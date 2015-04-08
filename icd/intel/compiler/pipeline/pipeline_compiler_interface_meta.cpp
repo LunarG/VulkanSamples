@@ -1,5 +1,5 @@
 /*
- * XGL
+ * Vulkan
  *
  * Copyright (C) 2014 LunarG, Inc.
  *
@@ -619,7 +619,7 @@ void *intel_meta_compiler::codegen(uint32_t *code_size)
 
     prog = get_program(&prog_size, stderr);
 
-    code = intel_alloc(gpu, prog_size, 0, XGL_SYSTEM_ALLOC_INTERNAL);
+    code = intel_alloc(gpu, prog_size, 0, VK_SYSTEM_ALLOC_INTERNAL);
     if (!code)
         return NULL;
 
@@ -695,7 +695,7 @@ void *intel_meta_compiler::compile(brw_blorp_prog_data *prog_data,
 
 extern "C" {
 
-XGL_RESULT intel_pipeline_shader_compile_meta(struct intel_pipeline_shader *sh,
+VK_RESULT intel_pipeline_shader_compile_meta(struct intel_pipeline_shader *sh,
                                               const struct intel_gpu *gpu,
                                               enum intel_dev_meta_shader id)
 {
@@ -734,7 +734,7 @@ XGL_RESULT intel_pipeline_shader_compile_meta(struct intel_pipeline_shader *sh,
     ralloc_free(brw->shader_prog);
     ralloc_free(brw);
 
-    return (sh->pCode) ? XGL_SUCCESS : XGL_ERROR_UNKNOWN;
+    return (sh->pCode) ? VK_SUCCESS : VK_ERROR_UNKNOWN;
 }
 
 } // extern "C"

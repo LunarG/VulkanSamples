@@ -1,5 +1,5 @@
 /*
- * XGL
+ * Vulkan
  *
  * Copyright (C) 2014 LunarG, Inc.
  *
@@ -34,11 +34,11 @@
 struct intel_buf {
     struct intel_obj obj;
 
-    XGL_GPU_SIZE size;
-    XGL_FLAGS usage;
+    VK_GPU_SIZE size;
+    VK_FLAGS usage;
 };
 
-static inline struct intel_buf *intel_buf(XGL_BUFFER buf)
+static inline struct intel_buf *intel_buf(VK_BUFFER buf)
 {
     return (struct intel_buf *) buf;
 }
@@ -53,8 +53,8 @@ static inline struct intel_buf *intel_buf_from_obj(struct intel_obj *obj)
     return intel_buf_from_base(&obj->base);
 }
 
-XGL_RESULT intel_buf_create(struct intel_dev *dev,
-                            const XGL_BUFFER_CREATE_INFO *info,
+VK_RESULT intel_buf_create(struct intel_dev *dev,
+                            const VK_BUFFER_CREATE_INFO *info,
                             struct intel_buf **buf_ret);
 
 void intel_buf_destroy(struct intel_buf *buf);

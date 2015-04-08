@@ -1,4 +1,4 @@
-// XGL tests
+// VK tests
 //
 // Copyright (C) 2014 LunarG, Inc.
 //
@@ -22,21 +22,21 @@
 
 #include <iostream>
 #include <string.h> // memset(), memcmp()
-#include "xgltestbinding.h"
+#include "vktestbinding.h"
 
 namespace {
 
 #define DERIVED_OBJECT_INIT(create_func, ...)                       \
     do {                                                            \
         obj_type obj;                                               \
-        if (EXPECT(create_func(__VA_ARGS__, &obj) == XGL_SUCCESS))  \
+        if (EXPECT(create_func(__VA_ARGS__, &obj) == VK_SUCCESS))  \
             base_type::init(obj);                                   \
     } while (0)
 
 #define STRINGIFY(x) #x
 #define EXPECT(expr) ((expr) ? true : expect_failure(STRINGIFY(expr), __FILE__, __LINE__, __FUNCTION__))
 
-xgl_testing::ErrorCallback error_callback;
+vk_testing::ErrorCallback error_callback;
 
 bool expect_failure(const char *expr, const char *file, unsigned int line, const char *function)
 {
@@ -61,13 +61,13 @@ std::vector<T> make_objects(const std::vector<S> &v)
 }
 
 template<typename T>
-std::vector<T> get_info(XGL_PHYSICAL_GPU gpu, XGL_PHYSICAL_GPU_INFO_TYPE type, size_t min_elems)
+std::vector<T> get_info(VK_PHYSICAL_GPU gpu, VK_PHYSICAL_GPU_INFO_TYPE type, size_t min_elems)
 {
     std::vector<T> info;
     size_t size;
-    if (EXPECT(xglGetGpuInfo(gpu, type, &size, NULL) == XGL_SUCCESS && size % sizeof(T) == 0)) {
+    if (EXPECT(vkGetGpuInfo(gpu, type, &size, NULL) == VK_SUCCESS && size % sizeof(T) == 0)) {
         info.resize(size / sizeof(T));
-        if (!EXPECT(xglGetGpuInfo(gpu, type, &size, &info[0]) == XGL_SUCCESS && size == info.size() * sizeof(T)))
+        if (!EXPECT(vkGetGpuInfo(gpu, type, &size, &info[0]) == VK_SUCCESS && size == info.size() * sizeof(T)))
             info.clear();
     }
 
@@ -78,13 +78,13 @@ std::vector<T> get_info(XGL_PHYSICAL_GPU gpu, XGL_PHYSICAL_GPU_INFO_TYPE type, s
 }
 
 template<typename T>
-std::vector<T> get_info(XGL_BASE_OBJECT obj, XGL_OBJECT_INFO_TYPE type, size_t min_elems)
+std::vector<T> get_info(VK_BASE_OBJECT obj, VK_OBJECT_INFO_TYPE type, size_t min_elems)
 {
     std::vector<T> info;
     size_t size;
-    if (EXPECT(xglGetObjectInfo(obj, type, &size, NULL) == XGL_SUCCESS && size % sizeof(T) == 0)) {
+    if (EXPECT(vkGetObjectInfo(obj, type, &size, NULL) == VK_SUCCESS && size % sizeof(T) == 0)) {
         info.resize(size / sizeof(T));
-        if (!EXPECT(xglGetObjectInfo(obj, type, &size, &info[0]) == XGL_SUCCESS && size == info.size() * sizeof(T)))
+        if (!EXPECT(vkGetObjectInfo(obj, type, &size, &info[0]) == VK_SUCCESS && size == info.size() * sizeof(T)))
             info.clear();
     }
 
@@ -96,31 +96,31 @@ std::vector<T> get_info(XGL_BASE_OBJECT obj, XGL_OBJECT_INFO_TYPE type, size_t m
 
 } // namespace
 
-namespace xgl_testing {
+namespace vk_testing {
 
 void set_error_callback(ErrorCallback callback)
 {
     error_callback = callback;
 }
 
-XGL_PHYSICAL_GPU_PROPERTIES PhysicalGpu::properties() const
+VK_PHYSICAL_GPU_PROPERTIES PhysicalGpu::properties() const
 {
-    return get_info<XGL_PHYSICAL_GPU_PROPERTIES>(gpu_, XGL_INFO_TYPE_PHYSICAL_GPU_PROPERTIES, 1)[0];
+    return get_info<VK_PHYSICAL_GPU_PROPERTIES>(gpu_, VK_INFO_TYPE_PHYSICAL_GPU_PROPERTIES, 1)[0];
 }
 
-XGL_PHYSICAL_GPU_PERFORMANCE PhysicalGpu::performance() const
+VK_PHYSICAL_GPU_PERFORMANCE PhysicalGpu::performance() const
 {
-    return get_info<XGL_PHYSICAL_GPU_PERFORMANCE>(gpu_, XGL_INFO_TYPE_PHYSICAL_GPU_PERFORMANCE, 1)[0];
+    return get_info<VK_PHYSICAL_GPU_PERFORMANCE>(gpu_, VK_INFO_TYPE_PHYSICAL_GPU_PERFORMANCE, 1)[0];
 }
 
-std::vector<XGL_PHYSICAL_GPU_QUEUE_PROPERTIES> PhysicalGpu::queue_properties() const
+std::vector<VK_PHYSICAL_GPU_QUEUE_PROPERTIES> PhysicalGpu::queue_properties() const
 {
-    return get_info<XGL_PHYSICAL_GPU_QUEUE_PROPERTIES>(gpu_, XGL_INFO_TYPE_PHYSICAL_GPU_QUEUE_PROPERTIES, 0);
+    return get_info<VK_PHYSICAL_GPU_QUEUE_PROPERTIES>(gpu_, VK_INFO_TYPE_PHYSICAL_GPU_QUEUE_PROPERTIES, 0);
 }
 
-XGL_PHYSICAL_GPU_MEMORY_PROPERTIES PhysicalGpu::memory_properties() const
+VK_PHYSICAL_GPU_MEMORY_PROPERTIES PhysicalGpu::memory_properties() const
 {
-    return get_info<XGL_PHYSICAL_GPU_MEMORY_PROPERTIES>(gpu_, XGL_INFO_TYPE_PHYSICAL_GPU_MEMORY_PROPERTIES, 1)[0];
+    return get_info<VK_PHYSICAL_GPU_MEMORY_PROPERTIES>(gpu_, VK_INFO_TYPE_PHYSICAL_GPU_MEMORY_PROPERTIES, 1)[0];
 }
 
 std::vector<const char *> PhysicalGpu::layers(std::vector<char> &buf) const
@@ -137,7 +137,7 @@ std::vector<const char *> PhysicalGpu::layers(std::vector<char> &buf) const
 
     char * const *out = const_cast<char * const *>(&layers[0]);
     size_t count;
-    if (!EXPECT(xglEnumerateLayers(gpu_, max_layer_count, max_string_size, &count, out, NULL) == XGL_SUCCESS))
+    if (!EXPECT(vkEnumerateLayers(gpu_, max_layer_count, max_string_size, &count, out, NULL) == VK_SUCCESS))
         count = 0;
     layers.resize(count);
 
@@ -147,35 +147,35 @@ std::vector<const char *> PhysicalGpu::layers(std::vector<char> &buf) const
 std::vector<const char *> PhysicalGpu::extensions() const
 {
     static const char *known_exts[] = {
-        "XGL_WSI_X11",
+        "VK_WSI_X11",
     };
 
     std::vector<const char *> exts;
     for (int i = 0; i < sizeof(known_exts) / sizeof(known_exts[0]); i++) {
-        XGL_RESULT err = xglGetExtensionSupport(gpu_, known_exts[i]);
-        if (err == XGL_SUCCESS)
+        VK_RESULT err = vkGetExtensionSupport(gpu_, known_exts[i]);
+        if (err == VK_SUCCESS)
             exts.push_back(known_exts[i]);
     }
 
     return exts;
 }
 
-XGL_GPU_COMPATIBILITY_INFO PhysicalGpu::compatibility(const PhysicalGpu &other) const
+VK_GPU_COMPATIBILITY_INFO PhysicalGpu::compatibility(const PhysicalGpu &other) const
 {
-    XGL_GPU_COMPATIBILITY_INFO data;
-    if (!EXPECT(xglGetMultiGpuCompatibility(gpu_, other.gpu_, &data) == XGL_SUCCESS))
+    VK_GPU_COMPATIBILITY_INFO data;
+    if (!EXPECT(vkGetMultiGpuCompatibility(gpu_, other.gpu_, &data) == VK_SUCCESS))
         memset(&data, 0, sizeof(data));
 
     return data;
 }
 
-void BaseObject::init(XGL_BASE_OBJECT obj, bool own)
+void BaseObject::init(VK_BASE_OBJECT obj, bool own)
 {
     EXPECT(!initialized());
     reinit(obj, own);
 }
 
-void BaseObject::reinit(XGL_BASE_OBJECT obj, bool own)
+void BaseObject::reinit(VK_BASE_OBJECT obj, bool own)
 {
     obj_ = obj;
     own_obj_ = own;
@@ -183,19 +183,19 @@ void BaseObject::reinit(XGL_BASE_OBJECT obj, bool own)
 
 uint32_t BaseObject::memory_allocation_count() const
 {
-    return get_info<uint32_t>(obj_, XGL_INFO_TYPE_MEMORY_ALLOCATION_COUNT, 1)[0];
+    return get_info<uint32_t>(obj_, VK_INFO_TYPE_MEMORY_ALLOCATION_COUNT, 1)[0];
 }
 
-std::vector<XGL_MEMORY_REQUIREMENTS> BaseObject::memory_requirements() const
+std::vector<VK_MEMORY_REQUIREMENTS> BaseObject::memory_requirements() const
 {
-    XGL_RESULT err;
+    VK_RESULT err;
     uint32_t num_allocations = 0;
     size_t num_alloc_size = sizeof(num_allocations);
-    err = xglGetObjectInfo(obj_, XGL_INFO_TYPE_MEMORY_ALLOCATION_COUNT,
+    err = vkGetObjectInfo(obj_, VK_INFO_TYPE_MEMORY_ALLOCATION_COUNT,
                            &num_alloc_size, &num_allocations);
-    EXPECT(err == XGL_SUCCESS && num_alloc_size == sizeof(num_allocations));
-    std::vector<XGL_MEMORY_REQUIREMENTS> info =
-        get_info<XGL_MEMORY_REQUIREMENTS>(obj_, XGL_INFO_TYPE_MEMORY_REQUIREMENTS, 0);
+    EXPECT(err == VK_SUCCESS && num_alloc_size == sizeof(num_allocations));
+    std::vector<VK_MEMORY_REQUIREMENTS> info =
+        get_info<VK_MEMORY_REQUIREMENTS>(obj_, VK_INFO_TYPE_MEMORY_REQUIREMENTS, 0);
     EXPECT(info.size() == num_allocations);
     if (info.size() == 1 && !info[0].size)
         info.clear();
@@ -203,13 +203,13 @@ std::vector<XGL_MEMORY_REQUIREMENTS> BaseObject::memory_requirements() const
     return info;
 }
 
-void Object::init(XGL_OBJECT obj, bool own)
+void Object::init(VK_OBJECT obj, bool own)
 {
     BaseObject::init(obj, own);
     mem_alloc_count_ = memory_allocation_count();
 }
 
-void Object::reinit(XGL_OBJECT obj, bool own)
+void Object::reinit(VK_OBJECT obj, bool own)
 {
     cleanup();
     BaseObject::reinit(obj, own);
@@ -232,23 +232,23 @@ void Object::cleanup()
     mem_alloc_count_ = 0;
 
     if (own())
-        EXPECT(xglDestroyObject(obj()) == XGL_SUCCESS);
+        EXPECT(vkDestroyObject(obj()) == VK_SUCCESS);
 }
 
-void Object::bind_memory(uint32_t alloc_idx, const GpuMemory &mem, XGL_GPU_SIZE mem_offset)
+void Object::bind_memory(uint32_t alloc_idx, const GpuMemory &mem, VK_GPU_SIZE mem_offset)
 {
-    EXPECT(xglBindObjectMemory(obj(), alloc_idx, mem.obj(), mem_offset) == XGL_SUCCESS);
+    EXPECT(vkBindObjectMemory(obj(), alloc_idx, mem.obj(), mem_offset) == VK_SUCCESS);
 }
 
-void Object::bind_memory(uint32_t alloc_idx, XGL_GPU_SIZE offset, XGL_GPU_SIZE size,
-                         const GpuMemory &mem, XGL_GPU_SIZE mem_offset)
+void Object::bind_memory(uint32_t alloc_idx, VK_GPU_SIZE offset, VK_GPU_SIZE size,
+                         const GpuMemory &mem, VK_GPU_SIZE mem_offset)
 {
-    EXPECT(!alloc_idx && xglBindObjectMemoryRange(obj(), 0, offset, size, mem.obj(), mem_offset) == XGL_SUCCESS);
+    EXPECT(!alloc_idx && vkBindObjectMemoryRange(obj(), 0, offset, size, mem.obj(), mem_offset) == VK_SUCCESS);
 }
 
 void Object::unbind_memory(uint32_t alloc_idx)
 {
-    EXPECT(xglBindObjectMemory(obj(), alloc_idx, XGL_NULL_HANDLE, 0) == XGL_SUCCESS);
+    EXPECT(vkBindObjectMemory(obj(), alloc_idx, VK_NULL_HANDLE, 0) == VK_SUCCESS);
 }
 
 void Object::unbind_memory()
@@ -264,20 +264,20 @@ void Object::alloc_memory(const Device &dev, bool for_buf, bool for_img)
 
     internal_mems_ = new GpuMemory[mem_alloc_count_];
 
-    const std::vector<XGL_MEMORY_REQUIREMENTS> mem_reqs = memory_requirements();
-    std::vector<XGL_IMAGE_MEMORY_REQUIREMENTS> img_reqs;
-    std::vector<XGL_BUFFER_MEMORY_REQUIREMENTS> buf_reqs;
-    XGL_MEMORY_ALLOC_IMAGE_INFO img_info;
-    XGL_MEMORY_ALLOC_BUFFER_INFO buf_info;
-    XGL_MEMORY_ALLOC_INFO info, *next_info = NULL;
+    const std::vector<VK_MEMORY_REQUIREMENTS> mem_reqs = memory_requirements();
+    std::vector<VK_IMAGE_MEMORY_REQUIREMENTS> img_reqs;
+    std::vector<VK_BUFFER_MEMORY_REQUIREMENTS> buf_reqs;
+    VK_MEMORY_ALLOC_IMAGE_INFO img_info;
+    VK_MEMORY_ALLOC_BUFFER_INFO buf_info;
+    VK_MEMORY_ALLOC_INFO info, *next_info = NULL;
 
     if (for_img) {
-        img_reqs = get_info<XGL_IMAGE_MEMORY_REQUIREMENTS>(obj(),
-                        XGL_INFO_TYPE_IMAGE_MEMORY_REQUIREMENTS, 0);
+        img_reqs = get_info<VK_IMAGE_MEMORY_REQUIREMENTS>(obj(),
+                        VK_INFO_TYPE_IMAGE_MEMORY_REQUIREMENTS, 0);
         EXPECT(img_reqs.size() == 1);
-        next_info = (XGL_MEMORY_ALLOC_INFO *) &img_info;
+        next_info = (VK_MEMORY_ALLOC_INFO *) &img_info;
         img_info.pNext = NULL;
-        img_info.sType = XGL_STRUCTURE_TYPE_MEMORY_ALLOC_IMAGE_INFO;
+        img_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOC_IMAGE_INFO;
         img_info.usage = img_reqs[0].usage;
         img_info.formatClass = img_reqs[0].formatClass;
         img_info.samples = img_reqs[0].samples;
@@ -285,14 +285,14 @@ void Object::alloc_memory(const Device &dev, bool for_buf, bool for_img)
 
 
     if (for_buf) {
-        buf_reqs = get_info<XGL_BUFFER_MEMORY_REQUIREMENTS>(obj(),
-                        XGL_INFO_TYPE_BUFFER_MEMORY_REQUIREMENTS, 0);
+        buf_reqs = get_info<VK_BUFFER_MEMORY_REQUIREMENTS>(obj(),
+                        VK_INFO_TYPE_BUFFER_MEMORY_REQUIREMENTS, 0);
         if (for_img)
             img_info.pNext = &buf_info;
         else
-            next_info = (XGL_MEMORY_ALLOC_INFO *) &buf_info;
+            next_info = (VK_MEMORY_ALLOC_INFO *) &buf_info;
         buf_info.pNext = NULL;
-        buf_info.sType = XGL_STRUCTURE_TYPE_MEMORY_ALLOC_BUFFER_INFO;
+        buf_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOC_BUFFER_INFO;
         buf_info.usage = buf_reqs[0].usage;
     }
 
@@ -301,12 +301,12 @@ void Object::alloc_memory(const Device &dev, bool for_buf, bool for_img)
         info = GpuMemory::alloc_info(mem_reqs[i], next_info);
 
         switch (info.memType) {
-        case XGL_MEMORY_TYPE_BUFFER:
+        case VK_MEMORY_TYPE_BUFFER:
             EXPECT(for_buf);
-            info.memProps |= XGL_MEMORY_PROPERTY_CPU_VISIBLE_BIT;
+            info.memProps |= VK_MEMORY_PROPERTY_CPU_VISIBLE_BIT;
             primary_mem_ = &internal_mems_[i];
             break;
-        case XGL_MEMORY_TYPE_IMAGE:
+        case VK_MEMORY_TYPE_IMAGE:
             EXPECT(for_img);
             primary_mem_ = &internal_mems_[i];
             break;
@@ -319,14 +319,14 @@ void Object::alloc_memory(const Device &dev, bool for_buf, bool for_img)
     }
 }
 
-void Object::alloc_memory(const std::vector<XGL_GPU_MEMORY> &mems)
+void Object::alloc_memory(const std::vector<VK_GPU_MEMORY> &mems)
 {
     if (!EXPECT(!internal_mems_) || !mem_alloc_count_)
         return;
 
     internal_mems_ = new GpuMemory[mem_alloc_count_];
 
-    const std::vector<XGL_MEMORY_REQUIREMENTS> mem_reqs = memory_requirements();
+    const std::vector<VK_MEMORY_REQUIREMENTS> mem_reqs = memory_requirements();
     if (!EXPECT(mem_reqs.size() == mems.size()))
         return;
 
@@ -338,9 +338,9 @@ void Object::alloc_memory(const std::vector<XGL_GPU_MEMORY> &mems)
     }
 }
 
-std::vector<XGL_GPU_MEMORY> Object::memories() const
+std::vector<VK_GPU_MEMORY> Object::memories() const
 {
-    std::vector<XGL_GPU_MEMORY> mems;
+    std::vector<VK_GPU_MEMORY> mems;
     if (internal_mems_) {
         mems.reserve(mem_alloc_count_);
         for (uint32_t i = 0; i < mem_alloc_count_; i++)
@@ -361,27 +361,27 @@ Device::~Device()
         queues_[i].clear();
     }
 
-    EXPECT(xglDestroyDevice(obj()) == XGL_SUCCESS);
+    EXPECT(vkDestroyDevice(obj()) == VK_SUCCESS);
 }
 
 void Device::init(bool enable_layers)
 {
     // request all queues
-    const std::vector<XGL_PHYSICAL_GPU_QUEUE_PROPERTIES> queue_props = gpu_.queue_properties();
-    std::vector<XGL_DEVICE_QUEUE_CREATE_INFO> queue_info;
+    const std::vector<VK_PHYSICAL_GPU_QUEUE_PROPERTIES> queue_props = gpu_.queue_properties();
+    std::vector<VK_DEVICE_QUEUE_CREATE_INFO> queue_info;
     queue_info.reserve(queue_props.size());
     for (int i = 0; i < queue_props.size(); i++) {
-        XGL_DEVICE_QUEUE_CREATE_INFO qi = {};
+        VK_DEVICE_QUEUE_CREATE_INFO qi = {};
         qi.queueNodeIndex = i;
         qi.queueCount = queue_props[i].queueCount;
-        if (queue_props[i].queueFlags & XGL_QUEUE_GRAPHICS_BIT) {
+        if (queue_props[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) {
             graphics_queue_node_index_ = i;
         }
         queue_info.push_back(qi);
     }
 
-    XGL_LAYER_CREATE_INFO layer_info = {};
-    layer_info.sType = XGL_STRUCTURE_TYPE_LAYER_CREATE_INFO;
+    VK_LAYER_CREATE_INFO layer_info = {};
+    layer_info.sType = VK_STRUCTURE_TYPE_LAYER_CREATE_INFO;
 
     std::vector<const char *> layers;
     std::vector<char> layer_buf;
@@ -394,22 +394,22 @@ void Device::init(bool enable_layers)
 
     const std::vector<const char *> exts = gpu_.extensions();
 
-    XGL_DEVICE_CREATE_INFO dev_info = {};
-    dev_info.sType = XGL_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
+    VK_DEVICE_CREATE_INFO dev_info = {};
+    dev_info.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
     dev_info.pNext = (enable_layers) ? static_cast<void *>(&layer_info) : NULL;
     dev_info.queueRecordCount = queue_info.size();
     dev_info.pRequestedQueues = &queue_info[0];
     dev_info.extensionCount = exts.size();
     dev_info.ppEnabledExtensionNames = &exts[0];
-    dev_info.maxValidationLevel = XGL_VALIDATION_LEVEL_END_RANGE;
-    dev_info.flags = XGL_DEVICE_CREATE_VALIDATION_BIT;
+    dev_info.maxValidationLevel = VK_VALIDATION_LEVEL_END_RANGE;
+    dev_info.flags = VK_DEVICE_CREATE_VALIDATION_BIT;
 
     init(dev_info);
 }
 
-void Device::init(const XGL_DEVICE_CREATE_INFO &info)
+void Device::init(const VK_DEVICE_CREATE_INFO &info)
 {
-    DERIVED_OBJECT_INIT(xglCreateDevice, gpu_.obj(), &info);
+    DERIVED_OBJECT_INIT(vkCreateDevice, gpu_.obj(), &info);
 
     init_queues();
     init_formats();
@@ -417,39 +417,39 @@ void Device::init(const XGL_DEVICE_CREATE_INFO &info)
 
 void Device::init_queues()
 {
-    XGL_RESULT err;
+    VK_RESULT err;
     size_t data_size;
     uint32_t queue_node_count;
 
-    err = xglGetGpuInfo(gpu_.obj(), XGL_INFO_TYPE_PHYSICAL_GPU_QUEUE_PROPERTIES,
+    err = vkGetGpuInfo(gpu_.obj(), VK_INFO_TYPE_PHYSICAL_GPU_QUEUE_PROPERTIES,
                         &data_size, NULL);
-    EXPECT(err == XGL_SUCCESS);
+    EXPECT(err == VK_SUCCESS);
 
-    queue_node_count = data_size / sizeof(XGL_PHYSICAL_GPU_QUEUE_PROPERTIES);
+    queue_node_count = data_size / sizeof(VK_PHYSICAL_GPU_QUEUE_PROPERTIES);
     EXPECT(queue_node_count >= 1);
 
-    XGL_PHYSICAL_GPU_QUEUE_PROPERTIES queue_props[queue_node_count];
+    VK_PHYSICAL_GPU_QUEUE_PROPERTIES queue_props[queue_node_count];
 
-    err = xglGetGpuInfo(gpu_.obj(), XGL_INFO_TYPE_PHYSICAL_GPU_QUEUE_PROPERTIES,
+    err = vkGetGpuInfo(gpu_.obj(), VK_INFO_TYPE_PHYSICAL_GPU_QUEUE_PROPERTIES,
                         &data_size, queue_props);
-    EXPECT(err == XGL_SUCCESS);
+    EXPECT(err == VK_SUCCESS);
 
     for (int i = 0; i < queue_node_count; i++) {
-        XGL_QUEUE queue;
+        VK_QUEUE queue;
 
         for (int j = 0; j < queue_props[i].queueCount; j++) {
-            err = xglGetDeviceQueue(obj(), i, j, &queue);
-            EXPECT(err == XGL_SUCCESS);
+            err = vkGetDeviceQueue(obj(), i, j, &queue);
+            EXPECT(err == VK_SUCCESS);
 
-            if (queue_props[i].queueFlags & XGL_QUEUE_GRAPHICS_BIT) {
+            if (queue_props[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) {
                 queues_[GRAPHICS].push_back(new Queue(queue));
             }
 
-            if (queue_props[i].queueFlags & XGL_QUEUE_COMPUTE_BIT) {
+            if (queue_props[i].queueFlags & VK_QUEUE_COMPUTE_BIT) {
                 queues_[COMPUTE].push_back(new Queue(queue));
             }
 
-            if (queue_props[i].queueFlags & XGL_QUEUE_DMA_BIT) {
+            if (queue_props[i].queueFlags & VK_QUEUE_DMA_BIT) {
                 queues_[DMA].push_back(new Queue(queue));
             }
         }
@@ -460,17 +460,17 @@ void Device::init_queues()
 
 void Device::init_formats()
 {
-    for (int f = XGL_FMT_BEGIN_RANGE; f <= XGL_FMT_END_RANGE; f++) {
-        const XGL_FORMAT fmt = static_cast<XGL_FORMAT>(f);
-        const XGL_FORMAT_PROPERTIES props = format_properties(fmt);
+    for (int f = VK_FMT_BEGIN_RANGE; f <= VK_FMT_END_RANGE; f++) {
+        const VK_FORMAT fmt = static_cast<VK_FORMAT>(f);
+        const VK_FORMAT_PROPERTIES props = format_properties(fmt);
 
         if (props.linearTilingFeatures) {
-            const Format tmp = { fmt, XGL_LINEAR_TILING, props.linearTilingFeatures };
+            const Format tmp = { fmt, VK_LINEAR_TILING, props.linearTilingFeatures };
             formats_.push_back(tmp);
         }
 
         if (props.optimalTilingFeatures) {
-            const Format tmp = { fmt, XGL_OPTIMAL_TILING, props.optimalTilingFeatures };
+            const Format tmp = { fmt, VK_OPTIMAL_TILING, props.optimalTilingFeatures };
             formats_.push_back(tmp);
         }
     }
@@ -478,12 +478,12 @@ void Device::init_formats()
     EXPECT(!formats_.empty());
 }
 
-XGL_FORMAT_PROPERTIES Device::format_properties(XGL_FORMAT format)
+VK_FORMAT_PROPERTIES Device::format_properties(VK_FORMAT format)
 {
-    const XGL_FORMAT_INFO_TYPE type = XGL_INFO_TYPE_FORMAT_PROPERTIES;
-    XGL_FORMAT_PROPERTIES data;
+    const VK_FORMAT_INFO_TYPE type = VK_INFO_TYPE_FORMAT_PROPERTIES;
+    VK_FORMAT_PROPERTIES data;
     size_t size = sizeof(data);
-    if (!EXPECT(xglGetFormatInfo(obj(), format, type, &size, &data) == XGL_SUCCESS && size == sizeof(data)))
+    if (!EXPECT(vkGetFormatInfo(obj(), format, type, &size, &data) == VK_SUCCESS && size == sizeof(data)))
         memset(&data, 0, sizeof(data));
 
     return data;
@@ -491,32 +491,32 @@ XGL_FORMAT_PROPERTIES Device::format_properties(XGL_FORMAT format)
 
 void Device::wait()
 {
-    EXPECT(xglDeviceWaitIdle(obj()) == XGL_SUCCESS);
+    EXPECT(vkDeviceWaitIdle(obj()) == VK_SUCCESS);
 }
 
-XGL_RESULT Device::wait(const std::vector<const Fence *> &fences, bool wait_all, uint64_t timeout)
+VK_RESULT Device::wait(const std::vector<const Fence *> &fences, bool wait_all, uint64_t timeout)
 {
-    const std::vector<XGL_FENCE> fence_objs = make_objects<XGL_FENCE>(fences);
-    XGL_RESULT err = xglWaitForFences(obj(), fence_objs.size(), &fence_objs[0], wait_all, timeout);
-    EXPECT(err == XGL_SUCCESS || err == XGL_TIMEOUT);
+    const std::vector<VK_FENCE> fence_objs = make_objects<VK_FENCE>(fences);
+    VK_RESULT err = vkWaitForFences(obj(), fence_objs.size(), &fence_objs[0], wait_all, timeout);
+    EXPECT(err == VK_SUCCESS || err == VK_TIMEOUT);
 
     return err;
 }
 
-void Device::begin_descriptor_pool_update(XGL_DESCRIPTOR_UPDATE_MODE mode)
+void Device::begin_descriptor_pool_update(VK_DESCRIPTOR_UPDATE_MODE mode)
 {
-    EXPECT(xglBeginDescriptorPoolUpdate(obj(), mode) == XGL_SUCCESS);
+    EXPECT(vkBeginDescriptorPoolUpdate(obj(), mode) == VK_SUCCESS);
 }
 
 void Device::end_descriptor_pool_update(CmdBuffer &cmd)
 {
-    EXPECT(xglEndDescriptorPoolUpdate(obj(), cmd.obj()) == XGL_SUCCESS);
+    EXPECT(vkEndDescriptorPoolUpdate(obj(), cmd.obj()) == VK_SUCCESS);
 }
 
 void Queue::submit(const std::vector<const CmdBuffer *> &cmds, Fence &fence)
 {
-    const std::vector<XGL_CMD_BUFFER> cmd_objs = make_objects<XGL_CMD_BUFFER>(cmds);
-    EXPECT(xglQueueSubmit(obj(), cmd_objs.size(), &cmd_objs[0], fence.obj()) == XGL_SUCCESS);
+    const std::vector<VK_CMD_BUFFER> cmd_objs = make_objects<VK_CMD_BUFFER>(cmds);
+    EXPECT(vkQueueSubmit(obj(), cmd_objs.size(), &cmd_objs[0], fence.obj()) == VK_SUCCESS);
 }
 
 void Queue::submit(const CmdBuffer &cmd, Fence &fence)
@@ -530,79 +530,79 @@ void Queue::submit(const CmdBuffer &cmd)
     submit(cmd, fence);
 }
 
-void Queue::add_mem_references(const std::vector<XGL_GPU_MEMORY> &mem_refs)
+void Queue::add_mem_references(const std::vector<VK_GPU_MEMORY> &mem_refs)
 {
     for (int i = 0; i < mem_refs.size(); i++) {
-        EXPECT(xglQueueAddMemReference(obj(), mem_refs[i]) == XGL_SUCCESS);
+        EXPECT(vkQueueAddMemReference(obj(), mem_refs[i]) == VK_SUCCESS);
     }
 }
 
-void Queue::remove_mem_references(const std::vector<XGL_GPU_MEMORY> &mem_refs)
+void Queue::remove_mem_references(const std::vector<VK_GPU_MEMORY> &mem_refs)
 {
     for (int i = 0; i < mem_refs.size(); i++) {
-        EXPECT(xglQueueRemoveMemReference(obj(), mem_refs[i]) == XGL_SUCCESS);
+        EXPECT(vkQueueRemoveMemReference(obj(), mem_refs[i]) == VK_SUCCESS);
     }
 }
 
 void Queue::wait()
 {
-    EXPECT(xglQueueWaitIdle(obj()) == XGL_SUCCESS);
+    EXPECT(vkQueueWaitIdle(obj()) == VK_SUCCESS);
 }
 
 void Queue::signal_semaphore(Semaphore &sem)
 {
-    EXPECT(xglQueueSignalSemaphore(obj(), sem.obj()) == XGL_SUCCESS);
+    EXPECT(vkQueueSignalSemaphore(obj(), sem.obj()) == VK_SUCCESS);
 }
 
 void Queue::wait_semaphore(Semaphore &sem)
 {
-    EXPECT(xglQueueWaitSemaphore(obj(), sem.obj()) == XGL_SUCCESS);
+    EXPECT(vkQueueWaitSemaphore(obj(), sem.obj()) == VK_SUCCESS);
 }
 
 GpuMemory::~GpuMemory()
 {
     if (initialized() && own())
-        EXPECT(xglFreeMemory(obj()) == XGL_SUCCESS);
+        EXPECT(vkFreeMemory(obj()) == VK_SUCCESS);
 }
 
-void GpuMemory::init(const Device &dev, const XGL_MEMORY_ALLOC_INFO &info)
+void GpuMemory::init(const Device &dev, const VK_MEMORY_ALLOC_INFO &info)
 {
-    DERIVED_OBJECT_INIT(xglAllocMemory, dev.obj(), &info);
+    DERIVED_OBJECT_INIT(vkAllocMemory, dev.obj(), &info);
 }
 
 void GpuMemory::init(const Device &dev, size_t size, const void *data)
 {
-    DERIVED_OBJECT_INIT(xglPinSystemMemory, dev.obj(), data, size);
+    DERIVED_OBJECT_INIT(vkPinSystemMemory, dev.obj(), data, size);
 }
 
-void GpuMemory::init(const Device &dev, const XGL_MEMORY_OPEN_INFO &info)
+void GpuMemory::init(const Device &dev, const VK_MEMORY_OPEN_INFO &info)
 {
-    DERIVED_OBJECT_INIT(xglOpenSharedMemory, dev.obj(), &info);
+    DERIVED_OBJECT_INIT(vkOpenSharedMemory, dev.obj(), &info);
 }
 
-void GpuMemory::init(const Device &dev, const XGL_PEER_MEMORY_OPEN_INFO &info)
+void GpuMemory::init(const Device &dev, const VK_PEER_MEMORY_OPEN_INFO &info)
 {
-    DERIVED_OBJECT_INIT(xglOpenPeerMemory, dev.obj(), &info);
+    DERIVED_OBJECT_INIT(vkOpenPeerMemory, dev.obj(), &info);
 }
 
-void GpuMemory::set_priority(XGL_MEMORY_PRIORITY priority)
+void GpuMemory::set_priority(VK_MEMORY_PRIORITY priority)
 {
-    EXPECT(xglSetMemoryPriority(obj(), priority) == XGL_SUCCESS);
+    EXPECT(vkSetMemoryPriority(obj(), priority) == VK_SUCCESS);
 }
 
-const void *GpuMemory::map(XGL_FLAGS flags) const
+const void *GpuMemory::map(VK_FLAGS flags) const
 {
     void *data;
-    if (!EXPECT(xglMapMemory(obj(), flags, &data) == XGL_SUCCESS))
+    if (!EXPECT(vkMapMemory(obj(), flags, &data) == VK_SUCCESS))
         data = NULL;
 
     return data;
 }
 
-void *GpuMemory::map(XGL_FLAGS flags)
+void *GpuMemory::map(VK_FLAGS flags)
 {
     void *data;
-    if (!EXPECT(xglMapMemory(obj(), flags, &data) == XGL_SUCCESS))
+    if (!EXPECT(vkMapMemory(obj(), flags, &data) == VK_SUCCESS))
         data = NULL;
 
     return data;
@@ -610,104 +610,104 @@ void *GpuMemory::map(XGL_FLAGS flags)
 
 void GpuMemory::unmap() const
 {
-    EXPECT(xglUnmapMemory(obj()) == XGL_SUCCESS);
+    EXPECT(vkUnmapMemory(obj()) == VK_SUCCESS);
 }
 
-void Fence::init(const Device &dev, const XGL_FENCE_CREATE_INFO &info)
+void Fence::init(const Device &dev, const VK_FENCE_CREATE_INFO &info)
 {
-    DERIVED_OBJECT_INIT(xglCreateFence, dev.obj(), &info);
+    DERIVED_OBJECT_INIT(vkCreateFence, dev.obj(), &info);
     alloc_memory(dev);
 }
 
-void Semaphore::init(const Device &dev, const XGL_SEMAPHORE_CREATE_INFO &info)
+void Semaphore::init(const Device &dev, const VK_SEMAPHORE_CREATE_INFO &info)
 {
-    DERIVED_OBJECT_INIT(xglCreateSemaphore, dev.obj(), &info);
+    DERIVED_OBJECT_INIT(vkCreateSemaphore, dev.obj(), &info);
     alloc_memory(dev);
 }
 
-void Semaphore::init(const Device &dev, const XGL_SEMAPHORE_OPEN_INFO &info)
+void Semaphore::init(const Device &dev, const VK_SEMAPHORE_OPEN_INFO &info)
 {
-    DERIVED_OBJECT_INIT(xglOpenSharedSemaphore, dev.obj(), &info);
+    DERIVED_OBJECT_INIT(vkOpenSharedSemaphore, dev.obj(), &info);
 }
 
-void Event::init(const Device &dev, const XGL_EVENT_CREATE_INFO &info)
+void Event::init(const Device &dev, const VK_EVENT_CREATE_INFO &info)
 {
-    DERIVED_OBJECT_INIT(xglCreateEvent, dev.obj(), &info);
+    DERIVED_OBJECT_INIT(vkCreateEvent, dev.obj(), &info);
     alloc_memory(dev);
 }
 
 void Event::set()
 {
-    EXPECT(xglSetEvent(obj()) == XGL_SUCCESS);
+    EXPECT(vkSetEvent(obj()) == VK_SUCCESS);
 }
 
 void Event::reset()
 {
-    EXPECT(xglResetEvent(obj()) == XGL_SUCCESS);
+    EXPECT(vkResetEvent(obj()) == VK_SUCCESS);
 }
 
-void QueryPool::init(const Device &dev, const XGL_QUERY_POOL_CREATE_INFO &info)
+void QueryPool::init(const Device &dev, const VK_QUERY_POOL_CREATE_INFO &info)
 {
-    DERIVED_OBJECT_INIT(xglCreateQueryPool, dev.obj(), &info);
+    DERIVED_OBJECT_INIT(vkCreateQueryPool, dev.obj(), &info);
     alloc_memory(dev);
 }
 
-XGL_RESULT QueryPool::results(uint32_t start, uint32_t count, size_t size, void *data)
+VK_RESULT QueryPool::results(uint32_t start, uint32_t count, size_t size, void *data)
 {
     size_t tmp = size;
-    XGL_RESULT err = xglGetQueryPoolResults(obj(), start, count, &tmp, data);
-    if (err == XGL_SUCCESS) {
+    VK_RESULT err = vkGetQueryPoolResults(obj(), start, count, &tmp, data);
+    if (err == VK_SUCCESS) {
         if (!EXPECT(tmp == size))
             memset(data, 0, size);
     } else {
-        EXPECT(err == XGL_NOT_READY);
+        EXPECT(err == VK_NOT_READY);
     }
 
     return err;
 }
 
-void Buffer::init(const Device &dev, const XGL_BUFFER_CREATE_INFO &info)
+void Buffer::init(const Device &dev, const VK_BUFFER_CREATE_INFO &info)
 {
     init_no_mem(dev, info);
     alloc_memory(dev, true, false);
 }
 
-void Buffer::init_no_mem(const Device &dev, const XGL_BUFFER_CREATE_INFO &info)
+void Buffer::init_no_mem(const Device &dev, const VK_BUFFER_CREATE_INFO &info)
 {
-    DERIVED_OBJECT_INIT(xglCreateBuffer, dev.obj(), &info);
+    DERIVED_OBJECT_INIT(vkCreateBuffer, dev.obj(), &info);
     create_info_ = info;
 }
 
-void BufferView::init(const Device &dev, const XGL_BUFFER_VIEW_CREATE_INFO &info)
+void BufferView::init(const Device &dev, const VK_BUFFER_VIEW_CREATE_INFO &info)
 {
-    DERIVED_OBJECT_INIT(xglCreateBufferView, dev.obj(), &info);
+    DERIVED_OBJECT_INIT(vkCreateBufferView, dev.obj(), &info);
     alloc_memory(dev);
 }
 
-void Image::init(const Device &dev, const XGL_IMAGE_CREATE_INFO &info)
+void Image::init(const Device &dev, const VK_IMAGE_CREATE_INFO &info)
 {
     init_no_mem(dev, info);
-    alloc_memory(dev, info.tiling == XGL_LINEAR_TILING, true);
+    alloc_memory(dev, info.tiling == VK_LINEAR_TILING, true);
 }
 
-void Image::init_no_mem(const Device &dev, const XGL_IMAGE_CREATE_INFO &info)
+void Image::init_no_mem(const Device &dev, const VK_IMAGE_CREATE_INFO &info)
 {
-    DERIVED_OBJECT_INIT(xglCreateImage, dev.obj(), &info);
+    DERIVED_OBJECT_INIT(vkCreateImage, dev.obj(), &info);
     init_info(dev, info);
 }
 
-void Image::init(const Device &dev, const XGL_PEER_IMAGE_OPEN_INFO &info, const XGL_IMAGE_CREATE_INFO &original_info)
+void Image::init(const Device &dev, const VK_PEER_IMAGE_OPEN_INFO &info, const VK_IMAGE_CREATE_INFO &original_info)
 {
-    XGL_IMAGE img;
-    XGL_GPU_MEMORY mem;
-    EXPECT(xglOpenPeerImage(dev.obj(), &info, &img, &mem) == XGL_SUCCESS);
+    VK_IMAGE img;
+    VK_GPU_MEMORY mem;
+    EXPECT(vkOpenPeerImage(dev.obj(), &info, &img, &mem) == VK_SUCCESS);
     Object::init(img);
 
     init_info(dev, original_info);
-    alloc_memory(std::vector<XGL_GPU_MEMORY>(1, mem));
+    alloc_memory(std::vector<VK_GPU_MEMORY>(1, mem));
 }
 
-void Image::init_info(const Device &dev, const XGL_IMAGE_CREATE_INFO &info)
+void Image::init_info(const Device &dev, const VK_IMAGE_CREATE_INFO &info)
 {
     create_info_ = info;
 
@@ -719,18 +719,18 @@ void Image::init_info(const Device &dev, const XGL_IMAGE_CREATE_INFO &info)
     }
 }
 
-void Image::bind_memory(uint32_t alloc_idx, const XGL_IMAGE_MEMORY_BIND_INFO &info,
-                        const GpuMemory &mem, XGL_GPU_SIZE mem_offset)
+void Image::bind_memory(uint32_t alloc_idx, const VK_IMAGE_MEMORY_BIND_INFO &info,
+                        const GpuMemory &mem, VK_GPU_SIZE mem_offset)
 {
-    EXPECT(!alloc_idx && xglBindImageMemoryRange(obj(), 0, &info, mem.obj(), mem_offset) == XGL_SUCCESS);
+    EXPECT(!alloc_idx && vkBindImageMemoryRange(obj(), 0, &info, mem.obj(), mem_offset) == VK_SUCCESS);
 }
 
-XGL_SUBRESOURCE_LAYOUT Image::subresource_layout(const XGL_IMAGE_SUBRESOURCE &subres) const
+VK_SUBRESOURCE_LAYOUT Image::subresource_layout(const VK_IMAGE_SUBRESOURCE &subres) const
 {
-    const XGL_SUBRESOURCE_INFO_TYPE type = XGL_INFO_TYPE_SUBRESOURCE_LAYOUT;
-    XGL_SUBRESOURCE_LAYOUT data;
+    const VK_SUBRESOURCE_INFO_TYPE type = VK_INFO_TYPE_SUBRESOURCE_LAYOUT;
+    VK_SUBRESOURCE_LAYOUT data;
     size_t size = sizeof(data);
-    if (!EXPECT(xglGetImageSubresourceInfo(obj(), &subres, type, &size, &data) == XGL_SUCCESS && size == sizeof(data)))
+    if (!EXPECT(vkGetImageSubresourceInfo(obj(), &subres, type, &size, &data) == VK_SUCCESS && size == sizeof(data)))
         memset(&data, 0, sizeof(data));
 
     return data;
@@ -738,69 +738,69 @@ XGL_SUBRESOURCE_LAYOUT Image::subresource_layout(const XGL_IMAGE_SUBRESOURCE &su
 
 bool Image::transparent() const
 {
-    return (create_info_.tiling == XGL_LINEAR_TILING &&
+    return (create_info_.tiling == VK_LINEAR_TILING &&
             create_info_.samples == 1 &&
-            !(create_info_.usage & (XGL_IMAGE_USAGE_COLOR_ATTACHMENT_BIT |
-                                    XGL_IMAGE_USAGE_DEPTH_STENCIL_BIT)));
+            !(create_info_.usage & (VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT |
+                                    VK_IMAGE_USAGE_DEPTH_STENCIL_BIT)));
 }
 
-void ImageView::init(const Device &dev, const XGL_IMAGE_VIEW_CREATE_INFO &info)
+void ImageView::init(const Device &dev, const VK_IMAGE_VIEW_CREATE_INFO &info)
 {
-    DERIVED_OBJECT_INIT(xglCreateImageView, dev.obj(), &info);
+    DERIVED_OBJECT_INIT(vkCreateImageView, dev.obj(), &info);
     alloc_memory(dev);
 }
 
-void ColorAttachmentView::init(const Device &dev, const XGL_COLOR_ATTACHMENT_VIEW_CREATE_INFO &info)
+void ColorAttachmentView::init(const Device &dev, const VK_COLOR_ATTACHMENT_VIEW_CREATE_INFO &info)
 {
-    DERIVED_OBJECT_INIT(xglCreateColorAttachmentView, dev.obj(), &info);
+    DERIVED_OBJECT_INIT(vkCreateColorAttachmentView, dev.obj(), &info);
     alloc_memory(dev);
 }
 
-void DepthStencilView::init(const Device &dev, const XGL_DEPTH_STENCIL_VIEW_CREATE_INFO &info)
+void DepthStencilView::init(const Device &dev, const VK_DEPTH_STENCIL_VIEW_CREATE_INFO &info)
 {
-    DERIVED_OBJECT_INIT(xglCreateDepthStencilView, dev.obj(), &info);
+    DERIVED_OBJECT_INIT(vkCreateDepthStencilView, dev.obj(), &info);
     alloc_memory(dev);
 }
 
-void Shader::init(const Device &dev, const XGL_SHADER_CREATE_INFO &info)
+void Shader::init(const Device &dev, const VK_SHADER_CREATE_INFO &info)
 {
-    DERIVED_OBJECT_INIT(xglCreateShader, dev.obj(), &info);
+    DERIVED_OBJECT_INIT(vkCreateShader, dev.obj(), &info);
 }
 
-XGL_RESULT Shader::init_try(const Device &dev, const XGL_SHADER_CREATE_INFO &info)
+VK_RESULT Shader::init_try(const Device &dev, const VK_SHADER_CREATE_INFO &info)
 {
-    XGL_SHADER sh;
-    XGL_RESULT err = xglCreateShader(dev.obj(), &info, &sh);
-    if (err == XGL_SUCCESS)
+    VK_SHADER sh;
+    VK_RESULT err = vkCreateShader(dev.obj(), &info, &sh);
+    if (err == VK_SUCCESS)
         Object::init(sh);
 
     return err;
 }
 
-void Pipeline::init(const Device &dev, const XGL_GRAPHICS_PIPELINE_CREATE_INFO &info)
+void Pipeline::init(const Device &dev, const VK_GRAPHICS_PIPELINE_CREATE_INFO &info)
 {
-    DERIVED_OBJECT_INIT(xglCreateGraphicsPipeline, dev.obj(), &info);
+    DERIVED_OBJECT_INIT(vkCreateGraphicsPipeline, dev.obj(), &info);
     alloc_memory(dev);
 }
 
 void Pipeline::init(
         const Device &dev,
-        const XGL_GRAPHICS_PIPELINE_CREATE_INFO &info,
-        const XGL_PIPELINE basePipeline)
+        const VK_GRAPHICS_PIPELINE_CREATE_INFO &info,
+        const VK_PIPELINE basePipeline)
 {
-    DERIVED_OBJECT_INIT(xglCreateGraphicsPipelineDerivative, dev.obj(), &info, basePipeline);
+    DERIVED_OBJECT_INIT(vkCreateGraphicsPipelineDerivative, dev.obj(), &info, basePipeline);
     alloc_memory(dev);
 }
 
-void Pipeline::init(const Device &dev, const XGL_COMPUTE_PIPELINE_CREATE_INFO &info)
+void Pipeline::init(const Device &dev, const VK_COMPUTE_PIPELINE_CREATE_INFO &info)
 {
-    DERIVED_OBJECT_INIT(xglCreateComputePipeline, dev.obj(), &info);
+    DERIVED_OBJECT_INIT(vkCreateComputePipeline, dev.obj(), &info);
     alloc_memory(dev);
 }
 
 void Pipeline::init(const Device&dev, size_t size, const void *data)
 {
-    DERIVED_OBJECT_INIT(xglLoadPipeline, dev.obj(), size, data);
+    DERIVED_OBJECT_INIT(vkLoadPipeline, dev.obj(), size, data);
     alloc_memory(dev);
 }
 
@@ -808,68 +808,68 @@ void Pipeline::init(
         const Device&dev,
         size_t size,
         const void *data,
-        const XGL_PIPELINE basePipeline)
+        const VK_PIPELINE basePipeline)
 {
-    DERIVED_OBJECT_INIT(xglLoadPipelineDerivative, dev.obj(), size, data, basePipeline);
+    DERIVED_OBJECT_INIT(vkLoadPipelineDerivative, dev.obj(), size, data, basePipeline);
     alloc_memory(dev);
 }
 
 size_t Pipeline::store(size_t size, void *data)
 {
-    if (!EXPECT(xglStorePipeline(obj(), &size, data) == XGL_SUCCESS))
+    if (!EXPECT(vkStorePipeline(obj(), &size, data) == VK_SUCCESS))
         size = 0;
 
     return size;
 }
 
-void Sampler::init(const Device &dev, const XGL_SAMPLER_CREATE_INFO &info)
+void Sampler::init(const Device &dev, const VK_SAMPLER_CREATE_INFO &info)
 {
-    DERIVED_OBJECT_INIT(xglCreateSampler, dev.obj(), &info);
+    DERIVED_OBJECT_INIT(vkCreateSampler, dev.obj(), &info);
     alloc_memory(dev);
 }
 
-void DescriptorSetLayout::init(const Device &dev, const XGL_DESCRIPTOR_SET_LAYOUT_CREATE_INFO &info)
+void DescriptorSetLayout::init(const Device &dev, const VK_DESCRIPTOR_SET_LAYOUT_CREATE_INFO &info)
 {
-    DERIVED_OBJECT_INIT(xglCreateDescriptorSetLayout, dev.obj(), &info);
+    DERIVED_OBJECT_INIT(vkCreateDescriptorSetLayout, dev.obj(), &info);
     alloc_memory(dev);
 }
 
 void DescriptorSetLayoutChain::init(const Device &dev, const std::vector<const DescriptorSetLayout *> &layouts)
 {
-    const std::vector<XGL_DESCRIPTOR_SET_LAYOUT> layout_objs = make_objects<XGL_DESCRIPTOR_SET_LAYOUT>(layouts);
+    const std::vector<VK_DESCRIPTOR_SET_LAYOUT> layout_objs = make_objects<VK_DESCRIPTOR_SET_LAYOUT>(layouts);
 
-    DERIVED_OBJECT_INIT(xglCreateDescriptorSetLayoutChain, dev.obj(), layout_objs.size(), &layout_objs[0]);
+    DERIVED_OBJECT_INIT(vkCreateDescriptorSetLayoutChain, dev.obj(), layout_objs.size(), &layout_objs[0]);
     alloc_memory(dev);
 }
 
-void DescriptorPool::init(const Device &dev, XGL_DESCRIPTOR_POOL_USAGE usage,
-                          uint32_t max_sets, const XGL_DESCRIPTOR_POOL_CREATE_INFO &info)
+void DescriptorPool::init(const Device &dev, VK_DESCRIPTOR_POOL_USAGE usage,
+                          uint32_t max_sets, const VK_DESCRIPTOR_POOL_CREATE_INFO &info)
 {
-    DERIVED_OBJECT_INIT(xglCreateDescriptorPool, dev.obj(), usage, max_sets, &info);
+    DERIVED_OBJECT_INIT(vkCreateDescriptorPool, dev.obj(), usage, max_sets, &info);
     alloc_memory(dev);
 }
 
 void DescriptorPool::reset()
 {
-    EXPECT(xglResetDescriptorPool(obj()) == XGL_SUCCESS);
+    EXPECT(vkResetDescriptorPool(obj()) == VK_SUCCESS);
 }
 
-std::vector<DescriptorSet *> DescriptorPool::alloc_sets(XGL_DESCRIPTOR_SET_USAGE usage, const std::vector<const DescriptorSetLayout *> &layouts)
+std::vector<DescriptorSet *> DescriptorPool::alloc_sets(VK_DESCRIPTOR_SET_USAGE usage, const std::vector<const DescriptorSetLayout *> &layouts)
 {
-    const std::vector<XGL_DESCRIPTOR_SET_LAYOUT> layout_objs = make_objects<XGL_DESCRIPTOR_SET_LAYOUT>(layouts);
+    const std::vector<VK_DESCRIPTOR_SET_LAYOUT> layout_objs = make_objects<VK_DESCRIPTOR_SET_LAYOUT>(layouts);
 
-    std::vector<XGL_DESCRIPTOR_SET> set_objs;
+    std::vector<VK_DESCRIPTOR_SET> set_objs;
     set_objs.resize(layout_objs.size());
 
     uint32_t set_count;
-    XGL_RESULT err = xglAllocDescriptorSets(obj(), usage, layout_objs.size(), &layout_objs[0], &set_objs[0], &set_count);
-    if (err == XGL_SUCCESS)
+    VK_RESULT err = vkAllocDescriptorSets(obj(), usage, layout_objs.size(), &layout_objs[0], &set_objs[0], &set_count);
+    if (err == VK_SUCCESS)
         EXPECT(set_count == set_objs.size());
     set_objs.resize(set_count);
 
     std::vector<DescriptorSet *> sets;
     sets.reserve(set_count);
-    for (std::vector<XGL_DESCRIPTOR_SET>::const_iterator it = set_objs.begin(); it != set_objs.end(); it++) {
+    for (std::vector<VK_DESCRIPTOR_SET>::const_iterator it = set_objs.begin(); it != set_objs.end(); it++) {
         // do descriptor sets need memories bound?
         sets.push_back(new DescriptorSet(*it));
     }
@@ -877,12 +877,12 @@ std::vector<DescriptorSet *> DescriptorPool::alloc_sets(XGL_DESCRIPTOR_SET_USAGE
     return sets;
 }
 
-std::vector<DescriptorSet *> DescriptorPool::alloc_sets(XGL_DESCRIPTOR_SET_USAGE usage, const DescriptorSetLayout &layout, uint32_t count)
+std::vector<DescriptorSet *> DescriptorPool::alloc_sets(VK_DESCRIPTOR_SET_USAGE usage, const DescriptorSetLayout &layout, uint32_t count)
 {
     return alloc_sets(usage, std::vector<const DescriptorSetLayout *>(count, &layout));
 }
 
-DescriptorSet *DescriptorPool::alloc_sets(XGL_DESCRIPTOR_SET_USAGE usage, const DescriptorSetLayout &layout)
+DescriptorSet *DescriptorPool::alloc_sets(VK_DESCRIPTOR_SET_USAGE usage, const DescriptorSetLayout &layout)
 {
     std::vector<DescriptorSet *> set = alloc_sets(usage, layout, 1);
     return (set.empty()) ? NULL : set[0];
@@ -890,61 +890,61 @@ DescriptorSet *DescriptorPool::alloc_sets(XGL_DESCRIPTOR_SET_USAGE usage, const 
 
 void DescriptorPool::clear_sets(const std::vector<DescriptorSet *> &sets)
 {
-    const std::vector<XGL_DESCRIPTOR_SET> set_objs = make_objects<XGL_DESCRIPTOR_SET>(sets);
-    xglClearDescriptorSets(obj(), set_objs.size(), &set_objs[0]);
+    const std::vector<VK_DESCRIPTOR_SET> set_objs = make_objects<VK_DESCRIPTOR_SET>(sets);
+    vkClearDescriptorSets(obj(), set_objs.size(), &set_objs[0]);
 }
 
 void DescriptorSet::update(const std::vector<const void *> &update_array)
 {
-    xglUpdateDescriptors(obj(), update_array.size(), const_cast<const void **>(&update_array[0]));
+    vkUpdateDescriptors(obj(), update_array.size(), const_cast<const void **>(&update_array[0]));
 }
 
-void DynamicVpStateObject::init(const Device &dev, const XGL_DYNAMIC_VP_STATE_CREATE_INFO &info)
+void DynamicVpStateObject::init(const Device &dev, const VK_DYNAMIC_VP_STATE_CREATE_INFO &info)
 {
-    DERIVED_OBJECT_INIT(xglCreateDynamicViewportState, dev.obj(), &info);
+    DERIVED_OBJECT_INIT(vkCreateDynamicViewportState, dev.obj(), &info);
     alloc_memory(dev);
 }
 
-void DynamicRsStateObject::init(const Device &dev, const XGL_DYNAMIC_RS_STATE_CREATE_INFO &info)
+void DynamicRsStateObject::init(const Device &dev, const VK_DYNAMIC_RS_STATE_CREATE_INFO &info)
 {
-    DERIVED_OBJECT_INIT(xglCreateDynamicRasterState, dev.obj(), &info);
+    DERIVED_OBJECT_INIT(vkCreateDynamicRasterState, dev.obj(), &info);
     alloc_memory(dev);
 }
 
-void DynamicCbStateObject::init(const Device &dev, const XGL_DYNAMIC_CB_STATE_CREATE_INFO &info)
+void DynamicCbStateObject::init(const Device &dev, const VK_DYNAMIC_CB_STATE_CREATE_INFO &info)
 {
-    DERIVED_OBJECT_INIT(xglCreateDynamicColorBlendState, dev.obj(), &info);
+    DERIVED_OBJECT_INIT(vkCreateDynamicColorBlendState, dev.obj(), &info);
     alloc_memory(dev);
 }
 
-void DynamicDsStateObject::init(const Device &dev, const XGL_DYNAMIC_DS_STATE_CREATE_INFO &info)
+void DynamicDsStateObject::init(const Device &dev, const VK_DYNAMIC_DS_STATE_CREATE_INFO &info)
 {
-    DERIVED_OBJECT_INIT(xglCreateDynamicDepthStencilState, dev.obj(), &info);
+    DERIVED_OBJECT_INIT(vkCreateDynamicDepthStencilState, dev.obj(), &info);
     alloc_memory(dev);
 }
 
-void CmdBuffer::init(const Device &dev, const XGL_CMD_BUFFER_CREATE_INFO &info)
+void CmdBuffer::init(const Device &dev, const VK_CMD_BUFFER_CREATE_INFO &info)
 {
-    DERIVED_OBJECT_INIT(xglCreateCommandBuffer, dev.obj(), &info);
+    DERIVED_OBJECT_INIT(vkCreateCommandBuffer, dev.obj(), &info);
 }
 
-void CmdBuffer::begin(const XGL_CMD_BUFFER_BEGIN_INFO *info)
+void CmdBuffer::begin(const VK_CMD_BUFFER_BEGIN_INFO *info)
 {
-    EXPECT(xglBeginCommandBuffer(obj(), info) == XGL_SUCCESS);
+    EXPECT(vkBeginCommandBuffer(obj(), info) == VK_SUCCESS);
 }
 
-void CmdBuffer::begin(XGL_RENDER_PASS renderpass_obj, XGL_FRAMEBUFFER framebuffer_obj)
+void CmdBuffer::begin(VK_RENDER_PASS renderpass_obj, VK_FRAMEBUFFER framebuffer_obj)
 {
-    XGL_CMD_BUFFER_BEGIN_INFO info = {};
-    XGL_CMD_BUFFER_GRAPHICS_BEGIN_INFO graphics_cmd_buf_info = {};
-    graphics_cmd_buf_info.sType = XGL_STRUCTURE_TYPE_CMD_BUFFER_GRAPHICS_BEGIN_INFO;
+    VK_CMD_BUFFER_BEGIN_INFO info = {};
+    VK_CMD_BUFFER_GRAPHICS_BEGIN_INFO graphics_cmd_buf_info = {};
+    graphics_cmd_buf_info.sType = VK_STRUCTURE_TYPE_CMD_BUFFER_GRAPHICS_BEGIN_INFO;
     graphics_cmd_buf_info.pNext = NULL;
     graphics_cmd_buf_info.renderPassContinue.renderPass = renderpass_obj;
     graphics_cmd_buf_info.renderPassContinue.framebuffer = framebuffer_obj;
 
-    info.flags = XGL_CMD_BUFFER_OPTIMIZE_GPU_SMALL_BATCH_BIT |
-          XGL_CMD_BUFFER_OPTIMIZE_ONE_TIME_SUBMIT_BIT;
-    info.sType = XGL_STRUCTURE_TYPE_CMD_BUFFER_BEGIN_INFO;
+    info.flags = VK_CMD_BUFFER_OPTIMIZE_GPU_SMALL_BATCH_BIT |
+          VK_CMD_BUFFER_OPTIMIZE_ONE_TIME_SUBMIT_BIT;
+    info.sType = VK_STRUCTURE_TYPE_CMD_BUFFER_BEGIN_INFO;
     info.pNext = &graphics_cmd_buf_info;
 
     begin(&info);
@@ -952,22 +952,22 @@ void CmdBuffer::begin(XGL_RENDER_PASS renderpass_obj, XGL_FRAMEBUFFER framebuffe
 
 void CmdBuffer::begin()
 {
-    XGL_CMD_BUFFER_BEGIN_INFO info = {};
-    info.flags = XGL_CMD_BUFFER_OPTIMIZE_GPU_SMALL_BATCH_BIT |
-          XGL_CMD_BUFFER_OPTIMIZE_ONE_TIME_SUBMIT_BIT;
-    info.sType = XGL_STRUCTURE_TYPE_CMD_BUFFER_BEGIN_INFO;
+    VK_CMD_BUFFER_BEGIN_INFO info = {};
+    info.flags = VK_CMD_BUFFER_OPTIMIZE_GPU_SMALL_BATCH_BIT |
+          VK_CMD_BUFFER_OPTIMIZE_ONE_TIME_SUBMIT_BIT;
+    info.sType = VK_STRUCTURE_TYPE_CMD_BUFFER_BEGIN_INFO;
 
     begin(&info);
 }
 
 void CmdBuffer::end()
 {
-    EXPECT(xglEndCommandBuffer(obj()) == XGL_SUCCESS);
+    EXPECT(vkEndCommandBuffer(obj()) == VK_SUCCESS);
 }
 
 void CmdBuffer::reset()
 {
-    EXPECT(xglResetCommandBuffer(obj()) == XGL_SUCCESS);
+    EXPECT(vkResetCommandBuffer(obj()) == VK_SUCCESS);
 }
 
-}; // namespace xgl_testing
+}; // namespace vk_testing

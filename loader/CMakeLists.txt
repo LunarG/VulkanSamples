@@ -21,7 +21,7 @@ set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -DDEBUG")
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -DDEBUG")
 
 if (WIN32)
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DXGL_PROTOTYPES -D_CRT_SECURE_NO_WARNINGS -DXCB_NVIDIA")
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DVK_PROTOTYPES -D_CRT_SECURE_NO_WARNINGS -DXCB_NVIDIA")
 
     add_library(XGL SHARED loader.c loader.h dirent_on_windows.c dispatch.c table_ops.h XGL.def)
     set_target_properties(XGL PROPERTIES LINK_FLAGS "/DEF:${PROJECT_SOURCE_DIR}/loader/XGL.def")
@@ -30,7 +30,7 @@ if (WIN32)
     target_link_libraries(XGL)
 endif()
 if (NOT WIN32)
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DXGL_PROTOTYPES -Wpointer-arith")
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DVK_PROTOTYPES -Wpointer-arith")
 
     add_library(XGL SHARED loader.c dispatch.c table_ops.h)
     set_target_properties(XGL PROPERTIES SOVERSION 0)

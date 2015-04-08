@@ -1,4 +1,4 @@
-//  XGL tests
+//  VK tests
 //
 //  Copyright (C) 2014 LunarG, Inc.
 //
@@ -20,8 +20,8 @@
 //  FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 //  DEALINGS IN THE SOFTWARE.
 
-#include "xgltestframework.h"
-#include "xglrenderframework.h"
+#include "vktestframework.h"
+#include "vkrenderframework.h"
 #include "GL/freeglut_std.h"
 //#include "ShaderLang.h"
 #include "GlslangToSpv.h"
@@ -83,7 +83,7 @@ void TestEnvironment::SetUp()
     // Initialize GLSL to SPV compiler utility
     glslang::InitializeProcess();
 
-    xgl_testing::set_error_callback(test_error_callback);
+    vk_testing::set_error_callback(test_error_callback);
 }
 
 void TestEnvironment::TearDown()
@@ -180,26 +180,26 @@ void XglTestFramework::InitArgs(int *argc, char *argv[])
 void XglTestFramework::WritePPM( const char *basename, XglImage *image )
 {
     string filename;
-    XGL_RESULT err;
+    VK_RESULT err;
     int x, y;
     XglImage displayImage(image->device());
 
-    displayImage.init(image->extent().width, image->extent().height, image->format(), 0, XGL_LINEAR_TILING);
+    displayImage.init(image->extent().width, image->extent().height, image->format(), 0, VK_LINEAR_TILING);
     displayImage.CopyImage(*image);
 
     filename.append(basename);
     filename.append(".ppm");
 
-    const XGL_IMAGE_SUBRESOURCE sr = {
-        XGL_IMAGE_ASPECT_COLOR, 0, 0
+    const VK_IMAGE_SUBRESOURCE sr = {
+        VK_IMAGE_ASPECT_COLOR, 0, 0
     };
-    XGL_SUBRESOURCE_LAYOUT sr_layout;
+    VK_SUBRESOURCE_LAYOUT sr_layout;
     size_t data_size = sizeof(sr_layout);
 
-    err = xglGetImageSubresourceInfo( image->image(), &sr,
-                                      XGL_INFO_TYPE_SUBRESOURCE_LAYOUT,
+    err = vkGetImageSubresourceInfo( image->image(), &sr,
+                                      VK_INFO_TYPE_SUBRESOURCE_LAYOUT,
                                       &data_size, &sr_layout);
-    ASSERT_XGL_SUCCESS( err );
+    ASSERT_VK_SUCCESS( err );
     ASSERT_EQ(data_size, sizeof(sr_layout));
 
     char *ptr;
@@ -218,7 +218,7 @@ void XglTestFramework::WritePPM( const char *basename, XglImage *image )
         const int *row = (const int *) ptr;
         int swapped;
 
-        if (displayImage.format() == XGL_FMT_B8G8R8A8_UNORM)
+        if (displayImage.format() == VK_FMT_B8G8R8A8_UNORM)
         {
             for (x = 0; x < displayImage.width(); x++) {
                 swapped = (*row & 0xff00ff00) | (*row & 0x000000ff) << 16 | (*row & 0x00ff0000) >> 16;
@@ -226,7 +226,7 @@ void XglTestFramework::WritePPM( const char *basename, XglImage *image )
                 row++;
             }
         }
-        else if (displayImage.format() == XGL_FMT_R8G8B8A8_UNORM)
+        else if (displayImage.format() == VK_FMT_R8G8B8A8_UNORM)
         {
             for (x = 0; x < displayImage.width(); x++) {
                 file.write((char *) row, 3);
@@ -300,26 +300,26 @@ void XglTestFramework::Compare(const char *basename, XglImage *image )
 
 void XglTestFramework::Show(const char *comment, XglImage *image)
 {
-    XGL_RESULT err;
+    VK_RESULT err;
 
-    const XGL_IMAGE_SUBRESOURCE sr = {
-        XGL_IMAGE_ASPECT_COLOR, 0, 0
+    const VK_IMAGE_SUBRESOURCE sr = {
+        VK_IMAGE_ASPECT_COLOR, 0, 0
     };
-    XGL_SUBRESOURCE_LAYOUT sr_layout;
+    VK_SUBRESOURCE_LAYOUT sr_layout;
     size_t data_size = sizeof(sr_layout);
     XglTestImageRecord record;
 
     if (!m_show_images) return;
 
-    err = xglGetImageSubresourceInfo( image->image(), &sr, XGL_INFO_TYPE_SUBRESOURCE_LAYOUT,
+    err = vkGetImageSubresourceInfo( image->image(), &sr, VK_INFO_TYPE_SUBRESOURCE_LAYOUT,
                                       &data_size, &sr_layout);
-    ASSERT_XGL_SUCCESS( err );
+    ASSERT_VK_SUCCESS( err );
     ASSERT_EQ(data_size, sizeof(sr_layout));
 
     char *ptr;
 
     err = image->MapMemory( (void **) &ptr );
-    ASSERT_XGL_SUCCESS( err );
+    ASSERT_VK_SUCCESS( err );
 
     ptr += sr_layout.offset;
 
@@ -334,7 +334,7 @@ void XglTestFramework::Show(const char *comment, XglImage *image)
     m_display_image = --m_images.end();
 
     err = image->UnmapMemory();
-    ASSERT_XGL_SUCCESS( err );
+    ASSERT_VK_SUCCESS( err );
 
 }
 
@@ -380,12 +380,12 @@ void XglTestFramework::RecordImage(XglImage * image)
     }
 }
 
-static xgl_testing::Environment *environment;
+static vk_testing::Environment *environment;
 
 TestFrameworkXglPresent::TestFrameworkXglPresent() :
    m_device(environment->default_device()),
    m_queue(*m_device.graphics_queues()[0]),
-   m_cmdbuf(m_device, xgl_testing::CmdBuffer::create_info(m_device.graphics_queue_node_index_))
+   m_cmdbuf(m_device, vk_testing::CmdBuffer::create_info(m_device.graphics_queue_node_index_))
 {
     m_quit = false;
     m_pause = false;
@@ -395,9 +395,9 @@ TestFrameworkXglPresent::TestFrameworkXglPresent() :
 
 void  TestFrameworkXglPresent::Display()
 {
-    XGL_RESULT err;
+    VK_RESULT err;
 
-    XGL_WSI_X11_PRESENT_INFO present = {};
+    VK_WSI_X11_PRESENT_INFO present = {};
     present.destWindow = m_window;
     present.srcImage = m_display_image->m_presentableImage;
 
@@ -410,7 +410,7 @@ void  TestFrameworkXglPresent::Display()
                          m_display_image->m_title.size(),
                          m_display_image->m_title.c_str());
 
-    err = xglWsiX11QueuePresent(m_queue.obj(), &present, NULL);
+    err = vkWsiX11QueuePresent(m_queue.obj(), &present, NULL);
     assert(!err);
 
     m_queue.wait();
@@ -485,55 +485,55 @@ void  TestFrameworkXglPresent::Run()
 
 void TestFrameworkXglPresent::CreatePresentableImages()
 {
-    XGL_RESULT err;
+    VK_RESULT err;
 
     m_display_image = m_images.begin();
 
     for (int x=0; x < m_images.size(); x++)
     {
-        XGL_WSI_X11_PRESENTABLE_IMAGE_CREATE_INFO presentable_image_info = {};
-        presentable_image_info.format = XGL_FMT_B8G8R8A8_UNORM;
-        presentable_image_info.usage = XGL_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+        VK_WSI_X11_PRESENTABLE_IMAGE_CREATE_INFO presentable_image_info = {};
+        presentable_image_info.format = VK_FMT_B8G8R8A8_UNORM;
+        presentable_image_info.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
         presentable_image_info.extent.width = m_display_image->m_width;
         presentable_image_info.extent.height = m_display_image->m_height;
         presentable_image_info.flags = 0;
 
         void *dest_ptr;
 
-        err = xglWsiX11CreatePresentableImage(m_device.obj(), &presentable_image_info,
+        err = vkWsiX11CreatePresentableImage(m_device.obj(), &presentable_image_info,
                         &m_display_image->m_presentableImage, &m_display_image->m_presentableMemory);
         assert(!err);
 
-        xgl_testing::Buffer buf;
-        buf.init(m_device, (XGL_GPU_SIZE) m_display_image->m_data_size);
+        vk_testing::Buffer buf;
+        buf.init(m_device, (VK_GPU_SIZE) m_display_image->m_data_size);
         dest_ptr = buf.map();
         memcpy(dest_ptr,m_display_image->m_data, m_display_image->m_data_size);
         buf.unmap();
 
         m_cmdbuf.begin();
 
-        XGL_BUFFER_IMAGE_COPY region = {};
+        VK_BUFFER_IMAGE_COPY region = {};
         region.imageExtent.height = m_display_image->m_height;
         region.imageExtent.width = m_display_image->m_width;
         region.imageExtent.depth = 1;
 
-        xglCmdCopyBufferToImage(m_cmdbuf.obj(),
+        vkCmdCopyBufferToImage(m_cmdbuf.obj(),
                 buf.obj(),
-                m_display_image->m_presentableImage, XGL_IMAGE_LAYOUT_TRANSFER_DESTINATION_OPTIMAL,
+                m_display_image->m_presentableImage, VK_IMAGE_LAYOUT_TRANSFER_DESTINATION_OPTIMAL,
                 1, &region);
         m_cmdbuf.end();
 
-        xglQueueAddMemReference(m_queue.obj(), m_display_image->m_presentableMemory);
-        xglQueueAddMemReference(m_queue.obj(), buf.memories()[0]);
+        vkQueueAddMemReference(m_queue.obj(), m_display_image->m_presentableMemory);
+        vkQueueAddMemReference(m_queue.obj(), buf.memories()[0]);
 
-        XGL_CMD_BUFFER cmdBufs[1];
+        VK_CMD_BUFFER cmdBufs[1];
         cmdBufs[0] = m_cmdbuf.obj();
 
-        xglQueueSubmit(m_queue.obj(), 1, cmdBufs, NULL);
+        vkQueueSubmit(m_queue.obj(), 1, cmdBufs, NULL);
         m_queue.wait();
 
-        xglQueueRemoveMemReference(m_queue.obj(), m_display_image->m_presentableMemory);
-        xglQueueRemoveMemReference(m_queue.obj(), buf.memories()[0]);
+        vkQueueRemoveMemReference(m_queue.obj(), m_display_image->m_presentableMemory);
+        vkQueueRemoveMemReference(m_queue.obj(), buf.memories()[0]);
 
         if (m_display_image->m_width > m_width)
             m_width = m_display_image->m_width;
@@ -594,7 +594,7 @@ void TestFrameworkXglPresent::TearDown()
 {
     std::list<XglTestImageRecord>::const_iterator iterator;
     for (iterator = m_images.begin(); iterator != m_images.end(); ++iterator) {
-        xglDestroyObject(iterator->m_presentableImage);
+        vkDestroyObject(iterator->m_presentableImage);
     }
     xcb_destroy_window(environment->m_connection, m_window);
 }
@@ -603,18 +603,18 @@ void XglTestFramework::Finish()
 {
     if (m_images.size() == 0) return;
 
-    environment = new xgl_testing::Environment();
+    environment = new vk_testing::Environment();
     ::testing::AddGlobalTestEnvironment(environment);
     environment->X11SetUp();
 
     {
-        TestFrameworkXglPresent xglPresent;
+        TestFrameworkXglPresent vkPresent;
 
-        xglPresent.InitPresentFramework(m_images);
-        xglPresent.CreatePresentableImages();
-        xglPresent.CreateMyWindow();
-        xglPresent.Run();
-        xglPresent.TearDown();
+        vkPresent.InitPresentFramework(m_images);
+        vkPresent.CreatePresentableImages();
+        vkPresent.CreateMyWindow();
+        vkPresent.Run();
+        vkPresent.TearDown();
     }
     environment->TearDown();
 }
@@ -1079,27 +1079,27 @@ EShLanguage XglTestFramework::FindLanguage(const std::string& name)
 }
 
 //
-// Convert XGL shader type to compiler's
+// Convert VK shader type to compiler's
 //
-EShLanguage XglTestFramework::FindLanguage(const XGL_PIPELINE_SHADER_STAGE shader_type)
+EShLanguage XglTestFramework::FindLanguage(const VK_PIPELINE_SHADER_STAGE shader_type)
 {
     switch (shader_type) {
-    case XGL_SHADER_STAGE_VERTEX:
+    case VK_SHADER_STAGE_VERTEX:
         return EShLangVertex;
 
-    case XGL_SHADER_STAGE_TESS_CONTROL:
+    case VK_SHADER_STAGE_TESS_CONTROL:
         return EShLangTessControl;
 
-    case XGL_SHADER_STAGE_TESS_EVALUATION:
+    case VK_SHADER_STAGE_TESS_EVALUATION:
         return EShLangTessEvaluation;
 
-    case XGL_SHADER_STAGE_GEOMETRY:
+    case VK_SHADER_STAGE_GEOMETRY:
         return EShLangGeometry;
 
-    case XGL_SHADER_STAGE_FRAGMENT:
+    case VK_SHADER_STAGE_FRAGMENT:
         return EShLangFragment;
 
-    case XGL_SHADER_STAGE_COMPUTE:
+    case VK_SHADER_STAGE_COMPUTE:
         return EShLangCompute;
 
     default:
@@ -1109,10 +1109,10 @@ EShLanguage XglTestFramework::FindLanguage(const XGL_PIPELINE_SHADER_STAGE shade
 
 
 //
-// Compile a given string containing GLSL into SPV for use by XGL
+// Compile a given string containing GLSL into SPV for use by VK
 // Return value of false means an error was encountered.
 //
-bool XglTestFramework::GLSLtoSPV(const XGL_PIPELINE_SHADER_STAGE shader_type,
+bool XglTestFramework::GLSLtoSPV(const VK_PIPELINE_SHADER_STAGE shader_type,
                                  const char *pshader,
                                  std::vector<unsigned int> &spv)
 {

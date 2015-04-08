@@ -1,12 +1,12 @@
-#include <xgl.h>
-#include <xglDbg.h>
+#include <vulkan.h>
+#include <vkDbg.h>
 #include "gtest-1.7.0/include/gtest/gtest.h"
-#include "xglrenderframework.h"
+#include "vkrenderframework.h"
 
-void XGLAPI myDbgFunc(
-    XGL_DBG_MSG_TYPE     msgType,
-    XGL_VALIDATION_LEVEL validationLevel,
-    XGL_BASE_OBJECT      srcObject,
+void VKAPI myDbgFunc(
+    VK_DBG_MSG_TYPE     msgType,
+    VK_VALIDATION_LEVEL validationLevel,
+    VK_BASE_OBJECT      srcObject,
     size_t               location,
     int32_t              msgCode,
     const char*          pMsg,
@@ -14,36 +14,36 @@ void XGLAPI myDbgFunc(
 
 class ErrorMonitor {
 public:
-    ErrorMonitor(XGL_INSTANCE inst)
+    ErrorMonitor(VK_INSTANCE inst)
     {
-        xglDbgRegisterMsgCallback(inst, myDbgFunc, this);
-        m_msgType = XGL_DBG_MSG_UNKNOWN;
+        vkDbgRegisterMsgCallback(inst, myDbgFunc, this);
+        m_msgType = VK_DBG_MSG_UNKNOWN;
     }
     void ClearState()
     {
-        m_msgType = XGL_DBG_MSG_UNKNOWN;
+        m_msgType = VK_DBG_MSG_UNKNOWN;
         m_msgString.clear();
     }
-    XGL_DBG_MSG_TYPE GetState(std::string *msgString)
+    VK_DBG_MSG_TYPE GetState(std::string *msgString)
     {
         *msgString = m_msgString;
         return m_msgType;
     }
-    void SetState(XGL_DBG_MSG_TYPE msgType, const char *msgString)
+    void SetState(VK_DBG_MSG_TYPE msgType, const char *msgString)
     {
         m_msgType = msgType;
         m_msgString = *msgString;
     }
 
 private:
-    XGL_DBG_MSG_TYPE        m_msgType;
+    VK_DBG_MSG_TYPE        m_msgType;
     std::string             m_msgString;
 
 };
-void XGLAPI myDbgFunc(
-    XGL_DBG_MSG_TYPE     msgType,
-    XGL_VALIDATION_LEVEL validationLevel,
-    XGL_BASE_OBJECT      srcObject,
+void VKAPI myDbgFunc(
+    VK_DBG_MSG_TYPE     msgType,
+    VK_VALIDATION_LEVEL validationLevel,
+    VK_BASE_OBJECT      srcObject,
     size_t               location,
     int32_t              msgCode,
     const char*          pMsg,
@@ -55,8 +55,8 @@ void XGLAPI myDbgFunc(
 class XglLayerTest : public XglRenderFramework
 {
 public:
-    XGL_RESULT BeginCommandBuffer(XglCommandBufferObj &cmdBuffer);
-    XGL_RESULT EndCommandBuffer(XglCommandBufferObj &cmdBuffer);
+    VK_RESULT BeginCommandBuffer(XglCommandBufferObj &cmdBuffer);
+    VK_RESULT EndCommandBuffer(XglCommandBufferObj &cmdBuffer);
 
 protected:
         XglMemoryRefManager         m_memoryRefManager;
@@ -64,13 +64,13 @@ protected:
 
     virtual void SetUp() {
 
-        this->app_info.sType = XGL_STRUCTURE_TYPE_APPLICATION_INFO;
+        this->app_info.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
         this->app_info.pNext = NULL;
         this->app_info.pAppName = "layer_tests";
         this->app_info.appVersion = 1;
         this->app_info.pEngineName = "unittest";
         this->app_info.engineVersion = 1;
-        this->app_info.apiVersion = XGL_API_VERSION;
+        this->app_info.apiVersion = VK_API_VERSION;
 
         InitFramework();
         m_errorMonitor = new ErrorMonitor(inst);
@@ -82,9 +82,9 @@ protected:
         ShutdownFramework();
     }
 };
-XGL_RESULT XglLayerTest::BeginCommandBuffer(XglCommandBufferObj &cmdBuffer)
+VK_RESULT XglLayerTest::BeginCommandBuffer(XglCommandBufferObj &cmdBuffer)
 {
-    XGL_RESULT result;
+    VK_RESULT result;
 
     result = cmdBuffer.BeginCommandBuffer();
 
@@ -92,16 +92,16 @@ XGL_RESULT XglLayerTest::BeginCommandBuffer(XglCommandBufferObj &cmdBuffer)
      * For render test all drawing happens in a single render pass
      * on a single command buffer.
      */
-    if (XGL_SUCCESS == result) {
+    if (VK_SUCCESS == result) {
         cmdBuffer.BeginRenderPass(renderPass(), framebuffer());
     }
 
     return result;
 }
 
-XGL_RESULT XglLayerTest::EndCommandBuffer(XglCommandBufferObj &cmdBuffer)
+VK_RESULT XglLayerTest::EndCommandBuffer(XglCommandBufferObj &cmdBuffer)
 {
-    XGL_RESULT result;
+    VK_RESULT result;
 
     cmdBuffer.EndRenderPass(renderPass());
 
@@ -112,13 +112,13 @@ XGL_RESULT XglLayerTest::EndCommandBuffer(XglCommandBufferObj &cmdBuffer)
 
 TEST_F(XglLayerTest, UseSignaledFence)
 {
-    xgl_testing::Fence testFence;
-    XGL_DBG_MSG_TYPE msgType;
+    vk_testing::Fence testFence;
+    VK_DBG_MSG_TYPE msgType;
     std::string msgString;
-    const XGL_FENCE_CREATE_INFO fenceInfo = {
-        .sType = XGL_STRUCTURE_TYPE_FENCE_CREATE_INFO,
+    const VK_FENCE_CREATE_INFO fenceInfo = {
+        .sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
         .pNext = NULL,
-        .flags = XGL_FENCE_CREATE_SIGNALED_BIT,
+        .flags = VK_FENCE_CREATE_SIGNALED_BIT,
     };
 
     // Register error callback to catch errors and record parameters

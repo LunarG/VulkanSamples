@@ -1,5 +1,5 @@
 /*
- * XGL
+ * Vulkan
  *
  * Copyright (C) 2014 LunarG, Inc.
  *
@@ -36,23 +36,23 @@ static void query_destroy(struct intel_obj *obj)
     intel_query_destroy(query);
 }
 
-static XGL_RESULT query_get_info(struct intel_base *base, int type,
+static VK_RESULT query_get_info(struct intel_base *base, int type,
                                  size_t *size, void *data)
 {
     struct intel_query *query = intel_query_from_base(base);
-    XGL_RESULT ret = XGL_SUCCESS;
+    VK_RESULT ret = VK_SUCCESS;
 
     switch (type) {
-    case XGL_INFO_TYPE_MEMORY_REQUIREMENTS:
+    case VK_INFO_TYPE_MEMORY_REQUIREMENTS:
         {
-            XGL_MEMORY_REQUIREMENTS *mem_req = data;
+            VK_MEMORY_REQUIREMENTS *mem_req = data;
 
-            *size = sizeof(XGL_MEMORY_REQUIREMENTS);
+            *size = sizeof(VK_MEMORY_REQUIREMENTS);
             if (data == NULL)
                 return ret;
             mem_req->size = query->slot_stride * query->slot_count;
             mem_req->alignment = 64;
-            mem_req->memType =  XGL_MEMORY_TYPE_OTHER;
+            mem_req->memType =  VK_MEMORY_TYPE_OTHER;
         }
         break;
     default:
@@ -63,17 +63,17 @@ static XGL_RESULT query_get_info(struct intel_base *base, int type,
     return ret;
 }
 
-XGL_RESULT intel_query_create(struct intel_dev *dev,
-                              const XGL_QUERY_POOL_CREATE_INFO *info,
+VK_RESULT intel_query_create(struct intel_dev *dev,
+                              const VK_QUERY_POOL_CREATE_INFO *info,
                               struct intel_query **query_ret)
 {
     struct intel_query *query;
 
     query = (struct intel_query *) intel_base_create(&dev->base.handle,
-            sizeof(*query), dev->base.dbg, XGL_DBG_OBJECT_QUERY_POOL,
+            sizeof(*query), dev->base.dbg, VK_DBG_OBJECT_QUERY_POOL,
             info, 0);
     if (!query)
-        return XGL_ERROR_OUT_OF_MEMORY;
+        return VK_ERROR_OUT_OF_MEMORY;
 
     query->type = info->queryType;
     query->slot_count = info->slots;
@@ -84,12 +84,12 @@ XGL_RESULT intel_query_create(struct intel_dev *dev,
      * compare the differences to get the query results.
      */
     switch (info->queryType) {
-    case XGL_QUERY_OCCLUSION:
+    case VK_QUERY_OCCLUSION:
         query->slot_stride = u_align(sizeof(uint64_t) * 2, 64);
         break;
-    case XGL_QUERY_PIPELINE_STATISTICS:
+    case VK_QUERY_PIPELINE_STATISTICS:
         query->slot_stride =
-            u_align(sizeof(XGL_PIPELINE_STATISTICS_DATA) * 2, 64);
+            u_align(sizeof(VK_PIPELINE_STATISTICS_DATA) * 2, 64);
         break;
     default:
         break;
@@ -97,7 +97,7 @@ XGL_RESULT intel_query_create(struct intel_dev *dev,
 
     if (!query->slot_stride) {
         intel_query_destroy(query);
-        return XGL_ERROR_INVALID_VALUE;
+        return VK_ERROR_INVALID_VALUE;
     }
 
     query->obj.base.get_info = query_get_info;
@@ -105,7 +105,7 @@ XGL_RESULT intel_query_create(struct intel_dev *dev,
 
     *query_ret = query;
 
-    return XGL_SUCCESS;
+    return VK_SUCCESS;
 }
 
 void intel_query_destroy(struct intel_query *query)
@@ -131,7 +131,7 @@ query_process_occlusion(const struct intel_query *query,
 static void
 query_process_pipeline_statistics(const struct intel_query *query,
                                   uint32_t count, const uint8_t *raw,
-                                  XGL_PIPELINE_STATISTICS_DATA *results)
+                                  VK_PIPELINE_STATISTICS_DATA *results)
 {
     const uint32_t num_regs = sizeof(results[0]) / sizeof(uint64_t);
     uint32_t i, j;
@@ -148,29 +148,29 @@ query_process_pipeline_statistics(const struct intel_query *query,
     }
 }
 
-XGL_RESULT intel_query_get_results(struct intel_query *query,
+VK_RESULT intel_query_get_results(struct intel_query *query,
                                    uint32_t slot_start, uint32_t slot_count,
                                    void *results)
 {
     const uint8_t *ptr;
 
     if (!query->obj.mem)
-        return XGL_ERROR_MEMORY_NOT_BOUND;
+        return VK_ERROR_MEMORY_NOT_BOUND;
 
     if (intel_mem_is_busy(query->obj.mem))
-        return XGL_NOT_READY;
+        return VK_NOT_READY;
 
     ptr = (const uint8_t *) intel_mem_map_sync(query->obj.mem, false);
     if (!ptr)
-        return XGL_ERROR_MEMORY_MAP_FAILED;
+        return VK_ERROR_MEMORY_MAP_FAILED;
 
     ptr += query->obj.offset + query->slot_stride * slot_start;
 
     switch (query->type) {
-    case XGL_QUERY_OCCLUSION:
+    case VK_QUERY_OCCLUSION:
         query_process_occlusion(query, slot_count, ptr, results);
         break;
-    case XGL_QUERY_PIPELINE_STATISTICS:
+    case VK_QUERY_PIPELINE_STATISTICS:
         query_process_pipeline_statistics(query, slot_count, ptr, results);
         break;
     default:
@@ -180,13 +180,13 @@ XGL_RESULT intel_query_get_results(struct intel_query *query,
 
     intel_mem_unmap(query->obj.mem);
 
-    return XGL_SUCCESS;
+    return VK_SUCCESS;
 }
 
-ICD_EXPORT XGL_RESULT XGLAPI xglCreateQueryPool(
-    XGL_DEVICE                                  device,
-    const XGL_QUERY_POOL_CREATE_INFO*           pCreateInfo,
-    XGL_QUERY_POOL*                             pQueryPool)
+ICD_EXPORT VK_RESULT VKAPI vkCreateQueryPool(
+    VK_DEVICE                                  device,
+    const VK_QUERY_POOL_CREATE_INFO*           pCreateInfo,
+    VK_QUERY_POOL*                             pQueryPool)
 {
     struct intel_dev *dev = intel_dev(device);
 
@@ -194,8 +194,8 @@ ICD_EXPORT XGL_RESULT XGLAPI xglCreateQueryPool(
             (struct intel_query **) pQueryPool);
 }
 
-ICD_EXPORT XGL_RESULT XGLAPI xglGetQueryPoolResults(
-    XGL_QUERY_POOL                              queryPool,
+ICD_EXPORT VK_RESULT VKAPI vkGetQueryPoolResults(
+    VK_QUERY_POOL                              queryPool,
     uint32_t                                    startQuery,
     uint32_t                                    queryCount,
     size_t*                                     pDataSize,
@@ -204,19 +204,19 @@ ICD_EXPORT XGL_RESULT XGLAPI xglGetQueryPoolResults(
     struct intel_query *query = intel_query(queryPool);
 
     switch (query->type) {
-    case XGL_QUERY_OCCLUSION:
+    case VK_QUERY_OCCLUSION:
         *pDataSize = sizeof(uint64_t) * queryCount;
         break;
-    case XGL_QUERY_PIPELINE_STATISTICS:
-        *pDataSize = sizeof(XGL_PIPELINE_STATISTICS_DATA) * queryCount;
+    case VK_QUERY_PIPELINE_STATISTICS:
+        *pDataSize = sizeof(VK_PIPELINE_STATISTICS_DATA) * queryCount;
         break;
     default:
-        return XGL_ERROR_INVALID_HANDLE;
+        return VK_ERROR_INVALID_HANDLE;
         break;
     }
 
     if (pData)
         return intel_query_get_results(query, startQuery, queryCount, pData);
     else
-        return XGL_SUCCESS;
+        return VK_SUCCESS;
 }

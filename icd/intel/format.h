@@ -1,5 +1,5 @@
 /*
- * XGL
+ * Vulkan
  *
  * Copyright (C) 2014 LunarG, Inc.
  *
@@ -33,17 +33,17 @@
 struct intel_gpu;
 
 static inline bool intel_format_has_depth(const struct intel_gpu *gpu,
-                                          XGL_FORMAT format)
+                                          VK_FORMAT format)
 {
     bool has_depth = false;
 
     switch (format) {
-    case XGL_FMT_D16_UNORM:
-    case XGL_FMT_D24_UNORM:
-    case XGL_FMT_D32_SFLOAT:
-    /* XGL_FMT_D16_UNORM_S8_UINT is unsupported */
-    case XGL_FMT_D24_UNORM_S8_UINT:
-    case XGL_FMT_D32_SFLOAT_S8_UINT:
+    case VK_FMT_D16_UNORM:
+    case VK_FMT_D24_UNORM:
+    case VK_FMT_D32_SFLOAT:
+    /* VK_FMT_D16_UNORM_S8_UINT is unsupported */
+    case VK_FMT_D24_UNORM_S8_UINT:
+    case VK_FMT_D32_SFLOAT_S8_UINT:
         has_depth = true;
         break;
     default:
@@ -54,6 +54,6 @@ static inline bool intel_format_has_depth(const struct intel_gpu *gpu,
 }
 
 int intel_format_translate_color(const struct intel_gpu *gpu,
-                                 XGL_FORMAT format);
+                                 VK_FORMAT format);
 
 #endif /* FORMAT_H */

@@ -3,12 +3,12 @@ This sample driver implementation provide multiple subcomponents required to bui
 - [Implementation for Intel GPUs](intel)
 - [Null driver](nulldrv)
 - [*Sample Driver Tests*](../tests)
-    - Now includes Golden images to verify xgl_render_tests rendering.
+    - Now includes Golden images to verify vk_render_tests rendering.
 
-common/ provides helper and utility functions, as well as all XGL entry points
-except xglInitAndEnumerateGpus.  Hardware drivers are required to provide that
-function, and to embed a "XGL_LAYER_DISPATCH_TABLE *" as the first member of
-XGL_PHYSICAL_GPU and all XGL_BASE_OBJECT.
+common/ provides helper and utility functions, as well as all VK entry points
+except vkInitAndEnumerateGpus.  Hardware drivers are required to provide that
+function, and to embed a "VK_LAYER_DISPATCH_TABLE *" as the first member of
+VK_PHYSICAL_GPU and all VK_BASE_OBJECT.
 
 Thread safety
 
@@ -20,7 +20,7 @@ Thread safety
  They require that there is no other thread calling the ICD when these
  functions are called
 
-  - xglInitAndEnumerateGpus
-  - xglDbgRegisterMsgCallback
-  - xglDbgUnregisterMsgCallback
-  - xglDbgSetGlobalOption
+  - vkInitAndEnumerateGpus
+  - vkDbgRegisterMsgCallback
+  - vkDbgUnregisterMsgCallback
+  - vkDbgSetGlobalOption

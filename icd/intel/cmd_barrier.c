@@ -1,5 +1,5 @@
 /*
- * XGL
+ * Vulkan
  *
  * Copyright (C) 2014 LunarG, Inc.
  *
@@ -45,36 +45,36 @@ enum {
 };
 
 static uint32_t img_get_layout_ops(const struct intel_img *img,
-                                   XGL_IMAGE_LAYOUT layout)
+                                   VK_IMAGE_LAYOUT layout)
 {
     uint32_t ops;
 
     switch (layout) {
-    case XGL_IMAGE_LAYOUT_GENERAL:
+    case VK_IMAGE_LAYOUT_GENERAL:
         ops = READ_OP | WRITE_OP;
         break;
-    case XGL_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL:
+    case VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL:
         ops = READ_OP | WRITE_OP;
         break;
-    case XGL_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL:
+    case VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL:
         ops = READ_OP | WRITE_OP | HIZ_OP;
         break;
-    case XGL_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL:
+    case VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL:
         ops = READ_OP | HIZ_OP;
         break;
-    case XGL_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL:
+    case VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL:
         ops = READ_OP;
         break;
-    case XGL_IMAGE_LAYOUT_CLEAR_OPTIMAL:
+    case VK_IMAGE_LAYOUT_CLEAR_OPTIMAL:
         ops = WRITE_OP | HIZ_OP;
         break;
-    case XGL_IMAGE_LAYOUT_TRANSFER_SOURCE_OPTIMAL:
+    case VK_IMAGE_LAYOUT_TRANSFER_SOURCE_OPTIMAL:
         ops = READ_OP;
         break;
-    case XGL_IMAGE_LAYOUT_TRANSFER_DESTINATION_OPTIMAL:
+    case VK_IMAGE_LAYOUT_TRANSFER_DESTINATION_OPTIMAL:
         ops = WRITE_OP;
         break;
-    case XGL_IMAGE_LAYOUT_UNDEFINED:
+    case VK_IMAGE_LAYOUT_UNDEFINED:
     default:
         ops = 0;
         break;
@@ -84,40 +84,40 @@ static uint32_t img_get_layout_ops(const struct intel_img *img,
 }
 
 static uint32_t img_get_layout_caches(const struct intel_img *img,
-                                     XGL_IMAGE_LAYOUT layout)
+                                     VK_IMAGE_LAYOUT layout)
 {
     uint32_t caches;
 
     switch (layout) {
-    case XGL_IMAGE_LAYOUT_GENERAL:
+    case VK_IMAGE_LAYOUT_GENERAL:
         // General layout when image can be used for any kind of access
         caches = MEM_CACHE | DATA_READ_CACHE | DATA_WRITE_CACHE | RENDER_CACHE | SAMPLER_CACHE;
         break;
-    case XGL_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL:
+    case VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL:
         // Optimal layout when image is only used for color attachment read/write
         caches = DATA_WRITE_CACHE | RENDER_CACHE;
         break;
-    case XGL_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL:
+    case VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL:
         // Optimal layout when image is only used for depth/stencil attachment read/write
         caches = DATA_WRITE_CACHE | RENDER_CACHE;
         break;
-    case XGL_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL:
+    case VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL:
         // Optimal layout when image is used for read only depth/stencil attachment and shader access
         caches = RENDER_CACHE;
         break;
-    case XGL_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL:
+    case VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL:
         // Optimal layout when image is used for read only shader access
         caches = DATA_READ_CACHE | SAMPLER_CACHE;
         break;
-    case XGL_IMAGE_LAYOUT_CLEAR_OPTIMAL:
+    case VK_IMAGE_LAYOUT_CLEAR_OPTIMAL:
         // Optimal layout when image is used only for clear operations
         caches = RENDER_CACHE;
         break;
-    case XGL_IMAGE_LAYOUT_TRANSFER_SOURCE_OPTIMAL:
+    case VK_IMAGE_LAYOUT_TRANSFER_SOURCE_OPTIMAL:
         // Optimal layout when image is used only as source of transfer operations
         caches = MEM_CACHE | DATA_READ_CACHE | RENDER_CACHE | SAMPLER_CACHE;
         break;
-    case XGL_IMAGE_LAYOUT_TRANSFER_DESTINATION_OPTIMAL:
+    case VK_IMAGE_LAYOUT_TRANSFER_DESTINATION_OPTIMAL:
         // Optimal layout when image is used only as destination of transfer operations
         caches = MEM_CACHE | DATA_WRITE_CACHE | RENDER_CACHE;
         break;
@@ -131,9 +131,9 @@ static uint32_t img_get_layout_caches(const struct intel_img *img,
 
 static void cmd_resolve_depth(struct intel_cmd *cmd,
                               struct intel_img *img,
-                              XGL_IMAGE_LAYOUT old_layout,
-                              XGL_IMAGE_LAYOUT new_layout,
-                              const XGL_IMAGE_SUBRESOURCE_RANGE *range)
+                              VK_IMAGE_LAYOUT old_layout,
+                              VK_IMAGE_LAYOUT new_layout,
+                              const VK_IMAGE_SUBRESOURCE_RANGE *range)
 {
     const uint32_t old_ops = img_get_layout_ops(img, old_layout);
     const uint32_t new_ops = img_get_layout_ops(img, new_layout);
@@ -190,30 +190,30 @@ static void cmd_memory_barriers(struct intel_cmd *cmd,
                                 const void** memory_barriers)
 {
     uint32_t i;
-    XGL_FLAGS input_mask = 0;
-    XGL_FLAGS output_mask = 0;
+    VK_FLAGS input_mask = 0;
+    VK_FLAGS output_mask = 0;
 
     for (i = 0; i < memory_barrier_count; i++) {
 
         const union {
-            XGL_STRUCTURE_TYPE type;
+            VK_STRUCTURE_TYPE type;
 
-            XGL_MEMORY_BARRIER mem;
-            XGL_BUFFER_MEMORY_BARRIER buf;
-            XGL_IMAGE_MEMORY_BARRIER img;
+            VK_MEMORY_BARRIER mem;
+            VK_BUFFER_MEMORY_BARRIER buf;
+            VK_IMAGE_MEMORY_BARRIER img;
         } *u = memory_barriers[i];
 
         switch(u->type)
         {
-        case XGL_STRUCTURE_TYPE_MEMORY_BARRIER:
+        case VK_STRUCTURE_TYPE_MEMORY_BARRIER:
             output_mask |= u->mem.outputMask;
             input_mask  |= u->mem.inputMask;
             break;
-        case XGL_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER:
+        case VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER:
             output_mask |= u->buf.outputMask;
             input_mask  |= u->buf.inputMask;
             break;
-        case XGL_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER:
+        case VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER:
             output_mask |= u->img.outputMask;
             input_mask  |= u->img.inputMask;
             {
@@ -233,58 +233,58 @@ static void cmd_memory_barriers(struct intel_cmd *cmd,
         }
     }
 
-    if (output_mask & XGL_MEMORY_OUTPUT_SHADER_WRITE_BIT) {
+    if (output_mask & VK_MEMORY_OUTPUT_SHADER_WRITE_BIT) {
         flush_flags |= GEN7_PIPE_CONTROL_DC_FLUSH;
     }
-    if (output_mask & XGL_MEMORY_OUTPUT_COLOR_ATTACHMENT_BIT) {
+    if (output_mask & VK_MEMORY_OUTPUT_COLOR_ATTACHMENT_BIT) {
         flush_flags |= GEN6_PIPE_CONTROL_RENDER_CACHE_FLUSH;
     }
-    if (output_mask & XGL_MEMORY_OUTPUT_DEPTH_STENCIL_ATTACHMENT_BIT) {
+    if (output_mask & VK_MEMORY_OUTPUT_DEPTH_STENCIL_ATTACHMENT_BIT) {
         flush_flags |= GEN6_PIPE_CONTROL_DEPTH_CACHE_FLUSH;
     }
 
-    /* CPU write is cache coherent, so XGL_MEMORY_OUTPUT_CPU_WRITE_BIT needs no flush. */
-    /* Meta handles flushes, so XGL_MEMORY_OUTPUT_COPY_BIT needs no flush. */
+    /* CPU write is cache coherent, so VK_MEMORY_OUTPUT_CPU_WRITE_BIT needs no flush. */
+    /* Meta handles flushes, so VK_MEMORY_OUTPUT_COPY_BIT needs no flush. */
 
-    if (input_mask & (XGL_MEMORY_INPUT_SHADER_READ_BIT | XGL_MEMORY_INPUT_UNIFORM_READ_BIT)) {
+    if (input_mask & (VK_MEMORY_INPUT_SHADER_READ_BIT | VK_MEMORY_INPUT_UNIFORM_READ_BIT)) {
         flush_flags |= GEN6_PIPE_CONTROL_TEXTURE_CACHE_INVALIDATE;
     }
 
-    if (input_mask & XGL_MEMORY_INPUT_UNIFORM_READ_BIT) {
+    if (input_mask & VK_MEMORY_INPUT_UNIFORM_READ_BIT) {
         flush_flags |= GEN6_PIPE_CONTROL_CONSTANT_CACHE_INVALIDATE;
     }
 
-    if (input_mask & XGL_MEMORY_INPUT_VERTEX_ATTRIBUTE_FETCH_BIT) {
+    if (input_mask & VK_MEMORY_INPUT_VERTEX_ATTRIBUTE_FETCH_BIT) {
         flush_flags |= GEN6_PIPE_CONTROL_VF_CACHE_INVALIDATE;
     }
 
     /* These bits have no corresponding cache invalidate operation.
-     * XGL_MEMORY_INPUT_CPU_READ_BIT
-     * XGL_MEMORY_INPUT_INDIRECT_COMMAND_BIT
-     * XGL_MEMORY_INPUT_INDEX_FETCH_BIT
-     * XGL_MEMORY_INPUT_COLOR_ATTACHMENT_BIT
-     * XGL_MEMORY_INPUT_DEPTH_STENCIL_ATTACHMENT_BIT
-     * XGL_MEMORY_INPUT_COPY_BIT
+     * VK_MEMORY_INPUT_CPU_READ_BIT
+     * VK_MEMORY_INPUT_INDIRECT_COMMAND_BIT
+     * VK_MEMORY_INPUT_INDEX_FETCH_BIT
+     * VK_MEMORY_INPUT_COLOR_ATTACHMENT_BIT
+     * VK_MEMORY_INPUT_DEPTH_STENCIL_ATTACHMENT_BIT
+     * VK_MEMORY_INPUT_COPY_BIT
      */
 
     cmd_batch_flush(cmd, flush_flags);
 }
 
-ICD_EXPORT void XGLAPI xglCmdWaitEvents(
-    XGL_CMD_BUFFER                              cmdBuffer,
-    const XGL_EVENT_WAIT_INFO*                  pWaitInfo)
+ICD_EXPORT void VKAPI vkCmdWaitEvents(
+    VK_CMD_BUFFER                              cmdBuffer,
+    const VK_EVENT_WAIT_INFO*                  pWaitInfo)
 {
     struct intel_cmd *cmd = intel_cmd(cmdBuffer);
 
-    /* This hardware will always wait at XGL_WAIT_EVENT_TOP_OF_PIPE.
-     * Passing a pWaitInfo->waitEvent of XGL_WAIT_EVENT_BEFORE_FRAGMENT_PROCESSING
+    /* This hardware will always wait at VK_WAIT_EVENT_TOP_OF_PIPE.
+     * Passing a pWaitInfo->waitEvent of VK_WAIT_EVENT_BEFORE_FRAGMENT_PROCESSING
      * does not change that.
      */
 
     /* Because the command buffer is serialized, reaching
      * a pipelined wait is always after completion of prior events.
      * pWaitInfo->pEvents need not be examined.
-     * xglCmdWaitEvents is equivalent to memory barrier part of xglCmdPipelineBarrier.
+     * vkCmdWaitEvents is equivalent to memory barrier part of vkCmdPipelineBarrier.
      * cmd_memory_barriers will wait for GEN6_PIPE_CONTROL_CS_STALL and perform
      * appropriate cache control.
      */
@@ -293,39 +293,39 @@ ICD_EXPORT void XGLAPI xglCmdWaitEvents(
             pWaitInfo->memBarrierCount, pWaitInfo->ppMemBarriers);
 }
 
-ICD_EXPORT void XGLAPI xglCmdPipelineBarrier(
-    XGL_CMD_BUFFER                              cmdBuffer,
-    const XGL_PIPELINE_BARRIER*                 pBarrier)
+ICD_EXPORT void VKAPI vkCmdPipelineBarrier(
+    VK_CMD_BUFFER                              cmdBuffer,
+    const VK_PIPELINE_BARRIER*                 pBarrier)
 {
     struct intel_cmd *cmd = intel_cmd(cmdBuffer);
     uint32_t pipe_control_flags = 0;
     uint32_t i;
 
-    /* This hardware will always wait at XGL_WAIT_EVENT_TOP_OF_PIPE.
-     * Passing a pBarrier->waitEvent of XGL_WAIT_EVENT_BEFORE_FRAGMENT_PROCESSING
+    /* This hardware will always wait at VK_WAIT_EVENT_TOP_OF_PIPE.
+     * Passing a pBarrier->waitEvent of VK_WAIT_EVENT_BEFORE_FRAGMENT_PROCESSING
      * does not change that.
      */
 
     /* Cache control is done with PIPE_CONTROL flags.
-     * With no GEN6_PIPE_CONTROL_CS_STALL flag set, it behaves as XGL_PIPE_EVENT_TOP_OF_PIPE.
-     * All other pEvents values will behave as XGL_PIPE_EVENT_GPU_COMMANDS_COMPLETE.
+     * With no GEN6_PIPE_CONTROL_CS_STALL flag set, it behaves as VK_PIPE_EVENT_TOP_OF_PIPE.
+     * All other pEvents values will behave as VK_PIPE_EVENT_GPU_COMMANDS_COMPLETE.
      */
     for (i = 0; i < pBarrier->eventCount; i++) {
         switch(pBarrier->pEvents[i])
         {
-        case XGL_PIPE_EVENT_TOP_OF_PIPE:
+        case VK_PIPE_EVENT_TOP_OF_PIPE:
             break;
-        case XGL_PIPE_EVENT_VERTEX_PROCESSING_COMPLETE:
-        case XGL_PIPE_EVENT_LOCAL_FRAGMENT_PROCESSING_COMPLETE:
-        case XGL_PIPE_EVENT_FRAGMENT_PROCESSING_COMPLETE:
-        case XGL_PIPE_EVENT_GRAPHICS_PIPELINE_COMPLETE:
-        case XGL_PIPE_EVENT_COMPUTE_PIPELINE_COMPLETE:
-        case XGL_PIPE_EVENT_TRANSFER_COMPLETE:
-        case XGL_PIPE_EVENT_GPU_COMMANDS_COMPLETE:
+        case VK_PIPE_EVENT_VERTEX_PROCESSING_COMPLETE:
+        case VK_PIPE_EVENT_LOCAL_FRAGMENT_PROCESSING_COMPLETE:
+        case VK_PIPE_EVENT_FRAGMENT_PROCESSING_COMPLETE:
+        case VK_PIPE_EVENT_GRAPHICS_PIPELINE_COMPLETE:
+        case VK_PIPE_EVENT_COMPUTE_PIPELINE_COMPLETE:
+        case VK_PIPE_EVENT_TRANSFER_COMPLETE:
+        case VK_PIPE_EVENT_GPU_COMMANDS_COMPLETE:
             pipe_control_flags |= GEN6_PIPE_CONTROL_CS_STALL;
             break;
         default:
-            cmd_fail(cmd, XGL_ERROR_UNKNOWN);
+            cmd_fail(cmd, VK_ERROR_UNKNOWN);
             return;
             break;
         }

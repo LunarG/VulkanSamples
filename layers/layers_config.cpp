@@ -26,7 +26,7 @@
 #include <string>
 #include <map>
 #include <string.h>
-#include <xglLayer.h>
+#include <vkLayer.h>
 #include "loader_platform.h"
 #include "layers_config.h"
 // The following is #included again to catch certain OS-specific functions
@@ -56,24 +56,24 @@ static ConfigFile g_configFileObj;
 static unsigned int convertStringEnumVal(const char *_enum)
 {
     // only handles single enum values
-    if (!strcmp(_enum, "XGL_DBG_LAYER_ACTION_IGNORE"))
-        return XGL_DBG_LAYER_ACTION_IGNORE;
-    else if (!strcmp(_enum, "XGL_DBG_LAYER_ACTION_CALLBACK"))
-        return XGL_DBG_LAYER_ACTION_CALLBACK;
-    else if (!strcmp(_enum, "XGL_DBG_LAYER_ACTION_LOG_MSG"))
-        return XGL_DBG_LAYER_ACTION_LOG_MSG;
-    else if (!strcmp(_enum, "XGL_DBG_LAYER_ACTION_BREAK"))
-        return XGL_DBG_LAYER_ACTION_BREAK;
-    else if (!strcmp(_enum, "XGL_DBG_LAYER_LEVEL_INFO"))
-        return XGL_DBG_LAYER_LEVEL_INFO;
-    else if (!strcmp(_enum, "XGL_DBG_LAYER_LEVEL_WARN"))
-        return XGL_DBG_LAYER_LEVEL_WARN;
-    else if (!strcmp(_enum, "XGL_DBG_LAYER_LEVEL_PERF_WARN"))
-        return XGL_DBG_LAYER_LEVEL_PERF_WARN;
-    else if (!strcmp(_enum, "XGL_DBG_LAYER_LEVEL_ERROR"))
-        return XGL_DBG_LAYER_LEVEL_ERROR;
-    else if (!strcmp(_enum, "XGL_DBG_LAYER_LEVEL_NONE"))
-        return XGL_DBG_LAYER_LEVEL_NONE;
+    if (!strcmp(_enum, "VK_DBG_LAYER_ACTION_IGNORE"))
+        return VK_DBG_LAYER_ACTION_IGNORE;
+    else if (!strcmp(_enum, "VK_DBG_LAYER_ACTION_CALLBACK"))
+        return VK_DBG_LAYER_ACTION_CALLBACK;
+    else if (!strcmp(_enum, "VK_DBG_LAYER_ACTION_LOG_MSG"))
+        return VK_DBG_LAYER_ACTION_LOG_MSG;
+    else if (!strcmp(_enum, "VK_DBG_LAYER_ACTION_BREAK"))
+        return VK_DBG_LAYER_ACTION_BREAK;
+    else if (!strcmp(_enum, "VK_DBG_LAYER_LEVEL_INFO"))
+        return VK_DBG_LAYER_LEVEL_INFO;
+    else if (!strcmp(_enum, "VK_DBG_LAYER_LEVEL_WARN"))
+        return VK_DBG_LAYER_LEVEL_WARN;
+    else if (!strcmp(_enum, "VK_DBG_LAYER_LEVEL_PERF_WARN"))
+        return VK_DBG_LAYER_LEVEL_PERF_WARN;
+    else if (!strcmp(_enum, "VK_DBG_LAYER_LEVEL_ERROR"))
+        return VK_DBG_LAYER_LEVEL_ERROR;
+    else if (!strcmp(_enum, "VK_DBG_LAYER_LEVEL_NONE"))
+        return VK_DBG_LAYER_LEVEL_NONE;
     return 0;
 }
 const char *getLayerOption(const char *_option)
@@ -120,7 +120,7 @@ const char *ConfigFile::getOption(const std::string &_option)
     std::map<std::string, std::string>::const_iterator it;
     if (!m_fileIsParsed)
     {
-        parseFile("xgl_layer_settings.txt");
+        parseFile("vk_layer_settings.txt");
     }
 
     if ((it = m_valueMap.find(_option)) == m_valueMap.end())
@@ -133,7 +133,7 @@ void ConfigFile::setOption(const std::string &_option, const std::string &_val)
 {
     if (!m_fileIsParsed)
     {
-        parseFile("xgl_layer_settings.txt");
+        parseFile("vk_layer_settings.txt");
     }
 
     m_valueMap[_option] = _val;

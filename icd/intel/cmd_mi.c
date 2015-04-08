@@ -1,5 +1,5 @@
 /*
- * XGL
+ * Vulkan
  *
  * Copyright (C) 2014 LunarG, Inc.
  *
@@ -87,7 +87,7 @@ static void gen6_MI_STORE_DATA_IMM(struct intel_cmd *cmd,
 
 static void cmd_query_pipeline_statistics(struct intel_cmd *cmd,
                                           struct intel_bo *bo,
-                                          XGL_GPU_SIZE offset)
+                                          VK_GPU_SIZE offset)
 {
     const uint32_t regs[] = {
         GEN6_REG_PS_INVOCATION_COUNT,
@@ -121,57 +121,57 @@ static void cmd_query_pipeline_statistics(struct intel_cmd *cmd,
     }
 }
 
-ICD_EXPORT void XGLAPI xglCmdBeginQuery(
-    XGL_CMD_BUFFER                              cmdBuffer,
-    XGL_QUERY_POOL                              queryPool,
+ICD_EXPORT void VKAPI vkCmdBeginQuery(
+    VK_CMD_BUFFER                              cmdBuffer,
+    VK_QUERY_POOL                              queryPool,
     uint32_t                                    slot,
-    XGL_FLAGS                                   flags)
+    VK_FLAGS                                   flags)
 {
     struct intel_cmd *cmd = intel_cmd(cmdBuffer);
     struct intel_query *query = intel_query(queryPool);
     struct intel_bo *bo = query->obj.mem->bo;
-    const XGL_GPU_SIZE offset = query->slot_stride * slot;
+    const VK_GPU_SIZE offset = query->slot_stride * slot;
 
     switch (query->type) {
-    case XGL_QUERY_OCCLUSION:
+    case VK_QUERY_OCCLUSION:
         cmd_batch_depth_count(cmd, bo, offset);
         break;
-    case XGL_QUERY_PIPELINE_STATISTICS:
+    case VK_QUERY_PIPELINE_STATISTICS:
         cmd_query_pipeline_statistics(cmd, bo, offset);
         break;
     default:
-        cmd_fail(cmd, XGL_ERROR_UNKNOWN);
+        cmd_fail(cmd, VK_ERROR_UNKNOWN);
         break;
     }
 }
 
-ICD_EXPORT void XGLAPI xglCmdEndQuery(
-    XGL_CMD_BUFFER                              cmdBuffer,
-    XGL_QUERY_POOL                              queryPool,
+ICD_EXPORT void VKAPI vkCmdEndQuery(
+    VK_CMD_BUFFER                              cmdBuffer,
+    VK_QUERY_POOL                              queryPool,
     uint32_t                                    slot)
 {
     struct intel_cmd *cmd = intel_cmd(cmdBuffer);
     struct intel_query *query = intel_query(queryPool);
     struct intel_bo *bo = query->obj.mem->bo;
-    const XGL_GPU_SIZE offset = query->slot_stride * slot;
+    const VK_GPU_SIZE offset = query->slot_stride * slot;
 
     switch (query->type) {
-    case XGL_QUERY_OCCLUSION:
+    case VK_QUERY_OCCLUSION:
         cmd_batch_depth_count(cmd, bo, offset + sizeof(uint64_t));
         break;
-    case XGL_QUERY_PIPELINE_STATISTICS:
+    case VK_QUERY_PIPELINE_STATISTICS:
         cmd_query_pipeline_statistics(cmd, bo,
-                offset + sizeof(XGL_PIPELINE_STATISTICS_DATA));
+                offset + sizeof(VK_PIPELINE_STATISTICS_DATA));
         break;
     default:
-        cmd_fail(cmd, XGL_ERROR_UNKNOWN);
+        cmd_fail(cmd, VK_ERROR_UNKNOWN);
         break;
     }
 }
 
-ICD_EXPORT void XGLAPI xglCmdResetQueryPool(
-    XGL_CMD_BUFFER                              cmdBuffer,
-    XGL_QUERY_POOL                              queryPool,
+ICD_EXPORT void VKAPI vkCmdResetQueryPool(
+    VK_CMD_BUFFER                              cmdBuffer,
+    VK_QUERY_POOL                              queryPool,
     uint32_t                                    startQuery,
     uint32_t                                    queryCount)
 {
@@ -179,40 +179,40 @@ ICD_EXPORT void XGLAPI xglCmdResetQueryPool(
 }
 
 static void cmd_write_event_value(struct intel_cmd *cmd, struct intel_event *event,
-                            XGL_PIPE_EVENT pipeEvent, uint32_t value)
+                            VK_PIPE_EVENT pipeEvent, uint32_t value)
 {
     uint32_t pipe_control_flags;
 
     /* Event setting is done with PIPE_CONTROL post-sync write immediate.
-     * With no other PIPE_CONTROL flags set, it behaves as XGL_PIPE_EVENT_TOP_OF_PIPE.
-     * All other pipeEvent values will behave as XGL_PIPE_EVENT_GPU_COMMANDS_COMPLETE.
+     * With no other PIPE_CONTROL flags set, it behaves as VK_PIPE_EVENT_TOP_OF_PIPE.
+     * All other pipeEvent values will behave as VK_PIPE_EVENT_GPU_COMMANDS_COMPLETE.
      */
     switch(pipeEvent)
     {
-    case XGL_PIPE_EVENT_TOP_OF_PIPE:
+    case VK_PIPE_EVENT_TOP_OF_PIPE:
         pipe_control_flags = 0;
         break;
-    case XGL_PIPE_EVENT_VERTEX_PROCESSING_COMPLETE:
-    case XGL_PIPE_EVENT_LOCAL_FRAGMENT_PROCESSING_COMPLETE:
-    case XGL_PIPE_EVENT_FRAGMENT_PROCESSING_COMPLETE:
-    case XGL_PIPE_EVENT_GRAPHICS_PIPELINE_COMPLETE:
-    case XGL_PIPE_EVENT_COMPUTE_PIPELINE_COMPLETE:
-    case XGL_PIPE_EVENT_TRANSFER_COMPLETE:
-    case XGL_PIPE_EVENT_GPU_COMMANDS_COMPLETE:
+    case VK_PIPE_EVENT_VERTEX_PROCESSING_COMPLETE:
+    case VK_PIPE_EVENT_LOCAL_FRAGMENT_PROCESSING_COMPLETE:
+    case VK_PIPE_EVENT_FRAGMENT_PROCESSING_COMPLETE:
+    case VK_PIPE_EVENT_GRAPHICS_PIPELINE_COMPLETE:
+    case VK_PIPE_EVENT_COMPUTE_PIPELINE_COMPLETE:
+    case VK_PIPE_EVENT_TRANSFER_COMPLETE:
+    case VK_PIPE_EVENT_GPU_COMMANDS_COMPLETE:
         pipe_control_flags = GEN6_PIPE_CONTROL_CS_STALL;
         break;
     default:
-        cmd_fail(cmd, XGL_ERROR_UNKNOWN);
+        cmd_fail(cmd, VK_ERROR_UNKNOWN);
         return;
         break;
     }
     cmd_batch_immediate(cmd, pipe_control_flags, event->obj.mem->bo, 0, value);
 }
 
-ICD_EXPORT void XGLAPI xglCmdSetEvent(
-    XGL_CMD_BUFFER                              cmdBuffer,
-    XGL_EVENT                                   event_,
-    XGL_PIPE_EVENT                              pipeEvent)
+ICD_EXPORT void VKAPI vkCmdSetEvent(
+    VK_CMD_BUFFER                              cmdBuffer,
+    VK_EVENT                                   event_,
+    VK_PIPE_EVENT                              pipeEvent)
 {
     struct intel_cmd *cmd = intel_cmd(cmdBuffer);
     struct intel_event *event = intel_event(event_);
@@ -220,10 +220,10 @@ ICD_EXPORT void XGLAPI xglCmdSetEvent(
     cmd_write_event_value(cmd, event, pipeEvent, 1);
 }
 
-ICD_EXPORT void XGLAPI xglCmdResetEvent(
-    XGL_CMD_BUFFER                              cmdBuffer,
-    XGL_EVENT                                   event_,
-    XGL_PIPE_EVENT                              pipeEvent)
+ICD_EXPORT void VKAPI vkCmdResetEvent(
+    VK_CMD_BUFFER                              cmdBuffer,
+    VK_EVENT                                   event_,
+    VK_PIPE_EVENT                              pipeEvent)
 {
     struct intel_cmd *cmd = intel_cmd(cmdBuffer);
     struct intel_event *event = intel_event(event_);
@@ -231,28 +231,28 @@ ICD_EXPORT void XGLAPI xglCmdResetEvent(
     cmd_write_event_value(cmd, event, pipeEvent, 0);
 }
 
-ICD_EXPORT void XGLAPI xglCmdWriteTimestamp(
-    XGL_CMD_BUFFER                              cmdBuffer,
-    XGL_TIMESTAMP_TYPE                          timestampType,
-    XGL_BUFFER                                  destBuffer,
-    XGL_GPU_SIZE                                destOffset)
+ICD_EXPORT void VKAPI vkCmdWriteTimestamp(
+    VK_CMD_BUFFER                              cmdBuffer,
+    VK_TIMESTAMP_TYPE                          timestampType,
+    VK_BUFFER                                  destBuffer,
+    VK_GPU_SIZE                                destOffset)
 {
     struct intel_cmd *cmd = intel_cmd(cmdBuffer);
     struct intel_buf *buf = intel_buf(destBuffer);
 
     switch (timestampType) {
-    case XGL_TIMESTAMP_TOP:
+    case VK_TIMESTAMP_TOP:
         /* XXX we are not supposed to use two commands... */
         gen6_MI_STORE_REGISTER_MEM(cmd, buf->obj.mem->bo,
                 destOffset, GEN6_REG_TIMESTAMP);
         gen6_MI_STORE_REGISTER_MEM(cmd, buf->obj.mem->bo,
                 destOffset + 4, GEN6_REG_TIMESTAMP + 4);
         break;
-    case XGL_TIMESTAMP_BOTTOM:
+    case VK_TIMESTAMP_BOTTOM:
         cmd_batch_timestamp(cmd, buf->obj.mem->bo, destOffset);
         break;
     default:
-        cmd_fail(cmd, XGL_ERROR_INVALID_VALUE);
+        cmd_fail(cmd, VK_ERROR_INVALID_VALUE);
         break;
     }
 }

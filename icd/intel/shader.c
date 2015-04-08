@@ -1,5 +1,5 @@
 /*
- * XGL
+ * Vulkan
  *
  * Copyright (C) 2014 LunarG, Inc.
  *
@@ -39,8 +39,8 @@ static void shader_destroy(struct intel_obj *obj)
     intel_base_destroy(&sh->obj.base);
 }
 
-static XGL_RESULT shader_create(struct intel_dev *dev,
-                                const XGL_SHADER_CREATE_INFO *info,
+static VK_RESULT shader_create(struct intel_dev *dev,
+                                const VK_SHADER_CREATE_INFO *info,
                                 struct intel_shader **sh_ret)
 {
     const struct icd_spv_header *spv =
@@ -48,32 +48,32 @@ static XGL_RESULT shader_create(struct intel_dev *dev,
     struct intel_shader *sh;
 
     sh = (struct intel_shader *) intel_base_create(&dev->base.handle,
-            sizeof(*sh), dev->base.dbg, XGL_DBG_OBJECT_SHADER, info, 0);
+            sizeof(*sh), dev->base.dbg, VK_DBG_OBJECT_SHADER, info, 0);
     if (!sh)
-        return XGL_ERROR_OUT_OF_MEMORY;
+        return VK_ERROR_OUT_OF_MEMORY;
 
     if (info->codeSize < sizeof(*spv))
-        return XGL_ERROR_INVALID_MEMORY_SIZE;
+        return VK_ERROR_INVALID_MEMORY_SIZE;
     if (spv->magic != ICD_SPV_MAGIC)
-        return XGL_ERROR_BAD_SHADER_CODE;
+        return VK_ERROR_BAD_SHADER_CODE;
 
     sh->ir = shader_create_ir(dev->gpu, info->pCode, info->codeSize);
     if (!sh->ir) {
         shader_destroy(&sh->obj);
-        return XGL_ERROR_UNKNOWN;
+        return VK_ERROR_UNKNOWN;
     }
 
     sh->obj.destroy = shader_destroy;
 
     *sh_ret = sh;
 
-    return XGL_SUCCESS;
+    return VK_SUCCESS;
 }
 
-ICD_EXPORT XGL_RESULT XGLAPI xglCreateShader(
-        XGL_DEVICE                                  device,
-        const XGL_SHADER_CREATE_INFO*               pCreateInfo,
-        XGL_SHADER*                                 pShader)
+ICD_EXPORT VK_RESULT VKAPI vkCreateShader(
+        VK_DEVICE                                  device,
+        const VK_SHADER_CREATE_INFO*               pCreateInfo,
+        VK_SHADER*                                 pShader)
 {
     struct intel_dev *dev = intel_dev(device);
 

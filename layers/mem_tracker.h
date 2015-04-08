@@ -1,5 +1,5 @@
 /*
- * XGL
+ * Vulkan
  *
  * Copyright (C) 2015 LunarG, Inc.
  *
@@ -22,7 +22,7 @@
  * DEALINGS IN THE SOFTWARE.
  */
 #pragma once
-#include "xglLayer.h"
+#include "vkLayer.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -40,14 +40,14 @@ typedef enum _MEM_TRACK_ERROR
     MEMTRACK_FREED_MEM_REF                 = 6,  // MEM Obj freed while it still has obj and/or CB refs
     MEMTRACK_MEM_OBJ_CLEAR_EMPTY_BINDINGS  = 7,  // Clearing bindings on mem obj that doesn't have any bindings
     MEMTRACK_MISSING_MEM_BINDINGS          = 8,  // Trying to retrieve mem bindings, but none found (may be internal error)
-    MEMTRACK_INVALID_OBJECT                = 9,  // Attempting to reference generic XGL Object that is invalid
-    MEMTRACK_FREE_MEM_ERROR                = 10, // Error while calling xglFreeMemory
+    MEMTRACK_INVALID_OBJECT                = 9,  // Attempting to reference generic VK Object that is invalid
+    MEMTRACK_FREE_MEM_ERROR                = 10, // Error while calling vkFreeMemory
     MEMTRACK_DESTROY_OBJECT_ERROR          = 11, // Destroying an object that has a memory reference
     MEMTRACK_MEMORY_BINDING_ERROR          = 12, // Error during one of many calls that bind memory to object or CB
     MEMTRACK_OUT_OF_MEMORY_ERROR           = 13, // malloc failed
-    MEMTRACK_MEMORY_LEAK                   = 14, // Failure to call xglFreeMemory on Mem Obj prior to DestroyDevice
+    MEMTRACK_MEMORY_LEAK                   = 14, // Failure to call vkFreeMemory on Mem Obj prior to DestroyDevice
     MEMTRACK_INVALID_STATE                 = 15, // Memory not in the correct state
-    MEMTRACK_RESET_CB_WHILE_IN_FLIGHT      = 16, // xglResetCommandBuffer() called on a CB that hasn't completed
+    MEMTRACK_RESET_CB_WHILE_IN_FLIGHT      = 16, // vkResetCommandBuffer() called on a CB that hasn't completed
     MEMTRACK_INVALID_QUEUE                 = 17, // Invalid queue requested or selected
     MEMTRACK_INVALID_FENCE_STATE           = 18, // Invalid Fence State signaled or used
 } MEM_TRACK_ERROR;
@@ -61,7 +61,7 @@ typedef enum _MEM_TRACK_ERROR
  *  memObjMap -- map of Memory Objects to MT_MEM_OBJ_INFO structures
  *    Each MT_MEM_OBJ_INFO has two stl list containers with:
  *      -- all CBs referencing this mem obj
- *      -- all XGL Objects that are bound to this memory
+ *      -- all VK Objects that are bound to this memory
  *  objectMap -- map of objects to MT_OBJ_INFO structures
  *
  * Algorithm overview
@@ -85,31 +85,31 @@ typedef enum _MEM_TRACK_ERROR
 // Data struct for tracking memory object
 struct MT_MEM_OBJ_INFO {
     uint32_t                     refCount;           // Count of references (obj bindings or CB use)
-    XGL_GPU_MEMORY               mem;
-    XGL_MEMORY_ALLOC_INFO        allocInfo;
-    list<XGL_OBJECT>             pObjBindings;       // list container of objects bound to this memory
-    list<XGL_CMD_BUFFER>         pCmdBufferBindings; // list container of cmd buffers that reference this mem object
+    VK_GPU_MEMORY               mem;
+    VK_MEMORY_ALLOC_INFO        allocInfo;
+    list<VK_OBJECT>             pObjBindings;       // list container of objects bound to this memory
+    list<VK_CMD_BUFFER>         pCmdBufferBindings; // list container of cmd buffers that reference this mem object
 };
 
 struct MT_OBJ_INFO {
     MT_MEM_OBJ_INFO*            pMemObjInfo;
-    XGL_OBJECT                  object;
-    XGL_STRUCTURE_TYPE          sType;
+    VK_OBJECT                  object;
+    VK_STRUCTURE_TYPE          sType;
     uint32_t                    ref_count;
     // Capture all object types that may have memory bound. From prog guide:
     // The only objects that are guaranteed to have no external memory
     //   requirements are devices, queues, command buffers, shaders and memory objects.
     union {
-        XGL_COLOR_ATTACHMENT_VIEW_CREATE_INFO     color_attachment_view_create_info;
-        XGL_DEPTH_STENCIL_VIEW_CREATE_INFO        ds_view_create_info;
-        XGL_IMAGE_VIEW_CREATE_INFO                image_view_create_info;
-        XGL_IMAGE_CREATE_INFO                     image_create_info;
-        XGL_GRAPHICS_PIPELINE_CREATE_INFO         graphics_pipeline_create_info;
-        XGL_COMPUTE_PIPELINE_CREATE_INFO          compute_pipeline_create_info;
-        XGL_SAMPLER_CREATE_INFO                   sampler_create_info;
-        XGL_FENCE_CREATE_INFO                     fence_create_info;
+        VK_COLOR_ATTACHMENT_VIEW_CREATE_INFO     color_attachment_view_create_info;
+        VK_DEPTH_STENCIL_VIEW_CREATE_INFO        ds_view_create_info;
+        VK_IMAGE_VIEW_CREATE_INFO                image_view_create_info;
+        VK_IMAGE_CREATE_INFO                     image_create_info;
+        VK_GRAPHICS_PIPELINE_CREATE_INFO         graphics_pipeline_create_info;
+        VK_COMPUTE_PIPELINE_CREATE_INFO          compute_pipeline_create_info;
+        VK_SAMPLER_CREATE_INFO                   sampler_create_info;
+        VK_FENCE_CREATE_INFO                     fence_create_info;
 #ifndef _WIN32
-        XGL_WSI_X11_PRESENTABLE_IMAGE_CREATE_INFO wsi_x11_presentable_image_create_info;
+        VK_WSI_X11_PRESENTABLE_IMAGE_CREATE_INFO wsi_x11_presentable_image_create_info;
 #endif // _WIN32
     } create_info;
     char object_name[64];
@@ -117,21 +117,21 @@ struct MT_OBJ_INFO {
 
 // Track all command buffers
 struct MT_CB_INFO {
-    XGL_CMD_BUFFER_CREATE_INFO      createInfo;
-    MT_OBJ_INFO*                    pDynamicState[XGL_NUM_STATE_BIND_POINT];
-    XGL_PIPELINE                    pipelines[XGL_NUM_PIPELINE_BIND_POINT];
+    VK_CMD_BUFFER_CREATE_INFO      createInfo;
+    MT_OBJ_INFO*                    pDynamicState[VK_NUM_STATE_BIND_POINT];
+    VK_PIPELINE                    pipelines[VK_NUM_PIPELINE_BIND_POINT];
     uint32_t                        colorAttachmentCount;
-    XGL_DEPTH_STENCIL_BIND_INFO     dsBindInfo;
-    XGL_CMD_BUFFER                  cmdBuffer;
+    VK_DEPTH_STENCIL_BIND_INFO     dsBindInfo;
+    VK_CMD_BUFFER                  cmdBuffer;
     uint64_t                        fenceId;
     // Order dependent, stl containers must be at end of struct
-    list<XGL_GPU_MEMORY>            pMemObjList; // List container of Mem objs referenced by this CB
+    list<VK_GPU_MEMORY>            pMemObjList; // List container of Mem objs referenced by this CB
 };
 
 // Associate fenceId with a fence object
 struct MT_FENCE_INFO {
-    XGL_FENCE   fence;         // Handle to fence object
-    XGL_QUEUE   queue;         // Queue that this fence is submitted against
+    VK_FENCE   fence;         // Handle to fence object
+    VK_QUEUE   queue;         // Queue that this fence is submitted against
     bool32_t    localFence;    // Is fence created by layer?
 };
 
@@ -139,8 +139,8 @@ struct MT_FENCE_INFO {
 struct MT_QUEUE_INFO {
     uint64_t                      lastRetiredId;
     uint64_t                      lastSubmittedId;
-    list<XGL_CMD_BUFFER>          pQueueCmdBuffers;
-    list<XGL_GPU_MEMORY>          pMemRefList;
+    list<VK_CMD_BUFFER>          pQueueCmdBuffers;
+    list<VK_GPU_MEMORY>          pMemRefList;
 };
 
 #ifdef __cplusplus

@@ -1,5 +1,5 @@
 /*
- * XGL
+ * Vulkan
  *
  * Copyright (C) 2015 LunarG, Inc.
  *
@@ -41,7 +41,7 @@ struct intel_instance {
     bool exts[INTEL_EXT_COUNT];
 };
 
-static inline struct intel_instance *intel_instance(XGL_INSTANCE instance)
+static inline struct intel_instance *intel_instance(VK_INSTANCE instance)
 {
     return (struct intel_instance *) instance;
 }

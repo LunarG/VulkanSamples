@@ -168,7 +168,7 @@ intel_winsys_create_for_fd(const struct icd_instance *instance, int fd)
    struct intel_winsys *winsys;
 
    winsys = icd_instance_alloc(instance, sizeof(*winsys), 0,
-           XGL_SYSTEM_ALLOC_INTERNAL);
+           VK_SYSTEM_ALLOC_INTERNAL);
    if (!winsys)
       return NULL;
 

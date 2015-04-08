@@ -1,5 +1,5 @@
 /*
- * XGL
+ * Vulkan
  *
  * Copyright (C) 2014 LunarG, Inc.
  *
@@ -30,48 +30,48 @@
 #include "mem.h"
 #include "obj.h"
 
-XGL_RESULT intel_base_get_info(struct intel_base *base, int type,
+VK_RESULT intel_base_get_info(struct intel_base *base, int type,
                                size_t *size, void *data)
 {
-    XGL_RESULT ret = XGL_SUCCESS;
+    VK_RESULT ret = VK_SUCCESS;
     size_t s;
     uint32_t *count;
 
     switch (type) {
-    case XGL_INFO_TYPE_MEMORY_REQUIREMENTS:
+    case VK_INFO_TYPE_MEMORY_REQUIREMENTS:
         {
-            XGL_MEMORY_REQUIREMENTS *mem_req = data;
-            s = sizeof(XGL_MEMORY_REQUIREMENTS);
+            VK_MEMORY_REQUIREMENTS *mem_req = data;
+            s = sizeof(VK_MEMORY_REQUIREMENTS);
             *size = s;
             if (data == NULL)
                 return ret;
             memset(data, 0, s);
-            mem_req->memType =  XGL_MEMORY_TYPE_OTHER;
+            mem_req->memType =  VK_MEMORY_TYPE_OTHER;
             break;
         }
-    case XGL_INFO_TYPE_MEMORY_ALLOCATION_COUNT:
+    case VK_INFO_TYPE_MEMORY_ALLOCATION_COUNT:
         *size = sizeof(uint32_t);
         if (data == NULL)
             return ret;
         count = (uint32_t *) data;
         *count = 1;
         break;
-    case XGL_INFO_TYPE_IMAGE_MEMORY_REQUIREMENTS:
-        s = sizeof(XGL_IMAGE_MEMORY_REQUIREMENTS);
+    case VK_INFO_TYPE_IMAGE_MEMORY_REQUIREMENTS:
+        s = sizeof(VK_IMAGE_MEMORY_REQUIREMENTS);
         *size = s;
         if (data == NULL)
             return ret;
         memset(data, 0, s);
         break;
-    case XGL_INFO_TYPE_BUFFER_MEMORY_REQUIREMENTS:
-        s = sizeof(XGL_BUFFER_MEMORY_REQUIREMENTS);
+    case VK_INFO_TYPE_BUFFER_MEMORY_REQUIREMENTS:
+        s = sizeof(VK_BUFFER_MEMORY_REQUIREMENTS);
         *size = s;
         if (data == NULL)
             return ret;
         memset(data, 0, s);
         break;
     default:
-        ret = XGL_ERROR_INVALID_VALUE;
+        ret = VK_ERROR_INVALID_VALUE;
         break;
     }
 
@@ -85,7 +85,7 @@ static bool base_dbg_copy_create_info(const struct intel_handle *handle,
     const union {
         const void *ptr;
         const struct {
-            XGL_STRUCTURE_TYPE struct_type;
+            VK_STRUCTURE_TYPE struct_type;
             void *next;
         } *header;
     } info = { .ptr = create_info };
@@ -95,98 +95,98 @@ static bool base_dbg_copy_create_info(const struct intel_handle *handle,
         return true;
 
     switch (dbg->type) {
-    case XGL_DBG_OBJECT_DEVICE:
-        assert(info.header->struct_type == XGL_STRUCTURE_TYPE_DEVICE_CREATE_INFO);
+    case VK_DBG_OBJECT_DEVICE:
+        assert(info.header->struct_type == VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO);
         break;
-    case XGL_DBG_OBJECT_GPU_MEMORY:
-        assert(info.header->struct_type == XGL_STRUCTURE_TYPE_MEMORY_ALLOC_INFO);
+    case VK_DBG_OBJECT_GPU_MEMORY:
+        assert(info.header->struct_type == VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO);
         break;
-    case XGL_DBG_OBJECT_EVENT:
-        assert(info.header->struct_type == XGL_STRUCTURE_TYPE_EVENT_CREATE_INFO);
-        shallow_copy = sizeof(XGL_EVENT_CREATE_INFO);
+    case VK_DBG_OBJECT_EVENT:
+        assert(info.header->struct_type == VK_STRUCTURE_TYPE_EVENT_CREATE_INFO);
+        shallow_copy = sizeof(VK_EVENT_CREATE_INFO);
         break;
-    case XGL_DBG_OBJECT_FENCE:
-        assert(info.header->struct_type == XGL_STRUCTURE_TYPE_FENCE_CREATE_INFO);
-        shallow_copy = sizeof(XGL_FENCE_CREATE_INFO);
+    case VK_DBG_OBJECT_FENCE:
+        assert(info.header->struct_type == VK_STRUCTURE_TYPE_FENCE_CREATE_INFO);
+        shallow_copy = sizeof(VK_FENCE_CREATE_INFO);
         break;
-    case XGL_DBG_OBJECT_QUERY_POOL:
-        assert(info.header->struct_type == XGL_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO);
-        shallow_copy = sizeof(XGL_QUERY_POOL_CREATE_INFO);
+    case VK_DBG_OBJECT_QUERY_POOL:
+        assert(info.header->struct_type == VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO);
+        shallow_copy = sizeof(VK_QUERY_POOL_CREATE_INFO);
         break;
-    case XGL_DBG_OBJECT_BUFFER:
-        assert(info.header->struct_type == XGL_STRUCTURE_TYPE_BUFFER_CREATE_INFO);
-        shallow_copy = sizeof(XGL_BUFFER_CREATE_INFO);
+    case VK_DBG_OBJECT_BUFFER:
+        assert(info.header->struct_type == VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO);
+        shallow_copy = sizeof(VK_BUFFER_CREATE_INFO);
         break;
-    case XGL_DBG_OBJECT_BUFFER_VIEW:
-        assert(info.header->struct_type == XGL_STRUCTURE_TYPE_BUFFER_VIEW_CREATE_INFO);
-        shallow_copy = sizeof(XGL_BUFFER_VIEW_CREATE_INFO);
+    case VK_DBG_OBJECT_BUFFER_VIEW:
+        assert(info.header->struct_type == VK_STRUCTURE_TYPE_BUFFER_VIEW_CREATE_INFO);
+        shallow_copy = sizeof(VK_BUFFER_VIEW_CREATE_INFO);
         break;
-    case XGL_DBG_OBJECT_IMAGE:
-        assert(info.header->struct_type == XGL_STRUCTURE_TYPE_IMAGE_CREATE_INFO);
-        shallow_copy = sizeof(XGL_IMAGE_CREATE_INFO);
+    case VK_DBG_OBJECT_IMAGE:
+        assert(info.header->struct_type == VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO);
+        shallow_copy = sizeof(VK_IMAGE_CREATE_INFO);
         break;
-    case XGL_DBG_OBJECT_IMAGE_VIEW:
-        assert(info.header->struct_type == XGL_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO);
-        shallow_copy = sizeof(XGL_IMAGE_VIEW_CREATE_INFO);
+    case VK_DBG_OBJECT_IMAGE_VIEW:
+        assert(info.header->struct_type == VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO);
+        shallow_copy = sizeof(VK_IMAGE_VIEW_CREATE_INFO);
         break;
-    case XGL_DBG_OBJECT_COLOR_TARGET_VIEW:
-        assert(info.header->struct_type == XGL_STRUCTURE_TYPE_COLOR_ATTACHMENT_VIEW_CREATE_INFO);
-        shallow_copy = sizeof(XGL_COLOR_ATTACHMENT_VIEW_CREATE_INFO);
+    case VK_DBG_OBJECT_COLOR_TARGET_VIEW:
+        assert(info.header->struct_type == VK_STRUCTURE_TYPE_COLOR_ATTACHMENT_VIEW_CREATE_INFO);
+        shallow_copy = sizeof(VK_COLOR_ATTACHMENT_VIEW_CREATE_INFO);
         break;
-    case XGL_DBG_OBJECT_DEPTH_STENCIL_VIEW:
-        assert(info.header->struct_type == XGL_STRUCTURE_TYPE_DEPTH_STENCIL_VIEW_CREATE_INFO);
-        shallow_copy = sizeof(XGL_DEPTH_STENCIL_VIEW_CREATE_INFO);
+    case VK_DBG_OBJECT_DEPTH_STENCIL_VIEW:
+        assert(info.header->struct_type == VK_STRUCTURE_TYPE_DEPTH_STENCIL_VIEW_CREATE_INFO);
+        shallow_copy = sizeof(VK_DEPTH_STENCIL_VIEW_CREATE_INFO);
         break;
-    case XGL_DBG_OBJECT_SAMPLER:
-        assert(info.header->struct_type == XGL_STRUCTURE_TYPE_SAMPLER_CREATE_INFO);
-        shallow_copy = sizeof(XGL_SAMPLER_CREATE_INFO);
+    case VK_DBG_OBJECT_SAMPLER:
+        assert(info.header->struct_type == VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO);
+        shallow_copy = sizeof(VK_SAMPLER_CREATE_INFO);
         break;
-    case XGL_DBG_OBJECT_DESCRIPTOR_SET:
+    case VK_DBG_OBJECT_DESCRIPTOR_SET:
         /* no create info */
         break;
-    case XGL_DBG_OBJECT_VIEWPORT_STATE:
-        assert(info.header->struct_type == XGL_STRUCTURE_TYPE_DYNAMIC_VP_STATE_CREATE_INFO);
-        shallow_copy = sizeof(XGL_DYNAMIC_VP_STATE_CREATE_INFO);
+    case VK_DBG_OBJECT_VIEWPORT_STATE:
+        assert(info.header->struct_type == VK_STRUCTURE_TYPE_DYNAMIC_VP_STATE_CREATE_INFO);
+        shallow_copy = sizeof(VK_DYNAMIC_VP_STATE_CREATE_INFO);
         break;
-    case XGL_DBG_OBJECT_RASTER_STATE:
-        assert(info.header->struct_type == XGL_STRUCTURE_TYPE_DYNAMIC_RS_STATE_CREATE_INFO);
-        shallow_copy = sizeof(XGL_DYNAMIC_RS_STATE_CREATE_INFO);
+    case VK_DBG_OBJECT_RASTER_STATE:
+        assert(info.header->struct_type == VK_STRUCTURE_TYPE_DYNAMIC_RS_STATE_CREATE_INFO);
+        shallow_copy = sizeof(VK_DYNAMIC_RS_STATE_CREATE_INFO);
         break;
-    case XGL_DBG_OBJECT_COLOR_BLEND_STATE:
-        assert(info.header->struct_type == XGL_STRUCTURE_TYPE_DYNAMIC_CB_STATE_CREATE_INFO);
-        shallow_copy = sizeof(XGL_DYNAMIC_CB_STATE_CREATE_INFO);
+    case VK_DBG_OBJECT_COLOR_BLEND_STATE:
+        assert(info.header->struct_type == VK_STRUCTURE_TYPE_DYNAMIC_CB_STATE_CREATE_INFO);
+        shallow_copy = sizeof(VK_DYNAMIC_CB_STATE_CREATE_INFO);
         break;
-    case XGL_DBG_OBJECT_DEPTH_STENCIL_STATE:
-        assert(info.header->struct_type == XGL_STRUCTURE_TYPE_DYNAMIC_DS_STATE_CREATE_INFO);
-        shallow_copy = sizeof(XGL_DYNAMIC_DS_STATE_CREATE_INFO);
+    case VK_DBG_OBJECT_DEPTH_STENCIL_STATE:
+        assert(info.header->struct_type == VK_STRUCTURE_TYPE_DYNAMIC_DS_STATE_CREATE_INFO);
+        shallow_copy = sizeof(VK_DYNAMIC_DS_STATE_CREATE_INFO);
         break;
-    case XGL_DBG_OBJECT_CMD_BUFFER:
-        assert(info.header->struct_type == XGL_STRUCTURE_TYPE_CMD_BUFFER_CREATE_INFO);
-        shallow_copy = sizeof(XGL_CMD_BUFFER_CREATE_INFO);
+    case VK_DBG_OBJECT_CMD_BUFFER:
+        assert(info.header->struct_type == VK_STRUCTURE_TYPE_CMD_BUFFER_CREATE_INFO);
+        shallow_copy = sizeof(VK_CMD_BUFFER_CREATE_INFO);
         break;
-    case XGL_DBG_OBJECT_GRAPHICS_PIPELINE:
-        assert(info.header->struct_type == XGL_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO);
+    case VK_DBG_OBJECT_GRAPHICS_PIPELINE:
+        assert(info.header->struct_type == VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO);
         break;
-    case XGL_DBG_OBJECT_SHADER:
-        assert(info.header->struct_type == XGL_STRUCTURE_TYPE_SHADER_CREATE_INFO);
-        shallow_copy = sizeof(XGL_SHADER_CREATE_INFO);
+    case VK_DBG_OBJECT_SHADER:
+        assert(info.header->struct_type == VK_STRUCTURE_TYPE_SHADER_CREATE_INFO);
+        shallow_copy = sizeof(VK_SHADER_CREATE_INFO);
         break;
-    case XGL_DBG_OBJECT_FRAMEBUFFER:
-        assert(info.header->struct_type ==  XGL_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO);
-        shallow_copy = sizeof(XGL_FRAMEBUFFER_CREATE_INFO);
+    case VK_DBG_OBJECT_FRAMEBUFFER:
+        assert(info.header->struct_type ==  VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO);
+        shallow_copy = sizeof(VK_FRAMEBUFFER_CREATE_INFO);
         break;
-    case XGL_DBG_OBJECT_RENDER_PASS:
-        assert(info.header->struct_type ==  XGL_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO);
-        shallow_copy = sizeof(XGL_RENDER_PASS_CREATE_INFO);
+    case VK_DBG_OBJECT_RENDER_PASS:
+        assert(info.header->struct_type ==  VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO);
+        shallow_copy = sizeof(VK_RENDER_PASS_CREATE_INFO);
         break;
-    case XGL_DBG_OBJECT_DESCRIPTOR_SET_LAYOUT:
-        assert(info.header->struct_type ==  XGL_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO);
+    case VK_DBG_OBJECT_DESCRIPTOR_SET_LAYOUT:
+        assert(info.header->struct_type ==  VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO);
         /* TODO */
-        shallow_copy = sizeof(XGL_DESCRIPTOR_SET_LAYOUT_CREATE_INFO) * 0;
+        shallow_copy = sizeof(VK_DESCRIPTOR_SET_LAYOUT_CREATE_INFO) * 0;
         break;
-    case XGL_DBG_OBJECT_DESCRIPTOR_POOL:
-        assert(info.header->struct_type ==  XGL_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO);
-        shallow_copy = sizeof(XGL_DESCRIPTOR_POOL_CREATE_INFO);
+    case VK_DBG_OBJECT_DESCRIPTOR_POOL:
+        assert(info.header->struct_type ==  VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO);
+        shallow_copy = sizeof(VK_DESCRIPTOR_POOL_CREATE_INFO);
         break;
     default:
         assert(!"unknown dbg object type");
@@ -196,36 +196,36 @@ static bool base_dbg_copy_create_info(const struct intel_handle *handle,
 
     if (shallow_copy) {
         dbg->create_info = intel_alloc(handle, shallow_copy, 0,
-                XGL_SYSTEM_ALLOC_DEBUG);
+                VK_SYSTEM_ALLOC_DEBUG);
         if (!dbg->create_info)
             return false;
 
         memcpy(dbg->create_info, create_info, shallow_copy);
         dbg->create_info_size = shallow_copy;
     } else if (info.header->struct_type ==
-            XGL_STRUCTURE_TYPE_MEMORY_ALLOC_INFO) {
+            VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO) {
         size_t size;
-        const XGL_MEMORY_ALLOC_INFO *ptr_next, *src = info.ptr;
-        XGL_MEMORY_ALLOC_INFO *dst;
+        const VK_MEMORY_ALLOC_INFO *ptr_next, *src = info.ptr;
+        VK_MEMORY_ALLOC_INFO *dst;
         uint8_t *d;
         size = sizeof(*src);
 
         ptr_next = src->pNext;
         while (ptr_next != NULL) {
             switch (ptr_next->sType) {
-                case XGL_STRUCTURE_TYPE_MEMORY_ALLOC_IMAGE_INFO:
-                    size += sizeof(XGL_MEMORY_ALLOC_IMAGE_INFO);
+                case VK_STRUCTURE_TYPE_MEMORY_ALLOC_IMAGE_INFO:
+                    size += sizeof(VK_MEMORY_ALLOC_IMAGE_INFO);
                     break;
-                case XGL_STRUCTURE_TYPE_MEMORY_ALLOC_BUFFER_INFO:
-                    size += sizeof(XGL_MEMORY_ALLOC_BUFFER_INFO);
+                case VK_STRUCTURE_TYPE_MEMORY_ALLOC_BUFFER_INFO:
+                    size += sizeof(VK_MEMORY_ALLOC_BUFFER_INFO);
                     break;
                 default:
                     return false;
             }
-            ptr_next = (XGL_MEMORY_ALLOC_INFO *) ptr_next->pNext;
+            ptr_next = (VK_MEMORY_ALLOC_INFO *) ptr_next->pNext;
         }
         dbg->create_info_size = size;
-        dst = intel_alloc(handle, size, 0, XGL_SYSTEM_ALLOC_DEBUG);
+        dst = intel_alloc(handle, size, 0, VK_SYSTEM_ALLOC_DEBUG);
         if (!dst)
             return false;
         memcpy(dst, src, sizeof(*src));
@@ -235,24 +235,24 @@ static bool base_dbg_copy_create_info(const struct intel_handle *handle,
         d += sizeof(*src);
         while (ptr_next != NULL) {
             switch (ptr_next->sType) {
-            case XGL_STRUCTURE_TYPE_MEMORY_ALLOC_IMAGE_INFO:
-                memcpy(d, ptr_next, sizeof(XGL_MEMORY_ALLOC_IMAGE_INFO));
-                d += sizeof(XGL_MEMORY_ALLOC_IMAGE_INFO);
+            case VK_STRUCTURE_TYPE_MEMORY_ALLOC_IMAGE_INFO:
+                memcpy(d, ptr_next, sizeof(VK_MEMORY_ALLOC_IMAGE_INFO));
+                d += sizeof(VK_MEMORY_ALLOC_IMAGE_INFO);
                 break;
-            case XGL_STRUCTURE_TYPE_MEMORY_ALLOC_BUFFER_INFO:
-                memcpy(d, ptr_next, sizeof(XGL_MEMORY_ALLOC_BUFFER_INFO));
-                d += sizeof(XGL_MEMORY_ALLOC_BUFFER_INFO);
+            case VK_STRUCTURE_TYPE_MEMORY_ALLOC_BUFFER_INFO:
+                memcpy(d, ptr_next, sizeof(VK_MEMORY_ALLOC_BUFFER_INFO));
+                d += sizeof(VK_MEMORY_ALLOC_BUFFER_INFO);
                 break;
             default:
                 return false;
             }
-            ptr_next = (XGL_MEMORY_ALLOC_INFO *) ptr_next->pNext;
+            ptr_next = (VK_MEMORY_ALLOC_INFO *) ptr_next->pNext;
         }
         dbg->create_info = dst;
     } else if (info.header->struct_type ==
-            XGL_STRUCTURE_TYPE_DEVICE_CREATE_INFO) {
-        const XGL_DEVICE_CREATE_INFO *src = info.ptr;
-        XGL_DEVICE_CREATE_INFO *dst;
+            VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO) {
+        const VK_DEVICE_CREATE_INFO *src = info.ptr;
+        VK_DEVICE_CREATE_INFO *dst;
         uint8_t *d;
         size_t size;
         uint32_t i;
@@ -266,7 +266,7 @@ static bool base_dbg_copy_create_info(const struct intel_handle *handle,
             size += 1 + strlen(src->ppEnabledExtensionNames[i]);
         }
 
-        dst = intel_alloc(handle, size, 0, XGL_SYSTEM_ALLOC_DEBUG);
+        dst = intel_alloc(handle, size, 0, VK_SYSTEM_ALLOC_DEBUG);
         if (!dst)
             return false;
 
@@ -277,7 +277,7 @@ static bool base_dbg_copy_create_info(const struct intel_handle *handle,
 
         size = sizeof(src->pRequestedQueues[0]) * src->queueRecordCount;
         memcpy(d, src->pRequestedQueues, size);
-        dst->pRequestedQueues = (const XGL_DEVICE_QUEUE_CREATE_INFO *) d;
+        dst->pRequestedQueues = (const VK_DEVICE_QUEUE_CREATE_INFO *) d;
         d += size;
 
         size = sizeof(src->ppEnabledExtensionNames[0]) * src->extensionCount;
@@ -292,7 +292,7 @@ static bool base_dbg_copy_create_info(const struct intel_handle *handle,
             size += len + 1;
         }
         dbg->create_info = dst;
-    } else if (info.header->struct_type == XGL_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO) {
+    } else if (info.header->struct_type == VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO) {
         // TODO: What do we want to copy here?
     }
 
@@ -304,7 +304,7 @@ static bool base_dbg_copy_create_info(const struct intel_handle *handle,
  * size is allocated and zeroed.
  */
 struct intel_base_dbg *intel_base_dbg_create(const struct intel_handle *handle,
-                                             XGL_DBG_OBJECT_TYPE type,
+                                             VK_DBG_OBJECT_TYPE type,
                                              const void *create_info,
                                              size_t dbg_size)
 {
@@ -315,7 +315,7 @@ struct intel_base_dbg *intel_base_dbg_create(const struct intel_handle *handle,
 
     assert(dbg_size >= sizeof(*dbg));
 
-    dbg = intel_alloc(handle, dbg_size, 0, XGL_SYSTEM_ALLOC_DEBUG);
+    dbg = intel_alloc(handle, dbg_size, 0, VK_SYSTEM_ALLOC_DEBUG);
     if (!dbg)
         return NULL;
 
@@ -349,7 +349,7 @@ void intel_base_dbg_destroy(const struct intel_handle *handle,
  */
 struct intel_base *intel_base_create(const struct intel_handle *handle,
                                      size_t obj_size, bool debug,
-                                     XGL_DBG_OBJECT_TYPE type,
+                                     VK_DBG_OBJECT_TYPE type,
                                      const void *create_info,
                                      size_t dbg_size)
 {
@@ -360,7 +360,7 @@ struct intel_base *intel_base_create(const struct intel_handle *handle,
 
     assert(obj_size >= sizeof(*base));
 
-    base = intel_alloc(handle, obj_size, 0, XGL_SYSTEM_ALLOC_API_OBJECT);
+    base = intel_alloc(handle, obj_size, 0, VK_SYSTEM_ALLOC_API_OBJECT);
     if (!base)
         return NULL;
 
@@ -388,19 +388,19 @@ void intel_base_destroy(struct intel_base *base)
     intel_free(base, base);
 }
 
-ICD_EXPORT XGL_RESULT XGLAPI xglDestroyObject(
-    XGL_OBJECT                                  object)
+ICD_EXPORT VK_RESULT VKAPI vkDestroyObject(
+    VK_OBJECT                                  object)
 {
     struct intel_obj *obj = intel_obj(object);
 
     obj->destroy(obj);
 
-    return XGL_SUCCESS;
+    return VK_SUCCESS;
 }
 
-ICD_EXPORT XGL_RESULT XGLAPI xglGetObjectInfo(
-    XGL_BASE_OBJECT                             object,
-    XGL_OBJECT_INFO_TYPE                        infoType,
+ICD_EXPORT VK_RESULT VKAPI vkGetObjectInfo(
+    VK_BASE_OBJECT                             object,
+    VK_OBJECT_INFO_TYPE                        infoType,
     size_t*                                     pDataSize,
     void*                                       pData)
 {
@@ -409,43 +409,43 @@ ICD_EXPORT XGL_RESULT XGLAPI xglGetObjectInfo(
     return base->get_info(base, infoType, pDataSize, pData);
 }
 
-ICD_EXPORT XGL_RESULT XGLAPI xglBindObjectMemory(
-    XGL_OBJECT                                  object,
+ICD_EXPORT VK_RESULT VKAPI vkBindObjectMemory(
+    VK_OBJECT                                  object,
     uint32_t                                    allocationIdx,
-    XGL_GPU_MEMORY                              mem_,
-    XGL_GPU_SIZE                                memOffset)
+    VK_GPU_MEMORY                              mem_,
+    VK_GPU_SIZE                                memOffset)
 {
     struct intel_obj *obj = intel_obj(object);
     struct intel_mem *mem = intel_mem(mem_);
 
     intel_obj_bind_mem(obj, mem, memOffset);
 
-    return XGL_SUCCESS;
+    return VK_SUCCESS;
 }
 
-ICD_EXPORT XGL_RESULT XGLAPI xglBindObjectMemoryRange(
-    XGL_OBJECT                                  object,
+ICD_EXPORT VK_RESULT VKAPI vkBindObjectMemoryRange(
+    VK_OBJECT                                  object,
     uint32_t                                    allocationIdx,
-    XGL_GPU_SIZE                                rangeOffset,
-    XGL_GPU_SIZE                                rangeSize,
-    XGL_GPU_MEMORY                              mem,
-    XGL_GPU_SIZE                                memOffset)
+    VK_GPU_SIZE                                rangeOffset,
+    VK_GPU_SIZE                                rangeSize,
+    VK_GPU_MEMORY                              mem,
+    VK_GPU_SIZE                                memOffset)
 {
-    return XGL_ERROR_UNKNOWN;
+    return VK_ERROR_UNKNOWN;
 }
 
-ICD_EXPORT XGL_RESULT XGLAPI xglBindImageMemoryRange(
-    XGL_IMAGE                                   image,
+ICD_EXPORT VK_RESULT VKAPI vkBindImageMemoryRange(
+    VK_IMAGE                                   image,
     uint32_t                                    allocationIdx,
-    const XGL_IMAGE_MEMORY_BIND_INFO*           bindInfo,
-    XGL_GPU_MEMORY                              mem,
-    XGL_GPU_SIZE                                memOffset)
+    const VK_IMAGE_MEMORY_BIND_INFO*           bindInfo,
+    VK_GPU_MEMORY                              mem,
+    VK_GPU_SIZE                                memOffset)
 {
-    return XGL_ERROR_UNKNOWN;
+    return VK_ERROR_UNKNOWN;
 }
 
-ICD_EXPORT XGL_RESULT XGLAPI xglDbgSetObjectTag(
-    XGL_BASE_OBJECT                             object,
+ICD_EXPORT VK_RESULT VKAPI vkDbgSetObjectTag(
+    VK_BASE_OBJECT                             object,
     size_t                                      tagSize,
     const void*                                 pTag)
 {
@@ -454,11 +454,11 @@ ICD_EXPORT XGL_RESULT XGLAPI xglDbgSetObjectTag(
     void *tag;
 
     if (!dbg)
-        return XGL_SUCCESS;
+        return VK_SUCCESS;
 
-    tag = intel_alloc(base, tagSize, 0, XGL_SYSTEM_ALLOC_DEBUG);
+    tag = intel_alloc(base, tagSize, 0, VK_SYSTEM_ALLOC_DEBUG);
     if (!tag)
-        return XGL_ERROR_OUT_OF_MEMORY;
+        return VK_ERROR_OUT_OF_MEMORY;
 
     memcpy(tag, pTag, tagSize);
 
@@ -468,5 +468,5 @@ ICD_EXPORT XGL_RESULT XGLAPI xglDbgSetObjectTag(
     dbg->tag = tag;
     dbg->tag_size = tagSize;
 
-    return XGL_SUCCESS;
+    return VK_SUCCESS;
 }

@@ -434,7 +434,7 @@ main(int argc, char **argv)
    if ((status == EXIT_SUCCESS) && do_link)  {
       assert(whole_program->NumShaders == 1);
 
-      // for XGL, we are independently compiling and linking individual
+      // for VK, we are independently compiling and linking individual
       // shaders, which matches this frontend's concept of SSO
       whole_program->SeparateShader = true;
 

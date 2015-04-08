@@ -796,7 +796,7 @@ struct gl_program
 {
    GLuint Id;
    GLubyte *String;  /**< Null-terminated program text */
-   // LunarG: Remove - XGL does not use reference counts
+   // LunarG: Remove - VK does not use reference counts
    // GLint RefCount;
    GLenum Target;    /**< GL_VERTEX/FRAGMENT_PROGRAM_ARB, GL_GEOMETRY_PROGRAM_NV */
    GLenum Format;    /**< String encoding format */
@@ -1090,7 +1090,7 @@ struct gl_shader
    gl_shader_stage Stage;
    GLuint Name;  /**< AKA the handle */
    GLchar *Label;   /**< GL_KHR_debug */
-   // LunarG: Remove - XGL does not use reference counts
+   // LunarG: Remove - VK does not use reference counts
    // GLint RefCount;
    GLboolean DeletePending;
    GLboolean CompileStatus;
@@ -1326,7 +1326,7 @@ struct gl_shader_program
    GLenum Type;  /**< Always GL_SHADER_PROGRAM (internal token) */
    GLuint Name;  /**< aka handle or ID */
    GLchar *Label;   /**< GL_KHR_debug */
-   // LunarG: Remove - XGL does not use reference counts
+   // LunarG: Remove - VK does not use reference counts
    // GLint RefCount;
    GLboolean DeletePending;
 
@@ -2259,7 +2259,7 @@ typedef enum
    API_OPENGLES,
    API_OPENGLES2,
    API_OPENGL_CORE,
-   API_XGL,
+   API_VK,
    API_OPENGL_LAST = API_OPENGL_CORE
 } gl_api;
 

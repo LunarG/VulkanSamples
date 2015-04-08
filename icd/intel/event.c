@@ -1,5 +1,5 @@
 /*
- * XGL
+ * Vulkan
  *
  * Copyright (C) 2014 LunarG, Inc.
  *
@@ -29,12 +29,12 @@
 #include "mem.h"
 #include "event.h"
 
-static XGL_RESULT event_map(struct intel_event *event, uint32_t **ptr_ret)
+static VK_RESULT event_map(struct intel_event *event, uint32_t **ptr_ret)
 {
     void *ptr;
 
     if (!event->obj.mem)
-        return XGL_ERROR_MEMORY_NOT_BOUND;
+        return VK_ERROR_MEMORY_NOT_BOUND;
 
     /*
      * This is an unsynchronous mapping.  It doesn't look like we want a
@@ -43,11 +43,11 @@ static XGL_RESULT event_map(struct intel_event *event, uint32_t **ptr_ret)
      */
     ptr = intel_mem_map(event->obj.mem, 0);
     if (!ptr)
-        return XGL_ERROR_MEMORY_MAP_FAILED;
+        return VK_ERROR_MEMORY_MAP_FAILED;
 
     *ptr_ret = (uint32_t *) ((uint8_t *) ptr + event->obj.offset);
 
-    return XGL_SUCCESS;
+    return VK_SUCCESS;
 }
 
 static void event_unmap(struct intel_event *event)
@@ -55,13 +55,13 @@ static void event_unmap(struct intel_event *event)
     intel_mem_unmap(event->obj.mem);
 }
 
-static XGL_RESULT event_write(struct intel_event *event, uint32_t val)
+static VK_RESULT event_write(struct intel_event *event, uint32_t val)
 {
-    XGL_RESULT ret;
+    VK_RESULT ret;
     uint32_t *ptr;
 
     ret = event_map(event, &ptr);
-    if (ret == XGL_SUCCESS) {
+    if (ret == VK_SUCCESS) {
         *ptr = val;
         event_unmap(event);
     }
@@ -69,13 +69,13 @@ static XGL_RESULT event_write(struct intel_event *event, uint32_t val)
     return ret;
 }
 
-static XGL_RESULT event_read(struct intel_event *event, uint32_t *val)
+static VK_RESULT event_read(struct intel_event *event, uint32_t *val)
 {
-    XGL_RESULT ret;
+    VK_RESULT ret;
     uint32_t *ptr;
 
     ret = event_map(event, &ptr);
-    if (ret == XGL_SUCCESS) {
+    if (ret == VK_SUCCESS) {
         *val = *ptr;
         event_unmap(event);
     }
@@ -90,23 +90,23 @@ static void event_destroy(struct intel_obj *obj)
     intel_event_destroy(event);
 }
 
-static XGL_RESULT event_get_info(struct intel_base *base, int type,
+static VK_RESULT event_get_info(struct intel_base *base, int type,
                                  size_t *size, void *data)
 {
-    XGL_RESULT ret = XGL_SUCCESS;
+    VK_RESULT ret = VK_SUCCESS;
 
     switch (type) {
-    case XGL_INFO_TYPE_MEMORY_REQUIREMENTS:
+    case VK_INFO_TYPE_MEMORY_REQUIREMENTS:
         {
-            XGL_MEMORY_REQUIREMENTS *mem_req = data;
+            VK_MEMORY_REQUIREMENTS *mem_req = data;
 
-            *size = sizeof(XGL_MEMORY_REQUIREMENTS);
+            *size = sizeof(VK_MEMORY_REQUIREMENTS);
             if (data == NULL)
                 return ret;
             /* use dword aligned to 64-byte boundaries */
             mem_req->size = 4;
             mem_req->alignment = 64;
-            mem_req->memType = XGL_MEMORY_TYPE_OTHER;
+            mem_req->memType = VK_MEMORY_TYPE_OTHER;
         }
         break;
     default:
@@ -117,23 +117,23 @@ static XGL_RESULT event_get_info(struct intel_base *base, int type,
     return ret;
 }
 
-XGL_RESULT intel_event_create(struct intel_dev *dev,
-                              const XGL_EVENT_CREATE_INFO *info,
+VK_RESULT intel_event_create(struct intel_dev *dev,
+                              const VK_EVENT_CREATE_INFO *info,
                               struct intel_event **event_ret)
 {
     struct intel_event *event;
 
     event = (struct intel_event *) intel_base_create(&dev->base.handle,
-            sizeof(*event), dev->base.dbg, XGL_DBG_OBJECT_EVENT, info, 0);
+            sizeof(*event), dev->base.dbg, VK_DBG_OBJECT_EVENT, info, 0);
     if (!event)
-        return XGL_ERROR_OUT_OF_MEMORY;
+        return VK_ERROR_OUT_OF_MEMORY;
 
     event->obj.base.get_info = event_get_info;
     event->obj.destroy = event_destroy;
 
     *event_ret = event;
 
-    return XGL_SUCCESS;
+    return VK_SUCCESS;
 }
 
 void intel_event_destroy(struct intel_event *event)
@@ -141,32 +141,32 @@ void intel_event_destroy(struct intel_event *event)
     intel_base_destroy(&event->obj.base);
 }
 
-XGL_RESULT intel_event_set(struct intel_event *event)
+VK_RESULT intel_event_set(struct intel_event *event)
 {
     return event_write(event, 1);
 }
 
-XGL_RESULT intel_event_reset(struct intel_event *event)
+VK_RESULT intel_event_reset(struct intel_event *event)
 {
     return event_write(event, 0);
 }
 
-XGL_RESULT intel_event_get_status(struct intel_event *event)
+VK_RESULT intel_event_get_status(struct intel_event *event)
 {
-    XGL_RESULT ret;
+    VK_RESULT ret;
     uint32_t val;
 
     ret = event_read(event, &val);
-    if (ret != XGL_SUCCESS)
+    if (ret != VK_SUCCESS)
         return ret;
 
-    return (val) ? XGL_EVENT_SET : XGL_EVENT_RESET;
+    return (val) ? VK_EVENT_SET : VK_EVENT_RESET;
 }
 
-ICD_EXPORT XGL_RESULT XGLAPI xglCreateEvent(
-    XGL_DEVICE                                  device,
-    const XGL_EVENT_CREATE_INFO*                pCreateInfo,
-    XGL_EVENT*                                  pEvent)
+ICD_EXPORT VK_RESULT VKAPI vkCreateEvent(
+    VK_DEVICE                                  device,
+    const VK_EVENT_CREATE_INFO*                pCreateInfo,
+    VK_EVENT*                                  pEvent)
 {
     struct intel_dev *dev = intel_dev(device);
 
@@ -174,24 +174,24 @@ ICD_EXPORT XGL_RESULT XGLAPI xglCreateEvent(
             (struct intel_event **) pEvent);
 }
 
-ICD_EXPORT XGL_RESULT XGLAPI xglGetEventStatus(
-    XGL_EVENT                                   event_)
+ICD_EXPORT VK_RESULT VKAPI vkGetEventStatus(
+    VK_EVENT                                   event_)
 {
     struct intel_event *event = intel_event(event_);
 
     return intel_event_get_status(event);
 }
 
-ICD_EXPORT XGL_RESULT XGLAPI xglSetEvent(
-    XGL_EVENT                                   event_)
+ICD_EXPORT VK_RESULT VKAPI vkSetEvent(
+    VK_EVENT                                   event_)
 {
     struct intel_event *event = intel_event(event_);
 
     return intel_event_set(event);
 }
 
-ICD_EXPORT XGL_RESULT XGLAPI xglResetEvent(
-    XGL_EVENT                                   event_)
+ICD_EXPORT VK_RESULT VKAPI vkResetEvent(
+    VK_EVENT                                   event_)
 {
     struct intel_event *event = intel_event(event_);
 

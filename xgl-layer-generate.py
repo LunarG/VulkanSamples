@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# XGL
+# VK
 #
 # Copyright (C) 2014 LunarG, Inc.
 #
@@ -29,11 +29,11 @@ import sys
 import os
 
 import xgl
-import xgl_helper
+import vk_helper
 
 def generate_get_proc_addr_check(name):
-    return "    if (!%s || %s[0] != 'x' || %s[1] != 'g' || %s[2] != 'l')\n" \
-           "        return NULL;" % ((name,) * 4)
+    return "    if (!%s || %s[0] != 'v' || %s[1] != 'k')\n" \
+           "        return NULL;" % ((name,) * 3)
 
 class Subcommand(object):
     def __init__(self, argv):
@@ -68,7 +68,7 @@ class Subcommand(object):
         return """/* THIS FILE IS GENERATED.  DO NOT EDIT. */
 
 /*
- * XGL
+ * Vulkan
  *
  * Copyright (C) 2014 LunarG, Inc.
  *
@@ -101,76 +101,76 @@ class Subcommand(object):
         pass
 
     # Return set of printf '%' qualifier and input to that qualifier
-    def _get_printf_params(self, xgl_type, name, output_param, cpp=False):
+    def _get_printf_params(self, vk_type, name, output_param, cpp=False):
         # TODO : Need ENUM and STRUCT checks here
-        if xgl_helper.is_type(xgl_type, 'enum'):#"_TYPE" in xgl_type: # TODO : This should be generic ENUM check
-            return ("%s", "string_%s(%s)" % (xgl_type.strip('const ').strip('*'), name))
-        if "char*" == xgl_type:
+        if vk_helper.is_type(vk_type, 'enum'):#"_TYPE" in vk_type: # TODO : This should be generic ENUM check
+            return ("%s", "string_%s(%s)" % (vk_type.strip('const ').strip('*'), name))
+        if "char*" == vk_type:
             return ("%s", name)
-        if "uint64" in xgl_type:
-            if '*' in xgl_type:
+        if "uint64" in vk_type:
+            if '*' in vk_type:
                 return ("%lu", "*%s" % name)
             return ("%lu", name)
-        if "size" in xgl_type:
-            if '*' in xgl_type:
+        if "size" in vk_type:
+            if '*' in vk_type:
                 return ("%zu", "*%s" % name)
             return ("%zu", name)
-        if "float" in xgl_type:
-            if '[' in xgl_type: # handle array, current hard-coded to 4 (TODO: Make this dynamic)
+        if "float" in vk_type:
+            if '[' in vk_type: # handle array, current hard-coded to 4 (TODO: Make this dynamic)
                 if cpp:
                     return ("[%i, %i, %i, %i]", '"[" << %s[0] << "," << %s[1] << "," << %s[2] << "," << %s[3] << "]"' % (name, name, name, name))
                 return ("[%f, %f, %f, %f]", "%s[0], %s[1], %s[2], %s[3]" % (name, name, name, name))
             return ("%f", name)
-        if "bool" in xgl_type or 'xcb_randr_crtc_t' in xgl_type:
+        if "bool" in vk_type or 'xcb_randr_crtc_t' in vk_type:
             return ("%u", name)
-        if True in [t in xgl_type for t in ["int", "FLAGS", "MASK", "xcb_window_t"]]:
-            if '[' in xgl_type: # handle array, current hard-coded to 4 (TODO: Make this dynamic)
+        if True in [t in vk_type for t in ["int", "FLAGS", "MASK", "xcb_window_t"]]:
+            if '[' in vk_type: # handle array, current hard-coded to 4 (TODO: Make this dynamic)
                 if cpp:
                     return ("[%i, %i, %i, %i]", "%s[0] << %s[1] << %s[2] << %s[3]" % (name, name, name, name))
                 return ("[%i, %i, %i, %i]", "%s[0], %s[1], %s[2], %s[3]" % (name, name, name, name))
-            if '*' in xgl_type:
+            if '*' in vk_type:
                 if 'pUserData' == name:
                     return ("%i", "((pUserData == 0) ? 0 : *(pUserData))")
                 return ("%i", "*(%s)" % name)
             return ("%i", name)
         # TODO : This is special-cased as there's only one "format" param currently and it's nice to expand it
-        if "XGL_FORMAT" == xgl_type:
+        if "VK_FORMAT" == vk_type:
             if cpp:
                 return ("%p", "&%s" % name)
-            return ("{%s.channelFormat = %%s, %s.numericFormat = %%s}" % (name, name), "string_XGL_CHANNEL_FORMAT(%s.channelFormat), string_XGL_NUM_FORMAT(%s.numericFormat)" % (name, name))
+            return ("{%s.channelFormat = %%s, %s.numericFormat = %%s}" % (name, name), "string_VK_CHANNEL_FORMAT(%s.channelFormat), string_VK_NUM_FORMAT(%s.numericFormat)" % (name, name))
         if output_param:
             return ("%p", "(void*)*%s" % name)
-        if xgl_helper.is_type(xgl_type, 'struct') and '*' not in xgl_type:
+        if vk_helper.is_type(vk_type, 'struct') and '*' not in vk_type:
             return ("%p", "(void*)(&%s)" % name)
         return ("%p", "(void*)(%s)" % name)
 
     def _gen_layer_dbg_callback_register(self):
         r_body = []
-        r_body.append('XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglDbgRegisterMsgCallback(XGL_INSTANCE instance, XGL_DBG_MSG_CALLBACK_FUNCTION pfnMsgCallback, void* pUserData)')
+        r_body.append('VK_LAYER_EXPORT VK_RESULT VKAPI vkDbgRegisterMsgCallback(VK_INSTANCE instance, VK_DBG_MSG_CALLBACK_FUNCTION pfnMsgCallback, void* pUserData)')
         r_body.append('{')
         r_body.append('    // This layer intercepts callbacks')
-        r_body.append('    XGL_LAYER_DBG_FUNCTION_NODE *pNewDbgFuncNode = (XGL_LAYER_DBG_FUNCTION_NODE*)malloc(sizeof(XGL_LAYER_DBG_FUNCTION_NODE));')
+        r_body.append('    VK_LAYER_DBG_FUNCTION_NODE *pNewDbgFuncNode = (VK_LAYER_DBG_FUNCTION_NODE*)malloc(sizeof(VK_LAYER_DBG_FUNCTION_NODE));')
         r_body.append('    if (!pNewDbgFuncNode)')
-        r_body.append('        return XGL_ERROR_OUT_OF_MEMORY;')
+        r_body.append('        return VK_ERROR_OUT_OF_MEMORY;')
         r_body.append('    pNewDbgFuncNode->pfnMsgCallback = pfnMsgCallback;')
         r_body.append('    pNewDbgFuncNode->pUserData = pUserData;')
         r_body.append('    pNewDbgFuncNode->pNext = g_pDbgFunctionHead;')
         r_body.append('    g_pDbgFunctionHead = pNewDbgFuncNode;')
         r_body.append('    // force callbacks if DebugAction hasn\'t been set already other than initial value')
         r_body.append('    if (g_actionIsDefault) {')
-        r_body.append('        g_debugAction = XGL_DBG_LAYER_ACTION_CALLBACK;')
+        r_body.append('        g_debugAction = VK_DBG_LAYER_ACTION_CALLBACK;')
         r_body.append('    }')
-        r_body.append('    XGL_RESULT result = nextTable.DbgRegisterMsgCallback(instance, pfnMsgCallback, pUserData);')
+        r_body.append('    VK_RESULT result = nextTable.DbgRegisterMsgCallback(instance, pfnMsgCallback, pUserData);')
         r_body.append('    return result;')
         r_body.append('}')
         return "\n".join(r_body)
 
     def _gen_layer_dbg_callback_unregister(self):
         ur_body = []
-        ur_body.append('XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglDbgUnregisterMsgCallback(XGL_INSTANCE instance, XGL_DBG_MSG_CALLBACK_FUNCTION pfnMsgCallback)')
+        ur_body.append('VK_LAYER_EXPORT VK_RESULT VKAPI vkDbgUnregisterMsgCallback(VK_INSTANCE instance, VK_DBG_MSG_CALLBACK_FUNCTION pfnMsgCallback)')
         ur_body.append('{')
-        ur_body.append('    XGL_LAYER_DBG_FUNCTION_NODE *pTrav = g_pDbgFunctionHead;')
-        ur_body.append('    XGL_LAYER_DBG_FUNCTION_NODE *pPrev = pTrav;')
+        ur_body.append('    VK_LAYER_DBG_FUNCTION_NODE *pTrav = g_pDbgFunctionHead;')
+        ur_body.append('    VK_LAYER_DBG_FUNCTION_NODE *pPrev = pTrav;')
         ur_body.append('    while (pTrav) {')
         ur_body.append('        if (pTrav->pfnMsgCallback == pfnMsgCallback) {')
         ur_body.append('            pPrev->pNext = pTrav->pNext;')
@@ -185,32 +185,32 @@ class Subcommand(object):
         ur_body.append('    if (g_pDbgFunctionHead == NULL)')
         ur_body.append('    {')
         ur_body.append('        if (g_actionIsDefault)')
-        ur_body.append('            g_debugAction = XGL_DBG_LAYER_ACTION_LOG_MSG;')
+        ur_body.append('            g_debugAction = VK_DBG_LAYER_ACTION_LOG_MSG;')
         ur_body.append('        else')
-        ur_body.append('            g_debugAction &= ~XGL_DBG_LAYER_ACTION_CALLBACK;')
+        ur_body.append('            g_debugAction &= ~VK_DBG_LAYER_ACTION_CALLBACK;')
         ur_body.append('    }')
-        ur_body.append('    XGL_RESULT result = nextTable.DbgUnregisterMsgCallback(instance, pfnMsgCallback);')
+        ur_body.append('    VK_RESULT result = nextTable.DbgUnregisterMsgCallback(instance, pfnMsgCallback);')
         ur_body.append('    return result;')
         ur_body.append('}')
         return "\n".join(ur_body)
 
     def _gen_layer_get_extension_support(self, layer="Generic"):
         ges_body = []
-        ges_body.append('XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglGetExtensionSupport(XGL_PHYSICAL_GPU gpu, const char* pExtName)')
+        ges_body.append('VK_LAYER_EXPORT VK_RESULT VKAPI vkGetExtensionSupport(VK_PHYSICAL_GPU gpu, const char* pExtName)')
         ges_body.append('{')
-        ges_body.append('    XGL_RESULT result;')
-        ges_body.append('    XGL_BASE_LAYER_OBJECT* gpuw = (XGL_BASE_LAYER_OBJECT *) gpu;')
+        ges_body.append('    VK_RESULT result;')
+        ges_body.append('    VK_BASE_LAYER_OBJECT* gpuw = (VK_BASE_LAYER_OBJECT *) gpu;')
         ges_body.append('')
         ges_body.append('    /* This entrypoint is NOT going to init its own dispatch table since loader calls here early */')
         ges_body.append('    if (!strncmp(pExtName, "%s", strlen("%s")))' % (layer, layer))
         ges_body.append('    {')
-        ges_body.append('        result = XGL_SUCCESS;')
+        ges_body.append('        result = VK_SUCCESS;')
         ges_body.append('    } else if (nextTable.GetExtensionSupport != NULL)')
         ges_body.append('    {')
-        ges_body.append('        result = nextTable.GetExtensionSupport((XGL_PHYSICAL_GPU)gpuw->nextObject, pExtName);')
+        ges_body.append('        result = nextTable.GetExtensionSupport((VK_PHYSICAL_GPU)gpuw->nextObject, pExtName);')
         ges_body.append('    } else')
         ges_body.append('    {')
-        ges_body.append('        result = XGL_ERROR_INVALID_EXTENSION;')
+        ges_body.append('        result = VK_ERROR_INVALID_EXTENSION;')
         ges_body.append('    }')
         ges_body.append('    return result;')
         ges_body.append('}')
@@ -237,7 +237,7 @@ class Subcommand(object):
                     funcs.append(intercept)
                     intercepted.append(proto)
 
-        prefix="xgl"
+        prefix="vk"
         lookups = []
         for proto in intercepted:
             if 'WsiX11' in proto.name:
@@ -254,7 +254,7 @@ class Subcommand(object):
         body.append("{")
         body.append(generate_get_proc_addr_check("name"))
         body.append("")
-        body.append("    name += 3;")
+        body.append("    name += 2;")
         body.append("    %s" % "\n    ".join(lookups))
         body.append("")
         body.append("    return NULL;")
@@ -265,44 +265,44 @@ class Subcommand(object):
 
     def _generate_extensions(self):
         exts = []
-        exts.append('uint64_t objTrackGetObjectCount(XGL_OBJECT_TYPE type)')
+        exts.append('uint64_t objTrackGetObjectCount(VK_OBJECT_TYPE type)')
         exts.append('{')
-        exts.append('    return (type == XGL_OBJECT_TYPE_ANY) ? numTotalObjs : numObjs[type];')
+        exts.append('    return (type == VK_OBJECT_TYPE_ANY) ? numTotalObjs : numObjs[type];')
         exts.append('}')
         exts.append('')
-        exts.append('XGL_RESULT objTrackGetObjects(XGL_OBJECT_TYPE type, uint64_t objCount, OBJTRACK_NODE* pObjNodeArray)')
+        exts.append('VK_RESULT objTrackGetObjects(VK_OBJECT_TYPE type, uint64_t objCount, OBJTRACK_NODE* pObjNodeArray)')
         exts.append('{')
         exts.append("    // This bool flags if we're pulling all objs or just a single class of objs")
-        exts.append('    bool32_t bAllObjs = (type == XGL_OBJECT_TYPE_ANY);')
+        exts.append('    bool32_t bAllObjs = (type == VK_OBJECT_TYPE_ANY);')
         exts.append('    // Check the count first thing')
         exts.append('    uint64_t maxObjCount = (bAllObjs) ? numTotalObjs : numObjs[type];')
         exts.append('    if (objCount > maxObjCount) {')
         exts.append('        char str[1024];')
-        exts.append('        sprintf(str, "OBJ ERROR : Received objTrackGetObjects() request for %lu objs, but there are only %lu objs of type %s", objCount, maxObjCount, string_XGL_OBJECT_TYPE(type));')
-        exts.append('        layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, 0, 0, OBJTRACK_OBJCOUNT_MAX_EXCEEDED, "OBJTRACK", str);')
-        exts.append('        return XGL_ERROR_INVALID_VALUE;')
+        exts.append('        sprintf(str, "OBJ ERROR : Received objTrackGetObjects() request for %lu objs, but there are only %lu objs of type %s", objCount, maxObjCount, string_VK_OBJECT_TYPE(type));')
+        exts.append('        layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, 0, 0, OBJTRACK_OBJCOUNT_MAX_EXCEEDED, "OBJTRACK", str);')
+        exts.append('        return VK_ERROR_INVALID_VALUE;')
         exts.append('    }')
         exts.append('    objNode* pTrav = (bAllObjs) ? pGlobalHead : pObjectHead[type];')
         exts.append('    for (uint64_t i = 0; i < objCount; i++) {')
         exts.append('        if (!pTrav) {')
         exts.append('            char str[1024];')
-        exts.append('            sprintf(str, "OBJ INTERNAL ERROR : Ran out of %s objs! Should have %lu, but only copied %lu and not the requested %lu.", string_XGL_OBJECT_TYPE(type), maxObjCount, i, objCount);')
-        exts.append('            layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, 0, 0, OBJTRACK_INTERNAL_ERROR, "OBJTRACK", str);')
-        exts.append('            return XGL_ERROR_UNKNOWN;')
+        exts.append('            sprintf(str, "OBJ INTERNAL ERROR : Ran out of %s objs! Should have %lu, but only copied %lu and not the requested %lu.", string_VK_OBJECT_TYPE(type), maxObjCount, i, objCount);')
+        exts.append('            layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, 0, 0, OBJTRACK_INTERNAL_ERROR, "OBJTRACK", str);')
+        exts.append('            return VK_ERROR_UNKNOWN;')
         exts.append('        }')
         exts.append('        memcpy(&pObjNodeArray[i], pTrav, sizeof(OBJTRACK_NODE));')
         exts.append('        pTrav = (bAllObjs) ? pTrav->pNextGlobal : pTrav->pNextObj;')
         exts.append('    }')
-        exts.append('    return XGL_SUCCESS;')
+        exts.append('    return VK_SUCCESS;')
         exts.append('}')
 
         return "\n".join(exts)
 
     def _generate_layer_gpa_function(self, extensions=[]):
         func_body = []
-        func_body.append("XGL_LAYER_EXPORT void* XGLAPI xglGetProcAddr(XGL_PHYSICAL_GPU gpu, const char* funcName)\n"
+        func_body.append("VK_LAYER_EXPORT void* VKAPI vkGetProcAddr(VK_PHYSICAL_GPU gpu, const char* funcName)\n"
                          "{\n"
-                         "    XGL_BASE_LAYER_OBJECT* gpuw = (XGL_BASE_LAYER_OBJECT *) gpu;\n"
+                         "    VK_BASE_LAYER_OBJECT* gpuw = (VK_BASE_LAYER_OBJECT *) gpu;\n"
                          "    void* addr;\n"
                          "    if (gpu == NULL)\n"
                          "        return NULL;\n"
@@ -319,13 +319,13 @@ class Subcommand(object):
         func_body.append("    else {\n"
                          "        if (gpuw->pGPA == NULL)\n"
                          "            return NULL;\n"
-                         "        return gpuw->pGPA((XGL_PHYSICAL_GPU)gpuw->nextObject, funcName);\n"
+                         "        return gpuw->pGPA((VK_PHYSICAL_GPU)gpuw->nextObject, funcName);\n"
                          "    }\n"
                          "}\n")
         return "\n".join(func_body)
 
-    def _generate_layer_initialization(self, init_opts=False, prefix='xgl', lockname=None):
-        func_body = ["#include \"xgl_dispatch_table_helper.h\""]
+    def _generate_layer_initialization(self, init_opts=False, prefix='vk', lockname=None):
+        func_body = ["#include \"vk_dispatch_table_helper.h\""]
         func_body.append('static void init%s(void)\n'
                          '{\n' % self.layer_name)
         if init_opts:
@@ -334,7 +334,7 @@ class Subcommand(object):
             func_body.append('    getLayerOptionEnum("%sReportLevel", (uint32_t *) &g_reportingLevel);' % self.layer_name)
             func_body.append('    g_actionIsDefault = getLayerOptionEnum("%sDebugAction", (uint32_t *) &g_debugAction);' % self.layer_name)
             func_body.append('')
-            func_body.append('    if (g_debugAction & XGL_DBG_LAYER_ACTION_LOG_MSG)')
+            func_body.append('    if (g_debugAction & VK_DBG_LAYER_ACTION_LOG_MSG)')
             func_body.append('    {')
             func_body.append('        strOpt = getLayerOption("%sLogFilename");' % self.layer_name)
             func_body.append('        if (strOpt)')
@@ -345,11 +345,11 @@ class Subcommand(object):
             func_body.append('            g_logFile = stdout;')
             func_body.append('    }')
             func_body.append('')
-        func_body.append('    xglGetProcAddrType fpNextGPA;\n'
+        func_body.append('    vkGetProcAddrType fpNextGPA;\n'
                          '    fpNextGPA = pCurObj->pGPA;\n'
                          '    assert(fpNextGPA);\n')
 
-        func_body.append("    layer_initialize_dispatch_table(&nextTable, fpNextGPA, (XGL_PHYSICAL_GPU) pCurObj->nextObject);")
+        func_body.append("    layer_initialize_dispatch_table(&nextTable, fpNextGPA, (VK_PHYSICAL_GPU) pCurObj->nextObject);")
         if lockname is not None:
             func_body.append("    if (!%sLockInitialized)" % lockname)
             func_body.append("    {")
@@ -360,15 +360,15 @@ class Subcommand(object):
         func_body.append("}\n")
         return "\n".join(func_body)
 
-    def _generate_layer_initialization_with_lock(self, prefix='xgl'):
-        func_body = ["#include \"xgl_dispatch_table_helper.h\""]
+    def _generate_layer_initialization_with_lock(self, prefix='vk'):
+        func_body = ["#include \"vk_dispatch_table_helper.h\""]
         func_body.append('static void init%s(void)\n'
                          '{\n'
-                         '    xglGetProcAddrType fpNextGPA;\n'
+                         '    vkGetProcAddrType fpNextGPA;\n'
                          '    fpNextGPA = pCurObj->pGPA;\n'
                          '    assert(fpNextGPA);\n' % self.layer_name);
 
-        func_body.append("    layer_initialize_dispatch_table(&nextTable, fpNextGPA, (XGL_PHYSICAL_GPU) pCurObj->nextObject);\n")
+        func_body.append("    layer_initialize_dispatch_table(&nextTable, fpNextGPA, (VK_PHYSICAL_GPU) pCurObj->nextObject);\n")
         func_body.append("    if (!printLockInitialized)")
         func_body.append("    {")
         func_body.append("        // TODO/TBD: Need to delete this mutex sometime.  How???")
@@ -380,7 +380,7 @@ class Subcommand(object):
 
 class LayerFuncsSubcommand(Subcommand):
     def generate_header(self):
-        return '#include <xglLayer.h>\n#include "loader.h"'
+        return '#include <vkLayer.h>\n#include "loader.h"'
 
     def generate_body(self):
         return self._generate_dispatch_entrypoints("static")
@@ -394,66 +394,66 @@ class LayerDispatchSubcommand(Subcommand):
 
 class GenericLayerSubcommand(Subcommand):
     def generate_header(self):
-        return '#include <stdio.h>\n#include <stdlib.h>\n#include <string.h>\n#include "loader_platform.h"\n#include "xglLayer.h"\n//The following is #included again to catch certain OS-specific functions being used:\n#include "loader_platform.h"\n\n#include "layers_config.h"\n#include "layers_msg.h"\n\nstatic XGL_LAYER_DISPATCH_TABLE nextTable;\nstatic XGL_BASE_LAYER_OBJECT *pCurObj;\n\nstatic LOADER_PLATFORM_THREAD_ONCE_DECLARATION(tabOnce);'
+        return '#include <stdio.h>\n#include <stdlib.h>\n#include <string.h>\n#include "loader_platform.h"\n#include "vkLayer.h"\n//The following is #included again to catch certain OS-specific functions being used:\n#include "loader_platform.h"\n\n#include "layers_config.h"\n#include "layers_msg.h"\n\nstatic VK_LAYER_DISPATCH_TABLE nextTable;\nstatic VK_BASE_LAYER_OBJECT *pCurObj;\n\nstatic LOADER_PLATFORM_THREAD_ONCE_DECLARATION(tabOnce);'
 
     def generate_intercept(self, proto, qual):
         if proto.name in [ 'DbgRegisterMsgCallback', 'DbgUnregisterMsgCallback' , 'GetExtensionSupport']:
             # use default version
             return None
-        decl = proto.c_func(prefix="xgl", attr="XGLAPI")
+        decl = proto.c_func(prefix="vk", attr="VKAPI")
         param0_name = proto.params[0].name
         ret_val = ''
         stmt = ''
         funcs = []
         if proto.ret != "void":
-            ret_val = "XGL_RESULT result = "
+            ret_val = "VK_RESULT result = "
             stmt = "    return result;\n"
         if 'WsiX11AssociateConnection' == proto.name:
             funcs.append("#if defined(__linux__) || defined(XCB_NVIDIA)")
         if proto.name == "EnumerateLayers":
-            c_call = proto.c_call().replace("(" + proto.params[0].name, "((XGL_PHYSICAL_GPU)gpuw->nextObject", 1)
+            c_call = proto.c_call().replace("(" + proto.params[0].name, "((VK_PHYSICAL_GPU)gpuw->nextObject", 1)
             funcs.append('%s%s\n'
                      '{\n'
                      '    char str[1024];\n'
                      '    if (gpu != NULL) {\n'
-                     '        XGL_BASE_LAYER_OBJECT* gpuw = (XGL_BASE_LAYER_OBJECT *) %s;\n'
+                     '        VK_BASE_LAYER_OBJECT* gpuw = (VK_BASE_LAYER_OBJECT *) %s;\n'
                      '        sprintf(str, "At start of layered %s\\n");\n'
-                     '        layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, gpu, 0, 0, (char *) "GENERIC", (char *) str);\n'
+                     '        layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, gpu, 0, 0, (char *) "GENERIC", (char *) str);\n'
                      '        pCurObj = gpuw;\n'
                      '        loader_platform_thread_once(&tabOnce, init%s);\n'
                      '        %snextTable.%s;\n'
                      '        sprintf(str, "Completed layered %s\\n");\n'
-                     '        layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, gpu, 0, 0, (char *) "GENERIC", (char *) str);\n'
+                     '        layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, gpu, 0, 0, (char *) "GENERIC", (char *) str);\n'
                      '        fflush(stdout);\n'
                      '    %s'
                      '    } else {\n'
                      '        if (pOutLayerCount == NULL || pOutLayers == NULL || pOutLayers[0] == NULL)\n'
-                     '            return XGL_ERROR_INVALID_POINTER;\n'
+                     '            return VK_ERROR_INVALID_POINTER;\n'
                      '        // This layer compatible with all GPUs\n'
                      '        *pOutLayerCount = 1;\n'
                      '        strncpy((char *) pOutLayers[0], "%s", maxStringSize);\n'
-                     '        return XGL_SUCCESS;\n'
+                     '        return VK_SUCCESS;\n'
                      '    }\n'
                          '}' % (qual, decl, proto.params[0].name, proto.name, self.layer_name, ret_val, c_call, proto.name, stmt, self.layer_name))
-        elif proto.params[0].ty != "XGL_PHYSICAL_GPU":
+        elif proto.params[0].ty != "VK_PHYSICAL_GPU":
             funcs.append('%s%s\n'
                      '{\n'
                      '    %snextTable.%s;\n'
                      '%s'
                      '}' % (qual, decl, ret_val, proto.c_call(), stmt))
         else:
-            c_call = proto.c_call().replace("(" + proto.params[0].name, "((XGL_PHYSICAL_GPU)gpuw->nextObject", 1)
+            c_call = proto.c_call().replace("(" + proto.params[0].name, "((VK_PHYSICAL_GPU)gpuw->nextObject", 1)
             funcs.append('%s%s\n'
                      '{\n'
                      '    char str[1024];'
-                     '    XGL_BASE_LAYER_OBJECT* gpuw = (XGL_BASE_LAYER_OBJECT *) %s;\n'
+                     '    VK_BASE_LAYER_OBJECT* gpuw = (VK_BASE_LAYER_OBJECT *) %s;\n'
                      '    sprintf(str, "At start of layered %s\\n");\n'
-                     '    layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, gpuw, 0, 0, (char *) "GENERIC", (char *) str);\n'
+                     '    layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, gpuw, 0, 0, (char *) "GENERIC", (char *) str);\n'
                      '    pCurObj = gpuw;\n'
                      '    loader_platform_thread_once(&tabOnce, init%s);\n'
                      '    %snextTable.%s;\n'
                      '    sprintf(str, "Completed layered %s\\n");\n'
-                     '    layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, gpuw, 0, 0, (char *) "GENERIC", (char *) str);\n'
+                     '    layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, gpuw, 0, 0, (char *) "GENERIC", (char *) str);\n'
                      '    fflush(stdout);\n'
                      '%s'
                      '}' % (qual, decl, proto.params[0].name, proto.name, self.layer_name, ret_val, c_call, proto.name, stmt))
@@ -464,7 +464,7 @@ class GenericLayerSubcommand(Subcommand):
     def generate_body(self):
         self.layer_name = "Generic"
         body = [self._generate_layer_initialization(True),
-                self._generate_dispatch_entrypoints("XGL_LAYER_EXPORT"),
+                self._generate_dispatch_entrypoints("VK_LAYER_EXPORT"),
                 self._generate_layer_gpa_function()]
 
         return "\n\n".join(body)
@@ -474,11 +474,11 @@ class ApiDumpSubcommand(Subcommand):
         header_txt = []
         header_txt.append('#include <stdio.h>\n#include <stdlib.h>\n#include <string.h>')
         header_txt.append('#include "loader_platform.h"')
-        header_txt.append('#include "xglLayer.h"\n#include "xgl_struct_string_helper.h"\n')
+        header_txt.append('#include "vkLayer.h"\n#include "vk_struct_string_helper.h"\n')
         header_txt.append('// The following is #included again to catch certain OS-specific functions being used:')
         header_txt.append('#include "loader_platform.h"')
-        header_txt.append('static XGL_LAYER_DISPATCH_TABLE nextTable;')
-        header_txt.append('static XGL_BASE_LAYER_OBJECT *pCurObj;\n')
+        header_txt.append('static VK_LAYER_DISPATCH_TABLE nextTable;')
+        header_txt.append('static VK_BASE_LAYER_OBJECT *pCurObj;\n')
         header_txt.append('static LOADER_PLATFORM_THREAD_ONCE_DECLARATION(tabOnce);')
         header_txt.append('static int printLockInitialized = 0;')
         header_txt.append('static loader_platform_thread_mutex printLock;\n')
@@ -502,7 +502,7 @@ class ApiDumpSubcommand(Subcommand):
         return "\n".join(header_txt)
 
     def generate_intercept(self, proto, qual):
-        decl = proto.c_func(prefix="xgl", attr="XGLAPI")
+        decl = proto.c_func(prefix="vk", attr="VKAPI")
         param0_name = proto.params[0].name
         ret_val = ''
         stmt = ''
@@ -514,7 +514,7 @@ class ApiDumpSubcommand(Subcommand):
         elif 'Create' in proto.name or 'Alloc' in proto.name or 'MapMemory' in proto.name:
             create_params = -1
         if proto.ret != "void":
-            ret_val = "XGL_RESULT result = "
+            ret_val = "VK_RESULT result = "
             stmt = "    return result;\n"
         f_open = ''
         f_close = ''
@@ -523,11 +523,11 @@ class ApiDumpSubcommand(Subcommand):
             if 'CreateDevice' in proto.name:
                 file_mode = "w"
             f_open = 'loader_platform_thread_lock_mutex(&printLock);\n    pOutFile = fopen(outFileName, "%s");\n    ' % (file_mode)
-            log_func = 'fprintf(pOutFile, "t{%%u} xgl%s(' % proto.name
+            log_func = 'fprintf(pOutFile, "t{%%u} vk%s(' % proto.name
             f_close = '\n    fclose(pOutFile);\n    loader_platform_thread_unlock_mutex(&printLock);'
         else:
             f_open = 'loader_platform_thread_lock_mutex(&printLock);\n    '
-            log_func = 'printf("t{%%u} xgl%s(' % proto.name
+            log_func = 'printf("t{%%u} vk%s(' % proto.name
             f_close = '\n    loader_platform_thread_unlock_mutex(&printLock);'
         print_vals = ', getTIDIndex()'
         pindex = 0
@@ -549,7 +549,7 @@ class ApiDumpSubcommand(Subcommand):
                 sp_param_dict[pindex] = prev_count_name
             elif 'pDescriptorSets' == p.name and proto.params[-1].name == 'pCount':
                 sp_param_dict[pindex] = '*pCount'
-            elif 'Wsi' not in proto.name and xgl_helper.is_type(p.ty.strip('*').strip('const '), 'struct'):
+            elif 'Wsi' not in proto.name and vk_helper.is_type(p.ty.strip('*').strip('const '), 'struct'):
                 sp_param_dict[pindex] = 'index'
             pindex += 1
             if p.name.endswith('Count'):
@@ -562,7 +562,7 @@ class ApiDumpSubcommand(Subcommand):
         log_func = log_func.strip(', ')
         if proto.ret != "void":
             log_func += ') = %s\\n"'
-            print_vals += ', string_XGL_RESULT(result)'
+            print_vals += ', string_VK_RESULT(result)'
         else:
             log_func += ')\\n"'
         log_func = '%s%s);' % (log_func, print_vals)
@@ -572,7 +572,7 @@ class ApiDumpSubcommand(Subcommand):
             for sp_index in sorted(sp_param_dict):
                 # TODO : Clean this if/else block up, too much duplicated code
                 if 'index' == sp_param_dict[sp_index]:
-                    cis_print_func = 'xgl_print_%s' % (proto.params[sp_index].ty.strip('const ').strip('*').lower())
+                    cis_print_func = 'vk_print_%s' % (proto.params[sp_index].ty.strip('const ').strip('*').lower())
                     var_name = proto.params[sp_index].name
                     if proto.params[sp_index].name != 'color':
                         log_func += '\n    if (%s) {' % (proto.params[sp_index].name)
@@ -594,8 +594,8 @@ class ApiDumpSubcommand(Subcommand):
                     if proto.params[sp_index].name != 'color':
                         log_func += '\n    }'
                 else: # should have a count value stored to iterate over array
-                    if xgl_helper.is_type(proto.params[sp_index].ty.strip('*').strip('const '), 'struct'):
-                        cis_print_func = 'pTmpStr = xgl_print_%s(&%s[i], "    ");' % (proto.params[sp_index].ty.strip('const ').strip('*').lower(), proto.params[sp_index].name)
+                    if vk_helper.is_type(proto.params[sp_index].ty.strip('*').strip('const '), 'struct'):
+                        cis_print_func = 'pTmpStr = vk_print_%s(&%s[i], "    ");' % (proto.params[sp_index].ty.strip('const ').strip('*').lower(), proto.params[sp_index].name)
                     else:
                         cis_print_func = 'pTmpStr = (char*)malloc(32);\n        sprintf(pTmpStr, "    %%p", %s[i]);' % proto.params[sp_index].name
                     if not i_decl:
@@ -618,11 +618,11 @@ class ApiDumpSubcommand(Subcommand):
         if 'WsiX11AssociateConnection' == proto.name:
             funcs.append("#if defined(__linux__) || defined(XCB_NVIDIA)")
         if proto.name == "EnumerateLayers":
-            c_call = proto.c_call().replace("(" + proto.params[0].name, "((XGL_PHYSICAL_GPU)gpuw->nextObject", 1)
+            c_call = proto.c_call().replace("(" + proto.params[0].name, "((VK_PHYSICAL_GPU)gpuw->nextObject", 1)
             funcs.append('%s%s\n'
                      '{\n'
                      '    if (gpu != NULL) {\n'
-                     '        XGL_BASE_LAYER_OBJECT* gpuw = (XGL_BASE_LAYER_OBJECT *) %s;\n'
+                     '        VK_BASE_LAYER_OBJECT* gpuw = (VK_BASE_LAYER_OBJECT *) %s;\n'
                      '        pCurObj = gpuw;\n'
                      '        loader_platform_thread_once(&tabOnce, init%s);\n'
                      '        %snextTable.%s;\n'
@@ -630,34 +630,34 @@ class ApiDumpSubcommand(Subcommand):
                      '    %s'
                      '    } else {\n'
                      '        if (pOutLayerCount == NULL || pOutLayers == NULL || pOutLayers[0] == NULL)\n'
-                     '            return XGL_ERROR_INVALID_POINTER;\n'
+                     '            return VK_ERROR_INVALID_POINTER;\n'
                      '        // This layer compatible with all GPUs\n'
                      '        *pOutLayerCount = 1;\n'
                      '        strncpy((char *) pOutLayers[0], "%s", maxStringSize);\n'
-                     '        return XGL_SUCCESS;\n'
+                     '        return VK_SUCCESS;\n'
                      '    }\n'
                          '}' % (qual, decl, proto.params[0].name, self.layer_name, ret_val, c_call,f_open, log_func, f_close, stmt, self.layer_name))
         elif 'GetExtensionSupport' == proto.name:
-            c_call = proto.c_call().replace("(" + proto.params[0].name, "((XGL_PHYSICAL_GPU)gpuw->nextObject", 1)
+            c_call = proto.c_call().replace("(" + proto.params[0].name, "((VK_PHYSICAL_GPU)gpuw->nextObject", 1)
             funcs.append('%s%s\n'
                          '{\n'
-                         '    XGL_BASE_LAYER_OBJECT* gpuw = (XGL_BASE_LAYER_OBJECT *) %s;\n'
-                         '    XGL_RESULT result;\n'
+                         '    VK_BASE_LAYER_OBJECT* gpuw = (VK_BASE_LAYER_OBJECT *) %s;\n'
+                         '    VK_RESULT result;\n'
                          '    /* This entrypoint is NOT going to init its own dispatch table since loader calls here early */\n'
                          '    if (!strncmp(pExtName, "%s", strlen("%s")))\n'
                          '    {\n'
-                         '        result = XGL_SUCCESS;\n'
+                         '        result = VK_SUCCESS;\n'
                          '    } else if (nextTable.GetExtensionSupport != NULL)\n'
                          '    {\n'
                          '        result = nextTable.%s;\n'
                          '        %s    %s        %s\n'
                          '    } else\n'
                          '    {\n'
-                         '        result = XGL_ERROR_INVALID_EXTENSION;\n'
+                         '        result = VK_ERROR_INVALID_EXTENSION;\n'
                          '    }\n'
                          '%s'
                          '}' % (qual, decl, proto.params[0].name, self.layer_name, self.layer_name, c_call, f_open, log_func, f_close, stmt))
-        elif proto.params[0].ty != "XGL_PHYSICAL_GPU":
+        elif proto.params[0].ty != "VK_PHYSICAL_GPU":
             funcs.append('%s%s\n'
                      '{\n'
                      '    %snextTable.%s;\n'
@@ -665,10 +665,10 @@ class ApiDumpSubcommand(Subcommand):
                      '%s'
                      '}' % (qual, decl, ret_val, proto.c_call(), f_open, log_func, f_close, stmt))
         else:
-            c_call = proto.c_call().replace("(" + proto.params[0].name, "((XGL_PHYSICAL_GPU)gpuw->nextObject", 1)
+            c_call = proto.c_call().replace("(" + proto.params[0].name, "((VK_PHYSICAL_GPU)gpuw->nextObject", 1)
             funcs.append('%s%s\n'
                      '{\n'
-                     '    XGL_BASE_LAYER_OBJECT* gpuw = (XGL_BASE_LAYER_OBJECT *) %s;\n'
+                     '    VK_BASE_LAYER_OBJECT* gpuw = (VK_BASE_LAYER_OBJECT *) %s;\n'
                      '    pCurObj = gpuw;\n'
                      '    loader_platform_thread_once(&tabOnce, init%s);\n'
                      '    %snextTable.%s;\n'
@@ -682,7 +682,7 @@ class ApiDumpSubcommand(Subcommand):
     def generate_body(self):
         self.layer_name = "APIDump"
         body = [self._generate_layer_initialization_with_lock(),
-                self._generate_dispatch_entrypoints("XGL_LAYER_EXPORT"),
+                self._generate_dispatch_entrypoints("VK_LAYER_EXPORT"),
                 self._generate_layer_gpa_function()]
 
         return "\n\n".join(body)
@@ -692,11 +692,11 @@ class ApiDumpCppSubcommand(Subcommand):
         header_txt = []
         header_txt.append('#include <stdio.h>\n#include <stdlib.h>\n#include <string.h>')
         header_txt.append('#include "loader_platform.h"')
-        header_txt.append('#include "xglLayer.h"\n#include "xgl_struct_string_helper_cpp.h"\n')
+        header_txt.append('#include "vkLayer.h"\n#include "vk_struct_string_helper_cpp.h"\n')
         header_txt.append('// The following is #included again to catch certain OS-specific functions being used:')
         header_txt.append('#include "loader_platform.h"')
-        header_txt.append('static XGL_LAYER_DISPATCH_TABLE nextTable;')
-        header_txt.append('static XGL_BASE_LAYER_OBJECT *pCurObj;\n')
+        header_txt.append('static VK_LAYER_DISPATCH_TABLE nextTable;')
+        header_txt.append('static VK_BASE_LAYER_OBJECT *pCurObj;\n')
         header_txt.append('static LOADER_PLATFORM_THREAD_ONCE_DECLARATION(tabOnce);')
         header_txt.append('static int printLockInitialized = 0;')
         header_txt.append('static loader_platform_thread_mutex printLock;\n')
@@ -720,7 +720,7 @@ class ApiDumpCppSubcommand(Subcommand):
         return "\n".join(header_txt)
 
     def generate_intercept(self, proto, qual):
-        decl = proto.c_func(prefix="xgl", attr="XGLAPI")
+        decl = proto.c_func(prefix="vk", attr="VKAPI")
         param0_name = proto.params[0].name
         ret_val = ''
         stmt = ''
@@ -732,7 +732,7 @@ class ApiDumpCppSubcommand(Subcommand):
         elif 'Create' in proto.name or 'Alloc' in proto.name or 'MapMemory' in proto.name:
             create_params = -1
         if proto.ret != "void":
-            ret_val = "XGL_RESULT result = "
+            ret_val = "VK_RESULT result = "
             stmt = "    return result;\n"
         f_open = ''
         f_close = ''
@@ -741,11 +741,11 @@ class ApiDumpCppSubcommand(Subcommand):
             if 'CreateDevice' in proto.name:
                 file_mode = "w"
             f_open = 'loader_platform_thread_lock_mutex(&printLock);\n    pOutFile = fopen(outFileName, "%s");\n    ' % (file_mode)
-            log_func = 'fprintf(pOutFile, "t{%%u} xgl%s(' % proto.name
+            log_func = 'fprintf(pOutFile, "t{%%u} vk%s(' % proto.name
             f_close = '\n    fclose(pOutFile);\n    loader_platform_thread_unlock_mutex(&printLock);'
         else:
             f_open = 'loader_platform_thread_lock_mutex(&printLock);\n    '
-            log_func = 'cout << "t{" << getTIDIndex() << "} xgl%s(' % proto.name
+            log_func = 'cout << "t{" << getTIDIndex() << "} vk%s(' % proto.name
             f_close = '\n    loader_platform_thread_unlock_mutex(&printLock);'
         pindex = 0
         prev_count_name = ''
@@ -765,7 +765,7 @@ class ApiDumpCppSubcommand(Subcommand):
                 sp_param_dict[pindex] = prev_count_name
             elif 'pDescriptorSets' == p.name and proto.params[-1].name == 'pCount':
                 sp_param_dict[pindex] = '*pCount'
-            elif 'Wsi' not in proto.name and xgl_helper.is_type(p.ty.strip('*').strip('const '), 'struct'):
+            elif 'Wsi' not in proto.name and vk_helper.is_type(p.ty.strip('*').strip('const '), 'struct'):
                 sp_param_dict[pindex] = 'index'
             pindex += 1
             if p.name.endswith('Count'):
@@ -777,8 +777,8 @@ class ApiDumpCppSubcommand(Subcommand):
                 prev_count_name = ''
         log_func = log_func.strip(', ')
         if proto.ret != "void":
-            log_func += ') = " << string_XGL_RESULT((XGL_RESULT)result) << endl'
-            #print_vals += ', string_XGL_RESULT_CODE(result)'
+            log_func += ') = " << string_VK_RESULT((VK_RESULT)result) << endl'
+            #print_vals += ', string_VK_RESULT_CODE(result)'
         else:
             log_func += ')\\n"'
         log_func += ';'
@@ -787,7 +787,7 @@ class ApiDumpCppSubcommand(Subcommand):
             log_func += '\n    string tmp_str;'
             for sp_index in sp_param_dict:
                 if 'index' == sp_param_dict[sp_index]:
-                    cis_print_func = 'xgl_print_%s' % (proto.params[sp_index].ty.strip('const ').strip('*').lower())
+                    cis_print_func = 'vk_print_%s' % (proto.params[sp_index].ty.strip('const ').strip('*').lower())
                     var_name = proto.params[sp_index].name
                     if proto.params[sp_index].name != 'color':
                         log_func += '\n    if (%s) {' % (proto.params[sp_index].name)
@@ -812,10 +812,10 @@ class ApiDumpCppSubcommand(Subcommand):
                 else: # We have a count value stored to iterate over an array
                     print_cast = ''
                     print_func = ''
-                    if xgl_helper.is_type(proto.params[sp_index].ty.strip('*').strip('const '), 'struct'):
+                    if vk_helper.is_type(proto.params[sp_index].ty.strip('*').strip('const '), 'struct'):
                         print_cast = '&'
-                        print_func = 'xgl_print_%s' % proto.params[sp_index].ty.strip('const ').strip('*').lower()
-                        #cis_print_func = 'tmp_str = xgl_print_%s(&%s[i], "    ");' % (proto.params[sp_index].ty.strip('const ').strip('*').lower(), proto.params[sp_index].name)
+                        print_func = 'vk_print_%s' % proto.params[sp_index].ty.strip('const ').strip('*').lower()
+                        #cis_print_func = 'tmp_str = vk_print_%s(&%s[i], "    ");' % (proto.params[sp_index].ty.strip('const ').strip('*').lower(), proto.params[sp_index].name)
 # TODO : Need to display this address as a string
                     else:
                         print_cast = '(void*)'
@@ -847,11 +847,11 @@ class ApiDumpCppSubcommand(Subcommand):
         if 'WsiX11AssociateConnection' == proto.name:
             funcs.append("#if defined(__linux__) || defined(XCB_NVIDIA)")
         if proto.name == "EnumerateLayers":
-            c_call = proto.c_call().replace("(" + proto.params[0].name, "((XGL_PHYSICAL_GPU)gpuw->nextObject", 1)
+            c_call = proto.c_call().replace("(" + proto.params[0].name, "((VK_PHYSICAL_GPU)gpuw->nextObject", 1)
             funcs.append('%s%s\n'
                      '{\n'
                      '    if (gpu != NULL) {\n'
-                     '        XGL_BASE_LAYER_OBJECT* gpuw = (XGL_BASE_LAYER_OBJECT *) %s;\n'
+                     '        VK_BASE_LAYER_OBJECT* gpuw = (VK_BASE_LAYER_OBJECT *) %s;\n'
                      '        pCurObj = gpuw;\n'
                      '        loader_platform_thread_once(&tabOnce, init%s);\n'
                      '        %snextTable.%s;\n'
@@ -859,34 +859,34 @@ class ApiDumpCppSubcommand(Subcommand):
                      '    %s'
                      '    } else {\n'
                      '        if (pOutLayerCount == NULL || pOutLayers == NULL || pOutLayers[0] == NULL)\n'
-                     '            return XGL_ERROR_INVALID_POINTER;\n'
+                     '            return VK_ERROR_INVALID_POINTER;\n'
                      '        // This layer compatible with all GPUs\n'
                      '        *pOutLayerCount = 1;\n'
                      '        strncpy((char *) pOutLayers[0], "%s", maxStringSize);\n'
-                     '        return XGL_SUCCESS;\n'
+                     '        return VK_SUCCESS;\n'
                      '    }\n'
                          '}' % (qual, decl, proto.params[0].name, self.layer_name, ret_val, c_call,f_open, log_func, f_close, stmt, self.layer_name))
         elif 'GetExtensionSupport' == proto.name:
-            c_call = proto.c_call().replace("(" + proto.params[0].name, "((XGL_PHYSICAL_GPU)gpuw->nextObject", 1)
+            c_call = proto.c_call().replace("(" + proto.params[0].name, "((VK_PHYSICAL_GPU)gpuw->nextObject", 1)
             funcs.append('%s%s\n'
                          '{\n'
-                         '    XGL_BASE_LAYER_OBJECT* gpuw = (XGL_BASE_LAYER_OBJECT *) %s;\n'
-                         '    XGL_RESULT result;\n'
+                         '    VK_BASE_LAYER_OBJECT* gpuw = (VK_BASE_LAYER_OBJECT *) %s;\n'
+                         '    VK_RESULT result;\n'
                          '    /* This entrypoint is NOT going to init its own dispatch table since loader calls here early */\n'
                          '    if (!strncmp(pExtName, "%s", strlen("%s")))\n'
                          '    {\n'
-                         '        result = XGL_SUCCESS;\n'
+                         '        result = VK_SUCCESS;\n'
                          '    } else if (nextTable.GetExtensionSupport != NULL)\n'
                          '    {\n'
                          '        result = nextTable.%s;\n'
                          '        %s    %s        %s\n'
                          '    } else\n'
                          '    {\n'
-                         '        result = XGL_ERROR_INVALID_EXTENSION;\n'
+                         '        result = VK_ERROR_INVALID_EXTENSION;\n'
                          '    }\n'
                          '%s'
                          '}' % (qual, decl, proto.params[0].name, self.layer_name, self.layer_name, c_call, f_open, log_func, f_close, stmt))
-        elif proto.params[0].ty != "XGL_PHYSICAL_GPU":
+        elif proto.params[0].ty != "VK_PHYSICAL_GPU":
             funcs.append('%s%s\n'
                      '{\n'
                      '    %snextTable.%s;\n'
@@ -894,10 +894,10 @@ class ApiDumpCppSubcommand(Subcommand):
                      '%s'
                      '}' % (qual, decl, ret_val, proto.c_call(), f_open, log_func, f_close, stmt))
         else:
-            c_call = proto.c_call().replace("(" + proto.params[0].name, "((XGL_PHYSICAL_GPU)gpuw->nextObject", 1)
+            c_call = proto.c_call().replace("(" + proto.params[0].name, "((VK_PHYSICAL_GPU)gpuw->nextObject", 1)
             funcs.append('%s%s\n'
                      '{\n'
-                     '    XGL_BASE_LAYER_OBJECT* gpuw = (XGL_BASE_LAYER_OBJECT *) %s;\n'
+                     '    VK_BASE_LAYER_OBJECT* gpuw = (VK_BASE_LAYER_OBJECT *) %s;\n'
                      '    pCurObj = gpuw;\n'
                      '    loader_platform_thread_once(&tabOnce, init%s);\n'
                      '    %snextTable.%s;\n'
@@ -911,7 +911,7 @@ class ApiDumpCppSubcommand(Subcommand):
     def generate_body(self):
         self.layer_name = "APIDumpCpp"
         body = [self._generate_layer_initialization_with_lock(),
-                self._generate_dispatch_entrypoints("XGL_LAYER_EXPORT"),
+                self._generate_dispatch_entrypoints("VK_LAYER_EXPORT"),
                 self._generate_layer_gpa_function()]
 
         return "\n\n".join(body)
@@ -922,11 +922,11 @@ class ApiDumpFileSubcommand(ApiDumpSubcommand):
         header_txt = []
         header_txt.append('#include <stdio.h>\n#include <stdlib.h>\n#include <string.h>')
         header_txt.append('#include "loader_platform.h"')
-        header_txt.append('#include "xglLayer.h"\n#include "xgl_struct_string_helper.h"\n')
+        header_txt.append('#include "vkLayer.h"\n#include "vk_struct_string_helper.h"\n')
         header_txt.append('// The following is #included again to catch certain OS-specific functions being used:')
         header_txt.append('#include "loader_platform.h"')
-        header_txt.append('static XGL_LAYER_DISPATCH_TABLE nextTable;')
-        header_txt.append('static XGL_BASE_LAYER_OBJECT *pCurObj;\n')
+        header_txt.append('static VK_LAYER_DISPATCH_TABLE nextTable;')
+        header_txt.append('static VK_BASE_LAYER_OBJECT *pCurObj;\n')
         header_txt.append('static LOADER_PLATFORM_THREAD_ONCE_DECLARATION(tabOnce);')
         header_txt.append('static int printLockInitialized = 0;')
         header_txt.append('static loader_platform_thread_mutex printLock;\n')
@@ -947,13 +947,13 @@ class ApiDumpFileSubcommand(ApiDumpSubcommand):
         header_txt.append('    assert(maxTID < MAX_TID);')
         header_txt.append('    return retVal;')
         header_txt.append('}\n')
-        header_txt.append('static FILE* pOutFile;\nstatic char* outFileName = "xgl_apidump.txt";')
+        header_txt.append('static FILE* pOutFile;\nstatic char* outFileName = "vk_apidump.txt";')
         return "\n".join(header_txt)
 
     def generate_body(self):
         self.layer_name = "APIDumpFile"
         body = [self._generate_layer_initialization_with_lock(),
-                self._generate_dispatch_entrypoints("XGL_LAYER_EXPORT"),
+                self._generate_dispatch_entrypoints("VK_LAYER_EXPORT"),
                 self._generate_layer_gpa_function()]
 
         return "\n\n".join(body)
@@ -964,11 +964,11 @@ class ApiDumpNoAddrSubcommand(ApiDumpSubcommand):
         header_txt = []
         header_txt.append('#include <stdio.h>\n#include <stdlib.h>\n#include <string.h>')
         header_txt.append('#include "loader_platform.h"')
-        header_txt.append('#include "xglLayer.h"\n#include "xgl_struct_string_helper_no_addr.h"\n')
+        header_txt.append('#include "vkLayer.h"\n#include "vk_struct_string_helper_no_addr.h"\n')
         header_txt.append('// The following is #included again to catch certain OS-specific functions being used:')
         header_txt.append('#include "loader_platform.h"')
-        header_txt.append('static XGL_LAYER_DISPATCH_TABLE nextTable;')
-        header_txt.append('static XGL_BASE_LAYER_OBJECT *pCurObj;\n')
+        header_txt.append('static VK_LAYER_DISPATCH_TABLE nextTable;')
+        header_txt.append('static VK_BASE_LAYER_OBJECT *pCurObj;\n')
         header_txt.append('static LOADER_PLATFORM_THREAD_ONCE_DECLARATION(tabOnce);')
         header_txt.append('static int printLockInitialized = 0;')
         header_txt.append('static loader_platform_thread_mutex printLock;\n')
@@ -995,7 +995,7 @@ class ApiDumpNoAddrSubcommand(ApiDumpSubcommand):
         self.layer_name = "APIDumpNoAddr"
         self.no_addr = True
         body = [self._generate_layer_initialization_with_lock(),
-                self._generate_dispatch_entrypoints("XGL_LAYER_EXPORT"),
+                self._generate_dispatch_entrypoints("VK_LAYER_EXPORT"),
                 self._generate_layer_gpa_function()]
 
         return "\n\n".join(body)
@@ -1006,11 +1006,11 @@ class ApiDumpNoAddrCppSubcommand(ApiDumpCppSubcommand):
         header_txt = []
         header_txt.append('#include <stdio.h>\n#include <stdlib.h>\n#include <string.h>')
         header_txt.append('#include "loader_platform.h"')
-        header_txt.append('#include "xglLayer.h"\n#include "xgl_struct_string_helper_no_addr_cpp.h"\n')
+        header_txt.append('#include "vkLayer.h"\n#include "vk_struct_string_helper_no_addr_cpp.h"\n')
         header_txt.append('// The following is #included again to catch certain OS-specific functions being used:')
         header_txt.append('#include "loader_platform.h"')
-        header_txt.append('static XGL_LAYER_DISPATCH_TABLE nextTable;')
-        header_txt.append('static XGL_BASE_LAYER_OBJECT *pCurObj;\n')
+        header_txt.append('static VK_LAYER_DISPATCH_TABLE nextTable;')
+        header_txt.append('static VK_BASE_LAYER_OBJECT *pCurObj;\n')
         header_txt.append('static LOADER_PLATFORM_THREAD_ONCE_DECLARATION(tabOnce);')
         header_txt.append('static int printLockInitialized = 0;')
         header_txt.append('static loader_platform_thread_mutex printLock;\n')
@@ -1037,7 +1037,7 @@ class ApiDumpNoAddrCppSubcommand(ApiDumpCppSubcommand):
         self.layer_name = "APIDumpNoAddrCpp"
         self.no_addr = True
         body = [self._generate_layer_initialization_with_lock(),
-                self._generate_dispatch_entrypoints("XGL_LAYER_EXPORT"),
+                self._generate_dispatch_entrypoints("VK_LAYER_EXPORT"),
                 self._generate_layer_gpa_function()]
 
         return "\n\n".join(body)
@@ -1046,7 +1046,7 @@ class ObjectTrackerSubcommand(Subcommand):
     def generate_header(self):
         header_txt = []
         header_txt.append('#include <stdio.h>\n#include <stdlib.h>\n#include <string.h>\n#include "loader_platform.h"')
-        header_txt.append('#include "object_track.h"\n\nstatic XGL_LAYER_DISPATCH_TABLE nextTable;\nstatic XGL_BASE_LAYER_OBJECT *pCurObj;')
+        header_txt.append('#include "object_track.h"\n\nstatic VK_LAYER_DISPATCH_TABLE nextTable;\nstatic VK_BASE_LAYER_OBJECT *pCurObj;')
         header_txt.append('// The following is #included again to catch certain OS-specific functions being used:')
         header_txt.append('#include "loader_platform.h"')
         header_txt.append('#include "layers_config.h"')
@@ -1064,9 +1064,9 @@ class ObjectTrackerSubcommand(Subcommand):
         header_txt.append('    struct _objNode *pNextObj;')
         header_txt.append('    struct _objNode *pNextGlobal;')
         header_txt.append('} objNode;')
-        header_txt.append('static objNode *pObjectHead[XGL_NUM_OBJECT_TYPE] = {0};')
+        header_txt.append('static objNode *pObjectHead[VK_NUM_OBJECT_TYPE] = {0};')
         header_txt.append('static objNode *pGlobalHead = NULL;')
-        header_txt.append('static uint64_t numObjs[XGL_NUM_OBJECT_TYPE] = {0};')
+        header_txt.append('static uint64_t numObjs[VK_NUM_OBJECT_TYPE] = {0};')
         header_txt.append('static uint64_t numTotalObjs = 0;')
         header_txt.append('static uint32_t maxMemReferences = 0;')
         header_txt.append('// Debug function to print global list and each individual object list')
@@ -1075,24 +1075,24 @@ class ObjectTrackerSubcommand(Subcommand):
         header_txt.append('    objNode* pTrav = pGlobalHead;')
         header_txt.append('    printf("=====GLOBAL OBJECT LIST (%lu total objs):\\n", numTotalObjs);')
         header_txt.append('    while (pTrav) {')
-        header_txt.append('        printf("   ObjNode (%p) w/ %s obj %p has pNextGlobal %p\\n", (void*)pTrav, string_XGL_OBJECT_TYPE(pTrav->obj.objType), pTrav->obj.pObj, (void*)pTrav->pNextGlobal);')
+        header_txt.append('        printf("   ObjNode (%p) w/ %s obj %p has pNextGlobal %p\\n", (void*)pTrav, string_VK_OBJECT_TYPE(pTrav->obj.objType), pTrav->obj.pObj, (void*)pTrav->pNextGlobal);')
         header_txt.append('        pTrav = pTrav->pNextGlobal;')
         header_txt.append('    }')
-        header_txt.append('    for (uint32_t i = 0; i < XGL_NUM_OBJECT_TYPE; i++) {')
+        header_txt.append('    for (uint32_t i = 0; i < VK_NUM_OBJECT_TYPE; i++) {')
         header_txt.append('        pTrav = pObjectHead[i];')
         header_txt.append('        if (pTrav) {')
-        header_txt.append('            printf("=====%s OBJECT LIST (%lu objs):\\n", string_XGL_OBJECT_TYPE(pTrav->obj.objType), numObjs[i]);')
+        header_txt.append('            printf("=====%s OBJECT LIST (%lu objs):\\n", string_VK_OBJECT_TYPE(pTrav->obj.objType), numObjs[i]);')
         header_txt.append('            while (pTrav) {')
-        header_txt.append('                printf("   ObjNode (%p) w/ %s obj %p has pNextObj %p\\n", (void*)pTrav, string_XGL_OBJECT_TYPE(pTrav->obj.objType), pTrav->obj.pObj, (void*)pTrav->pNextObj);')
+        header_txt.append('                printf("   ObjNode (%p) w/ %s obj %p has pNextObj %p\\n", (void*)pTrav, string_VK_OBJECT_TYPE(pTrav->obj.objType), pTrav->obj.pObj, (void*)pTrav->pNextObj);')
         header_txt.append('                pTrav = pTrav->pNextObj;')
         header_txt.append('            }')
         header_txt.append('        }')
         header_txt.append('    }')
         header_txt.append('}')
-        header_txt.append('static void ll_insert_obj(void* pObj, XGL_OBJECT_TYPE objType) {')
+        header_txt.append('static void ll_insert_obj(void* pObj, VK_OBJECT_TYPE objType) {')
         header_txt.append('    char str[1024];')
-        header_txt.append('    sprintf(str, "OBJ[%llu] : CREATE %s object %p", object_track_index++, string_XGL_OBJECT_TYPE(objType), (void*)pObj);')
-        header_txt.append('    layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, pObj, 0, OBJTRACK_NONE, "OBJTRACK", str);')
+        header_txt.append('    sprintf(str, "OBJ[%llu] : CREATE %s object %p", object_track_index++, string_VK_OBJECT_TYPE(objType), (void*)pObj);')
+        header_txt.append('    layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, pObj, 0, OBJTRACK_NONE, "OBJTRACK", str);')
         header_txt.append('    objNode* pNewObjNode = (objNode*)malloc(sizeof(objNode));')
         header_txt.append('    pNewObjNode->obj.pObj = pObj;')
         header_txt.append('    pNewObjNode->obj.objType = objType;')
@@ -1107,11 +1107,11 @@ class ObjectTrackerSubcommand(Subcommand):
         header_txt.append('    // increment obj counts')
         header_txt.append('    numObjs[objType]++;')
         header_txt.append('    numTotalObjs++;')
-        header_txt.append('    //sprintf(str, "OBJ_STAT : %lu total objs & %lu %s objs.", numTotalObjs, numObjs[objType], string_XGL_OBJECT_TYPE(objType));')
+        header_txt.append('    //sprintf(str, "OBJ_STAT : %lu total objs & %lu %s objs.", numTotalObjs, numObjs[objType], string_VK_OBJECT_TYPE(objType));')
         header_txt.append('    if (0) ll_print_lists();')
         header_txt.append('}')
         header_txt.append('// Traverse global list and return type for given object')
-        header_txt.append('static XGL_OBJECT_TYPE ll_get_obj_type(XGL_OBJECT object) {')
+        header_txt.append('static VK_OBJECT_TYPE ll_get_obj_type(VK_OBJECT object) {')
         header_txt.append('    objNode *pTrav = pGlobalHead;')
         header_txt.append('    while (pTrav) {')
         header_txt.append('        if (pTrav->obj.pObj == object)')
@@ -1120,11 +1120,11 @@ class ObjectTrackerSubcommand(Subcommand):
         header_txt.append('    }')
         header_txt.append('    char str[1024];')
         header_txt.append('    sprintf(str, "Attempting look-up on obj %p but it is NOT in the global list!", (void*)object);')
-        header_txt.append('    layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, object, 0, OBJTRACK_MISSING_OBJECT, "OBJTRACK", str);')
-        header_txt.append('    return XGL_OBJECT_TYPE_UNKNOWN;')
+        header_txt.append('    layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, object, 0, OBJTRACK_MISSING_OBJECT, "OBJTRACK", str);')
+        header_txt.append('    return VK_OBJECT_TYPE_UNKNOWN;')
         header_txt.append('}')
         header_txt.append('#if 0')
-        header_txt.append('static uint64_t ll_get_obj_uses(void* pObj, XGL_OBJECT_TYPE objType) {')
+        header_txt.append('static uint64_t ll_get_obj_uses(void* pObj, VK_OBJECT_TYPE objType) {')
         header_txt.append('    objNode *pTrav = pObjectHead[objType];')
         header_txt.append('    while (pTrav) {')
         header_txt.append('        if (pTrav->obj.pObj == pObj) {')
@@ -1135,22 +1135,22 @@ class ObjectTrackerSubcommand(Subcommand):
         header_txt.append('    return 0;')
         header_txt.append('}')
         header_txt.append('#endif')
-        header_txt.append('static void ll_increment_use_count(void* pObj, XGL_OBJECT_TYPE objType) {')
+        header_txt.append('static void ll_increment_use_count(void* pObj, VK_OBJECT_TYPE objType) {')
         header_txt.append('    objNode *pTrav = pObjectHead[objType];')
         header_txt.append('    while (pTrav) {')
         header_txt.append('        if (pTrav->obj.pObj == pObj) {')
         header_txt.append('            pTrav->obj.numUses++;')
         header_txt.append('            char str[1024];')
-        header_txt.append('            sprintf(str, "OBJ[%llu] : USING %s object %p (%lu total uses)", object_track_index++, string_XGL_OBJECT_TYPE(objType), (void*)pObj, pTrav->obj.numUses);')
-        header_txt.append('            layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, pObj, 0, OBJTRACK_NONE, "OBJTRACK", str);')
+        header_txt.append('            sprintf(str, "OBJ[%llu] : USING %s object %p (%lu total uses)", object_track_index++, string_VK_OBJECT_TYPE(objType), (void*)pObj, pTrav->obj.numUses);')
+        header_txt.append('            layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, pObj, 0, OBJTRACK_NONE, "OBJTRACK", str);')
         header_txt.append('            return;')
         header_txt.append('        }')
         header_txt.append('        pTrav = pTrav->pNextObj;')
         header_txt.append('    }')
         header_txt.append('    // If we do not find obj, insert it and then increment count')
         header_txt.append('    char str[1024];')
-        header_txt.append('    sprintf(str, "Unable to increment count for obj %p, will add to list as %s type and increment count", pObj, string_XGL_OBJECT_TYPE(objType));')
-        header_txt.append('    layerCbMsg(XGL_DBG_MSG_WARNING, XGL_VALIDATION_LEVEL_0, pObj, 0, OBJTRACK_UNKNOWN_OBJECT, "OBJTRACK", str);')
+        header_txt.append('    sprintf(str, "Unable to increment count for obj %p, will add to list as %s type and increment count", pObj, string_VK_OBJECT_TYPE(objType));')
+        header_txt.append('    layerCbMsg(VK_DBG_MSG_WARNING, VK_VALIDATION_LEVEL_0, pObj, 0, OBJTRACK_UNKNOWN_OBJECT, "OBJTRACK", str);')
         header_txt.append('')
         header_txt.append('    ll_insert_obj(pObj, objType);')
         header_txt.append('    ll_increment_use_count(pObj, objType);')
@@ -1158,7 +1158,7 @@ class ObjectTrackerSubcommand(Subcommand):
         header_txt.append('// We usually do not know Obj type when we destroy it so have to fetch')
         header_txt.append('//  Type from global list w/ ll_destroy_obj()')
         header_txt.append('//   and then do the full removal from both lists w/ ll_remove_obj_type()')
-        header_txt.append('static void ll_remove_obj_type(void* pObj, XGL_OBJECT_TYPE objType) {')
+        header_txt.append('static void ll_remove_obj_type(void* pObj, VK_OBJECT_TYPE objType) {')
         header_txt.append('    objNode *pTrav = pObjectHead[objType];')
         header_txt.append('    objNode *pPrev = pObjectHead[objType];')
         header_txt.append('    while (pTrav) {')
@@ -1170,16 +1170,16 @@ class ObjectTrackerSubcommand(Subcommand):
         header_txt.append('            assert(numObjs[objType] > 0);')
         header_txt.append('            numObjs[objType]--;')
         header_txt.append('            char str[1024];')
-        header_txt.append('            sprintf(str, "OBJ[%llu] : DESTROY %s object %p", object_track_index++, string_XGL_OBJECT_TYPE(objType), (void*)pObj);')
-        header_txt.append('            layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, pObj, 0, OBJTRACK_NONE, "OBJTRACK", str);')
+        header_txt.append('            sprintf(str, "OBJ[%llu] : DESTROY %s object %p", object_track_index++, string_VK_OBJECT_TYPE(objType), (void*)pObj);')
+        header_txt.append('            layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, pObj, 0, OBJTRACK_NONE, "OBJTRACK", str);')
         header_txt.append('            return;')
         header_txt.append('        }')
         header_txt.append('        pPrev = pTrav;')
         header_txt.append('        pTrav = pTrav->pNextObj;')
         header_txt.append('    }')
         header_txt.append('    char str[1024];')
-        header_txt.append('    sprintf(str, "OBJ INTERNAL ERROR : Obj %p was in global list but not in %s list", pObj, string_XGL_OBJECT_TYPE(objType));')
-        header_txt.append('    layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, pObj, 0, OBJTRACK_INTERNAL_ERROR, "OBJTRACK", str);')
+        header_txt.append('    sprintf(str, "OBJ INTERNAL ERROR : Obj %p was in global list but not in %s list", pObj, string_VK_OBJECT_TYPE(objType));')
+        header_txt.append('    layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, pObj, 0, OBJTRACK_INTERNAL_ERROR, "OBJTRACK", str);')
         header_txt.append('}')
         header_txt.append('// Parse global list to find obj type, then remove obj from obj type list, finally')
         header_txt.append('//   remove obj from global list')
@@ -1196,8 +1196,8 @@ class ObjectTrackerSubcommand(Subcommand):
         header_txt.append('            assert(numTotalObjs > 0);')
         header_txt.append('            numTotalObjs--;')
         header_txt.append('            char str[1024];')
-        header_txt.append('            sprintf(str, "OBJ_STAT Removed %s obj %p that was used %lu times (%lu total objs remain & %lu %s objs).", string_XGL_OBJECT_TYPE(pTrav->obj.objType), pTrav->obj.pObj, pTrav->obj.numUses, numTotalObjs, numObjs[pTrav->obj.objType], string_XGL_OBJECT_TYPE(pTrav->obj.objType));')
-        header_txt.append('            layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, pObj, 0, OBJTRACK_NONE, "OBJTRACK", str);')
+        header_txt.append('            sprintf(str, "OBJ_STAT Removed %s obj %p that was used %lu times (%lu total objs remain & %lu %s objs).", string_VK_OBJECT_TYPE(pTrav->obj.objType), pTrav->obj.pObj, pTrav->obj.numUses, numTotalObjs, numObjs[pTrav->obj.objType], string_VK_OBJECT_TYPE(pTrav->obj.objType));')
+        header_txt.append('            layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, pObj, 0, OBJTRACK_NONE, "OBJTRACK", str);')
         header_txt.append('            free(pTrav);')
         header_txt.append('            return;')
         header_txt.append('        }')
@@ -1206,10 +1206,10 @@ class ObjectTrackerSubcommand(Subcommand):
         header_txt.append('    }')
         header_txt.append('    char str[1024];')
         header_txt.append('    sprintf(str, "Unable to remove obj %p. Was it created? Has it already been destroyed?", pObj);')
-        header_txt.append('    layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, pObj, 0, OBJTRACK_DESTROY_OBJECT_FAILED, "OBJTRACK", str);')
+        header_txt.append('    layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, pObj, 0, OBJTRACK_DESTROY_OBJECT_FAILED, "OBJTRACK", str);')
         header_txt.append('}')
         header_txt.append('// Set selected flag state for an object node')
-        header_txt.append('static void set_status(void* pObj, XGL_OBJECT_TYPE objType, OBJECT_STATUS status_flag) {')
+        header_txt.append('static void set_status(void* pObj, VK_OBJECT_TYPE objType, OBJECT_STATUS status_flag) {')
         header_txt.append('    if (pObj != NULL) {')
         header_txt.append('        objNode *pTrav = pObjectHead[objType];')
         header_txt.append('        while (pTrav) {')
@@ -1221,24 +1221,24 @@ class ObjectTrackerSubcommand(Subcommand):
         header_txt.append('        }')
         header_txt.append('        // If we do not find it print an error')
         header_txt.append('        char str[1024];')
-        header_txt.append('        sprintf(str, "Unable to set status for non-existent object %p of %s type", pObj, string_XGL_OBJECT_TYPE(objType));')
-        header_txt.append('        layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, pObj, 0, OBJTRACK_UNKNOWN_OBJECT, "OBJTRACK", str);')
+        header_txt.append('        sprintf(str, "Unable to set status for non-existent object %p of %s type", pObj, string_VK_OBJECT_TYPE(objType));')
+        header_txt.append('        layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, pObj, 0, OBJTRACK_UNKNOWN_OBJECT, "OBJTRACK", str);')
         header_txt.append('    }');
         header_txt.append('}')
         header_txt.append('')
         header_txt.append('// Track selected state for an object node')
-        header_txt.append('static void track_object_status(void* pObj, XGL_STATE_BIND_POINT stateBindPoint) {')
-        header_txt.append('    objNode *pTrav = pObjectHead[XGL_OBJECT_TYPE_CMD_BUFFER];')
+        header_txt.append('static void track_object_status(void* pObj, VK_STATE_BIND_POINT stateBindPoint) {')
+        header_txt.append('    objNode *pTrav = pObjectHead[VK_OBJECT_TYPE_CMD_BUFFER];')
         header_txt.append('')
         header_txt.append('    while (pTrav) {')
         header_txt.append('        if (pTrav->obj.pObj == pObj) {')
-        header_txt.append('            if (stateBindPoint == XGL_STATE_BIND_VIEWPORT) {')
+        header_txt.append('            if (stateBindPoint == VK_STATE_BIND_VIEWPORT) {')
         header_txt.append('                pTrav->obj.status |= OBJSTATUS_VIEWPORT_BOUND;')
-        header_txt.append('            } else if (stateBindPoint == XGL_STATE_BIND_RASTER) {')
+        header_txt.append('            } else if (stateBindPoint == VK_STATE_BIND_RASTER) {')
         header_txt.append('                pTrav->obj.status |= OBJSTATUS_RASTER_BOUND;')
-        header_txt.append('            } else if (stateBindPoint == XGL_STATE_BIND_COLOR_BLEND) {')
+        header_txt.append('            } else if (stateBindPoint == VK_STATE_BIND_COLOR_BLEND) {')
         header_txt.append('                pTrav->obj.status |= OBJSTATUS_COLOR_BLEND_BOUND;')
-        header_txt.append('            } else if (stateBindPoint == XGL_STATE_BIND_DEPTH_STENCIL) {')
+        header_txt.append('            } else if (stateBindPoint == VK_STATE_BIND_DEPTH_STENCIL) {')
         header_txt.append('                pTrav->obj.status |= OBJSTATUS_DEPTH_STENCIL_BOUND;')
         header_txt.append('            }')
         header_txt.append('            return;')
@@ -1248,11 +1248,11 @@ class ObjectTrackerSubcommand(Subcommand):
         header_txt.append('    // If we do not find it print an error')
         header_txt.append('    char str[1024];')
         header_txt.append('    sprintf(str, "Unable to track status for non-existent Command Buffer object %p", pObj);')
-        header_txt.append('    layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, pObj, 0, OBJTRACK_UNKNOWN_OBJECT, "OBJTRACK", str);')
+        header_txt.append('    layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, pObj, 0, OBJTRACK_UNKNOWN_OBJECT, "OBJTRACK", str);')
         header_txt.append('}')
         header_txt.append('')
         header_txt.append('// Reset selected flag state for an object node')
-        header_txt.append('static void reset_status(void* pObj, XGL_OBJECT_TYPE objType, OBJECT_STATUS status_flag) {')
+        header_txt.append('static void reset_status(void* pObj, VK_OBJECT_TYPE objType, OBJECT_STATUS status_flag) {')
         header_txt.append('    objNode *pTrav = pObjectHead[objType];')
         header_txt.append('    while (pTrav) {')
         header_txt.append('        if (pTrav->obj.pObj == pObj) {')
@@ -1263,49 +1263,49 @@ class ObjectTrackerSubcommand(Subcommand):
         header_txt.append('    }')
         header_txt.append('    // If we do not find it print an error')
         header_txt.append('    char str[1024];')
-        header_txt.append('    sprintf(str, "Unable to reset status for non-existent object %p of %s type", pObj, string_XGL_OBJECT_TYPE(objType));')
-        header_txt.append('    layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, pObj, 0, OBJTRACK_UNKNOWN_OBJECT, "OBJTRACK", str);')
+        header_txt.append('    sprintf(str, "Unable to reset status for non-existent object %p of %s type", pObj, string_VK_OBJECT_TYPE(objType));')
+        header_txt.append('    layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, pObj, 0, OBJTRACK_UNKNOWN_OBJECT, "OBJTRACK", str);')
         header_txt.append('}')
         header_txt.append('')
         header_txt.append('// Check object status for selected flag state')
-        header_txt.append('static bool32_t validate_status(void* pObj, XGL_OBJECT_TYPE objType, OBJECT_STATUS status_mask, OBJECT_STATUS status_flag, XGL_DBG_MSG_TYPE error_level, OBJECT_TRACK_ERROR error_code, char* fail_msg) {')
+        header_txt.append('static bool32_t validate_status(void* pObj, VK_OBJECT_TYPE objType, OBJECT_STATUS status_mask, OBJECT_STATUS status_flag, VK_DBG_MSG_TYPE error_level, OBJECT_TRACK_ERROR error_code, char* fail_msg) {')
         header_txt.append('    objNode *pTrav = pObjectHead[objType];')
         header_txt.append('    while (pTrav) {')
         header_txt.append('        if (pTrav->obj.pObj == pObj) {')
         header_txt.append('            if ((pTrav->obj.status & status_mask) != status_flag) {')
         header_txt.append('                char str[1024];')
-        header_txt.append('                sprintf(str, "OBJECT VALIDATION WARNING: %s object %p: %s", string_XGL_OBJECT_TYPE(objType), (void*)pObj, fail_msg);')
-        header_txt.append('                layerCbMsg(error_level, XGL_VALIDATION_LEVEL_0, pObj, 0, error_code, "OBJTRACK", str);')
-        header_txt.append('                return XGL_FALSE;')
+        header_txt.append('                sprintf(str, "OBJECT VALIDATION WARNING: %s object %p: %s", string_VK_OBJECT_TYPE(objType), (void*)pObj, fail_msg);')
+        header_txt.append('                layerCbMsg(error_level, VK_VALIDATION_LEVEL_0, pObj, 0, error_code, "OBJTRACK", str);')
+        header_txt.append('                return VK_FALSE;')
         header_txt.append('            }')
-        header_txt.append('            return XGL_TRUE;')
+        header_txt.append('            return VK_TRUE;')
         header_txt.append('        }')
         header_txt.append('        pTrav = pTrav->pNextObj;')
         header_txt.append('    }')
-        header_txt.append('    if (objType != XGL_OBJECT_TYPE_PRESENTABLE_IMAGE_MEMORY) {')
+        header_txt.append('    if (objType != VK_OBJECT_TYPE_PRESENTABLE_IMAGE_MEMORY) {')
         header_txt.append('        // If we do not find it print an error')
         header_txt.append('        char str[1024];')
-        header_txt.append('        sprintf(str, "Unable to obtain status for non-existent object %p of %s type", pObj, string_XGL_OBJECT_TYPE(objType));')
-        header_txt.append('        layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, pObj, 0, OBJTRACK_UNKNOWN_OBJECT, "OBJTRACK", str);')
+        header_txt.append('        sprintf(str, "Unable to obtain status for non-existent object %p of %s type", pObj, string_VK_OBJECT_TYPE(objType));')
+        header_txt.append('        layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, pObj, 0, OBJTRACK_UNKNOWN_OBJECT, "OBJTRACK", str);')
         header_txt.append('    }')
-        header_txt.append('    return XGL_FALSE;')
+        header_txt.append('    return VK_FALSE;')
         header_txt.append('}')
         header_txt.append('')
         header_txt.append('static void validate_draw_state_flags(void* pObj) {')
-        header_txt.append('    validate_status((void*)pObj, XGL_OBJECT_TYPE_CMD_BUFFER, OBJSTATUS_VIEWPORT_BOUND,      OBJSTATUS_VIEWPORT_BOUND,      XGL_DBG_MSG_ERROR,    OBJTRACK_VIEWPORT_NOT_BOUND,      "Viewport object not bound to this command buffer");')
-        header_txt.append('    validate_status((void*)pObj, XGL_OBJECT_TYPE_CMD_BUFFER, OBJSTATUS_RASTER_BOUND,        OBJSTATUS_RASTER_BOUND,        XGL_DBG_MSG_ERROR,    OBJTRACK_RASTER_NOT_BOUND,        "Raster object not bound to this command buffer");')
-        header_txt.append('    validate_status((void*)pObj, XGL_OBJECT_TYPE_CMD_BUFFER, OBJSTATUS_COLOR_BLEND_BOUND,   OBJSTATUS_COLOR_BLEND_BOUND,   XGL_DBG_MSG_UNKNOWN,  OBJTRACK_COLOR_BLEND_NOT_BOUND,   "Color-blend object not bound to this command buffer");')
-        header_txt.append('    validate_status((void*)pObj, XGL_OBJECT_TYPE_CMD_BUFFER, OBJSTATUS_DEPTH_STENCIL_BOUND, OBJSTATUS_DEPTH_STENCIL_BOUND, XGL_DBG_MSG_UNKNOWN,  OBJTRACK_DEPTH_STENCIL_NOT_BOUND, "Depth-stencil object not bound to this command buffer");')
+        header_txt.append('    validate_status((void*)pObj, VK_OBJECT_TYPE_CMD_BUFFER, OBJSTATUS_VIEWPORT_BOUND,      OBJSTATUS_VIEWPORT_BOUND,      VK_DBG_MSG_ERROR,    OBJTRACK_VIEWPORT_NOT_BOUND,      "Viewport object not bound to this command buffer");')
+        header_txt.append('    validate_status((void*)pObj, VK_OBJECT_TYPE_CMD_BUFFER, OBJSTATUS_RASTER_BOUND,        OBJSTATUS_RASTER_BOUND,        VK_DBG_MSG_ERROR,    OBJTRACK_RASTER_NOT_BOUND,        "Raster object not bound to this command buffer");')
+        header_txt.append('    validate_status((void*)pObj, VK_OBJECT_TYPE_CMD_BUFFER, OBJSTATUS_COLOR_BLEND_BOUND,   OBJSTATUS_COLOR_BLEND_BOUND,   VK_DBG_MSG_UNKNOWN,  OBJTRACK_COLOR_BLEND_NOT_BOUND,   "Color-blend object not bound to this command buffer");')
+        header_txt.append('    validate_status((void*)pObj, VK_OBJECT_TYPE_CMD_BUFFER, OBJSTATUS_DEPTH_STENCIL_BOUND, OBJSTATUS_DEPTH_STENCIL_BOUND, VK_DBG_MSG_UNKNOWN,  OBJTRACK_DEPTH_STENCIL_NOT_BOUND, "Depth-stencil object not bound to this command buffer");')
         header_txt.append('}')
         header_txt.append('')
-        header_txt.append('static void validate_memory_mapping_status(const XGL_GPU_MEMORY* pMemRefs, uint32_t numRefs) {')
+        header_txt.append('static void validate_memory_mapping_status(const VK_GPU_MEMORY* pMemRefs, uint32_t numRefs) {')
         header_txt.append('    uint32_t i;')
         header_txt.append('    for (i = 0; i < numRefs; i++) {')
         header_txt.append('        if (pMemRefs[i]) {')
         header_txt.append('            // If mem reference is in a presentable image memory list, skip the check of the GPU_MEMORY list')
-        header_txt.append('            if (!validate_status((void *)pMemRefs[i], XGL_OBJECT_TYPE_PRESENTABLE_IMAGE_MEMORY, OBJSTATUS_NONE, OBJSTATUS_NONE, XGL_DBG_MSG_UNKNOWN, OBJTRACK_NONE, NULL) == XGL_TRUE)')
+        header_txt.append('            if (!validate_status((void *)pMemRefs[i], VK_OBJECT_TYPE_PRESENTABLE_IMAGE_MEMORY, OBJSTATUS_NONE, OBJSTATUS_NONE, VK_DBG_MSG_UNKNOWN, OBJTRACK_NONE, NULL) == VK_TRUE)')
         header_txt.append('            {')
-        header_txt.append('                validate_status((void *)pMemRefs[i], XGL_OBJECT_TYPE_GPU_MEMORY, OBJSTATUS_GPU_MEM_MAPPED, OBJSTATUS_NONE, XGL_DBG_MSG_ERROR, OBJTRACK_GPU_MEM_MAPPED, "A Mapped Memory Object was referenced in a command buffer");')
+        header_txt.append('                validate_status((void *)pMemRefs[i], VK_OBJECT_TYPE_GPU_MEMORY, OBJSTATUS_GPU_MEM_MAPPED, OBJSTATUS_NONE, VK_DBG_MSG_ERROR, OBJTRACK_GPU_MEM_MAPPED, "A Mapped Memory Object was referenced in a command buffer");')
         header_txt.append('            }')
         header_txt.append('        }')
         header_txt.append('    }')
@@ -1314,19 +1314,19 @@ class ObjectTrackerSubcommand(Subcommand):
         header_txt.append('static void validate_mem_ref_count(uint32_t numRefs) {')
         header_txt.append('    if (maxMemReferences == 0) {')
         header_txt.append('        char str[1024];')
-        header_txt.append('        sprintf(str, "xglQueueSubmit called before calling xglGetGpuInfo");')
-        header_txt.append('        layerCbMsg(XGL_DBG_MSG_WARNING, XGL_VALIDATION_LEVEL_0, NULL, 0, OBJTRACK_GETGPUINFO_NOT_CALLED, "OBJTRACK", str);')
+        header_txt.append('        sprintf(str, "vkQueueSubmit called before calling vkGetGpuInfo");')
+        header_txt.append('        layerCbMsg(VK_DBG_MSG_WARNING, VK_VALIDATION_LEVEL_0, NULL, 0, OBJTRACK_GETGPUINFO_NOT_CALLED, "OBJTRACK", str);')
         header_txt.append('    } else {')
         header_txt.append('        if (numRefs > maxMemReferences) {')
         header_txt.append('            char str[1024];')
-        header_txt.append('            sprintf(str, "xglQueueSubmit Memory reference count (%d) exceeds allowable GPU limit (%d)", numRefs, maxMemReferences);')
-        header_txt.append('            layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, NULL, 0, OBJTRACK_MEMREFCOUNT_MAX_EXCEEDED, "OBJTRACK", str);')
+        header_txt.append('            sprintf(str, "vkQueueSubmit Memory reference count (%d) exceeds allowable GPU limit (%d)", numRefs, maxMemReferences);')
+        header_txt.append('            layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, OBJTRACK_MEMREFCOUNT_MAX_EXCEEDED, "OBJTRACK", str);')
         header_txt.append('        }')
         header_txt.append('    }')
         header_txt.append('}')
         header_txt.append('')
         header_txt.append('static void setGpuQueueInfoState(void *pData) {')
-        header_txt.append('    maxMemReferences = ((XGL_PHYSICAL_GPU_QUEUE_PROPERTIES *)pData)->maxMemReferences;')
+        header_txt.append('    maxMemReferences = ((VK_PHYSICAL_GPU_QUEUE_PROPERTIES *)pData)->maxMemReferences;')
         header_txt.append('}')
         return "\n".join(header_txt)
 
@@ -1334,12 +1334,12 @@ class ObjectTrackerSubcommand(Subcommand):
         if proto.name in [ 'DbgRegisterMsgCallback', 'DbgUnregisterMsgCallback' ]:
             # use default version
             return None
-        obj_type_mapping = {base_t : base_t.replace("XGL_", "XGL_OBJECT_TYPE_") for base_t in xgl.object_type_list}
+        obj_type_mapping = {base_t : base_t.replace("VK_", "VK_OBJECT_TYPE_") for base_t in xgl.object_type_list}
         # For the various "super-types" we have to use function to distinguish sub type
-        for obj_type in ["XGL_BASE_OBJECT", "XGL_OBJECT", "XGL_DYNAMIC_STATE_OBJECT"]:
+        for obj_type in ["VK_BASE_OBJECT", "VK_OBJECT", "VK_DYNAMIC_STATE_OBJECT"]:
             obj_type_mapping[obj_type] = "ll_get_obj_type(object)"
 
-        decl = proto.c_func(prefix="xgl", attr="XGLAPI")
+        decl = proto.c_func(prefix="vk", attr="VKAPI")
         param0_name = proto.params[0].name
         p0_type = proto.params[0].ty.strip('*').strip('const ')
         create_line = ''
@@ -1353,15 +1353,15 @@ class ObjectTrackerSubcommand(Subcommand):
             using_line += '    ll_increment_use_count((void*)%s, %s);\n' % (param0_name, obj_type_mapping[p0_type])
             using_line += '    loader_platform_thread_unlock_mutex(&objLock);\n'
         if 'QueueSubmit' in proto.name:
-            using_line += '    set_status((void*)fence, XGL_OBJECT_TYPE_FENCE, OBJSTATUS_FENCE_IS_SUBMITTED);\n'
+            using_line += '    set_status((void*)fence, VK_OBJECT_TYPE_FENCE, OBJSTATUS_FENCE_IS_SUBMITTED);\n'
             using_line += '    // TODO: Fix for updated memory reference mechanism\n'
             using_line += '    // validate_memory_mapping_status(pMemRefs, memRefCount);\n'
             using_line += '    // validate_mem_ref_count(memRefCount);\n'
         elif 'GetFenceStatus' in proto.name:
             using_line += '    // Warn if submitted_flag is not set\n'
-            using_line += '    validate_status((void*)fence, XGL_OBJECT_TYPE_FENCE, OBJSTATUS_FENCE_IS_SUBMITTED, OBJSTATUS_FENCE_IS_SUBMITTED, XGL_DBG_MSG_ERROR, OBJTRACK_INVALID_FENCE, "Status Requested for Unsubmitted Fence");\n'
+            using_line += '    validate_status((void*)fence, VK_OBJECT_TYPE_FENCE, OBJSTATUS_FENCE_IS_SUBMITTED, OBJSTATUS_FENCE_IS_SUBMITTED, VK_DBG_MSG_ERROR, OBJTRACK_INVALID_FENCE, "Status Requested for Unsubmitted Fence");\n'
         elif 'EndCommandBuffer' in proto.name:
-            using_line += '    reset_status((void*)cmdBuffer, XGL_OBJECT_TYPE_CMD_BUFFER, (OBJSTATUS_VIEWPORT_BOUND    |\n'
+            using_line += '    reset_status((void*)cmdBuffer, VK_OBJECT_TYPE_CMD_BUFFER, (OBJSTATUS_VIEWPORT_BOUND    |\n'
             using_line += '                                                                OBJSTATUS_RASTER_BOUND      |\n'
             using_line += '                                                                OBJSTATUS_COLOR_BLEND_BOUND |\n'
             using_line += '                                                                OBJSTATUS_DEPTH_STENCIL_BOUND));\n'
@@ -1370,20 +1370,20 @@ class ObjectTrackerSubcommand(Subcommand):
         elif 'CmdDraw' in proto.name:
             using_line += '    validate_draw_state_flags((void *)cmdBuffer);\n'
         elif 'MapMemory' in proto.name:
-            using_line += '    set_status((void*)mem, XGL_OBJECT_TYPE_GPU_MEMORY, OBJSTATUS_GPU_MEM_MAPPED);\n'
+            using_line += '    set_status((void*)mem, VK_OBJECT_TYPE_GPU_MEMORY, OBJSTATUS_GPU_MEM_MAPPED);\n'
         elif 'UnmapMemory' in proto.name:
-            using_line += '    reset_status((void*)mem, XGL_OBJECT_TYPE_GPU_MEMORY, OBJSTATUS_GPU_MEM_MAPPED);\n'
+            using_line += '    reset_status((void*)mem, VK_OBJECT_TYPE_GPU_MEMORY, OBJSTATUS_GPU_MEM_MAPPED);\n'
         if 'AllocDescriptor' in proto.name: # Allocates array of DSs
             create_line =  '    for (uint32_t i = 0; i < *pCount; i++) {\n'
             create_line += '        loader_platform_thread_lock_mutex(&objLock);\n'
-            create_line += '        ll_insert_obj((void*)pDescriptorSets[i], XGL_OBJECT_TYPE_DESCRIPTOR_SET);\n'
+            create_line += '        ll_insert_obj((void*)pDescriptorSets[i], VK_OBJECT_TYPE_DESCRIPTOR_SET);\n'
             create_line += '        loader_platform_thread_unlock_mutex(&objLock);\n'
             create_line += '    }\n'
         elif 'CreatePresentableImage' in proto.name:
             create_line = '    loader_platform_thread_lock_mutex(&objLock);\n'
             create_line += '    ll_insert_obj((void*)*%s, %s);\n' % (proto.params[-2].name, obj_type_mapping[proto.params[-2].ty.strip('*').strip('const ')])
-            create_line += '    ll_insert_obj((void*)*pMem, XGL_OBJECT_TYPE_PRESENTABLE_IMAGE_MEMORY);\n'
-            # create_line += '    ll_insert_obj((void*)*%s, XGL_OBJECT_TYPE_PRESENTABLE_IMAGE_MEMORY);\n' % (obj_type_mapping[proto.params[-1].ty.strip('*').strip('const ')])
+            create_line += '    ll_insert_obj((void*)*pMem, VK_OBJECT_TYPE_PRESENTABLE_IMAGE_MEMORY);\n'
+            # create_line += '    ll_insert_obj((void*)*%s, VK_OBJECT_TYPE_PRESENTABLE_IMAGE_MEMORY);\n' % (obj_type_mapping[proto.params[-1].ty.strip('*').strip('const ')])
             create_line += '    loader_platform_thread_unlock_mutex(&objLock);\n'
         elif 'Create' in proto.name or 'Alloc' in proto.name:
             create_line = '    loader_platform_thread_lock_mutex(&objLock);\n'
@@ -1402,30 +1402,30 @@ class ObjectTrackerSubcommand(Subcommand):
                 using_line = ''
             if 'DestroyDevice' in proto.name:
                 destroy_line += '    // Report any remaining objects in LL\n    objNode *pTrav = pGlobalHead;\n    while (pTrav) {\n'
-                destroy_line += '        if (pTrav->obj.objType == XGL_OBJECT_TYPE_PRESENTABLE_IMAGE_MEMORY) {\n'
+                destroy_line += '        if (pTrav->obj.objType == VK_OBJECT_TYPE_PRESENTABLE_IMAGE_MEMORY) {\n'
                 destroy_line += '            objNode *pDel = pTrav;\n'
                 destroy_line += '            pTrav = pTrav->pNextGlobal;\n'
                 destroy_line += '            ll_destroy_obj((void*)(pDel->obj.pObj));\n'
                 destroy_line += '        } else {\n'
                 destroy_line += '            char str[1024];\n'
-                destroy_line += '            sprintf(str, "OBJ ERROR : %s object %p has not been destroyed (was used %lu times).", string_XGL_OBJECT_TYPE(pTrav->obj.objType), pTrav->obj.pObj, pTrav->obj.numUses);\n'
-                destroy_line += '            layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, device, 0, OBJTRACK_OBJECT_LEAK, "OBJTRACK", str);\n'
+                destroy_line += '            sprintf(str, "OBJ ERROR : %s object %p has not been destroyed (was used %lu times).", string_VK_OBJECT_TYPE(pTrav->obj.objType), pTrav->obj.pObj, pTrav->obj.numUses);\n'
+                destroy_line += '            layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, device, 0, OBJTRACK_OBJECT_LEAK, "OBJTRACK", str);\n'
                 destroy_line += '            pTrav = pTrav->pNextGlobal;\n'
                 destroy_line += '        }\n'
                 destroy_line += '    }\n'
         ret_val = ''
         stmt = ''
         if proto.ret != "void":
-            ret_val = "XGL_RESULT result = "
+            ret_val = "VK_RESULT result = "
             stmt = "    return result;\n"
         if 'WsiX11AssociateConnection' == proto.name:
             funcs.append("#if defined(__linux__) || defined(XCB_NVIDIA)")
         if proto.name == "EnumerateLayers":
-            c_call = proto.c_call().replace("(" + proto.params[0].name, "((XGL_PHYSICAL_GPU)gpuw->nextObject", 1)
+            c_call = proto.c_call().replace("(" + proto.params[0].name, "((VK_PHYSICAL_GPU)gpuw->nextObject", 1)
             funcs.append('%s%s\n'
                      '{\n'
                      '    if (gpu != NULL) {\n'
-                     '        XGL_BASE_LAYER_OBJECT* gpuw = (XGL_BASE_LAYER_OBJECT *) %s;\n'
+                     '        VK_BASE_LAYER_OBJECT* gpuw = (VK_BASE_LAYER_OBJECT *) %s;\n'
                      '    %s'
                      '        pCurObj = gpuw;\n'
                      '        loader_platform_thread_once(&tabOnce, init%s);\n'
@@ -1434,36 +1434,36 @@ class ObjectTrackerSubcommand(Subcommand):
                      '    %s'
                      '    } else {\n'
                      '        if (pOutLayerCount == NULL || pOutLayers == NULL || pOutLayers[0] == NULL)\n'
-                     '            return XGL_ERROR_INVALID_POINTER;\n'
+                     '            return VK_ERROR_INVALID_POINTER;\n'
                      '        // This layer compatible with all GPUs\n'
                      '        *pOutLayerCount = 1;\n'
                      '        strncpy((char *) pOutLayers[0], "%s", maxStringSize);\n'
-                     '        return XGL_SUCCESS;\n'
+                     '        return VK_SUCCESS;\n'
                      '    }\n'
                          '}' % (qual, decl, proto.params[0].name, using_line, self.layer_name, ret_val, c_call, create_line, destroy_line, stmt, self.layer_name))
         elif 'GetExtensionSupport' == proto.name:
-            c_call = proto.c_call().replace("(" + proto.params[0].name, "((XGL_PHYSICAL_GPU)gpuw->nextObject", 1)
+            c_call = proto.c_call().replace("(" + proto.params[0].name, "((VK_PHYSICAL_GPU)gpuw->nextObject", 1)
             funcs.append('%s%s\n'
                      '{\n'
-                     '    XGL_BASE_LAYER_OBJECT* gpuw = (XGL_BASE_LAYER_OBJECT *) %s;\n'
-                     '    XGL_RESULT result;\n'
+                     '    VK_BASE_LAYER_OBJECT* gpuw = (VK_BASE_LAYER_OBJECT *) %s;\n'
+                     '    VK_RESULT result;\n'
                      '    /* This entrypoint is NOT going to init its own dispatch table since loader calls this early */\n'
                      '    if (!strncmp(pExtName, "%s", strlen("%s")) ||\n'
                      '        !strncmp(pExtName, "objTrackGetObjectCount", strlen("objTrackGetObjectCount")) ||\n'
                      '        !strncmp(pExtName, "objTrackGetObjects", strlen("objTrackGetObjects")))\n'
                      '    {\n'
-                     '        result = XGL_SUCCESS;\n'
+                     '        result = VK_SUCCESS;\n'
                      '    } else if (nextTable.GetExtensionSupport != NULL)\n'
                      '    {\n'
                      '    %s'
                      '        result = nextTable.%s;\n'
                      '    } else\n'
                      '    {\n'
-                     '        result = XGL_ERROR_INVALID_EXTENSION;\n'
+                     '        result = VK_ERROR_INVALID_EXTENSION;\n'
                      '    }\n'
                      '%s'
                      '}' % (qual, decl, proto.params[0].name, self.layer_name, self.layer_name, using_line, c_call,  stmt))
-        elif proto.params[0].ty != "XGL_PHYSICAL_GPU":
+        elif proto.params[0].ty != "VK_PHYSICAL_GPU":
             funcs.append('%s%s\n'
                      '{\n'
                      '%s'
@@ -1472,17 +1472,17 @@ class ObjectTrackerSubcommand(Subcommand):
                      '%s'
                      '}' % (qual, decl, using_line, ret_val, proto.c_call(), create_line, destroy_line, stmt))
         else:
-            c_call = proto.c_call().replace("(" + proto.params[0].name, "((XGL_PHYSICAL_GPU)gpuw->nextObject", 1)
+            c_call = proto.c_call().replace("(" + proto.params[0].name, "((VK_PHYSICAL_GPU)gpuw->nextObject", 1)
             gpu_state = ''
             if 'GetGpuInfo' in proto.name:
-                gpu_state =  '    if (infoType == XGL_INFO_TYPE_PHYSICAL_GPU_QUEUE_PROPERTIES) {\n'
+                gpu_state =  '    if (infoType == VK_INFO_TYPE_PHYSICAL_GPU_QUEUE_PROPERTIES) {\n'
                 gpu_state += '        if (pData != NULL) {\n'
                 gpu_state += '            setGpuQueueInfoState(pData);\n'
                 gpu_state += '        }\n'
                 gpu_state += '    }\n'
             funcs.append('%s%s\n'
                      '{\n'
-                     '    XGL_BASE_LAYER_OBJECT* gpuw = (XGL_BASE_LAYER_OBJECT *) %s;\n'
+                     '    VK_BASE_LAYER_OBJECT* gpuw = (VK_BASE_LAYER_OBJECT *) %s;\n'
                      '%s'
                      '    pCurObj = gpuw;\n'
                      '    loader_platform_thread_once(&tabOnce, init%s);\n'
@@ -1498,7 +1498,7 @@ class ObjectTrackerSubcommand(Subcommand):
     def generate_body(self):
         self.layer_name = "ObjectTracker"
         body = [self._generate_layer_initialization(True, lockname='obj'),
-                self._generate_dispatch_entrypoints("XGL_LAYER_EXPORT"),
+                self._generate_dispatch_entrypoints("VK_LAYER_EXPORT"),
                 self._generate_extensions(),
                 self._generate_layer_gpa_function(extensions=['objTrackGetObjectCount', 'objTrackGetObjects'])]
 
@@ -1523,14 +1523,14 @@ def main():
         print("Available subcommands are: %s" % " ".join(subcommands))
         exit(1)
 
-    hfp = xgl_helper.HeaderFileParser(sys.argv[2])
+    hfp = vk_helper.HeaderFileParser(sys.argv[2])
     hfp.parse()
-    xgl_helper.enum_val_dict = hfp.get_enum_val_dict()
-    xgl_helper.enum_type_dict = hfp.get_enum_type_dict()
-    xgl_helper.struct_dict = hfp.get_struct_dict()
-    xgl_helper.typedef_fwd_dict = hfp.get_typedef_fwd_dict()
-    xgl_helper.typedef_rev_dict = hfp.get_typedef_rev_dict()
-    xgl_helper.types_dict = hfp.get_types_dict()
+    vk_helper.enum_val_dict = hfp.get_enum_val_dict()
+    vk_helper.enum_type_dict = hfp.get_enum_type_dict()
+    vk_helper.struct_dict = hfp.get_struct_dict()
+    vk_helper.typedef_fwd_dict = hfp.get_typedef_fwd_dict()
+    vk_helper.typedef_rev_dict = hfp.get_typedef_rev_dict()
+    vk_helper.types_dict = hfp.get_types_dict()
 
     subcmd = subcommands[sys.argv[1]](sys.argv[2:])
     subcmd.run()

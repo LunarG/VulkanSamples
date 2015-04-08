@@ -86,7 +86,7 @@ _mesa_new_shader(struct gl_context *ctx, GLuint name, GLenum type)
       shader->Type = type;
       shader->Stage = _mesa_shader_enum_to_shader_stage(type);
       shader->Name = name;
-      // LunarG: XGL does not use reference counts
+      // LunarG: VK does not use reference counts
 //      shader->RefCount = 1;
    }
    return shader;

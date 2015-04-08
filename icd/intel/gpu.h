@@ -1,5 +1,5 @@
 /*
- * XGL
+ * Vulkan
  *
  * Copyright (C) 2014 LunarG, Inc.
  *
@@ -66,7 +66,7 @@ struct intel_gpu {
     int gen_opaque;     /* always read this with intel_gpu_gen() */
     int gt;
 
-    XGL_GPU_SIZE max_batch_buffer_size;
+    VK_GPU_SIZE max_batch_buffer_size;
     uint32_t batch_buffer_reloc_count;
 
     /*
@@ -85,7 +85,7 @@ struct intel_gpu {
     uint32_t display_count;
 };
 
-static inline struct intel_gpu *intel_gpu(XGL_PHYSICAL_GPU gpu)
+static inline struct intel_gpu *intel_gpu(VK_PHYSICAL_GPU gpu)
 {
     return (struct intel_gpu *) gpu;
 }
@@ -99,27 +99,27 @@ static inline int intel_gpu_gen(const struct intel_gpu *gpu)
 #endif
 }
 
-XGL_RESULT intel_gpu_create(const struct intel_instance *instance, int devid,
+VK_RESULT intel_gpu_create(const struct intel_instance *instance, int devid,
                             const char *primary_node, const char *render_node,
                             struct intel_gpu **gpu_ret);
 void intel_gpu_destroy(struct intel_gpu *gpu);
 
 void intel_gpu_get_props(const struct intel_gpu *gpu,
-                         XGL_PHYSICAL_GPU_PROPERTIES *props);
+                         VK_PHYSICAL_GPU_PROPERTIES *props);
 void intel_gpu_get_perf(const struct intel_gpu *gpu,
-                        XGL_PHYSICAL_GPU_PERFORMANCE *perf);
+                        VK_PHYSICAL_GPU_PERFORMANCE *perf);
 void intel_gpu_get_queue_props(const struct intel_gpu *gpu,
                                enum intel_gpu_engine_type engine,
-                               XGL_PHYSICAL_GPU_QUEUE_PROPERTIES *props);
+                               VK_PHYSICAL_GPU_QUEUE_PROPERTIES *props);
 void intel_gpu_get_memory_props(const struct intel_gpu *gpu,
-                                XGL_PHYSICAL_GPU_MEMORY_PROPERTIES *props);
+                                VK_PHYSICAL_GPU_MEMORY_PROPERTIES *props);
 
 int intel_gpu_get_max_threads(const struct intel_gpu *gpu,
-                              XGL_PIPELINE_SHADER_STAGE stage);
+                              VK_PIPELINE_SHADER_STAGE stage);
 
 int intel_gpu_get_primary_fd(struct intel_gpu *gpu);
 
-XGL_RESULT intel_gpu_init_winsys(struct intel_gpu *gpu);
+VK_RESULT intel_gpu_init_winsys(struct intel_gpu *gpu);
 void intel_gpu_cleanup_winsys(struct intel_gpu *gpu);
 
 enum intel_ext_type intel_gpu_lookup_extension(const struct intel_gpu *gpu,

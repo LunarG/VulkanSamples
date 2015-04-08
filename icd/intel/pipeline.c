@@ -1,5 +1,5 @@
 /*
- * XGL
+ * Vulkan
  *
  * Copyright (C) 2014 LunarG, Inc.
  *
@@ -33,76 +33,76 @@
 #include "shader.h"
 #include "pipeline.h"
 
-static int translate_blend_func(XGL_BLEND_FUNC func)
+static int translate_blend_func(VK_BLEND_FUNC func)
 {
    switch (func) {
-   case XGL_BLEND_FUNC_ADD:                return GEN6_BLENDFUNCTION_ADD;
-   case XGL_BLEND_FUNC_SUBTRACT:           return GEN6_BLENDFUNCTION_SUBTRACT;
-   case XGL_BLEND_FUNC_REVERSE_SUBTRACT:   return GEN6_BLENDFUNCTION_REVERSE_SUBTRACT;
-   case XGL_BLEND_FUNC_MIN:                return GEN6_BLENDFUNCTION_MIN;
-   case XGL_BLEND_FUNC_MAX:                return GEN6_BLENDFUNCTION_MAX;
+   case VK_BLEND_FUNC_ADD:                return GEN6_BLENDFUNCTION_ADD;
+   case VK_BLEND_FUNC_SUBTRACT:           return GEN6_BLENDFUNCTION_SUBTRACT;
+   case VK_BLEND_FUNC_REVERSE_SUBTRACT:   return GEN6_BLENDFUNCTION_REVERSE_SUBTRACT;
+   case VK_BLEND_FUNC_MIN:                return GEN6_BLENDFUNCTION_MIN;
+   case VK_BLEND_FUNC_MAX:                return GEN6_BLENDFUNCTION_MAX;
    default:
       assert(!"unknown blend func");
       return GEN6_BLENDFUNCTION_ADD;
    };
 }
 
-static int translate_blend(XGL_BLEND blend)
+static int translate_blend(VK_BLEND blend)
 {
    switch (blend) {
-   case XGL_BLEND_ZERO:                     return GEN6_BLENDFACTOR_ZERO;
-   case XGL_BLEND_ONE:                      return GEN6_BLENDFACTOR_ONE;
-   case XGL_BLEND_SRC_COLOR:                return GEN6_BLENDFACTOR_SRC_COLOR;
-   case XGL_BLEND_ONE_MINUS_SRC_COLOR:      return GEN6_BLENDFACTOR_INV_SRC_COLOR;
-   case XGL_BLEND_DEST_COLOR:               return GEN6_BLENDFACTOR_DST_COLOR;
-   case XGL_BLEND_ONE_MINUS_DEST_COLOR:     return GEN6_BLENDFACTOR_INV_DST_COLOR;
-   case XGL_BLEND_SRC_ALPHA:                return GEN6_BLENDFACTOR_SRC_ALPHA;
-   case XGL_BLEND_ONE_MINUS_SRC_ALPHA:      return GEN6_BLENDFACTOR_INV_SRC_ALPHA;
-   case XGL_BLEND_DEST_ALPHA:               return GEN6_BLENDFACTOR_DST_ALPHA;
-   case XGL_BLEND_ONE_MINUS_DEST_ALPHA:     return GEN6_BLENDFACTOR_INV_DST_ALPHA;
-   case XGL_BLEND_CONSTANT_COLOR:           return GEN6_BLENDFACTOR_CONST_COLOR;
-   case XGL_BLEND_ONE_MINUS_CONSTANT_COLOR: return GEN6_BLENDFACTOR_INV_CONST_COLOR;
-   case XGL_BLEND_CONSTANT_ALPHA:           return GEN6_BLENDFACTOR_CONST_ALPHA;
-   case XGL_BLEND_ONE_MINUS_CONSTANT_ALPHA: return GEN6_BLENDFACTOR_INV_CONST_ALPHA;
-   case XGL_BLEND_SRC_ALPHA_SATURATE:       return GEN6_BLENDFACTOR_SRC_ALPHA_SATURATE;
-   case XGL_BLEND_SRC1_COLOR:               return GEN6_BLENDFACTOR_SRC1_COLOR;
-   case XGL_BLEND_ONE_MINUS_SRC1_COLOR:     return GEN6_BLENDFACTOR_INV_SRC1_COLOR;
-   case XGL_BLEND_SRC1_ALPHA:               return GEN6_BLENDFACTOR_SRC1_ALPHA;
-   case XGL_BLEND_ONE_MINUS_SRC1_ALPHA:     return GEN6_BLENDFACTOR_INV_SRC1_ALPHA;
+   case VK_BLEND_ZERO:                     return GEN6_BLENDFACTOR_ZERO;
+   case VK_BLEND_ONE:                      return GEN6_BLENDFACTOR_ONE;
+   case VK_BLEND_SRC_COLOR:                return GEN6_BLENDFACTOR_SRC_COLOR;
+   case VK_BLEND_ONE_MINUS_SRC_COLOR:      return GEN6_BLENDFACTOR_INV_SRC_COLOR;
+   case VK_BLEND_DEST_COLOR:               return GEN6_BLENDFACTOR_DST_COLOR;
+   case VK_BLEND_ONE_MINUS_DEST_COLOR:     return GEN6_BLENDFACTOR_INV_DST_COLOR;
+   case VK_BLEND_SRC_ALPHA:                return GEN6_BLENDFACTOR_SRC_ALPHA;
+   case VK_BLEND_ONE_MINUS_SRC_ALPHA:      return GEN6_BLENDFACTOR_INV_SRC_ALPHA;
+   case VK_BLEND_DEST_ALPHA:               return GEN6_BLENDFACTOR_DST_ALPHA;
+   case VK_BLEND_ONE_MINUS_DEST_ALPHA:     return GEN6_BLENDFACTOR_INV_DST_ALPHA;
+   case VK_BLEND_CONSTANT_COLOR:           return GEN6_BLENDFACTOR_CONST_COLOR;
+   case VK_BLEND_ONE_MINUS_CONSTANT_COLOR: return GEN6_BLENDFACTOR_INV_CONST_COLOR;
+   case VK_BLEND_CONSTANT_ALPHA:           return GEN6_BLENDFACTOR_CONST_ALPHA;
+   case VK_BLEND_ONE_MINUS_CONSTANT_ALPHA: return GEN6_BLENDFACTOR_INV_CONST_ALPHA;
+   case VK_BLEND_SRC_ALPHA_SATURATE:       return GEN6_BLENDFACTOR_SRC_ALPHA_SATURATE;
+   case VK_BLEND_SRC1_COLOR:               return GEN6_BLENDFACTOR_SRC1_COLOR;
+   case VK_BLEND_ONE_MINUS_SRC1_COLOR:     return GEN6_BLENDFACTOR_INV_SRC1_COLOR;
+   case VK_BLEND_SRC1_ALPHA:               return GEN6_BLENDFACTOR_SRC1_ALPHA;
+   case VK_BLEND_ONE_MINUS_SRC1_ALPHA:     return GEN6_BLENDFACTOR_INV_SRC1_ALPHA;
    default:
       assert(!"unknown blend factor");
       return GEN6_BLENDFACTOR_ONE;
    };
 }
 
-static int translate_compare_func(XGL_COMPARE_FUNC func)
+static int translate_compare_func(VK_COMPARE_FUNC func)
 {
     switch (func) {
-    case XGL_COMPARE_NEVER:         return GEN6_COMPAREFUNCTION_NEVER;
-    case XGL_COMPARE_LESS:          return GEN6_COMPAREFUNCTION_LESS;
-    case XGL_COMPARE_EQUAL:         return GEN6_COMPAREFUNCTION_EQUAL;
-    case XGL_COMPARE_LESS_EQUAL:    return GEN6_COMPAREFUNCTION_LEQUAL;
-    case XGL_COMPARE_GREATER:       return GEN6_COMPAREFUNCTION_GREATER;
-    case XGL_COMPARE_NOT_EQUAL:     return GEN6_COMPAREFUNCTION_NOTEQUAL;
-    case XGL_COMPARE_GREATER_EQUAL: return GEN6_COMPAREFUNCTION_GEQUAL;
-    case XGL_COMPARE_ALWAYS:        return GEN6_COMPAREFUNCTION_ALWAYS;
+    case VK_COMPARE_NEVER:         return GEN6_COMPAREFUNCTION_NEVER;
+    case VK_COMPARE_LESS:          return GEN6_COMPAREFUNCTION_LESS;
+    case VK_COMPARE_EQUAL:         return GEN6_COMPAREFUNCTION_EQUAL;
+    case VK_COMPARE_LESS_EQUAL:    return GEN6_COMPAREFUNCTION_LEQUAL;
+    case VK_COMPARE_GREATER:       return GEN6_COMPAREFUNCTION_GREATER;
+    case VK_COMPARE_NOT_EQUAL:     return GEN6_COMPAREFUNCTION_NOTEQUAL;
+    case VK_COMPARE_GREATER_EQUAL: return GEN6_COMPAREFUNCTION_GEQUAL;
+    case VK_COMPARE_ALWAYS:        return GEN6_COMPAREFUNCTION_ALWAYS;
     default:
       assert(!"unknown compare_func");
       return GEN6_COMPAREFUNCTION_NEVER;
     }
 }
 
-static int translate_stencil_op(XGL_STENCIL_OP op)
+static int translate_stencil_op(VK_STENCIL_OP op)
 {
     switch (op) {
-    case XGL_STENCIL_OP_KEEP:       return GEN6_STENCILOP_KEEP;
-    case XGL_STENCIL_OP_ZERO:       return GEN6_STENCILOP_ZERO;
-    case XGL_STENCIL_OP_REPLACE:    return GEN6_STENCILOP_REPLACE;
-    case XGL_STENCIL_OP_INC_CLAMP:  return GEN6_STENCILOP_INCRSAT;
-    case XGL_STENCIL_OP_DEC_CLAMP:  return GEN6_STENCILOP_DECRSAT;
-    case XGL_STENCIL_OP_INVERT:     return GEN6_STENCILOP_INVERT;
-    case XGL_STENCIL_OP_INC_WRAP:   return GEN6_STENCILOP_INCR;
-    case XGL_STENCIL_OP_DEC_WRAP:   return GEN6_STENCILOP_DECR;
+    case VK_STENCIL_OP_KEEP:       return GEN6_STENCILOP_KEEP;
+    case VK_STENCIL_OP_ZERO:       return GEN6_STENCILOP_ZERO;
+    case VK_STENCIL_OP_REPLACE:    return GEN6_STENCILOP_REPLACE;
+    case VK_STENCIL_OP_INC_CLAMP:  return GEN6_STENCILOP_INCRSAT;
+    case VK_STENCIL_OP_DEC_CLAMP:  return GEN6_STENCILOP_DECRSAT;
+    case VK_STENCIL_OP_INVERT:     return GEN6_STENCILOP_INVERT;
+    case VK_STENCIL_OP_INC_WRAP:   return GEN6_STENCILOP_INCR;
+    case VK_STENCIL_OP_DEC_WRAP:   return GEN6_STENCILOP_DECR;
     default:
       assert(!"unknown stencil op");
       return GEN6_STENCILOP_KEEP;
@@ -110,22 +110,22 @@ static int translate_stencil_op(XGL_STENCIL_OP op)
 }
 
 struct intel_pipeline_create_info {
-    XGL_GRAPHICS_PIPELINE_CREATE_INFO   graphics;
-    XGL_PIPELINE_VERTEX_INPUT_CREATE_INFO vi;
-    XGL_PIPELINE_IA_STATE_CREATE_INFO   ia;
-    XGL_PIPELINE_DS_STATE_CREATE_INFO   db;
-    XGL_PIPELINE_CB_STATE_CREATE_INFO   cb;
-    XGL_PIPELINE_RS_STATE_CREATE_INFO   rs;
-    XGL_PIPELINE_TESS_STATE_CREATE_INFO tess;
-    XGL_PIPELINE_MS_STATE_CREATE_INFO   ms;
-    XGL_PIPELINE_VP_STATE_CREATE_INFO   vp;
-    XGL_PIPELINE_SHADER                 vs;
-    XGL_PIPELINE_SHADER                 tcs;
-    XGL_PIPELINE_SHADER                 tes;
-    XGL_PIPELINE_SHADER                 gs;
-    XGL_PIPELINE_SHADER                 fs;
+    VK_GRAPHICS_PIPELINE_CREATE_INFO   graphics;
+    VK_PIPELINE_VERTEX_INPUT_CREATE_INFO vi;
+    VK_PIPELINE_IA_STATE_CREATE_INFO   ia;
+    VK_PIPELINE_DS_STATE_CREATE_INFO   db;
+    VK_PIPELINE_CB_STATE_CREATE_INFO   cb;
+    VK_PIPELINE_RS_STATE_CREATE_INFO   rs;
+    VK_PIPELINE_TESS_STATE_CREATE_INFO tess;
+    VK_PIPELINE_MS_STATE_CREATE_INFO   ms;
+    VK_PIPELINE_VP_STATE_CREATE_INFO   vp;
+    VK_PIPELINE_SHADER                 vs;
+    VK_PIPELINE_SHADER                 tcs;
+    VK_PIPELINE_SHADER                 tes;
+    VK_PIPELINE_SHADER                 gs;
+    VK_PIPELINE_SHADER                 fs;
 
-    XGL_COMPUTE_PIPELINE_CREATE_INFO    compute;
+    VK_COMPUTE_PIPELINE_CREATE_INFO    compute;
 };
 
 /* in S1.3 */
@@ -202,15 +202,15 @@ struct intel_pipeline_shader *intel_pipeline_shader_create_meta(struct intel_dev
                                                                 enum intel_dev_meta_shader id)
 {
     struct intel_pipeline_shader *sh;
-    XGL_RESULT ret;
+    VK_RESULT ret;
 
-    sh = intel_alloc(dev, sizeof(*sh), 0, XGL_SYSTEM_ALLOC_INTERNAL);
+    sh = intel_alloc(dev, sizeof(*sh), 0, VK_SYSTEM_ALLOC_INTERNAL);
     if (!sh)
         return NULL;
     memset(sh, 0, sizeof(*sh));
 
     ret = intel_pipeline_shader_compile_meta(sh, dev->gpu, id);
-    if (ret != XGL_SUCCESS) {
+    if (ret != VK_SUCCESS) {
         intel_free(dev, sh);
         return NULL;
     }
@@ -220,11 +220,11 @@ struct intel_pipeline_shader *intel_pipeline_shader_create_meta(struct intel_dev
     case INTEL_DEV_META_VS_COPY_MEM:
     case INTEL_DEV_META_VS_COPY_MEM_UNALIGNED:
         sh->max_threads = intel_gpu_get_max_threads(dev->gpu,
-                XGL_SHADER_STAGE_VERTEX);
+                VK_SHADER_STAGE_VERTEX);
         break;
     default:
         sh->max_threads = intel_gpu_get_max_threads(dev->gpu,
-                XGL_SHADER_STAGE_FRAGMENT);
+                VK_SHADER_STAGE_FRAGMENT);
         break;
     }
 
@@ -238,16 +238,16 @@ void intel_pipeline_shader_destroy(struct intel_dev *dev,
     intel_free(dev, sh);
 }
 
-static XGL_RESULT pipeline_build_shader(struct intel_pipeline *pipeline,
+static VK_RESULT pipeline_build_shader(struct intel_pipeline *pipeline,
                                         const struct intel_desc_layout_chain *chain,
-                                        const XGL_PIPELINE_SHADER *sh_info,
+                                        const VK_PIPELINE_SHADER *sh_info,
                                         struct intel_pipeline_shader *sh)
 {
-    XGL_RESULT ret;
+    VK_RESULT ret;
 
     ret = intel_pipeline_shader_compile(sh,
             pipeline->dev->gpu, chain, sh_info);
-    if (ret != XGL_SUCCESS)
+    if (ret != VK_SUCCESS)
         return ret;
 
     sh->max_threads =
@@ -260,38 +260,38 @@ static XGL_RESULT pipeline_build_shader(struct intel_pipeline *pipeline,
 
     pipeline->active_shaders |= 1 << sh_info->stage;
 
-    return XGL_SUCCESS;
+    return VK_SUCCESS;
 }
 
-static XGL_RESULT pipeline_build_shaders(struct intel_pipeline *pipeline,
+static VK_RESULT pipeline_build_shaders(struct intel_pipeline *pipeline,
                                          const struct intel_pipeline_create_info *info)
 {
     const struct intel_desc_layout_chain *chain =
         intel_desc_layout_chain(info->graphics.pSetLayoutChain);
-    XGL_RESULT ret = XGL_SUCCESS;
+    VK_RESULT ret = VK_SUCCESS;
 
-    if (ret == XGL_SUCCESS && info->vs.shader) {
+    if (ret == VK_SUCCESS && info->vs.shader) {
         ret = pipeline_build_shader(pipeline, chain,
                 &info->vs, &pipeline->vs);
     }
-    if (ret == XGL_SUCCESS && info->tcs.shader) {
+    if (ret == VK_SUCCESS && info->tcs.shader) {
         ret = pipeline_build_shader(pipeline, chain,
                 &info->tcs,&pipeline->tcs);
     }
-    if (ret == XGL_SUCCESS && info->tes.shader) {
+    if (ret == VK_SUCCESS && info->tes.shader) {
         ret = pipeline_build_shader(pipeline, chain,
                 &info->tes,&pipeline->tes);
     }
-    if (ret == XGL_SUCCESS && info->gs.shader) {
+    if (ret == VK_SUCCESS && info->gs.shader) {
         ret = pipeline_build_shader(pipeline, chain,
                 &info->gs, &pipeline->gs);
     }
-    if (ret == XGL_SUCCESS && info->fs.shader) {
+    if (ret == VK_SUCCESS && info->fs.shader) {
         ret = pipeline_build_shader(pipeline, chain,
                 &info->fs, &pipeline->fs);
     }
 
-    if (ret == XGL_SUCCESS && info->compute.cs.shader) {
+    if (ret == VK_SUCCESS && info->compute.cs.shader) {
         chain = intel_desc_layout_chain(info->compute.setLayoutChain);
         ret = pipeline_build_shader(pipeline, chain,
                 &info->compute.cs, &pipeline->cs);
@@ -309,52 +309,52 @@ static uint32_t *pipeline_cmd_ptr(struct intel_pipeline *pipeline, int cmd_len)
     return ptr;
 }
 
-static XGL_RESULT pipeline_build_ia(struct intel_pipeline *pipeline,
+static VK_RESULT pipeline_build_ia(struct intel_pipeline *pipeline,
                                     const struct intel_pipeline_create_info* info)
 {
     pipeline->topology = info->ia.topology;
     pipeline->disable_vs_cache = info->ia.disableVertexReuse;
 
     switch (info->ia.topology) {
-    case XGL_TOPOLOGY_POINT_LIST:
+    case VK_TOPOLOGY_POINT_LIST:
         pipeline->prim_type = GEN6_3DPRIM_POINTLIST;
         break;
-    case XGL_TOPOLOGY_LINE_LIST:
+    case VK_TOPOLOGY_LINE_LIST:
         pipeline->prim_type = GEN6_3DPRIM_LINELIST;
         break;
-    case XGL_TOPOLOGY_LINE_STRIP:
+    case VK_TOPOLOGY_LINE_STRIP:
         pipeline->prim_type = GEN6_3DPRIM_LINESTRIP;
         break;
-    case XGL_TOPOLOGY_TRIANGLE_LIST:
+    case VK_TOPOLOGY_TRIANGLE_LIST:
         pipeline->prim_type = GEN6_3DPRIM_TRILIST;
         break;
-    case XGL_TOPOLOGY_TRIANGLE_STRIP:
+    case VK_TOPOLOGY_TRIANGLE_STRIP:
         pipeline->prim_type = GEN6_3DPRIM_TRISTRIP;
         break;
-    case XGL_TOPOLOGY_TRIANGLE_FAN:
+    case VK_TOPOLOGY_TRIANGLE_FAN:
         pipeline->prim_type = GEN6_3DPRIM_TRIFAN;
         break;
-    case XGL_TOPOLOGY_LINE_LIST_ADJ:
+    case VK_TOPOLOGY_LINE_LIST_ADJ:
         pipeline->prim_type = GEN6_3DPRIM_LINELIST_ADJ;
         break;
-    case XGL_TOPOLOGY_LINE_STRIP_ADJ:
+    case VK_TOPOLOGY_LINE_STRIP_ADJ:
         pipeline->prim_type = GEN6_3DPRIM_LINESTRIP_ADJ;
         break;
-    case XGL_TOPOLOGY_TRIANGLE_LIST_ADJ:
+    case VK_TOPOLOGY_TRIANGLE_LIST_ADJ:
         pipeline->prim_type = GEN6_3DPRIM_TRILIST_ADJ;
         break;
-    case XGL_TOPOLOGY_TRIANGLE_STRIP_ADJ:
+    case VK_TOPOLOGY_TRIANGLE_STRIP_ADJ:
         pipeline->prim_type = GEN6_3DPRIM_TRISTRIP_ADJ;
         break;
-    case XGL_TOPOLOGY_PATCH:
+    case VK_TOPOLOGY_PATCH:
         if (!info->tess.patchControlPoints ||
             info->tess.patchControlPoints > 32)
-            return XGL_ERROR_BAD_PIPELINE_DATA;
+            return VK_ERROR_BAD_PIPELINE_DATA;
         pipeline->prim_type = GEN7_3DPRIM_PATCHLIST_1 +
             info->tess.patchControlPoints - 1;
         break;
     default:
-        return XGL_ERROR_BAD_PIPELINE_DATA;
+        return VK_ERROR_BAD_PIPELINE_DATA;
     }
 
     if (info->ia.primitiveRestartEnable) {
@@ -364,20 +364,20 @@ static XGL_RESULT pipeline_build_ia(struct intel_pipeline *pipeline,
         pipeline->primitive_restart = false;
     }
 
-    return XGL_SUCCESS;
+    return VK_SUCCESS;
 }
 
-static XGL_RESULT pipeline_build_rs_state(struct intel_pipeline *pipeline,
+static VK_RESULT pipeline_build_rs_state(struct intel_pipeline *pipeline,
                                           const struct intel_pipeline_create_info* info)
 {
-    const XGL_PIPELINE_RS_STATE_CREATE_INFO *rs_state = &info->rs;
+    const VK_PIPELINE_RS_STATE_CREATE_INFO *rs_state = &info->rs;
     bool ccw;
 
     pipeline->depthClipEnable = rs_state->depthClipEnable;
     pipeline->rasterizerDiscardEnable = rs_state->rasterizerDiscardEnable;
     pipeline->use_rs_point_size = !rs_state->programPointSize;
 
-    if (rs_state->provokingVertex == XGL_PROVOKING_VERTEX_FIRST) {
+    if (rs_state->provokingVertex == VK_PROVOKING_VERTEX_FIRST) {
         pipeline->provoking_vertex_tri = 0;
         pipeline->provoking_vertex_trifan = 1;
         pipeline->provoking_vertex_line = 0;
@@ -388,24 +388,24 @@ static XGL_RESULT pipeline_build_rs_state(struct intel_pipeline *pipeline,
     }
 
     switch (rs_state->fillMode) {
-    case XGL_FILL_POINTS:
+    case VK_FILL_POINTS:
         pipeline->cmd_sf_fill |= GEN7_SF_DW1_FRONTFACE_POINT |
                               GEN7_SF_DW1_BACKFACE_POINT;
         break;
-    case XGL_FILL_WIREFRAME:
+    case VK_FILL_WIREFRAME:
         pipeline->cmd_sf_fill |= GEN7_SF_DW1_FRONTFACE_WIREFRAME |
                               GEN7_SF_DW1_BACKFACE_WIREFRAME;
         break;
-    case XGL_FILL_SOLID:
+    case VK_FILL_SOLID:
     default:
         pipeline->cmd_sf_fill |= GEN7_SF_DW1_FRONTFACE_SOLID |
                               GEN7_SF_DW1_BACKFACE_SOLID;
         break;
     }
 
-    ccw = (rs_state->frontFace == XGL_FRONT_FACE_CCW);
+    ccw = (rs_state->frontFace == VK_FRONT_FACE_CCW);
     /* flip the winding order */
-    if (info->vp.clipOrigin == XGL_COORDINATE_ORIGIN_LOWER_LEFT)
+    if (info->vp.clipOrigin == VK_COORDINATE_ORIGIN_LOWER_LEFT)
         ccw = !ccw;
 
     if (ccw) {
@@ -414,20 +414,20 @@ static XGL_RESULT pipeline_build_rs_state(struct intel_pipeline *pipeline,
     }
 
     switch (rs_state->cullMode) {
-    case XGL_CULL_NONE:
+    case VK_CULL_NONE:
     default:
         pipeline->cmd_sf_cull |= GEN7_SF_DW2_CULLMODE_NONE;
         pipeline->cmd_clip_cull |= GEN7_CLIP_DW1_CULLMODE_NONE;
         break;
-    case XGL_CULL_FRONT:
+    case VK_CULL_FRONT:
         pipeline->cmd_sf_cull |= GEN7_SF_DW2_CULLMODE_FRONT;
         pipeline->cmd_clip_cull |= GEN7_CLIP_DW1_CULLMODE_FRONT;
         break;
-    case XGL_CULL_BACK:
+    case VK_CULL_BACK:
         pipeline->cmd_sf_cull |= GEN7_SF_DW2_CULLMODE_BACK;
         pipeline->cmd_clip_cull |= GEN7_CLIP_DW1_CULLMODE_BACK;
         break;
-    case XGL_CULL_FRONT_AND_BACK:
+    case VK_CULL_FRONT_AND_BACK:
         pipeline->cmd_sf_cull |= GEN7_SF_DW2_CULLMODE_BOTH;
         pipeline->cmd_clip_cull |= GEN7_CLIP_DW1_CULLMODE_BOTH;
         break;
@@ -437,7 +437,7 @@ static XGL_RESULT pipeline_build_rs_state(struct intel_pipeline *pipeline,
     if (intel_gpu_gen(pipeline->dev->gpu) == INTEL_GEN(6))
         pipeline->cmd_clip_cull = 0;
 
-    return XGL_SUCCESS;
+    return VK_SUCCESS;
 }
 
 static void pipeline_destroy(struct intel_obj *obj)
@@ -471,22 +471,22 @@ static void pipeline_destroy(struct intel_obj *obj)
     intel_base_destroy(&pipeline->obj.base);
 }
 
-static XGL_RESULT pipeline_get_info(struct intel_base *base, int type,
+static VK_RESULT pipeline_get_info(struct intel_base *base, int type,
                                     size_t *size, void *data)
 {
     struct intel_pipeline *pipeline = intel_pipeline_from_base(base);
-    XGL_RESULT ret = XGL_SUCCESS;
+    VK_RESULT ret = VK_SUCCESS;
 
     switch (type) {
-    case XGL_INFO_TYPE_MEMORY_REQUIREMENTS:
+    case VK_INFO_TYPE_MEMORY_REQUIREMENTS:
         {
-            XGL_MEMORY_REQUIREMENTS *mem_req = data;
+            VK_MEMORY_REQUIREMENTS *mem_req = data;
 
-            *size = sizeof(XGL_MEMORY_REQUIREMENTS);
+            *size = sizeof(VK_MEMORY_REQUIREMENTS);
             if (data) {
                 mem_req->size = pipeline->scratch_size;
                 mem_req->alignment = 1024;
-                mem_req->memType =  XGL_MEMORY_TYPE_OTHER;
+                mem_req->memType =  VK_MEMORY_TYPE_OTHER;
             }
         }
         break;
@@ -498,14 +498,14 @@ static XGL_RESULT pipeline_get_info(struct intel_base *base, int type,
     return ret;
 }
 
-static XGL_RESULT pipeline_validate(struct intel_pipeline *pipeline)
+static VK_RESULT pipeline_validate(struct intel_pipeline *pipeline)
 {
     /*
      * Validate required elements
      */
     if (!(pipeline->active_shaders & SHADER_VERTEX_FLAG)) {
         // TODO: Log debug message: Vertex Shader required.
-        return XGL_ERROR_BAD_PIPELINE_DATA;
+        return VK_ERROR_BAD_PIPELINE_DATA;
     }
 
     /*
@@ -515,7 +515,7 @@ static XGL_RESULT pipeline_validate(struct intel_pipeline *pipeline)
     if (((pipeline->active_shaders & SHADER_TESS_CONTROL_FLAG) == 0) !=
          ((pipeline->active_shaders & SHADER_TESS_EVAL_FLAG) == 0) ) {
         // TODO: Log debug message: Both Tess control and Tess eval are required to use tessalation
-        return XGL_ERROR_BAD_PIPELINE_DATA;
+        return VK_ERROR_BAD_PIPELINE_DATA;
     }
 
     if ((pipeline->active_shaders & SHADER_COMPUTE_FLAG) &&
@@ -523,26 +523,26 @@ static XGL_RESULT pipeline_validate(struct intel_pipeline *pipeline)
                                      SHADER_TESS_EVAL_FLAG | SHADER_GEOMETRY_FLAG |
                                      SHADER_FRAGMENT_FLAG))) {
         // TODO: Log debug message: Can only specify compute shader when doing compute
-        return XGL_ERROR_BAD_PIPELINE_DATA;
+        return VK_ERROR_BAD_PIPELINE_DATA;
     }
 
     /*
-     * XGL_TOPOLOGY_PATCH primitive topology is only valid for tessellation pipelines.
+     * VK_TOPOLOGY_PATCH primitive topology is only valid for tessellation pipelines.
      * Mismatching primitive topology and tessellation fails graphics pipeline creation.
      */
     if (pipeline->active_shaders & (SHADER_TESS_CONTROL_FLAG | SHADER_TESS_EVAL_FLAG) &&
-        (pipeline->topology != XGL_TOPOLOGY_PATCH)) {
+        (pipeline->topology != VK_TOPOLOGY_PATCH)) {
         // TODO: Log debug message: Invalid topology used with tessalation shader.
-        return XGL_ERROR_BAD_PIPELINE_DATA;
+        return VK_ERROR_BAD_PIPELINE_DATA;
     }
 
-    if ((pipeline->topology == XGL_TOPOLOGY_PATCH) &&
+    if ((pipeline->topology == VK_TOPOLOGY_PATCH) &&
             (pipeline->active_shaders & ~(SHADER_TESS_CONTROL_FLAG | SHADER_TESS_EVAL_FLAG))) {
         // TODO: Log debug message: Cannot use TOPOLOGY_PATCH on non-tessalation shader.
-        return XGL_ERROR_BAD_PIPELINE_DATA;
+        return VK_ERROR_BAD_PIPELINE_DATA;
     }
 
-    return XGL_SUCCESS;
+    return VK_SUCCESS;
 }
 
 static void pipeline_build_urb_alloc_gen6(struct intel_pipeline *pipeline,
@@ -744,7 +744,7 @@ static void pipeline_build_vertex_elements(struct intel_pipeline *pipeline,
 
     /* VERTEX_ELEMENT_STATE */
     for (i = 0, attrs_processed = 0; attrs_processed < attr_count; i++) {
-        XGL_VERTEX_INPUT_ATTRIBUTE_DESCRIPTION *attr = NULL;
+        VK_VERTEX_INPUT_ATTRIBUTE_DESCRIPTION *attr = NULL;
 
         /*
          * The compiler will pack the shader references and then
@@ -762,7 +762,7 @@ static void pipeline_build_vertex_elements(struct intel_pipeline *pipeline,
          */
         for (j = 0; j < info->vi.attributeCount; j++) {
             if (info->vi.pVertexAttributeDescriptions[j].location == i) {
-                attr = (XGL_VERTEX_INPUT_ATTRIBUTE_DESCRIPTION *) &info->vi.pVertexAttributeDescriptions[j];
+                attr = (VK_VERTEX_INPUT_ATTRIBUTE_DESCRIPTION *) &info->vi.pVertexAttributeDescriptions[j];
                 attrs_processed++;
                 break;
             }
@@ -824,10 +824,10 @@ static void pipeline_build_viewport(struct intel_pipeline *pipeline,
                                     const struct intel_pipeline_create_info *info)
 {
     switch (info->vp.depthMode) {
-    case XGL_DEPTH_MODE_ZERO_TO_ONE:
+    case VK_DEPTH_MODE_ZERO_TO_ONE:
         pipeline->depth_zero_to_one = true;
         break;
-    case XGL_DEPTH_MODE_NEGATIVE_ONE_TO_ONE:
+    case VK_DEPTH_MODE_NEGATIVE_ONE_TO_ONE:
     default:
         pipeline->depth_zero_to_one = false;
         break;
@@ -888,10 +888,10 @@ static void pipeline_build_fragment_SBE(struct intel_pipeline *pipeline,
           vue_offset << GEN7_SBE_DW1_URB_READ_OFFSET__SHIFT;
 
     switch (info->rs.pointOrigin) {
-    case XGL_COORDINATE_ORIGIN_UPPER_LEFT:
+    case VK_COORDINATE_ORIGIN_UPPER_LEFT:
         body[1] |= GEN7_SBE_DW1_POINT_SPRITE_TEXCOORD_UPPERLEFT;
         break;
-    case XGL_COORDINATE_ORIGIN_LOWER_LEFT:
+    case VK_COORDINATE_ORIGIN_LOWER_LEFT:
         body[1] |= GEN7_SBE_DW1_POINT_SPRITE_TEXCOORD_LOWERLEFT;
         break;
     default:
@@ -949,7 +949,7 @@ static void pipeline_build_fragment_SBE(struct intel_pipeline *pipeline,
         body[2 + i] = hi << GEN8_SBE_SWIZ_HIGH__SHIFT | lo;
     }
 
-    if (info->ia.topology == XGL_TOPOLOGY_POINT_LIST)
+    if (info->ia.topology == VK_TOPOLOGY_POINT_LIST)
         body[10] = fs->point_sprite_enables;
     else
         body[10] = 0;
@@ -1094,7 +1094,7 @@ static void pipeline_build_cb(struct intel_pipeline *pipeline,
     uint32_t *dw = pipeline->cmd_cb;
 
     for (i = 0; i < info->cb.attachmentCount; i++) {
-        const XGL_PIPELINE_CB_ATTACHMENT_STATE *att = &info->cb.pAttachments[i];
+        const VK_PIPELINE_CB_ATTACHMENT_STATE *att = &info->cb.pAttachments[i];
         uint32_t dw0, dw1;
 
 
@@ -1120,25 +1120,25 @@ static void pipeline_build_cb(struct intel_pipeline *pipeline,
             pipeline->dual_source_blend_enable = icd_pipeline_cb_att_needs_dual_source_blending(att);
         }
 
-        if (info->cb.logicOp != XGL_LOGIC_OP_COPY) {
+        if (info->cb.logicOp != VK_LOGIC_OP_COPY) {
             int logicop;
 
             switch (info->cb.logicOp) {
-            case XGL_LOGIC_OP_CLEAR:            logicop = GEN6_LOGICOP_CLEAR; break;
-            case XGL_LOGIC_OP_AND:              logicop = GEN6_LOGICOP_AND; break;
-            case XGL_LOGIC_OP_AND_REVERSE:      logicop = GEN6_LOGICOP_AND_REVERSE; break;
-            case XGL_LOGIC_OP_AND_INVERTED:     logicop = GEN6_LOGICOP_AND_INVERTED; break;
-            case XGL_LOGIC_OP_NOOP:             logicop = GEN6_LOGICOP_NOOP; break;
-            case XGL_LOGIC_OP_XOR:              logicop = GEN6_LOGICOP_XOR; break;
-            case XGL_LOGIC_OP_OR:               logicop = GEN6_LOGICOP_OR; break;
-            case XGL_LOGIC_OP_NOR:              logicop = GEN6_LOGICOP_NOR; break;
-            case XGL_LOGIC_OP_EQUIV:            logicop = GEN6_LOGICOP_EQUIV; break;
-            case XGL_LOGIC_OP_INVERT:           logicop = GEN6_LOGICOP_INVERT; break;
-            case XGL_LOGIC_OP_OR_REVERSE:       logicop = GEN6_LOGICOP_OR_REVERSE; break;
-            case XGL_LOGIC_OP_COPY_INVERTED:    logicop = GEN6_LOGICOP_COPY_INVERTED; break;
-            case XGL_LOGIC_OP_OR_INVERTED:      logicop = GEN6_LOGICOP_OR_INVERTED; break;
-            case XGL_LOGIC_OP_NAND:             logicop = GEN6_LOGICOP_NAND; break;
-            case XGL_LOGIC_OP_SET:              logicop = GEN6_LOGICOP_SET; break;
+            case VK_LOGIC_OP_CLEAR:            logicop = GEN6_LOGICOP_CLEAR; break;
+            case VK_LOGIC_OP_AND:              logicop = GEN6_LOGICOP_AND; break;
+            case VK_LOGIC_OP_AND_REVERSE:      logicop = GEN6_LOGICOP_AND_REVERSE; break;
+            case VK_LOGIC_OP_AND_INVERTED:     logicop = GEN6_LOGICOP_AND_INVERTED; break;
+            case VK_LOGIC_OP_NOOP:             logicop = GEN6_LOGICOP_NOOP; break;
+            case VK_LOGIC_OP_XOR:              logicop = GEN6_LOGICOP_XOR; break;
+            case VK_LOGIC_OP_OR:               logicop = GEN6_LOGICOP_OR; break;
+            case VK_LOGIC_OP_NOR:              logicop = GEN6_LOGICOP_NOR; break;
+            case VK_LOGIC_OP_EQUIV:            logicop = GEN6_LOGICOP_EQUIV; break;
+            case VK_LOGIC_OP_INVERT:           logicop = GEN6_LOGICOP_INVERT; break;
+            case VK_LOGIC_OP_OR_REVERSE:       logicop = GEN6_LOGICOP_OR_REVERSE; break;
+            case VK_LOGIC_OP_COPY_INVERTED:    logicop = GEN6_LOGICOP_COPY_INVERTED; break;
+            case VK_LOGIC_OP_OR_INVERTED:      logicop = GEN6_LOGICOP_OR_INVERTED; break;
+            case VK_LOGIC_OP_NAND:             logicop = GEN6_LOGICOP_NAND; break;
+            case VK_LOGIC_OP_SET:              logicop = GEN6_LOGICOP_SET; break;
             default:
                 assert(!"unknown logic op");
                 logicop = GEN6_LOGICOP_CLEAR;
@@ -1177,18 +1177,18 @@ static void pipeline_build_cb(struct intel_pipeline *pipeline,
 }
 
 
-static XGL_RESULT pipeline_build_all(struct intel_pipeline *pipeline,
+static VK_RESULT pipeline_build_all(struct intel_pipeline *pipeline,
                                      const struct intel_pipeline_create_info *info)
 {
-    XGL_RESULT ret;
+    VK_RESULT ret;
 
     ret = pipeline_build_shaders(pipeline, info);
-    if (ret != XGL_SUCCESS)
+    if (ret != VK_SUCCESS)
         return ret;
 
     if (info->vi.bindingCount > ARRAY_SIZE(pipeline->vb) ||
         info->vi.attributeCount > ARRAY_SIZE(pipeline->vb))
-        return XGL_ERROR_BAD_PIPELINE_DATA;
+        return VK_ERROR_BAD_PIPELINE_DATA;
 
     pipeline->vb_count = info->vi.bindingCount;
     memcpy(pipeline->vb, info->vi.pVertexBindingDescriptions,
@@ -1221,10 +1221,10 @@ static XGL_RESULT pipeline_build_all(struct intel_pipeline *pipeline,
 
     ret = pipeline_build_ia(pipeline, info);
 
-    if (ret == XGL_SUCCESS)
+    if (ret == VK_SUCCESS)
         ret = pipeline_build_rs_state(pipeline, info);
 
-    if (ret == XGL_SUCCESS) {
+    if (ret == VK_SUCCESS) {
         pipeline->db_format = info->db.format;
         pipeline_build_cb(pipeline, info);
         pipeline->cb_state = info->cb;
@@ -1235,11 +1235,11 @@ static XGL_RESULT pipeline_build_all(struct intel_pipeline *pipeline,
 }
 
 struct intel_pipeline_create_info_header {
-    XGL_STRUCTURE_TYPE struct_type;
+    VK_STRUCTURE_TYPE struct_type;
     const struct intel_pipeline_create_info_header *next;
 };
 
-static XGL_RESULT pipeline_create_info_init(struct intel_pipeline_create_info *info,
+static VK_RESULT pipeline_create_info_init(struct intel_pipeline_create_info *info,
                                             const struct intel_pipeline_create_info_header *header)
 {
     memset(info, 0, sizeof(*info));
@@ -1258,78 +1258,78 @@ static XGL_RESULT pipeline_create_info_init(struct intel_pipeline_create_info *i
         void *dst;
 
         switch (header->struct_type) {
-        case XGL_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO:
+        case VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO:
             size = sizeof(info->graphics);
             dst = &info->graphics;
             break;
-        case XGL_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_CREATE_INFO:
+        case VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_CREATE_INFO:
             size = sizeof(info->vi);
             dst = &info->vi;
             break;
-        case XGL_STRUCTURE_TYPE_PIPELINE_IA_STATE_CREATE_INFO:
+        case VK_STRUCTURE_TYPE_PIPELINE_IA_STATE_CREATE_INFO:
             size = sizeof(info->ia);
             dst = &info->ia;
             break;
-        case XGL_STRUCTURE_TYPE_PIPELINE_DS_STATE_CREATE_INFO:
+        case VK_STRUCTURE_TYPE_PIPELINE_DS_STATE_CREATE_INFO:
             size = sizeof(info->db);
             dst = &info->db;
             break;
-        case XGL_STRUCTURE_TYPE_PIPELINE_CB_STATE_CREATE_INFO:
+        case VK_STRUCTURE_TYPE_PIPELINE_CB_STATE_CREATE_INFO:
             size = sizeof(info->cb);
             dst = &info->cb;
             break;
-        case XGL_STRUCTURE_TYPE_PIPELINE_RS_STATE_CREATE_INFO:
+        case VK_STRUCTURE_TYPE_PIPELINE_RS_STATE_CREATE_INFO:
             size = sizeof(info->rs);
             dst = &info->rs;
             break;
-        case XGL_STRUCTURE_TYPE_PIPELINE_TESS_STATE_CREATE_INFO:
+        case VK_STRUCTURE_TYPE_PIPELINE_TESS_STATE_CREATE_INFO:
             size = sizeof(info->tess);
             dst = &info->tess;
             break;
-        case XGL_STRUCTURE_TYPE_PIPELINE_MS_STATE_CREATE_INFO:
+        case VK_STRUCTURE_TYPE_PIPELINE_MS_STATE_CREATE_INFO:
             size = sizeof(info->ms);
             dst = &info->ms;
             break;
-        case XGL_STRUCTURE_TYPE_PIPELINE_VP_STATE_CREATE_INFO:
+        case VK_STRUCTURE_TYPE_PIPELINE_VP_STATE_CREATE_INFO:
             size = sizeof(info->vp);
             dst = &info->vp;
             break;
-        case XGL_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO:
+        case VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO:
             {
-                const XGL_PIPELINE_SHADER *shader =
-                    (const XGL_PIPELINE_SHADER *) (header + 1);
+                const VK_PIPELINE_SHADER *shader =
+                    (const VK_PIPELINE_SHADER *) (header + 1);
 
                 src = (const void *) shader;
                 size = sizeof(*shader);
 
                 switch (shader->stage) {
-                case XGL_SHADER_STAGE_VERTEX:
+                case VK_SHADER_STAGE_VERTEX:
                     dst = &info->vs;
                     break;
-                case XGL_SHADER_STAGE_TESS_CONTROL:
+                case VK_SHADER_STAGE_TESS_CONTROL:
                     dst = &info->tcs;
                     break;
-                case XGL_SHADER_STAGE_TESS_EVALUATION:
+                case VK_SHADER_STAGE_TESS_EVALUATION:
                     dst = &info->tes;
                     break;
-                case XGL_SHADER_STAGE_GEOMETRY:
+                case VK_SHADER_STAGE_GEOMETRY:
                     dst = &info->gs;
                     break;
-                case XGL_SHADER_STAGE_FRAGMENT:
+                case VK_SHADER_STAGE_FRAGMENT:
                     dst = &info->fs;
                     break;
                 default:
-                    return XGL_ERROR_BAD_PIPELINE_DATA;
+                    return VK_ERROR_BAD_PIPELINE_DATA;
                     break;
                 }
             }
             break;
-        case XGL_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO:
+        case VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO:
             size = sizeof(info->compute);
             dst = &info->compute;
             break;
         default:
-            return XGL_ERROR_BAD_PIPELINE_DATA;
+            return VK_ERROR_BAD_PIPELINE_DATA;
             break;
         }
 
@@ -1337,49 +1337,49 @@ static XGL_RESULT pipeline_create_info_init(struct intel_pipeline_create_info *i
         header = header->next;
     }
 
-    return XGL_SUCCESS;
+    return VK_SUCCESS;
 }
 
-static XGL_RESULT graphics_pipeline_create(struct intel_dev *dev,
-                                           const XGL_GRAPHICS_PIPELINE_CREATE_INFO *info_,
+static VK_RESULT graphics_pipeline_create(struct intel_dev *dev,
+                                           const VK_GRAPHICS_PIPELINE_CREATE_INFO *info_,
                                            struct intel_pipeline **pipeline_ret)
 {
     struct intel_pipeline_create_info info;
     struct intel_pipeline *pipeline;
-    XGL_RESULT ret;
+    VK_RESULT ret;
 
     ret = pipeline_create_info_init(&info,
             (const struct intel_pipeline_create_info_header *) info_);
-    if (ret != XGL_SUCCESS)
+    if (ret != VK_SUCCESS)
         return ret;
 
     pipeline = (struct intel_pipeline *) intel_base_create(&dev->base.handle,
             sizeof(*pipeline), dev->base.dbg,
-            XGL_DBG_OBJECT_GRAPHICS_PIPELINE, info_, 0);
+            VK_DBG_OBJECT_GRAPHICS_PIPELINE, info_, 0);
     if (!pipeline)
-        return XGL_ERROR_OUT_OF_MEMORY;
+        return VK_ERROR_OUT_OF_MEMORY;
 
     pipeline->dev = dev;
     pipeline->obj.base.get_info = pipeline_get_info;
     pipeline->obj.destroy = pipeline_destroy;
 
     ret = pipeline_build_all(pipeline, &info);
-    if (ret == XGL_SUCCESS)
+    if (ret == VK_SUCCESS)
         ret = pipeline_validate(pipeline);
-    if (ret != XGL_SUCCESS) {
+    if (ret != VK_SUCCESS) {
         pipeline_destroy(&pipeline->obj);
         return ret;
     }
 
     *pipeline_ret = pipeline;
 
-    return XGL_SUCCESS;
+    return VK_SUCCESS;
 }
 
-ICD_EXPORT XGL_RESULT XGLAPI xglCreateGraphicsPipeline(
-    XGL_DEVICE                                  device,
-    const XGL_GRAPHICS_PIPELINE_CREATE_INFO*    pCreateInfo,
-    XGL_PIPELINE*                               pPipeline)
+ICD_EXPORT VK_RESULT VKAPI vkCreateGraphicsPipeline(
+    VK_DEVICE                                  device,
+    const VK_GRAPHICS_PIPELINE_CREATE_INFO*    pCreateInfo,
+    VK_PIPELINE*                               pPipeline)
 {
     struct intel_dev *dev = intel_dev(device);
 
@@ -1387,11 +1387,11 @@ ICD_EXPORT XGL_RESULT XGLAPI xglCreateGraphicsPipeline(
             (struct intel_pipeline **) pPipeline);
 }
 
-ICD_EXPORT XGL_RESULT XGLAPI xglCreateGraphicsPipelineDerivative(
-    XGL_DEVICE                                  device,
-    const XGL_GRAPHICS_PIPELINE_CREATE_INFO*    pCreateInfo,
-    XGL_PIPELINE                                basePipeline,
-    XGL_PIPELINE*                               pPipeline)
+ICD_EXPORT VK_RESULT VKAPI vkCreateGraphicsPipelineDerivative(
+    VK_DEVICE                                  device,
+    const VK_GRAPHICS_PIPELINE_CREATE_INFO*    pCreateInfo,
+    VK_PIPELINE                                basePipeline,
+    VK_PIPELINE*                               pPipeline)
 {
     struct intel_dev *dev = intel_dev(device);
 
@@ -1401,37 +1401,37 @@ ICD_EXPORT XGL_RESULT XGLAPI xglCreateGraphicsPipelineDerivative(
             (struct intel_pipeline **) pPipeline);
 }
 
-ICD_EXPORT XGL_RESULT XGLAPI xglCreateComputePipeline(
-    XGL_DEVICE                                  device,
-    const XGL_COMPUTE_PIPELINE_CREATE_INFO*     pCreateInfo,
-    XGL_PIPELINE*                               pPipeline)
+ICD_EXPORT VK_RESULT VKAPI vkCreateComputePipeline(
+    VK_DEVICE                                  device,
+    const VK_COMPUTE_PIPELINE_CREATE_INFO*     pCreateInfo,
+    VK_PIPELINE*                               pPipeline)
 {
-    return XGL_ERROR_UNAVAILABLE;
+    return VK_ERROR_UNAVAILABLE;
 }
 
-ICD_EXPORT XGL_RESULT XGLAPI xglStorePipeline(
-    XGL_PIPELINE                                pipeline,
+ICD_EXPORT VK_RESULT VKAPI vkStorePipeline(
+    VK_PIPELINE                                pipeline,
     size_t*                                     pDataSize,
     void*                                       pData)
 {
-    return XGL_ERROR_UNAVAILABLE;
+    return VK_ERROR_UNAVAILABLE;
 }
 
-ICD_EXPORT XGL_RESULT XGLAPI xglLoadPipeline(
-    XGL_DEVICE                                  device,
+ICD_EXPORT VK_RESULT VKAPI vkLoadPipeline(
+    VK_DEVICE                                  device,
     size_t                                    dataSize,
     const void*                                 pData,
-    XGL_PIPELINE*                               pPipeline)
+    VK_PIPELINE*                               pPipeline)
 {
-    return XGL_ERROR_UNAVAILABLE;
+    return VK_ERROR_UNAVAILABLE;
 }
 
-ICD_EXPORT XGL_RESULT XGLAPI xglLoadPipelineDerivative(
-    XGL_DEVICE                                  device,
+ICD_EXPORT VK_RESULT VKAPI vkLoadPipelineDerivative(
+    VK_DEVICE                                  device,
     size_t                                      dataSize,
     const void*                                 pData,
-    XGL_PIPELINE                                basePipeline,
-    XGL_PIPELINE*                               pPipeline)
+    VK_PIPELINE                                basePipeline,
+    VK_PIPELINE*                               pPipeline)
 {
-    return XGL_ERROR_UNAVAILABLE;
+    return VK_ERROR_UNAVAILABLE;
 }

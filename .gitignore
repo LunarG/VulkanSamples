@@ -8,18 +8,6 @@ XGLConfig.h
 *.so.*
 icd/common/libicd.a
 icd/intel/intel_gpa.c
-loader/dispatch.c
-loader/table_ops.h
-tests/xgl_image_tests
-tests/xgl_render_tests
-tests/xglbase
-tests/xglinfo
-layers/xgl_dispatch_table_helper.h
-layers/xgl_enum_string_helper.h
-layers/xgl_generic_intercept_proc_helper.h
-layers/xgl_struct_string_helper.h
-layers/xgl_struct_wrappers.cpp
-layers/xgl_struct_wrappers.h
 _out64
 out32/*
 out64/*
@@ -36,3 +24,5 @@ libs/Win32/Debug/*
 *.vcxproj
 *.sdf
 *.filters
+build
+dbuild

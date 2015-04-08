@@ -14,7 +14,7 @@ if(NOT ImageMagick_FOUND)
     message(FATAL_ERROR "Missing ImageMagick library: sudo apt-get install libmagickwand-dev")
 endif()
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DXGL_PROTOTYPES -Wno-sign-compare")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DVK_PROTOTYPES -Wno-sign-compare")
 
 SET(COMMON_CPP
     xglrenderframework.cpp
@@ -78,28 +78,28 @@ set_target_properties(xglbase
    COMPILE_DEFINITIONS "GTEST_LINKED_AS_SHARED_LIBRARY=1")
 target_link_libraries(xglbase XGL gtest gtest_main ${TEST_LIBRARIES})
 
-add_executable(xgl_image_tests image_tests.cpp ${COMMON_CPP})
-set_target_properties(xgl_image_tests
+add_executable(vk_image_tests image_tests.cpp ${COMMON_CPP})
+set_target_properties(vk_image_tests
    PROPERTIES
    COMPILE_DEFINITIONS "GTEST_LINKED_AS_SHARED_LIBRARY=1")
-target_link_libraries(xgl_image_tests XGL gtest gtest_main ${TEST_LIBRARIES})
+target_link_libraries(vk_image_tests XGL gtest gtest_main ${TEST_LIBRARIES})
 
-add_executable(xgl_render_tests render_tests.cpp ${COMMON_CPP})
-set_target_properties(xgl_render_tests
+add_executable(vk_render_tests render_tests.cpp ${COMMON_CPP})
+set_target_properties(vk_render_tests
    PROPERTIES
    COMPILE_DEFINITIONS "GTEST_LINKED_AS_SHARED_LIBRARY=1")
-target_link_libraries(xgl_render_tests XGL gtest gtest_main ${TEST_LIBRARIES})
+target_link_libraries(vk_render_tests XGL gtest gtest_main ${TEST_LIBRARIES})
 
-add_executable(xgl_blit_tests blit_tests.cpp ${COMMON_CPP})
-set_target_properties(xgl_blit_tests
+add_executable(vk_blit_tests blit_tests.cpp ${COMMON_CPP})
+set_target_properties(vk_blit_tests
    PROPERTIES
    COMPILE_DEFINITIONS "GTEST_LINKED_AS_SHARED_LIBRARY=1")
-target_link_libraries(xgl_blit_tests XGL gtest gtest_main ${TEST_LIBRARIES})
+target_link_libraries(vk_blit_tests XGL gtest gtest_main ${TEST_LIBRARIES})
 
-add_executable(xgl_layer_validation_tests layer_validation_tests.cpp ${COMMON_CPP})
-set_target_properties(xgl_layer_validation_tests
+add_executable(vk_layer_validation_tests layer_validation_tests.cpp ${COMMON_CPP})
+set_target_properties(vk_layer_validation_tests
    PROPERTIES
    COMPILE_DEFINITIONS "GTEST_LINKED_AS_SHARED_LIBRARY=1")
-target_link_libraries(xgl_layer_validation_tests XGL gtest gtest_main ${TEST_LIBRARIES})
+target_link_libraries(vk_layer_validation_tests XGL gtest gtest_main ${TEST_LIBRARIES})
 
 add_subdirectory(gtest-1.7.0)

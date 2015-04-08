@@ -345,7 +345,7 @@ brw_vs_precompile(struct gl_context *ctx, struct gl_shader_program *prog)
 
    brw_vec4_setup_prog_key_for_precompile(ctx, &key.base, bvp->id, &vp->Base);
 
-   // In XGL, user clipping is triggered solely from the shader.
+   // In VK, user clipping is triggered solely from the shader.
    key.base.userclip_active = vp->Base.UsesClipDistanceOut;
 
    struct brw_vs_compile c;

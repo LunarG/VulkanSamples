@@ -1,5 +1,5 @@
 /*
- * XGL
+ * Vulkan
  *
  * Copyright (C) 2014 LunarG, Inc.
  *
@@ -36,10 +36,10 @@
 #include <string.h>
 #include <assert.h>
 
-#include <xgl.h>
-#include <xglDbg.h>
-#include <xglWsiX11Ext.h>
-#include <xglIcd.h>
+#include <vulkan.h>
+#include <vkDbg.h>
+#include <vkWsiX11Ext.h>
+#include <vkIcd.h>
 
 #include "icd.h"
 #include "icd-spv.h"
@@ -47,7 +47,7 @@
 #include "icd-instance.h"
 #include "icd-utils.h"
 
-#define INTEL_API_VERSION XGL_API_VERSION
+#define INTEL_API_VERSION VK_API_VERSION
 #define INTEL_DRIVER_VERSION 0
 
 #define INTEL_GEN(gen) ((int) ((gen) * 100))
@@ -78,7 +78,7 @@ extern int intel_debug;
 static const uint32_t intel_handle_magic = 0x494e544c;
 
 static inline void intel_handle_init(struct intel_handle *handle,
-                                     XGL_DBG_OBJECT_TYPE type,
+                                     VK_DBG_OBJECT_TYPE type,
                                      const struct icd_instance *icd)
 {
     set_loader_magic_value(handle);
@@ -97,7 +97,7 @@ static inline bool intel_handle_validate(const void *handle)
     const uint32_t handle_type =
         ((const struct intel_handle *) handle)->magic - intel_handle_magic;
 
-    return (handle_type <= XGL_DBG_OBJECT_TYPE_END_RANGE);
+    return (handle_type <= VK_DBG_OBJECT_TYPE_END_RANGE);
 }
 
 /**
@@ -106,7 +106,7 @@ static inline bool intel_handle_validate(const void *handle)
  * \see intel_handle_validate().
  */
 static inline bool intel_handle_validate_type(const void *handle,
-                                              XGL_DBG_OBJECT_TYPE type)
+                                              VK_DBG_OBJECT_TYPE type)
 {
     const uint32_t handle_type =
         ((const struct intel_handle *) handle)->magic - intel_handle_magic;
@@ -116,7 +116,7 @@ static inline bool intel_handle_validate_type(const void *handle,
 
 static inline void *intel_alloc(const void *handle,
                                 size_t size, size_t alignment,
-                                XGL_SYSTEM_ALLOC_TYPE type)
+                                VK_SYSTEM_ALLOC_TYPE type)
 {
     assert(intel_handle_validate(handle));
     return icd_instance_alloc(((const struct intel_handle *) handle)->icd,
@@ -130,9 +130,9 @@ static inline void intel_free(const void *handle, void *ptr)
 }
 
 static inline void intel_logv(const void *handle,
-                              XGL_DBG_MSG_TYPE msg_type,
-                              XGL_VALIDATION_LEVEL validation_level,
-                              XGL_BASE_OBJECT src_object,
+                              VK_DBG_MSG_TYPE msg_type,
+                              VK_VALIDATION_LEVEL validation_level,
+                              VK_BASE_OBJECT src_object,
                               size_t location, int32_t msg_code,
                               const char *format, va_list ap)
 {
@@ -149,9 +149,9 @@ static inline void intel_logv(const void *handle,
 }
 
 static inline void intel_log(const void *handle,
-                             XGL_DBG_MSG_TYPE msg_type,
-                             XGL_VALIDATION_LEVEL validation_level,
-                             XGL_BASE_OBJECT src_object,
+                             VK_DBG_MSG_TYPE msg_type,
+                             VK_VALIDATION_LEVEL validation_level,
+                             VK_BASE_OBJECT src_object,
                              size_t location, int32_t msg_code,
                              const char *format, ...)
 {

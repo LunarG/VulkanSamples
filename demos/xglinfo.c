@@ -1,5 +1,5 @@
 /*
- * XGL
+ * Vulkan
  *
  * Copyright (C) 2014 LunarG, Inc.
  *
@@ -27,10 +27,10 @@
 #include <string.h>
 #include <assert.h>
 
-#include <xgl.h>
+#include <vulkan.h>
 
 #define ERR(err) printf("%s:%d: failed with %s\n", \
-    __FILE__, __LINE__, xgl_result_string(err));
+    __FILE__, __LINE__, vk_result_string(err));
 
 #define ERR_EXIT(err) do { ERR(err); exit(-1); } while (0)
 
@@ -45,24 +45,24 @@ struct app_gpu;
 struct app_dev {
     struct app_gpu *gpu; /* point back to the GPU */
 
-    XGL_DEVICE obj;
+    VK_DEVICE obj;
 
 
-    XGL_FORMAT_PROPERTIES format_props[XGL_NUM_FMT];
+    VK_FORMAT_PROPERTIES format_props[VK_NUM_FMT];
 };
 
 struct app_gpu {
     uint32_t id;
-    XGL_PHYSICAL_GPU obj;
+    VK_PHYSICAL_GPU obj;
 
-    XGL_PHYSICAL_GPU_PROPERTIES props;
-    XGL_PHYSICAL_GPU_PERFORMANCE perf;
+    VK_PHYSICAL_GPU_PROPERTIES props;
+    VK_PHYSICAL_GPU_PERFORMANCE perf;
 
     uint32_t queue_count;
-    XGL_PHYSICAL_GPU_QUEUE_PROPERTIES *queue_props;
-    XGL_DEVICE_QUEUE_CREATE_INFO *queue_reqs;
+    VK_PHYSICAL_GPU_QUEUE_PROPERTIES *queue_props;
+    VK_DEVICE_QUEUE_CREATE_INFO *queue_reqs;
 
-    XGL_PHYSICAL_GPU_MEMORY_PROPERTIES memory_props;
+    VK_PHYSICAL_GPU_MEMORY_PROPERTIES memory_props;
 
     uint32_t extension_count;
     char **extensions;
@@ -70,59 +70,59 @@ struct app_gpu {
     struct app_dev dev;
 };
 
-static const char *xgl_result_string(XGL_RESULT err)
+static const char *vk_result_string(VK_RESULT err)
 {
     switch (err) {
 #define STR(r) case r: return #r
-    STR(XGL_SUCCESS);
-    STR(XGL_UNSUPPORTED);
-    STR(XGL_NOT_READY);
-    STR(XGL_TIMEOUT);
-    STR(XGL_EVENT_SET);
-    STR(XGL_EVENT_RESET);
-    STR(XGL_ERROR_UNKNOWN);
-    STR(XGL_ERROR_UNAVAILABLE);
-    STR(XGL_ERROR_INITIALIZATION_FAILED);
-    STR(XGL_ERROR_OUT_OF_MEMORY);
-    STR(XGL_ERROR_OUT_OF_GPU_MEMORY);
-    STR(XGL_ERROR_DEVICE_ALREADY_CREATED);
-    STR(XGL_ERROR_DEVICE_LOST);
-    STR(XGL_ERROR_INVALID_POINTER);
-    STR(XGL_ERROR_INVALID_VALUE);
-    STR(XGL_ERROR_INVALID_HANDLE);
-    STR(XGL_ERROR_INVALID_ORDINAL);
-    STR(XGL_ERROR_INVALID_MEMORY_SIZE);
-    STR(XGL_ERROR_INVALID_EXTENSION);
-    STR(XGL_ERROR_INVALID_FLAGS);
-    STR(XGL_ERROR_INVALID_ALIGNMENT);
-    STR(XGL_ERROR_INVALID_FORMAT);
-    STR(XGL_ERROR_INVALID_IMAGE);
-    STR(XGL_ERROR_INVALID_DESCRIPTOR_SET_DATA);
-    STR(XGL_ERROR_INVALID_QUEUE_TYPE);
-    STR(XGL_ERROR_INVALID_OBJECT_TYPE);
-    STR(XGL_ERROR_UNSUPPORTED_SHADER_IL_VERSION);
-    STR(XGL_ERROR_BAD_SHADER_CODE);
-    STR(XGL_ERROR_BAD_PIPELINE_DATA);
-    STR(XGL_ERROR_TOO_MANY_MEMORY_REFERENCES);
-    STR(XGL_ERROR_NOT_MAPPABLE);
-    STR(XGL_ERROR_MEMORY_MAP_FAILED);
-    STR(XGL_ERROR_MEMORY_UNMAP_FAILED);
-    STR(XGL_ERROR_INCOMPATIBLE_DEVICE);
-    STR(XGL_ERROR_INCOMPATIBLE_DRIVER);
-    STR(XGL_ERROR_INCOMPLETE_COMMAND_BUFFER);
-    STR(XGL_ERROR_BUILDING_COMMAND_BUFFER);
-    STR(XGL_ERROR_MEMORY_NOT_BOUND);
-    STR(XGL_ERROR_INCOMPATIBLE_QUEUE);
-    STR(XGL_ERROR_NOT_SHAREABLE);
+    STR(VK_SUCCESS);
+    STR(VK_UNSUPPORTED);
+    STR(VK_NOT_READY);
+    STR(VK_TIMEOUT);
+    STR(VK_EVENT_SET);
+    STR(VK_EVENT_RESET);
+    STR(VK_ERROR_UNKNOWN);
+    STR(VK_ERROR_UNAVAILABLE);
+    STR(VK_ERROR_INITIALIZATION_FAILED);
+    STR(VK_ERROR_OUT_OF_MEMORY);
+    STR(VK_ERROR_OUT_OF_GPU_MEMORY);
+    STR(VK_ERROR_DEVICE_ALREADY_CREATED);
+    STR(VK_ERROR_DEVICE_LOST);
+    STR(VK_ERROR_INVALID_POINTER);
+    STR(VK_ERROR_INVALID_VALUE);
+    STR(VK_ERROR_INVALID_HANDLE);
+    STR(VK_ERROR_INVALID_ORDINAL);
+    STR(VK_ERROR_INVALID_MEMORY_SIZE);
+    STR(VK_ERROR_INVALID_EXTENSION);
+    STR(VK_ERROR_INVALID_FLAGS);
+    STR(VK_ERROR_INVALID_ALIGNMENT);
+    STR(VK_ERROR_INVALID_FORMAT);
+    STR(VK_ERROR_INVALID_IMAGE);
+    STR(VK_ERROR_INVALID_DESCRIPTOR_SET_DATA);
+    STR(VK_ERROR_INVALID_QUEUE_TYPE);
+    STR(VK_ERROR_INVALID_OBJECT_TYPE);
+    STR(VK_ERROR_UNSUPPORTED_SHADER_IL_VERSION);
+    STR(VK_ERROR_BAD_SHADER_CODE);
+    STR(VK_ERROR_BAD_PIPELINE_DATA);
+    STR(VK_ERROR_TOO_MANY_MEMORY_REFERENCES);
+    STR(VK_ERROR_NOT_MAPPABLE);
+    STR(VK_ERROR_MEMORY_MAP_FAILED);
+    STR(VK_ERROR_MEMORY_UNMAP_FAILED);
+    STR(VK_ERROR_INCOMPATIBLE_DEVICE);
+    STR(VK_ERROR_INCOMPATIBLE_DRIVER);
+    STR(VK_ERROR_INCOMPLETE_COMMAND_BUFFER);
+    STR(VK_ERROR_BUILDING_COMMAND_BUFFER);
+    STR(VK_ERROR_MEMORY_NOT_BOUND);
+    STR(VK_ERROR_INCOMPATIBLE_QUEUE);
+    STR(VK_ERROR_NOT_SHAREABLE);
 #undef STR
     default: return "UNKNOWN_RESULT";
     }
 }
 
-static const char *xgl_gpu_type_string(XGL_PHYSICAL_GPU_TYPE type)
+static const char *vk_gpu_type_string(VK_PHYSICAL_GPU_TYPE type)
 {
     switch (type) {
-#define STR(r) case XGL_GPU_TYPE_ ##r: return #r
+#define STR(r) case VK_GPU_TYPE_ ##r: return #r
     STR(OTHER);
     STR(INTEGRATED);
     STR(DISCRETE);
@@ -132,10 +132,10 @@ static const char *xgl_gpu_type_string(XGL_PHYSICAL_GPU_TYPE type)
     }
 }
 
-static const char *xgl_format_string(XGL_FORMAT fmt)
+static const char *vk_format_string(VK_FORMAT fmt)
 {
     switch (fmt) {
-#define STR(r) case XGL_FMT_ ##r: return #r
+#define STR(r) case VK_FMT_ ##r: return #r
     STR(UNDEFINED);
     STR(R4G4_UNORM);
     STR(R4G4_USCALED);
@@ -310,39 +310,39 @@ static const char *xgl_format_string(XGL_FORMAT fmt)
 
 static void app_dev_init_formats(struct app_dev *dev)
 {
-    XGL_FORMAT f;
+    VK_FORMAT f;
 
-    for (f = 0; f < XGL_NUM_FMT; f++) {
-        const XGL_FORMAT fmt = f;
-        XGL_RESULT err;
+    for (f = 0; f < VK_NUM_FMT; f++) {
+        const VK_FORMAT fmt = f;
+        VK_RESULT err;
         size_t size = sizeof(dev->format_props[f]);
 
-        err = xglGetFormatInfo(dev->obj, fmt,
-                               XGL_INFO_TYPE_FORMAT_PROPERTIES,
+        err = vkGetFormatInfo(dev->obj, fmt,
+                               VK_INFO_TYPE_FORMAT_PROPERTIES,
                                &size, &dev->format_props[f]);
         if (err) {
             memset(&dev->format_props[f], 0,
                    sizeof(dev->format_props[f]));
         }
         else if (size != sizeof(dev->format_props[f])) {
-            ERR_EXIT(XGL_ERROR_UNKNOWN);
+            ERR_EXIT(VK_ERROR_UNKNOWN);
         }
     }
 }
 
 static void app_dev_init(struct app_dev *dev, struct app_gpu *gpu)
 {
-    XGL_DEVICE_CREATE_INFO info = {
-        .sType = XGL_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
+    VK_DEVICE_CREATE_INFO info = {
+        .sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
         .pNext = NULL,
         .queueRecordCount = 0,
         .pRequestedQueues = NULL,
         .extensionCount = 0,
         .ppEnabledExtensionNames = NULL,
-        .maxValidationLevel = XGL_VALIDATION_LEVEL_END_RANGE,
-        .flags = XGL_DEVICE_CREATE_VALIDATION_BIT,
+        .maxValidationLevel = VK_VALIDATION_LEVEL_END_RANGE,
+        .flags = VK_DEVICE_CREATE_VALIDATION_BIT,
     };
-    XGL_RESULT err;
+    VK_RESULT err;
 
     /* request all queues */
     info.queueRecordCount = gpu->queue_count;
@@ -352,7 +352,7 @@ static void app_dev_init(struct app_dev *dev, struct app_gpu *gpu)
     info.extensionCount = gpu->extension_count;
     info.ppEnabledExtensionNames = (const char*const*) gpu->extensions;
     dev->gpu = gpu;
-    err = xglCreateDevice(gpu->obj, &info, &dev->obj);
+    err = vkCreateDevice(gpu->obj, &info, &dev->obj);
     if (err)
         ERR_EXIT(err);
 
@@ -360,20 +360,20 @@ static void app_dev_init(struct app_dev *dev, struct app_gpu *gpu)
 
 static void app_dev_destroy(struct app_dev *dev)
 {
-    xglDestroyDevice(dev->obj);
+    vkDestroyDevice(dev->obj);
 }
 
 static void app_gpu_init_extensions(struct app_gpu *gpu)
 {
-    XGL_RESULT err;
+    VK_RESULT err;
     uint32_t i;
 
     static char *known_extensions[] = {
-        "XGL_WSI_X11",
+        "VK_WSI_X11",
     };
 
     for (i = 0; i < ARRAY_SIZE(known_extensions); i++) {
-        err = xglGetExtensionSupport(gpu->obj, known_extensions[i]);
+        err = vkGetExtensionSupport(gpu->obj, known_extensions[i]);
         if (!err)
             gpu->extension_count++;
     }
@@ -381,20 +381,20 @@ static void app_gpu_init_extensions(struct app_gpu *gpu)
     gpu->extensions =
             malloc(sizeof(gpu->extensions[0]) * gpu->extension_count);
     if (!gpu->extensions)
-        ERR_EXIT(XGL_ERROR_OUT_OF_MEMORY);
+        ERR_EXIT(VK_ERROR_OUT_OF_MEMORY);
 
     gpu->extension_count = 0;
     for (i = 0; i < ARRAY_SIZE(known_extensions); i++) {
-        err = xglGetExtensionSupport(gpu->obj, known_extensions[i]);
+        err = vkGetExtensionSupport(gpu->obj, known_extensions[i]);
         if (!err)
             gpu->extensions[gpu->extension_count++] = known_extensions[i];
     }
 }
 
-static void app_gpu_init(struct app_gpu *gpu, uint32_t id, XGL_PHYSICAL_GPU obj)
+static void app_gpu_init(struct app_gpu *gpu, uint32_t id, VK_PHYSICAL_GPU obj)
 {
     size_t size;
-    XGL_RESULT err;
+    VK_RESULT err;
     uint32_t i;
 
     memset(gpu, 0, sizeof(*gpu));
@@ -402,22 +402,22 @@ static void app_gpu_init(struct app_gpu *gpu, uint32_t id, XGL_PHYSICAL_GPU obj)
     gpu->id = id;
     gpu->obj = obj;
     size = sizeof(gpu->props);
-    err = xglGetGpuInfo(gpu->obj,
-                        XGL_INFO_TYPE_PHYSICAL_GPU_PROPERTIES,
+    err = vkGetGpuInfo(gpu->obj,
+                        VK_INFO_TYPE_PHYSICAL_GPU_PROPERTIES,
                         &size, &gpu->props);
     if (err || size != sizeof(gpu->props))
         ERR_EXIT(err);
 
     size = sizeof(gpu->perf);
-    err = xglGetGpuInfo(gpu->obj,
-                        XGL_INFO_TYPE_PHYSICAL_GPU_PERFORMANCE,
+    err = vkGetGpuInfo(gpu->obj,
+                        VK_INFO_TYPE_PHYSICAL_GPU_PERFORMANCE,
                         &size, &gpu->perf);
     if (err || size != sizeof(gpu->perf))
         ERR_EXIT(err);
 
     /* get queue count */
-    err = xglGetGpuInfo(gpu->obj,
-                        XGL_INFO_TYPE_PHYSICAL_GPU_QUEUE_PROPERTIES,
+    err = vkGetGpuInfo(gpu->obj,
+                        VK_INFO_TYPE_PHYSICAL_GPU_QUEUE_PROPERTIES,
                         &size, NULL);
     if (err || size % sizeof(gpu->queue_props[0]))
         ERR_EXIT(err);
@@ -427,9 +427,9 @@ static void app_gpu_init(struct app_gpu *gpu, uint32_t id, XGL_PHYSICAL_GPU obj)
             malloc(sizeof(gpu->queue_props[0]) * gpu->queue_count);
     size = sizeof(gpu->queue_props[0]) * gpu->queue_count;
     if (!gpu->queue_props)
-        ERR_EXIT(XGL_ERROR_OUT_OF_MEMORY);
-    err = xglGetGpuInfo(gpu->obj,
-                        XGL_INFO_TYPE_PHYSICAL_GPU_QUEUE_PROPERTIES,
+        ERR_EXIT(VK_ERROR_OUT_OF_MEMORY);
+    err = vkGetGpuInfo(gpu->obj,
+                        VK_INFO_TYPE_PHYSICAL_GPU_QUEUE_PROPERTIES,
                         &size, gpu->queue_props);
     if (err || size != sizeof(gpu->queue_props[0]) * gpu->queue_count)
         ERR_EXIT(err);
@@ -438,15 +438,15 @@ static void app_gpu_init(struct app_gpu *gpu, uint32_t id, XGL_PHYSICAL_GPU obj)
     size = sizeof(*gpu->queue_reqs) * gpu->queue_count;
     gpu->queue_reqs = malloc(sizeof(*gpu->queue_reqs) * gpu->queue_count);
     if (!gpu->queue_reqs)
-        ERR_EXIT(XGL_ERROR_OUT_OF_MEMORY);
+        ERR_EXIT(VK_ERROR_OUT_OF_MEMORY);
     for (i = 0; i < gpu->queue_count; i++) {
         gpu->queue_reqs[i].queueNodeIndex = i;
         gpu->queue_reqs[i].queueCount = gpu->queue_props[i].queueCount;
     }
 
     size = sizeof(gpu->memory_props);
-    err = xglGetGpuInfo(gpu->obj,
-                        XGL_INFO_TYPE_PHYSICAL_GPU_MEMORY_PROPERTIES,
+    err = vkGetGpuInfo(gpu->obj,
+                        VK_INFO_TYPE_PHYSICAL_GPU_MEMORY_PROPERTIES,
                         &size, &gpu->memory_props);
     if (err || size != sizeof(gpu->memory_props))
         ERR_EXIT(err);
@@ -464,12 +464,12 @@ static void app_gpu_destroy(struct app_gpu *gpu)
     free(gpu->queue_props);
 }
 
-static void app_dev_dump_format_props(const struct app_dev *dev, XGL_FORMAT fmt)
+static void app_dev_dump_format_props(const struct app_dev *dev, VK_FORMAT fmt)
 {
-    const XGL_FORMAT_PROPERTIES *props = &dev->format_props[fmt];
+    const VK_FORMAT_PROPERTIES *props = &dev->format_props[fmt];
     struct {
         const char *name;
-        XGL_FLAGS flags;
+        VK_FLAGS flags;
     } tilings[2];
     uint32_t i;
 
@@ -481,25 +481,25 @@ static void app_dev_dump_format_props(const struct app_dev *dev, XGL_FORMAT fmt)
     tilings[1].name = "optimal";
     tilings[1].flags = props->optimalTilingFeatures;
 
-    printf("FORMAT_%s\n", xgl_format_string(fmt));
+    printf("FORMAT_%s\n", vk_format_string(fmt));
     for (i = 0; i < ARRAY_SIZE(tilings); i++) {
         if (!tilings[i].flags)
             continue;
 
         printf("\t%s tiling image =%s%s%s\n", tilings[i].name,
-                (tilings[i].flags & XGL_FORMAT_IMAGE_SHADER_READ_BIT)      ? " read" : "",
-                (tilings[i].flags & XGL_FORMAT_IMAGE_SHADER_WRITE_BIT)     ? " write" : "",
-                (tilings[i].flags & XGL_FORMAT_IMAGE_COPY_BIT)             ? " copy" : "");
+                (tilings[i].flags & VK_FORMAT_IMAGE_SHADER_READ_BIT)      ? " read" : "",
+                (tilings[i].flags & VK_FORMAT_IMAGE_SHADER_WRITE_BIT)     ? " write" : "",
+                (tilings[i].flags & VK_FORMAT_IMAGE_COPY_BIT)             ? " copy" : "");
         printf("\t%s tiling memory =%s\n", tilings[i].name,
-                (tilings[i].flags & XGL_FORMAT_MEMORY_SHADER_ACCESS_BIT)   ? " access" : "");
+                (tilings[i].flags & VK_FORMAT_MEMORY_SHADER_ACCESS_BIT)   ? " access" : "");
         printf("\t%s tiling attachment =%s%s%s%s%s\n", tilings[i].name,
-                (tilings[i].flags & XGL_FORMAT_COLOR_ATTACHMENT_WRITE_BIT) ? " color" : "",
-                (tilings[i].flags & XGL_FORMAT_COLOR_ATTACHMENT_BLEND_BIT) ? " blend" : "",
-                (tilings[i].flags & XGL_FORMAT_DEPTH_ATTACHMENT_BIT)       ? " depth" : "",
-                (tilings[i].flags & XGL_FORMAT_STENCIL_ATTACHMENT_BIT)     ? " stencil" : "",
-                (tilings[i].flags & XGL_FORMAT_MSAA_ATTACHMENT_BIT)        ? " msaa" : "");
+                (tilings[i].flags & VK_FORMAT_COLOR_ATTACHMENT_WRITE_BIT) ? " color" : "",
+                (tilings[i].flags & VK_FORMAT_COLOR_ATTACHMENT_BLEND_BIT) ? " blend" : "",
+                (tilings[i].flags & VK_FORMAT_DEPTH_ATTACHMENT_BIT)       ? " depth" : "",
+                (tilings[i].flags & VK_FORMAT_STENCIL_ATTACHMENT_BIT)     ? " stencil" : "",
+                (tilings[i].flags & VK_FORMAT_MSAA_ATTACHMENT_BIT)        ? " msaa" : "");
         printf("\t%s tiling conversion = %u\n", tilings[i].name,
-                (bool) (tilings[i].flags & XGL_FORMAT_CONVERSION_BIT));
+                (bool) (tilings[i].flags & VK_FORMAT_CONVERSION_BIT));
     }
 }
 
@@ -507,19 +507,19 @@ static void app_dev_dump_format_props(const struct app_dev *dev, XGL_FORMAT fmt)
 static void
 app_dev_dump(const struct app_dev *dev)
 {
-    XGL_FORMAT fmt;
+    VK_FORMAT fmt;
 
-    for (fmt = 0; fmt < XGL_NUM_FMT; fmt++) {
+    for (fmt = 0; fmt < VK_NUM_FMT; fmt++) {
         app_dev_dump_format_props(dev, fmt);
     }
 }
 
 static void app_gpu_dump_multi_compat(const struct app_gpu *gpu, const struct app_gpu *other,
-        const XGL_GPU_COMPATIBILITY_INFO *info)
+        const VK_GPU_COMPATIBILITY_INFO *info)
 {
-    printf("XGL_GPU_COMPATIBILITY_INFO[GPU%d]\n", other->id);
+    printf("VK_GPU_COMPATIBILITY_INFO[GPU%d]\n", other->id);
 
-#define TEST(info, b) printf(#b " = %u\n", (bool) (info->compatibilityFlags & XGL_GPU_COMPAT_ ##b## _BIT))
+#define TEST(info, b) printf(#b " = %u\n", (bool) (info->compatibilityFlags & VK_GPU_COMPAT_ ##b## _BIT))
     TEST(info, ASIC_FEATURES);
     TEST(info, IQ_MATCH);
     TEST(info, PEER_TRANSFER);
@@ -532,17 +532,17 @@ static void app_gpu_dump_multi_compat(const struct app_gpu *gpu, const struct ap
 
 static void app_gpu_multi_compat(struct app_gpu *gpus, uint32_t gpu_count)
 {
-        XGL_RESULT err;
+        VK_RESULT err;
         uint32_t i, j;
 
         for (i = 0; i < gpu_count; i++) {
                 for (j = 0; j < gpu_count; j++) {
-                        XGL_GPU_COMPATIBILITY_INFO info;
+                        VK_GPU_COMPATIBILITY_INFO info;
 
                         if (i == j)
                                 continue;
 
-                        err = xglGetMultiGpuCompatibility(gpus[i].obj,
+                        err = vkGetMultiGpuCompatibility(gpus[i].obj,
                                         gpus[j].obj, &info);
                         if (err)
                                 ERR_EXIT(err);
@@ -554,14 +554,14 @@ static void app_gpu_multi_compat(struct app_gpu *gpus, uint32_t gpu_count)
 
 static void app_gpu_dump_props(const struct app_gpu *gpu)
 {
-    const XGL_PHYSICAL_GPU_PROPERTIES *props = &gpu->props;
+    const VK_PHYSICAL_GPU_PROPERTIES *props = &gpu->props;
 
-    printf("XGL_PHYSICAL_GPU_PROPERTIES\n");
+    printf("VK_PHYSICAL_GPU_PROPERTIES\n");
     printf("\tapiVersion = %u\n",                   props->apiVersion);
     printf("\tdriverVersion = %u\n",                props->driverVersion);
     printf("\tvendorId = 0x%04x\n",                 props->vendorId);
     printf("\tdeviceId = 0x%04x\n",                 props->deviceId);
-    printf("\tgpuType = %s\n",                      xgl_gpu_type_string(props->gpuType));
+    printf("\tgpuType = %s\n",                      vk_gpu_type_string(props->gpuType));
     printf("\tgpuName = %s\n",                      props->gpuName);
     printf("\tmaxInlineMemoryUpdateSize = %zu\n",   props->maxInlineMemoryUpdateSize);
     printf("\tmaxBoundDescriptorSets = %u\n",       props->maxBoundDescriptorSets);
@@ -572,9 +572,9 @@ static void app_gpu_dump_props(const struct app_gpu *gpu)
 
 static void app_gpu_dump_perf(const struct app_gpu *gpu)
 {
-    const XGL_PHYSICAL_GPU_PERFORMANCE *perf = &gpu->perf;
+    const VK_PHYSICAL_GPU_PERFORMANCE *perf = &gpu->perf;
 
-    printf("XGL_PHYSICAL_GPU_PERFORMANCE\n");
+    printf("VK_PHYSICAL_GPU_PERFORMANCE\n");
     printf("\tmaxGpuClock = %f\n",      perf->maxGpuClock);
     printf("\taluPerClock = %f\n",      perf->aluPerClock);
     printf("\ttexPerClock = %f\n",      perf->texPerClock);
@@ -598,14 +598,14 @@ static void app_gpu_dump_extensions(const struct app_gpu *gpu)
 
 static void app_gpu_dump_queue_props(const struct app_gpu *gpu, uint32_t id)
 {
-    const XGL_PHYSICAL_GPU_QUEUE_PROPERTIES *props = &gpu->queue_props[id];
+    const VK_PHYSICAL_GPU_QUEUE_PROPERTIES *props = &gpu->queue_props[id];
 
-    printf("XGL_PHYSICAL_GPU_QUEUE_PROPERTIES[%d]\n", id);
+    printf("VK_PHYSICAL_GPU_QUEUE_PROPERTIES[%d]\n", id);
     printf("\tqueueFlags = %c%c%c%c\n",
-            (props->queueFlags & XGL_QUEUE_GRAPHICS_BIT) ? 'G' : '.',
-            (props->queueFlags & XGL_QUEUE_COMPUTE_BIT)  ? 'C' : '.',
-            (props->queueFlags & XGL_QUEUE_DMA_BIT)      ? 'D' : '.',
-            (props->queueFlags & XGL_QUEUE_EXTENDED_BIT) ? 'X' : '.');
+            (props->queueFlags & VK_QUEUE_GRAPHICS_BIT) ? 'G' : '.',
+            (props->queueFlags & VK_QUEUE_COMPUTE_BIT)  ? 'C' : '.',
+            (props->queueFlags & VK_QUEUE_DMA_BIT)      ? 'D' : '.',
+            (props->queueFlags & VK_QUEUE_EXTENDED_BIT) ? 'X' : '.');
     printf("\tqueueCount = %u\n",           props->queueCount);
     printf("\tmaxAtomicCounters = %u\n",    props->maxAtomicCounters);
     printf("\tsupportsTimestamps = %u\n",   props->supportsTimestamps);
@@ -614,9 +614,9 @@ static void app_gpu_dump_queue_props(const struct app_gpu *gpu, uint32_t id)
 
 static void app_gpu_dump_memory_props(const struct app_gpu *gpu)
 {
-    const XGL_PHYSICAL_GPU_MEMORY_PROPERTIES *props = &gpu->memory_props;
+    const VK_PHYSICAL_GPU_MEMORY_PROPERTIES *props = &gpu->memory_props;
 
-    printf("XGL_PHYSICAL_GPU_MEMORY_PROPERTIES\n");
+    printf("VK_PHYSICAL_GPU_MEMORY_PROPERTIES\n");
     printf("\tsupportsMigration = %u\n",                props->supportsMigration);
     printf("\tsupportsPinning = %u\n",                  props->supportsPinning);
 }
@@ -643,17 +643,17 @@ static void app_gpu_dump(const struct app_gpu *gpu)
 
 int main(int argc, char **argv)
 {
-    static const XGL_APPLICATION_INFO app_info = {
-        .sType = XGL_STRUCTURE_TYPE_APPLICATION_INFO,
+    static const VK_APPLICATION_INFO app_info = {
+        .sType = VK_STRUCTURE_TYPE_APPLICATION_INFO,
         .pNext = NULL,
-        .pAppName = "xglinfo",
+        .pAppName = "vkinfo",
         .appVersion = 1,
-        .pEngineName = "xglinfo",
+        .pEngineName = "vkinfo",
         .engineVersion = 1,
-        .apiVersion = XGL_API_VERSION,
+        .apiVersion = VK_API_VERSION,
     };
-    static const XGL_INSTANCE_CREATE_INFO inst_info = {
-        .sType = XGL_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
+    static const VK_INSTANCE_CREATE_INFO inst_info = {
+        .sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
         .pNext = NULL,
         .pAppInfo = &app_info,
         .pAllocCb = NULL,
@@ -661,13 +661,13 @@ int main(int argc, char **argv)
         .ppEnabledExtensionNames = NULL,
     };
     struct app_gpu gpus[MAX_GPUS];
-    XGL_PHYSICAL_GPU objs[MAX_GPUS];
-    XGL_INSTANCE inst;
+    VK_PHYSICAL_GPU objs[MAX_GPUS];
+    VK_INSTANCE inst;
     uint32_t gpu_count, i;
-    XGL_RESULT err;
+    VK_RESULT err;
 
-    err = xglCreateInstance(&inst_info, &inst);
-    if (err == XGL_ERROR_INCOMPATIBLE_DRIVER) {
+    err = vkCreateInstance(&inst_info, &inst);
+    if (err == VK_ERROR_INCOMPATIBLE_DRIVER) {
         printf("Cannot find a compatible Vulkan installable client driver "
                "(ICD).\nExiting ...\n");
         fflush(stdout);
@@ -676,7 +676,7 @@ int main(int argc, char **argv)
 
         ERR_EXIT(err);
     }
-    err = xglEnumerateGpus(inst, MAX_GPUS, &gpu_count, objs);
+    err = vkEnumerateGpus(inst, MAX_GPUS, &gpu_count, objs);
     if (err)
         ERR_EXIT(err);
 
@@ -691,7 +691,7 @@ int main(int argc, char **argv)
     for (i = 0; i < gpu_count; i++)
         app_gpu_destroy(&gpus[i]);
 
-    xglDestroyInstance(inst);
+    vkDestroyInstance(inst);
 
     return 0;
 }

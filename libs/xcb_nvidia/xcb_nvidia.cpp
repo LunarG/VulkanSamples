@@ -2,7 +2,7 @@
 
 #include <string>
 
-#include <xgl.h>
+#include <vulkan.h>
 
 // COPIED FROM "loader.c" (not pointed to, because we're about to delete this
 // code).  Ian Elliott <ian@lunarg.com>.
@@ -80,11 +80,11 @@ struct xcb_connection_t {
 
 xcb_connection_t * xcb_connect(const char *displayname, int *screenp)
 {
-    std::string xglNvidia = (getenv("XGL_DRIVERS_PATH") == NULL) ? "" : getenv("XGL_DRIVERS_PATH");
+    std::string xglNvidia = (getenv("VK_DRIVERS_PATH") == NULL) ? "" : getenv("VK_DRIVERS_PATH");
     xglNvidia += "\\XGL_nvidia.dll";
     HMODULE module = LoadLibrary(xglNvidia.c_str());
     if (!module) {
-        std::string xglNulldrv = (getenv("XGL_DRIVERS_PATH") == NULL) ? "" : getenv("XGL_DRIVERS_PATH");
+        std::string xglNulldrv = (getenv("VK_DRIVERS_PATH") == NULL) ? "" : getenv("VK_DRIVERS_PATH");
         xglNulldrv += "\\xgl_nulldrv.dll";
         module = LoadLibrary(xglNulldrv.c_str());
     }
@@ -99,7 +99,7 @@ xcb_connection_t * xcb_connect(const char *displayname, int *screenp)
 
         registry_str = loader_get_registry_string(HKEY_LOCAL_MACHINE,
                                                   "Software\\XGL",
-                                                  "XGL_DRIVERS_PATH");
+                                                  "VK_DRIVERS_PATH");
         registry_len = strlen(registry_str);
         rtn_len = registry_len + 16;
         rtn_str = (char *) malloc(rtn_len);

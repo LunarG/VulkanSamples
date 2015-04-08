@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# XGL
+# VK
 #
 # Copyright (C) 2014 LunarG, Inc.
 #
@@ -27,7 +27,7 @@ import sys
 
 # code_gen.py overview
 # This script generates code based on input headers
-# Initially it's intended to support Mantle and XGL headers and
+# Initially it's intended to support Mantle and VK headers and
 #  generate wrappers functions that can be used to display
 #  structs in a human-readable txt format, as well as utility functions
 #  to print enum values as strings
@@ -161,8 +161,8 @@ class HeaderFileParser:
                         self.typedef_fwd_dict[base_type] = targ_type.strip(';')
                         self.typedef_rev_dict[targ_type.strip(';')] = base_type
                 elif parse_enum:
-                    #if 'XGL_MAX_ENUM' not in line and '{' not in line:
-                    if True not in [ens in line for ens in ['{', 'XGL_MAX_ENUM', '_RANGE']]:
+                    #if 'VK_MAX_ENUM' not in line and '{' not in line:
+                    if True not in [ens in line for ens in ['{', 'VK_MAX_ENUM', '_RANGE']]:
                         self._add_enum(line, base_type, default_enum_val)
                         default_enum_val += 1
                 elif parse_struct:
@@ -342,21 +342,25 @@ class StructWrapperGen:
         self.struct_dict = in_struct_dict
         self.include_headers = []
         self.api = prefix
-        self.header_filename = os.path.join(out_dir, self.api+"_struct_wrappers.h")
-        self.class_filename = os.path.join(out_dir, self.api+"_struct_wrappers.cpp")
-        self.string_helper_filename = os.path.join(out_dir, self.api+"_struct_string_helper.h")
-        self.string_helper_no_addr_filename = os.path.join(out_dir, self.api+"_struct_string_helper_no_addr.h")
-        self.string_helper_cpp_filename = os.path.join(out_dir, self.api+"_struct_string_helper_cpp.h")
-        self.string_helper_no_addr_cpp_filename = os.path.join(out_dir, self.api+"_struct_string_helper_no_addr_cpp.h")
-        self.validate_helper_filename = os.path.join(out_dir, self.api+"_struct_validate_helper.h")
+        if prefix == "vulkan":
+            self.api_prefix = "vk"
+        else:
+            self.api_prefix = prefix
+        self.header_filename = os.path.join(out_dir, self.api_prefix+"_struct_wrappers.h")
+        self.class_filename = os.path.join(out_dir, self.api_prefix+"_struct_wrappers.cpp")
+        self.string_helper_filename = os.path.join(out_dir, self.api_prefix+"_struct_string_helper.h")
+        self.string_helper_no_addr_filename = os.path.join(out_dir, self.api_prefix+"_struct_string_helper_no_addr.h")
+        self.string_helper_cpp_filename = os.path.join(out_dir, self.api_prefix+"_struct_string_helper_cpp.h")
+        self.string_helper_no_addr_cpp_filename = os.path.join(out_dir, self.api_prefix+"_struct_string_helper_no_addr_cpp.h")
+        self.validate_helper_filename = os.path.join(out_dir, self.api_prefix+"_struct_validate_helper.h")
         self.no_addr = False
         self.hfg = CommonFileGen(self.header_filename)
         self.cfg = CommonFileGen(self.class_filename)
         self.shg = CommonFileGen(self.string_helper_filename)
         self.shcppg = CommonFileGen(self.string_helper_cpp_filename)
         self.vhg = CommonFileGen(self.validate_helper_filename)
-        self.size_helper_filename = os.path.join(out_dir, self.api+"_struct_size_helper.h")
-        self.size_helper_c_filename = os.path.join(out_dir, self.api+"_struct_size_helper.c")
+        self.size_helper_filename = os.path.join(out_dir, self.api_prefix+"_struct_size_helper.h")
+        self.size_helper_c_filename = os.path.join(out_dir, self.api_prefix+"_struct_size_helper.c")
         self.size_helper_gen = CommonFileGen(self.size_helper_filename)
         self.size_helper_c_gen = CommonFileGen(self.size_helper_c_filename)
         #print(self.header_filename)
@@ -470,12 +474,12 @@ class StructWrapperGen:
     def _generateCppHeader(self):
         header = []
         header.append("//#includes, #defines, globals and such...\n")
-        header.append("#include <stdio.h>\n#include <%s>\n#include <%s_enum_string_helper.h>\n" % (os.path.basename(self.header_filename), self.api))
+        header.append("#include <stdio.h>\n#include <%s>\n#include <%s_enum_string_helper.h>\n" % (os.path.basename(self.header_filename), self.api_prefix))
         return "".join(header)
         
     def _generateClassDefinition(self):
         class_def = []
-        if 'xgl' == self.api: # Mantle doesn't have pNext to worry about
+        if 'vk' == self.api: # Mantle doesn't have pNext to worry about
             class_def.append(self._generateDynamicPrintFunctions())
         for s in sorted(self.struct_dict):
             class_def.append("\n// %s class definition" % self.get_class_name(s))
@@ -498,7 +502,7 @@ class StructWrapperGen:
     def _generateDynamicPrintFunctions(self):
         dp_funcs = []
         dp_funcs.append("\nvoid dynamic_display_full_txt(const void* pStruct, uint32_t indent)\n{\n    // Cast to APP_INFO ptr initially just to pull sType off struct")
-        dp_funcs.append("    XGL_STRUCTURE_TYPE sType = ((XGL_APPLICATION_INFO*)pStruct)->sType;\n")
+        dp_funcs.append("    VK_STRUCTURE_TYPE sType = ((VK_APPLICATION_INFO*)pStruct)->sType;\n")
         dp_funcs.append("    switch (sType)\n    {")
         for e in enum_type_dict:
             class_num = 0
@@ -519,7 +523,7 @@ class StructWrapperGen:
         return "\n".join(dp_funcs)
 
     def _get_func_name(self, struct, mid_str):
-        return "%s_%s_%s" % (self.api, mid_str, struct.lower().strip("_"))
+        return "%s_%s_%s" % (self.api_prefix, mid_str, struct.lower().strip("_"))
 
     def _get_sh_func_name(self, struct):
         return self._get_func_name(struct, 'print')
@@ -695,7 +699,7 @@ class StructWrapperGen:
         sh_funcs.append("    if (pStruct == NULL) {")
         sh_funcs.append("        return NULL;")
         sh_funcs.append("    }")
-        sh_funcs.append("    XGL_STRUCTURE_TYPE sType = ((XGL_APPLICATION_INFO*)pStruct)->sType;")
+        sh_funcs.append("    VK_STRUCTURE_TYPE sType = ((VK_APPLICATION_INFO*)pStruct)->sType;")
         sh_funcs.append('    char indent[100];\n    strcpy(indent, "    ");\n    strcat(indent, prefix);')
         sh_funcs.append("    switch (sType)\n    {")
         for e in enum_type_dict:
@@ -852,7 +856,7 @@ class StructWrapperGen:
         sh_funcs.append("    if (pStruct == NULL) {\n")
         sh_funcs.append("        return NULL;")
         sh_funcs.append("    }\n")
-        sh_funcs.append("    XGL_STRUCTURE_TYPE sType = ((XGL_APPLICATION_INFO*)pStruct)->sType;")
+        sh_funcs.append("    VK_STRUCTURE_TYPE sType = ((VK_APPLICATION_INFO*)pStruct)->sType;")
         sh_funcs.append('    string indent = "    ";')
         sh_funcs.append('    indent += prefix;')
         sh_funcs.append("    switch (sType)\n    {")
@@ -967,9 +971,9 @@ class StructWrapperGen:
         header = []
         header.append("//#includes, #defines, globals and such...\n")
         for f in self.include_headers:
-            if 'xgl_enum_string_helper' not in f:
+            if 'vk_enum_string_helper' not in f:
                 header.append("#include <%s>\n" % f)
-        header.append('#include "xgl_enum_string_helper.h"\n\n// Function Prototypes\n')
+        header.append('#include "vk_enum_string_helper.h"\n\n// Function Prototypes\n')
         header.append("char* dynamic_display(const void* pStruct, const char* prefix);\n")
         return "".join(header)
 
@@ -977,9 +981,9 @@ class StructWrapperGen:
         header = []
         header.append("//#includes, #defines, globals and such...\n")
         for f in self.include_headers:
-            if 'xgl_enum_string_helper' not in f:
+            if 'vk_enum_string_helper' not in f:
                 header.append("#include <%s>\n" % f)
-        header.append('#include "xgl_enum_string_helper.h"\n')
+        header.append('#include "vk_enum_string_helper.h"\n')
         header.append('using namespace std;\n\n// Function Prototypes\n')
         header.append("string dynamic_display(const void* pStruct, const string prefix);\n")
         return "".join(header)
@@ -993,7 +997,7 @@ class StructWrapperGen:
         for s in sorted(self.struct_dict):
             sh_funcs.append('uint32_t %s(const %s* pStruct)\n{' % (self._get_vh_func_name(s), typedef_fwd_dict[s]))
             for m in sorted(self.struct_dict[s]):
-                # TODO : Need to handle arrays of enums like in XGL_RENDER_PASS_CREATE_INFO struct
+                # TODO : Need to handle arrays of enums like in VK_RENDER_PASS_CREATE_INFO struct
                 if is_type(self.struct_dict[s][m]['type'], 'enum') and not self.struct_dict[s][m]['ptr']:
                     sh_funcs.append('    if (!validate_%s(pStruct->%s))\n        return 0;' % (self.struct_dict[s][m]['type'], self.struct_dict[s][m]['name']))
                 # TODO : Need a little refinement to this code to make sure type of struct matches expected input (ptr, const...)
@@ -1010,9 +1014,9 @@ class StructWrapperGen:
         header = []
         header.append("//#includes, #defines, globals and such...\n")
         for f in self.include_headers:
-            if 'xgl_enum_validate_helper' not in f:
+            if 'vk_enum_validate_helper' not in f:
                 header.append("#include <%s>\n" % f)
-        header.append('#include "xgl_enum_validate_helper.h"\n\n// Function Prototypes\n')
+        header.append('#include "vk_enum_validate_helper.h"\n\n// Function Prototypes\n')
         #header.append("char* dynamic_display(const void* pStruct, const char* prefix);\n")
         return "".join(header)
 
@@ -1044,7 +1048,7 @@ class StructWrapperGen:
                         if not is_type(self.struct_dict[s][m]['type'], 'struct') and not 'char' in self.struct_dict[s][m]['type'].lower():
                             if 'ppMemBarriers' == self.struct_dict[s][m]['name']:
                                 # TODO : For now be conservative and consider all memBarrier ptrs as largest possible struct
-                                sh_funcs.append('%sstructSize += pStruct->%s*(sizeof(%s*) + sizeof(XGL_IMAGE_MEMORY_BARRIER));' % (indent, self.struct_dict[s][m]['array_size'], self.struct_dict[s][m]['type']))
+                                sh_funcs.append('%sstructSize += pStruct->%s*(sizeof(%s*) + sizeof(VK_IMAGE_MEMORY_BARRIER));' % (indent, self.struct_dict[s][m]['array_size'], self.struct_dict[s][m]['type']))
                             else:
                                 sh_funcs.append('%sstructSize += pStruct->%s*(sizeof(%s*) + sizeof(%s));' % (indent, self.struct_dict[s][m]['array_size'], self.struct_dict[s][m]['type'], self.struct_dict[s][m]['type']))
                         else: # This is an array of char* or array of struct ptrs
@@ -1091,8 +1095,8 @@ class StructWrapperGen:
             else:
                 sh_funcs.append('size_t get_dynamic_struct_size(const void* pStruct)\n{')
             indent = '    '
-            sh_funcs.append('%s// Just use XGL_APPLICATION_INFO as struct until actual type is resolved' % (indent))
-            sh_funcs.append('%sXGL_APPLICATION_INFO* pNext = (XGL_APPLICATION_INFO*)pStruct;' % (indent))
+            sh_funcs.append('%s// Just use VK_APPLICATION_INFO as struct until actual type is resolved' % (indent))
+            sh_funcs.append('%sVK_APPLICATION_INFO* pNext = (VK_APPLICATION_INFO*)pStruct;' % (indent))
             sh_funcs.append('%ssize_t structSize = 0;' % (indent))
             if follow_chain:
                 sh_funcs.append('%swhile (pNext) {' % (indent))
@@ -1118,7 +1122,7 @@ class StructWrapperGen:
             indent = indent[:-4]
             sh_funcs.append('%s}' % (indent))
             if follow_chain:
-                sh_funcs.append('%spNext = (XGL_APPLICATION_INFO*)pNext->pNext;' % (indent))
+                sh_funcs.append('%spNext = (VK_APPLICATION_INFO*)pNext->pNext;' % (indent))
                 indent = indent[:-4]
                 sh_funcs.append('%s}' % (indent))
             sh_funcs.append('%sreturn structSize;\n}' % indent)
@@ -1282,7 +1286,11 @@ class GraphVizGen:
     def __init__(self, struct_dict, prefix, out_dir):
         self.struct_dict = struct_dict
         self.api = prefix
-        self.out_file = os.path.join(out_dir, self.api+"_struct_graphviz_helper.h")
+        if prefix == "vulkan":
+            self.api_prefix = "vk"
+        else:
+            self.api_prefix = prefix
+        self.out_file = os.path.join(out_dir, self.api_prefix+"_struct_graphviz_helper.h")
         self.gvg = CommonFileGen(self.out_file)
 
     def generate(self):
@@ -1299,14 +1307,14 @@ class GraphVizGen:
         header = []
         header.append("//#includes, #defines, globals and such...\n")
         for f in self.include_headers:
-            if 'xgl_enum_string_helper' not in f:
+            if 'vk_enum_string_helper' not in f:
                 header.append("#include <%s>\n" % f)
-        #header.append('#include "xgl_enum_string_helper.h"\n\n// Function Prototypes\n')
+        #header.append('#include "vk_enum_string_helper.h"\n\n// Function Prototypes\n')
         header.append("\nchar* dynamic_gv_display(const void* pStruct, const char* prefix);\n")
         return "".join(header)
 
     def _get_gv_func_name(self, struct):
-        return "%s_gv_print_%s" % (self.api, struct.lower().strip("_"))
+        return "%s_gv_print_%s" % (self.api_prefix, struct.lower().strip("_"))
 
     # Return elements to create formatted string for given struct member
     def _get_struct_gv_print_formatted(self, struct_member, pre_var_name="", postfix = "\\n", struct_var_name="pStruct", struct_ptr=True, print_array=False, port_label=""):
@@ -1368,15 +1376,15 @@ class GraphVizGen:
     def _generateBody(self):
         gv_funcs = []
         array_func_list = [] # structs for which we'll generate an array version of their print function
-        array_func_list.append('xgl_buffer_view_attach_info')
-        array_func_list.append('xgl_image_view_attach_info')
-        array_func_list.append('xgl_sampler_image_view_info')
-        array_func_list.append('xgl_descriptor_type_count')
+        array_func_list.append('vk_buffer_view_attach_info')
+        array_func_list.append('vk_image_view_attach_info')
+        array_func_list.append('vk_sampler_image_view_info')
+        array_func_list.append('vk_descriptor_type_count')
         # For first pass, generate prototype
         for s in sorted(self.struct_dict):
             gv_funcs.append('char* %s(const %s* pStruct, const char* myNodeName);\n' % (self._get_gv_func_name(s), typedef_fwd_dict[s]))
             if s.lower().strip("_") in array_func_list:
-                if s.lower().strip("_") in ['xgl_buffer_view_attach_info', 'xgl_image_view_attach_info']:
+                if s.lower().strip("_") in ['vk_buffer_view_attach_info', 'vk_image_view_attach_info']:
                     gv_funcs.append('char* %s_array(uint32_t count, const %s* const* pStruct, const char* myNodeName);\n' % (self._get_gv_func_name(s), typedef_fwd_dict[s]))
                 else:
                     gv_funcs.append('char* %s_array(uint32_t count, const %s* pStruct, const char* myNodeName);\n' % (self._get_gv_func_name(s), typedef_fwd_dict[s]))
@@ -1461,7 +1469,7 @@ class GraphVizGen:
             gv_funcs.append("    return str;\n}\n")
             if s.lower().strip("_") in array_func_list:
                 ptr_array = False
-                if s.lower().strip("_") in ['xgl_buffer_view_attach_info', 'xgl_image_view_attach_info']:
+                if s.lower().strip("_") in ['vk_buffer_view_attach_info', 'vk_image_view_attach_info']:
                     ptr_array = True
                     gv_funcs.append('char* %s_array(uint32_t count, const %s* const* pStruct, const char* myNodeName)\n{\n    char* str;\n    char tmpStr[1024];\n' % (self._get_gv_func_name(s), typedef_fwd_dict[s]))
                 else:
@@ -1495,7 +1503,7 @@ class GraphVizGen:
         # Add function to dynamically print out unknown struct
         gv_funcs.append("char* dynamic_gv_display(const void* pStruct, const char* nodeName)\n{\n")
         gv_funcs.append("    // Cast to APP_INFO ptr initially just to pull sType off struct\n")
-        gv_funcs.append("    XGL_STRUCTURE_TYPE sType = ((XGL_APPLICATION_INFO*)pStruct)->sType;\n")
+        gv_funcs.append("    VK_STRUCTURE_TYPE sType = ((VK_APPLICATION_INFO*)pStruct)->sType;\n")
         gv_funcs.append("    switch (sType)\n    {\n")
         for e in enum_type_dict:
             if "_STRUCTURE_TYPE" in e:
@@ -1503,13 +1511,13 @@ class GraphVizGen:
                     struct_name = v.replace("_STRUCTURE_TYPE", "")
                     print_func_name = self._get_gv_func_name(struct_name)
                     # TODO : Hand-coded fixes for some exceptions
-                    #if 'XGL_PIPELINE_CB_STATE_CREATE_INFO' in struct_name:
-                    #    struct_name = 'XGL_PIPELINE_CB_STATE'
-                    if 'XGL_SEMAPHORE_CREATE_INFO' in struct_name:
-                        struct_name = 'XGL_SEMAPHORE_CREATE_INFO'
+                    #if 'VK_PIPELINE_CB_STATE_CREATE_INFO' in struct_name:
+                    #    struct_name = 'VK_PIPELINE_CB_STATE'
+                    if 'VK_SEMAPHORE_CREATE_INFO' in struct_name:
+                        struct_name = 'VK_SEMAPHORE_CREATE_INFO'
                         print_func_name = self._get_gv_func_name(struct_name)
-                    elif 'XGL_SEMAPHORE_OPEN_INFO' in struct_name:
-                        struct_name = 'XGL_SEMAPHORE_OPEN_INFO'
+                    elif 'VK_SEMAPHORE_OPEN_INFO' in struct_name:
+                        struct_name = 'VK_SEMAPHORE_OPEN_INFO'
                         print_func_name = self._get_gv_func_name(struct_name)
                     gv_funcs.append('        case %s:\n' % (v))
                     gv_funcs.append('            return %s((%s*)pStruct, nodeName);\n' % (print_func_name, struct_name))
@@ -1565,17 +1573,20 @@ def main(argv=None):
     #print(enum_val_dict)
     #print(typedef_dict)
     #print(struct_dict)
+    prefix = os.path.basename(opts.input_file).strip(".h")
+    if prefix == "vulkan":
+        prefix = "vk"
     if (opts.abs_out_dir is not None):
-        enum_sh_filename = os.path.join(opts.abs_out_dir, os.path.basename(opts.input_file).strip(".h")+"_enum_string_helper.h")
+        enum_sh_filename = os.path.join(opts.abs_out_dir, prefix+"_enum_string_helper.h")
     else:
-        enum_sh_filename = os.path.join(os.getcwd(), opts.rel_out_dir, os.path.basename(opts.input_file).strip(".h")+"_enum_string_helper.h")
+        enum_sh_filename = os.path.join(os.getcwd(), opts.rel_out_dir, prefix+"_enum_string_helper.h")
     enum_sh_filename = os.path.abspath(enum_sh_filename)
     if not os.path.exists(os.path.dirname(enum_sh_filename)):
         print("Creating output dir %s" % os.path.dirname(enum_sh_filename))
         os.mkdir(os.path.dirname(enum_sh_filename))
     if opts.gen_enum_string_helper:
         print("Generating enum string helper to %s" % enum_sh_filename)
-        enum_vh_filename = os.path.join(os.path.dirname(enum_sh_filename), os.path.basename(opts.input_file).strip(".h")+"_enum_validate_helper.h")
+        enum_vh_filename = os.path.join(os.path.dirname(enum_sh_filename), prefix+"_enum_validate_helper.h")
         print("Generating enum validate helper to %s" % enum_vh_filename)
         eg = EnumCodeGen(enum_type_dict, enum_val_dict, typedef_fwd_dict, os.path.basename(opts.input_file), enum_sh_filename, enum_vh_filename)
         eg.generateStringHelper()

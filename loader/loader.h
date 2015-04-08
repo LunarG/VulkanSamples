@@ -1,5 +1,5 @@
 /*
- * XGL
+ * Vulkan
  *
  * Copyright (C) 2014 LunarG, Inc.
  *
@@ -28,15 +28,15 @@
 #ifndef LOADER_H
 #define LOADER_H
 
-#include <xgl.h>
-#include <xglDbg.h>
+#include <vulkan.h>
+#include <vkDbg.h>
 #if defined(WIN32)
 // FIXME: NEED WINDOWS EQUIVALENT
 #else // WIN32
-#include <xglWsiX11Ext.h>
+#include <vkWsiX11Ext.h>
 #endif // WIN32
-#include <xglLayer.h>
-#include <xglIcd.h>
+#include <vkLayer.h>
+#include <vkIcd.h>
 #include <assert.h>
 
 #if defined(__GNUC__) && __GNUC__ >= 4
@@ -65,16 +65,16 @@ static inline void loader_init_data(void *obj, const void *data)
     loader_set_data(obj, data);
 }
 
-static inline void *loader_unwrap_gpu(XGL_PHYSICAL_GPU *gpu)
+static inline void *loader_unwrap_gpu(VK_PHYSICAL_GPU *gpu)
 {
-    const XGL_BASE_LAYER_OBJECT *wrap = (const XGL_BASE_LAYER_OBJECT *) *gpu;
+    const VK_BASE_LAYER_OBJECT *wrap = (const VK_BASE_LAYER_OBJECT *) *gpu;
 
-    *gpu = (XGL_PHYSICAL_GPU) wrap->nextObject;
+    *gpu = (VK_PHYSICAL_GPU) wrap->nextObject;
 
     return loader_get_data(wrap->baseObject);
 }
 
-extern uint32_t loader_activate_layers(XGL_PHYSICAL_GPU gpu, const XGL_DEVICE_CREATE_INFO* pCreateInfo);
+extern uint32_t loader_activate_layers(VK_PHYSICAL_GPU gpu, const VK_DEVICE_CREATE_INFO* pCreateInfo);
 #define MAX_LAYER_LIBRARIES 64
 
 #endif /* LOADER_H */

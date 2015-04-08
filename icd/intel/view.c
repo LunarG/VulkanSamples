@@ -1,5 +1,5 @@
 /*
- * XGL
+ * Vulkan
  *
  * Copyright (C) 2014 LunarG, Inc.
  *
@@ -87,7 +87,7 @@ static void surface_state_null_gen7(const struct intel_gpu *gpu,
 static void surface_state_buf_gen7(const struct intel_gpu *gpu,
                                    unsigned offset, unsigned size,
                                    unsigned struct_size,
-                                   XGL_FORMAT elem_format,
+                                   VK_FORMAT elem_format,
                                    bool is_rt, bool render_cache_rw,
                                    uint32_t dw[8])
 {
@@ -200,49 +200,49 @@ static void surface_state_buf_gen7(const struct intel_gpu *gpu,
    }
 }
 
-static int img_type_to_view_type(XGL_IMAGE_TYPE type)
+static int img_type_to_view_type(VK_IMAGE_TYPE type)
 {
     switch (type) {
-    case XGL_IMAGE_1D:   return XGL_IMAGE_VIEW_1D;
-    case XGL_IMAGE_2D:   return XGL_IMAGE_VIEW_2D;
-    case XGL_IMAGE_3D:   return XGL_IMAGE_VIEW_3D;
-    default: assert(!"unknown img type"); return XGL_IMAGE_VIEW_1D;
+    case VK_IMAGE_1D:   return VK_IMAGE_VIEW_1D;
+    case VK_IMAGE_2D:   return VK_IMAGE_VIEW_2D;
+    case VK_IMAGE_3D:   return VK_IMAGE_VIEW_3D;
+    default: assert(!"unknown img type"); return VK_IMAGE_VIEW_1D;
     }
 }
 
-static int view_type_to_surface_type(XGL_IMAGE_VIEW_TYPE type)
+static int view_type_to_surface_type(VK_IMAGE_VIEW_TYPE type)
 {
     switch (type) {
-    case XGL_IMAGE_VIEW_1D:   return GEN6_SURFTYPE_1D;
-    case XGL_IMAGE_VIEW_2D:   return GEN6_SURFTYPE_2D;
-    case XGL_IMAGE_VIEW_3D:   return GEN6_SURFTYPE_3D;
-    case XGL_IMAGE_VIEW_CUBE: return GEN6_SURFTYPE_CUBE;
+    case VK_IMAGE_VIEW_1D:   return GEN6_SURFTYPE_1D;
+    case VK_IMAGE_VIEW_2D:   return GEN6_SURFTYPE_2D;
+    case VK_IMAGE_VIEW_3D:   return GEN6_SURFTYPE_3D;
+    case VK_IMAGE_VIEW_CUBE: return GEN6_SURFTYPE_CUBE;
     default: assert(!"unknown view type"); return GEN6_SURFTYPE_NULL;
     }
 }
 
-static int channel_swizzle_to_scs(XGL_CHANNEL_SWIZZLE swizzle)
+static int channel_swizzle_to_scs(VK_CHANNEL_SWIZZLE swizzle)
 {
     switch (swizzle) {
-    case XGL_CHANNEL_SWIZZLE_ZERO:  return GEN75_SCS_ZERO;
-    case XGL_CHANNEL_SWIZZLE_ONE:   return GEN75_SCS_ONE;
-    case XGL_CHANNEL_SWIZZLE_R:     return GEN75_SCS_RED;
-    case XGL_CHANNEL_SWIZZLE_G:     return GEN75_SCS_GREEN;
-    case XGL_CHANNEL_SWIZZLE_B:     return GEN75_SCS_BLUE;
-    case XGL_CHANNEL_SWIZZLE_A:     return GEN75_SCS_ALPHA;
+    case VK_CHANNEL_SWIZZLE_ZERO:  return GEN75_SCS_ZERO;
+    case VK_CHANNEL_SWIZZLE_ONE:   return GEN75_SCS_ONE;
+    case VK_CHANNEL_SWIZZLE_R:     return GEN75_SCS_RED;
+    case VK_CHANNEL_SWIZZLE_G:     return GEN75_SCS_GREEN;
+    case VK_CHANNEL_SWIZZLE_B:     return GEN75_SCS_BLUE;
+    case VK_CHANNEL_SWIZZLE_A:     return GEN75_SCS_ALPHA;
     default: assert(!"unknown swizzle"); return GEN75_SCS_ZERO;
     }
 }
 
 static void surface_state_tex_gen7(const struct intel_gpu *gpu,
                                    const struct intel_img *img,
-                                   XGL_IMAGE_VIEW_TYPE type,
-                                   XGL_FORMAT format,
+                                   VK_IMAGE_VIEW_TYPE type,
+                                   VK_FORMAT format,
                                    unsigned first_level,
                                    unsigned num_levels,
                                    unsigned first_layer,
                                    unsigned num_layers,
-                                   XGL_CHANNEL_MAPPING swizzles,
+                                   VK_CHANNEL_MAPPING swizzles,
                                    bool is_rt,
                                    uint32_t dw[8])
 {
@@ -259,7 +259,7 @@ static void surface_state_tex_gen7(const struct intel_gpu *gpu,
 
    width = img->layout.width0;
    height = img->layout.height0;
-   depth = (type == XGL_IMAGE_VIEW_3D) ?
+   depth = (type == VK_IMAGE_VIEW_3D) ?
       img->depth : num_layers;
    pitch = img->layout.bo_stride;
 
@@ -436,10 +436,10 @@ static void surface_state_tex_gen7(const struct intel_gpu *gpu,
           channel_swizzle_to_scs(swizzles.b) << GEN75_SURFACE_DW7_SCS_B__SHIFT |
           channel_swizzle_to_scs(swizzles.a) << GEN75_SURFACE_DW7_SCS_A__SHIFT;
    } else {
-        assert(swizzles.r == XGL_CHANNEL_SWIZZLE_R &&
-               swizzles.g == XGL_CHANNEL_SWIZZLE_G &&
-               swizzles.b == XGL_CHANNEL_SWIZZLE_B &&
-               swizzles.a == XGL_CHANNEL_SWIZZLE_A);
+        assert(swizzles.r == VK_CHANNEL_SWIZZLE_R &&
+               swizzles.g == VK_CHANNEL_SWIZZLE_G &&
+               swizzles.b == VK_CHANNEL_SWIZZLE_B &&
+               swizzles.a == VK_CHANNEL_SWIZZLE_A);
    }
 }
 
@@ -484,7 +484,7 @@ static void surface_state_null_gen6(const struct intel_gpu *gpu,
 static void surface_state_buf_gen6(const struct intel_gpu *gpu,
                                    unsigned offset, unsigned size,
                                    unsigned struct_size,
-                                   XGL_FORMAT elem_format,
+                                   VK_FORMAT elem_format,
                                    bool is_rt, bool render_cache_rw,
                                    uint32_t dw[6])
 {
@@ -570,8 +570,8 @@ static void surface_state_buf_gen6(const struct intel_gpu *gpu,
 
 static void surface_state_tex_gen6(const struct intel_gpu *gpu,
                                    const struct intel_img *img,
-                                   XGL_IMAGE_VIEW_TYPE type,
-                                   XGL_FORMAT format,
+                                   VK_IMAGE_VIEW_TYPE type,
+                                   VK_FORMAT format,
                                    unsigned first_level,
                                    unsigned num_levels,
                                    unsigned first_layer,
@@ -592,7 +592,7 @@ static void surface_state_tex_gen6(const struct intel_gpu *gpu,
 
    width = img->layout.width0;
    height = img->layout.height0;
-   depth = (type == XGL_IMAGE_VIEW_3D) ?
+   depth = (type == VK_IMAGE_VIEW_3D) ?
       img->depth : num_layers;
    pitch = img->layout.bo_stride;
 
@@ -754,7 +754,7 @@ ds_init_info_null(const struct intel_gpu *gpu,
 static void
 ds_init_info(const struct intel_gpu *gpu,
              const struct intel_img *img,
-             XGL_FORMAT format, unsigned level,
+             VK_FORMAT format, unsigned level,
              unsigned first_layer, unsigned num_layers,
              struct ds_surface_info *info)
 {
@@ -817,18 +817,18 @@ ds_init_info(const struct intel_gpu *gpu,
     * As for GEN7+, separate_stencil is always true.
     */
    switch (format) {
-   case XGL_FMT_D16_UNORM:
+   case VK_FMT_D16_UNORM:
       info->format = GEN6_ZFORMAT_D16_UNORM;
       break;
-   case XGL_FMT_D32_SFLOAT:
+   case VK_FMT_D32_SFLOAT:
       info->format = GEN6_ZFORMAT_D32_FLOAT;
       break;
-   case XGL_FMT_D32_SFLOAT_S8_UINT:
+   case VK_FMT_D32_SFLOAT_S8_UINT:
       info->format = (separate_stencil) ?
          GEN6_ZFORMAT_D32_FLOAT :
          GEN6_ZFORMAT_D32_FLOAT_S8X24_UINT;
       break;
-   case XGL_FMT_S8_UINT:
+   case VK_FMT_S8_UINT:
       if (separate_stencil) {
          info->format = GEN6_ZFORMAT_D32_FLOAT;
          break;
@@ -841,7 +841,7 @@ ds_init_info(const struct intel_gpu *gpu,
       break;
    }
 
-   if (format != XGL_FMT_S8_UINT)
+   if (format != VK_FMT_S8_UINT)
       info->zs.stride = img->layout.bo_stride;
 
    if (img->s8_layout) {
@@ -866,7 +866,7 @@ ds_init_info(const struct intel_gpu *gpu,
          intel_layout_pos_to_mem(img->s8_layout, x, y, &x, &y);
          info->stencil.offset = intel_layout_mem_to_raw(img->s8_layout, x, y);
       }
-   } else if (format == XGL_FMT_S8_UINT) {
+   } else if (format == VK_FMT_S8_UINT) {
       info->stencil.stride = img->layout.bo_stride * 2;
    }
 
@@ -880,7 +880,7 @@ ds_init_info(const struct intel_gpu *gpu,
 
    info->width = img->layout.width0;
    info->height = img->layout.height0;
-   info->depth = (img->type == XGL_IMAGE_3D) ?
+   info->depth = (img->type == VK_IMAGE_3D) ?
       img->depth : num_layers;
 
    info->lod = level;
@@ -891,7 +891,7 @@ ds_init_info(const struct intel_gpu *gpu,
 static void ds_view_init(struct intel_ds_view *view,
                          const struct intel_gpu *gpu,
                          const struct intel_img *img,
-                         XGL_FORMAT format, unsigned level,
+                         VK_FORMAT format, unsigned level,
                          unsigned first_layer, unsigned num_layers)
 {
    const int max_2d_size U_ASSERT_ONLY =
@@ -1065,25 +1065,25 @@ static void buf_view_destroy(struct intel_obj *obj)
     intel_buf_view_destroy(view);
 }
 
-XGL_RESULT intel_buf_view_create(struct intel_dev *dev,
-                                 const XGL_BUFFER_VIEW_CREATE_INFO *info,
+VK_RESULT intel_buf_view_create(struct intel_dev *dev,
+                                 const VK_BUFFER_VIEW_CREATE_INFO *info,
                                  struct intel_buf_view **view_ret)
 {
     struct intel_buf *buf = intel_buf(info->buffer);
     const bool will_write = (buf->usage |
-            (XGL_BUFFER_USAGE_SHADER_ACCESS_WRITE_BIT &
-             XGL_BUFFER_USAGE_SHADER_ACCESS_ATOMIC_BIT));
-    XGL_FORMAT format;
-    XGL_GPU_SIZE stride;
+            (VK_BUFFER_USAGE_SHADER_ACCESS_WRITE_BIT &
+             VK_BUFFER_USAGE_SHADER_ACCESS_ATOMIC_BIT));
+    VK_FORMAT format;
+    VK_GPU_SIZE stride;
     uint32_t *cmd;
     struct intel_buf_view *view;
     int i;
 
     view = (struct intel_buf_view *) intel_base_create(&dev->base.handle,
-            sizeof(*view), dev->base.dbg, XGL_DBG_OBJECT_BUFFER_VIEW,
+            sizeof(*view), dev->base.dbg, VK_DBG_OBJECT_BUFFER_VIEW,
             info, 0);
     if (!view)
-        return XGL_ERROR_OUT_OF_MEMORY;
+        return VK_ERROR_OUT_OF_MEMORY;
 
     view->obj.destroy = buf_view_destroy;
 
@@ -1092,10 +1092,10 @@ XGL_RESULT intel_buf_view_create(struct intel_dev *dev,
     /*
      * The compiler expects uniform buffers to have pitch of
      * 4 for fragment shaders, but 16 for other stages.  The format
-     * must be XGL_FMT_R32G32B32A32_SFLOAT.
+     * must be VK_FMT_R32G32B32A32_SFLOAT.
      */
-    if (info->viewType == XGL_BUFFER_VIEW_RAW) {
-        format = XGL_FMT_R32G32B32A32_SFLOAT;
+    if (info->viewType == VK_BUFFER_VIEW_RAW) {
+        format = VK_FMT_R32G32B32A32_SFLOAT;
         stride = 16;
     } else {
         format = info->format;
@@ -1117,7 +1117,7 @@ XGL_RESULT intel_buf_view_create(struct intel_dev *dev,
         }
 
         /* switch to view->fs_cmd */
-        if (info->viewType == XGL_BUFFER_VIEW_RAW) {
+        if (info->viewType == VK_BUFFER_VIEW_RAW) {
             cmd = view->fs_cmd;
             stride = 4;
         } else {
@@ -1128,7 +1128,7 @@ XGL_RESULT intel_buf_view_create(struct intel_dev *dev,
 
     *view_ret = view;
 
-    return XGL_SUCCESS;
+    return VK_SUCCESS;
 }
 
 void intel_buf_view_destroy(struct intel_buf_view *view)
@@ -1143,20 +1143,20 @@ static void img_view_destroy(struct intel_obj *obj)
     intel_img_view_destroy(view);
 }
 
-XGL_RESULT intel_img_view_create(struct intel_dev *dev,
-                                 const XGL_IMAGE_VIEW_CREATE_INFO *info,
+VK_RESULT intel_img_view_create(struct intel_dev *dev,
+                                 const VK_IMAGE_VIEW_CREATE_INFO *info,
                                  struct intel_img_view **view_ret)
 {
     struct intel_img *img = intel_img(info->image);
     struct intel_img_view *view;
     uint32_t mip_levels, array_size;
-    XGL_CHANNEL_MAPPING state_swizzles;
+    VK_CHANNEL_MAPPING state_swizzles;
 
     if (info->subresourceRange.baseMipLevel >= img->mip_levels ||
         info->subresourceRange.baseArraySlice >= img->array_size ||
         !info->subresourceRange.mipLevels ||
         !info->subresourceRange.arraySize)
-        return XGL_ERROR_INVALID_VALUE;
+        return VK_ERROR_INVALID_VALUE;
 
     mip_levels = info->subresourceRange.mipLevels;
     if (mip_levels > img->mip_levels - info->subresourceRange.baseMipLevel)
@@ -1167,9 +1167,9 @@ XGL_RESULT intel_img_view_create(struct intel_dev *dev,
         array_size = img->array_size - info->subresourceRange.baseArraySlice;
 
     view = (struct intel_img_view *) intel_base_create(&dev->base.handle,
-            sizeof(*view), dev->base.dbg, XGL_DBG_OBJECT_IMAGE_VIEW, info, 0);
+            sizeof(*view), dev->base.dbg, VK_DBG_OBJECT_IMAGE_VIEW, info, 0);
     if (!view)
-        return XGL_ERROR_OUT_OF_MEMORY;
+        return VK_ERROR_OUT_OF_MEMORY;
 
     view->obj.destroy = img_view_destroy;
 
@@ -1178,25 +1178,25 @@ XGL_RESULT intel_img_view_create(struct intel_dev *dev,
 
     if (intel_gpu_gen(dev->gpu) >= INTEL_GEN(7.5)) {
         state_swizzles = info->channels;
-        view->shader_swizzles.r = XGL_CHANNEL_SWIZZLE_R;
-        view->shader_swizzles.g = XGL_CHANNEL_SWIZZLE_G;
-        view->shader_swizzles.b = XGL_CHANNEL_SWIZZLE_B;
-        view->shader_swizzles.a = XGL_CHANNEL_SWIZZLE_A;
+        view->shader_swizzles.r = VK_CHANNEL_SWIZZLE_R;
+        view->shader_swizzles.g = VK_CHANNEL_SWIZZLE_G;
+        view->shader_swizzles.b = VK_CHANNEL_SWIZZLE_B;
+        view->shader_swizzles.a = VK_CHANNEL_SWIZZLE_A;
     } else {
-        state_swizzles.r = XGL_CHANNEL_SWIZZLE_R;
-        state_swizzles.g = XGL_CHANNEL_SWIZZLE_G;
-        state_swizzles.b = XGL_CHANNEL_SWIZZLE_B;
-        state_swizzles.a = XGL_CHANNEL_SWIZZLE_A;
+        state_swizzles.r = VK_CHANNEL_SWIZZLE_R;
+        state_swizzles.g = VK_CHANNEL_SWIZZLE_G;
+        state_swizzles.b = VK_CHANNEL_SWIZZLE_B;
+        state_swizzles.a = VK_CHANNEL_SWIZZLE_A;
         view->shader_swizzles = info->channels;
     }
 
     /* shader_swizzles is ignored by the compiler */
-    if (view->shader_swizzles.r != XGL_CHANNEL_SWIZZLE_R ||
-        view->shader_swizzles.g != XGL_CHANNEL_SWIZZLE_G ||
-        view->shader_swizzles.b != XGL_CHANNEL_SWIZZLE_B ||
-        view->shader_swizzles.a != XGL_CHANNEL_SWIZZLE_A) {
-        intel_dev_log(dev, XGL_DBG_MSG_WARNING,
-                XGL_VALIDATION_LEVEL_0, XGL_NULL_HANDLE, 0, 0,
+    if (view->shader_swizzles.r != VK_CHANNEL_SWIZZLE_R ||
+        view->shader_swizzles.g != VK_CHANNEL_SWIZZLE_G ||
+        view->shader_swizzles.b != VK_CHANNEL_SWIZZLE_B ||
+        view->shader_swizzles.a != VK_CHANNEL_SWIZZLE_A) {
+        intel_dev_log(dev, VK_DBG_MSG_WARNING,
+                VK_VALIDATION_LEVEL_0, VK_NULL_HANDLE, 0, 0,
                 "image data swizzling is ignored");
     }
 
@@ -1216,7 +1216,7 @@ XGL_RESULT intel_img_view_create(struct intel_dev *dev,
 
     *view_ret = view;
 
-    return XGL_SUCCESS;
+    return VK_SUCCESS;
 }
 
 void intel_img_view_destroy(struct intel_img_view *view)
@@ -1231,24 +1231,24 @@ static void rt_view_destroy(struct intel_obj *obj)
     intel_rt_view_destroy(view);
 }
 
-XGL_RESULT intel_rt_view_create(struct intel_dev *dev,
-                                const XGL_COLOR_ATTACHMENT_VIEW_CREATE_INFO *info,
+VK_RESULT intel_rt_view_create(struct intel_dev *dev,
+                                const VK_COLOR_ATTACHMENT_VIEW_CREATE_INFO *info,
                                 struct intel_rt_view **view_ret)
 {
-    static const XGL_CHANNEL_MAPPING identity_channel_mapping = {
-        .r = XGL_CHANNEL_SWIZZLE_R,
-        .g = XGL_CHANNEL_SWIZZLE_G,
-        .b = XGL_CHANNEL_SWIZZLE_B,
-        .a = XGL_CHANNEL_SWIZZLE_A,
+    static const VK_CHANNEL_MAPPING identity_channel_mapping = {
+        .r = VK_CHANNEL_SWIZZLE_R,
+        .g = VK_CHANNEL_SWIZZLE_G,
+        .b = VK_CHANNEL_SWIZZLE_B,
+        .a = VK_CHANNEL_SWIZZLE_A,
     };
     struct intel_img *img = intel_img(info->image);
     struct intel_rt_view *view;
 
     view = (struct intel_rt_view *) intel_base_create(&dev->base.handle,
-            sizeof(*view), dev->base.dbg, XGL_DBG_OBJECT_COLOR_TARGET_VIEW,
+            sizeof(*view), dev->base.dbg, VK_DBG_OBJECT_COLOR_TARGET_VIEW,
             info, 0);
     if (!view)
-        return XGL_ERROR_OUT_OF_MEMORY;
+        return VK_ERROR_OUT_OF_MEMORY;
 
     view->obj.destroy = rt_view_destroy;
 
@@ -1274,7 +1274,7 @@ XGL_RESULT intel_rt_view_create(struct intel_dev *dev,
 
     *view_ret = view;
 
-    return XGL_SUCCESS;
+    return VK_SUCCESS;
 }
 
 void intel_rt_view_destroy(struct intel_rt_view *view)
@@ -1289,18 +1289,18 @@ static void ds_view_destroy(struct intel_obj *obj)
     intel_ds_view_destroy(view);
 }
 
-XGL_RESULT intel_ds_view_create(struct intel_dev *dev,
-                                const XGL_DEPTH_STENCIL_VIEW_CREATE_INFO *info,
+VK_RESULT intel_ds_view_create(struct intel_dev *dev,
+                                const VK_DEPTH_STENCIL_VIEW_CREATE_INFO *info,
                                 struct intel_ds_view **view_ret)
 {
     struct intel_img *img = intel_img(info->image);
     struct intel_ds_view *view;
 
     view = (struct intel_ds_view *) intel_base_create(&dev->base.handle,
-            sizeof(*view), dev->base.dbg, XGL_DBG_OBJECT_DEPTH_STENCIL_VIEW,
+            sizeof(*view), dev->base.dbg, VK_DBG_OBJECT_DEPTH_STENCIL_VIEW,
             info, 0);
     if (!view)
-        return XGL_ERROR_OUT_OF_MEMORY;
+        return VK_ERROR_OUT_OF_MEMORY;
 
     view->obj.destroy = ds_view_destroy;
 
@@ -1313,7 +1313,7 @@ XGL_RESULT intel_ds_view_create(struct intel_dev *dev,
 
     *view_ret = view;
 
-    return XGL_SUCCESS;
+    return VK_SUCCESS;
 }
 
 void intel_ds_view_destroy(struct intel_ds_view *view)
@@ -1321,10 +1321,10 @@ void intel_ds_view_destroy(struct intel_ds_view *view)
     intel_base_destroy(&view->obj.base);
 }
 
-ICD_EXPORT XGL_RESULT XGLAPI xglCreateBufferView(
-    XGL_DEVICE                                  device,
-    const XGL_BUFFER_VIEW_CREATE_INFO*          pCreateInfo,
-    XGL_BUFFER_VIEW*                            pView)
+ICD_EXPORT VK_RESULT VKAPI vkCreateBufferView(
+    VK_DEVICE                                  device,
+    const VK_BUFFER_VIEW_CREATE_INFO*          pCreateInfo,
+    VK_BUFFER_VIEW*                            pView)
 {
     struct intel_dev *dev = intel_dev(device);
 
@@ -1332,10 +1332,10 @@ ICD_EXPORT XGL_RESULT XGLAPI xglCreateBufferView(
             (struct intel_buf_view **) pView);
 }
 
-ICD_EXPORT XGL_RESULT XGLAPI xglCreateImageView(
-    XGL_DEVICE                                  device,
-    const XGL_IMAGE_VIEW_CREATE_INFO*           pCreateInfo,
-    XGL_IMAGE_VIEW*                             pView)
+ICD_EXPORT VK_RESULT VKAPI vkCreateImageView(
+    VK_DEVICE                                  device,
+    const VK_IMAGE_VIEW_CREATE_INFO*           pCreateInfo,
+    VK_IMAGE_VIEW*                             pView)
 {
     struct intel_dev *dev = intel_dev(device);
 
@@ -1343,10 +1343,10 @@ ICD_EXPORT XGL_RESULT XGLAPI xglCreateImageView(
             (struct intel_img_view **) pView);
 }
 
-ICD_EXPORT XGL_RESULT XGLAPI xglCreateColorAttachmentView(
-    XGL_DEVICE                                  device,
-    const XGL_COLOR_ATTACHMENT_VIEW_CREATE_INFO* pCreateInfo,
-    XGL_COLOR_ATTACHMENT_VIEW*                  pView)
+ICD_EXPORT VK_RESULT VKAPI vkCreateColorAttachmentView(
+    VK_DEVICE                                  device,
+    const VK_COLOR_ATTACHMENT_VIEW_CREATE_INFO* pCreateInfo,
+    VK_COLOR_ATTACHMENT_VIEW*                  pView)
 {
     struct intel_dev *dev = intel_dev(device);
 
@@ -1354,10 +1354,10 @@ ICD_EXPORT XGL_RESULT XGLAPI xglCreateColorAttachmentView(
             (struct intel_rt_view **) pView);
 }
 
-ICD_EXPORT XGL_RESULT XGLAPI xglCreateDepthStencilView(
-    XGL_DEVICE                                  device,
-    const XGL_DEPTH_STENCIL_VIEW_CREATE_INFO*   pCreateInfo,
-    XGL_DEPTH_STENCIL_VIEW*                     pView)
+ICD_EXPORT VK_RESULT VKAPI vkCreateDepthStencilView(
+    VK_DEVICE                                  device,
+    const VK_DEPTH_STENCIL_VIEW_CREATE_INFO*   pCreateInfo,
+    VK_DEPTH_STENCIL_VIEW*                     pView)
 {
     struct intel_dev *dev = intel_dev(device);
 

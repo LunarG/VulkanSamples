@@ -1,5 +1,5 @@
 /*
- * XGL 3-D graphics library
+ * Vulkan 3-D graphics library
  *
  * Copyright (C) 2014 LunarG, Inc.
  *
@@ -108,7 +108,7 @@ static void intel_instance_destroy(struct intel_instance *instance)
     icd_instance_destroy(icd);
 }
 
-static struct intel_instance *intel_instance_create(const XGL_INSTANCE_CREATE_INFO* info)
+static struct intel_instance *intel_instance_create(const VK_INSTANCE_CREATE_INFO* info)
 {
     struct intel_instance *instance;
     struct icd_instance *icd;
@@ -121,14 +121,14 @@ static struct intel_instance *intel_instance_create(const XGL_INSTANCE_CREATE_IN
         return NULL;
 
     instance = icd_instance_alloc(icd, sizeof(*instance), 0,
-            XGL_SYSTEM_ALLOC_API_OBJECT);
+            VK_SYSTEM_ALLOC_API_OBJECT);
     if (!instance) {
         icd_instance_destroy(icd);
         return NULL;
     }
 
     memset(instance, 0, sizeof(*instance));
-    intel_handle_init(&instance->handle, XGL_DBG_OBJECT_INSTANCE, icd);
+    intel_handle_init(&instance->handle, VK_DBG_OBJECT_INSTANCE, icd);
 
     instance->icd = icd;
 
@@ -142,47 +142,47 @@ static struct intel_instance *intel_instance_create(const XGL_INSTANCE_CREATE_IN
     return instance;
 }
 
-ICD_EXPORT XGL_RESULT XGLAPI xglCreateInstance(
-    const XGL_INSTANCE_CREATE_INFO*             pCreateInfo,
-    XGL_INSTANCE*                               pInstance)
+ICD_EXPORT VK_RESULT VKAPI vkCreateInstance(
+    const VK_INSTANCE_CREATE_INFO*             pCreateInfo,
+    VK_INSTANCE*                               pInstance)
 {
     struct intel_instance *instance;
 
     instance = intel_instance_create(pCreateInfo);
     if (!instance)
-        return XGL_ERROR_OUT_OF_MEMORY;
+        return VK_ERROR_OUT_OF_MEMORY;
 
-    *pInstance = (XGL_INSTANCE) instance;
+    *pInstance = (VK_INSTANCE) instance;
 
-    return XGL_SUCCESS;
+    return VK_SUCCESS;
 }
 
-ICD_EXPORT XGL_RESULT XGLAPI xglDestroyInstance(
-    XGL_INSTANCE                                pInstance)
+ICD_EXPORT VK_RESULT VKAPI vkDestroyInstance(
+    VK_INSTANCE                                pInstance)
 {
     struct intel_instance *instance = intel_instance(pInstance);
 
     intel_instance_destroy(instance);
 
-    return XGL_SUCCESS;
+    return VK_SUCCESS;
 }
 
-ICD_EXPORT XGL_RESULT XGLAPI xglEnumerateGpus(
-    XGL_INSTANCE                                instance_,
+ICD_EXPORT VK_RESULT VKAPI vkEnumerateGpus(
+    VK_INSTANCE                                instance_,
     uint32_t                                    maxGpus,
     uint32_t*                                   pGpuCount,
-    XGL_PHYSICAL_GPU*                           pGpus)
+    VK_PHYSICAL_GPU*                           pGpus)
 {
     struct intel_instance *instance = intel_instance(instance_);
     struct icd_drm_device *devices, *dev;
-    XGL_RESULT ret;
+    VK_RESULT ret;
     uint32_t count;
 
     intel_instance_remove_gpus(instance);
 
     if (!maxGpus) {
         *pGpuCount = 0;
-        return XGL_SUCCESS;
+        return VK_SUCCESS;
     }
 
     devices = icd_drm_enumerate(instance->icd, 0x8086);
@@ -203,10 +203,10 @@ ICD_EXPORT XGL_RESULT XGLAPI xglEnumerateGpus(
         devid = (intel_devid_override) ? intel_devid_override : dev->devid;
         ret = intel_gpu_create(instance, devid,
                 primary_node, render_node, &gpu);
-        if (ret == XGL_SUCCESS) {
+        if (ret == VK_SUCCESS) {
             intel_instance_add_gpu(instance, gpu);
 
-            pGpus[count++] = (XGL_PHYSICAL_GPU) gpu;
+            pGpus[count++] = (VK_PHYSICAL_GPU) gpu;
             if (count >= maxGpus)
                 break;
         }
@@ -218,12 +218,12 @@ ICD_EXPORT XGL_RESULT XGLAPI xglEnumerateGpus(
 
     *pGpuCount = count;
 
-    return (count > 0) ? XGL_SUCCESS : XGL_ERROR_UNAVAILABLE;
+    return (count > 0) ? VK_SUCCESS : VK_ERROR_UNAVAILABLE;
 }
 
-ICD_EXPORT XGL_RESULT XGLAPI xglDbgRegisterMsgCallback(
-    XGL_INSTANCE                                instance_,
-    XGL_DBG_MSG_CALLBACK_FUNCTION               pfnMsgCallback,
+ICD_EXPORT VK_RESULT VKAPI vkDbgRegisterMsgCallback(
+    VK_INSTANCE                                instance_,
+    VK_DBG_MSG_CALLBACK_FUNCTION               pfnMsgCallback,
     void*                                       pUserData)
 {
     struct intel_instance *instance = intel_instance(instance_);
@@ -231,36 +231,36 @@ ICD_EXPORT XGL_RESULT XGLAPI xglDbgRegisterMsgCallback(
     return icd_instance_add_logger(instance->icd, pfnMsgCallback, pUserData);
 }
 
-ICD_EXPORT XGL_RESULT XGLAPI xglDbgUnregisterMsgCallback(
-    XGL_INSTANCE                                instance_,
-    XGL_DBG_MSG_CALLBACK_FUNCTION               pfnMsgCallback)
+ICD_EXPORT VK_RESULT VKAPI vkDbgUnregisterMsgCallback(
+    VK_INSTANCE                                instance_,
+    VK_DBG_MSG_CALLBACK_FUNCTION               pfnMsgCallback)
 {
     struct intel_instance *instance = intel_instance(instance_);
 
     return icd_instance_remove_logger(instance->icd, pfnMsgCallback);
 }
 
-ICD_EXPORT XGL_RESULT XGLAPI xglDbgSetGlobalOption(
-    XGL_INSTANCE                                instance_,
-    XGL_DBG_GLOBAL_OPTION                       dbgOption,
+ICD_EXPORT VK_RESULT VKAPI vkDbgSetGlobalOption(
+    VK_INSTANCE                                instance_,
+    VK_DBG_GLOBAL_OPTION                       dbgOption,
     size_t                                      dataSize,
     const void*                                 pData)
 {
     struct intel_instance *instance = intel_instance(instance_);
-    XGL_RESULT res = XGL_SUCCESS;
+    VK_RESULT res = VK_SUCCESS;
 
     if (dataSize == 0)
-        return XGL_ERROR_INVALID_VALUE;
+        return VK_ERROR_INVALID_VALUE;
 
     switch (dbgOption) {
-    case XGL_DBG_OPTION_DEBUG_ECHO_ENABLE:
-    case XGL_DBG_OPTION_BREAK_ON_ERROR:
-    case XGL_DBG_OPTION_BREAK_ON_WARNING:
+    case VK_DBG_OPTION_DEBUG_ECHO_ENABLE:
+    case VK_DBG_OPTION_BREAK_ON_ERROR:
+    case VK_DBG_OPTION_BREAK_ON_WARNING:
         res = icd_instance_set_bool(instance->icd, dbgOption,
                 *((const bool *) pData));
         break;
     default:
-        res = XGL_ERROR_INVALID_VALUE;
+        res = VK_ERROR_INVALID_VALUE;
         break;
     }
 

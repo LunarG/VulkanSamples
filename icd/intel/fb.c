@@ -1,5 +1,5 @@
 /*
- * XGL
+ * Vulkan
  *
  * Copyright (C) 2014 LunarG, Inc.
  *
@@ -36,27 +36,27 @@ static void fb_destroy(struct intel_obj *obj)
     intel_fb_destroy(fb);
 }
 
-XGL_RESULT intel_fb_create(struct intel_dev *dev,
-                           const XGL_FRAMEBUFFER_CREATE_INFO *info,
+VK_RESULT intel_fb_create(struct intel_dev *dev,
+                           const VK_FRAMEBUFFER_CREATE_INFO *info,
                            struct intel_fb **fb_ret)
 {
     struct intel_fb *fb;
     uint32_t width, height, array_size, i;
 
     if (info->colorAttachmentCount > INTEL_MAX_RENDER_TARGETS)
-        return XGL_ERROR_INVALID_VALUE;
+        return VK_ERROR_INVALID_VALUE;
 
     fb = (struct intel_fb *) intel_base_create(&dev->base.handle,
-            sizeof(*fb), dev->base.dbg, XGL_DBG_OBJECT_FRAMEBUFFER, info, 0);
+            sizeof(*fb), dev->base.dbg, VK_DBG_OBJECT_FRAMEBUFFER, info, 0);
     if (!fb)
-        return XGL_ERROR_OUT_OF_MEMORY;
+        return VK_ERROR_OUT_OF_MEMORY;
 
     width = info->width;
     height = info->height;
     array_size = info->layers;
 
     for (i = 0; i < info->colorAttachmentCount; i++) {
-        const XGL_COLOR_ATTACHMENT_BIND_INFO *att =
+        const VK_COLOR_ATTACHMENT_BIND_INFO *att =
             &info->pColorAttachments[i];
         const struct intel_rt_view *rt = intel_rt_view(att->view);
         const struct intel_layout *layout = &rt->img->layout;
@@ -70,7 +70,7 @@ XGL_RESULT intel_fb_create(struct intel_dev *dev,
 
         if (rt->img->samples != info->sampleCount) {
             intel_fb_destroy(fb);
-            return XGL_ERROR_INVALID_VALUE;
+            return VK_ERROR_INVALID_VALUE;
         }
 
         fb->rt[i] = rt;
@@ -79,7 +79,7 @@ XGL_RESULT intel_fb_create(struct intel_dev *dev,
     fb->rt_count = info->colorAttachmentCount;
 
     if (info->pDepthStencilAttachment) {
-        const XGL_DEPTH_STENCIL_BIND_INFO *att =
+        const VK_DEPTH_STENCIL_BIND_INFO *att =
             info->pDepthStencilAttachment;
         const struct intel_ds_view *ds = intel_ds_view(att->view);
         const struct intel_layout *layout = &ds->img->layout;
@@ -93,14 +93,14 @@ XGL_RESULT intel_fb_create(struct intel_dev *dev,
 
         if (ds->img->samples != info->sampleCount) {
             intel_fb_destroy(fb);
-            return XGL_ERROR_INVALID_VALUE;
+            return VK_ERROR_INVALID_VALUE;
         }
 
         fb->ds = ds;
 
         switch (att->layout) {
-        case XGL_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL:
-        case XGL_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL:
+        case VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL:
+        case VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL:
             fb->optimal_ds = true;
             break;
         default:
@@ -123,7 +123,7 @@ XGL_RESULT intel_fb_create(struct intel_dev *dev,
 
     *fb_ret = fb;
 
-    return XGL_SUCCESS;
+    return VK_SUCCESS;
 }
 
 void intel_fb_destroy(struct intel_fb *fb)
@@ -138,29 +138,29 @@ static void render_pass_destroy(struct intel_obj *obj)
     intel_render_pass_destroy(rp);
 }
 
-XGL_RESULT intel_render_pass_create(struct intel_dev *dev,
-                                    const XGL_RENDER_PASS_CREATE_INFO *info,
+VK_RESULT intel_render_pass_create(struct intel_dev *dev,
+                                    const VK_RENDER_PASS_CREATE_INFO *info,
                                     struct intel_render_pass **rp_ret)
 {
     struct intel_render_pass *rp;
     uint32_t i;
 
     rp = (struct intel_render_pass *) intel_base_create(&dev->base.handle,
-            sizeof(*rp), dev->base.dbg, XGL_DBG_OBJECT_RENDER_PASS, info, 0);
+            sizeof(*rp), dev->base.dbg, VK_DBG_OBJECT_RENDER_PASS, info, 0);
     if (!rp)
-        return XGL_ERROR_OUT_OF_MEMORY;
+        return VK_ERROR_OUT_OF_MEMORY;
 
     rp->obj.destroy = render_pass_destroy;
 
     /* TODO add any clear color ops */
     for (i = 0; i < info->colorAttachmentCount; i++)
-        assert(info->pColorLoadOps[i] != XGL_ATTACHMENT_LOAD_OP_CLEAR);
-    assert(info->depthLoadOp != XGL_ATTACHMENT_LOAD_OP_CLEAR);
-    assert(info->stencilLoadOp != XGL_ATTACHMENT_LOAD_OP_CLEAR);
+        assert(info->pColorLoadOps[i] != VK_ATTACHMENT_LOAD_OP_CLEAR);
+    assert(info->depthLoadOp != VK_ATTACHMENT_LOAD_OP_CLEAR);
+    assert(info->stencilLoadOp != VK_ATTACHMENT_LOAD_OP_CLEAR);
 
     *rp_ret = rp;
 
-    return XGL_SUCCESS;
+    return VK_SUCCESS;
 }
 
 void intel_render_pass_destroy(struct intel_render_pass *rp)
@@ -168,10 +168,10 @@ void intel_render_pass_destroy(struct intel_render_pass *rp)
     intel_base_destroy(&rp->obj.base);
 }
 
-ICD_EXPORT XGL_RESULT XGLAPI xglCreateFramebuffer(
-    XGL_DEVICE                                  device,
-    const XGL_FRAMEBUFFER_CREATE_INFO*          pCreateInfo,
-    XGL_FRAMEBUFFER*                            pFramebuffer)
+ICD_EXPORT VK_RESULT VKAPI vkCreateFramebuffer(
+    VK_DEVICE                                  device,
+    const VK_FRAMEBUFFER_CREATE_INFO*          pCreateInfo,
+    VK_FRAMEBUFFER*                            pFramebuffer)
 {
     struct intel_dev *dev = intel_dev(device);
 
@@ -179,10 +179,10 @@ ICD_EXPORT XGL_RESULT XGLAPI xglCreateFramebuffer(
             (struct intel_fb **) pFramebuffer);
 }
 
-ICD_EXPORT XGL_RESULT XGLAPI xglCreateRenderPass(
-    XGL_DEVICE                                  device,
-    const XGL_RENDER_PASS_CREATE_INFO*          pCreateInfo,
-    XGL_RENDER_PASS*                            pRenderPass)
+ICD_EXPORT VK_RESULT VKAPI vkCreateRenderPass(
+    VK_DEVICE                                  device,
+    const VK_RENDER_PASS_CREATE_INFO*          pCreateInfo,
+    VK_RENDER_PASS*                            pRenderPass)
 {
     struct intel_dev *dev = intel_dev(device);
 

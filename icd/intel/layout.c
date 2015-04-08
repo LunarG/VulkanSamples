@@ -1,5 +1,5 @@
 /*
- * XGL
+ * Vulkan
  *
  * Copyright (C) 2014 LunarG, Inc.
  *
@@ -46,7 +46,7 @@ struct intel_layout_params {
    struct intel_dev *dev;
 
    const struct intel_gpu *gpu;
-   const XGL_IMAGE_CREATE_INFO *info;
+   const VK_IMAGE_CREATE_INFO *info;
    bool scanout;
 
    bool compressed;
@@ -60,7 +60,7 @@ layout_get_slice_size(const struct intel_layout *layout,
                       const struct intel_layout_params *params,
                       unsigned level, unsigned *width, unsigned *height)
 {
-   const XGL_IMAGE_CREATE_INFO *info = params->info;
+   const VK_IMAGE_CREATE_INFO *info = params->info;
    unsigned w, h;
 
    w = u_minify(layout->width0, level);
@@ -161,7 +161,7 @@ static unsigned
 layout_get_num_layers(const struct intel_layout *layout,
                       const struct intel_layout_params *params)
 {
-   const XGL_IMAGE_CREATE_INFO *info = params->info;
+   const VK_IMAGE_CREATE_INFO *info = params->info;
    unsigned num_layers = info->arraySize;
 
    /* samples of the same index are stored in a layer */
@@ -175,7 +175,7 @@ static void
 layout_init_layer_height(struct intel_layout *layout,
                          struct intel_layout_params *params)
 {
-   const XGL_IMAGE_CREATE_INFO *info = params->info;
+   const VK_IMAGE_CREATE_INFO *info = params->info;
    unsigned num_layers;
 
    if (layout->walk != INTEL_LAYOUT_WALK_LAYER)
@@ -233,7 +233,7 @@ static void
 layout_init_lods(struct intel_layout *layout,
                  struct intel_layout_params *params)
 {
-   const XGL_IMAGE_CREATE_INFO *info = params->info;
+   const VK_IMAGE_CREATE_INFO *info = params->info;
    unsigned cur_x, cur_y;
    unsigned lv;
 
@@ -259,7 +259,7 @@ layout_init_lods(struct intel_layout *layout,
 
          /* every LOD begins at tile boundaries */
          if (info->mipLevels > 1) {
-            assert(layout->format == XGL_FMT_S8_UINT);
+            assert(layout->format == VK_FMT_S8_UINT);
             cur_x = u_align(cur_x, 64);
             cur_y = u_align(cur_y, 64);
          }
@@ -306,7 +306,7 @@ static void
 layout_init_alignments(struct intel_layout *layout,
                        struct intel_layout_params *params)
 {
-   const XGL_IMAGE_CREATE_INFO *info = params->info;
+   const VK_IMAGE_CREATE_INFO *info = params->info;
 
    /*
     * From the Sandy Bridge PRM, volume 1 part 1, page 113:
@@ -400,14 +400,14 @@ layout_init_alignments(struct intel_layout *layout,
       /* this happens to be the case */
       layout->align_i = layout->block_width;
       layout->align_j = layout->block_height;
-   } else if (info->usage & XGL_IMAGE_USAGE_DEPTH_STENCIL_BIT) {
+   } else if (info->usage & VK_IMAGE_USAGE_DEPTH_STENCIL_BIT) {
       if (intel_gpu_gen(params->gpu) >= INTEL_GEN(7)) {
          switch (layout->format) {
-         case XGL_FMT_D16_UNORM:
+         case VK_FMT_D16_UNORM:
             layout->align_i = 8;
             layout->align_j = 4;
             break;
-         case XGL_FMT_S8_UINT:
+         case VK_FMT_S8_UINT:
             layout->align_i = 8;
             layout->align_j = 8;
             break;
@@ -418,7 +418,7 @@ layout_init_alignments(struct intel_layout *layout,
          }
       } else {
          switch (layout->format) {
-         case XGL_FMT_S8_UINT:
+         case VK_FMT_S8_UINT:
             layout->align_i = 4;
             layout->align_j = 2;
             break;
@@ -434,11 +434,11 @@ layout_init_alignments(struct intel_layout *layout,
          (intel_gpu_gen(params->gpu) >= INTEL_GEN(8)) ||
          (intel_gpu_gen(params->gpu) >= INTEL_GEN(7) &&
           layout->tiling == GEN6_TILING_Y &&
-          (info->usage & XGL_IMAGE_USAGE_COLOR_ATTACHMENT_BIT));
+          (info->usage & VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT));
 
       if (intel_gpu_gen(params->gpu) >= INTEL_GEN(7) &&
           intel_gpu_gen(params->gpu) <= INTEL_GEN(7.5) && valign_4)
-         assert(layout->format != XGL_FMT_R32G32B32_SFLOAT);
+         assert(layout->format != VK_FMT_R32G32B32_SFLOAT);
 
       layout->align_i = 4;
       layout->align_j = (valign_4) ? 4 : 2;
@@ -464,8 +464,8 @@ static unsigned
 layout_get_valid_tilings(const struct intel_layout *layout,
                          const struct intel_layout_params *params)
 {
-   const XGL_IMAGE_CREATE_INFO *info = params->info;
-   const XGL_FORMAT format = layout->format;
+   const VK_IMAGE_CREATE_INFO *info = params->info;
+   const VK_FORMAT format = layout->format;
    unsigned valid_tilings = LAYOUT_TILING_ALL;
 
    /*
@@ -477,7 +477,7 @@ layout_get_valid_tilings(const struct intel_layout *layout,
    if (params->scanout)
        valid_tilings &= LAYOUT_TILING_X;
 
-   if (info->tiling == XGL_LINEAR_TILING)
+   if (info->tiling == VK_LINEAR_TILING)
        valid_tilings &= LAYOUT_TILING_NONE;
 
    /*
@@ -492,9 +492,9 @@ layout_get_valid_tilings(const struct intel_layout *layout,
     *
     *     "W-Major Tile Format is used for separate stencil."
     */
-   if (info->usage & XGL_IMAGE_USAGE_DEPTH_STENCIL_BIT) {
+   if (info->usage & VK_IMAGE_USAGE_DEPTH_STENCIL_BIT) {
       switch (format) {
-      case XGL_FMT_S8_UINT:
+      case VK_FMT_S8_UINT:
          valid_tilings &= LAYOUT_TILING_W;
          break;
       default:
@@ -503,7 +503,7 @@ layout_get_valid_tilings(const struct intel_layout *layout,
       }
    }
 
-   if (info->usage & XGL_IMAGE_USAGE_COLOR_ATTACHMENT_BIT) {
+   if (info->usage & VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT) {
       /*
        * From the Sandy Bridge PRM, volume 1 part 2, page 32:
        *
@@ -528,13 +528,13 @@ layout_get_valid_tilings(const struct intel_layout *layout,
        */
       if (intel_gpu_gen(params->gpu) >= INTEL_GEN(7) &&
           intel_gpu_gen(params->gpu) <= INTEL_GEN(7.5) &&
-          layout->format == XGL_FMT_R32G32B32_SFLOAT)
+          layout->format == VK_FMT_R32G32B32_SFLOAT)
          valid_tilings &= ~LAYOUT_TILING_Y;
 
       valid_tilings &= ~LAYOUT_TILING_W;
    }
 
-   if (info->usage & XGL_IMAGE_USAGE_SHADER_ACCESS_READ_BIT) {
+   if (info->usage & VK_IMAGE_USAGE_SHADER_ACCESS_READ_BIT) {
       if (intel_gpu_gen(params->gpu) < INTEL_GEN(8))
          valid_tilings &= ~LAYOUT_TILING_W;
    }
@@ -549,7 +549,7 @@ static void
 layout_init_tiling(struct intel_layout *layout,
                    struct intel_layout_params *params)
 {
-   const XGL_IMAGE_CREATE_INFO *info = params->info;
+   const VK_IMAGE_CREATE_INFO *info = params->info;
    unsigned preferred_tilings;
 
    layout->valid_tilings = layout_get_valid_tilings(layout, params);
@@ -560,8 +560,8 @@ layout_init_tiling(struct intel_layout *layout,
    if (preferred_tilings & ~LAYOUT_TILING_W)
       preferred_tilings &= ~LAYOUT_TILING_W;
 
-   if (info->usage & (XGL_IMAGE_USAGE_COLOR_ATTACHMENT_BIT |
-                      XGL_IMAGE_USAGE_SHADER_ACCESS_READ_BIT)) {
+   if (info->usage & (VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT |
+                      VK_IMAGE_USAGE_SHADER_ACCESS_READ_BIT)) {
       /*
        * heuristically set a minimum width/height for enabling tiling
        */
@@ -593,7 +593,7 @@ static void
 layout_init_walk_gen7(struct intel_layout *layout,
                               struct intel_layout_params *params)
 {
-   const XGL_IMAGE_CREATE_INFO *info = params->info;
+   const VK_IMAGE_CREATE_INFO *info = params->info;
 
    /*
     * It is not explicitly states, but render targets are expected to be
@@ -602,14 +602,14 @@ layout_init_walk_gen7(struct intel_layout *layout,
     *
     * See "Multisampled Surface Storage Format" field of SURFACE_STATE.
     */
-   if (info->usage & XGL_IMAGE_USAGE_DEPTH_STENCIL_BIT) {
+   if (info->usage & VK_IMAGE_USAGE_DEPTH_STENCIL_BIT) {
       /*
        * From the Ivy Bridge PRM, volume 1 part 1, page 111:
        *
        *     "note that the depth buffer and stencil buffer have an implied
        *      value of ARYSPC_FULL"
        */
-      layout->walk = (info->imageType == XGL_IMAGE_3D) ?
+      layout->walk = (info->imageType == VK_IMAGE_3D) ?
          INTEL_LAYOUT_WALK_3D : INTEL_LAYOUT_WALK_LAYER;
 
       layout->interleaved_samples = true;
@@ -628,7 +628,7 @@ layout_init_walk_gen7(struct intel_layout *layout,
          assert(info->mipLevels == 1);
 
       layout->walk =
-         (info->imageType == XGL_IMAGE_3D) ? INTEL_LAYOUT_WALK_3D :
+         (info->imageType == VK_IMAGE_3D) ? INTEL_LAYOUT_WALK_3D :
          (info->mipLevels > 1) ? INTEL_LAYOUT_WALK_LAYER :
          INTEL_LAYOUT_WALK_LOD;
 
@@ -652,8 +652,8 @@ layout_init_walk_gen6(struct intel_layout *layout,
     * GEN6 does not support compact spacing otherwise.
     */
    layout->walk =
-      (params->info->imageType == XGL_IMAGE_3D) ? INTEL_LAYOUT_WALK_3D :
-      (layout->format == XGL_FMT_S8_UINT) ? INTEL_LAYOUT_WALK_LOD :
+      (params->info->imageType == VK_IMAGE_3D) ? INTEL_LAYOUT_WALK_3D :
+      (layout->format == VK_FMT_S8_UINT) ? INTEL_LAYOUT_WALK_LOD :
       INTEL_LAYOUT_WALK_LAYER;
 
    /* GEN6 supports only interleaved samples */
@@ -674,8 +674,8 @@ static void
 layout_init_size_and_format(struct intel_layout *layout,
                             struct intel_layout_params *params)
 {
-   const XGL_IMAGE_CREATE_INFO *info = params->info;
-   XGL_FORMAT format = info->format;
+   const VK_IMAGE_CREATE_INFO *info = params->info;
+   VK_FORMAT format = info->format;
    bool require_separate_stencil = false;
 
    layout->width0 = info->extent.width;
@@ -689,7 +689,7 @@ layout_init_size_and_format(struct intel_layout *layout,
     *
     * GEN7+ requires separate stencil buffers.
     */
-   if (info->usage & XGL_IMAGE_USAGE_DEPTH_STENCIL_BIT) {
+   if (info->usage & VK_IMAGE_USAGE_DEPTH_STENCIL_BIT) {
       if (intel_gpu_gen(params->gpu) >= INTEL_GEN(7))
          require_separate_stencil = true;
       else
@@ -697,15 +697,15 @@ layout_init_size_and_format(struct intel_layout *layout,
    }
 
    switch (format) {
-   case XGL_FMT_D24_UNORM_S8_UINT:
+   case VK_FMT_D24_UNORM_S8_UINT:
       if (require_separate_stencil) {
-         format = XGL_FMT_D24_UNORM;
+         format = VK_FMT_D24_UNORM;
          layout->separate_stencil = true;
       }
       break;
-   case XGL_FMT_D32_SFLOAT_S8_UINT:
+   case VK_FMT_D32_SFLOAT_S8_UINT:
       if (require_separate_stencil) {
-         format = XGL_FMT_D32_SFLOAT;
+         format = VK_FMT_D32_SFLOAT;
          layout->separate_stencil = true;
       }
       break;
@@ -725,15 +725,15 @@ static bool
 layout_want_mcs(struct intel_layout *layout,
                 struct intel_layout_params *params)
 {
-   const XGL_IMAGE_CREATE_INFO *info = params->info;
+   const VK_IMAGE_CREATE_INFO *info = params->info;
    bool want_mcs = false;
 
    /* MCS is for RT on GEN7+ */
    if (intel_gpu_gen(params->gpu) < INTEL_GEN(7))
       return false;
 
-   if (info->imageType != XGL_IMAGE_2D ||
-       !(info->usage & XGL_IMAGE_USAGE_COLOR_ATTACHMENT_BIT))
+   if (info->imageType != VK_IMAGE_2D ||
+       !(info->usage & VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT))
       return false;
 
    /*
@@ -784,12 +784,12 @@ static bool
 layout_want_hiz(const struct intel_layout *layout,
                 const struct intel_layout_params *params)
 {
-   const XGL_IMAGE_CREATE_INFO *info = params->info;
+   const VK_IMAGE_CREATE_INFO *info = params->info;
 
    if (intel_debug & INTEL_DEBUG_NOHIZ)
        return false;
 
-   if (!(info->usage & XGL_IMAGE_USAGE_DEPTH_STENCIL_BIT))
+   if (!(info->usage & VK_IMAGE_USAGE_DEPTH_STENCIL_BIT))
       return false;
 
    if (!intel_format_has_depth(params->gpu, info->format))
@@ -819,7 +819,7 @@ layout_init_aux(struct intel_layout *layout,
 static void
 layout_align(struct intel_layout *layout, struct intel_layout_params *params)
 {
-   const XGL_IMAGE_CREATE_INFO *info = params->info;
+   const VK_IMAGE_CREATE_INFO *info = params->info;
    int align_w = 1, align_h = 1, pad_h = 0;
 
    /*
@@ -844,14 +844,14 @@ layout_align(struct intel_layout *layout, struct intel_layout_params *params)
     *      padding purposes. The value of 4 for j still applies for mip level
     *      alignment and QPitch calculation."
     */
-   if (info->usage & XGL_IMAGE_USAGE_SHADER_ACCESS_READ_BIT) {
+   if (info->usage & VK_IMAGE_USAGE_SHADER_ACCESS_READ_BIT) {
       if (align_w < layout->align_i)
           align_w = layout->align_i;
       if (align_h < layout->align_j)
           align_h = layout->align_j;
 
       /* in case it is used as a cube */
-      if (info->imageType == XGL_IMAGE_2D)
+      if (info->imageType == VK_IMAGE_2D)
          pad_h += 2;
 
       if (params->compressed && align_h < layout->align_j * 2)
@@ -864,7 +864,7 @@ layout_align(struct intel_layout *layout, struct intel_layout_params *params)
     *     "If the surface contains an odd number of rows of data, a final row
     *      below the surface must be allocated."
     */
-   if ((info->usage & XGL_IMAGE_USAGE_COLOR_ATTACHMENT_BIT) && align_h < 2)
+   if ((info->usage & VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT) && align_h < 2)
       align_h = 2;
 
    /*
@@ -911,7 +911,7 @@ layout_calculate_bo_size(struct intel_layout *layout,
        *      required above."
        */
       if (intel_gpu_gen(params->gpu) >= INTEL_GEN(7.5) &&
-          (params->info->usage & XGL_IMAGE_USAGE_SHADER_ACCESS_READ_BIT) &&
+          (params->info->usage & VK_IMAGE_USAGE_SHADER_ACCESS_READ_BIT) &&
           layout->tiling == GEN6_TILING_NONE)
          h += (64 + layout->bo_stride - 1) / layout->bo_stride;
 
@@ -1000,7 +1000,7 @@ static void
 layout_calculate_hiz_size(struct intel_layout *layout,
                           struct intel_layout_params *params)
 {
-   const XGL_IMAGE_CREATE_INFO *info = params->info;
+   const VK_IMAGE_CREATE_INFO *info = params->info;
    const unsigned hz_align_j = 8;
    enum intel_layout_walk_type hz_walk;
    unsigned hz_width, hz_height, lv;
@@ -1164,7 +1164,7 @@ static void
 layout_calculate_mcs_size(struct intel_layout *layout,
                           struct intel_layout_params *params)
 {
-   const XGL_IMAGE_CREATE_INFO *info = params->info;
+   const VK_IMAGE_CREATE_INFO *info = params->info;
    int mcs_width, mcs_height, mcs_cpp;
    int downscale_x, downscale_y;
 
@@ -1292,7 +1292,7 @@ layout_calculate_mcs_size(struct intel_layout *layout,
  */
 void intel_layout_init(struct intel_layout *layout,
                        struct intel_dev *dev,
-                       const XGL_IMAGE_CREATE_INFO *info,
+                       const VK_IMAGE_CREATE_INFO *info,
                        bool scanout)
 {
    struct intel_layout_params params;

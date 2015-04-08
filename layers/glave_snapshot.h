@@ -58,106 +58,106 @@ typedef enum _OBJECT_STATUS
 } OBJECT_STATUS;
 
 // Object type enum
-typedef enum _XGL_OBJECT_TYPE
+typedef enum _VK_OBJECT_TYPE
 {
-    XGL_OBJECT_TYPE_UNKNOWN,
-    XGL_OBJECT_TYPE_SAMPLER,
-    XGL_OBJECT_TYPE_DYNAMIC_DS_STATE_OBJECT,
-    XGL_OBJECT_TYPE_DESCRIPTOR_SET,
-    XGL_OBJECT_TYPE_DESCRIPTOR_POOL,
-    XGL_OBJECT_TYPE_DYNAMIC_CB_STATE_OBJECT,
-    XGL_OBJECT_TYPE_IMAGE_VIEW,
-    XGL_OBJECT_TYPE_QUEUE_SEMAPHORE,
-    XGL_OBJECT_TYPE_SHADER,
-    XGL_OBJECT_TYPE_DESCRIPTOR_SET_LAYOUT,
-    XGL_OBJECT_TYPE_BUFFER,
-    XGL_OBJECT_TYPE_PIPELINE,
-    XGL_OBJECT_TYPE_DEVICE,
-    XGL_OBJECT_TYPE_QUERY_POOL,
-    XGL_OBJECT_TYPE_EVENT,
-    XGL_OBJECT_TYPE_QUEUE,
-    XGL_OBJECT_TYPE_PHYSICAL_GPU,
-    XGL_OBJECT_TYPE_RENDER_PASS,
-    XGL_OBJECT_TYPE_FRAMEBUFFER,
-    XGL_OBJECT_TYPE_IMAGE,
-    XGL_OBJECT_TYPE_BUFFER_VIEW,
-    XGL_OBJECT_TYPE_DEPTH_STENCIL_VIEW,
-    XGL_OBJECT_TYPE_INSTANCE,
-    XGL_OBJECT_TYPE_PIPELINE_DELTA,
-    XGL_OBJECT_TYPE_DYNAMIC_VP_STATE_OBJECT,
-    XGL_OBJECT_TYPE_COLOR_ATTACHMENT_VIEW,
-    XGL_OBJECT_TYPE_GPU_MEMORY,
-    XGL_OBJECT_TYPE_DYNAMIC_RS_STATE_OBJECT,
-    XGL_OBJECT_TYPE_FENCE,
-    XGL_OBJECT_TYPE_CMD_BUFFER,
-    XGL_OBJECT_TYPE_PRESENTABLE_IMAGE_MEMORY,
+    VK_OBJECT_TYPE_UNKNOWN,
+    VK_OBJECT_TYPE_SAMPLER,
+    VK_OBJECT_TYPE_DYNAMIC_DS_STATE_OBJECT,
+    VK_OBJECT_TYPE_DESCRIPTOR_SET,
+    VK_OBJECT_TYPE_DESCRIPTOR_POOL,
+    VK_OBJECT_TYPE_DYNAMIC_CB_STATE_OBJECT,
+    VK_OBJECT_TYPE_IMAGE_VIEW,
+    VK_OBJECT_TYPE_QUEUE_SEMAPHORE,
+    VK_OBJECT_TYPE_SHADER,
+    VK_OBJECT_TYPE_DESCRIPTOR_SET_LAYOUT,
+    VK_OBJECT_TYPE_BUFFER,
+    VK_OBJECT_TYPE_PIPELINE,
+    VK_OBJECT_TYPE_DEVICE,
+    VK_OBJECT_TYPE_QUERY_POOL,
+    VK_OBJECT_TYPE_EVENT,
+    VK_OBJECT_TYPE_QUEUE,
+    VK_OBJECT_TYPE_PHYSICAL_GPU,
+    VK_OBJECT_TYPE_RENDER_PASS,
+    VK_OBJECT_TYPE_FRAMEBUFFER,
+    VK_OBJECT_TYPE_IMAGE,
+    VK_OBJECT_TYPE_BUFFER_VIEW,
+    VK_OBJECT_TYPE_DEPTH_STENCIL_VIEW,
+    VK_OBJECT_TYPE_INSTANCE,
+    VK_OBJECT_TYPE_PIPELINE_DELTA,
+    VK_OBJECT_TYPE_DYNAMIC_VP_STATE_OBJECT,
+    VK_OBJECT_TYPE_COLOR_ATTACHMENT_VIEW,
+    VK_OBJECT_TYPE_GPU_MEMORY,
+    VK_OBJECT_TYPE_DYNAMIC_RS_STATE_OBJECT,
+    VK_OBJECT_TYPE_FENCE,
+    VK_OBJECT_TYPE_CMD_BUFFER,
+    VK_OBJECT_TYPE_PRESENTABLE_IMAGE_MEMORY,
 
-    XGL_NUM_OBJECT_TYPE,
-    XGL_OBJECT_TYPE_ANY, // Allow global object list to be queried/retrieved
-} XGL_OBJECT_TYPE;
+    VK_NUM_OBJECT_TYPE,
+    VK_OBJECT_TYPE_ANY, // Allow global object list to be queried/retrieved
+} VK_OBJECT_TYPE;
 
-static const char* string_XGL_OBJECT_TYPE(XGL_OBJECT_TYPE type) {
+static const char* string_VK_OBJECT_TYPE(VK_OBJECT_TYPE type) {
     switch (type)
     {
-        case XGL_OBJECT_TYPE_DEVICE:
+        case VK_OBJECT_TYPE_DEVICE:
             return "DEVICE";
-        case XGL_OBJECT_TYPE_PIPELINE:
+        case VK_OBJECT_TYPE_PIPELINE:
             return "PIPELINE";
-        case XGL_OBJECT_TYPE_FENCE:
+        case VK_OBJECT_TYPE_FENCE:
             return "FENCE";
-        case XGL_OBJECT_TYPE_DESCRIPTOR_SET_LAYOUT:
+        case VK_OBJECT_TYPE_DESCRIPTOR_SET_LAYOUT:
             return "DESCRIPTOR_SET_LAYOUT";
-        case XGL_OBJECT_TYPE_GPU_MEMORY:
+        case VK_OBJECT_TYPE_GPU_MEMORY:
             return "GPU_MEMORY";
-        case XGL_OBJECT_TYPE_QUEUE:
+        case VK_OBJECT_TYPE_QUEUE:
             return "QUEUE";
-        case XGL_OBJECT_TYPE_IMAGE:
+        case VK_OBJECT_TYPE_IMAGE:
             return "IMAGE";
-        case XGL_OBJECT_TYPE_CMD_BUFFER:
+        case VK_OBJECT_TYPE_CMD_BUFFER:
             return "CMD_BUFFER";
-        case XGL_OBJECT_TYPE_QUEUE_SEMAPHORE:
+        case VK_OBJECT_TYPE_QUEUE_SEMAPHORE:
             return "QUEUE_SEMAPHORE";
-        case XGL_OBJECT_TYPE_FRAMEBUFFER:
+        case VK_OBJECT_TYPE_FRAMEBUFFER:
             return "FRAMEBUFFER";
-        case XGL_OBJECT_TYPE_SAMPLER:
+        case VK_OBJECT_TYPE_SAMPLER:
             return "SAMPLER";
-        case XGL_OBJECT_TYPE_COLOR_ATTACHMENT_VIEW:
+        case VK_OBJECT_TYPE_COLOR_ATTACHMENT_VIEW:
             return "COLOR_ATTACHMENT_VIEW";
-        case XGL_OBJECT_TYPE_BUFFER_VIEW:
+        case VK_OBJECT_TYPE_BUFFER_VIEW:
             return "BUFFER_VIEW";
-        case XGL_OBJECT_TYPE_DESCRIPTOR_SET:
+        case VK_OBJECT_TYPE_DESCRIPTOR_SET:
             return "DESCRIPTOR_SET";
-        case XGL_OBJECT_TYPE_PHYSICAL_GPU:
+        case VK_OBJECT_TYPE_PHYSICAL_GPU:
             return "PHYSICAL_GPU";
-        case XGL_OBJECT_TYPE_IMAGE_VIEW:
+        case VK_OBJECT_TYPE_IMAGE_VIEW:
             return "IMAGE_VIEW";
-        case XGL_OBJECT_TYPE_BUFFER:
+        case VK_OBJECT_TYPE_BUFFER:
             return "BUFFER";
-        case XGL_OBJECT_TYPE_PIPELINE_DELTA:
+        case VK_OBJECT_TYPE_PIPELINE_DELTA:
             return "PIPELINE_DELTA";
-        case XGL_OBJECT_TYPE_DYNAMIC_RS_STATE_OBJECT:
+        case VK_OBJECT_TYPE_DYNAMIC_RS_STATE_OBJECT:
             return "DYNAMIC_RS_STATE_OBJECT";
-        case XGL_OBJECT_TYPE_EVENT:
+        case VK_OBJECT_TYPE_EVENT:
             return "EVENT";
-        case XGL_OBJECT_TYPE_DEPTH_STENCIL_VIEW:
+        case VK_OBJECT_TYPE_DEPTH_STENCIL_VIEW:
             return "DEPTH_STENCIL_VIEW";
-        case XGL_OBJECT_TYPE_SHADER:
+        case VK_OBJECT_TYPE_SHADER:
             return "SHADER";
-        case XGL_OBJECT_TYPE_DYNAMIC_DS_STATE_OBJECT:
+        case VK_OBJECT_TYPE_DYNAMIC_DS_STATE_OBJECT:
             return "DYNAMIC_DS_STATE_OBJECT";
-        case XGL_OBJECT_TYPE_DYNAMIC_VP_STATE_OBJECT:
+        case VK_OBJECT_TYPE_DYNAMIC_VP_STATE_OBJECT:
             return "DYNAMIC_VP_STATE_OBJECT";
-        case XGL_OBJECT_TYPE_DYNAMIC_CB_STATE_OBJECT:
+        case VK_OBJECT_TYPE_DYNAMIC_CB_STATE_OBJECT:
             return "DYNAMIC_CB_STATE_OBJECT";
-        case XGL_OBJECT_TYPE_INSTANCE:
+        case VK_OBJECT_TYPE_INSTANCE:
             return "INSTANCE";
-        case XGL_OBJECT_TYPE_RENDER_PASS:
+        case VK_OBJECT_TYPE_RENDER_PASS:
             return "RENDER_PASS";
-        case XGL_OBJECT_TYPE_QUERY_POOL:
+        case VK_OBJECT_TYPE_QUERY_POOL:
             return "QUERY_POOL";
-        case XGL_OBJECT_TYPE_DESCRIPTOR_POOL:
+        case VK_OBJECT_TYPE_DESCRIPTOR_POOL:
             return "DESCRIPTOR_POOL";
-        case XGL_OBJECT_TYPE_PRESENTABLE_IMAGE_MEMORY:
+        case VK_OBJECT_TYPE_PRESENTABLE_IMAGE_MEMORY:
             return "PRESENTABLE_IMAGE_MEMORY";
         default:
             return "UNKNOWN";
@@ -173,13 +173,13 @@ void glv_vk_malloc_and_copy(void** ppDest, size_t size, const void* pSrc);
 
 typedef struct _GLV_VK_SNAPSHOT_CREATEDEVICE_PARAMS
 {
-    XGL_PHYSICAL_GPU gpu;
-    XGL_DEVICE_CREATE_INFO* pCreateInfo;
-    XGL_DEVICE* pDevice;
+    VK_PHYSICAL_GPU gpu;
+    VK_DEVICE_CREATE_INFO* pCreateInfo;
+    VK_DEVICE* pDevice;
 } GLV_VK_SNAPSHOT_CREATEDEVICE_PARAMS;
 
-XGL_DEVICE_CREATE_INFO* glv_deepcopy_xgl_device_create_info(const XGL_DEVICE_CREATE_INFO* pSrcCreateInfo);void glv_deepfree_xgl_device_create_info(XGL_DEVICE_CREATE_INFO* pCreateInfo);
-void glv_vk_snapshot_copy_createdevice_params(GLV_VK_SNAPSHOT_CREATEDEVICE_PARAMS* pDest, XGL_PHYSICAL_GPU gpu, const XGL_DEVICE_CREATE_INFO* pCreateInfo, XGL_DEVICE* pDevice);
+VK_DEVICE_CREATE_INFO* glv_deepcopy_xgl_device_create_info(const VK_DEVICE_CREATE_INFO* pSrcCreateInfo);void glv_deepfree_xgl_device_create_info(VK_DEVICE_CREATE_INFO* pCreateInfo);
+void glv_vk_snapshot_copy_createdevice_params(GLV_VK_SNAPSHOT_CREATEDEVICE_PARAMS* pDest, VK_PHYSICAL_GPU gpu, const VK_DEVICE_CREATE_INFO* pCreateInfo, VK_DEVICE* pDevice);
 void glv_vk_snapshot_destroy_createdevice_params(GLV_VK_SNAPSHOT_CREATEDEVICE_PARAMS* pSrc);
 
 //=============================================================================
@@ -189,16 +189,16 @@ void glv_vk_snapshot_destroy_createdevice_params(GLV_VK_SNAPSHOT_CREATEDEVICE_PA
 // Node that stores information about an object
 typedef struct _GLV_VK_SNAPSHOT_OBJECT_NODE {
     void*           pVkObject;
-    XGL_OBJECT_TYPE objType;
+    VK_OBJECT_TYPE objType;
     uint64_t        numUses;
     OBJECT_STATUS   status;
     void*           pStruct;    //< optionally points to a device-specific struct (ie, GLV_VK_SNAPSHOT_DEVICE_NODE)
 } GLV_VK_SNAPSHOT_OBJECT_NODE;
 
-// Node that stores information about an XGL_DEVICE
+// Node that stores information about an VK_DEVICE
 typedef struct _GLV_VK_SNAPSHOT_DEVICE_NODE {
     // This object
-    XGL_DEVICE device;
+    VK_DEVICE device;
 
     // CreateDevice parameters
     GLV_VK_SNAPSHOT_CREATEDEVICE_PARAMS params;
@@ -222,7 +222,7 @@ typedef struct _GLV_VK_SNAPSHOT_LL_NODE {
 typedef struct _GLV_VK_SNAPSHOT_DELETED_OBJ_NODE {
     struct _GLV_VK_SNAPSHOT_DELETED_OBJ_NODE* pNextObj;
     void* pVkObject;
-    XGL_OBJECT_TYPE objType;
+    VK_OBJECT_TYPE objType;
 } GLV_VK_SNAPSHOT_DELETED_OBJ_NODE;
 
 //=============================================================================
@@ -235,8 +235,8 @@ typedef struct _GLV_VK_SNAPSHOT {
     GLV_VK_SNAPSHOT_LL_NODE* pGlobalObjs;
 
     // TEMPORARY: Keep track of all objects of each type
-    uint64_t numObjs[XGL_NUM_OBJECT_TYPE];
-    GLV_VK_SNAPSHOT_LL_NODE *pObjectHead[XGL_NUM_OBJECT_TYPE];
+    uint64_t numObjs[VK_NUM_OBJECT_TYPE];
+    GLV_VK_SNAPSHOT_LL_NODE *pObjectHead[VK_NUM_OBJECT_TYPE];
 
     // List of created devices and [potentially] hierarchical tree of the objects on it.
     // This is used to represent ownership of the objects
@@ -290,13 +290,13 @@ void glvSnapshotClear(void);
 // merge a delta into a snapshot and return the updated snapshot
 GLV_VK_SNAPSHOT glvSnapshotMerge(const GLV_VK_SNAPSHOT * const pDelta, const GLV_VK_SNAPSHOT * const pSnapshot);
 
-uint64_t glvSnapshotGetObjectCount(XGL_OBJECT_TYPE type);
-XGL_RESULT glvSnapshotGetObjects(XGL_OBJECT_TYPE type, uint64_t objCount, GLV_VK_SNAPSHOT_OBJECT_NODE* pObjNodeArray);
+uint64_t glvSnapshotGetObjectCount(VK_OBJECT_TYPE type);
+VK_RESULT glvSnapshotGetObjects(VK_OBJECT_TYPE type, uint64_t objCount, GLV_VK_SNAPSHOT_OBJECT_NODE* pObjNodeArray);
 void glvSnapshotPrintObjects(void);
 
 // Func ptr typedefs
-typedef uint64_t (*GLVSNAPSHOT_GET_OBJECT_COUNT)(XGL_OBJECT_TYPE);
-typedef XGL_RESULT (*GLVSNAPSHOT_GET_OBJECTS)(XGL_OBJECT_TYPE, uint64_t, GLV_VK_SNAPSHOT_OBJECT_NODE*);
+typedef uint64_t (*GLVSNAPSHOT_GET_OBJECT_COUNT)(VK_OBJECT_TYPE);
+typedef VK_RESULT (*GLVSNAPSHOT_GET_OBJECTS)(VK_OBJECT_TYPE, uint64_t, GLV_VK_SNAPSHOT_OBJECT_NODE*);
 typedef void (*GLVSNAPSHOT_PRINT_OBJECTS)(void);
 typedef void (*GLVSNAPSHOT_START_TRACKING)(void);
 typedef GLV_VK_SNAPSHOT (*GLVSNAPSHOT_GET_DELTA)(void);

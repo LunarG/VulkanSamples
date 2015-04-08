@@ -1,5 +1,5 @@
 /*
- * XGL
+ * Vulkan
  *
  * Copyright (C) 2015 LunarG, Inc.
  * Copyright 2014 Valve Software
@@ -42,26 +42,26 @@
 #include <pthread.h>
 #include <assert.h>
 
-// XGL Library Filenames, Paths, etc.:
+// VK Library Filenames, Paths, etc.:
 #define PATH_SEPERATOR ':'
 #define DIRECTORY_SYMBOL "/"
-#define DRIVER_PATH_ENV "LIBXGL_DRIVERS_PATH"
-#define LAYERS_PATH_ENV "LIBXGL_LAYERS_PATH"
-#define LAYER_NAMES_ENV "LIBXGL_LAYER_NAMES"
-#ifndef DEFAULT_XGL_DRIVERS_PATH
+#define DRIVER_PATH_ENV "LIBVK_DRIVERS_PATH"
+#define LAYERS_PATH_ENV "LIBVK_LAYERS_PATH"
+#define LAYER_NAMES_ENV "LIBVK_LAYER_NAMES"
+#ifndef DEFAULT_VK_DRIVERS_PATH
 // TODO: Is this a good default location?
 // Need to search for both 32bit and 64bit ICDs
-#define DEFAULT_XGL_DRIVERS_PATH "/usr/lib/i386-linux-gnu/xgl:/usr/lib/x86_64-linux-gnu/xgl"
-#define XGL_DRIVER_LIBRARY_PREFIX "libXGL_"
-#define XGL_DRIVER_LIBRARY_PREFIX_LEN 7
-#define XGL_LAYER_LIBRARY_PREFIX "libXGLLayer"
-#define XGL_LAYER_LIBRARY_PREFIX_LEN 11
-#define XGL_LIBRARY_SUFFIX ".so"
-#define XGL_LIBRARY_SUFFIX_LEN 3
-#endif //  DEFAULT_XGL_DRIVERS_PATH
-#ifndef DEFAULT_XGL_LAYERS_PATH
+#define DEFAULT_VK_DRIVERS_PATH "/usr/lib/i386-linux-gnu/vk:/usr/lib/x86_64-linux-gnu/vk"
+#define VK_DRIVER_LIBRARY_PREFIX "libVK_"
+#define VK_DRIVER_LIBRARY_PREFIX_LEN 6
+#define VK_LAYER_LIBRARY_PREFIX "libVKLayer"
+#define VK_LAYER_LIBRARY_PREFIX_LEN 10
+#define VK_LIBRARY_SUFFIX ".so"
+#define VK_LIBRARY_SUFFIX_LEN 3
+#endif //  DEFAULT_VK_DRIVERS_PATH
+#ifndef DEFAULT_VK_LAYERS_PATH
 // TODO: Are these good default locations?
-#define DEFAULT_XGL_LAYERS_PATH ".:/usr/lib/i386-linux-gnu/xgl:/usr/lib/x86_64-linux-gnu/xgl"
+#define DEFAULT_VK_LAYERS_PATH ".:/usr/lib/i386-linux-gnu/vk:/usr/lib/x86_64-linux-gnu/vk"
 #endif
 
 // C99:
@@ -144,32 +144,32 @@ static inline void loader_platform_thread_delete_mutex(loader_platform_thread_mu
 using namespace std;
 #endif // __cplusplus
 
-// XGL Library Filenames, Paths, etc.:
+// VK Library Filenames, Paths, etc.:
 #define PATH_SEPERATOR ';'
 #define DIRECTORY_SYMBOL "\\"
-#define DRIVER_PATH_REGISTRY_VALUE "XGL_DRIVERS_PATH"
-#define LAYERS_PATH_REGISTRY_VALUE "XGL_LAYERS_PATH"
-#define LAYER_NAMES_REGISTRY_VALUE "XGL_LAYER_NAMES"
-#define DRIVER_PATH_ENV "XGL_DRIVERS_PATH"
-#define LAYERS_PATH_ENV "XGL_LAYERS_PATH"
-#define LAYER_NAMES_ENV "XGL_LAYER_NAMES"
-#ifndef DEFAULT_XGL_DRIVERS_PATH
+#define DRIVER_PATH_REGISTRY_VALUE "VK_DRIVERS_PATH"
+#define LAYERS_PATH_REGISTRY_VALUE "VK_LAYERS_PATH"
+#define LAYER_NAMES_REGISTRY_VALUE "VK_LAYER_NAMES"
+#define DRIVER_PATH_ENV "VK_DRIVERS_PATH"
+#define LAYERS_PATH_ENV "VK_LAYERS_PATH"
+#define LAYER_NAMES_ENV "VK_LAYER_NAMES"
+#ifndef DEFAULT_VK_DRIVERS_PATH
 // TODO: Is this a good default location?
 // Need to search for both 32bit and 64bit ICDs
-#define DEFAULT_XGL_DRIVERS_PATH "C:\\Windows\\System32"
+#define DEFAULT_VK_DRIVERS_PATH "C:\\Windows\\System32"
 // TODO/TBD: Is this an appropriate prefix for Windows?
-#define XGL_DRIVER_LIBRARY_PREFIX "XGL_"
-#define XGL_DRIVER_LIBRARY_PREFIX_LEN 4
+#define VK_DRIVER_LIBRARY_PREFIX "VK_"
+#define VK_DRIVER_LIBRARY_PREFIX_LEN 4
 // TODO/TBD: Is this an appropriate suffix for Windows?
-#define XGL_LAYER_LIBRARY_PREFIX "XGLLayer"
-#define XGL_LAYER_LIBRARY_PREFIX_LEN 8
-#define XGL_LIBRARY_SUFFIX ".dll"
-#define XGL_LIBRARY_SUFFIX_LEN 4
-#endif //  DEFAULT_XGL_DRIVERS_PATH
-#ifndef DEFAULT_XGL_LAYERS_PATH
+#define VK_LAYER_LIBRARY_PREFIX "VKLayer"
+#define VK_LAYER_LIBRARY_PREFIX_LEN 8
+#define VK_LIBRARY_SUFFIX ".dll"
+#define VK_LIBRARY_SUFFIX_LEN 4
+#endif //  DEFAULT_VK_DRIVERS_PATH
+#ifndef DEFAULT_VK_LAYERS_PATH
 // TODO: Is this a good default location?
-#define DEFAULT_XGL_LAYERS_PATH "C:\\Windows\\System32"
-#endif //  DEFAULT_XGL_LAYERS_PATH
+#define DEFAULT_VK_LAYERS_PATH "C:\\Windows\\System32"
+#endif //  DEFAULT_VK_LAYERS_PATH
 
 // C99:
 // Microsoft didn't implement C99 in Visual Studio; but started adding it with

@@ -1,4 +1,4 @@
-//  XGL tests
+//  VK tests
 //
 //  Copyright (C) 2014 LunarG, Inc.
 //
@@ -20,15 +20,15 @@
 //  FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 //  DEALINGS IN THE SOFTWARE.
 
-#ifndef XGLTESTFRAMEWORK_H
-#define XGLTESTFRAMEWORK_H
+#ifndef VKTESTFRAMEWORK_H
+#define VKTESTFRAMEWORK_H
 
 #include "gtest-1.7.0/include/gtest/gtest.h"
 #include "ShaderLang.h"
 #include "GLSL450Lib.h"
 #include "icd-spv.h"
 #include "test_common.h"
-#include "xgltestbinding.h"
+#include "vktestbinding.h"
 #include "test_environment.h"
 
 #include <stdlib.h>
@@ -38,7 +38,7 @@
 #include <iostream>
 #include <fstream>
 #include <list>
-#include <xglWsiX11Ext.h>
+#include <vkWsiX11Ext.h>
 
 // Can be used by tests to record additional details / description of test
 #define TEST_DESCRIPTION(desc) RecordProperty("description", desc)
@@ -62,8 +62,8 @@ public:
     int                       m_width;
     int                       m_height;
     void                     *m_data;
-    XGL_IMAGE                 m_presentableImage;
-    XGL_GPU_MEMORY            m_presentableMemory;
+    VK_IMAGE                 m_presentableImage;
+    VK_GPU_MEMORY            m_presentableMemory;
     unsigned                  m_data_size;
 };
 
@@ -81,7 +81,7 @@ public:
     void Compare(const char *comment, XglImage *image);
     void RecordImage(XglImage * image);
     void RecordImages(vector<XglImage *> image);
-    bool GLSLtoSPV(const XGL_PIPELINE_SHADER_STAGE shader_type,
+    bool GLSLtoSPV(const VK_PIPELINE_SHADER_STAGE shader_type,
                    const char *pshader,
                    std::vector<unsigned int> &spv);
     static bool         m_use_spv;
@@ -96,7 +96,7 @@ private:
     void SetMessageOptions(EShMessages& messages);
     void ProcessConfigFile();
     EShLanguage FindLanguage(const std::string& name);
-    EShLanguage FindLanguage(const XGL_PIPELINE_SHADER_STAGE shader_type);
+    EShLanguage FindLanguage(const VK_PIPELINE_SHADER_STAGE shader_type);
     std::string ConfigFile;
     bool SetConfigFile(const std::string& name);
 
@@ -129,9 +129,9 @@ public:
     void TearDown();
 
 protected:
-    xgl_testing::Device                    &m_device;
-    xgl_testing::Queue                     &m_queue;
-    xgl_testing::CmdBuffer                  m_cmdbuf;
+    vk_testing::Device                    &m_device;
+    vk_testing::Queue                     &m_queue;
+    vk_testing::CmdBuffer                  m_cmdbuf;
 
 private:
     xcb_window_t                            m_window;
@@ -158,4 +158,4 @@ class TestEnvironment : public ::testing::Environment
   void TearDown();
 };
 
-#endif // XGLTESTFRAMEWORK_H
+#endif // VKTESTFRAMEWORK_H

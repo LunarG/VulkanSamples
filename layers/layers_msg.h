@@ -1,5 +1,5 @@
 /*
- * XGL
+ * Vulkan
  *
  * Copyright (C) 2014 LunarG, Inc.
  *
@@ -24,17 +24,17 @@
 #include <stdio.h>
 #include <stdbool.h>
 
-static XGL_LAYER_DBG_FUNCTION_NODE *g_pDbgFunctionHead = NULL;
-static XGL_LAYER_DBG_REPORT_LEVEL g_reportingLevel = XGL_DBG_LAYER_LEVEL_INFO;
-static XGL_LAYER_DBG_ACTION g_debugAction = XGL_DBG_LAYER_ACTION_LOG_MSG;
+static VK_LAYER_DBG_FUNCTION_NODE *g_pDbgFunctionHead = NULL;
+static VK_LAYER_DBG_REPORT_LEVEL g_reportingLevel = VK_DBG_LAYER_LEVEL_INFO;
+static VK_LAYER_DBG_ACTION g_debugAction = VK_DBG_LAYER_ACTION_LOG_MSG;
 static bool g_actionIsDefault = true;
 static FILE *g_logFile = NULL;
 
 // Utility function to handle reporting
 //  If callbacks are enabled, use them, otherwise use printf
-static void layerCbMsg(XGL_DBG_MSG_TYPE msgType,
-    XGL_VALIDATION_LEVEL validationLevel,
-    XGL_BASE_OBJECT      srcObject,
+static void layerCbMsg(VK_DBG_MSG_TYPE msgType,
+    VK_VALIDATION_LEVEL validationLevel,
+    VK_BASE_OBJECT      srcObject,
     size_t               location,
     int32_t              msgCode,
     const char*          pLayerPrefix,
@@ -44,38 +44,38 @@ static void layerCbMsg(XGL_DBG_MSG_TYPE msgType,
 	g_logFile = stdout;
     }
 
-    if (g_debugAction & (XGL_DBG_LAYER_ACTION_LOG_MSG | XGL_DBG_LAYER_ACTION_CALLBACK)) {
-        XGL_LAYER_DBG_FUNCTION_NODE *pTrav = g_pDbgFunctionHead;
+    if (g_debugAction & (VK_DBG_LAYER_ACTION_LOG_MSG | VK_DBG_LAYER_ACTION_CALLBACK)) {
+        VK_LAYER_DBG_FUNCTION_NODE *pTrav = g_pDbgFunctionHead;
         switch (msgType) {
-            case XGL_DBG_MSG_ERROR:
-                if (g_reportingLevel <= XGL_DBG_LAYER_LEVEL_ERROR) {
-                    if (g_debugAction & XGL_DBG_LAYER_ACTION_LOG_MSG) {
+            case VK_DBG_MSG_ERROR:
+                if (g_reportingLevel <= VK_DBG_LAYER_LEVEL_ERROR) {
+                    if (g_debugAction & VK_DBG_LAYER_ACTION_LOG_MSG) {
                         fprintf(g_logFile, "{%s}ERROR : %s\n", pLayerPrefix, pMsg);
                         fflush(g_logFile);
                     }
-                    if (g_debugAction & XGL_DBG_LAYER_ACTION_CALLBACK)
+                    if (g_debugAction & VK_DBG_LAYER_ACTION_CALLBACK)
                         while (pTrav) {
 				            pTrav->pfnMsgCallback(msgType, validationLevel, srcObject, location, msgCode, pMsg, pTrav->pUserData);
                             pTrav = pTrav->pNext;
                         }
                 }
                 break;
-            case XGL_DBG_MSG_WARNING:
-                if (g_reportingLevel <= XGL_DBG_LAYER_LEVEL_WARN) {
-                    if (g_debugAction & XGL_DBG_LAYER_ACTION_LOG_MSG)
+            case VK_DBG_MSG_WARNING:
+                if (g_reportingLevel <= VK_DBG_LAYER_LEVEL_WARN) {
+                    if (g_debugAction & VK_DBG_LAYER_ACTION_LOG_MSG)
                         fprintf(g_logFile, "{%s}WARN : %s\n", pLayerPrefix, pMsg);
-                    if (g_debugAction & XGL_DBG_LAYER_ACTION_CALLBACK)
+                    if (g_debugAction & VK_DBG_LAYER_ACTION_CALLBACK)
                         while (pTrav) {
 				            pTrav->pfnMsgCallback(msgType, validationLevel, srcObject, location, msgCode, pMsg, pTrav->pUserData);
                             pTrav = pTrav->pNext;
                         }
                 }
                 break;
-            case XGL_DBG_MSG_PERF_WARNING:
-                if (g_reportingLevel <= XGL_DBG_LAYER_LEVEL_PERF_WARN) {
-                    if (g_debugAction & XGL_DBG_LAYER_ACTION_LOG_MSG)
+            case VK_DBG_MSG_PERF_WARNING:
+                if (g_reportingLevel <= VK_DBG_LAYER_LEVEL_PERF_WARN) {
+                    if (g_debugAction & VK_DBG_LAYER_ACTION_LOG_MSG)
                         fprintf(g_logFile, "{%s}PERF_WARN : %s\n", pLayerPrefix, pMsg);
-                    if (g_debugAction & XGL_DBG_LAYER_ACTION_CALLBACK)
+                    if (g_debugAction & VK_DBG_LAYER_ACTION_CALLBACK)
                         while (pTrav) {
 				            pTrav->pfnMsgCallback(msgType, validationLevel, srcObject, location, msgCode, pMsg, pTrav->pUserData);
                             pTrav = pTrav->pNext;
@@ -83,10 +83,10 @@ static void layerCbMsg(XGL_DBG_MSG_TYPE msgType,
                 }
                 break;
             default:
-                if (g_reportingLevel <= XGL_DBG_LAYER_LEVEL_INFO) {
-                    if (g_debugAction & XGL_DBG_LAYER_ACTION_LOG_MSG)
+                if (g_reportingLevel <= VK_DBG_LAYER_LEVEL_INFO) {
+                    if (g_debugAction & VK_DBG_LAYER_ACTION_LOG_MSG)
                         fprintf(g_logFile, "{%s}INFO : %s\n", pLayerPrefix, pMsg);
-                    if (g_debugAction & XGL_DBG_LAYER_ACTION_CALLBACK)
+                    if (g_debugAction & VK_DBG_LAYER_ACTION_CALLBACK)
                         while (pTrav) {
 				            pTrav->pfnMsgCallback(msgType, validationLevel, srcObject, location, msgCode, pMsg, pTrav->pUserData);
                             pTrav = pTrav->pNext;

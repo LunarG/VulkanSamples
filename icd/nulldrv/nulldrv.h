@@ -1,5 +1,5 @@
 /*
- * XGL
+ * Vulkan
  *
  * Copyright (C) 2014 LunarG, Inc.
  *
@@ -30,14 +30,14 @@
 #include <string.h>
 #include <assert.h>
 
-#include <xgl.h>
-#include <xglDbg.h>
-#include <xglIcd.h>
+#include <vulkan.h>
+#include <vkDbg.h>
+#include <vkIcd.h>
 
 #if defined(PLATFORM_LINUX)
-#include <xglWsiX11Ext.h>
+#include <vkWsiX11Ext.h>
 #else
-#include <xglWsiWinExt.h>
+#include <vkWsiWinExt.h>
 #endif
 
 #include "icd.h"
@@ -48,7 +48,7 @@
 struct nulldrv_base {
     void *loader_data;
     uint32_t magic;
-    XGL_RESULT (*get_info)(struct nulldrv_base *base, int type1,
+    VK_RESULT (*get_info)(struct nulldrv_base *base, int type1,
                            size_t *size, void *data);
 };
 
@@ -100,12 +100,12 @@ struct nulldrv_fence {
 
 struct nulldrv_img {
     struct nulldrv_obj obj;
-    XGL_IMAGE_TYPE type;
+    VK_IMAGE_TYPE type;
     int32_t depth;
     uint32_t mip_levels;
     uint32_t array_size;
-    XGL_FLAGS usage;
-    XGL_IMAGE_FORMAT_CLASS format_class;
+    VK_FLAGS usage;
+    VK_IMAGE_FORMAT_CLASS format_class;
     uint32_t samples;
     size_t total_size;
 };
@@ -113,7 +113,7 @@ struct nulldrv_img {
 struct nulldrv_mem {
     struct nulldrv_base base;
     struct nulldrv_bo *bo;
-    XGL_GPU_SIZE size;
+    VK_GPU_SIZE size;
 };
 
 struct nulldrv_ds_view {
@@ -135,8 +135,8 @@ struct nulldrv_img_view {
 
 struct nulldrv_buf {
     struct nulldrv_obj obj;
-    XGL_GPU_SIZE size;
-    XGL_FLAGS usage;
+    VK_GPU_SIZE size;
+    VK_FLAGS usage;
 };
 
 struct nulldrv_desc_layout {

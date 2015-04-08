@@ -1,5 +1,5 @@
 /*
- * XGL
+ * Vulkan
  *
  * Copyright (C) 2014 LunarG, Inc.
  *
@@ -26,110 +26,110 @@
 #include <assert.h>
 #include <unordered_map>
 #include "loader_platform.h"
-#include "xgl_dispatch_table_helper.h"
-#include "xglLayer.h"
+#include "vk_dispatch_table_helper.h"
+#include "vkLayer.h"
 // The following is #included again to catch certain OS-specific functions
 // being used:
 #include "loader_platform.h"
 
-static std::unordered_map<void *, XGL_LAYER_DISPATCH_TABLE *> tableMap;
+static std::unordered_map<void *, VK_LAYER_DISPATCH_TABLE *> tableMap;
 
-static XGL_LAYER_DISPATCH_TABLE * initLayerTable(const XGL_BASE_LAYER_OBJECT *gpuw)
+static VK_LAYER_DISPATCH_TABLE * initLayerTable(const VK_BASE_LAYER_OBJECT *gpuw)
 {
-    XGL_LAYER_DISPATCH_TABLE *pTable;
+    VK_LAYER_DISPATCH_TABLE *pTable;
 
     assert(gpuw);
-    std::unordered_map<void *, XGL_LAYER_DISPATCH_TABLE *>::const_iterator it = tableMap.find((void *) gpuw);
+    std::unordered_map<void *, VK_LAYER_DISPATCH_TABLE *>::const_iterator it = tableMap.find((void *) gpuw);
     if (it == tableMap.end())
     {
-        pTable =  new XGL_LAYER_DISPATCH_TABLE;
+        pTable =  new VK_LAYER_DISPATCH_TABLE;
         tableMap[(void *) gpuw] = pTable;
     } else
     {
         return it->second;
     }
 
-    layer_initialize_dispatch_table(pTable, gpuw->pGPA, (XGL_PHYSICAL_GPU) gpuw->nextObject);
+    layer_initialize_dispatch_table(pTable, gpuw->pGPA, (VK_PHYSICAL_GPU) gpuw->nextObject);
 
     return pTable;
 }
 
-XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglLayerExtension1(XGL_DEVICE device)
+VK_LAYER_EXPORT VK_RESULT VKAPI vkLayerExtension1(VK_DEVICE device)
 {
-    printf("In xglLayerExtension1() call w/ device: %p\n", (void*)device);
-    printf("xglLayerExtension1 returning SUCCESS\n");
-    return XGL_SUCCESS;
+    printf("In vkLayerExtension1() call w/ device: %p\n", (void*)device);
+    printf("vkLayerExtension1 returning SUCCESS\n");
+    return VK_SUCCESS;
 }
 
-XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglGetExtensionSupport(XGL_PHYSICAL_GPU gpu, const char* pExtName)
+VK_LAYER_EXPORT VK_RESULT VKAPI vkGetExtensionSupport(VK_PHYSICAL_GPU gpu, const char* pExtName)
 {
-    XGL_RESULT result;
-    XGL_BASE_LAYER_OBJECT* gpuw = (XGL_BASE_LAYER_OBJECT *) gpu;
+    VK_RESULT result;
+    VK_BASE_LAYER_OBJECT* gpuw = (VK_BASE_LAYER_OBJECT *) gpu;
 
     /* This entrypoint is NOT going to init it's own dispatch table since loader calls here early */
-    if (!strncmp(pExtName, "xglLayerExtension1", strlen("xglLayerExtension1")))
+    if (!strncmp(pExtName, "vkLayerExtension1", strlen("vkLayerExtension1")))
     {
-        result = XGL_SUCCESS;
+        result = VK_SUCCESS;
     } else if (!strncmp(pExtName, "Basic", strlen("Basic")))
     {
-        result = XGL_SUCCESS;
+        result = VK_SUCCESS;
     } else if (!tableMap.empty() && (tableMap.find(gpuw) != tableMap.end()))
     {
-        printf("At start of wrapped xglGetExtensionSupport() call w/ gpu: %p\n", (void*)gpu);
-        XGL_LAYER_DISPATCH_TABLE* pTable = tableMap[gpuw];
-        result = pTable->GetExtensionSupport((XGL_PHYSICAL_GPU)gpuw->nextObject, pExtName);
-        printf("Completed wrapped xglGetExtensionSupport() call w/ gpu: %p\n", (void*)gpu);
+        printf("At start of wrapped vkGetExtensionSupport() call w/ gpu: %p\n", (void*)gpu);
+        VK_LAYER_DISPATCH_TABLE* pTable = tableMap[gpuw];
+        result = pTable->GetExtensionSupport((VK_PHYSICAL_GPU)gpuw->nextObject, pExtName);
+        printf("Completed wrapped vkGetExtensionSupport() call w/ gpu: %p\n", (void*)gpu);
     } else
     {
-        result = XGL_ERROR_INVALID_EXTENSION;
+        result = VK_ERROR_INVALID_EXTENSION;
     }
     return result;
 }
 
-XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateDevice(XGL_PHYSICAL_GPU gpu, const XGL_DEVICE_CREATE_INFO* pCreateInfo, XGL_DEVICE* pDevice)
+VK_LAYER_EXPORT VK_RESULT VKAPI vkCreateDevice(VK_PHYSICAL_GPU gpu, const VK_DEVICE_CREATE_INFO* pCreateInfo, VK_DEVICE* pDevice)
 {
-    XGL_BASE_LAYER_OBJECT* gpuw = (XGL_BASE_LAYER_OBJECT *) gpu;
-    XGL_LAYER_DISPATCH_TABLE* pTable = tableMap[gpuw];
+    VK_BASE_LAYER_OBJECT* gpuw = (VK_BASE_LAYER_OBJECT *) gpu;
+    VK_LAYER_DISPATCH_TABLE* pTable = tableMap[gpuw];
 
-    printf("At start of wrapped xglCreateDevice() call w/ gpu: %p\n", (void*)gpu);
-    XGL_RESULT result = pTable->CreateDevice((XGL_PHYSICAL_GPU)gpuw->nextObject, pCreateInfo, pDevice);
+    printf("At start of wrapped vkCreateDevice() call w/ gpu: %p\n", (void*)gpu);
+    VK_RESULT result = pTable->CreateDevice((VK_PHYSICAL_GPU)gpuw->nextObject, pCreateInfo, pDevice);
     // create a mapping for the device object into the dispatch table
     tableMap.emplace(*pDevice, pTable);
-    printf("Completed wrapped xglCreateDevice() call w/ pDevice, Device %p: %p\n", (void*)pDevice, (void *) *pDevice);
+    printf("Completed wrapped vkCreateDevice() call w/ pDevice, Device %p: %p\n", (void*)pDevice, (void *) *pDevice);
     return result;
 }
-XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglGetFormatInfo(XGL_DEVICE device, XGL_FORMAT format, XGL_FORMAT_INFO_TYPE infoType, size_t* pDataSize, void* pData)
+VK_LAYER_EXPORT VK_RESULT VKAPI vkGetFormatInfo(VK_DEVICE device, VK_FORMAT format, VK_FORMAT_INFO_TYPE infoType, size_t* pDataSize, void* pData)
 {
-    XGL_LAYER_DISPATCH_TABLE* pTable = tableMap[device];
+    VK_LAYER_DISPATCH_TABLE* pTable = tableMap[device];
 
-    printf("At start of wrapped xglGetFormatInfo() call w/ device: %p\n", (void*)device);
-    XGL_RESULT result = pTable->GetFormatInfo(device, format, infoType, pDataSize, pData);
-    printf("Completed wrapped xglGetFormatInfo() call w/ device: %p\n", (void*)device);
+    printf("At start of wrapped vkGetFormatInfo() call w/ device: %p\n", (void*)device);
+    VK_RESULT result = pTable->GetFormatInfo(device, format, infoType, pDataSize, pData);
+    printf("Completed wrapped vkGetFormatInfo() call w/ device: %p\n", (void*)device);
     return result;
 }
 
-XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglEnumerateLayers(XGL_PHYSICAL_GPU gpu, size_t maxLayerCount, size_t maxStringSize, size_t* pOutLayerCount, char* const* pOutLayers, void* pReserved)
+VK_LAYER_EXPORT VK_RESULT VKAPI vkEnumerateLayers(VK_PHYSICAL_GPU gpu, size_t maxLayerCount, size_t maxStringSize, size_t* pOutLayerCount, char* const* pOutLayers, void* pReserved)
 {
     if (gpu != NULL)
     {
-        XGL_BASE_LAYER_OBJECT* gpuw = (XGL_BASE_LAYER_OBJECT *) gpu;
-        XGL_LAYER_DISPATCH_TABLE* pTable = initLayerTable(gpuw);
+        VK_BASE_LAYER_OBJECT* gpuw = (VK_BASE_LAYER_OBJECT *) gpu;
+        VK_LAYER_DISPATCH_TABLE* pTable = initLayerTable(gpuw);
 
-        printf("At start of wrapped xglEnumerateLayers() call w/ gpu: %p\n", gpu);
-        XGL_RESULT result = pTable->EnumerateLayers((XGL_PHYSICAL_GPU)gpuw->nextObject, maxLayerCount, maxStringSize, pOutLayerCount, pOutLayers, pReserved);
+        printf("At start of wrapped vkEnumerateLayers() call w/ gpu: %p\n", gpu);
+        VK_RESULT result = pTable->EnumerateLayers((VK_PHYSICAL_GPU)gpuw->nextObject, maxLayerCount, maxStringSize, pOutLayerCount, pOutLayers, pReserved);
         return result;
     } else
     {
         if (pOutLayerCount == NULL || pOutLayers == NULL || pOutLayers[0] == NULL || pReserved == NULL)
-            return XGL_ERROR_INVALID_POINTER;
+            return VK_ERROR_INVALID_POINTER;
 
         // Example of a layer that is only compatible with Intel's GPUs
-        XGL_BASE_LAYER_OBJECT* gpuw = (XGL_BASE_LAYER_OBJECT*) pReserved;
-        xglGetGpuInfoType fpGetGpuInfo;
-        XGL_PHYSICAL_GPU_PROPERTIES gpuProps;
-        size_t dataSize = sizeof(XGL_PHYSICAL_GPU_PROPERTIES);
-        fpGetGpuInfo = (xglGetGpuInfoType) gpuw->pGPA((XGL_PHYSICAL_GPU) gpuw->nextObject, "xglGetGpuInfo");
-        fpGetGpuInfo((XGL_PHYSICAL_GPU) gpuw->nextObject, XGL_INFO_TYPE_PHYSICAL_GPU_PROPERTIES, &dataSize, &gpuProps);
+        VK_BASE_LAYER_OBJECT* gpuw = (VK_BASE_LAYER_OBJECT*) pReserved;
+        vkGetGpuInfoType fpGetGpuInfo;
+        VK_PHYSICAL_GPU_PROPERTIES gpuProps;
+        size_t dataSize = sizeof(VK_PHYSICAL_GPU_PROPERTIES);
+        fpGetGpuInfo = (vkGetGpuInfoType) gpuw->pGPA((VK_PHYSICAL_GPU) gpuw->nextObject, "vkGetGpuInfo");
+        fpGetGpuInfo((VK_PHYSICAL_GPU) gpuw->nextObject, VK_INFO_TYPE_PHYSICAL_GPU_PROPERTIES, &dataSize, &gpuProps);
         if (gpuProps.vendorId == 0x8086)
         {
             *pOutLayerCount = 1;
@@ -138,33 +138,33 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglEnumerateLayers(XGL_PHYSICAL_GPU gpu, size
         {
             *pOutLayerCount = 0;
         }
-        return XGL_SUCCESS;
+        return VK_SUCCESS;
     }
 }
 
-XGL_LAYER_EXPORT void * XGLAPI xglGetProcAddr(XGL_PHYSICAL_GPU gpu, const char* pName)
+VK_LAYER_EXPORT void * VKAPI vkGetProcAddr(VK_PHYSICAL_GPU gpu, const char* pName)
 {
     if (gpu == NULL)
         return NULL;
 
-    initLayerTable((const XGL_BASE_LAYER_OBJECT *) gpu);
+    initLayerTable((const VK_BASE_LAYER_OBJECT *) gpu);
 
-    if (!strncmp("xglGetProcAddr", pName, sizeof("xglGetProcAddr")))
-        return (void *) xglGetProcAddr;
-    else if (!strncmp("xglCreateDevice", pName, sizeof ("xglCreateDevice")))
-        return (void *) xglCreateDevice;
-    else if (!strncmp("xglGetExtensionSupport", pName, sizeof ("xglGetExtensionSupport")))
-        return (void *) xglGetExtensionSupport;
-    else if (!strncmp("xglEnumerateLayers", pName, sizeof ("xglEnumerateLayers")))
-        return (void *) xglEnumerateLayers;
-    else if (!strncmp("xglGetFormatInfo", pName, sizeof ("xglGetFormatInfo")))
-        return (void *) xglGetFormatInfo;
-    else if (!strncmp("xglLayerExtension1", pName, sizeof("xglLayerExtension1")))
-        return (void *) xglLayerExtension1;
+    if (!strncmp("vkGetProcAddr", pName, sizeof("vkGetProcAddr")))
+        return (void *) vkGetProcAddr;
+    else if (!strncmp("vkCreateDevice", pName, sizeof ("vkCreateDevice")))
+        return (void *) vkCreateDevice;
+    else if (!strncmp("vkGetExtensionSupport", pName, sizeof ("vkGetExtensionSupport")))
+        return (void *) vkGetExtensionSupport;
+    else if (!strncmp("vkEnumerateLayers", pName, sizeof ("vkEnumerateLayers")))
+        return (void *) vkEnumerateLayers;
+    else if (!strncmp("vkGetFormatInfo", pName, sizeof ("vkGetFormatInfo")))
+        return (void *) vkGetFormatInfo;
+    else if (!strncmp("vkLayerExtension1", pName, sizeof("vkLayerExtension1")))
+        return (void *) vkLayerExtension1;
     else {
-        XGL_BASE_LAYER_OBJECT* gpuw = (XGL_BASE_LAYER_OBJECT *) gpu;
+        VK_BASE_LAYER_OBJECT* gpuw = (VK_BASE_LAYER_OBJECT *) gpu;
         if (gpuw->pGPA == NULL)
             return NULL;
-        return gpuw->pGPA((XGL_PHYSICAL_GPU) gpuw->nextObject, pName);
+        return gpuw->pGPA((VK_PHYSICAL_GPU) gpuw->nextObject, pName);
     }
 }

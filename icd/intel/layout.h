@@ -1,5 +1,5 @@
 /*
- * XGL
+ * Vulkan
  *
  * Copyright (C) 2014 LunarG, Inc.
  *
@@ -84,7 +84,7 @@ struct intel_layout {
    /* physical width0, height0, and format */
    unsigned width0;
    unsigned height0;
-   XGL_FORMAT format;
+   VK_FORMAT format;
    bool separate_stencil;
 
    /*
@@ -126,7 +126,7 @@ struct intel_layout {
 
 void intel_layout_init(struct intel_layout *layout,
                        struct intel_dev *dev,
-                       const XGL_IMAGE_CREATE_INFO *info,
+                       const VK_IMAGE_CREATE_INFO *info,
                        bool scanout);
 
 /**

@@ -1,5 +1,5 @@
 /*
- * XGL
+ * Vulkan
  *
  * Copyright (C) 2014 LunarG, Inc.
  *
@@ -31,43 +31,43 @@
 #include <stdbool.h>
 #include "icd.h"
 
-static inline bool icd_format_is_undef(XGL_FORMAT format)
+static inline bool icd_format_is_undef(VK_FORMAT format)
 {
-    return (format == XGL_FMT_UNDEFINED);
+    return (format == VK_FMT_UNDEFINED);
 }
 
-bool icd_format_is_ds(XGL_FORMAT format);
+bool icd_format_is_ds(VK_FORMAT format);
 
-static inline bool icd_format_is_color(XGL_FORMAT format)
+static inline bool icd_format_is_color(VK_FORMAT format)
 {
     return !(icd_format_is_undef(format) || icd_format_is_ds(format));
 }
 
-bool icd_format_is_norm(XGL_FORMAT format);
+bool icd_format_is_norm(VK_FORMAT format);
 
-bool icd_format_is_int(XGL_FORMAT format);
+bool icd_format_is_int(VK_FORMAT format);
 
-bool icd_format_is_float(XGL_FORMAT format);
+bool icd_format_is_float(VK_FORMAT format);
 
-bool icd_format_is_srgb(XGL_FORMAT format);
+bool icd_format_is_srgb(VK_FORMAT format);
 
-bool icd_format_is_compressed(XGL_FORMAT format);
+bool icd_format_is_compressed(VK_FORMAT format);
 
-static inline int icd_format_get_block_width(XGL_FORMAT format)
+static inline int icd_format_get_block_width(VK_FORMAT format)
 {
     /* all compressed formats use 4x4 blocks */
     return (icd_format_is_compressed(format)) ? 4 : 1;
 }
 
-static inline bool icd_blend_mode_is_dual_src(XGL_BLEND mode)
+static inline bool icd_blend_mode_is_dual_src(VK_BLEND mode)
 {
-    return (mode == XGL_BLEND_SRC1_COLOR) ||
-           (mode == XGL_BLEND_SRC1_ALPHA) ||
-           (mode == XGL_BLEND_ONE_MINUS_SRC1_COLOR) ||
-           (mode == XGL_BLEND_ONE_MINUS_SRC1_ALPHA);
+    return (mode == VK_BLEND_SRC1_COLOR) ||
+           (mode == VK_BLEND_SRC1_ALPHA) ||
+           (mode == VK_BLEND_ONE_MINUS_SRC1_COLOR) ||
+           (mode == VK_BLEND_ONE_MINUS_SRC1_ALPHA);
 }
 
-static inline bool icd_pipeline_cb_att_needs_dual_source_blending(const XGL_PIPELINE_CB_ATTACHMENT_STATE *att)
+static inline bool icd_pipeline_cb_att_needs_dual_source_blending(const VK_PIPELINE_CB_ATTACHMENT_STATE *att)
 {
     if (icd_blend_mode_is_dual_src(att->srcBlendColor) ||
         icd_blend_mode_is_dual_src(att->srcBlendAlpha) ||
@@ -78,13 +78,13 @@ static inline bool icd_pipeline_cb_att_needs_dual_source_blending(const XGL_PIPE
     return false;
 }
 
-size_t icd_format_get_size(XGL_FORMAT format);
+size_t icd_format_get_size(VK_FORMAT format);
 
-XGL_IMAGE_FORMAT_CLASS icd_format_get_class(XGL_FORMAT format);
+VK_IMAGE_FORMAT_CLASS icd_format_get_class(VK_FORMAT format);
 
-unsigned int icd_format_get_channel_count(XGL_FORMAT format);
+unsigned int icd_format_get_channel_count(VK_FORMAT format);
 
-void icd_format_get_raw_value(XGL_FORMAT format,
+void icd_format_get_raw_value(VK_FORMAT format,
                               const uint32_t color[4],
                               void *value);
 

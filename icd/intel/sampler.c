@@ -1,5 +1,5 @@
 /*
- * XGL
+ * Vulkan
  *
  * Copyright (C) 2014 LunarG, Inc.
  *
@@ -32,77 +32,77 @@
 /**
  * Translate a pipe texture filter to the matching hardware mapfilter.
  */
-static int translate_tex_filter(XGL_TEX_FILTER filter)
+static int translate_tex_filter(VK_TEX_FILTER filter)
 {
    switch (filter) {
-   case XGL_TEX_FILTER_NEAREST: return GEN6_MAPFILTER_NEAREST;
-   case XGL_TEX_FILTER_LINEAR:  return GEN6_MAPFILTER_LINEAR;
+   case VK_TEX_FILTER_NEAREST: return GEN6_MAPFILTER_NEAREST;
+   case VK_TEX_FILTER_LINEAR:  return GEN6_MAPFILTER_LINEAR;
    default:
       assert(!"unknown tex filter");
       return GEN6_MAPFILTER_NEAREST;
    }
 }
 
-static int translate_tex_mipmap_mode(XGL_TEX_MIPMAP_MODE mode)
+static int translate_tex_mipmap_mode(VK_TEX_MIPMAP_MODE mode)
 {
    switch (mode) {
-   case XGL_TEX_MIPMAP_NEAREST: return GEN6_MIPFILTER_NEAREST;
-   case XGL_TEX_MIPMAP_LINEAR:  return GEN6_MIPFILTER_LINEAR;
-   case XGL_TEX_MIPMAP_BASE:    return GEN6_MIPFILTER_NONE;
+   case VK_TEX_MIPMAP_NEAREST: return GEN6_MIPFILTER_NEAREST;
+   case VK_TEX_MIPMAP_LINEAR:  return GEN6_MIPFILTER_LINEAR;
+   case VK_TEX_MIPMAP_BASE:    return GEN6_MIPFILTER_NONE;
    default:
       assert(!"unknown tex mipmap mode");
       return GEN6_MIPFILTER_NONE;
    }
 }
 
-static int translate_tex_addr(XGL_TEX_ADDRESS addr)
+static int translate_tex_addr(VK_TEX_ADDRESS addr)
 {
    switch (addr) {
-   case XGL_TEX_ADDRESS_WRAP:         return GEN6_TEXCOORDMODE_WRAP;
-   case XGL_TEX_ADDRESS_MIRROR:       return GEN6_TEXCOORDMODE_MIRROR;
-   case XGL_TEX_ADDRESS_CLAMP:        return GEN6_TEXCOORDMODE_CLAMP;
-   case XGL_TEX_ADDRESS_MIRROR_ONCE:  return GEN6_TEXCOORDMODE_MIRROR_ONCE;
-   case XGL_TEX_ADDRESS_CLAMP_BORDER: return GEN6_TEXCOORDMODE_CLAMP_BORDER;
+   case VK_TEX_ADDRESS_WRAP:         return GEN6_TEXCOORDMODE_WRAP;
+   case VK_TEX_ADDRESS_MIRROR:       return GEN6_TEXCOORDMODE_MIRROR;
+   case VK_TEX_ADDRESS_CLAMP:        return GEN6_TEXCOORDMODE_CLAMP;
+   case VK_TEX_ADDRESS_MIRROR_ONCE:  return GEN6_TEXCOORDMODE_MIRROR_ONCE;
+   case VK_TEX_ADDRESS_CLAMP_BORDER: return GEN6_TEXCOORDMODE_CLAMP_BORDER;
    default:
       assert(!"unknown tex address");
       return GEN6_TEXCOORDMODE_WRAP;
    }
 }
 
-static int translate_compare_func(XGL_COMPARE_FUNC func)
+static int translate_compare_func(VK_COMPARE_FUNC func)
 {
     switch (func) {
-    case XGL_COMPARE_NEVER:         return GEN6_COMPAREFUNCTION_NEVER;
-    case XGL_COMPARE_LESS:          return GEN6_COMPAREFUNCTION_LESS;
-    case XGL_COMPARE_EQUAL:         return GEN6_COMPAREFUNCTION_EQUAL;
-    case XGL_COMPARE_LESS_EQUAL:    return GEN6_COMPAREFUNCTION_LEQUAL;
-    case XGL_COMPARE_GREATER:       return GEN6_COMPAREFUNCTION_GREATER;
-    case XGL_COMPARE_NOT_EQUAL:     return GEN6_COMPAREFUNCTION_NOTEQUAL;
-    case XGL_COMPARE_GREATER_EQUAL: return GEN6_COMPAREFUNCTION_GEQUAL;
-    case XGL_COMPARE_ALWAYS:        return GEN6_COMPAREFUNCTION_ALWAYS;
+    case VK_COMPARE_NEVER:         return GEN6_COMPAREFUNCTION_NEVER;
+    case VK_COMPARE_LESS:          return GEN6_COMPAREFUNCTION_LESS;
+    case VK_COMPARE_EQUAL:         return GEN6_COMPAREFUNCTION_EQUAL;
+    case VK_COMPARE_LESS_EQUAL:    return GEN6_COMPAREFUNCTION_LEQUAL;
+    case VK_COMPARE_GREATER:       return GEN6_COMPAREFUNCTION_GREATER;
+    case VK_COMPARE_NOT_EQUAL:     return GEN6_COMPAREFUNCTION_NOTEQUAL;
+    case VK_COMPARE_GREATER_EQUAL: return GEN6_COMPAREFUNCTION_GEQUAL;
+    case VK_COMPARE_ALWAYS:        return GEN6_COMPAREFUNCTION_ALWAYS;
     default:
       assert(!"unknown compare_func");
       return GEN6_COMPAREFUNCTION_NEVER;
     }
 }
 
-static void translate_border_color(XGL_BORDER_COLOR_TYPE type, float rgba[4])
+static void translate_border_color(VK_BORDER_COLOR_TYPE type, float rgba[4])
 {
     switch (type) {
-    case XGL_BORDER_COLOR_OPAQUE_WHITE:
+    case VK_BORDER_COLOR_OPAQUE_WHITE:
         rgba[0] = 1.0;
         rgba[1] = 1.0;
         rgba[2] = 1.0;
         rgba[3] = 1.0;
         break;
-    case XGL_BORDER_COLOR_TRANSPARENT_BLACK:
+    case VK_BORDER_COLOR_TRANSPARENT_BLACK:
     default:
         rgba[0] = 0.0;
         rgba[1] = 0.0;
         rgba[2] = 0.0;
         rgba[3] = 0.0;
         break;
-    case XGL_BORDER_COLOR_OPAQUE_BLACK:
+    case VK_BORDER_COLOR_OPAQUE_BLACK:
         rgba[0] = 0.0;
         rgba[1] = 0.0;
         rgba[2] = 0.0;
@@ -177,7 +177,7 @@ sampler_border_color_state_gen6(const struct intel_gpu *gpu,
 static void
 sampler_init(struct intel_sampler *sampler,
              const struct intel_gpu *gpu,
-             const XGL_SAMPLER_CREATE_INFO *info)
+             const VK_SAMPLER_CREATE_INFO *info)
 {
    int mip_filter, min_filter, mag_filter, max_aniso;
    int lod_bias, max_lod, min_lod;
@@ -253,7 +253,7 @@ sampler_init(struct intel_sampler *sampler,
     * To achieve our goal, we just need to set MinLod to zero and set
     * MagFilter to MinFilter when mipmapping is disabled.
     */
-   if (info->mipMode == XGL_TEX_MIPMAP_BASE && min_lod) {
+   if (info->mipMode == VK_TEX_MIPMAP_BASE && min_lod) {
       min_lod = 0;
       mag_filter = min_filter;
    }
@@ -361,16 +361,16 @@ static void sampler_destroy(struct intel_obj *obj)
     intel_sampler_destroy(sampler);
 }
 
-XGL_RESULT intel_sampler_create(struct intel_dev *dev,
-                                const XGL_SAMPLER_CREATE_INFO *info,
+VK_RESULT intel_sampler_create(struct intel_dev *dev,
+                                const VK_SAMPLER_CREATE_INFO *info,
                                 struct intel_sampler **sampler_ret)
 {
     struct intel_sampler *sampler;
 
     sampler = (struct intel_sampler *) intel_base_create(&dev->base.handle,
-            sizeof(*sampler), dev->base.dbg, XGL_DBG_OBJECT_SAMPLER, info, 0);
+            sizeof(*sampler), dev->base.dbg, VK_DBG_OBJECT_SAMPLER, info, 0);
     if (!sampler)
-        return XGL_ERROR_OUT_OF_MEMORY;
+        return VK_ERROR_OUT_OF_MEMORY;
 
     sampler->obj.destroy = sampler_destroy;
 
@@ -378,7 +378,7 @@ XGL_RESULT intel_sampler_create(struct intel_dev *dev,
 
     *sampler_ret = sampler;
 
-    return XGL_SUCCESS;
+    return VK_SUCCESS;
 }
 
 void intel_sampler_destroy(struct intel_sampler *sampler)
@@ -386,10 +386,10 @@ void intel_sampler_destroy(struct intel_sampler *sampler)
     intel_base_destroy(&sampler->obj.base);
 }
 
-ICD_EXPORT XGL_RESULT XGLAPI xglCreateSampler(
-    XGL_DEVICE                                  device,
-    const XGL_SAMPLER_CREATE_INFO*              pCreateInfo,
-    XGL_SAMPLER*                                pSampler)
+ICD_EXPORT VK_RESULT VKAPI vkCreateSampler(
+    VK_DEVICE                                  device,
+    const VK_SAMPLER_CREATE_INFO*              pCreateInfo,
+    VK_SAMPLER*                                pSampler)
 {
     struct intel_dev *dev = intel_dev(device);
 

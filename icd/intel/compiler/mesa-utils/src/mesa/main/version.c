@@ -408,7 +408,7 @@ _mesa_compute_version(struct gl_context *ctx)
    case API_OPENGLES2:
       compute_version_es2(ctx);
       break;
-   case API_XGL:
+   case API_VK:
        break;
    }
 

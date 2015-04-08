@@ -608,7 +608,7 @@ public:
     */
    unsigned shader_shadow_samplers;
 
-   bool isXGL;
+   bool isVK;
 };
 
 /**

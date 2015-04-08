@@ -1,5 +1,5 @@
 /*
- * XGL
+ * Vulkan
  *
  * Copyright (C) 2014 LunarG, Inc.
  *
@@ -296,7 +296,7 @@ static struct intel_pipeline_rmap *rmap_create(const struct intel_gpu *gpu,
     uint32_t surface_count, i;
 
     rmap = (struct intel_pipeline_rmap *)
-        intel_alloc(gpu, sizeof(*rmap), 0, XGL_SYSTEM_ALLOC_INTERNAL);
+        intel_alloc(gpu, sizeof(*rmap), 0, VK_SYSTEM_ALLOC_INTERNAL);
     if (!rmap)
         return NULL;
 
@@ -313,7 +313,7 @@ static struct intel_pipeline_rmap *rmap_create(const struct intel_gpu *gpu,
 
     rmap->slots = (struct intel_pipeline_rmap_slot *)
         intel_alloc(gpu, sizeof(rmap->slots[0]) * rmap->slot_count,
-            0, XGL_SYSTEM_ALLOC_INTERNAL);
+            0, VK_SYSTEM_ALLOC_INTERNAL);
     if (!rmap->slots) {
         intel_free(gpu, rmap);
         return NULL;
@@ -401,15 +401,15 @@ void unpack_set_and_binding(const int location, int &set, int &binding)
 }
 
 // invoke backend compiler to generate ISA and supporting data structures
-XGL_RESULT intel_pipeline_shader_compile(struct intel_pipeline_shader *pipe_shader,
+VK_RESULT intel_pipeline_shader_compile(struct intel_pipeline_shader *pipe_shader,
                                          const struct intel_gpu *gpu,
                                          const struct intel_desc_layout_chain *chain,
-                                         const XGL_PIPELINE_SHADER *info)
+                                         const VK_PIPELINE_SHADER *info)
 {
     const struct intel_ir *ir = intel_shader(info->shader)->ir;
     /* XXX how about constness? */
     struct gl_shader_program *sh_prog = (struct gl_shader_program *) ir;
-    XGL_RESULT status = XGL_SUCCESS;
+    VK_RESULT status = VK_SUCCESS;
     struct brw_binding_table bt;
 
     struct brw_context *brw = intel_create_brw_context(gpu);
@@ -427,9 +427,9 @@ XGL_RESULT intel_pipeline_shader_compile(struct intel_pipeline_shader *pipe_shad
         {
             pipe_shader->codeSize = get_vs_program_size(brw->shader_prog);
 
-            pipe_shader->pCode = intel_alloc(gpu, pipe_shader->codeSize, 0, XGL_SYSTEM_ALLOC_INTERNAL_SHADER);
+            pipe_shader->pCode = intel_alloc(gpu, pipe_shader->codeSize, 0, VK_SYSTEM_ALLOC_INTERNAL_SHADER);
             if (!pipe_shader->pCode) {
-                status = XGL_ERROR_OUT_OF_MEMORY;
+                status = VK_ERROR_OUT_OF_MEMORY;
                 break;
             }
 
@@ -484,12 +484,12 @@ XGL_RESULT intel_pipeline_shader_compile(struct intel_pipeline_shader *pipe_shad
 
             if (bt.ubo_count != sh_prog->_LinkedShaders[MESA_SHADER_VERTEX]->NumUniformBlocks) {
                 // If there is no UBO data to pull from, the shader is using a default uniform, which
-                // will not work in XGL.  We need a binding slot to pull from.
-                intel_log(gpu, XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, XGL_NULL_HANDLE, 0, 0,
+                // will not work in VK.  We need a binding slot to pull from.
+                intel_log(gpu, VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, VK_NULL_HANDLE, 0, 0,
                         "compile error: VS reads from global, non-block uniform");
 
                 assert(0);
-                status = XGL_ERROR_BAD_PIPELINE_DATA;
+                status = VK_ERROR_BAD_PIPELINE_DATA;
                 break;
             }
 
@@ -546,9 +546,9 @@ XGL_RESULT intel_pipeline_shader_compile(struct intel_pipeline_shader *pipe_shad
 
             pipe_shader->codeSize = get_wm_program_size(brw->shader_prog);
 
-            pipe_shader->pCode = intel_alloc(gpu, pipe_shader->codeSize, 0, XGL_SYSTEM_ALLOC_INTERNAL_SHADER);
+            pipe_shader->pCode = intel_alloc(gpu, pipe_shader->codeSize, 0, VK_SYSTEM_ALLOC_INTERNAL_SHADER);
             if (!pipe_shader->pCode) {
-                status = XGL_ERROR_OUT_OF_MEMORY;
+                status = VK_ERROR_OUT_OF_MEMORY;
                 break;
             }
 
@@ -618,12 +618,12 @@ XGL_RESULT intel_pipeline_shader_compile(struct intel_pipeline_shader *pipe_shad
 
             if (bt.ubo_count != sh_prog->_LinkedShaders[MESA_SHADER_FRAGMENT]->NumUniformBlocks) {
                 // If there is no UBO data to pull from, the shader is using a default uniform, which
-                // will not work in XGL.  We need a binding slot to pull from.
-                intel_log(gpu, XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, XGL_NULL_HANDLE, 0, 0,
+                // will not work in VK.  We need a binding slot to pull from.
+                intel_log(gpu, VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, VK_NULL_HANDLE, 0, 0,
                         "compile error: FS reads from global, non-block uniform");
 
                 assert(0);
-                status = XGL_ERROR_BAD_PIPELINE_DATA;
+                status = VK_ERROR_BAD_PIPELINE_DATA;
                 break;
             }
 
@@ -687,18 +687,18 @@ XGL_RESULT intel_pipeline_shader_compile(struct intel_pipeline_shader *pipe_shad
         case GL_COMPUTE_SHADER:
         default:
             assert(0);
-            status = XGL_ERROR_BAD_PIPELINE_DATA;
+            status = VK_ERROR_BAD_PIPELINE_DATA;
         }
     } else {
         assert(0);
-        status = XGL_ERROR_BAD_PIPELINE_DATA;
+        status = VK_ERROR_BAD_PIPELINE_DATA;
     }
 
-    if (status == XGL_SUCCESS) {
+    if (status == VK_SUCCESS) {
         pipe_shader->rmap = rmap_create(gpu, chain, &bt);
         if (!pipe_shader->rmap) {
             intel_pipeline_shader_cleanup(pipe_shader, gpu);
-            status = XGL_ERROR_OUT_OF_MEMORY;
+            status = VK_ERROR_OUT_OF_MEMORY;
         }
     }
 

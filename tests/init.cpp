@@ -28,7 +28,7 @@
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
-//  XGL tests
+//  VK tests
 //
 //  Copyright (C) 2014 LunarG, Inc.
 //
@@ -51,17 +51,17 @@
 //  DEALINGS IN THE SOFTWARE.
 
 
-// Verify XGL driver initialization
+// Verify VK driver initialization
 
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdbool.h>
 #include <string.h>
 
-#include <xgl.h>
+#include <vulkan.h>
 #include "gtest-1.7.0/include/gtest/gtest.h"
 
-#include "xgltestbinding.h"
+#include "vktestbinding.h"
 #include "test_common.h"
 #include "icd-spv.h"
 
@@ -71,56 +71,56 @@ public:
     void CreateCommandBufferTest();
     void CreatePipelineTest();
     void CreateShaderTest();
-    void CreateShader(XGL_SHADER *pshader);
+    void CreateShader(VK_SHADER *pshader);
 
-    XGL_DEVICE device() {return m_device->obj();}
+    VK_DEVICE device() {return m_device->obj();}
 
 protected:
-    XGL_APPLICATION_INFO app_info;
-    XGL_INSTANCE inst;
-    XGL_PHYSICAL_GPU objs[XGL_MAX_PHYSICAL_GPUS];
+    VK_APPLICATION_INFO app_info;
+    VK_INSTANCE inst;
+    VK_PHYSICAL_GPU objs[VK_MAX_PHYSICAL_GPUS];
     uint32_t gpu_count;
 
     uint32_t m_device_id;
-    xgl_testing::Device *m_device;
-    XGL_PHYSICAL_GPU_PROPERTIES props;
-    std::vector<XGL_PHYSICAL_GPU_QUEUE_PROPERTIES> queue_props;
+    vk_testing::Device *m_device;
+    VK_PHYSICAL_GPU_PROPERTIES props;
+    std::vector<VK_PHYSICAL_GPU_QUEUE_PROPERTIES> queue_props;
     uint32_t graphics_queue_node_index;
 
     virtual void SetUp() {
-        XGL_RESULT err;
+        VK_RESULT err;
         int i;
 
-        this->app_info.sType = XGL_STRUCTURE_TYPE_APPLICATION_INFO;
+        this->app_info.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
         this->app_info.pNext = NULL;
         this->app_info.pAppName = "base";
         this->app_info.appVersion = 1;
         this->app_info.pEngineName = "unittest";
         this->app_info.engineVersion = 1;
-        this->app_info.apiVersion = XGL_API_VERSION;
-        XGL_INSTANCE_CREATE_INFO inst_info = {};
-        inst_info.sType = XGL_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
+        this->app_info.apiVersion = VK_API_VERSION;
+        VK_INSTANCE_CREATE_INFO inst_info = {};
+        inst_info.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
         inst_info.pNext = NULL;
         inst_info.pAppInfo = &app_info;
         inst_info.pAllocCb = NULL;
         inst_info.extensionCount = 0;
         inst_info.ppEnabledExtensionNames = NULL;
-        err = xglCreateInstance(&inst_info, &inst);
-        ASSERT_XGL_SUCCESS(err);
-        err = xglEnumerateGpus(inst, XGL_MAX_PHYSICAL_GPUS, &this->gpu_count,
+        err = vkCreateInstance(&inst_info, &inst);
+        ASSERT_VK_SUCCESS(err);
+        err = vkEnumerateGpus(inst, VK_MAX_PHYSICAL_GPUS, &this->gpu_count,
                                objs);
-        ASSERT_XGL_SUCCESS(err);
+        ASSERT_VK_SUCCESS(err);
         ASSERT_GE(this->gpu_count, 1) << "No GPU available";
 
         m_device_id = 0;
-        this->m_device = new xgl_testing::Device(objs[m_device_id]);
+        this->m_device = new vk_testing::Device(objs[m_device_id]);
         this->m_device->init();
 
         props = m_device->gpu().properties();
 
         queue_props = this->m_device->gpu().queue_properties();
         for (i = 0; i < queue_props.size(); i++) {
-            if (queue_props[i].queueFlags & XGL_QUEUE_GRAPHICS_BIT) {
+            if (queue_props[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) {
                 graphics_queue_node_index = i;
                 break;
             }
@@ -129,331 +129,331 @@ protected:
     }
 
     virtual void TearDown() {
-        xglDestroyInstance(inst);
+        vkDestroyInstance(inst);
     }
 };
 
-TEST(Initialization, xglEnumerateGpus) {
-    XGL_APPLICATION_INFO app_info = {};
-    XGL_INSTANCE inst;
-    XGL_PHYSICAL_GPU objs[XGL_MAX_PHYSICAL_GPUS];
+TEST(Initialization, vkEnumerateGpus) {
+    VK_APPLICATION_INFO app_info = {};
+    VK_INSTANCE inst;
+    VK_PHYSICAL_GPU objs[VK_MAX_PHYSICAL_GPUS];
     uint32_t gpu_count;
-    XGL_RESULT err;
-    xgl_testing::PhysicalGpu *gpu;
+    VK_RESULT err;
+    vk_testing::PhysicalGpu *gpu;
     char *layers[16];
     size_t layer_count;
     char layer_buf[16][256];
-    XGL_INSTANCE_CREATE_INFO inst_info = {};
-    inst_info.sType = XGL_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
+    VK_INSTANCE_CREATE_INFO inst_info = {};
+    inst_info.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
     inst_info.pNext = NULL;
     inst_info.pAppInfo = &app_info;
     inst_info.pAllocCb = NULL;
     inst_info.extensionCount = 0;
     inst_info.ppEnabledExtensionNames = NULL;
-    app_info.sType = XGL_STRUCTURE_TYPE_APPLICATION_INFO;
+    app_info.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
     app_info.pNext = NULL;
     app_info.pAppName = "base";
     app_info.appVersion = 1;
     app_info.pEngineName = "unittest";
     app_info.engineVersion = 1;
-    app_info.apiVersion = XGL_API_VERSION;
+    app_info.apiVersion = VK_API_VERSION;
 
-    err = xglCreateInstance(&inst_info, &inst);
-    ASSERT_XGL_SUCCESS(err);
-    err = xglEnumerateGpus(inst, XGL_MAX_PHYSICAL_GPUS, &gpu_count, objs);
-    ASSERT_XGL_SUCCESS(err);
+    err = vkCreateInstance(&inst_info, &inst);
+    ASSERT_VK_SUCCESS(err);
+    err = vkEnumerateGpus(inst, VK_MAX_PHYSICAL_GPUS, &gpu_count, objs);
+    ASSERT_VK_SUCCESS(err);
     ASSERT_GE(gpu_count, 1) << "No GPU available";
 
     for (int i = 0; i < 16; i++)
         layers[i] = &layer_buf[i][0];
-    err = xglEnumerateLayers(objs[0], 16, 256, &layer_count, (char * const *) layers, NULL);
-    ASSERT_XGL_SUCCESS(err);
+    err = vkEnumerateLayers(objs[0], 16, 256, &layer_count, (char * const *) layers, NULL);
+    ASSERT_VK_SUCCESS(err);
     for (int i = 0; i < layer_count; i++) {
         printf("Enumerated layers: %s ", layers[i]);
     }
     printf("\n");
 
     // TODO: Iterate over all GPUs
-    gpu = new xgl_testing::PhysicalGpu(objs[0]);
+    gpu = new vk_testing::PhysicalGpu(objs[0]);
     delete gpu;
 
     // TODO: Verify destroy functions
-    err = xglDestroyInstance(inst);
-    ASSERT_XGL_SUCCESS(err);
+    err = vkDestroyInstance(inst);
+    ASSERT_VK_SUCCESS(err);
 }
 
 TEST_F(XglTest, AllocMemory) {
-    XGL_RESULT err;
-    XGL_MEMORY_ALLOC_INFO alloc_info = {};
-    XGL_GPU_MEMORY gpu_mem;
+    VK_RESULT err;
+    VK_MEMORY_ALLOC_INFO alloc_info = {};
+    VK_GPU_MEMORY gpu_mem;
     uint8_t *pData;
 
-    alloc_info.sType = XGL_STRUCTURE_TYPE_MEMORY_ALLOC_INFO;
+    alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO;
     alloc_info.allocationSize = 1024 * 1024; // 1MB
-    alloc_info.memProps = XGL_MEMORY_PROPERTY_SHAREABLE_BIT |
-                          XGL_MEMORY_PROPERTY_CPU_VISIBLE_BIT;
-    alloc_info.memType = XGL_MEMORY_TYPE_OTHER;
+    alloc_info.memProps = VK_MEMORY_PROPERTY_SHAREABLE_BIT |
+                          VK_MEMORY_PROPERTY_CPU_VISIBLE_BIT;
+    alloc_info.memType = VK_MEMORY_TYPE_OTHER;
 
 
     // TODO: Try variety of memory priorities
-    alloc_info.memPriority = XGL_MEMORY_PRIORITY_NORMAL;
+    alloc_info.memPriority = VK_MEMORY_PRIORITY_NORMAL;
 
-    err = xglAllocMemory(device(), &alloc_info, &gpu_mem);
-    ASSERT_XGL_SUCCESS(err);
+    err = vkAllocMemory(device(), &alloc_info, &gpu_mem);
+    ASSERT_VK_SUCCESS(err);
 
-    err = xglMapMemory(gpu_mem, 0, (void **) &pData);
-    ASSERT_XGL_SUCCESS(err);
+    err = vkMapMemory(gpu_mem, 0, (void **) &pData);
+    ASSERT_VK_SUCCESS(err);
 
     memset(pData, 0x55, alloc_info.allocationSize);
     EXPECT_EQ(0x55, pData[0]) << "Memory read not same a write";
 
-    err = xglUnmapMemory(gpu_mem);
-    ASSERT_XGL_SUCCESS(err);
+    err = vkUnmapMemory(gpu_mem);
+    ASSERT_VK_SUCCESS(err);
 
-    err = xglFreeMemory(gpu_mem);
-    ASSERT_XGL_SUCCESS(err);
+    err = vkFreeMemory(gpu_mem);
+    ASSERT_VK_SUCCESS(err);
 }
 
 TEST_F(XglTest, Event) {
-    XGL_EVENT_CREATE_INFO event_info;
-    XGL_EVENT event;
-    XGL_MEMORY_REQUIREMENTS mem_req;
+    VK_EVENT_CREATE_INFO event_info;
+    VK_EVENT event;
+    VK_MEMORY_REQUIREMENTS mem_req;
     size_t data_size = sizeof(mem_req);
-    XGL_RESULT err;
+    VK_RESULT err;
 
-    //        typedef struct _XGL_EVENT_CREATE_INFO
+    //        typedef struct _VK_EVENT_CREATE_INFO
     //        {
-    //            XGL_STRUCTURE_TYPE                      sType;      // Must be XGL_STRUCTURE_TYPE_EVENT_CREATE_INFO
+    //            VK_STRUCTURE_TYPE                      sType;      // Must be VK_STRUCTURE_TYPE_EVENT_CREATE_INFO
     //            const void*                             pNext;      // Pointer to next structure
-    //            XGL_FLAGS                               flags;      // Reserved
-    //        } XGL_EVENT_CREATE_INFO;
+    //            VK_FLAGS                               flags;      // Reserved
+    //        } VK_EVENT_CREATE_INFO;
     memset(&event_info, 0, sizeof(event_info));
-    event_info.sType = XGL_STRUCTURE_TYPE_EVENT_CREATE_INFO;
+    event_info.sType = VK_STRUCTURE_TYPE_EVENT_CREATE_INFO;
 
-    err = xglCreateEvent(device(), &event_info, &event);
-    ASSERT_XGL_SUCCESS(err);
+    err = vkCreateEvent(device(), &event_info, &event);
+    ASSERT_VK_SUCCESS(err);
 
-    err = xglGetObjectInfo(event, XGL_INFO_TYPE_MEMORY_REQUIREMENTS,
+    err = vkGetObjectInfo(event, VK_INFO_TYPE_MEMORY_REQUIREMENTS,
                            &data_size, &mem_req);
-    ASSERT_XGL_SUCCESS(err);
+    ASSERT_VK_SUCCESS(err);
 
-    //        XGL_RESULT XGLAPI xglAllocMemory(
-    //            XGL_DEVICE                                  device,
-    //            const XGL_MEMORY_ALLOC_INFO*                pAllocInfo,
-    //            XGL_GPU_MEMORY*                             pMem);
-    XGL_MEMORY_ALLOC_INFO mem_info;
-    XGL_GPU_MEMORY event_mem;
+    //        VK_RESULT VKAPI vkAllocMemory(
+    //            VK_DEVICE                                  device,
+    //            const VK_MEMORY_ALLOC_INFO*                pAllocInfo,
+    //            VK_GPU_MEMORY*                             pMem);
+    VK_MEMORY_ALLOC_INFO mem_info;
+    VK_GPU_MEMORY event_mem;
 
-    ASSERT_NE(0, mem_req.size) << "xglGetObjectInfo (Event): Failed - expect events to require memory";
+    ASSERT_NE(0, mem_req.size) << "vkGetObjectInfo (Event): Failed - expect events to require memory";
 
     memset(&mem_info, 0, sizeof(mem_info));
-    mem_info.sType = XGL_STRUCTURE_TYPE_MEMORY_ALLOC_INFO;
+    mem_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO;
     mem_info.allocationSize = mem_req.size;
-    mem_info.memProps = XGL_MEMORY_PROPERTY_SHAREABLE_BIT;
-    mem_info.memPriority = XGL_MEMORY_PRIORITY_NORMAL;
-    mem_info.memType = XGL_MEMORY_TYPE_OTHER;
-    err = xglAllocMemory(device(), &mem_info, &event_mem);
-    ASSERT_XGL_SUCCESS(err);
+    mem_info.memProps = VK_MEMORY_PROPERTY_SHAREABLE_BIT;
+    mem_info.memPriority = VK_MEMORY_PRIORITY_NORMAL;
+    mem_info.memType = VK_MEMORY_TYPE_OTHER;
+    err = vkAllocMemory(device(), &mem_info, &event_mem);
+    ASSERT_VK_SUCCESS(err);
 
-    err = xglBindObjectMemory(event, 0, event_mem, 0);
-    ASSERT_XGL_SUCCESS(err);
+    err = vkBindObjectMemory(event, 0, event_mem, 0);
+    ASSERT_VK_SUCCESS(err);
 
-    err = xglResetEvent(event);
-    ASSERT_XGL_SUCCESS(err);
+    err = vkResetEvent(event);
+    ASSERT_VK_SUCCESS(err);
 
-    err = xglGetEventStatus(event);
-    ASSERT_EQ(XGL_EVENT_RESET, err);
+    err = vkGetEventStatus(event);
+    ASSERT_EQ(VK_EVENT_RESET, err);
 
-    err = xglSetEvent(event);
-    ASSERT_XGL_SUCCESS(err);
+    err = vkSetEvent(event);
+    ASSERT_VK_SUCCESS(err);
 
-    err = xglGetEventStatus(event);
-    ASSERT_EQ(XGL_EVENT_SET, err);
+    err = vkGetEventStatus(event);
+    ASSERT_EQ(VK_EVENT_SET, err);
 
     // TODO: Test actual synchronization with command buffer event.
 
     // All done with event memory, clean up
-    err = xglBindObjectMemory(event, 0, XGL_NULL_HANDLE, 0);
-    ASSERT_XGL_SUCCESS(err);
+    err = vkBindObjectMemory(event, 0, VK_NULL_HANDLE, 0);
+    ASSERT_VK_SUCCESS(err);
 
-    err = xglDestroyObject(event);
-    ASSERT_XGL_SUCCESS(err);
+    err = vkDestroyObject(event);
+    ASSERT_VK_SUCCESS(err);
 }
 
 TEST_F(XglTest, Fence) {
-    XGL_RESULT err;
-    XGL_FENCE_CREATE_INFO fence_info;
-    XGL_FENCE fence;
+    VK_RESULT err;
+    VK_FENCE_CREATE_INFO fence_info;
+    VK_FENCE fence;
 
     memset(&fence_info, 0, sizeof(fence_info));
 
-    //            typedef struct _XGL_FENCE_CREATE_INFO
+    //            typedef struct _VK_FENCE_CREATE_INFO
     //            {
-    //                XGL_STRUCTURE_TYPE                      sType;      // Must be XGL_STRUCTURE_TYPE_FENCE_CREATE_INFO
+    //                VK_STRUCTURE_TYPE                      sType;      // Must be VK_STRUCTURE_TYPE_FENCE_CREATE_INFO
     //                const void*                             pNext;      // Pointer to next structure
-    //                XGL_FLAGS                               flags;      // Reserved
-    fence_info.sType = XGL_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+    //                VK_FLAGS                               flags;      // Reserved
+    fence_info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
 
-    err = xglCreateFence(device(), &fence_info, &fence);
-    ASSERT_XGL_SUCCESS(err);
+    err = vkCreateFence(device(), &fence_info, &fence);
+    ASSERT_VK_SUCCESS(err);
 
-    err = xglGetFenceStatus(fence);
+    err = vkGetFenceStatus(fence);
     // We've not submitted this fence on a command buffer so should get
-    // XGL_ERROR_UNAVAILABLE
-    EXPECT_EQ(XGL_ERROR_UNAVAILABLE, err);
+    // VK_ERROR_UNAVAILABLE
+    EXPECT_EQ(VK_ERROR_UNAVAILABLE, err);
 
     // Test glxWaitForFences
-    //        XGL_RESULT XGLAPI xglWaitForFences(
-    //            XGL_DEVICE                                  device,
+    //        VK_RESULT VKAPI vkWaitForFences(
+    //            VK_DEVICE                                  device,
     //            uint32_t                                    fenceCount,
-    //            const XGL_FENCE*                            pFences,
+    //            const VK_FENCE*                            pFences,
     //            bool32_t                                    waitAll,
     //            uint64_t                                    timeout);
-    err = xglWaitForFences(device(), 1, &fence, XGL_TRUE, 0);
-    EXPECT_EQ(XGL_ERROR_UNAVAILABLE, err);
+    err = vkWaitForFences(device(), 1, &fence, VK_TRUE, 0);
+    EXPECT_EQ(VK_ERROR_UNAVAILABLE, err);
 
     // TODO: Attached to command buffer and test GetFenceStatus
     // TODO: Add some commands and submit the command buffer
 
-    err = xglDestroyObject(fence);
-    ASSERT_XGL_SUCCESS(err);
+    err = vkDestroyObject(fence);
+    ASSERT_VK_SUCCESS(err);
 
 }
 
 #define MAX_QUERY_SLOTS 10
 
 TEST_F(XglTest, Query) {
-    XGL_QUERY_POOL_CREATE_INFO query_info;
-    XGL_QUERY_POOL query_pool;
+    VK_QUERY_POOL_CREATE_INFO query_info;
+    VK_QUERY_POOL query_pool;
     size_t data_size;
-    XGL_MEMORY_REQUIREMENTS mem_req;
+    VK_MEMORY_REQUIREMENTS mem_req;
     size_t query_result_size;
     uint32_t *query_result_data;
-    XGL_RESULT err;
+    VK_RESULT err;
 
-    //        typedef enum _XGL_QUERY_TYPE
+    //        typedef enum _VK_QUERY_TYPE
     //        {
-    //            XGL_QUERY_OCCLUSION                                     = 0x00000000,
-    //            XGL_QUERY_PIPELINE_STATISTICS                           = 0x00000001,
+    //            VK_QUERY_OCCLUSION                                     = 0x00000000,
+    //            VK_QUERY_PIPELINE_STATISTICS                           = 0x00000001,
 
-    //            XGL_QUERY_TYPE_BEGIN_RANGE                              = XGL_QUERY_OCCLUSION,
-    //            XGL_QUERY_TYPE_END_RANGE                                = XGL_QUERY_PIPELINE_STATISTICS,
-    //            XGL_NUM_QUERY_TYPE                                      = (XGL_QUERY_TYPE_END_RANGE - XGL_QUERY_TYPE_BEGIN_RANGE + 1),
-    //            XGL_MAX_ENUM(_XGL_QUERY_TYPE)
-    //        } XGL_QUERY_TYPE;
+    //            VK_QUERY_TYPE_BEGIN_RANGE                              = VK_QUERY_OCCLUSION,
+    //            VK_QUERY_TYPE_END_RANGE                                = VK_QUERY_PIPELINE_STATISTICS,
+    //            VK_NUM_QUERY_TYPE                                      = (VK_QUERY_TYPE_END_RANGE - VK_QUERY_TYPE_BEGIN_RANGE + 1),
+    //            VK_MAX_ENUM(_VK_QUERY_TYPE)
+    //        } VK_QUERY_TYPE;
 
-    //        typedef struct _XGL_QUERY_POOL_CREATE_INFO
+    //        typedef struct _VK_QUERY_POOL_CREATE_INFO
     //        {
-    //            XGL_STRUCTURE_TYPE                      sType;      // Must be XGL_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO
+    //            VK_STRUCTURE_TYPE                      sType;      // Must be VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO
     //            const void*                             pNext;      // Pointer to next structure
-    //            XGL_QUERY_TYPE                          queryType;
+    //            VK_QUERY_TYPE                          queryType;
     //            uint32_t                                slots;
-    //        } XGL_QUERY_POOL_CREATE_INFO;
+    //        } VK_QUERY_POOL_CREATE_INFO;
 
     memset(&query_info, 0, sizeof(query_info));
-    query_info.sType = XGL_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO;
-    query_info.queryType = XGL_QUERY_OCCLUSION;
+    query_info.sType = VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO;
+    query_info.queryType = VK_QUERY_OCCLUSION;
     query_info.slots = MAX_QUERY_SLOTS;
 
-    //        XGL_RESULT XGLAPI xglCreateQueryPool(
-    //            XGL_DEVICE                                  device,
-    //            const XGL_QUERY_POOL_CREATE_INFO*           pCreateInfo,
-    //            XGL_QUERY_POOL*                             pQueryPool);
+    //        VK_RESULT VKAPI vkCreateQueryPool(
+    //            VK_DEVICE                                  device,
+    //            const VK_QUERY_POOL_CREATE_INFO*           pCreateInfo,
+    //            VK_QUERY_POOL*                             pQueryPool);
 
-    err = xglCreateQueryPool(device(), &query_info, &query_pool);
-    ASSERT_XGL_SUCCESS(err);
+    err = vkCreateQueryPool(device(), &query_info, &query_pool);
+    ASSERT_VK_SUCCESS(err);
 
     data_size = sizeof(mem_req);
-    err = xglGetObjectInfo(query_pool, XGL_INFO_TYPE_MEMORY_REQUIREMENTS,
+    err = vkGetObjectInfo(query_pool, VK_INFO_TYPE_MEMORY_REQUIREMENTS,
                            &data_size, &mem_req);
-    ASSERT_XGL_SUCCESS(err);
+    ASSERT_VK_SUCCESS(err);
     ASSERT_NE(0, data_size) << "Invalid data_size";
 
-    //        XGL_RESULT XGLAPI xglAllocMemory(
-    //            XGL_DEVICE                                  device,
-    //            const XGL_MEMORY_ALLOC_INFO*                pAllocInfo,
-    //            XGL_GPU_MEMORY*                             pMem);
-    XGL_MEMORY_ALLOC_INFO mem_info;
-    XGL_GPU_MEMORY query_mem;
+    //        VK_RESULT VKAPI vkAllocMemory(
+    //            VK_DEVICE                                  device,
+    //            const VK_MEMORY_ALLOC_INFO*                pAllocInfo,
+    //            VK_GPU_MEMORY*                             pMem);
+    VK_MEMORY_ALLOC_INFO mem_info;
+    VK_GPU_MEMORY query_mem;
 
     memset(&mem_info, 0, sizeof(mem_info));
-    mem_info.sType = XGL_STRUCTURE_TYPE_MEMORY_ALLOC_INFO;
+    mem_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO;
     // TODO: Is a simple multiple all that's needed here?
     mem_info.allocationSize = mem_req.size * MAX_QUERY_SLOTS;
-    mem_info.memProps = XGL_MEMORY_PROPERTY_SHAREABLE_BIT;
-    mem_info.memType = XGL_MEMORY_TYPE_OTHER;
-    mem_info.memPriority = XGL_MEMORY_PRIORITY_NORMAL;
+    mem_info.memProps = VK_MEMORY_PROPERTY_SHAREABLE_BIT;
+    mem_info.memType = VK_MEMORY_TYPE_OTHER;
+    mem_info.memPriority = VK_MEMORY_PRIORITY_NORMAL;
     // TODO: Should this be pinned? Or maybe a separate test with pinned.
-    err = xglAllocMemory(device(), &mem_info, &query_mem);
-    ASSERT_XGL_SUCCESS(err);
+    err = vkAllocMemory(device(), &mem_info, &query_mem);
+    ASSERT_VK_SUCCESS(err);
 
-    err = xglBindObjectMemory(query_pool, 0, query_mem, 0);
-    ASSERT_XGL_SUCCESS(err);
+    err = vkBindObjectMemory(query_pool, 0, query_mem, 0);
+    ASSERT_VK_SUCCESS(err);
 
     // TODO: Test actual synchronization with command buffer event.
     // TODO: Create command buffer
-    // TODO: xglCmdResetQueryPool
-    // TODO: xglCmdBeginQuery
+    // TODO: vkCmdResetQueryPool
+    // TODO: vkCmdBeginQuery
     // TODO: commands
-    // TOOD: xglCmdEndQuery
+    // TOOD: vkCmdEndQuery
 
-    err = xglGetQueryPoolResults(query_pool, 0, MAX_QUERY_SLOTS,
-                                 &query_result_size, XGL_NULL_HANDLE);
-    ASSERT_XGL_SUCCESS(err);
+    err = vkGetQueryPoolResults(query_pool, 0, MAX_QUERY_SLOTS,
+                                 &query_result_size, VK_NULL_HANDLE);
+    ASSERT_VK_SUCCESS(err);
 
     if (query_result_size > 0) {
         query_result_data = new uint32_t [query_result_size];
-        err = xglGetQueryPoolResults(query_pool, 0, MAX_QUERY_SLOTS,
+        err = vkGetQueryPoolResults(query_pool, 0, MAX_QUERY_SLOTS,
                                      &query_result_size, query_result_data);
-        ASSERT_XGL_SUCCESS(err);
+        ASSERT_VK_SUCCESS(err);
 
         // TODO: Test Query result data.
 
     }
 
     // All done with QueryPool memory, clean up
-    err = xglBindObjectMemory(query_pool, 0, XGL_NULL_HANDLE, 0);
-    ASSERT_XGL_SUCCESS(err);
+    err = vkBindObjectMemory(query_pool, 0, VK_NULL_HANDLE, 0);
+    ASSERT_VK_SUCCESS(err);
 
-    err = xglDestroyObject(query_pool);
-    ASSERT_XGL_SUCCESS(err);
+    err = vkDestroyObject(query_pool);
+    ASSERT_VK_SUCCESS(err);
 }
 
-void getQueue(xgl_testing::Device *device, uint32_t queue_node_index, const char *qname)
+void getQueue(vk_testing::Device *device, uint32_t queue_node_index, const char *qname)
 {
     int que_idx;
-    XGL_RESULT err;
-    XGL_QUEUE queue;
+    VK_RESULT err;
+    VK_QUEUE queue;
 
-    const XGL_PHYSICAL_GPU_QUEUE_PROPERTIES props = device->gpu().queue_properties()[queue_node_index];
+    const VK_PHYSICAL_GPU_QUEUE_PROPERTIES props = device->gpu().queue_properties()[queue_node_index];
     for (que_idx = 0; que_idx < props.queueCount; que_idx++) {
-        err = xglGetDeviceQueue(device->obj(), queue_node_index, que_idx, &queue);
-        ASSERT_EQ(XGL_SUCCESS, err) << "xglGetDeviceQueue: " << qname << " queue #" << que_idx << ": Failed with error: " << xgl_result_string(err);
+        err = vkGetDeviceQueue(device->obj(), queue_node_index, que_idx, &queue);
+        ASSERT_EQ(VK_SUCCESS, err) << "vkGetDeviceQueue: " << qname << " queue #" << que_idx << ": Failed with error: " << vk_result_string(err);
     }
 }
 
 
-void print_queue_info(xgl_testing::Device *device, uint32_t queue_node_index)
+void print_queue_info(vk_testing::Device *device, uint32_t queue_node_index)
 {
     uint32_t que_idx;
-    XGL_PHYSICAL_GPU_QUEUE_PROPERTIES queue_props;
-    XGL_PHYSICAL_GPU_PROPERTIES props;
+    VK_PHYSICAL_GPU_QUEUE_PROPERTIES queue_props;
+    VK_PHYSICAL_GPU_PROPERTIES props;
 
     props = device->gpu().properties();
     queue_props = device->gpu().queue_properties()[queue_node_index];
     ASSERT_NE(0, queue_props.queueCount) << "No Queues available at Node Index #" << queue_node_index << " GPU: " << props.gpuName;
 
-//            XGL_RESULT XGLAPI xglGetDeviceQueue(
-//                XGL_DEVICE                                  device,
+//            VK_RESULT VKAPI vkGetDeviceQueue(
+//                VK_DEVICE                                  device,
 //                uint32_t                                    queueNodeIndex,
 //                uint32_t                                    queueIndex,
-//                XGL_QUEUE*                                  pQueue);
+//                VK_QUEUE*                                  pQueue);
     /*
      * queue handles are retrieved from the device by calling
-     * xglGetDeviceQueue() with a queue node index and a requested logical
+     * vkGetDeviceQueue() with a queue node index and a requested logical
      * queue ID. The queue node index is the index into the array of
-     * XGL_PHYSICAL_GPU_QUEUE_PROPERTIES returned by GetGpuInfo. Each
-     * queue node index has different attributes specified by the XGL_QUEUE_FLAGS property.
+     * VK_PHYSICAL_GPU_QUEUE_PROPERTIES returned by GetGpuInfo. Each
+     * queue node index has different attributes specified by the VK_QUEUE_FLAGS property.
      * The logical queue ID is a sequential number starting from zero
      * and referencing up to the number of queues supported of that node index
      * at device creation.
@@ -461,23 +461,23 @@ void print_queue_info(xgl_testing::Device *device, uint32_t queue_node_index)
 
     for (que_idx = 0; que_idx < queue_props.queueCount; que_idx++) {
 
-//                typedef enum _XGL_QUEUE_FLAGS
+//                typedef enum _VK_QUEUE_FLAGS
 //                {
-//                    XGL_QUEUE_GRAPHICS_BIT                                  = 0x00000001,   // Queue supports graphics operations
-//                    XGL_QUEUE_COMPUTE_BIT                                   = 0x00000002,   // Queue supports compute operations
-//                    XGL_QUEUE_DMA_BIT                                       = 0x00000004,   // Queue supports DMA operations
-//                    XGL_QUEUE_EXTENDED_BIT                                  = 0x80000000    // Extended queue
-//                } XGL_QUEUE_FLAGS;
+//                    VK_QUEUE_GRAPHICS_BIT                                  = 0x00000001,   // Queue supports graphics operations
+//                    VK_QUEUE_COMPUTE_BIT                                   = 0x00000002,   // Queue supports compute operations
+//                    VK_QUEUE_DMA_BIT                                       = 0x00000004,   // Queue supports DMA operations
+//                    VK_QUEUE_EXTENDED_BIT                                  = 0x80000000    // Extended queue
+//                } VK_QUEUE_FLAGS;
 
-        if (queue_props.queueFlags & XGL_QUEUE_GRAPHICS_BIT) {
+        if (queue_props.queueFlags & VK_QUEUE_GRAPHICS_BIT) {
             getQueue(device, queue_node_index, "Graphics");
         }
 
-        if (queue_props.queueFlags & XGL_QUEUE_COMPUTE_BIT) {
+        if (queue_props.queueFlags & VK_QUEUE_COMPUTE_BIT) {
             getQueue(device, queue_node_index, "Compute");
         }
 
-        if (queue_props.queueFlags & XGL_QUEUE_DMA_BIT) {
+        if (queue_props.queueFlags & VK_QUEUE_DMA_BIT) {
             getQueue(device, queue_node_index, "DMA");
         }
 
@@ -504,12 +504,12 @@ TEST_F(XglTest, Queue)
 
 void XglTest::CreateImageTest()
 {
-    XGL_RESULT err;
-    XGL_IMAGE image;
+    VK_RESULT err;
+    VK_IMAGE image;
     uint32_t w, h, mipCount;
     size_t size;
-    XGL_FORMAT fmt;
-    XGL_FORMAT_PROPERTIES image_fmt;
+    VK_FORMAT fmt;
+    VK_FORMAT_PROPERTIES image_fmt;
     size_t data_size;
 
     w =512;
@@ -525,11 +525,11 @@ void XglTest::CreateImageTest()
         mipCount++;
     }
 
-    fmt = XGL_FMT_R8G8B8A8_UINT;
+    fmt = VK_FMT_R8G8B8A8_UINT;
     // TODO: Pick known good format rather than just expect common format
     /*
      * XXX: What should happen if given NULL HANDLE for the pData argument?
-     * We're not requesting XGL_INFO_TYPE_MEMORY_REQUIREMENTS so there is
+     * We're not requesting VK_INFO_TYPE_MEMORY_REQUIREMENTS so there is
      * an expectation that pData is a valid pointer.
      * However, why include a returned size value? That implies that the
      * amount of data may vary and that doesn't work well for using a
@@ -537,30 +537,30 @@ void XglTest::CreateImageTest()
      */
 
     size = sizeof(image_fmt);
-    err = xglGetFormatInfo(device(), fmt,
-                           XGL_INFO_TYPE_FORMAT_PROPERTIES,
+    err = vkGetFormatInfo(device(), fmt,
+                           VK_INFO_TYPE_FORMAT_PROPERTIES,
                            &size, &image_fmt);
-    ASSERT_XGL_SUCCESS(err);
+    ASSERT_VK_SUCCESS(err);
 
-//    typedef struct _XGL_IMAGE_CREATE_INFO
+//    typedef struct _VK_IMAGE_CREATE_INFO
 //    {
-//        XGL_STRUCTURE_TYPE                      sType;                      // Must be XGL_STRUCTURE_TYPE_IMAGE_CREATE_INFO
+//        VK_STRUCTURE_TYPE                      sType;                      // Must be VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO
 //        const void*                             pNext;                      // Pointer to next structure.
-//        XGL_IMAGE_TYPE                          imageType;
-//        XGL_FORMAT                              format;
-//        XGL_EXTENT3D                            extent;
+//        VK_IMAGE_TYPE                          imageType;
+//        VK_FORMAT                              format;
+//        VK_EXTENT3D                            extent;
 //        uint32_t                                mipLevels;
 //        uint32_t                                arraySize;
 //        uint32_t                                samples;
-//        XGL_IMAGE_TILING                        tiling;
-//        XGL_FLAGS                               usage;                      // XGL_IMAGE_USAGE_FLAGS
-//        XGL_FLAGS                               flags;                      // XGL_IMAGE_CREATE_FLAGS
-//    } XGL_IMAGE_CREATE_INFO;
+//        VK_IMAGE_TILING                        tiling;
+//        VK_FLAGS                               usage;                      // VK_IMAGE_USAGE_FLAGS
+//        VK_FLAGS                               flags;                      // VK_IMAGE_CREATE_FLAGS
+//    } VK_IMAGE_CREATE_INFO;
 
 
-    XGL_IMAGE_CREATE_INFO imageCreateInfo = {};
-    imageCreateInfo.sType = XGL_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
-    imageCreateInfo.imageType = XGL_IMAGE_2D;
+    VK_IMAGE_CREATE_INFO imageCreateInfo = {};
+    imageCreateInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+    imageCreateInfo.imageType = VK_IMAGE_2D;
     imageCreateInfo.format = fmt;
     imageCreateInfo.arraySize = 1;
     imageCreateInfo.extent.width = w;
@@ -568,67 +568,67 @@ void XglTest::CreateImageTest()
     imageCreateInfo.extent.depth = 1;
     imageCreateInfo.mipLevels = mipCount;
     imageCreateInfo.samples = 1;
-    imageCreateInfo.tiling = XGL_LINEAR_TILING;
+    imageCreateInfo.tiling = VK_LINEAR_TILING;
 
 // Image usage flags
-//    typedef enum _XGL_IMAGE_USAGE_FLAGS
+//    typedef enum _VK_IMAGE_USAGE_FLAGS
 //    {
-//        XGL_IMAGE_USAGE_SHADER_ACCESS_READ_BIT                  = 0x00000001,
-//        XGL_IMAGE_USAGE_SHADER_ACCESS_WRITE_BIT                 = 0x00000002,
-//        XGL_IMAGE_USAGE_COLOR_ATTACHMENT_BIT                    = 0x00000004,
-//        XGL_IMAGE_USAGE_DEPTH_STENCIL_BIT                       = 0x00000008,
-//    } XGL_IMAGE_USAGE_FLAGS;
-    imageCreateInfo.usage = XGL_IMAGE_USAGE_SHADER_ACCESS_WRITE_BIT | XGL_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+//        VK_IMAGE_USAGE_SHADER_ACCESS_READ_BIT                  = 0x00000001,
+//        VK_IMAGE_USAGE_SHADER_ACCESS_WRITE_BIT                 = 0x00000002,
+//        VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT                    = 0x00000004,
+//        VK_IMAGE_USAGE_DEPTH_STENCIL_BIT                       = 0x00000008,
+//    } VK_IMAGE_USAGE_FLAGS;
+    imageCreateInfo.usage = VK_IMAGE_USAGE_SHADER_ACCESS_WRITE_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 
-//    XGL_RESULT XGLAPI xglCreateImage(
-//        XGL_DEVICE                                  device,
-//        const XGL_IMAGE_CREATE_INFO*                pCreateInfo,
-//        XGL_IMAGE*                                  pImage);
-    err = xglCreateImage(device(), &imageCreateInfo, &image);
-    ASSERT_XGL_SUCCESS(err);
+//    VK_RESULT VKAPI vkCreateImage(
+//        VK_DEVICE                                  device,
+//        const VK_IMAGE_CREATE_INFO*                pCreateInfo,
+//        VK_IMAGE*                                  pImage);
+    err = vkCreateImage(device(), &imageCreateInfo, &image);
+    ASSERT_VK_SUCCESS(err);
 
     // Verify image resources
-//    XGL_RESULT XGLAPI xglGetImageSubresourceInfo(
-//        XGL_IMAGE                                   image,
-//        const XGL_IMAGE_SUBRESOURCE*                pSubresource,
-//        XGL_SUBRESOURCE_INFO_TYPE                   infoType,
+//    VK_RESULT VKAPI vkGetImageSubresourceInfo(
+//        VK_IMAGE                                   image,
+//        const VK_IMAGE_SUBRESOURCE*                pSubresource,
+//        VK_SUBRESOURCE_INFO_TYPE                   infoType,
 //        size_t*                                     pDataSize,
 //        void*                                       pData);
-//    typedef struct _XGL_SUBRESOURCE_LAYOUT
+//    typedef struct _VK_SUBRESOURCE_LAYOUT
 //    {
-//        XGL_GPU_SIZE                            offset;                 // Specified in bytes
-//        XGL_GPU_SIZE                            size;                   // Specified in bytes
-//        XGL_GPU_SIZE                            rowPitch;               // Specified in bytes
-//        XGL_GPU_SIZE                            depthPitch;             // Specified in bytes
-//    } XGL_SUBRESOURCE_LAYOUT;
+//        VK_GPU_SIZE                            offset;                 // Specified in bytes
+//        VK_GPU_SIZE                            size;                   // Specified in bytes
+//        VK_GPU_SIZE                            rowPitch;               // Specified in bytes
+//        VK_GPU_SIZE                            depthPitch;             // Specified in bytes
+//    } VK_SUBRESOURCE_LAYOUT;
 
-//    typedef struct _XGL_IMAGE_SUBRESOURCE
+//    typedef struct _VK_IMAGE_SUBRESOURCE
 //    {
-//        XGL_IMAGE_ASPECT                        aspect;
+//        VK_IMAGE_ASPECT                        aspect;
 //        uint32_t                                mipLevel;
 //        uint32_t                                arraySlice;
-//    } XGL_IMAGE_SUBRESOURCE;
-//    typedef enum _XGL_SUBRESOURCE_INFO_TYPE
+//    } VK_IMAGE_SUBRESOURCE;
+//    typedef enum _VK_SUBRESOURCE_INFO_TYPE
 //    {
-//        // Info type for xglGetImageSubresourceInfo()
-//        XGL_INFO_TYPE_SUBRESOURCE_LAYOUT                        = 0x00000000,
+//        // Info type for vkGetImageSubresourceInfo()
+//        VK_INFO_TYPE_SUBRESOURCE_LAYOUT                        = 0x00000000,
 
-//        XGL_MAX_ENUM(_XGL_SUBRESOURCE_INFO_TYPE)
-//    } XGL_SUBRESOURCE_INFO_TYPE;
-    XGL_IMAGE_SUBRESOURCE subresource = {};
-    subresource.aspect = XGL_IMAGE_ASPECT_COLOR;
+//        VK_MAX_ENUM(_VK_SUBRESOURCE_INFO_TYPE)
+//    } VK_SUBRESOURCE_INFO_TYPE;
+    VK_IMAGE_SUBRESOURCE subresource = {};
+    subresource.aspect = VK_IMAGE_ASPECT_COLOR;
     subresource.arraySlice = 0;
 
     _w = w;
     _h = h;
     while( ( _w > 0 ) || ( _h > 0 ) )
     {
-        XGL_SUBRESOURCE_LAYOUT layout = {};
+        VK_SUBRESOURCE_LAYOUT layout = {};
         data_size = sizeof(layout);
-        err = xglGetImageSubresourceInfo(image, &subresource, XGL_INFO_TYPE_SUBRESOURCE_LAYOUT,
+        err = vkGetImageSubresourceInfo(image, &subresource, VK_INFO_TYPE_SUBRESOURCE_LAYOUT,
                                          &data_size, &layout);
-        ASSERT_XGL_SUCCESS(err);
-        ASSERT_EQ(sizeof(XGL_SUBRESOURCE_LAYOUT), data_size) << "Invalid structure (XGL_SUBRESOURCE_LAYOUT) size";
+        ASSERT_VK_SUCCESS(err);
+        ASSERT_EQ(sizeof(VK_SUBRESOURCE_LAYOUT), data_size) << "Invalid structure (VK_SUBRESOURCE_LAYOUT) size";
 
         // TODO: 4 should be replaced with pixel size for given format
         EXPECT_LE(_w * 4, layout.rowPitch) << "Pitch does not match expected image pitch";
@@ -638,91 +638,91 @@ void XglTest::CreateImageTest()
         subresource.mipLevel++;
     }
 
-    XGL_MEMORY_ALLOC_IMAGE_INFO img_alloc = {
-        .sType = XGL_STRUCTURE_TYPE_MEMORY_ALLOC_IMAGE_INFO,
+    VK_MEMORY_ALLOC_IMAGE_INFO img_alloc = {
+        .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOC_IMAGE_INFO,
         .pNext = NULL,
 
     };
-    XGL_MEMORY_REQUIREMENTS mem_req;
-    XGL_IMAGE_MEMORY_REQUIREMENTS img_reqs;
-    size_t img_reqs_size = sizeof(XGL_IMAGE_MEMORY_REQUIREMENTS);
+    VK_MEMORY_REQUIREMENTS mem_req;
+    VK_IMAGE_MEMORY_REQUIREMENTS img_reqs;
+    size_t img_reqs_size = sizeof(VK_IMAGE_MEMORY_REQUIREMENTS);
     data_size = sizeof(mem_req);
-    err = xglGetObjectInfo(image, XGL_INFO_TYPE_MEMORY_REQUIREMENTS,
+    err = vkGetObjectInfo(image, VK_INFO_TYPE_MEMORY_REQUIREMENTS,
                            &data_size, &mem_req);
-    ASSERT_XGL_SUCCESS(err);
+    ASSERT_VK_SUCCESS(err);
     ASSERT_EQ(data_size, sizeof(mem_req));
-    ASSERT_NE(0, mem_req.size) << "xglGetObjectInfo (Event): Failed - expect images to require memory";
-    err = xglGetObjectInfo(image, XGL_INFO_TYPE_IMAGE_MEMORY_REQUIREMENTS,
+    ASSERT_NE(0, mem_req.size) << "vkGetObjectInfo (Event): Failed - expect images to require memory";
+    err = vkGetObjectInfo(image, VK_INFO_TYPE_IMAGE_MEMORY_REQUIREMENTS,
                            &img_reqs_size, &img_reqs);
-    ASSERT_XGL_SUCCESS(err);
-    ASSERT_EQ(img_reqs_size, sizeof(XGL_IMAGE_MEMORY_REQUIREMENTS));
+    ASSERT_VK_SUCCESS(err);
+    ASSERT_EQ(img_reqs_size, sizeof(VK_IMAGE_MEMORY_REQUIREMENTS));
     img_alloc.usage = img_reqs.usage;
     img_alloc.formatClass = img_reqs.formatClass;
     img_alloc.samples = img_reqs.samples;
-    //        XGL_RESULT XGLAPI xglAllocMemory(
-    //            XGL_DEVICE                                  device,
-    //            const XGL_MEMORY_ALLOC_INFO*                pAllocInfo,
-    //            XGL_GPU_MEMORY*                             pMem);
-    XGL_MEMORY_ALLOC_INFO mem_info = {};
-    XGL_GPU_MEMORY image_mem;
+    //        VK_RESULT VKAPI vkAllocMemory(
+    //            VK_DEVICE                                  device,
+    //            const VK_MEMORY_ALLOC_INFO*                pAllocInfo,
+    //            VK_GPU_MEMORY*                             pMem);
+    VK_MEMORY_ALLOC_INFO mem_info = {};
+    VK_GPU_MEMORY image_mem;
 
-    mem_info.sType = XGL_STRUCTURE_TYPE_MEMORY_ALLOC_INFO;
+    mem_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO;
     mem_info.pNext = &img_alloc;
     mem_info.allocationSize = mem_req.size;
-    mem_info.memProps = XGL_MEMORY_PROPERTY_SHAREABLE_BIT;
-    mem_info.memType = XGL_MEMORY_TYPE_IMAGE;
-    mem_info.memPriority = XGL_MEMORY_PRIORITY_NORMAL;
-    err = xglAllocMemory(device(), &mem_info, &image_mem);
-    ASSERT_XGL_SUCCESS(err);
+    mem_info.memProps = VK_MEMORY_PROPERTY_SHAREABLE_BIT;
+    mem_info.memType = VK_MEMORY_TYPE_IMAGE;
+    mem_info.memPriority = VK_MEMORY_PRIORITY_NORMAL;
+    err = vkAllocMemory(device(), &mem_info, &image_mem);
+    ASSERT_VK_SUCCESS(err);
 
-    err = xglBindObjectMemory(image, 0, image_mem, 0);
-    ASSERT_XGL_SUCCESS(err);
+    err = vkBindObjectMemory(image, 0, image_mem, 0);
+    ASSERT_VK_SUCCESS(err);
 
-//    typedef struct _XGL_IMAGE_VIEW_CREATE_INFO
+//    typedef struct _VK_IMAGE_VIEW_CREATE_INFO
 //    {
-//        XGL_STRUCTURE_TYPE                      sType;                  // Must be XGL_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO
+//        VK_STRUCTURE_TYPE                      sType;                  // Must be VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO
 //        const void*                             pNext;                  // Pointer to next structure
-//        XGL_IMAGE                               image;
-//        XGL_IMAGE_VIEW_TYPE                     viewType;
-//        XGL_FORMAT                              format;
-//        XGL_CHANNEL_MAPPING                     channels;
-//        XGL_IMAGE_SUBRESOURCE_RANGE             subresourceRange;
+//        VK_IMAGE                               image;
+//        VK_IMAGE_VIEW_TYPE                     viewType;
+//        VK_FORMAT                              format;
+//        VK_CHANNEL_MAPPING                     channels;
+//        VK_IMAGE_SUBRESOURCE_RANGE             subresourceRange;
 //        float                                   minLod;
-//    } XGL_IMAGE_VIEW_CREATE_INFO;
-    XGL_IMAGE_VIEW_CREATE_INFO viewInfo = {};
-    XGL_IMAGE_VIEW view;
-    viewInfo.sType = XGL_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+//    } VK_IMAGE_VIEW_CREATE_INFO;
+    VK_IMAGE_VIEW_CREATE_INFO viewInfo = {};
+    VK_IMAGE_VIEW view;
+    viewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
     viewInfo.image = image;
-    viewInfo.viewType = XGL_IMAGE_VIEW_2D;
+    viewInfo.viewType = VK_IMAGE_VIEW_2D;
     viewInfo.format = fmt;
 
-    viewInfo.channels.r = XGL_CHANNEL_SWIZZLE_R;
-    viewInfo.channels.g = XGL_CHANNEL_SWIZZLE_G;
-    viewInfo.channels.b = XGL_CHANNEL_SWIZZLE_B;
-    viewInfo.channels.a = XGL_CHANNEL_SWIZZLE_A;
+    viewInfo.channels.r = VK_CHANNEL_SWIZZLE_R;
+    viewInfo.channels.g = VK_CHANNEL_SWIZZLE_G;
+    viewInfo.channels.b = VK_CHANNEL_SWIZZLE_B;
+    viewInfo.channels.a = VK_CHANNEL_SWIZZLE_A;
 
     viewInfo.subresourceRange.baseArraySlice = 0;
     viewInfo.subresourceRange.arraySize = 1;
     viewInfo.subresourceRange.baseMipLevel = 0;
     viewInfo.subresourceRange.mipLevels = 1;
-    viewInfo.subresourceRange.aspect = XGL_IMAGE_ASPECT_COLOR;
+    viewInfo.subresourceRange.aspect = VK_IMAGE_ASPECT_COLOR;
 
-//    XGL_RESULT XGLAPI xglCreateImageView(
-//        XGL_DEVICE                                  device,
-//        const XGL_IMAGE_VIEW_CREATE_INFO*           pCreateInfo,
-//        XGL_IMAGE_VIEW*                             pView);
+//    VK_RESULT VKAPI vkCreateImageView(
+//        VK_DEVICE                                  device,
+//        const VK_IMAGE_VIEW_CREATE_INFO*           pCreateInfo,
+//        VK_IMAGE_VIEW*                             pView);
 
-    err = xglCreateImageView(device(), &viewInfo, &view);
-    ASSERT_XGL_SUCCESS(err) << "xglCreateImageView failed";
+    err = vkCreateImageView(device(), &viewInfo, &view);
+    ASSERT_VK_SUCCESS(err) << "vkCreateImageView failed";
 
     // TODO: Test image memory.
 
     // All done with image memory, clean up
-    ASSERT_XGL_SUCCESS(xglBindObjectMemory(image, 0, XGL_NULL_HANDLE, 0));
+    ASSERT_VK_SUCCESS(vkBindObjectMemory(image, 0, VK_NULL_HANDLE, 0));
 
-    ASSERT_XGL_SUCCESS(xglFreeMemory(image_mem));
+    ASSERT_VK_SUCCESS(vkFreeMemory(image_mem));
 
-    ASSERT_XGL_SUCCESS(xglDestroyObject(image));
+    ASSERT_VK_SUCCESS(vkDestroyObject(image));
 }
 
 TEST_F(XglTest, CreateImage) {
@@ -731,36 +731,36 @@ TEST_F(XglTest, CreateImage) {
 
 void XglTest::CreateCommandBufferTest()
 {
-    XGL_RESULT err;
-    XGL_CMD_BUFFER_CREATE_INFO info = {};
-    XGL_CMD_BUFFER cmdBuffer;
+    VK_RESULT err;
+    VK_CMD_BUFFER_CREATE_INFO info = {};
+    VK_CMD_BUFFER cmdBuffer;
 
-//    typedef struct _XGL_CMD_BUFFER_CREATE_INFO
+//    typedef struct _VK_CMD_BUFFER_CREATE_INFO
 //    {
-//        XGL_STRUCTURE_TYPE                      sType;      // Must be XGL_STRUCTURE_TYPE_CMD_BUFFER_CREATE_INFO
+//        VK_STRUCTURE_TYPE                      sType;      // Must be VK_STRUCTURE_TYPE_CMD_BUFFER_CREATE_INFO
 //        const void*                             pNext;
-//        XGL_QUEUE_TYPE                          queueType;
-//        XGL_FLAGS                               flags;
-//    } XGL_CMD_BUFFER_CREATE_INFO;
+//        VK_QUEUE_TYPE                          queueType;
+//        VK_FLAGS                               flags;
+//    } VK_CMD_BUFFER_CREATE_INFO;
 
-    info.sType = XGL_STRUCTURE_TYPE_CMD_BUFFER_CREATE_INFO;
+    info.sType = VK_STRUCTURE_TYPE_CMD_BUFFER_CREATE_INFO;
     info.queueNodeIndex = graphics_queue_node_index;
-    err = xglCreateCommandBuffer(device(), &info, &cmdBuffer);
-    ASSERT_XGL_SUCCESS(err) << "xglCreateCommandBuffer failed";
+    err = vkCreateCommandBuffer(device(), &info, &cmdBuffer);
+    ASSERT_VK_SUCCESS(err) << "vkCreateCommandBuffer failed";
 
-    ASSERT_XGL_SUCCESS(xglDestroyObject(cmdBuffer));
+    ASSERT_VK_SUCCESS(vkDestroyObject(cmdBuffer));
 }
 
 TEST_F(XglTest, TestComandBuffer) {
     CreateCommandBufferTest();
 }
 
-void XglTest::CreateShader(XGL_SHADER *pshader)
+void XglTest::CreateShader(VK_SHADER *pshader)
 {
     void *code;
     uint32_t codeSize;
     struct icd_spv_header *pSPV;
-    XGL_RESULT err;
+    VK_RESULT err;
 
     codeSize = sizeof(struct icd_spv_header) + 100;
     code = malloc(codeSize);
@@ -773,31 +773,31 @@ void XglTest::CreateShader(XGL_SHADER *pshader)
     pSPV->magic = ICD_SPV_MAGIC;
     pSPV->version = ICD_SPV_VERSION;
 
-//    typedef struct _XGL_SHADER_CREATE_INFO
+//    typedef struct _VK_SHADER_CREATE_INFO
 //    {
-//        XGL_STRUCTURE_TYPE                      sType;              // Must be XGL_STRUCTURE_TYPE_SHADER_CREATE_INFO
+//        VK_STRUCTURE_TYPE                      sType;              // Must be VK_STRUCTURE_TYPE_SHADER_CREATE_INFO
 //        const void*                             pNext;              // Pointer to next structure
 //        size_t                                  codeSize;           // Specified in bytes
 //        const void*                             pCode;
-//        XGL_FLAGS                               flags;              // Reserved
-//    } XGL_SHADER_CREATE_INFO;
+//        VK_FLAGS                               flags;              // Reserved
+//    } VK_SHADER_CREATE_INFO;
 
-    XGL_SHADER_CREATE_INFO createInfo;
-    XGL_SHADER shader;
+    VK_SHADER_CREATE_INFO createInfo;
+    VK_SHADER shader;
 
-    createInfo.sType = XGL_STRUCTURE_TYPE_SHADER_CREATE_INFO;
+    createInfo.sType = VK_STRUCTURE_TYPE_SHADER_CREATE_INFO;
     createInfo.pNext = NULL;
     createInfo.pCode = code;
     createInfo.codeSize = codeSize;
     createInfo.flags = 0;
-    err = xglCreateShader(device(), &createInfo, &shader);
-    ASSERT_XGL_SUCCESS(err);
+    err = vkCreateShader(device(), &createInfo, &shader);
+    ASSERT_VK_SUCCESS(err);
 
     *pshader = shader;
 }
 
 int main(int argc, char **argv) {
     ::testing::InitGoogleTest(&argc, argv);
-    xgl_testing::set_error_callback(test_error_callback);
+    vk_testing::set_error_callback(test_error_callback);
     return RUN_ALL_TESTS();
 }

@@ -1,5 +1,5 @@
 /*
- * XGL
+ * Vulkan
  *
  * Copyright (C) 2014 LunarG, Inc.
  *
@@ -47,20 +47,20 @@ struct intel_dynamic_vp {
 
 struct intel_dynamic_rs {
     struct intel_obj obj;
-    XGL_DYNAMIC_RS_STATE_CREATE_INFO rs_info;
+    VK_DYNAMIC_RS_STATE_CREATE_INFO rs_info;
 };
 
 struct intel_dynamic_cb {
     struct intel_obj obj;
-    XGL_DYNAMIC_CB_STATE_CREATE_INFO cb_info;
+    VK_DYNAMIC_CB_STATE_CREATE_INFO cb_info;
 };
 
 struct intel_dynamic_ds {
     struct intel_obj obj;
-    XGL_DYNAMIC_DS_STATE_CREATE_INFO ds_info;
+    VK_DYNAMIC_DS_STATE_CREATE_INFO ds_info;
 };
 
-static inline struct intel_dynamic_vp *intel_dynamic_vp(XGL_DYNAMIC_VP_STATE_OBJECT state)
+static inline struct intel_dynamic_vp *intel_dynamic_vp(VK_DYNAMIC_VP_STATE_OBJECT state)
 {
     return (struct intel_dynamic_vp *) state;
 }
@@ -70,7 +70,7 @@ static inline struct intel_dynamic_vp *intel_viewport_state_from_obj(struct inte
     return (struct intel_dynamic_vp *) obj;
 }
 
-static inline struct intel_dynamic_rs *intel_dynamic_rs(XGL_DYNAMIC_RS_STATE_OBJECT state)
+static inline struct intel_dynamic_rs *intel_dynamic_rs(VK_DYNAMIC_RS_STATE_OBJECT state)
 {
     return (struct intel_dynamic_rs *) state;
 }
@@ -80,7 +80,7 @@ static inline struct intel_dynamic_rs *intel_raster_state_from_obj(struct intel_
     return (struct intel_dynamic_rs *) obj;
 }
 
-static inline struct intel_dynamic_cb *intel_dynamic_cb(XGL_DYNAMIC_CB_STATE_OBJECT state)
+static inline struct intel_dynamic_cb *intel_dynamic_cb(VK_DYNAMIC_CB_STATE_OBJECT state)
 {
     return (struct intel_dynamic_cb *) state;
 }
@@ -90,7 +90,7 @@ static inline struct intel_dynamic_cb *intel_blend_state_from_obj(struct intel_o
     return (struct intel_dynamic_cb *) obj;
 }
 
-static inline struct intel_dynamic_ds *intel_dynamic_ds(XGL_DYNAMIC_DS_STATE_OBJECT state)
+static inline struct intel_dynamic_ds *intel_dynamic_ds(VK_DYNAMIC_DS_STATE_OBJECT state)
 {
     return (struct intel_dynamic_ds *) state;
 }
@@ -100,23 +100,23 @@ static inline struct intel_dynamic_ds *intel_ds_state_from_obj(struct intel_obj 
     return (struct intel_dynamic_ds *) obj;
 }
 
-XGL_RESULT intel_viewport_state_create(struct intel_dev *dev,
-                                       const XGL_DYNAMIC_VP_STATE_CREATE_INFO *info,
+VK_RESULT intel_viewport_state_create(struct intel_dev *dev,
+                                       const VK_DYNAMIC_VP_STATE_CREATE_INFO *info,
                                        struct intel_dynamic_vp **state_ret);
 void intel_viewport_state_destroy(struct intel_dynamic_vp *state);
 
-XGL_RESULT intel_raster_state_create(struct intel_dev *dev,
-                                     const XGL_DYNAMIC_RS_STATE_CREATE_INFO *info,
+VK_RESULT intel_raster_state_create(struct intel_dev *dev,
+                                     const VK_DYNAMIC_RS_STATE_CREATE_INFO *info,
                                      struct intel_dynamic_rs **state_ret);
 void intel_raster_state_destroy(struct intel_dynamic_rs *state);
 
-XGL_RESULT intel_blend_state_create(struct intel_dev *dev,
-                                    const XGL_DYNAMIC_CB_STATE_CREATE_INFO *info,
+VK_RESULT intel_blend_state_create(struct intel_dev *dev,
+                                    const VK_DYNAMIC_CB_STATE_CREATE_INFO *info,
                                     struct intel_dynamic_cb **state_ret);
 void intel_blend_state_destroy(struct intel_dynamic_cb *state);
 
-XGL_RESULT intel_ds_state_create(struct intel_dev *dev,
-                                 const XGL_DYNAMIC_DS_STATE_CREATE_INFO *info,
+VK_RESULT intel_ds_state_create(struct intel_dev *dev,
+                                 const VK_DYNAMIC_DS_STATE_CREATE_INFO *info,
                                  struct intel_dynamic_ds **state_ret);
 void intel_ds_state_destroy(struct intel_dynamic_ds *state);
 

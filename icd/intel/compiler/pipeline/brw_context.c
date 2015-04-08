@@ -499,7 +499,7 @@ brw_initialize_context_constants(struct brw_context *brw)
    ctx->ShaderCompilerOptions[MESA_SHADER_GEOMETRY].OptimizeForAOS = true;
 
    /* ARB_viewport_array */
-   if (brw->gen >= 7 && (ctx->API == API_OPENGL_CORE || ctx->API == API_XGL)) {
+   if (brw->gen >= 7 && (ctx->API == API_OPENGL_CORE || ctx->API == API_VK)) {
       ctx->Const.MaxViewports = GEN7_NUM_VIEWPORTS;
       ctx->Const.ViewportSubpixelBits = 0;
 

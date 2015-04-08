@@ -1,6 +1,6 @@
 # Create the nulldrv XGL DRI library
 
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DXGL_PROTOTYPES")
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DVK_PROTOTYPES")
 
 add_custom_command(OUTPUT nulldrv_gpa.c
     COMMAND ${PYTHON_CMD} ${PROJECT_SOURCE_DIR}/xgl-generate.py icd-get-proc-addr > nulldrv_gpa.c

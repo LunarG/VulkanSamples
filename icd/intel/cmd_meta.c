@@ -1,5 +1,5 @@
 /*
- * XGL
+ * Vulkan
  *
  * Copyright (C) 2014 LunarG, Inc.
  *
@@ -31,19 +31,19 @@
 #include "state.h"
 #include "cmd_priv.h"
 
-static XGL_RESULT cmd_meta_create_buf_view(struct intel_cmd *cmd,
-                                           XGL_BUFFER buf,
-                                           XGL_GPU_SIZE range,
-                                           XGL_FORMAT format,
+static VK_RESULT cmd_meta_create_buf_view(struct intel_cmd *cmd,
+                                           VK_BUFFER buf,
+                                           VK_GPU_SIZE range,
+                                           VK_FORMAT format,
                                            struct intel_buf_view **view)
 {
-    XGL_BUFFER_VIEW_CREATE_INFO info;
-    XGL_GPU_SIZE stride;
+    VK_BUFFER_VIEW_CREATE_INFO info;
+    VK_GPU_SIZE stride;
 
     memset(&info, 0, sizeof(info));
-    info.sType = XGL_STRUCTURE_TYPE_BUFFER_VIEW_CREATE_INFO;
+    info.sType = VK_STRUCTURE_TYPE_BUFFER_VIEW_CREATE_INFO;
     info.buffer = buf;
-    info.viewType = XGL_BUFFER_VIEW_TYPED;
+    info.viewType = VK_BUFFER_VIEW_TYPED;
     info.format = format;
     info.range = range;
 
@@ -60,15 +60,15 @@ static XGL_RESULT cmd_meta_create_buf_view(struct intel_cmd *cmd,
 
 static void cmd_meta_set_src_for_buf(struct intel_cmd *cmd,
                                      const struct intel_buf *buf,
-                                     XGL_FORMAT format,
+                                     VK_FORMAT format,
                                      struct intel_cmd_meta *meta)
 {
     struct intel_buf_view *view;
-    XGL_RESULT res;
+    VK_RESULT res;
 
-    res = cmd_meta_create_buf_view(cmd, (XGL_BUFFER) buf,
+    res = cmd_meta_create_buf_view(cmd, (VK_BUFFER) buf,
             buf->size, format, &view);
-    if (res != XGL_SUCCESS) {
+    if (res != VK_SUCCESS) {
         cmd_fail(cmd, res);
         return;
     }
@@ -88,15 +88,15 @@ static void cmd_meta_set_src_for_buf(struct intel_cmd *cmd,
 
 static void cmd_meta_set_dst_for_buf(struct intel_cmd *cmd,
                                      const struct intel_buf *buf,
-                                     XGL_FORMAT format,
+                                     VK_FORMAT format,
                                      struct intel_cmd_meta *meta)
 {
     struct intel_buf_view *view;
-    XGL_RESULT res;
+    VK_RESULT res;
 
-    res = cmd_meta_create_buf_view(cmd, (XGL_BUFFER) buf,
+    res = cmd_meta_create_buf_view(cmd, (VK_BUFFER) buf,
             buf->size, format, &view);
-    if (res != XGL_SUCCESS) {
+    if (res != VK_SUCCESS) {
         cmd_fail(cmd, res);
         return;
     }
@@ -116,45 +116,45 @@ static void cmd_meta_set_dst_for_buf(struct intel_cmd *cmd,
 
 static void cmd_meta_set_src_for_img(struct intel_cmd *cmd,
                                      const struct intel_img *img,
-                                     XGL_FORMAT format,
-                                     XGL_IMAGE_ASPECT aspect,
+                                     VK_FORMAT format,
+                                     VK_IMAGE_ASPECT aspect,
                                      struct intel_cmd_meta *meta)
 {
-    XGL_IMAGE_VIEW_CREATE_INFO info;
+    VK_IMAGE_VIEW_CREATE_INFO info;
     struct intel_img_view *view;
-    XGL_RESULT ret;
+    VK_RESULT ret;
 
     memset(&info, 0, sizeof(info));
-    info.sType = XGL_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-    info.image = (XGL_IMAGE) img;
+    info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+    info.image = (VK_IMAGE) img;
 
     switch (img->type) {
-    case XGL_IMAGE_1D:
-        info.viewType = XGL_IMAGE_VIEW_1D;
+    case VK_IMAGE_1D:
+        info.viewType = VK_IMAGE_VIEW_1D;
         break;
-    case XGL_IMAGE_2D:
-        info.viewType = XGL_IMAGE_VIEW_2D;
+    case VK_IMAGE_2D:
+        info.viewType = VK_IMAGE_VIEW_2D;
         break;
-    case XGL_IMAGE_3D:
-        info.viewType = XGL_IMAGE_VIEW_3D;
+    case VK_IMAGE_3D:
+        info.viewType = VK_IMAGE_VIEW_3D;
         break;
     default:
         break;
     }
 
     info.format = format;
-    info.channels.r = XGL_CHANNEL_SWIZZLE_R;
-    info.channels.g = XGL_CHANNEL_SWIZZLE_G;
-    info.channels.b = XGL_CHANNEL_SWIZZLE_B;
-    info.channels.a = XGL_CHANNEL_SWIZZLE_A;
+    info.channels.r = VK_CHANNEL_SWIZZLE_R;
+    info.channels.g = VK_CHANNEL_SWIZZLE_G;
+    info.channels.b = VK_CHANNEL_SWIZZLE_B;
+    info.channels.a = VK_CHANNEL_SWIZZLE_A;
     info.subresourceRange.aspect = aspect;
     info.subresourceRange.baseMipLevel = 0;
-    info.subresourceRange.mipLevels = XGL_LAST_MIP_OR_SLICE;
+    info.subresourceRange.mipLevels = VK_LAST_MIP_OR_SLICE;
     info.subresourceRange.baseArraySlice = 0;
-    info.subresourceRange.arraySize = XGL_LAST_MIP_OR_SLICE;
+    info.subresourceRange.arraySize = VK_LAST_MIP_OR_SLICE;
 
     ret = intel_img_view_create(cmd->dev, &info, &view);
-    if (ret != XGL_SUCCESS) {
+    if (ret != VK_SUCCESS) {
         cmd_fail(cmd, ret);
         return;
     }
@@ -236,24 +236,24 @@ static void cmd_meta_adjust_compressed_dst(struct intel_cmd *cmd,
 
 static void cmd_meta_set_dst_for_img(struct intel_cmd *cmd,
                                      const struct intel_img *img,
-                                     XGL_FORMAT format,
+                                     VK_FORMAT format,
                                      uint32_t lod, uint32_t layer,
                                      struct intel_cmd_meta *meta)
 {
-    XGL_COLOR_ATTACHMENT_VIEW_CREATE_INFO info;
+    VK_COLOR_ATTACHMENT_VIEW_CREATE_INFO info;
     struct intel_rt_view *rt;
-    XGL_RESULT ret;
+    VK_RESULT ret;
 
     memset(&info, 0, sizeof(info));
-    info.sType = XGL_STRUCTURE_TYPE_COLOR_ATTACHMENT_VIEW_CREATE_INFO;
-    info.image = (XGL_IMAGE) img;
+    info.sType = VK_STRUCTURE_TYPE_COLOR_ATTACHMENT_VIEW_CREATE_INFO;
+    info.image = (VK_IMAGE) img;
     info.format = format;
     info.mipLevel = lod;
     info.baseArraySlice = layer;
     info.arraySize = 1;
 
     ret = intel_rt_view_create(cmd->dev, &info, &rt);
-    if (ret != XGL_SUCCESS) {
+    if (ret != VK_SUCCESS) {
         cmd_fail(cmd, ret);
         return;
     }
@@ -275,16 +275,16 @@ static void cmd_meta_set_dst_for_img(struct intel_cmd *cmd,
 
 static void cmd_meta_set_src_for_writer(struct intel_cmd *cmd,
                                         enum intel_cmd_writer_type writer,
-                                        XGL_GPU_SIZE size,
-                                        XGL_FORMAT format,
+                                        VK_GPU_SIZE size,
+                                        VK_FORMAT format,
                                         struct intel_cmd_meta *meta)
 {
     struct intel_buf_view *view;
-    XGL_RESULT res;
+    VK_RESULT res;
 
-    res = cmd_meta_create_buf_view(cmd, (XGL_BUFFER) XGL_NULL_HANDLE,
+    res = cmd_meta_create_buf_view(cmd, (VK_BUFFER) VK_NULL_HANDLE,
             size, format, &view);
-    if (res != XGL_SUCCESS) {
+    if (res != VK_SUCCESS) {
         cmd_fail(cmd, res);
         return;
     }
@@ -307,19 +307,19 @@ static void cmd_meta_set_ds_view(struct intel_cmd *cmd,
                                  uint32_t lod, uint32_t layer,
                                  struct intel_cmd_meta *meta)
 {
-    XGL_DEPTH_STENCIL_VIEW_CREATE_INFO info;
+    VK_DEPTH_STENCIL_VIEW_CREATE_INFO info;
     struct intel_ds_view *ds;
-    XGL_RESULT ret;
+    VK_RESULT ret;
 
     memset(&info, 0, sizeof(info));
-    info.sType = XGL_STRUCTURE_TYPE_DEPTH_STENCIL_VIEW_CREATE_INFO;
-    info.image = (XGL_IMAGE) img;
+    info.sType = VK_STRUCTURE_TYPE_DEPTH_STENCIL_VIEW_CREATE_INFO;
+    info.image = (VK_IMAGE) img;
     info.mipLevel = lod;
     info.baseArraySlice = layer;
     info.arraySize = 1;
 
     ret = intel_ds_view_create(cmd->dev, &info, &ds);
-    if (ret != XGL_SUCCESS) {
+    if (ret != VK_SUCCESS) {
         cmd_fail(cmd, ret);
         return;
     }
@@ -328,7 +328,7 @@ static void cmd_meta_set_ds_view(struct intel_cmd *cmd,
 }
 
 static void cmd_meta_set_ds_state(struct intel_cmd *cmd,
-                                  XGL_IMAGE_ASPECT aspect,
+                                  VK_IMAGE_ASPECT aspect,
                                   uint32_t stencil_ref,
                                   struct intel_cmd_meta *meta)
 {
@@ -343,16 +343,16 @@ static enum intel_dev_meta_shader get_shader_id(const struct intel_dev *dev,
     enum intel_dev_meta_shader shader_id;
 
     switch (img->type) {
-    case XGL_IMAGE_1D:
+    case VK_IMAGE_1D:
         shader_id = (copy_array) ?
             INTEL_DEV_META_FS_COPY_1D_ARRAY : INTEL_DEV_META_FS_COPY_1D;
         break;
-    case XGL_IMAGE_2D:
+    case VK_IMAGE_2D:
         shader_id = (img->samples > 1) ? INTEL_DEV_META_FS_COPY_2D_MS :
                     (copy_array) ?  INTEL_DEV_META_FS_COPY_2D_ARRAY :
                     INTEL_DEV_META_FS_COPY_2D;
         break;
-    case XGL_IMAGE_3D:
+    case VK_IMAGE_3D:
     default:
         shader_id = INTEL_DEV_META_FS_COPY_2D_ARRAY;
         break;
@@ -362,53 +362,53 @@ static enum intel_dev_meta_shader get_shader_id(const struct intel_dev *dev,
 }
 
 static bool cmd_meta_mem_dword_aligned(const struct intel_cmd *cmd,
-                                       XGL_GPU_SIZE src_offset,
-                                       XGL_GPU_SIZE dst_offset,
-                                       XGL_GPU_SIZE size)
+                                       VK_GPU_SIZE src_offset,
+                                       VK_GPU_SIZE dst_offset,
+                                       VK_GPU_SIZE size)
 {
     return !((src_offset | dst_offset | size) & 0x3);
 }
 
-static XGL_FORMAT cmd_meta_img_raw_format(const struct intel_cmd *cmd,
-                                          XGL_FORMAT format)
+static VK_FORMAT cmd_meta_img_raw_format(const struct intel_cmd *cmd,
+                                          VK_FORMAT format)
 {
     switch (icd_format_get_size(format)) {
     case 1:
-        format = XGL_FMT_R8_UINT;
+        format = VK_FMT_R8_UINT;
         break;
     case 2:
-        format = XGL_FMT_R16_UINT;
+        format = VK_FMT_R16_UINT;
         break;
     case 4:
-        format = XGL_FMT_R32_UINT;
+        format = VK_FMT_R32_UINT;
         break;
     case 8:
-        format = XGL_FMT_R32G32_UINT;
+        format = VK_FMT_R32G32_UINT;
         break;
     case 16:
-        format = XGL_FMT_R32G32B32A32_UINT;
+        format = VK_FMT_R32G32B32A32_UINT;
         break;
     default:
         assert(!"unsupported image format for raw blit op");
-        format = XGL_FMT_UNDEFINED;
+        format = VK_FMT_UNDEFINED;
         break;
     }
 
     return format;
 }
 
-ICD_EXPORT void XGLAPI xglCmdCopyBuffer(
-    XGL_CMD_BUFFER                              cmdBuffer,
-    XGL_BUFFER                                  srcBuffer,
-    XGL_BUFFER                                  destBuffer,
+ICD_EXPORT void VKAPI vkCmdCopyBuffer(
+    VK_CMD_BUFFER                              cmdBuffer,
+    VK_BUFFER                                  srcBuffer,
+    VK_BUFFER                                  destBuffer,
     uint32_t                                    regionCount,
-    const XGL_BUFFER_COPY*                      pRegions)
+    const VK_BUFFER_COPY*                      pRegions)
 {
     struct intel_cmd *cmd = intel_cmd(cmdBuffer);
     struct intel_buf *src = intel_buf(srcBuffer);
     struct intel_buf *dst = intel_buf(destBuffer);
     struct intel_cmd_meta meta;
-    XGL_FORMAT format;
+    VK_FORMAT format;
     uint32_t i;
 
     memset(&meta, 0, sizeof(meta));
@@ -417,11 +417,11 @@ ICD_EXPORT void XGLAPI xglCmdCopyBuffer(
     meta.height = 1;
     meta.samples = 1;
 
-    format = XGL_FMT_UNDEFINED;
+    format = VK_FMT_UNDEFINED;
 
     for (i = 0; i < regionCount; i++) {
-        const XGL_BUFFER_COPY *region = &pRegions[i];
-        XGL_FORMAT fmt;
+        const VK_BUFFER_COPY *region = &pRegions[i];
+        VK_FORMAT fmt;
 
         meta.src.x = region->srcOffset;
         meta.dst.x = region->destOffset;
@@ -438,13 +438,13 @@ ICD_EXPORT void XGLAPI xglCmdCopyBuffer(
              * INTEL_DEV_META_VS_COPY_MEM is untyped but expects the stride to
              * be 16
              */
-            fmt = XGL_FMT_R32G32B32A32_UINT;
+            fmt = VK_FMT_R32G32B32A32_UINT;
         } else {
             if (cmd_gen(cmd) == INTEL_GEN(6)) {
-                intel_dev_log(cmd->dev, XGL_DBG_MSG_ERROR,
-                        XGL_VALIDATION_LEVEL_0, XGL_NULL_HANDLE, 0, 0,
-                        "unaligned xglCmdCopyBuffer unsupported");
-                cmd_fail(cmd, XGL_ERROR_UNKNOWN);
+                intel_dev_log(cmd->dev, VK_DBG_MSG_ERROR,
+                        VK_VALIDATION_LEVEL_0, VK_NULL_HANDLE, 0, 0,
+                        "unaligned vkCmdCopyBuffer unsupported");
+                cmd_fail(cmd, VK_ERROR_UNKNOWN);
                 continue;
             }
 
@@ -454,7 +454,7 @@ ICD_EXPORT void XGLAPI xglCmdCopyBuffer(
              * INTEL_DEV_META_VS_COPY_MEM_UNALIGNED is untyped but expects the
              * stride to be 4
              */
-            fmt = XGL_FMT_R8G8B8A8_UINT;
+            fmt = VK_FMT_R8G8B8A8_UINT;
         }
 
         if (format != fmt) {
@@ -468,25 +468,25 @@ ICD_EXPORT void XGLAPI xglCmdCopyBuffer(
     }
 }
 
-ICD_EXPORT void XGLAPI xglCmdCopyImage(
-    XGL_CMD_BUFFER                              cmdBuffer,
-    XGL_IMAGE                                   srcImage,
-    XGL_IMAGE_LAYOUT                            srcImageLayout,
-    XGL_IMAGE                                   destImage,
-    XGL_IMAGE_LAYOUT                            destImageLayout,
+ICD_EXPORT void VKAPI vkCmdCopyImage(
+    VK_CMD_BUFFER                              cmdBuffer,
+    VK_IMAGE                                   srcImage,
+    VK_IMAGE_LAYOUT                            srcImageLayout,
+    VK_IMAGE                                   destImage,
+    VK_IMAGE_LAYOUT                            destImageLayout,
     uint32_t                                    regionCount,
-    const XGL_IMAGE_COPY*                       pRegions)
+    const VK_IMAGE_COPY*                       pRegions)
 {
     struct intel_cmd *cmd = intel_cmd(cmdBuffer);
     struct intel_img *src = intel_img(srcImage);
     struct intel_img *dst = intel_img(destImage);
     struct intel_cmd_meta meta;
-    XGL_FORMAT raw_format;
+    VK_FORMAT raw_format;
     bool raw_copy = false;
     uint32_t i;
 
     if (src->type != dst->type) {
-        cmd_fail(cmd, XGL_ERROR_UNKNOWN);
+        cmd_fail(cmd, VK_ERROR_UNKNOWN);
         return;
     }
 
@@ -495,7 +495,7 @@ ICD_EXPORT void XGLAPI xglCmdCopyImage(
         raw_format = cmd_meta_img_raw_format(cmd, src->layout.format);
     } else if (icd_format_is_compressed(src->layout.format) ||
                icd_format_is_compressed(dst->layout.format)) {
-        cmd_fail(cmd, XGL_ERROR_UNKNOWN);
+        cmd_fail(cmd, VK_ERROR_UNKNOWN);
         return;
     }
 
@@ -504,12 +504,12 @@ ICD_EXPORT void XGLAPI xglCmdCopyImage(
 
     cmd_meta_set_src_for_img(cmd, src,
             (raw_copy) ? raw_format : src->layout.format,
-            XGL_IMAGE_ASPECT_COLOR, &meta);
+            VK_IMAGE_ASPECT_COLOR, &meta);
 
     meta.samples = dst->samples;
 
     for (i = 0; i < regionCount; i++) {
-        const XGL_IMAGE_COPY *region = &pRegions[i];
+        const VK_IMAGE_COPY *region = &pRegions[i];
         uint32_t j;
 
         meta.shader_id = get_shader_id(cmd->dev, src,
@@ -555,36 +555,36 @@ ICD_EXPORT void XGLAPI xglCmdCopyImage(
     }
 }
 
-ICD_EXPORT void XGLAPI xglCmdBlitImage(
-    XGL_CMD_BUFFER                              cmdBuffer,
-    XGL_IMAGE                                   srcImage,
-    XGL_IMAGE_LAYOUT                            srcImageLayout,
-    XGL_IMAGE                                   destImage,
-    XGL_IMAGE_LAYOUT                            destImageLayout,
+ICD_EXPORT void VKAPI vkCmdBlitImage(
+    VK_CMD_BUFFER                              cmdBuffer,
+    VK_IMAGE                                   srcImage,
+    VK_IMAGE_LAYOUT                            srcImageLayout,
+    VK_IMAGE                                   destImage,
+    VK_IMAGE_LAYOUT                            destImageLayout,
     uint32_t                                    regionCount,
-    const XGL_IMAGE_BLIT*                       pRegions)
+    const VK_IMAGE_BLIT*                       pRegions)
 {
     struct intel_cmd *cmd = intel_cmd(cmdBuffer);
 
     /*
      * TODO: Implement actual blit function.
      */
-    cmd_fail(cmd, XGL_ERROR_UNAVAILABLE);
+    cmd_fail(cmd, VK_ERROR_UNAVAILABLE);
 }
 
-ICD_EXPORT void XGLAPI xglCmdCopyBufferToImage(
-    XGL_CMD_BUFFER                              cmdBuffer,
-    XGL_BUFFER                                  srcBuffer,
-    XGL_IMAGE                                   destImage,
-    XGL_IMAGE_LAYOUT                            destImageLayout,
+ICD_EXPORT void VKAPI vkCmdCopyBufferToImage(
+    VK_CMD_BUFFER                              cmdBuffer,
+    VK_BUFFER                                  srcBuffer,
+    VK_IMAGE                                   destImage,
+    VK_IMAGE_LAYOUT                            destImageLayout,
     uint32_t                                    regionCount,
-    const XGL_BUFFER_IMAGE_COPY*                pRegions)
+    const VK_BUFFER_IMAGE_COPY*                pRegions)
 {
     struct intel_cmd *cmd = intel_cmd(cmdBuffer);
     struct intel_buf *buf = intel_buf(srcBuffer);
     struct intel_img *img = intel_img(destImage);
     struct intel_cmd_meta meta;
-    XGL_FORMAT format;
+    VK_FORMAT format;
     uint32_t block_width, i;
 
     memset(&meta, 0, sizeof(meta));
@@ -598,7 +598,7 @@ ICD_EXPORT void XGLAPI xglCmdCopyBufferToImage(
     cmd_meta_set_src_for_buf(cmd, buf, format, &meta);
 
     for (i = 0; i < regionCount; i++) {
-        const XGL_BUFFER_IMAGE_COPY *region = &pRegions[i];
+        const VK_BUFFER_IMAGE_COPY *region = &pRegions[i];
         uint32_t j;
 
         meta.src.x = region->bufferOffset / icd_format_get_size(format);
@@ -624,19 +624,19 @@ ICD_EXPORT void XGLAPI xglCmdCopyBufferToImage(
     }
 }
 
-ICD_EXPORT void XGLAPI xglCmdCopyImageToBuffer(
-    XGL_CMD_BUFFER                              cmdBuffer,
-    XGL_IMAGE                                   srcImage,
-    XGL_IMAGE_LAYOUT                            srcImageLayout,
-    XGL_BUFFER                                  destBuffer,
+ICD_EXPORT void VKAPI vkCmdCopyImageToBuffer(
+    VK_CMD_BUFFER                              cmdBuffer,
+    VK_IMAGE                                   srcImage,
+    VK_IMAGE_LAYOUT                            srcImageLayout,
+    VK_BUFFER                                  destBuffer,
     uint32_t                                    regionCount,
-    const XGL_BUFFER_IMAGE_COPY*                pRegions)
+    const VK_BUFFER_IMAGE_COPY*                pRegions)
 {
     struct intel_cmd *cmd = intel_cmd(cmdBuffer);
     struct intel_img *img = intel_img(srcImage);
     struct intel_buf *buf = intel_buf(destBuffer);
     struct intel_cmd_meta meta;
-    XGL_FORMAT img_format, buf_format;
+    VK_FORMAT img_format, buf_format;
     uint32_t block_width, i;
 
     memset(&meta, 0, sizeof(meta));
@@ -647,51 +647,51 @@ ICD_EXPORT void XGLAPI xglCmdCopyImageToBuffer(
 
     /* buf_format is ignored by hw, but we derive stride from it */
     switch (img_format) {
-    case XGL_FMT_R8_UINT:
+    case VK_FMT_R8_UINT:
         meta.shader_id = INTEL_DEV_META_VS_COPY_R8_TO_MEM;
-        buf_format = XGL_FMT_R8G8B8A8_UINT;
+        buf_format = VK_FMT_R8G8B8A8_UINT;
         break;
-    case XGL_FMT_R16_UINT:
+    case VK_FMT_R16_UINT:
         meta.shader_id = INTEL_DEV_META_VS_COPY_R16_TO_MEM;
-        buf_format = XGL_FMT_R8G8B8A8_UINT;
+        buf_format = VK_FMT_R8G8B8A8_UINT;
         break;
-    case XGL_FMT_R32_UINT:
+    case VK_FMT_R32_UINT:
         meta.shader_id = INTEL_DEV_META_VS_COPY_R32_TO_MEM;
-        buf_format = XGL_FMT_R32G32B32A32_UINT;
+        buf_format = VK_FMT_R32G32B32A32_UINT;
         break;
-    case XGL_FMT_R32G32_UINT:
+    case VK_FMT_R32G32_UINT:
         meta.shader_id = INTEL_DEV_META_VS_COPY_R32G32_TO_MEM;
-        buf_format = XGL_FMT_R32G32B32A32_UINT;
+        buf_format = VK_FMT_R32G32B32A32_UINT;
         break;
-    case XGL_FMT_R32G32B32A32_UINT:
+    case VK_FMT_R32G32B32A32_UINT:
         meta.shader_id = INTEL_DEV_META_VS_COPY_R32G32B32A32_TO_MEM;
-        buf_format = XGL_FMT_R32G32B32A32_UINT;
+        buf_format = VK_FMT_R32G32B32A32_UINT;
         break;
     default:
-        img_format = XGL_FMT_UNDEFINED;
-        buf_format = XGL_FMT_UNDEFINED;
+        img_format = VK_FMT_UNDEFINED;
+        buf_format = VK_FMT_UNDEFINED;
         break;
     }
 
-    if (img_format == XGL_FMT_UNDEFINED ||
+    if (img_format == VK_FMT_UNDEFINED ||
         (cmd_gen(cmd) == INTEL_GEN(6) &&
          icd_format_get_size(img_format) < 4)) {
-        intel_dev_log(cmd->dev, XGL_DBG_MSG_ERROR,
-                XGL_VALIDATION_LEVEL_0, XGL_NULL_HANDLE, 0, 0,
-                "xglCmdCopyImageToBuffer with bpp %d unsupported",
+        intel_dev_log(cmd->dev, VK_DBG_MSG_ERROR,
+                VK_VALIDATION_LEVEL_0, VK_NULL_HANDLE, 0, 0,
+                "vkCmdCopyImageToBuffer with bpp %d unsupported",
                 icd_format_get_size(img->layout.format));
-        cmd_fail(cmd, XGL_ERROR_UNKNOWN);
+        cmd_fail(cmd, VK_ERROR_UNKNOWN);
         return;
     }
 
     cmd_meta_set_src_for_img(cmd, img, img_format,
-            XGL_IMAGE_ASPECT_COLOR, &meta);
+            VK_IMAGE_ASPECT_COLOR, &meta);
     cmd_meta_set_dst_for_buf(cmd, buf, buf_format, &meta);
 
     meta.samples = 1;
 
     for (i = 0; i < regionCount; i++) {
-        const XGL_BUFFER_IMAGE_COPY *region = &pRegions[i];
+        const VK_BUFFER_IMAGE_COPY *region = &pRegions[i];
         uint32_t j;
 
         meta.src.lod = region->imageSubresource.mipLevel;
@@ -713,36 +713,36 @@ ICD_EXPORT void XGLAPI xglCmdCopyImageToBuffer(
     }
 }
 
-ICD_EXPORT void XGLAPI xglCmdCloneImageData(
-    XGL_CMD_BUFFER                              cmdBuffer,
-    XGL_IMAGE                                   srcImage,
-    XGL_IMAGE_LAYOUT                            srcImageLayout,
-    XGL_IMAGE                                   destImage,
-    XGL_IMAGE_LAYOUT                            destImageLayout)
+ICD_EXPORT void VKAPI vkCmdCloneImageData(
+    VK_CMD_BUFFER                              cmdBuffer,
+    VK_IMAGE                                   srcImage,
+    VK_IMAGE_LAYOUT                            srcImageLayout,
+    VK_IMAGE                                   destImage,
+    VK_IMAGE_LAYOUT                            destImageLayout)
 {
     struct intel_cmd *cmd = intel_cmd(cmdBuffer);
     struct intel_img *src = intel_img(srcImage);
     struct intel_img *dst = intel_img(destImage);
     struct intel_buf *src_buf, *dst_buf;
-    XGL_BUFFER_CREATE_INFO buf_info;
-    XGL_BUFFER_COPY buf_region;
-    XGL_RESULT res;
+    VK_BUFFER_CREATE_INFO buf_info;
+    VK_BUFFER_COPY buf_region;
+    VK_RESULT res;
 
     memset(&buf_info, 0, sizeof(buf_info));
-    buf_info.sType = XGL_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+    buf_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
     buf_info.size = src->obj.mem->size;
 
     memset(&buf_region, 0, sizeof(buf_region));
     buf_region.copySize = src->obj.mem->size;
 
     res = intel_buf_create(cmd->dev, &buf_info, &src_buf);
-    if (res != XGL_SUCCESS) {
+    if (res != VK_SUCCESS) {
         cmd_fail(cmd, res);
         return;
     }
 
     res = intel_buf_create(cmd->dev, &buf_info, &dst_buf);
-    if (res != XGL_SUCCESS) {
+    if (res != VK_SUCCESS) {
         intel_buf_destroy(src_buf);
         cmd_fail(cmd, res);
         return;
@@ -752,30 +752,30 @@ ICD_EXPORT void XGLAPI xglCmdCloneImageData(
     intel_obj_bind_mem(&dst_buf->obj, dst->obj.mem, 0);
 
     cmd_batch_flush(cmd, GEN6_PIPE_CONTROL_RENDER_CACHE_FLUSH);
-    xglCmdCopyBuffer(cmdBuffer, (XGL_BUFFER) src_buf,
-            (XGL_BUFFER) dst_buf, 1, &buf_region);
+    vkCmdCopyBuffer(cmdBuffer, (VK_BUFFER) src_buf,
+            (VK_BUFFER) dst_buf, 1, &buf_region);
 
     intel_buf_destroy(src_buf);
     intel_buf_destroy(dst_buf);
 }
 
-ICD_EXPORT void XGLAPI xglCmdUpdateBuffer(
-    XGL_CMD_BUFFER                              cmdBuffer,
-    XGL_BUFFER                                  destBuffer,
-    XGL_GPU_SIZE                                destOffset,
-    XGL_GPU_SIZE                                dataSize,
+ICD_EXPORT void VKAPI vkCmdUpdateBuffer(
+    VK_CMD_BUFFER                              cmdBuffer,
+    VK_BUFFER                                  destBuffer,
+    VK_GPU_SIZE                                destOffset,
+    VK_GPU_SIZE                                dataSize,
     const uint32_t*                             pData)
 {
     struct intel_cmd *cmd = intel_cmd(cmdBuffer);
     struct intel_buf *dst = intel_buf(destBuffer);
     struct intel_cmd_meta meta;
-    XGL_FORMAT format;
+    VK_FORMAT format;
     uint32_t *ptr;
     uint32_t offset;
 
     /* must be 4-byte aligned */
     if ((destOffset | dataSize) & 3) {
-        cmd_fail(cmd, XGL_ERROR_UNKNOWN);
+        cmd_fail(cmd, VK_ERROR_UNKNOWN);
         return;
     }
 
@@ -798,7 +798,7 @@ ICD_EXPORT void XGLAPI xglCmdUpdateBuffer(
     /*
      * INTEL_DEV_META_VS_COPY_MEM is untyped but expects the stride to be 16
      */
-    format = XGL_FMT_R32G32B32A32_UINT;
+    format = VK_FMT_R32G32B32A32_UINT;
 
     cmd_meta_set_src_for_writer(cmd, INTEL_CMD_WRITER_STATE,
             offset + dataSize, format, &meta);
@@ -807,21 +807,21 @@ ICD_EXPORT void XGLAPI xglCmdUpdateBuffer(
     cmd_draw_meta(cmd, &meta);
 }
 
-ICD_EXPORT void XGLAPI xglCmdFillBuffer(
-    XGL_CMD_BUFFER                              cmdBuffer,
-    XGL_BUFFER                                  destBuffer,
-    XGL_GPU_SIZE                                destOffset,
-    XGL_GPU_SIZE                                fillSize,
+ICD_EXPORT void VKAPI vkCmdFillBuffer(
+    VK_CMD_BUFFER                              cmdBuffer,
+    VK_BUFFER                                  destBuffer,
+    VK_GPU_SIZE                                destOffset,
+    VK_GPU_SIZE                                fillSize,
     uint32_t                                    data)
 {
     struct intel_cmd *cmd = intel_cmd(cmdBuffer);
     struct intel_buf *dst = intel_buf(destBuffer);
     struct intel_cmd_meta meta;
-    XGL_FORMAT format;
+    VK_FORMAT format;
 
     /* must be 4-byte aligned */
     if ((destOffset | fillSize) & 3) {
-        cmd_fail(cmd, XGL_ERROR_UNKNOWN);
+        cmd_fail(cmd, VK_ERROR_UNKNOWN);
         return;
     }
 
@@ -840,7 +840,7 @@ ICD_EXPORT void XGLAPI xglCmdFillBuffer(
     /*
      * INTEL_DEV_META_VS_FILL_MEM is untyped but expects the stride to be 16
      */
-    format = XGL_FMT_R32G32B32A32_UINT;
+    format = VK_FMT_R32G32B32A32_UINT;
 
     cmd_meta_set_dst_for_buf(cmd, dst, format, &meta);
 
@@ -849,9 +849,9 @@ ICD_EXPORT void XGLAPI xglCmdFillBuffer(
 
 static void cmd_meta_clear_image(struct intel_cmd *cmd,
                                  struct intel_img *img,
-                                 XGL_FORMAT format,
+                                 VK_FORMAT format,
                                  struct intel_cmd_meta *meta,
-                                 const XGL_IMAGE_SUBRESOURCE_RANGE *range)
+                                 const VK_IMAGE_SUBRESOURCE_RANGE *range)
 {
     uint32_t mip_levels, array_size;
     uint32_t i, j;
@@ -881,7 +881,7 @@ static void cmd_meta_clear_image(struct intel_cmd *cmd,
             continue;
 
         for (j = 0; j < array_size; j++) {
-            if (range->aspect == XGL_IMAGE_ASPECT_COLOR) {
+            if (range->aspect == VK_IMAGE_ASPECT_COLOR) {
                 cmd_meta_set_dst_for_img(cmd, img, format,
                         meta->dst.lod, meta->dst.layer, meta);
 
@@ -905,38 +905,38 @@ static void cmd_meta_clear_image(struct intel_cmd *cmd,
 void cmd_meta_ds_op(struct intel_cmd *cmd,
                     enum intel_cmd_meta_ds_op op,
                     struct intel_img *img,
-                    const XGL_IMAGE_SUBRESOURCE_RANGE *range)
+                    const VK_IMAGE_SUBRESOURCE_RANGE *range)
 {
     struct intel_cmd_meta meta;
 
     if (img->layout.aux != INTEL_LAYOUT_AUX_HIZ)
         return;
-    if (range->aspect != XGL_IMAGE_ASPECT_DEPTH)
+    if (range->aspect != VK_IMAGE_ASPECT_DEPTH)
         return;
 
     memset(&meta, 0, sizeof(meta));
     meta.mode = INTEL_CMD_META_DEPTH_STENCIL_RECT;
     meta.samples = img->samples;
 
-    meta.ds.aspect = XGL_IMAGE_ASPECT_DEPTH;
+    meta.ds.aspect = VK_IMAGE_ASPECT_DEPTH;
     meta.ds.op = op;
     meta.ds.optimal = true;
 
     cmd_meta_clear_image(cmd, img, img->layout.format, &meta, range);
 }
 
-ICD_EXPORT void XGLAPI xglCmdClearColorImage(
-    XGL_CMD_BUFFER                              cmdBuffer,
-    XGL_IMAGE                                   image,
-    XGL_IMAGE_LAYOUT                            imageLayout,
-    XGL_CLEAR_COLOR                             clearColor,
+ICD_EXPORT void VKAPI vkCmdClearColorImage(
+    VK_CMD_BUFFER                              cmdBuffer,
+    VK_IMAGE                                   image,
+    VK_IMAGE_LAYOUT                            imageLayout,
+    VK_CLEAR_COLOR                             clearColor,
     uint32_t                                    rangeCount,
-    const XGL_IMAGE_SUBRESOURCE_RANGE*          pRanges)
+    const VK_IMAGE_SUBRESOURCE_RANGE*          pRanges)
 {
     struct intel_cmd *cmd = intel_cmd(cmdBuffer);
     struct intel_img *img = intel_img(image);
     struct intel_cmd_meta meta;
-    XGL_FORMAT format;
+    VK_FORMAT format;
     uint32_t i;
 
     memset(&meta, 0, sizeof(meta));
@@ -961,14 +961,14 @@ ICD_EXPORT void XGLAPI xglCmdClearColorImage(
     }
 }
 
-ICD_EXPORT void XGLAPI xglCmdClearDepthStencil(
-    XGL_CMD_BUFFER                              cmdBuffer,
-    XGL_IMAGE                                   image,
-    XGL_IMAGE_LAYOUT                            imageLayout,
+ICD_EXPORT void VKAPI vkCmdClearDepthStencil(
+    VK_CMD_BUFFER                              cmdBuffer,
+    VK_IMAGE                                   image,
+    VK_IMAGE_LAYOUT                            imageLayout,
     float                                       depth,
     uint32_t                                    stencil,
     uint32_t                                    rangeCount,
-    const XGL_IMAGE_SUBRESOURCE_RANGE*          pRanges)
+    const VK_IMAGE_SUBRESOURCE_RANGE*          pRanges)
 {
     struct intel_cmd *cmd = intel_cmd(cmdBuffer);
     struct intel_img *img = intel_img(image);
@@ -984,39 +984,39 @@ ICD_EXPORT void XGLAPI xglCmdClearDepthStencil(
     meta.clear_val[0] = u_fui(depth);
     meta.clear_val[1] = stencil;
 
-    if (imageLayout == XGL_IMAGE_LAYOUT_CLEAR_OPTIMAL ||
-        imageLayout == XGL_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL ||
-        imageLayout == XGL_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL) {
+    if (imageLayout == VK_IMAGE_LAYOUT_CLEAR_OPTIMAL ||
+        imageLayout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL ||
+        imageLayout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL) {
         meta.ds.optimal = true;
     }
 
     for (i = 0; i < rangeCount; i++) {
-        const XGL_IMAGE_SUBRESOURCE_RANGE *range = &pRanges[i];
+        const VK_IMAGE_SUBRESOURCE_RANGE *range = &pRanges[i];
 
         cmd_meta_clear_image(cmd, img, img->layout.format,
                 &meta, range);
     }
 }
 
-ICD_EXPORT void XGLAPI xglCmdResolveImage(
-    XGL_CMD_BUFFER                              cmdBuffer,
-    XGL_IMAGE                                   srcImage,
-    XGL_IMAGE_LAYOUT                            srcImageLayout,
-    XGL_IMAGE                                   destImage,
-    XGL_IMAGE_LAYOUT                            destImageLayout,
+ICD_EXPORT void VKAPI vkCmdResolveImage(
+    VK_CMD_BUFFER                              cmdBuffer,
+    VK_IMAGE                                   srcImage,
+    VK_IMAGE_LAYOUT                            srcImageLayout,
+    VK_IMAGE                                   destImage,
+    VK_IMAGE_LAYOUT                            destImageLayout,
     uint32_t                                    rectCount,
-    const XGL_IMAGE_RESOLVE*                    pRects)
+    const VK_IMAGE_RESOLVE*                    pRects)
 {
     struct intel_cmd *cmd = intel_cmd(cmdBuffer);
     struct intel_img *src = intel_img(srcImage);
     struct intel_img *dst = intel_img(destImage);
     struct intel_cmd_meta meta;
-    XGL_FORMAT format;
+    VK_FORMAT format;
     uint32_t i;
 
     if (src->samples <= 1 || dst->samples > 1 ||
         src->layout.format != dst->layout.format) {
-        cmd_fail(cmd, XGL_ERROR_UNKNOWN);
+        cmd_fail(cmd, VK_ERROR_UNKNOWN);
         return;
     }
 
@@ -1042,10 +1042,10 @@ ICD_EXPORT void XGLAPI xglCmdResolveImage(
     meta.samples = 1;
 
     format = cmd_meta_img_raw_format(cmd, src->layout.format);
-    cmd_meta_set_src_for_img(cmd, src, format, XGL_IMAGE_ASPECT_COLOR, &meta);
+    cmd_meta_set_src_for_img(cmd, src, format, VK_IMAGE_ASPECT_COLOR, &meta);
 
     for (i = 0; i < rectCount; i++) {
-        const XGL_IMAGE_RESOLVE *rect = &pRects[i];
+        const VK_IMAGE_RESOLVE *rect = &pRects[i];
 
         meta.src.lod = rect->srcSubresource.mipLevel;
         meta.src.layer = rect->srcSubresource.arraySlice;

@@ -1,5 +1,5 @@
 /*
- * XGL
+ * Vulkan
  *
  * Copyright (C) 2014 LunarG, Inc.
  *
@@ -43,7 +43,7 @@
 #include "loader_platform.h"
 #include "table_ops.h"
 #include "loader.h"
-#include "xglIcd.h"
+#include "vkIcd.h"
 // The following is #included again to catch certain OS-specific functions
 // being used:
 #include "loader_platform.h"
@@ -66,12 +66,12 @@ struct layer_name_pair {
 struct loader_icd {
     const struct loader_scanned_icds *scanned_icds;
 
-    XGL_LAYER_DISPATCH_TABLE *loader_dispatch;
-    uint32_t layer_count[XGL_MAX_PHYSICAL_GPUS];
-    struct loader_layers layer_libs[XGL_MAX_PHYSICAL_GPUS][MAX_LAYER_LIBRARIES];
-    XGL_BASE_LAYER_OBJECT *wrappedGpus[XGL_MAX_PHYSICAL_GPUS];
+    VK_LAYER_DISPATCH_TABLE *loader_dispatch;
+    uint32_t layer_count[VK_MAX_PHYSICAL_GPUS];
+    struct loader_layers layer_libs[VK_MAX_PHYSICAL_GPUS][MAX_LAYER_LIBRARIES];
+    VK_BASE_LAYER_OBJECT *wrappedGpus[VK_MAX_PHYSICAL_GPUS];
     uint32_t gpu_count;
-    XGL_BASE_LAYER_OBJECT *gpus;
+    VK_BASE_LAYER_OBJECT *gpus;
 
     struct loader_icd *next;
 };
@@ -79,12 +79,12 @@ struct loader_icd {
 
 struct loader_scanned_icds {
     loader_platform_dl_handle handle;
-    xglGetProcAddrType GetProcAddr;
-    xglCreateInstanceType CreateInstance;
-    xglDestroyInstanceType DestroyInstance;
-    xglEnumerateGpusType EnumerateGpus;
-    xglGetExtensionSupportType GetExtensionSupport;
-    XGL_INSTANCE instance;
+    vkGetProcAddrType GetProcAddr;
+    vkCreateInstanceType CreateInstance;
+    vkDestroyInstanceType DestroyInstance;
+    vkEnumerateGpusType EnumerateGpus;
+    vkGetExtensionSupportType GetExtensionSupport;
+    VK_INSTANCE instance;
     struct loader_scanned_icds *next;
 };
 
@@ -166,7 +166,7 @@ static char *loader_get_registry_and_env(const char *env_var,
     size_t rtn_len;
 
     registry_str = loader_get_registry_string(HKEY_LOCAL_MACHINE,
-                                              "Software\\XGL",
+                                              "Software\\VK",
                                               registry_value);
     registry_len = (registry_str) ? strlen(registry_str) : 0;
 
@@ -203,7 +203,7 @@ static char *loader_get_registry_and_env(const char *env_var,
 #endif // WIN32
 
 
-static void loader_log(XGL_DBG_MSG_TYPE msg_type, int32_t msg_code,
+static void loader_log(VK_DBG_MSG_TYPE msg_type, int32_t msg_code,
                        const char *format, ...)
 {
     char msg[256];
@@ -269,14 +269,14 @@ static void loader_scanned_icd_add(const char *filename)
     // Used to call: dlopen(filename, RTLD_LAZY);
     handle = loader_platform_open_library(filename);
     if (!handle) {
-        loader_log(XGL_DBG_MSG_WARNING, 0, loader_platform_open_library_error(filename));
+        loader_log(VK_DBG_MSG_WARNING, 0, loader_platform_open_library_error(filename));
         return;
     }
 
 #define LOOKUP(func_ptr, func) do {                            \
-    func_ptr = (xgl ##func## Type) loader_platform_get_proc_address(handle, "xgl" #func); \
+    func_ptr = (vk ##func## Type) loader_platform_get_proc_address(handle, "vk" #func); \
     if (!func_ptr) {                                           \
-        loader_log(XGL_DBG_MSG_WARNING, 0, loader_platform_get_proc_address_error("xgl" #func)); \
+        loader_log(VK_DBG_MSG_WARNING, 0, loader_platform_get_proc_address_error("vk" #func)); \
         return;                                                \
     }                                                          \
 } while (0)
@@ -290,7 +290,7 @@ static void loader_scanned_icd_add(const char *filename)
 
     new_node = (struct loader_scanned_icds *) malloc(sizeof(struct loader_scanned_icds));
     if (!new_node) {
-        loader_log(XGL_DBG_MSG_WARNING, 0, "Out of memory can't add icd");
+        loader_log(VK_DBG_MSG_WARNING, 0, "Out of memory can't add icd");
         return;
     }
 
@@ -306,11 +306,11 @@ static void loader_scanned_icd_add(const char *filename)
 
 
 /**
- * Try to \c loader_icd_scan XGL driver(s).
+ * Try to \c loader_icd_scan VK driver(s).
  *
  * This function scans the default system path or path
- * specified by the \c LIBXGL_DRIVERS_PATH environment variable in
- * order to find loadable XGL ICDs with the name of libXGL_*.
+ * specified by the \c LIBVK_DRIVERS_PATH environment variable in
+ * order to find loadable VK ICDs with the name of libVK_*.
  *
  * \returns
  * void; but side effect is to set loader_icd_scanned to true
@@ -332,7 +332,7 @@ static void loader_icd_scan(void)
         must_free_libPaths = true;
     } else {
         must_free_libPaths = false;
-        libPaths = DEFAULT_XGL_DRIVERS_PATH;
+        libPaths = DEFAULT_VK_DRIVERS_PATH;
     }
 #else  // WIN32
     if (geteuid() == getuid()) {
@@ -340,7 +340,7 @@ static void loader_icd_scan(void)
         libPaths = getenv(DRIVER_PATH_ENV);
     }
     if (libPaths == NULL) {
-        libPaths = DEFAULT_XGL_DRIVERS_PATH;
+        libPaths = DEFAULT_VK_DRIVERS_PATH;
     }
 #endif // WIN32
 
@@ -363,18 +363,18 @@ static void loader_icd_scan(void)
        if (sysdir) {
           dent = readdir(sysdir);
           while (dent) {
-             /* Look for ICDs starting with XGL_DRIVER_LIBRARY_PREFIX and
-              * ending with XGL_LIBRARY_SUFFIX
+             /* Look for ICDs starting with VK_DRIVER_LIBRARY_PREFIX and
+              * ending with VK_LIBRARY_SUFFIX
               */
               if (!strncmp(dent->d_name,
-                          XGL_DRIVER_LIBRARY_PREFIX,
-                          XGL_DRIVER_LIBRARY_PREFIX_LEN)) {
+                          VK_DRIVER_LIBRARY_PREFIX,
+                          VK_DRIVER_LIBRARY_PREFIX_LEN)) {
                  uint32_t nlen = (uint32_t) strlen(dent->d_name);
-                 const char *suf = dent->d_name + nlen - XGL_LIBRARY_SUFFIX_LEN;
-                 if ((nlen > XGL_LIBRARY_SUFFIX_LEN) &&
+                 const char *suf = dent->d_name + nlen - VK_LIBRARY_SUFFIX_LEN;
+                 if ((nlen > VK_LIBRARY_SUFFIX_LEN) &&
                      !strncmp(suf,
-                              XGL_LIBRARY_SUFFIX,
-                              XGL_LIBRARY_SUFFIX_LEN)) {
+                              VK_LIBRARY_SUFFIX,
+                              VK_LIBRARY_SUFFIX_LEN)) {
                     snprintf(icd_library, 1024, "%s" DIRECTORY_SYMBOL "%s", p,dent->d_name);
                     loader_scanned_icd_add(icd_library);
                  }
@@ -415,7 +415,7 @@ static void layer_lib_scan(void)
         must_free_libPaths = true;
     } else {
         must_free_libPaths = false;
-        libPaths = DEFAULT_XGL_LAYERS_PATH;
+        libPaths = DEFAULT_VK_LAYERS_PATH;
     }
 #else  // WIN32
     if (geteuid() == getuid()) {
@@ -423,7 +423,7 @@ static void layer_lib_scan(void)
         libPaths = getenv(LAYERS_PATH_ENV);
     }
     if (libPaths == NULL) {
-        libPaths = DEFAULT_XGL_LAYERS_PATH;
+        libPaths = DEFAULT_VK_LAYERS_PATH;
     }
 #endif // WIN32
 
@@ -473,18 +473,18 @@ static void layer_lib_scan(void)
        if (curdir) {
           dent = readdir(curdir);
           while (dent) {
-             /* Look for layers starting with XGL_LAYER_LIBRARY_PREFIX and
-              * ending with XGL_LIBRARY_SUFFIX
+             /* Look for layers starting with VK_LAYER_LIBRARY_PREFIX and
+              * ending with VK_LIBRARY_SUFFIX
               */
               if (!strncmp(dent->d_name,
-                          XGL_LAYER_LIBRARY_PREFIX,
-                          XGL_LAYER_LIBRARY_PREFIX_LEN)) {
+                          VK_LAYER_LIBRARY_PREFIX,
+                          VK_LAYER_LIBRARY_PREFIX_LEN)) {
                  uint32_t nlen = (uint32_t) strlen(dent->d_name);
-                 const char *suf = dent->d_name + nlen - XGL_LIBRARY_SUFFIX_LEN;
-                 if ((nlen > XGL_LIBRARY_SUFFIX_LEN) &&
+                 const char *suf = dent->d_name + nlen - VK_LIBRARY_SUFFIX_LEN;
+                 if ((nlen > VK_LIBRARY_SUFFIX_LEN) &&
                      !strncmp(suf,
-                              XGL_LIBRARY_SUFFIX,
-                              XGL_LIBRARY_SUFFIX_LEN)) {
+                              VK_LIBRARY_SUFFIX,
+                              VK_LIBRARY_SUFFIX_LEN)) {
                      loader_platform_dl_handle handle;
                      snprintf(temp_str, sizeof(temp_str), "%s" DIRECTORY_SYMBOL "%s",p,dent->d_name);
                      // Used to call: dlopen(temp_str, RTLD_LAZY)
@@ -493,11 +493,11 @@ static void layer_lib_scan(void)
                          continue;
                      }
                      if (loader.scanned_layer_count == MAX_LAYER_LIBRARIES) {
-                         loader_log(XGL_DBG_MSG_ERROR, 0, "%s ignored: max layer libraries exceed", temp_str);
+                         loader_log(VK_DBG_MSG_ERROR, 0, "%s ignored: max layer libraries exceed", temp_str);
                          break;
                      }
                      if ((loader.scanned_layer_names[loader.scanned_layer_count] = malloc(strlen(temp_str) + 1)) == NULL) {
-                         loader_log(XGL_DBG_MSG_ERROR, 0, "%s ignored: out of memory", temp_str);
+                         loader_log(VK_DBG_MSG_ERROR, 0, "%s ignored: out of memory", temp_str);
                          break;
                      }
                      strcpy(loader.scanned_layer_names[loader.scanned_layer_count], temp_str);
@@ -515,15 +515,15 @@ static void layer_lib_scan(void)
     loader.layer_scanned = true;
 }
 
-static void loader_init_dispatch_table(XGL_LAYER_DISPATCH_TABLE *tab, xglGetProcAddrType fpGPA, XGL_PHYSICAL_GPU gpu)
+static void loader_init_dispatch_table(VK_LAYER_DISPATCH_TABLE *tab, vkGetProcAddrType fpGPA, VK_PHYSICAL_GPU gpu)
 {
     loader_initialize_dispatch_table(tab, fpGPA, gpu);
 
     if (tab->EnumerateLayers == NULL)
-        tab->EnumerateLayers = xglEnumerateLayers;
+        tab->EnumerateLayers = vkEnumerateLayers;
 }
 
-static struct loader_icd * loader_get_icd(const XGL_BASE_LAYER_OBJECT *gpu, uint32_t *gpu_index)
+static struct loader_icd * loader_get_icd(const VK_BASE_LAYER_OBJECT *gpu, uint32_t *gpu_index)
 {
     for (struct loader_instance *inst = loader.instances; inst; inst = inst->next) {
         for (struct loader_icd *icd = inst->icds; icd; icd = icd->next) {
@@ -567,10 +567,10 @@ static void loader_init_layer_libs(struct loader_icd *icd, uint32_t gpu_index, s
             obj->name[sizeof(obj->name) - 1] = '\0';
             // Used to call: dlopen(pLayerNames[i].lib_name, RTLD_LAZY | RTLD_DEEPBIND)
             if ((obj->lib_handle = loader_platform_open_library(pLayerNames[i].lib_name)) == NULL) {
-                loader_log(XGL_DBG_MSG_ERROR, 0, loader_platform_open_library_error(pLayerNames[i].lib_name));
+                loader_log(VK_DBG_MSG_ERROR, 0, loader_platform_open_library_error(pLayerNames[i].lib_name));
                 continue;
             } else {
-                loader_log(XGL_DBG_MSG_UNKNOWN, 0, "Inserting layer %s from library %s", pLayerNames[i].layer_name, pLayerNames[i].lib_name);
+                loader_log(VK_DBG_MSG_UNKNOWN, 0, "Inserting layer %s from library %s", pLayerNames[i].layer_name, pLayerNames[i].lib_name);
             }
             free(pLayerNames[i].layer_name);
             icd->layer_count[gpu_index]++;
@@ -578,30 +578,30 @@ static void loader_init_layer_libs(struct loader_icd *icd, uint32_t gpu_index, s
     }
 }
 
-static XGL_RESULT find_layer_extension(struct loader_icd *icd, uint32_t gpu_index, const char *pExtName, const char **lib_name)
+static VK_RESULT find_layer_extension(struct loader_icd *icd, uint32_t gpu_index, const char *pExtName, const char **lib_name)
 {
-    XGL_RESULT err;
+    VK_RESULT err;
     char *search_name;
     loader_platform_dl_handle handle;
-    xglGetExtensionSupportType fpGetExtensionSupport;
+    vkGetExtensionSupportType fpGetExtensionSupport;
 
     /*
      * The loader provides the abstraction that make layers and extensions work via
      * the currently defined extension mechanism. That is, when app queries for an extension
-     * via xglGetExtensionSupport, the loader will call both the driver as well as any layers
+     * via vkGetExtensionSupport, the loader will call both the driver as well as any layers
      * to see who implements that extension. Then, if the app enables the extension during
-     * xglCreateDevice the loader will find and load any layers that implement that extension.
+     * vkCreateDevice the loader will find and load any layers that implement that extension.
      */
 
     // TODO: What if extension is in multiple places?
 
     // TODO: Who should we ask first? Driver or layers? Do driver for now.
-    err = icd->scanned_icds[gpu_index].GetExtensionSupport((XGL_PHYSICAL_GPU) (icd->gpus[gpu_index].nextObject), pExtName);
-    if (err == XGL_SUCCESS) {
+    err = icd->scanned_icds[gpu_index].GetExtensionSupport((VK_PHYSICAL_GPU) (icd->gpus[gpu_index].nextObject), pExtName);
+    if (err == VK_SUCCESS) {
         if (lib_name) {
             *lib_name = NULL;
         }
-        return XGL_SUCCESS;
+        return VK_SUCCESS;
     }
 
     for (unsigned int j = 0; j < loader.scanned_layer_count; j++) {
@@ -610,19 +610,19 @@ static XGL_RESULT find_layer_extension(struct loader_icd *icd, uint32_t gpu_inde
         if ((handle = loader_platform_open_library(search_name)) == NULL)
             continue;
 
-        fpGetExtensionSupport = loader_platform_get_proc_address(handle, "xglGetExtensionSupport");
+        fpGetExtensionSupport = loader_platform_get_proc_address(handle, "vkGetExtensionSupport");
 
         if (fpGetExtensionSupport != NULL) {
             // Found layer's GetExtensionSupport call
-            err = fpGetExtensionSupport((XGL_PHYSICAL_GPU) (icd->gpus + gpu_index), pExtName);
+            err = fpGetExtensionSupport((VK_PHYSICAL_GPU) (icd->gpus + gpu_index), pExtName);
 
             loader_platform_close_library(handle);
 
-            if (err == XGL_SUCCESS) {
+            if (err == VK_SUCCESS) {
                 if (lib_name) {
                     *lib_name = loader.scanned_layer_names[j];
                 }
-                return XGL_SUCCESS;
+                return VK_SUCCESS;
             }
         } else {
             loader_platform_close_library(handle);
@@ -630,12 +630,12 @@ static XGL_RESULT find_layer_extension(struct loader_icd *icd, uint32_t gpu_inde
 
         // No GetExtensionSupport or GetExtensionSupport returned invalid extension
         // for the layer, so test the layer name as if it is an extension name
-        // use default layer name based on library name XGL_LAYER_LIBRARY_PREFIX<name>.XGL_LIBRARY_SUFFIX
+        // use default layer name based on library name VK_LAYER_LIBRARY_PREFIX<name>.VK_LIBRARY_SUFFIX
         char *pEnd;
         size_t siz;
 
         search_name = basename(search_name);
-        search_name += strlen(XGL_LAYER_LIBRARY_PREFIX);
+        search_name += strlen(VK_LAYER_LIBRARY_PREFIX);
         pEnd = strrchr(search_name, '.');
         siz = (int) (pEnd - search_name);
         if (siz != strlen(pExtName))
@@ -645,10 +645,10 @@ static XGL_RESULT find_layer_extension(struct loader_icd *icd, uint32_t gpu_inde
             if (lib_name) {
                 *lib_name = loader.scanned_layer_names[j];
             }
-            return XGL_SUCCESS;
+            return VK_SUCCESS;
         }
     }
-    return XGL_ERROR_INVALID_EXTENSION;
+    return VK_ERROR_INVALID_EXTENSION;
 }
 
 static uint32_t loader_get_layer_env(struct loader_icd *icd, uint32_t gpu_index, struct layer_name_pair *pLayerNames)
@@ -691,7 +691,7 @@ static uint32_t loader_get_layer_env(struct loader_icd *icd, uint32_t gpu_index,
             next++;
         }
         name = basename(p);
-        if (find_layer_extension(icd, gpu_index, name, &lib_name) != XGL_SUCCESS) {
+        if (find_layer_extension(icd, gpu_index, name, &lib_name) != VK_SUCCESS) {
             p = next;
             continue;
         }
@@ -714,7 +714,7 @@ static uint32_t loader_get_layer_env(struct loader_icd *icd, uint32_t gpu_index,
     return count;
 }
 
-static uint32_t loader_get_layer_libs(struct loader_icd *icd, uint32_t gpu_index, const XGL_DEVICE_CREATE_INFO* pCreateInfo, struct layer_name_pair **ppLayerNames)
+static uint32_t loader_get_layer_libs(struct loader_icd *icd, uint32_t gpu_index, const VK_DEVICE_CREATE_INFO* pCreateInfo, struct layer_name_pair **ppLayerNames)
 {
     static struct layer_name_pair layerNames[MAX_LAYER_LIBRARIES];
     const char *lib_name = NULL;
@@ -727,7 +727,7 @@ static uint32_t loader_get_layer_libs(struct loader_icd *icd, uint32_t gpu_index
     for (uint32_t i = 0; i < pCreateInfo->extensionCount; i++) {
         const char *pExtName = pCreateInfo->ppEnabledExtensionNames[i];
 
-        if (find_layer_extension(icd, gpu_index, pExtName, &lib_name) == XGL_SUCCESS) {
+        if (find_layer_extension(icd, gpu_index, pExtName, &lib_name) == VK_SUCCESS) {
             uint32_t len;
 
             /*
@@ -788,31 +788,31 @@ static void loader_deactivate_layer(const struct loader_instance *instance)
     }
 }
 
-extern uint32_t loader_activate_layers(XGL_PHYSICAL_GPU gpu, const XGL_DEVICE_CREATE_INFO* pCreateInfo)
+extern uint32_t loader_activate_layers(VK_PHYSICAL_GPU gpu, const VK_DEVICE_CREATE_INFO* pCreateInfo)
 {
     uint32_t gpu_index;
     uint32_t count;
     struct layer_name_pair *pLayerNames;
-    struct loader_icd *icd = loader_get_icd((const XGL_BASE_LAYER_OBJECT *) gpu, &gpu_index);
+    struct loader_icd *icd = loader_get_icd((const VK_BASE_LAYER_OBJECT *) gpu, &gpu_index);
 
     if (!icd)
         return 0;
-    assert(gpu_index < XGL_MAX_PHYSICAL_GPUS);
+    assert(gpu_index < VK_MAX_PHYSICAL_GPUS);
 
     /* activate any layer libraries */
     if (!loader_layers_activated(icd, gpu_index)) {
-        XGL_BASE_LAYER_OBJECT *gpuObj = (XGL_BASE_LAYER_OBJECT *) gpu;
-        XGL_BASE_LAYER_OBJECT *nextGpuObj, *baseObj = gpuObj->baseObject;
-        xglGetProcAddrType nextGPA = xglGetProcAddr;
+        VK_BASE_LAYER_OBJECT *gpuObj = (VK_BASE_LAYER_OBJECT *) gpu;
+        VK_BASE_LAYER_OBJECT *nextGpuObj, *baseObj = gpuObj->baseObject;
+        vkGetProcAddrType nextGPA = vkGetProcAddr;
 
         count = loader_get_layer_libs(icd, gpu_index, pCreateInfo, &pLayerNames);
         if (!count)
             return 0;
         loader_init_layer_libs(icd, gpu_index, pLayerNames, count);
 
-        icd->wrappedGpus[gpu_index] = malloc(sizeof(XGL_BASE_LAYER_OBJECT) * icd->layer_count[gpu_index]);
+        icd->wrappedGpus[gpu_index] = malloc(sizeof(VK_BASE_LAYER_OBJECT) * icd->layer_count[gpu_index]);
         if (! icd->wrappedGpus[gpu_index])
-                loader_log(XGL_DBG_MSG_ERROR, 0, "Failed to malloc Gpu objects for layer");
+                loader_log(VK_DBG_MSG_ERROR, 0, "Failed to malloc Gpu objects for layer");
         for (int32_t i = icd->layer_count[gpu_index] - 1; i >= 0; i--) {
             nextGpuObj = (icd->wrappedGpus[gpu_index] + i);
             nextGpuObj->pGPA = nextGPA;
@@ -822,18 +822,18 @@ extern uint32_t loader_activate_layers(XGL_PHYSICAL_GPU gpu, const XGL_DEVICE_CR
 
             char funcStr[256];
             snprintf(funcStr, 256, "%sGetProcAddr",icd->layer_libs[gpu_index][i].name);
-            if ((nextGPA = (xglGetProcAddrType) loader_platform_get_proc_address(icd->layer_libs[gpu_index][i].lib_handle, funcStr)) == NULL)
-                nextGPA = (xglGetProcAddrType) loader_platform_get_proc_address(icd->layer_libs[gpu_index][i].lib_handle, "xglGetProcAddr");
+            if ((nextGPA = (vkGetProcAddrType) loader_platform_get_proc_address(icd->layer_libs[gpu_index][i].lib_handle, funcStr)) == NULL)
+                nextGPA = (vkGetProcAddrType) loader_platform_get_proc_address(icd->layer_libs[gpu_index][i].lib_handle, "vkGetProcAddr");
             if (!nextGPA) {
-                loader_log(XGL_DBG_MSG_ERROR, 0, "Failed to find xglGetProcAddr in layer %s", icd->layer_libs[gpu_index][i].name);
+                loader_log(VK_DBG_MSG_ERROR, 0, "Failed to find vkGetProcAddr in layer %s", icd->layer_libs[gpu_index][i].name);
                 continue;
             }
 
             if (i == 0) {
                 loader_init_dispatch_table(icd->loader_dispatch + gpu_index, nextGPA, gpuObj);
                 //Insert the new wrapped objects into the list with loader object at head
-                ((XGL_BASE_LAYER_OBJECT *) gpu)->nextObject = gpuObj;
-                ((XGL_BASE_LAYER_OBJECT *) gpu)->pGPA = nextGPA;
+                ((VK_BASE_LAYER_OBJECT *) gpu)->nextObject = gpuObj;
+                ((VK_BASE_LAYER_OBJECT *) gpu)->pGPA = nextGPA;
                 gpuObj = icd->wrappedGpus[gpu_index] + icd->layer_count[gpu_index] - 1;
                 gpuObj->nextObject = baseObj;
                 gpuObj->pGPA = icd->scanned_icds->GetProcAddr;
@@ -846,27 +846,27 @@ extern uint32_t loader_activate_layers(XGL_PHYSICAL_GPU gpu, const XGL_DEVICE_CR
         count = loader_get_layer_libs(icd, gpu_index, pCreateInfo, &pLayerNames);
         for (uint32_t i = 0; i < count; i++) {
             if (strcmp(icd->layer_libs[gpu_index][i].name, pLayerNames[i].layer_name)) {
-                loader_log(XGL_DBG_MSG_ERROR, 0, "Layers activated != Layers requested");
+                loader_log(VK_DBG_MSG_ERROR, 0, "Layers activated != Layers requested");
                 break;
             }
         }
         if (count != icd->layer_count[gpu_index]) {
-            loader_log(XGL_DBG_MSG_ERROR, 0, "Number of Layers activated != number requested");
+            loader_log(VK_DBG_MSG_ERROR, 0, "Number of Layers activated != number requested");
         }
     }
     return icd->layer_count[gpu_index];
 }
 
-LOADER_EXPORT XGL_RESULT XGLAPI xglCreateInstance(
-        const XGL_INSTANCE_CREATE_INFO*         pCreateInfo,
-        XGL_INSTANCE*                           pInstance)
+LOADER_EXPORT VK_RESULT VKAPI vkCreateInstance(
+        const VK_INSTANCE_CREATE_INFO*         pCreateInfo,
+        VK_INSTANCE*                           pInstance)
 {
     static LOADER_PLATFORM_THREAD_ONCE_DECLARATION(once_icd);
     static LOADER_PLATFORM_THREAD_ONCE_DECLARATION(once_layer);
     struct loader_instance *ptr_instance = NULL;
     struct loader_scanned_icds *scanned_icds;
     struct loader_icd *icd;
-    XGL_RESULT res = XGL_ERROR_INITIALIZATION_FAILED;
+    VK_RESULT res = VK_ERROR_INITIALIZATION_FAILED;
 
     /* Scan/discover all ICD libraries in a single-threaded manner */
     loader_platform_thread_once(&once_icd, loader_icd_scan);
@@ -876,7 +876,7 @@ LOADER_EXPORT XGL_RESULT XGLAPI xglCreateInstance(
 
     ptr_instance = (struct loader_instance*) malloc(sizeof(struct loader_instance));
     if (ptr_instance == NULL) {
-        return XGL_ERROR_OUT_OF_MEMORY;
+        return VK_ERROR_OUT_OF_MEMORY;
     }
     memset(ptr_instance, 0, sizeof(struct loader_instance));
 
@@ -889,12 +889,12 @@ LOADER_EXPORT XGL_RESULT XGLAPI xglCreateInstance(
         if (icd) {
             res = scanned_icds->CreateInstance(pCreateInfo,
                                            &(scanned_icds->instance));
-            if (res != XGL_SUCCESS)
+            if (res != VK_SUCCESS)
             {
                 ptr_instance->icds = ptr_instance->icds->next;
                 loader_icd_destroy(icd);
                 scanned_icds->instance = NULL;
-                loader_log(XGL_DBG_MSG_WARNING, 0,
+                loader_log(VK_DBG_MSG_WARNING, 0,
                         "ICD ignored: failed to CreateInstance on device");
             }
         }
@@ -902,19 +902,19 @@ LOADER_EXPORT XGL_RESULT XGLAPI xglCreateInstance(
     }
 
     if (ptr_instance->icds == NULL) {
-        return XGL_ERROR_INCOMPATIBLE_DRIVER;
+        return VK_ERROR_INCOMPATIBLE_DRIVER;
     }
 
-    *pInstance = (XGL_INSTANCE) ptr_instance;
-    return XGL_SUCCESS;
+    *pInstance = (VK_INSTANCE) ptr_instance;
+    return VK_SUCCESS;
 }
 
-LOADER_EXPORT XGL_RESULT XGLAPI xglDestroyInstance(
-        XGL_INSTANCE                                instance)
+LOADER_EXPORT VK_RESULT VKAPI vkDestroyInstance(
+        VK_INSTANCE                                instance)
 {
     struct loader_instance *ptr_instance = (struct loader_instance *) instance;
     struct loader_scanned_icds *scanned_icds;
-    XGL_RESULT res;
+    VK_RESULT res;
 
     // Remove this instance from the list of instances:
     struct loader_instance *prev = NULL;
@@ -933,7 +933,7 @@ LOADER_EXPORT XGL_RESULT XGLAPI xglDestroyInstance(
     }
     if (next  == NULL) {
         // This must be an invalid instance handle or empty list
-        return XGL_ERROR_INVALID_HANDLE;
+        return VK_ERROR_INVALID_HANDLE;
     }
 
     // cleanup any prior layer initializations
@@ -943,8 +943,8 @@ LOADER_EXPORT XGL_RESULT XGLAPI xglDestroyInstance(
     while (scanned_icds) {
         if (scanned_icds->instance)
             res = scanned_icds->DestroyInstance(scanned_icds->instance);
-        if (res != XGL_SUCCESS)
-            loader_log(XGL_DBG_MSG_WARNING, 0,
+        if (res != VK_SUCCESS)
+            loader_log(VK_DBG_MSG_WARNING, 0,
                         "ICD ignored: failed to DestroyInstance on device");
         scanned_icds->instance = NULL;
         scanned_icds = scanned_icds->next;
@@ -952,43 +952,43 @@ LOADER_EXPORT XGL_RESULT XGLAPI xglDestroyInstance(
 
     free(ptr_instance);
 
-    return XGL_SUCCESS;
+    return VK_SUCCESS;
 }
 
-LOADER_EXPORT XGL_RESULT XGLAPI xglEnumerateGpus(
+LOADER_EXPORT VK_RESULT VKAPI vkEnumerateGpus(
 
-        XGL_INSTANCE                                instance,
+        VK_INSTANCE                                instance,
         uint32_t                                    maxGpus,
         uint32_t*                                   pGpuCount,
-        XGL_PHYSICAL_GPU*                           pGpus)
+        VK_PHYSICAL_GPU*                           pGpus)
 {
     struct loader_instance *ptr_instance = (struct loader_instance *) instance;
     struct loader_icd *icd;
     uint32_t count = 0;
-    XGL_RESULT res;
+    VK_RESULT res;
 
-    //in spirit of XGL don't error check on the instance parameter
+    //in spirit of VK don't error check on the instance parameter
     icd = ptr_instance->icds;
     while (icd) {
-        XGL_PHYSICAL_GPU gpus[XGL_MAX_PHYSICAL_GPUS];
-        XGL_BASE_LAYER_OBJECT * wrapped_gpus;
-        xglGetProcAddrType get_proc_addr = icd->scanned_icds->GetProcAddr;
+        VK_PHYSICAL_GPU gpus[VK_MAX_PHYSICAL_GPUS];
+        VK_BASE_LAYER_OBJECT * wrapped_gpus;
+        vkGetProcAddrType get_proc_addr = icd->scanned_icds->GetProcAddr;
         uint32_t n, max = maxGpus - count;
 
-        if (max > XGL_MAX_PHYSICAL_GPUS) {
-            max = XGL_MAX_PHYSICAL_GPUS;
+        if (max > VK_MAX_PHYSICAL_GPUS) {
+            max = VK_MAX_PHYSICAL_GPUS;
         }
 
         res = icd->scanned_icds->EnumerateGpus(icd->scanned_icds->instance,
                                                max, &n,
                                                gpus);
-        if (res == XGL_SUCCESS && n) {
-            wrapped_gpus = (XGL_BASE_LAYER_OBJECT*) malloc(n *
-                                        sizeof(XGL_BASE_LAYER_OBJECT));
+        if (res == VK_SUCCESS && n) {
+            wrapped_gpus = (VK_BASE_LAYER_OBJECT*) malloc(n *
+                                        sizeof(VK_BASE_LAYER_OBJECT));
             icd->gpus = wrapped_gpus;
             icd->gpu_count = n;
-            icd->loader_dispatch = (XGL_LAYER_DISPATCH_TABLE *) malloc(n *
-                                        sizeof(XGL_LAYER_DISPATCH_TABLE));
+            icd->loader_dispatch = (VK_LAYER_DISPATCH_TABLE *) malloc(n *
+                                        sizeof(VK_LAYER_DISPATCH_TABLE));
             for (unsigned int i = 0; i < n; i++) {
                 (wrapped_gpus + i)->baseObject = gpus[i];
                 (wrapped_gpus + i)->pGPA = get_proc_addr;
@@ -999,13 +999,13 @@ LOADER_EXPORT XGL_RESULT XGLAPI xglEnumerateGpus(
 
                 /* Verify ICD compatibility */
                 if (!valid_loader_magic_value(gpus[i])) {
-                    loader_log(XGL_DBG_MSG_WARNING, 0,
+                    loader_log(VK_DBG_MSG_WARNING, 0,
                             "Loader: Incompatible ICD, first dword must be initialized to ICD_LOADER_MAGIC. See loader/README.md for details.\n");
                     assert(0);
                 }
 
-                const XGL_LAYER_DISPATCH_TABLE **disp;
-                disp = (const XGL_LAYER_DISPATCH_TABLE **) gpus[i];
+                const VK_LAYER_DISPATCH_TABLE **disp;
+                disp = (const VK_LAYER_DISPATCH_TABLE **) gpus[i];
                 *disp = icd->loader_dispatch + i;
             }
 
@@ -1021,16 +1021,16 @@ LOADER_EXPORT XGL_RESULT XGLAPI xglEnumerateGpus(
 
     *pGpuCount = count;
 
-    return (count > 0) ? XGL_SUCCESS : res;
+    return (count > 0) ? VK_SUCCESS : res;
 }
 
-LOADER_EXPORT void * XGLAPI xglGetProcAddr(XGL_PHYSICAL_GPU gpu, const char * pName)
+LOADER_EXPORT void * VKAPI vkGetProcAddr(VK_PHYSICAL_GPU gpu, const char * pName)
 {
     if (gpu == NULL) {
         return NULL;
     }
-    XGL_BASE_LAYER_OBJECT* gpuw = (XGL_BASE_LAYER_OBJECT *) gpu;
-    XGL_LAYER_DISPATCH_TABLE * disp_table = * (XGL_LAYER_DISPATCH_TABLE **) gpuw->baseObject;
+    VK_BASE_LAYER_OBJECT* gpuw = (VK_BASE_LAYER_OBJECT *) gpu;
+    VK_LAYER_DISPATCH_TABLE * disp_table = * (VK_LAYER_DISPATCH_TABLE **) gpuw->baseObject;
     void *addr;
 
     if (disp_table == NULL)
@@ -1046,33 +1046,33 @@ LOADER_EXPORT void * XGLAPI xglGetProcAddr(XGL_PHYSICAL_GPU gpu, const char * pN
     }
 }
 
-LOADER_EXPORT XGL_RESULT XGLAPI xglGetExtensionSupport(XGL_PHYSICAL_GPU gpu, const char *pExtName)
+LOADER_EXPORT VK_RESULT VKAPI vkGetExtensionSupport(VK_PHYSICAL_GPU gpu, const char *pExtName)
 {
     uint32_t gpu_index;
-    struct loader_icd *icd = loader_get_icd((const XGL_BASE_LAYER_OBJECT *) gpu, &gpu_index);
+    struct loader_icd *icd = loader_get_icd((const VK_BASE_LAYER_OBJECT *) gpu, &gpu_index);
 
     if (!icd)
-        return XGL_ERROR_UNAVAILABLE;
+        return VK_ERROR_UNAVAILABLE;
 
     return find_layer_extension(icd, gpu_index, pExtName, NULL);
 }
 
-LOADER_EXPORT XGL_RESULT XGLAPI xglEnumerateLayers(XGL_PHYSICAL_GPU gpu, size_t maxLayerCount, size_t maxStringSize, size_t* pOutLayerCount, char* const* pOutLayers, void* pReserved)
+LOADER_EXPORT VK_RESULT VKAPI vkEnumerateLayers(VK_PHYSICAL_GPU gpu, size_t maxLayerCount, size_t maxStringSize, size_t* pOutLayerCount, char* const* pOutLayers, void* pReserved)
 {
     uint32_t gpu_index;
     size_t count = 0;
     char *lib_name;
-    struct loader_icd *icd = loader_get_icd((const XGL_BASE_LAYER_OBJECT *) gpu, &gpu_index);
+    struct loader_icd *icd = loader_get_icd((const VK_BASE_LAYER_OBJECT *) gpu, &gpu_index);
     loader_platform_dl_handle handle;
-    xglEnumerateLayersType fpEnumerateLayers;
+    vkEnumerateLayersType fpEnumerateLayers;
     char layer_buf[16][256];
     char * layers[16];
 
     if (pOutLayerCount == NULL || pOutLayers == NULL)
-        return XGL_ERROR_INVALID_POINTER;
+        return VK_ERROR_INVALID_POINTER;
 
     if (!icd)
-        return XGL_ERROR_UNAVAILABLE;
+        return VK_ERROR_UNAVAILABLE;
 
     for (int i = 0; i < 16; i++)
          layers[i] = &layer_buf[i][0];
@@ -1082,14 +1082,14 @@ LOADER_EXPORT XGL_RESULT XGLAPI xglEnumerateLayers(XGL_PHYSICAL_GPU gpu, size_t 
         // Used to call: dlopen(*lib_name, RTLD_LAZY)
         if ((handle = loader_platform_open_library(lib_name)) == NULL)
             continue;
-        if ((fpEnumerateLayers = loader_platform_get_proc_address(handle, "xglEnumerateLayers")) == NULL) {
-            //use default layer name based on library name XGL_LAYER_LIBRARY_PREFIX<name>.XGL_LIBRARY_SUFFIX
+        if ((fpEnumerateLayers = loader_platform_get_proc_address(handle, "vkEnumerateLayers")) == NULL) {
+            //use default layer name based on library name VK_LAYER_LIBRARY_PREFIX<name>.VK_LIBRARY_SUFFIX
             char *pEnd, *cpyStr;
             size_t siz;
             loader_platform_close_library(handle);
             lib_name = basename(lib_name);
             pEnd = strrchr(lib_name, '.');
-            siz = (int) (pEnd - lib_name - strlen(XGL_LAYER_LIBRARY_PREFIX) + 1);
+            siz = (int) (pEnd - lib_name - strlen(VK_LAYER_LIBRARY_PREFIX) + 1);
             if (pEnd == NULL || siz <= 0)
                 continue;
             cpyStr = malloc(siz);
@@ -1097,7 +1097,7 @@ LOADER_EXPORT XGL_RESULT XGLAPI xglEnumerateLayers(XGL_PHYSICAL_GPU gpu, size_t 
                 free(cpyStr);
                 continue;
             }
-            strncpy(cpyStr, lib_name + strlen(XGL_LAYER_LIBRARY_PREFIX), siz);
+            strncpy(cpyStr, lib_name + strlen(VK_LAYER_LIBRARY_PREFIX), siz);
             cpyStr[siz - 1] = '\0';
             if (siz > maxStringSize)
                 siz = (int) maxStringSize;
@@ -1108,11 +1108,11 @@ LOADER_EXPORT XGL_RESULT XGLAPI xglEnumerateLayers(XGL_PHYSICAL_GPU gpu, size_t 
         } else {
             size_t cnt;
             uint32_t n;
-            XGL_RESULT res;
+            VK_RESULT res;
             n = (uint32_t) ((maxStringSize < 256) ? maxStringSize : 256);
             res = fpEnumerateLayers(NULL, 16, n, &cnt, layers, (char *) icd->gpus + gpu_index);
             loader_platform_close_library(handle);
-            if (res != XGL_SUCCESS)
+            if (res != VK_SUCCESS)
                 continue;
             if (cnt + count > maxLayerCount)
                 cnt = maxLayerCount - count;
@@ -1127,18 +1127,18 @@ LOADER_EXPORT XGL_RESULT XGLAPI xglEnumerateLayers(XGL_PHYSICAL_GPU gpu, size_t 
 
     *pOutLayerCount = count;
 
-    return XGL_SUCCESS;
+    return VK_SUCCESS;
 }
 
-LOADER_EXPORT XGL_RESULT XGLAPI xglDbgRegisterMsgCallback(XGL_INSTANCE instance, XGL_DBG_MSG_CALLBACK_FUNCTION pfnMsgCallback, void* pUserData)
+LOADER_EXPORT VK_RESULT VKAPI vkDbgRegisterMsgCallback(VK_INSTANCE instance, VK_DBG_MSG_CALLBACK_FUNCTION pfnMsgCallback, void* pUserData)
 {
     const struct loader_icd *icd;
     struct loader_instance *inst;
-    XGL_RESULT res;
+    VK_RESULT res;
     uint32_t gpu_idx;
 
-    if (instance == XGL_NULL_HANDLE)
-        return XGL_ERROR_INVALID_HANDLE;
+    if (instance == VK_NULL_HANDLE)
+        return VK_ERROR_INVALID_HANDLE;
 
     assert(loader.icds_scanned);
 
@@ -1147,19 +1147,19 @@ LOADER_EXPORT XGL_RESULT XGLAPI xglDbgRegisterMsgCallback(XGL_INSTANCE instance,
             break;
     }
 
-    if (inst == XGL_NULL_HANDLE)
-        return XGL_ERROR_INVALID_HANDLE;
+    if (inst == VK_NULL_HANDLE)
+        return VK_ERROR_INVALID_HANDLE;
 
     for (icd = inst->icds; icd; icd = icd->next) {
         for (uint32_t i = 0; i < icd->gpu_count; i++) {
             res = (icd->loader_dispatch + i)->DbgRegisterMsgCallback(icd->scanned_icds->instance,
                                                    pfnMsgCallback, pUserData);
-            if (res != XGL_SUCCESS) {
+            if (res != VK_SUCCESS) {
                 gpu_idx = i;
                 break;
             }
         }
-        if (res != XGL_SUCCESS)
+        if (res != VK_SUCCESS)
             break;
     }
 
@@ -1178,15 +1178,15 @@ LOADER_EXPORT XGL_RESULT XGLAPI xglDbgRegisterMsgCallback(XGL_INSTANCE instance,
         return res;
     }
 
-    return XGL_SUCCESS;
+    return VK_SUCCESS;
 }
 
-LOADER_EXPORT XGL_RESULT XGLAPI xglDbgUnregisterMsgCallback(XGL_INSTANCE instance, XGL_DBG_MSG_CALLBACK_FUNCTION pfnMsgCallback)
+LOADER_EXPORT VK_RESULT VKAPI vkDbgUnregisterMsgCallback(VK_INSTANCE instance, VK_DBG_MSG_CALLBACK_FUNCTION pfnMsgCallback)
 {
-    XGL_RESULT res = XGL_SUCCESS;
+    VK_RESULT res = VK_SUCCESS;
     struct loader_instance *inst;
-    if (instance == XGL_NULL_HANDLE)
-        return XGL_ERROR_INVALID_HANDLE;
+    if (instance == VK_NULL_HANDLE)
+        return VK_ERROR_INVALID_HANDLE;
 
     assert(loader.icds_scanned);
 
@@ -1195,14 +1195,14 @@ LOADER_EXPORT XGL_RESULT XGLAPI xglDbgUnregisterMsgCallback(XGL_INSTANCE instanc
             break;
     }
 
-    if (inst == XGL_NULL_HANDLE)
-        return XGL_ERROR_INVALID_HANDLE;
+    if (inst == VK_NULL_HANDLE)
+        return VK_ERROR_INVALID_HANDLE;
 
     for (const struct loader_icd * icd = inst->icds; icd; icd = icd->next) {
         for (uint32_t i = 0; i < icd->gpu_count; i++) {
-            XGL_RESULT r;
+            VK_RESULT r;
             r = (icd->loader_dispatch + i)->DbgUnregisterMsgCallback(icd->scanned_icds->instance, pfnMsgCallback);
-            if (r != XGL_SUCCESS) {
+            if (r != VK_SUCCESS) {
                 res = r;
             }
         }
@@ -1210,12 +1210,12 @@ LOADER_EXPORT XGL_RESULT XGLAPI xglDbgUnregisterMsgCallback(XGL_INSTANCE instanc
     return res;
 }
 
-LOADER_EXPORT XGL_RESULT XGLAPI xglDbgSetGlobalOption(XGL_INSTANCE instance, XGL_DBG_GLOBAL_OPTION dbgOption, size_t dataSize, const void* pData)
+LOADER_EXPORT VK_RESULT VKAPI vkDbgSetGlobalOption(VK_INSTANCE instance, VK_DBG_GLOBAL_OPTION dbgOption, size_t dataSize, const void* pData)
 {
-    XGL_RESULT res = XGL_SUCCESS;
+    VK_RESULT res = VK_SUCCESS;
     struct loader_instance *inst;
-    if (instance == XGL_NULL_HANDLE)
-        return XGL_ERROR_INVALID_HANDLE;
+    if (instance == VK_NULL_HANDLE)
+        return VK_ERROR_INVALID_HANDLE;
 
     assert(loader.icds_scanned);
 
@@ -1224,15 +1224,15 @@ LOADER_EXPORT XGL_RESULT XGLAPI xglDbgSetGlobalOption(XGL_INSTANCE instance, XGL
             break;
     }
 
-    if (inst == XGL_NULL_HANDLE)
-        return XGL_ERROR_INVALID_HANDLE;
+    if (inst == VK_NULL_HANDLE)
+        return VK_ERROR_INVALID_HANDLE;
     for (const struct loader_icd * icd = inst->icds; icd; icd = icd->next) {
         for (uint32_t i = 0; i < icd->gpu_count; i++) {
-            XGL_RESULT r;
+            VK_RESULT r;
             r = (icd->loader_dispatch + i)->DbgSetGlobalOption(icd->scanned_icds->instance, dbgOption,
                                                            dataSize, pData);
             /* unfortunately we cannot roll back */
-            if (r != XGL_SUCCESS) {
+            if (r != VK_SUCCESS) {
                res = r;
             }
         }

@@ -1,5 +1,5 @@
 /*
- * XGL
+ * Vulkan
  *
  * Copyright (C) 2014 LunarG, Inc.
  *
@@ -229,7 +229,7 @@ initialize_mesa_constants(struct gl_context *ctx)
    ctx->Const.MaxVertexStreams = 1;
 
    /* GL 3.2  */
-   ctx->Const.ProfileMask = (ctx->API == API_OPENGL_CORE || ctx->API == API_XGL)
+   ctx->Const.ProfileMask = (ctx->API == API_OPENGL_CORE || ctx->API == API_VK)
                           ? GL_CONTEXT_CORE_PROFILE_BIT
                           : GL_CONTEXT_COMPATIBILITY_PROFILE_BIT;
 
@@ -285,7 +285,7 @@ void initialize_mesa_context_to_defaults(struct gl_context *ctx)
 {
    memset(ctx, 0, sizeof(*ctx));
 
-   ctx->API = API_XGL;
+   ctx->API = API_VK;
 
    ctx->Extensions.dummy_false = false;
    ctx->Extensions.dummy_true = true;
@@ -381,10 +381,10 @@ struct intel_ir *shader_create_ir(const struct intel_gpu *gpu,
         shader->Source = (const char *) code + sizeof(header);
 
         switch(header.gen_magic) {
-        case XGL_SHADER_STAGE_VERTEX:
+        case VK_SHADER_STAGE_VERTEX:
             shader->Type = GL_VERTEX_SHADER;
             break;
-        case XGL_SHADER_STAGE_FRAGMENT:
+        case VK_SHADER_STAGE_FRAGMENT:
             shader->Type = GL_FRAGMENT_SHADER;
             break;
         default:
@@ -449,7 +449,7 @@ struct intel_ir *shader_create_ir(const struct intel_gpu *gpu,
 
     assert(shader_program->NumShaders == 1);
 
-    // for XGL, we are independently compiling and linking individual
+    // for VK, we are independently compiling and linking individual
     // shaders, which matches this frontend's concept of SSO
     shader_program->SeparateShader = true;
 

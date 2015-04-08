@@ -1,5 +1,5 @@
 /*
- * XGL
+ * Vulkan
  *
  * Copyright (C) 2014 LunarG, Inc.
  *
@@ -47,34 +47,34 @@ static void img_destroy(struct intel_obj *obj)
     intel_img_destroy(img);
 }
 
-static XGL_RESULT img_get_info(struct intel_base *base, int type,
+static VK_RESULT img_get_info(struct intel_base *base, int type,
                                size_t *size, void *data)
 {
     struct intel_img *img = intel_img_from_base(base);
-    XGL_RESULT ret = XGL_SUCCESS;
+    VK_RESULT ret = VK_SUCCESS;
 
     switch (type) {
-    case XGL_INFO_TYPE_MEMORY_REQUIREMENTS:
+    case VK_INFO_TYPE_MEMORY_REQUIREMENTS:
         {
-            XGL_MEMORY_REQUIREMENTS *mem_req = data;
+            VK_MEMORY_REQUIREMENTS *mem_req = data;
 
-            *size = sizeof(XGL_MEMORY_REQUIREMENTS);
+            *size = sizeof(VK_MEMORY_REQUIREMENTS);
             if (data == NULL)
                 return ret;
             mem_req->size = img->total_size;
             mem_req->alignment = 4096;
-            if (img->format_class == XGL_IMAGE_FORMAT_CLASS_LINEAR) {
-                mem_req->memType = XGL_MEMORY_TYPE_BUFFER;
+            if (img->format_class == VK_IMAGE_FORMAT_CLASS_LINEAR) {
+                mem_req->memType = VK_MEMORY_TYPE_BUFFER;
             } else {
-                mem_req->memType = XGL_MEMORY_TYPE_IMAGE;
+                mem_req->memType = VK_MEMORY_TYPE_IMAGE;
             }
         }
         break;
-    case XGL_INFO_TYPE_IMAGE_MEMORY_REQUIREMENTS:
+    case VK_INFO_TYPE_IMAGE_MEMORY_REQUIREMENTS:
         {
-            XGL_IMAGE_MEMORY_REQUIREMENTS *img_req = data;
+            VK_IMAGE_MEMORY_REQUIREMENTS *img_req = data;
 
-            *size = sizeof(XGL_IMAGE_MEMORY_REQUIREMENTS);
+            *size = sizeof(VK_IMAGE_MEMORY_REQUIREMENTS);
             if (data == NULL)
                 return ret;
             img_req->usage = img->usage;
@@ -82,11 +82,11 @@ static XGL_RESULT img_get_info(struct intel_base *base, int type,
             img_req->samples = img->samples;
         }
         break;
-    case XGL_INFO_TYPE_BUFFER_MEMORY_REQUIREMENTS:
+    case VK_INFO_TYPE_BUFFER_MEMORY_REQUIREMENTS:
         {
-            XGL_BUFFER_MEMORY_REQUIREMENTS *buf_req = data;
+            VK_BUFFER_MEMORY_REQUIREMENTS *buf_req = data;
 
-            *size = sizeof(XGL_BUFFER_MEMORY_REQUIREMENTS);
+            *size = sizeof(VK_BUFFER_MEMORY_REQUIREMENTS);
             if (data == NULL)
                 return ret;
             buf_req->usage = img->usage;
@@ -100,8 +100,8 @@ static XGL_RESULT img_get_info(struct intel_base *base, int type,
     return ret;
 }
 
-XGL_RESULT intel_img_create(struct intel_dev *dev,
-                            const XGL_IMAGE_CREATE_INFO *info,
+VK_RESULT intel_img_create(struct intel_dev *dev,
+                            const VK_IMAGE_CREATE_INFO *info,
                             bool scanout,
                             struct intel_img **img_ret)
 {
@@ -109,9 +109,9 @@ XGL_RESULT intel_img_create(struct intel_dev *dev,
     struct intel_layout *layout;
 
     img = (struct intel_img *) intel_base_create(&dev->base.handle,
-            sizeof(*img), dev->base.dbg, XGL_DBG_OBJECT_IMAGE, info, 0);
+            sizeof(*img), dev->base.dbg, VK_DBG_OBJECT_IMAGE, info, 0);
     if (!img)
-        return XGL_ERROR_OUT_OF_MEMORY;
+        return VK_ERROR_OUT_OF_MEMORY;
 
     layout = &img->layout;
 
@@ -120,18 +120,18 @@ XGL_RESULT intel_img_create(struct intel_dev *dev,
     img->mip_levels = info->mipLevels;
     img->array_size = info->arraySize;
     img->usage = info->usage;
-    if (info->tiling == XGL_LINEAR_TILING)
-        img->format_class = XGL_IMAGE_FORMAT_CLASS_LINEAR;
+    if (info->tiling == VK_LINEAR_TILING)
+        img->format_class = VK_IMAGE_FORMAT_CLASS_LINEAR;
     else
         img->format_class = icd_format_get_class(info->format);
     img->samples = info->samples;
     intel_layout_init(layout, dev, info, scanout);
 
     if (layout->bo_stride > intel_max_resource_size / layout->bo_height) {
-        intel_dev_log(dev, XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0,
-                XGL_NULL_HANDLE, 0, 0, "image too big");
+        intel_dev_log(dev, VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0,
+                VK_NULL_HANDLE, 0, 0, "image too big");
         intel_img_destroy(img);
-        return XGL_ERROR_INVALID_MEMORY_SIZE;
+        return VK_ERROR_INVALID_MEMORY_SIZE;
     }
 
     img->total_size = img->layout.bo_stride * img->layout.bo_height;
@@ -143,19 +143,19 @@ XGL_RESULT intel_img_create(struct intel_dev *dev,
     }
 
     if (layout->separate_stencil) {
-        XGL_IMAGE_CREATE_INFO s8_info;
+        VK_IMAGE_CREATE_INFO s8_info;
 
         img->s8_layout = intel_alloc(img, sizeof(*img->s8_layout), 0,
-                XGL_SYSTEM_ALLOC_INTERNAL);
+                VK_SYSTEM_ALLOC_INTERNAL);
         if (!img->s8_layout) {
             intel_img_destroy(img);
-            return XGL_ERROR_OUT_OF_MEMORY;
+            return VK_ERROR_OUT_OF_MEMORY;
         }
 
         s8_info = *info;
-        s8_info.format = XGL_FMT_S8_UINT;
+        s8_info.format = VK_FMT_S8_UINT;
         /* no stencil texturing */
-        s8_info.usage &= ~XGL_IMAGE_USAGE_SHADER_ACCESS_READ_BIT;
+        s8_info.usage &= ~VK_IMAGE_USAGE_SHADER_ACCESS_READ_BIT;
         assert(icd_format_is_ds(info->format));
 
         intel_layout_init(img->s8_layout, dev, &s8_info, scanout);
@@ -166,8 +166,8 @@ XGL_RESULT intel_img_create(struct intel_dev *dev,
     }
 
     if (scanout) {
-        XGL_RESULT ret = intel_wsi_img_init(img);
-        if (ret != XGL_SUCCESS) {
+        VK_RESULT ret = intel_wsi_img_init(img);
+        if (ret != VK_SUCCESS) {
             intel_img_destroy(img);
             return ret;
         }
@@ -178,7 +178,7 @@ XGL_RESULT intel_img_create(struct intel_dev *dev,
 
     *img_ret = img;
 
-    return XGL_SUCCESS;
+    return VK_SUCCESS;
 }
 
 void intel_img_destroy(struct intel_img *img)
@@ -192,19 +192,19 @@ void intel_img_destroy(struct intel_img *img)
     intel_base_destroy(&img->obj.base);
 }
 
-ICD_EXPORT XGL_RESULT XGLAPI xglOpenPeerImage(
-    XGL_DEVICE                                  device,
-    const XGL_PEER_IMAGE_OPEN_INFO*             pOpenInfo,
-    XGL_IMAGE*                                  pImage,
-    XGL_GPU_MEMORY*                             pMem)
+ICD_EXPORT VK_RESULT VKAPI vkOpenPeerImage(
+    VK_DEVICE                                  device,
+    const VK_PEER_IMAGE_OPEN_INFO*             pOpenInfo,
+    VK_IMAGE*                                  pImage,
+    VK_GPU_MEMORY*                             pMem)
 {
-    return XGL_ERROR_UNAVAILABLE;
+    return VK_ERROR_UNAVAILABLE;
 }
 
-ICD_EXPORT XGL_RESULT XGLAPI xglCreateImage(
-    XGL_DEVICE                                  device,
-    const XGL_IMAGE_CREATE_INFO*                pCreateInfo,
-    XGL_IMAGE*                                  pImage)
+ICD_EXPORT VK_RESULT VKAPI vkCreateImage(
+    VK_DEVICE                                  device,
+    const VK_IMAGE_CREATE_INFO*                pCreateInfo,
+    VK_IMAGE*                                  pImage)
 {
     struct intel_dev *dev = intel_dev(device);
 
@@ -212,27 +212,27 @@ ICD_EXPORT XGL_RESULT XGLAPI xglCreateImage(
             (struct intel_img **) pImage);
 }
 
-ICD_EXPORT XGL_RESULT XGLAPI xglGetImageSubresourceInfo(
-    XGL_IMAGE                                   image,
-    const XGL_IMAGE_SUBRESOURCE*                pSubresource,
-    XGL_SUBRESOURCE_INFO_TYPE                   infoType,
+ICD_EXPORT VK_RESULT VKAPI vkGetImageSubresourceInfo(
+    VK_IMAGE                                   image,
+    const VK_IMAGE_SUBRESOURCE*                pSubresource,
+    VK_SUBRESOURCE_INFO_TYPE                   infoType,
     size_t*                                     pDataSize,
     void*                                       pData)
 {
     const struct intel_img *img = intel_img(image);
-    XGL_RESULT ret = XGL_SUCCESS;
+    VK_RESULT ret = VK_SUCCESS;
 
     switch (infoType) {
-    case XGL_INFO_TYPE_SUBRESOURCE_LAYOUT:
+    case VK_INFO_TYPE_SUBRESOURCE_LAYOUT:
         {
-            XGL_SUBRESOURCE_LAYOUT *layout = (XGL_SUBRESOURCE_LAYOUT *) pData;
+            VK_SUBRESOURCE_LAYOUT *layout = (VK_SUBRESOURCE_LAYOUT *) pData;
             unsigned x, y;
 
             intel_layout_get_slice_pos(&img->layout, pSubresource->mipLevel,
                     pSubresource->arraySlice, &x, &y);
             intel_layout_pos_to_mem(&img->layout, x, y, &x, &y);
 
-            *pDataSize = sizeof(XGL_SUBRESOURCE_LAYOUT);
+            *pDataSize = sizeof(VK_SUBRESOURCE_LAYOUT);
 
             if (pData == NULL)
                 return ret;
@@ -245,7 +245,7 @@ ICD_EXPORT XGL_RESULT XGLAPI xglGetImageSubresourceInfo(
         }
         break;
     default:
-        ret = XGL_ERROR_INVALID_VALUE;
+        ret = VK_ERROR_INVALID_VALUE;
         break;
     }
 

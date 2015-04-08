@@ -1,5 +1,5 @@
 /*
- * XGL
+ * Vulkan
  *
  * Copyright (C) 2014 LunarG, Inc.
  *
@@ -39,7 +39,7 @@
 #include "wsi.h"
 
 static const char * const intel_gpu_exts[INTEL_EXT_COUNT] = {
-    [INTEL_EXT_WSI_X11] = "XGL_WSI_X11",
+    [INTEL_EXT_WSI_X11] = "VK_WSI_X11",
 };
 
 static int gpu_open_primary_node(struct intel_gpu *gpu)
@@ -63,7 +63,7 @@ static int gpu_open_render_node(struct intel_gpu *gpu)
     if (gpu->render_fd_internal < 0 && gpu->render_node) {
         gpu->render_fd_internal = open(gpu->render_node, O_RDWR);
         if (gpu->render_fd_internal < 0) {
-            intel_log(gpu, XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, NULL, 0,
+            intel_log(gpu, VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0,
                     0, "failed to open %s", gpu->render_node);
         }
     }
@@ -145,7 +145,7 @@ static int devid_to_gen(int devid)
     return gen;
 }
 
-XGL_RESULT intel_gpu_create(const struct intel_instance *instance, int devid,
+VK_RESULT intel_gpu_create(const struct intel_instance *instance, int devid,
                             const char *primary_node, const char *render_node,
                             struct intel_gpu **gpu_ret)
 {
@@ -154,18 +154,18 @@ XGL_RESULT intel_gpu_create(const struct intel_instance *instance, int devid,
     struct intel_gpu *gpu;
 
     if (gen < 0) {
-        intel_log(instance, XGL_DBG_MSG_WARNING, XGL_VALIDATION_LEVEL_0,
-                XGL_NULL_HANDLE, 0, 0, "unsupported device id 0x%04x", devid);
-        return XGL_ERROR_INITIALIZATION_FAILED;
+        intel_log(instance, VK_DBG_MSG_WARNING, VK_VALIDATION_LEVEL_0,
+                VK_NULL_HANDLE, 0, 0, "unsupported device id 0x%04x", devid);
+        return VK_ERROR_INITIALIZATION_FAILED;
     }
 
-    gpu = intel_alloc(instance, sizeof(*gpu), 0, XGL_SYSTEM_ALLOC_API_OBJECT);
+    gpu = intel_alloc(instance, sizeof(*gpu), 0, VK_SYSTEM_ALLOC_API_OBJECT);
     if (!gpu)
-        return XGL_ERROR_OUT_OF_MEMORY;
+        return VK_ERROR_OUT_OF_MEMORY;
 
     memset(gpu, 0, sizeof(*gpu));
-    /* there is no XGL_DBG_OBJECT_GPU */
-    intel_handle_init(&gpu->handle, XGL_DBG_OBJECT_UNKNOWN, instance->icd);
+    /* there is no VK_DBG_OBJECT_GPU */
+    intel_handle_init(&gpu->handle, VK_DBG_OBJECT_UNKNOWN, instance->icd);
 
     gpu->devid = devid;
 
@@ -173,10 +173,10 @@ XGL_RESULT intel_gpu_create(const struct intel_instance *instance, int devid,
     render_len = (render_node) ? strlen(render_node) : 0;
 
     gpu->primary_node = intel_alloc(gpu, primary_len + 1 +
-            ((render_len) ? (render_len + 1) : 0), 0, XGL_SYSTEM_ALLOC_INTERNAL);
+            ((render_len) ? (render_len + 1) : 0), 0, VK_SYSTEM_ALLOC_INTERNAL);
     if (!gpu->primary_node) {
         intel_free(instance, gpu);
-        return XGL_ERROR_OUT_OF_MEMORY;
+        return VK_ERROR_OUT_OF_MEMORY;
     }
 
     memcpy(gpu->primary_node, primary_node, primary_len + 1);
@@ -212,11 +212,11 @@ XGL_RESULT intel_gpu_create(const struct intel_instance *instance, int devid,
 
     *gpu_ret = gpu;
 
-    return XGL_SUCCESS;
+    return VK_SUCCESS;
 }
 
 void intel_gpu_get_props(const struct intel_gpu *gpu,
-                         XGL_PHYSICAL_GPU_PROPERTIES *props)
+                         VK_PHYSICAL_GPU_PROPERTIES *props)
 {
     const char *name;
     size_t name_len;
@@ -227,7 +227,7 @@ void intel_gpu_get_props(const struct intel_gpu *gpu,
     props->vendorId = 0x8086;
     props->deviceId = gpu->devid;
 
-    props->gpuType = XGL_GPU_TYPE_INTEGRATED;
+    props->gpuType = VK_GPU_TYPE_INTEGRATED;
 
     /* copy GPU name */
     name = gpu_get_name(gpu);
@@ -250,7 +250,7 @@ void intel_gpu_get_props(const struct intel_gpu *gpu,
 }
 
 void intel_gpu_get_perf(const struct intel_gpu *gpu,
-                        XGL_PHYSICAL_GPU_PERFORMANCE *perf)
+                        VK_PHYSICAL_GPU_PERFORMANCE *perf)
 {
     /* TODO */
     perf->maxGpuClock = 1.0f;
@@ -262,11 +262,11 @@ void intel_gpu_get_perf(const struct intel_gpu *gpu,
 
 void intel_gpu_get_queue_props(const struct intel_gpu *gpu,
                                enum intel_gpu_engine_type engine,
-                               XGL_PHYSICAL_GPU_QUEUE_PROPERTIES *props)
+                               VK_PHYSICAL_GPU_QUEUE_PROPERTIES *props)
 {
     switch (engine) {
     case INTEL_GPU_ENGINE_3D:
-        props->queueFlags = XGL_QUEUE_GRAPHICS_BIT | XGL_QUEUE_COMPUTE_BIT;
+        props->queueFlags = VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_COMPUTE_BIT;
         props->queueCount = 1;
         props->maxAtomicCounters = INTEL_QUEUE_ATOMIC_COUNTER_COUNT;
         props->supportsTimestamps = true;
@@ -279,21 +279,21 @@ void intel_gpu_get_queue_props(const struct intel_gpu *gpu,
 }
 
 void intel_gpu_get_memory_props(const struct intel_gpu *gpu,
-                                XGL_PHYSICAL_GPU_MEMORY_PROPERTIES *props)
+                                VK_PHYSICAL_GPU_MEMORY_PROPERTIES *props)
 {
     props->supportsMigration = false;
     props->supportsPinning = true;
 }
 
 int intel_gpu_get_max_threads(const struct intel_gpu *gpu,
-                              XGL_PIPELINE_SHADER_STAGE stage)
+                              VK_PIPELINE_SHADER_STAGE stage)
 {
     switch (intel_gpu_gen(gpu)) {
     case INTEL_GEN(7.5):
         switch (stage) {
-        case XGL_SHADER_STAGE_VERTEX:
+        case VK_SHADER_STAGE_VERTEX:
             return (gpu->gt >= 2) ? 280 : 70;
-        case XGL_SHADER_STAGE_FRAGMENT:
+        case VK_SHADER_STAGE_FRAGMENT:
             return (gpu->gt == 3) ? 408 :
                    (gpu->gt == 2) ? 204 : 102;
         default:
@@ -302,9 +302,9 @@ int intel_gpu_get_max_threads(const struct intel_gpu *gpu,
         break;
     case INTEL_GEN(7):
         switch (stage) {
-        case XGL_SHADER_STAGE_VERTEX:
+        case VK_SHADER_STAGE_VERTEX:
             return (gpu->gt == 2) ? 128 : 36;
-        case XGL_SHADER_STAGE_FRAGMENT:
+        case VK_SHADER_STAGE_FRAGMENT:
             return (gpu->gt == 2) ? 172 : 48;
         default:
             break;
@@ -312,9 +312,9 @@ int intel_gpu_get_max_threads(const struct intel_gpu *gpu,
         break;
     case INTEL_GEN(6):
         switch (stage) {
-        case XGL_SHADER_STAGE_VERTEX:
+        case VK_SHADER_STAGE_VERTEX:
             return (gpu->gt == 2) ? 60 : 24;
-        case XGL_SHADER_STAGE_FRAGMENT:
+        case VK_SHADER_STAGE_FRAGMENT:
             return (gpu->gt == 2) ? 80 : 40;
         default:
             break;
@@ -324,13 +324,13 @@ int intel_gpu_get_max_threads(const struct intel_gpu *gpu,
         break;
     }
 
-    intel_log(gpu, XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, XGL_NULL_HANDLE,
+    intel_log(gpu, VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, VK_NULL_HANDLE,
             0, 0, "unknown Gen or shader stage");
 
     switch (stage) {
-    case XGL_SHADER_STAGE_VERTEX:
+    case VK_SHADER_STAGE_VERTEX:
         return 1;
-    case XGL_SHADER_STAGE_FRAGMENT:
+    case VK_SHADER_STAGE_FRAGMENT:
         return 4;
     default:
         return 1;
@@ -342,7 +342,7 @@ int intel_gpu_get_primary_fd(struct intel_gpu *gpu)
     return gpu_open_primary_node(gpu);
 }
 
-XGL_RESULT intel_gpu_init_winsys(struct intel_gpu *gpu)
+VK_RESULT intel_gpu_init_winsys(struct intel_gpu *gpu)
 {
     int fd;
 
@@ -350,17 +350,17 @@ XGL_RESULT intel_gpu_init_winsys(struct intel_gpu *gpu)
 
     fd = gpu_open_render_node(gpu);
     if (fd < 0)
-        return XGL_ERROR_UNKNOWN;
+        return VK_ERROR_UNKNOWN;
 
     gpu->winsys = intel_winsys_create_for_fd(gpu->handle.icd, fd);
     if (!gpu->winsys) {
-        intel_log(gpu, XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0,
-                XGL_NULL_HANDLE, 0, 0, "failed to create GPU winsys");
+        intel_log(gpu, VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0,
+                VK_NULL_HANDLE, 0, 0, "failed to create GPU winsys");
         gpu_close_render_node(gpu);
-        return XGL_ERROR_UNKNOWN;
+        return VK_ERROR_UNKNOWN;
     }
 
-    return XGL_SUCCESS;
+    return VK_SUCCESS;
 }
 
 void intel_gpu_cleanup_winsys(struct intel_gpu *gpu)
@@ -389,8 +389,8 @@ enum intel_ext_type intel_gpu_lookup_extension(const struct intel_gpu *gpu,
     return type;
 }
 
-ICD_EXPORT XGL_RESULT XGLAPI xglEnumerateLayers(
-    XGL_PHYSICAL_GPU                            gpu,
+ICD_EXPORT VK_RESULT VKAPI vkEnumerateLayers(
+    VK_PHYSICAL_GPU                            gpu,
     size_t                                      maxLayerCount,
     size_t                                      maxStringSize,
     size_t*                                     pOutLayerCount,
@@ -398,51 +398,51 @@ ICD_EXPORT XGL_RESULT XGLAPI xglEnumerateLayers(
     void*                                       pReserved)
 {
     if (!pOutLayerCount)
-        return XGL_ERROR_INVALID_POINTER;
+        return VK_ERROR_INVALID_POINTER;
 
     *pOutLayerCount = 0;
 
-    return XGL_SUCCESS;
+    return VK_SUCCESS;
 }
 
-ICD_EXPORT XGL_RESULT XGLAPI xglGetGpuInfo(
-    XGL_PHYSICAL_GPU                            gpu_,
-    XGL_PHYSICAL_GPU_INFO_TYPE                  infoType,
+ICD_EXPORT VK_RESULT VKAPI vkGetGpuInfo(
+    VK_PHYSICAL_GPU                            gpu_,
+    VK_PHYSICAL_GPU_INFO_TYPE                  infoType,
     size_t*                                     pDataSize,
     void*                                       pData)
 {
     struct intel_gpu *gpu = intel_gpu(gpu_);
-    XGL_RESULT ret = XGL_SUCCESS;
+    VK_RESULT ret = VK_SUCCESS;
 
     switch (infoType) {
-    case XGL_INFO_TYPE_PHYSICAL_GPU_PROPERTIES:
-        *pDataSize = sizeof(XGL_PHYSICAL_GPU_PROPERTIES);
+    case VK_INFO_TYPE_PHYSICAL_GPU_PROPERTIES:
+        *pDataSize = sizeof(VK_PHYSICAL_GPU_PROPERTIES);
         if (pData == NULL) {
             return ret;
         }
         intel_gpu_get_props(gpu, pData);
         break;
 
-    case XGL_INFO_TYPE_PHYSICAL_GPU_PERFORMANCE:
-        *pDataSize = sizeof(XGL_PHYSICAL_GPU_PERFORMANCE);
+    case VK_INFO_TYPE_PHYSICAL_GPU_PERFORMANCE:
+        *pDataSize = sizeof(VK_PHYSICAL_GPU_PERFORMANCE);
         if (pData == NULL) {
             return ret;
         }
         intel_gpu_get_perf(gpu, pData);
         break;
 
-    case XGL_INFO_TYPE_PHYSICAL_GPU_QUEUE_PROPERTIES:
+    case VK_INFO_TYPE_PHYSICAL_GPU_QUEUE_PROPERTIES:
         /*
-         * XGL Programmers guide, page 33:
+         * Vulkan Programmers guide, page 33:
          * to determine the data size an application calls
-         * xglGetGpuInfo() with a NULL data pointer. The
+         * vkGetGpuInfo() with a NULL data pointer. The
          * expected data size for all queue property structures
          * is returned in pDataSize
          */
-        *pDataSize = sizeof(XGL_PHYSICAL_GPU_QUEUE_PROPERTIES) *
+        *pDataSize = sizeof(VK_PHYSICAL_GPU_QUEUE_PROPERTIES) *
             INTEL_GPU_ENGINE_COUNT;
         if (pData != NULL) {
-            XGL_PHYSICAL_GPU_QUEUE_PROPERTIES *dst = pData;
+            VK_PHYSICAL_GPU_QUEUE_PROPERTIES *dst = pData;
             int engine;
 
             for (engine = 0; engine < INTEL_GPU_ENGINE_COUNT; engine++) {
@@ -452,8 +452,8 @@ ICD_EXPORT XGL_RESULT XGLAPI xglGetGpuInfo(
         }
         break;
 
-    case XGL_INFO_TYPE_PHYSICAL_GPU_MEMORY_PROPERTIES:
-        *pDataSize = sizeof(XGL_PHYSICAL_GPU_MEMORY_PROPERTIES);
+    case VK_INFO_TYPE_PHYSICAL_GPU_MEMORY_PROPERTIES:
+        *pDataSize = sizeof(VK_PHYSICAL_GPU_MEMORY_PROPERTIES);
         if (pData == NULL) {
             return ret;
         }
@@ -468,34 +468,34 @@ ICD_EXPORT XGL_RESULT XGLAPI xglGetGpuInfo(
     return ret;
 }
 
-ICD_EXPORT XGL_RESULT XGLAPI xglGetExtensionSupport(
-    XGL_PHYSICAL_GPU                            gpu_,
+ICD_EXPORT VK_RESULT VKAPI vkGetExtensionSupport(
+    VK_PHYSICAL_GPU                            gpu_,
     const char*                                 pExtName)
 {
     struct intel_gpu *gpu = intel_gpu(gpu_);
     const enum intel_ext_type ext = intel_gpu_lookup_extension(gpu, pExtName);
 
     return (ext != INTEL_EXT_INVALID) ?
-        XGL_SUCCESS : XGL_ERROR_INVALID_EXTENSION;
+        VK_SUCCESS : VK_ERROR_INVALID_EXTENSION;
 }
 
-ICD_EXPORT XGL_RESULT XGLAPI xglGetMultiGpuCompatibility(
-    XGL_PHYSICAL_GPU                            gpu0_,
-    XGL_PHYSICAL_GPU                            gpu1_,
-    XGL_GPU_COMPATIBILITY_INFO*                 pInfo)
+ICD_EXPORT VK_RESULT VKAPI vkGetMultiGpuCompatibility(
+    VK_PHYSICAL_GPU                            gpu0_,
+    VK_PHYSICAL_GPU                            gpu1_,
+    VK_GPU_COMPATIBILITY_INFO*                 pInfo)
 {
     const struct intel_gpu *gpu0 = intel_gpu(gpu0_);
     const struct intel_gpu *gpu1 = intel_gpu(gpu1_);
-    XGL_FLAGS compat = XGL_GPU_COMPAT_IQ_MATCH_BIT |
-                       XGL_GPU_COMPAT_PEER_TRANSFER_BIT |
-                       XGL_GPU_COMPAT_SHARED_MEMORY_BIT |
-                       XGL_GPU_COMPAT_SHARED_GPU0_DISPLAY_BIT |
-                       XGL_GPU_COMPAT_SHARED_GPU1_DISPLAY_BIT;
+    VK_FLAGS compat = VK_GPU_COMPAT_IQ_MATCH_BIT |
+                       VK_GPU_COMPAT_PEER_TRANSFER_BIT |
+                       VK_GPU_COMPAT_SHARED_MEMORY_BIT |
+                       VK_GPU_COMPAT_SHARED_GPU0_DISPLAY_BIT |
+                       VK_GPU_COMPAT_SHARED_GPU1_DISPLAY_BIT;
 
     if (intel_gpu_gen(gpu0) == intel_gpu_gen(gpu1))
-        compat |= XGL_GPU_COMPAT_ASIC_FEATURES_BIT;
+        compat |= VK_GPU_COMPAT_ASIC_FEATURES_BIT;
 
     pInfo->compatibilityFlags = compat;
 
-    return XGL_SUCCESS;
+    return VK_SUCCESS;
 }

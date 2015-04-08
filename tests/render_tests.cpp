@@ -28,7 +28,7 @@
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
-//  XGL tests
+//  VK tests
 //
 //  Copyright (C) 2014 LunarG, Inc.
 //
@@ -60,7 +60,7 @@
 #include <fstream>
 using namespace std;
 
-#include <xgl.h>
+#include <vulkan.h>
 #ifdef DUMP_STATE_DOT
 #include "../layers/draw_state.h"
 #endif
@@ -68,7 +68,7 @@ using namespace std;
 #include "../layers/object_track.h"
 #endif
 #ifdef DEBUG_CALLBACK
-#include <xglDbg.h>
+#include <vkDbg.h>
 #endif
 #include "gtest-1.7.0/include/gtest/gtest.h"
 
@@ -78,12 +78,12 @@ using namespace std;
 #include "glm/glm.hpp"
 #include <glm/gtc/matrix_transform.hpp>
 
-#include "xglrenderframework.h"
+#include "vkrenderframework.h"
 #ifdef DEBUG_CALLBACK
-void XGLAPI myDbgFunc(
-    XGL_DBG_MSG_TYPE     msgType,
-    XGL_VALIDATION_LEVEL validationLevel,
-    XGL_BASE_OBJECT      srcObject,
+void VKAPI myDbgFunc(
+    VK_DBG_MSG_TYPE     msgType,
+    VK_VALIDATION_LEVEL validationLevel,
+    VK_BASE_OBJECT      srcObject,
     size_t               location,
     int32_t              msgCode,
     const char*          pMsg,
@@ -91,10 +91,10 @@ void XGLAPI myDbgFunc(
 {
     switch (msgType)
     {
-        case XGL_DBG_MSG_WARNING:
+        case VK_DBG_MSG_WARNING:
             printf("CALLBACK WARNING : %s\n", pMsg);
             break;
-        case XGL_DBG_MSG_ERROR:
+        case VK_DBG_MSG_ERROR:
             printf("CALLBACK ERROR : %s\n", pMsg);
             break;
         default:
@@ -217,32 +217,32 @@ public:
                                  XglConstantBufferObj *constantBuffer, XglCommandBufferObj *cmdBuffer);
     void GenericDrawPreparation(XglCommandBufferObj *cmdBuffer, XglPipelineObj &pipelineobj, XglDescriptorSetObj &descriptorSet);
     void InitDepthStencil();
-    void XGLTriangleTest(const char *vertShaderText, const char *fragShaderText, const bool rotate);
+    void VKTriangleTest(const char *vertShaderText, const char *fragShaderText, const bool rotate);
 
-    XGL_RESULT BeginCommandBuffer(XglCommandBufferObj &cmdBuffer);
-    XGL_RESULT EndCommandBuffer(XglCommandBufferObj &cmdBuffer);
+    VK_RESULT BeginCommandBuffer(XglCommandBufferObj &cmdBuffer);
+    VK_RESULT EndCommandBuffer(XglCommandBufferObj &cmdBuffer);
 
 protected:
-    XGL_IMAGE m_texture;
-    XGL_IMAGE_VIEW m_textureView;
-    XGL_IMAGE_VIEW_ATTACH_INFO m_textureViewInfo;
-    XGL_GPU_MEMORY m_textureMem;
+    VK_IMAGE m_texture;
+    VK_IMAGE_VIEW m_textureView;
+    VK_IMAGE_VIEW_ATTACH_INFO m_textureViewInfo;
+    VK_GPU_MEMORY m_textureMem;
 
-    XGL_SAMPLER m_sampler;
+    VK_SAMPLER m_sampler;
 
 
     virtual void SetUp() {
 
-        this->app_info.sType = XGL_STRUCTURE_TYPE_APPLICATION_INFO;
+        this->app_info.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
         this->app_info.pNext = NULL;
         this->app_info.pAppName = "render_tests";
         this->app_info.appVersion = 1;
         this->app_info.pEngineName = "unittest";
         this->app_info.engineVersion = 1;
-        this->app_info.apiVersion = XGL_API_VERSION;
+        this->app_info.apiVersion = VK_API_VERSION;
 
         memset(&m_textureViewInfo, 0, sizeof(m_textureViewInfo));
-        m_textureViewInfo.sType = XGL_STRUCTURE_TYPE_IMAGE_VIEW_ATTACH_INFO;
+        m_textureViewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_ATTACH_INFO;
 
         InitFramework();
     }
@@ -253,9 +253,9 @@ protected:
     }
 };
 
-XGL_RESULT XglRenderTest::BeginCommandBuffer(XglCommandBufferObj &cmdBuffer)
+VK_RESULT XglRenderTest::BeginCommandBuffer(XglCommandBufferObj &cmdBuffer)
 {
-    XGL_RESULT result;
+    VK_RESULT result;
 
     result = cmdBuffer.BeginCommandBuffer();
 
@@ -263,16 +263,16 @@ XGL_RESULT XglRenderTest::BeginCommandBuffer(XglCommandBufferObj &cmdBuffer)
      * For render test all drawing happens in a single render pass
      * on a single command buffer.
      */
-    if (XGL_SUCCESS == result) {
+    if (VK_SUCCESS == result) {
         cmdBuffer.BeginRenderPass(renderPass(), framebuffer());
     }
 
     return result;
 }
 
-XGL_RESULT XglRenderTest::EndCommandBuffer(XglCommandBufferObj &cmdBuffer)
+VK_RESULT XglRenderTest::EndCommandBuffer(XglCommandBufferObj &cmdBuffer)
 {
-    XGL_RESULT result;
+    VK_RESULT result;
 
     cmdBuffer.EndRenderPass(renderPass());
 
@@ -291,12 +291,12 @@ void XglRenderTest::GenericDrawPreparation(XglCommandBufferObj *cmdBuffer, XglPi
     }
 
     cmdBuffer->PrepareAttachments();
-    cmdBuffer->BindStateObject(XGL_STATE_BIND_RASTER, m_stateRaster);
-    cmdBuffer->BindStateObject(XGL_STATE_BIND_VIEWPORT, m_stateViewport);
-    cmdBuffer->BindStateObject(XGL_STATE_BIND_COLOR_BLEND, m_colorBlend);
-    cmdBuffer->BindStateObject(XGL_STATE_BIND_DEPTH_STENCIL, m_stateDepthStencil);
-    descriptorSet.CreateXGLDescriptorSet(cmdBuffer);
-    pipelineobj.CreateXGLPipeline(descriptorSet);
+    cmdBuffer->BindStateObject(VK_STATE_BIND_RASTER, m_stateRaster);
+    cmdBuffer->BindStateObject(VK_STATE_BIND_VIEWPORT, m_stateViewport);
+    cmdBuffer->BindStateObject(VK_STATE_BIND_COLOR_BLEND, m_colorBlend);
+    cmdBuffer->BindStateObject(VK_STATE_BIND_DEPTH_STENCIL, m_stateDepthStencil);
+    descriptorSet.CreateVKDescriptorSet(cmdBuffer);
+    pipelineobj.CreateVKPipeline(descriptorSet);
     cmdBuffer->BindPipeline(pipelineobj);
     cmdBuffer->BindDescriptorSet(descriptorSet);
 }
@@ -307,7 +307,7 @@ void XglRenderTest::RotateTriangleVSUniform(glm::mat4 Projection, glm::mat4 View
     int i;
     glm::mat4 MVP;
     int matrixSize = sizeof(MVP);
-    XGL_RESULT err;
+    VK_RESULT err;
 
     for (i = 0; i < 8; i++) {
         void *pData = constantBuffer->map();
@@ -321,11 +321,11 @@ void XglRenderTest::RotateTriangleVSUniform(glm::mat4 Projection, glm::mat4 View
         // submit the command buffer to the universal queue
         cmdBuffer->QueueCommandBuffer();
 
-        err = xglQueueWaitIdle( m_device->m_queue );
-        ASSERT_XGL_SUCCESS( err );
+        err = vkQueueWaitIdle( m_device->m_queue );
+        ASSERT_VK_SUCCESS( err );
 
         // Wait for work to finish before cleaning up.
-        xglDeviceWaitIdle(m_device->device());
+        vkDeviceWaitIdle(m_device->device());
 
         assert(m_renderTargets.size() == 1);
         RecordImage(m_renderTargets[0]);
@@ -352,28 +352,28 @@ void dumpVec4(const char *note, glm::vec4 vector)
     fflush(stdout);
 }
 
-struct xgltriangle_vs_uniform {
+struct vktriangle_vs_uniform {
     // Must start with MVP
     float   mvp[4][4];
     float   position[3][4];
     float   color[3][4];
 };
 
-void XglRenderTest::XGLTriangleTest(const char *vertShaderText, const char *fragShaderText, const bool rotate)
+void XglRenderTest::VKTriangleTest(const char *vertShaderText, const char *fragShaderText, const bool rotate)
 {
 #ifdef DEBUG_CALLBACK
-    xglDbgRegisterMsgCallback(inst, myDbgFunc, NULL);
+    vkDbgRegisterMsgCallback(inst, myDbgFunc, NULL);
 #endif
     // Create identity matrix
     int i;
-    struct xgltriangle_vs_uniform data;
+    struct vktriangle_vs_uniform data;
 
     glm::mat4 Projection      = glm::mat4(1.0f);
     glm::mat4 View      = glm::mat4(1.0f);
     glm::mat4 Model      = glm::mat4(1.0f);
     glm::mat4 MVP = Projection * View * Model;
     const int matrixSize = sizeof(MVP);
-    const int bufSize = sizeof(xgltriangle_vs_uniform) / sizeof(float);
+    const int bufSize = sizeof(vktriangle_vs_uniform) / sizeof(float);
     memcpy(&data.mvp, &MVP[0][0], matrixSize);
 
     static const Vertex tri_data[] =
@@ -399,25 +399,25 @@ void XglRenderTest::XGLTriangleTest(const char *vertShaderText, const char *frag
 
     XglConstantBufferObj constantBuffer(m_device, bufSize*2, sizeof(float), (const void*) &data);
 
-    XglShaderObj vs(m_device,vertShaderText,XGL_SHADER_STAGE_VERTEX, this);
-    XglShaderObj ps(m_device,fragShaderText, XGL_SHADER_STAGE_FRAGMENT, this);
+    XglShaderObj vs(m_device,vertShaderText,VK_SHADER_STAGE_VERTEX, this);
+    XglShaderObj ps(m_device,fragShaderText, VK_SHADER_STAGE_FRAGMENT, this);
 
     XglPipelineObj pipelineobj(m_device);
     pipelineobj.AddShader(&vs);
     pipelineobj.AddShader(&ps);
 
     XglDescriptorSetObj descriptorSet(m_device);
-    descriptorSet.AppendBuffer(XGL_DESCRIPTOR_TYPE_UNIFORM_BUFFER, constantBuffer);
+    descriptorSet.AppendBuffer(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, constantBuffer);
 
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
     XglCommandBufferObj cmdBuffer(m_device);
     cmdBuffer.AddRenderTarget(m_renderTargets[0]);
 
-    ASSERT_XGL_SUCCESS(BeginCommandBuffer(cmdBuffer));
+    ASSERT_VK_SUCCESS(BeginCommandBuffer(cmdBuffer));
 
     GenericDrawPreparation(&cmdBuffer, pipelineobj, descriptorSet);
 #ifdef DUMP_STATE_DOT
-    DRAW_STATE_DUMP_DOT_FILE pDSDumpDot = (DRAW_STATE_DUMP_DOT_FILE)xglGetProcAddr(gpu(), (char*)"drawStateDumpDotFile");
+    DRAW_STATE_DUMP_DOT_FILE pDSDumpDot = (DRAW_STATE_DUMP_DOT_FILE)vkGetProcAddr(gpu(), (char*)"drawStateDumpDotFile");
     pDSDumpDot((char*)"triTest2.dot");
 #endif
 
@@ -435,23 +435,23 @@ void XglRenderTest::XGLTriangleTest(const char *vertShaderText, const char *frag
         RotateTriangleVSUniform(Projection, View, Model, &constantBuffer, &cmdBuffer);
 
 #ifdef PRINT_OBJECTS
-    //uint64_t objTrackGetObjectCount(XGL_OBJECT_TYPE type)
-    OBJ_TRACK_GET_OBJECT_COUNT pObjTrackGetObjectCount = (OBJ_TRACK_GET_OBJECT_COUNT)xglGetProcAddr(gpu(), (char*)"objTrackGetObjectCount");
-    uint64_t numObjects = pObjTrackGetObjectCount(XGL_OBJECT_TYPE_ANY);
-    //OBJ_TRACK_GET_OBJECTS pGetObjsFunc = xglGetProcAddr(gpu(), (char*)"objTrackGetObjects");
+    //uint64_t objTrackGetObjectCount(VK_OBJECT_TYPE type)
+    OBJ_TRACK_GET_OBJECT_COUNT pObjTrackGetObjectCount = (OBJ_TRACK_GET_OBJECT_COUNT)vkGetProcAddr(gpu(), (char*)"objTrackGetObjectCount");
+    uint64_t numObjects = pObjTrackGetObjectCount(VK_OBJECT_TYPE_ANY);
+    //OBJ_TRACK_GET_OBJECTS pGetObjsFunc = vkGetProcAddr(gpu(), (char*)"objTrackGetObjects");
     printf("DEBUG : Number of Objects : %lu\n", numObjects);
-    OBJ_TRACK_GET_OBJECTS pObjTrackGetObjs = (OBJ_TRACK_GET_OBJECTS)xglGetProcAddr(gpu(), (char*)"objTrackGetObjects");
+    OBJ_TRACK_GET_OBJECTS pObjTrackGetObjs = (OBJ_TRACK_GET_OBJECTS)vkGetProcAddr(gpu(), (char*)"objTrackGetObjects");
     OBJTRACK_NODE* pObjNodeArray = (OBJTRACK_NODE*)malloc(sizeof(OBJTRACK_NODE)*numObjects);
-    pObjTrackGetObjs(XGL_OBJECT_TYPE_ANY, numObjects, pObjNodeArray);
+    pObjTrackGetObjs(VK_OBJECT_TYPE_ANY, numObjects, pObjNodeArray);
     for (i=0; i < numObjects; i++) {
-        printf("Object %i of type %s has objID (%p) and %lu uses\n", i, string_XGL_OBJECT_TYPE(pObjNodeArray[i].objType), pObjNodeArray[i].pObj, pObjNodeArray[i].numUses);
+        printf("Object %i of type %s has objID (%p) and %lu uses\n", i, string_VK_OBJECT_TYPE(pObjNodeArray[i].objType), pObjNodeArray[i].pObj, pObjNodeArray[i].numUses);
     }
     free(pObjNodeArray);
 #endif
 
 }
 
-TEST_F(XglRenderTest, XGLTriangle_FragColor)
+TEST_F(XglRenderTest, VKTriangle_FragColor)
 {
     static const char *vertShaderText =
         "#version 140\n"
@@ -484,11 +484,11 @@ TEST_F(XglRenderTest, XGLTriangle_FragColor)
         "   gl_FragColor = inColor;\n"
         "}\n";
 
-    TEST_DESCRIPTION("XGL-style shaders where fragment shader outputs to GLSL built-in gl_FragColor");
-    XGLTriangleTest(vertShaderText, fragShaderText, true);
+    TEST_DESCRIPTION("VK-style shaders where fragment shader outputs to GLSL built-in gl_FragColor");
+    VKTriangleTest(vertShaderText, fragShaderText, true);
 }
 
-TEST_F(XglRenderTest, XGLTriangle_OutputLocation)
+TEST_F(XglRenderTest, VKTriangle_OutputLocation)
 {
     static const char *vertShaderText =
         "#version 140\n"
@@ -522,12 +522,12 @@ TEST_F(XglRenderTest, XGLTriangle_OutputLocation)
         "   outColor = inColor;\n"
         "}\n";
 
-    TEST_DESCRIPTION("XGL-style shaders where fragment shader outputs to output location 0, which should be the same as gl_FragColor");
+    TEST_DESCRIPTION("VK-style shaders where fragment shader outputs to output location 0, which should be the same as gl_FragColor");
 
-    XGLTriangleTest(vertShaderText, fragShaderText, true);
+    VKTriangleTest(vertShaderText, fragShaderText, true);
 }
 #ifndef _WIN32 // Implicit (for now at least) in WIN32 is that we are using the Nvidia driver and it won't consume SPIRV yet
-TEST_F(XglRenderTest, SPV_XGLTriangle)
+TEST_F(XglRenderTest, SPV_VKTriangle)
 {
     bool saved_use_spv = XglTestFramework::m_use_spv;
 
@@ -562,11 +562,11 @@ TEST_F(XglRenderTest, SPV_XGLTriangle)
         "   gl_FragColor = inColor;\n"
         "}\n";
 
-    TEST_DESCRIPTION("XGL-style shaders, but force test framework to compile shader to SPV and pass SPV to driver.");
+    TEST_DESCRIPTION("VK-style shaders, but force test framework to compile shader to SPV and pass SPV to driver.");
 
     XglTestFramework::m_use_spv = true;
 
-    XGLTriangleTest(vertShaderText, fragShaderText, true);
+    VKTriangleTest(vertShaderText, fragShaderText, true);
 
     XglTestFramework::m_use_spv = saved_use_spv;
 }
@@ -591,7 +591,7 @@ TEST_F(XglRenderTest, GreenTriangle)
 
     TEST_DESCRIPTION("Basic shader that renders a fixed Green triangle coded as part of the vertex shader.");
 
-    XGLTriangleTest(vertShaderText, fragShaderText, false);
+    VKTriangleTest(vertShaderText, fragShaderText, false);
 }
 #ifndef _WIN32 // Implicit (for now at least) in WIN32 is that we are using the Nvidia driver and it won't consume SPIRV yet
 TEST_F(XglRenderTest, SPV_GreenTriangle)
@@ -617,7 +617,7 @@ TEST_F(XglRenderTest, SPV_GreenTriangle)
     TEST_DESCRIPTION("Same shader as GreenTriangle, but compiles shader to SPV and gives SPV to driver.");
 
     XglTestFramework::m_use_spv = true;
-    XGLTriangleTest(vertShaderText, fragShaderText, false);
+    VKTriangleTest(vertShaderText, fragShaderText, false);
     XglTestFramework::m_use_spv = saved_use_spv;
 }
 #endif
@@ -643,7 +643,7 @@ TEST_F(XglRenderTest, YellowTriangle)
             "  gl_FragColor = vec4(1.0, 1.0, 0.0, 1.0);\n"
             "}\n";
 
-    XGLTriangleTest(vertShaderText, fragShaderText, false);
+    VKTriangleTest(vertShaderText, fragShaderText, false);
 }
 
 TEST_F(XglRenderTest, QuadWithVertexFetch)
@@ -681,31 +681,31 @@ TEST_F(XglRenderTest, QuadWithVertexFetch)
     XglConstantBufferObj meshBuffer(m_device,sizeof(g_vbData)/sizeof(g_vbData[0]),sizeof(g_vbData[0]), g_vbData);
     meshBuffer.BufferMemoryBarrier();
 
-    XglShaderObj vs(m_device,vertShaderText,XGL_SHADER_STAGE_VERTEX, this);
-    XglShaderObj ps(m_device,fragShaderText, XGL_SHADER_STAGE_FRAGMENT, this);
+    XglShaderObj vs(m_device,vertShaderText,VK_SHADER_STAGE_VERTEX, this);
+    XglShaderObj ps(m_device,fragShaderText, VK_SHADER_STAGE_FRAGMENT, this);
 
     XglPipelineObj pipelineobj(m_device);
     pipelineobj.AddShader(&vs);
     pipelineobj.AddShader(&ps);
 
     XglDescriptorSetObj descriptorSet(m_device);
-    descriptorSet.AppendBuffer(XGL_DESCRIPTOR_TYPE_UNIFORM_BUFFER, meshBuffer);
+    descriptorSet.AppendBuffer(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, meshBuffer);
 
 #define MESH_BIND_ID 0
-    XGL_VERTEX_INPUT_BINDING_DESCRIPTION vi_binding = {
+    VK_VERTEX_INPUT_BINDING_DESCRIPTION vi_binding = {
         MESH_BIND_ID,                      // binding ID
          sizeof(g_vbData[0]),              // strideInBytes;  Distance between vertices in bytes (0 = no advancement)
-         XGL_VERTEX_INPUT_STEP_RATE_VERTEX // stepRate;       // Rate at which binding is incremented
+         VK_VERTEX_INPUT_STEP_RATE_VERTEX // stepRate;       // Rate at which binding is incremented
     };
 
-    XGL_VERTEX_INPUT_ATTRIBUTE_DESCRIPTION vi_attribs[2];
+    VK_VERTEX_INPUT_ATTRIBUTE_DESCRIPTION vi_attribs[2];
     vi_attribs[0].binding = MESH_BIND_ID;               // Binding ID
     vi_attribs[0].location = 0;                         // location, position
-    vi_attribs[0].format = XGL_FMT_R32G32B32A32_SFLOAT; // format of source data
+    vi_attribs[0].format = VK_FMT_R32G32B32A32_SFLOAT; // format of source data
     vi_attribs[0].offsetInBytes = 0;                    // Offset of first element in bytes from base of vertex
     vi_attribs[1].binding = MESH_BIND_ID;               // Binding ID
     vi_attribs[1].location = 1;                         // location, color
-    vi_attribs[1].format = XGL_FMT_R32G32B32A32_SFLOAT; // format of source data
+    vi_attribs[1].format = VK_FMT_R32G32B32A32_SFLOAT; // format of source data
     vi_attribs[1].offsetInBytes = 1*sizeof(float)*4;     // Offset of first element in bytes from base of vertex
 
     pipelineobj.AddVertexInputAttribs(vi_attribs,2);
@@ -716,7 +716,7 @@ TEST_F(XglRenderTest, QuadWithVertexFetch)
     XglCommandBufferObj cmdBuffer(m_device);
     cmdBuffer.AddRenderTarget(m_renderTargets[0]);
 
-    ASSERT_XGL_SUCCESS(BeginCommandBuffer(cmdBuffer));
+    ASSERT_VK_SUCCESS(BeginCommandBuffer(cmdBuffer));
 
     GenericDrawPreparation(&cmdBuffer, pipelineobj, descriptorSet);
 
@@ -762,24 +762,24 @@ TEST_F(XglRenderTest, TriangleMRT)
     XglConstantBufferObj meshBuffer(m_device, sizeof(vb_data) / sizeof(vb_data[0]), sizeof(vb_data[0]), vb_data);
     meshBuffer.BufferMemoryBarrier();
 
-    XglShaderObj vs(m_device,vertShaderText,XGL_SHADER_STAGE_VERTEX, this);
-    XglShaderObj ps(m_device,fragShaderText, XGL_SHADER_STAGE_FRAGMENT, this);
+    XglShaderObj vs(m_device,vertShaderText,VK_SHADER_STAGE_VERTEX, this);
+    XglShaderObj ps(m_device,fragShaderText, VK_SHADER_STAGE_FRAGMENT, this);
 
     XglPipelineObj pipelineobj(m_device);
     pipelineobj.AddShader(&vs);
     pipelineobj.AddShader(&ps);
 
 #define MESH_BUF_ID 0
-    XGL_VERTEX_INPUT_BINDING_DESCRIPTION vi_binding = {
+    VK_VERTEX_INPUT_BINDING_DESCRIPTION vi_binding = {
         MESH_BUF_ID,                            // Binding ID
         sizeof(vb_data[0]),                     // strideInBytes;  Distance between vertices in bytes (0 = no advancement)
-        XGL_VERTEX_INPUT_STEP_RATE_VERTEX       // stepRate;       // Rate at which binding is incremented
+        VK_VERTEX_INPUT_STEP_RATE_VERTEX       // stepRate;       // Rate at which binding is incremented
     };
 
-    XGL_VERTEX_INPUT_ATTRIBUTE_DESCRIPTION vi_attrib;
+    VK_VERTEX_INPUT_ATTRIBUTE_DESCRIPTION vi_attrib;
     vi_attrib.binding = MESH_BUF_ID;            // index into vertexBindingDescriptions
     vi_attrib.location = 0;
-    vi_attrib.format = XGL_FMT_R32G32_SFLOAT;   // format of source data
+    vi_attrib.format = VK_FMT_R32G32_SFLOAT;   // format of source data
     vi_attrib.offsetInBytes = 0;                // Offset of first element in bytes from base of vertex
 
     pipelineobj.AddVertexInputAttribs(&vi_attrib, 1);
@@ -787,12 +787,12 @@ TEST_F(XglRenderTest, TriangleMRT)
     pipelineobj.AddVertexDataBuffer(&meshBuffer, MESH_BUF_ID);
 
     XglDescriptorSetObj descriptorSet(m_device);
-    descriptorSet.AppendBuffer(XGL_DESCRIPTOR_TYPE_UNIFORM_BUFFER, meshBuffer);
+    descriptorSet.AppendBuffer(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, meshBuffer);
 
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget(2));
 
-    XGL_PIPELINE_CB_ATTACHMENT_STATE att = {};
-    att.blendEnable = XGL_FALSE;
+    VK_PIPELINE_CB_ATTACHMENT_STATE att = {};
+    att.blendEnable = VK_FALSE;
     att.format = m_render_target_fmt;
     att.channelWriteMask = 0xf;
     pipelineobj.AddColorAttachment(1, &att);
@@ -802,13 +802,13 @@ TEST_F(XglRenderTest, TriangleMRT)
     cmdBuffer.AddRenderTarget(m_renderTargets[0]);
     cmdBuffer.AddRenderTarget(m_renderTargets[1]);
 
-    ASSERT_XGL_SUCCESS(BeginCommandBuffer(cmdBuffer));
+    ASSERT_VK_SUCCESS(BeginCommandBuffer(cmdBuffer));
 
     GenericDrawPreparation(&cmdBuffer, pipelineobj, descriptorSet);
 
     cmdBuffer.BindVertexBuffer(&meshBuffer, 0, 0);
 #ifdef DUMP_STATE_DOT
-    DRAW_STATE_DUMP_DOT_FILE pDSDumpDot = (DRAW_STATE_DUMP_DOT_FILE)xglGetProcAddr(gpu(), (char*)"drawStateDumpDotFile");
+    DRAW_STATE_DUMP_DOT_FILE pDSDumpDot = (DRAW_STATE_DUMP_DOT_FILE)vkGetProcAddr(gpu(), (char*)"drawStateDumpDotFile");
     pDSDumpDot((char*)"triTest2.dot");
 #endif
 
@@ -871,36 +871,36 @@ TEST_F(XglRenderTest, QuadWithIndexedVertexFetch)
     meshBuffer.BufferMemoryBarrier();
 
     XglIndexBufferObj indexBuffer(m_device);
-    indexBuffer.CreateAndInitBuffer(sizeof(g_idxData)/sizeof(g_idxData[0]), XGL_INDEX_16, g_idxData);
+    indexBuffer.CreateAndInitBuffer(sizeof(g_idxData)/sizeof(g_idxData[0]), VK_INDEX_16, g_idxData);
     indexBuffer.BufferMemoryBarrier();
 
-    XglShaderObj vs(m_device,vertShaderText,XGL_SHADER_STAGE_VERTEX, this);
-    XglShaderObj ps(m_device,fragShaderText, XGL_SHADER_STAGE_FRAGMENT, this);
+    XglShaderObj vs(m_device,vertShaderText,VK_SHADER_STAGE_VERTEX, this);
+    XglShaderObj ps(m_device,fragShaderText, VK_SHADER_STAGE_FRAGMENT, this);
 
     XglPipelineObj pipelineobj(m_device);
     pipelineobj.AddShader(&vs);
     pipelineobj.AddShader(&ps);
 
     XglDescriptorSetObj descriptorSet(m_device);
-    descriptorSet.AppendBuffer(XGL_DESCRIPTOR_TYPE_UNIFORM_BUFFER, meshBuffer);
-    descriptorSet.AppendBuffer(XGL_DESCRIPTOR_TYPE_UNIFORM_BUFFER, indexBuffer);
+    descriptorSet.AppendBuffer(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, meshBuffer);
+    descriptorSet.AppendBuffer(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, indexBuffer);
 
 
 #define MESH_BIND_ID 0
-    XGL_VERTEX_INPUT_BINDING_DESCRIPTION vi_binding = {
+    VK_VERTEX_INPUT_BINDING_DESCRIPTION vi_binding = {
         MESH_BIND_ID,                           // binding ID
         sizeof(g_vbData[0]),                    // strideInBytes;  Distance between vertices in bytes (0 = no advancement)
-        XGL_VERTEX_INPUT_STEP_RATE_VERTEX       // stepRate;       // Rate at which binding is incremented
+        VK_VERTEX_INPUT_STEP_RATE_VERTEX       // stepRate;       // Rate at which binding is incremented
     };
 
-    XGL_VERTEX_INPUT_ATTRIBUTE_DESCRIPTION vi_attribs[2];
+    VK_VERTEX_INPUT_ATTRIBUTE_DESCRIPTION vi_attribs[2];
     vi_attribs[0].binding = MESH_BIND_ID;               // binding ID from BINDING_DESCRIPTION array to use for this attribute
     vi_attribs[0].location = 0;                         // layout location of vertex attribute
-    vi_attribs[0].format = XGL_FMT_R32G32B32A32_SFLOAT; // format of source data
+    vi_attribs[0].format = VK_FMT_R32G32B32A32_SFLOAT; // format of source data
     vi_attribs[0].offsetInBytes = 0;                    // Offset of first element in bytes from base of vertex
     vi_attribs[1].binding = MESH_BIND_ID;               // binding ID from BINDING_DESCRIPTION array to use for this attribute
     vi_attribs[1].location = 1;                         // layout location of vertex attribute
-    vi_attribs[1].format = XGL_FMT_R32G32B32A32_SFLOAT; // format of source data
+    vi_attribs[1].format = VK_FMT_R32G32B32A32_SFLOAT; // format of source data
     vi_attribs[1].offsetInBytes = 16;                   // Offset of first element in bytes from base of vertex
 
     pipelineobj.AddVertexInputAttribs(vi_attribs,2);
@@ -909,12 +909,12 @@ TEST_F(XglRenderTest, QuadWithIndexedVertexFetch)
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
     XglCommandBufferObj cmdBuffer(m_device);
     cmdBuffer.AddRenderTarget(m_renderTargets[0]);
-    ASSERT_XGL_SUCCESS(BeginCommandBuffer(cmdBuffer));
+    ASSERT_VK_SUCCESS(BeginCommandBuffer(cmdBuffer));
 
     GenericDrawPreparation(&cmdBuffer, pipelineobj, descriptorSet);
 
 #ifdef DUMP_STATE_DOT
-    DRAW_STATE_DUMP_DOT_FILE pDSDumpDot = (DRAW_STATE_DUMP_DOT_FILE)xglGetProcAddr(gpu(), (char*)"drawStateDumpDotFile");
+    DRAW_STATE_DUMP_DOT_FILE pDSDumpDot = (DRAW_STATE_DUMP_DOT_FILE)vkGetProcAddr(gpu(), (char*)"drawStateDumpDotFile");
     pDSDumpDot((char*)"triTest2.dot");
 #endif
 
@@ -970,27 +970,27 @@ TEST_F(XglRenderTest, GreyandRedCirclesonBlue)
     XglConstantBufferObj meshBuffer(m_device,sizeof(g_vbData)/sizeof(g_vbData[0]),sizeof(g_vbData[0]), g_vbData);
     meshBuffer.BufferMemoryBarrier();
 
-    XglShaderObj vs(m_device,vertShaderText,XGL_SHADER_STAGE_VERTEX, this);
-    XglShaderObj ps(m_device,fragShaderText, XGL_SHADER_STAGE_FRAGMENT, this);
+    XglShaderObj vs(m_device,vertShaderText,VK_SHADER_STAGE_VERTEX, this);
+    XglShaderObj ps(m_device,fragShaderText, VK_SHADER_STAGE_FRAGMENT, this);
 
     XglPipelineObj pipelineobj(m_device);
     pipelineobj.AddShader(&vs);
     pipelineobj.AddShader(&ps);
 
     XglDescriptorSetObj descriptorSet(m_device);
-    descriptorSet.AppendBuffer(XGL_DESCRIPTOR_TYPE_UNIFORM_BUFFER, meshBuffer);
+    descriptorSet.AppendBuffer(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, meshBuffer);
 
 #define MESH_BIND_ID 0
-    XGL_VERTEX_INPUT_BINDING_DESCRIPTION vi_binding = {
+    VK_VERTEX_INPUT_BINDING_DESCRIPTION vi_binding = {
         MESH_BIND_ID,                           // binding ID
         sizeof(g_vbData[0]),                    // strideInBytes;  Distance between vertices in bytes (0 = no advancement)
-        XGL_VERTEX_INPUT_STEP_RATE_VERTEX       // stepRate;       // Rate at which binding is incremented
+        VK_VERTEX_INPUT_STEP_RATE_VERTEX       // stepRate;       // Rate at which binding is incremented
     };
 
-    XGL_VERTEX_INPUT_ATTRIBUTE_DESCRIPTION vi_attribs[1];
+    VK_VERTEX_INPUT_ATTRIBUTE_DESCRIPTION vi_attribs[1];
     vi_attribs[0].binding = MESH_BIND_ID;               // binding ID
     vi_attribs[0].location = 0;
-    vi_attribs[0].format = XGL_FMT_R32G32B32A32_SFLOAT; // format of source data
+    vi_attribs[0].format = VK_FMT_R32G32B32A32_SFLOAT; // format of source data
     vi_attribs[0].offsetInBytes = 0;                    // Offset of first element in bytes from base of vertex
 
     pipelineobj.AddVertexInputAttribs(vi_attribs,1);
@@ -1001,13 +1001,13 @@ TEST_F(XglRenderTest, GreyandRedCirclesonBlue)
     XglCommandBufferObj cmdBuffer(m_device);
     cmdBuffer.AddRenderTarget(m_renderTargets[0]);
 
-    ASSERT_XGL_SUCCESS(BeginCommandBuffer(cmdBuffer));
+    ASSERT_VK_SUCCESS(BeginCommandBuffer(cmdBuffer));
 
     GenericDrawPreparation(&cmdBuffer, pipelineobj, descriptorSet);
 
     cmdBuffer.BindVertexBuffer(&meshBuffer, 0, 0);
 #ifdef DUMP_STATE_DOT
-    DRAW_STATE_DUMP_DOT_FILE pDSDumpDot = (DRAW_STATE_DUMP_DOT_FILE)xglGetProcAddr(gpu(), (char*)"drawStateDumpDotFile");
+    DRAW_STATE_DUMP_DOT_FILE pDSDumpDot = (DRAW_STATE_DUMP_DOT_FILE)vkGetProcAddr(gpu(), (char*)"drawStateDumpDotFile");
     pDSDumpDot((char*)"triTest2.dot");
 #endif
 
@@ -1060,27 +1060,27 @@ TEST_F(XglRenderTest, RedCirclesonBlue)
     XglConstantBufferObj meshBuffer(m_device,sizeof(g_vbData)/sizeof(g_vbData[0]),sizeof(g_vbData[0]), g_vbData);
     meshBuffer.BufferMemoryBarrier();
 
-    XglShaderObj vs(m_device,vertShaderText,XGL_SHADER_STAGE_VERTEX, this);
-    XglShaderObj ps(m_device,fragShaderText, XGL_SHADER_STAGE_FRAGMENT, this);
+    XglShaderObj vs(m_device,vertShaderText,VK_SHADER_STAGE_VERTEX, this);
+    XglShaderObj ps(m_device,fragShaderText, VK_SHADER_STAGE_FRAGMENT, this);
 
     XglPipelineObj pipelineobj(m_device);
     pipelineobj.AddShader(&vs);
     pipelineobj.AddShader(&ps);
 
     XglDescriptorSetObj descriptorSet(m_device);
-    descriptorSet.AppendBuffer(XGL_DESCRIPTOR_TYPE_UNIFORM_BUFFER, meshBuffer);
+    descriptorSet.AppendBuffer(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, meshBuffer);
 
 #define MESH_BIND_ID 0
-    XGL_VERTEX_INPUT_BINDING_DESCRIPTION vi_binding = {
+    VK_VERTEX_INPUT_BINDING_DESCRIPTION vi_binding = {
         MESH_BIND_ID,                           // binding ID
         sizeof(g_vbData[0]),                    // strideInBytes;  Distance between vertices in bytes (0 = no advancement)
-        XGL_VERTEX_INPUT_STEP_RATE_VERTEX       // stepRate;       // Rate at which binding is incremented
+        VK_VERTEX_INPUT_STEP_RATE_VERTEX       // stepRate;       // Rate at which binding is incremented
     };
 
-    XGL_VERTEX_INPUT_ATTRIBUTE_DESCRIPTION vi_attribs[1];
+    VK_VERTEX_INPUT_ATTRIBUTE_DESCRIPTION vi_attribs[1];
     vi_attribs[0].binding = MESH_BIND_ID;               // binding ID
     vi_attribs[0].location = 0;
-    vi_attribs[0].format = XGL_FMT_R32G32B32A32_SFLOAT; // format of source data
+    vi_attribs[0].format = VK_FMT_R32G32B32A32_SFLOAT; // format of source data
     vi_attribs[0].offsetInBytes = 0;                    // Offset of first element in bytes from base of vertex
 
     pipelineobj.AddVertexInputAttribs(vi_attribs,1);
@@ -1091,13 +1091,13 @@ TEST_F(XglRenderTest, RedCirclesonBlue)
     XglCommandBufferObj cmdBuffer(m_device);
     cmdBuffer.AddRenderTarget(m_renderTargets[0]);
 
-    ASSERT_XGL_SUCCESS(BeginCommandBuffer(cmdBuffer));
+    ASSERT_VK_SUCCESS(BeginCommandBuffer(cmdBuffer));
 
     GenericDrawPreparation(&cmdBuffer, pipelineobj, descriptorSet);
 
     cmdBuffer.BindVertexBuffer(&meshBuffer, 0, 0);
 #ifdef DUMP_STATE_DOT
-    DRAW_STATE_DUMP_DOT_FILE pDSDumpDot = (DRAW_STATE_DUMP_DOT_FILE)xglGetProcAddr(gpu(), (char*)"drawStateDumpDotFile");
+    DRAW_STATE_DUMP_DOT_FILE pDSDumpDot = (DRAW_STATE_DUMP_DOT_FILE)vkGetProcAddr(gpu(), (char*)"drawStateDumpDotFile");
     pDSDumpDot((char*)"triTest2.dot");
 #endif
     // render two triangles
@@ -1160,27 +1160,27 @@ TEST_F(XglRenderTest, GreyCirclesonBlueFade)
     XglConstantBufferObj meshBuffer(m_device,sizeof(g_vbData)/sizeof(g_vbData[0]),sizeof(g_vbData[0]), g_vbData);
     meshBuffer.BufferMemoryBarrier();
 
-    XglShaderObj vs(m_device,vertShaderText,XGL_SHADER_STAGE_VERTEX, this);
-    XglShaderObj ps(m_device,fragShaderText, XGL_SHADER_STAGE_FRAGMENT, this);
+    XglShaderObj vs(m_device,vertShaderText,VK_SHADER_STAGE_VERTEX, this);
+    XglShaderObj ps(m_device,fragShaderText, VK_SHADER_STAGE_FRAGMENT, this);
 
     XglPipelineObj pipelineobj(m_device);
     pipelineobj.AddShader(&vs);
     pipelineobj.AddShader(&ps);
 
     XglDescriptorSetObj descriptorSet(m_device);
-    descriptorSet.AppendBuffer(XGL_DESCRIPTOR_TYPE_UNIFORM_BUFFER, meshBuffer);
+    descriptorSet.AppendBuffer(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, meshBuffer);
 
 #define MESH_BIND_ID 0
-    XGL_VERTEX_INPUT_BINDING_DESCRIPTION vi_binding = {
+    VK_VERTEX_INPUT_BINDING_DESCRIPTION vi_binding = {
         MESH_BIND_ID,                           // binding ID
         sizeof(g_vbData[0]),                    // strideInBytes;  Distance between vertices in bytes (0 = no advancement)
-        XGL_VERTEX_INPUT_STEP_RATE_VERTEX       // stepRate;       // Rate at which binding is incremented
+        VK_VERTEX_INPUT_STEP_RATE_VERTEX       // stepRate;       // Rate at which binding is incremented
     };
 
-    XGL_VERTEX_INPUT_ATTRIBUTE_DESCRIPTION vi_attribs[1];
+    VK_VERTEX_INPUT_ATTRIBUTE_DESCRIPTION vi_attribs[1];
     vi_attribs[0].binding = MESH_BIND_ID;               // binding ID
     vi_attribs[0].location = 0;
-    vi_attribs[0].format = XGL_FMT_R32G32B32A32_SFLOAT; // format of source data
+    vi_attribs[0].format = VK_FMT_R32G32B32A32_SFLOAT; // format of source data
     vi_attribs[0].offsetInBytes = 0;                    // Offset of first element in bytes from base of vertex
 
     pipelineobj.AddVertexInputAttribs(vi_attribs,1);
@@ -1191,13 +1191,13 @@ TEST_F(XglRenderTest, GreyCirclesonBlueFade)
     XglCommandBufferObj cmdBuffer(m_device);
     cmdBuffer.AddRenderTarget(m_renderTargets[0]);
 
-    ASSERT_XGL_SUCCESS(BeginCommandBuffer(cmdBuffer));
+    ASSERT_VK_SUCCESS(BeginCommandBuffer(cmdBuffer));
 
     GenericDrawPreparation(&cmdBuffer, pipelineobj, descriptorSet);
 
     cmdBuffer.BindVertexBuffer(&meshBuffer, 0, 0);
 #ifdef DUMP_STATE_DOT
-    DRAW_STATE_DUMP_DOT_FILE pDSDumpDot = (DRAW_STATE_DUMP_DOT_FILE)xglGetProcAddr(gpu(), (char*)"drawStateDumpDotFile");
+    DRAW_STATE_DUMP_DOT_FILE pDSDumpDot = (DRAW_STATE_DUMP_DOT_FILE)vkGetProcAddr(gpu(), (char*)"drawStateDumpDotFile");
     pDSDumpDot((char*)"triTest2.dot");
 #endif
 
@@ -1251,27 +1251,27 @@ TEST_F(XglRenderTest, GreyCirclesonBlueDiscard)
     XglConstantBufferObj meshBuffer(m_device,sizeof(g_vbData)/sizeof(g_vbData[0]),sizeof(g_vbData[0]), g_vbData);
     meshBuffer.BufferMemoryBarrier();
 
-    XglShaderObj vs(m_device,vertShaderText,XGL_SHADER_STAGE_VERTEX, this);
-    XglShaderObj ps(m_device,fragShaderText, XGL_SHADER_STAGE_FRAGMENT, this);
+    XglShaderObj vs(m_device,vertShaderText,VK_SHADER_STAGE_VERTEX, this);
+    XglShaderObj ps(m_device,fragShaderText, VK_SHADER_STAGE_FRAGMENT, this);
 
     XglPipelineObj pipelineobj(m_device);
     pipelineobj.AddShader(&vs);
     pipelineobj.AddShader(&ps);
 
     XglDescriptorSetObj descriptorSet(m_device);
-    descriptorSet.AppendBuffer(XGL_DESCRIPTOR_TYPE_UNIFORM_BUFFER, meshBuffer);
+    descriptorSet.AppendBuffer(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, meshBuffer);
 
 #define MESH_BIND_ID 0
-    XGL_VERTEX_INPUT_BINDING_DESCRIPTION vi_binding = {
+    VK_VERTEX_INPUT_BINDING_DESCRIPTION vi_binding = {
         MESH_BIND_ID,                           // binding ID
         sizeof(g_vbData[0]),                    // strideInBytes;  Distance between vertices in bytes (0 = no advancement)
-        XGL_VERTEX_INPUT_STEP_RATE_VERTEX       // stepRate;       // Rate at which binding is incremented
+        VK_VERTEX_INPUT_STEP_RATE_VERTEX       // stepRate;       // Rate at which binding is incremented
     };
 
-    XGL_VERTEX_INPUT_ATTRIBUTE_DESCRIPTION vi_attribs[1];
+    VK_VERTEX_INPUT_ATTRIBUTE_DESCRIPTION vi_attribs[1];
     vi_attribs[0].binding = MESH_BIND_ID;               // binding ID
     vi_attribs[0].location = 0;
-    vi_attribs[0].format = XGL_FMT_R32G32B32A32_SFLOAT; // format of source data
+    vi_attribs[0].format = VK_FMT_R32G32B32A32_SFLOAT; // format of source data
     vi_attribs[0].offsetInBytes = 0;                    // Offset of first element in bytes from base of vertex
 
     pipelineobj.AddVertexInputAttribs(vi_attribs,1);
@@ -1282,13 +1282,13 @@ TEST_F(XglRenderTest, GreyCirclesonBlueDiscard)
     XglCommandBufferObj cmdBuffer(m_device);
     cmdBuffer.AddRenderTarget(m_renderTargets[0]);
 
-    ASSERT_XGL_SUCCESS(BeginCommandBuffer(cmdBuffer));
+    ASSERT_VK_SUCCESS(BeginCommandBuffer(cmdBuffer));
 
     GenericDrawPreparation(&cmdBuffer, pipelineobj, descriptorSet);
 
     cmdBuffer.BindVertexBuffer(&meshBuffer, 0, 0);
 #ifdef DUMP_STATE_DOT
-    DRAW_STATE_DUMP_DOT_FILE pDSDumpDot = (DRAW_STATE_DUMP_DOT_FILE)xglGetProcAddr(gpu(), (char*)"drawStateDumpDotFile");
+    DRAW_STATE_DUMP_DOT_FILE pDSDumpDot = (DRAW_STATE_DUMP_DOT_FILE)vkGetProcAddr(gpu(), (char*)"drawStateDumpDotFile");
     pDSDumpDot((char*)"triTest2.dot");
 #endif
 
@@ -1338,8 +1338,8 @@ TEST_F(XglRenderTest, TriangleVSUniform)
     const int matrixSize = sizeof(MVP) / sizeof(MVP[0]);
 
     XglConstantBufferObj MVPBuffer(m_device, matrixSize, sizeof(MVP[0]), (const void*) &MVP[0][0]);
-    XglShaderObj vs(m_device,vertShaderText,XGL_SHADER_STAGE_VERTEX, this);
-    XglShaderObj ps(m_device,fragShaderText, XGL_SHADER_STAGE_FRAGMENT, this);
+    XglShaderObj vs(m_device,vertShaderText,VK_SHADER_STAGE_VERTEX, this);
+    XglShaderObj ps(m_device,fragShaderText, VK_SHADER_STAGE_FRAGMENT, this);
 
     XglPipelineObj pipelineobj(m_device);
     pipelineobj.AddShader(&vs);
@@ -1347,19 +1347,19 @@ TEST_F(XglRenderTest, TriangleVSUniform)
 
     // Create descriptor set and attach the constant buffer to it
     XglDescriptorSetObj descriptorSet(m_device);
-    descriptorSet.AppendBuffer(XGL_DESCRIPTOR_TYPE_UNIFORM_BUFFER, MVPBuffer);
+    descriptorSet.AppendBuffer(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, MVPBuffer);
 
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
     XglCommandBufferObj cmdBuffer(m_device);
     cmdBuffer.AddRenderTarget(m_renderTargets[0]);
 
-    ASSERT_XGL_SUCCESS(BeginCommandBuffer(cmdBuffer));
+    ASSERT_VK_SUCCESS(BeginCommandBuffer(cmdBuffer));
 
     GenericDrawPreparation(&cmdBuffer, pipelineobj, descriptorSet);
 
     // cmdBuffer.BindVertexBuffer(&meshBuffer, 0, 0);
 #ifdef DUMP_STATE_DOT
-    DRAW_STATE_DUMP_DOT_FILE pDSDumpDot = (DRAW_STATE_DUMP_DOT_FILE)xglGetProcAddr(gpu(), (char*)"drawStateDumpDotFile");
+    DRAW_STATE_DUMP_DOT_FILE pDSDumpDot = (DRAW_STATE_DUMP_DOT_FILE)vkGetProcAddr(gpu(), (char*)"drawStateDumpDotFile");
     pDSDumpDot((char*)"triTest2.dot");
 #endif
 
@@ -1416,8 +1416,8 @@ TEST_F(XglRenderTest, MixTriangle)
     ASSERT_NO_FATAL_FAILURE(InitState());
     ASSERT_NO_FATAL_FAILURE(InitViewport());
 
-    XglShaderObj vs(m_device,vertShaderText,XGL_SHADER_STAGE_VERTEX, this);
-    XglShaderObj ps(m_device,fragShaderText, XGL_SHADER_STAGE_FRAGMENT, this);
+    XglShaderObj vs(m_device,vertShaderText,VK_SHADER_STAGE_VERTEX, this);
+    XglShaderObj ps(m_device,fragShaderText, VK_SHADER_STAGE_FRAGMENT, this);
 
     XglPipelineObj pipelineobj(m_device);
     pipelineobj.AddShader(&vs);
@@ -1430,12 +1430,12 @@ TEST_F(XglRenderTest, MixTriangle)
     XglCommandBufferObj cmdBuffer(m_device);
     cmdBuffer.AddRenderTarget(m_renderTargets[0]);
 
-    ASSERT_XGL_SUCCESS(BeginCommandBuffer(cmdBuffer));
+    ASSERT_VK_SUCCESS(BeginCommandBuffer(cmdBuffer));
 
     GenericDrawPreparation(&cmdBuffer, pipelineobj, descriptorSet);
 
 #ifdef DUMP_STATE_DOT
-    DRAW_STATE_DUMP_DOT_FILE pDSDumpDot = (DRAW_STATE_DUMP_DOT_FILE)xglGetProcAddr(gpu(), (char*)"drawStateDumpDotFile");
+    DRAW_STATE_DUMP_DOT_FILE pDSDumpDot = (DRAW_STATE_DUMP_DOT_FILE)vkGetProcAddr(gpu(), (char*)"drawStateDumpDotFile");
     pDSDumpDot((char*)"triTest2.dot");
 #endif
 
@@ -1485,31 +1485,31 @@ TEST_F(XglRenderTest, QuadVertFetchAndVertID)
     XglConstantBufferObj meshBuffer(m_device,sizeof(g_vbData)/sizeof(g_vbData[0]),sizeof(g_vbData[0]), g_vbData);
     meshBuffer.BufferMemoryBarrier();
 
-    XglShaderObj vs(m_device,vertShaderText,XGL_SHADER_STAGE_VERTEX, this);
-    XglShaderObj ps(m_device,fragShaderText, XGL_SHADER_STAGE_FRAGMENT, this);
+    XglShaderObj vs(m_device,vertShaderText,VK_SHADER_STAGE_VERTEX, this);
+    XglShaderObj ps(m_device,fragShaderText, VK_SHADER_STAGE_FRAGMENT, this);
 
     XglPipelineObj pipelineobj(m_device);
     pipelineobj.AddShader(&vs);
     pipelineobj.AddShader(&ps);
 
     XglDescriptorSetObj descriptorSet(m_device);
-    descriptorSet.AppendBuffer(XGL_DESCRIPTOR_TYPE_UNIFORM_BUFFER, meshBuffer);
+    descriptorSet.AppendBuffer(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, meshBuffer);
 
 #define MESH_BUF_ID 0
-    XGL_VERTEX_INPUT_BINDING_DESCRIPTION vi_binding = {
+    VK_VERTEX_INPUT_BINDING_DESCRIPTION vi_binding = {
         MESH_BUF_ID,                            // Binding ID
         sizeof(g_vbData[0]),                    // strideInBytes;  Distance between vertices in bytes (0 = no advancement)
-        XGL_VERTEX_INPUT_STEP_RATE_VERTEX       // stepRate;       // Rate at which binding is incremented
+        VK_VERTEX_INPUT_STEP_RATE_VERTEX       // stepRate;       // Rate at which binding is incremented
     };
 
-    XGL_VERTEX_INPUT_ATTRIBUTE_DESCRIPTION vi_attribs[2];
+    VK_VERTEX_INPUT_ATTRIBUTE_DESCRIPTION vi_attribs[2];
     vi_attribs[0].binding = MESH_BUF_ID;            // binding ID
     vi_attribs[0].location = 0;
-    vi_attribs[0].format = XGL_FMT_R32G32_SFLOAT;   // format of source data
+    vi_attribs[0].format = VK_FMT_R32G32_SFLOAT;   // format of source data
     vi_attribs[0].offsetInBytes = 0;                // Offset of first element in bytes from base of vertex
     vi_attribs[1].binding = MESH_BUF_ID;            // binding ID
     vi_attribs[1].location = 1;
-    vi_attribs[1].format = XGL_FMT_R32G32_SFLOAT;   // format of source data
+    vi_attribs[1].format = VK_FMT_R32G32_SFLOAT;   // format of source data
     vi_attribs[1].offsetInBytes = 16;                // Offset of first element in bytes from base of vertex
 
     pipelineobj.AddVertexInputAttribs(vi_attribs, 2);
@@ -1520,13 +1520,13 @@ TEST_F(XglRenderTest, QuadVertFetchAndVertID)
     XglCommandBufferObj cmdBuffer(m_device);
     cmdBuffer.AddRenderTarget(m_renderTargets[0]);
 
-    ASSERT_XGL_SUCCESS(BeginCommandBuffer(cmdBuffer));
+    ASSERT_VK_SUCCESS(BeginCommandBuffer(cmdBuffer));
 
     GenericDrawPreparation(&cmdBuffer, pipelineobj, descriptorSet);
 
     cmdBuffer.BindVertexBuffer(&meshBuffer, 0, 0);
 #ifdef DUMP_STATE_DOT
-    DRAW_STATE_DUMP_DOT_FILE pDSDumpDot = (DRAW_STATE_DUMP_DOT_FILE)xglGetProcAddr(gpu(), (char*)"drawStateDumpDotFile");
+    DRAW_STATE_DUMP_DOT_FILE pDSDumpDot = (DRAW_STATE_DUMP_DOT_FILE)vkGetProcAddr(gpu(), (char*)"drawStateDumpDotFile");
     pDSDumpDot((char*)"triTest2.dot");
 #endif
 
@@ -1590,31 +1590,31 @@ TEST_F(XglRenderTest, QuadSparseVertFetch)
     XglConstantBufferObj meshBuffer(m_device,sizeof(vData)/sizeof(vData[0]),sizeof(vData[0]), vData);
     meshBuffer.BufferMemoryBarrier();
 
-    XglShaderObj vs(m_device,vertShaderText,XGL_SHADER_STAGE_VERTEX, this);
-    XglShaderObj ps(m_device,fragShaderText, XGL_SHADER_STAGE_FRAGMENT, this);
+    XglShaderObj vs(m_device,vertShaderText,VK_SHADER_STAGE_VERTEX, this);
+    XglShaderObj ps(m_device,fragShaderText, VK_SHADER_STAGE_FRAGMENT, this);
 
     XglPipelineObj pipelineobj(m_device);
     pipelineobj.AddShader(&vs);
     pipelineobj.AddShader(&ps);
 
     XglDescriptorSetObj descriptorSet(m_device);
-    descriptorSet.AppendBuffer(XGL_DESCRIPTOR_TYPE_UNIFORM_BUFFER, meshBuffer);
+    descriptorSet.AppendBuffer(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, meshBuffer);
 
 #define MESH_BUF_ID 0
-    XGL_VERTEX_INPUT_BINDING_DESCRIPTION vi_binding = {
+    VK_VERTEX_INPUT_BINDING_DESCRIPTION vi_binding = {
         MESH_BUF_ID,                            // Binding ID
         sizeof(vData[0]),                       // strideInBytes;  Distance between vertices in bytes (0 = no advancement)
-        XGL_VERTEX_INPUT_STEP_RATE_VERTEX       // stepRate;       // Rate at which binding is incremented
+        VK_VERTEX_INPUT_STEP_RATE_VERTEX       // stepRate;       // Rate at which binding is incremented
     };
 
-    XGL_VERTEX_INPUT_ATTRIBUTE_DESCRIPTION vi_attribs[2];
+    VK_VERTEX_INPUT_ATTRIBUTE_DESCRIPTION vi_attribs[2];
     vi_attribs[0].binding = MESH_BUF_ID;                                        // binding ID
     vi_attribs[0].location = 4;
-    vi_attribs[0].format = XGL_FMT_R32G32B32A32_SFLOAT;                         // format of source data
+    vi_attribs[0].format = VK_FMT_R32G32B32A32_SFLOAT;                         // format of source data
     vi_attribs[0].offsetInBytes = sizeof(float) * 4 * 2;   // Offset of first element in bytes from base of vertex
     vi_attribs[1].binding = MESH_BUF_ID;                                        // binding ID
     vi_attribs[1].location = 1;
-    vi_attribs[1].format = XGL_FMT_R32G32B32A32_SFLOAT;                         // format of source data
+    vi_attribs[1].format = VK_FMT_R32G32B32A32_SFLOAT;                         // format of source data
     vi_attribs[1].offsetInBytes = sizeof(float) * 4 * 1;   // Offset of first element in bytes from base of vertex
 
     pipelineobj.AddVertexInputAttribs(vi_attribs, 2);
@@ -1625,13 +1625,13 @@ TEST_F(XglRenderTest, QuadSparseVertFetch)
     XglCommandBufferObj cmdBuffer(m_device);
     cmdBuffer.AddRenderTarget(m_renderTargets[0]);
 
-    ASSERT_XGL_SUCCESS(BeginCommandBuffer(cmdBuffer));
+    ASSERT_VK_SUCCESS(BeginCommandBuffer(cmdBuffer));
 
     GenericDrawPreparation(&cmdBuffer, pipelineobj, descriptorSet);
 
     cmdBuffer.BindVertexBuffer(&meshBuffer, 0, MESH_BUF_ID);
 #ifdef DUMP_STATE_DOT
-    DRAW_STATE_DUMP_DOT_FILE pDSDumpDot = (DRAW_STATE_DUMP_DOT_FILE)xglGetProcAddr(gpu(), (char*)"drawStateDumpDotFile");
+    DRAW_STATE_DUMP_DOT_FILE pDSDumpDot = (DRAW_STATE_DUMP_DOT_FILE)vkGetProcAddr(gpu(), (char*)"drawStateDumpDotFile");
     pDSDumpDot((char*)"triTest2.dot");
 #endif
 
@@ -1685,31 +1685,31 @@ TEST_F(XglRenderTest, TriVertFetchDeadAttr)
     XglConstantBufferObj meshBuffer(m_device,sizeof(g_vbData)/sizeof(g_vbData[0]),sizeof(g_vbData[0]), g_vbData);
     meshBuffer.BufferMemoryBarrier();
 
-    XglShaderObj vs(m_device,vertShaderText,XGL_SHADER_STAGE_VERTEX, this);
-    XglShaderObj ps(m_device,fragShaderText, XGL_SHADER_STAGE_FRAGMENT, this);
+    XglShaderObj vs(m_device,vertShaderText,VK_SHADER_STAGE_VERTEX, this);
+    XglShaderObj ps(m_device,fragShaderText, VK_SHADER_STAGE_FRAGMENT, this);
 
     XglPipelineObj pipelineobj(m_device);
     pipelineobj.AddShader(&vs);
     pipelineobj.AddShader(&ps);
 
     XglDescriptorSetObj descriptorSet(m_device);
-    descriptorSet.AppendBuffer(XGL_DESCRIPTOR_TYPE_UNIFORM_BUFFER, meshBuffer);
+    descriptorSet.AppendBuffer(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, meshBuffer);
 
 #define MESH_BUF_ID 0
-    XGL_VERTEX_INPUT_BINDING_DESCRIPTION vi_binding = {
+    VK_VERTEX_INPUT_BINDING_DESCRIPTION vi_binding = {
         MESH_BUF_ID,                            // Binding ID
         sizeof(g_vbData[0]),                    // strideInBytes;  Distance between vertices in bytes (0 = no advancement)
-        XGL_VERTEX_INPUT_STEP_RATE_VERTEX       // stepRate;       // Rate at which binding is incremented
+        VK_VERTEX_INPUT_STEP_RATE_VERTEX       // stepRate;       // Rate at which binding is incremented
     };
 
-    XGL_VERTEX_INPUT_ATTRIBUTE_DESCRIPTION vi_attribs[2];
+    VK_VERTEX_INPUT_ATTRIBUTE_DESCRIPTION vi_attribs[2];
     vi_attribs[0].binding = MESH_BUF_ID;            // binding ID
     vi_attribs[0].location = 0;
-    vi_attribs[0].format = XGL_FMT_R32G32B32A32_SFLOAT;            // format of source data
+    vi_attribs[0].format = VK_FMT_R32G32B32A32_SFLOAT;            // format of source data
     vi_attribs[0].offsetInBytes = 0;                // Offset of first element in bytes from base of vertex
     vi_attribs[1].binding = MESH_BUF_ID;            // binding ID
     vi_attribs[1].location = 1;
-    vi_attribs[1].format = XGL_FMT_R32G32B32A32_SFLOAT;            // format of source data
+    vi_attribs[1].format = VK_FMT_R32G32B32A32_SFLOAT;            // format of source data
     vi_attribs[1].offsetInBytes = 16;                // Offset of first element in bytes from base of vertex
 
     pipelineobj.AddVertexInputAttribs(vi_attribs, 2);
@@ -1720,13 +1720,13 @@ TEST_F(XglRenderTest, TriVertFetchDeadAttr)
     XglCommandBufferObj cmdBuffer(m_device);
     cmdBuffer.AddRenderTarget(m_renderTargets[0]);
 
-    ASSERT_XGL_SUCCESS(BeginCommandBuffer(cmdBuffer));
+    ASSERT_VK_SUCCESS(BeginCommandBuffer(cmdBuffer));
 
     GenericDrawPreparation(&cmdBuffer, pipelineobj, descriptorSet);
 
     cmdBuffer.BindVertexBuffer(&meshBuffer, 0, 0);
 #ifdef DUMP_STATE_DOT
-    DRAW_STATE_DUMP_DOT_FILE pDSDumpDot = (DRAW_STATE_DUMP_DOT_FILE)xglGetProcAddr(gpu(), (char*)"drawStateDumpDotFile");
+    DRAW_STATE_DUMP_DOT_FILE pDSDumpDot = (DRAW_STATE_DUMP_DOT_FILE)vkGetProcAddr(gpu(), (char*)"drawStateDumpDotFile");
     pDSDumpDot((char*)"triTest2.dot");
 #endif
 
@@ -1785,45 +1785,45 @@ TEST_F(XglRenderTest, CubeWithVertexFetchAndMVP)
     const int buf_size = sizeof(MVP) / sizeof(float);
 
     XglConstantBufferObj MVPBuffer(m_device, buf_size, sizeof(MVP[0]), (const void*) &MVP[0][0]);
-    XglShaderObj vs(m_device,vertShaderText,XGL_SHADER_STAGE_VERTEX, this);
-    XglShaderObj ps(m_device,fragShaderText, XGL_SHADER_STAGE_FRAGMENT, this);
+    XglShaderObj vs(m_device,vertShaderText,VK_SHADER_STAGE_VERTEX, this);
+    XglShaderObj ps(m_device,fragShaderText, VK_SHADER_STAGE_FRAGMENT, this);
 
     XglPipelineObj pipelineobj(m_device);
     pipelineobj.AddShader(&vs);
     pipelineobj.AddShader(&ps);
 
-    XGL_PIPELINE_DS_STATE_CREATE_INFO ds_state;
-    ds_state.depthTestEnable = XGL_TRUE;
-    ds_state.depthWriteEnable = XGL_TRUE;
-    ds_state.depthFunc = XGL_COMPARE_LESS_EQUAL;
-    ds_state.depthBoundsEnable = XGL_FALSE;
-    ds_state.stencilTestEnable = XGL_FALSE;
-    ds_state.back.stencilDepthFailOp = XGL_STENCIL_OP_KEEP;
-    ds_state.back.stencilFailOp = XGL_STENCIL_OP_KEEP;
-    ds_state.back.stencilPassOp = XGL_STENCIL_OP_KEEP;
-    ds_state.back.stencilFunc = XGL_COMPARE_ALWAYS;
-    ds_state.format = XGL_FMT_D32_SFLOAT;
+    VK_PIPELINE_DS_STATE_CREATE_INFO ds_state;
+    ds_state.depthTestEnable = VK_TRUE;
+    ds_state.depthWriteEnable = VK_TRUE;
+    ds_state.depthFunc = VK_COMPARE_LESS_EQUAL;
+    ds_state.depthBoundsEnable = VK_FALSE;
+    ds_state.stencilTestEnable = VK_FALSE;
+    ds_state.back.stencilDepthFailOp = VK_STENCIL_OP_KEEP;
+    ds_state.back.stencilFailOp = VK_STENCIL_OP_KEEP;
+    ds_state.back.stencilPassOp = VK_STENCIL_OP_KEEP;
+    ds_state.back.stencilFunc = VK_COMPARE_ALWAYS;
+    ds_state.format = VK_FMT_D32_SFLOAT;
     ds_state.front = ds_state.back;
     pipelineobj.SetDepthStencil(&ds_state);
 
     XglDescriptorSetObj descriptorSet(m_device);
-    descriptorSet.AppendBuffer(XGL_DESCRIPTOR_TYPE_UNIFORM_BUFFER, MVPBuffer);
+    descriptorSet.AppendBuffer(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, MVPBuffer);
 
 #define MESH_BUF_ID 0
-    XGL_VERTEX_INPUT_BINDING_DESCRIPTION vi_binding = {
+    VK_VERTEX_INPUT_BINDING_DESCRIPTION vi_binding = {
         MESH_BUF_ID,                            // Binding ID
         sizeof(g_vbData[0]),                     // strideInBytes;  Distance between vertices in bytes (0 = no advancement)
-        XGL_VERTEX_INPUT_STEP_RATE_VERTEX       // stepRate;       // Rate at which binding is incremented
+        VK_VERTEX_INPUT_STEP_RATE_VERTEX       // stepRate;       // Rate at which binding is incremented
     };
 
-    XGL_VERTEX_INPUT_ATTRIBUTE_DESCRIPTION vi_attribs[2];
+    VK_VERTEX_INPUT_ATTRIBUTE_DESCRIPTION vi_attribs[2];
     vi_attribs[0].binding = MESH_BUF_ID;            // binding ID
     vi_attribs[0].location = 0;
-    vi_attribs[0].format = XGL_FMT_R32G32B32A32_SFLOAT;            // format of source data
+    vi_attribs[0].format = VK_FMT_R32G32B32A32_SFLOAT;            // format of source data
     vi_attribs[0].offsetInBytes = 0;                // Offset of first element in bytes from base of vertex
     vi_attribs[1].binding = MESH_BUF_ID;            // binding ID
     vi_attribs[1].location = 1;
-    vi_attribs[1].format = XGL_FMT_R32G32B32A32_SFLOAT;            // format of source data
+    vi_attribs[1].format = VK_FMT_R32G32B32A32_SFLOAT;            // format of source data
     vi_attribs[1].offsetInBytes = 16;                // Offset of first element in bytes from base of vertex
 
     pipelineobj.AddVertexInputAttribs(vi_attribs, 2);
@@ -1835,12 +1835,12 @@ TEST_F(XglRenderTest, CubeWithVertexFetchAndMVP)
     XglCommandBufferObj cmdBuffer(m_device);
     cmdBuffer.AddRenderTarget(m_renderTargets[0]);
 
-    ASSERT_XGL_SUCCESS(BeginCommandBuffer(cmdBuffer));
+    ASSERT_VK_SUCCESS(BeginCommandBuffer(cmdBuffer));
     GenericDrawPreparation(&cmdBuffer, pipelineobj, descriptorSet);
 
     cmdBuffer.BindVertexBuffer(&meshBuffer, 0, 0);
 #ifdef DUMP_STATE_DOT
-    DRAW_STATE_DUMP_DOT_FILE pDSDumpDot = (DRAW_STATE_DUMP_DOT_FILE)xglGetProcAddr(gpu(), (char*)"drawStateDumpDotFile");
+    DRAW_STATE_DUMP_DOT_FILE pDSDumpDot = (DRAW_STATE_DUMP_DOT_FILE)vkGetProcAddr(gpu(), (char*)"drawStateDumpDotFile");
     pDSDumpDot((char*)"triTest2.dot");
 #endif
 
@@ -1887,8 +1887,8 @@ TEST_F(XglRenderTest, VSTexture)
     ASSERT_NO_FATAL_FAILURE(InitState());
     ASSERT_NO_FATAL_FAILURE(InitViewport());
 
-    XglShaderObj vs(m_device,vertShaderText,XGL_SHADER_STAGE_VERTEX, this);
-    XglShaderObj ps(m_device,fragShaderText, XGL_SHADER_STAGE_FRAGMENT, this);
+    XglShaderObj vs(m_device,vertShaderText,VK_SHADER_STAGE_VERTEX, this);
+    XglShaderObj ps(m_device,fragShaderText, VK_SHADER_STAGE_FRAGMENT, this);
     XglSamplerObj sampler(m_device);
     XglTextureObj texture(m_device);
 
@@ -1903,12 +1903,12 @@ TEST_F(XglRenderTest, VSTexture)
     XglCommandBufferObj cmdBuffer(m_device);
     cmdBuffer.AddRenderTarget(m_renderTargets[0]);
 
-    ASSERT_XGL_SUCCESS(BeginCommandBuffer(cmdBuffer));
+    ASSERT_VK_SUCCESS(BeginCommandBuffer(cmdBuffer));
 
     GenericDrawPreparation(&cmdBuffer, pipelineobj, descriptorSet);
 
 #ifdef DUMP_STATE_DOT
-    DRAW_STATE_DUMP_DOT_FILE pDSDumpDot = (DRAW_STATE_DUMP_DOT_FILE)xglGetProcAddr(gpu(), (char*)"drawStateDumpDotFile");
+    DRAW_STATE_DUMP_DOT_FILE pDSDumpDot = (DRAW_STATE_DUMP_DOT_FILE)vkGetProcAddr(gpu(), (char*)"drawStateDumpDotFile");
     pDSDumpDot((char*)"triTest2.dot");
 #endif
 
@@ -1957,8 +1957,8 @@ TEST_F(XglRenderTest, TexturedTriangle)
     ASSERT_NO_FATAL_FAILURE(InitState());
     ASSERT_NO_FATAL_FAILURE(InitViewport());
 
-    XglShaderObj vs(m_device,vertShaderText,XGL_SHADER_STAGE_VERTEX, this);
-    XglShaderObj ps(m_device,fragShaderText, XGL_SHADER_STAGE_FRAGMENT, this);
+    XglShaderObj vs(m_device,vertShaderText,VK_SHADER_STAGE_VERTEX, this);
+    XglShaderObj ps(m_device,fragShaderText, VK_SHADER_STAGE_FRAGMENT, this);
     XglSamplerObj sampler(m_device);
     XglTextureObj texture(m_device);
 
@@ -1973,12 +1973,12 @@ TEST_F(XglRenderTest, TexturedTriangle)
     XglCommandBufferObj cmdBuffer(m_device);
     cmdBuffer.AddRenderTarget(m_renderTargets[0]);
 
-    ASSERT_XGL_SUCCESS(BeginCommandBuffer(cmdBuffer));
+    ASSERT_VK_SUCCESS(BeginCommandBuffer(cmdBuffer));
 
     GenericDrawPreparation(&cmdBuffer, pipelineobj, descriptorSet);
 
 #ifdef DUMP_STATE_DOT
-    DRAW_STATE_DUMP_DOT_FILE pDSDumpDot = (DRAW_STATE_DUMP_DOT_FILE)xglGetProcAddr(gpu(), (char*)"drawStateDumpDotFile");
+    DRAW_STATE_DUMP_DOT_FILE pDSDumpDot = (DRAW_STATE_DUMP_DOT_FILE)vkGetProcAddr(gpu(), (char*)"drawStateDumpDotFile");
     pDSDumpDot((char*)"triTest2.dot");
 #endif
     // render triangle
@@ -2037,8 +2037,8 @@ TEST_F(XglRenderTest, TexturedTriangleClip)
     ASSERT_NO_FATAL_FAILURE(InitState());
     ASSERT_NO_FATAL_FAILURE(InitViewport());
 
-    XglShaderObj vs(m_device,vertShaderText,XGL_SHADER_STAGE_VERTEX, this);
-    XglShaderObj ps(m_device,fragShaderText, XGL_SHADER_STAGE_FRAGMENT, this);
+    XglShaderObj vs(m_device,vertShaderText,VK_SHADER_STAGE_VERTEX, this);
+    XglShaderObj ps(m_device,fragShaderText, VK_SHADER_STAGE_FRAGMENT, this);
     XglSamplerObj sampler(m_device);
     XglTextureObj texture(m_device);
 
@@ -2053,12 +2053,12 @@ TEST_F(XglRenderTest, TexturedTriangleClip)
     XglCommandBufferObj cmdBuffer(m_device);
     cmdBuffer.AddRenderTarget(m_renderTargets[0]);
 
-    ASSERT_XGL_SUCCESS(BeginCommandBuffer(cmdBuffer));
+    ASSERT_VK_SUCCESS(BeginCommandBuffer(cmdBuffer));
 
     GenericDrawPreparation(&cmdBuffer, pipelineobj, descriptorSet);
 
 #ifdef DUMP_STATE_DOT
-    DRAW_STATE_DUMP_DOT_FILE pDSDumpDot = (DRAW_STATE_DUMP_DOT_FILE)xglGetProcAddr(gpu(), (char*)"drawStateDumpDotFile");
+    DRAW_STATE_DUMP_DOT_FILE pDSDumpDot = (DRAW_STATE_DUMP_DOT_FILE)vkGetProcAddr(gpu(), (char*)"drawStateDumpDotFile");
     pDSDumpDot((char*)"triTest2.dot");
 #endif
     // render triangle
@@ -2106,8 +2106,8 @@ TEST_F(XglRenderTest, FSTriangle)
     ASSERT_NO_FATAL_FAILURE(InitState());
     ASSERT_NO_FATAL_FAILURE(InitViewport());
 
-    XglShaderObj vs(m_device,vertShaderText,XGL_SHADER_STAGE_VERTEX, this);
-    XglShaderObj ps(m_device,fragShaderText, XGL_SHADER_STAGE_FRAGMENT, this);
+    XglShaderObj vs(m_device,vertShaderText,VK_SHADER_STAGE_VERTEX, this);
+    XglShaderObj ps(m_device,fragShaderText, VK_SHADER_STAGE_FRAGMENT, this);
     XglSamplerObj sampler(m_device);
     XglTextureObj texture(m_device);
 
@@ -2122,12 +2122,12 @@ TEST_F(XglRenderTest, FSTriangle)
     XglCommandBufferObj cmdBuffer(m_device);
     cmdBuffer.AddRenderTarget(m_renderTargets[0]);
 
-    ASSERT_XGL_SUCCESS(BeginCommandBuffer(cmdBuffer));
+    ASSERT_VK_SUCCESS(BeginCommandBuffer(cmdBuffer));
 
     GenericDrawPreparation(&cmdBuffer, pipelineobj, descriptorSet);
 
 #ifdef DUMP_STATE_DOT
-    DRAW_STATE_DUMP_DOT_FILE pDSDumpDot = (DRAW_STATE_DUMP_DOT_FILE)xglGetProcAddr(gpu(), (char*)"drawStateDumpDotFile");
+    DRAW_STATE_DUMP_DOT_FILE pDSDumpDot = (DRAW_STATE_DUMP_DOT_FILE)vkGetProcAddr(gpu(), (char*)"drawStateDumpDotFile");
     pDSDumpDot((char*)"triTest2.dot");
 #endif
     // render triangle
@@ -2181,8 +2181,8 @@ TEST_F(XglRenderTest, SamplerBindingsTriangle)
     ASSERT_NO_FATAL_FAILURE(InitState());
     ASSERT_NO_FATAL_FAILURE(InitViewport());
 
-    XglShaderObj vs(m_device,vertShaderText,XGL_SHADER_STAGE_VERTEX, this);
-    XglShaderObj ps(m_device,fragShaderText, XGL_SHADER_STAGE_FRAGMENT, this);
+    XglShaderObj vs(m_device,vertShaderText,VK_SHADER_STAGE_VERTEX, this);
+    XglShaderObj ps(m_device,fragShaderText, VK_SHADER_STAGE_FRAGMENT, this);
 
     XglSamplerObj sampler1(m_device);
     XglSamplerObj sampler2(m_device);
@@ -2210,12 +2210,12 @@ TEST_F(XglRenderTest, SamplerBindingsTriangle)
     XglCommandBufferObj cmdBuffer(m_device);
     cmdBuffer.AddRenderTarget(m_renderTargets[0]);
 
-    ASSERT_XGL_SUCCESS(BeginCommandBuffer(cmdBuffer));
+    ASSERT_VK_SUCCESS(BeginCommandBuffer(cmdBuffer));
 
     GenericDrawPreparation(&cmdBuffer, pipelineobj, descriptorSet);
 
 #ifdef DUMP_STATE_DOT
-    DRAW_STATE_DUMP_DOT_FILE pDSDumpDot = (DRAW_STATE_DUMP_DOT_FILE)xglGetProcAddr(gpu(), (char*)"drawStateDumpDotFile");
+    DRAW_STATE_DUMP_DOT_FILE pDSDumpDot = (DRAW_STATE_DUMP_DOT_FILE)vkGetProcAddr(gpu(), (char*)"drawStateDumpDotFile");
     pDSDumpDot((char*)"triTest2.dot");
 #endif
     // render triangle
@@ -2264,8 +2264,8 @@ TEST_F(XglRenderTest, TriangleVSUniformBlock)
     ASSERT_NO_FATAL_FAILURE(InitState());
     ASSERT_NO_FATAL_FAILURE(InitViewport());
 
-    XglShaderObj vs(m_device,vertShaderText,XGL_SHADER_STAGE_VERTEX, this);
-    XglShaderObj ps(m_device,fragShaderText, XGL_SHADER_STAGE_FRAGMENT, this);
+    XglShaderObj vs(m_device,vertShaderText,VK_SHADER_STAGE_VERTEX, this);
+    XglShaderObj ps(m_device,fragShaderText, VK_SHADER_STAGE_FRAGMENT, this);
 
     // Let's populate our buffer with the following:
     //     vec4 red;
@@ -2285,18 +2285,18 @@ TEST_F(XglRenderTest, TriangleVSUniformBlock)
     pipelineobj.AddShader(&ps);
 
     XglDescriptorSetObj descriptorSet(m_device);
-    descriptorSet.AppendBuffer(XGL_DESCRIPTOR_TYPE_UNIFORM_BUFFER, colorBuffer);
+    descriptorSet.AppendBuffer(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, colorBuffer);
 
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
     XglCommandBufferObj cmdBuffer(m_device);
     cmdBuffer.AddRenderTarget(m_renderTargets[0]);
 
-    ASSERT_XGL_SUCCESS(BeginCommandBuffer(cmdBuffer));
+    ASSERT_VK_SUCCESS(BeginCommandBuffer(cmdBuffer));
 
     GenericDrawPreparation(&cmdBuffer, pipelineobj, descriptorSet);
 
 #ifdef DUMP_STATE_DOT
-    DRAW_STATE_DUMP_DOT_FILE pDSDumpDot = (DRAW_STATE_DUMP_DOT_FILE)xglGetProcAddr(gpu(), (char*)"drawStateDumpDotFile");
+    DRAW_STATE_DUMP_DOT_FILE pDSDumpDot = (DRAW_STATE_DUMP_DOT_FILE)vkGetProcAddr(gpu(), (char*)"drawStateDumpDotFile");
     pDSDumpDot((char*)"triTest2.dot");
 #endif
     // render triangle
@@ -2347,8 +2347,8 @@ TEST_F(XglRenderTest, TriangleFSUniformBlockBinding)
     ASSERT_NO_FATAL_FAILURE(InitState());
     ASSERT_NO_FATAL_FAILURE(InitViewport());
 
-    XglShaderObj vs(m_device,vertShaderText,XGL_SHADER_STAGE_VERTEX, this);
-    XglShaderObj ps(m_device,fragShaderText, XGL_SHADER_STAGE_FRAGMENT, this);
+    XglShaderObj vs(m_device,vertShaderText,VK_SHADER_STAGE_VERTEX, this);
+    XglShaderObj ps(m_device,fragShaderText, VK_SHADER_STAGE_FRAGMENT, this);
 
     // We're going to create a number of uniform buffers, and then allow
     // the shader to select which it wants to read from with a binding
@@ -2382,21 +2382,21 @@ TEST_F(XglRenderTest, TriangleFSUniformBlockBinding)
     pipelineobj.AddShader(&ps);
 
     XglDescriptorSetObj descriptorSet(m_device);
-    descriptorSet.AppendBuffer(XGL_DESCRIPTOR_TYPE_UNIFORM_BUFFER, redBuffer);
-    descriptorSet.AppendBuffer(XGL_DESCRIPTOR_TYPE_UNIFORM_BUFFER, greenBuffer);
-    descriptorSet.AppendBuffer(XGL_DESCRIPTOR_TYPE_UNIFORM_BUFFER, blueBuffer);
-    descriptorSet.AppendBuffer(XGL_DESCRIPTOR_TYPE_UNIFORM_BUFFER, whiteBuffer);
+    descriptorSet.AppendBuffer(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, redBuffer);
+    descriptorSet.AppendBuffer(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, greenBuffer);
+    descriptorSet.AppendBuffer(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, blueBuffer);
+    descriptorSet.AppendBuffer(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, whiteBuffer);
 
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
     XglCommandBufferObj cmdBuffer(m_device);
     cmdBuffer.AddRenderTarget(m_renderTargets[0]);
 
-    ASSERT_XGL_SUCCESS(BeginCommandBuffer(cmdBuffer));
+    ASSERT_VK_SUCCESS(BeginCommandBuffer(cmdBuffer));
 
     GenericDrawPreparation(&cmdBuffer, pipelineobj, descriptorSet);
 
 #ifdef DUMP_STATE_DOT
-    DRAW_STATE_DUMP_DOT_FILE pDSDumpDot = (DRAW_STATE_DUMP_DOT_FILE)xglGetProcAddr(gpu(), (char*)"drawStateDumpDotFile");
+    DRAW_STATE_DUMP_DOT_FILE pDSDumpDot = (DRAW_STATE_DUMP_DOT_FILE)vkGetProcAddr(gpu(), (char*)"drawStateDumpDotFile");
     pDSDumpDot((char*)"triTest2.dot");
 #endif
     // render triangle
@@ -2443,8 +2443,8 @@ TEST_F(XglRenderTest, TriangleFSAnonymousUniformBlockBinding)
     ASSERT_NO_FATAL_FAILURE(InitState());
     ASSERT_NO_FATAL_FAILURE(InitViewport());
 
-    XglShaderObj vs(m_device,vertShaderText,XGL_SHADER_STAGE_VERTEX, this);
-    XglShaderObj ps(m_device,fragShaderText, XGL_SHADER_STAGE_FRAGMENT, this);
+    XglShaderObj vs(m_device,vertShaderText,VK_SHADER_STAGE_VERTEX, this);
+    XglShaderObj ps(m_device,fragShaderText, VK_SHADER_STAGE_FRAGMENT, this);
 
     // We're going to create a number of uniform buffers, and then allow
     // the shader to select which it wants to read from with a binding
@@ -2478,21 +2478,21 @@ TEST_F(XglRenderTest, TriangleFSAnonymousUniformBlockBinding)
     pipelineobj.AddShader(&ps);
 
     XglDescriptorSetObj descriptorSet(m_device);
-    descriptorSet.AppendBuffer(XGL_DESCRIPTOR_TYPE_UNIFORM_BUFFER, redBuffer);
-    descriptorSet.AppendBuffer(XGL_DESCRIPTOR_TYPE_UNIFORM_BUFFER, greenBuffer);
-    descriptorSet.AppendBuffer(XGL_DESCRIPTOR_TYPE_UNIFORM_BUFFER, blueBuffer);
-    descriptorSet.AppendBuffer(XGL_DESCRIPTOR_TYPE_UNIFORM_BUFFER, whiteBuffer);
+    descriptorSet.AppendBuffer(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, redBuffer);
+    descriptorSet.AppendBuffer(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, greenBuffer);
+    descriptorSet.AppendBuffer(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, blueBuffer);
+    descriptorSet.AppendBuffer(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, whiteBuffer);
 
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
     XglCommandBufferObj cmdBuffer(m_device);
     cmdBuffer.AddRenderTarget(m_renderTargets[0]);
 
-    ASSERT_XGL_SUCCESS(BeginCommandBuffer(cmdBuffer));
+    ASSERT_VK_SUCCESS(BeginCommandBuffer(cmdBuffer));
 
     GenericDrawPreparation(&cmdBuffer, pipelineobj, descriptorSet);
 
 #ifdef DUMP_STATE_DOT
-    DRAW_STATE_DUMP_DOT_FILE pDSDumpDot = (DRAW_STATE_DUMP_DOT_FILE)xglGetProcAddr(gpu(), (char*)"drawStateDumpDotFile");
+    DRAW_STATE_DUMP_DOT_FILE pDSDumpDot = (DRAW_STATE_DUMP_DOT_FILE)vkGetProcAddr(gpu(), (char*)"drawStateDumpDotFile");
     pDSDumpDot((char*)"triTest2.dot");
 #endif
     // render triangle
@@ -2559,8 +2559,8 @@ TEST_F(XglRenderTest, CubeWithVertexFetchAndMVPAndTexture)
     const int buf_size = sizeof(MVP) / sizeof(float);
 
     XglConstantBufferObj mvpBuffer(m_device, buf_size, sizeof(MVP[0]), (const void*) &MVP[0][0]);
-    XglShaderObj vs(m_device,vertShaderText,XGL_SHADER_STAGE_VERTEX, this);
-    XglShaderObj ps(m_device,fragShaderText, XGL_SHADER_STAGE_FRAGMENT, this);
+    XglShaderObj vs(m_device,vertShaderText,VK_SHADER_STAGE_VERTEX, this);
+    XglShaderObj ps(m_device,fragShaderText, VK_SHADER_STAGE_FRAGMENT, this);
     XglSamplerObj sampler(m_device);
     XglTextureObj texture(m_device);
 
@@ -2569,41 +2569,41 @@ TEST_F(XglRenderTest, CubeWithVertexFetchAndMVPAndTexture)
     pipelineobj.AddShader(&ps);
 
     XglDescriptorSetObj descriptorSet(m_device);
-    descriptorSet.AppendBuffer(XGL_DESCRIPTOR_TYPE_UNIFORM_BUFFER, mvpBuffer);
+    descriptorSet.AppendBuffer(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, mvpBuffer);
     descriptorSet.AppendSamplerTexture(&sampler, &texture);
 
 #define MESH_BIND_ID 0
-    XGL_VERTEX_INPUT_BINDING_DESCRIPTION vi_binding = {
+    VK_VERTEX_INPUT_BINDING_DESCRIPTION vi_binding = {
         MESH_BIND_ID,                      // binding ID
         sizeof(g_vbData[0]),               // strideInBytes;  Distance between vertices in bytes (0 = no advancement)
-        XGL_VERTEX_INPUT_STEP_RATE_VERTEX  // stepRate;       // Rate at which binding is incremented
+        VK_VERTEX_INPUT_STEP_RATE_VERTEX  // stepRate;       // Rate at which binding is incremented
     };
 
-    XGL_VERTEX_INPUT_ATTRIBUTE_DESCRIPTION vi_attribs[2];
+    VK_VERTEX_INPUT_ATTRIBUTE_DESCRIPTION vi_attribs[2];
     vi_attribs[0].binding = MESH_BIND_ID;               // Binding ID
     vi_attribs[0].location = 0;                         // location
-    vi_attribs[0].format = XGL_FMT_R32G32B32A32_SFLOAT; // format of source data
+    vi_attribs[0].format = VK_FMT_R32G32B32A32_SFLOAT; // format of source data
     vi_attribs[0].offsetInBytes = 0;                    // Offset of first element in bytes from base of vertex
     vi_attribs[1].binding = MESH_BIND_ID;               // Binding ID
     vi_attribs[1].location = 1;                         // location
-    vi_attribs[1].format = XGL_FMT_R32G32B32A32_SFLOAT; // format of source data
+    vi_attribs[1].format = VK_FMT_R32G32B32A32_SFLOAT; // format of source data
     vi_attribs[1].offsetInBytes = 16;                   // Offset of first element in bytes from base of vertex
 
     pipelineobj.AddVertexInputAttribs(vi_attribs,2);
     pipelineobj.AddVertexInputBindings(&vi_binding,1);
     pipelineobj.AddVertexDataBuffer(&meshBuffer, MESH_BIND_ID);
 
-    XGL_PIPELINE_DS_STATE_CREATE_INFO ds_state;
-    ds_state.depthTestEnable = XGL_TRUE;
-    ds_state.depthWriteEnable = XGL_TRUE;
-    ds_state.depthFunc = XGL_COMPARE_LESS_EQUAL;
-    ds_state.depthBoundsEnable = XGL_FALSE;
-    ds_state.stencilTestEnable = XGL_FALSE;
-    ds_state.back.stencilDepthFailOp = XGL_STENCIL_OP_KEEP;
-    ds_state.back.stencilFailOp = XGL_STENCIL_OP_KEEP;
-    ds_state.back.stencilPassOp = XGL_STENCIL_OP_KEEP;
-    ds_state.back.stencilFunc = XGL_COMPARE_ALWAYS;
-    ds_state.format = XGL_FMT_D32_SFLOAT;
+    VK_PIPELINE_DS_STATE_CREATE_INFO ds_state;
+    ds_state.depthTestEnable = VK_TRUE;
+    ds_state.depthWriteEnable = VK_TRUE;
+    ds_state.depthFunc = VK_COMPARE_LESS_EQUAL;
+    ds_state.depthBoundsEnable = VK_FALSE;
+    ds_state.stencilTestEnable = VK_FALSE;
+    ds_state.back.stencilDepthFailOp = VK_STENCIL_OP_KEEP;
+    ds_state.back.stencilFailOp = VK_STENCIL_OP_KEEP;
+    ds_state.back.stencilPassOp = VK_STENCIL_OP_KEEP;
+    ds_state.back.stencilFunc = VK_COMPARE_ALWAYS;
+    ds_state.format = VK_FMT_D32_SFLOAT;
     ds_state.front = ds_state.back;
     pipelineobj.SetDepthStencil(&ds_state);
 
@@ -2611,13 +2611,13 @@ TEST_F(XglRenderTest, CubeWithVertexFetchAndMVPAndTexture)
     XglCommandBufferObj cmdBuffer(m_device);
     cmdBuffer.AddRenderTarget(m_renderTargets[0]);
 
-    ASSERT_XGL_SUCCESS(BeginCommandBuffer(cmdBuffer));
+    ASSERT_VK_SUCCESS(BeginCommandBuffer(cmdBuffer));
 
     GenericDrawPreparation(&cmdBuffer, pipelineobj, descriptorSet);
 
     cmdBuffer.BindVertexBuffer(&meshBuffer, 0, 0);
 #ifdef DUMP_STATE_DOT
-    DRAW_STATE_DUMP_DOT_FILE pDSDumpDot = (DRAW_STATE_DUMP_DOT_FILE)xglGetProcAddr(gpu(), (char*)"drawStateDumpDotFile");
+    DRAW_STATE_DUMP_DOT_FILE pDSDumpDot = (DRAW_STATE_DUMP_DOT_FILE)vkGetProcAddr(gpu(), (char*)"drawStateDumpDotFile");
     pDSDumpDot((char*)"triTest2.dot");
 #endif
     // render triangle
@@ -2673,8 +2673,8 @@ TEST_F(XglRenderTest, TriangleMixedSamplerUniformBlockBinding)
     ASSERT_NO_FATAL_FAILURE(InitState());
     ASSERT_NO_FATAL_FAILURE(InitViewport());
 
-    XglShaderObj vs(m_device,vertShaderText,XGL_SHADER_STAGE_VERTEX, this);
-    XglShaderObj ps(m_device,fragShaderText, XGL_SHADER_STAGE_FRAGMENT, this);
+    XglShaderObj vs(m_device,vertShaderText,VK_SHADER_STAGE_VERTEX, this);
+    XglShaderObj ps(m_device,fragShaderText, VK_SHADER_STAGE_FRAGMENT, this);
 
     const float redVals[4]   = { 1.0, 0.0, 0.0, 1.0 };
     const float greenVals[4] = { 0.0, 1.0, 0.0, 1.0 };
@@ -2716,22 +2716,22 @@ TEST_F(XglRenderTest, TriangleMixedSamplerUniformBlockBinding)
     descriptorSet.AppendSamplerTexture(&sampler2, &texture2);
     descriptorSet.AppendSamplerTexture(&sampler4, &texture4);
     descriptorSet.AppendSamplerTexture(&sampler7, &texture7);
-    descriptorSet.AppendBuffer(XGL_DESCRIPTOR_TYPE_UNIFORM_BUFFER, redBuffer);
+    descriptorSet.AppendBuffer(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, redBuffer);
     // swap blue and green
-    descriptorSet.AppendBuffer(XGL_DESCRIPTOR_TYPE_UNIFORM_BUFFER, blueBuffer);
-    descriptorSet.AppendBuffer(XGL_DESCRIPTOR_TYPE_UNIFORM_BUFFER, greenBuffer);
-    descriptorSet.AppendBuffer(XGL_DESCRIPTOR_TYPE_UNIFORM_BUFFER, whiteBuffer);
+    descriptorSet.AppendBuffer(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, blueBuffer);
+    descriptorSet.AppendBuffer(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, greenBuffer);
+    descriptorSet.AppendBuffer(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, whiteBuffer);
 
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
     XglCommandBufferObj cmdBuffer(m_device);
     cmdBuffer.AddRenderTarget(m_renderTargets[0]);
 
-    ASSERT_XGL_SUCCESS(BeginCommandBuffer(cmdBuffer));
+    ASSERT_VK_SUCCESS(BeginCommandBuffer(cmdBuffer));
 
     GenericDrawPreparation(&cmdBuffer, pipelineobj, descriptorSet);
 
 #ifdef DUMP_STATE_DOT
-    DRAW_STATE_DUMP_DOT_FILE pDSDumpDot = (DRAW_STATE_DUMP_DOT_FILE)xglGetProcAddr(gpu(), (char*)"drawStateDumpDotFile");
+    DRAW_STATE_DUMP_DOT_FILE pDSDumpDot = (DRAW_STATE_DUMP_DOT_FILE)vkGetProcAddr(gpu(), (char*)"drawStateDumpDotFile");
     pDSDumpDot((char*)"triTest2.dot");
 #endif
     // render triangle
@@ -2785,8 +2785,8 @@ TEST_F(XglRenderTest, TriangleMatchingSamplerUniformBlockBinding)
     ASSERT_NO_FATAL_FAILURE(InitState());
     ASSERT_NO_FATAL_FAILURE(InitViewport());
 
-    XglShaderObj vs(m_device,vertShaderText,XGL_SHADER_STAGE_VERTEX, this);
-    XglShaderObj ps(m_device,fragShaderText, XGL_SHADER_STAGE_FRAGMENT, this);
+    XglShaderObj vs(m_device,vertShaderText,VK_SHADER_STAGE_VERTEX, this);
+    XglShaderObj ps(m_device,fragShaderText, VK_SHADER_STAGE_FRAGMENT, this);
 
     const float redVals[4]   = { 1.0, 0.0, 0.0, 1.0 };
     const float greenVals[4] = { 0.0, 1.0, 0.0, 1.0 };
@@ -2825,21 +2825,21 @@ TEST_F(XglRenderTest, TriangleMatchingSamplerUniformBlockBinding)
     descriptorSet.AppendSamplerTexture(&sampler2, &texture2);
     descriptorSet.AppendSamplerTexture(&sampler4, &texture4);
     descriptorSet.AppendSamplerTexture(&sampler7, &texture7);
-    descriptorSet.AppendBuffer(XGL_DESCRIPTOR_TYPE_UNIFORM_BUFFER, redBuffer);
-    descriptorSet.AppendBuffer(XGL_DESCRIPTOR_TYPE_UNIFORM_BUFFER, greenBuffer);
-    descriptorSet.AppendBuffer(XGL_DESCRIPTOR_TYPE_UNIFORM_BUFFER, blueBuffer);
-    descriptorSet.AppendBuffer(XGL_DESCRIPTOR_TYPE_UNIFORM_BUFFER, whiteBuffer);
+    descriptorSet.AppendBuffer(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, redBuffer);
+    descriptorSet.AppendBuffer(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, greenBuffer);
+    descriptorSet.AppendBuffer(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, blueBuffer);
+    descriptorSet.AppendBuffer(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, whiteBuffer);
 
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
     XglCommandBufferObj cmdBuffer(m_device);
     cmdBuffer.AddRenderTarget(m_renderTargets[0]);
 
-    ASSERT_XGL_SUCCESS(BeginCommandBuffer(cmdBuffer));
+    ASSERT_VK_SUCCESS(BeginCommandBuffer(cmdBuffer));
 
     GenericDrawPreparation(&cmdBuffer, pipelineobj, descriptorSet);
 
 #ifdef DUMP_STATE_DOT
-    DRAW_STATE_DUMP_DOT_FILE pDSDumpDot = (DRAW_STATE_DUMP_DOT_FILE)xglGetProcAddr(gpu(), (char*)"drawStateDumpDotFile");
+    DRAW_STATE_DUMP_DOT_FILE pDSDumpDot = (DRAW_STATE_DUMP_DOT_FILE)vkGetProcAddr(gpu(), (char*)"drawStateDumpDotFile");
     pDSDumpDot((char*)"triTest2.dot");
 #endif
     // render triangle
@@ -3068,8 +3068,8 @@ TEST_F(XglRenderTest, TriangleUniformBufferLayout)
 
     const int constCount   = sizeof(mixedVals)   / sizeof(float);
 
-    XglShaderObj vs(m_device,vertShaderText,XGL_SHADER_STAGE_VERTEX, this);
-    XglShaderObj ps(m_device,fragShaderText, XGL_SHADER_STAGE_FRAGMENT, this);
+    XglShaderObj vs(m_device,vertShaderText,VK_SHADER_STAGE_VERTEX, this);
+    XglShaderObj ps(m_device,fragShaderText, VK_SHADER_STAGE_FRAGMENT, this);
 
     XglConstantBufferObj mixedBuffer(m_device, constCount, sizeof(mixedVals[0]), (const void*) mixedVals);
 
@@ -3078,18 +3078,18 @@ TEST_F(XglRenderTest, TriangleUniformBufferLayout)
     pipelineobj.AddShader(&ps);
 
     XglDescriptorSetObj descriptorSet(m_device);
-    descriptorSet.AppendBuffer(XGL_DESCRIPTOR_TYPE_UNIFORM_BUFFER, mixedBuffer);
+    descriptorSet.AppendBuffer(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, mixedBuffer);
 
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
     XglCommandBufferObj cmdBuffer(m_device);
     cmdBuffer.AddRenderTarget(m_renderTargets[0]);
 
-    ASSERT_XGL_SUCCESS(BeginCommandBuffer(cmdBuffer));
+    ASSERT_VK_SUCCESS(BeginCommandBuffer(cmdBuffer));
 
     GenericDrawPreparation(&cmdBuffer, pipelineobj, descriptorSet);
 
 #ifdef DUMP_STATE_DOT
-    DRAW_STATE_DUMP_DOT_FILE pDSDumpDot = (DRAW_STATE_DUMP_DOT_FILE)xglGetProcAddr(gpu(), (char*)"drawStateDumpDotFile");
+    DRAW_STATE_DUMP_DOT_FILE pDSDumpDot = (DRAW_STATE_DUMP_DOT_FILE)vkGetProcAddr(gpu(), (char*)"drawStateDumpDotFile");
     pDSDumpDot((char*)"triTest2.dot");
 #endif
     // render triangle

@@ -1,5 +1,5 @@
 /*
- * XGL
+ * Vulkan
  *
  * Copyright (C) 2014 LunarG, Inc.
  *
@@ -21,7 +21,7 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
-#include "xglLayer.h"
+#include "vkLayer.h"
 #include <vector>
 
 using namespace std;
@@ -39,10 +39,10 @@ typedef enum _DRAW_STATE_ERROR
     DRAWSTATE_UPDATE_WITHOUT_BEGIN,             // Attempt to update descriptors w/o calling BeginDescriptorPoolUpdate
     DRAWSTATE_INVALID_PIPELINE,                 // Invalid Pipeline referenced
     DRAWSTATE_INVALID_CMD_BUFFER,               // Invalid CmdBuffer referenced
-    DRAWSTATE_VTX_INDEX_OUT_OF_BOUNDS,          // binding in xglCmdBindVertexData() too large for PSO's pVertexBindingDescriptions array
+    DRAWSTATE_VTX_INDEX_OUT_OF_BOUNDS,          // binding in vkCmdBindVertexData() too large for PSO's pVertexBindingDescriptions array
     DRAWSTATE_INVALID_DYNAMIC_STATE_OBJECT,     // Invalid dyn state object
     DRAWSTATE_MISSING_DOT_PROGRAM,              // No "dot" program in order to generate png image
-    DRAWSTATE_BINDING_DS_NO_END_UPDATE,         // DS bound to CmdBuffer w/o call to xglEndDescriptorSetUpdate())
+    DRAWSTATE_BINDING_DS_NO_END_UPDATE,         // DS bound to CmdBuffer w/o call to vkEndDescriptorSetUpdate())
     DRAWSTATE_NO_DS_POOL,                       // No DS Pool is available
     DRAWSTATE_OUT_OF_MEMORY,                    // malloc failed
     DRAWSTATE_DESCRIPTOR_TYPE_MISMATCH,         // Type in layout vs. update are not the same
@@ -65,84 +65,84 @@ typedef enum _DRAW_TYPE
 
 typedef struct _SHADER_DS_MAPPING {
     uint32_t slotCount;
-    XGL_DESCRIPTOR_SET_LAYOUT_CREATE_INFO* pShaderMappingSlot;
+    VK_DESCRIPTOR_SET_LAYOUT_CREATE_INFO* pShaderMappingSlot;
 } SHADER_DS_MAPPING;
 
 typedef struct _GENERIC_HEADER {
-    XGL_STRUCTURE_TYPE sType;
+    VK_STRUCTURE_TYPE sType;
     const void*    pNext;
 } GENERIC_HEADER;
 
 typedef struct _PIPELINE_NODE {
-    XGL_PIPELINE           pipeline;
+    VK_PIPELINE           pipeline;
 
-    XGL_GRAPHICS_PIPELINE_CREATE_INFO     graphicsPipelineCI;
-    XGL_PIPELINE_VERTEX_INPUT_CREATE_INFO vertexInputCI;
-    XGL_PIPELINE_IA_STATE_CREATE_INFO     iaStateCI;
-    XGL_PIPELINE_TESS_STATE_CREATE_INFO   tessStateCI;
-    XGL_PIPELINE_VP_STATE_CREATE_INFO     vpStateCI;
-    XGL_PIPELINE_RS_STATE_CREATE_INFO     rsStateCI;
-    XGL_PIPELINE_MS_STATE_CREATE_INFO     msStateCI;
-    XGL_PIPELINE_CB_STATE_CREATE_INFO     cbStateCI;
-    XGL_PIPELINE_DS_STATE_CREATE_INFO     dsStateCI;
-    XGL_PIPELINE_SHADER_STAGE_CREATE_INFO vsCI;
-    XGL_PIPELINE_SHADER_STAGE_CREATE_INFO tcsCI;
-    XGL_PIPELINE_SHADER_STAGE_CREATE_INFO tesCI;
-    XGL_PIPELINE_SHADER_STAGE_CREATE_INFO gsCI;
-    XGL_PIPELINE_SHADER_STAGE_CREATE_INFO fsCI;
-    // Compute shader is include in XGL_COMPUTE_PIPELINE_CREATE_INFO
-    XGL_COMPUTE_PIPELINE_CREATE_INFO      computePipelineCI;
+    VK_GRAPHICS_PIPELINE_CREATE_INFO     graphicsPipelineCI;
+    VK_PIPELINE_VERTEX_INPUT_CREATE_INFO vertexInputCI;
+    VK_PIPELINE_IA_STATE_CREATE_INFO     iaStateCI;
+    VK_PIPELINE_TESS_STATE_CREATE_INFO   tessStateCI;
+    VK_PIPELINE_VP_STATE_CREATE_INFO     vpStateCI;
+    VK_PIPELINE_RS_STATE_CREATE_INFO     rsStateCI;
+    VK_PIPELINE_MS_STATE_CREATE_INFO     msStateCI;
+    VK_PIPELINE_CB_STATE_CREATE_INFO     cbStateCI;
+    VK_PIPELINE_DS_STATE_CREATE_INFO     dsStateCI;
+    VK_PIPELINE_SHADER_STAGE_CREATE_INFO vsCI;
+    VK_PIPELINE_SHADER_STAGE_CREATE_INFO tcsCI;
+    VK_PIPELINE_SHADER_STAGE_CREATE_INFO tesCI;
+    VK_PIPELINE_SHADER_STAGE_CREATE_INFO gsCI;
+    VK_PIPELINE_SHADER_STAGE_CREATE_INFO fsCI;
+    // Compute shader is include in VK_COMPUTE_PIPELINE_CREATE_INFO
+    VK_COMPUTE_PIPELINE_CREATE_INFO      computePipelineCI;
 
-    XGL_GRAPHICS_PIPELINE_CREATE_INFO*      pCreateTree; // Ptr to shadow of data in create tree
+    VK_GRAPHICS_PIPELINE_CREATE_INFO*      pCreateTree; // Ptr to shadow of data in create tree
     // Vtx input info (if any)
     uint32_t                                vtxBindingCount;   // number of bindings
-    XGL_VERTEX_INPUT_BINDING_DESCRIPTION*   pVertexBindingDescriptions;
+    VK_VERTEX_INPUT_BINDING_DESCRIPTION*   pVertexBindingDescriptions;
     uint32_t                                vtxAttributeCount; // number of attributes
-    XGL_VERTEX_INPUT_ATTRIBUTE_DESCRIPTION* pVertexAttributeDescriptions;
+    VK_VERTEX_INPUT_ATTRIBUTE_DESCRIPTION* pVertexAttributeDescriptions;
     uint32_t                                attachmentCount;   // number of CB attachments
-    XGL_PIPELINE_CB_ATTACHMENT_STATE*       pAttachments;
+    VK_PIPELINE_CB_ATTACHMENT_STATE*       pAttachments;
 } PIPELINE_NODE;
 
 typedef struct _SAMPLER_NODE {
-    XGL_SAMPLER              sampler;
-    XGL_SAMPLER_CREATE_INFO  createInfo;
+    VK_SAMPLER              sampler;
+    VK_SAMPLER_CREATE_INFO  createInfo;
 } SAMPLER_NODE;
 
 typedef struct _IMAGE_NODE {
-    XGL_IMAGE_VIEW             image;
-    XGL_IMAGE_VIEW_CREATE_INFO createInfo;
-    XGL_IMAGE_VIEW_ATTACH_INFO attachInfo;
+    VK_IMAGE_VIEW             image;
+    VK_IMAGE_VIEW_CREATE_INFO createInfo;
+    VK_IMAGE_VIEW_ATTACH_INFO attachInfo;
 } IMAGE_NODE;
 
 typedef struct _BUFFER_NODE {
-    XGL_BUFFER_VIEW             buffer;
-    XGL_BUFFER_VIEW_CREATE_INFO createInfo;
-    XGL_BUFFER_VIEW_ATTACH_INFO attachInfo;
+    VK_BUFFER_VIEW             buffer;
+    VK_BUFFER_VIEW_CREATE_INFO createInfo;
+    VK_BUFFER_VIEW_ATTACH_INFO attachInfo;
 } BUFFER_NODE;
 
 typedef struct _DYNAMIC_STATE_NODE {
-    XGL_DYNAMIC_STATE_OBJECT    stateObj;
+    VK_DYNAMIC_STATE_OBJECT    stateObj;
     GENERIC_HEADER*             pCreateInfo;
     union {
-        XGL_DYNAMIC_VP_STATE_CREATE_INFO vpci;
-        XGL_DYNAMIC_RS_STATE_CREATE_INFO rsci;
-        XGL_DYNAMIC_CB_STATE_CREATE_INFO cbci;
-        XGL_DYNAMIC_DS_STATE_CREATE_INFO dsci;
+        VK_DYNAMIC_VP_STATE_CREATE_INFO vpci;
+        VK_DYNAMIC_RS_STATE_CREATE_INFO rsci;
+        VK_DYNAMIC_CB_STATE_CREATE_INFO cbci;
+        VK_DYNAMIC_DS_STATE_CREATE_INFO dsci;
     } create_info;
 } DYNAMIC_STATE_NODE;
 // Descriptor Data structures
 // Layout Node has the core layout data
 typedef struct _LAYOUT_NODE {
-    XGL_DESCRIPTOR_SET_LAYOUT                    layout;
-    XGL_DESCRIPTOR_TYPE*                         pTypes; // Dynamic array that will be created to verify descriptor types
-    XGL_DESCRIPTOR_SET_LAYOUT_CREATE_INFO        createInfo;
+    VK_DESCRIPTOR_SET_LAYOUT                    layout;
+    VK_DESCRIPTOR_TYPE*                         pTypes; // Dynamic array that will be created to verify descriptor types
+    VK_DESCRIPTOR_SET_LAYOUT_CREATE_INFO        createInfo;
     uint32_t                                     startIndex; // 1st index of this layout
     uint32_t                                     endIndex; // last index of this layout
 } LAYOUT_NODE;
 typedef struct _SET_NODE {
-    XGL_DESCRIPTOR_SET                           set;
-    XGL_DESCRIPTOR_POOL                          pool;
-    XGL_DESCRIPTOR_SET_USAGE                     setUsage;
+    VK_DESCRIPTOR_SET                           set;
+    VK_DESCRIPTOR_POOL                          pool;
+    VK_DESCRIPTOR_SET_USAGE                     setUsage;
     // Head of LL of all Update structs for this set
     GENERIC_HEADER*                              pUpdateStructs;
     // Total num of descriptors in this set (count of its layout plus all prior layouts)
@@ -153,10 +153,10 @@ typedef struct _SET_NODE {
 } SET_NODE;
 
 typedef struct _POOL_NODE {
-    XGL_DESCRIPTOR_POOL                          pool;
-    XGL_DESCRIPTOR_POOL_USAGE                    poolUsage;
+    VK_DESCRIPTOR_POOL                          pool;
+    VK_DESCRIPTOR_POOL_USAGE                    poolUsage;
     uint32_t                                     maxSets;
-    XGL_DESCRIPTOR_POOL_CREATE_INFO              createInfo;
+    VK_DESCRIPTOR_POOL_CREATE_INFO              createInfo;
     bool32_t                                     updateActive; // Track if Pool is in an update block
     SET_NODE*                                    pSets; // Head of LL of sets for this Pool
 } POOL_NODE;
@@ -218,10 +218,10 @@ typedef enum _CB_STATE
 } CB_STATE;
 // Cmd Buffer Wrapper Struct
 typedef struct _GLOBAL_CB_NODE {
-    XGL_CMD_BUFFER                  cmdBuffer;
+    VK_CMD_BUFFER                  cmdBuffer;
     uint32_t                        queueNodeIndex;
-    XGL_FLAGS                       flags;
-    XGL_FENCE                       fence;    // fence tracking this cmd buffer
+    VK_FLAGS                       flags;
+    VK_FENCE                       fence;    // fence tracking this cmd buffer
     uint64_t                        numCmds;  // number of cmds in this CB
     uint64_t                        drawCount[NUM_DRAW_TYPES]; // Count of each type of draw in this CB
     CB_STATE                        state; // Track if cmd buffer update status
@@ -229,12 +229,12 @@ typedef struct _GLOBAL_CB_NODE {
     // Currently storing "lastBound" objects on per-CB basis
     //  long-term may want to create caches of "lastBound" states and could have
     //  each individual CMD_NODE referencing its own "lastBound" state
-    XGL_PIPELINE                    lastBoundPipeline;
+    VK_PIPELINE                    lastBoundPipeline;
     uint32_t                        lastVtxBinding;
-    DYNAMIC_STATE_NODE*             lastBoundDynamicState[XGL_NUM_STATE_BIND_POINT];
-    XGL_DESCRIPTOR_SET              lastBoundDescriptorSet;
-    XGL_RENDER_PASS                 activeRenderPass;
-    XGL_FRAMEBUFFER                 framebuffer;
+    DYNAMIC_STATE_NODE*             lastBoundDynamicState[VK_NUM_STATE_BIND_POINT];
+    VK_DESCRIPTOR_SET              lastBoundDescriptorSet;
+    VK_RENDER_PASS                 activeRenderPass;
+    VK_FRAMEBUFFER                 framebuffer;
 } GLOBAL_CB_NODE;
 
 //prototypes for extension functions

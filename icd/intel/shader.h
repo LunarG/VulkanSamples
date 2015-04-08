@@ -1,5 +1,5 @@
 /*
- * XGL
+ * Vulkan
  *
  * Copyright (C) 2014 LunarG, Inc.
  *
@@ -40,7 +40,7 @@ struct intel_shader {
     struct intel_ir *ir;
 };
 
-static inline struct intel_shader *intel_shader(XGL_SHADER shader)
+static inline struct intel_shader *intel_shader(VK_SHADER shader)
 {
     return (struct intel_shader *) shader;
 }

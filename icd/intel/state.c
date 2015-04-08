@@ -1,5 +1,5 @@
 /*
- * XGL
+ * Vulkan
  *
  * Copyright (C) 2014 LunarG, Inc.
  *
@@ -89,10 +89,10 @@ viewport_get_guardband(const struct intel_gpu *gpu,
    *max_gby = (float) (center_y + half_len);
 }
 
-static XGL_RESULT
+static VK_RESULT
 viewport_state_alloc_cmd(struct intel_dynamic_vp *state,
                          const struct intel_gpu *gpu,
-                         const XGL_DYNAMIC_VP_STATE_CREATE_INFO *info)
+                         const VK_DYNAMIC_VP_STATE_CREATE_INFO *info)
 {
     INTEL_GPU_ASSERT(gpu, 6, 7.5);
 
@@ -118,28 +118,28 @@ viewport_state_alloc_cmd(struct intel_dynamic_vp *state,
     state->cmd_len += 2 * info->viewportAndScissorCount;
 
     state->cmd = intel_alloc(state, sizeof(uint32_t) * state->cmd_len,
-            0, XGL_SYSTEM_ALLOC_INTERNAL);
+            0, VK_SYSTEM_ALLOC_INTERNAL);
     if (!state->cmd)
-        return XGL_ERROR_OUT_OF_MEMORY;
+        return VK_ERROR_OUT_OF_MEMORY;
 
-    return XGL_SUCCESS;
+    return VK_SUCCESS;
 }
 
-static XGL_RESULT
+static VK_RESULT
 viewport_state_init(struct intel_dynamic_vp *state,
                     const struct intel_gpu *gpu,
-                    const XGL_DYNAMIC_VP_STATE_CREATE_INFO *info)
+                    const VK_DYNAMIC_VP_STATE_CREATE_INFO *info)
 {
     const uint32_t sf_stride = (intel_gpu_gen(gpu) >= INTEL_GEN(7)) ? 16 : 8;
     const uint32_t clip_stride = (intel_gpu_gen(gpu) >= INTEL_GEN(7)) ? 16 : 4;
     uint32_t *sf_viewport, *clip_viewport, *cc_viewport, *scissor_rect;
     uint32_t i;
-    XGL_RESULT ret;
+    VK_RESULT ret;
 
     INTEL_GPU_ASSERT(gpu, 6, 7.5);
 
     ret = viewport_state_alloc_cmd(state, gpu, info);
-    if (ret != XGL_SUCCESS)
+    if (ret != VK_SUCCESS)
         return ret;
 
     sf_viewport = state->cmd;
@@ -148,7 +148,7 @@ viewport_state_init(struct intel_dynamic_vp *state,
     scissor_rect = state->cmd + state->cmd_scissor_rect_pos;
 
     for (i = 0; i < info->viewportAndScissorCount; i++) {
-        const XGL_VIEWPORT *viewport = &info->pViewports[i];
+        const VK_VIEWPORT *viewport = &info->pViewports[i];
         uint32_t *dw = NULL;
         float translate[3], scale[3];
         int min_gbx, max_gbx, min_gby, max_gby;
@@ -191,7 +191,7 @@ viewport_state_init(struct intel_dynamic_vp *state,
     }
 
     for (i = 0; i < info->viewportAndScissorCount; i++) {
-        const XGL_RECT *scissor = &info->pScissors[i];
+        const VK_RECT *scissor = &info->pScissors[i];
         /* SCISSOR_RECT */
         int16_t max_x, max_y;
         uint32_t *dw = NULL;
@@ -211,7 +211,7 @@ viewport_state_init(struct intel_dynamic_vp *state,
         scissor_rect += 2;
     }
 
-    return XGL_SUCCESS;
+    return VK_SUCCESS;
 }
 
 static void viewport_state_destroy(struct intel_obj *obj)
@@ -221,30 +221,30 @@ static void viewport_state_destroy(struct intel_obj *obj)
     intel_viewport_state_destroy(state);
 }
 
-XGL_RESULT intel_viewport_state_create(struct intel_dev *dev,
-                                       const XGL_DYNAMIC_VP_STATE_CREATE_INFO *info,
+VK_RESULT intel_viewport_state_create(struct intel_dev *dev,
+                                       const VK_DYNAMIC_VP_STATE_CREATE_INFO *info,
                                        struct intel_dynamic_vp **state_ret)
 {
     struct intel_dynamic_vp *state;
-    XGL_RESULT ret;
+    VK_RESULT ret;
 
     state = (struct intel_dynamic_vp *) intel_base_create(&dev->base.handle,
-            sizeof(*state), dev->base.dbg, XGL_DBG_OBJECT_VIEWPORT_STATE,
+            sizeof(*state), dev->base.dbg, VK_DBG_OBJECT_VIEWPORT_STATE,
             info, 0);
     if (!state)
-        return XGL_ERROR_OUT_OF_MEMORY;
+        return VK_ERROR_OUT_OF_MEMORY;
 
     state->obj.destroy = viewport_state_destroy;
 
     ret = viewport_state_init(state, dev->gpu, info);
-    if (ret != XGL_SUCCESS) {
+    if (ret != VK_SUCCESS) {
         intel_viewport_state_destroy(state);
         return ret;
     }
 
     *state_ret = state;
 
-    return XGL_SUCCESS;
+    return VK_SUCCESS;
 }
 
 void intel_viewport_state_destroy(struct intel_dynamic_vp *state)
@@ -260,24 +260,24 @@ static void raster_state_destroy(struct intel_obj *obj)
     intel_raster_state_destroy(state);
 }
 
-XGL_RESULT intel_raster_state_create(struct intel_dev *dev,
-                                     const XGL_DYNAMIC_RS_STATE_CREATE_INFO *info,
+VK_RESULT intel_raster_state_create(struct intel_dev *dev,
+                                     const VK_DYNAMIC_RS_STATE_CREATE_INFO *info,
                                      struct intel_dynamic_rs **state_ret)
 {
     struct intel_dynamic_rs *state;
 
     state = (struct intel_dynamic_rs *) intel_base_create(&dev->base.handle,
-            sizeof(*state), dev->base.dbg, XGL_DBG_OBJECT_RASTER_STATE,
+            sizeof(*state), dev->base.dbg, VK_DBG_OBJECT_RASTER_STATE,
             info, 0);
     if (!state)
-        return XGL_ERROR_OUT_OF_MEMORY;
+        return VK_ERROR_OUT_OF_MEMORY;
 
     state->obj.destroy = raster_state_destroy;
     state->rs_info = *info;
 
     *state_ret = state;
 
-    return XGL_SUCCESS;
+    return VK_SUCCESS;
 }
 
 void intel_raster_state_destroy(struct intel_dynamic_rs *state)
@@ -292,24 +292,24 @@ static void blend_state_destroy(struct intel_obj *obj)
     intel_blend_state_destroy(state);
 }
 
-XGL_RESULT intel_blend_state_create(struct intel_dev *dev,
-                                    const XGL_DYNAMIC_CB_STATE_CREATE_INFO *info,
+VK_RESULT intel_blend_state_create(struct intel_dev *dev,
+                                    const VK_DYNAMIC_CB_STATE_CREATE_INFO *info,
                                     struct intel_dynamic_cb **state_ret)
 {
     struct intel_dynamic_cb *state;
 
     state = (struct intel_dynamic_cb *) intel_base_create(&dev->base.handle,
-            sizeof(*state), dev->base.dbg, XGL_DBG_OBJECT_COLOR_BLEND_STATE,
+            sizeof(*state), dev->base.dbg, VK_DBG_OBJECT_COLOR_BLEND_STATE,
             info, 0);
     if (!state)
-        return XGL_ERROR_OUT_OF_MEMORY;
+        return VK_ERROR_OUT_OF_MEMORY;
 
     state->obj.destroy = blend_state_destroy;
     state->cb_info = *info;
 
     *state_ret = state;
 
-    return XGL_SUCCESS;
+    return VK_SUCCESS;
 }
 
 void intel_blend_state_destroy(struct intel_dynamic_cb *state)
@@ -324,17 +324,17 @@ static void ds_state_destroy(struct intel_obj *obj)
     intel_ds_state_destroy(state);
 }
 
-XGL_RESULT intel_ds_state_create(struct intel_dev *dev,
-                                 const XGL_DYNAMIC_DS_STATE_CREATE_INFO *info,
+VK_RESULT intel_ds_state_create(struct intel_dev *dev,
+                                 const VK_DYNAMIC_DS_STATE_CREATE_INFO *info,
                                  struct intel_dynamic_ds **state_ret)
 {
     struct intel_dynamic_ds *state;
 
     state = (struct intel_dynamic_ds *) intel_base_create(&dev->base.handle,
-            sizeof(*state), dev->base.dbg, XGL_DBG_OBJECT_DEPTH_STENCIL_STATE,
+            sizeof(*state), dev->base.dbg, VK_DBG_OBJECT_DEPTH_STENCIL_STATE,
             info, 0);
     if (!state)
-        return XGL_ERROR_OUT_OF_MEMORY;
+        return VK_ERROR_OUT_OF_MEMORY;
 
     state->obj.destroy = ds_state_destroy;
 
@@ -357,7 +357,7 @@ XGL_RESULT intel_ds_state_create(struct intel_dev *dev,
 
     *state_ret = state;
 
-    return XGL_SUCCESS;
+    return VK_SUCCESS;
 }
 
 void intel_ds_state_destroy(struct intel_dynamic_ds *state)
@@ -365,10 +365,10 @@ void intel_ds_state_destroy(struct intel_dynamic_ds *state)
     intel_base_destroy(&state->obj.base);
 }
 
-ICD_EXPORT XGL_RESULT XGLAPI xglCreateDynamicViewportState(
-    XGL_DEVICE                                  device,
-    const XGL_DYNAMIC_VP_STATE_CREATE_INFO*     pCreateInfo,
-    XGL_DYNAMIC_VP_STATE_OBJECT*                pState)
+ICD_EXPORT VK_RESULT VKAPI vkCreateDynamicViewportState(
+    VK_DEVICE                                  device,
+    const VK_DYNAMIC_VP_STATE_CREATE_INFO*     pCreateInfo,
+    VK_DYNAMIC_VP_STATE_OBJECT*                pState)
 {
     struct intel_dev *dev = intel_dev(device);
 
@@ -376,10 +376,10 @@ ICD_EXPORT XGL_RESULT XGLAPI xglCreateDynamicViewportState(
             (struct intel_dynamic_vp **) pState);
 }
 
-ICD_EXPORT XGL_RESULT XGLAPI xglCreateDynamicRasterState(
-    XGL_DEVICE                                  device,
-    const XGL_DYNAMIC_RS_STATE_CREATE_INFO*     pCreateInfo,
-    XGL_DYNAMIC_RS_STATE_OBJECT*                pState)
+ICD_EXPORT VK_RESULT VKAPI vkCreateDynamicRasterState(
+    VK_DEVICE                                  device,
+    const VK_DYNAMIC_RS_STATE_CREATE_INFO*     pCreateInfo,
+    VK_DYNAMIC_RS_STATE_OBJECT*                pState)
 {
     struct intel_dev *dev = intel_dev(device);
 
@@ -387,10 +387,10 @@ ICD_EXPORT XGL_RESULT XGLAPI xglCreateDynamicRasterState(
             (struct intel_dynamic_rs **) pState);
 }
 
-ICD_EXPORT XGL_RESULT XGLAPI xglCreateDynamicColorBlendState(
-    XGL_DEVICE                                  device,
-    const XGL_DYNAMIC_CB_STATE_CREATE_INFO*     pCreateInfo,
-    XGL_DYNAMIC_CB_STATE_OBJECT*                pState)
+ICD_EXPORT VK_RESULT VKAPI vkCreateDynamicColorBlendState(
+    VK_DEVICE                                  device,
+    const VK_DYNAMIC_CB_STATE_CREATE_INFO*     pCreateInfo,
+    VK_DYNAMIC_CB_STATE_OBJECT*                pState)
 {
     struct intel_dev *dev = intel_dev(device);
 
@@ -398,10 +398,10 @@ ICD_EXPORT XGL_RESULT XGLAPI xglCreateDynamicColorBlendState(
             (struct intel_dynamic_cb **) pState);
 }
 
-ICD_EXPORT XGL_RESULT XGLAPI xglCreateDynamicDepthStencilState(
-    XGL_DEVICE                                  device,
-    const XGL_DYNAMIC_DS_STATE_CREATE_INFO*     pCreateInfo,
-    XGL_DYNAMIC_DS_STATE_OBJECT*                pState)
+ICD_EXPORT VK_RESULT VKAPI vkCreateDynamicDepthStencilState(
+    VK_DEVICE                                  device,
+    const VK_DYNAMIC_DS_STATE_CREATE_INFO*     pCreateInfo,
+    VK_DYNAMIC_DS_STATE_OBJECT*                pState)
 {
     struct intel_dev *dev = intel_dev(device);
 

@@ -1,5 +1,5 @@
 /*
- * XGL
+ * Vulkan
  *
  * Copyright (C) 2014 LunarG, Inc.
  *
@@ -38,20 +38,20 @@ static void fence_destroy(struct intel_obj *obj)
     intel_fence_destroy(fence);
 }
 
-XGL_RESULT intel_fence_create(struct intel_dev *dev,
-                              const XGL_FENCE_CREATE_INFO *info,
+VK_RESULT intel_fence_create(struct intel_dev *dev,
+                              const VK_FENCE_CREATE_INFO *info,
                               struct intel_fence **fence_ret)
 {
     struct intel_fence *fence;
 
     fence = (struct intel_fence *) intel_base_create(&dev->base.handle,
-            sizeof(*fence), dev->base.dbg, XGL_DBG_OBJECT_FENCE, info, 0);
+            sizeof(*fence), dev->base.dbg, VK_DBG_OBJECT_FENCE, info, 0);
     if (!fence)
-        return XGL_ERROR_OUT_OF_MEMORY;
+        return VK_ERROR_OUT_OF_MEMORY;
 
     if (dev->exts[INTEL_EXT_WSI_X11]) {
-        XGL_RESULT ret = intel_wsi_fence_init(fence);
-        if (ret != XGL_SUCCESS) {
+        VK_RESULT ret = intel_wsi_fence_init(fence);
+        if (ret != VK_SUCCESS) {
             intel_fence_destroy(fence);
             return ret;
         }
@@ -60,9 +60,9 @@ XGL_RESULT intel_fence_create(struct intel_dev *dev,
     fence->obj.destroy = fence_destroy;
 
     *fence_ret = fence;
-    fence->signaled = (info->flags & XGL_FENCE_CREATE_SIGNALED_BIT);
+    fence->signaled = (info->flags & VK_FENCE_CREATE_SIGNALED_BIT);
 
-    return XGL_SUCCESS;
+    return VK_SUCCESS;
 }
 
 void intel_fence_destroy(struct intel_fence *fence)
@@ -91,34 +91,34 @@ void intel_fence_set_seqno(struct intel_fence *fence,
     fence->signaled = false;
 }
 
-XGL_RESULT intel_fence_wait(struct intel_fence *fence, int64_t timeout_ns)
+VK_RESULT intel_fence_wait(struct intel_fence *fence, int64_t timeout_ns)
 {
-    XGL_RESULT ret;
+    VK_RESULT ret;
 
     ret = intel_wsi_fence_wait(fence, timeout_ns);
-    if (ret != XGL_SUCCESS)
+    if (ret != VK_SUCCESS)
         return ret;
 
     if (fence->signaled) {
-        return XGL_SUCCESS;
+        return VK_SUCCESS;
     }
 
     if (fence->seqno_bo) {
         ret = (intel_bo_wait(fence->seqno_bo, timeout_ns)) ?
-            XGL_NOT_READY : XGL_SUCCESS;
-        if (ret == XGL_SUCCESS) {
+            VK_NOT_READY : VK_SUCCESS;
+        if (ret == VK_SUCCESS) {
             fence->signaled = true;
         }
         return ret;
     }
 
-    return XGL_ERROR_UNAVAILABLE;
+    return VK_ERROR_UNAVAILABLE;
 }
 
-ICD_EXPORT XGL_RESULT XGLAPI xglCreateFence(
-    XGL_DEVICE                                  device,
-    const XGL_FENCE_CREATE_INFO*                pCreateInfo,
-    XGL_FENCE*                                  pFence)
+ICD_EXPORT VK_RESULT VKAPI vkCreateFence(
+    VK_DEVICE                                  device,
+    const VK_FENCE_CREATE_INFO*                pCreateInfo,
+    VK_FENCE*                                  pFence)
 {
     struct intel_dev *dev = intel_dev(device);
 
@@ -126,46 +126,46 @@ ICD_EXPORT XGL_RESULT XGLAPI xglCreateFence(
             (struct intel_fence **) pFence);
 }
 
-ICD_EXPORT XGL_RESULT XGLAPI xglGetFenceStatus(
-    XGL_FENCE                                   fence_)
+ICD_EXPORT VK_RESULT VKAPI vkGetFenceStatus(
+    VK_FENCE                                   fence_)
 {
     struct intel_fence *fence = intel_fence(fence_);
 
     return intel_fence_wait(fence, 0);
 }
 
-ICD_EXPORT XGL_RESULT XGLAPI xglWaitForFences(
-    XGL_DEVICE                                  device,
+ICD_EXPORT VK_RESULT VKAPI vkWaitForFences(
+    VK_DEVICE                                  device,
     uint32_t                                    fenceCount,
-    const XGL_FENCE*                            pFences,
+    const VK_FENCE*                            pFences,
     bool32_t                                    waitAll,
     uint64_t                                    timeout)
 {
-    XGL_RESULT ret = XGL_SUCCESS;
+    VK_RESULT ret = VK_SUCCESS;
     uint32_t i;
 
     for (i = 0; i < fenceCount; i++) {
         struct intel_fence *fence = intel_fence(pFences[i]);
         int64_t ns;
-        XGL_RESULT r;
+        VK_RESULT r;
 
         /* timeout in nano seconds */
         ns = (timeout <= (uint64_t) INT64_MAX) ? ns : -1;
         r = intel_fence_wait(fence, ns);
 
-        if (!waitAll && r == XGL_SUCCESS)
-            return XGL_SUCCESS;
+        if (!waitAll && r == VK_SUCCESS)
+            return VK_SUCCESS;
 
-        if (r != XGL_SUCCESS)
+        if (r != VK_SUCCESS)
             ret = r;
     }
 
     return ret;
 }
-ICD_EXPORT XGL_RESULT XGLAPI xglResetFences(
-    XGL_DEVICE                                  device,
+ICD_EXPORT VK_RESULT VKAPI vkResetFences(
+    VK_DEVICE                                  device,
     uint32_t                                    fenceCount,
-    XGL_FENCE*                                  pFences)
+    VK_FENCE*                                  pFences)
 {
     uint32_t i;
 
@@ -174,5 +174,5 @@ ICD_EXPORT XGL_RESULT XGLAPI xglResetFences(
         fence->signaled = false;
     }
 
-    return XGL_SUCCESS;
+    return VK_SUCCESS;
 }

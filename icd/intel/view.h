@@ -1,5 +1,5 @@
 /*
- * XGL
+ * Vulkan
  *
  * Copyright (C) 2014 LunarG, Inc.
  *
@@ -59,7 +59,7 @@ struct intel_img_view {
     struct intel_img *img;
 
     float min_lod;
-    XGL_CHANNEL_MAPPING shader_swizzles;
+    VK_CHANNEL_MAPPING shader_swizzles;
 
     /* SURFACE_STATE */
     uint32_t cmd[8];
@@ -95,7 +95,7 @@ struct intel_ds_view {
     bool has_hiz;
 };
 
-static inline struct intel_buf_view *intel_buf_view(XGL_BUFFER_VIEW view)
+static inline struct intel_buf_view *intel_buf_view(VK_BUFFER_VIEW view)
 {
     return (struct intel_buf_view *) view;
 }
@@ -105,7 +105,7 @@ static inline struct intel_buf_view *intel_buf_view_from_obj(struct intel_obj *o
     return (struct intel_buf_view *) obj;
 }
 
-static inline struct intel_img_view *intel_img_view(XGL_IMAGE_VIEW view)
+static inline struct intel_img_view *intel_img_view(VK_IMAGE_VIEW view)
 {
     return (struct intel_img_view *) view;
 }
@@ -115,7 +115,7 @@ static inline struct intel_img_view *intel_img_view_from_obj(struct intel_obj *o
     return (struct intel_img_view *) obj;
 }
 
-static inline struct intel_rt_view *intel_rt_view(XGL_COLOR_ATTACHMENT_VIEW view)
+static inline struct intel_rt_view *intel_rt_view(VK_COLOR_ATTACHMENT_VIEW view)
 {
     return (struct intel_rt_view *) view;
 }
@@ -125,7 +125,7 @@ static inline struct intel_rt_view *intel_rt_view_from_obj(struct intel_obj *obj
     return (struct intel_rt_view *) obj;
 }
 
-static inline struct intel_ds_view *intel_ds_view(XGL_DEPTH_STENCIL_VIEW view)
+static inline struct intel_ds_view *intel_ds_view(VK_DEPTH_STENCIL_VIEW view)
 {
     return (struct intel_ds_view *) view;
 }
@@ -138,24 +138,24 @@ static inline struct intel_ds_view *intel_ds_view_from_obj(struct intel_obj *obj
 void intel_null_view_init(struct intel_null_view *view,
                           struct intel_dev *dev);
 
-XGL_RESULT intel_buf_view_create(struct intel_dev *dev,
-                                 const XGL_BUFFER_VIEW_CREATE_INFO *info,
+VK_RESULT intel_buf_view_create(struct intel_dev *dev,
+                                 const VK_BUFFER_VIEW_CREATE_INFO *info,
                                  struct intel_buf_view **view_ret);
 
 void intel_buf_view_destroy(struct intel_buf_view *view);
 
-XGL_RESULT intel_img_view_create(struct intel_dev *dev,
-                                 const XGL_IMAGE_VIEW_CREATE_INFO *info,
+VK_RESULT intel_img_view_create(struct intel_dev *dev,
+                                 const VK_IMAGE_VIEW_CREATE_INFO *info,
                                  struct intel_img_view **view_ret);
 void intel_img_view_destroy(struct intel_img_view *view);
 
-XGL_RESULT intel_rt_view_create(struct intel_dev *dev,
-                                const XGL_COLOR_ATTACHMENT_VIEW_CREATE_INFO *info,
+VK_RESULT intel_rt_view_create(struct intel_dev *dev,
+                                const VK_COLOR_ATTACHMENT_VIEW_CREATE_INFO *info,
                                 struct intel_rt_view **view_ret);
 void intel_rt_view_destroy(struct intel_rt_view *view);
 
-XGL_RESULT intel_ds_view_create(struct intel_dev *dev,
-                                const XGL_DEPTH_STENCIL_VIEW_CREATE_INFO *info,
+VK_RESULT intel_ds_view_create(struct intel_dev *dev,
+                                const VK_DEPTH_STENCIL_VIEW_CREATE_INFO *info,
                                 struct intel_ds_view **view_ret);
 void intel_ds_view_destroy(struct intel_ds_view *view);
 

@@ -1,5 +1,5 @@
 /*
- * XGL
+ * Vulkan
  *
  * Copyright (C) 2014-2015 LunarG, Inc.
  *
@@ -31,9 +31,9 @@
 #include <string.h>
 #include "icd-instance.h"
 
-static void * XGLAPI default_alloc(void *user_data, size_t size,
+static void * VKAPI default_alloc(void *user_data, size_t size,
                                    size_t alignment,
-                                   XGL_SYSTEM_ALLOC_TYPE allocType)
+                                   VK_SYSTEM_ALLOC_TYPE allocType)
 {
     if (alignment <= 1) {
         return malloc(size);
@@ -56,15 +56,15 @@ static void * XGLAPI default_alloc(void *user_data, size_t size,
     }
 }
 
-static void XGLAPI default_free(void *user_data, void *ptr)
+static void VKAPI default_free(void *user_data, void *ptr)
 {
     free(ptr);
 }
 
-struct icd_instance *icd_instance_create(const XGL_APPLICATION_INFO *app_info,
-                                         const XGL_ALLOC_CALLBACKS *alloc_cb)
+struct icd_instance *icd_instance_create(const VK_APPLICATION_INFO *app_info,
+                                         const VK_ALLOC_CALLBACKS *alloc_cb)
 {
-    static const XGL_ALLOC_CALLBACKS default_alloc_cb = {
+    static const VK_ALLOC_CALLBACKS default_alloc_cb = {
         .pfnAlloc = default_alloc,
         .pfnFree = default_free,
     };
@@ -76,7 +76,7 @@ struct icd_instance *icd_instance_create(const XGL_APPLICATION_INFO *app_info,
         alloc_cb = &default_alloc_cb;
 
     instance = alloc_cb->pfnAlloc(alloc_cb->pUserData, sizeof(*instance), 0,
-            XGL_SYSTEM_ALLOC_API_OBJECT);
+            VK_SYSTEM_ALLOC_API_OBJECT);
     if (!instance)
         return NULL;
 
@@ -85,7 +85,7 @@ struct icd_instance *icd_instance_create(const XGL_APPLICATION_INFO *app_info,
     name = (app_info->pAppName) ? app_info->pAppName : "unnamed";
     len = strlen(name);
     instance->name = alloc_cb->pfnAlloc(alloc_cb->pUserData, len + 1, 0,
-            XGL_SYSTEM_ALLOC_INTERNAL);
+            VK_SYSTEM_ALLOC_INTERNAL);
     if (!instance->name) {
         alloc_cb->pfnFree(alloc_cb->pUserData, instance);
         return NULL;
@@ -114,31 +114,31 @@ void icd_instance_destroy(struct icd_instance *instance)
     icd_instance_free(instance, instance);
 }
 
-XGL_RESULT icd_instance_set_bool(struct icd_instance *instance,
-                                 XGL_DBG_GLOBAL_OPTION option, bool yes)
+VK_RESULT icd_instance_set_bool(struct icd_instance *instance,
+                                 VK_DBG_GLOBAL_OPTION option, bool yes)
 {
-    XGL_RESULT res = XGL_SUCCESS;
+    VK_RESULT res = VK_SUCCESS;
 
     switch (option) {
-    case XGL_DBG_OPTION_DEBUG_ECHO_ENABLE:
+    case VK_DBG_OPTION_DEBUG_ECHO_ENABLE:
         instance->debug_echo_enable = yes;
         break;
-    case XGL_DBG_OPTION_BREAK_ON_ERROR:
+    case VK_DBG_OPTION_BREAK_ON_ERROR:
         instance->break_on_error = yes;
         break;
-    case XGL_DBG_OPTION_BREAK_ON_WARNING:
+    case VK_DBG_OPTION_BREAK_ON_WARNING:
         instance->break_on_warning = yes;
         break;
     default:
-        res = XGL_ERROR_INVALID_VALUE;
+        res = VK_ERROR_INVALID_VALUE;
         break;
     }
 
     return res;
 }
 
-XGL_RESULT icd_instance_add_logger(struct icd_instance *instance,
-                                   XGL_DBG_MSG_CALLBACK_FUNCTION func,
+VK_RESULT icd_instance_add_logger(struct icd_instance *instance,
+                                   VK_DBG_MSG_CALLBACK_FUNCTION func,
                                    void *user_data)
 {
     struct icd_instance_logger *logger;
@@ -150,9 +150,9 @@ XGL_RESULT icd_instance_add_logger(struct icd_instance *instance,
 
     if (!logger) {
         logger = icd_instance_alloc(instance, sizeof(*logger), 0,
-                XGL_SYSTEM_ALLOC_DEBUG);
+                VK_SYSTEM_ALLOC_DEBUG);
         if (!logger)
-            return XGL_ERROR_OUT_OF_MEMORY;
+            return VK_ERROR_OUT_OF_MEMORY;
 
         logger->func = func;
         logger->next = instance->loggers;
@@ -161,11 +161,11 @@ XGL_RESULT icd_instance_add_logger(struct icd_instance *instance,
 
     logger->user_data = user_data;
 
-    return XGL_SUCCESS;
+    return VK_SUCCESS;
 }
 
-XGL_RESULT icd_instance_remove_logger(struct icd_instance *instance,
-                                      XGL_DBG_MSG_CALLBACK_FUNCTION func)
+VK_RESULT icd_instance_remove_logger(struct icd_instance *instance,
+                                      VK_DBG_MSG_CALLBACK_FUNCTION func)
 {
     struct icd_instance_logger *logger, *prev;
 
@@ -176,7 +176,7 @@ XGL_RESULT icd_instance_remove_logger(struct icd_instance *instance,
     }
 
     if (!logger)
-        return XGL_ERROR_INVALID_POINTER;
+        return VK_ERROR_INVALID_POINTER;
 
     if (prev)
         prev->next = logger->next;
@@ -185,13 +185,13 @@ XGL_RESULT icd_instance_remove_logger(struct icd_instance *instance,
 
     icd_instance_free(instance, logger);
 
-    return XGL_SUCCESS;
+    return VK_SUCCESS;
 }
 
 void icd_instance_log(const struct icd_instance *instance,
-                      XGL_DBG_MSG_TYPE msg_type,
-                      XGL_VALIDATION_LEVEL validation_level,
-                      XGL_BASE_OBJECT src_object,
+                      VK_DBG_MSG_TYPE msg_type,
+                      VK_VALIDATION_LEVEL validation_level,
+                      VK_BASE_OBJECT src_object,
                       size_t location, int32_t msg_code,
                       const char *msg)
 {
@@ -208,11 +208,11 @@ void icd_instance_log(const struct icd_instance *instance,
     }
 
     switch (msg_type) {
-    case XGL_DBG_MSG_ERROR:
+    case VK_DBG_MSG_ERROR:
         if (instance->break_on_error)
             abort();
         /* fall through */
-    case XGL_DBG_MSG_WARNING:
+    case VK_DBG_MSG_WARNING:
         if (instance->break_on_warning)
             abort();
         break;

@@ -1,5 +1,5 @@
 /*
- * XGL
+ * Vulkan
  *
  * Copyright (C) 2014 LunarG, Inc.
  *
@@ -36,18 +36,18 @@ static void buf_destroy(struct intel_obj *obj)
     intel_buf_destroy(buf);
 }
 
-static XGL_RESULT buf_get_info(struct intel_base *base, int type,
+static VK_RESULT buf_get_info(struct intel_base *base, int type,
                                size_t *size, void *data)
 {
     struct intel_buf *buf = intel_buf_from_base(base);
-    XGL_RESULT ret = XGL_SUCCESS;
+    VK_RESULT ret = VK_SUCCESS;
 
     switch (type) {
-    case XGL_INFO_TYPE_MEMORY_REQUIREMENTS:
+    case VK_INFO_TYPE_MEMORY_REQUIREMENTS:
         {
-            XGL_MEMORY_REQUIREMENTS *mem_req = data;
+            VK_MEMORY_REQUIREMENTS *mem_req = data;
 
-            *size = sizeof(XGL_MEMORY_REQUIREMENTS);
+            *size = sizeof(VK_MEMORY_REQUIREMENTS);
             if (data == NULL)
                 return ret;
 
@@ -60,19 +60,19 @@ static XGL_RESULT buf_get_info(struct intel_base *base, int type,
              *      bytes added beyond that to account for the L1 cache line."
              */
             mem_req->size = buf->size;
-            if (buf->usage & XGL_BUFFER_USAGE_SHADER_ACCESS_READ_BIT)
+            if (buf->usage & VK_BUFFER_USAGE_SHADER_ACCESS_READ_BIT)
                 mem_req->size = u_align(mem_req->size, 256) + 16;
 
             mem_req->alignment = 4096;
-            mem_req->memType = XGL_MEMORY_TYPE_BUFFER;
+            mem_req->memType = VK_MEMORY_TYPE_BUFFER;
 
         }
         break;
-        case XGL_INFO_TYPE_BUFFER_MEMORY_REQUIREMENTS:
+        case VK_INFO_TYPE_BUFFER_MEMORY_REQUIREMENTS:
         {
-            XGL_BUFFER_MEMORY_REQUIREMENTS *buf_req = data;
+            VK_BUFFER_MEMORY_REQUIREMENTS *buf_req = data;
 
-            *size = sizeof(XGL_BUFFER_MEMORY_REQUIREMENTS);
+            *size = sizeof(VK_BUFFER_MEMORY_REQUIREMENTS);
             if (data == NULL)
                 return ret;
             buf_req->usage = buf->usage;
@@ -86,16 +86,16 @@ static XGL_RESULT buf_get_info(struct intel_base *base, int type,
     return ret;
 }
 
-XGL_RESULT intel_buf_create(struct intel_dev *dev,
-                            const XGL_BUFFER_CREATE_INFO *info,
+VK_RESULT intel_buf_create(struct intel_dev *dev,
+                            const VK_BUFFER_CREATE_INFO *info,
                             struct intel_buf **buf_ret)
 {
     struct intel_buf *buf;
 
     buf = (struct intel_buf *) intel_base_create(&dev->base.handle,
-            sizeof(*buf), dev->base.dbg, XGL_DBG_OBJECT_BUFFER, info, 0);
+            sizeof(*buf), dev->base.dbg, VK_DBG_OBJECT_BUFFER, info, 0);
     if (!buf)
-        return XGL_ERROR_OUT_OF_MEMORY;
+        return VK_ERROR_OUT_OF_MEMORY;
 
     buf->size = info->size;
     buf->usage = info->usage;
@@ -105,7 +105,7 @@ XGL_RESULT intel_buf_create(struct intel_dev *dev,
 
     *buf_ret = buf;
 
-    return XGL_SUCCESS;
+    return VK_SUCCESS;
 }
 
 void intel_buf_destroy(struct intel_buf *buf)
@@ -113,10 +113,10 @@ void intel_buf_destroy(struct intel_buf *buf)
     intel_base_destroy(&buf->obj.base);
 }
 
-ICD_EXPORT XGL_RESULT XGLAPI xglCreateBuffer(
-    XGL_DEVICE                                  device,
-    const XGL_BUFFER_CREATE_INFO*               pCreateInfo,
-    XGL_BUFFER*                                 pBuffer)
+ICD_EXPORT VK_RESULT VKAPI vkCreateBuffer(
+    VK_DEVICE                                  device,
+    const VK_BUFFER_CREATE_INFO*               pCreateInfo,
+    VK_BUFFER*                                 pBuffer)
 {
     struct intel_dev *dev = intel_dev(device);
 

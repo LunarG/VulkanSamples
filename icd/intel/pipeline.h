@@ -1,5 +1,5 @@
 /*
- * XGL
+ * Vulkan
  *
  * Copyright (C) 2014 LunarG, Inc.
  *
@@ -93,12 +93,12 @@ struct intel_pipeline_rmap {
     uint32_t slot_count;
 };
 
-#define SHADER_VERTEX_FLAG            (1 << XGL_SHADER_STAGE_VERTEX)
-#define SHADER_TESS_CONTROL_FLAG      (1 << XGL_SHADER_STAGE_TESS_CONTROL)
-#define SHADER_TESS_EVAL_FLAG         (1 << XGL_SHADER_STAGE_TESS_EVALUATION)
-#define SHADER_GEOMETRY_FLAG          (1 << XGL_SHADER_STAGE_GEOMETRY)
-#define SHADER_FRAGMENT_FLAG          (1 << XGL_SHADER_STAGE_FRAGMENT)
-#define SHADER_COMPUTE_FLAG           (1 << XGL_SHADER_STAGE_COMPUTE)
+#define SHADER_VERTEX_FLAG            (1 << VK_SHADER_STAGE_VERTEX)
+#define SHADER_TESS_CONTROL_FLAG      (1 << VK_SHADER_STAGE_TESS_CONTROL)
+#define SHADER_TESS_EVAL_FLAG         (1 << VK_SHADER_STAGE_TESS_EVALUATION)
+#define SHADER_GEOMETRY_FLAG          (1 << VK_SHADER_STAGE_GEOMETRY)
+#define SHADER_FRAGMENT_FLAG          (1 << VK_SHADER_STAGE_FRAGMENT)
+#define SHADER_COMPUTE_FLAG           (1 << VK_SHADER_STAGE_COMPUTE)
 
 struct intel_pipeline_shader {
     /* this is not an intel_obj */
@@ -110,7 +110,7 @@ struct intel_pipeline_shader {
      * must grab everything we need from shader object as that
      * can go away after the pipeline is created
      */
-    XGL_FLAGS uses;
+    VK_FLAGS uses;
     uint64_t inputs_read;
     uint64_t outputs_written;
     uint32_t outputs_offset;
@@ -132,10 +132,10 @@ struct intel_pipeline_shader {
     /* If present, where does the SIMD16 kernel start? */
     uint32_t offset_16;
 
-    XGL_FLAGS barycentric_interps;
-    XGL_FLAGS point_sprite_enables;
+    VK_FLAGS barycentric_interps;
+    VK_FLAGS point_sprite_enables;
 
-    XGL_GPU_SIZE per_thread_scratch_size;
+    VK_GPU_SIZE per_thread_scratch_size;
 
     enum intel_computed_depth_mode computed_depth_mode;
 
@@ -143,7 +143,7 @@ struct intel_pipeline_shader {
 
     /* these are set up by the driver */
     uint32_t max_threads;
-    XGL_GPU_SIZE scratch_offset;
+    VK_GPU_SIZE scratch_offset;
 };
 
 /*
@@ -173,11 +173,11 @@ struct intel_pipeline {
 
     struct intel_dev *dev;
 
-    XGL_VERTEX_INPUT_BINDING_DESCRIPTION vb[INTEL_MAX_VERTEX_BINDING_COUNT];
+    VK_VERTEX_INPUT_BINDING_DESCRIPTION vb[INTEL_MAX_VERTEX_BINDING_COUNT];
     uint32_t vb_count;
 
-    /* XGL_PIPELINE_IA_STATE_CREATE_INFO */
-    XGL_PRIMITIVE_TOPOLOGY topology;
+    /* VK_PIPELINE_IA_STATE_CREATE_INFO */
+    VK_PRIMITIVE_TOPOLOGY topology;
     int prim_type;
     bool disable_vs_cache;
     bool primitive_restart;
@@ -187,20 +187,20 @@ struct intel_pipeline {
     int provoking_vertex_trifan;
     int provoking_vertex_line;
 
-    // TODO: This should probably be Intel HW state, not XGL state.
+    // TODO: This should probably be Intel HW state, not VK state.
     /* Depth Buffer format */
-    XGL_FORMAT db_format;
+    VK_FORMAT db_format;
 
     bool depth_zero_to_one;
 
-    XGL_PIPELINE_CB_STATE_CREATE_INFO cb_state;
+    VK_PIPELINE_CB_STATE_CREATE_INFO cb_state;
 
-    // XGL_PIPELINE_RS_STATE_CREATE_INFO rs_state;
+    // VK_PIPELINE_RS_STATE_CREATE_INFO rs_state;
     bool depthClipEnable;
     bool rasterizerDiscardEnable;
     bool use_rs_point_size;
 
-    XGL_PIPELINE_TESS_STATE_CREATE_INFO tess_state;
+    VK_PIPELINE_TESS_STATE_CREATE_INFO tess_state;
 
     uint32_t active_shaders;
     struct intel_pipeline_shader vs;
@@ -209,7 +209,7 @@ struct intel_pipeline {
     struct intel_pipeline_shader gs;
     struct intel_pipeline_shader fs;
     struct intel_pipeline_shader cs;
-    XGL_GPU_SIZE scratch_size;
+    VK_GPU_SIZE scratch_size;
 
     uint32_t wa_flags;
 
@@ -221,7 +221,7 @@ struct intel_pipeline {
     /* The following are only partial HW commands that will need
      * more processing before sending to the HW
      */
-    // XGL_PIPELINE_DS_STATE_CREATE_INFO ds_state
+    // VK_PIPELINE_DS_STATE_CREATE_INFO ds_state
     bool stencilTestEnable;
     uint32_t cmd_depth_stencil;
     uint32_t cmd_depth_test;
@@ -236,7 +236,7 @@ struct intel_pipeline {
     uint32_t cmd_3dstate_sbe[14];
 };
 
-static inline struct intel_pipeline *intel_pipeline(XGL_PIPELINE pipeline)
+static inline struct intel_pipeline *intel_pipeline(VK_PIPELINE pipeline)
 {
     return (struct intel_pipeline *) pipeline;
 }

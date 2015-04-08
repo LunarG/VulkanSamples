@@ -1,5 +1,5 @@
 //
-// File: xglPlatform.h
+// File: vkPlatform.h
 //
 /*
 ** Copyright (c) 2014 The Khronos Group Inc.
@@ -25,8 +25,8 @@
 */
 
 
-#ifndef __XGLPLATFORM_H__
-#define __XGLPLATFORM_H__
+#ifndef __VKPLATFORM_H__
+#define __VKPLATFORM_H__
 
 #ifdef __cplusplus
 extern "C"
@@ -43,8 +43,8 @@ extern "C"
     // Ensure we don't pick up min/max macros from Winddef.h
     #define NOMINMAX
 
-    // On Windows, XGLAPI should equate to the __stdcall convention
-    #define XGLAPI   __stdcall
+    // On Windows, VKAPI should equate to the __stdcall convention
+    #define VKAPI   __stdcall
 
     // C99:
 #ifndef __cplusplus
@@ -52,8 +52,8 @@ extern "C"
     #define inline __inline
 #endif // __cplusplus
 #elif defined(__GNUC__)
-    // On other platforms using GCC, XGLAPI stays undefined
-    #define XGLAPI
+    // On other platforms using GCC, VKAPI stays undefined
+    #define VKAPI
 #else
     // Unsupported Platform!
     #error "Unsupported OS Platform detected!"
@@ -61,7 +61,7 @@ extern "C"
 
 #include <stddef.h>
 
-#if !defined(XGL_NO_STDINT_H)
+#if !defined(VK_NO_STDINT_H)
     #if defined(_MSC_VER) && (_MSC_VER < 1600)
         typedef signed   __int8  int8_t;
         typedef unsigned __int8  uint8_t;
@@ -74,17 +74,17 @@ extern "C"
     #else
         #include <stdint.h>
     #endif
-#endif // !defined(XGL_NO_STDINT_H)
+#endif // !defined(VK_NO_STDINT_H)
 
-typedef uint64_t   XGL_GPU_SIZE;
+typedef uint64_t   VK_GPU_SIZE;
 typedef uint32_t   bool32_t;
 
-typedef uint32_t   XGL_SAMPLE_MASK;
-typedef uint32_t   XGL_FLAGS;
-typedef int32_t    XGL_ENUM;
+typedef uint32_t   VK_SAMPLE_MASK;
+typedef uint32_t   VK_FLAGS;
+typedef int32_t    VK_ENUM;
 
 #ifdef __cplusplus
 } // extern "C"
 #endif // __cplusplus
 
-#endif // __XGLPLATFORM_H__
+#endif // __VKPLATFORM_H__

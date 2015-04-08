@@ -1,20 +1,20 @@
 #include "test_common.h"
-#include "xgltestbinding.h"
+#include "vktestbinding.h"
 #include "test_environment.h"
 
 #define ARRAY_SIZE(a) (sizeof(a) / sizeof(a[0]))
 
-namespace xgl_testing {
+namespace vk_testing {
 
 Environment::Environment() :
     m_connection(NULL), default_dev_(0)
 {
-    app_.sType = XGL_STRUCTURE_TYPE_APPLICATION_INFO;
-    app_.pAppName = "xgl_testing";
+    app_.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
+    app_.pAppName = "vk_testing";
     app_.appVersion = 1;
-    app_.pEngineName = "xgl_testing";
+    app_.pEngineName = "vk_testing";
     app_.engineVersion = 1;
-    app_.apiVersion = XGL_API_VERSION;
+    app_.apiVersion = VK_API_VERSION;
 }
 
 bool Environment::parse_args(int argc, char **argv)
@@ -50,18 +50,18 @@ void Environment::SetUp()
 {
 
     uint32_t count;
-    XGL_RESULT err;
-    XGL_INSTANCE_CREATE_INFO inst_info = {};
-    inst_info.sType = XGL_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
+    VK_RESULT err;
+    VK_INSTANCE_CREATE_INFO inst_info = {};
+    inst_info.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
     inst_info.pNext = NULL;
     inst_info.pAppInfo = &app_;
     inst_info.pAllocCb = NULL;
     inst_info.extensionCount = 0;
     inst_info.ppEnabledExtensionNames = NULL;
-    err = xglCreateInstance(&inst_info, &inst);
-    ASSERT_EQ(XGL_SUCCESS, err);
-    err = xglEnumerateGpus(inst, ARRAY_SIZE(gpus), &count, gpus);
-    ASSERT_EQ(XGL_SUCCESS, err);
+    err = vkCreateInstance(&inst_info, &inst);
+    ASSERT_EQ(VK_SUCCESS, err);
+    err = vkEnumerateGpus(inst, ARRAY_SIZE(gpus), &count, gpus);
+    ASSERT_EQ(VK_SUCCESS, err);
     ASSERT_GT(count, default_dev_);
 
     devs_.reserve(count);
@@ -78,22 +78,22 @@ void Environment::X11SetUp()
 {
 
     uint32_t count;
-    XGL_RESULT err;
+    VK_RESULT err;
     const xcb_setup_t *setup;
     xcb_screen_iterator_t iter;
     int scr;
-    XGL_INSTANCE_CREATE_INFO instInfo = {};
-    instInfo.sType = XGL_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
+    VK_INSTANCE_CREATE_INFO instInfo = {};
+    instInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
     instInfo.pNext = NULL;
     instInfo.pAppInfo = &app_;
     instInfo.pAllocCb = NULL;
     instInfo.extensionCount = 0;
     instInfo.ppEnabledExtensionNames = NULL;
 
-    err = xglCreateInstance(&instInfo, &inst);
-    ASSERT_EQ(XGL_SUCCESS, err);
-    err = xglEnumerateGpus(inst, ARRAY_SIZE(gpus), &count, gpus);
-    ASSERT_EQ(XGL_SUCCESS, err);
+    err = vkCreateInstance(&instInfo, &inst);
+    ASSERT_EQ(VK_SUCCESS, err);
+    err = vkEnumerateGpus(inst, ARRAY_SIZE(gpus), &count, gpus);
+    ASSERT_EQ(VK_SUCCESS, err);
     ASSERT_GT(count, default_dev_);
 
     m_connection = xcb_connect(NULL, &scr);
@@ -105,12 +105,12 @@ void Environment::X11SetUp()
 
     m_screen = iter.data;
 
-    XGL_WSI_X11_CONNECTION_INFO connection_info = {};
+    VK_WSI_X11_CONNECTION_INFO connection_info = {};
     connection_info.pConnection = m_connection;
     connection_info.root = m_screen->root;
     connection_info.provider = 0;
 
-    err = xglWsiX11AssociateConnection(gpus[0], &connection_info);
+    err = vkWsiX11AssociateConnection(gpus[0], &connection_info);
     assert(!err);
 
 
@@ -134,6 +134,6 @@ void Environment::TearDown()
         delete *it;
     devs_.clear();
 
-    xglDestroyInstance(inst);
+    vkDestroyInstance(inst);
 }
-} // xgl_testing namespace
+} // vk_testing namespace

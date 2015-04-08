@@ -1,5 +1,5 @@
 /*
- * XGL
+ * Vulkan
  *
  * Copyright (C) 2014 LunarG, Inc.
  *
@@ -28,17 +28,17 @@
 #ifndef ICD_H
 #define ICD_H
 
-#include <xgl.h>
-#include <xglPlatform.h>
-#include <xglDbg.h>
+#include <vulkan.h>
+#include <vkPlatform.h>
+#include <vkDbg.h>
 
 #if defined(PLATFORM_LINUX)
 
-#include <xglWsiX11Ext.h>
+#include <vkWsiX11Ext.h>
 
 #else
 
-#include <xglWsiWinExt.h>
+#include <vkWsiWinExt.h>
 
 #endif
 

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# XGL
+# VK
 #
 # Copyright (C) 2014 LunarG, Inc.
 #
@@ -30,8 +30,8 @@ import sys
 import xgl
 
 def generate_get_proc_addr_check(name):
-    return "    if (!%s || %s[0] != 'x' || %s[1] != 'g' || %s[2] != 'l')\n" \
-           "        return NULL;" % ((name,) * 4)
+    return "    if (!%s || %s[0] != 'v' || %s[1] != 'k')\n" \
+           "        return NULL;" % ((name,) * 3)
 
 class Subcommand(object):
     def __init__(self, argv):
@@ -64,7 +64,7 @@ class Subcommand(object):
         return """/* THIS FILE IS GENERATED.  DO NOT EDIT. */
 
 /*
- * XGL
+ * Vulkan
  *
  * Copyright (C) 2014 LunarG, Inc.
  *
@@ -111,7 +111,7 @@ class LoaderEntrypointsSubcommand(Subcommand):
 
     def _generate_object_setup(self, proto):
         method = "loader_init_data"
-        cond = "res == XGL_SUCCESS"
+        cond = "res == VK_SUCCESS"
 
         if "Get" in proto.name:
             method = "loader_set_data"
@@ -146,18 +146,17 @@ class LoaderEntrypointsSubcommand(Subcommand):
         for proto in self.protos:
             if not self._is_dispatchable(proto):
                 continue
-
             func = []
 
             obj_setup = self._generate_object_setup(proto)
 
-            func.append(qual + proto.c_func(prefix="xgl", attr="XGLAPI"))
+            func.append(qual + proto.c_func(prefix="vk", attr="VKAPI"))
             func.append("{")
 
             # declare local variables
-            func.append("    const XGL_LAYER_DISPATCH_TABLE *disp;")
+            func.append("    const VK_LAYER_DISPATCH_TABLE *disp;")
             if proto.ret != 'void' and obj_setup:
-                func.append("    XGL_RESULT res;")
+                func.append("    VK_RESULT res;")
             func.append("")
 
             # active layers before dispatching CreateDevice
@@ -169,7 +168,7 @@ class LoaderEntrypointsSubcommand(Subcommand):
             # get dispatch table and unwrap GPUs
             for param in proto.params:
                 stmt = ""
-                if param.ty == "XGL_PHYSICAL_GPU":
+                if param.ty == "VK_PHYSICAL_GPU":
                     stmt = "loader_unwrap_gpu(&%s);" % param.name
                     if param == proto.params[0]:
                         stmt = "disp = " + stmt
@@ -217,8 +216,8 @@ class DispatchTableOpsSubcommand(Subcommand):
         super().run()
 
     def generate_header(self):
-        return "\n".join(["#include <xgl.h>",
-                          "#include <xglLayer.h>",
+        return "\n".join(["#include <vulkan.h>",
+                          "#include <vkLayer.h>",
                           "#include <string.h>",
                           "#include \"loader_platform.h\""])
 
@@ -231,16 +230,16 @@ class DispatchTableOpsSubcommand(Subcommand):
                 stmts.append("table->%s = gpa; /* direct assignment */" %
                         proto.name)
             else:
-                stmts.append("table->%s = (xgl%sType) gpa(gpu, \"xgl%s\");" %
+                stmts.append("table->%s = (vk%sType) gpa(gpu, \"vk%s\");" %
                         (proto.name, proto.name, proto.name))
         stmts.append("#endif")
 
         func = []
-        func.append("static inline void %s_initialize_dispatch_table(XGL_LAYER_DISPATCH_TABLE *table,"
+        func.append("static inline void %s_initialize_dispatch_table(VK_LAYER_DISPATCH_TABLE *table,"
                 % self.prefix)
-        func.append("%s                                              xglGetProcAddrType gpa,"
+        func.append("%s                                              vkGetProcAddrType gpa,"
                 % (" " * len(self.prefix)))
-        func.append("%s                                              XGL_PHYSICAL_GPU gpu)"
+        func.append("%s                                              VK_PHYSICAL_GPU gpu)"
                 % (" " * len(self.prefix)))
         func.append("{")
         func.append("    %s" % "\n    ".join(stmts))
@@ -259,14 +258,14 @@ class DispatchTableOpsSubcommand(Subcommand):
         lookups.append("#endif")
 
         func = []
-        func.append("static inline void *%s_lookup_dispatch_table(const XGL_LAYER_DISPATCH_TABLE *table,"
+        func.append("static inline void *%s_lookup_dispatch_table(const VK_LAYER_DISPATCH_TABLE *table,"
                 % self.prefix)
         func.append("%s                                           const char *name)"
                 % (" " * len(self.prefix)))
         func.append("{")
         func.append(generate_get_proc_addr_check("name"))
         func.append("")
-        func.append("    name += 3;")
+        func.append("    name += 2;")
         func.append("    %s" % "\n    ".join(lookups))
         func.append("")
         func.append("    return NULL;")
@@ -286,7 +285,7 @@ class IcdDummyEntrypointsSubcommand(Subcommand):
             self.prefix = self.argv[0]
             self.qual = "static"
         else:
-            self.prefix = "xgl"
+            self.prefix = "vk"
             self.qual = "ICD_EXPORT"
 
         super().run()
@@ -295,14 +294,14 @@ class IcdDummyEntrypointsSubcommand(Subcommand):
         return "#include \"icd.h\""
 
     def _generate_stub_decl(self, proto):
-        return proto.c_pretty_decl(self.prefix + proto.name, attr="XGLAPI")
+        return proto.c_pretty_decl(self.prefix + proto.name, attr="VKAPI")
 
     def _generate_stubs(self):
         stubs = []
         for proto in self.protos:
             decl = self._generate_stub_decl(proto)
             if proto.ret != "void":
-                stmt = "    return XGL_ERROR_UNKNOWN;\n"
+                stmt = "    return VK_ERROR_UNKNOWN;\n"
             else:
                 stmt = ""
 
@@ -340,7 +339,7 @@ class IcdGetProcAddrSubcommand(IcdDummyEntrypointsSubcommand):
         body.append("{")
         body.append(generate_get_proc_addr_check(gpa_pname))
         body.append("")
-        body.append("    %s += 3;" % gpa_pname)
+        body.append("    %s += 2;" % gpa_pname)
         body.append("    %s" % "\n    ".join(lookups))
         body.append("")
         body.append("    return NULL;")
@@ -350,7 +349,7 @@ class IcdGetProcAddrSubcommand(IcdDummyEntrypointsSubcommand):
 
 class LayerInterceptProcSubcommand(Subcommand):
     def run(self):
-        self.prefix = "xgl"
+        self.prefix = "vk"
 
         # we could get the list from argv if wanted
         self.intercepted = [proto.name for proto in self.protos
@@ -363,7 +362,7 @@ class LayerInterceptProcSubcommand(Subcommand):
         super().run()
 
     def generate_header(self):
-        return "\n".join(["#include <string.h>", "#include \"xglLayer.h\""])
+        return "\n".join(["#include <string.h>", "#include \"vkLayer.h\""])
 
     def generate_body(self):
         lookups = []
@@ -385,7 +384,7 @@ class LayerInterceptProcSubcommand(Subcommand):
         body.append("{")
         body.append(generate_get_proc_addr_check("name"))
         body.append("")
-        body.append("    name += 3;")
+        body.append("    name += 2;")
         body.append("    %s" % "\n    ".join(lookups))
         body.append("")
         body.append("    return NULL;")
@@ -423,7 +422,7 @@ class WinDefFileSubcommand(Subcommand):
         return """; THIS FILE IS GENERATED.  DO NOT EDIT.
 
 ;;;; Begin Copyright Notice ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-; XGL
+; Vulkan
 ;
 ; Copyright (C) 2015 LunarG, Inc.
 ;
@@ -458,7 +457,7 @@ class WinDefFileSubcommand(Subcommand):
         for proto in self.protos:
             if self.exports and proto.name not in self.exports:
                 continue
-            body.append("   xgl" + proto.name)
+            body.append("   vk" + proto.name)
 
         return "\n".join(body)
 

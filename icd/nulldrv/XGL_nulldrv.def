@@ -1,5 +1,5 @@
 ;;;; Begin Copyright Notice ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-; XGL
+; VK
 ;
 ; Copyright (C) 2015 LunarG, Inc.
 ;
@@ -24,12 +24,12 @@
 
 ; The following is required on Windows, for exporting symbols from the DLL
 
-LIBRARY XGL_nulldrv
+LIBRARY VK_nulldrv
 EXPORTS
-   xglGetProcAddr
-   xglCreateInstance
-   xglEnumerateGpus
-   xglDestroyInstance
+   vkGetProcAddr
+   vkCreateInstance
+   vkEnumerateGpus
+   vkDestroyInstance
    xcbCreateWindow
    xcbDestroyWindow
    xcbGetMessage

@@ -1,5 +1,5 @@
 /*
- * XGL
+ * Vulkan
  *
  * Copyright (C) 2014 LunarG, Inc.
  *
@@ -36,23 +36,23 @@ struct intel_mem {
     struct intel_base base;
 
     struct intel_bo *bo;
-    XGL_GPU_SIZE size;
+    VK_GPU_SIZE size;
 };
 
-XGL_RESULT intel_mem_alloc(struct intel_dev *dev,
-                           const XGL_MEMORY_ALLOC_INFO *info,
+VK_RESULT intel_mem_alloc(struct intel_dev *dev,
+                           const VK_MEMORY_ALLOC_INFO *info,
                            struct intel_mem **mem_ret);
 void intel_mem_free(struct intel_mem *mem);
 
-XGL_RESULT intel_mem_import_userptr(struct intel_dev *dev,
+VK_RESULT intel_mem_import_userptr(struct intel_dev *dev,
                                     const void *userptr,
                                     size_t size,
                                     struct intel_mem **mem_ret);
 
-XGL_RESULT intel_mem_set_priority(struct intel_mem *mem,
-                                  XGL_MEMORY_PRIORITY priority);
+VK_RESULT intel_mem_set_priority(struct intel_mem *mem,
+                                  VK_MEMORY_PRIORITY priority);
 
-static inline void *intel_mem_map(struct intel_mem *mem, XGL_FLAGS flags)
+static inline void *intel_mem_map(struct intel_mem *mem, VK_FLAGS flags)
 {
     return intel_bo_map_async(mem->bo);
 }
@@ -72,7 +72,7 @@ static inline bool intel_mem_is_busy(struct intel_mem *mem)
     return intel_bo_is_busy(mem->bo);
 }
 
-static inline struct intel_mem *intel_mem(XGL_GPU_MEMORY mem)
+static inline struct intel_mem *intel_mem(VK_GPU_MEMORY mem)
 {
     return (struct intel_mem *) mem;
 }

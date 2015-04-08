@@ -1,5 +1,5 @@
 /*
- * XGL
+ * Vulkan
  *
  * Copyright (C) 2014 LunarG, Inc.
  *
@@ -34,7 +34,7 @@ struct intel_dev;
 struct intel_mem;
 
 struct intel_base_dbg {
-    XGL_DBG_OBJECT_TYPE type;
+    VK_DBG_OBJECT_TYPE type;
 
     void *create_info;
     size_t create_info_size;
@@ -48,7 +48,7 @@ struct intel_base {
 
     struct intel_base_dbg *dbg;
 
-    XGL_RESULT (*get_info)(struct intel_base *base, int type,
+    VK_RESULT (*get_info)(struct intel_base *base, int type,
                            size_t *size, void *data);
 };
 
@@ -62,29 +62,29 @@ struct intel_obj {
     size_t offset;
 };
 
-static inline struct intel_base *intel_base(XGL_BASE_OBJECT base)
+static inline struct intel_base *intel_base(VK_BASE_OBJECT base)
 {
     return (struct intel_base *) base;
 }
 
-static inline struct intel_obj *intel_obj(XGL_OBJECT obj)
+static inline struct intel_obj *intel_obj(VK_OBJECT obj)
 {
     return (struct intel_obj *) obj;
 }
 
 static inline void intel_obj_bind_mem(struct intel_obj *obj,
                                       struct intel_mem *mem,
-                                      XGL_GPU_SIZE offset)
+                                      VK_GPU_SIZE offset)
 {
     obj->mem = mem;
     obj->offset = offset;
 }
 
-XGL_RESULT intel_base_get_info(struct intel_base *base, int type,
+VK_RESULT intel_base_get_info(struct intel_base *base, int type,
                                size_t *size, void *data);
 
 struct intel_base_dbg *intel_base_dbg_create(const struct intel_handle *handle,
-                                             XGL_DBG_OBJECT_TYPE type,
+                                             VK_DBG_OBJECT_TYPE type,
                                              const void *create_info,
                                              size_t dbg_size);
 void intel_base_dbg_destroy(const struct intel_handle *handle,
@@ -92,7 +92,7 @@ void intel_base_dbg_destroy(const struct intel_handle *handle,
 
 struct intel_base *intel_base_create(const struct intel_handle *handle,
                                      size_t obj_size, bool debug,
-                                     XGL_DBG_OBJECT_TYPE type,
+                                     VK_DBG_OBJECT_TYPE type,
                                      const void *create_info,
                                      size_t dbg_size);
 void intel_base_destroy(struct intel_base *base);

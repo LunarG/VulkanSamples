@@ -239,7 +239,7 @@ _mesa_init_program_struct( struct gl_context *ctx, struct gl_program *prog,
       memset(prog, 0, sizeof(*prog));
       prog->Id = id;
       prog->Target = target;
-      // LunarG: XGL does not use reference counts
+      // LunarG: VK does not use reference counts
       // prog->RefCount = 1;
       prog->Format = GL_PROGRAM_FORMAT_ASCII_ARB;
 
@@ -365,7 +365,7 @@ _mesa_delete_program(struct gl_context *ctx, struct gl_program *prog)
 {
    (void) ctx;
    ASSERT(prog);
-   // LunarG: XGL does not use reference counts
+   // LunarG: VK does not use reference counts
    //ASSERT(prog->RefCount==0);
 
    if (prog == &_mesa_DummyProgram)
@@ -410,7 +410,7 @@ _mesa_reference_program_(struct gl_context *ctx,
                          struct gl_program **ptr,
                          struct gl_program *prog)
 {
-// LunarG: XGL does not use reference counts
+// LunarG: VK does not use reference counts
 #if 0
 #ifndef NDEBUG
    assert(ptr);
@@ -485,7 +485,7 @@ _mesa_clone_program(struct gl_context *ctx, const struct gl_program *prog)
       return NULL;
 
    assert(clone->Target == prog->Target);
-   // LunarG: XGL does not use reference counts
+   // LunarG: VK does not use reference counts
    // assert(clone->RefCount == 1);
 
    clone->String = (GLubyte *) _mesa_strdup((char *) prog->String);

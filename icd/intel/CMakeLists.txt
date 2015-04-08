@@ -1,6 +1,6 @@
 # Create the i965 XGL DRI library
 
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DXGL_PROTOTYPES -Wno-sign-compare")
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DVK_PROTOTYPES -Wno-sign-compare")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-sign-compare")
 
 add_subdirectory(kmd)
@@ -60,12 +60,12 @@ else()
     list(APPEND sources wsi_null.c)
 endif()
 
-add_library(XGL_i965 SHARED ${sources})
-target_compile_definitions(XGL_i965 PRIVATE ${definitions})
-target_include_directories(XGL_i965 PRIVATE ${include_dirs})
-target_link_libraries(XGL_i965 ${libraries})
+add_library(VK_i965 SHARED ${sources})
+target_compile_definitions(VK_i965 PRIVATE ${definitions})
+target_include_directories(VK_i965 PRIVATE ${include_dirs})
+target_link_libraries(VK_i965 ${libraries})
 
 # set -Bsymbolic for xglGetProcAddr()
-set_target_properties(XGL_i965 PROPERTIES
+set_target_properties(VK_i965 PROPERTIES
     COMPILE_FLAGS "-Wmissing-declarations"
     LINK_FLAGS "-Wl,-Bsymbolic -Wl,-no-undefined -Wl,--exclude-libs,ALL")

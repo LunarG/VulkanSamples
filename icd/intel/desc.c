@@ -1,5 +1,5 @@
 /*
- * XGL
+ * Vulkan
  *
  * Copyright (C) 2015 LunarG, Inc.
  *
@@ -82,7 +82,7 @@ bool intel_desc_iter_init_for_binding(struct intel_desc_iter *iter,
 
 static bool desc_iter_init_for_update(struct intel_desc_iter *iter,
                                       const struct intel_desc_set *set,
-                                      XGL_DESCRIPTOR_TYPE type,
+                                      VK_DESCRIPTOR_TYPE type,
                                       uint32_t binding_index, uint32_t array_base)
 {
     if (!intel_desc_iter_init_for_binding(iter, set->layout,
@@ -117,22 +117,22 @@ static bool desc_region_init_desc_sizes(struct intel_desc_region *region,
     return true;
 }
 
-XGL_RESULT intel_desc_region_create(struct intel_dev *dev,
+VK_RESULT intel_desc_region_create(struct intel_dev *dev,
                                     struct intel_desc_region **region_ret)
 {
     const uint32_t surface_count = 16384;
     const uint32_t sampler_count = 16384;
     struct intel_desc_region *region;
 
-    region = intel_alloc(dev, sizeof(*region), 0, XGL_SYSTEM_ALLOC_INTERNAL);
+    region = intel_alloc(dev, sizeof(*region), 0, VK_SYSTEM_ALLOC_INTERNAL);
     if (!region)
-        return XGL_ERROR_OUT_OF_MEMORY;
+        return VK_ERROR_OUT_OF_MEMORY;
 
     memset(region, 0, sizeof(*region));
 
     if (!desc_region_init_desc_sizes(region, dev->gpu)) {
         intel_free(dev, region);
-        return XGL_ERROR_UNKNOWN;
+        return VK_ERROR_UNKNOWN;
     }
 
     intel_desc_offset_set(&region->size,
@@ -140,23 +140,23 @@ XGL_RESULT intel_desc_region_create(struct intel_dev *dev,
             region->sampler_desc_size * sampler_count);
 
     region->surfaces = intel_alloc(dev, region->size.surface,
-            64, XGL_SYSTEM_ALLOC_INTERNAL);
+            64, VK_SYSTEM_ALLOC_INTERNAL);
     if (!region->surfaces) {
         intel_free(dev, region);
-        return XGL_ERROR_OUT_OF_MEMORY;
+        return VK_ERROR_OUT_OF_MEMORY;
     }
 
     region->samplers = intel_alloc(dev, region->size.sampler,
-            64, XGL_SYSTEM_ALLOC_INTERNAL);
+            64, VK_SYSTEM_ALLOC_INTERNAL);
     if (!region->samplers) {
         intel_free(dev, region->surfaces);
         intel_free(dev, region);
-        return XGL_ERROR_OUT_OF_MEMORY;
+        return VK_ERROR_OUT_OF_MEMORY;
     }
 
     *region_ret = region;
 
-    return XGL_SUCCESS;
+    return VK_SUCCESS;
 }
 
 void intel_desc_region_destroy(struct intel_dev *dev,
@@ -170,43 +170,43 @@ void intel_desc_region_destroy(struct intel_dev *dev,
 /**
  * Get the size of a descriptor in the region.
  */
-static XGL_RESULT desc_region_get_desc_size(const struct intel_desc_region *region,
-                                            XGL_DESCRIPTOR_TYPE type,
+static VK_RESULT desc_region_get_desc_size(const struct intel_desc_region *region,
+                                            VK_DESCRIPTOR_TYPE type,
                                             struct intel_desc_offset *size)
 {
     uint32_t surface_size = 0, sampler_size = 0;
 
     switch (type) {
-    case XGL_DESCRIPTOR_TYPE_SAMPLER:
+    case VK_DESCRIPTOR_TYPE_SAMPLER:
         sampler_size = region->sampler_desc_size;
         break;
-    case XGL_DESCRIPTOR_TYPE_SAMPLER_TEXTURE:
+    case VK_DESCRIPTOR_TYPE_SAMPLER_TEXTURE:
         surface_size = region->surface_desc_size;
         sampler_size = region->sampler_desc_size;
         break;
-    case XGL_DESCRIPTOR_TYPE_TEXTURE:
-    case XGL_DESCRIPTOR_TYPE_TEXTURE_BUFFER:
-    case XGL_DESCRIPTOR_TYPE_IMAGE:
-    case XGL_DESCRIPTOR_TYPE_IMAGE_BUFFER:
-    case XGL_DESCRIPTOR_TYPE_UNIFORM_BUFFER:
-    case XGL_DESCRIPTOR_TYPE_SHADER_STORAGE_BUFFER:
-    case XGL_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC:
-    case XGL_DESCRIPTOR_TYPE_SHADER_STORAGE_BUFFER_DYNAMIC:
+    case VK_DESCRIPTOR_TYPE_TEXTURE:
+    case VK_DESCRIPTOR_TYPE_TEXTURE_BUFFER:
+    case VK_DESCRIPTOR_TYPE_IMAGE:
+    case VK_DESCRIPTOR_TYPE_IMAGE_BUFFER:
+    case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER:
+    case VK_DESCRIPTOR_TYPE_SHADER_STORAGE_BUFFER:
+    case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC:
+    case VK_DESCRIPTOR_TYPE_SHADER_STORAGE_BUFFER_DYNAMIC:
         surface_size = region->surface_desc_size;
         break;
     default:
         assert(!"unknown descriptor type");
-        return XGL_ERROR_INVALID_VALUE;
+        return VK_ERROR_INVALID_VALUE;
         break;
     }
 
     intel_desc_offset_set(size, surface_size, sampler_size);
 
-    return XGL_SUCCESS;
+    return VK_SUCCESS;
 }
 
-XGL_RESULT intel_desc_region_alloc(struct intel_desc_region *region,
-                                   const XGL_DESCRIPTOR_POOL_CREATE_INFO *info,
+VK_RESULT intel_desc_region_alloc(struct intel_desc_region *region,
+                                   const VK_DESCRIPTOR_POOL_CREATE_INFO *info,
                                    struct intel_desc_offset *begin,
                                    struct intel_desc_offset *end)
 {
@@ -216,12 +216,12 @@ XGL_RESULT intel_desc_region_alloc(struct intel_desc_region *region,
 
     /* calculate sizes needed */
     for (i = 0; i < info->count; i++) {
-        const XGL_DESCRIPTOR_TYPE_COUNT *tc = &info->pTypeCount[i];
+        const VK_DESCRIPTOR_TYPE_COUNT *tc = &info->pTypeCount[i];
         struct intel_desc_offset size;
-        XGL_RESULT ret;
+        VK_RESULT ret;
 
         ret = desc_region_get_desc_size(region, tc->type, &size);
-        if (ret != XGL_SUCCESS)
+        if (ret != VK_SUCCESS)
             return ret;
 
         surface_size += size.surface * tc->count;
@@ -234,12 +234,12 @@ XGL_RESULT intel_desc_region_alloc(struct intel_desc_region *region,
     intel_desc_offset_add(end, &region->cur, &alloc);
 
     if (!intel_desc_offset_within(end, &region->size))
-        return XGL_ERROR_OUT_OF_MEMORY;
+        return VK_ERROR_OUT_OF_MEMORY;
 
     /* increment the writer pointer */
     region->cur = *end;
 
-    return XGL_SUCCESS;
+    return VK_SUCCESS;
 }
 
 static void desc_region_validate_begin_end(const struct intel_desc_region *region,
@@ -262,18 +262,18 @@ void intel_desc_region_free(struct intel_desc_region *region,
     /* is it ok not to reclaim? */
 }
 
-XGL_RESULT intel_desc_region_begin_update(struct intel_desc_region *region,
-                                          XGL_DESCRIPTOR_UPDATE_MODE mode)
+VK_RESULT intel_desc_region_begin_update(struct intel_desc_region *region,
+                                          VK_DESCRIPTOR_UPDATE_MODE mode)
 {
     /* no-op */
-    return XGL_SUCCESS;
+    return VK_SUCCESS;
 }
 
-XGL_RESULT intel_desc_region_end_update(struct intel_desc_region *region,
+VK_RESULT intel_desc_region_end_update(struct intel_desc_region *region,
                                         struct intel_cmd *cmd)
 {
     /* No pipelined update.  cmd_draw() will do the work. */
-    return XGL_SUCCESS;
+    return VK_SUCCESS;
 }
 
 void intel_desc_region_clear(struct intel_desc_region *region,
@@ -348,7 +348,7 @@ void intel_desc_region_copy(struct intel_desc_region *region,
 
 void intel_desc_region_read_surface(const struct intel_desc_region *region,
                                     const struct intel_desc_offset *offset,
-                                    XGL_PIPELINE_SHADER_STAGE stage,
+                                    VK_PIPELINE_SHADER_STAGE stage,
                                     const struct intel_mem **mem,
                                     bool *read_only,
                                     const uint32_t **cmd,
@@ -368,7 +368,7 @@ void intel_desc_region_read_surface(const struct intel_desc_region *region,
     *read_only = desc->read_only;
     switch (desc->type) {
     case INTEL_DESC_SURFACE_BUF:
-        *cmd = (stage == XGL_SHADER_STAGE_FRAGMENT) ?
+        *cmd = (stage == VK_SHADER_STAGE_FRAGMENT) ?
             desc->u.buf->fs_cmd : desc->u.buf->cmd;
         *cmd_len = desc->u.buf->cmd_len;
         break;
@@ -408,26 +408,26 @@ static void desc_pool_destroy(struct intel_obj *obj)
     intel_desc_pool_destroy(pool);
 }
 
-XGL_RESULT intel_desc_pool_create(struct intel_dev *dev,
-                                  XGL_DESCRIPTOR_POOL_USAGE usage,
+VK_RESULT intel_desc_pool_create(struct intel_dev *dev,
+                                  VK_DESCRIPTOR_POOL_USAGE usage,
                                   uint32_t max_sets,
-                                  const XGL_DESCRIPTOR_POOL_CREATE_INFO *info,
+                                  const VK_DESCRIPTOR_POOL_CREATE_INFO *info,
                                   struct intel_desc_pool **pool_ret)
 {
     struct intel_desc_pool *pool;
-    XGL_RESULT ret;
+    VK_RESULT ret;
 
     pool = (struct intel_desc_pool *) intel_base_create(&dev->base.handle,
-            sizeof(*pool), dev->base.dbg, XGL_DBG_OBJECT_DESCRIPTOR_POOL,
+            sizeof(*pool), dev->base.dbg, VK_DBG_OBJECT_DESCRIPTOR_POOL,
             info, 0);
     if (!pool)
-        return XGL_ERROR_OUT_OF_MEMORY;
+        return VK_ERROR_OUT_OF_MEMORY;
 
     pool->dev = dev;
 
     ret = intel_desc_region_alloc(dev->desc_region, info,
             &pool->region_begin, &pool->region_end);
-    if (ret != XGL_SUCCESS) {
+    if (ret != VK_SUCCESS) {
         intel_base_destroy(&pool->obj.base);
         return ret;
     }
@@ -439,7 +439,7 @@ XGL_RESULT intel_desc_pool_create(struct intel_dev *dev,
 
     *pool_ret = pool;
 
-    return XGL_SUCCESS;
+    return VK_SUCCESS;
 }
 
 void intel_desc_pool_destroy(struct intel_desc_pool *pool)
@@ -449,7 +449,7 @@ void intel_desc_pool_destroy(struct intel_desc_pool *pool)
     intel_base_destroy(&pool->obj.base);
 }
 
-XGL_RESULT intel_desc_pool_alloc(struct intel_desc_pool *pool,
+VK_RESULT intel_desc_pool_alloc(struct intel_desc_pool *pool,
                                  const struct intel_desc_layout *layout,
                                  struct intel_desc_offset *begin,
                                  struct intel_desc_offset *end)
@@ -458,12 +458,12 @@ XGL_RESULT intel_desc_pool_alloc(struct intel_desc_pool *pool,
     intel_desc_offset_add(end, &pool->cur, &layout->region_size);
 
     if (!intel_desc_offset_within(end, &pool->region_end))
-        return XGL_ERROR_OUT_OF_MEMORY;
+        return VK_ERROR_OUT_OF_MEMORY;
 
     /* increment the writer pointer */
     pool->cur = *end;
 
-    return XGL_SUCCESS;
+    return VK_SUCCESS;
 }
 
 void intel_desc_pool_reset(struct intel_desc_pool *pool)
@@ -479,25 +479,25 @@ static void desc_set_destroy(struct intel_obj *obj)
     intel_desc_set_destroy(set);
 }
 
-XGL_RESULT intel_desc_set_create(struct intel_dev *dev,
+VK_RESULT intel_desc_set_create(struct intel_dev *dev,
                                  struct intel_desc_pool *pool,
-                                 XGL_DESCRIPTOR_SET_USAGE usage,
+                                 VK_DESCRIPTOR_SET_USAGE usage,
                                  const struct intel_desc_layout *layout,
                                  struct intel_desc_set **set_ret)
 {
     struct intel_desc_set *set;
-    XGL_RESULT ret;
+    VK_RESULT ret;
 
     set = (struct intel_desc_set *) intel_base_create(&dev->base.handle,
-            sizeof(*set), dev->base.dbg, XGL_DBG_OBJECT_DESCRIPTOR_SET,
+            sizeof(*set), dev->base.dbg, VK_DBG_OBJECT_DESCRIPTOR_SET,
             NULL, 0);
     if (!set)
-        return XGL_ERROR_OUT_OF_MEMORY;
+        return VK_ERROR_OUT_OF_MEMORY;
 
     set->region = dev->desc_region;
     ret = intel_desc_pool_alloc(pool, layout,
             &set->region_begin, &set->region_end);
-    if (ret != XGL_SUCCESS) {
+    if (ret != VK_SUCCESS) {
         intel_base_destroy(&set->obj.base);
         return ret;
     }
@@ -508,7 +508,7 @@ XGL_RESULT intel_desc_set_create(struct intel_dev *dev,
 
     *set_ret = set;
 
-    return XGL_SUCCESS;
+    return VK_SUCCESS;
 }
 
 void intel_desc_set_destroy(struct intel_desc_set *set)
@@ -516,12 +516,12 @@ void intel_desc_set_destroy(struct intel_desc_set *set)
     intel_base_destroy(&set->obj.base);
 }
 
-static bool desc_set_img_layout_read_only(XGL_IMAGE_LAYOUT layout)
+static bool desc_set_img_layout_read_only(VK_IMAGE_LAYOUT layout)
 {
     switch (layout) {
-    case XGL_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL:
-    case XGL_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL:
-    case XGL_IMAGE_LAYOUT_TRANSFER_SOURCE_OPTIMAL:
+    case VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL:
+    case VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL:
+    case VK_IMAGE_LAYOUT_TRANSFER_SOURCE_OPTIMAL:
         return true;
     default:
         return false;
@@ -529,18 +529,18 @@ static bool desc_set_img_layout_read_only(XGL_IMAGE_LAYOUT layout)
 }
 
 void intel_desc_set_update_samplers(struct intel_desc_set *set,
-                                    const XGL_UPDATE_SAMPLERS *update)
+                                    const VK_UPDATE_SAMPLERS *update)
 {
     struct intel_desc_iter iter;
     uint32_t i;
 
-    if (!desc_iter_init_for_update(&iter, set, XGL_DESCRIPTOR_TYPE_SAMPLER,
+    if (!desc_iter_init_for_update(&iter, set, VK_DESCRIPTOR_TYPE_SAMPLER,
                 update->binding, update->arrayIndex))
         return;
 
     for (i = 0; i < update->count; i++) {
         const struct intel_sampler *sampler =
-            intel_sampler((XGL_SAMPLER) update->pSamplers[i]);
+            intel_sampler((VK_SAMPLER) update->pSamplers[i]);
         struct intel_desc_sampler desc;
 
         desc.sampler = sampler;
@@ -553,13 +553,13 @@ void intel_desc_set_update_samplers(struct intel_desc_set *set,
 }
 
 void intel_desc_set_update_sampler_textures(struct intel_desc_set *set,
-                                            const XGL_UPDATE_SAMPLER_TEXTURES *update)
+                                            const VK_UPDATE_SAMPLER_TEXTURES *update)
 {
     struct intel_desc_iter iter;
     const struct intel_desc_layout_binding *binding;
     uint32_t i;
 
-    if (!desc_iter_init_for_update(&iter, set, XGL_DESCRIPTOR_TYPE_SAMPLER_TEXTURE,
+    if (!desc_iter_init_for_update(&iter, set, VK_DESCRIPTOR_TYPE_SAMPLER_TEXTURE,
                 update->binding, update->arrayIndex))
         return;
 
@@ -582,7 +582,7 @@ void intel_desc_set_update_sampler_textures(struct intel_desc_set *set,
         const struct intel_sampler *sampler = (binding->immutable_samplers) ?
             binding->immutable_samplers[update->arrayIndex + i] :
             intel_sampler(update->pSamplerImageViews[i].sampler);
-        const XGL_IMAGE_VIEW_ATTACH_INFO *info =
+        const VK_IMAGE_VIEW_ATTACH_INFO *info =
             update->pSamplerImageViews[i].pImageView;
         const struct intel_img_view *view = intel_img_view(info->view);
         struct intel_desc_surface view_desc;
@@ -604,7 +604,7 @@ void intel_desc_set_update_sampler_textures(struct intel_desc_set *set,
 }
 
 void intel_desc_set_update_images(struct intel_desc_set *set,
-                                  const XGL_UPDATE_IMAGES *update)
+                                  const VK_UPDATE_IMAGES *update)
 {
     struct intel_desc_iter iter;
     uint32_t i;
@@ -614,7 +614,7 @@ void intel_desc_set_update_images(struct intel_desc_set *set,
         return;
 
     for (i = 0; i < update->count; i++) {
-        const XGL_IMAGE_VIEW_ATTACH_INFO *info = &update->pImageViews[i];
+        const VK_IMAGE_VIEW_ATTACH_INFO *info = &update->pImageViews[i];
         const struct intel_img_view *view = intel_img_view(info->view);
         struct intel_desc_surface desc;
 
@@ -631,7 +631,7 @@ void intel_desc_set_update_images(struct intel_desc_set *set,
 }
 
 void intel_desc_set_update_buffers(struct intel_desc_set *set,
-                                   const XGL_UPDATE_BUFFERS *update)
+                                   const VK_UPDATE_BUFFERS *update)
 {
     struct intel_desc_iter iter;
     uint32_t i;
@@ -641,7 +641,7 @@ void intel_desc_set_update_buffers(struct intel_desc_set *set,
         return;
 
     for (i = 0; i < update->count; i++) {
-        const XGL_BUFFER_VIEW_ATTACH_INFO *info = &update->pBufferViews[i];
+        const VK_BUFFER_VIEW_ATTACH_INFO *info = &update->pBufferViews[i];
         const struct intel_buf_view *view = intel_buf_view(info->view);
         struct intel_desc_surface desc;
 
@@ -658,7 +658,7 @@ void intel_desc_set_update_buffers(struct intel_desc_set *set,
 }
 
 void intel_desc_set_update_as_copy(struct intel_desc_set *set,
-                                   const XGL_UPDATE_AS_COPY *update)
+                                   const VK_UPDATE_AS_COPY *update)
 {
     const struct intel_desc_set *src_set =
         intel_desc_set(update->descriptorSet);
@@ -667,7 +667,7 @@ void intel_desc_set_update_as_copy(struct intel_desc_set *set,
     uint32_t i;
 
     /* disallow combined sampler textures */
-    if (update->descriptorType == XGL_DESCRIPTOR_TYPE_SAMPLER_TEXTURE)
+    if (update->descriptorType == VK_DESCRIPTOR_TYPE_SAMPLER_TEXTURE)
         return;
 
     if (!desc_iter_init_for_update(&iter, set, update->descriptorType,
@@ -699,34 +699,34 @@ static void desc_layout_destroy(struct intel_obj *obj)
     intel_desc_layout_destroy(layout);
 }
 
-static XGL_RESULT desc_layout_init_bindings(struct intel_desc_layout *layout,
+static VK_RESULT desc_layout_init_bindings(struct intel_desc_layout *layout,
                                             const struct intel_desc_region *region,
-                                            const XGL_DESCRIPTOR_SET_LAYOUT_CREATE_INFO *info)
+                                            const VK_DESCRIPTOR_SET_LAYOUT_CREATE_INFO *info)
 {
     struct intel_desc_offset offset;
     uint32_t i;
-    XGL_RESULT ret;
+    VK_RESULT ret;
 
     intel_desc_offset_set(&offset, 0, 0);
 
     /* allocate bindings */
     layout->bindings = intel_alloc(layout, sizeof(layout->bindings[0]) *
-            info->count, 0, XGL_SYSTEM_ALLOC_INTERNAL);
+            info->count, 0, VK_SYSTEM_ALLOC_INTERNAL);
     if (!layout->bindings)
-        return XGL_ERROR_OUT_OF_MEMORY;
+        return VK_ERROR_OUT_OF_MEMORY;
 
     memset(layout->bindings, 0, sizeof(layout->bindings[0]) * info->count);
     layout->binding_count = info->count;
 
     /* initialize bindings */
     for (i = 0; i < info->count; i++) {
-        const XGL_DESCRIPTOR_SET_LAYOUT_BINDING *lb = &info->pBinding[i];
+        const VK_DESCRIPTOR_SET_LAYOUT_BINDING *lb = &info->pBinding[i];
         struct intel_desc_layout_binding *binding = &layout->bindings[i];
         struct intel_desc_offset size;
 
         switch (lb->descriptorType) {
-        case XGL_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC:
-        case XGL_DESCRIPTOR_TYPE_SHADER_STORAGE_BUFFER_DYNAMIC:
+        case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC:
+        case VK_DESCRIPTOR_TYPE_SHADER_STORAGE_BUFFER_DYNAMIC:
             layout->dynamic_desc_count += lb->count;
             break;
         default:
@@ -740,7 +740,7 @@ static XGL_RESULT desc_layout_init_bindings(struct intel_desc_layout *layout,
 
         ret = desc_region_get_desc_size(region,
                 lb->descriptorType, &size);
-        if (ret != XGL_SUCCESS)
+        if (ret != VK_SUCCESS)
             return ret;
 
         binding->increment = size;
@@ -759,20 +759,20 @@ static XGL_RESULT desc_layout_init_bindings(struct intel_desc_layout *layout,
 
             if (shared) {
                 binding->shared_immutable_sampler =
-                    intel_sampler((XGL_SAMPLER) lb->pImmutableSamplers[0]);
+                    intel_sampler((VK_SAMPLER) lb->pImmutableSamplers[0]);
                 /* set sampler offset increment to 0 */
                 intel_desc_offset_set(&binding->increment,
                         binding->increment.surface, 0);
             } else {
                 binding->immutable_samplers = intel_alloc(layout,
                         sizeof(binding->immutable_samplers[0]) * lb->count,
-                        0, XGL_SYSTEM_ALLOC_INTERNAL);
+                        0, VK_SYSTEM_ALLOC_INTERNAL);
                 if (!binding->immutable_samplers)
-                    return XGL_ERROR_OUT_OF_MEMORY;
+                    return VK_ERROR_OUT_OF_MEMORY;
 
                 for (j = 0; j < lb->count; j++) {
                     binding->immutable_samplers[j] =
-                        intel_sampler((XGL_SAMPLER) lb->pImmutableSamplers[j]);
+                        intel_sampler((VK_SAMPLER) lb->pImmutableSamplers[j]);
                 }
             }
         }
@@ -785,24 +785,24 @@ static XGL_RESULT desc_layout_init_bindings(struct intel_desc_layout *layout,
 
     layout->region_size = offset;
 
-    return XGL_SUCCESS;
+    return VK_SUCCESS;
 }
 
-XGL_RESULT intel_desc_layout_create(struct intel_dev *dev,
-                                    const XGL_DESCRIPTOR_SET_LAYOUT_CREATE_INFO *info,
+VK_RESULT intel_desc_layout_create(struct intel_dev *dev,
+                                    const VK_DESCRIPTOR_SET_LAYOUT_CREATE_INFO *info,
                                     struct intel_desc_layout **layout_ret)
 {
     struct intel_desc_layout *layout;
-    XGL_RESULT ret;
+    VK_RESULT ret;
 
     layout = (struct intel_desc_layout *) intel_base_create(&dev->base.handle,
             sizeof(*layout), dev->base.dbg,
-            XGL_DBG_OBJECT_DESCRIPTOR_SET_LAYOUT, info, 0);
+            VK_DBG_OBJECT_DESCRIPTOR_SET_LAYOUT, info, 0);
     if (!layout)
-        return XGL_ERROR_OUT_OF_MEMORY;
+        return VK_ERROR_OUT_OF_MEMORY;
 
     ret = desc_layout_init_bindings(layout, dev->desc_region, info);
-    if (ret != XGL_SUCCESS) {
+    if (ret != VK_SUCCESS) {
         intel_desc_layout_destroy(layout);
         return ret;
     }
@@ -811,7 +811,7 @@ XGL_RESULT intel_desc_layout_create(struct intel_dev *dev,
 
     *layout_ret = layout;
 
-    return XGL_SUCCESS;
+    return VK_SUCCESS;
 }
 
 void intel_desc_layout_destroy(struct intel_desc_layout *layout)
@@ -836,8 +836,8 @@ static void desc_layout_chain_destroy(struct intel_obj *obj)
     intel_desc_layout_chain_destroy(chain);
 }
 
-XGL_RESULT intel_desc_layout_chain_create(struct intel_dev *dev,
-                                          const XGL_DESCRIPTOR_SET_LAYOUT *layouts,
+VK_RESULT intel_desc_layout_chain_create(struct intel_dev *dev,
+                                          const VK_DESCRIPTOR_SET_LAYOUT *layouts,
                                           uint32_t count,
                                           struct intel_desc_layout_chain **chain_ret)
 {
@@ -846,23 +846,23 @@ XGL_RESULT intel_desc_layout_chain_create(struct intel_dev *dev,
 
     chain = (struct intel_desc_layout_chain *)
         intel_base_create(&dev->base.handle, sizeof(*chain), dev->base.dbg,
-                XGL_DBG_OBJECT_DESCRIPTOR_SET_LAYOUT_CHAIN, NULL, 0);
+                VK_DBG_OBJECT_DESCRIPTOR_SET_LAYOUT_CHAIN, NULL, 0);
     if (!chain)
-        return XGL_ERROR_OUT_OF_MEMORY;
+        return VK_ERROR_OUT_OF_MEMORY;
 
     chain->layouts = intel_alloc(chain, sizeof(chain->layouts[0]) * count,
-            0, XGL_SYSTEM_ALLOC_INTERNAL);
+            0, VK_SYSTEM_ALLOC_INTERNAL);
     if (!chain) {
         intel_desc_layout_chain_destroy(chain);
-        return XGL_ERROR_OUT_OF_MEMORY;
+        return VK_ERROR_OUT_OF_MEMORY;
     }
 
     chain->dynamic_desc_indices = intel_alloc(chain,
             sizeof(chain->dynamic_desc_indices[0]) * count,
-            0, XGL_SYSTEM_ALLOC_INTERNAL);
+            0, VK_SYSTEM_ALLOC_INTERNAL);
     if (!chain->dynamic_desc_indices) {
         intel_desc_layout_chain_destroy(chain);
-        return XGL_ERROR_OUT_OF_MEMORY;
+        return VK_ERROR_OUT_OF_MEMORY;
     }
 
     for (i = 0; i < count; i++) {
@@ -879,7 +879,7 @@ XGL_RESULT intel_desc_layout_chain_create(struct intel_dev *dev,
 
     *chain_ret = chain;
 
-    return XGL_SUCCESS;
+    return VK_SUCCESS;
 }
 
 void intel_desc_layout_chain_destroy(struct intel_desc_layout_chain *chain)
@@ -891,10 +891,10 @@ void intel_desc_layout_chain_destroy(struct intel_desc_layout_chain *chain)
     intel_base_destroy(&chain->obj.base);
 }
 
-ICD_EXPORT XGL_RESULT XGLAPI xglCreateDescriptorSetLayout(
-    XGL_DEVICE                                   device,
-    const XGL_DESCRIPTOR_SET_LAYOUT_CREATE_INFO* pCreateInfo,
-    XGL_DESCRIPTOR_SET_LAYOUT*                   pSetLayout)
+ICD_EXPORT VK_RESULT VKAPI vkCreateDescriptorSetLayout(
+    VK_DEVICE                                   device,
+    const VK_DESCRIPTOR_SET_LAYOUT_CREATE_INFO* pCreateInfo,
+    VK_DESCRIPTOR_SET_LAYOUT*                   pSetLayout)
 {
     struct intel_dev *dev = intel_dev(device);
 
@@ -902,11 +902,11 @@ ICD_EXPORT XGL_RESULT XGLAPI xglCreateDescriptorSetLayout(
             (struct intel_desc_layout **) pSetLayout);
 }
 
-ICD_EXPORT XGL_RESULT XGLAPI xglCreateDescriptorSetLayoutChain(
-    XGL_DEVICE                                   device,
+ICD_EXPORT VK_RESULT VKAPI vkCreateDescriptorSetLayoutChain(
+    VK_DEVICE                                   device,
     uint32_t                                     setLayoutArrayCount,
-    const XGL_DESCRIPTOR_SET_LAYOUT*             pSetLayoutArray,
-    XGL_DESCRIPTOR_SET_LAYOUT_CHAIN*             pLayoutChain)
+    const VK_DESCRIPTOR_SET_LAYOUT*             pSetLayoutArray,
+    VK_DESCRIPTOR_SET_LAYOUT_CHAIN*             pLayoutChain)
 {
     struct intel_dev *dev = intel_dev(device);
 
@@ -915,9 +915,9 @@ ICD_EXPORT XGL_RESULT XGLAPI xglCreateDescriptorSetLayoutChain(
             (struct intel_desc_layout_chain **) pLayoutChain);
 }
 
-ICD_EXPORT XGL_RESULT XGLAPI xglBeginDescriptorPoolUpdate(
-    XGL_DEVICE                                   device,
-    XGL_DESCRIPTOR_UPDATE_MODE                   updateMode)
+ICD_EXPORT VK_RESULT VKAPI vkBeginDescriptorPoolUpdate(
+    VK_DEVICE                                   device,
+    VK_DESCRIPTOR_UPDATE_MODE                   updateMode)
 {
     struct intel_dev *dev = intel_dev(device);
     struct intel_desc_region *region = dev->desc_region;
@@ -925,9 +925,9 @@ ICD_EXPORT XGL_RESULT XGLAPI xglBeginDescriptorPoolUpdate(
     return intel_desc_region_begin_update(region, updateMode);
 }
 
-ICD_EXPORT XGL_RESULT XGLAPI xglEndDescriptorPoolUpdate(
-    XGL_DEVICE                                   device,
-    XGL_CMD_BUFFER                               cmd_)
+ICD_EXPORT VK_RESULT VKAPI vkEndDescriptorPoolUpdate(
+    VK_DEVICE                                   device,
+    VK_CMD_BUFFER                               cmd_)
 {
     struct intel_dev *dev = intel_dev(device);
     struct intel_desc_region *region = dev->desc_region;
@@ -936,12 +936,12 @@ ICD_EXPORT XGL_RESULT XGLAPI xglEndDescriptorPoolUpdate(
     return intel_desc_region_end_update(region, cmd);
 }
 
-ICD_EXPORT XGL_RESULT XGLAPI xglCreateDescriptorPool(
-    XGL_DEVICE                                   device,
-    XGL_DESCRIPTOR_POOL_USAGE                    poolUsage,
+ICD_EXPORT VK_RESULT VKAPI vkCreateDescriptorPool(
+    VK_DEVICE                                   device,
+    VK_DESCRIPTOR_POOL_USAGE                    poolUsage,
     uint32_t                                     maxSets,
-    const XGL_DESCRIPTOR_POOL_CREATE_INFO*       pCreateInfo,
-    XGL_DESCRIPTOR_POOL*                         pDescriptorPool)
+    const VK_DESCRIPTOR_POOL_CREATE_INFO*       pCreateInfo,
+    VK_DESCRIPTOR_POOL*                         pDescriptorPool)
 {
     struct intel_dev *dev = intel_dev(device);
 
@@ -949,36 +949,36 @@ ICD_EXPORT XGL_RESULT XGLAPI xglCreateDescriptorPool(
             (struct intel_desc_pool **) pDescriptorPool);
 }
 
-ICD_EXPORT XGL_RESULT XGLAPI xglResetDescriptorPool(
-    XGL_DESCRIPTOR_POOL                          descriptorPool)
+ICD_EXPORT VK_RESULT VKAPI vkResetDescriptorPool(
+    VK_DESCRIPTOR_POOL                          descriptorPool)
 {
     struct intel_desc_pool *pool = intel_desc_pool(descriptorPool);
 
     intel_desc_pool_reset(pool);
 
-    return XGL_SUCCESS;
+    return VK_SUCCESS;
 }
 
-ICD_EXPORT XGL_RESULT XGLAPI xglAllocDescriptorSets(
-    XGL_DESCRIPTOR_POOL                          descriptorPool,
-    XGL_DESCRIPTOR_SET_USAGE                     setUsage,
+ICD_EXPORT VK_RESULT VKAPI vkAllocDescriptorSets(
+    VK_DESCRIPTOR_POOL                          descriptorPool,
+    VK_DESCRIPTOR_SET_USAGE                     setUsage,
     uint32_t                                     count,
-    const XGL_DESCRIPTOR_SET_LAYOUT*             pSetLayouts,
-    XGL_DESCRIPTOR_SET*                          pDescriptorSets,
+    const VK_DESCRIPTOR_SET_LAYOUT*             pSetLayouts,
+    VK_DESCRIPTOR_SET*                          pDescriptorSets,
     uint32_t*                                    pCount)
 {
     struct intel_desc_pool *pool = intel_desc_pool(descriptorPool);
     struct intel_dev *dev = pool->dev;
-    XGL_RESULT ret = XGL_SUCCESS;
+    VK_RESULT ret = VK_SUCCESS;
     uint32_t i;
 
     for (i = 0; i < count; i++) {
         const struct intel_desc_layout *layout =
-            intel_desc_layout((XGL_DESCRIPTOR_SET_LAYOUT) pSetLayouts[i]);
+            intel_desc_layout((VK_DESCRIPTOR_SET_LAYOUT) pSetLayouts[i]);
 
         ret = intel_desc_set_create(dev, pool, setUsage, layout,
                 (struct intel_desc_set **) &pDescriptorSets[i]);
-        if (ret != XGL_SUCCESS)
+        if (ret != VK_SUCCESS)
             break;
     }
 
@@ -988,23 +988,23 @@ ICD_EXPORT XGL_RESULT XGLAPI xglAllocDescriptorSets(
     return ret;
 }
 
-ICD_EXPORT void XGLAPI xglClearDescriptorSets(
-    XGL_DESCRIPTOR_POOL                          descriptorPool,
+ICD_EXPORT void VKAPI vkClearDescriptorSets(
+    VK_DESCRIPTOR_POOL                          descriptorPool,
     uint32_t                                     count,
-    const XGL_DESCRIPTOR_SET*                    pDescriptorSets)
+    const VK_DESCRIPTOR_SET*                    pDescriptorSets)
 {
     uint32_t i;
 
     for (i = 0; i < count; i++) {
         struct intel_desc_set *set =
-            intel_desc_set((XGL_DESCRIPTOR_SET) pDescriptorSets[i]);
+            intel_desc_set((VK_DESCRIPTOR_SET) pDescriptorSets[i]);
 
         intel_desc_region_clear(set->region, &set->region_begin, &set->region_end);
     }
 }
 
-ICD_EXPORT void XGLAPI xglUpdateDescriptors(
-    XGL_DESCRIPTOR_SET                           descriptorSet,
+ICD_EXPORT void VKAPI vkUpdateDescriptors(
+    VK_DESCRIPTOR_SET                           descriptorSet,
     uint32_t                                     updateCount,
     const void**                                 ppUpdateArray)
 {
@@ -1014,31 +1014,31 @@ ICD_EXPORT void XGLAPI xglUpdateDescriptors(
     for (i = 0; i < updateCount; i++) {
         const union {
             struct {
-                XGL_STRUCTURE_TYPE                      sType;
+                VK_STRUCTURE_TYPE                      sType;
                 const void*                             pNext;
             } common;
 
-            XGL_UPDATE_SAMPLERS samplers;
-            XGL_UPDATE_SAMPLER_TEXTURES sampler_textures;
-            XGL_UPDATE_IMAGES images;
-            XGL_UPDATE_BUFFERS buffers;
-            XGL_UPDATE_AS_COPY as_copy;
+            VK_UPDATE_SAMPLERS samplers;
+            VK_UPDATE_SAMPLER_TEXTURES sampler_textures;
+            VK_UPDATE_IMAGES images;
+            VK_UPDATE_BUFFERS buffers;
+            VK_UPDATE_AS_COPY as_copy;
         } *u = ppUpdateArray[i];
 
         switch (u->common.sType) {
-        case XGL_STRUCTURE_TYPE_UPDATE_SAMPLERS:
+        case VK_STRUCTURE_TYPE_UPDATE_SAMPLERS:
             intel_desc_set_update_samplers(set, &u->samplers);
             break;
-        case XGL_STRUCTURE_TYPE_UPDATE_SAMPLER_TEXTURES:
+        case VK_STRUCTURE_TYPE_UPDATE_SAMPLER_TEXTURES:
             intel_desc_set_update_sampler_textures(set, &u->sampler_textures);
             break;
-        case XGL_STRUCTURE_TYPE_UPDATE_IMAGES:
+        case VK_STRUCTURE_TYPE_UPDATE_IMAGES:
             intel_desc_set_update_images(set, &u->images);
             break;
-        case XGL_STRUCTURE_TYPE_UPDATE_BUFFERS:
+        case VK_STRUCTURE_TYPE_UPDATE_BUFFERS:
             intel_desc_set_update_buffers(set, &u->buffers);
             break;
-        case XGL_STRUCTURE_TYPE_UPDATE_AS_COPY:
+        case VK_STRUCTURE_TYPE_UPDATE_AS_COPY:
             intel_desc_set_update_as_copy(set, &u->as_copy);
             break;
         default:

@@ -604,7 +604,7 @@ void intel_cmd_decode(struct intel_cmd *cmd, bool decode_inst_writer)
 {
     int i;
 
-    assert(cmd->result == XGL_SUCCESS);
+    assert(cmd->result == VK_SUCCESS);
 
     for (i = 0; i < INTEL_CMD_WRITER_COUNT; i++)
         cmd_writer_decode(cmd, i, decode_inst_writer);

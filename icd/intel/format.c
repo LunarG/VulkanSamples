@@ -1,5 +1,5 @@
 /*
- * XGL
+ * Vulkan
  *
  * Copyright (C) 2014 LunarG, Inc.
  *
@@ -377,171 +377,171 @@ static const struct intel_dp_cap intel_dp_caps[] = {
 #undef CAP
 };
 
-static const int intel_color_mapping[XGL_NUM_FMT] = {
-    [XGL_FMT_R4G4_UNORM]           = 0,
-    [XGL_FMT_R4G4_USCALED]         = 0,
-    [XGL_FMT_R4G4B4A4_UNORM]       = 0,
-    [XGL_FMT_R4G4B4A4_USCALED]     = 0,
-    [XGL_FMT_R5G6B5_UNORM]         = 0,
-    [XGL_FMT_R5G6B5_USCALED]       = 0,
-    [XGL_FMT_R5G5B5A1_UNORM]       = 0,
-    [XGL_FMT_R5G5B5A1_USCALED]     = 0,
-    [XGL_FMT_R8_UNORM]             = GEN6_FORMAT_R8_UNORM,
-    [XGL_FMT_R8_SNORM]             = GEN6_FORMAT_R8_SNORM,
-    [XGL_FMT_R8_USCALED]           = GEN6_FORMAT_R8_USCALED,
-    [XGL_FMT_R8_SSCALED]           = GEN6_FORMAT_R8_SSCALED,
-    [XGL_FMT_R8_UINT]              = GEN6_FORMAT_R8_UINT,
-    [XGL_FMT_R8_SINT]              = GEN6_FORMAT_R8_SINT,
-    [XGL_FMT_R8_SRGB]              = 0,
-    [XGL_FMT_R8G8_UNORM]           = GEN6_FORMAT_R8G8_UNORM,
-    [XGL_FMT_R8G8_SNORM]           = GEN6_FORMAT_R8G8_SNORM,
-    [XGL_FMT_R8G8_USCALED]         = GEN6_FORMAT_R8G8_USCALED,
-    [XGL_FMT_R8G8_SSCALED]         = GEN6_FORMAT_R8G8_SSCALED,
-    [XGL_FMT_R8G8_UINT]            = GEN6_FORMAT_R8G8_UINT,
-    [XGL_FMT_R8G8_SINT]            = GEN6_FORMAT_R8G8_SINT,
-    [XGL_FMT_R8G8_SRGB]            = 0,
-    [XGL_FMT_R8G8B8_UNORM]         = GEN6_FORMAT_R8G8B8_UNORM,
-    [XGL_FMT_R8G8B8_SNORM]         = GEN6_FORMAT_R8G8B8_SNORM,
-    [XGL_FMT_R8G8B8_USCALED]       = GEN6_FORMAT_R8G8B8_USCALED,
-    [XGL_FMT_R8G8B8_SSCALED]       = GEN6_FORMAT_R8G8B8_SSCALED,
-    [XGL_FMT_R8G8B8_UINT]          = GEN6_FORMAT_R8G8B8_UINT,
-    [XGL_FMT_R8G8B8_SINT]          = GEN6_FORMAT_R8G8B8_SINT,
-    [XGL_FMT_R8G8B8_SRGB]          = GEN6_FORMAT_R8G8B8_UNORM_SRGB,
-    [XGL_FMT_R8G8B8A8_UNORM]       = GEN6_FORMAT_R8G8B8A8_UNORM,
-    [XGL_FMT_R8G8B8A8_SNORM]       = GEN6_FORMAT_R8G8B8A8_SNORM,
-    [XGL_FMT_R8G8B8A8_USCALED]     = GEN6_FORMAT_R8G8B8A8_USCALED,
-    [XGL_FMT_R8G8B8A8_SSCALED]     = GEN6_FORMAT_R8G8B8A8_SSCALED,
-    [XGL_FMT_R8G8B8A8_UINT]        = GEN6_FORMAT_R8G8B8A8_UINT,
-    [XGL_FMT_R8G8B8A8_SINT]        = GEN6_FORMAT_R8G8B8A8_SINT,
-    [XGL_FMT_R8G8B8A8_SRGB]        = GEN6_FORMAT_R8G8B8A8_UNORM_SRGB,
-    [XGL_FMT_R10G10B10A2_UNORM]    = GEN6_FORMAT_R10G10B10A2_UNORM,
-    [XGL_FMT_R10G10B10A2_SNORM]    = GEN6_FORMAT_R10G10B10A2_SNORM,
-    [XGL_FMT_R10G10B10A2_USCALED]  = GEN6_FORMAT_R10G10B10A2_USCALED,
-    [XGL_FMT_R10G10B10A2_SSCALED]  = GEN6_FORMAT_R10G10B10A2_SSCALED,
-    [XGL_FMT_R10G10B10A2_UINT]     = GEN6_FORMAT_R10G10B10A2_UINT,
-    [XGL_FMT_R10G10B10A2_SINT]     = GEN6_FORMAT_R10G10B10A2_SINT,
-    [XGL_FMT_R16_UNORM]            = GEN6_FORMAT_R16_UNORM,
-    [XGL_FMT_R16_SNORM]            = GEN6_FORMAT_R16_SNORM,
-    [XGL_FMT_R16_USCALED]          = GEN6_FORMAT_R16_USCALED,
-    [XGL_FMT_R16_SSCALED]          = GEN6_FORMAT_R16_SSCALED,
-    [XGL_FMT_R16_UINT]             = GEN6_FORMAT_R16_UINT,
-    [XGL_FMT_R16_SINT]             = GEN6_FORMAT_R16_SINT,
-    [XGL_FMT_R16_SFLOAT]           = GEN6_FORMAT_R16_FLOAT,
-    [XGL_FMT_R16G16_UNORM]         = GEN6_FORMAT_R16G16_UNORM,
-    [XGL_FMT_R16G16_SNORM]         = GEN6_FORMAT_R16G16_SNORM,
-    [XGL_FMT_R16G16_USCALED]       = GEN6_FORMAT_R16G16_USCALED,
-    [XGL_FMT_R16G16_SSCALED]       = GEN6_FORMAT_R16G16_SSCALED,
-    [XGL_FMT_R16G16_UINT]          = GEN6_FORMAT_R16G16_UINT,
-    [XGL_FMT_R16G16_SINT]          = GEN6_FORMAT_R16G16_SINT,
-    [XGL_FMT_R16G16_SFLOAT]        = GEN6_FORMAT_R16G16_FLOAT,
-    [XGL_FMT_R16G16B16_UNORM]      = GEN6_FORMAT_R16G16B16_UNORM,
-    [XGL_FMT_R16G16B16_SNORM]      = GEN6_FORMAT_R16G16B16_SNORM,
-    [XGL_FMT_R16G16B16_USCALED]    = GEN6_FORMAT_R16G16B16_USCALED,
-    [XGL_FMT_R16G16B16_SSCALED]    = GEN6_FORMAT_R16G16B16_SSCALED,
-    [XGL_FMT_R16G16B16_UINT]       = GEN6_FORMAT_R16G16B16_UINT,
-    [XGL_FMT_R16G16B16_SINT]       = GEN6_FORMAT_R16G16B16_SINT,
-    [XGL_FMT_R16G16B16_SFLOAT]     = 0,
-    [XGL_FMT_R16G16B16A16_UNORM]   = GEN6_FORMAT_R16G16B16A16_UNORM,
-    [XGL_FMT_R16G16B16A16_SNORM]   = GEN6_FORMAT_R16G16B16A16_SNORM,
-    [XGL_FMT_R16G16B16A16_USCALED] = GEN6_FORMAT_R16G16B16A16_USCALED,
-    [XGL_FMT_R16G16B16A16_SSCALED] = GEN6_FORMAT_R16G16B16A16_SSCALED,
-    [XGL_FMT_R16G16B16A16_UINT]    = GEN6_FORMAT_R16G16B16A16_UINT,
-    [XGL_FMT_R16G16B16A16_SINT]    = GEN6_FORMAT_R16G16B16A16_SINT,
-    [XGL_FMT_R16G16B16A16_SFLOAT]  = GEN6_FORMAT_R16G16B16A16_FLOAT,
-    [XGL_FMT_R32_UINT]             = GEN6_FORMAT_R32_UINT,
-    [XGL_FMT_R32_SINT]             = GEN6_FORMAT_R32_SINT,
-    [XGL_FMT_R32_SFLOAT]           = GEN6_FORMAT_R32_FLOAT,
-    [XGL_FMT_R32G32_UINT]          = GEN6_FORMAT_R32G32_UINT,
-    [XGL_FMT_R32G32_SINT]          = GEN6_FORMAT_R32G32_SINT,
-    [XGL_FMT_R32G32_SFLOAT]        = GEN6_FORMAT_R32G32_FLOAT,
-    [XGL_FMT_R32G32B32_UINT]       = GEN6_FORMAT_R32G32B32_UINT,
-    [XGL_FMT_R32G32B32_SINT]       = GEN6_FORMAT_R32G32B32_SINT,
-    [XGL_FMT_R32G32B32_SFLOAT]     = GEN6_FORMAT_R32G32B32_FLOAT,
-    [XGL_FMT_R32G32B32A32_UINT]    = GEN6_FORMAT_R32G32B32A32_UINT,
-    [XGL_FMT_R32G32B32A32_SINT]    = GEN6_FORMAT_R32G32B32A32_SINT,
-    [XGL_FMT_R32G32B32A32_SFLOAT]  = GEN6_FORMAT_R32G32B32A32_FLOAT,
-    [XGL_FMT_R64_SFLOAT]           = GEN6_FORMAT_R64_FLOAT,
-    [XGL_FMT_R64G64_SFLOAT]        = GEN6_FORMAT_R64G64_FLOAT,
-    [XGL_FMT_R64G64B64_SFLOAT]     = GEN6_FORMAT_R64G64B64_FLOAT,
-    [XGL_FMT_R64G64B64A64_SFLOAT]  = GEN6_FORMAT_R64G64B64A64_FLOAT,
-    [XGL_FMT_R11G11B10_UFLOAT]     = GEN6_FORMAT_R11G11B10_FLOAT,
-    [XGL_FMT_R9G9B9E5_UFLOAT]      = GEN6_FORMAT_R9G9B9E5_SHAREDEXP,
-    [XGL_FMT_BC1_RGB_UNORM]        = GEN6_FORMAT_BC1_UNORM,
-    [XGL_FMT_BC1_RGB_SRGB]         = GEN6_FORMAT_BC1_UNORM_SRGB,
-    [XGL_FMT_BC2_UNORM]            = GEN6_FORMAT_BC2_UNORM,
-    [XGL_FMT_BC2_SRGB]             = GEN6_FORMAT_BC2_UNORM_SRGB,
-    [XGL_FMT_BC3_UNORM]            = GEN6_FORMAT_BC3_UNORM,
-    [XGL_FMT_BC3_SRGB]             = GEN6_FORMAT_BC3_UNORM_SRGB,
-    [XGL_FMT_BC4_UNORM]            = GEN6_FORMAT_BC4_UNORM,
-    [XGL_FMT_BC4_SNORM]            = GEN6_FORMAT_BC4_SNORM,
-    [XGL_FMT_BC5_UNORM]            = GEN6_FORMAT_BC5_UNORM,
-    [XGL_FMT_BC5_SNORM]            = GEN6_FORMAT_BC5_SNORM,
-    [XGL_FMT_BC6H_UFLOAT]          = GEN6_FORMAT_BC6H_UF16,
-    [XGL_FMT_BC6H_SFLOAT]          = GEN6_FORMAT_BC6H_SF16,
-    [XGL_FMT_BC7_UNORM]            = GEN6_FORMAT_BC7_UNORM,
-    [XGL_FMT_BC7_SRGB]             = GEN6_FORMAT_BC7_UNORM_SRGB,
+static const int intel_color_mapping[VK_NUM_FMT] = {
+    [VK_FMT_R4G4_UNORM]           = 0,
+    [VK_FMT_R4G4_USCALED]         = 0,
+    [VK_FMT_R4G4B4A4_UNORM]       = 0,
+    [VK_FMT_R4G4B4A4_USCALED]     = 0,
+    [VK_FMT_R5G6B5_UNORM]         = 0,
+    [VK_FMT_R5G6B5_USCALED]       = 0,
+    [VK_FMT_R5G5B5A1_UNORM]       = 0,
+    [VK_FMT_R5G5B5A1_USCALED]     = 0,
+    [VK_FMT_R8_UNORM]             = GEN6_FORMAT_R8_UNORM,
+    [VK_FMT_R8_SNORM]             = GEN6_FORMAT_R8_SNORM,
+    [VK_FMT_R8_USCALED]           = GEN6_FORMAT_R8_USCALED,
+    [VK_FMT_R8_SSCALED]           = GEN6_FORMAT_R8_SSCALED,
+    [VK_FMT_R8_UINT]              = GEN6_FORMAT_R8_UINT,
+    [VK_FMT_R8_SINT]              = GEN6_FORMAT_R8_SINT,
+    [VK_FMT_R8_SRGB]              = 0,
+    [VK_FMT_R8G8_UNORM]           = GEN6_FORMAT_R8G8_UNORM,
+    [VK_FMT_R8G8_SNORM]           = GEN6_FORMAT_R8G8_SNORM,
+    [VK_FMT_R8G8_USCALED]         = GEN6_FORMAT_R8G8_USCALED,
+    [VK_FMT_R8G8_SSCALED]         = GEN6_FORMAT_R8G8_SSCALED,
+    [VK_FMT_R8G8_UINT]            = GEN6_FORMAT_R8G8_UINT,
+    [VK_FMT_R8G8_SINT]            = GEN6_FORMAT_R8G8_SINT,
+    [VK_FMT_R8G8_SRGB]            = 0,
+    [VK_FMT_R8G8B8_UNORM]         = GEN6_FORMAT_R8G8B8_UNORM,
+    [VK_FMT_R8G8B8_SNORM]         = GEN6_FORMAT_R8G8B8_SNORM,
+    [VK_FMT_R8G8B8_USCALED]       = GEN6_FORMAT_R8G8B8_USCALED,
+    [VK_FMT_R8G8B8_SSCALED]       = GEN6_FORMAT_R8G8B8_SSCALED,
+    [VK_FMT_R8G8B8_UINT]          = GEN6_FORMAT_R8G8B8_UINT,
+    [VK_FMT_R8G8B8_SINT]          = GEN6_FORMAT_R8G8B8_SINT,
+    [VK_FMT_R8G8B8_SRGB]          = GEN6_FORMAT_R8G8B8_UNORM_SRGB,
+    [VK_FMT_R8G8B8A8_UNORM]       = GEN6_FORMAT_R8G8B8A8_UNORM,
+    [VK_FMT_R8G8B8A8_SNORM]       = GEN6_FORMAT_R8G8B8A8_SNORM,
+    [VK_FMT_R8G8B8A8_USCALED]     = GEN6_FORMAT_R8G8B8A8_USCALED,
+    [VK_FMT_R8G8B8A8_SSCALED]     = GEN6_FORMAT_R8G8B8A8_SSCALED,
+    [VK_FMT_R8G8B8A8_UINT]        = GEN6_FORMAT_R8G8B8A8_UINT,
+    [VK_FMT_R8G8B8A8_SINT]        = GEN6_FORMAT_R8G8B8A8_SINT,
+    [VK_FMT_R8G8B8A8_SRGB]        = GEN6_FORMAT_R8G8B8A8_UNORM_SRGB,
+    [VK_FMT_R10G10B10A2_UNORM]    = GEN6_FORMAT_R10G10B10A2_UNORM,
+    [VK_FMT_R10G10B10A2_SNORM]    = GEN6_FORMAT_R10G10B10A2_SNORM,
+    [VK_FMT_R10G10B10A2_USCALED]  = GEN6_FORMAT_R10G10B10A2_USCALED,
+    [VK_FMT_R10G10B10A2_SSCALED]  = GEN6_FORMAT_R10G10B10A2_SSCALED,
+    [VK_FMT_R10G10B10A2_UINT]     = GEN6_FORMAT_R10G10B10A2_UINT,
+    [VK_FMT_R10G10B10A2_SINT]     = GEN6_FORMAT_R10G10B10A2_SINT,
+    [VK_FMT_R16_UNORM]            = GEN6_FORMAT_R16_UNORM,
+    [VK_FMT_R16_SNORM]            = GEN6_FORMAT_R16_SNORM,
+    [VK_FMT_R16_USCALED]          = GEN6_FORMAT_R16_USCALED,
+    [VK_FMT_R16_SSCALED]          = GEN6_FORMAT_R16_SSCALED,
+    [VK_FMT_R16_UINT]             = GEN6_FORMAT_R16_UINT,
+    [VK_FMT_R16_SINT]             = GEN6_FORMAT_R16_SINT,
+    [VK_FMT_R16_SFLOAT]           = GEN6_FORMAT_R16_FLOAT,
+    [VK_FMT_R16G16_UNORM]         = GEN6_FORMAT_R16G16_UNORM,
+    [VK_FMT_R16G16_SNORM]         = GEN6_FORMAT_R16G16_SNORM,
+    [VK_FMT_R16G16_USCALED]       = GEN6_FORMAT_R16G16_USCALED,
+    [VK_FMT_R16G16_SSCALED]       = GEN6_FORMAT_R16G16_SSCALED,
+    [VK_FMT_R16G16_UINT]          = GEN6_FORMAT_R16G16_UINT,
+    [VK_FMT_R16G16_SINT]          = GEN6_FORMAT_R16G16_SINT,
+    [VK_FMT_R16G16_SFLOAT]        = GEN6_FORMAT_R16G16_FLOAT,
+    [VK_FMT_R16G16B16_UNORM]      = GEN6_FORMAT_R16G16B16_UNORM,
+    [VK_FMT_R16G16B16_SNORM]      = GEN6_FORMAT_R16G16B16_SNORM,
+    [VK_FMT_R16G16B16_USCALED]    = GEN6_FORMAT_R16G16B16_USCALED,
+    [VK_FMT_R16G16B16_SSCALED]    = GEN6_FORMAT_R16G16B16_SSCALED,
+    [VK_FMT_R16G16B16_UINT]       = GEN6_FORMAT_R16G16B16_UINT,
+    [VK_FMT_R16G16B16_SINT]       = GEN6_FORMAT_R16G16B16_SINT,
+    [VK_FMT_R16G16B16_SFLOAT]     = 0,
+    [VK_FMT_R16G16B16A16_UNORM]   = GEN6_FORMAT_R16G16B16A16_UNORM,
+    [VK_FMT_R16G16B16A16_SNORM]   = GEN6_FORMAT_R16G16B16A16_SNORM,
+    [VK_FMT_R16G16B16A16_USCALED] = GEN6_FORMAT_R16G16B16A16_USCALED,
+    [VK_FMT_R16G16B16A16_SSCALED] = GEN6_FORMAT_R16G16B16A16_SSCALED,
+    [VK_FMT_R16G16B16A16_UINT]    = GEN6_FORMAT_R16G16B16A16_UINT,
+    [VK_FMT_R16G16B16A16_SINT]    = GEN6_FORMAT_R16G16B16A16_SINT,
+    [VK_FMT_R16G16B16A16_SFLOAT]  = GEN6_FORMAT_R16G16B16A16_FLOAT,
+    [VK_FMT_R32_UINT]             = GEN6_FORMAT_R32_UINT,
+    [VK_FMT_R32_SINT]             = GEN6_FORMAT_R32_SINT,
+    [VK_FMT_R32_SFLOAT]           = GEN6_FORMAT_R32_FLOAT,
+    [VK_FMT_R32G32_UINT]          = GEN6_FORMAT_R32G32_UINT,
+    [VK_FMT_R32G32_SINT]          = GEN6_FORMAT_R32G32_SINT,
+    [VK_FMT_R32G32_SFLOAT]        = GEN6_FORMAT_R32G32_FLOAT,
+    [VK_FMT_R32G32B32_UINT]       = GEN6_FORMAT_R32G32B32_UINT,
+    [VK_FMT_R32G32B32_SINT]       = GEN6_FORMAT_R32G32B32_SINT,
+    [VK_FMT_R32G32B32_SFLOAT]     = GEN6_FORMAT_R32G32B32_FLOAT,
+    [VK_FMT_R32G32B32A32_UINT]    = GEN6_FORMAT_R32G32B32A32_UINT,
+    [VK_FMT_R32G32B32A32_SINT]    = GEN6_FORMAT_R32G32B32A32_SINT,
+    [VK_FMT_R32G32B32A32_SFLOAT]  = GEN6_FORMAT_R32G32B32A32_FLOAT,
+    [VK_FMT_R64_SFLOAT]           = GEN6_FORMAT_R64_FLOAT,
+    [VK_FMT_R64G64_SFLOAT]        = GEN6_FORMAT_R64G64_FLOAT,
+    [VK_FMT_R64G64B64_SFLOAT]     = GEN6_FORMAT_R64G64B64_FLOAT,
+    [VK_FMT_R64G64B64A64_SFLOAT]  = GEN6_FORMAT_R64G64B64A64_FLOAT,
+    [VK_FMT_R11G11B10_UFLOAT]     = GEN6_FORMAT_R11G11B10_FLOAT,
+    [VK_FMT_R9G9B9E5_UFLOAT]      = GEN6_FORMAT_R9G9B9E5_SHAREDEXP,
+    [VK_FMT_BC1_RGB_UNORM]        = GEN6_FORMAT_BC1_UNORM,
+    [VK_FMT_BC1_RGB_SRGB]         = GEN6_FORMAT_BC1_UNORM_SRGB,
+    [VK_FMT_BC2_UNORM]            = GEN6_FORMAT_BC2_UNORM,
+    [VK_FMT_BC2_SRGB]             = GEN6_FORMAT_BC2_UNORM_SRGB,
+    [VK_FMT_BC3_UNORM]            = GEN6_FORMAT_BC3_UNORM,
+    [VK_FMT_BC3_SRGB]             = GEN6_FORMAT_BC3_UNORM_SRGB,
+    [VK_FMT_BC4_UNORM]            = GEN6_FORMAT_BC4_UNORM,
+    [VK_FMT_BC4_SNORM]            = GEN6_FORMAT_BC4_SNORM,
+    [VK_FMT_BC5_UNORM]            = GEN6_FORMAT_BC5_UNORM,
+    [VK_FMT_BC5_SNORM]            = GEN6_FORMAT_BC5_SNORM,
+    [VK_FMT_BC6H_UFLOAT]          = GEN6_FORMAT_BC6H_UF16,
+    [VK_FMT_BC6H_SFLOAT]          = GEN6_FORMAT_BC6H_SF16,
+    [VK_FMT_BC7_UNORM]            = GEN6_FORMAT_BC7_UNORM,
+    [VK_FMT_BC7_SRGB]             = GEN6_FORMAT_BC7_UNORM_SRGB,
     /* TODO: Implement for remaining compressed formats. */
-    [XGL_FMT_ETC2_R8G8B8_UNORM]    = 0,
-    [XGL_FMT_ETC2_R8G8B8A1_UNORM]  = 0,
-    [XGL_FMT_ETC2_R8G8B8A8_UNORM]  = 0,
-    [XGL_FMT_EAC_R11_UNORM]        = 0,
-    [XGL_FMT_EAC_R11_SNORM]        = 0,
-    [XGL_FMT_EAC_R11G11_UNORM]     = 0,
-    [XGL_FMT_EAC_R11G11_SNORM]     = 0,
-    [XGL_FMT_ASTC_4x4_UNORM]       = 0,
-    [XGL_FMT_ASTC_4x4_SRGB]        = 0,
-    [XGL_FMT_ASTC_5x4_UNORM]       = 0,
-    [XGL_FMT_ASTC_5x4_SRGB]        = 0,
-    [XGL_FMT_ASTC_5x5_UNORM]       = 0,
-    [XGL_FMT_ASTC_5x5_SRGB]        = 0,
-    [XGL_FMT_ASTC_6x5_UNORM]       = 0,
-    [XGL_FMT_ASTC_6x5_SRGB]        = 0,
-    [XGL_FMT_ASTC_6x6_UNORM]       = 0,
-    [XGL_FMT_ASTC_6x6_SRGB]        = 0,
-    [XGL_FMT_ASTC_8x5_UNORM]       = 0,
-    [XGL_FMT_ASTC_8x5_SRGB]        = 0,
-    [XGL_FMT_ASTC_8x6_UNORM]       = 0,
-    [XGL_FMT_ASTC_8x6_SRGB]        = 0,
-    [XGL_FMT_ASTC_8x8_UNORM]       = 0,
-    [XGL_FMT_ASTC_8x8_SRGB]        = 0,
-    [XGL_FMT_ASTC_10x5_UNORM]      = 0,
-    [XGL_FMT_ASTC_10x5_SRGB]       = 0,
-    [XGL_FMT_ASTC_10x6_UNORM]      = 0,
-    [XGL_FMT_ASTC_10x6_SRGB]       = 0,
-    [XGL_FMT_ASTC_10x8_UNORM]      = 0,
-    [XGL_FMT_ASTC_10x8_SRGB]       = 0,
-    [XGL_FMT_ASTC_10x10_UNORM]     = 0,
-    [XGL_FMT_ASTC_10x10_SRGB]      = 0,
-    [XGL_FMT_ASTC_12x10_UNORM]     = 0,
-    [XGL_FMT_ASTC_12x10_SRGB]      = 0,
-    [XGL_FMT_ASTC_12x12_UNORM]     = 0,
-    [XGL_FMT_ASTC_12x12_SRGB]      = 0,
-    [XGL_FMT_B5G6R5_UNORM]         = GEN6_FORMAT_B5G6R5_UNORM,
-    [XGL_FMT_B5G6R5_USCALED]       = 0,
-    [XGL_FMT_B8G8R8_UNORM]         = 0,
-    [XGL_FMT_B8G8R8_SNORM]         = 0,
-    [XGL_FMT_B8G8R8_USCALED]       = 0,
-    [XGL_FMT_B8G8R8_SSCALED]       = 0,
-    [XGL_FMT_B8G8R8_UINT]          = 0,
-    [XGL_FMT_B8G8R8_SINT]          = 0,
-    [XGL_FMT_B8G8R8_SRGB]          = GEN6_FORMAT_B5G6R5_UNORM_SRGB,
-    [XGL_FMT_B8G8R8A8_UNORM]       = GEN6_FORMAT_B8G8R8A8_UNORM,
-    [XGL_FMT_B8G8R8A8_SNORM]       = 0,
-    [XGL_FMT_B8G8R8A8_USCALED]     = 0,
-    [XGL_FMT_B8G8R8A8_SSCALED]     = 0,
-    [XGL_FMT_B8G8R8A8_UINT]        = 0,
-    [XGL_FMT_B8G8R8A8_SINT]        = 0,
-    [XGL_FMT_B8G8R8A8_SRGB]        = GEN6_FORMAT_B8G8R8A8_UNORM_SRGB,
-    [XGL_FMT_B10G10R10A2_UNORM]    = GEN6_FORMAT_B10G10R10A2_UNORM,
-    [XGL_FMT_B10G10R10A2_SNORM]    = GEN6_FORMAT_B10G10R10A2_SNORM,
-    [XGL_FMT_B10G10R10A2_USCALED]  = GEN6_FORMAT_B10G10R10A2_USCALED,
-    [XGL_FMT_B10G10R10A2_SSCALED]  = GEN6_FORMAT_B10G10R10A2_SSCALED,
-    [XGL_FMT_B10G10R10A2_UINT]     = GEN6_FORMAT_B10G10R10A2_UINT,
-    [XGL_FMT_B10G10R10A2_SINT]     = GEN6_FORMAT_B10G10R10A2_SINT
+    [VK_FMT_ETC2_R8G8B8_UNORM]    = 0,
+    [VK_FMT_ETC2_R8G8B8A1_UNORM]  = 0,
+    [VK_FMT_ETC2_R8G8B8A8_UNORM]  = 0,
+    [VK_FMT_EAC_R11_UNORM]        = 0,
+    [VK_FMT_EAC_R11_SNORM]        = 0,
+    [VK_FMT_EAC_R11G11_UNORM]     = 0,
+    [VK_FMT_EAC_R11G11_SNORM]     = 0,
+    [VK_FMT_ASTC_4x4_UNORM]       = 0,
+    [VK_FMT_ASTC_4x4_SRGB]        = 0,
+    [VK_FMT_ASTC_5x4_UNORM]       = 0,
+    [VK_FMT_ASTC_5x4_SRGB]        = 0,
+    [VK_FMT_ASTC_5x5_UNORM]       = 0,
+    [VK_FMT_ASTC_5x5_SRGB]        = 0,
+    [VK_FMT_ASTC_6x5_UNORM]       = 0,
+    [VK_FMT_ASTC_6x5_SRGB]        = 0,
+    [VK_FMT_ASTC_6x6_UNORM]       = 0,
+    [VK_FMT_ASTC_6x6_SRGB]        = 0,
+    [VK_FMT_ASTC_8x5_UNORM]       = 0,
+    [VK_FMT_ASTC_8x5_SRGB]        = 0,
+    [VK_FMT_ASTC_8x6_UNORM]       = 0,
+    [VK_FMT_ASTC_8x6_SRGB]        = 0,
+    [VK_FMT_ASTC_8x8_UNORM]       = 0,
+    [VK_FMT_ASTC_8x8_SRGB]        = 0,
+    [VK_FMT_ASTC_10x5_UNORM]      = 0,
+    [VK_FMT_ASTC_10x5_SRGB]       = 0,
+    [VK_FMT_ASTC_10x6_UNORM]      = 0,
+    [VK_FMT_ASTC_10x6_SRGB]       = 0,
+    [VK_FMT_ASTC_10x8_UNORM]      = 0,
+    [VK_FMT_ASTC_10x8_SRGB]       = 0,
+    [VK_FMT_ASTC_10x10_UNORM]     = 0,
+    [VK_FMT_ASTC_10x10_SRGB]      = 0,
+    [VK_FMT_ASTC_12x10_UNORM]     = 0,
+    [VK_FMT_ASTC_12x10_SRGB]      = 0,
+    [VK_FMT_ASTC_12x12_UNORM]     = 0,
+    [VK_FMT_ASTC_12x12_SRGB]      = 0,
+    [VK_FMT_B5G6R5_UNORM]         = GEN6_FORMAT_B5G6R5_UNORM,
+    [VK_FMT_B5G6R5_USCALED]       = 0,
+    [VK_FMT_B8G8R8_UNORM]         = 0,
+    [VK_FMT_B8G8R8_SNORM]         = 0,
+    [VK_FMT_B8G8R8_USCALED]       = 0,
+    [VK_FMT_B8G8R8_SSCALED]       = 0,
+    [VK_FMT_B8G8R8_UINT]          = 0,
+    [VK_FMT_B8G8R8_SINT]          = 0,
+    [VK_FMT_B8G8R8_SRGB]          = GEN6_FORMAT_B5G6R5_UNORM_SRGB,
+    [VK_FMT_B8G8R8A8_UNORM]       = GEN6_FORMAT_B8G8R8A8_UNORM,
+    [VK_FMT_B8G8R8A8_SNORM]       = 0,
+    [VK_FMT_B8G8R8A8_USCALED]     = 0,
+    [VK_FMT_B8G8R8A8_SSCALED]     = 0,
+    [VK_FMT_B8G8R8A8_UINT]        = 0,
+    [VK_FMT_B8G8R8A8_SINT]        = 0,
+    [VK_FMT_B8G8R8A8_SRGB]        = GEN6_FORMAT_B8G8R8A8_UNORM_SRGB,
+    [VK_FMT_B10G10R10A2_UNORM]    = GEN6_FORMAT_B10G10R10A2_UNORM,
+    [VK_FMT_B10G10R10A2_SNORM]    = GEN6_FORMAT_B10G10R10A2_SNORM,
+    [VK_FMT_B10G10R10A2_USCALED]  = GEN6_FORMAT_B10G10R10A2_USCALED,
+    [VK_FMT_B10G10R10A2_SSCALED]  = GEN6_FORMAT_B10G10R10A2_SSCALED,
+    [VK_FMT_B10G10R10A2_UINT]     = GEN6_FORMAT_B10G10R10A2_UINT,
+    [VK_FMT_B10G10R10A2_SINT]     = GEN6_FORMAT_B10G10R10A2_SINT
 };
 
 int intel_format_translate_color(const struct intel_gpu *gpu,
-                                 XGL_FORMAT format)
+                                 VK_FORMAT format)
 {
     int fmt;
 
@@ -552,7 +552,7 @@ int intel_format_translate_color(const struct intel_gpu *gpu,
     /* TODO: Implement for remaining compressed formats. */
 
     /* GEN6_FORMAT_R32G32B32A32_FLOAT happens to be 0 */
-    if (format == XGL_FMT_R32G32B32A32_SFLOAT)
+    if (format == VK_FMT_R32G32B32A32_SFLOAT)
         assert(fmt == 0);
     else if (!fmt)
         fmt = -1;
@@ -560,14 +560,14 @@ int intel_format_translate_color(const struct intel_gpu *gpu,
     return fmt;
 }
 
-static XGL_FLAGS intel_format_get_color_features(const struct intel_dev *dev,
-                                                 XGL_FORMAT format)
+static VK_FLAGS intel_format_get_color_features(const struct intel_dev *dev,
+                                                 VK_FORMAT format)
 {
     const int fmt = intel_format_translate_color(dev->gpu, format);
     const struct intel_vf_cap *vf;
     const struct intel_sampler_cap *sampler;
     const struct intel_dp_cap *dp;
-    XGL_FLAGS features;
+    VK_FLAGS features;
 
     if (fmt < 0)
         return 0;
@@ -577,7 +577,7 @@ static XGL_FLAGS intel_format_get_color_features(const struct intel_dev *dev,
     vf = (fmt < ARRAY_SIZE(intel_vf_caps)) ?  &intel_vf_caps[fmt] : NULL;
     dp = (fmt < ARRAY_SIZE(intel_dp_caps)) ?  &intel_dp_caps[fmt] : NULL;
 
-    features = XGL_FORMAT_MEMORY_SHADER_ACCESS_BIT;
+    features = VK_FORMAT_MEMORY_SHADER_ACCESS_BIT;
 
 #define TEST(dev, func, cap) ((func) && (func)->cap && \
         intel_gpu_gen((dev)->gpu) >= (func)->cap)
@@ -588,21 +588,21 @@ static XGL_FLAGS intel_format_get_color_features(const struct intel_dev *dev,
     if (TEST(dev, sampler, sampling)) {
         if (icd_format_is_int(format) ||
             TEST(dev, sampler, filtering))
-            features |= XGL_FORMAT_IMAGE_SHADER_READ_BIT;
+            features |= VK_FORMAT_IMAGE_SHADER_READ_BIT;
     }
 
     if (TEST(dev, dp, typed_write))
-        features |= XGL_FORMAT_IMAGE_SHADER_WRITE_BIT;
+        features |= VK_FORMAT_IMAGE_SHADER_WRITE_BIT;
 
     if (TEST(dev, dp, rt_write)) {
-        features |= XGL_FORMAT_COLOR_ATTACHMENT_WRITE_BIT;
+        features |= VK_FORMAT_COLOR_ATTACHMENT_WRITE_BIT;
 
         if (TEST(dev, dp, rt_write_blending))
-            features |= XGL_FORMAT_COLOR_ATTACHMENT_BLEND_BIT;
+            features |= VK_FORMAT_COLOR_ATTACHMENT_BLEND_BIT;
 
-        if (features & XGL_FORMAT_IMAGE_SHADER_READ_BIT) {
-            features |= XGL_FORMAT_IMAGE_COPY_BIT |
-                        XGL_FORMAT_CONVERSION_BIT;
+        if (features & VK_FORMAT_IMAGE_SHADER_READ_BIT) {
+            features |= VK_FORMAT_IMAGE_COPY_BIT |
+                        VK_FORMAT_CONVERSION_BIT;
         }
     }
 #undef TEST
@@ -610,27 +610,27 @@ static XGL_FLAGS intel_format_get_color_features(const struct intel_dev *dev,
     return features;
 }
 
-static XGL_FLAGS intel_format_get_ds_features(const struct intel_dev *dev,
-                                              XGL_FORMAT format)
+static VK_FLAGS intel_format_get_ds_features(const struct intel_dev *dev,
+                                              VK_FORMAT format)
 {
-    XGL_FLAGS features;
+    VK_FLAGS features;
 
     assert(icd_format_is_ds(format));
 
     switch (format) {
-    case XGL_FMT_S8_UINT:
-        features = XGL_FORMAT_STENCIL_ATTACHMENT_BIT;;
+    case VK_FMT_S8_UINT:
+        features = VK_FORMAT_STENCIL_ATTACHMENT_BIT;;
         break;
-    case XGL_FMT_D16_UNORM:
-    case XGL_FMT_D24_UNORM:
-    case XGL_FMT_D32_SFLOAT:
-        features = XGL_FORMAT_DEPTH_ATTACHMENT_BIT;
+    case VK_FMT_D16_UNORM:
+    case VK_FMT_D24_UNORM:
+    case VK_FMT_D32_SFLOAT:
+        features = VK_FORMAT_DEPTH_ATTACHMENT_BIT;
         break;
-    case XGL_FMT_D16_UNORM_S8_UINT:
-    case XGL_FMT_D24_UNORM_S8_UINT:
-    case XGL_FMT_D32_SFLOAT_S8_UINT:
-        features = XGL_FORMAT_DEPTH_ATTACHMENT_BIT |
-                   XGL_FORMAT_STENCIL_ATTACHMENT_BIT;
+    case VK_FMT_D16_UNORM_S8_UINT:
+    case VK_FMT_D24_UNORM_S8_UINT:
+    case VK_FMT_D32_SFLOAT_S8_UINT:
+        features = VK_FORMAT_DEPTH_ATTACHMENT_BIT |
+                   VK_FORMAT_STENCIL_ATTACHMENT_BIT;
         break;
     default:
         features = 0;
@@ -640,16 +640,16 @@ static XGL_FLAGS intel_format_get_ds_features(const struct intel_dev *dev,
     return features;
 }
 
-static XGL_FLAGS intel_format_get_raw_features(const struct intel_dev *dev,
-                                               XGL_FORMAT format)
+static VK_FLAGS intel_format_get_raw_features(const struct intel_dev *dev,
+                                               VK_FORMAT format)
 {
-    return (format == XGL_FMT_UNDEFINED) ?
-        XGL_FORMAT_MEMORY_SHADER_ACCESS_BIT : 0;
+    return (format == VK_FMT_UNDEFINED) ?
+        VK_FORMAT_MEMORY_SHADER_ACCESS_BIT : 0;
 }
 
 static void intel_format_get_props(const struct intel_dev *dev,
-                                   XGL_FORMAT format,
-                                   XGL_FORMAT_PROPERTIES *props)
+                                   VK_FORMAT format,
+                                   VK_FORMAT_PROPERTIES *props)
 {
     if (icd_format_is_undef(format)) {
         props->linearTilingFeatures =
@@ -669,25 +669,25 @@ static void intel_format_get_props(const struct intel_dev *dev,
     }
 }
 
-ICD_EXPORT XGL_RESULT XGLAPI xglGetFormatInfo(
-    XGL_DEVICE                                  device,
-    XGL_FORMAT                                  format,
-    XGL_FORMAT_INFO_TYPE                        infoType,
+ICD_EXPORT VK_RESULT VKAPI vkGetFormatInfo(
+    VK_DEVICE                                  device,
+    VK_FORMAT                                  format,
+    VK_FORMAT_INFO_TYPE                        infoType,
     size_t*                                     pDataSize,
     void*                                       pData)
 {
     const struct intel_dev *dev = intel_dev(device);
-    XGL_RESULT ret = XGL_SUCCESS;
+    VK_RESULT ret = VK_SUCCESS;
 
     switch (infoType) {
-    case XGL_INFO_TYPE_FORMAT_PROPERTIES:
-        *pDataSize = sizeof(XGL_FORMAT_PROPERTIES);
+    case VK_INFO_TYPE_FORMAT_PROPERTIES:
+        *pDataSize = sizeof(VK_FORMAT_PROPERTIES);
         if (pData == NULL)
             return ret;
         intel_format_get_props(dev, format, pData);
         break;
     default:
-        ret = XGL_ERROR_INVALID_VALUE;
+        ret = VK_ERROR_INVALID_VALUE;
         break;
     }
 

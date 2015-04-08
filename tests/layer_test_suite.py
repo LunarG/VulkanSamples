@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# XGL
+# VK
 #
 # Copyright (C) 2014 LunarG, Inc.
 #
@@ -49,7 +49,7 @@ expected_errors = {'XglRenderTest.CubeWithVertexFetchAndMVP' : ['{OBJTRACK}ERROR
                                                                           '{OBJTRACK}ERROR : OBJ ERROR : GPU_MEMORY',
                                                                           '{OBJTRACK}ERROR : OBJ ERROR : IMAGE'],
                    'XglTest.Fence' : ['{OBJTRACK}ERROR : OBJECT VALIDATION WARNING: FENCE'],
-                   #'XglRenderTest.XGLTriangle_OutputLocation' : ['{OBJTRACK}ERROR : xglQueueSubmit Memory reference count'],
+                   #'XglRenderTest.VKTriangle_OutputLocation' : ['{OBJTRACK}ERROR : vkQueueSubmit Memory reference count'],
                    'XglRenderTest.TriangleWithVertexFetch' : ['{OBJTRACK}ERROR : OBJ ERROR : CMD_BUFFER'],
                    'XglRenderTest.TriangleMRT' : ['{OBJTRACK}ERROR : OBJ ERROR : CMD_BUFFER'],
                    'XglRenderTest.QuadWithIndexedVertexFetch' : ['{OBJTRACK}ERROR : OBJ ERROR : CMD_BUFFER', '{OBJTRACK}ERROR : OBJ ERROR : CMD_BUFFER'],

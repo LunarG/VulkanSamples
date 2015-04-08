@@ -1,5 +1,5 @@
 /*
- * XGL
+ * Vulkan
  *
  * Copyright (C) 2014 LunarG, Inc.
  *
@@ -93,7 +93,7 @@ static struct intel_bo *alloc_writer_bo(struct intel_winsys *winsys,
 /**
  * Allocate and map the buffer for writing.
  */
-static XGL_RESULT cmd_writer_alloc_and_map(struct intel_cmd *cmd,
+static VK_RESULT cmd_writer_alloc_and_map(struct intel_cmd *cmd,
                                            enum intel_cmd_writer_type which)
 {
     struct intel_cmd_writer *writer = &cmd->writers[which];
@@ -107,7 +107,7 @@ static XGL_RESULT cmd_writer_alloc_and_map(struct intel_cmd *cmd,
         /* reuse the old bo */
         cmd_writer_discard(cmd, which);
     } else {
-        return XGL_ERROR_OUT_OF_GPU_MEMORY;
+        return VK_ERROR_OUT_OF_GPU_MEMORY;
     }
 
     writer->used = 0;
@@ -115,9 +115,9 @@ static XGL_RESULT cmd_writer_alloc_and_map(struct intel_cmd *cmd,
 
     writer->ptr = intel_bo_map(writer->bo, true);
     if (!writer->ptr)
-        return XGL_ERROR_UNKNOWN;
+        return VK_ERROR_UNKNOWN;
 
-    return XGL_SUCCESS;
+    return VK_SUCCESS;
 }
 
 /**
@@ -152,7 +152,7 @@ void cmd_writer_grow(struct intel_cmd *cmd,
     new_bo = alloc_writer_bo(cmd->dev->winsys, which, new_size);
     if (!new_bo) {
         cmd_writer_discard(cmd, which);
-        cmd_fail(cmd, XGL_ERROR_OUT_OF_GPU_MEMORY);
+        cmd_fail(cmd, VK_ERROR_OUT_OF_GPU_MEMORY);
         return;
     }
 
@@ -161,7 +161,7 @@ void cmd_writer_grow(struct intel_cmd *cmd,
     if (!new_ptr) {
         intel_bo_unref(new_bo);
         cmd_writer_discard(cmd, which);
-        cmd_fail(cmd, XGL_ERROR_UNKNOWN);
+        cmd_fail(cmd, VK_ERROR_UNKNOWN);
         return;
     }
 
@@ -192,10 +192,10 @@ void cmd_writer_record(struct intel_cmd *cmd,
         struct intel_cmd_item *items;
 
         items = intel_alloc(cmd, sizeof(writer->items[0]) * new_alloc,
-                0, XGL_SYSTEM_ALLOC_DEBUG);
+                0, VK_SYSTEM_ALLOC_DEBUG);
         if (!items) {
             writer->item_used = 0;
-            cmd_fail(cmd, XGL_ERROR_OUT_OF_MEMORY);
+            cmd_fail(cmd, VK_ERROR_OUT_OF_MEMORY);
             return;
         }
 
@@ -246,7 +246,7 @@ static void cmd_reset(struct intel_cmd *cmd)
     memset(&cmd->bind, 0, sizeof(cmd->bind));
 
     cmd->reloc_used = 0;
-    cmd->result = XGL_SUCCESS;
+    cmd->result = VK_SUCCESS;
 }
 
 static void cmd_destroy(struct intel_obj *obj)
@@ -256,8 +256,8 @@ static void cmd_destroy(struct intel_obj *obj)
     intel_cmd_destroy(cmd);
 }
 
-XGL_RESULT intel_cmd_create(struct intel_dev *dev,
-                            const XGL_CMD_BUFFER_CREATE_INFO *info,
+VK_RESULT intel_cmd_create(struct intel_dev *dev,
+                            const VK_CMD_BUFFER_CREATE_INFO *info,
                             struct intel_cmd **cmd_ret)
 {
     int pipeline_select;
@@ -268,14 +268,14 @@ XGL_RESULT intel_cmd_create(struct intel_dev *dev,
         pipeline_select = GEN6_PIPELINE_SELECT_DW0_SELECT_3D;
         break;
     default:
-        return XGL_ERROR_INVALID_VALUE;
+        return VK_ERROR_INVALID_VALUE;
         break;
     }
 
     cmd = (struct intel_cmd *) intel_base_create(&dev->base.handle,
-            sizeof(*cmd), dev->base.dbg, XGL_DBG_OBJECT_CMD_BUFFER, info, 0);
+            sizeof(*cmd), dev->base.dbg, VK_DBG_OBJECT_CMD_BUFFER, info, 0);
     if (!cmd)
-        return XGL_ERROR_OUT_OF_MEMORY;
+        return VK_ERROR_OUT_OF_MEMORY;
 
     cmd->obj.destroy = cmd_destroy;
 
@@ -290,15 +290,15 @@ XGL_RESULT intel_cmd_create(struct intel_dev *dev,
      */
     cmd->reloc_count = dev->gpu->batch_buffer_reloc_count;
     cmd->relocs = intel_alloc(cmd, sizeof(cmd->relocs[0]) * cmd->reloc_count,
-            4096, XGL_SYSTEM_ALLOC_INTERNAL);
+            4096, VK_SYSTEM_ALLOC_INTERNAL);
     if (!cmd->relocs) {
         intel_cmd_destroy(cmd);
-        return XGL_ERROR_OUT_OF_MEMORY;
+        return VK_ERROR_OUT_OF_MEMORY;
     }
 
     *cmd_ret = cmd;
 
-    return XGL_SUCCESS;
+    return VK_SUCCESS;
 }
 
 void intel_cmd_destroy(struct intel_cmd *cmd)
@@ -309,31 +309,31 @@ void intel_cmd_destroy(struct intel_cmd *cmd)
     intel_base_destroy(&cmd->obj.base);
 }
 
-XGL_RESULT intel_cmd_begin(struct intel_cmd *cmd, const XGL_CMD_BUFFER_BEGIN_INFO *info)
+VK_RESULT intel_cmd_begin(struct intel_cmd *cmd, const VK_CMD_BUFFER_BEGIN_INFO *info)
 {
-    const XGL_CMD_BUFFER_GRAPHICS_BEGIN_INFO *ginfo;
-    XGL_RESULT ret;
+    const VK_CMD_BUFFER_GRAPHICS_BEGIN_INFO *ginfo;
+    VK_RESULT ret;
     uint32_t i;
-    XGL_FLAGS flags = 0;
+    VK_FLAGS flags = 0;
 
     cmd_reset(cmd);
 
     while (info != NULL) {
         switch (info->sType) {
-        case XGL_STRUCTURE_TYPE_CMD_BUFFER_BEGIN_INFO:
+        case VK_STRUCTURE_TYPE_CMD_BUFFER_BEGIN_INFO:
             flags = info->flags;
             break;
-        case XGL_STRUCTURE_TYPE_CMD_BUFFER_GRAPHICS_BEGIN_INFO:
-            ginfo = (const XGL_CMD_BUFFER_GRAPHICS_BEGIN_INFO *) info;
+        case VK_STRUCTURE_TYPE_CMD_BUFFER_GRAPHICS_BEGIN_INFO:
+            ginfo = (const VK_CMD_BUFFER_GRAPHICS_BEGIN_INFO *) info;
             cmd_begin_render_pass(cmd, intel_render_pass(ginfo->renderPassContinue.renderPass),
                                   intel_fb(ginfo->renderPassContinue.framebuffer));
             break;
         default:
-            return XGL_ERROR_INVALID_VALUE;
+            return VK_ERROR_INVALID_VALUE;
             break;
         }
 
-        info = (const XGL_CMD_BUFFER_BEGIN_INFO*) info->pNext;
+        info = (const VK_CMD_BUFFER_BEGIN_INFO*) info->pNext;
     }
 
     if (cmd->flags != flags) {
@@ -345,7 +345,7 @@ XGL_RESULT intel_cmd_begin(struct intel_cmd *cmd, const XGL_CMD_BUFFER_BEGIN_INF
         const uint32_t size = cmd->dev->gpu->max_batch_buffer_size / 2;
         uint32_t divider = 1;
 
-        if (flags & XGL_CMD_BUFFER_OPTIMIZE_GPU_SMALL_BATCH_BIT)
+        if (flags & VK_CMD_BUFFER_OPTIMIZE_GPU_SMALL_BATCH_BIT)
             divider *= 4;
 
         cmd->writers[INTEL_CMD_WRITER_BATCH].size = size / divider;
@@ -356,7 +356,7 @@ XGL_RESULT intel_cmd_begin(struct intel_cmd *cmd, const XGL_CMD_BUFFER_BEGIN_INF
 
     for (i = 0; i < INTEL_CMD_WRITER_COUNT; i++) {
         ret = cmd_writer_alloc_and_map(cmd, i);
-        if (ret != XGL_SUCCESS) {
+        if (ret != VK_SUCCESS) {
             cmd_reset(cmd);
             return  ret;
         }
@@ -364,17 +364,17 @@ XGL_RESULT intel_cmd_begin(struct intel_cmd *cmd, const XGL_CMD_BUFFER_BEGIN_INF
 
     cmd_batch_begin(cmd);
 
-    return XGL_SUCCESS;
+    return VK_SUCCESS;
 }
 
-XGL_RESULT intel_cmd_end(struct intel_cmd *cmd)
+VK_RESULT intel_cmd_end(struct intel_cmd *cmd)
 {
     struct intel_winsys *winsys = cmd->dev->winsys;
     uint32_t i;
 
     /* no matching intel_cmd_begin() */
     if (!cmd->writers[INTEL_CMD_WRITER_BATCH].ptr)
-        return XGL_ERROR_INCOMPLETE_COMMAND_BUFFER;
+        return VK_ERROR_INCOMPLETE_COMMAND_BUFFER;
 
     cmd_batch_end(cmd);
 
@@ -398,7 +398,7 @@ XGL_RESULT intel_cmd_end(struct intel_cmd *cmd)
                 (struct intel_bo *) reloc->target, reloc->target_offset,
                 reloc->flags, &presumed_offset);
         if (err) {
-            cmd_fail(cmd, XGL_ERROR_UNKNOWN);
+            cmd_fail(cmd, VK_ERROR_UNKNOWN);
             break;
         }
 
@@ -420,7 +420,7 @@ XGL_RESULT intel_cmd_end(struct intel_cmd *cmd)
                 reloc->flags & ~INTEL_CMD_RELOC_TARGET_IS_WRITER,
                 &presumed_offset);
         if (err) {
-            cmd_fail(cmd, XGL_ERROR_UNKNOWN);
+            cmd_fail(cmd, VK_ERROR_UNKNOWN);
             break;
         }
 
@@ -432,20 +432,20 @@ XGL_RESULT intel_cmd_end(struct intel_cmd *cmd)
     for (i = 0; i < INTEL_CMD_WRITER_COUNT; i++)
         cmd_writer_unmap(cmd, i);
 
-    if (cmd->result != XGL_SUCCESS)
+    if (cmd->result != VK_SUCCESS)
         return cmd->result;
 
     if (intel_winsys_can_submit_bo(winsys,
                 &cmd->writers[INTEL_CMD_WRITER_BATCH].bo, 1))
-        return XGL_SUCCESS;
+        return VK_SUCCESS;
     else
-        return XGL_ERROR_TOO_MANY_MEMORY_REFERENCES;
+        return VK_ERROR_TOO_MANY_MEMORY_REFERENCES;
 }
 
-ICD_EXPORT XGL_RESULT XGLAPI xglCreateCommandBuffer(
-    XGL_DEVICE                                  device,
-    const XGL_CMD_BUFFER_CREATE_INFO*           pCreateInfo,
-    XGL_CMD_BUFFER*                             pCmdBuffer)
+ICD_EXPORT VK_RESULT VKAPI vkCreateCommandBuffer(
+    VK_DEVICE                                  device,
+    const VK_CMD_BUFFER_CREATE_INFO*           pCreateInfo,
+    VK_CMD_BUFFER*                             pCmdBuffer)
 {
     struct intel_dev *dev = intel_dev(device);
 
@@ -453,69 +453,69 @@ ICD_EXPORT XGL_RESULT XGLAPI xglCreateCommandBuffer(
             (struct intel_cmd **) pCmdBuffer);
 }
 
-ICD_EXPORT XGL_RESULT XGLAPI xglBeginCommandBuffer(
-    XGL_CMD_BUFFER                              cmdBuffer,
-    const XGL_CMD_BUFFER_BEGIN_INFO            *info)
+ICD_EXPORT VK_RESULT VKAPI vkBeginCommandBuffer(
+    VK_CMD_BUFFER                              cmdBuffer,
+    const VK_CMD_BUFFER_BEGIN_INFO            *info)
 {
     struct intel_cmd *cmd = intel_cmd(cmdBuffer);
 
     return intel_cmd_begin(cmd, info);
 }
 
-ICD_EXPORT XGL_RESULT XGLAPI xglEndCommandBuffer(
-    XGL_CMD_BUFFER                              cmdBuffer)
+ICD_EXPORT VK_RESULT VKAPI vkEndCommandBuffer(
+    VK_CMD_BUFFER                              cmdBuffer)
 {
     struct intel_cmd *cmd = intel_cmd(cmdBuffer);
 
     return intel_cmd_end(cmd);
 }
 
-ICD_EXPORT XGL_RESULT XGLAPI xglResetCommandBuffer(
-    XGL_CMD_BUFFER                              cmdBuffer)
+ICD_EXPORT VK_RESULT VKAPI vkResetCommandBuffer(
+    VK_CMD_BUFFER                              cmdBuffer)
 {
     struct intel_cmd *cmd = intel_cmd(cmdBuffer);
 
     cmd_reset(cmd);
 
-    return XGL_SUCCESS;
+    return VK_SUCCESS;
 }
 
-ICD_EXPORT void XGLAPI xglCmdInitAtomicCounters(
-    XGL_CMD_BUFFER                              cmdBuffer,
-    XGL_PIPELINE_BIND_POINT                     pipelineBindPoint,
+ICD_EXPORT void VKAPI vkCmdInitAtomicCounters(
+    VK_CMD_BUFFER                              cmdBuffer,
+    VK_PIPELINE_BIND_POINT                     pipelineBindPoint,
     uint32_t                                    startCounter,
     uint32_t                                    counterCount,
     const uint32_t*                             pData)
 {
 }
 
-ICD_EXPORT void XGLAPI xglCmdLoadAtomicCounters(
-    XGL_CMD_BUFFER                              cmdBuffer,
-    XGL_PIPELINE_BIND_POINT                     pipelineBindPoint,
+ICD_EXPORT void VKAPI vkCmdLoadAtomicCounters(
+    VK_CMD_BUFFER                              cmdBuffer,
+    VK_PIPELINE_BIND_POINT                     pipelineBindPoint,
     uint32_t                                    startCounter,
     uint32_t                                    counterCount,
-    XGL_BUFFER                                  srcBuffer,
-    XGL_GPU_SIZE                                srcOffset)
+    VK_BUFFER                                  srcBuffer,
+    VK_GPU_SIZE                                srcOffset)
 {
 }
 
-ICD_EXPORT void XGLAPI xglCmdSaveAtomicCounters(
-    XGL_CMD_BUFFER                              cmdBuffer,
-    XGL_PIPELINE_BIND_POINT                     pipelineBindPoint,
+ICD_EXPORT void VKAPI vkCmdSaveAtomicCounters(
+    VK_CMD_BUFFER                              cmdBuffer,
+    VK_PIPELINE_BIND_POINT                     pipelineBindPoint,
     uint32_t                                    startCounter,
     uint32_t                                    counterCount,
-    XGL_BUFFER                                  destBuffer,
-    XGL_GPU_SIZE                                destOffset)
+    VK_BUFFER                                  destBuffer,
+    VK_GPU_SIZE                                destOffset)
 {
 }
 
-ICD_EXPORT void XGLAPI xglCmdDbgMarkerBegin(
-    XGL_CMD_BUFFER                              cmdBuffer,
+ICD_EXPORT void VKAPI vkCmdDbgMarkerBegin(
+    VK_CMD_BUFFER                              cmdBuffer,
     const char*                                 pMarker)
 {
 }
 
-ICD_EXPORT void XGLAPI xglCmdDbgMarkerEnd(
-    XGL_CMD_BUFFER                              cmdBuffer)
+ICD_EXPORT void VKAPI vkCmdDbgMarkerEnd(
+    VK_CMD_BUFFER                              cmdBuffer)
 {
 }

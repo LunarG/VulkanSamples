@@ -1,5 +1,5 @@
 /*
- * XGL
+ * Vulkan
  *
  * Copyright (C) 2014 LunarG, Inc.
  *
@@ -28,8 +28,8 @@
 #include "dev.h"
 #include "mem.h"
 
-XGL_RESULT intel_mem_alloc(struct intel_dev *dev,
-                           const XGL_MEMORY_ALLOC_INFO *info,
+VK_RESULT intel_mem_alloc(struct intel_dev *dev,
+                           const VK_MEMORY_ALLOC_INFO *info,
                            struct intel_mem **mem_ret)
 {
     struct intel_mem *mem;
@@ -37,22 +37,22 @@ XGL_RESULT intel_mem_alloc(struct intel_dev *dev,
     /* ignore any IMAGE_INFO and BUFFER_INFO usage: they don't alter allocations */
 
     mem = (struct intel_mem *) intel_base_create(&dev->base.handle,
-            sizeof(*mem), dev->base.dbg, XGL_DBG_OBJECT_GPU_MEMORY, info, 0);
+            sizeof(*mem), dev->base.dbg, VK_DBG_OBJECT_GPU_MEMORY, info, 0);
     if (!mem)
-        return XGL_ERROR_OUT_OF_MEMORY;
+        return VK_ERROR_OUT_OF_MEMORY;
 
     mem->bo = intel_winsys_alloc_bo(dev->winsys,
-            "xgl-gpu-memory", info->allocationSize, 0);
+            "vk-gpu-memory", info->allocationSize, 0);
     if (!mem->bo) {
         intel_mem_free(mem);
-        return XGL_ERROR_UNKNOWN;
+        return VK_ERROR_UNKNOWN;
     }
 
     mem->size = info->allocationSize;
 
     *mem_ret = mem;
 
-    return XGL_SUCCESS;
+    return VK_SUCCESS;
 }
 
 void intel_mem_free(struct intel_mem *mem)
@@ -62,7 +62,7 @@ void intel_mem_free(struct intel_mem *mem)
     intel_base_destroy(&mem->base);
 }
 
-XGL_RESULT intel_mem_import_userptr(struct intel_dev *dev,
+VK_RESULT intel_mem_import_userptr(struct intel_dev *dev,
                                     const void *userptr,
                                     size_t size,
                                     struct intel_mem **mem_ret)
@@ -71,66 +71,66 @@ XGL_RESULT intel_mem_import_userptr(struct intel_dev *dev,
     struct intel_mem *mem;
 
     if ((uintptr_t) userptr % alignment || size % alignment)
-        return XGL_ERROR_INVALID_ALIGNMENT;
+        return VK_ERROR_INVALID_ALIGNMENT;
 
     mem = (struct intel_mem *) intel_base_create(&dev->base.handle,
-            sizeof(*mem), dev->base.dbg, XGL_DBG_OBJECT_GPU_MEMORY, NULL, 0);
+            sizeof(*mem), dev->base.dbg, VK_DBG_OBJECT_GPU_MEMORY, NULL, 0);
     if (!mem)
-        return XGL_ERROR_OUT_OF_MEMORY;
+        return VK_ERROR_OUT_OF_MEMORY;
 
     mem->bo = intel_winsys_import_userptr(dev->winsys,
-            "xgl-gpu-memory-userptr", (void *) userptr, size, 0);
+            "vk-gpu-memory-userptr", (void *) userptr, size, 0);
     if (!mem->bo) {
         intel_mem_free(mem);
-        return XGL_ERROR_UNKNOWN;
+        return VK_ERROR_UNKNOWN;
     }
 
     mem->size = size;
 
     *mem_ret = mem;
 
-    return XGL_SUCCESS;
+    return VK_SUCCESS;
 }
 
-XGL_RESULT intel_mem_set_priority(struct intel_mem *mem,
-                                  XGL_MEMORY_PRIORITY priority)
+VK_RESULT intel_mem_set_priority(struct intel_mem *mem,
+                                  VK_MEMORY_PRIORITY priority)
 {
-    /* pin the bo when XGL_MEMORY_PRIORITY_VERY_HIGH? */
-    return XGL_SUCCESS;
+    /* pin the bo when VK_MEMORY_PRIORITY_VERY_HIGH? */
+    return VK_SUCCESS;
 }
 
-ICD_EXPORT XGL_RESULT XGLAPI xglAllocMemory(
-    XGL_DEVICE                                  device,
-    const XGL_MEMORY_ALLOC_INFO*                pAllocInfo,
-    XGL_GPU_MEMORY*                             pMem)
+ICD_EXPORT VK_RESULT VKAPI vkAllocMemory(
+    VK_DEVICE                                  device,
+    const VK_MEMORY_ALLOC_INFO*                pAllocInfo,
+    VK_GPU_MEMORY*                             pMem)
 {
     struct intel_dev *dev = intel_dev(device);
 
     return intel_mem_alloc(dev, pAllocInfo, (struct intel_mem **) pMem);
 }
 
-ICD_EXPORT XGL_RESULT XGLAPI xglFreeMemory(
-    XGL_GPU_MEMORY                              mem_)
+ICD_EXPORT VK_RESULT VKAPI vkFreeMemory(
+    VK_GPU_MEMORY                              mem_)
 {
     struct intel_mem *mem = intel_mem(mem_);
 
     intel_mem_free(mem);
 
-    return XGL_SUCCESS;
+    return VK_SUCCESS;
 }
 
-ICD_EXPORT XGL_RESULT XGLAPI xglSetMemoryPriority(
-    XGL_GPU_MEMORY                              mem_,
-    XGL_MEMORY_PRIORITY                         priority)
+ICD_EXPORT VK_RESULT VKAPI vkSetMemoryPriority(
+    VK_GPU_MEMORY                              mem_,
+    VK_MEMORY_PRIORITY                         priority)
 {
     struct intel_mem *mem = intel_mem(mem_);
 
     return intel_mem_set_priority(mem, priority);
 }
 
-ICD_EXPORT XGL_RESULT XGLAPI xglMapMemory(
-    XGL_GPU_MEMORY                              mem_,
-    XGL_FLAGS                                   flags,
+ICD_EXPORT VK_RESULT VKAPI vkMapMemory(
+    VK_GPU_MEMORY                              mem_,
+    VK_FLAGS                                   flags,
     void**                                      ppData)
 {
     struct intel_mem *mem = intel_mem(mem_);
@@ -138,24 +138,24 @@ ICD_EXPORT XGL_RESULT XGLAPI xglMapMemory(
 
     *ppData = ptr;
 
-    return (ptr) ? XGL_SUCCESS : XGL_ERROR_UNKNOWN;
+    return (ptr) ? VK_SUCCESS : VK_ERROR_UNKNOWN;
 }
 
-ICD_EXPORT XGL_RESULT XGLAPI xglUnmapMemory(
-    XGL_GPU_MEMORY                              mem_)
+ICD_EXPORT VK_RESULT VKAPI vkUnmapMemory(
+    VK_GPU_MEMORY                              mem_)
 {
     struct intel_mem *mem = intel_mem(mem_);
 
     intel_mem_unmap(mem);
 
-    return XGL_SUCCESS;
+    return VK_SUCCESS;
 }
 
-ICD_EXPORT XGL_RESULT XGLAPI xglPinSystemMemory(
-    XGL_DEVICE                                  device,
+ICD_EXPORT VK_RESULT VKAPI vkPinSystemMemory(
+    VK_DEVICE                                  device,
     const void*                                 pSysMem,
     size_t                                      memSize,
-    XGL_GPU_MEMORY*                             pMem)
+    VK_GPU_MEMORY*                             pMem)
 {
     struct intel_dev *dev = intel_dev(device);
 
@@ -163,18 +163,18 @@ ICD_EXPORT XGL_RESULT XGLAPI xglPinSystemMemory(
             (struct intel_mem **) pMem);
 }
 
-ICD_EXPORT XGL_RESULT XGLAPI xglOpenSharedMemory(
-    XGL_DEVICE                                  device,
-    const XGL_MEMORY_OPEN_INFO*                 pOpenInfo,
-    XGL_GPU_MEMORY*                             pMem)
+ICD_EXPORT VK_RESULT VKAPI vkOpenSharedMemory(
+    VK_DEVICE                                  device,
+    const VK_MEMORY_OPEN_INFO*                 pOpenInfo,
+    VK_GPU_MEMORY*                             pMem)
 {
-    return XGL_ERROR_UNAVAILABLE;
+    return VK_ERROR_UNAVAILABLE;
 }
 
-ICD_EXPORT XGL_RESULT XGLAPI xglOpenPeerMemory(
-    XGL_DEVICE                                  device,
-    const XGL_PEER_MEMORY_OPEN_INFO*            pOpenInfo,
-    XGL_GPU_MEMORY*                             pMem)
+ICD_EXPORT VK_RESULT VKAPI vkOpenPeerMemory(
+    VK_DEVICE                                  device,
+    const VK_PEER_MEMORY_OPEN_INFO*            pOpenInfo,
+    VK_GPU_MEMORY*                             pMem)
 {
-    return XGL_ERROR_UNAVAILABLE;
+    return VK_ERROR_UNAVAILABLE;
 }

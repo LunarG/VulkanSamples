@@ -1,5 +1,5 @@
 /*
- * XGL
+ * Vulkan
  *
  * Copyright (C) 2014 LunarG, Inc.
  *
@@ -39,15 +39,15 @@ static void queue_submit_hang(struct intel_queue *queue,
 {
     intel_cmd_decode(cmd, true);
 
-    intel_dev_log(queue->dev, XGL_DBG_MSG_ERROR,
-            XGL_VALIDATION_LEVEL_0, XGL_NULL_HANDLE, 0, 0,
+    intel_dev_log(queue->dev, VK_DBG_MSG_ERROR,
+            VK_VALIDATION_LEVEL_0, VK_NULL_HANDLE, 0, 0,
             "GPU hanged with %d/%d active/pending command buffers lost",
             active_lost, pending_lost);
 }
 
-static XGL_RESULT queue_submit_bo(struct intel_queue *queue,
+static VK_RESULT queue_submit_bo(struct intel_queue *queue,
                                   struct intel_bo *bo,
-                                  XGL_GPU_SIZE used)
+                                  VK_GPU_SIZE used)
 {
     struct intel_winsys *winsys = queue->dev->winsys;
     int err;
@@ -57,11 +57,11 @@ static XGL_RESULT queue_submit_bo(struct intel_queue *queue,
     else
         err = intel_winsys_submit_bo(winsys, queue->ring, bo, used, 0);
 
-    return (err) ? XGL_ERROR_UNKNOWN : XGL_SUCCESS;
+    return (err) ? VK_ERROR_UNKNOWN : VK_SUCCESS;
 }
 
 static struct intel_bo *queue_create_bo(struct intel_queue *queue,
-                                        XGL_GPU_SIZE size,
+                                        VK_GPU_SIZE size,
                                         const void *cmd,
                                         size_t cmd_len)
 {
@@ -88,7 +88,7 @@ static struct intel_bo *queue_create_bo(struct intel_queue *queue,
     return bo;
 }
 
-static XGL_RESULT queue_select_pipeline(struct intel_queue *queue,
+static VK_RESULT queue_select_pipeline(struct intel_queue *queue,
                                         int pipeline_select)
 {
     uint32_t pipeline_select_cmd[] = {
@@ -96,11 +96,11 @@ static XGL_RESULT queue_select_pipeline(struct intel_queue *queue,
         GEN6_MI_CMD(MI_BATCH_BUFFER_END),
     };
     struct intel_bo *bo;
-    XGL_RESULT ret;
+    VK_RESULT ret;
 
     if (queue->ring != INTEL_RING_RENDER ||
         queue->last_pipeline_select == pipeline_select)
-        return XGL_SUCCESS;
+        return VK_SUCCESS;
 
     switch (pipeline_select) {
     case GEN6_PIPELINE_SELECT_DW0_SELECT_3D:
@@ -110,7 +110,7 @@ static XGL_RESULT queue_select_pipeline(struct intel_queue *queue,
         bo = queue->select_compute_bo;
         break;
     default:
-        return XGL_ERROR_INVALID_VALUE;
+        return VK_ERROR_INVALID_VALUE;
         break;
     }
 
@@ -119,7 +119,7 @@ static XGL_RESULT queue_select_pipeline(struct intel_queue *queue,
         bo = queue_create_bo(queue, sizeof(pipeline_select_cmd),
                 pipeline_select_cmd, sizeof(pipeline_select_cmd));
         if (!bo)
-            return XGL_ERROR_OUT_OF_GPU_MEMORY;
+            return VK_ERROR_OUT_OF_GPU_MEMORY;
 
         switch (pipeline_select) {
         case GEN6_PIPELINE_SELECT_DW0_SELECT_3D:
@@ -134,13 +134,13 @@ static XGL_RESULT queue_select_pipeline(struct intel_queue *queue,
     }
 
     ret = queue_submit_bo(queue, bo, sizeof(pipeline_select_cmd));
-    if (ret == XGL_SUCCESS)
+    if (ret == VK_SUCCESS)
         queue->last_pipeline_select = pipeline_select;
 
     return ret;
 }
 
-static XGL_RESULT queue_init_hw_and_atomic_bo(struct intel_queue *queue)
+static VK_RESULT queue_init_hw_and_atomic_bo(struct intel_queue *queue)
 {
     const uint32_t ctx_init_cmd[] = {
         /* STATE_SIP */
@@ -156,24 +156,24 @@ static XGL_RESULT queue_init_hw_and_atomic_bo(struct intel_queue *queue)
         GEN6_MI_CMD(MI_NOOP),
     };
     struct intel_bo *bo;
-    XGL_RESULT ret;
+    VK_RESULT ret;
 
     if (queue->ring != INTEL_RING_RENDER) {
         queue->last_pipeline_select = -1;
         queue->atomic_bo = queue_create_bo(queue,
                 sizeof(uint32_t) * INTEL_QUEUE_ATOMIC_COUNTER_COUNT,
                 NULL, 0);
-        return (queue->atomic_bo) ? XGL_SUCCESS : XGL_ERROR_OUT_OF_GPU_MEMORY;
+        return (queue->atomic_bo) ? VK_SUCCESS : VK_ERROR_OUT_OF_GPU_MEMORY;
     }
 
     bo = queue_create_bo(queue,
             sizeof(uint32_t) * INTEL_QUEUE_ATOMIC_COUNTER_COUNT,
             ctx_init_cmd, sizeof(ctx_init_cmd));
     if (!bo)
-        return XGL_ERROR_OUT_OF_GPU_MEMORY;
+        return VK_ERROR_OUT_OF_GPU_MEMORY;
 
     ret = queue_submit_bo(queue, bo, sizeof(ctx_init_cmd));
-    if (ret != XGL_SUCCESS) {
+    if (ret != VK_SUCCESS) {
         intel_bo_unref(bo);
         return ret;
     }
@@ -182,15 +182,15 @@ static XGL_RESULT queue_init_hw_and_atomic_bo(struct intel_queue *queue)
     /* reuse */
     queue->atomic_bo = bo;
 
-    return XGL_SUCCESS;
+    return VK_SUCCESS;
 }
 
-static XGL_RESULT queue_submit_cmd_prepare(struct intel_queue *queue,
+static VK_RESULT queue_submit_cmd_prepare(struct intel_queue *queue,
                                            struct intel_cmd *cmd)
 {
-    if (unlikely(cmd->result != XGL_SUCCESS)) {
-        intel_dev_log(cmd->dev, XGL_DBG_MSG_ERROR,
-                XGL_VALIDATION_LEVEL_0, XGL_NULL_HANDLE, 0, 0,
+    if (unlikely(cmd->result != VK_SUCCESS)) {
+        intel_dev_log(cmd->dev, VK_DBG_MSG_ERROR,
+                VK_VALIDATION_LEVEL_0, VK_NULL_HANDLE, 0, 0,
                 "invalid command buffer submitted");
         return cmd->result;
     }
@@ -198,16 +198,16 @@ static XGL_RESULT queue_submit_cmd_prepare(struct intel_queue *queue,
     return queue_select_pipeline(queue, cmd->pipeline_select);
 }
 
-static XGL_RESULT queue_submit_cmd_debug(struct intel_queue *queue,
+static VK_RESULT queue_submit_cmd_debug(struct intel_queue *queue,
                                          struct intel_cmd *cmd)
 {
     uint32_t active[2], pending[2];
     struct intel_bo *bo;
-    XGL_GPU_SIZE used;
-    XGL_RESULT ret;
+    VK_GPU_SIZE used;
+    VK_RESULT ret;
 
     ret = queue_submit_cmd_prepare(queue, cmd);
-    if (ret != XGL_SUCCESS)
+    if (ret != VK_SUCCESS)
         return ret;
 
     if (intel_debug & INTEL_DEBUG_HANG) {
@@ -217,7 +217,7 @@ static XGL_RESULT queue_submit_cmd_debug(struct intel_queue *queue,
 
     bo = intel_cmd_get_batch(cmd, &used);
     ret = queue_submit_bo(queue, bo, used);
-    if (ret != XGL_SUCCESS)
+    if (ret != VK_SUCCESS)
         return ret;
 
     if (intel_debug & INTEL_DEBUG_HANG) {
@@ -234,18 +234,18 @@ static XGL_RESULT queue_submit_cmd_debug(struct intel_queue *queue,
     if (intel_debug & INTEL_DEBUG_BATCH)
         intel_cmd_decode(cmd, false);
 
-    return XGL_SUCCESS;
+    return VK_SUCCESS;
 }
 
-static XGL_RESULT queue_submit_cmd(struct intel_queue *queue,
+static VK_RESULT queue_submit_cmd(struct intel_queue *queue,
                                    struct intel_cmd *cmd)
 {
     struct intel_bo *bo;
-    XGL_GPU_SIZE used;
-    XGL_RESULT ret;
+    VK_GPU_SIZE used;
+    VK_RESULT ret;
 
     ret = queue_submit_cmd_prepare(queue, cmd);
-    if (ret == XGL_SUCCESS) {
+    if (ret == VK_SUCCESS) {
         bo = intel_cmd_get_batch(cmd, &used);
         ret = queue_submit_bo(queue, bo, used);
     }
@@ -253,48 +253,48 @@ static XGL_RESULT queue_submit_cmd(struct intel_queue *queue,
     return ret;
 }
 
-XGL_RESULT intel_queue_create(struct intel_dev *dev,
+VK_RESULT intel_queue_create(struct intel_dev *dev,
                               enum intel_gpu_engine_type engine,
                               struct intel_queue **queue_ret)
 {
     struct intel_queue *queue;
     enum intel_ring_type ring;
-    XGL_FENCE_CREATE_INFO fence_info;
-    XGL_RESULT ret;
+    VK_FENCE_CREATE_INFO fence_info;
+    VK_RESULT ret;
 
     switch (engine) {
     case INTEL_GPU_ENGINE_3D:
         ring = INTEL_RING_RENDER;
         break;
     default:
-        return XGL_ERROR_INVALID_VALUE;
+        return VK_ERROR_INVALID_VALUE;
         break;
     }
 
     queue = (struct intel_queue *) intel_base_create(&dev->base.handle,
-            sizeof(*queue), dev->base.dbg, XGL_DBG_OBJECT_QUEUE, NULL, 0);
+            sizeof(*queue), dev->base.dbg, VK_DBG_OBJECT_QUEUE, NULL, 0);
     if (!queue)
-        return XGL_ERROR_OUT_OF_MEMORY;
+        return VK_ERROR_OUT_OF_MEMORY;
 
     queue->dev = dev;
     queue->ring = ring;
 
-    if (queue_init_hw_and_atomic_bo(queue) != XGL_SUCCESS) {
+    if (queue_init_hw_and_atomic_bo(queue) != VK_SUCCESS) {
         intel_queue_destroy(queue);
-        return XGL_ERROR_INITIALIZATION_FAILED;
+        return VK_ERROR_INITIALIZATION_FAILED;
     }
 
     memset(&fence_info, 0, sizeof(fence_info));
-    fence_info.sType = XGL_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+    fence_info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
     ret = intel_fence_create(dev, &fence_info, &queue->fence);
-    if (ret != XGL_SUCCESS) {
+    if (ret != VK_SUCCESS) {
         intel_queue_destroy(queue);
         return ret;
     }
 
     *queue_ret = queue;
 
-    return XGL_SUCCESS;
+    return VK_SUCCESS;
 }
 
 void intel_queue_destroy(struct intel_queue *queue)
@@ -309,53 +309,53 @@ void intel_queue_destroy(struct intel_queue *queue)
     intel_base_destroy(&queue->base);
 }
 
-XGL_RESULT intel_queue_wait(struct intel_queue *queue, int64_t timeout)
+VK_RESULT intel_queue_wait(struct intel_queue *queue, int64_t timeout)
 {
-    /* return XGL_SUCCESS instead of XGL_ERROR_UNAVAILABLE */
+    /* return VK_SUCCESS instead of VK_ERROR_UNAVAILABLE */
     if (!queue->fence->seqno_bo)
-        return XGL_SUCCESS;
+        return VK_SUCCESS;
 
     return intel_fence_wait(queue->fence, timeout);
 }
 
-ICD_EXPORT XGL_RESULT XGLAPI xglQueueAddMemReference(
-    XGL_QUEUE                                   queue,
-    XGL_GPU_MEMORY                              mem)
+ICD_EXPORT VK_RESULT VKAPI vkQueueAddMemReference(
+    VK_QUEUE                                   queue,
+    VK_GPU_MEMORY                              mem)
 {
     /*
      * The winsys maintains the list of memory references.  These are ignored
      * until we move away from the winsys.
      */
-    return XGL_SUCCESS;
+    return VK_SUCCESS;
 }
 
-ICD_EXPORT XGL_RESULT XGLAPI xglQueueRemoveMemReference(
-    XGL_QUEUE                                   queue,
-    XGL_GPU_MEMORY                              mem)
+ICD_EXPORT VK_RESULT VKAPI vkQueueRemoveMemReference(
+    VK_QUEUE                                   queue,
+    VK_GPU_MEMORY                              mem)
 {
     /*
      * The winsys maintains the list of memory references.  These are ignored
      * until we move away from the winsys.
      */
-    return XGL_SUCCESS;
+    return VK_SUCCESS;
 }
 
-ICD_EXPORT XGL_RESULT XGLAPI xglQueueWaitIdle(
-    XGL_QUEUE                                   queue_)
+ICD_EXPORT VK_RESULT VKAPI vkQueueWaitIdle(
+    VK_QUEUE                                   queue_)
 {
     struct intel_queue *queue = intel_queue(queue_);
 
     return intel_queue_wait(queue, -1);
 }
 
-ICD_EXPORT XGL_RESULT XGLAPI xglQueueSubmit(
-    XGL_QUEUE                                   queue_,
+ICD_EXPORT VK_RESULT VKAPI vkQueueSubmit(
+    VK_QUEUE                                   queue_,
     uint32_t                                    cmdBufferCount,
-    const XGL_CMD_BUFFER*                       pCmdBuffers,
-    XGL_FENCE                                   fence_)
+    const VK_CMD_BUFFER*                       pCmdBuffers,
+    VK_FENCE                                   fence_)
 {
     struct intel_queue *queue = intel_queue(queue_);
-    XGL_RESULT ret = XGL_SUCCESS;
+    VK_RESULT ret = VK_SUCCESS;
     struct intel_cmd *last_cmd;
     uint32_t i;
 
@@ -363,14 +363,14 @@ ICD_EXPORT XGL_RESULT XGLAPI xglQueueSubmit(
         for (i = 0; i < cmdBufferCount; i++) {
             struct intel_cmd *cmd = intel_cmd(pCmdBuffers[i]);
             ret = queue_submit_cmd_debug(queue, cmd);
-            if (ret != XGL_SUCCESS)
+            if (ret != VK_SUCCESS)
                 break;
         }
     } else {
         for (i = 0; i < cmdBufferCount; i++) {
             struct intel_cmd *cmd = intel_cmd(pCmdBuffers[i]);
             ret = queue_submit_cmd(queue, cmd);
-            if (ret != XGL_SUCCESS)
+            if (ret != VK_SUCCESS)
                 break;
         }
     }
@@ -381,11 +381,11 @@ ICD_EXPORT XGL_RESULT XGLAPI xglQueueSubmit(
 
     last_cmd = intel_cmd(pCmdBuffers[i - 1]);
 
-    if (ret == XGL_SUCCESS) {
+    if (ret == VK_SUCCESS) {
         intel_fence_set_seqno(queue->fence,
                 intel_bo_ref(intel_cmd_get_batch(last_cmd, NULL)));
 
-        if (fence_ != XGL_NULL_HANDLE) {
+        if (fence_ != VK_NULL_HANDLE) {
             struct intel_fence *fence = intel_fence(fence_);
             intel_fence_copy(fence, queue->fence);
         }
@@ -400,18 +400,18 @@ ICD_EXPORT XGL_RESULT XGLAPI xglQueueSubmit(
     return ret;
 }
 
-ICD_EXPORT XGL_RESULT XGLAPI xglOpenSharedSemaphore(
-    XGL_DEVICE                                  device,
-    const XGL_SEMAPHORE_OPEN_INFO*              pOpenInfo,
-    XGL_SEMAPHORE*                              pSemaphore)
+ICD_EXPORT VK_RESULT VKAPI vkOpenSharedSemaphore(
+    VK_DEVICE                                  device,
+    const VK_SEMAPHORE_OPEN_INFO*              pOpenInfo,
+    VK_SEMAPHORE*                              pSemaphore)
 {
-    return XGL_ERROR_UNAVAILABLE;
+    return VK_ERROR_UNAVAILABLE;
 }
 
-ICD_EXPORT XGL_RESULT XGLAPI xglCreateSemaphore(
-    XGL_DEVICE                                  device,
-    const XGL_SEMAPHORE_CREATE_INFO*            pCreateInfo,
-    XGL_SEMAPHORE*                              pSemaphore)
+ICD_EXPORT VK_RESULT VKAPI vkCreateSemaphore(
+    VK_DEVICE                                  device,
+    const VK_SEMAPHORE_CREATE_INFO*            pCreateInfo,
+    VK_SEMAPHORE*                              pSemaphore)
 {
     /*
      * We want to find an unused semaphore register and initialize it.  Signal
@@ -421,19 +421,19 @@ ICD_EXPORT XGL_RESULT XGLAPI xglCreateSemaphore(
      *
      * XXX However, MI_SEMAPHORE_MBOX does not seem to have the flexibility.
      */
-    return XGL_ERROR_UNAVAILABLE;
+    return VK_ERROR_UNAVAILABLE;
 }
 
-ICD_EXPORT XGL_RESULT XGLAPI xglQueueSignalSemaphore(
-    XGL_QUEUE                                   queue,
-    XGL_SEMAPHORE                               semaphore)
+ICD_EXPORT VK_RESULT VKAPI vkQueueSignalSemaphore(
+    VK_QUEUE                                   queue,
+    VK_SEMAPHORE                               semaphore)
 {
-    return XGL_ERROR_UNAVAILABLE;
+    return VK_ERROR_UNAVAILABLE;
 }
 
-ICD_EXPORT XGL_RESULT XGLAPI xglQueueWaitSemaphore(
-    XGL_QUEUE                                   queue,
-    XGL_SEMAPHORE                               semaphore)
+ICD_EXPORT VK_RESULT VKAPI vkQueueWaitSemaphore(
+    VK_QUEUE                                   queue,
+    VK_SEMAPHORE                               semaphore)
 {
-    return XGL_ERROR_UNAVAILABLE;
+    return VK_ERROR_UNAVAILABLE;
 }

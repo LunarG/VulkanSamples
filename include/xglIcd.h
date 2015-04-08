@@ -1,9 +1,9 @@
-#ifndef XGLICD_H
-#define XGLICD_H
+#ifndef VKICD_H
+#define VKICD_H
 
 #include <stdint.h>
 #include <stdbool.h>
-#include "xglPlatform.h"
+#include "vkPlatform.h"
 
 /*
  * The ICD must reserve space for a pointer for the loader's dispatch
@@ -13,20 +13,20 @@
 
 #define ICD_LOADER_MAGIC   0x01CDC0DE
 
-typedef union _XGL_LOADER_DATA {
+typedef union _VK_LOADER_DATA {
   uint32_t loaderMagic;
   void *loaderData;
-} XGL_LOADER_DATA;
+} VK_LOADER_DATA;
 
 static inline void set_loader_magic_value(void *pNewObject) {
-    XGL_LOADER_DATA *loader_info = (XGL_LOADER_DATA *) pNewObject;
+    VK_LOADER_DATA *loader_info = (VK_LOADER_DATA *) pNewObject;
     loader_info->loaderMagic = ICD_LOADER_MAGIC;
 }
 
 static inline bool valid_loader_magic_value(void *pNewObject) {
-    const XGL_LOADER_DATA *loader_info = (XGL_LOADER_DATA *) pNewObject;
+    const VK_LOADER_DATA *loader_info = (VK_LOADER_DATA *) pNewObject;
     return loader_info->loaderMagic == ICD_LOADER_MAGIC;
 }
 
-#endif // XGLICD_H
+#endif // VKICD_H
 

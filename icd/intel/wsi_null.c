@@ -27,29 +27,29 @@
 
 #include "wsi.h"
 
-XGL_RESULT intel_wsi_gpu_get_info(struct intel_gpu *gpu,
-                                  XGL_PHYSICAL_GPU_INFO_TYPE type,
-                                  size_t *size, void *data)
+VK_RESULT intel_wsi_gpu_get_info(struct intel_gpu *gpu,
+                                 VK_PHYSICAL_GPU_INFO_TYPE type,
+                                 size_t *size, void *data)
 {
-    return XGL_ERROR_INVALID_VALUE;
+    return VK_ERROR_INVALID_VALUE;
 }
 
 void intel_wsi_gpu_cleanup(struct intel_gpu *gpu)
 {
 }
 
-XGL_RESULT intel_wsi_img_init(struct intel_img *img)
+VK_RESULT intel_wsi_img_init(struct intel_img *img)
 {
-    return XGL_SUCCESS;
+    return VK_SUCCESS;
 }
 
 void intel_wsi_img_cleanup(struct intel_img *img)
 {
 }
 
-XGL_RESULT intel_wsi_fence_init(struct intel_fence *fence)
+VK_RESULT intel_wsi_fence_init(struct intel_fence *fence)
 {
-    return XGL_SUCCESS;
+    return VK_SUCCESS;
 }
 
 void intel_wsi_fence_cleanup(struct intel_fence *fence)
@@ -61,41 +61,41 @@ void intel_wsi_fence_copy(struct intel_fence *fence,
 {
 }
 
-XGL_RESULT intel_wsi_fence_wait(struct intel_fence *fence,
-                                int64_t timeout_ns)
+VK_RESULT intel_wsi_fence_wait(struct intel_fence *fence,
+                               int64_t timeout_ns)
 {
-    return XGL_SUCCESS;
+    return VK_SUCCESS;
 }
 
-ICD_EXPORT XGL_RESULT XGLAPI xglWsiX11AssociateConnection(
-    XGL_PHYSICAL_GPU                            gpu_,
-    const XGL_WSI_X11_CONNECTION_INFO*          pConnectionInfo)
+ICD_EXPORT VK_RESULT VKAPI vkWsiX11AssociateConnection(
+    VK_PHYSICAL_GPU                             gpu_,
+    const VK_WSI_X11_CONNECTION_INFO*           pConnectionInfo)
 {
-    return XGL_ERROR_UNKNOWN;
+    return VK_ERROR_UNKNOWN;
 }
 
-ICD_EXPORT XGL_RESULT XGLAPI xglWsiX11GetMSC(
-    XGL_DEVICE                                  device,
+ICD_EXPORT VK_RESULT VKAPI vkWsiX11GetMSC(
+    VK_DEVICE                                   device,
     xcb_window_t                                window,
     xcb_randr_crtc_t                            crtc,
     uint64_t  *                                 pMsc)
 {
-    return XGL_ERROR_UNKNOWN;
+    return VK_ERROR_UNKNOWN;
 }
 
-ICD_EXPORT XGL_RESULT XGLAPI xglWsiX11CreatePresentableImage(
-    XGL_DEVICE                                  device,
-    const XGL_WSI_X11_PRESENTABLE_IMAGE_CREATE_INFO* pCreateInfo,
-    XGL_IMAGE*                                  pImage,
-    XGL_GPU_MEMORY*                             pMem)
+ICD_EXPORT VK_RESULT VKAPI vkWsiX11CreatePresentableImage(
+    VK_DEVICE                                   device,
+    const VK_WSI_X11_PRESENTABLE_IMAGE_CREATE_INFO* pCreateInfo,
+    VK_IMAGE*                                   pImage,
+    VK_GPU_MEMORY*                              pMem)
 {
-    return XGL_ERROR_UNKNOWN;
+    return VK_ERROR_UNKNOWN;
 }
 
-ICD_EXPORT XGL_RESULT XGLAPI xglWsiX11QueuePresent(
-    XGL_QUEUE                                   queue_,
-    const XGL_WSI_X11_PRESENT_INFO*             pPresentInfo,
-    XGL_FENCE                                   fence_)
+ICD_EXPORT VK_RESULT VKAPI vkWsiX11QueuePresent(
+    VK_QUEUE                                    queue_,
+    const VK_WSI_X11_PRESENT_INFO*              pPresentInfo,
+    VK_FENCE                                    fence_)
 {
-    return XGL_ERROR_UNKNOWN;
+    return VK_ERROR_UNKNOWN;
 }

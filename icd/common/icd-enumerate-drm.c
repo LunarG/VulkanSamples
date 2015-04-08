@@ -1,5 +1,5 @@
 /*
- * XGL
+ * Vulkan
  *
  * Copyright (C) 2014 LunarG, Inc.
  *
@@ -125,7 +125,7 @@ static struct icd_drm_device *probe_syspath(const struct icd_instance *instance,
         return devices;
     } else {
         dev = icd_instance_alloc(instance, sizeof(*dev), 0,
-                XGL_SYSTEM_ALLOC_INTERNAL_TEMP);
+                VK_SYSTEM_ALLOC_INTERNAL_TEMP);
         if (!dev)
             return devices;
 
@@ -151,16 +151,16 @@ struct icd_drm_device *icd_drm_enumerate(const struct icd_instance *instance,
 
     udev = udev_new();
     if (udev == NULL) {
-        icd_instance_log(instance, XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0,
-                XGL_NULL_HANDLE, 0, 0, "failed to initialize udev context");
+        icd_instance_log(instance, VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0,
+                VK_NULL_HANDLE, 0, 0, "failed to initialize udev context");
 
         return NULL;
     }
 
     e = udev_enumerate_new(udev);
     if (e == NULL) {
-        icd_instance_log(instance, XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0,
-                XGL_NULL_HANDLE, 0, 0,
+        icd_instance_log(instance, VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0,
+                VK_NULL_HANDLE, 0, 0,
                 "failed to initialize udev enumerate context");
         udev_unref(udev);
 

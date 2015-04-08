@@ -139,7 +139,7 @@ brw_new_shader_program(struct gl_context *ctx, GLuint name)
       //               bringing in shaderobj.c
       //_mesa_init_shader_program(ctx, &prog->base);
       prog->base.Type = GL_SHADER_PROGRAM_MESA;
-      // LunarG: Remove - XGL does not use reference counts
+      // LunarG: Remove - VK does not use reference counts
       // prog->base.RefCount = 1;
 
       prog->base.AttributeBindings = new string_to_uint_map;
