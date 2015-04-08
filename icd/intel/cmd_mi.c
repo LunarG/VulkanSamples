@@ -193,6 +193,7 @@ static void cmd_write_event_value(struct intel_cmd *cmd, struct intel_event *eve
         pipe_control_flags = 0;
         break;
     case XGL_PIPE_EVENT_VERTEX_PROCESSING_COMPLETE:
+    case XGL_PIPE_EVENT_LOCAL_FRAGMENT_PROCESSING_COMPLETE:
     case XGL_PIPE_EVENT_FRAGMENT_PROCESSING_COMPLETE:
     case XGL_PIPE_EVENT_GRAPHICS_PIPELINE_COMPLETE:
     case XGL_PIPE_EVENT_COMPUTE_PIPELINE_COMPLETE:

@@ -145,11 +145,12 @@ typedef enum _XGL_PIPE_EVENT
 {
     XGL_PIPE_EVENT_TOP_OF_PIPE                              = 0x00000001,   // Set event before the GPU starts processing subsequent command
     XGL_PIPE_EVENT_VERTEX_PROCESSING_COMPLETE               = 0x00000002,   // Set event when all pending vertex processing is complete
-    XGL_PIPE_EVENT_FRAGMENT_PROCESSING_COMPLETE             = 0x00000003,   // Set event when all pending fragment shader executions are complete
-    XGL_PIPE_EVENT_GRAPHICS_PIPELINE_COMPLETE               = 0x00000004,   // Set event when all pending graphics operations are complete
-    XGL_PIPE_EVENT_COMPUTE_PIPELINE_COMPLETE                = 0x00000005,   // Set event when all pending compute operations are complete
-    XGL_PIPE_EVENT_TRANSFER_COMPLETE                        = 0x00000006,   // Set event when all pending transfer operations are complete
-    XGL_PIPE_EVENT_GPU_COMMANDS_COMPLETE                    = 0x00000007,   // Set event when all pending GPU work is complete
+    XGL_PIPE_EVENT_LOCAL_FRAGMENT_PROCESSING_COMPLETE       = 0x00000003,   // Set event when all pending fragment shader executions are complete, within each fragment location
+    XGL_PIPE_EVENT_FRAGMENT_PROCESSING_COMPLETE             = 0x00000004,   // Set event when all pending fragment shader executions are complete
+    XGL_PIPE_EVENT_GRAPHICS_PIPELINE_COMPLETE               = 0x00000005,   // Set event when all pending graphics operations are complete
+    XGL_PIPE_EVENT_COMPUTE_PIPELINE_COMPLETE                = 0x00000006,   // Set event when all pending compute operations are complete
+    XGL_PIPE_EVENT_TRANSFER_COMPLETE                        = 0x00000007,   // Set event when all pending transfer operations are complete
+    XGL_PIPE_EVENT_GPU_COMMANDS_COMPLETE                    = 0x00000008,   // Set event when all pending GPU work is complete
 
     XGL_PIPE_EVENT_BEGIN_RANGE                              = XGL_PIPE_EVENT_TOP_OF_PIPE,
     XGL_PIPE_EVENT_END_RANGE                                = XGL_PIPE_EVENT_GPU_COMMANDS_COMPLETE,
