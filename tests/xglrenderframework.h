@@ -175,6 +175,7 @@ public:
     void Draw(uint32_t firstVertex, uint32_t vertexCount, uint32_t firstInstance, uint32_t instanceCount);
     void DrawIndexed(uint32_t firstIndex, uint32_t indexCount, int32_t vertexOffset, uint32_t firstInstance, uint32_t instanceCount);
     void QueueCommandBuffer();
+    void QueueCommandBuffer(XGL_FENCE fence);
 
     XglMemoryRefManager             mem_ref_mgr;
 

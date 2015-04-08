@@ -1357,12 +1357,17 @@ void XglCommandBufferObj::Draw(uint32_t firstVertex, uint32_t vertexCount, uint3
 
 void XglCommandBufferObj::QueueCommandBuffer()
 {
+    QueueCommandBuffer(NULL);
+}
+
+void XglCommandBufferObj::QueueCommandBuffer(XGL_FENCE fence)
+{
     XGL_RESULT err = XGL_SUCCESS;
 
     mem_ref_mgr.EmitAddMemoryRefs(m_device->m_queue);
 
     // submit the command buffer to the universal queue
-    err = xglQueueSubmit( m_device->m_queue, 1, &obj(), NULL );
+    err = xglQueueSubmit( m_device->m_queue, 1, &obj(), fence );
     ASSERT_XGL_SUCCESS( err );
 
     err = xglQueueWaitIdle( m_device->m_queue );
