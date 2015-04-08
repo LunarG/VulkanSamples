@@ -68,13 +68,10 @@ struct intel_wsi_x11 {
 
     xcb_connection_t *c;
     xcb_window_t root;
-    xcb_randr_provider_t provider;
     int root_depth;
 
     int dri3_major, dri3_minor;
     int present_major, present_minor;
-
-    int fd;
 
     struct intel_x11_swap_chain *swap_chains;
 };
@@ -90,9 +87,8 @@ struct intel_x11_fence_data {
     uint32_t serial;
 };
 
-static bool wsi_x11_is_format_presentable(struct intel_wsi_x11 *x11,
-                                          struct intel_dev *dev,
-                                          XGL_FORMAT format)
+static bool x11_is_format_presentable(const struct intel_dev *dev,
+                                      XGL_FORMAT format)
 {
     /* this is what DDX expects */
     switch (format) {
@@ -138,63 +134,66 @@ static int x11_export_prime_fd(struct intel_dev *dev,
 }
 
 /**
- * Return true if x11->fd points to the primary or render node of the GPU.
+ * Return true if fd points to the primary or render node of the GPU.
  */
-static bool wsi_x11_uses_gpu(const struct intel_wsi_x11 *x11,
-                             const struct intel_gpu *gpu)
+static bool x11_gpu_match_fd(const struct intel_gpu *gpu, int fd)
 {
-    struct stat x11_stat, gpu_stat;
+    struct stat fd_stat, gpu_stat;
 
-    if (fstat(x11->fd, &x11_stat))
+    if (fstat(fd, &fd_stat))
         return false;
 
     /* is it the primary node? */
     if (!stat(gpu->primary_node, &gpu_stat) &&
-        !memcmp(&x11_stat, &gpu_stat, sizeof(x11_stat)))
+        !memcmp(&fd_stat, &gpu_stat, sizeof(fd_stat)))
         return true;
 
     /* is it the render node? */
     if (gpu->render_node && !stat(gpu->render_node, &gpu_stat) &&
-        !memcmp(&x11_stat, &gpu_stat, sizeof(x11_stat)))
+        !memcmp(&fd_stat, &gpu_stat, sizeof(fd_stat)))
         return true;
 
     return false;
 }
 
-/**
- * Return the depth of the root window.
+/*
+ * Return the depth of \p drawable.
  */
-static int wsi_x11_get_root_depth(struct intel_wsi_x11 *x11)
+static int x11_get_drawable_depth(xcb_connection_t *c,
+                                  xcb_drawable_t drawable)
 {
-    const xcb_setup_t *setup;
-    xcb_screen_iterator_t iter;
+    xcb_get_geometry_cookie_t cookie;
+    xcb_get_geometry_reply_t *reply;
+    uint8_t depth;
 
-    setup = xcb_get_setup(x11->c);
+    cookie = xcb_get_geometry(c, drawable);
+    reply = xcb_get_geometry_reply(c, cookie, NULL);
 
-    iter = xcb_setup_roots_iterator(setup);
-    for (; iter.rem; xcb_screen_next(&iter)) {
-        if (iter.data->root == x11->root)
-            return iter.data->root_depth;
+    if (reply) {
+        depth = reply->depth;
+        free(reply);
+    } else {
+        depth = 0;
     }
 
-    return 0;
+    return depth;
 }
 
 /**
  * Return true if DRI3 and Present are supported by the server.
  */
-static bool wsi_x11_has_dri3_and_present(struct intel_wsi_x11 *x11)
+static bool x11_is_dri3_and_present_supported(xcb_connection_t *c)
 {
     const xcb_query_extension_reply_t *ext;
 
-    xcb_prefetch_extension_data(x11->c, &xcb_dri3_id);
-    xcb_prefetch_extension_data(x11->c, &xcb_present_id);
+    xcb_prefetch_extension_data(c, &xcb_dri3_id);
+    xcb_prefetch_extension_data(c, &xcb_present_id);
 
-    ext = xcb_get_extension_data(x11->c, &xcb_dri3_id);
+    ext = xcb_get_extension_data(c, &xcb_dri3_id);
     if (!ext || !ext->present)
         return false;
 
-    ext = xcb_get_extension_data(x11->c, &xcb_present_id);
+    ext = xcb_get_extension_data(c, &xcb_present_id);
     if (!ext || !ext->present)
         return false;
 
@@ -204,27 +203,23 @@ static bool wsi_x11_has_dri3_and_present(struct intel_wsi_x11 *x11)
 /**
  * Send a DRI3Open to get the server GPU fd.
  */
-static bool wsi_x11_dri3_open(struct intel_wsi_x11 *x11)
+static int x11_dri3_open(xcb_connection_t *c,
+                         xcb_drawable_t drawable,
+                         xcb_randr_provider_t provider)
 {
     xcb_dri3_open_cookie_t cookie;
     xcb_dri3_open_reply_t *reply;
     int fd;
 
-    cookie = xcb_dri3_open(x11->c, x11->root, x11->provider);
-    reply = xcb_dri3_open_reply(x11->c, cookie, NULL);
+    cookie = xcb_dri3_open(c, drawable, provider);
+    reply = xcb_dri3_open_reply(c, cookie, NULL);
     if (!reply)
-        return false;
+        return -1;
 
-    fd = (reply->nfd == 1) ? xcb_dri3_open_reply_fds(x11->c, reply)[0] : -1;
+    fd = (reply->nfd == 1) ? xcb_dri3_open_reply_fds(c, reply)[0] : -1;
     free(reply);
 
-    if (fd < 0)
-        return false;
-
-    fcntl(fd, F_SETFD, FD_CLOEXEC);
-    x11->fd = fd;
-
-    return true;
+    return fd;
 }
 
 /**
@@ -342,7 +337,7 @@ static XGL_RESULT wsi_x11_img_create(struct intel_wsi_x11 *x11,
     struct intel_mem *mem;
     XGL_RESULT ret;
 
-    if (!wsi_x11_is_format_presentable(x11, dev, info->format)) {
+    if (!x11_is_format_presentable(dev, info->format)) {
         intel_dev_log(dev, XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0,
                 XGL_NULL_HANDLE, 0, 0, "invalid presentable image format");
         return XGL_ERROR_INVALID_VALUE;
@@ -517,9 +512,6 @@ static void wsi_x11_destroy(struct intel_wsi_x11 *x11)
         sc = next;
     }
 
-    if (x11->fd >= 0)
-        close(x11->fd);
-
     intel_free(x11, x11);
 }
 
@@ -527,6 +519,21 @@ static struct intel_wsi_x11 *wsi_x11_create(struct intel_gpu *gpu,
                                             const XGL_WSI_X11_CONNECTION_INFO *info)
 {
     struct intel_wsi_x11 *x11;
+    int depth, fd;
+
+    if (!x11_is_dri3_and_present_supported(info->pConnection))
+        return NULL;
+
+    depth = x11_get_drawable_depth(info->pConnection, info->root);
+    if (!depth)
+        return NULL;
+
+    fd = x11_dri3_open(info->pConnection, info->root, info->provider);
+    if (fd < 0 || !x11_gpu_match_fd(gpu, fd)) {
+        if (fd >= 0)
+            close(fd);
+        return NULL;
+    }
 
     x11 = intel_alloc(gpu, sizeof(*x11), 0, XGL_SYSTEM_ALLOC_API_OBJECT);
     if (!x11)
@@ -535,18 +542,13 @@ static struct intel_wsi_x11 *wsi_x11_create(struct intel_gpu *gpu,
     memset(x11, 0, sizeof(*x11));
     /* there is no XGL_DBG_OBJECT_WSI_DISPLAY */
     intel_handle_init(&x11->handle, XGL_DBG_OBJECT_UNKNOWN, gpu->handle.icd);
-    x11->fd = -1;
 
     x11->c = info->pConnection;
     x11->root = info->root;
-    x11->provider = info->provider;
 
-    x11->root_depth = wsi_x11_get_root_depth(x11);
+    x11->root_depth = depth;
 
-    if (!wsi_x11_has_dri3_and_present(x11) ||
-        !wsi_x11_dri3_and_present_query_version(x11) ||
-        !wsi_x11_dri3_open(x11) ||
-        !wsi_x11_uses_gpu(x11, gpu)) {
+    if (!wsi_x11_dri3_and_present_query_version(x11)) {
         wsi_x11_destroy(x11);
         return NULL;
     }
