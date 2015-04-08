@@ -280,7 +280,9 @@ class Subcommand(object):
         funcs = []
         intercepted = []
         for proto in self.protos:
-            if proto.name != "GetProcAddr" and proto.name != "InitAndEnumerateGpus":
+            if proto.name == "GetProcAddr":
+                intercepted.append(proto)
+            else:
                 intercept = self.generate_intercept(proto, qual)
                 if intercept is None:
                     # fill in default intercept for certain entrypoints
