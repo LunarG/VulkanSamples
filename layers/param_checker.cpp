@@ -305,6 +305,17 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglQueueSubmit(XGL_QUEUE queue, uint32_t cmdB
     return result;
 }
 
+XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglQueueAddMemReference(XGL_QUEUE queue, XGL_GPU_MEMORY mem)
+{
+    XGL_RESULT result = nextTable.QueueAddMemReference(queue, mem);
+    return result;
+}
+
+XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglQueueRemoveMemReference(XGL_QUEUE queue, XGL_GPU_MEMORY mem)
+{
+    XGL_RESULT result = nextTable.QueueRemoveMemReference(queue, mem);
+    return result;
+}
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglQueueWaitIdle(XGL_QUEUE queue)
 {
 
