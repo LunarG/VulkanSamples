@@ -1268,6 +1268,79 @@ static void drm_intel_gem_bo_unreference(drm_intel_bo *bo)
 	}
 }
 
+static int drm_intel_gem_bo_map(drm_intel_bo *bo, int write_enable)
+{
+	drm_intel_bufmgr_gem *bufmgr_gem = (drm_intel_bufmgr_gem *) bo->bufmgr;
+	drm_intel_bo_gem *bo_gem = (drm_intel_bo_gem *) bo;
+	struct drm_i915_gem_set_domain set_domain;
+	int ret;
+
+	if (bo_gem->is_userptr) {
+		/* Return the same user ptr */
+		bo->virtual = bo_gem->user_virtual;
+		return 0;
+	}
+
+	pthread_mutex_lock(&bufmgr_gem->lock);
+
+	if (bo_gem->map_count++ == 0)
+		drm_intel_gem_bo_open_vma(bufmgr_gem, bo_gem);
+
+	if (!bo_gem->mem_virtual) {
+		struct drm_i915_gem_mmap mmap_arg;
+
+		DBG("bo_map: %d (%s), map_count=%d\n",
+		    bo_gem->gem_handle, bo_gem->name, bo_gem->map_count);
+
+		memclear(mmap_arg);
+		mmap_arg.handle = bo_gem->gem_handle;
+		mmap_arg.size = bo->size;
+		ret = drmIoctl(bufmgr_gem->fd,
+			       DRM_IOCTL_I915_GEM_MMAP,
+			       &mmap_arg);
+		if (ret != 0) {
+			ret = -errno;
+			DBG("%s:%d: Error mapping buffer %d (%s): %s .\n",
+			    __FILE__, __LINE__, bo_gem->gem_handle,
+			    bo_gem->name, strerror(errno));
+			if (--bo_gem->map_count == 0)
+				drm_intel_gem_bo_close_vma(bufmgr_gem, bo_gem);
+			pthread_mutex_unlock(&bufmgr_gem->lock);
+			return ret;
+		}
+		VG(VALGRIND_MALLOCLIKE_BLOCK(mmap_arg.addr_ptr, mmap_arg.size, 0, 1));
+		bo_gem->mem_virtual = (void *)(uintptr_t) mmap_arg.addr_ptr;
+	}
+	DBG("bo_map: %d (%s) -> %p\n", bo_gem->gem_handle, bo_gem->name,
+	    bo_gem->mem_virtual);
+	bo->virtual = bo_gem->mem_virtual;
+
+	memclear(set_domain);
+	set_domain.handle = bo_gem->gem_handle;
+	set_domain.read_domains = I915_GEM_DOMAIN_CPU;
+	if (write_enable)
+		set_domain.write_domain = I915_GEM_DOMAIN_CPU;
+	else
+		set_domain.write_domain = 0;
+	ret = drmIoctl(bufmgr_gem->fd,
+		       DRM_IOCTL_I915_GEM_SET_DOMAIN,
+		       &set_domain);
+	if (ret != 0) {
+		DBG("%s:%d: Error setting to CPU domain %d: %s\n",
+		    __FILE__, __LINE__, bo_gem->gem_handle,
+		    strerror(errno));
+	}
+
+	if (write_enable)
+		bo_gem->mapped_cpu_write = true;
+
+	drm_intel_gem_bo_mark_mmaps_incoherent(bo);
+	VG(VALGRIND_MAKE_MEM_DEFINED(bo_gem->mem_virtual, bo->size));
+	pthread_mutex_unlock(&bufmgr_gem->lock);
+
+	return 0;
+}
+
 static int map_bo(drm_intel_bo *bo)
 {
 	drm_intel_bufmgr_gem *bufmgr_gem = (drm_intel_bufmgr_gem *) bo->bufmgr;
@@ -1307,51 +1380,6 @@ static int map_bo(drm_intel_bo *bo)
 
 	drm_intel_gem_bo_mark_mmaps_incoherent(bo);
 	VG(VALGRIND_MAKE_MEM_DEFINED(bo_gem->mem_virtual, bo->size));
-
-	return 0;
-}
-
-static int drm_intel_gem_bo_map(drm_intel_bo *bo, int write_enable)
-{
-	drm_intel_bufmgr_gem *bufmgr_gem = (drm_intel_bufmgr_gem *) bo->bufmgr;
-	drm_intel_bo_gem *bo_gem = (drm_intel_bo_gem *) bo;
-	struct drm_i915_gem_set_domain set_domain;
-	int ret;
-
-	if (bo_gem->is_userptr) {
-		/* Return the same user ptr */
-		bo->virtual = bo_gem->user_virtual;
-		return 0;
-	}
-
-	pthread_mutex_lock(&bufmgr_gem->lock);
-
-        ret = map_bo(bo);
-        if (ret != 0) {
-		pthread_mutex_unlock(&bufmgr_gem->lock);
-		return ret;
-        }
-
-	memclear(set_domain);
-	set_domain.handle = bo_gem->gem_handle;
-	set_domain.read_domains = I915_GEM_DOMAIN_CPU;
-	if (write_enable)
-		set_domain.write_domain = I915_GEM_DOMAIN_CPU;
-	else
-		set_domain.write_domain = 0;
-	ret = drmIoctl(bufmgr_gem->fd,
-		       DRM_IOCTL_I915_GEM_SET_DOMAIN,
-		       &set_domain);
-	if (ret != 0) {
-		DBG("%s:%d: Error setting to CPU domain %d: %s\n",
-		    __FILE__, __LINE__, bo_gem->gem_handle,
-		    strerror(errno));
-	}
-
-	if (write_enable)
-		bo_gem->mapped_cpu_write = true;
-
-	pthread_mutex_unlock(&bufmgr_gem->lock);
 
 	return 0;
 }
