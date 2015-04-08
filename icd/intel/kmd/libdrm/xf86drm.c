@@ -40,6 +40,8 @@
 #include <string.h>
 #include <strings.h>
 #include <ctype.h>
+#include <dirent.h>
+#include <stddef.h>
 #include <fcntl.h>
 #include <errno.h>
 #include <signal.h>
@@ -50,6 +52,9 @@
 #include <sys/ioctl.h>
 #include <sys/time.h>
 #include <stdarg.h>
+#ifdef HAVE_SYS_MKDEV_H
+# include <sys/mkdev.h> /* defines major(), minor(), and makedev() on Solaris */
+#endif
 
 /* Not all systems have MAP_FAILED defined */
 #ifndef MAP_FAILED
@@ -109,11 +114,6 @@ drmDebugPrint(const char *format, va_list ap)
     return vfprintf(stderr, format, ap);
 }
 
-typedef int DRM_PRINTFLIKE(1, 0) (*debug_msg_func_t)(const char *format,
-						     va_list ap);
-
-static debug_msg_func_t drm_debug_print = drmDebugPrint;
-
 void
 drmMsg(const char *format, ...)
 {
@@ -125,16 +125,10 @@ drmMsg(const char *format, ...)
 	if (drm_server_info) {
 	  drm_server_info->debug_print(format,ap);
 	} else {
-	  drm_debug_print(format, ap);
+	  drmDebugPrint(format, ap);
 	}
 	va_end(ap);
     }
-}
-
-void
-drmSetDebugMsgFunction(debug_msg_func_t debug_msg_ptr)
-{
-    drm_debug_print = debug_msg_ptr;
 }
 
 static void *drmHashTable = NULL; /* Context switch callbacks */
@@ -272,6 +266,7 @@ static int drmMatchBusID(const char *id1, const char *id2, int pci_domain_ok)
  * If any other failure happened then it will output error mesage using
  * drmMsg() call.
  */
+#if !defined(UDEV)
 static int chown_check_return(const char *path, uid_t owner, gid_t group)
 {
 	int rv;
@@ -287,6 +282,7 @@ static int chown_check_return(const char *path, uid_t owner, gid_t group)
 			path, errno, strerror(errno));
 	return -1;
 }
+#endif
 
 /**
  * Open the DRM device, creating it if necessary.
@@ -308,10 +304,13 @@ static int drmOpenDevice(dev_t dev, int minor, int type)
     char            buf[64];
     int             fd;
     mode_t          devmode = DRM_DEV_MODE, serv_mode;
+    gid_t           serv_group;
+#if !defined(UDEV)
     int             isroot  = !geteuid();
     uid_t           user    = DRM_DEV_UID;
-    gid_t           group   = DRM_DEV_GID, serv_group;
-    
+    gid_t           group   = DRM_DEV_GID;
+#endif
+
     switch (type) {
     case DRM_NODE_PRIMARY:
 	    dev_name = DRM_DEV_NAME;
@@ -333,7 +332,6 @@ static int drmOpenDevice(dev_t dev, int minor, int type)
 	drm_server_info->get_perms(&serv_group, &serv_mode);
 	devmode  = serv_mode ? serv_mode : DRM_DEV_MODE;
 	devmode &= ~(S_IXUSR|S_IXGRP|S_IXOTH);
-	group = (serv_group >= 0) ? serv_group : DRM_DEV_GID;
     }
 
 #if !defined(UDEV)
@@ -354,6 +352,7 @@ static int drmOpenDevice(dev_t dev, int minor, int type)
     }
 
     if (drm_server_info) {
+	group = (serv_group >= 0) ? serv_group : DRM_DEV_GID;
 	chown_check_return(buf, user, group);
 	chmod(buf, devmode);
     }
@@ -519,6 +518,20 @@ static int drmGetMinorType(int minor)
         return type;
     default:
         return -1;
+    }
+}
+
+static const char *drmGetMinorName(int type)
+{
+    switch (type) {
+    case DRM_NODE_PRIMARY:
+        return "card";
+    case DRM_NODE_CONTROL:
+        return "controlD";
+    case DRM_NODE_RENDER:
+        return "renderD";
+    default:
+        return NULL;
     }
 }
 
@@ -1706,7 +1719,7 @@ int drmAgpEnable(int fd, unsigned long mode)
 {
     drm_agp_mode_t m;
 
-    memclear(mode);
+    memclear(m);
     m.mode = mode;
     if (drmIoctl(fd, DRM_IOCTL_AGP_ENABLE, &m))
 	return -errno;
@@ -2736,3 +2749,71 @@ int drmPrimeFDToHandle(int fd, int prime_fd, uint32_t *handle)
 	return 0;
 }
 
+static char *drmGetMinorNameForFD(int fd, int type)
+{
+#ifdef __linux__
+	DIR *sysdir;
+	struct dirent *pent, *ent;
+	struct stat sbuf;
+	const char *name = drmGetMinorName(type);
+	int len;
+	char dev_name[64], buf[64];
+	long name_max;
+	int maj, min;
+
+	if (!name)
+		return NULL;
+
+	len = strlen(name);
+
+	if (fstat(fd, &sbuf))
+		return NULL;
+
+	maj = major(sbuf.st_rdev);
+	min = minor(sbuf.st_rdev);
+
+	if (maj != DRM_MAJOR || !S_ISCHR(sbuf.st_mode))
+		return NULL;
+
+	snprintf(buf, sizeof(buf), "/sys/dev/char/%d:%d/device/drm", maj, min);
+
+	sysdir = opendir(buf);
+	if (!sysdir)
+		return NULL;
+
+	name_max = fpathconf(dirfd(sysdir), _PC_NAME_MAX);
+	if (name_max == -1)
+		goto out_close_dir;
+
+	pent = malloc(offsetof(struct dirent, d_name) + name_max + 1);
+	if (pent == NULL)
+		 goto out_close_dir;
+
+	while (readdir_r(sysdir, pent, &ent) == 0 && ent != NULL) {
+		if (strncmp(ent->d_name, name, len) == 0) {
+			free(pent);
+			closedir(sysdir);
+
+			snprintf(dev_name, sizeof(dev_name), DRM_DIR_NAME "/%s",
+				 ent->d_name);
+			return strdup(dev_name);
+		}
+	}
+
+	free(pent);
+
+out_close_dir:
+	closedir(sysdir);
+#endif
+	return NULL;
+}
+
+char *drmGetPrimaryDeviceNameFromFd(int fd)
+{
+	return drmGetMinorNameForFD(fd, DRM_NODE_PRIMARY);
+}
+
+char *drmGetRenderDeviceNameFromFd(int fd)
+{
+	return drmGetMinorNameForFD(fd, DRM_NODE_RENDER);
+}
