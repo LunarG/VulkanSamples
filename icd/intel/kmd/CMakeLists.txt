@@ -7,6 +7,7 @@ if(UNIX)
     set(libdrm_sources
         libdrm/xf86drm.c
         libdrm/xf86drmHash.c
+        libdrm/xf86drmMode.c
         libdrm/xf86drmRandom.c
         libdrm/intel/intel_bufmgr.c
         libdrm/intel/intel_bufmgr_gem.c
