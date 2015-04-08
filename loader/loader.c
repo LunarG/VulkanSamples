@@ -51,6 +51,8 @@
 struct loader_instance {
     struct loader_icd *icds;
     struct loader_instance *next;
+    uint32_t  extension_count;
+    char **extension_names;
 };
 
 struct loader_layers {
@@ -867,6 +869,7 @@ LOADER_EXPORT VkResult VKAPI vkCreateInstance(
     struct loader_scanned_icds *scanned_icds;
     struct loader_icd *icd;
     VkResult res = VK_ERROR_INITIALIZATION_FAILED;
+    uint32_t i;
 
     /* Scan/discover all ICD libraries in a single-threaded manner */
     loader_platform_thread_once(&once_icd, loader_icd_scan);
@@ -879,7 +882,15 @@ LOADER_EXPORT VkResult VKAPI vkCreateInstance(
         return VK_ERROR_OUT_OF_MEMORY;
     }
     memset(ptr_instance, 0, sizeof(struct loader_instance));
-
+    ptr_instance->extension_count = pCreateInfo->extensionCount;
+    ptr_instance->extension_names = (ptr_instance->extension_count > 0) ?
+                malloc(sizeof (char *) * ptr_instance->extension_count) : NULL;
+    for (i = 0; i < ptr_instance->extension_count; i++) {
+        ptr_instance->extension_names[i] = malloc(strlen(pCreateInfo->ppEnabledExtensionNames[i] + 1));
+        if (ptr_instance->extension_names[i] == NULL)
+            return VK_ERROR_OUT_OF_MEMORY;
+        strcpy(ptr_instance->extension_names[i], pCreateInfo->ppEnabledExtensionNames[i]);
+    }
     ptr_instance->next = loader.instances;
     loader.instances = ptr_instance;
 
@@ -915,6 +926,7 @@ LOADER_EXPORT VkResult VKAPI vkDestroyInstance(
     struct loader_instance *ptr_instance = (struct loader_instance *) instance;
     struct loader_scanned_icds *scanned_icds;
     VkResult res;
+    uint32_t i;
 
     // Remove this instance from the list of instances:
     struct loader_instance *prev = NULL;
@@ -922,6 +934,9 @@ LOADER_EXPORT VkResult VKAPI vkDestroyInstance(
     while (next != NULL) {
         if (next == ptr_instance) {
             // Remove this instance from the list:
+            for (i = 0; i < ptr_instance->extension_count; i++) {
+                free(ptr_instance->extension_names[i]);
+            }
             if (prev)
                 prev->next = next->next;
             else
