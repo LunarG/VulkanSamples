@@ -220,10 +220,7 @@ class DispatchTableOpsSubcommand(Subcommand):
         for proto in self.protos:
             if 'WsiX11AssociateConnection' == proto.name:
                 stmts.append("#if defined(__linux__) || defined(XCB_NVIDIA)")
-            if proto.name == "GetProcAddr":
-                stmts.append("table->%s = gpa; /* direct assignment */" %
-                        proto.name)
-            elif self.is_dispatchable_object_first_param(proto) or proto.name == "CreateInstance":
+            if self.is_dispatchable_object_first_param(proto) or proto.name == "CreateInstance":
                 stmts.append("table->%s = (PFN_vk%s) gpa(gpu, \"vk%s\");" %
                         (proto.name, proto.name, proto.name))
             else:

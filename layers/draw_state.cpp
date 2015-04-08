@@ -1426,9 +1426,6 @@ static void initDrawState(void)
 
     layer_initialize_dispatch_table(&nextTable, fpNextGPA, (VkPhysicalGpu) pCurObj->nextObject);
 
-    PFN_vkGetProcAddr fpGetProcAddr = (PFN_vkGetProcAddr)fpNextGPA((VkPhysicalGpu) pCurObj->nextObject, (char *) "vkGetProcAddr");
-    nextTable.GetProcAddr = fpGetProcAddr;
-
     if (!globalLockInitialized)
     {
         // TODO/TBD: Need to delete this mutex sometime.  How???  One
