@@ -159,16 +159,6 @@ class LoaderEntrypointsSubcommand(Subcommand):
                 func.append("    VkResult res;")
             func.append("")
 
-            # active layers before dispatching CreateDevice
-            if proto.name == "CreateDevice":
-                func.append("    {")
-                func.append("        uint32_t gpu_index;")
-                func.append("        struct loader_icd *icd = loader_get_icd((const VkBaseLayerObject *) gpu, &gpu_index);")
-                func.append("        loader_activate_layers((void *) icd, gpu_index, %s->extensionCount, %s->ppEnabledExtensionNames);"
-                        % (proto.params[1].name, proto.params[1].name))
-                func.append("    }")
-                func.append("")
-
             # get dispatch table and unwrap GPUs
             for param in proto.params:
                 stmt = ""

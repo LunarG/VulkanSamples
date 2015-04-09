@@ -1014,6 +1014,8 @@ LOADER_EXPORT VkResult VKAPI vkEnumerateGpus(
                 const VkLayerDispatchTable **disp;
                 disp = (const VkLayerDispatchTable **) gpus[i];
                 *disp = icd->loader_dispatch + i;
+                loader_activate_layers(icd, i, ptr_instance->extension_count,
+                        (const char *const*) ptr_instance->extension_names);
             }
 
             count += n;
