@@ -72,11 +72,11 @@ if (NOT (CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_CURRENT_BINARY_DIR))
         )
 endif()
 
-add_executable(xglbase init.cpp ${COMMON_CPP})
-set_target_properties(xglbase
+add_executable(vkbase init.cpp ${COMMON_CPP})
+set_target_properties(vkbase
    PROPERTIES
    COMPILE_DEFINITIONS "GTEST_LINKED_AS_SHARED_LIBRARY=1")
-target_link_libraries(xglbase XGL gtest gtest_main ${TEST_LIBRARIES})
+target_link_libraries(vkbase XGL gtest gtest_main ${TEST_LIBRARIES})
 
 add_executable(vk_image_tests image_tests.cpp ${COMMON_CPP})
 set_target_properties(vk_image_tests
