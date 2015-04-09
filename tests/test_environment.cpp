@@ -7,7 +7,7 @@
 namespace xgl_testing {
 
 Environment::Environment() :
-    default_dev_(0)
+    m_connection(NULL), default_dev_(0)
 {
     app_.sType = XGL_STRUCTURE_TYPE_APPLICATION_INFO;
     app_.pAppName = "xgl_testing";
@@ -113,12 +113,14 @@ void Environment::X11SetUp()
 
 void Environment::TearDown()
 {
+    if (m_connection)
+        xcb_disconnect(m_connection);
+
     // destroy devices first
     for (std::vector<Device *>::iterator it = devs_.begin(); it != devs_.end(); it++)
         delete *it;
     devs_.clear();
 
     xglDestroyInstance(inst);
-    xcb_disconnect(m_connection);
 }
 } // xgl_testing namespace
