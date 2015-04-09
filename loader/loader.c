@@ -1055,6 +1055,7 @@ LOADER_EXPORT void * VKAPI vkGetProcAddr(VkPhysicalGpu gpu, const char * pName)
     }
 }
 
+#if 0
 LOADER_EXPORT VkResult VKAPI vkGetExtensionSupport(VkPhysicalGpu gpu, const char *pExtName)
 {
     uint32_t gpu_index;
@@ -1065,6 +1066,7 @@ LOADER_EXPORT VkResult VKAPI vkGetExtensionSupport(VkPhysicalGpu gpu, const char
 
     return find_layer_extension(icd, gpu_index, pExtName, NULL);
 }
+#endif
 
 LOADER_EXPORT VkResult VKAPI vkEnumerateLayers(VkPhysicalGpu gpu, size_t maxLayerCount, size_t maxStringSize, size_t* pOutLayerCount, char* const* pOutLayers, void* pReserved)
 {

@@ -102,7 +102,7 @@ class LoaderEntrypointsSubcommand(Subcommand):
 
     def _is_dispatchable(self, proto):
         if proto.name in ["GetProcAddr", "DestroyInstance", "EnumerateGpus",
-                "EnumerateLayers", "DbgRegisterMsgCallback", "GetExtensionSupport",
+                "EnumerateLayers", "DbgRegisterMsgCallback",
                 "DbgUnregisterMsgCallback", "DbgSetGlobalOption"]:
             return False
 
