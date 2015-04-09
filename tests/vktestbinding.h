@@ -149,7 +149,7 @@ public:
     void unmap() const;
 
 protected:
-    explicit Object() : mem_alloc_count_(0), internal_mems_(NULL), primary_mem_(NULL) {}
+    explicit Object() : mem_alloc_count_(0), internal_mems_(NULL), primary_mem_(NULL), bound(false) {}
     explicit Object(VK_OBJECT obj) : mem_alloc_count_(0), internal_mems_(NULL), primary_mem_(NULL) { init(obj); }
     ~Object() { cleanup(); }
 
@@ -170,6 +170,7 @@ private:
     uint32_t mem_alloc_count_;
     GpuMemory *internal_mems_;
     GpuMemory *primary_mem_;
+    bool bound;
 };
 
 class DynamicStateObject : public Object {
