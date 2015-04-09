@@ -1204,6 +1204,7 @@ typedef enum VkImageCreateFlags_
     VK_IMAGE_CREATE_SHAREABLE_BIT                           = 0x00000004,
     VK_IMAGE_CREATE_SPARSE_BIT                              = 0x00000008,
     VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT                      = 0x00000010,   // Allows image views to have different format than the base image
+    VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT                     = 0x00000020,   // Allows creating image views with cube type from the created image
     VK_MAX_ENUM(VkImageCreateFlags_)
 } VkImageCreateFlags;
 
