@@ -469,19 +469,52 @@ class GenericLayerSubcommand(Subcommand):
 
         return "\n\n".join(body)
 
-class ApiDumpSubcommand(Subcommand):
+class APIDumpSubcommand(Subcommand):
     def generate_header(self):
         header_txt = []
-        header_txt.append('#include <stdio.h>\n#include <stdlib.h>\n#include <string.h>')
+        header_txt.append('#include <fstream>')
+        header_txt.append('#include <iostream>')
+        header_txt.append('#include <string>')
+        header_txt.append('')
+        header_txt.append('static std::ofstream fileStream;')
+        header_txt.append('static std::string fileName = "vk_apidump.txt";')
+        header_txt.append('std::ostream* outputStream = NULL;')
+        header_txt.append('void ConfigureOutputStream(bool writeToFile, bool flushAfterWrite)')
+        header_txt.append('{')
+        header_txt.append('    if(writeToFile)')
+        header_txt.append('    {')
+        header_txt.append('        fileStream.open(fileName);')
+        header_txt.append('        outputStream = &fileStream;')
+        header_txt.append('    }')
+        header_txt.append('    else')
+        header_txt.append('    {')
+        header_txt.append('        outputStream = &std::cout;')
+        header_txt.append('    }')
+        header_txt.append('')
+        header_txt.append('    if(flushAfterWrite)')
+        header_txt.append('    {')
+        header_txt.append('        outputStream->sync_with_stdio(true);')
+        header_txt.append('    }')
+        header_txt.append('    else')
+        header_txt.append('    {')
+        header_txt.append('        outputStream->sync_with_stdio(false);')
+        header_txt.append('    }')
+        header_txt.append('}')
+        header_txt.append('')
         header_txt.append('#include "loader_platform.h"')
-        header_txt.append('#include "vkLayer.h"\n#include "vk_struct_string_helper.h"\n')
+        header_txt.append('#include "vkLayer.h"')
+        header_txt.append('#include "vk_struct_string_helper_cpp.h"')
+        header_txt.append('')
         header_txt.append('// The following is #included again to catch certain OS-specific functions being used:')
         header_txt.append('#include "loader_platform.h"')
+        header_txt.append('')
         header_txt.append('static VK_LAYER_DISPATCH_TABLE nextTable;')
-        header_txt.append('static VK_BASE_LAYER_OBJECT *pCurObj;\n')
+        header_txt.append('static VK_BASE_LAYER_OBJECT *pCurObj;')
+        header_txt.append('')
         header_txt.append('static LOADER_PLATFORM_THREAD_ONCE_DECLARATION(tabOnce);')
         header_txt.append('static int printLockInitialized = 0;')
-        header_txt.append('static loader_platform_thread_mutex printLock;\n')
+        header_txt.append('static loader_platform_thread_mutex printLock;')
+        header_txt.append('')
         header_txt.append('#define MAX_TID 513')
         header_txt.append('static loader_platform_thread_id tidMapping[MAX_TID] = {0};')
         header_txt.append('static uint32_t maxTID = 0;')
@@ -501,223 +534,72 @@ class ApiDumpSubcommand(Subcommand):
         header_txt.append('}')
         return "\n".join(header_txt)
 
-    def generate_intercept(self, proto, qual):
-        decl = proto.c_func(prefix="vk", attr="VKAPI")
-        param0_name = proto.params[0].name
-        ret_val = ''
-        stmt = ''
-        funcs = []
-        sp_param_dict = {} # Store 'index' for struct param to print, or an name of binding "Count" param for array to print
-        create_params = 0 # Num of params at end of function that are created and returned as output values
-        if 'WsiX11CreatePresentableImage' in proto.name:
-            create_params = -2
-        elif 'Create' in proto.name or 'Alloc' in proto.name or 'MapMemory' in proto.name:
-            create_params = -1
-        if proto.ret != "void":
-            ret_val = "VK_RESULT result = "
-            stmt = "    return result;\n"
-        f_open = ''
-        f_close = ''
-        if "File" in self.layer_name:
-            file_mode = "a"
-            if 'CreateDevice' in proto.name:
-                file_mode = "w"
-            f_open = 'loader_platform_thread_lock_mutex(&printLock);\n    pOutFile = fopen(outFileName, "%s");\n    ' % (file_mode)
-            log_func = 'fprintf(pOutFile, "t{%%u} vk%s(' % proto.name
-            f_close = '\n    fclose(pOutFile);\n    loader_platform_thread_unlock_mutex(&printLock);'
-        else:
-            f_open = 'loader_platform_thread_lock_mutex(&printLock);\n    '
-            log_func = 'printf("t{%%u} vk%s(' % proto.name
-            f_close = '\n    loader_platform_thread_unlock_mutex(&printLock);'
-        print_vals = ', getTIDIndex()'
-        pindex = 0
-        prev_count_name = ''
-        for p in proto.params:
-            cp = False
-            if 0 != create_params:
-                # If this is any of the N last params of the func, treat as output
-                for y in range(-1, create_params-1, -1):
-                    if p.name == proto.params[y].name:
-                        cp = True
-            (pft, pfi) = self._get_printf_params(p.ty, p.name, cp)
-            if self.no_addr and "%p" == pft:
-                (pft, pfi) = ("%s", '"addr"')
-            log_func += '%s = %s, ' % (p.name, pft)
-            print_vals += ', %s' % (pfi)
-            # Catch array inputs that are bound by a "Count" param
-            if prev_count_name != '' and (prev_count_name.strip('Count')[1:] in p.name or 'slotCount' == prev_count_name):
-                sp_param_dict[pindex] = prev_count_name
-            elif 'pDescriptorSets' == p.name and proto.params[-1].name == 'pCount':
-                sp_param_dict[pindex] = '*pCount'
-            elif 'Wsi' not in proto.name and vk_helper.is_type(p.ty.strip('*').strip('const '), 'struct'):
-                sp_param_dict[pindex] = 'index'
-            pindex += 1
-            if p.name.endswith('Count'):
-                if '*' in p.ty:
-                    prev_count_name = "*%s" % p.name
-                else:
-                    prev_count_name = p.name
-            else:
-                prev_count_name = ''
-        log_func = log_func.strip(', ')
-        if proto.ret != "void":
-            log_func += ') = %s\\n"'
-            print_vals += ', string_VK_RESULT(result)'
-        else:
-            log_func += ')\\n"'
-        log_func = '%s%s);' % (log_func, print_vals)
-        if len(sp_param_dict) > 0:
-            i_decl = False
-            log_func += '\n    char *pTmpStr = "";'
-            for sp_index in sorted(sp_param_dict):
-                # TODO : Clean this if/else block up, too much duplicated code
-                if 'index' == sp_param_dict[sp_index]:
-                    cis_print_func = 'vk_print_%s' % (proto.params[sp_index].ty.strip('const ').strip('*').lower())
-                    var_name = proto.params[sp_index].name
-                    if proto.params[sp_index].name != 'color':
-                        log_func += '\n    if (%s) {' % (proto.params[sp_index].name)
-                    else:
-                        var_name = "&%s" % proto.params[sp_index].name
-                    log_func += '\n        pTmpStr = %s(%s, "    ");' % (cis_print_func, var_name)
-                    if "File" in self.layer_name:
-                        if self.no_addr:
-                            log_func += '\n        fprintf(pOutFile, "   %s (addr)\\n%%s\\n", pTmpStr);' % (var_name)
-                        else:
-                            log_func += '\n        fprintf(pOutFile, "   %s (%%p)\\n%%s\\n", (void*)%s, pTmpStr);' % (var_name, var_name)
-                    else:
-                        if self.no_addr:
-                            log_func += '\n        printf("   %s (addr)\\n%%s\\n", pTmpStr);' % (proto.params[sp_index].name)
-                        else:
-                            log_func += '\n        printf("   %s (%%p)\\n%%s\\n", (void*)%s, pTmpStr);' % (proto.params[sp_index].name, var_name)
-                        log_func += '\n        fflush(stdout);'
-                    log_func += '\n        free(pTmpStr);'
-                    if proto.params[sp_index].name != 'color':
-                        log_func += '\n    }'
-                else: # should have a count value stored to iterate over array
-                    if vk_helper.is_type(proto.params[sp_index].ty.strip('*').strip('const '), 'struct'):
-                        cis_print_func = 'pTmpStr = vk_print_%s(&%s[i], "    ");' % (proto.params[sp_index].ty.strip('const ').strip('*').lower(), proto.params[sp_index].name)
-                    else:
-                        cis_print_func = 'pTmpStr = (char*)malloc(32);\n        sprintf(pTmpStr, "    %%p", %s[i]);' % proto.params[sp_index].name
-                    if not i_decl:
-                        log_func += '\n    uint32_t i;'
-                        i_decl = True
-                    log_func += '\n    for (i = 0; i < %s; i++) {' % (sp_param_dict[sp_index])
-                    log_func += '\n        %s' % (cis_print_func)
-                    if "File" in self.layer_name:
-                        if self.no_addr:
-                            log_func += '\n        fprintf(pOutFile, "   %s[%%i] (addr)\\n%%s\\n", i, pTmpStr);' % (proto.params[sp_index].name)
-                        else:
-                            log_func += '\n        fprintf(pOutFile, "   %s[%%i] (%%p)\\n%%s\\n", i, (void*)%s, pTmpStr);' % (proto.params[sp_index].name, proto.params[sp_index].name)
-                    else:
-                        if self.no_addr:
-                            log_func += '\n        printf("   %s[%%i] (addr)\\n%%s\\n", i, pTmpStr);' % (proto.params[sp_index].name)
-                        else:
-                            log_func += '\n        printf("   %s[%%i] (%%p)\\n%%s\\n", i, (void*)%s, pTmpStr);' % (proto.params[sp_index].name, proto.params[sp_index].name)
-                        log_func += '\n        fflush(stdout);'
-                    log_func += '\n        free(pTmpStr);\n    }'
-        if 'WsiX11AssociateConnection' == proto.name:
-            funcs.append("#if defined(__linux__) || defined(XCB_NVIDIA)")
-        if proto.name == "EnumerateLayers":
-            c_call = proto.c_call().replace("(" + proto.params[0].name, "((VK_PHYSICAL_GPU)gpuw->nextObject", 1)
-            funcs.append('%s%s\n'
-                     '{\n'
-                     '    if (gpu != NULL) {\n'
-                     '        VK_BASE_LAYER_OBJECT* gpuw = (VK_BASE_LAYER_OBJECT *) %s;\n'
-                     '        pCurObj = gpuw;\n'
-                     '        loader_platform_thread_once(&tabOnce, init%s);\n'
-                     '        %snextTable.%s;\n'
-                     '        %s    %s    %s\n'
-                     '    %s'
-                     '    } else {\n'
-                     '        if (pOutLayerCount == NULL || pOutLayers == NULL || pOutLayers[0] == NULL)\n'
-                     '            return VK_ERROR_INVALID_POINTER;\n'
-                     '        // This layer compatible with all GPUs\n'
-                     '        *pOutLayerCount = 1;\n'
-                     '        strncpy((char *) pOutLayers[0], "%s", maxStringSize);\n'
-                     '        return VK_SUCCESS;\n'
-                     '    }\n'
-                         '}' % (qual, decl, proto.params[0].name, self.layer_name, ret_val, c_call,f_open, log_func, f_close, stmt, self.layer_name))
-        elif 'GetExtensionSupport' == proto.name:
-            c_call = proto.c_call().replace("(" + proto.params[0].name, "((VK_PHYSICAL_GPU)gpuw->nextObject", 1)
-            funcs.append('%s%s\n'
-                         '{\n'
-                         '    VK_BASE_LAYER_OBJECT* gpuw = (VK_BASE_LAYER_OBJECT *) %s;\n'
-                         '    VK_RESULT result;\n'
-                         '    /* This entrypoint is NOT going to init its own dispatch table since loader calls here early */\n'
-                         '    if (!strncmp(pExtName, "%s", strlen("%s")))\n'
-                         '    {\n'
-                         '        result = VK_SUCCESS;\n'
-                         '    } else if (nextTable.GetExtensionSupport != NULL)\n'
-                         '    {\n'
-                         '        result = nextTable.%s;\n'
-                         '        %s    %s        %s\n'
-                         '    } else\n'
-                         '    {\n'
-                         '        result = VK_ERROR_INVALID_EXTENSION;\n'
-                         '    }\n'
-                         '%s'
-                         '}' % (qual, decl, proto.params[0].name, self.layer_name, self.layer_name, c_call, f_open, log_func, f_close, stmt))
-        elif proto.params[0].ty != "VK_PHYSICAL_GPU":
-            funcs.append('%s%s\n'
-                     '{\n'
-                     '    %snextTable.%s;\n'
-                     '    %s%s%s\n'
-                     '%s'
-                     '}' % (qual, decl, ret_val, proto.c_call(), f_open, log_func, f_close, stmt))
-        else:
-            c_call = proto.c_call().replace("(" + proto.params[0].name, "((VK_PHYSICAL_GPU)gpuw->nextObject", 1)
-            funcs.append('%s%s\n'
-                     '{\n'
-                     '    VK_BASE_LAYER_OBJECT* gpuw = (VK_BASE_LAYER_OBJECT *) %s;\n'
-                     '    pCurObj = gpuw;\n'
-                     '    loader_platform_thread_once(&tabOnce, init%s);\n'
-                     '    %snextTable.%s;\n'
-                     '    %s%s%s\n'
-                     '%s'
-                     '}' % (qual, decl, proto.params[0].name, self.layer_name, ret_val, c_call, f_open, log_func, f_close, stmt))
-        if 'WsiX11QueuePresent' == proto.name:
-            funcs.append("#endif")
-        return "\n\n".join(funcs)
-
-    def generate_body(self):
-        self.layer_name = "APIDump"
-        body = [self._generate_layer_initialization_with_lock(),
-                self._generate_dispatch_entrypoints("VK_LAYER_EXPORT"),
-                self._generate_layer_gpa_function()]
-
-        return "\n\n".join(body)
-
-class ApiDumpCppSubcommand(Subcommand):
-    def generate_header(self):
-        header_txt = []
-        header_txt.append('#include <stdio.h>\n#include <stdlib.h>\n#include <string.h>')
-        header_txt.append('#include "loader_platform.h"')
-        header_txt.append('#include "vkLayer.h"\n#include "vk_struct_string_helper_cpp.h"\n')
-        header_txt.append('// The following is #included again to catch certain OS-specific functions being used:')
-        header_txt.append('#include "loader_platform.h"')
-        header_txt.append('static VK_LAYER_DISPATCH_TABLE nextTable;')
-        header_txt.append('static VK_BASE_LAYER_OBJECT *pCurObj;\n')
-        header_txt.append('static LOADER_PLATFORM_THREAD_ONCE_DECLARATION(tabOnce);')
-        header_txt.append('static int printLockInitialized = 0;')
-        header_txt.append('static loader_platform_thread_mutex printLock;\n')
-        header_txt.append('#define MAX_TID 513')
-        header_txt.append('static loader_platform_thread_id tidMapping[MAX_TID] = {0};')
-        header_txt.append('static uint32_t maxTID = 0;')
-        header_txt.append('// Map actual TID to an index value and return that index')
-        header_txt.append('//  This keeps TIDs in range from 0-MAX_TID and simplifies compares between runs')
-        header_txt.append('static uint32_t getTIDIndex() {')
-        header_txt.append('    loader_platform_thread_id tid = loader_platform_get_thread_id();')
-        header_txt.append('    for (uint32_t i = 0; i < maxTID; i++) {')
-        header_txt.append('        if (tid == tidMapping[i])')
-        header_txt.append('            return i;')
-        header_txt.append('    }')
-        header_txt.append("    // Don't yet have mapping, set it and return newly set index")
-        header_txt.append('    uint32_t retVal = (uint32_t) maxTID;')
-        header_txt.append('    tidMapping[maxTID++] = tid;')
-        header_txt.append('    assert(maxTID < MAX_TID);')
-        header_txt.append('    return retVal;')
-        header_txt.append('}')
-        return "\n".join(header_txt)
+    def generate_init(self):
+        func_body = []
+        func_body.append('#include "vk_dispatch_table_helper.h"')
+        func_body.append('#include "layers_config.h"')
+        func_body.append('')
+        func_body.append('static void init%s(void)' % self.layer_name)
+        func_body.append('{')
+        func_body.append('    using namespace StreamControl;')
+        func_body.append('')
+        func_body.append('    char const*const writeToFileStr = getLayerOption("APIDumpFile");')
+        func_body.append('    bool writeToFile = false;')
+        func_body.append('    if(writeToFileStr != NULL)')
+        func_body.append('    {')
+        func_body.append('        if(strcmp(writeToFileStr, "TRUE") == 0)')
+        func_body.append('        {')
+        func_body.append('            writeToFile = true;')
+        func_body.append('        }')
+        func_body.append('        else if(strcmp(writeToFileStr, "FALSE") == 0)')
+        func_body.append('        {')
+        func_body.append('            writeToFile = false;')
+        func_body.append('        }')
+        func_body.append('    }')
+        func_body.append('')
+        func_body.append('    char const*const noAddrStr = getLayerOption("APIDumpNoAddr");')
+        func_body.append('    if(noAddrStr != NULL)')
+        func_body.append('    {')
+        func_body.append('        if(strcmp(noAddrStr, "FALSE") == 0)')
+        func_body.append('        {')
+        func_body.append('            StreamControl::writeAddress = true;')
+        func_body.append('        }')
+        func_body.append('        else if(strcmp(noAddrStr, "TRUE") == 0)')
+        func_body.append('        {')
+        func_body.append('            StreamControl::writeAddress = false;')
+        func_body.append('        }')
+        func_body.append('    }')
+        func_body.append('')
+        func_body.append('    char const*const flushAfterWriteStr = getLayerOption("APIDumpFlush");')
+        func_body.append('    bool flushAfterWrite = false;')
+        func_body.append('    if(flushAfterWriteStr != NULL)')
+        func_body.append('    {')
+        func_body.append('        if(strcmp(flushAfterWriteStr, "TRUE") == 0)')
+        func_body.append('        {')
+        func_body.append('            flushAfterWrite = true;')
+        func_body.append('        }')
+        func_body.append('        else if(strcmp(flushAfterWriteStr, "FALSE") == 0)')
+        func_body.append('        {')
+        func_body.append('            flushAfterWrite = false;')
+        func_body.append('        }')
+        func_body.append('    }')
+        func_body.append('')
+        func_body.append('    ConfigureOutputStream(writeToFile, flushAfterWrite);')
+        func_body.append('')
+        func_body.append('    vkGetProcAddrType fpNextGPA;')
+        func_body.append('    fpNextGPA = pCurObj->pGPA;')
+        func_body.append('    assert(fpNextGPA);')
+        func_body.append('    layer_initialize_dispatch_table(&nextTable, fpNextGPA, (VK_PHYSICAL_GPU) pCurObj->nextObject);')
+        func_body.append('')
+        func_body.append('    if (!printLockInitialized)')
+        func_body.append('    {')
+        func_body.append('        // TODO/TBD: Need to delete this mutex sometime.  How???')
+        func_body.append('        loader_platform_thread_create_mutex(&printLock);')
+        func_body.append('        printLockInitialized = 1;')
+        func_body.append('    }')
+        func_body.append('}')
+        func_body.append('')
+        return "\n".join(func_body)
 
     def generate_intercept(self, proto, qual):
         decl = proto.c_func(prefix="vk", attr="VKAPI")
@@ -734,19 +616,11 @@ class ApiDumpCppSubcommand(Subcommand):
         if proto.ret != "void":
             ret_val = "VK_RESULT result = "
             stmt = "    return result;\n"
-        f_open = ''
-        f_close = ''
-        if "File" in self.layer_name:
-            file_mode = "a"
-            if 'CreateDevice' in proto.name:
-                file_mode = "w"
-            f_open = 'loader_platform_thread_lock_mutex(&printLock);\n    pOutFile = fopen(outFileName, "%s");\n    ' % (file_mode)
-            log_func = 'fprintf(pOutFile, "t{%%u} vk%s(' % proto.name
-            f_close = '\n    fclose(pOutFile);\n    loader_platform_thread_unlock_mutex(&printLock);'
-        else:
-            f_open = 'loader_platform_thread_lock_mutex(&printLock);\n    '
-            log_func = 'cout << "t{" << getTIDIndex() << "} vk%s(' % proto.name
-            f_close = '\n    loader_platform_thread_unlock_mutex(&printLock);'
+        f_open = 'loader_platform_thread_lock_mutex(&printLock);\n    '
+        log_func = '    if (StreamControl::writeAddress == true) {'
+        log_func += '\n        (*outputStream) << "t{" << getTIDIndex() << "} vk%s(' % proto.name
+        log_func_no_addr = '\n        (*outputStream) << "t{" << getTIDIndex() << "} vk%s(' % proto.name
+        f_close = '\n    loader_platform_thread_unlock_mutex(&printLock);'
         pindex = 0
         prev_count_name = ''
         for p in proto.params:
@@ -757,10 +631,11 @@ class ApiDumpCppSubcommand(Subcommand):
                     if p.name == proto.params[y].name:
                         cp = True
             (pft, pfi) = self._get_printf_params(p.ty, p.name, cp, cpp=True)
-            if self.no_addr and "%p" == pft:
-                (pft, pfi) = ("%s", '"addr"')
             log_func += '%s = " << %s << ", ' % (p.name, pfi)
-            #print_vals += ', %s' % (pfi)
+            if "%p" == pft:
+                log_func_no_addr += '%s = address, ' % (p.name)
+            else:
+                log_func_no_addr += '%s = " << %s << ", ' % (p.name, pfi)
             if prev_count_name != '' and (prev_count_name.strip('Count')[1:] in p.name or 'slotCount' == prev_count_name):
                 sp_param_dict[pindex] = prev_count_name
             elif 'pDescriptorSets' == p.name and proto.params[-1].name == 'pCount':
@@ -776,39 +651,29 @@ class ApiDumpCppSubcommand(Subcommand):
             else:
                 prev_count_name = ''
         log_func = log_func.strip(', ')
+        log_func_no_addr = log_func_no_addr.strip(', ')
         if proto.ret != "void":
             log_func += ') = " << string_VK_RESULT((VK_RESULT)result) << endl'
-            #print_vals += ', string_VK_RESULT_CODE(result)'
+            log_func_no_addr += ') = " << string_VK_RESULT((VK_RESULT)result) << endl'
         else:
             log_func += ')\\n"'
+            log_func_no_addr += ')\\n"'
         log_func += ';'
+        log_func_no_addr += ';'
+        log_func += '\n    }\n    else {%s;\n    }' % log_func_no_addr;
         if len(sp_param_dict) > 0:
             i_decl = False
             log_func += '\n    string tmp_str;'
             for sp_index in sp_param_dict:
                 if 'index' == sp_param_dict[sp_index]:
                     cis_print_func = 'vk_print_%s' % (proto.params[sp_index].ty.strip('const ').strip('*').lower())
-                    var_name = proto.params[sp_index].name
-                    if proto.params[sp_index].name != 'color':
-                        log_func += '\n    if (%s) {' % (proto.params[sp_index].name)
-                    else:
-                        var_name = '&%s' % (proto.params[sp_index].name)
-                    log_func += '\n        tmp_str = %s(%s, "    ");' % (cis_print_func, var_name)
-                    if "File" in self.layer_name:
-                        if self.no_addr:
-                            log_func += '\n        fprintf(pOutFile, "   %s (addr)\\n%%s\\n", pTmpStr);' % (proto.params[sp_index].name)
-                        else:
-                            log_func += '\n        fprintf(pOutFile, "   %s (%%p)\\n%%s\\n", (void*)%s, pTmpStr);' % (proto.params[sp_index].name, var_name)
-                    else:
-                        if self.no_addr:
-                            #log_func += '\n        printf("   %s (addr)\\n%%s\\n", pTmpStr);' % (proto.params[sp_index].name)
-                            log_func += '\n        cout << "   %s (addr)" << endl << tmp_str << endl;' % (proto.params[sp_index].name)
-                        else:
-                            #log_func += '\n        printf("   %s (%%p)\\n%%s\\n", (void*)%s, pTmpStr);' % (proto.params[sp_index].name, proto.params[sp_index].name)
-                            log_func += '\n        cout << "   %s (" << %s << ")" << endl << tmp_str << endl;' % (proto.params[sp_index].name, var_name)
-                        #log_func += '\n        fflush(stdout);'
-                    if proto.params[sp_index].name != 'color':
-                        log_func += '\n    }'
+                    local_name = proto.params[sp_index].name
+                    if '*' not in proto.params[sp_index].ty:
+                        local_name = '&%s' % proto.params[sp_index].name
+                    log_func += '\n    if (%s) {' % (local_name)
+                    log_func += '\n        tmp_str = %s(%s, "    ");' % (cis_print_func, local_name)
+                    log_func += '\n        (*outputStream) << "   %s (" << %s << ")" << endl << tmp_str << endl;' % (local_name, local_name)
+                    log_func += '\n    }'
                 else: # We have a count value stored to iterate over an array
                     print_cast = ''
                     print_func = ''
@@ -818,7 +683,7 @@ class ApiDumpCppSubcommand(Subcommand):
                         #cis_print_func = 'tmp_str = vk_print_%s(&%s[i], "    ");' % (proto.params[sp_index].ty.strip('const ').strip('*').lower(), proto.params[sp_index].name)
 # TODO : Need to display this address as a string
                     else:
-                        print_cast = '(void*)'
+                        print_cast = ''
                         print_func = 'string_convert_helper'
                         #cis_print_func = 'tmp_str = string_convert_helper((void*)%s[i], "    ");' % proto.params[sp_index].name
                     cis_print_func = 'tmp_str = %s(%s%s[i], "    ");' % (print_func, print_cast, proto.params[sp_index].name)
@@ -829,20 +694,7 @@ class ApiDumpCppSubcommand(Subcommand):
                         i_decl = True
                     log_func += '\n    for (i = 0; i < %s; i++) {' % (sp_param_dict[sp_index])
                     log_func += '\n        %s' % (cis_print_func)
-                    if "File" in self.layer_name:
-                        if self.no_addr:
-                            log_func += '\n        fprintf(pOutFile, "   %s (addr)\\n%%s\\n", pTmpStr);' % (proto.params[sp_index].name)
-                        else:
-                            log_func += '\n        fprintf(pOutFile, "   %s (%%p)\\n%%s\\n", (void*)%s, pTmpStr);' % (proto.params[sp_index].name, proto.params[sp_index].name)
-                    else:
-                        if self.no_addr:
-                            #log_func += '\n        printf("   %s (addr)\\n%%s\\n", pTmpStr);' % (proto.params[sp_index].name)
-                            log_func += '\n        cout << "   %s[" << (uint32_t)i << "] (addr)" << endl << tmp_str << endl;' % (proto.params[sp_index].name)
-                        else:
-                            #log_func += '\n        printf("   %s (%%p)\\n%%s\\n", (void*)%s, pTmpStr);' % (proto.params[sp_index].name, proto.params[sp_index].name)
-                            #log_func += '\n        cout << "   %s[" << (uint32_t)i << "] (" << %s[i] << ")" << endl << tmp_str << endl;' % (proto.params[sp_index].name, proto.params[sp_index].name)
-                            log_func += '\n        cout << "   %s[" << i << "] (" << %s%s[i] << ")" << endl << tmp_str << endl;' % (proto.params[sp_index].name, print_cast, proto.params[sp_index].name)
-                        #log_func += '\n        fflush(stdout);'
+                    log_func += '\n        (*outputStream) << "   %s[" << i << "] (" << %s%s[i] << ")" << endl << tmp_str << endl;' % (proto.params[sp_index].name, '&', proto.params[sp_index].name)
                     log_func += '\n    }'
         if 'WsiX11AssociateConnection' == proto.name:
             funcs.append("#if defined(__linux__) || defined(XCB_NVIDIA)")
@@ -850,6 +702,7 @@ class ApiDumpCppSubcommand(Subcommand):
             c_call = proto.c_call().replace("(" + proto.params[0].name, "((VK_PHYSICAL_GPU)gpuw->nextObject", 1)
             funcs.append('%s%s\n'
                      '{\n'
+                     '    using namespace StreamControl;\n'
                      '    if (gpu != NULL) {\n'
                      '        VK_BASE_LAYER_OBJECT* gpuw = (VK_BASE_LAYER_OBJECT *) %s;\n'
                      '        pCurObj = gpuw;\n'
@@ -889,6 +742,7 @@ class ApiDumpCppSubcommand(Subcommand):
         elif proto.params[0].ty != "VK_PHYSICAL_GPU":
             funcs.append('%s%s\n'
                      '{\n'
+                     '    using namespace StreamControl;\n'
                      '    %snextTable.%s;\n'
                      '    %s%s%s\n'
                      '%s'
@@ -897,6 +751,7 @@ class ApiDumpCppSubcommand(Subcommand):
             c_call = proto.c_call().replace("(" + proto.params[0].name, "((VK_PHYSICAL_GPU)gpuw->nextObject", 1)
             funcs.append('%s%s\n'
                      '{\n'
+                     '    using namespace StreamControl;\n'
                      '    VK_BASE_LAYER_OBJECT* gpuw = (VK_BASE_LAYER_OBJECT *) %s;\n'
                      '    pCurObj = gpuw;\n'
                      '    loader_platform_thread_once(&tabOnce, init%s);\n'
@@ -909,139 +764,54 @@ class ApiDumpCppSubcommand(Subcommand):
         return "\n\n".join(funcs)
 
     def generate_body(self):
-        self.layer_name = "APIDumpCpp"
-        body = [self._generate_layer_initialization_with_lock(),
+        self.layer_name = "APIDump"
+        body = [self.generate_init(),
                 self._generate_dispatch_entrypoints("VK_LAYER_EXPORT"),
                 self._generate_layer_gpa_function()]
-
         return "\n\n".join(body)
 
-# subclass from ApiDumpSubcommand instead of Subcommand
-class ApiDumpFileSubcommand(ApiDumpSubcommand):
-    def generate_header(self):
-        header_txt = []
-        header_txt.append('#include <stdio.h>\n#include <stdlib.h>\n#include <string.h>')
-        header_txt.append('#include "loader_platform.h"')
-        header_txt.append('#include "vkLayer.h"\n#include "vk_struct_string_helper.h"\n')
-        header_txt.append('// The following is #included again to catch certain OS-specific functions being used:')
-        header_txt.append('#include "loader_platform.h"')
-        header_txt.append('static VK_LAYER_DISPATCH_TABLE nextTable;')
-        header_txt.append('static VK_BASE_LAYER_OBJECT *pCurObj;\n')
-        header_txt.append('static LOADER_PLATFORM_THREAD_ONCE_DECLARATION(tabOnce);')
-        header_txt.append('static int printLockInitialized = 0;')
-        header_txt.append('static loader_platform_thread_mutex printLock;\n')
-        header_txt.append('#define MAX_TID 513')
-        header_txt.append('static loader_platform_thread_id tidMapping[MAX_TID] = {0};')
-        header_txt.append('static uint32_t maxTID = 0;')
-        header_txt.append('// Map actual TID to an index value and return that index')
-        header_txt.append('//  This keeps TIDs in range from 0-MAX_TID and simplifies compares between runs')
-        header_txt.append('static uint32_t getTIDIndex() {')
-        header_txt.append('    loader_platform_thread_id tid = loader_platform_get_thread_id();')
-        header_txt.append('    for (uint32_t i = 0; i < maxTID; i++) {')
-        header_txt.append('        if (tid == tidMapping[i])')
-        header_txt.append('            return i;')
-        header_txt.append('    }')
-        header_txt.append("    // Don't yet have mapping, set it and return newly set index")
-        header_txt.append('    uint32_t retVal = (uint32_t) maxTID;')
-        header_txt.append('    tidMapping[maxTID++] = tid;')
-        header_txt.append('    assert(maxTID < MAX_TID);')
-        header_txt.append('    return retVal;')
-        header_txt.append('}\n')
-        header_txt.append('static FILE* pOutFile;\nstatic char* outFileName = "vk_apidump.txt";')
-        return "\n".join(header_txt)
-
-    def generate_body(self):
-        self.layer_name = "APIDumpFile"
-        body = [self._generate_layer_initialization_with_lock(),
-                self._generate_dispatch_entrypoints("VK_LAYER_EXPORT"),
-                self._generate_layer_gpa_function()]
-
-        return "\n\n".join(body)
-
-# subclass from ApiDumpSubcommand instead of Subcommand
-class ApiDumpNoAddrSubcommand(ApiDumpSubcommand):
-    def generate_header(self):
-        header_txt = []
-        header_txt.append('#include <stdio.h>\n#include <stdlib.h>\n#include <string.h>')
-        header_txt.append('#include "loader_platform.h"')
-        header_txt.append('#include "vkLayer.h"\n#include "vk_struct_string_helper_no_addr.h"\n')
-        header_txt.append('// The following is #included again to catch certain OS-specific functions being used:')
-        header_txt.append('#include "loader_platform.h"')
-        header_txt.append('static VK_LAYER_DISPATCH_TABLE nextTable;')
-        header_txt.append('static VK_BASE_LAYER_OBJECT *pCurObj;\n')
-        header_txt.append('static LOADER_PLATFORM_THREAD_ONCE_DECLARATION(tabOnce);')
-        header_txt.append('static int printLockInitialized = 0;')
-        header_txt.append('static loader_platform_thread_mutex printLock;\n')
-        header_txt.append('#define MAX_TID 513')
-        header_txt.append('static loader_platform_thread_id tidMapping[MAX_TID] = {0};')
-        header_txt.append('static uint32_t maxTID = 0;')
-        header_txt.append('// Map actual TID to an index value and return that index')
-        header_txt.append('//  This keeps TIDs in range from 0-MAX_TID and simplifies compares between runs')
-        header_txt.append('static uint32_t getTIDIndex() {')
-        header_txt.append('    loader_platform_thread_id tid = loader_platform_get_thread_id();')
-        header_txt.append('    for (uint32_t i = 0; i < maxTID; i++) {')
-        header_txt.append('        if (tid == tidMapping[i])')
-        header_txt.append('            return i;')
-        header_txt.append('    }')
-        header_txt.append("    // Don't yet have mapping, set it and return newly set index")
-        header_txt.append('    uint32_t retVal = (uint32_t) maxTID;')
-        header_txt.append('    tidMapping[maxTID++] = tid;')
-        header_txt.append('    assert(maxTID < MAX_TID);')
-        header_txt.append('    return retVal;')
-        header_txt.append('}')
-        return "\n".join(header_txt)
-
-    def generate_body(self):
-        self.layer_name = "APIDumpNoAddr"
-        self.no_addr = True
-        body = [self._generate_layer_initialization_with_lock(),
-                self._generate_dispatch_entrypoints("VK_LAYER_EXPORT"),
-                self._generate_layer_gpa_function()]
-
-        return "\n\n".join(body)
-
-# subclass from ApiDumpCppSubcommand instead of Subcommand
-class ApiDumpNoAddrCppSubcommand(ApiDumpCppSubcommand):
-    def generate_header(self):
-        header_txt = []
-        header_txt.append('#include <stdio.h>\n#include <stdlib.h>\n#include <string.h>')
-        header_txt.append('#include "loader_platform.h"')
-        header_txt.append('#include "vkLayer.h"\n#include "vk_struct_string_helper_no_addr_cpp.h"\n')
-        header_txt.append('// The following is #included again to catch certain OS-specific functions being used:')
-        header_txt.append('#include "loader_platform.h"')
-        header_txt.append('static VK_LAYER_DISPATCH_TABLE nextTable;')
-        header_txt.append('static VK_BASE_LAYER_OBJECT *pCurObj;\n')
-        header_txt.append('static LOADER_PLATFORM_THREAD_ONCE_DECLARATION(tabOnce);')
-        header_txt.append('static int printLockInitialized = 0;')
-        header_txt.append('static loader_platform_thread_mutex printLock;\n')
-        header_txt.append('#define MAX_TID 513')
-        header_txt.append('static loader_platform_thread_id tidMapping[MAX_TID] = {0};')
-        header_txt.append('static uint32_t maxTID = 0;')
-        header_txt.append('// Map actual TID to an index value and return that index')
-        header_txt.append('//  This keeps TIDs in range from 0-MAX_TID and simplifies compares between runs')
-        header_txt.append('static uint32_t getTIDIndex() {')
-        header_txt.append('    loader_platform_thread_id tid = loader_platform_get_thread_id();')
-        header_txt.append('    for (uint32_t i = 0; i < maxTID; i++) {')
-        header_txt.append('        if (tid == tidMapping[i])')
-        header_txt.append('            return i;')
-        header_txt.append('    }')
-        header_txt.append("    // Don't yet have mapping, set it and return newly set index")
-        header_txt.append('    uint32_t retVal = (uint32_t) maxTID;')
-        header_txt.append('    tidMapping[maxTID++] = tid;')
-        header_txt.append('    assert(maxTID < MAX_TID);')
-        header_txt.append('    return retVal;')
-        header_txt.append('}')
-        return "\n".join(header_txt)
-
-    def generate_body(self):
-        self.layer_name = "APIDumpNoAddrCpp"
-        self.no_addr = True
-        body = [self._generate_layer_initialization_with_lock(),
-                self._generate_dispatch_entrypoints("VK_LAYER_EXPORT"),
-                self._generate_layer_gpa_function()]
-
-        return "\n\n".join(body)
-
+## subclass from APIDumpCppSubcommand instead of Subcommand
+#class APIDumpNoAddrCppSubcommand(APIDumpCppSubcommand):
+#    def generate_header(self):
+#        header_txt = []
+#        header_txt.append('#include <stdio.h>\n#include <stdlib.h>\n#include <string.h>')
+#        header_txt.append('#include "loader_platform.h"')
+#        header_txt.append('#include "vkLayer.h"\n#include "vk_struct_string_helper_no_addr_cpp.h"\n')
+#        header_txt.append('// The following is #included again to catch certain OS-specific functions being used:')
+#        header_txt.append('#include "loader_platform.h"')
+#        header_txt.append('static VK_LAYER_DISPATCH_TABLE nextTable;')
+#        header_txt.append('static VK_BASE_LAYER_OBJECT *pCurObj;\n')
+#        header_txt.append('static LOADER_PLATFORM_THREAD_ONCE_DECLARATION(tabOnce);')
+#        header_txt.append('static int printLockInitialized = 0;')
+#        header_txt.append('static loader_platform_thread_mutex printLock;\n')
+#        header_txt.append('#define MAX_TID 513')
+#        header_txt.append('static loader_platform_thread_id tidMapping[MAX_TID] = {0};')
+#        header_txt.append('static uint32_t maxTID = 0;')
+#        header_txt.append('// Map actual TID to an index value and return that index')
+#        header_txt.append('//  This keeps TIDs in range from 0-MAX_TID and simplifies compares between runs')
+#        header_txt.append('static uint32_t getTIDIndex() {')
+#        header_txt.append('    loader_platform_thread_id tid = loader_platform_get_thread_id();')
+#        header_txt.append('    for (uint32_t i = 0; i < maxTID; i++) {')
+#        header_txt.append('        if (tid == tidMapping[i])')
+#        header_txt.append('            return i;')
+#        header_txt.append('    }')
+#        header_txt.append("    // Don't yet have mapping, set it and return newly set index")
+#        header_txt.append('    uint32_t retVal = (uint32_t) maxTID;')
+#        header_txt.append('    tidMapping[maxTID++] = tid;')
+#        header_txt.append('    assert(maxTID < MAX_TID);')
+#        header_txt.append('    return retVal;')
+#        header_txt.append('}')
+#        return "\n".join(header_txt)
+#
+#    def generate_body(self):
+#        self.layer_name = "APIDumpNoAddrCpp"
+#        self.no_addr = True
+#        body = [self._generate_layer_initialization_with_lock(),
+#                self._generate_dispatch_entrypoints("VK_LAYER_EXPORT"),
+#                self._generate_layer_gpa_function()]
+#
+#        return "\n\n".join(body)
+#
 class ObjectTrackerSubcommand(Subcommand):
     def generate_header(self):
         header_txt = []
@@ -1482,11 +1252,7 @@ def main():
             "layer-funcs" : LayerFuncsSubcommand,
             "layer-dispatch" : LayerDispatchSubcommand,
             "Generic" : GenericLayerSubcommand,
-            "ApiDump" : ApiDumpSubcommand,
-            "ApiDumpFile" : ApiDumpFileSubcommand,
-            "ApiDumpNoAddr" : ApiDumpNoAddrSubcommand,
-            "ApiDumpCpp" : ApiDumpCppSubcommand,
-            "ApiDumpNoAddrCpp" : ApiDumpNoAddrCppSubcommand,
+            "APIDump" : APIDumpSubcommand,
             "ObjectTracker" : ObjectTrackerSubcommand,
     }
 
