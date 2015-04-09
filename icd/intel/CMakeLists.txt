@@ -54,6 +54,8 @@ if(XCB_FOUND)
     list(APPEND include_dirs ${XCB_INCLUDE_DIRS})
     list(APPEND libraries ${XCB_LIBRARIES})
     list(APPEND sources wsi_x11.c)
+
+    set_source_files_properties(wsi_x11.c PROPERTIES COMPILE_FLAGS "-Ikmd/libdrm/include/drm")
 else()
     list(APPEND sources wsi_null.c)
 endif()

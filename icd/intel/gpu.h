@@ -49,6 +49,7 @@ enum intel_gpu_engine_type {
 };
 
 struct intel_instance;
+struct intel_wsi_display;
 struct intel_winsys;
 
 /*
@@ -79,6 +80,9 @@ struct intel_gpu {
     struct intel_winsys *winsys;
 
     void *wsi_data;
+
+    struct intel_wsi_display **displays;
+    uint32_t display_count;
 };
 
 static inline struct intel_gpu *intel_gpu(XGL_PHYSICAL_GPU gpu)

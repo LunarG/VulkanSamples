@@ -34,6 +34,7 @@
 #include <xcb/present.h>
 
 #include "kmd/winsys.h"
+#include "kmd/libdrm/xf86drmMode.h"
 #include "dev.h"
 #include "fence.h"
 #include "gpu.h"
@@ -41,6 +42,20 @@
 #include "mem.h"
 #include "queue.h"
 #include "wsi.h"
+
+struct intel_x11_display {
+    struct intel_handle handle;
+
+    int fd;
+    uint32_t connector_id;
+
+    char name[32];
+    XGL_EXTENT2D physical_dimension;
+    XGL_EXTENT2D physical_resolution;
+
+    drmModeModeInfoPtr modes;
+    uint32_t mode_count;
+};
 
 struct intel_x11_swap_chain {
     struct intel_handle handle;
@@ -620,18 +635,166 @@ static XGL_RESULT intel_wsi_gpu_init(struct intel_gpu *gpu,
     return XGL_SUCCESS;
 }
 
+static void x11_display_init_modes(struct intel_x11_display *dpy,
+                                   const drmModeConnectorPtr conn)
+{
+    int i;
+
+    if (!conn->count_modes)
+        return;
+
+    dpy->modes = intel_alloc(dpy, sizeof(dpy->modes[0]) * conn->count_modes,
+            0, XGL_SYSTEM_ALLOC_INTERNAL);
+    if (!dpy->modes)
+        return;
+
+    for (i = 0; i < conn->count_modes; i++) {
+        dpy->modes[i] = conn->modes[i];
+
+        if (dpy->physical_resolution.width  < conn->modes[i].hdisplay &&
+            dpy->physical_resolution.height < conn->modes[i].vdisplay) {
+            dpy->physical_resolution.width  = conn->modes[i].hdisplay;
+            dpy->physical_resolution.height = conn->modes[i].vdisplay;
+        }
+    }
+
+    dpy->mode_count = conn->count_modes;
+
+    dpy->physical_dimension.width = conn->mmWidth;
+    dpy->physical_dimension.height = conn->mmHeight;
+}
+
+static void x11_display_init_name(struct intel_x11_display *dpy,
+                                  const drmModeConnectorPtr conn)
+{
+    static const char *connector_names[] = {
+        [DRM_MODE_CONNECTOR_Unknown]        = "Unknown",
+        [DRM_MODE_CONNECTOR_VGA]            = "VGA",
+        [DRM_MODE_CONNECTOR_DVII]           = "DVII",
+        [DRM_MODE_CONNECTOR_DVID]           = "DVID",
+        [DRM_MODE_CONNECTOR_DVIA]           = "DVIA",
+        [DRM_MODE_CONNECTOR_Composite]      = "Composite",
+        [DRM_MODE_CONNECTOR_SVIDEO]         = "SVIDEO",
+        [DRM_MODE_CONNECTOR_LVDS]           = "LVDS",
+        [DRM_MODE_CONNECTOR_Component]      = "COMPONENT",
+        [DRM_MODE_CONNECTOR_9PinDIN]        = "9PinDIN",
+        [DRM_MODE_CONNECTOR_DisplayPort]    = "DisplayPort",
+        [DRM_MODE_CONNECTOR_HDMIA]          = "HDMIA",
+        [DRM_MODE_CONNECTOR_HDMIB]          = "HDMIB",
+        [DRM_MODE_CONNECTOR_TV]             = "TV",
+        [DRM_MODE_CONNECTOR_eDP]            = "eDP",
+        [DRM_MODE_CONNECTOR_VIRTUAL]        = "VIRTUAL",
+        [DRM_MODE_CONNECTOR_DSI]            = "DSI",
+    };
+    const char *name;
+
+    name = (conn->connector_type < ARRAY_SIZE(connector_names)) ?
+        connector_names[conn->connector_type] : NULL;
+    if (!name)
+        name = connector_names[DRM_MODE_CONNECTOR_Unknown];
+
+    snprintf(dpy->name, sizeof(dpy->name),
+            "%s%d", name, conn->connector_type_id);
+}
+
+static void x11_display_destroy(struct intel_x11_display *dpy)
+{
+    intel_free(dpy, dpy->modes);
+    intel_free(dpy, dpy);
+}
+
+static struct intel_x11_display *x11_display_create(struct intel_gpu *gpu,
+                                                    int fd,
+                                                    uint32_t connector_id)
+{
+    struct intel_x11_display *dpy;
+    drmModeConnectorPtr conn;
+
+    dpy = intel_alloc(gpu, sizeof(*dpy), 0, XGL_SYSTEM_ALLOC_API_OBJECT);
+    if (!dpy)
+        return NULL;
+
+    memset(dpy, 0, sizeof(*dpy));
+    /* there is no XGL_DBG_OBJECT_WSI_DISPLAY */
+    intel_handle_init(&dpy->handle, XGL_DBG_OBJECT_UNKNOWN, gpu->handle.icd);
+
+    dpy->fd = fd;
+    dpy->connector_id = connector_id;
+
+    conn = drmModeGetConnector(fd, connector_id);
+    if (!conn) {
+        x11_display_destroy(dpy);
+        return NULL;
+    }
+
+    x11_display_init_name(dpy, conn);
+    x11_display_init_modes(dpy, conn);
+
+    drmModeFreeConnector(conn);
+
+    return dpy;
+}
+
+static void x11_display_scan(struct intel_gpu *gpu)
+{
+    struct intel_x11_display **displays;
+    drmModeResPtr res;
+    int fd, i;
+
+    fd = intel_gpu_get_primary_fd(gpu);
+    if (fd < 0)
+        return;
+
+    res = drmModeGetResources(fd);
+    if (!res)
+        return;
+
+    displays = intel_alloc(gpu, sizeof(*displays) * res->count_connectors,
+            0, XGL_SYSTEM_ALLOC_INTERNAL);
+    if (!displays) {
+        drmModeFreeResources(res);
+        return;
+    }
+
+    for (i = 0; i < res->count_connectors; i++) {
+        displays[i] = x11_display_create(gpu, fd, res->connectors[i]);
+        if (!displays[i])
+            break;
+    }
+
+    drmModeFreeResources(res);
+
+    gpu->displays = (struct intel_wsi_display **) displays;
+    gpu->display_count = i;
+}
+
 XGL_RESULT intel_wsi_gpu_get_info(struct intel_gpu *gpu,
                                   XGL_PHYSICAL_GPU_INFO_TYPE type,
                                   size_t *size, void *data)
 {
+    if (false)
+        x11_display_scan(gpu);
+
     return XGL_ERROR_INVALID_VALUE;
 }
 
 void intel_wsi_gpu_cleanup(struct intel_gpu *gpu)
 {
-    struct intel_wsi_x11 *x11 = (struct intel_wsi_x11 *) gpu->wsi_data;
+    if (gpu->displays) {
+        uint32_t i;
 
-    wsi_x11_destroy(x11);
+        for (i = 0; i < gpu->display_count; i++) {
+            struct intel_x11_display *dpy =
+                (struct intel_x11_display *) gpu->displays[i];
+            x11_display_destroy(dpy);
+        }
+        intel_free(gpu, gpu->displays);
+    }
+
+    if (gpu->wsi_data) {
+        struct intel_wsi_x11 *x11 = (struct intel_wsi_x11 *) gpu->wsi_data;
+        wsi_x11_destroy(x11);
+    }
 }
 
 XGL_RESULT intel_wsi_img_init(struct intel_img *img)

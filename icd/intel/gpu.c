@@ -116,8 +116,7 @@ static const char *gpu_get_name(const struct intel_gpu *gpu)
 
 void intel_gpu_destroy(struct intel_gpu *gpu)
 {
-    if (gpu->wsi_data)
-        intel_wsi_gpu_cleanup(gpu);
+    intel_wsi_gpu_cleanup(gpu);
 
     intel_gpu_cleanup_winsys(gpu);
 
