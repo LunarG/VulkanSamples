@@ -32,7 +32,8 @@ public:
     void SetState(VK_DBG_MSG_TYPE msgType, const char *msgString)
     {
         m_msgType = msgType;
-        m_msgString = *msgString;
+        m_msgString.reserve(strlen(msgString));
+        m_msgString = msgString;
     }
 
 private:
@@ -49,10 +50,12 @@ void VKAPI myDbgFunc(
     const char*          pMsg,
     void*                pUserData)
 {
-    ErrorMonitor *errMonitor = (ErrorMonitor *)pUserData;
-    errMonitor->SetState(msgType, pMsg);
+    if (msgType == VK_DBG_MSG_WARNING || msgType == VK_DBG_MSG_ERROR) {
+        ErrorMonitor *errMonitor = (ErrorMonitor *)pUserData;
+        errMonitor->SetState(msgType, pMsg);
+    }
 }
-class XglLayerTest : public XglRenderFramework
+class VkLayerTest : public XglRenderFramework
 {
 public:
     VK_RESULT BeginCommandBuffer(XglCommandBufferObj &cmdBuffer);
@@ -78,11 +81,11 @@ protected:
 
     virtual void TearDown() {
         // Clean up resources before we reset
-        delete m_errorMonitor;
         ShutdownFramework();
+        delete m_errorMonitor;
     }
 };
-VK_RESULT XglLayerTest::BeginCommandBuffer(XglCommandBufferObj &cmdBuffer)
+VK_RESULT VkLayerTest::BeginCommandBuffer(XglCommandBufferObj &cmdBuffer)
 {
     VK_RESULT result;
 
@@ -99,7 +102,7 @@ VK_RESULT XglLayerTest::BeginCommandBuffer(XglCommandBufferObj &cmdBuffer)
     return result;
 }
 
-VK_RESULT XglLayerTest::EndCommandBuffer(XglCommandBufferObj &cmdBuffer)
+VK_RESULT VkLayerTest::EndCommandBuffer(XglCommandBufferObj &cmdBuffer)
 {
     VK_RESULT result;
 
@@ -110,18 +113,15 @@ VK_RESULT XglLayerTest::EndCommandBuffer(XglCommandBufferObj &cmdBuffer)
     return result;
 }
 
-TEST_F(XglLayerTest, UseSignaledFence)
+TEST_F(VkLayerTest, SubmitSignaledFence)
 {
     vk_testing::Fence testFence;
     VK_DBG_MSG_TYPE msgType;
     std::string msgString;
-    const VK_FENCE_CREATE_INFO fenceInfo = {
-        .sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
-        .pNext = NULL,
-        .flags = VK_FENCE_CREATE_SIGNALED_BIT,
-    };
-
-    // Register error callback to catch errors and record parameters
+    VK_FENCE_CREATE_INFO fenceInfo = {};
+    fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+    fenceInfo.pNext = NULL;
+    fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
 
     // Verifiy that the appropriate layer is loaded
 
@@ -132,14 +132,42 @@ TEST_F(XglLayerTest, UseSignaledFence)
     XglCommandBufferObj cmdBuffer(m_device);
     cmdBuffer.AddRenderTarget(m_renderTargets[0]);
 
-    cmdBuffer.begin();
+    BeginCommandBuffer(cmdBuffer);
     cmdBuffer.ClearAllBuffers(m_clear_color, m_depth_clear_color, m_stencil_clear_color, NULL);
-    cmdBuffer.end();
+    EndCommandBuffer(cmdBuffer);
 
     testFence.init(*m_device, fenceInfo);
     m_errorMonitor->ClearState();
-    cmdBuffer.QueueCommandBuffer();
+    cmdBuffer.QueueCommandBuffer(testFence.obj());
     msgType = m_errorMonitor->GetState(&msgString);
+    ASSERT_EQ(msgType, VK_DBG_MSG_ERROR) << "Did not receive an err from using a fence in SIGNALED state in call to vkQueueSubmit";
+    if (!strstr(msgString.c_str(),"submitted in SIGNALED state.  Fences must be reset before being submitted")) {
+        ASSERT_TRUE(false) << "Error received was not vkQueueSubmit with fence in SIGNALED_STATE";
+    }
+
+}
+
+TEST_F(VkLayerTest, ResetUnsignaledFence)
+{
+    vk_testing::Fence testFence;
+    VK_DBG_MSG_TYPE msgType;
+    std::string msgString;
+    VK_FENCE_CREATE_INFO fenceInfo = {};
+    fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+    fenceInfo.pNext = NULL;
+
+    // Verifiy that the appropriate layer is loaded
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+    testFence.init(*m_device, fenceInfo);
+    m_errorMonitor->ClearState();
+    VK_FENCE fences[1] = {testFence.obj()};
+    vkResetFences(m_device->device(), 1, fences);
+    msgType = m_errorMonitor->GetState(&msgString);
+    ASSERT_EQ(msgType, VK_DBG_MSG_ERROR) << "Did not receive an error from submitting fence with UNSIGNALED state to vkResetFences";
+    if (!strstr(msgString.c_str(),"submitted to vkResetFences in UNSIGNALED STATE")) {
+        ASSERT_TRUE(false) << "Error received was not vkResetFences with fence in UNSIGNALED_STATE";
+    }
 
 }
 
