@@ -313,7 +313,7 @@ int XglDescriptorSetObj::AppendSamplerTexture( XglSamplerObj* sampler, XglTextur
     m_type_counts.push_back(tc);
 
     VK_SAMPLER_IMAGE_VIEW_INFO tmp = {};
-    tmp.pSampler = sampler->obj();
+    tmp.sampler = sampler->obj();
     tmp.pImageView = &texture->m_textureViewInfo;
     m_samplerTextureInfo.push_back(tmp);
 

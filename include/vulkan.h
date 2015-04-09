@@ -33,7 +33,7 @@
 #include "vkPlatform.h"
 
 // Vulkan API version supported by this file
-#define VK_API_VERSION VK_MAKE_VERSION(0, 69, 0)
+#define VK_API_VERSION VK_MAKE_VERSION(0, 70, 0)
 
 #ifdef __cplusplus
 extern "C"
@@ -1546,7 +1546,7 @@ typedef struct _VK_UPDATE_SAMPLERS
 
 typedef struct _VK_SAMPLER_IMAGE_VIEW_INFO
 {
-    VK_SAMPLER                                  pSampler;
+    VK_SAMPLER                                  sampler;
     const VK_IMAGE_VIEW_ATTACH_INFO*            pImageView;
 } VK_SAMPLER_IMAGE_VIEW_INFO;
 

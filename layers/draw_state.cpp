@@ -1176,7 +1176,7 @@ static void dsCoreDumpDot(const VK_DESCRIPTOR_SET ds, FILE* pOutFile)
                             break;
                         case VK_STRUCTURE_TYPE_UPDATE_SAMPLER_TEXTURES:
                             pUST = (VK_UPDATE_SAMPLER_TEXTURES*)pSet->ppDescriptors[i];
-                            pSCI = getSamplerCreateInfo(pUST->pSamplerImageViews[i-pUST->arrayIndex].pSampler);
+                            pSCI = getSamplerCreateInfo(pUST->pSamplerImageViews[i-pUST->arrayIndex].sampler);
                             if (pSCI) {
                                 sprintf(tmp_str, "SAMPLER%u", i);
                                 fprintf(pOutFile, "%s", vk_gv_print_vk_sampler_create_info(pSCI, tmp_str));
