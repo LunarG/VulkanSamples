@@ -823,10 +823,9 @@ static void initMemTracker(void)
 
 VK_LAYER_EXPORT VkResult VKAPI vkCreateDevice(VkPhysicalGpu gpu, const VkDeviceCreateInfo* pCreateInfo, VkDevice* pDevice)
 {
-    VkBaseLayerObject* gpuw = (VkBaseLayerObject *) gpu;
-    pCurObj = gpuw;
+    pCurObj = (VkBaseLayerObject *) gpu;
     loader_platform_thread_once(&g_initOnce, initMemTracker);
-    VkResult result = nextTable.CreateDevice((VkPhysicalGpu)gpuw->nextObject, pCreateInfo, pDevice);
+    VkResult result = nextTable.CreateDevice(gpu, pCreateInfo, pDevice);
     // Save off device in case we need it to create Fences
     globalDevice = *pDevice;
     return result;
@@ -867,7 +866,6 @@ VK_LAYER_EXPORT VkResult VKAPI vkDestroyDevice(VkDevice device)
 
 VK_LAYER_EXPORT VkResult VKAPI vkGetExtensionSupport(VkPhysicalGpu gpu, const char* pExtName)
 {
-    VkBaseLayerObject* gpuw = (VkBaseLayerObject *) gpu;
     VkResult result;
     /* This entrypoint is NOT going to init its own dispatch table since loader calls here early */
     if (!strcmp(pExtName, "MemTracker"))
@@ -875,7 +873,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkGetExtensionSupport(VkPhysicalGpu gpu, const ch
         result = VK_SUCCESS;
     } else if (nextTable.GetExtensionSupport != NULL)
     {
-        result = nextTable.GetExtensionSupport((VkPhysicalGpu)gpuw->nextObject, pExtName);
+        result = nextTable.GetExtensionSupport(gpu, pExtName);
     } else
     {
         result = VK_ERROR_INVALID_EXTENSION;
@@ -888,10 +886,9 @@ VK_LAYER_EXPORT VkResult VKAPI vkEnumerateLayers(VkPhysicalGpu gpu, size_t maxLa
 {
         if (gpu != NULL)
     {
-        VkBaseLayerObject* gpuw = (VkBaseLayerObject *) gpu;
-        pCurObj = gpuw;
+        pCurObj = (VkBaseLayerObject *)  gpu;
         loader_platform_thread_once(&g_initOnce, initMemTracker);
-        VkResult result = nextTable.EnumerateLayers((VkPhysicalGpu)gpuw->nextObject, maxLayerCount,
+        VkResult result = nextTable.EnumerateLayers(gpu, maxLayerCount,
             maxStringSize, pOutLayerCount, pOutLayers, pReserved);
         return result;
     } else

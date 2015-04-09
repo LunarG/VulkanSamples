@@ -520,11 +520,16 @@ static void loader_init_dispatch_table(VkLayerDispatchTable *tab, PFN_vkGetProcA
 
 extern struct loader_icd * loader_get_icd(const VkBaseLayerObject *gpu, uint32_t *gpu_index)
 {
+    /*
+     * NOTE: at this time icd->gpus is pointing to wrapped GPUs, but no where else
+     * are wrapped gpus used. Should go away. The incoming gpu is NOT wrapped so
+     * need to test it against the wrapped GPU's base object.
+     */
     for (struct loader_instance *inst = loader.instances; inst; inst = inst->next) {
         for (struct loader_icd *icd = inst->icds; icd; icd = icd->next) {
             for (uint32_t i = 0; i < icd->gpu_count; i++)
                 if ((icd->gpus + i) == gpu || (icd->gpus +i)->baseObject ==
-                                                            gpu->baseObject) {
+                                                            gpu) {
                     *gpu_index = i;
                     return icd;
                 }
@@ -1000,7 +1005,7 @@ LOADER_EXPORT VkResult VKAPI vkEnumerateGpus(
                 (wrapped_gpus + i)->baseObject = gpus[i];
                 (wrapped_gpus + i)->pGPA = get_proc_addr;
                 (wrapped_gpus + i)->nextObject = gpus[i];
-                memcpy(pGpus + count, &wrapped_gpus, sizeof(*pGpus));
+                memcpy(pGpus + count, gpus, sizeof(*pGpus));
                 loader_init_dispatch_table(icd->loader_dispatch + i,
                                            get_proc_addr, gpus[i]);
 

@@ -199,7 +199,6 @@ class Subcommand(object):
         ges_body.append('VK_LAYER_EXPORT VkResult VKAPI vkGetExtensionSupport(VkPhysicalGpu gpu, const char* pExtName)')
         ges_body.append('{')
         ges_body.append('    VkResult result;')
-        ges_body.append('    VkBaseLayerObject* gpuw = (VkBaseLayerObject *) gpu;')
         ges_body.append('')
         ges_body.append('    /* This entrypoint is NOT going to init its own dispatch table since loader calls here early */')
         ges_body.append('    if (!strncmp(pExtName, "%s", strlen("%s")))' % (layer, layer))
@@ -207,7 +206,7 @@ class Subcommand(object):
         ges_body.append('        result = VK_SUCCESS;')
         ges_body.append('    } else if (nextTable.GetExtensionSupport != NULL)')
         ges_body.append('    {')
-        ges_body.append('        result = nextTable.GetExtensionSupport((VkPhysicalGpu)gpuw->nextObject, pExtName);')
+        ges_body.append('        result = nextTable.GetExtensionSupport(gpu, pExtName);')
         ges_body.append('    } else')
         ges_body.append('    {')
         ges_body.append('        result = VK_ERROR_INVALID_EXTENSION;')
@@ -447,15 +446,13 @@ class GenericLayerSubcommand(Subcommand):
         if 'WsiX11AssociateConnection' == proto.name:
             funcs.append("#if defined(__linux__) || defined(XCB_NVIDIA)")
         if proto.name == "EnumerateLayers":
-            c_call = proto.c_call().replace("(" + proto.params[0].name, "((VkPhysicalGpu)gpuw->nextObject", 1)
             funcs.append('%s%s\n'
                      '{\n'
                      '    char str[1024];\n'
                      '    if (gpu != NULL) {\n'
-                     '        VkBaseLayerObject* gpuw = (VkBaseLayerObject *) %s;\n'
                      '        sprintf(str, "At start of layered %s\\n");\n'
                      '        layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, gpu, 0, 0, (char *) "GENERIC", (char *) str);\n'
-                     '        pCurObj = gpuw;\n'
+                     '        pCurObj = (VkBaseLayerObject *) gpu;\n'
                      '        loader_platform_thread_once(&tabOnce, init%s);\n'
                      '        %snextTable.%s;\n'
                      '        sprintf(str, "Completed layered %s\\n");\n'
@@ -470,29 +467,13 @@ class GenericLayerSubcommand(Subcommand):
                      '        strncpy((char *) pOutLayers[0], "%s", maxStringSize);\n'
                      '        return VK_SUCCESS;\n'
                      '    }\n'
-                         '}' % (qual, decl, proto.params[0].name, proto.name, self.layer_name, ret_val, c_call, proto.name, stmt, self.layer_name))
-        elif proto.params[0].ty != "VkPhysicalGpu":
+                     '}' % (qual, decl, proto.name, self.layer_name, ret_val, proto.c_call(), proto.name, stmt, self.layer_name))
+        else:
             funcs.append('%s%s\n'
                      '{\n'
                      '    %snextTable.%s;\n'
                      '%s'
                      '}' % (qual, decl, ret_val, proto.c_call(), stmt))
-        else:
-            c_call = proto.c_call().replace("(" + proto.params[0].name, "((VkPhysicalGpu)gpuw->nextObject", 1)
-            funcs.append('%s%s\n'
-                     '{\n'
-                     '    char str[1024];'
-                     '    VkBaseLayerObject* gpuw = (VkBaseLayerObject *) %s;\n'
-                     '    sprintf(str, "At start of layered %s\\n");\n'
-                     '    layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, gpuw, 0, 0, (char *) "GENERIC", (char *) str);\n'
-                     '    pCurObj = gpuw;\n'
-                     '    loader_platform_thread_once(&tabOnce, init%s);\n'
-                     '    %snextTable.%s;\n'
-                     '    sprintf(str, "Completed layered %s\\n");\n'
-                     '    layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, gpuw, 0, 0, (char *) "GENERIC", (char *) str);\n'
-                     '    fflush(stdout);\n'
-                     '%s'
-                     '}' % (qual, decl, proto.params[0].name, proto.name, self.layer_name, ret_val, c_call, proto.name, stmt))
         if 'WsiX11QueuePresent' == proto.name:
             funcs.append("#endif")
         return "\n\n".join(funcs)
@@ -738,8 +719,7 @@ class APIDumpSubcommand(Subcommand):
                      '{\n'
                      '    using namespace StreamControl;\n'
                      '    if (gpu != NULL) {\n'
-                     '        VkBaseLayerObject* gpuw = (VkBaseLayerObject *) %s;\n'
-                     '        pCurObj = gpuw;\n'
+                     '        pCurObj = (VkBaseLayerObject *) gpu;\n'
                      '        loader_platform_thread_once(&tabOnce, init%s);\n'
                      '        %snextTable.%s;\n'
                      '        %s    %s    %s\n'
@@ -752,12 +732,10 @@ class APIDumpSubcommand(Subcommand):
                      '        strncpy((char *) pOutLayers[0], "%s", maxStringSize);\n'
                      '        return VK_SUCCESS;\n'
                      '    }\n'
-                         '}' % (qual, decl, proto.params[0].name, self.layer_name, ret_val, c_call,f_open, log_func, f_close, stmt, self.layer_name))
+                         '}' % (qual, decl, self.layer_name, ret_val, proto.c_call(),f_open, log_func, f_close, stmt, self.layer_name))
         elif 'GetExtensionSupport' == proto.name:
-            c_call = proto.c_call().replace("(" + proto.params[0].name, "((VkPhysicalGpu)gpuw->nextObject", 1)
             funcs.append('%s%s\n'
                          '{\n'
-                         '    VkBaseLayerObject* gpuw = (VkBaseLayerObject *) %s;\n'
                          '    VkResult result;\n'
                          '    /* This entrypoint is NOT going to init its own dispatch table since loader calls here early */\n'
                          '    if (!strncmp(pExtName, "%s", strlen("%s")))\n'
@@ -772,23 +750,11 @@ class APIDumpSubcommand(Subcommand):
                          '        result = VK_ERROR_INVALID_EXTENSION;\n'
                          '    }\n'
                          '%s'
-                         '}' % (qual, decl, proto.params[0].name, self.layer_name, self.layer_name, c_call, f_open, log_func, f_close, stmt))
-        elif proto.params[0].ty != "VkPhysicalGpu":
-            funcs.append('%s%s\n'
-                     '{\n'
-                     '    using namespace StreamControl;\n'
-                     '    %snextTable.%s;\n'
-                     '    %s%s%s\n'
-                     '%s'
-                     '}' % (qual, decl, ret_val, proto.c_call(), f_open, log_func, f_close, stmt))
+                         '}' % (qual, decl, self.layer_name, self.layer_name, proto.c_call(), f_open, log_func, f_close, stmt))
         else:
-            c_call = proto.c_call().replace("(" + proto.params[0].name, "((VkPhysicalGpu)gpuw->nextObject", 1)
             funcs.append('%s%s\n'
                      '{\n'
                      '    using namespace StreamControl;\n'
-                     '    VkBaseLayerObject* gpuw = (VkBaseLayerObject *) %s;\n'
-                     '    pCurObj = gpuw;\n'
-                     '    loader_platform_thread_once(&tabOnce, init%s);\n'
                      '    %snextTable.%s;\n'
                      '    %s%s%s\n'
                      '%s'
@@ -1396,13 +1362,11 @@ class ObjectTrackerSubcommand(Subcommand):
         if 'WsiX11AssociateConnection' == proto.name:
             funcs.append("#if defined(__linux__) || defined(XCB_NVIDIA)")
         if proto.name == "EnumerateLayers":
-            c_call = proto.c_call().replace("(" + proto.params[0].name, "((VkPhysicalGpu)gpuw->nextObject", 1)
             funcs.append('%s%s\n'
                      '{\n'
                      '    if (gpu != NULL) {\n'
-                     '        VkBaseLayerObject* gpuw = (VkBaseLayerObject *) %s;\n'
                      '    %s'
-                     '        pCurObj = gpuw;\n'
+                     '        pCurObj = (VkBaseLayerObject *) gpu;\n'
                      '        loader_platform_thread_once(&tabOnce, init%s);\n'
                      '        %snextTable.%s;\n'
                      '    %s%s'
@@ -1415,12 +1379,10 @@ class ObjectTrackerSubcommand(Subcommand):
                      '        strncpy((char *) pOutLayers[0], "%s", maxStringSize);\n'
                      '        return VK_SUCCESS;\n'
                      '    }\n'
-                         '}' % (qual, decl, proto.params[0].name, using_line, self.layer_name, ret_val, c_call, create_line, destroy_line, stmt, self.layer_name))
+                         '}' % (qual, decl, using_line, self.layer_name, ret_val, proto.c_call(), create_line, destroy_line, stmt, self.layer_name))
         elif 'GetExtensionSupport' == proto.name:
-            c_call = proto.c_call().replace("(" + proto.params[0].name, "((VkPhysicalGpu)gpuw->nextObject", 1)
             funcs.append('%s%s\n'
                      '{\n'
-                     '    VkBaseLayerObject* gpuw = (VkBaseLayerObject *) %s;\n'
                      '    VkResult result;\n'
                      '    /* This entrypoint is NOT going to init its own dispatch table since loader calls this early */\n'
                      '    if (!strncmp(pExtName, "%s", strlen("%s")) ||\n'
@@ -1437,8 +1399,24 @@ class ObjectTrackerSubcommand(Subcommand):
                      '        result = VK_ERROR_INVALID_EXTENSION;\n'
                      '    }\n'
                      '%s'
-                     '}' % (qual, decl, proto.params[0].name, self.layer_name, self.layer_name, using_line, c_call,  stmt))
-        elif proto.params[0].ty != "VkPhysicalGpu":
+                     '}' % (qual, decl, self.layer_name, self.layer_name, using_line, proto.c_call(),  stmt))
+        elif 'GetGpuInfo' in proto.name:
+            gpu_state =  '    if (infoType == VK_INFO_TYPE_PHYSICAL_GPU_QUEUE_PROPERTIES) {\n'
+            gpu_state += '        if (pData != NULL) {\n'
+            gpu_state += '            setGpuQueueInfoState(pData);\n'
+            gpu_state += '        }\n'
+            gpu_state += '    }\n'
+            funcs.append('%s%s\n'
+                     '{\n'
+                     '%s'
+                     '    pCurObj = (VkBaseLayerObject *) gpu;\n'
+                     '    loader_platform_thread_once(&tabOnce, init%s);\n'
+                     '    %snextTable.%s;\n'
+                     '%s%s'
+                     '%s'
+                     '%s'
+                     '}' % (qual, decl, using_line, self.layer_name, ret_val, proto.c_call(), create_line, destroy_line, gpu_state, stmt))
+        else:
             funcs.append('%s%s\n'
                      '{\n'
                      '%s'
@@ -1446,26 +1424,6 @@ class ObjectTrackerSubcommand(Subcommand):
                      '%s%s'
                      '%s'
                      '}' % (qual, decl, using_line, ret_val, proto.c_call(), create_line, destroy_line, stmt))
-        else:
-            c_call = proto.c_call().replace("(" + proto.params[0].name, "((VkPhysicalGpu)gpuw->nextObject", 1)
-            gpu_state = ''
-            if 'GetGpuInfo' in proto.name:
-                gpu_state =  '    if (infoType == VK_INFO_TYPE_PHYSICAL_GPU_QUEUE_PROPERTIES) {\n'
-                gpu_state += '        if (pData != NULL) {\n'
-                gpu_state += '            setGpuQueueInfoState(pData);\n'
-                gpu_state += '        }\n'
-                gpu_state += '    }\n'
-            funcs.append('%s%s\n'
-                     '{\n'
-                     '    VkBaseLayerObject* gpuw = (VkBaseLayerObject *) %s;\n'
-                     '%s'
-                     '    pCurObj = gpuw;\n'
-                     '    loader_platform_thread_once(&tabOnce, init%s);\n'
-                     '    %snextTable.%s;\n'
-                     '%s%s'
-                     '%s'
-                     '%s'
-                     '}' % (qual, decl, proto.params[0].name, using_line, self.layer_name, ret_val, c_call, create_line, destroy_line, gpu_state, stmt))
         if 'WsiX11QueuePresent' == proto.name:
             funcs.append("#endif")
         return "\n\n".join(funcs)

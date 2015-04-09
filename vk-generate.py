@@ -159,18 +159,9 @@ class LoaderEntrypointsSubcommand(Subcommand):
                 func.append("    VkResult res;")
             func.append("")
 
-            # get dispatch table and unwrap GPUs
-            for param in proto.params:
-                stmt = ""
-                if param.ty == "VkPhysicalGpu":
-                    stmt = "loader_unwrap_gpu(&%s);" % param.name
-                    if param == proto.params[0]:
-                        stmt = "disp = " + stmt
-                elif param == proto.params[0]:
-                    stmt = "disp = loader_get_data(%s);" % param.name
-
-                if stmt:
-                    func.append("    " + stmt)
+            # get dispatch table
+            func.append("    disp = loader_get_data(%s);" %
+                    proto.params[0].name)
             func.append("")
 
             # dispatch!

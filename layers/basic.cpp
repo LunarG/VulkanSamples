@@ -39,11 +39,11 @@ static VkLayerDispatchTable * initLayerTable(const VkBaseLayerObject *gpuw)
     VkLayerDispatchTable *pTable;
 
     assert(gpuw);
-    std::unordered_map<void *, VkLayerDispatchTable *>::const_iterator it = tableMap.find((void *) gpuw);
+    std::unordered_map<void *, VkLayerDispatchTable *>::const_iterator it = tableMap.find((void *) gpuw->baseObject);
     if (it == tableMap.end())
     {
         pTable =  new VkLayerDispatchTable;
-        tableMap[(void *) gpuw] = pTable;
+        tableMap[(void *) gpuw->baseObject] = pTable;
     } else
     {
         return it->second;
@@ -64,7 +64,6 @@ VK_LAYER_EXPORT VkResult VKAPI vkLayerExtension1(VkDevice device)
 VK_LAYER_EXPORT VkResult VKAPI vkGetExtensionSupport(VkPhysicalGpu gpu, const char* pExtName)
 {
     VkResult result;
-    VkBaseLayerObject* gpuw = (VkBaseLayerObject *) gpu;
 
     /* This entrypoint is NOT going to init it's own dispatch table since loader calls here early */
     if (!strncmp(pExtName, "vkLayerExtension1", strlen("vkLayerExtension1")))
@@ -73,11 +72,11 @@ VK_LAYER_EXPORT VkResult VKAPI vkGetExtensionSupport(VkPhysicalGpu gpu, const ch
     } else if (!strncmp(pExtName, "Basic", strlen("Basic")))
     {
         result = VK_SUCCESS;
-    } else if (!tableMap.empty() && (tableMap.find(gpuw) != tableMap.end()))
+    } else if (!tableMap.empty() && (tableMap.find(gpu) != tableMap.end()))
     {
         printf("At start of wrapped vkGetExtensionSupport() call w/ gpu: %p\n", (void*)gpu);
-        VkLayerDispatchTable* pTable = tableMap[gpuw];
-        result = pTable->GetExtensionSupport((VkPhysicalGpu)gpuw->nextObject, pExtName);
+        VkLayerDispatchTable* pTable = tableMap[gpu];
+        result = pTable->GetExtensionSupport(gpu, pExtName);
         printf("Completed wrapped vkGetExtensionSupport() call w/ gpu: %p\n", (void*)gpu);
     } else
     {
@@ -88,11 +87,10 @@ VK_LAYER_EXPORT VkResult VKAPI vkGetExtensionSupport(VkPhysicalGpu gpu, const ch
 
 VK_LAYER_EXPORT VkResult VKAPI vkCreateDevice(VkPhysicalGpu gpu, const VkDeviceCreateInfo* pCreateInfo, VkDevice* pDevice)
 {
-    VkBaseLayerObject* gpuw = (VkBaseLayerObject *) gpu;
-    VkLayerDispatchTable* pTable = tableMap[gpuw];
+    VkLayerDispatchTable* pTable = tableMap[gpu];
 
     printf("At start of wrapped vkCreateDevice() call w/ gpu: %p\n", (void*)gpu);
-    VkResult result = pTable->CreateDevice((VkPhysicalGpu)gpuw->nextObject, pCreateInfo, pDevice);
+    VkResult result = pTable->CreateDevice(gpu, pCreateInfo, pDevice);
     // create a mapping for the device object into the dispatch table
     tableMap.emplace(*pDevice, pTable);
     printf("Completed wrapped vkCreateDevice() call w/ pDevice, Device %p: %p\n", (void*)pDevice, (void *) *pDevice);
@@ -112,11 +110,10 @@ VK_LAYER_EXPORT VkResult VKAPI vkEnumerateLayers(VkPhysicalGpu gpu, size_t maxLa
 {
     if (gpu != NULL)
     {
-        VkBaseLayerObject* gpuw = (VkBaseLayerObject *) gpu;
-        VkLayerDispatchTable* pTable = initLayerTable(gpuw);
+        VkLayerDispatchTable* pTable = initLayerTable((const VkBaseLayerObject *) gpu);
 
         printf("At start of wrapped vkEnumerateLayers() call w/ gpu: %p\n", gpu);
-        VkResult result = pTable->EnumerateLayers((VkPhysicalGpu)gpuw->nextObject, maxLayerCount, maxStringSize, pOutLayerCount, pOutLayers, pReserved);
+        VkResult result = pTable->EnumerateLayers(gpu, maxLayerCount, maxStringSize, pOutLayerCount, pOutLayers, pReserved);
         return result;
     } else
     {

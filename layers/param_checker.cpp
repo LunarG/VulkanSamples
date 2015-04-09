@@ -148,15 +148,14 @@ VK_LAYER_EXPORT VkResult VKAPI vkEnumerateGpus(VkInstance instance, uint32_t max
 
 VK_LAYER_EXPORT VkResult VKAPI vkGetGpuInfo(VkPhysicalGpu gpu, VkPhysicalGpuInfoType infoType, size_t* pDataSize, void* pData)
 {
-    VkBaseLayerObject* gpuw = (VkBaseLayerObject *) gpu;
-    pCurObj = gpuw;
+    pCurObj = (VkBaseLayerObject *) gpu;
     loader_platform_thread_once(&tabOnce, initParamChecker);
     char str[1024];
     if (!validate_VkPhysicalGpuInfoType(infoType)) {
         sprintf(str, "Parameter infoType to function GetGpuInfo has invalid value of %i.", (int)infoType);
         layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
     }
-    VkResult result = nextTable.GetGpuInfo((VkPhysicalGpu)gpuw->nextObject, infoType, pDataSize, pData);
+    VkResult result = nextTable.GetGpuInfo(gpu, infoType, pDataSize, pData);
     return result;
 }
 
@@ -243,11 +242,10 @@ void PostCreateDevice(VkResult result, VkDevice* pDevice)
 
 VK_LAYER_EXPORT VkResult VKAPI vkCreateDevice(VkPhysicalGpu gpu, const VkDeviceCreateInfo* pCreateInfo, VkDevice* pDevice)
 {
-    VkBaseLayerObject* gpuw = (VkBaseLayerObject *) gpu;
-    pCurObj = gpuw;
+    pCurObj = (VkBaseLayerObject *) gpu;
     loader_platform_thread_once(&tabOnce, initParamChecker);
     PreCreateDevice(gpu, pCreateInfo);
-    VkResult result = nextTable.CreateDevice((VkPhysicalGpu)gpuw->nextObject, pCreateInfo, pDevice);
+    VkResult result = nextTable.CreateDevice(gpu, pCreateInfo, pDevice);
     PostCreateDevice(result, pDevice);
     return result;
 }
@@ -261,11 +259,10 @@ VK_LAYER_EXPORT VkResult VKAPI vkDestroyDevice(VkDevice device)
 
 VK_LAYER_EXPORT VkResult VKAPI vkGetExtensionSupport(VkPhysicalGpu gpu, const char* pExtName)
 {
-    VkBaseLayerObject* gpuw = (VkBaseLayerObject *) gpu;
-    pCurObj = gpuw;
+    pCurObj = (VkBaseLayerObject *) gpu;
     loader_platform_thread_once(&tabOnce, initParamChecker);
 
-    VkResult result = nextTable.GetExtensionSupport((VkPhysicalGpu)gpuw->nextObject, pExtName);
+    VkResult result = nextTable.GetExtensionSupport(gpu, pExtName);
     return result;
 }
 
@@ -273,12 +270,11 @@ VK_LAYER_EXPORT VkResult VKAPI vkEnumerateLayers(VkPhysicalGpu gpu, size_t maxLa
 {
     char str[1024];
     if (gpu != NULL) {
-        VkBaseLayerObject* gpuw = (VkBaseLayerObject *) gpu;
         sprintf(str, "At start of layered EnumerateLayers\n");
         layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, nullptr, 0, 0, "PARAMCHECK", str);
-        pCurObj = gpuw;
+        pCurObj = (VkBaseLayerObject *) gpu;
         loader_platform_thread_once(&tabOnce, initParamChecker);
-        VkResult result = nextTable.EnumerateLayers((VkPhysicalGpu)gpuw->nextObject, maxLayerCount, maxStringSize, pOutLayerCount, pOutLayers, pReserved);
+        VkResult result = nextTable.EnumerateLayers(gpu, maxLayerCount, maxStringSize, pOutLayerCount, pOutLayers, pReserved);
         sprintf(str, "Completed layered EnumerateLayers\n");
         layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, nullptr, 0, 0, "PARAMCHECK", str);
         fflush(stdout);
@@ -386,11 +382,10 @@ VK_LAYER_EXPORT VkResult VKAPI vkPinSystemMemory(VkDevice device, const void* pS
 
 VK_LAYER_EXPORT VkResult VKAPI vkGetMultiGpuCompatibility(VkPhysicalGpu gpu0, VkPhysicalGpu gpu1, VkGpuCompatibilityInfo* pInfo)
 {
-    VkBaseLayerObject* gpuw = (VkBaseLayerObject *) gpu0;
-    pCurObj = gpuw;
+    pCurObj = (VkBaseLayerObject *) gpu0;
     loader_platform_thread_once(&tabOnce, initParamChecker);
 
-    VkResult result = nextTable.GetMultiGpuCompatibility((VkPhysicalGpu)gpuw->nextObject, gpu1, pInfo);
+    VkResult result = nextTable.GetMultiGpuCompatibility(gpu0, gpu1, pInfo);
     return result;
 }
 
@@ -1932,11 +1927,10 @@ VK_LAYER_EXPORT void VKAPI vkCmdDbgMarkerEnd(VkCmdBuffer cmdBuffer)
 
 VK_LAYER_EXPORT VkResult VKAPI vkWsiX11AssociateConnection(VkPhysicalGpu gpu, const VK_WSI_X11_CONNECTION_INFO* pConnectionInfo)
 {
-    VkBaseLayerObject* gpuw = (VkBaseLayerObject *) gpu;
-    pCurObj = gpuw;
+    pCurObj = (VkBaseLayerObject *) gpu;
     loader_platform_thread_once(&tabOnce, initParamChecker);
 
-    VkResult result = nextTable.WsiX11AssociateConnection((VkPhysicalGpu)gpuw->nextObject, pConnectionInfo);
+    VkResult result = nextTable.WsiX11AssociateConnection(gpu, pConnectionInfo);
     return result;
 }
 

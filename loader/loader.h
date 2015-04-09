@@ -65,15 +65,6 @@ static inline void loader_init_data(void *obj, const void *data)
     loader_set_data(obj, data);
 }
 
-static inline void *loader_unwrap_gpu(VkPhysicalGpu *gpu)
-{
-    const VkBaseLayerObject *wrap = (const VkBaseLayerObject *) *gpu;
-
-    *gpu = (VkPhysicalGpu) wrap->nextObject;
-
-    return loader_get_data(wrap->baseObject);
-}
-
 struct loader_instance {
     struct loader_icd *icds;
     struct loader_instance *next;
