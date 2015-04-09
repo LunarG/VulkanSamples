@@ -29,6 +29,8 @@
 
 XglRenderFramework::XglRenderFramework() :
     m_cmdBuffer( VK_NULL_HANDLE ),
+    m_renderPass(VK_NULL_HANDLE),
+    m_framebuffer(VK_NULL_HANDLE),
     m_stateRaster( VK_NULL_HANDLE ),
     m_colorBlend( VK_NULL_HANDLE ),
     m_stateViewport( VK_NULL_HANDLE ),
