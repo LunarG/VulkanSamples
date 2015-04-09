@@ -501,9 +501,9 @@ namespace {
 
 static vk_testing::Environment *environment;
 
-class XglCmdBlitTest : public ::testing::Test {
+class VkCmdBlitTest : public ::testing::Test {
 protected:
-    XglCmdBlitTest() :
+    VkCmdBlitTest() :
         dev_(environment->default_device()),
         queue_(*dev_.graphics_queues()[0]),
         cmd_(dev_, vk_testing::CmdBuffer::create_info(dev_.graphics_queue_node_index_))
@@ -543,9 +543,9 @@ protected:
     std::vector<VK_GPU_MEMORY> mem_refs_;
 };
 
-typedef XglCmdBlitTest XglCmdFillBufferTest;
+typedef VkCmdBlitTest VkCmdFillBufferTest;
 
-TEST_F(XglCmdFillBufferTest, Basic)
+TEST_F(VkCmdFillBufferTest, Basic)
 {
     vk_testing::Buffer buf;
 
@@ -568,7 +568,7 @@ TEST_F(XglCmdFillBufferTest, Basic)
     buf.unmap();
 }
 
-TEST_F(XglCmdFillBufferTest, Large)
+TEST_F(VkCmdFillBufferTest, Large)
 {
     const VK_GPU_SIZE size = 32 * 1024 * 1024;
     vk_testing::Buffer buf;
@@ -592,7 +592,7 @@ TEST_F(XglCmdFillBufferTest, Large)
     buf.unmap();
 }
 
-TEST_F(XglCmdFillBufferTest, Overlap)
+TEST_F(VkCmdFillBufferTest, Overlap)
 {
     vk_testing::Buffer buf;
 
@@ -615,7 +615,7 @@ TEST_F(XglCmdFillBufferTest, Overlap)
     buf.unmap();
 }
 
-TEST_F(XglCmdFillBufferTest, MultiAlignments)
+TEST_F(VkCmdFillBufferTest, MultiAlignments)
 {
     vk_testing::Buffer bufs[9];
     VK_GPU_SIZE size = 4;
@@ -644,9 +644,9 @@ TEST_F(XglCmdFillBufferTest, MultiAlignments)
     }
 }
 
-typedef XglCmdBlitTest XglCmdCopyBufferTest;
+typedef VkCmdBlitTest VkCmdCopyBufferTest;
 
-TEST_F(XglCmdCopyBufferTest, Basic)
+TEST_F(VkCmdCopyBufferTest, Basic)
 {
     vk_testing::Buffer src, dst;
 
@@ -672,7 +672,7 @@ TEST_F(XglCmdCopyBufferTest, Basic)
     dst.unmap();
 }
 
-TEST_F(XglCmdCopyBufferTest, Large)
+TEST_F(VkCmdCopyBufferTest, Large)
 {
     const VK_GPU_SIZE size = 32 * 1024 * 1024;
     vk_testing::Buffer src, dst;
@@ -702,7 +702,7 @@ TEST_F(XglCmdCopyBufferTest, Large)
     dst.unmap();
 }
 
-TEST_F(XglCmdCopyBufferTest, MultiAlignments)
+TEST_F(VkCmdCopyBufferTest, MultiAlignments)
 {
     const VK_BUFFER_COPY regions[] = {
         /* well aligned */
@@ -751,7 +751,7 @@ TEST_F(XglCmdCopyBufferTest, MultiAlignments)
     dst.unmap();
 }
 
-TEST_F(XglCmdCopyBufferTest, RAWHazard)
+TEST_F(VkCmdCopyBufferTest, RAWHazard)
 {
     vk_testing::Buffer bufs[3];
     VK_EVENT_CREATE_INFO event_info;
@@ -882,7 +882,7 @@ TEST_F(XglCmdCopyBufferTest, RAWHazard)
     ASSERT_VK_SUCCESS(err);
 }
 
-class XglCmdBlitImageTest : public XglCmdBlitTest {
+class VkCmdBlitImageTest : public VkCmdBlitTest {
 protected:
     void init_test_formats(VK_FLAGS features)
     {
@@ -968,11 +968,11 @@ protected:
     VK_FORMAT first_optimal_format_;
 };
 
-class XglCmdCopyBufferToImageTest : public XglCmdBlitImageTest {
+class VkCmdCopyBufferToImageTest : public VkCmdBlitImageTest {
 protected:
     virtual void SetUp()
     {
-        XglCmdBlitTest::SetUp();
+        VkCmdBlitTest::SetUp();
         init_test_formats(VK_FORMAT_IMAGE_COPY_BIT);
         ASSERT_NE(true, test_formats_.empty());
     }
@@ -1014,7 +1014,7 @@ protected:
     }
 };
 
-TEST_F(XglCmdCopyBufferToImageTest, Basic)
+TEST_F(VkCmdCopyBufferToImageTest, Basic)
 {
     for (std::vector<vk_testing::Device::Format>::const_iterator it = test_formats_.begin();
          it != test_formats_.end(); it++) {
@@ -1036,11 +1036,11 @@ TEST_F(XglCmdCopyBufferToImageTest, Basic)
     }
 }
 
-class XglCmdCopyImageToBufferTest : public XglCmdBlitImageTest {
+class VkCmdCopyImageToBufferTest : public VkCmdBlitImageTest {
 protected:
     virtual void SetUp()
     {
-        XglCmdBlitTest::SetUp();
+        VkCmdBlitTest::SetUp();
         init_test_formats(VK_FORMAT_IMAGE_COPY_BIT);
         ASSERT_NE(true, test_formats_.empty());
     }
@@ -1082,7 +1082,7 @@ protected:
     }
 };
 
-TEST_F(XglCmdCopyImageToBufferTest, Basic)
+TEST_F(VkCmdCopyImageToBufferTest, Basic)
 {
     for (std::vector<vk_testing::Device::Format>::const_iterator it = test_formats_.begin();
          it != test_formats_.end(); it++) {
@@ -1104,11 +1104,11 @@ TEST_F(XglCmdCopyImageToBufferTest, Basic)
     }
 }
 
-class XglCmdCopyImageTest : public XglCmdBlitImageTest {
+class VkCmdCopyImageTest : public VkCmdBlitImageTest {
 protected:
     virtual void SetUp()
     {
-        XglCmdBlitTest::SetUp();
+        VkCmdBlitTest::SetUp();
         init_test_formats(VK_FORMAT_IMAGE_COPY_BIT);
         ASSERT_NE(true, test_formats_.empty());
     }
@@ -1164,7 +1164,7 @@ protected:
     }
 };
 
-TEST_F(XglCmdCopyImageTest, Basic)
+TEST_F(VkCmdCopyImageTest, Basic)
 {
     for (std::vector<vk_testing::Device::Format>::const_iterator it = test_formats_.begin();
          it != test_formats_.end(); it++) {
@@ -1191,11 +1191,11 @@ TEST_F(XglCmdCopyImageTest, Basic)
     }
 }
 
-class XglCmdCloneImageDataTest : public XglCmdBlitImageTest {
+class VkCmdCloneImageDataTest : public VkCmdBlitImageTest {
 protected:
     virtual void SetUp()
     {
-        XglCmdBlitTest::SetUp();
+        VkCmdBlitTest::SetUp();
         init_test_formats();
         ASSERT_NE(true, test_formats_.empty());
     }
@@ -1229,7 +1229,7 @@ protected:
     }
 };
 
-TEST_F(XglCmdCloneImageDataTest, Basic)
+TEST_F(VkCmdCloneImageDataTest, Basic)
 {
     for (std::vector<vk_testing::Device::Format>::const_iterator it = test_formats_.begin();
          it != test_formats_.end(); it++) {
@@ -1263,14 +1263,14 @@ TEST_F(XglCmdCloneImageDataTest, Basic)
     }
 }
 
-class XglCmdClearColorImageTest : public XglCmdBlitImageTest {
+class VkCmdClearColorImageTest : public VkCmdBlitImageTest {
 protected:
-    XglCmdClearColorImageTest() : test_raw_(false) {}
-    XglCmdClearColorImageTest(bool test_raw) : test_raw_(test_raw) {}
+    VkCmdClearColorImageTest() : test_raw_(false) {}
+    VkCmdClearColorImageTest(bool test_raw) : test_raw_(test_raw) {}
 
     virtual void SetUp()
     {
-        XglCmdBlitTest::SetUp();
+        VkCmdBlitTest::SetUp();
 
         if (test_raw_)
             init_test_formats();
@@ -1439,7 +1439,7 @@ protected:
     }
 };
 
-TEST_F(XglCmdClearColorImageTest, Basic)
+TEST_F(VkCmdClearColorImageTest, Basic)
 {
     for (std::vector<vk_testing::Device::Format>::const_iterator it = test_formats_.begin();
          it != test_formats_.end(); it++) {
@@ -1460,9 +1460,9 @@ TEST_F(XglCmdClearColorImageTest, Basic)
     }
 }
 
-class XglCmdClearColorImageRawTest : public XglCmdClearColorImageTest {
+class VkCmdClearColorImageRawTest : public VkCmdClearColorImageTest {
 protected:
-    XglCmdClearColorImageRawTest() : XglCmdClearColorImageTest(true) {}
+    VkCmdClearColorImageRawTest() : VkCmdClearColorImageTest(true) {}
 
     void test_clear_color_image_raw(const VK_IMAGE_CREATE_INFO &img_info,
                                     const uint32_t color[4],
@@ -1475,7 +1475,7 @@ protected:
     }
 };
 
-TEST_F(XglCmdClearColorImageRawTest, Basic)
+TEST_F(VkCmdClearColorImageRawTest, Basic)
 {
     for (std::vector<vk_testing::Device::Format>::const_iterator it = test_formats_.begin();
          it != test_formats_.end(); it++) {
@@ -1512,11 +1512,11 @@ TEST_F(XglCmdClearColorImageRawTest, Basic)
     }
 }
 
-class XglCmdClearDepthStencilTest : public XglCmdBlitImageTest {
+class VkCmdClearDepthStencilTest : public VkCmdBlitImageTest {
 protected:
     virtual void SetUp()
     {
-        XglCmdBlitTest::SetUp();
+        VkCmdBlitTest::SetUp();
         init_test_formats(VK_FORMAT_DEPTH_ATTACHMENT_BIT |
                           VK_FORMAT_STENCIL_ATTACHMENT_BIT);
         ASSERT_NE(true, test_formats_.empty());
@@ -1658,7 +1658,7 @@ protected:
     }
 };
 
-TEST_F(XglCmdClearDepthStencilTest, Basic)
+TEST_F(VkCmdClearDepthStencilTest, Basic)
 {
     for (std::vector<vk_testing::Device::Format>::const_iterator it = test_formats_.begin();
          it != test_formats_.end(); it++) {

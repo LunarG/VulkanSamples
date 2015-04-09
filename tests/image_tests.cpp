@@ -63,7 +63,7 @@
 #include "vktestbinding.h"
 #include "test_common.h"
 
-class XglImageTest : public ::testing::Test {
+class VkImageTest : public ::testing::Test {
 public:
     void CreateImage(uint32_t w, uint32_t h);
     void DestroyImage();
@@ -117,7 +117,7 @@ protected:
 };
 
 
-void XglImageTest::CreateImage(uint32_t w, uint32_t h)
+void VkImageTest::CreateImage(uint32_t w, uint32_t h)
 {
     VK_RESULT err;
     uint32_t mipCount;
@@ -257,7 +257,7 @@ void XglImageTest::CreateImage(uint32_t w, uint32_t h)
     }
 }
 
-void XglImageTest::DestroyImage()
+void VkImageTest::DestroyImage()
 {
     VK_RESULT err;
     // All done with image memory, clean up
@@ -272,19 +272,19 @@ void XglImageTest::DestroyImage()
     ASSERT_VK_SUCCESS(vkDestroyObject(m_image));
 }
 
-void XglImageTest::CreateImageView(VK_IMAGE_VIEW_CREATE_INFO *pCreateInfo,
+void VkImageTest::CreateImageView(VK_IMAGE_VIEW_CREATE_INFO *pCreateInfo,
                                    VK_IMAGE_VIEW *pView)
 {
     pCreateInfo->image = this->m_image;
     ASSERT_VK_SUCCESS(vkCreateImageView(device(), pCreateInfo, pView));
 }
 
-void XglImageTest::DestroyImageView(VK_IMAGE_VIEW imageView)
+void VkImageTest::DestroyImageView(VK_IMAGE_VIEW imageView)
 {
     ASSERT_VK_SUCCESS(vkDestroyObject(imageView));
 }
 
-TEST_F(XglImageTest, CreateImageViewTest) {
+TEST_F(VkImageTest, CreateImageViewTest) {
     VK_FORMAT fmt;
     VK_IMAGE_VIEW imageView;
 

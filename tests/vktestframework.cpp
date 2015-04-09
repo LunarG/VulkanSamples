@@ -91,34 +91,34 @@ void TestEnvironment::TearDown()
     glslang::FinalizeProcess();
 }
 
-XglTestFramework::XglTestFramework() :
+VkTestFramework::VkTestFramework() :
     m_compile_options( 0 ),
     m_num_shader_strings( 0 )
 {
 
 }
 
-XglTestFramework::~XglTestFramework()
+VkTestFramework::~VkTestFramework()
 {
 
 }
 
 // Define all the static elements
-bool XglTestFramework::m_show_images = false;
-bool XglTestFramework::m_save_images = false;
-bool XglTestFramework::m_compare_images = false;
+bool VkTestFramework::m_show_images = false;
+bool VkTestFramework::m_save_images = false;
+bool VkTestFramework::m_compare_images = false;
 #ifdef _WIN32
-bool XglTestFramework::m_use_spv = false;
+bool VkTestFramework::m_use_spv = false;
 #else
-bool XglTestFramework::m_use_spv = true;
+bool VkTestFramework::m_use_spv = true;
 #endif
-int XglTestFramework::m_width = 0;
-int XglTestFramework::m_height = 0;
-std::list<XglTestImageRecord> XglTestFramework::m_images;
-std::list<XglTestImageRecord>::iterator XglTestFramework::m_display_image;
+int VkTestFramework::m_width = 0;
+int VkTestFramework::m_height = 0;
+std::list<VkTestImageRecord> VkTestFramework::m_images;
+std::list<VkTestImageRecord>::iterator VkTestFramework::m_display_image;
 int m_display_image_idx = 0;
 
-void XglTestFramework::InitArgs(int *argc, char *argv[])
+void VkTestFramework::InitArgs(int *argc, char *argv[])
 {
     int i, n;
 
@@ -177,12 +177,12 @@ void XglTestFramework::InitArgs(int *argc, char *argv[])
     }
 }
 
-void XglTestFramework::WritePPM( const char *basename, XglImage *image )
+void VkTestFramework::WritePPM( const char *basename, VkImageObj *image )
 {
     string filename;
     VK_RESULT err;
     int x, y;
-    XglImage displayImage(image->device());
+    VkImageObj displayImage(image->device());
 
     displayImage.init(image->extent().width, image->extent().height, image->format(), 0, VK_LINEAR_TILING);
     displayImage.CopyImage(*image);
@@ -245,7 +245,7 @@ void XglTestFramework::WritePPM( const char *basename, XglImage *image )
     displayImage.unmap();
 }
 
-void XglTestFramework::Compare(const char *basename, XglImage *image )
+void VkTestFramework::Compare(const char *basename, VkImageObj *image )
 {
 
     MagickWand *magick_wand_1;
@@ -298,7 +298,7 @@ void XglTestFramework::Compare(const char *basename, XglImage *image )
     }
 }
 
-void XglTestFramework::Show(const char *comment, XglImage *image)
+void VkTestFramework::Show(const char *comment, VkImageObj *image)
 {
     VK_RESULT err;
 
@@ -307,7 +307,7 @@ void XglTestFramework::Show(const char *comment, XglImage *image)
     };
     VK_SUBRESOURCE_LAYOUT sr_layout;
     size_t data_size = sizeof(sr_layout);
-    XglTestImageRecord record;
+    VkTestImageRecord record;
 
     if (!m_show_images) return;
 
@@ -338,14 +338,14 @@ void XglTestFramework::Show(const char *comment, XglImage *image)
 
 }
 
-void XglTestFramework::RecordImages(vector<XglImage *> images)
+void VkTestFramework::RecordImages(vector<VkImageObj *> images)
 {
     for (int32_t i = 0; i < images.size(); i++) {
         RecordImage(images[i]);
     }
 }
 
-void XglTestFramework::RecordImage(XglImage * image)
+void VkTestFramework::RecordImage(VkImageObj * image)
 {
     const ::testing::TestInfo* const test_info =
       ::testing::UnitTest::GetInstance()->current_test_info();
@@ -382,7 +382,7 @@ void XglTestFramework::RecordImage(XglImage * image)
 
 static vk_testing::Environment *environment;
 
-TestFrameworkXglPresent::TestFrameworkXglPresent() :
+TestFrameworkVkPresent::TestFrameworkVkPresent() :
    m_device(environment->default_device()),
    m_queue(*m_device.graphics_queues()[0]),
    m_cmdbuf(m_device, vk_testing::CmdBuffer::create_info(m_device.graphics_queue_node_index_))
@@ -393,7 +393,7 @@ TestFrameworkXglPresent::TestFrameworkXglPresent() :
     m_height = 0;
 }
 
-void  TestFrameworkXglPresent::Display()
+void  TestFrameworkVkPresent::Display()
 {
     VK_RESULT err;
 
@@ -417,7 +417,7 @@ void  TestFrameworkXglPresent::Display()
 
 }
 
-void  TestFrameworkXglPresent::HandleEvent(xcb_generic_event_t *event)
+void  TestFrameworkVkPresent::HandleEvent(xcb_generic_event_t *event)
 {
     uint8_t event_code = event->response_type & 0x7f;
     switch (event_code) {
@@ -464,7 +464,7 @@ void  TestFrameworkXglPresent::HandleEvent(xcb_generic_event_t *event)
     }
 }
 
-void  TestFrameworkXglPresent::Run()
+void  TestFrameworkVkPresent::Run()
 {
     xcb_flush(environment->m_connection);
 
@@ -483,7 +483,7 @@ void  TestFrameworkXglPresent::Run()
     }
 }
 
-void TestFrameworkXglPresent::CreatePresentableImages()
+void TestFrameworkVkPresent::CreatePresentableImages()
 {
     VK_RESULT err;
 
@@ -549,12 +549,12 @@ void TestFrameworkXglPresent::CreatePresentableImages()
     m_display_image = m_images.begin();
 }
 
-void  TestFrameworkXglPresent::InitPresentFramework(std::list<XglTestImageRecord>  &imagesIn)
+void  TestFrameworkVkPresent::InitPresentFramework(std::list<VkTestImageRecord>  &imagesIn)
 {
     m_images = imagesIn;
 }
 
-void  TestFrameworkXglPresent::CreateMyWindow()
+void  TestFrameworkVkPresent::CreateMyWindow()
 {
     uint32_t value_mask, value_list[32];
 
@@ -590,16 +590,16 @@ void  TestFrameworkXglPresent::CreateMyWindow()
     xcb_map_window(environment->m_connection, m_window);
 }
 
-void TestFrameworkXglPresent::TearDown()
+void TestFrameworkVkPresent::TearDown()
 {
-    std::list<XglTestImageRecord>::const_iterator iterator;
+    std::list<VkTestImageRecord>::const_iterator iterator;
     for (iterator = m_images.begin(); iterator != m_images.end(); ++iterator) {
         vkDestroyObject(iterator->m_presentableImage);
     }
     xcb_destroy_window(environment->m_connection, m_window);
 }
 
-void XglTestFramework::Finish()
+void VkTestFramework::Finish()
 {
     if (m_images.size() == 0) return;
 
@@ -608,7 +608,7 @@ void XglTestFramework::Finish()
     environment->X11SetUp();
 
     {
-        TestFrameworkXglPresent vkPresent;
+        TestFrameworkVkPresent vkPresent;
 
         vkPresent.InitPresentFramework(m_images);
         vkPresent.CreatePresentableImages();
@@ -723,7 +723,7 @@ static const char* DefaultConfig =
 //
 // *.conf => this is a config file that can set limits/resources
 //
-bool XglTestFramework::SetConfigFile(const std::string& name)
+bool VkTestFramework::SetConfigFile(const std::string& name)
 {
     if (name.size() < 5)
         return false;
@@ -739,7 +739,7 @@ bool XglTestFramework::SetConfigFile(const std::string& name)
 //
 // Parse either a .conf file provided by the user or the default string above.
 //
-void XglTestFramework::ProcessConfigFile()
+void VkTestFramework::ProcessConfigFile()
 {
     char** configStrings = 0;
     char* config = 0;
@@ -961,7 +961,7 @@ void XglTestFramework::ProcessConfigFile()
         FreeFileData(configStrings);
 }
 
-void XglTestFramework::SetMessageOptions(EShMessages& messages)
+void VkTestFramework::SetMessageOptions(EShMessages& messages)
 {
     if (m_compile_options & EOptionRelaxedErrors)
         messages = (EShMessages)(messages | EShMsgRelaxedErrors);
@@ -974,7 +974,7 @@ void XglTestFramework::SetMessageOptions(EShMessages& messages)
 //
 //   Malloc a string of sufficient size and read a string into it.
 //
-char** XglTestFramework::ReadFileData(const char* fileName)
+char** VkTestFramework::ReadFileData(const char* fileName)
 {
     FILE *in;
     #if defined(_WIN32) && defined(__GNUC__)
@@ -1037,7 +1037,7 @@ char** XglTestFramework::ReadFileData(const char* fileName)
     return return_data;
 }
 
-void XglTestFramework::FreeFileData(char** data)
+void VkTestFramework::FreeFileData(char** data)
 {
     for(int i=0;i<m_num_shader_strings;i++)
         free(data[i]);
@@ -1054,7 +1054,7 @@ void XglTestFramework::FreeFileData(char** data)
 //   .frag = fragment
 //   .comp = compute
 //
-EShLanguage XglTestFramework::FindLanguage(const std::string& name)
+EShLanguage VkTestFramework::FindLanguage(const std::string& name)
 {
     size_t ext = name.rfind('.');
     if (ext == std::string::npos) {
@@ -1081,7 +1081,7 @@ EShLanguage XglTestFramework::FindLanguage(const std::string& name)
 //
 // Convert VK shader type to compiler's
 //
-EShLanguage XglTestFramework::FindLanguage(const VK_PIPELINE_SHADER_STAGE shader_type)
+EShLanguage VkTestFramework::FindLanguage(const VK_PIPELINE_SHADER_STAGE shader_type)
 {
     switch (shader_type) {
     case VK_SHADER_STAGE_VERTEX:
@@ -1112,7 +1112,7 @@ EShLanguage XglTestFramework::FindLanguage(const VK_PIPELINE_SHADER_STAGE shader
 // Compile a given string containing GLSL into SPV for use by VK
 // Return value of false means an error was encountered.
 //
-bool XglTestFramework::GLSLtoSPV(const VK_PIPELINE_SHADER_STAGE shader_type,
+bool VkTestFramework::GLSLtoSPV(const VK_PIPELINE_SHADER_STAGE shader_type,
                                  const char *pshader,
                                  std::vector<unsigned int> &spv)
 {
@@ -1173,7 +1173,7 @@ bool XglTestFramework::GLSLtoSPV(const VK_PIPELINE_SHADER_STAGE shader_type,
 
 
 
-XglTestImageRecord::XglTestImageRecord() : // Constructor
+VkTestImageRecord::VkTestImageRecord() : // Constructor
     m_width( 0 ),
     m_height( 0 ),
     m_data( NULL ),
@@ -1183,12 +1183,12 @@ XglTestImageRecord::XglTestImageRecord() : // Constructor
 {
 }
 
-XglTestImageRecord::~XglTestImageRecord()
+VkTestImageRecord::~VkTestImageRecord()
 {
 
 }
 
-XglTestImageRecord::XglTestImageRecord(const XglTestImageRecord &copyin)   // Copy constructor to handle pass by value.
+VkTestImageRecord::VkTestImageRecord(const VkTestImageRecord &copyin)   // Copy constructor to handle pass by value.
 {
     m_title = copyin.m_title;
     m_width = copyin.m_width;
@@ -1199,14 +1199,14 @@ XglTestImageRecord::XglTestImageRecord(const XglTestImageRecord &copyin)   // Co
     m_presentableMemory = copyin.m_presentableMemory;
 }
 
-ostream &operator<<(ostream &output, const XglTestImageRecord &XglTestImageRecord)
+ostream &operator<<(ostream &output, const VkTestImageRecord &VkTestImageRecord)
 {
-    output << XglTestImageRecord.m_title << " (" << XglTestImageRecord.m_width <<
-              "," << XglTestImageRecord.m_height << ")" << endl;
+    output << VkTestImageRecord.m_title << " (" << VkTestImageRecord.m_width <<
+              "," << VkTestImageRecord.m_height << ")" << endl;
     return output;
 }
 
-XglTestImageRecord& XglTestImageRecord::operator=(const XglTestImageRecord &rhs)
+VkTestImageRecord& VkTestImageRecord::operator=(const VkTestImageRecord &rhs)
 {
     m_title = rhs.m_title;
     m_width = rhs.m_width;
@@ -1218,14 +1218,14 @@ XglTestImageRecord& XglTestImageRecord::operator=(const XglTestImageRecord &rhs)
     return *this;
 }
 
-int XglTestImageRecord::operator==(const XglTestImageRecord &rhs) const
+int VkTestImageRecord::operator==(const VkTestImageRecord &rhs) const
 {
     if( this->m_data != rhs.m_data) return 0;
     return 1;
 }
 
 // This function is required for built-in STL list functions like sort
-int XglTestImageRecord::operator<(const XglTestImageRecord &rhs) const
+int VkTestImageRecord::operator<(const VkTestImageRecord &rhs) const
 {
     if( this->m_data_size < rhs.m_data_size ) return 1;
     return 0;

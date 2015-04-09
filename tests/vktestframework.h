@@ -45,18 +45,18 @@
 
 using namespace std;
 
-class XglImage;
+class VkImageObj;
 
 
-class XglTestImageRecord
+class VkTestImageRecord
 {
 public:
-    XglTestImageRecord();
-    XglTestImageRecord(const XglTestImageRecord &);
-    ~XglTestImageRecord();
-    XglTestImageRecord &operator=(const XglTestImageRecord &rhs);
-    int operator==(const XglTestImageRecord &rhs) const;
-    int operator<(const XglTestImageRecord &rhs) const;
+    VkTestImageRecord();
+    VkTestImageRecord(const VkTestImageRecord &);
+    ~VkTestImageRecord();
+    VkTestImageRecord &operator=(const VkTestImageRecord &rhs);
+    int operator==(const VkTestImageRecord &rhs) const;
+    int operator<(const VkTestImageRecord &rhs) const;
 
     string                    m_title;
     int                       m_width;
@@ -67,20 +67,20 @@ public:
     unsigned                  m_data_size;
 };
 
-class XglTestFramework : public ::testing::Test
+class VkTestFramework : public ::testing::Test
 {
 public:
-    XglTestFramework();
-    ~XglTestFramework();
+    VkTestFramework();
+    ~VkTestFramework();
 
     static void InitArgs(int *argc, char *argv[]);
     static void Finish();
 
-    void WritePPM( const char *basename, XglImage *image );
-    void Show(const char *comment, XglImage *image);
-    void Compare(const char *comment, XglImage *image);
-    void RecordImage(XglImage * image);
-    void RecordImages(vector<XglImage *> image);
+    void WritePPM( const char *basename, VkImageObj *image );
+    void Show(const char *comment, VkImageObj *image);
+    void Compare(const char *comment, VkImageObj *image);
+    void RecordImage(VkImageObj * image);
+    void RecordImages(vector<VkImageObj *> image);
     bool GLSLtoSPV(const VK_PIPELINE_SHADER_STAGE shader_type,
                    const char *pshader,
                    std::vector<unsigned int> &spv);
@@ -104,8 +104,8 @@ private:
     static bool                             m_save_images;
     static bool                             m_compare_images;
 
-    static std::list<XglTestImageRecord>    m_images;
-    static std::list<XglTestImageRecord>::iterator m_display_image;
+    static std::list<VkTestImageRecord>    m_images;
+    static std::list<VkTestImageRecord>::iterator m_display_image;
     static int                              m_display_image_idx;
 
     static int                              m_width;            // Window width
@@ -117,13 +117,13 @@ private:
 };
 
 
-class TestFrameworkXglPresent
+class TestFrameworkVkPresent
 {
 public:
-    TestFrameworkXglPresent();
+    TestFrameworkVkPresent();
 
     void Run();
-    void InitPresentFramework(std::list<XglTestImageRecord> &imagesIn);
+    void InitPresentFramework(std::list<VkTestImageRecord> &imagesIn);
     void CreateMyWindow();
     void CreatePresentableImages();
     void TearDown();
@@ -136,7 +136,7 @@ protected:
 private:
     xcb_window_t                            m_window;
     xcb_intern_atom_reply_t                *m_atom_wm_delete_window;
-    std::list<XglTestImageRecord>           m_images;
+    std::list<VkTestImageRecord>           m_images;
 
     bool                                    m_quit;
     bool                                    m_pause;
@@ -144,7 +144,7 @@ private:
     uint32_t                                m_width;
     uint32_t                                m_height;
 
-    std::list<XglTestImageRecord>::iterator m_display_image;
+    std::list<VkTestImageRecord>::iterator m_display_image;
 
     void Display();
     void HandleEvent(xcb_generic_event_t *event);

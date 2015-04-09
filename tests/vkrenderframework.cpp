@@ -27,7 +27,7 @@
 
 #include "vkrenderframework.h"
 
-XglRenderFramework::XglRenderFramework() :
+VkRenderFramework::VkRenderFramework() :
     m_cmdBuffer( VK_NULL_HANDLE ),
     m_renderPass(VK_NULL_HANDLE),
     m_framebuffer(VK_NULL_HANDLE),
@@ -51,12 +51,12 @@ XglRenderFramework::XglRenderFramework() :
     m_clear_color.useRawValue = true;
 }
 
-XglRenderFramework::~XglRenderFramework()
+VkRenderFramework::~VkRenderFramework()
 {
 
 }
 
-void XglRenderFramework::InitFramework()
+void VkRenderFramework::InitFramework()
 {
     VK_RESULT err;
     VK_INSTANCE_CREATE_INFO instInfo = {};
@@ -73,13 +73,13 @@ void XglRenderFramework::InitFramework()
     ASSERT_VK_SUCCESS(err);
     ASSERT_GE(this->gpu_count, 1) << "No GPU available";
 
-    m_device = new XglDevice(0, objs[0]);
+    m_device = new VkDeviceObj(0, objs[0]);
     m_device->get_device_queue();
 
-    m_depthStencil = new XglDepthStencilObj();
+    m_depthStencil = new VkDepthStencilObj();
 }
 
-void XglRenderFramework::ShutdownFramework()
+void VkRenderFramework::ShutdownFramework()
 {
     if (m_colorBlend) vkDestroyObject(m_colorBlend);
     if (m_stateDepthStencil) vkDestroyObject(m_stateDepthStencil);
@@ -106,7 +106,7 @@ void XglRenderFramework::ShutdownFramework()
     vkDestroyInstance(this->inst);
 }
 
-void XglRenderFramework::InitState()
+void VkRenderFramework::InitState()
 {
     VK_RESULT err;
 
@@ -144,7 +144,7 @@ void XglRenderFramework::InitState()
     ASSERT_VK_SUCCESS(err) << "vkCreateCommandBuffer failed";
 }
 
-void XglRenderFramework::InitViewport(float width, float height)
+void VkRenderFramework::InitViewport(float width, float height)
 {
     VK_RESULT err;
 
@@ -173,26 +173,26 @@ void XglRenderFramework::InitViewport(float width, float height)
     m_height = height;
 }
 
-void XglRenderFramework::InitViewport()
+void VkRenderFramework::InitViewport()
 {
     InitViewport(m_width, m_height);
 }
-void XglRenderFramework::InitRenderTarget()
+void VkRenderFramework::InitRenderTarget()
 {
     InitRenderTarget(1);
 }
 
-void XglRenderFramework::InitRenderTarget(uint32_t targets)
+void VkRenderFramework::InitRenderTarget(uint32_t targets)
 {
     InitRenderTarget(targets, NULL);
 }
 
-void XglRenderFramework::InitRenderTarget(VK_DEPTH_STENCIL_BIND_INFO *dsBinding)
+void VkRenderFramework::InitRenderTarget(VK_DEPTH_STENCIL_BIND_INFO *dsBinding)
 {
     InitRenderTarget(1, dsBinding);
 }
 
-void XglRenderFramework::InitRenderTarget(uint32_t targets, VK_DEPTH_STENCIL_BIND_INFO *dsBinding)
+void VkRenderFramework::InitRenderTarget(uint32_t targets, VK_DEPTH_STENCIL_BIND_INFO *dsBinding)
 {
     std::vector<VK_ATTACHMENT_LOAD_OP> load_ops;
     std::vector<VK_ATTACHMENT_STORE_OP> store_ops;
@@ -201,7 +201,7 @@ void XglRenderFramework::InitRenderTarget(uint32_t targets, VK_DEPTH_STENCIL_BIN
     uint32_t i;
 
     for (i = 0; i < targets; i++) {
-        XglImage *img = new XglImage(m_device);
+        VkImageObj *img = new VkImageObj(m_device);
         img->init(m_width, m_height, m_render_target_fmt,
                 VK_IMAGE_USAGE_SHADER_ACCESS_WRITE_BIT |
                 VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT);
@@ -253,7 +253,7 @@ void XglRenderFramework::InitRenderTarget(uint32_t targets, VK_DEPTH_STENCIL_BIN
 
 
 
-XglDevice::XglDevice(uint32_t id, VK_PHYSICAL_GPU obj) :
+VkDeviceObj::VkDeviceObj(uint32_t id, VK_PHYSICAL_GPU obj) :
     vk_testing::Device(obj), id(id)
 {
     init();
@@ -262,25 +262,25 @@ XglDevice::XglDevice(uint32_t id, VK_PHYSICAL_GPU obj) :
     queue_props = &gpu().queue_properties()[0];
 }
 
-void XglDevice::get_device_queue()
+void VkDeviceObj::get_device_queue()
 {
     ASSERT_NE(true, graphics_queues().empty());
     m_queue = graphics_queues()[0]->obj();
 }
 
-XglDescriptorSetObj::XglDescriptorSetObj(XglDevice *device)
+VkDescriptorSetObj::VkDescriptorSetObj(VkDeviceObj *device)
 {
     m_device = device;
     m_nextSlot = 0;
 
 }
 
-XglDescriptorSetObj::~XglDescriptorSetObj()
+VkDescriptorSetObj::~VkDescriptorSetObj()
 {
     delete m_set;
 }
 
-int XglDescriptorSetObj::AppendDummy()
+int VkDescriptorSetObj::AppendDummy()
 {
     /* request a descriptor but do not update it */
     VK_DESCRIPTOR_TYPE_COUNT tc = {};
@@ -291,7 +291,7 @@ int XglDescriptorSetObj::AppendDummy()
     return m_nextSlot++;
 }
 
-int XglDescriptorSetObj::AppendBuffer(VK_DESCRIPTOR_TYPE type, XglConstantBufferObj &constantBuffer)
+int VkDescriptorSetObj::AppendBuffer(VK_DESCRIPTOR_TYPE type, VkConstantBufferObj &constantBuffer)
 {
     VK_DESCRIPTOR_TYPE_COUNT tc = {};
     tc.type = type;
@@ -307,7 +307,7 @@ int XglDescriptorSetObj::AppendBuffer(VK_DESCRIPTOR_TYPE type, XglConstantBuffer
     return m_nextSlot++;
 }
 
-int XglDescriptorSetObj::AppendSamplerTexture( XglSamplerObj* sampler, XglTextureObj* texture)
+int VkDescriptorSetObj::AppendSamplerTexture( VkSamplerObj* sampler, VkTextureObj* texture)
 {
     VK_DESCRIPTOR_TYPE_COUNT tc = {};
     tc.type = VK_DESCRIPTOR_TYPE_SAMPLER_TEXTURE;
@@ -328,17 +328,17 @@ int XglDescriptorSetObj::AppendSamplerTexture( XglSamplerObj* sampler, XglTextur
     return m_nextSlot++;
 }
 
-VK_DESCRIPTOR_SET_LAYOUT_CHAIN XglDescriptorSetObj::GetLayoutChain() const
+VK_DESCRIPTOR_SET_LAYOUT_CHAIN VkDescriptorSetObj::GetLayoutChain() const
 {
     return m_layout_chain.obj();
 }
 
-VK_DESCRIPTOR_SET XglDescriptorSetObj::GetDescriptorSetHandle() const
+VK_DESCRIPTOR_SET VkDescriptorSetObj::GetDescriptorSetHandle() const
 {
     return m_set->obj();
 }
 
-void XglDescriptorSetObj::CreateVKDescriptorSet(XglCommandBufferObj *cmdBuffer)
+void VkDescriptorSetObj::CreateVKDescriptorSet(VkCommandBufferObj *cmdBuffer)
 {
     // create VK_DESCRIPTOR_POOL
     VK_DESCRIPTOR_POOL_CREATE_INFO pool = {};
@@ -390,15 +390,15 @@ void XglDescriptorSetObj::CreateVKDescriptorSet(XglCommandBufferObj *cmdBuffer)
     m_device->end_descriptor_pool_update(*cmdBuffer);
 }
 
-XglImage::XglImage(XglDevice *dev)
+VkImageObj::VkImageObj(VkDeviceObj *dev)
 {
     m_device = dev;
     m_imageInfo.view = VK_NULL_HANDLE;
     m_imageInfo.layout = VK_IMAGE_LAYOUT_GENERAL;
 }
 
-void XglImage::ImageMemoryBarrier(
-        XglCommandBufferObj *cmd_buf,
+void VkImageObj::ImageMemoryBarrier(
+        VkCommandBufferObj *cmd_buf,
         VK_IMAGE_ASPECT aspect,
         VK_FLAGS output_mask /*=
             VK_MEMORY_OUTPUT_CPU_WRITE_BIT |
@@ -439,7 +439,7 @@ void XglImage::ImageMemoryBarrier(
     vkCmdPipelineBarrier(cmd_buf->obj(), &pipeline_barrier);
 }
 
-void XglImage::SetLayout(XglCommandBufferObj *cmd_buf,
+void VkImageObj::SetLayout(VkCommandBufferObj *cmd_buf,
                          VK_IMAGE_ASPECT aspect,
                          VK_IMAGE_LAYOUT image_layout)
 {
@@ -494,11 +494,11 @@ void XglImage::SetLayout(XglCommandBufferObj *cmd_buf,
     m_imageInfo.layout = image_layout;
 }
 
-void XglImage::SetLayout(VK_IMAGE_ASPECT aspect,
+void VkImageObj::SetLayout(VK_IMAGE_ASPECT aspect,
                          VK_IMAGE_LAYOUT image_layout)
 {
     VK_RESULT err;
-    XglCommandBufferObj cmd_buf(m_device);
+    VkCommandBufferObj cmd_buf(m_device);
 
     /* Build command buffer to set image layout in the driver */
     err = cmd_buf.BeginCommandBuffer();
@@ -512,7 +512,7 @@ void XglImage::SetLayout(VK_IMAGE_ASPECT aspect,
     cmd_buf.QueueCommandBuffer();
 }
 
-bool XglImage::IsCompatible(VK_FLAGS usage, VK_FLAGS features)
+bool VkImageObj::IsCompatible(VK_FLAGS usage, VK_FLAGS features)
 {
     if ((usage & VK_IMAGE_USAGE_SHADER_ACCESS_READ_BIT) &&
             !(features & VK_FORMAT_IMAGE_SHADER_READ_BIT))
@@ -525,7 +525,7 @@ bool XglImage::IsCompatible(VK_FLAGS usage, VK_FLAGS features)
     return true;
 }
 
-void XglImage::init(uint32_t w, uint32_t h,
+void VkImageObj::init(uint32_t w, uint32_t h,
                VK_FORMAT fmt, VK_FLAGS usage,
                VK_IMAGE_TILING requested_tiling)
 {
@@ -587,22 +587,22 @@ void XglImage::init(uint32_t w, uint32_t h,
     }
 }
 
-VK_RESULT XglImage::MapMemory(void** ptr)
+VK_RESULT VkImageObj::MapMemory(void** ptr)
 {
     *ptr = map();
     return (*ptr) ? VK_SUCCESS : VK_ERROR_UNKNOWN;
 }
 
-VK_RESULT XglImage::UnmapMemory()
+VK_RESULT VkImageObj::UnmapMemory()
 {
     unmap();
     return VK_SUCCESS;
 }
 
-VK_RESULT XglImage::CopyImage(XglImage &src_image)
+VK_RESULT VkImageObj::CopyImage(VkImageObj &src_image)
 {
     VK_RESULT err;
-    XglCommandBufferObj cmd_buf(m_device);
+    VkCommandBufferObj cmd_buf(m_device);
     VK_IMAGE_LAYOUT src_image_layout, dest_image_layout;
 
     /* Build command buffer to copy staging texture to usable texture */
@@ -650,15 +650,15 @@ VK_RESULT XglImage::CopyImage(XglImage &src_image)
     return VK_SUCCESS;
 }
 
-XglTextureObj::XglTextureObj(XglDevice *device, uint32_t *colors)
-    :XglImage(device)
+VkTextureObj::VkTextureObj(VkDeviceObj *device, uint32_t *colors)
+    :VkImageObj(device)
 {
     m_device = device;
     const VK_FORMAT tex_format = VK_FMT_B8G8R8A8_UNORM;
     uint32_t tex_colors[2] = { 0xffff0000, 0xff00ff00 };
     void *data;
     int32_t x, y;
-    XglImage stagingImage(device);
+    VkImageObj stagingImage(device);
 
     stagingImage.init(16, 16, tex_format, 0, VK_LINEAR_TILING);
     VK_SUBRESOURCE_LAYOUT layout = stagingImage.subresource_layout(subresource(VK_IMAGE_ASPECT_COLOR, 0, 0));
@@ -703,10 +703,10 @@ XglTextureObj::XglTextureObj(XglDevice *device, uint32_t *colors)
             row[x] = colors[(x & 1) ^ (y & 1)];
     }
     stagingImage.unmap();
-    XglImage::CopyImage(stagingImage);
+    VkImageObj::CopyImage(stagingImage);
 }
 
-XglSamplerObj::XglSamplerObj(XglDevice *device)
+VkSamplerObj::VkSamplerObj(VkDeviceObj *device)
 {
     m_device = device;
 
@@ -732,7 +732,7 @@ XglSamplerObj::XglSamplerObj(XglDevice *device)
 /*
  * Basic ConstantBuffer constructor. Then use create methods to fill in the details.
  */
-XglConstantBufferObj::XglConstantBufferObj(XglDevice *device)
+VkConstantBufferObj::VkConstantBufferObj(VkDeviceObj *device)
 {
     m_device = device;
     m_commandBuffer = 0;
@@ -740,7 +740,7 @@ XglConstantBufferObj::XglConstantBufferObj(XglDevice *device)
     memset(&m_bufferViewInfo,0,sizeof(m_bufferViewInfo));
 }
 
-XglConstantBufferObj::~XglConstantBufferObj()
+VkConstantBufferObj::~VkConstantBufferObj()
 {
     // TODO: Should we call QueueRemoveMemReference for the constant buffer memory here?
     if (m_commandBuffer) {
@@ -748,7 +748,7 @@ XglConstantBufferObj::~XglConstantBufferObj()
     }
 }
 
-XglConstantBufferObj::XglConstantBufferObj(XglDevice *device, int constantCount, int constantSize, const void* data)
+VkConstantBufferObj::VkConstantBufferObj(VkDeviceObj *device, int constantCount, int constantSize, const void* data)
 {
     m_device = device;
     m_commandBuffer = 0;
@@ -777,13 +777,13 @@ XglConstantBufferObj::XglConstantBufferObj(XglDevice *device, int constantCount,
     this->m_bufferViewInfo.view = m_bufferView.obj();
 }
 
-void XglConstantBufferObj::Bind(VK_CMD_BUFFER cmdBuffer, VK_GPU_SIZE offset, uint32_t binding)
+void VkConstantBufferObj::Bind(VK_CMD_BUFFER cmdBuffer, VK_GPU_SIZE offset, uint32_t binding)
 {
     vkCmdBindVertexBuffer(cmdBuffer, obj(), offset, binding);
 }
 
 
-void XglConstantBufferObj::BufferMemoryBarrier(
+void VkConstantBufferObj::BufferMemoryBarrier(
         VK_FLAGS outputMask /*=
             VK_MEMORY_OUTPUT_CPU_WRITE_BIT |
             VK_MEMORY_OUTPUT_SHADER_WRITE_BIT |
@@ -807,7 +807,7 @@ void XglConstantBufferObj::BufferMemoryBarrier(
     {
         m_fence.init(*m_device, vk_testing::Fence::create_info());
 
-        m_commandBuffer = new XglCommandBufferObj(m_device);
+        m_commandBuffer = new VkCommandBufferObj(m_device);
     }
     else
     {
@@ -858,13 +858,13 @@ void XglConstantBufferObj::BufferMemoryBarrier(
     ASSERT_VK_SUCCESS(err);
 }
 
-XglIndexBufferObj::XglIndexBufferObj(XglDevice *device)
-    : XglConstantBufferObj(device)
+VkIndexBufferObj::VkIndexBufferObj(VkDeviceObj *device)
+    : VkConstantBufferObj(device)
 {
 
 }
 
-void XglIndexBufferObj::CreateAndInitBuffer(int numIndexes, VK_INDEX_TYPE indexType, const void* data)
+void VkIndexBufferObj::CreateAndInitBuffer(int numIndexes, VK_INDEX_TYPE indexType, const void* data)
 {
     VK_FORMAT viewFormat;
 
@@ -909,17 +909,17 @@ void XglIndexBufferObj::CreateAndInitBuffer(int numIndexes, VK_INDEX_TYPE indexT
     this->m_bufferViewInfo.view = m_bufferView.obj();
 }
 
-void XglIndexBufferObj::Bind(VK_CMD_BUFFER cmdBuffer, VK_GPU_SIZE offset)
+void VkIndexBufferObj::Bind(VK_CMD_BUFFER cmdBuffer, VK_GPU_SIZE offset)
 {
     vkCmdBindIndexBuffer(cmdBuffer, obj(), offset, m_indexType);
 }
 
-VK_INDEX_TYPE XglIndexBufferObj::GetIndexType()
+VK_INDEX_TYPE VkIndexBufferObj::GetIndexType()
 {
     return m_indexType;
 }
 
-VK_PIPELINE_SHADER_STAGE_CREATE_INFO* XglShaderObj::GetStageCreateInfo()
+VK_PIPELINE_SHADER_STAGE_CREATE_INFO* VkShaderObj::GetStageCreateInfo()
 {
     VK_PIPELINE_SHADER_STAGE_CREATE_INFO *stageInfo = (VK_PIPELINE_SHADER_STAGE_CREATE_INFO*) calloc( 1,sizeof(VK_PIPELINE_SHADER_STAGE_CREATE_INFO) );
     stageInfo->sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
@@ -931,7 +931,7 @@ VK_PIPELINE_SHADER_STAGE_CREATE_INFO* XglShaderObj::GetStageCreateInfo()
     return stageInfo;
 }
 
-XglShaderObj::XglShaderObj(XglDevice *device, const char * shader_code, VK_PIPELINE_SHADER_STAGE stage, XglRenderFramework *framework)
+VkShaderObj::VkShaderObj(VkDeviceObj *device, const char * shader_code, VK_PIPELINE_SHADER_STAGE stage, VkRenderFramework *framework)
 {
     VK_RESULT err = VK_SUCCESS;
     std::vector<unsigned int> spv;
@@ -974,7 +974,7 @@ XglShaderObj::XglShaderObj(XglDevice *device, const char * shader_code, VK_PIPEL
     }
 }
 
-XglPipelineObj::XglPipelineObj(XglDevice *device)
+VkPipelineObj::VkPipelineObj(VkDeviceObj *device)
 {
     m_device = device;
     m_vi_state.attributeCount = m_vi_state.bindingCount = 0;
@@ -1034,31 +1034,31 @@ XglPipelineObj::XglPipelineObj(XglDevice *device)
 
 };
 
-void XglPipelineObj::AddShader(XglShaderObj* shader)
+void VkPipelineObj::AddShader(VkShaderObj* shader)
 {
     m_shaderObjs.push_back(shader);
 }
 
-void XglPipelineObj::AddVertexInputAttribs(VK_VERTEX_INPUT_ATTRIBUTE_DESCRIPTION* vi_attrib, int count)
+void VkPipelineObj::AddVertexInputAttribs(VK_VERTEX_INPUT_ATTRIBUTE_DESCRIPTION* vi_attrib, int count)
 {
     m_vi_state.pVertexAttributeDescriptions = vi_attrib;
     m_vi_state.attributeCount = count;
 }
 
-void XglPipelineObj::AddVertexInputBindings(VK_VERTEX_INPUT_BINDING_DESCRIPTION* vi_binding, int count)
+void VkPipelineObj::AddVertexInputBindings(VK_VERTEX_INPUT_BINDING_DESCRIPTION* vi_binding, int count)
 {
     m_vi_state.pVertexBindingDescriptions = vi_binding;
     m_vi_state.bindingCount = count;
 }
 
-void XglPipelineObj::AddVertexDataBuffer(XglConstantBufferObj* vertexDataBuffer, int binding)
+void VkPipelineObj::AddVertexDataBuffer(VkConstantBufferObj* vertexDataBuffer, int binding)
 {
     m_vertexBufferObjs.push_back(vertexDataBuffer);
     m_vertexBufferBindings.push_back(binding);
     m_vertexBufferCount++;
 }
 
-void XglPipelineObj::AddColorAttachment(uint32_t binding, const VK_PIPELINE_CB_ATTACHMENT_STATE *att)
+void VkPipelineObj::AddColorAttachment(uint32_t binding, const VK_PIPELINE_CB_ATTACHMENT_STATE *att)
 {
     if (binding+1 > m_colorAttachments.size())
     {
@@ -1067,7 +1067,7 @@ void XglPipelineObj::AddColorAttachment(uint32_t binding, const VK_PIPELINE_CB_A
     m_colorAttachments[binding] = *att;
 }
 
-void XglPipelineObj::SetDepthStencil(VK_PIPELINE_DS_STATE_CREATE_INFO *ds_state)
+void VkPipelineObj::SetDepthStencil(VK_PIPELINE_DS_STATE_CREATE_INFO *ds_state)
 {
     m_ds_state.format = ds_state->format;
     m_ds_state.depthTestEnable = ds_state->depthTestEnable;
@@ -1079,7 +1079,7 @@ void XglPipelineObj::SetDepthStencil(VK_PIPELINE_DS_STATE_CREATE_INFO *ds_state)
     m_ds_state.front = ds_state->front;
 }
 
-void XglPipelineObj::CreateVKPipeline(XglDescriptorSetObj &descriptorSet)
+void VkPipelineObj::CreateVKPipeline(VkDescriptorSetObj &descriptorSet)
 {
     void* head_ptr = &m_ds_state;
     VK_GRAPHICS_PIPELINE_CREATE_INFO info = {};
@@ -1111,7 +1111,7 @@ void XglPipelineObj::CreateVKPipeline(XglDescriptorSetObj &descriptorSet)
     init(*m_device, info);
 }
 
-vector<VK_GPU_MEMORY> XglMemoryRefManager::mem_refs() const
+vector<VK_GPU_MEMORY> VkMemoryRefManager::mem_refs() const
 {
     std::vector<VK_GPU_MEMORY> mems;
     if (this->mem_refs_.size()) {
@@ -1123,13 +1123,13 @@ vector<VK_GPU_MEMORY> XglMemoryRefManager::mem_refs() const
     return mems;
 }
 
-void XglMemoryRefManager::AddMemoryRefs(vk_testing::Object &vkObject)
+void VkMemoryRefManager::AddMemoryRefs(vk_testing::Object &vkObject)
 {
     const std::vector<VK_GPU_MEMORY> mems = vkObject.memories();
     AddMemoryRefs(mems);
 }
 
-void XglMemoryRefManager::AddMemoryRefs(vector<VK_GPU_MEMORY> mem)
+void VkMemoryRefManager::AddMemoryRefs(vector<VK_GPU_MEMORY> mem)
 {
     for (size_t i = 0; i < mem.size(); i++) {
         if (mem[i] != NULL) {
@@ -1138,62 +1138,62 @@ void XglMemoryRefManager::AddMemoryRefs(vector<VK_GPU_MEMORY> mem)
     }
 }
 
-void XglMemoryRefManager::EmitAddMemoryRefs(VK_QUEUE queue)
+void VkMemoryRefManager::EmitAddMemoryRefs(VK_QUEUE queue)
 {
     for (uint32_t i = 0; i < mem_refs_.size(); i++) {
         vkQueueAddMemReference(queue, mem_refs_[i]);
     }
 }
 
-void XglMemoryRefManager::EmitRemoveMemoryRefs(VK_QUEUE queue)
+void VkMemoryRefManager::EmitRemoveMemoryRefs(VK_QUEUE queue)
 {
     for (uint32_t i = 0; i < mem_refs_.size(); i++) {
         vkQueueRemoveMemReference(queue, mem_refs_[i]);
     }
 }
 
-XglCommandBufferObj::XglCommandBufferObj(XglDevice *device)
+VkCommandBufferObj::VkCommandBufferObj(VkDeviceObj *device)
     : vk_testing::CmdBuffer(*device, vk_testing::CmdBuffer::create_info(device->graphics_queue_node_index_))
 {
     m_device = device;
 }
 
-VK_CMD_BUFFER XglCommandBufferObj::GetBufferHandle()
+VK_CMD_BUFFER VkCommandBufferObj::GetBufferHandle()
 {
     return obj();
 }
 
-VK_RESULT XglCommandBufferObj::BeginCommandBuffer(VK_CMD_BUFFER_BEGIN_INFO *pInfo)
+VK_RESULT VkCommandBufferObj::BeginCommandBuffer(VK_CMD_BUFFER_BEGIN_INFO *pInfo)
 {
     begin(pInfo);
     return VK_SUCCESS;
 }
 
-VK_RESULT XglCommandBufferObj::BeginCommandBuffer(VK_RENDER_PASS renderpass_obj, VK_FRAMEBUFFER framebuffer_obj)
+VK_RESULT VkCommandBufferObj::BeginCommandBuffer(VK_RENDER_PASS renderpass_obj, VK_FRAMEBUFFER framebuffer_obj)
 {
     begin(renderpass_obj, framebuffer_obj);
     return VK_SUCCESS;
 }
 
-VK_RESULT XglCommandBufferObj::BeginCommandBuffer()
+VK_RESULT VkCommandBufferObj::BeginCommandBuffer()
 {
     begin();
     return VK_SUCCESS;
 }
 
-VK_RESULT XglCommandBufferObj::EndCommandBuffer()
+VK_RESULT VkCommandBufferObj::EndCommandBuffer()
 {
     end();
     return VK_SUCCESS;
 }
 
-void XglCommandBufferObj::PipelineBarrier(VK_PIPELINE_BARRIER *barrierPtr)
+void VkCommandBufferObj::PipelineBarrier(VK_PIPELINE_BARRIER *barrierPtr)
 {
     vkCmdPipelineBarrier(obj(), barrierPtr);
 }
 
-void XglCommandBufferObj::ClearAllBuffers(VK_CLEAR_COLOR clear_color, float depth_clear_color, uint32_t stencil_clear_color,
-                                          XglDepthStencilObj *depthStencilObj)
+void VkCommandBufferObj::ClearAllBuffers(VK_CLEAR_COLOR clear_color, float depth_clear_color, uint32_t stencil_clear_color,
+                                          VkDepthStencilObj *depthStencilObj)
 {
     uint32_t i;
     const VK_FLAGS output_mask =
@@ -1275,7 +1275,7 @@ void XglCommandBufferObj::ClearAllBuffers(VK_CLEAR_COLOR clear_color, float dept
     }
 }
 
-void XglCommandBufferObj::PrepareAttachments()
+void VkCommandBufferObj::PrepareAttachments()
 {
     uint32_t i;
     const VK_FLAGS output_mask =
@@ -1328,7 +1328,7 @@ void XglCommandBufferObj::PrepareAttachments()
     }
 }
 
-void XglCommandBufferObj::BeginRenderPass(VK_RENDER_PASS renderpass, VK_FRAMEBUFFER framebuffer)
+void VkCommandBufferObj::BeginRenderPass(VK_RENDER_PASS renderpass, VK_FRAMEBUFFER framebuffer)
 {
     VK_RENDER_PASS_BEGIN rp_begin = {
         renderpass,
@@ -1338,37 +1338,37 @@ void XglCommandBufferObj::BeginRenderPass(VK_RENDER_PASS renderpass, VK_FRAMEBUF
     vkCmdBeginRenderPass( obj(), &rp_begin);
 }
 
-void XglCommandBufferObj::EndRenderPass(VK_RENDER_PASS renderpass)
+void VkCommandBufferObj::EndRenderPass(VK_RENDER_PASS renderpass)
 {
     vkCmdEndRenderPass( obj(), renderpass);
 }
 
-void XglCommandBufferObj::BindStateObject(VK_STATE_BIND_POINT stateBindPoint, VK_DYNAMIC_STATE_OBJECT stateObject)
+void VkCommandBufferObj::BindStateObject(VK_STATE_BIND_POINT stateBindPoint, VK_DYNAMIC_STATE_OBJECT stateObject)
 {
     vkCmdBindDynamicStateObject( obj(), stateBindPoint, stateObject);
 }
 
-void XglCommandBufferObj::AddRenderTarget(XglImage *renderTarget)
+void VkCommandBufferObj::AddRenderTarget(VkImageObj *renderTarget)
 {
     m_renderTargets.push_back(renderTarget);
 }
 
-void XglCommandBufferObj::DrawIndexed(uint32_t firstIndex, uint32_t indexCount, int32_t vertexOffset, uint32_t firstInstance, uint32_t instanceCount)
+void VkCommandBufferObj::DrawIndexed(uint32_t firstIndex, uint32_t indexCount, int32_t vertexOffset, uint32_t firstInstance, uint32_t instanceCount)
 {
     vkCmdDrawIndexed(obj(), firstIndex, indexCount, vertexOffset, firstInstance, instanceCount);
 }
 
-void XglCommandBufferObj::Draw(uint32_t firstVertex, uint32_t vertexCount, uint32_t firstInstance, uint32_t instanceCount)
+void VkCommandBufferObj::Draw(uint32_t firstVertex, uint32_t vertexCount, uint32_t firstInstance, uint32_t instanceCount)
 {
     vkCmdDraw(obj(), firstVertex, vertexCount, firstInstance, instanceCount);
 }
 
-void XglCommandBufferObj::QueueCommandBuffer()
+void VkCommandBufferObj::QueueCommandBuffer()
 {
     QueueCommandBuffer(NULL);
 }
 
-void XglCommandBufferObj::QueueCommandBuffer(VK_FENCE fence)
+void VkCommandBufferObj::QueueCommandBuffer(VK_FENCE fence)
 {
     VK_RESULT err = VK_SUCCESS;
 
@@ -1391,13 +1391,13 @@ void XglCommandBufferObj::QueueCommandBuffer(VK_FENCE fence)
     mem_ref_mgr.EmitRemoveMemoryRefs(m_device->m_queue);
 }
 
-void XglCommandBufferObj::BindPipeline(XglPipelineObj &pipeline)
+void VkCommandBufferObj::BindPipeline(VkPipelineObj &pipeline)
 {
     vkCmdBindPipeline( obj(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline.obj() );
     mem_ref_mgr.AddMemoryRefs(pipeline);
 }
 
-void XglCommandBufferObj::BindDescriptorSet(XglDescriptorSetObj &descriptorSet)
+void VkCommandBufferObj::BindDescriptorSet(VkDescriptorSetObj &descriptorSet)
 {
     VK_DESCRIPTOR_SET set_obj = descriptorSet.GetDescriptorSetHandle();
 
@@ -1410,33 +1410,33 @@ void XglCommandBufferObj::BindDescriptorSet(XglDescriptorSetObj &descriptorSet)
     mem_ref_mgr.AddMemoryRefs(descriptorSet.mem_ref_mgr.mem_refs());
 }
 
-void XglCommandBufferObj::BindIndexBuffer(XglIndexBufferObj *indexBuffer, uint32_t offset)
+void VkCommandBufferObj::BindIndexBuffer(VkIndexBufferObj *indexBuffer, uint32_t offset)
 {
     vkCmdBindIndexBuffer(obj(), indexBuffer->obj(), offset, indexBuffer->GetIndexType());
     mem_ref_mgr.AddMemoryRefs(*indexBuffer);
 }
 
-void XglCommandBufferObj::BindVertexBuffer(XglConstantBufferObj *vertexBuffer, uint32_t offset, uint32_t binding)
+void VkCommandBufferObj::BindVertexBuffer(VkConstantBufferObj *vertexBuffer, uint32_t offset, uint32_t binding)
 {
     vkCmdBindVertexBuffer(obj(), vertexBuffer->obj(), offset, binding);
     mem_ref_mgr.AddMemoryRefs(*vertexBuffer);
 }
 
-XglDepthStencilObj::XglDepthStencilObj()
+VkDepthStencilObj::VkDepthStencilObj()
 {
     m_initialized = false;
 }
-bool XglDepthStencilObj::Initialized()
+bool VkDepthStencilObj::Initialized()
 {
     return m_initialized;
 }
 
-VK_DEPTH_STENCIL_BIND_INFO* XglDepthStencilObj::BindInfo()
+VK_DEPTH_STENCIL_BIND_INFO* VkDepthStencilObj::BindInfo()
 {
     return &m_depthStencilBindInfo;
 }
 
-void XglDepthStencilObj::Init(XglDevice *device, int32_t width, int32_t height)
+void VkDepthStencilObj::Init(VkDeviceObj *device, int32_t width, int32_t height)
 {
     VK_IMAGE_CREATE_INFO image_info;
     VK_DEPTH_STENCIL_VIEW_CREATE_INFO view_info;

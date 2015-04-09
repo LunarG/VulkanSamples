@@ -209,18 +209,18 @@ static const Vertex g_vb_solid_face_colors_Data[] =
     { XYZ1( -1, -1, -1 ), XYZ1( 0.f, 1.f, 1.f ) },
 };
 
-class XglRenderTest : public XglRenderFramework
+class VkRenderTest : public VkRenderFramework
 {
 public:
 
     void RotateTriangleVSUniform(glm::mat4 Projection, glm::mat4 View, glm::mat4 Model,
-                                 XglConstantBufferObj *constantBuffer, XglCommandBufferObj *cmdBuffer);
-    void GenericDrawPreparation(XglCommandBufferObj *cmdBuffer, XglPipelineObj &pipelineobj, XglDescriptorSetObj &descriptorSet);
+                                 VkConstantBufferObj *constantBuffer, VkCommandBufferObj *cmdBuffer);
+    void GenericDrawPreparation(VkCommandBufferObj *cmdBuffer, VkPipelineObj &pipelineobj, VkDescriptorSetObj &descriptorSet);
     void InitDepthStencil();
     void VKTriangleTest(const char *vertShaderText, const char *fragShaderText, const bool rotate);
 
-    VK_RESULT BeginCommandBuffer(XglCommandBufferObj &cmdBuffer);
-    VK_RESULT EndCommandBuffer(XglCommandBufferObj &cmdBuffer);
+    VK_RESULT BeginCommandBuffer(VkCommandBufferObj &cmdBuffer);
+    VK_RESULT EndCommandBuffer(VkCommandBufferObj &cmdBuffer);
 
 protected:
     VK_IMAGE m_texture;
@@ -253,7 +253,7 @@ protected:
     }
 };
 
-VK_RESULT XglRenderTest::BeginCommandBuffer(XglCommandBufferObj &cmdBuffer)
+VK_RESULT VkRenderTest::BeginCommandBuffer(VkCommandBufferObj &cmdBuffer)
 {
     VK_RESULT result;
 
@@ -270,7 +270,7 @@ VK_RESULT XglRenderTest::BeginCommandBuffer(XglCommandBufferObj &cmdBuffer)
     return result;
 }
 
-VK_RESULT XglRenderTest::EndCommandBuffer(XglCommandBufferObj &cmdBuffer)
+VK_RESULT VkRenderTest::EndCommandBuffer(VkCommandBufferObj &cmdBuffer)
 {
     VK_RESULT result;
 
@@ -282,7 +282,7 @@ VK_RESULT XglRenderTest::EndCommandBuffer(XglCommandBufferObj &cmdBuffer)
 }
 
 
-void XglRenderTest::GenericDrawPreparation(XglCommandBufferObj *cmdBuffer, XglPipelineObj &pipelineobj, XglDescriptorSetObj &descriptorSet)
+void VkRenderTest::GenericDrawPreparation(VkCommandBufferObj *cmdBuffer, VkPipelineObj &pipelineobj, VkDescriptorSetObj &descriptorSet)
 {
     if (m_depthStencil->Initialized()) {
         cmdBuffer->ClearAllBuffers(m_clear_color, m_depth_clear_color, m_stencil_clear_color, m_depthStencil);
@@ -301,8 +301,8 @@ void XglRenderTest::GenericDrawPreparation(XglCommandBufferObj *cmdBuffer, XglPi
     cmdBuffer->BindDescriptorSet(descriptorSet);
 }
 
-void XglRenderTest::RotateTriangleVSUniform(glm::mat4 Projection, glm::mat4 View, glm::mat4 Model,
-                                            XglConstantBufferObj *constantBuffer, XglCommandBufferObj *cmdBuffer)
+void VkRenderTest::RotateTriangleVSUniform(glm::mat4 Projection, glm::mat4 View, glm::mat4 Model,
+                                            VkConstantBufferObj *constantBuffer, VkCommandBufferObj *cmdBuffer)
 {
     int i;
     glm::mat4 MVP;
@@ -359,7 +359,7 @@ struct vktriangle_vs_uniform {
     float   color[3][4];
 };
 
-void XglRenderTest::VKTriangleTest(const char *vertShaderText, const char *fragShaderText, const bool rotate)
+void VkRenderTest::VKTriangleTest(const char *vertShaderText, const char *fragShaderText, const bool rotate)
 {
 #ifdef DEBUG_CALLBACK
     vkDbgRegisterMsgCallback(inst, myDbgFunc, NULL);
@@ -397,20 +397,20 @@ void XglRenderTest::VKTriangleTest(const char *vertShaderText, const char *fragS
     ASSERT_NO_FATAL_FAILURE(InitState());
     ASSERT_NO_FATAL_FAILURE(InitViewport());
 
-    XglConstantBufferObj constantBuffer(m_device, bufSize*2, sizeof(float), (const void*) &data);
+    VkConstantBufferObj constantBuffer(m_device, bufSize*2, sizeof(float), (const void*) &data);
 
-    XglShaderObj vs(m_device,vertShaderText,VK_SHADER_STAGE_VERTEX, this);
-    XglShaderObj ps(m_device,fragShaderText, VK_SHADER_STAGE_FRAGMENT, this);
+    VkShaderObj vs(m_device,vertShaderText,VK_SHADER_STAGE_VERTEX, this);
+    VkShaderObj ps(m_device,fragShaderText, VK_SHADER_STAGE_FRAGMENT, this);
 
-    XglPipelineObj pipelineobj(m_device);
+    VkPipelineObj pipelineobj(m_device);
     pipelineobj.AddShader(&vs);
     pipelineobj.AddShader(&ps);
 
-    XglDescriptorSetObj descriptorSet(m_device);
+    VkDescriptorSetObj descriptorSet(m_device);
     descriptorSet.AppendBuffer(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, constantBuffer);
 
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
-    XglCommandBufferObj cmdBuffer(m_device);
+    VkCommandBufferObj cmdBuffer(m_device);
     cmdBuffer.AddRenderTarget(m_renderTargets[0]);
 
     ASSERT_VK_SUCCESS(BeginCommandBuffer(cmdBuffer));
@@ -451,7 +451,7 @@ void XglRenderTest::VKTriangleTest(const char *vertShaderText, const char *fragS
 
 }
 
-TEST_F(XglRenderTest, VKTriangle_FragColor)
+TEST_F(VkRenderTest, VKTriangle_FragColor)
 {
     static const char *vertShaderText =
         "#version 140\n"
@@ -488,7 +488,7 @@ TEST_F(XglRenderTest, VKTriangle_FragColor)
     VKTriangleTest(vertShaderText, fragShaderText, true);
 }
 
-TEST_F(XglRenderTest, VKTriangle_OutputLocation)
+TEST_F(VkRenderTest, VKTriangle_OutputLocation)
 {
     static const char *vertShaderText =
         "#version 140\n"
@@ -527,9 +527,9 @@ TEST_F(XglRenderTest, VKTriangle_OutputLocation)
     VKTriangleTest(vertShaderText, fragShaderText, true);
 }
 #ifndef _WIN32 // Implicit (for now at least) in WIN32 is that we are using the Nvidia driver and it won't consume SPIRV yet
-TEST_F(XglRenderTest, SPV_VKTriangle)
+TEST_F(VkRenderTest, SPV_VKTriangle)
 {
-    bool saved_use_spv = XglTestFramework::m_use_spv;
+    bool saved_use_spv = VkTestFramework::m_use_spv;
 
     static const char *vertShaderText =
         "#version 140\n"
@@ -564,14 +564,14 @@ TEST_F(XglRenderTest, SPV_VKTriangle)
 
     TEST_DESCRIPTION("VK-style shaders, but force test framework to compile shader to SPV and pass SPV to driver.");
 
-    XglTestFramework::m_use_spv = true;
+    VkTestFramework::m_use_spv = true;
 
     VKTriangleTest(vertShaderText, fragShaderText, true);
 
-    XglTestFramework::m_use_spv = saved_use_spv;
+    VkTestFramework::m_use_spv = saved_use_spv;
 }
 #endif
-TEST_F(XglRenderTest, GreenTriangle)
+TEST_F(VkRenderTest, GreenTriangle)
 {
     static const char *vertShaderText =
             "#version 130\n"
@@ -594,9 +594,9 @@ TEST_F(XglRenderTest, GreenTriangle)
     VKTriangleTest(vertShaderText, fragShaderText, false);
 }
 #ifndef _WIN32 // Implicit (for now at least) in WIN32 is that we are using the Nvidia driver and it won't consume SPIRV yet
-TEST_F(XglRenderTest, SPV_GreenTriangle)
+TEST_F(VkRenderTest, SPV_GreenTriangle)
 {
-    bool saved_use_spv = XglTestFramework::m_use_spv;
+    bool saved_use_spv = VkTestFramework::m_use_spv;
 
     static const char *vertShaderText =
             "#version 130\n"
@@ -616,12 +616,12 @@ TEST_F(XglRenderTest, SPV_GreenTriangle)
 
     TEST_DESCRIPTION("Same shader as GreenTriangle, but compiles shader to SPV and gives SPV to driver.");
 
-    XglTestFramework::m_use_spv = true;
+    VkTestFramework::m_use_spv = true;
     VKTriangleTest(vertShaderText, fragShaderText, false);
-    XglTestFramework::m_use_spv = saved_use_spv;
+    VkTestFramework::m_use_spv = saved_use_spv;
 }
 #endif
-TEST_F(XglRenderTest, YellowTriangle)
+TEST_F(VkRenderTest, YellowTriangle)
 {
     static const char *vertShaderText =
             "#version 130\n"
@@ -646,7 +646,7 @@ TEST_F(XglRenderTest, YellowTriangle)
     VKTriangleTest(vertShaderText, fragShaderText, false);
 }
 
-TEST_F(XglRenderTest, QuadWithVertexFetch)
+TEST_F(VkRenderTest, QuadWithVertexFetch)
 {
     static const char *vertShaderText =
             "#version 140\n"
@@ -678,17 +678,17 @@ TEST_F(XglRenderTest, QuadWithVertexFetch)
     ASSERT_NO_FATAL_FAILURE(InitState());
     ASSERT_NO_FATAL_FAILURE(InitViewport());
 
-    XglConstantBufferObj meshBuffer(m_device,sizeof(g_vbData)/sizeof(g_vbData[0]),sizeof(g_vbData[0]), g_vbData);
+    VkConstantBufferObj meshBuffer(m_device,sizeof(g_vbData)/sizeof(g_vbData[0]),sizeof(g_vbData[0]), g_vbData);
     meshBuffer.BufferMemoryBarrier();
 
-    XglShaderObj vs(m_device,vertShaderText,VK_SHADER_STAGE_VERTEX, this);
-    XglShaderObj ps(m_device,fragShaderText, VK_SHADER_STAGE_FRAGMENT, this);
+    VkShaderObj vs(m_device,vertShaderText,VK_SHADER_STAGE_VERTEX, this);
+    VkShaderObj ps(m_device,fragShaderText, VK_SHADER_STAGE_FRAGMENT, this);
 
-    XglPipelineObj pipelineobj(m_device);
+    VkPipelineObj pipelineobj(m_device);
     pipelineobj.AddShader(&vs);
     pipelineobj.AddShader(&ps);
 
-    XglDescriptorSetObj descriptorSet(m_device);
+    VkDescriptorSetObj descriptorSet(m_device);
     descriptorSet.AppendBuffer(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, meshBuffer);
 
 #define MESH_BIND_ID 0
@@ -713,7 +713,7 @@ TEST_F(XglRenderTest, QuadWithVertexFetch)
     pipelineobj.AddVertexDataBuffer(&meshBuffer, MESH_BIND_ID);
 
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
-    XglCommandBufferObj cmdBuffer(m_device);
+    VkCommandBufferObj cmdBuffer(m_device);
     cmdBuffer.AddRenderTarget(m_renderTargets[0]);
 
     ASSERT_VK_SUCCESS(BeginCommandBuffer(cmdBuffer));
@@ -733,7 +733,7 @@ TEST_F(XglRenderTest, QuadWithVertexFetch)
     RecordImages(m_renderTargets);
 }
 
-TEST_F(XglRenderTest, TriangleMRT)
+TEST_F(VkRenderTest, TriangleMRT)
 {
     static const char *vertShaderText =
             "#version 140\n"
@@ -759,13 +759,13 @@ TEST_F(XglRenderTest, TriangleMRT)
     ASSERT_NO_FATAL_FAILURE(InitState());
     ASSERT_NO_FATAL_FAILURE(InitViewport());
 
-    XglConstantBufferObj meshBuffer(m_device, sizeof(vb_data) / sizeof(vb_data[0]), sizeof(vb_data[0]), vb_data);
+    VkConstantBufferObj meshBuffer(m_device, sizeof(vb_data) / sizeof(vb_data[0]), sizeof(vb_data[0]), vb_data);
     meshBuffer.BufferMemoryBarrier();
 
-    XglShaderObj vs(m_device,vertShaderText,VK_SHADER_STAGE_VERTEX, this);
-    XglShaderObj ps(m_device,fragShaderText, VK_SHADER_STAGE_FRAGMENT, this);
+    VkShaderObj vs(m_device,vertShaderText,VK_SHADER_STAGE_VERTEX, this);
+    VkShaderObj ps(m_device,fragShaderText, VK_SHADER_STAGE_FRAGMENT, this);
 
-    XglPipelineObj pipelineobj(m_device);
+    VkPipelineObj pipelineobj(m_device);
     pipelineobj.AddShader(&vs);
     pipelineobj.AddShader(&ps);
 
@@ -786,7 +786,7 @@ TEST_F(XglRenderTest, TriangleMRT)
     pipelineobj.AddVertexInputBindings(&vi_binding,1);
     pipelineobj.AddVertexDataBuffer(&meshBuffer, MESH_BUF_ID);
 
-    XglDescriptorSetObj descriptorSet(m_device);
+    VkDescriptorSetObj descriptorSet(m_device);
     descriptorSet.AppendBuffer(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, meshBuffer);
 
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget(2));
@@ -797,7 +797,7 @@ TEST_F(XglRenderTest, TriangleMRT)
     att.channelWriteMask = 0xf;
     pipelineobj.AddColorAttachment(1, &att);
 
-    XglCommandBufferObj cmdBuffer(m_device);
+    VkCommandBufferObj cmdBuffer(m_device);
 
     cmdBuffer.AddRenderTarget(m_renderTargets[0]);
     cmdBuffer.AddRenderTarget(m_renderTargets[1]);
@@ -822,7 +822,7 @@ TEST_F(XglRenderTest, TriangleMRT)
     RecordImages(m_renderTargets);
 }
 
-TEST_F(XglRenderTest, QuadWithIndexedVertexFetch)
+TEST_F(VkRenderTest, QuadWithIndexedVertexFetch)
 {
     static const char *vertShaderText =
             "#version 140\n"
@@ -867,21 +867,21 @@ TEST_F(XglRenderTest, QuadWithIndexedVertexFetch)
     ASSERT_NO_FATAL_FAILURE(InitState());
     ASSERT_NO_FATAL_FAILURE(InitViewport());
 
-    XglConstantBufferObj meshBuffer(m_device,sizeof(g_vbData)/sizeof(g_vbData[0]),sizeof(g_vbData[0]), g_vbData);
+    VkConstantBufferObj meshBuffer(m_device,sizeof(g_vbData)/sizeof(g_vbData[0]),sizeof(g_vbData[0]), g_vbData);
     meshBuffer.BufferMemoryBarrier();
 
-    XglIndexBufferObj indexBuffer(m_device);
+    VkIndexBufferObj indexBuffer(m_device);
     indexBuffer.CreateAndInitBuffer(sizeof(g_idxData)/sizeof(g_idxData[0]), VK_INDEX_16, g_idxData);
     indexBuffer.BufferMemoryBarrier();
 
-    XglShaderObj vs(m_device,vertShaderText,VK_SHADER_STAGE_VERTEX, this);
-    XglShaderObj ps(m_device,fragShaderText, VK_SHADER_STAGE_FRAGMENT, this);
+    VkShaderObj vs(m_device,vertShaderText,VK_SHADER_STAGE_VERTEX, this);
+    VkShaderObj ps(m_device,fragShaderText, VK_SHADER_STAGE_FRAGMENT, this);
 
-    XglPipelineObj pipelineobj(m_device);
+    VkPipelineObj pipelineobj(m_device);
     pipelineobj.AddShader(&vs);
     pipelineobj.AddShader(&ps);
 
-    XglDescriptorSetObj descriptorSet(m_device);
+    VkDescriptorSetObj descriptorSet(m_device);
     descriptorSet.AppendBuffer(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, meshBuffer);
     descriptorSet.AppendBuffer(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, indexBuffer);
 
@@ -907,7 +907,7 @@ TEST_F(XglRenderTest, QuadWithIndexedVertexFetch)
     pipelineobj.AddVertexInputBindings(&vi_binding,1);
 
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
-    XglCommandBufferObj cmdBuffer(m_device);
+    VkCommandBufferObj cmdBuffer(m_device);
     cmdBuffer.AddRenderTarget(m_renderTargets[0]);
     ASSERT_VK_SUCCESS(BeginCommandBuffer(cmdBuffer));
 
@@ -931,7 +931,7 @@ TEST_F(XglRenderTest, QuadWithIndexedVertexFetch)
     RecordImages(m_renderTargets);
 }
 
-TEST_F(XglRenderTest, GreyandRedCirclesonBlue)
+TEST_F(VkRenderTest, GreyandRedCirclesonBlue)
 {
     // This tests gl_FragCoord
 
@@ -967,17 +967,17 @@ TEST_F(XglRenderTest, GreyandRedCirclesonBlue)
     ASSERT_NO_FATAL_FAILURE(InitState());
     ASSERT_NO_FATAL_FAILURE(InitViewport());
 
-    XglConstantBufferObj meshBuffer(m_device,sizeof(g_vbData)/sizeof(g_vbData[0]),sizeof(g_vbData[0]), g_vbData);
+    VkConstantBufferObj meshBuffer(m_device,sizeof(g_vbData)/sizeof(g_vbData[0]),sizeof(g_vbData[0]), g_vbData);
     meshBuffer.BufferMemoryBarrier();
 
-    XglShaderObj vs(m_device,vertShaderText,VK_SHADER_STAGE_VERTEX, this);
-    XglShaderObj ps(m_device,fragShaderText, VK_SHADER_STAGE_FRAGMENT, this);
+    VkShaderObj vs(m_device,vertShaderText,VK_SHADER_STAGE_VERTEX, this);
+    VkShaderObj ps(m_device,fragShaderText, VK_SHADER_STAGE_FRAGMENT, this);
 
-    XglPipelineObj pipelineobj(m_device);
+    VkPipelineObj pipelineobj(m_device);
     pipelineobj.AddShader(&vs);
     pipelineobj.AddShader(&ps);
 
-    XglDescriptorSetObj descriptorSet(m_device);
+    VkDescriptorSetObj descriptorSet(m_device);
     descriptorSet.AppendBuffer(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, meshBuffer);
 
 #define MESH_BIND_ID 0
@@ -998,7 +998,7 @@ TEST_F(XglRenderTest, GreyandRedCirclesonBlue)
     pipelineobj.AddVertexDataBuffer(&meshBuffer,MESH_BIND_ID);
 
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
-    XglCommandBufferObj cmdBuffer(m_device);
+    VkCommandBufferObj cmdBuffer(m_device);
     cmdBuffer.AddRenderTarget(m_renderTargets[0]);
 
     ASSERT_VK_SUCCESS(BeginCommandBuffer(cmdBuffer));
@@ -1021,7 +1021,7 @@ TEST_F(XglRenderTest, GreyandRedCirclesonBlue)
     RecordImages(m_renderTargets);
 }
 
-TEST_F(XglRenderTest, RedCirclesonBlue)
+TEST_F(VkRenderTest, RedCirclesonBlue)
 {
     // This tests that we correctly handle unread fragment inputs
 
@@ -1057,17 +1057,17 @@ TEST_F(XglRenderTest, RedCirclesonBlue)
     ASSERT_NO_FATAL_FAILURE(InitState());
     ASSERT_NO_FATAL_FAILURE(InitViewport());
 
-    XglConstantBufferObj meshBuffer(m_device,sizeof(g_vbData)/sizeof(g_vbData[0]),sizeof(g_vbData[0]), g_vbData);
+    VkConstantBufferObj meshBuffer(m_device,sizeof(g_vbData)/sizeof(g_vbData[0]),sizeof(g_vbData[0]), g_vbData);
     meshBuffer.BufferMemoryBarrier();
 
-    XglShaderObj vs(m_device,vertShaderText,VK_SHADER_STAGE_VERTEX, this);
-    XglShaderObj ps(m_device,fragShaderText, VK_SHADER_STAGE_FRAGMENT, this);
+    VkShaderObj vs(m_device,vertShaderText,VK_SHADER_STAGE_VERTEX, this);
+    VkShaderObj ps(m_device,fragShaderText, VK_SHADER_STAGE_FRAGMENT, this);
 
-    XglPipelineObj pipelineobj(m_device);
+    VkPipelineObj pipelineobj(m_device);
     pipelineobj.AddShader(&vs);
     pipelineobj.AddShader(&ps);
 
-    XglDescriptorSetObj descriptorSet(m_device);
+    VkDescriptorSetObj descriptorSet(m_device);
     descriptorSet.AppendBuffer(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, meshBuffer);
 
 #define MESH_BIND_ID 0
@@ -1088,7 +1088,7 @@ TEST_F(XglRenderTest, RedCirclesonBlue)
     pipelineobj.AddVertexDataBuffer(&meshBuffer,MESH_BIND_ID);
 
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
-    XglCommandBufferObj cmdBuffer(m_device);
+    VkCommandBufferObj cmdBuffer(m_device);
     cmdBuffer.AddRenderTarget(m_renderTargets[0]);
 
     ASSERT_VK_SUCCESS(BeginCommandBuffer(cmdBuffer));
@@ -1110,7 +1110,7 @@ TEST_F(XglRenderTest, RedCirclesonBlue)
     RecordImages(m_renderTargets);
 }
 
-TEST_F(XglRenderTest, GreyCirclesonBlueFade)
+TEST_F(VkRenderTest, GreyCirclesonBlueFade)
 {
     // This tests reading gl_ClipDistance from FS
 
@@ -1157,17 +1157,17 @@ TEST_F(XglRenderTest, GreyCirclesonBlueFade)
     ASSERT_NO_FATAL_FAILURE(InitState());
     ASSERT_NO_FATAL_FAILURE(InitViewport());
 
-    XglConstantBufferObj meshBuffer(m_device,sizeof(g_vbData)/sizeof(g_vbData[0]),sizeof(g_vbData[0]), g_vbData);
+    VkConstantBufferObj meshBuffer(m_device,sizeof(g_vbData)/sizeof(g_vbData[0]),sizeof(g_vbData[0]), g_vbData);
     meshBuffer.BufferMemoryBarrier();
 
-    XglShaderObj vs(m_device,vertShaderText,VK_SHADER_STAGE_VERTEX, this);
-    XglShaderObj ps(m_device,fragShaderText, VK_SHADER_STAGE_FRAGMENT, this);
+    VkShaderObj vs(m_device,vertShaderText,VK_SHADER_STAGE_VERTEX, this);
+    VkShaderObj ps(m_device,fragShaderText, VK_SHADER_STAGE_FRAGMENT, this);
 
-    XglPipelineObj pipelineobj(m_device);
+    VkPipelineObj pipelineobj(m_device);
     pipelineobj.AddShader(&vs);
     pipelineobj.AddShader(&ps);
 
-    XglDescriptorSetObj descriptorSet(m_device);
+    VkDescriptorSetObj descriptorSet(m_device);
     descriptorSet.AppendBuffer(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, meshBuffer);
 
 #define MESH_BIND_ID 0
@@ -1188,7 +1188,7 @@ TEST_F(XglRenderTest, GreyCirclesonBlueFade)
     pipelineobj.AddVertexDataBuffer(&meshBuffer,MESH_BIND_ID);
 
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
-    XglCommandBufferObj cmdBuffer(m_device);
+    VkCommandBufferObj cmdBuffer(m_device);
     cmdBuffer.AddRenderTarget(m_renderTargets[0]);
 
     ASSERT_VK_SUCCESS(BeginCommandBuffer(cmdBuffer));
@@ -1211,7 +1211,7 @@ TEST_F(XglRenderTest, GreyCirclesonBlueFade)
     RecordImages(m_renderTargets);
 }
 
-TEST_F(XglRenderTest, GreyCirclesonBlueDiscard)
+TEST_F(VkRenderTest, GreyCirclesonBlueDiscard)
 {
     static const char *vertShaderText =
             "#version 140\n"
@@ -1248,17 +1248,17 @@ TEST_F(XglRenderTest, GreyCirclesonBlueDiscard)
     ASSERT_NO_FATAL_FAILURE(InitState());
     ASSERT_NO_FATAL_FAILURE(InitViewport());
 
-    XglConstantBufferObj meshBuffer(m_device,sizeof(g_vbData)/sizeof(g_vbData[0]),sizeof(g_vbData[0]), g_vbData);
+    VkConstantBufferObj meshBuffer(m_device,sizeof(g_vbData)/sizeof(g_vbData[0]),sizeof(g_vbData[0]), g_vbData);
     meshBuffer.BufferMemoryBarrier();
 
-    XglShaderObj vs(m_device,vertShaderText,VK_SHADER_STAGE_VERTEX, this);
-    XglShaderObj ps(m_device,fragShaderText, VK_SHADER_STAGE_FRAGMENT, this);
+    VkShaderObj vs(m_device,vertShaderText,VK_SHADER_STAGE_VERTEX, this);
+    VkShaderObj ps(m_device,fragShaderText, VK_SHADER_STAGE_FRAGMENT, this);
 
-    XglPipelineObj pipelineobj(m_device);
+    VkPipelineObj pipelineobj(m_device);
     pipelineobj.AddShader(&vs);
     pipelineobj.AddShader(&ps);
 
-    XglDescriptorSetObj descriptorSet(m_device);
+    VkDescriptorSetObj descriptorSet(m_device);
     descriptorSet.AppendBuffer(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, meshBuffer);
 
 #define MESH_BIND_ID 0
@@ -1279,7 +1279,7 @@ TEST_F(XglRenderTest, GreyCirclesonBlueDiscard)
     pipelineobj.AddVertexDataBuffer(&meshBuffer,MESH_BIND_ID);
 
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
-    XglCommandBufferObj cmdBuffer(m_device);
+    VkCommandBufferObj cmdBuffer(m_device);
     cmdBuffer.AddRenderTarget(m_renderTargets[0]);
 
     ASSERT_VK_SUCCESS(BeginCommandBuffer(cmdBuffer));
@@ -1303,7 +1303,7 @@ TEST_F(XglRenderTest, GreyCirclesonBlueDiscard)
 }
 
 
-TEST_F(XglRenderTest, TriangleVSUniform)
+TEST_F(VkRenderTest, TriangleVSUniform)
 {
     static const char *vertShaderText =
             "#version 140\n"
@@ -1337,20 +1337,20 @@ TEST_F(XglRenderTest, TriangleVSUniform)
     glm::mat4 MVP = Projection * View * Model;
     const int matrixSize = sizeof(MVP) / sizeof(MVP[0]);
 
-    XglConstantBufferObj MVPBuffer(m_device, matrixSize, sizeof(MVP[0]), (const void*) &MVP[0][0]);
-    XglShaderObj vs(m_device,vertShaderText,VK_SHADER_STAGE_VERTEX, this);
-    XglShaderObj ps(m_device,fragShaderText, VK_SHADER_STAGE_FRAGMENT, this);
+    VkConstantBufferObj MVPBuffer(m_device, matrixSize, sizeof(MVP[0]), (const void*) &MVP[0][0]);
+    VkShaderObj vs(m_device,vertShaderText,VK_SHADER_STAGE_VERTEX, this);
+    VkShaderObj ps(m_device,fragShaderText, VK_SHADER_STAGE_FRAGMENT, this);
 
-    XglPipelineObj pipelineobj(m_device);
+    VkPipelineObj pipelineobj(m_device);
     pipelineobj.AddShader(&vs);
     pipelineobj.AddShader(&ps);
 
     // Create descriptor set and attach the constant buffer to it
-    XglDescriptorSetObj descriptorSet(m_device);
+    VkDescriptorSetObj descriptorSet(m_device);
     descriptorSet.AppendBuffer(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, MVPBuffer);
 
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
-    XglCommandBufferObj cmdBuffer(m_device);
+    VkCommandBufferObj cmdBuffer(m_device);
     cmdBuffer.AddRenderTarget(m_renderTargets[0]);
 
     ASSERT_VK_SUCCESS(BeginCommandBuffer(cmdBuffer));
@@ -1375,7 +1375,7 @@ TEST_F(XglRenderTest, TriangleVSUniform)
     RotateTriangleVSUniform(Projection, View, Model, &MVPBuffer, &cmdBuffer);
 }
 
-TEST_F(XglRenderTest, MixTriangle)
+TEST_F(VkRenderTest, MixTriangle)
 {
     // This tests location applied to varyings. Notice that we have switched foo
     // and bar in the FS. The triangle should be blended with red, green and blue
@@ -1416,18 +1416,18 @@ TEST_F(XglRenderTest, MixTriangle)
     ASSERT_NO_FATAL_FAILURE(InitState());
     ASSERT_NO_FATAL_FAILURE(InitViewport());
 
-    XglShaderObj vs(m_device,vertShaderText,VK_SHADER_STAGE_VERTEX, this);
-    XglShaderObj ps(m_device,fragShaderText, VK_SHADER_STAGE_FRAGMENT, this);
+    VkShaderObj vs(m_device,vertShaderText,VK_SHADER_STAGE_VERTEX, this);
+    VkShaderObj ps(m_device,fragShaderText, VK_SHADER_STAGE_FRAGMENT, this);
 
-    XglPipelineObj pipelineobj(m_device);
+    VkPipelineObj pipelineobj(m_device);
     pipelineobj.AddShader(&vs);
     pipelineobj.AddShader(&ps);
 
-    XglDescriptorSetObj descriptorSet(m_device);
+    VkDescriptorSetObj descriptorSet(m_device);
     descriptorSet.AppendDummy();
 
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
-    XglCommandBufferObj cmdBuffer(m_device);
+    VkCommandBufferObj cmdBuffer(m_device);
     cmdBuffer.AddRenderTarget(m_renderTargets[0]);
 
     ASSERT_VK_SUCCESS(BeginCommandBuffer(cmdBuffer));
@@ -1449,7 +1449,7 @@ TEST_F(XglRenderTest, MixTriangle)
     RecordImages(m_renderTargets);
 }
 
-TEST_F(XglRenderTest, QuadVertFetchAndVertID)
+TEST_F(VkRenderTest, QuadVertFetchAndVertID)
 {
     // This tests that attributes work in the presence of gl_VertexID
 
@@ -1482,17 +1482,17 @@ TEST_F(XglRenderTest, QuadVertFetchAndVertID)
     ASSERT_NO_FATAL_FAILURE(InitState());
     ASSERT_NO_FATAL_FAILURE(InitViewport());
 
-    XglConstantBufferObj meshBuffer(m_device,sizeof(g_vbData)/sizeof(g_vbData[0]),sizeof(g_vbData[0]), g_vbData);
+    VkConstantBufferObj meshBuffer(m_device,sizeof(g_vbData)/sizeof(g_vbData[0]),sizeof(g_vbData[0]), g_vbData);
     meshBuffer.BufferMemoryBarrier();
 
-    XglShaderObj vs(m_device,vertShaderText,VK_SHADER_STAGE_VERTEX, this);
-    XglShaderObj ps(m_device,fragShaderText, VK_SHADER_STAGE_FRAGMENT, this);
+    VkShaderObj vs(m_device,vertShaderText,VK_SHADER_STAGE_VERTEX, this);
+    VkShaderObj ps(m_device,fragShaderText, VK_SHADER_STAGE_FRAGMENT, this);
 
-    XglPipelineObj pipelineobj(m_device);
+    VkPipelineObj pipelineobj(m_device);
     pipelineobj.AddShader(&vs);
     pipelineobj.AddShader(&ps);
 
-    XglDescriptorSetObj descriptorSet(m_device);
+    VkDescriptorSetObj descriptorSet(m_device);
     descriptorSet.AppendBuffer(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, meshBuffer);
 
 #define MESH_BUF_ID 0
@@ -1517,7 +1517,7 @@ TEST_F(XglRenderTest, QuadVertFetchAndVertID)
     pipelineobj.AddVertexDataBuffer(&meshBuffer, MESH_BUF_ID);
 
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
-    XglCommandBufferObj cmdBuffer(m_device);
+    VkCommandBufferObj cmdBuffer(m_device);
     cmdBuffer.AddRenderTarget(m_renderTargets[0]);
 
     ASSERT_VK_SUCCESS(BeginCommandBuffer(cmdBuffer));
@@ -1540,7 +1540,7 @@ TEST_F(XglRenderTest, QuadVertFetchAndVertID)
     RecordImages(m_renderTargets);
 }
 
-TEST_F(XglRenderTest, QuadSparseVertFetch)
+TEST_F(VkRenderTest, QuadSparseVertFetch)
 {
     // This tests that attributes work in the presence of gl_VertexID
 
@@ -1587,17 +1587,17 @@ TEST_F(XglRenderTest, QuadSparseVertFetch)
         { XYZ1(0, 0, 0), XYZ1( 1,  1, -1 ), XYZ1( 1.f, 1.f, 0.f ) },
     };
 
-    XglConstantBufferObj meshBuffer(m_device,sizeof(vData)/sizeof(vData[0]),sizeof(vData[0]), vData);
+    VkConstantBufferObj meshBuffer(m_device,sizeof(vData)/sizeof(vData[0]),sizeof(vData[0]), vData);
     meshBuffer.BufferMemoryBarrier();
 
-    XglShaderObj vs(m_device,vertShaderText,VK_SHADER_STAGE_VERTEX, this);
-    XglShaderObj ps(m_device,fragShaderText, VK_SHADER_STAGE_FRAGMENT, this);
+    VkShaderObj vs(m_device,vertShaderText,VK_SHADER_STAGE_VERTEX, this);
+    VkShaderObj ps(m_device,fragShaderText, VK_SHADER_STAGE_FRAGMENT, this);
 
-    XglPipelineObj pipelineobj(m_device);
+    VkPipelineObj pipelineobj(m_device);
     pipelineobj.AddShader(&vs);
     pipelineobj.AddShader(&ps);
 
-    XglDescriptorSetObj descriptorSet(m_device);
+    VkDescriptorSetObj descriptorSet(m_device);
     descriptorSet.AppendBuffer(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, meshBuffer);
 
 #define MESH_BUF_ID 0
@@ -1622,7 +1622,7 @@ TEST_F(XglRenderTest, QuadSparseVertFetch)
     pipelineobj.AddVertexDataBuffer(&meshBuffer, MESH_BUF_ID);
 
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
-    XglCommandBufferObj cmdBuffer(m_device);
+    VkCommandBufferObj cmdBuffer(m_device);
     cmdBuffer.AddRenderTarget(m_renderTargets[0]);
 
     ASSERT_VK_SUCCESS(BeginCommandBuffer(cmdBuffer));
@@ -1645,7 +1645,7 @@ TEST_F(XglRenderTest, QuadSparseVertFetch)
     RecordImages(m_renderTargets);
 }
 
-TEST_F(XglRenderTest, TriVertFetchDeadAttr)
+TEST_F(VkRenderTest, TriVertFetchDeadAttr)
 {
     // This tests that attributes work in the presence of gl_VertexID
     // and a dead attribute in position 0. Draws a triangle with yellow,
@@ -1682,17 +1682,17 @@ TEST_F(XglRenderTest, TriVertFetchDeadAttr)
     ASSERT_NO_FATAL_FAILURE(InitState());
     ASSERT_NO_FATAL_FAILURE(InitViewport());
 
-    XglConstantBufferObj meshBuffer(m_device,sizeof(g_vbData)/sizeof(g_vbData[0]),sizeof(g_vbData[0]), g_vbData);
+    VkConstantBufferObj meshBuffer(m_device,sizeof(g_vbData)/sizeof(g_vbData[0]),sizeof(g_vbData[0]), g_vbData);
     meshBuffer.BufferMemoryBarrier();
 
-    XglShaderObj vs(m_device,vertShaderText,VK_SHADER_STAGE_VERTEX, this);
-    XglShaderObj ps(m_device,fragShaderText, VK_SHADER_STAGE_FRAGMENT, this);
+    VkShaderObj vs(m_device,vertShaderText,VK_SHADER_STAGE_VERTEX, this);
+    VkShaderObj ps(m_device,fragShaderText, VK_SHADER_STAGE_FRAGMENT, this);
 
-    XglPipelineObj pipelineobj(m_device);
+    VkPipelineObj pipelineobj(m_device);
     pipelineobj.AddShader(&vs);
     pipelineobj.AddShader(&ps);
 
-    XglDescriptorSetObj descriptorSet(m_device);
+    VkDescriptorSetObj descriptorSet(m_device);
     descriptorSet.AppendBuffer(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, meshBuffer);
 
 #define MESH_BUF_ID 0
@@ -1717,7 +1717,7 @@ TEST_F(XglRenderTest, TriVertFetchDeadAttr)
     pipelineobj.AddVertexDataBuffer(&meshBuffer, MESH_BUF_ID);
 
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
-    XglCommandBufferObj cmdBuffer(m_device);
+    VkCommandBufferObj cmdBuffer(m_device);
     cmdBuffer.AddRenderTarget(m_renderTargets[0]);
 
     ASSERT_VK_SUCCESS(BeginCommandBuffer(cmdBuffer));
@@ -1740,7 +1740,7 @@ TEST_F(XglRenderTest, TriVertFetchDeadAttr)
     RecordImages(m_renderTargets);
 }
 
-TEST_F(XglRenderTest, CubeWithVertexFetchAndMVP)
+TEST_F(VkRenderTest, CubeWithVertexFetchAndMVP)
 {
     static const char *vertShaderText =
             "#version 140\n"
@@ -1779,16 +1779,16 @@ TEST_F(XglRenderTest, CubeWithVertexFetchAndMVP)
     ASSERT_NO_FATAL_FAILURE(InitViewport());
     m_depthStencil->Init(m_device, m_width, m_height);
 
-    XglConstantBufferObj meshBuffer(m_device,sizeof(g_vb_solid_face_colors_Data)/sizeof(g_vb_solid_face_colors_Data[0]),
+    VkConstantBufferObj meshBuffer(m_device,sizeof(g_vb_solid_face_colors_Data)/sizeof(g_vb_solid_face_colors_Data[0]),
             sizeof(g_vb_solid_face_colors_Data[0]), g_vb_solid_face_colors_Data);
 
     const int buf_size = sizeof(MVP) / sizeof(float);
 
-    XglConstantBufferObj MVPBuffer(m_device, buf_size, sizeof(MVP[0]), (const void*) &MVP[0][0]);
-    XglShaderObj vs(m_device,vertShaderText,VK_SHADER_STAGE_VERTEX, this);
-    XglShaderObj ps(m_device,fragShaderText, VK_SHADER_STAGE_FRAGMENT, this);
+    VkConstantBufferObj MVPBuffer(m_device, buf_size, sizeof(MVP[0]), (const void*) &MVP[0][0]);
+    VkShaderObj vs(m_device,vertShaderText,VK_SHADER_STAGE_VERTEX, this);
+    VkShaderObj ps(m_device,fragShaderText, VK_SHADER_STAGE_FRAGMENT, this);
 
-    XglPipelineObj pipelineobj(m_device);
+    VkPipelineObj pipelineobj(m_device);
     pipelineobj.AddShader(&vs);
     pipelineobj.AddShader(&ps);
 
@@ -1806,7 +1806,7 @@ TEST_F(XglRenderTest, CubeWithVertexFetchAndMVP)
     ds_state.front = ds_state.back;
     pipelineobj.SetDepthStencil(&ds_state);
 
-    XglDescriptorSetObj descriptorSet(m_device);
+    VkDescriptorSetObj descriptorSet(m_device);
     descriptorSet.AppendBuffer(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, MVPBuffer);
 
 #define MESH_BUF_ID 0
@@ -1832,7 +1832,7 @@ TEST_F(XglRenderTest, CubeWithVertexFetchAndMVP)
 
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget(m_depthStencil->BindInfo()));
 
-    XglCommandBufferObj cmdBuffer(m_device);
+    VkCommandBufferObj cmdBuffer(m_device);
     cmdBuffer.AddRenderTarget(m_renderTargets[0]);
 
     ASSERT_VK_SUCCESS(BeginCommandBuffer(cmdBuffer));
@@ -1855,7 +1855,7 @@ TEST_F(XglRenderTest, CubeWithVertexFetchAndMVP)
     RecordImages(m_renderTargets);
 }
 
-TEST_F(XglRenderTest, VSTexture)
+TEST_F(VkRenderTest, VSTexture)
 {
     // The expected result from this test is a green and red triangle;
     // one red vertex on the left, two green vertices on the right.
@@ -1887,20 +1887,20 @@ TEST_F(XglRenderTest, VSTexture)
     ASSERT_NO_FATAL_FAILURE(InitState());
     ASSERT_NO_FATAL_FAILURE(InitViewport());
 
-    XglShaderObj vs(m_device,vertShaderText,VK_SHADER_STAGE_VERTEX, this);
-    XglShaderObj ps(m_device,fragShaderText, VK_SHADER_STAGE_FRAGMENT, this);
-    XglSamplerObj sampler(m_device);
-    XglTextureObj texture(m_device);
+    VkShaderObj vs(m_device,vertShaderText,VK_SHADER_STAGE_VERTEX, this);
+    VkShaderObj ps(m_device,fragShaderText, VK_SHADER_STAGE_FRAGMENT, this);
+    VkSamplerObj sampler(m_device);
+    VkTextureObj texture(m_device);
 
-    XglPipelineObj pipelineobj(m_device);
+    VkPipelineObj pipelineobj(m_device);
     pipelineobj.AddShader(&vs);
     pipelineobj.AddShader(&ps);
 
-    XglDescriptorSetObj descriptorSet(m_device);
+    VkDescriptorSetObj descriptorSet(m_device);
     descriptorSet.AppendSamplerTexture(&sampler, &texture);
 
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
-    XglCommandBufferObj cmdBuffer(m_device);
+    VkCommandBufferObj cmdBuffer(m_device);
     cmdBuffer.AddRenderTarget(m_renderTargets[0]);
 
     ASSERT_VK_SUCCESS(BeginCommandBuffer(cmdBuffer));
@@ -1921,7 +1921,7 @@ TEST_F(XglRenderTest, VSTexture)
 
     RecordImages(m_renderTargets);
 }
-TEST_F(XglRenderTest, TexturedTriangle)
+TEST_F(VkRenderTest, TexturedTriangle)
 {
     // The expected result from this test is a red and green checkered triangle
     static const char *vertShaderText =
@@ -1957,20 +1957,20 @@ TEST_F(XglRenderTest, TexturedTriangle)
     ASSERT_NO_FATAL_FAILURE(InitState());
     ASSERT_NO_FATAL_FAILURE(InitViewport());
 
-    XglShaderObj vs(m_device,vertShaderText,VK_SHADER_STAGE_VERTEX, this);
-    XglShaderObj ps(m_device,fragShaderText, VK_SHADER_STAGE_FRAGMENT, this);
-    XglSamplerObj sampler(m_device);
-    XglTextureObj texture(m_device);
+    VkShaderObj vs(m_device,vertShaderText,VK_SHADER_STAGE_VERTEX, this);
+    VkShaderObj ps(m_device,fragShaderText, VK_SHADER_STAGE_FRAGMENT, this);
+    VkSamplerObj sampler(m_device);
+    VkTextureObj texture(m_device);
 
-    XglPipelineObj pipelineobj(m_device);
+    VkPipelineObj pipelineobj(m_device);
     pipelineobj.AddShader(&vs);
     pipelineobj.AddShader(&ps);
 
-    XglDescriptorSetObj descriptorSet(m_device);
+    VkDescriptorSetObj descriptorSet(m_device);
     descriptorSet.AppendSamplerTexture(&sampler, &texture);
 
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
-    XglCommandBufferObj cmdBuffer(m_device);
+    VkCommandBufferObj cmdBuffer(m_device);
     cmdBuffer.AddRenderTarget(m_renderTargets[0]);
 
     ASSERT_VK_SUCCESS(BeginCommandBuffer(cmdBuffer));
@@ -1990,7 +1990,7 @@ TEST_F(XglRenderTest, TexturedTriangle)
 
     RecordImages(m_renderTargets);
 }
-TEST_F(XglRenderTest, TexturedTriangleClip)
+TEST_F(VkRenderTest, TexturedTriangleClip)
 {
     // The expected result from this test is a red and green checkered triangle
     static const char *vertShaderText =
@@ -2037,20 +2037,20 @@ TEST_F(XglRenderTest, TexturedTriangleClip)
     ASSERT_NO_FATAL_FAILURE(InitState());
     ASSERT_NO_FATAL_FAILURE(InitViewport());
 
-    XglShaderObj vs(m_device,vertShaderText,VK_SHADER_STAGE_VERTEX, this);
-    XglShaderObj ps(m_device,fragShaderText, VK_SHADER_STAGE_FRAGMENT, this);
-    XglSamplerObj sampler(m_device);
-    XglTextureObj texture(m_device);
+    VkShaderObj vs(m_device,vertShaderText,VK_SHADER_STAGE_VERTEX, this);
+    VkShaderObj ps(m_device,fragShaderText, VK_SHADER_STAGE_FRAGMENT, this);
+    VkSamplerObj sampler(m_device);
+    VkTextureObj texture(m_device);
 
-    XglPipelineObj pipelineobj(m_device);
+    VkPipelineObj pipelineobj(m_device);
     pipelineobj.AddShader(&vs);
     pipelineobj.AddShader(&ps);
 
-    XglDescriptorSetObj descriptorSet(m_device);
+    VkDescriptorSetObj descriptorSet(m_device);
     descriptorSet.AppendSamplerTexture(&sampler, &texture);
 
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
-    XglCommandBufferObj cmdBuffer(m_device);
+    VkCommandBufferObj cmdBuffer(m_device);
     cmdBuffer.AddRenderTarget(m_renderTargets[0]);
 
     ASSERT_VK_SUCCESS(BeginCommandBuffer(cmdBuffer));
@@ -2070,7 +2070,7 @@ TEST_F(XglRenderTest, TexturedTriangleClip)
 
     RecordImages(m_renderTargets);
 }
-TEST_F(XglRenderTest, FSTriangle)
+TEST_F(VkRenderTest, FSTriangle)
 {
     // The expected result from this test is a red and green checkered triangle
     static const char *vertShaderText =
@@ -2106,20 +2106,20 @@ TEST_F(XglRenderTest, FSTriangle)
     ASSERT_NO_FATAL_FAILURE(InitState());
     ASSERT_NO_FATAL_FAILURE(InitViewport());
 
-    XglShaderObj vs(m_device,vertShaderText,VK_SHADER_STAGE_VERTEX, this);
-    XglShaderObj ps(m_device,fragShaderText, VK_SHADER_STAGE_FRAGMENT, this);
-    XglSamplerObj sampler(m_device);
-    XglTextureObj texture(m_device);
+    VkShaderObj vs(m_device,vertShaderText,VK_SHADER_STAGE_VERTEX, this);
+    VkShaderObj ps(m_device,fragShaderText, VK_SHADER_STAGE_FRAGMENT, this);
+    VkSamplerObj sampler(m_device);
+    VkTextureObj texture(m_device);
 
-    XglPipelineObj pipelineobj(m_device);
+    VkPipelineObj pipelineobj(m_device);
     pipelineobj.AddShader(&vs);
     pipelineobj.AddShader(&ps);
 
-    XglDescriptorSetObj descriptorSet(m_device);
+    VkDescriptorSetObj descriptorSet(m_device);
     descriptorSet.AppendSamplerTexture(&sampler, &texture);
 
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
-    XglCommandBufferObj cmdBuffer(m_device);
+    VkCommandBufferObj cmdBuffer(m_device);
     cmdBuffer.AddRenderTarget(m_renderTargets[0]);
 
     ASSERT_VK_SUCCESS(BeginCommandBuffer(cmdBuffer));
@@ -2139,7 +2139,7 @@ TEST_F(XglRenderTest, FSTriangle)
 
     RecordImages(m_renderTargets);
 }
-TEST_F(XglRenderTest, SamplerBindingsTriangle)
+TEST_F(VkRenderTest, SamplerBindingsTriangle)
 {
     // This test sets bindings on the samplers
     // For now we are asserting that sampler and texture pairs
@@ -2181,25 +2181,25 @@ TEST_F(XglRenderTest, SamplerBindingsTriangle)
     ASSERT_NO_FATAL_FAILURE(InitState());
     ASSERT_NO_FATAL_FAILURE(InitViewport());
 
-    XglShaderObj vs(m_device,vertShaderText,VK_SHADER_STAGE_VERTEX, this);
-    XglShaderObj ps(m_device,fragShaderText, VK_SHADER_STAGE_FRAGMENT, this);
+    VkShaderObj vs(m_device,vertShaderText,VK_SHADER_STAGE_VERTEX, this);
+    VkShaderObj ps(m_device,fragShaderText, VK_SHADER_STAGE_FRAGMENT, this);
 
-    XglSamplerObj sampler1(m_device);
-    XglSamplerObj sampler2(m_device);
-    XglSamplerObj sampler3(m_device);
+    VkSamplerObj sampler1(m_device);
+    VkSamplerObj sampler2(m_device);
+    VkSamplerObj sampler3(m_device);
 
     uint32_t tex_colors[2] = { 0xffff0000, 0xffff0000 };
-    XglTextureObj texture1(m_device, tex_colors); // Red
+    VkTextureObj texture1(m_device, tex_colors); // Red
     tex_colors[0] = 0xff00ff00; tex_colors[1] = 0xff00ff00;
-    XglTextureObj texture2(m_device, tex_colors); // Green
+    VkTextureObj texture2(m_device, tex_colors); // Green
     tex_colors[0] = 0xff0000ff; tex_colors[1] = 0xff0000ff;
-    XglTextureObj texture3(m_device, tex_colors); // Blue
+    VkTextureObj texture3(m_device, tex_colors); // Blue
 
-    XglPipelineObj pipelineobj(m_device);
+    VkPipelineObj pipelineobj(m_device);
     pipelineobj.AddShader(&vs);
     pipelineobj.AddShader(&ps);
 
-    XglDescriptorSetObj descriptorSet(m_device);
+    VkDescriptorSetObj descriptorSet(m_device);
     descriptorSet.AppendSamplerTexture(&sampler1, &texture1);
     descriptorSet.AppendSamplerTexture(&sampler2, &texture2);
     for (int i = 0; i < 10; i++)
@@ -2207,7 +2207,7 @@ TEST_F(XglRenderTest, SamplerBindingsTriangle)
     descriptorSet.AppendSamplerTexture(&sampler3, &texture3);
 
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
-    XglCommandBufferObj cmdBuffer(m_device);
+    VkCommandBufferObj cmdBuffer(m_device);
     cmdBuffer.AddRenderTarget(m_renderTargets[0]);
 
     ASSERT_VK_SUCCESS(BeginCommandBuffer(cmdBuffer));
@@ -2228,7 +2228,7 @@ TEST_F(XglRenderTest, SamplerBindingsTriangle)
     RecordImages(m_renderTargets);
 }
 
-TEST_F(XglRenderTest, TriangleVSUniformBlock)
+TEST_F(VkRenderTest, TriangleVSUniformBlock)
 {
     // The expected result from this test is a blue triangle
 
@@ -2264,8 +2264,8 @@ TEST_F(XglRenderTest, TriangleVSUniformBlock)
     ASSERT_NO_FATAL_FAILURE(InitState());
     ASSERT_NO_FATAL_FAILURE(InitViewport());
 
-    XglShaderObj vs(m_device,vertShaderText,VK_SHADER_STAGE_VERTEX, this);
-    XglShaderObj ps(m_device,fragShaderText, VK_SHADER_STAGE_FRAGMENT, this);
+    VkShaderObj vs(m_device,vertShaderText,VK_SHADER_STAGE_VERTEX, this);
+    VkShaderObj ps(m_device,fragShaderText, VK_SHADER_STAGE_FRAGMENT, this);
 
     // Let's populate our buffer with the following:
     //     vec4 red;
@@ -2278,17 +2278,17 @@ TEST_F(XglRenderTest, TriangleVSUniformBlock)
                                          0.0, 0.0, 1.0, 1.0,
                                          1.0, 1.0, 1.0, 1.0 };
 
-    XglConstantBufferObj colorBuffer(m_device, valCount, sizeof(bufferVals[0]), (const void*) bufferVals);
+    VkConstantBufferObj colorBuffer(m_device, valCount, sizeof(bufferVals[0]), (const void*) bufferVals);
 
-    XglPipelineObj pipelineobj(m_device);
+    VkPipelineObj pipelineobj(m_device);
     pipelineobj.AddShader(&vs);
     pipelineobj.AddShader(&ps);
 
-    XglDescriptorSetObj descriptorSet(m_device);
+    VkDescriptorSetObj descriptorSet(m_device);
     descriptorSet.AppendBuffer(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, colorBuffer);
 
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
-    XglCommandBufferObj cmdBuffer(m_device);
+    VkCommandBufferObj cmdBuffer(m_device);
     cmdBuffer.AddRenderTarget(m_renderTargets[0]);
 
     ASSERT_VK_SUCCESS(BeginCommandBuffer(cmdBuffer));
@@ -2309,7 +2309,7 @@ TEST_F(XglRenderTest, TriangleVSUniformBlock)
     RecordImages(m_renderTargets);
 }
 
-TEST_F(XglRenderTest, TriangleFSUniformBlockBinding)
+TEST_F(VkRenderTest, TriangleFSUniformBlockBinding)
 {
     // This test allows the shader to select which buffer it is
     // pulling from using layout binding qualifier.
@@ -2347,8 +2347,8 @@ TEST_F(XglRenderTest, TriangleFSUniformBlockBinding)
     ASSERT_NO_FATAL_FAILURE(InitState());
     ASSERT_NO_FATAL_FAILURE(InitViewport());
 
-    XglShaderObj vs(m_device,vertShaderText,VK_SHADER_STAGE_VERTEX, this);
-    XglShaderObj ps(m_device,fragShaderText, VK_SHADER_STAGE_FRAGMENT, this);
+    VkShaderObj vs(m_device,vertShaderText,VK_SHADER_STAGE_VERTEX, this);
+    VkShaderObj ps(m_device,fragShaderText, VK_SHADER_STAGE_FRAGMENT, this);
 
     // We're going to create a number of uniform buffers, and then allow
     // the shader to select which it wants to read from with a binding
@@ -2369,26 +2369,26 @@ TEST_F(XglRenderTest, TriangleFSUniformBlockBinding)
     const int blueCount  = sizeof(blueVals)  / sizeof(float);
     const int whiteCount = sizeof(whiteVals) / sizeof(float);
 
-    XglConstantBufferObj redBuffer(m_device, redCount, sizeof(redVals[0]), (const void*) redVals);
+    VkConstantBufferObj redBuffer(m_device, redCount, sizeof(redVals[0]), (const void*) redVals);
 
-    XglConstantBufferObj greenBuffer(m_device, greenCount, sizeof(greenVals[0]), (const void*) greenVals);
+    VkConstantBufferObj greenBuffer(m_device, greenCount, sizeof(greenVals[0]), (const void*) greenVals);
 
-    XglConstantBufferObj blueBuffer(m_device, blueCount, sizeof(blueVals[0]), (const void*) blueVals);
+    VkConstantBufferObj blueBuffer(m_device, blueCount, sizeof(blueVals[0]), (const void*) blueVals);
 
-    XglConstantBufferObj whiteBuffer(m_device, whiteCount, sizeof(whiteVals[0]), (const void*) whiteVals);
+    VkConstantBufferObj whiteBuffer(m_device, whiteCount, sizeof(whiteVals[0]), (const void*) whiteVals);
 
-    XglPipelineObj pipelineobj(m_device);
+    VkPipelineObj pipelineobj(m_device);
     pipelineobj.AddShader(&vs);
     pipelineobj.AddShader(&ps);
 
-    XglDescriptorSetObj descriptorSet(m_device);
+    VkDescriptorSetObj descriptorSet(m_device);
     descriptorSet.AppendBuffer(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, redBuffer);
     descriptorSet.AppendBuffer(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, greenBuffer);
     descriptorSet.AppendBuffer(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, blueBuffer);
     descriptorSet.AppendBuffer(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, whiteBuffer);
 
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
-    XglCommandBufferObj cmdBuffer(m_device);
+    VkCommandBufferObj cmdBuffer(m_device);
     cmdBuffer.AddRenderTarget(m_renderTargets[0]);
 
     ASSERT_VK_SUCCESS(BeginCommandBuffer(cmdBuffer));
@@ -2409,7 +2409,7 @@ TEST_F(XglRenderTest, TriangleFSUniformBlockBinding)
     RecordImages(m_renderTargets);
 }
 
-TEST_F(XglRenderTest, TriangleFSAnonymousUniformBlockBinding)
+TEST_F(VkRenderTest, TriangleFSAnonymousUniformBlockBinding)
 {
     // This test is the same as TriangleFSUniformBlockBinding, but
     // it does not provide an instance name.
@@ -2443,8 +2443,8 @@ TEST_F(XglRenderTest, TriangleFSAnonymousUniformBlockBinding)
     ASSERT_NO_FATAL_FAILURE(InitState());
     ASSERT_NO_FATAL_FAILURE(InitViewport());
 
-    XglShaderObj vs(m_device,vertShaderText,VK_SHADER_STAGE_VERTEX, this);
-    XglShaderObj ps(m_device,fragShaderText, VK_SHADER_STAGE_FRAGMENT, this);
+    VkShaderObj vs(m_device,vertShaderText,VK_SHADER_STAGE_VERTEX, this);
+    VkShaderObj ps(m_device,fragShaderText, VK_SHADER_STAGE_FRAGMENT, this);
 
     // We're going to create a number of uniform buffers, and then allow
     // the shader to select which it wants to read from with a binding
@@ -2465,26 +2465,26 @@ TEST_F(XglRenderTest, TriangleFSAnonymousUniformBlockBinding)
     const int blueCount  = sizeof(blueVals)  / sizeof(float);
     const int whiteCount = sizeof(whiteVals) / sizeof(float);
 
-    XglConstantBufferObj redBuffer(m_device, redCount, sizeof(redVals[0]), (const void*) redVals);
+    VkConstantBufferObj redBuffer(m_device, redCount, sizeof(redVals[0]), (const void*) redVals);
 
-    XglConstantBufferObj greenBuffer(m_device, greenCount, sizeof(greenVals[0]), (const void*) greenVals);
+    VkConstantBufferObj greenBuffer(m_device, greenCount, sizeof(greenVals[0]), (const void*) greenVals);
 
-    XglConstantBufferObj blueBuffer(m_device, blueCount, sizeof(blueVals[0]), (const void*) blueVals);
+    VkConstantBufferObj blueBuffer(m_device, blueCount, sizeof(blueVals[0]), (const void*) blueVals);
 
-    XglConstantBufferObj whiteBuffer(m_device, whiteCount, sizeof(whiteVals[0]), (const void*) whiteVals);
+    VkConstantBufferObj whiteBuffer(m_device, whiteCount, sizeof(whiteVals[0]), (const void*) whiteVals);
 
-    XglPipelineObj pipelineobj(m_device);
+    VkPipelineObj pipelineobj(m_device);
     pipelineobj.AddShader(&vs);
     pipelineobj.AddShader(&ps);
 
-    XglDescriptorSetObj descriptorSet(m_device);
+    VkDescriptorSetObj descriptorSet(m_device);
     descriptorSet.AppendBuffer(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, redBuffer);
     descriptorSet.AppendBuffer(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, greenBuffer);
     descriptorSet.AppendBuffer(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, blueBuffer);
     descriptorSet.AppendBuffer(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, whiteBuffer);
 
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
-    XglCommandBufferObj cmdBuffer(m_device);
+    VkCommandBufferObj cmdBuffer(m_device);
     cmdBuffer.AddRenderTarget(m_renderTargets[0]);
 
     ASSERT_VK_SUCCESS(BeginCommandBuffer(cmdBuffer));
@@ -2505,7 +2505,7 @@ TEST_F(XglRenderTest, TriangleFSAnonymousUniformBlockBinding)
     RecordImages(m_renderTargets);
 }
 
-TEST_F(XglRenderTest, CubeWithVertexFetchAndMVPAndTexture)
+TEST_F(VkRenderTest, CubeWithVertexFetchAndMVPAndTexture)
 {
     static const char *vertShaderText =
             "#version 140\n"
@@ -2552,23 +2552,23 @@ TEST_F(XglRenderTest, CubeWithVertexFetchAndMVPAndTexture)
     ASSERT_NO_FATAL_FAILURE(InitViewport());
     m_depthStencil->Init(m_device, m_width, m_height);
 
-    XglConstantBufferObj meshBuffer(m_device,sizeof(g_vb_solid_face_colors_Data)/sizeof(g_vb_solid_face_colors_Data[0]),
+    VkConstantBufferObj meshBuffer(m_device,sizeof(g_vb_solid_face_colors_Data)/sizeof(g_vb_solid_face_colors_Data[0]),
             sizeof(g_vb_solid_face_colors_Data[0]), g_vb_solid_face_colors_Data);
     meshBuffer.BufferMemoryBarrier();
 
     const int buf_size = sizeof(MVP) / sizeof(float);
 
-    XglConstantBufferObj mvpBuffer(m_device, buf_size, sizeof(MVP[0]), (const void*) &MVP[0][0]);
-    XglShaderObj vs(m_device,vertShaderText,VK_SHADER_STAGE_VERTEX, this);
-    XglShaderObj ps(m_device,fragShaderText, VK_SHADER_STAGE_FRAGMENT, this);
-    XglSamplerObj sampler(m_device);
-    XglTextureObj texture(m_device);
+    VkConstantBufferObj mvpBuffer(m_device, buf_size, sizeof(MVP[0]), (const void*) &MVP[0][0]);
+    VkShaderObj vs(m_device,vertShaderText,VK_SHADER_STAGE_VERTEX, this);
+    VkShaderObj ps(m_device,fragShaderText, VK_SHADER_STAGE_FRAGMENT, this);
+    VkSamplerObj sampler(m_device);
+    VkTextureObj texture(m_device);
 
-    XglPipelineObj pipelineobj(m_device);
+    VkPipelineObj pipelineobj(m_device);
     pipelineobj.AddShader(&vs);
     pipelineobj.AddShader(&ps);
 
-    XglDescriptorSetObj descriptorSet(m_device);
+    VkDescriptorSetObj descriptorSet(m_device);
     descriptorSet.AppendBuffer(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, mvpBuffer);
     descriptorSet.AppendSamplerTexture(&sampler, &texture);
 
@@ -2608,7 +2608,7 @@ TEST_F(XglRenderTest, CubeWithVertexFetchAndMVPAndTexture)
     pipelineobj.SetDepthStencil(&ds_state);
 
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget(m_depthStencil->BindInfo()));
-    XglCommandBufferObj cmdBuffer(m_device);
+    VkCommandBufferObj cmdBuffer(m_device);
     cmdBuffer.AddRenderTarget(m_renderTargets[0]);
 
     ASSERT_VK_SUCCESS(BeginCommandBuffer(cmdBuffer));
@@ -2630,7 +2630,7 @@ TEST_F(XglRenderTest, CubeWithVertexFetchAndMVPAndTexture)
     RecordImages(m_renderTargets);
 }
 
-TEST_F(XglRenderTest, TriangleMixedSamplerUniformBlockBinding)
+TEST_F(VkRenderTest, TriangleMixedSamplerUniformBlockBinding)
 {
     // This test mixes binding slots of textures and buffers, ensuring
     // that sparse and overlapping assignments work.
@@ -2673,8 +2673,8 @@ TEST_F(XglRenderTest, TriangleMixedSamplerUniformBlockBinding)
     ASSERT_NO_FATAL_FAILURE(InitState());
     ASSERT_NO_FATAL_FAILURE(InitViewport());
 
-    XglShaderObj vs(m_device,vertShaderText,VK_SHADER_STAGE_VERTEX, this);
-    XglShaderObj ps(m_device,fragShaderText, VK_SHADER_STAGE_FRAGMENT, this);
+    VkShaderObj vs(m_device,vertShaderText,VK_SHADER_STAGE_VERTEX, this);
+    VkShaderObj ps(m_device,fragShaderText, VK_SHADER_STAGE_FRAGMENT, this);
 
     const float redVals[4]   = { 1.0, 0.0, 0.0, 1.0 };
     const float greenVals[4] = { 0.0, 1.0, 0.0, 1.0 };
@@ -2686,32 +2686,32 @@ TEST_F(XglRenderTest, TriangleMixedSamplerUniformBlockBinding)
     const int blueCount  = sizeof(blueVals)  / sizeof(float);
     const int whiteCount = sizeof(whiteVals) / sizeof(float);
 
-    XglConstantBufferObj redBuffer(m_device, redCount, sizeof(redVals[0]), (const void*) redVals);
-    XglConstantBufferObj greenBuffer(m_device, greenCount, sizeof(greenVals[0]), (const void*) greenVals);
-    XglConstantBufferObj blueBuffer(m_device, blueCount, sizeof(blueVals[0]), (const void*) blueVals);
-    XglConstantBufferObj whiteBuffer(m_device, whiteCount, sizeof(whiteVals[0]), (const void*) whiteVals);
+    VkConstantBufferObj redBuffer(m_device, redCount, sizeof(redVals[0]), (const void*) redVals);
+    VkConstantBufferObj greenBuffer(m_device, greenCount, sizeof(greenVals[0]), (const void*) greenVals);
+    VkConstantBufferObj blueBuffer(m_device, blueCount, sizeof(blueVals[0]), (const void*) blueVals);
+    VkConstantBufferObj whiteBuffer(m_device, whiteCount, sizeof(whiteVals[0]), (const void*) whiteVals);
 
     uint32_t tex_colors[2] = { 0xff800000, 0xff800000 };
-    XglSamplerObj sampler0(m_device);
-    XglTextureObj texture0(m_device, tex_colors); // Light Red
+    VkSamplerObj sampler0(m_device);
+    VkTextureObj texture0(m_device, tex_colors); // Light Red
     tex_colors[0] = 0xff000080; tex_colors[1] = 0xff000080;
-    XglSamplerObj sampler2(m_device);
-    XglTextureObj texture2(m_device, tex_colors); // Light Blue
+    VkSamplerObj sampler2(m_device);
+    VkTextureObj texture2(m_device, tex_colors); // Light Blue
     tex_colors[0] = 0xff008000; tex_colors[1] = 0xff008000;
-    XglSamplerObj sampler4(m_device);
-    XglTextureObj texture4(m_device, tex_colors); // Light Green
+    VkSamplerObj sampler4(m_device);
+    VkTextureObj texture4(m_device, tex_colors); // Light Green
 
     // NOTE:  Bindings 1,3,5,7,8,9,11,12,14,16 work for this sampler, but 6 does not!!!
     // TODO:  Get back here ASAP and understand why.
     tex_colors[0] = 0xffff00ff; tex_colors[1] = 0xffff00ff;
-    XglSamplerObj sampler7(m_device);
-    XglTextureObj texture7(m_device, tex_colors); // Red and Blue
+    VkSamplerObj sampler7(m_device);
+    VkTextureObj texture7(m_device, tex_colors); // Red and Blue
 
-    XglPipelineObj pipelineobj(m_device);
+    VkPipelineObj pipelineobj(m_device);
     pipelineobj.AddShader(&vs);
     pipelineobj.AddShader(&ps);
 
-    XglDescriptorSetObj descriptorSet(m_device);
+    VkDescriptorSetObj descriptorSet(m_device);
     descriptorSet.AppendSamplerTexture(&sampler0, &texture0);
     descriptorSet.AppendSamplerTexture(&sampler2, &texture2);
     descriptorSet.AppendSamplerTexture(&sampler4, &texture4);
@@ -2723,7 +2723,7 @@ TEST_F(XglRenderTest, TriangleMixedSamplerUniformBlockBinding)
     descriptorSet.AppendBuffer(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, whiteBuffer);
 
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
-    XglCommandBufferObj cmdBuffer(m_device);
+    VkCommandBufferObj cmdBuffer(m_device);
     cmdBuffer.AddRenderTarget(m_renderTargets[0]);
 
     ASSERT_VK_SUCCESS(BeginCommandBuffer(cmdBuffer));
@@ -2744,7 +2744,7 @@ TEST_F(XglRenderTest, TriangleMixedSamplerUniformBlockBinding)
     RecordImages(m_renderTargets);
 }
 
-TEST_F(XglRenderTest, TriangleMatchingSamplerUniformBlockBinding)
+TEST_F(VkRenderTest, TriangleMatchingSamplerUniformBlockBinding)
 {
     // This test matches binding slots of textures and buffers, requiring
     // the driver to give them distinct number spaces.
@@ -2785,8 +2785,8 @@ TEST_F(XglRenderTest, TriangleMatchingSamplerUniformBlockBinding)
     ASSERT_NO_FATAL_FAILURE(InitState());
     ASSERT_NO_FATAL_FAILURE(InitViewport());
 
-    XglShaderObj vs(m_device,vertShaderText,VK_SHADER_STAGE_VERTEX, this);
-    XglShaderObj ps(m_device,fragShaderText, VK_SHADER_STAGE_FRAGMENT, this);
+    VkShaderObj vs(m_device,vertShaderText,VK_SHADER_STAGE_VERTEX, this);
+    VkShaderObj ps(m_device,fragShaderText, VK_SHADER_STAGE_FRAGMENT, this);
 
     const float redVals[4]   = { 1.0, 0.0, 0.0, 1.0 };
     const float greenVals[4] = { 0.0, 1.0, 0.0, 1.0 };
@@ -2798,29 +2798,29 @@ TEST_F(XglRenderTest, TriangleMatchingSamplerUniformBlockBinding)
     const int blueCount  = sizeof(blueVals)  / sizeof(float);
     const int whiteCount = sizeof(whiteVals) / sizeof(float);
 
-    XglConstantBufferObj redBuffer(m_device, redCount, sizeof(redVals[0]), (const void*) redVals);
-    XglConstantBufferObj greenBuffer(m_device, greenCount, sizeof(greenVals[0]), (const void*) greenVals);
-    XglConstantBufferObj blueBuffer(m_device, blueCount, sizeof(blueVals[0]), (const void*) blueVals);
-    XglConstantBufferObj whiteBuffer(m_device, whiteCount, sizeof(whiteVals[0]), (const void*) whiteVals);
+    VkConstantBufferObj redBuffer(m_device, redCount, sizeof(redVals[0]), (const void*) redVals);
+    VkConstantBufferObj greenBuffer(m_device, greenCount, sizeof(greenVals[0]), (const void*) greenVals);
+    VkConstantBufferObj blueBuffer(m_device, blueCount, sizeof(blueVals[0]), (const void*) blueVals);
+    VkConstantBufferObj whiteBuffer(m_device, whiteCount, sizeof(whiteVals[0]), (const void*) whiteVals);
 
     uint32_t tex_colors[2] = { 0xff800000, 0xff800000 };
-    XglSamplerObj sampler0(m_device);
-    XglTextureObj texture0(m_device, tex_colors); // Light Red
+    VkSamplerObj sampler0(m_device);
+    VkTextureObj texture0(m_device, tex_colors); // Light Red
     tex_colors[0] = 0xff000080; tex_colors[1] = 0xff000080;
-    XglSamplerObj sampler2(m_device);
-    XglTextureObj texture2(m_device, tex_colors); // Light Blue
+    VkSamplerObj sampler2(m_device);
+    VkTextureObj texture2(m_device, tex_colors); // Light Blue
     tex_colors[0] = 0xff008000; tex_colors[1] = 0xff008000;
-    XglSamplerObj sampler4(m_device);
-    XglTextureObj texture4(m_device, tex_colors); // Light Green
+    VkSamplerObj sampler4(m_device);
+    VkTextureObj texture4(m_device, tex_colors); // Light Green
     tex_colors[0] = 0xffff00ff; tex_colors[1] = 0xffff00ff;
-    XglSamplerObj sampler7(m_device);
-    XglTextureObj texture7(m_device, tex_colors); // Red and Blue
+    VkSamplerObj sampler7(m_device);
+    VkTextureObj texture7(m_device, tex_colors); // Red and Blue
 
-    XglPipelineObj pipelineobj(m_device);
+    VkPipelineObj pipelineobj(m_device);
     pipelineobj.AddShader(&vs);
     pipelineobj.AddShader(&ps);
 
-    XglDescriptorSetObj descriptorSet(m_device);
+    VkDescriptorSetObj descriptorSet(m_device);
     descriptorSet.AppendSamplerTexture(&sampler0, &texture0);
     descriptorSet.AppendSamplerTexture(&sampler2, &texture2);
     descriptorSet.AppendSamplerTexture(&sampler4, &texture4);
@@ -2831,7 +2831,7 @@ TEST_F(XglRenderTest, TriangleMatchingSamplerUniformBlockBinding)
     descriptorSet.AppendBuffer(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, whiteBuffer);
 
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
-    XglCommandBufferObj cmdBuffer(m_device);
+    VkCommandBufferObj cmdBuffer(m_device);
     cmdBuffer.AddRenderTarget(m_renderTargets[0]);
 
     ASSERT_VK_SUCCESS(BeginCommandBuffer(cmdBuffer));
@@ -2852,7 +2852,7 @@ TEST_F(XglRenderTest, TriangleMatchingSamplerUniformBlockBinding)
     RecordImages(m_renderTargets);
 }
 
-TEST_F(XglRenderTest, TriangleUniformBufferLayout)
+TEST_F(VkRenderTest, TriangleUniformBufferLayout)
 {
     // This test populates a buffer with a variety of different data
     // types, then reads them out with a shader.
@@ -3068,20 +3068,20 @@ TEST_F(XglRenderTest, TriangleUniformBufferLayout)
 
     const int constCount   = sizeof(mixedVals)   / sizeof(float);
 
-    XglShaderObj vs(m_device,vertShaderText,VK_SHADER_STAGE_VERTEX, this);
-    XglShaderObj ps(m_device,fragShaderText, VK_SHADER_STAGE_FRAGMENT, this);
+    VkShaderObj vs(m_device,vertShaderText,VK_SHADER_STAGE_VERTEX, this);
+    VkShaderObj ps(m_device,fragShaderText, VK_SHADER_STAGE_FRAGMENT, this);
 
-    XglConstantBufferObj mixedBuffer(m_device, constCount, sizeof(mixedVals[0]), (const void*) mixedVals);
+    VkConstantBufferObj mixedBuffer(m_device, constCount, sizeof(mixedVals[0]), (const void*) mixedVals);
 
-    XglPipelineObj pipelineobj(m_device);
+    VkPipelineObj pipelineobj(m_device);
     pipelineobj.AddShader(&vs);
     pipelineobj.AddShader(&ps);
 
-    XglDescriptorSetObj descriptorSet(m_device);
+    VkDescriptorSetObj descriptorSet(m_device);
     descriptorSet.AppendBuffer(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, mixedBuffer);
 
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
-    XglCommandBufferObj cmdBuffer(m_device);
+    VkCommandBufferObj cmdBuffer(m_device);
     cmdBuffer.AddRenderTarget(m_renderTargets[0]);
 
     ASSERT_VK_SUCCESS(BeginCommandBuffer(cmdBuffer));
@@ -3106,12 +3106,12 @@ int main(int argc, char **argv) {
     int result;
 
     ::testing::InitGoogleTest(&argc, argv);
-    XglTestFramework::InitArgs(&argc, argv);
+    VkTestFramework::InitArgs(&argc, argv);
 
     ::testing::AddGlobalTestEnvironment(new TestEnvironment);
 
     result = RUN_ALL_TESTS();
 
-    XglTestFramework::Finish();
+    VkTestFramework::Finish();
     return result;
 }

@@ -55,15 +55,15 @@ void VKAPI myDbgFunc(
         errMonitor->SetState(msgType, pMsg);
     }
 }
-class VkLayerTest : public XglRenderFramework
+class VkLayerTest : public VkRenderFramework
 {
 public:
-    VK_RESULT BeginCommandBuffer(XglCommandBufferObj &cmdBuffer);
-    VK_RESULT EndCommandBuffer(XglCommandBufferObj &cmdBuffer);
+    VK_RESULT BeginCommandBuffer(VkCommandBufferObj &cmdBuffer);
+    VK_RESULT EndCommandBuffer(VkCommandBufferObj &cmdBuffer);
 
 protected:
-        XglMemoryRefManager         m_memoryRefManager;
-        ErrorMonitor                *m_errorMonitor;
+        VkMemoryRefManager         m_memoryRefManager;
+        ErrorMonitor               *m_errorMonitor;
 
     virtual void SetUp() {
 
@@ -85,7 +85,7 @@ protected:
         delete m_errorMonitor;
     }
 };
-VK_RESULT VkLayerTest::BeginCommandBuffer(XglCommandBufferObj &cmdBuffer)
+VK_RESULT VkLayerTest::BeginCommandBuffer(VkCommandBufferObj &cmdBuffer)
 {
     VK_RESULT result;
 
@@ -102,7 +102,7 @@ VK_RESULT VkLayerTest::BeginCommandBuffer(XglCommandBufferObj &cmdBuffer)
     return result;
 }
 
-VK_RESULT VkLayerTest::EndCommandBuffer(XglCommandBufferObj &cmdBuffer)
+VK_RESULT VkLayerTest::EndCommandBuffer(VkCommandBufferObj &cmdBuffer)
 {
     VK_RESULT result;
 
@@ -129,7 +129,7 @@ TEST_F(VkLayerTest, SubmitSignaledFence)
     ASSERT_NO_FATAL_FAILURE(InitViewport());
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
 
-    XglCommandBufferObj cmdBuffer(m_device);
+    VkCommandBufferObj cmdBuffer(m_device);
     cmdBuffer.AddRenderTarget(m_renderTargets[0]);
 
     BeginCommandBuffer(cmdBuffer);
@@ -142,7 +142,7 @@ TEST_F(VkLayerTest, SubmitSignaledFence)
     msgType = m_errorMonitor->GetState(&msgString);
     ASSERT_EQ(msgType, VK_DBG_MSG_ERROR) << "Did not receive an err from using a fence in SIGNALED state in call to vkQueueSubmit";
     if (!strstr(msgString.c_str(),"submitted in SIGNALED state.  Fences must be reset before being submitted")) {
-        ASSERT_TRUE(false) << "Error received was not vkQueueSubmit with fence in SIGNALED_STATE";
+        ASSERT_TRUE(false) << "Error received was not VkQueueSubmit with fence in SIGNALED_STATE";
     }
 
 }
@@ -165,8 +165,8 @@ TEST_F(VkLayerTest, ResetUnsignaledFence)
     vkResetFences(m_device->device(), 1, fences);
     msgType = m_errorMonitor->GetState(&msgString);
     ASSERT_EQ(msgType, VK_DBG_MSG_ERROR) << "Did not receive an error from submitting fence with UNSIGNALED state to vkResetFences";
-    if (!strstr(msgString.c_str(),"submitted to vkResetFences in UNSIGNALED STATE")) {
-        ASSERT_TRUE(false) << "Error received was not vkResetFences with fence in UNSIGNALED_STATE";
+    if (!strstr(msgString.c_str(),"submitted to VkResetFences in UNSIGNALED STATE")) {
+        ASSERT_TRUE(false) << "Error received was not VkResetFences with fence in UNSIGNALED_STATE";
     }
 
 }
@@ -175,12 +175,12 @@ int main(int argc, char **argv) {
     int result;
 
     ::testing::InitGoogleTest(&argc, argv);
-    XglTestFramework::InitArgs(&argc, argv);
+    VkTestFramework::InitArgs(&argc, argv);
 
     ::testing::AddGlobalTestEnvironment(new TestEnvironment);
 
     result = RUN_ALL_TESTS();
 
-    XglTestFramework::Finish();
+    VkTestFramework::Finish();
     return result;
 }
