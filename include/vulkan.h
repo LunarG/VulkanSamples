@@ -30,10 +30,10 @@
 #define VK_MAKE_VERSION(major, minor, patch) \
     ((major << 22) | (minor << 12) | patch)
 
-#include "vkPlatform.h"
+#include "vk_platform.h"
 
 // Vulkan API version supported by this file
-#define VK_API_VERSION VK_MAKE_VERSION(0, 70, 0)
+#define VK_API_VERSION VK_MAKE_VERSION(0, 71, 0)
 
 #ifdef __cplusplus
 extern "C"

@@ -29,7 +29,7 @@
 #define ICD_H
 
 #include <vulkan.h>
-#include <vkPlatform.h>
+#include <vk_platform.h>
 #include <vkDbg.h>
 
 #if defined(PLATFORM_LINUX)

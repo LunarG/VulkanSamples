@@ -1,5 +1,5 @@
 //
-// File: vkPlatform.h
+// File: vk_platform.h
 //
 /*
 ** Copyright (c) 2014 The Khronos Group Inc.
@@ -25,8 +25,8 @@
 */
 
 
-#ifndef __VKPLATFORM_H__
-#define __VKPLATFORM_H__
+#ifndef __VK_PLATFORM_H__
+#define __VK_PLATFORM_H__
 
 #ifdef __cplusplus
 extern "C"
@@ -87,4 +87,4 @@ typedef int32_t    VK_ENUM;
 } // extern "C"
 #endif // __cplusplus
 
-#endif // __VKPLATFORM_H__
+#endif // __VK_PLATFORM_H__
