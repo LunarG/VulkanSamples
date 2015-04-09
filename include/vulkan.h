@@ -1791,28 +1791,28 @@ typedef struct VkImageMemoryBindInfo_
 typedef struct VkImageCopy_
 {
     VkImageSubresource                        srcSubresource;
-    VkOffset3D                                 srcOffset;
+    VkOffset3D                                 srcOffset;              // Specified in pixels for both compressed and uncompressed images
     VkImageSubresource                        destSubresource;
-    VkOffset3D                                 destOffset;
-    VkExtent3D                                 extent;
+    VkOffset3D                                 destOffset;             // Specified in pixels for both compressed and uncompressed images
+    VkExtent3D                                 extent;                 // Specified in pixels for both compressed and uncompressed images
 } VkImageCopy;
 
 typedef struct VkImageBlit_
 {
     VkImageSubresource                        srcSubresource;
-    VkOffset3D                                 srcOffset;
-    VkExtent3D                                 srcExtent;
+    VkOffset3D                                 srcOffset;              // Specified in pixels for both compressed and uncompressed images
+    VkExtent3D                                 srcExtent;              // Specified in pixels for both compressed and uncompressed images
     VkImageSubresource                        destSubresource;
-    VkOffset3D                                 destOffset;
-    VkExtent3D                                 destExtent;
+    VkOffset3D                                 destOffset;             // Specified in pixels for both compressed and uncompressed images
+    VkExtent3D                                 destExtent;             // Specified in pixels for both compressed and uncompressed images
 } VkImageBlit;
 
 typedef struct VkBufferImageCopy_
 {
     VkGpuSize                                 bufferOffset;           // Specified in bytes
     VkImageSubresource                        imageSubresource;
-    VkOffset3D                                 imageOffset;
-    VkExtent3D                                 imageExtent;
+    VkOffset3D                                 imageOffset;           // Specified in pixels for both compressed and uncompressed images
+    VkExtent3D                                 imageExtent;           // Specified in pixels for both compressed and uncompressed images
 } VkBufferImageCopy;
 
 typedef struct VkImageResolve_
