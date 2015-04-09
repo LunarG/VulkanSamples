@@ -142,7 +142,7 @@ TEST_F(VkLayerTest, SubmitSignaledFence)
     msgType = m_errorMonitor->GetState(&msgString);
     ASSERT_EQ(msgType, VK_DBG_MSG_ERROR) << "Did not receive an err from using a fence in SIGNALED state in call to vkQueueSubmit";
     if (!strstr(msgString.c_str(),"submitted in SIGNALED state.  Fences must be reset before being submitted")) {
-        ASSERT_TRUE(false) << "Error received was not VkQueueSubmit with fence in SIGNALED_STATE";
+        FAIL() << "Error received was not VkQueueSubmit with fence in SIGNALED_STATE";
     }
 
 }
@@ -166,7 +166,7 @@ TEST_F(VkLayerTest, ResetUnsignaledFence)
     msgType = m_errorMonitor->GetState(&msgString);
     ASSERT_EQ(msgType, VK_DBG_MSG_ERROR) << "Did not receive an error from submitting fence with UNSIGNALED state to vkResetFences";
     if (!strstr(msgString.c_str(),"submitted to VkResetFences in UNSIGNALED STATE")) {
-        ASSERT_TRUE(false) << "Error received was not VkResetFences with fence in UNSIGNALED_STATE";
+        FAIL() << "Error received was not VkResetFences with fence in UNSIGNALED_STATE";
     }
 
 }
