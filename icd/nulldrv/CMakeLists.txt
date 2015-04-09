@@ -26,8 +26,8 @@ target_include_directories(XGL_nulldrv PRIVATE ${include_dirs})
 target_link_libraries(XGL_nulldrv ${libraries})
 
 if (WIN32)
-    # Add in the DLL "map" file for xglGetProcAddr()
+    # Add in the DLL "map" file for vkGetProcAddr()
     set_target_properties(XGL_nulldrv PROPERTIES
-        LINK_FLAGS "/DEF:${PROJECT_SOURCE_DIR}/icd/nulldrv/XGL_nulldrv.def")
+        LINK_FLAGS "/DEF:${PROJECT_SOURCE_DIR}/icd/nulldrv/VK_nulldrv.def")
 endif()
 

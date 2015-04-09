@@ -65,7 +65,7 @@ target_compile_definitions(VK_i965 PRIVATE ${definitions})
 target_include_directories(VK_i965 PRIVATE ${include_dirs})
 target_link_libraries(VK_i965 ${libraries})
 
-# set -Bsymbolic for xglGetProcAddr()
+# set -Bsymbolic for vkGetProcAddr()
 set_target_properties(VK_i965 PROPERTIES
     COMPILE_FLAGS "-Wmissing-declarations"
     LINK_FLAGS "-Wl,-Bsymbolic -Wl,-no-undefined -Wl,--exclude-libs,ALL")
