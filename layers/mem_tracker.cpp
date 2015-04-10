@@ -1873,7 +1873,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkWsiX11CreatePresentableImage(VkDevice device, c
     loader_platform_thread_lock_mutex(&globalLock);
     if (VK_SUCCESS == result) {
         // Add image object, then insert the new Mem Object and then bind it to created image
-        addObjectInfo(*pImage, VkStructureType__MAX_ENUM, pCreateInfo, sizeof(VK_WSI_X11_PRESENTABLE_IMAGE_CREATE_INFO), "wsi_x11_image");
+        addObjectInfo(*pImage, VkStructureType_MAX_ENUM, pCreateInfo, sizeof(VK_WSI_X11_PRESENTABLE_IMAGE_CREATE_INFO), "wsi_x11_image");
         addMemObjInfo(*pMem, NULL);
         if (VK_FALSE == updateObjectBinding(*pImage, *pMem)) {
             char str[1024];

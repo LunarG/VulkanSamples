@@ -120,7 +120,7 @@ typedef enum VkMemoryPriority_
     VK_MEMORY_PRIORITY_BEGIN_RANGE                          = VK_MEMORY_PRIORITY_UNUSED,
     VK_MEMORY_PRIORITY_END_RANGE                            = VK_MEMORY_PRIORITY_VERY_HIGH,
     VK_NUM_MEMORY_PRIORITY                                  = (VK_MEMORY_PRIORITY_END_RANGE - VK_MEMORY_PRIORITY_BEGIN_RANGE + 1),
-    VK_MAX_ENUM(VkMemoryPriority_)
+    VK_MAX_ENUM(VkMemoryPriority)
 } VkMemoryPriority;
 
 typedef enum VkImageLayout_
@@ -138,7 +138,7 @@ typedef enum VkImageLayout_
     VK_IMAGE_LAYOUT_BEGIN_RANGE                             = VK_IMAGE_LAYOUT_UNDEFINED,
     VK_IMAGE_LAYOUT_END_RANGE                               = VK_IMAGE_LAYOUT_TRANSFER_DESTINATION_OPTIMAL,
     VK_NUM_IMAGE_LAYOUT                                     = (VK_IMAGE_LAYOUT_END_RANGE - VK_IMAGE_LAYOUT_BEGIN_RANGE + 1),
-    VK_MAX_ENUM(VkImageLayout_)
+    VK_MAX_ENUM(VkImageLayout)
 } VkImageLayout;
 
 typedef enum VkPipeEvent_
@@ -155,7 +155,7 @@ typedef enum VkPipeEvent_
     VK_PIPE_EVENT_BEGIN_RANGE                               = VK_PIPE_EVENT_TOP_OF_PIPE,
     VK_PIPE_EVENT_END_RANGE                                 = VK_PIPE_EVENT_GPU_COMMANDS_COMPLETE,
     VK_NUM_PIPE_EVENT                                       = (VK_PIPE_EVENT_END_RANGE - VK_PIPE_EVENT_BEGIN_RANGE + 1),
-    VK_MAX_ENUM(VkPipeEvent_)
+    VK_MAX_ENUM(VkPipeEvent)
 } VkPipeEvent;
 
 typedef enum VkWaitEvent_
@@ -166,7 +166,7 @@ typedef enum VkWaitEvent_
     VK_WAIT_EVENT_BEGIN_RANGE                               = VK_WAIT_EVENT_TOP_OF_PIPE,
     VK_WAIT_EVENT_END_RANGE                                 = VK_WAIT_EVENT_BEFORE_RASTERIZATION,
     VK_NUM_WAIT_EVENT                                       = (VK_WAIT_EVENT_END_RANGE - VK_WAIT_EVENT_BEGIN_RANGE + 1),
-    VK_MAX_ENUM(VkWaitEvent_)
+    VK_MAX_ENUM(VkWaitEvent)
 } VkWaitEvent;
 
 typedef enum VkMemoryOutputFlags_
@@ -176,7 +176,7 @@ typedef enum VkMemoryOutputFlags_
     VK_MEMORY_OUTPUT_COLOR_ATTACHMENT_BIT                   = 0x00000004,   // Controls output coherency of color attachment writes
     VK_MEMORY_OUTPUT_DEPTH_STENCIL_ATTACHMENT_BIT           = 0x00000008,   // Controls output coherency of depth/stencil attachment writes
     VK_MEMORY_OUTPUT_COPY_BIT                               = 0x00000010,   // Controls output coherency of copy operations
-    VK_MAX_ENUM(VkMemoryOutputFlags_)
+    VK_MAX_ENUM(VkMemoryOutputFlags)
 } VkMemoryOutputFlags;
 
 typedef enum VkMemoryInputFlags_
@@ -190,7 +190,7 @@ typedef enum VkMemoryInputFlags_
     VK_MEMORY_INPUT_COLOR_ATTACHMENT_BIT                    = 0x00000040,   // Controls input coherency of color attachment reads
     VK_MEMORY_INPUT_DEPTH_STENCIL_ATTACHMENT_BIT            = 0x00000080,   // Controls input coherency of depth/stencil attachment reads
     VK_MEMORY_INPUT_COPY_BIT                                = 0x00000100,   // Controls input coherency of copy operations
-    VK_MAX_ENUM(VkMemoryInputFlags_)
+    VK_MAX_ENUM(VkMemoryInputFlags)
 } VkMemoryInputFlags;
 
 typedef enum VkAttachmentLoadOp_
@@ -202,7 +202,7 @@ typedef enum VkAttachmentLoadOp_
     VK_ATTACHMENT_LOAD_OP_BEGIN_RANGE                       = VK_ATTACHMENT_LOAD_OP_LOAD,
     VK_ATTACHMENT_LOAD_OP_END_RANGE                         = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
     VK_NUM_ATTACHMENT_LOAD_OP                               = (VK_ATTACHMENT_LOAD_OP_END_RANGE - VK_ATTACHMENT_LOAD_OP_BEGIN_RANGE + 1),
-    VK_MAX_ENUM(VkAttachmentLoadOp_)
+    VK_MAX_ENUM(VkAttachmentLoadOp)
 } VkAttachmentLoadOp;
 
 typedef enum VkAttachmentStoreOp_
@@ -214,7 +214,7 @@ typedef enum VkAttachmentStoreOp_
     VK_ATTACHMENT_STORE_OP_BEGIN_RANGE                      = VK_ATTACHMENT_STORE_OP_STORE,
     VK_ATTACHMENT_STORE_OP_END_RANGE                        = VK_ATTACHMENT_STORE_OP_DONT_CARE,
     VK_NUM_ATTACHMENT_STORE_OP                              = (VK_ATTACHMENT_STORE_OP_END_RANGE - VK_ATTACHMENT_STORE_OP_BEGIN_RANGE + 1),
-    VK_MAX_ENUM(VkAttachmentStoreOp_)
+    VK_MAX_ENUM(VkAttachmentStoreOp)
 } VkAttachmentStoreOp;
 
 typedef enum VkImageType_
@@ -226,7 +226,7 @@ typedef enum VkImageType_
     VK_IMAGE_TYPE_BEGIN_RANGE                               = VK_IMAGE_1D,
     VK_IMAGE_TYPE_END_RANGE                                 = VK_IMAGE_3D,
     VK_NUM_IMAGE_TYPE                                       = (VK_IMAGE_TYPE_END_RANGE - VK_IMAGE_TYPE_BEGIN_RANGE + 1),
-    VK_MAX_ENUM(VkImageType_)
+    VK_MAX_ENUM(VkImageType)
 } VkImageType;
 
 typedef enum VkImageTiling_
@@ -237,7 +237,7 @@ typedef enum VkImageTiling_
     VK_IMAGE_TILING_BEGIN_RANGE                             = VK_LINEAR_TILING,
     VK_IMAGE_TILING_END_RANGE                               = VK_OPTIMAL_TILING,
     VK_NUM_IMAGE_TILING                                     = (VK_IMAGE_TILING_END_RANGE - VK_IMAGE_TILING_BEGIN_RANGE + 1),
-    VK_MAX_ENUM(VkImageTiling_)
+    VK_MAX_ENUM(VkImageTiling)
 } VkImageTiling;
 
 typedef enum VkImageViewType_
@@ -250,7 +250,7 @@ typedef enum VkImageViewType_
     VK_IMAGE_VIEW_TYPE_BEGIN_RANGE                          = VK_IMAGE_VIEW_1D,
     VK_IMAGE_VIEW_TYPE_END_RANGE                            = VK_IMAGE_VIEW_CUBE,
     VK_NUM_IMAGE_VIEW_TYPE                                  = (VK_IMAGE_VIEW_TYPE_END_RANGE - VK_IMAGE_VIEW_TYPE_BEGIN_RANGE + 1),
-    VK_MAX_ENUM(VkImageViewType_)
+    VK_MAX_ENUM(VkImageViewType)
 } VkImageViewType;
 
 typedef enum VkImageAspect_
@@ -262,7 +262,7 @@ typedef enum VkImageAspect_
     VK_IMAGE_ASPECT_BEGIN_RANGE                             = VK_IMAGE_ASPECT_COLOR,
     VK_IMAGE_ASPECT_END_RANGE                               = VK_IMAGE_ASPECT_STENCIL,
     VK_NUM_IMAGE_ASPECT                                     = (VK_IMAGE_ASPECT_END_RANGE - VK_IMAGE_ASPECT_BEGIN_RANGE + 1),
-    VK_MAX_ENUM(VkImageAspect_)
+    VK_MAX_ENUM(VkImageAspect)
 } VkImageAspect;
 
 typedef enum VkChannelSwizzle_
@@ -277,7 +277,7 @@ typedef enum VkChannelSwizzle_
     VK_CHANNEL_SWIZZLE_BEGIN_RANGE                          = VK_CHANNEL_SWIZZLE_ZERO,
     VK_CHANNEL_SWIZZLE_END_RANGE                            = VK_CHANNEL_SWIZZLE_A,
     VK_NUM_CHANNEL_SWIZZLE                                  = (VK_CHANNEL_SWIZZLE_END_RANGE - VK_CHANNEL_SWIZZLE_BEGIN_RANGE + 1),
-    VK_MAX_ENUM(VkChannelSwizzle_)
+    VK_MAX_ENUM(VkChannelSwizzle)
 } VkChannelSwizzle;
 
 typedef enum VkDescriptorType_
@@ -296,7 +296,7 @@ typedef enum VkDescriptorType_
     VK_DESCRIPTOR_TYPE_BEGIN_RANGE                          = VK_DESCRIPTOR_TYPE_SAMPLER,
     VK_DESCRIPTOR_TYPE_END_RANGE                            = VK_DESCRIPTOR_TYPE_SHADER_STORAGE_BUFFER_DYNAMIC,
     VK_NUM_DESCRIPTOR_TYPE                                  = (VK_DESCRIPTOR_TYPE_END_RANGE - VK_DESCRIPTOR_TYPE_BEGIN_RANGE + 1),
-    VK_MAX_ENUM(VkDescriptorType_)
+    VK_MAX_ENUM(VkDescriptorType)
 } VkDescriptorType;
 
 typedef enum VkDescriptorPoolUsage_
@@ -307,7 +307,7 @@ typedef enum VkDescriptorPoolUsage_
     VK_DESCRIPTOR_POOL_USAGE_BEGIN_RANGE                    = VK_DESCRIPTOR_POOL_USAGE_ONE_SHOT,
     VK_DESCRIPTOR_POOL_USAGE_END_RANGE                      = VK_DESCRIPTOR_POOL_USAGE_DYNAMIC,
     VK_NUM_DESCRIPTOR_POOL_USAGE                            = (VK_DESCRIPTOR_POOL_USAGE_END_RANGE - VK_DESCRIPTOR_POOL_USAGE_BEGIN_RANGE + 1),
-    VK_MAX_ENUM(VkDescriptorPoolUsage_)
+    VK_MAX_ENUM(VkDescriptorPoolUsage)
 } VkDescriptorPoolUsage;
 
 typedef enum VkDescriptorUpdateMode_
@@ -318,7 +318,7 @@ typedef enum VkDescriptorUpdateMode_
     VK_DESCRIPTOR_UPDATE_MODE_BEGIN_RANGE                   = VK_DESCRIPTOR_UDPATE_MODE_COPY,
     VK_DESCRIPTOR_UPDATE_MODE_END_RANGE                     = VK_DESCRIPTOR_UPDATE_MODE_FASTEST,
     VK_NUM_DESCRIPTOR_UPDATE_MODE                           = (VK_DESCRIPTOR_UPDATE_MODE_END_RANGE - VK_DESCRIPTOR_UPDATE_MODE_BEGIN_RANGE + 1),
-    VK_MAX_ENUM(VkDescriptorUpdateMode_)
+    VK_MAX_ENUM(VkDescriptorUpdateMode)
 } VkDescriptorUpdateMode;
 
 typedef enum VkDescriptorSetUsage_
@@ -329,7 +329,7 @@ typedef enum VkDescriptorSetUsage_
     VK_DESCRIPTOR_SET_USAGE_BEGIN_RANGE                     = VK_DESCRIPTOR_SET_USAGE_ONE_SHOT,
     VK_DESCRIPTOR_SET_USAGE_END_RANGE                       = VK_DESCRIPTOR_SET_USAGE_STATIC,
     VK_NUM_DESCRIPTOR_SET_USAGE                             = (VK_DESCRIPTOR_SET_USAGE_END_RANGE - VK_DESCRIPTOR_SET_USAGE_BEGIN_RANGE + 1),
-    VK_MAX_ENUM(VkDescriptorSetUsage_)
+    VK_MAX_ENUM(VkDescriptorSetUsage)
 } VkDescriptorSetUsage;
 
 typedef enum VkQueryType_
@@ -340,7 +340,7 @@ typedef enum VkQueryType_
     VK_QUERY_TYPE_BEGIN_RANGE                               = VK_QUERY_OCCLUSION,
     VK_QUERY_TYPE_END_RANGE                                 = VK_QUERY_PIPELINE_STATISTICS,
     VK_NUM_QUERY_TYPE                                       = (VK_QUERY_TYPE_END_RANGE - VK_QUERY_TYPE_BEGIN_RANGE + 1),
-    VK_MAX_ENUM(VkQueryType_)
+    VK_MAX_ENUM(VkQueryType)
 } VkQueryType;
 
 typedef enum VkTimestampType_
@@ -351,7 +351,7 @@ typedef enum VkTimestampType_
     VK_TIMESTAMP_TYPE_BEGIN_RANGE                           = VK_TIMESTAMP_TOP,
     VK_TIMESTAMP_TYPE_END_RANGE                             = VK_TIMESTAMP_BOTTOM,
     VK_NUM_TIMESTAMP_TYPE                                   = (VK_TIMESTAMP_TYPE_END_RANGE - VK_TIMESTAMP_TYPE_BEGIN_RANGE + 1),
-    VK_MAX_ENUM(_VK_TIMESTEAMP_TYPE)
+    VK_MAX_ENUM(VkTimestampType)
 } VkTimestampType;
 
 typedef enum VkBorderColorType_
@@ -363,7 +363,7 @@ typedef enum VkBorderColorType_
     VK_BORDER_COLOR_TYPE_BEGIN_RANGE                        = VK_BORDER_COLOR_OPAQUE_WHITE,
     VK_BORDER_COLOR_TYPE_END_RANGE                          = VK_BORDER_COLOR_OPAQUE_BLACK,
     VK_NUM_BORDER_COLOR_TYPE                                = (VK_BORDER_COLOR_TYPE_END_RANGE - VK_BORDER_COLOR_TYPE_BEGIN_RANGE + 1),
-    VK_MAX_ENUM(VkBorderColorType_)
+    VK_MAX_ENUM(VkBorderColorType)
 } VkBorderColorType;
 
 typedef enum VkPipelineBindPoint_
@@ -374,7 +374,7 @@ typedef enum VkPipelineBindPoint_
     VK_PIPELINE_BIND_POINT_BEGIN_RANGE                      = VK_PIPELINE_BIND_POINT_COMPUTE,
     VK_PIPELINE_BIND_POINT_END_RANGE                        = VK_PIPELINE_BIND_POINT_GRAPHICS,
     VK_NUM_PIPELINE_BIND_POINT                              = (VK_PIPELINE_BIND_POINT_END_RANGE - VK_PIPELINE_BIND_POINT_BEGIN_RANGE + 1),
-    VK_MAX_ENUM(VkPipelineBindPoint_)
+    VK_MAX_ENUM(VkPipelineBindPoint)
 } VkPipelineBindPoint;
 
 typedef enum VkStateBindPoint_
@@ -387,7 +387,7 @@ typedef enum VkStateBindPoint_
     VK_STATE_BIND_POINT_BEGIN_RANGE                         = VK_STATE_BIND_VIEWPORT,
     VK_STATE_BIND_POINT_END_RANGE                           = VK_STATE_BIND_DEPTH_STENCIL,
     VK_NUM_STATE_BIND_POINT                                 = (VK_STATE_BIND_POINT_END_RANGE - VK_STATE_BIND_POINT_BEGIN_RANGE + 1),
-    VK_MAX_ENUM(VkStateBindPoint_)
+    VK_MAX_ENUM(VkStateBindPoint)
 } VkStateBindPoint;
 
 typedef enum VkPrimitiveTopology_
@@ -407,7 +407,7 @@ typedef enum VkPrimitiveTopology_
     VK_PRIMITIVE_TOPOLOGY_BEGIN_RANGE                       = VK_TOPOLOGY_POINT_LIST,
     VK_PRIMITIVE_TOPOLOGY_END_RANGE                         = VK_TOPOLOGY_PATCH,
     VK_NUM_PRIMITIVE_TOPOLOGY                               = (VK_PRIMITIVE_TOPOLOGY_END_RANGE - VK_PRIMITIVE_TOPOLOGY_BEGIN_RANGE + 1),
-    VK_MAX_ENUM(VkPrimitiveTopology_)
+    VK_MAX_ENUM(VkPrimitiveTopology)
 } VkPrimitiveTopology;
 
 typedef enum VkIndexType_
@@ -419,7 +419,7 @@ typedef enum VkIndexType_
     VK_INDEX_TYPE_BEGIN_RANGE                               = VK_INDEX_8,
     VK_INDEX_TYPE_END_RANGE                                 = VK_INDEX_32,
     VK_NUM_INDEX_TYPE                                       = (VK_INDEX_TYPE_END_RANGE - VK_INDEX_TYPE_BEGIN_RANGE + 1),
-    VK_MAX_ENUM(VkIndexType_)
+    VK_MAX_ENUM(VkIndexType)
 } VkIndexType;
 
 typedef enum VkTexFilter_
@@ -430,7 +430,7 @@ typedef enum VkTexFilter_
     VK_TEX_FILTER_BEGIN_RANGE                               = VK_TEX_FILTER_NEAREST,
     VK_TEX_FILTER_END_RANGE                                 = VK_TEX_FILTER_LINEAR,
     VK_NUM_TEX_FILTER                                       = (VK_TEX_FILTER_END_RANGE - VK_TEX_FILTER_BEGIN_RANGE + 1),
-    VK_MAX_ENUM(VkTexFilter_)
+    VK_MAX_ENUM(VkTexFilter)
 } VkTexFilter;
 
 typedef enum VkTexMipmapMode_
@@ -442,7 +442,7 @@ typedef enum VkTexMipmapMode_
     VK_TEX_MIPMAP_BEGIN_RANGE                               = VK_TEX_MIPMAP_BASE,
     VK_TEX_MIPMAP_END_RANGE                                 = VK_TEX_MIPMAP_LINEAR,
     VK_NUM_TEX_MIPMAP                                       = (VK_TEX_MIPMAP_END_RANGE - VK_TEX_MIPMAP_BEGIN_RANGE + 1),
-    VK_MAX_ENUM(VkTexMipmapMode_)
+    VK_MAX_ENUM(VkTexMipmapMode)
 } VkTexMipmapMode;
 
 typedef enum VkTexAddress_
@@ -456,7 +456,7 @@ typedef enum VkTexAddress_
     VK_TEX_ADDRESS_BEGIN_RANGE                              = VK_TEX_ADDRESS_WRAP,
     VK_TEX_ADDRESS_END_RANGE                                = VK_TEX_ADDRESS_CLAMP_BORDER,
     VK_NUM_TEX_ADDRESS                                      = (VK_TEX_ADDRESS_END_RANGE - VK_TEX_ADDRESS_BEGIN_RANGE + 1),
-    VK_MAX_ENUM(VkTexAddress_)
+    VK_MAX_ENUM(VkTexAddress)
 } VkTexAddress;
 
 typedef enum VkCompareFunc_
@@ -473,7 +473,7 @@ typedef enum VkCompareFunc_
     VK_COMPARE_FUNC_BEGIN_RANGE                             = VK_COMPARE_NEVER,
     VK_COMPARE_FUNC_END_RANGE                               = VK_COMPARE_ALWAYS,
     VK_NUM_COMPARE_FUNC                                     = (VK_COMPARE_FUNC_END_RANGE - VK_COMPARE_FUNC_BEGIN_RANGE + 1),
-    VK_MAX_ENUM(VkCompareFunc_)
+    VK_MAX_ENUM(VkCompareFunc)
 } VkCompareFunc;
 
 typedef enum VkFillMode_
@@ -485,7 +485,7 @@ typedef enum VkFillMode_
     VK_FILL_MODE_BEGIN_RANGE                                = VK_FILL_POINTS,
     VK_FILL_MODE_END_RANGE                                  = VK_FILL_SOLID,
     VK_NUM_FILL_MODE                                        = (VK_FILL_MODE_END_RANGE - VK_FILL_MODE_BEGIN_RANGE + 1),
-    VK_MAX_ENUM(VkFillMode_)
+    VK_MAX_ENUM(VkFillMode)
 } VkFillMode;
 
 typedef enum VkCullMode_
@@ -498,7 +498,7 @@ typedef enum VkCullMode_
     VK_CULL_MODE_BEGIN_RANGE                                = VK_CULL_NONE,
     VK_CULL_MODE_END_RANGE                                  = VK_CULL_FRONT_AND_BACK,
     VK_NUM_CULL_MODE                                        = (VK_CULL_MODE_END_RANGE - VK_CULL_MODE_BEGIN_RANGE + 1),
-    VK_MAX_ENUM(VkCullMode_)
+    VK_MAX_ENUM(VkCullMode)
 } VkCullMode;
 
 typedef enum VkFaceOrientation_
@@ -509,7 +509,7 @@ typedef enum VkFaceOrientation_
     VK_FACE_ORIENTATION_BEGIN_RANGE                         = VK_FRONT_FACE_CCW,
     VK_FACE_ORIENTATION_END_RANGE                           = VK_FRONT_FACE_CW,
     VK_NUM_FACE_ORIENTATION                                 = (VK_FACE_ORIENTATION_END_RANGE - VK_FACE_ORIENTATION_BEGIN_RANGE + 1),
-    VK_MAX_ENUM(VkFaceOrientation_)
+    VK_MAX_ENUM(VkFaceOrientation)
 } VkFaceOrientation;
 
 typedef enum VkProvokingVertexConvention_
@@ -520,7 +520,7 @@ typedef enum VkProvokingVertexConvention_
     VK_PROVOKING_VERTEX_BEGIN_RANGE                         = VK_PROVOKING_VERTEX_FIRST,
     VK_PROVOKING_VERTEX_END_RANGE                           = VK_PROVOKING_VERTEX_LAST,
     VK_NUM_PROVOKING_VERTEX_CONVENTION                      = (VK_PROVOKING_VERTEX_END_RANGE - VK_PROVOKING_VERTEX_BEGIN_RANGE + 1),
-    VK_MAX_ENUM(VkProvokingVertexConvention_)
+    VK_MAX_ENUM(VkProvokingVertexConvention)
 } VkProvokingVertexConvention;
 
 typedef enum VkCoordinateOrigin_
@@ -531,7 +531,7 @@ typedef enum VkCoordinateOrigin_
     VK_COORDINATE_ORIGIN_BEGIN_RANGE                        = VK_COORDINATE_ORIGIN_UPPER_LEFT,
     VK_COORDINATE_ORIGIN_END_RANGE                          = VK_COORDINATE_ORIGIN_LOWER_LEFT,
     VK_NUM_COORDINATE_ORIGIN                                = (VK_COORDINATE_ORIGIN_END_RANGE - VK_COORDINATE_ORIGIN_END_RANGE + 1),
-    VK_MAX_ENUM(VkCoordinateOrigin_)
+    VK_MAX_ENUM(VkCoordinateOrigin)
 } VkCoordinateOrigin;
 
 typedef enum VkDepthMode_
@@ -542,7 +542,7 @@ typedef enum VkDepthMode_
     VK_DEPTH_MODE_BEGIN_RANGE                               = VK_DEPTH_MODE_ZERO_TO_ONE,
     VK_DEPTH_MODE_END_RANGE                                 = VK_DEPTH_MODE_NEGATIVE_ONE_TO_ONE,
     VK_NUM_DEPTH_MODE                                       = (VK_DEPTH_MODE_END_RANGE - VK_DEPTH_MODE_BEGIN_RANGE + 1),
-    VK_MAX_ENUM(VkDepthMode_)
+    VK_MAX_ENUM(VkDepthMode)
 } VkDepthMode;
 
 typedef enum VkBlend_
@@ -570,7 +570,7 @@ typedef enum VkBlend_
     VK_BLEND_BEGIN_RANGE                                    = VK_BLEND_ZERO,
     VK_BLEND_END_RANGE                                      = VK_BLEND_ONE_MINUS_SRC1_ALPHA,
     VK_NUM_BLEND                                            = (VK_BLEND_END_RANGE - VK_BLEND_BEGIN_RANGE + 1),
-    VK_MAX_ENUM(VkBlend_)
+    VK_MAX_ENUM(VkBlend)
 } VkBlend;
 
 typedef enum VkBlendFunc_
@@ -584,7 +584,7 @@ typedef enum VkBlendFunc_
     VK_BLEND_FUNC_BEGIN_RANGE                               = VK_BLEND_FUNC_ADD,
     VK_BLEND_FUNC_END_RANGE                                 = VK_BLEND_FUNC_MAX,
     VK_NUM_BLEND_FUNC                                       = (VK_BLEND_FUNC_END_RANGE - VK_BLEND_FUNC_BEGIN_RANGE + 1),
-    VK_MAX_ENUM(VkBlendFunc_)
+    VK_MAX_ENUM(VkBlendFunc)
 } VkBlendFunc;
 
 typedef enum VkStencilOp_
@@ -601,7 +601,7 @@ typedef enum VkStencilOp_
     VK_STENCIL_OP_BEGIN_RANGE                               = VK_STENCIL_OP_KEEP,
     VK_STENCIL_OP_END_RANGE                                 = VK_STENCIL_OP_DEC_WRAP,
     VK_NUM_STENCIL_OP                                       = (VK_STENCIL_OP_END_RANGE - VK_STENCIL_OP_BEGIN_RANGE + 1),
-    VK_MAX_ENUM(VkStencilOp_)
+    VK_MAX_ENUM(VkStencilOp)
 } VkStencilOp;
 
 typedef enum VkLogicOp_
@@ -626,7 +626,7 @@ typedef enum VkLogicOp_
     VK_LOGIC_OP_BEGIN_RANGE                                 = VK_LOGIC_OP_COPY,
     VK_LOGIC_OP_END_RANGE                                   = VK_LOGIC_OP_SET,
     VK_NUM_LOGIC_OP                                         = (VK_LOGIC_OP_END_RANGE - VK_LOGIC_OP_BEGIN_RANGE + 1),
-    VK_MAX_ENUM(VkLogicOp_)
+    VK_MAX_ENUM(VkLogicOp)
 } VkLogicOp;
 
 typedef enum VkSystemAllocType_
@@ -640,7 +640,7 @@ typedef enum VkSystemAllocType_
     VK_SYSTEM_ALLOC_BEGIN_RANGE                             = VK_SYSTEM_ALLOC_API_OBJECT,
     VK_SYSTEM_ALLOC_END_RANGE                               = VK_SYSTEM_ALLOC_DEBUG,
     VK_NUM_SYSTEM_ALLOC_TYPE                                = (VK_SYSTEM_ALLOC_END_RANGE - VK_SYSTEM_ALLOC_BEGIN_RANGE + 1),
-    VK_MAX_ENUM(VkSystemAllocType_)
+    VK_MAX_ENUM(VkSystemAllocType)
 } VkSystemAllocType;
 
 typedef enum VkPhysicalGpuType_
@@ -653,7 +653,7 @@ typedef enum VkPhysicalGpuType_
     VK_PHYSICAL_GPU_TYPE_BEGIN_RANGE                        = VK_GPU_TYPE_OTHER,
     VK_PHYSICAL_GPU_TYPE_END_RANGE                          = VK_GPU_TYPE_VIRTUAL,
     VK_NUM_PHYSICAL_GPU_TYPE                                = (VK_PHYSICAL_GPU_TYPE_END_RANGE - VK_PHYSICAL_GPU_TYPE_BEGIN_RANGE + 1),
-    VK_MAX_ENUM(VkPhysicalGpuType_)
+    VK_MAX_ENUM(VkPhysicalGpuType)
 } VkPhysicalGpuType;
 
 typedef enum VkPhysicalGpuInfoType_
@@ -667,7 +667,7 @@ typedef enum VkPhysicalGpuInfoType_
     VK_INFO_TYPE_PHYSICAL_GPU_BEGIN_RANGE                   = VK_INFO_TYPE_PHYSICAL_GPU_PROPERTIES,
     VK_INFO_TYPE_PHYSICAL_GPU_END_RANGE                     = VK_INFO_TYPE_PHYSICAL_GPU_MEMORY_PROPERTIES,
     VK_NUM_INFO_TYPE_PHYSICAL_GPU                           = (VK_INFO_TYPE_PHYSICAL_GPU_END_RANGE - VK_INFO_TYPE_PHYSICAL_GPU_BEGIN_RANGE + 1),
-    VK_MAX_ENUM(VkPhysicalGpuInfoType_)
+    VK_MAX_ENUM(VkPhysicalGpuInfoType)
 } VkPhysicalGpuInfoType;
 
 typedef enum VkFormatInfoType_
@@ -678,7 +678,7 @@ typedef enum VkFormatInfoType_
     VK_INFO_TYPE_FORMAT_BEGIN_RANGE                         = VK_INFO_TYPE_FORMAT_PROPERTIES,
     VK_INFO_TYPE_FORMAT_END_RANGE                           = VK_INFO_TYPE_FORMAT_PROPERTIES,
     VK_NUM_INFO_TYPE_FORMAT                                  = (VK_INFO_TYPE_FORMAT_END_RANGE - VK_INFO_TYPE_FORMAT_BEGIN_RANGE + 1),
-    VK_MAX_ENUM(VkFormatInfoType_)
+    VK_MAX_ENUM(VkFormatInfoType)
 } VkFormatInfoType;
 
 typedef enum VkSubresourceInfoType_
@@ -689,7 +689,7 @@ typedef enum VkSubresourceInfoType_
     VK_INFO_TYPE_SUBRESOURCE_BEGIN_RANGE                    = VK_INFO_TYPE_SUBRESOURCE_LAYOUT,
     VK_INFO_TYPE_SUBRESOURCE_END_RANGE                      = VK_INFO_TYPE_SUBRESOURCE_LAYOUT,
     VK_NUM_INFO_TYPE_SUBRESOURCE                            = (VK_INFO_TYPE_SUBRESOURCE_END_RANGE - VK_INFO_TYPE_SUBRESOURCE_BEGIN_RANGE + 1),
-    VK_MAX_ENUM(VkSubresourceInfoType_)
+    VK_MAX_ENUM(VkSubresourceInfoType)
 } VkSubresourceInfoType;
 
 typedef enum VkObjectInfoType_
@@ -703,7 +703,7 @@ typedef enum VkObjectInfoType_
     VK_INFO_TYPE_BEGIN_RANGE                                = VK_INFO_TYPE_MEMORY_ALLOCATION_COUNT,
     VK_INFO_TYPE_END_RANGE                                  = VK_INFO_TYPE_IMAGE_MEMORY_REQUIREMENTS,
     VK_NUM_INFO_TYPE                                        = (VK_INFO_TYPE_END_RANGE - VK_INFO_TYPE_BEGIN_RANGE + 1),
-    VK_MAX_ENUM(VkObjectInfoType_)
+    VK_MAX_ENUM(VkObjectInfoType)
 } VkObjectInfoType;
 
 typedef enum VkValidationLevel_
@@ -718,7 +718,7 @@ typedef enum VkValidationLevel_
     VK_VALIDATION_LEVEL_END_RANGE                           = VK_VALIDATION_LEVEL_4,
     VK_NUM_VALIDATION_LEVEL                                 = (VK_VALIDATION_LEVEL_END_RANGE - VK_VALIDATION_LEVEL_BEGIN_RANGE + 1),
 
-    VK_MAX_ENUM(VkValidationLevel_)
+    VK_MAX_ENUM(VkValidationLevel)
 } VkValidationLevel;
 
 // ------------------------------------------------------------------------------------------------
@@ -769,7 +769,7 @@ typedef enum VkResult_
     VK_ERROR_MEMORY_NOT_BOUND                               = -(0x00000020),
     VK_ERROR_INCOMPATIBLE_QUEUE                             = -(0x00000021),
     VK_ERROR_NOT_SHAREABLE                                  = -(0x00000022),
-    VK_MAX_ENUM(_VK_RESULT_CODE)
+    VK_MAX_ENUM(VkResult)
 } VkResult;
 
 // ------------------------------------------------------------------------------------------------
@@ -784,7 +784,7 @@ typedef enum VkVertexInputStepRate_
     VK_VERTEX_INPUT_STEP_RATE_BEGIN_RANGE                   = VK_VERTEX_INPUT_STEP_RATE_VERTEX,
     VK_VERTEX_INPUT_STEP_RATE_END_RANGE                     = VK_VERTEX_INPUT_STEP_RATE_DRAW,
     VK_NUM_VERTEX_INPUT_STEP_RATE                           = (VK_VERTEX_INPUT_STEP_RATE_END_RANGE - VK_VERTEX_INPUT_STEP_RATE_BEGIN_RANGE + 1),
-    VK_MAX_ENUM(VkVertexInputStepRate_)
+    VK_MAX_ENUM(VkVertexInputStepRate)
 } VkVertexInputStepRate;
 
 typedef enum VkFormat_
@@ -967,7 +967,7 @@ typedef enum VkFormat_
     VK_FMT_BEGIN_RANGE                                      = VK_FMT_UNDEFINED,
     VK_FMT_END_RANGE                                        = VK_FMT_B10G10R10A2_SINT,
     VK_NUM_FMT                                              = (VK_FMT_END_RANGE - VK_FMT_BEGIN_RANGE + 1),
-    VK_MAX_ENUM(VkFormat_)
+    VK_MAX_ENUM(VkFormat)
 } VkFormat;
 
 // Shader stage enumerant
@@ -983,7 +983,7 @@ typedef enum VkPipelineShaderStage_
     VK_SHADER_STAGE_BEGIN_RANGE                             = VK_SHADER_STAGE_VERTEX,
     VK_SHADER_STAGE_END_RANGE                               = VK_SHADER_STAGE_COMPUTE,
     VK_NUM_SHADER_STAGE                                     = (VK_SHADER_STAGE_END_RANGE - VK_SHADER_STAGE_BEGIN_RANGE + 1),
-    VK_MAX_ENUM(VkPipelineShaderStage_)
+    VK_MAX_ENUM(VkPipelineShaderStage)
 } VkPipelineShaderStage;
 
 typedef enum VkShaderStageFlags_
@@ -996,7 +996,7 @@ typedef enum VkShaderStageFlags_
     VK_SHADER_STAGE_FLAGS_COMPUTE_BIT                       = 0x00000020,
 
     VK_SHADER_STAGE_FLAGS_ALL                               = 0x7FFFFFFF,
-    VK_MAX_ENUM(VkShaderStageFlags_)
+    VK_MAX_ENUM(VkShaderStageFlags)
 } VkShaderStageFlags;
 
 // Structure type enumerant
@@ -1063,7 +1063,7 @@ typedef enum VkStructureType_
     VK_STRUCTURE_TYPE_END_RANGE                             = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
 
     VK_NUM_STRUCTURE_TYPE                                   = (VK_STRUCTURE_TYPE_END_RANGE - VK_STRUCTURE_TYPE_BEGIN_RANGE + 1),
-    VK_MAX_ENUM(VkStructureType_)
+    VK_MAX_ENUM(VkStructureType)
 } VkStructureType;
 
 // ------------------------------------------------------------------------------------------------
@@ -1074,7 +1074,7 @@ typedef enum VkDeviceCreateFlags_
 {
     VK_DEVICE_CREATE_VALIDATION_BIT                         = 0x00000001,
     VK_DEVICE_CREATE_MGPU_IQ_MATCH_BIT                      = 0x00000002,
-    VK_MAX_ENUM(VkDeviceCreateFlags_)
+    VK_MAX_ENUM(VkDeviceCreateFlags)
 } VkDeviceCreateFlags;
 
 // Queue capabilities
@@ -1084,7 +1084,7 @@ typedef enum VkQueueFlags_
     VK_QUEUE_COMPUTE_BIT                                    = 0x00000002,   // Queue supports compute operations
     VK_QUEUE_DMA_BIT                                        = 0x00000004,   // Queue supports DMA operations
     VK_QUEUE_EXTENDED_BIT                                   = 0x40000000,   // Extended queue
-    VK_MAX_ENUM(VkQueueFlags_)
+    VK_MAX_ENUM(VkQueueFlags)
 } VkQueueFlags;
 
 // memory properties passed into vkAllocMemory().
@@ -1097,7 +1097,7 @@ typedef enum VkMemoryPropertyFlags_
     VK_MEMORY_PROPERTY_CPU_WRITE_COMBINED_BIT               = 0x00000008,
     VK_MEMORY_PROPERTY_PREFER_CPU_LOCAL                     = 0x00000010,   // all else being equal, prefer CPU access
     VK_MEMORY_PROPERTY_SHAREABLE_BIT                        = 0x00000020,
-    VK_MAX_ENUM(VkMemoryPropertyFlags_)
+    VK_MAX_ENUM(VkMemoryPropertyFlags)
 } VkMemoryPropertyFlags;
 
 typedef enum VkMemoryType_
@@ -1109,7 +1109,7 @@ typedef enum VkMemoryType_
     VK_MEMORY_TYPE_BEGIN_RANGE                              = VK_MEMORY_TYPE_OTHER,
     VK_MEMORY_TYPE_END_RANGE                                = VK_MEMORY_TYPE_IMAGE,
     VK_NUM_MEMORY_TYPE                                      = (VK_MEMORY_TYPE_END_RANGE - VK_MEMORY_TYPE_BEGIN_RANGE + 1),
-    VK_MAX_ENUM(VkMemoryType_)
+    VK_MAX_ENUM(VkMemoryType)
 } VkMemoryType;
 
 // Buffer and buffer allocation usage flags
@@ -1128,7 +1128,7 @@ typedef enum VkBufferUsageFlags_
     VK_BUFFER_USAGE_INDIRECT_PARAMETER_FETCH_BIT            = 0x00000200,   // Can be the source of indirect parameters (e.g. indirect buffer, parameter buffer)
     VK_BUFFER_USAGE_TEXTURE_BUFFER_BIT                      = 0x00000400,   // texture buffer (TBO)
     VK_BUFFER_USAGE_IMAGE_BUFFER_BIT                        = 0x00000800,   // image buffer (load/store)
-    VK_MAX_ENUM(VkBufferUsageFlags_)
+    VK_MAX_ENUM(VkBufferUsageFlags)
 } VkBufferUsageFlags;
 
 // Buffer flags
@@ -1136,7 +1136,7 @@ typedef enum VkBufferCreateFlags_
 {
     VK_BUFFER_CREATE_SHAREABLE_BIT                          = 0x00000001,
     VK_BUFFER_CREATE_SPARSE_BIT                             = 0x00000002,
-    VK_MAX_ENUM(VkBufferCreateFlags_)
+    VK_MAX_ENUM(VkBufferCreateFlags)
 } VkBufferCreateFlags;
 
 typedef enum VkBufferViewType_
@@ -1147,7 +1147,7 @@ typedef enum VkBufferViewType_
     VK_BUFFER_VIEW_TYPE_BEGIN_RANGE                         = VK_BUFFER_VIEW_RAW,
     VK_BUFFER_VIEW_TYPE_END_RANGE                           = VK_BUFFER_VIEW_TYPED,
     VK_NUM_BUFFER_VIEW_TYPE                                 = (VK_BUFFER_VIEW_TYPE_END_RANGE - VK_BUFFER_VIEW_TYPE_BEGIN_RANGE + 1),
-    VK_MAX_ENUM(VkBufferViewType_)
+    VK_MAX_ENUM(VkBufferViewType)
 } VkBufferViewType;
 
 
@@ -1176,7 +1176,7 @@ typedef enum VkImageFormatClass_
     VK_IMAGE_FORMAT_CLASS_BEGIN_RANGE                       = VK_IMAGE_FORMAT_CLASS_128_BITS,
     VK_IMAGE_FORMAT_CLASS_END_RANGE                         = VK_IMAGE_FORMAT_CLASS_LINEAR,
     VK_NUM_IMAGE_FORMAT_CLASS                               = (VK_IMAGE_FORMAT_CLASS_END_RANGE - VK_IMAGE_FORMAT_CLASS_BEGIN_RANGE + 1),
-    VK_MAX_ENUM(VkImageFormatClass_)
+    VK_MAX_ENUM(VkImageFormatClass)
 } VkImageFormatClass;
 
 // Image and image allocation usage flags
@@ -1193,7 +1193,7 @@ typedef enum VkImageUsageFlags_
     VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT                     = 0x00000080,   // framebuffer color attachment
     VK_IMAGE_USAGE_DEPTH_STENCIL_BIT                        = 0x00000100,   // framebuffer depth/stencil
     VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT                 = 0x00000200,   // image data not needed outside of rendering.
-    VK_MAX_ENUM(VkImageUsageFlags_)
+    VK_MAX_ENUM(VkImageUsageFlags)
 } VkImageUsageFlags;
 
 // Image flags
@@ -1205,7 +1205,7 @@ typedef enum VkImageCreateFlags_
     VK_IMAGE_CREATE_SPARSE_BIT                              = 0x00000008,
     VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT                      = 0x00000010,   // Allows image views to have different format than the base image
     VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT                     = 0x00000020,   // Allows creating image views with cube type from the created image
-    VK_MAX_ENUM(VkImageCreateFlags_)
+    VK_MAX_ENUM(VkImageCreateFlags)
 } VkImageCreateFlags;
 
 // Depth-stencil view creation flags
@@ -1213,7 +1213,7 @@ typedef enum VkDepthStencilViewCreateFlags_
 {
     VK_DEPTH_STENCIL_VIEW_CREATE_READ_ONLY_DEPTH_BIT        = 0x00000001,
     VK_DEPTH_STENCIL_VIEW_CREATE_READ_ONLY_STENCIL_BIT      = 0x00000002,
-    VK_MAX_ENUM(VkDepthStencilViewCreateFlags_)
+    VK_MAX_ENUM(VkDepthStencilViewCreateFlags)
 } VkDepthStencilViewCreateFlags;
 
 // Pipeline creation flags
@@ -1221,21 +1221,21 @@ typedef enum VkPipelineCreateFlags_
 {
     VK_PIPELINE_CREATE_DISABLE_OPTIMIZATION_BIT             = 0x00000001,
     VK_PIPELINE_CREATE_ALLOW_DERIVATIVES_BIT                = 0x00000002,
-    VK_MAX_ENUM(VkPipelineCreateFlags_)
+    VK_MAX_ENUM(VkPipelineCreateFlags)
 } VkPipelineCreateFlags;
 
 // Fence creation flags
 typedef enum VkFenceCreateFlags_
 {
     VK_FENCE_CREATE_SIGNALED_BIT                            = 0x00000001,
-    VK_MAX_ENUM(VkFenceCreateFlags_)
+    VK_MAX_ENUM(VkFenceCreateFlags)
 } VkFenceCreateFlags;
 
 // Semaphore creation flags
 typedef enum VkSemaphoreCreateFlags_
 {
     VK_SEMAPHORE_CREATE_SHAREABLE_BIT                       = 0x00000001,
-    VK_MAX_ENUM(VkSemaphoreCreateFlags_)
+    VK_MAX_ENUM(VkSemaphoreCreateFlags)
 } VkSemaphoreCreateFlags;
 
 // Format capability flags
@@ -1251,14 +1251,14 @@ typedef enum VkFormatFeatureFlags_
     VK_FORMAT_STENCIL_ATTACHMENT_BIT                        = 0x00000080,
     VK_FORMAT_MSAA_ATTACHMENT_BIT                           = 0x00000100,
     VK_FORMAT_CONVERSION_BIT                                = 0x00000200,
-    VK_MAX_ENUM(VkFormatFeatureFlags_)
+    VK_MAX_ENUM(VkFormatFeatureFlags)
 } VkFormatFeatureFlags;
 
 // Query flags
 typedef enum VkQueryControlFlags_
 {
     VK_QUERY_IMPRECISE_DATA_BIT                             = 0x00000001,
-    VK_MAX_ENUM(VkQueryControlFlags_)
+    VK_MAX_ENUM(VkQueryControlFlags)
 } VkQueryControlFlags;
 
 // GPU compatibility flags
@@ -1271,7 +1271,7 @@ typedef enum VkGpuCompatibilityFlags_
     VK_GPU_COMPAT_SHARED_SYNC_BIT                           = 0x00000010,
     VK_GPU_COMPAT_SHARED_GPU0_DISPLAY_BIT                   = 0x00000020,
     VK_GPU_COMPAT_SHARED_GPU1_DISPLAY_BIT                   = 0x00000040,
-    VK_MAX_ENUM(VkGpuCompatibilityFlags_)
+    VK_MAX_ENUM(VkGpuCompatibilityFlags)
 } VkGpuCompatibilityFlags;
 
 // Command buffer building flags
@@ -1281,7 +1281,7 @@ typedef enum VkCmdBufferBuildFlags_
     VK_CMD_BUFFER_OPTIMIZE_PIPELINE_SWITCH_BIT              = 0x00000002,
     VK_CMD_BUFFER_OPTIMIZE_ONE_TIME_SUBMIT_BIT              = 0x00000004,
     VK_CMD_BUFFER_OPTIMIZE_DESCRIPTOR_SET_SWITCH_BIT        = 0x00000008,
-    VK_MAX_ENUM(VkCmdBufferBuildFlags_)
+    VK_MAX_ENUM(VkCmdBufferBuildFlags)
 } VkCmdBufferBuildFlags;
 
 // ------------------------------------------------------------------------------------------------
@@ -1397,13 +1397,13 @@ typedef struct VkAllocCallbacks_
     PFN_vkFreeFunction                          pfnFree;
 } VkAllocCallbacks;
 
-typedef struct _VkDeviceQueueCreateInfo
+typedef struct VkDeviceQueueCreateInfo_
 {
     uint32_t                                    queueNodeIndex;
     uint32_t                                    queueCount;
 } VkDeviceQueueCreateInfo;
 
-typedef struct _VkDeviceCreateInfo
+typedef struct VkDeviceCreateInfo_
 {
     VkStructureType                             sType;                      // Should be VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO
     const void*                                 pNext;                      // Pointer to next structure
@@ -1415,7 +1415,7 @@ typedef struct _VkDeviceCreateInfo
     VkFlags                                     flags;                      // VkDeviceCreateFlags
 } VkDeviceCreateInfo;
 
-typedef struct _VkInstanceCreateInfo
+typedef struct VkInstanceCreateInfo_
 {
     VkStructureType                           sType;                      // Should be VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO
     const void*                                 pNext;                      // Pointer to next structure
@@ -1449,7 +1449,7 @@ typedef struct VkPhysicalGpuMemoryProperties_
     bool32_t                                    supportsPinning;
 } VkPhysicalGpuMemoryProperties;
 
-typedef struct _VkMemoryAllocInfo
+typedef struct VkMemoryAllocInfo_
 {
     VkStructureType                             sType;                      // Must be VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO
     const void*                                 pNext;                      // Pointer to next structure
@@ -1461,7 +1461,7 @@ typedef struct _VkMemoryAllocInfo
 
 // This structure is included in the VkMemoryAllocInfo chain
 // for memory regions allocated for buffer usage.
-typedef struct _VkMemoryAllocBufferInfo
+typedef struct VkMemoryAllocBufferInfo_
 {
     VkStructureType                             sType;                      // Must be VK_STRUCTURE_TYPE_MEMORY_ALLOC_BUFFER_INFO
     const void*                                 pNext;                      // Pointer to next structure
@@ -1470,7 +1470,7 @@ typedef struct _VkMemoryAllocBufferInfo
 
 // This structure is included in the VkMemoryAllocInfo chain
 // for memory regions allocated for image usage.
-typedef struct _VkMemoryAllocImageInfo
+typedef struct VkMemoryAllocImageInfo_
 {
     VkStructureType                             sType;                      // Must be VK_STRUCTURE_TYPE_MEMORY_ALLOC_IMAGE_INFO
     const void*                                 pNext;                      // Pointer to next structure
@@ -1594,7 +1594,7 @@ typedef struct VkUpdateAsCopy_
     uint32_t                                    count;
 } VkUpdateAsCopy;
 
-typedef struct _VkBufferCreateInfo
+typedef struct VkBufferCreateInfo_
 {
     VkStructureType                             sType;                      // Must be VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO
     const void*                                 pNext;                      // Pointer to next structure.
@@ -1603,7 +1603,7 @@ typedef struct _VkBufferCreateInfo
     VkFlags                                     flags;                      // VkBufferCreateFlags
 } VkBufferCreateInfo;
 
-typedef struct _VkBufferViewCreateInfo
+typedef struct VkBufferViewCreateInfo_
 {
     VkStructureType                             sType;                      // Must be VK_STRUCTURE_TYPE_BUFFER_VIEW_CREATE_INFO
     const void*                                 pNext;                      // Pointer to next structure.
