@@ -41,7 +41,7 @@ struct intel_instance {
     bool exts[INTEL_EXT_COUNT];
 };
 
-static inline struct intel_instance *intel_instance(VK_INSTANCE instance)
+static inline struct intel_instance *intel_instance(VkInstance instance)
 {
     return (struct intel_instance *) instance;
 }

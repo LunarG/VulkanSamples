@@ -36,18 +36,18 @@ static void buf_destroy(struct intel_obj *obj)
     intel_buf_destroy(buf);
 }
 
-static VK_RESULT buf_get_info(struct intel_base *base, int type,
+static VkResult buf_get_info(struct intel_base *base, int type,
                                size_t *size, void *data)
 {
     struct intel_buf *buf = intel_buf_from_base(base);
-    VK_RESULT ret = VK_SUCCESS;
+    VkResult ret = VK_SUCCESS;
 
     switch (type) {
     case VK_INFO_TYPE_MEMORY_REQUIREMENTS:
         {
-            VK_MEMORY_REQUIREMENTS *mem_req = data;
+            VkMemoryRequirements *mem_req = data;
 
-            *size = sizeof(VK_MEMORY_REQUIREMENTS);
+            *size = sizeof(VkMemoryRequirements);
             if (data == NULL)
                 return ret;
 
@@ -70,9 +70,9 @@ static VK_RESULT buf_get_info(struct intel_base *base, int type,
         break;
         case VK_INFO_TYPE_BUFFER_MEMORY_REQUIREMENTS:
         {
-            VK_BUFFER_MEMORY_REQUIREMENTS *buf_req = data;
+            VkBufferMemoryRequirements *buf_req = data;
 
-            *size = sizeof(VK_BUFFER_MEMORY_REQUIREMENTS);
+            *size = sizeof(VkBufferMemoryRequirements);
             if (data == NULL)
                 return ret;
             buf_req->usage = buf->usage;
@@ -86,7 +86,7 @@ static VK_RESULT buf_get_info(struct intel_base *base, int type,
     return ret;
 }
 
-VK_RESULT intel_buf_create(struct intel_dev *dev,
+VkResult intel_buf_create(struct intel_dev *dev,
                             const VkBufferCreateInfo *info,
                             struct intel_buf **buf_ret)
 {
@@ -113,10 +113,10 @@ void intel_buf_destroy(struct intel_buf *buf)
     intel_base_destroy(&buf->obj.base);
 }
 
-ICD_EXPORT VK_RESULT VKAPI vkCreateBuffer(
-    VK_DEVICE                                  device,
+ICD_EXPORT VkResult VKAPI vkCreateBuffer(
+    VkDevice                                  device,
     const VkBufferCreateInfo*               pCreateInfo,
-    VK_BUFFER*                                 pBuffer)
+    VkBuffer*                                 pBuffer)
 {
     struct intel_dev *dev = intel_dev(device);
 

@@ -79,12 +79,12 @@ struct loader_icd {
 
 struct loader_scanned_icds {
     loader_platform_dl_handle handle;
-    vkGetProcAddrType GetProcAddr;
-    vkCreateInstanceType CreateInstance;
-    vkDestroyInstanceType DestroyInstance;
-    vkEnumerateGpusType EnumerateGpus;
-    vkGetExtensionSupportType GetExtensionSupport;
-    VK_INSTANCE instance;
+    PFN_vkGetProcAddr GetProcAddr;
+    PFN_vkCreateInstance CreateInstance;
+    PFN_vkDestroyInstance DestroyInstance;
+    PFN_vkEnumerateGpus EnumerateGpus;
+    PFN_vkGetExtensionSupport GetExtensionSupport;
+    VkInstance instance;
     struct loader_scanned_icds *next;
 };
 
@@ -274,7 +274,7 @@ static void loader_scanned_icd_add(const char *filename)
     }
 
 #define LOOKUP(func_ptr, func) do {                            \
-    func_ptr = (vk ##func## Type) loader_platform_get_proc_address(handle, "vk" #func); \
+    func_ptr = (PFN_vk ##func) loader_platform_get_proc_address(handle, "vk" #func); \
     if (!func_ptr) {                                           \
         loader_log(VK_DBG_MSG_WARNING, 0, loader_platform_get_proc_address_error("vk" #func)); \
         return;                                                \
@@ -515,7 +515,7 @@ static void layer_lib_scan(void)
     loader.layer_scanned = true;
 }
 
-static void loader_init_dispatch_table(VK_LAYER_DISPATCH_TABLE *tab, vkGetProcAddrType fpGPA, VK_PHYSICAL_GPU gpu)
+static void loader_init_dispatch_table(VK_LAYER_DISPATCH_TABLE *tab, PFN_vkGetProcAddr fpGPA, VkPhysicalGpu gpu)
 {
     loader_initialize_dispatch_table(tab, fpGPA, gpu);
 
@@ -578,12 +578,12 @@ static void loader_init_layer_libs(struct loader_icd *icd, uint32_t gpu_index, s
     }
 }
 
-static VK_RESULT find_layer_extension(struct loader_icd *icd, uint32_t gpu_index, const char *pExtName, const char **lib_name)
+static VkResult find_layer_extension(struct loader_icd *icd, uint32_t gpu_index, const char *pExtName, const char **lib_name)
 {
-    VK_RESULT err;
+    VkResult err;
     char *search_name;
     loader_platform_dl_handle handle;
-    vkGetExtensionSupportType fpGetExtensionSupport;
+    PFN_vkGetExtensionSupport fpGetExtensionSupport;
 
     /*
      * The loader provides the abstraction that make layers and extensions work via
@@ -596,7 +596,7 @@ static VK_RESULT find_layer_extension(struct loader_icd *icd, uint32_t gpu_index
     // TODO: What if extension is in multiple places?
 
     // TODO: Who should we ask first? Driver or layers? Do driver for now.
-    err = icd->scanned_icds[gpu_index].GetExtensionSupport((VK_PHYSICAL_GPU) (icd->gpus[gpu_index].nextObject), pExtName);
+    err = icd->scanned_icds[gpu_index].GetExtensionSupport((VkPhysicalGpu) (icd->gpus[gpu_index].nextObject), pExtName);
     if (err == VK_SUCCESS) {
         if (lib_name) {
             *lib_name = NULL;
@@ -614,7 +614,7 @@ static VK_RESULT find_layer_extension(struct loader_icd *icd, uint32_t gpu_index
 
         if (fpGetExtensionSupport != NULL) {
             // Found layer's GetExtensionSupport call
-            err = fpGetExtensionSupport((VK_PHYSICAL_GPU) (icd->gpus + gpu_index), pExtName);
+            err = fpGetExtensionSupport((VkPhysicalGpu) (icd->gpus + gpu_index), pExtName);
 
             loader_platform_close_library(handle);
 
@@ -788,7 +788,7 @@ static void loader_deactivate_layer(const struct loader_instance *instance)
     }
 }
 
-extern uint32_t loader_activate_layers(VK_PHYSICAL_GPU gpu, const VkDeviceCreateInfo* pCreateInfo)
+extern uint32_t loader_activate_layers(VkPhysicalGpu gpu, const VkDeviceCreateInfo* pCreateInfo)
 {
     uint32_t gpu_index;
     uint32_t count;
@@ -803,7 +803,7 @@ extern uint32_t loader_activate_layers(VK_PHYSICAL_GPU gpu, const VkDeviceCreate
     if (!loader_layers_activated(icd, gpu_index)) {
         VK_BASE_LAYER_OBJECT *gpuObj = (VK_BASE_LAYER_OBJECT *) gpu;
         VK_BASE_LAYER_OBJECT *nextGpuObj, *baseObj = gpuObj->baseObject;
-        vkGetProcAddrType nextGPA = vkGetProcAddr;
+        PFN_vkGetProcAddr nextGPA = vkGetProcAddr;
 
         count = loader_get_layer_libs(icd, gpu_index, pCreateInfo, &pLayerNames);
         if (!count)
@@ -822,8 +822,8 @@ extern uint32_t loader_activate_layers(VK_PHYSICAL_GPU gpu, const VkDeviceCreate
 
             char funcStr[256];
             snprintf(funcStr, 256, "%sGetProcAddr",icd->layer_libs[gpu_index][i].name);
-            if ((nextGPA = (vkGetProcAddrType) loader_platform_get_proc_address(icd->layer_libs[gpu_index][i].lib_handle, funcStr)) == NULL)
-                nextGPA = (vkGetProcAddrType) loader_platform_get_proc_address(icd->layer_libs[gpu_index][i].lib_handle, "vkGetProcAddr");
+            if ((nextGPA = (PFN_vkGetProcAddr) loader_platform_get_proc_address(icd->layer_libs[gpu_index][i].lib_handle, funcStr)) == NULL)
+                nextGPA = (PFN_vkGetProcAddr) loader_platform_get_proc_address(icd->layer_libs[gpu_index][i].lib_handle, "vkGetProcAddr");
             if (!nextGPA) {
                 loader_log(VK_DBG_MSG_ERROR, 0, "Failed to find vkGetProcAddr in layer %s", icd->layer_libs[gpu_index][i].name);
                 continue;
@@ -857,16 +857,16 @@ extern uint32_t loader_activate_layers(VK_PHYSICAL_GPU gpu, const VkDeviceCreate
     return icd->layer_count[gpu_index];
 }
 
-LOADER_EXPORT VK_RESULT VKAPI vkCreateInstance(
+LOADER_EXPORT VkResult VKAPI vkCreateInstance(
         const VkInstanceCreateInfo*         pCreateInfo,
-        VK_INSTANCE*                           pInstance)
+        VkInstance*                           pInstance)
 {
     static LOADER_PLATFORM_THREAD_ONCE_DECLARATION(once_icd);
     static LOADER_PLATFORM_THREAD_ONCE_DECLARATION(once_layer);
     struct loader_instance *ptr_instance = NULL;
     struct loader_scanned_icds *scanned_icds;
     struct loader_icd *icd;
-    VK_RESULT res = VK_ERROR_INITIALIZATION_FAILED;
+    VkResult res = VK_ERROR_INITIALIZATION_FAILED;
 
     /* Scan/discover all ICD libraries in a single-threaded manner */
     loader_platform_thread_once(&once_icd, loader_icd_scan);
@@ -905,16 +905,16 @@ LOADER_EXPORT VK_RESULT VKAPI vkCreateInstance(
         return VK_ERROR_INCOMPATIBLE_DRIVER;
     }
 
-    *pInstance = (VK_INSTANCE) ptr_instance;
+    *pInstance = (VkInstance) ptr_instance;
     return VK_SUCCESS;
 }
 
-LOADER_EXPORT VK_RESULT VKAPI vkDestroyInstance(
-        VK_INSTANCE                                instance)
+LOADER_EXPORT VkResult VKAPI vkDestroyInstance(
+        VkInstance                                instance)
 {
     struct loader_instance *ptr_instance = (struct loader_instance *) instance;
     struct loader_scanned_icds *scanned_icds;
-    VK_RESULT res;
+    VkResult res;
 
     // Remove this instance from the list of instances:
     struct loader_instance *prev = NULL;
@@ -955,24 +955,24 @@ LOADER_EXPORT VK_RESULT VKAPI vkDestroyInstance(
     return VK_SUCCESS;
 }
 
-LOADER_EXPORT VK_RESULT VKAPI vkEnumerateGpus(
+LOADER_EXPORT VkResult VKAPI vkEnumerateGpus(
 
-        VK_INSTANCE                                instance,
+        VkInstance                                instance,
         uint32_t                                    maxGpus,
         uint32_t*                                   pGpuCount,
-        VK_PHYSICAL_GPU*                           pGpus)
+        VkPhysicalGpu*                           pGpus)
 {
     struct loader_instance *ptr_instance = (struct loader_instance *) instance;
     struct loader_icd *icd;
     uint32_t count = 0;
-    VK_RESULT res;
+    VkResult res;
 
     //in spirit of VK don't error check on the instance parameter
     icd = ptr_instance->icds;
     while (icd) {
-        VK_PHYSICAL_GPU gpus[VK_MAX_PHYSICAL_GPUS];
+        VkPhysicalGpu gpus[VK_MAX_PHYSICAL_GPUS];
         VK_BASE_LAYER_OBJECT * wrapped_gpus;
-        vkGetProcAddrType get_proc_addr = icd->scanned_icds->GetProcAddr;
+        PFN_vkGetProcAddr get_proc_addr = icd->scanned_icds->GetProcAddr;
         uint32_t n, max = maxGpus - count;
 
         if (max > VK_MAX_PHYSICAL_GPUS) {
@@ -1024,7 +1024,7 @@ LOADER_EXPORT VK_RESULT VKAPI vkEnumerateGpus(
     return (count > 0) ? VK_SUCCESS : res;
 }
 
-LOADER_EXPORT void * VKAPI vkGetProcAddr(VK_PHYSICAL_GPU gpu, const char * pName)
+LOADER_EXPORT void * VKAPI vkGetProcAddr(VkPhysicalGpu gpu, const char * pName)
 {
     if (gpu == NULL) {
         return NULL;
@@ -1046,7 +1046,7 @@ LOADER_EXPORT void * VKAPI vkGetProcAddr(VK_PHYSICAL_GPU gpu, const char * pName
     }
 }
 
-LOADER_EXPORT VK_RESULT VKAPI vkGetExtensionSupport(VK_PHYSICAL_GPU gpu, const char *pExtName)
+LOADER_EXPORT VkResult VKAPI vkGetExtensionSupport(VkPhysicalGpu gpu, const char *pExtName)
 {
     uint32_t gpu_index;
     struct loader_icd *icd = loader_get_icd((const VK_BASE_LAYER_OBJECT *) gpu, &gpu_index);
@@ -1057,14 +1057,14 @@ LOADER_EXPORT VK_RESULT VKAPI vkGetExtensionSupport(VK_PHYSICAL_GPU gpu, const c
     return find_layer_extension(icd, gpu_index, pExtName, NULL);
 }
 
-LOADER_EXPORT VK_RESULT VKAPI vkEnumerateLayers(VK_PHYSICAL_GPU gpu, size_t maxLayerCount, size_t maxStringSize, size_t* pOutLayerCount, char* const* pOutLayers, void* pReserved)
+LOADER_EXPORT VkResult VKAPI vkEnumerateLayers(VkPhysicalGpu gpu, size_t maxLayerCount, size_t maxStringSize, size_t* pOutLayerCount, char* const* pOutLayers, void* pReserved)
 {
     uint32_t gpu_index;
     size_t count = 0;
     char *lib_name;
     struct loader_icd *icd = loader_get_icd((const VK_BASE_LAYER_OBJECT *) gpu, &gpu_index);
     loader_platform_dl_handle handle;
-    vkEnumerateLayersType fpEnumerateLayers;
+    PFN_vkEnumerateLayers fpEnumerateLayers;
     char layer_buf[16][256];
     char * layers[16];
 
@@ -1108,7 +1108,7 @@ LOADER_EXPORT VK_RESULT VKAPI vkEnumerateLayers(VK_PHYSICAL_GPU gpu, size_t maxL
         } else {
             size_t cnt;
             uint32_t n;
-            VK_RESULT res;
+            VkResult res;
             n = (uint32_t) ((maxStringSize < 256) ? maxStringSize : 256);
             res = fpEnumerateLayers(NULL, 16, n, &cnt, layers, (char *) icd->gpus + gpu_index);
             loader_platform_close_library(handle);
@@ -1130,11 +1130,11 @@ LOADER_EXPORT VK_RESULT VKAPI vkEnumerateLayers(VK_PHYSICAL_GPU gpu, size_t maxL
     return VK_SUCCESS;
 }
 
-LOADER_EXPORT VK_RESULT VKAPI vkDbgRegisterMsgCallback(VK_INSTANCE instance, VK_DBG_MSG_CALLBACK_FUNCTION pfnMsgCallback, void* pUserData)
+LOADER_EXPORT VkResult VKAPI vkDbgRegisterMsgCallback(VkInstance instance, VK_DBG_MSG_CALLBACK_FUNCTION pfnMsgCallback, void* pUserData)
 {
     const struct loader_icd *icd;
     struct loader_instance *inst;
-    VK_RESULT res;
+    VkResult res;
     uint32_t gpu_idx;
 
     if (instance == VK_NULL_HANDLE)
@@ -1181,9 +1181,9 @@ LOADER_EXPORT VK_RESULT VKAPI vkDbgRegisterMsgCallback(VK_INSTANCE instance, VK_
     return VK_SUCCESS;
 }
 
-LOADER_EXPORT VK_RESULT VKAPI vkDbgUnregisterMsgCallback(VK_INSTANCE instance, VK_DBG_MSG_CALLBACK_FUNCTION pfnMsgCallback)
+LOADER_EXPORT VkResult VKAPI vkDbgUnregisterMsgCallback(VkInstance instance, VK_DBG_MSG_CALLBACK_FUNCTION pfnMsgCallback)
 {
-    VK_RESULT res = VK_SUCCESS;
+    VkResult res = VK_SUCCESS;
     struct loader_instance *inst;
     if (instance == VK_NULL_HANDLE)
         return VK_ERROR_INVALID_HANDLE;
@@ -1200,7 +1200,7 @@ LOADER_EXPORT VK_RESULT VKAPI vkDbgUnregisterMsgCallback(VK_INSTANCE instance, V
 
     for (const struct loader_icd * icd = inst->icds; icd; icd = icd->next) {
         for (uint32_t i = 0; i < icd->gpu_count; i++) {
-            VK_RESULT r;
+            VkResult r;
             r = (icd->loader_dispatch + i)->DbgUnregisterMsgCallback(icd->scanned_icds->instance, pfnMsgCallback);
             if (r != VK_SUCCESS) {
                 res = r;
@@ -1210,9 +1210,9 @@ LOADER_EXPORT VK_RESULT VKAPI vkDbgUnregisterMsgCallback(VK_INSTANCE instance, V
     return res;
 }
 
-LOADER_EXPORT VK_RESULT VKAPI vkDbgSetGlobalOption(VK_INSTANCE instance, VK_DBG_GLOBAL_OPTION dbgOption, size_t dataSize, const void* pData)
+LOADER_EXPORT VkResult VKAPI vkDbgSetGlobalOption(VkInstance instance, VK_DBG_GLOBAL_OPTION dbgOption, size_t dataSize, const void* pData)
 {
-    VK_RESULT res = VK_SUCCESS;
+    VkResult res = VK_SUCCESS;
     struct loader_instance *inst;
     if (instance == VK_NULL_HANDLE)
         return VK_ERROR_INVALID_HANDLE;
@@ -1228,7 +1228,7 @@ LOADER_EXPORT VK_RESULT VKAPI vkDbgSetGlobalOption(VK_INSTANCE instance, VK_DBG_
         return VK_ERROR_INVALID_HANDLE;
     for (const struct loader_icd * icd = inst->icds; icd; icd = icd->next) {
         for (uint32_t i = 0; i < icd->gpu_count; i++) {
-            VK_RESULT r;
+            VkResult r;
             r = (icd->loader_dispatch + i)->DbgSetGlobalOption(icd->scanned_icds->instance, dbgOption,
                                                            dataSize, pData);
             /* unfortunately we cannot roll back */

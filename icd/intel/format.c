@@ -541,7 +541,7 @@ static const int intel_color_mapping[VK_NUM_FMT] = {
 };
 
 int intel_format_translate_color(const struct intel_gpu *gpu,
-                                 VK_FORMAT format)
+                                 VkFormat format)
 {
     int fmt;
 
@@ -560,14 +560,14 @@ int intel_format_translate_color(const struct intel_gpu *gpu,
     return fmt;
 }
 
-static VK_FLAGS intel_format_get_color_features(const struct intel_dev *dev,
-                                                 VK_FORMAT format)
+static VkFlags intel_format_get_color_features(const struct intel_dev *dev,
+                                                 VkFormat format)
 {
     const int fmt = intel_format_translate_color(dev->gpu, format);
     const struct intel_vf_cap *vf;
     const struct intel_sampler_cap *sampler;
     const struct intel_dp_cap *dp;
-    VK_FLAGS features;
+    VkFlags features;
 
     if (fmt < 0)
         return 0;
@@ -610,10 +610,10 @@ static VK_FLAGS intel_format_get_color_features(const struct intel_dev *dev,
     return features;
 }
 
-static VK_FLAGS intel_format_get_ds_features(const struct intel_dev *dev,
-                                              VK_FORMAT format)
+static VkFlags intel_format_get_ds_features(const struct intel_dev *dev,
+                                              VkFormat format)
 {
-    VK_FLAGS features;
+    VkFlags features;
 
     assert(icd_format_is_ds(format));
 
@@ -640,16 +640,16 @@ static VK_FLAGS intel_format_get_ds_features(const struct intel_dev *dev,
     return features;
 }
 
-static VK_FLAGS intel_format_get_raw_features(const struct intel_dev *dev,
-                                               VK_FORMAT format)
+static VkFlags intel_format_get_raw_features(const struct intel_dev *dev,
+                                               VkFormat format)
 {
     return (format == VK_FMT_UNDEFINED) ?
         VK_FORMAT_MEMORY_SHADER_ACCESS_BIT : 0;
 }
 
 static void intel_format_get_props(const struct intel_dev *dev,
-                                   VK_FORMAT format,
-                                   VK_FORMAT_PROPERTIES *props)
+                                   VkFormat format,
+                                   VkFormatProperties *props)
 {
     if (icd_format_is_undef(format)) {
         props->linearTilingFeatures =
@@ -669,19 +669,19 @@ static void intel_format_get_props(const struct intel_dev *dev,
     }
 }
 
-ICD_EXPORT VK_RESULT VKAPI vkGetFormatInfo(
-    VK_DEVICE                                  device,
-    VK_FORMAT                                  format,
-    VK_FORMAT_INFO_TYPE                        infoType,
+ICD_EXPORT VkResult VKAPI vkGetFormatInfo(
+    VkDevice                                  device,
+    VkFormat                                  format,
+    VkFormatInfoType                        infoType,
     size_t*                                     pDataSize,
     void*                                       pData)
 {
     const struct intel_dev *dev = intel_dev(device);
-    VK_RESULT ret = VK_SUCCESS;
+    VkResult ret = VK_SUCCESS;
 
     switch (infoType) {
     case VK_INFO_TYPE_FORMAT_PROPERTIES:
-        *pDataSize = sizeof(VK_FORMAT_PROPERTIES);
+        *pDataSize = sizeof(VkFormatProperties);
         if (pData == NULL)
             return ret;
         intel_format_get_props(dev, format, pData);

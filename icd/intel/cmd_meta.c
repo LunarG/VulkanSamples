@@ -31,14 +31,14 @@
 #include "state.h"
 #include "cmd_priv.h"
 
-static VK_RESULT cmd_meta_create_buf_view(struct intel_cmd *cmd,
-                                           VK_BUFFER buf,
-                                           VK_GPU_SIZE range,
-                                           VK_FORMAT format,
+static VkResult cmd_meta_create_buf_view(struct intel_cmd *cmd,
+                                           VkBuffer buf,
+                                           VkGpuSize range,
+                                           VkFormat format,
                                            struct intel_buf_view **view)
 {
     VkBufferViewCreateInfo info;
-    VK_GPU_SIZE stride;
+    VkGpuSize stride;
 
     memset(&info, 0, sizeof(info));
     info.sType = VK_STRUCTURE_TYPE_BUFFER_VIEW_CREATE_INFO;
@@ -60,13 +60,13 @@ static VK_RESULT cmd_meta_create_buf_view(struct intel_cmd *cmd,
 
 static void cmd_meta_set_src_for_buf(struct intel_cmd *cmd,
                                      const struct intel_buf *buf,
-                                     VK_FORMAT format,
+                                     VkFormat format,
                                      struct intel_cmd_meta *meta)
 {
     struct intel_buf_view *view;
-    VK_RESULT res;
+    VkResult res;
 
-    res = cmd_meta_create_buf_view(cmd, (VK_BUFFER) buf,
+    res = cmd_meta_create_buf_view(cmd, (VkBuffer) buf,
             buf->size, format, &view);
     if (res != VK_SUCCESS) {
         cmd_fail(cmd, res);
@@ -88,13 +88,13 @@ static void cmd_meta_set_src_for_buf(struct intel_cmd *cmd,
 
 static void cmd_meta_set_dst_for_buf(struct intel_cmd *cmd,
                                      const struct intel_buf *buf,
-                                     VK_FORMAT format,
+                                     VkFormat format,
                                      struct intel_cmd_meta *meta)
 {
     struct intel_buf_view *view;
-    VK_RESULT res;
+    VkResult res;
 
-    res = cmd_meta_create_buf_view(cmd, (VK_BUFFER) buf,
+    res = cmd_meta_create_buf_view(cmd, (VkBuffer) buf,
             buf->size, format, &view);
     if (res != VK_SUCCESS) {
         cmd_fail(cmd, res);
@@ -116,17 +116,17 @@ static void cmd_meta_set_dst_for_buf(struct intel_cmd *cmd,
 
 static void cmd_meta_set_src_for_img(struct intel_cmd *cmd,
                                      const struct intel_img *img,
-                                     VK_FORMAT format,
-                                     VK_IMAGE_ASPECT aspect,
+                                     VkFormat format,
+                                     VkImageAspect aspect,
                                      struct intel_cmd_meta *meta)
 {
-    VK_IMAGE_VIEW_CREATE_INFO info;
+    VkImageViewCreateInfo info;
     struct intel_img_view *view;
-    VK_RESULT ret;
+    VkResult ret;
 
     memset(&info, 0, sizeof(info));
     info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-    info.image = (VK_IMAGE) img;
+    info.image = (VkImage) img;
 
     switch (img->type) {
     case VK_IMAGE_1D:
@@ -236,17 +236,17 @@ static void cmd_meta_adjust_compressed_dst(struct intel_cmd *cmd,
 
 static void cmd_meta_set_dst_for_img(struct intel_cmd *cmd,
                                      const struct intel_img *img,
-                                     VK_FORMAT format,
+                                     VkFormat format,
                                      uint32_t lod, uint32_t layer,
                                      struct intel_cmd_meta *meta)
 {
-    VK_COLOR_ATTACHMENT_VIEW_CREATE_INFO info;
+    VkColorAttachmentViewCreateInfo info;
     struct intel_rt_view *rt;
-    VK_RESULT ret;
+    VkResult ret;
 
     memset(&info, 0, sizeof(info));
     info.sType = VK_STRUCTURE_TYPE_COLOR_ATTACHMENT_VIEW_CREATE_INFO;
-    info.image = (VK_IMAGE) img;
+    info.image = (VkImage) img;
     info.format = format;
     info.mipLevel = lod;
     info.baseArraySlice = layer;
@@ -275,14 +275,14 @@ static void cmd_meta_set_dst_for_img(struct intel_cmd *cmd,
 
 static void cmd_meta_set_src_for_writer(struct intel_cmd *cmd,
                                         enum intel_cmd_writer_type writer,
-                                        VK_GPU_SIZE size,
-                                        VK_FORMAT format,
+                                        VkGpuSize size,
+                                        VkFormat format,
                                         struct intel_cmd_meta *meta)
 {
     struct intel_buf_view *view;
-    VK_RESULT res;
+    VkResult res;
 
-    res = cmd_meta_create_buf_view(cmd, (VK_BUFFER) VK_NULL_HANDLE,
+    res = cmd_meta_create_buf_view(cmd, (VkBuffer) VK_NULL_HANDLE,
             size, format, &view);
     if (res != VK_SUCCESS) {
         cmd_fail(cmd, res);
@@ -307,13 +307,13 @@ static void cmd_meta_set_ds_view(struct intel_cmd *cmd,
                                  uint32_t lod, uint32_t layer,
                                  struct intel_cmd_meta *meta)
 {
-    VK_DEPTH_STENCIL_VIEW_CREATE_INFO info;
+    VkDepthStencilViewCreateInfo info;
     struct intel_ds_view *ds;
-    VK_RESULT ret;
+    VkResult ret;
 
     memset(&info, 0, sizeof(info));
     info.sType = VK_STRUCTURE_TYPE_DEPTH_STENCIL_VIEW_CREATE_INFO;
-    info.image = (VK_IMAGE) img;
+    info.image = (VkImage) img;
     info.mipLevel = lod;
     info.baseArraySlice = layer;
     info.arraySize = 1;
@@ -328,7 +328,7 @@ static void cmd_meta_set_ds_view(struct intel_cmd *cmd,
 }
 
 static void cmd_meta_set_ds_state(struct intel_cmd *cmd,
-                                  VK_IMAGE_ASPECT aspect,
+                                  VkImageAspect aspect,
                                   uint32_t stencil_ref,
                                   struct intel_cmd_meta *meta)
 {
@@ -362,15 +362,15 @@ static enum intel_dev_meta_shader get_shader_id(const struct intel_dev *dev,
 }
 
 static bool cmd_meta_mem_dword_aligned(const struct intel_cmd *cmd,
-                                       VK_GPU_SIZE src_offset,
-                                       VK_GPU_SIZE dst_offset,
-                                       VK_GPU_SIZE size)
+                                       VkGpuSize src_offset,
+                                       VkGpuSize dst_offset,
+                                       VkGpuSize size)
 {
     return !((src_offset | dst_offset | size) & 0x3);
 }
 
-static VK_FORMAT cmd_meta_img_raw_format(const struct intel_cmd *cmd,
-                                          VK_FORMAT format)
+static VkFormat cmd_meta_img_raw_format(const struct intel_cmd *cmd,
+                                          VkFormat format)
 {
     switch (icd_format_get_size(format)) {
     case 1:
@@ -398,17 +398,17 @@ static VK_FORMAT cmd_meta_img_raw_format(const struct intel_cmd *cmd,
 }
 
 ICD_EXPORT void VKAPI vkCmdCopyBuffer(
-    VK_CMD_BUFFER                              cmdBuffer,
-    VK_BUFFER                                  srcBuffer,
-    VK_BUFFER                                  destBuffer,
+    VkCmdBuffer                              cmdBuffer,
+    VkBuffer                                  srcBuffer,
+    VkBuffer                                  destBuffer,
     uint32_t                                    regionCount,
-    const VK_BUFFER_COPY*                      pRegions)
+    const VkBufferCopy*                      pRegions)
 {
     struct intel_cmd *cmd = intel_cmd(cmdBuffer);
     struct intel_buf *src = intel_buf(srcBuffer);
     struct intel_buf *dst = intel_buf(destBuffer);
     struct intel_cmd_meta meta;
-    VK_FORMAT format;
+    VkFormat format;
     uint32_t i;
 
     memset(&meta, 0, sizeof(meta));
@@ -420,8 +420,8 @@ ICD_EXPORT void VKAPI vkCmdCopyBuffer(
     format = VK_FMT_UNDEFINED;
 
     for (i = 0; i < regionCount; i++) {
-        const VK_BUFFER_COPY *region = &pRegions[i];
-        VK_FORMAT fmt;
+        const VkBufferCopy *region = &pRegions[i];
+        VkFormat fmt;
 
         meta.src.x = region->srcOffset;
         meta.dst.x = region->destOffset;
@@ -469,19 +469,19 @@ ICD_EXPORT void VKAPI vkCmdCopyBuffer(
 }
 
 ICD_EXPORT void VKAPI vkCmdCopyImage(
-    VK_CMD_BUFFER                              cmdBuffer,
-    VK_IMAGE                                   srcImage,
-    VK_IMAGE_LAYOUT                            srcImageLayout,
-    VK_IMAGE                                   destImage,
-    VK_IMAGE_LAYOUT                            destImageLayout,
+    VkCmdBuffer                              cmdBuffer,
+    VkImage                                   srcImage,
+    VkImageLayout                            srcImageLayout,
+    VkImage                                   destImage,
+    VkImageLayout                            destImageLayout,
     uint32_t                                    regionCount,
-    const VK_IMAGE_COPY*                       pRegions)
+    const VkImageCopy*                       pRegions)
 {
     struct intel_cmd *cmd = intel_cmd(cmdBuffer);
     struct intel_img *src = intel_img(srcImage);
     struct intel_img *dst = intel_img(destImage);
     struct intel_cmd_meta meta;
-    VK_FORMAT raw_format;
+    VkFormat raw_format;
     bool raw_copy = false;
     uint32_t i;
 
@@ -509,7 +509,7 @@ ICD_EXPORT void VKAPI vkCmdCopyImage(
     meta.samples = dst->samples;
 
     for (i = 0; i < regionCount; i++) {
-        const VK_IMAGE_COPY *region = &pRegions[i];
+        const VkImageCopy *region = &pRegions[i];
         uint32_t j;
 
         meta.shader_id = get_shader_id(cmd->dev, src,
@@ -556,13 +556,13 @@ ICD_EXPORT void VKAPI vkCmdCopyImage(
 }
 
 ICD_EXPORT void VKAPI vkCmdBlitImage(
-    VK_CMD_BUFFER                              cmdBuffer,
-    VK_IMAGE                                   srcImage,
-    VK_IMAGE_LAYOUT                            srcImageLayout,
-    VK_IMAGE                                   destImage,
-    VK_IMAGE_LAYOUT                            destImageLayout,
+    VkCmdBuffer                              cmdBuffer,
+    VkImage                                   srcImage,
+    VkImageLayout                            srcImageLayout,
+    VkImage                                   destImage,
+    VkImageLayout                            destImageLayout,
     uint32_t                                    regionCount,
-    const VK_IMAGE_BLIT*                       pRegions)
+    const VkImageBlit*                       pRegions)
 {
     struct intel_cmd *cmd = intel_cmd(cmdBuffer);
 
@@ -573,18 +573,18 @@ ICD_EXPORT void VKAPI vkCmdBlitImage(
 }
 
 ICD_EXPORT void VKAPI vkCmdCopyBufferToImage(
-    VK_CMD_BUFFER                              cmdBuffer,
-    VK_BUFFER                                  srcBuffer,
-    VK_IMAGE                                   destImage,
-    VK_IMAGE_LAYOUT                            destImageLayout,
+    VkCmdBuffer                              cmdBuffer,
+    VkBuffer                                  srcBuffer,
+    VkImage                                   destImage,
+    VkImageLayout                            destImageLayout,
     uint32_t                                    regionCount,
-    const VK_BUFFER_IMAGE_COPY*                pRegions)
+    const VkBufferImageCopy*                pRegions)
 {
     struct intel_cmd *cmd = intel_cmd(cmdBuffer);
     struct intel_buf *buf = intel_buf(srcBuffer);
     struct intel_img *img = intel_img(destImage);
     struct intel_cmd_meta meta;
-    VK_FORMAT format;
+    VkFormat format;
     uint32_t block_width, i;
 
     memset(&meta, 0, sizeof(meta));
@@ -598,7 +598,7 @@ ICD_EXPORT void VKAPI vkCmdCopyBufferToImage(
     cmd_meta_set_src_for_buf(cmd, buf, format, &meta);
 
     for (i = 0; i < regionCount; i++) {
-        const VK_BUFFER_IMAGE_COPY *region = &pRegions[i];
+        const VkBufferImageCopy *region = &pRegions[i];
         uint32_t j;
 
         meta.src.x = region->bufferOffset / icd_format_get_size(format);
@@ -625,18 +625,18 @@ ICD_EXPORT void VKAPI vkCmdCopyBufferToImage(
 }
 
 ICD_EXPORT void VKAPI vkCmdCopyImageToBuffer(
-    VK_CMD_BUFFER                              cmdBuffer,
-    VK_IMAGE                                   srcImage,
-    VK_IMAGE_LAYOUT                            srcImageLayout,
-    VK_BUFFER                                  destBuffer,
+    VkCmdBuffer                              cmdBuffer,
+    VkImage                                   srcImage,
+    VkImageLayout                            srcImageLayout,
+    VkBuffer                                  destBuffer,
     uint32_t                                    regionCount,
-    const VK_BUFFER_IMAGE_COPY*                pRegions)
+    const VkBufferImageCopy*                pRegions)
 {
     struct intel_cmd *cmd = intel_cmd(cmdBuffer);
     struct intel_img *img = intel_img(srcImage);
     struct intel_buf *buf = intel_buf(destBuffer);
     struct intel_cmd_meta meta;
-    VK_FORMAT img_format, buf_format;
+    VkFormat img_format, buf_format;
     uint32_t block_width, i;
 
     memset(&meta, 0, sizeof(meta));
@@ -691,7 +691,7 @@ ICD_EXPORT void VKAPI vkCmdCopyImageToBuffer(
     meta.samples = 1;
 
     for (i = 0; i < regionCount; i++) {
-        const VK_BUFFER_IMAGE_COPY *region = &pRegions[i];
+        const VkBufferImageCopy *region = &pRegions[i];
         uint32_t j;
 
         meta.src.lod = region->imageSubresource.mipLevel;
@@ -714,19 +714,19 @@ ICD_EXPORT void VKAPI vkCmdCopyImageToBuffer(
 }
 
 ICD_EXPORT void VKAPI vkCmdCloneImageData(
-    VK_CMD_BUFFER                              cmdBuffer,
-    VK_IMAGE                                   srcImage,
-    VK_IMAGE_LAYOUT                            srcImageLayout,
-    VK_IMAGE                                   destImage,
-    VK_IMAGE_LAYOUT                            destImageLayout)
+    VkCmdBuffer                              cmdBuffer,
+    VkImage                                   srcImage,
+    VkImageLayout                            srcImageLayout,
+    VkImage                                   destImage,
+    VkImageLayout                            destImageLayout)
 {
     struct intel_cmd *cmd = intel_cmd(cmdBuffer);
     struct intel_img *src = intel_img(srcImage);
     struct intel_img *dst = intel_img(destImage);
     struct intel_buf *src_buf, *dst_buf;
     VkBufferCreateInfo buf_info;
-    VK_BUFFER_COPY buf_region;
-    VK_RESULT res;
+    VkBufferCopy buf_region;
+    VkResult res;
 
     memset(&buf_info, 0, sizeof(buf_info));
     buf_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
@@ -752,24 +752,24 @@ ICD_EXPORT void VKAPI vkCmdCloneImageData(
     intel_obj_bind_mem(&dst_buf->obj, dst->obj.mem, 0);
 
     cmd_batch_flush(cmd, GEN6_PIPE_CONTROL_RENDER_CACHE_FLUSH);
-    vkCmdCopyBuffer(cmdBuffer, (VK_BUFFER) src_buf,
-            (VK_BUFFER) dst_buf, 1, &buf_region);
+    vkCmdCopyBuffer(cmdBuffer, (VkBuffer) src_buf,
+            (VkBuffer) dst_buf, 1, &buf_region);
 
     intel_buf_destroy(src_buf);
     intel_buf_destroy(dst_buf);
 }
 
 ICD_EXPORT void VKAPI vkCmdUpdateBuffer(
-    VK_CMD_BUFFER                              cmdBuffer,
-    VK_BUFFER                                  destBuffer,
-    VK_GPU_SIZE                                destOffset,
-    VK_GPU_SIZE                                dataSize,
+    VkCmdBuffer                              cmdBuffer,
+    VkBuffer                                  destBuffer,
+    VkGpuSize                                destOffset,
+    VkGpuSize                                dataSize,
     const uint32_t*                             pData)
 {
     struct intel_cmd *cmd = intel_cmd(cmdBuffer);
     struct intel_buf *dst = intel_buf(destBuffer);
     struct intel_cmd_meta meta;
-    VK_FORMAT format;
+    VkFormat format;
     uint32_t *ptr;
     uint32_t offset;
 
@@ -808,16 +808,16 @@ ICD_EXPORT void VKAPI vkCmdUpdateBuffer(
 }
 
 ICD_EXPORT void VKAPI vkCmdFillBuffer(
-    VK_CMD_BUFFER                              cmdBuffer,
-    VK_BUFFER                                  destBuffer,
-    VK_GPU_SIZE                                destOffset,
-    VK_GPU_SIZE                                fillSize,
+    VkCmdBuffer                              cmdBuffer,
+    VkBuffer                                  destBuffer,
+    VkGpuSize                                destOffset,
+    VkGpuSize                                fillSize,
     uint32_t                                    data)
 {
     struct intel_cmd *cmd = intel_cmd(cmdBuffer);
     struct intel_buf *dst = intel_buf(destBuffer);
     struct intel_cmd_meta meta;
-    VK_FORMAT format;
+    VkFormat format;
 
     /* must be 4-byte aligned */
     if ((destOffset | fillSize) & 3) {
@@ -849,9 +849,9 @@ ICD_EXPORT void VKAPI vkCmdFillBuffer(
 
 static void cmd_meta_clear_image(struct intel_cmd *cmd,
                                  struct intel_img *img,
-                                 VK_FORMAT format,
+                                 VkFormat format,
                                  struct intel_cmd_meta *meta,
-                                 const VK_IMAGE_SUBRESOURCE_RANGE *range)
+                                 const VkImageSubresourceRange *range)
 {
     uint32_t mip_levels, array_size;
     uint32_t i, j;
@@ -905,7 +905,7 @@ static void cmd_meta_clear_image(struct intel_cmd *cmd,
 void cmd_meta_ds_op(struct intel_cmd *cmd,
                     enum intel_cmd_meta_ds_op op,
                     struct intel_img *img,
-                    const VK_IMAGE_SUBRESOURCE_RANGE *range)
+                    const VkImageSubresourceRange *range)
 {
     struct intel_cmd_meta meta;
 
@@ -926,17 +926,17 @@ void cmd_meta_ds_op(struct intel_cmd *cmd,
 }
 
 ICD_EXPORT void VKAPI vkCmdClearColorImage(
-    VK_CMD_BUFFER                              cmdBuffer,
-    VK_IMAGE                                   image,
-    VK_IMAGE_LAYOUT                            imageLayout,
-    VK_CLEAR_COLOR                             clearColor,
+    VkCmdBuffer                              cmdBuffer,
+    VkImage                                   image,
+    VkImageLayout                            imageLayout,
+    VkClearColor                             clearColor,
     uint32_t                                    rangeCount,
-    const VK_IMAGE_SUBRESOURCE_RANGE*          pRanges)
+    const VkImageSubresourceRange*          pRanges)
 {
     struct intel_cmd *cmd = intel_cmd(cmdBuffer);
     struct intel_img *img = intel_img(image);
     struct intel_cmd_meta meta;
-    VK_FORMAT format;
+    VkFormat format;
     uint32_t i;
 
     memset(&meta, 0, sizeof(meta));
@@ -962,13 +962,13 @@ ICD_EXPORT void VKAPI vkCmdClearColorImage(
 }
 
 ICD_EXPORT void VKAPI vkCmdClearDepthStencil(
-    VK_CMD_BUFFER                              cmdBuffer,
-    VK_IMAGE                                   image,
-    VK_IMAGE_LAYOUT                            imageLayout,
+    VkCmdBuffer                              cmdBuffer,
+    VkImage                                   image,
+    VkImageLayout                            imageLayout,
     float                                       depth,
     uint32_t                                    stencil,
     uint32_t                                    rangeCount,
-    const VK_IMAGE_SUBRESOURCE_RANGE*          pRanges)
+    const VkImageSubresourceRange*          pRanges)
 {
     struct intel_cmd *cmd = intel_cmd(cmdBuffer);
     struct intel_img *img = intel_img(image);
@@ -991,7 +991,7 @@ ICD_EXPORT void VKAPI vkCmdClearDepthStencil(
     }
 
     for (i = 0; i < rangeCount; i++) {
-        const VK_IMAGE_SUBRESOURCE_RANGE *range = &pRanges[i];
+        const VkImageSubresourceRange *range = &pRanges[i];
 
         cmd_meta_clear_image(cmd, img, img->layout.format,
                 &meta, range);
@@ -999,19 +999,19 @@ ICD_EXPORT void VKAPI vkCmdClearDepthStencil(
 }
 
 ICD_EXPORT void VKAPI vkCmdResolveImage(
-    VK_CMD_BUFFER                              cmdBuffer,
-    VK_IMAGE                                   srcImage,
-    VK_IMAGE_LAYOUT                            srcImageLayout,
-    VK_IMAGE                                   destImage,
-    VK_IMAGE_LAYOUT                            destImageLayout,
+    VkCmdBuffer                              cmdBuffer,
+    VkImage                                   srcImage,
+    VkImageLayout                            srcImageLayout,
+    VkImage                                   destImage,
+    VkImageLayout                            destImageLayout,
     uint32_t                                    rectCount,
-    const VK_IMAGE_RESOLVE*                    pRects)
+    const VkImageResolve*                    pRects)
 {
     struct intel_cmd *cmd = intel_cmd(cmdBuffer);
     struct intel_img *src = intel_img(srcImage);
     struct intel_img *dst = intel_img(destImage);
     struct intel_cmd_meta meta;
-    VK_FORMAT format;
+    VkFormat format;
     uint32_t i;
 
     if (src->samples <= 1 || dst->samples > 1 ||
@@ -1045,7 +1045,7 @@ ICD_EXPORT void VKAPI vkCmdResolveImage(
     cmd_meta_set_src_for_img(cmd, src, format, VK_IMAGE_ASPECT_COLOR, &meta);
 
     for (i = 0; i < rectCount; i++) {
-        const VK_IMAGE_RESOLVE *rect = &pRects[i];
+        const VkImageResolve *rect = &pRects[i];
 
         meta.src.lod = rect->srcSubresource.mipLevel;
         meta.src.layer = rect->srcSubresource.arraySlice;

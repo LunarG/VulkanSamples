@@ -342,7 +342,7 @@ class Subcommand(object):
         #   big case to handle is when ptrs to structs have embedded data that needs to be accounted for in packet
         custom_ptr_dict = {'VkDeviceCreateInfo': {'add_txt': 'add_VkDeviceCreateInfo_to_packet(pHeader, (VkDeviceCreateInfo**) &(pPacket->pCreateInfo), pCreateInfo)',
                                                   'finalize_txt': ''},
-                           'VK_APPLICATION_INFO': {'add_txt': 'add_VK_APPLICATION_INFO_to_packet(pHeader, (VK_APPLICATION_INFO**)&(pPacket->pAppInfo), pAppInfo)',
+                           'VkApplicationInfo': {'add_txt': 'add_VkApplicationInfo_to_packet(pHeader, (VkApplicationInfo**)&(pPacket->pAppInfo), pAppInfo)',
                                                 'finalize_txt': ''},
                            'VK_PHYSICAL_GPU': {'add_txt': 'glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pGpus), *pGpuCount*sizeof(VK_PHYSICAL_GPU), pGpus)',
                                                 'finalize_txt': 'default'},
@@ -703,9 +703,9 @@ class Subcommand(object):
     def _generate_struct_util_funcs(self):
         pid_enum = []
         pid_enum.append('//=============================================================================')
-        pid_enum.append('static void add_VK_APPLICATION_INFO_to_packet(glv_trace_packet_header*  pHeader, VK_APPLICATION_INFO** ppStruct, const VK_APPLICATION_INFO *pInStruct)')
+        pid_enum.append('static void add_VkApplicationInfo_to_packet(glv_trace_packet_header*  pHeader, VkApplicationInfo** ppStruct, const VkApplicationInfo *pInStruct)')
         pid_enum.append('{')
-        pid_enum.append('    glv_add_buffer_to_trace_packet(pHeader, (void**)ppStruct, sizeof(VK_APPLICATION_INFO), pInStruct);')
+        pid_enum.append('    glv_add_buffer_to_trace_packet(pHeader, (void**)ppStruct, sizeof(VkApplicationInfo), pInStruct);')
         pid_enum.append('    glv_add_buffer_to_trace_packet(pHeader, (void**)&((*ppStruct)->pAppName), strlen(pInStruct->pAppName) + 1, pInStruct->pAppName);')
         pid_enum.append('    glv_add_buffer_to_trace_packet(pHeader, (void**)&((*ppStruct)->pEngineName), strlen(pInStruct->pEngineName) + 1, pInStruct->pEngineName);')
         pid_enum.append('    glv_finalize_buffer_address(pHeader, (void**)&((*ppStruct)->pAppName));')
@@ -808,7 +808,7 @@ class Subcommand(object):
     def _generate_interp_funcs(self):
         # Custom txt for given function and parameter.  First check if param is NULL, then insert txt if not
         # TODO : This code is now too large and complex, need to make codegen smarter for pointers embedded in struct params to handle those cases automatically
-        custom_case_dict = { 'CreateInstance' : {'param': 'pAppInfo', 'txt': ['VK_APPLICATION_INFO* pInfo = (VK_APPLICATION_INFO*)pPacket->pAppInfo;\n',
+        custom_case_dict = { 'CreateInstance' : {'param': 'pAppInfo', 'txt': ['VkApplicationInfo* pInfo = (VkApplicationInfo*)pPacket->pAppInfo;\n',
                                                        'pInfo->pAppName = (const char*)glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->pAppInfo->pAppName);\n',
                                                        'pInfo->pEngineName = (const char*)glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->pAppInfo->pEngineName);']},
                              'CreateShader' : {'param': 'pCreateInfo', 'txt': ['VK_SHADER_CREATE_INFO* pInfo = (VK_SHADER_CREATE_INFO*)pPacket->pCreateInfo;\n',
@@ -1682,7 +1682,7 @@ class Subcommand(object):
         rbody.append('glv_replay::GLV_REPLAY_RESULT vkReplay::replay(glv_trace_packet_header *packet)')
         rbody.append('{')
         rbody.append('    glv_replay::GLV_REPLAY_RESULT returnValue = glv_replay::GLV_REPLAY_SUCCESS;')
-        rbody.append('    VK_RESULT replayResult = VK_ERROR_UNKNOWN;')
+        rbody.append('    VkResult replayResult = VK_ERROR_UNKNOWN;')
         rbody.append('    switch (packet->packet_id)')
         rbody.append('    {')
         rbody.append('        case GLV_TPI_VK_vkApiVersion:')

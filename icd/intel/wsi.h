@@ -34,19 +34,19 @@ struct intel_fence;
 struct intel_gpu;
 struct intel_img;
 
-VK_RESULT intel_wsi_gpu_get_info(struct intel_gpu *gpu,
-                                  VK_PHYSICAL_GPU_INFO_TYPE type,
+VkResult intel_wsi_gpu_get_info(struct intel_gpu *gpu,
+                                  VkPhysicalGpuInfoType type,
                                   size_t *size, void *data);
 void intel_wsi_gpu_cleanup(struct intel_gpu *gpu);
 
-VK_RESULT intel_wsi_img_init(struct intel_img *img);
+VkResult intel_wsi_img_init(struct intel_img *img);
 void intel_wsi_img_cleanup(struct intel_img *img);
 
-VK_RESULT intel_wsi_fence_init(struct intel_fence *fence);
+VkResult intel_wsi_fence_init(struct intel_fence *fence);
 void intel_wsi_fence_cleanup(struct intel_fence *fence);
 void intel_wsi_fence_copy(struct intel_fence *fence,
                           const struct intel_fence *src);
-VK_RESULT intel_wsi_fence_wait(struct intel_fence *fence,
+VkResult intel_wsi_fence_wait(struct intel_fence *fence,
                                 int64_t timeout_ns);
 
 #endif /* WSI_H */

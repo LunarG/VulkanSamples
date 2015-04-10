@@ -54,38 +54,38 @@ extern "C"
     #define VK_DEFINE_SUBCLASS_HANDLE(_obj, _base) typedef void* _obj;
 #endif // __cplusplus
 
-VK_DEFINE_HANDLE(VK_INSTANCE)
-VK_DEFINE_HANDLE(VK_PHYSICAL_GPU)
-VK_DEFINE_HANDLE(VK_BASE_OBJECT)
-VK_DEFINE_SUBCLASS_HANDLE(VK_DEVICE, VK_BASE_OBJECT)
-VK_DEFINE_SUBCLASS_HANDLE(VK_QUEUE, VK_BASE_OBJECT)
-VK_DEFINE_SUBCLASS_HANDLE(VK_GPU_MEMORY, VK_BASE_OBJECT)
-VK_DEFINE_SUBCLASS_HANDLE(VK_OBJECT, VK_BASE_OBJECT)
-VK_DEFINE_SUBCLASS_HANDLE(VK_BUFFER, VK_OBJECT)
-VK_DEFINE_SUBCLASS_HANDLE(VK_BUFFER_VIEW, VK_OBJECT)
-VK_DEFINE_SUBCLASS_HANDLE(VK_IMAGE, VK_OBJECT)
-VK_DEFINE_SUBCLASS_HANDLE(VK_IMAGE_VIEW, VK_OBJECT)
-VK_DEFINE_SUBCLASS_HANDLE(VK_COLOR_ATTACHMENT_VIEW, VK_OBJECT)
-VK_DEFINE_SUBCLASS_HANDLE(VK_DEPTH_STENCIL_VIEW, VK_OBJECT)
-VK_DEFINE_SUBCLASS_HANDLE(VK_SHADER, VK_OBJECT)
-VK_DEFINE_SUBCLASS_HANDLE(VK_PIPELINE, VK_OBJECT)
-VK_DEFINE_SUBCLASS_HANDLE(VK_SAMPLER, VK_OBJECT)
-VK_DEFINE_SUBCLASS_HANDLE(VK_DESCRIPTOR_SET, VK_OBJECT)
-VK_DEFINE_SUBCLASS_HANDLE(VK_DESCRIPTOR_SET_LAYOUT, VK_OBJECT)
-VK_DEFINE_SUBCLASS_HANDLE(VK_DESCRIPTOR_SET_LAYOUT_CHAIN, VK_OBJECT)
-VK_DEFINE_SUBCLASS_HANDLE(VK_DESCRIPTOR_POOL, VK_OBJECT)
-VK_DEFINE_SUBCLASS_HANDLE(VK_DYNAMIC_STATE_OBJECT, VK_OBJECT)
-VK_DEFINE_SUBCLASS_HANDLE(VK_DYNAMIC_VP_STATE_OBJECT, VK_DYNAMIC_STATE_OBJECT)
-VK_DEFINE_SUBCLASS_HANDLE(VK_DYNAMIC_RS_STATE_OBJECT, VK_DYNAMIC_STATE_OBJECT)
-VK_DEFINE_SUBCLASS_HANDLE(VK_DYNAMIC_CB_STATE_OBJECT, VK_DYNAMIC_STATE_OBJECT)
-VK_DEFINE_SUBCLASS_HANDLE(VK_DYNAMIC_DS_STATE_OBJECT, VK_DYNAMIC_STATE_OBJECT)
-VK_DEFINE_SUBCLASS_HANDLE(VK_CMD_BUFFER, VK_OBJECT)
-VK_DEFINE_SUBCLASS_HANDLE(VK_FENCE, VK_OBJECT)
-VK_DEFINE_SUBCLASS_HANDLE(VK_SEMAPHORE, VK_OBJECT)
-VK_DEFINE_SUBCLASS_HANDLE(VK_EVENT, VK_OBJECT)
-VK_DEFINE_SUBCLASS_HANDLE(VK_QUERY_POOL, VK_OBJECT)
-VK_DEFINE_SUBCLASS_HANDLE(VK_FRAMEBUFFER, VK_OBJECT)
-VK_DEFINE_SUBCLASS_HANDLE(VK_RENDER_PASS, VK_OBJECT)
+VK_DEFINE_HANDLE(VkInstance)
+VK_DEFINE_HANDLE(VkPhysicalGpu)
+VK_DEFINE_HANDLE(VkBaseObject)
+VK_DEFINE_SUBCLASS_HANDLE(VkDevice, VkBaseObject)
+VK_DEFINE_SUBCLASS_HANDLE(VkQueue, VkBaseObject)
+VK_DEFINE_SUBCLASS_HANDLE(VkGpuMemory, VkBaseObject)
+VK_DEFINE_SUBCLASS_HANDLE(VkObject, VkBaseObject)
+VK_DEFINE_SUBCLASS_HANDLE(VkBuffer, VkObject)
+VK_DEFINE_SUBCLASS_HANDLE(VkBufferView, VkObject)
+VK_DEFINE_SUBCLASS_HANDLE(VkImage, VkObject)
+VK_DEFINE_SUBCLASS_HANDLE(VkImageView, VkObject)
+VK_DEFINE_SUBCLASS_HANDLE(VkColorAttachmentView, VkObject)
+VK_DEFINE_SUBCLASS_HANDLE(VkDepthStencilView, VkObject)
+VK_DEFINE_SUBCLASS_HANDLE(VkShader, VkObject)
+VK_DEFINE_SUBCLASS_HANDLE(VkPipeline, VkObject)
+VK_DEFINE_SUBCLASS_HANDLE(VkSampler, VkObject)
+VK_DEFINE_SUBCLASS_HANDLE(VkDescriptorSet, VkObject)
+VK_DEFINE_SUBCLASS_HANDLE(VkDescriptorSetLayout, VkObject)
+VK_DEFINE_SUBCLASS_HANDLE(VkDescriptorSetLayoutChain, VkObject)
+VK_DEFINE_SUBCLASS_HANDLE(VkDescriptorPool, VkObject)
+VK_DEFINE_SUBCLASS_HANDLE(VkDynamicStateObject, VkObject)
+VK_DEFINE_SUBCLASS_HANDLE(VkDynamicVpStateObject, VkDynamicStateObject)
+VK_DEFINE_SUBCLASS_HANDLE(VkDynamicRsStateObject, VkDynamicStateObject)
+VK_DEFINE_SUBCLASS_HANDLE(VkDynamicCbStateObject, VkDynamicStateObject)
+VK_DEFINE_SUBCLASS_HANDLE(VkDynamicDsStateObject, VkDynamicStateObject)
+VK_DEFINE_SUBCLASS_HANDLE(VkCmdBuffer, VkObject)
+VK_DEFINE_SUBCLASS_HANDLE(VkFence, VkObject)
+VK_DEFINE_SUBCLASS_HANDLE(VkSemaphore, VkObject)
+VK_DEFINE_SUBCLASS_HANDLE(VkEvent, VkObject)
+VK_DEFINE_SUBCLASS_HANDLE(VkQueryPool, VkObject)
+VK_DEFINE_SUBCLASS_HANDLE(VkFramebuffer, VkObject)
+VK_DEFINE_SUBCLASS_HANDLE(VkRenderPass, VkObject)
 
 #define VK_MAX_PHYSICAL_GPUS       16
 #define VK_MAX_PHYSICAL_GPU_NAME   256
@@ -108,7 +108,7 @@ VK_DEFINE_SUBCLASS_HANDLE(VK_RENDER_PASS, VK_OBJECT)
 // Enumerations
 
 
-typedef enum _VK_MEMORY_PRIORITY
+typedef enum VkMemoryPriority_
 {
     VK_MEMORY_PRIORITY_UNUSED                               = 0x0,
     VK_MEMORY_PRIORITY_VERY_LOW                             = 0x1,
@@ -120,10 +120,10 @@ typedef enum _VK_MEMORY_PRIORITY
     VK_MEMORY_PRIORITY_BEGIN_RANGE                          = VK_MEMORY_PRIORITY_UNUSED,
     VK_MEMORY_PRIORITY_END_RANGE                            = VK_MEMORY_PRIORITY_VERY_HIGH,
     VK_NUM_MEMORY_PRIORITY                                  = (VK_MEMORY_PRIORITY_END_RANGE - VK_MEMORY_PRIORITY_BEGIN_RANGE + 1),
-    VK_MAX_ENUM(_VK_MEMORY_PRIORITY)
-} VK_MEMORY_PRIORITY;
+    VK_MAX_ENUM(VkMemoryPriority_)
+} VkMemoryPriority;
 
-typedef enum _VK_IMAGE_LAYOUT
+typedef enum VkImageLayout_
 {
     VK_IMAGE_LAYOUT_UNDEFINED                               = 0x00000000,   // Implicit layout an image is when its contents are undefined due to various reasons (e.g. right after creation)
     VK_IMAGE_LAYOUT_GENERAL                                 = 0x00000001,   // General layout when image can be used for any kind of access
@@ -138,10 +138,10 @@ typedef enum _VK_IMAGE_LAYOUT
     VK_IMAGE_LAYOUT_BEGIN_RANGE                             = VK_IMAGE_LAYOUT_UNDEFINED,
     VK_IMAGE_LAYOUT_END_RANGE                               = VK_IMAGE_LAYOUT_TRANSFER_DESTINATION_OPTIMAL,
     VK_NUM_IMAGE_LAYOUT                                     = (VK_IMAGE_LAYOUT_END_RANGE - VK_IMAGE_LAYOUT_BEGIN_RANGE + 1),
-    VK_MAX_ENUM(_VK_IMAGE_LAYOUT)
-} VK_IMAGE_LAYOUT;
+    VK_MAX_ENUM(VkImageLayout_)
+} VkImageLayout;
 
-typedef enum _VK_PIPE_EVENT
+typedef enum VkPipeEvent_
 {
     VK_PIPE_EVENT_TOP_OF_PIPE                               = 0x00000001,   // Set event before the GPU starts processing subsequent command
     VK_PIPE_EVENT_VERTEX_PROCESSING_COMPLETE                = 0x00000002,   // Set event when all pending vertex processing is complete
@@ -155,10 +155,10 @@ typedef enum _VK_PIPE_EVENT
     VK_PIPE_EVENT_BEGIN_RANGE                               = VK_PIPE_EVENT_TOP_OF_PIPE,
     VK_PIPE_EVENT_END_RANGE                                 = VK_PIPE_EVENT_GPU_COMMANDS_COMPLETE,
     VK_NUM_PIPE_EVENT                                       = (VK_PIPE_EVENT_END_RANGE - VK_PIPE_EVENT_BEGIN_RANGE + 1),
-    VK_MAX_ENUM(_VK_PIPE_EVENT)
-} VK_PIPE_EVENT;
+    VK_MAX_ENUM(VkPipeEvent_)
+} VkPipeEvent;
 
-typedef enum _VK_WAIT_EVENT
+typedef enum VkWaitEvent_
 {
     VK_WAIT_EVENT_TOP_OF_PIPE                               = 0x00000001,   // Wait event before the GPU starts processing subsequent commands
     VK_WAIT_EVENT_BEFORE_RASTERIZATION                      = 0x00000002,   // Wait event before rasterizing subsequent primitives
@@ -166,20 +166,20 @@ typedef enum _VK_WAIT_EVENT
     VK_WAIT_EVENT_BEGIN_RANGE                               = VK_WAIT_EVENT_TOP_OF_PIPE,
     VK_WAIT_EVENT_END_RANGE                                 = VK_WAIT_EVENT_BEFORE_RASTERIZATION,
     VK_NUM_WAIT_EVENT                                       = (VK_WAIT_EVENT_END_RANGE - VK_WAIT_EVENT_BEGIN_RANGE + 1),
-    VK_MAX_ENUM(_VK_WAIT_EVENT)
-} VK_WAIT_EVENT;
+    VK_MAX_ENUM(VkWaitEvent_)
+} VkWaitEvent;
 
-typedef enum _VK_MEMORY_OUTPUT_FLAGS
+typedef enum VkMemoryOutputFlags_
 {
     VK_MEMORY_OUTPUT_CPU_WRITE_BIT                          = 0x00000001,   // Controls output coherency of CPU writes
     VK_MEMORY_OUTPUT_SHADER_WRITE_BIT                       = 0x00000002,   // Controls output coherency of generic shader writes
     VK_MEMORY_OUTPUT_COLOR_ATTACHMENT_BIT                   = 0x00000004,   // Controls output coherency of color attachment writes
     VK_MEMORY_OUTPUT_DEPTH_STENCIL_ATTACHMENT_BIT           = 0x00000008,   // Controls output coherency of depth/stencil attachment writes
     VK_MEMORY_OUTPUT_COPY_BIT                               = 0x00000010,   // Controls output coherency of copy operations
-    VK_MAX_ENUM(_VK_MEMORY_OUTPUT_FLAGS)
-} VK_MEMORY_OUTPUT_FLAGS;
+    VK_MAX_ENUM(VkMemoryOutputFlags_)
+} VkMemoryOutputFlags;
 
-typedef enum _VK_MEMORY_INPUT_FLAGS
+typedef enum VkMemoryInputFlags_
 {
     VK_MEMORY_INPUT_CPU_READ_BIT                            = 0x00000001,   // Controls input coherency of CPU reads
     VK_MEMORY_INPUT_INDIRECT_COMMAND_BIT                    = 0x00000002,   // Controls input coherency of indirect command reads
@@ -190,10 +190,10 @@ typedef enum _VK_MEMORY_INPUT_FLAGS
     VK_MEMORY_INPUT_COLOR_ATTACHMENT_BIT                    = 0x00000040,   // Controls input coherency of color attachment reads
     VK_MEMORY_INPUT_DEPTH_STENCIL_ATTACHMENT_BIT            = 0x00000080,   // Controls input coherency of depth/stencil attachment reads
     VK_MEMORY_INPUT_COPY_BIT                                = 0x00000100,   // Controls input coherency of copy operations
-    VK_MAX_ENUM(_VK_MEMORY_INPUT_FLAGS)
-} VK_MEMORY_INPUT_FLAGS;
+    VK_MAX_ENUM(VkMemoryInputFlags_)
+} VkMemoryInputFlags;
 
-typedef enum _VK_ATTACHMENT_LOAD_OP
+typedef enum VkAttachmentLoadOp_
 {
     VK_ATTACHMENT_LOAD_OP_LOAD                              = 0x00000000,
     VK_ATTACHMENT_LOAD_OP_CLEAR                             = 0x00000001,
@@ -202,10 +202,10 @@ typedef enum _VK_ATTACHMENT_LOAD_OP
     VK_ATTACHMENT_LOAD_OP_BEGIN_RANGE                       = VK_ATTACHMENT_LOAD_OP_LOAD,
     VK_ATTACHMENT_LOAD_OP_END_RANGE                         = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
     VK_NUM_ATTACHMENT_LOAD_OP                               = (VK_ATTACHMENT_LOAD_OP_END_RANGE - VK_ATTACHMENT_LOAD_OP_BEGIN_RANGE + 1),
-    VK_MAX_ENUM(_VK_ATTACHMENT_LOAD_OP)
-} VK_ATTACHMENT_LOAD_OP;
+    VK_MAX_ENUM(VkAttachmentLoadOp_)
+} VkAttachmentLoadOp;
 
-typedef enum _VK_ATTACHMENT_STORE_OP
+typedef enum VkAttachmentStoreOp_
 {
     VK_ATTACHMENT_STORE_OP_STORE                            = 0x00000000,
     VK_ATTACHMENT_STORE_OP_RESOLVE_MSAA                     = 0x00000001,
@@ -214,10 +214,10 @@ typedef enum _VK_ATTACHMENT_STORE_OP
     VK_ATTACHMENT_STORE_OP_BEGIN_RANGE                      = VK_ATTACHMENT_STORE_OP_STORE,
     VK_ATTACHMENT_STORE_OP_END_RANGE                        = VK_ATTACHMENT_STORE_OP_DONT_CARE,
     VK_NUM_ATTACHMENT_STORE_OP                              = (VK_ATTACHMENT_STORE_OP_END_RANGE - VK_ATTACHMENT_STORE_OP_BEGIN_RANGE + 1),
-    VK_MAX_ENUM(_VK_ATTACHMENT_STORE_OP)
-} VK_ATTACHMENT_STORE_OP;
+    VK_MAX_ENUM(VkAttachmentStoreOp_)
+} VkAttachmentStoreOp;
 
-typedef enum _VK_IMAGE_TYPE
+typedef enum VkImageType_
 {
     VK_IMAGE_1D                                             = 0x00000000,
     VK_IMAGE_2D                                             = 0x00000001,
@@ -226,10 +226,10 @@ typedef enum _VK_IMAGE_TYPE
     VK_IMAGE_TYPE_BEGIN_RANGE                               = VK_IMAGE_1D,
     VK_IMAGE_TYPE_END_RANGE                                 = VK_IMAGE_3D,
     VK_NUM_IMAGE_TYPE                                       = (VK_IMAGE_TYPE_END_RANGE - VK_IMAGE_TYPE_BEGIN_RANGE + 1),
-    VK_MAX_ENUM(_VK_IMAGE_TYPE)
-} VK_IMAGE_TYPE;
+    VK_MAX_ENUM(VkImageType_)
+} VkImageType;
 
-typedef enum _VK_IMAGE_TILING
+typedef enum VkImageTiling_
 {
     VK_LINEAR_TILING                                        = 0x00000000,
     VK_OPTIMAL_TILING                                       = 0x00000001,
@@ -237,10 +237,10 @@ typedef enum _VK_IMAGE_TILING
     VK_IMAGE_TILING_BEGIN_RANGE                             = VK_LINEAR_TILING,
     VK_IMAGE_TILING_END_RANGE                               = VK_OPTIMAL_TILING,
     VK_NUM_IMAGE_TILING                                     = (VK_IMAGE_TILING_END_RANGE - VK_IMAGE_TILING_BEGIN_RANGE + 1),
-    VK_MAX_ENUM(_VK_IMAGE_TILING)
-} VK_IMAGE_TILING;
+    VK_MAX_ENUM(VkImageTiling_)
+} VkImageTiling;
 
-typedef enum _VK_IMAGE_VIEW_TYPE
+typedef enum VkImageViewType_
 {
     VK_IMAGE_VIEW_1D                                        = 0x00000000,
     VK_IMAGE_VIEW_2D                                        = 0x00000001,
@@ -250,10 +250,10 @@ typedef enum _VK_IMAGE_VIEW_TYPE
     VK_IMAGE_VIEW_TYPE_BEGIN_RANGE                          = VK_IMAGE_VIEW_1D,
     VK_IMAGE_VIEW_TYPE_END_RANGE                            = VK_IMAGE_VIEW_CUBE,
     VK_NUM_IMAGE_VIEW_TYPE                                  = (VK_IMAGE_VIEW_TYPE_END_RANGE - VK_IMAGE_VIEW_TYPE_BEGIN_RANGE + 1),
-    VK_MAX_ENUM(_VK_IMAGE_VIEW_TYPE)
-} VK_IMAGE_VIEW_TYPE;
+    VK_MAX_ENUM(VkImageViewType_)
+} VkImageViewType;
 
-typedef enum _VK_IMAGE_ASPECT
+typedef enum VkImageAspect_
 {
     VK_IMAGE_ASPECT_COLOR                                   = 0x00000000,
     VK_IMAGE_ASPECT_DEPTH                                   = 0x00000001,
@@ -262,10 +262,10 @@ typedef enum _VK_IMAGE_ASPECT
     VK_IMAGE_ASPECT_BEGIN_RANGE                             = VK_IMAGE_ASPECT_COLOR,
     VK_IMAGE_ASPECT_END_RANGE                               = VK_IMAGE_ASPECT_STENCIL,
     VK_NUM_IMAGE_ASPECT                                     = (VK_IMAGE_ASPECT_END_RANGE - VK_IMAGE_ASPECT_BEGIN_RANGE + 1),
-    VK_MAX_ENUM(_VK_IMAGE_ASPECT)
-} VK_IMAGE_ASPECT;
+    VK_MAX_ENUM(VkImageAspect_)
+} VkImageAspect;
 
-typedef enum _VK_CHANNEL_SWIZZLE
+typedef enum VkChannelSwizzle_
 {
     VK_CHANNEL_SWIZZLE_ZERO                                 = 0x00000000,
     VK_CHANNEL_SWIZZLE_ONE                                  = 0x00000001,
@@ -277,10 +277,10 @@ typedef enum _VK_CHANNEL_SWIZZLE
     VK_CHANNEL_SWIZZLE_BEGIN_RANGE                          = VK_CHANNEL_SWIZZLE_ZERO,
     VK_CHANNEL_SWIZZLE_END_RANGE                            = VK_CHANNEL_SWIZZLE_A,
     VK_NUM_CHANNEL_SWIZZLE                                  = (VK_CHANNEL_SWIZZLE_END_RANGE - VK_CHANNEL_SWIZZLE_BEGIN_RANGE + 1),
-    VK_MAX_ENUM(_VK_CHANNEL_SWIZZLE)
-} VK_CHANNEL_SWIZZLE;
+    VK_MAX_ENUM(VkChannelSwizzle_)
+} VkChannelSwizzle;
 
-typedef enum _VK_DESCRIPTOR_TYPE
+typedef enum VkDescriptorType_
 {
     VK_DESCRIPTOR_TYPE_SAMPLER                              = 0x00000000,
     VK_DESCRIPTOR_TYPE_SAMPLER_TEXTURE                      = 0x00000001,
@@ -296,10 +296,10 @@ typedef enum _VK_DESCRIPTOR_TYPE
     VK_DESCRIPTOR_TYPE_BEGIN_RANGE                          = VK_DESCRIPTOR_TYPE_SAMPLER,
     VK_DESCRIPTOR_TYPE_END_RANGE                            = VK_DESCRIPTOR_TYPE_SHADER_STORAGE_BUFFER_DYNAMIC,
     VK_NUM_DESCRIPTOR_TYPE                                  = (VK_DESCRIPTOR_TYPE_END_RANGE - VK_DESCRIPTOR_TYPE_BEGIN_RANGE + 1),
-    VK_MAX_ENUM(_VK_DESCRIPTOR_TYPE)
-} VK_DESCRIPTOR_TYPE;
+    VK_MAX_ENUM(VkDescriptorType_)
+} VkDescriptorType;
 
-typedef enum _VK_DESCRIPTOR_POOL_USAGE
+typedef enum VkDescriptorPoolUsage_
 {
     VK_DESCRIPTOR_POOL_USAGE_ONE_SHOT                       = 0x00000000,
     VK_DESCRIPTOR_POOL_USAGE_DYNAMIC                        = 0x00000001,
@@ -307,10 +307,10 @@ typedef enum _VK_DESCRIPTOR_POOL_USAGE
     VK_DESCRIPTOR_POOL_USAGE_BEGIN_RANGE                    = VK_DESCRIPTOR_POOL_USAGE_ONE_SHOT,
     VK_DESCRIPTOR_POOL_USAGE_END_RANGE                      = VK_DESCRIPTOR_POOL_USAGE_DYNAMIC,
     VK_NUM_DESCRIPTOR_POOL_USAGE                            = (VK_DESCRIPTOR_POOL_USAGE_END_RANGE - VK_DESCRIPTOR_POOL_USAGE_BEGIN_RANGE + 1),
-    VK_MAX_ENUM(_VK_DESCRIPTOR_POOL_USAGE)
-} VK_DESCRIPTOR_POOL_USAGE;
+    VK_MAX_ENUM(VkDescriptorPoolUsage_)
+} VkDescriptorPoolUsage;
 
-typedef enum _VK_DESCRIPTOR_UPDATE_MODE
+typedef enum VkDescriptorUpdateMode_
 {
     VK_DESCRIPTOR_UDPATE_MODE_COPY                          = 0x00000000,
     VK_DESCRIPTOR_UPDATE_MODE_FASTEST                       = 0x00000001,
@@ -318,10 +318,10 @@ typedef enum _VK_DESCRIPTOR_UPDATE_MODE
     VK_DESCRIPTOR_UPDATE_MODE_BEGIN_RANGE                   = VK_DESCRIPTOR_UDPATE_MODE_COPY,
     VK_DESCRIPTOR_UPDATE_MODE_END_RANGE                     = VK_DESCRIPTOR_UPDATE_MODE_FASTEST,
     VK_NUM_DESCRIPTOR_UPDATE_MODE                           = (VK_DESCRIPTOR_UPDATE_MODE_END_RANGE - VK_DESCRIPTOR_UPDATE_MODE_BEGIN_RANGE + 1),
-    VK_MAX_ENUM(_VK_DESCRIPTOR_UPDATE_MODE)
-} VK_DESCRIPTOR_UPDATE_MODE;
+    VK_MAX_ENUM(VkDescriptorUpdateMode_)
+} VkDescriptorUpdateMode;
 
-typedef enum _VK_DESCRIPTOR_SET_USAGE
+typedef enum VkDescriptorSetUsage_
 {
     VK_DESCRIPTOR_SET_USAGE_ONE_SHOT                        = 0x00000000,
     VK_DESCRIPTOR_SET_USAGE_STATIC                          = 0x00000001,
@@ -329,10 +329,10 @@ typedef enum _VK_DESCRIPTOR_SET_USAGE
     VK_DESCRIPTOR_SET_USAGE_BEGIN_RANGE                     = VK_DESCRIPTOR_SET_USAGE_ONE_SHOT,
     VK_DESCRIPTOR_SET_USAGE_END_RANGE                       = VK_DESCRIPTOR_SET_USAGE_STATIC,
     VK_NUM_DESCRIPTOR_SET_USAGE                             = (VK_DESCRIPTOR_SET_USAGE_END_RANGE - VK_DESCRIPTOR_SET_USAGE_BEGIN_RANGE + 1),
-    VK_MAX_ENUM(_VK_DESCRIPTOR_SET_USAGE)
-} VK_DESCRIPTOR_SET_USAGE;
+    VK_MAX_ENUM(VkDescriptorSetUsage_)
+} VkDescriptorSetUsage;
 
-typedef enum _VK_QUERY_TYPE
+typedef enum VkQueryType_
 {
     VK_QUERY_OCCLUSION                                      = 0x00000000,
     VK_QUERY_PIPELINE_STATISTICS                            = 0x00000001,
@@ -340,10 +340,10 @@ typedef enum _VK_QUERY_TYPE
     VK_QUERY_TYPE_BEGIN_RANGE                               = VK_QUERY_OCCLUSION,
     VK_QUERY_TYPE_END_RANGE                                 = VK_QUERY_PIPELINE_STATISTICS,
     VK_NUM_QUERY_TYPE                                       = (VK_QUERY_TYPE_END_RANGE - VK_QUERY_TYPE_BEGIN_RANGE + 1),
-    VK_MAX_ENUM(_VK_QUERY_TYPE)
-} VK_QUERY_TYPE;
+    VK_MAX_ENUM(VkQueryType_)
+} VkQueryType;
 
-typedef enum _VK_TIMESTAMP_TYPE
+typedef enum VkTimestampType_
 {
     VK_TIMESTAMP_TOP                                        = 0x00000000,
     VK_TIMESTAMP_BOTTOM                                     = 0x00000001,
@@ -352,9 +352,9 @@ typedef enum _VK_TIMESTAMP_TYPE
     VK_TIMESTAMP_TYPE_END_RANGE                             = VK_TIMESTAMP_BOTTOM,
     VK_NUM_TIMESTAMP_TYPE                                   = (VK_TIMESTAMP_TYPE_END_RANGE - VK_TIMESTAMP_TYPE_BEGIN_RANGE + 1),
     VK_MAX_ENUM(_VK_TIMESTEAMP_TYPE)
-} VK_TIMESTAMP_TYPE;
+} VkTimestampType;
 
-typedef enum _VK_BORDER_COLOR_TYPE
+typedef enum VkBorderColorType_
 {
     VK_BORDER_COLOR_OPAQUE_WHITE                            = 0x00000000,
     VK_BORDER_COLOR_TRANSPARENT_BLACK                       = 0x00000001,
@@ -363,10 +363,10 @@ typedef enum _VK_BORDER_COLOR_TYPE
     VK_BORDER_COLOR_TYPE_BEGIN_RANGE                        = VK_BORDER_COLOR_OPAQUE_WHITE,
     VK_BORDER_COLOR_TYPE_END_RANGE                          = VK_BORDER_COLOR_OPAQUE_BLACK,
     VK_NUM_BORDER_COLOR_TYPE                                = (VK_BORDER_COLOR_TYPE_END_RANGE - VK_BORDER_COLOR_TYPE_BEGIN_RANGE + 1),
-    VK_MAX_ENUM(_VK_BORDER_COLOR_TYPE)
-} VK_BORDER_COLOR_TYPE;
+    VK_MAX_ENUM(VkBorderColorType_)
+} VkBorderColorType;
 
-typedef enum _VK_PIPELINE_BIND_POINT
+typedef enum VkPipelineBindPoint_
 {
     VK_PIPELINE_BIND_POINT_COMPUTE                          = 0x00000000,
     VK_PIPELINE_BIND_POINT_GRAPHICS                         = 0x00000001,
@@ -374,10 +374,10 @@ typedef enum _VK_PIPELINE_BIND_POINT
     VK_PIPELINE_BIND_POINT_BEGIN_RANGE                      = VK_PIPELINE_BIND_POINT_COMPUTE,
     VK_PIPELINE_BIND_POINT_END_RANGE                        = VK_PIPELINE_BIND_POINT_GRAPHICS,
     VK_NUM_PIPELINE_BIND_POINT                              = (VK_PIPELINE_BIND_POINT_END_RANGE - VK_PIPELINE_BIND_POINT_BEGIN_RANGE + 1),
-    VK_MAX_ENUM(_VK_PIPELINE_BIND_POINT)
-} VK_PIPELINE_BIND_POINT;
+    VK_MAX_ENUM(VkPipelineBindPoint_)
+} VkPipelineBindPoint;
 
-typedef enum _VK_STATE_BIND_POINT
+typedef enum VkStateBindPoint_
 {
     VK_STATE_BIND_VIEWPORT                                  = 0x00000000,
     VK_STATE_BIND_RASTER                                    = 0x00000001,
@@ -387,10 +387,10 @@ typedef enum _VK_STATE_BIND_POINT
     VK_STATE_BIND_POINT_BEGIN_RANGE                         = VK_STATE_BIND_VIEWPORT,
     VK_STATE_BIND_POINT_END_RANGE                           = VK_STATE_BIND_DEPTH_STENCIL,
     VK_NUM_STATE_BIND_POINT                                 = (VK_STATE_BIND_POINT_END_RANGE - VK_STATE_BIND_POINT_BEGIN_RANGE + 1),
-    VK_MAX_ENUM(_VK_STATE_BIND_POINT)
-} VK_STATE_BIND_POINT;
+    VK_MAX_ENUM(VkStateBindPoint_)
+} VkStateBindPoint;
 
-typedef enum _VK_PRIMITIVE_TOPOLOGY
+typedef enum VkPrimitiveTopology_
 {
     VK_TOPOLOGY_POINT_LIST                                  = 0x00000000,
     VK_TOPOLOGY_LINE_LIST                                   = 0x00000001,
@@ -407,10 +407,10 @@ typedef enum _VK_PRIMITIVE_TOPOLOGY
     VK_PRIMITIVE_TOPOLOGY_BEGIN_RANGE                       = VK_TOPOLOGY_POINT_LIST,
     VK_PRIMITIVE_TOPOLOGY_END_RANGE                         = VK_TOPOLOGY_PATCH,
     VK_NUM_PRIMITIVE_TOPOLOGY                               = (VK_PRIMITIVE_TOPOLOGY_END_RANGE - VK_PRIMITIVE_TOPOLOGY_BEGIN_RANGE + 1),
-    VK_MAX_ENUM(_VK_PRIMITIVE_TOPOLOGY)
-} VK_PRIMITIVE_TOPOLOGY;
+    VK_MAX_ENUM(VkPrimitiveTopology_)
+} VkPrimitiveTopology;
 
-typedef enum _VK_INDEX_TYPE
+typedef enum VkIndexType_
 {
     VK_INDEX_8                                              = 0x00000000,
     VK_INDEX_16                                             = 0x00000001,
@@ -419,10 +419,10 @@ typedef enum _VK_INDEX_TYPE
     VK_INDEX_TYPE_BEGIN_RANGE                               = VK_INDEX_8,
     VK_INDEX_TYPE_END_RANGE                                 = VK_INDEX_32,
     VK_NUM_INDEX_TYPE                                       = (VK_INDEX_TYPE_END_RANGE - VK_INDEX_TYPE_BEGIN_RANGE + 1),
-    VK_MAX_ENUM(_VK_INDEX_TYPE)
-} VK_INDEX_TYPE;
+    VK_MAX_ENUM(VkIndexType_)
+} VkIndexType;
 
-typedef enum _VK_TEX_FILTER
+typedef enum VkTexFilter_
 {
     VK_TEX_FILTER_NEAREST                                   = 0,
     VK_TEX_FILTER_LINEAR                                    = 1,
@@ -430,10 +430,10 @@ typedef enum _VK_TEX_FILTER
     VK_TEX_FILTER_BEGIN_RANGE                               = VK_TEX_FILTER_NEAREST,
     VK_TEX_FILTER_END_RANGE                                 = VK_TEX_FILTER_LINEAR,
     VK_NUM_TEX_FILTER                                       = (VK_TEX_FILTER_END_RANGE - VK_TEX_FILTER_BEGIN_RANGE + 1),
-    VK_MAX_ENUM(_VK_TEX_FILTER)
-} VK_TEX_FILTER;
+    VK_MAX_ENUM(VkTexFilter_)
+} VkTexFilter;
 
-typedef enum _VK_TEX_MIPMAP_MODE
+typedef enum VkTexMipmapMode_
 {
     VK_TEX_MIPMAP_BASE                                      = 0,        // Always choose base level
     VK_TEX_MIPMAP_NEAREST                                   = 1,        // Choose nearest mip level
@@ -442,10 +442,10 @@ typedef enum _VK_TEX_MIPMAP_MODE
     VK_TEX_MIPMAP_BEGIN_RANGE                               = VK_TEX_MIPMAP_BASE,
     VK_TEX_MIPMAP_END_RANGE                                 = VK_TEX_MIPMAP_LINEAR,
     VK_NUM_TEX_MIPMAP                                       = (VK_TEX_MIPMAP_END_RANGE - VK_TEX_MIPMAP_BEGIN_RANGE + 1),
-    VK_MAX_ENUM(_VK_TEX_MIPMAP_MODE)
-} VK_TEX_MIPMAP_MODE;
+    VK_MAX_ENUM(VkTexMipmapMode_)
+} VkTexMipmapMode;
 
-typedef enum _VK_TEX_ADDRESS
+typedef enum VkTexAddress_
 {
     VK_TEX_ADDRESS_WRAP                                     = 0x00000000,
     VK_TEX_ADDRESS_MIRROR                                   = 0x00000001,
@@ -456,10 +456,10 @@ typedef enum _VK_TEX_ADDRESS
     VK_TEX_ADDRESS_BEGIN_RANGE                              = VK_TEX_ADDRESS_WRAP,
     VK_TEX_ADDRESS_END_RANGE                                = VK_TEX_ADDRESS_CLAMP_BORDER,
     VK_NUM_TEX_ADDRESS                                      = (VK_TEX_ADDRESS_END_RANGE - VK_TEX_ADDRESS_BEGIN_RANGE + 1),
-    VK_MAX_ENUM(_VK_TEX_ADDRESS)
-} VK_TEX_ADDRESS;
+    VK_MAX_ENUM(VkTexAddress_)
+} VkTexAddress;
 
-typedef enum _VK_COMPARE_FUNC
+typedef enum VkCompareFunc_
 {
     VK_COMPARE_NEVER                                        = 0x00000000,
     VK_COMPARE_LESS                                         = 0x00000001,
@@ -473,10 +473,10 @@ typedef enum _VK_COMPARE_FUNC
     VK_COMPARE_FUNC_BEGIN_RANGE                             = VK_COMPARE_NEVER,
     VK_COMPARE_FUNC_END_RANGE                               = VK_COMPARE_ALWAYS,
     VK_NUM_COMPARE_FUNC                                     = (VK_COMPARE_FUNC_END_RANGE - VK_COMPARE_FUNC_BEGIN_RANGE + 1),
-    VK_MAX_ENUM(_VK_COMPARE_FUNC)
-} VK_COMPARE_FUNC;
+    VK_MAX_ENUM(VkCompareFunc_)
+} VkCompareFunc;
 
-typedef enum _VK_FILL_MODE
+typedef enum VkFillMode_
 {
     VK_FILL_POINTS                                          = 0x00000000,
     VK_FILL_WIREFRAME                                       = 0x00000001,
@@ -485,10 +485,10 @@ typedef enum _VK_FILL_MODE
     VK_FILL_MODE_BEGIN_RANGE                                = VK_FILL_POINTS,
     VK_FILL_MODE_END_RANGE                                  = VK_FILL_SOLID,
     VK_NUM_FILL_MODE                                        = (VK_FILL_MODE_END_RANGE - VK_FILL_MODE_BEGIN_RANGE + 1),
-    VK_MAX_ENUM(_VK_FILL_MODE)
-} VK_FILL_MODE;
+    VK_MAX_ENUM(VkFillMode_)
+} VkFillMode;
 
-typedef enum _VK_CULL_MODE
+typedef enum VkCullMode_
 {
     VK_CULL_NONE                                            = 0x00000000,
     VK_CULL_FRONT                                           = 0x00000001,
@@ -498,10 +498,10 @@ typedef enum _VK_CULL_MODE
     VK_CULL_MODE_BEGIN_RANGE                                = VK_CULL_NONE,
     VK_CULL_MODE_END_RANGE                                  = VK_CULL_FRONT_AND_BACK,
     VK_NUM_CULL_MODE                                        = (VK_CULL_MODE_END_RANGE - VK_CULL_MODE_BEGIN_RANGE + 1),
-    VK_MAX_ENUM(_VK_CULL_MODE)
-} VK_CULL_MODE;
+    VK_MAX_ENUM(VkCullMode_)
+} VkCullMode;
 
-typedef enum _VK_FACE_ORIENTATION
+typedef enum VkFaceOrientation_
 {
     VK_FRONT_FACE_CCW                                       = 0x00000000,
     VK_FRONT_FACE_CW                                        = 0x00000001,
@@ -509,10 +509,10 @@ typedef enum _VK_FACE_ORIENTATION
     VK_FACE_ORIENTATION_BEGIN_RANGE                         = VK_FRONT_FACE_CCW,
     VK_FACE_ORIENTATION_END_RANGE                           = VK_FRONT_FACE_CW,
     VK_NUM_FACE_ORIENTATION                                 = (VK_FACE_ORIENTATION_END_RANGE - VK_FACE_ORIENTATION_BEGIN_RANGE + 1),
-    VK_MAX_ENUM(_VK_FACE_ORIENTATION)
-} VK_FACE_ORIENTATION;
+    VK_MAX_ENUM(VkFaceOrientation_)
+} VkFaceOrientation;
 
-typedef enum _VK_PROVOKING_VERTEX_CONVENTION
+typedef enum VkProvokingVertexConvention_
 {
     VK_PROVOKING_VERTEX_FIRST                               = 0x00000000,
     VK_PROVOKING_VERTEX_LAST                                = 0x00000001,
@@ -520,10 +520,10 @@ typedef enum _VK_PROVOKING_VERTEX_CONVENTION
     VK_PROVOKING_VERTEX_BEGIN_RANGE                         = VK_PROVOKING_VERTEX_FIRST,
     VK_PROVOKING_VERTEX_END_RANGE                           = VK_PROVOKING_VERTEX_LAST,
     VK_NUM_PROVOKING_VERTEX_CONVENTION                      = (VK_PROVOKING_VERTEX_END_RANGE - VK_PROVOKING_VERTEX_BEGIN_RANGE + 1),
-    VK_MAX_ENUM(_VK_PROVOKING_VERTEX_CONVENTION)
-} VK_PROVOKING_VERTEX_CONVENTION;
+    VK_MAX_ENUM(VkProvokingVertexConvention_)
+} VkProvokingVertexConvention;
 
-typedef enum _VK_COORDINATE_ORIGIN
+typedef enum VkCoordinateOrigin_
 {
     VK_COORDINATE_ORIGIN_UPPER_LEFT                         = 0x00000000,
     VK_COORDINATE_ORIGIN_LOWER_LEFT                         = 0x00000001,
@@ -531,10 +531,10 @@ typedef enum _VK_COORDINATE_ORIGIN
     VK_COORDINATE_ORIGIN_BEGIN_RANGE                        = VK_COORDINATE_ORIGIN_UPPER_LEFT,
     VK_COORDINATE_ORIGIN_END_RANGE                          = VK_COORDINATE_ORIGIN_LOWER_LEFT,
     VK_NUM_COORDINATE_ORIGIN                                = (VK_COORDINATE_ORIGIN_END_RANGE - VK_COORDINATE_ORIGIN_END_RANGE + 1),
-    VK_MAX_ENUM(_VK_COORDINATE_ORIGIN)
-} VK_COORDINATE_ORIGIN;
+    VK_MAX_ENUM(VkCoordinateOrigin_)
+} VkCoordinateOrigin;
 
-typedef enum _VK_DEPTH_MODE
+typedef enum VkDepthMode_
 {
     VK_DEPTH_MODE_ZERO_TO_ONE                               = 0x00000000,
     VK_DEPTH_MODE_NEGATIVE_ONE_TO_ONE                       = 0x00000001,
@@ -542,10 +542,10 @@ typedef enum _VK_DEPTH_MODE
     VK_DEPTH_MODE_BEGIN_RANGE                               = VK_DEPTH_MODE_ZERO_TO_ONE,
     VK_DEPTH_MODE_END_RANGE                                 = VK_DEPTH_MODE_NEGATIVE_ONE_TO_ONE,
     VK_NUM_DEPTH_MODE                                       = (VK_DEPTH_MODE_END_RANGE - VK_DEPTH_MODE_BEGIN_RANGE + 1),
-    VK_MAX_ENUM(_VK_DEPTH_MODE)
-} VK_DEPTH_MODE;
+    VK_MAX_ENUM(VkDepthMode_)
+} VkDepthMode;
 
-typedef enum _VK_BLEND
+typedef enum VkBlend_
 {
     VK_BLEND_ZERO                                           = 0x00000000,
     VK_BLEND_ONE                                            = 0x00000001,
@@ -570,10 +570,10 @@ typedef enum _VK_BLEND
     VK_BLEND_BEGIN_RANGE                                    = VK_BLEND_ZERO,
     VK_BLEND_END_RANGE                                      = VK_BLEND_ONE_MINUS_SRC1_ALPHA,
     VK_NUM_BLEND                                            = (VK_BLEND_END_RANGE - VK_BLEND_BEGIN_RANGE + 1),
-    VK_MAX_ENUM(_VK_BLEND)
-} VK_BLEND;
+    VK_MAX_ENUM(VkBlend_)
+} VkBlend;
 
-typedef enum _VK_BLEND_FUNC
+typedef enum VkBlendFunc_
 {
     VK_BLEND_FUNC_ADD                                       = 0x00000000,
     VK_BLEND_FUNC_SUBTRACT                                  = 0x00000001,
@@ -584,10 +584,10 @@ typedef enum _VK_BLEND_FUNC
     VK_BLEND_FUNC_BEGIN_RANGE                               = VK_BLEND_FUNC_ADD,
     VK_BLEND_FUNC_END_RANGE                                 = VK_BLEND_FUNC_MAX,
     VK_NUM_BLEND_FUNC                                       = (VK_BLEND_FUNC_END_RANGE - VK_BLEND_FUNC_BEGIN_RANGE + 1),
-    VK_MAX_ENUM(_VK_BLEND_FUNC)
-} VK_BLEND_FUNC;
+    VK_MAX_ENUM(VkBlendFunc_)
+} VkBlendFunc;
 
-typedef enum _VK_STENCIL_OP
+typedef enum VkStencilOp_
 {
     VK_STENCIL_OP_KEEP                                      = 0x00000000,
     VK_STENCIL_OP_ZERO                                      = 0x00000001,
@@ -601,10 +601,10 @@ typedef enum _VK_STENCIL_OP
     VK_STENCIL_OP_BEGIN_RANGE                               = VK_STENCIL_OP_KEEP,
     VK_STENCIL_OP_END_RANGE                                 = VK_STENCIL_OP_DEC_WRAP,
     VK_NUM_STENCIL_OP                                       = (VK_STENCIL_OP_END_RANGE - VK_STENCIL_OP_BEGIN_RANGE + 1),
-    VK_MAX_ENUM(_VK_STENCIL_OP)
-} VK_STENCIL_OP;
+    VK_MAX_ENUM(VkStencilOp_)
+} VkStencilOp;
 
-typedef enum _VK_LOGIC_OP
+typedef enum VkLogicOp_
 {
     VK_LOGIC_OP_COPY                                        = 0x00000000,
     VK_LOGIC_OP_CLEAR                                       = 0x00000001,
@@ -626,10 +626,10 @@ typedef enum _VK_LOGIC_OP
     VK_LOGIC_OP_BEGIN_RANGE                                 = VK_LOGIC_OP_COPY,
     VK_LOGIC_OP_END_RANGE                                   = VK_LOGIC_OP_SET,
     VK_NUM_LOGIC_OP                                         = (VK_LOGIC_OP_END_RANGE - VK_LOGIC_OP_BEGIN_RANGE + 1),
-    VK_MAX_ENUM(_VK_LOGIC_OP)
-} VK_LOGIC_OP;
+    VK_MAX_ENUM(VkLogicOp_)
+} VkLogicOp;
 
-typedef enum _VK_SYSTEM_ALLOC_TYPE
+typedef enum VkSystemAllocType_
 {
     VK_SYSTEM_ALLOC_API_OBJECT                              = 0x00000000,
     VK_SYSTEM_ALLOC_INTERNAL                                = 0x00000001,
@@ -640,10 +640,10 @@ typedef enum _VK_SYSTEM_ALLOC_TYPE
     VK_SYSTEM_ALLOC_BEGIN_RANGE                             = VK_SYSTEM_ALLOC_API_OBJECT,
     VK_SYSTEM_ALLOC_END_RANGE                               = VK_SYSTEM_ALLOC_DEBUG,
     VK_NUM_SYSTEM_ALLOC_TYPE                                = (VK_SYSTEM_ALLOC_END_RANGE - VK_SYSTEM_ALLOC_BEGIN_RANGE + 1),
-    VK_MAX_ENUM(_VK_SYSTEM_ALLOC_TYPE)
-} VK_SYSTEM_ALLOC_TYPE;
+    VK_MAX_ENUM(VkSystemAllocType_)
+} VkSystemAllocType;
 
-typedef enum _VK_PHYSICAL_GPU_TYPE
+typedef enum VkPhysicalGpuType_
 {
     VK_GPU_TYPE_OTHER                                       = 0x00000000,
     VK_GPU_TYPE_INTEGRATED                                  = 0x00000001,
@@ -653,10 +653,10 @@ typedef enum _VK_PHYSICAL_GPU_TYPE
     VK_PHYSICAL_GPU_TYPE_BEGIN_RANGE                        = VK_GPU_TYPE_OTHER,
     VK_PHYSICAL_GPU_TYPE_END_RANGE                          = VK_GPU_TYPE_VIRTUAL,
     VK_NUM_PHYSICAL_GPU_TYPE                                = (VK_PHYSICAL_GPU_TYPE_END_RANGE - VK_PHYSICAL_GPU_TYPE_BEGIN_RANGE + 1),
-    VK_MAX_ENUM(_VK_PHYSICAL_GPU_TYPE)
-} VK_PHYSICAL_GPU_TYPE;
+    VK_MAX_ENUM(VkPhysicalGpuType_)
+} VkPhysicalGpuType;
 
-typedef enum _VK_PHYSICAL_GPU_INFO_TYPE
+typedef enum VkPhysicalGpuInfoType_
 {
     // Info type for vkGetGpuInfo()
     VK_INFO_TYPE_PHYSICAL_GPU_PROPERTIES                    = 0x00000000,
@@ -667,10 +667,10 @@ typedef enum _VK_PHYSICAL_GPU_INFO_TYPE
     VK_INFO_TYPE_PHYSICAL_GPU_BEGIN_RANGE                   = VK_INFO_TYPE_PHYSICAL_GPU_PROPERTIES,
     VK_INFO_TYPE_PHYSICAL_GPU_END_RANGE                     = VK_INFO_TYPE_PHYSICAL_GPU_MEMORY_PROPERTIES,
     VK_NUM_INFO_TYPE_PHYSICAL_GPU                           = (VK_INFO_TYPE_PHYSICAL_GPU_END_RANGE - VK_INFO_TYPE_PHYSICAL_GPU_BEGIN_RANGE + 1),
-    VK_MAX_ENUM(_VK_PHYSICAL_GPU_INFO_TYPE)
-} VK_PHYSICAL_GPU_INFO_TYPE;
+    VK_MAX_ENUM(VkPhysicalGpuInfoType_)
+} VkPhysicalGpuInfoType;
 
-typedef enum _VK_FORMAT_INFO_TYPE
+typedef enum VkFormatInfoType_
 {
     // Info type for vkGetFormatInfo()
     VK_INFO_TYPE_FORMAT_PROPERTIES                          = 0x00000000,
@@ -678,10 +678,10 @@ typedef enum _VK_FORMAT_INFO_TYPE
     VK_INFO_TYPE_FORMAT_BEGIN_RANGE                         = VK_INFO_TYPE_FORMAT_PROPERTIES,
     VK_INFO_TYPE_FORMAT_END_RANGE                           = VK_INFO_TYPE_FORMAT_PROPERTIES,
     VK_NUM_INFO_TYPE_FORMAT                                  = (VK_INFO_TYPE_FORMAT_END_RANGE - VK_INFO_TYPE_FORMAT_BEGIN_RANGE + 1),
-    VK_MAX_ENUM(_VK_FORMAT_INFO_TYPE)
-} VK_FORMAT_INFO_TYPE;
+    VK_MAX_ENUM(VkFormatInfoType_)
+} VkFormatInfoType;
 
-typedef enum _VK_SUBRESOURCE_INFO_TYPE
+typedef enum VkSubresourceInfoType_
 {
     // Info type for vkGetImageSubresourceInfo()
     VK_INFO_TYPE_SUBRESOURCE_LAYOUT                         = 0x00000000,
@@ -689,10 +689,10 @@ typedef enum _VK_SUBRESOURCE_INFO_TYPE
     VK_INFO_TYPE_SUBRESOURCE_BEGIN_RANGE                    = VK_INFO_TYPE_SUBRESOURCE_LAYOUT,
     VK_INFO_TYPE_SUBRESOURCE_END_RANGE                      = VK_INFO_TYPE_SUBRESOURCE_LAYOUT,
     VK_NUM_INFO_TYPE_SUBRESOURCE                            = (VK_INFO_TYPE_SUBRESOURCE_END_RANGE - VK_INFO_TYPE_SUBRESOURCE_BEGIN_RANGE + 1),
-    VK_MAX_ENUM(_VK_SUBRESOURCE_INFO_TYPE)
-} VK_SUBRESOURCE_INFO_TYPE;
+    VK_MAX_ENUM(VkSubresourceInfoType_)
+} VkSubresourceInfoType;
 
-typedef enum _VK_OBJECT_INFO_TYPE
+typedef enum VkObjectInfoType_
 {
     // Info type for vkGetObjectInfo()
     VK_INFO_TYPE_MEMORY_ALLOCATION_COUNT                    = 0x00000000,
@@ -703,10 +703,10 @@ typedef enum _VK_OBJECT_INFO_TYPE
     VK_INFO_TYPE_BEGIN_RANGE                                = VK_INFO_TYPE_MEMORY_ALLOCATION_COUNT,
     VK_INFO_TYPE_END_RANGE                                  = VK_INFO_TYPE_IMAGE_MEMORY_REQUIREMENTS,
     VK_NUM_INFO_TYPE                                        = (VK_INFO_TYPE_END_RANGE - VK_INFO_TYPE_BEGIN_RANGE + 1),
-    VK_MAX_ENUM(_VK_OBJECT_INFO_TYPE)
-} VK_OBJECT_INFO_TYPE;
+    VK_MAX_ENUM(VkObjectInfoType_)
+} VkObjectInfoType;
 
-typedef enum _VK_VALIDATION_LEVEL
+typedef enum VkValidationLevel_
 {
     VK_VALIDATION_LEVEL_0                                   = 0x00000000,
     VK_VALIDATION_LEVEL_1                                   = 0x00000001,
@@ -718,13 +718,13 @@ typedef enum _VK_VALIDATION_LEVEL
     VK_VALIDATION_LEVEL_END_RANGE                           = VK_VALIDATION_LEVEL_4,
     VK_NUM_VALIDATION_LEVEL                                 = (VK_VALIDATION_LEVEL_END_RANGE - VK_VALIDATION_LEVEL_BEGIN_RANGE + 1),
 
-    VK_MAX_ENUM(_VK_VALIDATION_LEVEL)
-} VK_VALIDATION_LEVEL;
+    VK_MAX_ENUM(VkValidationLevel_)
+} VkValidationLevel;
 
 // ------------------------------------------------------------------------------------------------
 // Error and return codes
 
-typedef enum _VK_RESULT
+typedef enum VkResult_
 {
     // Return codes for successful operation execution (> = 0)
     VK_SUCCESS                                              = 0x0000000,
@@ -770,12 +770,12 @@ typedef enum _VK_RESULT
     VK_ERROR_INCOMPATIBLE_QUEUE                             = -(0x00000021),
     VK_ERROR_NOT_SHAREABLE                                  = -(0x00000022),
     VK_MAX_ENUM(_VK_RESULT_CODE)
-} VK_RESULT;
+} VkResult;
 
 // ------------------------------------------------------------------------------------------------
 // Vulkan format definitions
 
-typedef enum _VK_VERTEX_INPUT_STEP_RATE
+typedef enum VkVertexInputStepRate_
 {
     VK_VERTEX_INPUT_STEP_RATE_VERTEX                        = 0x0,
     VK_VERTEX_INPUT_STEP_RATE_INSTANCE                      = 0x1,
@@ -784,10 +784,10 @@ typedef enum _VK_VERTEX_INPUT_STEP_RATE
     VK_VERTEX_INPUT_STEP_RATE_BEGIN_RANGE                   = VK_VERTEX_INPUT_STEP_RATE_VERTEX,
     VK_VERTEX_INPUT_STEP_RATE_END_RANGE                     = VK_VERTEX_INPUT_STEP_RATE_DRAW,
     VK_NUM_VERTEX_INPUT_STEP_RATE                           = (VK_VERTEX_INPUT_STEP_RATE_END_RANGE - VK_VERTEX_INPUT_STEP_RATE_BEGIN_RANGE + 1),
-    VK_MAX_ENUM(_VK_VERTEX_INPUT_STEP_RATE)
-} VK_VERTEX_INPUT_STEP_RATE;
+    VK_MAX_ENUM(VkVertexInputStepRate_)
+} VkVertexInputStepRate;
 
-typedef enum _VK_FORMAT
+typedef enum VkFormat_
 {
     VK_FMT_UNDEFINED                                        = 0x00000000,
     VK_FMT_R4G4_UNORM                                       = 0x00000001,
@@ -967,11 +967,11 @@ typedef enum _VK_FORMAT
     VK_FMT_BEGIN_RANGE                                      = VK_FMT_UNDEFINED,
     VK_FMT_END_RANGE                                        = VK_FMT_B10G10R10A2_SINT,
     VK_NUM_FMT                                              = (VK_FMT_END_RANGE - VK_FMT_BEGIN_RANGE + 1),
-    VK_MAX_ENUM(_VK_FORMAT)
-} VK_FORMAT;
+    VK_MAX_ENUM(VkFormat_)
+} VkFormat;
 
 // Shader stage enumerant
-typedef enum _VK_PIPELINE_SHADER_STAGE
+typedef enum VkPipelineShaderStage_
 {
     VK_SHADER_STAGE_VERTEX                                  = 0,
     VK_SHADER_STAGE_TESS_CONTROL                            = 1,
@@ -983,10 +983,10 @@ typedef enum _VK_PIPELINE_SHADER_STAGE
     VK_SHADER_STAGE_BEGIN_RANGE                             = VK_SHADER_STAGE_VERTEX,
     VK_SHADER_STAGE_END_RANGE                               = VK_SHADER_STAGE_COMPUTE,
     VK_NUM_SHADER_STAGE                                     = (VK_SHADER_STAGE_END_RANGE - VK_SHADER_STAGE_BEGIN_RANGE + 1),
-    VK_MAX_ENUM(_VK_PIPELINE_SHADER_STAGE)
-} VK_PIPELINE_SHADER_STAGE;
+    VK_MAX_ENUM(VkPipelineShaderStage_)
+} VkPipelineShaderStage;
 
-typedef enum _VK_SHADER_STAGE_FLAGS
+typedef enum VkShaderStageFlags_
 {
     VK_SHADER_STAGE_FLAGS_VERTEX_BIT                         = 0x00000001,
     VK_SHADER_STAGE_FLAGS_TESS_CONTROL_BIT                   = 0x00000002,
@@ -996,11 +996,11 @@ typedef enum _VK_SHADER_STAGE_FLAGS
     VK_SHADER_STAGE_FLAGS_COMPUTE_BIT                        = 0x00000020,
 
     VK_SHADER_STAGE_FLAGS_ALL                                = 0x7FFFFFFF,
-    VK_MAX_ENUM(_VK_SHADER_STAGE_FLAGS)
-} VK_SHADER_STAGE_FLAGS;
+    VK_MAX_ENUM(VkShaderStageFlags_)
+} VkShaderStageFlags;
 
 // Structure type enumerant
-typedef enum _VK_STRUCTURE_TYPE
+typedef enum VkStructureType_
 {
     VK_STRUCTURE_TYPE_APPLICATION_INFO                      = 0,
     VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO                    = 1,
@@ -1063,32 +1063,32 @@ typedef enum _VK_STRUCTURE_TYPE
     VK_STRUCTURE_TYPE_END_RANGE                             = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
 
     VK_NUM_STRUCTURE_TYPE                                   = (VK_STRUCTURE_TYPE_END_RANGE - VK_STRUCTURE_TYPE_BEGIN_RANGE + 1),
-    VK_MAX_ENUM(_VK_STRUCTURE_TYPE)
-} VK_STRUCTURE_TYPE;
+    VK_MAX_ENUM(VkStructureType_)
+} VkStructureType;
 
 // ------------------------------------------------------------------------------------------------
 // Flags
 
 // Device creation flags
-typedef enum _VK_DEVICE_CREATE_FLAGS
+typedef enum VkDeviceCreateFlags_
 {
     VK_DEVICE_CREATE_VALIDATION_BIT                         = 0x00000001,
     VK_DEVICE_CREATE_MGPU_IQ_MATCH_BIT                      = 0x00000002,
-    VK_MAX_ENUM(_VK_DEVICE_CREATE_FLAGS)
-} VK_DEVICE_CREATE_FLAGS;
+    VK_MAX_ENUM(VkDeviceCreateFlags_)
+} VkDeviceCreateFlags;
 
 // Queue capabilities
-typedef enum _VK_QUEUE_FLAGS
+typedef enum VkQueueFlags_
 {
     VK_QUEUE_GRAPHICS_BIT                                   = 0x00000001,   // Queue supports graphics operations
     VK_QUEUE_COMPUTE_BIT                                    = 0x00000002,   // Queue supports compute operations
     VK_QUEUE_DMA_BIT                                        = 0x00000004,   // Queue supports DMA operations
     VK_QUEUE_EXTENDED_BIT                                   = 0x40000000,   // Extended queue
-    VK_MAX_ENUM(_VK_QUEUE_FLAGS)
-} VK_QUEUE_FLAGS;
+    VK_MAX_ENUM(VkQueueFlags_)
+} VkQueueFlags;
 
 // memory properties passed into vkAllocMemory().
-typedef enum _VK_MEMORY_PROPERTY_FLAGS
+typedef enum VkMemoryPropertyFlags_
 {
     VK_MEMORY_PROPERTY_GPU_ONLY                             = 0x00000000,   // If not set, then allocate memory on device (GPU)
     VK_MEMORY_PROPERTY_CPU_VISIBLE_BIT                      = 0x00000001,
@@ -1097,10 +1097,10 @@ typedef enum _VK_MEMORY_PROPERTY_FLAGS
     VK_MEMORY_PROPERTY_CPU_WRITE_COMBINED_BIT               = 0x00000008,
     VK_MEMORY_PROPERTY_PREFER_CPU_LOCAL                     = 0x00000010,   // all else being equal, prefer CPU access
     VK_MEMORY_PROPERTY_SHAREABLE_BIT                        = 0x00000020,
-    VK_MAX_ENUM(_VK_MEMORY_PROPERTY_FLAGS)
-} VK_MEMORY_PROPERTY_FLAGS;
+    VK_MAX_ENUM(VkMemoryPropertyFlags_)
+} VkMemoryPropertyFlags;
 
-typedef enum _VK_MEMORY_TYPE
+typedef enum VkMemoryType_
 {
     VK_MEMORY_TYPE_OTHER                                    = 0x00000000,   // device memory that is not any of the others
     VK_MEMORY_TYPE_BUFFER                                   = 0x00000001,   // memory for buffers and associated information
@@ -1109,11 +1109,11 @@ typedef enum _VK_MEMORY_TYPE
     VK_MEMORY_TYPE_BEGIN_RANGE                              = VK_MEMORY_TYPE_OTHER,
     VK_MEMORY_TYPE_END_RANGE                                = VK_MEMORY_TYPE_IMAGE,
     VK_NUM_MEMORY_TYPE                                      = (VK_MEMORY_TYPE_END_RANGE - VK_MEMORY_TYPE_BEGIN_RANGE + 1),
-    VK_MAX_ENUM(_VK_MEMORY_TYPE)
-} VK_MEMORY_TYPE;
+    VK_MAX_ENUM(VkMemoryType_)
+} VkMemoryType;
 
 // Buffer and buffer allocation usage flags
-typedef enum _VK_BUFFER_USAGE_FLAGS
+typedef enum VkBufferUsageFlags_
 {
     VK_BUFFER_USAGE_GENERAL                                 = 0x00000000,   // no special usage
     VK_BUFFER_USAGE_SHADER_ACCESS_READ_BIT                  = 0x00000001,   // Shader read (e.g. TBO, image buffer, UBO, SSBO)
@@ -1128,18 +1128,18 @@ typedef enum _VK_BUFFER_USAGE_FLAGS
     VK_BUFFER_USAGE_INDIRECT_PARAMETER_FETCH_BIT            = 0x00000200,   // Can be the source of indirect parameters (e.g. indirect buffer, parameter buffer)
     VK_BUFFER_USAGE_TEXTURE_BUFFER_BIT                      = 0x00000400,   // texture buffer (TBO)
     VK_BUFFER_USAGE_IMAGE_BUFFER_BIT                        = 0x00000800,   // image buffer (load/store)
-    VK_MAX_ENUM(_VK_BUFFER_USAGE_FLAGS)
-} VK_BUFFER_USAGE_FLAGS;
+    VK_MAX_ENUM(VkBufferUsageFlags_)
+} VkBufferUsageFlags;
 
 // Buffer flags
-typedef enum _VK_BUFFER_CREATE_FLAGS
+typedef enum VkBufferCreateFlags_
 {
     VK_BUFFER_CREATE_SHAREABLE_BIT                          = 0x00000001,
     VK_BUFFER_CREATE_SPARSE_BIT                             = 0x00000002,
-    VK_MAX_ENUM(_VK_BUFFER_CREATE_FLAGS)
-} VK_BUFFER_CREATE_FLAGS;
+    VK_MAX_ENUM(VkBufferCreateFlags_)
+} VkBufferCreateFlags;
 
-typedef enum _VK_BUFFER_VIEW_TYPE
+typedef enum VkBufferViewType_
 {
     VK_BUFFER_VIEW_RAW                                      = 0x00000000,   // Raw buffer without special structure (e.g. UBO, SSBO, indirect and parameter buffers)
     VK_BUFFER_VIEW_TYPED                                    = 0x00000001,   // Typed buffer, format and channels are used (TBO, image buffer)
@@ -1147,12 +1147,12 @@ typedef enum _VK_BUFFER_VIEW_TYPE
     VK_BUFFER_VIEW_TYPE_BEGIN_RANGE                         = VK_BUFFER_VIEW_RAW,
     VK_BUFFER_VIEW_TYPE_END_RANGE                           = VK_BUFFER_VIEW_TYPED,
     VK_NUM_BUFFER_VIEW_TYPE                                 = (VK_BUFFER_VIEW_TYPE_END_RANGE - VK_BUFFER_VIEW_TYPE_BEGIN_RANGE + 1),
-    VK_MAX_ENUM(_VK_BUFFER_VIEW_TYPE)
-} VK_BUFFER_VIEW_TYPE;
+    VK_MAX_ENUM(VkBufferViewType_)
+} VkBufferViewType;
 
 
 // Images memory allocations can be used for resources of a given format class.
-typedef enum _VK_IMAGE_FORMAT_CLASS
+typedef enum VkImageFormatClass_
 {
     VK_IMAGE_FORMAT_CLASS_128_BITS                          = 1,  // color formats
     VK_IMAGE_FORMAT_CLASS_96_BITS                           = 2,
@@ -1176,11 +1176,11 @@ typedef enum _VK_IMAGE_FORMAT_CLASS
     VK_IMAGE_FORMAT_CLASS_BEGIN_RANGE                       = VK_IMAGE_FORMAT_CLASS_128_BITS,
     VK_IMAGE_FORMAT_CLASS_END_RANGE                         = VK_IMAGE_FORMAT_CLASS_LINEAR,
     VK_NUM_IMAGE_FORMAT_CLASS                               = (VK_IMAGE_FORMAT_CLASS_END_RANGE - VK_IMAGE_FORMAT_CLASS_BEGIN_RANGE + 1),
-    VK_MAX_ENUM(_VK_IMAGE_FORMAT_CLASS)
-} VK_IMAGE_FORMAT_CLASS;
+    VK_MAX_ENUM(VkImageFormatClass_)
+} VkImageFormatClass;
 
 // Image and image allocation usage flags
-typedef enum _VK_IMAGE_USAGE_FLAGS
+typedef enum VkImageUsageFlags_
 {
     VK_IMAGE_USAGE_GENERAL                                  = 0x00000000,   // no special usage
     VK_IMAGE_USAGE_SHADER_ACCESS_READ_BIT                   = 0x00000001,   // shader read (e.g. texture, image)
@@ -1193,52 +1193,52 @@ typedef enum _VK_IMAGE_USAGE_FLAGS
     VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT                     = 0x00000080,   // framebuffer color attachment
     VK_IMAGE_USAGE_DEPTH_STENCIL_BIT                        = 0x00000100,   // framebuffer depth/stencil
     VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT                 = 0x00000200,   // image data not needed outside of rendering.
-    VK_MAX_ENUM(_VK_IMAGE_USAGE_FLAGS)
-} VK_IMAGE_USAGE_FLAGS;
+    VK_MAX_ENUM(VkImageUsageFlags_)
+} VkImageUsageFlags;
 
 // Image flags
-typedef enum _VK_IMAGE_CREATE_FLAGS
+typedef enum VkImageCreateFlags_
 {
     VK_IMAGE_CREATE_INVARIANT_DATA_BIT                      = 0x00000001,
     VK_IMAGE_CREATE_CLONEABLE_BIT                           = 0x00000002,
     VK_IMAGE_CREATE_SHAREABLE_BIT                           = 0x00000004,
     VK_IMAGE_CREATE_SPARSE_BIT                              = 0x00000008,
     VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT                      = 0x00000010,   // Allows image views to have different format than the base image
-    VK_MAX_ENUM(_VK_IMAGE_CREATE_FLAGS)
-} VK_IMAGE_CREATE_FLAGS;
+    VK_MAX_ENUM(VkImageCreateFlags_)
+} VkImageCreateFlags;
 
 // Depth-stencil view creation flags
-typedef enum _VK_DEPTH_STENCIL_VIEW_CREATE_FLAGS
+typedef enum VkDepthStencilViewCreateFlags_
 {
     VK_DEPTH_STENCIL_VIEW_CREATE_READ_ONLY_DEPTH_BIT        = 0x00000001,
     VK_DEPTH_STENCIL_VIEW_CREATE_READ_ONLY_STENCIL_BIT      = 0x00000002,
-    VK_MAX_ENUM(_VK_DEPTH_STENCIL_VIEW_CREATE_FLAGS)
-} VK_DEPTH_STENCIL_VIEW_CREATE_FLAGS;
+    VK_MAX_ENUM(VkDepthStencilViewCreateFlags_)
+} VkDepthStencilViewCreateFlags;
 
 // Pipeline creation flags
-typedef enum _VK_PIPELINE_CREATE_FLAGS
+typedef enum VkPipelineCreateFlags_
 {
     VK_PIPELINE_CREATE_DISABLE_OPTIMIZATION_BIT             = 0x00000001,
     VK_PIPELINE_CREATE_ALLOW_DERIVATIVES_BIT                = 0x00000002,
-    VK_MAX_ENUM(_VK_PIPELINE_CREATE_FLAGS)
-} VK_PIPELINE_CREATE_FLAGS;
+    VK_MAX_ENUM(VkPipelineCreateFlags_)
+} VkPipelineCreateFlags;
 
 // Fence creation flags
-typedef enum _VK_FENCE_CREATE_FLAGS
+typedef enum VkFenceCreateFlags_
 {
     VK_FENCE_CREATE_SIGNALED_BIT                            = 0x00000001,
-    VK_MAX_ENUM(_VK_FENCE_CREATE_FLAGS)
-} VK_FENCE_CREATE_FLAGS;
+    VK_MAX_ENUM(VkFenceCreateFlags_)
+} VkFenceCreateFlags;
 
 // Semaphore creation flags
-typedef enum _VK_SEMAPHORE_CREATE_FLAGS
+typedef enum VkSemaphoreCreateFlags_
 {
     VK_SEMAPHORE_CREATE_SHAREABLE_BIT                       = 0x00000001,
-    VK_MAX_ENUM(_VK_SEMAPHORE_CREATE_FLAGS)
-} VK_SEMAPHORE_CREATE_FLAGS;
+    VK_MAX_ENUM(VkSemaphoreCreateFlags_)
+} VkSemaphoreCreateFlags;
 
 // Format capability flags
-typedef enum _VK_FORMAT_FEATURE_FLAGS
+typedef enum VkFormatFeatureFlags_
 {
     VK_FORMAT_IMAGE_SHADER_READ_BIT                         = 0x00000001,
     VK_FORMAT_IMAGE_SHADER_WRITE_BIT                        = 0x00000002,
@@ -1250,18 +1250,18 @@ typedef enum _VK_FORMAT_FEATURE_FLAGS
     VK_FORMAT_STENCIL_ATTACHMENT_BIT                        = 0x00000080,
     VK_FORMAT_MSAA_ATTACHMENT_BIT                           = 0x00000100,
     VK_FORMAT_CONVERSION_BIT                                = 0x00000200,
-    VK_MAX_ENUM(_VK_FORMAT_FEATURE_FLAGS)
-} VK_FORMAT_FEATURE_FLAGS;
+    VK_MAX_ENUM(VkFormatFeatureFlags_)
+} VkFormatFeatureFlags;
 
 // Query flags
-typedef enum _VK_QUERY_CONTROL_FLAGS
+typedef enum VkQueryControlFlags_
 {
     VK_QUERY_IMPRECISE_DATA_BIT                             = 0x00000001,
-    VK_MAX_ENUM(_VK_QUERY_CONTROL_FLAGS)
-} VK_QUERY_CONTROL_FLAGS;
+    VK_MAX_ENUM(VkQueryControlFlags_)
+} VkQueryControlFlags;
 
 // GPU compatibility flags
-typedef enum _VK_GPU_COMPATIBILITY_FLAGS
+typedef enum VkGpuCompatibilityFlags_
 {
     VK_GPU_COMPAT_ASIC_FEATURES_BIT                         = 0x00000001,
     VK_GPU_COMPAT_IQ_MATCH_BIT                              = 0x00000002,
@@ -1270,49 +1270,49 @@ typedef enum _VK_GPU_COMPATIBILITY_FLAGS
     VK_GPU_COMPAT_SHARED_SYNC_BIT                           = 0x00000010,
     VK_GPU_COMPAT_SHARED_GPU0_DISPLAY_BIT                   = 0x00000020,
     VK_GPU_COMPAT_SHARED_GPU1_DISPLAY_BIT                   = 0x00000040,
-    VK_MAX_ENUM(_VK_GPU_COMPATIBILITY_FLAGS)
-} VK_GPU_COMPATIBILITY_FLAGS;
+    VK_MAX_ENUM(VkGpuCompatibilityFlags_)
+} VkGpuCompatibilityFlags;
 
 // Command buffer building flags
-typedef enum _VK_CMD_BUFFER_BUILD_FLAGS
+typedef enum VkCmdBufferBuildFlags_
 {
     VK_CMD_BUFFER_OPTIMIZE_GPU_SMALL_BATCH_BIT              = 0x00000001,
     VK_CMD_BUFFER_OPTIMIZE_PIPELINE_SWITCH_BIT              = 0x00000002,
     VK_CMD_BUFFER_OPTIMIZE_ONE_TIME_SUBMIT_BIT              = 0x00000004,
     VK_CMD_BUFFER_OPTIMIZE_DESCRIPTOR_SET_SWITCH_BIT        = 0x00000008,
-    VK_MAX_ENUM(_VK_CMD_BUFFER_BUILD_FLAGS)
-} VK_CMD_BUFFER_BUILD_FLAGS;
+    VK_MAX_ENUM(VkCmdBufferBuildFlags_)
+} VkCmdBufferBuildFlags;
 
 // ------------------------------------------------------------------------------------------------
 // Vulkan structures
 
-typedef struct _VK_OFFSET2D
+typedef struct VkOffset2D_
 {
     int32_t                                     x;
     int32_t                                     y;
-} VK_OFFSET2D;
+} VkOffset2D;
 
-typedef struct _VK_OFFSET3D
+typedef struct VkOffset3D_
 {
     int32_t                                     x;
     int32_t                                     y;
     int32_t                                     z;
-} VK_OFFSET3D;
+} VkOffset3D;
 
-typedef struct _VK_EXTENT2D
+typedef struct VkExtent2D_
 {
     int32_t                                     width;
     int32_t                                     height;
-} VK_EXTENT2D;
+} VkExtent2D;
 
-typedef struct _VK_EXTENT3D
+typedef struct VkExtent3D_
 {
     int32_t                                     width;
     int32_t                                     height;
     int32_t                                     depth;
-} VK_EXTENT3D;
+} VkExtent3D;
 
-typedef struct _VK_VIEWPORT
+typedef struct VkViewport_
 {
     float                                       originX;
     float                                       originY;
@@ -1320,31 +1320,31 @@ typedef struct _VK_VIEWPORT
     float                                       height;
     float                                       minDepth;
     float                                       maxDepth;
-} VK_VIEWPORT;
+} VkViewport;
 
-typedef struct _VK_RECT
+typedef struct VkRect_
 {
-    VK_OFFSET2D                                 offset;
-    VK_EXTENT2D                                 extent;
-} VK_RECT;
+    VkOffset2D                                 offset;
+    VkExtent2D                                 extent;
+} VkRect;
 
-typedef struct _VK_CHANNEL_MAPPING
+typedef struct VkChannelMapping_
 {
-    VK_CHANNEL_SWIZZLE                          r;
-    VK_CHANNEL_SWIZZLE                          g;
-    VK_CHANNEL_SWIZZLE                          b;
-    VK_CHANNEL_SWIZZLE                          a;
-} VK_CHANNEL_MAPPING;
+    VkChannelSwizzle                          r;
+    VkChannelSwizzle                          g;
+    VkChannelSwizzle                          b;
+    VkChannelSwizzle                          a;
+} VkChannelMapping;
 
-typedef struct _VK_PHYSICAL_GPU_PROPERTIES
+typedef struct VkPhysicalGpuProperties_
 {
     uint32_t                                    apiVersion;
     uint32_t                                    driverVersion;
     uint32_t                                    vendorId;
     uint32_t                                    deviceId;
-    VK_PHYSICAL_GPU_TYPE                        gpuType;
+    VkPhysicalGpuType                        gpuType;
     char                                        gpuName[VK_MAX_PHYSICAL_GPU_NAME];
-    VK_GPU_SIZE                                 maxInlineMemoryUpdateSize;
+    VkGpuSize                                 maxInlineMemoryUpdateSize;
     uint32_t                                    maxBoundDescriptorSets;
     uint32_t                                    maxThreadGroupSize;
     uint64_t                                    timestampFrequency;
@@ -1352,49 +1352,49 @@ typedef struct _VK_PHYSICAL_GPU_PROPERTIES
     uint32_t                                    maxDescriptorSets;              // at least 2?
     uint32_t                                    maxViewports;                   // at least 16?
     uint32_t                                    maxColorAttachments;            // at least 8?
-} VK_PHYSICAL_GPU_PROPERTIES;
+} VkPhysicalGpuProperties;
 
-typedef struct _VK_PHYSICAL_GPU_PERFORMANCE
+typedef struct VkPhysicalGpuPerformance_
 {
     float                                       maxGpuClock;
     float                                       aluPerClock;
     float                                       texPerClock;
     float                                       primsPerClock;
     float                                       pixelsPerClock;
-} VK_PHYSICAL_GPU_PERFORMANCE;
+} VkPhysicalGpuPerformance;
 
-typedef struct _VK_GPU_COMPATIBILITY_INFO
+typedef struct VkGpuCompatibilityInfo_
 {
-    VK_FLAGS                                    compatibilityFlags; // VK_GPU_COMPATIBILITY_FLAGS
-} VK_GPU_COMPATIBILITY_INFO;
+    VkFlags                                    compatibilityFlags; // VkGpuCompatibilityFlags
+} VkGpuCompatibilityInfo;
 
-typedef struct _VK_APPLICATION_INFO
+typedef struct VkApplicationInfo_
 {
-    VK_STRUCTURE_TYPE                           sType;              // Type of structure. Should be VK_STRUCTURE_TYPE_APPLICATION_INFO
+    VkStructureType                           sType;              // Type of structure. Should be VK_STRUCTURE_TYPE_APPLICATION_INFO
     const void*                                 pNext;              // Next structure in chain
     const char*                                 pAppName;
     uint32_t                                    appVersion;
     const char*                                 pEngineName;
     uint32_t                                    engineVersion;
     uint32_t                                    apiVersion;
-} VK_APPLICATION_INFO;
+} VkApplicationInfo;
 
-typedef void* (VKAPI *VK_ALLOC_FUNCTION)(
+typedef void* (VKAPI *PFN_vkAllocFunction)(
     void*                                       pUserData,
     size_t                                      size,
     size_t                                      alignment,
-    VK_SYSTEM_ALLOC_TYPE                        allocType);
+    VkSystemAllocType                        allocType);
 
-typedef void (VKAPI *VK_FREE_FUNCTION)(
+typedef void (VKAPI *PFN_vkFreeFunction)(
     void*                                       pUserData,
     void*                                       pMem);
 
-typedef struct _VK_ALLOC_CALLBACKS
+typedef struct VkAllocCallbacks_
 {
     void*                                       pUserData;
-    VK_ALLOC_FUNCTION                           pfnAlloc;
-    VK_FREE_FUNCTION                            pfnFree;
-} VK_ALLOC_CALLBACKS;
+    PFN_vkAllocFunction                           pfnAlloc;
+    PFN_vkFreeFunction                            pfnFree;
+} VkAllocCallbacks;
 
 typedef struct _VkDeviceQueueCreateInfo
 {
@@ -1404,22 +1404,22 @@ typedef struct _VkDeviceQueueCreateInfo
 
 typedef struct _VkDeviceCreateInfo
 {
-    VK_STRUCTURE_TYPE                           sType;                      // Should be VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO
+    VkStructureType                           sType;                      // Should be VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO
     const void*                                 pNext;                      // Pointer to next structure
     uint32_t                                    queueRecordCount;
     const VkDeviceQueueCreateInfo*              pRequestedQueues;
     uint32_t                                    extensionCount;
     const char*const*                           ppEnabledExtensionNames;
-    VK_VALIDATION_LEVEL                         maxValidationLevel;
-    VK_FLAGS                                    flags;                      // VK_DEVICE_CREATE_FLAGS
+    VkValidationLevel                         maxValidationLevel;
+    VkFlags                                    flags;                      // VkDeviceCreateFlags
 } VkDeviceCreateInfo;
 
 typedef struct _VkInstanceCreateInfo
 {
-    VK_STRUCTURE_TYPE                           sType;                      // Should be VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO
+    VkStructureType                           sType;                      // Should be VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO
     const void*                                 pNext;                      // Pointer to next structure
-    const VK_APPLICATION_INFO*                  pAppInfo;
-    const VK_ALLOC_CALLBACKS*                   pAllocCb;
+    const VkApplicationInfo*                  pAppInfo;
+    const VkAllocCallbacks*                   pAllocCb;
     uint32_t                                    extensionCount;
     const char*const*                           ppEnabledExtensionNames;    // layer or extension name to be enabled
 } VkInstanceCreateInfo;
@@ -1427,656 +1427,656 @@ typedef struct _VkInstanceCreateInfo
 // can be added to VkDeviceCreateInfo or VkInstanceCreateInfo via pNext
 typedef struct _VkLayerCreateInfo
 {
-    VK_STRUCTURE_TYPE                           sType;                      // Should be VK_STRUCTURE_TYPE_LAYER_CREATE_INFO
+    VkStructureType                           sType;                      // Should be VK_STRUCTURE_TYPE_LAYER_CREATE_INFO
     const void*                                 pNext;                      // Pointer to next structure
     uint32_t                                    layerCount;
     const char *const*                          ppActiveLayerNames;         // layer name from the layer's vkEnumerateLayers())
 } VkLayerCreateInfo;
 
-typedef struct _VK_PHYSICAL_GPU_QUEUE_PROPERTIES
+typedef struct VkPhysicalGpuQueueProperties_
 {
-    VK_FLAGS                                    queueFlags;                 // VK_QUEUE_FLAGS
+    VkFlags                                    queueFlags;                 // VkQueueFlags
     uint32_t                                    queueCount;
     uint32_t                                    maxAtomicCounters;
     bool32_t                                    supportsTimestamps;
     uint32_t                                    maxMemReferences;           // Tells how many memory references can be active for the given queue
-} VK_PHYSICAL_GPU_QUEUE_PROPERTIES;
+} VkPhysicalGpuQueueProperties;
 
-typedef struct _VK_PHYSICAL_GPU_MEMORY_PROPERTIES
+typedef struct VkPhysicalGpuMemoryProperties_
 {
     bool32_t                                    supportsMigration;
     bool32_t                                    supportsPinning;
-} VK_PHYSICAL_GPU_MEMORY_PROPERTIES;
+} VkPhysicalGpuMemoryProperties;
 
 typedef struct _VkMemoryAllocInfo
 {
-    VK_STRUCTURE_TYPE                           sType;                      // Must be VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO
+    VkStructureType                           sType;                      // Must be VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO
     const void*                                 pNext;                      // Pointer to next structure
-    VK_GPU_SIZE                                 allocationSize;             // Size of memory allocation
-    VK_FLAGS                                    memProps;                   // VK_MEMORY_PROPERTY_FLAGS
-    VK_MEMORY_TYPE                              memType;
-    VK_MEMORY_PRIORITY                          memPriority;
+    VkGpuSize                                 allocationSize;             // Size of memory allocation
+    VkFlags                                    memProps;                   // VkMemoryPropertyFlags
+    VkMemoryType                              memType;
+    VkMemoryPriority                          memPriority;
 } VkMemoryAllocInfo;
 
 // This structure is included in the VkMemoryAllocInfo chain
 // for memory regions allocated for buffer usage.
 typedef struct _VkMemoryAllocBufferInfo
 {
-    VK_STRUCTURE_TYPE                           sType;                      // Must be VK_STRUCTURE_TYPE_MEMORY_ALLOC_BUFFER_INFO
+    VkStructureType                           sType;                      // Must be VK_STRUCTURE_TYPE_MEMORY_ALLOC_BUFFER_INFO
     const void*                                 pNext;                      // Pointer to next structure
-    VK_FLAGS                                    usage;                      // VK_BUFFER_USAGE_FLAGS
+    VkFlags                                    usage;                      // VkBufferUsageFlags
 } VkMemoryAllocBufferInfo;
 
 // This structure is included in the VkMemoryAllocInfo chain
 // for memory regions allocated for image usage.
 typedef struct _VkMemoryAllocImageInfo
 {
-    VK_STRUCTURE_TYPE                           sType;                      // Must be VK_STRUCTURE_TYPE_MEMORY_ALLOC_IMAGE_INFO
+    VkStructureType                           sType;                      // Must be VK_STRUCTURE_TYPE_MEMORY_ALLOC_IMAGE_INFO
     const void*                                 pNext;                      // Pointer to next structure
-    VK_FLAGS                                    usage;                      // VK_IMAGE_USAGE_FLAGS
-    VK_IMAGE_FORMAT_CLASS                       formatClass;
+    VkFlags                                    usage;                      // VkImageUsageFlags
+    VkImageFormatClass                       formatClass;
     uint32_t                                    samples;
 } VkMemoryAllocImageInfo;
 
-typedef struct _VK_MEMORY_OPEN_INFO
+typedef struct VkMemoryOpenInfo_
 {
-    VK_STRUCTURE_TYPE                           sType;                      // Must be VK_STRUCTURE_TYPE_MEMORY_OPEN_INFO
+    VkStructureType                           sType;                      // Must be VK_STRUCTURE_TYPE_MEMORY_OPEN_INFO
     const void*                                 pNext;                      // Pointer to next structure
-    VK_GPU_MEMORY                               sharedMem;
-} VK_MEMORY_OPEN_INFO;
+    VkGpuMemory                               sharedMem;
+} VkMemoryOpenInfo;
 
-typedef struct _VK_PEER_MEMORY_OPEN_INFO
+typedef struct VkPeerMemoryOpenInfo_
 {
-    VK_STRUCTURE_TYPE                           sType;                      // Must be VK_STRUCTURE_TYPE_PEER_MEMORY_OPEN_INFO
+    VkStructureType                           sType;                      // Must be VK_STRUCTURE_TYPE_PEER_MEMORY_OPEN_INFO
     const void*                                 pNext;                      // Pointer to next structure
-    VK_GPU_MEMORY                               originalMem;
-} VK_PEER_MEMORY_OPEN_INFO;
+    VkGpuMemory                               originalMem;
+} VkPeerMemoryOpenInfo;
 
-typedef struct _VK_MEMORY_REQUIREMENTS
+typedef struct VkMemoryRequirements_
 {
-    VK_GPU_SIZE                                 size;                       // Specified in bytes
-    VK_GPU_SIZE                                 alignment;                  // Specified in bytes
-    VK_GPU_SIZE                                 granularity;                // Granularity on which vkBindObjectMemoryRange can bind sub-ranges of memory specified in bytes (usually the page size)
-    VK_FLAGS                                    memProps;                   // VK_MEMORY_PROPERTY_FLAGS
-    VK_MEMORY_TYPE                              memType;
-} VK_MEMORY_REQUIREMENTS;
+    VkGpuSize                                 size;                       // Specified in bytes
+    VkGpuSize                                 alignment;                  // Specified in bytes
+    VkGpuSize                                 granularity;                // Granularity on which vkBindObjectMemoryRange can bind sub-ranges of memory specified in bytes (usually the page size)
+    VkFlags                                    memProps;                   // VkMemoryPropertyFlags
+    VkMemoryType                              memType;
+} VkMemoryRequirements;
 
-typedef struct _VK_BUFFER_MEMORY_REQUIREMENTS
+typedef struct VkBufferMemoryRequirements_
 {
-    VK_FLAGS                                    usage;                      // VK_BUFFER_USAGE_FLAGS
-} VK_BUFFER_MEMORY_REQUIREMENTS;
+    VkFlags                                    usage;                      // VkBufferUsageFlags
+} VkBufferMemoryRequirements;
 
-typedef struct _VK_IMAGE_MEMORY_REQUIREMENTS
+typedef struct VkImageMemoryRequirements_
 {
-    VK_FLAGS                                    usage;                      // VK_IMAGE_USAGE_FLAGS
-    VK_IMAGE_FORMAT_CLASS                       formatClass;
+    VkFlags                                    usage;                      // VkImageUsageFlags
+    VkImageFormatClass                       formatClass;
     uint32_t                                    samples;
-} VK_IMAGE_MEMORY_REQUIREMENTS;
+} VkImageMemoryRequirements;
 
-typedef struct _VK_FORMAT_PROPERTIES
+typedef struct VkFormatProperties_
 {
-    VK_FLAGS                                    linearTilingFeatures;      // VK_FORMAT_FEATURE_FLAGS
-    VK_FLAGS                                    optimalTilingFeatures;     // VK_FORMAT_FEATURE_FLAGS
-} VK_FORMAT_PROPERTIES;
+    VkFlags                                    linearTilingFeatures;      // VkFormatFeatureFlags
+    VkFlags                                    optimalTilingFeatures;     // VkFormatFeatureFlags
+} VkFormatProperties;
 
-typedef struct _VK_BUFFER_VIEW_ATTACH_INFO
+typedef struct VkBufferViewAttachInfo_
 {
-    VK_STRUCTURE_TYPE                           sType;                      // Must be VK_STRUCTURE_TYPE_BUFFER_VIEW_ATTACH_INFO
+    VkStructureType                           sType;                      // Must be VK_STRUCTURE_TYPE_BUFFER_VIEW_ATTACH_INFO
     const void*                                 pNext;                      // Pointer to next structure
-    VK_BUFFER_VIEW                              view;
-} VK_BUFFER_VIEW_ATTACH_INFO;
+    VkBufferView                              view;
+} VkBufferViewAttachInfo;
 
-typedef struct _VK_IMAGE_VIEW_ATTACH_INFO
+typedef struct VkImageViewAttachInfo_
 {
-    VK_STRUCTURE_TYPE                           sType;                      // Must be VK_STRUCTURE_TYPE_IMAGE_VIEW_ATTACH_INFO
+    VkStructureType                           sType;                      // Must be VK_STRUCTURE_TYPE_IMAGE_VIEW_ATTACH_INFO
     const void*                                 pNext;                      // Pointer to next structure
-    VK_IMAGE_VIEW                               view;
-    VK_IMAGE_LAYOUT                             layout;
-} VK_IMAGE_VIEW_ATTACH_INFO;
+    VkImageView                               view;
+    VkImageLayout                             layout;
+} VkImageViewAttachInfo;
 
-typedef struct _VK_UPDATE_SAMPLERS
+typedef struct VkUpdateSamplers_
 {
-    VK_STRUCTURE_TYPE                           sType;                      // Must be VK_STRUCTURE_TYPE_UPDATE_SAMPLERS
+    VkStructureType                           sType;                      // Must be VK_STRUCTURE_TYPE_UPDATE_SAMPLERS
     const void*                                 pNext;                      // Pointer to next structure
     uint32_t                                    binding;                    // Binding of the sampler (array)
     uint32_t                                    arrayIndex;                 // First element of the array to update or zero otherwise
     uint32_t                                    count;                      // Number of elements to update
-    const VK_SAMPLER*                           pSamplers;
-} VK_UPDATE_SAMPLERS;
+    const VkSampler*                           pSamplers;
+} VkUpdateSamplers;
 
-typedef struct _VK_SAMPLER_IMAGE_VIEW_INFO
+typedef struct VkSamplerImageViewInfo_
 {
-    VK_SAMPLER                                  sampler;
-    const VK_IMAGE_VIEW_ATTACH_INFO*            pImageView;
-} VK_SAMPLER_IMAGE_VIEW_INFO;
+    VkSampler                                  sampler;
+    const VkImageViewAttachInfo*            pImageView;
+} VkSamplerImageViewInfo;
 
-typedef struct _VK_UPDATE_SAMPLER_TEXTURES
+typedef struct VkUpdateSamplerTextures_
 {
-    VK_STRUCTURE_TYPE                           sType;                      // Must be VK_STRUCTURE_TYPE_UPDATE_SAMPLER_TEXTURES
+    VkStructureType                           sType;                      // Must be VK_STRUCTURE_TYPE_UPDATE_SAMPLER_TEXTURES
     const void*                                 pNext;                      // Pointer to next structure
     uint32_t                                    binding;                    // Binding of the combined texture sampler (array)
     uint32_t                                    arrayIndex;                 // First element of the array to update or zero otherwise
     uint32_t                                    count;                      // Number of elements to update
-    const VK_SAMPLER_IMAGE_VIEW_INFO*           pSamplerImageViews;
-} VK_UPDATE_SAMPLER_TEXTURES;
+    const VkSamplerImageViewInfo*           pSamplerImageViews;
+} VkUpdateSamplerTextures;
 
-typedef struct _VK_UPDATE_IMAGES
+typedef struct VkUpdateImages_
 {
-    VK_STRUCTURE_TYPE                           sType;                     // Must be VK_STRUCTURE_TYPE_UPDATE_IMAGES
+    VkStructureType                           sType;                     // Must be VK_STRUCTURE_TYPE_UPDATE_IMAGES
     const void*                                 pNext;                     // Pointer to next structure
-    VK_DESCRIPTOR_TYPE                          descriptorType;
+    VkDescriptorType                          descriptorType;
     uint32_t                                    binding;                   // Binding of the image (array)
     uint32_t                                    arrayIndex;                // First element of the array to update or zero otherwise
     uint32_t                                    count;                     // Number of elements to update
-    const VK_IMAGE_VIEW_ATTACH_INFO*            pImageViews;
-} VK_UPDATE_IMAGES;
+    const VkImageViewAttachInfo*            pImageViews;
+} VkUpdateImages;
 
-typedef struct _VK_UPDATE_BUFFERS
+typedef struct VkUpdateBuffers_
 {
-    VK_STRUCTURE_TYPE                           sType;                    // Must be VK_STRUCTURE_TYPE_UPDATE_BUFFERS
+    VkStructureType                           sType;                    // Must be VK_STRUCTURE_TYPE_UPDATE_BUFFERS
     const void*                                 pNext;                    // Pointer to next structure
-    VK_DESCRIPTOR_TYPE                          descriptorType;
+    VkDescriptorType                          descriptorType;
     uint32_t                                    binding;                  // Binding of the buffer (array)
     uint32_t                                    arrayIndex;               // First element of the array to update or zero otherwise
     uint32_t                                    count;                    // Number of elements to update
-    const VK_BUFFER_VIEW_ATTACH_INFO*           pBufferViews;
-} VK_UPDATE_BUFFERS;
+    const VkBufferViewAttachInfo*           pBufferViews;
+} VkUpdateBuffers;
 
-typedef struct _VK_UPDATE_AS_COPY
+typedef struct VkUpdateAsCopy_
 {
-    VK_STRUCTURE_TYPE                           sType;                      // Must be VK_STRUCTURE_TYPE_UPDATE_AS_COPY
+    VkStructureType                           sType;                      // Must be VK_STRUCTURE_TYPE_UPDATE_AS_COPY
     const void*                                 pNext;                      // Pointer to next structure
-    VK_DESCRIPTOR_TYPE                          descriptorType;
-    VK_DESCRIPTOR_SET                           descriptorSet;
+    VkDescriptorType                          descriptorType;
+    VkDescriptorSet                           descriptorSet;
     uint32_t                                    binding;
     uint32_t                                    arrayElement;
     uint32_t                                    count;
-} VK_UPDATE_AS_COPY;
+} VkUpdateAsCopy;
 
 typedef struct _VkBufferCreateInfo
 {
-    VK_STRUCTURE_TYPE                           sType;                      // Must be VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO
+    VkStructureType                           sType;                      // Must be VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO
     const void*                                 pNext;                      // Pointer to next structure.
-    VK_GPU_SIZE                                 size;                       // Specified in bytes
-    VK_FLAGS                                    usage;                      // VK_BUFFER_USAGE_FLAGS
-    VK_FLAGS                                    flags;                      // VK_BUFFER_CREATE_FLAGS
+    VkGpuSize                                 size;                       // Specified in bytes
+    VkFlags                                    usage;                      // VkBufferUsageFlags
+    VkFlags                                    flags;                      // VkBufferCreateFlags
 } VkBufferCreateInfo;
 
 typedef struct _VkBufferViewCreateInfo
 {
-    VK_STRUCTURE_TYPE                           sType;                      // Must be VK_STRUCTURE_TYPE_BUFFER_VIEW_CREATE_INFO
+    VkStructureType                           sType;                      // Must be VK_STRUCTURE_TYPE_BUFFER_VIEW_CREATE_INFO
     const void*                                 pNext;                      // Pointer to next structure.
-    VK_BUFFER                                   buffer;
-    VK_BUFFER_VIEW_TYPE                         viewType;
-    VK_FORMAT                                   format;                     // Optionally specifies format of elements
-    VK_GPU_SIZE                                 offset;                     // Specified in bytes
-    VK_GPU_SIZE                                 range;                      // View size specified in bytes
+    VkBuffer                                   buffer;
+    VkBufferViewType                         viewType;
+    VkFormat                                   format;                     // Optionally specifies format of elements
+    VkGpuSize                                 offset;                     // Specified in bytes
+    VkGpuSize                                 range;                      // View size specified in bytes
 } VkBufferViewCreateInfo;
 
-typedef struct _VK_IMAGE_SUBRESOURCE
+typedef struct VkImageSubresource_
 {
-    VK_IMAGE_ASPECT                             aspect;
+    VkImageAspect                             aspect;
     uint32_t                                    mipLevel;
     uint32_t                                    arraySlice;
-} VK_IMAGE_SUBRESOURCE;
+} VkImageSubresource;
 
-typedef struct _VK_IMAGE_SUBRESOURCE_RANGE
+typedef struct VkImageSubresourceRange_
 {
-    VK_IMAGE_ASPECT                             aspect;
+    VkImageAspect                             aspect;
     uint32_t                                    baseMipLevel;
     uint32_t                                    mipLevels;
     uint32_t                                    baseArraySlice;
     uint32_t                                    arraySize;
-} VK_IMAGE_SUBRESOURCE_RANGE;
+} VkImageSubresourceRange;
 
-typedef struct _VK_EVENT_WAIT_INFO
+typedef struct VkEventWaitInfo_
 {
-    VK_STRUCTURE_TYPE                           sType;                      // Must be VK_STRUCTURE_TYPE_EVENT_WAIT_INFO
+    VkStructureType                           sType;                      // Must be VK_STRUCTURE_TYPE_EVENT_WAIT_INFO
     const void*                                 pNext;                      // Pointer to next structure.
 
     uint32_t                                    eventCount;                 // Number of events to wait on
-    const VK_EVENT*                             pEvents;                    // Array of event objects to wait on
+    const VkEvent*                             pEvents;                    // Array of event objects to wait on
 
-    VK_WAIT_EVENT                               waitEvent;                  // Pipeline event where the wait should happen
+    VkWaitEvent                               waitEvent;                  // Pipeline event where the wait should happen
 
     uint32_t                                    memBarrierCount;            // Number of memory barriers
-    const void**                                ppMemBarriers;              // Array of pointers to memory barriers (any of them can be either VK_MEMORY_BARRIER, VK_BUFFER_MEMORY_BARRIER, or VK_IMAGE_MEMORY_BARRIER)
-} VK_EVENT_WAIT_INFO;
+    const void**                                ppMemBarriers;              // Array of pointers to memory barriers (any of them can be either VkMemoryBarrier, VkBufferMemoryBarrier, or VkImageMemoryBarrier)
+} VkEventWaitInfo;
 
-typedef struct _VK_PIPELINE_BARRIER
+typedef struct VkPipelineBarrier_
 {
-    VK_STRUCTURE_TYPE                           sType;                      // Must be VK_STRUCTURE_TYPE_PIPELINE_BARRIER
+    VkStructureType                           sType;                      // Must be VK_STRUCTURE_TYPE_PIPELINE_BARRIER
     const void*                                 pNext;                      // Pointer to next structure.
 
     uint32_t                                    eventCount;                 // Number of events to wait on
-    const VK_PIPE_EVENT*                        pEvents;                    // Array of pipeline events to wait on
+    const VkPipeEvent*                        pEvents;                    // Array of pipeline events to wait on
 
-    VK_WAIT_EVENT                               waitEvent;                  // Pipeline event where the wait should happen
+    VkWaitEvent                               waitEvent;                  // Pipeline event where the wait should happen
 
     uint32_t                                    memBarrierCount;            // Number of memory barriers
-    const void**                                ppMemBarriers;              // Array of pointers to memory barriers (any of them can be either VK_MEMORY_BARRIER, VK_BUFFER_MEMORY_BARRIER, or VK_IMAGE_MEMORY_BARRIER)
-} VK_PIPELINE_BARRIER;
+    const void**                                ppMemBarriers;              // Array of pointers to memory barriers (any of them can be either VkMemoryBarrier, VkBufferMemoryBarrier, or VkImageMemoryBarrier)
+} VkPipelineBarrier;
 
-typedef struct _VK_MEMORY_BARRIER
+typedef struct VkMemoryBarrier_
 {
-    VK_STRUCTURE_TYPE                           sType;                      // Must be VK_STRUCTURE_TYPE_MEMORY_BARRIER
+    VkStructureType                           sType;                      // Must be VK_STRUCTURE_TYPE_MEMORY_BARRIER
     const void*                                 pNext;                      // Pointer to next structure.
 
-    VK_FLAGS                                    outputMask;                 // Outputs the barrier should sync (see VK_MEMORY_OUTPUT_FLAGS)
-    VK_FLAGS                                    inputMask;                  // Inputs the barrier should sync to (see VK_MEMORY_INPUT_FLAGS)
-} VK_MEMORY_BARRIER;
+    VkFlags                                    outputMask;                 // Outputs the barrier should sync (see VkMemoryOutputFlags)
+    VkFlags                                    inputMask;                  // Inputs the barrier should sync to (see VkMemoryInputFlags)
+} VkMemoryBarrier;
 
-typedef struct _VK_BUFFER_MEMORY_BARRIER
+typedef struct VkBufferMemoryBarrier_
 {
-    VK_STRUCTURE_TYPE                           sType;                      // Must be VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER
+    VkStructureType                           sType;                      // Must be VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER
     const void*                                 pNext;                      // Pointer to next structure.
 
-    VK_FLAGS                                    outputMask;                 // Outputs the barrier should sync (see VK_MEMORY_OUTPUT_FLAGS)
-    VK_FLAGS                                    inputMask;                  // Inputs the barrier should sync to (see VK_MEMORY_INPUT_FLAGS)
+    VkFlags                                    outputMask;                 // Outputs the barrier should sync (see VkMemoryOutputFlags)
+    VkFlags                                    inputMask;                  // Inputs the barrier should sync to (see VkMemoryInputFlags)
 
-    VK_BUFFER                                   buffer;                     // Buffer to sync
+    VkBuffer                                   buffer;                     // Buffer to sync
 
-    VK_GPU_SIZE                                 offset;                     // Offset within the buffer to sync
-    VK_GPU_SIZE                                 size;                       // Amount of bytes to sync
-} VK_BUFFER_MEMORY_BARRIER;
+    VkGpuSize                                 offset;                     // Offset within the buffer to sync
+    VkGpuSize                                 size;                       // Amount of bytes to sync
+} VkBufferMemoryBarrier;
 
-typedef struct _VK_IMAGE_MEMORY_BARRIER
+typedef struct VkImageMemoryBarrier_
 {
-    VK_STRUCTURE_TYPE                           sType;                      // Must be VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER
+    VkStructureType                           sType;                      // Must be VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER
     const void*                                 pNext;                      // Pointer to next structure.
 
-    VK_FLAGS                                    outputMask;                 // Outputs the barrier should sync (see VK_MEMORY_OUTPUT_FLAGS)
-    VK_FLAGS                                    inputMask;                  // Inputs the barrier should sync to (see VK_MEMORY_INPUT_FLAGS)
+    VkFlags                                    outputMask;                 // Outputs the barrier should sync (see VkMemoryOutputFlags)
+    VkFlags                                    inputMask;                  // Inputs the barrier should sync to (see VkMemoryInputFlags)
 
-    VK_IMAGE_LAYOUT                             oldLayout;                  // Current layout of the image
-    VK_IMAGE_LAYOUT                             newLayout;                  // New layout to transition the image to
+    VkImageLayout                             oldLayout;                  // Current layout of the image
+    VkImageLayout                             newLayout;                  // New layout to transition the image to
 
-    VK_IMAGE                                    image;                      // Image to sync
+    VkImage                                    image;                      // Image to sync
 
-    VK_IMAGE_SUBRESOURCE_RANGE                  subresourceRange;           // Subresource range to sync
-} VK_IMAGE_MEMORY_BARRIER;
+    VkImageSubresourceRange                  subresourceRange;           // Subresource range to sync
+} VkImageMemoryBarrier;
 
-typedef struct _VK_IMAGE_CREATE_INFO
+typedef struct VkImageCreateInfo_
 {
-    VK_STRUCTURE_TYPE                           sType;                      // Must be VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO
+    VkStructureType                           sType;                      // Must be VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO
     const void*                                 pNext;                      // Pointer to next structure.
-    VK_IMAGE_TYPE                               imageType;
-    VK_FORMAT                                   format;
-    VK_EXTENT3D                                 extent;
+    VkImageType                               imageType;
+    VkFormat                                   format;
+    VkExtent3D                                 extent;
     uint32_t                                    mipLevels;
     uint32_t                                    arraySize;
     uint32_t                                    samples;
-    VK_IMAGE_TILING                             tiling;
-    VK_FLAGS                                    usage;                      // VK_IMAGE_USAGE_FLAGS
-    VK_FLAGS                                    flags;                      // VK_IMAGE_CREATE_FLAGS
-} VK_IMAGE_CREATE_INFO;
+    VkImageTiling                             tiling;
+    VkFlags                                    usage;                      // VkImageUsageFlags
+    VkFlags                                    flags;                      // VkImageCreateFlags
+} VkImageCreateInfo;
 
-typedef struct _VK_PEER_IMAGE_OPEN_INFO
+typedef struct VkPeerImageOpenInfo_
 {
-    VK_IMAGE                                    originalImage;
-} VK_PEER_IMAGE_OPEN_INFO;
+    VkImage                                    originalImage;
+} VkPeerImageOpenInfo;
 
-typedef struct _VK_SUBRESOURCE_LAYOUT
+typedef struct VkSubresourceLayout_
 {
-    VK_GPU_SIZE                                 offset;                 // Specified in bytes
-    VK_GPU_SIZE                                 size;                   // Specified in bytes
-    VK_GPU_SIZE                                 rowPitch;               // Specified in bytes
-    VK_GPU_SIZE                                 depthPitch;             // Specified in bytes
-} VK_SUBRESOURCE_LAYOUT;
+    VkGpuSize                                 offset;                 // Specified in bytes
+    VkGpuSize                                 size;                   // Specified in bytes
+    VkGpuSize                                 rowPitch;               // Specified in bytes
+    VkGpuSize                                 depthPitch;             // Specified in bytes
+} VkSubresourceLayout;
 
-typedef struct _VK_IMAGE_VIEW_CREATE_INFO
+typedef struct VkImageViewCreateInfo_
 {
-    VK_STRUCTURE_TYPE                           sType;                  // Must be VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO
+    VkStructureType                           sType;                  // Must be VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO
     const void*                                 pNext;                  // Pointer to next structure
-    VK_IMAGE                                    image;
-    VK_IMAGE_VIEW_TYPE                          viewType;
-    VK_FORMAT                                   format;
-    VK_CHANNEL_MAPPING                          channels;
-    VK_IMAGE_SUBRESOURCE_RANGE                  subresourceRange;
+    VkImage                                    image;
+    VkImageViewType                          viewType;
+    VkFormat                                   format;
+    VkChannelMapping                          channels;
+    VkImageSubresourceRange                  subresourceRange;
     float                                       minLod;
-} VK_IMAGE_VIEW_CREATE_INFO;
+} VkImageViewCreateInfo;
 
-typedef struct _VK_COLOR_ATTACHMENT_VIEW_CREATE_INFO
+typedef struct VkColorAttachmentViewCreateInfo_
 {
-    VK_STRUCTURE_TYPE                           sType;                  // Must be VK_STRUCTURE_TYPE_COLOR_ATTACHMENT_VIEW_CREATE_INFO
+    VkStructureType                           sType;                  // Must be VK_STRUCTURE_TYPE_COLOR_ATTACHMENT_VIEW_CREATE_INFO
     const void*                                 pNext;                  // Pointer to next structure
-    VK_IMAGE                                    image;
-    VK_FORMAT                                   format;
+    VkImage                                    image;
+    VkFormat                                   format;
     uint32_t                                    mipLevel;
     uint32_t                                    baseArraySlice;
     uint32_t                                    arraySize;
-    VK_IMAGE                                    msaaResolveImage;
-    VK_IMAGE_SUBRESOURCE_RANGE                  msaaResolveSubResource;
-} VK_COLOR_ATTACHMENT_VIEW_CREATE_INFO;
+    VkImage                                    msaaResolveImage;
+    VkImageSubresourceRange                  msaaResolveSubResource;
+} VkColorAttachmentViewCreateInfo;
 
-typedef struct _VK_DEPTH_STENCIL_VIEW_CREATE_INFO
+typedef struct VkDepthStencilViewCreateInfo_
 {
-    VK_STRUCTURE_TYPE                           sType;                  // Must be VK_STRUCTURE_TYPE_DEPTH_STENCIL_VIEW_CREATE_INFO
+    VkStructureType                           sType;                  // Must be VK_STRUCTURE_TYPE_DEPTH_STENCIL_VIEW_CREATE_INFO
     const void*                                 pNext;                  // Pointer to next structure
-    VK_IMAGE                                    image;
+    VkImage                                    image;
     uint32_t                                    mipLevel;
     uint32_t                                    baseArraySlice;
     uint32_t                                    arraySize;
-    VK_IMAGE                                    msaaResolveImage;
-    VK_IMAGE_SUBRESOURCE_RANGE                  msaaResolveSubResource;
-    VK_FLAGS                                    flags;                  // VK_DEPTH_STENCIL_VIEW_CREATE_FLAGS
-} VK_DEPTH_STENCIL_VIEW_CREATE_INFO;
+    VkImage                                    msaaResolveImage;
+    VkImageSubresourceRange                  msaaResolveSubResource;
+    VkFlags                                    flags;                  // VkDepthStencilViewCreateFlags
+} VkDepthStencilViewCreateInfo;
 
-typedef struct _VK_COLOR_ATTACHMENT_BIND_INFO
+typedef struct VkColorAttachmentBindInfo_
 {
-    VK_COLOR_ATTACHMENT_VIEW                    view;
-    VK_IMAGE_LAYOUT                             layout;
-} VK_COLOR_ATTACHMENT_BIND_INFO;
+    VkColorAttachmentView                    view;
+    VkImageLayout                             layout;
+} VkColorAttachmentBindInfo;
 
-typedef struct _VK_DEPTH_STENCIL_BIND_INFO
+typedef struct VkDepthStencilBindInfo_
 {
-    VK_DEPTH_STENCIL_VIEW                       view;
-    VK_IMAGE_LAYOUT                             layout;
-} VK_DEPTH_STENCIL_BIND_INFO;
+    VkDepthStencilView                       view;
+    VkImageLayout                             layout;
+} VkDepthStencilBindInfo;
 
-typedef struct _VK_BUFFER_COPY
+typedef struct VkBufferCopy_
 {
-    VK_GPU_SIZE                                 srcOffset;              // Specified in bytes
-    VK_GPU_SIZE                                 destOffset;             // Specified in bytes
-    VK_GPU_SIZE                                 copySize;               // Specified in bytes
-} VK_BUFFER_COPY;
+    VkGpuSize                                 srcOffset;              // Specified in bytes
+    VkGpuSize                                 destOffset;             // Specified in bytes
+    VkGpuSize                                 copySize;               // Specified in bytes
+} VkBufferCopy;
 
-typedef struct _VK_IMAGE_MEMORY_BIND_INFO
+typedef struct VkImageMemoryBindInfo_
 {
-    VK_IMAGE_SUBRESOURCE                        subresource;
-    VK_OFFSET3D                                 offset;
-    VK_EXTENT3D                                 extent;
-} VK_IMAGE_MEMORY_BIND_INFO;
+    VkImageSubresource                        subresource;
+    VkOffset3D                                 offset;
+    VkExtent3D                                 extent;
+} VkImageMemoryBindInfo;
 
-typedef struct _VK_IMAGE_COPY
+typedef struct VkImageCopy_
 {
-    VK_IMAGE_SUBRESOURCE                        srcSubresource;
-    VK_OFFSET3D                                 srcOffset;
-    VK_IMAGE_SUBRESOURCE                        destSubresource;
-    VK_OFFSET3D                                 destOffset;
-    VK_EXTENT3D                                 extent;
-} VK_IMAGE_COPY;
+    VkImageSubresource                        srcSubresource;
+    VkOffset3D                                 srcOffset;
+    VkImageSubresource                        destSubresource;
+    VkOffset3D                                 destOffset;
+    VkExtent3D                                 extent;
+} VkImageCopy;
 
-typedef struct _VK_IMAGE_BLIT
+typedef struct VkImageBlit_
 {
-    VK_IMAGE_SUBRESOURCE                        srcSubresource;
-    VK_OFFSET3D                                 srcOffset;
-    VK_EXTENT3D                                 srcExtent;
-    VK_IMAGE_SUBRESOURCE                        destSubresource;
-    VK_OFFSET3D                                 destOffset;
-    VK_EXTENT3D                                 destExtent;
-} VK_IMAGE_BLIT;
+    VkImageSubresource                        srcSubresource;
+    VkOffset3D                                 srcOffset;
+    VkExtent3D                                 srcExtent;
+    VkImageSubresource                        destSubresource;
+    VkOffset3D                                 destOffset;
+    VkExtent3D                                 destExtent;
+} VkImageBlit;
 
-typedef struct _VK_BUFFER_IMAGE_COPY
+typedef struct VkBufferImageCopy_
 {
-    VK_GPU_SIZE                                 bufferOffset;           // Specified in bytes
-    VK_IMAGE_SUBRESOURCE                        imageSubresource;
-    VK_OFFSET3D                                 imageOffset;
-    VK_EXTENT3D                                 imageExtent;
-} VK_BUFFER_IMAGE_COPY;
+    VkGpuSize                                 bufferOffset;           // Specified in bytes
+    VkImageSubresource                        imageSubresource;
+    VkOffset3D                                 imageOffset;
+    VkExtent3D                                 imageExtent;
+} VkBufferImageCopy;
 
-typedef struct _VK_IMAGE_RESOLVE
+typedef struct VkImageResolve_
 {
-    VK_IMAGE_SUBRESOURCE                        srcSubresource;
-    VK_OFFSET2D                                 srcOffset;
-    VK_IMAGE_SUBRESOURCE                        destSubresource;
-    VK_OFFSET2D                                 destOffset;
-    VK_EXTENT2D                                 extent;
-} VK_IMAGE_RESOLVE;
+    VkImageSubresource                        srcSubresource;
+    VkOffset2D                                 srcOffset;
+    VkImageSubresource                        destSubresource;
+    VkOffset2D                                 destOffset;
+    VkExtent2D                                 extent;
+} VkImageResolve;
 
-typedef struct _VK_SHADER_CREATE_INFO
+typedef struct VkShaderCreateInfo_
 {
-    VK_STRUCTURE_TYPE                           sType;              // Must be VK_STRUCTURE_TYPE_SHADER_CREATE_INFO
+    VkStructureType                           sType;              // Must be VK_STRUCTURE_TYPE_SHADER_CREATE_INFO
     const void*                                 pNext;              // Pointer to next structure
     size_t                                      codeSize;           // Specified in bytes
     const void*                                 pCode;
-    VK_FLAGS                                    flags;              // Reserved
-} VK_SHADER_CREATE_INFO;
+    VkFlags                                    flags;              // Reserved
+} VkShaderCreateInfo;
 
-typedef struct _VK_DESCRIPTOR_SET_LAYOUT_BINDING
+typedef struct VkDescriptorSetLayoutBinding_
 {
-    VK_DESCRIPTOR_TYPE                          descriptorType;
+    VkDescriptorType                          descriptorType;
     uint32_t                                    count;
-    VK_FLAGS                                    stageFlags;         // VK_SHADER_STAGE_FLAGS
-    const VK_SAMPLER*                           pImmutableSamplers;
-} VK_DESCRIPTOR_SET_LAYOUT_BINDING;
+    VkFlags                                    stageFlags;         // VkShaderStageFlags
+    const VkSampler*                           pImmutableSamplers;
+} VkDescriptorSetLayoutBinding;
 
-typedef struct _VK_DESCRIPTOR_SET_LAYOUT_CREATE_INFO
+typedef struct VkDescriptorSetLayoutCreateInfo_
 {
-    VK_STRUCTURE_TYPE                           sType;             // Must be VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO
+    VkStructureType                           sType;             // Must be VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO
     const void*                                 pNext;             // Pointer to next structure
     uint32_t                                    count;             // Number of bindings in the descriptor set layout
-    const VK_DESCRIPTOR_SET_LAYOUT_BINDING*     pBinding;          // Array of descriptor set layout bindings
-} VK_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+    const VkDescriptorSetLayoutBinding*     pBinding;          // Array of descriptor set layout bindings
+} VkDescriptorSetLayoutCreateInfo;
 
-typedef struct _VK_DESCRIPTOR_TYPE_COUNT
+typedef struct VkDescriptorTypeCount_
 {
-    VK_DESCRIPTOR_TYPE                          type;
+    VkDescriptorType                          type;
     uint32_t                                    count;
-} VK_DESCRIPTOR_TYPE_COUNT;
+} VkDescriptorTypeCount;
 
-typedef struct _VK_DESCRIPTOR_POOL_CREATE_INFO
+typedef struct VkDescriptorPoolCreateInfo_
 {
-    VK_STRUCTURE_TYPE                           sType;              // Must be VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO
+    VkStructureType                           sType;              // Must be VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO
     const void*                                 pNext;              // Pointer to next structure
     uint32_t                                    count;
-    const VK_DESCRIPTOR_TYPE_COUNT*             pTypeCount;
-} VK_DESCRIPTOR_POOL_CREATE_INFO;
+    const VkDescriptorTypeCount*             pTypeCount;
+} VkDescriptorPoolCreateInfo;
 
-typedef struct _VK_LINK_CONST_BUFFER
+typedef struct VkLinkConstBuffer_
 {
     uint32_t                                    bufferId;
     size_t                                      bufferSize;
     const void*                                 pBufferData;
-} VK_LINK_CONST_BUFFER;
+} VkLinkConstBuffer;
 
-typedef struct _VK_SPECIALIZATION_MAP_ENTRY
+typedef struct VkSpecializationMapEntry_
 {
     uint32_t                                    constantId;         // The SpecConstant ID specified in the BIL
     uint32_t                                    offset;             // Offset of the value in the data block
-} VK_SPECIALIZATION_MAP_ENTRY;
+} VkSpecializationMapEntry;
 
-typedef struct _VK_SPECIALIZATION_INFO
+typedef struct VkSpecializationInfo_
 {
     uint32_t                                    mapEntryCount;
-    const VK_SPECIALIZATION_MAP_ENTRY*          pMap;               // mapEntryCount entries
+    const VkSpecializationMapEntry*          pMap;               // mapEntryCount entries
     const void*                                 pData;
-} VK_SPECIALIZATION_INFO;
+} VkSpecializationInfo;
 
-typedef struct _VK_PIPELINE_SHADER
+typedef struct VkPipelineShader_
 {
-    VK_PIPELINE_SHADER_STAGE                    stage;
-    VK_SHADER                                   shader;
+    VkPipelineShaderStage                    stage;
+    VkShader                                   shader;
     uint32_t                                    linkConstBufferCount;
-    const VK_LINK_CONST_BUFFER*                 pLinkConstBufferInfo;
-    const VK_SPECIALIZATION_INFO*               pSpecializationInfo;
-} VK_PIPELINE_SHADER;
+    const VkLinkConstBuffer*                 pLinkConstBufferInfo;
+    const VkSpecializationInfo*               pSpecializationInfo;
+} VkPipelineShader;
 
-typedef struct _VK_COMPUTE_PIPELINE_CREATE_INFO
+typedef struct VkComputePipelineCreateInfo_
 {
-    VK_STRUCTURE_TYPE                           sType;      // Must be VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO
+    VkStructureType                           sType;      // Must be VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO
     const void*                                 pNext;      // Pointer to next structure
-    VK_PIPELINE_SHADER                          cs;
-    VK_FLAGS                                    flags;      // VK_PIPELINE_CREATE_FLAGS
-    VK_DESCRIPTOR_SET_LAYOUT_CHAIN              setLayoutChain;
+    VkPipelineShader                          cs;
+    VkFlags                                    flags;      // VkPipelineCreateFlags
+    VkDescriptorSetLayoutChain              setLayoutChain;
     uint32_t                                    localSizeX;
     uint32_t                                    localSizeY;
     uint32_t                                    localSizeZ;
 
-} VK_COMPUTE_PIPELINE_CREATE_INFO;
+} VkComputePipelineCreateInfo;
 
-typedef struct _VK_VERTEX_INPUT_BINDING_DESCRIPTION
+typedef struct VkVertexInputBindingDescription_
 {
     uint32_t                                    binding;        // Vertex buffer binding id
     uint32_t                                    strideInBytes;  // Distance between vertices in bytes (0  = no advancement)
 
-    VK_VERTEX_INPUT_STEP_RATE                   stepRate;       // Rate at which binding is incremented
-} VK_VERTEX_INPUT_BINDING_DESCRIPTION;
+    VkVertexInputStepRate                   stepRate;       // Rate at which binding is incremented
+} VkVertexInputBindingDescription;
 
-typedef struct _VK_VERTEX_INPUT_ATTRIBUTE_DESCRIPTION
+typedef struct VkVertexInputAttributeDescription_
 {
     uint32_t                                    location;       // location of the shader vertex attrib
     uint32_t                                    binding;        // Vertex buffer binding id
 
-    VK_FORMAT                                   format;         // format of source data
+    VkFormat                                   format;         // format of source data
 
     uint32_t                                    offsetInBytes;  // Offset of first element in bytes from base of vertex
-} VK_VERTEX_INPUT_ATTRIBUTE_DESCRIPTION;
+} VkVertexInputAttributeDescription;
 
-typedef struct _VK_PIPELINE_VERTEX_INPUT_CREATE_INFO
+typedef struct VkPipelineVertexInputCreateInfo_
 {
-    VK_STRUCTURE_TYPE                           sType;          // Should be VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_CREATE_INFO
+    VkStructureType                           sType;          // Should be VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_CREATE_INFO
     const void*                                 pNext;          // Pointer to next structure
 
     uint32_t                                    bindingCount;   // number of bindings
-    const VK_VERTEX_INPUT_BINDING_DESCRIPTION*  pVertexBindingDescriptions;
+    const VkVertexInputBindingDescription*  pVertexBindingDescriptions;
 
     uint32_t                                    attributeCount; // number of attributes
-    const VK_VERTEX_INPUT_ATTRIBUTE_DESCRIPTION* pVertexAttributeDescriptions;
-} VK_PIPELINE_VERTEX_INPUT_CREATE_INFO;
+    const VkVertexInputAttributeDescription* pVertexAttributeDescriptions;
+} VkPipelineVertexInputCreateInfo;
 
-typedef struct _VK_PIPELINE_IA_STATE_CREATE_INFO
+typedef struct VkPipelineIaStateCreateInfo_
 {
-    VK_STRUCTURE_TYPE                           sType;      // Must be VK_STRUCTURE_TYPE_PIPELINE_IA_STATE_CREATE_INFO
+    VkStructureType                           sType;      // Must be VK_STRUCTURE_TYPE_PIPELINE_IA_STATE_CREATE_INFO
     const void*                                 pNext;      // Pointer to next structure
-    VK_PRIMITIVE_TOPOLOGY                       topology;
+    VkPrimitiveTopology                       topology;
     bool32_t                                    disableVertexReuse;         // optional
     bool32_t                                    primitiveRestartEnable;
     uint32_t                                    primitiveRestartIndex;      // optional (GL45)
-} VK_PIPELINE_IA_STATE_CREATE_INFO;
+} VkPipelineIaStateCreateInfo;
 
-typedef struct _VK_PIPELINE_TESS_STATE_CREATE_INFO
+typedef struct VkPipelineTessStateCreateInfo_
 {
-    VK_STRUCTURE_TYPE                           sType;      // Must be VK_STRUCTURE_TYPE_PIPELINE_TESS_STATE_CREATE_INFO
+    VkStructureType                           sType;      // Must be VK_STRUCTURE_TYPE_PIPELINE_TESS_STATE_CREATE_INFO
     const void*                                 pNext;      // Pointer to next structure
     uint32_t                                    patchControlPoints;
-} VK_PIPELINE_TESS_STATE_CREATE_INFO;
+} VkPipelineTessStateCreateInfo;
 
-typedef struct _VK_PIPELINE_VP_STATE_CREATE_INFO
+typedef struct VkPipelineVpStateCreateInfo_
 {
-    VK_STRUCTURE_TYPE                           sType;      // Must be VK_STRUCTURE_TYPE_PIPELINE_VP_STATE_CREATE_INFO
+    VkStructureType                           sType;      // Must be VK_STRUCTURE_TYPE_PIPELINE_VP_STATE_CREATE_INFO
     const void*                                 pNext;      // Pointer to next structure
     uint32_t                                    numViewports;
-    VK_COORDINATE_ORIGIN                        clipOrigin;                 // optional (GL45)
-    VK_DEPTH_MODE                               depthMode;                  // optional (GL45)
-} VK_PIPELINE_VP_STATE_CREATE_INFO;
+    VkCoordinateOrigin                        clipOrigin;                 // optional (GL45)
+    VkDepthMode                               depthMode;                  // optional (GL45)
+} VkPipelineVpStateCreateInfo;
 
-typedef struct _VK_PIPELINE_RS_STATE_CREATE_INFO
+typedef struct VkPipelineRsStateCreateInfo_
 {
-    VK_STRUCTURE_TYPE                           sType;      // Must be VK_STRUCTURE_TYPE_PIPELINE_RS_STATE_CREATE_INFO
+    VkStructureType                           sType;      // Must be VK_STRUCTURE_TYPE_PIPELINE_RS_STATE_CREATE_INFO
     const void*                                 pNext;      // Pointer to next structure
     bool32_t                                    depthClipEnable;
     bool32_t                                    rasterizerDiscardEnable;
     bool32_t                                    programPointSize;           // optional (GL45)
-    VK_COORDINATE_ORIGIN                        pointOrigin;                // optional (GL45)
-    VK_PROVOKING_VERTEX_CONVENTION              provokingVertex;            // optional (GL45)
-    VK_FILL_MODE                                fillMode;                   // optional (GL45)
-    VK_CULL_MODE                                cullMode;
-    VK_FACE_ORIENTATION                         frontFace;
-} VK_PIPELINE_RS_STATE_CREATE_INFO;
+    VkCoordinateOrigin                        pointOrigin;                // optional (GL45)
+    VkProvokingVertexConvention              provokingVertex;            // optional (GL45)
+    VkFillMode                                fillMode;                   // optional (GL45)
+    VkCullMode                                cullMode;
+    VkFaceOrientation                         frontFace;
+} VkPipelineRsStateCreateInfo;
 
-typedef struct _VK_PIPELINE_MS_STATE_CREATE_INFO
+typedef struct VkPipelineMsStateCreateInfo_
 {
-    VK_STRUCTURE_TYPE                           sType;      // Must be VK_STRUCTURE_TYPE_PIPELINE_MS_STATE_CREATE_INFO
+    VkStructureType                           sType;      // Must be VK_STRUCTURE_TYPE_PIPELINE_MS_STATE_CREATE_INFO
     const void*                                 pNext;      // Pointer to next structure
     uint32_t                                    samples;
     bool32_t                                    multisampleEnable;          // optional (GL45)
     bool32_t                                    sampleShadingEnable;        // optional (GL45)
     float                                       minSampleShading;           // optional (GL45)
-    VK_SAMPLE_MASK                              sampleMask;
-} VK_PIPELINE_MS_STATE_CREATE_INFO;
+    VkSampleMask                              sampleMask;
+} VkPipelineMsStateCreateInfo;
 
-typedef struct _VK_PIPELINE_CB_ATTACHMENT_STATE
+typedef struct VkPipelineCbAttachmentState_
 {
     bool32_t                                    blendEnable;
-    VK_FORMAT                                   format;
-    VK_BLEND                                    srcBlendColor;
-    VK_BLEND                                    destBlendColor;
-    VK_BLEND_FUNC                               blendFuncColor;
-    VK_BLEND                                    srcBlendAlpha;
-    VK_BLEND                                    destBlendAlpha;
-    VK_BLEND_FUNC                               blendFuncAlpha;
+    VkFormat                                   format;
+    VkBlend                                    srcBlendColor;
+    VkBlend                                    destBlendColor;
+    VkBlendFunc                               blendFuncColor;
+    VkBlend                                    srcBlendAlpha;
+    VkBlend                                    destBlendAlpha;
+    VkBlendFunc                               blendFuncAlpha;
     uint8_t                                     channelWriteMask;
-} VK_PIPELINE_CB_ATTACHMENT_STATE;
+} VkPipelineCbAttachmentState;
 
-typedef struct _VK_PIPELINE_CB_STATE_CREATE_INFO
+typedef struct VkPipelineCbStateCreateInfo_
 {
-    VK_STRUCTURE_TYPE                           sType;      // Must be VK_STRUCTURE_TYPE_PIPELINE_CB_STATE_CREATE_INFO
+    VkStructureType                           sType;      // Must be VK_STRUCTURE_TYPE_PIPELINE_CB_STATE_CREATE_INFO
     const void*                                 pNext;      // Pointer to next structure
     bool32_t                                    alphaToCoverageEnable;
     bool32_t                                    logicOpEnable;
-    VK_LOGIC_OP                                 logicOp;
+    VkLogicOp                                 logicOp;
     uint32_t                                    attachmentCount;    // # of pAttachments
-    const VK_PIPELINE_CB_ATTACHMENT_STATE*      pAttachments;
-} VK_PIPELINE_CB_STATE_CREATE_INFO;
+    const VkPipelineCbAttachmentState*      pAttachments;
+} VkPipelineCbStateCreateInfo;
 
-typedef struct _VK_STENCIL_OP_STATE
+typedef struct VkStencilOpState_
 {
-    VK_STENCIL_OP                               stencilFailOp;
-    VK_STENCIL_OP                               stencilPassOp;
-    VK_STENCIL_OP                               stencilDepthFailOp;
-    VK_COMPARE_FUNC                             stencilFunc;
-} VK_STENCIL_OP_STATE;
+    VkStencilOp                               stencilFailOp;
+    VkStencilOp                               stencilPassOp;
+    VkStencilOp                               stencilDepthFailOp;
+    VkCompareFunc                             stencilFunc;
+} VkStencilOpState;
 
-typedef struct _VK_PIPELINE_DS_STATE_CREATE_INFO
+typedef struct VkPipelineDsStateCreateInfo_
 {
-    VK_STRUCTURE_TYPE                           sType;      // Must be VK_STRUCTURE_TYPE_PIPELINE_DS_STATE_CREATE_INFO
+    VkStructureType                           sType;      // Must be VK_STRUCTURE_TYPE_PIPELINE_DS_STATE_CREATE_INFO
     const void*                                 pNext;      // Pointer to next structure
-    VK_FORMAT                                   format;
+    VkFormat                                   format;
     bool32_t                                    depthTestEnable;
     bool32_t                                    depthWriteEnable;
-    VK_COMPARE_FUNC                             depthFunc;
+    VkCompareFunc                             depthFunc;
     bool32_t                                    depthBoundsEnable;          // optional (depth_bounds_test)
     bool32_t                                    stencilTestEnable;
-    VK_STENCIL_OP_STATE                         front;
-    VK_STENCIL_OP_STATE                         back;
-} VK_PIPELINE_DS_STATE_CREATE_INFO;
+    VkStencilOpState                         front;
+    VkStencilOpState                         back;
+} VkPipelineDsStateCreateInfo;
 
-typedef struct _VK_PIPELINE_SHADER_STAGE_CREATE_INFO
+typedef struct VkPipelineShaderStageCreateInfo_
 {
-    VK_STRUCTURE_TYPE                           sType;      // Must be VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO
+    VkStructureType                           sType;      // Must be VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO
     const void*                                 pNext;      // Pointer to next structure
-    VK_PIPELINE_SHADER                          shader;
-} VK_PIPELINE_SHADER_STAGE_CREATE_INFO;
+    VkPipelineShader                          shader;
+} VkPipelineShaderStageCreateInfo;
 
-typedef struct _VK_GRAPHICS_PIPELINE_CREATE_INFO
+typedef struct VkGraphicsPipelineCreateInfo_
 {
-    VK_STRUCTURE_TYPE                           sType;      // Must be VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO
+    VkStructureType                           sType;      // Must be VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO
     const void*                                 pNext;      // Pointer to next structure
-    VK_FLAGS                                    flags;      // VK_PIPELINE_CREATE_FLAGS
-    VK_DESCRIPTOR_SET_LAYOUT_CHAIN              pSetLayoutChain;
-} VK_GRAPHICS_PIPELINE_CREATE_INFO;
+    VkFlags                                    flags;      // VkPipelineCreateFlags
+    VkDescriptorSetLayoutChain              pSetLayoutChain;
+} VkGraphicsPipelineCreateInfo;
 
-typedef struct _VK_SAMPLER_CREATE_INFO
+typedef struct VkSamplerCreateInfo_
 {
-    VK_STRUCTURE_TYPE                           sType;          // Must be VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO
+    VkStructureType                           sType;          // Must be VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO
     const void*                                 pNext;          // Pointer to next structure
-    VK_TEX_FILTER                               magFilter;      // Filter mode for magnification
-    VK_TEX_FILTER                               minFilter;      // Filter mode for minifiation
-    VK_TEX_MIPMAP_MODE                          mipMode;        // Mipmap selection mode
-    VK_TEX_ADDRESS                              addressU;
-    VK_TEX_ADDRESS                              addressV;
-    VK_TEX_ADDRESS                              addressW;
+    VkTexFilter                               magFilter;      // Filter mode for magnification
+    VkTexFilter                               minFilter;      // Filter mode for minifiation
+    VkTexMipmapMode                          mipMode;        // Mipmap selection mode
+    VkTexAddress                              addressU;
+    VkTexAddress                              addressV;
+    VkTexAddress                              addressW;
     float                                       mipLodBias;
     uint32_t                                    maxAnisotropy;
-    VK_COMPARE_FUNC                             compareFunc;
+    VkCompareFunc                             compareFunc;
     float                                       minLod;
     float                                       maxLod;
-    VK_BORDER_COLOR_TYPE                        borderColorType;
-} VK_SAMPLER_CREATE_INFO;
+    VkBorderColorType                        borderColorType;
+} VkSamplerCreateInfo;
 
-typedef struct _VK_DYNAMIC_VP_STATE_CREATE_INFO
+typedef struct VkDynamicVpStateCreateInfo_
 {
-    VK_STRUCTURE_TYPE                           sType;      // Must be VK_STRUCTURE_TYPE_DYNAMIC_VP_STATE_CREATE_INFO
+    VkStructureType                           sType;      // Must be VK_STRUCTURE_TYPE_DYNAMIC_VP_STATE_CREATE_INFO
     const void*                                 pNext;      // Pointer to next structure
     uint32_t                                    viewportAndScissorCount;  // number of entries in pViewports and pScissors
-    const VK_VIEWPORT*                          pViewports;
-    const VK_RECT*                              pScissors;
-} VK_DYNAMIC_VP_STATE_CREATE_INFO;
+    const VkViewport*                          pViewports;
+    const VkRect*                              pScissors;
+} VkDynamicVpStateCreateInfo;
 
-typedef struct _VK_DYNAMIC_RS_STATE_CREATE_INFO
+typedef struct VkDynamicRsStateCreateInfo_
 {
-    VK_STRUCTURE_TYPE                           sType;      // Must be VK_STRUCTURE_TYPE_DYNAMIC_RS_STATE_CREATE_INFO
+    VkStructureType                           sType;      // Must be VK_STRUCTURE_TYPE_DYNAMIC_RS_STATE_CREATE_INFO
     const void*                                 pNext;      // Pointer to next structure
     float                                       depthBias;
     float                                       depthBiasClamp;
@@ -2084,18 +2084,18 @@ typedef struct _VK_DYNAMIC_RS_STATE_CREATE_INFO
     float                                       pointSize;          // optional (GL45) - Size of points
     float                                       pointFadeThreshold; // optional (GL45) - Size of point fade threshold
     float                                       lineWidth;          // optional (GL45) - Width of lines
-} VK_DYNAMIC_RS_STATE_CREATE_INFO;
+} VkDynamicRsStateCreateInfo;
 
-typedef struct _VK_DYNAMIC_CB_STATE_CREATE_INFO
+typedef struct VkDynamicCbStateCreateInfo_
 {
-    VK_STRUCTURE_TYPE                           sType;      // Must be VK_STRUCTURE_TYPE_DYNAMIC_CB_STATE_CREATE_INFO
+    VkStructureType                           sType;      // Must be VK_STRUCTURE_TYPE_DYNAMIC_CB_STATE_CREATE_INFO
     const void*                                 pNext;      // Pointer to next structure
     float                                       blendConst[4];
-} VK_DYNAMIC_CB_STATE_CREATE_INFO;
+} VkDynamicCbStateCreateInfo;
 
-typedef struct _VK_DYNAMIC_DS_STATE_CREATE_INFO
+typedef struct VkDynamicDsStateCreateInfo_
 {
-    VK_STRUCTURE_TYPE                           sType;      // Must be VK_STRUCTURE_TYPE_DYNAMIC_DS_STATE_CREATE_INFO
+    VkStructureType                           sType;      // Must be VK_STRUCTURE_TYPE_DYNAMIC_DS_STATE_CREATE_INFO
     const void*                                 pNext;      // Pointer to next structure
     float                                       minDepth;               // optional (depth_bounds_test)
     float                                       maxDepth;               // optional (depth_bounds_test)
@@ -2103,106 +2103,106 @@ typedef struct _VK_DYNAMIC_DS_STATE_CREATE_INFO
     uint32_t                                    stencilWriteMask;
     uint32_t                                    stencilFrontRef;
     uint32_t                                    stencilBackRef;
-} VK_DYNAMIC_DS_STATE_CREATE_INFO;
+} VkDynamicDsStateCreateInfo;
 
-typedef struct _VK_CMD_BUFFER_CREATE_INFO
+typedef struct VkCmdBufferCreateInfo_
 {
-    VK_STRUCTURE_TYPE                           sType;      // Must be VK_STRUCTURE_TYPE_CMD_BUFFER_CREATE_INFO
+    VkStructureType                           sType;      // Must be VK_STRUCTURE_TYPE_CMD_BUFFER_CREATE_INFO
     const void*                                 pNext;      // Pointer to next structure
     uint32_t                                    queueNodeIndex;
-    VK_FLAGS                                    flags;
-} VK_CMD_BUFFER_CREATE_INFO;
+    VkFlags                                    flags;
+} VkCmdBufferCreateInfo;
 
-typedef struct _VK_CMD_BUFFER_BEGIN_INFO
+typedef struct VkCmdBufferBeginInfo_
 {
-    VK_STRUCTURE_TYPE                           sType;      // Must be VK_STRUCTURE_TYPE_CMD_BUFFER_BEGIN_INFO
+    VkStructureType                           sType;      // Must be VK_STRUCTURE_TYPE_CMD_BUFFER_BEGIN_INFO
     const void*                                 pNext;      // Pointer to next structure
 
-    VK_FLAGS                                    flags;      // VK_CMD_BUFFER_BUILD_FLAGS
-} VK_CMD_BUFFER_BEGIN_INFO;
+    VkFlags                                    flags;      // VkCmdBufferBuildFlags
+} VkCmdBufferBeginInfo;
 
-typedef struct _VK_RENDER_PASS_BEGIN
+typedef struct VkRenderPassBegin_
 {
-    VK_RENDER_PASS                              renderPass;
-    VK_FRAMEBUFFER                              framebuffer;
-} VK_RENDER_PASS_BEGIN;
+    VkRenderPass                              renderPass;
+    VkFramebuffer                              framebuffer;
+} VkRenderPassBegin;
 
-typedef struct _VK_CMD_BUFFER_GRAPHICS_BEGIN_INFO
+typedef struct VkCmdBufferGraphicsBeginInfo_
 {
-    VK_STRUCTURE_TYPE                           sType;      // Must be VK_STRUCTURE_TYPE_CMD_BUFFER_GRAPHICS_BEGIN_INFO
+    VkStructureType                           sType;      // Must be VK_STRUCTURE_TYPE_CMD_BUFFER_GRAPHICS_BEGIN_INFO
     const void*                                 pNext;      // Pointer to next structure
 
-    VK_RENDER_PASS_BEGIN                        renderPassContinue;  // Only needed when a render pass is split across two command buffers
-} VK_CMD_BUFFER_GRAPHICS_BEGIN_INFO;
+    VkRenderPassBegin                        renderPassContinue;  // Only needed when a render pass is split across two command buffers
+} VkCmdBufferGraphicsBeginInfo;
 
 // Union allowing specification of floating point or raw color data. Actual value selected is based on image being cleared.
-typedef union _VK_CLEAR_COLOR_VALUE
+typedef union VkClearColorValue_
 {
     float                                       floatColor[4];
     uint32_t                                    rawColor[4];
-} VK_CLEAR_COLOR_VALUE;
+} VkClearColorValue;
 
-typedef struct _VK_CLEAR_COLOR
+typedef struct VkClearColor_
 {
-    VK_CLEAR_COLOR_VALUE                        color;
+    VkClearColorValue                        color;
     bool32_t                                    useRawValue;
-} VK_CLEAR_COLOR;
+} VkClearColor;
 
-typedef struct _VK_RENDER_PASS_CREATE_INFO
+typedef struct VkRenderPassCreateInfo_
 {
-    VK_STRUCTURE_TYPE                           sType;      // Must be VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO
+    VkStructureType                           sType;      // Must be VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO
     const void*                                 pNext;      // Pointer to next structure
 
-    VK_RECT                                     renderArea;
+    VkRect                                     renderArea;
     uint32_t                                    colorAttachmentCount;
-    VK_EXTENT2D                                 extent;
+    VkExtent2D                                 extent;
     uint32_t                                    sampleCount;
     uint32_t                                    layers;
-    const VK_FORMAT*                            pColorFormats;
-    const VK_IMAGE_LAYOUT*                      pColorLayouts;
-    const VK_ATTACHMENT_LOAD_OP*                pColorLoadOps;
-    const VK_ATTACHMENT_STORE_OP*               pColorStoreOps;
-    const VK_CLEAR_COLOR*                       pColorLoadClearValues;
-    VK_FORMAT                                   depthStencilFormat;
-    VK_IMAGE_LAYOUT                             depthStencilLayout;
-    VK_ATTACHMENT_LOAD_OP                       depthLoadOp;
+    const VkFormat*                            pColorFormats;
+    const VkImageLayout*                      pColorLayouts;
+    const VkAttachmentLoadOp*                pColorLoadOps;
+    const VkAttachmentStoreOp*               pColorStoreOps;
+    const VkClearColor*                       pColorLoadClearValues;
+    VkFormat                                   depthStencilFormat;
+    VkImageLayout                             depthStencilLayout;
+    VkAttachmentLoadOp                       depthLoadOp;
     float                                       depthLoadClearValue;
-    VK_ATTACHMENT_STORE_OP                      depthStoreOp;
-    VK_ATTACHMENT_LOAD_OP                       stencilLoadOp;
+    VkAttachmentStoreOp                      depthStoreOp;
+    VkAttachmentLoadOp                       stencilLoadOp;
     uint32_t                                    stencilLoadClearValue;
-    VK_ATTACHMENT_STORE_OP                      stencilStoreOp;
-} VK_RENDER_PASS_CREATE_INFO;
+    VkAttachmentStoreOp                      stencilStoreOp;
+} VkRenderPassCreateInfo;
 
-typedef struct _VK_EVENT_CREATE_INFO
+typedef struct VkEventCreateInfo_
 {
-    VK_STRUCTURE_TYPE                           sType;      // Must be VK_STRUCTURE_TYPE_EVENT_CREATE_INFO
+    VkStructureType                           sType;      // Must be VK_STRUCTURE_TYPE_EVENT_CREATE_INFO
     const void*                                 pNext;      // Pointer to next structure
-    VK_FLAGS                                    flags;      // Reserved
-} VK_EVENT_CREATE_INFO;
+    VkFlags                                    flags;      // Reserved
+} VkEventCreateInfo;
 
-typedef struct _VK_FENCE_CREATE_INFO
+typedef struct VkFenceCreateInfo_
 {
-    VK_STRUCTURE_TYPE                           sType;      // Must be VK_STRUCTURE_TYPE_FENCE_CREATE_INFO
+    VkStructureType                           sType;      // Must be VK_STRUCTURE_TYPE_FENCE_CREATE_INFO
     const void*                                 pNext;      // Pointer to next structure
-    VK_FENCE_CREATE_FLAGS                       flags;      // VK_FENCE_CREATE_FLAGS
-} VK_FENCE_CREATE_INFO;
+    VkFenceCreateFlags                       flags;      // VkFenceCreateFlags
+} VkFenceCreateInfo;
 
-typedef struct _VK_SEMAPHORE_CREATE_INFO
+typedef struct VkSemaphoreCreateInfo_
 {
-    VK_STRUCTURE_TYPE                           sType;      // Must be VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO
+    VkStructureType                           sType;      // Must be VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO
     const void*                                 pNext;      // Pointer to next structure
     uint32_t                                    initialCount;
-    VK_FLAGS                                    flags;      // VK_SEMAPHORE_CREATE_FLAGS
-} VK_SEMAPHORE_CREATE_INFO;
+    VkFlags                                    flags;      // VkSemaphoreCreateFlags
+} VkSemaphoreCreateInfo;
 
-typedef struct _VK_SEMAPHORE_OPEN_INFO
+typedef struct VkSemaphoreOpenInfo_
 {
-    VK_STRUCTURE_TYPE                           sType;      // Must be VK_STRUCTURE_TYPE_SEMAPHORE_OPEN_INFO
+    VkStructureType                           sType;      // Must be VK_STRUCTURE_TYPE_SEMAPHORE_OPEN_INFO
     const void*                                 pNext;      // Pointer to next structure
-    VK_SEMAPHORE                                sharedSemaphore;
-} VK_SEMAPHORE_OPEN_INFO;
+    VkSemaphore                                sharedSemaphore;
+} VkSemaphoreOpenInfo;
 
-typedef struct _VK_PIPELINE_STATISTICS_DATA
+typedef struct VkPipelineStatisticsData_
 {
     uint64_t                                    fsInvocations;            // Fragment shader invocations
     uint64_t                                    cPrimitives;              // Clipper primitives
@@ -2215,219 +2215,219 @@ typedef struct _VK_PIPELINE_STATISTICS_DATA
     uint64_t                                    tcsInvocations;           // Tessellation control shader invocations
     uint64_t                                    tesInvocations;           // Tessellation evaluation shader invocations
     uint64_t                                    csInvocations;            // Compute shader invocations
-} VK_PIPELINE_STATISTICS_DATA;
+} VkPipelineStatisticsData;
 
-typedef struct _VK_QUERY_POOL_CREATE_INFO
+typedef struct VkQueryPoolCreateInfo_
 {
-    VK_STRUCTURE_TYPE                           sType;      // Must be VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO
+    VkStructureType                           sType;      // Must be VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO
     const void*                                 pNext;      // Pointer to next structure
-    VK_QUERY_TYPE                               queryType;
+    VkQueryType                               queryType;
     uint32_t                                    slots;
-} VK_QUERY_POOL_CREATE_INFO;
+} VkQueryPoolCreateInfo;
 
-typedef struct _VK_FRAMEBUFFER_CREATE_INFO
+typedef struct VkFramebufferCreateInfo_
 {
-    VK_STRUCTURE_TYPE                           sType;  // Must be VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO
+    VkStructureType                           sType;  // Must be VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO
     const void*                                 pNext;  // Pointer to next structure
 
     uint32_t                                    colorAttachmentCount;
-    const VK_COLOR_ATTACHMENT_BIND_INFO*        pColorAttachments;
-    const VK_DEPTH_STENCIL_BIND_INFO*           pDepthStencilAttachment;
+    const VkColorAttachmentBindInfo*        pColorAttachments;
+    const VkDepthStencilBindInfo*           pDepthStencilAttachment;
 
     uint32_t                                    sampleCount;
     uint32_t                                    width;
     uint32_t                                    height;
     uint32_t                                    layers;
-} VK_FRAMEBUFFER_CREATE_INFO;
+} VkFramebufferCreateInfo;
 
-typedef struct _VK_DRAW_INDIRECT_CMD
+typedef struct VkDrawIndirectCmd_
 {
     uint32_t                                    vertexCount;
     uint32_t                                    instanceCount;
     uint32_t                                    firstVertex;
     uint32_t                                    firstInstance;
-} VK_DRAW_INDIRECT_CMD;
+} VkDrawIndirectCmd;
 
-typedef struct _VK_DRAW_INDEXED_INDIRECT_CMD
+typedef struct VkDrawIndexedIndirectCmd_
 {
     uint32_t                                    indexCount;
     uint32_t                                    instanceCount;
     uint32_t                                    firstIndex;
     int32_t                                     vertexOffset;
     uint32_t                                    firstInstance;
-} VK_DRAW_INDEXED_INDIRECT_CMD;
+} VkDrawIndexedIndirectCmd;
 
-typedef struct _VK_DISPATCH_INDIRECT_CMD
+typedef struct VkDispatchIndirectCmd_
 {
     uint32_t                                    x;
     uint32_t                                    y;
     uint32_t                                    z;
-} VK_DISPATCH_INDIRECT_CMD;
+} VkDispatchIndirectCmd;
 
 // ------------------------------------------------------------------------------------------------
 // API functions
-typedef VK_RESULT (VKAPI *vkCreateInstanceType)(const VkInstanceCreateInfo* pCreateInfo, VK_INSTANCE* pInstance);
-typedef VK_RESULT (VKAPI *vkDestroyInstanceType)(VK_INSTANCE instance);
-typedef VK_RESULT (VKAPI *vkEnumerateGpusType)(VK_INSTANCE instance, uint32_t maxGpus, uint32_t* pGpuCount, VK_PHYSICAL_GPU* pGpus);
-typedef VK_RESULT (VKAPI *vkGetGpuInfoType)(VK_PHYSICAL_GPU gpu, VK_PHYSICAL_GPU_INFO_TYPE infoType, size_t* pDataSize, void* pData);
-typedef void *    (VKAPI *vkGetProcAddrType)(VK_PHYSICAL_GPU gpu, const char * pName);
-typedef VK_RESULT (VKAPI *vkCreateDeviceType)(VK_PHYSICAL_GPU gpu, const VkDeviceCreateInfo* pCreateInfo, VK_DEVICE* pDevice);
-typedef VK_RESULT (VKAPI *vkDestroyDeviceType)(VK_DEVICE device);
-typedef VK_RESULT (VKAPI *vkGetExtensionSupportType)(VK_PHYSICAL_GPU gpu, const char* pExtName);
-typedef VK_RESULT (VKAPI *vkEnumerateLayersType)(VK_PHYSICAL_GPU gpu, size_t maxLayerCount, size_t maxStringSize, size_t* pOutLayerCount, char* const* pOutLayers, void* pReserved);
-typedef VK_RESULT (VKAPI *vkGetDeviceQueueType)(VK_DEVICE device, uint32_t queueNodeIndex, uint32_t queueIndex, VK_QUEUE* pQueue);
-typedef VK_RESULT (VKAPI *vkQueueSubmitType)(VK_QUEUE queue, uint32_t cmdBufferCount, const VK_CMD_BUFFER* pCmdBuffers, VK_FENCE fence);
-typedef VK_RESULT (VKAPI *vkQueueAddMemReferenceType)(VK_QUEUE queue, VK_GPU_MEMORY mem);
-typedef VK_RESULT (VKAPI *vkQueueRemoveMemReferenceType)(VK_QUEUE queue, VK_GPU_MEMORY mem);
-typedef VK_RESULT (VKAPI *vkQueueWaitIdleType)(VK_QUEUE queue);
-typedef VK_RESULT (VKAPI *vkDeviceWaitIdleType)(VK_DEVICE device);
-typedef VK_RESULT (VKAPI *vkAllocMemoryType)(VK_DEVICE device, const VkMemoryAllocInfo* pAllocInfo, VK_GPU_MEMORY* pMem);
-typedef VK_RESULT (VKAPI *vkFreeMemoryType)(VK_GPU_MEMORY mem);
-typedef VK_RESULT (VKAPI *vkSetMemoryPriorityType)(VK_GPU_MEMORY mem, VK_MEMORY_PRIORITY priority);
-typedef VK_RESULT (VKAPI *vkMapMemoryType)(VK_GPU_MEMORY mem, VK_FLAGS flags, void** ppData);
-typedef VK_RESULT (VKAPI *vkUnmapMemoryType)(VK_GPU_MEMORY mem);
-typedef VK_RESULT (VKAPI *vkPinSystemMemoryType)(VK_DEVICE device, const void* pSysMem, size_t memSize, VK_GPU_MEMORY* pMem);
-typedef VK_RESULT (VKAPI *vkGetMultiGpuCompatibilityType)(VK_PHYSICAL_GPU gpu0, VK_PHYSICAL_GPU gpu1, VK_GPU_COMPATIBILITY_INFO* pInfo);
-typedef VK_RESULT (VKAPI *vkOpenSharedMemoryType)(VK_DEVICE device, const VK_MEMORY_OPEN_INFO* pOpenInfo, VK_GPU_MEMORY* pMem);
-typedef VK_RESULT (VKAPI *vkOpenSharedSemaphoreType)(VK_DEVICE device, const VK_SEMAPHORE_OPEN_INFO* pOpenInfo, VK_SEMAPHORE* pSemaphore);
-typedef VK_RESULT (VKAPI *vkOpenPeerMemoryType)(VK_DEVICE device, const VK_PEER_MEMORY_OPEN_INFO* pOpenInfo, VK_GPU_MEMORY* pMem);
-typedef VK_RESULT (VKAPI *vkOpenPeerImageType)(VK_DEVICE device, const VK_PEER_IMAGE_OPEN_INFO* pOpenInfo, VK_IMAGE* pImage, VK_GPU_MEMORY* pMem);
-typedef VK_RESULT (VKAPI *vkDestroyObjectType)(VK_OBJECT object);
-typedef VK_RESULT (VKAPI *vkGetObjectInfoType)(VK_BASE_OBJECT object, VK_OBJECT_INFO_TYPE infoType, size_t* pDataSize, void* pData);
-typedef VK_RESULT (VKAPI *vkBindObjectMemoryType)(VK_OBJECT object, uint32_t allocationIdx, VK_GPU_MEMORY mem, VK_GPU_SIZE offset);
-typedef VK_RESULT (VKAPI *vkBindObjectMemoryRangeType)(VK_OBJECT object, uint32_t allocationIdx, VK_GPU_SIZE rangeOffset,VK_GPU_SIZE rangeSize, VK_GPU_MEMORY mem, VK_GPU_SIZE memOffset);
-typedef VK_RESULT (VKAPI *vkBindImageMemoryRangeType)(VK_IMAGE image, uint32_t allocationIdx, const VK_IMAGE_MEMORY_BIND_INFO* bindInfo, VK_GPU_MEMORY mem, VK_GPU_SIZE memOffset);
-typedef VK_RESULT (VKAPI *vkCreateFenceType)(VK_DEVICE device, const VK_FENCE_CREATE_INFO* pCreateInfo, VK_FENCE* pFence);
-typedef VK_RESULT (VKAPI *vkResetFencesType)(VK_DEVICE device, uint32_t fenceCount, VK_FENCE* pFences);
-typedef VK_RESULT (VKAPI *vkGetFenceStatusType)(VK_FENCE fence);
-typedef VK_RESULT (VKAPI *vkWaitForFencesType)(VK_DEVICE device, uint32_t fenceCount, const VK_FENCE* pFences, bool32_t waitAll, uint64_t timeout);
-typedef VK_RESULT (VKAPI *vkCreateSemaphoreType)(VK_DEVICE device, const VK_SEMAPHORE_CREATE_INFO* pCreateInfo, VK_SEMAPHORE* pSemaphore);
-typedef VK_RESULT (VKAPI *vkQueueSignalSemaphoreType)(VK_QUEUE queue, VK_SEMAPHORE semaphore);
-typedef VK_RESULT (VKAPI *vkQueueWaitSemaphoreType)(VK_QUEUE queue, VK_SEMAPHORE semaphore);
-typedef VK_RESULT (VKAPI *vkCreateEventType)(VK_DEVICE device, const VK_EVENT_CREATE_INFO* pCreateInfo, VK_EVENT* pEvent);
-typedef VK_RESULT (VKAPI *vkGetEventStatusType)(VK_EVENT event);
-typedef VK_RESULT (VKAPI *vkSetEventType)(VK_EVENT event);
-typedef VK_RESULT (VKAPI *vkResetEventType)(VK_EVENT event);
-typedef VK_RESULT (VKAPI *vkCreateQueryPoolType)(VK_DEVICE device, const VK_QUERY_POOL_CREATE_INFO* pCreateInfo, VK_QUERY_POOL* pQueryPool);
-typedef VK_RESULT (VKAPI *vkGetQueryPoolResultsType)(VK_QUERY_POOL queryPool, uint32_t startQuery, uint32_t queryCount, size_t* pDataSize, void* pData);
-typedef VK_RESULT (VKAPI *vkGetFormatInfoType)(VK_DEVICE device, VK_FORMAT format, VK_FORMAT_INFO_TYPE infoType, size_t* pDataSize, void* pData);
-typedef VK_RESULT (VKAPI *vkCreateBufferType)(VK_DEVICE device, const VkBufferCreateInfo* pCreateInfo, VK_BUFFER* pBuffer);
-typedef VK_RESULT (VKAPI *vkCreateBufferViewType)(VK_DEVICE device, const VkBufferViewCreateInfo* pCreateInfo, VK_BUFFER_VIEW* pView);
-typedef VK_RESULT (VKAPI *vkCreateImageType)(VK_DEVICE device, const VK_IMAGE_CREATE_INFO* pCreateInfo, VK_IMAGE* pImage);
-typedef VK_RESULT (VKAPI *vkGetImageSubresourceInfoType)(VK_IMAGE image, const VK_IMAGE_SUBRESOURCE* pSubresource, VK_SUBRESOURCE_INFO_TYPE infoType, size_t* pDataSize, void* pData);
-typedef VK_RESULT (VKAPI *vkCreateImageViewType)(VK_DEVICE device, const VK_IMAGE_VIEW_CREATE_INFO* pCreateInfo, VK_IMAGE_VIEW* pView);
-typedef VK_RESULT (VKAPI *vkCreateColorAttachmentViewType)(VK_DEVICE device, const VK_COLOR_ATTACHMENT_VIEW_CREATE_INFO* pCreateInfo, VK_COLOR_ATTACHMENT_VIEW* pView);
-typedef VK_RESULT (VKAPI *vkCreateDepthStencilViewType)(VK_DEVICE device, const VK_DEPTH_STENCIL_VIEW_CREATE_INFO* pCreateInfo, VK_DEPTH_STENCIL_VIEW* pView);
-typedef VK_RESULT (VKAPI *vkCreateShaderType)(VK_DEVICE device, const VK_SHADER_CREATE_INFO* pCreateInfo, VK_SHADER* pShader);
-typedef VK_RESULT (VKAPI *vkCreateGraphicsPipelineType)(VK_DEVICE device, const VK_GRAPHICS_PIPELINE_CREATE_INFO* pCreateInfo, VK_PIPELINE* pPipeline);
-typedef VK_RESULT (VKAPI *vkCreateGraphicsPipelineDerivativeType)(VK_DEVICE device, const VK_GRAPHICS_PIPELINE_CREATE_INFO* pCreateInfo, VK_PIPELINE basePipeline, VK_PIPELINE* pPipeline);
-typedef VK_RESULT (VKAPI *vkCreateComputePipelineType)(VK_DEVICE device, const VK_COMPUTE_PIPELINE_CREATE_INFO* pCreateInfo, VK_PIPELINE* pPipeline);
-typedef VK_RESULT (VKAPI *vkStorePipelineType)(VK_PIPELINE pipeline, size_t* pDataSize, void* pData);
-typedef VK_RESULT (VKAPI *vkLoadPipelineType)(VK_DEVICE device, size_t dataSize, const void* pData, VK_PIPELINE* pPipeline);
-typedef VK_RESULT (VKAPI *vkLoadPipelineDerivativeType)(VK_DEVICE device, size_t dataSize, const void* pData, VK_PIPELINE basePipeline, VK_PIPELINE* pPipeline);
-typedef VK_RESULT (VKAPI *vkCreateSamplerType)(VK_DEVICE device, const VK_SAMPLER_CREATE_INFO* pCreateInfo, VK_SAMPLER* pSampler);
-typedef VK_RESULT (VKAPI *vkCreateDescriptorSetLayoutType)(VK_DEVICE device, const VK_DESCRIPTOR_SET_LAYOUT_CREATE_INFO* pCreateInfo, VK_DESCRIPTOR_SET_LAYOUT* pSetLayout);
-typedef VK_RESULT (VKAPI *vkCreateDescriptorSetLayoutChainType)(VK_DEVICE device, uint32_t setLayoutArrayCount, const VK_DESCRIPTOR_SET_LAYOUT* pSetLayoutArray, VK_DESCRIPTOR_SET_LAYOUT_CHAIN* pLayoutChain);
-typedef VK_RESULT (VKAPI *vkBeginDescriptorPoolUpdateType)(VK_DEVICE device, VK_DESCRIPTOR_UPDATE_MODE updateMode);
-typedef VK_RESULT (VKAPI *vkEndDescriptorPoolUpdateType)(VK_DEVICE device, VK_CMD_BUFFER cmd);
-typedef VK_RESULT (VKAPI *vkCreateDescriptorPoolType)(VK_DEVICE device, VK_DESCRIPTOR_POOL_USAGE poolUsage, uint32_t maxSets, const VK_DESCRIPTOR_POOL_CREATE_INFO* pCreateInfo, VK_DESCRIPTOR_POOL* pDescriptorPool);
-typedef VK_RESULT (VKAPI *vkResetDescriptorPoolType)(VK_DESCRIPTOR_POOL descriptorPool);
-typedef VK_RESULT (VKAPI *vkAllocDescriptorSetsType)(VK_DESCRIPTOR_POOL descriptorPool, VK_DESCRIPTOR_SET_USAGE setUsage, uint32_t count, const VK_DESCRIPTOR_SET_LAYOUT* pSetLayouts, VK_DESCRIPTOR_SET* pDescriptorSets, uint32_t* pCount);
-typedef void      (VKAPI *vkClearDescriptorSetsType)(VK_DESCRIPTOR_POOL descriptorPool, uint32_t count, const VK_DESCRIPTOR_SET* pDescriptorSets);
-typedef void      (VKAPI *vkUpdateDescriptorsType)(VK_DESCRIPTOR_SET descriptorSet, uint32_t updateCount, const void** pUpdateArray);
-typedef VK_RESULT (VKAPI *vkCreateDynamicViewportStateType)(VK_DEVICE device, const VK_DYNAMIC_VP_STATE_CREATE_INFO* pCreateInfo, VK_DYNAMIC_VP_STATE_OBJECT* pState);
-typedef VK_RESULT (VKAPI *vkCreateDynamicRasterStateType)(VK_DEVICE device, const VK_DYNAMIC_RS_STATE_CREATE_INFO* pCreateInfo, VK_DYNAMIC_RS_STATE_OBJECT* pState);
-typedef VK_RESULT (VKAPI *vkCreateDynamicColorBlendStateType)(VK_DEVICE device, const VK_DYNAMIC_CB_STATE_CREATE_INFO* pCreateInfo, VK_DYNAMIC_CB_STATE_OBJECT* pState);
-typedef VK_RESULT (VKAPI *vkCreateDynamicDepthStencilStateType)(VK_DEVICE device, const VK_DYNAMIC_DS_STATE_CREATE_INFO* pCreateInfo, VK_DYNAMIC_DS_STATE_OBJECT* pState);
-typedef VK_RESULT (VKAPI *vkCreateCommandBufferType)(VK_DEVICE device, const VK_CMD_BUFFER_CREATE_INFO* pCreateInfo, VK_CMD_BUFFER* pCmdBuffer);
-typedef VK_RESULT (VKAPI *vkBeginCommandBufferType)(VK_CMD_BUFFER cmdBuffer, const VK_CMD_BUFFER_BEGIN_INFO* pBeginInfo);
-typedef VK_RESULT (VKAPI *vkEndCommandBufferType)(VK_CMD_BUFFER cmdBuffer);
-typedef VK_RESULT (VKAPI *vkResetCommandBufferType)(VK_CMD_BUFFER cmdBuffer);
-typedef void      (VKAPI *vkCmdBindPipelineType)(VK_CMD_BUFFER cmdBuffer, VK_PIPELINE_BIND_POINT pipelineBindPoint, VK_PIPELINE pipeline);
-typedef void      (VKAPI *vkCmdBindDynamicStateObjectType)(VK_CMD_BUFFER cmdBuffer, VK_STATE_BIND_POINT stateBindPoint, VK_DYNAMIC_STATE_OBJECT state);
-typedef void      (VKAPI *vkCmdBindDescriptorSetsType)(VK_CMD_BUFFER cmdBuffer, VK_PIPELINE_BIND_POINT pipelineBindPoint, VK_DESCRIPTOR_SET_LAYOUT_CHAIN layoutChain, uint32_t layoutChainSlot, uint32_t count, const VK_DESCRIPTOR_SET* pDescriptorSets, const uint32_t* pUserData);
-typedef void      (VKAPI *vkCmdBindIndexBufferType)(VK_CMD_BUFFER cmdBuffer, VK_BUFFER buffer, VK_GPU_SIZE offset, VK_INDEX_TYPE indexType);
-typedef void      (VKAPI *vkCmdBindVertexBufferType)(VK_CMD_BUFFER cmdBuffer, VK_BUFFER buffer, VK_GPU_SIZE offset, uint32_t binding);
-typedef void      (VKAPI *vkCmdDrawType)(VK_CMD_BUFFER cmdBuffer, uint32_t firstVertex, uint32_t vertexCount, uint32_t firstInstance, uint32_t instanceCount);
-typedef void      (VKAPI *vkCmdDrawIndexedType)(VK_CMD_BUFFER cmdBuffer, uint32_t firstIndex, uint32_t indexCount, int32_t vertexOffset, uint32_t firstInstance, uint32_t instanceCount);
-typedef void      (VKAPI *vkCmdDrawIndirectType)(VK_CMD_BUFFER cmdBuffer, VK_BUFFER buffer, VK_GPU_SIZE offset, uint32_t count, uint32_t stride);
-typedef void      (VKAPI *vkCmdDrawIndexedIndirectType)(VK_CMD_BUFFER cmdBuffer, VK_BUFFER buffer, VK_GPU_SIZE offset, uint32_t count, uint32_t stride);
-typedef void      (VKAPI *vkCmdDispatchType)(VK_CMD_BUFFER cmdBuffer, uint32_t x, uint32_t y, uint32_t z);
-typedef void      (VKAPI *vkCmdDispatchIndirectType)(VK_CMD_BUFFER cmdBuffer, VK_BUFFER buffer, VK_GPU_SIZE offset);
-typedef void      (VKAPI *vkCmdCopyBufferType)(VK_CMD_BUFFER cmdBuffer, VK_BUFFER srcBuffer, VK_BUFFER destBuffer, uint32_t regionCount, const VK_BUFFER_COPY* pRegions);
-typedef void      (VKAPI *vkCmdCopyImageType)(VK_CMD_BUFFER cmdBuffer, VK_IMAGE srcImage, VK_IMAGE_LAYOUT srcImageLayout, VK_IMAGE destImage, VK_IMAGE_LAYOUT destImageLayout, uint32_t regionCount, const VK_IMAGE_COPY* pRegions);
-typedef void      (VKAPI *vkCmdBlitImageType)(VK_CMD_BUFFER cmdBuffer, VK_IMAGE srcImage, VK_IMAGE_LAYOUT srcImageLayout, VK_IMAGE destImage, VK_IMAGE_LAYOUT destImageLayout, uint32_t regionCount, const VK_IMAGE_BLIT* pRegions);
-typedef void      (VKAPI *vkCmdCopyBufferToImageType)(VK_CMD_BUFFER cmdBuffer, VK_BUFFER srcBuffer, VK_IMAGE destImage, VK_IMAGE_LAYOUT destImageLayout, uint32_t regionCount, const VK_BUFFER_IMAGE_COPY* pRegions);
-typedef void      (VKAPI *vkCmdCopyImageToBufferType)(VK_CMD_BUFFER cmdBuffer, VK_IMAGE srcImage, VK_IMAGE_LAYOUT srcImageLayout, VK_BUFFER destBuffer, uint32_t regionCount, const VK_BUFFER_IMAGE_COPY* pRegions);
-typedef void      (VKAPI *vkCmdCloneImageDataType)(VK_CMD_BUFFER cmdBuffer, VK_IMAGE srcImage, VK_IMAGE_LAYOUT srcImageLayout, VK_IMAGE destImage, VK_IMAGE_LAYOUT destImageLayout);
-typedef void      (VKAPI *vkCmdUpdateBufferType)(VK_CMD_BUFFER cmdBuffer, VK_BUFFER destBuffer, VK_GPU_SIZE destOffset, VK_GPU_SIZE dataSize, const uint32_t* pData);
-typedef void      (VKAPI *vkCmdFillBufferType)(VK_CMD_BUFFER cmdBuffer, VK_BUFFER destBuffer, VK_GPU_SIZE destOffset, VK_GPU_SIZE fillSize, uint32_t data);
-typedef void      (VKAPI *vkCmdClearColorImageType)(VK_CMD_BUFFER cmdBuffer, VK_IMAGE image, VK_IMAGE_LAYOUT imageLayout, VK_CLEAR_COLOR color, uint32_t rangeCount, const VK_IMAGE_SUBRESOURCE_RANGE* pRanges);
-typedef void      (VKAPI *vkCmdClearDepthStencilType)(VK_CMD_BUFFER cmdBuffer, VK_IMAGE image, VK_IMAGE_LAYOUT imageLayout, float depth, uint32_t stencil, uint32_t rangeCount, const VK_IMAGE_SUBRESOURCE_RANGE* pRanges);
-typedef void      (VKAPI *vkCmdResolveImageType)(VK_CMD_BUFFER cmdBuffer, VK_IMAGE srcImage, VK_IMAGE_LAYOUT srcImageLayout, VK_IMAGE destImage, VK_IMAGE_LAYOUT destImageLayout, uint32_t rectCount, const VK_IMAGE_RESOLVE* pRects);
-typedef void      (VKAPI *vkCmdSetEventType)(VK_CMD_BUFFER cmdBuffer, VK_EVENT event, VK_PIPE_EVENT pipeEvent);
-typedef void      (VKAPI *vkCmdResetEventType)(VK_CMD_BUFFER cmdBuffer, VK_EVENT event, VK_PIPE_EVENT pipeEvent);
-typedef void      (VKAPI *vkCmdWaitEventsType)(VK_CMD_BUFFER cmdBuffer, const VK_EVENT_WAIT_INFO* pWaitInfo);
-typedef void      (VKAPI *vkCmdPipelineBarrierType)(VK_CMD_BUFFER cmdBuffer, const VK_PIPELINE_BARRIER* pBarrier);
-typedef void      (VKAPI *vkCmdBeginQueryType)(VK_CMD_BUFFER cmdBuffer, VK_QUERY_POOL queryPool, uint32_t slot, VK_FLAGS flags);
-typedef void      (VKAPI *vkCmdEndQueryType)(VK_CMD_BUFFER cmdBuffer, VK_QUERY_POOL queryPool, uint32_t slot);
-typedef void      (VKAPI *vkCmdResetQueryPoolType)(VK_CMD_BUFFER cmdBuffer, VK_QUERY_POOL queryPool, uint32_t startQuery, uint32_t queryCount);
-typedef void      (VKAPI *vkCmdWriteTimestampType)(VK_CMD_BUFFER cmdBuffer, VK_TIMESTAMP_TYPE timestampType, VK_BUFFER destBuffer, VK_GPU_SIZE destOffset);
-typedef void      (VKAPI *vkCmdInitAtomicCountersType)(VK_CMD_BUFFER cmdBuffer, VK_PIPELINE_BIND_POINT pipelineBindPoint, uint32_t startCounter, uint32_t counterCount, const uint32_t* pData);
-typedef void      (VKAPI *vkCmdLoadAtomicCountersType)(VK_CMD_BUFFER cmdBuffer, VK_PIPELINE_BIND_POINT pipelineBindPoint, uint32_t startCounter, uint32_t counterCount, VK_BUFFER srcBuffer, VK_GPU_SIZE srcOffset);
-typedef void      (VKAPI *vkCmdSaveAtomicCountersType)(VK_CMD_BUFFER cmdBuffer, VK_PIPELINE_BIND_POINT pipelineBindPoint, uint32_t startCounter, uint32_t counterCount, VK_BUFFER destBuffer, VK_GPU_SIZE destOffset);
-typedef VK_RESULT (VKAPI *vkCreateFramebufferType)(VK_DEVICE device, const VK_FRAMEBUFFER_CREATE_INFO* pCreateInfo, VK_FRAMEBUFFER* pFramebuffer);
-typedef VK_RESULT (VKAPI *vkCreateRenderPassType)(VK_DEVICE device, const VK_RENDER_PASS_CREATE_INFO* pCreateInfo, VK_RENDER_PASS* pRenderPass);
-typedef void      (VKAPI *vkCmdBeginRenderPassType)(VK_CMD_BUFFER cmdBuffer, const VK_RENDER_PASS_BEGIN* pRenderPassBegin);
-typedef void      (VKAPI *vkCmdEndRenderPassType)(VK_CMD_BUFFER cmdBuffer, VK_RENDER_PASS renderPass);
+typedef VkResult (VKAPI *PFN_vkCreateInstance)(const VkInstanceCreateInfo* pCreateInfo, VkInstance* pInstance);
+typedef VkResult (VKAPI *PFN_vkDestroyInstance)(VkInstance instance);
+typedef VkResult (VKAPI *PFN_vkEnumerateGpus)(VkInstance instance, uint32_t maxGpus, uint32_t* pGpuCount, VkPhysicalGpu* pGpus);
+typedef VkResult (VKAPI *PFN_vkGetGpuInfo)(VkPhysicalGpu gpu, VkPhysicalGpuInfoType infoType, size_t* pDataSize, void* pData);
+typedef void *    (VKAPI *PFN_vkGetProcAddr)(VkPhysicalGpu gpu, const char * pName);
+typedef VkResult (VKAPI *PFN_vkCreateDevice)(VkPhysicalGpu gpu, const VkDeviceCreateInfo* pCreateInfo, VkDevice* pDevice);
+typedef VkResult (VKAPI *PFN_vkDestroyDevice)(VkDevice device);
+typedef VkResult (VKAPI *PFN_vkGetExtensionSupport)(VkPhysicalGpu gpu, const char* pExtName);
+typedef VkResult (VKAPI *PFN_vkEnumerateLayers)(VkPhysicalGpu gpu, size_t maxLayerCount, size_t maxStringSize, size_t* pOutLayerCount, char* const* pOutLayers, void* pReserved);
+typedef VkResult (VKAPI *PFN_vkGetDeviceQueue)(VkDevice device, uint32_t queueNodeIndex, uint32_t queueIndex, VkQueue* pQueue);
+typedef VkResult (VKAPI *PFN_vkQueueSubmit)(VkQueue queue, uint32_t cmdBufferCount, const VkCmdBuffer* pCmdBuffers, VkFence fence);
+typedef VkResult (VKAPI *PFN_vkQueueAddMemReference)(VkQueue queue, VkGpuMemory mem);
+typedef VkResult (VKAPI *PFN_vkQueueRemoveMemReference)(VkQueue queue, VkGpuMemory mem);
+typedef VkResult (VKAPI *PFN_vkQueueWaitIdle)(VkQueue queue);
+typedef VkResult (VKAPI *PFN_vkDeviceWaitIdle)(VkDevice device);
+typedef VkResult (VKAPI *PFN_vkAllocMemory)(VkDevice device, const VkMemoryAllocInfo* pAllocInfo, VkGpuMemory* pMem);
+typedef VkResult (VKAPI *PFN_vkFreeMemory)(VkGpuMemory mem);
+typedef VkResult (VKAPI *PFN_vkSetMemoryPriority)(VkGpuMemory mem, VkMemoryPriority priority);
+typedef VkResult (VKAPI *PFN_vkMapMemory)(VkGpuMemory mem, VkFlags flags, void** ppData);
+typedef VkResult (VKAPI *PFN_vkUnmapMemory)(VkGpuMemory mem);
+typedef VkResult (VKAPI *PFN_vkPinSystemMemory)(VkDevice device, const void* pSysMem, size_t memSize, VkGpuMemory* pMem);
+typedef VkResult (VKAPI *PFN_vkGetMultiGpuCompatibility)(VkPhysicalGpu gpu0, VkPhysicalGpu gpu1, VkGpuCompatibilityInfo* pInfo);
+typedef VkResult (VKAPI *PFN_vkOpenSharedMemory)(VkDevice device, const VkMemoryOpenInfo* pOpenInfo, VkGpuMemory* pMem);
+typedef VkResult (VKAPI *PFN_vkOpenSharedSemaphore)(VkDevice device, const VkSemaphoreOpenInfo* pOpenInfo, VkSemaphore* pSemaphore);
+typedef VkResult (VKAPI *PFN_vkOpenPeerMemory)(VkDevice device, const VkPeerMemoryOpenInfo* pOpenInfo, VkGpuMemory* pMem);
+typedef VkResult (VKAPI *PFN_vkOpenPeerImage)(VkDevice device, const VkPeerImageOpenInfo* pOpenInfo, VkImage* pImage, VkGpuMemory* pMem);
+typedef VkResult (VKAPI *PFN_vkDestroyObject)(VkObject object);
+typedef VkResult (VKAPI *PFN_vkGetObjectInfo)(VkBaseObject object, VkObjectInfoType infoType, size_t* pDataSize, void* pData);
+typedef VkResult (VKAPI *PFN_vkBindObjectMemory)(VkObject object, uint32_t allocationIdx, VkGpuMemory mem, VkGpuSize offset);
+typedef VkResult (VKAPI *PFN_vkBindObjectMemoryRange)(VkObject object, uint32_t allocationIdx, VkGpuSize rangeOffset,VkGpuSize rangeSize, VkGpuMemory mem, VkGpuSize memOffset);
+typedef VkResult (VKAPI *PFN_vkBindImageMemoryRange)(VkImage image, uint32_t allocationIdx, const VkImageMemoryBindInfo* bindInfo, VkGpuMemory mem, VkGpuSize memOffset);
+typedef VkResult (VKAPI *PFN_vkCreateFence)(VkDevice device, const VkFenceCreateInfo* pCreateInfo, VkFence* pFence);
+typedef VkResult (VKAPI *PFN_vkResetFences)(VkDevice device, uint32_t fenceCount, VkFence* pFences);
+typedef VkResult (VKAPI *PFN_vkGetFenceStatus)(VkFence fence);
+typedef VkResult (VKAPI *PFN_vkWaitForFences)(VkDevice device, uint32_t fenceCount, const VkFence* pFences, bool32_t waitAll, uint64_t timeout);
+typedef VkResult (VKAPI *PFN_vkCreateSemaphore)(VkDevice device, const VkSemaphoreCreateInfo* pCreateInfo, VkSemaphore* pSemaphore);
+typedef VkResult (VKAPI *PFN_vkQueueSignalSemaphore)(VkQueue queue, VkSemaphore semaphore);
+typedef VkResult (VKAPI *PFN_vkQueueWaitSemaphore)(VkQueue queue, VkSemaphore semaphore);
+typedef VkResult (VKAPI *PFN_vkCreateEvent)(VkDevice device, const VkEventCreateInfo* pCreateInfo, VkEvent* pEvent);
+typedef VkResult (VKAPI *PFN_vkGetEventStatus)(VkEvent event);
+typedef VkResult (VKAPI *PFN_vkSetEvent)(VkEvent event);
+typedef VkResult (VKAPI *PFN_vkResetEvent)(VkEvent event);
+typedef VkResult (VKAPI *PFN_vkCreateQueryPool)(VkDevice device, const VkQueryPoolCreateInfo* pCreateInfo, VkQueryPool* pQueryPool);
+typedef VkResult (VKAPI *PFN_vkGetQueryPoolResults)(VkQueryPool queryPool, uint32_t startQuery, uint32_t queryCount, size_t* pDataSize, void* pData);
+typedef VkResult (VKAPI *PFN_vkGetFormatInfo)(VkDevice device, VkFormat format, VkFormatInfoType infoType, size_t* pDataSize, void* pData);
+typedef VkResult (VKAPI *PFN_vkCreateBuffer)(VkDevice device, const VkBufferCreateInfo* pCreateInfo, VkBuffer* pBuffer);
+typedef VkResult (VKAPI *PFN_vkCreateBufferView)(VkDevice device, const VkBufferViewCreateInfo* pCreateInfo, VkBufferView* pView);
+typedef VkResult (VKAPI *PFN_vkCreateImage)(VkDevice device, const VkImageCreateInfo* pCreateInfo, VkImage* pImage);
+typedef VkResult (VKAPI *PFN_vkGetImageSubresourceInfo)(VkImage image, const VkImageSubresource* pSubresource, VkSubresourceInfoType infoType, size_t* pDataSize, void* pData);
+typedef VkResult (VKAPI *PFN_vkCreateImageView)(VkDevice device, const VkImageViewCreateInfo* pCreateInfo, VkImageView* pView);
+typedef VkResult (VKAPI *PFN_vkCreateColorAttachmentView)(VkDevice device, const VkColorAttachmentViewCreateInfo* pCreateInfo, VkColorAttachmentView* pView);
+typedef VkResult (VKAPI *PFN_vkCreateDepthStencilView)(VkDevice device, const VkDepthStencilViewCreateInfo* pCreateInfo, VkDepthStencilView* pView);
+typedef VkResult (VKAPI *PFN_vkCreateShader)(VkDevice device, const VkShaderCreateInfo* pCreateInfo, VkShader* pShader);
+typedef VkResult (VKAPI *PFN_vkCreateGraphicsPipeline)(VkDevice device, const VkGraphicsPipelineCreateInfo* pCreateInfo, VkPipeline* pPipeline);
+typedef VkResult (VKAPI *PFN_vkCreateGraphicsPipelineDerivative)(VkDevice device, const VkGraphicsPipelineCreateInfo* pCreateInfo, VkPipeline basePipeline, VkPipeline* pPipeline);
+typedef VkResult (VKAPI *PFN_vkCreateComputePipeline)(VkDevice device, const VkComputePipelineCreateInfo* pCreateInfo, VkPipeline* pPipeline);
+typedef VkResult (VKAPI *PFN_vkStorePipeline)(VkPipeline pipeline, size_t* pDataSize, void* pData);
+typedef VkResult (VKAPI *PFN_vkLoadPipeline)(VkDevice device, size_t dataSize, const void* pData, VkPipeline* pPipeline);
+typedef VkResult (VKAPI *PFN_vkLoadPipelineDerivative)(VkDevice device, size_t dataSize, const void* pData, VkPipeline basePipeline, VkPipeline* pPipeline);
+typedef VkResult (VKAPI *PFN_vkCreateSampler)(VkDevice device, const VkSamplerCreateInfo* pCreateInfo, VkSampler* pSampler);
+typedef VkResult (VKAPI *PFN_vkCreateDescriptorSetLayout)(VkDevice device, const VkDescriptorSetLayoutCreateInfo* pCreateInfo, VkDescriptorSetLayout* pSetLayout);
+typedef VkResult (VKAPI *PFN_vkCreateDescriptorSetLayoutChain)(VkDevice device, uint32_t setLayoutArrayCount, const VkDescriptorSetLayout* pSetLayoutArray, VkDescriptorSetLayoutChain* pLayoutChain);
+typedef VkResult (VKAPI *PFN_vkBeginDescriptorPoolUpdate)(VkDevice device, VkDescriptorUpdateMode updateMode);
+typedef VkResult (VKAPI *PFN_vkEndDescriptorPoolUpdate)(VkDevice device, VkCmdBuffer cmd);
+typedef VkResult (VKAPI *PFN_vkCreateDescriptorPool)(VkDevice device, VkDescriptorPoolUsage poolUsage, uint32_t maxSets, const VkDescriptorPoolCreateInfo* pCreateInfo, VkDescriptorPool* pDescriptorPool);
+typedef VkResult (VKAPI *PFN_vkResetDescriptorPool)(VkDescriptorPool descriptorPool);
+typedef VkResult (VKAPI *PFN_vkAllocDescriptorSets)(VkDescriptorPool descriptorPool, VkDescriptorSetUsage setUsage, uint32_t count, const VkDescriptorSetLayout* pSetLayouts, VkDescriptorSet* pDescriptorSets, uint32_t* pCount);
+typedef void      (VKAPI *PFN_vkClearDescriptorSets)(VkDescriptorPool descriptorPool, uint32_t count, const VkDescriptorSet* pDescriptorSets);
+typedef void      (VKAPI *PFN_vkUpdateDescriptors)(VkDescriptorSet descriptorSet, uint32_t updateCount, const void** pUpdateArray);
+typedef VkResult (VKAPI *PFN_vkCreateDynamicViewportState)(VkDevice device, const VkDynamicVpStateCreateInfo* pCreateInfo, VkDynamicVpStateObject* pState);
+typedef VkResult (VKAPI *PFN_vkCreateDynamicRasterState)(VkDevice device, const VkDynamicRsStateCreateInfo* pCreateInfo, VkDynamicRsStateObject* pState);
+typedef VkResult (VKAPI *PFN_vkCreateDynamicColorBlendState)(VkDevice device, const VkDynamicCbStateCreateInfo* pCreateInfo, VkDynamicCbStateObject* pState);
+typedef VkResult (VKAPI *PFN_vkCreateDynamicDepthStencilState)(VkDevice device, const VkDynamicDsStateCreateInfo* pCreateInfo, VkDynamicDsStateObject* pState);
+typedef VkResult (VKAPI *PFN_vkCreateCommandBuffer)(VkDevice device, const VkCmdBufferCreateInfo* pCreateInfo, VkCmdBuffer* pCmdBuffer);
+typedef VkResult (VKAPI *PFN_vkBeginCommandBuffer)(VkCmdBuffer cmdBuffer, const VkCmdBufferBeginInfo* pBeginInfo);
+typedef VkResult (VKAPI *PFN_vkEndCommandBuffer)(VkCmdBuffer cmdBuffer);
+typedef VkResult (VKAPI *PFN_vkResetCommandBuffer)(VkCmdBuffer cmdBuffer);
+typedef void      (VKAPI *PFN_vkCmdBindPipeline)(VkCmdBuffer cmdBuffer, VkPipelineBindPoint pipelineBindPoint, VkPipeline pipeline);
+typedef void      (VKAPI *PFN_vkCmdBindDynamicStateObject)(VkCmdBuffer cmdBuffer, VkStateBindPoint stateBindPoint, VkDynamicStateObject state);
+typedef void      (VKAPI *PFN_vkCmdBindDescriptorSets)(VkCmdBuffer cmdBuffer, VkPipelineBindPoint pipelineBindPoint, VkDescriptorSetLayoutChain layoutChain, uint32_t layoutChainSlot, uint32_t count, const VkDescriptorSet* pDescriptorSets, const uint32_t* pUserData);
+typedef void      (VKAPI *PFN_vkCmdBindIndexBuffer)(VkCmdBuffer cmdBuffer, VkBuffer buffer, VkGpuSize offset, VkIndexType indexType);
+typedef void      (VKAPI *PFN_vkCmdBindVertexBuffer)(VkCmdBuffer cmdBuffer, VkBuffer buffer, VkGpuSize offset, uint32_t binding);
+typedef void      (VKAPI *PFN_vkCmdDraw)(VkCmdBuffer cmdBuffer, uint32_t firstVertex, uint32_t vertexCount, uint32_t firstInstance, uint32_t instanceCount);
+typedef void      (VKAPI *PFN_vkCmdDrawIndexed)(VkCmdBuffer cmdBuffer, uint32_t firstIndex, uint32_t indexCount, int32_t vertexOffset, uint32_t firstInstance, uint32_t instanceCount);
+typedef void      (VKAPI *PFN_vkCmdDrawIndirect)(VkCmdBuffer cmdBuffer, VkBuffer buffer, VkGpuSize offset, uint32_t count, uint32_t stride);
+typedef void      (VKAPI *PFN_vkCmdDrawIndexedIndirect)(VkCmdBuffer cmdBuffer, VkBuffer buffer, VkGpuSize offset, uint32_t count, uint32_t stride);
+typedef void      (VKAPI *PFN_vkCmdDispatch)(VkCmdBuffer cmdBuffer, uint32_t x, uint32_t y, uint32_t z);
+typedef void      (VKAPI *PFN_vkCmdDispatchIndirect)(VkCmdBuffer cmdBuffer, VkBuffer buffer, VkGpuSize offset);
+typedef void      (VKAPI *PFN_vkCmdCopyBuffer)(VkCmdBuffer cmdBuffer, VkBuffer srcBuffer, VkBuffer destBuffer, uint32_t regionCount, const VkBufferCopy* pRegions);
+typedef void      (VKAPI *PFN_vkCmdCopyImage)(VkCmdBuffer cmdBuffer, VkImage srcImage, VkImageLayout srcImageLayout, VkImage destImage, VkImageLayout destImageLayout, uint32_t regionCount, const VkImageCopy* pRegions);
+typedef void      (VKAPI *PFN_vkCmdBlitImage)(VkCmdBuffer cmdBuffer, VkImage srcImage, VkImageLayout srcImageLayout, VkImage destImage, VkImageLayout destImageLayout, uint32_t regionCount, const VkImageBlit* pRegions);
+typedef void      (VKAPI *PFN_vkCmdCopyBufferToImage)(VkCmdBuffer cmdBuffer, VkBuffer srcBuffer, VkImage destImage, VkImageLayout destImageLayout, uint32_t regionCount, const VkBufferImageCopy* pRegions);
+typedef void      (VKAPI *PFN_vkCmdCopyImageToBuffer)(VkCmdBuffer cmdBuffer, VkImage srcImage, VkImageLayout srcImageLayout, VkBuffer destBuffer, uint32_t regionCount, const VkBufferImageCopy* pRegions);
+typedef void      (VKAPI *PFN_vkCmdCloneImageData)(VkCmdBuffer cmdBuffer, VkImage srcImage, VkImageLayout srcImageLayout, VkImage destImage, VkImageLayout destImageLayout);
+typedef void      (VKAPI *PFN_vkCmdUpdateBuffer)(VkCmdBuffer cmdBuffer, VkBuffer destBuffer, VkGpuSize destOffset, VkGpuSize dataSize, const uint32_t* pData);
+typedef void      (VKAPI *PFN_vkCmdFillBuffer)(VkCmdBuffer cmdBuffer, VkBuffer destBuffer, VkGpuSize destOffset, VkGpuSize fillSize, uint32_t data);
+typedef void      (VKAPI *PFN_vkCmdClearColorImage)(VkCmdBuffer cmdBuffer, VkImage image, VkImageLayout imageLayout, VkClearColor color, uint32_t rangeCount, const VkImageSubresourceRange* pRanges);
+typedef void      (VKAPI *PFN_vkCmdClearDepthStencil)(VkCmdBuffer cmdBuffer, VkImage image, VkImageLayout imageLayout, float depth, uint32_t stencil, uint32_t rangeCount, const VkImageSubresourceRange* pRanges);
+typedef void      (VKAPI *PFN_vkCmdResolveImage)(VkCmdBuffer cmdBuffer, VkImage srcImage, VkImageLayout srcImageLayout, VkImage destImage, VkImageLayout destImageLayout, uint32_t rectCount, const VkImageResolve* pRects);
+typedef void      (VKAPI *PFN_vkCmdSetEvent)(VkCmdBuffer cmdBuffer, VkEvent event, VkPipeEvent pipeEvent);
+typedef void      (VKAPI *PFN_vkCmdResetEvent)(VkCmdBuffer cmdBuffer, VkEvent event, VkPipeEvent pipeEvent);
+typedef void      (VKAPI *PFN_vkCmdWaitEvents)(VkCmdBuffer cmdBuffer, const VkEventWaitInfo* pWaitInfo);
+typedef void      (VKAPI *PFN_vkCmdPipelineBarrier)(VkCmdBuffer cmdBuffer, const VkPipelineBarrier* pBarrier);
+typedef void      (VKAPI *PFN_vkCmdBeginQuery)(VkCmdBuffer cmdBuffer, VkQueryPool queryPool, uint32_t slot, VkFlags flags);
+typedef void      (VKAPI *PFN_vkCmdEndQuery)(VkCmdBuffer cmdBuffer, VkQueryPool queryPool, uint32_t slot);
+typedef void      (VKAPI *PFN_vkCmdResetQueryPool)(VkCmdBuffer cmdBuffer, VkQueryPool queryPool, uint32_t startQuery, uint32_t queryCount);
+typedef void      (VKAPI *PFN_vkCmdWriteTimestamp)(VkCmdBuffer cmdBuffer, VkTimestampType timestampType, VkBuffer destBuffer, VkGpuSize destOffset);
+typedef void      (VKAPI *PFN_vkCmdInitAtomicCounters)(VkCmdBuffer cmdBuffer, VkPipelineBindPoint pipelineBindPoint, uint32_t startCounter, uint32_t counterCount, const uint32_t* pData);
+typedef void      (VKAPI *PFN_vkCmdLoadAtomicCounters)(VkCmdBuffer cmdBuffer, VkPipelineBindPoint pipelineBindPoint, uint32_t startCounter, uint32_t counterCount, VkBuffer srcBuffer, VkGpuSize srcOffset);
+typedef void      (VKAPI *PFN_vkCmdSaveAtomicCounters)(VkCmdBuffer cmdBuffer, VkPipelineBindPoint pipelineBindPoint, uint32_t startCounter, uint32_t counterCount, VkBuffer destBuffer, VkGpuSize destOffset);
+typedef VkResult (VKAPI *PFN_vkCreateFramebuffer)(VkDevice device, const VkFramebufferCreateInfo* pCreateInfo, VkFramebuffer* pFramebuffer);
+typedef VkResult (VKAPI *PFN_vkCreateRenderPass)(VkDevice device, const VkRenderPassCreateInfo* pCreateInfo, VkRenderPass* pRenderPass);
+typedef void      (VKAPI *PFN_vkCmdBeginRenderPass)(VkCmdBuffer cmdBuffer, const VkRenderPassBegin* pRenderPassBegin);
+typedef void      (VKAPI *PFN_vkCmdEndRenderPass)(VkCmdBuffer cmdBuffer, VkRenderPass renderPass);
 
 #ifdef VK_PROTOTYPES
 
 // GPU initialization
 
-VK_RESULT VKAPI vkCreateInstance(
+VkResult VKAPI vkCreateInstance(
     const VkInstanceCreateInfo*             pCreateInfo,
-    VK_INSTANCE*                               pInstance);
+    VkInstance*                               pInstance);
 
-VK_RESULT VKAPI vkDestroyInstance(
-    VK_INSTANCE                                 instance);
+VkResult VKAPI vkDestroyInstance(
+    VkInstance                                 instance);
 
-VK_RESULT VKAPI vkEnumerateGpus(
-    VK_INSTANCE                                 instance,
+VkResult VKAPI vkEnumerateGpus(
+    VkInstance                                 instance,
     uint32_t                                    maxGpus,
     uint32_t*                                   pGpuCount,
-    VK_PHYSICAL_GPU*                            pGpus);
+    VkPhysicalGpu*                            pGpus);
 
-VK_RESULT VKAPI vkGetGpuInfo(
-    VK_PHYSICAL_GPU                             gpu,
-    VK_PHYSICAL_GPU_INFO_TYPE                   infoType,
+VkResult VKAPI vkGetGpuInfo(
+    VkPhysicalGpu                             gpu,
+    VkPhysicalGpuInfoType                   infoType,
     size_t*                                     pDataSize,
     void*                                       pData);
 
 void * VKAPI vkGetProcAddr(
-    VK_PHYSICAL_GPU                             gpu,
+    VkPhysicalGpu                             gpu,
     const char*                                 pName);
 
 // Device functions
 
-VK_RESULT VKAPI vkCreateDevice(
-    VK_PHYSICAL_GPU                             gpu,
+VkResult VKAPI vkCreateDevice(
+    VkPhysicalGpu                             gpu,
     const VkDeviceCreateInfo*                pCreateInfo,
-    VK_DEVICE*                                  pDevice);
+    VkDevice*                                  pDevice);
 
-VK_RESULT VKAPI vkDestroyDevice(
-    VK_DEVICE                                   device);
+VkResult VKAPI vkDestroyDevice(
+    VkDevice                                   device);
 
 // Extension discovery functions
 
-VK_RESULT VKAPI vkGetExtensionSupport(
-    VK_PHYSICAL_GPU                             gpu,
+VkResult VKAPI vkGetExtensionSupport(
+    VkPhysicalGpu                             gpu,
     const char*                                 pExtName);
 
 // Layer discovery functions
 
-VK_RESULT VKAPI vkEnumerateLayers(
-    VK_PHYSICAL_GPU                             gpu,
+VkResult VKAPI vkEnumerateLayers(
+    VkPhysicalGpu                             gpu,
     size_t                                      maxLayerCount,
     size_t                                      maxStringSize,
     size_t*                                     pOutLayerCount,
@@ -2436,182 +2436,182 @@ VK_RESULT VKAPI vkEnumerateLayers(
 
 // Queue functions
 
-VK_RESULT VKAPI vkGetDeviceQueue(
-    VK_DEVICE                                   device,
+VkResult VKAPI vkGetDeviceQueue(
+    VkDevice                                   device,
     uint32_t                                    queueNodeIndex,
     uint32_t                                    queueIndex,
-    VK_QUEUE*                                   pQueue);
+    VkQueue*                                   pQueue);
 
-VK_RESULT VKAPI vkQueueSubmit(
-    VK_QUEUE                                    queue,
+VkResult VKAPI vkQueueSubmit(
+    VkQueue                                    queue,
     uint32_t                                    cmdBufferCount,
-    const VK_CMD_BUFFER*                        pCmdBuffers,
-    VK_FENCE                                    fence);
+    const VkCmdBuffer*                        pCmdBuffers,
+    VkFence                                    fence);
 
-VK_RESULT VKAPI vkQueueAddMemReference(
-    VK_QUEUE                                    queue,
-    VK_GPU_MEMORY                               mem);
+VkResult VKAPI vkQueueAddMemReference(
+    VkQueue                                    queue,
+    VkGpuMemory                               mem);
 
-VK_RESULT VKAPI vkQueueRemoveMemReference(
-    VK_QUEUE                                    queue,
-    VK_GPU_MEMORY                               mem);
+VkResult VKAPI vkQueueRemoveMemReference(
+    VkQueue                                    queue,
+    VkGpuMemory                               mem);
 
-VK_RESULT VKAPI vkQueueWaitIdle(
-    VK_QUEUE                                    queue);
+VkResult VKAPI vkQueueWaitIdle(
+    VkQueue                                    queue);
 
-VK_RESULT VKAPI vkDeviceWaitIdle(
-    VK_DEVICE                                   device);
+VkResult VKAPI vkDeviceWaitIdle(
+    VkDevice                                   device);
 
 // Memory functions
 
-VK_RESULT VKAPI vkAllocMemory(
-    VK_DEVICE                                   device,
+VkResult VKAPI vkAllocMemory(
+    VkDevice                                   device,
     const VkMemoryAllocInfo*                 pAllocInfo,
-    VK_GPU_MEMORY*                              pMem);
+    VkGpuMemory*                              pMem);
 
-VK_RESULT VKAPI vkFreeMemory(
-    VK_GPU_MEMORY                               mem);
+VkResult VKAPI vkFreeMemory(
+    VkGpuMemory                               mem);
 
-VK_RESULT VKAPI vkSetMemoryPriority(
-    VK_GPU_MEMORY                               mem,
-    VK_MEMORY_PRIORITY                          priority);
+VkResult VKAPI vkSetMemoryPriority(
+    VkGpuMemory                               mem,
+    VkMemoryPriority                          priority);
 
-VK_RESULT VKAPI vkMapMemory(
-    VK_GPU_MEMORY                               mem,
-    VK_FLAGS                                    flags,                // Reserved
+VkResult VKAPI vkMapMemory(
+    VkGpuMemory                               mem,
+    VkFlags                                    flags,                // Reserved
     void**                                      ppData);
 
-VK_RESULT VKAPI vkUnmapMemory(
-    VK_GPU_MEMORY                               mem);
+VkResult VKAPI vkUnmapMemory(
+    VkGpuMemory                               mem);
 
-VK_RESULT VKAPI vkPinSystemMemory(
-    VK_DEVICE                                   device,
+VkResult VKAPI vkPinSystemMemory(
+    VkDevice                                   device,
     const void*                                 pSysMem,
     size_t                                      memSize,
-    VK_GPU_MEMORY*                              pMem);
+    VkGpuMemory*                              pMem);
 
 // Multi-device functions
 
-VK_RESULT VKAPI vkGetMultiGpuCompatibility(
-    VK_PHYSICAL_GPU                             gpu0,
-    VK_PHYSICAL_GPU                             gpu1,
-    VK_GPU_COMPATIBILITY_INFO*                  pInfo);
+VkResult VKAPI vkGetMultiGpuCompatibility(
+    VkPhysicalGpu                             gpu0,
+    VkPhysicalGpu                             gpu1,
+    VkGpuCompatibilityInfo*                  pInfo);
 
-VK_RESULT VKAPI vkOpenSharedMemory(
-    VK_DEVICE                                   device,
-    const VK_MEMORY_OPEN_INFO*                  pOpenInfo,
-    VK_GPU_MEMORY*                              pMem);
+VkResult VKAPI vkOpenSharedMemory(
+    VkDevice                                   device,
+    const VkMemoryOpenInfo*                  pOpenInfo,
+    VkGpuMemory*                              pMem);
 
-VK_RESULT VKAPI vkOpenSharedSemaphore(
-    VK_DEVICE                                   device,
-    const VK_SEMAPHORE_OPEN_INFO*               pOpenInfo,
-    VK_SEMAPHORE*                               pSemaphore);
+VkResult VKAPI vkOpenSharedSemaphore(
+    VkDevice                                   device,
+    const VkSemaphoreOpenInfo*               pOpenInfo,
+    VkSemaphore*                               pSemaphore);
 
-VK_RESULT VKAPI vkOpenPeerMemory(
-    VK_DEVICE                                   device,
-    const VK_PEER_MEMORY_OPEN_INFO*             pOpenInfo,
-    VK_GPU_MEMORY*                              pMem);
+VkResult VKAPI vkOpenPeerMemory(
+    VkDevice                                    device,
+    const VkPeerMemoryOpenInfo*                 pOpenInfo,
+    VkGpuMemory*                                pMem);
 
-VK_RESULT VKAPI vkOpenPeerImage(
-    VK_DEVICE                                   device,
-    const VK_PEER_IMAGE_OPEN_INFO*              pOpenInfo,
-    VK_IMAGE*                                   pImage,
-    VK_GPU_MEMORY*                              pMem);
+VkResult VKAPI vkOpenPeerImage(
+    VkDevice                                   device,
+    const VkPeerImageOpenInfo*              pOpenInfo,
+    VkImage*                                   pImage,
+    VkGpuMemory*                              pMem);
 
 // Generic API object functions
 
-VK_RESULT VKAPI vkDestroyObject(
-    VK_OBJECT                                   object);
+VkResult VKAPI vkDestroyObject(
+    VkObject                                   object);
 
-VK_RESULT VKAPI vkGetObjectInfo(
-    VK_BASE_OBJECT                              object,
-    VK_OBJECT_INFO_TYPE                         infoType,
+VkResult VKAPI vkGetObjectInfo(
+    VkBaseObject                              object,
+    VkObjectInfoType                         infoType,
     size_t*                                     pDataSize,
     void*                                       pData);
 
-VK_RESULT VKAPI vkBindObjectMemory(
-    VK_OBJECT                                   object,
+VkResult VKAPI vkBindObjectMemory(
+    VkObject                                   object,
     uint32_t                                    allocationIdx,
-    VK_GPU_MEMORY                               mem,
-    VK_GPU_SIZE                                 memOffset);
+    VkGpuMemory                               mem,
+    VkGpuSize                                 memOffset);
 
-VK_RESULT VKAPI vkBindObjectMemoryRange(
-    VK_OBJECT                                   object,
+VkResult VKAPI vkBindObjectMemoryRange(
+    VkObject                                   object,
     uint32_t                                    allocationIdx,
-    VK_GPU_SIZE                                 rangeOffset,
-    VK_GPU_SIZE                                 rangeSize,
-    VK_GPU_MEMORY                               mem,
-    VK_GPU_SIZE                                 memOffset);
+    VkGpuSize                                 rangeOffset,
+    VkGpuSize                                 rangeSize,
+    VkGpuMemory                               mem,
+    VkGpuSize                                 memOffset);
 
-VK_RESULT VKAPI vkBindImageMemoryRange(
-    VK_IMAGE                                    image,
+VkResult VKAPI vkBindImageMemoryRange(
+    VkImage                                    image,
     uint32_t                                    allocationIdx,
-    const VK_IMAGE_MEMORY_BIND_INFO*            bindInfo,
-    VK_GPU_MEMORY                               mem,
-    VK_GPU_SIZE                                 memOffset);
+    const VkImageMemoryBindInfo*            bindInfo,
+    VkGpuMemory                               mem,
+    VkGpuSize                                 memOffset);
 
 // Fence functions
 
-VK_RESULT VKAPI vkCreateFence(
-    VK_DEVICE                                   device,
-    const VK_FENCE_CREATE_INFO*                 pCreateInfo,
-    VK_FENCE*                                   pFence);
+VkResult VKAPI vkCreateFence(
+    VkDevice                                   device,
+    const VkFenceCreateInfo*                 pCreateInfo,
+    VkFence*                                   pFence);
 
-VK_RESULT VKAPI vkResetFences(
-    VK_DEVICE                                   device,
+VkResult VKAPI vkResetFences(
+    VkDevice                                   device,
     uint32_t                                    fenceCount,
-    VK_FENCE*                                   pFences);
+    VkFence*                                   pFences);
 
-VK_RESULT VKAPI vkGetFenceStatus(
-    VK_FENCE fence);
+VkResult VKAPI vkGetFenceStatus(
+    VkFence fence);
 
-VK_RESULT VKAPI vkWaitForFences(
-    VK_DEVICE                                   device,
+VkResult VKAPI vkWaitForFences(
+    VkDevice                                   device,
     uint32_t                                    fenceCount,
-    const VK_FENCE*                             pFences,
+    const VkFence*                             pFences,
     bool32_t                                    waitAll,
     uint64_t                                    timeout); // timeout in nanoseconds
 
 // Queue semaphore functions
 
-VK_RESULT VKAPI vkCreateSemaphore(
-    VK_DEVICE                                   device,
-    const VK_SEMAPHORE_CREATE_INFO*             pCreateInfo,
-    VK_SEMAPHORE*                               pSemaphore);
+VkResult VKAPI vkCreateSemaphore(
+    VkDevice                                   device,
+    const VkSemaphoreCreateInfo*             pCreateInfo,
+    VkSemaphore*                               pSemaphore);
 
-VK_RESULT VKAPI vkQueueSignalSemaphore(
-    VK_QUEUE                                    queue,
-    VK_SEMAPHORE                                semaphore);
+VkResult VKAPI vkQueueSignalSemaphore(
+    VkQueue                                    queue,
+    VkSemaphore                                semaphore);
 
-VK_RESULT VKAPI vkQueueWaitSemaphore(
-    VK_QUEUE                                    queue,
-    VK_SEMAPHORE                                semaphore);
+VkResult VKAPI vkQueueWaitSemaphore(
+    VkQueue                                    queue,
+    VkSemaphore                                semaphore);
 
 // Event functions
 
-VK_RESULT VKAPI vkCreateEvent(
-    VK_DEVICE                                   device,
-    const VK_EVENT_CREATE_INFO*                 pCreateInfo,
-    VK_EVENT*                                   pEvent);
+VkResult VKAPI vkCreateEvent(
+    VkDevice                                   device,
+    const VkEventCreateInfo*                 pCreateInfo,
+    VkEvent*                                   pEvent);
 
-VK_RESULT VKAPI vkGetEventStatus(
-    VK_EVENT                                    event);
+VkResult VKAPI vkGetEventStatus(
+    VkEvent                                    event);
 
-VK_RESULT VKAPI vkSetEvent(
-    VK_EVENT                                    event);
+VkResult VKAPI vkSetEvent(
+    VkEvent                                    event);
 
-VK_RESULT VKAPI vkResetEvent(
-    VK_EVENT                                    event);
+VkResult VKAPI vkResetEvent(
+    VkEvent                                    event);
 
 // Query functions
 
-VK_RESULT VKAPI vkCreateQueryPool(
-    VK_DEVICE                                   device,
-    const VK_QUERY_POOL_CREATE_INFO*            pCreateInfo,
-    VK_QUERY_POOL*                              pQueryPool);
+VkResult VKAPI vkCreateQueryPool(
+    VkDevice                                   device,
+    const VkQueryPoolCreateInfo*            pCreateInfo,
+    VkQueryPool*                              pQueryPool);
 
-VK_RESULT VKAPI vkGetQueryPoolResults(
-    VK_QUERY_POOL                               queryPool,
+VkResult VKAPI vkGetQueryPoolResults(
+    VkQueryPool                               queryPool,
     uint32_t                                    startQuery,
     uint32_t                                    queryCount,
     size_t*                                     pDataSize,
@@ -2619,238 +2619,238 @@ VK_RESULT VKAPI vkGetQueryPoolResults(
 
 // Format capabilities
 
-VK_RESULT VKAPI vkGetFormatInfo(
-    VK_DEVICE                                   device,
-    VK_FORMAT                                   format,
-    VK_FORMAT_INFO_TYPE                         infoType,
+VkResult VKAPI vkGetFormatInfo(
+    VkDevice                                   device,
+    VkFormat                                   format,
+    VkFormatInfoType                         infoType,
     size_t*                                     pDataSize,
     void*                                       pData);
 
 // Buffer functions
 
-VK_RESULT VKAPI vkCreateBuffer(
-    VK_DEVICE                                   device,
+VkResult VKAPI vkCreateBuffer(
+    VkDevice                                   device,
     const VkBufferCreateInfo*                pCreateInfo,
-    VK_BUFFER*                                  pBuffer);
+    VkBuffer*                                  pBuffer);
 
 // Buffer view functions
 
-VK_RESULT VKAPI vkCreateBufferView(
-    VK_DEVICE                                   device,
+VkResult VKAPI vkCreateBufferView(
+    VkDevice                                   device,
     const VkBufferViewCreateInfo*           pCreateInfo,
-    VK_BUFFER_VIEW*                             pView);
+    VkBufferView*                             pView);
 
 // Image functions
 
-VK_RESULT VKAPI vkCreateImage(
-    VK_DEVICE                                   device,
-    const VK_IMAGE_CREATE_INFO*                 pCreateInfo,
-    VK_IMAGE*                                   pImage);
+VkResult VKAPI vkCreateImage(
+    VkDevice                                   device,
+    const VkImageCreateInfo*                 pCreateInfo,
+    VkImage*                                   pImage);
 
-VK_RESULT VKAPI vkGetImageSubresourceInfo(
-    VK_IMAGE                                    image,
-    const VK_IMAGE_SUBRESOURCE*                 pSubresource,
-    VK_SUBRESOURCE_INFO_TYPE                    infoType,
+VkResult VKAPI vkGetImageSubresourceInfo(
+    VkImage                                    image,
+    const VkImageSubresource*                 pSubresource,
+    VkSubresourceInfoType                    infoType,
     size_t*                                     pDataSize,
     void*                                       pData);
 
 // Image view functions
 
-VK_RESULT VKAPI vkCreateImageView(
-    VK_DEVICE                                   device,
-    const VK_IMAGE_VIEW_CREATE_INFO*            pCreateInfo,
-    VK_IMAGE_VIEW*                              pView);
+VkResult VKAPI vkCreateImageView(
+    VkDevice                                   device,
+    const VkImageViewCreateInfo*            pCreateInfo,
+    VkImageView*                              pView);
 
-VK_RESULT VKAPI vkCreateColorAttachmentView(
-    VK_DEVICE                                   device,
-    const VK_COLOR_ATTACHMENT_VIEW_CREATE_INFO* pCreateInfo,
-    VK_COLOR_ATTACHMENT_VIEW*                   pView);
+VkResult VKAPI vkCreateColorAttachmentView(
+    VkDevice                                   device,
+    const VkColorAttachmentViewCreateInfo* pCreateInfo,
+    VkColorAttachmentView*                   pView);
 
-VK_RESULT VKAPI vkCreateDepthStencilView(
-    VK_DEVICE                                   device,
-    const VK_DEPTH_STENCIL_VIEW_CREATE_INFO*    pCreateInfo,
-    VK_DEPTH_STENCIL_VIEW*                      pView);
+VkResult VKAPI vkCreateDepthStencilView(
+    VkDevice                                   device,
+    const VkDepthStencilViewCreateInfo*    pCreateInfo,
+    VkDepthStencilView*                      pView);
 
 // Shader functions
 
-VK_RESULT VKAPI vkCreateShader(
-    VK_DEVICE                                   device,
-    const VK_SHADER_CREATE_INFO*                pCreateInfo,
-    VK_SHADER*                                  pShader);
+VkResult VKAPI vkCreateShader(
+    VkDevice                                   device,
+    const VkShaderCreateInfo*                pCreateInfo,
+    VkShader*                                  pShader);
 
 // Pipeline functions
 
-VK_RESULT VKAPI vkCreateGraphicsPipeline(
-    VK_DEVICE                                   device,
-    const VK_GRAPHICS_PIPELINE_CREATE_INFO*     pCreateInfo,
-    VK_PIPELINE*                                pPipeline);
+VkResult VKAPI vkCreateGraphicsPipeline(
+    VkDevice                                   device,
+    const VkGraphicsPipelineCreateInfo*     pCreateInfo,
+    VkPipeline*                                pPipeline);
 
-VK_RESULT VKAPI vkCreateGraphicsPipelineDerivative(
-    VK_DEVICE                                   device,
-    const VK_GRAPHICS_PIPELINE_CREATE_INFO*     pCreateInfo,
-    VK_PIPELINE                                 basePipeline,
-    VK_PIPELINE*                                pPipeline);
+VkResult VKAPI vkCreateGraphicsPipelineDerivative(
+    VkDevice                                   device,
+    const VkGraphicsPipelineCreateInfo*     pCreateInfo,
+    VkPipeline                                 basePipeline,
+    VkPipeline*                                pPipeline);
 
-VK_RESULT VKAPI vkCreateComputePipeline(
-    VK_DEVICE                                   device,
-    const VK_COMPUTE_PIPELINE_CREATE_INFO*      pCreateInfo,
-    VK_PIPELINE*                                pPipeline);
+VkResult VKAPI vkCreateComputePipeline(
+    VkDevice                                   device,
+    const VkComputePipelineCreateInfo*      pCreateInfo,
+    VkPipeline*                                pPipeline);
 
-VK_RESULT VKAPI vkStorePipeline(
-    VK_PIPELINE                                 pipeline,
+VkResult VKAPI vkStorePipeline(
+    VkPipeline                                 pipeline,
     size_t*                                     pDataSize,
     void*                                       pData);
 
-VK_RESULT VKAPI vkLoadPipeline(
-    VK_DEVICE                                   device,
+VkResult VKAPI vkLoadPipeline(
+    VkDevice                                   device,
     size_t                                      dataSize,
     const void*                                 pData,
-    VK_PIPELINE*                                pPipeline);
+    VkPipeline*                                pPipeline);
 
-VK_RESULT VKAPI vkLoadPipelineDerivative(
-    VK_DEVICE                                   device,
+VkResult VKAPI vkLoadPipelineDerivative(
+    VkDevice                                   device,
     size_t                                      dataSize,
     const void*                                 pData,
-    VK_PIPELINE                                 basePipeline,
-    VK_PIPELINE*                                pPipeline);
+    VkPipeline                                 basePipeline,
+    VkPipeline*                                pPipeline);
 
 // Sampler functions
 
-VK_RESULT VKAPI vkCreateSampler(
-    VK_DEVICE                                   device,
-    const VK_SAMPLER_CREATE_INFO*               pCreateInfo,
-    VK_SAMPLER*                                 pSampler);
+VkResult VKAPI vkCreateSampler(
+    VkDevice                                   device,
+    const VkSamplerCreateInfo*               pCreateInfo,
+    VkSampler*                                 pSampler);
 
 // Descriptor set functions
 
-VK_RESULT VKAPI vkCreateDescriptorSetLayout(
-    VK_DEVICE                                    device,
-    const VK_DESCRIPTOR_SET_LAYOUT_CREATE_INFO*  pCreateInfo,
-    VK_DESCRIPTOR_SET_LAYOUT*                    pSetLayout);
+VkResult VKAPI vkCreateDescriptorSetLayout(
+    VkDevice                                    device,
+    const VkDescriptorSetLayoutCreateInfo*  pCreateInfo,
+    VkDescriptorSetLayout*                    pSetLayout);
 
-VK_RESULT VKAPI vkCreateDescriptorSetLayoutChain(
-    VK_DEVICE                                    device,
+VkResult VKAPI vkCreateDescriptorSetLayoutChain(
+    VkDevice                                    device,
     uint32_t                                     setLayoutArrayCount,
-    const VK_DESCRIPTOR_SET_LAYOUT*              pSetLayoutArray,
-    VK_DESCRIPTOR_SET_LAYOUT_CHAIN*              pLayoutChain);
+    const VkDescriptorSetLayout*              pSetLayoutArray,
+    VkDescriptorSetLayoutChain*              pLayoutChain);
 
-VK_RESULT VKAPI vkBeginDescriptorPoolUpdate(
-    VK_DEVICE                                    device,
-    VK_DESCRIPTOR_UPDATE_MODE                    updateMode);
+VkResult VKAPI vkBeginDescriptorPoolUpdate(
+    VkDevice                                    device,
+    VkDescriptorUpdateMode                    updateMode);
 
-VK_RESULT VKAPI vkEndDescriptorPoolUpdate(
-    VK_DEVICE                                    device,
-    VK_CMD_BUFFER                                cmd);
+VkResult VKAPI vkEndDescriptorPoolUpdate(
+    VkDevice                                    device,
+    VkCmdBuffer                                cmd);
 
-VK_RESULT VKAPI vkCreateDescriptorPool(
-    VK_DEVICE                                    device,
-    VK_DESCRIPTOR_POOL_USAGE                     poolUsage,
+VkResult VKAPI vkCreateDescriptorPool(
+    VkDevice                                    device,
+    VkDescriptorPoolUsage                     poolUsage,
     uint32_t                                     maxSets,
-    const VK_DESCRIPTOR_POOL_CREATE_INFO*        pCreateInfo,
-    VK_DESCRIPTOR_POOL*                          pDescriptorPool);
+    const VkDescriptorPoolCreateInfo*        pCreateInfo,
+    VkDescriptorPool*                          pDescriptorPool);
 
-VK_RESULT VKAPI vkResetDescriptorPool(
-    VK_DESCRIPTOR_POOL                           descriptorPool);
+VkResult VKAPI vkResetDescriptorPool(
+    VkDescriptorPool                           descriptorPool);
 
-VK_RESULT VKAPI vkAllocDescriptorSets(
-    VK_DESCRIPTOR_POOL                           descriptorPool,
-    VK_DESCRIPTOR_SET_USAGE                      setUsage,
+VkResult VKAPI vkAllocDescriptorSets(
+    VkDescriptorPool                           descriptorPool,
+    VkDescriptorSetUsage                      setUsage,
     uint32_t                                     count,
-    const VK_DESCRIPTOR_SET_LAYOUT*              pSetLayouts,
-    VK_DESCRIPTOR_SET*                           pDescriptorSets,
+    const VkDescriptorSetLayout*              pSetLayouts,
+    VkDescriptorSet*                           pDescriptorSets,
     uint32_t*                                    pCount);
 
 void VKAPI vkClearDescriptorSets(
-    VK_DESCRIPTOR_POOL                           descriptorPool,
+    VkDescriptorPool                           descriptorPool,
     uint32_t                                     count,
-    const VK_DESCRIPTOR_SET*                     pDescriptorSets);
+    const VkDescriptorSet*                     pDescriptorSets);
 
 void VKAPI vkUpdateDescriptors(
-    VK_DESCRIPTOR_SET                            descriptorSet,
+    VkDescriptorSet                            descriptorSet,
     uint32_t                                     updateCount,
     const void**                                 pUpdateArray);
 
 // State object functions
 
-VK_RESULT VKAPI vkCreateDynamicViewportState(
-    VK_DEVICE                                   device,
-    const VK_DYNAMIC_VP_STATE_CREATE_INFO*      pCreateInfo,
-    VK_DYNAMIC_VP_STATE_OBJECT*                 pState);
+VkResult VKAPI vkCreateDynamicViewportState(
+    VkDevice                                   device,
+    const VkDynamicVpStateCreateInfo*      pCreateInfo,
+    VkDynamicVpStateObject*                 pState);
 
-VK_RESULT VKAPI vkCreateDynamicRasterState(
-    VK_DEVICE                                   device,
-    const VK_DYNAMIC_RS_STATE_CREATE_INFO*      pCreateInfo,
-    VK_DYNAMIC_RS_STATE_OBJECT*                 pState);
+VkResult VKAPI vkCreateDynamicRasterState(
+    VkDevice                                   device,
+    const VkDynamicRsStateCreateInfo*      pCreateInfo,
+    VkDynamicRsStateObject*                 pState);
 
-VK_RESULT VKAPI vkCreateDynamicColorBlendState(
-    VK_DEVICE                                   device,
-    const VK_DYNAMIC_CB_STATE_CREATE_INFO*      pCreateInfo,
-    VK_DYNAMIC_CB_STATE_OBJECT*                 pState);
+VkResult VKAPI vkCreateDynamicColorBlendState(
+    VkDevice                                   device,
+    const VkDynamicCbStateCreateInfo*      pCreateInfo,
+    VkDynamicCbStateObject*                 pState);
 
-VK_RESULT VKAPI vkCreateDynamicDepthStencilState(
-    VK_DEVICE                                   device,
-    const VK_DYNAMIC_DS_STATE_CREATE_INFO*      pCreateInfo,
-    VK_DYNAMIC_DS_STATE_OBJECT*                 pState);
+VkResult VKAPI vkCreateDynamicDepthStencilState(
+    VkDevice                                   device,
+    const VkDynamicDsStateCreateInfo*      pCreateInfo,
+    VkDynamicDsStateObject*                 pState);
 
 // Command buffer functions
 
-VK_RESULT VKAPI vkCreateCommandBuffer(
-    VK_DEVICE                                   device,
-    const VK_CMD_BUFFER_CREATE_INFO*            pCreateInfo,
-    VK_CMD_BUFFER*                              pCmdBuffer);
+VkResult VKAPI vkCreateCommandBuffer(
+    VkDevice                                   device,
+    const VkCmdBufferCreateInfo*            pCreateInfo,
+    VkCmdBuffer*                              pCmdBuffer);
 
-VK_RESULT VKAPI vkBeginCommandBuffer(
-    VK_CMD_BUFFER                               cmdBuffer,
-    const VK_CMD_BUFFER_BEGIN_INFO*             pBeginInfo);
+VkResult VKAPI vkBeginCommandBuffer(
+    VkCmdBuffer                               cmdBuffer,
+    const VkCmdBufferBeginInfo*             pBeginInfo);
 
-VK_RESULT VKAPI vkEndCommandBuffer(
-    VK_CMD_BUFFER                               cmdBuffer);
+VkResult VKAPI vkEndCommandBuffer(
+    VkCmdBuffer                               cmdBuffer);
 
-VK_RESULT VKAPI vkResetCommandBuffer(
-    VK_CMD_BUFFER                               cmdBuffer);
+VkResult VKAPI vkResetCommandBuffer(
+    VkCmdBuffer                               cmdBuffer);
 
 // Command buffer building functions
 
 void VKAPI vkCmdBindPipeline(
-    VK_CMD_BUFFER                               cmdBuffer,
-    VK_PIPELINE_BIND_POINT                      pipelineBindPoint,
-    VK_PIPELINE                                 pipeline);
+    VkCmdBuffer                               cmdBuffer,
+    VkPipelineBindPoint                      pipelineBindPoint,
+    VkPipeline                                 pipeline);
 
 void VKAPI vkCmdBindDynamicStateObject(
-    VK_CMD_BUFFER                               cmdBuffer,
-    VK_STATE_BIND_POINT                         stateBindPoint,
-    VK_DYNAMIC_STATE_OBJECT                     dynamicState);
+    VkCmdBuffer                               cmdBuffer,
+    VkStateBindPoint                         stateBindPoint,
+    VkDynamicStateObject                     dynamicState);
 
 void VKAPI vkCmdBindDescriptorSets(
-    VK_CMD_BUFFER                               cmdBuffer,
-    VK_PIPELINE_BIND_POINT                      pipelineBindPoint,
-    VK_DESCRIPTOR_SET_LAYOUT_CHAIN              layoutChain,
+    VkCmdBuffer                               cmdBuffer,
+    VkPipelineBindPoint                      pipelineBindPoint,
+    VkDescriptorSetLayoutChain              layoutChain,
     uint32_t                                    layoutChainSlot,
     uint32_t                                    count,
-    const VK_DESCRIPTOR_SET*                    pDescriptorSets,
+    const VkDescriptorSet*                    pDescriptorSets,
     const uint32_t    *                         pUserData);
 
 void VKAPI vkCmdBindIndexBuffer(
-    VK_CMD_BUFFER                               cmdBuffer,
-    VK_BUFFER                                   buffer,
-    VK_GPU_SIZE                                 offset,
-    VK_INDEX_TYPE                               indexType);
+    VkCmdBuffer                               cmdBuffer,
+    VkBuffer                                   buffer,
+    VkGpuSize                                 offset,
+    VkIndexType                               indexType);
 
 void VKAPI vkCmdBindVertexBuffer(
-    VK_CMD_BUFFER                               cmdBuffer,
-    VK_BUFFER                                   buffer,
-    VK_GPU_SIZE                                 offset,
+    VkCmdBuffer                               cmdBuffer,
+    VkBuffer                                   buffer,
+    VkGpuSize                                 offset,
     uint32_t                                    binding);
 
 void VKAPI vkCmdDraw(
-    VK_CMD_BUFFER                               cmdBuffer,
+    VkCmdBuffer                               cmdBuffer,
     uint32_t                                    firstVertex,
     uint32_t                                    vertexCount,
     uint32_t                                    firstInstance,
     uint32_t                                    instanceCount);
 
 void VKAPI vkCmdDrawIndexed(
-    VK_CMD_BUFFER                               cmdBuffer,
+    VkCmdBuffer                               cmdBuffer,
     uint32_t                                    firstIndex,
     uint32_t                                    indexCount,
     int32_t                                     vertexOffset,
@@ -2858,198 +2858,198 @@ void VKAPI vkCmdDrawIndexed(
     uint32_t                                    instanceCount);
 
 void VKAPI vkCmdDrawIndirect(
-    VK_CMD_BUFFER                               cmdBuffer,
-    VK_BUFFER                                   buffer,
-    VK_GPU_SIZE                                 offset,
+    VkCmdBuffer                               cmdBuffer,
+    VkBuffer                                   buffer,
+    VkGpuSize                                 offset,
     uint32_t                                    count,
     uint32_t                                    stride);
 
 void VKAPI vkCmdDrawIndexedIndirect(
-    VK_CMD_BUFFER                               cmdBuffer,
-    VK_BUFFER                                   buffer,
-    VK_GPU_SIZE                                 offset,
+    VkCmdBuffer                               cmdBuffer,
+    VkBuffer                                   buffer,
+    VkGpuSize                                 offset,
     uint32_t                                    count,
     uint32_t                                    stride);
 
 void VKAPI vkCmdDispatch(
-    VK_CMD_BUFFER                               cmdBuffer,
+    VkCmdBuffer                               cmdBuffer,
     uint32_t                                    x,
     uint32_t                                    y,
     uint32_t                                    z);
 void VKAPI vkCmdDispatchIndirect(
-    VK_CMD_BUFFER                               cmdBuffer,
-    VK_BUFFER                                   buffer,
-    VK_GPU_SIZE                                 offset);
+    VkCmdBuffer                               cmdBuffer,
+    VkBuffer                                   buffer,
+    VkGpuSize                                 offset);
 
 void VKAPI vkCmdCopyBuffer(
-    VK_CMD_BUFFER                               cmdBuffer,
-    VK_BUFFER                                   srcBuffer,
-    VK_BUFFER                                   destBuffer,
+    VkCmdBuffer                               cmdBuffer,
+    VkBuffer                                   srcBuffer,
+    VkBuffer                                   destBuffer,
     uint32_t                                    regionCount,
-    const VK_BUFFER_COPY*                       pRegions);
+    const VkBufferCopy*                       pRegions);
 
 void VKAPI vkCmdCopyImage(
-    VK_CMD_BUFFER                               cmdBuffer,
-    VK_IMAGE                                    srcImage,
-    VK_IMAGE_LAYOUT                             srcImageLayout,
-    VK_IMAGE                                    destImage,
-    VK_IMAGE_LAYOUT                             destImageLayout,
+    VkCmdBuffer                               cmdBuffer,
+    VkImage                                    srcImage,
+    VkImageLayout                             srcImageLayout,
+    VkImage                                    destImage,
+    VkImageLayout                             destImageLayout,
     uint32_t                                    regionCount,
-    const VK_IMAGE_COPY*                        pRegions);
+    const VkImageCopy*                        pRegions);
 
 void VKAPI vkCmdBlitImage(
-    VK_CMD_BUFFER                               cmdBuffer,
-    VK_IMAGE                                    srcImage,
-    VK_IMAGE_LAYOUT                             srcImageLayout,
-    VK_IMAGE                                    destImage,
-    VK_IMAGE_LAYOUT                             destImageLayout,
+    VkCmdBuffer                               cmdBuffer,
+    VkImage                                    srcImage,
+    VkImageLayout                             srcImageLayout,
+    VkImage                                    destImage,
+    VkImageLayout                             destImageLayout,
     uint32_t                                    regionCount,
-    const VK_IMAGE_BLIT*                        pRegions);
+    const VkImageBlit*                        pRegions);
 
 void VKAPI vkCmdCopyBufferToImage(
-    VK_CMD_BUFFER                               cmdBuffer,
-    VK_BUFFER                                   srcBuffer,
-    VK_IMAGE                                    destImage,
-    VK_IMAGE_LAYOUT                             destImageLayout,
+    VkCmdBuffer                               cmdBuffer,
+    VkBuffer                                   srcBuffer,
+    VkImage                                    destImage,
+    VkImageLayout                             destImageLayout,
     uint32_t                                    regionCount,
-    const VK_BUFFER_IMAGE_COPY*                 pRegions);
+    const VkBufferImageCopy*                 pRegions);
 
 void VKAPI vkCmdCopyImageToBuffer(
-    VK_CMD_BUFFER                               cmdBuffer,
-    VK_IMAGE                                    srcImage,
-    VK_IMAGE_LAYOUT                             srcImageLayout,
-    VK_BUFFER                                   destBuffer,
+    VkCmdBuffer                               cmdBuffer,
+    VkImage                                    srcImage,
+    VkImageLayout                             srcImageLayout,
+    VkBuffer                                   destBuffer,
     uint32_t                                    regionCount,
-    const VK_BUFFER_IMAGE_COPY*                 pRegions);
+    const VkBufferImageCopy*                 pRegions);
 
 void VKAPI vkCmdCloneImageData(
-    VK_CMD_BUFFER                               cmdBuffer,
-    VK_IMAGE                                    srcImage,
-    VK_IMAGE_LAYOUT                             srcImageLayout,
-    VK_IMAGE                                    destImage,
-    VK_IMAGE_LAYOUT                             destImageLayout);
+    VkCmdBuffer                               cmdBuffer,
+    VkImage                                    srcImage,
+    VkImageLayout                             srcImageLayout,
+    VkImage                                    destImage,
+    VkImageLayout                             destImageLayout);
 
 void VKAPI vkCmdUpdateBuffer(
-    VK_CMD_BUFFER                               cmdBuffer,
-    VK_BUFFER                                   destBuffer,
-    VK_GPU_SIZE                                 destOffset,
-    VK_GPU_SIZE                                 dataSize,
+    VkCmdBuffer                               cmdBuffer,
+    VkBuffer                                   destBuffer,
+    VkGpuSize                                 destOffset,
+    VkGpuSize                                 dataSize,
     const uint32_t*                             pData);
 
 void VKAPI vkCmdFillBuffer(
-    VK_CMD_BUFFER                               cmdBuffer,
-    VK_BUFFER                                   destBuffer,
-    VK_GPU_SIZE                                 destOffset,
-    VK_GPU_SIZE                                 fillSize,
+    VkCmdBuffer                               cmdBuffer,
+    VkBuffer                                   destBuffer,
+    VkGpuSize                                 destOffset,
+    VkGpuSize                                 fillSize,
     uint32_t                                    data);
 
 void VKAPI vkCmdClearColorImage(
-    VK_CMD_BUFFER                               cmdBuffer,
-    VK_IMAGE                                    image,
-    VK_IMAGE_LAYOUT                             imageLayout,
-    VK_CLEAR_COLOR                              color,
+    VkCmdBuffer                               cmdBuffer,
+    VkImage                                    image,
+    VkImageLayout                             imageLayout,
+    VkClearColor                              color,
     uint32_t                                    rangeCount,
-    const VK_IMAGE_SUBRESOURCE_RANGE*           pRanges);
+    const VkImageSubresourceRange*           pRanges);
 
 void VKAPI vkCmdClearDepthStencil(
-    VK_CMD_BUFFER                               cmdBuffer,
-    VK_IMAGE                                    image,
-    VK_IMAGE_LAYOUT                             imageLayout,
+    VkCmdBuffer                               cmdBuffer,
+    VkImage                                    image,
+    VkImageLayout                             imageLayout,
     float                                       depth,
     uint32_t                                    stencil,
     uint32_t                                    rangeCount,
-    const VK_IMAGE_SUBRESOURCE_RANGE*           pRanges);
+    const VkImageSubresourceRange*           pRanges);
 
 void VKAPI vkCmdResolveImage(
-    VK_CMD_BUFFER                               cmdBuffer,
-    VK_IMAGE                                    srcImage,
-    VK_IMAGE_LAYOUT                             srcImageLayout,
-    VK_IMAGE                                    destImage,
-    VK_IMAGE_LAYOUT                             destImageLayout,
+    VkCmdBuffer                               cmdBuffer,
+    VkImage                                    srcImage,
+    VkImageLayout                             srcImageLayout,
+    VkImage                                    destImage,
+    VkImageLayout                             destImageLayout,
     uint32_t                                    rectCount,
-    const VK_IMAGE_RESOLVE*                     pRects);
+    const VkImageResolve*                     pRects);
 
 void VKAPI vkCmdSetEvent(
-    VK_CMD_BUFFER                               cmdBuffer,
-    VK_EVENT                                    event,
-    VK_PIPE_EVENT                               pipeEvent);
+    VkCmdBuffer                               cmdBuffer,
+    VkEvent                                    event,
+    VkPipeEvent                               pipeEvent);
 
 void VKAPI vkCmdResetEvent(
-    VK_CMD_BUFFER                               cmdBuffer,
-    VK_EVENT                                    event,
-    VK_PIPE_EVENT                               pipeEvent);
+    VkCmdBuffer                               cmdBuffer,
+    VkEvent                                    event,
+    VkPipeEvent                               pipeEvent);
 
 void VKAPI vkCmdWaitEvents(
-    VK_CMD_BUFFER                               cmdBuffer,
-    const VK_EVENT_WAIT_INFO*                   pWaitInfo);
+    VkCmdBuffer                               cmdBuffer,
+    const VkEventWaitInfo*                   pWaitInfo);
 
 void VKAPI vkCmdPipelineBarrier(
-    VK_CMD_BUFFER                               cmdBuffer,
-    const VK_PIPELINE_BARRIER*                  pBarrier);
+    VkCmdBuffer                               cmdBuffer,
+    const VkPipelineBarrier*                  pBarrier);
 
 void VKAPI vkCmdBeginQuery(
-    VK_CMD_BUFFER                               cmdBuffer,
-    VK_QUERY_POOL                               queryPool,
+    VkCmdBuffer                               cmdBuffer,
+    VkQueryPool                               queryPool,
     uint32_t                                    slot,
-    VK_FLAGS                                    flags);
+    VkFlags                                    flags);
 
 void VKAPI vkCmdEndQuery(
-    VK_CMD_BUFFER                               cmdBuffer,
-    VK_QUERY_POOL                               queryPool,
+    VkCmdBuffer                               cmdBuffer,
+    VkQueryPool                               queryPool,
     uint32_t                                    slot);
 
 void VKAPI vkCmdResetQueryPool(
-    VK_CMD_BUFFER                               cmdBuffer,
-    VK_QUERY_POOL                               queryPool,
+    VkCmdBuffer                               cmdBuffer,
+    VkQueryPool                               queryPool,
     uint32_t                                    startQuery,
     uint32_t                                    queryCount);
 
 void VKAPI vkCmdWriteTimestamp(
-    VK_CMD_BUFFER                               cmdBuffer,
-    VK_TIMESTAMP_TYPE                           timestampType,
-    VK_BUFFER                                   destBuffer,
-    VK_GPU_SIZE                                 destOffset);
+    VkCmdBuffer                               cmdBuffer,
+    VkTimestampType                           timestampType,
+    VkBuffer                                   destBuffer,
+    VkGpuSize                                 destOffset);
 
 void VKAPI vkCmdInitAtomicCounters(
-    VK_CMD_BUFFER                               cmdBuffer,
-    VK_PIPELINE_BIND_POINT                      pipelineBindPoint,
+    VkCmdBuffer                               cmdBuffer,
+    VkPipelineBindPoint                      pipelineBindPoint,
     uint32_t                                    startCounter,
     uint32_t                                    counterCount,
     const uint32_t*                             pData);
 
 void VKAPI vkCmdLoadAtomicCounters(
-    VK_CMD_BUFFER                               cmdBuffer,
-    VK_PIPELINE_BIND_POINT                      pipelineBindPoint,
+    VkCmdBuffer                               cmdBuffer,
+    VkPipelineBindPoint                      pipelineBindPoint,
     uint32_t                                    startCounter,
     uint32_t                                    counterCount,
-    VK_BUFFER                                   srcBuffer,
-    VK_GPU_SIZE                                 srcOffset);
+    VkBuffer                                   srcBuffer,
+    VkGpuSize                                 srcOffset);
 
 void VKAPI vkCmdSaveAtomicCounters(
-    VK_CMD_BUFFER                               cmdBuffer,
-    VK_PIPELINE_BIND_POINT                      pipelineBindPoint,
+    VkCmdBuffer                               cmdBuffer,
+    VkPipelineBindPoint                      pipelineBindPoint,
     uint32_t                                    startCounter,
     uint32_t                                    counterCount,
-    VK_BUFFER                                   destBuffer,
-    VK_GPU_SIZE                                 destOffset);
+    VkBuffer                                   destBuffer,
+    VkGpuSize                                 destOffset);
 
-VK_RESULT VKAPI vkCreateFramebuffer(
-    VK_DEVICE                                   device,
-    const VK_FRAMEBUFFER_CREATE_INFO*           pCreateInfo,
-    VK_FRAMEBUFFER*                             pFramebuffer);
+VkResult VKAPI vkCreateFramebuffer(
+    VkDevice                                   device,
+    const VkFramebufferCreateInfo*           pCreateInfo,
+    VkFramebuffer*                             pFramebuffer);
 
-VK_RESULT VKAPI vkCreateRenderPass(
-    VK_DEVICE                                   device,
-    const VK_RENDER_PASS_CREATE_INFO*           pCreateInfo,
-    VK_RENDER_PASS*                             pRenderPass);
+VkResult VKAPI vkCreateRenderPass(
+    VkDevice                                   device,
+    const VkRenderPassCreateInfo*           pCreateInfo,
+    VkRenderPass*                             pRenderPass);
 
 void VKAPI vkCmdBeginRenderPass(
-    VK_CMD_BUFFER                               cmdBuffer,
-    const VK_RENDER_PASS_BEGIN*                 pRenderPassBegin);
+    VkCmdBuffer                               cmdBuffer,
+    const VkRenderPassBegin*                 pRenderPassBegin);
 
 void VKAPI vkCmdEndRenderPass(
-    VK_CMD_BUFFER                               cmdBuffer,
-    VK_RENDER_PASS                              renderPass);
+    VkCmdBuffer                               cmdBuffer,
+    VkRenderPass                              renderPass);
 
 #endif // VK_PROTOTYPES
 

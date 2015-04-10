@@ -87,7 +87,7 @@ static void surface_state_null_gen7(const struct intel_gpu *gpu,
 static void surface_state_buf_gen7(const struct intel_gpu *gpu,
                                    unsigned offset, unsigned size,
                                    unsigned struct_size,
-                                   VK_FORMAT elem_format,
+                                   VkFormat elem_format,
                                    bool is_rt, bool render_cache_rw,
                                    uint32_t dw[8])
 {
@@ -200,7 +200,7 @@ static void surface_state_buf_gen7(const struct intel_gpu *gpu,
    }
 }
 
-static int img_type_to_view_type(VK_IMAGE_TYPE type)
+static int img_type_to_view_type(VkImageType type)
 {
     switch (type) {
     case VK_IMAGE_1D:   return VK_IMAGE_VIEW_1D;
@@ -210,7 +210,7 @@ static int img_type_to_view_type(VK_IMAGE_TYPE type)
     }
 }
 
-static int view_type_to_surface_type(VK_IMAGE_VIEW_TYPE type)
+static int view_type_to_surface_type(VkImageViewType type)
 {
     switch (type) {
     case VK_IMAGE_VIEW_1D:   return GEN6_SURFTYPE_1D;
@@ -221,7 +221,7 @@ static int view_type_to_surface_type(VK_IMAGE_VIEW_TYPE type)
     }
 }
 
-static int channel_swizzle_to_scs(VK_CHANNEL_SWIZZLE swizzle)
+static int channel_swizzle_to_scs(VkChannelSwizzle swizzle)
 {
     switch (swizzle) {
     case VK_CHANNEL_SWIZZLE_ZERO:  return GEN75_SCS_ZERO;
@@ -236,13 +236,13 @@ static int channel_swizzle_to_scs(VK_CHANNEL_SWIZZLE swizzle)
 
 static void surface_state_tex_gen7(const struct intel_gpu *gpu,
                                    const struct intel_img *img,
-                                   VK_IMAGE_VIEW_TYPE type,
-                                   VK_FORMAT format,
+                                   VkImageViewType type,
+                                   VkFormat format,
                                    unsigned first_level,
                                    unsigned num_levels,
                                    unsigned first_layer,
                                    unsigned num_layers,
-                                   VK_CHANNEL_MAPPING swizzles,
+                                   VkChannelMapping swizzles,
                                    bool is_rt,
                                    uint32_t dw[8])
 {
@@ -484,7 +484,7 @@ static void surface_state_null_gen6(const struct intel_gpu *gpu,
 static void surface_state_buf_gen6(const struct intel_gpu *gpu,
                                    unsigned offset, unsigned size,
                                    unsigned struct_size,
-                                   VK_FORMAT elem_format,
+                                   VkFormat elem_format,
                                    bool is_rt, bool render_cache_rw,
                                    uint32_t dw[6])
 {
@@ -570,8 +570,8 @@ static void surface_state_buf_gen6(const struct intel_gpu *gpu,
 
 static void surface_state_tex_gen6(const struct intel_gpu *gpu,
                                    const struct intel_img *img,
-                                   VK_IMAGE_VIEW_TYPE type,
-                                   VK_FORMAT format,
+                                   VkImageViewType type,
+                                   VkFormat format,
                                    unsigned first_level,
                                    unsigned num_levels,
                                    unsigned first_layer,
@@ -754,7 +754,7 @@ ds_init_info_null(const struct intel_gpu *gpu,
 static void
 ds_init_info(const struct intel_gpu *gpu,
              const struct intel_img *img,
-             VK_FORMAT format, unsigned level,
+             VkFormat format, unsigned level,
              unsigned first_layer, unsigned num_layers,
              struct ds_surface_info *info)
 {
@@ -891,7 +891,7 @@ ds_init_info(const struct intel_gpu *gpu,
 static void ds_view_init(struct intel_ds_view *view,
                          const struct intel_gpu *gpu,
                          const struct intel_img *img,
-                         VK_FORMAT format, unsigned level,
+                         VkFormat format, unsigned level,
                          unsigned first_layer, unsigned num_layers)
 {
    const int max_2d_size U_ASSERT_ONLY =
@@ -1065,7 +1065,7 @@ static void buf_view_destroy(struct intel_obj *obj)
     intel_buf_view_destroy(view);
 }
 
-VK_RESULT intel_buf_view_create(struct intel_dev *dev,
+VkResult intel_buf_view_create(struct intel_dev *dev,
                                  const VkBufferViewCreateInfo *info,
                                  struct intel_buf_view **view_ret)
 {
@@ -1073,8 +1073,8 @@ VK_RESULT intel_buf_view_create(struct intel_dev *dev,
     const bool will_write = (buf->usage |
             (VK_BUFFER_USAGE_SHADER_ACCESS_WRITE_BIT &
              VK_BUFFER_USAGE_SHADER_ACCESS_ATOMIC_BIT));
-    VK_FORMAT format;
-    VK_GPU_SIZE stride;
+    VkFormat format;
+    VkGpuSize stride;
     uint32_t *cmd;
     struct intel_buf_view *view;
     int i;
@@ -1143,14 +1143,14 @@ static void img_view_destroy(struct intel_obj *obj)
     intel_img_view_destroy(view);
 }
 
-VK_RESULT intel_img_view_create(struct intel_dev *dev,
-                                 const VK_IMAGE_VIEW_CREATE_INFO *info,
+VkResult intel_img_view_create(struct intel_dev *dev,
+                                 const VkImageViewCreateInfo *info,
                                  struct intel_img_view **view_ret)
 {
     struct intel_img *img = intel_img(info->image);
     struct intel_img_view *view;
     uint32_t mip_levels, array_size;
-    VK_CHANNEL_MAPPING state_swizzles;
+    VkChannelMapping state_swizzles;
 
     if (info->subresourceRange.baseMipLevel >= img->mip_levels ||
         info->subresourceRange.baseArraySlice >= img->array_size ||
@@ -1231,11 +1231,11 @@ static void rt_view_destroy(struct intel_obj *obj)
     intel_rt_view_destroy(view);
 }
 
-VK_RESULT intel_rt_view_create(struct intel_dev *dev,
-                                const VK_COLOR_ATTACHMENT_VIEW_CREATE_INFO *info,
+VkResult intel_rt_view_create(struct intel_dev *dev,
+                                const VkColorAttachmentViewCreateInfo *info,
                                 struct intel_rt_view **view_ret)
 {
-    static const VK_CHANNEL_MAPPING identity_channel_mapping = {
+    static const VkChannelMapping identity_channel_mapping = {
         .r = VK_CHANNEL_SWIZZLE_R,
         .g = VK_CHANNEL_SWIZZLE_G,
         .b = VK_CHANNEL_SWIZZLE_B,
@@ -1289,8 +1289,8 @@ static void ds_view_destroy(struct intel_obj *obj)
     intel_ds_view_destroy(view);
 }
 
-VK_RESULT intel_ds_view_create(struct intel_dev *dev,
-                                const VK_DEPTH_STENCIL_VIEW_CREATE_INFO *info,
+VkResult intel_ds_view_create(struct intel_dev *dev,
+                                const VkDepthStencilViewCreateInfo *info,
                                 struct intel_ds_view **view_ret)
 {
     struct intel_img *img = intel_img(info->image);
@@ -1321,10 +1321,10 @@ void intel_ds_view_destroy(struct intel_ds_view *view)
     intel_base_destroy(&view->obj.base);
 }
 
-ICD_EXPORT VK_RESULT VKAPI vkCreateBufferView(
-    VK_DEVICE                                  device,
+ICD_EXPORT VkResult VKAPI vkCreateBufferView(
+    VkDevice                                  device,
     const VkBufferViewCreateInfo*          pCreateInfo,
-    VK_BUFFER_VIEW*                            pView)
+    VkBufferView*                            pView)
 {
     struct intel_dev *dev = intel_dev(device);
 
@@ -1332,10 +1332,10 @@ ICD_EXPORT VK_RESULT VKAPI vkCreateBufferView(
             (struct intel_buf_view **) pView);
 }
 
-ICD_EXPORT VK_RESULT VKAPI vkCreateImageView(
-    VK_DEVICE                                  device,
-    const VK_IMAGE_VIEW_CREATE_INFO*           pCreateInfo,
-    VK_IMAGE_VIEW*                             pView)
+ICD_EXPORT VkResult VKAPI vkCreateImageView(
+    VkDevice                                  device,
+    const VkImageViewCreateInfo*           pCreateInfo,
+    VkImageView*                             pView)
 {
     struct intel_dev *dev = intel_dev(device);
 
@@ -1343,10 +1343,10 @@ ICD_EXPORT VK_RESULT VKAPI vkCreateImageView(
             (struct intel_img_view **) pView);
 }
 
-ICD_EXPORT VK_RESULT VKAPI vkCreateColorAttachmentView(
-    VK_DEVICE                                  device,
-    const VK_COLOR_ATTACHMENT_VIEW_CREATE_INFO* pCreateInfo,
-    VK_COLOR_ATTACHMENT_VIEW*                  pView)
+ICD_EXPORT VkResult VKAPI vkCreateColorAttachmentView(
+    VkDevice                                  device,
+    const VkColorAttachmentViewCreateInfo* pCreateInfo,
+    VkColorAttachmentView*                  pView)
 {
     struct intel_dev *dev = intel_dev(device);
 
@@ -1354,10 +1354,10 @@ ICD_EXPORT VK_RESULT VKAPI vkCreateColorAttachmentView(
             (struct intel_rt_view **) pView);
 }
 
-ICD_EXPORT VK_RESULT VKAPI vkCreateDepthStencilView(
-    VK_DEVICE                                  device,
-    const VK_DEPTH_STENCIL_VIEW_CREATE_INFO*   pCreateInfo,
-    VK_DEPTH_STENCIL_VIEW*                     pView)
+ICD_EXPORT VkResult VKAPI vkCreateDepthStencilView(
+    VkDevice                                  device,
+    const VkDepthStencilViewCreateInfo*   pCreateInfo,
+    VkDepthStencilView*                     pView)
 {
     struct intel_dev *dev = intel_dev(device);
 

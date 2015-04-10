@@ -47,18 +47,18 @@ static void img_destroy(struct intel_obj *obj)
     intel_img_destroy(img);
 }
 
-static VK_RESULT img_get_info(struct intel_base *base, int type,
+static VkResult img_get_info(struct intel_base *base, int type,
                                size_t *size, void *data)
 {
     struct intel_img *img = intel_img_from_base(base);
-    VK_RESULT ret = VK_SUCCESS;
+    VkResult ret = VK_SUCCESS;
 
     switch (type) {
     case VK_INFO_TYPE_MEMORY_REQUIREMENTS:
         {
-            VK_MEMORY_REQUIREMENTS *mem_req = data;
+            VkMemoryRequirements *mem_req = data;
 
-            *size = sizeof(VK_MEMORY_REQUIREMENTS);
+            *size = sizeof(VkMemoryRequirements);
             if (data == NULL)
                 return ret;
             mem_req->size = img->total_size;
@@ -72,9 +72,9 @@ static VK_RESULT img_get_info(struct intel_base *base, int type,
         break;
     case VK_INFO_TYPE_IMAGE_MEMORY_REQUIREMENTS:
         {
-            VK_IMAGE_MEMORY_REQUIREMENTS *img_req = data;
+            VkImageMemoryRequirements *img_req = data;
 
-            *size = sizeof(VK_IMAGE_MEMORY_REQUIREMENTS);
+            *size = sizeof(VkImageMemoryRequirements);
             if (data == NULL)
                 return ret;
             img_req->usage = img->usage;
@@ -84,9 +84,9 @@ static VK_RESULT img_get_info(struct intel_base *base, int type,
         break;
     case VK_INFO_TYPE_BUFFER_MEMORY_REQUIREMENTS:
         {
-            VK_BUFFER_MEMORY_REQUIREMENTS *buf_req = data;
+            VkBufferMemoryRequirements *buf_req = data;
 
-            *size = sizeof(VK_BUFFER_MEMORY_REQUIREMENTS);
+            *size = sizeof(VkBufferMemoryRequirements);
             if (data == NULL)
                 return ret;
             buf_req->usage = img->usage;
@@ -100,8 +100,8 @@ static VK_RESULT img_get_info(struct intel_base *base, int type,
     return ret;
 }
 
-VK_RESULT intel_img_create(struct intel_dev *dev,
-                            const VK_IMAGE_CREATE_INFO *info,
+VkResult intel_img_create(struct intel_dev *dev,
+                            const VkImageCreateInfo *info,
                             bool scanout,
                             struct intel_img **img_ret)
 {
@@ -143,7 +143,7 @@ VK_RESULT intel_img_create(struct intel_dev *dev,
     }
 
     if (layout->separate_stencil) {
-        VK_IMAGE_CREATE_INFO s8_info;
+        VkImageCreateInfo s8_info;
 
         img->s8_layout = intel_alloc(img, sizeof(*img->s8_layout), 0,
                 VK_SYSTEM_ALLOC_INTERNAL);
@@ -166,7 +166,7 @@ VK_RESULT intel_img_create(struct intel_dev *dev,
     }
 
     if (scanout) {
-        VK_RESULT ret = intel_wsi_img_init(img);
+        VkResult ret = intel_wsi_img_init(img);
         if (ret != VK_SUCCESS) {
             intel_img_destroy(img);
             return ret;
@@ -192,19 +192,19 @@ void intel_img_destroy(struct intel_img *img)
     intel_base_destroy(&img->obj.base);
 }
 
-ICD_EXPORT VK_RESULT VKAPI vkOpenPeerImage(
-    VK_DEVICE                                  device,
-    const VK_PEER_IMAGE_OPEN_INFO*             pOpenInfo,
-    VK_IMAGE*                                  pImage,
-    VK_GPU_MEMORY*                             pMem)
+ICD_EXPORT VkResult VKAPI vkOpenPeerImage(
+    VkDevice                                  device,
+    const VkPeerImageOpenInfo*             pOpenInfo,
+    VkImage*                                  pImage,
+    VkGpuMemory*                             pMem)
 {
     return VK_ERROR_UNAVAILABLE;
 }
 
-ICD_EXPORT VK_RESULT VKAPI vkCreateImage(
-    VK_DEVICE                                  device,
-    const VK_IMAGE_CREATE_INFO*                pCreateInfo,
-    VK_IMAGE*                                  pImage)
+ICD_EXPORT VkResult VKAPI vkCreateImage(
+    VkDevice                                  device,
+    const VkImageCreateInfo*                pCreateInfo,
+    VkImage*                                  pImage)
 {
     struct intel_dev *dev = intel_dev(device);
 
@@ -212,27 +212,27 @@ ICD_EXPORT VK_RESULT VKAPI vkCreateImage(
             (struct intel_img **) pImage);
 }
 
-ICD_EXPORT VK_RESULT VKAPI vkGetImageSubresourceInfo(
-    VK_IMAGE                                   image,
-    const VK_IMAGE_SUBRESOURCE*                pSubresource,
-    VK_SUBRESOURCE_INFO_TYPE                   infoType,
+ICD_EXPORT VkResult VKAPI vkGetImageSubresourceInfo(
+    VkImage                                   image,
+    const VkImageSubresource*                pSubresource,
+    VkSubresourceInfoType                   infoType,
     size_t*                                     pDataSize,
     void*                                       pData)
 {
     const struct intel_img *img = intel_img(image);
-    VK_RESULT ret = VK_SUCCESS;
+    VkResult ret = VK_SUCCESS;
 
     switch (infoType) {
     case VK_INFO_TYPE_SUBRESOURCE_LAYOUT:
         {
-            VK_SUBRESOURCE_LAYOUT *layout = (VK_SUBRESOURCE_LAYOUT *) pData;
+            VkSubresourceLayout *layout = (VkSubresourceLayout *) pData;
             unsigned x, y;
 
             intel_layout_get_slice_pos(&img->layout, pSubresource->mipLevel,
                     pSubresource->arraySlice, &x, &y);
             intel_layout_pos_to_mem(&img->layout, x, y, &x, &y);
 
-            *pDataSize = sizeof(VK_SUBRESOURCE_LAYOUT);
+            *pDataSize = sizeof(VkSubresourceLayout);
 
             if (pData == NULL)
                 return ret;

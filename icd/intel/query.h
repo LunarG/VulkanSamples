@@ -34,12 +34,12 @@
 struct intel_query {
     struct intel_obj obj;
 
-    VK_QUERY_TYPE type;
+    VkQueryType type;
     uint32_t slot_stride;
     uint32_t slot_count;
 };
 
-static inline struct intel_query *intel_query(VK_QUERY_POOL pool)
+static inline struct intel_query *intel_query(VkQueryPool pool)
 {
     return (struct intel_query *) pool;
 }
@@ -54,12 +54,12 @@ static inline struct intel_query *intel_query_from_obj(struct intel_obj *obj)
     return intel_query_from_base(&obj->base);
 }
 
-VK_RESULT intel_query_create(struct intel_dev *dev,
-                              const VK_QUERY_POOL_CREATE_INFO *info,
+VkResult intel_query_create(struct intel_dev *dev,
+                              const VkQueryPoolCreateInfo *info,
                               struct intel_query **query_ret);
 void intel_query_destroy(struct intel_query *query);
 
-VK_RESULT intel_query_get_results(struct intel_query *query,
+VkResult intel_query_get_results(struct intel_query *query,
                                    uint32_t slot_start, uint32_t slot_count,
                                    void *results);
 

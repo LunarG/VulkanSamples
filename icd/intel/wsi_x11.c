@@ -50,8 +50,8 @@ struct intel_x11_display {
     uint32_t connector_id;
 
     char name[32];
-    VK_EXTENT2D physical_dimension;
-    VK_EXTENT2D physical_resolution;
+    VkExtent2D physical_dimension;
+    VkExtent2D physical_resolution;
 
     drmModeModeInfoPtr modes;
     uint32_t mode_count;
@@ -103,7 +103,7 @@ struct intel_x11_fence_data {
 };
 
 static bool x11_is_format_presentable(const struct intel_dev *dev,
-                                      VK_FORMAT format)
+                                      VkFormat format)
 {
     /* this is what DDX expects */
     switch (format) {
@@ -295,7 +295,7 @@ static bool wsi_x11_dri3_and_present_query_version(struct intel_wsi_x11 *x11)
 /**
  * Send a PresentSelectInput to select interested events.
  */
-static VK_RESULT x11_swap_chain_present_select_input(struct intel_x11_swap_chain *sc)
+static VkResult x11_swap_chain_present_select_input(struct intel_x11_swap_chain *sc)
 {
     xcb_void_cookie_t cookie;
     xcb_generic_error_t *error;
@@ -318,7 +318,7 @@ static VK_RESULT x11_swap_chain_present_select_input(struct intel_x11_swap_chain
     return VK_SUCCESS;
 }
 
-static VK_RESULT wsi_x11_dri3_pixmap_from_buffer(struct intel_wsi_x11 *x11,
+static VkResult wsi_x11_dri3_pixmap_from_buffer(struct intel_wsi_x11 *x11,
                                                  struct intel_dev *dev,
                                                  struct intel_img *img,
                                                  struct intel_mem *mem)
@@ -341,16 +341,16 @@ static VK_RESULT wsi_x11_dri3_pixmap_from_buffer(struct intel_wsi_x11 *x11,
 /**
  * Create a presentable image.
  */
-static VK_RESULT wsi_x11_img_create(struct intel_wsi_x11 *x11,
+static VkResult wsi_x11_img_create(struct intel_wsi_x11 *x11,
                                     struct intel_dev *dev,
                                     const VK_WSI_X11_PRESENTABLE_IMAGE_CREATE_INFO *info,
                                     struct intel_img **img_ret)
 {
-    VK_IMAGE_CREATE_INFO img_info;
+    VkImageCreateInfo img_info;
     VkMemoryAllocInfo mem_info;
     struct intel_img *img;
     struct intel_mem *mem;
-    VK_RESULT ret;
+    VkResult ret;
 
     if (!x11_is_format_presentable(dev, info->format)) {
         intel_dev_log(dev, VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0,
@@ -408,7 +408,7 @@ static VK_RESULT wsi_x11_img_create(struct intel_wsi_x11 *x11,
 /**
  * Send a PresentPixmap.
  */
-static VK_RESULT x11_swap_chain_present_pixmap(struct intel_x11_swap_chain *sc,
+static VkResult x11_swap_chain_present_pixmap(struct intel_x11_swap_chain *sc,
                                                const VK_WSI_X11_PRESENT_INFO *info)
 {
     struct intel_img *img = intel_img(info->srcImage);
@@ -481,7 +481,7 @@ static void x11_swap_chain_present_event(struct intel_x11_swap_chain *sc,
     }
 }
 
-static VK_RESULT x11_swap_chain_wait(struct intel_x11_swap_chain *sc,
+static VkResult x11_swap_chain_wait(struct intel_x11_swap_chain *sc,
                                       uint32_t serial, int64_t timeout)
 {
     const bool wait = (timeout != 0);
@@ -621,7 +621,7 @@ static struct intel_x11_swap_chain *x11_swap_chain_lookup(struct intel_dev *dev,
     return sc;
 }
 
-static VK_RESULT intel_wsi_gpu_init(struct intel_gpu *gpu,
+static VkResult intel_wsi_gpu_init(struct intel_gpu *gpu,
                                      const VK_WSI_X11_CONNECTION_INFO *info)
 {
     struct intel_wsi_x11 *x11;
@@ -768,8 +768,8 @@ static void x11_display_scan(struct intel_gpu *gpu)
     gpu->display_count = i;
 }
 
-VK_RESULT intel_wsi_gpu_get_info(struct intel_gpu *gpu,
-                                  VK_PHYSICAL_GPU_INFO_TYPE type,
+VkResult intel_wsi_gpu_get_info(struct intel_gpu *gpu,
+                                  VkPhysicalGpuInfoType type,
                                   size_t *size, void *data)
 {
     if (false)
@@ -797,7 +797,7 @@ void intel_wsi_gpu_cleanup(struct intel_gpu *gpu)
     }
 }
 
-VK_RESULT intel_wsi_img_init(struct intel_img *img)
+VkResult intel_wsi_img_init(struct intel_img *img)
 {
     struct intel_x11_img_data *data;
 
@@ -826,7 +826,7 @@ void intel_wsi_img_cleanup(struct intel_img *img)
     intel_free(img, img->wsi_data);
 }
 
-VK_RESULT intel_wsi_fence_init(struct intel_fence *fence)
+VkResult intel_wsi_fence_init(struct intel_fence *fence)
 {
     struct intel_x11_fence_data *data;
 
@@ -854,7 +854,7 @@ void intel_wsi_fence_copy(struct intel_fence *fence,
             sizeof(struct intel_x11_fence_data));
 }
 
-VK_RESULT intel_wsi_fence_wait(struct intel_fence *fence,
+VkResult intel_wsi_fence_wait(struct intel_fence *fence,
                                 int64_t timeout_ns)
 {
     struct intel_x11_fence_data *data =
@@ -866,8 +866,8 @@ VK_RESULT intel_wsi_fence_wait(struct intel_fence *fence,
     return x11_swap_chain_wait(data->swap_chain, data->serial, timeout_ns);
 }
 
-ICD_EXPORT VK_RESULT VKAPI vkWsiX11AssociateConnection(
-    VK_PHYSICAL_GPU                            gpu_,
+ICD_EXPORT VkResult VKAPI vkWsiX11AssociateConnection(
+    VkPhysicalGpu                            gpu_,
     const VK_WSI_X11_CONNECTION_INFO*          pConnectionInfo)
 {
     struct intel_gpu *gpu = intel_gpu(gpu_);
@@ -875,15 +875,15 @@ ICD_EXPORT VK_RESULT VKAPI vkWsiX11AssociateConnection(
     return intel_wsi_gpu_init(gpu, pConnectionInfo);
 }
 
-ICD_EXPORT VK_RESULT VKAPI vkWsiX11GetMSC(
-    VK_DEVICE                                   device,
+ICD_EXPORT VkResult VKAPI vkWsiX11GetMSC(
+    VkDevice                                   device,
     xcb_window_t                                window,
     xcb_randr_crtc_t                            crtc,
     uint64_t  *                                 pMsc)
 {
     struct intel_dev *dev = intel_dev(device);
     struct intel_x11_swap_chain *sc;
-    VK_RESULT ret;
+    VkResult ret;
 
     sc = x11_swap_chain_lookup(dev, window);
     if (!sc)
@@ -901,30 +901,30 @@ ICD_EXPORT VK_RESULT VKAPI vkWsiX11GetMSC(
     return VK_SUCCESS;
 }
 
-ICD_EXPORT VK_RESULT VKAPI vkWsiX11CreatePresentableImage(
-    VK_DEVICE                                  device,
+ICD_EXPORT VkResult VKAPI vkWsiX11CreatePresentableImage(
+    VkDevice                                  device,
     const VK_WSI_X11_PRESENTABLE_IMAGE_CREATE_INFO* pCreateInfo,
-    VK_IMAGE*                                  pImage,
-    VK_GPU_MEMORY*                             pMem)
+    VkImage*                                  pImage,
+    VkGpuMemory*                             pMem)
 {
     struct intel_dev *dev = intel_dev(device);
     struct intel_wsi_x11 *x11 = (struct intel_wsi_x11 *) dev->gpu->wsi_data;
     struct intel_img *img;
-    VK_RESULT ret;
+    VkResult ret;
 
     ret = wsi_x11_img_create(x11, dev, pCreateInfo, &img);
     if (ret == VK_SUCCESS) {
-        *pImage = (VK_IMAGE) img;
-        *pMem = (VK_GPU_MEMORY) img->obj.mem;
+        *pImage = (VkImage) img;
+        *pMem = (VkGpuMemory) img->obj.mem;
     }
 
     return ret;
 }
 
-ICD_EXPORT VK_RESULT VKAPI vkWsiX11QueuePresent(
-    VK_QUEUE                                   queue_,
+ICD_EXPORT VkResult VKAPI vkWsiX11QueuePresent(
+    VkQueue                                   queue_,
     const VK_WSI_X11_PRESENT_INFO*             pPresentInfo,
-    VK_FENCE                                   fence_)
+    VkFence                                   fence_)
 {
     struct intel_queue *queue = intel_queue(queue_);
     struct intel_dev *dev = queue->dev;
@@ -932,7 +932,7 @@ ICD_EXPORT VK_RESULT VKAPI vkWsiX11QueuePresent(
         (struct intel_x11_fence_data *) queue->fence->wsi_data;
     struct intel_img *img = intel_img(pPresentInfo->srcImage);
     struct intel_x11_swap_chain *sc;
-    VK_RESULT ret;
+    VkResult ret;
 
     sc = x11_swap_chain_lookup(dev, pPresentInfo->destWindow);
     if (!sc)

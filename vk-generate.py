@@ -156,7 +156,7 @@ class LoaderEntrypointsSubcommand(Subcommand):
             # declare local variables
             func.append("    const VK_LAYER_DISPATCH_TABLE *disp;")
             if proto.ret != 'void' and obj_setup:
-                func.append("    VK_RESULT res;")
+                func.append("    VkResult res;")
             func.append("")
 
             # active layers before dispatching CreateDevice
@@ -168,7 +168,7 @@ class LoaderEntrypointsSubcommand(Subcommand):
             # get dispatch table and unwrap GPUs
             for param in proto.params:
                 stmt = ""
-                if param.ty == "VK_PHYSICAL_GPU":
+                if param.ty == "VkPhysicalGpu":
                     stmt = "loader_unwrap_gpu(&%s);" % param.name
                     if param == proto.params[0]:
                         stmt = "disp = " + stmt
@@ -230,16 +230,16 @@ class DispatchTableOpsSubcommand(Subcommand):
                 stmts.append("table->%s = gpa; /* direct assignment */" %
                         proto.name)
             else:
-                stmts.append("table->%s = (vk%sType) gpa(gpu, \"vk%s\");" %
+                stmts.append("table->%s = (PFN_vk%s) gpa(gpu, \"vk%s\");" %
                         (proto.name, proto.name, proto.name))
         stmts.append("#endif")
 
         func = []
         func.append("static inline void %s_initialize_dispatch_table(VK_LAYER_DISPATCH_TABLE *table,"
                 % self.prefix)
-        func.append("%s                                              vkGetProcAddrType gpa,"
+        func.append("%s                                              PFN_vkGetProcAddr gpa,"
                 % (" " * len(self.prefix)))
-        func.append("%s                                              VK_PHYSICAL_GPU gpu)"
+        func.append("%s                                              VkPhysicalGpu gpu)"
                 % (" " * len(self.prefix)))
         func.append("{")
         func.append("    %s" % "\n    ".join(stmts))

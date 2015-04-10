@@ -62,44 +62,44 @@ extern "C" {
 #endif
 
 
-VK_LAYER_EXPORT VK_RESULT VKAPI multi1CreateDevice(VK_PHYSICAL_GPU gpu, const VkDeviceCreateInfo* pCreateInfo,
-                                                      VK_DEVICE* pDevice)
+VK_LAYER_EXPORT VkResult VKAPI multi1CreateDevice(VkPhysicalGpu gpu, const VkDeviceCreateInfo* pCreateInfo,
+                                                      VkDevice* pDevice)
 {
     VK_BASE_LAYER_OBJECT* gpuw = (VK_BASE_LAYER_OBJECT *) gpu;
     VK_LAYER_DISPATCH_TABLE* pTable = getLayer1Table(gpuw);
 
     printf("At start of multi1 layer vkCreateDevice()\n");
-    VK_RESULT result = pTable->CreateDevice((VK_PHYSICAL_GPU)gpuw->nextObject, pCreateInfo, pDevice);
+    VkResult result = pTable->CreateDevice((VkPhysicalGpu)gpuw->nextObject, pCreateInfo, pDevice);
     // create a mapping for the device object into the dispatch table
     tableMap1.emplace(*pDevice, pTable);
     printf("Completed multi1 layer vkCreateDevice()\n");
     return result;
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI multi1CreateGraphicsPipeline(VK_DEVICE device, const VK_GRAPHICS_PIPELINE_CREATE_INFO* pCreateInfo,
-                                                                VK_PIPELINE* pPipeline)
+VK_LAYER_EXPORT VkResult VKAPI multi1CreateGraphicsPipeline(VkDevice device, const VkGraphicsPipelineCreateInfo* pCreateInfo,
+                                                                VkPipeline* pPipeline)
 {
     VK_LAYER_DISPATCH_TABLE* pTable = tableMap1[device];
 
     printf("At start of multi1 layer vkCreateGraphicsPipeline()\n");
-    VK_RESULT result = pTable->CreateGraphicsPipeline(device, pCreateInfo, pPipeline);
+    VkResult result = pTable->CreateGraphicsPipeline(device, pCreateInfo, pPipeline);
     // create a mapping for the pipeline object into the dispatch table
     tableMap1.emplace(*pPipeline, pTable);
     printf("Completed multi1 layer vkCreateGraphicsPipeline()\n");
     return result;
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI multi1StorePipeline(VK_PIPELINE pipeline, size_t* pDataSize, void* pData)
+VK_LAYER_EXPORT VkResult VKAPI multi1StorePipeline(VkPipeline pipeline, size_t* pDataSize, void* pData)
 {
     VK_LAYER_DISPATCH_TABLE* pTable = tableMap1[pipeline];
 
     printf("At start of multi1 layer vkStorePipeline()\n");
-    VK_RESULT result = pTable->StorePipeline(pipeline, pDataSize, pData);
+    VkResult result = pTable->StorePipeline(pipeline, pDataSize, pData);
     printf("Completed multi1 layer vkStorePipeline()\n");
     return result;
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI multi1EnumerateLayers(VK_PHYSICAL_GPU gpu, size_t maxLayerCount, size_t maxStringSize,
+VK_LAYER_EXPORT VkResult VKAPI multi1EnumerateLayers(VkPhysicalGpu gpu, size_t maxLayerCount, size_t maxStringSize,
                                                          size_t* pOutLayerCount, char* const* pOutLayers,
                                                          void* pReserved)
 {
@@ -110,12 +110,12 @@ VK_LAYER_EXPORT VK_RESULT VKAPI multi1EnumerateLayers(VK_PHYSICAL_GPU gpu, size_
     VK_LAYER_DISPATCH_TABLE* pTable = getLayer1Table(gpuw);
 
     printf("At start of multi1 layer vkEnumerateLayers()\n");
-    VK_RESULT result = pTable->EnumerateLayers((VK_PHYSICAL_GPU)gpuw->nextObject, maxLayerCount, maxStringSize, pOutLayerCount, pOutLayers, pReserved);
+    VkResult result = pTable->EnumerateLayers((VkPhysicalGpu)gpuw->nextObject, maxLayerCount, maxStringSize, pOutLayerCount, pOutLayers, pReserved);
     printf("Completed multi1 layer vkEnumerateLayers()\n");
     return result;
 }
 
-VK_LAYER_EXPORT void * VKAPI multi1GetProcAddr(VK_PHYSICAL_GPU gpu, const char* pName)
+VK_LAYER_EXPORT void * VKAPI multi1GetProcAddr(VkPhysicalGpu gpu, const char* pName)
 {
     VK_BASE_LAYER_OBJECT* gpuw = (VK_BASE_LAYER_OBJECT *) gpu;
 
@@ -137,7 +137,7 @@ VK_LAYER_EXPORT void * VKAPI multi1GetProcAddr(VK_PHYSICAL_GPU gpu, const char* 
     else {
         if (gpuw->pGPA == NULL)
             return NULL;
-        return gpuw->pGPA((VK_PHYSICAL_GPU) gpuw->nextObject, pName);
+        return gpuw->pGPA((VkPhysicalGpu) gpuw->nextObject, pName);
     }
 }
 
@@ -163,45 +163,45 @@ static VK_LAYER_DISPATCH_TABLE * getLayer2Table(const VK_BASE_LAYER_OBJECT *gpuw
     }
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI multi2CreateDevice(VK_PHYSICAL_GPU gpu, const VkDeviceCreateInfo* pCreateInfo,
-                                                      VK_DEVICE* pDevice)
+VK_LAYER_EXPORT VkResult VKAPI multi2CreateDevice(VkPhysicalGpu gpu, const VkDeviceCreateInfo* pCreateInfo,
+                                                      VkDevice* pDevice)
 {
     VK_BASE_LAYER_OBJECT* gpuw = (VK_BASE_LAYER_OBJECT *) gpu;
     VK_LAYER_DISPATCH_TABLE* pTable = getLayer2Table(gpuw);
 
     printf("At start of multi2 vkCreateDevice()\n");
-    VK_RESULT result = pTable->CreateDevice((VK_PHYSICAL_GPU)gpuw->nextObject, pCreateInfo, pDevice);
+    VkResult result = pTable->CreateDevice((VkPhysicalGpu)gpuw->nextObject, pCreateInfo, pDevice);
     // create a mapping for the device object into the dispatch table for layer2
     tableMap2.emplace(*pDevice, pTable);
     printf("Completed multi2 layer vkCreateDevice()\n");
     return result;
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI multi2CreateCommandBuffer(VK_DEVICE device, const VK_CMD_BUFFER_CREATE_INFO* pCreateInfo,
-                                                             VK_CMD_BUFFER* pCmdBuffer)
+VK_LAYER_EXPORT VkResult VKAPI multi2CreateCommandBuffer(VkDevice device, const VkCmdBufferCreateInfo* pCreateInfo,
+                                                             VkCmdBuffer* pCmdBuffer)
 {
     VK_LAYER_DISPATCH_TABLE* pTable = tableMap2[device];
 
     printf("At start of multi2 layer vkCreateCommandBuffer()\n");
-    VK_RESULT result = pTable->CreateCommandBuffer(device, pCreateInfo, pCmdBuffer);
+    VkResult result = pTable->CreateCommandBuffer(device, pCreateInfo, pCmdBuffer);
     // create a mapping for CmdBuffer object into the dispatch table for layer 2
     tableMap2.emplace(*pCmdBuffer, pTable);
     printf("Completed multi2 layer vkCreateCommandBuffer()\n");
     return result;
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI multi2BeginCommandBuffer(VK_CMD_BUFFER cmdBuffer, const VK_CMD_BUFFER_BEGIN_INFO* pBeginInfo)
+VK_LAYER_EXPORT VkResult VKAPI multi2BeginCommandBuffer(VkCmdBuffer cmdBuffer, const VkCmdBufferBeginInfo* pBeginInfo)
 {
     VK_LAYER_DISPATCH_TABLE* pTable = tableMap2[cmdBuffer];
 
     printf("At start of multi2 layer vkBeginCommandBuffer()\n");
-    VK_RESULT result = pTable->BeginCommandBuffer(cmdBuffer, pBeginInfo);
+    VkResult result = pTable->BeginCommandBuffer(cmdBuffer, pBeginInfo);
     printf("Completed multi2 layer vkBeginCommandBuffer()\n");
     return result;
 
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI multi2EnumerateLayers(VK_PHYSICAL_GPU gpu, size_t maxLayerCount, size_t maxStringSize,
+VK_LAYER_EXPORT VkResult VKAPI multi2EnumerateLayers(VkPhysicalGpu gpu, size_t maxLayerCount, size_t maxStringSize,
                                                          size_t* pOutLayerCount, char* const* pOutLayers,
                                                          void* pReserved)
 {
@@ -212,12 +212,12 @@ VK_LAYER_EXPORT VK_RESULT VKAPI multi2EnumerateLayers(VK_PHYSICAL_GPU gpu, size_
     VK_LAYER_DISPATCH_TABLE* pTable = getLayer2Table(gpuw);
 
     printf("At start of multi2 layer vkEnumerateLayers()\n");
-    VK_RESULT result = pTable->EnumerateLayers((VK_PHYSICAL_GPU)gpuw->nextObject, maxLayerCount, maxStringSize, pOutLayerCount, pOutLayers, pReserved);
+    VkResult result = pTable->EnumerateLayers((VkPhysicalGpu)gpuw->nextObject, maxLayerCount, maxStringSize, pOutLayerCount, pOutLayers, pReserved);
     printf("Completed multi2 layer vkEnumerateLayers()\n");
     return result;
 }
 
-VK_LAYER_EXPORT void * VKAPI multi2GetProcAddr(VK_PHYSICAL_GPU gpu, const char* pName)
+VK_LAYER_EXPORT void * VKAPI multi2GetProcAddr(VkPhysicalGpu gpu, const char* pName)
 {
     VK_BASE_LAYER_OBJECT* gpuw = (VK_BASE_LAYER_OBJECT *) gpu;
 
@@ -239,12 +239,12 @@ VK_LAYER_EXPORT void * VKAPI multi2GetProcAddr(VK_PHYSICAL_GPU gpu, const char* 
     else {
         if (gpuw->pGPA == NULL)
             return NULL;
-        return gpuw->pGPA((VK_PHYSICAL_GPU) gpuw->nextObject, pName);
+        return gpuw->pGPA((VkPhysicalGpu) gpuw->nextObject, pName);
     }
 }
 
 /********************************* Common functions ********************************/
-VK_LAYER_EXPORT VK_RESULT VKAPI vkEnumerateLayers(VK_PHYSICAL_GPU gpu, size_t maxLayerCount, size_t maxStringSize,
+VK_LAYER_EXPORT VkResult VKAPI vkEnumerateLayers(VkPhysicalGpu gpu, size_t maxLayerCount, size_t maxStringSize,
                                                       size_t* pOutLayerCount, char* const* pOutLayers,
                                                       void* pReserved)
 {
@@ -259,9 +259,9 @@ VK_LAYER_EXPORT VK_RESULT VKAPI vkEnumerateLayers(VK_PHYSICAL_GPU gpu, size_t ma
     return VK_SUCCESS;
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkGetExtensionSupport(VK_PHYSICAL_GPU gpu, const char* pExtName)
+VK_LAYER_EXPORT VkResult VKAPI vkGetExtensionSupport(VkPhysicalGpu gpu, const char* pExtName)
 {
-    VK_RESULT result;
+    VkResult result;
     VK_BASE_LAYER_OBJECT* gpuw = (VK_BASE_LAYER_OBJECT *) gpu;
 
     /* This entrypoint is NOT going to init it's own dispatch table since loader calls here early */
@@ -274,11 +274,11 @@ VK_LAYER_EXPORT VK_RESULT VKAPI vkGetExtensionSupport(VK_PHYSICAL_GPU gpu, const
     } else if (!tableMap1.empty() && (tableMap1.find(gpuw) != tableMap1.end()))
     {
         VK_LAYER_DISPATCH_TABLE* pTable = tableMap1[gpuw];
-        result = pTable->GetExtensionSupport((VK_PHYSICAL_GPU)gpuw->nextObject, pExtName);
+        result = pTable->GetExtensionSupport((VkPhysicalGpu)gpuw->nextObject, pExtName);
     } else if (!tableMap2.empty() && (tableMap2.find(gpuw) != tableMap2.end()))
     {
         VK_LAYER_DISPATCH_TABLE* pTable = tableMap2[gpuw];
-        result = pTable->GetExtensionSupport((VK_PHYSICAL_GPU)gpuw->nextObject, pExtName);
+        result = pTable->GetExtensionSupport((VkPhysicalGpu)gpuw->nextObject, pExtName);
     } else
     {
         result = VK_ERROR_INVALID_EXTENSION;
@@ -286,7 +286,7 @@ VK_LAYER_EXPORT VK_RESULT VKAPI vkGetExtensionSupport(VK_PHYSICAL_GPU gpu, const
     return result;
 }
 
-VK_LAYER_EXPORT void * VKAPI vkGetProcAddr(VK_PHYSICAL_GPU gpu, const char* pName)
+VK_LAYER_EXPORT void * VKAPI vkGetProcAddr(VkPhysicalGpu gpu, const char* pName)
 {
     // to find each layers GPA routine Loader will search via "<layerName>GetProcAddr"
     if (!strncmp("multi1GetProcAddr", pName, sizeof("multi1GetProcAddr")))
@@ -317,5 +317,5 @@ static void initLayerTable(const VK_BASE_LAYER_OBJECT *gpuw, VK_LAYER_DISPATCH_T
     if (layerNum == 1 && layer2_first_activated == false)
         layer1_first_activated = true;
 
-    layer_initialize_dispatch_table(pTable, gpuw->pGPA, (VK_PHYSICAL_GPU) gpuw->nextObject);
+    layer_initialize_dispatch_table(pTable, gpuw->pGPA, (VkPhysicalGpu) gpuw->nextObject);
 }

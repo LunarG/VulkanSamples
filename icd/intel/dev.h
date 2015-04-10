@@ -146,7 +146,7 @@ struct intel_dev_dbg_msg_filter {
 struct intel_dev_dbg {
     struct intel_base_dbg base;
 
-    VK_VALIDATION_LEVEL validation_level;
+    VkValidationLevel validation_level;
     bool disable_pipeline_loads;
     bool force_object_memory_reqs;
     bool force_large_image_alignment;
@@ -176,7 +176,7 @@ struct intel_dev {
     struct intel_queue *queues[INTEL_GPU_ENGINE_COUNT];
 };
 
-static inline struct intel_dev *intel_dev(VK_DEVICE dev)
+static inline struct intel_dev *intel_dev(VkDevice dev)
 {
     return (struct intel_dev *) dev;
 }
@@ -186,12 +186,12 @@ static inline struct intel_dev_dbg *intel_dev_dbg(struct intel_dev *dev)
     return (struct intel_dev_dbg *) dev->base.dbg;
 }
 
-VK_RESULT intel_dev_create(struct intel_gpu *gpu,
+VkResult intel_dev_create(struct intel_gpu *gpu,
                             const VkDeviceCreateInfo *info,
                             struct intel_dev **dev_ret);
 void intel_dev_destroy(struct intel_dev *dev);
 
-VK_RESULT intel_dev_add_msg_filter(struct intel_dev *dev,
+VkResult intel_dev_add_msg_filter(struct intel_dev *dev,
                                     int32_t msg_code,
                                     VK_DBG_MSG_FILTER filter);
 
@@ -200,7 +200,7 @@ void intel_dev_remove_msg_filter(struct intel_dev *dev,
 
 void intel_dev_log(struct intel_dev *dev,
                    VK_DBG_MSG_TYPE msg_type,
-                   VK_VALIDATION_LEVEL validation_level,
+                   VkValidationLevel validation_level,
                    struct intel_base *src_object,
                    size_t location,
                    int32_t msg_code,

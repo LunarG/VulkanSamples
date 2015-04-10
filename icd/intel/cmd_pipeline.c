@@ -237,8 +237,8 @@ static bool gen6_can_primitive_restart(const struct intel_cmd *cmd)
 
 static void gen6_3DSTATE_INDEX_BUFFER(struct intel_cmd *cmd,
                                       const struct intel_buf *buf,
-                                      VK_GPU_SIZE offset,
-                                      VK_INDEX_TYPE type,
+                                      VkGpuSize offset,
+                                      VkIndexType type,
                                       bool enable_cut_index)
 {
     const uint8_t cmd_len = 3;
@@ -1357,7 +1357,7 @@ void cmd_batch_flush_all(struct intel_cmd *cmd)
 
 void cmd_batch_depth_count(struct intel_cmd *cmd,
                            struct intel_bo *bo,
-                           VK_GPU_SIZE offset)
+                           VkGpuSize offset)
 {
     cmd_wa_gen6_pre_depth_stall_write(cmd);
 
@@ -1369,7 +1369,7 @@ void cmd_batch_depth_count(struct intel_cmd *cmd,
 
 void cmd_batch_timestamp(struct intel_cmd *cmd,
                          struct intel_bo *bo,
-                         VK_GPU_SIZE offset)
+                         VkGpuSize offset)
 {
     /* need any WA or stall? */
     gen6_PIPE_CONTROL(cmd, GEN6_PIPE_CONTROL_WRITE_TIMESTAMP, bo, offset, 0);
@@ -1378,7 +1378,7 @@ void cmd_batch_timestamp(struct intel_cmd *cmd,
 void cmd_batch_immediate(struct intel_cmd *cmd,
                          uint32_t pipe_control_flags,
                          struct intel_bo *bo,
-                         VK_GPU_SIZE offset,
+                         VkGpuSize offset,
                          uint64_t val)
 {
     /* need any WA or stall? */
@@ -1638,7 +1638,7 @@ static uint32_t emit_samplers(struct intel_cmd *cmd,
 
 static uint32_t emit_binding_table(struct intel_cmd *cmd,
                                    const struct intel_pipeline_rmap *rmap,
-                                   const VK_PIPELINE_SHADER_STAGE stage)
+                                   const VkPipelineShaderStage stage)
 {
     const struct intel_desc_region *region = cmd->dev->desc_region;
     const struct intel_cmd_dset_data *data = &cmd->bind.dset.graphics_data;
@@ -1796,7 +1796,7 @@ static void gen6_3DSTATE_VERTEX_BUFFERS(struct intel_cmd *cmd)
 
         if (cmd->bind.vertex.buf[i]) {
             const struct intel_buf *buf = cmd->bind.vertex.buf[i];
-            const VK_GPU_SIZE offset = cmd->bind.vertex.offset[i];
+            const VkGpuSize offset = cmd->bind.vertex.offset[i];
 
             cmd_reserve_reloc(cmd, 2);
             cmd_batch_reloc(cmd, pos + 1, buf->obj.mem->bo, offset, 0);
@@ -3097,7 +3097,7 @@ static void cmd_copy_dset_data(struct intel_cmd *cmd,
 
 static void cmd_bind_vertex_data(struct intel_cmd *cmd,
                                  const struct intel_buf *buf,
-                                 VK_GPU_SIZE offset, uint32_t binding)
+                                 VkGpuSize offset, uint32_t binding)
 {
     if (binding >= ARRAY_SIZE(cmd->bind.vertex.buf)) {
         cmd_fail(cmd, VK_ERROR_UNKNOWN);
@@ -3110,7 +3110,7 @@ static void cmd_bind_vertex_data(struct intel_cmd *cmd,
 
 static void cmd_bind_index_data(struct intel_cmd *cmd,
                                 const struct intel_buf *buf,
-                                VK_GPU_SIZE offset, VK_INDEX_TYPE type)
+                                VkGpuSize offset, VkIndexType type)
 {
     cmd->bind.index.buf = buf;
     cmd->bind.index.offset = offset;
@@ -3322,9 +3322,9 @@ void cmd_draw_meta(struct intel_cmd *cmd, const struct intel_cmd_meta *meta)
 }
 
 ICD_EXPORT void VKAPI vkCmdBindPipeline(
-    VK_CMD_BUFFER                              cmdBuffer,
-    VK_PIPELINE_BIND_POINT                     pipelineBindPoint,
-    VK_PIPELINE                                pipeline)
+    VkCmdBuffer                              cmdBuffer,
+    VkPipelineBindPoint                     pipelineBindPoint,
+    VkPipeline                                pipeline)
 {
     struct intel_cmd *cmd = intel_cmd(cmdBuffer);
 
@@ -3342,28 +3342,28 @@ ICD_EXPORT void VKAPI vkCmdBindPipeline(
 }
 
 ICD_EXPORT void VKAPI vkCmdBindDynamicStateObject(
-    VK_CMD_BUFFER                              cmdBuffer,
-    VK_STATE_BIND_POINT                        stateBindPoint,
-    VK_DYNAMIC_STATE_OBJECT                    state)
+    VkCmdBuffer                              cmdBuffer,
+    VkStateBindPoint                        stateBindPoint,
+    VkDynamicStateObject                    state)
 {
     struct intel_cmd *cmd = intel_cmd(cmdBuffer);
 
     switch (stateBindPoint) {
     case VK_STATE_BIND_VIEWPORT:
         cmd_bind_viewport_state(cmd,
-                intel_dynamic_vp((VK_DYNAMIC_VP_STATE_OBJECT) state));
+                intel_dynamic_vp((VkDynamicVpStateObject) state));
         break;
     case VK_STATE_BIND_RASTER:
         cmd_bind_raster_state(cmd,
-                intel_dynamic_rs((VK_DYNAMIC_RS_STATE_OBJECT) state));
+                intel_dynamic_rs((VkDynamicRsStateObject) state));
         break;
     case VK_STATE_BIND_DEPTH_STENCIL:
         cmd_bind_ds_state(cmd,
-                intel_dynamic_ds((VK_DYNAMIC_DS_STATE_OBJECT) state));
+                intel_dynamic_ds((VkDynamicDsStateObject) state));
         break;
     case VK_STATE_BIND_COLOR_BLEND:
         cmd_bind_blend_state(cmd,
-                intel_dynamic_cb((VK_DYNAMIC_CB_STATE_OBJECT) state));
+                intel_dynamic_cb((VkDynamicCbStateObject) state));
         break;
     default:
         cmd_fail(cmd, VK_ERROR_INVALID_VALUE);
@@ -3372,12 +3372,12 @@ ICD_EXPORT void VKAPI vkCmdBindDynamicStateObject(
 }
 
 ICD_EXPORT void VKAPI vkCmdBindDescriptorSets(
-    VK_CMD_BUFFER                              cmdBuffer,
-    VK_PIPELINE_BIND_POINT                     pipelineBindPoint,
-    VK_DESCRIPTOR_SET_LAYOUT_CHAIN             layoutChain,
+    VkCmdBuffer                              cmdBuffer,
+    VkPipelineBindPoint                     pipelineBindPoint,
+    VkDescriptorSetLayoutChain             layoutChain,
     uint32_t                                    layoutChainSlot,
     uint32_t                                    count,
-    const VK_DESCRIPTOR_SET*                   pDescriptorSets,
+    const VkDescriptorSet*                   pDescriptorSets,
     const uint32_t*                             pUserData)
 {
     struct intel_cmd *cmd = intel_cmd(cmdBuffer);
@@ -3414,9 +3414,9 @@ ICD_EXPORT void VKAPI vkCmdBindDescriptorSets(
 }
 
 ICD_EXPORT void VKAPI vkCmdBindVertexBuffer(
-    VK_CMD_BUFFER                              cmdBuffer,
-    VK_BUFFER                                  buffer,
-    VK_GPU_SIZE                                offset,
+    VkCmdBuffer                              cmdBuffer,
+    VkBuffer                                  buffer,
+    VkGpuSize                                offset,
     uint32_t                                    binding)
 {
     struct intel_cmd *cmd = intel_cmd(cmdBuffer);
@@ -3426,10 +3426,10 @@ ICD_EXPORT void VKAPI vkCmdBindVertexBuffer(
 }
 
 ICD_EXPORT void VKAPI vkCmdBindIndexBuffer(
-    VK_CMD_BUFFER                              cmdBuffer,
-    VK_BUFFER                                  buffer,
-    VK_GPU_SIZE                                offset,
-    VK_INDEX_TYPE                              indexType)
+    VkCmdBuffer                              cmdBuffer,
+    VkBuffer                                  buffer,
+    VkGpuSize                                offset,
+    VkIndexType                              indexType)
 {
     struct intel_cmd *cmd = intel_cmd(cmdBuffer);
     struct intel_buf *buf = intel_buf(buffer);
@@ -3438,7 +3438,7 @@ ICD_EXPORT void VKAPI vkCmdBindIndexBuffer(
 }
 
 ICD_EXPORT void VKAPI vkCmdDraw(
-    VK_CMD_BUFFER                              cmdBuffer,
+    VkCmdBuffer                              cmdBuffer,
     uint32_t                                    firstVertex,
     uint32_t                                    vertexCount,
     uint32_t                                    firstInstance,
@@ -3451,7 +3451,7 @@ ICD_EXPORT void VKAPI vkCmdDraw(
 }
 
 ICD_EXPORT void VKAPI vkCmdDrawIndexed(
-    VK_CMD_BUFFER                              cmdBuffer,
+    VkCmdBuffer                              cmdBuffer,
     uint32_t                                    firstIndex,
     uint32_t                                    indexCount,
     int32_t                                     vertexOffset,
@@ -3465,9 +3465,9 @@ ICD_EXPORT void VKAPI vkCmdDrawIndexed(
 }
 
 ICD_EXPORT void VKAPI vkCmdDrawIndirect(
-    VK_CMD_BUFFER                              cmdBuffer,
-    VK_BUFFER                                  buffer,
-    VK_GPU_SIZE                                offset,
+    VkCmdBuffer                              cmdBuffer,
+    VkBuffer                                  buffer,
+    VkGpuSize                                offset,
     uint32_t                                    count,
     uint32_t                                    stride)
 {
@@ -3477,9 +3477,9 @@ ICD_EXPORT void VKAPI vkCmdDrawIndirect(
 }
 
 ICD_EXPORT void VKAPI vkCmdDrawIndexedIndirect(
-    VK_CMD_BUFFER                              cmdBuffer,
-    VK_BUFFER                                  buffer,
-    VK_GPU_SIZE                                offset,
+    VkCmdBuffer                              cmdBuffer,
+    VkBuffer                                  buffer,
+    VkGpuSize                                offset,
     uint32_t                                    count,
     uint32_t                                    stride)
 {
@@ -3489,7 +3489,7 @@ ICD_EXPORT void VKAPI vkCmdDrawIndexedIndirect(
 }
 
 ICD_EXPORT void VKAPI vkCmdDispatch(
-    VK_CMD_BUFFER                              cmdBuffer,
+    VkCmdBuffer                              cmdBuffer,
     uint32_t                                    x,
     uint32_t                                    y,
     uint32_t                                    z)
@@ -3500,9 +3500,9 @@ ICD_EXPORT void VKAPI vkCmdDispatch(
 }
 
 ICD_EXPORT void VKAPI vkCmdDispatchIndirect(
-    VK_CMD_BUFFER                              cmdBuffer,
-    VK_BUFFER                                  buffer,
-    VK_GPU_SIZE                                offset)
+    VkCmdBuffer                              cmdBuffer,
+    VkBuffer                                  buffer,
+    VkGpuSize                                offset)
 {
     struct intel_cmd *cmd = intel_cmd(cmdBuffer);
 
@@ -3510,8 +3510,8 @@ ICD_EXPORT void VKAPI vkCmdDispatchIndirect(
 }
 
 ICD_EXPORT void VKAPI vkCmdBeginRenderPass(
-    VK_CMD_BUFFER                              cmdBuffer,
-    const VK_RENDER_PASS_BEGIN*                pRenderPassBegin)
+    VkCmdBuffer                              cmdBuffer,
+    const VkRenderPassBegin*                pRenderPassBegin)
 {
    struct intel_cmd *cmd = intel_cmd(cmdBuffer);
 
@@ -3519,8 +3519,8 @@ ICD_EXPORT void VKAPI vkCmdBeginRenderPass(
 }
 
 ICD_EXPORT void VKAPI vkCmdEndRenderPass(
-    VK_CMD_BUFFER                              cmdBuffer,
-    VK_RENDER_PASS                             renderPass)
+    VkCmdBuffer                              cmdBuffer,
+    VkRenderPass                             renderPass)
 {
    struct intel_cmd *cmd = intel_cmd(cmdBuffer);
 

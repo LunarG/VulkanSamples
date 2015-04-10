@@ -55,14 +55,14 @@ vkDisplay::~vkDisplay()
 #endif
 }
 
-VK_RESULT vkDisplay::init_vk(unsigned int gpu_idx)
+VkResult vkDisplay::init_vk(unsigned int gpu_idx)
 {
 #if 0
-    VK_APPLICATION_INFO appInfo = {};
+    VkApplicationInfo appInfo = {};
     appInfo.pAppName = APP_NAME;
     appInfo.pEngineName = "";
     appInfo.apiVersion = VK_API_VERSION;
-    VK_RESULT res = vkInitAndEnumerateGpus(&appInfo, NULL, VK_MAX_PHYSICAL_GPUS, &m_gpuCount, m_gpus);
+    VkResult res = vkInitAndEnumerateGpus(&appInfo, NULL, VK_MAX_PHYSICAL_GPUS, &m_gpuCount, m_gpus);
     if ( res == VK_SUCCESS ) {
         // retrieve the GPU information for all GPUs
         for( uint32_t gpu = 0; gpu < m_gpuCount; gpu++)
@@ -127,7 +127,7 @@ int vkDisplay::init(const unsigned int gpu_idx)
 {
     //m_gpuIdx = gpu_idx;
 #if 0
-    VK_RESULT result = init_vk(gpu_idx);
+    VkResult result = init_vk(gpu_idx);
     if (result != VK_SUCCESS) {
         glv_LogError("could not init vulkan library");
         return -1;

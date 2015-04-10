@@ -48,7 +48,7 @@ struct intel_base {
 
     struct intel_base_dbg *dbg;
 
-    VK_RESULT (*get_info)(struct intel_base *base, int type,
+    VkResult (*get_info)(struct intel_base *base, int type,
                            size_t *size, void *data);
 };
 
@@ -62,25 +62,25 @@ struct intel_obj {
     size_t offset;
 };
 
-static inline struct intel_base *intel_base(VK_BASE_OBJECT base)
+static inline struct intel_base *intel_base(VkBaseObject base)
 {
     return (struct intel_base *) base;
 }
 
-static inline struct intel_obj *intel_obj(VK_OBJECT obj)
+static inline struct intel_obj *intel_obj(VkObject obj)
 {
     return (struct intel_obj *) obj;
 }
 
 static inline void intel_obj_bind_mem(struct intel_obj *obj,
                                       struct intel_mem *mem,
-                                      VK_GPU_SIZE offset)
+                                      VkGpuSize offset)
 {
     obj->mem = mem;
     obj->offset = offset;
 }
 
-VK_RESULT intel_base_get_info(struct intel_base *base, int type,
+VkResult intel_base_get_info(struct intel_base *base, int type,
                                size_t *size, void *data);
 
 struct intel_base_dbg *intel_base_dbg_create(const struct intel_handle *handle,

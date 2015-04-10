@@ -36,12 +36,12 @@
 struct intel_img {
     struct intel_obj obj;
 
-    VK_IMAGE_TYPE type;
+    VkImageType type;
     int32_t depth;
     uint32_t mip_levels;
     uint32_t array_size;
-    VK_FLAGS usage;
-    VK_IMAGE_FORMAT_CLASS format_class;  // should this be integrated into intel_layout?
+    VkFlags usage;
+    VkImageFormatClass format_class;  // should this be integrated into intel_layout?
     uint32_t samples;
     struct intel_layout layout;
 
@@ -55,7 +55,7 @@ struct intel_img {
     void *wsi_data;
 };
 
-static inline struct intel_img *intel_img(VK_IMAGE image)
+static inline struct intel_img *intel_img(VkImage image)
 {
     return (struct intel_img *) image;
 }
@@ -70,8 +70,8 @@ static inline struct intel_img *intel_img_from_obj(struct intel_obj *obj)
     return intel_img_from_base(&obj->base);
 }
 
-VK_RESULT intel_img_create(struct intel_dev *dev,
-                            const VK_IMAGE_CREATE_INFO *info,
+VkResult intel_img_create(struct intel_dev *dev,
+                            const VkImageCreateInfo *info,
                             bool scanout,
                             struct intel_img **img_ret);
 

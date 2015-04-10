@@ -30,24 +30,24 @@
 
 namespace vk_testing {
 
-size_t get_format_size(VK_FORMAT format);
+size_t get_format_size(VkFormat format);
 
 class ImageChecker {
 public:
-    explicit ImageChecker(const VK_IMAGE_CREATE_INFO &info, const std::vector<VK_BUFFER_IMAGE_COPY> &regions)
+    explicit ImageChecker(const VkImageCreateInfo &info, const std::vector<VkBufferImageCopy> &regions)
         : info_(info), regions_(regions), pattern_(HASH) {}
-    explicit ImageChecker(const VK_IMAGE_CREATE_INFO &info, const std::vector<VK_IMAGE_SUBRESOURCE_RANGE> &ranges);
-    explicit ImageChecker(const VK_IMAGE_CREATE_INFO &info);
+    explicit ImageChecker(const VkImageCreateInfo &info, const std::vector<VkImageSubresourceRange> &ranges);
+    explicit ImageChecker(const VkImageCreateInfo &info);
 
     void set_solid_pattern(const std::vector<uint8_t> &solid);
 
-    VK_GPU_SIZE buffer_size() const;
+    VkGpuSize buffer_size() const;
     bool fill(Buffer &buf) const { return walk(FILL, buf); }
     bool fill(Image &img) const { return walk(FILL, img); }
     bool check(Buffer &buf) const { return walk(CHECK, buf); }
     bool check(Image &img) const { return walk(CHECK, img); }
 
-    const std::vector<VK_BUFFER_IMAGE_COPY> &regions() const { return regions_; }
+    const std::vector<VkBufferImageCopy> &regions() const { return regions_; }
 
     static void hash_salt_generate() { hash_salt_++; }
 
@@ -63,18 +63,18 @@ private:
     };
 
     size_t buffer_cpp() const;
-    VK_SUBRESOURCE_LAYOUT buffer_layout(const VK_BUFFER_IMAGE_COPY &region) const;
+    VkSubresourceLayout buffer_layout(const VkBufferImageCopy &region) const;
 
     bool walk(Action action, Buffer &buf) const;
     bool walk(Action action, Image &img) const;
-    bool walk_region(Action action, const VK_BUFFER_IMAGE_COPY &region, const VK_SUBRESOURCE_LAYOUT &layout, void *data) const;
+    bool walk_region(Action action, const VkBufferImageCopy &region, const VkSubresourceLayout &layout, void *data) const;
 
-    std::vector<uint8_t> pattern_hash(const VK_IMAGE_SUBRESOURCE &subres, const VK_OFFSET3D &offset) const;
+    std::vector<uint8_t> pattern_hash(const VkImageSubresource &subres, const VkOffset3D &offset) const;
 
     static uint32_t hash_salt_;
 
-    VK_IMAGE_CREATE_INFO info_;
-    std::vector<VK_BUFFER_IMAGE_COPY> regions_;
+    VkImageCreateInfo info_;
+    std::vector<VkBufferImageCopy> regions_;
 
     Pattern pattern_;
     std::vector<uint8_t> pattern_solid_;
@@ -83,13 +83,13 @@ private:
 
 uint32_t ImageChecker::hash_salt_;
 
-ImageChecker::ImageChecker(const VK_IMAGE_CREATE_INFO &info)
+ImageChecker::ImageChecker(const VkImageCreateInfo &info)
     : info_(info), regions_(), pattern_(HASH)
 {
     // create a region for every mip level in array slice 0
-    VK_GPU_SIZE offset = 0;
+    VkGpuSize offset = 0;
     for (uint32_t lv = 0; lv < info_.mipLevels; lv++) {
-        VK_BUFFER_IMAGE_COPY region = {};
+        VkBufferImageCopy region = {};
 
         region.bufferOffset = offset;
         region.imageSubresource.mipLevel = lv;
@@ -119,14 +119,14 @@ ImageChecker::ImageChecker(const VK_IMAGE_CREATE_INFO &info)
     // arraySize should be limited in our tests.  If this proves to be an
     // issue, we can store only the regions for array slice 0 and be smart.
     if (info_.arraySize > 1) {
-        const VK_GPU_SIZE slice_pitch = offset;
+        const VkGpuSize slice_pitch = offset;
         const uint32_t slice_region_count = regions_.size();
 
         regions_.reserve(slice_region_count * info_.arraySize);
 
         for (uint32_t slice = 1; slice < info_.arraySize; slice++) {
             for (uint32_t i = 0; i < slice_region_count; i++) {
-                VK_BUFFER_IMAGE_COPY region = regions_[i];
+                VkBufferImageCopy region = regions_[i];
 
                 region.bufferOffset += slice_pitch * slice;
                 region.imageSubresource.arraySlice = slice;
@@ -136,15 +136,15 @@ ImageChecker::ImageChecker(const VK_IMAGE_CREATE_INFO &info)
     }
 }
 
-ImageChecker::ImageChecker(const VK_IMAGE_CREATE_INFO &info, const std::vector<VK_IMAGE_SUBRESOURCE_RANGE> &ranges)
+ImageChecker::ImageChecker(const VkImageCreateInfo &info, const std::vector<VkImageSubresourceRange> &ranges)
     : info_(info), regions_(), pattern_(HASH)
 {
-    VK_GPU_SIZE offset = 0;
-    for (std::vector<VK_IMAGE_SUBRESOURCE_RANGE>::const_iterator it = ranges.begin();
+    VkGpuSize offset = 0;
+    for (std::vector<VkImageSubresourceRange>::const_iterator it = ranges.begin();
          it != ranges.end(); it++) {
         for (uint32_t lv = 0; lv < it->mipLevels; lv++) {
             for (uint32_t slice = 0; slice < it->arraySize; slice++) {
-                VK_BUFFER_IMAGE_COPY region = {};
+                VkBufferImageCopy region = {};
                 region.bufferOffset = offset;
                 region.imageSubresource = Image::subresource(*it, lv, slice);
                 region.imageExtent = Image::extent(info_.extent, lv);
@@ -171,9 +171,9 @@ size_t ImageChecker::buffer_cpp() const
     return get_format_size(info_.format);
 }
 
-VK_SUBRESOURCE_LAYOUT ImageChecker::buffer_layout(const VK_BUFFER_IMAGE_COPY &region) const
+VkSubresourceLayout ImageChecker::buffer_layout(const VkBufferImageCopy &region) const
 {
-    VK_SUBRESOURCE_LAYOUT layout = {};
+    VkSubresourceLayout layout = {};
     layout.offset = region.bufferOffset;
     layout.rowPitch = buffer_cpp() * region.imageExtent.width;
     layout.depthPitch = layout.rowPitch * region.imageExtent.height;
@@ -182,13 +182,13 @@ VK_SUBRESOURCE_LAYOUT ImageChecker::buffer_layout(const VK_BUFFER_IMAGE_COPY &re
     return layout;
 }
 
-VK_GPU_SIZE ImageChecker::buffer_size() const
+VkGpuSize ImageChecker::buffer_size() const
 {
-    VK_GPU_SIZE size = 0;
+    VkGpuSize size = 0;
 
-    for (std::vector<VK_BUFFER_IMAGE_COPY>::const_iterator it = regions_.begin();
+    for (std::vector<VkBufferImageCopy>::const_iterator it = regions_.begin();
          it != regions_.end(); it++) {
-        const VK_SUBRESOURCE_LAYOUT layout = buffer_layout(*it);
+        const VkSubresourceLayout layout = buffer_layout(*it);
         if (size < layout.offset + layout.size)
             size = layout.offset + layout.size;
     }
@@ -196,8 +196,8 @@ VK_GPU_SIZE ImageChecker::buffer_size() const
     return size;
 }
 
-bool ImageChecker::walk_region(Action action, const VK_BUFFER_IMAGE_COPY &region,
-                               const VK_SUBRESOURCE_LAYOUT &layout, void *data) const
+bool ImageChecker::walk_region(Action action, const VkBufferImageCopy &region,
+                               const VkSubresourceLayout &layout, void *data) const
 {
     for (int32_t z = 0; z < region.imageExtent.depth; z++) {
         for (int32_t y = 0; y < region.imageExtent.height; y++) {
@@ -206,7 +206,7 @@ bool ImageChecker::walk_region(Action action, const VK_BUFFER_IMAGE_COPY &region
                 dst += layout.offset + layout.depthPitch * z +
                     layout.rowPitch * y + buffer_cpp() * x;
 
-                VK_OFFSET3D offset = region.imageOffset;
+                VkOffset3D offset = region.imageOffset;
                 offset.x += x;
                 offset.y += y;
                 offset.z += z;
@@ -239,7 +239,7 @@ bool ImageChecker::walk(Action action, Buffer &buf) const
     if (!data)
         return false;
 
-    std::vector<VK_BUFFER_IMAGE_COPY>::const_iterator it;
+    std::vector<VkBufferImageCopy>::const_iterator it;
     for (it = regions_.begin(); it != regions_.end(); it++) {
         if (!walk_region(action, *it, buffer_layout(*it), data))
             break;
@@ -256,7 +256,7 @@ bool ImageChecker::walk(Action action, Image &img) const
     if (!data)
         return false;
 
-    std::vector<VK_BUFFER_IMAGE_COPY>::const_iterator it;
+    std::vector<VkBufferImageCopy>::const_iterator it;
     for (it = regions_.begin(); it != regions_.end(); it++) {
         if (!walk_region(action, *it, img.subresource_layout(it->imageSubresource), data))
             break;
@@ -267,7 +267,7 @@ bool ImageChecker::walk(Action action, Image &img) const
     return (it == regions_.end());
 }
 
-std::vector<uint8_t> ImageChecker::pattern_hash(const VK_IMAGE_SUBRESOURCE &subres, const VK_OFFSET3D &offset) const
+std::vector<uint8_t> ImageChecker::pattern_hash(const VkImageSubresource &subres, const VkOffset3D &offset) const
 {
 #define HASH_BYTE(val, b) static_cast<uint8_t>((static_cast<uint32_t>(val) >> (b * 8)) & 0xff)
 #define HASH_BYTES(val) HASH_BYTE(val, 0), HASH_BYTE(val, 1), HASH_BYTE(val, 2), HASH_BYTE(val, 3)
@@ -296,7 +296,7 @@ std::vector<uint8_t> ImageChecker::pattern_hash(const VK_IMAGE_SUBRESOURCE &subr
     return val;
 }
 
-size_t get_format_size(VK_FORMAT format)
+size_t get_format_size(VkFormat format)
 {
     static const struct format_info {
         size_t size;
@@ -482,9 +482,9 @@ size_t get_format_size(VK_FORMAT format)
     return format_table[format].size;
 }
 
-VK_EXTENT3D get_mip_level_extent(const VK_EXTENT3D &extent, uint32_t mip_level)
+VkExtent3D get_mip_level_extent(const VkExtent3D &extent, uint32_t mip_level)
 {
-    const VK_EXTENT3D ext = {
+    const VkExtent3D ext = {
         (extent.width  >> mip_level) ? extent.width  >> mip_level : 1,
         (extent.height >> mip_level) ? extent.height >> mip_level : 1,
         (extent.depth  >> mip_level) ? extent.depth  >> mip_level : 1,
@@ -522,9 +522,9 @@ protected:
 
     void add_memory_ref(const vk_testing::Object &obj)
     {
-        const std::vector<VK_GPU_MEMORY> mems = obj.memories();
-        for (std::vector<VK_GPU_MEMORY>::const_iterator it = mems.begin(); it != mems.end(); it++) {
-            std::vector<VK_GPU_MEMORY>::iterator ref;
+        const std::vector<VkGpuMemory> mems = obj.memories();
+        for (std::vector<VkGpuMemory>::const_iterator it = mems.begin(); it != mems.end(); it++) {
+            std::vector<VkGpuMemory>::iterator ref;
             for (ref = mem_refs_.begin(); ref != mem_refs_.end(); ref++) {
                 if (*ref == *it)
                     break;
@@ -540,7 +540,7 @@ protected:
     vk_testing::Queue &queue_;
     vk_testing::CmdBuffer cmd_;
 
-    std::vector<VK_GPU_MEMORY> mem_refs_;
+    std::vector<VkGpuMemory> mem_refs_;
 };
 
 typedef VkCmdBlitTest VkCmdFillBufferTest;
@@ -570,7 +570,7 @@ TEST_F(VkCmdFillBufferTest, Basic)
 
 TEST_F(VkCmdFillBufferTest, Large)
 {
-    const VK_GPU_SIZE size = 32 * 1024 * 1024;
+    const VkGpuSize size = 32 * 1024 * 1024;
     vk_testing::Buffer buf;
 
     buf.init(dev_, size);
@@ -584,7 +584,7 @@ TEST_F(VkCmdFillBufferTest, Large)
     submit_and_done();
 
     const uint32_t *data = static_cast<const uint32_t *>(buf.map());
-    VK_GPU_SIZE offset;
+    VkGpuSize offset;
     for (offset = 0; offset < size / 2; offset += 4)
         EXPECT_EQ(0x11111111, data[offset / 4]) << "Offset is: " << offset;
     for (; offset < size; offset += 4)
@@ -607,7 +607,7 @@ TEST_F(VkCmdFillBufferTest, Overlap)
     submit_and_done();
 
     const uint32_t *data = static_cast<const uint32_t *>(buf.map());
-    VK_GPU_SIZE offset;
+    VkGpuSize offset;
     for (offset = 0; offset < 32; offset += 4)
         EXPECT_EQ(0x11111111, data[offset / 4]) << "Offset is: " << offset;
     for (; offset < 64; offset += 4)
@@ -618,7 +618,7 @@ TEST_F(VkCmdFillBufferTest, Overlap)
 TEST_F(VkCmdFillBufferTest, MultiAlignments)
 {
     vk_testing::Buffer bufs[9];
-    VK_GPU_SIZE size = 4;
+    VkGpuSize size = 4;
 
     cmd_.begin();
     for (int i = 0; i < ARRAY_SIZE(bufs); i++) {
@@ -634,7 +634,7 @@ TEST_F(VkCmdFillBufferTest, MultiAlignments)
     size = 4;
     for (int i = 0; i < ARRAY_SIZE(bufs); i++) {
         const uint32_t *data = static_cast<const uint32_t *>(bufs[i].map());
-        VK_GPU_SIZE offset;
+        VkGpuSize offset;
         for (offset = 0; offset < size; offset += 4)
             EXPECT_EQ(0x11111111, data[offset / 4]) << "Buffser is: " << i << "\n" <<
                                                        "Offset is: " << offset;
@@ -660,7 +660,7 @@ TEST_F(VkCmdCopyBufferTest, Basic)
     add_memory_ref(dst);
 
     cmd_.begin();
-    VK_BUFFER_COPY region = {};
+    VkBufferCopy region = {};
     region.copySize = 4;
     vkCmdCopyBuffer(cmd_.obj(), src.obj(), dst.obj(), 1, &region);
     cmd_.end();
@@ -674,12 +674,12 @@ TEST_F(VkCmdCopyBufferTest, Basic)
 
 TEST_F(VkCmdCopyBufferTest, Large)
 {
-    const VK_GPU_SIZE size = 32 * 1024 * 1024;
+    const VkGpuSize size = 32 * 1024 * 1024;
     vk_testing::Buffer src, dst;
 
     src.init(dev_, size);
     uint32_t *data = static_cast<uint32_t *>(src.map());
-    VK_GPU_SIZE offset;
+    VkGpuSize offset;
     for (offset = 0; offset < size; offset += 4)
         data[offset / 4] = offset;
     src.unmap();
@@ -689,7 +689,7 @@ TEST_F(VkCmdCopyBufferTest, Large)
     add_memory_ref(dst);
 
     cmd_.begin();
-    VK_BUFFER_COPY region = {};
+    VkBufferCopy region = {};
     region.copySize = size;
     vkCmdCopyBuffer(cmd_.obj(), src.obj(), dst.obj(), 1, &region);
     cmd_.end();
@@ -704,7 +704,7 @@ TEST_F(VkCmdCopyBufferTest, Large)
 
 TEST_F(VkCmdCopyBufferTest, MultiAlignments)
 {
-    const VK_BUFFER_COPY regions[] = {
+    const VkBufferCopy regions[] = {
         /* well aligned */
         {  0,   0,  256 },
         {  0, 256,  128 },
@@ -740,7 +740,7 @@ TEST_F(VkCmdCopyBufferTest, MultiAlignments)
 
     data = static_cast<uint8_t *>(dst.map());
     for (int i = 0; i < ARRAY_SIZE(regions); i++) {
-        const VK_BUFFER_COPY &r = regions[i];
+        const VkBufferCopy &r = regions[i];
 
         for (int j = 0; j < r.copySize; j++) {
             EXPECT_EQ(r.srcOffset + j, data[r.destOffset + j]) <<
@@ -754,18 +754,18 @@ TEST_F(VkCmdCopyBufferTest, MultiAlignments)
 TEST_F(VkCmdCopyBufferTest, RAWHazard)
 {
     vk_testing::Buffer bufs[3];
-    VK_EVENT_CREATE_INFO event_info;
-    VK_EVENT event;
-    VK_MEMORY_REQUIREMENTS mem_req;
+    VkEventCreateInfo event_info;
+    VkEvent event;
+    VkMemoryRequirements mem_req;
     size_t data_size = sizeof(mem_req);
-    VK_RESULT err;
+    VkResult err;
 
-    //        typedef struct _VK_EVENT_CREATE_INFO
+    //        typedef struct VkEventCreateInfo_
     //        {
-    //            VK_STRUCTURE_TYPE                      sType;      // Must be VK_STRUCTURE_TYPE_EVENT_CREATE_INFO
+    //            VkStructureType                      sType;      // Must be VK_STRUCTURE_TYPE_EVENT_CREATE_INFO
     //            const void*                             pNext;      // Pointer to next structure
-    //            VK_FLAGS                               flags;      // Reserved
-    //        } VK_EVENT_CREATE_INFO;
+    //            VkFlags                               flags;      // Reserved
+    //        } VkEventCreateInfo;
     memset(&event_info, 0, sizeof(event_info));
     event_info.sType = VK_STRUCTURE_TYPE_EVENT_CREATE_INFO;
 
@@ -776,12 +776,12 @@ TEST_F(VkCmdCopyBufferTest, RAWHazard)
                            &data_size, &mem_req);
     ASSERT_VK_SUCCESS(err);
 
-    //        VK_RESULT VKAPI vkAllocMemory(
-    //            VK_DEVICE                                  device,
+    //        VkResult VKAPI vkAllocMemory(
+    //            VkDevice                                  device,
     //            const VkMemoryAllocInfo*                pAllocInfo,
-    //            VK_GPU_MEMORY*                             pMem);
+    //            VkGpuMemory*                             pMem);
     VkMemoryAllocInfo mem_info;
-    VK_GPU_MEMORY event_mem;
+    VkGpuMemory event_mem;
 
     ASSERT_NE(0, mem_req.size) << "vkGetObjectInfo (Event): Failed - expect events to require memory";
 
@@ -813,12 +813,12 @@ TEST_F(VkCmdCopyBufferTest, RAWHazard)
 
     vkCmdFillBuffer(cmd_.obj(), bufs[0].obj(), 0, 4, 0x11111111);
     // is this necessary?
-    VK_BUFFER_MEMORY_BARRIER memory_barrier = bufs[0].buffer_memory_barrier(
+    VkBufferMemoryBarrier memory_barrier = bufs[0].buffer_memory_barrier(
             VK_MEMORY_OUTPUT_COPY_BIT, VK_MEMORY_INPUT_COPY_BIT, 0, 4);
-    VK_BUFFER_MEMORY_BARRIER *pmemory_barrier = &memory_barrier;
+    VkBufferMemoryBarrier *pmemory_barrier = &memory_barrier;
 
-    VK_PIPE_EVENT set_events[] = { VK_PIPE_EVENT_TRANSFER_COMPLETE };
-    VK_PIPELINE_BARRIER pipeline_barrier = {};
+    VkPipeEvent set_events[] = { VK_PIPE_EVENT_TRANSFER_COMPLETE };
+    VkPipelineBarrier pipeline_barrier = {};
     pipeline_barrier.sType = VK_STRUCTURE_TYPE_PIPELINE_BARRIER;
     pipeline_barrier.eventCount = 1;
     pipeline_barrier.pEvents = set_events;
@@ -827,7 +827,7 @@ TEST_F(VkCmdCopyBufferTest, RAWHazard)
     pipeline_barrier.ppMemBarriers = (const void **)&pmemory_barrier;
     vkCmdPipelineBarrier(cmd_.obj(), &pipeline_barrier);
 
-    VK_BUFFER_COPY region = {};
+    VkBufferCopy region = {};
     region.copySize = 4;
     vkCmdCopyBuffer(cmd_.obj(), bufs[0].obj(), bufs[1].obj(), 1, &region);
 
@@ -854,7 +854,7 @@ TEST_F(VkCmdCopyBufferTest, RAWHazard)
     memory_barrier = bufs[1].buffer_memory_barrier(
             VK_MEMORY_OUTPUT_COPY_BIT, VK_MEMORY_INPUT_CPU_READ_BIT, 0, 4);
     pmemory_barrier = &memory_barrier;
-    VK_EVENT_WAIT_INFO wait_info = {};
+    VkEventWaitInfo wait_info = {};
     wait_info.sType = VK_STRUCTURE_TYPE_EVENT_WAIT_INFO;
     wait_info.eventCount = 1;
     wait_info.pEvents = &event;
@@ -884,7 +884,7 @@ TEST_F(VkCmdCopyBufferTest, RAWHazard)
 
 class VkCmdBlitImageTest : public VkCmdBlitTest {
 protected:
-    void init_test_formats(VK_FLAGS features)
+    void init_test_formats(VkFlags features)
     {
         first_linear_format_ = VK_FMT_UNDEFINED;
         first_optimal_format_ = VK_FMT_UNDEFINED;
@@ -906,7 +906,7 @@ protected:
 
     void init_test_formats()
     {
-        init_test_formats(static_cast<VK_FLAGS>(-1));
+        init_test_formats(static_cast<VkFlags>(-1));
     }
 
     void fill_src(vk_testing::Image &img, const vk_testing::ImageChecker &checker)
@@ -964,8 +964,8 @@ protected:
     }
 
     std::vector<vk_testing::Device::Format> test_formats_;
-    VK_FORMAT first_linear_format_;
-    VK_FORMAT first_optimal_format_;
+    VkFormat first_linear_format_;
+    VkFormat first_optimal_format_;
 };
 
 class VkCmdCopyBufferToImageTest : public VkCmdBlitImageTest {
@@ -977,7 +977,7 @@ protected:
         ASSERT_NE(true, test_formats_.empty());
     }
 
-    void test_copy_memory_to_image(const VK_IMAGE_CREATE_INFO &img_info, const vk_testing::ImageChecker &checker)
+    void test_copy_memory_to_image(const VkImageCreateInfo &img_info, const vk_testing::ImageChecker &checker)
     {
         vk_testing::Buffer buf;
         vk_testing::Image img;
@@ -1001,13 +1001,13 @@ protected:
         check_dst(img, checker);
     }
 
-    void test_copy_memory_to_image(const VK_IMAGE_CREATE_INFO &img_info, const std::vector<VK_BUFFER_IMAGE_COPY> &regions)
+    void test_copy_memory_to_image(const VkImageCreateInfo &img_info, const std::vector<VkBufferImageCopy> &regions)
     {
         vk_testing::ImageChecker checker(img_info, regions);
         test_copy_memory_to_image(img_info, checker);
     }
 
-    void test_copy_memory_to_image(const VK_IMAGE_CREATE_INFO &img_info)
+    void test_copy_memory_to_image(const VkImageCreateInfo &img_info)
     {
         vk_testing::ImageChecker checker(img_info);
         test_copy_memory_to_image(img_info, checker);
@@ -1025,7 +1025,7 @@ TEST_F(VkCmdCopyBufferToImageTest, Basic)
              it->format <= VK_FMT_B8G8R8_SRGB))
             continue;
 
-        VK_IMAGE_CREATE_INFO img_info = vk_testing::Image::create_info();
+        VkImageCreateInfo img_info = vk_testing::Image::create_info();
         img_info.imageType = VK_IMAGE_2D;
         img_info.format = it->format;
         img_info.extent.width = 64;
@@ -1045,7 +1045,7 @@ protected:
         ASSERT_NE(true, test_formats_.empty());
     }
 
-    void test_copy_image_to_memory(const VK_IMAGE_CREATE_INFO &img_info, const vk_testing::ImageChecker &checker)
+    void test_copy_image_to_memory(const VkImageCreateInfo &img_info, const vk_testing::ImageChecker &checker)
     {
         vk_testing::Image img;
         vk_testing::Buffer buf;
@@ -1069,13 +1069,13 @@ protected:
         checker.check(buf);
     }
 
-    void test_copy_image_to_memory(const VK_IMAGE_CREATE_INFO &img_info, const std::vector<VK_BUFFER_IMAGE_COPY> &regions)
+    void test_copy_image_to_memory(const VkImageCreateInfo &img_info, const std::vector<VkBufferImageCopy> &regions)
     {
         vk_testing::ImageChecker checker(img_info, regions);
         test_copy_image_to_memory(img_info, checker);
     }
 
-    void test_copy_image_to_memory(const VK_IMAGE_CREATE_INFO &img_info)
+    void test_copy_image_to_memory(const VkImageCreateInfo &img_info)
     {
         vk_testing::ImageChecker checker(img_info);
         test_copy_image_to_memory(img_info, checker);
@@ -1093,7 +1093,7 @@ TEST_F(VkCmdCopyImageToBufferTest, Basic)
              it->format <= VK_FMT_B8G8R8_SRGB))
             continue;
 
-        VK_IMAGE_CREATE_INFO img_info = vk_testing::Image::create_info();
+        VkImageCreateInfo img_info = vk_testing::Image::create_info();
         img_info.imageType = VK_IMAGE_2D;
         img_info.format = it->format;
         img_info.extent.width = 64;
@@ -1113,14 +1113,14 @@ protected:
         ASSERT_NE(true, test_formats_.empty());
     }
 
-    void test_copy_image(const VK_IMAGE_CREATE_INFO &src_info, const VK_IMAGE_CREATE_INFO &dst_info,
-                         const std::vector<VK_IMAGE_COPY> &copies)
+    void test_copy_image(const VkImageCreateInfo &src_info, const VkImageCreateInfo &dst_info,
+                         const std::vector<VkImageCopy> &copies)
     {
-        // convert VK_IMAGE_COPY to two sets of VK_BUFFER_IMAGE_COPY
-        std::vector<VK_BUFFER_IMAGE_COPY> src_regions, dst_regions;
-        VK_GPU_SIZE src_offset = 0, dst_offset = 0;
-        for (std::vector<VK_IMAGE_COPY>::const_iterator it = copies.begin(); it != copies.end(); it++) {
-            VK_BUFFER_IMAGE_COPY src_region = {}, dst_region = {};
+        // convert VkImageCopy to two sets of VkBufferImageCopy
+        std::vector<VkBufferImageCopy> src_regions, dst_regions;
+        VkGpuSize src_offset = 0, dst_offset = 0;
+        for (std::vector<VkImageCopy>::const_iterator it = copies.begin(); it != copies.end(); it++) {
+            VkBufferImageCopy src_region = {}, dst_region = {};
 
             src_region.bufferOffset = src_offset;
             src_region.imageSubresource = it->srcSubresource;
@@ -1134,7 +1134,7 @@ protected:
             dst_region.imageExtent = it->extent;
             dst_regions.push_back(dst_region);
 
-            const VK_GPU_SIZE size = it->extent.width * it->extent.height * it->extent.depth;
+            const VkGpuSize size = it->extent.width * it->extent.height * it->extent.depth;
             src_offset += vk_testing::get_format_size(src_info.format) * size;
             dst_offset += vk_testing::get_format_size(dst_info.format) * size;
         }
@@ -1175,19 +1175,19 @@ TEST_F(VkCmdCopyImageTest, Basic)
              it->format <= VK_FMT_B8G8R8_SRGB))
             continue;
 
-        VK_IMAGE_CREATE_INFO img_info = vk_testing::Image::create_info();
+        VkImageCreateInfo img_info = vk_testing::Image::create_info();
         img_info.imageType = VK_IMAGE_2D;
         img_info.format = it->format;
         img_info.extent.width = 64;
         img_info.extent.height = 64;
         img_info.tiling = it->tiling;
 
-        VK_IMAGE_COPY copy = {};
+        VkImageCopy copy = {};
         copy.srcSubresource = vk_testing::Image::subresource(VK_IMAGE_ASPECT_COLOR, 0, 0);
         copy.destSubresource = copy.srcSubresource;
         copy.extent = img_info.extent;
 
-        test_copy_image(img_info, img_info, std::vector<VK_IMAGE_COPY>(&copy, &copy + 1));
+        test_copy_image(img_info, img_info, std::vector<VkImageCopy>(&copy, &copy + 1));
     }
 }
 
@@ -1200,7 +1200,7 @@ protected:
         ASSERT_NE(true, test_formats_.empty());
     }
 
-    void test_clone_image_data(const VK_IMAGE_CREATE_INFO &img_info)
+    void test_clone_image_data(const VkImageCreateInfo &img_info)
     {
         vk_testing::ImageChecker checker(img_info);
         vk_testing::Image src, dst;
@@ -1213,7 +1213,7 @@ protected:
         dst.init(dev_, img_info);
         add_memory_ref(dst);
 
-        const VK_IMAGE_LAYOUT layout = VK_IMAGE_LAYOUT_GENERAL;
+        const VkImageLayout layout = VK_IMAGE_LAYOUT_GENERAL;
 
         cmd_.begin();
         vkCmdCloneImageData(cmd_.obj(), src.obj(), layout, dst.obj(), layout);
@@ -1247,7 +1247,7 @@ TEST_F(VkCmdCloneImageDataTest, Basic)
             it->format == VK_FMT_R64G64B64A64_SFLOAT)
             continue;
 
-        VK_IMAGE_CREATE_INFO img_info = vk_testing::Image::create_info();
+        VkImageCreateInfo img_info = vk_testing::Image::create_info();
         img_info.imageType = VK_IMAGE_2D;
         img_info.format = it->format;
         img_info.extent.width = 64;
@@ -1255,9 +1255,9 @@ TEST_F(VkCmdCloneImageDataTest, Basic)
         img_info.tiling = it->tiling;
         img_info.flags = VK_IMAGE_CREATE_CLONEABLE_BIT;
 
-        const VK_IMAGE_SUBRESOURCE_RANGE range =
+        const VkImageSubresourceRange range =
             vk_testing::Image::subresource_range(img_info, VK_IMAGE_ASPECT_COLOR);
-        std::vector<VK_IMAGE_SUBRESOURCE_RANGE> ranges(&range, &range + 1);
+        std::vector<VkImageSubresourceRange> ranges(&range, &range + 1);
 
         test_clone_image_data(img_info);
     }
@@ -1287,7 +1287,7 @@ protected:
 
     bool test_raw_;
 
-    std::vector<uint8_t> color_to_raw(VK_FORMAT format, const float color[4])
+    std::vector<uint8_t> color_to_raw(VkFormat format, const float color[4])
     {
         std::vector<uint8_t> raw;
 
@@ -1312,7 +1312,7 @@ protected:
         return raw;
     }
 
-    std::vector<uint8_t> color_to_raw(VK_FORMAT format, const uint32_t color[4])
+    std::vector<uint8_t> color_to_raw(VkFormat format, const uint32_t color[4])
     {
         std::vector<uint8_t> raw;
 
@@ -1337,7 +1337,7 @@ protected:
         return raw;
     }
 
-    std::vector<uint8_t> color_to_raw(VK_FORMAT format, const VK_CLEAR_COLOR &color)
+    std::vector<uint8_t> color_to_raw(VkFormat format, const VkClearColor &color)
     {
         if (color.useRawValue)
             return color_to_raw(format, color.color.rawColor);
@@ -1345,20 +1345,20 @@ protected:
             return color_to_raw(format, color.color.floatColor);
     }
 
-    void test_clear_color_image(const VK_IMAGE_CREATE_INFO &img_info,
-                                const VK_CLEAR_COLOR &clear_color,
-                                const std::vector<VK_IMAGE_SUBRESOURCE_RANGE> &ranges)
+    void test_clear_color_image(const VkImageCreateInfo &img_info,
+                                const VkClearColor &clear_color,
+                                const std::vector<VkImageSubresourceRange> &ranges)
     {
         vk_testing::Image img;
         img.init(dev_, img_info);
         add_memory_ref(img);
-        const VK_FLAGS all_cache_outputs =
+        const VkFlags all_cache_outputs =
                 VK_MEMORY_OUTPUT_CPU_WRITE_BIT |
                 VK_MEMORY_OUTPUT_SHADER_WRITE_BIT |
                 VK_MEMORY_OUTPUT_COLOR_ATTACHMENT_BIT |
                 VK_MEMORY_OUTPUT_DEPTH_STENCIL_ATTACHMENT_BIT |
                 VK_MEMORY_OUTPUT_COPY_BIT;
-        const VK_FLAGS all_cache_inputs =
+        const VkFlags all_cache_inputs =
                 VK_MEMORY_INPUT_CPU_READ_BIT |
                 VK_MEMORY_INPUT_INDIRECT_COMMAND_BIT |
                 VK_MEMORY_INPUT_INDEX_FETCH_BIT |
@@ -1369,12 +1369,12 @@ protected:
                 VK_MEMORY_INPUT_DEPTH_STENCIL_ATTACHMENT_BIT |
                 VK_MEMORY_INPUT_COPY_BIT;
 
-        std::vector<VK_IMAGE_MEMORY_BARRIER> to_clear;
-        std::vector<VK_IMAGE_MEMORY_BARRIER *> p_to_clear;
-        std::vector<VK_IMAGE_MEMORY_BARRIER> to_xfer;
-        std::vector<VK_IMAGE_MEMORY_BARRIER *> p_to_xfer;
+        std::vector<VkImageMemoryBarrier> to_clear;
+        std::vector<VkImageMemoryBarrier *> p_to_clear;
+        std::vector<VkImageMemoryBarrier> to_xfer;
+        std::vector<VkImageMemoryBarrier *> p_to_xfer;
 
-        for (std::vector<VK_IMAGE_SUBRESOURCE_RANGE>::const_iterator it = ranges.begin();
+        for (std::vector<VkImageSubresourceRange>::const_iterator it = ranges.begin();
              it != ranges.end(); it++) {
             to_clear.push_back(img.image_memory_barrier(all_cache_outputs, all_cache_inputs,
                     VK_IMAGE_LAYOUT_GENERAL,
@@ -1389,8 +1389,8 @@ protected:
 
         cmd_.begin();
 
-        VK_PIPE_EVENT set_events[] = { VK_PIPE_EVENT_GPU_COMMANDS_COMPLETE };
-        VK_PIPELINE_BARRIER pipeline_barrier = {};
+        VkPipeEvent set_events[] = { VK_PIPE_EVENT_GPU_COMMANDS_COMPLETE };
+        VkPipelineBarrier pipeline_barrier = {};
         pipeline_barrier.sType = VK_STRUCTURE_TYPE_PIPELINE_BARRIER;
         pipeline_barrier.eventCount = 1;
         pipeline_barrier.pEvents = set_events;
@@ -1429,11 +1429,11 @@ protected:
         check_dst(img, checker);
     }
 
-    void test_clear_color_image(const VK_IMAGE_CREATE_INFO &img_info,
+    void test_clear_color_image(const VkImageCreateInfo &img_info,
                                 const float color[4],
-                                const std::vector<VK_IMAGE_SUBRESOURCE_RANGE> &ranges)
+                                const std::vector<VkImageSubresourceRange> &ranges)
     {
-        VK_CLEAR_COLOR c = {};
+        VkClearColor c = {};
         memcpy(c.color.floatColor, color, sizeof(c.color.floatColor));
         test_clear_color_image(img_info, c, ranges);
     }
@@ -1445,16 +1445,16 @@ TEST_F(VkCmdClearColorImageTest, Basic)
          it != test_formats_.end(); it++) {
         const float color[4] = { 0.0f, 1.0f, 0.0f, 1.0f };
 
-        VK_IMAGE_CREATE_INFO img_info = vk_testing::Image::create_info();
+        VkImageCreateInfo img_info = vk_testing::Image::create_info();
         img_info.imageType = VK_IMAGE_2D;
         img_info.format = it->format;
         img_info.extent.width = 64;
         img_info.extent.height = 64;
         img_info.tiling = it->tiling;
 
-        const VK_IMAGE_SUBRESOURCE_RANGE range =
+        const VkImageSubresourceRange range =
             vk_testing::Image::subresource_range(img_info, VK_IMAGE_ASPECT_COLOR);
-        std::vector<VK_IMAGE_SUBRESOURCE_RANGE> ranges(&range, &range + 1);
+        std::vector<VkImageSubresourceRange> ranges(&range, &range + 1);
 
         test_clear_color_image(img_info, color, ranges);
     }
@@ -1464,11 +1464,11 @@ class VkCmdClearColorImageRawTest : public VkCmdClearColorImageTest {
 protected:
     VkCmdClearColorImageRawTest() : VkCmdClearColorImageTest(true) {}
 
-    void test_clear_color_image_raw(const VK_IMAGE_CREATE_INFO &img_info,
+    void test_clear_color_image_raw(const VkImageCreateInfo &img_info,
                                     const uint32_t color[4],
-                                    const std::vector<VK_IMAGE_SUBRESOURCE_RANGE> &ranges)
+                                    const std::vector<VkImageSubresourceRange> &ranges)
     {
-        VK_CLEAR_COLOR c = {};
+        VkClearColor c = {};
         c.useRawValue = true;
         memcpy(c.color.rawColor, color, sizeof(c.color.rawColor));
         test_clear_color_image(img_info, c, ranges);
@@ -1497,16 +1497,16 @@ TEST_F(VkCmdClearColorImageRawTest, Basic)
              it->format <= VK_FMT_D32_SFLOAT_S8_UINT))
             continue;
 
-        VK_IMAGE_CREATE_INFO img_info = vk_testing::Image::create_info();
+        VkImageCreateInfo img_info = vk_testing::Image::create_info();
         img_info.imageType = VK_IMAGE_2D;
         img_info.format = it->format;
         img_info.extent.width = 64;
         img_info.extent.height = 64;
         img_info.tiling = it->tiling;
 
-        const VK_IMAGE_SUBRESOURCE_RANGE range =
+        const VkImageSubresourceRange range =
             vk_testing::Image::subresource_range(img_info, VK_IMAGE_ASPECT_COLOR);
-        std::vector<VK_IMAGE_SUBRESOURCE_RANGE> ranges(&range, &range + 1);
+        std::vector<VkImageSubresourceRange> ranges(&range, &range + 1);
 
         test_clear_color_image_raw(img_info, color, ranges);
     }
@@ -1522,7 +1522,7 @@ protected:
         ASSERT_NE(true, test_formats_.empty());
     }
 
-    std::vector<uint8_t> ds_to_raw(VK_FORMAT format, float depth, uint32_t stencil)
+    std::vector<uint8_t> ds_to_raw(VkFormat format, float depth, uint32_t stencil)
     {
         std::vector<uint8_t> raw;
 
@@ -1576,20 +1576,20 @@ protected:
         return raw;
     }
 
-    void test_clear_depth_stencil(const VK_IMAGE_CREATE_INFO &img_info,
+    void test_clear_depth_stencil(const VkImageCreateInfo &img_info,
                                   float depth, uint32_t stencil,
-                                  const std::vector<VK_IMAGE_SUBRESOURCE_RANGE> &ranges)
+                                  const std::vector<VkImageSubresourceRange> &ranges)
     {
         vk_testing::Image img;
         img.init(dev_, img_info);
         add_memory_ref(img);
-        const VK_FLAGS all_cache_outputs =
+        const VkFlags all_cache_outputs =
                 VK_MEMORY_OUTPUT_CPU_WRITE_BIT |
                 VK_MEMORY_OUTPUT_SHADER_WRITE_BIT |
                 VK_MEMORY_OUTPUT_COLOR_ATTACHMENT_BIT |
                 VK_MEMORY_OUTPUT_DEPTH_STENCIL_ATTACHMENT_BIT |
                 VK_MEMORY_OUTPUT_COPY_BIT;
-        const VK_FLAGS all_cache_inputs =
+        const VkFlags all_cache_inputs =
                 VK_MEMORY_INPUT_CPU_READ_BIT |
                 VK_MEMORY_INPUT_INDIRECT_COMMAND_BIT |
                 VK_MEMORY_INPUT_INDEX_FETCH_BIT |
@@ -1600,12 +1600,12 @@ protected:
                 VK_MEMORY_INPUT_DEPTH_STENCIL_ATTACHMENT_BIT |
                 VK_MEMORY_INPUT_COPY_BIT;
 
-        std::vector<VK_IMAGE_MEMORY_BARRIER> to_clear;
-        std::vector<VK_IMAGE_MEMORY_BARRIER *> p_to_clear;
-        std::vector<VK_IMAGE_MEMORY_BARRIER> to_xfer;
-        std::vector<VK_IMAGE_MEMORY_BARRIER *> p_to_xfer;
+        std::vector<VkImageMemoryBarrier> to_clear;
+        std::vector<VkImageMemoryBarrier *> p_to_clear;
+        std::vector<VkImageMemoryBarrier> to_xfer;
+        std::vector<VkImageMemoryBarrier *> p_to_xfer;
 
-        for (std::vector<VK_IMAGE_SUBRESOURCE_RANGE>::const_iterator it = ranges.begin();
+        for (std::vector<VkImageSubresourceRange>::const_iterator it = ranges.begin();
              it != ranges.end(); it++) {
             to_clear.push_back(img.image_memory_barrier(all_cache_outputs, all_cache_inputs,
                     VK_IMAGE_LAYOUT_GENERAL,
@@ -1620,8 +1620,8 @@ protected:
 
         cmd_.begin();
 
-        VK_PIPE_EVENT set_events[] = { VK_PIPE_EVENT_GPU_COMMANDS_COMPLETE };
-        VK_PIPELINE_BARRIER pipeline_barrier = {};
+        VkPipeEvent set_events[] = { VK_PIPE_EVENT_GPU_COMMANDS_COMPLETE };
+        VkPipelineBarrier pipeline_barrier = {};
         pipeline_barrier.sType = VK_STRUCTURE_TYPE_PIPELINE_BARRIER;
         pipeline_barrier.eventCount = 1;
         pipeline_barrier.pEvents = set_events;
@@ -1669,7 +1669,7 @@ TEST_F(VkCmdClearDepthStencilTest, Basic)
             it->format == VK_FMT_D24_UNORM_S8_UINT)
             continue;
 
-        VK_IMAGE_CREATE_INFO img_info = vk_testing::Image::create_info();
+        VkImageCreateInfo img_info = vk_testing::Image::create_info();
         img_info.imageType = VK_IMAGE_2D;
         img_info.format = it->format;
         img_info.extent.width = 64;
@@ -1677,9 +1677,9 @@ TEST_F(VkCmdClearDepthStencilTest, Basic)
         img_info.tiling = it->tiling;
         img_info.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_BIT;
 
-        const VK_IMAGE_SUBRESOURCE_RANGE range =
+        const VkImageSubresourceRange range =
             vk_testing::Image::subresource_range(img_info, VK_IMAGE_ASPECT_DEPTH);
-        std::vector<VK_IMAGE_SUBRESOURCE_RANGE> ranges(&range, &range + 1);
+        std::vector<VkImageSubresourceRange> ranges(&range, &range + 1);
 
         test_clear_depth_stencil(img_info, 0.25f, 63, ranges);
     }

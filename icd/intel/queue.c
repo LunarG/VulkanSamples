@@ -45,9 +45,9 @@ static void queue_submit_hang(struct intel_queue *queue,
             active_lost, pending_lost);
 }
 
-static VK_RESULT queue_submit_bo(struct intel_queue *queue,
+static VkResult queue_submit_bo(struct intel_queue *queue,
                                   struct intel_bo *bo,
-                                  VK_GPU_SIZE used)
+                                  VkGpuSize used)
 {
     struct intel_winsys *winsys = queue->dev->winsys;
     int err;
@@ -61,7 +61,7 @@ static VK_RESULT queue_submit_bo(struct intel_queue *queue,
 }
 
 static struct intel_bo *queue_create_bo(struct intel_queue *queue,
-                                        VK_GPU_SIZE size,
+                                        VkGpuSize size,
                                         const void *cmd,
                                         size_t cmd_len)
 {
@@ -88,7 +88,7 @@ static struct intel_bo *queue_create_bo(struct intel_queue *queue,
     return bo;
 }
 
-static VK_RESULT queue_select_pipeline(struct intel_queue *queue,
+static VkResult queue_select_pipeline(struct intel_queue *queue,
                                         int pipeline_select)
 {
     uint32_t pipeline_select_cmd[] = {
@@ -96,7 +96,7 @@ static VK_RESULT queue_select_pipeline(struct intel_queue *queue,
         GEN6_MI_CMD(MI_BATCH_BUFFER_END),
     };
     struct intel_bo *bo;
-    VK_RESULT ret;
+    VkResult ret;
 
     if (queue->ring != INTEL_RING_RENDER ||
         queue->last_pipeline_select == pipeline_select)
@@ -140,7 +140,7 @@ static VK_RESULT queue_select_pipeline(struct intel_queue *queue,
     return ret;
 }
 
-static VK_RESULT queue_init_hw_and_atomic_bo(struct intel_queue *queue)
+static VkResult queue_init_hw_and_atomic_bo(struct intel_queue *queue)
 {
     const uint32_t ctx_init_cmd[] = {
         /* STATE_SIP */
@@ -156,7 +156,7 @@ static VK_RESULT queue_init_hw_and_atomic_bo(struct intel_queue *queue)
         GEN6_MI_CMD(MI_NOOP),
     };
     struct intel_bo *bo;
-    VK_RESULT ret;
+    VkResult ret;
 
     if (queue->ring != INTEL_RING_RENDER) {
         queue->last_pipeline_select = -1;
@@ -185,7 +185,7 @@ static VK_RESULT queue_init_hw_and_atomic_bo(struct intel_queue *queue)
     return VK_SUCCESS;
 }
 
-static VK_RESULT queue_submit_cmd_prepare(struct intel_queue *queue,
+static VkResult queue_submit_cmd_prepare(struct intel_queue *queue,
                                            struct intel_cmd *cmd)
 {
     if (unlikely(cmd->result != VK_SUCCESS)) {
@@ -198,13 +198,13 @@ static VK_RESULT queue_submit_cmd_prepare(struct intel_queue *queue,
     return queue_select_pipeline(queue, cmd->pipeline_select);
 }
 
-static VK_RESULT queue_submit_cmd_debug(struct intel_queue *queue,
+static VkResult queue_submit_cmd_debug(struct intel_queue *queue,
                                          struct intel_cmd *cmd)
 {
     uint32_t active[2], pending[2];
     struct intel_bo *bo;
-    VK_GPU_SIZE used;
-    VK_RESULT ret;
+    VkGpuSize used;
+    VkResult ret;
 
     ret = queue_submit_cmd_prepare(queue, cmd);
     if (ret != VK_SUCCESS)
@@ -237,12 +237,12 @@ static VK_RESULT queue_submit_cmd_debug(struct intel_queue *queue,
     return VK_SUCCESS;
 }
 
-static VK_RESULT queue_submit_cmd(struct intel_queue *queue,
+static VkResult queue_submit_cmd(struct intel_queue *queue,
                                    struct intel_cmd *cmd)
 {
     struct intel_bo *bo;
-    VK_GPU_SIZE used;
-    VK_RESULT ret;
+    VkGpuSize used;
+    VkResult ret;
 
     ret = queue_submit_cmd_prepare(queue, cmd);
     if (ret == VK_SUCCESS) {
@@ -253,14 +253,14 @@ static VK_RESULT queue_submit_cmd(struct intel_queue *queue,
     return ret;
 }
 
-VK_RESULT intel_queue_create(struct intel_dev *dev,
+VkResult intel_queue_create(struct intel_dev *dev,
                               enum intel_gpu_engine_type engine,
                               struct intel_queue **queue_ret)
 {
     struct intel_queue *queue;
     enum intel_ring_type ring;
-    VK_FENCE_CREATE_INFO fence_info;
-    VK_RESULT ret;
+    VkFenceCreateInfo fence_info;
+    VkResult ret;
 
     switch (engine) {
     case INTEL_GPU_ENGINE_3D:
@@ -309,7 +309,7 @@ void intel_queue_destroy(struct intel_queue *queue)
     intel_base_destroy(&queue->base);
 }
 
-VK_RESULT intel_queue_wait(struct intel_queue *queue, int64_t timeout)
+VkResult intel_queue_wait(struct intel_queue *queue, int64_t timeout)
 {
     /* return VK_SUCCESS instead of VK_ERROR_UNAVAILABLE */
     if (!queue->fence->seqno_bo)
@@ -318,9 +318,9 @@ VK_RESULT intel_queue_wait(struct intel_queue *queue, int64_t timeout)
     return intel_fence_wait(queue->fence, timeout);
 }
 
-ICD_EXPORT VK_RESULT VKAPI vkQueueAddMemReference(
-    VK_QUEUE                                   queue,
-    VK_GPU_MEMORY                              mem)
+ICD_EXPORT VkResult VKAPI vkQueueAddMemReference(
+    VkQueue                                   queue,
+    VkGpuMemory                              mem)
 {
     /*
      * The winsys maintains the list of memory references.  These are ignored
@@ -329,9 +329,9 @@ ICD_EXPORT VK_RESULT VKAPI vkQueueAddMemReference(
     return VK_SUCCESS;
 }
 
-ICD_EXPORT VK_RESULT VKAPI vkQueueRemoveMemReference(
-    VK_QUEUE                                   queue,
-    VK_GPU_MEMORY                              mem)
+ICD_EXPORT VkResult VKAPI vkQueueRemoveMemReference(
+    VkQueue                                   queue,
+    VkGpuMemory                              mem)
 {
     /*
      * The winsys maintains the list of memory references.  These are ignored
@@ -340,22 +340,22 @@ ICD_EXPORT VK_RESULT VKAPI vkQueueRemoveMemReference(
     return VK_SUCCESS;
 }
 
-ICD_EXPORT VK_RESULT VKAPI vkQueueWaitIdle(
-    VK_QUEUE                                   queue_)
+ICD_EXPORT VkResult VKAPI vkQueueWaitIdle(
+    VkQueue                                   queue_)
 {
     struct intel_queue *queue = intel_queue(queue_);
 
     return intel_queue_wait(queue, -1);
 }
 
-ICD_EXPORT VK_RESULT VKAPI vkQueueSubmit(
-    VK_QUEUE                                   queue_,
+ICD_EXPORT VkResult VKAPI vkQueueSubmit(
+    VkQueue                                   queue_,
     uint32_t                                    cmdBufferCount,
-    const VK_CMD_BUFFER*                       pCmdBuffers,
-    VK_FENCE                                   fence_)
+    const VkCmdBuffer*                       pCmdBuffers,
+    VkFence                                   fence_)
 {
     struct intel_queue *queue = intel_queue(queue_);
-    VK_RESULT ret = VK_SUCCESS;
+    VkResult ret = VK_SUCCESS;
     struct intel_cmd *last_cmd;
     uint32_t i;
 
@@ -400,18 +400,18 @@ ICD_EXPORT VK_RESULT VKAPI vkQueueSubmit(
     return ret;
 }
 
-ICD_EXPORT VK_RESULT VKAPI vkOpenSharedSemaphore(
-    VK_DEVICE                                  device,
-    const VK_SEMAPHORE_OPEN_INFO*              pOpenInfo,
-    VK_SEMAPHORE*                              pSemaphore)
+ICD_EXPORT VkResult VKAPI vkOpenSharedSemaphore(
+    VkDevice                                  device,
+    const VkSemaphoreOpenInfo*              pOpenInfo,
+    VkSemaphore*                              pSemaphore)
 {
     return VK_ERROR_UNAVAILABLE;
 }
 
-ICD_EXPORT VK_RESULT VKAPI vkCreateSemaphore(
-    VK_DEVICE                                  device,
-    const VK_SEMAPHORE_CREATE_INFO*            pCreateInfo,
-    VK_SEMAPHORE*                              pSemaphore)
+ICD_EXPORT VkResult VKAPI vkCreateSemaphore(
+    VkDevice                                  device,
+    const VkSemaphoreCreateInfo*            pCreateInfo,
+    VkSemaphore*                              pSemaphore)
 {
     /*
      * We want to find an unused semaphore register and initialize it.  Signal
@@ -424,16 +424,16 @@ ICD_EXPORT VK_RESULT VKAPI vkCreateSemaphore(
     return VK_ERROR_UNAVAILABLE;
 }
 
-ICD_EXPORT VK_RESULT VKAPI vkQueueSignalSemaphore(
-    VK_QUEUE                                   queue,
-    VK_SEMAPHORE                               semaphore)
+ICD_EXPORT VkResult VKAPI vkQueueSignalSemaphore(
+    VkQueue                                   queue,
+    VkSemaphore                               semaphore)
 {
     return VK_ERROR_UNAVAILABLE;
 }
 
-ICD_EXPORT VK_RESULT VKAPI vkQueueWaitSemaphore(
-    VK_QUEUE                                   queue,
-    VK_SEMAPHORE                               semaphore)
+ICD_EXPORT VkResult VKAPI vkQueueWaitSemaphore(
+    VkQueue                                   queue,
+    VkSemaphore                               semaphore)
 {
     return VK_ERROR_UNAVAILABLE;
 }

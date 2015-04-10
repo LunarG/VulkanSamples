@@ -41,7 +41,7 @@ struct intel_sampler {
     uint32_t cmd[15];
 };
 
-static inline struct intel_sampler *intel_sampler(VK_SAMPLER sampler)
+static inline struct intel_sampler *intel_sampler(VkSampler sampler)
 {
     return (struct intel_sampler *) sampler;
 }
@@ -51,8 +51,8 @@ static inline struct intel_sampler *intel_sampler_from_obj(struct intel_obj *obj
     return (struct intel_sampler *) obj;
 }
 
-VK_RESULT intel_sampler_create(struct intel_dev *dev,
-                                const VK_SAMPLER_CREATE_INFO *info,
+VkResult intel_sampler_create(struct intel_dev *dev,
+                                const VkSamplerCreateInfo *info,
                                 struct intel_sampler **sampler_ret);
 void intel_sampler_destroy(struct intel_sampler *sampler);
 

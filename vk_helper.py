@@ -298,26 +298,20 @@ def recreate_structs():
         sys.stdout.write(";\n\n")
 
 #
+# TODO: Fix construction of struct name
 def get_struct_name_from_struct_type(struct_type):
+    # Note: All struct types are now camel-case
     caps_struct_name = struct_type.replace("_STRUCTURE_TYPE", "")
-    # NOTE: These must stay in caps as they are looking at the VK_STRUCTURE_TYPE_*_CREATE_INFO
-    # and that has not changed to camel case
-    exceptions_list = ['VK_DEVICE_CREATE_INFO', 'VK_INSTANCE_CREATE_INFO', 'VK_LAYER_CREATE_INFO',
-                       'VK_MEMORY_ALLOC_INFO', 'VK_MEMORY_ALLOC_BUFFER_INFO', 'VK_MEMORY_ALLOC_IMAGE_INFO',
-                       'VK_BUFFER_CREATE_INFO', 'VK_BUFFER_VIEW_CREATE_INFO']
-    if caps_struct_name in exceptions_list:
-        char_idx = 0
-        struct_name = ''
-        for char in caps_struct_name:
-            if (0 == char_idx) or (caps_struct_name[char_idx-1] == '_'):
-                struct_name += caps_struct_name[char_idx]
-            elif (caps_struct_name[char_idx] == '_'):
-                pass
-            else:
-                struct_name += caps_struct_name[char_idx].lower()
-            char_idx += 1
-    else:
-        struct_name = caps_struct_name
+    char_idx = 0
+    struct_name = ''
+    for char in caps_struct_name:
+        if (0 == char_idx) or (caps_struct_name[char_idx-1] == '_'):
+            struct_name += caps_struct_name[char_idx]
+        elif (caps_struct_name[char_idx] == '_'):
+            pass
+        else:
+            struct_name += caps_struct_name[char_idx].lower()
+        char_idx += 1
     return struct_name
 
 # class for writing common file elements
@@ -526,11 +520,11 @@ class StructWrapperGen:
     def _generateDynamicPrintFunctions(self):
         dp_funcs = []
         dp_funcs.append("\nvoid dynamic_display_full_txt(const void* pStruct, uint32_t indent)\n{\n    // Cast to APP_INFO ptr initially just to pull sType off struct")
-        dp_funcs.append("    VK_STRUCTURE_TYPE sType = ((VK_APPLICATION_INFO*)pStruct)->sType;\n")
+        dp_funcs.append("    VkStructureType sType = ((VkApplicationInfo*)pStruct)->sType;\n")
         dp_funcs.append("    switch (sType)\n    {")
         for e in enum_type_dict:
             class_num = 0
-            if "_STRUCTURE_TYPE" in e:
+            if "StructureType" in e:
                 for v in sorted(enum_type_dict[e]):
                     struct_name = get_struct_name_from_struct_type(v)
                     class_name = self.get_class_name(struct_name)
@@ -592,14 +586,14 @@ class StructWrapperGen:
             member_post = ' ? "TRUE" : "FALSE"'
         elif 'float' in struct_member['type']:
             print_type = "f"
-        elif 'uint64' in struct_member['type']:
-            print_type = "lu"
+        elif 'uint64' in struct_member['type'] or 'gpusize' in struct_member['type'].lower():
+            print_type = '" PRId64 "'
         elif 'uint8' in struct_member['type']:
             print_type = "hu"
-        elif '_size' in struct_member['type']:
+        elif 'size' in struct_member['type'].lower():
             print_type = '" PRINTF_SIZE_T_SPECIFIER "'
             print_delimiter = ""
-        elif True in [ui_str.lower() in struct_member['type'].lower() for ui_str in ['uint', '_FLAGS', '_SAMPLE_MASK']]:
+        elif True in [ui_str.lower() in struct_member['type'].lower() for ui_str in ['uint', 'flags', 'samplemask']]:
             print_type = "u"
         elif 'int' in struct_member['type']:
             print_type = "i"
@@ -723,11 +717,11 @@ class StructWrapperGen:
         sh_funcs.append("    if (pStruct == NULL) {")
         sh_funcs.append("        return NULL;")
         sh_funcs.append("    }")
-        sh_funcs.append("    VK_STRUCTURE_TYPE sType = ((VK_APPLICATION_INFO*)pStruct)->sType;")
+        sh_funcs.append("    VkStructureType sType = ((VkApplicationInfo*)pStruct)->sType;")
         sh_funcs.append('    char indent[100];\n    strcpy(indent, "    ");\n    strcat(indent, prefix);')
         sh_funcs.append("    switch (sType)\n    {")
         for e in enum_type_dict:
-            if "_STRUCTURE_TYPE" in e:
+            if "StructureType" in e:
                 for v in sorted(enum_type_dict[e]):
                     struct_name = get_struct_name_from_struct_type(v)
                     print_func_name = self._get_sh_func_name(struct_name)
@@ -750,6 +744,7 @@ class StructWrapperGen:
         # create and return final string
         sh_funcs = []
         # First generate prototypes for every struct
+        # XXX - REMOVE this comment
         for s in sorted(self.struct_dict):
             sh_funcs.append('string %s(const %s* pStruct, const string prefix);' % (self._get_sh_func_name(s), typedef_fwd_dict[s]))
         sh_funcs.append('\n')
@@ -892,22 +887,23 @@ class StructWrapperGen:
         sh_funcs.append("    if (pStruct == NULL) {\n")
         sh_funcs.append("        return NULL;")
         sh_funcs.append("    }\n")
-        sh_funcs.append("    VK_STRUCTURE_TYPE sType = ((VK_APPLICATION_INFO*)pStruct)->sType;")
+        sh_funcs.append("    VkStructureType sType = ((VkApplicationInfo*)pStruct)->sType;")
         sh_funcs.append('    string indent = "    ";')
         sh_funcs.append('    indent += prefix;')
         sh_funcs.append("    switch (sType)\n    {")
         for e in enum_type_dict:
-            if "_STRUCTURE_TYPE" in e:
+            if "StructureType" in e:
                 for v in sorted(enum_type_dict[e]):
                     struct_name = get_struct_name_from_struct_type(v)
                     print_func_name = self._get_sh_func_name(struct_name)
+                    #sh_funcs.append('string %s(const %s* pStruct, const string prefix);' % (self._get_sh_func_name(s), typedef_fwd_dict[s]))
                     sh_funcs.append('        case %s:\n        {' % (v))
                     sh_funcs.append('            return %s((%s*)pStruct, indent);' % (print_func_name, struct_name))
                     sh_funcs.append('        }')
                     sh_funcs.append('        break;')
                 sh_funcs.append("        default:")
                 sh_funcs.append("        return NULL;")
-                sh_funcs.append("    }")
+        sh_funcs.append("    }")
         sh_funcs.append("}")
         return "\n".join(sh_funcs)
         
@@ -1056,7 +1052,7 @@ class StructWrapperGen:
         for s in sorted(self.struct_dict):
             sh_funcs.append('uint32_t %s(const %s* pStruct)\n{' % (self._get_vh_func_name(s), typedef_fwd_dict[s]))
             for m in sorted(self.struct_dict[s]):
-                # TODO : Need to handle arrays of enums like in VK_RENDER_PASS_CREATE_INFO struct
+                # TODO : Need to handle arrays of enums like in VkRenderPassCreateInfo struct
                 if is_type(self.struct_dict[s][m]['type'], 'enum') and not self.struct_dict[s][m]['ptr']:
                     sh_funcs.append('    if (!validate_%s(pStruct->%s))\n        return 0;' % (self.struct_dict[s][m]['type'], self.struct_dict[s][m]['name']))
                 # TODO : Need a little refinement to this code to make sure type of struct matches expected input (ptr, const...)
@@ -1107,7 +1103,7 @@ class StructWrapperGen:
                         if not is_type(self.struct_dict[s][m]['type'], 'struct') and not 'char' in self.struct_dict[s][m]['type'].lower():
                             if 'ppMemBarriers' == self.struct_dict[s][m]['name']:
                                 # TODO : For now be conservative and consider all memBarrier ptrs as largest possible struct
-                                sh_funcs.append('%sstructSize += pStruct->%s*(sizeof(%s*) + sizeof(VK_IMAGE_MEMORY_BARRIER));' % (indent, self.struct_dict[s][m]['array_size'], self.struct_dict[s][m]['type']))
+                                sh_funcs.append('%sstructSize += pStruct->%s*(sizeof(%s*) + sizeof(VkImageMemoryBarrier));' % (indent, self.struct_dict[s][m]['array_size'], self.struct_dict[s][m]['type']))
                             else:
                                 sh_funcs.append('%sstructSize += pStruct->%s*(sizeof(%s*) + sizeof(%s));' % (indent, self.struct_dict[s][m]['array_size'], self.struct_dict[s][m]['type'], self.struct_dict[s][m]['type']))
                         else: # This is an array of char* or array of struct ptrs
@@ -1154,8 +1150,8 @@ class StructWrapperGen:
             else:
                 sh_funcs.append('size_t get_dynamic_struct_size(const void* pStruct)\n{')
             indent = '    '
-            sh_funcs.append('%s// Just use VK_APPLICATION_INFO as struct until actual type is resolved' % (indent))
-            sh_funcs.append('%sVK_APPLICATION_INFO* pNext = (VK_APPLICATION_INFO*)pStruct;' % (indent))
+            sh_funcs.append('%s// Just use VkApplicationInfo as struct until actual type is resolved' % (indent))
+            sh_funcs.append('%sVkApplicationInfo* pNext = (VkApplicationInfo*)pStruct;' % (indent))
             sh_funcs.append('%ssize_t structSize = 0;' % (indent))
             if follow_chain:
                 sh_funcs.append('%swhile (pNext) {' % (indent))
@@ -1163,7 +1159,7 @@ class StructWrapperGen:
             sh_funcs.append('%sswitch (pNext->sType) {' % (indent))
             indent += '    '
             for e in enum_type_dict:
-                if '_STRUCTURE_TYPE' in e:
+                if 'StructureType' in e:
                     for v in sorted(enum_type_dict[e]):
                         struct_name = get_struct_name_from_struct_type(v)
                         sh_funcs.append('%scase %s:' % (indent, v))
@@ -1181,7 +1177,7 @@ class StructWrapperGen:
             indent = indent[:-4]
             sh_funcs.append('%s}' % (indent))
             if follow_chain:
-                sh_funcs.append('%spNext = (VK_APPLICATION_INFO*)pNext->pNext;' % (indent))
+                sh_funcs.append('%spNext = (VkApplicationInfo*)pNext->pNext;' % (indent))
                 indent = indent[:-4]
                 sh_funcs.append('%s}' % (indent))
             sh_funcs.append('%sreturn structSize;\n}' % indent)
@@ -1388,8 +1384,8 @@ class GraphVizGen:
         array_index = ""
         member_print_post = ""
         print_delimiter = "%"
-        if struct_member['array'] and 'CHAR' in struct_member['type']: # just print char array as string
-            print_type = "s"
+        if struct_member['array'] and 'char' in struct_member['type'].lower(): # just print char array as string
+            print_type = "p"
             print_array = False
         elif struct_member['array'] and not print_array:
             # Just print base address of array when not full print_array
@@ -1408,14 +1404,14 @@ class GraphVizGen:
             member_post = ' ? "TRUE" : "FALSE"'
         elif 'float' in struct_member['type']:
             print_type = "f"
-        elif 'uint64' in struct_member['type']:
-            print_type = "lu"
+        elif 'uint64' in struct_member['type'] or 'gpusize' in struct_member['type'].lower():
+            print_type = '" PRId64 "'
         elif 'uint8' in struct_member['type']:
             print_type = "hu"
-        elif '_SIZE' in struct_member['type']:
+        elif 'size' in struct_member['type'].lower():
             print_type = '" PRINTF_SIZE_T_SPECIFIER "'
             print_delimiter = ""
-        elif True in [ui_str in struct_member['type'] for ui_str in ['uint', '_FLAGS', '_SAMPLE_MASK']]:
+        elif True in [ui_str.lower() in struct_member['type'].lower() for ui_str in ['uint', 'flags', 'samplemask']]:
             print_type = "u"
         elif 'int' in struct_member['type']:
             print_type = "i"
@@ -1429,21 +1425,21 @@ class GraphVizGen:
             array_index = " i,"
             member_post = "[i]"
         print_out = "<TR><TD>%%s%s%s</TD><TD%s>%s%s%s</TD></TR>" % (member_name, member_print_post, port_label, print_delimiter, print_type, postfix) # section of print that goes inside of quotes
-        print_arg = ", %s,%s %s(%s%s%s)%s" % (pre_var_name, array_index, cast_type, struct_var_name, struct_op, member_name, member_post) # section of print passed to portion in quotes
+        print_arg = ", %s,%s %s(%s%s%s)%s\n" % (pre_var_name, array_index, cast_type, struct_var_name, struct_op, member_name, member_post) # section of print passed to portion in quotes
         return (print_out, print_arg)
 
     def _generateBody(self):
         gv_funcs = []
         array_func_list = [] # structs for which we'll generate an array version of their print function
-        array_func_list.append('vk_buffer_view_attach_info')
-        array_func_list.append('vk_image_view_attach_info')
-        array_func_list.append('vk_sampler_image_view_info')
-        array_func_list.append('vk_descriptor_type_count')
+        array_func_list.append('vkbufferviewattachinfo')
+        array_func_list.append('vkimageviewattachinfo')
+        array_func_list.append('vksamplerimageviewinfo')
+        array_func_list.append('vkdescriptortypecount')
         # For first pass, generate prototype
         for s in sorted(self.struct_dict):
             gv_funcs.append('char* %s(const %s* pStruct, const char* myNodeName);\n' % (self._get_gv_func_name(s), typedef_fwd_dict[s]))
             if s.lower().strip("_") in array_func_list:
-                if s.lower().strip("_") in ['vk_buffer_view_attach_info', 'vk_image_view_attach_info']:
+                if s.lower().strip("_") in ['vkbufferviewattachinfo', 'vkimageviewattachinfo']:
                     gv_funcs.append('char* %s_array(uint32_t count, const %s* const* pStruct, const char* myNodeName);\n' % (self._get_gv_func_name(s), typedef_fwd_dict[s]))
                 else:
                     gv_funcs.append('char* %s_array(uint32_t count, const %s* pStruct, const char* myNodeName);\n' % (self._get_gv_func_name(s), typedef_fwd_dict[s]))
@@ -1528,7 +1524,7 @@ class GraphVizGen:
             gv_funcs.append("    return str;\n}\n")
             if s.lower().strip("_") in array_func_list:
                 ptr_array = False
-                if s.lower().strip("_") in ['vk_buffer_view_attach_info', 'vk_image_view_attach_info']:
+                if s.lower().strip("_") in ['vkbufferviewattachinfo', 'vkimageviewattachinfo']:
                     ptr_array = True
                     gv_funcs.append('char* %s_array(uint32_t count, const %s* const* pStruct, const char* myNodeName)\n{\n    char* str;\n    char tmpStr[1024];\n' % (self._get_gv_func_name(s), typedef_fwd_dict[s]))
                 else:
@@ -1562,21 +1558,21 @@ class GraphVizGen:
         # Add function to dynamically print out unknown struct
         gv_funcs.append("char* dynamic_gv_display(const void* pStruct, const char* nodeName)\n{\n")
         gv_funcs.append("    // Cast to APP_INFO ptr initially just to pull sType off struct\n")
-        gv_funcs.append("    VK_STRUCTURE_TYPE sType = ((VK_APPLICATION_INFO*)pStruct)->sType;\n")
+        gv_funcs.append("    VkStructureType sType = ((VkApplicationInfo*)pStruct)->sType;\n")
         gv_funcs.append("    switch (sType)\n    {\n")
         for e in enum_type_dict:
-            if "_STRUCTURE_TYPE" in e:
+            if "StructureType" in e:
                 for v in sorted(enum_type_dict[e]):
                     struct_name = get_struct_name_from_struct_type(v)
                     print_func_name = self._get_gv_func_name(struct_name)
                     # TODO : Hand-coded fixes for some exceptions
-                    #if 'VK_PIPELINE_CB_STATE_CREATE_INFO' in struct_name:
+                    #if 'VkPipelineCbStateCreateInfo' in struct_name:
                     #    struct_name = 'VK_PIPELINE_CB_STATE'
-                    if 'VK_SEMAPHORE_CREATE_INFO' in struct_name:
-                        struct_name = 'VK_SEMAPHORE_CREATE_INFO'
+                    if 'VkSemaphoreCreateInfo' in struct_name:
+                        struct_name = 'VkSemaphoreCreateInfo'
                         print_func_name = self._get_gv_func_name(struct_name)
-                    elif 'VK_SEMAPHORE_OPEN_INFO' in struct_name:
-                        struct_name = 'VK_SEMAPHORE_OPEN_INFO'
+                    elif 'VkSemaphoreOpenInfo' in struct_name:
+                        struct_name = 'VkSemaphoreOpenInfo'
                         print_func_name = self._get_gv_func_name(struct_name)
                     gv_funcs.append('        case %s:\n' % (v))
                     gv_funcs.append('            return %s((%s*)pStruct, nodeName);\n' % (print_func_name, struct_name))
@@ -1655,7 +1651,7 @@ def main(argv=None):
     if opts.gen_struct_wrappers:
         sw = StructWrapperGen(struct_dict, os.path.basename(opts.input_file).strip(".h"), os.path.dirname(enum_sh_filename))
         #print(sw.get_class_name(struct))
-        sw.set_include_headers([os.path.basename(opts.input_file),os.path.basename(enum_sh_filename),"stdint.h","stdio.h","stdlib.h"])
+        sw.set_include_headers([os.path.basename(opts.input_file),os.path.basename(enum_sh_filename),"stdint.h","inttypes.h", "stdio.h","stdlib.h"])
         print("Generating struct wrapper header to %s" % sw.header_filename)
         sw.generateHeader()
         print("Generating struct wrapper class to %s" % sw.class_filename)
@@ -1679,7 +1675,7 @@ def main(argv=None):
         cmg.generate()
     if opts.gen_graphviz:
         gv = GraphVizGen(struct_dict, os.path.basename(opts.input_file).strip(".h"), os.path.dirname(enum_sh_filename))
-        gv.set_include_headers([os.path.basename(opts.input_file),os.path.basename(enum_sh_filename),"stdint.h","stdio.h","stdlib.h"])
+        gv.set_include_headers([os.path.basename(opts.input_file),os.path.basename(enum_sh_filename),"stdint.h","stdio.h","stdlib.h", "inttypes.h"])
         gv.generate()
     print("DONE!")
     #print(typedef_rev_dict)

@@ -36,23 +36,23 @@ struct intel_mem {
     struct intel_base base;
 
     struct intel_bo *bo;
-    VK_GPU_SIZE size;
+    VkGpuSize size;
 };
 
-VK_RESULT intel_mem_alloc(struct intel_dev *dev,
+VkResult intel_mem_alloc(struct intel_dev *dev,
                            const VkMemoryAllocInfo *info,
                            struct intel_mem **mem_ret);
 void intel_mem_free(struct intel_mem *mem);
 
-VK_RESULT intel_mem_import_userptr(struct intel_dev *dev,
+VkResult intel_mem_import_userptr(struct intel_dev *dev,
                                     const void *userptr,
                                     size_t size,
                                     struct intel_mem **mem_ret);
 
-VK_RESULT intel_mem_set_priority(struct intel_mem *mem,
-                                  VK_MEMORY_PRIORITY priority);
+VkResult intel_mem_set_priority(struct intel_mem *mem,
+                                  VkMemoryPriority priority);
 
-static inline void *intel_mem_map(struct intel_mem *mem, VK_FLAGS flags)
+static inline void *intel_mem_map(struct intel_mem *mem, VkFlags flags)
 {
     return intel_bo_map_async(mem->bo);
 }
@@ -72,7 +72,7 @@ static inline bool intel_mem_is_busy(struct intel_mem *mem)
     return intel_bo_is_busy(mem->bo);
 }
 
-static inline struct intel_mem *intel_mem(VK_GPU_MEMORY mem)
+static inline struct intel_mem *intel_mem(VkGpuMemory mem)
 {
     return (struct intel_mem *) mem;
 }

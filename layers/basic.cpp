@@ -49,21 +49,21 @@ static VK_LAYER_DISPATCH_TABLE * initLayerTable(const VK_BASE_LAYER_OBJECT *gpuw
         return it->second;
     }
 
-    layer_initialize_dispatch_table(pTable, gpuw->pGPA, (VK_PHYSICAL_GPU) gpuw->nextObject);
+    layer_initialize_dispatch_table(pTable, gpuw->pGPA, (VkPhysicalGpu) gpuw->nextObject);
 
     return pTable;
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkLayerExtension1(VK_DEVICE device)
+VK_LAYER_EXPORT VkResult VKAPI vkLayerExtension1(VkDevice device)
 {
     printf("In vkLayerExtension1() call w/ device: %p\n", (void*)device);
     printf("vkLayerExtension1 returning SUCCESS\n");
     return VK_SUCCESS;
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkGetExtensionSupport(VK_PHYSICAL_GPU gpu, const char* pExtName)
+VK_LAYER_EXPORT VkResult VKAPI vkGetExtensionSupport(VkPhysicalGpu gpu, const char* pExtName)
 {
-    VK_RESULT result;
+    VkResult result;
     VK_BASE_LAYER_OBJECT* gpuw = (VK_BASE_LAYER_OBJECT *) gpu;
 
     /* This entrypoint is NOT going to init it's own dispatch table since loader calls here early */
@@ -77,7 +77,7 @@ VK_LAYER_EXPORT VK_RESULT VKAPI vkGetExtensionSupport(VK_PHYSICAL_GPU gpu, const
     {
         printf("At start of wrapped vkGetExtensionSupport() call w/ gpu: %p\n", (void*)gpu);
         VK_LAYER_DISPATCH_TABLE* pTable = tableMap[gpuw];
-        result = pTable->GetExtensionSupport((VK_PHYSICAL_GPU)gpuw->nextObject, pExtName);
+        result = pTable->GetExtensionSupport((VkPhysicalGpu)gpuw->nextObject, pExtName);
         printf("Completed wrapped vkGetExtensionSupport() call w/ gpu: %p\n", (void*)gpu);
     } else
     {
@@ -86,29 +86,29 @@ VK_LAYER_EXPORT VK_RESULT VKAPI vkGetExtensionSupport(VK_PHYSICAL_GPU gpu, const
     return result;
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkCreateDevice(VK_PHYSICAL_GPU gpu, const VkDeviceCreateInfo* pCreateInfo, VK_DEVICE* pDevice)
+VK_LAYER_EXPORT VkResult VKAPI vkCreateDevice(VkPhysicalGpu gpu, const VkDeviceCreateInfo* pCreateInfo, VkDevice* pDevice)
 {
     VK_BASE_LAYER_OBJECT* gpuw = (VK_BASE_LAYER_OBJECT *) gpu;
     VK_LAYER_DISPATCH_TABLE* pTable = tableMap[gpuw];
 
     printf("At start of wrapped vkCreateDevice() call w/ gpu: %p\n", (void*)gpu);
-    VK_RESULT result = pTable->CreateDevice((VK_PHYSICAL_GPU)gpuw->nextObject, pCreateInfo, pDevice);
+    VkResult result = pTable->CreateDevice((VkPhysicalGpu)gpuw->nextObject, pCreateInfo, pDevice);
     // create a mapping for the device object into the dispatch table
     tableMap.emplace(*pDevice, pTable);
     printf("Completed wrapped vkCreateDevice() call w/ pDevice, Device %p: %p\n", (void*)pDevice, (void *) *pDevice);
     return result;
 }
-VK_LAYER_EXPORT VK_RESULT VKAPI vkGetFormatInfo(VK_DEVICE device, VK_FORMAT format, VK_FORMAT_INFO_TYPE infoType, size_t* pDataSize, void* pData)
+VK_LAYER_EXPORT VkResult VKAPI vkGetFormatInfo(VkDevice device, VkFormat format, VkFormatInfoType infoType, size_t* pDataSize, void* pData)
 {
     VK_LAYER_DISPATCH_TABLE* pTable = tableMap[device];
 
     printf("At start of wrapped vkGetFormatInfo() call w/ device: %p\n", (void*)device);
-    VK_RESULT result = pTable->GetFormatInfo(device, format, infoType, pDataSize, pData);
+    VkResult result = pTable->GetFormatInfo(device, format, infoType, pDataSize, pData);
     printf("Completed wrapped vkGetFormatInfo() call w/ device: %p\n", (void*)device);
     return result;
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkEnumerateLayers(VK_PHYSICAL_GPU gpu, size_t maxLayerCount, size_t maxStringSize, size_t* pOutLayerCount, char* const* pOutLayers, void* pReserved)
+VK_LAYER_EXPORT VkResult VKAPI vkEnumerateLayers(VkPhysicalGpu gpu, size_t maxLayerCount, size_t maxStringSize, size_t* pOutLayerCount, char* const* pOutLayers, void* pReserved)
 {
     if (gpu != NULL)
     {
@@ -116,7 +116,7 @@ VK_LAYER_EXPORT VK_RESULT VKAPI vkEnumerateLayers(VK_PHYSICAL_GPU gpu, size_t ma
         VK_LAYER_DISPATCH_TABLE* pTable = initLayerTable(gpuw);
 
         printf("At start of wrapped vkEnumerateLayers() call w/ gpu: %p\n", gpu);
-        VK_RESULT result = pTable->EnumerateLayers((VK_PHYSICAL_GPU)gpuw->nextObject, maxLayerCount, maxStringSize, pOutLayerCount, pOutLayers, pReserved);
+        VkResult result = pTable->EnumerateLayers((VkPhysicalGpu)gpuw->nextObject, maxLayerCount, maxStringSize, pOutLayerCount, pOutLayers, pReserved);
         return result;
     } else
     {
@@ -125,11 +125,11 @@ VK_LAYER_EXPORT VK_RESULT VKAPI vkEnumerateLayers(VK_PHYSICAL_GPU gpu, size_t ma
 
         // Example of a layer that is only compatible with Intel's GPUs
         VK_BASE_LAYER_OBJECT* gpuw = (VK_BASE_LAYER_OBJECT*) pReserved;
-        vkGetGpuInfoType fpGetGpuInfo;
-        VK_PHYSICAL_GPU_PROPERTIES gpuProps;
-        size_t dataSize = sizeof(VK_PHYSICAL_GPU_PROPERTIES);
-        fpGetGpuInfo = (vkGetGpuInfoType) gpuw->pGPA((VK_PHYSICAL_GPU) gpuw->nextObject, "vkGetGpuInfo");
-        fpGetGpuInfo((VK_PHYSICAL_GPU) gpuw->nextObject, VK_INFO_TYPE_PHYSICAL_GPU_PROPERTIES, &dataSize, &gpuProps);
+        PFN_vkGetGpuInfo fpGetGpuInfo;
+        VkPhysicalGpuProperties gpuProps;
+        size_t dataSize = sizeof(VkPhysicalGpuProperties);
+        fpGetGpuInfo = (PFN_vkGetGpuInfo) gpuw->pGPA((VkPhysicalGpu) gpuw->nextObject, "vkGetGpuInfo");
+        fpGetGpuInfo((VkPhysicalGpu) gpuw->nextObject, VK_INFO_TYPE_PHYSICAL_GPU_PROPERTIES, &dataSize, &gpuProps);
         if (gpuProps.vendorId == 0x8086)
         {
             *pOutLayerCount = 1;
@@ -142,7 +142,7 @@ VK_LAYER_EXPORT VK_RESULT VKAPI vkEnumerateLayers(VK_PHYSICAL_GPU gpu, size_t ma
     }
 }
 
-VK_LAYER_EXPORT void * VKAPI vkGetProcAddr(VK_PHYSICAL_GPU gpu, const char* pName)
+VK_LAYER_EXPORT void * VKAPI vkGetProcAddr(VkPhysicalGpu gpu, const char* pName)
 {
     if (gpu == NULL)
         return NULL;
@@ -165,6 +165,6 @@ VK_LAYER_EXPORT void * VKAPI vkGetProcAddr(VK_PHYSICAL_GPU gpu, const char* pNam
         VK_BASE_LAYER_OBJECT* gpuw = (VK_BASE_LAYER_OBJECT *) gpu;
         if (gpuw->pGPA == NULL)
             return NULL;
-        return gpuw->pGPA((VK_PHYSICAL_GPU) gpuw->nextObject, pName);
+        return gpuw->pGPA((VkPhysicalGpu) gpuw->nextObject, pName);
     }
 }

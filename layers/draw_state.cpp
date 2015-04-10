@@ -41,18 +41,18 @@
 #include "loader_platform.h"
 #include "layers_msg.h"
 
-unordered_map<VK_SAMPLER, SAMPLER_NODE*> sampleMap;
-unordered_map<VK_IMAGE_VIEW, IMAGE_NODE*> imageMap;
-unordered_map<VK_BUFFER_VIEW, BUFFER_NODE*> bufferMap;
-unordered_map<VK_DYNAMIC_STATE_OBJECT, DYNAMIC_STATE_NODE*> dynamicStateMap;
-unordered_map<VK_PIPELINE, PIPELINE_NODE*> pipelineMap;
-unordered_map<VK_DESCRIPTOR_POOL, POOL_NODE*> poolMap;
-unordered_map<VK_DESCRIPTOR_SET, SET_NODE*> setMap;
-unordered_map<VK_DESCRIPTOR_SET_LAYOUT, LAYOUT_NODE*> layoutMap;
+unordered_map<VkSampler, SAMPLER_NODE*> sampleMap;
+unordered_map<VkImageView, IMAGE_NODE*> imageMap;
+unordered_map<VkBufferView, BUFFER_NODE*> bufferMap;
+unordered_map<VkDynamicStateObject, DYNAMIC_STATE_NODE*> dynamicStateMap;
+unordered_map<VkPipeline, PIPELINE_NODE*> pipelineMap;
+unordered_map<VkDescriptorPool, POOL_NODE*> poolMap;
+unordered_map<VkDescriptorSet, SET_NODE*> setMap;
+unordered_map<VkDescriptorSetLayout, LAYOUT_NODE*> layoutMap;
 // Map for layout chains
-unordered_map<VK_CMD_BUFFER, GLOBAL_CB_NODE*> cmdBufferMap;
-unordered_map<VK_RENDER_PASS, VK_RENDER_PASS_CREATE_INFO*> renderPassMap;
-unordered_map<VK_FRAMEBUFFER, VK_FRAMEBUFFER_CREATE_INFO*> frameBufferMap;
+unordered_map<VkCmdBuffer, GLOBAL_CB_NODE*> cmdBufferMap;
+unordered_map<VkRenderPass, VkRenderPassCreateInfo*> renderPassMap;
+unordered_map<VkFramebuffer, VkFramebufferCreateInfo*> frameBufferMap;
 
 static VK_LAYER_DISPATCH_TABLE nextTable;
 static VK_BASE_LAYER_OBJECT *pCurObj;
@@ -176,7 +176,7 @@ static uint64_t g_drawCount[NUM_DRAW_TYPES] = {0, 0, 0, 0};
 //   Then need to synchronize the accesses based on cmd buffer so that if I'm reading state on one cmd buffer, updates
 //   to that same cmd buffer by separate thread are not changing state from underneath us
 // Track the last cmd buffer touched by this thread
-static VK_CMD_BUFFER    g_lastCmdBuffer[MAX_TID] = {NULL};
+static VkCmdBuffer    g_lastCmdBuffer[MAX_TID] = {NULL};
 // Track the last group of CBs touched for displaying to dot file
 static GLOBAL_CB_NODE*   g_pLastTouchedCB[NUM_COMMAND_BUFFERS_TO_DISPLAY] = {NULL};
 static uint32_t g_lastTouchedCBIndex = 0;
@@ -184,14 +184,14 @@ static uint32_t g_lastTouchedCBIndex = 0;
 static GLOBAL_CB_NODE*        g_lastGlobalCB = NULL;
 static PIPELINE_NODE*         g_lastBoundPipeline = NULL;
 static DYNAMIC_STATE_NODE*    g_lastBoundDynamicState[VK_NUM_STATE_BIND_POINT] = {NULL};
-static VK_DESCRIPTOR_SET     g_lastBoundDescriptorSet = NULL;
+static VkDescriptorSet     g_lastBoundDescriptorSet = NULL;
 #define MAX_BINDING 0xFFFFFFFF // Default vtxBinding value in CB Node to identify if no vtxBinding set
 
 //static DYNAMIC_STATE_NODE* g_pDynamicStateHead[VK_NUM_STATE_BIND_POINT] = {0};
 
-static void insertDynamicState(const VK_DYNAMIC_STATE_OBJECT state, const GENERIC_HEADER* pCreateInfo, VK_STATE_BIND_POINT bindPoint)
+static void insertDynamicState(const VkDynamicStateObject state, const GENERIC_HEADER* pCreateInfo, VkStateBindPoint bindPoint)
 {
-    VK_DYNAMIC_VP_STATE_CREATE_INFO* pVPCI = NULL;
+    VkDynamicVpStateCreateInfo* pVPCI = NULL;
     size_t scSize = 0;
     size_t vpSize = 0;
     loader_platform_thread_lock_mutex(&globalLock);
@@ -199,23 +199,23 @@ static void insertDynamicState(const VK_DYNAMIC_STATE_OBJECT state, const GENERI
     pStateNode->stateObj = state;
     switch (pCreateInfo->sType) {
         case VK_STRUCTURE_TYPE_DYNAMIC_VP_STATE_CREATE_INFO:
-            memcpy(&pStateNode->create_info, pCreateInfo, sizeof(VK_DYNAMIC_VP_STATE_CREATE_INFO));
-            pVPCI = (VK_DYNAMIC_VP_STATE_CREATE_INFO*)pCreateInfo;
-            pStateNode->create_info.vpci.pScissors = new VK_RECT[pStateNode->create_info.vpci.viewportAndScissorCount];
-            pStateNode->create_info.vpci.pViewports = new VK_VIEWPORT[pStateNode->create_info.vpci.viewportAndScissorCount];
-            scSize = pVPCI->viewportAndScissorCount * sizeof(VK_RECT);
-            vpSize = pVPCI->viewportAndScissorCount * sizeof(VK_VIEWPORT);
+            memcpy(&pStateNode->create_info, pCreateInfo, sizeof(VkDynamicVpStateCreateInfo));
+            pVPCI = (VkDynamicVpStateCreateInfo*)pCreateInfo;
+            pStateNode->create_info.vpci.pScissors = new VkRect[pStateNode->create_info.vpci.viewportAndScissorCount];
+            pStateNode->create_info.vpci.pViewports = new VkViewport[pStateNode->create_info.vpci.viewportAndScissorCount];
+            scSize = pVPCI->viewportAndScissorCount * sizeof(VkRect);
+            vpSize = pVPCI->viewportAndScissorCount * sizeof(VkViewport);
             memcpy((void*)pStateNode->create_info.vpci.pScissors, pVPCI->pScissors, scSize);
             memcpy((void*)pStateNode->create_info.vpci.pViewports, pVPCI->pViewports, vpSize);
             break;
         case VK_STRUCTURE_TYPE_DYNAMIC_RS_STATE_CREATE_INFO:
-            memcpy(&pStateNode->create_info, pCreateInfo, sizeof(VK_DYNAMIC_RS_STATE_CREATE_INFO));
+            memcpy(&pStateNode->create_info, pCreateInfo, sizeof(VkDynamicRsStateCreateInfo));
             break;
         case VK_STRUCTURE_TYPE_DYNAMIC_CB_STATE_CREATE_INFO:
-            memcpy(&pStateNode->create_info, pCreateInfo, sizeof(VK_DYNAMIC_CB_STATE_CREATE_INFO));
+            memcpy(&pStateNode->create_info, pCreateInfo, sizeof(VkDynamicCbStateCreateInfo));
             break;
         case VK_STRUCTURE_TYPE_DYNAMIC_DS_STATE_CREATE_INFO:
-            memcpy(&pStateNode->create_info, pCreateInfo, sizeof(VK_DYNAMIC_DS_STATE_CREATE_INFO));
+            memcpy(&pStateNode->create_info, pCreateInfo, sizeof(VkDynamicDsStateCreateInfo));
             break;
         default:
             assert(0);
@@ -228,7 +228,7 @@ static void insertDynamicState(const VK_DYNAMIC_STATE_OBJECT state, const GENERI
 // Free all allocated nodes for Dynamic State objs
 static void deleteDynamicState()
 {
-    for (unordered_map<VK_DYNAMIC_STATE_OBJECT, DYNAMIC_STATE_NODE*>::iterator ii=dynamicStateMap.begin(); ii!=dynamicStateMap.end(); ++ii) {
+    for (unordered_map<VkDynamicStateObject, DYNAMIC_STATE_NODE*>::iterator ii=dynamicStateMap.begin(); ii!=dynamicStateMap.end(); ++ii) {
         if (VK_STRUCTURE_TYPE_DYNAMIC_VP_STATE_CREATE_INFO == (*ii).second->create_info.vpci.sType) {
             delete[] (*ii).second->create_info.vpci.pScissors;
             delete[] (*ii).second->create_info.vpci.pViewports;
@@ -239,11 +239,11 @@ static void deleteDynamicState()
 // Free all sampler nodes
 static void deleteSamplers()
 {
-    for (unordered_map<VK_SAMPLER, SAMPLER_NODE*>::iterator ii=sampleMap.begin(); ii!=sampleMap.end(); ++ii) {
+    for (unordered_map<VkSampler, SAMPLER_NODE*>::iterator ii=sampleMap.begin(); ii!=sampleMap.end(); ++ii) {
         delete (*ii).second;
     }
 }
-static VK_IMAGE_VIEW_CREATE_INFO* getImageViewCreateInfo(VK_IMAGE_VIEW view)
+static VkImageViewCreateInfo* getImageViewCreateInfo(VkImageView view)
 {
     loader_platform_thread_lock_mutex(&globalLock);
     if (imageMap.find(view) == imageMap.end()) {
@@ -258,11 +258,11 @@ static VK_IMAGE_VIEW_CREATE_INFO* getImageViewCreateInfo(VK_IMAGE_VIEW view)
 // Free all image nodes
 static void deleteImages()
 {
-    for (unordered_map<VK_IMAGE_VIEW, IMAGE_NODE*>::iterator ii=imageMap.begin(); ii!=imageMap.end(); ++ii) {
+    for (unordered_map<VkImageView, IMAGE_NODE*>::iterator ii=imageMap.begin(); ii!=imageMap.end(); ++ii) {
         delete (*ii).second;
     }
 }
-static VkBufferViewCreateInfo* getBufferViewCreateInfo(VK_BUFFER_VIEW view)
+static VkBufferViewCreateInfo* getBufferViewCreateInfo(VkBufferView view)
 {
     loader_platform_thread_lock_mutex(&globalLock);
     if (bufferMap.find(view) == bufferMap.end()) {
@@ -277,13 +277,13 @@ static VkBufferViewCreateInfo* getBufferViewCreateInfo(VK_BUFFER_VIEW view)
 // Free all buffer nodes
 static void deleteBuffers()
 {
-    for (unordered_map<VK_BUFFER_VIEW, BUFFER_NODE*>::iterator ii=bufferMap.begin(); ii!=bufferMap.end(); ++ii) {
+    for (unordered_map<VkBufferView, BUFFER_NODE*>::iterator ii=bufferMap.begin(); ii!=bufferMap.end(); ++ii) {
         delete (*ii).second;
     }
 }
-static GLOBAL_CB_NODE* getCBNode(VK_CMD_BUFFER cb);
+static GLOBAL_CB_NODE* getCBNode(VkCmdBuffer cb);
 
-static void updateCBTracking(VK_CMD_BUFFER cb)
+static void updateCBTracking(VkCmdBuffer cb)
 {
     g_lastCmdBuffer[getTIDIndex()] = cb;
     GLOBAL_CB_NODE* pCB = getCBNode(cb);
@@ -302,7 +302,7 @@ static void updateCBTracking(VK_CMD_BUFFER cb)
 }
 
 // Print the last bound dynamic state
-static void printDynamicState(const VK_CMD_BUFFER cb)
+static void printDynamicState(const VkCmdBuffer cb)
 {
     GLOBAL_CB_NODE* pCB = getCBNode(cb);
     if (pCB) {
@@ -310,13 +310,13 @@ static void printDynamicState(const VK_CMD_BUFFER cb)
         char str[4*1024];
         for (uint32_t i = 0; i < VK_NUM_STATE_BIND_POINT; i++) {
             if (pCB->lastBoundDynamicState[i]) {
-                sprintf(str, "Reporting CreateInfo for currently bound %s object %p", string_VK_STATE_BIND_POINT((VK_STATE_BIND_POINT)i), pCB->lastBoundDynamicState[i]->stateObj);
+                sprintf(str, "Reporting CreateInfo for currently bound %s object %p", string_VkStateBindPoint((VkStateBindPoint)i), pCB->lastBoundDynamicState[i]->stateObj);
                 layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, pCB->lastBoundDynamicState[i]->stateObj, 0, DRAWSTATE_NONE, "DS", str);
                 layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, pCB->lastBoundDynamicState[i]->stateObj, 0, DRAWSTATE_NONE, "DS", dynamic_display(pCB->lastBoundDynamicState[i]->pCreateInfo, "  ").c_str());
                 break;
             }
             else {
-                sprintf(str, "No dynamic state of type %s bound", string_VK_STATE_BIND_POINT((VK_STATE_BIND_POINT)i));
+                sprintf(str, "No dynamic state of type %s bound", string_VkStateBindPoint((VkStateBindPoint)i));
                 layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, NULL, 0, DRAWSTATE_NONE, "DS", str);
             }
         }
@@ -329,7 +329,7 @@ static void printDynamicState(const VK_CMD_BUFFER cb)
     }
 }
 // Retrieve pipeline node ptr for given pipeline object
-static PIPELINE_NODE* getPipeline(VK_PIPELINE pipeline)
+static PIPELINE_NODE* getPipeline(VkPipeline pipeline)
 {
     loader_platform_thread_lock_mutex(&globalLock);
     if (pipelineMap.find(pipeline) == pipelineMap.end()) {
@@ -341,7 +341,7 @@ static PIPELINE_NODE* getPipeline(VK_PIPELINE pipeline)
 }
 
 // For given sampler, return a ptr to its Create Info struct, or NULL if sampler not found
-static VK_SAMPLER_CREATE_INFO* getSamplerCreateInfo(const VK_SAMPLER sampler)
+static VkSamplerCreateInfo* getSamplerCreateInfo(const VkSampler sampler)
 {
     loader_platform_thread_lock_mutex(&globalLock);
     if (sampleMap.find(sampler) == sampleMap.end()) {
@@ -354,49 +354,49 @@ static VK_SAMPLER_CREATE_INFO* getSamplerCreateInfo(const VK_SAMPLER sampler)
 
 // Init the pipeline mapping info based on pipeline create info LL tree
 //  Threading note : Calls to this function should wrapped in mutex
-static void initPipeline(PIPELINE_NODE* pPipeline, const VK_GRAPHICS_PIPELINE_CREATE_INFO* pCreateInfo)
+static void initPipeline(PIPELINE_NODE* pPipeline, const VkGraphicsPipelineCreateInfo* pCreateInfo)
 {
     // First init create info, we'll shadow the structs as we go down the tree
     // TODO : Validate that no create info is incorrectly replicated
-    memcpy(&pPipeline->graphicsPipelineCI, pCreateInfo, sizeof(VK_GRAPHICS_PIPELINE_CREATE_INFO));
+    memcpy(&pPipeline->graphicsPipelineCI, pCreateInfo, sizeof(VkGraphicsPipelineCreateInfo));
     GENERIC_HEADER* pTrav = (GENERIC_HEADER*)pCreateInfo->pNext;
     GENERIC_HEADER* pPrev = (GENERIC_HEADER*)&pPipeline->graphicsPipelineCI; // Hold prev ptr to tie chain of structs together
     size_t bufferSize = 0;
-    VK_PIPELINE_VERTEX_INPUT_CREATE_INFO* pVICI = NULL;
-    VK_PIPELINE_CB_STATE_CREATE_INFO*     pCBCI = NULL;
-    VK_PIPELINE_SHADER_STAGE_CREATE_INFO* pTmpPSSCI = NULL;
+    VkPipelineVertexInputCreateInfo* pVICI = NULL;
+    VkPipelineCbStateCreateInfo*     pCBCI = NULL;
+    VkPipelineShaderStageCreateInfo* pTmpPSSCI = NULL;
     while (pTrav) {
         switch (pTrav->sType) {
             case VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO:
-                pTmpPSSCI = (VK_PIPELINE_SHADER_STAGE_CREATE_INFO*)pTrav;
+                pTmpPSSCI = (VkPipelineShaderStageCreateInfo*)pTrav;
                 switch (pTmpPSSCI->shader.stage) {
                     case VK_SHADER_STAGE_VERTEX:
                         pPrev->pNext = &pPipeline->vsCI;
                         pPrev = (GENERIC_HEADER*)&pPipeline->vsCI;
-                        memcpy(&pPipeline->vsCI, pTmpPSSCI, sizeof(VK_PIPELINE_SHADER_STAGE_CREATE_INFO));
+                        memcpy(&pPipeline->vsCI, pTmpPSSCI, sizeof(VkPipelineShaderStageCreateInfo));
                         break;
                     case VK_SHADER_STAGE_TESS_CONTROL:
                         pPrev->pNext = &pPipeline->tcsCI;
                         pPrev = (GENERIC_HEADER*)&pPipeline->tcsCI;
-                        memcpy(&pPipeline->tcsCI, pTmpPSSCI, sizeof(VK_PIPELINE_SHADER_STAGE_CREATE_INFO));
+                        memcpy(&pPipeline->tcsCI, pTmpPSSCI, sizeof(VkPipelineShaderStageCreateInfo));
                         break;
                     case VK_SHADER_STAGE_TESS_EVALUATION:
                         pPrev->pNext = &pPipeline->tesCI;
                         pPrev = (GENERIC_HEADER*)&pPipeline->tesCI;
-                        memcpy(&pPipeline->tesCI, pTmpPSSCI, sizeof(VK_PIPELINE_SHADER_STAGE_CREATE_INFO));
+                        memcpy(&pPipeline->tesCI, pTmpPSSCI, sizeof(VkPipelineShaderStageCreateInfo));
                         break;
                     case VK_SHADER_STAGE_GEOMETRY:
                         pPrev->pNext = &pPipeline->gsCI;
                         pPrev = (GENERIC_HEADER*)&pPipeline->gsCI;
-                        memcpy(&pPipeline->gsCI, pTmpPSSCI, sizeof(VK_PIPELINE_SHADER_STAGE_CREATE_INFO));
+                        memcpy(&pPipeline->gsCI, pTmpPSSCI, sizeof(VkPipelineShaderStageCreateInfo));
                         break;
                     case VK_SHADER_STAGE_FRAGMENT:
                         pPrev->pNext = &pPipeline->fsCI;
                         pPrev = (GENERIC_HEADER*)&pPipeline->fsCI;
-                        memcpy(&pPipeline->fsCI, pTmpPSSCI, sizeof(VK_PIPELINE_SHADER_STAGE_CREATE_INFO));
+                        memcpy(&pPipeline->fsCI, pTmpPSSCI, sizeof(VkPipelineShaderStageCreateInfo));
                         break;
                     case VK_SHADER_STAGE_COMPUTE:
-                        // TODO : Flag error, CS is specified through VK_COMPUTE_PIPELINE_CREATE_INFO
+                        // TODO : Flag error, CS is specified through VkComputePipelineCreateInfo
                         break;
                     default:
                         // TODO : Flag error
@@ -406,64 +406,64 @@ static void initPipeline(PIPELINE_NODE* pPipeline, const VK_GRAPHICS_PIPELINE_CR
             case VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_CREATE_INFO:
                 pPrev->pNext = &pPipeline->vertexInputCI;
                 pPrev = (GENERIC_HEADER*)&pPipeline->vertexInputCI;
-                memcpy((void*)&pPipeline->vertexInputCI, pTrav, sizeof(VK_PIPELINE_VERTEX_INPUT_CREATE_INFO));
+                memcpy((void*)&pPipeline->vertexInputCI, pTrav, sizeof(VkPipelineVertexInputCreateInfo));
                 // Copy embedded ptrs
-                pVICI = (VK_PIPELINE_VERTEX_INPUT_CREATE_INFO*)pTrav;
+                pVICI = (VkPipelineVertexInputCreateInfo*)pTrav;
                 pPipeline->vtxBindingCount = pVICI->bindingCount;
                 if (pPipeline->vtxBindingCount) {
-                    pPipeline->pVertexBindingDescriptions = new VK_VERTEX_INPUT_BINDING_DESCRIPTION[pPipeline->vtxBindingCount];
-                    bufferSize = pPipeline->vtxBindingCount * sizeof(VK_VERTEX_INPUT_BINDING_DESCRIPTION);
-                    memcpy((void*)pPipeline->pVertexBindingDescriptions, ((VK_PIPELINE_VERTEX_INPUT_CREATE_INFO*)pTrav)->pVertexAttributeDescriptions, bufferSize);
+                    pPipeline->pVertexBindingDescriptions = new VkVertexInputBindingDescription[pPipeline->vtxBindingCount];
+                    bufferSize = pPipeline->vtxBindingCount * sizeof(VkVertexInputBindingDescription);
+                    memcpy((void*)pPipeline->pVertexBindingDescriptions, ((VkPipelineVertexInputCreateInfo*)pTrav)->pVertexAttributeDescriptions, bufferSize);
                 }
                 pPipeline->vtxAttributeCount = pVICI->attributeCount;
                 if (pPipeline->vtxAttributeCount) {
-                    pPipeline->pVertexAttributeDescriptions = new VK_VERTEX_INPUT_ATTRIBUTE_DESCRIPTION[pPipeline->vtxAttributeCount];
-                    bufferSize = pPipeline->vtxAttributeCount * sizeof(VK_VERTEX_INPUT_ATTRIBUTE_DESCRIPTION);
-                    memcpy((void*)pPipeline->pVertexAttributeDescriptions, ((VK_PIPELINE_VERTEX_INPUT_CREATE_INFO*)pTrav)->pVertexAttributeDescriptions, bufferSize);
+                    pPipeline->pVertexAttributeDescriptions = new VkVertexInputAttributeDescription[pPipeline->vtxAttributeCount];
+                    bufferSize = pPipeline->vtxAttributeCount * sizeof(VkVertexInputAttributeDescription);
+                    memcpy((void*)pPipeline->pVertexAttributeDescriptions, ((VkPipelineVertexInputCreateInfo*)pTrav)->pVertexAttributeDescriptions, bufferSize);
                 }
                 break;
             case VK_STRUCTURE_TYPE_PIPELINE_IA_STATE_CREATE_INFO:
                 pPrev->pNext = &pPipeline->iaStateCI;
                 pPrev = (GENERIC_HEADER*)&pPipeline->iaStateCI;
-                memcpy((void*)&pPipeline->iaStateCI, pTrav, sizeof(VK_PIPELINE_IA_STATE_CREATE_INFO));
+                memcpy((void*)&pPipeline->iaStateCI, pTrav, sizeof(VkPipelineIaStateCreateInfo));
                 break;
             case VK_STRUCTURE_TYPE_PIPELINE_TESS_STATE_CREATE_INFO:
                 pPrev->pNext = &pPipeline->tessStateCI;
                 pPrev = (GENERIC_HEADER*)&pPipeline->tessStateCI;
-                memcpy((void*)&pPipeline->tessStateCI, pTrav, sizeof(VK_PIPELINE_TESS_STATE_CREATE_INFO));
+                memcpy((void*)&pPipeline->tessStateCI, pTrav, sizeof(VkPipelineTessStateCreateInfo));
                 break;
             case VK_STRUCTURE_TYPE_PIPELINE_VP_STATE_CREATE_INFO:
                 pPrev->pNext = &pPipeline->vpStateCI;
                 pPrev = (GENERIC_HEADER*)&pPipeline->vpStateCI;
-                memcpy((void*)&pPipeline->vpStateCI, pTrav, sizeof(VK_PIPELINE_VP_STATE_CREATE_INFO));
+                memcpy((void*)&pPipeline->vpStateCI, pTrav, sizeof(VkPipelineVpStateCreateInfo));
                 break;
             case VK_STRUCTURE_TYPE_PIPELINE_RS_STATE_CREATE_INFO:
                 pPrev->pNext = &pPipeline->rsStateCI;
                 pPrev = (GENERIC_HEADER*)&pPipeline->rsStateCI;
-                memcpy((void*)&pPipeline->rsStateCI, pTrav, sizeof(VK_PIPELINE_RS_STATE_CREATE_INFO));
+                memcpy((void*)&pPipeline->rsStateCI, pTrav, sizeof(VkPipelineRsStateCreateInfo));
                 break;
             case VK_STRUCTURE_TYPE_PIPELINE_MS_STATE_CREATE_INFO:
                 pPrev->pNext = &pPipeline->msStateCI;
                 pPrev = (GENERIC_HEADER*)&pPipeline->msStateCI;
-                memcpy((void*)&pPipeline->msStateCI, pTrav, sizeof(VK_PIPELINE_MS_STATE_CREATE_INFO));
+                memcpy((void*)&pPipeline->msStateCI, pTrav, sizeof(VkPipelineMsStateCreateInfo));
                 break;
             case VK_STRUCTURE_TYPE_PIPELINE_CB_STATE_CREATE_INFO:
                 pPrev->pNext = &pPipeline->cbStateCI;
                 pPrev = (GENERIC_HEADER*)&pPipeline->cbStateCI;
-                memcpy((void*)&pPipeline->cbStateCI, pTrav, sizeof(VK_PIPELINE_CB_STATE_CREATE_INFO));
+                memcpy((void*)&pPipeline->cbStateCI, pTrav, sizeof(VkPipelineCbStateCreateInfo));
                 // Copy embedded ptrs
-                pCBCI = (VK_PIPELINE_CB_STATE_CREATE_INFO*)pTrav;
+                pCBCI = (VkPipelineCbStateCreateInfo*)pTrav;
                 pPipeline->attachmentCount = pCBCI->attachmentCount;
                 if (pPipeline->attachmentCount) {
-                    pPipeline->pAttachments = new VK_PIPELINE_CB_ATTACHMENT_STATE[pPipeline->attachmentCount];
-                    bufferSize = pPipeline->attachmentCount * sizeof(VK_PIPELINE_CB_ATTACHMENT_STATE);
-                    memcpy((void*)pPipeline->pAttachments, ((VK_PIPELINE_CB_STATE_CREATE_INFO*)pTrav)->pAttachments, bufferSize);
+                    pPipeline->pAttachments = new VkPipelineCbAttachmentState[pPipeline->attachmentCount];
+                    bufferSize = pPipeline->attachmentCount * sizeof(VkPipelineCbAttachmentState);
+                    memcpy((void*)pPipeline->pAttachments, ((VkPipelineCbStateCreateInfo*)pTrav)->pAttachments, bufferSize);
                 }
                 break;
             case VK_STRUCTURE_TYPE_PIPELINE_DS_STATE_CREATE_INFO:
                 pPrev->pNext = &pPipeline->dsStateCI;
                 pPrev = (GENERIC_HEADER*)&pPipeline->dsStateCI;
-                memcpy((void*)&pPipeline->dsStateCI, pTrav, sizeof(VK_PIPELINE_DS_STATE_CREATE_INFO));
+                memcpy((void*)&pPipeline->dsStateCI, pTrav, sizeof(VkPipelineDsStateCreateInfo));
                 break;
             default:
                 assert(0);
@@ -476,7 +476,7 @@ static void initPipeline(PIPELINE_NODE* pPipeline, const VK_GRAPHICS_PIPELINE_CR
 // Free the Pipeline nodes
 static void deletePipelines()
 {
-    for (unordered_map<VK_PIPELINE, PIPELINE_NODE*>::iterator ii=pipelineMap.begin(); ii!=pipelineMap.end(); ++ii) {
+    for (unordered_map<VkPipeline, PIPELINE_NODE*>::iterator ii=pipelineMap.begin(); ii!=pipelineMap.end(); ++ii) {
         if ((*ii).second->pVertexBindingDescriptions) {
             delete[] (*ii).second->pVertexBindingDescriptions;
         }
@@ -490,7 +490,7 @@ static void deletePipelines()
     }
 }
 // For given pipeline, return number of MSAA samples, or one if MSAA disabled
-static uint32_t getNumSamples(const VK_PIPELINE pipeline)
+static uint32_t getNumSamples(const VkPipeline pipeline)
 {
     PIPELINE_NODE* pPipe = pipelineMap[pipeline];
     if (VK_STRUCTURE_TYPE_PIPELINE_MS_STATE_CREATE_INFO == pPipe->msStateCI.sType) {
@@ -500,14 +500,14 @@ static uint32_t getNumSamples(const VK_PIPELINE pipeline)
     return 1;
 }
 // Validate state related to the PSO
-static void validatePipelineState(const GLOBAL_CB_NODE* pCB, const VK_PIPELINE_BIND_POINT pipelineBindPoint, const VK_PIPELINE pipeline)
+static void validatePipelineState(const GLOBAL_CB_NODE* pCB, const VkPipelineBindPoint pipelineBindPoint, const VkPipeline pipeline)
 {
     if (VK_PIPELINE_BIND_POINT_GRAPHICS == pipelineBindPoint) {
         // Verify that any MSAA request in PSO matches sample# in bound FB
         uint32_t psoNumSamples = getNumSamples(pipeline);
         if (pCB->activeRenderPass) {
-            VK_RENDER_PASS_CREATE_INFO* pRPCI = renderPassMap[pCB->activeRenderPass];
-            VK_FRAMEBUFFER_CREATE_INFO* pFBCI = frameBufferMap[pCB->framebuffer];
+            VkRenderPassCreateInfo* pRPCI = renderPassMap[pCB->activeRenderPass];
+            VkFramebufferCreateInfo* pFBCI = frameBufferMap[pCB->framebuffer];
             if (psoNumSamples != pFBCI->sampleCount) {
                 char str[1024];
                 sprintf(str, "Num samples mismatche! Binding PSO (%p) with %u samples while current RenderPass (%p) uses FB (%p) with %u samples!", (void*)pipeline, psoNumSamples, (void*)pCB->activeRenderPass, (void*)pCB->framebuffer, pFBCI->sampleCount);
@@ -526,7 +526,7 @@ static void validatePipelineState(const GLOBAL_CB_NODE* pCB, const VK_PIPELINE_B
 // Block of code at start here specifically for managing/tracking DSs
 
 // Return Pool node ptr for specified pool or else NULL
-static POOL_NODE* getPoolNode(VK_DESCRIPTOR_POOL pool)
+static POOL_NODE* getPoolNode(VkDescriptorPool pool)
 {
     loader_platform_thread_lock_mutex(&globalLock);
     if (poolMap.find(pool) == poolMap.end()) {
@@ -537,7 +537,7 @@ static POOL_NODE* getPoolNode(VK_DESCRIPTOR_POOL pool)
     return poolMap[pool];
 }
 // Return Set node ptr for specified set or else NULL
-static SET_NODE* getSetNode(VK_DESCRIPTOR_SET set)
+static SET_NODE* getSetNode(VkDescriptorSet set)
 {
     loader_platform_thread_lock_mutex(&globalLock);
     if (setMap.find(set) == setMap.end()) {
@@ -549,7 +549,7 @@ static SET_NODE* getSetNode(VK_DESCRIPTOR_SET set)
 }
 
 // Return VK_TRUE if DS Exists and is within an vkBeginDescriptorPoolUpdate() call sequence, otherwise VK_FALSE
-static bool32_t dsUpdateActive(VK_DESCRIPTOR_SET ds)
+static bool32_t dsUpdateActive(VkDescriptorSet ds)
 {
     // Note, both "get" functions use global mutex so this guy does not
     SET_NODE* pTrav = getSetNode(ds);
@@ -562,7 +562,7 @@ static bool32_t dsUpdateActive(VK_DESCRIPTOR_SET ds)
     return VK_FALSE;
 }
 
-static LAYOUT_NODE* getLayoutNode(const VK_DESCRIPTOR_SET_LAYOUT layout) {
+static LAYOUT_NODE* getLayoutNode(const VkDescriptorSetLayout layout) {
     loader_platform_thread_lock_mutex(&globalLock);
     if (layoutMap.find(layout) == layoutMap.end()) {
         loader_platform_thread_unlock_mutex(&globalLock);
@@ -578,15 +578,15 @@ static uint32_t getUpdateBinding(const GENERIC_HEADER* pUpdateStruct)
     switch (pUpdateStruct->sType)
     {
         case VK_STRUCTURE_TYPE_UPDATE_SAMPLERS:
-            return ((VK_UPDATE_SAMPLERS*)pUpdateStruct)->binding;
+            return ((VkUpdateSamplers*)pUpdateStruct)->binding;
         case VK_STRUCTURE_TYPE_UPDATE_SAMPLER_TEXTURES:
-            return ((VK_UPDATE_SAMPLER_TEXTURES*)pUpdateStruct)->binding;
+            return ((VkUpdateSamplerTextures*)pUpdateStruct)->binding;
         case VK_STRUCTURE_TYPE_UPDATE_IMAGES:
-            return ((VK_UPDATE_IMAGES*)pUpdateStruct)->binding;
+            return ((VkUpdateImages*)pUpdateStruct)->binding;
         case VK_STRUCTURE_TYPE_UPDATE_BUFFERS:
-            return ((VK_UPDATE_BUFFERS*)pUpdateStruct)->binding;
+            return ((VkUpdateBuffers*)pUpdateStruct)->binding;
         case VK_STRUCTURE_TYPE_UPDATE_AS_COPY:
-            return ((VK_UPDATE_AS_COPY*)pUpdateStruct)->binding;
+            return ((VkUpdateAsCopy*)pUpdateStruct)->binding;
         default:
             // TODO : Flag specific error for this case
             assert(0);
@@ -599,16 +599,16 @@ static uint32_t getUpdateArrayIndex(const GENERIC_HEADER* pUpdateStruct)
     switch (pUpdateStruct->sType)
     {
         case VK_STRUCTURE_TYPE_UPDATE_SAMPLERS:
-            return (((VK_UPDATE_SAMPLERS*)pUpdateStruct)->arrayIndex);
+            return (((VkUpdateSamplers*)pUpdateStruct)->arrayIndex);
         case VK_STRUCTURE_TYPE_UPDATE_SAMPLER_TEXTURES:
-            return (((VK_UPDATE_SAMPLER_TEXTURES*)pUpdateStruct)->arrayIndex);
+            return (((VkUpdateSamplerTextures*)pUpdateStruct)->arrayIndex);
         case VK_STRUCTURE_TYPE_UPDATE_IMAGES:
-            return (((VK_UPDATE_IMAGES*)pUpdateStruct)->arrayIndex);
+            return (((VkUpdateImages*)pUpdateStruct)->arrayIndex);
         case VK_STRUCTURE_TYPE_UPDATE_BUFFERS:
-            return (((VK_UPDATE_BUFFERS*)pUpdateStruct)->arrayIndex);
+            return (((VkUpdateBuffers*)pUpdateStruct)->arrayIndex);
         case VK_STRUCTURE_TYPE_UPDATE_AS_COPY:
             // TODO : Need to understand this case better and make sure code is correct
-            return (((VK_UPDATE_AS_COPY*)pUpdateStruct)->arrayElement);
+            return (((VkUpdateAsCopy*)pUpdateStruct)->arrayElement);
         default:
             // TODO : Flag specific error for this case
             assert(0);
@@ -621,16 +621,16 @@ static uint32_t getUpdateCount(const GENERIC_HEADER* pUpdateStruct)
     switch (pUpdateStruct->sType)
     {
         case VK_STRUCTURE_TYPE_UPDATE_SAMPLERS:
-            return (((VK_UPDATE_SAMPLERS*)pUpdateStruct)->count);
+            return (((VkUpdateSamplers*)pUpdateStruct)->count);
         case VK_STRUCTURE_TYPE_UPDATE_SAMPLER_TEXTURES:
-            return (((VK_UPDATE_SAMPLER_TEXTURES*)pUpdateStruct)->count);
+            return (((VkUpdateSamplerTextures*)pUpdateStruct)->count);
         case VK_STRUCTURE_TYPE_UPDATE_IMAGES:
-            return (((VK_UPDATE_IMAGES*)pUpdateStruct)->count);
+            return (((VkUpdateImages*)pUpdateStruct)->count);
         case VK_STRUCTURE_TYPE_UPDATE_BUFFERS:
-            return (((VK_UPDATE_BUFFERS*)pUpdateStruct)->count);
+            return (((VkUpdateBuffers*)pUpdateStruct)->count);
         case VK_STRUCTURE_TYPE_UPDATE_AS_COPY:
             // TODO : Need to understand this case better and make sure code is correct
-            return (((VK_UPDATE_AS_COPY*)pUpdateStruct)->count);
+            return (((VkUpdateAsCopy*)pUpdateStruct)->count);
         default:
             // TODO : Flag specific error for this case
             assert(0);
@@ -669,7 +669,7 @@ static uint32_t getUpdateEndIndex(const LAYOUT_NODE* pLayout, const GENERIC_HEAD
 static bool32_t validateUpdateType(const LAYOUT_NODE* pLayout, const GENERIC_HEADER* pUpdateStruct)
 {
     // First get actual type of update
-    VK_DESCRIPTOR_TYPE actualType;
+    VkDescriptorType actualType;
     uint32_t i = 0;
     switch (pUpdateStruct->sType)
     {
@@ -680,13 +680,13 @@ static bool32_t validateUpdateType(const LAYOUT_NODE* pLayout, const GENERIC_HEA
             actualType = VK_DESCRIPTOR_TYPE_SAMPLER_TEXTURE;
             break;
         case VK_STRUCTURE_TYPE_UPDATE_IMAGES:
-            actualType = ((VK_UPDATE_IMAGES*)pUpdateStruct)->descriptorType;
+            actualType = ((VkUpdateImages*)pUpdateStruct)->descriptorType;
             break;
         case VK_STRUCTURE_TYPE_UPDATE_BUFFERS:
-            actualType = ((VK_UPDATE_BUFFERS*)pUpdateStruct)->descriptorType;
+            actualType = ((VkUpdateBuffers*)pUpdateStruct)->descriptorType;
             break;
         case VK_STRUCTURE_TYPE_UPDATE_AS_COPY:
-            actualType = ((VK_UPDATE_AS_COPY*)pUpdateStruct)->descriptorType;
+            actualType = ((VkUpdateAsCopy*)pUpdateStruct)->descriptorType;
             break;
         default:
             // TODO : Flag specific error for this case
@@ -704,64 +704,64 @@ static bool32_t validateUpdateType(const LAYOUT_NODE* pLayout, const GENERIC_HEA
 static GENERIC_HEADER* shadowUpdateNode(GENERIC_HEADER* pUpdate)
 {
     GENERIC_HEADER* pNewNode = NULL;
-    VK_UPDATE_SAMPLERS* pUS = NULL;
-    VK_UPDATE_SAMPLER_TEXTURES* pUST = NULL;
-    VK_UPDATE_BUFFERS* pUB = NULL;
-    VK_UPDATE_IMAGES* pUI = NULL;
-    VK_UPDATE_AS_COPY* pUAC = NULL;
+    VkUpdateSamplers* pUS = NULL;
+    VkUpdateSamplerTextures* pUST = NULL;
+    VkUpdateBuffers* pUB = NULL;
+    VkUpdateImages* pUI = NULL;
+    VkUpdateAsCopy* pUAC = NULL;
     size_t array_size = 0;
     size_t base_array_size = 0;
     size_t total_array_size = 0;
     size_t baseBuffAddr = 0;
-    VK_IMAGE_VIEW_ATTACH_INFO** ppLocalImageViews = NULL;
-    VK_BUFFER_VIEW_ATTACH_INFO** ppLocalBufferViews = NULL;
+    VkImageViewAttachInfo** ppLocalImageViews = NULL;
+    VkBufferViewAttachInfo** ppLocalBufferViews = NULL;
     char str[1024];
     switch (pUpdate->sType)
     {
         case VK_STRUCTURE_TYPE_UPDATE_SAMPLERS:
-            pUS = new VK_UPDATE_SAMPLERS;
+            pUS = new VkUpdateSamplers;
             pNewNode = (GENERIC_HEADER*)pUS;
-            memcpy(pUS, pUpdate, sizeof(VK_UPDATE_SAMPLERS));
-            pUS->pSamplers = new VK_SAMPLER[pUS->count];
-            array_size = sizeof(VK_SAMPLER) * pUS->count;
-            memcpy((void*)pUS->pSamplers, ((VK_UPDATE_SAMPLERS*)pUpdate)->pSamplers, array_size);
+            memcpy(pUS, pUpdate, sizeof(VkUpdateSamplers));
+            pUS->pSamplers = new VkSampler[pUS->count];
+            array_size = sizeof(VkSampler) * pUS->count;
+            memcpy((void*)pUS->pSamplers, ((VkUpdateSamplers*)pUpdate)->pSamplers, array_size);
             break;
         case VK_STRUCTURE_TYPE_UPDATE_SAMPLER_TEXTURES:
-            pUST = new VK_UPDATE_SAMPLER_TEXTURES;
+            pUST = new VkUpdateSamplerTextures;
             pNewNode = (GENERIC_HEADER*)pUST;
-            memcpy(pUST, pUpdate, sizeof(VK_UPDATE_SAMPLER_TEXTURES));
-            pUST->pSamplerImageViews = new VK_SAMPLER_IMAGE_VIEW_INFO[pUST->count];
-            array_size = sizeof(VK_SAMPLER_IMAGE_VIEW_INFO) * pUST->count;
-            memcpy((void*)pUST->pSamplerImageViews, ((VK_UPDATE_SAMPLER_TEXTURES*)pUpdate)->pSamplerImageViews, array_size);
+            memcpy(pUST, pUpdate, sizeof(VkUpdateSamplerTextures));
+            pUST->pSamplerImageViews = new VkSamplerImageViewInfo[pUST->count];
+            array_size = sizeof(VkSamplerImageViewInfo) * pUST->count;
+            memcpy((void*)pUST->pSamplerImageViews, ((VkUpdateSamplerTextures*)pUpdate)->pSamplerImageViews, array_size);
             for (uint32_t i = 0; i < pUST->count; i++) {
-                VK_IMAGE_VIEW_ATTACH_INFO** ppIV = (VK_IMAGE_VIEW_ATTACH_INFO**)&pUST->pSamplerImageViews[i].pImageView;
-                *ppIV = new VK_IMAGE_VIEW_ATTACH_INFO;
-                memcpy((void*)*ppIV, ((VK_UPDATE_SAMPLER_TEXTURES*)pUpdate)->pSamplerImageViews[i].pImageView, sizeof(VK_IMAGE_VIEW_ATTACH_INFO));
+                VkImageViewAttachInfo** ppIV = (VkImageViewAttachInfo**)&pUST->pSamplerImageViews[i].pImageView;
+                *ppIV = new VkImageViewAttachInfo;
+                memcpy((void*)*ppIV, ((VkUpdateSamplerTextures*)pUpdate)->pSamplerImageViews[i].pImageView, sizeof(VkImageViewAttachInfo));
             }
             break;
         case VK_STRUCTURE_TYPE_UPDATE_IMAGES:
-            pUI = new VK_UPDATE_IMAGES;
+            pUI = new VkUpdateImages;
             pNewNode = (GENERIC_HEADER*)pUI;
-            memcpy(pUI, pUpdate, sizeof(VK_UPDATE_IMAGES));
-            pUI->pImageViews = new VK_IMAGE_VIEW_ATTACH_INFO[pUI->count];
-            array_size = (sizeof(VK_IMAGE_VIEW_ATTACH_INFO) * pUI->count);
-            memcpy((void*)pUI->pImageViews, ((VK_UPDATE_IMAGES*)pUpdate)->pImageViews, array_size);
+            memcpy(pUI, pUpdate, sizeof(VkUpdateImages));
+            pUI->pImageViews = new VkImageViewAttachInfo[pUI->count];
+            array_size = (sizeof(VkImageViewAttachInfo) * pUI->count);
+            memcpy((void*)pUI->pImageViews, ((VkUpdateImages*)pUpdate)->pImageViews, array_size);
             break;
         case VK_STRUCTURE_TYPE_UPDATE_BUFFERS:
-            pUB = new VK_UPDATE_BUFFERS;
+            pUB = new VkUpdateBuffers;
             pNewNode = (GENERIC_HEADER*)pUB;
-            memcpy(pUB, pUpdate, sizeof(VK_UPDATE_BUFFERS));
-            pUB->pBufferViews = new VK_BUFFER_VIEW_ATTACH_INFO[pUB->count];
-            array_size = (sizeof(VK_BUFFER_VIEW_ATTACH_INFO) * pUB->count);
-            memcpy((void*)pUB->pBufferViews, ((VK_UPDATE_BUFFERS*)pUpdate)->pBufferViews, array_size);
+            memcpy(pUB, pUpdate, sizeof(VkUpdateBuffers));
+            pUB->pBufferViews = new VkBufferViewAttachInfo[pUB->count];
+            array_size = (sizeof(VkBufferViewAttachInfo) * pUB->count);
+            memcpy((void*)pUB->pBufferViews, ((VkUpdateBuffers*)pUpdate)->pBufferViews, array_size);
             break;
         case VK_STRUCTURE_TYPE_UPDATE_AS_COPY:
-            pUAC = new VK_UPDATE_AS_COPY;
+            pUAC = new VkUpdateAsCopy;
             pUpdate = (GENERIC_HEADER*)pUAC;
-            memcpy(pUAC, pUpdate, sizeof(VK_UPDATE_AS_COPY));
+            memcpy(pUAC, pUpdate, sizeof(VkUpdateAsCopy));
             break;
         default:
-            sprintf(str, "Unexpected UPDATE struct of type %s (value %u) in vkUpdateDescriptors() struct tree", string_VK_STRUCTURE_TYPE(pUpdate->sType), pUpdate->sType);
+            sprintf(str, "Unexpected UPDATE struct of type %s (value %u) in vkUpdateDescriptors() struct tree", string_VkStructureType(pUpdate->sType), pUpdate->sType);
             layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, DRAWSTATE_INVALID_UPDATE_STRUCT, "DS", str);
             return NULL;
     }
@@ -770,13 +770,13 @@ static GENERIC_HEADER* shadowUpdateNode(GENERIC_HEADER* pUpdate)
     return pNewNode;
 }
 // For given ds, update its mapping based on ppUpdateArray
-static void dsUpdate(VK_DESCRIPTOR_SET ds, uint32_t updateCount, const void** ppUpdateArray)
+static void dsUpdate(VkDescriptorSet ds, uint32_t updateCount, const void** ppUpdateArray)
 {
     SET_NODE* pSet = getSetNode(ds);
     loader_platform_thread_lock_mutex(&globalLock);
     g_lastBoundDescriptorSet = pSet->set;
     LAYOUT_NODE* pLayout = NULL;
-    VK_DESCRIPTOR_SET_LAYOUT_CREATE_INFO* pLayoutCI = NULL;
+    VkDescriptorSetLayoutCreateInfo* pLayoutCI = NULL;
     // TODO : If pCIList is NULL, flag error
     // Perform all updates
     for (uint32_t i = 0; i < updateCount; i++) {
@@ -785,7 +785,7 @@ static void dsUpdate(VK_DESCRIPTOR_SET ds, uint32_t updateCount, const void** pp
         // Make sure that binding is within bounds
         if (pLayout->createInfo.count < getUpdateBinding(pUpdate)) {
             char str[1024];
-            sprintf(str, "Descriptor Set %p does not have binding to match update binding %u for update type %s!", ds, getUpdateBinding(pUpdate), string_VK_STRUCTURE_TYPE(pUpdate->sType));
+            sprintf(str, "Descriptor Set %p does not have binding to match update binding %u for update type %s!", ds, getUpdateBinding(pUpdate), string_VkStructureType(pUpdate->sType));
             layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, ds, 0, DRAWSTATE_INVALID_UPDATE_INDEX, "DS", str);
         }
         else {
@@ -793,15 +793,15 @@ static void dsUpdate(VK_DESCRIPTOR_SET ds, uint32_t updateCount, const void** pp
             if (getBindingEndIndex(pLayout, getUpdateBinding(pUpdate)) < getUpdateEndIndex(pLayout, pUpdate)) {
                 char str[48*1024]; // TODO : Keep count of layout CI structs and size this string dynamically based on that count
                 pLayoutCI = &pLayout->createInfo;
-                string DSstr = vk_print_vk_descriptor_set_layout_create_info(pLayoutCI, "{DS}    ");
-                sprintf(str, "Descriptor update type of %s is out of bounds for matching binding %u in Layout w/ CI:\n%s!", string_VK_STRUCTURE_TYPE(pUpdate->sType), getUpdateBinding(pUpdate), DSstr.c_str());
+                string DSstr = vk_print_vkdescriptorsetlayoutcreateinfo(pLayoutCI, "{DS}    ");
+                sprintf(str, "Descriptor update type of %s is out of bounds for matching binding %u in Layout w/ CI:\n%s!", string_VkStructureType(pUpdate->sType), getUpdateBinding(pUpdate), DSstr.c_str());
                 layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, ds, 0, DRAWSTATE_DESCRIPTOR_UPDATE_OUT_OF_BOUNDS, "DS", str);
             }
             else { // TODO : should we skip update on a type mismatch or force it?
                 // Layout bindings match w/ update ok, now verify that update is of the right type
                 if (!validateUpdateType(pLayout, pUpdate)) {
                     char str[1024];
-                    sprintf(str, "Descriptor update type of %s does not match overlapping binding type!", string_VK_STRUCTURE_TYPE(pUpdate->sType));
+                    sprintf(str, "Descriptor update type of %s does not match overlapping binding type!", string_VkStructureType(pUpdate->sType));
                     layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, ds, 0, DRAWSTATE_DESCRIPTOR_TYPE_MISMATCH, "DS", str);
                 }
                 else {
@@ -843,20 +843,20 @@ static void freeShadowUpdateTree(SET_NODE* pSet)
         pFreeUpdate = pShadowUpdate;
         pShadowUpdate = (GENERIC_HEADER*)pShadowUpdate->pNext;
         uint32_t index = 0;
-        VK_UPDATE_SAMPLERS* pUS = NULL;
-        VK_UPDATE_SAMPLER_TEXTURES* pUST = NULL;
-        VK_UPDATE_IMAGES* pUI = NULL;
-        VK_UPDATE_BUFFERS* pUB = NULL;
+        VkUpdateSamplers* pUS = NULL;
+        VkUpdateSamplerTextures* pUST = NULL;
+        VkUpdateImages* pUI = NULL;
+        VkUpdateBuffers* pUB = NULL;
         void** ppToFree = NULL;
         switch (pFreeUpdate->sType)
         {
             case VK_STRUCTURE_TYPE_UPDATE_SAMPLERS:
-                pUS = (VK_UPDATE_SAMPLERS*)pFreeUpdate;
+                pUS = (VkUpdateSamplers*)pFreeUpdate;
                 if (pUS->pSamplers)
                     delete[] pUS->pSamplers;
                 break;
             case VK_STRUCTURE_TYPE_UPDATE_SAMPLER_TEXTURES:
-                pUST = (VK_UPDATE_SAMPLER_TEXTURES*)pFreeUpdate;
+                pUST = (VkUpdateSamplerTextures*)pFreeUpdate;
                 if (pUST->pSamplerImageViews) {
                     for (index = 0; index < pUST->count; index++) {
                         if (pUST->pSamplerImageViews[index].pImageView) {
@@ -867,12 +867,12 @@ static void freeShadowUpdateTree(SET_NODE* pSet)
                 }
                 break;
             case VK_STRUCTURE_TYPE_UPDATE_IMAGES:
-                pUI = (VK_UPDATE_IMAGES*)pFreeUpdate;
+                pUI = (VkUpdateImages*)pFreeUpdate;
                 if (pUI->pImageViews)
                     delete[] pUI->pImageViews;
                 break;
             case VK_STRUCTURE_TYPE_UPDATE_BUFFERS:
-                pUB = (VK_UPDATE_BUFFERS*)pFreeUpdate;
+                pUB = (VkUpdateBuffers*)pFreeUpdate;
                 if (pUB->pBufferViews)
                     delete[] pUB->pBufferViews;
                 break;
@@ -889,7 +889,7 @@ static void freeShadowUpdateTree(SET_NODE* pSet)
 // NOTE : Calls to this function should be wrapped in mutex
 static void deletePools()
 {
-    for (unordered_map<VK_DESCRIPTOR_POOL, POOL_NODE*>::iterator ii=poolMap.begin(); ii!=poolMap.end(); ++ii) {
+    for (unordered_map<VkDescriptorPool, POOL_NODE*>::iterator ii=poolMap.begin(); ii!=poolMap.end(); ++ii) {
         SET_NODE* pSet = (*ii).second->pSets;
         SET_NODE* pFreeSet = pSet;
         while (pSet) {
@@ -913,7 +913,7 @@ static void deletePools()
 // NOTE : Calls to this function should be wrapped in mutex
 static void deleteLayouts()
 {
-    for (unordered_map<VK_DESCRIPTOR_SET_LAYOUT, LAYOUT_NODE*>::iterator ii=layoutMap.begin(); ii!=layoutMap.end(); ++ii) {
+    for (unordered_map<VkDescriptorSetLayout, LAYOUT_NODE*>::iterator ii=layoutMap.begin(); ii!=layoutMap.end(); ++ii) {
         LAYOUT_NODE* pLayout = (*ii).second;
         if (pLayout->createInfo.pBinding) {
             for (uint32_t i=0; i<pLayout->createInfo.count; i++) {
@@ -930,7 +930,7 @@ static void deleteLayouts()
 }
 // Currently clearing a set is removing all previous updates to that set
 //  TODO : Validate if this is correct clearing behavior
-static void clearDescriptorSet(VK_DESCRIPTOR_SET set)
+static void clearDescriptorSet(VkDescriptorSet set)
 {
     SET_NODE* pSet = getSetNode(set);
     if (!pSet) {
@@ -943,7 +943,7 @@ static void clearDescriptorSet(VK_DESCRIPTOR_SET set)
     }
 }
 
-static void clearDescriptorPool(VK_DESCRIPTOR_POOL pool)
+static void clearDescriptorPool(VkDescriptorPool pool)
 {
     POOL_NODE* pPool = getPoolNode(pool);
     if (!pPool) {
@@ -961,7 +961,7 @@ static void clearDescriptorPool(VK_DESCRIPTOR_POOL pool)
     }
 }
 // Code here to manage the Cmd buffer LL
-static GLOBAL_CB_NODE* getCBNode(VK_CMD_BUFFER cb)
+static GLOBAL_CB_NODE* getCBNode(VkCmdBuffer cb)
 {
     loader_platform_thread_lock_mutex(&globalLock);
     if (cmdBufferMap.find(cb) == cmdBufferMap.end()) {
@@ -975,7 +975,7 @@ static GLOBAL_CB_NODE* getCBNode(VK_CMD_BUFFER cb)
 // NOTE : Calls to this function should be wrapped in mutex
 static void deleteCmdBuffers()
 {
-    for (unordered_map<VK_CMD_BUFFER, GLOBAL_CB_NODE*>::iterator ii=cmdBufferMap.begin(); ii!=cmdBufferMap.end(); ++ii) {
+    for (unordered_map<VkCmdBuffer, GLOBAL_CB_NODE*>::iterator ii=cmdBufferMap.begin(); ii!=cmdBufferMap.end(); ++ii) {
         while (!(*ii).second->pCmds.empty()) {
             delete (*ii).second->pCmds.back();
             (*ii).second->pCmds.pop_back();
@@ -999,7 +999,7 @@ static void addCmd(GLOBAL_CB_NODE* pCB, const CMD_TYPE cmd)
         layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, pCB->cmdBuffer, 0, DRAWSTATE_OUT_OF_MEMORY, "DS", str);
     }
 }
-static void resetCB(const VK_CMD_BUFFER cb)
+static void resetCB(const VkCmdBuffer cb)
 {
     GLOBAL_CB_NODE* pCB = getCBNode(cb);
     if (pCB) {
@@ -1008,7 +1008,7 @@ static void resetCB(const VK_CMD_BUFFER cb)
             pCB->pCmds.pop_back();
         }
         // Reset CB state
-        VK_FLAGS saveFlags = pCB->flags;
+        VkFlags saveFlags = pCB->flags;
         uint32_t saveQueueNodeIndex = pCB->queueNodeIndex;
         memset(pCB, 0, sizeof(GLOBAL_CB_NODE));
         pCB->cmdBuffer = cb;
@@ -1019,7 +1019,7 @@ static void resetCB(const VK_CMD_BUFFER cb)
 }
 // Set the last bound dynamic state of given type
 // TODO : Need to track this per cmdBuffer and correlate cmdBuffer for Draw w/ last bound for that cmdBuffer?
-static void setLastBoundDynamicState(const VK_CMD_BUFFER cmdBuffer, const VK_DYNAMIC_STATE_OBJECT state, const VK_STATE_BIND_POINT sType)
+static void setLastBoundDynamicState(const VkCmdBuffer cmdBuffer, const VkDynamicStateObject state, const VkStateBindPoint sType)
 {
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
@@ -1044,7 +1044,7 @@ static void setLastBoundDynamicState(const VK_CMD_BUFFER cmdBuffer, const VK_DYN
     }
 }
 // Print the last bound Gfx Pipeline
-static void printPipeline(const VK_CMD_BUFFER cb)
+static void printPipeline(const VkCmdBuffer cb)
 {
     GLOBAL_CB_NODE* pCB = getCBNode(cb);
     if (pCB) {
@@ -1053,13 +1053,13 @@ static void printPipeline(const VK_CMD_BUFFER cb)
             // nothing to print
         }
         else {
-            string pipeStr = vk_print_vk_graphics_pipeline_create_info(&pPipeTrav->graphicsPipelineCI, "{DS}").c_str();
+            string pipeStr = vk_print_vkgraphicspipelinecreateinfo(&pPipeTrav->graphicsPipelineCI, "{DS}").c_str();
             layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, NULL, 0, DRAWSTATE_NONE, "DS", pipeStr.c_str());
         }
     }
 }
 // Common Dot dumping code
-static void dsCoreDumpDot(const VK_DESCRIPTOR_SET ds, FILE* pOutFile)
+static void dsCoreDumpDot(const VkDescriptorSet ds, FILE* pOutFile)
 {
     SET_NODE* pSet = getSetNode(ds);
     if (pSet) {
@@ -1067,7 +1067,7 @@ static void dsCoreDumpDot(const VK_DESCRIPTOR_SET ds, FILE* pOutFile)
         char tmp_str[4*1024];
         fprintf(pOutFile, "subgraph cluster_DescriptorPool\n{\nlabel=\"Descriptor Pool\"\n");
         sprintf(tmp_str, "Pool (%p)", pPool->pool);
-        char* pGVstr = vk_gv_print_vk_descriptor_pool_create_info(&pPool->createInfo, tmp_str);
+        char* pGVstr = vk_gv_print_vkdescriptorpoolcreateinfo(&pPool->createInfo, tmp_str);
         fprintf(pOutFile, "%s", pGVstr);
         free(pGVstr);
         fprintf(pOutFile, "subgraph cluster_DescriptorSet\n{\nlabel=\"Descriptor Set (%p)\"\n", pSet->set);
@@ -1076,7 +1076,7 @@ static void dsCoreDumpDot(const VK_DESCRIPTOR_SET ds, FILE* pOutFile)
         uint32_t layout_index = 0;
         ++layout_index;
         sprintf(tmp_str, "LAYOUT%u", layout_index);
-        pGVstr = vk_gv_print_vk_descriptor_set_layout_create_info(&pLayout->createInfo, tmp_str);
+        pGVstr = vk_gv_print_vkdescriptorsetlayoutcreateinfo(&pLayout->createInfo, tmp_str);
         fprintf(pOutFile, "%s", pGVstr);
         free(pGVstr);
         if (pSet->pUpdateStructs) {
@@ -1089,7 +1089,7 @@ static void dsCoreDumpDot(const VK_DESCRIPTOR_SET ds, FILE* pOutFile)
             uint32_t i = 0;
             for (i=0; i < pSet->descriptorCount; i++) {
                 if (pSet->ppDescriptors[i]) {
-                    fprintf(pOutFile, "<TR><TD PORT=\"slot%u\">slot%u</TD><TD>%s</TD></TR>", i, i, string_VK_STRUCTURE_TYPE(pSet->ppDescriptors[i]->sType));
+                    fprintf(pOutFile, "<TR><TD PORT=\"slot%u\">slot%u</TD><TD>%s</TD></TR>", i, i, string_VkStructureType(pSet->ppDescriptors[i]->sType));
                 }
             }
 #define NUM_COLORS 7
@@ -1104,13 +1104,13 @@ static void dsCoreDumpDot(const VK_DESCRIPTOR_SET ds, FILE* pOutFile)
             uint32_t colorIdx = 0;
             fprintf(pOutFile, "</TABLE>>\n];\n");
             // Now add the views that are mapped to active descriptors
-            VK_UPDATE_SAMPLERS* pUS = NULL;
-            VK_UPDATE_SAMPLER_TEXTURES* pUST = NULL;
-            VK_UPDATE_IMAGES* pUI = NULL;
-            VK_UPDATE_BUFFERS* pUB = NULL;
-            VK_UPDATE_AS_COPY* pUAC = NULL;
-            VK_SAMPLER_CREATE_INFO* pSCI = NULL;
-            VK_IMAGE_VIEW_CREATE_INFO* pIVCI = NULL;
+            VkUpdateSamplers* pUS = NULL;
+            VkUpdateSamplerTextures* pUST = NULL;
+            VkUpdateImages* pUI = NULL;
+            VkUpdateBuffers* pUB = NULL;
+            VkUpdateAsCopy* pUAC = NULL;
+            VkSamplerCreateInfo* pSCI = NULL;
+            VkImageViewCreateInfo* pIVCI = NULL;
             VkBufferViewCreateInfo* pBVCI = NULL;
             void** ppNextPtr = NULL;
             void* pSaveNext = NULL;
@@ -1119,40 +1119,40 @@ static void dsCoreDumpDot(const VK_DESCRIPTOR_SET ds, FILE* pOutFile)
                     switch (pSet->ppDescriptors[i]->sType)
                     {
                         case VK_STRUCTURE_TYPE_UPDATE_SAMPLERS:
-                            pUS = (VK_UPDATE_SAMPLERS*)pSet->ppDescriptors[i];
+                            pUS = (VkUpdateSamplers*)pSet->ppDescriptors[i];
                             pSCI = getSamplerCreateInfo(pUS->pSamplers[i-pUS->arrayIndex]);
                             if (pSCI) {
                                 sprintf(tmp_str, "SAMPLER%u", i);
-                                fprintf(pOutFile, "%s", vk_gv_print_vk_sampler_create_info(pSCI, tmp_str));
+                                fprintf(pOutFile, "%s", vk_gv_print_vksamplercreateinfo(pSCI, tmp_str));
                                 fprintf(pOutFile, "\"DESCRIPTORS\":slot%u -> \"%s\" [color=\"#%s\"];\n", i, tmp_str, edgeColors[colorIdx].c_str());
                             }
                             break;
                         case VK_STRUCTURE_TYPE_UPDATE_SAMPLER_TEXTURES:
-                            pUST = (VK_UPDATE_SAMPLER_TEXTURES*)pSet->ppDescriptors[i];
+                            pUST = (VkUpdateSamplerTextures*)pSet->ppDescriptors[i];
                             pSCI = getSamplerCreateInfo(pUST->pSamplerImageViews[i-pUST->arrayIndex].sampler);
                             if (pSCI) {
                                 sprintf(tmp_str, "SAMPLER%u", i);
-                                fprintf(pOutFile, "%s", vk_gv_print_vk_sampler_create_info(pSCI, tmp_str));
+                                fprintf(pOutFile, "%s", vk_gv_print_vksamplercreateinfo(pSCI, tmp_str));
                                 fprintf(pOutFile, "\"DESCRIPTORS\":slot%u -> \"%s\" [color=\"#%s\"];\n", i, tmp_str, edgeColors[colorIdx].c_str());
                             }
                             pIVCI = getImageViewCreateInfo(pUST->pSamplerImageViews[i-pUST->arrayIndex].pImageView->view);
                             if (pIVCI) {
                                 sprintf(tmp_str, "IMAGE_VIEW%u", i);
-                                fprintf(pOutFile, "%s", vk_gv_print_vk_image_view_create_info(pIVCI, tmp_str));
+                                fprintf(pOutFile, "%s", vk_gv_print_vkimageviewcreateinfo(pIVCI, tmp_str));
                                 fprintf(pOutFile, "\"DESCRIPTORS\":slot%u -> \"%s\" [color=\"#%s\"];\n", i, tmp_str, edgeColors[colorIdx].c_str());
                             }
                             break;
                         case VK_STRUCTURE_TYPE_UPDATE_IMAGES:
-                            pUI = (VK_UPDATE_IMAGES*)pSet->ppDescriptors[i];
+                            pUI = (VkUpdateImages*)pSet->ppDescriptors[i];
                             pIVCI = getImageViewCreateInfo(pUI->pImageViews[i-pUI->arrayIndex].view);
                             if (pIVCI) {
                                 sprintf(tmp_str, "IMAGE_VIEW%u", i);
-                                fprintf(pOutFile, "%s", vk_gv_print_vk_image_view_create_info(pIVCI, tmp_str));
+                                fprintf(pOutFile, "%s", vk_gv_print_vkimageviewcreateinfo(pIVCI, tmp_str));
                                 fprintf(pOutFile, "\"DESCRIPTORS\":slot%u -> \"%s\" [color=\"#%s\"];\n", i, tmp_str, edgeColors[colorIdx].c_str());
                             }
                             break;
                         case VK_STRUCTURE_TYPE_UPDATE_BUFFERS:
-                            pUB = (VK_UPDATE_BUFFERS*)pSet->ppDescriptors[i];
+                            pUB = (VkUpdateBuffers*)pSet->ppDescriptors[i];
                             pBVCI = getBufferViewCreateInfo(pUB->pBufferViews[i-pUB->arrayIndex].view);
                             if (pBVCI) {
                                 sprintf(tmp_str, "BUFFER_VIEW%u", i);
@@ -1161,14 +1161,14 @@ static void dsCoreDumpDot(const VK_DESCRIPTOR_SET ds, FILE* pOutFile)
                             }
                             break;
                         case VK_STRUCTURE_TYPE_UPDATE_AS_COPY:
-                            pUAC = (VK_UPDATE_AS_COPY*)pSet->ppDescriptors[i];
+                            pUAC = (VkUpdateAsCopy*)pSet->ppDescriptors[i];
                             // TODO : Need to validate this code
                             // Save off pNext and set to NULL while printing this struct, then restore it
                             ppNextPtr = (void**)&pUAC->pNext;
                             pSaveNext = *ppNextPtr;
                             *ppNextPtr = NULL;
                             sprintf(tmp_str, "UPDATE_AS_COPY%u", i);
-                            fprintf(pOutFile, "%s", vk_gv_print_vk_update_as_copy(pUAC, tmp_str));
+                            fprintf(pOutFile, "%s", vk_gv_print_vkupdateascopy(pUAC, tmp_str));
                             fprintf(pOutFile, "\"DESCRIPTORS\":slot%u -> \"%s\" [color=\"#%s\"];\n", i, tmp_str, edgeColors[colorIdx].c_str());
                             // Restore next ptr
                             *ppNextPtr = pSaveNext;
@@ -1185,7 +1185,7 @@ static void dsCoreDumpDot(const VK_DESCRIPTOR_SET ds, FILE* pOutFile)
     }
 }
 // Dump subgraph w/ DS info
-static void dsDumpDot(const VK_CMD_BUFFER cb, FILE* pOutFile)
+static void dsDumpDot(const VkCmdBuffer cb, FILE* pOutFile)
 {
     GLOBAL_CB_NODE* pCB = getCBNode(cb);
     if (pCB && pCB->lastBoundDescriptorSet) {
@@ -1237,14 +1237,14 @@ static void dumpGlobalDotFile(char *outFileName)
         char* pGVstr = NULL;
         for (uint32_t i = 0; i < VK_NUM_STATE_BIND_POINT; i++) {
             if (g_lastBoundDynamicState[i] && g_lastBoundDynamicState[i]->pCreateInfo) {
-                pGVstr = dynamic_gv_display(g_lastBoundDynamicState[i]->pCreateInfo, string_VK_STATE_BIND_POINT((VK_STATE_BIND_POINT)i));
+                pGVstr = dynamic_gv_display(g_lastBoundDynamicState[i]->pCreateInfo, string_VkStateBindPoint((VkStateBindPoint)i));
                 fprintf(pOutFile, "%s", pGVstr);
                 free(pGVstr);
             }
         }
         fprintf(pOutFile, "}\n"); // close dynamicState subgraph
         fprintf(pOutFile, "subgraph cluster_PipelineStateObject\n{\nlabel=\"Pipeline State Object\"\n");
-        pGVstr = vk_gv_print_vk_graphics_pipeline_create_info(&pPipeTrav->graphicsPipelineCI, "PSO HEAD");
+        pGVstr = vk_gv_print_vkgraphicspipelinecreateinfo(&pPipeTrav->graphicsPipelineCI, "PSO HEAD");
         fprintf(pOutFile, "%s", pGVstr);
         free(pGVstr);
         fprintf(pOutFile, "}\n");
@@ -1254,7 +1254,7 @@ static void dumpGlobalDotFile(char *outFileName)
     }
 }
 // Dump a GraphViz dot file showing the pipeline for a given CB
-static void dumpDotFile(const VK_CMD_BUFFER cb, string outFileName)
+static void dumpDotFile(const VkCmdBuffer cb, string outFileName)
 {
     GLOBAL_CB_NODE* pCB = getCBNode(cb);
     if (pCB) {
@@ -1267,14 +1267,14 @@ static void dumpDotFile(const VK_CMD_BUFFER cb, string outFileName)
             char* pGVstr = NULL;
             for (uint32_t i = 0; i < VK_NUM_STATE_BIND_POINT; i++) {
                 if (pCB->lastBoundDynamicState[i] && pCB->lastBoundDynamicState[i]->pCreateInfo) {
-                    pGVstr = dynamic_gv_display(pCB->lastBoundDynamicState[i]->pCreateInfo, string_VK_STATE_BIND_POINT((VK_STATE_BIND_POINT)i));
+                    pGVstr = dynamic_gv_display(pCB->lastBoundDynamicState[i]->pCreateInfo, string_VkStateBindPoint((VkStateBindPoint)i));
                     fprintf(pOutFile, "%s", pGVstr);
                     free(pGVstr);
                 }
             }
             fprintf(pOutFile, "}\n"); // close dynamicState subgraph
             fprintf(pOutFile, "subgraph cluster_PipelineStateObject\n{\nlabel=\"Pipeline State Object\"\n");
-            pGVstr = vk_gv_print_vk_graphics_pipeline_create_info(&pPipeTrav->graphicsPipelineCI, "PSO HEAD");
+            pGVstr = vk_gv_print_vkgraphicspipelinecreateinfo(&pPipeTrav->graphicsPipelineCI, "PSO HEAD");
             fprintf(pOutFile, "%s", pGVstr);
             free(pGVstr);
             fprintf(pOutFile, "}\n");
@@ -1285,7 +1285,7 @@ static void dumpDotFile(const VK_CMD_BUFFER cb, string outFileName)
     }
 }
 // Verify VB Buffer binding
-static void validateVBBinding(const VK_CMD_BUFFER cb)
+static void validateVBBinding(const VkCmdBuffer cb)
 {
     GLOBAL_CB_NODE* pCB = getCBNode(cb);
     if (pCB && pCB->lastBoundPipeline) {
@@ -1310,7 +1310,7 @@ static void validateVBBinding(const VK_CMD_BUFFER cb)
                     }
                 }
                 else {
-                    string tmpStr = vk_print_vk_vertex_input_binding_description(&pPipeTrav->pVertexBindingDescriptions[pCB->lastVtxBinding], "{DS}INFO : ").c_str();
+                    string tmpStr = vk_print_vkvertexinputbindingdescription(&pPipeTrav->pVertexBindingDescriptions[pCB->lastVtxBinding], "{DS}INFO : ").c_str();
                     layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, NULL, 0, DRAWSTATE_NONE, "DS", tmpStr.c_str());
                 }
             }
@@ -1318,7 +1318,7 @@ static void validateVBBinding(const VK_CMD_BUFFER cb)
     }
 }
 // Print details of DS config to stdout
-static void printDSConfig(const VK_CMD_BUFFER cb)
+static void printDSConfig(const VkCmdBuffer cb)
 {
     char tmp_str[1024];
     char ds_config_str[1024*256] = {0}; // TODO : Currently making this buffer HUGE w/o overrun protection.  Need to be smarter, start smaller, and grow as needed.
@@ -1329,7 +1329,7 @@ static void printDSConfig(const VK_CMD_BUFFER cb)
         // Print out pool details
         sprintf(tmp_str, "Details for pool %p.", (void*)pPool->pool);
         layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, NULL, 0, DRAWSTATE_NONE, "DS", tmp_str);
-        string poolStr = vk_print_vk_descriptor_pool_create_info(&pPool->createInfo, " ");
+        string poolStr = vk_print_vkdescriptorpoolcreateinfo(&pPool->createInfo, " ");
         sprintf(ds_config_str, "%s", poolStr.c_str());
         layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, NULL, 0, DRAWSTATE_NONE, "DS", ds_config_str);
         // Print out set details
@@ -1342,7 +1342,7 @@ static void printDSConfig(const VK_CMD_BUFFER cb)
         sprintf(tmp_str, "Layout #%u, (object %p) for DS %p.", index+1, (void*)pLayout->layout, (void*)pSet->set);
         layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, NULL, 0, DRAWSTATE_NONE, "DS", tmp_str);
         sprintf(prefix, "  [L%u] ", index);
-        string DSLstr = vk_print_vk_descriptor_set_layout_create_info(&pLayout->createInfo, prefix).c_str();
+        string DSLstr = vk_print_vkdescriptorsetlayoutcreateinfo(&pLayout->createInfo, prefix).c_str();
         sprintf(ds_config_str, "%s", DSLstr.c_str());
         layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, NULL, 0, DRAWSTATE_NONE, "DS", ds_config_str);
         index++;
@@ -1362,7 +1362,7 @@ static void printDSConfig(const VK_CMD_BUFFER cb)
     }
 }
 
-static void printCB(const VK_CMD_BUFFER cb)
+static void printCB(const VkCmdBuffer cb)
 {
     GLOBAL_CB_NODE* pCB = getCBNode(cb);
     if (pCB) {
@@ -1380,7 +1380,7 @@ static void printCB(const VK_CMD_BUFFER cb)
 }
 
 
-static void synchAndPrintDSConfig(const VK_CMD_BUFFER cb)
+static void synchAndPrintDSConfig(const VkCmdBuffer cb)
 {
     printDSConfig(cb);
     printPipeline(cb);
@@ -1420,13 +1420,13 @@ static void initDrawState(void)
     }
     // initialize Layer dispatch table
     // TODO handle multiple GPUs
-    vkGetProcAddrType fpNextGPA;
+    PFN_vkGetProcAddr fpNextGPA;
     fpNextGPA = pCurObj->pGPA;
     assert(fpNextGPA);
 
-    layer_initialize_dispatch_table(&nextTable, fpNextGPA, (VK_PHYSICAL_GPU) pCurObj->nextObject);
+    layer_initialize_dispatch_table(&nextTable, fpNextGPA, (VkPhysicalGpu) pCurObj->nextObject);
 
-    vkGetProcAddrType fpGetProcAddr = (vkGetProcAddrType)fpNextGPA((VK_PHYSICAL_GPU) pCurObj->nextObject, (char *) "vkGetProcAddr");
+    PFN_vkGetProcAddr fpGetProcAddr = (PFN_vkGetProcAddr)fpNextGPA((VkPhysicalGpu) pCurObj->nextObject, (char *) "vkGetProcAddr");
     nextTable.GetProcAddr = fpGetProcAddr;
 
     if (!globalLockInitialized)
@@ -1441,16 +1441,16 @@ static void initDrawState(void)
     }
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkCreateDevice(VK_PHYSICAL_GPU gpu, const VkDeviceCreateInfo* pCreateInfo, VK_DEVICE* pDevice)
+VK_LAYER_EXPORT VkResult VKAPI vkCreateDevice(VkPhysicalGpu gpu, const VkDeviceCreateInfo* pCreateInfo, VkDevice* pDevice)
 {
     VK_BASE_LAYER_OBJECT* gpuw = (VK_BASE_LAYER_OBJECT *) gpu;
     pCurObj = gpuw;
     loader_platform_thread_once(&g_initOnce, initDrawState);
-    VK_RESULT result = nextTable.CreateDevice((VK_PHYSICAL_GPU)gpuw->nextObject, pCreateInfo, pDevice);
+    VkResult result = nextTable.CreateDevice((VkPhysicalGpu)gpuw->nextObject, pCreateInfo, pDevice);
     return result;
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkDestroyDevice(VK_DEVICE device)
+VK_LAYER_EXPORT VkResult VKAPI vkDestroyDevice(VkDevice device)
 {
     // Free all the memory
     loader_platform_thread_lock_mutex(&globalLock);
@@ -1463,14 +1463,14 @@ VK_LAYER_EXPORT VK_RESULT VKAPI vkDestroyDevice(VK_DEVICE device)
     deletePools();
     deleteLayouts();
     loader_platform_thread_unlock_mutex(&globalLock);
-    VK_RESULT result = nextTable.DestroyDevice(device);
+    VkResult result = nextTable.DestroyDevice(device);
     return result;
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkGetExtensionSupport(VK_PHYSICAL_GPU gpu, const char* pExtName)
+VK_LAYER_EXPORT VkResult VKAPI vkGetExtensionSupport(VkPhysicalGpu gpu, const char* pExtName)
 {
     VK_BASE_LAYER_OBJECT* gpuw = (VK_BASE_LAYER_OBJECT *) gpu;
-    VK_RESULT result;
+    VkResult result;
     /* This entrypoint is NOT going to init its own dispatch table since loader calls here early */
     if (!strcmp(pExtName, "DrawState") || !strcmp(pExtName, "drawStateDumpDotFile") ||
         !strcmp(pExtName, "drawStateDumpCommandBufferDotFile") || !strcmp(pExtName, "drawStateDumpPngFile"))
@@ -1478,7 +1478,7 @@ VK_LAYER_EXPORT VK_RESULT VKAPI vkGetExtensionSupport(VK_PHYSICAL_GPU gpu, const
         result = VK_SUCCESS;
     } else if (nextTable.GetExtensionSupport != NULL)
     {
-        result = nextTable.GetExtensionSupport((VK_PHYSICAL_GPU)gpuw->nextObject, pExtName);
+        result = nextTable.GetExtensionSupport((VkPhysicalGpu)gpuw->nextObject, pExtName);
     } else
     {
         result = VK_ERROR_INVALID_EXTENSION;
@@ -1486,14 +1486,14 @@ VK_LAYER_EXPORT VK_RESULT VKAPI vkGetExtensionSupport(VK_PHYSICAL_GPU gpu, const
     return result;
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkEnumerateLayers(VK_PHYSICAL_GPU gpu, size_t maxLayerCount, size_t maxStringSize, size_t* pOutLayerCount, char* const* pOutLayers, void* pReserved)
+VK_LAYER_EXPORT VkResult VKAPI vkEnumerateLayers(VkPhysicalGpu gpu, size_t maxLayerCount, size_t maxStringSize, size_t* pOutLayerCount, char* const* pOutLayers, void* pReserved)
 {
     if (gpu != NULL)
     {
         VK_BASE_LAYER_OBJECT* gpuw = (VK_BASE_LAYER_OBJECT *) gpu;
         pCurObj = gpuw;
         loader_platform_thread_once(&g_initOnce, initDrawState);
-        VK_RESULT result = nextTable.EnumerateLayers((VK_PHYSICAL_GPU)gpuw->nextObject, maxLayerCount, maxStringSize, pOutLayerCount, pOutLayers, pReserved);
+        VkResult result = nextTable.EnumerateLayers((VkPhysicalGpu)gpuw->nextObject, maxLayerCount, maxStringSize, pOutLayerCount, pOutLayers, pReserved);
         return result;
     } else
     {
@@ -1506,25 +1506,25 @@ VK_LAYER_EXPORT VK_RESULT VKAPI vkEnumerateLayers(VK_PHYSICAL_GPU gpu, size_t ma
     }
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkQueueSubmit(VK_QUEUE queue, uint32_t cmdBufferCount, const VK_CMD_BUFFER* pCmdBuffers, VK_FENCE fence)
+VK_LAYER_EXPORT VkResult VKAPI vkQueueSubmit(VkQueue queue, uint32_t cmdBufferCount, const VkCmdBuffer* pCmdBuffers, VkFence fence)
 {
     for (uint32_t i=0; i < cmdBufferCount; i++) {
         // Validate that cmd buffers have been updated
     }
-    VK_RESULT result = nextTable.QueueSubmit(queue, cmdBufferCount, pCmdBuffers, fence);
+    VkResult result = nextTable.QueueSubmit(queue, cmdBufferCount, pCmdBuffers, fence);
     return result;
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkDestroyObject(VK_OBJECT object)
+VK_LAYER_EXPORT VkResult VKAPI vkDestroyObject(VkObject object)
 {
     // TODO : When wrapped objects (such as dynamic state) are destroyed, need to clean up memory
-    VK_RESULT result = nextTable.DestroyObject(object);
+    VkResult result = nextTable.DestroyObject(object);
     return result;
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkCreateBufferView(VK_DEVICE device, const VkBufferViewCreateInfo* pCreateInfo, VK_BUFFER_VIEW* pView)
+VK_LAYER_EXPORT VkResult VKAPI vkCreateBufferView(VkDevice device, const VkBufferViewCreateInfo* pCreateInfo, VkBufferView* pView)
 {
-    VK_RESULT result = nextTable.CreateBufferView(device, pCreateInfo, pView);
+    VkResult result = nextTable.CreateBufferView(device, pCreateInfo, pView);
     if (VK_SUCCESS == result) {
         loader_platform_thread_lock_mutex(&globalLock);
         BUFFER_NODE* pNewNode = new BUFFER_NODE;
@@ -1536,9 +1536,9 @@ VK_LAYER_EXPORT VK_RESULT VKAPI vkCreateBufferView(VK_DEVICE device, const VkBuf
     return result;
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkCreateImageView(VK_DEVICE device, const VK_IMAGE_VIEW_CREATE_INFO* pCreateInfo, VK_IMAGE_VIEW* pView)
+VK_LAYER_EXPORT VkResult VKAPI vkCreateImageView(VkDevice device, const VkImageViewCreateInfo* pCreateInfo, VkImageView* pView)
 {
-    VK_RESULT result = nextTable.CreateImageView(device, pCreateInfo, pView);
+    VkResult result = nextTable.CreateImageView(device, pCreateInfo, pView);
     if (VK_SUCCESS == result) {
         loader_platform_thread_lock_mutex(&globalLock);
         IMAGE_NODE *pNewNode = new IMAGE_NODE;
@@ -1550,7 +1550,7 @@ VK_LAYER_EXPORT VK_RESULT VKAPI vkCreateImageView(VK_DEVICE device, const VK_IMA
     return result;
 }
 
-static void track_pipeline(const VK_GRAPHICS_PIPELINE_CREATE_INFO* pCreateInfo, VK_PIPELINE* pPipeline)
+static void track_pipeline(const VkGraphicsPipelineCreateInfo* pCreateInfo, VkPipeline* pPipeline)
 {
     // Create LL HEAD for this Pipeline
     loader_platform_thread_lock_mutex(&globalLock);
@@ -1561,9 +1561,9 @@ static void track_pipeline(const VK_GRAPHICS_PIPELINE_CREATE_INFO* pCreateInfo, 
     loader_platform_thread_unlock_mutex(&globalLock);
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkCreateGraphicsPipeline(VK_DEVICE device, const VK_GRAPHICS_PIPELINE_CREATE_INFO* pCreateInfo, VK_PIPELINE* pPipeline)
+VK_LAYER_EXPORT VkResult VKAPI vkCreateGraphicsPipeline(VkDevice device, const VkGraphicsPipelineCreateInfo* pCreateInfo, VkPipeline* pPipeline)
 {
-    VK_RESULT result = nextTable.CreateGraphicsPipeline(device, pCreateInfo, pPipeline);
+    VkResult result = nextTable.CreateGraphicsPipeline(device, pCreateInfo, pPipeline);
     // Create LL HEAD for this Pipeline
     char str[1024];
     sprintf(str, "Created Gfx Pipeline %p", (void*)*pPipeline);
@@ -1574,13 +1574,13 @@ VK_LAYER_EXPORT VK_RESULT VKAPI vkCreateGraphicsPipeline(VK_DEVICE device, const
     return result;
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkCreateGraphicsPipelineDerivative(
-        VK_DEVICE device,
-        const VK_GRAPHICS_PIPELINE_CREATE_INFO* pCreateInfo,
-        VK_PIPELINE basePipeline,
-        VK_PIPELINE* pPipeline)
+VK_LAYER_EXPORT VkResult VKAPI vkCreateGraphicsPipelineDerivative(
+        VkDevice device,
+        const VkGraphicsPipelineCreateInfo* pCreateInfo,
+        VkPipeline basePipeline,
+        VkPipeline* pPipeline)
 {
-    VK_RESULT result = nextTable.CreateGraphicsPipelineDerivative(device, pCreateInfo, basePipeline, pPipeline);
+    VkResult result = nextTable.CreateGraphicsPipelineDerivative(device, pCreateInfo, basePipeline, pPipeline);
     // Create LL HEAD for this Pipeline
     char str[1024];
     sprintf(str, "Created Gfx Pipeline %p (derived from pipeline %p)", (void*)*pPipeline, basePipeline);
@@ -1591,9 +1591,9 @@ VK_LAYER_EXPORT VK_RESULT VKAPI vkCreateGraphicsPipelineDerivative(
     loader_platform_thread_unlock_mutex(&globalLock);
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkCreateSampler(VK_DEVICE device, const VK_SAMPLER_CREATE_INFO* pCreateInfo, VK_SAMPLER* pSampler)
+VK_LAYER_EXPORT VkResult VKAPI vkCreateSampler(VkDevice device, const VkSamplerCreateInfo* pCreateInfo, VkSampler* pSampler)
 {
-    VK_RESULT result = nextTable.CreateSampler(device, pCreateInfo, pSampler);
+    VkResult result = nextTable.CreateSampler(device, pCreateInfo, pSampler);
     if (VK_SUCCESS == result) {
         loader_platform_thread_lock_mutex(&globalLock);
         SAMPLER_NODE* pNewNode = new SAMPLER_NODE;
@@ -1605,9 +1605,9 @@ VK_LAYER_EXPORT VK_RESULT VKAPI vkCreateSampler(VK_DEVICE device, const VK_SAMPL
     return result;
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkCreateDescriptorSetLayout(VK_DEVICE device, const VK_DESCRIPTOR_SET_LAYOUT_CREATE_INFO* pCreateInfo, VK_DESCRIPTOR_SET_LAYOUT* pSetLayout)
+VK_LAYER_EXPORT VkResult VKAPI vkCreateDescriptorSetLayout(VkDevice device, const VkDescriptorSetLayoutCreateInfo* pCreateInfo, VkDescriptorSetLayout* pSetLayout)
 {
-    VK_RESULT result = nextTable.CreateDescriptorSetLayout(device, pCreateInfo, pSetLayout);
+    VkResult result = nextTable.CreateDescriptorSetLayout(device, pCreateInfo, pSetLayout);
     if (VK_SUCCESS == result) {
         LAYOUT_NODE* pNewNode = new LAYOUT_NODE;
         if (NULL == pNewNode) {
@@ -1616,20 +1616,20 @@ VK_LAYER_EXPORT VK_RESULT VKAPI vkCreateDescriptorSetLayout(VK_DEVICE device, co
             layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, *pSetLayout, 0, DRAWSTATE_OUT_OF_MEMORY, "DS", str);
         }
         memset(pNewNode, 0, sizeof(LAYOUT_NODE));
-        memcpy((void*)&pNewNode->createInfo, pCreateInfo, sizeof(VK_DESCRIPTOR_SET_LAYOUT_CREATE_INFO));
-        pNewNode->createInfo.pBinding = new VK_DESCRIPTOR_SET_LAYOUT_BINDING[pCreateInfo->count];
-        memcpy((void*)pNewNode->createInfo.pBinding, pCreateInfo->pBinding, sizeof(VK_DESCRIPTOR_SET_LAYOUT_BINDING)*pCreateInfo->count);
+        memcpy((void*)&pNewNode->createInfo, pCreateInfo, sizeof(VkDescriptorSetLayoutCreateInfo));
+        pNewNode->createInfo.pBinding = new VkDescriptorSetLayoutBinding[pCreateInfo->count];
+        memcpy((void*)pNewNode->createInfo.pBinding, pCreateInfo->pBinding, sizeof(VkDescriptorSetLayoutBinding)*pCreateInfo->count);
         uint32_t totalCount = 0;
         for (uint32_t i=0; i<pCreateInfo->count; i++) {
             totalCount += pCreateInfo->pBinding[i].count;
             if (pCreateInfo->pBinding[i].pImmutableSamplers) {
-                VK_SAMPLER** ppIS = (VK_SAMPLER**)&pNewNode->createInfo.pBinding[i].pImmutableSamplers;
-                *ppIS = new VK_SAMPLER[pCreateInfo->pBinding[i].count];
-                memcpy(*ppIS, pCreateInfo->pBinding[i].pImmutableSamplers, pCreateInfo->pBinding[i].count*sizeof(VK_SAMPLER));
+                VkSampler** ppIS = (VkSampler**)&pNewNode->createInfo.pBinding[i].pImmutableSamplers;
+                *ppIS = new VkSampler[pCreateInfo->pBinding[i].count];
+                memcpy(*ppIS, pCreateInfo->pBinding[i].pImmutableSamplers, pCreateInfo->pBinding[i].count*sizeof(VkSampler));
             }
         }
         if (totalCount > 0) {
-            pNewNode->pTypes = new VK_DESCRIPTOR_TYPE[totalCount];
+            pNewNode->pTypes = new VkDescriptorType[totalCount];
             uint32_t offset = 0;
             uint32_t j = 0;
             for (uint32_t i=0; i<pCreateInfo->count; i++) {
@@ -1651,18 +1651,18 @@ VK_LAYER_EXPORT VK_RESULT VKAPI vkCreateDescriptorSetLayout(VK_DEVICE device, co
     return result;
 }
 
-VK_RESULT VKAPI vkCreateDescriptorSetLayoutChain(VK_DEVICE device, uint32_t setLayoutArrayCount, const VK_DESCRIPTOR_SET_LAYOUT* pSetLayoutArray, VK_DESCRIPTOR_SET_LAYOUT_CHAIN* pLayoutChain)
+VkResult VKAPI vkCreateDescriptorSetLayoutChain(VkDevice device, uint32_t setLayoutArrayCount, const VkDescriptorSetLayout* pSetLayoutArray, VkDescriptorSetLayoutChain* pLayoutChain)
 {
-    VK_RESULT result = nextTable.CreateDescriptorSetLayoutChain(device, setLayoutArrayCount, pSetLayoutArray, pLayoutChain);
+    VkResult result = nextTable.CreateDescriptorSetLayoutChain(device, setLayoutArrayCount, pSetLayoutArray, pLayoutChain);
     if (VK_SUCCESS == result) {
         // TODO : Need to capture the layout chains
     }
     return result;
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkBeginDescriptorPoolUpdate(VK_DEVICE device, VK_DESCRIPTOR_UPDATE_MODE updateMode)
+VK_LAYER_EXPORT VkResult VKAPI vkBeginDescriptorPoolUpdate(VkDevice device, VkDescriptorUpdateMode updateMode)
 {
-    VK_RESULT result = nextTable.BeginDescriptorPoolUpdate(device, updateMode);
+    VkResult result = nextTable.BeginDescriptorPoolUpdate(device, updateMode);
     if (VK_SUCCESS == result) {
         loader_platform_thread_lock_mutex(&globalLock);
         POOL_NODE* pPoolNode = poolMap.begin()->second;
@@ -1679,9 +1679,9 @@ VK_LAYER_EXPORT VK_RESULT VKAPI vkBeginDescriptorPoolUpdate(VK_DEVICE device, VK
     return result;
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkEndDescriptorPoolUpdate(VK_DEVICE device, VK_CMD_BUFFER cmd)
+VK_LAYER_EXPORT VkResult VKAPI vkEndDescriptorPoolUpdate(VkDevice device, VkCmdBuffer cmd)
 {
-    VK_RESULT result = nextTable.EndDescriptorPoolUpdate(device, cmd);
+    VkResult result = nextTable.EndDescriptorPoolUpdate(device, cmd);
     if (VK_SUCCESS == result) {
         loader_platform_thread_lock_mutex(&globalLock);
         POOL_NODE* pPoolNode = poolMap.begin()->second;
@@ -1706,28 +1706,28 @@ VK_LAYER_EXPORT VK_RESULT VKAPI vkEndDescriptorPoolUpdate(VK_DEVICE device, VK_C
     return result;
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkCreateDescriptorPool(VK_DEVICE device, VK_DESCRIPTOR_POOL_USAGE poolUsage, uint32_t maxSets, const VK_DESCRIPTOR_POOL_CREATE_INFO* pCreateInfo, VK_DESCRIPTOR_POOL* pDescriptorPool)
+VK_LAYER_EXPORT VkResult VKAPI vkCreateDescriptorPool(VkDevice device, VkDescriptorPoolUsage poolUsage, uint32_t maxSets, const VkDescriptorPoolCreateInfo* pCreateInfo, VkDescriptorPool* pDescriptorPool)
 {
-    VK_RESULT result = nextTable.CreateDescriptorPool(device, poolUsage, maxSets, pCreateInfo, pDescriptorPool);
+    VkResult result = nextTable.CreateDescriptorPool(device, poolUsage, maxSets, pCreateInfo, pDescriptorPool);
     if (VK_SUCCESS == result) {
         // Insert this pool into Global Pool LL at head
         char str[1024];
         sprintf(str, "Created Descriptor Pool %p", (void*)*pDescriptorPool);
-        layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, (VK_BASE_OBJECT)pDescriptorPool, 0, DRAWSTATE_NONE, "DS", str);
+        layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, (VkBaseObject)pDescriptorPool, 0, DRAWSTATE_NONE, "DS", str);
         loader_platform_thread_lock_mutex(&globalLock);
         POOL_NODE* pNewNode = new POOL_NODE;
         if (NULL == pNewNode) {
             char str[1024];
             sprintf(str, "Out of memory while attempting to allocate POOL_NODE in vkCreateDescriptorPool()");
-            layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, (VK_BASE_OBJECT)*pDescriptorPool, 0, DRAWSTATE_OUT_OF_MEMORY, "DS", str);
+            layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, (VkBaseObject)*pDescriptorPool, 0, DRAWSTATE_OUT_OF_MEMORY, "DS", str);
         }
         else {
             memset(pNewNode, 0, sizeof(POOL_NODE));
-            VK_DESCRIPTOR_POOL_CREATE_INFO* pCI = (VK_DESCRIPTOR_POOL_CREATE_INFO*)&pNewNode->createInfo;
-            memcpy((void*)pCI, pCreateInfo, sizeof(VK_DESCRIPTOR_POOL_CREATE_INFO));
+            VkDescriptorPoolCreateInfo* pCI = (VkDescriptorPoolCreateInfo*)&pNewNode->createInfo;
+            memcpy((void*)pCI, pCreateInfo, sizeof(VkDescriptorPoolCreateInfo));
             if (pNewNode->createInfo.count) {
-                size_t typeCountSize = pNewNode->createInfo.count * sizeof(VK_DESCRIPTOR_TYPE_COUNT);
-                pNewNode->createInfo.pTypeCount = new VK_DESCRIPTOR_TYPE_COUNT[typeCountSize];
+                size_t typeCountSize = pNewNode->createInfo.count * sizeof(VkDescriptorTypeCount);
+                pNewNode->createInfo.pTypeCount = new VkDescriptorTypeCount[typeCountSize];
                 memcpy((void*)pNewNode->createInfo.pTypeCount, pCreateInfo->pTypeCount, typeCountSize);
             }
             pNewNode->poolUsage  = poolUsage;
@@ -1744,18 +1744,18 @@ VK_LAYER_EXPORT VK_RESULT VKAPI vkCreateDescriptorPool(VK_DEVICE device, VK_DESC
     return result;
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkResetDescriptorPool(VK_DESCRIPTOR_POOL descriptorPool)
+VK_LAYER_EXPORT VkResult VKAPI vkResetDescriptorPool(VkDescriptorPool descriptorPool)
 {
-    VK_RESULT result = nextTable.ResetDescriptorPool(descriptorPool);
+    VkResult result = nextTable.ResetDescriptorPool(descriptorPool);
     if (VK_SUCCESS == result) {
         clearDescriptorPool(descriptorPool);
     }
     return result;
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkAllocDescriptorSets(VK_DESCRIPTOR_POOL descriptorPool, VK_DESCRIPTOR_SET_USAGE setUsage, uint32_t count, const VK_DESCRIPTOR_SET_LAYOUT* pSetLayouts, VK_DESCRIPTOR_SET* pDescriptorSets, uint32_t* pCount)
+VK_LAYER_EXPORT VkResult VKAPI vkAllocDescriptorSets(VkDescriptorPool descriptorPool, VkDescriptorSetUsage setUsage, uint32_t count, const VkDescriptorSetLayout* pSetLayouts, VkDescriptorSet* pDescriptorSets, uint32_t* pCount)
 {
-    VK_RESULT result = nextTable.AllocDescriptorSets(descriptorPool, setUsage, count, pSetLayouts, pDescriptorSets, pCount);
+    VkResult result = nextTable.AllocDescriptorSets(descriptorPool, setUsage, count, pSetLayouts, pDescriptorSets, pCount);
     if ((VK_SUCCESS == result) || (*pCount > 0)) {
         POOL_NODE *pPoolNode = getPoolNode(descriptorPool);
         if (!pPoolNode) {
@@ -1804,7 +1804,7 @@ VK_LAYER_EXPORT VK_RESULT VKAPI vkAllocDescriptorSets(VK_DESCRIPTOR_POOL descrip
     return result;
 }
 
-VK_LAYER_EXPORT void VKAPI vkClearDescriptorSets(VK_DESCRIPTOR_POOL descriptorPool, uint32_t count, const VK_DESCRIPTOR_SET* pDescriptorSets)
+VK_LAYER_EXPORT void VKAPI vkClearDescriptorSets(VkDescriptorPool descriptorPool, uint32_t count, const VkDescriptorSet* pDescriptorSets)
 {
     for (uint32_t i = 0; i < count; i++) {
         clearDescriptorSet(pDescriptorSets[i]);
@@ -1812,7 +1812,7 @@ VK_LAYER_EXPORT void VKAPI vkClearDescriptorSets(VK_DESCRIPTOR_POOL descriptorPo
     nextTable.ClearDescriptorSets(descriptorPool, count, pDescriptorSets);
 }
 
-VK_LAYER_EXPORT void VKAPI vkUpdateDescriptors(VK_DESCRIPTOR_SET descriptorSet, uint32_t updateCount, const void** ppUpdateArray)
+VK_LAYER_EXPORT void VKAPI vkUpdateDescriptors(VkDescriptorSet descriptorSet, uint32_t updateCount, const void** ppUpdateArray)
 {
     SET_NODE* pSet = getSetNode(descriptorSet);
     if (!dsUpdateActive(descriptorSet)) {
@@ -1828,37 +1828,37 @@ VK_LAYER_EXPORT void VKAPI vkUpdateDescriptors(VK_DESCRIPTOR_SET descriptorSet, 
     nextTable.UpdateDescriptors(descriptorSet, updateCount, ppUpdateArray);
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkCreateDynamicViewportState(VK_DEVICE device, const VK_DYNAMIC_VP_STATE_CREATE_INFO* pCreateInfo, VK_DYNAMIC_VP_STATE_OBJECT* pState)
+VK_LAYER_EXPORT VkResult VKAPI vkCreateDynamicViewportState(VkDevice device, const VkDynamicVpStateCreateInfo* pCreateInfo, VkDynamicVpStateObject* pState)
 {
-    VK_RESULT result = nextTable.CreateDynamicViewportState(device, pCreateInfo, pState);
+    VkResult result = nextTable.CreateDynamicViewportState(device, pCreateInfo, pState);
     insertDynamicState(*pState, (GENERIC_HEADER*)pCreateInfo, VK_STATE_BIND_VIEWPORT);
     return result;
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkCreateDynamicRasterState(VK_DEVICE device, const VK_DYNAMIC_RS_STATE_CREATE_INFO* pCreateInfo, VK_DYNAMIC_RS_STATE_OBJECT* pState)
+VK_LAYER_EXPORT VkResult VKAPI vkCreateDynamicRasterState(VkDevice device, const VkDynamicRsStateCreateInfo* pCreateInfo, VkDynamicRsStateObject* pState)
 {
-    VK_RESULT result = nextTable.CreateDynamicRasterState(device, pCreateInfo, pState);
+    VkResult result = nextTable.CreateDynamicRasterState(device, pCreateInfo, pState);
     insertDynamicState(*pState, (GENERIC_HEADER*)pCreateInfo, VK_STATE_BIND_RASTER);
     return result;
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkCreateDynamicColorBlendState(VK_DEVICE device, const VK_DYNAMIC_CB_STATE_CREATE_INFO* pCreateInfo, VK_DYNAMIC_CB_STATE_OBJECT* pState)
+VK_LAYER_EXPORT VkResult VKAPI vkCreateDynamicColorBlendState(VkDevice device, const VkDynamicCbStateCreateInfo* pCreateInfo, VkDynamicCbStateObject* pState)
 {
-    VK_RESULT result = nextTable.CreateDynamicColorBlendState(device, pCreateInfo, pState);
+    VkResult result = nextTable.CreateDynamicColorBlendState(device, pCreateInfo, pState);
     insertDynamicState(*pState, (GENERIC_HEADER*)pCreateInfo, VK_STATE_BIND_COLOR_BLEND);
     return result;
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkCreateDynamicDepthStencilState(VK_DEVICE device, const VK_DYNAMIC_DS_STATE_CREATE_INFO* pCreateInfo, VK_DYNAMIC_DS_STATE_OBJECT* pState)
+VK_LAYER_EXPORT VkResult VKAPI vkCreateDynamicDepthStencilState(VkDevice device, const VkDynamicDsStateCreateInfo* pCreateInfo, VkDynamicDsStateObject* pState)
 {
-    VK_RESULT result = nextTable.CreateDynamicDepthStencilState(device, pCreateInfo, pState);
+    VkResult result = nextTable.CreateDynamicDepthStencilState(device, pCreateInfo, pState);
     insertDynamicState(*pState, (GENERIC_HEADER*)pCreateInfo, VK_STATE_BIND_DEPTH_STENCIL);
     return result;
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkCreateCommandBuffer(VK_DEVICE device, const VK_CMD_BUFFER_CREATE_INFO* pCreateInfo, VK_CMD_BUFFER* pCmdBuffer)
+VK_LAYER_EXPORT VkResult VKAPI vkCreateCommandBuffer(VkDevice device, const VkCmdBufferCreateInfo* pCreateInfo, VkCmdBuffer* pCmdBuffer)
 {
-    VK_RESULT result = nextTable.CreateCommandBuffer(device, pCreateInfo, pCmdBuffer);
+    VkResult result = nextTable.CreateCommandBuffer(device, pCreateInfo, pCmdBuffer);
     if (VK_SUCCESS == result) {
         loader_platform_thread_lock_mutex(&globalLock);
         GLOBAL_CB_NODE* pCB = new GLOBAL_CB_NODE;
@@ -1874,9 +1874,9 @@ VK_LAYER_EXPORT VK_RESULT VKAPI vkCreateCommandBuffer(VK_DEVICE device, const VK
     return result;
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkBeginCommandBuffer(VK_CMD_BUFFER cmdBuffer, const VK_CMD_BUFFER_BEGIN_INFO* pBeginInfo)
+VK_LAYER_EXPORT VkResult VKAPI vkBeginCommandBuffer(VkCmdBuffer cmdBuffer, const VkCmdBufferBeginInfo* pBeginInfo)
 {
-    VK_RESULT result = nextTable.BeginCommandBuffer(cmdBuffer, pBeginInfo);
+    VkResult result = nextTable.BeginCommandBuffer(cmdBuffer, pBeginInfo);
     if (VK_SUCCESS == result) {
         GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
         if (pCB) {
@@ -1884,7 +1884,7 @@ VK_LAYER_EXPORT VK_RESULT VKAPI vkBeginCommandBuffer(VK_CMD_BUFFER cmdBuffer, co
                 resetCB(cmdBuffer);
             pCB->state = CB_UPDATE_ACTIVE;
             if (pBeginInfo->pNext) {
-                VK_CMD_BUFFER_GRAPHICS_BEGIN_INFO* pCbGfxBI = (VK_CMD_BUFFER_GRAPHICS_BEGIN_INFO*)pBeginInfo->pNext;
+                VkCmdBufferGraphicsBeginInfo* pCbGfxBI = (VkCmdBufferGraphicsBeginInfo*)pBeginInfo->pNext;
                 if (VK_STRUCTURE_TYPE_CMD_BUFFER_GRAPHICS_BEGIN_INFO == pCbGfxBI->sType) {
                     pCB->activeRenderPass = pCbGfxBI->renderPassContinue.renderPass;
                 }
@@ -1900,9 +1900,9 @@ VK_LAYER_EXPORT VK_RESULT VKAPI vkBeginCommandBuffer(VK_CMD_BUFFER cmdBuffer, co
     return result;
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkEndCommandBuffer(VK_CMD_BUFFER cmdBuffer)
+VK_LAYER_EXPORT VkResult VKAPI vkEndCommandBuffer(VkCmdBuffer cmdBuffer)
 {
-    VK_RESULT result = nextTable.EndCommandBuffer(cmdBuffer);
+    VkResult result = nextTable.EndCommandBuffer(cmdBuffer);
     if (VK_SUCCESS == result) {
         GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
         if (pCB) {
@@ -1920,9 +1920,9 @@ VK_LAYER_EXPORT VK_RESULT VKAPI vkEndCommandBuffer(VK_CMD_BUFFER cmdBuffer)
     return result;
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkResetCommandBuffer(VK_CMD_BUFFER cmdBuffer)
+VK_LAYER_EXPORT VkResult VKAPI vkResetCommandBuffer(VkCmdBuffer cmdBuffer)
 {
-    VK_RESULT result = nextTable.ResetCommandBuffer(cmdBuffer);
+    VkResult result = nextTable.ResetCommandBuffer(cmdBuffer);
     if (VK_SUCCESS == result) {
         resetCB(cmdBuffer);
         updateCBTracking(cmdBuffer);
@@ -1930,7 +1930,7 @@ VK_LAYER_EXPORT VK_RESULT VKAPI vkResetCommandBuffer(VK_CMD_BUFFER cmdBuffer)
     return result;
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdBindPipeline(VK_CMD_BUFFER cmdBuffer, VK_PIPELINE_BIND_POINT pipelineBindPoint, VK_PIPELINE pipeline)
+VK_LAYER_EXPORT void VKAPI vkCmdBindPipeline(VkCmdBuffer cmdBuffer, VkPipelineBindPoint pipelineBindPoint, VkPipeline pipeline)
 {
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
@@ -1958,13 +1958,13 @@ VK_LAYER_EXPORT void VKAPI vkCmdBindPipeline(VK_CMD_BUFFER cmdBuffer, VK_PIPELIN
     nextTable.CmdBindPipeline(cmdBuffer, pipelineBindPoint, pipeline);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdBindDynamicStateObject(VK_CMD_BUFFER cmdBuffer, VK_STATE_BIND_POINT stateBindPoint, VK_DYNAMIC_STATE_OBJECT state)
+VK_LAYER_EXPORT void VKAPI vkCmdBindDynamicStateObject(VkCmdBuffer cmdBuffer, VkStateBindPoint stateBindPoint, VkDynamicStateObject state)
 {
     setLastBoundDynamicState(cmdBuffer, state, stateBindPoint);
     nextTable.CmdBindDynamicStateObject(cmdBuffer, stateBindPoint, state);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdBindDescriptorSets(VK_CMD_BUFFER cmdBuffer, VK_PIPELINE_BIND_POINT pipelineBindPoint, VK_DESCRIPTOR_SET_LAYOUT_CHAIN layoutChain, uint32_t layoutChainSlot, uint32_t count, const VK_DESCRIPTOR_SET* pDescriptorSets, const uint32_t* pUserData)
+VK_LAYER_EXPORT void VKAPI vkCmdBindDescriptorSets(VkCmdBuffer cmdBuffer, VkPipelineBindPoint pipelineBindPoint, VkDescriptorSetLayoutChain layoutChain, uint32_t layoutChainSlot, uint32_t count, const VkDescriptorSet* pDescriptorSets, const uint32_t* pUserData)
 {
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
@@ -1985,7 +1985,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdBindDescriptorSets(VK_CMD_BUFFER cmdBuffer, VK_P
                 g_lastBoundDescriptorSet = pDescriptorSets[i];
                 loader_platform_thread_unlock_mutex(&globalLock);
                 char str[1024];
-                sprintf(str, "DS %p bound on pipeline %s", (void*)pDescriptorSets[i], string_VK_PIPELINE_BIND_POINT(pipelineBindPoint));
+                sprintf(str, "DS %p bound on pipeline %s", (void*)pDescriptorSets[i], string_VkPipelineBindPoint(pipelineBindPoint));
                 layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, pDescriptorSets[i], 0, DRAWSTATE_NONE, "DS", str);
                 synchAndPrintDSConfig(cmdBuffer);
             }
@@ -2004,7 +2004,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdBindDescriptorSets(VK_CMD_BUFFER cmdBuffer, VK_P
     nextTable.CmdBindDescriptorSets(cmdBuffer, pipelineBindPoint, layoutChain, layoutChainSlot, count, pDescriptorSets, pUserData);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdBindIndexBuffer(VK_CMD_BUFFER cmdBuffer, VK_BUFFER buffer, VK_GPU_SIZE offset, VK_INDEX_TYPE indexType)
+VK_LAYER_EXPORT void VKAPI vkCmdBindIndexBuffer(VkCmdBuffer cmdBuffer, VkBuffer buffer, VkGpuSize offset, VkIndexType indexType)
 {
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
@@ -2020,7 +2020,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdBindIndexBuffer(VK_CMD_BUFFER cmdBuffer, VK_BUFF
     nextTable.CmdBindIndexBuffer(cmdBuffer, buffer, offset, indexType);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdBindVertexBuffer(VK_CMD_BUFFER cmdBuffer, VK_BUFFER buffer, VK_GPU_SIZE offset, uint32_t binding)
+VK_LAYER_EXPORT void VKAPI vkCmdBindVertexBuffer(VkCmdBuffer cmdBuffer, VkBuffer buffer, VkGpuSize offset, uint32_t binding)
 {
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
@@ -2037,7 +2037,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdBindVertexBuffer(VK_CMD_BUFFER cmdBuffer, VK_BUF
     nextTable.CmdBindVertexBuffer(cmdBuffer, buffer, offset, binding);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdDraw(VK_CMD_BUFFER cmdBuffer, uint32_t firstVertex, uint32_t vertexCount, uint32_t firstInstance, uint32_t instanceCount)
+VK_LAYER_EXPORT void VKAPI vkCmdDraw(VkCmdBuffer cmdBuffer, uint32_t firstVertex, uint32_t vertexCount, uint32_t firstInstance, uint32_t instanceCount)
 {
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
@@ -2057,7 +2057,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdDraw(VK_CMD_BUFFER cmdBuffer, uint32_t firstVert
     nextTable.CmdDraw(cmdBuffer, firstVertex, vertexCount, firstInstance, instanceCount);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdDrawIndexed(VK_CMD_BUFFER cmdBuffer, uint32_t firstIndex, uint32_t indexCount, int32_t vertexOffset, uint32_t firstInstance, uint32_t instanceCount)
+VK_LAYER_EXPORT void VKAPI vkCmdDrawIndexed(VkCmdBuffer cmdBuffer, uint32_t firstIndex, uint32_t indexCount, int32_t vertexOffset, uint32_t firstInstance, uint32_t instanceCount)
 {
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
@@ -2077,7 +2077,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdDrawIndexed(VK_CMD_BUFFER cmdBuffer, uint32_t fi
     nextTable.CmdDrawIndexed(cmdBuffer, firstIndex, indexCount, vertexOffset, firstInstance, instanceCount);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdDrawIndirect(VK_CMD_BUFFER cmdBuffer, VK_BUFFER buffer, VK_GPU_SIZE offset, uint32_t count, uint32_t stride)
+VK_LAYER_EXPORT void VKAPI vkCmdDrawIndirect(VkCmdBuffer cmdBuffer, VkBuffer buffer, VkGpuSize offset, uint32_t count, uint32_t stride)
 {
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
@@ -2097,7 +2097,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdDrawIndirect(VK_CMD_BUFFER cmdBuffer, VK_BUFFER 
     nextTable.CmdDrawIndirect(cmdBuffer, buffer, offset, count, stride);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdDrawIndexedIndirect(VK_CMD_BUFFER cmdBuffer, VK_BUFFER buffer, VK_GPU_SIZE offset, uint32_t count, uint32_t stride)
+VK_LAYER_EXPORT void VKAPI vkCmdDrawIndexedIndirect(VkCmdBuffer cmdBuffer, VkBuffer buffer, VkGpuSize offset, uint32_t count, uint32_t stride)
 {
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
@@ -2117,7 +2117,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdDrawIndexedIndirect(VK_CMD_BUFFER cmdBuffer, VK_
     nextTable.CmdDrawIndexedIndirect(cmdBuffer, buffer, offset, count, stride);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdDispatch(VK_CMD_BUFFER cmdBuffer, uint32_t x, uint32_t y, uint32_t z)
+VK_LAYER_EXPORT void VKAPI vkCmdDispatch(VkCmdBuffer cmdBuffer, uint32_t x, uint32_t y, uint32_t z)
 {
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
@@ -2132,7 +2132,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdDispatch(VK_CMD_BUFFER cmdBuffer, uint32_t x, ui
     nextTable.CmdDispatch(cmdBuffer, x, y, z);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdDispatchIndirect(VK_CMD_BUFFER cmdBuffer, VK_BUFFER buffer, VK_GPU_SIZE offset)
+VK_LAYER_EXPORT void VKAPI vkCmdDispatchIndirect(VkCmdBuffer cmdBuffer, VkBuffer buffer, VkGpuSize offset)
 {
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
@@ -2147,7 +2147,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdDispatchIndirect(VK_CMD_BUFFER cmdBuffer, VK_BUF
     nextTable.CmdDispatchIndirect(cmdBuffer, buffer, offset);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdCopyBuffer(VK_CMD_BUFFER cmdBuffer, VK_BUFFER srcBuffer, VK_BUFFER destBuffer, uint32_t regionCount, const VK_BUFFER_COPY* pRegions)
+VK_LAYER_EXPORT void VKAPI vkCmdCopyBuffer(VkCmdBuffer cmdBuffer, VkBuffer srcBuffer, VkBuffer destBuffer, uint32_t regionCount, const VkBufferCopy* pRegions)
 {
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
@@ -2162,12 +2162,12 @@ VK_LAYER_EXPORT void VKAPI vkCmdCopyBuffer(VK_CMD_BUFFER cmdBuffer, VK_BUFFER sr
     nextTable.CmdCopyBuffer(cmdBuffer, srcBuffer, destBuffer, regionCount, pRegions);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdCopyImage(VK_CMD_BUFFER cmdBuffer,
-                                             VK_IMAGE srcImage,
-                                             VK_IMAGE_LAYOUT srcImageLayout,
-                                             VK_IMAGE destImage,
-                                             VK_IMAGE_LAYOUT destImageLayout,
-                                             uint32_t regionCount, const VK_IMAGE_COPY* pRegions)
+VK_LAYER_EXPORT void VKAPI vkCmdCopyImage(VkCmdBuffer cmdBuffer,
+                                             VkImage srcImage,
+                                             VkImageLayout srcImageLayout,
+                                             VkImage destImage,
+                                             VkImageLayout destImageLayout,
+                                             uint32_t regionCount, const VkImageCopy* pRegions)
 {
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
@@ -2182,10 +2182,10 @@ VK_LAYER_EXPORT void VKAPI vkCmdCopyImage(VK_CMD_BUFFER cmdBuffer,
     nextTable.CmdCopyImage(cmdBuffer, srcImage, srcImageLayout, destImage, destImageLayout, regionCount, pRegions);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdBlitImage(VK_CMD_BUFFER cmdBuffer,
-                                             VK_IMAGE srcImage, VK_IMAGE_LAYOUT srcImageLayout,
-                                             VK_IMAGE destImage, VK_IMAGE_LAYOUT destImageLayout,
-                                             uint32_t regionCount, const VK_IMAGE_BLIT* pRegions)
+VK_LAYER_EXPORT void VKAPI vkCmdBlitImage(VkCmdBuffer cmdBuffer,
+                                             VkImage srcImage, VkImageLayout srcImageLayout,
+                                             VkImage destImage, VkImageLayout destImageLayout,
+                                             uint32_t regionCount, const VkImageBlit* pRegions)
 {
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
@@ -2200,10 +2200,10 @@ VK_LAYER_EXPORT void VKAPI vkCmdBlitImage(VK_CMD_BUFFER cmdBuffer,
     nextTable.CmdBlitImage(cmdBuffer, srcImage, srcImageLayout, destImage, destImageLayout, regionCount, pRegions);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdCopyBufferToImage(VK_CMD_BUFFER cmdBuffer,
-                                                     VK_BUFFER srcBuffer,
-                                                     VK_IMAGE destImage, VK_IMAGE_LAYOUT destImageLayout,
-                                                     uint32_t regionCount, const VK_BUFFER_IMAGE_COPY* pRegions)
+VK_LAYER_EXPORT void VKAPI vkCmdCopyBufferToImage(VkCmdBuffer cmdBuffer,
+                                                     VkBuffer srcBuffer,
+                                                     VkImage destImage, VkImageLayout destImageLayout,
+                                                     uint32_t regionCount, const VkBufferImageCopy* pRegions)
 {
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
@@ -2218,10 +2218,10 @@ VK_LAYER_EXPORT void VKAPI vkCmdCopyBufferToImage(VK_CMD_BUFFER cmdBuffer,
     nextTable.CmdCopyBufferToImage(cmdBuffer, srcBuffer, destImage, destImageLayout, regionCount, pRegions);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdCopyImageToBuffer(VK_CMD_BUFFER cmdBuffer,
-                                                     VK_IMAGE srcImage, VK_IMAGE_LAYOUT srcImageLayout,
-                                                     VK_BUFFER destBuffer,
-                                                     uint32_t regionCount, const VK_BUFFER_IMAGE_COPY* pRegions)
+VK_LAYER_EXPORT void VKAPI vkCmdCopyImageToBuffer(VkCmdBuffer cmdBuffer,
+                                                     VkImage srcImage, VkImageLayout srcImageLayout,
+                                                     VkBuffer destBuffer,
+                                                     uint32_t regionCount, const VkBufferImageCopy* pRegions)
 {
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
@@ -2236,7 +2236,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdCopyImageToBuffer(VK_CMD_BUFFER cmdBuffer,
     nextTable.CmdCopyImageToBuffer(cmdBuffer, srcImage, srcImageLayout, destBuffer, regionCount, pRegions);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdCloneImageData(VK_CMD_BUFFER cmdBuffer, VK_IMAGE srcImage, VK_IMAGE_LAYOUT srcImageLayout, VK_IMAGE destImage, VK_IMAGE_LAYOUT destImageLayout)
+VK_LAYER_EXPORT void VKAPI vkCmdCloneImageData(VkCmdBuffer cmdBuffer, VkImage srcImage, VkImageLayout srcImageLayout, VkImage destImage, VkImageLayout destImageLayout)
 {
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
@@ -2251,7 +2251,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdCloneImageData(VK_CMD_BUFFER cmdBuffer, VK_IMAGE
     nextTable.CmdCloneImageData(cmdBuffer, srcImage, srcImageLayout, destImage, destImageLayout);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdUpdateBuffer(VK_CMD_BUFFER cmdBuffer, VK_BUFFER destBuffer, VK_GPU_SIZE destOffset, VK_GPU_SIZE dataSize, const uint32_t* pData)
+VK_LAYER_EXPORT void VKAPI vkCmdUpdateBuffer(VkCmdBuffer cmdBuffer, VkBuffer destBuffer, VkGpuSize destOffset, VkGpuSize dataSize, const uint32_t* pData)
 {
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
@@ -2266,7 +2266,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdUpdateBuffer(VK_CMD_BUFFER cmdBuffer, VK_BUFFER 
     nextTable.CmdUpdateBuffer(cmdBuffer, destBuffer, destOffset, dataSize, pData);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdFillBuffer(VK_CMD_BUFFER cmdBuffer, VK_BUFFER destBuffer, VK_GPU_SIZE destOffset, VK_GPU_SIZE fillSize, uint32_t data)
+VK_LAYER_EXPORT void VKAPI vkCmdFillBuffer(VkCmdBuffer cmdBuffer, VkBuffer destBuffer, VkGpuSize destOffset, VkGpuSize fillSize, uint32_t data)
 {
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
@@ -2281,10 +2281,10 @@ VK_LAYER_EXPORT void VKAPI vkCmdFillBuffer(VK_CMD_BUFFER cmdBuffer, VK_BUFFER de
     nextTable.CmdFillBuffer(cmdBuffer, destBuffer, destOffset, fillSize, data);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdClearColorImage(VK_CMD_BUFFER cmdBuffer,
-                                                   VK_IMAGE image, VK_IMAGE_LAYOUT imageLayout,
-                                                   VK_CLEAR_COLOR color,
-                                                   uint32_t rangeCount, const VK_IMAGE_SUBRESOURCE_RANGE* pRanges)
+VK_LAYER_EXPORT void VKAPI vkCmdClearColorImage(VkCmdBuffer cmdBuffer,
+                                                   VkImage image, VkImageLayout imageLayout,
+                                                   VkClearColor color,
+                                                   uint32_t rangeCount, const VkImageSubresourceRange* pRanges)
 {
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
@@ -2299,10 +2299,10 @@ VK_LAYER_EXPORT void VKAPI vkCmdClearColorImage(VK_CMD_BUFFER cmdBuffer,
     nextTable.CmdClearColorImage(cmdBuffer, image, imageLayout, color, rangeCount, pRanges);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdClearDepthStencil(VK_CMD_BUFFER cmdBuffer,
-                                                     VK_IMAGE image, VK_IMAGE_LAYOUT imageLayout,
+VK_LAYER_EXPORT void VKAPI vkCmdClearDepthStencil(VkCmdBuffer cmdBuffer,
+                                                     VkImage image, VkImageLayout imageLayout,
                                                      float depth, uint32_t stencil,
-                                                     uint32_t rangeCount, const VK_IMAGE_SUBRESOURCE_RANGE* pRanges)
+                                                     uint32_t rangeCount, const VkImageSubresourceRange* pRanges)
 {
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
@@ -2317,10 +2317,10 @@ VK_LAYER_EXPORT void VKAPI vkCmdClearDepthStencil(VK_CMD_BUFFER cmdBuffer,
     nextTable.CmdClearDepthStencil(cmdBuffer, image, imageLayout, depth, stencil, rangeCount, pRanges);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdResolveImage(VK_CMD_BUFFER cmdBuffer,
-                                                VK_IMAGE srcImage, VK_IMAGE_LAYOUT srcImageLayout,
-                                                VK_IMAGE destImage, VK_IMAGE_LAYOUT destImageLayout,
-                                                uint32_t rectCount, const VK_IMAGE_RESOLVE* pRects)
+VK_LAYER_EXPORT void VKAPI vkCmdResolveImage(VkCmdBuffer cmdBuffer,
+                                                VkImage srcImage, VkImageLayout srcImageLayout,
+                                                VkImage destImage, VkImageLayout destImageLayout,
+                                                uint32_t rectCount, const VkImageResolve* pRects)
 {
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
@@ -2335,7 +2335,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdResolveImage(VK_CMD_BUFFER cmdBuffer,
     nextTable.CmdResolveImage(cmdBuffer, srcImage, srcImageLayout, destImage, destImageLayout, rectCount, pRects);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdSetEvent(VK_CMD_BUFFER cmdBuffer, VK_EVENT event, VK_PIPE_EVENT pipeEvent)
+VK_LAYER_EXPORT void VKAPI vkCmdSetEvent(VkCmdBuffer cmdBuffer, VkEvent event, VkPipeEvent pipeEvent)
 {
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
@@ -2350,7 +2350,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdSetEvent(VK_CMD_BUFFER cmdBuffer, VK_EVENT event
     nextTable.CmdSetEvent(cmdBuffer, event, pipeEvent);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdResetEvent(VK_CMD_BUFFER cmdBuffer, VK_EVENT event, VK_PIPE_EVENT pipeEvent)
+VK_LAYER_EXPORT void VKAPI vkCmdResetEvent(VkCmdBuffer cmdBuffer, VkEvent event, VkPipeEvent pipeEvent)
 {
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
@@ -2365,7 +2365,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdResetEvent(VK_CMD_BUFFER cmdBuffer, VK_EVENT eve
     nextTable.CmdResetEvent(cmdBuffer, event, pipeEvent);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdWaitEvents(VK_CMD_BUFFER cmdBuffer, const VK_EVENT_WAIT_INFO* pWaitInfo)
+VK_LAYER_EXPORT void VKAPI vkCmdWaitEvents(VkCmdBuffer cmdBuffer, const VkEventWaitInfo* pWaitInfo)
 {
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
@@ -2380,7 +2380,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdWaitEvents(VK_CMD_BUFFER cmdBuffer, const VK_EVE
     nextTable.CmdWaitEvents(cmdBuffer, pWaitInfo);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdPipelineBarrier(VK_CMD_BUFFER cmdBuffer, const VK_PIPELINE_BARRIER* pBarrier)
+VK_LAYER_EXPORT void VKAPI vkCmdPipelineBarrier(VkCmdBuffer cmdBuffer, const VkPipelineBarrier* pBarrier)
 {
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
@@ -2395,7 +2395,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdPipelineBarrier(VK_CMD_BUFFER cmdBuffer, const V
     nextTable.CmdPipelineBarrier(cmdBuffer, pBarrier);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdBeginQuery(VK_CMD_BUFFER cmdBuffer, VK_QUERY_POOL queryPool, uint32_t slot, VK_FLAGS flags)
+VK_LAYER_EXPORT void VKAPI vkCmdBeginQuery(VkCmdBuffer cmdBuffer, VkQueryPool queryPool, uint32_t slot, VkFlags flags)
 {
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
@@ -2410,7 +2410,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdBeginQuery(VK_CMD_BUFFER cmdBuffer, VK_QUERY_POO
     nextTable.CmdBeginQuery(cmdBuffer, queryPool, slot, flags);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdEndQuery(VK_CMD_BUFFER cmdBuffer, VK_QUERY_POOL queryPool, uint32_t slot)
+VK_LAYER_EXPORT void VKAPI vkCmdEndQuery(VkCmdBuffer cmdBuffer, VkQueryPool queryPool, uint32_t slot)
 {
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
@@ -2425,7 +2425,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdEndQuery(VK_CMD_BUFFER cmdBuffer, VK_QUERY_POOL 
     nextTable.CmdEndQuery(cmdBuffer, queryPool, slot);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdResetQueryPool(VK_CMD_BUFFER cmdBuffer, VK_QUERY_POOL queryPool, uint32_t startQuery, uint32_t queryCount)
+VK_LAYER_EXPORT void VKAPI vkCmdResetQueryPool(VkCmdBuffer cmdBuffer, VkQueryPool queryPool, uint32_t startQuery, uint32_t queryCount)
 {
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
@@ -2440,7 +2440,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdResetQueryPool(VK_CMD_BUFFER cmdBuffer, VK_QUERY
     nextTable.CmdResetQueryPool(cmdBuffer, queryPool, startQuery, queryCount);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdWriteTimestamp(VK_CMD_BUFFER cmdBuffer, VK_TIMESTAMP_TYPE timestampType, VK_BUFFER destBuffer, VK_GPU_SIZE destOffset)
+VK_LAYER_EXPORT void VKAPI vkCmdWriteTimestamp(VkCmdBuffer cmdBuffer, VkTimestampType timestampType, VkBuffer destBuffer, VkGpuSize destOffset)
 {
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
@@ -2455,7 +2455,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdWriteTimestamp(VK_CMD_BUFFER cmdBuffer, VK_TIMES
     nextTable.CmdWriteTimestamp(cmdBuffer, timestampType, destBuffer, destOffset);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdInitAtomicCounters(VK_CMD_BUFFER cmdBuffer, VK_PIPELINE_BIND_POINT pipelineBindPoint, uint32_t startCounter, uint32_t counterCount, const uint32_t* pData)
+VK_LAYER_EXPORT void VKAPI vkCmdInitAtomicCounters(VkCmdBuffer cmdBuffer, VkPipelineBindPoint pipelineBindPoint, uint32_t startCounter, uint32_t counterCount, const uint32_t* pData)
 {
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
@@ -2470,7 +2470,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdInitAtomicCounters(VK_CMD_BUFFER cmdBuffer, VK_P
     nextTable.CmdInitAtomicCounters(cmdBuffer, pipelineBindPoint, startCounter, counterCount, pData);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdLoadAtomicCounters(VK_CMD_BUFFER cmdBuffer, VK_PIPELINE_BIND_POINT pipelineBindPoint, uint32_t startCounter, uint32_t counterCount, VK_BUFFER srcBuffer, VK_GPU_SIZE srcOffset)
+VK_LAYER_EXPORT void VKAPI vkCmdLoadAtomicCounters(VkCmdBuffer cmdBuffer, VkPipelineBindPoint pipelineBindPoint, uint32_t startCounter, uint32_t counterCount, VkBuffer srcBuffer, VkGpuSize srcOffset)
 {
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
@@ -2485,7 +2485,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdLoadAtomicCounters(VK_CMD_BUFFER cmdBuffer, VK_P
     nextTable.CmdLoadAtomicCounters(cmdBuffer, pipelineBindPoint, startCounter, counterCount, srcBuffer, srcOffset);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdSaveAtomicCounters(VK_CMD_BUFFER cmdBuffer, VK_PIPELINE_BIND_POINT pipelineBindPoint, uint32_t startCounter, uint32_t counterCount, VK_BUFFER destBuffer, VK_GPU_SIZE destOffset)
+VK_LAYER_EXPORT void VKAPI vkCmdSaveAtomicCounters(VkCmdBuffer cmdBuffer, VkPipelineBindPoint pipelineBindPoint, uint32_t startCounter, uint32_t counterCount, VkBuffer destBuffer, VkGpuSize destOffset)
 {
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
@@ -2500,49 +2500,49 @@ VK_LAYER_EXPORT void VKAPI vkCmdSaveAtomicCounters(VK_CMD_BUFFER cmdBuffer, VK_P
     nextTable.CmdSaveAtomicCounters(cmdBuffer, pipelineBindPoint, startCounter, counterCount, destBuffer, destOffset);
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkCreateFramebuffer(VK_DEVICE device, const VK_FRAMEBUFFER_CREATE_INFO* pCreateInfo, VK_FRAMEBUFFER* pFramebuffer)
+VK_LAYER_EXPORT VkResult VKAPI vkCreateFramebuffer(VkDevice device, const VkFramebufferCreateInfo* pCreateInfo, VkFramebuffer* pFramebuffer)
 {
-    VK_RESULT result = nextTable.CreateFramebuffer(device, pCreateInfo, pFramebuffer);
+    VkResult result = nextTable.CreateFramebuffer(device, pCreateInfo, pFramebuffer);
     if (VK_SUCCESS == result) {
         // Shadow create info and store in map
-        VK_FRAMEBUFFER_CREATE_INFO* localFBCI = new VK_FRAMEBUFFER_CREATE_INFO(*pCreateInfo);
+        VkFramebufferCreateInfo* localFBCI = new VkFramebufferCreateInfo(*pCreateInfo);
         if (pCreateInfo->pColorAttachments) {
-            localFBCI->pColorAttachments = new VK_COLOR_ATTACHMENT_BIND_INFO[localFBCI->colorAttachmentCount];
-            memcpy((void*)localFBCI->pColorAttachments, pCreateInfo->pColorAttachments, localFBCI->colorAttachmentCount*sizeof(VK_COLOR_ATTACHMENT_BIND_INFO));
+            localFBCI->pColorAttachments = new VkColorAttachmentBindInfo[localFBCI->colorAttachmentCount];
+            memcpy((void*)localFBCI->pColorAttachments, pCreateInfo->pColorAttachments, localFBCI->colorAttachmentCount*sizeof(VkColorAttachmentBindInfo));
         }
         if (pCreateInfo->pDepthStencilAttachment) {
-            localFBCI->pDepthStencilAttachment = new VK_DEPTH_STENCIL_BIND_INFO[localFBCI->colorAttachmentCount];
-            memcpy((void*)localFBCI->pDepthStencilAttachment, pCreateInfo->pDepthStencilAttachment, localFBCI->colorAttachmentCount*sizeof(VK_DEPTH_STENCIL_BIND_INFO));
+            localFBCI->pDepthStencilAttachment = new VkDepthStencilBindInfo[localFBCI->colorAttachmentCount];
+            memcpy((void*)localFBCI->pDepthStencilAttachment, pCreateInfo->pDepthStencilAttachment, localFBCI->colorAttachmentCount*sizeof(VkDepthStencilBindInfo));
         }
         frameBufferMap[*pFramebuffer] = localFBCI;
     }
     return result;
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkCreateRenderPass(VK_DEVICE device, const VK_RENDER_PASS_CREATE_INFO* pCreateInfo, VK_RENDER_PASS* pRenderPass)
+VK_LAYER_EXPORT VkResult VKAPI vkCreateRenderPass(VkDevice device, const VkRenderPassCreateInfo* pCreateInfo, VkRenderPass* pRenderPass)
 {
-    VK_RESULT result = nextTable.CreateRenderPass(device, pCreateInfo, pRenderPass);
+    VkResult result = nextTable.CreateRenderPass(device, pCreateInfo, pRenderPass);
     if (VK_SUCCESS == result) {
         // Shadow create info and store in map
-        VK_RENDER_PASS_CREATE_INFO* localRPCI = new VK_RENDER_PASS_CREATE_INFO(*pCreateInfo);
+        VkRenderPassCreateInfo* localRPCI = new VkRenderPassCreateInfo(*pCreateInfo);
         if (pCreateInfo->pColorLoadOps) {
-            localRPCI->pColorLoadOps = new VK_ATTACHMENT_LOAD_OP[localRPCI->colorAttachmentCount];
-            memcpy((void*)localRPCI->pColorLoadOps, pCreateInfo->pColorLoadOps, localRPCI->colorAttachmentCount*sizeof(VK_ATTACHMENT_LOAD_OP));
+            localRPCI->pColorLoadOps = new VkAttachmentLoadOp[localRPCI->colorAttachmentCount];
+            memcpy((void*)localRPCI->pColorLoadOps, pCreateInfo->pColorLoadOps, localRPCI->colorAttachmentCount*sizeof(VkAttachmentLoadOp));
         }
         if (pCreateInfo->pColorStoreOps) {
-            localRPCI->pColorStoreOps = new VK_ATTACHMENT_STORE_OP[localRPCI->colorAttachmentCount];
-            memcpy((void*)localRPCI->pColorStoreOps, pCreateInfo->pColorStoreOps, localRPCI->colorAttachmentCount*sizeof(VK_ATTACHMENT_STORE_OP));
+            localRPCI->pColorStoreOps = new VkAttachmentStoreOp[localRPCI->colorAttachmentCount];
+            memcpy((void*)localRPCI->pColorStoreOps, pCreateInfo->pColorStoreOps, localRPCI->colorAttachmentCount*sizeof(VkAttachmentStoreOp));
         }
         if (pCreateInfo->pColorLoadClearValues) {
-            localRPCI->pColorLoadClearValues = new VK_CLEAR_COLOR[localRPCI->colorAttachmentCount];
-            memcpy((void*)localRPCI->pColorLoadClearValues, pCreateInfo->pColorLoadClearValues, localRPCI->colorAttachmentCount*sizeof(VK_CLEAR_COLOR));
+            localRPCI->pColorLoadClearValues = new VkClearColor[localRPCI->colorAttachmentCount];
+            memcpy((void*)localRPCI->pColorLoadClearValues, pCreateInfo->pColorLoadClearValues, localRPCI->colorAttachmentCount*sizeof(VkClearColor));
         }
         renderPassMap[*pRenderPass] = localRPCI;
     }
     return result;
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdBeginRenderPass(VK_CMD_BUFFER cmdBuffer, const VK_RENDER_PASS_BEGIN *pRenderPassBegin)
+VK_LAYER_EXPORT void VKAPI vkCmdBeginRenderPass(VkCmdBuffer cmdBuffer, const VkRenderPassBegin *pRenderPassBegin)
 {
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
@@ -2561,7 +2561,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdBeginRenderPass(VK_CMD_BUFFER cmdBuffer, const V
     nextTable.CmdBeginRenderPass(cmdBuffer, pRenderPassBegin);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdEndRenderPass(VK_CMD_BUFFER cmdBuffer, VK_RENDER_PASS renderPass)
+VK_LAYER_EXPORT void VKAPI vkCmdEndRenderPass(VkCmdBuffer cmdBuffer, VkRenderPass renderPass)
 {
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
@@ -2577,7 +2577,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdEndRenderPass(VK_CMD_BUFFER cmdBuffer, VK_RENDER
     nextTable.CmdEndRenderPass(cmdBuffer, renderPass);
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkDbgRegisterMsgCallback(VK_INSTANCE instance, VK_DBG_MSG_CALLBACK_FUNCTION pfnMsgCallback, void* pUserData)
+VK_LAYER_EXPORT VkResult VKAPI vkDbgRegisterMsgCallback(VkInstance instance, VK_DBG_MSG_CALLBACK_FUNCTION pfnMsgCallback, void* pUserData)
 {
     // This layer intercepts callbacks
     VK_LAYER_DBG_FUNCTION_NODE* pNewDbgFuncNode = new VK_LAYER_DBG_FUNCTION_NODE;
@@ -2591,11 +2591,11 @@ VK_LAYER_EXPORT VK_RESULT VKAPI vkDbgRegisterMsgCallback(VK_INSTANCE instance, V
 	if (g_actionIsDefault) {
 		g_debugAction = VK_DBG_LAYER_ACTION_CALLBACK;
 	}
-    VK_RESULT result = nextTable.DbgRegisterMsgCallback(instance, pfnMsgCallback, pUserData);
+    VkResult result = nextTable.DbgRegisterMsgCallback(instance, pfnMsgCallback, pUserData);
     return result;
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkDbgUnregisterMsgCallback(VK_INSTANCE instance, VK_DBG_MSG_CALLBACK_FUNCTION pfnMsgCallback)
+VK_LAYER_EXPORT VkResult VKAPI vkDbgUnregisterMsgCallback(VkInstance instance, VK_DBG_MSG_CALLBACK_FUNCTION pfnMsgCallback)
 {
     VK_LAYER_DBG_FUNCTION_NODE *pTrav = g_pDbgFunctionHead;
     VK_LAYER_DBG_FUNCTION_NODE *pPrev = pTrav;
@@ -2617,11 +2617,11 @@ VK_LAYER_EXPORT VK_RESULT VKAPI vkDbgUnregisterMsgCallback(VK_INSTANCE instance,
         else
             g_debugAction = (VK_LAYER_DBG_ACTION)(g_debugAction & ~((uint32_t)VK_DBG_LAYER_ACTION_CALLBACK));
     }
-    VK_RESULT result = nextTable.DbgUnregisterMsgCallback(instance, pfnMsgCallback);
+    VkResult result = nextTable.DbgUnregisterMsgCallback(instance, pfnMsgCallback);
     return result;
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdDbgMarkerBegin(VK_CMD_BUFFER cmdBuffer, const char* pMarker)
+VK_LAYER_EXPORT void VKAPI vkCmdDbgMarkerBegin(VkCmdBuffer cmdBuffer, const char* pMarker)
 {
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
@@ -2636,7 +2636,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdDbgMarkerBegin(VK_CMD_BUFFER cmdBuffer, const ch
     nextTable.CmdDbgMarkerBegin(cmdBuffer, pMarker);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdDbgMarkerEnd(VK_CMD_BUFFER cmdBuffer)
+VK_LAYER_EXPORT void VKAPI vkCmdDbgMarkerEnd(VkCmdBuffer cmdBuffer)
 {
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
@@ -2688,7 +2688,7 @@ void drawStateDumpPngFile(char* outFileName)
 #endif // WIN32
 }
 
-VK_LAYER_EXPORT void* VKAPI vkGetProcAddr(VK_PHYSICAL_GPU gpu, const char* funcName)
+VK_LAYER_EXPORT void* VKAPI vkGetProcAddr(VkPhysicalGpu gpu, const char* funcName)
 {
     VK_BASE_LAYER_OBJECT* gpuw = (VK_BASE_LAYER_OBJECT *) gpu;
 
@@ -2844,6 +2844,6 @@ VK_LAYER_EXPORT void* VKAPI vkGetProcAddr(VK_PHYSICAL_GPU gpu, const char* funcN
     else {
         if (gpuw->pGPA == NULL)
             return NULL;
-        return gpuw->pGPA((VK_PHYSICAL_GPU)gpuw->nextObject, funcName);
+        return gpuw->pGPA((VkPhysicalGpu)gpuw->nextObject, funcName);
     }
 }

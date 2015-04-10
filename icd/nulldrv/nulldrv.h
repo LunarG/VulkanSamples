@@ -48,7 +48,7 @@
 struct nulldrv_base {
     void *loader_data;
     uint32_t magic;
-    VK_RESULT (*get_info)(struct nulldrv_base *base, int type1,
+    VkResult (*get_info)(struct nulldrv_base *base, int type1,
                            size_t *size, void *data);
 };
 
@@ -100,12 +100,12 @@ struct nulldrv_fence {
 
 struct nulldrv_img {
     struct nulldrv_obj obj;
-    VK_IMAGE_TYPE type;
+    VkImageType type;
     int32_t depth;
     uint32_t mip_levels;
     uint32_t array_size;
-    VK_FLAGS usage;
-    VK_IMAGE_FORMAT_CLASS format_class;
+    VkFlags usage;
+    VkImageFormatClass format_class;
     uint32_t samples;
     size_t total_size;
 };
@@ -113,7 +113,7 @@ struct nulldrv_img {
 struct nulldrv_mem {
     struct nulldrv_base base;
     struct nulldrv_bo *bo;
-    VK_GPU_SIZE size;
+    VkGpuSize size;
 };
 
 struct nulldrv_ds_view {
@@ -135,8 +135,8 @@ struct nulldrv_img_view {
 
 struct nulldrv_buf {
     struct nulldrv_obj obj;
-    VK_GPU_SIZE size;
-    VK_FLAGS usage;
+    VkGpuSize size;
+    VkFlags usage;
 };
 
 struct nulldrv_desc_layout {

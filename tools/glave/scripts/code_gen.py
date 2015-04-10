@@ -356,7 +356,7 @@ class StructWrapperGen:
     def _generateDynamicPrintFunctions(self):
         dp_funcs = []
         dp_funcs.append("\nvoid dynamic_display_full_txt(const void* pStruct, uint32_t indent)\n{\n    // Cast to APP_INFO ptr initially just to pull sType off struct")
-        dp_funcs.append("    VK_STRUCTURE_TYPE sType = ((VK_APPLICATION_INFO*)pStruct)->sType;    switch (sType)\n    {")
+        dp_funcs.append("    VK_STRUCTURE_TYPE sType = ((VkApplicationInfo*)pStruct)->sType;    switch (sType)\n    {")
         for e in enum_type_dict:
             class_num = 0
             if "_STRUCTURE_TYPE" in e:

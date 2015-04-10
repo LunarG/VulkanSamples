@@ -134,7 +134,7 @@ class Subcommand(object):
                 return ("%i", "*(%s)" % name)
             return ("%i", name)
         # TODO : This is special-cased as there's only one "format" param currently and it's nice to expand it
-        if "VK_FORMAT" == vk_type:
+        if "VkFormat" == vk_type:
             if cpp:
                 return ("%p", "&%s" % name)
             return ("{%s.channelFormat = %%s, %s.numericFormat = %%s}" % (name, name), "string_VK_CHANNEL_FORMAT(%s.channelFormat), string_VK_NUM_FORMAT(%s.numericFormat)" % (name, name))
@@ -146,7 +146,7 @@ class Subcommand(object):
 
     def _gen_layer_dbg_callback_register(self):
         r_body = []
-        r_body.append('VK_LAYER_EXPORT VK_RESULT VKAPI vkDbgRegisterMsgCallback(VK_INSTANCE instance, VK_DBG_MSG_CALLBACK_FUNCTION pfnMsgCallback, void* pUserData)')
+        r_body.append('VK_LAYER_EXPORT VkResult VKAPI vkDbgRegisterMsgCallback(VkInstance instance, VK_DBG_MSG_CALLBACK_FUNCTION pfnMsgCallback, void* pUserData)')
         r_body.append('{')
         r_body.append('    // This layer intercepts callbacks')
         r_body.append('    VK_LAYER_DBG_FUNCTION_NODE *pNewDbgFuncNode = (VK_LAYER_DBG_FUNCTION_NODE*)malloc(sizeof(VK_LAYER_DBG_FUNCTION_NODE));')
@@ -160,14 +160,14 @@ class Subcommand(object):
         r_body.append('    if (g_actionIsDefault) {')
         r_body.append('        g_debugAction = VK_DBG_LAYER_ACTION_CALLBACK;')
         r_body.append('    }')
-        r_body.append('    VK_RESULT result = nextTable.DbgRegisterMsgCallback(instance, pfnMsgCallback, pUserData);')
+        r_body.append('    VkResult result = nextTable.DbgRegisterMsgCallback(instance, pfnMsgCallback, pUserData);')
         r_body.append('    return result;')
         r_body.append('}')
         return "\n".join(r_body)
 
     def _gen_layer_dbg_callback_unregister(self):
         ur_body = []
-        ur_body.append('VK_LAYER_EXPORT VK_RESULT VKAPI vkDbgUnregisterMsgCallback(VK_INSTANCE instance, VK_DBG_MSG_CALLBACK_FUNCTION pfnMsgCallback)')
+        ur_body.append('VK_LAYER_EXPORT VkResult VKAPI vkDbgUnregisterMsgCallback(VkInstance instance, VK_DBG_MSG_CALLBACK_FUNCTION pfnMsgCallback)')
         ur_body.append('{')
         ur_body.append('    VK_LAYER_DBG_FUNCTION_NODE *pTrav = g_pDbgFunctionHead;')
         ur_body.append('    VK_LAYER_DBG_FUNCTION_NODE *pPrev = pTrav;')
@@ -189,16 +189,16 @@ class Subcommand(object):
         ur_body.append('        else')
         ur_body.append('            g_debugAction &= ~VK_DBG_LAYER_ACTION_CALLBACK;')
         ur_body.append('    }')
-        ur_body.append('    VK_RESULT result = nextTable.DbgUnregisterMsgCallback(instance, pfnMsgCallback);')
+        ur_body.append('    VkResult result = nextTable.DbgUnregisterMsgCallback(instance, pfnMsgCallback);')
         ur_body.append('    return result;')
         ur_body.append('}')
         return "\n".join(ur_body)
 
     def _gen_layer_get_extension_support(self, layer="Generic"):
         ges_body = []
-        ges_body.append('VK_LAYER_EXPORT VK_RESULT VKAPI vkGetExtensionSupport(VK_PHYSICAL_GPU gpu, const char* pExtName)')
+        ges_body.append('VK_LAYER_EXPORT VkResult VKAPI vkGetExtensionSupport(VkPhysicalGpu gpu, const char* pExtName)')
         ges_body.append('{')
-        ges_body.append('    VK_RESULT result;')
+        ges_body.append('    VkResult result;')
         ges_body.append('    VK_BASE_LAYER_OBJECT* gpuw = (VK_BASE_LAYER_OBJECT *) gpu;')
         ges_body.append('')
         ges_body.append('    /* This entrypoint is NOT going to init its own dispatch table since loader calls here early */')
@@ -207,7 +207,7 @@ class Subcommand(object):
         ges_body.append('        result = VK_SUCCESS;')
         ges_body.append('    } else if (nextTable.GetExtensionSupport != NULL)')
         ges_body.append('    {')
-        ges_body.append('        result = nextTable.GetExtensionSupport((VK_PHYSICAL_GPU)gpuw->nextObject, pExtName);')
+        ges_body.append('        result = nextTable.GetExtensionSupport((VkPhysicalGpu)gpuw->nextObject, pExtName);')
         ges_body.append('    } else')
         ges_body.append('    {')
         ges_body.append('        result = VK_ERROR_INVALID_EXTENSION;')
@@ -270,7 +270,7 @@ class Subcommand(object):
         exts.append('    return (type == VK_OBJECT_TYPE_ANY) ? numTotalObjs : numObjs[type];')
         exts.append('}')
         exts.append('')
-        exts.append('VK_RESULT objTrackGetObjects(VK_OBJECT_TYPE type, uint64_t objCount, OBJTRACK_NODE* pObjNodeArray)')
+        exts.append('VkResult objTrackGetObjects(VK_OBJECT_TYPE type, uint64_t objCount, OBJTRACK_NODE* pObjNodeArray)')
         exts.append('{')
         exts.append("    // This bool flags if we're pulling all objs or just a single class of objs")
         exts.append('    bool32_t bAllObjs = (type == VK_OBJECT_TYPE_ANY);')
@@ -300,7 +300,7 @@ class Subcommand(object):
 
     def _generate_layer_gpa_function(self, extensions=[]):
         func_body = []
-        func_body.append("VK_LAYER_EXPORT void* VKAPI vkGetProcAddr(VK_PHYSICAL_GPU gpu, const char* funcName)\n"
+        func_body.append("VK_LAYER_EXPORT void* VKAPI vkGetProcAddr(VkPhysicalGpu gpu, const char* funcName)\n"
                          "{\n"
                          "    VK_BASE_LAYER_OBJECT* gpuw = (VK_BASE_LAYER_OBJECT *) gpu;\n"
                          "    void* addr;\n"
@@ -319,7 +319,7 @@ class Subcommand(object):
         func_body.append("    else {\n"
                          "        if (gpuw->pGPA == NULL)\n"
                          "            return NULL;\n"
-                         "        return gpuw->pGPA((VK_PHYSICAL_GPU)gpuw->nextObject, funcName);\n"
+                         "        return gpuw->pGPA((VkPhysicalGpu)gpuw->nextObject, funcName);\n"
                          "    }\n"
                          "}\n")
         return "\n".join(func_body)
@@ -345,11 +345,11 @@ class Subcommand(object):
             func_body.append('            g_logFile = stdout;')
             func_body.append('    }')
             func_body.append('')
-        func_body.append('    vkGetProcAddrType fpNextGPA;\n'
+        func_body.append('    PFN_vkGetProcAddr fpNextGPA;\n'
                          '    fpNextGPA = pCurObj->pGPA;\n'
                          '    assert(fpNextGPA);\n')
 
-        func_body.append("    layer_initialize_dispatch_table(&nextTable, fpNextGPA, (VK_PHYSICAL_GPU) pCurObj->nextObject);")
+        func_body.append("    layer_initialize_dispatch_table(&nextTable, fpNextGPA, (VkPhysicalGpu) pCurObj->nextObject);")
         if lockname is not None:
             func_body.append("    if (!%sLockInitialized)" % lockname)
             func_body.append("    {")
@@ -364,11 +364,11 @@ class Subcommand(object):
         func_body = ["#include \"vk_dispatch_table_helper.h\""]
         func_body.append('static void init%s(void)\n'
                          '{\n'
-                         '    vkGetProcAddrType fpNextGPA;\n'
+                         '    PFN_vkGetProcAddr fpNextGPA;\n'
                          '    fpNextGPA = pCurObj->pGPA;\n'
                          '    assert(fpNextGPA);\n' % self.layer_name);
 
-        func_body.append("    layer_initialize_dispatch_table(&nextTable, fpNextGPA, (VK_PHYSICAL_GPU) pCurObj->nextObject);\n")
+        func_body.append("    layer_initialize_dispatch_table(&nextTable, fpNextGPA, (VkPhysicalGpu) pCurObj->nextObject);\n")
         func_body.append("    if (!printLockInitialized)")
         func_body.append("    {")
         func_body.append("        // TODO/TBD: Need to delete this mutex sometime.  How???")
@@ -406,12 +406,12 @@ class GenericLayerSubcommand(Subcommand):
         stmt = ''
         funcs = []
         if proto.ret != "void":
-            ret_val = "VK_RESULT result = "
+            ret_val = "VkResult result = "
             stmt = "    return result;\n"
         if 'WsiX11AssociateConnection' == proto.name:
             funcs.append("#if defined(__linux__) || defined(XCB_NVIDIA)")
         if proto.name == "EnumerateLayers":
-            c_call = proto.c_call().replace("(" + proto.params[0].name, "((VK_PHYSICAL_GPU)gpuw->nextObject", 1)
+            c_call = proto.c_call().replace("(" + proto.params[0].name, "((VkPhysicalGpu)gpuw->nextObject", 1)
             funcs.append('%s%s\n'
                      '{\n'
                      '    char str[1024];\n'
@@ -435,14 +435,14 @@ class GenericLayerSubcommand(Subcommand):
                      '        return VK_SUCCESS;\n'
                      '    }\n'
                          '}' % (qual, decl, proto.params[0].name, proto.name, self.layer_name, ret_val, c_call, proto.name, stmt, self.layer_name))
-        elif proto.params[0].ty != "VK_PHYSICAL_GPU":
+        elif proto.params[0].ty != "VkPhysicalGpu":
             funcs.append('%s%s\n'
                      '{\n'
                      '    %snextTable.%s;\n'
                      '%s'
                      '}' % (qual, decl, ret_val, proto.c_call(), stmt))
         else:
-            c_call = proto.c_call().replace("(" + proto.params[0].name, "((VK_PHYSICAL_GPU)gpuw->nextObject", 1)
+            c_call = proto.c_call().replace("(" + proto.params[0].name, "((VkPhysicalGpu)gpuw->nextObject", 1)
             funcs.append('%s%s\n'
                      '{\n'
                      '    char str[1024];'
@@ -586,10 +586,10 @@ class APIDumpSubcommand(Subcommand):
         func_body.append('')
         func_body.append('    ConfigureOutputStream(writeToFile, flushAfterWrite);')
         func_body.append('')
-        func_body.append('    vkGetProcAddrType fpNextGPA;')
+        func_body.append('    PFN_vkGetProcAddr fpNextGPA;')
         func_body.append('    fpNextGPA = pCurObj->pGPA;')
         func_body.append('    assert(fpNextGPA);')
-        func_body.append('    layer_initialize_dispatch_table(&nextTable, fpNextGPA, (VK_PHYSICAL_GPU) pCurObj->nextObject);')
+        func_body.append('    layer_initialize_dispatch_table(&nextTable, fpNextGPA, (VkPhysicalGpu) pCurObj->nextObject);')
         func_body.append('')
         func_body.append('    if (!printLockInitialized)')
         func_body.append('    {')
@@ -614,7 +614,7 @@ class APIDumpSubcommand(Subcommand):
         elif 'Create' in proto.name or 'Alloc' in proto.name or 'MapMemory' in proto.name:
             create_params = -1
         if proto.ret != "void":
-            ret_val = "VK_RESULT result = "
+            ret_val = "VkResult result = "
             stmt = "    return result;\n"
         f_open = 'loader_platform_thread_lock_mutex(&printLock);\n    '
         log_func = '    if (StreamControl::writeAddress == true) {'
@@ -653,8 +653,8 @@ class APIDumpSubcommand(Subcommand):
         log_func = log_func.strip(', ')
         log_func_no_addr = log_func_no_addr.strip(', ')
         if proto.ret != "void":
-            log_func += ') = " << string_VK_RESULT((VK_RESULT)result) << endl'
-            log_func_no_addr += ') = " << string_VK_RESULT((VK_RESULT)result) << endl'
+            log_func += ') = " << string_VkResult((VkResult)result) << endl'
+            log_func_no_addr += ') = " << string_VkResult((VkResult)result) << endl'
         else:
             log_func += ')\\n"'
             log_func_no_addr += ')\\n"'
@@ -697,7 +697,7 @@ class APIDumpSubcommand(Subcommand):
         if 'WsiX11AssociateConnection' == proto.name:
             funcs.append("#if defined(__linux__) || defined(XCB_NVIDIA)")
         if proto.name == "EnumerateLayers":
-            c_call = proto.c_call().replace("(" + proto.params[0].name, "((VK_PHYSICAL_GPU)gpuw->nextObject", 1)
+            c_call = proto.c_call().replace("(" + proto.params[0].name, "((VkPhysicalGpu)gpuw->nextObject", 1)
             funcs.append('%s%s\n'
                      '{\n'
                      '    using namespace StreamControl;\n'
@@ -718,11 +718,11 @@ class APIDumpSubcommand(Subcommand):
                      '    }\n'
                          '}' % (qual, decl, proto.params[0].name, self.layer_name, ret_val, c_call,f_open, log_func, f_close, stmt, self.layer_name))
         elif 'GetExtensionSupport' == proto.name:
-            c_call = proto.c_call().replace("(" + proto.params[0].name, "((VK_PHYSICAL_GPU)gpuw->nextObject", 1)
+            c_call = proto.c_call().replace("(" + proto.params[0].name, "((VkPhysicalGpu)gpuw->nextObject", 1)
             funcs.append('%s%s\n'
                          '{\n'
                          '    VK_BASE_LAYER_OBJECT* gpuw = (VK_BASE_LAYER_OBJECT *) %s;\n'
-                         '    VK_RESULT result;\n'
+                         '    VkResult result;\n'
                          '    /* This entrypoint is NOT going to init its own dispatch table since loader calls here early */\n'
                          '    if (!strncmp(pExtName, "%s", strlen("%s")))\n'
                          '    {\n'
@@ -737,7 +737,7 @@ class APIDumpSubcommand(Subcommand):
                          '    }\n'
                          '%s'
                          '}' % (qual, decl, proto.params[0].name, self.layer_name, self.layer_name, c_call, f_open, log_func, f_close, stmt))
-        elif proto.params[0].ty != "VK_PHYSICAL_GPU":
+        elif proto.params[0].ty != "VkPhysicalGpu":
             funcs.append('%s%s\n'
                      '{\n'
                      '    using namespace StreamControl;\n'
@@ -746,7 +746,7 @@ class APIDumpSubcommand(Subcommand):
                      '%s'
                      '}' % (qual, decl, ret_val, proto.c_call(), f_open, log_func, f_close, stmt))
         else:
-            c_call = proto.c_call().replace("(" + proto.params[0].name, "((VK_PHYSICAL_GPU)gpuw->nextObject", 1)
+            c_call = proto.c_call().replace("(" + proto.params[0].name, "((VkPhysicalGpu)gpuw->nextObject", 1)
             funcs.append('%s%s\n'
                      '{\n'
                      '    using namespace StreamControl;\n'
@@ -879,7 +879,7 @@ class ObjectTrackerSubcommand(Subcommand):
         header_txt.append('    if (0) ll_print_lists();')
         header_txt.append('}')
         header_txt.append('// Traverse global list and return type for given object')
-        header_txt.append('static VK_OBJECT_TYPE ll_get_obj_type(VK_OBJECT object) {')
+        header_txt.append('static VK_OBJECT_TYPE ll_get_obj_type(VkObject object) {')
         header_txt.append('    objNode *pTrav = pGlobalHead;')
         header_txt.append('    while (pTrav) {')
         header_txt.append('        if (pTrav->obj.pObj == object)')
@@ -1067,7 +1067,7 @@ class ObjectTrackerSubcommand(Subcommand):
         header_txt.append('}')
         header_txt.append('')
         header_txt.append('static void setGpuQueueInfoState(void *pData) {')
-        header_txt.append('    maxMemReferences = ((VK_PHYSICAL_GPU_QUEUE_PROPERTIES *)pData)->maxMemReferences;')
+        header_txt.append('    maxMemReferences = ((VkPhysicalGpu_QUEUE_PROPERTIES *)pData)->maxMemReferences;')
         header_txt.append('}')
         return "\n".join(header_txt)
 
@@ -1077,7 +1077,7 @@ class ObjectTrackerSubcommand(Subcommand):
             return None
         obj_type_mapping = {base_t : base_t.replace("VK_", "VK_OBJECT_TYPE_") for base_t in vulkan.object_type_list}
         # For the various "super-types" we have to use function to distinguish sub type
-        for obj_type in ["VK_BASE_OBJECT", "VK_OBJECT", "VK_DYNAMIC_STATE_OBJECT"]:
+        for obj_type in ["VK_BASE_OBJECT", "VK_OBJECT", "VK_DYNAMIC_STATE_OBJECT", "VkObject", "VkBaseObject"]:
             obj_type_mapping[obj_type] = "ll_get_obj_type(object)"
 
         decl = proto.c_func(prefix="vk", attr="VKAPI")
@@ -1157,12 +1157,12 @@ class ObjectTrackerSubcommand(Subcommand):
         ret_val = ''
         stmt = ''
         if proto.ret != "void":
-            ret_val = "VK_RESULT result = "
+            ret_val = "VkResult result = "
             stmt = "    return result;\n"
         if 'WsiX11AssociateConnection' == proto.name:
             funcs.append("#if defined(__linux__) || defined(XCB_NVIDIA)")
         if proto.name == "EnumerateLayers":
-            c_call = proto.c_call().replace("(" + proto.params[0].name, "((VK_PHYSICAL_GPU)gpuw->nextObject", 1)
+            c_call = proto.c_call().replace("(" + proto.params[0].name, "((VkPhysicalGpu)gpuw->nextObject", 1)
             funcs.append('%s%s\n'
                      '{\n'
                      '    if (gpu != NULL) {\n'
@@ -1183,11 +1183,11 @@ class ObjectTrackerSubcommand(Subcommand):
                      '    }\n'
                          '}' % (qual, decl, proto.params[0].name, using_line, self.layer_name, ret_val, c_call, create_line, destroy_line, stmt, self.layer_name))
         elif 'GetExtensionSupport' == proto.name:
-            c_call = proto.c_call().replace("(" + proto.params[0].name, "((VK_PHYSICAL_GPU)gpuw->nextObject", 1)
+            c_call = proto.c_call().replace("(" + proto.params[0].name, "((VkPhysicalGpu)gpuw->nextObject", 1)
             funcs.append('%s%s\n'
                      '{\n'
                      '    VK_BASE_LAYER_OBJECT* gpuw = (VK_BASE_LAYER_OBJECT *) %s;\n'
-                     '    VK_RESULT result;\n'
+                     '    VkResult result;\n'
                      '    /* This entrypoint is NOT going to init its own dispatch table since loader calls this early */\n'
                      '    if (!strncmp(pExtName, "%s", strlen("%s")) ||\n'
                      '        !strncmp(pExtName, "objTrackGetObjectCount", strlen("objTrackGetObjectCount")) ||\n'
@@ -1204,7 +1204,7 @@ class ObjectTrackerSubcommand(Subcommand):
                      '    }\n'
                      '%s'
                      '}' % (qual, decl, proto.params[0].name, self.layer_name, self.layer_name, using_line, c_call,  stmt))
-        elif proto.params[0].ty != "VK_PHYSICAL_GPU":
+        elif proto.params[0].ty != "VkPhysicalGpu":
             funcs.append('%s%s\n'
                      '{\n'
                      '%s'
@@ -1213,7 +1213,7 @@ class ObjectTrackerSubcommand(Subcommand):
                      '%s'
                      '}' % (qual, decl, using_line, ret_val, proto.c_call(), create_line, destroy_line, stmt))
         else:
-            c_call = proto.c_call().replace("(" + proto.params[0].name, "((VK_PHYSICAL_GPU)gpuw->nextObject", 1)
+            c_call = proto.c_call().replace("(" + proto.params[0].name, "((VkPhysicalGpu)gpuw->nextObject", 1)
             gpu_state = ''
             if 'GetGpuInfo' in proto.name:
                 gpu_state =  '    if (infoType == VK_INFO_TYPE_PHYSICAL_GPU_QUEUE_PROPERTIES) {\n'

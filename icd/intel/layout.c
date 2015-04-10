@@ -46,7 +46,7 @@ struct intel_layout_params {
    struct intel_dev *dev;
 
    const struct intel_gpu *gpu;
-   const VK_IMAGE_CREATE_INFO *info;
+   const VkImageCreateInfo *info;
    bool scanout;
 
    bool compressed;
@@ -60,7 +60,7 @@ layout_get_slice_size(const struct intel_layout *layout,
                       const struct intel_layout_params *params,
                       unsigned level, unsigned *width, unsigned *height)
 {
-   const VK_IMAGE_CREATE_INFO *info = params->info;
+   const VkImageCreateInfo *info = params->info;
    unsigned w, h;
 
    w = u_minify(layout->width0, level);
@@ -161,7 +161,7 @@ static unsigned
 layout_get_num_layers(const struct intel_layout *layout,
                       const struct intel_layout_params *params)
 {
-   const VK_IMAGE_CREATE_INFO *info = params->info;
+   const VkImageCreateInfo *info = params->info;
    unsigned num_layers = info->arraySize;
 
    /* samples of the same index are stored in a layer */
@@ -175,7 +175,7 @@ static void
 layout_init_layer_height(struct intel_layout *layout,
                          struct intel_layout_params *params)
 {
-   const VK_IMAGE_CREATE_INFO *info = params->info;
+   const VkImageCreateInfo *info = params->info;
    unsigned num_layers;
 
    if (layout->walk != INTEL_LAYOUT_WALK_LAYER)
@@ -233,7 +233,7 @@ static void
 layout_init_lods(struct intel_layout *layout,
                  struct intel_layout_params *params)
 {
-   const VK_IMAGE_CREATE_INFO *info = params->info;
+   const VkImageCreateInfo *info = params->info;
    unsigned cur_x, cur_y;
    unsigned lv;
 
@@ -306,7 +306,7 @@ static void
 layout_init_alignments(struct intel_layout *layout,
                        struct intel_layout_params *params)
 {
-   const VK_IMAGE_CREATE_INFO *info = params->info;
+   const VkImageCreateInfo *info = params->info;
 
    /*
     * From the Sandy Bridge PRM, volume 1 part 1, page 113:
@@ -464,8 +464,8 @@ static unsigned
 layout_get_valid_tilings(const struct intel_layout *layout,
                          const struct intel_layout_params *params)
 {
-   const VK_IMAGE_CREATE_INFO *info = params->info;
-   const VK_FORMAT format = layout->format;
+   const VkImageCreateInfo *info = params->info;
+   const VkFormat format = layout->format;
    unsigned valid_tilings = LAYOUT_TILING_ALL;
 
    /*
@@ -549,7 +549,7 @@ static void
 layout_init_tiling(struct intel_layout *layout,
                    struct intel_layout_params *params)
 {
-   const VK_IMAGE_CREATE_INFO *info = params->info;
+   const VkImageCreateInfo *info = params->info;
    unsigned preferred_tilings;
 
    layout->valid_tilings = layout_get_valid_tilings(layout, params);
@@ -593,7 +593,7 @@ static void
 layout_init_walk_gen7(struct intel_layout *layout,
                               struct intel_layout_params *params)
 {
-   const VK_IMAGE_CREATE_INFO *info = params->info;
+   const VkImageCreateInfo *info = params->info;
 
    /*
     * It is not explicitly states, but render targets are expected to be
@@ -674,8 +674,8 @@ static void
 layout_init_size_and_format(struct intel_layout *layout,
                             struct intel_layout_params *params)
 {
-   const VK_IMAGE_CREATE_INFO *info = params->info;
-   VK_FORMAT format = info->format;
+   const VkImageCreateInfo *info = params->info;
+   VkFormat format = info->format;
    bool require_separate_stencil = false;
 
    layout->width0 = info->extent.width;
@@ -725,7 +725,7 @@ static bool
 layout_want_mcs(struct intel_layout *layout,
                 struct intel_layout_params *params)
 {
-   const VK_IMAGE_CREATE_INFO *info = params->info;
+   const VkImageCreateInfo *info = params->info;
    bool want_mcs = false;
 
    /* MCS is for RT on GEN7+ */
@@ -784,7 +784,7 @@ static bool
 layout_want_hiz(const struct intel_layout *layout,
                 const struct intel_layout_params *params)
 {
-   const VK_IMAGE_CREATE_INFO *info = params->info;
+   const VkImageCreateInfo *info = params->info;
 
    if (intel_debug & INTEL_DEBUG_NOHIZ)
        return false;
@@ -819,7 +819,7 @@ layout_init_aux(struct intel_layout *layout,
 static void
 layout_align(struct intel_layout *layout, struct intel_layout_params *params)
 {
-   const VK_IMAGE_CREATE_INFO *info = params->info;
+   const VkImageCreateInfo *info = params->info;
    int align_w = 1, align_h = 1, pad_h = 0;
 
    /*
@@ -1000,7 +1000,7 @@ static void
 layout_calculate_hiz_size(struct intel_layout *layout,
                           struct intel_layout_params *params)
 {
-   const VK_IMAGE_CREATE_INFO *info = params->info;
+   const VkImageCreateInfo *info = params->info;
    const unsigned hz_align_j = 8;
    enum intel_layout_walk_type hz_walk;
    unsigned hz_width, hz_height, lv;
@@ -1164,7 +1164,7 @@ static void
 layout_calculate_mcs_size(struct intel_layout *layout,
                           struct intel_layout_params *params)
 {
-   const VK_IMAGE_CREATE_INFO *info = params->info;
+   const VkImageCreateInfo *info = params->info;
    int mcs_width, mcs_height, mcs_cpp;
    int downscale_x, downscale_y;
 
@@ -1292,7 +1292,7 @@ layout_calculate_mcs_size(struct intel_layout *layout,
  */
 void intel_layout_init(struct intel_layout *layout,
                        struct intel_dev *dev,
-                       const VK_IMAGE_CREATE_INFO *info,
+                       const VkImageCreateInfo *info,
                        bool scanout)
 {
    struct intel_layout_params params;

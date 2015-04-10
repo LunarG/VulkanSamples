@@ -33,7 +33,7 @@
 
 static void * VKAPI default_alloc(void *user_data, size_t size,
                                    size_t alignment,
-                                   VK_SYSTEM_ALLOC_TYPE allocType)
+                                   VkSystemAllocType allocType)
 {
     if (alignment <= 1) {
         return malloc(size);
@@ -61,10 +61,10 @@ static void VKAPI default_free(void *user_data, void *ptr)
     free(ptr);
 }
 
-struct icd_instance *icd_instance_create(const VK_APPLICATION_INFO *app_info,
-                                         const VK_ALLOC_CALLBACKS *alloc_cb)
+struct icd_instance *icd_instance_create(const VkApplicationInfo *app_info,
+                                         const VkAllocCallbacks *alloc_cb)
 {
-    static const VK_ALLOC_CALLBACKS default_alloc_cb = {
+    static const VkAllocCallbacks default_alloc_cb = {
         .pfnAlloc = default_alloc,
         .pfnFree = default_free,
     };
@@ -114,10 +114,10 @@ void icd_instance_destroy(struct icd_instance *instance)
     icd_instance_free(instance, instance);
 }
 
-VK_RESULT icd_instance_set_bool(struct icd_instance *instance,
+VkResult icd_instance_set_bool(struct icd_instance *instance,
                                  VK_DBG_GLOBAL_OPTION option, bool yes)
 {
-    VK_RESULT res = VK_SUCCESS;
+    VkResult res = VK_SUCCESS;
 
     switch (option) {
     case VK_DBG_OPTION_DEBUG_ECHO_ENABLE:
@@ -137,7 +137,7 @@ VK_RESULT icd_instance_set_bool(struct icd_instance *instance,
     return res;
 }
 
-VK_RESULT icd_instance_add_logger(struct icd_instance *instance,
+VkResult icd_instance_add_logger(struct icd_instance *instance,
                                    VK_DBG_MSG_CALLBACK_FUNCTION func,
                                    void *user_data)
 {
@@ -164,7 +164,7 @@ VK_RESULT icd_instance_add_logger(struct icd_instance *instance,
     return VK_SUCCESS;
 }
 
-VK_RESULT icd_instance_remove_logger(struct icd_instance *instance,
+VkResult icd_instance_remove_logger(struct icd_instance *instance,
                                       VK_DBG_MSG_CALLBACK_FUNCTION func)
 {
     struct icd_instance_logger *logger, *prev;
@@ -190,8 +190,8 @@ VK_RESULT icd_instance_remove_logger(struct icd_instance *instance,
 
 void icd_instance_log(const struct icd_instance *instance,
                       VK_DBG_MSG_TYPE msg_type,
-                      VK_VALIDATION_LEVEL validation_level,
-                      VK_BASE_OBJECT src_object,
+                      VkValidationLevel validation_level,
+                      VkBaseObject src_object,
                       size_t location, int32_t msg_code,
                       const char *msg)
 {

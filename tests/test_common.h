@@ -15,7 +15,7 @@
 
 #define ASSERT_VK_SUCCESS(err) ASSERT_EQ(VK_SUCCESS, err) << vk_result_string(err)
 
-static inline const char *vk_result_string(VK_RESULT err)
+static inline const char *vk_result_string(VkResult err)
 {
     switch (err) {
 #define STR(r) case r: return #r

@@ -101,66 +101,66 @@ typedef enum _VK_DBG_OBJECT_TYPE
 
 typedef void (VKAPI *VK_DBG_MSG_CALLBACK_FUNCTION)(
     VK_DBG_MSG_TYPE     msgType,
-    VK_VALIDATION_LEVEL validationLevel,
-    VK_BASE_OBJECT      srcObject,
+    VkValidationLevel validationLevel,
+    VkBaseObject      srcObject,
     size_t               location,
     int32_t              msgCode,
     const char*          pMsg,
     void*                pUserData);
 
 // Debug functions
-typedef VK_RESULT (VKAPI *vkDbgSetValidationLevelType)(VK_DEVICE device, VK_VALIDATION_LEVEL validationLevel);
-typedef VK_RESULT (VKAPI *vkDbgRegisterMsgCallbackType)(VK_INSTANCE instance, VK_DBG_MSG_CALLBACK_FUNCTION pfnMsgCallback, void* pUserData);
-typedef VK_RESULT (VKAPI *vkDbgUnregisterMsgCallbackType)(VK_INSTANCE instance, VK_DBG_MSG_CALLBACK_FUNCTION pfnMsgCallback);
-typedef VK_RESULT (VKAPI *vkDbgSetMessageFilterType)(VK_DEVICE device, int32_t msgCode, VK_DBG_MSG_FILTER filter);
-typedef VK_RESULT (VKAPI *vkDbgSetObjectTagType)(VK_BASE_OBJECT object, size_t tagSize, const void* pTag);
-typedef VK_RESULT (VKAPI *vkDbgSetGlobalOptionType)(VK_INSTANCE instance, VK_DBG_GLOBAL_OPTION dbgOption, size_t dataSize, const void* pData);
-typedef VK_RESULT (VKAPI *vkDbgSetDeviceOptionType)(VK_DEVICE device, VK_DBG_DEVICE_OPTION dbgOption, size_t dataSize, const void* pData);
-typedef void (VKAPI *vkCmdDbgMarkerBeginType)(VK_CMD_BUFFER cmdBuffer, const char* pMarker);
-typedef void (VKAPI *vkCmdDbgMarkerEndType)(VK_CMD_BUFFER cmdBuffer);
+typedef VkResult (VKAPI *PFN_vkDbgSetValidationLevel)(VkDevice device, VkValidationLevel validationLevel);
+typedef VkResult (VKAPI *PFN_vkDbgRegisterMsgCallback)(VkInstance instance, VK_DBG_MSG_CALLBACK_FUNCTION pfnMsgCallback, void* pUserData);
+typedef VkResult (VKAPI *PFN_vkDbgUnregisterMsgCallback)(VkInstance instance, VK_DBG_MSG_CALLBACK_FUNCTION pfnMsgCallback);
+typedef VkResult (VKAPI *PFN_vkDbgSetMessageFilter)(VkDevice device, int32_t msgCode, VK_DBG_MSG_FILTER filter);
+typedef VkResult (VKAPI *PFN_vkDbgSetObjectTag)(VkBaseObject object, size_t tagSize, const void* pTag);
+typedef VkResult (VKAPI *PFN_vkDbgSetGlobalOption)(VkInstance instance, VK_DBG_GLOBAL_OPTION dbgOption, size_t dataSize, const void* pData);
+typedef VkResult (VKAPI *PFN_vkDbgSetDeviceOption)(VkDevice device, VK_DBG_DEVICE_OPTION dbgOption, size_t dataSize, const void* pData);
+typedef void (VKAPI *PFN_vkCmdDbgMarkerBegin)(VkCmdBuffer cmdBuffer, const char* pMarker);
+typedef void (VKAPI *PFN_vkCmdDbgMarkerEnd)(VkCmdBuffer cmdBuffer);
 
 #ifdef VK_PROTOTYPES
-VK_RESULT VKAPI vkDbgSetValidationLevel(
-    VK_DEVICE           device,
-    VK_VALIDATION_LEVEL validationLevel);
+VkResult VKAPI vkDbgSetValidationLevel(
+    VkDevice           device,
+    VkValidationLevel validationLevel);
 
-VK_RESULT VKAPI vkDbgRegisterMsgCallback(
-    VK_INSTANCE                  instance,
+VkResult VKAPI vkDbgRegisterMsgCallback(
+    VkInstance                  instance,
     VK_DBG_MSG_CALLBACK_FUNCTION pfnMsgCallback,
     void*                         pUserData);
 
-VK_RESULT VKAPI vkDbgUnregisterMsgCallback(
-    VK_INSTANCE                  instance,
+VkResult VKAPI vkDbgUnregisterMsgCallback(
+    VkInstance                  instance,
     VK_DBG_MSG_CALLBACK_FUNCTION pfnMsgCallback);
 
-VK_RESULT VKAPI vkDbgSetMessageFilter(
-    VK_DEVICE         device,
+VkResult VKAPI vkDbgSetMessageFilter(
+    VkDevice         device,
     int32_t            msgCode,
     VK_DBG_MSG_FILTER filter);
 
-VK_RESULT VKAPI vkDbgSetObjectTag(
-    VK_BASE_OBJECT object,
+VkResult VKAPI vkDbgSetObjectTag(
+    VkBaseObject object,
     size_t          tagSize,
     const void*     pTag);
 
-VK_RESULT VKAPI vkDbgSetGlobalOption(
-    VK_INSTANCE          instance,
+VkResult VKAPI vkDbgSetGlobalOption(
+    VkInstance          instance,
     VK_DBG_GLOBAL_OPTION dbgOption,
     size_t                dataSize,
     const void*           pData);
 
-VK_RESULT VKAPI vkDbgSetDeviceOption(
-    VK_DEVICE            device,
+VkResult VKAPI vkDbgSetDeviceOption(
+    VkDevice            device,
     VK_DBG_DEVICE_OPTION dbgOption,
     size_t                dataSize,
     const void*           pData);
 
 void VKAPI vkCmdDbgMarkerBegin(
-    VK_CMD_BUFFER  cmdBuffer,
+    VkCmdBuffer  cmdBuffer,
     const char*     pMarker);
 
 void VKAPI vkCmdDbgMarkerEnd(
-    VK_CMD_BUFFER  cmdBuffer);
+    VkCmdBuffer  cmdBuffer);
 
 #endif // VK_PROTOTYPES
 

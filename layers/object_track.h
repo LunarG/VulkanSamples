@@ -174,8 +174,8 @@ typedef struct _OBJTRACK_NODE {
 
 // prototype for extension functions
 uint64_t objTrackGetObjectCount(VK_OBJECT_TYPE type);
-VK_RESULT objTrackGetObjects(VK_OBJECT_TYPE type, uint64_t objCount, OBJTRACK_NODE* pObjNodeArray);
+VkResult objTrackGetObjects(VK_OBJECT_TYPE type, uint64_t objCount, OBJTRACK_NODE* pObjNodeArray);
 
 // Func ptr typedefs
 typedef uint64_t (*OBJ_TRACK_GET_OBJECT_COUNT)(VK_OBJECT_TYPE);
-typedef VK_RESULT (*OBJ_TRACK_GET_OBJECTS)(VK_OBJECT_TYPE, uint64_t, OBJTRACK_NODE*);
+typedef VkResult (*OBJ_TRACK_GET_OBJECTS)(VK_OBJECT_TYPE, uint64_t, OBJTRACK_NODE*);

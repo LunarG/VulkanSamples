@@ -45,24 +45,24 @@ struct app_gpu;
 struct app_dev {
     struct app_gpu *gpu; /* point back to the GPU */
 
-    VK_DEVICE obj;
+    VkDevice obj;
 
 
-    VK_FORMAT_PROPERTIES format_props[VK_NUM_FMT];
+    VkFormatProperties format_props[VK_NUM_FMT];
 };
 
 struct app_gpu {
     uint32_t id;
-    VK_PHYSICAL_GPU obj;
+    VkPhysicalGpu obj;
 
-    VK_PHYSICAL_GPU_PROPERTIES props;
-    VK_PHYSICAL_GPU_PERFORMANCE perf;
+    VkPhysicalGpuProperties props;
+    VkPhysicalGpuPerformance perf;
 
     uint32_t queue_count;
-    VK_PHYSICAL_GPU_QUEUE_PROPERTIES *queue_props;
+    VkPhysicalGpuQueueProperties *queue_props;
     VkDeviceQueueCreateInfo *queue_reqs;
 
-    VK_PHYSICAL_GPU_MEMORY_PROPERTIES memory_props;
+    VkPhysicalGpuMemoryProperties memory_props;
 
     uint32_t extension_count;
     char **extensions;
@@ -70,7 +70,7 @@ struct app_gpu {
     struct app_dev dev;
 };
 
-static const char *vk_result_string(VK_RESULT err)
+static const char *vk_result_string(VkResult err)
 {
     switch (err) {
 #define STR(r) case r: return #r
@@ -119,7 +119,7 @@ static const char *vk_result_string(VK_RESULT err)
     }
 }
 
-static const char *vk_gpu_type_string(VK_PHYSICAL_GPU_TYPE type)
+static const char *vk_gpu_type_string(VkPhysicalGpuType type)
 {
     switch (type) {
 #define STR(r) case VK_GPU_TYPE_ ##r: return #r
@@ -132,7 +132,7 @@ static const char *vk_gpu_type_string(VK_PHYSICAL_GPU_TYPE type)
     }
 }
 
-static const char *vk_format_string(VK_FORMAT fmt)
+static const char *vk_format_string(VkFormat fmt)
 {
     switch (fmt) {
 #define STR(r) case VK_FMT_ ##r: return #r
@@ -310,11 +310,11 @@ static const char *vk_format_string(VK_FORMAT fmt)
 
 static void app_dev_init_formats(struct app_dev *dev)
 {
-    VK_FORMAT f;
+    VkFormat f;
 
     for (f = 0; f < VK_NUM_FMT; f++) {
-        const VK_FORMAT fmt = f;
-        VK_RESULT err;
+        const VkFormat fmt = f;
+        VkResult err;
         size_t size = sizeof(dev->format_props[f]);
 
         err = vkGetFormatInfo(dev->obj, fmt,
@@ -342,7 +342,7 @@ static void app_dev_init(struct app_dev *dev, struct app_gpu *gpu)
         .maxValidationLevel = VK_VALIDATION_LEVEL_END_RANGE,
         .flags = VK_DEVICE_CREATE_VALIDATION_BIT,
     };
-    VK_RESULT err;
+    VkResult err;
 
     /* request all queues */
     info.queueRecordCount = gpu->queue_count;
@@ -365,7 +365,7 @@ static void app_dev_destroy(struct app_dev *dev)
 
 static void app_gpu_init_extensions(struct app_gpu *gpu)
 {
-    VK_RESULT err;
+    VkResult err;
     uint32_t i;
 
     static char *known_extensions[] = {
@@ -391,10 +391,10 @@ static void app_gpu_init_extensions(struct app_gpu *gpu)
     }
 }
 
-static void app_gpu_init(struct app_gpu *gpu, uint32_t id, VK_PHYSICAL_GPU obj)
+static void app_gpu_init(struct app_gpu *gpu, uint32_t id, VkPhysicalGpu obj)
 {
     size_t size;
-    VK_RESULT err;
+    VkResult err;
     uint32_t i;
 
     memset(gpu, 0, sizeof(*gpu));
@@ -464,12 +464,12 @@ static void app_gpu_destroy(struct app_gpu *gpu)
     free(gpu->queue_props);
 }
 
-static void app_dev_dump_format_props(const struct app_dev *dev, VK_FORMAT fmt)
+static void app_dev_dump_format_props(const struct app_dev *dev, VkFormat fmt)
 {
-    const VK_FORMAT_PROPERTIES *props = &dev->format_props[fmt];
+    const VkFormatProperties *props = &dev->format_props[fmt];
     struct {
         const char *name;
-        VK_FLAGS flags;
+        VkFlags flags;
     } tilings[2];
     uint32_t i;
 
@@ -507,7 +507,7 @@ static void app_dev_dump_format_props(const struct app_dev *dev, VK_FORMAT fmt)
 static void
 app_dev_dump(const struct app_dev *dev)
 {
-    VK_FORMAT fmt;
+    VkFormat fmt;
 
     for (fmt = 0; fmt < VK_NUM_FMT; fmt++) {
         app_dev_dump_format_props(dev, fmt);
@@ -515,9 +515,9 @@ app_dev_dump(const struct app_dev *dev)
 }
 
 static void app_gpu_dump_multi_compat(const struct app_gpu *gpu, const struct app_gpu *other,
-        const VK_GPU_COMPATIBILITY_INFO *info)
+        const VkGpuCompatibilityInfo *info)
 {
-    printf("VK_GPU_COMPATIBILITY_INFO[GPU%d]\n", other->id);
+    printf("VkGpuCompatibilityInfo[GPU%d]\n", other->id);
 
 #define TEST(info, b) printf(#b " = %u\n", (bool) (info->compatibilityFlags & VK_GPU_COMPAT_ ##b## _BIT))
     TEST(info, ASIC_FEATURES);
@@ -532,12 +532,12 @@ static void app_gpu_dump_multi_compat(const struct app_gpu *gpu, const struct ap
 
 static void app_gpu_multi_compat(struct app_gpu *gpus, uint32_t gpu_count)
 {
-        VK_RESULT err;
+        VkResult err;
         uint32_t i, j;
 
         for (i = 0; i < gpu_count; i++) {
                 for (j = 0; j < gpu_count; j++) {
-                        VK_GPU_COMPATIBILITY_INFO info;
+                        VkGpuCompatibilityInfo info;
 
                         if (i == j)
                                 continue;
@@ -554,9 +554,9 @@ static void app_gpu_multi_compat(struct app_gpu *gpus, uint32_t gpu_count)
 
 static void app_gpu_dump_props(const struct app_gpu *gpu)
 {
-    const VK_PHYSICAL_GPU_PROPERTIES *props = &gpu->props;
+    const VkPhysicalGpuProperties *props = &gpu->props;
 
-    printf("VK_PHYSICAL_GPU_PROPERTIES\n");
+    printf("VkPhysicalGpuProperties\n");
     printf("\tapiVersion = %u\n",                   props->apiVersion);
     printf("\tdriverVersion = %u\n",                props->driverVersion);
     printf("\tvendorId = 0x%04x\n",                 props->vendorId);
@@ -572,9 +572,9 @@ static void app_gpu_dump_props(const struct app_gpu *gpu)
 
 static void app_gpu_dump_perf(const struct app_gpu *gpu)
 {
-    const VK_PHYSICAL_GPU_PERFORMANCE *perf = &gpu->perf;
+    const VkPhysicalGpuPerformance *perf = &gpu->perf;
 
-    printf("VK_PHYSICAL_GPU_PERFORMANCE\n");
+    printf("VkPhysicalGpuPerformance\n");
     printf("\tmaxGpuClock = %f\n",      perf->maxGpuClock);
     printf("\taluPerClock = %f\n",      perf->aluPerClock);
     printf("\ttexPerClock = %f\n",      perf->texPerClock);
@@ -598,9 +598,9 @@ static void app_gpu_dump_extensions(const struct app_gpu *gpu)
 
 static void app_gpu_dump_queue_props(const struct app_gpu *gpu, uint32_t id)
 {
-    const VK_PHYSICAL_GPU_QUEUE_PROPERTIES *props = &gpu->queue_props[id];
+    const VkPhysicalGpuQueueProperties *props = &gpu->queue_props[id];
 
-    printf("VK_PHYSICAL_GPU_QUEUE_PROPERTIES[%d]\n", id);
+    printf("VkPhysicalGpuQueueProperties[%d]\n", id);
     printf("\tqueueFlags = %c%c%c%c\n",
             (props->queueFlags & VK_QUEUE_GRAPHICS_BIT) ? 'G' : '.',
             (props->queueFlags & VK_QUEUE_COMPUTE_BIT)  ? 'C' : '.',
@@ -614,9 +614,9 @@ static void app_gpu_dump_queue_props(const struct app_gpu *gpu, uint32_t id)
 
 static void app_gpu_dump_memory_props(const struct app_gpu *gpu)
 {
-    const VK_PHYSICAL_GPU_MEMORY_PROPERTIES *props = &gpu->memory_props;
+    const VkPhysicalGpuMemoryProperties *props = &gpu->memory_props;
 
-    printf("VK_PHYSICAL_GPU_MEMORY_PROPERTIES\n");
+    printf("VkPhysicalGpuMemoryProperties\n");
     printf("\tsupportsMigration = %u\n",                props->supportsMigration);
     printf("\tsupportsPinning = %u\n",                  props->supportsPinning);
 }
@@ -643,7 +643,7 @@ static void app_gpu_dump(const struct app_gpu *gpu)
 
 int main(int argc, char **argv)
 {
-    static const VK_APPLICATION_INFO app_info = {
+    static const VkApplicationInfo app_info = {
         .sType = VK_STRUCTURE_TYPE_APPLICATION_INFO,
         .pNext = NULL,
         .pAppName = "vkinfo",
@@ -661,10 +661,10 @@ int main(int argc, char **argv)
         .ppEnabledExtensionNames = NULL,
     };
     struct app_gpu gpus[MAX_GPUS];
-    VK_PHYSICAL_GPU objs[MAX_GPUS];
-    VK_INSTANCE inst;
+    VkPhysicalGpu objs[MAX_GPUS];
+    VkInstance inst;
     uint32_t gpu_count, i;
-    VK_RESULT err;
+    VkResult err;
 
     err = vkCreateInstance(&inst_info, &inst);
     if (err == VK_ERROR_INCOMPATIBLE_DRIVER) {

@@ -34,11 +34,11 @@
 struct intel_buf {
     struct intel_obj obj;
 
-    VK_GPU_SIZE size;
-    VK_FLAGS usage;
+    VkGpuSize size;
+    VkFlags usage;
 };
 
-static inline struct intel_buf *intel_buf(VK_BUFFER buf)
+static inline struct intel_buf *intel_buf(VkBuffer buf)
 {
     return (struct intel_buf *) buf;
 }
@@ -53,7 +53,7 @@ static inline struct intel_buf *intel_buf_from_obj(struct intel_obj *obj)
     return intel_buf_from_base(&obj->base);
 }
 
-VK_RESULT intel_buf_create(struct intel_dev *dev,
+VkResult intel_buf_create(struct intel_dev *dev,
                             const VkBufferCreateInfo *info,
                             struct intel_buf **buf_ret);
 

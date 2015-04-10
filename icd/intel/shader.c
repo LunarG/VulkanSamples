@@ -39,8 +39,8 @@ static void shader_destroy(struct intel_obj *obj)
     intel_base_destroy(&sh->obj.base);
 }
 
-static VK_RESULT shader_create(struct intel_dev *dev,
-                                const VK_SHADER_CREATE_INFO *info,
+static VkResult shader_create(struct intel_dev *dev,
+                                const VkShaderCreateInfo *info,
                                 struct intel_shader **sh_ret)
 {
     const struct icd_spv_header *spv =
@@ -70,10 +70,10 @@ static VK_RESULT shader_create(struct intel_dev *dev,
     return VK_SUCCESS;
 }
 
-ICD_EXPORT VK_RESULT VKAPI vkCreateShader(
-        VK_DEVICE                                  device,
-        const VK_SHADER_CREATE_INFO*               pCreateInfo,
-        VK_SHADER*                                 pShader)
+ICD_EXPORT VkResult VKAPI vkCreateShader(
+        VkDevice                                  device,
+        const VkShaderCreateInfo*               pCreateInfo,
+        VkShader*                                 pShader)
 {
     struct intel_dev *dev = intel_dev(device);
 

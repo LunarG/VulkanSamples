@@ -66,15 +66,15 @@ class CmdBuffer;
 
 class PhysicalGpu {
 public:
-    explicit PhysicalGpu(VK_PHYSICAL_GPU gpu) : gpu_(gpu) {}
+    explicit PhysicalGpu(VkPhysicalGpu gpu) : gpu_(gpu) {}
 
-    const VK_PHYSICAL_GPU &obj() const { return gpu_; }
+    const VkPhysicalGpu &obj() const { return gpu_; }
 
     // vkGetGpuInfo()
-    VK_PHYSICAL_GPU_PROPERTIES properties() const;
-    VK_PHYSICAL_GPU_PERFORMANCE performance() const;
-    VK_PHYSICAL_GPU_MEMORY_PROPERTIES memory_properties() const;
-    std::vector<VK_PHYSICAL_GPU_QUEUE_PROPERTIES> queue_properties() const;
+    VkPhysicalGpuProperties properties() const;
+    VkPhysicalGpuPerformance performance() const;
+    VkPhysicalGpuMemoryProperties memory_properties() const;
+    std::vector<VkPhysicalGpuQueueProperties> queue_properties() const;
 
     // vkGetProcAddr()
     void *get_proc(const char *name) const { return vkGetProcAddr(gpu_, name); }
@@ -87,30 +87,30 @@ public:
     std::vector<const char *> layers(std::vector<char> &buf) const;
 
     // vkGetMultiGpuCompatibility()
-    VK_GPU_COMPATIBILITY_INFO compatibility(const PhysicalGpu &other) const;
+    VkGpuCompatibilityInfo compatibility(const PhysicalGpu &other) const;
 
 private:
-    VK_PHYSICAL_GPU gpu_;
+    VkPhysicalGpu gpu_;
 };
 
 class BaseObject {
 public:
-    const VK_BASE_OBJECT &obj() const { return obj_; }
+    const VkBaseObject &obj() const { return obj_; }
     bool initialized() const { return (obj_ != VK_NULL_HANDLE); }
 
     // vkGetObjectInfo()
     uint32_t memory_allocation_count() const;
-    std::vector<VK_MEMORY_REQUIREMENTS> memory_requirements() const;
+    std::vector<VkMemoryRequirements> memory_requirements() const;
 
 protected:
     explicit BaseObject() : obj_(VK_NULL_HANDLE), own_obj_(false) {}
-    explicit BaseObject(VK_BASE_OBJECT obj) : obj_(VK_NULL_HANDLE), own_obj_(false) { init(obj); }
+    explicit BaseObject(VkBaseObject obj) : obj_(VK_NULL_HANDLE), own_obj_(false) { init(obj); }
 
-    void init(VK_BASE_OBJECT obj, bool own);
-    void init(VK_BASE_OBJECT obj) { init(obj, true); }
+    void init(VkBaseObject obj, bool own);
+    void init(VkBaseObject obj) { init(obj, true); }
 
-    void reinit(VK_BASE_OBJECT obj, bool own);
-    void reinit(VK_BASE_OBJECT obj) { reinit(obj, true); }
+    void reinit(VkBaseObject obj, bool own);
+    void reinit(VkBaseObject obj) { reinit(obj, true); }
 
     bool own() const { return own_obj_; }
 
@@ -119,30 +119,30 @@ private:
     BaseObject(const BaseObject &);
     BaseObject &operator=(const BaseObject &);
 
-    VK_BASE_OBJECT obj_;
+    VkBaseObject obj_;
     bool own_obj_;
 };
 
 class Object : public BaseObject {
 public:
-    const VK_OBJECT &obj() const { return reinterpret_cast<const VK_OBJECT &>(BaseObject::obj()); }
+    const VkObject &obj() const { return reinterpret_cast<const VkObject &>(BaseObject::obj()); }
 
     // vkBindObjectMemory()
-    void bind_memory(uint32_t alloc_idx, const GpuMemory &mem, VK_GPU_SIZE mem_offset);
+    void bind_memory(uint32_t alloc_idx, const GpuMemory &mem, VkGpuSize mem_offset);
     void unbind_memory(uint32_t alloc_idx);
     void unbind_memory();
 
     // vkBindObjectMemoryRange()
-    void bind_memory(uint32_t alloc_idx, VK_GPU_SIZE offset, VK_GPU_SIZE size,
-                     const GpuMemory &mem, VK_GPU_SIZE mem_offset);
+    void bind_memory(uint32_t alloc_idx, VkGpuSize offset, VkGpuSize size,
+                     const GpuMemory &mem, VkGpuSize mem_offset);
 
     // Unless an object is initialized with init_no_mem(), memories are
     // automatically allocated and bound.  These methods can be used to get
     // the memories (for vkQueueAddMemReference), or to map/unmap the primary memory.
-    std::vector<VK_GPU_MEMORY> memories() const;
+    std::vector<VkGpuMemory> memories() const;
 
-    const void *map(VK_FLAGS flags) const;
-          void *map(VK_FLAGS flags);
+    const void *map(VkFlags flags) const;
+          void *map(VkFlags flags);
     const void *map() const { return map(0); }
           void *map()       { return map(0); }
 
@@ -150,19 +150,19 @@ public:
 
 protected:
     explicit Object() : mem_alloc_count_(0), internal_mems_(NULL), primary_mem_(NULL), bound(false) {}
-    explicit Object(VK_OBJECT obj) : mem_alloc_count_(0), internal_mems_(NULL), primary_mem_(NULL) { init(obj); }
+    explicit Object(VkObject obj) : mem_alloc_count_(0), internal_mems_(NULL), primary_mem_(NULL) { init(obj); }
     ~Object() { cleanup(); }
 
-    void init(VK_OBJECT obj, bool own);
-    void init(VK_OBJECT obj) { init(obj, true); }
+    void init(VkObject obj, bool own);
+    void init(VkObject obj) { init(obj, true); }
 
-    void reinit(VK_OBJECT obj, bool own);
-    void reinit(VK_OBJECT obj) { init(obj, true); }
+    void reinit(VkObject obj, bool own);
+    void reinit(VkObject obj) { init(obj, true); }
 
     // allocate and bind internal memories
     void alloc_memory(const Device &dev, bool for_linear_img, bool for_img);
     void alloc_memory(const Device &dev) { alloc_memory(dev, false, false); }
-    void alloc_memory(const std::vector<VK_GPU_MEMORY> &mems);
+    void alloc_memory(const std::vector<VkGpuMemory> &mems);
 
 private:
     void cleanup();
@@ -175,11 +175,11 @@ private:
 
 class DynamicStateObject : public Object {
 public:
-    const VK_DYNAMIC_STATE_OBJECT &obj() const { return reinterpret_cast<const VK_DYNAMIC_STATE_OBJECT &>(Object::obj()); }
+    const VkDynamicStateObject &obj() const { return reinterpret_cast<const VkDynamicStateObject &>(Object::obj()); }
 
 protected:
     explicit DynamicStateObject() {}
-    explicit DynamicStateObject(VK_DYNAMIC_STATE_OBJECT obj) : Object(obj) {}
+    explicit DynamicStateObject(VkDynamicStateObject obj) : Object(obj) {}
 };
 
 template<typename T, class C>
@@ -195,9 +195,9 @@ protected:
     explicit DerivedObject(T obj) : C(obj) {}
 };
 
-class Device : public DerivedObject<VK_DEVICE, BaseObject> {
+class Device : public DerivedObject<VkDevice, BaseObject> {
 public:
-    explicit Device(VK_PHYSICAL_GPU gpu) : gpu_(gpu) {}
+    explicit Device(VkPhysicalGpu gpu) : gpu_(gpu) {}
     ~Device();
 
     // vkCreateDevice()
@@ -214,24 +214,24 @@ public:
     uint32_t graphics_queue_node_index_;
 
     struct Format {
-        VK_FORMAT format;
-        VK_IMAGE_TILING tiling;
-        VK_FLAGS features;
+        VkFormat format;
+        VkImageTiling tiling;
+        VkFlags features;
     };
     // vkGetFormatInfo()
-    VK_FORMAT_PROPERTIES format_properties(VK_FORMAT format);
+    VkFormatProperties format_properties(VkFormat format);
     const std::vector<Format> &formats() const { return formats_; }
 
     // vkDeviceWaitIdle()
     void wait();
 
     // vkWaitForFences()
-    VK_RESULT wait(const std::vector<const Fence *> &fences, bool wait_all, uint64_t timeout);
-    VK_RESULT wait(const Fence &fence) { return wait(std::vector<const Fence *>(1, &fence), true, (uint64_t) -1); }
+    VkResult wait(const std::vector<const Fence *> &fences, bool wait_all, uint64_t timeout);
+    VkResult wait(const Fence &fence) { return wait(std::vector<const Fence *>(1, &fence), true, (uint64_t) -1); }
 
     // vkBeginDescriptorPoolUpdate()
     // vkEndDescriptorPoolUpdate()
-    void begin_descriptor_pool_update(VK_DESCRIPTOR_UPDATE_MODE mode);
+    void begin_descriptor_pool_update(VkDescriptorUpdateMode mode);
     void end_descriptor_pool_update(CmdBuffer &cmd);
 
 private:
@@ -251,9 +251,9 @@ private:
     std::vector<Format> formats_;
 };
 
-class Queue : public DerivedObject<VK_QUEUE, BaseObject> {
+class Queue : public DerivedObject<VkQueue, BaseObject> {
 public:
-    explicit Queue(VK_QUEUE queue) : DerivedObject(queue) {}
+    explicit Queue(VkQueue queue) : DerivedObject(queue) {}
 
     // vkQueueSubmit()
     void submit(const std::vector<const CmdBuffer *> &cmds, Fence &fence);
@@ -262,8 +262,8 @@ public:
 
     // vkQueueAddMemReference()
     // vkQueueRemoveMemReference()
-    void add_mem_references(const std::vector<VK_GPU_MEMORY> &mem_refs);
-    void remove_mem_references(const std::vector<VK_GPU_MEMORY> &mem_refs);
+    void add_mem_references(const std::vector<VkGpuMemory> &mem_refs);
+    void remove_mem_references(const std::vector<VkGpuMemory> &mem_refs);
 
     // vkQueueWaitIdle()
     void wait();
@@ -274,7 +274,7 @@ public:
     void wait_semaphore(Semaphore &sem);
 };
 
-class GpuMemory : public DerivedObject<VK_GPU_MEMORY, BaseObject> {
+class GpuMemory : public DerivedObject<VkGpuMemory, BaseObject> {
 public:
     ~GpuMemory();
 
@@ -283,93 +283,93 @@ public:
     // vkPinSystemMemory()
     void init(const Device &dev, size_t size, const void *data);
     // vkOpenSharedMemory()
-    void init(const Device &dev, const VK_MEMORY_OPEN_INFO &info);
+    void init(const Device &dev, const VkMemoryOpenInfo &info);
     // vkOpenPeerMemory()
-    void init(const Device &dev, const VK_PEER_MEMORY_OPEN_INFO &info);
+    void init(const Device &dev, const VkPeerMemoryOpenInfo &info);
 
-    void init(VK_GPU_MEMORY mem) { BaseObject::init(mem, false); }
+    void init(VkGpuMemory mem) { BaseObject::init(mem, false); }
 
     // vkSetMemoryPriority()
-    void set_priority(VK_MEMORY_PRIORITY priority);
+    void set_priority(VkMemoryPriority priority);
 
     // vkMapMemory()
-    const void *map(VK_FLAGS flags) const;
-          void *map(VK_FLAGS flags);
+    const void *map(VkFlags flags) const;
+          void *map(VkFlags flags);
     const void *map() const { return map(0); }
           void *map()       { return map(0); }
 
     // vkUnmapMemory()
     void unmap() const;
 
-    static VkMemoryAllocInfo alloc_info(const VK_MEMORY_REQUIREMENTS &reqs,
+    static VkMemoryAllocInfo alloc_info(const VkMemoryRequirements &reqs,
                   const VkMemoryAllocInfo *next_info);
 };
 
-class Fence : public DerivedObject<VK_FENCE, Object> {
+class Fence : public DerivedObject<VkFence, Object> {
 public:
     // vkCreateFence()
-    void init(const Device &dev, const VK_FENCE_CREATE_INFO &info);
+    void init(const Device &dev, const VkFenceCreateInfo &info);
 
     // vkGetFenceStatus()
-    VK_RESULT status() const { return vkGetFenceStatus(obj()); }
+    VkResult status() const { return vkGetFenceStatus(obj()); }
 
-    static VK_FENCE_CREATE_INFO create_info(VK_FENCE_CREATE_FLAGS flags);
-    static VK_FENCE_CREATE_INFO create_info();
+    static VkFenceCreateInfo create_info(VkFenceCreateFlags flags);
+    static VkFenceCreateInfo create_info();
 };
 
-class Semaphore : public DerivedObject<VK_SEMAPHORE, Object> {
+class Semaphore : public DerivedObject<VkSemaphore, Object> {
 public:
     // vkCreateSemaphore()
-    void init(const Device &dev, const VK_SEMAPHORE_CREATE_INFO &info);
+    void init(const Device &dev, const VkSemaphoreCreateInfo &info);
     // vkOpenSharedSemaphore()
-    void init(const Device &dev, const VK_SEMAPHORE_OPEN_INFO &info);
+    void init(const Device &dev, const VkSemaphoreOpenInfo &info);
 
-    static VK_SEMAPHORE_CREATE_INFO create_info(uint32_t init_count, VK_FLAGS flags);
+    static VkSemaphoreCreateInfo create_info(uint32_t init_count, VkFlags flags);
 };
 
-class Event : public DerivedObject<VK_EVENT, Object> {
+class Event : public DerivedObject<VkEvent, Object> {
 public:
     // vkCreateEvent()
-    void init(const Device &dev, const VK_EVENT_CREATE_INFO &info);
+    void init(const Device &dev, const VkEventCreateInfo &info);
 
     // vkGetEventStatus()
     // vkSetEvent()
     // vkResetEvent()
-    VK_RESULT status() const { return vkGetEventStatus(obj()); }
+    VkResult status() const { return vkGetEventStatus(obj()); }
     void set();
     void reset();
 
-    static VK_EVENT_CREATE_INFO create_info(VK_FLAGS flags);
+    static VkEventCreateInfo create_info(VkFlags flags);
 };
 
-class QueryPool : public DerivedObject<VK_QUERY_POOL, Object> {
+class QueryPool : public DerivedObject<VkQueryPool, Object> {
 public:
     // vkCreateQueryPool()
-    void init(const Device &dev, const VK_QUERY_POOL_CREATE_INFO &info);
+    void init(const Device &dev, const VkQueryPoolCreateInfo &info);
 
     // vkGetQueryPoolResults()
-    VK_RESULT results(uint32_t start, uint32_t count, size_t size, void *data);
+    VkResult results(uint32_t start, uint32_t count, size_t size, void *data);
 
-    static VK_QUERY_POOL_CREATE_INFO create_info(VK_QUERY_TYPE type, uint32_t slot_count);
+    static VkQueryPoolCreateInfo create_info(VkQueryType type, uint32_t slot_count);
 };
 
-class Buffer : public DerivedObject<VK_BUFFER, Object> {
+class Buffer : public DerivedObject<VkBuffer, Object> {
 public:
     explicit Buffer() {}
     explicit Buffer(const Device &dev, const VkBufferCreateInfo &info) { init(dev, info); }
-    explicit Buffer(const Device &dev, VK_GPU_SIZE size) { init(dev, size); }
+    explicit Buffer(const Device &dev, VkGpuSize size) { init(dev, size); }
 
     // vkCreateBuffer()
     void init(const Device &dev, const VkBufferCreateInfo &info);
-    void init(const Device &dev, VK_GPU_SIZE size) { init(dev, create_info(size, 0)); }
+    void init(const Device &dev, VkGpuSize size) { init(dev, create_info(size, 0)); }
     void init_no_mem(const Device &dev, const VkBufferCreateInfo &info);
 
-    static VkBufferCreateInfo create_info(VK_GPU_SIZE size, VK_FLAGS usage);
+    static VkBufferCreateInfo create_info(VkGpuSize size, VkFlags usage);
 
-    VK_BUFFER_MEMORY_BARRIER buffer_memory_barrier(VK_FLAGS output_mask, VK_FLAGS input_mask,
-                                                 VK_GPU_SIZE offset, VK_GPU_SIZE size) const
+    VkBufferMemoryBarrier buffer_memory_barrier(VkFlags output_mask, VkFlags input_mask,
+                                                 VkGpuSize offset, VkGpuSize size) const
     {
-        VK_BUFFER_MEMORY_BARRIER barrier = {};
+        VkBufferMemoryBarrier barrier = {};
         barrier.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
         barrier.buffer = obj();
         barrier.outputMask = output_mask;
@@ -382,44 +382,44 @@ private:
     VkBufferCreateInfo create_info_;
 };
 
-class BufferView : public DerivedObject<VK_BUFFER_VIEW, Object> {
+class BufferView : public DerivedObject<VkBufferView, Object> {
 public:
     // vkCreateBufferView()
     void init(const Device &dev, const VkBufferViewCreateInfo &info);
 };
 
-class Image : public DerivedObject<VK_IMAGE, Object> {
+class Image : public DerivedObject<VkImage, Object> {
 public:
     explicit Image() : format_features_(0) {}
-    explicit Image(const Device &dev, const VK_IMAGE_CREATE_INFO &info) : format_features_(0) { init(dev, info); }
+    explicit Image(const Device &dev, const VkImageCreateInfo &info) : format_features_(0) { init(dev, info); }
 
     // vkCreateImage()
-    void init(const Device &dev, const VK_IMAGE_CREATE_INFO &info);
-    void init_no_mem(const Device &dev, const VK_IMAGE_CREATE_INFO &info);
+    void init(const Device &dev, const VkImageCreateInfo &info);
+    void init_no_mem(const Device &dev, const VkImageCreateInfo &info);
     // vkOpenPeerImage()
-    void init(const Device &dev, const VK_PEER_IMAGE_OPEN_INFO &info, const VK_IMAGE_CREATE_INFO &original_info);
+    void init(const Device &dev, const VkPeerImageOpenInfo &info, const VkImageCreateInfo &original_info);
 
     // vkBindImageMemoryRange()
-    void bind_memory(uint32_t alloc_idx, const VK_IMAGE_MEMORY_BIND_INFO &info,
-                     const GpuMemory &mem, VK_GPU_SIZE mem_offset);
+    void bind_memory(uint32_t alloc_idx, const VkImageMemoryBindInfo &info,
+                     const GpuMemory &mem, VkGpuSize mem_offset);
 
     // vkGetImageSubresourceInfo()
-    VK_SUBRESOURCE_LAYOUT subresource_layout(const VK_IMAGE_SUBRESOURCE &subres) const;
+    VkSubresourceLayout subresource_layout(const VkImageSubresource &subres) const;
 
     bool transparent() const;
     bool copyable() const { return (format_features_ & VK_FORMAT_IMAGE_COPY_BIT); }
 
-    VK_IMAGE_SUBRESOURCE_RANGE subresource_range(VK_IMAGE_ASPECT aspect) const { return subresource_range(create_info_, aspect); }
-    VK_EXTENT3D extent() const { return create_info_.extent; }
-    VK_EXTENT3D extent(uint32_t mip_level) const { return extent(create_info_.extent, mip_level); }
-    VK_FORMAT format() const {return create_info_.format;}
+    VkImageSubresourceRange subresource_range(VkImageAspect aspect) const { return subresource_range(create_info_, aspect); }
+    VkExtent3D extent() const { return create_info_.extent; }
+    VkExtent3D extent(uint32_t mip_level) const { return extent(create_info_.extent, mip_level); }
+    VkFormat format() const {return create_info_.format;}
 
-    VK_IMAGE_MEMORY_BARRIER image_memory_barrier(VK_FLAGS output_mask, VK_FLAGS input_mask,
-                                                  VK_IMAGE_LAYOUT old_layout,
-                                                  VK_IMAGE_LAYOUT new_layout,
-                                                  const VK_IMAGE_SUBRESOURCE_RANGE &range) const
+    VkImageMemoryBarrier image_memory_barrier(VkFlags output_mask, VkFlags input_mask,
+                                                  VkImageLayout old_layout,
+                                                  VkImageLayout new_layout,
+                                                  const VkImageSubresourceRange &range) const
     {
-        VK_IMAGE_MEMORY_BARRIER barrier = {};
+        VkImageMemoryBarrier barrier = {};
         barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
         barrier.outputMask = output_mask;
         barrier.inputMask = input_mask;
@@ -430,169 +430,169 @@ public:
         return barrier;
     }
 
-    static VK_IMAGE_CREATE_INFO create_info();
-    static VK_IMAGE_SUBRESOURCE subresource(VK_IMAGE_ASPECT aspect, uint32_t mip_level, uint32_t array_slice);
-    static VK_IMAGE_SUBRESOURCE subresource(const VK_IMAGE_SUBRESOURCE_RANGE &range, uint32_t mip_level, uint32_t array_slice);
-    static VK_IMAGE_SUBRESOURCE_RANGE subresource_range(VK_IMAGE_ASPECT aspect, uint32_t base_mip_level, uint32_t mip_levels,
+    static VkImageCreateInfo create_info();
+    static VkImageSubresource subresource(VkImageAspect aspect, uint32_t mip_level, uint32_t array_slice);
+    static VkImageSubresource subresource(const VkImageSubresourceRange &range, uint32_t mip_level, uint32_t array_slice);
+    static VkImageSubresourceRange subresource_range(VkImageAspect aspect, uint32_t base_mip_level, uint32_t mip_levels,
                                                                                   uint32_t base_array_slice, uint32_t array_size);
-    static VK_IMAGE_SUBRESOURCE_RANGE subresource_range(const VK_IMAGE_CREATE_INFO &info, VK_IMAGE_ASPECT aspect);
-    static VK_IMAGE_SUBRESOURCE_RANGE subresource_range(const VK_IMAGE_SUBRESOURCE &subres);
+    static VkImageSubresourceRange subresource_range(const VkImageCreateInfo &info, VkImageAspect aspect);
+    static VkImageSubresourceRange subresource_range(const VkImageSubresource &subres);
 
-    static VK_EXTENT2D extent(int32_t width, int32_t height);
-    static VK_EXTENT2D extent(const VK_EXTENT2D &extent, uint32_t mip_level);
-    static VK_EXTENT2D extent(const VK_EXTENT3D &extent);
+    static VkExtent2D extent(int32_t width, int32_t height);
+    static VkExtent2D extent(const VkExtent2D &extent, uint32_t mip_level);
+    static VkExtent2D extent(const VkExtent3D &extent);
 
-    static VK_EXTENT3D extent(int32_t width, int32_t height, int32_t depth);
-    static VK_EXTENT3D extent(const VK_EXTENT3D &extent, uint32_t mip_level);
+    static VkExtent3D extent(int32_t width, int32_t height, int32_t depth);
+    static VkExtent3D extent(const VkExtent3D &extent, uint32_t mip_level);
 
 private:
-    void init_info(const Device &dev, const VK_IMAGE_CREATE_INFO &info);
+    void init_info(const Device &dev, const VkImageCreateInfo &info);
 
-    VK_IMAGE_CREATE_INFO create_info_;
-    VK_FLAGS format_features_;
+    VkImageCreateInfo create_info_;
+    VkFlags format_features_;
 };
 
-class ImageView : public DerivedObject<VK_IMAGE_VIEW, Object> {
+class ImageView : public DerivedObject<VkImageView, Object> {
 public:
     // vkCreateImageView()
-    void init(const Device &dev, const VK_IMAGE_VIEW_CREATE_INFO &info);
+    void init(const Device &dev, const VkImageViewCreateInfo &info);
 };
 
-class ColorAttachmentView : public DerivedObject<VK_COLOR_ATTACHMENT_VIEW, Object> {
+class ColorAttachmentView : public DerivedObject<VkColorAttachmentView, Object> {
 public:
     // vkCreateColorAttachmentView()
-    void init(const Device &dev, const VK_COLOR_ATTACHMENT_VIEW_CREATE_INFO &info);
+    void init(const Device &dev, const VkColorAttachmentViewCreateInfo &info);
 };
 
-class DepthStencilView : public DerivedObject<VK_DEPTH_STENCIL_VIEW, Object> {
+class DepthStencilView : public DerivedObject<VkDepthStencilView, Object> {
 public:
     // vkCreateDepthStencilView()
-    void init(const Device &dev, const VK_DEPTH_STENCIL_VIEW_CREATE_INFO &info);
+    void init(const Device &dev, const VkDepthStencilViewCreateInfo &info);
 };
 
-class Shader : public DerivedObject<VK_SHADER, Object> {
+class Shader : public DerivedObject<VkShader, Object> {
 public:
     // vkCreateShader()
-    void init(const Device &dev, const VK_SHADER_CREATE_INFO &info);
-    VK_RESULT init_try(const Device &dev, const VK_SHADER_CREATE_INFO &info);
+    void init(const Device &dev, const VkShaderCreateInfo &info);
+    VkResult init_try(const Device &dev, const VkShaderCreateInfo &info);
 
-    static VK_SHADER_CREATE_INFO create_info(size_t code_size, const void *code, VK_FLAGS flags);
+    static VkShaderCreateInfo create_info(size_t code_size, const void *code, VkFlags flags);
 };
 
-class Pipeline : public DerivedObject<VK_PIPELINE, Object> {
+class Pipeline : public DerivedObject<VkPipeline, Object> {
 public:
     // vkCreateGraphicsPipeline()
-    void init(const Device &dev, const VK_GRAPHICS_PIPELINE_CREATE_INFO &info);
+    void init(const Device &dev, const VkGraphicsPipelineCreateInfo &info);
     // vkCreateGraphicsPipelineDerivative()
-    void init(const Device &dev, const VK_GRAPHICS_PIPELINE_CREATE_INFO &info, const VK_PIPELINE basePipeline);
+    void init(const Device &dev, const VkGraphicsPipelineCreateInfo &info, const VkPipeline basePipeline);
     // vkCreateComputePipeline()
-    void init(const Device &dev, const VK_COMPUTE_PIPELINE_CREATE_INFO &info);
+    void init(const Device &dev, const VkComputePipelineCreateInfo &info);
     // vkLoadPipeline()
     void init(const Device&dev, size_t size, const void *data);
     // vkLoadPipelineDerivative()
-    void init(const Device&dev, size_t size, const void *data, VK_PIPELINE basePipeline);
+    void init(const Device&dev, size_t size, const void *data, VkPipeline basePipeline);
 
     // vkStorePipeline()
     size_t store(size_t size, void *data);
 };
 
-class Sampler : public DerivedObject<VK_SAMPLER, Object> {
+class Sampler : public DerivedObject<VkSampler, Object> {
 public:
     // vkCreateSampler()
-    void init(const Device &dev, const VK_SAMPLER_CREATE_INFO &info);
+    void init(const Device &dev, const VkSamplerCreateInfo &info);
 };
 
-class DescriptorSetLayout : public DerivedObject<VK_DESCRIPTOR_SET_LAYOUT, Object> {
+class DescriptorSetLayout : public DerivedObject<VkDescriptorSetLayout, Object> {
 public:
     // vkCreateDescriptorSetLayout()
-    void init(const Device &dev, const VK_DESCRIPTOR_SET_LAYOUT_CREATE_INFO &info);
+    void init(const Device &dev, const VkDescriptorSetLayoutCreateInfo &info);
 };
 
-class DescriptorSetLayoutChain : public DerivedObject<VK_DESCRIPTOR_SET_LAYOUT_CHAIN, Object> {
+class DescriptorSetLayoutChain : public DerivedObject<VkDescriptorSetLayoutChain, Object> {
 public:
     // vkCreateDescriptorSetLayoutChain()
     void init(const Device &dev, const std::vector<const DescriptorSetLayout *> &layouts);
 };
 
-class DescriptorPool : public DerivedObject<VK_DESCRIPTOR_POOL, Object> {
+class DescriptorPool : public DerivedObject<VkDescriptorPool, Object> {
 public:
     // vkCreateDescriptorPool()
-    void init(const Device &dev, VK_DESCRIPTOR_POOL_USAGE usage,
-              uint32_t max_sets, const VK_DESCRIPTOR_POOL_CREATE_INFO &info);
+    void init(const Device &dev, VkDescriptorPoolUsage usage,
+              uint32_t max_sets, const VkDescriptorPoolCreateInfo &info);
 
     // vkResetDescriptorPool()
     void reset();
 
     // vkAllocDescriptorSets()
-    std::vector<DescriptorSet *> alloc_sets(VK_DESCRIPTOR_SET_USAGE usage, const std::vector<const DescriptorSetLayout *> &layouts);
-    std::vector<DescriptorSet *> alloc_sets(VK_DESCRIPTOR_SET_USAGE usage, const DescriptorSetLayout &layout, uint32_t count);
-    DescriptorSet *alloc_sets(VK_DESCRIPTOR_SET_USAGE usage, const DescriptorSetLayout &layout);
+    std::vector<DescriptorSet *> alloc_sets(VkDescriptorSetUsage usage, const std::vector<const DescriptorSetLayout *> &layouts);
+    std::vector<DescriptorSet *> alloc_sets(VkDescriptorSetUsage usage, const DescriptorSetLayout &layout, uint32_t count);
+    DescriptorSet *alloc_sets(VkDescriptorSetUsage usage, const DescriptorSetLayout &layout);
 
     // vkClearDescriptorSets()
     void clear_sets(const std::vector<DescriptorSet *> &sets);
     void clear_sets(DescriptorSet &set) { clear_sets(std::vector<DescriptorSet *>(1, &set)); }
 };
 
-class DescriptorSet : public DerivedObject<VK_DESCRIPTOR_SET, Object> {
+class DescriptorSet : public DerivedObject<VkDescriptorSet, Object> {
 public:
-    explicit DescriptorSet(VK_DESCRIPTOR_SET set) : DerivedObject(set) {}
+    explicit DescriptorSet(VkDescriptorSet set) : DerivedObject(set) {}
 
     // vkUpdateDescriptors()
     void update(const std::vector<const void *> &update_array);
 
-    static VK_UPDATE_SAMPLERS update(uint32_t binding, uint32_t index, uint32_t count, const VK_SAMPLER *samplers);
-    static VK_UPDATE_SAMPLERS update(uint32_t binding, uint32_t index, const std::vector<VK_SAMPLER> &samplers);
+    static VkUpdateSamplers update(uint32_t binding, uint32_t index, uint32_t count, const VkSampler *samplers);
+    static VkUpdateSamplers update(uint32_t binding, uint32_t index, const std::vector<VkSampler> &samplers);
 
-    static VK_UPDATE_SAMPLER_TEXTURES update(uint32_t binding, uint32_t index, uint32_t count, const VK_SAMPLER_IMAGE_VIEW_INFO *textures);
-    static VK_UPDATE_SAMPLER_TEXTURES update(uint32_t binding, uint32_t index, const std::vector<VK_SAMPLER_IMAGE_VIEW_INFO> &textures);
+    static VkUpdateSamplerTextures update(uint32_t binding, uint32_t index, uint32_t count, const VkSamplerImageViewInfo *textures);
+    static VkUpdateSamplerTextures update(uint32_t binding, uint32_t index, const std::vector<VkSamplerImageViewInfo> &textures);
 
-    static VK_UPDATE_IMAGES update(VK_DESCRIPTOR_TYPE type, uint32_t binding, uint32_t index, uint32_t count, const VK_IMAGE_VIEW_ATTACH_INFO *views);
-    static VK_UPDATE_IMAGES update(VK_DESCRIPTOR_TYPE type, uint32_t binding, uint32_t index, const std::vector<VK_IMAGE_VIEW_ATTACH_INFO> &views);
+    static VkUpdateImages update(VkDescriptorType type, uint32_t binding, uint32_t index, uint32_t count, const VkImageViewAttachInfo *views);
+    static VkUpdateImages update(VkDescriptorType type, uint32_t binding, uint32_t index, const std::vector<VkImageViewAttachInfo> &views);
 
-    static VK_UPDATE_BUFFERS update(VK_DESCRIPTOR_TYPE type, uint32_t binding, uint32_t index, uint32_t count, const VK_BUFFER_VIEW_ATTACH_INFO *views);
-    static VK_UPDATE_BUFFERS update(VK_DESCRIPTOR_TYPE type, uint32_t binding, uint32_t index, const std::vector<VK_BUFFER_VIEW_ATTACH_INFO> &views);
+    static VkUpdateBuffers update(VkDescriptorType type, uint32_t binding, uint32_t index, uint32_t count, const VkBufferViewAttachInfo *views);
+    static VkUpdateBuffers update(VkDescriptorType type, uint32_t binding, uint32_t index, const std::vector<VkBufferViewAttachInfo> &views);
 
-    static VK_UPDATE_AS_COPY update(VK_DESCRIPTOR_TYPE type, uint32_t binding, uint32_t index, uint32_t count, const DescriptorSet &set);
+    static VkUpdateAsCopy update(VkDescriptorType type, uint32_t binding, uint32_t index, uint32_t count, const DescriptorSet &set);
 
-    static VK_BUFFER_VIEW_ATTACH_INFO attach_info(const BufferView &view);
-    static VK_IMAGE_VIEW_ATTACH_INFO attach_info(const ImageView &view, VK_IMAGE_LAYOUT layout);
+    static VkBufferViewAttachInfo attach_info(const BufferView &view);
+    static VkImageViewAttachInfo attach_info(const ImageView &view, VkImageLayout layout);
 };
 
-class DynamicVpStateObject : public DerivedObject<VK_DYNAMIC_VP_STATE_OBJECT, DynamicStateObject> {
+class DynamicVpStateObject : public DerivedObject<VkDynamicVpStateObject, DynamicStateObject> {
 public:
     // vkCreateDynamicViewportState()
-    void init(const Device &dev, const VK_DYNAMIC_VP_STATE_CREATE_INFO &info);
+    void init(const Device &dev, const VkDynamicVpStateCreateInfo &info);
 };
 
-class DynamicRsStateObject : public DerivedObject<VK_DYNAMIC_RS_STATE_OBJECT, DynamicStateObject> {
+class DynamicRsStateObject : public DerivedObject<VkDynamicRsStateObject, DynamicStateObject> {
 public:
     // vkCreateDynamicRasterState()
-    void init(const Device &dev, const VK_DYNAMIC_RS_STATE_CREATE_INFO &info);
+    void init(const Device &dev, const VkDynamicRsStateCreateInfo &info);
 };
 
-class DynamicCbStateObject : public DerivedObject<VK_DYNAMIC_CB_STATE_OBJECT, DynamicStateObject> {
+class DynamicCbStateObject : public DerivedObject<VkDynamicCbStateObject, DynamicStateObject> {
 public:
     // vkCreateDynamicColorBlendState()
-    void init(const Device &dev, const VK_DYNAMIC_CB_STATE_CREATE_INFO &info);
+    void init(const Device &dev, const VkDynamicCbStateCreateInfo &info);
 };
 
-class DynamicDsStateObject : public DerivedObject<VK_DYNAMIC_DS_STATE_OBJECT, DynamicStateObject> {
+class DynamicDsStateObject : public DerivedObject<VkDynamicDsStateObject, DynamicStateObject> {
 public:
     // vkCreateDynamicDepthStencilState()
-    void init(const Device &dev, const VK_DYNAMIC_DS_STATE_CREATE_INFO &info);
+    void init(const Device &dev, const VkDynamicDsStateCreateInfo &info);
 };
 
-class CmdBuffer : public DerivedObject<VK_CMD_BUFFER, Object> {
+class CmdBuffer : public DerivedObject<VkCmdBuffer, Object> {
 public:
     explicit CmdBuffer() {}
-    explicit CmdBuffer(const Device &dev, const VK_CMD_BUFFER_CREATE_INFO &info) { init(dev, info); }
+    explicit CmdBuffer(const Device &dev, const VkCmdBufferCreateInfo &info) { init(dev, info); }
 
     // vkCreateCommandBuffer()
-    void init(const Device &dev, const VK_CMD_BUFFER_CREATE_INFO &info);
+    void init(const Device &dev, const VkCmdBufferCreateInfo &info);
 
     // vkBeginCommandBuffer()
-    void begin(const VK_CMD_BUFFER_BEGIN_INFO *info);
-    void begin(VK_RENDER_PASS renderpass_obj, VK_FRAMEBUFFER framebuffer_obj);
+    void begin(const VkCmdBufferBeginInfo *info);
+    void begin(VkRenderPass renderpass_obj, VkFramebuffer framebuffer_obj);
     void begin();
 
     // vkEndCommandBuffer()
@@ -600,15 +600,15 @@ public:
     void end();
     void reset();
 
-    static VK_CMD_BUFFER_CREATE_INFO create_info(uint32_t queueNodeIndex);
+    static VkCmdBufferCreateInfo create_info(uint32_t queueNodeIndex);
 };
 
-inline const void *Object::map(VK_FLAGS flags) const
+inline const void *Object::map(VkFlags flags) const
 {
     return (primary_mem_) ? primary_mem_->map(flags) : NULL;
 }
 
-inline void *Object::map(VK_FLAGS flags)
+inline void *Object::map(VkFlags flags)
 {
     return (primary_mem_) ? primary_mem_->map(flags) : NULL;
 }
@@ -619,7 +619,7 @@ inline void Object::unmap() const
         primary_mem_->unmap();
 }
 
-inline VkMemoryAllocInfo GpuMemory::alloc_info(const VK_MEMORY_REQUIREMENTS &reqs,
+inline VkMemoryAllocInfo GpuMemory::alloc_info(const VkMemoryRequirements &reqs,
                                 const VkMemoryAllocInfo *next_info)
 {
     VkMemoryAllocInfo info = {};
@@ -634,7 +634,7 @@ inline VkMemoryAllocInfo GpuMemory::alloc_info(const VK_MEMORY_REQUIREMENTS &req
     return info;
 }
 
-inline VkBufferCreateInfo Buffer::create_info(VK_GPU_SIZE size, VK_FLAGS usage)
+inline VkBufferCreateInfo Buffer::create_info(VkGpuSize size, VkFlags usage)
 {
     VkBufferCreateInfo info = {};
     info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
@@ -643,50 +643,50 @@ inline VkBufferCreateInfo Buffer::create_info(VK_GPU_SIZE size, VK_FLAGS usage)
     return info;
 }
 
-inline VK_FENCE_CREATE_INFO Fence::create_info(VK_FENCE_CREATE_FLAGS flags)
+inline VkFenceCreateInfo Fence::create_info(VkFenceCreateFlags flags)
 {
-    VK_FENCE_CREATE_INFO info = {};
+    VkFenceCreateInfo info = {};
     info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
     info.flags = flags;
     return info;
 }
 
-inline VK_FENCE_CREATE_INFO Fence::create_info()
+inline VkFenceCreateInfo Fence::create_info()
 {
-    VK_FENCE_CREATE_INFO info = {};
+    VkFenceCreateInfo info = {};
     info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
     return info;
 }
 
-inline VK_SEMAPHORE_CREATE_INFO Semaphore::create_info(uint32_t init_count, VK_FLAGS flags)
+inline VkSemaphoreCreateInfo Semaphore::create_info(uint32_t init_count, VkFlags flags)
 {
-    VK_SEMAPHORE_CREATE_INFO info = {};
+    VkSemaphoreCreateInfo info = {};
     info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
     info.initialCount = init_count;
     info.flags = flags;
     return info;
 }
 
-inline VK_EVENT_CREATE_INFO Event::create_info(VK_FLAGS flags)
+inline VkEventCreateInfo Event::create_info(VkFlags flags)
 {
-    VK_EVENT_CREATE_INFO info = {};
+    VkEventCreateInfo info = {};
     info.sType = VK_STRUCTURE_TYPE_EVENT_CREATE_INFO;
     info.flags = flags;
     return info;
 }
 
-inline VK_QUERY_POOL_CREATE_INFO QueryPool::create_info(VK_QUERY_TYPE type, uint32_t slot_count)
+inline VkQueryPoolCreateInfo QueryPool::create_info(VkQueryType type, uint32_t slot_count)
 {
-    VK_QUERY_POOL_CREATE_INFO info = {};
+    VkQueryPoolCreateInfo info = {};
     info.sType = VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO;
     info.queryType = type;
     info.slots = slot_count;
     return info;
 }
 
-inline VK_IMAGE_CREATE_INFO Image::create_info()
+inline VkImageCreateInfo Image::create_info()
 {
-    VK_IMAGE_CREATE_INFO info = {};
+    VkImageCreateInfo info = {};
     info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
     info.extent.width = 1;
     info.extent.height = 1;
@@ -697,24 +697,24 @@ inline VK_IMAGE_CREATE_INFO Image::create_info()
     return info;
 }
 
-inline VK_IMAGE_SUBRESOURCE Image::subresource(VK_IMAGE_ASPECT aspect, uint32_t mip_level, uint32_t array_slice)
+inline VkImageSubresource Image::subresource(VkImageAspect aspect, uint32_t mip_level, uint32_t array_slice)
 {
-    VK_IMAGE_SUBRESOURCE subres = {};
+    VkImageSubresource subres = {};
     subres.aspect = aspect;
     subres.mipLevel = mip_level;
     subres.arraySlice = array_slice;
     return subres;
 }
 
-inline VK_IMAGE_SUBRESOURCE Image::subresource(const VK_IMAGE_SUBRESOURCE_RANGE &range, uint32_t mip_level, uint32_t array_slice)
+inline VkImageSubresource Image::subresource(const VkImageSubresourceRange &range, uint32_t mip_level, uint32_t array_slice)
 {
     return subresource(range.aspect, range.baseMipLevel + mip_level, range.baseArraySlice + array_slice);
 }
 
-inline VK_IMAGE_SUBRESOURCE_RANGE Image::subresource_range(VK_IMAGE_ASPECT aspect, uint32_t base_mip_level, uint32_t mip_levels,
+inline VkImageSubresourceRange Image::subresource_range(VkImageAspect aspect, uint32_t base_mip_level, uint32_t mip_levels,
                                                                                      uint32_t base_array_slice, uint32_t array_size)
 {
-    VK_IMAGE_SUBRESOURCE_RANGE range = {};
+    VkImageSubresourceRange range = {};
     range.aspect = aspect;
     range.baseMipLevel = base_mip_level;
     range.mipLevels = mip_levels;
@@ -723,46 +723,46 @@ inline VK_IMAGE_SUBRESOURCE_RANGE Image::subresource_range(VK_IMAGE_ASPECT aspec
     return range;
 }
 
-inline VK_IMAGE_SUBRESOURCE_RANGE Image::subresource_range(const VK_IMAGE_CREATE_INFO &info, VK_IMAGE_ASPECT aspect)
+inline VkImageSubresourceRange Image::subresource_range(const VkImageCreateInfo &info, VkImageAspect aspect)
 {
     return subresource_range(aspect, 0, info.mipLevels, 0, info.arraySize);
 }
 
-inline VK_IMAGE_SUBRESOURCE_RANGE Image::subresource_range(const VK_IMAGE_SUBRESOURCE &subres)
+inline VkImageSubresourceRange Image::subresource_range(const VkImageSubresource &subres)
 {
     return subresource_range(subres.aspect, subres.mipLevel, 1, subres.arraySlice, 1);
 }
 
-inline VK_EXTENT2D Image::extent(int32_t width, int32_t height)
+inline VkExtent2D Image::extent(int32_t width, int32_t height)
 {
-    VK_EXTENT2D extent = {};
+    VkExtent2D extent = {};
     extent.width = width;
     extent.height = height;
     return extent;
 }
 
-inline VK_EXTENT2D Image::extent(const VK_EXTENT2D &extent, uint32_t mip_level)
+inline VkExtent2D Image::extent(const VkExtent2D &extent, uint32_t mip_level)
 {
     const int32_t width  = (extent.width  >> mip_level) ? extent.width  >> mip_level : 1;
     const int32_t height = (extent.height >> mip_level) ? extent.height >> mip_level : 1;
     return Image::extent(width, height);
 }
 
-inline VK_EXTENT2D Image::extent(const VK_EXTENT3D &extent)
+inline VkExtent2D Image::extent(const VkExtent3D &extent)
 {
     return Image::extent(extent.width, extent.height);
 }
 
-inline VK_EXTENT3D Image::extent(int32_t width, int32_t height, int32_t depth)
+inline VkExtent3D Image::extent(int32_t width, int32_t height, int32_t depth)
 {
-    VK_EXTENT3D extent = {};
+    VkExtent3D extent = {};
     extent.width = width;
     extent.height = height;
     extent.depth = depth;
     return extent;
 }
 
-inline VK_EXTENT3D Image::extent(const VK_EXTENT3D &extent, uint32_t mip_level)
+inline VkExtent3D Image::extent(const VkExtent3D &extent, uint32_t mip_level)
 {
     const int32_t width  = (extent.width  >> mip_level) ? extent.width  >> mip_level : 1;
     const int32_t height = (extent.height >> mip_level) ? extent.height >> mip_level : 1;
@@ -770,9 +770,9 @@ inline VK_EXTENT3D Image::extent(const VK_EXTENT3D &extent, uint32_t mip_level)
     return Image::extent(width, height, depth);
 }
 
-inline VK_SHADER_CREATE_INFO Shader::create_info(size_t code_size, const void *code, VK_FLAGS flags)
+inline VkShaderCreateInfo Shader::create_info(size_t code_size, const void *code, VkFlags flags)
 {
-    VK_SHADER_CREATE_INFO info = {};
+    VkShaderCreateInfo info = {};
     info.sType = VK_STRUCTURE_TYPE_SHADER_CREATE_INFO;
     info.codeSize = code_size;
     info.pCode = code;
@@ -780,26 +780,26 @@ inline VK_SHADER_CREATE_INFO Shader::create_info(size_t code_size, const void *c
     return info;
 }
 
-inline VK_BUFFER_VIEW_ATTACH_INFO DescriptorSet::attach_info(const BufferView &view)
+inline VkBufferViewAttachInfo DescriptorSet::attach_info(const BufferView &view)
 {
-    VK_BUFFER_VIEW_ATTACH_INFO info = {};
+    VkBufferViewAttachInfo info = {};
     info.sType = VK_STRUCTURE_TYPE_BUFFER_VIEW_ATTACH_INFO;
     info.view = view.obj();
     return info;
 }
 
-inline VK_IMAGE_VIEW_ATTACH_INFO DescriptorSet::attach_info(const ImageView &view, VK_IMAGE_LAYOUT layout)
+inline VkImageViewAttachInfo DescriptorSet::attach_info(const ImageView &view, VkImageLayout layout)
 {
-    VK_IMAGE_VIEW_ATTACH_INFO info = {};
+    VkImageViewAttachInfo info = {};
     info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_ATTACH_INFO;
     info.view = view.obj();
     info.layout = layout;
     return info;
 }
 
-inline VK_UPDATE_SAMPLERS DescriptorSet::update(uint32_t binding, uint32_t index, uint32_t count, const VK_SAMPLER *samplers)
+inline VkUpdateSamplers DescriptorSet::update(uint32_t binding, uint32_t index, uint32_t count, const VkSampler *samplers)
 {
-    VK_UPDATE_SAMPLERS info = {};
+    VkUpdateSamplers info = {};
     info.sType = VK_STRUCTURE_TYPE_UPDATE_SAMPLERS;
     info.binding = binding;
     info.arrayIndex = index;
@@ -808,14 +808,14 @@ inline VK_UPDATE_SAMPLERS DescriptorSet::update(uint32_t binding, uint32_t index
     return info;
 }
 
-inline VK_UPDATE_SAMPLERS DescriptorSet::update(uint32_t binding, uint32_t index, const std::vector<VK_SAMPLER> &samplers)
+inline VkUpdateSamplers DescriptorSet::update(uint32_t binding, uint32_t index, const std::vector<VkSampler> &samplers)
 {
     return update(binding, index, samplers.size(), &samplers[0]);
 }
 
-inline VK_UPDATE_SAMPLER_TEXTURES DescriptorSet::update(uint32_t binding, uint32_t index, uint32_t count, const VK_SAMPLER_IMAGE_VIEW_INFO *textures)
+inline VkUpdateSamplerTextures DescriptorSet::update(uint32_t binding, uint32_t index, uint32_t count, const VkSamplerImageViewInfo *textures)
 {
-    VK_UPDATE_SAMPLER_TEXTURES info = {};
+    VkUpdateSamplerTextures info = {};
     info.sType = VK_STRUCTURE_TYPE_UPDATE_SAMPLER_TEXTURES;
     info.binding = binding;
     info.arrayIndex = index;
@@ -824,15 +824,15 @@ inline VK_UPDATE_SAMPLER_TEXTURES DescriptorSet::update(uint32_t binding, uint32
     return info;
 }
 
-inline VK_UPDATE_SAMPLER_TEXTURES DescriptorSet::update(uint32_t binding, uint32_t index, const std::vector<VK_SAMPLER_IMAGE_VIEW_INFO> &textures)
+inline VkUpdateSamplerTextures DescriptorSet::update(uint32_t binding, uint32_t index, const std::vector<VkSamplerImageViewInfo> &textures)
 {
     return update(binding, index, textures.size(), &textures[0]);
 }
 
-inline VK_UPDATE_IMAGES DescriptorSet::update(VK_DESCRIPTOR_TYPE type, uint32_t binding, uint32_t index, uint32_t count,
-                                               const VK_IMAGE_VIEW_ATTACH_INFO *views)
+inline VkUpdateImages DescriptorSet::update(VkDescriptorType type, uint32_t binding, uint32_t index, uint32_t count,
+                                               const VkImageViewAttachInfo *views)
 {
-    VK_UPDATE_IMAGES info = {};
+    VkUpdateImages info = {};
     info.sType = VK_STRUCTURE_TYPE_UPDATE_IMAGES;
     info.descriptorType = type;
     info.binding = binding;
@@ -842,16 +842,16 @@ inline VK_UPDATE_IMAGES DescriptorSet::update(VK_DESCRIPTOR_TYPE type, uint32_t 
     return info;
 }
 
-inline VK_UPDATE_IMAGES DescriptorSet::update(VK_DESCRIPTOR_TYPE type, uint32_t binding, uint32_t index,
-                                               const std::vector<VK_IMAGE_VIEW_ATTACH_INFO> &views)
+inline VkUpdateImages DescriptorSet::update(VkDescriptorType type, uint32_t binding, uint32_t index,
+                                               const std::vector<VkImageViewAttachInfo> &views)
 {
     return update(type, binding, index, views.size(), &views[0]);
 }
 
-inline VK_UPDATE_BUFFERS DescriptorSet::update(VK_DESCRIPTOR_TYPE type, uint32_t binding, uint32_t index, uint32_t count,
-                                                const VK_BUFFER_VIEW_ATTACH_INFO *views)
+inline VkUpdateBuffers DescriptorSet::update(VkDescriptorType type, uint32_t binding, uint32_t index, uint32_t count,
+                                                const VkBufferViewAttachInfo *views)
 {
-    VK_UPDATE_BUFFERS info = {};
+    VkUpdateBuffers info = {};
     info.sType = VK_STRUCTURE_TYPE_UPDATE_BUFFERS;
     info.descriptorType = type;
     info.binding = binding;
@@ -861,15 +861,15 @@ inline VK_UPDATE_BUFFERS DescriptorSet::update(VK_DESCRIPTOR_TYPE type, uint32_t
     return info;
 }
 
-inline VK_UPDATE_BUFFERS DescriptorSet::update(VK_DESCRIPTOR_TYPE type, uint32_t binding, uint32_t index,
-                                                const std::vector<VK_BUFFER_VIEW_ATTACH_INFO> &views)
+inline VkUpdateBuffers DescriptorSet::update(VkDescriptorType type, uint32_t binding, uint32_t index,
+                                                const std::vector<VkBufferViewAttachInfo> &views)
 {
     return update(type, binding, index, views.size(), &views[0]);
 }
 
-inline VK_UPDATE_AS_COPY DescriptorSet::update(VK_DESCRIPTOR_TYPE type, uint32_t binding, uint32_t index, uint32_t count, const DescriptorSet &set)
+inline VkUpdateAsCopy DescriptorSet::update(VkDescriptorType type, uint32_t binding, uint32_t index, uint32_t count, const DescriptorSet &set)
 {
-    VK_UPDATE_AS_COPY info = {};
+    VkUpdateAsCopy info = {};
     info.sType = VK_STRUCTURE_TYPE_UPDATE_AS_COPY;
     info.descriptorType = type;
     info.binding = binding;
@@ -879,9 +879,9 @@ inline VK_UPDATE_AS_COPY DescriptorSet::update(VK_DESCRIPTOR_TYPE type, uint32_t
     return info;
 }
 
-inline VK_CMD_BUFFER_CREATE_INFO CmdBuffer::create_info(uint32_t queueNodeIndex)
+inline VkCmdBufferCreateInfo CmdBuffer::create_info(uint32_t queueNodeIndex)
 {
-    VK_CMD_BUFFER_CREATE_INFO info = {};
+    VkCmdBufferCreateInfo info = {};
     info.sType = VK_STRUCTURE_TYPE_CMD_BUFFER_CREATE_INFO;
     info.queueNodeIndex = queueNodeIndex;
     return info;

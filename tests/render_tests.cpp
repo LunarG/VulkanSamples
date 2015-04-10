@@ -82,8 +82,8 @@ using namespace std;
 #ifdef DEBUG_CALLBACK
 void VKAPI myDbgFunc(
     VK_DBG_MSG_TYPE     msgType,
-    VK_VALIDATION_LEVEL validationLevel,
-    VK_BASE_OBJECT      srcObject,
+    VkValidationLevel validationLevel,
+    VkBaseObject      srcObject,
     size_t               location,
     int32_t              msgCode,
     const char*          pMsg,
@@ -219,16 +219,16 @@ public:
     void InitDepthStencil();
     void VKTriangleTest(const char *vertShaderText, const char *fragShaderText, const bool rotate);
 
-    VK_RESULT BeginCommandBuffer(VkCommandBufferObj &cmdBuffer);
-    VK_RESULT EndCommandBuffer(VkCommandBufferObj &cmdBuffer);
+    VkResult BeginCommandBuffer(VkCommandBufferObj &cmdBuffer);
+    VkResult EndCommandBuffer(VkCommandBufferObj &cmdBuffer);
 
 protected:
-    VK_IMAGE m_texture;
-    VK_IMAGE_VIEW m_textureView;
-    VK_IMAGE_VIEW_ATTACH_INFO m_textureViewInfo;
-    VK_GPU_MEMORY m_textureMem;
+    VkImage m_texture;
+    VkImageView m_textureView;
+    VkImageViewAttachInfo m_textureViewInfo;
+    VkGpuMemory m_textureMem;
 
-    VK_SAMPLER m_sampler;
+    VkSampler m_sampler;
 
 
     virtual void SetUp() {
@@ -253,9 +253,9 @@ protected:
     }
 };
 
-VK_RESULT VkRenderTest::BeginCommandBuffer(VkCommandBufferObj &cmdBuffer)
+VkResult VkRenderTest::BeginCommandBuffer(VkCommandBufferObj &cmdBuffer)
 {
-    VK_RESULT result;
+    VkResult result;
 
     result = cmdBuffer.BeginCommandBuffer();
 
@@ -270,9 +270,9 @@ VK_RESULT VkRenderTest::BeginCommandBuffer(VkCommandBufferObj &cmdBuffer)
     return result;
 }
 
-VK_RESULT VkRenderTest::EndCommandBuffer(VkCommandBufferObj &cmdBuffer)
+VkResult VkRenderTest::EndCommandBuffer(VkCommandBufferObj &cmdBuffer)
 {
-    VK_RESULT result;
+    VkResult result;
 
     cmdBuffer.EndRenderPass(renderPass());
 
@@ -307,7 +307,7 @@ void VkRenderTest::RotateTriangleVSUniform(glm::mat4 Projection, glm::mat4 View,
     int i;
     glm::mat4 MVP;
     int matrixSize = sizeof(MVP);
-    VK_RESULT err;
+    VkResult err;
 
     for (i = 0; i < 8; i++) {
         void *pData = constantBuffer->map();
@@ -692,13 +692,13 @@ TEST_F(VkRenderTest, QuadWithVertexFetch)
     descriptorSet.AppendBuffer(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, meshBuffer);
 
 #define MESH_BIND_ID 0
-    VK_VERTEX_INPUT_BINDING_DESCRIPTION vi_binding = {
+    VkVertexInputBindingDescription vi_binding = {
         MESH_BIND_ID,                      // binding ID
          sizeof(g_vbData[0]),              // strideInBytes;  Distance between vertices in bytes (0 = no advancement)
          VK_VERTEX_INPUT_STEP_RATE_VERTEX // stepRate;       // Rate at which binding is incremented
     };
 
-    VK_VERTEX_INPUT_ATTRIBUTE_DESCRIPTION vi_attribs[2];
+    VkVertexInputAttributeDescription vi_attribs[2];
     vi_attribs[0].binding = MESH_BIND_ID;               // Binding ID
     vi_attribs[0].location = 0;                         // location, position
     vi_attribs[0].format = VK_FMT_R32G32B32A32_SFLOAT; // format of source data
@@ -770,13 +770,13 @@ TEST_F(VkRenderTest, TriangleMRT)
     pipelineobj.AddShader(&ps);
 
 #define MESH_BUF_ID 0
-    VK_VERTEX_INPUT_BINDING_DESCRIPTION vi_binding = {
+    VkVertexInputBindingDescription vi_binding = {
         MESH_BUF_ID,                            // Binding ID
         sizeof(vb_data[0]),                     // strideInBytes;  Distance between vertices in bytes (0 = no advancement)
         VK_VERTEX_INPUT_STEP_RATE_VERTEX       // stepRate;       // Rate at which binding is incremented
     };
 
-    VK_VERTEX_INPUT_ATTRIBUTE_DESCRIPTION vi_attrib;
+    VkVertexInputAttributeDescription vi_attrib;
     vi_attrib.binding = MESH_BUF_ID;            // index into vertexBindingDescriptions
     vi_attrib.location = 0;
     vi_attrib.format = VK_FMT_R32G32_SFLOAT;   // format of source data
@@ -791,7 +791,7 @@ TEST_F(VkRenderTest, TriangleMRT)
 
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget(2));
 
-    VK_PIPELINE_CB_ATTACHMENT_STATE att = {};
+    VkPipelineCbAttachmentState att = {};
     att.blendEnable = VK_FALSE;
     att.format = m_render_target_fmt;
     att.channelWriteMask = 0xf;
@@ -887,13 +887,13 @@ TEST_F(VkRenderTest, QuadWithIndexedVertexFetch)
 
 
 #define MESH_BIND_ID 0
-    VK_VERTEX_INPUT_BINDING_DESCRIPTION vi_binding = {
+    VkVertexInputBindingDescription vi_binding = {
         MESH_BIND_ID,                           // binding ID
         sizeof(g_vbData[0]),                    // strideInBytes;  Distance between vertices in bytes (0 = no advancement)
         VK_VERTEX_INPUT_STEP_RATE_VERTEX       // stepRate;       // Rate at which binding is incremented
     };
 
-    VK_VERTEX_INPUT_ATTRIBUTE_DESCRIPTION vi_attribs[2];
+    VkVertexInputAttributeDescription vi_attribs[2];
     vi_attribs[0].binding = MESH_BIND_ID;               // binding ID from BINDING_DESCRIPTION array to use for this attribute
     vi_attribs[0].location = 0;                         // layout location of vertex attribute
     vi_attribs[0].format = VK_FMT_R32G32B32A32_SFLOAT; // format of source data
@@ -981,13 +981,13 @@ TEST_F(VkRenderTest, GreyandRedCirclesonBlue)
     descriptorSet.AppendBuffer(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, meshBuffer);
 
 #define MESH_BIND_ID 0
-    VK_VERTEX_INPUT_BINDING_DESCRIPTION vi_binding = {
+    VkVertexInputBindingDescription vi_binding = {
         MESH_BIND_ID,                           // binding ID
         sizeof(g_vbData[0]),                    // strideInBytes;  Distance between vertices in bytes (0 = no advancement)
         VK_VERTEX_INPUT_STEP_RATE_VERTEX       // stepRate;       // Rate at which binding is incremented
     };
 
-    VK_VERTEX_INPUT_ATTRIBUTE_DESCRIPTION vi_attribs[1];
+    VkVertexInputAttributeDescription vi_attribs[1];
     vi_attribs[0].binding = MESH_BIND_ID;               // binding ID
     vi_attribs[0].location = 0;
     vi_attribs[0].format = VK_FMT_R32G32B32A32_SFLOAT; // format of source data
@@ -1071,13 +1071,13 @@ TEST_F(VkRenderTest, RedCirclesonBlue)
     descriptorSet.AppendBuffer(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, meshBuffer);
 
 #define MESH_BIND_ID 0
-    VK_VERTEX_INPUT_BINDING_DESCRIPTION vi_binding = {
+    VkVertexInputBindingDescription vi_binding = {
         MESH_BIND_ID,                           // binding ID
         sizeof(g_vbData[0]),                    // strideInBytes;  Distance between vertices in bytes (0 = no advancement)
         VK_VERTEX_INPUT_STEP_RATE_VERTEX       // stepRate;       // Rate at which binding is incremented
     };
 
-    VK_VERTEX_INPUT_ATTRIBUTE_DESCRIPTION vi_attribs[1];
+    VkVertexInputAttributeDescription vi_attribs[1];
     vi_attribs[0].binding = MESH_BIND_ID;               // binding ID
     vi_attribs[0].location = 0;
     vi_attribs[0].format = VK_FMT_R32G32B32A32_SFLOAT; // format of source data
@@ -1171,13 +1171,13 @@ TEST_F(VkRenderTest, GreyCirclesonBlueFade)
     descriptorSet.AppendBuffer(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, meshBuffer);
 
 #define MESH_BIND_ID 0
-    VK_VERTEX_INPUT_BINDING_DESCRIPTION vi_binding = {
+    VkVertexInputBindingDescription vi_binding = {
         MESH_BIND_ID,                           // binding ID
         sizeof(g_vbData[0]),                    // strideInBytes;  Distance between vertices in bytes (0 = no advancement)
         VK_VERTEX_INPUT_STEP_RATE_VERTEX       // stepRate;       // Rate at which binding is incremented
     };
 
-    VK_VERTEX_INPUT_ATTRIBUTE_DESCRIPTION vi_attribs[1];
+    VkVertexInputAttributeDescription vi_attribs[1];
     vi_attribs[0].binding = MESH_BIND_ID;               // binding ID
     vi_attribs[0].location = 0;
     vi_attribs[0].format = VK_FMT_R32G32B32A32_SFLOAT; // format of source data
@@ -1262,13 +1262,13 @@ TEST_F(VkRenderTest, GreyCirclesonBlueDiscard)
     descriptorSet.AppendBuffer(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, meshBuffer);
 
 #define MESH_BIND_ID 0
-    VK_VERTEX_INPUT_BINDING_DESCRIPTION vi_binding = {
+    VkVertexInputBindingDescription vi_binding = {
         MESH_BIND_ID,                           // binding ID
         sizeof(g_vbData[0]),                    // strideInBytes;  Distance between vertices in bytes (0 = no advancement)
         VK_VERTEX_INPUT_STEP_RATE_VERTEX       // stepRate;       // Rate at which binding is incremented
     };
 
-    VK_VERTEX_INPUT_ATTRIBUTE_DESCRIPTION vi_attribs[1];
+    VkVertexInputAttributeDescription vi_attribs[1];
     vi_attribs[0].binding = MESH_BIND_ID;               // binding ID
     vi_attribs[0].location = 0;
     vi_attribs[0].format = VK_FMT_R32G32B32A32_SFLOAT; // format of source data
@@ -1496,13 +1496,13 @@ TEST_F(VkRenderTest, QuadVertFetchAndVertID)
     descriptorSet.AppendBuffer(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, meshBuffer);
 
 #define MESH_BUF_ID 0
-    VK_VERTEX_INPUT_BINDING_DESCRIPTION vi_binding = {
+    VkVertexInputBindingDescription vi_binding = {
         MESH_BUF_ID,                            // Binding ID
         sizeof(g_vbData[0]),                    // strideInBytes;  Distance between vertices in bytes (0 = no advancement)
         VK_VERTEX_INPUT_STEP_RATE_VERTEX       // stepRate;       // Rate at which binding is incremented
     };
 
-    VK_VERTEX_INPUT_ATTRIBUTE_DESCRIPTION vi_attribs[2];
+    VkVertexInputAttributeDescription vi_attribs[2];
     vi_attribs[0].binding = MESH_BUF_ID;            // binding ID
     vi_attribs[0].location = 0;
     vi_attribs[0].format = VK_FMT_R32G32_SFLOAT;   // format of source data
@@ -1601,13 +1601,13 @@ TEST_F(VkRenderTest, QuadSparseVertFetch)
     descriptorSet.AppendBuffer(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, meshBuffer);
 
 #define MESH_BUF_ID 0
-    VK_VERTEX_INPUT_BINDING_DESCRIPTION vi_binding = {
+    VkVertexInputBindingDescription vi_binding = {
         MESH_BUF_ID,                            // Binding ID
         sizeof(vData[0]),                       // strideInBytes;  Distance between vertices in bytes (0 = no advancement)
         VK_VERTEX_INPUT_STEP_RATE_VERTEX       // stepRate;       // Rate at which binding is incremented
     };
 
-    VK_VERTEX_INPUT_ATTRIBUTE_DESCRIPTION vi_attribs[2];
+    VkVertexInputAttributeDescription vi_attribs[2];
     vi_attribs[0].binding = MESH_BUF_ID;                                        // binding ID
     vi_attribs[0].location = 4;
     vi_attribs[0].format = VK_FMT_R32G32B32A32_SFLOAT;                         // format of source data
@@ -1696,13 +1696,13 @@ TEST_F(VkRenderTest, TriVertFetchDeadAttr)
     descriptorSet.AppendBuffer(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, meshBuffer);
 
 #define MESH_BUF_ID 0
-    VK_VERTEX_INPUT_BINDING_DESCRIPTION vi_binding = {
+    VkVertexInputBindingDescription vi_binding = {
         MESH_BUF_ID,                            // Binding ID
         sizeof(g_vbData[0]),                    // strideInBytes;  Distance between vertices in bytes (0 = no advancement)
         VK_VERTEX_INPUT_STEP_RATE_VERTEX       // stepRate;       // Rate at which binding is incremented
     };
 
-    VK_VERTEX_INPUT_ATTRIBUTE_DESCRIPTION vi_attribs[2];
+    VkVertexInputAttributeDescription vi_attribs[2];
     vi_attribs[0].binding = MESH_BUF_ID;            // binding ID
     vi_attribs[0].location = 0;
     vi_attribs[0].format = VK_FMT_R32G32B32A32_SFLOAT;            // format of source data
@@ -1792,7 +1792,7 @@ TEST_F(VkRenderTest, CubeWithVertexFetchAndMVP)
     pipelineobj.AddShader(&vs);
     pipelineobj.AddShader(&ps);
 
-    VK_PIPELINE_DS_STATE_CREATE_INFO ds_state;
+    VkPipelineDsStateCreateInfo ds_state;
     ds_state.depthTestEnable = VK_TRUE;
     ds_state.depthWriteEnable = VK_TRUE;
     ds_state.depthFunc = VK_COMPARE_LESS_EQUAL;
@@ -1810,13 +1810,13 @@ TEST_F(VkRenderTest, CubeWithVertexFetchAndMVP)
     descriptorSet.AppendBuffer(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, MVPBuffer);
 
 #define MESH_BUF_ID 0
-    VK_VERTEX_INPUT_BINDING_DESCRIPTION vi_binding = {
+    VkVertexInputBindingDescription vi_binding = {
         MESH_BUF_ID,                            // Binding ID
         sizeof(g_vbData[0]),                     // strideInBytes;  Distance between vertices in bytes (0 = no advancement)
         VK_VERTEX_INPUT_STEP_RATE_VERTEX       // stepRate;       // Rate at which binding is incremented
     };
 
-    VK_VERTEX_INPUT_ATTRIBUTE_DESCRIPTION vi_attribs[2];
+    VkVertexInputAttributeDescription vi_attribs[2];
     vi_attribs[0].binding = MESH_BUF_ID;            // binding ID
     vi_attribs[0].location = 0;
     vi_attribs[0].format = VK_FMT_R32G32B32A32_SFLOAT;            // format of source data
@@ -2573,13 +2573,13 @@ TEST_F(VkRenderTest, CubeWithVertexFetchAndMVPAndTexture)
     descriptorSet.AppendSamplerTexture(&sampler, &texture);
 
 #define MESH_BIND_ID 0
-    VK_VERTEX_INPUT_BINDING_DESCRIPTION vi_binding = {
+    VkVertexInputBindingDescription vi_binding = {
         MESH_BIND_ID,                      // binding ID
         sizeof(g_vbData[0]),               // strideInBytes;  Distance between vertices in bytes (0 = no advancement)
         VK_VERTEX_INPUT_STEP_RATE_VERTEX  // stepRate;       // Rate at which binding is incremented
     };
 
-    VK_VERTEX_INPUT_ATTRIBUTE_DESCRIPTION vi_attribs[2];
+    VkVertexInputAttributeDescription vi_attribs[2];
     vi_attribs[0].binding = MESH_BIND_ID;               // Binding ID
     vi_attribs[0].location = 0;                         // location
     vi_attribs[0].format = VK_FMT_R32G32B32A32_SFLOAT; // format of source data
@@ -2593,7 +2593,7 @@ TEST_F(VkRenderTest, CubeWithVertexFetchAndMVPAndTexture)
     pipelineobj.AddVertexInputBindings(&vi_binding,1);
     pipelineobj.AddVertexDataBuffer(&meshBuffer, MESH_BIND_ID);
 
-    VK_PIPELINE_DS_STATE_CREATE_INFO ds_state;
+    VkPipelineDsStateCreateInfo ds_state;
     ds_state.depthTestEnable = VK_TRUE;
     ds_state.depthWriteEnable = VK_TRUE;
     ds_state.depthFunc = VK_COMPARE_LESS_EQUAL;

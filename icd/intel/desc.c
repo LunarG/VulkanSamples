@@ -82,7 +82,7 @@ bool intel_desc_iter_init_for_binding(struct intel_desc_iter *iter,
 
 static bool desc_iter_init_for_update(struct intel_desc_iter *iter,
                                       const struct intel_desc_set *set,
-                                      VK_DESCRIPTOR_TYPE type,
+                                      VkDescriptorType type,
                                       uint32_t binding_index, uint32_t array_base)
 {
     if (!intel_desc_iter_init_for_binding(iter, set->layout,
@@ -117,7 +117,7 @@ static bool desc_region_init_desc_sizes(struct intel_desc_region *region,
     return true;
 }
 
-VK_RESULT intel_desc_region_create(struct intel_dev *dev,
+VkResult intel_desc_region_create(struct intel_dev *dev,
                                     struct intel_desc_region **region_ret)
 {
     const uint32_t surface_count = 16384;
@@ -170,8 +170,8 @@ void intel_desc_region_destroy(struct intel_dev *dev,
 /**
  * Get the size of a descriptor in the region.
  */
-static VK_RESULT desc_region_get_desc_size(const struct intel_desc_region *region,
-                                            VK_DESCRIPTOR_TYPE type,
+static VkResult desc_region_get_desc_size(const struct intel_desc_region *region,
+                                            VkDescriptorType type,
                                             struct intel_desc_offset *size)
 {
     uint32_t surface_size = 0, sampler_size = 0;
@@ -205,8 +205,8 @@ static VK_RESULT desc_region_get_desc_size(const struct intel_desc_region *regio
     return VK_SUCCESS;
 }
 
-VK_RESULT intel_desc_region_alloc(struct intel_desc_region *region,
-                                   const VK_DESCRIPTOR_POOL_CREATE_INFO *info,
+VkResult intel_desc_region_alloc(struct intel_desc_region *region,
+                                   const VkDescriptorPoolCreateInfo *info,
                                    struct intel_desc_offset *begin,
                                    struct intel_desc_offset *end)
 {
@@ -216,9 +216,9 @@ VK_RESULT intel_desc_region_alloc(struct intel_desc_region *region,
 
     /* calculate sizes needed */
     for (i = 0; i < info->count; i++) {
-        const VK_DESCRIPTOR_TYPE_COUNT *tc = &info->pTypeCount[i];
+        const VkDescriptorTypeCount *tc = &info->pTypeCount[i];
         struct intel_desc_offset size;
-        VK_RESULT ret;
+        VkResult ret;
 
         ret = desc_region_get_desc_size(region, tc->type, &size);
         if (ret != VK_SUCCESS)
@@ -262,14 +262,14 @@ void intel_desc_region_free(struct intel_desc_region *region,
     /* is it ok not to reclaim? */
 }
 
-VK_RESULT intel_desc_region_begin_update(struct intel_desc_region *region,
-                                          VK_DESCRIPTOR_UPDATE_MODE mode)
+VkResult intel_desc_region_begin_update(struct intel_desc_region *region,
+                                          VkDescriptorUpdateMode mode)
 {
     /* no-op */
     return VK_SUCCESS;
 }
 
-VK_RESULT intel_desc_region_end_update(struct intel_desc_region *region,
+VkResult intel_desc_region_end_update(struct intel_desc_region *region,
                                         struct intel_cmd *cmd)
 {
     /* No pipelined update.  cmd_draw() will do the work. */
@@ -348,7 +348,7 @@ void intel_desc_region_copy(struct intel_desc_region *region,
 
 void intel_desc_region_read_surface(const struct intel_desc_region *region,
                                     const struct intel_desc_offset *offset,
-                                    VK_PIPELINE_SHADER_STAGE stage,
+                                    VkPipelineShaderStage stage,
                                     const struct intel_mem **mem,
                                     bool *read_only,
                                     const uint32_t **cmd,
@@ -408,14 +408,14 @@ static void desc_pool_destroy(struct intel_obj *obj)
     intel_desc_pool_destroy(pool);
 }
 
-VK_RESULT intel_desc_pool_create(struct intel_dev *dev,
-                                  VK_DESCRIPTOR_POOL_USAGE usage,
+VkResult intel_desc_pool_create(struct intel_dev *dev,
+                                  VkDescriptorPoolUsage usage,
                                   uint32_t max_sets,
-                                  const VK_DESCRIPTOR_POOL_CREATE_INFO *info,
+                                  const VkDescriptorPoolCreateInfo *info,
                                   struct intel_desc_pool **pool_ret)
 {
     struct intel_desc_pool *pool;
-    VK_RESULT ret;
+    VkResult ret;
 
     pool = (struct intel_desc_pool *) intel_base_create(&dev->base.handle,
             sizeof(*pool), dev->base.dbg, VK_DBG_OBJECT_DESCRIPTOR_POOL,
@@ -449,7 +449,7 @@ void intel_desc_pool_destroy(struct intel_desc_pool *pool)
     intel_base_destroy(&pool->obj.base);
 }
 
-VK_RESULT intel_desc_pool_alloc(struct intel_desc_pool *pool,
+VkResult intel_desc_pool_alloc(struct intel_desc_pool *pool,
                                  const struct intel_desc_layout *layout,
                                  struct intel_desc_offset *begin,
                                  struct intel_desc_offset *end)
@@ -479,14 +479,14 @@ static void desc_set_destroy(struct intel_obj *obj)
     intel_desc_set_destroy(set);
 }
 
-VK_RESULT intel_desc_set_create(struct intel_dev *dev,
+VkResult intel_desc_set_create(struct intel_dev *dev,
                                  struct intel_desc_pool *pool,
-                                 VK_DESCRIPTOR_SET_USAGE usage,
+                                 VkDescriptorSetUsage usage,
                                  const struct intel_desc_layout *layout,
                                  struct intel_desc_set **set_ret)
 {
     struct intel_desc_set *set;
-    VK_RESULT ret;
+    VkResult ret;
 
     set = (struct intel_desc_set *) intel_base_create(&dev->base.handle,
             sizeof(*set), dev->base.dbg, VK_DBG_OBJECT_DESCRIPTOR_SET,
@@ -516,7 +516,7 @@ void intel_desc_set_destroy(struct intel_desc_set *set)
     intel_base_destroy(&set->obj.base);
 }
 
-static bool desc_set_img_layout_read_only(VK_IMAGE_LAYOUT layout)
+static bool desc_set_img_layout_read_only(VkImageLayout layout)
 {
     switch (layout) {
     case VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL:
@@ -529,7 +529,7 @@ static bool desc_set_img_layout_read_only(VK_IMAGE_LAYOUT layout)
 }
 
 void intel_desc_set_update_samplers(struct intel_desc_set *set,
-                                    const VK_UPDATE_SAMPLERS *update)
+                                    const VkUpdateSamplers *update)
 {
     struct intel_desc_iter iter;
     uint32_t i;
@@ -540,7 +540,7 @@ void intel_desc_set_update_samplers(struct intel_desc_set *set,
 
     for (i = 0; i < update->count; i++) {
         const struct intel_sampler *sampler =
-            intel_sampler((VK_SAMPLER) update->pSamplers[i]);
+            intel_sampler((VkSampler) update->pSamplers[i]);
         struct intel_desc_sampler desc;
 
         desc.sampler = sampler;
@@ -553,7 +553,7 @@ void intel_desc_set_update_samplers(struct intel_desc_set *set,
 }
 
 void intel_desc_set_update_sampler_textures(struct intel_desc_set *set,
-                                            const VK_UPDATE_SAMPLER_TEXTURES *update)
+                                            const VkUpdateSamplerTextures *update)
 {
     struct intel_desc_iter iter;
     const struct intel_desc_layout_binding *binding;
@@ -582,7 +582,7 @@ void intel_desc_set_update_sampler_textures(struct intel_desc_set *set,
         const struct intel_sampler *sampler = (binding->immutable_samplers) ?
             binding->immutable_samplers[update->arrayIndex + i] :
             intel_sampler(update->pSamplerImageViews[i].sampler);
-        const VK_IMAGE_VIEW_ATTACH_INFO *info =
+        const VkImageViewAttachInfo *info =
             update->pSamplerImageViews[i].pImageView;
         const struct intel_img_view *view = intel_img_view(info->view);
         struct intel_desc_surface view_desc;
@@ -604,7 +604,7 @@ void intel_desc_set_update_sampler_textures(struct intel_desc_set *set,
 }
 
 void intel_desc_set_update_images(struct intel_desc_set *set,
-                                  const VK_UPDATE_IMAGES *update)
+                                  const VkUpdateImages *update)
 {
     struct intel_desc_iter iter;
     uint32_t i;
@@ -614,7 +614,7 @@ void intel_desc_set_update_images(struct intel_desc_set *set,
         return;
 
     for (i = 0; i < update->count; i++) {
-        const VK_IMAGE_VIEW_ATTACH_INFO *info = &update->pImageViews[i];
+        const VkImageViewAttachInfo *info = &update->pImageViews[i];
         const struct intel_img_view *view = intel_img_view(info->view);
         struct intel_desc_surface desc;
 
@@ -631,7 +631,7 @@ void intel_desc_set_update_images(struct intel_desc_set *set,
 }
 
 void intel_desc_set_update_buffers(struct intel_desc_set *set,
-                                   const VK_UPDATE_BUFFERS *update)
+                                   const VkUpdateBuffers *update)
 {
     struct intel_desc_iter iter;
     uint32_t i;
@@ -641,7 +641,7 @@ void intel_desc_set_update_buffers(struct intel_desc_set *set,
         return;
 
     for (i = 0; i < update->count; i++) {
-        const VK_BUFFER_VIEW_ATTACH_INFO *info = &update->pBufferViews[i];
+        const VkBufferViewAttachInfo *info = &update->pBufferViews[i];
         const struct intel_buf_view *view = intel_buf_view(info->view);
         struct intel_desc_surface desc;
 
@@ -658,7 +658,7 @@ void intel_desc_set_update_buffers(struct intel_desc_set *set,
 }
 
 void intel_desc_set_update_as_copy(struct intel_desc_set *set,
-                                   const VK_UPDATE_AS_COPY *update)
+                                   const VkUpdateAsCopy *update)
 {
     const struct intel_desc_set *src_set =
         intel_desc_set(update->descriptorSet);
@@ -699,13 +699,13 @@ static void desc_layout_destroy(struct intel_obj *obj)
     intel_desc_layout_destroy(layout);
 }
 
-static VK_RESULT desc_layout_init_bindings(struct intel_desc_layout *layout,
+static VkResult desc_layout_init_bindings(struct intel_desc_layout *layout,
                                             const struct intel_desc_region *region,
-                                            const VK_DESCRIPTOR_SET_LAYOUT_CREATE_INFO *info)
+                                            const VkDescriptorSetLayoutCreateInfo *info)
 {
     struct intel_desc_offset offset;
     uint32_t i;
-    VK_RESULT ret;
+    VkResult ret;
 
     intel_desc_offset_set(&offset, 0, 0);
 
@@ -720,7 +720,7 @@ static VK_RESULT desc_layout_init_bindings(struct intel_desc_layout *layout,
 
     /* initialize bindings */
     for (i = 0; i < info->count; i++) {
-        const VK_DESCRIPTOR_SET_LAYOUT_BINDING *lb = &info->pBinding[i];
+        const VkDescriptorSetLayoutBinding *lb = &info->pBinding[i];
         struct intel_desc_layout_binding *binding = &layout->bindings[i];
         struct intel_desc_offset size;
 
@@ -759,7 +759,7 @@ static VK_RESULT desc_layout_init_bindings(struct intel_desc_layout *layout,
 
             if (shared) {
                 binding->shared_immutable_sampler =
-                    intel_sampler((VK_SAMPLER) lb->pImmutableSamplers[0]);
+                    intel_sampler((VkSampler) lb->pImmutableSamplers[0]);
                 /* set sampler offset increment to 0 */
                 intel_desc_offset_set(&binding->increment,
                         binding->increment.surface, 0);
@@ -772,7 +772,7 @@ static VK_RESULT desc_layout_init_bindings(struct intel_desc_layout *layout,
 
                 for (j = 0; j < lb->count; j++) {
                     binding->immutable_samplers[j] =
-                        intel_sampler((VK_SAMPLER) lb->pImmutableSamplers[j]);
+                        intel_sampler((VkSampler) lb->pImmutableSamplers[j]);
                 }
             }
         }
@@ -788,12 +788,12 @@ static VK_RESULT desc_layout_init_bindings(struct intel_desc_layout *layout,
     return VK_SUCCESS;
 }
 
-VK_RESULT intel_desc_layout_create(struct intel_dev *dev,
-                                    const VK_DESCRIPTOR_SET_LAYOUT_CREATE_INFO *info,
+VkResult intel_desc_layout_create(struct intel_dev *dev,
+                                    const VkDescriptorSetLayoutCreateInfo *info,
                                     struct intel_desc_layout **layout_ret)
 {
     struct intel_desc_layout *layout;
-    VK_RESULT ret;
+    VkResult ret;
 
     layout = (struct intel_desc_layout *) intel_base_create(&dev->base.handle,
             sizeof(*layout), dev->base.dbg,
@@ -836,8 +836,8 @@ static void desc_layout_chain_destroy(struct intel_obj *obj)
     intel_desc_layout_chain_destroy(chain);
 }
 
-VK_RESULT intel_desc_layout_chain_create(struct intel_dev *dev,
-                                          const VK_DESCRIPTOR_SET_LAYOUT *layouts,
+VkResult intel_desc_layout_chain_create(struct intel_dev *dev,
+                                          const VkDescriptorSetLayout *layouts,
                                           uint32_t count,
                                           struct intel_desc_layout_chain **chain_ret)
 {
@@ -891,10 +891,10 @@ void intel_desc_layout_chain_destroy(struct intel_desc_layout_chain *chain)
     intel_base_destroy(&chain->obj.base);
 }
 
-ICD_EXPORT VK_RESULT VKAPI vkCreateDescriptorSetLayout(
-    VK_DEVICE                                   device,
-    const VK_DESCRIPTOR_SET_LAYOUT_CREATE_INFO* pCreateInfo,
-    VK_DESCRIPTOR_SET_LAYOUT*                   pSetLayout)
+ICD_EXPORT VkResult VKAPI vkCreateDescriptorSetLayout(
+    VkDevice                                   device,
+    const VkDescriptorSetLayoutCreateInfo* pCreateInfo,
+    VkDescriptorSetLayout*                   pSetLayout)
 {
     struct intel_dev *dev = intel_dev(device);
 
@@ -902,11 +902,11 @@ ICD_EXPORT VK_RESULT VKAPI vkCreateDescriptorSetLayout(
             (struct intel_desc_layout **) pSetLayout);
 }
 
-ICD_EXPORT VK_RESULT VKAPI vkCreateDescriptorSetLayoutChain(
-    VK_DEVICE                                   device,
+ICD_EXPORT VkResult VKAPI vkCreateDescriptorSetLayoutChain(
+    VkDevice                                   device,
     uint32_t                                     setLayoutArrayCount,
-    const VK_DESCRIPTOR_SET_LAYOUT*             pSetLayoutArray,
-    VK_DESCRIPTOR_SET_LAYOUT_CHAIN*             pLayoutChain)
+    const VkDescriptorSetLayout*             pSetLayoutArray,
+    VkDescriptorSetLayoutChain*             pLayoutChain)
 {
     struct intel_dev *dev = intel_dev(device);
 
@@ -915,9 +915,9 @@ ICD_EXPORT VK_RESULT VKAPI vkCreateDescriptorSetLayoutChain(
             (struct intel_desc_layout_chain **) pLayoutChain);
 }
 
-ICD_EXPORT VK_RESULT VKAPI vkBeginDescriptorPoolUpdate(
-    VK_DEVICE                                   device,
-    VK_DESCRIPTOR_UPDATE_MODE                   updateMode)
+ICD_EXPORT VkResult VKAPI vkBeginDescriptorPoolUpdate(
+    VkDevice                                   device,
+    VkDescriptorUpdateMode                   updateMode)
 {
     struct intel_dev *dev = intel_dev(device);
     struct intel_desc_region *region = dev->desc_region;
@@ -925,9 +925,9 @@ ICD_EXPORT VK_RESULT VKAPI vkBeginDescriptorPoolUpdate(
     return intel_desc_region_begin_update(region, updateMode);
 }
 
-ICD_EXPORT VK_RESULT VKAPI vkEndDescriptorPoolUpdate(
-    VK_DEVICE                                   device,
-    VK_CMD_BUFFER                               cmd_)
+ICD_EXPORT VkResult VKAPI vkEndDescriptorPoolUpdate(
+    VkDevice                                   device,
+    VkCmdBuffer                               cmd_)
 {
     struct intel_dev *dev = intel_dev(device);
     struct intel_desc_region *region = dev->desc_region;
@@ -936,12 +936,12 @@ ICD_EXPORT VK_RESULT VKAPI vkEndDescriptorPoolUpdate(
     return intel_desc_region_end_update(region, cmd);
 }
 
-ICD_EXPORT VK_RESULT VKAPI vkCreateDescriptorPool(
-    VK_DEVICE                                   device,
-    VK_DESCRIPTOR_POOL_USAGE                    poolUsage,
+ICD_EXPORT VkResult VKAPI vkCreateDescriptorPool(
+    VkDevice                                   device,
+    VkDescriptorPoolUsage                    poolUsage,
     uint32_t                                     maxSets,
-    const VK_DESCRIPTOR_POOL_CREATE_INFO*       pCreateInfo,
-    VK_DESCRIPTOR_POOL*                         pDescriptorPool)
+    const VkDescriptorPoolCreateInfo*       pCreateInfo,
+    VkDescriptorPool*                         pDescriptorPool)
 {
     struct intel_dev *dev = intel_dev(device);
 
@@ -949,8 +949,8 @@ ICD_EXPORT VK_RESULT VKAPI vkCreateDescriptorPool(
             (struct intel_desc_pool **) pDescriptorPool);
 }
 
-ICD_EXPORT VK_RESULT VKAPI vkResetDescriptorPool(
-    VK_DESCRIPTOR_POOL                          descriptorPool)
+ICD_EXPORT VkResult VKAPI vkResetDescriptorPool(
+    VkDescriptorPool                          descriptorPool)
 {
     struct intel_desc_pool *pool = intel_desc_pool(descriptorPool);
 
@@ -959,22 +959,22 @@ ICD_EXPORT VK_RESULT VKAPI vkResetDescriptorPool(
     return VK_SUCCESS;
 }
 
-ICD_EXPORT VK_RESULT VKAPI vkAllocDescriptorSets(
-    VK_DESCRIPTOR_POOL                          descriptorPool,
-    VK_DESCRIPTOR_SET_USAGE                     setUsage,
+ICD_EXPORT VkResult VKAPI vkAllocDescriptorSets(
+    VkDescriptorPool                          descriptorPool,
+    VkDescriptorSetUsage                     setUsage,
     uint32_t                                     count,
-    const VK_DESCRIPTOR_SET_LAYOUT*             pSetLayouts,
-    VK_DESCRIPTOR_SET*                          pDescriptorSets,
+    const VkDescriptorSetLayout*             pSetLayouts,
+    VkDescriptorSet*                          pDescriptorSets,
     uint32_t*                                    pCount)
 {
     struct intel_desc_pool *pool = intel_desc_pool(descriptorPool);
     struct intel_dev *dev = pool->dev;
-    VK_RESULT ret = VK_SUCCESS;
+    VkResult ret = VK_SUCCESS;
     uint32_t i;
 
     for (i = 0; i < count; i++) {
         const struct intel_desc_layout *layout =
-            intel_desc_layout((VK_DESCRIPTOR_SET_LAYOUT) pSetLayouts[i]);
+            intel_desc_layout((VkDescriptorSetLayout) pSetLayouts[i]);
 
         ret = intel_desc_set_create(dev, pool, setUsage, layout,
                 (struct intel_desc_set **) &pDescriptorSets[i]);
@@ -989,22 +989,22 @@ ICD_EXPORT VK_RESULT VKAPI vkAllocDescriptorSets(
 }
 
 ICD_EXPORT void VKAPI vkClearDescriptorSets(
-    VK_DESCRIPTOR_POOL                          descriptorPool,
+    VkDescriptorPool                          descriptorPool,
     uint32_t                                     count,
-    const VK_DESCRIPTOR_SET*                    pDescriptorSets)
+    const VkDescriptorSet*                    pDescriptorSets)
 {
     uint32_t i;
 
     for (i = 0; i < count; i++) {
         struct intel_desc_set *set =
-            intel_desc_set((VK_DESCRIPTOR_SET) pDescriptorSets[i]);
+            intel_desc_set((VkDescriptorSet) pDescriptorSets[i]);
 
         intel_desc_region_clear(set->region, &set->region_begin, &set->region_end);
     }
 }
 
 ICD_EXPORT void VKAPI vkUpdateDescriptors(
-    VK_DESCRIPTOR_SET                           descriptorSet,
+    VkDescriptorSet                           descriptorSet,
     uint32_t                                     updateCount,
     const void**                                 ppUpdateArray)
 {
@@ -1014,15 +1014,15 @@ ICD_EXPORT void VKAPI vkUpdateDescriptors(
     for (i = 0; i < updateCount; i++) {
         const union {
             struct {
-                VK_STRUCTURE_TYPE                      sType;
+                VkStructureType                      sType;
                 const void*                             pNext;
             } common;
 
-            VK_UPDATE_SAMPLERS samplers;
-            VK_UPDATE_SAMPLER_TEXTURES sampler_textures;
-            VK_UPDATE_IMAGES images;
-            VK_UPDATE_BUFFERS buffers;
-            VK_UPDATE_AS_COPY as_copy;
+            VkUpdateSamplers samplers;
+            VkUpdateSamplerTextures sampler_textures;
+            VkUpdateImages images;
+            VkUpdateBuffers buffers;
+            VkUpdateAsCopy as_copy;
         } *u = ppUpdateArray[i];
 
         switch (u->common.sType) {

@@ -44,15 +44,15 @@ struct intel_pipeline_shader;
 struct brw_context *intel_create_brw_context(const struct intel_gpu *gpu);
 void intel_destroy_brw_context(struct brw_context *brw);
 
-VK_RESULT intel_pipeline_shader_compile(struct intel_pipeline_shader *ips,
+VkResult intel_pipeline_shader_compile(struct intel_pipeline_shader *ips,
                                          const struct intel_gpu *gpu,
                                          const struct intel_desc_layout_chain *chain,
-                                         const VK_PIPELINE_SHADER *info);
+                                         const VkPipelineShader *info);
 
 void intel_pipeline_shader_cleanup(struct intel_pipeline_shader *sh,
                                    const struct intel_gpu *gpu);
 
-VK_RESULT intel_pipeline_shader_compile_meta(struct intel_pipeline_shader *sh,
+VkResult intel_pipeline_shader_compile_meta(struct intel_pipeline_shader *sh,
                                               const struct intel_gpu *gpu,
                                               enum intel_dev_meta_shader id);
 

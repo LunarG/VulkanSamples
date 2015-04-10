@@ -32,7 +32,7 @@
 /**
  * Translate a pipe texture filter to the matching hardware mapfilter.
  */
-static int translate_tex_filter(VK_TEX_FILTER filter)
+static int translate_tex_filter(VkTexFilter filter)
 {
    switch (filter) {
    case VK_TEX_FILTER_NEAREST: return GEN6_MAPFILTER_NEAREST;
@@ -43,7 +43,7 @@ static int translate_tex_filter(VK_TEX_FILTER filter)
    }
 }
 
-static int translate_tex_mipmap_mode(VK_TEX_MIPMAP_MODE mode)
+static int translate_tex_mipmap_mode(VkTexMipmapMode mode)
 {
    switch (mode) {
    case VK_TEX_MIPMAP_NEAREST: return GEN6_MIPFILTER_NEAREST;
@@ -55,7 +55,7 @@ static int translate_tex_mipmap_mode(VK_TEX_MIPMAP_MODE mode)
    }
 }
 
-static int translate_tex_addr(VK_TEX_ADDRESS addr)
+static int translate_tex_addr(VkTexAddress addr)
 {
    switch (addr) {
    case VK_TEX_ADDRESS_WRAP:         return GEN6_TEXCOORDMODE_WRAP;
@@ -69,7 +69,7 @@ static int translate_tex_addr(VK_TEX_ADDRESS addr)
    }
 }
 
-static int translate_compare_func(VK_COMPARE_FUNC func)
+static int translate_compare_func(VkCompareFunc func)
 {
     switch (func) {
     case VK_COMPARE_NEVER:         return GEN6_COMPAREFUNCTION_NEVER;
@@ -86,7 +86,7 @@ static int translate_compare_func(VK_COMPARE_FUNC func)
     }
 }
 
-static void translate_border_color(VK_BORDER_COLOR_TYPE type, float rgba[4])
+static void translate_border_color(VkBorderColorType type, float rgba[4])
 {
     switch (type) {
     case VK_BORDER_COLOR_OPAQUE_WHITE:
@@ -177,7 +177,7 @@ sampler_border_color_state_gen6(const struct intel_gpu *gpu,
 static void
 sampler_init(struct intel_sampler *sampler,
              const struct intel_gpu *gpu,
-             const VK_SAMPLER_CREATE_INFO *info)
+             const VkSamplerCreateInfo *info)
 {
    int mip_filter, min_filter, mag_filter, max_aniso;
    int lod_bias, max_lod, min_lod;
@@ -361,8 +361,8 @@ static void sampler_destroy(struct intel_obj *obj)
     intel_sampler_destroy(sampler);
 }
 
-VK_RESULT intel_sampler_create(struct intel_dev *dev,
-                                const VK_SAMPLER_CREATE_INFO *info,
+VkResult intel_sampler_create(struct intel_dev *dev,
+                                const VkSamplerCreateInfo *info,
                                 struct intel_sampler **sampler_ret)
 {
     struct intel_sampler *sampler;
@@ -386,10 +386,10 @@ void intel_sampler_destroy(struct intel_sampler *sampler)
     intel_base_destroy(&sampler->obj.base);
 }
 
-ICD_EXPORT VK_RESULT VKAPI vkCreateSampler(
-    VK_DEVICE                                  device,
-    const VK_SAMPLER_CREATE_INFO*              pCreateInfo,
-    VK_SAMPLER*                                pSampler)
+ICD_EXPORT VkResult VKAPI vkCreateSampler(
+    VkDevice                                  device,
+    const VkSamplerCreateInfo*              pCreateInfo,
+    VkSampler*                                pSampler)
 {
     struct intel_dev *dev = intel_dev(device);
 

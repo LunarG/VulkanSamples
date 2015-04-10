@@ -42,12 +42,12 @@
 GLV_CRITICAL_SECTION g_memInfoLock;
 VKMemInfo g_memInfo = {0, NULL, NULL, 0};
 
-GLVTRACER_EXPORT VK_RESULT VKAPI __HOOKED_vkCreateInstance(
-    const VK_INSTANCE_CREATE_INFO* pCreateInfo,
-    VK_INSTANCE* pInstance)
+GLVTRACER_EXPORT VkResult VKAPI __HOOKED_vkCreateInstance(
+    const VkInstanceCreateInfo* pCreateInfo,
+    VkInstance* pInstance)
 {
     glv_trace_packet_header* pHeader;
-    VK_RESULT result;
+    VkResult result;
     struct_vkCreateInstance* pPacket = NULL;
     uint64_t startTime;
     glv_platform_thread_once(&gInitOnce, InitTracer);
@@ -58,7 +58,7 @@ GLVTRACER_EXPORT VK_RESULT VKAPI __HOOKED_vkCreateInstance(
     }
     startTime = glv_get_time();
     result = real_vkCreateInstance(pCreateInfo, pInstance);
-    CREATE_TRACE_PACKET(vkCreateInstance, sizeof(VK_INSTANCE) + get_struct_chain_size((void*)pCreateInfo));
+    CREATE_TRACE_PACKET(vkCreateInstance, sizeof(VkInstance) + get_struct_chain_size((void*)pCreateInfo));
     pHeader->entrypoint_begin_time = startTime;
     if (isHooked == FALSE) {
         AttachHooks();
@@ -67,15 +67,15 @@ GLVTRACER_EXPORT VK_RESULT VKAPI __HOOKED_vkCreateInstance(
     }
     pPacket = interpret_body_as_vkCreateInstance(pHeader);
 
-    add_VK_INSTANCE_CREATE_INFO_to_packet(pHeader, (VK_INSTANCE_CREATE_INFO**)&(pPacket->pCreateInfo), pCreateInfo);
-    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pInstance), sizeof(VK_INSTANCE), pInstance);
+    add_VK_INSTANCE_CREATE_INFO_to_packet(pHeader, (VkInstanceCreateInfo**)&(pPacket->pCreateInfo), pCreateInfo);
+    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pInstance), sizeof(VkInstance), pInstance);
     pPacket->result = result;
     glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pInstance));
     FINISH_TRACE_PACKET();
     return result;
 }
 
-GLVTRACER_EXPORT VK_RESULT VKAPI __HOOKED_vkEnumerateLayers(
+GLVTRACER_EXPORT VkResult VKAPI __HOOKED_vkEnumerateLayers(
     VK_PHYSICAL_GPU gpu,
     size_t maxLayerCount,
     size_t maxStringSize,
@@ -84,7 +84,7 @@ GLVTRACER_EXPORT VK_RESULT VKAPI __HOOKED_vkEnumerateLayers(
     void* pReserved)
 {
     glv_trace_packet_header* pHeader;
-    VK_RESULT result;
+    VkResult result;
     struct_vkEnumerateLayers* pPacket = NULL;
     uint64_t startTime;
     SEND_ENTRYPOINT_ID(vkEnumerateLayers);
@@ -113,14 +113,14 @@ GLVTRACER_EXPORT VK_RESULT VKAPI __HOOKED_vkEnumerateLayers(
     return result;
 }
 
-GLVTRACER_EXPORT VK_RESULT VKAPI __HOOKED_vkEnumerateGpus(
-    VK_INSTANCE instance,
+GLVTRACER_EXPORT VkResult VKAPI __HOOKED_vkEnumerateGpus(
+    VkInstance instance,
     uint32_t maxGpus,
     uint32_t* pGpuCount,
     VK_PHYSICAL_GPU* pGpus)
 {
     glv_trace_packet_header* pHeader;
-    VK_RESULT result;
+    VkResult result;
     struct_vkEnumerateGpus* pPacket = NULL;
     uint64_t startTime;
     SEND_ENTRYPOINT_ID(vkEnumerateGpus);
@@ -140,7 +140,7 @@ GLVTRACER_EXPORT VK_RESULT VKAPI __HOOKED_vkEnumerateGpus(
     return result;
 }
 
-GLVTRACER_EXPORT VK_RESULT VKAPI __HOOKED_vkAllocDescriptorSets(
+GLVTRACER_EXPORT VkResult VKAPI __HOOKED_vkAllocDescriptorSets(
     VK_DESCRIPTOR_POOL descriptorPool,
     VK_DESCRIPTOR_SET_USAGE setUsage,
     uint32_t count,
@@ -149,7 +149,7 @@ GLVTRACER_EXPORT VK_RESULT VKAPI __HOOKED_vkAllocDescriptorSets(
     uint32_t* pCount)
 {
     glv_trace_packet_header* pHeader;
-    VK_RESULT result;
+    VkResult result;
     struct_vkAllocDescriptorSets* pPacket = NULL;
     uint64_t startTime;
     SEND_ENTRYPOINT_ID(vkAllocDescriptorSets);
@@ -173,13 +173,13 @@ GLVTRACER_EXPORT VK_RESULT VKAPI __HOOKED_vkAllocDescriptorSets(
     return result;
 }
 
-GLVTRACER_EXPORT VK_RESULT VKAPI __HOOKED_vkMapMemory(
+GLVTRACER_EXPORT VkResult VKAPI __HOOKED_vkMapMemory(
     VK_GPU_MEMORY mem,
     VK_FLAGS flags,
     void** ppData)
 {
     glv_trace_packet_header* pHeader;
-    VK_RESULT result;
+    VkResult result;
     struct_vkMapMemory* pPacket = NULL;
     CREATE_TRACE_PACKET(vkMapMemory, sizeof(void*));
     result = real_vkMapMemory(mem, flags, ppData);
@@ -197,10 +197,10 @@ GLVTRACER_EXPORT VK_RESULT VKAPI __HOOKED_vkMapMemory(
     return result;
 }
 
-GLVTRACER_EXPORT VK_RESULT VKAPI __HOOKED_vkUnmapMemory(VK_GPU_MEMORY mem)
+GLVTRACER_EXPORT VkResult VKAPI __HOOKED_vkUnmapMemory(VK_GPU_MEMORY mem)
 {
     glv_trace_packet_header* pHeader;
-    VK_RESULT result;
+    VkResult result;
     struct_vkUnmapMemory* pPacket;
     VKAllocInfo *entry;
     SEND_ENTRYPOINT_PARAMS("vkUnmapMemory(mem %p)\n", mem);

@@ -33,7 +33,7 @@
 #include "shader.h"
 #include "pipeline.h"
 
-static int translate_blend_func(VK_BLEND_FUNC func)
+static int translate_blend_func(VkBlendFunc func)
 {
    switch (func) {
    case VK_BLEND_FUNC_ADD:                return GEN6_BLENDFUNCTION_ADD;
@@ -47,7 +47,7 @@ static int translate_blend_func(VK_BLEND_FUNC func)
    };
 }
 
-static int translate_blend(VK_BLEND blend)
+static int translate_blend(VkBlend blend)
 {
    switch (blend) {
    case VK_BLEND_ZERO:                     return GEN6_BLENDFACTOR_ZERO;
@@ -75,7 +75,7 @@ static int translate_blend(VK_BLEND blend)
    };
 }
 
-static int translate_compare_func(VK_COMPARE_FUNC func)
+static int translate_compare_func(VkCompareFunc func)
 {
     switch (func) {
     case VK_COMPARE_NEVER:         return GEN6_COMPAREFUNCTION_NEVER;
@@ -92,7 +92,7 @@ static int translate_compare_func(VK_COMPARE_FUNC func)
     }
 }
 
-static int translate_stencil_op(VK_STENCIL_OP op)
+static int translate_stencil_op(VkStencilOp op)
 {
     switch (op) {
     case VK_STENCIL_OP_KEEP:       return GEN6_STENCILOP_KEEP;
@@ -110,22 +110,22 @@ static int translate_stencil_op(VK_STENCIL_OP op)
 }
 
 struct intel_pipeline_create_info {
-    VK_GRAPHICS_PIPELINE_CREATE_INFO   graphics;
-    VK_PIPELINE_VERTEX_INPUT_CREATE_INFO vi;
-    VK_PIPELINE_IA_STATE_CREATE_INFO   ia;
-    VK_PIPELINE_DS_STATE_CREATE_INFO   db;
-    VK_PIPELINE_CB_STATE_CREATE_INFO   cb;
-    VK_PIPELINE_RS_STATE_CREATE_INFO   rs;
-    VK_PIPELINE_TESS_STATE_CREATE_INFO tess;
-    VK_PIPELINE_MS_STATE_CREATE_INFO   ms;
-    VK_PIPELINE_VP_STATE_CREATE_INFO   vp;
-    VK_PIPELINE_SHADER                 vs;
-    VK_PIPELINE_SHADER                 tcs;
-    VK_PIPELINE_SHADER                 tes;
-    VK_PIPELINE_SHADER                 gs;
-    VK_PIPELINE_SHADER                 fs;
+    VkGraphicsPipelineCreateInfo   graphics;
+    VkPipelineVertexInputCreateInfo vi;
+    VkPipelineIaStateCreateInfo   ia;
+    VkPipelineDsStateCreateInfo   db;
+    VkPipelineCbStateCreateInfo   cb;
+    VkPipelineRsStateCreateInfo   rs;
+    VkPipelineTessStateCreateInfo tess;
+    VkPipelineMsStateCreateInfo   ms;
+    VkPipelineVpStateCreateInfo   vp;
+    VkPipelineShader                 vs;
+    VkPipelineShader                 tcs;
+    VkPipelineShader                 tes;
+    VkPipelineShader                 gs;
+    VkPipelineShader                 fs;
 
-    VK_COMPUTE_PIPELINE_CREATE_INFO    compute;
+    VkComputePipelineCreateInfo    compute;
 };
 
 /* in S1.3 */
@@ -202,7 +202,7 @@ struct intel_pipeline_shader *intel_pipeline_shader_create_meta(struct intel_dev
                                                                 enum intel_dev_meta_shader id)
 {
     struct intel_pipeline_shader *sh;
-    VK_RESULT ret;
+    VkResult ret;
 
     sh = intel_alloc(dev, sizeof(*sh), 0, VK_SYSTEM_ALLOC_INTERNAL);
     if (!sh)
@@ -238,12 +238,12 @@ void intel_pipeline_shader_destroy(struct intel_dev *dev,
     intel_free(dev, sh);
 }
 
-static VK_RESULT pipeline_build_shader(struct intel_pipeline *pipeline,
+static VkResult pipeline_build_shader(struct intel_pipeline *pipeline,
                                         const struct intel_desc_layout_chain *chain,
-                                        const VK_PIPELINE_SHADER *sh_info,
+                                        const VkPipelineShader *sh_info,
                                         struct intel_pipeline_shader *sh)
 {
-    VK_RESULT ret;
+    VkResult ret;
 
     ret = intel_pipeline_shader_compile(sh,
             pipeline->dev->gpu, chain, sh_info);
@@ -263,12 +263,12 @@ static VK_RESULT pipeline_build_shader(struct intel_pipeline *pipeline,
     return VK_SUCCESS;
 }
 
-static VK_RESULT pipeline_build_shaders(struct intel_pipeline *pipeline,
+static VkResult pipeline_build_shaders(struct intel_pipeline *pipeline,
                                          const struct intel_pipeline_create_info *info)
 {
     const struct intel_desc_layout_chain *chain =
         intel_desc_layout_chain(info->graphics.pSetLayoutChain);
-    VK_RESULT ret = VK_SUCCESS;
+    VkResult ret = VK_SUCCESS;
 
     if (ret == VK_SUCCESS && info->vs.shader) {
         ret = pipeline_build_shader(pipeline, chain,
@@ -309,7 +309,7 @@ static uint32_t *pipeline_cmd_ptr(struct intel_pipeline *pipeline, int cmd_len)
     return ptr;
 }
 
-static VK_RESULT pipeline_build_ia(struct intel_pipeline *pipeline,
+static VkResult pipeline_build_ia(struct intel_pipeline *pipeline,
                                     const struct intel_pipeline_create_info* info)
 {
     pipeline->topology = info->ia.topology;
@@ -367,10 +367,10 @@ static VK_RESULT pipeline_build_ia(struct intel_pipeline *pipeline,
     return VK_SUCCESS;
 }
 
-static VK_RESULT pipeline_build_rs_state(struct intel_pipeline *pipeline,
+static VkResult pipeline_build_rs_state(struct intel_pipeline *pipeline,
                                           const struct intel_pipeline_create_info* info)
 {
-    const VK_PIPELINE_RS_STATE_CREATE_INFO *rs_state = &info->rs;
+    const VkPipelineRsStateCreateInfo *rs_state = &info->rs;
     bool ccw;
 
     pipeline->depthClipEnable = rs_state->depthClipEnable;
@@ -471,18 +471,18 @@ static void pipeline_destroy(struct intel_obj *obj)
     intel_base_destroy(&pipeline->obj.base);
 }
 
-static VK_RESULT pipeline_get_info(struct intel_base *base, int type,
+static VkResult pipeline_get_info(struct intel_base *base, int type,
                                     size_t *size, void *data)
 {
     struct intel_pipeline *pipeline = intel_pipeline_from_base(base);
-    VK_RESULT ret = VK_SUCCESS;
+    VkResult ret = VK_SUCCESS;
 
     switch (type) {
     case VK_INFO_TYPE_MEMORY_REQUIREMENTS:
         {
-            VK_MEMORY_REQUIREMENTS *mem_req = data;
+            VkMemoryRequirements *mem_req = data;
 
-            *size = sizeof(VK_MEMORY_REQUIREMENTS);
+            *size = sizeof(VkMemoryRequirements);
             if (data) {
                 mem_req->size = pipeline->scratch_size;
                 mem_req->alignment = 1024;
@@ -498,7 +498,7 @@ static VK_RESULT pipeline_get_info(struct intel_base *base, int type,
     return ret;
 }
 
-static VK_RESULT pipeline_validate(struct intel_pipeline *pipeline)
+static VkResult pipeline_validate(struct intel_pipeline *pipeline)
 {
     /*
      * Validate required elements
@@ -744,7 +744,7 @@ static void pipeline_build_vertex_elements(struct intel_pipeline *pipeline,
 
     /* VERTEX_ELEMENT_STATE */
     for (i = 0, attrs_processed = 0; attrs_processed < attr_count; i++) {
-        VK_VERTEX_INPUT_ATTRIBUTE_DESCRIPTION *attr = NULL;
+        VkVertexInputAttributeDescription *attr = NULL;
 
         /*
          * The compiler will pack the shader references and then
@@ -762,7 +762,7 @@ static void pipeline_build_vertex_elements(struct intel_pipeline *pipeline,
          */
         for (j = 0; j < info->vi.attributeCount; j++) {
             if (info->vi.pVertexAttributeDescriptions[j].location == i) {
-                attr = (VK_VERTEX_INPUT_ATTRIBUTE_DESCRIPTION *) &info->vi.pVertexAttributeDescriptions[j];
+                attr = (VkVertexInputAttributeDescription *) &info->vi.pVertexAttributeDescriptions[j];
                 attrs_processed++;
                 break;
             }
@@ -1094,7 +1094,7 @@ static void pipeline_build_cb(struct intel_pipeline *pipeline,
     uint32_t *dw = pipeline->cmd_cb;
 
     for (i = 0; i < info->cb.attachmentCount; i++) {
-        const VK_PIPELINE_CB_ATTACHMENT_STATE *att = &info->cb.pAttachments[i];
+        const VkPipelineCbAttachmentState *att = &info->cb.pAttachments[i];
         uint32_t dw0, dw1;
 
 
@@ -1177,10 +1177,10 @@ static void pipeline_build_cb(struct intel_pipeline *pipeline,
 }
 
 
-static VK_RESULT pipeline_build_all(struct intel_pipeline *pipeline,
+static VkResult pipeline_build_all(struct intel_pipeline *pipeline,
                                      const struct intel_pipeline_create_info *info)
 {
-    VK_RESULT ret;
+    VkResult ret;
 
     ret = pipeline_build_shaders(pipeline, info);
     if (ret != VK_SUCCESS)
@@ -1235,11 +1235,11 @@ static VK_RESULT pipeline_build_all(struct intel_pipeline *pipeline,
 }
 
 struct intel_pipeline_create_info_header {
-    VK_STRUCTURE_TYPE struct_type;
+    VkStructureType struct_type;
     const struct intel_pipeline_create_info_header *next;
 };
 
-static VK_RESULT pipeline_create_info_init(struct intel_pipeline_create_info *info,
+static VkResult pipeline_create_info_init(struct intel_pipeline_create_info *info,
                                             const struct intel_pipeline_create_info_header *header)
 {
     memset(info, 0, sizeof(*info));
@@ -1296,8 +1296,8 @@ static VK_RESULT pipeline_create_info_init(struct intel_pipeline_create_info *in
             break;
         case VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO:
             {
-                const VK_PIPELINE_SHADER *shader =
-                    (const VK_PIPELINE_SHADER *) (header + 1);
+                const VkPipelineShader *shader =
+                    (const VkPipelineShader *) (header + 1);
 
                 src = (const void *) shader;
                 size = sizeof(*shader);
@@ -1340,13 +1340,13 @@ static VK_RESULT pipeline_create_info_init(struct intel_pipeline_create_info *in
     return VK_SUCCESS;
 }
 
-static VK_RESULT graphics_pipeline_create(struct intel_dev *dev,
-                                           const VK_GRAPHICS_PIPELINE_CREATE_INFO *info_,
+static VkResult graphics_pipeline_create(struct intel_dev *dev,
+                                           const VkGraphicsPipelineCreateInfo *info_,
                                            struct intel_pipeline **pipeline_ret)
 {
     struct intel_pipeline_create_info info;
     struct intel_pipeline *pipeline;
-    VK_RESULT ret;
+    VkResult ret;
 
     ret = pipeline_create_info_init(&info,
             (const struct intel_pipeline_create_info_header *) info_);
@@ -1376,10 +1376,10 @@ static VK_RESULT graphics_pipeline_create(struct intel_dev *dev,
     return VK_SUCCESS;
 }
 
-ICD_EXPORT VK_RESULT VKAPI vkCreateGraphicsPipeline(
-    VK_DEVICE                                  device,
-    const VK_GRAPHICS_PIPELINE_CREATE_INFO*    pCreateInfo,
-    VK_PIPELINE*                               pPipeline)
+ICD_EXPORT VkResult VKAPI vkCreateGraphicsPipeline(
+    VkDevice                                  device,
+    const VkGraphicsPipelineCreateInfo*    pCreateInfo,
+    VkPipeline*                               pPipeline)
 {
     struct intel_dev *dev = intel_dev(device);
 
@@ -1387,11 +1387,11 @@ ICD_EXPORT VK_RESULT VKAPI vkCreateGraphicsPipeline(
             (struct intel_pipeline **) pPipeline);
 }
 
-ICD_EXPORT VK_RESULT VKAPI vkCreateGraphicsPipelineDerivative(
-    VK_DEVICE                                  device,
-    const VK_GRAPHICS_PIPELINE_CREATE_INFO*    pCreateInfo,
-    VK_PIPELINE                                basePipeline,
-    VK_PIPELINE*                               pPipeline)
+ICD_EXPORT VkResult VKAPI vkCreateGraphicsPipelineDerivative(
+    VkDevice                                  device,
+    const VkGraphicsPipelineCreateInfo*    pCreateInfo,
+    VkPipeline                                basePipeline,
+    VkPipeline*                               pPipeline)
 {
     struct intel_dev *dev = intel_dev(device);
 
@@ -1401,37 +1401,37 @@ ICD_EXPORT VK_RESULT VKAPI vkCreateGraphicsPipelineDerivative(
             (struct intel_pipeline **) pPipeline);
 }
 
-ICD_EXPORT VK_RESULT VKAPI vkCreateComputePipeline(
-    VK_DEVICE                                  device,
-    const VK_COMPUTE_PIPELINE_CREATE_INFO*     pCreateInfo,
-    VK_PIPELINE*                               pPipeline)
+ICD_EXPORT VkResult VKAPI vkCreateComputePipeline(
+    VkDevice                                  device,
+    const VkComputePipelineCreateInfo*     pCreateInfo,
+    VkPipeline*                               pPipeline)
 {
     return VK_ERROR_UNAVAILABLE;
 }
 
-ICD_EXPORT VK_RESULT VKAPI vkStorePipeline(
-    VK_PIPELINE                                pipeline,
+ICD_EXPORT VkResult VKAPI vkStorePipeline(
+    VkPipeline                                pipeline,
     size_t*                                     pDataSize,
     void*                                       pData)
 {
     return VK_ERROR_UNAVAILABLE;
 }
 
-ICD_EXPORT VK_RESULT VKAPI vkLoadPipeline(
-    VK_DEVICE                                  device,
+ICD_EXPORT VkResult VKAPI vkLoadPipeline(
+    VkDevice                                  device,
     size_t                                    dataSize,
     const void*                                 pData,
-    VK_PIPELINE*                               pPipeline)
+    VkPipeline*                               pPipeline)
 {
     return VK_ERROR_UNAVAILABLE;
 }
 
-ICD_EXPORT VK_RESULT VKAPI vkLoadPipelineDerivative(
-    VK_DEVICE                                  device,
+ICD_EXPORT VkResult VKAPI vkLoadPipelineDerivative(
+    VkDevice                                  device,
     size_t                                      dataSize,
     const void*                                 pData,
-    VK_PIPELINE                                basePipeline,
-    VK_PIPELINE*                               pPipeline)
+    VkPipeline                                basePipeline,
+    VkPipeline*                               pPipeline)
 {
     return VK_ERROR_UNAVAILABLE;
 }

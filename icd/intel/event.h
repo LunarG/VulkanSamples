@@ -37,7 +37,7 @@ struct intel_event {
     struct intel_obj obj;
 };
 
-static inline struct intel_event *intel_event(VK_EVENT event)
+static inline struct intel_event *intel_event(VkEvent event)
 {
     return (struct intel_event *) event;
 }
@@ -47,13 +47,13 @@ static inline struct intel_event *intel_event_from_obj(struct intel_obj *obj)
     return (struct intel_event *) obj;
 }
 
-VK_RESULT intel_event_create(struct intel_dev *dev,
-                              const VK_EVENT_CREATE_INFO *info,
+VkResult intel_event_create(struct intel_dev *dev,
+                              const VkEventCreateInfo *info,
                               struct intel_event **event_ret);
 void intel_event_destroy(struct intel_event *event);
 
-VK_RESULT intel_event_set(struct intel_event *event);
-VK_RESULT intel_event_reset(struct intel_event *event);
-VK_RESULT intel_event_get_status(struct intel_event *event);
+VkResult intel_event_set(struct intel_event *event);
+VkResult intel_event_reset(struct intel_event *event);
+VkResult intel_event_get_status(struct intel_event *event);
 
 #endif /* EVENT_H */

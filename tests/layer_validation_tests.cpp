@@ -5,8 +5,8 @@
 
 void VKAPI myDbgFunc(
     VK_DBG_MSG_TYPE     msgType,
-    VK_VALIDATION_LEVEL validationLevel,
-    VK_BASE_OBJECT      srcObject,
+    VkValidationLevel validationLevel,
+    VkBaseObject      srcObject,
     size_t               location,
     int32_t              msgCode,
     const char*          pMsg,
@@ -14,7 +14,7 @@ void VKAPI myDbgFunc(
 
 class ErrorMonitor {
 public:
-    ErrorMonitor(VK_INSTANCE inst)
+    ErrorMonitor(VkInstance inst)
     {
         vkDbgRegisterMsgCallback(inst, myDbgFunc, this);
         m_msgType = VK_DBG_MSG_UNKNOWN;
@@ -43,8 +43,8 @@ private:
 };
 void VKAPI myDbgFunc(
     VK_DBG_MSG_TYPE     msgType,
-    VK_VALIDATION_LEVEL validationLevel,
-    VK_BASE_OBJECT      srcObject,
+    VkValidationLevel validationLevel,
+    VkBaseObject      srcObject,
     size_t               location,
     int32_t              msgCode,
     const char*          pMsg,
@@ -58,8 +58,8 @@ void VKAPI myDbgFunc(
 class VkLayerTest : public VkRenderFramework
 {
 public:
-    VK_RESULT BeginCommandBuffer(VkCommandBufferObj &cmdBuffer);
-    VK_RESULT EndCommandBuffer(VkCommandBufferObj &cmdBuffer);
+    VkResult BeginCommandBuffer(VkCommandBufferObj &cmdBuffer);
+    VkResult EndCommandBuffer(VkCommandBufferObj &cmdBuffer);
 
 protected:
         VkMemoryRefManager         m_memoryRefManager;
@@ -85,9 +85,9 @@ protected:
         delete m_errorMonitor;
     }
 };
-VK_RESULT VkLayerTest::BeginCommandBuffer(VkCommandBufferObj &cmdBuffer)
+VkResult VkLayerTest::BeginCommandBuffer(VkCommandBufferObj &cmdBuffer)
 {
-    VK_RESULT result;
+    VkResult result;
 
     result = cmdBuffer.BeginCommandBuffer();
 
@@ -102,9 +102,9 @@ VK_RESULT VkLayerTest::BeginCommandBuffer(VkCommandBufferObj &cmdBuffer)
     return result;
 }
 
-VK_RESULT VkLayerTest::EndCommandBuffer(VkCommandBufferObj &cmdBuffer)
+VkResult VkLayerTest::EndCommandBuffer(VkCommandBufferObj &cmdBuffer)
 {
-    VK_RESULT result;
+    VkResult result;
 
     cmdBuffer.EndRenderPass(renderPass());
 
@@ -118,7 +118,8 @@ TEST_F(VkLayerTest, SubmitSignaledFence)
     vk_testing::Fence testFence;
     VK_DBG_MSG_TYPE msgType;
     std::string msgString;
-    VK_FENCE_CREATE_INFO fenceInfo = {};
+
+    VkFenceCreateInfo fenceInfo = {};
     fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
     fenceInfo.pNext = NULL;
     fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
@@ -152,7 +153,7 @@ TEST_F(VkLayerTest, ResetUnsignaledFence)
     vk_testing::Fence testFence;
     VK_DBG_MSG_TYPE msgType;
     std::string msgString;
-    VK_FENCE_CREATE_INFO fenceInfo = {};
+    VkFenceCreateInfo fenceInfo = {};
     fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
     fenceInfo.pNext = NULL;
 
@@ -161,7 +162,7 @@ TEST_F(VkLayerTest, ResetUnsignaledFence)
     ASSERT_NO_FATAL_FAILURE(InitState());
     testFence.init(*m_device, fenceInfo);
     m_errorMonitor->ClearState();
-    VK_FENCE fences[1] = {testFence.obj()};
+    VkFence fences[1] = {testFence.obj()};
     vkResetFences(m_device->device(), 1, fences);
     msgType = m_errorMonitor->GetState(&msgString);
     ASSERT_EQ(msgType, VK_DBG_MSG_ERROR) << "Did not receive an error from submitting fence with UNSIGNALED state to vkResetFences";

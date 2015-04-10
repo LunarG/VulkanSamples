@@ -65,7 +65,7 @@ static bool dev_create_meta_shaders(struct intel_dev *dev)
     return true;
 }
 
-static VK_RESULT dev_create_queues(struct intel_dev *dev,
+static VkResult dev_create_queues(struct intel_dev *dev,
                                     const VkDeviceQueueCreateInfo *queues,
                                     uint32_t count)
 {
@@ -76,7 +76,7 @@ static VK_RESULT dev_create_queues(struct intel_dev *dev,
 
     for (i = 0; i < count; i++) {
         const VkDeviceQueueCreateInfo *q = &queues[i];
-        VK_RESULT ret = VK_SUCCESS;
+        VkResult ret = VK_SUCCESS;
 
         if (q->queueNodeIndex < INTEL_GPU_ENGINE_COUNT &&
             q->queueCount == 1 && !dev->queues[q->queueNodeIndex]) {
@@ -99,13 +99,13 @@ static VK_RESULT dev_create_queues(struct intel_dev *dev,
     return VK_SUCCESS;
 }
 
-VK_RESULT intel_dev_create(struct intel_gpu *gpu,
+VkResult intel_dev_create(struct intel_gpu *gpu,
                             const VkDeviceCreateInfo *info,
                             struct intel_dev **dev_ret)
 {
     struct intel_dev *dev;
     uint32_t i;
-    VK_RESULT ret;
+    VkResult ret;
 
     if (gpu->winsys)
         return VK_ERROR_DEVICE_ALREADY_CREATED;
@@ -212,7 +212,7 @@ void intel_dev_destroy(struct intel_dev *dev)
         intel_gpu_cleanup_winsys(gpu);
 }
 
-VK_RESULT intel_dev_add_msg_filter(struct intel_dev *dev,
+VkResult intel_dev_add_msg_filter(struct intel_dev *dev,
                                     int32_t msg_code,
                                     VK_DBG_MSG_FILTER filter)
 {
@@ -302,7 +302,7 @@ static bool dev_filter_msg(struct intel_dev *dev,
 
 void intel_dev_log(struct intel_dev *dev,
                    VK_DBG_MSG_TYPE msg_type,
-                   VK_VALIDATION_LEVEL validation_level,
+                   VkValidationLevel validation_level,
                    struct intel_base *src_object,
                    size_t location,
                    int32_t msg_code,
@@ -314,23 +314,23 @@ void intel_dev_log(struct intel_dev *dev,
         return;
 
     va_start(ap, format);
-    intel_logv(dev, msg_type, validation_level, (VK_BASE_OBJECT) src_object,
+    intel_logv(dev, msg_type, validation_level, (VkBaseObject) src_object,
             location, msg_code, format, ap);
     va_end(ap);
 }
 
-ICD_EXPORT VK_RESULT VKAPI vkCreateDevice(
-    VK_PHYSICAL_GPU                            gpu_,
+ICD_EXPORT VkResult VKAPI vkCreateDevice(
+    VkPhysicalGpu                            gpu_,
     const VkDeviceCreateInfo*               pCreateInfo,
-    VK_DEVICE*                                 pDevice)
+    VkDevice*                                 pDevice)
 {
     struct intel_gpu *gpu = intel_gpu(gpu_);
 
     return intel_dev_create(gpu, pCreateInfo, (struct intel_dev **) pDevice);
 }
 
-ICD_EXPORT VK_RESULT VKAPI vkDestroyDevice(
-    VK_DEVICE                                  device)
+ICD_EXPORT VkResult VKAPI vkDestroyDevice(
+    VkDevice                                  device)
 {
     struct intel_dev *dev = intel_dev(device);
 
@@ -339,11 +339,11 @@ ICD_EXPORT VK_RESULT VKAPI vkDestroyDevice(
     return VK_SUCCESS;
 }
 
-ICD_EXPORT VK_RESULT VKAPI vkGetDeviceQueue(
-    VK_DEVICE                                  device,
+ICD_EXPORT VkResult VKAPI vkGetDeviceQueue(
+    VkDevice                                  device,
     uint32_t                                    queueNodeIndex,
     uint32_t                                    queueIndex,
-    VK_QUEUE*                                  pQueue)
+    VkQueue*                                  pQueue)
 {
     struct intel_dev *dev = intel_dev(device);
 
@@ -358,16 +358,16 @@ ICD_EXPORT VK_RESULT VKAPI vkGetDeviceQueue(
     return VK_SUCCESS;
 }
 
-ICD_EXPORT VK_RESULT VKAPI vkDeviceWaitIdle(
-    VK_DEVICE                                  device)
+ICD_EXPORT VkResult VKAPI vkDeviceWaitIdle(
+    VkDevice                                  device)
 {
     struct intel_dev *dev = intel_dev(device);
-    VK_RESULT ret = VK_SUCCESS;
+    VkResult ret = VK_SUCCESS;
     uint32_t i;
 
     for (i = 0; i < ARRAY_SIZE(dev->queues); i++) {
         if (dev->queues[i]) {
-            const VK_RESULT r = intel_queue_wait(dev->queues[i], -1);
+            const VkResult r = intel_queue_wait(dev->queues[i], -1);
             if (r != VK_SUCCESS)
                 ret = r;
         }
@@ -376,9 +376,9 @@ ICD_EXPORT VK_RESULT VKAPI vkDeviceWaitIdle(
     return ret;
 }
 
-ICD_EXPORT VK_RESULT VKAPI vkDbgSetValidationLevel(
-    VK_DEVICE                                  device,
-    VK_VALIDATION_LEVEL                        validationLevel)
+ICD_EXPORT VkResult VKAPI vkDbgSetValidationLevel(
+    VkDevice                                  device,
+    VkValidationLevel                        validationLevel)
 {
     struct intel_dev *dev = intel_dev(device);
     struct intel_dev_dbg *dbg = intel_dev_dbg(dev);
@@ -389,8 +389,8 @@ ICD_EXPORT VK_RESULT VKAPI vkDbgSetValidationLevel(
     return VK_SUCCESS;
 }
 
-ICD_EXPORT VK_RESULT VKAPI vkDbgSetMessageFilter(
-    VK_DEVICE                                  device,
+ICD_EXPORT VkResult VKAPI vkDbgSetMessageFilter(
+    VkDevice                                  device,
     int32_t                                     msgCode,
     VK_DBG_MSG_FILTER                          filter)
 {
@@ -407,15 +407,15 @@ ICD_EXPORT VK_RESULT VKAPI vkDbgSetMessageFilter(
     return intel_dev_add_msg_filter(dev, msgCode, filter);
 }
 
-ICD_EXPORT VK_RESULT VKAPI vkDbgSetDeviceOption(
-    VK_DEVICE                                  device,
+ICD_EXPORT VkResult VKAPI vkDbgSetDeviceOption(
+    VkDevice                                  device,
     VK_DBG_DEVICE_OPTION                       dbgOption,
     size_t                                      dataSize,
     const void*                                 pData)
 {
     struct intel_dev *dev = intel_dev(device);
     struct intel_dev_dbg *dbg = intel_dev_dbg(dev);
-    VK_RESULT ret = VK_SUCCESS;
+    VkResult ret = VK_SUCCESS;
 
     if (dataSize == 0)
         return VK_ERROR_INVALID_VALUE;

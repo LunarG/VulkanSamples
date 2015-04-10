@@ -139,19 +139,19 @@ void glv_deepfree_VkDeviceCreateInfo(VkDeviceCreateInfo* pCreateInfo)
     free(pCreateInfo);
 }
 
-void glv_vk_snapshot_copy_createdevice_params(GLV_VK_SNAPSHOT_CREATEDEVICE_PARAMS* pDest, VK_PHYSICAL_GPU gpu, const VkDeviceCreateInfo* pCreateInfo, VK_DEVICE* pDevice)
+void glv_vk_snapshot_copy_createdevice_params(GLV_VK_SNAPSHOT_CREATEDEVICE_PARAMS* pDest, VkPhysicalGpu gpu, const VkDeviceCreateInfo* pCreateInfo, VkDevice* pDevice)
 {
     pDest->gpu = gpu;
 
     pDest->pCreateInfo = glv_deepcopy_VkDeviceCreateInfo(pCreateInfo);
 
-    pDest->pDevice = (VK_DEVICE*)malloc(sizeof(VK_DEVICE));
+    pDest->pDevice = (VkDevice*)malloc(sizeof(VkDevice));
     *pDest->pDevice = *pDevice;
 }
 
 void glv_vk_snapshot_destroy_createdevice_params(GLV_VK_SNAPSHOT_CREATEDEVICE_PARAMS* pSrc)
 {
-    memset(&pSrc->gpu, 0, sizeof(VK_PHYSICAL_GPU));
+    memset(&pSrc->gpu, 0, sizeof(VkPhysicalGpu));
 
     glv_deepfree_VkDeviceCreateInfo(pSrc->pCreateInfo);
     pSrc->pCreateInfo = NULL;
@@ -267,7 +267,7 @@ static void snapshot_insert_deleted_object(GLV_VK_SNAPSHOT* pSnapshot, void* pOb
 }
 
 // Note: the parameters after pSnapshot match the order of vkCreateDevice(..)
-static void snapshot_insert_device(GLV_VK_SNAPSHOT* pSnapshot, VK_PHYSICAL_GPU gpu, const VkDeviceCreateInfo* pCreateInfo, VK_DEVICE* pDevice)
+static void snapshot_insert_device(GLV_VK_SNAPSHOT* pSnapshot, VkPhysicalGpu gpu, const VkDeviceCreateInfo* pCreateInfo, VkDevice* pDevice)
 {
     GLV_VK_SNAPSHOT_LL_NODE* pNode = snapshot_insert_object(pSnapshot, *pDevice, VK_OBJECT_TYPE_DEVICE);
     pNode->obj.pStruct = malloc(sizeof(GLV_VK_SNAPSHOT_DEVICE_NODE));
@@ -283,7 +283,7 @@ static void snapshot_insert_device(GLV_VK_SNAPSHOT* pSnapshot, VK_PHYSICAL_GPU g
     pSnapshot->deviceCount++;
 }
 
-static void snapshot_remove_device(GLV_VK_SNAPSHOT* pSnapshot, VK_DEVICE device)
+static void snapshot_remove_device(GLV_VK_SNAPSHOT* pSnapshot, VkDevice device)
 {
     GLV_VK_SNAPSHOT_LL_NODE* pFoundObject = snapshot_remove_object(pSnapshot, device);
 
@@ -331,7 +331,7 @@ static void snapshot_remove_device(GLV_VK_SNAPSHOT* pSnapshot, VK_DEVICE device)
 }
 
 // Traverse global list and return type for given object
-static VK_OBJECT_TYPE ll_get_obj_type(VK_OBJECT object) {
+static VK_OBJECT_TYPE ll_get_obj_type(VkObject object) {
     GLV_VK_SNAPSHOT_LL_NODE *pTrav = s_delta.pGlobalObjs;
     while (pTrav) {
         if (pTrav->obj.pVkObject == object)
@@ -386,7 +386,7 @@ static void set_status(void* pObj, VK_OBJECT_TYPE objType, OBJECT_STATUS status_
 }
 
 // Track selected state for an object node
-static void track_object_status(void* pObj, VK_STATE_BIND_POINT stateBindPoint) {
+static void track_object_status(void* pObj, VkStateBindPoint stateBindPoint) {
     GLV_VK_SNAPSHOT_LL_NODE *pTrav = s_delta.pObjectHead[VK_OBJECT_TYPE_CMD_BUFFER];
 
     while (pTrav) {
@@ -447,11 +447,11 @@ static void initGlaveSnapshot(void)
             g_logFile = stdout;
     }
 
-    vkGetProcAddrType fpNextGPA;
+    PFN_vkGetProcAddr fpNextGPA;
     fpNextGPA = pCurObj->pGPA;
     assert(fpNextGPA);
 
-    layer_initialize_dispatch_table(&nextTable, fpNextGPA, (VK_PHYSICAL_GPU) pCurObj->nextObject);
+    layer_initialize_dispatch_table(&nextTable, fpNextGPA, (VkPhysicalGpu) pCurObj->nextObject);
     if (!objLockInitialized)
     {
         // TODO/TBD: Need to delete this mutex sometime.  How???
@@ -463,48 +463,48 @@ static void initGlaveSnapshot(void)
 //=============================================================================
 // vulkan entrypoints
 //=============================================================================
-VK_LAYER_EXPORT VK_RESULT VKAPI vkCreateInstance(const VkInstanceCreateInfo* pCreateInfo, VK_INSTANCE* pInstance)
+VK_LAYER_EXPORT VkResult VKAPI vkCreateInstance(const VkInstanceCreateInfo* pCreateInfo, VkInstance* pInstance)
 {
-    VK_RESULT result = nextTable.CreateInstance(pCreateInfo, pInstance);
+    VkResult result = nextTable.CreateInstance(pCreateInfo, pInstance);
     loader_platform_thread_lock_mutex(&objLock);
     snapshot_insert_object(&s_delta, *pInstance, VK_OBJECT_TYPE_INSTANCE);
     loader_platform_thread_unlock_mutex(&objLock);
     return result;
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkDestroyInstance(VK_INSTANCE instance)
+VK_LAYER_EXPORT VkResult VKAPI vkDestroyInstance(VkInstance instance)
 {
-    VK_RESULT result = nextTable.DestroyInstance(instance);
+    VkResult result = nextTable.DestroyInstance(instance);
     loader_platform_thread_lock_mutex(&objLock);
     snapshot_remove_object(&s_delta, (void*)instance);
     loader_platform_thread_unlock_mutex(&objLock);
     return result;
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkEnumerateGpus(VK_INSTANCE instance, uint32_t maxGpus, uint32_t* pGpuCount, VK_PHYSICAL_GPU* pGpus)
+VK_LAYER_EXPORT VkResult VKAPI vkEnumerateGpus(VkInstance instance, uint32_t maxGpus, uint32_t* pGpuCount, VkPhysicalGpu* pGpus)
 {
     loader_platform_thread_lock_mutex(&objLock);
     ll_increment_use_count((void*)instance, VK_OBJECT_TYPE_INSTANCE);
     loader_platform_thread_unlock_mutex(&objLock);
-    VK_RESULT result = nextTable.EnumerateGpus(instance, maxGpus, pGpuCount, pGpus);
+    VkResult result = nextTable.EnumerateGpus(instance, maxGpus, pGpuCount, pGpus);
     return result;
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkGetGpuInfo(VK_PHYSICAL_GPU gpu, VK_PHYSICAL_GPU_INFO_TYPE infoType, size_t* pDataSize, void* pData)
+VK_LAYER_EXPORT VkResult VKAPI vkGetGpuInfo(VkPhysicalGpu gpu, VkPhysicalGpuInfoType infoType, size_t* pDataSize, void* pData)
 {
     VK_BASE_LAYER_OBJECT* gpuw = (VK_BASE_LAYER_OBJECT *) gpu;
     pCurObj = gpuw;
     loader_platform_thread_once(&tabOnce, initGlaveSnapshot);
-    VK_RESULT result = nextTable.GetGpuInfo((VK_PHYSICAL_GPU)gpuw->nextObject, infoType, pDataSize, pData);
+    VkResult result = nextTable.GetGpuInfo((VkPhysicalGpu)gpuw->nextObject, infoType, pDataSize, pData);
     return result;
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkCreateDevice(VK_PHYSICAL_GPU gpu, const VkDeviceCreateInfo* pCreateInfo, VK_DEVICE* pDevice)
+VK_LAYER_EXPORT VkResult VKAPI vkCreateDevice(VkPhysicalGpu gpu, const VkDeviceCreateInfo* pCreateInfo, VkDevice* pDevice)
 {
     VK_BASE_LAYER_OBJECT* gpuw = (VK_BASE_LAYER_OBJECT *) gpu;
     pCurObj = gpuw;
     loader_platform_thread_once(&tabOnce, initGlaveSnapshot);
-    VK_RESULT result = nextTable.CreateDevice((VK_PHYSICAL_GPU)gpuw->nextObject, pCreateInfo, pDevice);
+    VkResult result = nextTable.CreateDevice((VkPhysicalGpu)gpuw->nextObject, pCreateInfo, pDevice);
     if (result == VK_SUCCESS)
     {
         loader_platform_thread_lock_mutex(&objLock);
@@ -514,9 +514,9 @@ VK_LAYER_EXPORT VK_RESULT VKAPI vkCreateDevice(VK_PHYSICAL_GPU gpu, const VkDevi
     return result;
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkDestroyDevice(VK_DEVICE device)
+VK_LAYER_EXPORT VkResult VKAPI vkDestroyDevice(VkDevice device)
 {
-    VK_RESULT result = nextTable.DestroyDevice(device);
+    VkResult result = nextTable.DestroyDevice(device);
     loader_platform_thread_lock_mutex(&objLock);
     snapshot_remove_device(&s_delta, device);
     loader_platform_thread_unlock_mutex(&objLock);
@@ -541,7 +541,7 @@ VK_LAYER_EXPORT VK_RESULT VKAPI vkDestroyDevice(VK_DEVICE device)
     return result;
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkGetExtensionSupport(VK_PHYSICAL_GPU gpu, const char* pExtName)
+VK_LAYER_EXPORT VkResult VKAPI vkGetExtensionSupport(VkPhysicalGpu gpu, const char* pExtName)
 {
     VK_BASE_LAYER_OBJECT* gpuw = (VK_BASE_LAYER_OBJECT *) gpu;
     loader_platform_thread_lock_mutex(&objLock);
@@ -549,11 +549,11 @@ VK_LAYER_EXPORT VK_RESULT VKAPI vkGetExtensionSupport(VK_PHYSICAL_GPU gpu, const
     loader_platform_thread_unlock_mutex(&objLock);
     pCurObj = gpuw;
     loader_platform_thread_once(&tabOnce, initGlaveSnapshot);
-    VK_RESULT result = nextTable.GetExtensionSupport((VK_PHYSICAL_GPU)gpuw->nextObject, pExtName);
+    VkResult result = nextTable.GetExtensionSupport((VkPhysicalGpu)gpuw->nextObject, pExtName);
     return result;
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkEnumerateLayers(VK_PHYSICAL_GPU gpu, size_t maxLayerCount, size_t maxStringSize, size_t* pOutLayerCount, char* const* pOutLayers, void* pReserved)
+VK_LAYER_EXPORT VkResult VKAPI vkEnumerateLayers(VkPhysicalGpu gpu, size_t maxLayerCount, size_t maxStringSize, size_t* pOutLayerCount, char* const* pOutLayers, void* pReserved)
 {
     if (gpu != NULL) {
         VK_BASE_LAYER_OBJECT* gpuw = (VK_BASE_LAYER_OBJECT *) gpu;
@@ -562,7 +562,7 @@ VK_LAYER_EXPORT VK_RESULT VKAPI vkEnumerateLayers(VK_PHYSICAL_GPU gpu, size_t ma
     loader_platform_thread_unlock_mutex(&objLock);
         pCurObj = gpuw;
         loader_platform_thread_once(&tabOnce, initGlaveSnapshot);
-        VK_RESULT result = nextTable.EnumerateLayers((VK_PHYSICAL_GPU)gpuw->nextObject, maxLayerCount, maxStringSize, pOutLayerCount, pOutLayers, pReserved);
+        VkResult result = nextTable.EnumerateLayers((VkPhysicalGpu)gpuw->nextObject, maxLayerCount, maxStringSize, pOutLayerCount, pOutLayers, pReserved);
             return result;
     } else {
         if (pOutLayerCount == NULL || pOutLayers == NULL || pOutLayers[0] == NULL)
@@ -574,43 +574,43 @@ VK_LAYER_EXPORT VK_RESULT VKAPI vkEnumerateLayers(VK_PHYSICAL_GPU gpu, size_t ma
     }
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkGetDeviceQueue(VK_DEVICE device, uint32_t queueNodeIndex, uint32_t queueIndex, VK_QUEUE* pQueue)
+VK_LAYER_EXPORT VkResult VKAPI vkGetDeviceQueue(VkDevice device, uint32_t queueNodeIndex, uint32_t queueIndex, VkQueue* pQueue)
 {
     loader_platform_thread_lock_mutex(&objLock);
     ll_increment_use_count((void*)device, VK_OBJECT_TYPE_DEVICE);
     loader_platform_thread_unlock_mutex(&objLock);
-    VK_RESULT result = nextTable.GetDeviceQueue(device, queueNodeIndex, queueIndex, pQueue);
+    VkResult result = nextTable.GetDeviceQueue(device, queueNodeIndex, queueIndex, pQueue);
     return result;
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkQueueSubmit(VK_QUEUE queue, uint32_t cmdBufferCount, const VK_CMD_BUFFER* pCmdBuffers, VK_FENCE fence)
+VK_LAYER_EXPORT VkResult VKAPI vkQueueSubmit(VkQueue queue, uint32_t cmdBufferCount, const VkCmdBuffer* pCmdBuffers, VkFence fence)
 {
     set_status((void*)fence, VK_OBJECT_TYPE_FENCE, OBJSTATUS_FENCE_IS_SUBMITTED);
-    VK_RESULT result = nextTable.QueueSubmit(queue, cmdBufferCount, pCmdBuffers, fence);
+    VkResult result = nextTable.QueueSubmit(queue, cmdBufferCount, pCmdBuffers, fence);
     return result;
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkQueueWaitIdle(VK_QUEUE queue)
+VK_LAYER_EXPORT VkResult VKAPI vkQueueWaitIdle(VkQueue queue)
 {
-    VK_RESULT result = nextTable.QueueWaitIdle(queue);
+    VkResult result = nextTable.QueueWaitIdle(queue);
     return result;
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkDeviceWaitIdle(VK_DEVICE device)
-{
-    loader_platform_thread_lock_mutex(&objLock);
-    ll_increment_use_count((void*)device, VK_OBJECT_TYPE_DEVICE);
-    loader_platform_thread_unlock_mutex(&objLock);
-    VK_RESULT result = nextTable.DeviceWaitIdle(device);
-    return result;
-}
-
-VK_LAYER_EXPORT VK_RESULT VKAPI vkAllocMemory(VK_DEVICE device, const VkMemoryAllocInfo* pAllocInfo, VK_GPU_MEMORY* pMem)
+VK_LAYER_EXPORT VkResult VKAPI vkDeviceWaitIdle(VkDevice device)
 {
     loader_platform_thread_lock_mutex(&objLock);
     ll_increment_use_count((void*)device, VK_OBJECT_TYPE_DEVICE);
     loader_platform_thread_unlock_mutex(&objLock);
-    VK_RESULT result = nextTable.AllocMemory(device, pAllocInfo, pMem);
+    VkResult result = nextTable.DeviceWaitIdle(device);
+    return result;
+}
+
+VK_LAYER_EXPORT VkResult VKAPI vkAllocMemory(VkDevice device, const VkMemoryAllocInfo* pAllocInfo, VkGpuMemory* pMem)
+{
+    loader_platform_thread_lock_mutex(&objLock);
+    ll_increment_use_count((void*)device, VK_OBJECT_TYPE_DEVICE);
+    loader_platform_thread_unlock_mutex(&objLock);
+    VkResult result = nextTable.AllocMemory(device, pAllocInfo, pMem);
     if (result == VK_SUCCESS)
     {
         loader_platform_thread_lock_mutex(&objLock);
@@ -621,54 +621,54 @@ VK_LAYER_EXPORT VK_RESULT VKAPI vkAllocMemory(VK_DEVICE device, const VkMemoryAl
     return result;
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkFreeMemory(VK_GPU_MEMORY mem)
+VK_LAYER_EXPORT VkResult VKAPI vkFreeMemory(VkGpuMemory mem)
 {
-    VK_RESULT result = nextTable.FreeMemory(mem);
+    VkResult result = nextTable.FreeMemory(mem);
     loader_platform_thread_lock_mutex(&objLock);
     snapshot_remove_object(&s_delta, (void*)mem);
     loader_platform_thread_unlock_mutex(&objLock);
     return result;
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkSetMemoryPriority(VK_GPU_MEMORY mem, VK_MEMORY_PRIORITY priority)
+VK_LAYER_EXPORT VkResult VKAPI vkSetMemoryPriority(VkGpuMemory mem, VkMemoryPriority priority)
 {
     loader_platform_thread_lock_mutex(&objLock);
     ll_increment_use_count((void*)mem, VK_OBJECT_TYPE_GPU_MEMORY);
     loader_platform_thread_unlock_mutex(&objLock);
-    VK_RESULT result = nextTable.SetMemoryPriority(mem, priority);
+    VkResult result = nextTable.SetMemoryPriority(mem, priority);
     return result;
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkMapMemory(VK_GPU_MEMORY mem, VK_FLAGS flags, void** ppData)
+VK_LAYER_EXPORT VkResult VKAPI vkMapMemory(VkGpuMemory mem, VkFlags flags, void** ppData)
 {
     loader_platform_thread_lock_mutex(&objLock);
     ll_increment_use_count((void*)mem, VK_OBJECT_TYPE_GPU_MEMORY);
     loader_platform_thread_unlock_mutex(&objLock);
     set_status((void*)mem, VK_OBJECT_TYPE_GPU_MEMORY, OBJSTATUS_GPU_MEM_MAPPED);
-    VK_RESULT result = nextTable.MapMemory(mem, flags, ppData);
+    VkResult result = nextTable.MapMemory(mem, flags, ppData);
     return result;
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkUnmapMemory(VK_GPU_MEMORY mem)
+VK_LAYER_EXPORT VkResult VKAPI vkUnmapMemory(VkGpuMemory mem)
 {
     loader_platform_thread_lock_mutex(&objLock);
     ll_increment_use_count((void*)mem, VK_OBJECT_TYPE_GPU_MEMORY);
     loader_platform_thread_unlock_mutex(&objLock);
     reset_status((void*)mem, VK_OBJECT_TYPE_GPU_MEMORY, OBJSTATUS_GPU_MEM_MAPPED);
-    VK_RESULT result = nextTable.UnmapMemory(mem);
+    VkResult result = nextTable.UnmapMemory(mem);
     return result;
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkPinSystemMemory(VK_DEVICE device, const void* pSysMem, size_t memSize, VK_GPU_MEMORY* pMem)
+VK_LAYER_EXPORT VkResult VKAPI vkPinSystemMemory(VkDevice device, const void* pSysMem, size_t memSize, VkGpuMemory* pMem)
 {
     loader_platform_thread_lock_mutex(&objLock);
     ll_increment_use_count((void*)device, VK_OBJECT_TYPE_DEVICE);
     loader_platform_thread_unlock_mutex(&objLock);
-    VK_RESULT result = nextTable.PinSystemMemory(device, pSysMem, memSize, pMem);
+    VkResult result = nextTable.PinSystemMemory(device, pSysMem, memSize, pMem);
     return result;
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkGetMultiGpuCompatibility(VK_PHYSICAL_GPU gpu0, VK_PHYSICAL_GPU gpu1, VK_GPU_COMPATIBILITY_INFO* pInfo)
+VK_LAYER_EXPORT VkResult VKAPI vkGetMultiGpuCompatibility(VkPhysicalGpu gpu0, VkPhysicalGpu gpu1, VkGpuCompatibilityInfo* pInfo)
 {
     VK_BASE_LAYER_OBJECT* gpuw = (VK_BASE_LAYER_OBJECT *) gpu0;
     loader_platform_thread_lock_mutex(&objLock);
@@ -676,97 +676,97 @@ VK_LAYER_EXPORT VK_RESULT VKAPI vkGetMultiGpuCompatibility(VK_PHYSICAL_GPU gpu0,
     loader_platform_thread_unlock_mutex(&objLock);
     pCurObj = gpuw;
     loader_platform_thread_once(&tabOnce, initGlaveSnapshot);
-    VK_RESULT result = nextTable.GetMultiGpuCompatibility((VK_PHYSICAL_GPU)gpuw->nextObject, gpu1, pInfo);
+    VkResult result = nextTable.GetMultiGpuCompatibility((VkPhysicalGpu)gpuw->nextObject, gpu1, pInfo);
     return result;
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkOpenSharedMemory(VK_DEVICE device, const VK_MEMORY_OPEN_INFO* pOpenInfo, VK_GPU_MEMORY* pMem)
+VK_LAYER_EXPORT VkResult VKAPI vkOpenSharedMemory(VkDevice device, const VkMemoryOpenInfo* pOpenInfo, VkGpuMemory* pMem)
 {
     loader_platform_thread_lock_mutex(&objLock);
     ll_increment_use_count((void*)device, VK_OBJECT_TYPE_DEVICE);
     loader_platform_thread_unlock_mutex(&objLock);
-    VK_RESULT result = nextTable.OpenSharedMemory(device, pOpenInfo, pMem);
+    VkResult result = nextTable.OpenSharedMemory(device, pOpenInfo, pMem);
     return result;
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkOpenSharedSemaphore(VK_DEVICE device, const VK_SEMAPHORE_OPEN_INFO* pOpenInfo, VK_SEMAPHORE* pSemaphore)
+VK_LAYER_EXPORT VkResult VKAPI vkOpenSharedSemaphore(VkDevice device, const VkSemaphoreOpenInfo* pOpenInfo, VkSemaphore* pSemaphore)
 {
     loader_platform_thread_lock_mutex(&objLock);
     ll_increment_use_count((void*)device, VK_OBJECT_TYPE_DEVICE);
     loader_platform_thread_unlock_mutex(&objLock);
-    VK_RESULT result = nextTable.OpenSharedSemaphore(device, pOpenInfo, pSemaphore);
+    VkResult result = nextTable.OpenSharedSemaphore(device, pOpenInfo, pSemaphore);
     return result;
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkOpenPeerMemory(VK_DEVICE device, const VK_PEER_MEMORY_OPEN_INFO* pOpenInfo, VK_GPU_MEMORY* pMem)
+VK_LAYER_EXPORT VkResult VKAPI vkOpenPeerMemory(VkDevice device, const VkPeerMemoryOpenInfo* pOpenInfo, VkGpuMemory* pMem)
 {
     loader_platform_thread_lock_mutex(&objLock);
     ll_increment_use_count((void*)device, VK_OBJECT_TYPE_DEVICE);
     loader_platform_thread_unlock_mutex(&objLock);
-    VK_RESULT result = nextTable.OpenPeerMemory(device, pOpenInfo, pMem);
+    VkResult result = nextTable.OpenPeerMemory(device, pOpenInfo, pMem);
     return result;
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkOpenPeerImage(VK_DEVICE device, const VK_PEER_IMAGE_OPEN_INFO* pOpenInfo, VK_IMAGE* pImage, VK_GPU_MEMORY* pMem)
+VK_LAYER_EXPORT VkResult VKAPI vkOpenPeerImage(VkDevice device, const VkPeerImageOpenInfo* pOpenInfo, VkImage* pImage, VkGpuMemory* pMem)
 {
     loader_platform_thread_lock_mutex(&objLock);
     ll_increment_use_count((void*)device, VK_OBJECT_TYPE_DEVICE);
     loader_platform_thread_unlock_mutex(&objLock);
-    VK_RESULT result = nextTable.OpenPeerImage(device, pOpenInfo, pImage, pMem);
+    VkResult result = nextTable.OpenPeerImage(device, pOpenInfo, pImage, pMem);
     return result;
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkDestroyObject(VK_OBJECT object)
+VK_LAYER_EXPORT VkResult VKAPI vkDestroyObject(VkObject object)
 {
-    VK_RESULT result = nextTable.DestroyObject(object);
+    VkResult result = nextTable.DestroyObject(object);
     loader_platform_thread_lock_mutex(&objLock);
     snapshot_remove_object(&s_delta, (void*)object);
     loader_platform_thread_unlock_mutex(&objLock);
     return result;
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkGetObjectInfo(VK_BASE_OBJECT object, VK_OBJECT_INFO_TYPE infoType, size_t* pDataSize, void* pData)
+VK_LAYER_EXPORT VkResult VKAPI vkGetObjectInfo(VkBaseObject object, VkObjectInfoType infoType, size_t* pDataSize, void* pData)
 {
     loader_platform_thread_lock_mutex(&objLock);
     ll_increment_use_count((void*)object, ll_get_obj_type(object));
     loader_platform_thread_unlock_mutex(&objLock);
-    VK_RESULT result = nextTable.GetObjectInfo(object, infoType, pDataSize, pData);
+    VkResult result = nextTable.GetObjectInfo(object, infoType, pDataSize, pData);
     return result;
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkBindObjectMemory(VK_OBJECT object, uint32_t allocationIdx, VK_GPU_MEMORY mem, VK_GPU_SIZE offset)
+VK_LAYER_EXPORT VkResult VKAPI vkBindObjectMemory(VkObject object, uint32_t allocationIdx, VkGpuMemory mem, VkGpuSize offset)
 {
     loader_platform_thread_lock_mutex(&objLock);
     ll_increment_use_count((void*)object, ll_get_obj_type(object));
     loader_platform_thread_unlock_mutex(&objLock);
-    VK_RESULT result = nextTable.BindObjectMemory(object, allocationIdx, mem, offset);
+    VkResult result = nextTable.BindObjectMemory(object, allocationIdx, mem, offset);
     return result;
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkBindObjectMemoryRange(VK_OBJECT object, uint32_t allocationIdx, VK_GPU_SIZE rangeOffset, VK_GPU_SIZE rangeSize, VK_GPU_MEMORY mem, VK_GPU_SIZE memOffset)
+VK_LAYER_EXPORT VkResult VKAPI vkBindObjectMemoryRange(VkObject object, uint32_t allocationIdx, VkGpuSize rangeOffset, VkGpuSize rangeSize, VkGpuMemory mem, VkGpuSize memOffset)
 {
     loader_platform_thread_lock_mutex(&objLock);
     ll_increment_use_count((void*)object, ll_get_obj_type(object));
     loader_platform_thread_unlock_mutex(&objLock);
-    VK_RESULT result = nextTable.BindObjectMemoryRange(object, allocationIdx, rangeOffset, rangeSize, mem, memOffset);
+    VkResult result = nextTable.BindObjectMemoryRange(object, allocationIdx, rangeOffset, rangeSize, mem, memOffset);
     return result;
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkBindImageMemoryRange(VK_IMAGE image, uint32_t allocationIdx, const VK_IMAGE_MEMORY_BIND_INFO* bindInfo, VK_GPU_MEMORY mem, VK_GPU_SIZE memOffset)
+VK_LAYER_EXPORT VkResult VKAPI vkBindImageMemoryRange(VkImage image, uint32_t allocationIdx, const VkImageMemoryBindInfo* bindInfo, VkGpuMemory mem, VkGpuSize memOffset)
 {
     loader_platform_thread_lock_mutex(&objLock);
     ll_increment_use_count((void*)image, VK_OBJECT_TYPE_IMAGE);
     loader_platform_thread_unlock_mutex(&objLock);
-    VK_RESULT result = nextTable.BindImageMemoryRange(image, allocationIdx, bindInfo, mem, memOffset);
+    VkResult result = nextTable.BindImageMemoryRange(image, allocationIdx, bindInfo, mem, memOffset);
     return result;
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkCreateFence(VK_DEVICE device, const VK_FENCE_CREATE_INFO* pCreateInfo, VK_FENCE* pFence)
+VK_LAYER_EXPORT VkResult VKAPI vkCreateFence(VkDevice device, const VkFenceCreateInfo* pCreateInfo, VkFence* pFence)
 {
     loader_platform_thread_lock_mutex(&objLock);
     ll_increment_use_count((void*)device, VK_OBJECT_TYPE_DEVICE);
     loader_platform_thread_unlock_mutex(&objLock);
-    VK_RESULT result = nextTable.CreateFence(device, pCreateInfo, pFence);
+    VkResult result = nextTable.CreateFence(device, pCreateInfo, pFence);
     if (result == VK_SUCCESS)
     {
         loader_platform_thread_lock_mutex(&objLock);
@@ -777,31 +777,31 @@ VK_LAYER_EXPORT VK_RESULT VKAPI vkCreateFence(VK_DEVICE device, const VK_FENCE_C
     return result;
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkGetFenceStatus(VK_FENCE fence)
+VK_LAYER_EXPORT VkResult VKAPI vkGetFenceStatus(VkFence fence)
 {
     loader_platform_thread_lock_mutex(&objLock);
     ll_increment_use_count((void*)fence, VK_OBJECT_TYPE_FENCE);
     loader_platform_thread_unlock_mutex(&objLock);
     // Warn if submitted_flag is not set
-    VK_RESULT result = nextTable.GetFenceStatus(fence);
+    VkResult result = nextTable.GetFenceStatus(fence);
     return result;
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkWaitForFences(VK_DEVICE device, uint32_t fenceCount, const VK_FENCE* pFences, bool32_t waitAll, uint64_t timeout)
+VK_LAYER_EXPORT VkResult VKAPI vkWaitForFences(VkDevice device, uint32_t fenceCount, const VkFence* pFences, bool32_t waitAll, uint64_t timeout)
 {
     loader_platform_thread_lock_mutex(&objLock);
     ll_increment_use_count((void*)device, VK_OBJECT_TYPE_DEVICE);
     loader_platform_thread_unlock_mutex(&objLock);
-    VK_RESULT result = nextTable.WaitForFences(device, fenceCount, pFences, waitAll, timeout);
+    VkResult result = nextTable.WaitForFences(device, fenceCount, pFences, waitAll, timeout);
     return result;
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkCreateSemaphore(VK_DEVICE device, const VK_SEMAPHORE_CREATE_INFO* pCreateInfo, VK_SEMAPHORE* pSemaphore)
+VK_LAYER_EXPORT VkResult VKAPI vkCreateSemaphore(VkDevice device, const VkSemaphoreCreateInfo* pCreateInfo, VkSemaphore* pSemaphore)
 {
     loader_platform_thread_lock_mutex(&objLock);
     ll_increment_use_count((void*)device, VK_OBJECT_TYPE_DEVICE);
     loader_platform_thread_unlock_mutex(&objLock);
-    VK_RESULT result = nextTable.CreateSemaphore(device, pCreateInfo, pSemaphore);
+    VkResult result = nextTable.CreateSemaphore(device, pCreateInfo, pSemaphore);
     if (result == VK_SUCCESS)
     {
         loader_platform_thread_lock_mutex(&objLock);
@@ -812,24 +812,24 @@ VK_LAYER_EXPORT VK_RESULT VKAPI vkCreateSemaphore(VK_DEVICE device, const VK_SEM
     return result;
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkQueueSignalSemaphore(VK_QUEUE queue, VK_SEMAPHORE semaphore)
+VK_LAYER_EXPORT VkResult VKAPI vkQueueSignalSemaphore(VkQueue queue, VkSemaphore semaphore)
 {
-    VK_RESULT result = nextTable.QueueSignalSemaphore(queue, semaphore);
+    VkResult result = nextTable.QueueSignalSemaphore(queue, semaphore);
     return result;
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkQueueWaitSemaphore(VK_QUEUE queue, VK_SEMAPHORE semaphore)
+VK_LAYER_EXPORT VkResult VKAPI vkQueueWaitSemaphore(VkQueue queue, VkSemaphore semaphore)
 {
-    VK_RESULT result = nextTable.QueueWaitSemaphore(queue, semaphore);
+    VkResult result = nextTable.QueueWaitSemaphore(queue, semaphore);
     return result;
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkCreateEvent(VK_DEVICE device, const VK_EVENT_CREATE_INFO* pCreateInfo, VK_EVENT* pEvent)
+VK_LAYER_EXPORT VkResult VKAPI vkCreateEvent(VkDevice device, const VkEventCreateInfo* pCreateInfo, VkEvent* pEvent)
 {
     loader_platform_thread_lock_mutex(&objLock);
     ll_increment_use_count((void*)device, VK_OBJECT_TYPE_DEVICE);
     loader_platform_thread_unlock_mutex(&objLock);
-    VK_RESULT result = nextTable.CreateEvent(device, pCreateInfo, pEvent);
+    VkResult result = nextTable.CreateEvent(device, pCreateInfo, pEvent);
     if (result == VK_SUCCESS)
     {
         loader_platform_thread_lock_mutex(&objLock);
@@ -840,39 +840,39 @@ VK_LAYER_EXPORT VK_RESULT VKAPI vkCreateEvent(VK_DEVICE device, const VK_EVENT_C
     return result;
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkGetEventStatus(VK_EVENT event)
+VK_LAYER_EXPORT VkResult VKAPI vkGetEventStatus(VkEvent event)
 {
     loader_platform_thread_lock_mutex(&objLock);
     ll_increment_use_count((void*)event, VK_OBJECT_TYPE_EVENT);
     loader_platform_thread_unlock_mutex(&objLock);
-    VK_RESULT result = nextTable.GetEventStatus(event);
+    VkResult result = nextTable.GetEventStatus(event);
     return result;
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkSetEvent(VK_EVENT event)
+VK_LAYER_EXPORT VkResult VKAPI vkSetEvent(VkEvent event)
 {
     loader_platform_thread_lock_mutex(&objLock);
     ll_increment_use_count((void*)event, VK_OBJECT_TYPE_EVENT);
     loader_platform_thread_unlock_mutex(&objLock);
-    VK_RESULT result = nextTable.SetEvent(event);
+    VkResult result = nextTable.SetEvent(event);
     return result;
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkResetEvent(VK_EVENT event)
+VK_LAYER_EXPORT VkResult VKAPI vkResetEvent(VkEvent event)
 {
     loader_platform_thread_lock_mutex(&objLock);
     ll_increment_use_count((void*)event, VK_OBJECT_TYPE_EVENT);
     loader_platform_thread_unlock_mutex(&objLock);
-    VK_RESULT result = nextTable.ResetEvent(event);
+    VkResult result = nextTable.ResetEvent(event);
     return result;
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkCreateQueryPool(VK_DEVICE device, const VK_QUERY_POOL_CREATE_INFO* pCreateInfo, VK_QUERY_POOL* pQueryPool)
+VK_LAYER_EXPORT VkResult VKAPI vkCreateQueryPool(VkDevice device, const VkQueryPoolCreateInfo* pCreateInfo, VkQueryPool* pQueryPool)
 {
     loader_platform_thread_lock_mutex(&objLock);
     ll_increment_use_count((void*)device, VK_OBJECT_TYPE_DEVICE);
     loader_platform_thread_unlock_mutex(&objLock);
-    VK_RESULT result = nextTable.CreateQueryPool(device, pCreateInfo, pQueryPool);
+    VkResult result = nextTable.CreateQueryPool(device, pCreateInfo, pQueryPool);
     if (result == VK_SUCCESS)
     {
         loader_platform_thread_lock_mutex(&objLock);
@@ -883,30 +883,30 @@ VK_LAYER_EXPORT VK_RESULT VKAPI vkCreateQueryPool(VK_DEVICE device, const VK_QUE
     return result;
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkGetQueryPoolResults(VK_QUERY_POOL queryPool, uint32_t startQuery, uint32_t queryCount, size_t* pDataSize, void* pData)
+VK_LAYER_EXPORT VkResult VKAPI vkGetQueryPoolResults(VkQueryPool queryPool, uint32_t startQuery, uint32_t queryCount, size_t* pDataSize, void* pData)
 {
     loader_platform_thread_lock_mutex(&objLock);
     ll_increment_use_count((void*)queryPool, VK_OBJECT_TYPE_QUERY_POOL);
     loader_platform_thread_unlock_mutex(&objLock);
-    VK_RESULT result = nextTable.GetQueryPoolResults(queryPool, startQuery, queryCount, pDataSize, pData);
+    VkResult result = nextTable.GetQueryPoolResults(queryPool, startQuery, queryCount, pDataSize, pData);
     return result;
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkGetFormatInfo(VK_DEVICE device, VK_FORMAT format, VK_FORMAT_INFO_TYPE infoType, size_t* pDataSize, void* pData)
+VK_LAYER_EXPORT VkResult VKAPI vkGetFormatInfo(VkDevice device, VkFormat format, VkFormatInfoType infoType, size_t* pDataSize, void* pData)
 {
     loader_platform_thread_lock_mutex(&objLock);
     ll_increment_use_count((void*)device, VK_OBJECT_TYPE_DEVICE);
     loader_platform_thread_unlock_mutex(&objLock);
-    VK_RESULT result = nextTable.GetFormatInfo(device, format, infoType, pDataSize, pData);
+    VkResult result = nextTable.GetFormatInfo(device, format, infoType, pDataSize, pData);
     return result;
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkCreateBuffer(VK_DEVICE device, const VkBufferCreateInfo* pCreateInfo, VK_BUFFER* pBuffer)
+VK_LAYER_EXPORT VkResult VKAPI vkCreateBuffer(VkDevice device, const VkBufferCreateInfo* pCreateInfo, VkBuffer* pBuffer)
 {
     loader_platform_thread_lock_mutex(&objLock);
     ll_increment_use_count((void*)device, VK_OBJECT_TYPE_DEVICE);
     loader_platform_thread_unlock_mutex(&objLock);
-    VK_RESULT result = nextTable.CreateBuffer(device, pCreateInfo, pBuffer);
+    VkResult result = nextTable.CreateBuffer(device, pCreateInfo, pBuffer);
     if (result == VK_SUCCESS)
     {
         loader_platform_thread_lock_mutex(&objLock);
@@ -917,12 +917,12 @@ VK_LAYER_EXPORT VK_RESULT VKAPI vkCreateBuffer(VK_DEVICE device, const VkBufferC
     return result;
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkCreateBufferView(VK_DEVICE device, const VkBufferViewCreateInfo* pCreateInfo, VK_BUFFER_VIEW* pView)
+VK_LAYER_EXPORT VkResult VKAPI vkCreateBufferView(VkDevice device, const VkBufferViewCreateInfo* pCreateInfo, VkBufferView* pView)
 {
     loader_platform_thread_lock_mutex(&objLock);
     ll_increment_use_count((void*)device, VK_OBJECT_TYPE_DEVICE);
     loader_platform_thread_unlock_mutex(&objLock);
-    VK_RESULT result = nextTable.CreateBufferView(device, pCreateInfo, pView);
+    VkResult result = nextTable.CreateBufferView(device, pCreateInfo, pView);
     if (result == VK_SUCCESS)
     {
         loader_platform_thread_lock_mutex(&objLock);
@@ -933,12 +933,12 @@ VK_LAYER_EXPORT VK_RESULT VKAPI vkCreateBufferView(VK_DEVICE device, const VkBuf
     return result;
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkCreateImage(VK_DEVICE device, const VK_IMAGE_CREATE_INFO* pCreateInfo, VK_IMAGE* pImage)
+VK_LAYER_EXPORT VkResult VKAPI vkCreateImage(VkDevice device, const VkImageCreateInfo* pCreateInfo, VkImage* pImage)
 {
     loader_platform_thread_lock_mutex(&objLock);
     ll_increment_use_count((void*)device, VK_OBJECT_TYPE_DEVICE);
     loader_platform_thread_unlock_mutex(&objLock);
-    VK_RESULT result = nextTable.CreateImage(device, pCreateInfo, pImage);
+    VkResult result = nextTable.CreateImage(device, pCreateInfo, pImage);
     if (result == VK_SUCCESS)
     {
         loader_platform_thread_lock_mutex(&objLock);
@@ -949,21 +949,21 @@ VK_LAYER_EXPORT VK_RESULT VKAPI vkCreateImage(VK_DEVICE device, const VK_IMAGE_C
     return result;
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkGetImageSubresourceInfo(VK_IMAGE image, const VK_IMAGE_SUBRESOURCE* pSubresource, VK_SUBRESOURCE_INFO_TYPE infoType, size_t* pDataSize, void* pData)
+VK_LAYER_EXPORT VkResult VKAPI vkGetImageSubresourceInfo(VkImage image, const VkImageSubresource* pSubresource, VkSubresourceInfoType infoType, size_t* pDataSize, void* pData)
 {
     loader_platform_thread_lock_mutex(&objLock);
     ll_increment_use_count((void*)image, VK_OBJECT_TYPE_IMAGE);
     loader_platform_thread_unlock_mutex(&objLock);
-    VK_RESULT result = nextTable.GetImageSubresourceInfo(image, pSubresource, infoType, pDataSize, pData);
+    VkResult result = nextTable.GetImageSubresourceInfo(image, pSubresource, infoType, pDataSize, pData);
     return result;
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkCreateImageView(VK_DEVICE device, const VK_IMAGE_VIEW_CREATE_INFO* pCreateInfo, VK_IMAGE_VIEW* pView)
+VK_LAYER_EXPORT VkResult VKAPI vkCreateImageView(VkDevice device, const VkImageViewCreateInfo* pCreateInfo, VkImageView* pView)
 {
     loader_platform_thread_lock_mutex(&objLock);
     ll_increment_use_count((void*)device, VK_OBJECT_TYPE_DEVICE);
     loader_platform_thread_unlock_mutex(&objLock);
-    VK_RESULT result = nextTable.CreateImageView(device, pCreateInfo, pView);
+    VkResult result = nextTable.CreateImageView(device, pCreateInfo, pView);
     if (result == VK_SUCCESS)
     {
         loader_platform_thread_lock_mutex(&objLock);
@@ -974,12 +974,12 @@ VK_LAYER_EXPORT VK_RESULT VKAPI vkCreateImageView(VK_DEVICE device, const VK_IMA
     return result;
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkCreateColorAttachmentView(VK_DEVICE device, const VK_COLOR_ATTACHMENT_VIEW_CREATE_INFO* pCreateInfo, VK_COLOR_ATTACHMENT_VIEW* pView)
+VK_LAYER_EXPORT VkResult VKAPI vkCreateColorAttachmentView(VkDevice device, const VkColorAttachmentViewCreateInfo* pCreateInfo, VkColorAttachmentView* pView)
 {
     loader_platform_thread_lock_mutex(&objLock);
     ll_increment_use_count((void*)device, VK_OBJECT_TYPE_DEVICE);
     loader_platform_thread_unlock_mutex(&objLock);
-    VK_RESULT result = nextTable.CreateColorAttachmentView(device, pCreateInfo, pView);
+    VkResult result = nextTable.CreateColorAttachmentView(device, pCreateInfo, pView);
     if (result == VK_SUCCESS)
     {
         loader_platform_thread_lock_mutex(&objLock);
@@ -990,12 +990,12 @@ VK_LAYER_EXPORT VK_RESULT VKAPI vkCreateColorAttachmentView(VK_DEVICE device, co
     return result;
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkCreateDepthStencilView(VK_DEVICE device, const VK_DEPTH_STENCIL_VIEW_CREATE_INFO* pCreateInfo, VK_DEPTH_STENCIL_VIEW* pView)
+VK_LAYER_EXPORT VkResult VKAPI vkCreateDepthStencilView(VkDevice device, const VkDepthStencilViewCreateInfo* pCreateInfo, VkDepthStencilView* pView)
 {
     loader_platform_thread_lock_mutex(&objLock);
     ll_increment_use_count((void*)device, VK_OBJECT_TYPE_DEVICE);
     loader_platform_thread_unlock_mutex(&objLock);
-    VK_RESULT result = nextTable.CreateDepthStencilView(device, pCreateInfo, pView);
+    VkResult result = nextTable.CreateDepthStencilView(device, pCreateInfo, pView);
     if (result == VK_SUCCESS)
     {
         loader_platform_thread_lock_mutex(&objLock);
@@ -1006,12 +1006,12 @@ VK_LAYER_EXPORT VK_RESULT VKAPI vkCreateDepthStencilView(VK_DEVICE device, const
     return result;
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkCreateShader(VK_DEVICE device, const VK_SHADER_CREATE_INFO* pCreateInfo, VK_SHADER* pShader)
+VK_LAYER_EXPORT VkResult VKAPI vkCreateShader(VkDevice device, const VkShaderCreateInfo* pCreateInfo, VkShader* pShader)
 {
     loader_platform_thread_lock_mutex(&objLock);
     ll_increment_use_count((void*)device, VK_OBJECT_TYPE_DEVICE);
     loader_platform_thread_unlock_mutex(&objLock);
-    VK_RESULT result = nextTable.CreateShader(device, pCreateInfo, pShader);
+    VkResult result = nextTable.CreateShader(device, pCreateInfo, pShader);
     if (result == VK_SUCCESS)
     {
         loader_platform_thread_lock_mutex(&objLock);
@@ -1022,12 +1022,12 @@ VK_LAYER_EXPORT VK_RESULT VKAPI vkCreateShader(VK_DEVICE device, const VK_SHADER
     return result;
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkCreateGraphicsPipeline(VK_DEVICE device, const VK_GRAPHICS_PIPELINE_CREATE_INFO* pCreateInfo, VK_PIPELINE* pPipeline)
+VK_LAYER_EXPORT VkResult VKAPI vkCreateGraphicsPipeline(VkDevice device, const VkGraphicsPipelineCreateInfo* pCreateInfo, VkPipeline* pPipeline)
 {
     loader_platform_thread_lock_mutex(&objLock);
     ll_increment_use_count((void*)device, VK_OBJECT_TYPE_DEVICE);
     loader_platform_thread_unlock_mutex(&objLock);
-    VK_RESULT result = nextTable.CreateGraphicsPipeline(device, pCreateInfo, pPipeline);
+    VkResult result = nextTable.CreateGraphicsPipeline(device, pCreateInfo, pPipeline);
     if (result == VK_SUCCESS)
     {
         loader_platform_thread_lock_mutex(&objLock);
@@ -1038,12 +1038,12 @@ VK_LAYER_EXPORT VK_RESULT VKAPI vkCreateGraphicsPipeline(VK_DEVICE device, const
     return result;
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkCreateComputePipeline(VK_DEVICE device, const VK_COMPUTE_PIPELINE_CREATE_INFO* pCreateInfo, VK_PIPELINE* pPipeline)
+VK_LAYER_EXPORT VkResult VKAPI vkCreateComputePipeline(VkDevice device, const VkComputePipelineCreateInfo* pCreateInfo, VkPipeline* pPipeline)
 {
     loader_platform_thread_lock_mutex(&objLock);
     ll_increment_use_count((void*)device, VK_OBJECT_TYPE_DEVICE);
     loader_platform_thread_unlock_mutex(&objLock);
-    VK_RESULT result = nextTable.CreateComputePipeline(device, pCreateInfo, pPipeline);
+    VkResult result = nextTable.CreateComputePipeline(device, pCreateInfo, pPipeline);
     if (result == VK_SUCCESS)
     {
         loader_platform_thread_lock_mutex(&objLock);
@@ -1054,30 +1054,30 @@ VK_LAYER_EXPORT VK_RESULT VKAPI vkCreateComputePipeline(VK_DEVICE device, const 
     return result;
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkStorePipeline(VK_PIPELINE pipeline, size_t* pDataSize, void* pData)
+VK_LAYER_EXPORT VkResult VKAPI vkStorePipeline(VkPipeline pipeline, size_t* pDataSize, void* pData)
 {
     loader_platform_thread_lock_mutex(&objLock);
     ll_increment_use_count((void*)pipeline, VK_OBJECT_TYPE_PIPELINE);
     loader_platform_thread_unlock_mutex(&objLock);
-    VK_RESULT result = nextTable.StorePipeline(pipeline, pDataSize, pData);
+    VkResult result = nextTable.StorePipeline(pipeline, pDataSize, pData);
     return result;
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkLoadPipeline(VK_DEVICE device, size_t dataSize, const void* pData, VK_PIPELINE* pPipeline)
+VK_LAYER_EXPORT VkResult VKAPI vkLoadPipeline(VkDevice device, size_t dataSize, const void* pData, VkPipeline* pPipeline)
 {
     loader_platform_thread_lock_mutex(&objLock);
     ll_increment_use_count((void*)device, VK_OBJECT_TYPE_DEVICE);
     loader_platform_thread_unlock_mutex(&objLock);
-    VK_RESULT result = nextTable.LoadPipeline(device, dataSize, pData, pPipeline);
+    VkResult result = nextTable.LoadPipeline(device, dataSize, pData, pPipeline);
     return result;
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkCreateSampler(VK_DEVICE device, const VK_SAMPLER_CREATE_INFO* pCreateInfo, VK_SAMPLER* pSampler)
+VK_LAYER_EXPORT VkResult VKAPI vkCreateSampler(VkDevice device, const VkSamplerCreateInfo* pCreateInfo, VkSampler* pSampler)
 {
     loader_platform_thread_lock_mutex(&objLock);
     ll_increment_use_count((void*)device, VK_OBJECT_TYPE_DEVICE);
     loader_platform_thread_unlock_mutex(&objLock);
-    VK_RESULT result = nextTable.CreateSampler(device, pCreateInfo, pSampler);
+    VkResult result = nextTable.CreateSampler(device, pCreateInfo, pSampler);
     if (result == VK_SUCCESS)
     {
         loader_platform_thread_lock_mutex(&objLock);
@@ -1088,12 +1088,12 @@ VK_LAYER_EXPORT VK_RESULT VKAPI vkCreateSampler(VK_DEVICE device, const VK_SAMPL
     return result;
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkCreateDescriptorSetLayout( VK_DEVICE device, const VK_DESCRIPTOR_SET_LAYOUT_CREATE_INFO* pCreateInfo, VK_DESCRIPTOR_SET_LAYOUT* pSetLayout)
+VK_LAYER_EXPORT VkResult VKAPI vkCreateDescriptorSetLayout( VkDevice device, const VkDescriptorSetLayoutCreateInfo* pCreateInfo, VkDescriptorSetLayout* pSetLayout)
 {
     loader_platform_thread_lock_mutex(&objLock);
     ll_increment_use_count((void*)device, VK_OBJECT_TYPE_DEVICE);
     loader_platform_thread_unlock_mutex(&objLock);
-    VK_RESULT result = nextTable.CreateDescriptorSetLayout(device, pCreateInfo, pSetLayout);
+    VkResult result = nextTable.CreateDescriptorSetLayout(device, pCreateInfo, pSetLayout);
     if (result == VK_SUCCESS)
     {
         loader_platform_thread_lock_mutex(&objLock);
@@ -1104,30 +1104,30 @@ VK_LAYER_EXPORT VK_RESULT VKAPI vkCreateDescriptorSetLayout( VK_DEVICE device, c
     return result;
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkBeginDescriptorPoolUpdate(VK_DEVICE device, VK_DESCRIPTOR_UPDATE_MODE updateMode)
+VK_LAYER_EXPORT VkResult VKAPI vkBeginDescriptorPoolUpdate(VkDevice device, VkDescriptorUpdateMode updateMode)
 {
     loader_platform_thread_lock_mutex(&objLock);
     ll_increment_use_count((void*)device, VK_OBJECT_TYPE_DEVICE);
     loader_platform_thread_unlock_mutex(&objLock);
-    VK_RESULT result = nextTable.BeginDescriptorPoolUpdate(device, updateMode);
+    VkResult result = nextTable.BeginDescriptorPoolUpdate(device, updateMode);
     return result;
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkEndDescriptorPoolUpdate(VK_DEVICE device, VK_CMD_BUFFER cmd)
+VK_LAYER_EXPORT VkResult VKAPI vkEndDescriptorPoolUpdate(VkDevice device, VkCmdBuffer cmd)
 {
     loader_platform_thread_lock_mutex(&objLock);
     ll_increment_use_count((void*)device, VK_OBJECT_TYPE_DEVICE);
     loader_platform_thread_unlock_mutex(&objLock);
-    VK_RESULT result = nextTable.EndDescriptorPoolUpdate(device, cmd);
+    VkResult result = nextTable.EndDescriptorPoolUpdate(device, cmd);
     return result;
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkCreateDescriptorPool(VK_DEVICE device, VK_DESCRIPTOR_POOL_USAGE poolUsage, uint32_t maxSets, const VK_DESCRIPTOR_POOL_CREATE_INFO* pCreateInfo, VK_DESCRIPTOR_POOL* pDescriptorPool)
+VK_LAYER_EXPORT VkResult VKAPI vkCreateDescriptorPool(VkDevice device, VkDescriptorPoolUsage poolUsage, uint32_t maxSets, const VkDescriptorPoolCreateInfo* pCreateInfo, VkDescriptorPool* pDescriptorPool)
 {
     loader_platform_thread_lock_mutex(&objLock);
     ll_increment_use_count((void*)device, VK_OBJECT_TYPE_DEVICE);
     loader_platform_thread_unlock_mutex(&objLock);
-    VK_RESULT result = nextTable.CreateDescriptorPool(device, poolUsage, maxSets, pCreateInfo, pDescriptorPool);
+    VkResult result = nextTable.CreateDescriptorPool(device, poolUsage, maxSets, pCreateInfo, pDescriptorPool);
     if (result == VK_SUCCESS)
     {
         loader_platform_thread_lock_mutex(&objLock);
@@ -1138,21 +1138,21 @@ VK_LAYER_EXPORT VK_RESULT VKAPI vkCreateDescriptorPool(VK_DEVICE device, VK_DESC
     return result;
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkResetDescriptorPool(VK_DESCRIPTOR_POOL descriptorPool)
+VK_LAYER_EXPORT VkResult VKAPI vkResetDescriptorPool(VkDescriptorPool descriptorPool)
 {
     loader_platform_thread_lock_mutex(&objLock);
     ll_increment_use_count((void*)descriptorPool, VK_OBJECT_TYPE_DESCRIPTOR_POOL);
     loader_platform_thread_unlock_mutex(&objLock);
-    VK_RESULT result = nextTable.ResetDescriptorPool(descriptorPool);
+    VkResult result = nextTable.ResetDescriptorPool(descriptorPool);
     return result;
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkAllocDescriptorSets(VK_DESCRIPTOR_POOL descriptorPool, VK_DESCRIPTOR_SET_USAGE setUsage, uint32_t count, const VK_DESCRIPTOR_SET_LAYOUT* pSetLayouts, VK_DESCRIPTOR_SET* pDescriptorSets, uint32_t* pCount)
+VK_LAYER_EXPORT VkResult VKAPI vkAllocDescriptorSets(VkDescriptorPool descriptorPool, VkDescriptorSetUsage setUsage, uint32_t count, const VkDescriptorSetLayout* pSetLayouts, VkDescriptorSet* pDescriptorSets, uint32_t* pCount)
 {
     loader_platform_thread_lock_mutex(&objLock);
     ll_increment_use_count((void*)descriptorPool, VK_OBJECT_TYPE_DESCRIPTOR_POOL);
     loader_platform_thread_unlock_mutex(&objLock);
-    VK_RESULT result = nextTable.AllocDescriptorSets(descriptorPool, setUsage, count, pSetLayouts, pDescriptorSets, pCount);
+    VkResult result = nextTable.AllocDescriptorSets(descriptorPool, setUsage, count, pSetLayouts, pDescriptorSets, pCount);
     if (result == VK_SUCCESS)
     {
         for (uint32_t i = 0; i < *pCount; i++) {
@@ -1165,7 +1165,7 @@ VK_LAYER_EXPORT VK_RESULT VKAPI vkAllocDescriptorSets(VK_DESCRIPTOR_POOL descrip
     return result;
 }
 
-VK_LAYER_EXPORT void VKAPI vkClearDescriptorSets(VK_DESCRIPTOR_POOL descriptorPool, uint32_t count, const VK_DESCRIPTOR_SET* pDescriptorSets)
+VK_LAYER_EXPORT void VKAPI vkClearDescriptorSets(VkDescriptorPool descriptorPool, uint32_t count, const VkDescriptorSet* pDescriptorSets)
 {
     loader_platform_thread_lock_mutex(&objLock);
     ll_increment_use_count((void*)descriptorPool, VK_OBJECT_TYPE_DESCRIPTOR_POOL);
@@ -1173,7 +1173,7 @@ VK_LAYER_EXPORT void VKAPI vkClearDescriptorSets(VK_DESCRIPTOR_POOL descriptorPo
     nextTable.ClearDescriptorSets(descriptorPool, count, pDescriptorSets);
 }
 
-VK_LAYER_EXPORT void VKAPI vkUpdateDescriptors(VK_DESCRIPTOR_SET descriptorSet, uint32_t updateCount, const void** ppUpdateArray)
+VK_LAYER_EXPORT void VKAPI vkUpdateDescriptors(VkDescriptorSet descriptorSet, uint32_t updateCount, const void** ppUpdateArray)
 {
     loader_platform_thread_lock_mutex(&objLock);
     ll_increment_use_count((void*)descriptorSet, VK_OBJECT_TYPE_DESCRIPTOR_SET);
@@ -1181,12 +1181,12 @@ VK_LAYER_EXPORT void VKAPI vkUpdateDescriptors(VK_DESCRIPTOR_SET descriptorSet, 
     nextTable.UpdateDescriptors(descriptorSet, updateCount, ppUpdateArray);
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkCreateDynamicViewportState(VK_DEVICE device, const VK_DYNAMIC_VP_STATE_CREATE_INFO* pCreateInfo, VK_DYNAMIC_VP_STATE_OBJECT* pState)
+VK_LAYER_EXPORT VkResult VKAPI vkCreateDynamicViewportState(VkDevice device, const VkDynamicVpStateCreateInfo* pCreateInfo, VkDynamicVpStateObject* pState)
 {
     loader_platform_thread_lock_mutex(&objLock);
     ll_increment_use_count((void*)device, VK_OBJECT_TYPE_DEVICE);
     loader_platform_thread_unlock_mutex(&objLock);
-    VK_RESULT result = nextTable.CreateDynamicViewportState(device, pCreateInfo, pState);
+    VkResult result = nextTable.CreateDynamicViewportState(device, pCreateInfo, pState);
     if (result == VK_SUCCESS)
     {
         loader_platform_thread_lock_mutex(&objLock);
@@ -1197,12 +1197,12 @@ VK_LAYER_EXPORT VK_RESULT VKAPI vkCreateDynamicViewportState(VK_DEVICE device, c
     return result;
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkCreateDynamicRasterState(VK_DEVICE device, const VK_DYNAMIC_RS_STATE_CREATE_INFO* pCreateInfo, VK_DYNAMIC_RS_STATE_OBJECT* pState)
+VK_LAYER_EXPORT VkResult VKAPI vkCreateDynamicRasterState(VkDevice device, const VkDynamicRsStateCreateInfo* pCreateInfo, VkDynamicRsStateObject* pState)
 {
     loader_platform_thread_lock_mutex(&objLock);
     ll_increment_use_count((void*)device, VK_OBJECT_TYPE_DEVICE);
     loader_platform_thread_unlock_mutex(&objLock);
-    VK_RESULT result = nextTable.CreateDynamicRasterState(device, pCreateInfo, pState);
+    VkResult result = nextTable.CreateDynamicRasterState(device, pCreateInfo, pState);
     if (result == VK_SUCCESS)
     {
         loader_platform_thread_lock_mutex(&objLock);
@@ -1213,12 +1213,12 @@ VK_LAYER_EXPORT VK_RESULT VKAPI vkCreateDynamicRasterState(VK_DEVICE device, con
     return result;
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkCreateDynamicColorBlendState(VK_DEVICE device, const VK_DYNAMIC_CB_STATE_CREATE_INFO* pCreateInfo, VK_DYNAMIC_CB_STATE_OBJECT* pState)
+VK_LAYER_EXPORT VkResult VKAPI vkCreateDynamicColorBlendState(VkDevice device, const VkDynamicCbStateCreateInfo* pCreateInfo, VkDynamicCbStateObject* pState)
 {
     loader_platform_thread_lock_mutex(&objLock);
     ll_increment_use_count((void*)device, VK_OBJECT_TYPE_DEVICE);
     loader_platform_thread_unlock_mutex(&objLock);
-    VK_RESULT result = nextTable.CreateDynamicColorBlendState(device, pCreateInfo, pState);
+    VkResult result = nextTable.CreateDynamicColorBlendState(device, pCreateInfo, pState);
     if (result == VK_SUCCESS)
     {
         loader_platform_thread_lock_mutex(&objLock);
@@ -1229,12 +1229,12 @@ VK_LAYER_EXPORT VK_RESULT VKAPI vkCreateDynamicColorBlendState(VK_DEVICE device,
     return result;
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkCreateDynamicDepthStencilState(VK_DEVICE device, const VK_DYNAMIC_DS_STATE_CREATE_INFO* pCreateInfo, VK_DYNAMIC_DS_STATE_OBJECT* pState)
+VK_LAYER_EXPORT VkResult VKAPI vkCreateDynamicDepthStencilState(VkDevice device, const VkDynamicDsStateCreateInfo* pCreateInfo, VkDynamicDsStateObject* pState)
 {
     loader_platform_thread_lock_mutex(&objLock);
     ll_increment_use_count((void*)device, VK_OBJECT_TYPE_DEVICE);
     loader_platform_thread_unlock_mutex(&objLock);
-    VK_RESULT result = nextTable.CreateDynamicDepthStencilState(device, pCreateInfo, pState);
+    VkResult result = nextTable.CreateDynamicDepthStencilState(device, pCreateInfo, pState);
     if (result == VK_SUCCESS)
     {
         loader_platform_thread_lock_mutex(&objLock);
@@ -1245,12 +1245,12 @@ VK_LAYER_EXPORT VK_RESULT VKAPI vkCreateDynamicDepthStencilState(VK_DEVICE devic
     return result;
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkCreateCommandBuffer(VK_DEVICE device, const VK_CMD_BUFFER_CREATE_INFO* pCreateInfo, VK_CMD_BUFFER* pCmdBuffer)
+VK_LAYER_EXPORT VkResult VKAPI vkCreateCommandBuffer(VkDevice device, const VkCmdBufferCreateInfo* pCreateInfo, VkCmdBuffer* pCmdBuffer)
 {
     loader_platform_thread_lock_mutex(&objLock);
     ll_increment_use_count((void*)device, VK_OBJECT_TYPE_DEVICE);
     loader_platform_thread_unlock_mutex(&objLock);
-    VK_RESULT result = nextTable.CreateCommandBuffer(device, pCreateInfo, pCmdBuffer);
+    VkResult result = nextTable.CreateCommandBuffer(device, pCreateInfo, pCmdBuffer);
     if (result == VK_SUCCESS)
     {
         loader_platform_thread_lock_mutex(&objLock);
@@ -1261,16 +1261,16 @@ VK_LAYER_EXPORT VK_RESULT VKAPI vkCreateCommandBuffer(VK_DEVICE device, const VK
     return result;
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkBeginCommandBuffer(VK_CMD_BUFFER cmdBuffer, const VK_CMD_BUFFER_BEGIN_INFO* pBeginInfo)
+VK_LAYER_EXPORT VkResult VKAPI vkBeginCommandBuffer(VkCmdBuffer cmdBuffer, const VkCmdBufferBeginInfo* pBeginInfo)
 {
     loader_platform_thread_lock_mutex(&objLock);
     ll_increment_use_count((void*)cmdBuffer, VK_OBJECT_TYPE_CMD_BUFFER);
     loader_platform_thread_unlock_mutex(&objLock);
-    VK_RESULT result = nextTable.BeginCommandBuffer(cmdBuffer, pBeginInfo);
+    VkResult result = nextTable.BeginCommandBuffer(cmdBuffer, pBeginInfo);
     return result;
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkEndCommandBuffer(VK_CMD_BUFFER cmdBuffer)
+VK_LAYER_EXPORT VkResult VKAPI vkEndCommandBuffer(VkCmdBuffer cmdBuffer)
 {
     loader_platform_thread_lock_mutex(&objLock);
     ll_increment_use_count((void*)cmdBuffer, VK_OBJECT_TYPE_CMD_BUFFER);
@@ -1279,20 +1279,20 @@ VK_LAYER_EXPORT VK_RESULT VKAPI vkEndCommandBuffer(VK_CMD_BUFFER cmdBuffer)
                                                                 OBJSTATUS_RASTER_BOUND      |
                                                                 OBJSTATUS_COLOR_BLEND_BOUND |
                                                                 OBJSTATUS_DEPTH_STENCIL_BOUND));
-    VK_RESULT result = nextTable.EndCommandBuffer(cmdBuffer);
+    VkResult result = nextTable.EndCommandBuffer(cmdBuffer);
     return result;
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkResetCommandBuffer(VK_CMD_BUFFER cmdBuffer)
+VK_LAYER_EXPORT VkResult VKAPI vkResetCommandBuffer(VkCmdBuffer cmdBuffer)
 {
     loader_platform_thread_lock_mutex(&objLock);
     ll_increment_use_count((void*)cmdBuffer, VK_OBJECT_TYPE_CMD_BUFFER);
     loader_platform_thread_unlock_mutex(&objLock);
-    VK_RESULT result = nextTable.ResetCommandBuffer(cmdBuffer);
+    VkResult result = nextTable.ResetCommandBuffer(cmdBuffer);
     return result;
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdBindPipeline(VK_CMD_BUFFER cmdBuffer, VK_PIPELINE_BIND_POINT pipelineBindPoint, VK_PIPELINE pipeline)
+VK_LAYER_EXPORT void VKAPI vkCmdBindPipeline(VkCmdBuffer cmdBuffer, VkPipelineBindPoint pipelineBindPoint, VkPipeline pipeline)
 {
     loader_platform_thread_lock_mutex(&objLock);
     ll_increment_use_count((void*)cmdBuffer, VK_OBJECT_TYPE_CMD_BUFFER);
@@ -1300,7 +1300,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdBindPipeline(VK_CMD_BUFFER cmdBuffer, VK_PIPELIN
     nextTable.CmdBindPipeline(cmdBuffer, pipelineBindPoint, pipeline);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdBindDynamicStateObject(VK_CMD_BUFFER cmdBuffer, VK_STATE_BIND_POINT stateBindPoint, VK_DYNAMIC_STATE_OBJECT state)
+VK_LAYER_EXPORT void VKAPI vkCmdBindDynamicStateObject(VkCmdBuffer cmdBuffer, VkStateBindPoint stateBindPoint, VkDynamicStateObject state)
 {
     loader_platform_thread_lock_mutex(&objLock);
     ll_increment_use_count((void*)cmdBuffer, VK_OBJECT_TYPE_CMD_BUFFER);
@@ -1309,7 +1309,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdBindDynamicStateObject(VK_CMD_BUFFER cmdBuffer, 
     nextTable.CmdBindDynamicStateObject(cmdBuffer, stateBindPoint, state);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdBindDescriptorSets(VK_CMD_BUFFER cmdBuffer, VK_PIPELINE_BIND_POINT pipelineBindPoint, VK_DESCRIPTOR_SET_LAYOUT_CHAIN layoutChain, uint32_t layoutChainSlot, uint32_t count, const VK_DESCRIPTOR_SET* pDescriptorSets, const uint32_t* pUserData)
+VK_LAYER_EXPORT void VKAPI vkCmdBindDescriptorSets(VkCmdBuffer cmdBuffer, VkPipelineBindPoint pipelineBindPoint, VkDescriptorSetLayoutChain layoutChain, uint32_t layoutChainSlot, uint32_t count, const VkDescriptorSet* pDescriptorSets, const uint32_t* pUserData)
 {
     loader_platform_thread_lock_mutex(&objLock);
     ll_increment_use_count((void*)cmdBuffer, VK_OBJECT_TYPE_CMD_BUFFER);
@@ -1317,7 +1317,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdBindDescriptorSets(VK_CMD_BUFFER cmdBuffer, VK_P
     nextTable.CmdBindDescriptorSets(cmdBuffer, pipelineBindPoint, layoutChain, layoutChainSlot, count, pDescriptorSets, pUserData);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdBindVertexBuffer(VK_CMD_BUFFER cmdBuffer, VK_BUFFER buffer, VK_GPU_SIZE offset, uint32_t binding)
+VK_LAYER_EXPORT void VKAPI vkCmdBindVertexBuffer(VkCmdBuffer cmdBuffer, VkBuffer buffer, VkGpuSize offset, uint32_t binding)
 {
     loader_platform_thread_lock_mutex(&objLock);
     ll_increment_use_count((void*)cmdBuffer, VK_OBJECT_TYPE_CMD_BUFFER);
@@ -1325,7 +1325,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdBindVertexBuffer(VK_CMD_BUFFER cmdBuffer, VK_BUF
     nextTable.CmdBindVertexBuffer(cmdBuffer, buffer, offset, binding);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdBindIndexBuffer(VK_CMD_BUFFER cmdBuffer, VK_BUFFER buffer, VK_GPU_SIZE offset, VK_INDEX_TYPE indexType)
+VK_LAYER_EXPORT void VKAPI vkCmdBindIndexBuffer(VkCmdBuffer cmdBuffer, VkBuffer buffer, VkGpuSize offset, VkIndexType indexType)
 {
     loader_platform_thread_lock_mutex(&objLock);
     ll_increment_use_count((void*)cmdBuffer, VK_OBJECT_TYPE_CMD_BUFFER);
@@ -1333,7 +1333,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdBindIndexBuffer(VK_CMD_BUFFER cmdBuffer, VK_BUFF
     nextTable.CmdBindIndexBuffer(cmdBuffer, buffer, offset, indexType);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdDraw(VK_CMD_BUFFER cmdBuffer, uint32_t firstVertex, uint32_t vertexCount, uint32_t firstInstance, uint32_t instanceCount)
+VK_LAYER_EXPORT void VKAPI vkCmdDraw(VkCmdBuffer cmdBuffer, uint32_t firstVertex, uint32_t vertexCount, uint32_t firstInstance, uint32_t instanceCount)
 {
     loader_platform_thread_lock_mutex(&objLock);
     ll_increment_use_count((void*)cmdBuffer, VK_OBJECT_TYPE_CMD_BUFFER);
@@ -1341,7 +1341,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdDraw(VK_CMD_BUFFER cmdBuffer, uint32_t firstVert
     nextTable.CmdDraw(cmdBuffer, firstVertex, vertexCount, firstInstance, instanceCount);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdDrawIndexed(VK_CMD_BUFFER cmdBuffer, uint32_t firstIndex, uint32_t indexCount, int32_t vertexOffset, uint32_t firstInstance, uint32_t instanceCount)
+VK_LAYER_EXPORT void VKAPI vkCmdDrawIndexed(VkCmdBuffer cmdBuffer, uint32_t firstIndex, uint32_t indexCount, int32_t vertexOffset, uint32_t firstInstance, uint32_t instanceCount)
 {
     loader_platform_thread_lock_mutex(&objLock);
     ll_increment_use_count((void*)cmdBuffer, VK_OBJECT_TYPE_CMD_BUFFER);
@@ -1349,7 +1349,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdDrawIndexed(VK_CMD_BUFFER cmdBuffer, uint32_t fi
     nextTable.CmdDrawIndexed(cmdBuffer, firstIndex, indexCount, vertexOffset, firstInstance, instanceCount);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdDrawIndirect(VK_CMD_BUFFER cmdBuffer, VK_BUFFER buffer, VK_GPU_SIZE offset, uint32_t count, uint32_t stride)
+VK_LAYER_EXPORT void VKAPI vkCmdDrawIndirect(VkCmdBuffer cmdBuffer, VkBuffer buffer, VkGpuSize offset, uint32_t count, uint32_t stride)
 {
     loader_platform_thread_lock_mutex(&objLock);
     ll_increment_use_count((void*)cmdBuffer, VK_OBJECT_TYPE_CMD_BUFFER);
@@ -1357,7 +1357,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdDrawIndirect(VK_CMD_BUFFER cmdBuffer, VK_BUFFER 
     nextTable.CmdDrawIndirect(cmdBuffer, buffer, offset, count, stride);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdDrawIndexedIndirect(VK_CMD_BUFFER cmdBuffer, VK_BUFFER buffer, VK_GPU_SIZE offset, uint32_t count, uint32_t stride)
+VK_LAYER_EXPORT void VKAPI vkCmdDrawIndexedIndirect(VkCmdBuffer cmdBuffer, VkBuffer buffer, VkGpuSize offset, uint32_t count, uint32_t stride)
 {
     loader_platform_thread_lock_mutex(&objLock);
     ll_increment_use_count((void*)cmdBuffer, VK_OBJECT_TYPE_CMD_BUFFER);
@@ -1365,7 +1365,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdDrawIndexedIndirect(VK_CMD_BUFFER cmdBuffer, VK_
     nextTable.CmdDrawIndexedIndirect(cmdBuffer, buffer, offset, count, stride);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdDispatch(VK_CMD_BUFFER cmdBuffer, uint32_t x, uint32_t y, uint32_t z)
+VK_LAYER_EXPORT void VKAPI vkCmdDispatch(VkCmdBuffer cmdBuffer, uint32_t x, uint32_t y, uint32_t z)
 {
     loader_platform_thread_lock_mutex(&objLock);
     ll_increment_use_count((void*)cmdBuffer, VK_OBJECT_TYPE_CMD_BUFFER);
@@ -1373,7 +1373,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdDispatch(VK_CMD_BUFFER cmdBuffer, uint32_t x, ui
     nextTable.CmdDispatch(cmdBuffer, x, y, z);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdDispatchIndirect(VK_CMD_BUFFER cmdBuffer, VK_BUFFER buffer, VK_GPU_SIZE offset)
+VK_LAYER_EXPORT void VKAPI vkCmdDispatchIndirect(VkCmdBuffer cmdBuffer, VkBuffer buffer, VkGpuSize offset)
 {
     loader_platform_thread_lock_mutex(&objLock);
     ll_increment_use_count((void*)cmdBuffer, VK_OBJECT_TYPE_CMD_BUFFER);
@@ -1381,7 +1381,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdDispatchIndirect(VK_CMD_BUFFER cmdBuffer, VK_BUF
     nextTable.CmdDispatchIndirect(cmdBuffer, buffer, offset);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdCopyBuffer(VK_CMD_BUFFER cmdBuffer, VK_BUFFER srcBuffer, VK_BUFFER destBuffer, uint32_t regionCount, const VK_BUFFER_COPY* pRegions)
+VK_LAYER_EXPORT void VKAPI vkCmdCopyBuffer(VkCmdBuffer cmdBuffer, VkBuffer srcBuffer, VkBuffer destBuffer, uint32_t regionCount, const VkBufferCopy* pRegions)
 {
     loader_platform_thread_lock_mutex(&objLock);
     ll_increment_use_count((void*)cmdBuffer, VK_OBJECT_TYPE_CMD_BUFFER);
@@ -1389,7 +1389,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdCopyBuffer(VK_CMD_BUFFER cmdBuffer, VK_BUFFER sr
     nextTable.CmdCopyBuffer(cmdBuffer, srcBuffer, destBuffer, regionCount, pRegions);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdCopyImage(VK_CMD_BUFFER cmdBuffer, VK_IMAGE srcImage, VK_IMAGE_LAYOUT srcImageLayout, VK_IMAGE destImage, VK_IMAGE_LAYOUT destImageLayout, uint32_t regionCount, const VK_IMAGE_COPY* pRegions)
+VK_LAYER_EXPORT void VKAPI vkCmdCopyImage(VkCmdBuffer cmdBuffer, VkImage srcImage, VkImageLayout srcImageLayout, VkImage destImage, VkImageLayout destImageLayout, uint32_t regionCount, const VkImageCopy* pRegions)
 {
     loader_platform_thread_lock_mutex(&objLock);
     ll_increment_use_count((void*)cmdBuffer, VK_OBJECT_TYPE_CMD_BUFFER);
@@ -1397,7 +1397,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdCopyImage(VK_CMD_BUFFER cmdBuffer, VK_IMAGE srcI
     nextTable.CmdCopyImage(cmdBuffer, srcImage, srcImageLayout, destImage, destImageLayout, regionCount, pRegions);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdCopyBufferToImage(VK_CMD_BUFFER cmdBuffer, VK_BUFFER srcBuffer, VK_IMAGE destImage, VK_IMAGE_LAYOUT destImageLayout, uint32_t regionCount, const VK_BUFFER_IMAGE_COPY* pRegions)
+VK_LAYER_EXPORT void VKAPI vkCmdCopyBufferToImage(VkCmdBuffer cmdBuffer, VkBuffer srcBuffer, VkImage destImage, VkImageLayout destImageLayout, uint32_t regionCount, const VkBufferImageCopy* pRegions)
 {
     loader_platform_thread_lock_mutex(&objLock);
     ll_increment_use_count((void*)cmdBuffer, VK_OBJECT_TYPE_CMD_BUFFER);
@@ -1405,7 +1405,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdCopyBufferToImage(VK_CMD_BUFFER cmdBuffer, VK_BU
     nextTable.CmdCopyBufferToImage(cmdBuffer, srcBuffer, destImage, destImageLayout, regionCount, pRegions);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdCopyImageToBuffer(VK_CMD_BUFFER cmdBuffer, VK_IMAGE srcImage, VK_IMAGE_LAYOUT srcImageLayout, VK_BUFFER destBuffer, uint32_t regionCount, const VK_BUFFER_IMAGE_COPY* pRegions)
+VK_LAYER_EXPORT void VKAPI vkCmdCopyImageToBuffer(VkCmdBuffer cmdBuffer, VkImage srcImage, VkImageLayout srcImageLayout, VkBuffer destBuffer, uint32_t regionCount, const VkBufferImageCopy* pRegions)
 {
     loader_platform_thread_lock_mutex(&objLock);
     ll_increment_use_count((void*)cmdBuffer, VK_OBJECT_TYPE_CMD_BUFFER);
@@ -1413,7 +1413,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdCopyImageToBuffer(VK_CMD_BUFFER cmdBuffer, VK_IM
     nextTable.CmdCopyImageToBuffer(cmdBuffer, srcImage, srcImageLayout, destBuffer, regionCount, pRegions);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdCloneImageData(VK_CMD_BUFFER cmdBuffer, VK_IMAGE srcImage, VK_IMAGE_LAYOUT srcImageLayout, VK_IMAGE destImage, VK_IMAGE_LAYOUT destImageLayout)
+VK_LAYER_EXPORT void VKAPI vkCmdCloneImageData(VkCmdBuffer cmdBuffer, VkImage srcImage, VkImageLayout srcImageLayout, VkImage destImage, VkImageLayout destImageLayout)
 {
     loader_platform_thread_lock_mutex(&objLock);
     ll_increment_use_count((void*)cmdBuffer, VK_OBJECT_TYPE_CMD_BUFFER);
@@ -1421,7 +1421,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdCloneImageData(VK_CMD_BUFFER cmdBuffer, VK_IMAGE
     nextTable.CmdCloneImageData(cmdBuffer, srcImage, srcImageLayout, destImage, destImageLayout);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdUpdateBuffer(VK_CMD_BUFFER cmdBuffer, VK_BUFFER destBuffer, VK_GPU_SIZE destOffset, VK_GPU_SIZE dataSize, const uint32_t* pData)
+VK_LAYER_EXPORT void VKAPI vkCmdUpdateBuffer(VkCmdBuffer cmdBuffer, VkBuffer destBuffer, VkGpuSize destOffset, VkGpuSize dataSize, const uint32_t* pData)
 {
     loader_platform_thread_lock_mutex(&objLock);
     ll_increment_use_count((void*)cmdBuffer, VK_OBJECT_TYPE_CMD_BUFFER);
@@ -1429,7 +1429,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdUpdateBuffer(VK_CMD_BUFFER cmdBuffer, VK_BUFFER 
     nextTable.CmdUpdateBuffer(cmdBuffer, destBuffer, destOffset, dataSize, pData);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdFillBuffer(VK_CMD_BUFFER cmdBuffer, VK_BUFFER destBuffer, VK_GPU_SIZE destOffset, VK_GPU_SIZE fillSize, uint32_t data)
+VK_LAYER_EXPORT void VKAPI vkCmdFillBuffer(VkCmdBuffer cmdBuffer, VkBuffer destBuffer, VkGpuSize destOffset, VkGpuSize fillSize, uint32_t data)
 {
     loader_platform_thread_lock_mutex(&objLock);
     ll_increment_use_count((void*)cmdBuffer, VK_OBJECT_TYPE_CMD_BUFFER);
@@ -1437,7 +1437,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdFillBuffer(VK_CMD_BUFFER cmdBuffer, VK_BUFFER de
     nextTable.CmdFillBuffer(cmdBuffer, destBuffer, destOffset, fillSize, data);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdClearColorImage(VK_CMD_BUFFER cmdBuffer, VK_IMAGE image, VK_IMAGE_LAYOUT imageLayout, VK_CLEAR_COLOR color, uint32_t rangeCount, const VK_IMAGE_SUBRESOURCE_RANGE* pRanges)
+VK_LAYER_EXPORT void VKAPI vkCmdClearColorImage(VkCmdBuffer cmdBuffer, VkImage image, VkImageLayout imageLayout, VkClearColor color, uint32_t rangeCount, const VkImageSubresourceRange* pRanges)
 {
     loader_platform_thread_lock_mutex(&objLock);
     ll_increment_use_count((void*)cmdBuffer, VK_OBJECT_TYPE_CMD_BUFFER);
@@ -1445,7 +1445,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdClearColorImage(VK_CMD_BUFFER cmdBuffer, VK_IMAG
     nextTable.CmdClearColorImage(cmdBuffer, image, imageLayout, color, rangeCount, pRanges);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdClearDepthStencil(VK_CMD_BUFFER cmdBuffer, VK_IMAGE image, VK_IMAGE_LAYOUT imageLayout, float depth, uint32_t stencil, uint32_t rangeCount, const VK_IMAGE_SUBRESOURCE_RANGE* pRanges)
+VK_LAYER_EXPORT void VKAPI vkCmdClearDepthStencil(VkCmdBuffer cmdBuffer, VkImage image, VkImageLayout imageLayout, float depth, uint32_t stencil, uint32_t rangeCount, const VkImageSubresourceRange* pRanges)
 {
     loader_platform_thread_lock_mutex(&objLock);
     ll_increment_use_count((void*)cmdBuffer, VK_OBJECT_TYPE_CMD_BUFFER);
@@ -1453,7 +1453,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdClearDepthStencil(VK_CMD_BUFFER cmdBuffer, VK_IM
     nextTable.CmdClearDepthStencil(cmdBuffer, image, imageLayout, depth, stencil, rangeCount, pRanges);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdResolveImage(VK_CMD_BUFFER cmdBuffer, VK_IMAGE srcImage, VK_IMAGE_LAYOUT srcImageLayout, VK_IMAGE destImage, VK_IMAGE_LAYOUT destImageLayout, uint32_t rectCount, const VK_IMAGE_RESOLVE* pRects)
+VK_LAYER_EXPORT void VKAPI vkCmdResolveImage(VkCmdBuffer cmdBuffer, VkImage srcImage, VkImageLayout srcImageLayout, VkImage destImage, VkImageLayout destImageLayout, uint32_t rectCount, const VkImageResolve* pRects)
 {
     loader_platform_thread_lock_mutex(&objLock);
     ll_increment_use_count((void*)cmdBuffer, VK_OBJECT_TYPE_CMD_BUFFER);
@@ -1461,7 +1461,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdResolveImage(VK_CMD_BUFFER cmdBuffer, VK_IMAGE s
     nextTable.CmdResolveImage(cmdBuffer, srcImage, srcImageLayout, destImage, destImageLayout, rectCount, pRects);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdSetEvent(VK_CMD_BUFFER cmdBuffer, VK_EVENT event, VK_PIPE_EVENT pipeEvent)
+VK_LAYER_EXPORT void VKAPI vkCmdSetEvent(VkCmdBuffer cmdBuffer, VkEvent event, VkPipeEvent pipeEvent)
 {
     loader_platform_thread_lock_mutex(&objLock);
     ll_increment_use_count((void*)cmdBuffer, VK_OBJECT_TYPE_CMD_BUFFER);
@@ -1469,7 +1469,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdSetEvent(VK_CMD_BUFFER cmdBuffer, VK_EVENT event
     nextTable.CmdSetEvent(cmdBuffer, event, pipeEvent);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdResetEvent(VK_CMD_BUFFER cmdBuffer, VK_EVENT event, VK_PIPE_EVENT pipeEvent)
+VK_LAYER_EXPORT void VKAPI vkCmdResetEvent(VkCmdBuffer cmdBuffer, VkEvent event, VkPipeEvent pipeEvent)
 {
     loader_platform_thread_lock_mutex(&objLock);
     ll_increment_use_count((void*)cmdBuffer, VK_OBJECT_TYPE_CMD_BUFFER);
@@ -1477,7 +1477,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdResetEvent(VK_CMD_BUFFER cmdBuffer, VK_EVENT eve
     nextTable.CmdResetEvent(cmdBuffer, event, pipeEvent);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdWaitEvents(VK_CMD_BUFFER cmdBuffer, const VK_EVENT_WAIT_INFO* pWaitInfo)
+VK_LAYER_EXPORT void VKAPI vkCmdWaitEvents(VkCmdBuffer cmdBuffer, const VkEventWaitInfo* pWaitInfo)
 {
     loader_platform_thread_lock_mutex(&objLock);
     ll_increment_use_count((void*)cmdBuffer, VK_OBJECT_TYPE_CMD_BUFFER);
@@ -1485,7 +1485,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdWaitEvents(VK_CMD_BUFFER cmdBuffer, const VK_EVE
     nextTable.CmdWaitEvents(cmdBuffer, pWaitInfo);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdPipelineBarrier(VK_CMD_BUFFER cmdBuffer, const VK_PIPELINE_BARRIER* pBarrier)
+VK_LAYER_EXPORT void VKAPI vkCmdPipelineBarrier(VkCmdBuffer cmdBuffer, const VkPipelineBarrier* pBarrier)
 {
     loader_platform_thread_lock_mutex(&objLock);
     ll_increment_use_count((void*)cmdBuffer, VK_OBJECT_TYPE_CMD_BUFFER);
@@ -1493,7 +1493,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdPipelineBarrier(VK_CMD_BUFFER cmdBuffer, const V
     nextTable.CmdPipelineBarrier(cmdBuffer, pBarrier);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdBeginQuery(VK_CMD_BUFFER cmdBuffer, VK_QUERY_POOL queryPool, uint32_t slot, VK_FLAGS flags)
+VK_LAYER_EXPORT void VKAPI vkCmdBeginQuery(VkCmdBuffer cmdBuffer, VkQueryPool queryPool, uint32_t slot, VkFlags flags)
 {
     loader_platform_thread_lock_mutex(&objLock);
     ll_increment_use_count((void*)cmdBuffer, VK_OBJECT_TYPE_CMD_BUFFER);
@@ -1501,7 +1501,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdBeginQuery(VK_CMD_BUFFER cmdBuffer, VK_QUERY_POO
     nextTable.CmdBeginQuery(cmdBuffer, queryPool, slot, flags);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdEndQuery(VK_CMD_BUFFER cmdBuffer, VK_QUERY_POOL queryPool, uint32_t slot)
+VK_LAYER_EXPORT void VKAPI vkCmdEndQuery(VkCmdBuffer cmdBuffer, VkQueryPool queryPool, uint32_t slot)
 {
     loader_platform_thread_lock_mutex(&objLock);
     ll_increment_use_count((void*)cmdBuffer, VK_OBJECT_TYPE_CMD_BUFFER);
@@ -1509,7 +1509,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdEndQuery(VK_CMD_BUFFER cmdBuffer, VK_QUERY_POOL 
     nextTable.CmdEndQuery(cmdBuffer, queryPool, slot);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdResetQueryPool(VK_CMD_BUFFER cmdBuffer, VK_QUERY_POOL queryPool, uint32_t startQuery, uint32_t queryCount)
+VK_LAYER_EXPORT void VKAPI vkCmdResetQueryPool(VkCmdBuffer cmdBuffer, VkQueryPool queryPool, uint32_t startQuery, uint32_t queryCount)
 {
     loader_platform_thread_lock_mutex(&objLock);
     ll_increment_use_count((void*)cmdBuffer, VK_OBJECT_TYPE_CMD_BUFFER);
@@ -1517,7 +1517,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdResetQueryPool(VK_CMD_BUFFER cmdBuffer, VK_QUERY
     nextTable.CmdResetQueryPool(cmdBuffer, queryPool, startQuery, queryCount);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdWriteTimestamp(VK_CMD_BUFFER cmdBuffer, VK_TIMESTAMP_TYPE timestampType, VK_BUFFER destBuffer, VK_GPU_SIZE destOffset)
+VK_LAYER_EXPORT void VKAPI vkCmdWriteTimestamp(VkCmdBuffer cmdBuffer, VkTimestampType timestampType, VkBuffer destBuffer, VkGpuSize destOffset)
 {
     loader_platform_thread_lock_mutex(&objLock);
     ll_increment_use_count((void*)cmdBuffer, VK_OBJECT_TYPE_CMD_BUFFER);
@@ -1525,7 +1525,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdWriteTimestamp(VK_CMD_BUFFER cmdBuffer, VK_TIMES
     nextTable.CmdWriteTimestamp(cmdBuffer, timestampType, destBuffer, destOffset);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdInitAtomicCounters(VK_CMD_BUFFER cmdBuffer, VK_PIPELINE_BIND_POINT pipelineBindPoint, uint32_t startCounter, uint32_t counterCount, const uint32_t* pData)
+VK_LAYER_EXPORT void VKAPI vkCmdInitAtomicCounters(VkCmdBuffer cmdBuffer, VkPipelineBindPoint pipelineBindPoint, uint32_t startCounter, uint32_t counterCount, const uint32_t* pData)
 {
     loader_platform_thread_lock_mutex(&objLock);
     ll_increment_use_count((void*)cmdBuffer, VK_OBJECT_TYPE_CMD_BUFFER);
@@ -1533,7 +1533,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdInitAtomicCounters(VK_CMD_BUFFER cmdBuffer, VK_P
     nextTable.CmdInitAtomicCounters(cmdBuffer, pipelineBindPoint, startCounter, counterCount, pData);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdLoadAtomicCounters(VK_CMD_BUFFER cmdBuffer, VK_PIPELINE_BIND_POINT pipelineBindPoint, uint32_t startCounter, uint32_t counterCount, VK_BUFFER srcBuffer, VK_GPU_SIZE srcOffset)
+VK_LAYER_EXPORT void VKAPI vkCmdLoadAtomicCounters(VkCmdBuffer cmdBuffer, VkPipelineBindPoint pipelineBindPoint, uint32_t startCounter, uint32_t counterCount, VkBuffer srcBuffer, VkGpuSize srcOffset)
 {
     loader_platform_thread_lock_mutex(&objLock);
     ll_increment_use_count((void*)cmdBuffer, VK_OBJECT_TYPE_CMD_BUFFER);
@@ -1541,7 +1541,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdLoadAtomicCounters(VK_CMD_BUFFER cmdBuffer, VK_P
     nextTable.CmdLoadAtomicCounters(cmdBuffer, pipelineBindPoint, startCounter, counterCount, srcBuffer, srcOffset);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdSaveAtomicCounters(VK_CMD_BUFFER cmdBuffer, VK_PIPELINE_BIND_POINT pipelineBindPoint, uint32_t startCounter, uint32_t counterCount, VK_BUFFER destBuffer, VK_GPU_SIZE destOffset)
+VK_LAYER_EXPORT void VKAPI vkCmdSaveAtomicCounters(VkCmdBuffer cmdBuffer, VkPipelineBindPoint pipelineBindPoint, uint32_t startCounter, uint32_t counterCount, VkBuffer destBuffer, VkGpuSize destOffset)
 {
     loader_platform_thread_lock_mutex(&objLock);
     ll_increment_use_count((void*)cmdBuffer, VK_OBJECT_TYPE_CMD_BUFFER);
@@ -1549,12 +1549,12 @@ VK_LAYER_EXPORT void VKAPI vkCmdSaveAtomicCounters(VK_CMD_BUFFER cmdBuffer, VK_P
     nextTable.CmdSaveAtomicCounters(cmdBuffer, pipelineBindPoint, startCounter, counterCount, destBuffer, destOffset);
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkCreateFramebuffer(VK_DEVICE device, const VK_FRAMEBUFFER_CREATE_INFO* pCreateInfo, VK_FRAMEBUFFER* pFramebuffer)
+VK_LAYER_EXPORT VkResult VKAPI vkCreateFramebuffer(VkDevice device, const VkFramebufferCreateInfo* pCreateInfo, VkFramebuffer* pFramebuffer)
 {
     loader_platform_thread_lock_mutex(&objLock);
     ll_increment_use_count((void*)device, VK_OBJECT_TYPE_DEVICE);
     loader_platform_thread_unlock_mutex(&objLock);
-    VK_RESULT result = nextTable.CreateFramebuffer(device, pCreateInfo, pFramebuffer);
+    VkResult result = nextTable.CreateFramebuffer(device, pCreateInfo, pFramebuffer);
     if (result == VK_SUCCESS)
     {
         loader_platform_thread_lock_mutex(&objLock);
@@ -1565,12 +1565,12 @@ VK_LAYER_EXPORT VK_RESULT VKAPI vkCreateFramebuffer(VK_DEVICE device, const VK_F
     return result;
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkCreateRenderPass(VK_DEVICE device, const VK_RENDER_PASS_CREATE_INFO* pCreateInfo, VK_RENDER_PASS* pRenderPass)
+VK_LAYER_EXPORT VkResult VKAPI vkCreateRenderPass(VkDevice device, const VkRenderPassCreateInfo* pCreateInfo, VkRenderPass* pRenderPass)
 {
     loader_platform_thread_lock_mutex(&objLock);
     ll_increment_use_count((void*)device, VK_OBJECT_TYPE_DEVICE);
     loader_platform_thread_unlock_mutex(&objLock);
-    VK_RESULT result = nextTable.CreateRenderPass(device, pCreateInfo, pRenderPass);
+    VkResult result = nextTable.CreateRenderPass(device, pCreateInfo, pRenderPass);
     if (result == VK_SUCCESS)
     {
         loader_platform_thread_lock_mutex(&objLock);
@@ -1581,7 +1581,7 @@ VK_LAYER_EXPORT VK_RESULT VKAPI vkCreateRenderPass(VK_DEVICE device, const VK_RE
     return result;
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdBeginRenderPass(VK_CMD_BUFFER cmdBuffer, const VK_RENDER_PASS_BEGIN *pRenderPassBegin)
+VK_LAYER_EXPORT void VKAPI vkCmdBeginRenderPass(VkCmdBuffer cmdBuffer, const VkRenderPassBegin *pRenderPassBegin)
 {
     loader_platform_thread_lock_mutex(&objLock);
     ll_increment_use_count((void*)cmdBuffer, VK_OBJECT_TYPE_CMD_BUFFER);
@@ -1589,7 +1589,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdBeginRenderPass(VK_CMD_BUFFER cmdBuffer, const V
     nextTable.CmdBeginRenderPass(cmdBuffer, pRenderPassBegin);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdEndRenderPass(VK_CMD_BUFFER cmdBuffer, VK_RENDER_PASS renderPass)
+VK_LAYER_EXPORT void VKAPI vkCmdEndRenderPass(VkCmdBuffer cmdBuffer, VkRenderPass renderPass)
 {
     loader_platform_thread_lock_mutex(&objLock);
     ll_increment_use_count((void*)cmdBuffer, VK_OBJECT_TYPE_CMD_BUFFER);
@@ -1597,16 +1597,16 @@ VK_LAYER_EXPORT void VKAPI vkCmdEndRenderPass(VK_CMD_BUFFER cmdBuffer, VK_RENDER
     nextTable.CmdEndRenderPass(cmdBuffer, renderPass);
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkDbgSetValidationLevel(VK_DEVICE device, VK_VALIDATION_LEVEL validationLevel)
+VK_LAYER_EXPORT VkResult VKAPI vkDbgSetValidationLevel(VkDevice device, VkValidationLevel validationLevel)
 {
     loader_platform_thread_lock_mutex(&objLock);
     ll_increment_use_count((void*)device, VK_OBJECT_TYPE_DEVICE);
     loader_platform_thread_unlock_mutex(&objLock);
-    VK_RESULT result = nextTable.DbgSetValidationLevel(device, validationLevel);
+    VkResult result = nextTable.DbgSetValidationLevel(device, validationLevel);
     return result;
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkDbgRegisterMsgCallback(VK_INSTANCE instance, VK_DBG_MSG_CALLBACK_FUNCTION pfnMsgCallback, void* pUserData)
+VK_LAYER_EXPORT VkResult VKAPI vkDbgRegisterMsgCallback(VkInstance instance, VK_DBG_MSG_CALLBACK_FUNCTION pfnMsgCallback, void* pUserData)
 {
     // This layer intercepts callbacks
     VK_LAYER_DBG_FUNCTION_NODE *pNewDbgFuncNode = (VK_LAYER_DBG_FUNCTION_NODE*)malloc(sizeof(VK_LAYER_DBG_FUNCTION_NODE));
@@ -1619,11 +1619,11 @@ VK_LAYER_EXPORT VK_RESULT VKAPI vkDbgRegisterMsgCallback(VK_INSTANCE instance, V
     // force callbacks if DebugAction hasn't been set already other than initial value
     if (g_actionIsDefault) {
         g_debugAction = VK_DBG_LAYER_ACTION_CALLBACK;
-    }    VK_RESULT result = nextTable.DbgRegisterMsgCallback(instance, pfnMsgCallback, pUserData);
+    }    VkResult result = nextTable.DbgRegisterMsgCallback(instance, pfnMsgCallback, pUserData);
     return result;
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkDbgUnregisterMsgCallback(VK_INSTANCE instance, VK_DBG_MSG_CALLBACK_FUNCTION pfnMsgCallback)
+VK_LAYER_EXPORT VkResult VKAPI vkDbgUnregisterMsgCallback(VkInstance instance, VK_DBG_MSG_CALLBACK_FUNCTION pfnMsgCallback)
 {
     VK_LAYER_DBG_FUNCTION_NODE *pTrav = g_pDbgFunctionHead;
     VK_LAYER_DBG_FUNCTION_NODE *pPrev = pTrav;
@@ -1645,44 +1645,44 @@ VK_LAYER_EXPORT VK_RESULT VKAPI vkDbgUnregisterMsgCallback(VK_INSTANCE instance,
         else
             g_debugAction &= ~VK_DBG_LAYER_ACTION_CALLBACK;
     }
-    VK_RESULT result = nextTable.DbgUnregisterMsgCallback(instance, pfnMsgCallback);
+    VkResult result = nextTable.DbgUnregisterMsgCallback(instance, pfnMsgCallback);
     return result;
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkDbgSetMessageFilter(VK_DEVICE device, int32_t msgCode, VK_DBG_MSG_FILTER filter)
+VK_LAYER_EXPORT VkResult VKAPI vkDbgSetMessageFilter(VkDevice device, int32_t msgCode, VK_DBG_MSG_FILTER filter)
 {
     loader_platform_thread_lock_mutex(&objLock);
     ll_increment_use_count((void*)device, VK_OBJECT_TYPE_DEVICE);
     loader_platform_thread_unlock_mutex(&objLock);
-    VK_RESULT result = nextTable.DbgSetMessageFilter(device, msgCode, filter);
+    VkResult result = nextTable.DbgSetMessageFilter(device, msgCode, filter);
     return result;
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkDbgSetObjectTag(VK_BASE_OBJECT object, size_t tagSize, const void* pTag)
+VK_LAYER_EXPORT VkResult VKAPI vkDbgSetObjectTag(VkBaseObject object, size_t tagSize, const void* pTag)
 {
     loader_platform_thread_lock_mutex(&objLock);
     ll_increment_use_count((void*)object, ll_get_obj_type(object));
     loader_platform_thread_unlock_mutex(&objLock);
-    VK_RESULT result = nextTable.DbgSetObjectTag(object, tagSize, pTag);
+    VkResult result = nextTable.DbgSetObjectTag(object, tagSize, pTag);
     return result;
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkDbgSetGlobalOption(VK_INSTANCE instance, VK_DBG_GLOBAL_OPTION dbgOption, size_t dataSize, const void* pData)
+VK_LAYER_EXPORT VkResult VKAPI vkDbgSetGlobalOption(VkInstance instance, VK_DBG_GLOBAL_OPTION dbgOption, size_t dataSize, const void* pData)
 {
-    VK_RESULT result = nextTable.DbgSetGlobalOption(instance, dbgOption, dataSize, pData);
+    VkResult result = nextTable.DbgSetGlobalOption(instance, dbgOption, dataSize, pData);
     return result;
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkDbgSetDeviceOption(VK_DEVICE device, VK_DBG_DEVICE_OPTION dbgOption, size_t dataSize, const void* pData)
+VK_LAYER_EXPORT VkResult VKAPI vkDbgSetDeviceOption(VkDevice device, VK_DBG_DEVICE_OPTION dbgOption, size_t dataSize, const void* pData)
 {
     loader_platform_thread_lock_mutex(&objLock);
     ll_increment_use_count((void*)device, VK_OBJECT_TYPE_DEVICE);
     loader_platform_thread_unlock_mutex(&objLock);
-    VK_RESULT result = nextTable.DbgSetDeviceOption(device, dbgOption, dataSize, pData);
+    VkResult result = nextTable.DbgSetDeviceOption(device, dbgOption, dataSize, pData);
     return result;
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdDbgMarkerBegin(VK_CMD_BUFFER cmdBuffer, const char* pMarker)
+VK_LAYER_EXPORT void VKAPI vkCmdDbgMarkerBegin(VkCmdBuffer cmdBuffer, const char* pMarker)
 {
     loader_platform_thread_lock_mutex(&objLock);
     ll_increment_use_count((void*)cmdBuffer, VK_OBJECT_TYPE_CMD_BUFFER);
@@ -1690,7 +1690,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdDbgMarkerBegin(VK_CMD_BUFFER cmdBuffer, const ch
     nextTable.CmdDbgMarkerBegin(cmdBuffer, pMarker);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdDbgMarkerEnd(VK_CMD_BUFFER cmdBuffer)
+VK_LAYER_EXPORT void VKAPI vkCmdDbgMarkerEnd(VkCmdBuffer cmdBuffer)
 {
     loader_platform_thread_lock_mutex(&objLock);
     ll_increment_use_count((void*)cmdBuffer, VK_OBJECT_TYPE_CMD_BUFFER);
@@ -1700,7 +1700,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdDbgMarkerEnd(VK_CMD_BUFFER cmdBuffer)
 
 #if defined(__linux__) || defined(XCB_NVIDIA)
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkWsiX11AssociateConnection(VK_PHYSICAL_GPU gpu, const VK_WSI_X11_CONNECTION_INFO* pConnectionInfo)
+VK_LAYER_EXPORT VkResult VKAPI vkWsiX11AssociateConnection(VkPhysicalGpu gpu, const VK_WSI_X11_CONNECTION_INFO* pConnectionInfo)
 {
     VK_BASE_LAYER_OBJECT* gpuw = (VK_BASE_LAYER_OBJECT *) gpu;
     loader_platform_thread_lock_mutex(&objLock);
@@ -1708,25 +1708,25 @@ VK_LAYER_EXPORT VK_RESULT VKAPI vkWsiX11AssociateConnection(VK_PHYSICAL_GPU gpu,
     loader_platform_thread_unlock_mutex(&objLock);
     pCurObj = gpuw;
     loader_platform_thread_once(&tabOnce, initGlaveSnapshot);
-    VK_RESULT result = nextTable.WsiX11AssociateConnection((VK_PHYSICAL_GPU)gpuw->nextObject, pConnectionInfo);
+    VkResult result = nextTable.WsiX11AssociateConnection((VkPhysicalGpu)gpuw->nextObject, pConnectionInfo);
     return result;
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkWsiX11GetMSC(VK_DEVICE device, xcb_window_t window, xcb_randr_crtc_t crtc, uint64_t* pMsc)
+VK_LAYER_EXPORT VkResult VKAPI vkWsiX11GetMSC(VkDevice device, xcb_window_t window, xcb_randr_crtc_t crtc, uint64_t* pMsc)
 {
     loader_platform_thread_lock_mutex(&objLock);
     ll_increment_use_count((void*)device, VK_OBJECT_TYPE_DEVICE);
     loader_platform_thread_unlock_mutex(&objLock);
-    VK_RESULT result = nextTable.WsiX11GetMSC(device, window, crtc, pMsc);
+    VkResult result = nextTable.WsiX11GetMSC(device, window, crtc, pMsc);
     return result;
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkWsiX11CreatePresentableImage(VK_DEVICE device, const VK_WSI_X11_PRESENTABLE_IMAGE_CREATE_INFO* pCreateInfo, VK_IMAGE* pImage, VK_GPU_MEMORY* pMem)
+VK_LAYER_EXPORT VkResult VKAPI vkWsiX11CreatePresentableImage(VkDevice device, const VK_WSI_X11_PRESENTABLE_IMAGE_CREATE_INFO* pCreateInfo, VkImage* pImage, VkGpuMemory* pMem)
 {
     loader_platform_thread_lock_mutex(&objLock);
     ll_increment_use_count((void*)device, VK_OBJECT_TYPE_DEVICE);
     loader_platform_thread_unlock_mutex(&objLock);
-    VK_RESULT result = nextTable.WsiX11CreatePresentableImage(device, pCreateInfo, pImage, pMem);
+    VkResult result = nextTable.WsiX11CreatePresentableImage(device, pCreateInfo, pImage, pMem);
 
     if (result == VK_SUCCESS)
     {
@@ -1743,9 +1743,9 @@ VK_LAYER_EXPORT VK_RESULT VKAPI vkWsiX11CreatePresentableImage(VK_DEVICE device,
     return result;
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkWsiX11QueuePresent(VK_QUEUE queue, const VK_WSI_X11_PRESENT_INFO* pPresentInfo, VK_FENCE fence)
+VK_LAYER_EXPORT VkResult VKAPI vkWsiX11QueuePresent(VkQueue queue, const VK_WSI_X11_PRESENT_INFO* pPresentInfo, VkFence fence)
 {
-    VK_RESULT result = nextTable.WsiX11QueuePresent(queue, pPresentInfo, fence);
+    VkResult result = nextTable.WsiX11QueuePresent(queue, pPresentInfo, fence);
     return result;
 }
 
@@ -1858,7 +1858,7 @@ uint64_t glvSnapshotGetObjectCount(VK_OBJECT_TYPE type)
     return retVal;
 }
 
-VK_RESULT glvSnapshotGetObjects(VK_OBJECT_TYPE type, uint64_t objCount, GLV_VK_SNAPSHOT_OBJECT_NODE *pObjNodeArray)
+VkResult glvSnapshotGetObjects(VK_OBJECT_TYPE type, uint64_t objCount, GLV_VK_SNAPSHOT_OBJECT_NODE *pObjNodeArray)
 {
     // This bool flags if we're pulling all objs or just a single class of objs
     bool32_t bAllObjs = (type == VK_OBJECT_TYPE_ANY);
@@ -1892,7 +1892,7 @@ void glvSnapshotPrintObjects(void)
 }
 
 #include "vk_generic_intercept_proc_helper.h"
-VK_LAYER_EXPORT void* VKAPI vkGetProcAddr(VK_PHYSICAL_GPU gpu, const char* funcName)
+VK_LAYER_EXPORT void* VKAPI vkGetProcAddr(VkPhysicalGpu gpu, const char* funcName)
 {
     VK_BASE_LAYER_OBJECT* gpuw = (VK_BASE_LAYER_OBJECT *) gpu;
     void* addr;
@@ -1927,7 +1927,7 @@ VK_LAYER_EXPORT void* VKAPI vkGetProcAddr(VK_PHYSICAL_GPU gpu, const char* funcN
     else {
         if (gpuw->pGPA == NULL)
             return NULL;
-        return gpuw->pGPA((VK_PHYSICAL_GPU)gpuw->nextObject, funcName);
+        return gpuw->pGPA((VkPhysicalGpu)gpuw->nextObject, funcName);
     }
 }
 

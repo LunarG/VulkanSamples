@@ -20,17 +20,17 @@ typedef struct _VK_WSI_X11_CONNECTION_INFO {
 
 typedef struct _VK_WSI_X11_PRESENTABLE_IMAGE_CREATE_INFO
 {
-    VK_FORMAT          format;
-    VK_FLAGS           usage;           // VK_IMAGE_USAGE_FLAGS
-    VK_EXTENT2D        extent;
-    VK_FLAGS           flags;
+    VkFormat          format;
+    VkFlags           usage;           // VkImageUsageFlags
+    VkExtent2D        extent;
+    VkFlags           flags;
 } VK_WSI_X11_PRESENTABLE_IMAGE_CREATE_INFO;
 
 typedef struct _VK_WSI_X11_PRESENT_INFO
 {
     /* which window to present to */
     xcb_window_t destWindow;
-    VK_IMAGE srcImage;
+    VkImage srcImage;
 
     /**
      * After the command buffers in the queue have been completed, if the MSC
@@ -80,10 +80,10 @@ typedef struct _VK_WSI_X11_PRESENT_INFO
     bool32_t flip;
 } VK_WSI_X11_PRESENT_INFO;
 
-typedef VK_RESULT (VKAPI *vkWsiX11AssociateConnectionType)(VK_PHYSICAL_GPU gpu, const VK_WSI_X11_CONNECTION_INFO* pConnectionInfo);
-typedef VK_RESULT (VKAPI *vkWsiX11GetMSCType)(VK_DEVICE device, xcb_window_t window, xcb_randr_crtc_t crtc, uint64_t* pMsc);
-typedef VK_RESULT (VKAPI *vkWsiX11CreatePresentableImageType)(VK_DEVICE device, const VK_WSI_X11_PRESENTABLE_IMAGE_CREATE_INFO* pCreateInfo, VK_IMAGE* pImage, VK_GPU_MEMORY* pMem);
-typedef VK_RESULT (VKAPI *vkWsiX11QueuePresentType)(VK_QUEUE queue, const VK_WSI_X11_PRESENT_INFO* pPresentInfo, VK_FENCE fence);
+typedef VkResult (VKAPI *PFN_vkWsiX11AssociateConnection)(VkPhysicalGpu gpu, const VK_WSI_X11_CONNECTION_INFO* pConnectionInfo);
+typedef VkResult (VKAPI *PFN_vkWsiX11GetMSC)(VkDevice device, xcb_window_t window, xcb_randr_crtc_t crtc, uint64_t* pMsc);
+typedef VkResult (VKAPI *PFN_vkWsiX11CreatePresentableImage)(VkDevice device, const VK_WSI_X11_PRESENTABLE_IMAGE_CREATE_INFO* pCreateInfo, VkImage* pImage, VkGpuMemory* pMem);
+typedef VkResult (VKAPI *PFN_vkWsiX11QueuePresent)(VkQueue queue, const VK_WSI_X11_PRESENT_INFO* pPresentInfo, VkFence fence);
 
 /**
  * Associate an X11 connection with a GPU.  This should be done before device
@@ -97,8 +97,8 @@ typedef VK_RESULT (VKAPI *vkWsiX11QueuePresentType)(VK_QUEUE queue, const VK_WSI
  * This function is available when vkGetExtensionSupport says "VK_WSI_X11"
  * is supported.
  */
-VK_RESULT VKAPI vkWsiX11AssociateConnection(
-    VK_PHYSICAL_GPU                            gpu,
+VkResult VKAPI vkWsiX11AssociateConnection(
+    VkPhysicalGpu                            gpu,
     const VK_WSI_X11_CONNECTION_INFO*          pConnectionInfo);
 
 /**
@@ -106,23 +106,23 @@ VK_RESULT VKAPI vkWsiX11AssociateConnection(
  * of \p crtc.  If crtc is \p XCB_NONE, a suitable CRTC is picked based on \p
  * win.
  */
-VK_RESULT VKAPI vkWsiX11GetMSC(
-    VK_DEVICE                                  device,
+VkResult VKAPI vkWsiX11GetMSC(
+    VkDevice                                  device,
     xcb_window_t                                window,
     xcb_randr_crtc_t                            crtc,
     uint64_t*                                   pMsc);
 
 /**
- * Create an VK_IMAGE that can be presented.  An VK_GPU_MEMORY is created
+ * Create an VkImage that can be presented.  An VkGpuMemory is created
  * and bound automatically.  The memory returned can only be used in
  * vkQueue[Add|Remove]MemReference.  Destroying the memory or binding another memory to the
  * image is not allowed.
  */
-VK_RESULT VKAPI vkWsiX11CreatePresentableImage(
-    VK_DEVICE                                  device,
+VkResult VKAPI vkWsiX11CreatePresentableImage(
+    VkDevice                                  device,
     const VK_WSI_X11_PRESENTABLE_IMAGE_CREATE_INFO* pCreateInfo,
-    VK_IMAGE*                                  pImage,
-    VK_GPU_MEMORY*                             pMem);
+    VkImage*                                  pImage,
+    VkGpuMemory*                             pMem);
 
 /**
  * Present an image to an X11 window.  The presentation always occurs after
@@ -131,10 +131,10 @@ VK_RESULT VKAPI vkWsiX11CreatePresentableImage(
  *
  * Fence is reached when the presentation occurs.
  */
-VK_RESULT VKAPI vkWsiX11QueuePresent(
-    VK_QUEUE                                   queue,
+VkResult VKAPI vkWsiX11QueuePresent(
+    VkQueue                                   queue,
     const VK_WSI_X11_PRESENT_INFO*             pPresentInfo,
-    VK_FENCE                                   fence);
+    VkFence                                   fence);
 
 #ifdef __cplusplus
 } // extern "C"

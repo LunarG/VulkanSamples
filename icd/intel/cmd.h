@@ -179,13 +179,13 @@ struct intel_cmd_bind {
 
     struct {
         const struct intel_buf *buf[INTEL_MAX_VERTEX_BINDING_COUNT];
-        VK_GPU_SIZE offset[INTEL_MAX_VERTEX_BINDING_COUNT];
+        VkGpuSize offset[INTEL_MAX_VERTEX_BINDING_COUNT];
     } vertex;
 
     struct {
         const struct intel_buf *buf;
-        VK_GPU_SIZE offset;
-        VK_INDEX_TYPE type;
+        VkGpuSize offset;
+        VkIndexType type;
     } index;
 
 
@@ -222,17 +222,17 @@ struct intel_cmd {
     struct intel_cmd_reloc *relocs;
     uint32_t reloc_count;
 
-    VK_FLAGS flags;
+    VkFlags flags;
 
     struct intel_cmd_writer writers[INTEL_CMD_WRITER_COUNT];
 
     uint32_t reloc_used;
-    VK_RESULT result;
+    VkResult result;
 
     struct intel_cmd_bind bind;
 };
 
-static inline struct intel_cmd *intel_cmd(VK_CMD_BUFFER cmd)
+static inline struct intel_cmd *intel_cmd(VkCmdBuffer cmd)
 {
     return (struct intel_cmd *) cmd;
 }
@@ -242,18 +242,18 @@ static inline struct intel_cmd *intel_cmd_from_obj(struct intel_obj *obj)
     return (struct intel_cmd *) obj;
 }
 
-VK_RESULT intel_cmd_create(struct intel_dev *dev,
-                            const VK_CMD_BUFFER_CREATE_INFO *info,
+VkResult intel_cmd_create(struct intel_dev *dev,
+                            const VkCmdBufferCreateInfo *info,
                             struct intel_cmd **cmd_ret);
 void intel_cmd_destroy(struct intel_cmd *cmd);
 
-VK_RESULT intel_cmd_begin(struct intel_cmd *cmd, const VK_CMD_BUFFER_BEGIN_INFO* pBeginInfo);
-VK_RESULT intel_cmd_end(struct intel_cmd *cmd);
+VkResult intel_cmd_begin(struct intel_cmd *cmd, const VkCmdBufferBeginInfo* pBeginInfo);
+VkResult intel_cmd_end(struct intel_cmd *cmd);
 
 void intel_cmd_decode(struct intel_cmd *cmd, bool decode_inst_writer);
 
 static inline struct intel_bo *intel_cmd_get_batch(const struct intel_cmd *cmd,
-                                                   VK_GPU_SIZE *used)
+                                                   VkGpuSize *used)
 {
     const struct intel_cmd_writer *writer =
         &cmd->writers[INTEL_CMD_WRITER_BATCH];

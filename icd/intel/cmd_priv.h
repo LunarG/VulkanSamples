@@ -125,7 +125,7 @@ struct intel_cmd_meta {
     struct {
         struct intel_ds_view *view;
         uint32_t stencil_ref;
-        VK_IMAGE_ASPECT aspect;
+        VkImageAspect aspect;
 
         enum intel_cmd_meta_ds_op op;
         bool optimal;
@@ -142,7 +142,7 @@ static inline int cmd_gen(const struct intel_cmd *cmd)
     return intel_gpu_gen(cmd->dev->gpu);
 }
 
-static inline void cmd_fail(struct intel_cmd *cmd, VK_RESULT result)
+static inline void cmd_fail(struct intel_cmd *cmd, VkResult result)
 {
     intel_dev_log(cmd->dev, VK_DBG_MSG_ERROR,
             VK_VALIDATION_LEVEL_0, VK_NULL_HANDLE, 0, 0,
@@ -506,16 +506,16 @@ void cmd_batch_flush_all(struct intel_cmd *cmd);
 
 void cmd_batch_depth_count(struct intel_cmd *cmd,
                            struct intel_bo *bo,
-                           VK_GPU_SIZE offset);
+                           VkGpuSize offset);
 
 void cmd_batch_timestamp(struct intel_cmd *cmd,
                          struct intel_bo *bo,
-                         VK_GPU_SIZE offset);
+                         VkGpuSize offset);
 
 void cmd_batch_immediate(struct intel_cmd *cmd,
                          uint32_t pipe_control_flags,
                          struct intel_bo *bo,
-                         VK_GPU_SIZE offset,
+                         VkGpuSize offset,
                          uint64_t val);
 
 void cmd_draw_meta(struct intel_cmd *cmd, const struct intel_cmd_meta *meta);
@@ -523,6 +523,6 @@ void cmd_draw_meta(struct intel_cmd *cmd, const struct intel_cmd_meta *meta);
 void cmd_meta_ds_op(struct intel_cmd *cmd,
                     enum intel_cmd_meta_ds_op op,
                     struct intel_img *img,
-                    const VK_IMAGE_SUBRESOURCE_RANGE *range);
+                    const VkImageSubresourceRange *range);
 
 #endif /* CMD_PRIV_H */

@@ -33,8 +33,8 @@ static FILE *g_logFile = NULL;
 // Utility function to handle reporting
 //  If callbacks are enabled, use them, otherwise use printf
 static void layerCbMsg(VK_DBG_MSG_TYPE msgType,
-    VK_VALIDATION_LEVEL validationLevel,
-    VK_BASE_OBJECT      srcObject,
+    VkValidationLevel validationLevel,
+    VkBaseObject      srcObject,
     size_t               location,
     int32_t              msgCode,
     const char*          pLayerPrefix,

@@ -401,15 +401,15 @@ void unpack_set_and_binding(const int location, int &set, int &binding)
 }
 
 // invoke backend compiler to generate ISA and supporting data structures
-VK_RESULT intel_pipeline_shader_compile(struct intel_pipeline_shader *pipe_shader,
+VkResult intel_pipeline_shader_compile(struct intel_pipeline_shader *pipe_shader,
                                          const struct intel_gpu *gpu,
                                          const struct intel_desc_layout_chain *chain,
-                                         const VK_PIPELINE_SHADER *info)
+                                         const VkPipelineShader *info)
 {
     const struct intel_ir *ir = intel_shader(info->shader)->ir;
     /* XXX how about constness? */
     struct gl_shader_program *sh_prog = (struct gl_shader_program *) ir;
-    VK_RESULT status = VK_SUCCESS;
+    VkResult status = VK_SUCCESS;
     struct brw_binding_table bt;
 
     struct brw_context *brw = intel_create_brw_context(gpu);

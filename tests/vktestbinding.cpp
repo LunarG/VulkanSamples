@@ -61,7 +61,7 @@ std::vector<T> make_objects(const std::vector<S> &v)
 }
 
 template<typename T>
-std::vector<T> get_info(VK_PHYSICAL_GPU gpu, VK_PHYSICAL_GPU_INFO_TYPE type, size_t min_elems)
+std::vector<T> get_info(VkPhysicalGpu gpu, VkPhysicalGpuInfoType type, size_t min_elems)
 {
     std::vector<T> info;
     size_t size;
@@ -78,7 +78,7 @@ std::vector<T> get_info(VK_PHYSICAL_GPU gpu, VK_PHYSICAL_GPU_INFO_TYPE type, siz
 }
 
 template<typename T>
-std::vector<T> get_info(VK_BASE_OBJECT obj, VK_OBJECT_INFO_TYPE type, size_t min_elems)
+std::vector<T> get_info(VkBaseObject obj, VkObjectInfoType type, size_t min_elems)
 {
     std::vector<T> info;
     size_t size;
@@ -103,24 +103,24 @@ void set_error_callback(ErrorCallback callback)
     error_callback = callback;
 }
 
-VK_PHYSICAL_GPU_PROPERTIES PhysicalGpu::properties() const
+VkPhysicalGpuProperties PhysicalGpu::properties() const
 {
-    return get_info<VK_PHYSICAL_GPU_PROPERTIES>(gpu_, VK_INFO_TYPE_PHYSICAL_GPU_PROPERTIES, 1)[0];
+    return get_info<VkPhysicalGpuProperties>(gpu_, VK_INFO_TYPE_PHYSICAL_GPU_PROPERTIES, 1)[0];
 }
 
-VK_PHYSICAL_GPU_PERFORMANCE PhysicalGpu::performance() const
+VkPhysicalGpuPerformance PhysicalGpu::performance() const
 {
-    return get_info<VK_PHYSICAL_GPU_PERFORMANCE>(gpu_, VK_INFO_TYPE_PHYSICAL_GPU_PERFORMANCE, 1)[0];
+    return get_info<VkPhysicalGpuPerformance>(gpu_, VK_INFO_TYPE_PHYSICAL_GPU_PERFORMANCE, 1)[0];
 }
 
-std::vector<VK_PHYSICAL_GPU_QUEUE_PROPERTIES> PhysicalGpu::queue_properties() const
+std::vector<VkPhysicalGpuQueueProperties> PhysicalGpu::queue_properties() const
 {
-    return get_info<VK_PHYSICAL_GPU_QUEUE_PROPERTIES>(gpu_, VK_INFO_TYPE_PHYSICAL_GPU_QUEUE_PROPERTIES, 0);
+    return get_info<VkPhysicalGpuQueueProperties>(gpu_, VK_INFO_TYPE_PHYSICAL_GPU_QUEUE_PROPERTIES, 0);
 }
 
-VK_PHYSICAL_GPU_MEMORY_PROPERTIES PhysicalGpu::memory_properties() const
+VkPhysicalGpuMemoryProperties PhysicalGpu::memory_properties() const
 {
-    return get_info<VK_PHYSICAL_GPU_MEMORY_PROPERTIES>(gpu_, VK_INFO_TYPE_PHYSICAL_GPU_MEMORY_PROPERTIES, 1)[0];
+    return get_info<VkPhysicalGpuMemoryProperties>(gpu_, VK_INFO_TYPE_PHYSICAL_GPU_MEMORY_PROPERTIES, 1)[0];
 }
 
 std::vector<const char *> PhysicalGpu::layers(std::vector<char> &buf) const
@@ -152,7 +152,7 @@ std::vector<const char *> PhysicalGpu::extensions() const
 
     std::vector<const char *> exts;
     for (int i = 0; i < sizeof(known_exts) / sizeof(known_exts[0]); i++) {
-        VK_RESULT err = vkGetExtensionSupport(gpu_, known_exts[i]);
+        VkResult err = vkGetExtensionSupport(gpu_, known_exts[i]);
         if (err == VK_SUCCESS)
             exts.push_back(known_exts[i]);
     }
@@ -160,22 +160,22 @@ std::vector<const char *> PhysicalGpu::extensions() const
     return exts;
 }
 
-VK_GPU_COMPATIBILITY_INFO PhysicalGpu::compatibility(const PhysicalGpu &other) const
+VkGpuCompatibilityInfo PhysicalGpu::compatibility(const PhysicalGpu &other) const
 {
-    VK_GPU_COMPATIBILITY_INFO data;
+    VkGpuCompatibilityInfo data;
     if (!EXPECT(vkGetMultiGpuCompatibility(gpu_, other.gpu_, &data) == VK_SUCCESS))
         memset(&data, 0, sizeof(data));
 
     return data;
 }
 
-void BaseObject::init(VK_BASE_OBJECT obj, bool own)
+void BaseObject::init(VkBaseObject obj, bool own)
 {
     EXPECT(!initialized());
     reinit(obj, own);
 }
 
-void BaseObject::reinit(VK_BASE_OBJECT obj, bool own)
+void BaseObject::reinit(VkBaseObject obj, bool own)
 {
     obj_ = obj;
     own_obj_ = own;
@@ -186,16 +186,16 @@ uint32_t BaseObject::memory_allocation_count() const
     return get_info<uint32_t>(obj_, VK_INFO_TYPE_MEMORY_ALLOCATION_COUNT, 1)[0];
 }
 
-std::vector<VK_MEMORY_REQUIREMENTS> BaseObject::memory_requirements() const
+std::vector<VkMemoryRequirements> BaseObject::memory_requirements() const
 {
-    VK_RESULT err;
+    VkResult err;
     uint32_t num_allocations = 0;
     size_t num_alloc_size = sizeof(num_allocations);
     err = vkGetObjectInfo(obj_, VK_INFO_TYPE_MEMORY_ALLOCATION_COUNT,
                            &num_alloc_size, &num_allocations);
     EXPECT(err == VK_SUCCESS && num_alloc_size == sizeof(num_allocations));
-    std::vector<VK_MEMORY_REQUIREMENTS> info =
-        get_info<VK_MEMORY_REQUIREMENTS>(obj_, VK_INFO_TYPE_MEMORY_REQUIREMENTS, 0);
+    std::vector<VkMemoryRequirements> info =
+        get_info<VkMemoryRequirements>(obj_, VK_INFO_TYPE_MEMORY_REQUIREMENTS, 0);
     EXPECT(info.size() == num_allocations);
     if (info.size() == 1 && !info[0].size)
         info.clear();
@@ -203,13 +203,13 @@ std::vector<VK_MEMORY_REQUIREMENTS> BaseObject::memory_requirements() const
     return info;
 }
 
-void Object::init(VK_OBJECT obj, bool own)
+void Object::init(VkObject obj, bool own)
 {
     BaseObject::init(obj, own);
     mem_alloc_count_ = memory_allocation_count();
 }
 
-void Object::reinit(VK_OBJECT obj, bool own)
+void Object::reinit(VkObject obj, bool own)
 {
     cleanup();
     BaseObject::reinit(obj, own);
@@ -237,14 +237,14 @@ void Object::cleanup()
         EXPECT(vkDestroyObject(obj()) == VK_SUCCESS);
 }
 
-void Object::bind_memory(uint32_t alloc_idx, const GpuMemory &mem, VK_GPU_SIZE mem_offset)
+void Object::bind_memory(uint32_t alloc_idx, const GpuMemory &mem, VkGpuSize mem_offset)
 {
     bound = true;
     EXPECT(vkBindObjectMemory(obj(), alloc_idx, mem.obj(), mem_offset) == VK_SUCCESS);
 }
 
-void Object::bind_memory(uint32_t alloc_idx, VK_GPU_SIZE offset, VK_GPU_SIZE size,
-                         const GpuMemory &mem, VK_GPU_SIZE mem_offset)
+void Object::bind_memory(uint32_t alloc_idx, VkGpuSize offset, VkGpuSize size,
+                         const GpuMemory &mem, VkGpuSize mem_offset)
 {
     bound = true;
     EXPECT(!alloc_idx && vkBindObjectMemoryRange(obj(), 0, offset, size, mem.obj(), mem_offset) == VK_SUCCESS);
@@ -268,15 +268,15 @@ void Object::alloc_memory(const Device &dev, bool for_buf, bool for_img)
 
     internal_mems_ = new GpuMemory[mem_alloc_count_];
 
-    const std::vector<VK_MEMORY_REQUIREMENTS> mem_reqs = memory_requirements();
-    std::vector<VK_IMAGE_MEMORY_REQUIREMENTS> img_reqs;
-    std::vector<VK_BUFFER_MEMORY_REQUIREMENTS> buf_reqs;
+    const std::vector<VkMemoryRequirements> mem_reqs = memory_requirements();
+    std::vector<VkImageMemoryRequirements> img_reqs;
+    std::vector<VkBufferMemoryRequirements> buf_reqs;
     VkMemoryAllocImageInfo img_info;
     VkMemoryAllocBufferInfo buf_info;
     VkMemoryAllocInfo info, *next_info = NULL;
 
     if (for_img) {
-        img_reqs = get_info<VK_IMAGE_MEMORY_REQUIREMENTS>(obj(),
+        img_reqs = get_info<VkImageMemoryRequirements>(obj(),
                         VK_INFO_TYPE_IMAGE_MEMORY_REQUIREMENTS, 0);
         EXPECT(img_reqs.size() == 1);
         next_info = (VkMemoryAllocInfo *) &img_info;
@@ -289,7 +289,7 @@ void Object::alloc_memory(const Device &dev, bool for_buf, bool for_img)
 
 
     if (for_buf) {
-        buf_reqs = get_info<VK_BUFFER_MEMORY_REQUIREMENTS>(obj(),
+        buf_reqs = get_info<VkBufferMemoryRequirements>(obj(),
                         VK_INFO_TYPE_BUFFER_MEMORY_REQUIREMENTS, 0);
         if (for_img)
             img_info.pNext = &buf_info;
@@ -323,14 +323,14 @@ void Object::alloc_memory(const Device &dev, bool for_buf, bool for_img)
     }
 }
 
-void Object::alloc_memory(const std::vector<VK_GPU_MEMORY> &mems)
+void Object::alloc_memory(const std::vector<VkGpuMemory> &mems)
 {
     if (!EXPECT(!internal_mems_) || !mem_alloc_count_)
         return;
 
     internal_mems_ = new GpuMemory[mem_alloc_count_];
 
-    const std::vector<VK_MEMORY_REQUIREMENTS> mem_reqs = memory_requirements();
+    const std::vector<VkMemoryRequirements> mem_reqs = memory_requirements();
     if (!EXPECT(mem_reqs.size() == mems.size()))
         return;
 
@@ -342,9 +342,9 @@ void Object::alloc_memory(const std::vector<VK_GPU_MEMORY> &mems)
     }
 }
 
-std::vector<VK_GPU_MEMORY> Object::memories() const
+std::vector<VkGpuMemory> Object::memories() const
 {
-    std::vector<VK_GPU_MEMORY> mems;
+    std::vector<VkGpuMemory> mems;
     if (internal_mems_) {
         mems.reserve(mem_alloc_count_);
         for (uint32_t i = 0; i < mem_alloc_count_; i++)
@@ -371,7 +371,7 @@ Device::~Device()
 void Device::init(bool enable_layers)
 {
     // request all queues
-    const std::vector<VK_PHYSICAL_GPU_QUEUE_PROPERTIES> queue_props = gpu_.queue_properties();
+    const std::vector<VkPhysicalGpuQueueProperties> queue_props = gpu_.queue_properties();
     std::vector<VkDeviceQueueCreateInfo> queue_info;
     queue_info.reserve(queue_props.size());
     for (int i = 0; i < queue_props.size(); i++) {
@@ -421,7 +421,7 @@ void Device::init(const VkDeviceCreateInfo &info)
 
 void Device::init_queues()
 {
-    VK_RESULT err;
+    VkResult err;
     size_t data_size;
     uint32_t queue_node_count;
 
@@ -429,17 +429,17 @@ void Device::init_queues()
                         &data_size, NULL);
     EXPECT(err == VK_SUCCESS);
 
-    queue_node_count = data_size / sizeof(VK_PHYSICAL_GPU_QUEUE_PROPERTIES);
+    queue_node_count = data_size / sizeof(VkPhysicalGpuQueueProperties);
     EXPECT(queue_node_count >= 1);
 
-    VK_PHYSICAL_GPU_QUEUE_PROPERTIES queue_props[queue_node_count];
+    VkPhysicalGpuQueueProperties queue_props[queue_node_count];
 
     err = vkGetGpuInfo(gpu_.obj(), VK_INFO_TYPE_PHYSICAL_GPU_QUEUE_PROPERTIES,
                         &data_size, queue_props);
     EXPECT(err == VK_SUCCESS);
 
     for (int i = 0; i < queue_node_count; i++) {
-        VK_QUEUE queue;
+        VkQueue queue;
 
         for (int j = 0; j < queue_props[i].queueCount; j++) {
             err = vkGetDeviceQueue(obj(), i, j, &queue);
@@ -465,8 +465,8 @@ void Device::init_queues()
 void Device::init_formats()
 {
     for (int f = VK_FMT_BEGIN_RANGE; f <= VK_FMT_END_RANGE; f++) {
-        const VK_FORMAT fmt = static_cast<VK_FORMAT>(f);
-        const VK_FORMAT_PROPERTIES props = format_properties(fmt);
+        const VkFormat fmt = static_cast<VkFormat>(f);
+        const VkFormatProperties props = format_properties(fmt);
 
         if (props.linearTilingFeatures) {
             const Format tmp = { fmt, VK_LINEAR_TILING, props.linearTilingFeatures };
@@ -482,10 +482,10 @@ void Device::init_formats()
     EXPECT(!formats_.empty());
 }
 
-VK_FORMAT_PROPERTIES Device::format_properties(VK_FORMAT format)
+VkFormatProperties Device::format_properties(VkFormat format)
 {
-    const VK_FORMAT_INFO_TYPE type = VK_INFO_TYPE_FORMAT_PROPERTIES;
-    VK_FORMAT_PROPERTIES data;
+    const VkFormatInfoType type = VK_INFO_TYPE_FORMAT_PROPERTIES;
+    VkFormatProperties data;
     size_t size = sizeof(data);
     if (!EXPECT(vkGetFormatInfo(obj(), format, type, &size, &data) == VK_SUCCESS && size == sizeof(data)))
         memset(&data, 0, sizeof(data));
@@ -498,16 +498,16 @@ void Device::wait()
     EXPECT(vkDeviceWaitIdle(obj()) == VK_SUCCESS);
 }
 
-VK_RESULT Device::wait(const std::vector<const Fence *> &fences, bool wait_all, uint64_t timeout)
+VkResult Device::wait(const std::vector<const Fence *> &fences, bool wait_all, uint64_t timeout)
 {
-    const std::vector<VK_FENCE> fence_objs = make_objects<VK_FENCE>(fences);
-    VK_RESULT err = vkWaitForFences(obj(), fence_objs.size(), &fence_objs[0], wait_all, timeout);
+    const std::vector<VkFence> fence_objs = make_objects<VkFence>(fences);
+    VkResult err = vkWaitForFences(obj(), fence_objs.size(), &fence_objs[0], wait_all, timeout);
     EXPECT(err == VK_SUCCESS || err == VK_TIMEOUT);
 
     return err;
 }
 
-void Device::begin_descriptor_pool_update(VK_DESCRIPTOR_UPDATE_MODE mode)
+void Device::begin_descriptor_pool_update(VkDescriptorUpdateMode mode)
 {
     EXPECT(vkBeginDescriptorPoolUpdate(obj(), mode) == VK_SUCCESS);
 }
@@ -519,7 +519,7 @@ void Device::end_descriptor_pool_update(CmdBuffer &cmd)
 
 void Queue::submit(const std::vector<const CmdBuffer *> &cmds, Fence &fence)
 {
-    const std::vector<VK_CMD_BUFFER> cmd_objs = make_objects<VK_CMD_BUFFER>(cmds);
+    const std::vector<VkCmdBuffer> cmd_objs = make_objects<VkCmdBuffer>(cmds);
     EXPECT(vkQueueSubmit(obj(), cmd_objs.size(), &cmd_objs[0], fence.obj()) == VK_SUCCESS);
 }
 
@@ -534,14 +534,14 @@ void Queue::submit(const CmdBuffer &cmd)
     submit(cmd, fence);
 }
 
-void Queue::add_mem_references(const std::vector<VK_GPU_MEMORY> &mem_refs)
+void Queue::add_mem_references(const std::vector<VkGpuMemory> &mem_refs)
 {
     for (int i = 0; i < mem_refs.size(); i++) {
         EXPECT(vkQueueAddMemReference(obj(), mem_refs[i]) == VK_SUCCESS);
     }
 }
 
-void Queue::remove_mem_references(const std::vector<VK_GPU_MEMORY> &mem_refs)
+void Queue::remove_mem_references(const std::vector<VkGpuMemory> &mem_refs)
 {
     for (int i = 0; i < mem_refs.size(); i++) {
         EXPECT(vkQueueRemoveMemReference(obj(), mem_refs[i]) == VK_SUCCESS);
@@ -579,22 +579,22 @@ void GpuMemory::init(const Device &dev, size_t size, const void *data)
     DERIVED_OBJECT_INIT(vkPinSystemMemory, dev.obj(), data, size);
 }
 
-void GpuMemory::init(const Device &dev, const VK_MEMORY_OPEN_INFO &info)
+void GpuMemory::init(const Device &dev, const VkMemoryOpenInfo &info)
 {
     DERIVED_OBJECT_INIT(vkOpenSharedMemory, dev.obj(), &info);
 }
 
-void GpuMemory::init(const Device &dev, const VK_PEER_MEMORY_OPEN_INFO &info)
+void GpuMemory::init(const Device &dev, const VkPeerMemoryOpenInfo &info)
 {
     DERIVED_OBJECT_INIT(vkOpenPeerMemory, dev.obj(), &info);
 }
 
-void GpuMemory::set_priority(VK_MEMORY_PRIORITY priority)
+void GpuMemory::set_priority(VkMemoryPriority priority)
 {
     EXPECT(vkSetMemoryPriority(obj(), priority) == VK_SUCCESS);
 }
 
-const void *GpuMemory::map(VK_FLAGS flags) const
+const void *GpuMemory::map(VkFlags flags) const
 {
     void *data;
     if (!EXPECT(vkMapMemory(obj(), flags, &data) == VK_SUCCESS))
@@ -603,7 +603,7 @@ const void *GpuMemory::map(VK_FLAGS flags) const
     return data;
 }
 
-void *GpuMemory::map(VK_FLAGS flags)
+void *GpuMemory::map(VkFlags flags)
 {
     void *data;
     if (!EXPECT(vkMapMemory(obj(), flags, &data) == VK_SUCCESS))
@@ -617,24 +617,24 @@ void GpuMemory::unmap() const
     EXPECT(vkUnmapMemory(obj()) == VK_SUCCESS);
 }
 
-void Fence::init(const Device &dev, const VK_FENCE_CREATE_INFO &info)
+void Fence::init(const Device &dev, const VkFenceCreateInfo &info)
 {
     DERIVED_OBJECT_INIT(vkCreateFence, dev.obj(), &info);
     alloc_memory(dev);
 }
 
-void Semaphore::init(const Device &dev, const VK_SEMAPHORE_CREATE_INFO &info)
+void Semaphore::init(const Device &dev, const VkSemaphoreCreateInfo &info)
 {
     DERIVED_OBJECT_INIT(vkCreateSemaphore, dev.obj(), &info);
     alloc_memory(dev);
 }
 
-void Semaphore::init(const Device &dev, const VK_SEMAPHORE_OPEN_INFO &info)
+void Semaphore::init(const Device &dev, const VkSemaphoreOpenInfo &info)
 {
     DERIVED_OBJECT_INIT(vkOpenSharedSemaphore, dev.obj(), &info);
 }
 
-void Event::init(const Device &dev, const VK_EVENT_CREATE_INFO &info)
+void Event::init(const Device &dev, const VkEventCreateInfo &info)
 {
     DERIVED_OBJECT_INIT(vkCreateEvent, dev.obj(), &info);
     alloc_memory(dev);
@@ -650,16 +650,16 @@ void Event::reset()
     EXPECT(vkResetEvent(obj()) == VK_SUCCESS);
 }
 
-void QueryPool::init(const Device &dev, const VK_QUERY_POOL_CREATE_INFO &info)
+void QueryPool::init(const Device &dev, const VkQueryPoolCreateInfo &info)
 {
     DERIVED_OBJECT_INIT(vkCreateQueryPool, dev.obj(), &info);
     alloc_memory(dev);
 }
 
-VK_RESULT QueryPool::results(uint32_t start, uint32_t count, size_t size, void *data)
+VkResult QueryPool::results(uint32_t start, uint32_t count, size_t size, void *data)
 {
     size_t tmp = size;
-    VK_RESULT err = vkGetQueryPoolResults(obj(), start, count, &tmp, data);
+    VkResult err = vkGetQueryPoolResults(obj(), start, count, &tmp, data);
     if (err == VK_SUCCESS) {
         if (!EXPECT(tmp == size))
             memset(data, 0, size);
@@ -688,30 +688,30 @@ void BufferView::init(const Device &dev, const VkBufferViewCreateInfo &info)
     alloc_memory(dev);
 }
 
-void Image::init(const Device &dev, const VK_IMAGE_CREATE_INFO &info)
+void Image::init(const Device &dev, const VkImageCreateInfo &info)
 {
     init_no_mem(dev, info);
     alloc_memory(dev, info.tiling == VK_LINEAR_TILING, true);
 }
 
-void Image::init_no_mem(const Device &dev, const VK_IMAGE_CREATE_INFO &info)
+void Image::init_no_mem(const Device &dev, const VkImageCreateInfo &info)
 {
     DERIVED_OBJECT_INIT(vkCreateImage, dev.obj(), &info);
     init_info(dev, info);
 }
 
-void Image::init(const Device &dev, const VK_PEER_IMAGE_OPEN_INFO &info, const VK_IMAGE_CREATE_INFO &original_info)
+void Image::init(const Device &dev, const VkPeerImageOpenInfo &info, const VkImageCreateInfo &original_info)
 {
-    VK_IMAGE img;
-    VK_GPU_MEMORY mem;
+    VkImage img;
+    VkGpuMemory mem;
     EXPECT(vkOpenPeerImage(dev.obj(), &info, &img, &mem) == VK_SUCCESS);
     Object::init(img);
 
     init_info(dev, original_info);
-    alloc_memory(std::vector<VK_GPU_MEMORY>(1, mem));
+    alloc_memory(std::vector<VkGpuMemory>(1, mem));
 }
 
-void Image::init_info(const Device &dev, const VK_IMAGE_CREATE_INFO &info)
+void Image::init_info(const Device &dev, const VkImageCreateInfo &info)
 {
     create_info_ = info;
 
@@ -723,16 +723,16 @@ void Image::init_info(const Device &dev, const VK_IMAGE_CREATE_INFO &info)
     }
 }
 
-void Image::bind_memory(uint32_t alloc_idx, const VK_IMAGE_MEMORY_BIND_INFO &info,
-                        const GpuMemory &mem, VK_GPU_SIZE mem_offset)
+void Image::bind_memory(uint32_t alloc_idx, const VkImageMemoryBindInfo &info,
+                        const GpuMemory &mem, VkGpuSize mem_offset)
 {
     EXPECT(!alloc_idx && vkBindImageMemoryRange(obj(), 0, &info, mem.obj(), mem_offset) == VK_SUCCESS);
 }
 
-VK_SUBRESOURCE_LAYOUT Image::subresource_layout(const VK_IMAGE_SUBRESOURCE &subres) const
+VkSubresourceLayout Image::subresource_layout(const VkImageSubresource &subres) const
 {
-    const VK_SUBRESOURCE_INFO_TYPE type = VK_INFO_TYPE_SUBRESOURCE_LAYOUT;
-    VK_SUBRESOURCE_LAYOUT data;
+    const VkSubresourceInfoType type = VK_INFO_TYPE_SUBRESOURCE_LAYOUT;
+    VkSubresourceLayout data;
     size_t size = sizeof(data);
     if (!EXPECT(vkGetImageSubresourceInfo(obj(), &subres, type, &size, &data) == VK_SUCCESS && size == sizeof(data)))
         memset(&data, 0, sizeof(data));
@@ -748,40 +748,40 @@ bool Image::transparent() const
                                     VK_IMAGE_USAGE_DEPTH_STENCIL_BIT)));
 }
 
-void ImageView::init(const Device &dev, const VK_IMAGE_VIEW_CREATE_INFO &info)
+void ImageView::init(const Device &dev, const VkImageViewCreateInfo &info)
 {
     DERIVED_OBJECT_INIT(vkCreateImageView, dev.obj(), &info);
     alloc_memory(dev);
 }
 
-void ColorAttachmentView::init(const Device &dev, const VK_COLOR_ATTACHMENT_VIEW_CREATE_INFO &info)
+void ColorAttachmentView::init(const Device &dev, const VkColorAttachmentViewCreateInfo &info)
 {
     DERIVED_OBJECT_INIT(vkCreateColorAttachmentView, dev.obj(), &info);
     alloc_memory(dev);
 }
 
-void DepthStencilView::init(const Device &dev, const VK_DEPTH_STENCIL_VIEW_CREATE_INFO &info)
+void DepthStencilView::init(const Device &dev, const VkDepthStencilViewCreateInfo &info)
 {
     DERIVED_OBJECT_INIT(vkCreateDepthStencilView, dev.obj(), &info);
     alloc_memory(dev);
 }
 
-void Shader::init(const Device &dev, const VK_SHADER_CREATE_INFO &info)
+void Shader::init(const Device &dev, const VkShaderCreateInfo &info)
 {
     DERIVED_OBJECT_INIT(vkCreateShader, dev.obj(), &info);
 }
 
-VK_RESULT Shader::init_try(const Device &dev, const VK_SHADER_CREATE_INFO &info)
+VkResult Shader::init_try(const Device &dev, const VkShaderCreateInfo &info)
 {
-    VK_SHADER sh;
-    VK_RESULT err = vkCreateShader(dev.obj(), &info, &sh);
+    VkShader sh;
+    VkResult err = vkCreateShader(dev.obj(), &info, &sh);
     if (err == VK_SUCCESS)
         Object::init(sh);
 
     return err;
 }
 
-void Pipeline::init(const Device &dev, const VK_GRAPHICS_PIPELINE_CREATE_INFO &info)
+void Pipeline::init(const Device &dev, const VkGraphicsPipelineCreateInfo &info)
 {
     DERIVED_OBJECT_INIT(vkCreateGraphicsPipeline, dev.obj(), &info);
     alloc_memory(dev);
@@ -789,14 +789,14 @@ void Pipeline::init(const Device &dev, const VK_GRAPHICS_PIPELINE_CREATE_INFO &i
 
 void Pipeline::init(
         const Device &dev,
-        const VK_GRAPHICS_PIPELINE_CREATE_INFO &info,
-        const VK_PIPELINE basePipeline)
+        const VkGraphicsPipelineCreateInfo &info,
+        const VkPipeline basePipeline)
 {
     DERIVED_OBJECT_INIT(vkCreateGraphicsPipelineDerivative, dev.obj(), &info, basePipeline);
     alloc_memory(dev);
 }
 
-void Pipeline::init(const Device &dev, const VK_COMPUTE_PIPELINE_CREATE_INFO &info)
+void Pipeline::init(const Device &dev, const VkComputePipelineCreateInfo &info)
 {
     DERIVED_OBJECT_INIT(vkCreateComputePipeline, dev.obj(), &info);
     alloc_memory(dev);
@@ -812,7 +812,7 @@ void Pipeline::init(
         const Device&dev,
         size_t size,
         const void *data,
-        const VK_PIPELINE basePipeline)
+        const VkPipeline basePipeline)
 {
     DERIVED_OBJECT_INIT(vkLoadPipelineDerivative, dev.obj(), size, data, basePipeline);
     alloc_memory(dev);
@@ -826,13 +826,13 @@ size_t Pipeline::store(size_t size, void *data)
     return size;
 }
 
-void Sampler::init(const Device &dev, const VK_SAMPLER_CREATE_INFO &info)
+void Sampler::init(const Device &dev, const VkSamplerCreateInfo &info)
 {
     DERIVED_OBJECT_INIT(vkCreateSampler, dev.obj(), &info);
     alloc_memory(dev);
 }
 
-void DescriptorSetLayout::init(const Device &dev, const VK_DESCRIPTOR_SET_LAYOUT_CREATE_INFO &info)
+void DescriptorSetLayout::init(const Device &dev, const VkDescriptorSetLayoutCreateInfo &info)
 {
     DERIVED_OBJECT_INIT(vkCreateDescriptorSetLayout, dev.obj(), &info);
     alloc_memory(dev);
@@ -840,14 +840,14 @@ void DescriptorSetLayout::init(const Device &dev, const VK_DESCRIPTOR_SET_LAYOUT
 
 void DescriptorSetLayoutChain::init(const Device &dev, const std::vector<const DescriptorSetLayout *> &layouts)
 {
-    const std::vector<VK_DESCRIPTOR_SET_LAYOUT> layout_objs = make_objects<VK_DESCRIPTOR_SET_LAYOUT>(layouts);
+    const std::vector<VkDescriptorSetLayout> layout_objs = make_objects<VkDescriptorSetLayout>(layouts);
 
     DERIVED_OBJECT_INIT(vkCreateDescriptorSetLayoutChain, dev.obj(), layout_objs.size(), &layout_objs[0]);
     alloc_memory(dev);
 }
 
-void DescriptorPool::init(const Device &dev, VK_DESCRIPTOR_POOL_USAGE usage,
-                          uint32_t max_sets, const VK_DESCRIPTOR_POOL_CREATE_INFO &info)
+void DescriptorPool::init(const Device &dev, VkDescriptorPoolUsage usage,
+                          uint32_t max_sets, const VkDescriptorPoolCreateInfo &info)
 {
     DERIVED_OBJECT_INIT(vkCreateDescriptorPool, dev.obj(), usage, max_sets, &info);
     alloc_memory(dev);
@@ -858,22 +858,22 @@ void DescriptorPool::reset()
     EXPECT(vkResetDescriptorPool(obj()) == VK_SUCCESS);
 }
 
-std::vector<DescriptorSet *> DescriptorPool::alloc_sets(VK_DESCRIPTOR_SET_USAGE usage, const std::vector<const DescriptorSetLayout *> &layouts)
+std::vector<DescriptorSet *> DescriptorPool::alloc_sets(VkDescriptorSetUsage usage, const std::vector<const DescriptorSetLayout *> &layouts)
 {
-    const std::vector<VK_DESCRIPTOR_SET_LAYOUT> layout_objs = make_objects<VK_DESCRIPTOR_SET_LAYOUT>(layouts);
+    const std::vector<VkDescriptorSetLayout> layout_objs = make_objects<VkDescriptorSetLayout>(layouts);
 
-    std::vector<VK_DESCRIPTOR_SET> set_objs;
+    std::vector<VkDescriptorSet> set_objs;
     set_objs.resize(layout_objs.size());
 
     uint32_t set_count;
-    VK_RESULT err = vkAllocDescriptorSets(obj(), usage, layout_objs.size(), &layout_objs[0], &set_objs[0], &set_count);
+    VkResult err = vkAllocDescriptorSets(obj(), usage, layout_objs.size(), &layout_objs[0], &set_objs[0], &set_count);
     if (err == VK_SUCCESS)
         EXPECT(set_count == set_objs.size());
     set_objs.resize(set_count);
 
     std::vector<DescriptorSet *> sets;
     sets.reserve(set_count);
-    for (std::vector<VK_DESCRIPTOR_SET>::const_iterator it = set_objs.begin(); it != set_objs.end(); it++) {
+    for (std::vector<VkDescriptorSet>::const_iterator it = set_objs.begin(); it != set_objs.end(); it++) {
         // do descriptor sets need memories bound?
         sets.push_back(new DescriptorSet(*it));
     }
@@ -881,12 +881,12 @@ std::vector<DescriptorSet *> DescriptorPool::alloc_sets(VK_DESCRIPTOR_SET_USAGE 
     return sets;
 }
 
-std::vector<DescriptorSet *> DescriptorPool::alloc_sets(VK_DESCRIPTOR_SET_USAGE usage, const DescriptorSetLayout &layout, uint32_t count)
+std::vector<DescriptorSet *> DescriptorPool::alloc_sets(VkDescriptorSetUsage usage, const DescriptorSetLayout &layout, uint32_t count)
 {
     return alloc_sets(usage, std::vector<const DescriptorSetLayout *>(count, &layout));
 }
 
-DescriptorSet *DescriptorPool::alloc_sets(VK_DESCRIPTOR_SET_USAGE usage, const DescriptorSetLayout &layout)
+DescriptorSet *DescriptorPool::alloc_sets(VkDescriptorSetUsage usage, const DescriptorSetLayout &layout)
 {
     std::vector<DescriptorSet *> set = alloc_sets(usage, layout, 1);
     return (set.empty()) ? NULL : set[0];
@@ -894,7 +894,7 @@ DescriptorSet *DescriptorPool::alloc_sets(VK_DESCRIPTOR_SET_USAGE usage, const D
 
 void DescriptorPool::clear_sets(const std::vector<DescriptorSet *> &sets)
 {
-    const std::vector<VK_DESCRIPTOR_SET> set_objs = make_objects<VK_DESCRIPTOR_SET>(sets);
+    const std::vector<VkDescriptorSet> set_objs = make_objects<VkDescriptorSet>(sets);
     vkClearDescriptorSets(obj(), set_objs.size(), &set_objs[0]);
 }
 
@@ -903,44 +903,44 @@ void DescriptorSet::update(const std::vector<const void *> &update_array)
     vkUpdateDescriptors(obj(), update_array.size(), const_cast<const void **>(&update_array[0]));
 }
 
-void DynamicVpStateObject::init(const Device &dev, const VK_DYNAMIC_VP_STATE_CREATE_INFO &info)
+void DynamicVpStateObject::init(const Device &dev, const VkDynamicVpStateCreateInfo &info)
 {
     DERIVED_OBJECT_INIT(vkCreateDynamicViewportState, dev.obj(), &info);
     alloc_memory(dev);
 }
 
-void DynamicRsStateObject::init(const Device &dev, const VK_DYNAMIC_RS_STATE_CREATE_INFO &info)
+void DynamicRsStateObject::init(const Device &dev, const VkDynamicRsStateCreateInfo &info)
 {
     DERIVED_OBJECT_INIT(vkCreateDynamicRasterState, dev.obj(), &info);
     alloc_memory(dev);
 }
 
-void DynamicCbStateObject::init(const Device &dev, const VK_DYNAMIC_CB_STATE_CREATE_INFO &info)
+void DynamicCbStateObject::init(const Device &dev, const VkDynamicCbStateCreateInfo &info)
 {
     DERIVED_OBJECT_INIT(vkCreateDynamicColorBlendState, dev.obj(), &info);
     alloc_memory(dev);
 }
 
-void DynamicDsStateObject::init(const Device &dev, const VK_DYNAMIC_DS_STATE_CREATE_INFO &info)
+void DynamicDsStateObject::init(const Device &dev, const VkDynamicDsStateCreateInfo &info)
 {
     DERIVED_OBJECT_INIT(vkCreateDynamicDepthStencilState, dev.obj(), &info);
     alloc_memory(dev);
 }
 
-void CmdBuffer::init(const Device &dev, const VK_CMD_BUFFER_CREATE_INFO &info)
+void CmdBuffer::init(const Device &dev, const VkCmdBufferCreateInfo &info)
 {
     DERIVED_OBJECT_INIT(vkCreateCommandBuffer, dev.obj(), &info);
 }
 
-void CmdBuffer::begin(const VK_CMD_BUFFER_BEGIN_INFO *info)
+void CmdBuffer::begin(const VkCmdBufferBeginInfo *info)
 {
     EXPECT(vkBeginCommandBuffer(obj(), info) == VK_SUCCESS);
 }
 
-void CmdBuffer::begin(VK_RENDER_PASS renderpass_obj, VK_FRAMEBUFFER framebuffer_obj)
+void CmdBuffer::begin(VkRenderPass renderpass_obj, VkFramebuffer framebuffer_obj)
 {
-    VK_CMD_BUFFER_BEGIN_INFO info = {};
-    VK_CMD_BUFFER_GRAPHICS_BEGIN_INFO graphics_cmd_buf_info = {};
+    VkCmdBufferBeginInfo info = {};
+    VkCmdBufferGraphicsBeginInfo graphics_cmd_buf_info = {};
     graphics_cmd_buf_info.sType = VK_STRUCTURE_TYPE_CMD_BUFFER_GRAPHICS_BEGIN_INFO;
     graphics_cmd_buf_info.pNext = NULL;
     graphics_cmd_buf_info.renderPassContinue.renderPass = renderpass_obj;
@@ -956,7 +956,7 @@ void CmdBuffer::begin(VK_RENDER_PASS renderpass_obj, VK_FRAMEBUFFER framebuffer_
 
 void CmdBuffer::begin()
 {
-    VK_CMD_BUFFER_BEGIN_INFO info = {};
+    VkCmdBufferBeginInfo info = {};
     info.flags = VK_CMD_BUFFER_OPTIMIZE_GPU_SMALL_BATCH_BIT |
           VK_CMD_BUFFER_OPTIMIZE_ONE_TIME_SUBMIT_BIT;
     info.sType = VK_STRUCTURE_TYPE_CMD_BUFFER_BEGIN_INFO;

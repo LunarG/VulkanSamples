@@ -31,35 +31,35 @@
 #include <stdbool.h>
 #include "icd.h"
 
-static inline bool icd_format_is_undef(VK_FORMAT format)
+static inline bool icd_format_is_undef(VkFormat format)
 {
     return (format == VK_FMT_UNDEFINED);
 }
 
-bool icd_format_is_ds(VK_FORMAT format);
+bool icd_format_is_ds(VkFormat format);
 
-static inline bool icd_format_is_color(VK_FORMAT format)
+static inline bool icd_format_is_color(VkFormat format)
 {
     return !(icd_format_is_undef(format) || icd_format_is_ds(format));
 }
 
-bool icd_format_is_norm(VK_FORMAT format);
+bool icd_format_is_norm(VkFormat format);
 
-bool icd_format_is_int(VK_FORMAT format);
+bool icd_format_is_int(VkFormat format);
 
-bool icd_format_is_float(VK_FORMAT format);
+bool icd_format_is_float(VkFormat format);
 
-bool icd_format_is_srgb(VK_FORMAT format);
+bool icd_format_is_srgb(VkFormat format);
 
-bool icd_format_is_compressed(VK_FORMAT format);
+bool icd_format_is_compressed(VkFormat format);
 
-static inline int icd_format_get_block_width(VK_FORMAT format)
+static inline int icd_format_get_block_width(VkFormat format)
 {
     /* all compressed formats use 4x4 blocks */
     return (icd_format_is_compressed(format)) ? 4 : 1;
 }
 
-static inline bool icd_blend_mode_is_dual_src(VK_BLEND mode)
+static inline bool icd_blend_mode_is_dual_src(VkBlend mode)
 {
     return (mode == VK_BLEND_SRC1_COLOR) ||
            (mode == VK_BLEND_SRC1_ALPHA) ||
@@ -67,7 +67,7 @@ static inline bool icd_blend_mode_is_dual_src(VK_BLEND mode)
            (mode == VK_BLEND_ONE_MINUS_SRC1_ALPHA);
 }
 
-static inline bool icd_pipeline_cb_att_needs_dual_source_blending(const VK_PIPELINE_CB_ATTACHMENT_STATE *att)
+static inline bool icd_pipeline_cb_att_needs_dual_source_blending(const VkPipelineCbAttachmentState *att)
 {
     if (icd_blend_mode_is_dual_src(att->srcBlendColor) ||
         icd_blend_mode_is_dual_src(att->srcBlendAlpha) ||
@@ -78,13 +78,13 @@ static inline bool icd_pipeline_cb_att_needs_dual_source_blending(const VK_PIPEL
     return false;
 }
 
-size_t icd_format_get_size(VK_FORMAT format);
+size_t icd_format_get_size(VkFormat format);
 
-VK_IMAGE_FORMAT_CLASS icd_format_get_class(VK_FORMAT format);
+VkImageFormatClass icd_format_get_class(VkFormat format);
 
-unsigned int icd_format_get_channel_count(VK_FORMAT format);
+unsigned int icd_format_get_channel_count(VkFormat format);
 
-void icd_format_get_raw_value(VK_FORMAT format,
+void icd_format_get_raw_value(VkFormat format,
                               const uint32_t color[4],
                               void *value);
 

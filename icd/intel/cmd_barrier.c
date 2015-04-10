@@ -45,7 +45,7 @@ enum {
 };
 
 static uint32_t img_get_layout_ops(const struct intel_img *img,
-                                   VK_IMAGE_LAYOUT layout)
+                                   VkImageLayout layout)
 {
     uint32_t ops;
 
@@ -84,7 +84,7 @@ static uint32_t img_get_layout_ops(const struct intel_img *img,
 }
 
 static uint32_t img_get_layout_caches(const struct intel_img *img,
-                                     VK_IMAGE_LAYOUT layout)
+                                     VkImageLayout layout)
 {
     uint32_t caches;
 
@@ -131,9 +131,9 @@ static uint32_t img_get_layout_caches(const struct intel_img *img,
 
 static void cmd_resolve_depth(struct intel_cmd *cmd,
                               struct intel_img *img,
-                              VK_IMAGE_LAYOUT old_layout,
-                              VK_IMAGE_LAYOUT new_layout,
-                              const VK_IMAGE_SUBRESOURCE_RANGE *range)
+                              VkImageLayout old_layout,
+                              VkImageLayout new_layout,
+                              const VkImageSubresourceRange *range)
 {
     const uint32_t old_ops = img_get_layout_ops(img, old_layout);
     const uint32_t new_ops = img_get_layout_ops(img, new_layout);
@@ -190,17 +190,17 @@ static void cmd_memory_barriers(struct intel_cmd *cmd,
                                 const void** memory_barriers)
 {
     uint32_t i;
-    VK_FLAGS input_mask = 0;
-    VK_FLAGS output_mask = 0;
+    VkFlags input_mask = 0;
+    VkFlags output_mask = 0;
 
     for (i = 0; i < memory_barrier_count; i++) {
 
         const union {
-            VK_STRUCTURE_TYPE type;
+            VkStructureType type;
 
-            VK_MEMORY_BARRIER mem;
-            VK_BUFFER_MEMORY_BARRIER buf;
-            VK_IMAGE_MEMORY_BARRIER img;
+            VkMemoryBarrier mem;
+            VkBufferMemoryBarrier buf;
+            VkImageMemoryBarrier img;
         } *u = memory_barriers[i];
 
         switch(u->type)
@@ -271,8 +271,8 @@ static void cmd_memory_barriers(struct intel_cmd *cmd,
 }
 
 ICD_EXPORT void VKAPI vkCmdWaitEvents(
-    VK_CMD_BUFFER                              cmdBuffer,
-    const VK_EVENT_WAIT_INFO*                  pWaitInfo)
+    VkCmdBuffer                              cmdBuffer,
+    const VkEventWaitInfo*                  pWaitInfo)
 {
     struct intel_cmd *cmd = intel_cmd(cmdBuffer);
 
@@ -294,8 +294,8 @@ ICD_EXPORT void VKAPI vkCmdWaitEvents(
 }
 
 ICD_EXPORT void VKAPI vkCmdPipelineBarrier(
-    VK_CMD_BUFFER                              cmdBuffer,
-    const VK_PIPELINE_BARRIER*                 pBarrier)
+    VkCmdBuffer                              cmdBuffer,
+    const VkPipelineBarrier*                 pBarrier)
 {
     struct intel_cmd *cmd = intel_cmd(cmdBuffer);
     uint32_t pipe_control_flags = 0;

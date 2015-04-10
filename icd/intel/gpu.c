@@ -145,7 +145,7 @@ static int devid_to_gen(int devid)
     return gen;
 }
 
-VK_RESULT intel_gpu_create(const struct intel_instance *instance, int devid,
+VkResult intel_gpu_create(const struct intel_instance *instance, int devid,
                             const char *primary_node, const char *render_node,
                             struct intel_gpu **gpu_ret)
 {
@@ -216,7 +216,7 @@ VK_RESULT intel_gpu_create(const struct intel_instance *instance, int devid,
 }
 
 void intel_gpu_get_props(const struct intel_gpu *gpu,
-                         VK_PHYSICAL_GPU_PROPERTIES *props)
+                         VkPhysicalGpuProperties *props)
 {
     const char *name;
     size_t name_len;
@@ -250,7 +250,7 @@ void intel_gpu_get_props(const struct intel_gpu *gpu,
 }
 
 void intel_gpu_get_perf(const struct intel_gpu *gpu,
-                        VK_PHYSICAL_GPU_PERFORMANCE *perf)
+                        VkPhysicalGpuPerformance *perf)
 {
     /* TODO */
     perf->maxGpuClock = 1.0f;
@@ -262,7 +262,7 @@ void intel_gpu_get_perf(const struct intel_gpu *gpu,
 
 void intel_gpu_get_queue_props(const struct intel_gpu *gpu,
                                enum intel_gpu_engine_type engine,
-                               VK_PHYSICAL_GPU_QUEUE_PROPERTIES *props)
+                               VkPhysicalGpuQueueProperties *props)
 {
     switch (engine) {
     case INTEL_GPU_ENGINE_3D:
@@ -279,14 +279,14 @@ void intel_gpu_get_queue_props(const struct intel_gpu *gpu,
 }
 
 void intel_gpu_get_memory_props(const struct intel_gpu *gpu,
-                                VK_PHYSICAL_GPU_MEMORY_PROPERTIES *props)
+                                VkPhysicalGpuMemoryProperties *props)
 {
     props->supportsMigration = false;
     props->supportsPinning = true;
 }
 
 int intel_gpu_get_max_threads(const struct intel_gpu *gpu,
-                              VK_PIPELINE_SHADER_STAGE stage)
+                              VkPipelineShaderStage stage)
 {
     switch (intel_gpu_gen(gpu)) {
     case INTEL_GEN(7.5):
@@ -342,7 +342,7 @@ int intel_gpu_get_primary_fd(struct intel_gpu *gpu)
     return gpu_open_primary_node(gpu);
 }
 
-VK_RESULT intel_gpu_init_winsys(struct intel_gpu *gpu)
+VkResult intel_gpu_init_winsys(struct intel_gpu *gpu)
 {
     int fd;
 
@@ -389,8 +389,8 @@ enum intel_ext_type intel_gpu_lookup_extension(const struct intel_gpu *gpu,
     return type;
 }
 
-ICD_EXPORT VK_RESULT VKAPI vkEnumerateLayers(
-    VK_PHYSICAL_GPU                            gpu,
+ICD_EXPORT VkResult VKAPI vkEnumerateLayers(
+    VkPhysicalGpu                            gpu,
     size_t                                      maxLayerCount,
     size_t                                      maxStringSize,
     size_t*                                     pOutLayerCount,
@@ -405,18 +405,18 @@ ICD_EXPORT VK_RESULT VKAPI vkEnumerateLayers(
     return VK_SUCCESS;
 }
 
-ICD_EXPORT VK_RESULT VKAPI vkGetGpuInfo(
-    VK_PHYSICAL_GPU                            gpu_,
-    VK_PHYSICAL_GPU_INFO_TYPE                  infoType,
+ICD_EXPORT VkResult VKAPI vkGetGpuInfo(
+    VkPhysicalGpu                            gpu_,
+    VkPhysicalGpuInfoType                  infoType,
     size_t*                                     pDataSize,
     void*                                       pData)
 {
     struct intel_gpu *gpu = intel_gpu(gpu_);
-    VK_RESULT ret = VK_SUCCESS;
+    VkResult ret = VK_SUCCESS;
 
     switch (infoType) {
     case VK_INFO_TYPE_PHYSICAL_GPU_PROPERTIES:
-        *pDataSize = sizeof(VK_PHYSICAL_GPU_PROPERTIES);
+        *pDataSize = sizeof(VkPhysicalGpuProperties);
         if (pData == NULL) {
             return ret;
         }
@@ -424,7 +424,7 @@ ICD_EXPORT VK_RESULT VKAPI vkGetGpuInfo(
         break;
 
     case VK_INFO_TYPE_PHYSICAL_GPU_PERFORMANCE:
-        *pDataSize = sizeof(VK_PHYSICAL_GPU_PERFORMANCE);
+        *pDataSize = sizeof(VkPhysicalGpuPerformance);
         if (pData == NULL) {
             return ret;
         }
@@ -439,10 +439,10 @@ ICD_EXPORT VK_RESULT VKAPI vkGetGpuInfo(
          * expected data size for all queue property structures
          * is returned in pDataSize
          */
-        *pDataSize = sizeof(VK_PHYSICAL_GPU_QUEUE_PROPERTIES) *
+        *pDataSize = sizeof(VkPhysicalGpuQueueProperties) *
             INTEL_GPU_ENGINE_COUNT;
         if (pData != NULL) {
-            VK_PHYSICAL_GPU_QUEUE_PROPERTIES *dst = pData;
+            VkPhysicalGpuQueueProperties *dst = pData;
             int engine;
 
             for (engine = 0; engine < INTEL_GPU_ENGINE_COUNT; engine++) {
@@ -453,7 +453,7 @@ ICD_EXPORT VK_RESULT VKAPI vkGetGpuInfo(
         break;
 
     case VK_INFO_TYPE_PHYSICAL_GPU_MEMORY_PROPERTIES:
-        *pDataSize = sizeof(VK_PHYSICAL_GPU_MEMORY_PROPERTIES);
+        *pDataSize = sizeof(VkPhysicalGpuMemoryProperties);
         if (pData == NULL) {
             return ret;
         }
@@ -468,8 +468,8 @@ ICD_EXPORT VK_RESULT VKAPI vkGetGpuInfo(
     return ret;
 }
 
-ICD_EXPORT VK_RESULT VKAPI vkGetExtensionSupport(
-    VK_PHYSICAL_GPU                            gpu_,
+ICD_EXPORT VkResult VKAPI vkGetExtensionSupport(
+    VkPhysicalGpu                            gpu_,
     const char*                                 pExtName)
 {
     struct intel_gpu *gpu = intel_gpu(gpu_);
@@ -479,14 +479,14 @@ ICD_EXPORT VK_RESULT VKAPI vkGetExtensionSupport(
         VK_SUCCESS : VK_ERROR_INVALID_EXTENSION;
 }
 
-ICD_EXPORT VK_RESULT VKAPI vkGetMultiGpuCompatibility(
-    VK_PHYSICAL_GPU                            gpu0_,
-    VK_PHYSICAL_GPU                            gpu1_,
-    VK_GPU_COMPATIBILITY_INFO*                 pInfo)
+ICD_EXPORT VkResult VKAPI vkGetMultiGpuCompatibility(
+    VkPhysicalGpu                            gpu0_,
+    VkPhysicalGpu                            gpu1_,
+    VkGpuCompatibilityInfo*                 pInfo)
 {
     const struct intel_gpu *gpu0 = intel_gpu(gpu0_);
     const struct intel_gpu *gpu1 = intel_gpu(gpu1_);
-    VK_FLAGS compat = VK_GPU_COMPAT_IQ_MATCH_BIT |
+    VkFlags compat = VK_GPU_COMPAT_IQ_MATCH_BIT |
                        VK_GPU_COMPAT_PEER_TRANSFER_BIT |
                        VK_GPU_COMPAT_SHARED_MEMORY_BIT |
                        VK_GPU_COMPAT_SHARED_GPU0_DISPLAY_BIT |

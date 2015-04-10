@@ -48,7 +48,7 @@ struct intel_render_pass {
     struct intel_obj obj;
 };
 
-static inline struct intel_fb *intel_fb(VK_FRAMEBUFFER fb)
+static inline struct intel_fb *intel_fb(VkFramebuffer fb)
 {
     return (struct intel_fb *) fb;
 }
@@ -58,7 +58,7 @@ static inline struct intel_fb *intel_fb_from_obj(struct intel_obj *obj)
     return (struct intel_fb *) obj;
 }
 
-static inline struct intel_render_pass *intel_render_pass(VK_RENDER_PASS rp)
+static inline struct intel_render_pass *intel_render_pass(VkRenderPass rp)
 {
     return (struct intel_render_pass *) rp;
 }
@@ -68,13 +68,13 @@ static inline struct intel_render_pass *intel_render_pass_from_obj(struct intel_
     return (struct intel_render_pass *) obj;
 }
 
-VK_RESULT intel_fb_create(struct intel_dev *dev,
-                           const VK_FRAMEBUFFER_CREATE_INFO *pInfo,
+VkResult intel_fb_create(struct intel_dev *dev,
+                           const VkFramebufferCreateInfo *pInfo,
                            struct intel_fb **fb_ret);
 void intel_fb_destroy(struct intel_fb *fb);
 
-VK_RESULT intel_render_pass_create(struct intel_dev *dev,
-                                    const VK_RENDER_PASS_CREATE_INFO *pInfo,
+VkResult intel_render_pass_create(struct intel_dev *dev,
+                                    const VkRenderPassCreateInfo *pInfo,
                                     struct intel_render_pass **rp_ret);
 void intel_render_pass_destroy(struct intel_render_pass *rp);
 

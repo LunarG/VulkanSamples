@@ -180,7 +180,7 @@ void VkTestFramework::InitArgs(int *argc, char *argv[])
 void VkTestFramework::WritePPM( const char *basename, VkImageObj *image )
 {
     string filename;
-    VK_RESULT err;
+    VkResult err;
     int x, y;
     VkImageObj displayImage(image->device());
 
@@ -190,10 +190,10 @@ void VkTestFramework::WritePPM( const char *basename, VkImageObj *image )
     filename.append(basename);
     filename.append(".ppm");
 
-    const VK_IMAGE_SUBRESOURCE sr = {
+    const VkImageSubresource sr = {
         VK_IMAGE_ASPECT_COLOR, 0, 0
     };
-    VK_SUBRESOURCE_LAYOUT sr_layout;
+    VkSubresourceLayout sr_layout;
     size_t data_size = sizeof(sr_layout);
 
     err = vkGetImageSubresourceInfo( image->image(), &sr,
@@ -300,12 +300,12 @@ void VkTestFramework::Compare(const char *basename, VkImageObj *image )
 
 void VkTestFramework::Show(const char *comment, VkImageObj *image)
 {
-    VK_RESULT err;
+    VkResult err;
 
-    const VK_IMAGE_SUBRESOURCE sr = {
+    const VkImageSubresource sr = {
         VK_IMAGE_ASPECT_COLOR, 0, 0
     };
-    VK_SUBRESOURCE_LAYOUT sr_layout;
+    VkSubresourceLayout sr_layout;
     size_t data_size = sizeof(sr_layout);
     VkTestImageRecord record;
 
@@ -395,7 +395,7 @@ TestFrameworkVkPresent::TestFrameworkVkPresent() :
 
 void  TestFrameworkVkPresent::Display()
 {
-    VK_RESULT err;
+    VkResult err;
 
     VK_WSI_X11_PRESENT_INFO present = {};
     present.destWindow = m_window;
@@ -485,7 +485,7 @@ void  TestFrameworkVkPresent::Run()
 
 void TestFrameworkVkPresent::CreatePresentableImages()
 {
-    VK_RESULT err;
+    VkResult err;
 
     m_display_image = m_images.begin();
 
@@ -505,14 +505,14 @@ void TestFrameworkVkPresent::CreatePresentableImages()
         assert(!err);
 
         vk_testing::Buffer buf;
-        buf.init(m_device, (VK_GPU_SIZE) m_display_image->m_data_size);
+        buf.init(m_device, (VkGpuSize) m_display_image->m_data_size);
         dest_ptr = buf.map();
         memcpy(dest_ptr,m_display_image->m_data, m_display_image->m_data_size);
         buf.unmap();
 
         m_cmdbuf.begin();
 
-        VK_BUFFER_IMAGE_COPY region = {};
+        VkBufferImageCopy region = {};
         region.imageExtent.height = m_display_image->m_height;
         region.imageExtent.width = m_display_image->m_width;
         region.imageExtent.depth = 1;
@@ -526,7 +526,7 @@ void TestFrameworkVkPresent::CreatePresentableImages()
         vkQueueAddMemReference(m_queue.obj(), m_display_image->m_presentableMemory);
         vkQueueAddMemReference(m_queue.obj(), buf.memories()[0]);
 
-        VK_CMD_BUFFER cmdBufs[1];
+        VkCmdBuffer cmdBufs[1];
         cmdBufs[0] = m_cmdbuf.obj();
 
         vkQueueSubmit(m_queue.obj(), 1, cmdBufs, NULL);
@@ -1081,7 +1081,7 @@ EShLanguage VkTestFramework::FindLanguage(const std::string& name)
 //
 // Convert VK shader type to compiler's
 //
-EShLanguage VkTestFramework::FindLanguage(const VK_PIPELINE_SHADER_STAGE shader_type)
+EShLanguage VkTestFramework::FindLanguage(const VkPipelineShaderStage shader_type)
 {
     switch (shader_type) {
     case VK_SHADER_STAGE_VERTEX:
@@ -1112,7 +1112,7 @@ EShLanguage VkTestFramework::FindLanguage(const VK_PIPELINE_SHADER_STAGE shader_
 // Compile a given string containing GLSL into SPV for use by VK
 // Return value of false means an error was encountered.
 //
-bool VkTestFramework::GLSLtoSPV(const VK_PIPELINE_SHADER_STAGE shader_type,
+bool VkTestFramework::GLSLtoSPV(const VkPipelineShaderStage shader_type,
                                  const char *pshader,
                                  std::vector<unsigned int> &spv)
 {

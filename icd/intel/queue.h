@@ -53,16 +53,16 @@ struct intel_queue {
     struct intel_fence *fence;
 };
 
-static inline struct intel_queue *intel_queue(VK_QUEUE queue)
+static inline struct intel_queue *intel_queue(VkQueue queue)
 {
     return (struct intel_queue *) queue;
 }
 
-VK_RESULT intel_queue_create(struct intel_dev *dev,
+VkResult intel_queue_create(struct intel_dev *dev,
                               enum intel_gpu_engine_type engine,
                               struct intel_queue **queue_ret);
 void intel_queue_destroy(struct intel_queue *queue);
 
-VK_RESULT intel_queue_wait(struct intel_queue *queue, int64_t timeout);
+VkResult intel_queue_wait(struct intel_queue *queue, int64_t timeout);
 
 #endif /* QUEUE_H */

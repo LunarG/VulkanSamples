@@ -28,7 +28,7 @@
 #include "dev.h"
 #include "mem.h"
 
-VK_RESULT intel_mem_alloc(struct intel_dev *dev,
+VkResult intel_mem_alloc(struct intel_dev *dev,
                            const VkMemoryAllocInfo *info,
                            struct intel_mem **mem_ret)
 {
@@ -62,7 +62,7 @@ void intel_mem_free(struct intel_mem *mem)
     intel_base_destroy(&mem->base);
 }
 
-VK_RESULT intel_mem_import_userptr(struct intel_dev *dev,
+VkResult intel_mem_import_userptr(struct intel_dev *dev,
                                     const void *userptr,
                                     size_t size,
                                     struct intel_mem **mem_ret)
@@ -92,25 +92,25 @@ VK_RESULT intel_mem_import_userptr(struct intel_dev *dev,
     return VK_SUCCESS;
 }
 
-VK_RESULT intel_mem_set_priority(struct intel_mem *mem,
-                                  VK_MEMORY_PRIORITY priority)
+VkResult intel_mem_set_priority(struct intel_mem *mem,
+                                  VkMemoryPriority priority)
 {
     /* pin the bo when VK_MEMORY_PRIORITY_VERY_HIGH? */
     return VK_SUCCESS;
 }
 
-ICD_EXPORT VK_RESULT VKAPI vkAllocMemory(
-    VK_DEVICE                                  device,
+ICD_EXPORT VkResult VKAPI vkAllocMemory(
+    VkDevice                                  device,
     const VkMemoryAllocInfo*                pAllocInfo,
-    VK_GPU_MEMORY*                             pMem)
+    VkGpuMemory*                             pMem)
 {
     struct intel_dev *dev = intel_dev(device);
 
     return intel_mem_alloc(dev, pAllocInfo, (struct intel_mem **) pMem);
 }
 
-ICD_EXPORT VK_RESULT VKAPI vkFreeMemory(
-    VK_GPU_MEMORY                              mem_)
+ICD_EXPORT VkResult VKAPI vkFreeMemory(
+    VkGpuMemory                              mem_)
 {
     struct intel_mem *mem = intel_mem(mem_);
 
@@ -119,18 +119,18 @@ ICD_EXPORT VK_RESULT VKAPI vkFreeMemory(
     return VK_SUCCESS;
 }
 
-ICD_EXPORT VK_RESULT VKAPI vkSetMemoryPriority(
-    VK_GPU_MEMORY                              mem_,
-    VK_MEMORY_PRIORITY                         priority)
+ICD_EXPORT VkResult VKAPI vkSetMemoryPriority(
+    VkGpuMemory                              mem_,
+    VkMemoryPriority                         priority)
 {
     struct intel_mem *mem = intel_mem(mem_);
 
     return intel_mem_set_priority(mem, priority);
 }
 
-ICD_EXPORT VK_RESULT VKAPI vkMapMemory(
-    VK_GPU_MEMORY                              mem_,
-    VK_FLAGS                                   flags,
+ICD_EXPORT VkResult VKAPI vkMapMemory(
+    VkGpuMemory                              mem_,
+    VkFlags                                   flags,
     void**                                      ppData)
 {
     struct intel_mem *mem = intel_mem(mem_);
@@ -141,8 +141,8 @@ ICD_EXPORT VK_RESULT VKAPI vkMapMemory(
     return (ptr) ? VK_SUCCESS : VK_ERROR_UNKNOWN;
 }
 
-ICD_EXPORT VK_RESULT VKAPI vkUnmapMemory(
-    VK_GPU_MEMORY                              mem_)
+ICD_EXPORT VkResult VKAPI vkUnmapMemory(
+    VkGpuMemory                              mem_)
 {
     struct intel_mem *mem = intel_mem(mem_);
 
@@ -151,11 +151,11 @@ ICD_EXPORT VK_RESULT VKAPI vkUnmapMemory(
     return VK_SUCCESS;
 }
 
-ICD_EXPORT VK_RESULT VKAPI vkPinSystemMemory(
-    VK_DEVICE                                  device,
+ICD_EXPORT VkResult VKAPI vkPinSystemMemory(
+    VkDevice                                  device,
     const void*                                 pSysMem,
     size_t                                      memSize,
-    VK_GPU_MEMORY*                             pMem)
+    VkGpuMemory*                             pMem)
 {
     struct intel_dev *dev = intel_dev(device);
 
@@ -163,18 +163,18 @@ ICD_EXPORT VK_RESULT VKAPI vkPinSystemMemory(
             (struct intel_mem **) pMem);
 }
 
-ICD_EXPORT VK_RESULT VKAPI vkOpenSharedMemory(
-    VK_DEVICE                                  device,
-    const VK_MEMORY_OPEN_INFO*                 pOpenInfo,
-    VK_GPU_MEMORY*                             pMem)
+ICD_EXPORT VkResult VKAPI vkOpenSharedMemory(
+    VkDevice                                  device,
+    const VkMemoryOpenInfo*                 pOpenInfo,
+    VkGpuMemory*                             pMem)
 {
     return VK_ERROR_UNAVAILABLE;
 }
 
-ICD_EXPORT VK_RESULT VKAPI vkOpenPeerMemory(
-    VK_DEVICE                                  device,
-    const VK_PEER_MEMORY_OPEN_INFO*            pOpenInfo,
-    VK_GPU_MEMORY*                             pMem)
+ICD_EXPORT VkResult VKAPI vkOpenPeerMemory(
+    VkDevice                                  device,
+    const VkPeerMemoryOpenInfo*            pOpenInfo,
+    VkGpuMemory*                             pMem)
 {
     return VK_ERROR_UNAVAILABLE;
 }

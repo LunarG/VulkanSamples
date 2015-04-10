@@ -40,7 +40,7 @@ struct intel_shader {
     struct intel_ir *ir;
 };
 
-static inline struct intel_shader *intel_shader(VK_SHADER shader)
+static inline struct intel_shader *intel_shader(VkShader shader)
 {
     return (struct intel_shader *) shader;
 }

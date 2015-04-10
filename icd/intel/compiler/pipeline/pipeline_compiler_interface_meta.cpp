@@ -695,7 +695,7 @@ void *intel_meta_compiler::compile(brw_blorp_prog_data *prog_data,
 
 extern "C" {
 
-VK_RESULT intel_pipeline_shader_compile_meta(struct intel_pipeline_shader *sh,
+VkResult intel_pipeline_shader_compile_meta(struct intel_pipeline_shader *sh,
                                               const struct intel_gpu *gpu,
                                               enum intel_dev_meta_shader id)
 {

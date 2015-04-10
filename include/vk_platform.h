@@ -76,11 +76,11 @@ extern "C"
     #endif
 #endif // !defined(VK_NO_STDINT_H)
 
-typedef uint64_t   VK_GPU_SIZE;
+typedef uint64_t   VkGpuSize;
 typedef uint32_t   bool32_t;
 
-typedef uint32_t   VK_SAMPLE_MASK;
-typedef uint32_t   VK_FLAGS;
+typedef uint32_t   VkSampleMask;
+typedef uint32_t   VkFlags;
 typedef int32_t    VK_ENUM;
 
 #ifdef __cplusplus

@@ -43,7 +43,7 @@ struct intel_fence {
     void *wsi_data;
 };
 
-static inline struct intel_fence *intel_fence(VK_FENCE fence)
+static inline struct intel_fence *intel_fence(VkFence fence)
 {
     return (struct intel_fence *) fence;
 }
@@ -53,12 +53,12 @@ static inline struct intel_fence *intel_fence_from_obj(struct intel_obj *obj)
     return (struct intel_fence *) obj;
 }
 
-VK_RESULT intel_fence_create(struct intel_dev *dev,
-                              const VK_FENCE_CREATE_INFO *info,
+VkResult intel_fence_create(struct intel_dev *dev,
+                              const VkFenceCreateInfo *info,
                               struct intel_fence **fence_ret);
 void intel_fence_destroy(struct intel_fence *fence);
 
-VK_RESULT intel_fence_wait(struct intel_fence *fence, int64_t timeout_ns);
+VkResult intel_fence_wait(struct intel_fence *fence, int64_t timeout_ns);
 
 void intel_fence_copy(struct intel_fence *fence,
                       const struct intel_fence *src);

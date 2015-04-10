@@ -93,7 +93,7 @@ static struct intel_bo *alloc_writer_bo(struct intel_winsys *winsys,
 /**
  * Allocate and map the buffer for writing.
  */
-static VK_RESULT cmd_writer_alloc_and_map(struct intel_cmd *cmd,
+static VkResult cmd_writer_alloc_and_map(struct intel_cmd *cmd,
                                            enum intel_cmd_writer_type which)
 {
     struct intel_cmd_writer *writer = &cmd->writers[which];
@@ -256,8 +256,8 @@ static void cmd_destroy(struct intel_obj *obj)
     intel_cmd_destroy(cmd);
 }
 
-VK_RESULT intel_cmd_create(struct intel_dev *dev,
-                            const VK_CMD_BUFFER_CREATE_INFO *info,
+VkResult intel_cmd_create(struct intel_dev *dev,
+                            const VkCmdBufferCreateInfo *info,
                             struct intel_cmd **cmd_ret)
 {
     int pipeline_select;
@@ -309,12 +309,12 @@ void intel_cmd_destroy(struct intel_cmd *cmd)
     intel_base_destroy(&cmd->obj.base);
 }
 
-VK_RESULT intel_cmd_begin(struct intel_cmd *cmd, const VK_CMD_BUFFER_BEGIN_INFO *info)
+VkResult intel_cmd_begin(struct intel_cmd *cmd, const VkCmdBufferBeginInfo *info)
 {
-    const VK_CMD_BUFFER_GRAPHICS_BEGIN_INFO *ginfo;
-    VK_RESULT ret;
+    const VkCmdBufferGraphicsBeginInfo *ginfo;
+    VkResult ret;
     uint32_t i;
-    VK_FLAGS flags = 0;
+    VkFlags flags = 0;
 
     cmd_reset(cmd);
 
@@ -324,7 +324,7 @@ VK_RESULT intel_cmd_begin(struct intel_cmd *cmd, const VK_CMD_BUFFER_BEGIN_INFO 
             flags = info->flags;
             break;
         case VK_STRUCTURE_TYPE_CMD_BUFFER_GRAPHICS_BEGIN_INFO:
-            ginfo = (const VK_CMD_BUFFER_GRAPHICS_BEGIN_INFO *) info;
+            ginfo = (const VkCmdBufferGraphicsBeginInfo *) info;
             cmd_begin_render_pass(cmd, intel_render_pass(ginfo->renderPassContinue.renderPass),
                                   intel_fb(ginfo->renderPassContinue.framebuffer));
             break;
@@ -333,7 +333,7 @@ VK_RESULT intel_cmd_begin(struct intel_cmd *cmd, const VK_CMD_BUFFER_BEGIN_INFO 
             break;
         }
 
-        info = (const VK_CMD_BUFFER_BEGIN_INFO*) info->pNext;
+        info = (const VkCmdBufferBeginInfo*) info->pNext;
     }
 
     if (cmd->flags != flags) {
@@ -367,7 +367,7 @@ VK_RESULT intel_cmd_begin(struct intel_cmd *cmd, const VK_CMD_BUFFER_BEGIN_INFO 
     return VK_SUCCESS;
 }
 
-VK_RESULT intel_cmd_end(struct intel_cmd *cmd)
+VkResult intel_cmd_end(struct intel_cmd *cmd)
 {
     struct intel_winsys *winsys = cmd->dev->winsys;
     uint32_t i;
@@ -442,10 +442,10 @@ VK_RESULT intel_cmd_end(struct intel_cmd *cmd)
         return VK_ERROR_TOO_MANY_MEMORY_REFERENCES;
 }
 
-ICD_EXPORT VK_RESULT VKAPI vkCreateCommandBuffer(
-    VK_DEVICE                                  device,
-    const VK_CMD_BUFFER_CREATE_INFO*           pCreateInfo,
-    VK_CMD_BUFFER*                             pCmdBuffer)
+ICD_EXPORT VkResult VKAPI vkCreateCommandBuffer(
+    VkDevice                                  device,
+    const VkCmdBufferCreateInfo*           pCreateInfo,
+    VkCmdBuffer*                             pCmdBuffer)
 {
     struct intel_dev *dev = intel_dev(device);
 
@@ -453,25 +453,25 @@ ICD_EXPORT VK_RESULT VKAPI vkCreateCommandBuffer(
             (struct intel_cmd **) pCmdBuffer);
 }
 
-ICD_EXPORT VK_RESULT VKAPI vkBeginCommandBuffer(
-    VK_CMD_BUFFER                              cmdBuffer,
-    const VK_CMD_BUFFER_BEGIN_INFO            *info)
+ICD_EXPORT VkResult VKAPI vkBeginCommandBuffer(
+    VkCmdBuffer                              cmdBuffer,
+    const VkCmdBufferBeginInfo            *info)
 {
     struct intel_cmd *cmd = intel_cmd(cmdBuffer);
 
     return intel_cmd_begin(cmd, info);
 }
 
-ICD_EXPORT VK_RESULT VKAPI vkEndCommandBuffer(
-    VK_CMD_BUFFER                              cmdBuffer)
+ICD_EXPORT VkResult VKAPI vkEndCommandBuffer(
+    VkCmdBuffer                              cmdBuffer)
 {
     struct intel_cmd *cmd = intel_cmd(cmdBuffer);
 
     return intel_cmd_end(cmd);
 }
 
-ICD_EXPORT VK_RESULT VKAPI vkResetCommandBuffer(
-    VK_CMD_BUFFER                              cmdBuffer)
+ICD_EXPORT VkResult VKAPI vkResetCommandBuffer(
+    VkCmdBuffer                              cmdBuffer)
 {
     struct intel_cmd *cmd = intel_cmd(cmdBuffer);
 
@@ -481,8 +481,8 @@ ICD_EXPORT VK_RESULT VKAPI vkResetCommandBuffer(
 }
 
 ICD_EXPORT void VKAPI vkCmdInitAtomicCounters(
-    VK_CMD_BUFFER                              cmdBuffer,
-    VK_PIPELINE_BIND_POINT                     pipelineBindPoint,
+    VkCmdBuffer                              cmdBuffer,
+    VkPipelineBindPoint                     pipelineBindPoint,
     uint32_t                                    startCounter,
     uint32_t                                    counterCount,
     const uint32_t*                             pData)
@@ -490,32 +490,32 @@ ICD_EXPORT void VKAPI vkCmdInitAtomicCounters(
 }
 
 ICD_EXPORT void VKAPI vkCmdLoadAtomicCounters(
-    VK_CMD_BUFFER                              cmdBuffer,
-    VK_PIPELINE_BIND_POINT                     pipelineBindPoint,
+    VkCmdBuffer                              cmdBuffer,
+    VkPipelineBindPoint                     pipelineBindPoint,
     uint32_t                                    startCounter,
     uint32_t                                    counterCount,
-    VK_BUFFER                                  srcBuffer,
-    VK_GPU_SIZE                                srcOffset)
+    VkBuffer                                  srcBuffer,
+    VkGpuSize                                srcOffset)
 {
 }
 
 ICD_EXPORT void VKAPI vkCmdSaveAtomicCounters(
-    VK_CMD_BUFFER                              cmdBuffer,
-    VK_PIPELINE_BIND_POINT                     pipelineBindPoint,
+    VkCmdBuffer                              cmdBuffer,
+    VkPipelineBindPoint                     pipelineBindPoint,
     uint32_t                                    startCounter,
     uint32_t                                    counterCount,
-    VK_BUFFER                                  destBuffer,
-    VK_GPU_SIZE                                destOffset)
+    VkBuffer                                  destBuffer,
+    VkGpuSize                                destOffset)
 {
 }
 
 ICD_EXPORT void VKAPI vkCmdDbgMarkerBegin(
-    VK_CMD_BUFFER                              cmdBuffer,
+    VkCmdBuffer                              cmdBuffer,
     const char*                                 pMarker)
 {
 }
 
 ICD_EXPORT void VKAPI vkCmdDbgMarkerEnd(
-    VK_CMD_BUFFER                              cmdBuffer)
+    VkCmdBuffer                              cmdBuffer)
 {
 }

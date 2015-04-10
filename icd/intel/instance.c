@@ -142,9 +142,9 @@ static struct intel_instance *intel_instance_create(const VkInstanceCreateInfo* 
     return instance;
 }
 
-ICD_EXPORT VK_RESULT VKAPI vkCreateInstance(
+ICD_EXPORT VkResult VKAPI vkCreateInstance(
     const VkInstanceCreateInfo*             pCreateInfo,
-    VK_INSTANCE*                               pInstance)
+    VkInstance*                               pInstance)
 {
     struct intel_instance *instance;
 
@@ -152,13 +152,13 @@ ICD_EXPORT VK_RESULT VKAPI vkCreateInstance(
     if (!instance)
         return VK_ERROR_OUT_OF_MEMORY;
 
-    *pInstance = (VK_INSTANCE) instance;
+    *pInstance = (VkInstance) instance;
 
     return VK_SUCCESS;
 }
 
-ICD_EXPORT VK_RESULT VKAPI vkDestroyInstance(
-    VK_INSTANCE                                pInstance)
+ICD_EXPORT VkResult VKAPI vkDestroyInstance(
+    VkInstance                                pInstance)
 {
     struct intel_instance *instance = intel_instance(pInstance);
 
@@ -167,15 +167,15 @@ ICD_EXPORT VK_RESULT VKAPI vkDestroyInstance(
     return VK_SUCCESS;
 }
 
-ICD_EXPORT VK_RESULT VKAPI vkEnumerateGpus(
-    VK_INSTANCE                                instance_,
+ICD_EXPORT VkResult VKAPI vkEnumerateGpus(
+    VkInstance                                instance_,
     uint32_t                                    maxGpus,
     uint32_t*                                   pGpuCount,
-    VK_PHYSICAL_GPU*                           pGpus)
+    VkPhysicalGpu*                           pGpus)
 {
     struct intel_instance *instance = intel_instance(instance_);
     struct icd_drm_device *devices, *dev;
-    VK_RESULT ret;
+    VkResult ret;
     uint32_t count;
 
     intel_instance_remove_gpus(instance);
@@ -206,7 +206,7 @@ ICD_EXPORT VK_RESULT VKAPI vkEnumerateGpus(
         if (ret == VK_SUCCESS) {
             intel_instance_add_gpu(instance, gpu);
 
-            pGpus[count++] = (VK_PHYSICAL_GPU) gpu;
+            pGpus[count++] = (VkPhysicalGpu) gpu;
             if (count >= maxGpus)
                 break;
         }
@@ -221,8 +221,8 @@ ICD_EXPORT VK_RESULT VKAPI vkEnumerateGpus(
     return (count > 0) ? VK_SUCCESS : VK_ERROR_UNAVAILABLE;
 }
 
-ICD_EXPORT VK_RESULT VKAPI vkDbgRegisterMsgCallback(
-    VK_INSTANCE                                instance_,
+ICD_EXPORT VkResult VKAPI vkDbgRegisterMsgCallback(
+    VkInstance                                instance_,
     VK_DBG_MSG_CALLBACK_FUNCTION               pfnMsgCallback,
     void*                                       pUserData)
 {
@@ -231,8 +231,8 @@ ICD_EXPORT VK_RESULT VKAPI vkDbgRegisterMsgCallback(
     return icd_instance_add_logger(instance->icd, pfnMsgCallback, pUserData);
 }
 
-ICD_EXPORT VK_RESULT VKAPI vkDbgUnregisterMsgCallback(
-    VK_INSTANCE                                instance_,
+ICD_EXPORT VkResult VKAPI vkDbgUnregisterMsgCallback(
+    VkInstance                                instance_,
     VK_DBG_MSG_CALLBACK_FUNCTION               pfnMsgCallback)
 {
     struct intel_instance *instance = intel_instance(instance_);
@@ -240,14 +240,14 @@ ICD_EXPORT VK_RESULT VKAPI vkDbgUnregisterMsgCallback(
     return icd_instance_remove_logger(instance->icd, pfnMsgCallback);
 }
 
-ICD_EXPORT VK_RESULT VKAPI vkDbgSetGlobalOption(
-    VK_INSTANCE                                instance_,
+ICD_EXPORT VkResult VKAPI vkDbgSetGlobalOption(
+    VkInstance                                instance_,
     VK_DBG_GLOBAL_OPTION                       dbgOption,
     size_t                                      dataSize,
     const void*                                 pData)
 {
     struct intel_instance *instance = intel_instance(instance_);
-    VK_RESULT res = VK_SUCCESS;
+    VkResult res = VK_SUCCESS;
 
     if (dataSize == 0)
         return VK_ERROR_INVALID_VALUE;

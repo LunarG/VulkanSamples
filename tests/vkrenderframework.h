@@ -34,29 +34,29 @@
 class VkDeviceObj : public vk_testing::Device
 {
 public:
-    VkDeviceObj(uint32_t id, VK_PHYSICAL_GPU obj);
+    VkDeviceObj(uint32_t id, VkPhysicalGpu obj);
 
-    VK_DEVICE device() { return obj(); }
+    VkDevice device() { return obj(); }
     void get_device_queue();
 
     uint32_t id;
-    VK_PHYSICAL_GPU_PROPERTIES props;
-    const VK_PHYSICAL_GPU_QUEUE_PROPERTIES *queue_props;
+    VkPhysicalGpuProperties props;
+    const VkPhysicalGpuQueueProperties *queue_props;
 
-    VK_QUEUE m_queue;
+    VkQueue m_queue;
 };
 
 class VkMemoryRefManager
 {
 public:
     void AddMemoryRefs(vk_testing::Object &vkObject);
-    void AddMemoryRefs(vector<VK_GPU_MEMORY> mem);
-    void EmitAddMemoryRefs(VK_QUEUE queue);
-    void EmitRemoveMemoryRefs(VK_QUEUE queue);
-    vector<VK_GPU_MEMORY> mem_refs() const;
+    void AddMemoryRefs(vector<VkGpuMemory> mem);
+    void EmitAddMemoryRefs(VkQueue queue);
+    void EmitRemoveMemoryRefs(VkQueue queue);
+    vector<VkGpuMemory> mem_refs() const;
 
 protected:
-    vector<VK_GPU_MEMORY>      mem_refs_;
+    vector<VkGpuMemory>      mem_refs_;
 
 };
 
@@ -66,14 +66,14 @@ public:
     VkDepthStencilObj();
     void Init(VkDeviceObj *device, int32_t width, int32_t height);
     bool Initialized();
-    VK_DEPTH_STENCIL_BIND_INFO* BindInfo();
+    VkDepthStencilBindInfo* BindInfo();
 
 protected:
     VkDeviceObj                         *m_device;
     bool                               m_initialized;
     vk_testing::DepthStencilView      m_depthStencilView;
-    VK_FORMAT                         m_depth_stencil_fmt;
-    VK_DEPTH_STENCIL_BIND_INFO        m_depthStencilBindInfo;
+    VkFormat                         m_depth_stencil_fmt;
+    VkDepthStencilBindInfo        m_depthStencilBindInfo;
 };
 
 class VkRenderFramework : public VkTestFramework
@@ -82,40 +82,40 @@ public:
     VkRenderFramework();
     ~VkRenderFramework();
 
-    VK_DEVICE device() {return m_device->device();}
-    VK_PHYSICAL_GPU gpu() {return objs[0];}
-    VK_RENDER_PASS renderPass() {return m_renderPass;}
-    VK_FRAMEBUFFER framebuffer() {return m_framebuffer;}
+    VkDevice device() {return m_device->device();}
+    VkPhysicalGpu gpu() {return objs[0];}
+    VkRenderPass renderPass() {return m_renderPass;}
+    VkFramebuffer framebuffer() {return m_framebuffer;}
     void InitViewport(float width, float height);
     void InitViewport();
     void InitRenderTarget();
     void InitRenderTarget(uint32_t targets);
-    void InitRenderTarget(VK_DEPTH_STENCIL_BIND_INFO *dsBinding);
-    void InitRenderTarget(uint32_t targets, VK_DEPTH_STENCIL_BIND_INFO *dsBinding);
+    void InitRenderTarget(VkDepthStencilBindInfo *dsBinding);
+    void InitRenderTarget(uint32_t targets, VkDepthStencilBindInfo *dsBinding);
     void InitFramework();
     void ShutdownFramework();
     void InitState();
 
 
 protected:
-    VK_APPLICATION_INFO                    app_info;
-    VK_INSTANCE                            inst;
-    VK_PHYSICAL_GPU                        objs[VK_MAX_PHYSICAL_GPUS];
+    VkApplicationInfo                    app_info;
+    VkInstance                            inst;
+    VkPhysicalGpu                        objs[VK_MAX_PHYSICAL_GPUS];
     uint32_t                                gpu_count;
     VkDeviceObj                           *m_device;
-    VK_CMD_BUFFER                          m_cmdBuffer;
-    VK_RENDER_PASS                         m_renderPass;
-    VK_FRAMEBUFFER                         m_framebuffer;
-    VK_DYNAMIC_RS_STATE_OBJECT             m_stateRaster;
-    VK_DYNAMIC_CB_STATE_OBJECT             m_colorBlend;
-    VK_DYNAMIC_VP_STATE_OBJECT             m_stateViewport;
-    VK_DYNAMIC_DS_STATE_OBJECT             m_stateDepthStencil;
+    VkCmdBuffer                            m_cmdBuffer;
+    VkRenderPass                           m_renderPass;
+    VkFramebuffer                          m_framebuffer;
+    VkDynamicRsStateObject                 m_stateRaster;
+    VkDynamicCbStateObject                 m_colorBlend;
+    VkDynamicVpStateObject                 m_stateViewport;
+    VkDynamicDsStateObject                 m_stateDepthStencil;
     vector<VkImageObj*>                    m_renderTargets;
     float                                   m_width, m_height;
-    VK_FORMAT                              m_render_target_fmt;
-    VK_FORMAT                              m_depth_stencil_fmt;
-    VK_COLOR_ATTACHMENT_BIND_INFO          m_colorBindings[8];
-    VK_CLEAR_COLOR                         m_clear_color;
+    VkFormat                              m_render_target_fmt;
+    VkFormat                              m_depth_stencil_fmt;
+    VkColorAttachmentBindInfo          m_colorBindings[8];
+    VkClearColor                         m_clear_color;
     float                                   m_depth_clear_color;
     uint32_t                                m_stencil_clear_color;
     VkDepthStencilObj                     *m_depthStencil;
@@ -152,30 +152,30 @@ class VkCommandBufferObj : public vk_testing::CmdBuffer
 {
 public:
     VkCommandBufferObj(VkDeviceObj *device);
-    VK_CMD_BUFFER GetBufferHandle();
-    VK_RESULT BeginCommandBuffer();
-    VK_RESULT BeginCommandBuffer(VK_CMD_BUFFER_BEGIN_INFO *pInfo);
-    VK_RESULT BeginCommandBuffer(VK_RENDER_PASS renderpass_obj, VK_FRAMEBUFFER framebuffer_obj);
-    VK_RESULT EndCommandBuffer();
-    void PipelineBarrier(VK_PIPELINE_BARRIER *barrierPtr);
+    VkCmdBuffer GetBufferHandle();
+    VkResult BeginCommandBuffer();
+    VkResult BeginCommandBuffer(VkCmdBufferBeginInfo *pInfo);
+    VkResult BeginCommandBuffer(VkRenderPass renderpass_obj, VkFramebuffer framebuffer_obj);
+    VkResult EndCommandBuffer();
+    void PipelineBarrier(VkPipelineBarrier *barrierPtr);
     void AddRenderTarget(VkImageObj *renderTarget);
     void AddDepthStencil();
-    void ClearAllBuffers(VK_CLEAR_COLOR clear_color, float depth_clear_color, uint32_t stencil_clear_color, VkDepthStencilObj *depthStencilObj);
+    void ClearAllBuffers(VkClearColor clear_color, float depth_clear_color, uint32_t stencil_clear_color, VkDepthStencilObj *depthStencilObj);
     void PrepareAttachments();
     void AddMemoryRefs(vk_testing::Object &vkObject);
-    void AddMemoryRefs(uint32_t ref_count, const VK_GPU_MEMORY *mem);
+    void AddMemoryRefs(uint32_t ref_count, const VkGpuMemory *mem);
     void AddMemoryRefs(vector<vk_testing::Object *> images);
     void BindPipeline(VkPipelineObj &pipeline);
     void BindDescriptorSet(VkDescriptorSetObj &descriptorSet);
     void BindVertexBuffer(VkConstantBufferObj *vertexBuffer, uint32_t offset, uint32_t binding);
     void BindIndexBuffer(VkIndexBufferObj *indexBuffer, uint32_t offset);
-    void BindStateObject(VK_STATE_BIND_POINT stateBindPoint, VK_DYNAMIC_STATE_OBJECT stateObject);
-    void BeginRenderPass(VK_RENDER_PASS renderpass, VK_FRAMEBUFFER framebuffer);
-    void EndRenderPass(VK_RENDER_PASS renderpass);
+    void BindStateObject(VkStateBindPoint stateBindPoint, VkDynamicStateObject stateObject);
+    void BeginRenderPass(VkRenderPass renderpass, VkFramebuffer framebuffer);
+    void EndRenderPass(VkRenderPass renderpass);
     void Draw(uint32_t firstVertex, uint32_t vertexCount, uint32_t firstInstance, uint32_t instanceCount);
     void DrawIndexed(uint32_t firstIndex, uint32_t indexCount, int32_t vertexOffset, uint32_t firstInstance, uint32_t instanceCount);
     void QueueCommandBuffer();
-    void QueueCommandBuffer(VK_FENCE fence);
+    void QueueCommandBuffer(VkFence fence);
 
     VkMemoryRefManager             mem_ref_mgr;
 
@@ -191,13 +191,13 @@ public:
     VkConstantBufferObj(VkDeviceObj *device, int constantCount, int constantSize, const void* data);
     ~VkConstantBufferObj();
     void BufferMemoryBarrier(
-        VK_FLAGS outputMask =
+        VkFlags outputMask =
             VK_MEMORY_OUTPUT_CPU_WRITE_BIT |
             VK_MEMORY_OUTPUT_SHADER_WRITE_BIT |
             VK_MEMORY_OUTPUT_COLOR_ATTACHMENT_BIT |
             VK_MEMORY_OUTPUT_DEPTH_STENCIL_ATTACHMENT_BIT |
             VK_MEMORY_OUTPUT_COPY_BIT,
-        VK_FLAGS inputMask =
+        VkFlags inputMask =
             VK_MEMORY_INPUT_CPU_READ_BIT |
             VK_MEMORY_INPUT_INDIRECT_COMMAND_BIT |
             VK_MEMORY_INPUT_INDEX_FETCH_BIT |
@@ -208,9 +208,9 @@ public:
             VK_MEMORY_INPUT_DEPTH_STENCIL_ATTACHMENT_BIT |
             VK_MEMORY_INPUT_COPY_BIT);
 
-    void Bind(VK_CMD_BUFFER cmdBuffer, VK_GPU_SIZE offset, uint32_t binding);
+    void Bind(VkCmdBuffer cmdBuffer, VkGpuSize offset, uint32_t binding);
 
-    VK_BUFFER_VIEW_ATTACH_INFO     m_bufferViewInfo;
+    VkBufferViewAttachInfo     m_bufferViewInfo;
 
 protected:
     VkDeviceObj                      *m_device;
@@ -225,56 +225,56 @@ class VkIndexBufferObj : public VkConstantBufferObj
 {
 public:
     VkIndexBufferObj(VkDeviceObj *device);
-    void CreateAndInitBuffer(int numIndexes, VK_INDEX_TYPE dataFormat, const void* data);
-    void Bind(VK_CMD_BUFFER cmdBuffer, VK_GPU_SIZE offset);
-    VK_INDEX_TYPE GetIndexType();
+    void CreateAndInitBuffer(int numIndexes, VkIndexType dataFormat, const void* data);
+    void Bind(VkCmdBuffer cmdBuffer, VkGpuSize offset);
+    VkIndexType GetIndexType();
 
 protected:
-    VK_INDEX_TYPE  m_indexType;
+    VkIndexType  m_indexType;
 };
 
 class VkImageObj : public vk_testing::Image
 {
 public:
     VkImageObj(VkDeviceObj *dev);
-    bool IsCompatible(VK_FLAGS usage, VK_FLAGS features);
+    bool IsCompatible(VkFlags usage, VkFlags features);
 
 public:
     void init(uint32_t w, uint32_t h,
-              VK_FORMAT fmt, VK_FLAGS usage,
-              VK_IMAGE_TILING tiling=VK_LINEAR_TILING);
+              VkFormat fmt, VkFlags usage,
+              VkImageTiling tiling=VK_LINEAR_TILING);
 
     //    void clear( CommandBuffer*, uint32_t[4] );
 
-    void layout( VK_IMAGE_LAYOUT layout )
+    void layout( VkImageLayout layout )
     {
         m_imageInfo.layout = layout;
     }
 
-    VK_GPU_MEMORY memory() const
+    VkGpuMemory memory() const
     {
-        const std::vector<VK_GPU_MEMORY> mems = memories();
+        const std::vector<VkGpuMemory> mems = memories();
         return mems.empty() ? VK_NULL_HANDLE : mems[0];
     }
 
     void ImageMemoryBarrier(VkCommandBufferObj *cmd,
-                            VK_IMAGE_ASPECT aspect,
-                            VK_FLAGS output_mask,
-                            VK_FLAGS input_mask,
-                            VK_IMAGE_LAYOUT image_layout);
+                            VkImageAspect aspect,
+                            VkFlags output_mask,
+                            VkFlags input_mask,
+                            VkImageLayout image_layout);
 
-    VK_RESULT CopyImage(VkImageObj &src_image);
+    VkResult CopyImage(VkImageObj &src_image);
 
-    VK_IMAGE image() const
+    VkImage image() const
     {
         return obj();
     }
 
-    VK_COLOR_ATTACHMENT_VIEW targetView()
+    VkColorAttachmentView targetView()
     {
         if (!m_targetView.initialized())
         {
-            VK_COLOR_ATTACHMENT_VIEW_CREATE_INFO createView = {
+            VkColorAttachmentViewCreateInfo createView = {
                 VK_STRUCTURE_TYPE_COLOR_ATTACHMENT_VIEW_CREATE_INFO,
                 VK_NULL_HANDLE,
                 obj(),
@@ -288,12 +288,12 @@ public:
         return m_targetView.obj();
     }
 
-    void SetLayout(VkCommandBufferObj *cmd_buf, VK_IMAGE_ASPECT aspect, VK_IMAGE_LAYOUT image_layout);
-    void SetLayout(VK_IMAGE_ASPECT aspect, VK_IMAGE_LAYOUT image_layout);
+    void SetLayout(VkCommandBufferObj *cmd_buf, VkImageAspect aspect, VkImageLayout image_layout);
+    void SetLayout(VkImageAspect aspect, VkImageLayout image_layout);
 
-    VK_IMAGE_LAYOUT layout() const
+    VkImageLayout layout() const
     {
-        return ( VK_IMAGE_LAYOUT )m_imageInfo.layout;
+        return ( VkImageLayout )m_imageInfo.layout;
     }
     uint32_t width() const
     {
@@ -308,27 +308,27 @@ public:
         return m_device;
     }
 
-    VK_RESULT MapMemory(void** ptr);
-    VK_RESULT UnmapMemory();
+    VkResult MapMemory(void** ptr);
+    VkResult UnmapMemory();
 
 protected:
     VkDeviceObj *m_device;
 
     vk_testing::ColorAttachmentView m_targetView;
-    VK_IMAGE_VIEW_ATTACH_INFO   m_imageInfo;
+    VkImageViewAttachInfo   m_imageInfo;
 };
 
 class VkTextureObj : public VkImageObj
 {
 public:
     VkTextureObj(VkDeviceObj *device, uint32_t *colors = NULL);
-    VK_IMAGE_VIEW_ATTACH_INFO m_textureViewInfo;
+    VkImageViewAttachInfo m_textureViewInfo;
 
 
 protected:
     VkDeviceObj                 *m_device;
     vk_testing::ImageView     m_textureView;
-    VK_GPU_SIZE               m_rowPitch;
+    VkGpuSize               m_rowPitch;
 };
 
 class VkSamplerObj : public vk_testing::Sampler
@@ -348,24 +348,24 @@ public:
     ~VkDescriptorSetObj();
 
     int AppendDummy();
-    int AppendBuffer(VK_DESCRIPTOR_TYPE type, VkConstantBufferObj &constantBuffer);
+    int AppendBuffer(VkDescriptorType type, VkConstantBufferObj &constantBuffer);
     int AppendSamplerTexture(VkSamplerObj* sampler, VkTextureObj* texture);
     void CreateVKDescriptorSet(VkCommandBufferObj *cmdBuffer);
 
-    VK_DESCRIPTOR_SET GetDescriptorSetHandle() const;
-    VK_DESCRIPTOR_SET_LAYOUT_CHAIN GetLayoutChain() const;
+    VkDescriptorSet GetDescriptorSetHandle() const;
+    VkDescriptorSetLayoutChain GetLayoutChain() const;
 
-    VkMemoryRefManager                  mem_ref_mgr;
+    VkMemoryRefManager                   mem_ref_mgr;
 
 protected:
-    VkDeviceObj                           *m_device;
-    vector<VK_DESCRIPTOR_TYPE_COUNT>    m_type_counts;
+    VkDeviceObj                         *m_device;
+    vector<VkDescriptorTypeCount>        m_type_counts;
     int                                  m_nextSlot;
 
-    vector<VK_UPDATE_BUFFERS>           m_updateBuffers;
+    vector<VkUpdateBuffers>           m_updateBuffers;
 
-    vector<VK_SAMPLER_IMAGE_VIEW_INFO>  m_samplerTextureInfo;
-    vector<VK_UPDATE_SAMPLER_TEXTURES>  m_updateSamplerTextures;
+    vector<VkSamplerImageViewInfo>  m_samplerTextureInfo;
+    vector<VkUpdateSamplerTextures>  m_updateSamplerTextures;
 
     vk_testing::DescriptorSetLayout     m_layout;
     vk_testing::DescriptorSetLayoutChain m_layout_chain;
@@ -376,12 +376,12 @@ protected:
 class VkShaderObj : public vk_testing::Shader
 {
 public:
-    VkShaderObj(VkDeviceObj *device, const char * shaderText, VK_PIPELINE_SHADER_STAGE stage, VkRenderFramework *framework);
-    VK_PIPELINE_SHADER_STAGE_CREATE_INFO* GetStageCreateInfo();
+    VkShaderObj(VkDeviceObj *device, const char * shaderText, VkPipelineShaderStage stage, VkRenderFramework *framework);
+    VkPipelineShaderStageCreateInfo* GetStageCreateInfo();
 
 protected:
-    VK_PIPELINE_SHADER_STAGE_CREATE_INFO stage_info;
-    VK_PIPELINE_SHADER_STAGE m_stage;
+    VkPipelineShaderStageCreateInfo stage_info;
+    VkPipelineShaderStage m_stage;
     VkDeviceObj *m_device;
 
 };
@@ -391,25 +391,25 @@ class VkPipelineObj : public vk_testing::Pipeline
 public:
     VkPipelineObj(VkDeviceObj *device);
     void AddShader(VkShaderObj* shaderObj);
-    void AddVertexInputAttribs(VK_VERTEX_INPUT_ATTRIBUTE_DESCRIPTION* vi_attrib, int count);
-    void AddVertexInputBindings(VK_VERTEX_INPUT_BINDING_DESCRIPTION* vi_binding, int count);
+    void AddVertexInputAttribs(VkVertexInputAttributeDescription* vi_attrib, int count);
+    void AddVertexInputBindings(VkVertexInputBindingDescription* vi_binding, int count);
     void AddVertexDataBuffer(VkConstantBufferObj* vertexDataBuffer, int binding);
-    void AddColorAttachment(uint32_t binding, const VK_PIPELINE_CB_ATTACHMENT_STATE *att);
-    void SetDepthStencil(VK_PIPELINE_DS_STATE_CREATE_INFO *);
+    void AddColorAttachment(uint32_t binding, const VkPipelineCbAttachmentState *att);
+    void SetDepthStencil(VkPipelineDsStateCreateInfo *);
     void CreateVKPipeline(VkDescriptorSetObj &descriptorSet);
 
 protected:
-    VK_PIPELINE_VERTEX_INPUT_CREATE_INFO m_vi_state;
-    VK_PIPELINE_IA_STATE_CREATE_INFO m_ia_state;
-    VK_PIPELINE_RS_STATE_CREATE_INFO m_rs_state;
-    VK_PIPELINE_CB_STATE_CREATE_INFO m_cb_state;
-    VK_PIPELINE_DS_STATE_CREATE_INFO m_ds_state;
-    VK_PIPELINE_MS_STATE_CREATE_INFO m_ms_state;
+    VkPipelineVertexInputCreateInfo m_vi_state;
+    VkPipelineIaStateCreateInfo m_ia_state;
+    VkPipelineRsStateCreateInfo m_rs_state;
+    VkPipelineCbStateCreateInfo m_cb_state;
+    VkPipelineDsStateCreateInfo m_ds_state;
+    VkPipelineMsStateCreateInfo m_ms_state;
     VkDeviceObj *m_device;
     vector<VkShaderObj*> m_shaderObjs;
     vector<VkConstantBufferObj*> m_vertexBufferObjs;
     vector<int> m_vertexBufferBindings;
-    vector<VK_PIPELINE_CB_ATTACHMENT_STATE> m_colorAttachments;
+    vector<VkPipelineCbAttachmentState> m_colorAttachments;
     int m_vertexBufferCount;
 
 };

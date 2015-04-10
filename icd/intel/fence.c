@@ -38,8 +38,8 @@ static void fence_destroy(struct intel_obj *obj)
     intel_fence_destroy(fence);
 }
 
-VK_RESULT intel_fence_create(struct intel_dev *dev,
-                              const VK_FENCE_CREATE_INFO *info,
+VkResult intel_fence_create(struct intel_dev *dev,
+                              const VkFenceCreateInfo *info,
                               struct intel_fence **fence_ret)
 {
     struct intel_fence *fence;
@@ -50,7 +50,7 @@ VK_RESULT intel_fence_create(struct intel_dev *dev,
         return VK_ERROR_OUT_OF_MEMORY;
 
     if (dev->exts[INTEL_EXT_WSI_X11]) {
-        VK_RESULT ret = intel_wsi_fence_init(fence);
+        VkResult ret = intel_wsi_fence_init(fence);
         if (ret != VK_SUCCESS) {
             intel_fence_destroy(fence);
             return ret;
@@ -91,9 +91,9 @@ void intel_fence_set_seqno(struct intel_fence *fence,
     fence->signaled = false;
 }
 
-VK_RESULT intel_fence_wait(struct intel_fence *fence, int64_t timeout_ns)
+VkResult intel_fence_wait(struct intel_fence *fence, int64_t timeout_ns)
 {
-    VK_RESULT ret;
+    VkResult ret;
 
     ret = intel_wsi_fence_wait(fence, timeout_ns);
     if (ret != VK_SUCCESS)
@@ -115,10 +115,10 @@ VK_RESULT intel_fence_wait(struct intel_fence *fence, int64_t timeout_ns)
     return VK_ERROR_UNAVAILABLE;
 }
 
-ICD_EXPORT VK_RESULT VKAPI vkCreateFence(
-    VK_DEVICE                                  device,
-    const VK_FENCE_CREATE_INFO*                pCreateInfo,
-    VK_FENCE*                                  pFence)
+ICD_EXPORT VkResult VKAPI vkCreateFence(
+    VkDevice                                  device,
+    const VkFenceCreateInfo*                pCreateInfo,
+    VkFence*                                  pFence)
 {
     struct intel_dev *dev = intel_dev(device);
 
@@ -126,28 +126,28 @@ ICD_EXPORT VK_RESULT VKAPI vkCreateFence(
             (struct intel_fence **) pFence);
 }
 
-ICD_EXPORT VK_RESULT VKAPI vkGetFenceStatus(
-    VK_FENCE                                   fence_)
+ICD_EXPORT VkResult VKAPI vkGetFenceStatus(
+    VkFence                                   fence_)
 {
     struct intel_fence *fence = intel_fence(fence_);
 
     return intel_fence_wait(fence, 0);
 }
 
-ICD_EXPORT VK_RESULT VKAPI vkWaitForFences(
-    VK_DEVICE                                  device,
+ICD_EXPORT VkResult VKAPI vkWaitForFences(
+    VkDevice                                  device,
     uint32_t                                    fenceCount,
-    const VK_FENCE*                            pFences,
+    const VkFence*                            pFences,
     bool32_t                                    waitAll,
     uint64_t                                    timeout)
 {
-    VK_RESULT ret = VK_SUCCESS;
+    VkResult ret = VK_SUCCESS;
     uint32_t i;
 
     for (i = 0; i < fenceCount; i++) {
         struct intel_fence *fence = intel_fence(pFences[i]);
         int64_t ns;
-        VK_RESULT r;
+        VkResult r;
 
         /* timeout in nano seconds */
         ns = (timeout <= (uint64_t) INT64_MAX) ? ns : -1;
@@ -162,10 +162,10 @@ ICD_EXPORT VK_RESULT VKAPI vkWaitForFences(
 
     return ret;
 }
-ICD_EXPORT VK_RESULT VKAPI vkResetFences(
-    VK_DEVICE                                  device,
+ICD_EXPORT VkResult VKAPI vkResetFences(
+    VkDevice                                  device,
     uint32_t                                    fenceCount,
-    VK_FENCE*                                  pFences)
+    VkFence*                                  pFences)
 {
     uint32_t i;
 

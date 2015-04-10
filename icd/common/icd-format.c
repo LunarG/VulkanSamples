@@ -205,7 +205,7 @@ static const struct icd_format_info {
     [VK_FMT_B10G10R10A2_SINT]     = { 4, 4 },
 };
 
-bool icd_format_is_ds(VK_FORMAT format)
+bool icd_format_is_ds(VkFormat format)
 {
     bool is_ds = false;
 
@@ -226,7 +226,7 @@ bool icd_format_is_ds(VK_FORMAT format)
     return is_ds;
 }
 
-bool icd_format_is_norm(VK_FORMAT format)
+bool icd_format_is_norm(VkFormat format)
 {
     bool is_norm = false;
 
@@ -298,7 +298,7 @@ bool icd_format_is_norm(VK_FORMAT format)
     return is_norm;
 };
 
-bool icd_format_is_int(VK_FORMAT format)
+bool icd_format_is_int(VkFormat format)
 {
     bool is_int = false;
 
@@ -344,7 +344,7 @@ bool icd_format_is_int(VK_FORMAT format)
     return is_int;
 }
 
-bool icd_format_is_float(VK_FORMAT format)
+bool icd_format_is_float(VkFormat format)
 {
     bool is_float = false;
 
@@ -374,7 +374,7 @@ bool icd_format_is_float(VK_FORMAT format)
     return is_float;
 }
 
-bool icd_format_is_srgb(VK_FORMAT format)
+bool icd_format_is_srgb(VkFormat format)
 {
     bool is_srgb = false;
 
@@ -412,7 +412,7 @@ bool icd_format_is_srgb(VK_FORMAT format)
     return is_srgb;
 }
 
-bool icd_format_is_compressed(VK_FORMAT format)
+bool icd_format_is_compressed(VkFormat format)
 {
     switch (format) {
     case VK_FMT_BC1_RGB_UNORM:
@@ -470,12 +470,12 @@ bool icd_format_is_compressed(VK_FORMAT format)
     }
 }
 
-size_t icd_format_get_size(VK_FORMAT format)
+size_t icd_format_get_size(VkFormat format)
 {
     return icd_format_table[format].size;
 }
 
-VK_IMAGE_FORMAT_CLASS icd_format_get_class(VK_FORMAT format)
+VkImageFormatClass icd_format_get_class(VkFormat format)
 {
     if (icd_format_is_undef(format))
         assert(!"undefined format");
@@ -541,7 +541,7 @@ VK_IMAGE_FORMAT_CLASS icd_format_get_class(VK_FORMAT format)
     }
 }
 
-unsigned int icd_format_get_channel_count(VK_FORMAT format)
+unsigned int icd_format_get_channel_count(VkFormat format)
 {
     return icd_format_table[format].channel_count;
 }
@@ -550,7 +550,7 @@ unsigned int icd_format_get_channel_count(VK_FORMAT format)
  * Convert a raw RGBA color to a raw value.  \p value must have at least
  * icd_format_get_size(format) bytes.
  */
-void icd_format_get_raw_value(VK_FORMAT format,
+void icd_format_get_raw_value(VkFormat format,
                               const uint32_t color[4],
                               void *value)
 {

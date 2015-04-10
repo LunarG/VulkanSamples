@@ -64,18 +64,18 @@ static void initParamChecker(void)
             g_logFile = stdout;
     }
 
-    vkGetProcAddrType fpNextGPA;
+    PFN_vkGetProcAddr fpNextGPA;
     fpNextGPA = pCurObj->pGPA;
     assert(fpNextGPA);
 
-    layer_initialize_dispatch_table(&nextTable, fpNextGPA, (VK_PHYSICAL_GPU) pCurObj->nextObject);
+    layer_initialize_dispatch_table(&nextTable, fpNextGPA, (VkPhysicalGpu) pCurObj->nextObject);
 }
 
-void PreCreateInstance(const VK_APPLICATION_INFO* pAppInfo, const VK_ALLOC_CALLBACKS* pAllocCb)
+void PreCreateInstance(const VkApplicationInfo* pAppInfo, const VkAllocCallbacks* pAllocCb)
 {
     if(pAppInfo == nullptr)
     {
-        char const str[] = "vkCreateInstance parameter, VK_APPLICATION_INFO* pAppInfo, is "\
+        char const str[] = "vkCreateInstance parameter, VkApplicationInfo* pAppInfo, is "\
             "nullptr (precondition).";
         layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
         return;
@@ -97,7 +97,7 @@ void PreCreateInstance(const VK_APPLICATION_INFO* pAppInfo, const VK_ALLOC_CALLB
     {
         if(!vk_validate_vk_alloc_callbacks(pAllocCb))
         {
-            char const str[] = "vkCreateInstance parameter, VK_ALLOC_CALLBACKS* pAllocCb, "\
+            char const str[] = "vkCreateInstance parameter, VkAllocCallbacks* pAllocCb, "\
                 "contains an invalid value (precondition).";
             layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
             return;
@@ -105,11 +105,11 @@ void PreCreateInstance(const VK_APPLICATION_INFO* pAppInfo, const VK_ALLOC_CALLB
     }
 }
 
-void PostCreateInstance(VK_RESULT result, VK_INSTANCE* pInstance)
+void PostCreateInstance(VkResult result, VkInstance* pInstance)
 {
     if(result != VK_SUCCESS)
     {
-        // TODO: Spit out VK_RESULT value.
+        // TODO: Spit out VkResult value.
         char const str[] = "vkCreateInstance failed (postcondition).";
         layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
         return;
@@ -117,36 +117,36 @@ void PostCreateInstance(VK_RESULT result, VK_INSTANCE* pInstance)
 
     if(pInstance == nullptr)
     {
-        char const str[] = "vkCreateInstance parameter, VK_INSTANCE* pInstance, is nullptr "\
+        char const str[] = "vkCreateInstance parameter, VkInstance* pInstance, is nullptr "\
             "(postcondition).";
         layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
         return;
     }
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkCreateInstance(const VkInstanceCreateInfo* pCreateInfo, VK_INSTANCE* pInstance)
+VK_LAYER_EXPORT VkResult VKAPI vkCreateInstance(const VkInstanceCreateInfo* pCreateInfo, VkInstance* pInstance)
 {
     PreCreateInstance(pCreateInfo->pAppInfo, pCreateInfo->pAllocCb);
-    VK_RESULT result = nextTable.CreateInstance(pCreateInfo, pInstance);
+    VkResult result = nextTable.CreateInstance(pCreateInfo, pInstance);
     PostCreateInstance(result, pInstance);
     return result;
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkDestroyInstance(VK_INSTANCE instance)
+VK_LAYER_EXPORT VkResult VKAPI vkDestroyInstance(VkInstance instance)
 {
 
-    VK_RESULT result = nextTable.DestroyInstance(instance);
+    VkResult result = nextTable.DestroyInstance(instance);
     return result;
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkEnumerateGpus(VK_INSTANCE instance, uint32_t maxGpus, uint32_t* pGpuCount, VK_PHYSICAL_GPU* pGpus)
+VK_LAYER_EXPORT VkResult VKAPI vkEnumerateGpus(VkInstance instance, uint32_t maxGpus, uint32_t* pGpuCount, VkPhysicalGpu* pGpus)
 {
 
-    VK_RESULT result = nextTable.EnumerateGpus(instance, maxGpus, pGpuCount, pGpus);
+    VkResult result = nextTable.EnumerateGpus(instance, maxGpus, pGpuCount, pGpus);
     return result;
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkGetGpuInfo(VK_PHYSICAL_GPU gpu, VK_PHYSICAL_GPU_INFO_TYPE infoType, size_t* pDataSize, void* pData)
+VK_LAYER_EXPORT VkResult VKAPI vkGetGpuInfo(VkPhysicalGpu gpu, VkPhysicalGpuInfoType infoType, size_t* pDataSize, void* pData)
 {
     VK_BASE_LAYER_OBJECT* gpuw = (VK_BASE_LAYER_OBJECT *) gpu;
     pCurObj = gpuw;
@@ -156,15 +156,15 @@ VK_LAYER_EXPORT VK_RESULT VKAPI vkGetGpuInfo(VK_PHYSICAL_GPU gpu, VK_PHYSICAL_GP
         sprintf(str, "Parameter infoType to function GetGpuInfo has invalid value of %i.", (int)infoType);
         layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
     }
-    VK_RESULT result = nextTable.GetGpuInfo((VK_PHYSICAL_GPU)gpuw->nextObject, infoType, pDataSize, pData);
+    VkResult result = nextTable.GetGpuInfo((VkPhysicalGpu)gpuw->nextObject, infoType, pDataSize, pData);
     return result;
 }
 
-void PreCreateDevice(VK_PHYSICAL_GPU gpu, const VkDeviceCreateInfo* pCreateInfo)
+void PreCreateDevice(VkPhysicalGpu gpu, const VkDeviceCreateInfo* pCreateInfo)
 {
     if(gpu == nullptr)
     {
-        char const str[] = "vkCreateDevice parameter, VK_PHYSICAL_GPU gpu, is nullptr "\
+        char const str[] = "vkCreateDevice parameter, VkPhysicalGpu gpu, is nullptr "\
             "(precondition).";
         layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
         return;
@@ -216,18 +216,18 @@ void PreCreateDevice(VK_PHYSICAL_GPU gpu, const VkDeviceCreateInfo* pCreateInfo)
 
     if(!validate_VK_VALIDATION_LEVEL(pCreateInfo->maxValidationLevel))
     {
-        char const str[] = "vkCreateDevice parameter, VK_VALIDATION_LEVEL pCreateInfo->maxValidationLevel, is "\
+        char const str[] = "vkCreateDevice parameter, VkValidationLevel pCreateInfo->maxValidationLevel, is "\
             "unrecognized (precondition).";
         layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
         return;
     }
 }
 
-void PostCreateDevice(VK_RESULT result, VK_DEVICE* pDevice)
+void PostCreateDevice(VkResult result, VkDevice* pDevice)
 {
     if(result != VK_SUCCESS)
     {
-        // TODO: Spit out VK_RESULT value.
+        // TODO: Spit out VkResult value.
         char const str[] = "vkCreateDevice failed (postcondition).";
         layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
         return;
@@ -235,41 +235,41 @@ void PostCreateDevice(VK_RESULT result, VK_DEVICE* pDevice)
 
     if(pDevice == nullptr)
     {
-        char const str[] = "vkCreateDevice parameter, VK_DEVICE* pDevice, is nullptr (postcondition).";
+        char const str[] = "vkCreateDevice parameter, VkDevice* pDevice, is nullptr (postcondition).";
         layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
         return;
     }
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkCreateDevice(VK_PHYSICAL_GPU gpu, const VkDeviceCreateInfo* pCreateInfo, VK_DEVICE* pDevice)
+VK_LAYER_EXPORT VkResult VKAPI vkCreateDevice(VkPhysicalGpu gpu, const VkDeviceCreateInfo* pCreateInfo, VkDevice* pDevice)
 {
     VK_BASE_LAYER_OBJECT* gpuw = (VK_BASE_LAYER_OBJECT *) gpu;
     pCurObj = gpuw;
     loader_platform_thread_once(&tabOnce, initParamChecker);
     PreCreateDevice(gpu, pCreateInfo);
-    VK_RESULT result = nextTable.CreateDevice((VK_PHYSICAL_GPU)gpuw->nextObject, pCreateInfo, pDevice);
+    VkResult result = nextTable.CreateDevice((VkPhysicalGpu)gpuw->nextObject, pCreateInfo, pDevice);
     PostCreateDevice(result, pDevice);
     return result;
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkDestroyDevice(VK_DEVICE device)
+VK_LAYER_EXPORT VkResult VKAPI vkDestroyDevice(VkDevice device)
 {
 
-    VK_RESULT result = nextTable.DestroyDevice(device);
+    VkResult result = nextTable.DestroyDevice(device);
     return result;
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkGetExtensionSupport(VK_PHYSICAL_GPU gpu, const char* pExtName)
+VK_LAYER_EXPORT VkResult VKAPI vkGetExtensionSupport(VkPhysicalGpu gpu, const char* pExtName)
 {
     VK_BASE_LAYER_OBJECT* gpuw = (VK_BASE_LAYER_OBJECT *) gpu;
     pCurObj = gpuw;
     loader_platform_thread_once(&tabOnce, initParamChecker);
 
-    VK_RESULT result = nextTable.GetExtensionSupport((VK_PHYSICAL_GPU)gpuw->nextObject, pExtName);
+    VkResult result = nextTable.GetExtensionSupport((VkPhysicalGpu)gpuw->nextObject, pExtName);
     return result;
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkEnumerateLayers(VK_PHYSICAL_GPU gpu, size_t maxLayerCount, size_t maxStringSize, size_t* pOutLayerCount, char* const* pOutLayers, void* pReserved)
+VK_LAYER_EXPORT VkResult VKAPI vkEnumerateLayers(VkPhysicalGpu gpu, size_t maxLayerCount, size_t maxStringSize, size_t* pOutLayerCount, char* const* pOutLayers, void* pReserved)
 {
     char str[1024];
     if (gpu != NULL) {
@@ -278,7 +278,7 @@ VK_LAYER_EXPORT VK_RESULT VKAPI vkEnumerateLayers(VK_PHYSICAL_GPU gpu, size_t ma
         layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, nullptr, 0, 0, "PARAMCHECK", str);
         pCurObj = gpuw;
         loader_platform_thread_once(&tabOnce, initParamChecker);
-        VK_RESULT result = nextTable.EnumerateLayers((VK_PHYSICAL_GPU)gpuw->nextObject, maxLayerCount, maxStringSize, pOutLayerCount, pOutLayers, pReserved);
+        VkResult result = nextTable.EnumerateLayers((VkPhysicalGpu)gpuw->nextObject, maxLayerCount, maxStringSize, pOutLayerCount, pOutLayers, pReserved);
         sprintf(str, "Completed layered EnumerateLayers\n");
         layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, nullptr, 0, 0, "PARAMCHECK", str);
         fflush(stdout);
@@ -293,45 +293,45 @@ VK_LAYER_EXPORT VK_RESULT VKAPI vkEnumerateLayers(VK_PHYSICAL_GPU gpu, size_t ma
     }
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkGetDeviceQueue(VK_DEVICE device, uint32_t queueNodeIndex, uint32_t queueIndex, VK_QUEUE* pQueue)
+VK_LAYER_EXPORT VkResult VKAPI vkGetDeviceQueue(VkDevice device, uint32_t queueNodeIndex, uint32_t queueIndex, VkQueue* pQueue)
 {
 
-    VK_RESULT result = nextTable.GetDeviceQueue(device, queueNodeIndex, queueIndex, pQueue);
+    VkResult result = nextTable.GetDeviceQueue(device, queueNodeIndex, queueIndex, pQueue);
     return result;
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkQueueSubmit(VK_QUEUE queue, uint32_t cmdBufferCount, const VK_CMD_BUFFER* pCmdBuffers, VK_FENCE fence)
+VK_LAYER_EXPORT VkResult VKAPI vkQueueSubmit(VkQueue queue, uint32_t cmdBufferCount, const VkCmdBuffer* pCmdBuffers, VkFence fence)
 {
-    VK_RESULT result = nextTable.QueueSubmit(queue, cmdBufferCount, pCmdBuffers, fence);
+    VkResult result = nextTable.QueueSubmit(queue, cmdBufferCount, pCmdBuffers, fence);
     return result;
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkQueueAddMemReference(VK_QUEUE queue, VK_GPU_MEMORY mem)
+VK_LAYER_EXPORT VkResult VKAPI vkQueueAddMemReference(VkQueue queue, VkGpuMemory mem)
 {
-    VK_RESULT result = nextTable.QueueAddMemReference(queue, mem);
+    VkResult result = nextTable.QueueAddMemReference(queue, mem);
     return result;
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkQueueRemoveMemReference(VK_QUEUE queue, VK_GPU_MEMORY mem)
+VK_LAYER_EXPORT VkResult VKAPI vkQueueRemoveMemReference(VkQueue queue, VkGpuMemory mem)
 {
-    VK_RESULT result = nextTable.QueueRemoveMemReference(queue, mem);
+    VkResult result = nextTable.QueueRemoveMemReference(queue, mem);
     return result;
 }
-VK_LAYER_EXPORT VK_RESULT VKAPI vkQueueWaitIdle(VK_QUEUE queue)
+VK_LAYER_EXPORT VkResult VKAPI vkQueueWaitIdle(VkQueue queue)
 {
 
-    VK_RESULT result = nextTable.QueueWaitIdle(queue);
-    return result;
-}
-
-VK_LAYER_EXPORT VK_RESULT VKAPI vkDeviceWaitIdle(VK_DEVICE device)
-{
-
-    VK_RESULT result = nextTable.DeviceWaitIdle(device);
+    VkResult result = nextTable.QueueWaitIdle(queue);
     return result;
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkAllocMemory(VK_DEVICE device, const VkMemoryAllocInfo* pAllocInfo, VK_GPU_MEMORY* pMem)
+VK_LAYER_EXPORT VkResult VKAPI vkDeviceWaitIdle(VkDevice device)
+{
+
+    VkResult result = nextTable.DeviceWaitIdle(device);
+    return result;
+}
+
+VK_LAYER_EXPORT VkResult VKAPI vkAllocMemory(VkDevice device, const VkMemoryAllocInfo* pAllocInfo, VkGpuMemory* pMem)
 {
     char str[1024];
     if (!pAllocInfo) {
@@ -341,60 +341,60 @@ VK_LAYER_EXPORT VK_RESULT VKAPI vkAllocMemory(VK_DEVICE device, const VkMemoryAl
         sprintf(str, "Parameter pAllocInfo to function AllocMemory contains an invalid value.");
         layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
     }
-    VK_RESULT result = nextTable.AllocMemory(device, pAllocInfo, pMem);
+    VkResult result = nextTable.AllocMemory(device, pAllocInfo, pMem);
     return result;
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkFreeMemory(VK_GPU_MEMORY mem)
+VK_LAYER_EXPORT VkResult VKAPI vkFreeMemory(VkGpuMemory mem)
 {
 
-    VK_RESULT result = nextTable.FreeMemory(mem);
+    VkResult result = nextTable.FreeMemory(mem);
     return result;
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkSetMemoryPriority(VK_GPU_MEMORY mem, VK_MEMORY_PRIORITY priority)
+VK_LAYER_EXPORT VkResult VKAPI vkSetMemoryPriority(VkGpuMemory mem, VkMemoryPriority priority)
 {
     char str[1024];
     if (!validate_VK_MEMORY_PRIORITY(priority)) {
         sprintf(str, "Parameter priority to function SetMemoryPriority has invalid value of %i.", (int)priority);
         layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
     }
-    VK_RESULT result = nextTable.SetMemoryPriority(mem, priority);
+    VkResult result = nextTable.SetMemoryPriority(mem, priority);
     return result;
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkMapMemory(VK_GPU_MEMORY mem, VK_FLAGS flags, void** ppData)
+VK_LAYER_EXPORT VkResult VKAPI vkMapMemory(VkGpuMemory mem, VkFlags flags, void** ppData)
 {
 
-    VK_RESULT result = nextTable.MapMemory(mem, flags, ppData);
+    VkResult result = nextTable.MapMemory(mem, flags, ppData);
     return result;
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkUnmapMemory(VK_GPU_MEMORY mem)
+VK_LAYER_EXPORT VkResult VKAPI vkUnmapMemory(VkGpuMemory mem)
 {
 
-    VK_RESULT result = nextTable.UnmapMemory(mem);
+    VkResult result = nextTable.UnmapMemory(mem);
     return result;
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkPinSystemMemory(VK_DEVICE device, const void* pSysMem, size_t memSize, VK_GPU_MEMORY* pMem)
+VK_LAYER_EXPORT VkResult VKAPI vkPinSystemMemory(VkDevice device, const void* pSysMem, size_t memSize, VkGpuMemory* pMem)
 {
 
-    VK_RESULT result = nextTable.PinSystemMemory(device, pSysMem, memSize, pMem);
+    VkResult result = nextTable.PinSystemMemory(device, pSysMem, memSize, pMem);
     return result;
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkGetMultiGpuCompatibility(VK_PHYSICAL_GPU gpu0, VK_PHYSICAL_GPU gpu1, VK_GPU_COMPATIBILITY_INFO* pInfo)
+VK_LAYER_EXPORT VkResult VKAPI vkGetMultiGpuCompatibility(VkPhysicalGpu gpu0, VkPhysicalGpu gpu1, VkGpuCompatibilityInfo* pInfo)
 {
     VK_BASE_LAYER_OBJECT* gpuw = (VK_BASE_LAYER_OBJECT *) gpu0;
     pCurObj = gpuw;
     loader_platform_thread_once(&tabOnce, initParamChecker);
 
-    VK_RESULT result = nextTable.GetMultiGpuCompatibility((VK_PHYSICAL_GPU)gpuw->nextObject, gpu1, pInfo);
+    VkResult result = nextTable.GetMultiGpuCompatibility((VkPhysicalGpu)gpuw->nextObject, gpu1, pInfo);
     return result;
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkOpenSharedMemory(VK_DEVICE device, const VK_MEMORY_OPEN_INFO* pOpenInfo, VK_GPU_MEMORY* pMem)
+VK_LAYER_EXPORT VkResult VKAPI vkOpenSharedMemory(VkDevice device, const VkMemoryOpenInfo* pOpenInfo, VkGpuMemory* pMem)
 {
     char str[1024];
     if (!pOpenInfo) {
@@ -405,11 +405,11 @@ VK_LAYER_EXPORT VK_RESULT VKAPI vkOpenSharedMemory(VK_DEVICE device, const VK_ME
         sprintf(str, "Parameter pOpenInfo to function OpenSharedMemory contains an invalid value.");
         layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
     }
-    VK_RESULT result = nextTable.OpenSharedMemory(device, pOpenInfo, pMem);
+    VkResult result = nextTable.OpenSharedMemory(device, pOpenInfo, pMem);
     return result;
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkOpenSharedSemaphore(VK_DEVICE device, const VK_SEMAPHORE_OPEN_INFO* pOpenInfo, VK_SEMAPHORE* pSemaphore)
+VK_LAYER_EXPORT VkResult VKAPI vkOpenSharedSemaphore(VkDevice device, const VkSemaphoreOpenInfo* pOpenInfo, VkSemaphore* pSemaphore)
 {
     char str[1024];
     if (!pOpenInfo) {
@@ -420,11 +420,11 @@ VK_LAYER_EXPORT VK_RESULT VKAPI vkOpenSharedSemaphore(VK_DEVICE device, const VK
         sprintf(str, "Parameter pOpenInfo to function OpenSharedSemaphore contains an invalid value.");
         layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
     }
-    VK_RESULT result = nextTable.OpenSharedSemaphore(device, pOpenInfo, pSemaphore);
+    VkResult result = nextTable.OpenSharedSemaphore(device, pOpenInfo, pSemaphore);
     return result;
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkOpenPeerMemory(VK_DEVICE device, const VK_PEER_MEMORY_OPEN_INFO* pOpenInfo, VK_GPU_MEMORY* pMem)
+VK_LAYER_EXPORT VkResult VKAPI vkOpenPeerMemory(VkDevice device, const VkPeerMemoryOpenInfo* pOpenInfo, VkGpuMemory* pMem)
 {
     char str[1024];
     if (!pOpenInfo) {
@@ -435,11 +435,11 @@ VK_LAYER_EXPORT VK_RESULT VKAPI vkOpenPeerMemory(VK_DEVICE device, const VK_PEER
         sprintf(str, "Parameter pOpenInfo to function OpenPeerMemory contains an invalid value.");
         layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
     }
-    VK_RESULT result = nextTable.OpenPeerMemory(device, pOpenInfo, pMem);
+    VkResult result = nextTable.OpenPeerMemory(device, pOpenInfo, pMem);
     return result;
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkOpenPeerImage(VK_DEVICE device, const VK_PEER_IMAGE_OPEN_INFO* pOpenInfo, VK_IMAGE* pImage, VK_GPU_MEMORY* pMem)
+VK_LAYER_EXPORT VkResult VKAPI vkOpenPeerImage(VkDevice device, const VkPeerImageOpenInfo* pOpenInfo, VkImage* pImage, VkGpuMemory* pMem)
 {
     char str[1024];
     if (!pOpenInfo) {
@@ -450,43 +450,43 @@ VK_LAYER_EXPORT VK_RESULT VKAPI vkOpenPeerImage(VK_DEVICE device, const VK_PEER_
         sprintf(str, "Parameter pOpenInfo to function OpenPeerImage contains an invalid value.");
         layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
     }
-    VK_RESULT result = nextTable.OpenPeerImage(device, pOpenInfo, pImage, pMem);
+    VkResult result = nextTable.OpenPeerImage(device, pOpenInfo, pImage, pMem);
     return result;
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkDestroyObject(VK_OBJECT object)
+VK_LAYER_EXPORT VkResult VKAPI vkDestroyObject(VkObject object)
 {
 
-    VK_RESULT result = nextTable.DestroyObject(object);
+    VkResult result = nextTable.DestroyObject(object);
     return result;
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkGetObjectInfo(VK_BASE_OBJECT object, VK_OBJECT_INFO_TYPE infoType, size_t* pDataSize, void* pData)
+VK_LAYER_EXPORT VkResult VKAPI vkGetObjectInfo(VkBaseObject object, VkObjectInfoType infoType, size_t* pDataSize, void* pData)
 {
     char str[1024];
     if (!validate_VK_OBJECT_INFO_TYPE(infoType)) {
         sprintf(str, "Parameter infoType to function GetObjectInfo has invalid value of %i.", (int)infoType);
         layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
     }
-    VK_RESULT result = nextTable.GetObjectInfo(object, infoType, pDataSize, pData);
+    VkResult result = nextTable.GetObjectInfo(object, infoType, pDataSize, pData);
     return result;
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkBindObjectMemory(VK_OBJECT object, uint32_t allocationIdx, VK_GPU_MEMORY mem, VK_GPU_SIZE offset)
+VK_LAYER_EXPORT VkResult VKAPI vkBindObjectMemory(VkObject object, uint32_t allocationIdx, VkGpuMemory mem, VkGpuSize offset)
 {
 
-    VK_RESULT result = nextTable.BindObjectMemory(object, allocationIdx, mem, offset);
+    VkResult result = nextTable.BindObjectMemory(object, allocationIdx, mem, offset);
     return result;
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkBindObjectMemoryRange(VK_OBJECT object, uint32_t allocationIdx, VK_GPU_SIZE rangeOffset, VK_GPU_SIZE rangeSize, VK_GPU_MEMORY mem, VK_GPU_SIZE memOffset)
+VK_LAYER_EXPORT VkResult VKAPI vkBindObjectMemoryRange(VkObject object, uint32_t allocationIdx, VkGpuSize rangeOffset, VkGpuSize rangeSize, VkGpuMemory mem, VkGpuSize memOffset)
 {
 
-    VK_RESULT result = nextTable.BindObjectMemoryRange(object, allocationIdx, rangeOffset, rangeSize, mem, memOffset);
+    VkResult result = nextTable.BindObjectMemoryRange(object, allocationIdx, rangeOffset, rangeSize, mem, memOffset);
     return result;
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkBindImageMemoryRange(VK_IMAGE image, uint32_t allocationIdx, const VK_IMAGE_MEMORY_BIND_INFO* bindInfo, VK_GPU_MEMORY mem, VK_GPU_SIZE memOffset)
+VK_LAYER_EXPORT VkResult VKAPI vkBindImageMemoryRange(VkImage image, uint32_t allocationIdx, const VkImageMemoryBindInfo* bindInfo, VkGpuMemory mem, VkGpuSize memOffset)
 {
     char str[1024];
     if (!bindInfo) {
@@ -497,11 +497,11 @@ VK_LAYER_EXPORT VK_RESULT VKAPI vkBindImageMemoryRange(VK_IMAGE image, uint32_t 
         sprintf(str, "Parameter bindInfo to function BindImageMemoryRange contains an invalid value.");
         layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
     }
-    VK_RESULT result = nextTable.BindImageMemoryRange(image, allocationIdx, bindInfo, mem, memOffset);
+    VkResult result = nextTable.BindImageMemoryRange(image, allocationIdx, bindInfo, mem, memOffset);
     return result;
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkCreateFence(VK_DEVICE device, const VK_FENCE_CREATE_INFO* pCreateInfo, VK_FENCE* pFence)
+VK_LAYER_EXPORT VkResult VKAPI vkCreateFence(VkDevice device, const VkFenceCreateInfo* pCreateInfo, VkFence* pFence)
 {
     char str[1024];
     if (!pCreateInfo) {
@@ -512,32 +512,32 @@ VK_LAYER_EXPORT VK_RESULT VKAPI vkCreateFence(VK_DEVICE device, const VK_FENCE_C
         sprintf(str, "Parameter pCreateInfo to function CreateFence contains an invalid value.");
         layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
     }
-    VK_RESULT result = nextTable.CreateFence(device, pCreateInfo, pFence);
+    VkResult result = nextTable.CreateFence(device, pCreateInfo, pFence);
     return result;
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkGetFenceStatus(VK_FENCE fence)
+VK_LAYER_EXPORT VkResult VKAPI vkGetFenceStatus(VkFence fence)
 {
 
-    VK_RESULT result = nextTable.GetFenceStatus(fence);
+    VkResult result = nextTable.GetFenceStatus(fence);
     return result;
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkWaitForFences(VK_DEVICE device, uint32_t fenceCount, const VK_FENCE* pFences, bool32_t waitAll, uint64_t timeout)
+VK_LAYER_EXPORT VkResult VKAPI vkWaitForFences(VkDevice device, uint32_t fenceCount, const VkFence* pFences, bool32_t waitAll, uint64_t timeout)
 {
 
-    VK_RESULT result = nextTable.WaitForFences(device, fenceCount, pFences, waitAll, timeout);
+    VkResult result = nextTable.WaitForFences(device, fenceCount, pFences, waitAll, timeout);
     return result;
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkResetFences(VK_DEVICE device, uint32_t fenceCount, VK_FENCE* pFences)
+VK_LAYER_EXPORT VkResult VKAPI vkResetFences(VkDevice device, uint32_t fenceCount, VkFence* pFences)
 {
 
-    VK_RESULT result = nextTable.ResetFences(device, fenceCount, pFences);
+    VkResult result = nextTable.ResetFences(device, fenceCount, pFences);
     return result;
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkCreateSemaphore(VK_DEVICE device, const VK_SEMAPHORE_CREATE_INFO* pCreateInfo, VK_SEMAPHORE* pSemaphore)
+VK_LAYER_EXPORT VkResult VKAPI vkCreateSemaphore(VkDevice device, const VkSemaphoreCreateInfo* pCreateInfo, VkSemaphore* pSemaphore)
 {
     char str[1024];
     if (!pCreateInfo) {
@@ -548,25 +548,25 @@ VK_LAYER_EXPORT VK_RESULT VKAPI vkCreateSemaphore(VK_DEVICE device, const VK_SEM
         sprintf(str, "Parameter pCreateInfo to function CreateSemaphore contains an invalid value.");
         layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
     }
-    VK_RESULT result = nextTable.CreateSemaphore(device, pCreateInfo, pSemaphore);
+    VkResult result = nextTable.CreateSemaphore(device, pCreateInfo, pSemaphore);
     return result;
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkQueueSignalSemaphore(VK_QUEUE queue, VK_SEMAPHORE semaphore)
+VK_LAYER_EXPORT VkResult VKAPI vkQueueSignalSemaphore(VkQueue queue, VkSemaphore semaphore)
 {
 
-    VK_RESULT result = nextTable.QueueSignalSemaphore(queue, semaphore);
+    VkResult result = nextTable.QueueSignalSemaphore(queue, semaphore);
     return result;
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkQueueWaitSemaphore(VK_QUEUE queue, VK_SEMAPHORE semaphore)
+VK_LAYER_EXPORT VkResult VKAPI vkQueueWaitSemaphore(VkQueue queue, VkSemaphore semaphore)
 {
 
-    VK_RESULT result = nextTable.QueueWaitSemaphore(queue, semaphore);
+    VkResult result = nextTable.QueueWaitSemaphore(queue, semaphore);
     return result;
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkCreateEvent(VK_DEVICE device, const VK_EVENT_CREATE_INFO* pCreateInfo, VK_EVENT* pEvent)
+VK_LAYER_EXPORT VkResult VKAPI vkCreateEvent(VkDevice device, const VkEventCreateInfo* pCreateInfo, VkEvent* pEvent)
 {
     char str[1024];
     if (!pCreateInfo) {
@@ -577,32 +577,32 @@ VK_LAYER_EXPORT VK_RESULT VKAPI vkCreateEvent(VK_DEVICE device, const VK_EVENT_C
         sprintf(str, "Parameter pCreateInfo to function CreateEvent contains an invalid value.");
         layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
     }
-    VK_RESULT result = nextTable.CreateEvent(device, pCreateInfo, pEvent);
+    VkResult result = nextTable.CreateEvent(device, pCreateInfo, pEvent);
     return result;
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkGetEventStatus(VK_EVENT event)
+VK_LAYER_EXPORT VkResult VKAPI vkGetEventStatus(VkEvent event)
 {
 
-    VK_RESULT result = nextTable.GetEventStatus(event);
+    VkResult result = nextTable.GetEventStatus(event);
     return result;
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkSetEvent(VK_EVENT event)
+VK_LAYER_EXPORT VkResult VKAPI vkSetEvent(VkEvent event)
 {
 
-    VK_RESULT result = nextTable.SetEvent(event);
+    VkResult result = nextTable.SetEvent(event);
     return result;
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkResetEvent(VK_EVENT event)
+VK_LAYER_EXPORT VkResult VKAPI vkResetEvent(VkEvent event)
 {
 
-    VK_RESULT result = nextTable.ResetEvent(event);
+    VkResult result = nextTable.ResetEvent(event);
     return result;
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkCreateQueryPool(VK_DEVICE device, const VK_QUERY_POOL_CREATE_INFO* pCreateInfo, VK_QUERY_POOL* pQueryPool)
+VK_LAYER_EXPORT VkResult VKAPI vkCreateQueryPool(VkDevice device, const VkQueryPoolCreateInfo* pCreateInfo, VkQueryPool* pQueryPool)
 {
     char str[1024];
     if (!pCreateInfo) {
@@ -613,18 +613,18 @@ VK_LAYER_EXPORT VK_RESULT VKAPI vkCreateQueryPool(VK_DEVICE device, const VK_QUE
         sprintf(str, "Parameter pCreateInfo to function CreateQueryPool contains an invalid value.");
         layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
     }
-    VK_RESULT result = nextTable.CreateQueryPool(device, pCreateInfo, pQueryPool);
+    VkResult result = nextTable.CreateQueryPool(device, pCreateInfo, pQueryPool);
     return result;
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkGetQueryPoolResults(VK_QUERY_POOL queryPool, uint32_t startQuery, uint32_t queryCount, size_t* pDataSize, void* pData)
+VK_LAYER_EXPORT VkResult VKAPI vkGetQueryPoolResults(VkQueryPool queryPool, uint32_t startQuery, uint32_t queryCount, size_t* pDataSize, void* pData)
 {
 
-    VK_RESULT result = nextTable.GetQueryPoolResults(queryPool, startQuery, queryCount, pDataSize, pData);
+    VkResult result = nextTable.GetQueryPoolResults(queryPool, startQuery, queryCount, pDataSize, pData);
     return result;
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkGetFormatInfo(VK_DEVICE device, VK_FORMAT format, VK_FORMAT_INFO_TYPE infoType, size_t* pDataSize, void* pData)
+VK_LAYER_EXPORT VkResult VKAPI vkGetFormatInfo(VkDevice device, VkFormat format, VkFormatInfoType infoType, size_t* pDataSize, void* pData)
 {
     char str[1024];
     if (!validate_VK_FORMAT(format)) {
@@ -635,11 +635,11 @@ VK_LAYER_EXPORT VK_RESULT VKAPI vkGetFormatInfo(VK_DEVICE device, VK_FORMAT form
         sprintf(str, "Parameter infoType to function GetFormatInfo has invalid value of %i.", (int)infoType);
         layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
     }
-    VK_RESULT result = nextTable.GetFormatInfo(device, format, infoType, pDataSize, pData);
+    VkResult result = nextTable.GetFormatInfo(device, format, infoType, pDataSize, pData);
     return result;
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkCreateBuffer(VK_DEVICE device, const VkBufferCreateInfo* pCreateInfo, VK_BUFFER* pBuffer)
+VK_LAYER_EXPORT VkResult VKAPI vkCreateBuffer(VkDevice device, const VkBufferCreateInfo* pCreateInfo, VkBuffer* pBuffer)
 {
     char str[1024];
     if (!pCreateInfo) {
@@ -650,11 +650,11 @@ VK_LAYER_EXPORT VK_RESULT VKAPI vkCreateBuffer(VK_DEVICE device, const VkBufferC
         sprintf(str, "Parameter pCreateInfo to function CreateBuffer contains an invalid value.");
         layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
     }
-    VK_RESULT result = nextTable.CreateBuffer(device, pCreateInfo, pBuffer);
+    VkResult result = nextTable.CreateBuffer(device, pCreateInfo, pBuffer);
     return result;
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkCreateBufferView(VK_DEVICE device, const VkBufferViewCreateInfo* pCreateInfo, VK_BUFFER_VIEW* pView)
+VK_LAYER_EXPORT VkResult VKAPI vkCreateBufferView(VkDevice device, const VkBufferViewCreateInfo* pCreateInfo, VkBufferView* pView)
 {
     char str[1024];
     if (!pCreateInfo) {
@@ -665,15 +665,15 @@ VK_LAYER_EXPORT VK_RESULT VKAPI vkCreateBufferView(VK_DEVICE device, const VkBuf
         sprintf(str, "Parameter pCreateInfo to function CreateBufferView contains an invalid value.");
         layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
     }
-    VK_RESULT result = nextTable.CreateBufferView(device, pCreateInfo, pView);
+    VkResult result = nextTable.CreateBufferView(device, pCreateInfo, pView);
     return result;
 }
 
-void PreCreateImage(VK_DEVICE device, const VK_IMAGE_CREATE_INFO* pCreateInfo)
+void PreCreateImage(VkDevice device, const VkImageCreateInfo* pCreateInfo)
 {
     if(pCreateInfo == nullptr)
     {
-        char const str[] = "vkCreateImage parameter, VK_IMAGE_CREATE_INFO* pCreateInfo, is "\
+        char const str[] = "vkCreateImage parameter, VkImageCreateInfo* pCreateInfo, is "\
             "nullptr (precondition).";
         layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
         return;
@@ -689,7 +689,7 @@ void PreCreateImage(VK_DEVICE device, const VK_IMAGE_CREATE_INFO* pCreateInfo)
 
     if (!validate_VK_IMAGE_TYPE(pCreateInfo->imageType))
     {
-        char const str[] = "vkCreateImage parameter, VK_IMAGE_TYPE pCreateInfo->imageType, is "\
+        char const str[] = "vkCreateImage parameter, VkImageType pCreateInfo->imageType, is "\
             "unrecognized (precondition).";
         layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
         return;
@@ -697,19 +697,19 @@ void PreCreateImage(VK_DEVICE device, const VK_IMAGE_CREATE_INFO* pCreateInfo)
 
     if (!validate_VK_FORMAT(pCreateInfo->format))
     {
-        char const str[] = "vkCreateImage parameter, VK_FORMAT pCreateInfo->format, is "\
+        char const str[] = "vkCreateImage parameter, VkFormat pCreateInfo->format, is "\
             "unrecognized (precondition).";
         layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
         return;
     }
 
-    VK_FORMAT_PROPERTIES properties;
+    VkFormatProperties properties;
     size_t size = sizeof(properties);
-    VK_RESULT result = nextTable.GetFormatInfo(device, pCreateInfo->format,
+    VkResult result = nextTable.GetFormatInfo(device, pCreateInfo->format,
         VK_INFO_TYPE_FORMAT_PROPERTIES, &size, &properties);
     if(result != VK_SUCCESS)
     {
-        char const str[] = "vkCreateImage parameter, VK_FORMAT pCreateInfo->format, cannot be "\
+        char const str[] = "vkCreateImage parameter, VkFormat pCreateInfo->format, cannot be "\
             "validated (precondition).";
         layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
         return;
@@ -717,7 +717,7 @@ void PreCreateImage(VK_DEVICE device, const VK_IMAGE_CREATE_INFO* pCreateInfo)
 
     if((properties.linearTilingFeatures) == 0 && (properties.optimalTilingFeatures == 0))
     {
-        char const str[] = "vkCreateImage parameter, VK_FORMAT pCreateInfo->format, contains "\
+        char const str[] = "vkCreateImage parameter, VkFormat pCreateInfo->format, contains "\
             "unsupported format (precondition).";
         layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
         return;
@@ -726,7 +726,7 @@ void PreCreateImage(VK_DEVICE device, const VK_IMAGE_CREATE_INFO* pCreateInfo)
     // TODO: Can we check device-specific limits?
     if (!vk_validate_vk_extent3d(&pCreateInfo->extent))
     {
-        char const str[] = "vkCreateImage parameter, VK_EXTENT3D pCreateInfo->extent, is invalid "\
+        char const str[] = "vkCreateImage parameter, VkExtent3D pCreateInfo->extent, is invalid "\
             "(precondition).";
         layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
         return;
@@ -734,18 +734,18 @@ void PreCreateImage(VK_DEVICE device, const VK_IMAGE_CREATE_INFO* pCreateInfo)
 
     if (!validate_VK_IMAGE_TILING(pCreateInfo->tiling))
     {
-        char const str[] = "vkCreateImage parameter, VK_IMAGE_TILING pCreateInfo->tiling, is "\
+        char const str[] = "vkCreateImage parameter, VkImageTiling pCreateInfo->tiling, is "\
             "unrecoginized (precondition).";
         layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
         return;
     }
 }
 
-void PostCreateImage(VK_RESULT result, VK_IMAGE* pImage)
+void PostCreateImage(VkResult result, VkImage* pImage)
 {
     if(result != VK_SUCCESS)
     {
-        // TODO: Spit out VK_RESULT value.
+        // TODO: Spit out VkResult value.
         char const str[] = "vkCreateImage failed (postcondition).";
         layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
         return;
@@ -753,21 +753,21 @@ void PostCreateImage(VK_RESULT result, VK_IMAGE* pImage)
 
     if(pImage == nullptr)
     {
-        char const str[] = "vkCreateImage parameter, VK_IMAGE* pImage, is nullptr (postcondition).";
+        char const str[] = "vkCreateImage parameter, VkImage* pImage, is nullptr (postcondition).";
         layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
         return;
     }
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkCreateImage(VK_DEVICE device, const VK_IMAGE_CREATE_INFO* pCreateInfo, VK_IMAGE* pImage)
+VK_LAYER_EXPORT VkResult VKAPI vkCreateImage(VkDevice device, const VkImageCreateInfo* pCreateInfo, VkImage* pImage)
 {
     PreCreateImage(device, pCreateInfo);
-    VK_RESULT result = nextTable.CreateImage(device, pCreateInfo, pImage);
+    VkResult result = nextTable.CreateImage(device, pCreateInfo, pImage);
     PostCreateImage(result, pImage);
     return result;
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkGetImageSubresourceInfo(VK_IMAGE image, const VK_IMAGE_SUBRESOURCE* pSubresource, VK_SUBRESOURCE_INFO_TYPE infoType, size_t* pDataSize, void* pData)
+VK_LAYER_EXPORT VkResult VKAPI vkGetImageSubresourceInfo(VkImage image, const VkImageSubresource* pSubresource, VkSubresourceInfoType infoType, size_t* pDataSize, void* pData)
 {
     char str[1024];
     if (!pSubresource) {
@@ -782,11 +782,11 @@ VK_LAYER_EXPORT VK_RESULT VKAPI vkGetImageSubresourceInfo(VK_IMAGE image, const 
         sprintf(str, "Parameter infoType to function GetImageSubresourceInfo has invalid value of %i.", (int)infoType);
         layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
     }
-    VK_RESULT result = nextTable.GetImageSubresourceInfo(image, pSubresource, infoType, pDataSize, pData);
+    VkResult result = nextTable.GetImageSubresourceInfo(image, pSubresource, infoType, pDataSize, pData);
     return result;
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkCreateImageView(VK_DEVICE device, const VK_IMAGE_VIEW_CREATE_INFO* pCreateInfo, VK_IMAGE_VIEW* pView)
+VK_LAYER_EXPORT VkResult VKAPI vkCreateImageView(VkDevice device, const VkImageViewCreateInfo* pCreateInfo, VkImageView* pView)
 {
     char str[1024];
     if (!pCreateInfo) {
@@ -797,11 +797,11 @@ VK_LAYER_EXPORT VK_RESULT VKAPI vkCreateImageView(VK_DEVICE device, const VK_IMA
         sprintf(str, "Parameter pCreateInfo to function CreateImageView contains an invalid value.");
         layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
     }
-    VK_RESULT result = nextTable.CreateImageView(device, pCreateInfo, pView);
+    VkResult result = nextTable.CreateImageView(device, pCreateInfo, pView);
     return result;
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkCreateColorAttachmentView(VK_DEVICE device, const VK_COLOR_ATTACHMENT_VIEW_CREATE_INFO* pCreateInfo, VK_COLOR_ATTACHMENT_VIEW* pView)
+VK_LAYER_EXPORT VkResult VKAPI vkCreateColorAttachmentView(VkDevice device, const VkColorAttachmentViewCreateInfo* pCreateInfo, VkColorAttachmentView* pView)
 {
     char str[1024];
     if (!pCreateInfo) {
@@ -812,11 +812,11 @@ VK_LAYER_EXPORT VK_RESULT VKAPI vkCreateColorAttachmentView(VK_DEVICE device, co
         sprintf(str, "Parameter pCreateInfo to function CreateColorAttachmentView contains an invalid value.");
         layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
     }
-    VK_RESULT result = nextTable.CreateColorAttachmentView(device, pCreateInfo, pView);
+    VkResult result = nextTable.CreateColorAttachmentView(device, pCreateInfo, pView);
     return result;
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkCreateDepthStencilView(VK_DEVICE device, const VK_DEPTH_STENCIL_VIEW_CREATE_INFO* pCreateInfo, VK_DEPTH_STENCIL_VIEW* pView)
+VK_LAYER_EXPORT VkResult VKAPI vkCreateDepthStencilView(VkDevice device, const VkDepthStencilViewCreateInfo* pCreateInfo, VkDepthStencilView* pView)
 {
     char str[1024];
     if (!pCreateInfo) {
@@ -827,11 +827,11 @@ VK_LAYER_EXPORT VK_RESULT VKAPI vkCreateDepthStencilView(VK_DEVICE device, const
         sprintf(str, "Parameter pCreateInfo to function CreateDepthStencilView contains an invalid value.");
         layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
     }
-    VK_RESULT result = nextTable.CreateDepthStencilView(device, pCreateInfo, pView);
+    VkResult result = nextTable.CreateDepthStencilView(device, pCreateInfo, pView);
     return result;
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkCreateShader(VK_DEVICE device, const VK_SHADER_CREATE_INFO* pCreateInfo, VK_SHADER* pShader)
+VK_LAYER_EXPORT VkResult VKAPI vkCreateShader(VkDevice device, const VkShaderCreateInfo* pCreateInfo, VkShader* pShader)
 {
     char str[1024];
     if (!pCreateInfo) {
@@ -842,11 +842,11 @@ VK_LAYER_EXPORT VK_RESULT VKAPI vkCreateShader(VK_DEVICE device, const VK_SHADER
         sprintf(str, "Parameter pCreateInfo to function CreateShader contains an invalid value.");
         layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
     }
-    VK_RESULT result = nextTable.CreateShader(device, pCreateInfo, pShader);
+    VkResult result = nextTable.CreateShader(device, pCreateInfo, pShader);
     return result;
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkCreateGraphicsPipeline(VK_DEVICE device, const VK_GRAPHICS_PIPELINE_CREATE_INFO* pCreateInfo, VK_PIPELINE* pPipeline)
+VK_LAYER_EXPORT VkResult VKAPI vkCreateGraphicsPipeline(VkDevice device, const VkGraphicsPipelineCreateInfo* pCreateInfo, VkPipeline* pPipeline)
 {
     char str[1024];
     if (!pCreateInfo) {
@@ -857,11 +857,11 @@ VK_LAYER_EXPORT VK_RESULT VKAPI vkCreateGraphicsPipeline(VK_DEVICE device, const
         sprintf(str, "Parameter pCreateInfo to function CreateGraphicsPipeline contains an invalid value.");
         layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
     }
-    VK_RESULT result = nextTable.CreateGraphicsPipeline(device, pCreateInfo, pPipeline);
+    VkResult result = nextTable.CreateGraphicsPipeline(device, pCreateInfo, pPipeline);
     return result;
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkCreateGraphicsPipelineDerivative(VK_DEVICE device, const VK_GRAPHICS_PIPELINE_CREATE_INFO* pCreateInfo, VK_PIPELINE basePipeline, VK_PIPELINE* pPipeline)
+VK_LAYER_EXPORT VkResult VKAPI vkCreateGraphicsPipelineDerivative(VkDevice device, const VkGraphicsPipelineCreateInfo* pCreateInfo, VkPipeline basePipeline, VkPipeline* pPipeline)
 {
     char str[1024];
     if (!pCreateInfo) {
@@ -872,11 +872,11 @@ VK_LAYER_EXPORT VK_RESULT VKAPI vkCreateGraphicsPipelineDerivative(VK_DEVICE dev
         sprintf(str, "Parameter pCreateInfo to function CreateGraphicsPipelineDerivative contains an invalid value.");
         layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
     }
-    VK_RESULT result = nextTable.CreateGraphicsPipelineDerivative(device, pCreateInfo, basePipeline, pPipeline);
+    VkResult result = nextTable.CreateGraphicsPipelineDerivative(device, pCreateInfo, basePipeline, pPipeline);
     return result;
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkCreateComputePipeline(VK_DEVICE device, const VK_COMPUTE_PIPELINE_CREATE_INFO* pCreateInfo, VK_PIPELINE* pPipeline)
+VK_LAYER_EXPORT VkResult VKAPI vkCreateComputePipeline(VkDevice device, const VkComputePipelineCreateInfo* pCreateInfo, VkPipeline* pPipeline)
 {
     char str[1024];
     if (!pCreateInfo) {
@@ -887,32 +887,32 @@ VK_LAYER_EXPORT VK_RESULT VKAPI vkCreateComputePipeline(VK_DEVICE device, const 
         sprintf(str, "Parameter pCreateInfo to function CreateComputePipeline contains an invalid value.");
         layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
     }
-    VK_RESULT result = nextTable.CreateComputePipeline(device, pCreateInfo, pPipeline);
+    VkResult result = nextTable.CreateComputePipeline(device, pCreateInfo, pPipeline);
     return result;
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkStorePipeline(VK_PIPELINE pipeline, size_t* pDataSize, void* pData)
+VK_LAYER_EXPORT VkResult VKAPI vkStorePipeline(VkPipeline pipeline, size_t* pDataSize, void* pData)
 {
 
-    VK_RESULT result = nextTable.StorePipeline(pipeline, pDataSize, pData);
+    VkResult result = nextTable.StorePipeline(pipeline, pDataSize, pData);
     return result;
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkLoadPipeline(VK_DEVICE device, size_t dataSize, const void* pData, VK_PIPELINE* pPipeline)
+VK_LAYER_EXPORT VkResult VKAPI vkLoadPipeline(VkDevice device, size_t dataSize, const void* pData, VkPipeline* pPipeline)
 {
 
-    VK_RESULT result = nextTable.LoadPipeline(device, dataSize, pData, pPipeline);
+    VkResult result = nextTable.LoadPipeline(device, dataSize, pData, pPipeline);
     return result;
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkLoadPipelineDerivative(VK_DEVICE device, size_t dataSize, const void* pData, VK_PIPELINE basePipeline, VK_PIPELINE* pPipeline)
+VK_LAYER_EXPORT VkResult VKAPI vkLoadPipelineDerivative(VkDevice device, size_t dataSize, const void* pData, VkPipeline basePipeline, VkPipeline* pPipeline)
 {
 
-    VK_RESULT result = nextTable.LoadPipelineDerivative(device, dataSize, pData, basePipeline, pPipeline);
+    VkResult result = nextTable.LoadPipelineDerivative(device, dataSize, pData, basePipeline, pPipeline);
     return result;
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkCreateSampler(VK_DEVICE device, const VK_SAMPLER_CREATE_INFO* pCreateInfo, VK_SAMPLER* pSampler)
+VK_LAYER_EXPORT VkResult VKAPI vkCreateSampler(VkDevice device, const VkSamplerCreateInfo* pCreateInfo, VkSampler* pSampler)
 {
     char str[1024];
     if (!pCreateInfo) {
@@ -923,11 +923,11 @@ VK_LAYER_EXPORT VK_RESULT VKAPI vkCreateSampler(VK_DEVICE device, const VK_SAMPL
         sprintf(str, "Parameter pCreateInfo to function CreateSampler contains an invalid value.");
         layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
     }
-    VK_RESULT result = nextTable.CreateSampler(device, pCreateInfo, pSampler);
+    VkResult result = nextTable.CreateSampler(device, pCreateInfo, pSampler);
     return result;
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkCreateDescriptorSetLayout(VK_DEVICE device, const VK_DESCRIPTOR_SET_LAYOUT_CREATE_INFO* pCreateInfo, VK_DESCRIPTOR_SET_LAYOUT* pSetLayout)
+VK_LAYER_EXPORT VkResult VKAPI vkCreateDescriptorSetLayout(VkDevice device, const VkDescriptorSetLayoutCreateInfo* pCreateInfo, VkDescriptorSetLayout* pSetLayout)
 {
     char str[1024];
     if (!pCreateInfo) {
@@ -938,36 +938,36 @@ VK_LAYER_EXPORT VK_RESULT VKAPI vkCreateDescriptorSetLayout(VK_DEVICE device, co
         sprintf(str, "Parameter pCreateInfo to function CreateDescriptorSetLayout contains an invalid value.");
         layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
     }
-    VK_RESULT result = nextTable.CreateDescriptorSetLayout(device, pCreateInfo, pSetLayout);
+    VkResult result = nextTable.CreateDescriptorSetLayout(device, pCreateInfo, pSetLayout);
     return result;
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkCreateDescriptorSetLayoutChain(VK_DEVICE device, uint32_t setLayoutArrayCount, const VK_DESCRIPTOR_SET_LAYOUT* pSetLayoutArray, VK_DESCRIPTOR_SET_LAYOUT_CHAIN* pLayoutChain)
+VK_LAYER_EXPORT VkResult VKAPI vkCreateDescriptorSetLayoutChain(VkDevice device, uint32_t setLayoutArrayCount, const VkDescriptorSetLayout* pSetLayoutArray, VkDescriptorSetLayoutChain* pLayoutChain)
 {
 
-    VK_RESULT result = nextTable.CreateDescriptorSetLayoutChain(device, setLayoutArrayCount, pSetLayoutArray, pLayoutChain);
+    VkResult result = nextTable.CreateDescriptorSetLayoutChain(device, setLayoutArrayCount, pSetLayoutArray, pLayoutChain);
     return result;
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkBeginDescriptorPoolUpdate(VK_DEVICE device, VK_DESCRIPTOR_UPDATE_MODE updateMode)
+VK_LAYER_EXPORT VkResult VKAPI vkBeginDescriptorPoolUpdate(VkDevice device, VkDescriptorUpdateMode updateMode)
 {
     char str[1024];
     if (!validate_VK_DESCRIPTOR_UPDATE_MODE(updateMode)) {
         sprintf(str, "Parameter updateMode to function BeginDescriptorPoolUpdate has invalid value of %i.", (int)updateMode);
         layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
     }
-    VK_RESULT result = nextTable.BeginDescriptorPoolUpdate(device, updateMode);
+    VkResult result = nextTable.BeginDescriptorPoolUpdate(device, updateMode);
     return result;
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkEndDescriptorPoolUpdate(VK_DEVICE device, VK_CMD_BUFFER cmd)
+VK_LAYER_EXPORT VkResult VKAPI vkEndDescriptorPoolUpdate(VkDevice device, VkCmdBuffer cmd)
 {
 
-    VK_RESULT result = nextTable.EndDescriptorPoolUpdate(device, cmd);
+    VkResult result = nextTable.EndDescriptorPoolUpdate(device, cmd);
     return result;
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkCreateDescriptorPool(VK_DEVICE device, VK_DESCRIPTOR_POOL_USAGE poolUsage, uint32_t maxSets, const VK_DESCRIPTOR_POOL_CREATE_INFO* pCreateInfo, VK_DESCRIPTOR_POOL* pDescriptorPool)
+VK_LAYER_EXPORT VkResult VKAPI vkCreateDescriptorPool(VkDevice device, VkDescriptorPoolUsage poolUsage, uint32_t maxSets, const VkDescriptorPoolCreateInfo* pCreateInfo, VkDescriptorPool* pDescriptorPool)
 {
     char str[1024];
     if (!validate_VK_DESCRIPTOR_POOL_USAGE(poolUsage)) {
@@ -982,41 +982,41 @@ VK_LAYER_EXPORT VK_RESULT VKAPI vkCreateDescriptorPool(VK_DEVICE device, VK_DESC
         sprintf(str, "Parameter pCreateInfo to function CreateDescriptorPool contains an invalid value.");
         layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
     }
-    VK_RESULT result = nextTable.CreateDescriptorPool(device, poolUsage, maxSets, pCreateInfo, pDescriptorPool);
+    VkResult result = nextTable.CreateDescriptorPool(device, poolUsage, maxSets, pCreateInfo, pDescriptorPool);
     return result;
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkResetDescriptorPool(VK_DESCRIPTOR_POOL descriptorPool)
+VK_LAYER_EXPORT VkResult VKAPI vkResetDescriptorPool(VkDescriptorPool descriptorPool)
 {
 
-    VK_RESULT result = nextTable.ResetDescriptorPool(descriptorPool);
+    VkResult result = nextTable.ResetDescriptorPool(descriptorPool);
     return result;
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkAllocDescriptorSets(VK_DESCRIPTOR_POOL descriptorPool, VK_DESCRIPTOR_SET_USAGE setUsage, uint32_t count, const VK_DESCRIPTOR_SET_LAYOUT* pSetLayouts, VK_DESCRIPTOR_SET* pDescriptorSets, uint32_t* pCount)
+VK_LAYER_EXPORT VkResult VKAPI vkAllocDescriptorSets(VkDescriptorPool descriptorPool, VkDescriptorSetUsage setUsage, uint32_t count, const VkDescriptorSetLayout* pSetLayouts, VkDescriptorSet* pDescriptorSets, uint32_t* pCount)
 {
     char str[1024];
     if (!validate_VK_DESCRIPTOR_SET_USAGE(setUsage)) {
         sprintf(str, "Parameter setUsage to function AllocDescriptorSets has invalid value of %i.", (int)setUsage);
         layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
     }
-    VK_RESULT result = nextTable.AllocDescriptorSets(descriptorPool, setUsage, count, pSetLayouts, pDescriptorSets, pCount);
+    VkResult result = nextTable.AllocDescriptorSets(descriptorPool, setUsage, count, pSetLayouts, pDescriptorSets, pCount);
     return result;
 }
 
-VK_LAYER_EXPORT void VKAPI vkClearDescriptorSets(VK_DESCRIPTOR_POOL descriptorPool, uint32_t count, const VK_DESCRIPTOR_SET* pDescriptorSets)
+VK_LAYER_EXPORT void VKAPI vkClearDescriptorSets(VkDescriptorPool descriptorPool, uint32_t count, const VkDescriptorSet* pDescriptorSets)
 {
 
     nextTable.ClearDescriptorSets(descriptorPool, count, pDescriptorSets);
 }
 
-VK_LAYER_EXPORT void VKAPI vkUpdateDescriptors(VK_DESCRIPTOR_SET descriptorSet, uint32_t updateCount, const void** ppUpdateArray)
+VK_LAYER_EXPORT void VKAPI vkUpdateDescriptors(VkDescriptorSet descriptorSet, uint32_t updateCount, const void** ppUpdateArray)
 {
 
     nextTable.UpdateDescriptors(descriptorSet, updateCount, ppUpdateArray);
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkCreateDynamicViewportState(VK_DEVICE device, const VK_DYNAMIC_VP_STATE_CREATE_INFO* pCreateInfo, VK_DYNAMIC_VP_STATE_OBJECT* pState)
+VK_LAYER_EXPORT VkResult VKAPI vkCreateDynamicViewportState(VkDevice device, const VkDynamicVpStateCreateInfo* pCreateInfo, VkDynamicVpStateObject* pState)
 {
     char str[1024];
     if (!pCreateInfo) {
@@ -1027,11 +1027,11 @@ VK_LAYER_EXPORT VK_RESULT VKAPI vkCreateDynamicViewportState(VK_DEVICE device, c
         sprintf(str, "Parameter pCreateInfo to function CreateDynamicViewportState contains an invalid value.");
         layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
     }
-    VK_RESULT result = nextTable.CreateDynamicViewportState(device, pCreateInfo, pState);
+    VkResult result = nextTable.CreateDynamicViewportState(device, pCreateInfo, pState);
     return result;
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkCreateDynamicRasterState(VK_DEVICE device, const VK_DYNAMIC_RS_STATE_CREATE_INFO* pCreateInfo, VK_DYNAMIC_RS_STATE_OBJECT* pState)
+VK_LAYER_EXPORT VkResult VKAPI vkCreateDynamicRasterState(VkDevice device, const VkDynamicRsStateCreateInfo* pCreateInfo, VkDynamicRsStateObject* pState)
 {
     char str[1024];
     if (!pCreateInfo) {
@@ -1042,11 +1042,11 @@ VK_LAYER_EXPORT VK_RESULT VKAPI vkCreateDynamicRasterState(VK_DEVICE device, con
         sprintf(str, "Parameter pCreateInfo to function CreateDynamicRasterState contains an invalid value.");
         layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
     }
-    VK_RESULT result = nextTable.CreateDynamicRasterState(device, pCreateInfo, pState);
+    VkResult result = nextTable.CreateDynamicRasterState(device, pCreateInfo, pState);
     return result;
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkCreateDynamicColorBlendState(VK_DEVICE device, const VK_DYNAMIC_CB_STATE_CREATE_INFO* pCreateInfo, VK_DYNAMIC_CB_STATE_OBJECT* pState)
+VK_LAYER_EXPORT VkResult VKAPI vkCreateDynamicColorBlendState(VkDevice device, const VkDynamicCbStateCreateInfo* pCreateInfo, VkDynamicCbStateObject* pState)
 {
     char str[1024];
     if (!pCreateInfo) {
@@ -1057,11 +1057,11 @@ VK_LAYER_EXPORT VK_RESULT VKAPI vkCreateDynamicColorBlendState(VK_DEVICE device,
         sprintf(str, "Parameter pCreateInfo to function CreateDynamicColorBlendState contains an invalid value.");
         layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
     }
-    VK_RESULT result = nextTable.CreateDynamicColorBlendState(device, pCreateInfo, pState);
+    VkResult result = nextTable.CreateDynamicColorBlendState(device, pCreateInfo, pState);
     return result;
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkCreateDynamicDepthStencilState(VK_DEVICE device, const VK_DYNAMIC_DS_STATE_CREATE_INFO* pCreateInfo, VK_DYNAMIC_DS_STATE_OBJECT* pState)
+VK_LAYER_EXPORT VkResult VKAPI vkCreateDynamicDepthStencilState(VkDevice device, const VkDynamicDsStateCreateInfo* pCreateInfo, VkDynamicDsStateObject* pState)
 {
     char str[1024];
     if (!pCreateInfo) {
@@ -1072,15 +1072,15 @@ VK_LAYER_EXPORT VK_RESULT VKAPI vkCreateDynamicDepthStencilState(VK_DEVICE devic
         sprintf(str, "Parameter pCreateInfo to function CreateDynamicDepthStencilState contains an invalid value.");
         layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
     }
-    VK_RESULT result = nextTable.CreateDynamicDepthStencilState(device, pCreateInfo, pState);
+    VkResult result = nextTable.CreateDynamicDepthStencilState(device, pCreateInfo, pState);
     return result;
 }
 
-void PreCreateCommandBuffer(VK_DEVICE device, const VK_CMD_BUFFER_CREATE_INFO* pCreateInfo)
+void PreCreateCommandBuffer(VkDevice device, const VkCmdBufferCreateInfo* pCreateInfo)
 {
     if(device == nullptr)
     {
-        char const str[] = "vkCreateCommandBuffer parameter, VK_DEVICE device, is "\
+        char const str[] = "vkCreateCommandBuffer parameter, VkDevice device, is "\
             "nullptr (precondition).";
         layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
         return;
@@ -1088,7 +1088,7 @@ void PreCreateCommandBuffer(VK_DEVICE device, const VK_CMD_BUFFER_CREATE_INFO* p
 
     if(pCreateInfo == nullptr)
     {
-        char const str[] = "vkCreateCommandBuffer parameter, VK_CMD_BUFFER_CREATE_INFO* pCreateInfo, is "\
+        char const str[] = "vkCreateCommandBuffer parameter, VkCmdBufferCreateInfo* pCreateInfo, is "\
             "nullptr (precondition).";
         layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
         return;
@@ -1103,11 +1103,11 @@ void PreCreateCommandBuffer(VK_DEVICE device, const VK_CMD_BUFFER_CREATE_INFO* p
     }
 }
 
-void PostCreateCommandBuffer(VK_RESULT result, VK_CMD_BUFFER* pCmdBuffer)
+void PostCreateCommandBuffer(VkResult result, VkCmdBuffer* pCmdBuffer)
 {
     if(result != VK_SUCCESS)
     {
-        // TODO: Spit out VK_RESULT value.
+        // TODO: Spit out VkResult value.
         char const str[] = "vkCreateCommandBuffer failed (postcondition).";
         layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
         return;
@@ -1115,22 +1115,22 @@ void PostCreateCommandBuffer(VK_RESULT result, VK_CMD_BUFFER* pCmdBuffer)
 
     if(pCmdBuffer == nullptr)
     {
-        char const str[] = "vkCreateCommandBuffer parameter, VK_CMD_BUFFER* pCmdBuffer, is nullptr (postcondition).";
+        char const str[] = "vkCreateCommandBuffer parameter, VkCmdBuffer* pCmdBuffer, is nullptr (postcondition).";
         layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
         return;
     }
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkCreateCommandBuffer(VK_DEVICE device,
-    const VK_CMD_BUFFER_CREATE_INFO* pCreateInfo, VK_CMD_BUFFER* pCmdBuffer)
+VK_LAYER_EXPORT VkResult VKAPI vkCreateCommandBuffer(VkDevice device,
+    const VkCmdBufferCreateInfo* pCreateInfo, VkCmdBuffer* pCmdBuffer)
 {
     PreCreateCommandBuffer(device, pCreateInfo);
-    VK_RESULT result = nextTable.CreateCommandBuffer(device, pCreateInfo, pCmdBuffer);
+    VkResult result = nextTable.CreateCommandBuffer(device, pCreateInfo, pCmdBuffer);
     PostCreateCommandBuffer(result, pCmdBuffer);
     return result;
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkBeginCommandBuffer(VK_CMD_BUFFER cmdBuffer, const VK_CMD_BUFFER_BEGIN_INFO* pBeginInfo)
+VK_LAYER_EXPORT VkResult VKAPI vkBeginCommandBuffer(VkCmdBuffer cmdBuffer, const VkCmdBufferBeginInfo* pBeginInfo)
 {
     char str[1024];
     if (!pBeginInfo) {
@@ -1141,25 +1141,25 @@ VK_LAYER_EXPORT VK_RESULT VKAPI vkBeginCommandBuffer(VK_CMD_BUFFER cmdBuffer, co
         sprintf(str, "Parameter pBeginInfo to function BeginCommandBuffer contains an invalid value.");
         layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
     }
-    VK_RESULT result = nextTable.BeginCommandBuffer(cmdBuffer, pBeginInfo);
+    VkResult result = nextTable.BeginCommandBuffer(cmdBuffer, pBeginInfo);
     return result;
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkEndCommandBuffer(VK_CMD_BUFFER cmdBuffer)
+VK_LAYER_EXPORT VkResult VKAPI vkEndCommandBuffer(VkCmdBuffer cmdBuffer)
 {
 
-    VK_RESULT result = nextTable.EndCommandBuffer(cmdBuffer);
+    VkResult result = nextTable.EndCommandBuffer(cmdBuffer);
     return result;
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkResetCommandBuffer(VK_CMD_BUFFER cmdBuffer)
+VK_LAYER_EXPORT VkResult VKAPI vkResetCommandBuffer(VkCmdBuffer cmdBuffer)
 {
 
-    VK_RESULT result = nextTable.ResetCommandBuffer(cmdBuffer);
+    VkResult result = nextTable.ResetCommandBuffer(cmdBuffer);
     return result;
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdBindPipeline(VK_CMD_BUFFER cmdBuffer, VK_PIPELINE_BIND_POINT pipelineBindPoint, VK_PIPELINE pipeline)
+VK_LAYER_EXPORT void VKAPI vkCmdBindPipeline(VkCmdBuffer cmdBuffer, VkPipelineBindPoint pipelineBindPoint, VkPipeline pipeline)
 {
     char str[1024];
     if (!validate_VK_PIPELINE_BIND_POINT(pipelineBindPoint)) {
@@ -1169,7 +1169,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdBindPipeline(VK_CMD_BUFFER cmdBuffer, VK_PIPELIN
     nextTable.CmdBindPipeline(cmdBuffer, pipelineBindPoint, pipeline);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdBindDynamicStateObject(VK_CMD_BUFFER cmdBuffer, VK_STATE_BIND_POINT stateBindPoint, VK_DYNAMIC_STATE_OBJECT state)
+VK_LAYER_EXPORT void VKAPI vkCmdBindDynamicStateObject(VkCmdBuffer cmdBuffer, VkStateBindPoint stateBindPoint, VkDynamicStateObject state)
 {
     char str[1024];
     if (!validate_VK_STATE_BIND_POINT(stateBindPoint)) {
@@ -1179,7 +1179,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdBindDynamicStateObject(VK_CMD_BUFFER cmdBuffer, 
     nextTable.CmdBindDynamicStateObject(cmdBuffer, stateBindPoint, state);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdBindDescriptorSets(VK_CMD_BUFFER cmdBuffer, VK_PIPELINE_BIND_POINT pipelineBindPoint, VK_DESCRIPTOR_SET_LAYOUT_CHAIN layoutChain, uint32_t layoutChainSlot, uint32_t count, const VK_DESCRIPTOR_SET* pDescriptorSets, const uint32_t* pUserData)
+VK_LAYER_EXPORT void VKAPI vkCmdBindDescriptorSets(VkCmdBuffer cmdBuffer, VkPipelineBindPoint pipelineBindPoint, VkDescriptorSetLayoutChain layoutChain, uint32_t layoutChainSlot, uint32_t count, const VkDescriptorSet* pDescriptorSets, const uint32_t* pUserData)
 {
     char str[1024];
     if (!validate_VK_PIPELINE_BIND_POINT(pipelineBindPoint)) {
@@ -1189,13 +1189,13 @@ VK_LAYER_EXPORT void VKAPI vkCmdBindDescriptorSets(VK_CMD_BUFFER cmdBuffer, VK_P
     nextTable.CmdBindDescriptorSets(cmdBuffer, pipelineBindPoint, layoutChain, layoutChainSlot, count, pDescriptorSets, pUserData);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdBindVertexBuffer(VK_CMD_BUFFER cmdBuffer, VK_BUFFER buffer, VK_GPU_SIZE offset, uint32_t binding)
+VK_LAYER_EXPORT void VKAPI vkCmdBindVertexBuffer(VkCmdBuffer cmdBuffer, VkBuffer buffer, VkGpuSize offset, uint32_t binding)
 {
 
     nextTable.CmdBindVertexBuffer(cmdBuffer, buffer, offset, binding);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdBindIndexBuffer(VK_CMD_BUFFER cmdBuffer, VK_BUFFER buffer, VK_GPU_SIZE offset, VK_INDEX_TYPE indexType)
+VK_LAYER_EXPORT void VKAPI vkCmdBindIndexBuffer(VkCmdBuffer cmdBuffer, VkBuffer buffer, VkGpuSize offset, VkIndexType indexType)
 {
     char str[1024];
     if (!validate_VK_INDEX_TYPE(indexType)) {
@@ -1205,43 +1205,43 @@ VK_LAYER_EXPORT void VKAPI vkCmdBindIndexBuffer(VK_CMD_BUFFER cmdBuffer, VK_BUFF
     nextTable.CmdBindIndexBuffer(cmdBuffer, buffer, offset, indexType);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdDraw(VK_CMD_BUFFER cmdBuffer, uint32_t firstVertex, uint32_t vertexCount, uint32_t firstInstance, uint32_t instanceCount)
+VK_LAYER_EXPORT void VKAPI vkCmdDraw(VkCmdBuffer cmdBuffer, uint32_t firstVertex, uint32_t vertexCount, uint32_t firstInstance, uint32_t instanceCount)
 {
 
     nextTable.CmdDraw(cmdBuffer, firstVertex, vertexCount, firstInstance, instanceCount);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdDrawIndexed(VK_CMD_BUFFER cmdBuffer, uint32_t firstIndex, uint32_t indexCount, int32_t vertexOffset, uint32_t firstInstance, uint32_t instanceCount)
+VK_LAYER_EXPORT void VKAPI vkCmdDrawIndexed(VkCmdBuffer cmdBuffer, uint32_t firstIndex, uint32_t indexCount, int32_t vertexOffset, uint32_t firstInstance, uint32_t instanceCount)
 {
 
     nextTable.CmdDrawIndexed(cmdBuffer, firstIndex, indexCount, vertexOffset, firstInstance, instanceCount);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdDrawIndirect(VK_CMD_BUFFER cmdBuffer, VK_BUFFER buffer, VK_GPU_SIZE offset, uint32_t count, uint32_t stride)
+VK_LAYER_EXPORT void VKAPI vkCmdDrawIndirect(VkCmdBuffer cmdBuffer, VkBuffer buffer, VkGpuSize offset, uint32_t count, uint32_t stride)
 {
 
     nextTable.CmdDrawIndirect(cmdBuffer, buffer, offset, count, stride);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdDrawIndexedIndirect(VK_CMD_BUFFER cmdBuffer, VK_BUFFER buffer, VK_GPU_SIZE offset, uint32_t count, uint32_t stride)
+VK_LAYER_EXPORT void VKAPI vkCmdDrawIndexedIndirect(VkCmdBuffer cmdBuffer, VkBuffer buffer, VkGpuSize offset, uint32_t count, uint32_t stride)
 {
 
     nextTable.CmdDrawIndexedIndirect(cmdBuffer, buffer, offset, count, stride);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdDispatch(VK_CMD_BUFFER cmdBuffer, uint32_t x, uint32_t y, uint32_t z)
+VK_LAYER_EXPORT void VKAPI vkCmdDispatch(VkCmdBuffer cmdBuffer, uint32_t x, uint32_t y, uint32_t z)
 {
 
     nextTable.CmdDispatch(cmdBuffer, x, y, z);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdDispatchIndirect(VK_CMD_BUFFER cmdBuffer, VK_BUFFER buffer, VK_GPU_SIZE offset)
+VK_LAYER_EXPORT void VKAPI vkCmdDispatchIndirect(VkCmdBuffer cmdBuffer, VkBuffer buffer, VkGpuSize offset)
 {
 
     nextTable.CmdDispatchIndirect(cmdBuffer, buffer, offset);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdCopyBuffer(VK_CMD_BUFFER cmdBuffer, VK_BUFFER srcBuffer, VK_BUFFER destBuffer, uint32_t regionCount, const VK_BUFFER_COPY* pRegions)
+VK_LAYER_EXPORT void VKAPI vkCmdCopyBuffer(VkCmdBuffer cmdBuffer, VkBuffer srcBuffer, VkBuffer destBuffer, uint32_t regionCount, const VkBufferCopy* pRegions)
 {
     char str[1024];
     uint32_t i;
@@ -1254,7 +1254,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdCopyBuffer(VK_CMD_BUFFER cmdBuffer, VK_BUFFER sr
     nextTable.CmdCopyBuffer(cmdBuffer, srcBuffer, destBuffer, regionCount, pRegions);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdCopyImage(VK_CMD_BUFFER cmdBuffer, VK_IMAGE srcImage, VK_IMAGE_LAYOUT srcImageLayout, VK_IMAGE destImage, VK_IMAGE_LAYOUT destImageLayout, uint32_t regionCount, const VK_IMAGE_COPY* pRegions)
+VK_LAYER_EXPORT void VKAPI vkCmdCopyImage(VkCmdBuffer cmdBuffer, VkImage srcImage, VkImageLayout srcImageLayout, VkImage destImage, VkImageLayout destImageLayout, uint32_t regionCount, const VkImageCopy* pRegions)
 {
     char str[1024];
     if (!validate_VK_IMAGE_LAYOUT(srcImageLayout)) {
@@ -1275,7 +1275,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdCopyImage(VK_CMD_BUFFER cmdBuffer, VK_IMAGE srcI
     nextTable.CmdCopyImage(cmdBuffer, srcImage, srcImageLayout, destImage, destImageLayout, regionCount, pRegions);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdBlitImage(VK_CMD_BUFFER cmdBuffer, VK_IMAGE srcImage, VK_IMAGE_LAYOUT srcImageLayout, VK_IMAGE destImage, VK_IMAGE_LAYOUT destImageLayout, uint32_t regionCount, const VK_IMAGE_BLIT* pRegions)
+VK_LAYER_EXPORT void VKAPI vkCmdBlitImage(VkCmdBuffer cmdBuffer, VkImage srcImage, VkImageLayout srcImageLayout, VkImage destImage, VkImageLayout destImageLayout, uint32_t regionCount, const VkImageBlit* pRegions)
 {
     char str[1024];
     if (!validate_VK_IMAGE_LAYOUT(srcImageLayout)) {
@@ -1296,7 +1296,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdBlitImage(VK_CMD_BUFFER cmdBuffer, VK_IMAGE srcI
     nextTable.CmdBlitImage(cmdBuffer, srcImage, srcImageLayout, destImage, destImageLayout, regionCount, pRegions);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdCopyBufferToImage(VK_CMD_BUFFER cmdBuffer, VK_BUFFER srcBuffer, VK_IMAGE destImage, VK_IMAGE_LAYOUT destImageLayout, uint32_t regionCount, const VK_BUFFER_IMAGE_COPY* pRegions)
+VK_LAYER_EXPORT void VKAPI vkCmdCopyBufferToImage(VkCmdBuffer cmdBuffer, VkBuffer srcBuffer, VkImage destImage, VkImageLayout destImageLayout, uint32_t regionCount, const VkBufferImageCopy* pRegions)
 {
     char str[1024];
     if (!validate_VK_IMAGE_LAYOUT(destImageLayout)) {
@@ -1313,7 +1313,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdCopyBufferToImage(VK_CMD_BUFFER cmdBuffer, VK_BU
     nextTable.CmdCopyBufferToImage(cmdBuffer, srcBuffer, destImage, destImageLayout, regionCount, pRegions);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdCopyImageToBuffer(VK_CMD_BUFFER cmdBuffer, VK_IMAGE srcImage, VK_IMAGE_LAYOUT srcImageLayout, VK_BUFFER destBuffer, uint32_t regionCount, const VK_BUFFER_IMAGE_COPY* pRegions)
+VK_LAYER_EXPORT void VKAPI vkCmdCopyImageToBuffer(VkCmdBuffer cmdBuffer, VkImage srcImage, VkImageLayout srcImageLayout, VkBuffer destBuffer, uint32_t regionCount, const VkBufferImageCopy* pRegions)
 {
     char str[1024];
     if (!validate_VK_IMAGE_LAYOUT(srcImageLayout)) {
@@ -1330,7 +1330,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdCopyImageToBuffer(VK_CMD_BUFFER cmdBuffer, VK_IM
     nextTable.CmdCopyImageToBuffer(cmdBuffer, srcImage, srcImageLayout, destBuffer, regionCount, pRegions);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdCloneImageData(VK_CMD_BUFFER cmdBuffer, VK_IMAGE srcImage, VK_IMAGE_LAYOUT srcImageLayout, VK_IMAGE destImage, VK_IMAGE_LAYOUT destImageLayout)
+VK_LAYER_EXPORT void VKAPI vkCmdCloneImageData(VkCmdBuffer cmdBuffer, VkImage srcImage, VkImageLayout srcImageLayout, VkImage destImage, VkImageLayout destImageLayout)
 {
     char str[1024];
     if (!validate_VK_IMAGE_LAYOUT(srcImageLayout)) {
@@ -1344,19 +1344,19 @@ VK_LAYER_EXPORT void VKAPI vkCmdCloneImageData(VK_CMD_BUFFER cmdBuffer, VK_IMAGE
     nextTable.CmdCloneImageData(cmdBuffer, srcImage, srcImageLayout, destImage, destImageLayout);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdUpdateBuffer(VK_CMD_BUFFER cmdBuffer, VK_BUFFER destBuffer, VK_GPU_SIZE destOffset, VK_GPU_SIZE dataSize, const uint32_t* pData)
+VK_LAYER_EXPORT void VKAPI vkCmdUpdateBuffer(VkCmdBuffer cmdBuffer, VkBuffer destBuffer, VkGpuSize destOffset, VkGpuSize dataSize, const uint32_t* pData)
 {
 
     nextTable.CmdUpdateBuffer(cmdBuffer, destBuffer, destOffset, dataSize, pData);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdFillBuffer(VK_CMD_BUFFER cmdBuffer, VK_BUFFER destBuffer, VK_GPU_SIZE destOffset, VK_GPU_SIZE fillSize, uint32_t data)
+VK_LAYER_EXPORT void VKAPI vkCmdFillBuffer(VkCmdBuffer cmdBuffer, VkBuffer destBuffer, VkGpuSize destOffset, VkGpuSize fillSize, uint32_t data)
 {
 
     nextTable.CmdFillBuffer(cmdBuffer, destBuffer, destOffset, fillSize, data);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdClearColorImage(VK_CMD_BUFFER cmdBuffer, VK_IMAGE image, VK_IMAGE_LAYOUT imageLayout, VK_CLEAR_COLOR color, uint32_t rangeCount, const VK_IMAGE_SUBRESOURCE_RANGE* pRanges)
+VK_LAYER_EXPORT void VKAPI vkCmdClearColorImage(VkCmdBuffer cmdBuffer, VkImage image, VkImageLayout imageLayout, VkClearColor color, uint32_t rangeCount, const VkImageSubresourceRange* pRanges)
 {
     char str[1024];
     if (!validate_VK_IMAGE_LAYOUT(imageLayout)) {
@@ -1373,7 +1373,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdClearColorImage(VK_CMD_BUFFER cmdBuffer, VK_IMAG
     nextTable.CmdClearColorImage(cmdBuffer, image, imageLayout, color, rangeCount, pRanges);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdClearDepthStencil(VK_CMD_BUFFER cmdBuffer, VK_IMAGE image, VK_IMAGE_LAYOUT imageLayout, float depth, uint32_t stencil, uint32_t rangeCount, const VK_IMAGE_SUBRESOURCE_RANGE* pRanges)
+VK_LAYER_EXPORT void VKAPI vkCmdClearDepthStencil(VkCmdBuffer cmdBuffer, VkImage image, VkImageLayout imageLayout, float depth, uint32_t stencil, uint32_t rangeCount, const VkImageSubresourceRange* pRanges)
 {
     char str[1024];
     if (!validate_VK_IMAGE_LAYOUT(imageLayout)) {
@@ -1390,7 +1390,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdClearDepthStencil(VK_CMD_BUFFER cmdBuffer, VK_IM
     nextTable.CmdClearDepthStencil(cmdBuffer, image, imageLayout, depth, stencil, rangeCount, pRanges);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdResolveImage(VK_CMD_BUFFER cmdBuffer, VK_IMAGE srcImage, VK_IMAGE_LAYOUT srcImageLayout, VK_IMAGE destImage, VK_IMAGE_LAYOUT destImageLayout, uint32_t rectCount, const VK_IMAGE_RESOLVE* pRects)
+VK_LAYER_EXPORT void VKAPI vkCmdResolveImage(VkCmdBuffer cmdBuffer, VkImage srcImage, VkImageLayout srcImageLayout, VkImage destImage, VkImageLayout destImageLayout, uint32_t rectCount, const VkImageResolve* pRects)
 {
     char str[1024];
     if (!validate_VK_IMAGE_LAYOUT(srcImageLayout)) {
@@ -1411,7 +1411,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdResolveImage(VK_CMD_BUFFER cmdBuffer, VK_IMAGE s
     nextTable.CmdResolveImage(cmdBuffer, srcImage, srcImageLayout, destImage, destImageLayout, rectCount, pRects);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdSetEvent(VK_CMD_BUFFER cmdBuffer, VK_EVENT event, VK_PIPE_EVENT pipeEvent)
+VK_LAYER_EXPORT void VKAPI vkCmdSetEvent(VkCmdBuffer cmdBuffer, VkEvent event, VkPipeEvent pipeEvent)
 {
     char str[1024];
     if (!validate_VK_PIPE_EVENT(pipeEvent)) {
@@ -1421,7 +1421,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdSetEvent(VK_CMD_BUFFER cmdBuffer, VK_EVENT event
     nextTable.CmdSetEvent(cmdBuffer, event, pipeEvent);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdResetEvent(VK_CMD_BUFFER cmdBuffer, VK_EVENT event, VK_PIPE_EVENT pipeEvent)
+VK_LAYER_EXPORT void VKAPI vkCmdResetEvent(VkCmdBuffer cmdBuffer, VkEvent event, VkPipeEvent pipeEvent)
 {
     char str[1024];
     if (!validate_VK_PIPE_EVENT(pipeEvent)) {
@@ -1431,7 +1431,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdResetEvent(VK_CMD_BUFFER cmdBuffer, VK_EVENT eve
     nextTable.CmdResetEvent(cmdBuffer, event, pipeEvent);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdWaitEvents(VK_CMD_BUFFER cmdBuffer, const VK_EVENT_WAIT_INFO* pWaitInfo)
+VK_LAYER_EXPORT void VKAPI vkCmdWaitEvents(VkCmdBuffer cmdBuffer, const VkEventWaitInfo* pWaitInfo)
 {
     char str[1024];
     if (!pWaitInfo) {
@@ -1445,7 +1445,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdWaitEvents(VK_CMD_BUFFER cmdBuffer, const VK_EVE
     nextTable.CmdWaitEvents(cmdBuffer, pWaitInfo);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdPipelineBarrier(VK_CMD_BUFFER cmdBuffer, const VK_PIPELINE_BARRIER* pBarrier)
+VK_LAYER_EXPORT void VKAPI vkCmdPipelineBarrier(VkCmdBuffer cmdBuffer, const VkPipelineBarrier* pBarrier)
 {
     char str[1024];
     if (!pBarrier) {
@@ -1459,25 +1459,25 @@ VK_LAYER_EXPORT void VKAPI vkCmdPipelineBarrier(VK_CMD_BUFFER cmdBuffer, const V
     nextTable.CmdPipelineBarrier(cmdBuffer, pBarrier);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdBeginQuery(VK_CMD_BUFFER cmdBuffer, VK_QUERY_POOL queryPool, uint32_t slot, VK_FLAGS flags)
+VK_LAYER_EXPORT void VKAPI vkCmdBeginQuery(VkCmdBuffer cmdBuffer, VkQueryPool queryPool, uint32_t slot, VkFlags flags)
 {
 
     nextTable.CmdBeginQuery(cmdBuffer, queryPool, slot, flags);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdEndQuery(VK_CMD_BUFFER cmdBuffer, VK_QUERY_POOL queryPool, uint32_t slot)
+VK_LAYER_EXPORT void VKAPI vkCmdEndQuery(VkCmdBuffer cmdBuffer, VkQueryPool queryPool, uint32_t slot)
 {
 
     nextTable.CmdEndQuery(cmdBuffer, queryPool, slot);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdResetQueryPool(VK_CMD_BUFFER cmdBuffer, VK_QUERY_POOL queryPool, uint32_t startQuery, uint32_t queryCount)
+VK_LAYER_EXPORT void VKAPI vkCmdResetQueryPool(VkCmdBuffer cmdBuffer, VkQueryPool queryPool, uint32_t startQuery, uint32_t queryCount)
 {
 
     nextTable.CmdResetQueryPool(cmdBuffer, queryPool, startQuery, queryCount);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdWriteTimestamp(VK_CMD_BUFFER cmdBuffer, VK_TIMESTAMP_TYPE timestampType, VK_BUFFER destBuffer, VK_GPU_SIZE destOffset)
+VK_LAYER_EXPORT void VKAPI vkCmdWriteTimestamp(VkCmdBuffer cmdBuffer, VkTimestampType timestampType, VkBuffer destBuffer, VkGpuSize destOffset)
 {
     char str[1024];
     if (!validate_VK_TIMESTAMP_TYPE(timestampType)) {
@@ -1487,7 +1487,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdWriteTimestamp(VK_CMD_BUFFER cmdBuffer, VK_TIMES
     nextTable.CmdWriteTimestamp(cmdBuffer, timestampType, destBuffer, destOffset);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdInitAtomicCounters(VK_CMD_BUFFER cmdBuffer, VK_PIPELINE_BIND_POINT pipelineBindPoint, uint32_t startCounter, uint32_t counterCount, const uint32_t* pData)
+VK_LAYER_EXPORT void VKAPI vkCmdInitAtomicCounters(VkCmdBuffer cmdBuffer, VkPipelineBindPoint pipelineBindPoint, uint32_t startCounter, uint32_t counterCount, const uint32_t* pData)
 {
     char str[1024];
     if (!validate_VK_PIPELINE_BIND_POINT(pipelineBindPoint)) {
@@ -1497,7 +1497,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdInitAtomicCounters(VK_CMD_BUFFER cmdBuffer, VK_P
     nextTable.CmdInitAtomicCounters(cmdBuffer, pipelineBindPoint, startCounter, counterCount, pData);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdLoadAtomicCounters(VK_CMD_BUFFER cmdBuffer, VK_PIPELINE_BIND_POINT pipelineBindPoint, uint32_t startCounter, uint32_t counterCount, VK_BUFFER srcBuffer, VK_GPU_SIZE srcOffset)
+VK_LAYER_EXPORT void VKAPI vkCmdLoadAtomicCounters(VkCmdBuffer cmdBuffer, VkPipelineBindPoint pipelineBindPoint, uint32_t startCounter, uint32_t counterCount, VkBuffer srcBuffer, VkGpuSize srcOffset)
 {
     char str[1024];
     if (!validate_VK_PIPELINE_BIND_POINT(pipelineBindPoint)) {
@@ -1507,7 +1507,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdLoadAtomicCounters(VK_CMD_BUFFER cmdBuffer, VK_P
     nextTable.CmdLoadAtomicCounters(cmdBuffer, pipelineBindPoint, startCounter, counterCount, srcBuffer, srcOffset);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdSaveAtomicCounters(VK_CMD_BUFFER cmdBuffer, VK_PIPELINE_BIND_POINT pipelineBindPoint, uint32_t startCounter, uint32_t counterCount, VK_BUFFER destBuffer, VK_GPU_SIZE destOffset)
+VK_LAYER_EXPORT void VKAPI vkCmdSaveAtomicCounters(VkCmdBuffer cmdBuffer, VkPipelineBindPoint pipelineBindPoint, uint32_t startCounter, uint32_t counterCount, VkBuffer destBuffer, VkGpuSize destOffset)
 {
     char str[1024];
     if (!validate_VK_PIPELINE_BIND_POINT(pipelineBindPoint)) {
@@ -1517,7 +1517,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdSaveAtomicCounters(VK_CMD_BUFFER cmdBuffer, VK_P
     nextTable.CmdSaveAtomicCounters(cmdBuffer, pipelineBindPoint, startCounter, counterCount, destBuffer, destOffset);
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkCreateFramebuffer(VK_DEVICE device, const VK_FRAMEBUFFER_CREATE_INFO* pCreateInfo, VK_FRAMEBUFFER* pFramebuffer)
+VK_LAYER_EXPORT VkResult VKAPI vkCreateFramebuffer(VkDevice device, const VkFramebufferCreateInfo* pCreateInfo, VkFramebuffer* pFramebuffer)
 {
     char str[1024];
     if (!pCreateInfo) {
@@ -1528,16 +1528,16 @@ VK_LAYER_EXPORT VK_RESULT VKAPI vkCreateFramebuffer(VK_DEVICE device, const VK_F
         sprintf(str, "Parameter pCreateInfo to function CreateFramebuffer contains an invalid value.");
         layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
     }
-    VK_RESULT result = nextTable.CreateFramebuffer(device, pCreateInfo, pFramebuffer);
+    VkResult result = nextTable.CreateFramebuffer(device, pCreateInfo, pFramebuffer);
     return result;
 }
 
 
-void PreCreateRenderPass(VK_DEVICE device, const VK_RENDER_PASS_CREATE_INFO* pCreateInfo)
+void PreCreateRenderPass(VkDevice device, const VkRenderPassCreateInfo* pCreateInfo)
 {
     if(pCreateInfo == nullptr)
     {
-        char const str[] = "vkCreateRenderPass parameter, VK_RENDER_PASS_CREATE_INFO* pCreateInfo, is "\
+        char const str[] = "vkCreateRenderPass parameter, VkRenderPassCreateInfo* pCreateInfo, is "\
             "nullptr (precondition).";
         layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
         return;
@@ -1553,7 +1553,7 @@ void PreCreateRenderPass(VK_DEVICE device, const VK_RENDER_PASS_CREATE_INFO* pCr
 
     if(!vk_validate_vk_rect(&pCreateInfo->renderArea))
     {
-        char const str[] = "vkCreateRenderPass parameter, VK_RECT pCreateInfo->renderArea, is invalid "\
+        char const str[] = "vkCreateRenderPass parameter, VkRect pCreateInfo->renderArea, is invalid "\
             "(precondition).";
         layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
         return;
@@ -1561,7 +1561,7 @@ void PreCreateRenderPass(VK_DEVICE device, const VK_RENDER_PASS_CREATE_INFO* pCr
 
     if(!vk_validate_vk_extent2d(&pCreateInfo->extent))
     {
-        char const str[] = "vkCreateRenderPass parameter, VK_EXTENT2D pCreateInfo->extent, is invalid "\
+        char const str[] = "vkCreateRenderPass parameter, VkExtent2D pCreateInfo->extent, is invalid "\
             "(precondition).";
         layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
         return;
@@ -1569,7 +1569,7 @@ void PreCreateRenderPass(VK_DEVICE device, const VK_RENDER_PASS_CREATE_INFO* pCr
 
     if(pCreateInfo->pColorFormats == nullptr)
     {
-        char const str[] = "vkCreateRenderPass parameter, VK_FORMAT* pCreateInfo->pColorFormats, "\
+        char const str[] = "vkCreateRenderPass parameter, VkFormat* pCreateInfo->pColorFormats, "\
             "is nullptr (precondition).";
         layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
         return;
@@ -1580,20 +1580,20 @@ void PreCreateRenderPass(VK_DEVICE device, const VK_RENDER_PASS_CREATE_INFO* pCr
         if(!validate_VK_FORMAT(pCreateInfo->pColorFormats[i]))
         {
             std::stringstream ss;
-            ss << "vkCreateRenderPass parameter, VK_FORMAT pCreateInfo->pColorFormats[" << i <<
+            ss << "vkCreateRenderPass parameter, VkFormat pCreateInfo->pColorFormats[" << i <<
                 "], is unrecognized (precondition).";
             layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", ss.str().c_str());
             continue;
         }
 
-        VK_FORMAT_PROPERTIES properties;
+        VkFormatProperties properties;
         size_t size = sizeof(properties);
-        VK_RESULT result = nextTable.GetFormatInfo(device, pCreateInfo->pColorFormats[i],
+        VkResult result = nextTable.GetFormatInfo(device, pCreateInfo->pColorFormats[i],
             VK_INFO_TYPE_FORMAT_PROPERTIES, &size, &properties);
         if(result != VK_SUCCESS)
         {
             std::stringstream ss;
-            ss << "vkCreateRenderPass parameter, VK_FORMAT pCreateInfo->pColorFormats[" << i <<
+            ss << "vkCreateRenderPass parameter, VkFormat pCreateInfo->pColorFormats[" << i <<
                 "], cannot be validated (precondition).";
             layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", ss.str().c_str());
             continue;
@@ -1602,7 +1602,7 @@ void PreCreateRenderPass(VK_DEVICE device, const VK_RENDER_PASS_CREATE_INFO* pCr
         if((properties.linearTilingFeatures) == 0 && (properties.optimalTilingFeatures == 0))
         {
             std::stringstream ss;
-            ss << "vkCreateRenderPass parameter, VK_FORMAT pCreateInfo->pColorFormats[" << i <<
+            ss << "vkCreateRenderPass parameter, VkFormat pCreateInfo->pColorFormats[" << i <<
                 "], contains unsupported format (precondition).";
             layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", ss.str().c_str());
             continue;
@@ -1612,7 +1612,7 @@ void PreCreateRenderPass(VK_DEVICE device, const VK_RENDER_PASS_CREATE_INFO* pCr
 
     if(pCreateInfo->pColorLayouts == nullptr)
     {
-        char const str[] = "vkCreateRenderPass parameter, VK_IMAGE_LAYOUT* pCreateInfo->pColorLayouts, "\
+        char const str[] = "vkCreateRenderPass parameter, VkImageLayout* pCreateInfo->pColorLayouts, "\
             "is nullptr (precondition).";
         layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
         return;
@@ -1623,7 +1623,7 @@ void PreCreateRenderPass(VK_DEVICE device, const VK_RENDER_PASS_CREATE_INFO* pCr
         if(!validate_VK_IMAGE_LAYOUT(pCreateInfo->pColorLayouts[i]))
         {
             std::stringstream ss;
-            ss << "vkCreateRenderPass parameter, VK_IMAGE_LAYOUT pCreateInfo->pColorLayouts[" << i <<
+            ss << "vkCreateRenderPass parameter, VkImageLayout pCreateInfo->pColorLayouts[" << i <<
                 "], is unrecognized (precondition).";
             layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", ss.str().c_str());
             continue;
@@ -1632,7 +1632,7 @@ void PreCreateRenderPass(VK_DEVICE device, const VK_RENDER_PASS_CREATE_INFO* pCr
 
     if(pCreateInfo->pColorLoadOps == nullptr)
     {
-        char const str[] = "vkCreateRenderPass parameter, VK_ATTACHMENT_LOAD_OP* pCreateInfo->pColorLoadOps, "\
+        char const str[] = "vkCreateRenderPass parameter, VkAttachmentLoadOp* pCreateInfo->pColorLoadOps, "\
             "is nullptr (precondition).";
         layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
         return;
@@ -1643,7 +1643,7 @@ void PreCreateRenderPass(VK_DEVICE device, const VK_RENDER_PASS_CREATE_INFO* pCr
         if(!validate_VK_ATTACHMENT_LOAD_OP(pCreateInfo->pColorLoadOps[i]))
         {
             std::stringstream ss;
-            ss << "vkCreateRenderPass parameter, VK_ATTACHMENT_LOAD_OP pCreateInfo->pColorLoadOps[" << i <<
+            ss << "vkCreateRenderPass parameter, VkAttachmentLoadOp pCreateInfo->pColorLoadOps[" << i <<
                 "], is unrecognized (precondition).";
             layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", ss.str().c_str());
             continue;
@@ -1652,7 +1652,7 @@ void PreCreateRenderPass(VK_DEVICE device, const VK_RENDER_PASS_CREATE_INFO* pCr
 
     if(pCreateInfo->pColorStoreOps == nullptr)
     {
-        char const str[] = "vkCreateRenderPass parameter, VK_ATTACHMENT_STORE_OP* pCreateInfo->pColorStoreOps, "\
+        char const str[] = "vkCreateRenderPass parameter, VkAttachmentStoreOp* pCreateInfo->pColorStoreOps, "\
             "is nullptr (precondition).";
         layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
         return;
@@ -1663,7 +1663,7 @@ void PreCreateRenderPass(VK_DEVICE device, const VK_RENDER_PASS_CREATE_INFO* pCr
         if(!validate_VK_ATTACHMENT_STORE_OP(pCreateInfo->pColorStoreOps[i]))
         {
             std::stringstream ss;
-            ss << "vkCreateRenderPass parameter, VK_ATTACHMENT_STORE_OP pCreateInfo->pColorStoreOps[" << i <<
+            ss << "vkCreateRenderPass parameter, VkAttachmentStoreOp pCreateInfo->pColorStoreOps[" << i <<
                 "], is unrecognized (precondition).";
             layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", ss.str().c_str());
             continue;
@@ -1672,7 +1672,7 @@ void PreCreateRenderPass(VK_DEVICE device, const VK_RENDER_PASS_CREATE_INFO* pCr
 
     if(pCreateInfo->pColorLoadClearValues == nullptr)
     {
-        char const str[] = "vkCreateRenderPass parameter, VK_CLEAR_COLOR* pCreateInfo->"\
+        char const str[] = "vkCreateRenderPass parameter, VkClearColor* pCreateInfo->"\
             "pColorLoadClearValues, is nullptr (precondition).";
         layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
         return;
@@ -1711,7 +1711,7 @@ void PreCreateRenderPass(VK_DEVICE device, const VK_RENDER_PASS_CREATE_INFO* pCr
         if(!vk_validate_vk_clear_color(&(pCreateInfo->pColorLoadClearValues[i])))
         {
             std::stringstream ss;
-            ss << "vkCreateRenderPass parameter, VK_CLEAR_COLOR pCreateInfo->pColorLoadClearValues[" << i <<
+            ss << "vkCreateRenderPass parameter, VkClearColor pCreateInfo->pColorLoadClearValues[" << i <<
                 "], is invalid (precondition).";
             layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", ss.str().c_str());
             continue;
@@ -1720,19 +1720,19 @@ void PreCreateRenderPass(VK_DEVICE device, const VK_RENDER_PASS_CREATE_INFO* pCr
 
     if(!validate_VK_FORMAT(pCreateInfo->depthStencilFormat))
     {
-        char const str[] = "vkCreateRenderPass parameter, VK_FORMAT pCreateInfo->"\
+        char const str[] = "vkCreateRenderPass parameter, VkFormat pCreateInfo->"\
             "depthStencilFormat, is unrecognized (precondition).";
         layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
         return;
     }
 
-    VK_FORMAT_PROPERTIES properties;
+    VkFormatProperties properties;
     size_t size = sizeof(properties);
-    VK_RESULT result = nextTable.GetFormatInfo(device, pCreateInfo->depthStencilFormat,
+    VkResult result = nextTable.GetFormatInfo(device, pCreateInfo->depthStencilFormat,
         VK_INFO_TYPE_FORMAT_PROPERTIES, &size, &properties);
     if(result != VK_SUCCESS)
     {
-        char const str[] = "vkCreateRenderPass parameter, VK_FORMAT pCreateInfo->"\
+        char const str[] = "vkCreateRenderPass parameter, VkFormat pCreateInfo->"\
             "depthStencilFormat, cannot be validated (precondition).";
         layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
         return;
@@ -1740,7 +1740,7 @@ void PreCreateRenderPass(VK_DEVICE device, const VK_RENDER_PASS_CREATE_INFO* pCr
 
     if((properties.linearTilingFeatures) == 0 && (properties.optimalTilingFeatures == 0))
     {
-        char const str[] = "vkCreateRenderPass parameter, VK_FORMAT pCreateInfo->"\
+        char const str[] = "vkCreateRenderPass parameter, VkFormat pCreateInfo->"\
             "depthStencilFormat, contains unsupported format (precondition).";
         layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
         return;
@@ -1748,7 +1748,7 @@ void PreCreateRenderPass(VK_DEVICE device, const VK_RENDER_PASS_CREATE_INFO* pCr
 
     if(!validate_VK_IMAGE_LAYOUT(pCreateInfo->depthStencilLayout))
     {
-        char const str[] = "vkCreateRenderPass parameter, VK_IMAGE_LAYOUT pCreateInfo->"\
+        char const str[] = "vkCreateRenderPass parameter, VkImageLayout pCreateInfo->"\
             "depthStencilLayout, is unrecognized (precondition).";
         layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
         return;
@@ -1756,7 +1756,7 @@ void PreCreateRenderPass(VK_DEVICE device, const VK_RENDER_PASS_CREATE_INFO* pCr
 
     if(!validate_VK_ATTACHMENT_LOAD_OP(pCreateInfo->depthLoadOp))
     {
-        char const str[] = "vkCreateRenderPass parameter, VK_ATTACHMENT_LOAD_OP pCreateInfo->"\
+        char const str[] = "vkCreateRenderPass parameter, VkAttachmentLoadOp pCreateInfo->"\
             "depthLoadOp, is unrecognized (precondition).";
         layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
         return;
@@ -1764,7 +1764,7 @@ void PreCreateRenderPass(VK_DEVICE device, const VK_RENDER_PASS_CREATE_INFO* pCr
 
     if(!validate_VK_ATTACHMENT_STORE_OP(pCreateInfo->depthStoreOp))
     {
-        char const str[] = "vkCreateRenderPass parameter, VK_ATTACHMENT_STORE_OP pCreateInfo->"\
+        char const str[] = "vkCreateRenderPass parameter, VkAttachmentStoreOp pCreateInfo->"\
             "depthStoreOp, is unrecognized (precondition).";
         layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
         return;
@@ -1772,7 +1772,7 @@ void PreCreateRenderPass(VK_DEVICE device, const VK_RENDER_PASS_CREATE_INFO* pCr
 
     if(!validate_VK_ATTACHMENT_LOAD_OP(pCreateInfo->stencilLoadOp))
     {
-        char const str[] = "vkCreateRenderPass parameter, VK_ATTACHMENT_LOAD_OP pCreateInfo->"\
+        char const str[] = "vkCreateRenderPass parameter, VkAttachmentLoadOp pCreateInfo->"\
             "stencilLoadOp, is unrecognized (precondition).";
         layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
         return;
@@ -1780,18 +1780,18 @@ void PreCreateRenderPass(VK_DEVICE device, const VK_RENDER_PASS_CREATE_INFO* pCr
 
     if(!validate_VK_ATTACHMENT_STORE_OP(pCreateInfo->stencilStoreOp))
     {
-        char const str[] = "vkCreateRenderPass parameter, VK_ATTACHMENT_STORE_OP pCreateInfo->"\
+        char const str[] = "vkCreateRenderPass parameter, VkAttachmentStoreOp pCreateInfo->"\
             "stencilStoreOp, is unrecognized (precondition).";
         layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
         return;
     }
 }
 
-void PostCreateRenderPass(VK_RESULT result, VK_RENDER_PASS* pRenderPass)
+void PostCreateRenderPass(VkResult result, VkRenderPass* pRenderPass)
 {
     if(result != VK_SUCCESS)
     {
-        // TODO: Spit out VK_RESULT value.
+        // TODO: Spit out VkResult value.
         char const str[] = "vkCreateRenderPass failed (postcondition).";
         layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
         return;
@@ -1799,21 +1799,21 @@ void PostCreateRenderPass(VK_RESULT result, VK_RENDER_PASS* pRenderPass)
 
     if(pRenderPass == nullptr)
     {
-        char const str[] = "vkCreateRenderPass parameter, VK_RENDER_PASS* pRenderPass, is nullptr (postcondition).";
+        char const str[] = "vkCreateRenderPass parameter, VkRenderPass* pRenderPass, is nullptr (postcondition).";
         layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
         return;
     }
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkCreateRenderPass(VK_DEVICE device, const VK_RENDER_PASS_CREATE_INFO* pCreateInfo, VK_RENDER_PASS* pRenderPass)
+VK_LAYER_EXPORT VkResult VKAPI vkCreateRenderPass(VkDevice device, const VkRenderPassCreateInfo* pCreateInfo, VkRenderPass* pRenderPass)
 {
     PreCreateRenderPass(device, pCreateInfo);
-    VK_RESULT result = nextTable.CreateRenderPass(device, pCreateInfo, pRenderPass);
+    VkResult result = nextTable.CreateRenderPass(device, pCreateInfo, pRenderPass);
     PostCreateRenderPass(result, pRenderPass);
     return result;
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdBeginRenderPass(VK_CMD_BUFFER cmdBuffer, const VK_RENDER_PASS_BEGIN* pRenderPassBegin)
+VK_LAYER_EXPORT void VKAPI vkCmdBeginRenderPass(VkCmdBuffer cmdBuffer, const VkRenderPassBegin* pRenderPassBegin)
 {
     char str[1024];
     if (!pRenderPassBegin) {
@@ -1827,24 +1827,24 @@ VK_LAYER_EXPORT void VKAPI vkCmdBeginRenderPass(VK_CMD_BUFFER cmdBuffer, const V
     nextTable.CmdBeginRenderPass(cmdBuffer, pRenderPassBegin);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdEndRenderPass(VK_CMD_BUFFER cmdBuffer, VK_RENDER_PASS renderPass)
+VK_LAYER_EXPORT void VKAPI vkCmdEndRenderPass(VkCmdBuffer cmdBuffer, VkRenderPass renderPass)
 {
 
     nextTable.CmdEndRenderPass(cmdBuffer, renderPass);
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkDbgSetValidationLevel(VK_DEVICE device, VK_VALIDATION_LEVEL validationLevel)
+VK_LAYER_EXPORT VkResult VKAPI vkDbgSetValidationLevel(VkDevice device, VkValidationLevel validationLevel)
 {
     char str[1024];
     if (!validate_VK_VALIDATION_LEVEL(validationLevel)) {
         sprintf(str, "Parameter validationLevel to function DbgSetValidationLevel has invalid value of %i.", (int)validationLevel);
         layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
     }
-    VK_RESULT result = nextTable.DbgSetValidationLevel(device, validationLevel);
+    VkResult result = nextTable.DbgSetValidationLevel(device, validationLevel);
     return result;
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkDbgRegisterMsgCallback(VK_INSTANCE instance, VK_DBG_MSG_CALLBACK_FUNCTION pfnMsgCallback, void* pUserData)
+VK_LAYER_EXPORT VkResult VKAPI vkDbgRegisterMsgCallback(VkInstance instance, VK_DBG_MSG_CALLBACK_FUNCTION pfnMsgCallback, void* pUserData)
 {
     // This layer intercepts callbacks
     VK_LAYER_DBG_FUNCTION_NODE *pNewDbgFuncNode = (VK_LAYER_DBG_FUNCTION_NODE*)malloc(sizeof(VK_LAYER_DBG_FUNCTION_NODE));
@@ -1858,11 +1858,11 @@ VK_LAYER_EXPORT VK_RESULT VKAPI vkDbgRegisterMsgCallback(VK_INSTANCE instance, V
     if (g_actionIsDefault) {
         g_debugAction = VK_DBG_LAYER_ACTION_CALLBACK;
     }
-    VK_RESULT result = nextTable.DbgRegisterMsgCallback(instance, pfnMsgCallback, pUserData);
+    VkResult result = nextTable.DbgRegisterMsgCallback(instance, pfnMsgCallback, pUserData);
     return result;
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkDbgUnregisterMsgCallback(VK_INSTANCE instance, VK_DBG_MSG_CALLBACK_FUNCTION pfnMsgCallback)
+VK_LAYER_EXPORT VkResult VKAPI vkDbgUnregisterMsgCallback(VkInstance instance, VK_DBG_MSG_CALLBACK_FUNCTION pfnMsgCallback)
 {
     VK_LAYER_DBG_FUNCTION_NODE *pTrav = g_pDbgFunctionHead;
     VK_LAYER_DBG_FUNCTION_NODE *pPrev = pTrav;
@@ -1884,45 +1884,45 @@ VK_LAYER_EXPORT VK_RESULT VKAPI vkDbgUnregisterMsgCallback(VK_INSTANCE instance,
         else
             g_debugAction = (VK_LAYER_DBG_ACTION)(g_debugAction & ~((uint32_t)VK_DBG_LAYER_ACTION_CALLBACK));
     }
-    VK_RESULT result = nextTable.DbgUnregisterMsgCallback(instance, pfnMsgCallback);
+    VkResult result = nextTable.DbgUnregisterMsgCallback(instance, pfnMsgCallback);
     return result;
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkDbgSetMessageFilter(VK_DEVICE device, int32_t msgCode, VK_DBG_MSG_FILTER filter)
+VK_LAYER_EXPORT VkResult VKAPI vkDbgSetMessageFilter(VkDevice device, int32_t msgCode, VK_DBG_MSG_FILTER filter)
 {
 
-    VK_RESULT result = nextTable.DbgSetMessageFilter(device, msgCode, filter);
+    VkResult result = nextTable.DbgSetMessageFilter(device, msgCode, filter);
     return result;
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkDbgSetObjectTag(VK_BASE_OBJECT object, size_t tagSize, const void* pTag)
+VK_LAYER_EXPORT VkResult VKAPI vkDbgSetObjectTag(VkBaseObject object, size_t tagSize, const void* pTag)
 {
 
-    VK_RESULT result = nextTable.DbgSetObjectTag(object, tagSize, pTag);
+    VkResult result = nextTable.DbgSetObjectTag(object, tagSize, pTag);
     return result;
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkDbgSetGlobalOption(VK_INSTANCE instance, VK_DBG_GLOBAL_OPTION dbgOption, size_t dataSize, const void* pData)
+VK_LAYER_EXPORT VkResult VKAPI vkDbgSetGlobalOption(VkInstance instance, VK_DBG_GLOBAL_OPTION dbgOption, size_t dataSize, const void* pData)
 {
 
-    VK_RESULT result = nextTable.DbgSetGlobalOption(instance, dbgOption, dataSize, pData);
+    VkResult result = nextTable.DbgSetGlobalOption(instance, dbgOption, dataSize, pData);
     return result;
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkDbgSetDeviceOption(VK_DEVICE device, VK_DBG_DEVICE_OPTION dbgOption, size_t dataSize, const void* pData)
+VK_LAYER_EXPORT VkResult VKAPI vkDbgSetDeviceOption(VkDevice device, VK_DBG_DEVICE_OPTION dbgOption, size_t dataSize, const void* pData)
 {
 
-    VK_RESULT result = nextTable.DbgSetDeviceOption(device, dbgOption, dataSize, pData);
+    VkResult result = nextTable.DbgSetDeviceOption(device, dbgOption, dataSize, pData);
     return result;
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdDbgMarkerBegin(VK_CMD_BUFFER cmdBuffer, const char* pMarker)
+VK_LAYER_EXPORT void VKAPI vkCmdDbgMarkerBegin(VkCmdBuffer cmdBuffer, const char* pMarker)
 {
 
     nextTable.CmdDbgMarkerBegin(cmdBuffer, pMarker);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdDbgMarkerEnd(VK_CMD_BUFFER cmdBuffer)
+VK_LAYER_EXPORT void VKAPI vkCmdDbgMarkerEnd(VkCmdBuffer cmdBuffer)
 {
 
     nextTable.CmdDbgMarkerEnd(cmdBuffer);
@@ -1930,41 +1930,41 @@ VK_LAYER_EXPORT void VKAPI vkCmdDbgMarkerEnd(VK_CMD_BUFFER cmdBuffer)
 
 #if defined(__linux__) || defined(XCB_NVIDIA)
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkWsiX11AssociateConnection(VK_PHYSICAL_GPU gpu, const VK_WSI_X11_CONNECTION_INFO* pConnectionInfo)
+VK_LAYER_EXPORT VkResult VKAPI vkWsiX11AssociateConnection(VkPhysicalGpu gpu, const VK_WSI_X11_CONNECTION_INFO* pConnectionInfo)
 {
     VK_BASE_LAYER_OBJECT* gpuw = (VK_BASE_LAYER_OBJECT *) gpu;
     pCurObj = gpuw;
     loader_platform_thread_once(&tabOnce, initParamChecker);
 
-    VK_RESULT result = nextTable.WsiX11AssociateConnection((VK_PHYSICAL_GPU)gpuw->nextObject, pConnectionInfo);
+    VkResult result = nextTable.WsiX11AssociateConnection((VkPhysicalGpu)gpuw->nextObject, pConnectionInfo);
     return result;
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkWsiX11GetMSC(VK_DEVICE device, xcb_window_t window, xcb_randr_crtc_t crtc, uint64_t* pMsc)
+VK_LAYER_EXPORT VkResult VKAPI vkWsiX11GetMSC(VkDevice device, xcb_window_t window, xcb_randr_crtc_t crtc, uint64_t* pMsc)
 {
 
-    VK_RESULT result = nextTable.WsiX11GetMSC(device, window, crtc, pMsc);
+    VkResult result = nextTable.WsiX11GetMSC(device, window, crtc, pMsc);
     return result;
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkWsiX11CreatePresentableImage(VK_DEVICE device, const VK_WSI_X11_PRESENTABLE_IMAGE_CREATE_INFO* pCreateInfo, VK_IMAGE* pImage, VK_GPU_MEMORY* pMem)
+VK_LAYER_EXPORT VkResult VKAPI vkWsiX11CreatePresentableImage(VkDevice device, const VK_WSI_X11_PRESENTABLE_IMAGE_CREATE_INFO* pCreateInfo, VkImage* pImage, VkGpuMemory* pMem)
 {
 
-    VK_RESULT result = nextTable.WsiX11CreatePresentableImage(device, pCreateInfo, pImage, pMem);
+    VkResult result = nextTable.WsiX11CreatePresentableImage(device, pCreateInfo, pImage, pMem);
     return result;
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkWsiX11QueuePresent(VK_QUEUE queue, const VK_WSI_X11_PRESENT_INFO* pPresentInfo, VK_FENCE fence)
+VK_LAYER_EXPORT VkResult VKAPI vkWsiX11QueuePresent(VkQueue queue, const VK_WSI_X11_PRESENT_INFO* pPresentInfo, VkFence fence)
 {
 
-    VK_RESULT result = nextTable.WsiX11QueuePresent(queue, pPresentInfo, fence);
+    VkResult result = nextTable.WsiX11QueuePresent(queue, pPresentInfo, fence);
     return result;
 }
 
 #endif
 
 #include "vk_generic_intercept_proc_helper.h"
-VK_LAYER_EXPORT void* VKAPI vkGetProcAddr(VK_PHYSICAL_GPU gpu, const char* funcName)
+VK_LAYER_EXPORT void* VKAPI vkGetProcAddr(VkPhysicalGpu gpu, const char* funcName)
 {
     VK_BASE_LAYER_OBJECT* gpuw = (VK_BASE_LAYER_OBJECT *) gpu;
     void* addr;
@@ -1979,7 +1979,7 @@ VK_LAYER_EXPORT void* VKAPI vkGetProcAddr(VK_PHYSICAL_GPU gpu, const char* funcN
     else {
         if (gpuw->pGPA == NULL)
             return NULL;
-        return gpuw->pGPA((VK_PHYSICAL_GPU)gpuw->nextObject, funcName);
+        return gpuw->pGPA((VkPhysicalGpu)gpuw->nextObject, funcName);
     }
 }
 

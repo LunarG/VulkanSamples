@@ -36,8 +36,8 @@ static void fb_destroy(struct intel_obj *obj)
     intel_fb_destroy(fb);
 }
 
-VK_RESULT intel_fb_create(struct intel_dev *dev,
-                           const VK_FRAMEBUFFER_CREATE_INFO *info,
+VkResult intel_fb_create(struct intel_dev *dev,
+                           const VkFramebufferCreateInfo *info,
                            struct intel_fb **fb_ret)
 {
     struct intel_fb *fb;
@@ -56,7 +56,7 @@ VK_RESULT intel_fb_create(struct intel_dev *dev,
     array_size = info->layers;
 
     for (i = 0; i < info->colorAttachmentCount; i++) {
-        const VK_COLOR_ATTACHMENT_BIND_INFO *att =
+        const VkColorAttachmentBindInfo *att =
             &info->pColorAttachments[i];
         const struct intel_rt_view *rt = intel_rt_view(att->view);
         const struct intel_layout *layout = &rt->img->layout;
@@ -79,7 +79,7 @@ VK_RESULT intel_fb_create(struct intel_dev *dev,
     fb->rt_count = info->colorAttachmentCount;
 
     if (info->pDepthStencilAttachment) {
-        const VK_DEPTH_STENCIL_BIND_INFO *att =
+        const VkDepthStencilBindInfo *att =
             info->pDepthStencilAttachment;
         const struct intel_ds_view *ds = intel_ds_view(att->view);
         const struct intel_layout *layout = &ds->img->layout;
@@ -138,8 +138,8 @@ static void render_pass_destroy(struct intel_obj *obj)
     intel_render_pass_destroy(rp);
 }
 
-VK_RESULT intel_render_pass_create(struct intel_dev *dev,
-                                    const VK_RENDER_PASS_CREATE_INFO *info,
+VkResult intel_render_pass_create(struct intel_dev *dev,
+                                    const VkRenderPassCreateInfo *info,
                                     struct intel_render_pass **rp_ret)
 {
     struct intel_render_pass *rp;
@@ -168,10 +168,10 @@ void intel_render_pass_destroy(struct intel_render_pass *rp)
     intel_base_destroy(&rp->obj.base);
 }
 
-ICD_EXPORT VK_RESULT VKAPI vkCreateFramebuffer(
-    VK_DEVICE                                  device,
-    const VK_FRAMEBUFFER_CREATE_INFO*          pCreateInfo,
-    VK_FRAMEBUFFER*                            pFramebuffer)
+ICD_EXPORT VkResult VKAPI vkCreateFramebuffer(
+    VkDevice                                  device,
+    const VkFramebufferCreateInfo*          pCreateInfo,
+    VkFramebuffer*                            pFramebuffer)
 {
     struct intel_dev *dev = intel_dev(device);
 
@@ -179,10 +179,10 @@ ICD_EXPORT VK_RESULT VKAPI vkCreateFramebuffer(
             (struct intel_fb **) pFramebuffer);
 }
 
-ICD_EXPORT VK_RESULT VKAPI vkCreateRenderPass(
-    VK_DEVICE                                  device,
-    const VK_RENDER_PASS_CREATE_INFO*          pCreateInfo,
-    VK_RENDER_PASS*                            pRenderPass)
+ICD_EXPORT VkResult VKAPI vkCreateRenderPass(
+    VkDevice                                  device,
+    const VkRenderPassCreateInfo*          pCreateInfo,
+    VkRenderPass*                            pRenderPass)
 {
     struct intel_dev *dev = intel_dev(device);
 

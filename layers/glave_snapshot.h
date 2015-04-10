@@ -173,13 +173,13 @@ void glv_vk_malloc_and_copy(void** ppDest, size_t size, const void* pSrc);
 
 typedef struct _GLV_VK_SNAPSHOT_CREATEDEVICE_PARAMS
 {
-    VK_PHYSICAL_GPU gpu;
+    VkPhysicalGpu gpu;
     VkDeviceCreateInfo* pCreateInfo;
-    VK_DEVICE* pDevice;
+    VkDevice* pDevice;
 } GLV_VK_SNAPSHOT_CREATEDEVICE_PARAMS;
 
 VkDeviceCreateInfo* glv_deepcopy_xgl_device_create_info(const VkDeviceCreateInfo* pSrcCreateInfo);void glv_deepfree_xgl_device_create_info(VkDeviceCreateInfo* pCreateInfo);
-void glv_vk_snapshot_copy_createdevice_params(GLV_VK_SNAPSHOT_CREATEDEVICE_PARAMS* pDest, VK_PHYSICAL_GPU gpu, const VkDeviceCreateInfo* pCreateInfo, VK_DEVICE* pDevice);
+void glv_vk_snapshot_copy_createdevice_params(GLV_VK_SNAPSHOT_CREATEDEVICE_PARAMS* pDest, VkPhysicalGpu gpu, const VkDeviceCreateInfo* pCreateInfo, VkDevice* pDevice);
 void glv_vk_snapshot_destroy_createdevice_params(GLV_VK_SNAPSHOT_CREATEDEVICE_PARAMS* pSrc);
 
 //=============================================================================
@@ -195,10 +195,10 @@ typedef struct _GLV_VK_SNAPSHOT_OBJECT_NODE {
     void*           pStruct;    //< optionally points to a device-specific struct (ie, GLV_VK_SNAPSHOT_DEVICE_NODE)
 } GLV_VK_SNAPSHOT_OBJECT_NODE;
 
-// Node that stores information about an VK_DEVICE
+// Node that stores information about an VkDevice
 typedef struct _GLV_VK_SNAPSHOT_DEVICE_NODE {
     // This object
-    VK_DEVICE device;
+    VkDevice device;
 
     // CreateDevice parameters
     GLV_VK_SNAPSHOT_CREATEDEVICE_PARAMS params;
@@ -291,12 +291,12 @@ void glvSnapshotClear(void);
 GLV_VK_SNAPSHOT glvSnapshotMerge(const GLV_VK_SNAPSHOT * const pDelta, const GLV_VK_SNAPSHOT * const pSnapshot);
 
 uint64_t glvSnapshotGetObjectCount(VK_OBJECT_TYPE type);
-VK_RESULT glvSnapshotGetObjects(VK_OBJECT_TYPE type, uint64_t objCount, GLV_VK_SNAPSHOT_OBJECT_NODE* pObjNodeArray);
+VkResult glvSnapshotGetObjects(VK_OBJECT_TYPE type, uint64_t objCount, GLV_VK_SNAPSHOT_OBJECT_NODE* pObjNodeArray);
 void glvSnapshotPrintObjects(void);
 
 // Func ptr typedefs
 typedef uint64_t (*GLVSNAPSHOT_GET_OBJECT_COUNT)(VK_OBJECT_TYPE);
-typedef VK_RESULT (*GLVSNAPSHOT_GET_OBJECTS)(VK_OBJECT_TYPE, uint64_t, GLV_VK_SNAPSHOT_OBJECT_NODE*);
+typedef VkResult (*GLVSNAPSHOT_GET_OBJECTS)(VK_OBJECT_TYPE, uint64_t, GLV_VK_SNAPSHOT_OBJECT_NODE*);
 typedef void (*GLVSNAPSHOT_PRINT_OBJECTS)(void);
 typedef void (*GLVSNAPSHOT_START_TRACKING)(void);
 typedef GLV_VK_SNAPSHOT (*GLVSNAPSHOT_GET_DELTA)(void);

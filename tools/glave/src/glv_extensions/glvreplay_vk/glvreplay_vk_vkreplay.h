@@ -65,7 +65,7 @@ public:
     int init(glv_replay::Display & disp);
     vkDisplay * get_display() {return m_display;}
     glv_replay::GLV_REPLAY_RESULT replay(glv_trace_packet_header *packet);
-    glv_replay::GLV_REPLAY_RESULT handle_replay_errors(const char* entrypointName, const VK_RESULT resCall, const VK_RESULT resTrace, const glv_replay::GLV_REPLAY_RESULT resIn);
+    glv_replay::GLV_REPLAY_RESULT handle_replay_errors(const char* entrypointName, const VkResult resCall, const VkResult resTrace, const glv_replay::GLV_REPLAY_RESULT resIn);
 
     void push_validation_msg(VK_VALIDATION_LEVEL validationLevel, VK_BASE_OBJECT srcObject, size_t location, int32_t msgCode, const char* pMsg);
     glv_replay::GLV_REPLAY_RESULT pop_validation_msgs();

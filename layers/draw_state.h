@@ -65,84 +65,84 @@ typedef enum _DRAW_TYPE
 
 typedef struct _SHADER_DS_MAPPING {
     uint32_t slotCount;
-    VK_DESCRIPTOR_SET_LAYOUT_CREATE_INFO* pShaderMappingSlot;
+    VkDescriptorSetLayoutCreateInfo* pShaderMappingSlot;
 } SHADER_DS_MAPPING;
 
 typedef struct _GENERIC_HEADER {
-    VK_STRUCTURE_TYPE sType;
+    VkStructureType sType;
     const void*    pNext;
 } GENERIC_HEADER;
 
 typedef struct _PIPELINE_NODE {
-    VK_PIPELINE           pipeline;
+    VkPipeline           pipeline;
 
-    VK_GRAPHICS_PIPELINE_CREATE_INFO     graphicsPipelineCI;
-    VK_PIPELINE_VERTEX_INPUT_CREATE_INFO vertexInputCI;
-    VK_PIPELINE_IA_STATE_CREATE_INFO     iaStateCI;
-    VK_PIPELINE_TESS_STATE_CREATE_INFO   tessStateCI;
-    VK_PIPELINE_VP_STATE_CREATE_INFO     vpStateCI;
-    VK_PIPELINE_RS_STATE_CREATE_INFO     rsStateCI;
-    VK_PIPELINE_MS_STATE_CREATE_INFO     msStateCI;
-    VK_PIPELINE_CB_STATE_CREATE_INFO     cbStateCI;
-    VK_PIPELINE_DS_STATE_CREATE_INFO     dsStateCI;
-    VK_PIPELINE_SHADER_STAGE_CREATE_INFO vsCI;
-    VK_PIPELINE_SHADER_STAGE_CREATE_INFO tcsCI;
-    VK_PIPELINE_SHADER_STAGE_CREATE_INFO tesCI;
-    VK_PIPELINE_SHADER_STAGE_CREATE_INFO gsCI;
-    VK_PIPELINE_SHADER_STAGE_CREATE_INFO fsCI;
-    // Compute shader is include in VK_COMPUTE_PIPELINE_CREATE_INFO
-    VK_COMPUTE_PIPELINE_CREATE_INFO      computePipelineCI;
+    VkGraphicsPipelineCreateInfo     graphicsPipelineCI;
+    VkPipelineVertexInputCreateInfo vertexInputCI;
+    VkPipelineIaStateCreateInfo     iaStateCI;
+    VkPipelineTessStateCreateInfo   tessStateCI;
+    VkPipelineVpStateCreateInfo     vpStateCI;
+    VkPipelineRsStateCreateInfo     rsStateCI;
+    VkPipelineMsStateCreateInfo     msStateCI;
+    VkPipelineCbStateCreateInfo     cbStateCI;
+    VkPipelineDsStateCreateInfo     dsStateCI;
+    VkPipelineShaderStageCreateInfo vsCI;
+    VkPipelineShaderStageCreateInfo tcsCI;
+    VkPipelineShaderStageCreateInfo tesCI;
+    VkPipelineShaderStageCreateInfo gsCI;
+    VkPipelineShaderStageCreateInfo fsCI;
+    // Compute shader is include in VkComputePipelineCreateInfo
+    VkComputePipelineCreateInfo      computePipelineCI;
 
-    VK_GRAPHICS_PIPELINE_CREATE_INFO*      pCreateTree; // Ptr to shadow of data in create tree
+    VkGraphicsPipelineCreateInfo*      pCreateTree; // Ptr to shadow of data in create tree
     // Vtx input info (if any)
     uint32_t                                vtxBindingCount;   // number of bindings
-    VK_VERTEX_INPUT_BINDING_DESCRIPTION*   pVertexBindingDescriptions;
+    VkVertexInputBindingDescription*   pVertexBindingDescriptions;
     uint32_t                                vtxAttributeCount; // number of attributes
-    VK_VERTEX_INPUT_ATTRIBUTE_DESCRIPTION* pVertexAttributeDescriptions;
+    VkVertexInputAttributeDescription* pVertexAttributeDescriptions;
     uint32_t                                attachmentCount;   // number of CB attachments
-    VK_PIPELINE_CB_ATTACHMENT_STATE*       pAttachments;
+    VkPipelineCbAttachmentState*       pAttachments;
 } PIPELINE_NODE;
 
 typedef struct _SAMPLER_NODE {
-    VK_SAMPLER              sampler;
-    VK_SAMPLER_CREATE_INFO  createInfo;
+    VkSampler              sampler;
+    VkSamplerCreateInfo  createInfo;
 } SAMPLER_NODE;
 
 typedef struct _IMAGE_NODE {
-    VK_IMAGE_VIEW             image;
-    VK_IMAGE_VIEW_CREATE_INFO createInfo;
-    VK_IMAGE_VIEW_ATTACH_INFO attachInfo;
+    VkImageView             image;
+    VkImageViewCreateInfo createInfo;
+    VkImageViewAttachInfo attachInfo;
 } IMAGE_NODE;
 
 typedef struct _BUFFER_NODE {
-    VK_BUFFER_VIEW             buffer;
+    VkBufferView             buffer;
     VkBufferViewCreateInfo createInfo;
-    VK_BUFFER_VIEW_ATTACH_INFO attachInfo;
+    VkBufferViewAttachInfo attachInfo;
 } BUFFER_NODE;
 
 typedef struct _DYNAMIC_STATE_NODE {
-    VK_DYNAMIC_STATE_OBJECT    stateObj;
+    VkDynamicStateObject    stateObj;
     GENERIC_HEADER*             pCreateInfo;
     union {
-        VK_DYNAMIC_VP_STATE_CREATE_INFO vpci;
-        VK_DYNAMIC_RS_STATE_CREATE_INFO rsci;
-        VK_DYNAMIC_CB_STATE_CREATE_INFO cbci;
-        VK_DYNAMIC_DS_STATE_CREATE_INFO dsci;
+        VkDynamicVpStateCreateInfo vpci;
+        VkDynamicRsStateCreateInfo rsci;
+        VkDynamicCbStateCreateInfo cbci;
+        VkDynamicDsStateCreateInfo dsci;
     } create_info;
 } DYNAMIC_STATE_NODE;
 // Descriptor Data structures
 // Layout Node has the core layout data
 typedef struct _LAYOUT_NODE {
-    VK_DESCRIPTOR_SET_LAYOUT                    layout;
-    VK_DESCRIPTOR_TYPE*                         pTypes; // Dynamic array that will be created to verify descriptor types
-    VK_DESCRIPTOR_SET_LAYOUT_CREATE_INFO        createInfo;
+    VkDescriptorSetLayout                    layout;
+    VkDescriptorType*                         pTypes; // Dynamic array that will be created to verify descriptor types
+    VkDescriptorSetLayoutCreateInfo        createInfo;
     uint32_t                                     startIndex; // 1st index of this layout
     uint32_t                                     endIndex; // last index of this layout
 } LAYOUT_NODE;
 typedef struct _SET_NODE {
-    VK_DESCRIPTOR_SET                           set;
-    VK_DESCRIPTOR_POOL                          pool;
-    VK_DESCRIPTOR_SET_USAGE                     setUsage;
+    VkDescriptorSet                           set;
+    VkDescriptorPool                          pool;
+    VkDescriptorSetUsage                     setUsage;
     // Head of LL of all Update structs for this set
     GENERIC_HEADER*                              pUpdateStructs;
     // Total num of descriptors in this set (count of its layout plus all prior layouts)
@@ -153,10 +153,10 @@ typedef struct _SET_NODE {
 } SET_NODE;
 
 typedef struct _POOL_NODE {
-    VK_DESCRIPTOR_POOL                          pool;
-    VK_DESCRIPTOR_POOL_USAGE                    poolUsage;
+    VkDescriptorPool                          pool;
+    VkDescriptorPoolUsage                    poolUsage;
     uint32_t                                     maxSets;
-    VK_DESCRIPTOR_POOL_CREATE_INFO              createInfo;
+    VkDescriptorPoolCreateInfo              createInfo;
     bool32_t                                     updateActive; // Track if Pool is in an update block
     SET_NODE*                                    pSets; // Head of LL of sets for this Pool
 } POOL_NODE;
@@ -218,10 +218,10 @@ typedef enum _CB_STATE
 } CB_STATE;
 // Cmd Buffer Wrapper Struct
 typedef struct _GLOBAL_CB_NODE {
-    VK_CMD_BUFFER                  cmdBuffer;
+    VkCmdBuffer                  cmdBuffer;
     uint32_t                        queueNodeIndex;
-    VK_FLAGS                       flags;
-    VK_FENCE                       fence;    // fence tracking this cmd buffer
+    VkFlags                       flags;
+    VkFence                       fence;    // fence tracking this cmd buffer
     uint64_t                        numCmds;  // number of cmds in this CB
     uint64_t                        drawCount[NUM_DRAW_TYPES]; // Count of each type of draw in this CB
     CB_STATE                        state; // Track if cmd buffer update status
@@ -229,12 +229,12 @@ typedef struct _GLOBAL_CB_NODE {
     // Currently storing "lastBound" objects on per-CB basis
     //  long-term may want to create caches of "lastBound" states and could have
     //  each individual CMD_NODE referencing its own "lastBound" state
-    VK_PIPELINE                    lastBoundPipeline;
+    VkPipeline                    lastBoundPipeline;
     uint32_t                        lastVtxBinding;
     DYNAMIC_STATE_NODE*             lastBoundDynamicState[VK_NUM_STATE_BIND_POINT];
-    VK_DESCRIPTOR_SET              lastBoundDescriptorSet;
-    VK_RENDER_PASS                 activeRenderPass;
-    VK_FRAMEBUFFER                 framebuffer;
+    VkDescriptorSet              lastBoundDescriptorSet;
+    VkRenderPass                 activeRenderPass;
+    VkFramebuffer                 framebuffer;
 } GLOBAL_CB_NODE;
 
 //prototypes for extension functions

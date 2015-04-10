@@ -10,7 +10,7 @@
 void glvWritePPM( const char *basename, uint32_t width, uint32_t height, VK_IMAGE img, VK_GPU_MEMORY mem, vkFuncs *pVkFuncs)
 {
     std::string filename;
-    VK_RESULT err;
+    VkResult err;
     unsigned int x, y;
 
     filename.append(basename);

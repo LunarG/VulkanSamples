@@ -33,7 +33,7 @@
 struct intel_gpu;
 
 static inline bool intel_format_has_depth(const struct intel_gpu *gpu,
-                                          VK_FORMAT format)
+                                          VkFormat format)
 {
     bool has_depth = false;
 
@@ -54,6 +54,6 @@ static inline bool intel_format_has_depth(const struct intel_gpu *gpu,
 }
 
 int intel_format_translate_color(const struct intel_gpu *gpu,
-                                 VK_FORMAT format);
+                                 VkFormat format);
 
 #endif /* FORMAT_H */

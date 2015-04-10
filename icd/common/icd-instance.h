@@ -49,21 +49,21 @@ struct icd_instance {
     bool break_on_error;
     bool break_on_warning;
 
-    VK_ALLOC_CALLBACKS alloc_cb;
+    VkAllocCallbacks alloc_cb;
 
     struct icd_instance_logger *loggers;
 };
 
-struct icd_instance *icd_instance_create(const VK_APPLICATION_INFO *app_info,
-                                         const VK_ALLOC_CALLBACKS *alloc_cb);
+struct icd_instance *icd_instance_create(const VkApplicationInfo *app_info,
+                                         const VkAllocCallbacks *alloc_cb);
 void icd_instance_destroy(struct icd_instance *instance);
 
-VK_RESULT icd_instance_set_bool(struct icd_instance *instance,
+VkResult icd_instance_set_bool(struct icd_instance *instance,
                                  VK_DBG_GLOBAL_OPTION option, bool yes);
 
 static inline void *icd_instance_alloc(const struct icd_instance *instance,
                                        size_t size, size_t alignment,
-                                       VK_SYSTEM_ALLOC_TYPE type)
+                                       VkSystemAllocType type)
 {
     return instance->alloc_cb.pfnAlloc(instance->alloc_cb.pUserData,
             size, alignment, type);
@@ -75,16 +75,16 @@ static inline void icd_instance_free(const struct icd_instance *instance,
     instance->alloc_cb.pfnFree(instance->alloc_cb.pUserData, ptr);
 }
 
-VK_RESULT icd_instance_add_logger(struct icd_instance *instance,
+VkResult icd_instance_add_logger(struct icd_instance *instance,
                                    VK_DBG_MSG_CALLBACK_FUNCTION func,
                                    void *user_data);
-VK_RESULT icd_instance_remove_logger(struct icd_instance *instance,
+VkResult icd_instance_remove_logger(struct icd_instance *instance,
                                       VK_DBG_MSG_CALLBACK_FUNCTION func);
 
 void icd_instance_log(const struct icd_instance *instance,
                       VK_DBG_MSG_TYPE msg_type,
-                      VK_VALIDATION_LEVEL validation_level,
-                      VK_BASE_OBJECT src_object,
+                      VkValidationLevel validation_level,
+                      VkBaseObject src_object,
                       size_t location, int32_t msg_code,
                       const char *msg);
 

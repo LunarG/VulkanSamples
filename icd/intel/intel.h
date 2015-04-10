@@ -116,7 +116,7 @@ static inline bool intel_handle_validate_type(const void *handle,
 
 static inline void *intel_alloc(const void *handle,
                                 size_t size, size_t alignment,
-                                VK_SYSTEM_ALLOC_TYPE type)
+                                VkSystemAllocType type)
 {
     assert(intel_handle_validate(handle));
     return icd_instance_alloc(((const struct intel_handle *) handle)->icd,
@@ -131,8 +131,8 @@ static inline void intel_free(const void *handle, void *ptr)
 
 static inline void intel_logv(const void *handle,
                               VK_DBG_MSG_TYPE msg_type,
-                              VK_VALIDATION_LEVEL validation_level,
-                              VK_BASE_OBJECT src_object,
+                              VkValidationLevel validation_level,
+                              VkBaseObject src_object,
                               size_t location, int32_t msg_code,
                               const char *format, va_list ap)
 {
@@ -150,8 +150,8 @@ static inline void intel_logv(const void *handle,
 
 static inline void intel_log(const void *handle,
                              VK_DBG_MSG_TYPE msg_type,
-                             VK_VALIDATION_LEVEL validation_level,
-                             VK_BASE_OBJECT src_object,
+                             VkValidationLevel validation_level,
+                             VkBaseObject src_object,
                              size_t location, int32_t msg_code,
                              const char *format, ...)
 {

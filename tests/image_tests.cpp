@@ -68,23 +68,23 @@ public:
     void CreateImage(uint32_t w, uint32_t h);
     void DestroyImage();
 
-    void CreateImageView(VK_IMAGE_VIEW_CREATE_INFO* pCreateInfo,
-                         VK_IMAGE_VIEW* pView);
-    void DestroyImageView(VK_IMAGE_VIEW imageView);
-    VK_DEVICE device() {return m_device->obj();}
+    void CreateImageView(VkImageViewCreateInfo* pCreateInfo,
+                         VkImageView* pView);
+    void DestroyImageView(VkImageView imageView);
+    VkDevice device() {return m_device->obj();}
 
 protected:
     vk_testing::Device *m_device;
-    VK_APPLICATION_INFO app_info;
-    VK_PHYSICAL_GPU objs[VK_MAX_PHYSICAL_GPUS];
+    VkApplicationInfo app_info;
+    VkPhysicalGpu objs[VK_MAX_PHYSICAL_GPUS];
     uint32_t gpu_count;
-    VK_INSTANCE inst;
-    VK_IMAGE m_image;
-    VK_GPU_MEMORY *m_image_mem;
+    VkInstance inst;
+    VkImage m_image;
+    VkGpuMemory *m_image_mem;
     uint32_t m_num_mem;
 
     virtual void SetUp() {
-        VK_RESULT err;
+        VkResult err;
 
         this->app_info.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
         this->app_info.pNext = NULL;
@@ -119,11 +119,11 @@ protected:
 
 void VkImageTest::CreateImage(uint32_t w, uint32_t h)
 {
-    VK_RESULT err;
+    VkResult err;
     uint32_t mipCount;
     size_t size;
-    VK_FORMAT fmt;
-    VK_FORMAT_PROPERTIES image_fmt;
+    VkFormat fmt;
+    VkFormatProperties image_fmt;
 
     mipCount = 0;
 
@@ -152,23 +152,23 @@ void VkImageTest::CreateImage(uint32_t w, uint32_t h)
                            &size, &image_fmt);
     ASSERT_VK_SUCCESS(err);
 
-    //    typedef struct _VK_IMAGE_CREATE_INFO
+    //    typedef struct VkImageCreateInfo_
     //    {
-    //        VK_STRUCTURE_TYPE                      sType;                      // Must be VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO
+    //        VkStructureType                      sType;                      // Must be VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO
     //        const void*                             pNext;                      // Pointer to next structure.
-    //        VK_IMAGE_TYPE                          imageType;
-    //        VK_FORMAT                              format;
-    //        VK_EXTENT3D                            extent;
+    //        VkImageType                          imageType;
+    //        VkFormat                              format;
+    //        VkExtent3D                            extent;
     //        uint32_t                                mipLevels;
     //        uint32_t                                arraySize;
     //        uint32_t                                samples;
-    //        VK_IMAGE_TILING                        tiling;
-    //        VK_FLAGS                               usage;                      // VK_IMAGE_USAGE_FLAGS
-    //        VK_FLAGS                               flags;                      // VK_IMAGE_CREATE_FLAGS
-    //    } VK_IMAGE_CREATE_INFO;
+    //        VkImageTiling                        tiling;
+    //        VkFlags                               usage;                      // VkImageUsageFlags
+    //        VkFlags                               flags;                      // VkImageCreateFlags
+    //    } VkImageCreateInfo;
 
 
-    VK_IMAGE_CREATE_INFO imageCreateInfo = {};
+    VkImageCreateInfo imageCreateInfo = {};
     imageCreateInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
     imageCreateInfo.imageType = VK_IMAGE_2D;
     imageCreateInfo.format = fmt;
@@ -189,26 +189,26 @@ void VkImageTest::CreateImage(uint32_t w, uint32_t h)
     }
 
     // Image usage flags
-    //    typedef enum _VK_IMAGE_USAGE_FLAGS
+    //    typedef enum VkImageUsageFlags_
     //    {
     //        VK_IMAGE_USAGE_SHADER_ACCESS_READ_BIT                  = 0x00000001,
     //        VK_IMAGE_USAGE_SHADER_ACCESS_WRITE_BIT                 = 0x00000002,
     //        VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT                    = 0x00000004,
     //        VK_IMAGE_USAGE_DEPTH_STENCIL_BIT                       = 0x00000008,
-    //    } VK_IMAGE_USAGE_FLAGS;
+    //    } VkImageUsageFlags;
     imageCreateInfo.usage = VK_IMAGE_USAGE_SHADER_ACCESS_WRITE_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 
-    //    VK_RESULT VKAPI vkCreateImage(
-    //        VK_DEVICE                                  device,
-    //        const VK_IMAGE_CREATE_INFO*                pCreateInfo,
-    //        VK_IMAGE*                                  pImage);
+    //    VkResult VKAPI vkCreateImage(
+    //        VkDevice                                  device,
+    //        const VkImageCreateInfo*                pCreateInfo,
+    //        VkImage*                                  pImage);
     err = vkCreateImage(device(), &imageCreateInfo, &m_image);
     ASSERT_VK_SUCCESS(err);
 
-    VK_MEMORY_REQUIREMENTS *mem_req;
-    size_t mem_reqs_size = sizeof(VK_MEMORY_REQUIREMENTS);
-    VK_IMAGE_MEMORY_REQUIREMENTS img_reqs;
-    size_t img_reqs_size = sizeof(VK_IMAGE_MEMORY_REQUIREMENTS);
+    VkMemoryRequirements *mem_req;
+    size_t mem_reqs_size = sizeof(VkMemoryRequirements);
+    VkImageMemoryRequirements img_reqs;
+    size_t img_reqs_size = sizeof(VkImageMemoryRequirements);
     uint32_t num_allocations = 0;
     size_t num_alloc_size = sizeof(num_allocations);
     VkMemoryAllocImageInfo img_alloc = {};
@@ -223,19 +223,19 @@ void VkImageTest::CreateImage(uint32_t w, uint32_t h)
                     &num_alloc_size, &num_allocations);
     ASSERT_VK_SUCCESS(err);
     ASSERT_EQ(num_alloc_size,sizeof(num_allocations));
-    mem_req = (VK_MEMORY_REQUIREMENTS *) malloc(num_allocations * sizeof(VK_MEMORY_REQUIREMENTS));
-    m_image_mem = (VK_GPU_MEMORY *) malloc(num_allocations * sizeof(VK_GPU_MEMORY));
+    mem_req = (VkMemoryRequirements *) malloc(num_allocations * sizeof(VkMemoryRequirements));
+    m_image_mem = (VkGpuMemory *) malloc(num_allocations * sizeof(VkGpuMemory));
     m_num_mem = num_allocations;
     err = vkGetObjectInfo(m_image,
                     VK_INFO_TYPE_MEMORY_REQUIREMENTS,
                     &mem_reqs_size, mem_req);
     ASSERT_VK_SUCCESS(err);
-    ASSERT_EQ(mem_reqs_size, num_allocations * sizeof(VK_MEMORY_REQUIREMENTS));
+    ASSERT_EQ(mem_reqs_size, num_allocations * sizeof(VkMemoryRequirements));
     err = vkGetObjectInfo(m_image,
                         VK_INFO_TYPE_IMAGE_MEMORY_REQUIREMENTS,
                         &img_reqs_size, &img_reqs);
     ASSERT_VK_SUCCESS(err);
-    ASSERT_EQ(img_reqs_size, sizeof(VK_IMAGE_MEMORY_REQUIREMENTS));
+    ASSERT_EQ(img_reqs_size, sizeof(VkImageMemoryRequirements));
     img_alloc.usage = img_reqs.usage;
     img_alloc.formatClass = img_reqs.formatClass;
     img_alloc.samples = img_reqs.samples;
@@ -259,7 +259,7 @@ void VkImageTest::CreateImage(uint32_t w, uint32_t h)
 
 void VkImageTest::DestroyImage()
 {
-    VK_RESULT err;
+    VkResult err;
     // All done with image memory, clean up
     ASSERT_VK_SUCCESS(vkBindObjectMemory(m_image, 0, VK_NULL_HANDLE, 0));
 
@@ -272,38 +272,38 @@ void VkImageTest::DestroyImage()
     ASSERT_VK_SUCCESS(vkDestroyObject(m_image));
 }
 
-void VkImageTest::CreateImageView(VK_IMAGE_VIEW_CREATE_INFO *pCreateInfo,
-                                   VK_IMAGE_VIEW *pView)
+void VkImageTest::CreateImageView(VkImageViewCreateInfo *pCreateInfo,
+                                   VkImageView *pView)
 {
     pCreateInfo->image = this->m_image;
     ASSERT_VK_SUCCESS(vkCreateImageView(device(), pCreateInfo, pView));
 }
 
-void VkImageTest::DestroyImageView(VK_IMAGE_VIEW imageView)
+void VkImageTest::DestroyImageView(VkImageView imageView)
 {
     ASSERT_VK_SUCCESS(vkDestroyObject(imageView));
 }
 
 TEST_F(VkImageTest, CreateImageViewTest) {
-    VK_FORMAT fmt;
-    VK_IMAGE_VIEW imageView;
+    VkFormat fmt;
+    VkImageView imageView;
 
     fmt = VK_FMT_R8G8B8A8_UINT;
 
     CreateImage(512, 256);
 
-    //    typedef struct _VK_IMAGE_VIEW_CREATE_INFO
+    //    typedef struct VkImageViewCreateInfo_
     //    {
-    //        VK_STRUCTURE_TYPE                      sType;                  // Must be VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO
+    //        VkStructureType                      sType;                  // Must be VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO
     //        const void*                             pNext;                  // Pointer to next structure
-    //        VK_IMAGE                               image;
-    //        VK_IMAGE_VIEW_TYPE                     viewType;
-    //        VK_FORMAT                              format;
-    //        VK_CHANNEL_MAPPING                     channels;
-    //        VK_IMAGE_SUBRESOURCE_RANGE             subresourceRange;
+    //        VkImage                               image;
+    //        VkImageViewType                     viewType;
+    //        VkFormat                              format;
+    //        VkChannelMapping                     channels;
+    //        VkImageSubresourceRange             subresourceRange;
     //        float                                   minLod;
-    //    } VK_IMAGE_VIEW_CREATE_INFO;
-    VK_IMAGE_VIEW_CREATE_INFO viewInfo = {};
+    //    } VkImageViewCreateInfo;
+    VkImageViewCreateInfo viewInfo = {};
     viewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
     viewInfo.viewType = VK_IMAGE_VIEW_2D;
     viewInfo.format = fmt;
@@ -319,10 +319,10 @@ TEST_F(VkImageTest, CreateImageViewTest) {
     viewInfo.subresourceRange.mipLevels = 1;
     viewInfo.subresourceRange.aspect = VK_IMAGE_ASPECT_COLOR;
 
-    //    VK_RESULT VKAPI vkCreateImageView(
-    //        VK_DEVICE                                  device,
-    //        const VK_IMAGE_VIEW_CREATE_INFO*           pCreateInfo,
-    //        VK_IMAGE_VIEW*                             pView);
+    //    VkResult VKAPI vkCreateImageView(
+    //        VkDevice                                  device,
+    //        const VkImageViewCreateInfo*           pCreateInfo,
+    //        VkImageView*                             pView);
 
     CreateImageView(&viewInfo, &imageView);
 

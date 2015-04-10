@@ -85,29 +85,29 @@ typedef enum _MEM_TRACK_ERROR
 // Data struct for tracking memory object
 struct MT_MEM_OBJ_INFO {
     uint32_t                     refCount;           // Count of references (obj bindings or CB use)
-    VK_GPU_MEMORY               mem;
+    VkGpuMemory               mem;
     VkMemoryAllocInfo        allocInfo;
-    list<VK_OBJECT>             pObjBindings;       // list container of objects bound to this memory
-    list<VK_CMD_BUFFER>         pCmdBufferBindings; // list container of cmd buffers that reference this mem object
+    list<VkObject>             pObjBindings;       // list container of objects bound to this memory
+    list<VkCmdBuffer>         pCmdBufferBindings; // list container of cmd buffers that reference this mem object
 };
 
 struct MT_OBJ_INFO {
     MT_MEM_OBJ_INFO*            pMemObjInfo;
-    VK_OBJECT                  object;
-    VK_STRUCTURE_TYPE          sType;
+    VkObject                  object;
+    VkStructureType          sType;
     uint32_t                    ref_count;
     // Capture all object types that may have memory bound. From prog guide:
     // The only objects that are guaranteed to have no external memory
     //   requirements are devices, queues, command buffers, shaders and memory objects.
     union {
-        VK_COLOR_ATTACHMENT_VIEW_CREATE_INFO     color_attachment_view_create_info;
-        VK_DEPTH_STENCIL_VIEW_CREATE_INFO        ds_view_create_info;
-        VK_IMAGE_VIEW_CREATE_INFO                image_view_create_info;
-        VK_IMAGE_CREATE_INFO                     image_create_info;
-        VK_GRAPHICS_PIPELINE_CREATE_INFO         graphics_pipeline_create_info;
-        VK_COMPUTE_PIPELINE_CREATE_INFO          compute_pipeline_create_info;
-        VK_SAMPLER_CREATE_INFO                   sampler_create_info;
-        VK_FENCE_CREATE_INFO                     fence_create_info;
+        VkColorAttachmentViewCreateInfo     color_attachment_view_create_info;
+        VkDepthStencilViewCreateInfo        ds_view_create_info;
+        VkImageViewCreateInfo                image_view_create_info;
+        VkImageCreateInfo                     image_create_info;
+        VkGraphicsPipelineCreateInfo         graphics_pipeline_create_info;
+        VkComputePipelineCreateInfo          compute_pipeline_create_info;
+        VkSamplerCreateInfo                   sampler_create_info;
+        VkFenceCreateInfo                     fence_create_info;
 #ifndef _WIN32
         VK_WSI_X11_PRESENTABLE_IMAGE_CREATE_INFO wsi_x11_presentable_image_create_info;
 #endif // _WIN32
@@ -117,21 +117,21 @@ struct MT_OBJ_INFO {
 
 // Track all command buffers
 struct MT_CB_INFO {
-    VK_CMD_BUFFER_CREATE_INFO      createInfo;
+    VkCmdBufferCreateInfo      createInfo;
     MT_OBJ_INFO*                    pDynamicState[VK_NUM_STATE_BIND_POINT];
-    VK_PIPELINE                    pipelines[VK_NUM_PIPELINE_BIND_POINT];
+    VkPipeline                    pipelines[VK_NUM_PIPELINE_BIND_POINT];
     uint32_t                        colorAttachmentCount;
-    VK_DEPTH_STENCIL_BIND_INFO     dsBindInfo;
-    VK_CMD_BUFFER                  cmdBuffer;
+    VkDepthStencilBindInfo     dsBindInfo;
+    VkCmdBuffer                  cmdBuffer;
     uint64_t                        fenceId;
     // Order dependent, stl containers must be at end of struct
-    list<VK_GPU_MEMORY>            pMemObjList; // List container of Mem objs referenced by this CB
+    list<VkGpuMemory>            pMemObjList; // List container of Mem objs referenced by this CB
 };
 
 // Associate fenceId with a fence object
 struct MT_FENCE_INFO {
-    VK_FENCE   fence;         // Handle to fence object
-    VK_QUEUE   queue;         // Queue that this fence is submitted against
+    VkFence   fence;         // Handle to fence object
+    VkQueue   queue;         // Queue that this fence is submitted against
     bool32_t    localFence;    // Is fence created by layer?
 };
 
@@ -139,8 +139,8 @@ struct MT_FENCE_INFO {
 struct MT_QUEUE_INFO {
     uint64_t                      lastRetiredId;
     uint64_t                      lastSubmittedId;
-    list<VK_CMD_BUFFER>          pQueueCmdBuffers;
-    list<VK_GPU_MEMORY>          pMemRefList;
+    list<VkCmdBuffer>          pQueueCmdBuffers;
+    list<VkGpuMemory>          pMemRefList;
 };
 
 #ifdef __cplusplus

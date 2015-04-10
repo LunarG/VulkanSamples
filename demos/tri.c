@@ -22,14 +22,14 @@
 #define VERTEX_BUFFER_BIND_ID 0
 
 struct texture_object {
-    VK_SAMPLER sampler;
+    VkSampler sampler;
 
-    VK_IMAGE image;
-    VK_IMAGE_LAYOUT imageLayout;
+    VkImage image;
+    VkImageLayout imageLayout;
 
     uint32_t  num_mem;
-    VK_GPU_MEMORY *mem;
-    VK_IMAGE_VIEW view;
+    VkGpuMemory *mem;
+    VkImageView view;
     int32_t tex_width, tex_height;
 };
 
@@ -37,58 +37,58 @@ struct demo {
     xcb_connection_t *connection;
     xcb_screen_t *screen;
 
-    VK_INSTANCE inst;
-    VK_PHYSICAL_GPU gpu;
-    VK_DEVICE device;
-    VK_QUEUE queue;
-    VK_PHYSICAL_GPU_PROPERTIES *gpu_props;
-    VK_PHYSICAL_GPU_QUEUE_PROPERTIES *queue_props;
+    VkInstance inst;
+    VkPhysicalGpu gpu;
+    VkDevice device;
+    VkQueue queue;
+    VkPhysicalGpuProperties *gpu_props;
+    VkPhysicalGpuQueueProperties *queue_props;
     uint32_t graphics_queue_node_index;
 
     int width, height;
-    VK_FORMAT format;
+    VkFormat format;
 
     struct {
-        VK_IMAGE image;
-        VK_GPU_MEMORY mem;
+        VkImage image;
+        VkGpuMemory mem;
 
-        VK_COLOR_ATTACHMENT_VIEW view;
-        VK_FENCE fence;
+        VkColorAttachmentView view;
+        VkFence fence;
     } buffers[DEMO_BUFFER_COUNT];
 
     struct {
-        VK_FORMAT format;
+        VkFormat format;
 
-        VK_IMAGE image;
+        VkImage image;
         uint32_t  num_mem;
-        VK_GPU_MEMORY *mem;
-        VK_DEPTH_STENCIL_VIEW view;
+        VkGpuMemory *mem;
+        VkDepthStencilView view;
     } depth;
 
     struct texture_object textures[DEMO_TEXTURE_COUNT];
 
     struct {
-        VK_BUFFER buf;
+        VkBuffer buf;
         uint32_t  num_mem;
-        VK_GPU_MEMORY *mem;
+        VkGpuMemory *mem;
 
-        VK_PIPELINE_VERTEX_INPUT_CREATE_INFO vi;
-        VK_VERTEX_INPUT_BINDING_DESCRIPTION vi_bindings[1];
-        VK_VERTEX_INPUT_ATTRIBUTE_DESCRIPTION vi_attrs[2];
+        VkPipelineVertexInputCreateInfo vi;
+        VkVertexInputBindingDescription vi_bindings[1];
+        VkVertexInputAttributeDescription vi_attrs[2];
     } vertices;
 
-    VK_CMD_BUFFER cmd;  // Buffer for initialization commands
-    VK_DESCRIPTOR_SET_LAYOUT_CHAIN desc_layout_chain;
-    VK_DESCRIPTOR_SET_LAYOUT desc_layout;
-    VK_PIPELINE pipeline;
+    VkCmdBuffer cmd;  // Buffer for initialization commands
+    VkDescriptorSetLayoutChain desc_layout_chain;
+    VkDescriptorSetLayout desc_layout;
+    VkPipeline pipeline;
 
-    VK_DYNAMIC_VP_STATE_OBJECT viewport;
-    VK_DYNAMIC_RS_STATE_OBJECT raster;
-    VK_DYNAMIC_CB_STATE_OBJECT color_blend;
-    VK_DYNAMIC_DS_STATE_OBJECT depth_stencil;
+    VkDynamicVpStateObject viewport;
+    VkDynamicRsStateObject raster;
+    VkDynamicCbStateObject color_blend;
+    VkDynamicDsStateObject depth_stencil;
 
-    VK_DESCRIPTOR_POOL desc_pool;
-    VK_DESCRIPTOR_SET desc_set;
+    VkDescriptorPool desc_pool;
+    VkDescriptorSet desc_set;
 
     xcb_window_t window;
     xcb_intern_atom_reply_t *atom_wm_delete_window;
@@ -100,7 +100,7 @@ struct demo {
 
 static void demo_flush_init_cmd(struct demo *demo)
 {
-    VK_RESULT err;
+    VkResult err;
 
     if (demo->cmd == VK_NULL_HANDLE)
         return;
@@ -108,7 +108,7 @@ static void demo_flush_init_cmd(struct demo *demo)
     err = vkEndCommandBuffer(demo->cmd);
     assert(!err);
 
-    const VK_CMD_BUFFER cmd_bufs[] = { demo->cmd };
+    const VkCmdBuffer cmd_bufs[] = { demo->cmd };
 
     err = vkQueueSubmit(demo->queue, 1, cmd_bufs, VK_NULL_HANDLE);
     assert(!err);
@@ -122,7 +122,7 @@ static void demo_flush_init_cmd(struct demo *demo)
 
 static void demo_add_mem_refs(
         struct demo *demo,
-        int num_refs, VK_GPU_MEMORY *mem)
+        int num_refs, VkGpuMemory *mem)
 {
     for (int i = 0; i < num_refs; i++) {
         vkQueueAddMemReference(demo->queue, mem[i]);
@@ -131,7 +131,7 @@ static void demo_add_mem_refs(
 
 static void demo_remove_mem_refs(
         struct demo *demo,
-        int num_refs, VK_GPU_MEMORY *mem)
+        int num_refs, VkGpuMemory *mem)
 {
     for (int i = 0; i < num_refs; i++) {
         vkQueueRemoveMemReference(demo->queue, mem[i]);
@@ -140,14 +140,14 @@ static void demo_remove_mem_refs(
 
 static void demo_set_image_layout(
         struct demo *demo,
-        VK_IMAGE image,
-        VK_IMAGE_LAYOUT old_image_layout,
-        VK_IMAGE_LAYOUT new_image_layout)
+        VkImage image,
+        VkImageLayout old_image_layout,
+        VkImageLayout new_image_layout)
 {
-    VK_RESULT err;
+    VkResult err;
 
     if (demo->cmd == VK_NULL_HANDLE) {
-        const VK_CMD_BUFFER_CREATE_INFO cmd = {
+        const VkCmdBufferCreateInfo cmd = {
             .sType = VK_STRUCTURE_TYPE_CMD_BUFFER_CREATE_INFO,
             .pNext = NULL,
             .queueNodeIndex = demo->graphics_queue_node_index,
@@ -157,7 +157,7 @@ static void demo_set_image_layout(
         err = vkCreateCommandBuffer(demo->device, &cmd, &demo->cmd);
         assert(!err);
 
-        VK_CMD_BUFFER_BEGIN_INFO cmd_buf_info = {
+        VkCmdBufferBeginInfo cmd_buf_info = {
             .sType = VK_STRUCTURE_TYPE_CMD_BUFFER_BEGIN_INFO,
             .pNext = NULL,
             .flags = VK_CMD_BUFFER_OPTIMIZE_GPU_SMALL_BATCH_BIT |
@@ -166,7 +166,7 @@ static void demo_set_image_layout(
         err = vkBeginCommandBuffer(demo->cmd, &cmd_buf_info);
     }
 
-    VK_IMAGE_MEMORY_BARRIER image_memory_barrier = {
+    VkImageMemoryBarrier image_memory_barrier = {
         .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
         .pNext = NULL,
         .outputMask = 0,
@@ -187,11 +187,11 @@ static void demo_set_image_layout(
         image_memory_barrier.outputMask = VK_MEMORY_OUTPUT_COPY_BIT | VK_MEMORY_OUTPUT_CPU_WRITE_BIT;
     }
 
-    VK_IMAGE_MEMORY_BARRIER *pmemory_barrier = &image_memory_barrier;
+    VkImageMemoryBarrier *pmemory_barrier = &image_memory_barrier;
 
-    VK_PIPE_EVENT set_events[] = { VK_PIPE_EVENT_TOP_OF_PIPE };
+    VkPipeEvent set_events[] = { VK_PIPE_EVENT_TOP_OF_PIPE };
 
-    VK_PIPELINE_BARRIER pipeline_barrier;
+    VkPipelineBarrier pipeline_barrier;
     pipeline_barrier.sType = VK_STRUCTURE_TYPE_PIPELINE_BARRIER;
     pipeline_barrier.pNext = NULL;
     pipeline_barrier.eventCount = 1;
@@ -205,42 +205,42 @@ static void demo_set_image_layout(
 
 static void demo_draw_build_cmd(struct demo *demo)
 {
-    const VK_COLOR_ATTACHMENT_BIND_INFO color_attachment = {
+    const VkColorAttachmentBindInfo color_attachment = {
         .view = demo->buffers[demo->current_buffer].view,
         .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
     };
-    const VK_DEPTH_STENCIL_BIND_INFO depth_stencil = {
+    const VkDepthStencilBindInfo depth_stencil = {
         .view = demo->depth.view,
         .layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
     };
-    const VK_CLEAR_COLOR clear_color = {
+    const VkClearColor clear_color = {
         .color.floatColor = { 0.2f, 0.2f, 0.2f, 0.2f },
         .useRawValue = false,
     };
     const float clear_depth = 0.9f;
-    VK_IMAGE_SUBRESOURCE_RANGE clear_range;
-    VK_CMD_BUFFER_BEGIN_INFO cmd_buf_info = {
+    VkImageSubresourceRange clear_range;
+    VkCmdBufferBeginInfo cmd_buf_info = {
         .sType = VK_STRUCTURE_TYPE_CMD_BUFFER_BEGIN_INFO,
         .pNext = NULL,
         .flags = VK_CMD_BUFFER_OPTIMIZE_GPU_SMALL_BATCH_BIT |
             VK_CMD_BUFFER_OPTIMIZE_ONE_TIME_SUBMIT_BIT,
     };
-    VK_RESULT err;
-    VK_ATTACHMENT_LOAD_OP load_op = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-    VK_ATTACHMENT_STORE_OP store_op = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-    const VK_FRAMEBUFFER_CREATE_INFO fb_info = {
+    VkResult err;
+    VkAttachmentLoadOp load_op = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+    VkAttachmentStoreOp store_op = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+    const VkFramebufferCreateInfo fb_info = {
          .sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
          .pNext = NULL,
          .colorAttachmentCount = 1,
-         .pColorAttachments = (VK_COLOR_ATTACHMENT_BIND_INFO*) &color_attachment,
-         .pDepthStencilAttachment = (VK_DEPTH_STENCIL_BIND_INFO*) &depth_stencil,
+         .pColorAttachments = (VkColorAttachmentBindInfo*) &color_attachment,
+         .pDepthStencilAttachment = (VkDepthStencilBindInfo*) &depth_stencil,
          .sampleCount = 1,
          .width  = demo->width,
          .height = demo->height,
          .layers = 1,
     };
-    VK_RENDER_PASS_CREATE_INFO rp_info;
-    VK_RENDER_PASS_BEGIN rp_begin;
+    VkRenderPassCreateInfo rp_info;
+    VkRenderPassBegin rp_begin;
 
     memset(&rp_info, 0 , sizeof(rp_info));
     err = vkCreateFramebuffer(demo->device, &fb_info, &rp_begin.framebuffer);
@@ -315,8 +315,8 @@ static void demo_draw(struct demo *demo)
         .destWindow = demo->window,
         .srcImage = demo->buffers[demo->current_buffer].image,
     };
-    VK_FENCE fence = demo->buffers[demo->current_buffer].fence;
-    VK_RESULT err;
+    VkFence fence = demo->buffers[demo->current_buffer].fence;
+    VkResult err;
 
     demo_draw_build_cmd(demo);
 
@@ -343,16 +343,16 @@ static void demo_prepare_buffers(struct demo *demo)
         },
         .flags = 0,
     };
-    const VK_FENCE_CREATE_INFO fence = {
+    const VkFenceCreateInfo fence = {
         .sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
         .pNext = NULL,
         .flags = 0,
     };
-    VK_RESULT err;
+    VkResult err;
     uint32_t i;
 
     for (i = 0; i < DEMO_BUFFER_COUNT; i++) {
-        VK_COLOR_ATTACHMENT_VIEW_CREATE_INFO color_attachment_view = {
+        VkColorAttachmentViewCreateInfo color_attachment_view = {
             .sType = VK_STRUCTURE_TYPE_COLOR_ATTACHMENT_VIEW_CREATE_INFO,
             .pNext = NULL,
             .format = demo->format,
@@ -385,8 +385,8 @@ static void demo_prepare_buffers(struct demo *demo)
 
 static void demo_prepare_depth(struct demo *demo)
 {
-    const VK_FORMAT depth_format = VK_FMT_D16_UNORM;
-    const VK_IMAGE_CREATE_INFO image = {
+    const VkFormat depth_format = VK_FMT_D16_UNORM;
+    const VkImageCreateInfo image = {
         .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
         .pNext = NULL,
         .imageType = VK_IMAGE_2D,
@@ -411,7 +411,7 @@ static void demo_prepare_depth(struct demo *demo)
         .memType = VK_MEMORY_TYPE_IMAGE,
         .memPriority = VK_MEMORY_PRIORITY_NORMAL,
     };
-    VK_DEPTH_STENCIL_VIEW_CREATE_INFO view = {
+    VkDepthStencilViewCreateInfo view = {
         .sType = VK_STRUCTURE_TYPE_DEPTH_STENCIL_VIEW_CREATE_INFO,
         .pNext = NULL,
         .image = VK_NULL_HANDLE,
@@ -421,11 +421,11 @@ static void demo_prepare_depth(struct demo *demo)
         .flags = 0,
     };
 
-    VK_MEMORY_REQUIREMENTS *mem_reqs;
-    size_t mem_reqs_size = sizeof(VK_MEMORY_REQUIREMENTS);
-    VK_IMAGE_MEMORY_REQUIREMENTS img_reqs;
-    size_t img_reqs_size = sizeof(VK_IMAGE_MEMORY_REQUIREMENTS);
-    VK_RESULT err;
+    VkMemoryRequirements *mem_reqs;
+    size_t mem_reqs_size = sizeof(VkMemoryRequirements);
+    VkImageMemoryRequirements img_reqs;
+    size_t img_reqs_size = sizeof(VkImageMemoryRequirements);
+    VkResult err;
     uint32_t num_allocations = 0;
     size_t num_alloc_size = sizeof(num_allocations);
 
@@ -438,17 +438,17 @@ static void demo_prepare_depth(struct demo *demo)
 
     err = vkGetObjectInfo(demo->depth.image, VK_INFO_TYPE_MEMORY_ALLOCATION_COUNT, &num_alloc_size, &num_allocations);
     assert(!err && num_alloc_size == sizeof(num_allocations));
-    mem_reqs = malloc(num_allocations * sizeof(VK_MEMORY_REQUIREMENTS));
-    demo->depth.mem = malloc(num_allocations * sizeof(VK_GPU_MEMORY));
+    mem_reqs = malloc(num_allocations * sizeof(VkMemoryRequirements));
+    demo->depth.mem = malloc(num_allocations * sizeof(VkGpuMemory));
     demo->depth.num_mem = num_allocations;
     err = vkGetObjectInfo(demo->depth.image,
                     VK_INFO_TYPE_MEMORY_REQUIREMENTS,
                     &mem_reqs_size, mem_reqs);
-    assert(!err && mem_reqs_size == num_allocations * sizeof(VK_MEMORY_REQUIREMENTS));
+    assert(!err && mem_reqs_size == num_allocations * sizeof(VkMemoryRequirements));
     err = vkGetObjectInfo(demo->depth.image,
                     VK_INFO_TYPE_IMAGE_MEMORY_REQUIREMENTS,
                     &img_reqs_size, &img_reqs);
-    assert(!err && img_reqs_size == sizeof(VK_IMAGE_MEMORY_REQUIREMENTS));
+    assert(!err && img_reqs_size == sizeof(VkImageMemoryRequirements));
     img_alloc.usage = img_reqs.usage;
     img_alloc.formatClass = img_reqs.formatClass;
     img_alloc.samples = img_reqs.samples;
@@ -482,18 +482,18 @@ static void demo_prepare_depth(struct demo *demo)
 static void demo_prepare_texture_image(struct demo *demo,
                                        const uint32_t *tex_colors,
                                        struct texture_object *tex_obj,
-                                       VK_IMAGE_TILING tiling,
-                                       VK_FLAGS mem_props)
+                                       VkImageTiling tiling,
+                                       VkFlags mem_props)
 {
-    const VK_FORMAT tex_format = VK_FMT_B8G8R8A8_UNORM;
+    const VkFormat tex_format = VK_FMT_B8G8R8A8_UNORM;
     const int32_t tex_width = 2;
     const int32_t tex_height = 2;
-    VK_RESULT err;
+    VkResult err;
 
     tex_obj->tex_width = tex_width;
     tex_obj->tex_height = tex_height;
 
-    const VK_IMAGE_CREATE_INFO image_create_info = {
+    const VkImageCreateInfo image_create_info = {
         .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
         .pNext = NULL,
         .imageType = VK_IMAGE_2D,
@@ -519,10 +519,10 @@ static void demo_prepare_texture_image(struct demo *demo,
         .memPriority = VK_MEMORY_PRIORITY_NORMAL,
     };
 
-    VK_MEMORY_REQUIREMENTS *mem_reqs;
-    size_t mem_reqs_size = sizeof(VK_MEMORY_REQUIREMENTS);
-    VK_IMAGE_MEMORY_REQUIREMENTS img_reqs;
-    size_t img_reqs_size = sizeof(VK_IMAGE_MEMORY_REQUIREMENTS);
+    VkMemoryRequirements *mem_reqs;
+    size_t mem_reqs_size = sizeof(VkMemoryRequirements);
+    VkImageMemoryRequirements img_reqs;
+    size_t img_reqs_size = sizeof(VkImageMemoryRequirements);
     uint32_t num_allocations = 0;
     size_t num_alloc_size = sizeof(num_allocations);
 
@@ -534,16 +534,16 @@ static void demo_prepare_texture_image(struct demo *demo,
                 VK_INFO_TYPE_MEMORY_ALLOCATION_COUNT,
                 &num_alloc_size, &num_allocations);
     assert(!err && num_alloc_size == sizeof(num_allocations));
-    mem_reqs = malloc(num_allocations * sizeof(VK_MEMORY_REQUIREMENTS));
-    tex_obj->mem = malloc(num_allocations * sizeof(VK_GPU_MEMORY));
+    mem_reqs = malloc(num_allocations * sizeof(VkMemoryRequirements));
+    tex_obj->mem = malloc(num_allocations * sizeof(VkGpuMemory));
     err = vkGetObjectInfo(tex_obj->image,
                 VK_INFO_TYPE_MEMORY_REQUIREMENTS,
                 &mem_reqs_size, mem_reqs);
-    assert(!err && mem_reqs_size == num_allocations * sizeof(VK_MEMORY_REQUIREMENTS));
+    assert(!err && mem_reqs_size == num_allocations * sizeof(VkMemoryRequirements));
     err = vkGetObjectInfo(tex_obj->image,
                     VK_INFO_TYPE_IMAGE_MEMORY_REQUIREMENTS,
                     &img_reqs_size, &img_reqs);
-    assert(!err && img_reqs_size == sizeof(VK_IMAGE_MEMORY_REQUIREMENTS));
+    assert(!err && img_reqs_size == sizeof(VkImageMemoryRequirements));
     img_alloc.usage = img_reqs.usage;
     img_alloc.formatClass = img_reqs.formatClass;
     img_alloc.samples = img_reqs.samples;
@@ -567,13 +567,13 @@ static void demo_prepare_texture_image(struct demo *demo,
     tex_obj->num_mem = num_allocations;
 
     if (mem_props & VK_MEMORY_PROPERTY_CPU_VISIBLE_BIT) {
-        const VK_IMAGE_SUBRESOURCE subres = {
+        const VkImageSubresource subres = {
             .aspect = VK_IMAGE_ASPECT_COLOR,
             .mipLevel = 0,
             .arraySlice = 0,
         };
-        VK_SUBRESOURCE_LAYOUT layout;
-        size_t layout_size = sizeof(VK_SUBRESOURCE_LAYOUT);
+        VkSubresourceLayout layout;
+        size_t layout_size = sizeof(VkSubresourceLayout);
         void *data;
         int32_t x, y;
 
@@ -618,13 +618,13 @@ static void demo_destroy_texture_image(struct texture_object *tex_obj)
 
 static void demo_prepare_textures(struct demo *demo)
 {
-    const VK_FORMAT tex_format = VK_FMT_B8G8R8A8_UNORM;
-    VK_FORMAT_PROPERTIES props;
+    const VkFormat tex_format = VK_FMT_B8G8R8A8_UNORM;
+    VkFormatProperties props;
     size_t size = sizeof(props);
     const uint32_t tex_colors[DEMO_TEXTURE_COUNT][2] = {
         { 0xffff0000, 0xff00ff00 },
     };
-    VK_RESULT err;
+    VkResult err;
     uint32_t i;
 
     err = vkGetFormatInfo(demo->device, tex_format,
@@ -656,7 +656,7 @@ static void demo_prepare_textures(struct demo *demo)
                                    demo->textures[i].imageLayout,
                                    VK_IMAGE_LAYOUT_TRANSFER_DESTINATION_OPTIMAL);
 
-            VK_IMAGE_COPY copy_region = {
+            VkImageCopy copy_region = {
                 .srcSubresource = { VK_IMAGE_ASPECT_COLOR, 0, 0 },
                 .srcOffset = { 0, 0, 0 },
                 .destSubresource = { VK_IMAGE_ASPECT_COLOR, 0, 0 },
@@ -684,7 +684,7 @@ static void demo_prepare_textures(struct demo *demo)
             assert(!"No support for B8G8R8A8_UNORM as texture image format");
         }
 
-        const VK_SAMPLER_CREATE_INFO sampler = {
+        const VkSamplerCreateInfo sampler = {
             .sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
             .pNext = NULL,
             .magFilter = VK_TEX_FILTER_NEAREST,
@@ -700,7 +700,7 @@ static void demo_prepare_textures(struct demo *demo)
             .maxLod = 0.0f,
             .borderColorType = VK_BORDER_COLOR_OPAQUE_WHITE,
         };
-        VK_IMAGE_VIEW_CREATE_INFO view = {
+        VkImageViewCreateInfo view = {
             .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
             .pNext = NULL,
             .image = VK_NULL_HANDLE,
@@ -754,13 +754,13 @@ static void demo_prepare_vertices(struct demo *demo)
         .memType = VK_MEMORY_TYPE_BUFFER,
         .memPriority = VK_MEMORY_PRIORITY_NORMAL,
     };
-    VK_MEMORY_REQUIREMENTS *mem_reqs;
-    size_t mem_reqs_size = sizeof(VK_MEMORY_REQUIREMENTS);
-    VK_BUFFER_MEMORY_REQUIREMENTS buf_reqs;
-    size_t buf_reqs_size = sizeof(VK_BUFFER_MEMORY_REQUIREMENTS);
+    VkMemoryRequirements *mem_reqs;
+    size_t mem_reqs_size = sizeof(VkMemoryRequirements);
+    VkBufferMemoryRequirements buf_reqs;
+    size_t buf_reqs_size = sizeof(VkBufferMemoryRequirements);
     uint32_t num_allocations = 0;
     size_t num_alloc_size = sizeof(num_allocations);
-    VK_RESULT err;
+    VkResult err;
     void *data;
 
     memset(&demo->vertices, 0, sizeof(demo->vertices));
@@ -772,8 +772,8 @@ static void demo_prepare_vertices(struct demo *demo)
                            VK_INFO_TYPE_MEMORY_ALLOCATION_COUNT,
                            &num_alloc_size, &num_allocations);
     assert(!err && num_alloc_size == sizeof(num_allocations));
-    mem_reqs = malloc(num_allocations * sizeof(VK_MEMORY_REQUIREMENTS));
-    demo->vertices.mem = malloc(num_allocations * sizeof(VK_GPU_MEMORY));
+    mem_reqs = malloc(num_allocations * sizeof(VkMemoryRequirements));
+    demo->vertices.mem = malloc(num_allocations * sizeof(VkGpuMemory));
     demo->vertices.num_mem = num_allocations;
     err = vkGetObjectInfo(demo->vertices.buf,
             VK_INFO_TYPE_MEMORY_REQUIREMENTS,
@@ -782,7 +782,7 @@ static void demo_prepare_vertices(struct demo *demo)
     err = vkGetObjectInfo(demo->vertices.buf,
                     VK_INFO_TYPE_BUFFER_MEMORY_REQUIREMENTS,
                     &buf_reqs_size, &buf_reqs);
-    assert(!err && buf_reqs_size == sizeof(VK_BUFFER_MEMORY_REQUIREMENTS));
+    assert(!err && buf_reqs_size == sizeof(VkBufferMemoryRequirements));
     buf_alloc.usage = buf_reqs.usage;
     for (uint32_t i = 0; i < num_allocations; i ++) {
         mem_alloc.allocationSize = mem_reqs[i].size;
@@ -828,19 +828,19 @@ static void demo_prepare_vertices(struct demo *demo)
 
 static void demo_prepare_descriptor_layout(struct demo *demo)
 {
-    const VK_DESCRIPTOR_SET_LAYOUT_BINDING layout_binding = {
+    const VkDescriptorSetLayoutBinding layout_binding = {
         .descriptorType = VK_DESCRIPTOR_TYPE_SAMPLER_TEXTURE,
         .count = DEMO_TEXTURE_COUNT,
         .stageFlags = VK_SHADER_STAGE_FLAGS_FRAGMENT_BIT,
         .pImmutableSamplers = NULL,
     };
-    const VK_DESCRIPTOR_SET_LAYOUT_CREATE_INFO descriptor_layout = {
+    const VkDescriptorSetLayoutCreateInfo descriptor_layout = {
         .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
         .pNext = NULL,
         .count = 1,
         .pBinding = &layout_binding,
     };
-    VK_RESULT err;
+    VkResult err;
 
     err = vkCreateDescriptorSetLayout(demo->device,
             &descriptor_layout, &demo->desc_layout);
@@ -851,14 +851,14 @@ static void demo_prepare_descriptor_layout(struct demo *demo)
     assert(!err);
 }
 
-static VK_SHADER demo_prepare_shader(struct demo *demo,
-                                      VK_PIPELINE_SHADER_STAGE stage,
+static VkShader demo_prepare_shader(struct demo *demo,
+                                      VkPipelineShaderStage stage,
                                       const void *code,
                                       size_t size)
 {
-    VK_SHADER_CREATE_INFO createInfo;
-    VK_SHADER shader;
-    VK_RESULT err;
+    VkShaderCreateInfo createInfo;
+    VkShader shader;
+    VkResult err;
 
     createInfo.sType = VK_STRUCTURE_TYPE_SHADER_CREATE_INFO;
     createInfo.pNext = NULL;
@@ -869,7 +869,7 @@ static VK_SHADER demo_prepare_shader(struct demo *demo,
     createInfo.pCode = malloc(createInfo.codeSize);
     createInfo.flags = 0;
 
-    /* try version 0 first: VK_PIPELINE_SHADER_STAGE followed by GLSL */
+    /* try version 0 first: VkPipelineShaderStage followed by GLSL */
     ((uint32_t *) createInfo.pCode)[0] = ICD_SPV_MAGIC;
     ((uint32_t *) createInfo.pCode)[1] = 0;
     ((uint32_t *) createInfo.pCode)[2] = stage;
@@ -884,7 +884,7 @@ static VK_SHADER demo_prepare_shader(struct demo *demo,
     return shader;
 }
 
-static VK_SHADER demo_prepare_vs(struct demo *demo)
+static VkShader demo_prepare_vs(struct demo *demo)
 {
     static const char *vertShaderText =
             "#version 140\n"
@@ -903,7 +903,7 @@ static VK_SHADER demo_prepare_vs(struct demo *demo)
                                strlen(vertShaderText));
 }
 
-static VK_SHADER demo_prepare_fs(struct demo *demo)
+static VkShader demo_prepare_fs(struct demo *demo)
 {
     static const char *fragShaderText =
             "#version 140\n"
@@ -922,17 +922,17 @@ static VK_SHADER demo_prepare_fs(struct demo *demo)
 
 static void demo_prepare_pipeline(struct demo *demo)
 {
-    VK_GRAPHICS_PIPELINE_CREATE_INFO pipeline;
-    VK_PIPELINE_VERTEX_INPUT_CREATE_INFO vi;
-    VK_PIPELINE_IA_STATE_CREATE_INFO ia;
-    VK_PIPELINE_RS_STATE_CREATE_INFO rs;
-    VK_PIPELINE_CB_STATE_CREATE_INFO cb;
-    VK_PIPELINE_DS_STATE_CREATE_INFO ds;
-    VK_PIPELINE_SHADER_STAGE_CREATE_INFO vs;
-    VK_PIPELINE_SHADER_STAGE_CREATE_INFO fs;
-    VK_PIPELINE_VP_STATE_CREATE_INFO vp;
-    VK_PIPELINE_MS_STATE_CREATE_INFO ms;
-    VK_RESULT err;
+    VkGraphicsPipelineCreateInfo pipeline;
+    VkPipelineVertexInputCreateInfo vi;
+    VkPipelineIaStateCreateInfo ia;
+    VkPipelineRsStateCreateInfo rs;
+    VkPipelineCbStateCreateInfo cb;
+    VkPipelineDsStateCreateInfo ds;
+    VkPipelineShaderStageCreateInfo vs;
+    VkPipelineShaderStageCreateInfo fs;
+    VkPipelineVpStateCreateInfo vp;
+    VkPipelineMsStateCreateInfo ms;
+    VkResult err;
 
     memset(&pipeline, 0, sizeof(pipeline));
     pipeline.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
@@ -952,7 +952,7 @@ static void demo_prepare_pipeline(struct demo *demo)
 
     memset(&cb, 0, sizeof(cb));
     cb.sType = VK_STRUCTURE_TYPE_PIPELINE_CB_STATE_CREATE_INFO;
-    VK_PIPELINE_CB_ATTACHMENT_STATE att_state[1];
+    VkPipelineCbAttachmentState att_state[1];
     memset(att_state, 0, sizeof(att_state));
     att_state[0].format = demo->format;
     att_state[0].channelWriteMask = 0xf;
@@ -1015,23 +1015,23 @@ static void demo_prepare_pipeline(struct demo *demo)
 
 static void demo_prepare_dynamic_states(struct demo *demo)
 {
-    VK_DYNAMIC_VP_STATE_CREATE_INFO viewport_create;
-    VK_DYNAMIC_RS_STATE_CREATE_INFO raster;
-    VK_DYNAMIC_CB_STATE_CREATE_INFO color_blend;
-    VK_DYNAMIC_DS_STATE_CREATE_INFO depth_stencil;
-    VK_RESULT err;
+    VkDynamicVpStateCreateInfo viewport_create;
+    VkDynamicRsStateCreateInfo raster;
+    VkDynamicCbStateCreateInfo color_blend;
+    VkDynamicDsStateCreateInfo depth_stencil;
+    VkResult err;
 
     memset(&viewport_create, 0, sizeof(viewport_create));
     viewport_create.sType = VK_STRUCTURE_TYPE_DYNAMIC_VP_STATE_CREATE_INFO;
     viewport_create.viewportAndScissorCount = 1;
-    VK_VIEWPORT viewport;
+    VkViewport viewport;
     memset(&viewport, 0, sizeof(viewport));
     viewport.height = (float) demo->height;
     viewport.width = (float) demo->width;
     viewport.minDepth = (float) 0.0f;
     viewport.maxDepth = (float) 1.0f;
     viewport_create.pViewports = &viewport;
-    VK_RECT scissor;
+    VkRect scissor;
     memset(&scissor, 0, sizeof(scissor));
     scissor.extent.width = demo->width;
     scissor.extent.height = demo->height;
@@ -1077,17 +1077,17 @@ static void demo_prepare_dynamic_states(struct demo *demo)
 
 static void demo_prepare_descriptor_pool(struct demo *demo)
 {
-    const VK_DESCRIPTOR_TYPE_COUNT type_count = {
+    const VkDescriptorTypeCount type_count = {
         .type = VK_DESCRIPTOR_TYPE_SAMPLER_TEXTURE,
         .count = DEMO_TEXTURE_COUNT,
     };
-    const VK_DESCRIPTOR_POOL_CREATE_INFO descriptor_pool = {
+    const VkDescriptorPoolCreateInfo descriptor_pool = {
         .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
         .pNext = NULL,
         .count = 1,
         .pTypeCount = &type_count,
     };
-    VK_RESULT err;
+    VkResult err;
 
     err = vkCreateDescriptorPool(demo->device,
             VK_DESCRIPTOR_POOL_USAGE_ONE_SHOT, 1,
@@ -1097,11 +1097,11 @@ static void demo_prepare_descriptor_pool(struct demo *demo)
 
 static void demo_prepare_descriptor_set(struct demo *demo)
 {
-    VK_IMAGE_VIEW_ATTACH_INFO view_info[DEMO_TEXTURE_COUNT];
-    VK_SAMPLER_IMAGE_VIEW_INFO combined_info[DEMO_TEXTURE_COUNT];
-    VK_UPDATE_SAMPLER_TEXTURES update;
+    VkImageViewAttachInfo view_info[DEMO_TEXTURE_COUNT];
+    VkSamplerImageViewInfo combined_info[DEMO_TEXTURE_COUNT];
+    VkUpdateSamplerTextures update;
     const void *update_array[1] = { &update };
-    VK_RESULT err;
+    VkResult err;
     uint32_t count;
     uint32_t i;
 
@@ -1137,13 +1137,13 @@ static void demo_prepare_descriptor_set(struct demo *demo)
 
 static void demo_prepare(struct demo *demo)
 {
-    const VK_CMD_BUFFER_CREATE_INFO cmd = {
+    const VkCmdBufferCreateInfo cmd = {
         .sType = VK_STRUCTURE_TYPE_CMD_BUFFER_CREATE_INFO,
         .pNext = NULL,
         .queueNodeIndex = demo->graphics_queue_node_index,
         .flags = 0,
     };
-    VK_RESULT err;
+    VkResult err;
 
     demo_prepare_buffers(demo);
     demo_prepare_depth(demo);
@@ -1243,7 +1243,7 @@ static void demo_create_window(struct demo *demo)
 
 static void demo_init_vk(struct demo *demo)
 {
-    const VK_APPLICATION_INFO app = {
+    const VkApplicationInfo app = {
         .sType = VK_STRUCTURE_TYPE_APPLICATION_INFO,
         .pNext = NULL,
         .pAppName = "tri",
@@ -1282,7 +1282,7 @@ static void demo_init_vk(struct demo *demo)
         .maxValidationLevel = VK_VALIDATION_LEVEL_END_RANGE,
         .flags = VK_DEVICE_CREATE_VALIDATION_BIT,
     };
-    VK_RESULT err;
+    VkResult err;
     uint32_t gpu_count;
     uint32_t i;
     size_t data_size;
@@ -1316,7 +1316,7 @@ static void demo_init_vk(struct demo *demo)
                         &data_size, NULL);
     assert(!err);
 
-    demo->gpu_props = (VK_PHYSICAL_GPU_PROPERTIES *) malloc(data_size);
+    demo->gpu_props = (VkPhysicalGpuProperties *) malloc(data_size);
     err = vkGetGpuInfo(demo->gpu, VK_INFO_TYPE_PHYSICAL_GPU_PROPERTIES,
                         &data_size, demo->gpu_props);
     assert(!err);
@@ -1325,11 +1325,11 @@ static void demo_init_vk(struct demo *demo)
                         &data_size, NULL);
     assert(!err);
 
-    demo->queue_props = (VK_PHYSICAL_GPU_QUEUE_PROPERTIES *) malloc(data_size);
+    demo->queue_props = (VkPhysicalGpuQueueProperties *) malloc(data_size);
     err = vkGetGpuInfo(demo->gpu, VK_INFO_TYPE_PHYSICAL_GPU_QUEUE_PROPERTIES,
                         &data_size, demo->queue_props);
     assert(!err);
-	queue_count = (uint32_t) (data_size / sizeof(VK_PHYSICAL_GPU_QUEUE_PROPERTIES));
+	queue_count = (uint32_t) (data_size / sizeof(VkPhysicalGpuQueueProperties));
     assert(queue_count >= 1);
 
     for (i = 0; i < queue_count; i++) {

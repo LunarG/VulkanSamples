@@ -110,7 +110,7 @@ struct intel_pipeline_shader {
      * must grab everything we need from shader object as that
      * can go away after the pipeline is created
      */
-    VK_FLAGS uses;
+    VkFlags uses;
     uint64_t inputs_read;
     uint64_t outputs_written;
     uint32_t outputs_offset;
@@ -132,10 +132,10 @@ struct intel_pipeline_shader {
     /* If present, where does the SIMD16 kernel start? */
     uint32_t offset_16;
 
-    VK_FLAGS barycentric_interps;
-    VK_FLAGS point_sprite_enables;
+    VkFlags barycentric_interps;
+    VkFlags point_sprite_enables;
 
-    VK_GPU_SIZE per_thread_scratch_size;
+    VkGpuSize per_thread_scratch_size;
 
     enum intel_computed_depth_mode computed_depth_mode;
 
@@ -143,7 +143,7 @@ struct intel_pipeline_shader {
 
     /* these are set up by the driver */
     uint32_t max_threads;
-    VK_GPU_SIZE scratch_offset;
+    VkGpuSize scratch_offset;
 };
 
 /*
@@ -173,11 +173,11 @@ struct intel_pipeline {
 
     struct intel_dev *dev;
 
-    VK_VERTEX_INPUT_BINDING_DESCRIPTION vb[INTEL_MAX_VERTEX_BINDING_COUNT];
+    VkVertexInputBindingDescription vb[INTEL_MAX_VERTEX_BINDING_COUNT];
     uint32_t vb_count;
 
-    /* VK_PIPELINE_IA_STATE_CREATE_INFO */
-    VK_PRIMITIVE_TOPOLOGY topology;
+    /* VkPipelineIaStateCreateInfo */
+    VkPrimitiveTopology topology;
     int prim_type;
     bool disable_vs_cache;
     bool primitive_restart;
@@ -189,18 +189,18 @@ struct intel_pipeline {
 
     // TODO: This should probably be Intel HW state, not VK state.
     /* Depth Buffer format */
-    VK_FORMAT db_format;
+    VkFormat db_format;
 
     bool depth_zero_to_one;
 
-    VK_PIPELINE_CB_STATE_CREATE_INFO cb_state;
+    VkPipelineCbStateCreateInfo cb_state;
 
-    // VK_PIPELINE_RS_STATE_CREATE_INFO rs_state;
+    // VkPipelineRsStateCreateInfo rs_state;
     bool depthClipEnable;
     bool rasterizerDiscardEnable;
     bool use_rs_point_size;
 
-    VK_PIPELINE_TESS_STATE_CREATE_INFO tess_state;
+    VkPipelineTessStateCreateInfo tess_state;
 
     uint32_t active_shaders;
     struct intel_pipeline_shader vs;
@@ -209,7 +209,7 @@ struct intel_pipeline {
     struct intel_pipeline_shader gs;
     struct intel_pipeline_shader fs;
     struct intel_pipeline_shader cs;
-    VK_GPU_SIZE scratch_size;
+    VkGpuSize scratch_size;
 
     uint32_t wa_flags;
 
@@ -221,7 +221,7 @@ struct intel_pipeline {
     /* The following are only partial HW commands that will need
      * more processing before sending to the HW
      */
-    // VK_PIPELINE_DS_STATE_CREATE_INFO ds_state
+    // VkPipelineDsStateCreateInfo ds_state
     bool stencilTestEnable;
     uint32_t cmd_depth_stencil;
     uint32_t cmd_depth_test;
@@ -236,7 +236,7 @@ struct intel_pipeline {
     uint32_t cmd_3dstate_sbe[14];
 };
 
-static inline struct intel_pipeline *intel_pipeline(VK_PIPELINE pipeline)
+static inline struct intel_pipeline *intel_pipeline(VkPipeline pipeline)
 {
     return (struct intel_pipeline *) pipeline;
 }

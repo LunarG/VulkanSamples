@@ -87,7 +87,7 @@ static void gen6_MI_STORE_DATA_IMM(struct intel_cmd *cmd,
 
 static void cmd_query_pipeline_statistics(struct intel_cmd *cmd,
                                           struct intel_bo *bo,
-                                          VK_GPU_SIZE offset)
+                                          VkGpuSize offset)
 {
     const uint32_t regs[] = {
         GEN6_REG_PS_INVOCATION_COUNT,
@@ -122,15 +122,15 @@ static void cmd_query_pipeline_statistics(struct intel_cmd *cmd,
 }
 
 ICD_EXPORT void VKAPI vkCmdBeginQuery(
-    VK_CMD_BUFFER                              cmdBuffer,
-    VK_QUERY_POOL                              queryPool,
+    VkCmdBuffer                              cmdBuffer,
+    VkQueryPool                              queryPool,
     uint32_t                                    slot,
-    VK_FLAGS                                   flags)
+    VkFlags                                   flags)
 {
     struct intel_cmd *cmd = intel_cmd(cmdBuffer);
     struct intel_query *query = intel_query(queryPool);
     struct intel_bo *bo = query->obj.mem->bo;
-    const VK_GPU_SIZE offset = query->slot_stride * slot;
+    const VkGpuSize offset = query->slot_stride * slot;
 
     switch (query->type) {
     case VK_QUERY_OCCLUSION:
@@ -146,14 +146,14 @@ ICD_EXPORT void VKAPI vkCmdBeginQuery(
 }
 
 ICD_EXPORT void VKAPI vkCmdEndQuery(
-    VK_CMD_BUFFER                              cmdBuffer,
-    VK_QUERY_POOL                              queryPool,
+    VkCmdBuffer                              cmdBuffer,
+    VkQueryPool                              queryPool,
     uint32_t                                    slot)
 {
     struct intel_cmd *cmd = intel_cmd(cmdBuffer);
     struct intel_query *query = intel_query(queryPool);
     struct intel_bo *bo = query->obj.mem->bo;
-    const VK_GPU_SIZE offset = query->slot_stride * slot;
+    const VkGpuSize offset = query->slot_stride * slot;
 
     switch (query->type) {
     case VK_QUERY_OCCLUSION:
@@ -161,7 +161,7 @@ ICD_EXPORT void VKAPI vkCmdEndQuery(
         break;
     case VK_QUERY_PIPELINE_STATISTICS:
         cmd_query_pipeline_statistics(cmd, bo,
-                offset + sizeof(VK_PIPELINE_STATISTICS_DATA));
+                offset + sizeof(VkPipelineStatisticsData));
         break;
     default:
         cmd_fail(cmd, VK_ERROR_UNKNOWN);
@@ -170,8 +170,8 @@ ICD_EXPORT void VKAPI vkCmdEndQuery(
 }
 
 ICD_EXPORT void VKAPI vkCmdResetQueryPool(
-    VK_CMD_BUFFER                              cmdBuffer,
-    VK_QUERY_POOL                              queryPool,
+    VkCmdBuffer                              cmdBuffer,
+    VkQueryPool                              queryPool,
     uint32_t                                    startQuery,
     uint32_t                                    queryCount)
 {
@@ -179,7 +179,7 @@ ICD_EXPORT void VKAPI vkCmdResetQueryPool(
 }
 
 static void cmd_write_event_value(struct intel_cmd *cmd, struct intel_event *event,
-                            VK_PIPE_EVENT pipeEvent, uint32_t value)
+                            VkPipeEvent pipeEvent, uint32_t value)
 {
     uint32_t pipe_control_flags;
 
@@ -210,9 +210,9 @@ static void cmd_write_event_value(struct intel_cmd *cmd, struct intel_event *eve
 }
 
 ICD_EXPORT void VKAPI vkCmdSetEvent(
-    VK_CMD_BUFFER                              cmdBuffer,
-    VK_EVENT                                   event_,
-    VK_PIPE_EVENT                              pipeEvent)
+    VkCmdBuffer                              cmdBuffer,
+    VkEvent                                   event_,
+    VkPipeEvent                              pipeEvent)
 {
     struct intel_cmd *cmd = intel_cmd(cmdBuffer);
     struct intel_event *event = intel_event(event_);
@@ -221,9 +221,9 @@ ICD_EXPORT void VKAPI vkCmdSetEvent(
 }
 
 ICD_EXPORT void VKAPI vkCmdResetEvent(
-    VK_CMD_BUFFER                              cmdBuffer,
-    VK_EVENT                                   event_,
-    VK_PIPE_EVENT                              pipeEvent)
+    VkCmdBuffer                              cmdBuffer,
+    VkEvent                                   event_,
+    VkPipeEvent                              pipeEvent)
 {
     struct intel_cmd *cmd = intel_cmd(cmdBuffer);
     struct intel_event *event = intel_event(event_);
@@ -232,10 +232,10 @@ ICD_EXPORT void VKAPI vkCmdResetEvent(
 }
 
 ICD_EXPORT void VKAPI vkCmdWriteTimestamp(
-    VK_CMD_BUFFER                              cmdBuffer,
-    VK_TIMESTAMP_TYPE                          timestampType,
-    VK_BUFFER                                  destBuffer,
-    VK_GPU_SIZE                                destOffset)
+    VkCmdBuffer                              cmdBuffer,
+    VkTimestampType                          timestampType,
+    VkBuffer                                  destBuffer,
+    VkGpuSize                                destOffset)
 {
     struct intel_cmd *cmd = intel_cmd(cmdBuffer);
     struct intel_buf *buf = intel_buf(destBuffer);

@@ -12,27 +12,27 @@ subgraph clusterDSCreate1
 {
 label="vkCreateDescriptorSet()"
 "_VK_DESCRIPTOR_SET_CREATE_INFO1" [
-label = <<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0"> <TR><TD COLSPAN="2" PORT="f0">VK_DESCRIPTOR_SET_CREATE_INFO</TD></TR><TR><TD PORT="f1">VK_STRUCTURE_TYPE</TD><TD>sType=<BR/>VK_STRUCTURE_TYPE_DESCRIPTOR_SET_CREATE_INFO</TD></TR><TR><TD>const void*</TD><TD PORT="f2">pNext=NULL</TD></TR><TR><TD PORT="f3">uint32_t</TD><TD PORT="f4">slots=14</TD></TR></TABLE>>
+label = <<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0"> <TR><TD COLSPAN="2" PORT="f0">VK_DESCRIPTOR_SET_CREATE_INFO</TD></TR><TR><TD PORT="f1">VkStructureType</TD><TD>sType=<BR/>VK_STRUCTURE_TYPE_DESCRIPTOR_SET_CREATE_INFO</TD></TR><TR><TD>const void*</TD><TD PORT="f2">pNext=NULL</TD></TR><TR><TD PORT="f3">uint32_t</TD><TD PORT="f4">slots=14</TD></TR></TABLE>>
 ];
 }
 subgraph clusterDSCreate2
 {
 label="vkCreateDescriptorSet()"
 "_VK_DESCRIPTOR_SET_CREATE_INFO2" [
-label = <<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0"> <TR><TD COLSPAN="2" PORT="f0">VK_DESCRIPTOR_SET_CREATE_INFO</TD></TR><TR><TD PORT="f1">VK_STRUCTURE_TYPE</TD><TD>sType=<BR/>VK_STRUCTURE_TYPE_DESCRIPTOR_SET_CREATE_INFO</TD></TR><TR><TD>const void*</TD><TD PORT="f2">pNext=NULL</TD></TR><TR><TD PORT="f3">uint32_t</TD><TD PORT="f4">slots=20</TD></TR></TABLE>>
+label = <<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0"> <TR><TD COLSPAN="2" PORT="f0">VK_DESCRIPTOR_SET_CREATE_INFO</TD></TR><TR><TD PORT="f1">VkStructureType</TD><TD>sType=<BR/>VK_STRUCTURE_TYPE_DESCRIPTOR_SET_CREATE_INFO</TD></TR><TR><TD>const void*</TD><TD PORT="f2">pNext=NULL</TD></TR><TR><TD PORT="f3">uint32_t</TD><TD PORT="f4">slots=20</TD></TR></TABLE>>
 ];
 }
 subgraph clusterSamplerCreate
 {
-label="vkCreateSampler - multiple calls return unique VK_SAMPLER handles"
+label="vkCreateSampler - multiple calls return unique VkSampler handles"
 "_VK_SAMPLER_CREATE_INFO_0" [
-label = <<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0"> <TR><TD COLSPAN="2" PORT="f0">VK_SAMPLER_CREATE_INFO</TD></TR><TR><TD PORT="f1">VK_STRUCTURE_TYPE</TD><TD PORT="f2">sType=<BR/>VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO</TD></TR><TR><TD PORT="f3">const void*</TD><TD PORT="f4">pNext=NULL</TD></TR><TR><TD PORT="f5">VK_TEX_FILTER</TD><TD PORT="f6">magFilter</TD></TR><TR><TD PORT="f7">VK_TEX_FILTER</TD><TD PORT="f8">minFilter</TD></TR><TR><TD PORT="f9">VK_TEX_MIPMAP_MODE</TD><TD PORT="f10">mipMode</TD></TR><TR><TD PORT="f11">VK_TEX_ADDRESS</TD><TD PORT="f12">addressU</TD></TR><TR><TD PORT="f13">VK_TEX_ADDRESS</TD><TD PORT="f14">addressV</TD></TR><TR><TD PORT="f15">VK_TEX_ADDRESS</TD><TD PORT="f16">addressW</TD></TR><TR><TD PORT="f17">float</TD><TD PORT="f18">mipLodBias</TD></TR><TR><TD PORT="f19">uint32_t</TD><TD PORT="f20">maxAnisotropy</TD></TR><TR><TD PORT="f21">VK_COMPARE_FUNC</TD><TD PORT="f22">compareFunc</TD></TR><TR><TD PORT="f23">float</TD><TD PORT="f24">minLod</TD></TR><TR><TD PORT="f25">float</TD><TD PORT="f26">maxLod</TD></TR><TR><TD PORT="f27">VK_BORDER_COLOR_TYPE</TD><TD PORT="f28">borderColorType</TD></TR></TABLE>>
+label = <<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0"> <TR><TD COLSPAN="2" PORT="f0">VkSamplerCreateInfo</TD></TR><TR><TD PORT="f1">VkStructureType</TD><TD PORT="f2">sType=<BR/>VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO</TD></TR><TR><TD PORT="f3">const void*</TD><TD PORT="f4">pNext=NULL</TD></TR><TR><TD PORT="f5">VkTexFilter</TD><TD PORT="f6">magFilter</TD></TR><TR><TD PORT="f7">VkTexFilter</TD><TD PORT="f8">minFilter</TD></TR><TR><TD PORT="f9">VkTexMipmapMode</TD><TD PORT="f10">mipMode</TD></TR><TR><TD PORT="f11">VkTexAddress</TD><TD PORT="f12">addressU</TD></TR><TR><TD PORT="f13">VkTexAddress</TD><TD PORT="f14">addressV</TD></TR><TR><TD PORT="f15">VkTexAddress</TD><TD PORT="f16">addressW</TD></TR><TR><TD PORT="f17">float</TD><TD PORT="f18">mipLodBias</TD></TR><TR><TD PORT="f19">uint32_t</TD><TD PORT="f20">maxAnisotropy</TD></TR><TR><TD PORT="f21">VkCompareFunc</TD><TD PORT="f22">compareFunc</TD></TR><TR><TD PORT="f23">float</TD><TD PORT="f24">minLod</TD></TR><TR><TD PORT="f25">float</TD><TD PORT="f26">maxLod</TD></TR><TR><TD PORT="f27">VkBorderColorType</TD><TD PORT="f28">borderColorType</TD></TR></TABLE>>
 ];
 "SAMPLER_ELLIPSES" [
 label = "..."
 ];
 "_VK_SAMPLER_CREATE_INFO_19" [
-label = <<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0"> <TR><TD COLSPAN="2" PORT="f0">VK_SAMPLER_CREATE_INFO</TD></TR><TR><TD PORT="f1">VK_STRUCTURE_TYPE</TD><TD PORT="f2">sType=<BR/>VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO</TD></TR><TR><TD PORT="f3">const void*</TD><TD PORT="f4">pNext=NULL</TD></TR><TR><TD PORT="f5">VK_TEX_FILTER</TD><TD PORT="f6">magFilter</TD></TR><TR><TD PORT="f7">VK_TEX_FILTER</TD><TD PORT="f8">minFilter</TD></TR><TR><TD PORT="f9">VK_TEX_MIPMAP_MODE</TD><TD PORT="f10">mipMode</TD></TR><TR><TD PORT="f11">VK_TEX_ADDRESS</TD><TD PORT="f12">addressU</TD></TR><TR><TD PORT="f13">VK_TEX_ADDRESS</TD><TD PORT="f14">addressV</TD></TR><TR><TD PORT="f15">VK_TEX_ADDRESS</TD><TD PORT="f16">addressW</TD></TR><TR><TD PORT="f17">float</TD><TD PORT="f18">mipLodBias</TD></TR><TR><TD PORT="f19">uint32_t</TD><TD PORT="f20">maxAnisotropy</TD></TR><TR><TD PORT="f21">VK_COMPARE_FUNC</TD><TD PORT="f22">compareFunc</TD></TR><TR><TD PORT="f23">float</TD><TD PORT="f24">minLod</TD></TR><TR><TD PORT="f25">float</TD><TD PORT="f26">maxLod</TD></TR><TR><TD PORT="f27">VK_BORDER_COLOR_TYPE</TD><TD PORT="f28">borderColorType</TD></TR></TABLE>>
+label = <<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0"> <TR><TD COLSPAN="2" PORT="f0">VkSamplerCreateInfo</TD></TR><TR><TD PORT="f1">VkStructureType</TD><TD PORT="f2">sType=<BR/>VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO</TD></TR><TR><TD PORT="f3">const void*</TD><TD PORT="f4">pNext=NULL</TD></TR><TR><TD PORT="f5">VkTexFilter</TD><TD PORT="f6">magFilter</TD></TR><TR><TD PORT="f7">VkTexFilter</TD><TD PORT="f8">minFilter</TD></TR><TR><TD PORT="f9">VkTexMipmapMode</TD><TD PORT="f10">mipMode</TD></TR><TR><TD PORT="f11">VkTexAddress</TD><TD PORT="f12">addressU</TD></TR><TR><TD PORT="f13">VkTexAddress</TD><TD PORT="f14">addressV</TD></TR><TR><TD PORT="f15">VkTexAddress</TD><TD PORT="f16">addressW</TD></TR><TR><TD PORT="f17">float</TD><TD PORT="f18">mipLodBias</TD></TR><TR><TD PORT="f19">uint32_t</TD><TD PORT="f20">maxAnisotropy</TD></TR><TR><TD PORT="f21">VkCompareFunc</TD><TD PORT="f22">compareFunc</TD></TR><TR><TD PORT="f23">float</TD><TD PORT="f24">minLod</TD></TR><TR><TD PORT="f25">float</TD><TD PORT="f26">maxLod</TD></TR><TR><TD PORT="f27">VkBorderColorType</TD><TD PORT="f28">borderColorType</TD></TR></TABLE>>
 ];
 }
 subgraph clusterSamplerAttach
@@ -52,26 +52,26 @@ subgraph clusterMemoryView
 {
 label="vkAttachMemoryViewDescriptors - pMemViews array of VK_MEMORY_VIEW_ATTACH_INFO structs"
 "_VK_MEMORY_VIEW_ATTACH_INFO_3" [
-label = <<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0"> <TR><TD COLSPAN="2" PORT="f0">VK_MEMORY_VIEW_ATTACH_INFO</TD></TR><TR><TD PORT="f1">VK_STRUCTURE_TYPE</TD><TD PORT="f2">sType=<BR/>VK_STRUCTURE_TYPE_MEMORY_VIEW_ATTACH_INFO</TD></TR><TR><TD PORT="f3">void*</TD><TD PORT="f4">pNext=NULL</TD></TR><TR><TD PORT="f5">VK_GPU_MEMORY</TD><TD PORT="f6">mem</TD></TR><TR><TD PORT="f7">VK_GPU_SIZE</TD><TD PORT="f8">offset</TD></TR><TR><TD PORT="f9">VK_GPU_SIZE</TD><TD PORT="f10">range</TD></TR><TR><TD PORT="f11">VK_GPU_SIZE</TD><TD PORT="f12">stride</TD></TR><TR><TD PORT="f13">VK_FORMAT</TD><TD PORT="f14">format</TD></TR><TR><TD PORT="f15">VK_MEMORY_STATE</TD><TD PORT="f16">state</TD></TR></TABLE>>
+label = <<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0"> <TR><TD COLSPAN="2" PORT="f0">VK_MEMORY_VIEW_ATTACH_INFO</TD></TR><TR><TD PORT="f1">VkStructureType</TD><TD PORT="f2">sType=<BR/>VK_STRUCTURE_TYPE_MEMORY_VIEW_ATTACH_INFO</TD></TR><TR><TD PORT="f3">void*</TD><TD PORT="f4">pNext=NULL</TD></TR><TR><TD PORT="f5">VkGpuMemory</TD><TD PORT="f6">mem</TD></TR><TR><TD PORT="f7">VkGpuSize</TD><TD PORT="f8">offset</TD></TR><TR><TD PORT="f9">VkGpuSize</TD><TD PORT="f10">range</TD></TR><TR><TD PORT="f11">VkGpuSize</TD><TD PORT="f12">stride</TD></TR><TR><TD PORT="f13">VkFormat</TD><TD PORT="f14">format</TD></TR><TR><TD PORT="f15">VK_MEMORY_STATE</TD><TD PORT="f16">state</TD></TR></TABLE>>
 ];
 "MEM_VIEW_ELLIPSES" [
 label = "..."
 ];
 "_VK_MEMORY_VIEW_ATTACH_INFO_0" [
-label = <<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0"> <TR><TD COLSPAN="2" PORT="f0">VK_MEMORY_VIEW_ATTACH_INFO</TD></TR><TR><TD PORT="f1">VK_STRUCTURE_TYPE</TD><TD PORT="f2">sType=<BR/>VK_STRUCTURE_TYPE_MEMORY_VIEW_ATTACH_INFO</TD></TR><TR><TD PORT="f3">void*</TD><TD PORT="f4">pNext=NULL</TD></TR><TR><TD PORT="f5">VK_GPU_MEMORY</TD><TD PORT="f6">mem</TD></TR><TR><TD PORT="f7">VK_GPU_SIZE</TD><TD PORT="f8">offset</TD></TR><TR><TD PORT="f9">VK_GPU_SIZE</TD><TD PORT="f10">range</TD></TR><TR><TD PORT="f11">VK_GPU_SIZE</TD><TD PORT="f12">stride</TD></TR><TR><TD PORT="f13">VK_FORMAT</TD><TD PORT="f14">format</TD></TR><TR><TD PORT="f15">VK_MEMORY_STATE</TD><TD PORT="f16">state</TD></TR></TABLE>>
+label = <<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0"> <TR><TD COLSPAN="2" PORT="f0">VK_MEMORY_VIEW_ATTACH_INFO</TD></TR><TR><TD PORT="f1">VkStructureType</TD><TD PORT="f2">sType=<BR/>VK_STRUCTURE_TYPE_MEMORY_VIEW_ATTACH_INFO</TD></TR><TR><TD PORT="f3">void*</TD><TD PORT="f4">pNext=NULL</TD></TR><TR><TD PORT="f5">VkGpuMemory</TD><TD PORT="f6">mem</TD></TR><TR><TD PORT="f7">VkGpuSize</TD><TD PORT="f8">offset</TD></TR><TR><TD PORT="f9">VkGpuSize</TD><TD PORT="f10">range</TD></TR><TR><TD PORT="f11">VkGpuSize</TD><TD PORT="f12">stride</TD></TR><TR><TD PORT="f13">VkFormat</TD><TD PORT="f14">format</TD></TR><TR><TD PORT="f15">VK_MEMORY_STATE</TD><TD PORT="f16">state</TD></TR></TABLE>>
 ];
 }
 subgraph clusterImageView
 {
-label="vkAttachImageViewDescriptors - pImageViews array of VK_IMAGE_VIEW_ATTACH_INFO structs"
+label="vkAttachImageViewDescriptors - pImageViews array of VkImageViewAttachInfo structs"
 "_VK_IMAGE_VIEW_ATTACH_INFO_9" [
-label = <<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0"> <TR><TD COLSPAN="2" PORT="f0">VK_IMAGE_VIEW_ATTACH_INFO</TD></TR><TR><TD PORT="f1">VK_STRUCTURE_TYPE</TD><TD PORT="f2">sType=<BR/>VK_STRUCTURE_TYPE_IMAGE_VIEW_ATTACH_INFO</TD></TR><TR><TD PORT="f3">void*</TD><TD PORT="f4">pNext=NULL</TD></TR><TR><TD PORT="f5">VK_IMAGE_VIEW</TD><TD PORT="f6">view</TD></TR><TR><TD PORT="f7">VK_IMAGE_STATE</TD><TD PORT="f8">state</TD></TR></TABLE>>
+label = <<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0"> <TR><TD COLSPAN="2" PORT="f0">VkImageViewAttachInfo</TD></TR><TR><TD PORT="f1">VkStructureType</TD><TD PORT="f2">sType=<BR/>VK_STRUCTURE_TYPE_IMAGE_VIEW_ATTACH_INFO</TD></TR><TR><TD PORT="f3">void*</TD><TD PORT="f4">pNext=NULL</TD></TR><TR><TD PORT="f5">VkImageView</TD><TD PORT="f6">view</TD></TR><TR><TD PORT="f7">VK_IMAGE_STATE</TD><TD PORT="f8">state</TD></TR></TABLE>>
 ];
 "IMG_VIEW_ELLIPSES" [
 label = "..."
 ];
 "_VK_IMAGE_VIEW_ATTACH_INFO_0" [
-label = <<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0"> <TR><TD COLSPAN="2" PORT="f0">VK_IMAGE_VIEW_ATTACH_INFO</TD></TR><TR><TD PORT="f1">VK_STRUCTURE_TYPE</TD><TD PORT="f2">sType=<BR/>VK_STRUCTURE_TYPE_IMAGE_VIEW_ATTACH_INFO</TD></TR><TR><TD PORT="f3">void*</TD><TD PORT="f4">pNext=NULL</TD></TR><TR><TD PORT="f5">VK_IMAGE_VIEW</TD><TD PORT="f6">view</TD></TR><TR><TD PORT="f7">VK_IMAGE_STATE</TD><TD PORT="f8">state</TD></TR></TABLE>>
+label = <<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0"> <TR><TD COLSPAN="2" PORT="f0">VkImageViewAttachInfo</TD></TR><TR><TD PORT="f1">VkStructureType</TD><TD PORT="f2">sType=<BR/>VK_STRUCTURE_TYPE_IMAGE_VIEW_ATTACH_INFO</TD></TR><TR><TD PORT="f3">void*</TD><TD PORT="f4">pNext=NULL</TD></TR><TR><TD PORT="f5">VkImageView</TD><TD PORT="f6">view</TD></TR><TR><TD PORT="f7">VK_IMAGE_STATE</TD><TD PORT="f8">state</TD></TR></TABLE>>
 ];
 }
 "VS_VK_DESCRIPTOR_SET_MAPPING" [

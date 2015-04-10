@@ -107,12 +107,12 @@ int vkReplay::init(glv_replay::Display & disp)
     return 0;
 }
 
-glv_replay::GLV_REPLAY_RESULT vkReplay::handle_replay_errors(const char* entrypointName, const VK_RESULT resCall, const VK_RESULT resTrace, const glv_replay::GLV_REPLAY_RESULT resIn)
+glv_replay::GLV_REPLAY_RESULT vkReplay::handle_replay_errors(const char* entrypointName, const VkResult resCall, const VkResult resTrace, const glv_replay::GLV_REPLAY_RESULT resIn)
 {
     glv_replay::GLV_REPLAY_RESULT res = resIn;
     if (resCall != resTrace) {
         glv_LogWarn("Mismatched return from API call (%s) traced result %s, replay result %s\n", entrypointName,
-                string_VK_RESULT((VK_RESULT)resTrace), string_VK_RESULT((VK_RESULT)resCall));
+                string_VK_RESULT((VkResult)resTrace), string_VK_RESULT((VkResult)resCall));
         res = glv_replay::GLV_REPLAY_BAD_RETURN;
     }
 #if 0
@@ -159,7 +159,7 @@ int vkReplay::dump_validation_data()
 
 glv_replay::GLV_REPLAY_RESULT vkReplay::manually_handle_vkCreateDevice(struct_vkCreateDevice* pPacket)
 {
-    VK_RESULT replayResult = VK_ERROR_UNKNOWN;
+    VkResult replayResult = VK_ERROR_UNKNOWN;
     glv_replay::GLV_REPLAY_RESULT returnValue = glv_replay::GLV_REPLAY_SUCCESS;
     if (!m_display->m_initedVK)
     {
@@ -211,7 +211,7 @@ glv_replay::GLV_REPLAY_RESULT vkReplay::manually_handle_vkCreateDevice(struct_vk
 
 glv_replay::GLV_REPLAY_RESULT vkReplay::manually_handle_vkEnumerateGpus(struct_vkEnumerateGpus* pPacket)
 {
-    VK_RESULT replayResult = VK_ERROR_UNKNOWN;
+    VkResult replayResult = VK_ERROR_UNKNOWN;
     glv_replay::GLV_REPLAY_RESULT returnValue = glv_replay::GLV_REPLAY_SUCCESS;
     if (!m_display->m_initedVK)
     {
@@ -249,7 +249,7 @@ glv_replay::GLV_REPLAY_RESULT vkReplay::manually_handle_vkEnumerateGpus(struct_v
 
 glv_replay::GLV_REPLAY_RESULT vkReplay::manually_handle_vkGetGpuInfo(struct_vkGetGpuInfo* pPacket)
 {
-    VK_RESULT replayResult = VK_ERROR_UNKNOWN;
+    VkResult replayResult = VK_ERROR_UNKNOWN;
     glv_replay::GLV_REPLAY_RESULT returnValue = glv_replay::GLV_REPLAY_SUCCESS;
     if (!m_display->m_initedVK)
     {
@@ -341,7 +341,7 @@ glv_replay::GLV_REPLAY_RESULT vkReplay::manually_handle_vkGetGpuInfo(struct_vkGe
 
 glv_replay::GLV_REPLAY_RESULT vkReplay::manually_handle_vkGetExtensionSupport(struct_vkGetExtensionSupport* pPacket)
 {
-    VK_RESULT replayResult = VK_ERROR_UNKNOWN;
+    VkResult replayResult = VK_ERROR_UNKNOWN;
     glv_replay::GLV_REPLAY_RESULT returnValue = glv_replay::GLV_REPLAY_SUCCESS;
     if (!m_display->m_initedVK) {
         replayResult = m_vkFuncs.real_vkGetExtensionSupport(m_objMapper.remap(pPacket->gpu), pPacket->pExtName);
@@ -368,7 +368,7 @@ glv_replay::GLV_REPLAY_RESULT vkReplay::manually_handle_vkGetExtensionSupport(st
 
 glv_replay::GLV_REPLAY_RESULT vkReplay::manually_handle_vkQueueSubmit(struct_vkQueueSubmit* pPacket)
 {
-    VK_RESULT replayResult = VK_ERROR_UNKNOWN;
+    VkResult replayResult = VK_ERROR_UNKNOWN;
     glv_replay::GLV_REPLAY_RESULT returnValue = glv_replay::GLV_REPLAY_SUCCESS;
     VK_CMD_BUFFER *remappedBuffers = NULL;
     if (pPacket->pCmdBuffers != NULL)
@@ -390,7 +390,7 @@ glv_replay::GLV_REPLAY_RESULT vkReplay::manually_handle_vkQueueSubmit(struct_vkQ
 
 glv_replay::GLV_REPLAY_RESULT vkReplay::manually_handle_vkGetObjectInfo(struct_vkGetObjectInfo* pPacket)
 {
-    VK_RESULT replayResult = VK_ERROR_UNKNOWN;
+    VkResult replayResult = VK_ERROR_UNKNOWN;
     glv_replay::GLV_REPLAY_RESULT returnValue = glv_replay::GLV_REPLAY_SUCCESS;
     size_t size = 0;
     void* pData = NULL;
@@ -459,7 +459,7 @@ glv_replay::GLV_REPLAY_RESULT vkReplay::manually_handle_vkGetObjectInfo(struct_v
 
 glv_replay::GLV_REPLAY_RESULT vkReplay::manually_handle_vkGetFormatInfo(struct_vkGetFormatInfo* pPacket)
 {
-    VK_RESULT replayResult = VK_ERROR_UNKNOWN;
+    VkResult replayResult = VK_ERROR_UNKNOWN;
     glv_replay::GLV_REPLAY_RESULT returnValue = glv_replay::GLV_REPLAY_SUCCESS;
     size_t size = 0;
     void* pData = NULL;
@@ -487,7 +487,7 @@ glv_replay::GLV_REPLAY_RESULT vkReplay::manually_handle_vkGetFormatInfo(struct_v
 
 glv_replay::GLV_REPLAY_RESULT vkReplay::manually_handle_vkGetImageSubresourceInfo(struct_vkGetImageSubresourceInfo* pPacket)
 {
-    VK_RESULT replayResult = VK_ERROR_UNKNOWN;
+    VkResult replayResult = VK_ERROR_UNKNOWN;
     glv_replay::GLV_REPLAY_RESULT returnValue = glv_replay::GLV_REPLAY_SUCCESS;
     size_t size = 0;
     void* pData = NULL;
@@ -647,7 +647,7 @@ glv_replay::GLV_REPLAY_RESULT vkReplay::manually_handle_vkUpdateDescriptors(stru
 
 glv_replay::GLV_REPLAY_RESULT vkReplay::manually_handle_vkCreateDescriptorSetLayout(struct_vkCreateDescriptorSetLayout* pPacket)
 {
-    VK_RESULT replayResult = VK_ERROR_UNKNOWN;
+    VkResult replayResult = VK_ERROR_UNKNOWN;
     glv_replay::GLV_REPLAY_RESULT returnValue = glv_replay::GLV_REPLAY_SUCCESS;
     VK_SAMPLER *pSaveSampler;
     VK_DESCRIPTOR_SET_LAYOUT_CREATE_INFO *pInfo = (VK_DESCRIPTOR_SET_LAYOUT_CREATE_INFO *) pPacket->pCreateInfo;
@@ -698,7 +698,7 @@ glv_replay::GLV_REPLAY_RESULT vkReplay::manually_handle_vkCreateDescriptorSetLay
 
 glv_replay::GLV_REPLAY_RESULT vkReplay::manually_handle_vkCreateGraphicsPipeline(struct_vkCreateGraphicsPipeline* pPacket)
 {
-    VK_RESULT replayResult = VK_ERROR_UNKNOWN;
+    VkResult replayResult = VK_ERROR_UNKNOWN;
     glv_replay::GLV_REPLAY_RESULT returnValue = glv_replay::GLV_REPLAY_SUCCESS;
     VK_GRAPHICS_PIPELINE_CREATE_INFO createInfo;
     struct shaderPair saveShader[10];
@@ -818,7 +818,7 @@ glv_replay::GLV_REPLAY_RESULT vkReplay::manually_handle_vkCmdPipelineBarrier(str
 
 glv_replay::GLV_REPLAY_RESULT vkReplay::manually_handle_vkCreateFramebuffer(struct_vkCreateFramebuffer* pPacket)
 {
-    VK_RESULT replayResult = VK_ERROR_UNKNOWN;
+    VkResult replayResult = VK_ERROR_UNKNOWN;
     glv_replay::GLV_REPLAY_RESULT returnValue = glv_replay::GLV_REPLAY_SUCCESS;
     VK_FRAMEBUFFER_CREATE_INFO *pInfo = (VK_FRAMEBUFFER_CREATE_INFO *) pPacket->pCreateInfo;
     VK_COLOR_ATTACHMENT_BIND_INFO *pColorAttachments, *pSavedColor = (VK_COLOR_ATTACHMENT_BIND_INFO*)pInfo->pColorAttachments;
@@ -861,7 +861,7 @@ glv_replay::GLV_REPLAY_RESULT vkReplay::manually_handle_vkCreateFramebuffer(stru
 
 glv_replay::GLV_REPLAY_RESULT vkReplay::manually_handle_vkCreateRenderPass(struct_vkCreateRenderPass* pPacket)
 {
-    VK_RESULT replayResult = VK_ERROR_UNKNOWN;
+    VkResult replayResult = VK_ERROR_UNKNOWN;
     glv_replay::GLV_REPLAY_RESULT returnValue = glv_replay::GLV_REPLAY_SUCCESS;
     VK_RENDER_PASS local_renderpass;
     replayResult = m_vkFuncs.real_vkCreateRenderPass(m_objMapper.remap(pPacket->device), pPacket->pCreateInfo, &local_renderpass);
@@ -875,7 +875,7 @@ glv_replay::GLV_REPLAY_RESULT vkReplay::manually_handle_vkCreateRenderPass(struc
 
 glv_replay::GLV_REPLAY_RESULT vkReplay::manually_handle_vkBeginCommandBuffer(struct_vkBeginCommandBuffer* pPacket)
 {
-    VK_RESULT replayResult = VK_ERROR_UNKNOWN;
+    VkResult replayResult = VK_ERROR_UNKNOWN;
     glv_replay::GLV_REPLAY_RESULT returnValue = glv_replay::GLV_REPLAY_SUCCESS;
     VK_CMD_BUFFER_BEGIN_INFO* pInfo = (VK_CMD_BUFFER_BEGIN_INFO*)pPacket->pBeginInfo;
     // assume only zero or one graphics_begin_info in the chain
@@ -903,7 +903,7 @@ glv_replay::GLV_REPLAY_RESULT vkReplay::manually_handle_vkBeginCommandBuffer(str
 
 glv_replay::GLV_REPLAY_RESULT vkReplay::manually_handle_vkStorePipeline(struct_vkStorePipeline* pPacket)
 {
-    VK_RESULT replayResult = VK_ERROR_UNKNOWN;
+    VkResult replayResult = VK_ERROR_UNKNOWN;
     glv_replay::GLV_REPLAY_RESULT returnValue = glv_replay::GLV_REPLAY_SUCCESS;
     size_t size = 0;
     void* pData = NULL;
@@ -931,7 +931,7 @@ glv_replay::GLV_REPLAY_RESULT vkReplay::manually_handle_vkStorePipeline(struct_v
 
 glv_replay::GLV_REPLAY_RESULT vkReplay::manually_handle_vkGetMultiGpuCompatibility(struct_vkGetMultiGpuCompatibility* pPacket)
 {
-    VK_RESULT replayResult = VK_ERROR_UNKNOWN;
+    VkResult replayResult = VK_ERROR_UNKNOWN;
     glv_replay::GLV_REPLAY_RESULT returnValue = glv_replay::GLV_REPLAY_SUCCESS;
     VK_GPU_COMPATIBILITY_INFO cInfo;
     VK_PHYSICAL_GPU handle0, handle1;
@@ -944,7 +944,7 @@ glv_replay::GLV_REPLAY_RESULT vkReplay::manually_handle_vkGetMultiGpuCompatibili
 
 glv_replay::GLV_REPLAY_RESULT vkReplay::manually_handle_vkDestroyObject(struct_vkDestroyObject* pPacket)
 {
-    VK_RESULT replayResult = VK_ERROR_UNKNOWN;
+    VkResult replayResult = VK_ERROR_UNKNOWN;
     glv_replay::GLV_REPLAY_RESULT returnValue = glv_replay::GLV_REPLAY_SUCCESS;
     VK_OBJECT object = m_objMapper.remap(pPacket->object);
     if (object != VK_NULL_HANDLE)
@@ -957,7 +957,7 @@ glv_replay::GLV_REPLAY_RESULT vkReplay::manually_handle_vkDestroyObject(struct_v
 
 glv_replay::GLV_REPLAY_RESULT vkReplay::manually_handle_vkWaitForFences(struct_vkWaitForFences* pPacket)
 {
-    VK_RESULT replayResult = VK_ERROR_UNKNOWN;
+    VkResult replayResult = VK_ERROR_UNKNOWN;
     glv_replay::GLV_REPLAY_RESULT returnValue = glv_replay::GLV_REPLAY_SUCCESS;
     VK_FENCE *pFence = GLV_NEW_ARRAY(VK_FENCE, pPacket->fenceCount);
     for (uint32_t i = 0; i < pPacket->fenceCount; i++)
@@ -972,7 +972,7 @@ glv_replay::GLV_REPLAY_RESULT vkReplay::manually_handle_vkWaitForFences(struct_v
 
 glv_replay::GLV_REPLAY_RESULT vkReplay::manually_handle_vkFreeMemory(struct_vkFreeMemory* pPacket)
 {
-    VK_RESULT replayResult = VK_ERROR_UNKNOWN;
+    VkResult replayResult = VK_ERROR_UNKNOWN;
     glv_replay::GLV_REPLAY_RESULT returnValue = glv_replay::GLV_REPLAY_SUCCESS;
     gpuMemObj local_mem;
     local_mem = m_objMapper.m_gpuMemorys.find(pPacket->mem)->second;
@@ -989,7 +989,7 @@ glv_replay::GLV_REPLAY_RESULT vkReplay::manually_handle_vkFreeMemory(struct_vkFr
 
 glv_replay::GLV_REPLAY_RESULT vkReplay::manually_handle_vkMapMemory(struct_vkMapMemory* pPacket)
 {
-    VK_RESULT replayResult = VK_ERROR_UNKNOWN;
+    VkResult replayResult = VK_ERROR_UNKNOWN;
     glv_replay::GLV_REPLAY_RESULT returnValue = glv_replay::GLV_REPLAY_SUCCESS;
     gpuMemObj local_mem = m_objMapper.m_gpuMemorys.find(pPacket->mem)->second;
     void* pData;
@@ -1017,7 +1017,7 @@ glv_replay::GLV_REPLAY_RESULT vkReplay::manually_handle_vkMapMemory(struct_vkMap
 
 glv_replay::GLV_REPLAY_RESULT vkReplay::manually_handle_vkUnmapMemory(struct_vkUnmapMemory* pPacket)
 {
-    VK_RESULT replayResult = VK_ERROR_UNKNOWN;
+    VkResult replayResult = VK_ERROR_UNKNOWN;
     glv_replay::GLV_REPLAY_RESULT returnValue = glv_replay::GLV_REPLAY_SUCCESS;
     gpuMemObj local_mem = m_objMapper.m_gpuMemorys.find(pPacket->mem)->second;
     if (!local_mem.pGpuMem->isPendingAlloc())
@@ -1047,7 +1047,7 @@ glv_replay::GLV_REPLAY_RESULT vkReplay::manually_handle_vkUnmapMemory(struct_vkU
 
 glv_replay::GLV_REPLAY_RESULT vkReplay::manually_handle_vkWsiX11AssociateConnection(struct_vkWsiX11AssociateConnection* pPacket)
 {
-    VK_RESULT replayResult = VK_ERROR_UNKNOWN;
+    VkResult replayResult = VK_ERROR_UNKNOWN;
     glv_replay::GLV_REPLAY_RESULT returnValue = glv_replay::GLV_REPLAY_SUCCESS;
 #if defined(PLATFORM_LINUX) || defined(XCB_NVIDIA)
     //associate with the replayers Wsi connection rather than tracers
@@ -1062,7 +1062,7 @@ glv_replay::GLV_REPLAY_RESULT vkReplay::manually_handle_vkWsiX11AssociateConnect
 
 glv_replay::GLV_REPLAY_RESULT vkReplay::manually_handle_vkWsiX11GetMSC(struct_vkWsiX11GetMSC* pPacket)
 {
-    VK_RESULT replayResult = VK_ERROR_UNKNOWN;
+    VkResult replayResult = VK_ERROR_UNKNOWN;
     glv_replay::GLV_REPLAY_RESULT returnValue = glv_replay::GLV_REPLAY_SUCCESS;
 #if defined(PLATFORM_LINUX) || defined(XCB_NVIDIA)
     xcb_window_t window = m_display->m_XcbWindow;
@@ -1078,7 +1078,7 @@ glv_replay::GLV_REPLAY_RESULT vkReplay::manually_handle_vkWsiX11GetMSC(struct_vk
 
 glv_replay::GLV_REPLAY_RESULT vkReplay::manually_handle_vkWsiX11CreatePresentableImage(struct_vkWsiX11CreatePresentableImage* pPacket)
 {
-    VK_RESULT replayResult = VK_ERROR_UNKNOWN;
+    VkResult replayResult = VK_ERROR_UNKNOWN;
     glv_replay::GLV_REPLAY_RESULT returnValue = glv_replay::GLV_REPLAY_SUCCESS;
 #if defined(PLATFORM_LINUX) || defined(XCB_NVIDIA)
     imageObj local_imgObj;
@@ -1105,7 +1105,7 @@ glv_replay::GLV_REPLAY_RESULT vkReplay::manually_handle_vkWsiX11CreatePresentabl
 
 glv_replay::GLV_REPLAY_RESULT vkReplay::manually_handle_vkWsiX11QueuePresent(struct_vkWsiX11QueuePresent* pPacket)
 {
-    VK_RESULT replayResult = VK_ERROR_UNKNOWN;
+    VkResult replayResult = VK_ERROR_UNKNOWN;
     glv_replay::GLV_REPLAY_RESULT returnValue = glv_replay::GLV_REPLAY_SUCCESS;
 #if defined(PLATFORM_LINUX) || defined(XCB_NVIDIA)
     VK_WSI_X11_PRESENT_INFO pInfo;
