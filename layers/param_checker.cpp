@@ -622,11 +622,11 @@ VK_LAYER_EXPORT VkResult VKAPI vkGetQueryPoolResults(VkQueryPool queryPool, uint
 VK_LAYER_EXPORT VkResult VKAPI vkGetFormatInfo(VkDevice device, VkFormat format, VkFormatInfoType infoType, size_t* pDataSize, void* pData)
 {
     char str[1024];
-    if (!validate_VkFormatFeatureFlags(format)) {
+    if (!validate_VkFormat(format)) {
         sprintf(str, "Parameter format to function GetFormatInfo has invalid value of %i.", (int)format);
         layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
     }
-    if (!validate_VkFormat(infoType)) {
+    if (!validate_VkFormatInfoType(infoType)) {
         sprintf(str, "Parameter infoType to function GetFormatInfo has invalid value of %i.", (int)infoType);
         layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
     }
@@ -690,7 +690,7 @@ void PreCreateImage(VkDevice device, const VkImageCreateInfo* pCreateInfo)
         return;
     }
 
-    if (!validate_VkFormatFeatureFlags(pCreateInfo->format))
+    if (!validate_VkFormat(pCreateInfo->format))
     {
         char const str[] = "vkCreateImage parameter, VkFormat pCreateInfo->format, is "\
             "unrecognized (precondition).";
@@ -768,8 +768,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkGetImageSubresourceInfo(VkImage image, const Vk
     if (!pSubresource) {
         sprintf(str, "Struct ptr parameter pSubresource to function GetImageSubresourceInfo is NULL.");
         layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
-    }
-    else if (!vk_validate_vkimagesubresourcerange(pSubresource)) {
+    } else if (!vk_validate_vkimagesubresource(pSubresource)) {
         sprintf(str, "Parameter pSubresource to function GetImageSubresourceInfo contains an invalid value.");
         layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
     }
@@ -1157,7 +1156,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkResetCommandBuffer(VkCmdBuffer cmdBuffer)
 VK_LAYER_EXPORT void VKAPI vkCmdBindPipeline(VkCmdBuffer cmdBuffer, VkPipelineBindPoint pipelineBindPoint, VkPipeline pipeline)
 {
     char str[1024];
-    if (!validate_VkPipeEvent(pipelineBindPoint)) {
+    if (!validate_VkPipelineBindPoint(pipelineBindPoint)) {
         sprintf(str, "Parameter pipelineBindPoint to function CmdBindPipeline has invalid value of %i.", (int)pipelineBindPoint);
         layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
     }
@@ -1177,7 +1176,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdBindDynamicStateObject(VkCmdBuffer cmdBuffer, Vk
 VK_LAYER_EXPORT void VKAPI vkCmdBindDescriptorSets(VkCmdBuffer cmdBuffer, VkPipelineBindPoint pipelineBindPoint, VkDescriptorSetLayoutChain layoutChain, uint32_t layoutChainSlot, uint32_t count, const VkDescriptorSet* pDescriptorSets, const uint32_t* pUserData)
 {
     char str[1024];
-    if (!validate_VkPipeEvent(pipelineBindPoint)) {
+    if (!validate_VkPipelineBindPoint(pipelineBindPoint)) {
         sprintf(str, "Parameter pipelineBindPoint to function CmdBindDescriptorSets has invalid value of %i.", (int)pipelineBindPoint);
         layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
     }
@@ -1360,7 +1359,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdClearColorImage(VkCmdBuffer cmdBuffer, VkImage i
     }
     uint32_t i;
     for (i = 0; i < rangeCount; i++) {
-        if (!vk_validate_vkimagesubresource(&pRanges[i])) {
+        if (!vk_validate_vkimagesubresourcerange(&pRanges[i])) {
             sprintf(str, "Parameter pRanges[%i] to function CmdClearColorImage contains an invalid value.", i);
             layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
         }
@@ -1377,7 +1376,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdClearDepthStencil(VkCmdBuffer cmdBuffer, VkImage
     }
     uint32_t i;
     for (i = 0; i < rangeCount; i++) {
-        if (!vk_validate_vkimagesubresource(&pRanges[i])) {
+        if (!vk_validate_vkimagesubresourcerange(&pRanges[i])) {
             sprintf(str, "Parameter pRanges[%i] to function CmdClearDepthStencil contains an invalid value.", i);
             layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
         }
@@ -1409,7 +1408,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdResolveImage(VkCmdBuffer cmdBuffer, VkImage srcI
 VK_LAYER_EXPORT void VKAPI vkCmdSetEvent(VkCmdBuffer cmdBuffer, VkEvent event, VkPipeEvent pipeEvent)
 {
     char str[1024];
-    if (!validate_VkPipelineShaderStage(pipeEvent)) {
+    if (!validate_VkPipeEvent(pipeEvent)) {
         sprintf(str, "Parameter pipeEvent to function CmdSetEvent has invalid value of %i.", (int)pipeEvent);
         layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
     }
@@ -1419,7 +1418,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdSetEvent(VkCmdBuffer cmdBuffer, VkEvent event, V
 VK_LAYER_EXPORT void VKAPI vkCmdResetEvent(VkCmdBuffer cmdBuffer, VkEvent event, VkPipeEvent pipeEvent)
 {
     char str[1024];
-    if (!validate_VkPipelineShaderStage(pipeEvent)) {
+    if (!validate_VkPipeEvent(pipeEvent)) {
         sprintf(str, "Parameter pipeEvent to function CmdResetEvent has invalid value of %i.", (int)pipeEvent);
         layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
     }
@@ -1485,7 +1484,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdWriteTimestamp(VkCmdBuffer cmdBuffer, VkTimestam
 VK_LAYER_EXPORT void VKAPI vkCmdInitAtomicCounters(VkCmdBuffer cmdBuffer, VkPipelineBindPoint pipelineBindPoint, uint32_t startCounter, uint32_t counterCount, const uint32_t* pData)
 {
     char str[1024];
-    if (!validate_VkPipeEvent(pipelineBindPoint)) {
+    if (!validate_VkPipelineBindPoint(pipelineBindPoint)) {
         sprintf(str, "Parameter pipelineBindPoint to function CmdInitAtomicCounters has invalid value of %i.", (int)pipelineBindPoint);
         layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
     }
@@ -1495,7 +1494,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdInitAtomicCounters(VkCmdBuffer cmdBuffer, VkPipe
 VK_LAYER_EXPORT void VKAPI vkCmdLoadAtomicCounters(VkCmdBuffer cmdBuffer, VkPipelineBindPoint pipelineBindPoint, uint32_t startCounter, uint32_t counterCount, VkBuffer srcBuffer, VkGpuSize srcOffset)
 {
     char str[1024];
-    if (!validate_VkPipeEvent(pipelineBindPoint)) {
+    if (!validate_VkPipelineBindPoint(pipelineBindPoint)) {
         sprintf(str, "Parameter pipelineBindPoint to function CmdLoadAtomicCounters has invalid value of %i.", (int)pipelineBindPoint);
         layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
     }
@@ -1505,7 +1504,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdLoadAtomicCounters(VkCmdBuffer cmdBuffer, VkPipe
 VK_LAYER_EXPORT void VKAPI vkCmdSaveAtomicCounters(VkCmdBuffer cmdBuffer, VkPipelineBindPoint pipelineBindPoint, uint32_t startCounter, uint32_t counterCount, VkBuffer destBuffer, VkGpuSize destOffset)
 {
     char str[1024];
-    if (!validate_VkPipeEvent(pipelineBindPoint)) {
+    if (!validate_VkPipelineBindPoint(pipelineBindPoint)) {
         sprintf(str, "Parameter pipelineBindPoint to function CmdSaveAtomicCounters has invalid value of %i.", (int)pipelineBindPoint);
         layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
     }
@@ -1572,7 +1571,7 @@ void PreCreateRenderPass(VkDevice device, const VkRenderPassCreateInfo* pCreateI
 
     for(uint32_t i = 0; i < pCreateInfo->colorAttachmentCount; ++i)
     {
-        if(!validate_VkFormatFeatureFlags(pCreateInfo->pColorFormats[i]))
+        if(!validate_VkFormat(pCreateInfo->pColorFormats[i]))
         {
             std::stringstream ss;
             ss << "vkCreateRenderPass parameter, VkFormat pCreateInfo->pColorFormats[" << i <<
@@ -1703,7 +1702,7 @@ void PreCreateRenderPass(VkDevice device, const VkRenderPassCreateInfo* pCreateI
    
     for(uint32_t i = 0; i < pCreateInfo->colorAttachmentCount; ++i)
     {
-        if(!vk_validate_vkclearcolorvalue(&(pCreateInfo->pColorLoadClearValues[i])))
+        if(!vk_validate_vkclearcolor(&(pCreateInfo->pColorLoadClearValues[i])))
         {
             std::stringstream ss;
             ss << "vkCreateRenderPass parameter, VkClearColor pCreateInfo->pColorLoadClearValues[" << i <<
@@ -1713,7 +1712,7 @@ void PreCreateRenderPass(VkDevice device, const VkRenderPassCreateInfo* pCreateI
         }
     }
 
-    if(!validate_VkFormatFeatureFlags(pCreateInfo->depthStencilFormat))
+    if(!validate_VkFormat(pCreateInfo->depthStencilFormat))
     {
         char const str[] = "vkCreateRenderPass parameter, VkFormat pCreateInfo->"\
             "depthStencilFormat, is unrecognized (precondition).";
