@@ -81,7 +81,6 @@ typedef uint32_t   bool32_t;
 
 typedef uint32_t   VkSampleMask;
 typedef uint32_t   VkFlags;
-typedef int32_t    VK_ENUM;
 
 #ifdef __cplusplus
 } // extern "C"
