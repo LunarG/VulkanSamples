@@ -194,48 +194,52 @@ class Subcommand(object):
         ur_body.append('}')
         return "\n".join(ur_body)
 
-    def _gen_layer_get_extension_support(self, layer="Generic"):
-        ges_body = []
-        ges_body.append('VK_LAYER_EXPORT VkResult VKAPI vkGetExtensionSupport(VkPhysicalGpu gpu, const char* pExtName)')
-        ges_body.append('{')
-        ges_body.append('    VkResult result;')
-        ges_body.append('')
-        ges_body.append('    /* This entrypoint is NOT going to init its own dispatch table since loader calls here early */')
-        ges_body.append('    if (!strncmp(pExtName, "%s", strlen("%s")))' % (layer, layer))
-        ges_body.append('    {')
-        ges_body.append('        result = VK_SUCCESS;')
-        ges_body.append('    } else if (nextTable.GetExtensionSupport != NULL)')
-        ges_body.append('    {')
-        ges_body.append('        result = nextTable.GetExtensionSupport(gpu, pExtName);')
-        ges_body.append('    } else')
-        ges_body.append('    {')
-        ges_body.append('        result = VK_ERROR_INVALID_EXTENSION;')
-        ges_body.append('    }')
-        ges_body.append('    return result;')
-        ges_body.append('}')
-        return "\n".join(ges_body)
-
-    def _gen_layer_get_extension_support(self, layer="Generic"):
-        ges_body = []
-        ges_body.append('VK_LAYER_EXPORT VkResult VKAPI vkGetExtensionSupport(VkPhysicalGpu gpu, const char* pExtName)')
-        ges_body.append('{')
-        ges_body.append('    VkResult result;')
-        ges_body.append('    VK_BASE_LAYER_OBJECT* gpuw = (VK_BASE_LAYER_OBJECT *) gpu;')
-        ges_body.append('')
-        ges_body.append('    /* This entrypoint is NOT going to init its own dispatch table since loader calls here early */')
-        ges_body.append('    if (!strncmp(pExtName, "%s", strlen("%s")))' % (layer, layer))
-        ges_body.append('    {')
-        ges_body.append('        result = VK_SUCCESS;')
-        ges_body.append('    } else if (nextTable.GetExtensionSupport != NULL)')
-        ges_body.append('    {')
-        ges_body.append('        result = nextTable.GetExtensionSupport((VkPhysicalGpu)gpuw->nextObject, pExtName);')
-        ges_body.append('    } else')
-        ges_body.append('    {')
-        ges_body.append('        result = VK_ERROR_INVALID_EXTENSION;')
-        ges_body.append('    }')
-        ges_body.append('    return result;')
-        ges_body.append('}')
-        return "\n".join(ges_body)
+    def _gen_layer_get_global_extension_info(self, layer="Generic"):
+        ggei_body = []
+        ggei_body.append('struct extProps {')
+        ggei_body.append('    uint32_t version;')
+        ggei_body.append('    const char * const name;')
+        ggei_body.append('};')
+        ggei_body.append('#define LAYER_EXT_ARRAY_SIZE 1')
+        ggei_body.append('static const struct extProps layerExts[LAYER_EXT_ARRAY_SIZE] = {')
+        ggei_body.append('    // TODO what is the version?')
+        ggei_body.append('    {0x10, "%s"}' % layer)
+        ggei_body.append('};')
+        ggei_body.append('')
+        ggei_body.append('VK_LAYER_EXPORT VK_RESULT VKAPI vkGetGlobalExtensionInfo(VkExtensionInfoType infoType, uint32_t extensionIndex, size_t* pDataSize, void* pData)')
+        ggei_body.append('{')
+        ggei_body.append('    VkExtensionProperties *ext_props;')
+        ggei_body.append('    uint32_t *count;')
+        ggei_body.append('')
+        ggei_body.append('    if (pDataSize == NULL)')
+        ggei_body.append('        return VK_ERROR_INVALID_POINTER;')
+        ggei_body.append('')
+        ggei_body.append('    switch (infoType) {')
+        ggei_body.append('        case VK_EXTENSION_INFO_TYPE_COUNT:')
+        ggei_body.append('            *pDataSize = sizeof(uint32_t);')
+        ggei_body.append('            if (pData == NULL)')
+        ggei_body.append('                return VK_SUCCESS;')
+        ggei_body.append('            count = (uint32_t *) pData;')
+        ggei_body.append('            *count = LAYER_EXT_ARRAY_SIZE;')
+        ggei_body.append('            break;')
+        ggei_body.append('        case VK_EXTENSION_INFO_TYPE_PROPERTIES:')
+        ggei_body.append('            *pDataSize = sizeof(VkExtensionProperties);')
+        ggei_body.append('            if (pData == NULL)')
+        ggei_body.append('                return VK_SUCCESS;')
+        ggei_body.append('            if (extensionIndex >= LAYER_EXT_ARRAY_SIZE)')
+        ggei_body.append('                return VK_ERROR_INVALID_VALUE;')
+        ggei_body.append('            ext_props = (VkExtensionProperties *) pData;')
+        ggei_body.append('            ext_props->version = layerExts[extensionIndex].version;')
+        ggei_body.append('            strncpy(ext_props->extName, layerExts[extensionIndex].name,')
+        ggei_body.append('                                        VK_MAX_EXTENSION_NAME);')
+        ggei_body.append("            ext_props->extName[VK_MAX_EXTENSION_NAME - 1] = '\\0';")
+        ggei_body.append('            break;')
+        ggei_body.append('        default:')
+        ggei_body.append('            return VK_ERROR_INVALID_VALUE;')
+        ggei_body.append('    };')
+        ggei_body.append('    return VK_SUCCESS;')
+        ggei_body.append('}')
+        return "\n".join(ggei_body)
 
     def _generate_dispatch_entrypoints(self, qual=""):
         if qual:
@@ -254,9 +258,22 @@ class Subcommand(object):
                         intercept = self._gen_layer_dbg_callback_unregister()
                     elif 'GetExtensionSupport' == proto.name:
                         funcs.append(self._gen_layer_get_extension_support(self.layer_name))
+                    elif 'GetGlobalExtensionInfo' == proto.name:
+                        funcs.append(self._gen_layer_get_global_extension_info(self.layer_name))
                 if intercept is not None:
                     funcs.append(intercept)
                     intercepted.append(proto)
+
+        prefix="vk"
+        lookups = []
+        for proto in intercepted:
+            if 'WsiX11' in proto.name:
+                lookups.append("#if defined(__linux__) || defined(XCB_NVIDIA)")
+            lookups.append("if (!strcmp(name, \"%s\"))" % proto.name)
+            lookups.append("    return (void*) %s%s;" %
+                    (prefix, proto.name))
+            if 'WsiX11' in proto.name:
+                lookups.append("#endif")
 
         prefix="vk"
         lookups = []
@@ -432,7 +449,7 @@ class GenericLayerSubcommand(Subcommand):
         return '#include <stdio.h>\n#include <stdlib.h>\n#include <string.h>\n#include "loader_platform.h"\n#include "vkLayer.h"\n//The following is #included again to catch certain OS-specific functions being used:\n#include "loader_platform.h"\n\n#include "layers_config.h"\n#include "layers_msg.h"\n\nstatic VkLayerDispatchTable nextTable;\nstatic VkBaseLayerObject *pCurObj;\n\nstatic LOADER_PLATFORM_THREAD_ONCE_DECLARATION(tabOnce);'
 
     def generate_intercept(self, proto, qual):
-        if proto.name in [ 'DbgRegisterMsgCallback', 'DbgUnregisterMsgCallback' , 'GetExtensionSupport']:
+        if proto.name in [ 'DbgRegisterMsgCallback', 'DbgUnregisterMsgCallback' , 'GetExtensionSupport', 'GetGlobalExtensionInfo']:
             # use default version
             return None
         decl = proto.c_func(prefix="vk", attr="VKAPI")
@@ -619,8 +636,9 @@ class APIDumpSubcommand(Subcommand):
         return "\n".join(func_body)
 
     def generate_intercept(self, proto, qual):
+        if proto.name in [ 'GetGlobalExtensionInfo']:
+            return None
         decl = proto.c_func(prefix="vk", attr="VKAPI")
-        param0_name = proto.params[0].name
         ret_val = ''
         stmt = ''
         funcs = []
@@ -651,6 +669,20 @@ class APIDumpSubcommand(Subcommand):
             log_func += '%s = " << %s << ", ' % (p.name, pfi)
             if "%p" == pft:
                 log_func_no_addr += '%s = address, ' % (p.name)
+            else:
+                log_func_no_addr += '%s = " << %s << ", ' % (p.name, pfi)
+            if prev_count_name != '' and (prev_count_name.replace('Count', '')[1:] in p.name or 'slotCount' == prev_count_name):
+                sp_param_dict[pindex] = prev_count_name
+            elif 'pDescriptorSets' == p.name and proto.params[-1].name == 'pCount':
+                sp_param_dict[pindex] = '*pCount'
+            elif 'Wsi' not in proto.name and vk_helper.is_type(p.ty.strip('*').replace('const ', ''), 'struct'):
+                sp_param_dict[pindex] = 'index'
+            pindex += 1
+            if p.name.endswith('Count'):
+                if '*' in p.ty:
+                    prev_count_name = "*%s" % p.name
+                else:
+                    prev_count_name = p.name
             else:
                 log_func_no_addr += '%s = " << %s << ", ' % (p.name, pfi)
             if prev_count_name != '' and (prev_count_name.replace('Count', '')[1:] in p.name or 'slotCount' == prev_count_name):
@@ -1268,7 +1300,7 @@ class ObjectTrackerSubcommand(Subcommand):
         return "\n".join(header_txt)
 
     def generate_intercept(self, proto, qual):
-        if proto.name in [ 'DbgRegisterMsgCallback', 'DbgUnregisterMsgCallback' ]:
+        if proto.name in [ 'DbgRegisterMsgCallback', 'DbgUnregisterMsgCallback', 'GetGlobalExtensionInfo' ]:
             # use default version
             return None
         obj_type_mapping = {base_t : base_t.replace("VK_", "VK_OBJECT_TYPE_") for base_t in vulkan.object_type_list}
@@ -1283,7 +1315,7 @@ class ObjectTrackerSubcommand(Subcommand):
         destroy_line = ''
         funcs = []
         # Special cases for API funcs that don't use an object as first arg
-        if True in [no_use_proto in proto.name for no_use_proto in ['GlobalOption', 'CreateInstance', 'QueueSubmit', 'QueueAddMemReference', 'QueueRemoveMemReference', 'QueueWaitIdle', 'CreateDevice', 'GetGpuInfo', 'QueueSignalSemaphore', 'QueueWaitSemaphore', 'WsiX11QueuePresent']]:
+        if True in [no_use_proto in proto.name for no_use_proto in ['GlobalOption', 'CreateInstance', 'QueueSubmit', 'QueueAddMemReference', 'QueueRemoveMemReference', 'QueueWaitIdle', 'GetGlobalExtensionInfo', 'CreateDevice', 'GetGpuInfo', 'QueueSignalSemaphore', 'QueueWaitSemaphore', 'WsiX11QueuePresent']]:
             using_line = ''
         else:
             using_line = '    loader_platform_thread_lock_mutex(&objLock);\n'

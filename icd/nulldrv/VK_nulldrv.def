@@ -30,6 +30,7 @@ EXPORTS
    vkCreateInstance
    vkEnumerateGpus
    vkDestroyInstance
+   vkGetGlobalExtensionInfo
    xcbCreateWindow
    xcbDestroyWindow
    xcbGetMessage

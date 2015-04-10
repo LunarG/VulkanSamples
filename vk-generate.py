@@ -33,6 +33,7 @@ def generate_get_proc_addr_check(name):
     return "    if (!%s || %s[0] != 'v' || %s[1] != 'k')\n" \
            "        return NULL;" % ((name,) * 3)
 
+
 class Subcommand(object):
     def __init__(self, argv):
         self.argv = argv
@@ -41,6 +42,12 @@ class Subcommand(object):
 
     def run(self):
         print(self.generate())
+
+    def is_dispatchable_object_first_param(self, proto):
+        in_objs = proto.object_in_params()
+        non_dispatch_objs = ["VkInstance"]
+        param0 = proto.params[0]
+        return (len(in_objs) > 0)  and (in_objs[0].ty == param0.ty) and (param0.ty not in non_dispatch_objs)
 
     def generate(self):
         copyright = self.generate_copyright()
@@ -100,14 +107,11 @@ class LoaderEntrypointsSubcommand(Subcommand):
     def generate_header(self):
         return "#include \"loader.h\""
 
-    def _is_dispatchable(self, proto):
-        if proto.name in ["GetProcAddr", "DestroyInstance", "EnumerateGpus",
-                "EnumerateLayers", "DbgRegisterMsgCallback",
-                "DbgUnregisterMsgCallback", "DbgSetGlobalOption"]:
-            return False
+    def _is_loader_special_case(self, proto):
+        if proto.name in ["GetProcAddr", "EnumerateGpus", "EnumerateLayers"]:
+            return True
 
-        in_objs = proto.object_in_params()
-        return in_objs and in_objs[0] == proto.params[0]
+        return not self.is_dispatchable_object_first_param(proto)
 
     def _generate_object_setup(self, proto):
         method = "loader_init_data"
@@ -144,7 +148,7 @@ class LoaderEntrypointsSubcommand(Subcommand):
 
         funcs = []
         for proto in self.protos:
-            if not self._is_dispatchable(proto):
+            if self._is_loader_special_case(proto):
                 continue
             func = []
 
@@ -214,7 +218,7 @@ class DispatchTableOpsSubcommand(Subcommand):
             if proto.name == "GetProcAddr":
                 stmts.append("table->%s = gpa; /* direct assignment */" %
                         proto.name)
-            else:
+            elif self.is_dispatchable_object_first_param(proto):
                 stmts.append("table->%s = (PFN_vk%s) gpa(gpu, \"vk%s\");" %
                         (proto.name, proto.name, proto.name))
         stmts.append("#endif")
@@ -237,8 +241,9 @@ class DispatchTableOpsSubcommand(Subcommand):
         for proto in self.protos:
             if 'WsiX11AssociateConnection' == proto.name:
                 lookups.append("#if defined(__linux__) || defined(XCB_NVIDIA)")
-            lookups.append("if (!strcmp(name, \"%s\"))" % (proto.name))
-            lookups.append("    return (void *) table->%s;"
+            if self.is_dispatchable_object_first_param(proto):
+                lookups.append("if (!strcmp(name, \"%s\"))" % (proto.name))
+                lookups.append("    return (void *) table->%s;"
                     % (proto.name))
         lookups.append("#endif")
 

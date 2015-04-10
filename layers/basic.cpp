@@ -61,6 +61,59 @@ VK_LAYER_EXPORT VkResult VKAPI vkLayerExtension1(VkDevice device)
     return VK_SUCCESS;
 }
 
+struct extProps {
+    uint32_t version;
+    const char * const name;
+};
+#define BASIC_LAYER_EXT_ARRAY_SIZE 2
+static const struct extProps basicExts[BASIC_LAYER_EXT_ARRAY_SIZE] = {
+    // TODO what is the version?
+    0x10, "Basic",
+    0x10, "vkLayerExtension1"
+};
+
+VK_LAYER_EXPORT VkResult VKAPI vkGetGlobalExtensionInfo(
+                                               VkExtensionInfoType infoType,
+                                               uint32_t extensionIndex,
+                                               size_t*  pDataSize,
+                                               void*    pData)
+{
+    VkResult result;
+
+    /* This entrypoint is NOT going to init it's own dispatch table since loader calls here early */
+    VkExtensionProperties *ext_props;
+    uint32_t *count;
+
+    if (pDataSize == NULL)
+        return VK_ERROR_INVALID_POINTER;
+
+    switch (infoType) {
+        case VK_EXTENSION_INFO_TYPE_COUNT:
+            *pDataSize = sizeof(uint32_t);
+            if (pData == NULL)
+                return VK_SUCCESS;
+            count = (uint32_t *) pData;
+            *count = BASIC_LAYER_EXT_ARRAY_SIZE;
+            break;
+        case VK_EXTENSION_INFO_TYPE_PROPERTIES:
+            *pDataSize = sizeof(VkExtensionProperties);
+            if (pData == NULL)
+                return VK_SUCCESS;
+            if (extensionIndex >= BASIC_LAYER_EXT_ARRAY_SIZE)
+                return VK_ERROR_INVALID_VALUE;
+            ext_props = (VkExtensionProperties *) pData;
+            ext_props->version = basicExts[extensionIndex].version;
+            strncpy(ext_props->extName, basicExts[extensionIndex].name,
+                                        VK_MAX_EXTENSION_NAME);
+            ext_props->extName[VK_MAX_EXTENSION_NAME - 1] = '\0';
+            break;
+        default:
+            return VK_ERROR_INVALID_VALUE;
+    };
+
+    return VK_SUCCESS;
+}
+
 VK_LAYER_EXPORT VkResult VKAPI vkGetExtensionSupport(VkPhysicalGpu gpu, const char* pExtName)
 {
     VkResult result;

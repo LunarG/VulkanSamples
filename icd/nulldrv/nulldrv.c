@@ -1353,8 +1353,41 @@ ICD_EXPORT VkResult VKAPI vkGetGpuInfo(
     return VK_SUCCESS;
 }
 
+ICD_EXPORT VkResult VKAPI vkGetGlobalExtensionInfo(
+                                               VkExtensionInfoType infoType,
+                                               uint32_t extensionIndex,
+                                               size_t*  pDataSize,
+                                               void*    pData)
+{
+    uint32_t *count;
+
+    if (pDataSize == NULL)
+        return VK_ERROR_INVALID_POINTER;
+
+    switch (infoType) {
+        case VK_EXTENSION_INFO_TYPE_COUNT:
+            *pDataSize = sizeof(uint32_t);
+            if (pData == NULL)
+                return VK_SUCCESS;
+            count = (uint32_t *) pData;
+            *count = 0;
+            break;
+        case VK_EXTENSION_INFO_TYPE_PROPERTIES:
+            *pDataSize = 0;
+            if (pData == NULL)
+                return VK_SUCCESS;
+            else
+                return VK_ERROR_INVALID_EXTENSION;
+            break;
+        default:
+            return VK_ERROR_INVALID_VALUE;
+    };
+
+    return VK_SUCCESS;
+}
+
 ICD_EXPORT VkResult VKAPI vkGetExtensionSupport(
-    VkPhysicalGpu                            gpu_,
+    VkPhysicalGpu                               gpu_,
     const char*                                 pExtName)
 {
     NULLDRV_LOG_FUNC;

@@ -38,8 +38,13 @@
 #include "instance.h"
 #include "wsi.h"
 
-static const char * const intel_gpu_exts[INTEL_EXT_COUNT] = {
-    [INTEL_EXT_WSI_X11] = "VK_WSI_X11",
+struct intel_gpu_ext_props {
+    uint32_t version;
+    const char * const name;
+};
+static const struct intel_gpu_ext_props intel_gpu_exts[INTEL_EXT_COUNT] = {
+    [INTEL_EXT_WSI_X11].version = 0x10, // TODO what is the version?
+    [INTEL_EXT_WSI_X11].name = "VK_WSI_X11"
 };
 
 static int gpu_open_primary_node(struct intel_gpu *gpu)
@@ -380,7 +385,7 @@ enum intel_ext_type intel_gpu_lookup_extension(const struct intel_gpu *gpu,
     enum intel_ext_type type;
 
     for (type = 0; type < ARRAY_SIZE(intel_gpu_exts); type++) {
-        if (intel_gpu_exts[type] && strcmp(intel_gpu_exts[type], ext) == 0)
+        if (intel_gpu_exts[type].name && strcmp(intel_gpu_exts[type].name, ext) == 0)
             break;
     }
 
@@ -468,8 +473,47 @@ ICD_EXPORT VkResult VKAPI vkGetGpuInfo(
     return ret;
 }
 
+ICD_EXPORT VkResult VKAPI vkGetGlobalExtensionInfo(
+                                               VkExtensionInfoType infoType,
+                                               uint32_t extensionIndex,
+                                               size_t*  pDataSize,
+                                               void*    pData)
+{
+    VkExtensionProperties *ext_props;
+    uint32_t *count;
+
+    if (pDataSize == NULL)
+        return VK_ERROR_INVALID_POINTER;
+
+    switch (infoType) {
+        case VK_EXTENSION_INFO_TYPE_COUNT:
+            *pDataSize = sizeof(uint32_t);
+            if (pData == NULL)
+                return VK_SUCCESS;
+            count = (uint32_t *) pData;
+            *count = INTEL_EXT_COUNT;
+            break;
+        case VK_EXTENSION_INFO_TYPE_PROPERTIES:
+            *pDataSize = sizeof(VkExtensionProperties);
+            if (pData == NULL)
+                return VK_SUCCESS;
+            if (extensionIndex >= INTEL_EXT_COUNT)
+                return VK_ERROR_INVALID_VALUE;
+            ext_props = (VkExtensionProperties *) pData;
+            ext_props->version = intel_gpu_exts[extensionIndex].version;
+            strncpy(ext_props->extName, intel_gpu_exts[extensionIndex].name,
+                                            VK_MAX_EXTENSION_NAME);
+            ext_props->extName[VK_MAX_EXTENSION_NAME - 1] = '\0';
+            break;
+        default:
+            return VK_ERROR_INVALID_VALUE;
+    };
+
+    return VK_SUCCESS;
+}
+
 ICD_EXPORT VkResult VKAPI vkGetExtensionSupport(
-    VkPhysicalGpu                            gpu_,
+    VkPhysicalGpu                               gpu_,
     const char*                                 pExtName)
 {
     struct intel_gpu *gpu = intel_gpu(gpu_);

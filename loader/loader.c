@@ -58,6 +58,12 @@ struct layer_name_pair {
     const char *lib_name;
 };
 
+struct extension_property {
+    char extName[VK_MAX_EXTENSION_NAME];
+    uint32_t version;
+    bool hosted;            // does the extension reside in one driver/layer
+};
+
 struct loader_icd {
     const struct loader_scanned_icds *scanned_icds;
 
@@ -74,15 +80,23 @@ struct loader_icd {
 
 struct loader_scanned_icds {
     loader_platform_dl_handle handle;
+
     PFN_vkGetProcAddr GetProcAddr;
     PFN_vkCreateInstance CreateInstance;
     PFN_vkDestroyInstance DestroyInstance;
     PFN_vkEnumerateGpus EnumerateGpus;
-    PFN_vkGetExtensionSupport GetExtensionSupport;
+    PFN_vkGetGlobalExtensionInfo GetGlobalExtensionInfo;
     VkInstance instance;
     struct loader_scanned_icds *next;
+    uint32_t extension_count;
+    struct extension_property *extensions;
 };
 
+struct loader_scanned_layers {
+    char *name;
+    uint32_t extension_count;
+    struct extension_property *extensions;
+};
 // Note: Since the following is a static structure, all members are initialized
 // to zero.
 static struct {
@@ -92,9 +106,15 @@ static struct {
     bool layer_scanned;
     char *layer_dirs;
     unsigned int scanned_layer_count;
-    char *scanned_layer_names[MAX_LAYER_LIBRARIES];
+    struct loader_scanned_layers scanned_layers[MAX_LAYER_LIBRARIES];
+    size_t scanned_ext_list_capacity;
+    uint32_t scanned_ext_list_count;      // coalesced from all layers/drivers
+    struct extension_property **scanned_ext_list;
 } loader;
 
+static LOADER_PLATFORM_THREAD_ONCE_DECLARATION(once_icd);
+static LOADER_PLATFORM_THREAD_ONCE_DECLARATION(once_layer);
+static LOADER_PLATFORM_THREAD_ONCE_DECLARATION(once_exts);
 
 #if defined(WIN32)
 char *loader_get_registry_string(const HKEY hive,
@@ -216,15 +236,145 @@ static void loader_log(VK_DBG_MSG_TYPE msg_type, int32_t msg_code,
     fputc('\n', stderr);
 }
 
-static void
-loader_icd_destroy(struct loader_icd *icd)
+static bool has_extension(struct extension_property *exts, uint32_t count,
+                          const char *name, bool must_be_hosted)
+{
+    uint32_t i;
+    for (i = 0; i < count; i++) {
+        if (!strcmp(name, exts[i].extName) && (!must_be_hosted || exts[i].hosted))
+            return true;
+    }
+    return false;
+}
+
+static void get_global_extensions(PFN_vkGetGlobalExtensionInfo fp_get,
+                                  uint32_t *count_out,
+                                  struct extension_property **props_out)
+{
+    uint32_t i, count, cur;
+    size_t siz = sizeof(count);
+    struct extension_property *ext_props;
+    VkExtensionProperties vk_prop;
+    VkResult res;
+
+    *count_out = 0;
+    *props_out = NULL;
+    res = fp_get(VK_EXTENSION_INFO_TYPE_COUNT, 0, &siz, &count);
+    if (res != VK_SUCCESS) {
+        loader_log(VK_DBG_MSG_WARNING, 0, "Error getting global extension count from ICD");
+        return;
+    }
+    ext_props = (struct extension_property *) malloc(sizeof(struct extension_property) * count);
+    if (ext_props == NULL) {
+        loader_log(VK_DBG_MSG_WARNING, 0, "Out of memory didn't get global extensions from ICD");
+        return;
+    }
+    siz = sizeof(VkExtensionProperties);
+    cur = 0;
+    for (i = 0; i < count; i++) {
+        res = fp_get(VK_EXTENSION_INFO_TYPE_PROPERTIES, i, &siz, &vk_prop);
+        if (res == VK_SUCCESS) {
+            (ext_props + cur)->hosted = false;
+            (ext_props + cur)->version = vk_prop.version;
+            strncpy((ext_props + cur)->extName, vk_prop.extName, VK_MAX_EXTENSION_NAME);
+            (ext_props + cur)->extName[VK_MAX_EXTENSION_NAME - 1] = '\0';
+            cur++;
+        }
+        *count_out = cur;
+        *props_out = ext_props;
+    }
+    return;
+}
+
+static void loader_init_ext_list()
+{
+    loader.scanned_ext_list_capacity = 256 * sizeof(struct extension_property *);
+    loader.scanned_ext_list = malloc(loader.scanned_ext_list_capacity);
+    memset(loader.scanned_ext_list, 0, loader.scanned_ext_list_capacity);
+    loader.scanned_ext_list_count = 0;
+}
+
+#if 0 // currently no place to call this
+static void loader_destroy_ext_list()
+{
+    free(loader.scanned_ext_list);
+    loader.scanned_ext_list_capacity = 0;
+    loader.scanned_ext_list_count = 0;
+}
+#endif
+
+static void loader_add_to_ext_list(uint32_t count,
+                                   struct extension_property *prop_list)
+{
+    uint32_t i, j;
+    bool duplicate;
+    struct extension_property *cur_ext;
+
+    if (loader.scanned_ext_list == NULL || loader.scanned_ext_list_capacity == 0)
+        loader_init_ext_list();
+
+    if (loader.scanned_ext_list == NULL)
+        return;
+
+    struct extension_property *ext_list, **ext_list_addr;
+
+    for (i = 0; i < count; i++) {
+        cur_ext = prop_list + i;
+
+        // look for duplicates or not
+        duplicate = false;
+        for (j = 0; j < loader.scanned_ext_list_count; j++) {
+            ext_list = loader.scanned_ext_list[j];
+            if (!strcmp(cur_ext->extName, ext_list->extName)) {
+                duplicate = true;
+                ext_list->hosted = false;
+                break;
+            }
+        }
+
+        // add to list at end
+        if (!duplicate) {
+            // check for enough capacity
+            if (loader.scanned_ext_list_count * sizeof(struct extension_property *)
+                            >= loader.scanned_ext_list_capacity) {
+                // double capacity
+                loader.scanned_ext_list_capacity *= 2;
+                loader.scanned_ext_list = realloc(loader.scanned_ext_list,
+                        loader.scanned_ext_list_capacity);
+            }
+            ext_list_addr = &(loader.scanned_ext_list[loader.scanned_ext_list_count++]);
+            *ext_list_addr = cur_ext;
+            cur_ext->hosted = true;
+        }
+
+    }
+}
+
+static void loader_coalesce_extensions()
+{
+    uint32_t i;
+    struct loader_scanned_icds *icd_list = loader.scanned_icd_list;
+
+    // traverse scanned icd list adding non-duplicate extensions to the list
+    while (icd_list != NULL) {
+        loader_add_to_ext_list(icd_list->extension_count, icd_list->extensions);
+        icd_list = icd_list->next;
+    };
+
+    //Traverse layers list adding non-duplicate extensions to the list
+    for (i = 0; i < loader.scanned_layer_count; i++) {
+        loader_add_to_ext_list(loader.scanned_layers[i].extension_count,
+                loader.scanned_layers[i].extensions);
+    }
+}
+
+static void loader_icd_destroy(struct loader_icd *icd)
 {
     loader_platform_close_library(icd->scanned_icds->handle);
     free(icd);
 }
 
-static struct loader_icd *
-loader_icd_create(const struct loader_scanned_icds *scanned)
+static struct loader_icd * loader_icd_create(const struct loader_scanned_icds *scanned)
 {
     struct loader_icd *icd;
 
@@ -258,7 +408,8 @@ static struct loader_icd *loader_icd_add(struct loader_instance *ptr_inst,
 static void loader_scanned_icd_add(const char *filename)
 {
     loader_platform_dl_handle handle;
-    void *fp_gpa, *fp_enumerate, *fp_create_inst, *fp_destroy_inst, *fp_get_extension_support;
+    void *fp_gpa, *fp_enumerate, *fp_create_inst, *fp_destroy_inst;
+    void *fp_get_global_ext_info;
     struct loader_scanned_icds *new_node;
 
     // Used to call: dlopen(filename, RTLD_LAZY);
@@ -280,7 +431,7 @@ static void loader_scanned_icd_add(const char *filename)
     LOOKUP(fp_create_inst, CreateInstance);
     LOOKUP(fp_destroy_inst, DestroyInstance);
     LOOKUP(fp_enumerate, EnumerateGpus);
-    LOOKUP(fp_get_extension_support, GetExtensionSupport);
+    LOOKUP(fp_get_global_ext_info, GetGlobalExtensionInfo);
 #undef LOOKUP
 
     new_node = (struct loader_scanned_icds *) malloc(sizeof(struct loader_scanned_icds));
@@ -294,11 +445,21 @@ static void loader_scanned_icd_add(const char *filename)
     new_node->CreateInstance = fp_create_inst;
     new_node->DestroyInstance = fp_destroy_inst;
     new_node->EnumerateGpus = fp_enumerate;
-    new_node->GetExtensionSupport = fp_get_extension_support;
+    new_node->GetGlobalExtensionInfo = fp_get_global_ext_info;
+    new_node->extension_count = 0;
+    new_node->extensions = NULL;
     new_node->next = loader.scanned_icd_list;
-    loader.scanned_icd_list = new_node;
-}
 
+    loader.scanned_icd_list = new_node;
+
+    if (fp_get_global_ext_info) {
+        get_global_extensions((PFN_vkGetGlobalExtensionInfo) fp_get_global_ext_info,
+                       &new_node->extension_count,
+                       &new_node->extensions);
+    } else {
+        loader_log(VK_DBG_MSG_WARNING, 0, "Couldn't get global extensions from ICD");
+    }
+}
 
 /**
  * Try to \c loader_icd_scan VK driver(s).
@@ -401,6 +562,8 @@ static void layer_lib_scan(void)
     struct dirent *dent;
     size_t len, i;
     char temp_str[1024];
+    uint32_t count;
+    PFN_vkGetGlobalExtensionInfo fp_get_ext;
 
 #if defined(WIN32)
     bool must_free_libPaths;
@@ -446,23 +609,27 @@ static void layer_lib_scan(void)
 
     /* cleanup any previously scanned libraries */
     for (i = 0; i < loader.scanned_layer_count; i++) {
-        if (loader.scanned_layer_names[i] != NULL)
-            free(loader.scanned_layer_names[i]);
-        loader.scanned_layer_names[i] = NULL;
+        if (loader.scanned_layers[i].name != NULL)
+            free(loader.scanned_layers[i].name);
+        if (loader.scanned_layers[i].extensions != NULL)
+            free(loader.scanned_layers[i].extensions);
+        loader.scanned_layers[i].name = NULL;
+        loader.scanned_layers[i].extensions = NULL;
     }
     loader.scanned_layer_count = 0;
+    count = 0;
 
     for (p = libPaths; *p; p = next) {
-       next = strchr(p, PATH_SEPERATOR);
-       if (next == NULL) {
-          len = (uint32_t) strlen(p);
-          next = p + len;
-       }
-       else {
-          len = (uint32_t) (next - p);
-          *(char *) next = '\0';
-          next++;
-       }
+        next = strchr(p, PATH_SEPERATOR);
+        if (next == NULL) {
+           len = (uint32_t) strlen(p);
+           next = p + len;
+        }
+        else {
+           len = (uint32_t) (next - p);
+           *(char *) next = '\0';
+           next++;
+        }
 
        curdir = opendir(p);
        if (curdir) {
@@ -481,32 +648,58 @@ static void layer_lib_scan(void)
                               VK_LIBRARY_SUFFIX,
                               VK_LIBRARY_SUFFIX_LEN)) {
                      loader_platform_dl_handle handle;
-                     snprintf(temp_str, sizeof(temp_str), "%s" DIRECTORY_SYMBOL "%s",p,dent->d_name);
+                     snprintf(temp_str, sizeof(temp_str),
+                              "%s" DIRECTORY_SYMBOL "%s",p,dent->d_name);
                      // Used to call: dlopen(temp_str, RTLD_LAZY)
                      if ((handle = loader_platform_open_library(temp_str)) == NULL) {
                          dent = readdir(curdir);
                          continue;
                      }
-                     if (loader.scanned_layer_count == MAX_LAYER_LIBRARIES) {
-                         loader_log(VK_DBG_MSG_ERROR, 0, "%s ignored: max layer libraries exceed", temp_str);
+                     if (count == MAX_LAYER_LIBRARIES) {
+                         loader_log(VK_DBG_MSG_ERROR, 0,
+                                    "%s ignored: max layer libraries exceed",
+                                    temp_str);
                          break;
                      }
-                     if ((loader.scanned_layer_names[loader.scanned_layer_count] = malloc(strlen(temp_str) + 1)) == NULL) {
+                     fp_get_ext = loader_platform_get_proc_address(handle,
+                                               "vkGetGlobalExtensionInfo");
+
+                     if (!fp_get_ext) {
+                        loader_log(VK_DBG_MSG_WARNING, 0,
+                              "Couldn't dlsym vkGetGlobalExtensionInfo from library %s",
+                               temp_str);
+                        dent = readdir(curdir);
+                        loader_platform_close_library(handle);
+                        continue;
+                     }
+
+                     loader.scanned_layers[count].name =
+                                                   malloc(strlen(temp_str) + 1);
+                     if (loader.scanned_layers[count].name == NULL) {
                          loader_log(VK_DBG_MSG_ERROR, 0, "%s ignored: out of memory", temp_str);
                          break;
                      }
-                     strcpy(loader.scanned_layer_names[loader.scanned_layer_count], temp_str);
-                     loader.scanned_layer_count++;
-                     loader_platform_close_library(handle);
+
+                     get_global_extensions(fp_get_ext,
+                             &loader.scanned_layers[count].extension_count,
+                             &loader.scanned_layers[count].extensions);
+
+
+                    strcpy(loader.scanned_layers[count].name, temp_str);
+                    count++;
+                    loader_platform_close_library(handle);
                  }
              }
 
              dent = readdir(curdir);
-          }
+          } // while (dir_entry)
+          if (count == MAX_LAYER_LIBRARIES)
+             break;
           closedir(curdir);
-       }
-    }
+       } // if (curdir))
+    } // for (libpaths)
 
+    loader.scanned_layer_count = count;
     loader.layer_scanned = true;
 }
 
@@ -578,62 +771,38 @@ static void loader_init_layer_libs(struct loader_icd *icd, uint32_t gpu_index, s
     }
 }
 
-static VkResult find_layer_extension(struct loader_icd *icd, uint32_t gpu_index, const char *pExtName, const char **lib_name)
+static bool find_layer_extension(struct loader_icd *icd, uint32_t gpu_index, const char *pExtName, const char **lib_name)
 {
-    VkResult err;
     char *search_name;
-    loader_platform_dl_handle handle;
-    PFN_vkGetExtensionSupport fpGetExtensionSupport;
+    uint32_t j;
 
     /*
      * The loader provides the abstraction that make layers and extensions work via
      * the currently defined extension mechanism. That is, when app queries for an extension
-     * via vkGetExtensionSupport, the loader will call both the driver as well as any layers
+     * via vkGetGlobalExtensionInfo, the loader will call both the driver as well as any layers
      * to see who implements that extension. Then, if the app enables the extension during
-     * vkCreateDevice the loader will find and load any layers that implement that extension.
+     * vkCreateInstance the loader will find and load any layers that implement that extension.
      */
 
-    // TODO: What if extension is in multiple places?
+    // TODO: what about GetPhysicalDeviceExtension for device specific layers/extensions
 
-    // TODO: Who should we ask first? Driver or layers? Do driver for now.
-    err = icd->scanned_icds[gpu_index].GetExtensionSupport((VkPhysicalGpu) (icd->gpus[gpu_index].nextObject), pExtName);
-    if (err == VK_SUCCESS) {
+    for (j = 0; j < loader.scanned_layer_count; j++) {
         if (lib_name) {
-            *lib_name = NULL;
+            *lib_name = loader.scanned_layers[j].name;
         }
-        return VK_SUCCESS;
-    }
+        if (has_extension(loader.scanned_layers[j].extensions,
+                          loader.scanned_layers[j].extension_count, pExtName,
+                          true))
 
-    for (unsigned int j = 0; j < loader.scanned_layer_count; j++) {
-        search_name = loader.scanned_layer_names[j];
+            return true;
 
-        if ((handle = loader_platform_open_library(search_name)) == NULL)
-            continue;
-
-        fpGetExtensionSupport = loader_platform_get_proc_address(handle, "vkGetExtensionSupport");
-
-        if (fpGetExtensionSupport != NULL) {
-            // Found layer's GetExtensionSupport call
-            err = fpGetExtensionSupport((VkPhysicalGpu) (icd->gpus + gpu_index), pExtName);
-
-            loader_platform_close_library(handle);
-
-            if (err == VK_SUCCESS) {
-                if (lib_name) {
-                    *lib_name = loader.scanned_layer_names[j];
-                }
-                return VK_SUCCESS;
-            }
-        } else {
-            loader_platform_close_library(handle);
-        }
-
-        // No GetExtensionSupport or GetExtensionSupport returned invalid extension
-        // for the layer, so test the layer name as if it is an extension name
-        // use default layer name based on library name VK_LAYER_LIBRARY_PREFIX<name>.VK_LIBRARY_SUFFIX
+        // Extension not found in list for the layer, so test the layer name
+        // as if it is an extension name. Use default layer name based on
+        // library name VK_LAYER_LIBRARY_PREFIX<name>.VK_LIBRARY_SUFFIX
         char *pEnd;
         size_t siz;
 
+        search_name = loader.scanned_layers[j].name;
         search_name = basename(search_name);
         search_name += strlen(VK_LAYER_LIBRARY_PREFIX);
         pEnd = strrchr(search_name, '.');
@@ -642,13 +811,13 @@ static VkResult find_layer_extension(struct loader_icd *icd, uint32_t gpu_index,
             continue;
 
         if (strncmp(search_name, pExtName, siz) == 0) {
-            if (lib_name) {
-                *lib_name = loader.scanned_layer_names[j];
-            }
-            return VK_SUCCESS;
+            return true;
         }
     }
-    return VK_ERROR_INVALID_EXTENSION;
+    if (lib_name) {
+       *lib_name = NULL;
+    }
+    return false;
 }
 
 static uint32_t loader_get_layer_env(struct loader_icd *icd, uint32_t gpu_index, struct layer_name_pair *pLayerNames)
@@ -691,7 +860,7 @@ static uint32_t loader_get_layer_env(struct loader_icd *icd, uint32_t gpu_index,
             next++;
         }
         name = basename(p);
-        if (find_layer_extension(icd, gpu_index, name, &lib_name) != VK_SUCCESS) {
+        if (!find_layer_extension(icd, gpu_index, name, &lib_name)) {
             p = next;
             continue;
         }
@@ -727,7 +896,7 @@ static uint32_t loader_get_layer_libs(struct loader_icd *icd, uint32_t gpu_index
     for (uint32_t i = 0; i < ext_count; i++) {
         const char *pExtName = ext_names[i];
 
-        if (find_layer_extension(icd, gpu_index, pExtName, &lib_name) == VK_SUCCESS) {
+        if (find_layer_extension(icd, gpu_index, pExtName, &lib_name)) {
             uint32_t len;
 
             /*
@@ -860,8 +1029,6 @@ LOADER_EXPORT VkResult VKAPI vkCreateInstance(
         const VkInstanceCreateInfo*         pCreateInfo,
         VkInstance*                           pInstance)
 {
-    static LOADER_PLATFORM_THREAD_ONCE_DECLARATION(once_icd);
-    static LOADER_PLATFORM_THREAD_ONCE_DECLARATION(once_layer);
     struct loader_instance *ptr_instance = NULL;
     struct loader_scanned_icds *scanned_icds;
     struct loader_icd *icd;
@@ -873,6 +1040,9 @@ LOADER_EXPORT VkResult VKAPI vkCreateInstance(
 
     /* get layer libraries in a single-threaded manner */
     loader_platform_thread_once(&once_layer, layer_lib_scan);
+
+    /* merge any duplicate extensions */
+    loader_platform_thread_once(&once_exts, loader_coalesce_extensions);
 
     ptr_instance = (struct loader_instance*) malloc(sizeof(struct loader_instance));
     if (ptr_instance == NULL) {
@@ -1060,18 +1230,60 @@ LOADER_EXPORT void * VKAPI vkGetProcAddr(VkPhysicalGpu gpu, const char * pName)
     }
 }
 
-#if 0
-LOADER_EXPORT VkResult VKAPI vkGetExtensionSupport(VkPhysicalGpu gpu, const char *pExtName)
+//TODO make sure createInstance enables extensions that are valid (loader does)
+//TODO make sure CreateDevice enables extensions that are valid (left for layers/drivers to do)
+
+//TODO how is layer extension going to be enabled?
+//Need to call createInstance on the layer or something
+
+LOADER_EXPORT VkResult VKAPI vkGetGlobalExtensionInfo(
+                                               VkExtensionInfoType infoType,
+                                               uint32_t extensionIndex,
+                                               size_t*  pDataSize,
+                                               void*    pData)
 {
-    uint32_t gpu_index;
-    struct loader_icd *icd = loader_get_icd((const VkBaseLayerObject *) gpu, &gpu_index);
+    VkExtensionProperties *ext_props;
+    uint32_t *count;
+    /* Scan/discover all ICD libraries in a single-threaded manner */
+    loader_platform_thread_once(&once_icd, loader_icd_scan);
 
-    if (!icd)
-        return VK_ERROR_UNAVAILABLE;
+    /* get layer libraries in a single-threaded manner */
+    loader_platform_thread_once(&once_layer, layer_lib_scan);
 
-    return find_layer_extension(icd, gpu_index, pExtName, NULL);
+    /* merge any duplicate extensions */
+    loader_platform_thread_once(&once_exts, loader_coalesce_extensions);
+
+
+    if (pDataSize == NULL)
+        return VK_ERROR_INVALID_POINTER;
+
+    switch (infoType) {
+        case VK_EXTENSION_INFO_TYPE_COUNT:
+            *pDataSize = sizeof(uint32_t);
+            if (pData == NULL)
+                return VK_SUCCESS;
+            count = (uint32_t *) pData;
+            *count = loader.scanned_ext_list_count;
+            break;
+        case VK_EXTENSION_INFO_TYPE_PROPERTIES:
+            *pDataSize = sizeof(VkExtensionProperties);
+            if (pData == NULL)
+                return VK_SUCCESS;
+            if (extensionIndex >= loader.scanned_ext_list_count)
+                return VK_ERROR_INVALID_VALUE;
+            ext_props = (VkExtensionProperties *) pData;
+            ext_props->version = loader.scanned_ext_list[extensionIndex]->version;
+            strncpy(ext_props->extName, loader.scanned_ext_list[extensionIndex]->extName
+                                            , VK_MAX_EXTENSION_NAME);
+            ext_props->extName[VK_MAX_EXTENSION_NAME - 1] = '\0';
+            break;
+        default:
+            loader_log(VK_DBG_MSG_WARNING, 0, "Invalid infoType in vkGetGlobalExtensionInfo");
+            return VK_ERROR_INVALID_VALUE;
+    };
+
+    return VK_SUCCESS;
 }
-#endif
 
 LOADER_EXPORT VkResult VKAPI vkEnumerateLayers(VkPhysicalGpu gpu, size_t maxLayerCount, size_t maxStringSize, size_t* pOutLayerCount, char* const* pOutLayers, void* pReserved)
 {
@@ -1094,7 +1306,7 @@ LOADER_EXPORT VkResult VKAPI vkEnumerateLayers(VkPhysicalGpu gpu, size_t maxLaye
          layers[i] = &layer_buf[i][0];
 
     for (unsigned int j = 0; j < loader.scanned_layer_count && count < maxLayerCount; j++) {
-        lib_name = loader.scanned_layer_names[j];
+        lib_name = loader.scanned_layers[j].name;
         // Used to call: dlopen(*lib_name, RTLD_LAZY)
         if ((handle = loader_platform_open_library(lib_name)) == NULL)
             continue;

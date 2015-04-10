@@ -182,6 +182,7 @@ class Extension(object):
 core = Extension(
     name="VK_CORE",
     headers=["vulkan.h", "vkDbg.h"],
+
     objects=[
         "VkInstance",
         "VkPhysicalGpu",
@@ -247,6 +248,12 @@ core = Extension(
 
         Proto("VkResult", "DestroyDevice",
             [Param("VkDevice", "device")]),
+
+        Proto("VkResult", "GetGlobalExtensionInfo",
+            [Param("VkExtensionInfoType", "infoType"),
+             Param("uint32_t", "extensionIndex"),
+             Param("size_t*", "pDataSize"),
+             Param("void*", "pData")]),
 
         Proto("VkResult", "GetExtensionSupport",
             [Param("VkPhysicalGpu", "gpu"),

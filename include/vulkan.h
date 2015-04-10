@@ -89,6 +89,7 @@ VK_DEFINE_SUBCLASS_HANDLE(VkRenderPass, VkObject)
 
 #define VK_MAX_PHYSICAL_GPUS       16
 #define VK_MAX_PHYSICAL_GPU_NAME   256
+#define VK_MAX_EXTENSION_NAME      256
 
 #define VK_LOD_CLAMP_NONE       MAX_FLOAT
 #define VK_LAST_MIP_OR_SLICE    0xffffffff
@@ -669,6 +670,15 @@ typedef enum VkPhysicalGpuInfoType_
     VK_NUM_INFO_TYPE_PHYSICAL_GPU                           = (VK_INFO_TYPE_PHYSICAL_GPU_END_RANGE - VK_INFO_TYPE_PHYSICAL_GPU_BEGIN_RANGE + 1),
     VK_MAX_ENUM(VkPhysicalGpuInfoType)
 } VkPhysicalGpuInfoType;
+
+typedef enum VkExtensionInfoType_
+{
+    // Info type for vkGetGlobalExtensionInfo() and vkGetPhysicalDeviceExtensionInfo()
+    VK_EXTENSION_INFO_TYPE_COUNT                            = 0x00000000,
+    VK_EXTENSION_INFO_TYPE_PROPERTIES                       = 0x00000001,
+
+    //VK_ENUM_RANGE(EXTENSION_INFO_TYPE, COUNT, PROPERTIES)
+} VkExtensionInfoType;
 
 typedef enum VkFormatInfoType_
 {
@@ -1368,6 +1378,12 @@ typedef struct VkGpuCompatibilityInfo_
 {
     VkFlags                                     compatibilityFlags; // VkGpuCompatibilityFlags
 } VkGpuCompatibilityInfo;
+
+typedef struct VkExtensionProperties_
+{
+    char                                        extName[VK_MAX_EXTENSION_NAME];     // extension name
+    uint32_t                                    version;                            // version of the extension specification
+} VkExtensionProperties;
 
 typedef struct VkApplicationInfo_
 {
@@ -2274,6 +2290,7 @@ typedef VkResult (VKAPI *PFN_vkGetGpuInfo)(VkPhysicalGpu gpu, VkPhysicalGpuInfoT
 typedef void *   (VKAPI *PFN_vkGetProcAddr)(VkPhysicalGpu gpu, const char * pName);
 typedef VkResult (VKAPI *PFN_vkCreateDevice)(VkPhysicalGpu gpu, const VkDeviceCreateInfo* pCreateInfo, VkDevice* pDevice);
 typedef VkResult (VKAPI *PFN_vkDestroyDevice)(VkDevice device);
+typedef VkResult (VKAPI *PFN_vkGetGlobalExtensionInfo)(VkExtensionInfoType infoType, uint32_t extensionIndex, size_t* pDataSize, void* pData);
 typedef VkResult (VKAPI *PFN_vkGetExtensionSupport)(VkPhysicalGpu gpu, const char* pExtName);
 typedef VkResult (VKAPI *PFN_vkEnumerateLayers)(VkPhysicalGpu gpu, size_t maxLayerCount, size_t maxStringSize, size_t* pOutLayerCount, char* const* pOutLayers, void* pReserved);
 typedef VkResult (VKAPI *PFN_vkGetDeviceQueue)(VkDevice device, uint32_t queueNodeIndex, uint32_t queueIndex, VkQueue* pQueue);
@@ -2420,6 +2437,11 @@ VkResult VKAPI vkDestroyDevice(
     VkDevice                                    device);
 
 // Extension discovery functions
+VkResult VKAPI vkGetGlobalExtensionInfo(
+                                               VkExtensionInfoType infoType,
+                                               uint32_t extensionIndex,
+                                               size_t*  pDataSize,
+                                               void*    pData);
 
 VkResult VKAPI vkGetExtensionSupport(
     VkPhysicalGpu                               gpu,

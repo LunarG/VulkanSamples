@@ -1466,6 +1466,58 @@ VK_LAYER_EXPORT VkResult VKAPI vkDestroyDevice(VkDevice device)
     return result;
 }
 
+struct extProps {
+    uint32_t version;
+    const char * const name;
+};
+#define DRAW_STATE_LAYER_EXT_ARRAY_SIZE 1
+static const struct extProps dsExts[DRAW_STATE_LAYER_EXT_ARRAY_SIZE] = {
+    // TODO what is the version?
+    0x10, "DrawState"
+};
+
+VK_LAYER_EXPORT VkResult VKAPI vkGetGlobalExtensionInfo(
+                                               VkExtensionInfoType infoType,
+                                               uint32_t extensionIndex,
+                                               size_t*  pDataSize,
+                                               void*    pData)
+{
+    VkResult result;
+
+    /* This entrypoint is NOT going to init it's own dispatch table since loader calls here early */
+    VkExtensionProperties *ext_props;
+    uint32_t *count;
+
+    if (pDataSize == NULL)
+        return VK_ERROR_INVALID_POINTER;
+
+    switch (infoType) {
+        case VK_EXTENSION_INFO_TYPE_COUNT:
+            *pDataSize = sizeof(uint32_t);
+            if (pData == NULL)
+                return VK_SUCCESS;
+            count = (uint32_t *) pData;
+            *count = DRAW_STATE_LAYER_EXT_ARRAY_SIZE;
+            break;
+        case VK_EXTENSION_INFO_TYPE_PROPERTIES:
+            *pDataSize = sizeof(VkExtensionProperties);
+            if (pData == NULL)
+                return VK_SUCCESS;
+            if (extensionIndex >= DRAW_STATE_LAYER_EXT_ARRAY_SIZE)
+                return VK_ERROR_INVALID_VALUE;
+            ext_props = (VkExtensionProperties *) pData;
+            ext_props->version = dsExts[extensionIndex].version;
+            strncpy(ext_props->extName, dsExts[extensionIndex].name,
+                                        VK_MAX_EXTENSION_NAME);
+            ext_props->extName[VK_MAX_EXTENSION_NAME - 1] = '\0';
+            break;
+        default:
+            return VK_ERROR_INVALID_VALUE;
+    };
+
+    return VK_SUCCESS;
+}
+
 VK_LAYER_EXPORT VkResult VKAPI vkGetExtensionSupport(VkPhysicalGpu gpu, const char* pExtName)
 {
     VkResult result;
