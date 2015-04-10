@@ -59,10 +59,10 @@ typedef enum _OBJECT_STATUS
 typedef enum _VK_OBJECT_TYPE
 {
     VkObjectTypeSampler,
-    VkObjectTypeDynamicDsStateObject,
+    VkObjectTypeDynamicDsState,
     VkObjectTypeDescriptorSet,
     VkObjectTypeDescriptorPool,
-    VkObjectTypeDynamicCbStateObject,
+    VkObjectTypeDynamicCbState,
     VkObjectTypeImageView,
     VkObjectTypeSemaphore,
     VkObjectTypeShader,
@@ -81,10 +81,10 @@ typedef enum _VK_OBJECT_TYPE
     VkObjectTypeBufferView,
     VkObjectTypeDepthStencilView,
     VkObjectTypeInstance,
-    VkObjectTypeDynamicVpStateObject,
+    VkObjectTypeDynamicVpState,
     VkObjectTypeColorAttachmentView,
     VkObjectTypeGpuMemory,
-    VkObjectTypeDynamicRsStateObject,
+    VkObjectTypeDynamicRsState,
     VkObjectTypeFence,
     VkObjectTypeCmdBuffer,
     VkObjectTypePresentableImageMemory,
@@ -133,7 +133,7 @@ static const char* string_VK_OBJECT_TYPE(VK_OBJECT_TYPE type) {
             return "IMAGE_VIEW";
         case VkObjectTypeBuffer:
             return "BUFFER";
-        case VkObjectTypeDynamicRsStateObject:
+        case VkObjectTypeDynamicRsState:
             return "DYNAMIC_RS_STATE_OBJECT";
         case VkObjectTypeEvent:
             return "EVENT";
@@ -141,11 +141,11 @@ static const char* string_VK_OBJECT_TYPE(VK_OBJECT_TYPE type) {
             return "DEPTH_STENCIL_VIEW";
         case VkObjectTypeShader:
             return "SHADER";
-        case VkObjectTypeDynamicDsStateObject:
+        case VkObjectTypeDynamicDsState:
             return "DYNAMIC_DS_STATE_OBJECT";
-        case VkObjectTypeDynamicVpStateObject:
+        case VkObjectTypeDynamicVpState:
             return "DYNAMIC_VP_STATE_OBJECT";
-        case VkObjectTypeDynamicCbStateObject:
+        case VkObjectTypeDynamicCbState:
             return "DYNAMIC_CB_STATE_OBJECT";
         case VkObjectTypeInstance:
             return "INSTANCE";

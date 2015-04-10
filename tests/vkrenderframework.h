@@ -106,10 +106,10 @@ protected:
     VkCmdBuffer                            m_cmdBuffer;
     VkRenderPass                           m_renderPass;
     VkFramebuffer                          m_framebuffer;
-    VkDynamicRsStateObject                 m_stateRaster;
-    VkDynamicCbStateObject                 m_colorBlend;
-    VkDynamicVpStateObject                 m_stateViewport;
-    VkDynamicDsStateObject                 m_stateDepthStencil;
+    VkDynamicRsState                       m_stateRaster;
+    VkDynamicCbState                       m_colorBlend;
+    VkDynamicVpState                       m_stateViewport;
+    VkDynamicDsState                       m_stateDepthStencil;
     vector<VkImageObj*>                    m_renderTargets;
     float                                   m_width, m_height;
     VkFormat                              m_render_target_fmt;

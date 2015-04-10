@@ -247,10 +247,10 @@ struct demo {
     VkDescriptorSetLayout desc_layout;
     VkPipeline pipeline;
 
-    VkDynamicVpStateObject viewport;
-    VkDynamicRsStateObject raster;
-    VkDynamicCbStateObject color_blend;
-    VkDynamicDsStateObject depth_stencil;
+    VkDynamicVpState viewport;
+    VkDynamicRsState raster;
+    VkDynamicCbState color_blend;
+    VkDynamicDsState depth_stencil;
 
     mat4x4 projection_matrix;
     mat4x4 view_matrix;

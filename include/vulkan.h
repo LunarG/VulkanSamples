@@ -33,7 +33,7 @@
 #include "vk_platform.h"
 
 // Vulkan API version supported by this file
-#define VK_API_VERSION VK_MAKE_VERSION(0, 71, 0)
+#define VK_API_VERSION VK_MAKE_VERSION(0, 72, 0)
 
 #ifdef __cplusplus
 extern "C"
@@ -75,10 +75,10 @@ VK_DEFINE_SUBCLASS_HANDLE(VkDescriptorSetLayout, VkObject)
 VK_DEFINE_SUBCLASS_HANDLE(VkDescriptorSetLayoutChain, VkObject)
 VK_DEFINE_SUBCLASS_HANDLE(VkDescriptorPool, VkObject)
 VK_DEFINE_SUBCLASS_HANDLE(VkDynamicStateObject, VkObject)
-VK_DEFINE_SUBCLASS_HANDLE(VkDynamicVpStateObject, VkDynamicStateObject)
-VK_DEFINE_SUBCLASS_HANDLE(VkDynamicRsStateObject, VkDynamicStateObject)
-VK_DEFINE_SUBCLASS_HANDLE(VkDynamicCbStateObject, VkDynamicStateObject)
-VK_DEFINE_SUBCLASS_HANDLE(VkDynamicDsStateObject, VkDynamicStateObject)
+VK_DEFINE_SUBCLASS_HANDLE(VkDynamicVpState, VkDynamicStateObject)
+VK_DEFINE_SUBCLASS_HANDLE(VkDynamicRsState, VkDynamicStateObject)
+VK_DEFINE_SUBCLASS_HANDLE(VkDynamicCbState, VkDynamicStateObject)
+VK_DEFINE_SUBCLASS_HANDLE(VkDynamicDsState, VkDynamicStateObject)
 VK_DEFINE_SUBCLASS_HANDLE(VkCmdBuffer, VkObject)
 VK_DEFINE_SUBCLASS_HANDLE(VkFence, VkObject)
 VK_DEFINE_SUBCLASS_HANDLE(VkSemaphore, VkObject)
@@ -2336,10 +2336,10 @@ typedef VkResult (VKAPI *PFN_vkResetDescriptorPool)(VkDescriptorPool descriptorP
 typedef VkResult (VKAPI *PFN_vkAllocDescriptorSets)(VkDescriptorPool descriptorPool, VkDescriptorSetUsage setUsage, uint32_t count, const VkDescriptorSetLayout* pSetLayouts, VkDescriptorSet* pDescriptorSets, uint32_t* pCount);
 typedef void      (VKAPI *PFN_vkClearDescriptorSets)(VkDescriptorPool descriptorPool, uint32_t count, const VkDescriptorSet* pDescriptorSets);
 typedef void      (VKAPI *PFN_vkUpdateDescriptors)(VkDescriptorSet descriptorSet, uint32_t updateCount, const void** pUpdateArray);
-typedef VkResult (VKAPI *PFN_vkCreateDynamicViewportState)(VkDevice device, const VkDynamicVpStateCreateInfo* pCreateInfo, VkDynamicVpStateObject* pState);
-typedef VkResult (VKAPI *PFN_vkCreateDynamicRasterState)(VkDevice device, const VkDynamicRsStateCreateInfo* pCreateInfo, VkDynamicRsStateObject* pState);
-typedef VkResult (VKAPI *PFN_vkCreateDynamicColorBlendState)(VkDevice device, const VkDynamicCbStateCreateInfo* pCreateInfo, VkDynamicCbStateObject* pState);
-typedef VkResult (VKAPI *PFN_vkCreateDynamicDepthStencilState)(VkDevice device, const VkDynamicDsStateCreateInfo* pCreateInfo, VkDynamicDsStateObject* pState);
+typedef VkResult (VKAPI *PFN_vkCreateDynamicViewportState)(VkDevice device, const VkDynamicVpStateCreateInfo* pCreateInfo, VkDynamicVpState* pState);
+typedef VkResult (VKAPI *PFN_vkCreateDynamicRasterState)(VkDevice device, const VkDynamicRsStateCreateInfo* pCreateInfo, VkDynamicRsState* pState);
+typedef VkResult (VKAPI *PFN_vkCreateDynamicColorBlendState)(VkDevice device, const VkDynamicCbStateCreateInfo* pCreateInfo, VkDynamicCbState* pState);
+typedef VkResult (VKAPI *PFN_vkCreateDynamicDepthStencilState)(VkDevice device, const VkDynamicDsStateCreateInfo* pCreateInfo, VkDynamicDsState* pState);
 typedef VkResult (VKAPI *PFN_vkCreateCommandBuffer)(VkDevice device, const VkCmdBufferCreateInfo* pCreateInfo, VkCmdBuffer* pCmdBuffer);
 typedef VkResult (VKAPI *PFN_vkBeginCommandBuffer)(VkCmdBuffer cmdBuffer, const VkCmdBufferBeginInfo* pBeginInfo);
 typedef VkResult (VKAPI *PFN_vkEndCommandBuffer)(VkCmdBuffer cmdBuffer);
@@ -2776,22 +2776,22 @@ void VKAPI vkUpdateDescriptors(
 VkResult VKAPI vkCreateDynamicViewportState(
     VkDevice                                   device,
     const VkDynamicVpStateCreateInfo*      pCreateInfo,
-    VkDynamicVpStateObject*                 pState);
+    VkDynamicVpState*                 pState);
 
 VkResult VKAPI vkCreateDynamicRasterState(
     VkDevice                                   device,
     const VkDynamicRsStateCreateInfo*      pCreateInfo,
-    VkDynamicRsStateObject*                 pState);
+    VkDynamicRsState*                 pState);
 
 VkResult VKAPI vkCreateDynamicColorBlendState(
     VkDevice                                   device,
     const VkDynamicCbStateCreateInfo*      pCreateInfo,
-    VkDynamicCbStateObject*                 pState);
+    VkDynamicCbState*                 pState);
 
 VkResult VKAPI vkCreateDynamicDepthStencilState(
     VkDevice                                   device,
     const VkDynamicDsStateCreateInfo*      pCreateInfo,
-    VkDynamicDsStateObject*                 pState);
+    VkDynamicDsState*                 pState);
 
 // Command buffer functions
 

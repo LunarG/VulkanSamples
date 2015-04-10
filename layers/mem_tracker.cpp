@@ -1381,7 +1381,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateSampler(VkDevice device, const VkSamplerC
 }
 
 VK_LAYER_EXPORT VkResult VKAPI vkCreateDynamicViewportState(VkDevice device, const VkDynamicVpStateCreateInfo* pCreateInfo,
-    VkDynamicVpStateObject* pState)
+    VkDynamicVpState* pState)
 {
     VkResult result = nextTable.CreateDynamicViewportState(device, pCreateInfo, pState);
     if (result == VK_SUCCESS) {
@@ -1393,7 +1393,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateDynamicViewportState(VkDevice device, con
 }
 
 VK_LAYER_EXPORT VkResult VKAPI vkCreateDynamicRasterState(VkDevice device, const VkDynamicRsStateCreateInfo* pCreateInfo,
-    VkDynamicRsStateObject* pState)
+    VkDynamicRsState* pState)
 {
     VkResult result = nextTable.CreateDynamicRasterState(device, pCreateInfo, pState);
     if (result == VK_SUCCESS) {
@@ -1405,7 +1405,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateDynamicRasterState(VkDevice device, const
 }
 
 VK_LAYER_EXPORT VkResult VKAPI vkCreateDynamicColorBlendState(VkDevice device, const VkDynamicCbStateCreateInfo* pCreateInfo,
-    VkDynamicCbStateObject*  pState)
+    VkDynamicCbState*  pState)
 {
     VkResult result = nextTable.CreateDynamicColorBlendState(device, pCreateInfo, pState);
     if (result == VK_SUCCESS) {
@@ -1417,7 +1417,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateDynamicColorBlendState(VkDevice device, c
 }
 
 VK_LAYER_EXPORT VkResult VKAPI vkCreateDynamicDepthStencilState(VkDevice device, const VkDynamicDsStateCreateInfo* pCreateInfo,
-    VkDynamicDsStateObject*    pState)
+    VkDynamicDsState*    pState)
 {
     VkResult result = nextTable.CreateDynamicDepthStencilState(device, pCreateInfo, pState);
     if (result == VK_SUCCESS) {

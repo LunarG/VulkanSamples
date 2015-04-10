@@ -204,10 +204,10 @@ core = Extension(
         "VkDescriptorSetLayoutChain",
         "VkDescriptorPool",
         "VkDynamicStateObject",
-        "VkDynamicVpStateObject",
-        "VkDynamicRsStateObject",
-        "VkDynamicCbStateObject",
-        "VkDynamicDsStateObject",
+        "VkDynamicVpState",
+        "VkDynamicRsState",
+        "VkDynamicCbState",
+        "VkDynamicDsState",
         "VkCmdBuffer",
         "VkFence",
         "VkSemaphore",
@@ -565,22 +565,22 @@ core = Extension(
         Proto("VkResult", "CreateDynamicViewportState",
             [Param("VkDevice", "device"),
              Param("const VkDynamicVpStateCreateInfo*", "pCreateInfo"),
-             Param("VkDynamicVpStateObject*", "pState")]),
+             Param("VkDynamicVpState*", "pState")]),
 
         Proto("VkResult", "CreateDynamicRasterState",
             [Param("VkDevice", "device"),
              Param("const VkDynamicRsStateCreateInfo*", "pCreateInfo"),
-             Param("VkDynamicRsStateObject*", "pState")]),
+             Param("VkDynamicRsState*", "pState")]),
 
         Proto("VkResult", "CreateDynamicColorBlendState",
             [Param("VkDevice", "device"),
              Param("const VkDynamicCbStateCreateInfo*", "pCreateInfo"),
-             Param("VkDynamicCbStateObject*", "pState")]),
+             Param("VkDynamicCbState*", "pState")]),
 
         Proto("VkResult", "CreateDynamicDepthStencilState",
             [Param("VkDevice", "device"),
              Param("const VkDynamicDsStateCreateInfo*", "pCreateInfo"),
-             Param("VkDynamicDsStateObject*", "pState")]),
+             Param("VkDynamicDsState*", "pState")]),
 
         Proto("VkResult", "CreateCommandBuffer",
             [Param("VkDevice", "device"),
@@ -950,10 +950,10 @@ object_list = [
 ]
 
 object_dynamic_state_list = [
-    "VkDynamicVpStateObject",
-    "VkDynamicRsStateObject",
-    "VkDynamicCbStateObject",
-    "VkDynamicDsStateObject"
+    "VkDynamicVpState",
+    "VkDynamicRsState",
+    "VkDynamicCbState",
+    "VkDynamicDsState"
 ]
 
 object_type_list = object_root_list + object_base_list + object_list + object_dynamic_state_list

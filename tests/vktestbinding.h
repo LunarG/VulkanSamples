@@ -558,25 +558,25 @@ public:
     static VkImageViewAttachInfo attach_info(const ImageView &view, VkImageLayout layout);
 };
 
-class DynamicVpStateObject : public DerivedObject<VkDynamicVpStateObject, DynamicStateObject> {
+class DynamicVpStateObject : public DerivedObject<VkDynamicVpState, DynamicStateObject> {
 public:
     // vkCreateDynamicViewportState()
     void init(const Device &dev, const VkDynamicVpStateCreateInfo &info);
 };
 
-class DynamicRsStateObject : public DerivedObject<VkDynamicRsStateObject, DynamicStateObject> {
+class DynamicRsStateObject : public DerivedObject<VkDynamicRsState, DynamicStateObject> {
 public:
     // vkCreateDynamicRasterState()
     void init(const Device &dev, const VkDynamicRsStateCreateInfo &info);
 };
 
-class DynamicCbStateObject : public DerivedObject<VkDynamicCbStateObject, DynamicStateObject> {
+class DynamicCbStateObject : public DerivedObject<VkDynamicCbState, DynamicStateObject> {
 public:
     // vkCreateDynamicColorBlendState()
     void init(const Device &dev, const VkDynamicCbStateCreateInfo &info);
 };
 
-class DynamicDsStateObject : public DerivedObject<VkDynamicDsStateObject, DynamicStateObject> {
+class DynamicDsStateObject : public DerivedObject<VkDynamicDsState, DynamicStateObject> {
 public:
     // vkCreateDynamicDepthStencilState()
     void init(const Device &dev, const VkDynamicDsStateCreateInfo &info);

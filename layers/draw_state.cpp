@@ -1824,28 +1824,28 @@ VK_LAYER_EXPORT void VKAPI vkUpdateDescriptors(VkDescriptorSet descriptorSet, ui
     nextTable.UpdateDescriptors(descriptorSet, updateCount, ppUpdateArray);
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkCreateDynamicViewportState(VkDevice device, const VkDynamicVpStateCreateInfo* pCreateInfo, VkDynamicVpStateObject* pState)
+VK_LAYER_EXPORT VkResult VKAPI vkCreateDynamicViewportState(VkDevice device, const VkDynamicVpStateCreateInfo* pCreateInfo, VkDynamicVpState* pState)
 {
     VkResult result = nextTable.CreateDynamicViewportState(device, pCreateInfo, pState);
     insertDynamicState(*pState, (GENERIC_HEADER*)pCreateInfo, VK_STATE_BIND_VIEWPORT);
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkCreateDynamicRasterState(VkDevice device, const VkDynamicRsStateCreateInfo* pCreateInfo, VkDynamicRsStateObject* pState)
+VK_LAYER_EXPORT VkResult VKAPI vkCreateDynamicRasterState(VkDevice device, const VkDynamicRsStateCreateInfo* pCreateInfo, VkDynamicRsState* pState)
 {
     VkResult result = nextTable.CreateDynamicRasterState(device, pCreateInfo, pState);
     insertDynamicState(*pState, (GENERIC_HEADER*)pCreateInfo, VK_STATE_BIND_RASTER);
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkCreateDynamicColorBlendState(VkDevice device, const VkDynamicCbStateCreateInfo* pCreateInfo, VkDynamicCbStateObject* pState)
+VK_LAYER_EXPORT VkResult VKAPI vkCreateDynamicColorBlendState(VkDevice device, const VkDynamicCbStateCreateInfo* pCreateInfo, VkDynamicCbState* pState)
 {
     VkResult result = nextTable.CreateDynamicColorBlendState(device, pCreateInfo, pState);
     insertDynamicState(*pState, (GENERIC_HEADER*)pCreateInfo, VK_STATE_BIND_COLOR_BLEND);
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkCreateDynamicDepthStencilState(VkDevice device, const VkDynamicDsStateCreateInfo* pCreateInfo, VkDynamicDsStateObject* pState)
+VK_LAYER_EXPORT VkResult VKAPI vkCreateDynamicDepthStencilState(VkDevice device, const VkDynamicDsStateCreateInfo* pCreateInfo, VkDynamicDsState* pState)
 {
     VkResult result = nextTable.CreateDynamicDepthStencilState(device, pCreateInfo, pState);
     insertDynamicState(*pState, (GENERIC_HEADER*)pCreateInfo, VK_STATE_BIND_DEPTH_STENCIL);

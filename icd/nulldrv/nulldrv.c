@@ -1819,7 +1819,7 @@ ICD_EXPORT VkResult VKAPI vkCreateShader(
 ICD_EXPORT VkResult VKAPI vkCreateDynamicViewportState(
     VkDevice                                  device,
     const VkDynamicVpStateCreateInfo*       pCreateInfo,
-    VkDynamicVpStateObject*                  pState)
+    VkDynamicVpState*                  pState)
 {
     NULLDRV_LOG_FUNC;
     struct nulldrv_dev *dev = nulldrv_dev(device);
@@ -1831,7 +1831,7 @@ ICD_EXPORT VkResult VKAPI vkCreateDynamicViewportState(
 ICD_EXPORT VkResult VKAPI vkCreateDynamicRasterState(
     VkDevice                                  device,
     const VkDynamicRsStateCreateInfo*         pCreateInfo,
-    VkDynamicRsStateObject*                    pState)
+    VkDynamicRsState*                    pState)
 {
     NULLDRV_LOG_FUNC;
     struct nulldrv_dev *dev = nulldrv_dev(device);
@@ -1843,7 +1843,7 @@ ICD_EXPORT VkResult VKAPI vkCreateDynamicRasterState(
 ICD_EXPORT VkResult VKAPI vkCreateDynamicColorBlendState(
     VkDevice                                  device,
     const VkDynamicCbStateCreateInfo*    pCreateInfo,
-    VkDynamicCbStateObject*               pState)
+    VkDynamicCbState*               pState)
 {
     NULLDRV_LOG_FUNC;
     struct nulldrv_dev *dev = nulldrv_dev(device);
@@ -1855,7 +1855,7 @@ ICD_EXPORT VkResult VKAPI vkCreateDynamicColorBlendState(
 ICD_EXPORT VkResult VKAPI vkCreateDynamicDepthStencilState(
     VkDevice                                  device,
     const VkDynamicDsStateCreateInfo*  pCreateInfo,
-    VkDynamicDsStateObject*             pState)
+    VkDynamicDsState*             pState)
 {
     NULLDRV_LOG_FUNC;
     struct nulldrv_dev *dev = nulldrv_dev(device);

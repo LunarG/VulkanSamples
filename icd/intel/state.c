@@ -368,7 +368,7 @@ void intel_ds_state_destroy(struct intel_dynamic_ds *state)
 ICD_EXPORT VkResult VKAPI vkCreateDynamicViewportState(
     VkDevice                                  device,
     const VkDynamicVpStateCreateInfo*     pCreateInfo,
-    VkDynamicVpStateObject*                pState)
+    VkDynamicVpState*                pState)
 {
     struct intel_dev *dev = intel_dev(device);
 
@@ -379,7 +379,7 @@ ICD_EXPORT VkResult VKAPI vkCreateDynamicViewportState(
 ICD_EXPORT VkResult VKAPI vkCreateDynamicRasterState(
     VkDevice                                  device,
     const VkDynamicRsStateCreateInfo*     pCreateInfo,
-    VkDynamicRsStateObject*                pState)
+    VkDynamicRsState*                pState)
 {
     struct intel_dev *dev = intel_dev(device);
 
@@ -390,7 +390,7 @@ ICD_EXPORT VkResult VKAPI vkCreateDynamicRasterState(
 ICD_EXPORT VkResult VKAPI vkCreateDynamicColorBlendState(
     VkDevice                                  device,
     const VkDynamicCbStateCreateInfo*     pCreateInfo,
-    VkDynamicCbStateObject*                pState)
+    VkDynamicCbState*                pState)
 {
     struct intel_dev *dev = intel_dev(device);
 
@@ -401,7 +401,7 @@ ICD_EXPORT VkResult VKAPI vkCreateDynamicColorBlendState(
 ICD_EXPORT VkResult VKAPI vkCreateDynamicDepthStencilState(
     VkDevice                                  device,
     const VkDynamicDsStateCreateInfo*     pCreateInfo,
-    VkDynamicDsStateObject*                pState)
+    VkDynamicDsState*                pState)
 {
     struct intel_dev *dev = intel_dev(device);
 

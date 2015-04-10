@@ -3351,19 +3351,19 @@ ICD_EXPORT void VKAPI vkCmdBindDynamicStateObject(
     switch (stateBindPoint) {
     case VK_STATE_BIND_VIEWPORT:
         cmd_bind_viewport_state(cmd,
-                intel_dynamic_vp((VkDynamicVpStateObject) state));
+                intel_dynamic_vp((VkDynamicVpState) state));
         break;
     case VK_STATE_BIND_RASTER:
         cmd_bind_raster_state(cmd,
-                intel_dynamic_rs((VkDynamicRsStateObject) state));
+                intel_dynamic_rs((VkDynamicRsState) state));
         break;
     case VK_STATE_BIND_DEPTH_STENCIL:
         cmd_bind_ds_state(cmd,
-                intel_dynamic_ds((VkDynamicDsStateObject) state));
+                intel_dynamic_ds((VkDynamicDsState) state));
         break;
     case VK_STATE_BIND_COLOR_BLEND:
         cmd_bind_blend_state(cmd,
-                intel_dynamic_cb((VkDynamicCbStateObject) state));
+                intel_dynamic_cb((VkDynamicCbState) state));
         break;
     default:
         cmd_fail(cmd, VK_ERROR_INVALID_VALUE);
