@@ -2,7 +2,7 @@
 // File: vulkan.h
 //
 /*
-** Copyright (c) 2014 The Khronos Group Inc.
+** Copyright (c) 2014-2015 The Khronos Group Inc.
 **
 ** Permission is hereby granted, free of charge, to any person obtaining a
 ** copy of this software and/or associated documentation files (the
@@ -988,14 +988,14 @@ typedef enum VkPipelineShaderStage_
 
 typedef enum VkShaderStageFlags_
 {
-    VK_SHADER_STAGE_FLAGS_VERTEX_BIT                         = 0x00000001,
-    VK_SHADER_STAGE_FLAGS_TESS_CONTROL_BIT                   = 0x00000002,
-    VK_SHADER_STAGE_FLAGS_TESS_EVALUATION_BIT                = 0x00000004,
-    VK_SHADER_STAGE_FLAGS_GEOMETRY_BIT                       = 0x00000008,
-    VK_SHADER_STAGE_FLAGS_FRAGMENT_BIT                       = 0x00000010,
-    VK_SHADER_STAGE_FLAGS_COMPUTE_BIT                        = 0x00000020,
+    VK_SHADER_STAGE_FLAGS_VERTEX_BIT                        = 0x00000001,
+    VK_SHADER_STAGE_FLAGS_TESS_CONTROL_BIT                  = 0x00000002,
+    VK_SHADER_STAGE_FLAGS_TESS_EVALUATION_BIT               = 0x00000004,
+    VK_SHADER_STAGE_FLAGS_GEOMETRY_BIT                      = 0x00000008,
+    VK_SHADER_STAGE_FLAGS_FRAGMENT_BIT                      = 0x00000010,
+    VK_SHADER_STAGE_FLAGS_COMPUTE_BIT                       = 0x00000020,
 
-    VK_SHADER_STAGE_FLAGS_ALL                                = 0x7FFFFFFF,
+    VK_SHADER_STAGE_FLAGS_ALL                               = 0x7FFFFFFF,
     VK_MAX_ENUM(VkShaderStageFlags_)
 } VkShaderStageFlags;
 
@@ -1325,16 +1325,16 @@ typedef struct VkViewport_
 
 typedef struct VkRect_
 {
-    VkOffset2D                                 offset;
-    VkExtent2D                                 extent;
+    VkOffset2D                                  offset;
+    VkExtent2D                                  extent;
 } VkRect;
 
 typedef struct VkChannelMapping_
 {
-    VkChannelSwizzle                          r;
-    VkChannelSwizzle                          g;
-    VkChannelSwizzle                          b;
-    VkChannelSwizzle                          a;
+    VkChannelSwizzle                            r;
+    VkChannelSwizzle                            g;
+    VkChannelSwizzle                            b;
+    VkChannelSwizzle                            a;
 } VkChannelMapping;
 
 typedef struct VkPhysicalGpuProperties_
@@ -1343,9 +1343,9 @@ typedef struct VkPhysicalGpuProperties_
     uint32_t                                    driverVersion;
     uint32_t                                    vendorId;
     uint32_t                                    deviceId;
-    VkPhysicalGpuType                        gpuType;
+    VkPhysicalGpuType                           gpuType;
     char                                        gpuName[VK_MAX_PHYSICAL_GPU_NAME];
-    VkGpuSize                                 maxInlineMemoryUpdateSize;
+    VkGpuSize                                   maxInlineMemoryUpdateSize;
     uint32_t                                    maxBoundDescriptorSets;
     uint32_t                                    maxThreadGroupSize;
     uint64_t                                    timestampFrequency;
@@ -1366,12 +1366,12 @@ typedef struct VkPhysicalGpuPerformance_
 
 typedef struct VkGpuCompatibilityInfo_
 {
-    VkFlags                                    compatibilityFlags; // VkGpuCompatibilityFlags
+    VkFlags                                     compatibilityFlags; // VkGpuCompatibilityFlags
 } VkGpuCompatibilityInfo;
 
 typedef struct VkApplicationInfo_
 {
-    VkStructureType                           sType;              // Type of structure. Should be VK_STRUCTURE_TYPE_APPLICATION_INFO
+    VkStructureType                             sType;              // Type of structure. Should be VK_STRUCTURE_TYPE_APPLICATION_INFO
     const void*                                 pNext;              // Next structure in chain
     const char*                                 pAppName;
     uint32_t                                    appVersion;
@@ -1384,7 +1384,7 @@ typedef void* (VKAPI *PFN_vkAllocFunction)(
     void*                                       pUserData,
     size_t                                      size,
     size_t                                      alignment,
-    VkSystemAllocType                        allocType);
+    VkSystemAllocType                           allocType);
 
 typedef void (VKAPI *PFN_vkFreeFunction)(
     void*                                       pUserData,
@@ -1393,8 +1393,8 @@ typedef void (VKAPI *PFN_vkFreeFunction)(
 typedef struct VkAllocCallbacks_
 {
     void*                                       pUserData;
-    PFN_vkAllocFunction                           pfnAlloc;
-    PFN_vkFreeFunction                            pfnFree;
+    PFN_vkAllocFunction                         pfnAlloc;
+    PFN_vkFreeFunction                          pfnFree;
 } VkAllocCallbacks;
 
 typedef struct _VkDeviceQueueCreateInfo
@@ -1405,14 +1405,14 @@ typedef struct _VkDeviceQueueCreateInfo
 
 typedef struct _VkDeviceCreateInfo
 {
-    VkStructureType                           sType;                      // Should be VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO
+    VkStructureType                             sType;                      // Should be VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO
     const void*                                 pNext;                      // Pointer to next structure
     uint32_t                                    queueRecordCount;
     const VkDeviceQueueCreateInfo*              pRequestedQueues;
     uint32_t                                    extensionCount;
     const char*const*                           ppEnabledExtensionNames;
-    VkValidationLevel                         maxValidationLevel;
-    VkFlags                                    flags;                      // VkDeviceCreateFlags
+    VkValidationLevel                           maxValidationLevel;
+    VkFlags                                     flags;                      // VkDeviceCreateFlags
 } VkDeviceCreateInfo;
 
 typedef struct _VkInstanceCreateInfo
@@ -1428,7 +1428,7 @@ typedef struct _VkInstanceCreateInfo
 // can be added to VkDeviceCreateInfo or VkInstanceCreateInfo via pNext
 typedef struct _VkLayerCreateInfo
 {
-    VkStructureType                           sType;                      // Should be VK_STRUCTURE_TYPE_LAYER_CREATE_INFO
+    VkStructureType                             sType;                      // Should be VK_STRUCTURE_TYPE_LAYER_CREATE_INFO
     const void*                                 pNext;                      // Pointer to next structure
     uint32_t                                    layerCount;
     const char *const*                          ppActiveLayerNames;         // layer name from the layer's vkEnumerateLayers())
@@ -1436,7 +1436,7 @@ typedef struct _VkLayerCreateInfo
 
 typedef struct VkPhysicalGpuQueueProperties_
 {
-    VkFlags                                    queueFlags;                 // VkQueueFlags
+    VkFlags                                     queueFlags;                 // VkQueueFlags
     uint32_t                                    queueCount;
     uint32_t                                    maxAtomicCounters;
     bool32_t                                    supportsTimestamps;
@@ -1451,144 +1451,144 @@ typedef struct VkPhysicalGpuMemoryProperties_
 
 typedef struct _VkMemoryAllocInfo
 {
-    VkStructureType                           sType;                      // Must be VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO
+    VkStructureType                             sType;                      // Must be VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO
     const void*                                 pNext;                      // Pointer to next structure
-    VkGpuSize                                 allocationSize;             // Size of memory allocation
-    VkFlags                                    memProps;                   // VkMemoryPropertyFlags
-    VkMemoryType                              memType;
-    VkMemoryPriority                          memPriority;
+    VkGpuSize                                   allocationSize;             // Size of memory allocation
+    VkFlags                                     memProps;                   // VkMemoryPropertyFlags
+    VkMemoryType                                memType;
+    VkMemoryPriority                            memPriority;
 } VkMemoryAllocInfo;
 
 // This structure is included in the VkMemoryAllocInfo chain
 // for memory regions allocated for buffer usage.
 typedef struct _VkMemoryAllocBufferInfo
 {
-    VkStructureType                           sType;                      // Must be VK_STRUCTURE_TYPE_MEMORY_ALLOC_BUFFER_INFO
+    VkStructureType                             sType;                      // Must be VK_STRUCTURE_TYPE_MEMORY_ALLOC_BUFFER_INFO
     const void*                                 pNext;                      // Pointer to next structure
-    VkFlags                                    usage;                      // VkBufferUsageFlags
+    VkFlags                                     usage;                      // VkBufferUsageFlags
 } VkMemoryAllocBufferInfo;
 
 // This structure is included in the VkMemoryAllocInfo chain
 // for memory regions allocated for image usage.
 typedef struct _VkMemoryAllocImageInfo
 {
-    VkStructureType                           sType;                      // Must be VK_STRUCTURE_TYPE_MEMORY_ALLOC_IMAGE_INFO
+    VkStructureType                             sType;                      // Must be VK_STRUCTURE_TYPE_MEMORY_ALLOC_IMAGE_INFO
     const void*                                 pNext;                      // Pointer to next structure
-    VkFlags                                    usage;                      // VkImageUsageFlags
-    VkImageFormatClass                       formatClass;
+    VkFlags                                     usage;                      // VkImageUsageFlags
+    VkImageFormatClass                          formatClass;
     uint32_t                                    samples;
 } VkMemoryAllocImageInfo;
 
 typedef struct VkMemoryOpenInfo_
 {
-    VkStructureType                           sType;                      // Must be VK_STRUCTURE_TYPE_MEMORY_OPEN_INFO
+    VkStructureType                             sType;                      // Must be VK_STRUCTURE_TYPE_MEMORY_OPEN_INFO
     const void*                                 pNext;                      // Pointer to next structure
-    VkGpuMemory                               sharedMem;
+    VkGpuMemory                                 sharedMem;
 } VkMemoryOpenInfo;
 
 typedef struct VkPeerMemoryOpenInfo_
 {
-    VkStructureType                           sType;                      // Must be VK_STRUCTURE_TYPE_PEER_MEMORY_OPEN_INFO
+    VkStructureType                             sType;                      // Must be VK_STRUCTURE_TYPE_PEER_MEMORY_OPEN_INFO
     const void*                                 pNext;                      // Pointer to next structure
-    VkGpuMemory                               originalMem;
+    VkGpuMemory                                 originalMem;
 } VkPeerMemoryOpenInfo;
 
 typedef struct VkMemoryRequirements_
 {
-    VkGpuSize                                 size;                       // Specified in bytes
-    VkGpuSize                                 alignment;                  // Specified in bytes
-    VkGpuSize                                 granularity;                // Granularity on which vkBindObjectMemoryRange can bind sub-ranges of memory specified in bytes (usually the page size)
-    VkFlags                                    memProps;                   // VkMemoryPropertyFlags
-    VkMemoryType                              memType;
+    VkGpuSize                                   size;                       // Specified in bytes
+    VkGpuSize                                   alignment;                  // Specified in bytes
+    VkGpuSize                                   granularity;                // Granularity on which vkBindObjectMemoryRange can bind sub-ranges of memory specified in bytes (usually the page size)
+    VkFlags                                     memProps;                   // VkMemoryPropertyFlags
+    VkMemoryType                                memType;
 } VkMemoryRequirements;
 
 typedef struct VkBufferMemoryRequirements_
 {
-    VkFlags                                    usage;                      // VkBufferUsageFlags
+    VkFlags                                     usage;                      // VkBufferUsageFlags
 } VkBufferMemoryRequirements;
 
 typedef struct VkImageMemoryRequirements_
 {
-    VkFlags                                    usage;                      // VkImageUsageFlags
-    VkImageFormatClass                       formatClass;
+    VkFlags                                     usage;                      // VkImageUsageFlags
+    VkImageFormatClass                          formatClass;
     uint32_t                                    samples;
 } VkImageMemoryRequirements;
 
 typedef struct VkFormatProperties_
 {
-    VkFlags                                    linearTilingFeatures;      // VkFormatFeatureFlags
-    VkFlags                                    optimalTilingFeatures;     // VkFormatFeatureFlags
+    VkFlags                                     linearTilingFeatures;      // VkFormatFeatureFlags
+    VkFlags                                     optimalTilingFeatures;     // VkFormatFeatureFlags
 } VkFormatProperties;
 
 typedef struct VkBufferViewAttachInfo_
 {
-    VkStructureType                           sType;                      // Must be VK_STRUCTURE_TYPE_BUFFER_VIEW_ATTACH_INFO
+    VkStructureType                             sType;                      // Must be VK_STRUCTURE_TYPE_BUFFER_VIEW_ATTACH_INFO
     const void*                                 pNext;                      // Pointer to next structure
-    VkBufferView                              view;
+    VkBufferView                                view;
 } VkBufferViewAttachInfo;
 
 typedef struct VkImageViewAttachInfo_
 {
-    VkStructureType                           sType;                      // Must be VK_STRUCTURE_TYPE_IMAGE_VIEW_ATTACH_INFO
+    VkStructureType                             sType;                      // Must be VK_STRUCTURE_TYPE_IMAGE_VIEW_ATTACH_INFO
     const void*                                 pNext;                      // Pointer to next structure
-    VkImageView                               view;
-    VkImageLayout                             layout;
+    VkImageView                                 view;
+    VkImageLayout                               layout;
 } VkImageViewAttachInfo;
 
 typedef struct VkUpdateSamplers_
 {
-    VkStructureType                           sType;                      // Must be VK_STRUCTURE_TYPE_UPDATE_SAMPLERS
+    VkStructureType                             sType;                      // Must be VK_STRUCTURE_TYPE_UPDATE_SAMPLERS
     const void*                                 pNext;                      // Pointer to next structure
     uint32_t                                    binding;                    // Binding of the sampler (array)
     uint32_t                                    arrayIndex;                 // First element of the array to update or zero otherwise
     uint32_t                                    count;                      // Number of elements to update
-    const VkSampler*                           pSamplers;
+    const VkSampler*                            pSamplers;
 } VkUpdateSamplers;
 
 typedef struct VkSamplerImageViewInfo_
 {
-    VkSampler                                  sampler;
-    const VkImageViewAttachInfo*            pImageView;
+    VkSampler                                   sampler;
+    const VkImageViewAttachInfo*                pImageView;
 } VkSamplerImageViewInfo;
 
 typedef struct VkUpdateSamplerTextures_
 {
-    VkStructureType                           sType;                      // Must be VK_STRUCTURE_TYPE_UPDATE_SAMPLER_TEXTURES
+    VkStructureType                             sType;                      // Must be VK_STRUCTURE_TYPE_UPDATE_SAMPLER_TEXTURES
     const void*                                 pNext;                      // Pointer to next structure
     uint32_t                                    binding;                    // Binding of the combined texture sampler (array)
     uint32_t                                    arrayIndex;                 // First element of the array to update or zero otherwise
     uint32_t                                    count;                      // Number of elements to update
-    const VkSamplerImageViewInfo*           pSamplerImageViews;
+    const VkSamplerImageViewInfo*               pSamplerImageViews;
 } VkUpdateSamplerTextures;
 
 typedef struct VkUpdateImages_
 {
-    VkStructureType                           sType;                     // Must be VK_STRUCTURE_TYPE_UPDATE_IMAGES
+    VkStructureType                             sType;                     // Must be VK_STRUCTURE_TYPE_UPDATE_IMAGES
     const void*                                 pNext;                     // Pointer to next structure
-    VkDescriptorType                          descriptorType;
+    VkDescriptorType                            descriptorType;
     uint32_t                                    binding;                   // Binding of the image (array)
     uint32_t                                    arrayIndex;                // First element of the array to update or zero otherwise
     uint32_t                                    count;                     // Number of elements to update
-    const VkImageViewAttachInfo*            pImageViews;
+    const VkImageViewAttachInfo*                pImageViews;
 } VkUpdateImages;
 
 typedef struct VkUpdateBuffers_
 {
-    VkStructureType                           sType;                    // Must be VK_STRUCTURE_TYPE_UPDATE_BUFFERS
+    VkStructureType                             sType;                    // Must be VK_STRUCTURE_TYPE_UPDATE_BUFFERS
     const void*                                 pNext;                    // Pointer to next structure
-    VkDescriptorType                          descriptorType;
+    VkDescriptorType                            descriptorType;
     uint32_t                                    binding;                  // Binding of the buffer (array)
     uint32_t                                    arrayIndex;               // First element of the array to update or zero otherwise
     uint32_t                                    count;                    // Number of elements to update
-    const VkBufferViewAttachInfo*           pBufferViews;
+    const VkBufferViewAttachInfo*               pBufferViews;
 } VkUpdateBuffers;
 
 typedef struct VkUpdateAsCopy_
 {
-    VkStructureType                           sType;                      // Must be VK_STRUCTURE_TYPE_UPDATE_AS_COPY
+    VkStructureType                             sType;                      // Must be VK_STRUCTURE_TYPE_UPDATE_AS_COPY
     const void*                                 pNext;                      // Pointer to next structure
-    VkDescriptorType                          descriptorType;
-    VkDescriptorSet                           descriptorSet;
+    VkDescriptorType                            descriptorType;
+    VkDescriptorSet                             descriptorSet;
     uint32_t                                    binding;
     uint32_t                                    arrayElement;
     uint32_t                                    count;
@@ -1596,34 +1596,34 @@ typedef struct VkUpdateAsCopy_
 
 typedef struct _VkBufferCreateInfo
 {
-    VkStructureType                           sType;                      // Must be VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO
+    VkStructureType                             sType;                      // Must be VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO
     const void*                                 pNext;                      // Pointer to next structure.
-    VkGpuSize                                 size;                       // Specified in bytes
-    VkFlags                                    usage;                      // VkBufferUsageFlags
-    VkFlags                                    flags;                      // VkBufferCreateFlags
+    VkGpuSize                                   size;                       // Specified in bytes
+    VkFlags                                     usage;                      // VkBufferUsageFlags
+    VkFlags                                     flags;                      // VkBufferCreateFlags
 } VkBufferCreateInfo;
 
 typedef struct _VkBufferViewCreateInfo
 {
-    VkStructureType                           sType;                      // Must be VK_STRUCTURE_TYPE_BUFFER_VIEW_CREATE_INFO
+    VkStructureType                             sType;                      // Must be VK_STRUCTURE_TYPE_BUFFER_VIEW_CREATE_INFO
     const void*                                 pNext;                      // Pointer to next structure.
-    VkBuffer                                   buffer;
-    VkBufferViewType                         viewType;
-    VkFormat                                   format;                     // Optionally specifies format of elements
-    VkGpuSize                                 offset;                     // Specified in bytes
-    VkGpuSize                                 range;                      // View size specified in bytes
+    VkBuffer                                    buffer;
+    VkBufferViewType                            viewType;
+    VkFormat                                    format;                     // Optionally specifies format of elements
+    VkGpuSize                                   offset;                     // Specified in bytes
+    VkGpuSize                                   range;                      // View size specified in bytes
 } VkBufferViewCreateInfo;
 
 typedef struct VkImageSubresource_
 {
-    VkImageAspect                             aspect;
+    VkImageAspect                               aspect;
     uint32_t                                    mipLevel;
     uint32_t                                    arraySlice;
 } VkImageSubresource;
 
 typedef struct VkImageSubresourceRange_
 {
-    VkImageAspect                             aspect;
+    VkImageAspect                               aspect;
     uint32_t                                    baseMipLevel;
     uint32_t                                    mipLevels;
     uint32_t                                    baseArraySlice;
@@ -1632,13 +1632,13 @@ typedef struct VkImageSubresourceRange_
 
 typedef struct VkEventWaitInfo_
 {
-    VkStructureType                           sType;                      // Must be VK_STRUCTURE_TYPE_EVENT_WAIT_INFO
+    VkStructureType                             sType;                      // Must be VK_STRUCTURE_TYPE_EVENT_WAIT_INFO
     const void*                                 pNext;                      // Pointer to next structure.
 
     uint32_t                                    eventCount;                 // Number of events to wait on
-    const VkEvent*                             pEvents;                    // Array of event objects to wait on
+    const VkEvent*                              pEvents;                    // Array of event objects to wait on
 
-    VkWaitEvent                               waitEvent;                  // Pipeline event where the wait should happen
+    VkWaitEvent                                 waitEvent;                  // Pipeline event where the wait should happen
 
     uint32_t                                    memBarrierCount;            // Number of memory barriers
     const void**                                ppMemBarriers;              // Array of pointers to memory barriers (any of them can be either VkMemoryBarrier, VkBufferMemoryBarrier, or VkImageMemoryBarrier)
@@ -1646,13 +1646,13 @@ typedef struct VkEventWaitInfo_
 
 typedef struct VkPipelineBarrier_
 {
-    VkStructureType                           sType;                      // Must be VK_STRUCTURE_TYPE_PIPELINE_BARRIER
+    VkStructureType                             sType;                      // Must be VK_STRUCTURE_TYPE_PIPELINE_BARRIER
     const void*                                 pNext;                      // Pointer to next structure.
 
     uint32_t                                    eventCount;                 // Number of events to wait on
-    const VkPipeEvent*                        pEvents;                    // Array of pipeline events to wait on
+    const VkPipeEvent*                          pEvents;                    // Array of pipeline events to wait on
 
-    VkWaitEvent                               waitEvent;                  // Pipeline event where the wait should happen
+    VkWaitEvent                                 waitEvent;                  // Pipeline event where the wait should happen
 
     uint32_t                                    memBarrierCount;            // Number of memory barriers
     const void**                                ppMemBarriers;              // Array of pointers to memory barriers (any of them can be either VkMemoryBarrier, VkBufferMemoryBarrier, or VkImageMemoryBarrier)
@@ -1660,152 +1660,152 @@ typedef struct VkPipelineBarrier_
 
 typedef struct VkMemoryBarrier_
 {
-    VkStructureType                           sType;                      // Must be VK_STRUCTURE_TYPE_MEMORY_BARRIER
+    VkStructureType                             sType;                      // Must be VK_STRUCTURE_TYPE_MEMORY_BARRIER
     const void*                                 pNext;                      // Pointer to next structure.
 
-    VkFlags                                    outputMask;                 // Outputs the barrier should sync (see VkMemoryOutputFlags)
-    VkFlags                                    inputMask;                  // Inputs the barrier should sync to (see VkMemoryInputFlags)
+    VkFlags                                     outputMask;                 // Outputs the barrier should sync (see VkMemoryOutputFlags)
+    VkFlags                                     inputMask;                  // Inputs the barrier should sync to (see VkMemoryInputFlags)
 } VkMemoryBarrier;
 
 typedef struct VkBufferMemoryBarrier_
 {
-    VkStructureType                           sType;                      // Must be VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER
+    VkStructureType                             sType;                      // Must be VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER
     const void*                                 pNext;                      // Pointer to next structure.
 
-    VkFlags                                    outputMask;                 // Outputs the barrier should sync (see VkMemoryOutputFlags)
-    VkFlags                                    inputMask;                  // Inputs the barrier should sync to (see VkMemoryInputFlags)
+    VkFlags                                     outputMask;                 // Outputs the barrier should sync (see VkMemoryOutputFlags)
+    VkFlags                                     inputMask;                  // Inputs the barrier should sync to (see VkMemoryInputFlags)
 
-    VkBuffer                                   buffer;                     // Buffer to sync
+    VkBuffer                                    buffer;                     // Buffer to sync
 
-    VkGpuSize                                 offset;                     // Offset within the buffer to sync
-    VkGpuSize                                 size;                       // Amount of bytes to sync
+    VkGpuSize                                   offset;                     // Offset within the buffer to sync
+    VkGpuSize                                   size;                       // Amount of bytes to sync
 } VkBufferMemoryBarrier;
 
 typedef struct VkImageMemoryBarrier_
 {
-    VkStructureType                           sType;                      // Must be VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER
+    VkStructureType                             sType;                      // Must be VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER
     const void*                                 pNext;                      // Pointer to next structure.
 
-    VkFlags                                    outputMask;                 // Outputs the barrier should sync (see VkMemoryOutputFlags)
-    VkFlags                                    inputMask;                  // Inputs the barrier should sync to (see VkMemoryInputFlags)
+    VkFlags                                     outputMask;                 // Outputs the barrier should sync (see VkMemoryOutputFlags)
+    VkFlags                                     inputMask;                  // Inputs the barrier should sync to (see VkMemoryInputFlags)
 
-    VkImageLayout                             oldLayout;                  // Current layout of the image
-    VkImageLayout                             newLayout;                  // New layout to transition the image to
+    VkImageLayout                               oldLayout;                  // Current layout of the image
+    VkImageLayout                               newLayout;                  // New layout to transition the image to
 
-    VkImage                                    image;                      // Image to sync
+    VkImage                                     image;                      // Image to sync
 
-    VkImageSubresourceRange                  subresourceRange;           // Subresource range to sync
+    VkImageSubresourceRange                     subresourceRange;           // Subresource range to sync
 } VkImageMemoryBarrier;
 
 typedef struct VkImageCreateInfo_
 {
-    VkStructureType                           sType;                      // Must be VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO
+    VkStructureType                             sType;                      // Must be VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO
     const void*                                 pNext;                      // Pointer to next structure.
-    VkImageType                               imageType;
-    VkFormat                                   format;
-    VkExtent3D                                 extent;
+    VkImageType                                 imageType;
+    VkFormat                                    format;
+    VkExtent3D                                  extent;
     uint32_t                                    mipLevels;
     uint32_t                                    arraySize;
     uint32_t                                    samples;
-    VkImageTiling                             tiling;
-    VkFlags                                    usage;                      // VkImageUsageFlags
-    VkFlags                                    flags;                      // VkImageCreateFlags
+    VkImageTiling                               tiling;
+    VkFlags                                     usage;                      // VkImageUsageFlags
+    VkFlags                                     flags;                      // VkImageCreateFlags
 } VkImageCreateInfo;
 
 typedef struct VkPeerImageOpenInfo_
 {
-    VkImage                                    originalImage;
+    VkImage                                     originalImage;
 } VkPeerImageOpenInfo;
 
 typedef struct VkSubresourceLayout_
 {
-    VkGpuSize                                 offset;                 // Specified in bytes
-    VkGpuSize                                 size;                   // Specified in bytes
-    VkGpuSize                                 rowPitch;               // Specified in bytes
-    VkGpuSize                                 depthPitch;             // Specified in bytes
+    VkGpuSize                                   offset;                 // Specified in bytes
+    VkGpuSize                                   size;                   // Specified in bytes
+    VkGpuSize                                   rowPitch;               // Specified in bytes
+    VkGpuSize                                   depthPitch;             // Specified in bytes
 } VkSubresourceLayout;
 
 typedef struct VkImageViewCreateInfo_
 {
-    VkStructureType                           sType;                  // Must be VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO
+    VkStructureType                             sType;                  // Must be VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO
     const void*                                 pNext;                  // Pointer to next structure
-    VkImage                                    image;
-    VkImageViewType                          viewType;
-    VkFormat                                   format;
-    VkChannelMapping                          channels;
-    VkImageSubresourceRange                  subresourceRange;
+    VkImage                                     image;
+    VkImageViewType                             viewType;
+    VkFormat                                    format;
+    VkChannelMapping                            channels;
+    VkImageSubresourceRange                     subresourceRange;
     float                                       minLod;
 } VkImageViewCreateInfo;
 
 typedef struct VkColorAttachmentViewCreateInfo_
 {
-    VkStructureType                           sType;                  // Must be VK_STRUCTURE_TYPE_COLOR_ATTACHMENT_VIEW_CREATE_INFO
+    VkStructureType                             sType;                  // Must be VK_STRUCTURE_TYPE_COLOR_ATTACHMENT_VIEW_CREATE_INFO
     const void*                                 pNext;                  // Pointer to next structure
-    VkImage                                    image;
-    VkFormat                                   format;
+    VkImage                                     image;
+    VkFormat                                    format;
     uint32_t                                    mipLevel;
     uint32_t                                    baseArraySlice;
     uint32_t                                    arraySize;
-    VkImage                                    msaaResolveImage;
-    VkImageSubresourceRange                  msaaResolveSubResource;
+    VkImage                                     msaaResolveImage;
+    VkImageSubresourceRange                     msaaResolveSubResource;
 } VkColorAttachmentViewCreateInfo;
 
 typedef struct VkDepthStencilViewCreateInfo_
 {
-    VkStructureType                           sType;                  // Must be VK_STRUCTURE_TYPE_DEPTH_STENCIL_VIEW_CREATE_INFO
+    VkStructureType                             sType;                  // Must be VK_STRUCTURE_TYPE_DEPTH_STENCIL_VIEW_CREATE_INFO
     const void*                                 pNext;                  // Pointer to next structure
-    VkImage                                    image;
+    VkImage                                     image;
     uint32_t                                    mipLevel;
     uint32_t                                    baseArraySlice;
     uint32_t                                    arraySize;
-    VkImage                                    msaaResolveImage;
-    VkImageSubresourceRange                  msaaResolveSubResource;
-    VkFlags                                    flags;                  // VkDepthStencilViewCreateFlags
+    VkImage                                     msaaResolveImage;
+    VkImageSubresourceRange                     msaaResolveSubResource;
+    VkFlags                                     flags;                  // VkDepthStencilViewCreateFlags
 } VkDepthStencilViewCreateInfo;
 
 typedef struct VkColorAttachmentBindInfo_
 {
-    VkColorAttachmentView                    view;
-    VkImageLayout                             layout;
+    VkColorAttachmentView                       view;
+    VkImageLayout                               layout;
 } VkColorAttachmentBindInfo;
 
 typedef struct VkDepthStencilBindInfo_
 {
-    VkDepthStencilView                       view;
-    VkImageLayout                             layout;
+    VkDepthStencilView                          view;
+    VkImageLayout                               layout;
 } VkDepthStencilBindInfo;
 
 typedef struct VkBufferCopy_
 {
-    VkGpuSize                                 srcOffset;              // Specified in bytes
-    VkGpuSize                                 destOffset;             // Specified in bytes
-    VkGpuSize                                 copySize;               // Specified in bytes
+    VkGpuSize                                   srcOffset;              // Specified in bytes
+    VkGpuSize                                   destOffset;             // Specified in bytes
+    VkGpuSize                                   copySize;               // Specified in bytes
 } VkBufferCopy;
 
 typedef struct VkImageMemoryBindInfo_
 {
-    VkImageSubresource                        subresource;
-    VkOffset3D                                 offset;
-    VkExtent3D                                 extent;
+    VkImageSubresource                          subresource;
+    VkOffset3D                                  offset;
+    VkExtent3D                                  extent;
 } VkImageMemoryBindInfo;
 
 typedef struct VkImageCopy_
 {
-    VkImageSubresource                        srcSubresource;
-    VkOffset3D                                 srcOffset;              // Specified in pixels for both compressed and uncompressed images
-    VkImageSubresource                        destSubresource;
-    VkOffset3D                                 destOffset;             // Specified in pixels for both compressed and uncompressed images
-    VkExtent3D                                 extent;                 // Specified in pixels for both compressed and uncompressed images
+    VkImageSubresource                          srcSubresource;
+    VkOffset3D                                  srcOffset;
+    VkImageSubresource                          destSubresource;
+    VkOffset3D                                  destOffset;
+    VkExtent3D                                  extent;
 } VkImageCopy;
 
 typedef struct VkImageBlit_
 {
-    VkImageSubresource                        srcSubresource;
-    VkOffset3D                                 srcOffset;              // Specified in pixels for both compressed and uncompressed images
-    VkExtent3D                                 srcExtent;              // Specified in pixels for both compressed and uncompressed images
-    VkImageSubresource                        destSubresource;
-    VkOffset3D                                 destOffset;             // Specified in pixels for both compressed and uncompressed images
-    VkExtent3D                                 destExtent;             // Specified in pixels for both compressed and uncompressed images
+    VkImageSubresource                          srcSubresource;
+    VkOffset3D                                  srcOffset;
+    VkExtent3D                                  srcExtent;
+    VkImageSubresource                          destSubresource;
+    VkOffset3D                                  destOffset;
+    VkExtent3D                                  destExtent;
 } VkImageBlit;
 
 typedef struct VkBufferImageCopy_
@@ -1827,7 +1827,7 @@ typedef struct VkImageResolve_
 
 typedef struct VkShaderCreateInfo_
 {
-    VkStructureType                           sType;              // Must be VK_STRUCTURE_TYPE_SHADER_CREATE_INFO
+    VkStructureType                             sType;              // Must be VK_STRUCTURE_TYPE_SHADER_CREATE_INFO
     const void*                                 pNext;              // Pointer to next structure
     size_t                                      codeSize;           // Specified in bytes
     const void*                                 pCode;
@@ -1844,7 +1844,7 @@ typedef struct VkDescriptorSetLayoutBinding_
 
 typedef struct VkDescriptorSetLayoutCreateInfo_
 {
-    VkStructureType                           sType;             // Must be VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO
+    VkStructureType                             sType;             // Must be VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO
     const void*                                 pNext;             // Pointer to next structure
     uint32_t                                    count;             // Number of bindings in the descriptor set layout
     const VkDescriptorSetLayoutBinding*     pBinding;          // Array of descriptor set layout bindings
@@ -1858,7 +1858,7 @@ typedef struct VkDescriptorTypeCount_
 
 typedef struct VkDescriptorPoolCreateInfo_
 {
-    VkStructureType                           sType;              // Must be VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO
+    VkStructureType                             sType;              // Must be VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO
     const void*                                 pNext;              // Pointer to next structure
     uint32_t                                    count;
     const VkDescriptorTypeCount*             pTypeCount;
@@ -1895,7 +1895,7 @@ typedef struct VkPipelineShader_
 
 typedef struct VkComputePipelineCreateInfo_
 {
-    VkStructureType                           sType;      // Must be VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO
+    VkStructureType                             sType;      // Must be VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO
     const void*                                 pNext;      // Pointer to next structure
     VkPipelineShader                          cs;
     VkFlags                                    flags;      // VkPipelineCreateFlags
@@ -1926,7 +1926,7 @@ typedef struct VkVertexInputAttributeDescription_
 
 typedef struct VkPipelineVertexInputCreateInfo_
 {
-    VkStructureType                           sType;          // Should be VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_CREATE_INFO
+    VkStructureType                             sType;          // Should be VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_CREATE_INFO
     const void*                                 pNext;          // Pointer to next structure
 
     uint32_t                                    bindingCount;   // number of bindings
@@ -1938,7 +1938,7 @@ typedef struct VkPipelineVertexInputCreateInfo_
 
 typedef struct VkPipelineIaStateCreateInfo_
 {
-    VkStructureType                           sType;      // Must be VK_STRUCTURE_TYPE_PIPELINE_IA_STATE_CREATE_INFO
+    VkStructureType                             sType;      // Must be VK_STRUCTURE_TYPE_PIPELINE_IA_STATE_CREATE_INFO
     const void*                                 pNext;      // Pointer to next structure
     VkPrimitiveTopology                       topology;
     bool32_t                                    disableVertexReuse;         // optional
@@ -1948,14 +1948,14 @@ typedef struct VkPipelineIaStateCreateInfo_
 
 typedef struct VkPipelineTessStateCreateInfo_
 {
-    VkStructureType                           sType;      // Must be VK_STRUCTURE_TYPE_PIPELINE_TESS_STATE_CREATE_INFO
+    VkStructureType                             sType;      // Must be VK_STRUCTURE_TYPE_PIPELINE_TESS_STATE_CREATE_INFO
     const void*                                 pNext;      // Pointer to next structure
     uint32_t                                    patchControlPoints;
 } VkPipelineTessStateCreateInfo;
 
 typedef struct VkPipelineVpStateCreateInfo_
 {
-    VkStructureType                           sType;      // Must be VK_STRUCTURE_TYPE_PIPELINE_VP_STATE_CREATE_INFO
+    VkStructureType                             sType;      // Must be VK_STRUCTURE_TYPE_PIPELINE_VP_STATE_CREATE_INFO
     const void*                                 pNext;      // Pointer to next structure
     uint32_t                                    numViewports;
     VkCoordinateOrigin                        clipOrigin;                 // optional (GL45)
@@ -1964,7 +1964,7 @@ typedef struct VkPipelineVpStateCreateInfo_
 
 typedef struct VkPipelineRsStateCreateInfo_
 {
-    VkStructureType                           sType;      // Must be VK_STRUCTURE_TYPE_PIPELINE_RS_STATE_CREATE_INFO
+    VkStructureType                             sType;      // Must be VK_STRUCTURE_TYPE_PIPELINE_RS_STATE_CREATE_INFO
     const void*                                 pNext;      // Pointer to next structure
     bool32_t                                    depthClipEnable;
     bool32_t                                    rasterizerDiscardEnable;
@@ -1978,7 +1978,7 @@ typedef struct VkPipelineRsStateCreateInfo_
 
 typedef struct VkPipelineMsStateCreateInfo_
 {
-    VkStructureType                           sType;      // Must be VK_STRUCTURE_TYPE_PIPELINE_MS_STATE_CREATE_INFO
+    VkStructureType                             sType;      // Must be VK_STRUCTURE_TYPE_PIPELINE_MS_STATE_CREATE_INFO
     const void*                                 pNext;      // Pointer to next structure
     uint32_t                                    samples;
     bool32_t                                    multisampleEnable;          // optional (GL45)
@@ -2002,7 +2002,7 @@ typedef struct VkPipelineCbAttachmentState_
 
 typedef struct VkPipelineCbStateCreateInfo_
 {
-    VkStructureType                           sType;      // Must be VK_STRUCTURE_TYPE_PIPELINE_CB_STATE_CREATE_INFO
+    VkStructureType                             sType;      // Must be VK_STRUCTURE_TYPE_PIPELINE_CB_STATE_CREATE_INFO
     const void*                                 pNext;      // Pointer to next structure
     bool32_t                                    alphaToCoverageEnable;
     bool32_t                                    logicOpEnable;
@@ -2021,7 +2021,7 @@ typedef struct VkStencilOpState_
 
 typedef struct VkPipelineDsStateCreateInfo_
 {
-    VkStructureType                           sType;      // Must be VK_STRUCTURE_TYPE_PIPELINE_DS_STATE_CREATE_INFO
+    VkStructureType                             sType;      // Must be VK_STRUCTURE_TYPE_PIPELINE_DS_STATE_CREATE_INFO
     const void*                                 pNext;      // Pointer to next structure
     VkFormat                                   format;
     bool32_t                                    depthTestEnable;
@@ -2035,14 +2035,14 @@ typedef struct VkPipelineDsStateCreateInfo_
 
 typedef struct VkPipelineShaderStageCreateInfo_
 {
-    VkStructureType                           sType;      // Must be VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO
+    VkStructureType                             sType;      // Must be VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO
     const void*                                 pNext;      // Pointer to next structure
     VkPipelineShader                          shader;
 } VkPipelineShaderStageCreateInfo;
 
 typedef struct VkGraphicsPipelineCreateInfo_
 {
-    VkStructureType                           sType;      // Must be VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO
+    VkStructureType                             sType;      // Must be VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO
     const void*                                 pNext;      // Pointer to next structure
     VkFlags                                    flags;      // VkPipelineCreateFlags
     VkDescriptorSetLayoutChain              pSetLayoutChain;
@@ -2050,7 +2050,7 @@ typedef struct VkGraphicsPipelineCreateInfo_
 
 typedef struct VkSamplerCreateInfo_
 {
-    VkStructureType                           sType;          // Must be VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO
+    VkStructureType                             sType;          // Must be VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO
     const void*                                 pNext;          // Pointer to next structure
     VkTexFilter                               magFilter;      // Filter mode for magnification
     VkTexFilter                               minFilter;      // Filter mode for minifiation
@@ -2068,7 +2068,7 @@ typedef struct VkSamplerCreateInfo_
 
 typedef struct VkDynamicVpStateCreateInfo_
 {
-    VkStructureType                           sType;      // Must be VK_STRUCTURE_TYPE_DYNAMIC_VP_STATE_CREATE_INFO
+    VkStructureType                             sType;      // Must be VK_STRUCTURE_TYPE_DYNAMIC_VP_STATE_CREATE_INFO
     const void*                                 pNext;      // Pointer to next structure
     uint32_t                                    viewportAndScissorCount;  // number of entries in pViewports and pScissors
     const VkViewport*                          pViewports;
@@ -2077,7 +2077,7 @@ typedef struct VkDynamicVpStateCreateInfo_
 
 typedef struct VkDynamicRsStateCreateInfo_
 {
-    VkStructureType                           sType;      // Must be VK_STRUCTURE_TYPE_DYNAMIC_RS_STATE_CREATE_INFO
+    VkStructureType                             sType;      // Must be VK_STRUCTURE_TYPE_DYNAMIC_RS_STATE_CREATE_INFO
     const void*                                 pNext;      // Pointer to next structure
     float                                       depthBias;
     float                                       depthBiasClamp;
@@ -2089,14 +2089,14 @@ typedef struct VkDynamicRsStateCreateInfo_
 
 typedef struct VkDynamicCbStateCreateInfo_
 {
-    VkStructureType                           sType;      // Must be VK_STRUCTURE_TYPE_DYNAMIC_CB_STATE_CREATE_INFO
+    VkStructureType                             sType;      // Must be VK_STRUCTURE_TYPE_DYNAMIC_CB_STATE_CREATE_INFO
     const void*                                 pNext;      // Pointer to next structure
     float                                       blendConst[4];
 } VkDynamicCbStateCreateInfo;
 
 typedef struct VkDynamicDsStateCreateInfo_
 {
-    VkStructureType                           sType;      // Must be VK_STRUCTURE_TYPE_DYNAMIC_DS_STATE_CREATE_INFO
+    VkStructureType                             sType;      // Must be VK_STRUCTURE_TYPE_DYNAMIC_DS_STATE_CREATE_INFO
     const void*                                 pNext;      // Pointer to next structure
     float                                       minDepth;               // optional (depth_bounds_test)
     float                                       maxDepth;               // optional (depth_bounds_test)
@@ -2108,7 +2108,7 @@ typedef struct VkDynamicDsStateCreateInfo_
 
 typedef struct VkCmdBufferCreateInfo_
 {
-    VkStructureType                           sType;      // Must be VK_STRUCTURE_TYPE_CMD_BUFFER_CREATE_INFO
+    VkStructureType                             sType;      // Must be VK_STRUCTURE_TYPE_CMD_BUFFER_CREATE_INFO
     const void*                                 pNext;      // Pointer to next structure
     uint32_t                                    queueNodeIndex;
     VkFlags                                    flags;
@@ -2116,7 +2116,7 @@ typedef struct VkCmdBufferCreateInfo_
 
 typedef struct VkCmdBufferBeginInfo_
 {
-    VkStructureType                           sType;      // Must be VK_STRUCTURE_TYPE_CMD_BUFFER_BEGIN_INFO
+    VkStructureType                             sType;      // Must be VK_STRUCTURE_TYPE_CMD_BUFFER_BEGIN_INFO
     const void*                                 pNext;      // Pointer to next structure
 
     VkFlags                                    flags;      // VkCmdBufferBuildFlags
@@ -2130,7 +2130,7 @@ typedef struct VkRenderPassBegin_
 
 typedef struct VkCmdBufferGraphicsBeginInfo_
 {
-    VkStructureType                           sType;      // Must be VK_STRUCTURE_TYPE_CMD_BUFFER_GRAPHICS_BEGIN_INFO
+    VkStructureType                             sType;      // Must be VK_STRUCTURE_TYPE_CMD_BUFFER_GRAPHICS_BEGIN_INFO
     const void*                                 pNext;      // Pointer to next structure
 
     VkRenderPassBegin                        renderPassContinue;  // Only needed when a render pass is split across two command buffers
@@ -2151,7 +2151,7 @@ typedef struct VkClearColor_
 
 typedef struct VkRenderPassCreateInfo_
 {
-    VkStructureType                           sType;      // Must be VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO
+    VkStructureType                             sType;      // Must be VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO
     const void*                                 pNext;      // Pointer to next structure
 
     VkRect                                     renderArea;
@@ -2176,21 +2176,21 @@ typedef struct VkRenderPassCreateInfo_
 
 typedef struct VkEventCreateInfo_
 {
-    VkStructureType                           sType;      // Must be VK_STRUCTURE_TYPE_EVENT_CREATE_INFO
+    VkStructureType                             sType;      // Must be VK_STRUCTURE_TYPE_EVENT_CREATE_INFO
     const void*                                 pNext;      // Pointer to next structure
     VkFlags                                    flags;      // Reserved
 } VkEventCreateInfo;
 
 typedef struct VkFenceCreateInfo_
 {
-    VkStructureType                           sType;      // Must be VK_STRUCTURE_TYPE_FENCE_CREATE_INFO
+    VkStructureType                             sType;      // Must be VK_STRUCTURE_TYPE_FENCE_CREATE_INFO
     const void*                                 pNext;      // Pointer to next structure
     VkFenceCreateFlags                       flags;      // VkFenceCreateFlags
 } VkFenceCreateInfo;
 
 typedef struct VkSemaphoreCreateInfo_
 {
-    VkStructureType                           sType;      // Must be VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO
+    VkStructureType                             sType;      // Must be VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO
     const void*                                 pNext;      // Pointer to next structure
     uint32_t                                    initialCount;
     VkFlags                                    flags;      // VkSemaphoreCreateFlags
@@ -2198,7 +2198,7 @@ typedef struct VkSemaphoreCreateInfo_
 
 typedef struct VkSemaphoreOpenInfo_
 {
-    VkStructureType                           sType;      // Must be VK_STRUCTURE_TYPE_SEMAPHORE_OPEN_INFO
+    VkStructureType                             sType;      // Must be VK_STRUCTURE_TYPE_SEMAPHORE_OPEN_INFO
     const void*                                 pNext;      // Pointer to next structure
     VkSemaphore                                sharedSemaphore;
 } VkSemaphoreOpenInfo;
@@ -2220,7 +2220,7 @@ typedef struct VkPipelineStatisticsData_
 
 typedef struct VkQueryPoolCreateInfo_
 {
-    VkStructureType                           sType;      // Must be VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO
+    VkStructureType                             sType;      // Must be VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO
     const void*                                 pNext;      // Pointer to next structure
     VkQueryType                               queryType;
     uint32_t                                    slots;
@@ -2228,7 +2228,7 @@ typedef struct VkQueryPoolCreateInfo_
 
 typedef struct VkFramebufferCreateInfo_
 {
-    VkStructureType                           sType;  // Must be VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO
+    VkStructureType                             sType;  // Must be VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO
     const void*                                 pNext;  // Pointer to next structure
 
     uint32_t                                    colorAttachmentCount;
