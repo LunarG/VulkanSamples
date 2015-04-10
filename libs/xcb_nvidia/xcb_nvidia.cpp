@@ -98,9 +98,9 @@ xcb_connection_t * xcb_connect(const char *displayname, int *screenp)
         size_t rtn_len;
 
         registry_str = loader_get_registry_string(HKEY_LOCAL_MACHINE,
-                                                  "Software\\VK",
+                                                  "Software\\Vulkan",
                                                   "VK_DRIVERS_PATH");
-        registry_len = strlen(registry_str);
+        registry_len = (registry_str) ? strlen(registry_str) : 0;
         rtn_len = registry_len + 16;
         rtn_str = (char *) malloc(rtn_len);
         _snprintf(rtn_str, rtn_len, "%s\\%s", registry_str, "vk_nvidia.dll");

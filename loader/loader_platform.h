@@ -159,7 +159,7 @@ using namespace std;
 #define DEFAULT_VK_DRIVERS_PATH "C:\\Windows\\System32"
 // TODO/TBD: Is this an appropriate prefix for Windows?
 #define VK_DRIVER_LIBRARY_PREFIX "VK_"
-#define VK_DRIVER_LIBRARY_PREFIX_LEN 4
+#define VK_DRIVER_LIBRARY_PREFIX_LEN 3
 // TODO/TBD: Is this an appropriate suffix for Windows?
 #define VK_LAYER_LIBRARY_PREFIX "VKLayer"
 #define VK_LAYER_LIBRARY_PREFIX_LEN 8

@@ -166,7 +166,7 @@ static char *loader_get_registry_and_env(const char *env_var,
     size_t rtn_len;
 
     registry_str = loader_get_registry_string(HKEY_LOCAL_MACHINE,
-                                              "Software\\VK",
+                                              "Software\\Vulkan",
                                               registry_value);
     registry_len = (registry_str) ? strlen(registry_str) : 0;
 
