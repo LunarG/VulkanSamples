@@ -36,6 +36,9 @@
 #include <xglWsiX11Ext.h>
 #endif // WIN32
 #include <xglLayer.h>
+#include <xglIcd.h>
+#include <assert.h>
+
 #if defined(__GNUC__) && __GNUC__ >= 4
 #  define LOADER_EXPORT __attribute__((visibility("default")))
 #elif defined(__SUNPRO_C) && (__SUNPRO_C >= 0x590)
@@ -44,6 +47,34 @@
 #  define LOADER_EXPORT
 #endif
 
+static inline void loader_set_data(void *obj, const void *data)
+{
+    *((const void **) obj) = data;
+}
+
+static inline void *loader_get_data(const void *obj)
+{
+    return *((void **) obj);
+}
+
+static inline void loader_init_data(void *obj, const void *data)
+{
+    assert(valid_loader_magic_value(obj) &&
+            "Incompatible ICD, first dword must be initialized to ICD_LOADER_MAGIC. See loader/README.md for details.");
+
+    loader_set_data(obj, data);
+}
+
+static inline void *loader_unwrap_gpu(XGL_PHYSICAL_GPU *gpu)
+{
+    const XGL_BASE_LAYER_OBJECT *wrap = (const XGL_BASE_LAYER_OBJECT *) *gpu;
+
+    *gpu = (XGL_PHYSICAL_GPU) wrap->nextObject;
+
+    return loader_get_data(wrap->baseObject);
+}
+
 extern uint32_t loader_activate_layers(XGL_PHYSICAL_GPU gpu, const XGL_DEVICE_CREATE_INFO* pCreateInfo);
 #define MAX_LAYER_LIBRARIES 64
+
 #endif /* LOADER_H */
