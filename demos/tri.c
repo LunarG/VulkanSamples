@@ -44,8 +44,7 @@ struct demo {
 
     struct {
         XGL_IMAGE image;
-        uint32_t num_mem;
-        XGL_GPU_MEMORY *mem;
+        XGL_GPU_MEMORY mem;
 
         XGL_COLOR_ATTACHMENT_VIEW view;
         XGL_FENCE fence;
@@ -206,8 +205,9 @@ static void demo_draw(struct demo *demo)
 
     uint32_t i, idx = 0;
     XGL_MEMORY_REF *memRefs = 0;
-    memRefs = malloc(sizeof(XGL_MEMORY_REF) * (2 + demo->depth.num_mem +
-                     demo->textures[0].num_mem + demo->vertices.num_mem));
+    memRefs = malloc(sizeof(XGL_MEMORY_REF) * (DEMO_BUFFER_COUNT +
+                demo->depth.num_mem + demo->textures[0].num_mem +
+                demo->vertices.num_mem));
     for (i = 0; i < demo->depth.num_mem; i++, idx++) {
         memRefs[idx].mem = demo->depth.mem[i];
         memRefs[idx].flags = 0;
@@ -217,10 +217,8 @@ static void demo_draw(struct demo *demo)
         memRefs[idx].flags = 0;
     }
     for (i = 0; i < DEMO_BUFFER_COUNT; i++) {
-        for (uint32_t j = 0; j < demo->buffers[i].num_mem; j++) {
-            memRefs[idx].mem = demo->buffers[i].mem[j];
-            memRefs[idx++].flags = 0;
-        }
+        memRefs[idx].mem = demo->buffers[i].mem;
+        memRefs[idx++].flags = 0;
     }
     for (i = 0; i < demo->vertices.num_mem; i++, idx++) {
         memRefs[idx].mem = demo->vertices.mem[i];
@@ -267,9 +265,8 @@ static void demo_prepare_buffers(struct demo *demo)
 
         demo->buffers[i].mem = malloc(sizeof(XGL_GPU_MEMORY));
         err = xglWsiX11CreatePresentableImage(demo->device, &presentable_image,
-                &demo->buffers[i].image, &demo->buffers[i].mem[0]);
+                &demo->buffers[i].image, &demo->buffers[i].mem);
         assert(!err);
-        demo->buffers[i].num_mem = 1;
 
         color_attachment_view.image = demo->buffers[i].image;
 
@@ -1322,11 +1319,6 @@ static void demo_cleanup(struct demo *demo)
         xglDestroyObject(demo->buffers[i].fence);
         xglDestroyObject(demo->buffers[i].view);
         xglDestroyObject(demo->buffers[i].image);
-#if defined(XCB_NVIDIA)
-        for (j = 0; j < demo->buffers[i].num_mem; j++)
-            xglFreeMemory(demo->buffers[i].mem[j]);
-#endif
-        free(demo->buffers[i].mem);
     }
 
     xglDestroyDevice(demo->device);

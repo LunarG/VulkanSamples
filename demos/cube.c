@@ -1808,9 +1808,6 @@ static void demo_cleanup(struct demo *demo)
         xglDestroyObject(demo->buffers[i].view);
         xglDestroyObject(demo->buffers[i].image);
         xglDestroyObject(demo->buffers[i].cmd);
-#if defined(XCB_NVIDIA)
-        xglFreeMemory(demo->buffers[i].mem);
-#endif
     }
 
     xglDestroyDevice(demo->device);
