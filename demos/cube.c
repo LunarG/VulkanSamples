@@ -13,9 +13,6 @@
 #include "icd-spv.h"
 
 #include "linmath.h"
-#if defined(__linux__)
-#include <unistd.h>
-#endif
 #include <png.h>
 
 #define DEMO_BUFFER_COUNT 2

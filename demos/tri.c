@@ -10,16 +10,10 @@
 #include <stdbool.h>
 #include <assert.h>
 
-#if defined(XCB_NVIDIA)
-#define __linux__
-#endif
-
 #include <xcb/xcb.h>
 #include <xgl.h>
 #include <xglDbg.h>
-#if defined(__linux__)
 #include <xglWsiX11Ext.h>
-#endif
 
 #include "icd-spv.h"
 
@@ -37,10 +31,8 @@ struct texture_objects {
 };
 
 struct demo {
-#if defined(__linux__)
     xcb_connection_t *connection;
     xcb_screen_t *screen;
-#endif
 
     XGL_INSTANCE inst;
     XGL_PHYSICAL_GPU gpu;
@@ -93,10 +85,8 @@ struct demo {
     XGL_DESCRIPTOR_REGION desc_region;
     XGL_DESCRIPTOR_SET desc_set;
 
-#if defined(__linux__)
     xcb_window_t window;
     xcb_intern_atom_reply_t *atom_wm_delete_window;
-#endif
 
     bool quit;
     bool use_staging_buffer;
@@ -105,12 +95,10 @@ struct demo {
 
 static void demo_draw_build_cmd(struct demo *demo)
 {
-#if defined(__linux__)
     const XGL_COLOR_ATTACHMENT_BIND_INFO color_attachment = {
         .view = demo->buffers[demo->current_buffer].view,
         .layout = XGL_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
     };
-#endif
     const XGL_DEPTH_STENCIL_BIND_INFO depth_stencil = {
         .view = demo->depth.view,
         .layout = XGL_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
@@ -135,9 +123,7 @@ static void demo_draw_build_cmd(struct demo *demo)
          .sType = XGL_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
          .pNext = NULL,
          .colorAttachmentCount = 1,
-#if defined(__linux__)
          .pColorAttachments = (XGL_COLOR_ATTACHMENT_BIND_INFO*) &color_attachment,
-#endif
          .pDepthStencilAttachment = (XGL_DEPTH_STENCIL_BIND_INFO*) &depth_stencil,
          .sampleCount = 1,
          .width  = demo->width,
@@ -206,12 +192,10 @@ static void demo_draw_build_cmd(struct demo *demo)
 
 static void demo_draw(struct demo *demo)
 {
-#if defined(__linux__)
     const XGL_WSI_X11_PRESENT_INFO present = {
         .destWindow = demo->window,
         .srcImage = demo->buffers[demo->current_buffer].image,
     };
-#endif
     XGL_FENCE fence = demo->buffers[demo->current_buffer].fence;
     XGL_RESULT err;
 
@@ -246,17 +230,14 @@ static void demo_draw(struct demo *demo)
             idx, memRefs, XGL_NULL_HANDLE);
     assert(!err);
 
-#if defined(__linux__)
     err = xglWsiX11QueuePresent(demo->queue, &present, fence);
     assert(!err);
-#endif
 
     demo->current_buffer = (demo->current_buffer + 1) % DEMO_BUFFER_COUNT;
 }
 
 static void demo_prepare_buffers(struct demo *demo)
 {
-#if defined(__linux__)
     const XGL_WSI_X11_PRESENTABLE_IMAGE_CREATE_INFO presentable_image = {
         .format = demo->format,
         .usage = XGL_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
@@ -266,39 +247,6 @@ static void demo_prepare_buffers(struct demo *demo)
         },
         .flags = 0,
     };
-#else
-    const XGL_IMAGE_CREATE_INFO presentable_image = {
-        .sType = XGL_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
-        .pNext = NULL,
-        .imageType = XGL_IMAGE_2D,
-        .format = demo->format,
-        .extent = { demo->width, demo->height, 1 },
-        .mipLevels = 1,
-        .arraySize = 1,
-        .samples = 1,
-        .tiling = XGL_OPTIMAL_TILING,
-        .usage = XGL_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
-        .flags = 0,
-    };
-    XGL_MEMORY_ALLOC_IMAGE_INFO img_alloc = {
-        .sType = XGL_STRUCTURE_TYPE_MEMORY_ALLOC_IMAGE_INFO,
-        .pNext = NULL,
-    };
-    XGL_MEMORY_ALLOC_INFO mem_alloc = {
-        .sType = XGL_STRUCTURE_TYPE_MEMORY_ALLOC_INFO,
-        .pNext = &img_alloc,
-        .allocationSize = 0,
-        .memProps = XGL_MEMORY_PROPERTY_GPU_ONLY,
-        .memType = XGL_MEMORY_TYPE_IMAGE,
-        .memPriority = XGL_MEMORY_PRIORITY_NORMAL,
-    };
-    XGL_MEMORY_REQUIREMENTS *mem_reqs;
-    size_t mem_reqs_size = sizeof(XGL_MEMORY_REQUIREMENTS);
-    XGL_IMAGE_MEMORY_REQUIREMENTS img_reqs;
-    size_t img_reqs_size = sizeof(XGL_IMAGE_MEMORY_REQUIREMENTS);
-    uint32_t num_allocations = 0;
-    size_t num_alloc_size = sizeof(num_allocations);
-#endif
     const XGL_FENCE_CREATE_INFO fence = {
         .sType = XGL_STRUCTURE_TYPE_FENCE_CREATE_INFO,
         .pNext = NULL,
@@ -317,45 +265,11 @@ static void demo_prepare_buffers(struct demo *demo)
             .arraySize = 1,
         };
 
-#if defined(__linux__)
         demo->buffers[i].mem = malloc(sizeof(XGL_GPU_MEMORY));
         err = xglWsiX11CreatePresentableImage(demo->device, &presentable_image,
                 &demo->buffers[i].image, &demo->buffers[i].mem[0]);
         assert(!err);
         demo->buffers[i].num_mem = 1;
-#else
-        err = xglCreateImage(demo->device, &presentable_image, &demo->buffers[i].image);
-        assert(!err);
-        err = xglGetObjectInfo(demo->buffers[i].image, XGL_INFO_TYPE_MEMORY_ALLOCATION_COUNT, &num_alloc_size, &num_allocations);
-        assert(!err && num_alloc_size == sizeof(num_allocations));
-        mem_reqs = malloc(num_allocations * sizeof(XGL_MEMORY_REQUIREMENTS));
-        demo->buffers[i].mem = malloc(num_allocations * sizeof(XGL_GPU_MEMORY));
-        demo->buffers[i].num_mem = num_allocations;
-        err = xglGetObjectInfo(demo->buffers[i].image,
-            XGL_INFO_TYPE_MEMORY_REQUIREMENTS,
-            &mem_reqs_size, mem_reqs);
-        assert(!err && mem_reqs_size == num_allocations * sizeof(XGL_MEMORY_REQUIREMENTS));
-        err = xglGetObjectInfo(demo->buffers[i].image,
-            XGL_INFO_TYPE_IMAGE_MEMORY_REQUIREMENTS,
-            &img_reqs_size, &img_reqs);
-        assert(!err && img_reqs_size == sizeof(XGL_IMAGE_MEMORY_REQUIREMENTS));
-        img_alloc.usage = img_reqs.usage;
-        img_alloc.formatClass = img_reqs.formatClass;
-        img_alloc.samples = img_reqs.samples;
-        for (uint32_t i = 0; i < num_allocations; i++) {
-            mem_alloc.allocationSize = mem_reqs[i].size;
-
-            /* allocate memory */
-            err = xglAllocMemory(demo->device, &mem_alloc,
-                &(demo->buffers[i].mem[i]));
-            assert(!err);
-
-            /* bind memory */
-            err = xglBindObjectMemory(demo->buffers[i].image, i,
-                demo->buffers[i].mem[i], 0);
-            assert(!err);
-        }
-#endif
 
         color_attachment_view.image = demo->buffers[i].image;
 
@@ -1181,14 +1095,9 @@ static void demo_prepare(struct demo *demo)
     demo_prepare_descriptor_set(demo);
 }
 
-#if defined(__linux__)
 static void demo_handle_event(struct demo *demo,
                               const xcb_generic_event_t *event)
-#else
-static void demo_handle_event(struct demo *demo)
-#endif
 {
-#if defined(__linux__)
     switch (event->response_type & 0x7f) {
     case XCB_EXPOSE:
         demo_draw(demo);
@@ -1214,15 +1123,10 @@ static void demo_handle_event(struct demo *demo)
     default:
         break;
     }
-#else
-    // Since we don't yet support events, we'll just do a draw
-    demo_draw(demo);
-#endif
 }
 
 static void demo_run(struct demo *demo)
 {
-#if defined(__linux__)
     xcb_flush(demo->connection);
 
     while (!demo->quit) {
@@ -1234,16 +1138,10 @@ static void demo_run(struct demo *demo)
             free(event);
         }
     }
-#else
-    // Since we don't yet support events, just call demo_handle_event to do a draw
-    demo_handle_event(demo);
-
-#endif
 }
 
 static void demo_create_window(struct demo *demo)
 {
-#if defined(__linux__)
     uint32_t value_mask, value_list[32];
 
     demo->window = xcb_generate_id(demo->connection);
@@ -1276,7 +1174,6 @@ static void demo_create_window(struct demo *demo)
     free(reply);
 
     xcb_map_window(demo->connection, demo->window);
-#endif
 }
 
 static void demo_init_xgl(struct demo *demo)
@@ -1290,23 +1187,17 @@ static void demo_init_xgl(struct demo *demo)
         .engineVersion = 0,
         .apiVersion = XGL_API_VERSION,
     };
-#if defined(__linux__)
     const XGL_WSI_X11_CONNECTION_INFO connection = {
         .pConnection = demo->connection,
         .root = demo->screen->root,
         .provider = 0,
     };
-#endif
     const XGL_DEVICE_QUEUE_CREATE_INFO queue = {
         .queueNodeIndex = 0,
         .queueCount = 1,
     };
     const char *ext_names[] = {
-#if defined(__linux__)
         "XGL_WSI_X11",
-#else
-        "XGL_WSI_WINDOWS",
-#endif
     };
     const XGL_DEVICE_CREATE_INFO device = {
         .sType = XGL_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
@@ -1339,10 +1230,8 @@ static void demo_init_xgl(struct demo *demo)
         assert(!err);
     }
 
-#if defined(__linux__)
     err = xglWsiX11AssociateConnection(demo->gpu, &connection);
     assert(!err);
-#endif
 
     err = xglCreateDevice(demo->gpu, &device, &demo->device);
     assert(!err);
@@ -1354,7 +1243,6 @@ static void demo_init_xgl(struct demo *demo)
 
 static void demo_init_connection(struct demo *demo)
 {
-#if defined(__linux__)
     const xcb_setup_t *setup;
     xcb_screen_iterator_t iter;
     int scr;
@@ -1373,7 +1261,6 @@ static void demo_init_connection(struct demo *demo)
         xcb_screen_next(&iter);
 
     demo->screen = iter.data;
-#endif
 }
 
 static void demo_init(struct demo *demo, const int argc, const char *argv[])
@@ -1445,10 +1332,8 @@ static void demo_cleanup(struct demo *demo)
     xglDestroyDevice(demo->device);
     xglDestroyInstance(demo->inst);
 
-#if defined(__linux__)
     xcb_destroy_window(demo->connection, demo->window);
     xcb_disconnect(demo->connection);
-#endif
 }
 
 int main(const int argc, const char *argv[])
@@ -1463,9 +1348,5 @@ int main(const int argc, const char *argv[])
 
     demo_cleanup(&demo);
 
-#if defined(__linux__)
-#else
-    printf("try exitting...\n"); fflush(stdout);
-#endif
     return 0;
 }
