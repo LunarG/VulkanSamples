@@ -19,14 +19,6 @@
 #define DEMO_TEXTURE_COUNT 1
 
 /*
- * When not defined, code will use built-in GLSL compiler
- * which may not be supported on all drivers
- */
-#if !defined(XCB_NVIDIA)
-#define EXTERNAL_SPV
-#endif
-
-/*
  * structure to track all objects related to a texture.
  */
 struct texture_objects {
