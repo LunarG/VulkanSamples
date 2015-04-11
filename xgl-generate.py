@@ -432,6 +432,75 @@ class LayerInterceptProcSubcommand(Subcommand):
 
         return "\n".join(body)
 
+class WinDefFileSubcommand(Subcommand):
+    def run(self):
+        library_exports = {
+                "all": [],
+                "icd": [
+                    "EnumerateGpus",
+                    "CreateInstance",
+                    "DestroyInstance",
+                    "GetProcAddr",
+                ],
+                "layer": [
+                    "GetProcAddr",
+                    "EnumerateLayers",
+                ],
+        }
+
+        if len(self.argv) != 2 or self.argv[1] not in library_exports:
+            print("WinDefFileSubcommand: <library-name> {%s}" %
+                    "|".join(library_exports.keys()))
+            return
+
+        self.library = self.argv[0]
+        self.exports = library_exports[self.argv[1]]
+
+        super().run()
+
+    def generate_copyright(self):
+        return """; THIS FILE IS GENERATED.  DO NOT EDIT.
+
+;;;; Begin Copyright Notice ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; XGL
+;
+; Copyright (C) 2015 LunarG, Inc.
+;
+; Permission is hereby granted, free of charge, to any person obtaining a
+; copy of this software and associated documentation files (the "Software"),
+; to deal in the Software without restriction, including without limitation
+; the rights to use, copy, modify, merge, publish, distribute, sublicense,
+; and/or sell copies of the Software, and to permit persons to whom the
+; Software is furnished to do so, subject to the following conditions:
+;
+; The above copyright notice and this permission notice shall be included
+; in all copies or substantial portions of the Software.
+;
+; THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+; IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+; FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL
+; THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+; LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+; FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+; DEALINGS IN THE SOFTWARE.
+;;;;  End Copyright Notice ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;"""
+
+    def generate_header(self):
+        return "; The following is required on Windows, for exporting symbols from the DLL"
+
+    def generate_body(self):
+        body = []
+
+        body.append("LIBRARY " + self.library)
+        body.append("EXPORTS")
+
+        for proto in self.protos:
+            if self.exports and proto.name not in self.exports:
+                continue
+            body.append("   xgl" + proto.name)
+
+        return "\n".join(body)
+
 def main():
     subcommands = {
             "loader-entrypoints": LoaderEntrypointsSubcommand,
@@ -439,6 +508,7 @@ def main():
             "icd-dummy-entrypoints": IcdDummyEntrypointsSubcommand,
             "icd-get-proc-addr": IcdGetProcAddrSubcommand,
             "layer-intercept-proc": LayerInterceptProcSubcommand,
+            "win-def-file": WinDefFileSubcommand,
     }
 
     if len(sys.argv) < 2 or sys.argv[1] not in subcommands:

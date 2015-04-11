@@ -7,6 +7,10 @@ add_custom_command(OUTPUT table_ops.h
 	COMMAND ${PYTHON_CMD} ${PROJECT_SOURCE_DIR}/xgl-generate.py dispatch-table-ops loader > table_ops.h
 	DEPENDS ${PROJECT_SOURCE_DIR}/xgl-generate.py ${PROJECT_SOURCE_DIR}/xgl.py)
 
+add_custom_command(OUTPUT XGL.def
+	COMMAND ${PYTHON_CMD} ${PROJECT_SOURCE_DIR}/xgl-generate.py win-def-file XGL all > XGL.def
+	DEPENDS ${PROJECT_SOURCE_DIR}/xgl-generate.py ${PROJECT_SOURCE_DIR}/xgl.py)
+
 include_directories(
 	${CMAKE_CURRENT_SOURCE_DIR}
 	${CMAKE_CURRENT_BINARY_DIR}

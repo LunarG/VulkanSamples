@@ -17,8 +17,8 @@ endmacro()
 if (WIN32)
     macro(add_xgl_layer target)
 	add_custom_command(OUTPUT XGLLayer${target}.def
-		COMMAND ${PYTHON_CMD} ${PROJECT_SOURCE_DIR}/xgl-win-def-file-generate.py ${target} > XGLLayer${target}.def
-		DEPENDS ${PROJECT_SOURCE_DIR}/xgl-win-def-file-generate.py
+		COMMAND ${PYTHON_CMD} ${PROJECT_SOURCE_DIR}/xgl-generate.py win-def-file XGLLayer${target} layer > XGLLayer${target}.def
+		DEPENDS ${PROJECT_SOURCE_DIR}/xgl-generate.py ${PROJECT_SOURCE_DIR}/xgl.py
 	)
 	add_library(XGLLayer${target} SHARED ${ARGN} XGLLayer${target}.def)
         target_link_Libraries(XGLLayer${target} layer_utils)
