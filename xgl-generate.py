@@ -100,16 +100,41 @@ class LoaderEntrypointsSubcommand(Subcommand):
     def generate_header(self):
         return "#include \"loader.h\""
 
-    def _does_function_create_object(self, proto):
-        out_objs = proto.object_out_params()
-        return out_objs and out_objs[-1] == proto.params[-1]
-
     def _is_dispatchable(self, proto):
         if proto.name in ["GetProcAddr", "DestroyInstance", "EnumerateGpus", "EnumerateLayers"]:
             return False
 
         in_objs = proto.object_in_params()
         return in_objs and in_objs[0] == proto.params[0]
+
+    def _generate_object_setup(self, proto):
+        method = "loader_init_data"
+        cond = "res == XGL_SUCCESS"
+
+        if "Get" in proto.name:
+            method = "loader_set_data"
+
+        setup = []
+
+        if proto.name == "AllocDescriptorSets":
+            psets = proto.params[-2].name
+            pcount = proto.params[-1].name
+            setup.append("uint32_t i;")
+            setup.append("for (i = 0; i < *%s; i++)" % pcount)
+            setup.append("    %s(%s[i], disp);" % (method, psets))
+        else:
+            obj_params = proto.object_out_params()
+            for param in obj_params:
+                setup.append("%s(*%s, disp);" % (method, param.name))
+
+        if setup:
+            joined = "\n        ".join(setup)
+            setup = []
+            setup.append("    if (%s) {" % cond)
+            setup.append("        " + joined)
+            setup.append("    }")
+
+        return "\n".join(setup)
 
     def _generate_loader_dispatch_entrypoints(self, qual=""):
         if qual:
@@ -119,93 +144,58 @@ class LoaderEntrypointsSubcommand(Subcommand):
         for proto in self.protos:
             if not self._is_dispatchable(proto):
                 continue
+
+            func = []
+
+            obj_setup = self._generate_object_setup(proto)
+
+            func.append(qual + proto.c_func(prefix="xgl", attr="XGLAPI"))
+            func.append("{")
+
+            # declare local variables
+            func.append("    const XGL_LAYER_DISPATCH_TABLE *disp;")
+            if proto.ret != 'void' and obj_setup:
+                func.append("    XGL_RESULT res;")
+            func.append("")
+
+            # active layers before dispatching CreateDevice
+            if proto.name == "CreateDevice":
+                func.append("    loader_activate_layers(%s, %s);" %
+                        (proto.params[0].name, proto.params[1].name))
+                func.append("")
+
+            # get dispatch table and unwrap GPUs
+            for param in proto.params:
+                stmt = ""
+                if param.ty == "XGL_PHYSICAL_GPU":
+                    stmt = "loader_unwrap_gpu(&%s);" % param.name
+                    if param == proto.params[0]:
+                        stmt = "disp = " + stmt
+                elif param == proto.params[0]:
+                    stmt = "disp = loader_get_data(%s);" % param.name
+
+                if stmt:
+                    func.append("    " + stmt)
+            func.append("")
+
+            # dispatch!
+            dispatch = "disp->%s;" % proto.c_call()
+            if proto.ret == 'void':
+                func.append("    " + dispatch)
+            elif not obj_setup:
+                func.append("    return " + dispatch)
+            else:
+                func.append("    res = " + dispatch)
+                func.append(obj_setup)
+                func.append("")
+                func.append("    return res;")
+
+            func.append("}")
+
             if 'WsiX11AssociateConnection' == proto.name:
                 funcs.append("#if defined(__linux__) || defined(XCB_NVIDIA)")
-            decl = proto.c_func(prefix="xgl", attr="XGLAPI")
-            stmt = "disp->%s" % proto.c_call()
-            if proto.name == "CreateDevice":
-                funcs.append("%s%s\n"
-                         "{\n"
-                         "    loader_activate_layers(%s, %s);\n"
-                         "    const XGL_LAYER_DISPATCH_TABLE *disp = loader_unwrap_gpu(&%s);\n"
-                         "    XGL_RESULT res = %s;\n"
-                         "    if (res == XGL_SUCCESS) {\n"
-                         "        loader_init_data(*%s, disp);\n"
-                         "    }\n"
-                         "    return res;\n"
-                         "}" % (qual, decl, proto.params[0].name, proto.params[1].name,
-                                proto.params[0].name, stmt, proto.params[-1].name))
-            elif proto.name == "WsiX11CreatePresentableImage":
-                funcs.append("%s%s\n"
-                        "{\n"
-                        "    const XGL_LAYER_DISPATCH_TABLE *disp = loader_get_data(%s);\n"
-                        "    XGL_RESULT res = %s;\n"
-                        "    if (res == XGL_SUCCESS) {\n"
-                        "        loader_init_data(*%s, disp);\n"
-                        "        loader_init_data(*%s, disp);\n"
-                        "    }\n"
-                        "    return res;\n"
-                        "}"
-                        % (qual, decl, proto.params[0].name, stmt, proto.params[-1].name, proto.params[-2].name))
-            elif proto.name == "GetDeviceQueue":
-                # GetDeviceQueue returns an existing Queue object so cannot check for magic header as
-                # it may have already been replaced with a function table pointer
-                funcs.append("%s%s\n"
-                         "{\n"
-                         "    const XGL_LAYER_DISPATCH_TABLE *disp = loader_get_data(%s);\n"
-                         "    XGL_RESULT res = %s;\n"
-                         "    if (res == XGL_SUCCESS) {\n"
-                         "        loader_set_data(*%s, disp);\n"
-                         "    }\n"
-                         "    return res;\n"
-                         "}"
-                         % (qual, decl, proto.params[0].name, stmt, proto.params[-1].name))
-            elif self._does_function_create_object(proto):
-                funcs.append("%s%s\n"
-                         "{\n"
-                         "    const XGL_LAYER_DISPATCH_TABLE *disp = loader_get_data(%s);\n"
-                         "    XGL_RESULT res = %s;\n"
-                         "    if (res == XGL_SUCCESS) {\n"
-                         "        loader_init_data(*%s, disp);\n"
-                         "    }\n"
-                         "    return res;\n"
-                         "}"
-                         % (qual, decl, proto.params[0].name, stmt, proto.params[-1].name))
-            elif proto.name == "AllocDescriptorSets":
-                funcs.append("%s%s\n"
-                         "{\n"
-                         "    const XGL_LAYER_DISPATCH_TABLE *disp = loader_get_data(%s);\n"
-                         "    uint32_t i;\n"
-                         "    XGL_RESULT res = %s;\n"
-                         "    for (i = 0; i < *%s; i++) {\n"
-                         "        loader_init_data(%s[i], disp);\n"
-                         "    }\n"
-                         "    return res;\n"
-                         "}" % (qual, decl, proto.params[0].name, stmt, proto.params[-1].name, proto.params[-2].name))
-            elif proto.name == "GetMultiGpuCompatibility":
-                funcs.append("%s%s\n"
-                         "{\n"
-                         "    const XGL_LAYER_DISPATCH_TABLE *disp = loader_unwrap_gpu(&%s);\n"
-                         "    loader_unwrap_gpu(&%s);\n"
-                         "    return %s;\n"
-                         "}" % (qual, decl, proto.params[0].name, proto.params[1].name,
-                                stmt))
-            elif proto.params[0].ty != "XGL_PHYSICAL_GPU":
-                if proto.ret != "void":
-                    stmt = "return " + stmt
-                funcs.append("%s%s\n"
-                         "{\n"
-                         "    const XGL_LAYER_DISPATCH_TABLE *disp = loader_get_data(%s);\n"
-                         "    %s;\n"
-                         "}" % (qual, decl, proto.params[0].name, stmt))
-            else:
-                if proto.ret != "void":
-                    stmt = "return " + stmt
-                funcs.append("%s%s\n"
-                         "{\n"
-                         "    const XGL_LAYER_DISPATCH_TABLE *disp = loader_unwrap_gpu(&%s);\n"
-                         "    %s;\n"
-                             "}" % (qual, decl, proto.params[0].name, stmt))
+
+            funcs.append("\n".join(func))
 
         funcs.append("#endif")
         return "\n\n".join(funcs)
