@@ -186,7 +186,7 @@ class Subcommand(object):
             if 'Dbg' not in proto.name and 'Wsi' not in proto.name:
                 func_ptr_assign.append('extern %s( XGLAPI * real_xgl%s)(' % (proto.ret, proto.name))
                 for p in proto.params:
-                    if 'color' == p.name:
+                    if 'color' == p.name and 'XGL_CLEAR_COLOR' != p.ty:
                         func_ptr_assign.append('    %s %s[4],' % (p.ty.replace('[4]', ''), p.name))
                     else:
                         func_ptr_assign.append('    %s %s,' % (p.ty, p.name))

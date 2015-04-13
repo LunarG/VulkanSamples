@@ -1498,20 +1498,12 @@ XGL_LAYER_EXPORT void XGLAPI xglCmdFillBuffer(XGL_CMD_BUFFER cmdBuffer, XGL_BUFF
     nextTable.CmdFillBuffer(cmdBuffer, destBuffer, destOffset, fillSize, data);
 }
 
-XGL_LAYER_EXPORT void XGLAPI xglCmdClearColorImage(XGL_CMD_BUFFER cmdBuffer, XGL_IMAGE image, const float color[4], uint32_t rangeCount, const XGL_IMAGE_SUBRESOURCE_RANGE* pRanges)
+XGL_LAYER_EXPORT void XGLAPI xglCmdClearColorImage(XGL_CMD_BUFFER cmdBuffer, XGL_IMAGE image, XGL_CLEAR_COLOR color, uint32_t rangeCount, const XGL_IMAGE_SUBRESOURCE_RANGE* pRanges)
 {
     loader_platform_thread_lock_mutex(&objLock);
     ll_increment_use_count((void*)cmdBuffer, XGL_OBJECT_TYPE_CMD_BUFFER);
     loader_platform_thread_unlock_mutex(&objLock);
     nextTable.CmdClearColorImage(cmdBuffer, image, color, rangeCount, pRanges);
-}
-
-XGL_LAYER_EXPORT void XGLAPI xglCmdClearColorImageRaw(XGL_CMD_BUFFER cmdBuffer, XGL_IMAGE image, const uint32_t color[4], uint32_t rangeCount, const XGL_IMAGE_SUBRESOURCE_RANGE* pRanges)
-{
-    loader_platform_thread_lock_mutex(&objLock);
-    ll_increment_use_count((void*)cmdBuffer, XGL_OBJECT_TYPE_CMD_BUFFER);
-    loader_platform_thread_unlock_mutex(&objLock);
-    nextTable.CmdClearColorImageRaw(cmdBuffer, image, color, rangeCount, pRanges);
 }
 
 XGL_LAYER_EXPORT void XGLAPI xglCmdClearDepthStencil(XGL_CMD_BUFFER cmdBuffer, XGL_IMAGE image, float depth, uint32_t stencil, uint32_t rangeCount, const XGL_IMAGE_SUBRESOURCE_RANGE* pRanges)
