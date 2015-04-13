@@ -316,7 +316,7 @@ void intel_dev_log(struct intel_dev *dev,
         return;
 
     va_start(ap, format);
-    icd_logv(msg_type, validation_level, (XGL_BASE_OBJECT) src_object,
+    intel_logv(dev, msg_type, validation_level, (XGL_BASE_OBJECT) src_object,
             location, msg_code, format, ap);
     va_end(ap);
 }

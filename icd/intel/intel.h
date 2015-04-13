@@ -45,7 +45,6 @@
 #include "icd-spv.h"
 #include "icd-format.h"
 #include "icd-instance.h"
-#include "icd-log.h"
 #include "icd-utils.h"
 
 #define INTEL_API_VERSION XGL_API_VERSION

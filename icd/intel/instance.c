@@ -216,26 +216,31 @@ ICD_EXPORT XGL_RESULT XGLAPI xglEnumerateGpus(
 }
 
 ICD_EXPORT XGL_RESULT XGLAPI xglDbgRegisterMsgCallback(
-    XGL_INSTANCE                                instance,
+    XGL_INSTANCE                                instance_,
     XGL_DBG_MSG_CALLBACK_FUNCTION               pfnMsgCallback,
     void*                                       pUserData)
 {
-    return icd_logger_add_callback(pfnMsgCallback, pUserData);
+    struct intel_instance *instance = intel_instance(instance_);
+
+    return icd_instance_add_logger(instance->icd, pfnMsgCallback, pUserData);
 }
 
 ICD_EXPORT XGL_RESULT XGLAPI xglDbgUnregisterMsgCallback(
-    XGL_INSTANCE                                instance,
+    XGL_INSTANCE                                instance_,
     XGL_DBG_MSG_CALLBACK_FUNCTION               pfnMsgCallback)
 {
-    return icd_logger_remove_callback(pfnMsgCallback);
+    struct intel_instance *instance = intel_instance(instance_);
+
+    return icd_instance_remove_logger(instance->icd, pfnMsgCallback);
 }
 
 ICD_EXPORT XGL_RESULT XGLAPI xglDbgSetGlobalOption(
-    XGL_INSTANCE                                instance,
+    XGL_INSTANCE                                instance_,
     XGL_DBG_GLOBAL_OPTION                       dbgOption,
     size_t                                      dataSize,
     const void*                                 pData)
 {
+    struct intel_instance *instance = intel_instance(instance_);
     XGL_RESULT res = XGL_SUCCESS;
 
     if (dataSize == 0)
@@ -245,7 +250,8 @@ ICD_EXPORT XGL_RESULT XGLAPI xglDbgSetGlobalOption(
     case XGL_DBG_OPTION_DEBUG_ECHO_ENABLE:
     case XGL_DBG_OPTION_BREAK_ON_ERROR:
     case XGL_DBG_OPTION_BREAK_ON_WARNING:
-        res = icd_logger_set_bool(dbgOption, *((const bool *) pData));
+        res = icd_instance_set_bool(instance->icd, dbgOption,
+                *((const bool *) pData));
         break;
     default:
         res = XGL_ERROR_INVALID_VALUE;

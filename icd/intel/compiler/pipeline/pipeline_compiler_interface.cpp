@@ -478,7 +478,7 @@ XGL_RESULT intel_pipeline_shader_compile(struct intel_pipeline_shader *pipe_shad
             if (bt.ubo_count != sh_prog->_LinkedShaders[MESA_SHADER_VERTEX]->NumUniformBlocks) {
                 // If there is no UBO data to pull from, the shader is using a default uniform, which
                 // will not work in XGL.  We need a binding slot to pull from.
-                icd_log(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, XGL_NULL_HANDLE, 0, 0,
+                intel_log(gpu, XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, XGL_NULL_HANDLE, 0, 0,
                         "compile error: VS reads from global, non-block uniform");
 
                 assert(0);
@@ -612,7 +612,7 @@ XGL_RESULT intel_pipeline_shader_compile(struct intel_pipeline_shader *pipe_shad
             if (bt.ubo_count != sh_prog->_LinkedShaders[MESA_SHADER_FRAGMENT]->NumUniformBlocks) {
                 // If there is no UBO data to pull from, the shader is using a default uniform, which
                 // will not work in XGL.  We need a binding slot to pull from.
-                icd_log(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, XGL_NULL_HANDLE, 0, 0,
+                intel_log(gpu, XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, XGL_NULL_HANDLE, 0, 0,
                         "compile error: FS reads from global, non-block uniform");
 
                 assert(0);
