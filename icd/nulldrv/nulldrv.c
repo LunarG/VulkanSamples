@@ -1398,22 +1398,6 @@ ICD_EXPORT XGL_RESULT XGLAPI xglGetImageSubresourceInfo(
     return ret;
 }
 
-ICD_EXPORT XGL_RESULT XGLAPI xglSetFastClearColor(
-    XGL_IMAGE                                   image,
-    const float                                 color[4])
-{
-    NULLDRV_LOG_FUNC;
-    return XGL_SUCCESS;
-}
-
-ICD_EXPORT XGL_RESULT XGLAPI xglSetFastClearDepth(
-    XGL_IMAGE                                   image,
-    float                                       depth)
-{
-    NULLDRV_LOG_FUNC;
-    return XGL_SUCCESS;
-}
-
 ICD_EXPORT XGL_RESULT XGLAPI xglAllocMemory(
     XGL_DEVICE                                  device,
     const XGL_MEMORY_ALLOC_INFO*                pAllocInfo,

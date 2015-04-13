@@ -73,8 +73,6 @@ typedef struct _XGL_LAYER_DISPATCH_TABLE
     xglCreateBufferType CreateBuffer;
     xglCreateBufferViewType CreateBufferView;
     xglCreateImageType CreateImage;
-    xglSetFastClearColorType SetFastClearColor;
-    xglSetFastClearDepthType SetFastClearDepth;
     xglGetImageSubresourceInfoType GetImageSubresourceInfo;
     xglCreateImageViewType CreateImageView;
     xglCreateColorAttachmentViewType CreateColorAttachmentView;

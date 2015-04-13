@@ -52,9 +52,6 @@ struct intel_img {
     size_t aux_offset;
     size_t s8_offset;
 
-    float clear_color[4];
-    float clear_depth;
-
     void *wsi_data;
 };
 

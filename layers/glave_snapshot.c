@@ -968,24 +968,6 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateImage(XGL_DEVICE device, const XGL_I
     return result;
 }
 
-XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglSetFastClearColor(XGL_IMAGE image, const float color[4])
-{
-    loader_platform_thread_lock_mutex(&objLock);
-    ll_increment_use_count((void*)image, XGL_OBJECT_TYPE_IMAGE);
-    loader_platform_thread_unlock_mutex(&objLock);
-    XGL_RESULT result = nextTable.SetFastClearColor(image, color);
-    return result;
-}
-
-XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglSetFastClearDepth(XGL_IMAGE image, float depth)
-{
-    loader_platform_thread_lock_mutex(&objLock);
-    ll_increment_use_count((void*)image, XGL_OBJECT_TYPE_IMAGE);
-    loader_platform_thread_unlock_mutex(&objLock);
-    XGL_RESULT result = nextTable.SetFastClearDepth(image, depth);
-    return result;
-}
-
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglGetImageSubresourceInfo(XGL_IMAGE image, const XGL_IMAGE_SUBRESOURCE* pSubresource, XGL_SUBRESOURCE_INFO_TYPE infoType, size_t* pDataSize, void* pData)
 {
     loader_platform_thread_lock_mutex(&objLock);

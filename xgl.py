@@ -443,14 +443,6 @@ core = Extension(
              Param("const XGL_IMAGE_CREATE_INFO*", "pCreateInfo"),
              Param("XGL_IMAGE*", "pImage")]),
 
-        Proto("XGL_RESULT", "SetFastClearColor",
-            [Param("XGL_IMAGE", "image"),
-             Param("const float[4]", "color")]),
-
-        Proto("XGL_RESULT", "SetFastClearDepth",
-            [Param("XGL_IMAGE", "image"),
-             Param("float", "depth")]),
-
         Proto("XGL_RESULT", "GetImageSubresourceInfo",
             [Param("XGL_IMAGE", "image"),
              Param("const XGL_IMAGE_SUBRESOURCE*", "pSubresource"),
