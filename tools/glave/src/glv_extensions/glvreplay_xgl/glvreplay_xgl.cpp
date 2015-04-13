@@ -122,9 +122,6 @@ GLVTRACER_EXPORT void GLVTRACER_CDECL Deinitialize()
 {
     if (g_pReplayer != NULL)
     {
-        if (xglDbgUnregisterMsgCallback(g_fpDbgMsgCallback) != XGL_SUCCESS)
-            glv_LogError("Failed to unregister xgl callback for replayer\n");
-
         delete g_pReplayer;
         g_pReplayer = NULL;
     }

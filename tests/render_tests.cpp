@@ -444,7 +444,7 @@ struct xgltriangle_vs_uniform {
 void XglRenderTest::XGLTriangleTest(const char *vertShaderText, const char *fragShaderText, const bool rotate)
 {
 #ifdef DEBUG_CALLBACK
-    xglDbgRegisterMsgCallback(myDbgFunc, NULL);
+    xglDbgRegisterMsgCallback(inst, myDbgFunc, NULL);
 #endif
     // Create identity matrix
     int i;

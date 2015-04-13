@@ -1532,6 +1532,7 @@ ICD_EXPORT XGL_RESULT XGLAPI xglEnumerateLayers(
 }
 
 ICD_EXPORT XGL_RESULT XGLAPI xglDbgRegisterMsgCallback(
+    XGL_INSTANCE                                instance,
     XGL_DBG_MSG_CALLBACK_FUNCTION               pfnMsgCallback,
     void*                                       pUserData)
 {
@@ -1540,6 +1541,7 @@ ICD_EXPORT XGL_RESULT XGLAPI xglDbgRegisterMsgCallback(
 }
 
 ICD_EXPORT XGL_RESULT XGLAPI xglDbgUnregisterMsgCallback(
+    XGL_INSTANCE                                instance,
     XGL_DBG_MSG_CALLBACK_FUNCTION               pfnMsgCallback)
 {
     NULLDRV_LOG_FUNC;
@@ -1547,6 +1549,7 @@ ICD_EXPORT XGL_RESULT XGLAPI xglDbgUnregisterMsgCallback(
 }
 
 ICD_EXPORT XGL_RESULT XGLAPI xglDbgSetGlobalOption(
+    XGL_INSTANCE                                instance,
     XGL_DBG_GLOBAL_OPTION                       dbgOption,
     size_t                                      dataSize,
     const void*                                 pData)

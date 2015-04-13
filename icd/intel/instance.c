@@ -216,6 +216,7 @@ ICD_EXPORT XGL_RESULT XGLAPI xglEnumerateGpus(
 }
 
 ICD_EXPORT XGL_RESULT XGLAPI xglDbgRegisterMsgCallback(
+    XGL_INSTANCE                                instance,
     XGL_DBG_MSG_CALLBACK_FUNCTION               pfnMsgCallback,
     void*                                       pUserData)
 {
@@ -223,12 +224,14 @@ ICD_EXPORT XGL_RESULT XGLAPI xglDbgRegisterMsgCallback(
 }
 
 ICD_EXPORT XGL_RESULT XGLAPI xglDbgUnregisterMsgCallback(
+    XGL_INSTANCE                                instance,
     XGL_DBG_MSG_CALLBACK_FUNCTION               pfnMsgCallback)
 {
     return icd_logger_remove_callback(pfnMsgCallback);
 }
 
 ICD_EXPORT XGL_RESULT XGLAPI xglDbgSetGlobalOption(
+    XGL_INSTANCE                                instance,
     XGL_DBG_GLOBAL_OPTION                       dbgOption,
     size_t                                      dataSize,
     const void*                                 pData)

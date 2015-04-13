@@ -188,8 +188,6 @@ glv_replay::GLV_REPLAY_RESULT xglReplay::manually_handle_xglCreateDevice(struct_
             ci->pNext = NULL;
             pPacket->pCreateInfo = pCreateInfoSaved;
             release_enableLayer_list(layersStr);
-            if (xglDbgRegisterMsgCallback(g_fpDbgMsgCallback, NULL) != XGL_SUCCESS)
-                glv_LogError("Failed to register xgl callback for replayer error handling\n");
 #if !defined(_WIN32)
             m_pDSDump = (DRAW_STATE_DUMP_DOT_FILE) m_xglFuncs.real_xglGetProcAddr(m_objMapper.remap(pPacket->gpu), "drawStateDumpDotFile");
             m_pCBDump = (DRAW_STATE_DUMP_COMMAND_BUFFER_DOT_FILE) m_xglFuncs.real_xglGetProcAddr(m_objMapper.remap(pPacket->gpu), "drawStateDumpCommandBufferDotFile");
@@ -236,6 +234,10 @@ glv_replay::GLV_REPLAY_RESULT xglReplay::manually_handle_xglEnumerateGpus(struct
         {
             if (pPacket->pGpus)
                 m_objMapper.add_to_map(&(pPacket->pGpus[i]), &(gpus[i]));
+        }
+        if (xglDbgRegisterMsgCallback(m_objMapper.remap(pPacket->instance),
+                   g_fpDbgMsgCallback, NULL) != XGL_SUCCESS) {
+           glv_LogError("Failed to register xgl callback for replayer error handling\\n");
         }
     }
     return returnValue;

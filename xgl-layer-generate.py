@@ -140,7 +140,7 @@ class Subcommand(object):
 
     def _gen_layer_dbg_callback_register(self):
         r_body = []
-        r_body.append('XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglDbgRegisterMsgCallback(XGL_DBG_MSG_CALLBACK_FUNCTION pfnMsgCallback, void* pUserData)')
+        r_body.append('XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglDbgRegisterMsgCallback(XGL_INSTANCE instance, XGL_DBG_MSG_CALLBACK_FUNCTION pfnMsgCallback, void* pUserData)')
         r_body.append('{')
         r_body.append('    // This layer intercepts callbacks')
         r_body.append('    XGL_LAYER_DBG_FUNCTION_NODE *pNewDbgFuncNode = (XGL_LAYER_DBG_FUNCTION_NODE*)malloc(sizeof(XGL_LAYER_DBG_FUNCTION_NODE));')
@@ -154,14 +154,14 @@ class Subcommand(object):
         r_body.append('    if (g_actionIsDefault) {')
         r_body.append('        g_debugAction = XGL_DBG_LAYER_ACTION_CALLBACK;')
         r_body.append('    }')
-        r_body.append('    XGL_RESULT result = nextTable.DbgRegisterMsgCallback(pfnMsgCallback, pUserData);')
+        r_body.append('    XGL_RESULT result = nextTable.DbgRegisterMsgCallback(instance, pfnMsgCallback, pUserData);')
         r_body.append('    return result;')
         r_body.append('}')
         return "\n".join(r_body)
 
     def _gen_layer_dbg_callback_unregister(self):
         ur_body = []
-        ur_body.append('XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglDbgUnregisterMsgCallback(XGL_DBG_MSG_CALLBACK_FUNCTION pfnMsgCallback)')
+        ur_body.append('XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglDbgUnregisterMsgCallback(XGL_INSTANCE instance, XGL_DBG_MSG_CALLBACK_FUNCTION pfnMsgCallback)')
         ur_body.append('{')
         ur_body.append('    XGL_LAYER_DBG_FUNCTION_NODE *pTrav = g_pDbgFunctionHead;')
         ur_body.append('    XGL_LAYER_DBG_FUNCTION_NODE *pPrev = pTrav;')
@@ -183,7 +183,7 @@ class Subcommand(object):
         ur_body.append('        else')
         ur_body.append('            g_debugAction &= ~XGL_DBG_LAYER_ACTION_CALLBACK;')
         ur_body.append('    }')
-        ur_body.append('    XGL_RESULT result = nextTable.DbgUnregisterMsgCallback(pfnMsgCallback);')
+        ur_body.append('    XGL_RESULT result = nextTable.DbgUnregisterMsgCallback(instance, pfnMsgCallback);')
         ur_body.append('    return result;')
         ur_body.append('}')
         return "\n".join(ur_body)

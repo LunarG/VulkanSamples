@@ -2559,7 +2559,7 @@ XGL_LAYER_EXPORT void XGLAPI xglCmdEndRenderPass(XGL_CMD_BUFFER cmdBuffer, XGL_R
     nextTable.CmdEndRenderPass(cmdBuffer, renderPass);
 }
 
-XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglDbgRegisterMsgCallback(XGL_DBG_MSG_CALLBACK_FUNCTION pfnMsgCallback, void* pUserData)
+XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglDbgRegisterMsgCallback(XGL_INSTANCE instance, XGL_DBG_MSG_CALLBACK_FUNCTION pfnMsgCallback, void* pUserData)
 {
     // This layer intercepts callbacks
     XGL_LAYER_DBG_FUNCTION_NODE* pNewDbgFuncNode = (XGL_LAYER_DBG_FUNCTION_NODE*)malloc(sizeof(XGL_LAYER_DBG_FUNCTION_NODE));
@@ -2576,11 +2576,11 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglDbgRegisterMsgCallback(XGL_DBG_MSG_CALLBAC
 	if (g_actionIsDefault) {
 		g_debugAction = XGL_DBG_LAYER_ACTION_CALLBACK;
 	}
-    XGL_RESULT result = nextTable.DbgRegisterMsgCallback(pfnMsgCallback, pUserData);
+    XGL_RESULT result = nextTable.DbgRegisterMsgCallback(instance, pfnMsgCallback, pUserData);
     return result;
 }
 
-XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglDbgUnregisterMsgCallback(XGL_DBG_MSG_CALLBACK_FUNCTION pfnMsgCallback)
+XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglDbgUnregisterMsgCallback(XGL_INSTANCE instance, XGL_DBG_MSG_CALLBACK_FUNCTION pfnMsgCallback)
 {
     XGL_LAYER_DBG_FUNCTION_NODE *pTrav = g_pDbgFunctionHead;
     XGL_LAYER_DBG_FUNCTION_NODE *pPrev = pTrav;
@@ -2605,7 +2605,7 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglDbgUnregisterMsgCallback(XGL_DBG_MSG_CALLB
         else
             g_debugAction = (XGL_LAYER_DBG_ACTION)(g_debugAction & ~((uint32_t)XGL_DBG_LAYER_ACTION_CALLBACK));
     }
-    XGL_RESULT result = nextTable.DbgUnregisterMsgCallback(pfnMsgCallback);
+    XGL_RESULT result = nextTable.DbgUnregisterMsgCallback(instance, pfnMsgCallback);
     return result;
 }
 

@@ -819,11 +819,13 @@ core = Extension(
              Param("XGL_VALIDATION_LEVEL", "validationLevel")]),
 
         Proto("XGL_RESULT", "DbgRegisterMsgCallback",
-            [Param("XGL_DBG_MSG_CALLBACK_FUNCTION", "pfnMsgCallback"),
+            [Param("XGL_INSTANCE", "instance"),
+             Param("XGL_DBG_MSG_CALLBACK_FUNCTION", "pfnMsgCallback"),
              Param("void*", "pUserData")]),
 
         Proto("XGL_RESULT", "DbgUnregisterMsgCallback",
-            [Param("XGL_DBG_MSG_CALLBACK_FUNCTION", "pfnMsgCallback")]),
+            [Param("XGL_INSTANCE", "instance"),
+             Param("XGL_DBG_MSG_CALLBACK_FUNCTION", "pfnMsgCallback")]),
 
         Proto("XGL_RESULT", "DbgSetMessageFilter",
             [Param("XGL_DEVICE", "device"),
@@ -836,7 +838,8 @@ core = Extension(
              Param("const void*", "pTag")]),
 
         Proto("XGL_RESULT", "DbgSetGlobalOption",
-            [Param("XGL_DBG_GLOBAL_OPTION", "dbgOption"),
+            [Param("XGL_INSTANCE", "instance"),
+             Param("XGL_DBG_GLOBAL_OPTION", "dbgOption"),
              Param("size_t", "dataSize"),
              Param("const void*", "pData")]),
 

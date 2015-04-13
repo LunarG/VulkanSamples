@@ -109,11 +109,11 @@ typedef void (XGLAPI *XGL_DBG_MSG_CALLBACK_FUNCTION)(
 
 // Debug functions
 typedef XGL_RESULT (XGLAPI *xglDbgSetValidationLevelType)(XGL_DEVICE device, XGL_VALIDATION_LEVEL validationLevel);
-typedef XGL_RESULT (XGLAPI *xglDbgRegisterMsgCallbackType)(XGL_DBG_MSG_CALLBACK_FUNCTION pfnMsgCallback, void* pUserData);
-typedef XGL_RESULT (XGLAPI *xglDbgUnregisterMsgCallbackType)(XGL_DBG_MSG_CALLBACK_FUNCTION pfnMsgCallback);
+typedef XGL_RESULT (XGLAPI *xglDbgRegisterMsgCallbackType)(XGL_INSTANCE instance, XGL_DBG_MSG_CALLBACK_FUNCTION pfnMsgCallback, void* pUserData);
+typedef XGL_RESULT (XGLAPI *xglDbgUnregisterMsgCallbackType)(XGL_INSTANCE instance, XGL_DBG_MSG_CALLBACK_FUNCTION pfnMsgCallback);
 typedef XGL_RESULT (XGLAPI *xglDbgSetMessageFilterType)(XGL_DEVICE device, int32_t msgCode, XGL_DBG_MSG_FILTER filter);
 typedef XGL_RESULT (XGLAPI *xglDbgSetObjectTagType)(XGL_BASE_OBJECT object, size_t tagSize, const void* pTag);
-typedef XGL_RESULT (XGLAPI *xglDbgSetGlobalOptionType)(XGL_DBG_GLOBAL_OPTION dbgOption, size_t dataSize, const void* pData);
+typedef XGL_RESULT (XGLAPI *xglDbgSetGlobalOptionType)(XGL_INSTANCE instance, XGL_DBG_GLOBAL_OPTION dbgOption, size_t dataSize, const void* pData);
 typedef XGL_RESULT (XGLAPI *xglDbgSetDeviceOptionType)(XGL_DEVICE device, XGL_DBG_DEVICE_OPTION dbgOption, size_t dataSize, const void* pData);
 typedef void (XGLAPI *xglCmdDbgMarkerBeginType)(XGL_CMD_BUFFER cmdBuffer, const char* pMarker);
 typedef void (XGLAPI *xglCmdDbgMarkerEndType)(XGL_CMD_BUFFER cmdBuffer);
@@ -123,10 +123,12 @@ XGL_RESULT XGLAPI xglDbgSetValidationLevel(
     XGL_VALIDATION_LEVEL validationLevel);
 
 XGL_RESULT XGLAPI xglDbgRegisterMsgCallback(
+    XGL_INSTANCE                  instance,
     XGL_DBG_MSG_CALLBACK_FUNCTION pfnMsgCallback,
     void*                         pUserData);
 
 XGL_RESULT XGLAPI xglDbgUnregisterMsgCallback(
+    XGL_INSTANCE                  instance,
     XGL_DBG_MSG_CALLBACK_FUNCTION pfnMsgCallback);
 
 XGL_RESULT XGLAPI xglDbgSetMessageFilter(
@@ -140,6 +142,7 @@ XGL_RESULT XGLAPI xglDbgSetObjectTag(
     const void*     pTag);
 
 XGL_RESULT XGLAPI xglDbgSetGlobalOption(
+    XGL_INSTANCE          instance,
     XGL_DBG_GLOBAL_OPTION dbgOption,
     size_t                dataSize,
     const void*           pData);

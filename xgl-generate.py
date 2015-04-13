@@ -101,7 +101,9 @@ class LoaderEntrypointsSubcommand(Subcommand):
         return "#include \"loader.h\""
 
     def _is_dispatchable(self, proto):
-        if proto.name in ["GetProcAddr", "DestroyInstance", "EnumerateGpus", "EnumerateLayers"]:
+        if proto.name in ["GetProcAddr", "DestroyInstance", "EnumerateGpus",
+                "EnumerateLayers", "DbgRegisterMsgCallback",
+                "DbgUnregisterMsgCallback", "DbgSetGlobalOption"]:
             return False
 
         in_objs = proto.object_in_params()
