@@ -1046,23 +1046,26 @@ ICD_EXPORT void VKAPI vkCmdResolveImage(
 
     for (i = 0; i < rectCount; i++) {
         const VkImageResolve *rect = &pRects[i];
+        int arraySlice;
 
-        meta.src.lod = rect->srcSubresource.mipLevel;
-        meta.src.layer = rect->srcSubresource.arraySlice;
-        meta.src.x = rect->srcOffset.x;
-        meta.src.y = rect->srcOffset.y;
+        for(arraySlice = 0; arraySlice < rect->extent.depth; arraySlice++) {
+            meta.src.lod = rect->srcSubresource.mipLevel;
+            meta.src.layer = rect->srcSubresource.arraySlice + arraySlice;
+            meta.src.x = rect->srcOffset.x;
+            meta.src.y = rect->srcOffset.y;
 
-        meta.dst.lod = rect->destSubresource.mipLevel;
-        meta.dst.layer = rect->destSubresource.arraySlice;
-        meta.dst.x = rect->destOffset.x;
-        meta.dst.y = rect->destOffset.y;
+            meta.dst.lod = rect->destSubresource.mipLevel;
+            meta.dst.layer = rect->destSubresource.arraySlice + arraySlice;
+            meta.dst.x = rect->destOffset.x;
+            meta.dst.y = rect->destOffset.y;
 
-        meta.width = rect->extent.width;
-        meta.height = rect->extent.height;
+            meta.width = rect->extent.width;
+            meta.height = rect->extent.height;
 
-        cmd_meta_set_dst_for_img(cmd, dst, format,
-                meta.dst.lod, meta.dst.layer, &meta);
+            cmd_meta_set_dst_for_img(cmd, dst, format,
+                    meta.dst.lod, meta.dst.layer, &meta);
 
-        cmd_draw_meta(cmd, &meta);
+            cmd_draw_meta(cmd, &meta);
+        }
     }
 }

@@ -1815,10 +1815,10 @@ typedef struct VkBufferImageCopy_
 typedef struct VkImageResolve_
 {
     VkImageSubresource                          srcSubresource;
-    VkOffset2D                                  srcOffset;
+    VkOffset3D                                  srcOffset;
     VkImageSubresource                          destSubresource;
-    VkOffset2D                                  destOffset;
-    VkExtent2D                                  extent;
+    VkOffset3D                                  destOffset;
+    VkExtent3D                                  extent;
 } VkImageResolve;
 
 typedef struct VkShaderCreateInfo_
