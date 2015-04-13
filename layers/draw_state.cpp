@@ -1564,6 +1564,14 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateImageView(XGL_DEVICE device, const X
     return result;
 }
 
+static void track_pipeline(const XGL_GRAPHICS_PIPELINE_CREATE_INFO* pCreateInfo, XGL_PIPELINE* pPipeline)
+{
+    PIPELINE_NODE* pPipeNode = new PIPELINE_NODE;
+    memset((void*)pPipeNode, 0, sizeof(PIPELINE_NODE));
+    pPipeNode->pipeline = *pPipeline;
+    initPipeline(pPipeNode, pCreateInfo);
+}
+
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateGraphicsPipeline(XGL_DEVICE device, const XGL_GRAPHICS_PIPELINE_CREATE_INFO* pCreateInfo, XGL_PIPELINE* pPipeline)
 {
     XGL_RESULT result = nextTable.CreateGraphicsPipeline(device, pCreateInfo, pPipeline);
@@ -1572,10 +1580,28 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateGraphicsPipeline(XGL_DEVICE device, 
     sprintf(str, "Created Gfx Pipeline %p", (void*)*pPipeline);
     layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, (XGL_BASE_OBJECT)pPipeline, 0, DRAWSTATE_NONE, "DS", str);
     loader_platform_thread_lock_mutex(&globalLock);
-    PIPELINE_NODE* pPipeNode = new PIPELINE_NODE;
-    memset((void*)pPipeNode, 0, sizeof(PIPELINE_NODE));
-    pPipeNode->pipeline = *pPipeline;
-    initPipeline(pPipeNode, pCreateInfo);
+
+    track_pipeline(pCreateInfo, pPipeline);
+
+    loader_platform_thread_unlock_mutex(&globalLock);
+    return result;
+}
+
+XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateGraphicsPipelineDerivative(
+       XGL_DEVICE device,
+       const XGL_GRAPHICS_PIPELINE_CREATE_INFO* pCreateInfo,
+       XGL_PIPELINE basePipeline,
+       XGL_PIPELINE* pPipeline)
+{
+    XGL_RESULT result = nextTable.CreateGraphicsPipelineDerivative(device, pCreateInfo, basePipeline, pPipeline);
+    // Create LL HEAD for this Pipeline
+    char str[1024];
+    sprintf(str, "Created Gfx Pipeline %p (derived from pipeline %p)", (void*)*pPipeline, basePipeline);
+    layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, (XGL_BASE_OBJECT)pPipeline, 0, DRAWSTATE_NONE, "DS", str);
+    loader_platform_thread_lock_mutex(&globalLock);
+
+    track_pipeline(pCreateInfo, pPipeline);
+
     loader_platform_thread_unlock_mutex(&globalLock);
     return result;
 }
@@ -1964,22 +1990,6 @@ XGL_LAYER_EXPORT void XGLAPI xglCmdBindPipeline(XGL_CMD_BUFFER cmdBuffer, XGL_PI
         layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, cmdBuffer, 0, DRAWSTATE_INVALID_CMD_BUFFER, "DS", str);
     }
     nextTable.CmdBindPipeline(cmdBuffer, pipelineBindPoint, pipeline);
-}
-
-XGL_LAYER_EXPORT void XGLAPI xglCmdBindPipelineDelta(XGL_CMD_BUFFER cmdBuffer, XGL_PIPELINE_BIND_POINT pipelineBindPoint, XGL_PIPELINE_DELTA delta)
-{
-    GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
-    if (pCB) {
-        // TODO : Handle storing Pipeline Deltas to cmd buffer here
-        updateCBTracking(cmdBuffer);
-        addCmd(pCB, CMD_BINDPIPELINEDELTA);
-    }
-    else {
-        char str[1024];
-        sprintf(str, "Attempt to use CmdBuffer %p that doesn't exist!", (void*)cmdBuffer);
-        layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, cmdBuffer, 0, DRAWSTATE_INVALID_CMD_BUFFER, "DS", str);
-    }
-    nextTable.CmdBindPipelineDelta(cmdBuffer, pipelineBindPoint, delta);
 }
 
 XGL_LAYER_EXPORT void XGLAPI xglCmdBindDynamicStateObject(XGL_CMD_BUFFER cmdBuffer, XGL_STATE_BIND_POINT stateBindPoint, XGL_DYNAMIC_STATE_OBJECT state)
@@ -2781,8 +2791,6 @@ XGL_LAYER_EXPORT void* XGLAPI xglGetProcAddr(XGL_PHYSICAL_GPU gpu, const char* f
         return (void*) xglResetCommandBuffer;
     if (!strcmp(funcName, "xglCmdBindPipeline"))
         return (void*) xglCmdBindPipeline;
-    if (!strcmp(funcName, "xglCmdBindPipelineDelta"))
-        return (void*) xglCmdBindPipelineDelta;
     if (!strcmp(funcName, "xglCmdBindDynamicStateObject"))
         return (void*) xglCmdBindDynamicStateObject;
     if (!strcmp(funcName, "xglCmdBindDescriptorSet"))

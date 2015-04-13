@@ -1226,7 +1226,7 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateGraphicsPipelineDerivative(
     XGL_RESULT result = nextTable.CreateGraphicsPipelineDerivative(device, pCreateInfo, basePipeline, pPipeline);
     if (result == XGL_SUCCESS) {
         loader_platform_thread_lock_mutex(&globalLock);
-        insertGlobalObjectNode(*pPipeline, pCreateInfo->sType, pCreateInfo, sizeof(XGL_GRAPHICS_PIPELINE_CREATE_INFO), "graphics_pipeline");
+        addObjectInfo(*pPipeline, pCreateInfo->sType, pCreateInfo, sizeof(XGL_GRAPHICS_PIPELINE_CREATE_INFO), "graphics_pipeline");
         loader_platform_thread_unlock_mutex(&globalLock);
     }
     return result;

@@ -1109,22 +1109,6 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglLoadPipeline(XGL_DEVICE device, size_t dat
     return result;
 }
 
-XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreatePipelineDelta(XGL_DEVICE device, XGL_PIPELINE p1, XGL_PIPELINE p2, XGL_PIPELINE_DELTA* delta)
-{
-    loader_platform_thread_lock_mutex(&objLock);
-    ll_increment_use_count((void*)device, XGL_OBJECT_TYPE_DEVICE);
-    loader_platform_thread_unlock_mutex(&objLock);
-    XGL_RESULT result = nextTable.CreatePipelineDelta(device, p1, p2, delta);
-    if (result == XGL_SUCCESS)
-    {
-        loader_platform_thread_lock_mutex(&objLock);
-        GLV_VK_SNAPSHOT_LL_NODE* pNode = snapshot_insert_object(&s_delta, *delta, XGL_OBJECT_TYPE_PIPELINE_DELTA);
-        pNode->obj.pStruct = NULL;
-        loader_platform_thread_unlock_mutex(&objLock);
-    }
-    return result;
-}
-
 XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglCreateSampler(XGL_DEVICE device, const XGL_SAMPLER_CREATE_INFO* pCreateInfo, XGL_SAMPLER* pSampler)
 {
     loader_platform_thread_lock_mutex(&objLock);
@@ -1351,14 +1335,6 @@ XGL_LAYER_EXPORT void XGLAPI xglCmdBindPipeline(XGL_CMD_BUFFER cmdBuffer, XGL_PI
     ll_increment_use_count((void*)cmdBuffer, XGL_OBJECT_TYPE_CMD_BUFFER);
     loader_platform_thread_unlock_mutex(&objLock);
     nextTable.CmdBindPipeline(cmdBuffer, pipelineBindPoint, pipeline);
-}
-
-XGL_LAYER_EXPORT void XGLAPI xglCmdBindPipelineDelta(XGL_CMD_BUFFER cmdBuffer, XGL_PIPELINE_BIND_POINT pipelineBindPoint, XGL_PIPELINE_DELTA delta)
-{
-    loader_platform_thread_lock_mutex(&objLock);
-    ll_increment_use_count((void*)cmdBuffer, XGL_OBJECT_TYPE_CMD_BUFFER);
-    loader_platform_thread_unlock_mutex(&objLock);
-    nextTable.CmdBindPipelineDelta(cmdBuffer, pipelineBindPoint, delta);
 }
 
 XGL_LAYER_EXPORT void XGLAPI xglCmdBindDynamicStateObject(XGL_CMD_BUFFER cmdBuffer, XGL_STATE_BIND_POINT stateBindPoint, XGL_DYNAMIC_STATE_OBJECT state)
