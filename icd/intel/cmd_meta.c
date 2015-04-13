@@ -1004,8 +1004,8 @@ ICD_EXPORT void VKAPI vkCmdResolveImage(
     VkImageLayout                            srcImageLayout,
     VkImage                                   destImage,
     VkImageLayout                            destImageLayout,
-    uint32_t                                    rectCount,
-    const VkImageResolve*                    pRects)
+    uint32_t                                    regionCount,
+    const VkImageResolve*                    pRegions)
 {
     struct intel_cmd *cmd = intel_cmd(cmdBuffer);
     struct intel_img *src = intel_img(srcImage);
@@ -1044,23 +1044,23 @@ ICD_EXPORT void VKAPI vkCmdResolveImage(
     format = cmd_meta_img_raw_format(cmd, src->layout.format);
     cmd_meta_set_src_for_img(cmd, src, format, VK_IMAGE_ASPECT_COLOR, &meta);
 
-    for (i = 0; i < rectCount; i++) {
-        const VkImageResolve *rect = &pRects[i];
+    for (i = 0; i < regionCount; i++) {
+        const VkImageResolve *region = &pRegions[i];
         int arraySlice;
 
-        for(arraySlice = 0; arraySlice < rect->extent.depth; arraySlice++) {
-            meta.src.lod = rect->srcSubresource.mipLevel;
-            meta.src.layer = rect->srcSubresource.arraySlice + arraySlice;
-            meta.src.x = rect->srcOffset.x;
-            meta.src.y = rect->srcOffset.y;
+        for(arraySlice = 0; arraySlice < region->extent.depth; arraySlice++) {
+            meta.src.lod = region->srcSubresource.mipLevel;
+            meta.src.layer = region->srcSubresource.arraySlice + arraySlice;
+            meta.src.x = region->srcOffset.x;
+            meta.src.y = region->srcOffset.y;
 
-            meta.dst.lod = rect->destSubresource.mipLevel;
-            meta.dst.layer = rect->destSubresource.arraySlice + arraySlice;
-            meta.dst.x = rect->destOffset.x;
-            meta.dst.y = rect->destOffset.y;
+            meta.dst.lod = region->destSubresource.mipLevel;
+            meta.dst.layer = region->destSubresource.arraySlice + arraySlice;
+            meta.dst.x = region->destOffset.x;
+            meta.dst.y = region->destOffset.y;
 
-            meta.width = rect->extent.width;
-            meta.height = rect->extent.height;
+            meta.width = region->extent.width;
+            meta.height = region->extent.height;
 
             cmd_meta_set_dst_for_img(cmd, dst, format,
                     meta.dst.lod, meta.dst.layer, &meta);

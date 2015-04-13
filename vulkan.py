@@ -760,8 +760,8 @@ core = Extension(
              Param("VkImageLayout", "srcImageLayout"),
              Param("VkImage", "destImage"),
              Param("VkImageLayout", "destImageLayout"),
-             Param("uint32_t", "rectCount"),
-             Param("const VkImageResolve*", "pRects")]),
+             Param("uint32_t", "regionCount"),
+             Param("const VkImageResolve*", "pRegions")]),
 
         Proto("void", "CmdSetEvent",
             [Param("VkCmdBuffer", "cmdBuffer"),

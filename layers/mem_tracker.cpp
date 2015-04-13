@@ -1832,7 +1832,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdClearDepthStencil(VkCmdBuffer cmdBuffer,
 VK_LAYER_EXPORT void VKAPI vkCmdResolveImage(VkCmdBuffer cmdBuffer,
                                                 VkImage srcImage, VkImageLayout srcImageLayout,
                                                 VkImage destImage, VkImageLayout destImageLayout,
-                                                uint32_t rectCount, const VkImageResolve* pRects)
+                                                uint32_t regionCount, const VkImageResolve* pRegions)
 {
     loader_platform_thread_lock_mutex(&globalLock);
     VkGpuMemory mem = getMemBindingFromObject(srcImage);
@@ -1848,7 +1848,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdResolveImage(VkCmdBuffer cmdBuffer,
         layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, cmdBuffer, 0, MEMTRACK_MEMORY_BINDING_ERROR, "MEM", str);
     }
     loader_platform_thread_unlock_mutex(&globalLock);
-    nextTable.CmdResolveImage(cmdBuffer, srcImage, srcImageLayout, destImage, destImageLayout, rectCount, pRects);
+    nextTable.CmdResolveImage(cmdBuffer, srcImage, srcImageLayout, destImage, destImageLayout, regionCount, pRegions);
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdBeginQuery(VkCmdBuffer cmdBuffer, VkQueryPool queryPool, uint32_t slot, VkFlags flags)

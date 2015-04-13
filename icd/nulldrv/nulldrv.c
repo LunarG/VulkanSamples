@@ -1025,8 +1025,8 @@ ICD_EXPORT void VKAPI vkCmdResolveImage(
     VkImageLayout                            srcImageLayout,
     VkImage                                   destImage,
     VkImageLayout                            destImageLayout,
-    uint32_t                                    rectCount,
-    const VkImageResolve*                    pRects)
+    uint32_t                                    regionCount,
+    const VkImageResolve*                    pRegions)
 {
     NULLDRV_LOG_FUNC;
 }
