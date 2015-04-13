@@ -1667,7 +1667,7 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglDbgSetValidationLevel(XGL_DEVICE device, X
     return result;
 }
 
-XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglDbgRegisterMsgCallback(XGL_DBG_MSG_CALLBACK_FUNCTION pfnMsgCallback, void* pUserData)
+XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglDbgRegisterMsgCallback(XGL_INSTANCE instance, XGL_DBG_MSG_CALLBACK_FUNCTION pfnMsgCallback, void* pUserData)
 {
     // This layer intercepts callbacks
     XGL_LAYER_DBG_FUNCTION_NODE *pNewDbgFuncNode = (XGL_LAYER_DBG_FUNCTION_NODE*)malloc(sizeof(XGL_LAYER_DBG_FUNCTION_NODE));
@@ -1680,11 +1680,11 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglDbgRegisterMsgCallback(XGL_DBG_MSG_CALLBAC
     // force callbacks if DebugAction hasn't been set already other than initial value
     if (g_actionIsDefault) {
         g_debugAction = XGL_DBG_LAYER_ACTION_CALLBACK;
-    }    XGL_RESULT result = nextTable.DbgRegisterMsgCallback(pfnMsgCallback, pUserData);
+    }    XGL_RESULT result = nextTable.DbgRegisterMsgCallback(instance, pfnMsgCallback, pUserData);
     return result;
 }
 
-XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglDbgUnregisterMsgCallback(XGL_DBG_MSG_CALLBACK_FUNCTION pfnMsgCallback)
+XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglDbgUnregisterMsgCallback(XGL_INSTANCE instance, XGL_DBG_MSG_CALLBACK_FUNCTION pfnMsgCallback)
 {
     XGL_LAYER_DBG_FUNCTION_NODE *pTrav = g_pDbgFunctionHead;
     XGL_LAYER_DBG_FUNCTION_NODE *pPrev = pTrav;
@@ -1706,7 +1706,7 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglDbgUnregisterMsgCallback(XGL_DBG_MSG_CALLB
         else
             g_debugAction &= ~XGL_DBG_LAYER_ACTION_CALLBACK;
     }
-    XGL_RESULT result = nextTable.DbgUnregisterMsgCallback(pfnMsgCallback);
+    XGL_RESULT result = nextTable.DbgUnregisterMsgCallback(instance, pfnMsgCallback);
     return result;
 }
 
@@ -1728,9 +1728,9 @@ XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglDbgSetObjectTag(XGL_BASE_OBJECT object, si
     return result;
 }
 
-XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglDbgSetGlobalOption(XGL_DBG_GLOBAL_OPTION dbgOption, size_t dataSize, const void* pData)
+XGL_LAYER_EXPORT XGL_RESULT XGLAPI xglDbgSetGlobalOption(XGL_INSTANCE instance, XGL_DBG_GLOBAL_OPTION dbgOption, size_t dataSize, const void* pData)
 {
-    XGL_RESULT result = nextTable.DbgSetGlobalOption(dbgOption, dataSize, pData);
+    XGL_RESULT result = nextTable.DbgSetGlobalOption(instance, dbgOption, dataSize, pData);
     return result;
 }
 
