@@ -1749,7 +1749,7 @@ class Subcommand(object):
                     rbody.append('            for (unsigned int i = 0; i < pPacket->maxLayerCount; i++)')
                     rbody.append('                bufptr[i] = GLV_NEW_ARRAY(char, pPacket->maxStringSize);')
                 elif proto.name == 'DestroyInstance':
-                    rbody.append('            xglDbgUnregisterMsgCallback(remap(pPacket->instance), g_fpDbgMsgCallback);')
+                    rbody.append('            xglDbgUnregisterMsgCallback(m_objMapper.remap(pPacket->instance), g_fpDbgMsgCallback);')
                 rr_string = '            '
                 if ret_value:
                     rr_string = '            replayResult = '
