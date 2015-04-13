@@ -221,6 +221,9 @@ class DispatchTableOpsSubcommand(Subcommand):
             elif self.is_dispatchable_object_first_param(proto):
                 stmts.append("table->%s = (PFN_vk%s) gpa(gpu, \"vk%s\");" %
                         (proto.name, proto.name, proto.name))
+            else:
+                stmts.append("table->%s = vk%s; /* non-dispatchable */" %
+                             (proto.name, proto.name))
         stmts.append("#endif")
 
         func = []
