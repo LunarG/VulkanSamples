@@ -206,7 +206,7 @@ class Subcommand(object):
         ggei_body.append('    {0x10, "%s"}' % layer)
         ggei_body.append('};')
         ggei_body.append('')
-        ggei_body.append('VK_LAYER_EXPORT VK_RESULT VKAPI vkGetGlobalExtensionInfo(VkExtensionInfoType infoType, uint32_t extensionIndex, size_t* pDataSize, void* pData)')
+        ggei_body.append('VK_LAYER_EXPORT VkResult VKAPI vkGetGlobalExtensionInfo(VkExtensionInfoType infoType, uint32_t extensionIndex, size_t* pDataSize, void* pData)')
         ggei_body.append('{')
         ggei_body.append('    VkExtensionProperties *ext_props;')
         ggei_body.append('    uint32_t *count;')
