@@ -24,6 +24,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <assert.h>
+#include <map>
 #include <unordered_map>
 #include <vector>
 #include "loader_platform.h"
@@ -145,6 +146,96 @@ VK_LAYER_EXPORT VkResult VKAPI vkGetGlobalExtensionInfo(
     };
 
     return VK_SUCCESS;
+}
+
+
+static int
+value_or_default(std::unordered_map<unsigned, unsigned> const &map, unsigned id, int def)
+{
+    auto it = map.find(id);
+    if (it == map.end())
+        return def;
+    else
+        return it->second;
+}
+
+
+struct interface_var {
+    uint32_t id;
+    uint32_t type_id;
+    /* TODO: collect the name, too? Isn't required to be present. */
+};
+
+
+static void
+collect_interface_by_location(shader_source const *src, spv::StorageClass interface,
+                              std::map<uint32_t, interface_var> &out,
+                              std::map<uint32_t, interface_var> &builtins_out)
+{
+    unsigned int const *code = (unsigned int const *)&src->words[0];
+    size_t size = src->words.size();
+
+    if (code[0] != spv::MagicNumber) {
+        printf("Invalid magic.\n");
+        return;
+    }
+
+    std::unordered_map<unsigned, unsigned> var_locations;
+    std::unordered_map<unsigned, unsigned> var_builtins;
+
+    unsigned word = 5;
+    while (word < size) {
+
+        unsigned opcode = code[word] & 0x0ffffu;
+        unsigned oplen = (code[word] & 0xffff0000u) >> 16;
+
+        /* We consider two interface models: SSO rendezvous-by-location, and
+         * builtins. Complain about anything that fits neither model.
+         */
+        if (opcode == spv::OpDecorate) {
+            if (code[word+2] == spv::DecLocation) {
+                var_locations[code[word+1]] = code[word+3];
+            }
+
+            if (code[word+2] == spv::DecBuiltIn) {
+                var_builtins[code[word+1]] = code[word+3];
+            }
+        }
+
+        /* TODO: handle grouped decorations */
+        /* TODO: handle index=1 dual source outputs from FS -- two vars will
+         * have the same location, and we DONT want to clobber. */
+
+        if (opcode == spv::OpVariable && code[word+3] == interface) {
+            int location = value_or_default(var_locations, code[word+2], -1);
+            int builtin = value_or_default(var_builtins, code[word+2], -1);
+
+            if (location == -1 && builtin == -1) {
+                /* No location defined, and not bound to an API builtin.
+                 * The spec says nothing about how this case works (or doesn't)
+                 * for interface matching.
+                 */
+                printf("WARN: var %d (type %d) in %s interface has no Location or Builtin decoration\n",
+                       code[word+2], code[word+1], interface == spv::StorageInput ? "input" : "output");
+            }
+            else if (location != -1) {
+                /* A user-defined interface variable, with a location. */
+                interface_var v;
+                v.id = code[word+2];
+                v.type_id = code[word+1];
+                out[location] = v;
+            }
+            else {
+                /* A builtin interface variable */
+                interface_var v;
+                v.id = code[word+2];
+                v.type_id = code[word+1];
+                builtins_out[builtin] = v;
+            }
+        }
+
+        word += oplen;
+    }
 }
 
 
