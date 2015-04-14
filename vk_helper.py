@@ -342,7 +342,7 @@ class StructWrapperGen:
         self.struct_dict = in_struct_dict
         self.include_headers = []
         self.api = prefix
-        if prefix == "vulkan":
+        if prefix.lower() == "vulkan":
             self.api_prefix = "vk"
         else:
             self.api_prefix = prefix
@@ -1140,7 +1140,7 @@ class StructWrapperGen:
 
     def _generateSizeHelperHeaderC(self):
         header = []
-        header.append('#include "xgl_struct_size_helper.h"')
+        header.append('#include "vk_struct_size_helper.h"')
         header.append('#include <string.h>')
         header.append('#include <assert.h>')
         header.append('\n// Function definitions\n')
