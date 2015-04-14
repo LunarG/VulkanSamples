@@ -305,7 +305,8 @@ static void loader_destroy_ext_list()
 #endif
 
 static void loader_add_to_ext_list(uint32_t count,
-                                   struct extension_property *prop_list)
+                                   struct extension_property *prop_list,
+                                   bool is_layer_ext)
 {
     uint32_t i, j;
     bool duplicate;
@@ -369,14 +370,14 @@ static void loader_coalesce_extensions()
 
     // traverse scanned icd list adding non-duplicate extensions to the list
     while (icd_list != NULL) {
-        loader_add_to_ext_list(icd_list->extension_count, icd_list->extensions);
+        loader_add_to_ext_list(icd_list->extension_count, icd_list->extensions, false);
         icd_list = icd_list->next;
     };
 
     //Traverse layers list adding non-duplicate extensions to the list
     for (i = 0; i < loader.scanned_layer_count; i++) {
         loader_add_to_ext_list(loader.scanned_layers[i].extension_count,
-                loader.scanned_layers[i].extensions);
+                loader.scanned_layers[i].extensions, true);
     }
 }
 
@@ -773,7 +774,9 @@ static bool loader_layers_activated(const struct loader_icd *icd, const uint32_t
         return false;
 }
 
-static void loader_init_layer_libs(struct loader_icd *icd, uint32_t gpu_index, struct layer_name_pair * pLayerNames, uint32_t count)
+static void loader_init_layer_libs(struct loader_icd *icd, uint32_t gpu_index,
+                                   struct layer_name_pair * pLayerNames,
+                                   uint32_t count)
 {
     if (!icd)
         return;
@@ -783,7 +786,10 @@ static void loader_init_layer_libs(struct loader_icd *icd, uint32_t gpu_index, s
     for (uint32_t i = 0; i < count; i++) {
         foundLib = false;
         for (uint32_t j = 0; j < icd->layer_count[gpu_index]; j++) {
-            if (icd->layer_libs[gpu_index][j].lib_handle && !strcmp(icd->layer_libs[gpu_index][j].name, (char *) pLayerNames[i].layer_name)) {
+            if (icd->layer_libs[gpu_index][j].lib_handle &&
+                !strcmp(icd->layer_libs[gpu_index][j].name,
+                (char *) pLayerNames[i].layer_name) &&
+                strcmp("Validation", (char *) pLayerNames[i].layer_name)) {
                 foundLib = true;
                 break;
             }
@@ -797,7 +803,8 @@ static void loader_init_layer_libs(struct loader_icd *icd, uint32_t gpu_index, s
                 loader_log(VK_DBG_MSG_ERROR, 0, loader_platform_open_library_error(pLayerNames[i].lib_name));
                 continue;
             } else {
-                loader_log(VK_DBG_MSG_UNKNOWN, 0, "Inserting layer %s from library %s", pLayerNames[i].layer_name, pLayerNames[i].lib_name);
+                loader_log(VK_DBG_MSG_UNKNOWN, 0, "Inserting layer %s from library %s",
+                           pLayerNames[i].layer_name, pLayerNames[i].lib_name);
             }
             free(pLayerNames[i].layer_name);
             icd->layer_count[gpu_index]++;
@@ -805,10 +812,14 @@ static void loader_init_layer_libs(struct loader_icd *icd, uint32_t gpu_index, s
     }
 }
 
-static bool find_layer_extension(struct loader_icd *icd, uint32_t gpu_index, const char *pExtName, const char **lib_name)
+static bool find_layer_extension(struct loader_icd *icd, uint32_t gpu_index,
+                                 const char *pExtName, uint32_t *out_count,
+                                 char *lib_name[MAX_LAYER_LIBRARIES])
 {
     char *search_name;
-    uint32_t j;
+    uint32_t j, found_count = 0;
+    bool must_be_hosted;
+    bool found = false;
 
     /*
      * The loader provides the abstraction that make layers and extensions work via
@@ -821,43 +832,49 @@ static bool find_layer_extension(struct loader_icd *icd, uint32_t gpu_index, con
     // TODO: what about GetPhysicalDeviceExtension for device specific layers/extensions
 
     for (j = 0; j < loader.scanned_layer_count; j++) {
-        if (lib_name) {
-            *lib_name = loader.scanned_layers[j].name;
-        }
+
+        if (!strcmp("Validation", pExtName))
+            must_be_hosted = false;
+        else
+            must_be_hosted = true;
         if (has_extension(loader.scanned_layers[j].extensions,
                           loader.scanned_layers[j].extension_count, pExtName,
-                          true))
+                          must_be_hosted)) {
 
-            return true;
+            found = true;
+            lib_name[found_count] = loader.scanned_layers[j].name;
+            found_count++;
+        } else {
+            // Extension not found in list for the layer, so test the layer name
+            // as if it is an extension name. Use default layer name based on
+            // library name VK_LAYER_LIBRARY_PREFIX<name>.VK_LIBRARY_SUFFIX
+            char *pEnd;
+            size_t siz;
 
-        // Extension not found in list for the layer, so test the layer name
-        // as if it is an extension name. Use default layer name based on
-        // library name VK_LAYER_LIBRARY_PREFIX<name>.VK_LIBRARY_SUFFIX
-        char *pEnd;
-        size_t siz;
+            search_name = loader.scanned_layers[j].name;
+            search_name = basename(search_name);
+            search_name += strlen(VK_LAYER_LIBRARY_PREFIX);
+            pEnd = strrchr(search_name, '.');
+            siz = (int) (pEnd - search_name);
+            if (siz != strlen(pExtName))
+                continue;
 
-        search_name = loader.scanned_layers[j].name;
-        search_name = basename(search_name);
-        search_name += strlen(VK_LAYER_LIBRARY_PREFIX);
-        pEnd = strrchr(search_name, '.');
-        siz = (int) (pEnd - search_name);
-        if (siz != strlen(pExtName))
-            continue;
-
-        if (strncmp(search_name, pExtName, siz) == 0) {
-            return true;
+            if (strncmp(search_name, pExtName, siz) == 0) {
+                found = true;
+                lib_name[found_count] = loader.scanned_layers[j].name;
+                found_count++;
+            }
         }
     }
-    if (lib_name) {
-       *lib_name = NULL;
-    }
-    return false;
+
+    *out_count = found_count;
+    return found;
 }
 
 static uint32_t loader_get_layer_env(struct loader_icd *icd, uint32_t gpu_index, struct layer_name_pair *pLayerNames)
 {
     char *layerEnv;
-    uint32_t len, count = 0;
+    uint32_t i, len, found_count, count = 0;
     char *p, *pOrig, *next, *name;
 
 #if defined(WIN32)
@@ -883,7 +900,8 @@ static uint32_t loader_get_layer_env(struct loader_icd *icd, uint32_t gpu_index,
     pOrig = p;
 
     while (p && *p && count < MAX_LAYER_LIBRARIES) {
-        const char *lib_name = NULL;
+        char *lib_name[MAX_LAYER_LIBRARIES];
+        //memset(&lib_name[0], 0, sizeof(const char *) * MAX_LAYER_LIBRARIES);
         next = strchr(p, PATH_SEPERATOR);
         if (next == NULL) {
             len = (uint32_t) strlen(p);
@@ -894,21 +912,23 @@ static uint32_t loader_get_layer_env(struct loader_icd *icd, uint32_t gpu_index,
             next++;
         }
         name = basename(p);
-        if (!find_layer_extension(icd, gpu_index, name, &lib_name)) {
+        if (!find_layer_extension(icd, gpu_index, name, &found_count, lib_name)) {
             p = next;
             continue;
         }
 
-        len = (uint32_t) strlen(name);
-        pLayerNames[count].layer_name = malloc(len + 1);
-        if (!pLayerNames[count].layer_name) {
-            free(pOrig);
-            return count;
+        for (i = 0; i < found_count; i++) {
+            len = (uint32_t) strlen(name);
+            pLayerNames[count].layer_name = malloc(len + 1);
+            if (!pLayerNames[count].layer_name) {
+                free(pOrig);
+                return count;
+            }
+            strncpy((char *) pLayerNames[count].layer_name, name, len);
+            pLayerNames[count].layer_name[len] = '\0';
+            pLayerNames[count].lib_name = lib_name[i];
+            count++;
         }
-        strncpy((char *) pLayerNames[count].layer_name, name, len);
-        pLayerNames[count].layer_name[len] = '\0';
-        pLayerNames[count].lib_name = lib_name;
-        count++;
         p = next;
 
     }
@@ -920,8 +940,9 @@ static uint32_t loader_get_layer_env(struct loader_icd *icd, uint32_t gpu_index,
 static uint32_t loader_get_layer_libs(struct loader_icd *icd, uint32_t gpu_index, uint32_t ext_count, const char *const* ext_names, struct layer_name_pair **ppLayerNames)
 {
     static struct layer_name_pair layerNames[MAX_LAYER_LIBRARIES];
-    const char *lib_name = NULL;
-    uint32_t count = 0;
+    char *lib_name[MAX_LAYER_LIBRARIES];
+    uint32_t found_count, count = 0;
+    bool skip;
 
     *ppLayerNames =  &layerNames[0];
     /* Load any layers specified in the environment first */
@@ -930,32 +951,30 @@ static uint32_t loader_get_layer_libs(struct loader_icd *icd, uint32_t gpu_index
     for (uint32_t i = 0; i < ext_count; i++) {
         const char *pExtName = ext_names[i];
 
-        if (find_layer_extension(icd, gpu_index, pExtName, &lib_name)) {
-            uint32_t len;
-
-            /*
-             * the library name is NULL if the driver supports this
-             * extension and thus no layer to load.
-             */
-            if (lib_name == NULL)
-                continue;
-
-            len = (uint32_t) strlen(pExtName);
-            for (uint32_t j = 0; j < count; j++) {
-                if (len == strlen(layerNames[j].layer_name) &&
-                     strncmp(pExtName, layerNames[j].layer_name, len) == 0) {
-                    // Extension / Layer already on the list
-                    continue;
-                }
+        skip = false;
+        for (uint32_t j = 0; j < count; j++) {
+            if (!strcmp(pExtName, layerNames[j].layer_name) ) {
+                // Extension / Layer already on the list skip it
+                skip = true;
+                break;
             }
+        }
 
-            layerNames[count].layer_name = malloc(len + 1);
-            if (!layerNames[count].layer_name)
-                return count;
-            strncpy((char *) layerNames[count].layer_name, pExtName, len);
-            layerNames[count].layer_name[len] = '\0';
-            layerNames[count].lib_name = lib_name;
-            count++;
+        if (!skip && find_layer_extension(icd, gpu_index, pExtName, &found_count, lib_name)) {
+
+            for (uint32_t j = 0; j < found_count; j++) {
+                uint32_t len;
+                len = (uint32_t) strlen(pExtName);
+
+
+                layerNames[count].layer_name = malloc(len + 1);
+                if (!layerNames[count].layer_name)
+                    return count;
+                strncpy((char *) layerNames[count].layer_name, pExtName, len);
+                layerNames[count].layer_name[len] = '\0';
+                layerNames[count].lib_name = lib_name[j];
+                count++;
+            }
         }
     }
 
