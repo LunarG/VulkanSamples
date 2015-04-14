@@ -58,7 +58,6 @@ map<XGL_QUEUE,      MT_QUEUE_INFO*>   queueMap;
 
 // TODO : Add per-device fence completion
 static uint64_t     g_currentFenceId  = 1;
-//// LUGMAL -- becomes per-queue ////  static uint64_t     g_lastRetiredId   = 0;
 static XGL_DEVICE   globalDevice      = NULL;
 
 // Add new queue for this device to map container
@@ -85,7 +84,7 @@ static void addCBInfo(const XGL_CMD_BUFFER cb)
     MT_CB_INFO* pInfo = new MT_CB_INFO;
     memset(pInfo, 0, (sizeof(MT_CB_INFO) - sizeof(list<XGL_GPU_MEMORY>)));
     pInfo->cmdBuffer = cb;
-    cbMap[cb] = pInfo;
+    cbMap[cb]        = pInfo;
 }
 
 // Return ptr to Info in CB map, or NULL if not found
@@ -130,6 +129,7 @@ static void deleteFenceInfo(uint64_t fenceId)
 {
     if (fenceId != 0) {
         if (fenceMap.find(fenceId) != fenceMap.end()) {
+            map<uint64_t, MT_FENCE_INFO*>::iterator item;
             MT_FENCE_INFO* pDelInfo = fenceMap[fenceId];
             if (pDelInfo != NULL) {
                 if (pDelInfo->localFence == XGL_TRUE) {
@@ -137,7 +137,8 @@ static void deleteFenceInfo(uint64_t fenceId)
                 }
                 delete pDelInfo;
             }
-            fenceMap.erase(fenceId);
+            item = fenceMap.find(fenceId);
+            fenceMap.erase(item);
         }
     }
 }
@@ -202,12 +203,20 @@ static XGL_FENCE getFenceFromId(uint64_t fenceId)
 // Helper routine that updates the fence list for a specific queue to all-retired
 static void retireQueueFences(XGL_QUEUE queue)
 {
-    // Process entire list, retiring each item and update the queue's retiredID until the list is empty
-    MT_FENCE_INFO* pDelInfo = NULL;
-    for (map<uint64_t, MT_FENCE_INFO*>::iterator ii=fenceMap.begin(); ii!=fenceMap.end(); ++ii) {
-        MT_QUEUE_INFO *pQueueInfo = queueMap[queue];
-        pQueueInfo->lastRetiredId = (*ii).first;
-        deleteFenceInfo((*ii).first);
+    MT_QUEUE_INFO *pQueueInfo = queueMap[queue];
+    pQueueInfo->lastRetiredId = pQueueInfo->lastSubmittedId;
+    // Set Queue's lastRetired to lastSubmitted, free items in queue's fence list
+    map<uint64_t, MT_FENCE_INFO*>::iterator it = fenceMap.begin();
+    map<uint64_t, MT_FENCE_INFO*>::iterator temp;
+    while (it != fenceMap.end()) {
+        if (((*it).second)->queue == queue) {
+            temp = it;
+            ++temp;
+            deleteFenceInfo((*it).first);
+            it = temp;
+        } else {
+            ++it;
+        }
     }
 }
 
@@ -215,6 +224,7 @@ static void retireQueueFences(XGL_QUEUE queue)
 static void retireDeviceFences(XGL_DEVICE device)
 {
     // Process each queue for device
+    // TODO: Add multiple device support
     for (map<XGL_QUEUE, MT_QUEUE_INFO*>::iterator ii=queueMap.begin(); ii!=queueMap.end(); ++ii) {
         retireQueueFences((*ii).first);
     }
@@ -460,13 +470,10 @@ static bool32_t checkCBCompleted(const XGL_CMD_BUFFER cb)
         result = XGL_FALSE;
     } else {
         if (!fenceRetired(pCBInfo->fenceId)) {
-            // Explicitly call the internal xglGetFenceStatus routine
-            if (XGL_SUCCESS != xglGetFenceStatus(getFenceFromId(pCBInfo->fenceId))) {
-                char str[1024];
-                sprintf(str, "FenceId %" PRIx64", fence %p for CB %p has not completed", pCBInfo->fenceId, getFenceFromId(pCBInfo->fenceId), cb);
-                layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, cb, 0, MEMTRACK_NONE, "MEM", str);
-                result = XGL_FALSE;
-            }
+            char str[1024];
+            sprintf(str, "FenceId %" PRIx64", fence %p for CB %p has not been checked for completion", pCBInfo->fenceId, getFenceFromId(pCBInfo->fenceId), cb);
+            layerCbMsg(XGL_DBG_MSG_UNKNOWN, XGL_VALIDATION_LEVEL_0, cb, 0, MEMTRACK_NONE, "MEM", str);
+            result = XGL_FALSE;
         }
     }
     return result;
@@ -514,7 +521,7 @@ static bool32_t freeMemObjInfo(XGL_GPU_MEMORY mem, bool internal)
                 reportMemReferences(pInfo);
                 result = XGL_FALSE;
             }
-            // Delete mem obj info 
+            // Delete mem obj info
             deleteMemObjInfo(mem);
         }
     }
