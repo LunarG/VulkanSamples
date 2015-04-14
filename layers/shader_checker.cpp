@@ -31,14 +31,17 @@
 #include "loader_platform.h"
 #include "vk_dispatch_table_helper.h"
 #include "vkLayer.h"
+#include "layers_config.h"
+#include "layers_msg.h"
 // The following is #included again to catch certain OS-specific functions
 // being used:
 #include "loader_platform.h"
 
 #include "SPIRV/spirv.h"
 
-static std::unordered_map<void *, VkLayerDispatchTable *> tableMap;
 
+static std::unordered_map<void *, VkLayerDispatchTable *> tableMap;
+static LOADER_PLATFORM_THREAD_ONCE_DECLARATION(g_initOnce);
 
 
 static void
@@ -103,6 +106,27 @@ struct shader_source {
 static std::unordered_map<void *, shader_source *> shader_map;
 
 
+static void
+initLayer()
+{
+    const char *strOpt;
+    // initialize ShaderChecker options
+    getLayerOptionEnum("ShaderCheckerReportLevel", (uint32_t *) &g_reportingLevel);
+    g_actionIsDefault = getLayerOptionEnum("ShaderCheckerDebugAction", (uint32_t *) &g_debugAction);
+
+    if (g_debugAction & VK_DBG_LAYER_ACTION_LOG_MSG)
+    {
+        strOpt = getLayerOption("ShaderCheckerLogFilename");
+        if (strOpt)
+        {
+            g_logFile = fopen(strOpt, "w");
+        }
+        if (g_logFile == NULL)
+            g_logFile = stdout;
+    }
+}
+
+
 static VkLayerDispatchTable * initLayerTable(const VkBaseLayerObject *gpuw)
 {
     VkLayerDispatchTable *pTable;
@@ -128,6 +152,8 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateDevice(VkPhysicalGpu gpu, const VkDeviceC
 {
     VkLayerDispatchTable* pTable = tableMap[gpu];
     VkResult result = pTable->CreateDevice(gpu, pCreateInfo, pDevice);
+
+    loader_platform_thread_once(&g_initOnce, initLayer);
     // create a mapping for the device object into the dispatch table
     tableMap.emplace(*pDevice, pTable);
     return result;
@@ -726,6 +752,8 @@ VK_LAYER_EXPORT void * VKAPI vkGetProcAddr(VkPhysicalGpu gpu, const char* pName)
         return NULL;
 
     initLayerTable((const VkBaseLayerObject *) gpu);
+
+    loader_platform_thread_once(&g_initOnce, initLayer);
 
 #define ADD_HOOK(fn)    \
     if (!strncmp(#fn, pName, sizeof(#fn))) \
