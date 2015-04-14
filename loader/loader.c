@@ -42,6 +42,7 @@
 #endif // WIN32
 #include "loader_platform.h"
 #include "table_ops.h"
+#include "gpa_helper.h"
 #include "loader.h"
 #include "vkIcd.h"
 // The following is #included again to catch certain OS-specific functions
@@ -711,6 +712,28 @@ static void loader_init_dispatch_table(VkLayerDispatchTable *tab, PFN_vkGetProcA
         tab->EnumerateLayers = vkEnumerateLayers;
 }
 
+static void *loader_gpa_internal(VkPhysicalGpu gpu, const char * pName)
+{
+    if (gpu == NULL) {
+        return NULL;;
+    }
+    VkBaseLayerObject* gpuw = (VkBaseLayerObject *) gpu;
+    VkLayerDispatchTable * disp_table = * (VkLayerDispatchTable **) gpuw->baseObject;
+    void *addr;
+
+    if (disp_table == NULL)
+        return NULL;
+
+    addr = loader_lookup_dispatch_table(disp_table, pName);
+    if (addr)
+        return addr;
+    else  {
+        if (disp_table->GetProcAddr == NULL)
+            return NULL;
+        return disp_table->GetProcAddr(gpuw->nextObject, pName);
+    }
+}
+
 extern struct loader_icd * loader_get_icd(const VkBaseLayerObject *gpu, uint32_t *gpu_index)
 {
     /*
@@ -971,7 +994,7 @@ extern uint32_t loader_activate_layers(struct loader_icd *icd, uint32_t gpu_inde
     if (!loader_layers_activated(icd, gpu_index)) {
         VkBaseLayerObject *gpuObj = gpu;
         VkBaseLayerObject *nextGpuObj, *baseObj = gpuObj->baseObject;
-        PFN_vkGetProcAddr nextGPA = vkGetProcAddr;
+        PFN_vkGetProcAddr nextGPA = loader_gpa_internal;
 
         count = loader_get_layer_libs(icd, gpu_index, ext_count, ext_names, &pLayerNames);
         if (!count)
@@ -1211,12 +1234,21 @@ LOADER_EXPORT VkResult VKAPI vkEnumerateGpus(
 LOADER_EXPORT void * VKAPI vkGetProcAddr(VkPhysicalGpu gpu, const char * pName)
 {
     if (gpu == NULL) {
-        return NULL;
+
+        /* return entrypoint addresses that are global (in the loader)*/
+        return globalGetProcAddr(pName);
     }
-    VkBaseLayerObject* gpuw = (VkBaseLayerObject *) gpu;
-    VkLayerDispatchTable * disp_table = * (VkLayerDispatchTable **) gpuw->baseObject;
+
     void *addr;
 
+    /* for entrypoints that loader must handle (ie non-dispatchable or create object)
+       make sure the loader entrypoint is returned */
+    addr = loader_non_passthrough_gpa(pName);
+    if (addr)
+        return addr;
+
+    /* return the dispatch table entrypoint for the fastest case */
+    const VkLayerDispatchTable *disp_table = * (VkLayerDispatchTable **) gpu;
     if (disp_table == NULL)
         return NULL;
 
@@ -1226,7 +1258,7 @@ LOADER_EXPORT void * VKAPI vkGetProcAddr(VkPhysicalGpu gpu, const char * pName)
     else  {
         if (disp_table->GetProcAddr == NULL)
             return NULL;
-        return disp_table->GetProcAddr(gpuw->nextObject, pName);
+        return disp_table->GetProcAddr(gpu, pName);
     }
 }
 

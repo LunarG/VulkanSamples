@@ -33,7 +33,6 @@ def generate_get_proc_addr_check(name):
     return "    if (!%s || %s[0] != 'v' || %s[1] != 'k')\n" \
            "        return NULL;" % ((name,) * 3)
 
-
 class Subcommand(object):
     def __init__(self, argv):
         self.argv = argv
@@ -42,6 +41,18 @@ class Subcommand(object):
 
     def run(self):
         print(self.generate())
+
+    def _does_function_create_object(self, proto):
+        out_objs = proto.object_out_params()
+        if proto.name == "ResetFences":
+            return False
+        return out_objs and out_objs[-1] == proto.params[-1]
+
+    def _is_loader_special_case(self, proto):
+        if proto.name in ["GetProcAddr", "EnumerateGpus", "EnumerateLayers"]:
+            return True
+        return not self.is_dispatchable_object_first_param(proto)
+
 
     def is_dispatchable_object_first_param(self, proto):
         in_objs = proto.object_in_params()
@@ -106,12 +117,6 @@ class Subcommand(object):
 class LoaderEntrypointsSubcommand(Subcommand):
     def generate_header(self):
         return "#include \"loader.h\""
-
-    def _is_loader_special_case(self, proto):
-        if proto.name in ["GetProcAddr", "EnumerateGpus", "EnumerateLayers"]:
-            return True
-
-        return not self.is_dispatchable_object_first_param(proto)
 
     def _generate_object_setup(self, proto):
         method = "loader_init_data"
@@ -454,6 +459,70 @@ class WinDefFileSubcommand(Subcommand):
 
         return "\n".join(body)
 
+class LoaderGetProcAddrSubcommand(Subcommand):
+    def run(self):
+        self.prefix = "vk"
+
+        # we could get the list from argv if wanted
+        self.intercepted = [proto.name for proto in self.protos]
+
+        for proto in self.protos:
+            if proto.name == "GetProcAddr":
+                self.gpa = proto
+
+        super().run()
+
+    def generate_header(self):
+        return "\n".join(["#include <string.h>"])
+
+    def generate_body(self):
+        lookups = []
+        for proto in self.protos:
+            if proto.name not in self.intercepted:
+                lookups.append("/* no %s%s */" % (self.prefix, proto.name))
+                continue
+
+            if 'WsiX11AssociateConnection' == proto.name:
+                lookups.append("#if defined(__linux__) || defined(XCB_NVIDIA)")
+            lookups.append("if (!strcmp(name, \"%s\"))" % proto.name)
+            lookups.append("    return (%s) %s%s;" %
+                    (self.gpa.ret, self.prefix, proto.name))
+        lookups.append("#endif")
+
+        special_lookups = []
+        # these functions require special trampoline code beyond just the normal create object trampoline code
+        special_names = ["AllocDescriptorSets", "GetMultiGpuCompatibility"]
+        for proto in self.protos:
+            if self._is_loader_special_case(proto) or self._does_function_create_object(proto) or proto.name in special_names:
+                special_lookups.append("if (!strcmp(name, \"%s\"))" % proto.name)
+                special_lookups.append("    return (%s) %s%s;" %
+                        (self.gpa.ret, self.prefix, proto.name))
+            else:
+                continue
+        body = []
+        body.append("static inline %s globalGetProcAddr(const char *name)" %
+                self.gpa.ret)
+        body.append("{")
+        body.append(generate_get_proc_addr_check("name"))
+        body.append("")
+        body.append("    name += 2;")
+        body.append("    %s" % "\n    ".join(lookups))
+        body.append("")
+        body.append("    return NULL;")
+        body.append("}")
+        body.append("")
+        body.append("static inline void *loader_non_passthrough_gpa(const char *name)")
+        body.append("{")
+        body.append(generate_get_proc_addr_check("name"))
+        body.append("")
+        body.append("    name += 2;")
+        body.append("    %s" % "\n    ".join(special_lookups))
+        body.append("")
+        body.append("    return NULL;")
+        body.append("}")
+
+        return "\n".join(body)
+
 def main():
     subcommands = {
             "loader-entrypoints": LoaderEntrypointsSubcommand,
@@ -462,6 +531,7 @@ def main():
             "icd-get-proc-addr": IcdGetProcAddrSubcommand,
             "layer-intercept-proc": LayerInterceptProcSubcommand,
             "win-def-file": WinDefFileSubcommand,
+            "loader-get-proc-addr": LoaderGetProcAddrSubcommand,
     }
 
     if len(sys.argv) < 2 or sys.argv[1] not in subcommands:
