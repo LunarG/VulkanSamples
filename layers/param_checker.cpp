@@ -262,10 +262,11 @@ struct extProps {
     const char * const name;
 };
 
-#define PARAM_CHECKER_LAYER_EXT_ARRAY_SIZE 1
+#define PARAM_CHECKER_LAYER_EXT_ARRAY_SIZE 2
 static const struct extProps pcExts[PARAM_CHECKER_LAYER_EXT_ARRAY_SIZE] = {
     // TODO what is the version?
     0x10, "ParamChecker",
+    0x10, "Validation",
 };
 
 VK_LAYER_EXPORT VkResult VKAPI vkGetGlobalExtensionInfo(

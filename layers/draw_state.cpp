@@ -1470,10 +1470,14 @@ struct extProps {
     uint32_t version;
     const char * const name;
 };
-#define DRAW_STATE_LAYER_EXT_ARRAY_SIZE 1
+#define DRAW_STATE_LAYER_EXT_ARRAY_SIZE 5
 static const struct extProps dsExts[DRAW_STATE_LAYER_EXT_ARRAY_SIZE] = {
     // TODO what is the version?
-    0x10, "DrawState"
+    0x10, "DrawState",
+    0x10, "Validation",
+    0x10, "drawStateDumpDotFile",
+    0x10, "drawStateDumpCommandBufferDotFile",
+    0x10, "drawStateDumpPngFile"
 };
 
 VK_LAYER_EXPORT VkResult VKAPI vkGetGlobalExtensionInfo(
@@ -1637,6 +1641,8 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateGraphicsPipelineDerivative(
     track_pipeline(pCreateInfo, pPipeline);
 
     loader_platform_thread_unlock_mutex(&globalLock);
+
+    return result;
 }
 
 VK_LAYER_EXPORT VkResult VKAPI vkCreateSampler(VkDevice device, const VkSamplerCreateInfo* pCreateInfo, VkSampler* pSampler)

@@ -878,10 +878,11 @@ struct extProps {
     uint32_t version;
     const char * const name;
 };
-#define MEM_TRACKER_LAYER_EXT_ARRAY_SIZE 1
+#define MEM_TRACKER_LAYER_EXT_ARRAY_SIZE 2
 static const struct extProps mtExts[MEM_TRACKER_LAYER_EXT_ARRAY_SIZE] = {
     // TODO what is the version?
-    0x10, "MemTracker"
+    0x10, "MemTracker",
+    0x10, "Validation"
 };
 
 VK_LAYER_EXPORT VkResult VKAPI vkGetGlobalExtensionInfo(
