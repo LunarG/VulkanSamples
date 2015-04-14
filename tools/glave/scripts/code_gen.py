@@ -4,7 +4,7 @@ import sys
 
 # code_gen.py overview
 # This script generates code based on input headers
-# Initially it's intended to support Mantle and XGL headers and
+# Initially it's intended to support Mantle and Vulkan headers and
 #  generate wrappers functions that can be used to display
 #  structs in a human-readable txt format, as well as utility functions
 #  to print enum values as strings
@@ -333,7 +333,7 @@ class StructWrapperGen:
         
     def _generateClassDefinition(self):
         class_def = []
-        if 'xgl' == self.api: # Mantle doesn't have pNext to worry about
+        if 'vulkan' == self.api: # Mantle doesn't have pNext to worry about
             class_def.append(self._generateDynamicPrintFunctions())
         for s in self.struct_dict:
             class_def.append("\n// %s class definition" % self.get_class_name(s))
@@ -356,7 +356,7 @@ class StructWrapperGen:
     def _generateDynamicPrintFunctions(self):
         dp_funcs = []
         dp_funcs.append("\nvoid dynamic_display_full_txt(const void* pStruct, uint32_t indent)\n{\n    // Cast to APP_INFO ptr initially just to pull sType off struct")
-        dp_funcs.append("    XGL_STRUCTURE_TYPE sType = ((XGL_APPLICATION_INFO*)pStruct)->sType;    switch (sType)\n    {")
+        dp_funcs.append("    VK_STRUCTURE_TYPE sType = ((VK_APPLICATION_INFO*)pStruct)->sType;    switch (sType)\n    {")
         for e in enum_type_dict:
             class_num = 0
             if "_STRUCTURE_TYPE" in e:
@@ -364,13 +364,13 @@ class StructWrapperGen:
                     struct_name = v.replace("_STRUCTURE_TYPE", "")
                     class_name = self.get_class_name(struct_name)
                     # TODO : Hand-coded fixes for some exceptions
-                    if 'XGL_PIPELINE_CB_STATE_CREATE_INFO' in struct_name:
-                        struct_name = 'XGL_PIPELINE_CB_STATE'
-                    elif 'XGL_SEMAPHORE_CREATE_INFO' in struct_name:
-                        struct_name = 'XGL_SEMAPHORE_CREATE_INFO'
+                    if 'VK_PIPELINE_CB_STATE_CREATE_INFO' in struct_name:
+                        struct_name = 'VK_PIPELINE_CB_STATE'
+                    elif 'VK_SEMAPHORE_CREATE_INFO' in struct_name:
+                        struct_name = 'VK_SEMAPHORE_CREATE_INFO'
                         class_name = self.get_class_name(struct_name)
-                    elif 'XGL_SEMAPHORE_OPEN_INFO' in struct_name:
-                        struct_name = 'XGL_SEMAPHORE_OPEN_INFO'
+                    elif 'VK_SEMAPHORE_OPEN_INFO' in struct_name:
+                        struct_name = 'VK_SEMAPHORE_OPEN_INFO'
                         class_name = self.get_class_name(struct_name)
                     instance_name = "swc%i" % class_num
                     dp_funcs.append("        case %s:\n        {" % (v))
@@ -817,12 +817,12 @@ if __name__ == "__main__":
 #}
 
 # Dynamic print function
-# void dynamic_display_full_txt(XGL_STRUCTURE_TYPE sType, void* pStruct, uint32_t indent)
+# void dynamic_display_full_txt(VK_STRUCTURE_TYPE sType, void* pStruct, uint32_t indent)
 # {
 #     switch (sType)
 #     {
-#         case XGL_STRUCTURE_TYPE_COLOR_BLEND_STATE_CREATE_INFO:
-#             xgl_color_blend_state_create_info_struct_wrapper swc((XGL_COLOR_BLEND_STATE_CREATE_INFO*)pStruct);
+#         case VK_STRUCTURE_TYPE_COLOR_BLEND_STATE_CREATE_INFO:
+#             vk_color_blend_state_create_info_struct_wrapper swc((VK_COLOR_BLEND_STATE_CREATE_INFO*)pStruct);
 #             swc.set_indent(indent);
 #             swc.display_full_txt();
 #     }

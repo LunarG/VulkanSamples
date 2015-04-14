@@ -21,26 +21,26 @@
  * THE SOFTWARE.
  *
  *************************************************************************/
-#ifndef GLVDEBUG_XGL_QCONTROLLER_H
-#define GLVDEBUG_XGL_QCONTROLLER_H
+#ifndef GLVDEBUG_VK_QCONTROLLER_H
+#define GLVDEBUG_VK_QCONTROLLER_H
 
 #include "glv_trace_packet_identifiers.h"
-#include "glvdebug_xgl_qgroupframesproxymodel.h"
+#include "glvdebug_vk_qgroupframesproxymodel.h"
 #include "glvdebug_qgroupthreadsproxymodel.h"
 #include "glvdebug_qsvgviewer.h"
 #include "glvdebug_QReplayWidget.h"
 #include "glvdebug_QReplayWorker.h"
-#include "glvdebug_xgl_qfile_model.h"
+#include "glvdebug_vk_qfile_model.h"
 #include <QObject>
 #include <QLabel>
 #include <QScrollArea>
 
-class glvdebug_xgl_QController : public QObject
+class glvdebug_vk_QController : public QObject
 {
     Q_OBJECT
 public:
-    glvdebug_xgl_QController();
-    virtual ~glvdebug_xgl_QController();
+    glvdebug_vk_QController();
+    virtual ~glvdebug_vk_QController();
 
     glv_trace_packet_header* InterpretTracePacket(glv_trace_packet_header* pHeader);
     bool LoadTraceFile(glvdebug_trace_file_info* pTraceFileInfo, glvdebug_view* pView);
@@ -72,8 +72,8 @@ private:
     glvdebug_qsvgviewer* m_pDrawStateDiagram;
     glvdebug_qsvgviewer* m_pCommandBuffersDiagram;
     glvdebug_QReplayWidget* m_pReplayWidget;
-    glvdebug_xgl_QFileModel* m_pTraceFileModel;
-    glvdebug_xgl_QGroupFramesProxyModel m_groupByFramesProxy;
+    glvdebug_vk_QFileModel* m_pTraceFileModel;
+    glvdebug_vk_QGroupFramesProxyModel m_groupByFramesProxy;
     glvdebug_QGroupThreadsProxyModel m_groupByThreadsProxy;
 
     void setStateWidgetsEnabled(bool bEnabled);
@@ -81,4 +81,4 @@ private:
     void deleteStateDumps() const;
 };
 
-#endif // GLVDEBUG_XGL_QCONTROLLER_H
+#endif // GLVDEBUG_VK_QCONTROLLER_H

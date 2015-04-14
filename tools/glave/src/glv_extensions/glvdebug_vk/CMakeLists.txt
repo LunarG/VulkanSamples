@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 2.8)
 # this project is currently only available on Linux
 #if (${CMAKE_SYSTEM_NAME} MATCHES "Linux")
 
-project(glvdebug_xgl)
+project(glvdebug_vk)
 
 include("${SRC_DIR}/build_options.cmake")
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR}/../../..)
@@ -13,7 +13,7 @@ find_package(Qt5 COMPONENTS Widgets Gui Core Svg QUIET)
 if(NOT Qt5_FOUND)
 # After Qt5.3 is installed, you may need to add the following to the cmake command line:
 # -DQt5_DIR=/home/<username>/Qt/5.3/gcc_64/lib/cmake/Qt5
-message(WARNING "WARNING: glvdebug_xgl will be excluded because Qt5 was not found.")
+message(WARNING "WARNING: glvdebug_vk will be excluded because Qt5 was not found.")
 else()
 
 include_directories(${CMAKE_CURRENT_BINARY_DIR} ${SRC_DIR}/../../../include)
@@ -24,36 +24,36 @@ add_custom_command(OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/codegen/glv_vk_packet_id.h
                           ${CMAKE_CURRENT_SOURCE_DIR}/codegen/glv_vk_vk_structs.h
                           ${CMAKE_CURRENT_SOURCE_DIR}/codegen/glv_vk_vkwsix11ext_structs.h
                           ${CMAKE_CURRENT_SOURCE_DIR}/codegen/glv_vk_vkdbg_structs.h
-                          ${CMAKE_CURRENT_SOURCE_DIR}/codegen/xgl_enum_string_helper.h
+                          ${CMAKE_CURRENT_SOURCE_DIR}/codegen/vk_enum_string_helper.h
         COMMAND ${PYTHON_CMD} ${SRC_DIR}/../scripts/vk_generate.py glave-packet-id > glv_vk_packet_id.h
         COMMAND ${PYTHON_CMD} ${SRC_DIR}/../scripts/vk_generate.py glave-core-structs > glv_vk_vk_structs.h
         COMMAND ${PYTHON_CMD} ${SRC_DIR}/../scripts/vk_generate.py glave-wsi-trace-structs > glv_vk_vkwsix11ext_structs.h
         COMMAND ${PYTHON_CMD} ${SRC_DIR}/../scripts/vk_generate.py glave-dbg-trace-structs > glv_vk_vkdbg_structs.h
-        COMMAND ${PYTHON_CMD} ${SRC_DIR}/../../../xgl_helper.py --gen_enum_string_helper ${SRC_DIR}/../../../include/xgl.h --abs_out_dir ${CMAKE_CURRENT_SOURCE_DIR}/codegen
+        COMMAND ${PYTHON_CMD} ${SRC_DIR}/../../../vk_helper.py --gen_enum_string_helper ${SRC_DIR}/../../../include/vulkan.h --abs_out_dir ${CMAKE_CURRENT_SOURCE_DIR}/codegen
                    DEPENDS ${SRC_DIR}/../scripts/vk_generate.py
-                           ${SRC_DIR}/../../../xgl_helper.py
+                           ${SRC_DIR}/../../../vk_helper.py
                    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/codegen)
 
 if (${CMAKE_SYSTEM_NAME} MATCHES "Windows")
-    set(PATH_TO_WIN_XGL ${CMAKE_CURRENT_BINARY_DIR}/../../../../../loader/${CMAKE_CFG_INTDIR})
+    set(PATH_TO_WIN_VULKAN ${CMAKE_CURRENT_BINARY_DIR}/../../../../../loader/${CMAKE_CFG_INTDIR})
     set(OS_REPLAYER_LIBS
-        ${PATH_TO_WIN_XGL}/XGL.lib
+        ${PATH_TO_WIN_VULKAN}/vulkan.lib
 )
 endif()
 
 if (${CMAKE_SYSTEM_NAME} MATCHES "Linux")
 set(OS_REPLAYER_LIBS
-    ${CMAKE_CURRENT_BINARY_DIR}/../../../../../loader/libXGL.so
+    ${CMAKE_CURRENT_BINARY_DIR}/../../../../../loader/libvulkan.so
     xcb
 )
 endif()
 
 set(SRC_LIST
     ${SRC_LIST}
-    glvdebug_xgl.cpp
-    glvdebug_xgl_settings.cpp
-    glvdebug_xgl_qcontroller.cpp
-    glvdebug_xgl_qfile_model.cpp
+    glvdebug_vk.cpp
+    glvdebug_vk_settings.cpp
+    glvdebug_vk_qcontroller.cpp
+    glvdebug_vk_qfile_model.cpp
     ${SRC_DIR}/glvdebug/glvdebug_QReplayWorker.cpp
     ${SRC_DIR}/glvreplay/glvreplay_factory.cpp
 )
@@ -61,9 +61,9 @@ set(SRC_LIST
 # This should only contain headers that define a QOBJECT
 # Typically that means just headers for UI objects
 set(UI_HEADER_LIST
-    glvdebug_xgl_qcontroller.h
-    glvdebug_xgl_qfile_model.h
-    glvdebug_xgl_qgroupframesproxymodel.h
+    glvdebug_vk_qcontroller.h
+    glvdebug_vk_qfile_model.h
+    glvdebug_vk_qgroupframesproxymodel.h
     ${SRC_DIR}/glvdebug/glvdebug_qgroupthreadsproxymodel.h
     ${SRC_DIR}/glvdebug/glvdebug_qimageviewer.h
     ${SRC_DIR}/glvdebug/glvdebug_qsvgviewer.h
@@ -73,8 +73,8 @@ set(UI_HEADER_LIST
 )
 
 set(HDR_LIST
-    glvdebug_xgl_settings.h
-    glvdebug_xgl_qgroupframesproxymodel.h
+    glvdebug_vk_settings.h
+    glvdebug_vk_qgroupframesproxymodel.h
     codegen/glv_vk_packet_id.h
     codegen/glv_vk_vk_structs.h
     codegen/glv_vk_vkwsix11ext_structs.h

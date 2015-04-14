@@ -23,10 +23,10 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#include "glvreplay_xgl_xglreplay.h"
+#include "glvreplay_vk_vkreplay.h"
 
-xglDisplay::xglDisplay()
-    : m_initedXGL(false),
+vkDisplay::vkDisplay()
+    : m_initedVK(false),
     m_windowWidth(0),
     m_windowHeight(0)
 {
@@ -41,7 +41,7 @@ xglDisplay::xglDisplay()
 #endif
 }
 
-xglDisplay::~xglDisplay()
+vkDisplay::~vkDisplay()
 {
 #if defined(PLATFORM_LINUX) || defined(XCB_NVIDIA)
     if (m_XcbWindow != 0)
@@ -55,31 +55,31 @@ xglDisplay::~xglDisplay()
 #endif
 }
 
-XGL_RESULT xglDisplay::init_xgl(unsigned int gpu_idx)
+VK_RESULT vkDisplay::init_vk(unsigned int gpu_idx)
 {
 #if 0
-    XGL_APPLICATION_INFO appInfo = {};
+    VK_APPLICATION_INFO appInfo = {};
     appInfo.pAppName = APP_NAME;
     appInfo.pEngineName = "";
-    appInfo.apiVersion = XGL_API_VERSION;
-    XGL_RESULT res = xglInitAndEnumerateGpus(&appInfo, NULL, XGL_MAX_PHYSICAL_GPUS, &m_gpuCount, m_gpus);
-    if ( res == XGL_SUCCESS ) {
+    appInfo.apiVersion = VK_API_VERSION;
+    VK_RESULT res = vkInitAndEnumerateGpus(&appInfo, NULL, VK_MAX_PHYSICAL_GPUS, &m_gpuCount, m_gpus);
+    if ( res == VK_SUCCESS ) {
         // retrieve the GPU information for all GPUs
         for( uint32_t gpu = 0; gpu < m_gpuCount; gpu++)
         {
             size_t gpuInfoSize = sizeof(m_gpuProps[0]);
 
             // get the GPU physical properties:
-            res = xglGetGpuInfo( m_gpus[gpu], XGL_INFO_TYPE_PHYSICAL_GPU_PROPERTIES, &gpuInfoSize, &m_gpuProps[gpu]);
-            if (res != XGL_SUCCESS)
+            res = vkGetGpuInfo( m_gpus[gpu], VK_INFO_TYPE_PHYSICAL_GPU_PROPERTIES, &gpuInfoSize, &m_gpuProps[gpu]);
+            if (res != VK_SUCCESS)
                 glv_LogWarn("Failed to retrieve properties for gpu[%d] result %d\n", gpu, res);
         }
-        res = XGL_SUCCESS;
+        res = VK_SUCCESS;
     } else if ((gpu_idx + 1) > m_gpuCount) {
-        glv_LogError("xglInitAndEnumerate number of gpus does not include requested index: num %d, requested %d\n", m_gpuCount, gpu_idx);
+        glv_LogError("vkInitAndEnumerate number of gpus does not include requested index: num %d, requested %d\n", m_gpuCount, gpu_idx);
         return -1;
     } else {
-        glv_LogError("xglInitAndEnumerate failed\n");
+        glv_LogError("vkInitAndEnumerate failed\n");
         return res;
     }
     // TODO add multi-gpu support always use gpu[gpu_idx] for now
@@ -88,51 +88,51 @@ XGL_RESULT xglDisplay::init_xgl(unsigned int gpu_idx)
     bool foundWSIExt = false;
     for( int ext = 0; ext < sizeof( extensions ) / sizeof( extensions[0] ); ext++)
     {
-        res = xglGetExtensionSupport( m_gpus[gpu_idx], extensions[ext] );
-        if (res == XGL_SUCCESS) {
+        res = vkGetExtensionSupport( m_gpus[gpu_idx], extensions[ext] );
+        if (res == VK_SUCCESS) {
             m_extensions.push_back((char *) extensions[ext]);
-            if (!strcmp(extensions[ext], "XGL_WSI_WINDOWS"))
+            if (!strcmp(extensions[ext], "VK_WSI_WINDOWS"))
                 foundWSIExt = true;
         }
     }
     if (!foundWSIExt) {
-        glv_LogError("XGL_WSI_WINDOWS extension not supported by gpu[%d]\n", gpu_idx);
-        return XGL_ERROR_INCOMPATIBLE_DEVICE;
+        glv_LogError("VK_WSI_WINDOWS extension not supported by gpu[%d]\n", gpu_idx);
+        return VK_ERROR_INCOMPATIBLE_DEVICE;
     }
     // TODO generalize this: use one universal queue for now
-    XGL_DEVICE_QUEUE_CREATE_INFO dqci = {};
+    VK_DEVICE_QUEUE_CREATE_INFO dqci = {};
     dqci.queueCount = 1;
-    dqci.queueType = XGL_QUEUE_UNIVERSAL;
+    dqci.queueType = VK_QUEUE_UNIVERSAL;
     // create the device enabling validation level 4
     const char * const * extNames = &m_extensions[0];
-    XGL_DEVICE_CREATE_INFO info = {};
+    VK_DEVICE_CREATE_INFO info = {};
     info.queueRecordCount = 1;
     info.pRequestedQueues = &dqci;
     info.extensionCount = static_cast <uint32_t> (m_extensions.size());
     info.ppEnabledExtensionNames = extNames;
-    info.flags = XGL_DEVICE_CREATE_VALIDATION;
-    info.maxValidationLevel = XGL_VALIDATION_LEVEL_4;
-    bool32_t xglTrue = XGL_TRUE;
-    res = xglDbgSetGlobalOption( XGL_DBG_OPTION_BREAK_ON_ERROR, sizeof( xglTrue ), &xglTrue );
-    if (res != XGL_SUCCESS)
+    info.flags = VK_DEVICE_CREATE_VALIDATION;
+    info.maxValidationLevel = VK_VALIDATION_LEVEL_4;
+    bool32_t vkTrue = VK_TRUE;
+    res = vkDbgSetGlobalOption( VK_DBG_OPTION_BREAK_ON_ERROR, sizeof( vkTrue ), &vkTrue );
+    if (res != VK_SUCCESS)
         glv_LogWarn("Could not set debug option break on error\n");
-    res = xglCreateDevice( m_gpus[0], &info, &m_dev[gpu_idx]);
+    res = vkCreateDevice( m_gpus[0], &info, &m_dev[gpu_idx]);
     return res;
 #else
-    return XGL_ERROR_INITIALIZATION_FAILED;
+    return VK_ERROR_INITIALIZATION_FAILED;
 #endif
 }
 
-int xglDisplay::init(const unsigned int gpu_idx)
+int vkDisplay::init(const unsigned int gpu_idx)
 {
     //m_gpuIdx = gpu_idx;
 #if 0
-    XGL_RESULT result = init_xgl(gpu_idx);
-    if (result != XGL_SUCCESS) {
-        glv_LogError("could not init xgl library");
+    VK_RESULT result = init_vk(gpu_idx);
+    if (result != VK_SUCCESS) {
+        glv_LogError("could not init vulkan library");
         return -1;
     } else {
-        m_initedXGL = true;
+        m_initedVK = true;
     }
 #endif
 #if defined(PLATFORM_LINUX) || defined(XCB_NVIDIA)
@@ -153,7 +153,7 @@ int xglDisplay::init(const unsigned int gpu_idx)
 }
 
 #if defined(WIN32)
-LRESULT WINAPI WindowProcXgl( HWND window, unsigned int msg, WPARAM wp, LPARAM lp)
+LRESULT WINAPI WindowProcVk( HWND window, unsigned int msg, WPARAM wp, LPARAM lp)
 {
     switch(msg)
     {
@@ -169,7 +169,7 @@ LRESULT WINAPI WindowProcXgl( HWND window, unsigned int msg, WPARAM wp, LPARAM l
 }
 #endif
 
-int xglDisplay::set_window(glv_window_handle hWindow, unsigned int width, unsigned int height)
+int vkDisplay::set_window(glv_window_handle hWindow, unsigned int width, unsigned int height)
 {
 #if defined(PLATFORM_LINUX) || defined(XCB_NVIDIA)
     m_XcbWindow = hWindow;
@@ -181,7 +181,7 @@ int xglDisplay::set_window(glv_window_handle hWindow, unsigned int width, unsign
     return 0;
 }
 
-int xglDisplay::create_window(const unsigned int width, const unsigned int height)
+int vkDisplay::create_window(const unsigned int width, const unsigned int height)
 {
 #if defined(PLATFORM_LINUX) || defined(XCB_NVIDIA)
 
@@ -209,7 +209,7 @@ int xglDisplay::create_window(const unsigned int width, const unsigned int heigh
     WNDCLASSEX wcex = {};
     wcex.cbSize = sizeof( WNDCLASSEX);
     wcex.style = CS_HREDRAW | CS_VREDRAW;
-    wcex.lpfnWndProc = WindowProcXgl;
+    wcex.lpfnWndProc = WindowProcVk;
     wcex.cbClsExtra = 0;
     wcex.cbWndExtra = 0;
     wcex.hInstance = GetModuleHandle(0);
@@ -242,7 +242,7 @@ int xglDisplay::create_window(const unsigned int width, const unsigned int heigh
 #endif
 }
 
-void xglDisplay::resize_window(const unsigned int width, const unsigned int height)
+void vkDisplay::resize_window(const unsigned int width, const unsigned int height)
 {
 #if defined(PLATFORM_LINUX) || defined(XCB_NVIDIA)
     if (width != m_windowWidth || height != m_windowHeight)
@@ -264,6 +264,6 @@ void xglDisplay::resize_window(const unsigned int width, const unsigned int heig
 #endif
 }
 
-void xglDisplay::process_event()
+void vkDisplay::process_event()
 {
 }

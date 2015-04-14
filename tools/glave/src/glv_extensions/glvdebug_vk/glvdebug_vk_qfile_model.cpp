@@ -27,18 +27,18 @@ extern "C" {
 #include "glv_vk_packet_id.h"
 }
 
-#include "glvdebug_xgl_qfile_model.h"
+#include "glvdebug_vk_qfile_model.h"
 
-glvdebug_xgl_QFileModel::glvdebug_xgl_QFileModel(QObject* parent, glvdebug_trace_file_info* pTraceFileInfo)
+glvdebug_vk_QFileModel::glvdebug_vk_QFileModel(QObject* parent, glvdebug_trace_file_info* pTraceFileInfo)
         : glvdebug_QTraceFileModel(parent, pTraceFileInfo)
 {
 }
 
-glvdebug_xgl_QFileModel::~glvdebug_xgl_QFileModel()
+glvdebug_vk_QFileModel::~glvdebug_vk_QFileModel()
 {
 }
 
-QString glvdebug_xgl_QFileModel::get_packet_string(const glv_trace_packet_header* pHeader) const
+QString glvdebug_vk_QFileModel::get_packet_string(const glv_trace_packet_header* pHeader) const
 {
     if (pHeader->packet_id < GLV_TPI_BEGIN_API_HERE)
     {
@@ -46,34 +46,32 @@ QString glvdebug_xgl_QFileModel::get_packet_string(const glv_trace_packet_header
     }
     else
     {
-        QString packetString = stringify_xgl_packet_id((const enum GLV_TRACE_PACKET_ID_XGL) pHeader->packet_id, pHeader);
-        // TODO: temporarily replace xgl with vk for demo purposes.
-        return packetString.replace("xgl", "vk").replace("XGL", "VK");
+        QString packetString = stringify_vk_packet_id((const enum GLV_TRACE_PACKET_ID_VK) pHeader->packet_id, pHeader);
     }
 }
 
-bool glvdebug_xgl_QFileModel::isDrawCall(const GLV_TRACE_PACKET_ID packetId) const
+bool glvdebug_vk_QFileModel::isDrawCall(const GLV_TRACE_PACKET_ID packetId) const
 {
     // TODO : Update this based on latest API updates
     bool isDraw = false;
-    switch((GLV_TRACE_PACKET_ID_XGL)packetId)
+    switch((GLV_TRACE_PACKET_ID_VK)packetId)
     {
-        case GLV_TPI_XGL_xglCmdDraw:
-        case GLV_TPI_XGL_xglCmdDrawIndexed:
-        case GLV_TPI_XGL_xglCmdDrawIndirect:
-        case GLV_TPI_XGL_xglCmdDrawIndexedIndirect:
-        case GLV_TPI_XGL_xglCmdDispatch:
-        case GLV_TPI_XGL_xglCmdDispatchIndirect:
-        case GLV_TPI_XGL_xglCmdCopyBuffer:
-        case GLV_TPI_XGL_xglCmdCopyImage:
-        case GLV_TPI_XGL_xglCmdCopyBufferToImage:
-        case GLV_TPI_XGL_xglCmdCopyImageToBuffer:
-        case GLV_TPI_XGL_xglCmdCloneImageData:
-        case GLV_TPI_XGL_xglCmdUpdateBuffer:
-        case GLV_TPI_XGL_xglCmdFillBuffer:
-        case GLV_TPI_XGL_xglCmdClearColorImage:
-        case GLV_TPI_XGL_xglCmdClearDepthStencil:
-        case GLV_TPI_XGL_xglCmdResolveImage:
+        case GLV_TPI_VK_vkCmdDraw:
+        case GLV_TPI_VK_vkCmdDrawIndexed:
+        case GLV_TPI_VK_vkCmdDrawIndirect:
+        case GLV_TPI_VK_vkCmdDrawIndexedIndirect:
+        case GLV_TPI_VK_vkCmdDispatch:
+        case GLV_TPI_VK_vkCmdDispatchIndirect:
+        case GLV_TPI_VK_vkCmdCopyBuffer:
+        case GLV_TPI_VK_vkCmdCopyImage:
+        case GLV_TPI_VK_vkCmdCopyBufferToImage:
+        case GLV_TPI_VK_vkCmdCopyImageToBuffer:
+        case GLV_TPI_VK_vkCmdCloneImageData:
+        case GLV_TPI_VK_vkCmdUpdateBuffer:
+        case GLV_TPI_VK_vkCmdFillBuffer:
+        case GLV_TPI_VK_vkCmdClearColorImage:
+        case GLV_TPI_VK_vkCmdClearDepthStencil:
+        case GLV_TPI_VK_vkCmdResolveImage:
         {
             isDraw = true;
             break;

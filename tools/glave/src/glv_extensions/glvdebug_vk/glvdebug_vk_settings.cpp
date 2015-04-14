@@ -22,45 +22,45 @@
  *
  *************************************************************************/
 
-#include "glvdebug_xgl_settings.h"
+#include "glvdebug_vk_settings.h"
 
 // declared as extern in header
-glvdebug_xgl_settings g_xglDebugSettings;
-static glvdebug_xgl_settings s_defaultXglSettings;
+glvdebug_vk_settings g_vkDebugSettings;
+static glvdebug_vk_settings s_defaultVkSettings;
 
 glv_SettingInfo g_settings_info[] =
 {
-    { "ri", "PrintReplayInfoMsgs", GLV_SETTING_BOOL, &g_xglDebugSettings.printReplayInfoMsgs, &s_defaultXglSettings.printReplayInfoMsgs, TRUE, "Print info messages reported when replaying trace file."},
-    { "rw", "PrintReplayWarningMsgs", GLV_SETTING_BOOL, &g_xglDebugSettings.printReplayWarningMsgs, &s_defaultXglSettings.printReplayWarningMsgs, TRUE, "Print warning messages reported when replaying trace file."},
-    { "re", "PrintReplayErrorMsgs", GLV_SETTING_BOOL, &g_xglDebugSettings.printReplayErrorMsgs, &s_defaultXglSettings.printReplayErrorMsgs, TRUE, "Print error messages reported when replaying trace file."},
-    { "pi", "PauseOnReplayInfo", GLV_SETTING_BOOL, &g_xglDebugSettings.pauseOnReplayInfo, &s_defaultXglSettings.pauseOnReplayInfo, TRUE, "Pause replay if an info message is reported."},
-    { "pw", "PauseOnReplayWarning", GLV_SETTING_BOOL, &g_xglDebugSettings.pauseOnReplayWarning, &s_defaultXglSettings.pauseOnReplayWarning, TRUE, "Pause replay if a warning message is reported."},
-    { "pe", "PauseOnReplayError", GLV_SETTING_BOOL, &g_xglDebugSettings.pauseOnReplayError, &s_defaultXglSettings.pauseOnReplayError, TRUE, "Pause replay if an error message is reported."},
-    { "gf", "GroupByFrame", GLV_SETTING_BOOL, &g_xglDebugSettings.groupByFrame, &s_defaultXglSettings.groupByFrame, TRUE, "Group API calls by frame."},
-    { "gt", "GroupByThread", GLV_SETTING_BOOL, &g_xglDebugSettings.groupByThread, &s_defaultXglSettings.groupByThread, TRUE, "Group API calls by the CPU thread Id on which they executed."},
-    { "rw", "replay_window_width", GLV_SETTING_INT, &g_xglDebugSettings.replay_window_width, &s_defaultXglSettings.replay_window_width, TRUE, "Width of replay window on startup."},
-    { "rh", "replay_window_height", GLV_SETTING_INT, &g_xglDebugSettings.replay_window_height, &s_defaultXglSettings.replay_window_height, TRUE, "Height of replay window on startup."},
-    { "sr", "separate_replay_window", GLV_SETTING_BOOL, &g_xglDebugSettings.separate_replay_window, &s_defaultXglSettings.separate_replay_window, TRUE, "Use a separate replay window."},
+    { "ri", "PrintReplayInfoMsgs", GLV_SETTING_BOOL, &g_vkDebugSettings.printReplayInfoMsgs, &s_defaultVkSettings.printReplayInfoMsgs, TRUE, "Print info messages reported when replaying trace file."},
+    { "rw", "PrintReplayWarningMsgs", GLV_SETTING_BOOL, &g_vkDebugSettings.printReplayWarningMsgs, &s_defaultVkSettings.printReplayWarningMsgs, TRUE, "Print warning messages reported when replaying trace file."},
+    { "re", "PrintReplayErrorMsgs", GLV_SETTING_BOOL, &g_vkDebugSettings.printReplayErrorMsgs, &s_defaultVkSettings.printReplayErrorMsgs, TRUE, "Print error messages reported when replaying trace file."},
+    { "pi", "PauseOnReplayInfo", GLV_SETTING_BOOL, &g_vkDebugSettings.pauseOnReplayInfo, &s_defaultVkSettings.pauseOnReplayInfo, TRUE, "Pause replay if an info message is reported."},
+    { "pw", "PauseOnReplayWarning", GLV_SETTING_BOOL, &g_vkDebugSettings.pauseOnReplayWarning, &s_defaultVkSettings.pauseOnReplayWarning, TRUE, "Pause replay if a warning message is reported."},
+    { "pe", "PauseOnReplayError", GLV_SETTING_BOOL, &g_vkDebugSettings.pauseOnReplayError, &s_defaultVkSettings.pauseOnReplayError, TRUE, "Pause replay if an error message is reported."},
+    { "gf", "GroupByFrame", GLV_SETTING_BOOL, &g_vkDebugSettings.groupByFrame, &s_defaultVkSettings.groupByFrame, TRUE, "Group API calls by frame."},
+    { "gt", "GroupByThread", GLV_SETTING_BOOL, &g_vkDebugSettings.groupByThread, &s_defaultVkSettings.groupByThread, TRUE, "Group API calls by the CPU thread Id on which they executed."},
+    { "rw", "replay_window_width", GLV_SETTING_INT, &g_vkDebugSettings.replay_window_width, &s_defaultVkSettings.replay_window_width, TRUE, "Width of replay window on startup."},
+    { "rh", "replay_window_height", GLV_SETTING_INT, &g_vkDebugSettings.replay_window_height, &s_defaultVkSettings.replay_window_height, TRUE, "Height of replay window on startup."},
+    { "sr", "separate_replay_window", GLV_SETTING_BOOL, &g_vkDebugSettings.separate_replay_window, &s_defaultVkSettings.separate_replay_window, TRUE, "Use a separate replay window."},
 };
 
-glv_SettingGroup g_xglDebugSettingGroup =
+glv_SettingGroup g_vkDebugSettingGroup =
 {
-    "glvdebug_xgl",
+    "glvdebug_vk",
     sizeof(g_settings_info) / sizeof(g_settings_info[0]),
     &g_settings_info[0]
 };
 
 void initialize_default_settings()
 {
-    s_defaultXglSettings.printReplayInfoMsgs = FALSE;
-    s_defaultXglSettings.printReplayWarningMsgs = TRUE;
-    s_defaultXglSettings.printReplayErrorMsgs = TRUE;
-    s_defaultXglSettings.pauseOnReplayInfo = FALSE;
-    s_defaultXglSettings.pauseOnReplayWarning = FALSE;
-    s_defaultXglSettings.pauseOnReplayError = TRUE;
-    s_defaultXglSettings.groupByFrame = FALSE;
-    s_defaultXglSettings.groupByThread = FALSE;
-    s_defaultXglSettings.replay_window_width = 1024;
-    s_defaultXglSettings.replay_window_height = 768;
-    s_defaultXglSettings.separate_replay_window = FALSE;
+    s_defaultVkSettings.printReplayInfoMsgs = FALSE;
+    s_defaultVkSettings.printReplayWarningMsgs = TRUE;
+    s_defaultVkSettings.printReplayErrorMsgs = TRUE;
+    s_defaultVkSettings.pauseOnReplayInfo = FALSE;
+    s_defaultVkSettings.pauseOnReplayWarning = FALSE;
+    s_defaultVkSettings.pauseOnReplayError = TRUE;
+    s_defaultVkSettings.groupByFrame = FALSE;
+    s_defaultVkSettings.groupByThread = FALSE;
+    s_defaultVkSettings.replay_window_width = 1024;
+    s_defaultVkSettings.replay_window_height = 768;
+    s_defaultVkSettings.separate_replay_window = FALSE;
 };

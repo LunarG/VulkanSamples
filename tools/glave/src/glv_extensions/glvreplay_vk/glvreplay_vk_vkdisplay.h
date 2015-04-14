@@ -25,29 +25,29 @@
 
 #pragma once
 
-#include "glvreplay_xgl_xglreplay.h"
+#include "glvreplay_vk_vkreplay.h"
 
-class xglDisplay: public glv_replay::DisplayImp {
-friend class xglReplay;
+class vkDisplay: public glv_replay::DisplayImp {
+friend class vkReplay;
 public:
-    xglDisplay();
-    ~xglDisplay();
+    vkDisplay();
+    ~vkDisplay();
     int init(const unsigned int gpu_idx);
     int set_window(glv_window_handle hWindow, unsigned int width, unsigned int height);
     int create_window(const unsigned int width, const unsigned int height);
     void resize_window(const unsigned int width, const unsigned int height);
     void process_event();
-    // XGL_DEVICE get_device() { return m_dev[m_gpuIdx];}
+    // VK_DEVICE get_device() { return m_dev[m_gpuIdx];}
 #if defined(PLATFORM_LINUX) || defined(XCB_NVIDIA)
     xcb_window_t get_window_handle() { return m_XcbWindow; }
 #elif defined(WIN32)
     HWND get_window_handle() { return m_windowHandle; }
 #endif
 private:
-    XGL_RESULT init_xgl(const unsigned int gpu_idx);
-    bool m_initedXGL;
+    VK_RESULT init_vk(const unsigned int gpu_idx);
+    bool m_initedVK;
 #if defined(PLATFORM_LINUX) || defined(XCB_NVIDIA)
-    XGL_WSI_X11_CONNECTION_INFO m_WsiConnection;
+    VK_WSI_X11_CONNECTION_INFO m_WsiConnection;
     xcb_screen_t *m_pXcbScreen;
     xcb_window_t m_XcbWindow;
 #elif defined(WIN32)
@@ -58,14 +58,14 @@ private:
     unsigned int m_frameNumber;
     std::vector<uint32_t> imageWidth;
     std::vector<uint32_t> imageHeight;
-    std::vector<XGL_IMAGE> imageHandles;
-    std::vector<XGL_GPU_MEMORY> imageMemory;
+    std::vector<VK_IMAGE> imageHandles;
+    std::vector<VK_GPU_MEMORY> imageMemory;
 #if 0
-    XGL_DEVICE m_dev[XGL_MAX_PHYSICAL_GPUS];
+    VK_DEVICE m_dev[VK_MAX_PHYSICAL_GPUS];
     uint32_t m_gpuCount;
     unsigned int m_gpuIdx;
-    XGL_PHYSICAL_GPU m_gpus[XGL_MAX_PHYSICAL_GPUS];
-    XGL_PHYSICAL_GPU_PROPERTIES m_gpuProps[XGL_MAX_PHYSICAL_GPUS];
+    VK_PHYSICAL_GPU m_gpus[VK_MAX_PHYSICAL_GPUS];
+    VK_PHYSICAL_GPU_PROPERTIES m_gpuProps[VK_MAX_PHYSICAL_GPUS];
 #endif
     std::vector<char *>m_extensions;
 };

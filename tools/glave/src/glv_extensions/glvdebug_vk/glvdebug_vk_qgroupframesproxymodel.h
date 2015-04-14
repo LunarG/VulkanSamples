@@ -22,8 +22,8 @@
  * THE SOFTWARE.
  *
  **************************************************************************/
-#ifndef GLVDEBUG_XGL_QGROUPFRAMESPROXYMODEL_H
-#define GLVDEBUG_XGL_QGROUPFRAMESPROXYMODEL_H
+#ifndef GLVDEBUG_VK_QGROUPFRAMESPROXYMODEL_H
+#define GLVDEBUG_VK_QGROUPFRAMESPROXYMODEL_H
 
 #include "glv_vk_packet_id.h"
 
@@ -40,18 +40,18 @@ struct FrameInfo
     QList<int> mapChildRowToSourceRow;
 };
 
-class glvdebug_xgl_QGroupFramesProxyModel : public QAbstractProxyModel
+class glvdebug_vk_QGroupFramesProxyModel : public QAbstractProxyModel
 {
     Q_OBJECT
 public:
-    glvdebug_xgl_QGroupFramesProxyModel(QObject *parent = 0)
+    glvdebug_vk_QGroupFramesProxyModel(QObject *parent = 0)
         : QAbstractProxyModel(parent),
           m_curFrameCount(0)
     {
         buildGroups();
     }
 
-    virtual ~glvdebug_xgl_QGroupFramesProxyModel()
+    virtual ~glvdebug_vk_QGroupFramesProxyModel()
     {
     }
 
@@ -350,7 +350,7 @@ private:
                 QModelIndex tmpIndex = sourceModel()->index(srcRow, 0);
                 assert(tmpIndex.isValid());
                 glv_trace_packet_header* pHeader = (glv_trace_packet_header*)tmpIndex.internalPointer();
-                if (pHeader != NULL && pHeader->tracer_id == GLV_TID_XGL && pHeader->packet_id == GLV_TPI_XGL_xglWsiX11QueuePresent)
+                if (pHeader != NULL && pHeader->tracer_id == GLV_TID_VULKAN && pHeader->packet_id == GLV_TPI_VK_vkWsiX11QueuePresent)
                 {
                     pCurFrame = addNewFrame();
                 }
@@ -359,4 +359,4 @@ private:
     }
 };
 
-#endif // GLVDEBUG_XGL_QGROUPFRAMESPROXYMODEL_H
+#endif // GLVDEBUG_VK_QGROUPFRAMESPROXYMODEL_H

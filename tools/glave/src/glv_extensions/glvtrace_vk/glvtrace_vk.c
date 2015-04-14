@@ -29,14 +29,14 @@
 #include "glv_common.h"
 #include "glv_filelike.h"
 #include "glv_interconnect.h"
-#include "glvtrace_xgl_xgl.h"
-#include "glvtrace_xgl_xgldbg.h"
-#include "glvtrace_xgl_xglwsix11ext.h"
+#include "glvtrace_vk_vk.h"
+#include "glvtrace_vk_vkdbg.h"
+#include "glvtrace_vk_vkwsix11ext.h"
 
 // this is needed to be loaded by glvtrace
 GLVTRACER_EXPORT GLV_TRACER_ID GLVTRACER_CDECL GLV_GetTracerId(void)
 {
-    return GLV_TID_XGL;
+    return GLV_TID_VULKAN;
 }
 
 GLVTRACER_LEAVE _Unload(void);
@@ -44,7 +44,7 @@ GLVTRACER_LEAVE _Unload(void);
 #ifdef PLATFORM_LINUX
 static void glv_sighandler(int signum, siginfo_t *info, void *ptr)
 {
-   glv_LogInfo("glvtrace_xgl library handle signal %d\n", signum);
+   glv_LogInfo("glvtrace_vk library handle signal %d\n", signum);
     _Unload();
     kill(0, signum);
 }
@@ -52,7 +52,7 @@ static void glv_sighandler(int signum, siginfo_t *info, void *ptr)
 
 GLVTRACER_EXIT TrapExit(void)
 {
-    glv_LogInfo("glvtrace_xgl TrapExit\n");
+    glv_LogInfo("glvtrace_vk TrapExit\n");
 }
 
 extern
@@ -61,7 +61,7 @@ GLVTRACER_ENTRY _Load(void)
     // only do the hooking and networking if the tracer is NOT loaded by glvtrace
     if (glv_is_loaded_into_glvtrace() == FALSE)
     {
-        glv_LogInfo("glvtrace_xgl library loaded into PID %d\n", glv_get_pid());
+        glv_LogInfo("glvtrace_vk library loaded into PID %d\n", glv_get_pid());
         atexit(TrapExit);
 
         // If you need to debug startup, build with this set to true, then attach and change it to false.
@@ -73,8 +73,8 @@ GLVTRACER_ENTRY _Load(void)
     #endif
 #ifndef PLATFORM_LINUX
         AttachHooks();
-        AttachHooks_xgldbg();
-        AttachHooks_xglwsix11ext();
+        AttachHooks_vkdbg();
+        AttachHooks_vkwsix11ext();
 #else
         struct sigaction act;
         memset(&act, 0 , sizeof(act));
@@ -92,10 +92,10 @@ GLVTRACER_LEAVE _Unload(void)
     // only do the hooking and networking if the tracer is NOT loaded by glvtrace
     if (glv_is_loaded_into_glvtrace() == FALSE)
     {
-        glv_LogInfo("glvtrace_xgl library unloaded from PID %d\n", glv_get_pid());
+        glv_LogInfo("glvtrace_vk library unloaded from PID %d\n", glv_get_pid());
         DetachHooks();
-        DetachHooks_xgldbg();
-        DetachHooks_xglwsix11ext();
+        DetachHooks_vkdbg();
+        DetachHooks_vkwsix11ext();
         if (glv_trace_get_trace_file() != NULL) {
             glv_trace_packet_header* pHeader = glv_create_trace_packet(GLV_GetTracerId(), GLV_TPI_MARKER_TERMINATE_PROCESS, 0, 0);
             glv_finalize_trace_packet(pHeader);

@@ -22,17 +22,17 @@
  * THE SOFTWARE.
  *
  **************************************************************************/
-#ifndef GLVREPLAY_XGL_SETTINGS_H
-#define GLVREPLAY_XGL_SETTINGS_H
+#ifndef GLVREPLAY_VK_SETTINGS_H
+#define GLVREPLAY_VK_SETTINGS_H
 
 extern "C"
 {
 #include "glv_settings.h"
 }
 
-#include <xgl.h>
+#include <vulkan.h>
 
-typedef struct glvreplay_xgl_settings
+typedef struct glvreplay_vk_settings
 {
     uint32_t debugLevel;
     const char* enableLayers;
@@ -42,13 +42,13 @@ typedef struct glvreplay_xgl_settings
     const char* memTrackerDebugAction;
     const char* objectTrackerReportLevel;
     const char* objectTrackerDebugAction;
-} glvreplay_xgl_settings;
+} glvreplay_vk_settings;
 
-extern glvreplay_xgl_settings g_xglReplaySettings;
-extern glv_SettingGroup g_xglReplaySettingGroup;
+extern glvreplay_vk_settings g_vkReplaySettings;
+extern glv_SettingGroup g_vkReplaySettingGroup;
 
 void apply_layerSettings_overrides();
 char** get_enableLayers_list(unsigned int* pNumLayers);
 void release_enableLayer_list(char** pList);
 
-#endif // GLVREPLAY_XGL_SETTINGS_H
+#endif // GLVREPLAY_VK_SETTINGS_H

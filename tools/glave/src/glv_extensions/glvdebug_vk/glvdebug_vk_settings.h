@@ -21,14 +21,14 @@
  * THE SOFTWARE.
  *
  *************************************************************************/
-#ifndef GLVDEBUG_XGL_SETTINGS_H
-#define GLVDEBUG_XGL_SETTINGS_H
+#ifndef GLVDEBUG_VK_SETTINGS_H
+#define GLVDEBUG_VK_SETTINGS_H
 
 extern "C" {
 #include "glv_settings.h"
 }
 
-typedef struct glvdebug_xgl_settings
+typedef struct glvdebug_vk_settings
 {
     BOOL printReplayInfoMsgs;
     BOOL printReplayWarningMsgs;
@@ -41,12 +41,12 @@ typedef struct glvdebug_xgl_settings
     int replay_window_width;
     int replay_window_height;
     BOOL separate_replay_window;
-} glvdebug_xgl_settings;
+} glvdebug_vk_settings;
 
-extern glvdebug_xgl_settings g_xglDebugSettings;
-extern glv_SettingGroup g_xglDebugSettingGroup;
+extern glvdebug_vk_settings g_vkDebugSettings;
+extern glv_SettingGroup g_vkDebugSettingGroup;
 
 void initialize_default_settings();
 
-#endif // GLVDEBUG_XGL_SETTINGS_H
+#endif // GLVDEBUG_VK_SETTINGS_H
 

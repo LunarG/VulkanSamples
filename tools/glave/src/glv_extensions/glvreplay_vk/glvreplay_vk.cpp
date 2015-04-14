@@ -22,23 +22,23 @@
  * THE SOFTWARE.
  *
  **************************************************************************/
-#include "glvreplay_xgl.h"
-#include "glvreplay_xgl_xglreplay.h"
+#include "glvreplay_vk.h"
+#include "glvreplay_vk_vkreplay.h"
 
 extern "C"
 {
 #include "glv_vk_packet_id.h"
 }
 
-xglReplay* g_pReplayer = NULL;
+vkReplay* g_pReplayer = NULL;
 GLV_CRITICAL_SECTION g_handlerLock;
-XGL_DBG_MSG_CALLBACK_FUNCTION g_fpDbgMsgCallback;
+VK_DBG_MSG_CALLBACK_FUNCTION g_fpDbgMsgCallback;
 glv_replay::GLV_DBG_MSG_CALLBACK_FUNCTION g_fpGlvCallback = NULL;
 
-static void XGLAPI xglErrorHandler(
-                                            XGL_DBG_MSG_TYPE     msgType,
-                                            XGL_VALIDATION_LEVEL validationLevel,
-                                            XGL_BASE_OBJECT      srcObject,
+static void VKAPI vkErrorHandler(
+                                            VK_DBG_MSG_TYPE     msgType,
+                                            VK_VALIDATION_LEVEL validationLevel,
+                                            VK_BASE_OBJECT      srcObject,
                                             size_t               location,
                                             int32_t              msgCode,
                                             const char*          pMsg,
@@ -46,7 +46,7 @@ static void XGLAPI xglErrorHandler(
 {
     glv_enter_critical_section(&g_handlerLock);
     switch (msgType) {
-        case XGL_DBG_MSG_ERROR:
+        case VK_DBG_MSG_ERROR:
             glv_LogError("Validation level %d with object %p, location %u returned msgCode %d and msg %s\n",
                          validationLevel, srcObject, location, msgCode, (char *) pMsg);
             g_pReplayer->push_validation_msg(validationLevel, srcObject, location, msgCode, (char *) pMsg);
@@ -55,8 +55,8 @@ static void XGLAPI xglErrorHandler(
                 g_fpGlvCallback(glv_replay::GLV_DBG_MSG_ERROR, pMsg);
             }
             break;
-        case XGL_DBG_MSG_WARNING:
-        case XGL_DBG_MSG_PERF_WARNING:
+        case VK_DBG_MSG_WARNING:
+        case VK_DBG_MSG_PERF_WARNING:
             //glv_LogWarn("Validation level %d with object %p, location %u returned msgCode %d and msg %s\n",
             //            validationLevel, srcObject, location, msgCode, (char *) pMsg);
             if (g_fpGlvCallback != NULL)
@@ -88,32 +88,32 @@ GLVTRACER_EXPORT glv_SettingGroup* GLVTRACER_CDECL GetSettings()
     static BOOL bFirstTime = TRUE;
     if (bFirstTime == TRUE)
     {
-        glv_SettingGroup_reset_defaults(&g_xglReplaySettingGroup);
+        glv_SettingGroup_reset_defaults(&g_vkReplaySettingGroup);
         bFirstTime = FALSE;
     }
 
-    return &g_xglReplaySettingGroup;
+    return &g_vkReplaySettingGroup;
 }
 
 GLVTRACER_EXPORT void GLVTRACER_CDECL UpdateFromSettings(glv_SettingGroup* pSettingGroups, unsigned int numSettingGroups)
 {
-    glv_SettingGroup_Apply_Overrides(&g_xglReplaySettingGroup, pSettingGroups, numSettingGroups);
+    glv_SettingGroup_Apply_Overrides(&g_vkReplaySettingGroup, pSettingGroups, numSettingGroups);
 }
 
 GLVTRACER_EXPORT int GLVTRACER_CDECL Initialize(glv_replay::Display* pDisplay, glvreplay_settings *pReplaySettings)
 {
     try
     {
-        g_pReplayer = new xglReplay(pReplaySettings);
+        g_pReplayer = new vkReplay(pReplaySettings);
     }
     catch (int e)
     {
-        glv_LogError("Failed to create xglReplay, probably out of memory. Error %d\n", e);
+        glv_LogError("Failed to create vkReplay, probably out of memory. Error %d\n", e);
         return -1;
     }
 
     glv_create_critical_section(&g_handlerLock);
-    g_fpDbgMsgCallback = xglErrorHandler;
+    g_fpDbgMsgCallback = vkErrorHandler;
     int result = g_pReplayer->init(*pDisplay);
     return result;
 }
@@ -130,11 +130,11 @@ GLVTRACER_EXPORT void GLVTRACER_CDECL Deinitialize()
 
 GLVTRACER_EXPORT glv_trace_packet_header* GLVTRACER_CDECL Interpret(glv_trace_packet_header* pPacket)
 {
-    // Attempt to interpret the packet as an XGL packet
-    glv_trace_packet_header* pInterpretedHeader = interpret_trace_packet_xgl(pPacket);
+    // Attempt to interpret the packet as a Vulkan packet
+    glv_trace_packet_header* pInterpretedHeader = interpret_trace_packet_vk(pPacket);
     if (pInterpretedHeader == NULL)
     {
-        glv_LogWarn("Unrecognized XGL packet_id: %u\n", pPacket->packet_id);
+        glv_LogWarn("Unrecognized Vulkan packet_id: %u\n", pPacket->packet_id);
     }
 
     return pInterpretedHeader;

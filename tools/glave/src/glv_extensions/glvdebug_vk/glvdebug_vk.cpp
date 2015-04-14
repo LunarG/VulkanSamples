@@ -21,13 +21,13 @@
  * THE SOFTWARE.
  *
  *************************************************************************/
-#include "glvdebug_xgl_qcontroller.h"
-#include "glvdebug_xgl_settings.h"
+#include "glvdebug_vk_qcontroller.h"
+#include "glvdebug_vk_settings.h"
 #include "glvdebug_controller.h"
 
-static glvdebug_xgl_QController* s_pQController;
+static glvdebug_vk_QController* s_pQController;
 
-#define CREATE_CONTROLLER() if(s_pQController == NULL) { s_pQController = new glvdebug_xgl_QController(); }
+#define CREATE_CONTROLLER() if(s_pQController == NULL) { s_pQController = new glvdebug_vk_QController(); }
 
 extern "C"
 {
@@ -35,7 +35,7 @@ GLVTRACER_EXPORT glv_SettingGroup* GLVTRACER_CDECL glvdebug_controller_get_setti
 {
     CREATE_CONTROLLER()
 
-    return &g_xglDebugSettingGroup;
+    return &g_vkDebugSettingGroup;
 }
 
 GLVTRACER_EXPORT void GLVTRACER_CDECL glvdebug_controller_update_from_settings(glv_SettingGroup* pSettingGroups, unsigned int numSettingGroups)

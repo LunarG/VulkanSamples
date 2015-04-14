@@ -22,52 +22,52 @@
  * THE SOFTWARE.
  *
  **************************************************************************/
-#include <xglLayer.h>
+#include <vkLayer.h>
 
-#include "glvreplay_xgl_settings.h"
+#include "glvreplay_vk_settings.h"
 #include "layers_config.h"
 // declared as extern in header
-static glvreplay_xgl_settings s_defaultXglReplaySettings = { 1, "DrawState,ObjectTracker",
-                                                            STRINGIFY(XGL_DBG_LAYER_LEVEL_ERROR), STRINGIFY(XGL_DBG_LAYER_ACTION_CALLBACK),
-                                                            STRINGIFY(XGL_DBG_LAYER_LEVEL_ERROR), STRINGIFY(XGL_DBG_LAYER_ACTION_CALLBACK),
-                                                            STRINGIFY(XGL_DBG_LAYER_LEVEL_ERROR), STRINGIFY(XGL_DBG_LAYER_ACTION_CALLBACK)};
-glvreplay_xgl_settings g_xglReplaySettings;
+static glvreplay_vk_settings s_defaultVkReplaySettings = { 1, "DrawState,ObjectTracker",
+                                                            STRINGIFY(VK_DBG_LAYER_LEVEL_ERROR), STRINGIFY(VK_DBG_LAYER_ACTION_CALLBACK),
+                                                            STRINGIFY(VK_DBG_LAYER_LEVEL_ERROR), STRINGIFY(VK_DBG_LAYER_ACTION_CALLBACK),
+                                                            STRINGIFY(VK_DBG_LAYER_LEVEL_ERROR), STRINGIFY(VK_DBG_LAYER_ACTION_CALLBACK)};
+glvreplay_vk_settings g_vkReplaySettings;
 
 glv_SettingInfo g_settings_info[] =
 {
-    { "dl", "DebugLevel", GLV_SETTING_UINT, &g_xglReplaySettings.debugLevel, &s_defaultXglReplaySettings.debugLevel, FALSE, "Sets the Debug Level of the Mantle validation layers."},
-    { "e", "EnableLayers", GLV_SETTING_STRING, &g_xglReplaySettings.enableLayers, &s_defaultXglReplaySettings.enableLayers, TRUE, "Comma separated list of xgl layers to enable."},
-    { "dsrl", "DrawStateReportLevel", GLV_SETTING_STRING, &g_xglReplaySettings.drawStateReportLevel, &s_defaultXglReplaySettings.drawStateReportLevel, TRUE, "DrawState Layer reporting level"},
-    { "dsda", "DrawStateDebugAction", GLV_SETTING_STRING, &g_xglReplaySettings.drawStateDebugAction, &s_defaultXglReplaySettings.drawStateDebugAction, TRUE, "DrawState Layer debug action"},
-    { "mtrl", "MemTrackerReportLevel", GLV_SETTING_STRING, &g_xglReplaySettings.memTrackerReportLevel, &s_defaultXglReplaySettings.memTrackerReportLevel, TRUE, "MemTracker Layer reporting level"},
-    { "mtda", "MemTrackerDebugAction", GLV_SETTING_STRING, &g_xglReplaySettings.memTrackerDebugAction, &s_defaultXglReplaySettings.memTrackerDebugAction, TRUE, "MemTracker Layer debug action"},
-    { "dsrl", "ObjectTrackerReportLevel", GLV_SETTING_STRING, &g_xglReplaySettings.objectTrackerReportLevel, &s_defaultXglReplaySettings.objectTrackerReportLevel, TRUE, "ObjectTracker Layer reporting level"},
-    { "dsda", "ObjectTrackerDebugAction", GLV_SETTING_STRING, &g_xglReplaySettings.objectTrackerDebugAction, &s_defaultXglReplaySettings.objectTrackerDebugAction, TRUE, "ObjectTracker Layer debug action"},};
-glv_SettingGroup g_xglReplaySettingGroup =
+    { "dl", "DebugLevel", GLV_SETTING_UINT, &g_vkReplaySettings.debugLevel, &s_defaultVkReplaySettings.debugLevel, FALSE, "Sets the Debug Level of the Vulkan validation layers."},
+    { "e", "EnableLayers", GLV_SETTING_STRING, &g_vkReplaySettings.enableLayers, &s_defaultVkReplaySettings.enableLayers, TRUE, "Comma separated list of Vulkan layers to enable."},
+    { "dsrl", "DrawStateReportLevel", GLV_SETTING_STRING, &g_vkReplaySettings.drawStateReportLevel, &s_defaultVkReplaySettings.drawStateReportLevel, TRUE, "DrawState Layer reporting level"},
+    { "dsda", "DrawStateDebugAction", GLV_SETTING_STRING, &g_vkReplaySettings.drawStateDebugAction, &s_defaultVkReplaySettings.drawStateDebugAction, TRUE, "DrawState Layer debug action"},
+    { "mtrl", "MemTrackerReportLevel", GLV_SETTING_STRING, &g_vkReplaySettings.memTrackerReportLevel, &s_defaultVkReplaySettings.memTrackerReportLevel, TRUE, "MemTracker Layer reporting level"},
+    { "mtda", "MemTrackerDebugAction", GLV_SETTING_STRING, &g_vkReplaySettings.memTrackerDebugAction, &s_defaultVkReplaySettings.memTrackerDebugAction, TRUE, "MemTracker Layer debug action"},
+    { "dsrl", "ObjectTrackerReportLevel", GLV_SETTING_STRING, &g_vkReplaySettings.objectTrackerReportLevel, &s_defaultVkReplaySettings.objectTrackerReportLevel, TRUE, "ObjectTracker Layer reporting level"},
+    { "dsda", "ObjectTrackerDebugAction", GLV_SETTING_STRING, &g_vkReplaySettings.objectTrackerDebugAction, &s_defaultVkReplaySettings.objectTrackerDebugAction, TRUE, "ObjectTracker Layer debug action"},};
+glv_SettingGroup g_vkReplaySettingGroup =
 {
-    "glvreplay_xgl",
+    "glvreplay_vk",
     sizeof(g_settings_info) / sizeof(g_settings_info[0]),
     &g_settings_info[0]
 };
 
 void apply_layerSettings_overrides()
 {
-    setLayerOptionEnum("DrawStateReportLevel", g_xglReplaySettings.drawStateReportLevel);
-    setLayerOptionEnum("DrawStateDebugAction", g_xglReplaySettings.drawStateDebugAction);
-    setLayerOptionEnum("MemTrackerReportLevel", g_xglReplaySettings.memTrackerReportLevel);
-    setLayerOptionEnum("MemTrackerDebugAction", g_xglReplaySettings.memTrackerDebugAction);
-    setLayerOptionEnum("ObjectTrackerReportLevel", g_xglReplaySettings.objectTrackerReportLevel);
-    setLayerOptionEnum("ObjectTrackerDebugAction", g_xglReplaySettings.objectTrackerDebugAction);
+    setLayerOptionEnum("DrawStateReportLevel", g_vkReplaySettings.drawStateReportLevel);
+    setLayerOptionEnum("DrawStateDebugAction", g_vkReplaySettings.drawStateDebugAction);
+    setLayerOptionEnum("MemTrackerReportLevel", g_vkReplaySettings.memTrackerReportLevel);
+    setLayerOptionEnum("MemTrackerDebugAction", g_vkReplaySettings.memTrackerDebugAction);
+    setLayerOptionEnum("ObjectTrackerReportLevel", g_vkReplaySettings.objectTrackerReportLevel);
+    setLayerOptionEnum("ObjectTrackerDebugAction", g_vkReplaySettings.objectTrackerDebugAction);
 }
 
 char** get_enableLayers_list(unsigned int *pNumLayers)
 {
     char** pList = NULL;
-    size_t len = strlen(g_xglReplaySettings.enableLayers);
+    size_t len = strlen(g_vkReplaySettings.enableLayers);
     assert(pNumLayers != NULL);
     *pNumLayers = 0;
 
-    if (g_xglReplaySettings.enableLayers != NULL && len > 0)
+    if (g_vkReplaySettings.enableLayers != NULL && len > 0)
     {
         // The string contains 1 layer + another layer for each comma
         *pNumLayers = 1;
@@ -77,7 +77,7 @@ char** get_enableLayers_list(unsigned int *pNumLayers)
         // count number of commas to determine number of layers
         for (c = 0; c < len; c++)
         {
-            if (g_xglReplaySettings.enableLayers[c] == ',')
+            if (g_vkReplaySettings.enableLayers[c] == ',')
             {
                 (*pNumLayers)++;
             }
@@ -88,7 +88,7 @@ char** get_enableLayers_list(unsigned int *pNumLayers)
 
         // copy the entire string to the first element in the list to keep
         // the layer names localized in memory.
-        pList[0] = (char*)glv_allocate_and_copy(g_xglReplaySettings.enableLayers);
+        pList[0] = (char*)glv_allocate_and_copy(g_vkReplaySettings.enableLayers);
 
         // now walk the string and replace commas with NULL and record
         // the pointers in the pList array.

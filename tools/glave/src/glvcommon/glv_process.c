@@ -70,7 +70,7 @@ BOOL glv_process_spawn(glv_process_info* pInfo)
         envp[0] = pInfo->processLDPreload;
         envp[4] = (char *) (NULL);
         static char default_disp[] = "DISPLAY=:0";
-        char * libxgl_drivers_path = (char *) (NULL);
+        char * libvk_drivers_path = (char *) (NULL);
         char * env_display = (char *) NULL;
         char * ld_library_path = (char *) NULL;
         char * args[128];
@@ -103,18 +103,18 @@ BOOL glv_process_spawn(glv_process_info* pInfo)
         }
 
         // TODO this needs to be generalized for other drivers
-        libxgl_drivers_path = getenv("LIBXGL_DRIVERS_PATH");
-        if (libxgl_drivers_path == NULL)
+        libvk_drivers_path = getenv("LIBVK_DRIVERS_PATH");
+        if (libvk_drivers_path == NULL)
         {
-            glv_LogWarn("LIBXGL_DRIVERS_PATH env var was not set. We recommend that you set it.\n");
+            glv_LogWarn("LIBVK_DRIVERS_PATH env var was not set. We recommend that you set it.\n");
             envp[2] = NULL;
         }
         else
         {
-            char *dPath = malloc(strlen(libxgl_drivers_path) + strlen("LIBXGL_DRIVERS_PATH=") + 1);
+            char *dPath = malloc(strlen(libvk_drivers_path) + strlen("LIBVK_DRIVERS_PATH=") + 1);
             if (dPath == NULL)
                 glv_LogError("Failed to malloc in glv_process_spawn().\n");
-            snprintf(dPath, strlen(libxgl_drivers_path) + strlen("LIBXGL_DRIVERS_PATH=") + 1, "LIBXGL_DRIVERS_PATH=%s", libxgl_drivers_path);
+            snprintf(dPath, strlen(libvk_drivers_path) + strlen("LIBVK_DRIVERS_PATH=") + 1, "LIBVK_DRIVERS_PATH=%s", libvk_drivers_path);
             envp[2] = dPath;
         }
 

@@ -28,12 +28,12 @@
 #include "glvdebug_QTraceFileModel.h"
 #include <QObject>
 
-class glvdebug_xgl_QFileModel : public glvdebug_QTraceFileModel
+class glvdebug_vk_QFileModel : public glvdebug_QTraceFileModel
 {
     Q_OBJECT
 public:
-    glvdebug_xgl_QFileModel(QObject * parent, glvdebug_trace_file_info *);
-    virtual ~glvdebug_xgl_QFileModel();
+    glvdebug_vk_QFileModel(QObject * parent, glvdebug_trace_file_info *);
+    virtual ~glvdebug_vk_QFileModel();
 
     virtual QString get_packet_string(const glv_trace_packet_header* pHeader) const;
 

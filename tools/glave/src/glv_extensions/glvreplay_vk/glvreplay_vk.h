@@ -25,8 +25,8 @@
 #pragma once
 #include "glvreplay_window.h"
 #include "glvreplay_factory.h"
-#include "glvreplay_xgl_settings.h"
-#include "xglDbg.h"
+#include "glvreplay_vk_settings.h"
+#include "vkDbg.h"
 
 extern "C"
 {
@@ -40,4 +40,4 @@ GLVTRACER_EXPORT glv_replay::GLV_REPLAY_RESULT GLVTRACER_CDECL Replay(glv_trace_
 GLVTRACER_EXPORT int GLVTRACER_CDECL Dump();
 }
 
-extern XGL_DBG_MSG_CALLBACK_FUNCTION g_fpDbgMsgCallback;
+extern VK_DBG_MSG_CALLBACK_FUNCTION g_fpDbgMsgCallback;

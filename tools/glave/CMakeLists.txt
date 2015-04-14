@@ -35,9 +35,9 @@ if (NOT Qt5_FOUND)
     message(WARNING "Missing Qt5 development libraries: sudo apt-get install qt5-default libqt5svg5-dev")
 endif()
 
-set(CODE_GEN_DIR "glv_extensions/glave_xgl_gen")
+set(CODE_GEN_DIR "glv_extensions/glave_vk_gen")
 
-#execute_process(COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/../../xgl-helper.py --abs_out_dir ${CMAKE_CURRENT_SOURCE_DIR}/src/${CODE_GEN_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/../../include/xgl.h)
+#execute_process(COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/../../vk-helper.py --abs_out_dir ${CMAKE_CURRENT_SOURCE_DIR}/src/${CODE_GEN_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/../../include/vulkan.h)
 
 
 message("")
