@@ -49,14 +49,14 @@ class Subcommand(object):
         return out_objs and out_objs[-1] == proto.params[-1]
 
     def _is_loader_special_case(self, proto):
-        if proto.name in ["GetProcAddr", "EnumerateGpus", "EnumerateLayers"]:
+        if proto.name in ["GetProcAddr", "EnumerateGpus", "EnumerateLayers", "DbgRegisterMsgCallback", "DbgUnregisterMsgCallback", "DbgSetGlobalOption", "DestroyInstance"]:
             return True
         return not self.is_dispatchable_object_first_param(proto)
 
 
     def is_dispatchable_object_first_param(self, proto):
         in_objs = proto.object_in_params()
-        non_dispatch_objs = ["VkInstance"]
+        non_dispatch_objs = []
         param0 = proto.params[0]
         return (len(in_objs) > 0)  and (in_objs[0].ty == param0.ty) and (param0.ty not in non_dispatch_objs)
 
