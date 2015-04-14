@@ -1,4 +1,4 @@
-# Create the i965 XGL DRI library
+# Create the i965 Vulkan DRI library
 
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DVK_PROTOTYPES -Wno-sign-compare")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-sign-compare")
@@ -7,8 +7,8 @@ add_subdirectory(kmd)
 add_subdirectory(compiler)
 
 add_custom_command(OUTPUT gpa.c
-    COMMAND ${PROJECT_SOURCE_DIR}/xgl-generate.py icd-get-proc-addr > gpa.c
-    DEPENDS ${PROJECT_SOURCE_DIR}/xgl-generate.py ${PROJECT_SOURCE_DIR}/xgl.py)
+    COMMAND ${PROJECT_SOURCE_DIR}/vk-generate.py icd-get-proc-addr > gpa.c
+    DEPENDS ${PROJECT_SOURCE_DIR}/vk-generate.py ${PROJECT_SOURCE_DIR}/vulkan.py)
 
 set(sources
     buf.c

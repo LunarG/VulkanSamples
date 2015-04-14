@@ -28,7 +28,7 @@
 import sys
 import os
 
-import xgl
+import vulkan
 import vk_helper
 
 def generate_get_proc_addr_check(name):
@@ -38,8 +38,8 @@ def generate_get_proc_addr_check(name):
 class Subcommand(object):
     def __init__(self, argv):
         self.argv = argv
-        self.headers = xgl.headers
-        self.protos = xgl.protos
+        self.headers = vulkan.headers
+        self.protos = vulkan.protos
         self.no_addr = False
         self.layer_name = ""
 
@@ -1334,7 +1334,7 @@ class ObjectTrackerSubcommand(Subcommand):
         if proto.name in [ 'DbgRegisterMsgCallback', 'DbgUnregisterMsgCallback' ]:
             # use default version
             return None
-        obj_type_mapping = {base_t : base_t.replace("VK_", "VK_OBJECT_TYPE_") for base_t in xgl.object_type_list}
+        obj_type_mapping = {base_t : base_t.replace("VK_", "VK_OBJECT_TYPE_") for base_t in vulkan.object_type_list}
         # For the various "super-types" we have to use function to distinguish sub type
         for obj_type in ["VK_BASE_OBJECT", "VK_OBJECT", "VK_DYNAMIC_STATE_OBJECT"]:
             obj_type_mapping[obj_type] = "ll_get_obj_type(object)"

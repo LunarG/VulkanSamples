@@ -1612,7 +1612,7 @@ def main(argv=None):
         sw.generateStringHelperCpp()
         sw.set_no_addr(False)
         sw.generateStringHelperCpp()
-        sw.set_include_headers(["stdio.h", "stdlib.h", "xgl.h"])
+        sw.set_include_headers(["stdio.h", "stdlib.h", "vulkan.h"])
         sw.generateSizeHelper()
         sw.generateSizeHelperC()
     if opts.gen_cmake:

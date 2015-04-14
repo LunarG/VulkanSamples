@@ -1111,7 +1111,7 @@ static void demo_prepare_descriptor_set(struct demo *demo)
         view_info[i].view = demo->textures[i].view,
         view_info[i].layout = VK_IMAGE_LAYOUT_GENERAL;
 
-        combined_info[i].sampler = demo->textures[i].sampler;
+        combined_info[i].pSampler = demo->textures[i].sampler;
         combined_info[i].pImageView = &view_info[i];
     }
 

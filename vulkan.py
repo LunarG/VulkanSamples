@@ -181,7 +181,7 @@ class Extension(object):
 # VK core API
 core = Extension(
     name="VK_CORE",
-    headers=["vulkan.h", "xglDbg.h"],
+    headers=["vulkan.h", "vkDbg.h"],
     objects=[
         "VK_INSTANCE",
         "VK_PHYSICAL_GPU",
@@ -884,7 +884,7 @@ core = Extension(
 
 wsi_x11 = Extension(
     name="VK_WSI_X11",
-    headers=["xglWsiX11Ext.h"],
+    headers=["vkWsiX11Ext.h"],
     objects=[],
     protos=[
         Proto("VK_RESULT", "WsiX11AssociateConnection",
@@ -970,7 +970,7 @@ for ext in extensions:
 
 proto_names = [proto.name for proto in protos]
 
-def parse_xgl_h(filename):
+def parse_vk_h(filename):
     # read object and protoype typedefs
     object_lines = []
     proto_lines = []
@@ -1018,7 +1018,7 @@ def parse_xgl_h(filename):
 
     # make them an extension and print
     ext = Extension("VK_CORE",
-            headers=["vulkan.h", "xglDbg.h"],
+            headers=["vulkan.h", "vkDbg.h"],
             objects=object_lines,
             protos=protos)
     print("core =", str(ext))
@@ -1031,4 +1031,4 @@ def parse_xgl_h(filename):
     print("} VK_LAYER_DISPATCH_TABLE;")
 
 if __name__ == "__main__":
-    parse_xgl_h("include/vulkan.h")
+    parse_vk_h("include/vulkan.h")

@@ -27,7 +27,7 @@
 
 import sys
 
-import xgl
+import vulkan
 
 def generate_get_proc_addr_check(name):
     return "    if (!%s || %s[0] != 'v' || %s[1] != 'k')\n" \
@@ -36,8 +36,8 @@ def generate_get_proc_addr_check(name):
 class Subcommand(object):
     def __init__(self, argv):
         self.argv = argv
-        self.headers = xgl.headers
-        self.protos = xgl.protos
+        self.headers = vulkan.headers
+        self.protos = vulkan.protos
 
     def run(self):
         print(self.generate())

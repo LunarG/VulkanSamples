@@ -1,8 +1,8 @@
-# The name of our project is "XGL". CMakeLists files in this project can
-# refer to the root source directory of the project as ${XGL_SOURCE_DIR} and
-# to the root binary directory of the project as ${XGL_BINARY_DIR}.
+# The name of our project is "VULKAN". CMakeLists files in this project can
+# refer to the root source directory of the project as ${VULKAN_SOURCE_DIR} and
+# to the root binary directory of the project as ${VULKAN_BINARY_DIR}.
 cmake_minimum_required(VERSION 2.8.11)
-project (XGL)
+project (VULKAN)
 # set (CMAKE_VERBOSE_MAKEFILE 1)
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake")
@@ -42,9 +42,9 @@ else()
         set(PYTHON_CMD "py")
 endif()
 
-# loader: Generic XGL ICD loader
-# icd: Device dependent (DD) XGL components
-# tests: XGL tests
+# loader: Generic VULKAN ICD loader
+# icd: Device dependent (DD) VULKAN components
+# tests: VULKAN tests
 add_subdirectory(loader)
 add_subdirectory(icd)
 if (NOT WIN32)

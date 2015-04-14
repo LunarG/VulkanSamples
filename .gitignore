@@ -3,7 +3,7 @@ CMakeFiles/
 cmake_install.cmake
 Makefile
 __pycache__
-XGLConfig.h
+VKConfig.h
 *.so
 *.so.*
 icd/common/libicd.a

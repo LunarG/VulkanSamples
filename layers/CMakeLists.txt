@@ -9,8 +9,8 @@ endmacro()
 
 macro(run_vk_layer_generate subcmd output)
 	add_custom_command(OUTPUT ${output}
-		COMMAND ${PYTHON_CMD} ${PROJECT_SOURCE_DIR}/xgl-layer-generate.py ${subcmd} ${PROJECT_SOURCE_DIR}/include/vulkan.h > ${output}
-		DEPENDS ${PROJECT_SOURCE_DIR}/xgl-layer-generate.py ${PROJECT_SOURCE_DIR}/include/vulkan.h ${PROJECT_SOURCE_DIR}/xgl.py
+		COMMAND ${PYTHON_CMD} ${PROJECT_SOURCE_DIR}/vk-layer-generate.py ${subcmd} ${PROJECT_SOURCE_DIR}/include/vulkan.h > ${output}
+		DEPENDS ${PROJECT_SOURCE_DIR}/vk-layer-generate.py ${PROJECT_SOURCE_DIR}/include/vulkan.h ${PROJECT_SOURCE_DIR}/vulkan.py
 	)
 endmacro()
 
@@ -52,12 +52,12 @@ if (NOT WIN32)
 endif()
 
 add_custom_command(OUTPUT vk_dispatch_table_helper.h
-	COMMAND ${PYTHON_CMD} ${PROJECT_SOURCE_DIR}/xgl-generate.py dispatch-table-ops layer > vk_dispatch_table_helper.h
-	DEPENDS ${PROJECT_SOURCE_DIR}/xgl-generate.py ${PROJECT_SOURCE_DIR}/xgl.py)
+	COMMAND ${PYTHON_CMD} ${PROJECT_SOURCE_DIR}/vk-generate.py dispatch-table-ops layer > vk_dispatch_table_helper.h
+	DEPENDS ${PROJECT_SOURCE_DIR}/vk-generate.py ${PROJECT_SOURCE_DIR}/vulkan.py)
 
 add_custom_command(OUTPUT vk_generic_intercept_proc_helper.h
-	COMMAND ${PYTHON_CMD} ${PROJECT_SOURCE_DIR}/xgl-generate.py layer-intercept-proc > vk_generic_intercept_proc_helper.h
-	DEPENDS ${PROJECT_SOURCE_DIR}/xgl-generate.py ${PROJECT_SOURCE_DIR}/xgl.py)
+	COMMAND ${PYTHON_CMD} ${PROJECT_SOURCE_DIR}/vk-generate.py layer-intercept-proc > vk_generic_intercept_proc_helper.h
+	DEPENDS ${PROJECT_SOURCE_DIR}/vk-generate.py ${PROJECT_SOURCE_DIR}/vulkan.py)
 
 run_vk_helper(gen_enum_string_helper vk_enum_string_helper.h)
 run_vk_helper(gen_struct_wrappers

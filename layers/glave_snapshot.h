@@ -22,7 +22,7 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#include "xglLayer.h"
+#include "vkLayer.h"
 
 // Glave Snapshot ERROR codes
 typedef enum _GLAVE_SNAPSHOT_ERROR

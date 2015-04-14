@@ -581,7 +581,7 @@ void intel_desc_set_update_sampler_textures(struct intel_desc_set *set,
     for (i = 0; i < update->count; i++) {
         const struct intel_sampler *sampler = (binding->immutable_samplers) ?
             binding->immutable_samplers[update->arrayIndex + i] :
-            intel_sampler(update->pSamplerImageViews[i].sampler);
+            intel_sampler(update->pSamplerImageViews[i].pSampler);
         const VK_IMAGE_VIEW_ATTACH_INFO *info =
             update->pSamplerImageViews[i].pImageView;
         const struct intel_img_view *view = intel_img_view(info->view);

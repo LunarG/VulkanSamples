@@ -20,10 +20,10 @@ set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DVK_PROTOTYPES")
 set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DVK_PROTOTYPES")
 
 if(WIN32)
-    set (LIBRARIES "XGL")
+    set (LIBRARIES "vulkan")
 endif()
 if(NOT WIN32)
-    set (LIBRARIES "XGL")
+    set (LIBRARIES "vulkan")
     add_custom_command(OUTPUT ${CMAKE_BINARY_DIR}/demos/cube-vert.spv
        COMMAND ${GLSLANG_PREFIX}/build/install/bin/glslangValidator -s -V ${PROJECT_SOURCE_DIR}/demos/cube.vert
        COMMAND mv vert.spv ${CMAKE_BINARY_DIR}/demos/cube-vert.spv
@@ -43,7 +43,7 @@ if(NOT WIN32)
        "${PROJECT_SOURCE_DIR}/icd/common"
        )
 
-    link_libraries(${XCB_LIBRARIES} XGL png m)
+    link_libraries(${XCB_LIBRARIES} vulkan png m)
 endif()
 if(WIN32)
     include_directories (
@@ -59,8 +59,8 @@ else()
     set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DEXTERNAL_SPV")
 endif()
 
-add_executable(xglinfo xglinfo.c)
-target_link_libraries(xglinfo ${LIBRARIES})
+add_executable(vulkaninfo vulkaninfo.c)
+target_link_libraries(vulkaninfo ${LIBRARIES})
 
 add_executable(tri tri.c)
 target_link_libraries(tri ${LIBRARIES})

@@ -80,13 +80,13 @@ struct xcb_connection_t {
 
 xcb_connection_t * xcb_connect(const char *displayname, int *screenp)
 {
-    std::string xglNvidia = (getenv("VK_DRIVERS_PATH") == NULL) ? "" : getenv("VK_DRIVERS_PATH");
-    xglNvidia += "\\XGL_nvidia.dll";
-    HMODULE module = LoadLibrary(xglNvidia.c_str());
+    std::string vkNvidia = (getenv("VK_DRIVERS_PATH") == NULL) ? "" : getenv("VK_DRIVERS_PATH");
+    vkNvidia += "\\VK_nvidia.dll";
+    HMODULE module = LoadLibrary(vkNvidia.c_str());
     if (!module) {
-        std::string xglNulldrv = (getenv("VK_DRIVERS_PATH") == NULL) ? "" : getenv("VK_DRIVERS_PATH");
-        xglNulldrv += "\\xgl_nulldrv.dll";
-        module = LoadLibrary(xglNulldrv.c_str());
+        std::string vkNulldrv = (getenv("VK_DRIVERS_PATH") == NULL) ? "" : getenv("VK_DRIVERS_PATH");
+        vkNulldrv += "\\vk_nulldrv.dll";
+        module = LoadLibrary(vkNulldrv.c_str());
     }
     if (!module) {
         // TODO: Adapted up the following code (copied from "loader.c"):
@@ -98,12 +98,12 @@ xcb_connection_t * xcb_connect(const char *displayname, int *screenp)
         size_t rtn_len;
 
         registry_str = loader_get_registry_string(HKEY_LOCAL_MACHINE,
-                                                  "Software\\XGL",
+                                                  "Software\\VK",
                                                   "VK_DRIVERS_PATH");
         registry_len = strlen(registry_str);
         rtn_len = registry_len + 16;
         rtn_str = (char *) malloc(rtn_len);
-        _snprintf(rtn_str, rtn_len, "%s\\%s", registry_str, "xgl_nvidia.dll");
+        _snprintf(rtn_str, rtn_len, "%s\\%s", registry_str, "vk_nvidia.dll");
         module = LoadLibrary(rtn_str);
 
         free(rtn_str);
@@ -223,7 +223,7 @@ xcb_generic_event_t *xcb_poll_for_event(xcb_connection_t *c)
 
 uint32_t xcb_generate_id(xcb_connection_t *c)
 {
-    // This is a MONSTER hack to make XGL_nvidia compatible with both
+    // This is a MONSTER hack to make VK_nvidia compatible with both
     // the LunarG apps and Dota2.
     return (uint32_t)c->hwnd;
 }
