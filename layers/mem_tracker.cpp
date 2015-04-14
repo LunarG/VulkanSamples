@@ -1233,7 +1233,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkResetFences(VkDevice device, uint32_t fenceCoun
                 // Validate fences in SIGNALED state
                 if (!(pObjectInfo->create_info.fence_create_info.flags & VK_FENCE_CREATE_SIGNALED_BIT)) {
                     char str[1024];
-                    sprintf(str, "Fence %p submitted to xglResetFences in UNSIGNALED STATE", pFences[i]);
+                    sprintf(str, "Fence %p submitted to VkResetFences in UNSIGNALED STATE", pFences[i]);
                     layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, pFences[i], 0, MEMTRACK_INVALID_FENCE_STATE, "MEM", str);
                     result = VK_ERROR_INVALID_VALUE;
                 }
@@ -1267,7 +1267,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkWaitForFences(VkDevice device, uint32_t fenceCo
         if (pObjectInfo != NULL) {
             if (pObjectInfo->create_info.fence_create_info.flags & VK_FENCE_CREATE_SIGNALED_BIT) {
                 char str[1024];
-                sprintf(str, "xglWaitForFences specified fence %p already in SIGNALED state.", pFences[i]);
+                sprintf(str, "VkWaitForFences specified fence %p already in SIGNALED state.", pFences[i]);
                 layerCbMsg(VK_DBG_MSG_WARNING, VK_VALIDATION_LEVEL_0, pFences[i], 0, MEMTRACK_INVALID_FENCE_STATE, "MEM", str);
             }
         }
