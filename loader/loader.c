@@ -351,6 +351,17 @@ static void loader_add_to_ext_list(uint32_t count,
     }
 }
 
+static bool loader_is_extension_scanned(const char *name)
+{
+    uint32_t i;
+
+    for (i = 0; i < loader.scanned_ext_list_count; i++) {
+        if (!strcmp(name, loader.scanned_ext_list[i]->extName))
+            return true;
+    }
+    return false;
+}
+
 static void loader_coalesce_extensions()
 {
     uint32_t i;
@@ -1075,8 +1086,12 @@ LOADER_EXPORT VkResult VKAPI vkCreateInstance(
     ptr_instance->extension_count = pCreateInfo->extensionCount;
     ptr_instance->extension_names = (ptr_instance->extension_count > 0) ?
                 malloc(sizeof (char *) * ptr_instance->extension_count) : NULL;
+    if (ptr_instance->extension_names == NULL && (ptr_instance->extension_count > 0))
+        return VK_ERROR_OUT_OF_MEMORY;
     for (i = 0; i < ptr_instance->extension_count; i++) {
-        ptr_instance->extension_names[i] = malloc(strlen(pCreateInfo->ppEnabledExtensionNames[i] + 1));
+        if (!loader_is_extension_scanned(pCreateInfo->ppEnabledExtensionNames[i]))
+            return VK_ERROR_INVALID_EXTENSION;
+        ptr_instance->extension_names[i] = malloc(strlen(pCreateInfo->ppEnabledExtensionNames[i]) + 1);
         if (ptr_instance->extension_names[i] == NULL)
             return VK_ERROR_OUT_OF_MEMORY;
         strcpy(ptr_instance->extension_names[i], pCreateInfo->ppEnabledExtensionNames[i]);
