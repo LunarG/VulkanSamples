@@ -698,8 +698,6 @@ class APIDumpSubcommand(Subcommand):
                     prev_count_name = "*%s" % p.name
                 else:
                     prev_count_name = p.name
-            else:
-                log_func_no_addr += '%s = " << %s << ", ' % (p.name, pfi)
             pindex += 1
         log_func = log_func.strip(', ')
         log_func_no_addr = log_func_no_addr.strip(', ')
