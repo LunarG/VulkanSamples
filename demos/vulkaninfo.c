@@ -683,7 +683,15 @@ int main(int argc, char **argv)
 
         ERR_EXIT(err);
     }
-    err = vkEnumerateGpus(inst, MAX_GPUS, &gpu_count, objs);
+    err = vkEnumeratePhysicalDevices(inst, &gpu_count, NULL);
+    if (err)
+        ERR_EXIT(err);
+    if (gpu_count > MAX_GPUS) {
+        printf("Too many GPUS found \nExiting ...\n");
+        fflush(stdout);
+        exit(1);
+    }
+    err = vkEnumeratePhysicalDevices(inst, &gpu_count, objs);
     if (err)
         ERR_EXIT(err);
 

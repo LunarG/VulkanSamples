@@ -65,6 +65,8 @@
 #include "test_common.h"
 #include "icd-spv.h"
 
+#define ARRAY_SIZE(a) (sizeof(a) / sizeof(a[0]))
+
 class XglTest : public ::testing::Test {
 public:
     void CreateImageTest();
@@ -78,7 +80,7 @@ public:
 protected:
     VkApplicationInfo app_info;
     VkInstance inst;
-    VkPhysicalGpu objs[VK_MAX_PHYSICAL_GPUS];
+    VkPhysicalGpu objs[16];
     uint32_t gpu_count;
 
     uint32_t m_device_id;
@@ -107,8 +109,10 @@ protected:
         inst_info.ppEnabledExtensionNames = NULL;
         err = vkCreateInstance(&inst_info, &inst);
         ASSERT_VK_SUCCESS(err);
-        err = vkEnumerateGpus(inst, VK_MAX_PHYSICAL_GPUS, &this->gpu_count,
-                               objs);
+        err = vkEnumeratePhysicalDevices(inst, &this->gpu_count, NULL);
+        ASSERT_VK_SUCCESS(err);
+        ASSERT_LE(this->gpu_count, ARRAY_SIZE(objs)) << "Too many GPUs";
+        err = vkEnumeratePhysicalDevices(inst, &this->gpu_count, objs);
         ASSERT_VK_SUCCESS(err);
         ASSERT_GE(this->gpu_count, 1) << "No GPU available";
 
@@ -136,7 +140,7 @@ protected:
 TEST(Initialization, vkEnumerateGpus) {
     VkApplicationInfo app_info = {};
     VkInstance inst;
-    VkPhysicalGpu objs[VK_MAX_PHYSICAL_GPUS];
+    VkPhysicalGpu objs[16];
     uint32_t gpu_count;
     VkResult err;
     vk_testing::PhysicalGpu *gpu;
@@ -160,7 +164,10 @@ TEST(Initialization, vkEnumerateGpus) {
 
     err = vkCreateInstance(&inst_info, &inst);
     ASSERT_VK_SUCCESS(err);
-    err = vkEnumerateGpus(inst, VK_MAX_PHYSICAL_GPUS, &gpu_count, objs);
+    err = vkEnumeratePhysicalDevices(inst, &gpu_count, NULL);
+    ASSERT_VK_SUCCESS(err);
+    ASSERT_LE(gpu_count, ARRAY_SIZE(objs)) << "Too many GPUs";
+    err = vkEnumeratePhysicalDevices(inst, &gpu_count, objs);
     ASSERT_VK_SUCCESS(err);
     ASSERT_GE(gpu_count, 1) << "No GPU available";
 

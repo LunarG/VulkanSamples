@@ -100,7 +100,7 @@ public:
 protected:
     VkApplicationInfo                    app_info;
     VkInstance                            inst;
-    VkPhysicalGpu                        objs[VK_MAX_PHYSICAL_GPUS];
+    VkPhysicalGpu                        objs[16];
     uint32_t                                gpu_count;
     VkDeviceObj                           *m_device;
     VkCmdBuffer                            m_cmdBuffer;

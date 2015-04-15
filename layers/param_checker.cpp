@@ -139,13 +139,6 @@ VK_LAYER_EXPORT VkResult VKAPI vkDestroyInstance(VkInstance instance)
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkEnumerateGpus(VkInstance instance, uint32_t maxGpus, uint32_t* pGpuCount, VkPhysicalGpu* pGpus)
-{
-
-    VkResult result = nextTable.EnumerateGpus(instance, maxGpus, pGpuCount, pGpus);
-    return result;
-}
-
 VK_LAYER_EXPORT VkResult VKAPI vkGetGpuInfo(VkPhysicalGpu gpu, VkPhysicalGpuInfoType infoType, size_t* pDataSize, void* pData)
 {
     pCurObj = (VkBaseLayerObject *) gpu;

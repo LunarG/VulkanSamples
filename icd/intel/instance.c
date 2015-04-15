@@ -167,23 +167,22 @@ ICD_EXPORT VkResult VKAPI vkDestroyInstance(
     return VK_SUCCESS;
 }
 
-ICD_EXPORT VkResult VKAPI vkEnumerateGpus(
+ICD_EXPORT VkResult VKAPI vkEnumeratePhysicalDevices(
     VkInstance                                instance_,
-    uint32_t                                    maxGpus,
-    uint32_t*                                   pGpuCount,
-    VkPhysicalGpu*                           pGpus)
+    uint32_t*                                 pPhysicalDeviceCount,
+    VkPhysicalGpu*                            pPhysicalDevices)
 {
     struct intel_instance *instance = intel_instance(instance_);
     struct icd_drm_device *devices, *dev;
     VkResult ret;
     uint32_t count;
 
-    intel_instance_remove_gpus(instance);
-
-    if (!maxGpus) {
-        *pGpuCount = 0;
+    if (pPhysicalDevices == NULL) {
+        *pPhysicalDeviceCount = 1;
         return VK_SUCCESS;
     }
+
+    intel_instance_remove_gpus(instance);
 
     devices = icd_drm_enumerate(instance->icd, 0x8086);
 
@@ -206,8 +205,8 @@ ICD_EXPORT VkResult VKAPI vkEnumerateGpus(
         if (ret == VK_SUCCESS) {
             intel_instance_add_gpu(instance, gpu);
 
-            pGpus[count++] = (VkPhysicalGpu) gpu;
-            if (count >= maxGpus)
+            pPhysicalDevices[count++] = (VkPhysicalGpu) gpu;
+            if (count >= *pPhysicalDeviceCount)
                 break;
         }
 
@@ -216,7 +215,7 @@ ICD_EXPORT VkResult VKAPI vkEnumerateGpus(
 
     icd_drm_release(instance->icd, devices);
 
-    *pGpuCount = count;
+    *pPhysicalDeviceCount = count;
 
     return (count > 0) ? VK_SUCCESS : VK_ERROR_UNAVAILABLE;
 }

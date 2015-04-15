@@ -68,6 +68,7 @@ static inline void loader_init_data(void *obj, const void *data)
 }
 
 struct loader_instance {
+    uint32_t total_gpu_count;
     struct loader_icd *icds;
     struct loader_instance *next;
     uint32_t  extension_count;
@@ -77,5 +78,6 @@ struct loader_instance {
 extern uint32_t loader_activate_layers(struct loader_icd *icd, uint32_t gpu_index, uint32_t ext_count, const char *const* ext_names);
 extern struct loader_icd * loader_get_icd(const VkBaseLayerObject *gpu, uint32_t *gpu_index);
 #define MAX_LAYER_LIBRARIES 64
+#define MAX_GPUS_FOR_LAYER 16
 
 #endif /* LOADER_H */

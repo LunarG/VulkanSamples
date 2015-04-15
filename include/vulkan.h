@@ -87,7 +87,6 @@ VK_DEFINE_SUBCLASS_HANDLE(VkQueryPool, VkObject)
 VK_DEFINE_SUBCLASS_HANDLE(VkFramebuffer, VkObject)
 VK_DEFINE_SUBCLASS_HANDLE(VkRenderPass, VkObject)
 
-#define VK_MAX_PHYSICAL_GPUS       16
 #define VK_MAX_PHYSICAL_GPU_NAME   256
 #define VK_MAX_EXTENSION_NAME      256
 
@@ -2200,7 +2199,7 @@ typedef struct VkDispatchIndirectCmd_
 // API functions
 typedef VkResult (VKAPI *PFN_vkCreateInstance)(const VkInstanceCreateInfo* pCreateInfo, VkInstance* pInstance);
 typedef VkResult (VKAPI *PFN_vkDestroyInstance)(VkInstance instance);
-typedef VkResult (VKAPI *PFN_vkEnumerateGpus)(VkInstance instance, uint32_t maxGpus, uint32_t* pGpuCount, VkPhysicalGpu* pGpus);
+typedef VkResult (VKAPI *PFN_vkEnumeratePhysicalDevices)(VkInstance instance, uint32_t* pPhysicalDeviceCount, VkPhysicalGpu* pPhysicalDevices);
 typedef VkResult (VKAPI *PFN_vkGetGpuInfo)(VkPhysicalGpu gpu, VkPhysicalGpuInfoType infoType, size_t* pDataSize, void* pData);
 typedef void *   (VKAPI *PFN_vkGetProcAddr)(VkPhysicalGpu gpu, const char * pName);
 typedef VkResult (VKAPI *PFN_vkCreateDevice)(VkPhysicalGpu gpu, const VkDeviceCreateInfo* pCreateInfo, VkDevice* pDevice);
@@ -2326,11 +2325,10 @@ VkResult VKAPI vkCreateInstance(
 VkResult VKAPI vkDestroyInstance(
     VkInstance                                  instance);
 
-VkResult VKAPI vkEnumerateGpus(
+VkResult VKAPI vkEnumeratePhysicalDevices(
     VkInstance                                  instance,
-    uint32_t                                    maxGpus,
-    uint32_t*                                   pGpuCount,
-    VkPhysicalGpu*                              pGpus);
+    uint32_t*                                   pPhysicalDeviceCount,
+    VkPhysicalGpu*                              pPhysicalDevices);
 
 VkResult VKAPI vkGetGpuInfo(
     VkPhysicalGpu                               gpu,

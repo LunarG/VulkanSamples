@@ -225,11 +225,10 @@ core = Extension(
         Proto("VkResult", "DestroyInstance",
             [Param("VkInstance", "instance")]),
 
-        Proto("VkResult", "EnumerateGpus",
+        Proto("VkResult", "EnumeratePhysicalDevices",
             [Param("VkInstance", "instance"),
-             Param("uint32_t", "maxGpus"),
-             Param("uint32_t*", "pGpuCount"),
-             Param("VkPhysicalGpu*", "pGpus")]),
+             Param("uint32_t*", "pPhysicalDeviceCount"),
+             Param("VkPhysicalGpu*", "pPhysicalDevices")]),
 
         Proto("VkResult", "GetGpuInfo",
             [Param("VkPhysicalGpu", "gpu"),

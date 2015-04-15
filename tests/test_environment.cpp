@@ -60,7 +60,10 @@ void Environment::SetUp()
     inst_info.ppEnabledExtensionNames = NULL;
     err = vkCreateInstance(&inst_info, &inst);
     ASSERT_EQ(VK_SUCCESS, err);
-    err = vkEnumerateGpus(inst, ARRAY_SIZE(gpus), &count, gpus);
+    err = vkEnumeratePhysicalDevices(inst, &count, NULL);
+    ASSERT_EQ(VK_SUCCESS, err);
+    ASSERT_LE(count, ARRAY_SIZE(gpus));
+    err = vkEnumeratePhysicalDevices(inst, &count, gpus);
     ASSERT_EQ(VK_SUCCESS, err);
     ASSERT_GT(count, default_dev_);
 
@@ -92,7 +95,10 @@ void Environment::X11SetUp()
 
     err = vkCreateInstance(&instInfo, &inst);
     ASSERT_EQ(VK_SUCCESS, err);
-    err = vkEnumerateGpus(inst, ARRAY_SIZE(gpus), &count, gpus);
+    err = vkEnumeratePhysicalDevices(inst, &count, NULL);
+    ASSERT_EQ(VK_SUCCESS, err);
+    ASSERT_LE(count, ARRAY_SIZE(gpus));
+    err = vkEnumeratePhysicalDevices(inst, &count, gpus);
     ASSERT_EQ(VK_SUCCESS, err);
     ASSERT_GT(count, default_dev_);
 

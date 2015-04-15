@@ -30,7 +30,7 @@ typedef struct VkLayerDispatchTable_
     PFN_vkGetProcAddr GetProcAddr;
     PFN_vkCreateInstance CreateInstance;
     PFN_vkDestroyInstance DestroyInstance;
-    PFN_vkEnumerateGpus EnumerateGpus;
+    PFN_vkEnumeratePhysicalDevices EnumeratePhysicalDevices;
     PFN_vkGetGpuInfo GetGpuInfo;
     PFN_vkCreateDevice CreateDevice;
     PFN_vkDestroyDevice DestroyDevice;

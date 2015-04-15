@@ -27,6 +27,8 @@
 
 #include "vkrenderframework.h"
 
+#define ARRAY_SIZE(a) (sizeof(a) / sizeof(a[0]))
+
 VkRenderFramework::VkRenderFramework() :
     m_cmdBuffer( VK_NULL_HANDLE ),
     m_renderPass(VK_NULL_HANDLE),
@@ -68,8 +70,10 @@ void VkRenderFramework::InitFramework()
     instInfo.ppEnabledExtensionNames = NULL;
     err = vkCreateInstance(&instInfo, &this->inst);
     ASSERT_VK_SUCCESS(err);
-    err = vkEnumerateGpus(inst, VK_MAX_PHYSICAL_GPUS, &this->gpu_count,
-                           objs);
+    err = vkEnumeratePhysicalDevices(inst, &this->gpu_count, NULL);
+    ASSERT_LE(this->gpu_count, ARRAY_SIZE(objs)) << "Too many gpus";
+    ASSERT_VK_SUCCESS(err);
+    err = vkEnumeratePhysicalDevices(inst, &this->gpu_count, objs);
     ASSERT_VK_SUCCESS(err);
     ASSERT_GE(this->gpu_count, 1) << "No GPU available";
 

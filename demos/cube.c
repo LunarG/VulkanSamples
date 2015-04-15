@@ -1717,7 +1717,8 @@ static void demo_init_vk(struct demo *demo)
         assert(!err);
     }
 
-    err = vkEnumerateGpus(demo->inst, 1, &gpu_count, &demo->gpu);
+    gpu_count = 1;
+    err = vkEnumeratePhysicalDevices(demo->inst, &gpu_count, &demo->gpu);
     assert(!err && gpu_count == 1);
 
     err = vkWsiX11AssociateConnection(demo->gpu, &connection);

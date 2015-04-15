@@ -69,9 +69,9 @@ struct loader_icd {
     const struct loader_scanned_icds *scanned_icds;
 
     VkLayerDispatchTable *loader_dispatch;
-    uint32_t layer_count[VK_MAX_PHYSICAL_GPUS];
-    struct loader_layers layer_libs[VK_MAX_PHYSICAL_GPUS][MAX_LAYER_LIBRARIES];
-    VkBaseLayerObject *wrappedGpus[VK_MAX_PHYSICAL_GPUS];
+    uint32_t layer_count[MAX_GPUS_FOR_LAYER];
+    struct loader_layers layer_libs[MAX_GPUS_FOR_LAYER][MAX_LAYER_LIBRARIES];
+    VkBaseLayerObject *wrappedGpus[MAX_GPUS_FOR_LAYER];
     uint32_t gpu_count;
     VkBaseLayerObject *gpus;
 
@@ -85,7 +85,7 @@ struct loader_scanned_icds {
     PFN_vkGetProcAddr GetProcAddr;
     PFN_vkCreateInstance CreateInstance;
     PFN_vkDestroyInstance DestroyInstance;
-    PFN_vkEnumerateGpus EnumerateGpus;
+    PFN_vkEnumeratePhysicalDevices EnumeratePhysicalDevices;
     PFN_vkGetGlobalExtensionInfo GetGlobalExtensionInfo;
     VkInstance instance;
     struct loader_scanned_icds *next;
@@ -443,7 +443,7 @@ static void loader_scanned_icd_add(const char *filename)
     LOOKUP(fp_gpa, GetProcAddr);
     LOOKUP(fp_create_inst, CreateInstance);
     LOOKUP(fp_destroy_inst, DestroyInstance);
-    LOOKUP(fp_enumerate, EnumerateGpus);
+    LOOKUP(fp_enumerate, EnumeratePhysicalDevices);
     LOOKUP(fp_get_global_ext_info, GetGlobalExtensionInfo);
 #undef LOOKUP
 
@@ -457,7 +457,7 @@ static void loader_scanned_icd_add(const char *filename)
     new_node->GetProcAddr = fp_gpa;
     new_node->CreateInstance = fp_create_inst;
     new_node->DestroyInstance = fp_destroy_inst;
-    new_node->EnumerateGpus = fp_enumerate;
+    new_node->EnumeratePhysicalDevices = fp_enumerate;
     new_node->GetGlobalExtensionInfo = fp_get_global_ext_info;
     new_node->extension_count = 0;
     new_node->extensions = NULL;
@@ -1017,7 +1017,7 @@ extern uint32_t loader_activate_layers(struct loader_icd *icd, uint32_t gpu_inde
     struct layer_name_pair *pLayerNames;
     if (!icd)
         return 0;
-    assert(gpu_index < VK_MAX_PHYSICAL_GPUS);
+    assert(gpu_index < MAX_GPUS_FOR_LAYER);
 
     gpu = icd->gpus + gpu_index;
     /* activate any layer libraries */
@@ -1194,73 +1194,90 @@ LOADER_EXPORT VkResult VKAPI vkDestroyInstance(
     return VK_SUCCESS;
 }
 
-LOADER_EXPORT VkResult VKAPI vkEnumerateGpus(
+LOADER_EXPORT VkResult VKAPI vkEnumeratePhysicalDevices(
 
         VkInstance                                instance,
-        uint32_t                                    maxGpus,
-        uint32_t*                                   pGpuCount,
-        VkPhysicalGpu*                           pGpus)
+        uint32_t*                                 pPhysicalDeviceCount,
+        VkPhysicalGpu*                            pPhysicalDevices)
 {
     struct loader_instance *ptr_instance = (struct loader_instance *) instance;
     struct loader_icd *icd;
-    uint32_t count = 0;
+    uint32_t n, count = 0;
     VkResult res;
 
     //in spirit of VK don't error check on the instance parameter
     icd = ptr_instance->icds;
-    while (icd) {
-        VkPhysicalGpu gpus[VK_MAX_PHYSICAL_GPUS];
-        VkBaseLayerObject * wrapped_gpus;
-        PFN_vkGetProcAddr get_proc_addr = icd->scanned_icds->GetProcAddr;
-        uint32_t n, max = maxGpus - count;
-
-        if (max > VK_MAX_PHYSICAL_GPUS) {
-            max = VK_MAX_PHYSICAL_GPUS;
+    if (pPhysicalDevices == NULL) {
+        while (icd) {
+            res = icd->scanned_icds->EnumeratePhysicalDevices(
+                                                icd->scanned_icds->instance,
+                                                &n, NULL);
+            if (res != VK_SUCCESS)
+                return res;
+            icd->gpu_count = n;
+            count += n;
+            icd = icd->next;
         }
 
-        res = icd->scanned_icds->EnumerateGpus(icd->scanned_icds->instance,
-                                               max, &n,
-                                               gpus);
-        if (res == VK_SUCCESS && n) {
-            wrapped_gpus = (VkBaseLayerObject*) malloc(n *
-                                        sizeof(VkBaseLayerObject));
-            icd->gpus = wrapped_gpus;
-            icd->gpu_count = n;
-            icd->loader_dispatch = (VkLayerDispatchTable *) malloc(n *
-                                        sizeof(VkLayerDispatchTable));
-            for (unsigned int i = 0; i < n; i++) {
-                (wrapped_gpus + i)->baseObject = gpus[i];
-                (wrapped_gpus + i)->pGPA = get_proc_addr;
-                (wrapped_gpus + i)->nextObject = gpus[i];
-                memcpy(pGpus + count, gpus, sizeof(*pGpus));
-                loader_init_dispatch_table(icd->loader_dispatch + i,
-                                           get_proc_addr, gpus[i]);
+        ptr_instance->total_gpu_count = count;
 
-                /* Verify ICD compatibility */
-                if (!valid_loader_magic_value(gpus[i])) {
-                    loader_log(VK_DBG_MSG_WARNING, 0,
+    } else
+    {
+        VkPhysicalGpu* gpus;
+        if (*pPhysicalDeviceCount < ptr_instance->total_gpu_count)
+            return VK_ERROR_INVALID_VALUE;
+        gpus = malloc( sizeof(VkPhysicalGpu) *  *pPhysicalDeviceCount);
+        if (!gpus)
+            return VK_ERROR_OUT_OF_MEMORY;
+        while (icd) {
+            VkBaseLayerObject * wrapped_gpus;
+            PFN_vkGetProcAddr get_proc_addr = icd->scanned_icds->GetProcAddr;
+
+            res = icd->scanned_icds->EnumeratePhysicalDevices(
+                                            icd->scanned_icds->instance,
+                                            &n,
+                                            gpus);
+            if (res == VK_SUCCESS && n) {
+                wrapped_gpus = (VkBaseLayerObject*) malloc(n *
+                                            sizeof(VkBaseLayerObject));
+                icd->gpus = wrapped_gpus;
+                icd->gpu_count = n;
+                icd->loader_dispatch = (VkLayerDispatchTable *) malloc(n *
+                                        sizeof(VkLayerDispatchTable));
+                for (unsigned int i = 0; i < n; i++) {
+                    (wrapped_gpus + i)->baseObject = gpus[i];
+                    (wrapped_gpus + i)->pGPA = get_proc_addr;
+                    (wrapped_gpus + i)->nextObject = gpus[i];
+                    memcpy(pPhysicalDevices + count, gpus, sizeof(*pPhysicalDevices));
+                    loader_init_dispatch_table(icd->loader_dispatch + i,
+                                               get_proc_addr, gpus[i]);
+
+                    /* Verify ICD compatibility */
+                    if (!valid_loader_magic_value(gpus[i])) {
+                        loader_log(VK_DBG_MSG_WARNING, 0,
                             "Loader: Incompatible ICD, first dword must be initialized to ICD_LOADER_MAGIC. See loader/README.md for details.\n");
-                    assert(0);
+                        assert(0);
+                    }
+
+                    const VkLayerDispatchTable **disp;
+                    disp = (const VkLayerDispatchTable **) gpus[i];
+                    *disp = icd->loader_dispatch + i;
+                    loader_activate_layers(icd, i, ptr_instance->extension_count,
+                        (const char *const*) ptr_instance->extension_names);
                 }
 
-                const VkLayerDispatchTable **disp;
-                disp = (const VkLayerDispatchTable **) gpus[i];
-                *disp = icd->loader_dispatch + i;
-                loader_activate_layers(icd, i, ptr_instance->extension_count,
-                        (const char *const*) ptr_instance->extension_names);
+                count += n;
+
+                if (count >= *pPhysicalDeviceCount) {
+                    break;
+                }
             }
 
-            count += n;
-
-            if (count >= maxGpus) {
-                break;
-            }
+            icd = icd->next;
         }
-
-        icd = icd->next;
     }
 
-    *pGpuCount = count;
+    *pPhysicalDeviceCount = count;
 
     return (count > 0) ? VK_SUCCESS : res;
 }

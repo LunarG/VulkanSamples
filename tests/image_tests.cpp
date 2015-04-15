@@ -63,6 +63,8 @@
 #include "vktestbinding.h"
 #include "test_common.h"
 
+#define ARRAY_SIZE(a) (sizeof(a) / sizeof(a[0]))
+
 class VkImageTest : public ::testing::Test {
 public:
     void CreateImage(uint32_t w, uint32_t h);
@@ -76,7 +78,7 @@ public:
 protected:
     vk_testing::Device *m_device;
     VkApplicationInfo app_info;
-    VkPhysicalGpu objs[VK_MAX_PHYSICAL_GPUS];
+    VkPhysicalGpu objs[16];
     uint32_t gpu_count;
     VkInstance inst;
     VkImage m_image;
@@ -102,8 +104,10 @@ protected:
         inst_info.ppEnabledExtensionNames = NULL;
         err = vkCreateInstance(&inst_info, &this->inst);
         ASSERT_VK_SUCCESS(err);
-        err = vkEnumerateGpus(this->inst, VK_MAX_PHYSICAL_GPUS,
-                               &this->gpu_count, objs);
+        err = vkEnumeratePhysicalDevices(this->inst, &this->gpu_count, NULL);
+        ASSERT_VK_SUCCESS(err);
+        ASSERT_LE(this->gpu_count, ARRAY_SIZE(objs)) << "Too many GPUs";
+        err = vkEnumeratePhysicalDevices(this->inst, &this->gpu_count, objs);
         ASSERT_VK_SUCCESS(err);
         ASSERT_GE(this->gpu_count, 1) << "No GPU available";
 

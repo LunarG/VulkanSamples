@@ -49,7 +49,7 @@ class Subcommand(object):
         return out_objs and out_objs[-1] == proto.params[-1]
 
     def _is_loader_special_case(self, proto):
-        if proto.name in ["GetProcAddr", "EnumerateGpus", "EnumerateLayers", "DbgRegisterMsgCallback", "DbgUnregisterMsgCallback", "DbgSetGlobalOption", "DestroyInstance"]:
+        if proto.name in ["GetProcAddr", "EnumeratePhysicalDevices", "EnumerateLayers", "DbgRegisterMsgCallback", "DbgUnregisterMsgCallback", "DbgSetGlobalOption", "DestroyInstance"]:
             return True
         return not self.is_dispatchable_object_first_param(proto)
 
@@ -348,7 +348,7 @@ class LayerInterceptProcSubcommand(Subcommand):
 
         # we could get the list from argv if wanted
         self.intercepted = [proto.name for proto in self.protos
-                if proto.name not in ["EnumerateGpus"]]
+                if proto.name not in ["EnumeratePhysicalDevices"]]
 
         for proto in self.protos:
             if proto.name == "GetProcAddr":
