@@ -209,9 +209,8 @@ static void updateFenceTracking(VkFence fence)
 static bool32_t fenceRetired(uint64_t fenceId)
 {
     bool32_t result = VK_FALSE;
-    MT_FENCE_INFO* pFenceInfo = fenceMap[fenceId];
-    if (pFenceInfo != 0)
-    {
+    if (fenceMap.find(fenceId) != fenceMap.end()) {
+        MT_FENCE_INFO* pFenceInfo = fenceMap[fenceId];
         MT_QUEUE_INFO* pQueueInfo = queueMap[pFenceInfo->queue];
         if (fenceId <= pQueueInfo->lastRetiredId)
         {
