@@ -464,7 +464,7 @@ class StructWrapperGen:
         copyright.append('/* THIS FILE IS GENERATED.  DO NOT EDIT. */');
         copyright.append('');
         copyright.append('/*');
-        copyright.append(' * XGL');
+        copyright.append(' * Vulkan');
         copyright.append(' *');
         copyright.append(' * Copyright (C) 2014 LunarG, Inc.');
         copyright.append(' *');
