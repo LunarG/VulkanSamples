@@ -7,7 +7,7 @@
 #include <fstream>
 #include <string>
 
-void glvWritePPM( const char *basename, uint32_t width, uint32_t height, VK_IMAGE img, VK_GPU_MEMORY mem, vkFuncs *pVkFuncs)
+void glvWritePPM( const char *basename, uint32_t width, uint32_t height, VkImage img, VkGpuMemory mem, vkFuncs *pVkFuncs)
 {
     std::string filename;
     VkResult err;
@@ -16,10 +16,10 @@ void glvWritePPM( const char *basename, uint32_t width, uint32_t height, VK_IMAG
     filename.append(basename);
     filename.append(".ppm");
 
-    const VK_IMAGE_SUBRESOURCE sr = {
+    const VkImageSubresource sr = {
         VK_IMAGE_ASPECT_COLOR, 0, 0
     };
-    VK_SUBRESOURCE_LAYOUT sr_layout;
+    VkSubresourceLayout sr_layout;
     size_t data_size = sizeof(sr_layout);
 
     err =  pVkFuncs->real_vkGetImageSubresourceInfo( img, &sr,

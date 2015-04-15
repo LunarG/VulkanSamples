@@ -1221,7 +1221,8 @@ class Subcommand(object):
         for ty in vulkan.object_type_list:
             if ty in vulkan.object_parent_list:
                 continue
-            mem_var = ty.replace('VK_', '').lower()
+            if (ty.startswith('Vk')):
+                mem_var = ty.replace('Vk', '').lower()
             mem_var_list = mem_var.split('_')
             mem_var = 'm_%s%ss' % (mem_var_list[0], "".join([m.title() for m in mem_var_list[1:]]))
             obj_map_dict[mem_var] = ty
@@ -1366,8 +1367,8 @@ class Subcommand(object):
                 rc_body.append(self._rm_from_map_decl(obj_map_dict[var], var))
                 rc_body.append('    VkGpuMemory remap(const VkGpuMemory& value)')
                 rc_body.append('    {')
-                rc_body.append('        std::map<VkGpuMemory, gpuMemObj>::const_iterator q = m_gpuMemorys.find(value);')
-                rc_body.append('        return (q == m_gpuMemorys.end()) ? VK_NULL_HANDLE : q->second.replayGpuMem;')
+                rc_body.append('        std::map<VkGpuMemory, gpuMemObj>::const_iterator q = m_gpumemorys.find(value);')
+                rc_body.append('        return (q == m_gpumemorys.end()) ? VK_NULL_HANDLE : q->second.replayGpuMem;')
                 rc_body.append('    }\n')
             else:
                 rc_body.append(self._map_decl(obj_map_dict[var], obj_map_dict[var], var))
@@ -1401,7 +1402,7 @@ class Subcommand(object):
         rc_body.append('    }')
         rc_body.append('    VkBaseObject remap(const VkBaseObject& object)\n    {')
         rc_body.append('        VkBaseObject obj;')
-        base_obj_remap_types = ['VK_DEVICE', 'VK_QUEUE', 'VkGpuMemory', 'VkObject']
+        base_obj_remap_types = ['VkDevice', 'VkQueue', 'VkGpuMemory', 'VkObject']
         for t in base_obj_remap_types:
             rc_body.append('        if ((obj = remap(static_cast <%s> (object))) != VK_NULL_HANDLE)' % t)
             rc_body.append('            return obj;')
@@ -1662,15 +1663,15 @@ class Subcommand(object):
                                 'WsiX11AssociateConnection', 'WsiX11GetMSC', 'WsiX11CreatePresentableImage', 'WsiX11QueuePresent']
         # multi-gpu Open funcs w/ list of local params to create
         custom_open_params = {'OpenSharedMemory': (-1,),
-                              'OpenSharedQueueSemaphore': (-1,),
+                              'OpenSharedSemaphore': (-1,),
                               'OpenPeerMemory': (-1,),
                               'OpenPeerImage': (-1, -2,)}
         # Functions that create views are unique from other create functions
         create_view_list = ['CreateBufferView', 'CreateImageView', 'CreateColorAttachmentView', 'CreateDepthStencilView', 'CreateComputePipeline']
         # Functions to treat as "Create' that don't have 'Create' in the name
-        special_create_list = ['LoadPipeline', 'AllocMemory', 'GetDeviceQueue', 'PinSystemMemory', 'AllocDescriptorSets']
+        special_create_list = ['LoadPipeline', 'LoadPipelineDerivative', 'AllocMemory', 'GetDeviceQueue', 'PinSystemMemory', 'AllocDescriptorSets']
         # A couple funcs use do while loops
-        do_while_dict = {'GetFenceStatus': 'replayResult != pPacket->result  && pPacket->result == VK_SUCCESS', 'GetEventStatus': '(pPacket->result == VkEvent_SET || pPacket->result == VkEvent_RESET) && replayResult != pPacket->result'}
+        do_while_dict = {'GetFenceStatus': 'replayResult != pPacket->result  && pPacket->result == VK_SUCCESS', 'GetEventStatus': '(pPacket->result == VK_EVENT_SET || pPacket->result == VK_EVENT_RESET) && replayResult != pPacket->result'}
         rbody = []
         rbody.append('glv_replay::GLV_REPLAY_RESULT vkReplay::replay(glv_trace_packet_header *packet)')
         rbody.append('{')
@@ -1698,7 +1699,7 @@ class Subcommand(object):
                 rbody.append(custom_body_dict[proto.name]())
             else:
                 if proto.name in custom_open_params:
-                    rbody.append('            VK_DEVICE handle;')
+                    rbody.append('            VkDevice handle;')
                     for pidx in custom_open_params[proto.name]:
                         rbody.append('            %s local_%s;' % (proto.params[pidx].ty.replace('const ', '').strip('*'), proto.params[pidx].name))
                     rbody.append('            handle = m_objMapper.remap(pPacket->device);')
@@ -1716,18 +1717,24 @@ class Subcommand(object):
                     rbody.append('            %s local_%s;' % (proto.params[-1].ty.strip('*').replace('const ', ''), proto.params[-1].name))
                     if 'AllocDescriptorSets' == proto.name:
                         rbody.append('            %s local_%s[100];' % (proto.params[-2].ty.strip('*').replace('const ', ''), proto.params[-2].name))
-                        rbody.append('            VK_DESCRIPTOR_SET_LAYOUT localDescSets[100];')
+                        rbody.append('            VkDescriptorSetLayout localDescSets[100];')
                         rbody.append('            assert(pPacket->count <= 100);')
                         rbody.append('            for (uint32_t i = 0; i < pPacket->count; i++)')
                         rbody.append('            {')
                         rbody.append('                localDescSets[i] = m_objMapper.remap(pPacket->%s[i]);' % (proto.params[-3].name))
                         rbody.append('            }')
                 elif proto.name == 'ClearDescriptorSets':
-                    rbody.append('            VK_DESCRIPTOR_SET localDescSets[100];')
+                    rbody.append('            VkDescriptorSet localDescSets[100];')
                     rbody.append('            assert(pPacket->count <= 100);')
                     rbody.append('            for (uint32_t i = 0; i < pPacket->count; i++)')
                     rbody.append('            {')
                     rbody.append('                localDescSets[i] = m_objMapper.remap(pPacket->%s[i]);' % (proto.params[-1].name))
+                    rbody.append('            }')
+                elif proto.name == 'ResetFences':
+                    rbody.append('            VkFence* fences = GLV_NEW_ARRAY(VkFence, pPacket->fenceCount);')
+                    rbody.append('            for (uint32_t i = 0; i < pPacket->fenceCount; i++)')
+                    rbody.append('            {')
+                    rbody.append('                fences[i] = m_objMapper.remap(pPacket->%s[i]);' % (proto.params[-1].name))
                     rbody.append('            }')
                 elif proto.name in do_while_dict:
                     rbody.append('            do {')
@@ -1737,7 +1744,7 @@ class Subcommand(object):
                     rbody.append('            for (unsigned int i = 0; i < pPacket->maxLayerCount; i++)')
                     rbody.append('                bufptr[i] = GLV_NEW_ARRAY(char, pPacket->maxStringSize);')
                 elif proto.name == 'DestroyInstance':
-                    rbody.append('            vkDbgUnregisterMsgCallback(g_fpDbgMsgCallback);')
+                    rbody.append('            vkDbgUnregisterMsgCallback(m_objMapper.remap(pPacket->instance), g_fpDbgMsgCallback);')
                 rr_string = '            '
                 if ret_value:
                     rr_string = '            replayResult = '
@@ -1774,7 +1781,13 @@ class Subcommand(object):
                     rr_string = rr_string.replace('pPacket->pDescriptorSets', 'localDescSets')
                 elif proto.name == 'AllocDescriptorSets':
                     rr_string = rr_string.replace('pPacket->pSetLayouts', 'localDescSets')
+                elif proto.name == 'ResetFences':
+                    rr_string = rr_string.replace('m_objMapper.remap(*pPacket->pFences)', 'fences')
+
+                # insert the real_*(..) call
                 rbody.append(rr_string)
+
+                # handle return values or anything that needs to happen after the real_*(..) call
                 if 'DestroyDevice' in proto.name:
                     rbody.append('            if (replayResult == VK_SUCCESS)')
                     rbody.append('            {')
@@ -1798,6 +1811,8 @@ class Subcommand(object):
                     rbody.append('                    m_objMapper.add_to_map(&pPacket->%s[i], &local_%s[i]);' % (proto.params[-2].name, proto.params[-2].name))
                     rbody.append('                }')
                     rbody.append('            }')
+                elif proto.name == 'ResetFences':
+                    rbody.append('            GLV_DELETE(fences);')
                 elif create_func: # save handle mapping if create successful
                     rbody.append('            if (replayResult == VK_SUCCESS)')
                     rbody.append('            {')

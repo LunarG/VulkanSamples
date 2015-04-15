@@ -47,6 +47,7 @@ QString glvdebug_vk_QFileModel::get_packet_string(const glv_trace_packet_header*
     else
     {
         QString packetString = stringify_vk_packet_id((const enum GLV_TRACE_PACKET_ID_VK) pHeader->packet_id, pHeader);
+        return packetString;
     }
 }
 

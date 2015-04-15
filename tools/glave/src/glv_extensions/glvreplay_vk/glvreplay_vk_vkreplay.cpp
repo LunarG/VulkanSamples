@@ -112,7 +112,7 @@ glv_replay::GLV_REPLAY_RESULT vkReplay::handle_replay_errors(const char* entrypo
     glv_replay::GLV_REPLAY_RESULT res = resIn;
     if (resCall != resTrace) {
         glv_LogWarn("Mismatched return from API call (%s) traced result %s, replay result %s\n", entrypointName,
-                string_VK_RESULT((VkResult)resTrace), string_VK_RESULT((VkResult)resCall));
+                string_VkResult((VkResult)resTrace), string_VkResult((VkResult)resCall));
         res = glv_replay::GLV_REPLAY_BAD_RETURN;
     }
 #if 0
@@ -123,7 +123,7 @@ glv_replay::GLV_REPLAY_RESULT vkReplay::handle_replay_errors(const char* entrypo
     return res;
 }
 
-void vkReplay::push_validation_msg(VK_VALIDATION_LEVEL validationLevel, VK_BASE_OBJECT srcObject, size_t location, int32_t msgCode, const char * pMsg)
+void vkReplay::push_validation_msg(VkValidationLevel validationLevel, VkBaseObject srcObject, size_t location, int32_t msgCode, const char * pMsg)
 {
     struct validationMsg msgObj;
     msgObj.validationLevel = validationLevel;
@@ -163,7 +163,7 @@ glv_replay::GLV_REPLAY_RESULT vkReplay::manually_handle_vkCreateDevice(struct_vk
     glv_replay::GLV_REPLAY_RESULT returnValue = glv_replay::GLV_REPLAY_SUCCESS;
     if (!m_display->m_initedVK)
     {
-        VK_DEVICE device;
+        VkDevice device;
         if (g_vkReplaySettings.debugLevel > 0)
         {
             VkDeviceCreateInfo cInfo, *ci, *pCreateInfoSaved;
@@ -185,7 +185,7 @@ glv_replay::GLV_REPLAY_RESULT vkReplay::manually_handle_vkCreateDevice(struct_vk
             }
             memcpy(&cInfo, pPacket->pCreateInfo, sizeof(VkDeviceCreateInfo));
             cInfo.flags = pPacket->pCreateInfo->flags | VK_DEVICE_CREATE_VALIDATION_BIT;
-            cInfo.maxValidationLevel = (VK_VALIDATION_LEVEL)((g_vkReplaySettings.debugLevel <= 4) ? (unsigned int) VK_VALIDATION_LEVEL_0 + g_vkReplaySettings.debugLevel : (unsigned int) VK_VALIDATION_LEVEL_0);
+            cInfo.maxValidationLevel = (VkValidationLevel)((g_vkReplaySettings.debugLevel <= 4) ? (unsigned int) VK_VALIDATION_LEVEL_0 + g_vkReplaySettings.debugLevel : (unsigned int) VK_VALIDATION_LEVEL_0);
             pPacket->pCreateInfo = &cInfo;
             replayResult = m_vkFuncs.real_vkCreateDevice(m_objMapper.remap(pPacket->gpu), pPacket->pCreateInfo, &device);
             // restore the packet for next replay
@@ -216,7 +216,7 @@ glv_replay::GLV_REPLAY_RESULT vkReplay::manually_handle_vkEnumerateGpus(struct_v
     if (!m_display->m_initedVK)
     {
         uint32_t gpuCount;
-        VK_PHYSICAL_GPU gpus[VK_MAX_PHYSICAL_GPUS];
+        VkPhysicalGpu gpus[VK_MAX_PHYSICAL_GPUS];
         uint32_t maxGpus = (pPacket->maxGpus < VK_MAX_PHYSICAL_GPUS) ? pPacket->maxGpus : VK_MAX_PHYSICAL_GPUS;
         replayResult = m_vkFuncs.real_vkEnumerateGpus(m_objMapper.remap(pPacket->instance), maxGpus, &gpuCount, &gpus[0]);
         CHECK_RETURN_VALUE(vkEnumerateGpus);
@@ -256,8 +256,8 @@ glv_replay::GLV_REPLAY_RESULT vkReplay::manually_handle_vkGetGpuInfo(struct_vkGe
         switch (pPacket->infoType) {
         case VK_INFO_TYPE_PHYSICAL_GPU_PROPERTIES:
         {
-            VK_PHYSICAL_GPU_PROPERTIES gpuProps;
-            size_t dataSize = sizeof(VK_PHYSICAL_GPU_PROPERTIES);
+            VkPhysicalGpuProperties gpuProps;
+            size_t dataSize = sizeof(VkPhysicalGpuProperties);
             replayResult = m_vkFuncs.real_vkGetGpuInfo(m_objMapper.remap(pPacket->gpu), pPacket->infoType, &dataSize,
                             (pPacket->pData == NULL) ? NULL : &gpuProps);
             if (pPacket->pData != NULL)
@@ -270,8 +270,8 @@ glv_replay::GLV_REPLAY_RESULT vkReplay::manually_handle_vkGetGpuInfo(struct_vkGe
         }
         case VK_INFO_TYPE_PHYSICAL_GPU_PERFORMANCE:
         {
-            VK_PHYSICAL_GPU_PERFORMANCE gpuPerfs;
-            size_t dataSize = sizeof(VK_PHYSICAL_GPU_PERFORMANCE);
+            VkPhysicalGpuPerformance gpuPerfs;
+            size_t dataSize = sizeof(VkPhysicalGpuPerformance);
             replayResult = m_vkFuncs.real_vkGetGpuInfo(m_objMapper.remap(pPacket->gpu), pPacket->infoType, &dataSize,
                             (pPacket->pData == NULL) ? NULL : &gpuPerfs);
             if (pPacket->pData != NULL)
@@ -284,8 +284,8 @@ glv_replay::GLV_REPLAY_RESULT vkReplay::manually_handle_vkGetGpuInfo(struct_vkGe
         }
         case VK_INFO_TYPE_PHYSICAL_GPU_QUEUE_PROPERTIES:
         {
-            VK_PHYSICAL_GPU_QUEUE_PROPERTIES *pGpuQueue, *pQ;
-            size_t dataSize = sizeof(VK_PHYSICAL_GPU_QUEUE_PROPERTIES);
+            VkPhysicalGpuQueueProperties *pGpuQueue, *pQ;
+            size_t dataSize = sizeof(VkPhysicalGpuQueueProperties);
             size_t numQueues = 1;
             assert(pPacket->pDataSize);
             if ((*(pPacket->pDataSize) % dataSize) != 0)
@@ -293,7 +293,7 @@ glv_replay::GLV_REPLAY_RESULT vkReplay::manually_handle_vkGetGpuInfo(struct_vkGe
             else
                 numQueues = *(pPacket->pDataSize) / dataSize;
             dataSize = numQueues * dataSize;
-            pQ = static_cast < VK_PHYSICAL_GPU_QUEUE_PROPERTIES *> (glv_malloc(dataSize));
+            pQ = static_cast < VkPhysicalGpuQueueProperties *> (glv_malloc(dataSize));
             pGpuQueue = pQ;
             replayResult = m_vkFuncs.real_vkGetGpuInfo(m_objMapper.remap(pPacket->gpu), pPacket->infoType, &dataSize,
                             (pPacket->pData == NULL) ? NULL : pGpuQueue);
@@ -370,10 +370,10 @@ glv_replay::GLV_REPLAY_RESULT vkReplay::manually_handle_vkQueueSubmit(struct_vkQ
 {
     VkResult replayResult = VK_ERROR_UNKNOWN;
     glv_replay::GLV_REPLAY_RESULT returnValue = glv_replay::GLV_REPLAY_SUCCESS;
-    VK_CMD_BUFFER *remappedBuffers = NULL;
+    VkCmdBuffer *remappedBuffers = NULL;
     if (pPacket->pCmdBuffers != NULL)
     {
-        remappedBuffers = GLV_NEW_ARRAY( VK_CMD_BUFFER, pPacket->cmdBufferCount);
+        remappedBuffers = GLV_NEW_ARRAY( VkCmdBuffer, pPacket->cmdBufferCount);
         for (uint32_t i = 0; i < pPacket->cmdBufferCount; i++)
         {
             *(remappedBuffers + i) = m_objMapper.remap(*(pPacket->pCmdBuffers + i));
@@ -424,9 +424,9 @@ glv_replay::GLV_REPLAY_RESULT vkReplay::manually_handle_vkGetObjectInfo(struct_v
                 }
                 case VK_INFO_TYPE_MEMORY_REQUIREMENTS:
                 {
-                    VK_MEMORY_REQUIREMENTS *traceReqs = (VK_MEMORY_REQUIREMENTS *) pPacket->pData;
-                    VK_MEMORY_REQUIREMENTS *replayReqs = (VK_MEMORY_REQUIREMENTS *) pData;
-                    unsigned int num = size / sizeof(VK_MEMORY_REQUIREMENTS);
+                    VkMemoryRequirements *traceReqs = (VkMemoryRequirements *) pPacket->pData;
+                    VkMemoryRequirements *replayReqs = (VkMemoryRequirements *) pData;
+                    unsigned int num = size / sizeof(VkMemoryRequirements);
                     for (unsigned int i = 0; i < num; i++)
                     {
                         if (traceReqs->size != replayReqs->size)
@@ -518,34 +518,34 @@ glv_replay::GLV_REPLAY_RESULT vkReplay::manually_handle_vkUpdateDescriptors(stru
     // We have to remap handles internal to the structures so save the handles prior to remap and then restore
     // Rather than doing a deep memcpy of the entire struct and fixing any intermediate pointers, do save and restores via STL queue
     glv_replay::GLV_REPLAY_RESULT returnValue = glv_replay::GLV_REPLAY_SUCCESS;
-    std::queue<VK_SAMPLER> saveSamplers;
-    std::queue<VK_BUFFER_VIEW> saveBufferViews;
-    std::queue<VK_IMAGE_VIEW> saveImageViews;
-    std::queue<VK_DESCRIPTOR_SET> saveDescSets;
+    std::queue<VkSampler> saveSamplers;
+    std::queue<VkBufferView> saveBufferViews;
+    std::queue<VkImageView> saveImageViews;
+    std::queue<VkDescriptorSet> saveDescSets;
     uint32_t j;
     for (j = 0; j < pPacket->updateCount; j++)
     {
-        VK_UPDATE_SAMPLERS* pUpdateArray = (VK_UPDATE_SAMPLERS*)pPacket->ppUpdateArray[j];
+        VkUpdateSamplers* pUpdateArray = (VkUpdateSamplers*)pPacket->ppUpdateArray[j];
         switch(pUpdateArray->sType)
         {
             case VK_STRUCTURE_TYPE_UPDATE_SAMPLERS:
             {
-                for (uint32_t i = 0; i < ((VK_UPDATE_SAMPLERS*)pUpdateArray)->count; i++)
+                for (uint32_t i = 0; i < ((VkUpdateSamplers*)pUpdateArray)->count; i++)
                 {
-                    VK_SAMPLER* pLocalSampler = (VK_SAMPLER*) &((VK_UPDATE_SAMPLERS*)pUpdateArray)->pSamplers[i];
+                    VkSampler* pLocalSampler = (VkSampler*) &((VkUpdateSamplers*)pUpdateArray)->pSamplers[i];
                     saveSamplers.push(*pLocalSampler);
-                    *pLocalSampler = m_objMapper.remap(((VK_UPDATE_SAMPLERS*)pUpdateArray)->pSamplers[i]);
+                    *pLocalSampler = m_objMapper.remap(((VkUpdateSamplers*)pUpdateArray)->pSamplers[i]);
                 }
                 break;
             }
             case VK_STRUCTURE_TYPE_UPDATE_SAMPLER_TEXTURES:
             {
-                VK_UPDATE_SAMPLER_TEXTURES *pUST = (VK_UPDATE_SAMPLER_TEXTURES *) pUpdateArray;
+                VkUpdateSamplerTextures *pUST = (VkUpdateSamplerTextures *) pUpdateArray;
                 for (uint32_t i = 0; i < pUST->count; i++) {
-                    VK_SAMPLER *pLocalSampler = (VK_SAMPLER *) &pUST->pSamplerImageViews[i].sampler;
+                    VkSampler *pLocalSampler = (VkSampler *) &pUST->pSamplerImageViews[i].sampler;
                     saveSamplers.push(*pLocalSampler);
                     *pLocalSampler = m_objMapper.remap(pUST->pSamplerImageViews[i].sampler);
-                    VK_IMAGE_VIEW *pLocalView = (VK_IMAGE_VIEW *) &pUST->pSamplerImageViews[i].pImageView->view;
+                    VkImageView *pLocalView = (VkImageView *) &pUST->pSamplerImageViews[i].pImageView->view;
                     saveImageViews.push(*pLocalView);
                     *pLocalView = m_objMapper.remap(pUST->pSamplerImageViews[i].pImageView->view);
                 }
@@ -553,9 +553,9 @@ glv_replay::GLV_REPLAY_RESULT vkReplay::manually_handle_vkUpdateDescriptors(stru
             }
             case VK_STRUCTURE_TYPE_UPDATE_IMAGES:
             {
-                VK_UPDATE_IMAGES *pUI = (VK_UPDATE_IMAGES*) pUpdateArray;
+                VkUpdateImages *pUI = (VkUpdateImages*) pUpdateArray;
                 for (uint32_t i = 0; i < pUI->count; i++) {
-                    VK_IMAGE_VIEW* pLocalView = (VK_IMAGE_VIEW*) &pUI->pImageViews[i].view;
+                    VkImageView* pLocalView = (VkImageView*) &pUI->pImageViews[i].view;
                     saveImageViews.push(*pLocalView);
                     *pLocalView = m_objMapper.remap(pUI->pImageViews[i].view);
                 }
@@ -563,9 +563,9 @@ glv_replay::GLV_REPLAY_RESULT vkReplay::manually_handle_vkUpdateDescriptors(stru
             }
             case VK_STRUCTURE_TYPE_UPDATE_BUFFERS:
             {
-                VK_UPDATE_BUFFERS *pUB = (VK_UPDATE_BUFFERS *) pUpdateArray;
+                VkUpdateBuffers *pUB = (VkUpdateBuffers *) pUpdateArray;
                 for (uint32_t i = 0; i < pUB->count; i++) {
-                    VK_BUFFER_VIEW* pLocalView = (VK_BUFFER_VIEW*) &pUB->pBufferViews[i].view;
+                    VkBufferView* pLocalView = (VkBufferView*) &pUB->pBufferViews[i].view;
                     saveBufferViews.push(*pLocalView);
                     *pLocalView = m_objMapper.remap(pUB->pBufferViews[i].view);
                 }
@@ -573,8 +573,8 @@ glv_replay::GLV_REPLAY_RESULT vkReplay::manually_handle_vkUpdateDescriptors(stru
             }
             case VK_STRUCTURE_TYPE_UPDATE_AS_COPY:
             {
-                saveDescSets.push(((VK_UPDATE_AS_COPY*)pUpdateArray)->descriptorSet);
-                ((VK_UPDATE_AS_COPY*)pUpdateArray)->descriptorSet = m_objMapper.remap(((VK_UPDATE_AS_COPY*)pUpdateArray)->descriptorSet);
+                saveDescSets.push(((VkUpdateAsCopy*)pUpdateArray)->descriptorSet);
+                ((VkUpdateAsCopy*)pUpdateArray)->descriptorSet = m_objMapper.remap(((VkUpdateAsCopy*)pUpdateArray)->descriptorSet);
                 break;
             }
             default:
@@ -583,29 +583,29 @@ glv_replay::GLV_REPLAY_RESULT vkReplay::manually_handle_vkUpdateDescriptors(stru
                 break;
             }
         }
-        pUpdateArray = (VK_UPDATE_SAMPLERS*) pUpdateArray->pNext;
+        pUpdateArray = (VkUpdateSamplers*) pUpdateArray->pNext;
     }
     m_vkFuncs.real_vkUpdateDescriptors(m_objMapper.remap(pPacket->descriptorSet), pPacket->updateCount, pPacket->ppUpdateArray);
     for (j = 0; j < pPacket->updateCount; j++)
     {
-        VK_UPDATE_SAMPLERS* pUpdateArray = (VK_UPDATE_SAMPLERS*)pPacket->ppUpdateArray[j];
+        VkUpdateSamplers* pUpdateArray = (VkUpdateSamplers*)pPacket->ppUpdateArray[j];
         switch(pUpdateArray->sType)
         {
             case VK_STRUCTURE_TYPE_UPDATE_SAMPLERS:
-                for (uint32_t i = 0; i < ((VK_UPDATE_SAMPLERS*)pUpdateArray)->count; i++) {
-                    VK_SAMPLER* pLocalSampler = (VK_SAMPLER*) &((VK_UPDATE_SAMPLERS*)pUpdateArray)->pSamplers[i];
+                for (uint32_t i = 0; i < ((VkUpdateSamplers*)pUpdateArray)->count; i++) {
+                    VkSampler* pLocalSampler = (VkSampler*) &((VkUpdateSamplers*)pUpdateArray)->pSamplers[i];
                     *pLocalSampler = saveSamplers.front();
                     saveSamplers.pop();
                 }
                 break;
             case VK_STRUCTURE_TYPE_UPDATE_SAMPLER_TEXTURES:
             {
-                VK_UPDATE_SAMPLER_TEXTURES *pUST = (VK_UPDATE_SAMPLER_TEXTURES *) pUpdateArray;
+                VkUpdateSamplerTextures *pUST = (VkUpdateSamplerTextures *) pUpdateArray;
                 for (uint32_t i = 0; i < pUST->count; i++) {
-                    VK_SAMPLER *plocalSampler = (VK_SAMPLER *) &pUST->pSamplerImageViews[i].sampler;
+                    VkSampler *plocalSampler = (VkSampler *) &pUST->pSamplerImageViews[i].sampler;
                     *plocalSampler = saveSamplers.front();
                     saveSamplers.pop();
-                    VK_IMAGE_VIEW *pLocalView = (VK_IMAGE_VIEW *) &pUST->pSamplerImageViews[i].pImageView->view;
+                    VkImageView *pLocalView = (VkImageView *) &pUST->pSamplerImageViews[i].pImageView->view;
                     *pLocalView = saveImageViews.front();
                     saveImageViews.pop();
                 }
@@ -613,9 +613,9 @@ glv_replay::GLV_REPLAY_RESULT vkReplay::manually_handle_vkUpdateDescriptors(stru
             }
             case VK_STRUCTURE_TYPE_UPDATE_IMAGES:
             {
-                VK_UPDATE_IMAGES *pUI = (VK_UPDATE_IMAGES*) pUpdateArray;
+                VkUpdateImages *pUI = (VkUpdateImages*) pUpdateArray;
                 for (uint32_t i = 0; i < pUI->count; i++) {
-                    VK_IMAGE_VIEW* pLocalView = (VK_IMAGE_VIEW*) &pUI->pImageViews[i].view;
+                    VkImageView* pLocalView = (VkImageView*) &pUI->pImageViews[i].view;
                     *pLocalView = saveImageViews.front();
                     saveImageViews.pop();
                 }
@@ -623,16 +623,16 @@ glv_replay::GLV_REPLAY_RESULT vkReplay::manually_handle_vkUpdateDescriptors(stru
             }
             case VK_STRUCTURE_TYPE_UPDATE_BUFFERS:
             {
-                VK_UPDATE_BUFFERS *pUB = (VK_UPDATE_BUFFERS *) pUpdateArray;
+                VkUpdateBuffers *pUB = (VkUpdateBuffers *) pUpdateArray;
                 for (uint32_t i = 0; i < pUB->count; i++) {
-                    VK_BUFFER_VIEW* pLocalView = (VK_BUFFER_VIEW*) &pUB->pBufferViews[i].view;
+                    VkBufferView* pLocalView = (VkBufferView*) &pUB->pBufferViews[i].view;
                     *pLocalView = saveBufferViews.front();
                     saveBufferViews.pop();
                 }
                 break;
             }
             case VK_STRUCTURE_TYPE_UPDATE_AS_COPY:
-                ((VK_UPDATE_AS_COPY*)pUpdateArray)->descriptorSet = saveDescSets.front();
+                ((VkUpdateAsCopy*)pUpdateArray)->descriptorSet = saveDescSets.front();
                 saveDescSets.pop();
                 //pLocalUpdateChain = (void*)((VK_UPDATE_SAMPLERS*)pLocalUpdateChain)->pNext;
                 break;
@@ -640,7 +640,7 @@ glv_replay::GLV_REPLAY_RESULT vkReplay::manually_handle_vkUpdateDescriptors(stru
                 assert(0);
                 break;
         }
-        pUpdateArray = (VK_UPDATE_SAMPLERS*) pUpdateArray->pNext;
+        pUpdateArray = (VkUpdateSamplers*) pUpdateArray->pNext;
     }
     return returnValue;
 }
@@ -649,30 +649,30 @@ glv_replay::GLV_REPLAY_RESULT vkReplay::manually_handle_vkCreateDescriptorSetLay
 {
     VkResult replayResult = VK_ERROR_UNKNOWN;
     glv_replay::GLV_REPLAY_RESULT returnValue = glv_replay::GLV_REPLAY_SUCCESS;
-    VK_SAMPLER *pSaveSampler;
-    VK_DESCRIPTOR_SET_LAYOUT_CREATE_INFO *pInfo = (VK_DESCRIPTOR_SET_LAYOUT_CREATE_INFO *) pPacket->pCreateInfo;
+    VkSampler *pSaveSampler;
+    VkDescriptorSetLayoutCreateInfo *pInfo = (VkDescriptorSetLayoutCreateInfo *) pPacket->pCreateInfo;
     if (pInfo != NULL)
     {
         size_t bytesAlloc = 0;
         for (unsigned int i = 0; i < pInfo->count; i++)
         {
-            VK_DESCRIPTOR_SET_LAYOUT_BINDING *pLayoutBind = (VK_DESCRIPTOR_SET_LAYOUT_BINDING *) &pInfo->pBinding[i];
-            bytesAlloc += pLayoutBind->count * sizeof(VK_SAMPLER);
+            VkDescriptorSetLayoutBinding *pLayoutBind = (VkDescriptorSetLayoutBinding *) &pInfo->pBinding[i];
+            bytesAlloc += pLayoutBind->count * sizeof(VkSampler);
         }
-        pSaveSampler = (VK_SAMPLER *) glv_malloc(bytesAlloc);
-        VK_SAMPLER *pArray = pSaveSampler;
+        pSaveSampler = (VkSampler *) glv_malloc(bytesAlloc);
+        VkSampler *pArray = pSaveSampler;
         for (unsigned int i = 0; i < pInfo->count; i++)
         {
-            VK_DESCRIPTOR_SET_LAYOUT_BINDING *pLayoutBind = (VK_DESCRIPTOR_SET_LAYOUT_BINDING *) &pInfo->pBinding[i];
+            VkDescriptorSetLayoutBinding *pLayoutBind = (VkDescriptorSetLayoutBinding *) &pInfo->pBinding[i];
             for (unsigned int j = 0; j < pLayoutBind->count; j++)
             {
-                VK_SAMPLER *pOrigSampler = (VK_SAMPLER *) pLayoutBind->pImmutableSamplers + j;
-                *pArray++ = *((VK_SAMPLER *) pLayoutBind->pImmutableSamplers + j);
+                VkSampler *pOrigSampler = (VkSampler *) pLayoutBind->pImmutableSamplers + j;
+                *pArray++ = *((VkSampler *) pLayoutBind->pImmutableSamplers + j);
                 *pOrigSampler = m_objMapper.remap(*pOrigSampler);
             }
         }
     }
-    VK_DESCRIPTOR_SET_LAYOUT setLayout;
+    VkDescriptorSetLayout setLayout;
     replayResult = m_vkFuncs.real_vkCreateDescriptorSetLayout(m_objMapper.remap(pPacket->device), pPacket->pCreateInfo, &setLayout);
     if (replayResult == VK_SUCCESS)
     {
@@ -680,13 +680,13 @@ glv_replay::GLV_REPLAY_RESULT vkReplay::manually_handle_vkCreateDescriptorSetLay
     }
     if (pPacket->pCreateInfo != NULL)
     {
-        VK_SAMPLER *pArray = pSaveSampler;
+        VkSampler *pArray = pSaveSampler;
         for (unsigned int i = 0; i < pInfo->count; i++)
         {
-            VK_DESCRIPTOR_SET_LAYOUT_BINDING *pLayoutBind = (VK_DESCRIPTOR_SET_LAYOUT_BINDING *) &pInfo->pBinding[i];
+            VkDescriptorSetLayoutBinding *pLayoutBind = (VkDescriptorSetLayoutBinding *) &pInfo->pBinding[i];
             for (unsigned int j = 0; j < pLayoutBind->count && pLayoutBind->pImmutableSamplers != NULL; j++)
             {
-                VK_SAMPLER *pOrigSampler = (VK_SAMPLER *) pLayoutBind->pImmutableSamplers + j;
+                VkSampler *pOrigSampler = (VkSampler *) pLayoutBind->pImmutableSamplers + j;
                 *pOrigSampler = *pArray++;
             }
         }
@@ -700,14 +700,14 @@ glv_replay::GLV_REPLAY_RESULT vkReplay::manually_handle_vkCreateGraphicsPipeline
 {
     VkResult replayResult = VK_ERROR_UNKNOWN;
     glv_replay::GLV_REPLAY_RESULT returnValue = glv_replay::GLV_REPLAY_SUCCESS;
-    VK_GRAPHICS_PIPELINE_CREATE_INFO createInfo;
+    VkGraphicsPipelineCreateInfo createInfo;
     struct shaderPair saveShader[10];
     unsigned int idx = 0;
-    memcpy(&createInfo, pPacket->pCreateInfo, sizeof(VK_GRAPHICS_PIPELINE_CREATE_INFO));
+    memcpy(&createInfo, pPacket->pCreateInfo, sizeof(VkGraphicsPipelineCreateInfo));
     createInfo.pSetLayoutChain = m_objMapper.remap(createInfo.pSetLayoutChain);
     // Cast to shader type, as those are of primariy interest and all structs in LL have same header w/ sType & pNext
-    VK_PIPELINE_SHADER_STAGE_CREATE_INFO* pPacketNext = (VK_PIPELINE_SHADER_STAGE_CREATE_INFO*)pPacket->pCreateInfo->pNext;
-    VK_PIPELINE_SHADER_STAGE_CREATE_INFO* pNext = (VK_PIPELINE_SHADER_STAGE_CREATE_INFO*)createInfo.pNext;
+    VkPipelineShaderStageCreateInfo* pPacketNext = (VkPipelineShaderStageCreateInfo*)pPacket->pCreateInfo->pNext;
+    VkPipelineShaderStageCreateInfo* pNext = (VkPipelineShaderStageCreateInfo*)createInfo.pNext;
     while (VK_NULL_HANDLE != pPacketNext)
     {
         if (VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO == pNext->sType)
@@ -716,10 +716,10 @@ glv_replay::GLV_REPLAY_RESULT vkReplay::manually_handle_vkCreateGraphicsPipeline
             saveShader[idx++].addr = &(pNext->shader.shader);
             pNext->shader.shader = m_objMapper.remap(pPacketNext->shader.shader);
         }
-        pPacketNext = (VK_PIPELINE_SHADER_STAGE_CREATE_INFO*)pPacketNext->pNext;
-        pNext = (VK_PIPELINE_SHADER_STAGE_CREATE_INFO*)pNext->pNext;
+        pPacketNext = (VkPipelineShaderStageCreateInfo*)pPacketNext->pNext;
+        pNext = (VkPipelineShaderStageCreateInfo*)pNext->pNext;
     }
-    VK_PIPELINE pipeline;
+    VkPipeline pipeline;
     replayResult = m_vkFuncs.real_vkCreateGraphicsPipeline(m_objMapper.remap(pPacket->device), &createInfo, &pipeline);
     if (replayResult == VK_SUCCESS)
     {
@@ -734,29 +734,29 @@ glv_replay::GLV_REPLAY_RESULT vkReplay::manually_handle_vkCreateGraphicsPipeline
 glv_replay::GLV_REPLAY_RESULT vkReplay::manually_handle_vkCmdWaitEvents(struct_vkCmdWaitEvents* pPacket)
 {
     glv_replay::GLV_REPLAY_RESULT returnValue = glv_replay::GLV_REPLAY_SUCCESS;
-    VK_EVENT saveEvent[100];
+    VkEvent saveEvent[100];
     uint32_t idx, numRemapBuf=0, numRemapImg=0;
     assert(pPacket->pWaitInfo && pPacket->pWaitInfo->eventCount <= 100);
     for (idx = 0; idx < pPacket->pWaitInfo->eventCount; idx++)
     {
-        VK_EVENT *pEvent = (VK_EVENT *) &(pPacket->pWaitInfo->pEvents[idx]);
+        VkEvent *pEvent = (VkEvent *) &(pPacket->pWaitInfo->pEvents[idx]);
         saveEvent[idx] = pPacket->pWaitInfo->pEvents[idx];
         *pEvent = m_objMapper.remap(pPacket->pWaitInfo->pEvents[idx]);
     }
 
-    VK_BUFFER saveBuf[100];
-    VK_IMAGE saveImg[100];
+    VkBuffer saveBuf[100];
+    VkImage saveImg[100];
     for (idx = 0; idx < pPacket->pWaitInfo->memBarrierCount; idx++)
     {
-        VK_MEMORY_BARRIER *pNext = (VK_MEMORY_BARRIER *) pPacket->pWaitInfo->ppMemBarriers[idx];
+        VkMemoryBarrier *pNext = (VkMemoryBarrier *) pPacket->pWaitInfo->ppMemBarriers[idx];
         assert(pNext);
         if (pNext->sType == VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER) {
-            VK_BUFFER_MEMORY_BARRIER *pNextBuf = (VK_BUFFER_MEMORY_BARRIER *) pPacket->pWaitInfo->ppMemBarriers[idx];
+            VkBufferMemoryBarrier *pNextBuf = (VkBufferMemoryBarrier *) pPacket->pWaitInfo->ppMemBarriers[idx];
             assert(numRemapBuf < 100);
             saveBuf[numRemapBuf++] = pNextBuf->buffer;
             pNextBuf->buffer = m_objMapper.remap(pNextBuf->buffer);
         } else if (pNext->sType == VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER) {
-            VK_IMAGE_MEMORY_BARRIER *pNextImg = (VK_IMAGE_MEMORY_BARRIER *) pPacket->pWaitInfo->ppMemBarriers[idx];
+            VkImageMemoryBarrier *pNextImg = (VkImageMemoryBarrier *) pPacket->pWaitInfo->ppMemBarriers[idx];
             assert(numRemapImg < 100);
             saveImg[numRemapImg++] = pNextImg->image;
             pNextImg->image = m_objMapper.remap(pNextImg->image);
@@ -764,17 +764,17 @@ glv_replay::GLV_REPLAY_RESULT vkReplay::manually_handle_vkCmdWaitEvents(struct_v
     }
     m_vkFuncs.real_vkCmdWaitEvents(m_objMapper.remap(pPacket->cmdBuffer), pPacket->pWaitInfo);
     for (idx = 0; idx < pPacket->pWaitInfo->memBarrierCount; idx++) {
-        VK_MEMORY_BARRIER *pNext = (VK_MEMORY_BARRIER *) pPacket->pWaitInfo->ppMemBarriers[idx];
+        VkMemoryBarrier *pNext = (VkMemoryBarrier *) pPacket->pWaitInfo->ppMemBarriers[idx];
         if (pNext->sType == VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER) {
-            VK_BUFFER_MEMORY_BARRIER *pNextBuf = (VK_BUFFER_MEMORY_BARRIER *) pPacket->pWaitInfo->ppMemBarriers[idx];
+            VkBufferMemoryBarrier *pNextBuf = (VkBufferMemoryBarrier *) pPacket->pWaitInfo->ppMemBarriers[idx];
             pNextBuf->buffer = saveBuf[idx];
         } else if (pNext->sType == VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER) {
-            VK_IMAGE_MEMORY_BARRIER *pNextImg = (VK_IMAGE_MEMORY_BARRIER *) pPacket->pWaitInfo->ppMemBarriers[idx];
+            VkImageMemoryBarrier *pNextImg = (VkImageMemoryBarrier *) pPacket->pWaitInfo->ppMemBarriers[idx];
             pNextImg->image = saveImg[idx];
         }
     }
     for (idx = 0; idx < pPacket->pWaitInfo->eventCount; idx++) {
-        VK_EVENT *pEvent = (VK_EVENT *) &(pPacket->pWaitInfo->pEvents[idx]);
+        VkEvent *pEvent = (VkEvent *) &(pPacket->pWaitInfo->pEvents[idx]);
         *pEvent = saveEvent[idx];
     }
     return returnValue;
@@ -784,19 +784,19 @@ glv_replay::GLV_REPLAY_RESULT vkReplay::manually_handle_vkCmdPipelineBarrier(str
 {
     glv_replay::GLV_REPLAY_RESULT returnValue = glv_replay::GLV_REPLAY_SUCCESS;
     uint32_t idx, numRemapBuf=0, numRemapImg=0;
-    VK_BUFFER saveBuf[100];
-    VK_IMAGE saveImg[100];
+    VkBuffer saveBuf[100];
+    VkImage saveImg[100];
     for (idx = 0; idx < pPacket->pBarrier->memBarrierCount; idx++)
     {
-        VK_MEMORY_BARRIER *pNext = (VK_MEMORY_BARRIER *) pPacket->pBarrier->ppMemBarriers[idx];
+        VkMemoryBarrier *pNext = (VkMemoryBarrier *) pPacket->pBarrier->ppMemBarriers[idx];
         assert(pNext);
         if (pNext->sType == VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER) {
-            VK_BUFFER_MEMORY_BARRIER *pNextBuf = (VK_BUFFER_MEMORY_BARRIER *) pPacket->pBarrier->ppMemBarriers[idx];
+            VkBufferMemoryBarrier *pNextBuf = (VkBufferMemoryBarrier *) pPacket->pBarrier->ppMemBarriers[idx];
             assert(numRemapBuf < 100);
             saveBuf[numRemapBuf++] = pNextBuf->buffer;
             pNextBuf->buffer = m_objMapper.remap(pNextBuf->buffer);
         } else if (pNext->sType == VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER) {
-            VK_IMAGE_MEMORY_BARRIER *pNextImg = (VK_IMAGE_MEMORY_BARRIER *) pPacket->pBarrier->ppMemBarriers[idx];
+            VkImageMemoryBarrier *pNextImg = (VkImageMemoryBarrier *) pPacket->pBarrier->ppMemBarriers[idx];
             assert(numRemapImg < 100);
             saveImg[numRemapImg++] = pNextImg->image;
             pNextImg->image = m_objMapper.remap(pNextImg->image);
@@ -804,12 +804,12 @@ glv_replay::GLV_REPLAY_RESULT vkReplay::manually_handle_vkCmdPipelineBarrier(str
     }
     m_vkFuncs.real_vkCmdPipelineBarrier(m_objMapper.remap(pPacket->cmdBuffer), pPacket->pBarrier);
     for (idx = 0; idx < pPacket->pBarrier->memBarrierCount; idx++) {
-        VK_MEMORY_BARRIER *pNext = (VK_MEMORY_BARRIER *) pPacket->pBarrier->ppMemBarriers[idx];
+        VkMemoryBarrier *pNext = (VkMemoryBarrier *) pPacket->pBarrier->ppMemBarriers[idx];
         if (pNext->sType == VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER) {
-            VK_BUFFER_MEMORY_BARRIER *pNextBuf = (VK_BUFFER_MEMORY_BARRIER *) pPacket->pBarrier->ppMemBarriers[idx];
+            VkBufferMemoryBarrier *pNextBuf = (VkBufferMemoryBarrier *) pPacket->pBarrier->ppMemBarriers[idx];
             pNextBuf->buffer = saveBuf[idx];
         } else if (pNext->sType == VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER) {
-            VK_IMAGE_MEMORY_BARRIER *pNextImg = (VK_IMAGE_MEMORY_BARRIER *) pPacket->pBarrier->ppMemBarriers[idx];
+            VkImageMemoryBarrier *pNextImg = (VkImageMemoryBarrier *) pPacket->pBarrier->ppMemBarriers[idx];
             pNextImg->image = saveImg[idx];
         }
     }
@@ -820,14 +820,14 @@ glv_replay::GLV_REPLAY_RESULT vkReplay::manually_handle_vkCreateFramebuffer(stru
 {
     VkResult replayResult = VK_ERROR_UNKNOWN;
     glv_replay::GLV_REPLAY_RESULT returnValue = glv_replay::GLV_REPLAY_SUCCESS;
-    VK_FRAMEBUFFER_CREATE_INFO *pInfo = (VK_FRAMEBUFFER_CREATE_INFO *) pPacket->pCreateInfo;
-    VK_COLOR_ATTACHMENT_BIND_INFO *pColorAttachments, *pSavedColor = (VK_COLOR_ATTACHMENT_BIND_INFO*)pInfo->pColorAttachments;
+    VkFramebufferCreateInfo *pInfo = (VkFramebufferCreateInfo *) pPacket->pCreateInfo;
+    VkColorAttachmentBindInfo *pColorAttachments, *pSavedColor = (VkColorAttachmentBindInfo*)pInfo->pColorAttachments;
     bool allocatedColorAttachments = false;
     if (pSavedColor != NULL)
     {
         allocatedColorAttachments = true;
-        pColorAttachments = GLV_NEW_ARRAY(VK_COLOR_ATTACHMENT_BIND_INFO, pInfo->colorAttachmentCount);
-        memcpy(pColorAttachments, pSavedColor, sizeof(VK_COLOR_ATTACHMENT_BIND_INFO) * pInfo->colorAttachmentCount);
+        pColorAttachments = GLV_NEW_ARRAY(VkColorAttachmentBindInfo, pInfo->colorAttachmentCount);
+        memcpy(pColorAttachments, pSavedColor, sizeof(VkColorAttachmentBindInfo) * pInfo->colorAttachmentCount);
         for (uint32_t i = 0; i < pInfo->colorAttachmentCount; i++)
         {
             pColorAttachments[i].view = m_objMapper.remap(pInfo->pColorAttachments[i].view);
@@ -835,15 +835,15 @@ glv_replay::GLV_REPLAY_RESULT vkReplay::manually_handle_vkCreateFramebuffer(stru
         pInfo->pColorAttachments = pColorAttachments;
     }
     // remap depth stencil target
-    const VK_DEPTH_STENCIL_BIND_INFO *pSavedDS = pInfo->pDepthStencilAttachment;
-    VK_DEPTH_STENCIL_BIND_INFO depthTarget;
+    const VkDepthStencilBindInfo *pSavedDS = pInfo->pDepthStencilAttachment;
+    VkDepthStencilBindInfo depthTarget;
     if (pSavedDS != NULL)
     {
-        memcpy(&depthTarget, pSavedDS, sizeof(VK_DEPTH_STENCIL_BIND_INFO));
+        memcpy(&depthTarget, pSavedDS, sizeof(VkDepthStencilBindInfo));
         depthTarget.view = m_objMapper.remap(pSavedDS->view);
         pInfo->pDepthStencilAttachment = &depthTarget;
     }
-    VK_FRAMEBUFFER local_framebuffer;
+    VkFramebuffer local_framebuffer;
     replayResult = m_vkFuncs.real_vkCreateFramebuffer(m_objMapper.remap(pPacket->device), pPacket->pCreateInfo, &local_framebuffer);
     pInfo->pColorAttachments = pSavedColor;
     pInfo->pDepthStencilAttachment = pSavedDS;
@@ -863,7 +863,7 @@ glv_replay::GLV_REPLAY_RESULT vkReplay::manually_handle_vkCreateRenderPass(struc
 {
     VkResult replayResult = VK_ERROR_UNKNOWN;
     glv_replay::GLV_REPLAY_RESULT returnValue = glv_replay::GLV_REPLAY_SUCCESS;
-    VK_RENDER_PASS local_renderpass;
+    VkRenderPass local_renderpass;
     replayResult = m_vkFuncs.real_vkCreateRenderPass(m_objMapper.remap(pPacket->device), pPacket->pCreateInfo, &local_renderpass);
     if (replayResult == VK_SUCCESS)
     {
@@ -877,22 +877,22 @@ glv_replay::GLV_REPLAY_RESULT vkReplay::manually_handle_vkBeginCommandBuffer(str
 {
     VkResult replayResult = VK_ERROR_UNKNOWN;
     glv_replay::GLV_REPLAY_RESULT returnValue = glv_replay::GLV_REPLAY_SUCCESS;
-    VK_CMD_BUFFER_BEGIN_INFO* pInfo = (VK_CMD_BUFFER_BEGIN_INFO*)pPacket->pBeginInfo;
+    VkCmdBufferBeginInfo* pInfo = (VkCmdBufferBeginInfo*)pPacket->pBeginInfo;
     // assume only zero or one graphics_begin_info in the chain
-    VK_RENDER_PASS_BEGIN savedRP, *pRP;
-    VK_CMD_BUFFER_GRAPHICS_BEGIN_INFO *pGInfo = NULL;
+    VkRenderPassBegin savedRP, *pRP;
+    VkCmdBufferGraphicsBeginInfo *pGInfo = NULL;
     while (pInfo != NULL)
     {
         if (pInfo->sType == VK_STRUCTURE_TYPE_CMD_BUFFER_GRAPHICS_BEGIN_INFO)
         {
-            pGInfo = (VK_CMD_BUFFER_GRAPHICS_BEGIN_INFO *) pInfo;
+            pGInfo = (VkCmdBufferGraphicsBeginInfo *) pInfo;
             savedRP = pGInfo->renderPassContinue;
             pRP = &(pGInfo->renderPassContinue);
             pRP->renderPass = m_objMapper.remap(savedRP.renderPass);
             pRP->framebuffer = m_objMapper.remap(savedRP.framebuffer);
             break;
         }
-        pInfo = (VK_CMD_BUFFER_BEGIN_INFO*) pInfo->pNext;
+        pInfo = (VkCmdBufferBeginInfo*) pInfo->pNext;
     }
     replayResult = m_vkFuncs.real_vkBeginCommandBuffer(m_objMapper.remap(pPacket->cmdBuffer), pPacket->pBeginInfo);
     if (pGInfo != NULL)
@@ -933,8 +933,8 @@ glv_replay::GLV_REPLAY_RESULT vkReplay::manually_handle_vkGetMultiGpuCompatibili
 {
     VkResult replayResult = VK_ERROR_UNKNOWN;
     glv_replay::GLV_REPLAY_RESULT returnValue = glv_replay::GLV_REPLAY_SUCCESS;
-    VK_GPU_COMPATIBILITY_INFO cInfo;
-    VK_PHYSICAL_GPU handle0, handle1;
+    VkGpuCompatibilityInfo cInfo;
+    VkPhysicalGpu handle0, handle1;
     handle0 = m_objMapper.remap(pPacket->gpu0);
     handle1 = m_objMapper.remap(pPacket->gpu1);
     replayResult = m_vkFuncs.real_vkGetMultiGpuCompatibility(handle0, handle1, &cInfo);
@@ -946,7 +946,7 @@ glv_replay::GLV_REPLAY_RESULT vkReplay::manually_handle_vkDestroyObject(struct_v
 {
     VkResult replayResult = VK_ERROR_UNKNOWN;
     glv_replay::GLV_REPLAY_RESULT returnValue = glv_replay::GLV_REPLAY_SUCCESS;
-    VK_OBJECT object = m_objMapper.remap(pPacket->object);
+    VkObject object = m_objMapper.remap(pPacket->object);
     if (object != VK_NULL_HANDLE)
         replayResult = m_vkFuncs.real_vkDestroyObject(object);
     if (replayResult == VK_SUCCESS)
@@ -959,7 +959,7 @@ glv_replay::GLV_REPLAY_RESULT vkReplay::manually_handle_vkWaitForFences(struct_v
 {
     VkResult replayResult = VK_ERROR_UNKNOWN;
     glv_replay::GLV_REPLAY_RESULT returnValue = glv_replay::GLV_REPLAY_SUCCESS;
-    VK_FENCE *pFence = GLV_NEW_ARRAY(VK_FENCE, pPacket->fenceCount);
+    VkFence *pFence = GLV_NEW_ARRAY(VkFence, pPacket->fenceCount);
     for (uint32_t i = 0; i < pPacket->fenceCount; i++)
     {
         *(pFence + i) = m_objMapper.remap(*(pPacket->pFences + i));
@@ -975,7 +975,7 @@ glv_replay::GLV_REPLAY_RESULT vkReplay::manually_handle_vkFreeMemory(struct_vkFr
     VkResult replayResult = VK_ERROR_UNKNOWN;
     glv_replay::GLV_REPLAY_RESULT returnValue = glv_replay::GLV_REPLAY_SUCCESS;
     gpuMemObj local_mem;
-    local_mem = m_objMapper.m_gpuMemorys.find(pPacket->mem)->second;
+    local_mem = m_objMapper.m_gpumemorys.find(pPacket->mem)->second;
     // TODO how/when to free pendingAlloc that did not use and existing gpuMemObj
     replayResult = m_vkFuncs.real_vkFreeMemory(local_mem.replayGpuMem);
     if (replayResult == VK_SUCCESS)
@@ -991,7 +991,7 @@ glv_replay::GLV_REPLAY_RESULT vkReplay::manually_handle_vkMapMemory(struct_vkMap
 {
     VkResult replayResult = VK_ERROR_UNKNOWN;
     glv_replay::GLV_REPLAY_RESULT returnValue = glv_replay::GLV_REPLAY_SUCCESS;
-    gpuMemObj local_mem = m_objMapper.m_gpuMemorys.find(pPacket->mem)->second;
+    gpuMemObj local_mem = m_objMapper.m_gpumemorys.find(pPacket->mem)->second;
     void* pData;
     if (!local_mem.pGpuMem->isPendingAlloc())
     {
@@ -1019,7 +1019,7 @@ glv_replay::GLV_REPLAY_RESULT vkReplay::manually_handle_vkUnmapMemory(struct_vkU
 {
     VkResult replayResult = VK_ERROR_UNKNOWN;
     glv_replay::GLV_REPLAY_RESULT returnValue = glv_replay::GLV_REPLAY_SUCCESS;
-    gpuMemObj local_mem = m_objMapper.m_gpuMemorys.find(pPacket->mem)->second;
+    gpuMemObj local_mem = m_objMapper.m_gpumemorys.find(pPacket->mem)->second;
     if (!local_mem.pGpuMem->isPendingAlloc())
     {
         if (local_mem.pGpuMem)
