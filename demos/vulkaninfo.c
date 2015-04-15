@@ -60,7 +60,7 @@ struct app_gpu {
 
     uint32_t queue_count;
     VK_PHYSICAL_GPU_QUEUE_PROPERTIES *queue_props;
-    VK_DEVICE_QUEUE_CREATE_INFO *queue_reqs;
+    VkDeviceQueueCreateInfo *queue_reqs;
 
     VK_PHYSICAL_GPU_MEMORY_PROPERTIES memory_props;
 
@@ -332,7 +332,7 @@ static void app_dev_init_formats(struct app_dev *dev)
 
 static void app_dev_init(struct app_dev *dev, struct app_gpu *gpu)
 {
-    VK_DEVICE_CREATE_INFO info = {
+    VkDeviceCreateInfo info = {
         .sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
         .pNext = NULL,
         .queueRecordCount = 0,
@@ -652,7 +652,7 @@ int main(int argc, char **argv)
         .engineVersion = 1,
         .apiVersion = VK_API_VERSION,
     };
-    static const VK_INSTANCE_CREATE_INFO inst_info = {
+    static const VkInstanceCreateInfo inst_info = {
         .sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
         .pNext = NULL,
         .pAppInfo = &app_info,

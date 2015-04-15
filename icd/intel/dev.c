@@ -66,7 +66,7 @@ static bool dev_create_meta_shaders(struct intel_dev *dev)
 }
 
 static VK_RESULT dev_create_queues(struct intel_dev *dev,
-                                    const VK_DEVICE_QUEUE_CREATE_INFO *queues,
+                                    const VkDeviceQueueCreateInfo *queues,
                                     uint32_t count)
 {
     uint32_t i;
@@ -75,7 +75,7 @@ static VK_RESULT dev_create_queues(struct intel_dev *dev,
         return VK_ERROR_INVALID_POINTER;
 
     for (i = 0; i < count; i++) {
-        const VK_DEVICE_QUEUE_CREATE_INFO *q = &queues[i];
+        const VkDeviceQueueCreateInfo *q = &queues[i];
         VK_RESULT ret = VK_SUCCESS;
 
         if (q->queueNodeIndex < INTEL_GPU_ENGINE_COUNT &&
@@ -100,7 +100,7 @@ static VK_RESULT dev_create_queues(struct intel_dev *dev,
 }
 
 VK_RESULT intel_dev_create(struct intel_gpu *gpu,
-                            const VK_DEVICE_CREATE_INFO *info,
+                            const VkDeviceCreateInfo *info,
                             struct intel_dev **dev_ret)
 {
     struct intel_dev *dev;
@@ -321,7 +321,7 @@ void intel_dev_log(struct intel_dev *dev,
 
 ICD_EXPORT VK_RESULT VKAPI vkCreateDevice(
     VK_PHYSICAL_GPU                            gpu_,
-    const VK_DEVICE_CREATE_INFO*               pCreateInfo,
+    const VkDeviceCreateInfo*               pCreateInfo,
     VK_DEVICE*                                 pDevice)
 {
     struct intel_gpu *gpu = intel_gpu(gpu_);

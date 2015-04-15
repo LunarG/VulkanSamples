@@ -98,7 +98,7 @@ protected:
         this->app_info.pEngineName = "unittest";
         this->app_info.engineVersion = 1;
         this->app_info.apiVersion = VK_API_VERSION;
-        VK_INSTANCE_CREATE_INFO inst_info = {};
+        VkInstanceCreateInfo inst_info = {};
         inst_info.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
         inst_info.pNext = NULL;
         inst_info.pAppInfo = &app_info;
@@ -143,7 +143,7 @@ TEST(Initialization, vkEnumerateGpus) {
     char *layers[16];
     size_t layer_count;
     char layer_buf[16][256];
-    VK_INSTANCE_CREATE_INFO inst_info = {};
+    VkInstanceCreateInfo inst_info = {};
     inst_info.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
     inst_info.pNext = NULL;
     inst_info.pAppInfo = &app_info;
@@ -184,7 +184,7 @@ TEST(Initialization, vkEnumerateGpus) {
 
 TEST_F(XglTest, AllocMemory) {
     VK_RESULT err;
-    VK_MEMORY_ALLOC_INFO alloc_info = {};
+    VkMemoryAllocInfo alloc_info = {};
     VK_GPU_MEMORY gpu_mem;
     uint8_t *pData;
 
@@ -239,9 +239,9 @@ TEST_F(XglTest, Event) {
 
     //        VK_RESULT VKAPI vkAllocMemory(
     //            VK_DEVICE                                  device,
-    //            const VK_MEMORY_ALLOC_INFO*                pAllocInfo,
+    //            const VkMemoryAllocInfo*                pAllocInfo,
     //            VK_GPU_MEMORY*                             pMem);
-    VK_MEMORY_ALLOC_INFO mem_info;
+    VkMemoryAllocInfo mem_info;
     VK_GPU_MEMORY event_mem;
 
     ASSERT_NE(0, mem_req.size) << "vkGetObjectInfo (Event): Failed - expect events to require memory";
@@ -371,9 +371,9 @@ TEST_F(XglTest, Query) {
 
     //        VK_RESULT VKAPI vkAllocMemory(
     //            VK_DEVICE                                  device,
-    //            const VK_MEMORY_ALLOC_INFO*                pAllocInfo,
+    //            const VkMemoryAllocInfo*                pAllocInfo,
     //            VK_GPU_MEMORY*                             pMem);
-    VK_MEMORY_ALLOC_INFO mem_info;
+    VkMemoryAllocInfo mem_info;
     VK_GPU_MEMORY query_mem;
 
     memset(&mem_info, 0, sizeof(mem_info));
@@ -638,7 +638,7 @@ void XglTest::CreateImageTest()
         subresource.mipLevel++;
     }
 
-    VK_MEMORY_ALLOC_IMAGE_INFO img_alloc = {
+    VkMemoryAllocImageInfo img_alloc = {
         .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOC_IMAGE_INFO,
         .pNext = NULL,
 
@@ -661,9 +661,9 @@ void XglTest::CreateImageTest()
     img_alloc.samples = img_reqs.samples;
     //        VK_RESULT VKAPI vkAllocMemory(
     //            VK_DEVICE                                  device,
-    //            const VK_MEMORY_ALLOC_INFO*                pAllocInfo,
+    //            const VkMemoryAllocInfo*                pAllocInfo,
     //            VK_GPU_MEMORY*                             pMem);
-    VK_MEMORY_ALLOC_INFO mem_info = {};
+    VkMemoryAllocInfo mem_info = {};
     VK_GPU_MEMORY image_mem;
 
     mem_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO;

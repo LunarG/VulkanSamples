@@ -74,7 +74,7 @@ static inline void *loader_unwrap_gpu(VK_PHYSICAL_GPU *gpu)
     return loader_get_data(wrap->baseObject);
 }
 
-extern uint32_t loader_activate_layers(VK_PHYSICAL_GPU gpu, const VK_DEVICE_CREATE_INFO* pCreateInfo);
+extern uint32_t loader_activate_layers(VK_PHYSICAL_GPU gpu, const VkDeviceCreateInfo* pCreateInfo);
 #define MAX_LAYER_LIBRARIES 64
 
 #endif /* LOADER_H */

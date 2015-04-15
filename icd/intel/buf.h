@@ -54,7 +54,7 @@ static inline struct intel_buf *intel_buf_from_obj(struct intel_obj *obj)
 }
 
 VK_RESULT intel_buf_create(struct intel_dev *dev,
-                            const VK_BUFFER_CREATE_INFO *info,
+                            const VkBufferCreateInfo *info,
                             struct intel_buf **buf_ret);
 
 void intel_buf_destroy(struct intel_buf *buf);

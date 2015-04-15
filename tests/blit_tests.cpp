@@ -778,9 +778,9 @@ TEST_F(VkCmdCopyBufferTest, RAWHazard)
 
     //        VK_RESULT VKAPI vkAllocMemory(
     //            VK_DEVICE                                  device,
-    //            const VK_MEMORY_ALLOC_INFO*                pAllocInfo,
+    //            const VkMemoryAllocInfo*                pAllocInfo,
     //            VK_GPU_MEMORY*                             pMem);
-    VK_MEMORY_ALLOC_INFO mem_info;
+    VkMemoryAllocInfo mem_info;
     VK_GPU_MEMORY event_mem;
 
     ASSERT_NE(0, mem_req.size) << "vkGetObjectInfo (Event): Failed - expect events to require memory";

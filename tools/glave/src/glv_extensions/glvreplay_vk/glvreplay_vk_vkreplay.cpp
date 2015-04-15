@@ -166,24 +166,24 @@ glv_replay::GLV_REPLAY_RESULT vkReplay::manually_handle_vkCreateDevice(struct_vk
         VK_DEVICE device;
         if (g_vkReplaySettings.debugLevel > 0)
         {
-            VK_DEVICE_CREATE_INFO cInfo, *ci, *pCreateInfoSaved;
+            VkDeviceCreateInfo cInfo, *ci, *pCreateInfoSaved;
             unsigned int numLayers = 0;
             char ** layersStr = get_enableLayers_list(&numLayers);
             apply_layerSettings_overrides();
-            VK_LAYER_CREATE_INFO layerInfo;
-            pCreateInfoSaved = (VK_DEVICE_CREATE_INFO *) pPacket->pCreateInfo;
-            ci = (VK_DEVICE_CREATE_INFO *) pPacket->pCreateInfo;
+            VkLayerCreateInfo layerInfo;
+            pCreateInfoSaved = (VkDeviceCreateInfo *) pPacket->pCreateInfo;
+            ci = (VkDeviceCreateInfo *) pPacket->pCreateInfo;
             if (layersStr != NULL && numLayers > 0)
             {
                 while (ci->pNext != NULL)
-                    ci = (VK_DEVICE_CREATE_INFO *) ci->pNext;
+                    ci = (VkDeviceCreateInfo *) ci->pNext;
                 ci->pNext = &layerInfo;
                 layerInfo.sType = VK_STRUCTURE_TYPE_LAYER_CREATE_INFO;
                 layerInfo.pNext = 0;
                 layerInfo.layerCount = numLayers;
                 layerInfo.ppActiveLayerNames = layersStr;
             }
-            memcpy(&cInfo, pPacket->pCreateInfo, sizeof(VK_DEVICE_CREATE_INFO));
+            memcpy(&cInfo, pPacket->pCreateInfo, sizeof(VkDeviceCreateInfo));
             cInfo.flags = pPacket->pCreateInfo->flags | VK_DEVICE_CREATE_VALIDATION_BIT;
             cInfo.maxValidationLevel = (VK_VALIDATION_LEVEL)((g_vkReplaySettings.debugLevel <= 4) ? (unsigned int) VK_VALIDATION_LEVEL_0 + g_vkReplaySettings.debugLevel : (unsigned int) VK_VALIDATION_LEVEL_0);
             pPacket->pCreateInfo = &cInfo;

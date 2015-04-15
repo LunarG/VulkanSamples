@@ -594,11 +594,11 @@ static void demo_prepare_depth(struct demo *demo)
         .usage = VK_IMAGE_USAGE_DEPTH_STENCIL_BIT,
         .flags = 0,
     };
-    VK_MEMORY_ALLOC_IMAGE_INFO img_alloc = {
+    VkMemoryAllocImageInfo img_alloc = {
         .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOC_IMAGE_INFO,
         .pNext = NULL,
     };
-    VK_MEMORY_ALLOC_INFO mem_alloc = {
+    VkMemoryAllocInfo mem_alloc = {
         .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO,
         .pNext = &img_alloc,
         .allocationSize = 0,
@@ -851,15 +851,15 @@ static void demo_prepare_texture_image(struct demo *demo,
         .usage = VK_IMAGE_USAGE_TRANSFER_SOURCE_BIT,
         .flags = 0,
     };
-    VK_MEMORY_ALLOC_BUFFER_INFO buf_alloc = {
+    VkMemoryAllocBufferInfo buf_alloc = {
         .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOC_BUFFER_INFO,
         .pNext = NULL,
     };
-    VK_MEMORY_ALLOC_IMAGE_INFO img_alloc = {
+    VkMemoryAllocImageInfo img_alloc = {
         .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOC_IMAGE_INFO,
         .pNext = &buf_alloc,
     };
-    VK_MEMORY_ALLOC_INFO mem_alloc = {
+    VkMemoryAllocInfo mem_alloc = {
         .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO,
         .pNext = &img_alloc,
         .allocationSize = 0,
@@ -1087,13 +1087,13 @@ static void demo_prepare_textures(struct demo *demo)
 
 void demo_prepare_cube_data_buffer(struct demo *demo)
 {
-    VK_BUFFER_CREATE_INFO buf_info;
-    VK_BUFFER_VIEW_CREATE_INFO view_info;
-    VK_MEMORY_ALLOC_BUFFER_INFO buf_alloc = {
+    VkBufferCreateInfo buf_info;
+    VkBufferViewCreateInfo view_info;
+    VkMemoryAllocBufferInfo buf_alloc = {
         .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOC_BUFFER_INFO,
         .pNext = NULL,
     };
-    VK_MEMORY_ALLOC_INFO alloc_info = {
+    VkMemoryAllocInfo alloc_info = {
         .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO,
         .pNext = &buf_alloc,
         .allocationSize = 0,
@@ -1731,7 +1731,7 @@ static void demo_init_vk(struct demo *demo)
         .engineVersion = 0,
         .apiVersion = VK_API_VERSION,
     };
-    const VK_INSTANCE_CREATE_INFO inst_info = {
+    const VkInstanceCreateInfo inst_info = {
         .sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
         .pNext = NULL,
         .pAppInfo = &app,
@@ -1744,14 +1744,14 @@ static void demo_init_vk(struct demo *demo)
         .root = demo->screen->root,
         .provider = 0,
     };
-    const VK_DEVICE_QUEUE_CREATE_INFO queue = {
+    const VkDeviceQueueCreateInfo queue = {
         .queueNodeIndex = 0,
         .queueCount = 1,
     };
     const char *ext_names[] = {
         "VK_WSI_X11",
     };
-    const VK_DEVICE_CREATE_INFO device = {
+    const VkDeviceCreateInfo device = {
         .sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
         .pNext = NULL,
         .queueRecordCount = 1,

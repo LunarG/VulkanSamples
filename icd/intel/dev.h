@@ -187,7 +187,7 @@ static inline struct intel_dev_dbg *intel_dev_dbg(struct intel_dev *dev)
 }
 
 VK_RESULT intel_dev_create(struct intel_gpu *gpu,
-                            const VK_DEVICE_CREATE_INFO *info,
+                            const VkDeviceCreateInfo *info,
                             struct intel_dev **dev_ret);
 void intel_dev_destroy(struct intel_dev *dev);
 

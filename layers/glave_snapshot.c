@@ -62,15 +62,15 @@ void glv_vk_malloc_and_copy(void** ppDest, size_t size, const void* pSrc)
     memcpy(*ppDest, pSrc, size);
 }
 
-VK_DEVICE_CREATE_INFO* glv_deepcopy_VK_DEVICE_CREATE_INFO(const VK_DEVICE_CREATE_INFO* pSrcCreateInfo)
+VkDeviceCreateInfo* glv_deepcopy_VkDeviceCreateInfo(const VkDeviceCreateInfo* pSrcCreateInfo)
 {
-    VK_DEVICE_CREATE_INFO* pDestCreateInfo;
+    VkDeviceCreateInfo* pDestCreateInfo;
 
-    // NOTE: partially duplicated code from add_VK_DEVICE_CREATE_INFO_to_packet(...)
+    // NOTE: partially duplicated code from add_VkDeviceCreateInfo_to_packet(...)
     {
         uint32_t i;
-        glv_vk_malloc_and_copy((void**)&pDestCreateInfo, sizeof(VK_DEVICE_CREATE_INFO), pSrcCreateInfo);
-        glv_vk_malloc_and_copy((void**)&pDestCreateInfo->pRequestedQueues, pSrcCreateInfo->queueRecordCount*sizeof(VK_DEVICE_QUEUE_CREATE_INFO), pSrcCreateInfo->pRequestedQueues);
+        glv_vk_malloc_and_copy((void**)&pDestCreateInfo, sizeof(VkDeviceCreateInfo), pSrcCreateInfo);
+        glv_vk_malloc_and_copy((void**)&pDestCreateInfo->pRequestedQueues, pSrcCreateInfo->queueRecordCount*sizeof(VkDeviceQueueCreateInfo), pSrcCreateInfo->pRequestedQueues);
 
         if (pSrcCreateInfo->extensionCount > 0)
         {
@@ -80,29 +80,29 @@ VK_DEVICE_CREATE_INFO* glv_deepcopy_VK_DEVICE_CREATE_INFO(const VK_DEVICE_CREATE
                 glv_vk_malloc_and_copy((void**)&pDestCreateInfo->ppEnabledExtensionNames[i], strlen(pSrcCreateInfo->ppEnabledExtensionNames[i]) + 1, pSrcCreateInfo->ppEnabledExtensionNames[i]);
             }
         }
-        VK_LAYER_CREATE_INFO *pSrcNext = ( VK_LAYER_CREATE_INFO *) pSrcCreateInfo->pNext;
-        VK_LAYER_CREATE_INFO **ppDstNext = ( VK_LAYER_CREATE_INFO **) &pDestCreateInfo->pNext;
+        VkLayerCreateInfo *pSrcNext = ( VkLayerCreateInfo *) pSrcCreateInfo->pNext;
+        VkLayerCreateInfo **ppDstNext = ( VkLayerCreateInfo **) &pDestCreateInfo->pNext;
         while (pSrcNext != NULL)
         {
             if ((pSrcNext->sType == VK_STRUCTURE_TYPE_LAYER_CREATE_INFO) && pSrcNext->layerCount > 0)
             {
-                glv_vk_malloc_and_copy((void**)ppDstNext, sizeof(VK_LAYER_CREATE_INFO), pSrcNext);
+                glv_vk_malloc_and_copy((void**)ppDstNext, sizeof(VkLayerCreateInfo), pSrcNext);
                 glv_vk_malloc_and_copy((void**)&(*ppDstNext)->ppActiveLayerNames, pSrcNext->layerCount * sizeof(char*), pSrcNext->ppActiveLayerNames);
                 for (i = 0; i < pSrcNext->layerCount; i++)
                 {
                     glv_vk_malloc_and_copy((void**)&(*ppDstNext)->ppActiveLayerNames[i], strlen(pSrcNext->ppActiveLayerNames[i]) + 1, pSrcNext->ppActiveLayerNames[i]);
                 }
 
-                ppDstNext = (VK_LAYER_CREATE_INFO**) &(*ppDstNext)->pNext;
+                ppDstNext = (VkLayerCreateInfo**) &(*ppDstNext)->pNext;
             }
-            pSrcNext = (VK_LAYER_CREATE_INFO*) pSrcNext->pNext;
+            pSrcNext = (VkLayerCreateInfo*) pSrcNext->pNext;
         }
     }
 
     return pDestCreateInfo;
 }
 
-void glv_deepfree_VK_DEVICE_CREATE_INFO(VK_DEVICE_CREATE_INFO* pCreateInfo)
+void glv_deepfree_VkDeviceCreateInfo(VkDeviceCreateInfo* pCreateInfo)
 {
     uint32_t i;
     if (pCreateInfo->pRequestedQueues != NULL)
@@ -119,10 +119,10 @@ void glv_deepfree_VK_DEVICE_CREATE_INFO(VK_DEVICE_CREATE_INFO* pCreateInfo)
         free((void*)pCreateInfo->ppEnabledExtensionNames);
     }
 
-    VK_LAYER_CREATE_INFO *pSrcNext = (VK_LAYER_CREATE_INFO*)pCreateInfo->pNext;
+    VkLayerCreateInfo *pSrcNext = (VkLayerCreateInfo*)pCreateInfo->pNext;
     while (pSrcNext != NULL)
     {
-        VK_LAYER_CREATE_INFO* pTmp = (VK_LAYER_CREATE_INFO*)pSrcNext->pNext;
+        VkLayerCreateInfo* pTmp = (VkLayerCreateInfo*)pSrcNext->pNext;
         if ((pSrcNext->sType == VK_STRUCTURE_TYPE_LAYER_CREATE_INFO) && pSrcNext->layerCount > 0)
         {
             for (i = 0; i < pSrcNext->layerCount; i++)
@@ -139,11 +139,11 @@ void glv_deepfree_VK_DEVICE_CREATE_INFO(VK_DEVICE_CREATE_INFO* pCreateInfo)
     free(pCreateInfo);
 }
 
-void glv_vk_snapshot_copy_createdevice_params(GLV_VK_SNAPSHOT_CREATEDEVICE_PARAMS* pDest, VK_PHYSICAL_GPU gpu, const VK_DEVICE_CREATE_INFO* pCreateInfo, VK_DEVICE* pDevice)
+void glv_vk_snapshot_copy_createdevice_params(GLV_VK_SNAPSHOT_CREATEDEVICE_PARAMS* pDest, VK_PHYSICAL_GPU gpu, const VkDeviceCreateInfo* pCreateInfo, VK_DEVICE* pDevice)
 {
     pDest->gpu = gpu;
 
-    pDest->pCreateInfo = glv_deepcopy_VK_DEVICE_CREATE_INFO(pCreateInfo);
+    pDest->pCreateInfo = glv_deepcopy_VkDeviceCreateInfo(pCreateInfo);
 
     pDest->pDevice = (VK_DEVICE*)malloc(sizeof(VK_DEVICE));
     *pDest->pDevice = *pDevice;
@@ -153,7 +153,7 @@ void glv_vk_snapshot_destroy_createdevice_params(GLV_VK_SNAPSHOT_CREATEDEVICE_PA
 {
     memset(&pSrc->gpu, 0, sizeof(VK_PHYSICAL_GPU));
 
-    glv_deepfree_VK_DEVICE_CREATE_INFO(pSrc->pCreateInfo);
+    glv_deepfree_VkDeviceCreateInfo(pSrc->pCreateInfo);
     pSrc->pCreateInfo = NULL;
 
     free(pSrc->pDevice);
@@ -267,7 +267,7 @@ static void snapshot_insert_deleted_object(GLV_VK_SNAPSHOT* pSnapshot, void* pOb
 }
 
 // Note: the parameters after pSnapshot match the order of vkCreateDevice(..)
-static void snapshot_insert_device(GLV_VK_SNAPSHOT* pSnapshot, VK_PHYSICAL_GPU gpu, const VK_DEVICE_CREATE_INFO* pCreateInfo, VK_DEVICE* pDevice)
+static void snapshot_insert_device(GLV_VK_SNAPSHOT* pSnapshot, VK_PHYSICAL_GPU gpu, const VkDeviceCreateInfo* pCreateInfo, VK_DEVICE* pDevice)
 {
     GLV_VK_SNAPSHOT_LL_NODE* pNode = snapshot_insert_object(pSnapshot, *pDevice, VK_OBJECT_TYPE_DEVICE);
     pNode->obj.pStruct = malloc(sizeof(GLV_VK_SNAPSHOT_DEVICE_NODE));
@@ -463,7 +463,7 @@ static void initGlaveSnapshot(void)
 //=============================================================================
 // vulkan entrypoints
 //=============================================================================
-VK_LAYER_EXPORT VK_RESULT VKAPI vkCreateInstance(const VK_INSTANCE_CREATE_INFO* pCreateInfo, VK_INSTANCE* pInstance)
+VK_LAYER_EXPORT VK_RESULT VKAPI vkCreateInstance(const VkInstanceCreateInfo* pCreateInfo, VK_INSTANCE* pInstance)
 {
     VK_RESULT result = nextTable.CreateInstance(pCreateInfo, pInstance);
     loader_platform_thread_lock_mutex(&objLock);
@@ -499,7 +499,7 @@ VK_LAYER_EXPORT VK_RESULT VKAPI vkGetGpuInfo(VK_PHYSICAL_GPU gpu, VK_PHYSICAL_GP
     return result;
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkCreateDevice(VK_PHYSICAL_GPU gpu, const VK_DEVICE_CREATE_INFO* pCreateInfo, VK_DEVICE* pDevice)
+VK_LAYER_EXPORT VK_RESULT VKAPI vkCreateDevice(VK_PHYSICAL_GPU gpu, const VkDeviceCreateInfo* pCreateInfo, VK_DEVICE* pDevice)
 {
     VK_BASE_LAYER_OBJECT* gpuw = (VK_BASE_LAYER_OBJECT *) gpu;
     pCurObj = gpuw;
@@ -605,7 +605,7 @@ VK_LAYER_EXPORT VK_RESULT VKAPI vkDeviceWaitIdle(VK_DEVICE device)
     return result;
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkAllocMemory(VK_DEVICE device, const VK_MEMORY_ALLOC_INFO* pAllocInfo, VK_GPU_MEMORY* pMem)
+VK_LAYER_EXPORT VK_RESULT VKAPI vkAllocMemory(VK_DEVICE device, const VkMemoryAllocInfo * pAllocInfo, VK_GPU_MEMORY* pMem)
 {
     loader_platform_thread_lock_mutex(&objLock);
     ll_increment_use_count((void*)device, VK_OBJECT_TYPE_DEVICE);
@@ -901,7 +901,7 @@ VK_LAYER_EXPORT VK_RESULT VKAPI vkGetFormatInfo(VK_DEVICE device, VK_FORMAT form
     return result;
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkCreateBuffer(VK_DEVICE device, const VK_BUFFER_CREATE_INFO* pCreateInfo, VK_BUFFER* pBuffer)
+VK_LAYER_EXPORT VK_RESULT VKAPI vkCreateBuffer(VK_DEVICE device, const VkBufferCreateInfo* pCreateInfo, VK_BUFFER* pBuffer)
 {
     loader_platform_thread_lock_mutex(&objLock);
     ll_increment_use_count((void*)device, VK_OBJECT_TYPE_DEVICE);
@@ -917,7 +917,7 @@ VK_LAYER_EXPORT VK_RESULT VKAPI vkCreateBuffer(VK_DEVICE device, const VK_BUFFER
     return result;
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkCreateBufferView(VK_DEVICE device, const VK_BUFFER_VIEW_CREATE_INFO* pCreateInfo, VK_BUFFER_VIEW* pView)
+VK_LAYER_EXPORT VK_RESULT VKAPI vkCreateBufferView(VK_DEVICE device, const VkBufferViewCreateInfo* pCreateInfo, VK_BUFFER_VIEW* pView)
 {
     loader_platform_thread_lock_mutex(&objLock);
     ll_increment_use_count((void*)device, VK_OBJECT_TYPE_DEVICE);
@@ -1809,7 +1809,7 @@ void glvSnapshotPrintDelta()
         while (pDeviceNode != NULL)
         {
             GLV_VK_SNAPSHOT_DEVICE_NODE* pDev = (GLV_VK_SNAPSHOT_DEVICE_NODE*)pDeviceNode->obj.pStruct;
-            char * createInfoStr = vk_print_vk_device_create_info(pDev->params.pCreateInfo, "\t\t");
+            char * createInfoStr = vk_print_vkdevicecreateinfo(pDev->params.pCreateInfo, "\t\t");
             sprintf(str, "\t%s obj %p:\n%s", string_VK_OBJECT_TYPE(VK_OBJECT_TYPE_DEVICE), pDeviceNode->obj.pVkObject, createInfoStr);
             layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, pDeviceNode->obj.pVkObject, 0, GLVSNAPSHOT_SNAPSHOT_DATA, LAYER_ABBREV_STR, str);
             pDeviceNode = pDeviceNode->pNextObj;

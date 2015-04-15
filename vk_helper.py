@@ -160,6 +160,7 @@ class HeaderFileParser:
                         (cur_char, targ_type) = line.strip().split(None, 1)
                         self.typedef_fwd_dict[base_type] = targ_type.strip(';')
                         self.typedef_rev_dict[targ_type.strip(';')] = base_type
+                        #print("fwd_dict: %s = %s" % (base_type, targ_type))
                 elif parse_enum:
                     #if 'VK_MAX_ENUM' not in line and '{' not in line:
                     if True not in [ens in line for ens in ['{', 'VK_MAX_ENUM', '_RANGE']]:
@@ -238,7 +239,7 @@ class HeaderFileParser:
             self.struct_dict[struct_type][num]['ptr'] = False
         if 'const' in member_type:
             self.struct_dict[struct_type][num]['const'] = True
-            member_type = member_type.strip('const').strip()
+            member_type = member_type.replace('const', '').strip()
         else:
             self.struct_dict[struct_type][num]['const'] = False
         # TODO : There is a bug here where it seems that at the time we do this check,
@@ -295,6 +296,29 @@ def recreate_structs():
         sys.stdout.write("} ")
         sys.stdout.write(typedef_fwd_dict[struct_name])
         sys.stdout.write(";\n\n")
+
+#
+def get_struct_name_from_struct_type(struct_type):
+    caps_struct_name = struct_type.replace("_STRUCTURE_TYPE", "")
+    # NOTE: These must stay in caps as they are looking at the VK_STRUCTURE_TYPE_*_CREATE_INFO
+    # and that has not changed to camel case
+    exceptions_list = ['VK_DEVICE_CREATE_INFO', 'VK_INSTANCE_CREATE_INFO', 'VK_LAYER_CREATE_INFO',
+                       'VK_MEMORY_ALLOC_INFO', 'VK_MEMORY_ALLOC_BUFFER_INFO', 'VK_MEMORY_ALLOC_IMAGE_INFO',
+                       'VK_BUFFER_CREATE_INFO', 'VK_BUFFER_VIEW_CREATE_INFO']
+    if caps_struct_name in exceptions_list:
+        char_idx = 0
+        struct_name = ''
+        for char in caps_struct_name:
+            if (0 == char_idx) or (caps_struct_name[char_idx-1] == '_'):
+                struct_name += caps_struct_name[char_idx]
+            elif (caps_struct_name[char_idx] == '_'):
+                pass
+            else:
+                struct_name += caps_struct_name[char_idx].lower()
+            char_idx += 1
+    else:
+        struct_name = caps_struct_name
+    return struct_name
 
 # class for writing common file elements
 # Here's how this class lays out a file:
@@ -508,7 +532,7 @@ class StructWrapperGen:
             class_num = 0
             if "_STRUCTURE_TYPE" in e:
                 for v in sorted(enum_type_dict[e]):
-                    struct_name = v.replace("_STRUCTURE_TYPE", "")
+                    struct_name = get_struct_name_from_struct_type(v)
                     class_name = self.get_class_name(struct_name)
                     instance_name = "swc%i" % class_num
                     dp_funcs.append("        case %s:\n        {" % (v))
@@ -705,7 +729,7 @@ class StructWrapperGen:
         for e in enum_type_dict:
             if "_STRUCTURE_TYPE" in e:
                 for v in sorted(enum_type_dict[e]):
-                    struct_name = v.replace("_STRUCTURE_TYPE", "")
+                    struct_name = get_struct_name_from_struct_type(v)
                     print_func_name = self._get_sh_func_name(struct_name)
                     sh_funcs.append('        case %s:\n        {' % (v))
                     sh_funcs.append('            return %s((%s*)pStruct, indent);' % (print_func_name, struct_name))
@@ -754,12 +778,16 @@ class StructWrapperGen:
                     if 1 < stp_list[index]['full_type'].count('*'):
                         addr_char = ''
                     if (stp_list[index]['array']):
+                        sh_funcs.append('/* A */');
                         if stp_list[index]['dyn_array']:
+                            sh_funcs.append('/* AA */');
                             array_count = 'pStruct->%s' % (stp_list[index]['array_size'])
                         else:
+                            sh_funcs.append('/* AB */');
                             array_count = '%s' % (stp_list[index]['array_size'])
                         sh_funcs.append('%sstp_strs[%u] = "";' % (indent, index))
                         if not idx_ss_decl:
+                            sh_funcs.append('/* AC */');
                             sh_funcs.append('%sstringstream index_ss;' % (indent))
                             idx_ss_decl = True
                         sh_funcs.append('%sif (pStruct->%s) {' % (indent, stp_list[index]['name']))
@@ -769,15 +797,19 @@ class StructWrapperGen:
                         sh_funcs.append('%sindex_ss.str("");' % (indent))
                         sh_funcs.append('%sindex_ss << i;' % (indent))
                         if not is_type(stp_list[index]['type'], 'struct'):
+                            sh_funcs.append('/* AD */');
                             addr_char = ''
                             sh_funcs.append('%sss[%u] << %spStruct->%s[i];' % (indent, index, addr_char, stp_list[index]['name']))
                             sh_funcs.append('%sstp_strs[%u] += " " + prefix + "%s[" + index_ss.str() + "] = " + ss[%u].str() + "\\n";' % (indent, index, stp_list[index]['name'], index))
                         else:
+                            sh_funcs.append('/* AD */');
                             sh_funcs.append('%sss[%u] << %spStruct->%s[i];' % (indent, index, addr_char, stp_list[index]['name']))
                             sh_funcs.append('%stmp_str = %s(%spStruct->%s[i], extra_indent);' % (indent, self._get_sh_func_name(stp_list[index]['type']), addr_char, stp_list[index]['name']))
                             if self.no_addr:
+                                sh_funcs.append('/* ADA */');
                                 sh_funcs.append('%sstp_strs[%u] += " " + prefix + "%s[" + index_ss.str() + "] (addr)\\n" + tmp_str;' % (indent, index, stp_list[index]['name']))
                             else:
+                                sh_funcs.append('/* ADB */');
                                 sh_funcs.append('%sstp_strs[%u] += " " + prefix + "%s[" + index_ss.str() + "] (" + ss[%u].str() + ")\\n" + tmp_str;' % (indent, index, stp_list[index]['name'], index))
                         indent = indent[4:]
                         sh_funcs.append('%s}' % (indent))
@@ -785,6 +817,7 @@ class StructWrapperGen:
                         indent = indent[4:]
                         sh_funcs.append('%s}' % (indent))
                     elif (stp_list[index]['ptr']):
+                        sh_funcs.append('/* B */');
                         sh_funcs.append('    if (pStruct->%s) {' % stp_list[index]['name'])
                         if 'pNext' == stp_list[index]['name']:
                             sh_funcs.append('        tmp_str = dynamic_display((void*)pStruct->pNext, prefix);')
@@ -804,6 +837,7 @@ class StructWrapperGen:
                         sh_funcs.append('    else')
                         sh_funcs.append('        stp_strs[%u] = "";' % index)
                     else:
+                        sh_funcs.append('/* C */');
                         sh_funcs.append('    tmp_str = %s(&pStruct->%s, extra_indent);' % (self._get_sh_func_name(stp_list[index]['type']), stp_list[index]['name']))
                         sh_funcs.append('    ss[%u] << %spStruct->%s;' % (index, addr_char, stp_list[index]['name']))
                         if self.no_addr:
@@ -865,7 +899,7 @@ class StructWrapperGen:
         for e in enum_type_dict:
             if "_STRUCTURE_TYPE" in e:
                 for v in sorted(enum_type_dict[e]):
-                    struct_name = v.replace("_STRUCTURE_TYPE", "")
+                    struct_name = get_struct_name_from_struct_type(v)
                     print_func_name = self._get_sh_func_name(struct_name)
                     sh_funcs.append('        case %s:\n        {' % (v))
                     sh_funcs.append('            return %s((%s*)pStruct, indent);' % (print_func_name, struct_name))
@@ -1131,7 +1165,7 @@ class StructWrapperGen:
             for e in enum_type_dict:
                 if '_STRUCTURE_TYPE' in e:
                     for v in sorted(enum_type_dict[e]):
-                        struct_name = v.replace("_STRUCTURE_TYPE", "")
+                        struct_name = get_struct_name_from_struct_type(v)
                         sh_funcs.append('%scase %s:' % (indent, v))
                         sh_funcs.append('%s{' % (indent))
                         indent += '    '
@@ -1533,7 +1567,7 @@ class GraphVizGen:
         for e in enum_type_dict:
             if "_STRUCTURE_TYPE" in e:
                 for v in sorted(enum_type_dict[e]):
-                    struct_name = v.replace("_STRUCTURE_TYPE", "")
+                    struct_name = get_struct_name_from_struct_type(v)
                     print_func_name = self._get_gv_func_name(struct_name)
                     # TODO : Hand-coded fixes for some exceptions
                     #if 'VK_PIPELINE_CB_STATE_CREATE_INFO' in struct_name:

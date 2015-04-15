@@ -347,7 +347,7 @@ static VK_RESULT wsi_x11_img_create(struct intel_wsi_x11 *x11,
                                     struct intel_img **img_ret)
 {
     VK_IMAGE_CREATE_INFO img_info;
-    VK_MEMORY_ALLOC_INFO mem_info;
+    VkMemoryAllocInfo mem_info;
     struct intel_img *img;
     struct intel_mem *mem;
     VK_RESULT ret;

@@ -86,7 +86,7 @@ typedef enum _MEM_TRACK_ERROR
 struct MT_MEM_OBJ_INFO {
     uint32_t                     refCount;           // Count of references (obj bindings or CB use)
     VK_GPU_MEMORY               mem;
-    VK_MEMORY_ALLOC_INFO        allocInfo;
+    VkMemoryAllocInfo        allocInfo;
     list<VK_OBJECT>             pObjBindings;       // list container of objects bound to this memory
     list<VK_CMD_BUFFER>         pCmdBufferBindings; // list container of cmd buffers that reference this mem object
 };

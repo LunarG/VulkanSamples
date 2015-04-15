@@ -200,7 +200,7 @@ public:
     ~Device();
 
     // vkCreateDevice()
-    void init(const VK_DEVICE_CREATE_INFO &info);
+    void init(const VkDeviceCreateInfo &info);
     void init(bool enable_layers); // all queues, all extensions, etc
     void init() { init(false); };
 
@@ -278,7 +278,7 @@ public:
     ~GpuMemory();
 
     // vkAllocMemory()
-    void init(const Device &dev, const VK_MEMORY_ALLOC_INFO &info);
+    void init(const Device &dev, const VkMemoryAllocInfo &info);
     // vkPinSystemMemory()
     void init(const Device &dev, size_t size, const void *data);
     // vkOpenSharedMemory()
@@ -300,8 +300,8 @@ public:
     // vkUnmapMemory()
     void unmap() const;
 
-    static VK_MEMORY_ALLOC_INFO alloc_info(const VK_MEMORY_REQUIREMENTS &reqs,
-                  const VK_MEMORY_ALLOC_INFO *next_info);
+    static VkMemoryAllocInfo alloc_info(const VK_MEMORY_REQUIREMENTS &reqs,
+                  const VkMemoryAllocInfo *next_info);
 };
 
 class Fence : public DerivedObject<VK_FENCE, Object> {
@@ -355,15 +355,15 @@ public:
 class Buffer : public DerivedObject<VK_BUFFER, Object> {
 public:
     explicit Buffer() {}
-    explicit Buffer(const Device &dev, const VK_BUFFER_CREATE_INFO &info) { init(dev, info); }
+    explicit Buffer(const Device &dev, const VkBufferCreateInfo &info) { init(dev, info); }
     explicit Buffer(const Device &dev, VK_GPU_SIZE size) { init(dev, size); }
 
     // vkCreateBuffer()
-    void init(const Device &dev, const VK_BUFFER_CREATE_INFO &info);
+    void init(const Device &dev, const VkBufferCreateInfo &info);
     void init(const Device &dev, VK_GPU_SIZE size) { init(dev, create_info(size, 0)); }
-    void init_no_mem(const Device &dev, const VK_BUFFER_CREATE_INFO &info);
+    void init_no_mem(const Device &dev, const VkBufferCreateInfo &info);
 
-    static VK_BUFFER_CREATE_INFO create_info(VK_GPU_SIZE size, VK_FLAGS usage);
+    static VkBufferCreateInfo create_info(VK_GPU_SIZE size, VK_FLAGS usage);
 
     VK_BUFFER_MEMORY_BARRIER buffer_memory_barrier(VK_FLAGS output_mask, VK_FLAGS input_mask,
                                                  VK_GPU_SIZE offset, VK_GPU_SIZE size) const
@@ -378,13 +378,13 @@ public:
         return barrier;
     }
 private:
-    VK_BUFFER_CREATE_INFO create_info_;
+    VkBufferCreateInfo create_info_;
 };
 
 class BufferView : public DerivedObject<VK_BUFFER_VIEW, Object> {
 public:
     // vkCreateBufferView()
-    void init(const Device &dev, const VK_BUFFER_VIEW_CREATE_INFO &info);
+    void init(const Device &dev, const VkBufferViewCreateInfo &info);
 };
 
 class Image : public DerivedObject<VK_IMAGE, Object> {
@@ -618,10 +618,10 @@ inline void Object::unmap() const
         primary_mem_->unmap();
 }
 
-inline VK_MEMORY_ALLOC_INFO GpuMemory::alloc_info(const VK_MEMORY_REQUIREMENTS &reqs,
-                                const VK_MEMORY_ALLOC_INFO *next_info)
+inline VkMemoryAllocInfo GpuMemory::alloc_info(const VK_MEMORY_REQUIREMENTS &reqs,
+                                const VkMemoryAllocInfo *next_info)
 {
-    VK_MEMORY_ALLOC_INFO info = {};
+    VkMemoryAllocInfo info = {};
     info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO;
     if (next_info != NULL)
         info.pNext = (void *) next_info;
@@ -633,9 +633,9 @@ inline VK_MEMORY_ALLOC_INFO GpuMemory::alloc_info(const VK_MEMORY_REQUIREMENTS &
     return info;
 }
 
-inline VK_BUFFER_CREATE_INFO Buffer::create_info(VK_GPU_SIZE size, VK_FLAGS usage)
+inline VkBufferCreateInfo Buffer::create_info(VK_GPU_SIZE size, VK_FLAGS usage)
 {
-    VK_BUFFER_CREATE_INFO info = {};
+    VkBufferCreateInfo info = {};
     info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
     info.size = size;
     info.usage = usage;

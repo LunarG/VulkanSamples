@@ -104,7 +104,7 @@ class Subcommand(object):
     def _get_printf_params(self, vk_type, name, output_param, cpp=False):
         # TODO : Need ENUM and STRUCT checks here
         if vk_helper.is_type(vk_type, 'enum'):#"_TYPE" in vk_type: # TODO : This should be generic ENUM check
-            return ("%s", "string_%s(%s)" % (vk_type.strip('const ').strip('*'), name))
+            return ("%s", "string_%s(%s)" % (vk_type.replace('const ', '').strip('*'), name))
         if "char*" == vk_type:
             return ("%s", name)
         if "uint64" in vk_type:
@@ -636,11 +636,11 @@ class APIDumpSubcommand(Subcommand):
                 log_func_no_addr += '%s = address, ' % (p.name)
             else:
                 log_func_no_addr += '%s = " << %s << ", ' % (p.name, pfi)
-            if prev_count_name != '' and (prev_count_name.strip('Count')[1:] in p.name or 'slotCount' == prev_count_name):
+            if prev_count_name != '' and (prev_count_name.replace('Count', '')[1:] in p.name or 'slotCount' == prev_count_name):
                 sp_param_dict[pindex] = prev_count_name
             elif 'pDescriptorSets' == p.name and proto.params[-1].name == 'pCount':
                 sp_param_dict[pindex] = '*pCount'
-            elif 'Wsi' not in proto.name and vk_helper.is_type(p.ty.strip('*').strip('const '), 'struct'):
+            elif 'Wsi' not in proto.name and vk_helper.is_type(p.ty.strip('*').replace('const ', ''), 'struct'):
                 sp_param_dict[pindex] = 'index'
             pindex += 1
             if p.name.endswith('Count'):
@@ -666,7 +666,7 @@ class APIDumpSubcommand(Subcommand):
             log_func += '\n    string tmp_str;'
             for sp_index in sp_param_dict:
                 if 'index' == sp_param_dict[sp_index]:
-                    cis_print_func = 'vk_print_%s' % (proto.params[sp_index].ty.strip('const ').strip('*').lower())
+                    cis_print_func = 'vk_print_%s' % (proto.params[sp_index].ty.replace('const ', '').strip('*').lower())
                     local_name = proto.params[sp_index].name
                     if '*' not in proto.params[sp_index].ty:
                         local_name = '&%s' % proto.params[sp_index].name
@@ -677,11 +677,9 @@ class APIDumpSubcommand(Subcommand):
                 else: # We have a count value stored to iterate over an array
                     print_cast = ''
                     print_func = ''
-                    if vk_helper.is_type(proto.params[sp_index].ty.strip('*').strip('const '), 'struct'):
+                    if vk_helper.is_type(proto.params[sp_index].ty.strip('*').replace('const ', ''), 'struct'):
                         print_cast = '&'
-                        print_func = 'vk_print_%s' % proto.params[sp_index].ty.strip('const ').strip('*').lower()
-                        #cis_print_func = 'tmp_str = vk_print_%s(&%s[i], "    ");' % (proto.params[sp_index].ty.strip('const ').strip('*').lower(), proto.params[sp_index].name)
-# TODO : Need to display this address as a string
+                        print_func = 'vk_print_%s' % proto.params[sp_index].ty.replace('const ', '').strip('*').lower()
                     else:
                         print_cast = ''
                         print_func = 'string_convert_helper'
@@ -1084,7 +1082,7 @@ class ObjectTrackerSubcommand(Subcommand):
 
         decl = proto.c_func(prefix="vk", attr="VKAPI")
         param0_name = proto.params[0].name
-        p0_type = proto.params[0].ty.strip('*').strip('const ')
+        p0_type = proto.params[0].ty.strip('*').replace('const ', '')
         create_line = ''
         destroy_line = ''
         funcs = []
@@ -1124,13 +1122,13 @@ class ObjectTrackerSubcommand(Subcommand):
             create_line += '    }\n'
         elif 'CreatePresentableImage' in proto.name:
             create_line = '    loader_platform_thread_lock_mutex(&objLock);\n'
-            create_line += '    ll_insert_obj((void*)*%s, %s);\n' % (proto.params[-2].name, obj_type_mapping[proto.params[-2].ty.strip('*').strip('const ')])
+            create_line += '    ll_insert_obj((void*)*%s, %s);\n' % (proto.params[-2].name, obj_type_mapping[proto.params[-2].ty.strip('*').replace('const ', '')])
             create_line += '    ll_insert_obj((void*)*pMem, VK_OBJECT_TYPE_PRESENTABLE_IMAGE_MEMORY);\n'
-            # create_line += '    ll_insert_obj((void*)*%s, VK_OBJECT_TYPE_PRESENTABLE_IMAGE_MEMORY);\n' % (obj_type_mapping[proto.params[-1].ty.strip('*').strip('const ')])
+            # create_line += '    ll_insert_obj((void*)*%s, VK_OBJECT_TYPE_PRESENTABLE_IMAGE_MEMORY);\n' % (obj_type_mapping[proto.params[-1].ty.strip('*').replace('const ', '')])
             create_line += '    loader_platform_thread_unlock_mutex(&objLock);\n'
         elif 'Create' in proto.name or 'Alloc' in proto.name:
             create_line = '    loader_platform_thread_lock_mutex(&objLock);\n'
-            create_line += '    ll_insert_obj((void*)*%s, %s);\n' % (proto.params[-1].name, obj_type_mapping[proto.params[-1].ty.strip('*').strip('const ')])
+            create_line += '    ll_insert_obj((void*)*%s, %s);\n' % (proto.params[-1].name, obj_type_mapping[proto.params[-1].ty.strip('*').replace('const ', '')])
             create_line += '    loader_platform_thread_unlock_mutex(&objLock);\n'
         if 'DestroyObject' in proto.name:
             destroy_line = '    loader_platform_thread_lock_mutex(&objLock);\n'

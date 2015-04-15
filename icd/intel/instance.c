@@ -108,7 +108,7 @@ static void intel_instance_destroy(struct intel_instance *instance)
     icd_instance_destroy(icd);
 }
 
-static struct intel_instance *intel_instance_create(const VK_INSTANCE_CREATE_INFO* info)
+static struct intel_instance *intel_instance_create(const VkInstanceCreateInfo* info)
 {
     struct intel_instance *instance;
     struct icd_instance *icd;
@@ -143,7 +143,7 @@ static struct intel_instance *intel_instance_create(const VK_INSTANCE_CREATE_INF
 }
 
 ICD_EXPORT VK_RESULT VKAPI vkCreateInstance(
-    const VK_INSTANCE_CREATE_INFO*             pCreateInfo,
+    const VkInstanceCreateInfo*             pCreateInfo,
     VK_INSTANCE*                               pInstance)
 {
     struct intel_instance *instance;

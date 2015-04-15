@@ -29,7 +29,7 @@
 #include "mem.h"
 
 VK_RESULT intel_mem_alloc(struct intel_dev *dev,
-                           const VK_MEMORY_ALLOC_INFO *info,
+                           const VkMemoryAllocInfo *info,
                            struct intel_mem **mem_ret)
 {
     struct intel_mem *mem;
@@ -101,7 +101,7 @@ VK_RESULT intel_mem_set_priority(struct intel_mem *mem,
 
 ICD_EXPORT VK_RESULT VKAPI vkAllocMemory(
     VK_DEVICE                                  device,
-    const VK_MEMORY_ALLOC_INFO*                pAllocInfo,
+    const VkMemoryAllocInfo*                pAllocInfo,
     VK_GPU_MEMORY*                             pMem)
 {
     struct intel_dev *dev = intel_dev(device);

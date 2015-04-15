@@ -37,7 +37,7 @@ static VK_RESULT cmd_meta_create_buf_view(struct intel_cmd *cmd,
                                            VK_FORMAT format,
                                            struct intel_buf_view **view)
 {
-    VK_BUFFER_VIEW_CREATE_INFO info;
+    VkBufferViewCreateInfo info;
     VK_GPU_SIZE stride;
 
     memset(&info, 0, sizeof(info));
@@ -724,7 +724,7 @@ ICD_EXPORT void VKAPI vkCmdCloneImageData(
     struct intel_img *src = intel_img(srcImage);
     struct intel_img *dst = intel_img(destImage);
     struct intel_buf *src_buf, *dst_buf;
-    VK_BUFFER_CREATE_INFO buf_info;
+    VkBufferCreateInfo buf_info;
     VK_BUFFER_COPY buf_region;
     VK_RESULT res;
 

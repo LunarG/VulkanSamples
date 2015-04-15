@@ -174,12 +174,12 @@ void glv_vk_malloc_and_copy(void** ppDest, size_t size, const void* pSrc);
 typedef struct _GLV_VK_SNAPSHOT_CREATEDEVICE_PARAMS
 {
     VK_PHYSICAL_GPU gpu;
-    VK_DEVICE_CREATE_INFO* pCreateInfo;
+    VkDeviceCreateInfo* pCreateInfo;
     VK_DEVICE* pDevice;
 } GLV_VK_SNAPSHOT_CREATEDEVICE_PARAMS;
 
-VK_DEVICE_CREATE_INFO* glv_deepcopy_xgl_device_create_info(const VK_DEVICE_CREATE_INFO* pSrcCreateInfo);void glv_deepfree_xgl_device_create_info(VK_DEVICE_CREATE_INFO* pCreateInfo);
-void glv_vk_snapshot_copy_createdevice_params(GLV_VK_SNAPSHOT_CREATEDEVICE_PARAMS* pDest, VK_PHYSICAL_GPU gpu, const VK_DEVICE_CREATE_INFO* pCreateInfo, VK_DEVICE* pDevice);
+VkDeviceCreateInfo* glv_deepcopy_xgl_device_create_info(const VkDeviceCreateInfo* pSrcCreateInfo);void glv_deepfree_xgl_device_create_info(VkDeviceCreateInfo* pCreateInfo);
+void glv_vk_snapshot_copy_createdevice_params(GLV_VK_SNAPSHOT_CREATEDEVICE_PARAMS* pDest, VK_PHYSICAL_GPU gpu, const VkDeviceCreateInfo* pCreateInfo, VK_DEVICE* pDevice);
 void glv_vk_snapshot_destroy_createdevice_params(GLV_VK_SNAPSHOT_CREATEDEVICE_PARAMS* pSrc);
 
 //=============================================================================

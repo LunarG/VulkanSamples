@@ -168,7 +168,7 @@ static VK_RESULT nulldrv_queue_create(struct nulldrv_dev *dev,
 }
 
 static VK_RESULT dev_create_queues(struct nulldrv_dev *dev,
-                                    const VK_DEVICE_QUEUE_CREATE_INFO *queues,
+                                    const VkDeviceQueueCreateInfo *queues,
                                     uint32_t count)
 {
     uint32_t i;
@@ -177,7 +177,7 @@ static VK_RESULT dev_create_queues(struct nulldrv_dev *dev,
         return VK_ERROR_INVALID_POINTER;
 
     for (i = 0; i < count; i++) {
-        const VK_DEVICE_QUEUE_CREATE_INFO *q = &queues[i];
+        const VkDeviceQueueCreateInfo *q = &queues[i];
         VK_RESULT ret = VK_SUCCESS;
 
         if (q->queueCount == 1 && !dev->queues[q->queueNodeIndex]) {
@@ -231,7 +231,7 @@ static VK_RESULT nulldrv_desc_ooxx_create(struct nulldrv_dev *dev,
 }
 
 static VK_RESULT nulldrv_dev_create(struct nulldrv_gpu *gpu,
-                            const VK_DEVICE_CREATE_INFO *info,
+                            const VkDeviceCreateInfo *info,
                             struct nulldrv_dev **dev_ret)
 {
     struct nulldrv_dev *dev;
@@ -402,7 +402,7 @@ static struct nulldrv_img *nulldrv_img(VK_IMAGE image)
 }
 
 static VK_RESULT nulldrv_mem_alloc(struct nulldrv_dev *dev,
-                           const VK_MEMORY_ALLOC_INFO *info,
+                           const VkMemoryAllocInfo *info,
                            struct nulldrv_mem **mem_ret)
 {
     struct nulldrv_mem *mem;
@@ -538,7 +538,7 @@ static VK_RESULT buf_get_info(struct nulldrv_base *base, int type,
 }
 
 static VK_RESULT nulldrv_buf_create(struct nulldrv_dev *dev,
-                            const VK_BUFFER_CREATE_INFO *info,
+                            const VkBufferCreateInfo *info,
                             struct nulldrv_buf **buf_ret)
 {
     struct nulldrv_buf *buf;
@@ -797,7 +797,7 @@ static struct nulldrv_buf *nulldrv_buf(VK_BUFFER buf)
 }
 
 static VK_RESULT nulldrv_buf_view_create(struct nulldrv_dev *dev,
-                                 const VK_BUFFER_VIEW_CREATE_INFO *info,
+                                 const VkBufferViewCreateInfo *info,
                                  struct nulldrv_buf_view **view_ret)
 {
     struct nulldrv_buf *buf = nulldrv_buf(info->buffer);
@@ -822,7 +822,7 @@ static VK_RESULT nulldrv_buf_view_create(struct nulldrv_dev *dev,
 
 ICD_EXPORT VK_RESULT VKAPI vkCreateBuffer(
     VK_DEVICE                                  device,
-    const VK_BUFFER_CREATE_INFO*               pCreateInfo,
+    const VkBufferCreateInfo*               pCreateInfo,
     VK_BUFFER*                                 pBuffer)
 {
     NULLDRV_LOG_FUNC;
@@ -1202,7 +1202,7 @@ ICD_EXPORT void VKAPI vkCmdPipelineBarrier(
 
 ICD_EXPORT VK_RESULT VKAPI vkCreateDevice(
     VK_PHYSICAL_GPU                            gpu_,
-    const VK_DEVICE_CREATE_INFO*               pCreateInfo,
+    const VkDeviceCreateInfo*               pCreateInfo,
     VK_DEVICE*                                 pDevice)
 {
     NULLDRV_LOG_FUNC;
@@ -1418,7 +1418,7 @@ ICD_EXPORT VK_RESULT VKAPI vkGetImageSubresourceInfo(
 
 ICD_EXPORT VK_RESULT VKAPI vkAllocMemory(
     VK_DEVICE                                  device,
-    const VK_MEMORY_ALLOC_INFO*                pAllocInfo,
+    const VkMemoryAllocInfo*                pAllocInfo,
     VK_GPU_MEMORY*                             pMem)
 {
     NULLDRV_LOG_FUNC;
@@ -1492,7 +1492,7 @@ ICD_EXPORT VK_RESULT VKAPI vkOpenPeerMemory(
 }
 
 ICD_EXPORT VK_RESULT VKAPI vkCreateInstance(
-    const VK_INSTANCE_CREATE_INFO*             pCreateInfo,
+    const VkInstanceCreateInfo*             pCreateInfo,
     VK_INSTANCE*                               pInstance)
 {
     NULLDRV_LOG_FUNC;
@@ -1857,7 +1857,7 @@ ICD_EXPORT VK_RESULT VKAPI vkCreateDynamicDepthStencilState(
 
 ICD_EXPORT VK_RESULT VKAPI vkCreateBufferView(
     VK_DEVICE                                  device,
-    const VK_BUFFER_VIEW_CREATE_INFO*          pCreateInfo,
+    const VkBufferViewCreateInfo*          pCreateInfo,
     VK_BUFFER_VIEW*                            pView)
 {
     NULLDRV_LOG_FUNC;

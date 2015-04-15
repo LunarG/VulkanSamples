@@ -267,15 +267,15 @@ void Object::alloc_memory(const Device &dev, bool for_buf, bool for_img)
     const std::vector<VK_MEMORY_REQUIREMENTS> mem_reqs = memory_requirements();
     std::vector<VK_IMAGE_MEMORY_REQUIREMENTS> img_reqs;
     std::vector<VK_BUFFER_MEMORY_REQUIREMENTS> buf_reqs;
-    VK_MEMORY_ALLOC_IMAGE_INFO img_info;
-    VK_MEMORY_ALLOC_BUFFER_INFO buf_info;
-    VK_MEMORY_ALLOC_INFO info, *next_info = NULL;
+    VkMemoryAllocImageInfo img_info;
+    VkMemoryAllocBufferInfo buf_info;
+    VkMemoryAllocInfo info, *next_info = NULL;
 
     if (for_img) {
         img_reqs = get_info<VK_IMAGE_MEMORY_REQUIREMENTS>(obj(),
                         VK_INFO_TYPE_IMAGE_MEMORY_REQUIREMENTS, 0);
         EXPECT(img_reqs.size() == 1);
-        next_info = (VK_MEMORY_ALLOC_INFO *) &img_info;
+        next_info = (VkMemoryAllocInfo *) &img_info;
         img_info.pNext = NULL;
         img_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOC_IMAGE_INFO;
         img_info.usage = img_reqs[0].usage;
@@ -290,7 +290,7 @@ void Object::alloc_memory(const Device &dev, bool for_buf, bool for_img)
         if (for_img)
             img_info.pNext = &buf_info;
         else
-            next_info = (VK_MEMORY_ALLOC_INFO *) &buf_info;
+            next_info = (VkMemoryAllocInfo *) &buf_info;
         buf_info.pNext = NULL;
         buf_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOC_BUFFER_INFO;
         buf_info.usage = buf_reqs[0].usage;
@@ -368,10 +368,10 @@ void Device::init(bool enable_layers)
 {
     // request all queues
     const std::vector<VK_PHYSICAL_GPU_QUEUE_PROPERTIES> queue_props = gpu_.queue_properties();
-    std::vector<VK_DEVICE_QUEUE_CREATE_INFO> queue_info;
+    std::vector<VkDeviceQueueCreateInfo> queue_info;
     queue_info.reserve(queue_props.size());
     for (int i = 0; i < queue_props.size(); i++) {
-        VK_DEVICE_QUEUE_CREATE_INFO qi = {};
+        VkDeviceQueueCreateInfo qi = {};
         qi.queueNodeIndex = i;
         qi.queueCount = queue_props[i].queueCount;
         if (queue_props[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) {
@@ -380,7 +380,7 @@ void Device::init(bool enable_layers)
         queue_info.push_back(qi);
     }
 
-    VK_LAYER_CREATE_INFO layer_info = {};
+    VkLayerCreateInfo layer_info = {};
     layer_info.sType = VK_STRUCTURE_TYPE_LAYER_CREATE_INFO;
 
     std::vector<const char *> layers;
@@ -394,7 +394,7 @@ void Device::init(bool enable_layers)
 
     const std::vector<const char *> exts = gpu_.extensions();
 
-    VK_DEVICE_CREATE_INFO dev_info = {};
+    VkDeviceCreateInfo dev_info = {};
     dev_info.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
     dev_info.pNext = (enable_layers) ? static_cast<void *>(&layer_info) : NULL;
     dev_info.queueRecordCount = queue_info.size();
@@ -407,7 +407,7 @@ void Device::init(bool enable_layers)
     init(dev_info);
 }
 
-void Device::init(const VK_DEVICE_CREATE_INFO &info)
+void Device::init(const VkDeviceCreateInfo &info)
 {
     DERIVED_OBJECT_INIT(vkCreateDevice, gpu_.obj(), &info);
 
@@ -565,7 +565,7 @@ GpuMemory::~GpuMemory()
         EXPECT(vkFreeMemory(obj()) == VK_SUCCESS);
 }
 
-void GpuMemory::init(const Device &dev, const VK_MEMORY_ALLOC_INFO &info)
+void GpuMemory::init(const Device &dev, const VkMemoryAllocInfo &info)
 {
     DERIVED_OBJECT_INIT(vkAllocMemory, dev.obj(), &info);
 }
@@ -666,19 +666,19 @@ VK_RESULT QueryPool::results(uint32_t start, uint32_t count, size_t size, void *
     return err;
 }
 
-void Buffer::init(const Device &dev, const VK_BUFFER_CREATE_INFO &info)
+void Buffer::init(const Device &dev, const VkBufferCreateInfo &info)
 {
     init_no_mem(dev, info);
     alloc_memory(dev, true, false);
 }
 
-void Buffer::init_no_mem(const Device &dev, const VK_BUFFER_CREATE_INFO &info)
+void Buffer::init_no_mem(const Device &dev, const VkBufferCreateInfo &info)
 {
     DERIVED_OBJECT_INIT(vkCreateBuffer, dev.obj(), &info);
     create_info_ = info;
 }
 
-void BufferView::init(const Device &dev, const VK_BUFFER_VIEW_CREATE_INFO &info)
+void BufferView::init(const Device &dev, const VkBufferViewCreateInfo &info)
 {
     DERIVED_OBJECT_INIT(vkCreateBufferView, dev.obj(), &info);
     alloc_memory(dev);

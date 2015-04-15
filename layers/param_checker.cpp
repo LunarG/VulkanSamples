@@ -124,7 +124,7 @@ void PostCreateInstance(VK_RESULT result, VK_INSTANCE* pInstance)
     }
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkCreateInstance(const VK_INSTANCE_CREATE_INFO* pCreateInfo, VK_INSTANCE* pInstance)
+VK_LAYER_EXPORT VK_RESULT VKAPI vkCreateInstance(const VkInstanceCreateInfo* pCreateInfo, VK_INSTANCE* pInstance)
 {
     PreCreateInstance(pCreateInfo->pAppInfo, pCreateInfo->pAllocCb);
     VK_RESULT result = nextTable.CreateInstance(pCreateInfo, pInstance);
@@ -160,7 +160,7 @@ VK_LAYER_EXPORT VK_RESULT VKAPI vkGetGpuInfo(VK_PHYSICAL_GPU gpu, VK_PHYSICAL_GP
     return result;
 }
 
-void PreCreateDevice(VK_PHYSICAL_GPU gpu, const VK_DEVICE_CREATE_INFO* pCreateInfo)
+void PreCreateDevice(VK_PHYSICAL_GPU gpu, const VkDeviceCreateInfo* pCreateInfo)
 {
     if(gpu == nullptr)
     {
@@ -172,7 +172,7 @@ void PreCreateDevice(VK_PHYSICAL_GPU gpu, const VK_DEVICE_CREATE_INFO* pCreateIn
 
     if(pCreateInfo == nullptr)
     {
-        char const str[] = "vkCreateDevice parameter, VK_DEVICE_CREATE_INFO* pCreateInfo, is "\
+        char const str[] = "vkCreateDevice parameter, VkDeviceCreateInfo* pCreateInfo, is "\
             "nullptr (precondition).";
         layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
         return;
@@ -196,7 +196,7 @@ void PreCreateDevice(VK_PHYSICAL_GPU gpu, const VK_DEVICE_CREATE_INFO* pCreateIn
 
     if(pCreateInfo->pRequestedQueues == nullptr)
     {
-        char const str[] = "vkCreateDevice parameter, VK_DEVICE_QUEUE_CREATE_INFO* pCreateInfo->pRequestedQueues, is "\
+        char const str[] = "vkCreateDevice parameter, VkDeviceQueueCreateInfo* pCreateInfo->pRequestedQueues, is "\
             "nullptr (precondition).";
         layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
         return;
@@ -204,10 +204,10 @@ void PreCreateDevice(VK_PHYSICAL_GPU gpu, const VK_DEVICE_CREATE_INFO* pCreateIn
 
     for(uint32_t i = 0; i < pCreateInfo->queueRecordCount; ++i)
     {
-        if(!vk_validate_vk_device_queue_create_info(&(pCreateInfo->pRequestedQueues[i])))
+        if(!vk_validate_vkdevicequeuecreateinfo(&(pCreateInfo->pRequestedQueues[i])))
         {
             std::stringstream ss;
-            ss << "vkCreateDevice parameter, VK_DEVICE_QUEUE_CREATE_INFO pCreateInfo->pRequestedQueues[" << i <<
+            ss << "vkCreateDevice parameter, VkDeviceQueueCreateInfo pCreateInfo->pRequestedQueues[" << i <<
                 "], is invalid (precondition).";
             layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", ss.str().c_str());
             continue;
@@ -241,7 +241,7 @@ void PostCreateDevice(VK_RESULT result, VK_DEVICE* pDevice)
     }
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkCreateDevice(VK_PHYSICAL_GPU gpu, const VK_DEVICE_CREATE_INFO* pCreateInfo, VK_DEVICE* pDevice)
+VK_LAYER_EXPORT VK_RESULT VKAPI vkCreateDevice(VK_PHYSICAL_GPU gpu, const VkDeviceCreateInfo* pCreateInfo, VK_DEVICE* pDevice)
 {
     VK_BASE_LAYER_OBJECT* gpuw = (VK_BASE_LAYER_OBJECT *) gpu;
     pCurObj = gpuw;
@@ -331,14 +331,13 @@ VK_LAYER_EXPORT VK_RESULT VKAPI vkDeviceWaitIdle(VK_DEVICE device)
     return result;
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkAllocMemory(VK_DEVICE device, const VK_MEMORY_ALLOC_INFO* pAllocInfo, VK_GPU_MEMORY* pMem)
+VK_LAYER_EXPORT VK_RESULT VKAPI vkAllocMemory(VK_DEVICE device, const VkMemoryAllocInfo* pAllocInfo, VK_GPU_MEMORY* pMem)
 {
     char str[1024];
     if (!pAllocInfo) {
         sprintf(str, "Struct ptr parameter pAllocInfo to function AllocMemory is NULL.");
         layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
-    }
-    else if (!vk_validate_vk_memory_alloc_info(pAllocInfo)) {
+    } else if (!vk_validate_vkmemoryallocinfo(pAllocInfo)) {
         sprintf(str, "Parameter pAllocInfo to function AllocMemory contains an invalid value.");
         layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
     }
@@ -640,14 +639,14 @@ VK_LAYER_EXPORT VK_RESULT VKAPI vkGetFormatInfo(VK_DEVICE device, VK_FORMAT form
     return result;
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkCreateBuffer(VK_DEVICE device, const VK_BUFFER_CREATE_INFO* pCreateInfo, VK_BUFFER* pBuffer)
+VK_LAYER_EXPORT VK_RESULT VKAPI vkCreateBuffer(VK_DEVICE device, const VkBufferCreateInfo* pCreateInfo, VK_BUFFER* pBuffer)
 {
     char str[1024];
     if (!pCreateInfo) {
         sprintf(str, "Struct ptr parameter pCreateInfo to function CreateBuffer is NULL.");
         layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
     }
-    else if (!vk_validate_vk_buffer_create_info(pCreateInfo)) {
+    else if (!vk_validate_vkbuffercreateinfo(pCreateInfo)) {
         sprintf(str, "Parameter pCreateInfo to function CreateBuffer contains an invalid value.");
         layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
     }
@@ -655,14 +654,14 @@ VK_LAYER_EXPORT VK_RESULT VKAPI vkCreateBuffer(VK_DEVICE device, const VK_BUFFER
     return result;
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkCreateBufferView(VK_DEVICE device, const VK_BUFFER_VIEW_CREATE_INFO* pCreateInfo, VK_BUFFER_VIEW* pView)
+VK_LAYER_EXPORT VK_RESULT VKAPI vkCreateBufferView(VK_DEVICE device, const VkBufferViewCreateInfo* pCreateInfo, VK_BUFFER_VIEW* pView)
 {
     char str[1024];
     if (!pCreateInfo) {
         sprintf(str, "Struct ptr parameter pCreateInfo to function CreateBufferView is NULL.");
         layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
     }
-    else if (!vk_validate_vk_buffer_view_create_info(pCreateInfo)) {
+    else if (!vk_validate_vkbufferviewcreateinfo(pCreateInfo)) {
         sprintf(str, "Parameter pCreateInfo to function CreateBufferView contains an invalid value.");
         layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
     }

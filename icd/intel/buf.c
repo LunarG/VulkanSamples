@@ -87,7 +87,7 @@ static VK_RESULT buf_get_info(struct intel_base *base, int type,
 }
 
 VK_RESULT intel_buf_create(struct intel_dev *dev,
-                            const VK_BUFFER_CREATE_INFO *info,
+                            const VkBufferCreateInfo *info,
                             struct intel_buf **buf_ret)
 {
     struct intel_buf *buf;
@@ -115,7 +115,7 @@ void intel_buf_destroy(struct intel_buf *buf)
 
 ICD_EXPORT VK_RESULT VKAPI vkCreateBuffer(
     VK_DEVICE                                  device,
-    const VK_BUFFER_CREATE_INFO*               pCreateInfo,
+    const VkBufferCreateInfo*               pCreateInfo,
     VK_BUFFER*                                 pBuffer)
 {
     struct intel_dev *dev = intel_dev(device);

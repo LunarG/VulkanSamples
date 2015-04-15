@@ -100,12 +100,12 @@ VK_RESULT vkDisplay::init_vk(unsigned int gpu_idx)
         return VK_ERROR_INCOMPATIBLE_DEVICE;
     }
     // TODO generalize this: use one universal queue for now
-    VK_DEVICE_QUEUE_CREATE_INFO dqci = {};
+    VkDeviceQueueCreateInfo dqci = {};
     dqci.queueCount = 1;
     dqci.queueType = VK_QUEUE_UNIVERSAL;
     // create the device enabling validation level 4
     const char * const * extNames = &m_extensions[0];
-    VK_DEVICE_CREATE_INFO info = {};
+    VkDeviceCreateInfo info = {};
     info.queueRecordCount = 1;
     info.pRequestedQueues = &dqci;
     info.extensionCount = static_cast <uint32_t> (m_extensions.size());

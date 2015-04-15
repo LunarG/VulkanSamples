@@ -116,7 +116,7 @@ typedef struct _IMAGE_NODE {
 
 typedef struct _BUFFER_NODE {
     VK_BUFFER_VIEW             buffer;
-    VK_BUFFER_VIEW_CREATE_INFO createInfo;
+    VkBufferViewCreateInfo createInfo;
     VK_BUFFER_VIEW_ATTACH_INFO attachInfo;
 } BUFFER_NODE;
 

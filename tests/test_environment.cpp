@@ -51,7 +51,7 @@ void Environment::SetUp()
 
     uint32_t count;
     VK_RESULT err;
-    VK_INSTANCE_CREATE_INFO inst_info = {};
+    VkInstanceCreateInfo inst_info = {};
     inst_info.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
     inst_info.pNext = NULL;
     inst_info.pAppInfo = &app_;
@@ -82,7 +82,7 @@ void Environment::X11SetUp()
     const xcb_setup_t *setup;
     xcb_screen_iterator_t iter;
     int scr;
-    VK_INSTANCE_CREATE_INFO instInfo = {};
+    VkInstanceCreateInfo instInfo = {};
     instInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
     instInfo.pNext = NULL;
     instInfo.pAppInfo = &app_;

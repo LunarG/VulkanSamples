@@ -59,7 +59,7 @@ VkRenderFramework::~VkRenderFramework()
 void VkRenderFramework::InitFramework()
 {
     VK_RESULT err;
-    VK_INSTANCE_CREATE_INFO instInfo = {};
+    VkInstanceCreateInfo instInfo = {};
     instInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
     instInfo.pNext = NULL;
     instInfo.pAppInfo = &app_info;
@@ -765,7 +765,7 @@ VkConstantBufferObj::VkConstantBufferObj(VkDeviceObj *device, int constantCount,
     unmap();
 
     // set up the buffer view for the constant buffer
-    VK_BUFFER_VIEW_CREATE_INFO view_info = {};
+    VkBufferViewCreateInfo view_info = {};
     view_info.sType = VK_STRUCTURE_TYPE_BUFFER_VIEW_CREATE_INFO;
     view_info.buffer = obj();
     view_info.viewType = VK_BUFFER_VIEW_RAW;
@@ -896,7 +896,7 @@ void VkIndexBufferObj::CreateAndInitBuffer(int numIndexes, VK_INDEX_TYPE indexTy
     unmap();
 
     // set up the buffer view for the constant buffer
-    VK_BUFFER_VIEW_CREATE_INFO view_info = {};
+    VkBufferViewCreateInfo view_info = {};
     view_info.sType = VK_STRUCTURE_TYPE_BUFFER_VIEW_CREATE_INFO;
     view_info.buffer = obj();
     view_info.viewType = VK_BUFFER_VIEW_TYPED;

@@ -714,7 +714,7 @@ static uint32_t loader_get_layer_env(struct loader_icd *icd, uint32_t gpu_index,
     return count;
 }
 
-static uint32_t loader_get_layer_libs(struct loader_icd *icd, uint32_t gpu_index, const VK_DEVICE_CREATE_INFO* pCreateInfo, struct layer_name_pair **ppLayerNames)
+static uint32_t loader_get_layer_libs(struct loader_icd *icd, uint32_t gpu_index, const VkDeviceCreateInfo* pCreateInfo, struct layer_name_pair **ppLayerNames)
 {
     static struct layer_name_pair layerNames[MAX_LAYER_LIBRARIES];
     const char *lib_name = NULL;
@@ -788,7 +788,7 @@ static void loader_deactivate_layer(const struct loader_instance *instance)
     }
 }
 
-extern uint32_t loader_activate_layers(VK_PHYSICAL_GPU gpu, const VK_DEVICE_CREATE_INFO* pCreateInfo)
+extern uint32_t loader_activate_layers(VK_PHYSICAL_GPU gpu, const VkDeviceCreateInfo* pCreateInfo)
 {
     uint32_t gpu_index;
     uint32_t count;
@@ -858,7 +858,7 @@ extern uint32_t loader_activate_layers(VK_PHYSICAL_GPU gpu, const VK_DEVICE_CREA
 }
 
 LOADER_EXPORT VK_RESULT VKAPI vkCreateInstance(
-        const VK_INSTANCE_CREATE_INFO*         pCreateInfo,
+        const VkInstanceCreateInfo*         pCreateInfo,
         VK_INSTANCE*                           pInstance)
 {
     static LOADER_PLATFORM_THREAD_ONCE_DECLARATION(once_icd);

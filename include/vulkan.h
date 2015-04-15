@@ -1396,25 +1396,25 @@ typedef struct _VK_ALLOC_CALLBACKS
     VK_FREE_FUNCTION                            pfnFree;
 } VK_ALLOC_CALLBACKS;
 
-typedef struct _VK_DEVICE_QUEUE_CREATE_INFO
+typedef struct _VkDeviceQueueCreateInfo
 {
     uint32_t                                    queueNodeIndex;
     uint32_t                                    queueCount;
-} VK_DEVICE_QUEUE_CREATE_INFO;
+} VkDeviceQueueCreateInfo;
 
-typedef struct _VK_DEVICE_CREATE_INFO
+typedef struct _VkDeviceCreateInfo
 {
     VK_STRUCTURE_TYPE                           sType;                      // Should be VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO
     const void*                                 pNext;                      // Pointer to next structure
     uint32_t                                    queueRecordCount;
-    const VK_DEVICE_QUEUE_CREATE_INFO*          pRequestedQueues;
+    const VkDeviceQueueCreateInfo*              pRequestedQueues;
     uint32_t                                    extensionCount;
     const char*const*                           ppEnabledExtensionNames;
     VK_VALIDATION_LEVEL                         maxValidationLevel;
     VK_FLAGS                                    flags;                      // VK_DEVICE_CREATE_FLAGS
-} VK_DEVICE_CREATE_INFO;
+} VkDeviceCreateInfo;
 
-typedef struct _VK_INSTANCE_CREATE_INFO
+typedef struct _VkInstanceCreateInfo
 {
     VK_STRUCTURE_TYPE                           sType;                      // Should be VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO
     const void*                                 pNext;                      // Pointer to next structure
@@ -1422,16 +1422,16 @@ typedef struct _VK_INSTANCE_CREATE_INFO
     const VK_ALLOC_CALLBACKS*                   pAllocCb;
     uint32_t                                    extensionCount;
     const char*const*                           ppEnabledExtensionNames;    // layer or extension name to be enabled
-} VK_INSTANCE_CREATE_INFO;
+} VkInstanceCreateInfo;
 
-// can be added to VK_DEVICE_CREATE_INFO or VK_INSTANCE_CREATE_INFO via pNext
-typedef struct _VK_LAYER_CREATE_INFO
+// can be added to VkDeviceCreateInfo or VkInstanceCreateInfo via pNext
+typedef struct _VkLayerCreateInfo
 {
     VK_STRUCTURE_TYPE                           sType;                      // Should be VK_STRUCTURE_TYPE_LAYER_CREATE_INFO
     const void*                                 pNext;                      // Pointer to next structure
     uint32_t                                    layerCount;
     const char *const*                          ppActiveLayerNames;         // layer name from the layer's vkEnumerateLayers())
-} VK_LAYER_CREATE_INFO;
+} VkLayerCreateInfo;
 
 typedef struct _VK_PHYSICAL_GPU_QUEUE_PROPERTIES
 {
@@ -1448,7 +1448,7 @@ typedef struct _VK_PHYSICAL_GPU_MEMORY_PROPERTIES
     bool32_t                                    supportsPinning;
 } VK_PHYSICAL_GPU_MEMORY_PROPERTIES;
 
-typedef struct _VK_MEMORY_ALLOC_INFO
+typedef struct _VkMemoryAllocInfo
 {
     VK_STRUCTURE_TYPE                           sType;                      // Must be VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO
     const void*                                 pNext;                      // Pointer to next structure
@@ -1456,27 +1456,27 @@ typedef struct _VK_MEMORY_ALLOC_INFO
     VK_FLAGS                                    memProps;                   // VK_MEMORY_PROPERTY_FLAGS
     VK_MEMORY_TYPE                              memType;
     VK_MEMORY_PRIORITY                          memPriority;
-} VK_MEMORY_ALLOC_INFO;
+} VkMemoryAllocInfo;
 
-// This structure is included in the VK_MEMORY_ALLOC_INFO chain
+// This structure is included in the VkMemoryAllocInfo chain
 // for memory regions allocated for buffer usage.
-typedef struct _VK_MEMORY_ALLOC_BUFFER_INFO
+typedef struct _VkMemoryAllocBufferInfo
 {
     VK_STRUCTURE_TYPE                           sType;                      // Must be VK_STRUCTURE_TYPE_MEMORY_ALLOC_BUFFER_INFO
     const void*                                 pNext;                      // Pointer to next structure
     VK_FLAGS                                    usage;                      // VK_BUFFER_USAGE_FLAGS
-} VK_MEMORY_ALLOC_BUFFER_INFO;
+} VkMemoryAllocBufferInfo;
 
-// This structure is included in the VK_MEMORY_ALLOC_INFO chain
+// This structure is included in the VkMemoryAllocInfo chain
 // for memory regions allocated for image usage.
-typedef struct _VK_MEMORY_ALLOC_IMAGE_INFO
+typedef struct _VkMemoryAllocImageInfo
 {
     VK_STRUCTURE_TYPE                           sType;                      // Must be VK_STRUCTURE_TYPE_MEMORY_ALLOC_IMAGE_INFO
     const void*                                 pNext;                      // Pointer to next structure
     VK_FLAGS                                    usage;                      // VK_IMAGE_USAGE_FLAGS
     VK_IMAGE_FORMAT_CLASS                       formatClass;
     uint32_t                                    samples;
-} VK_MEMORY_ALLOC_IMAGE_INFO;
+} VkMemoryAllocImageInfo;
 
 typedef struct _VK_MEMORY_OPEN_INFO
 {
@@ -1593,16 +1593,16 @@ typedef struct _VK_UPDATE_AS_COPY
     uint32_t                                    count;
 } VK_UPDATE_AS_COPY;
 
-typedef struct _VK_BUFFER_CREATE_INFO
+typedef struct _VkBufferCreateInfo
 {
     VK_STRUCTURE_TYPE                           sType;                      // Must be VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO
     const void*                                 pNext;                      // Pointer to next structure.
     VK_GPU_SIZE                                 size;                       // Specified in bytes
     VK_FLAGS                                    usage;                      // VK_BUFFER_USAGE_FLAGS
     VK_FLAGS                                    flags;                      // VK_BUFFER_CREATE_FLAGS
-} VK_BUFFER_CREATE_INFO;
+} VkBufferCreateInfo;
 
-typedef struct _VK_BUFFER_VIEW_CREATE_INFO
+typedef struct _VkBufferViewCreateInfo
 {
     VK_STRUCTURE_TYPE                           sType;                      // Must be VK_STRUCTURE_TYPE_BUFFER_VIEW_CREATE_INFO
     const void*                                 pNext;                      // Pointer to next structure.
@@ -1611,7 +1611,7 @@ typedef struct _VK_BUFFER_VIEW_CREATE_INFO
     VK_FORMAT                                   format;                     // Optionally specifies format of elements
     VK_GPU_SIZE                                 offset;                     // Specified in bytes
     VK_GPU_SIZE                                 range;                      // View size specified in bytes
-} VK_BUFFER_VIEW_CREATE_INFO;
+} VkBufferViewCreateInfo;
 
 typedef struct _VK_IMAGE_SUBRESOURCE
 {
@@ -2266,12 +2266,12 @@ typedef struct _VK_DISPATCH_INDIRECT_CMD
 
 // ------------------------------------------------------------------------------------------------
 // API functions
-typedef VK_RESULT (VKAPI *vkCreateInstanceType)(const VK_INSTANCE_CREATE_INFO* pCreateInfo, VK_INSTANCE* pInstance);
+typedef VK_RESULT (VKAPI *vkCreateInstanceType)(const VkInstanceCreateInfo* pCreateInfo, VK_INSTANCE* pInstance);
 typedef VK_RESULT (VKAPI *vkDestroyInstanceType)(VK_INSTANCE instance);
 typedef VK_RESULT (VKAPI *vkEnumerateGpusType)(VK_INSTANCE instance, uint32_t maxGpus, uint32_t* pGpuCount, VK_PHYSICAL_GPU* pGpus);
 typedef VK_RESULT (VKAPI *vkGetGpuInfoType)(VK_PHYSICAL_GPU gpu, VK_PHYSICAL_GPU_INFO_TYPE infoType, size_t* pDataSize, void* pData);
 typedef void *    (VKAPI *vkGetProcAddrType)(VK_PHYSICAL_GPU gpu, const char * pName);
-typedef VK_RESULT (VKAPI *vkCreateDeviceType)(VK_PHYSICAL_GPU gpu, const VK_DEVICE_CREATE_INFO* pCreateInfo, VK_DEVICE* pDevice);
+typedef VK_RESULT (VKAPI *vkCreateDeviceType)(VK_PHYSICAL_GPU gpu, const VkDeviceCreateInfo* pCreateInfo, VK_DEVICE* pDevice);
 typedef VK_RESULT (VKAPI *vkDestroyDeviceType)(VK_DEVICE device);
 typedef VK_RESULT (VKAPI *vkGetExtensionSupportType)(VK_PHYSICAL_GPU gpu, const char* pExtName);
 typedef VK_RESULT (VKAPI *vkEnumerateLayersType)(VK_PHYSICAL_GPU gpu, size_t maxLayerCount, size_t maxStringSize, size_t* pOutLayerCount, char* const* pOutLayers, void* pReserved);
@@ -2281,7 +2281,7 @@ typedef VK_RESULT (VKAPI *vkQueueAddMemReferenceType)(VK_QUEUE queue, VK_GPU_MEM
 typedef VK_RESULT (VKAPI *vkQueueRemoveMemReferenceType)(VK_QUEUE queue, VK_GPU_MEMORY mem);
 typedef VK_RESULT (VKAPI *vkQueueWaitIdleType)(VK_QUEUE queue);
 typedef VK_RESULT (VKAPI *vkDeviceWaitIdleType)(VK_DEVICE device);
-typedef VK_RESULT (VKAPI *vkAllocMemoryType)(VK_DEVICE device, const VK_MEMORY_ALLOC_INFO* pAllocInfo, VK_GPU_MEMORY* pMem);
+typedef VK_RESULT (VKAPI *vkAllocMemoryType)(VK_DEVICE device, const VkMemoryAllocInfo* pAllocInfo, VK_GPU_MEMORY* pMem);
 typedef VK_RESULT (VKAPI *vkFreeMemoryType)(VK_GPU_MEMORY mem);
 typedef VK_RESULT (VKAPI *vkSetMemoryPriorityType)(VK_GPU_MEMORY mem, VK_MEMORY_PRIORITY priority);
 typedef VK_RESULT (VKAPI *vkMapMemoryType)(VK_GPU_MEMORY mem, VK_FLAGS flags, void** ppData);
@@ -2311,8 +2311,8 @@ typedef VK_RESULT (VKAPI *vkResetEventType)(VK_EVENT event);
 typedef VK_RESULT (VKAPI *vkCreateQueryPoolType)(VK_DEVICE device, const VK_QUERY_POOL_CREATE_INFO* pCreateInfo, VK_QUERY_POOL* pQueryPool);
 typedef VK_RESULT (VKAPI *vkGetQueryPoolResultsType)(VK_QUERY_POOL queryPool, uint32_t startQuery, uint32_t queryCount, size_t* pDataSize, void* pData);
 typedef VK_RESULT (VKAPI *vkGetFormatInfoType)(VK_DEVICE device, VK_FORMAT format, VK_FORMAT_INFO_TYPE infoType, size_t* pDataSize, void* pData);
-typedef VK_RESULT (VKAPI *vkCreateBufferType)(VK_DEVICE device, const VK_BUFFER_CREATE_INFO* pCreateInfo, VK_BUFFER* pBuffer);
-typedef VK_RESULT (VKAPI *vkCreateBufferViewType)(VK_DEVICE device, const VK_BUFFER_VIEW_CREATE_INFO* pCreateInfo, VK_BUFFER_VIEW* pView);
+typedef VK_RESULT (VKAPI *vkCreateBufferType)(VK_DEVICE device, const VkBufferCreateInfo* pCreateInfo, VK_BUFFER* pBuffer);
+typedef VK_RESULT (VKAPI *vkCreateBufferViewType)(VK_DEVICE device, const VkBufferViewCreateInfo* pCreateInfo, VK_BUFFER_VIEW* pView);
 typedef VK_RESULT (VKAPI *vkCreateImageType)(VK_DEVICE device, const VK_IMAGE_CREATE_INFO* pCreateInfo, VK_IMAGE* pImage);
 typedef VK_RESULT (VKAPI *vkGetImageSubresourceInfoType)(VK_IMAGE image, const VK_IMAGE_SUBRESOURCE* pSubresource, VK_SUBRESOURCE_INFO_TYPE infoType, size_t* pDataSize, void* pData);
 typedef VK_RESULT (VKAPI *vkCreateImageViewType)(VK_DEVICE device, const VK_IMAGE_VIEW_CREATE_INFO* pCreateInfo, VK_IMAGE_VIEW* pView);
@@ -2386,7 +2386,7 @@ typedef void      (VKAPI *vkCmdEndRenderPassType)(VK_CMD_BUFFER cmdBuffer, VK_RE
 // GPU initialization
 
 VK_RESULT VKAPI vkCreateInstance(
-    const VK_INSTANCE_CREATE_INFO*             pCreateInfo,
+    const VkInstanceCreateInfo*             pCreateInfo,
     VK_INSTANCE*                               pInstance);
 
 VK_RESULT VKAPI vkDestroyInstance(
@@ -2412,7 +2412,7 @@ void * VKAPI vkGetProcAddr(
 
 VK_RESULT VKAPI vkCreateDevice(
     VK_PHYSICAL_GPU                             gpu,
-    const VK_DEVICE_CREATE_INFO*                pCreateInfo,
+    const VkDeviceCreateInfo*                pCreateInfo,
     VK_DEVICE*                                  pDevice);
 
 VK_RESULT VKAPI vkDestroyDevice(
@@ -2466,7 +2466,7 @@ VK_RESULT VKAPI vkDeviceWaitIdle(
 
 VK_RESULT VKAPI vkAllocMemory(
     VK_DEVICE                                   device,
-    const VK_MEMORY_ALLOC_INFO*                 pAllocInfo,
+    const VkMemoryAllocInfo*                 pAllocInfo,
     VK_GPU_MEMORY*                              pMem);
 
 VK_RESULT VKAPI vkFreeMemory(
@@ -2630,14 +2630,14 @@ VK_RESULT VKAPI vkGetFormatInfo(
 
 VK_RESULT VKAPI vkCreateBuffer(
     VK_DEVICE                                   device,
-    const VK_BUFFER_CREATE_INFO*                pCreateInfo,
+    const VkBufferCreateInfo*                pCreateInfo,
     VK_BUFFER*                                  pBuffer);
 
 // Buffer view functions
 
 VK_RESULT VKAPI vkCreateBufferView(
     VK_DEVICE                                   device,
-    const VK_BUFFER_VIEW_CREATE_INFO*           pCreateInfo,
+    const VkBufferViewCreateInfo*           pCreateInfo,
     VK_BUFFER_VIEW*                             pView);
 
 // Image functions

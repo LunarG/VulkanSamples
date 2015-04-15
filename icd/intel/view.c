@@ -1066,7 +1066,7 @@ static void buf_view_destroy(struct intel_obj *obj)
 }
 
 VK_RESULT intel_buf_view_create(struct intel_dev *dev,
-                                 const VK_BUFFER_VIEW_CREATE_INFO *info,
+                                 const VkBufferViewCreateInfo *info,
                                  struct intel_buf_view **view_ret)
 {
     struct intel_buf *buf = intel_buf(info->buffer);
@@ -1323,7 +1323,7 @@ void intel_ds_view_destroy(struct intel_ds_view *view)
 
 ICD_EXPORT VK_RESULT VKAPI vkCreateBufferView(
     VK_DEVICE                                  device,
-    const VK_BUFFER_VIEW_CREATE_INFO*          pCreateInfo,
+    const VkBufferViewCreateInfo*          pCreateInfo,
     VK_BUFFER_VIEW*                            pView)
 {
     struct intel_dev *dev = intel_dev(device);

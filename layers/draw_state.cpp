@@ -262,7 +262,7 @@ static void deleteImages()
         delete (*ii).second;
     }
 }
-static VK_BUFFER_VIEW_CREATE_INFO* getBufferViewCreateInfo(VK_BUFFER_VIEW view)
+static VkBufferViewCreateInfo* getBufferViewCreateInfo(VK_BUFFER_VIEW view)
 {
     loader_platform_thread_lock_mutex(&globalLock);
     if (bufferMap.find(view) == bufferMap.end()) {
@@ -1111,7 +1111,7 @@ static void dsCoreDumpDot(const VK_DESCRIPTOR_SET ds, FILE* pOutFile)
             VK_UPDATE_AS_COPY* pUAC = NULL;
             VK_SAMPLER_CREATE_INFO* pSCI = NULL;
             VK_IMAGE_VIEW_CREATE_INFO* pIVCI = NULL;
-            VK_BUFFER_VIEW_CREATE_INFO* pBVCI = NULL;
+            VkBufferViewCreateInfo* pBVCI = NULL;
             void** ppNextPtr = NULL;
             void* pSaveNext = NULL;
             for (i=0; i < pSet->descriptorCount; i++) {
@@ -1156,7 +1156,7 @@ static void dsCoreDumpDot(const VK_DESCRIPTOR_SET ds, FILE* pOutFile)
                             pBVCI = getBufferViewCreateInfo(pUB->pBufferViews[i-pUB->arrayIndex].view);
                             if (pBVCI) {
                                 sprintf(tmp_str, "BUFFER_VIEW%u", i);
-                                fprintf(pOutFile, "%s", vk_gv_print_vk_buffer_view_create_info(pBVCI, tmp_str));
+                                fprintf(pOutFile, "%s", vk_gv_print_vkbufferviewcreateinfo(pBVCI, tmp_str));
                                 fprintf(pOutFile, "\"DESCRIPTORS\":slot%u -> \"%s\" [color=\"#%s\"];\n", i, tmp_str, edgeColors[colorIdx].c_str());
                             }
                             break;
@@ -1441,7 +1441,7 @@ static void initDrawState(void)
     }
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkCreateDevice(VK_PHYSICAL_GPU gpu, const VK_DEVICE_CREATE_INFO* pCreateInfo, VK_DEVICE* pDevice)
+VK_LAYER_EXPORT VK_RESULT VKAPI vkCreateDevice(VK_PHYSICAL_GPU gpu, const VkDeviceCreateInfo* pCreateInfo, VK_DEVICE* pDevice)
 {
     VK_BASE_LAYER_OBJECT* gpuw = (VK_BASE_LAYER_OBJECT *) gpu;
     pCurObj = gpuw;
@@ -1522,7 +1522,7 @@ VK_LAYER_EXPORT VK_RESULT VKAPI vkDestroyObject(VK_OBJECT object)
     return result;
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkCreateBufferView(VK_DEVICE device, const VK_BUFFER_VIEW_CREATE_INFO* pCreateInfo, VK_BUFFER_VIEW* pView)
+VK_LAYER_EXPORT VK_RESULT VKAPI vkCreateBufferView(VK_DEVICE device, const VkBufferViewCreateInfo* pCreateInfo, VK_BUFFER_VIEW* pView)
 {
     VK_RESULT result = nextTable.CreateBufferView(device, pCreateInfo, pView);
     if (VK_SUCCESS == result) {

@@ -218,7 +218,7 @@ core = Extension(
     ],
     protos=[
         Proto("VK_RESULT", "CreateInstance",
-            [Param("const VK_INSTANCE_CREATE_INFO*", "pCreateInfo"),
+            [Param("const VkInstanceCreateInfo*", "pCreateInfo"),
              Param("VK_INSTANCE*", "pInstance")]),
 
         Proto("VK_RESULT", "DestroyInstance",
@@ -242,7 +242,7 @@ core = Extension(
 
         Proto("VK_RESULT", "CreateDevice",
             [Param("VK_PHYSICAL_GPU", "gpu"),
-             Param("const VK_DEVICE_CREATE_INFO*", "pCreateInfo"),
+             Param("const VkDeviceCreateInfo*", "pCreateInfo"),
              Param("VK_DEVICE*", "pDevice")]),
 
         Proto("VK_RESULT", "DestroyDevice",
@@ -288,7 +288,7 @@ core = Extension(
 
         Proto("VK_RESULT", "AllocMemory",
             [Param("VK_DEVICE", "device"),
-             Param("const VK_MEMORY_ALLOC_INFO*", "pAllocInfo"),
+             Param("const VkMemoryAllocInfo*", "pAllocInfo"),
              Param("VK_GPU_MEMORY*", "pMem")]),
 
         Proto("VK_RESULT", "FreeMemory",
@@ -436,12 +436,12 @@ core = Extension(
 
         Proto("VK_RESULT", "CreateBuffer",
             [Param("VK_DEVICE", "device"),
-             Param("const VK_BUFFER_CREATE_INFO*", "pCreateInfo"),
+             Param("const VkBufferCreateInfo*", "pCreateInfo"),
              Param("VK_BUFFER*", "pBuffer")]),
 
         Proto("VK_RESULT", "CreateBufferView",
             [Param("VK_DEVICE", "device"),
-             Param("const VK_BUFFER_VIEW_CREATE_INFO*", "pCreateInfo"),
+             Param("const VkBufferViewCreateInfo*", "pCreateInfo"),
              Param("VK_BUFFER_VIEW*", "pView")]),
 
         Proto("VK_RESULT", "CreateImage",

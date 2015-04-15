@@ -345,14 +345,14 @@ static MT_MEM_OBJ_INFO* getMemObjInfo(const VK_GPU_MEMORY mem)
     return pMemObjInfo;
 }
 
-static void addMemObjInfo(const VK_GPU_MEMORY mem, const VK_MEMORY_ALLOC_INFO* pAllocInfo)
+static void addMemObjInfo(const VK_GPU_MEMORY mem, const VkMemoryAllocInfo* pAllocInfo)
 {
     MT_MEM_OBJ_INFO* pInfo = new MT_MEM_OBJ_INFO;
     pInfo->refCount           = 0;
-    memset(&pInfo->allocInfo, 0, sizeof(VK_MEMORY_ALLOC_INFO));
+    memset(&pInfo->allocInfo, 0, sizeof(VkMemoryAllocInfo));
 
     if (pAllocInfo) {  // MEM alloc created by vkWsiX11CreatePresentableImage() doesn't have alloc info struct
-        memcpy(&pInfo->allocInfo, pAllocInfo, sizeof(VK_MEMORY_ALLOC_INFO));
+        memcpy(&pInfo->allocInfo, pAllocInfo, sizeof(VkMemoryAllocInfo));
         // TODO:  Update for real hardware, actually process allocation info structures
         pInfo->allocInfo.pNext = NULL;
     }
@@ -734,7 +734,7 @@ static void printMemList()
         sprintf(str, "    Ref Count: %u", pInfo->refCount);
         layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, NULL, 0, MEMTRACK_NONE, "MEM", str);
         if (0 != pInfo->allocInfo.allocationSize) {
-            string pAllocInfoMsg = vk_print_vk_memory_alloc_info(&pInfo->allocInfo, "{MEM}INFO :       ");
+            string pAllocInfoMsg = vk_print_vkmemoryallocinfo(&pInfo->allocInfo, "{MEM}INFO :       ");
             sprintf(str, "    Mem Alloc info:\n%s", pAllocInfoMsg.c_str());
             layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, NULL, 0, MEMTRACK_NONE, "MEM", str);
         } else {
@@ -821,7 +821,7 @@ static void initMemTracker(void)
     }
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkCreateDevice(VK_PHYSICAL_GPU gpu, const VK_DEVICE_CREATE_INFO* pCreateInfo, VK_DEVICE* pDevice)
+VK_LAYER_EXPORT VK_RESULT VKAPI vkCreateDevice(VK_PHYSICAL_GPU gpu, const VkDeviceCreateInfo* pCreateInfo, VK_DEVICE* pDevice)
 {
     VK_BASE_LAYER_OBJECT* gpuw = (VK_BASE_LAYER_OBJECT *) gpu;
     pCurObj = gpuw;
@@ -999,7 +999,7 @@ VK_LAYER_EXPORT VK_RESULT VKAPI vkQueueSubmit(
     return result;
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkAllocMemory(VK_DEVICE device, const VK_MEMORY_ALLOC_INFO* pAllocInfo, VK_GPU_MEMORY* pMem)
+VK_LAYER_EXPORT VK_RESULT VKAPI vkAllocMemory(VK_DEVICE device, const VkMemoryAllocInfo* pAllocInfo, VK_GPU_MEMORY* pMem)
 {
     VK_RESULT result = nextTable.AllocMemory(device, pAllocInfo, pMem);
     // TODO : Track allocations and overall size here
@@ -1262,23 +1262,23 @@ VK_LAYER_EXPORT VK_RESULT VKAPI vkCreateQueryPool(VK_DEVICE device, const VK_QUE
     return result;
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkCreateBuffer(VK_DEVICE device, const VK_BUFFER_CREATE_INFO* pCreateInfo, VK_BUFFER* pBuffer)
+VK_LAYER_EXPORT VK_RESULT VKAPI vkCreateBuffer(VK_DEVICE device, const VkBufferCreateInfo* pCreateInfo, VK_BUFFER* pBuffer)
 {
     VK_RESULT result = nextTable.CreateBuffer(device, pCreateInfo, pBuffer);
     if (VK_SUCCESS == result) {
         loader_platform_thread_lock_mutex(&globalLock);
-        addObjectInfo(*pBuffer, pCreateInfo->sType, pCreateInfo, sizeof(VK_BUFFER_CREATE_INFO), "buffer");
+        addObjectInfo(*pBuffer, pCreateInfo->sType, pCreateInfo, sizeof(VkBufferCreateInfo), "buffer");
         loader_platform_thread_unlock_mutex(&globalLock);
     }
     return result;
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkCreateBufferView(VK_DEVICE device, const VK_BUFFER_VIEW_CREATE_INFO* pCreateInfo, VK_BUFFER_VIEW* pView)
+VK_LAYER_EXPORT VK_RESULT VKAPI vkCreateBufferView(VK_DEVICE device, const VkBufferViewCreateInfo* pCreateInfo, VK_BUFFER_VIEW* pView)
 {
     VK_RESULT result = nextTable.CreateBufferView(device, pCreateInfo, pView);
     if (result == VK_SUCCESS) {
         loader_platform_thread_lock_mutex(&globalLock);
-        addObjectInfo(*pView, pCreateInfo->sType, pCreateInfo, sizeof(VK_BUFFER_VIEW_CREATE_INFO), "buffer_view");
+        addObjectInfo(*pView, pCreateInfo->sType, pCreateInfo, sizeof(VkBufferViewCreateInfo), "buffer_view");
         loader_platform_thread_unlock_mutex(&globalLock);
     }
     return result;

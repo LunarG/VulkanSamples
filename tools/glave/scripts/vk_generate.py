@@ -340,7 +340,7 @@ class Subcommand(object):
         # TODO : This is a slightly nicer way to handle custom cases than initial code, however
         #   this can still be further generalized to eliminate more custom code
         #   big case to handle is when ptrs to structs have embedded data that needs to be accounted for in packet
-        custom_ptr_dict = {'VK_DEVICE_CREATE_INFO': {'add_txt': 'add_VK_DEVICE_CREATE_INFO_to_packet(pHeader, (VK_DEVICE_CREATE_INFO**) &(pPacket->pCreateInfo), pCreateInfo)',
+        custom_ptr_dict = {'VkDeviceCreateInfo': {'add_txt': 'add_VkDeviceCreateInfo_to_packet(pHeader, (VkDeviceCreateInfo**) &(pPacket->pCreateInfo), pCreateInfo)',
                                                   'finalize_txt': ''},
                            'VK_APPLICATION_INFO': {'add_txt': 'add_VK_APPLICATION_INFO_to_packet(pHeader, (VK_APPLICATION_INFO**)&(pPacket->pAppInfo), pAppInfo)',
                                                 'finalize_txt': ''},
@@ -374,7 +374,7 @@ class Subcommand(object):
                                                                  'finalize_txt': 'glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pCreateInfo))'},
                            'VK_DESCRIPTOR_SET_LAYOUT_CREATE_INFO': {'add_txt': 'glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pSetLayoutInfoList), sizeof(VK_DESCRIPTOR_SET_LAYOUT_CREATE_INFO), pSetLayoutInfoList);\n    if (pSetLayoutInfoList)\n        add_create_ds_layout_to_trace_packet(pHeader, (void**)&(pPacket->pSetLayoutInfoList->pNext), pSetLayoutInfoList->pNext)',
                                                                      'finalize_txt': 'glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pSetLayoutInfoList))'},
-                           'VK_DESCRIPTOR_REGION_CREATE_INFO': {'add_txt': 'glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo), sizeof(VK_DESCRIPTOR_REGION_CREATE_INFO), pCreateInfo);\n    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo->pTypeCount), rgCount * sizeof(VK_DESCRIPTOR_TYPE_COUNT), pCreateInfo->pTypeCount)',
+                           'VK_DESCRIPTOR_POOL_CREATE_INFO': {'add_txt': 'glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo), sizeof(VK_DESCRIPTOR_POOL_CREATE_INFO), pCreateInfo);\n    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo->pTypeCount), rgCount * sizeof(VK_DESCRIPTOR_TYPE_COUNT), pCreateInfo->pTypeCount)',
                                                                  'finalize_txt': 'glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pCreateInfo->pTypeCount));\n    glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pCreateInfo))'},
                            'VK_COMPUTE_PIPELINE_CREATE_INFO': {'add_txt': 'glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo), sizeof(VK_COMPUTE_PIPELINE_CREATE_INFO), pCreateInfo);\n    add_pipeline_state_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo->pNext), pCreateInfo->pNext);\n    add_pipeline_shader_to_trace_packet(pHeader, (VK_PIPELINE_SHADER*)&pPacket->pCreateInfo->cs, &pCreateInfo->cs)',
                                                                 'finalize_txt': 'finalize_pipeline_shader_address(pHeader, &pPacket->pCreateInfo->cs);\n    glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pCreateInfo))'},
@@ -536,7 +536,7 @@ class Subcommand(object):
                 if 'void' not in proto.ret or '*' in proto.ret:
                     func_body.append('    pPacket->result = result;')
                 for pp_dict in ptr_packet_update_list:
-                    if ('DEVICE_CREATE_INFO' not in proto.params[pp_dict['index']].ty) and ('APPLICATION_INFO' not in proto.params[pp_dict['index']].ty) and ('pUpdateChain' != proto.params[pp_dict['index']].name):
+                    if ('DeviceCreateInfo' not in proto.params[pp_dict['index']].ty) and ('APPLICATION_INFO' not in proto.params[pp_dict['index']].ty) and ('pUpdateChain' != proto.params[pp_dict['index']].name):
                         func_body.append('    %s;' % (pp_dict['finalize_txt']))
                 func_body.append('    FINISH_TRACE_PACKET();')
                 if 'AllocMemory' in proto.name:
@@ -713,11 +713,11 @@ class Subcommand(object):
         pid_enum.append('    glv_finalize_buffer_address(pHeader, (void**)&*ppStruct);')
         pid_enum.append('};\n')
         pid_enum.append('//=============================================================================\n')
-        pid_enum.append('static void add_VK_DEVICE_CREATE_INFO_to_packet(glv_trace_packet_header*  pHeader, VK_DEVICE_CREATE_INFO** ppStruct, const VK_DEVICE_CREATE_INFO *pInStruct)')
+        pid_enum.append('static void add_VkDeviceCreateInfo_to_packet(glv_trace_packet_header*  pHeader, VkDeviceCreateInfo** ppStruct, const VkDeviceCreateInfo *pInStruct)')
         pid_enum.append('{')
         pid_enum.append('    uint32_t i;')
-        pid_enum.append('    glv_add_buffer_to_trace_packet(pHeader, (void**)ppStruct, sizeof(VK_DEVICE_CREATE_INFO), pInStruct);')
-        pid_enum.append('    glv_add_buffer_to_trace_packet(pHeader, (void**)&(*ppStruct)->pRequestedQueues, pInStruct->queueRecordCount*sizeof(VK_DEVICE_QUEUE_CREATE_INFO), pInStruct->pRequestedQueues);')
+        pid_enum.append('    glv_add_buffer_to_trace_packet(pHeader, (void**)ppStruct, sizeof(VkDeviceCreateInfo), pInStruct);')
+        pid_enum.append('    glv_add_buffer_to_trace_packet(pHeader, (void**)&(*ppStruct)->pRequestedQueues, pInStruct->queueRecordCount*sizeof(VkDeviceQueueCreateInfo), pInStruct->pRequestedQueues);')
         pid_enum.append('    glv_finalize_buffer_address(pHeader, (void**)&(*ppStruct)->pRequestedQueues);')
         pid_enum.append('    if (pInStruct->extensionCount > 0) ')
         pid_enum.append('    {')
@@ -729,14 +729,14 @@ class Subcommand(object):
         pid_enum.append('        }')
         pid_enum.append('        glv_finalize_buffer_address(pHeader, (void **)&(*ppStruct)->ppEnabledExtensionNames);')
         pid_enum.append('    }')
-        pid_enum.append('    VK_LAYER_CREATE_INFO *pNext = ( VK_LAYER_CREATE_INFO *) pInStruct->pNext;')
+        pid_enum.append('    VkLayerCreateInfo *pNext = ( VkLayerCreateInfo *) pInStruct->pNext;')
         pid_enum.append('    while (pNext != NULL)')
         pid_enum.append('    {')
         pid_enum.append('        if ((pNext->sType == VK_STRUCTURE_TYPE_LAYER_CREATE_INFO) && pNext->layerCount > 0)')
         pid_enum.append('        {')
-        pid_enum.append('            glv_add_buffer_to_trace_packet(pHeader, (void**)(&((*ppStruct)->pNext)), sizeof(VK_LAYER_CREATE_INFO), pNext);')
+        pid_enum.append('            glv_add_buffer_to_trace_packet(pHeader, (void**)(&((*ppStruct)->pNext)), sizeof(VkLayerCreateInfo), pNext);')
         pid_enum.append('            glv_finalize_buffer_address(pHeader, (void**)(&((*ppStruct)->pNext)));')
-        pid_enum.append('            VK_LAYER_CREATE_INFO **ppOutStruct = (VK_LAYER_CREATE_INFO **) &((*ppStruct)->pNext);')
+        pid_enum.append('            VkLayerCreateInfo **ppOutStruct = (VkLayerCreateInfo **) &((*ppStruct)->pNext);')
         pid_enum.append('            glv_add_buffer_to_trace_packet(pHeader, (void**)(&(*ppOutStruct)->ppActiveLayerNames), pNext->layerCount * sizeof(char *), pNext->ppActiveLayerNames);')
         pid_enum.append('            for (i = 0; i < pNext->layerCount; i++)')
         pid_enum.append('            {')
@@ -745,28 +745,28 @@ class Subcommand(object):
         pid_enum.append('            }')
         pid_enum.append('            glv_finalize_buffer_address(pHeader, (void **)&(*ppOutStruct)->ppActiveLayerNames);')
         pid_enum.append('        }')
-        pid_enum.append('        pNext = ( VK_LAYER_CREATE_INFO *) pNext->pNext;')
+        pid_enum.append('        pNext = ( VkLayerCreateInfo *) pNext->pNext;')
         pid_enum.append('    }')
         pid_enum.append('    glv_finalize_buffer_address(pHeader, (void**)ppStruct);')
         pid_enum.append('}\n')
-        pid_enum.append('static VK_DEVICE_CREATE_INFO* interpret_VK_DEVICE_CREATE_INFO(glv_trace_packet_header*  pHeader, intptr_t ptr_variable)')
+        pid_enum.append('static VkDeviceCreateInfo* interpret_VkDeviceCreateInfo(glv_trace_packet_header*  pHeader, intptr_t ptr_variable)')
         pid_enum.append('{')
-        pid_enum.append('    VK_DEVICE_CREATE_INFO* pVK_DEVICE_CREATE_INFO = (VK_DEVICE_CREATE_INFO*)glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)ptr_variable);\n')
-        pid_enum.append('    if (pVK_DEVICE_CREATE_INFO != NULL)')
+        pid_enum.append('    VkDeviceCreateInfo* pVkDeviceCreateInfo = (VkDeviceCreateInfo*)glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)ptr_variable);\n')
+        pid_enum.append('    if (pVkDeviceCreateInfo != NULL)')
         pid_enum.append('    {')
         pid_enum.append('            uint32_t i;')
         pid_enum.append('            const char** pNames;')
-        pid_enum.append('        pVK_DEVICE_CREATE_INFO->pRequestedQueues = (const VK_DEVICE_QUEUE_CREATE_INFO*)glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pVK_DEVICE_CREATE_INFO->pRequestedQueues);\n')
-        pid_enum.append('        if (pVK_DEVICE_CREATE_INFO->extensionCount > 0)')
+        pid_enum.append('        pVkDeviceCreateInfo->pRequestedQueues = (const VkDeviceQueueCreateInfo *)glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pVkDeviceCreateInfo->pRequestedQueues);\n')
+        pid_enum.append('        if (pVkDeviceCreateInfo->extensionCount > 0)')
         pid_enum.append('        {')
-        pid_enum.append('            pVK_DEVICE_CREATE_INFO->ppEnabledExtensionNames = (const char *const*)glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pVK_DEVICE_CREATE_INFO->ppEnabledExtensionNames);')
-        pid_enum.append('            pNames = (const char**)pVK_DEVICE_CREATE_INFO->ppEnabledExtensionNames;')
-        pid_enum.append('            for (i = 0; i < pVK_DEVICE_CREATE_INFO->extensionCount; i++)')
+        pid_enum.append('            pVkDeviceCreateInfo->ppEnabledExtensionNames = (const char *const*)glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pVkDeviceCreateInfo->ppEnabledExtensionNames);')
+        pid_enum.append('            pNames = (const char**)pVkDeviceCreateInfo->ppEnabledExtensionNames;')
+        pid_enum.append('            for (i = 0; i < pVkDeviceCreateInfo->extensionCount; i++)')
         pid_enum.append('            {')
-        pid_enum.append('                pNames[i] = (const char*)glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)(pVK_DEVICE_CREATE_INFO->ppEnabledExtensionNames[i]));')
+        pid_enum.append('                pNames[i] = (const char*)glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)(pVkDeviceCreateInfo->ppEnabledExtensionNames[i]));')
         pid_enum.append('            }')
         pid_enum.append('        }')
-        pid_enum.append('        VK_LAYER_CREATE_INFO *pNext = ( VK_LAYER_CREATE_INFO *) glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pVK_DEVICE_CREATE_INFO->pNext);')
+        pid_enum.append('        VkLayerCreateInfo *pNext = ( VkLayerCreateInfo *) glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pVkDeviceCreateInfo->pNext);')
         pid_enum.append('        while (pNext != NULL)')
         pid_enum.append('        {')
         pid_enum.append('            if ((pNext->sType == VK_STRUCTURE_TYPE_LAYER_CREATE_INFO) && pNext->layerCount > 0)')
@@ -778,10 +778,10 @@ class Subcommand(object):
         pid_enum.append('                    pNames[i] = (const char*)glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)(pNext->ppActiveLayerNames[i]));')
         pid_enum.append('                }')
         pid_enum.append('            }')
-        pid_enum.append('            pNext = ( VK_LAYER_CREATE_INFO *) glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pNext->pNext);')
+        pid_enum.append('            pNext = ( VkLayerCreateInfo *) glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pNext->pNext);')
         pid_enum.append('        }')
         pid_enum.append('    }\n')
-        pid_enum.append('    return pVK_DEVICE_CREATE_INFO;')
+        pid_enum.append('    return pVkDeviceCreateInfo;')
         pid_enum.append('}\n')
         pid_enum.append('static void interpret_pipeline_shader(glv_trace_packet_header*  pHeader, VK_PIPELINE_SHADER* pShader)')
         pid_enum.append('{')
@@ -823,7 +823,7 @@ class Subcommand(object):
                                                    'pInfo->pColorLoadOps = (VK_ATTACHMENT_LOAD_OP*) glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->pCreateInfo->pColorLoadOps);\n',
                                                    'pInfo->pColorStoreOps = (VK_ATTACHMENT_STORE_OP*) glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->pCreateInfo->pColorStoreOps);\n',
                                                    'pInfo->pColorLoadClearValues = (VK_CLEAR_COLOR*) glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->pCreateInfo->pColorLoadClearValues);\n']},
-                             'CreateDescriptorRegion' : {'param': 'pCreateInfo', 'txt': ['VK_DESCRIPTOR_REGION_CREATE_INFO* pInfo = (VK_DESCRIPTOR_REGION_CREATE_INFO*)pPacket->pCreateInfo;\n',
+                             'CreateDescriptorPool' : {'param': 'pCreateInfo', 'txt': ['VK_DESCRIPTOR_POOL_CREATE_INFO* pInfo = (VK_DESCRIPTOR_POOL_CREATE_INFO*)pPacket->pCreateInfo;\n',
                                                                                              'pInfo->pTypeCount = (VK_DESCRIPTOR_TYPE_COUNT*) glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->pCreateInfo->pTypeCount);\n']},
                              'CmdWaitEvents' : {'param': 'pWaitInfo', 'txt': ['VK_EVENT_WAIT_INFO* pInfo = (VK_EVENT_WAIT_INFO*)pPacket->pWaitInfo;\n',
                                                                           'pInfo->pEvents = (VK_EVENT*) glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->pWaitInfo->pEvents);\n',
@@ -1079,8 +1079,8 @@ class Subcommand(object):
                 if_body.append('    pPacket->header = pHeader;')
                 for p in proto.params:
                     if '*' in p.ty:
-                        if 'DEVICE_CREATE_INFO' in p.ty:
-                            if_body.append('    pPacket->%s = interpret_VK_DEVICE_CREATE_INFO(pHeader, (intptr_t)pPacket->%s);' % (p.name, p.name))
+                        if 'DeviceCreateInfo' in p.ty:
+                            if_body.append('    pPacket->%s = interpret_VkDeviceCreateInfo(pHeader, (intptr_t)pPacket->%s);' % (p.name, p.name))
                         else:
                             if_body.append('    pPacket->%s = (%s)glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->%s);' % (p.name, p.ty, p.name))
                         # TODO : Generalize this custom code to kill dict data struct above.

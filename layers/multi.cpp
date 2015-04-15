@@ -62,7 +62,7 @@ extern "C" {
 #endif
 
 
-VK_LAYER_EXPORT VK_RESULT VKAPI multi1CreateDevice(VK_PHYSICAL_GPU gpu, const VK_DEVICE_CREATE_INFO* pCreateInfo,
+VK_LAYER_EXPORT VK_RESULT VKAPI multi1CreateDevice(VK_PHYSICAL_GPU gpu, const VkDeviceCreateInfo* pCreateInfo,
                                                       VK_DEVICE* pDevice)
 {
     VK_BASE_LAYER_OBJECT* gpuw = (VK_BASE_LAYER_OBJECT *) gpu;
@@ -163,7 +163,7 @@ static VK_LAYER_DISPATCH_TABLE * getLayer2Table(const VK_BASE_LAYER_OBJECT *gpuw
     }
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI multi2CreateDevice(VK_PHYSICAL_GPU gpu, const VK_DEVICE_CREATE_INFO* pCreateInfo,
+VK_LAYER_EXPORT VK_RESULT VKAPI multi2CreateDevice(VK_PHYSICAL_GPU gpu, const VkDeviceCreateInfo* pCreateInfo,
                                                       VK_DEVICE* pDevice)
 {
     VK_BASE_LAYER_OBJECT* gpuw = (VK_BASE_LAYER_OBJECT *) gpu;
