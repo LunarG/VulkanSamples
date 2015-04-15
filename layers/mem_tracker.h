@@ -54,7 +54,7 @@ typedef enum _MEM_TRACK_ERROR
 
 /*
  * Data Structure overview
- *  There are 4 global STL maps
+ *  There are 4 global STL(' maps
  *  cbMap -- map of command Buffer (CB) objects to MT_CB_INFO structures
  *    Each MT_CB_INFO struct has an stl list container with
  *    memory objects that are referenced by this CB

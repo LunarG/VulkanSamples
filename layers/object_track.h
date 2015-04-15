@@ -58,107 +58,104 @@ typedef enum _OBJECT_STATUS
 // Object type enum
 typedef enum _VK_OBJECT_TYPE
 {
-    VK_OBJECT_TYPE_SAMPLER,
-    VK_OBJECT_TYPE_DYNAMIC_DS_STATE_OBJECT,
-    VK_OBJECT_TYPE_DESCRIPTOR_SET,
-    VK_OBJECT_TYPE_DESCRIPTOR_POOL,
-    VK_OBJECT_TYPE_DYNAMIC_CB_STATE_OBJECT,
-    VK_OBJECT_TYPE_IMAGE_VIEW,
-    VK_OBJECT_TYPE_SEMAPHORE,
-    VK_OBJECT_TYPE_SHADER,
-    VK_OBJECT_TYPE_DESCRIPTOR_SET_LAYOUT,
-    VK_OBJECT_TYPE_DESCRIPTOR_SET_LAYOUT_CHAIN,
-    VK_OBJECT_TYPE_BUFFER,
-    VK_OBJECT_TYPE_PIPELINE,
-    VK_OBJECT_TYPE_DEVICE,
-    VK_OBJECT_TYPE_QUERY_POOL,
-    VK_OBJECT_TYPE_EVENT,
-    VK_OBJECT_TYPE_QUEUE,
-    VK_OBJECT_TYPE_PHYSICAL_GPU,
-    VK_OBJECT_TYPE_RENDER_PASS,
-    VK_OBJECT_TYPE_FRAMEBUFFER,
-    VK_OBJECT_TYPE_IMAGE,
-    VK_OBJECT_TYPE_BUFFER_VIEW,
-    VK_OBJECT_TYPE_DEPTH_STENCIL_VIEW,
-    VK_OBJECT_TYPE_INSTANCE,
-    VK_OBJECT_TYPE_PIPELINE_DELTA,
-    VK_OBJECT_TYPE_DYNAMIC_VP_STATE_OBJECT,
-    VK_OBJECT_TYPE_COLOR_ATTACHMENT_VIEW,
-    VK_OBJECT_TYPE_GPU_MEMORY,
-    VK_OBJECT_TYPE_DYNAMIC_RS_STATE_OBJECT,
-    VK_OBJECT_TYPE_FENCE,
-    VK_OBJECT_TYPE_CMD_BUFFER,
-    VK_OBJECT_TYPE_PRESENTABLE_IMAGE_MEMORY,
+    VkObjectTypeSampler,
+    VkObjectTypeDynamicDsStateObject,
+    VkObjectTypeDescriptorSet,
+    VkObjectTypeDescriptorPool,
+    VkObjectTypeDynamicCbStateObject,
+    VkObjectTypeImageView,
+    VkObjectTypeSemaphore,
+    VkObjectTypeShader,
+    VkObjectTypeDescriptorSetLayout,
+    VkObjectTypeDescriptorSetLayoutChain,
+    VkObjectTypeBuffer,
+    VkObjectTypePipeline,
+    VkObjectTypeDevice,
+    VkObjectTypeQueryPool,
+    VkObjectTypeEvent,
+    VkObjectTypeQueue,
+    VkObjectTypePhysicalGpu,
+    VkObjectTypeRenderPass,
+    VkObjectTypeFramebuffer,
+    VkObjectTypeImage,
+    VkObjectTypeBufferView,
+    VkObjectTypeDepthStencilView,
+    VkObjectTypeInstance,
+    VkObjectTypeDynamicVpStateObject,
+    VkObjectTypeColorAttachmentView,
+    VkObjectTypeGpuMemory,
+    VkObjectTypeDynamicRsStateObject,
+    VkObjectTypeFence,
+    VkObjectTypeCmdBuffer,
+    VkObjectTypePresentableImageMemory,
 
-    VK_OBJECT_TYPE_UNKNOWN,
-    VK_NUM_OBJECT_TYPE,
-    VK_OBJECT_TYPE_ANY, // Allow global object list to be queried/retrieved
+    VkObjectTypeUnknown,
+    VkNumObjectType,
+    VkObjectTypeAny, // Allow global object list to be queried/retrieved
 } VK_OBJECT_TYPE;
 
 static const char* string_VK_OBJECT_TYPE(VK_OBJECT_TYPE type) {
     switch (type)
     {
-        case VK_OBJECT_TYPE_DEVICE:
+        case VkObjectTypeDevice:
             return "DEVICE";
-        case VK_OBJECT_TYPE_PIPELINE:
+        case VkObjectTypePipeline:
             return "PIPELINE";
-        case VK_OBJECT_TYPE_FENCE:
+        case VkObjectTypeFence:
             return "FENCE";
-        case VK_OBJECT_TYPE_DESCRIPTOR_SET_LAYOUT:
+        case VkObjectTypeDescriptorSetLayout:
             return "DESCRIPTOR_SET_LAYOUT";
-        case VK_OBJECT_TYPE_DESCRIPTOR_SET_LAYOUT_CHAIN:
+        case VkObjectTypeDescriptorSetLayoutChain:
             return "DESCRIPTOR_SET_LAYOUT_CHAIN";
-        case VK_OBJECT_TYPE_GPU_MEMORY:
+        case VkObjectTypeGpuMemory:
             return "GPU_MEMORY";
-        case VK_OBJECT_TYPE_QUEUE:
+        case VkObjectTypeQueue:
             return "QUEUE";
-        case VK_OBJECT_TYPE_IMAGE:
+        case VkObjectTypeImage:
             return "IMAGE";
-        case VK_OBJECT_TYPE_CMD_BUFFER:
+        case VkObjectTypeCmdBuffer:
             return "CMD_BUFFER";
-        case VK_OBJECT_TYPE_SEMAPHORE:
+        case VkObjectTypeSemaphore:
             return "SEMAPHORE";
-        case VK_OBJECT_TYPE_FRAMEBUFFER:
+        case VkObjectTypeFramebuffer:
             return "FRAMEBUFFER";
-        case VK_OBJECT_TYPE_SAMPLER:
+        case VkObjectTypeSampler:
             return "SAMPLER";
-        case VK_OBJECT_TYPE_COLOR_ATTACHMENT_VIEW:
+        case VkObjectTypeColorAttachmentView:
             return "COLOR_ATTACHMENT_VIEW";
-        case VK_OBJECT_TYPE_BUFFER_VIEW:
+        case VkObjectTypeBufferView:
             return "BUFFER_VIEW";
-        case VK_OBJECT_TYPE_DESCRIPTOR_SET:
+        case VkObjectTypeDescriptorSet:
             return "DESCRIPTOR_SET";
-        case VK_OBJECT_TYPE_PHYSICAL_GPU:
+        case VkObjectTypePhysicalGpu:
             return "PHYSICAL_GPU";
-        case VK_OBJECT_TYPE_IMAGE_VIEW:
+        case VkObjectTypeImageView:
             return "IMAGE_VIEW";
-        case VK_OBJECT_TYPE_BUFFER:
+        case VkObjectTypeBuffer:
             return "BUFFER";
-        case VK_OBJECT_TYPE_PIPELINE_DELTA:
-            return "PIPELINE_DELTA";
-        case VK_OBJECT_TYPE_DYNAMIC_RS_STATE_OBJECT:
+        case VkObjectTypeDynamicRsStateObject:
             return "DYNAMIC_RS_STATE_OBJECT";
-        case VK_OBJECT_TYPE_EVENT:
+        case VkObjectTypeEvent:
             return "EVENT";
-        case VK_OBJECT_TYPE_DEPTH_STENCIL_VIEW:
+        case VkObjectTypeDepthStencilView:
             return "DEPTH_STENCIL_VIEW";
-        case VK_OBJECT_TYPE_SHADER:
+        case VkObjectTypeShader:
             return "SHADER";
-        case VK_OBJECT_TYPE_DYNAMIC_DS_STATE_OBJECT:
+        case VkObjectTypeDynamicDsStateObject:
             return "DYNAMIC_DS_STATE_OBJECT";
-        case VK_OBJECT_TYPE_DYNAMIC_VP_STATE_OBJECT:
+        case VkObjectTypeDynamicVpStateObject:
             return "DYNAMIC_VP_STATE_OBJECT";
-        case VK_OBJECT_TYPE_DYNAMIC_CB_STATE_OBJECT:
+        case VkObjectTypeDynamicCbStateObject:
             return "DYNAMIC_CB_STATE_OBJECT";
-        case VK_OBJECT_TYPE_INSTANCE:
+        case VkObjectTypeInstance:
             return "INSTANCE";
-        case VK_OBJECT_TYPE_RENDER_PASS:
+        case VkObjectTypeRenderPass:
             return "RENDER_PASS";
-        case VK_OBJECT_TYPE_QUERY_POOL:
+        case VkObjectTypeQueryPool:
             return "QUERY_POOL";
-        case VK_OBJECT_TYPE_DESCRIPTOR_POOL:
+        case VkObjectTypeDescriptorPool:
             return "DESCRIPTOR_POOL";
-        case VK_OBJECT_TYPE_PRESENTABLE_IMAGE_MEMORY:
+        case VkObjectTypePresentableImageMemory:
             return "PRESENTABLE_IMAGE_MEMORY";
         default:
             return "UNKNOWN";
