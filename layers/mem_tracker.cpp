@@ -185,13 +185,15 @@ static void updateFenceTracking(VkFence fence)
     MT_FENCE_INFO *pCurFenceInfo = NULL;
     uint64_t       fenceId       = 0;
     VkQueue      queue         = NULL;
+    bool found = false;
 
-    for (map<uint64_t, MT_FENCE_INFO*>::iterator ii=fenceMap.begin(); ii!=fenceMap.end(); ++ii) {
+    for (map<uint64_t, MT_FENCE_INFO*>::iterator ii=fenceMap.begin(); !found && ii!=fenceMap.end(); ++ii) {
         if ((*ii).second != NULL) {
             if (fence == ((*ii).second)->fence) {
                 queue = ((*ii).second)->queue;
                 MT_QUEUE_INFO *pQueueInfo = queueMap[queue];
                 pQueueInfo->lastRetiredId = (*ii).first;
+                found = true;
             } else {
                 deleteFenceInfo((*ii).first);
             }
