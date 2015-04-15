@@ -605,7 +605,7 @@ VK_LAYER_EXPORT VK_RESULT VKAPI vkDeviceWaitIdle(VK_DEVICE device)
     return result;
 }
 
-VK_LAYER_EXPORT VK_RESULT VKAPI vkAllocMemory(VK_DEVICE device, const VkMemoryAllocInfo * pAllocInfo, VK_GPU_MEMORY* pMem)
+VK_LAYER_EXPORT VK_RESULT VKAPI vkAllocMemory(VK_DEVICE device, const VkMemoryAllocInfo* pAllocInfo, VK_GPU_MEMORY* pMem)
 {
     loader_platform_thread_lock_mutex(&objLock);
     ll_increment_use_count((void*)device, VK_OBJECT_TYPE_DEVICE);
