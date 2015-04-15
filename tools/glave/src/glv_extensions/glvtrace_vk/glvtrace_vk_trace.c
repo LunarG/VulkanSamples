@@ -67,9 +67,7 @@ GLVTRACER_EXPORT VkResult VKAPI __HOOKED_vkCreateInstance(
     }
     pPacket = interpret_body_as_vkCreateInstance(pHeader);
 
-    //add_VK_INSTANCE_CREATE_INFO_to_packet(pHeader, (VkInstanceCreateInfo**)&(pPacket->pCreateInfo), pCreateInfo);
-    //TODO : Need definition for this function
-    //add_VkInstanceCreateInfo_to_packet(pHeader, (VkInstanceCreateInfo**)&(pPacket->pCreateInfo), pCreateInfo);
+    add_VkInstanceCreateInfo_to_packet(pHeader, (VkInstanceCreateInfo**)&(pPacket->pCreateInfo), (VkInstanceCreateInfo*) pCreateInfo);
     glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pInstance), sizeof(VkInstance), pInstance);
     pPacket->result = result;
     glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pInstance));

@@ -420,14 +420,6 @@ static void add_update_descriptors_to_trace_packet(glv_trace_packet_header* pHea
     return;
 }
 
-//#define CASE_VK_STRUCTURE_TYPE_PIPELINE(type) \
-//    case VK_STRUCTURE_TYPE_PIPELINE_##type: {\
-//        glv_add_buffer_to_trace_packet(pHeader, (void**)(ppOutNow), sizeof(VK_PIPELINE_##type), pInNow);\
-//        ppOutNext = (VkGraphicsPipelineCreateInfo**)&(*ppOutNow)->pNext;\
-//        glv_finalize_buffer_address(pHeader, (void**)(ppOutNow));\
-//        break;\
-//    }
-
 static void add_pipeline_state_to_trace_packet(glv_trace_packet_header* pHeader, void** ppOut, const void* pIn)
 {
     const VkGraphicsPipelineCreateInfo* pInNow = pIn;
