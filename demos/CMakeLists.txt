@@ -84,9 +84,9 @@ endif()
 
 
 if (${CMAKE_SYSTEM_NAME} MATCHES "Windows")
-    set(PATH_TO_WIN_XGL ${CMAKE_CURRENT_BINARY_DIR}/../loader/${CMAKE_CFG_INTDIR})
+    set(PATH_TO_WIN_VK ${CMAKE_CURRENT_BINARY_DIR}/../loader/${CMAKE_CFG_INTDIR})
     add_custom_command(TARGET tri
         POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy_if_different "${PATH_TO_WIN_XGL}/XGL.dll" $<TARGET_FILE_DIR:tri>
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different "${PATH_TO_WIN_VK}/vulkan.dll" $<TARGET_FILE_DIR:tri>
     )
 endif()

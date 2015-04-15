@@ -17,8 +17,8 @@ endmacro()
 if (WIN32)
     macro(add_vk_layer target)
 	add_custom_command(OUTPUT VKLayer${target}.def
-		COMMAND ${PYTHON_CMD} ${PROJECT_SOURCE_DIR}/xgl-generate.py win-def-file VKLayer${target} layer > VKLayer${target}.def
-		DEPENDS ${PROJECT_SOURCE_DIR}/xgl-generate.py ${PROJECT_SOURCE_DIR}/xgl.py
+		COMMAND ${PYTHON_CMD} ${PROJECT_SOURCE_DIR}/vk-generate.py win-def-file VKLayer${target} layer > VKLayer${target}.def
+		DEPENDS ${PROJECT_SOURCE_DIR}/vk-generate.py ${PROJECT_SOURCE_DIR}/vk.py
 	)
 	add_library(VKLayer${target} SHARED ${ARGN} VKLayer${target}.def)
         target_link_Libraries(VKLayer${target} layer_utils)
