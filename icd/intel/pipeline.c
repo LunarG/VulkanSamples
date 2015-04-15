@@ -486,6 +486,7 @@ static VkResult pipeline_get_info(struct intel_base *base, int type,
             if (data) {
                 mem_req->size = pipeline->scratch_size;
                 mem_req->alignment = 1024;
+                mem_req->memPropsAllowed = INTEL_MEMORY_PROPERTY_ALL;
             }
         }
         break;

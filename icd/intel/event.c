@@ -106,6 +106,7 @@ static VkResult event_get_info(struct intel_base *base, int type,
             /* use dword aligned to 64-byte boundaries */
             mem_req->size = 4;
             mem_req->alignment = 64;
+            mem_req->memPropsAllowed = INTEL_MEMORY_PROPERTY_ALL;
         }
         break;
     default:

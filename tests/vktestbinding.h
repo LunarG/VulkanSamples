@@ -627,7 +627,7 @@ inline VkMemoryAllocInfo GpuMemory::alloc_info(const VkMemoryRequirements &reqs,
         info.pNext = (void *) next_info;
 
     info.allocationSize = reqs.size;
-    info.memProps = reqs.memProps;
+    info.memProps = reqs.memPropsRequired;
     info.memPriority = VK_MEMORY_PRIORITY_NORMAL;
     return info;
 }

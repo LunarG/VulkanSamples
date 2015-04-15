@@ -45,6 +45,8 @@ VkResult intel_base_get_info(struct intel_base *base, int type,
             if (data == NULL)
                 return ret;
             memset(data, 0, s);
+            VkMemoryRequirements *mem_req = data;
+            mem_req->memPropsAllowed = INTEL_MEMORY_PROPERTY_ALL;
             break;
         }
     case VK_INFO_TYPE_MEMORY_ALLOCATION_COUNT:

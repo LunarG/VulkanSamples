@@ -67,6 +67,7 @@ static VkResult buf_get_info(struct intel_base *base, int type,
 
             mem_req->alignment = 4096;
 
+            mem_req->memPropsAllowed = INTEL_MEMORY_PROPERTY_ALL;
         }
         break;
     default:

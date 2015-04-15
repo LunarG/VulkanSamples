@@ -1441,7 +1441,8 @@ typedef struct VkMemoryRequirements_
     VkGpuSize                                   size;                       // Specified in bytes
     VkGpuSize                                   alignment;                  // Specified in bytes
     VkGpuSize                                   granularity;                // Granularity on which vkQueueBindObjectMemoryRange can bind sub-ranges of memory specified in bytes (usually the page size)
-    VkFlags                                     memProps;                   // VkMemoryPropertyFlags
+    VkMemoryPropertyFlags                       memPropsAllowed;            // Allowed memory property flags
+    VkMemoryPropertyFlags                       memPropsRequired;           // Required memory property flags
 } VkMemoryRequirements;
 
 typedef struct VkFormatProperties_
