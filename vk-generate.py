@@ -223,7 +223,7 @@ class DispatchTableOpsSubcommand(Subcommand):
             if proto.name == "GetProcAddr":
                 stmts.append("table->%s = gpa; /* direct assignment */" %
                         proto.name)
-            elif self.is_dispatchable_object_first_param(proto):
+            elif self.is_dispatchable_object_first_param(proto) or proto.name == "CreateInstance":
                 stmts.append("table->%s = (PFN_vk%s) gpa(gpu, \"vk%s\");" %
                         (proto.name, proto.name, proto.name))
             else:

@@ -1278,8 +1278,9 @@ LOADER_EXPORT void * VKAPI vkGetProcAddr(VkPhysicalGpu gpu, const char * pName)
     /* for entrypoints that loader must handle (ie non-dispatchable or create object)
        make sure the loader entrypoint is returned */
     addr = loader_non_passthrough_gpa(pName);
-    if (addr)
+    if (addr) {
         return addr;
+    }
 
     /* return the dispatch table entrypoint for the fastest case */
     const VkLayerDispatchTable *disp_table = * (VkLayerDispatchTable **) gpu;
