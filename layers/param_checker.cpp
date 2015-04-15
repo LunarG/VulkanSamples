@@ -1733,18 +1733,6 @@ void PreCreateRenderPass(VkDevice device, const VkRenderPassCreateInfo* pCreateI
         return;
     }
 
-    for(uint32_t i = 0; i < pCreateInfo->colorAttachmentCount; ++i)
-    {
-        if(!validate_VK_ATTACHMENT_STORE_OP(pCreateInfo->pColorStoreOps[i]))
-        {
-            std::stringstream ss;
-            ss << "vkCreateRenderPass parameter, VK_ATTACHMENT_STORE_OP pCreateInfo->pColorStoreOps[" << i <<
-                "], is unrecognized (precondition).";
-            layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", ss.str().c_str());
-            continue;
-        }
-    }
-
     if(pCreateInfo->pColorLoadClearValues == nullptr)
     {
         char const str[] = "vkCreateRenderPass parameter, VK_CLEAR_COLOR* pCreateInfo->"\

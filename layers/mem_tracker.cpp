@@ -144,13 +144,13 @@ static uint64_t addFenceInfo(VkFence fence, VkQueue queue)
         // Validate that fence is in UNSIGNALED state
         MT_OBJ_INFO* pObjectInfo = getObjectInfo(fence);
         if (pObjectInfo != NULL) {
-            if (pObjectInfo->create_info.fence_create_info.flags & XGL_FENCE_CREATE_SIGNALED_BIT) {
+            if (pObjectInfo->create_info.fence_create_info.flags & VK_FENCE_CREATE_SIGNALED_BIT) {
                 char str[1024];
                 sprintf(str, "Fence %p submitted in SIGNALED state.  Fences must be reset before being submitted", fence);
-                layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, fence, 0, MEMTRACK_INVALID_FENCE_STATE, "MEM", str);
+                layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, fence, 0, MEMTRACK_INVALID_FENCE_STATE, "MEM", str);
             }
         }
-        pFenceInfo->localFence = XGL_FALSE;
+        pFenceInfo->localFence = VK_FALSE;
         pFenceInfo->fence      = fence;
     }
     pFenceInfo->queue = queue;
@@ -199,7 +199,7 @@ static void updateFenceTracking(VkFence fence)
             MT_OBJ_INFO* pObjectInfo = getObjectInfo(fence);
             if (pObjectInfo != NULL) {
                 pObjectInfo->create_info.fence_create_info.flags =
-                    static_cast<XGL_FENCE_CREATE_FLAGS>(pObjectInfo->create_info.fence_create_info.flags | XGL_FENCE_CREATE_SIGNALED_BIT);
+                    static_cast<VkFenceCreateFlags>(pObjectInfo->create_info.fence_create_info.flags | VK_FENCE_CREATE_SIGNALED_BIT);
             }
         }
     }
@@ -1230,15 +1230,15 @@ VK_LAYER_EXPORT VkResult VKAPI vkResetFences(VkDevice device, uint32_t fenceCoun
             MT_OBJ_INFO* pObjectInfo = getObjectInfo(pFences[i]);
             if (pObjectInfo != NULL) {
                 // Validate fences in SIGNALED state
-                if (!(pObjectInfo->create_info.fence_create_info.flags & XGL_FENCE_CREATE_SIGNALED_BIT)) {
+                if (!(pObjectInfo->create_info.fence_create_info.flags & VK_FENCE_CREATE_SIGNALED_BIT)) {
                     char str[1024];
                     sprintf(str, "Fence %p submitted to xglResetFences in UNSIGNALED STATE", pFences[i]);
-                    layerCbMsg(XGL_DBG_MSG_ERROR, XGL_VALIDATION_LEVEL_0, pFences[i], 0, MEMTRACK_INVALID_FENCE_STATE, "MEM", str);
-                    result = XGL_ERROR_INVALID_VALUE;
+                    layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, pFences[i], 0, MEMTRACK_INVALID_FENCE_STATE, "MEM", str);
+                    result = VK_ERROR_INVALID_VALUE;
                 }
                 else {
                     pObjectInfo->create_info.fence_create_info.flags =
-                        static_cast<XGL_FENCE_CREATE_FLAGS>(pObjectInfo->create_info.fence_create_info.flags & ~XGL_FENCE_CREATE_SIGNALED_BIT);
+                        static_cast<VkFenceCreateFlags>(pObjectInfo->create_info.fence_create_info.flags & ~VK_FENCE_CREATE_SIGNALED_BIT);
                 }
             }
         }
@@ -1264,10 +1264,10 @@ VK_LAYER_EXPORT VkResult VKAPI vkWaitForFences(VkDevice device, uint32_t fenceCo
     for(uint32_t i = 0; i < fenceCount; i++) {
         MT_OBJ_INFO* pObjectInfo = getObjectInfo(pFences[i]);
         if (pObjectInfo != NULL) {
-            if (pObjectInfo->create_info.fence_create_info.flags & XGL_FENCE_CREATE_SIGNALED_BIT) {
+            if (pObjectInfo->create_info.fence_create_info.flags & VK_FENCE_CREATE_SIGNALED_BIT) {
                 char str[1024];
                 sprintf(str, "xglWaitForFences specified fence %p already in SIGNALED state.", pFences[i]);
-                layerCbMsg(XGL_DBG_MSG_WARNING, XGL_VALIDATION_LEVEL_0, pFences[i], 0, MEMTRACK_INVALID_FENCE_STATE, "MEM", str);
+                layerCbMsg(VK_DBG_MSG_WARNING, VK_VALIDATION_LEVEL_0, pFences[i], 0, MEMTRACK_INVALID_FENCE_STATE, "MEM", str);
             }
         }
     }

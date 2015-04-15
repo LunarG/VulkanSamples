@@ -33,7 +33,7 @@
 #define LAYER_ABBREV_STR "GLVSnap"
 
 static VkLayerDispatchTable nextTable;
-static VK_BASE_LAYER_OBJECT *pCurObj;
+static VkBaseLayerObject *pCurObj;
 
 // The following is #included again to catch certain OS-specific functions being used:
 #include "loader_platform.h"
@@ -492,7 +492,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkEnumerateGpus(VkInstance instance, uint32_t max
 
 VK_LAYER_EXPORT VkResult VKAPI vkGetGpuInfo(VkPhysicalGpu gpu, VkPhysicalGpuInfoType infoType, size_t* pDataSize, void* pData)
 {
-    VK_BASE_LAYER_OBJECT* gpuw = (VK_BASE_LAYER_OBJECT *) gpu;
+    VkBaseLayerObject* gpuw = (VkBaseLayerObject *) gpu;
     pCurObj = gpuw;
     loader_platform_thread_once(&tabOnce, initGlaveSnapshot);
     VkResult result = nextTable.GetGpuInfo((VkPhysicalGpu)gpuw->nextObject, infoType, pDataSize, pData);
@@ -501,7 +501,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkGetGpuInfo(VkPhysicalGpu gpu, VkPhysicalGpuInfo
 
 VK_LAYER_EXPORT VkResult VKAPI vkCreateDevice(VkPhysicalGpu gpu, const VkDeviceCreateInfo* pCreateInfo, VkDevice* pDevice)
 {
-    VK_BASE_LAYER_OBJECT* gpuw = (VK_BASE_LAYER_OBJECT *) gpu;
+    VkBaseLayerObject* gpuw = (VkBaseLayerObject *) gpu;
     pCurObj = gpuw;
     loader_platform_thread_once(&tabOnce, initGlaveSnapshot);
     VkResult result = nextTable.CreateDevice((VkPhysicalGpu)gpuw->nextObject, pCreateInfo, pDevice);
@@ -543,7 +543,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkDestroyDevice(VkDevice device)
 
 VK_LAYER_EXPORT VkResult VKAPI vkGetExtensionSupport(VkPhysicalGpu gpu, const char* pExtName)
 {
-    VK_BASE_LAYER_OBJECT* gpuw = (VK_BASE_LAYER_OBJECT *) gpu;
+    VkBaseLayerObject* gpuw = (VkBaseLayerObject *) gpu;
     loader_platform_thread_lock_mutex(&objLock);
     ll_increment_use_count((void*)gpu, VK_OBJECT_TYPE_PHYSICAL_GPU);
     loader_platform_thread_unlock_mutex(&objLock);
@@ -556,7 +556,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkGetExtensionSupport(VkPhysicalGpu gpu, const ch
 VK_LAYER_EXPORT VkResult VKAPI vkEnumerateLayers(VkPhysicalGpu gpu, size_t maxLayerCount, size_t maxStringSize, size_t* pOutLayerCount, char* const* pOutLayers, void* pReserved)
 {
     if (gpu != NULL) {
-        VK_BASE_LAYER_OBJECT* gpuw = (VK_BASE_LAYER_OBJECT *) gpu;
+        VkBaseLayerObject* gpuw = (VkBaseLayerObject *) gpu;
         loader_platform_thread_lock_mutex(&objLock);
     ll_increment_use_count((void*)gpu, VK_OBJECT_TYPE_PHYSICAL_GPU);
     loader_platform_thread_unlock_mutex(&objLock);
@@ -670,7 +670,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkPinSystemMemory(VkDevice device, const void* pS
 
 VK_LAYER_EXPORT VkResult VKAPI vkGetMultiGpuCompatibility(VkPhysicalGpu gpu0, VkPhysicalGpu gpu1, VkGpuCompatibilityInfo* pInfo)
 {
-    VK_BASE_LAYER_OBJECT* gpuw = (VK_BASE_LAYER_OBJECT *) gpu0;
+    VkBaseLayerObject* gpuw = (VkBaseLayerObject *) gpu0;
     loader_platform_thread_lock_mutex(&objLock);
     ll_increment_use_count((void*)gpu0, VK_OBJECT_TYPE_PHYSICAL_GPU);
     loader_platform_thread_unlock_mutex(&objLock);
@@ -1181,7 +1181,7 @@ VK_LAYER_EXPORT void VKAPI vkUpdateDescriptors(VkDescriptorSet descriptorSet, ui
     nextTable.UpdateDescriptors(descriptorSet, updateCount, ppUpdateArray);
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkCreateDynamicViewportState(VkDevice device, const VkDynamicVpStateCreateInfo* pCreateInfo, VkDynamicVpStateObject* pState)
+VK_LAYER_EXPORT VkResult VKAPI vkCreateDynamicViewportState(VkDevice device, const VkDynamicVpStateCreateInfo* pCreateInfo, VkDynamicVpState* pState)
 {
     loader_platform_thread_lock_mutex(&objLock);
     ll_increment_use_count((void*)device, VK_OBJECT_TYPE_DEVICE);
@@ -1197,7 +1197,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateDynamicViewportState(VkDevice device, con
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkCreateDynamicRasterState(VkDevice device, const VkDynamicRsStateCreateInfo* pCreateInfo, VkDynamicRsStateObject* pState)
+VK_LAYER_EXPORT VkResult VKAPI vkCreateDynamicRasterState(VkDevice device, const VkDynamicRsStateCreateInfo* pCreateInfo, VkDynamicRsState* pState)
 {
     loader_platform_thread_lock_mutex(&objLock);
     ll_increment_use_count((void*)device, VK_OBJECT_TYPE_DEVICE);
@@ -1213,7 +1213,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateDynamicRasterState(VkDevice device, const
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkCreateDynamicColorBlendState(VkDevice device, const VkDynamicCbStateCreateInfo* pCreateInfo, VkDynamicCbStateObject* pState)
+VK_LAYER_EXPORT VkResult VKAPI vkCreateDynamicColorBlendState(VkDevice device, const VkDynamicCbStateCreateInfo* pCreateInfo, VkDynamicCbState* pState)
 {
     loader_platform_thread_lock_mutex(&objLock);
     ll_increment_use_count((void*)device, VK_OBJECT_TYPE_DEVICE);
@@ -1229,7 +1229,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateDynamicColorBlendState(VkDevice device, c
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkCreateDynamicDepthStencilState(VkDevice device, const VkDynamicDsStateCreateInfo* pCreateInfo, VkDynamicDsStateObject* pState)
+VK_LAYER_EXPORT VkResult VKAPI vkCreateDynamicDepthStencilState(VkDevice device, const VkDynamicDsStateCreateInfo* pCreateInfo, VkDynamicDsState* pState)
 {
     loader_platform_thread_lock_mutex(&objLock);
     ll_increment_use_count((void*)device, VK_OBJECT_TYPE_DEVICE);
@@ -1702,7 +1702,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdDbgMarkerEnd(VkCmdBuffer cmdBuffer)
 
 VK_LAYER_EXPORT VkResult VKAPI vkWsiX11AssociateConnection(VkPhysicalGpu gpu, const VK_WSI_X11_CONNECTION_INFO* pConnectionInfo)
 {
-    VK_BASE_LAYER_OBJECT* gpuw = (VK_BASE_LAYER_OBJECT *) gpu;
+    VkBaseLayerObject* gpuw = (VkBaseLayerObject *) gpu;
     loader_platform_thread_lock_mutex(&objLock);
     ll_increment_use_count((void*)gpu, VK_OBJECT_TYPE_PHYSICAL_GPU);
     loader_platform_thread_unlock_mutex(&objLock);
@@ -1894,7 +1894,7 @@ void glvSnapshotPrintObjects(void)
 #include "vk_generic_intercept_proc_helper.h"
 VK_LAYER_EXPORT void* VKAPI vkGetProcAddr(VkPhysicalGpu gpu, const char* funcName)
 {
-    VK_BASE_LAYER_OBJECT* gpuw = (VK_BASE_LAYER_OBJECT *) gpu;
+    VkBaseLayerObject* gpuw = (VkBaseLayerObject *) gpu;
     void* addr;
     if (gpu == NULL)
         return NULL;

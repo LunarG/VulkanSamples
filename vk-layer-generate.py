@@ -123,7 +123,7 @@ class Subcommand(object):
             return ("%f", name)
         if "bool" in vk_type or 'xcb_randr_crtc_t' in vk_type:
             return ("%u", name)
-        if True in [t in vk_type for t in ["int", "FLAGS", "MASK", "xcb_window_t"]]:
+        if True in [t in vk_type.lower() for t in ["int", "flags", "mask", "xcb_window_t"]]:
             if '[' in vk_type: # handle array, current hard-coded to 4 (TODO: Make this dynamic)
                 if cpp:
                     return ("[%i, %i, %i, %i]", "%s[0] << %s[1] << %s[2] << %s[3]" % (name, name, name, name))
@@ -241,6 +241,28 @@ class Subcommand(object):
         ggei_body.append('}')
         return "\n".join(ggei_body)
 
+    def _gen_layer_get_extension_support(self, layer="Generic"):
+        ges_body = []
+        ges_body.append('VK_LAYER_EXPORT VkResult VKAPI xglGetExtensionSupport(VkPhysicalGpu gpu, const char* pExtName)')
+        ges_body.append('{')
+        ges_body.append('    VkResult result;')
+        ges_body.append('    VkBaseLayerObject* gpuw = (VkBaseLayerObject *) gpu;')
+        ges_body.append('')
+        ges_body.append('    /* This entrypoint is NOT going to init its own dispatch table since loader calls here early */')
+        ges_body.append('    if (!strncmp(pExtName, "%s", strlen("%s")))' % (layer, layer))
+        ges_body.append('    {')
+        ges_body.append('        result = VK_SUCCESS;')
+        ges_body.append('    } else if (nextTable.GetExtensionSupport != NULL)')
+        ges_body.append('    {')
+        ges_body.append('        result = nextTable.GetExtensionSupport((VkPhysicalGpu)gpuw->nextObject, pExtName);')
+        ges_body.append('    } else')
+        ges_body.append('    {')
+        ges_body.append('        result = VK_ERROR_INVALID_EXTENSION;')
+        ges_body.append('    }')
+        ges_body.append('    return result;')
+        ges_body.append('}')
+        return "\n".join(ges_body)
+
     def _generate_dispatch_entrypoints(self, qual=""):
         if qual:
             qual += " "
@@ -305,13 +327,13 @@ class Subcommand(object):
         exts = []
         exts.append('uint64_t objTrackGetObjectCount(VK_OBJECT_TYPE type)')
         exts.append('{')
-        exts.append('    return (type == VK_OBJECT_TYPE_ANY) ? numTotalObjs : numObjs[type];')
+        exts.append('    return (type == VkObjectTypeAny) ? numTotalObjs : numObjs[type];')
         exts.append('}')
         exts.append('')
         exts.append('VkResult objTrackGetObjects(VK_OBJECT_TYPE type, uint64_t objCount, OBJTRACK_NODE* pObjNodeArray)')
         exts.append('{')
         exts.append("    // This bool flags if we're pulling all objs or just a single class of objs")
-        exts.append('    bool32_t bAllObjs = (type == VK_OBJECT_TYPE_ANY);')
+        exts.append('    bool32_t bAllObjs = (type == VkObjectTypeAny);')
         exts.append('    // Check the count first thing')
         exts.append('    uint64_t maxObjCount = (bAllObjs) ? numTotalObjs : numObjs[type];')
         exts.append('    if (objCount > maxObjCount) {')
@@ -333,28 +355,29 @@ class Subcommand(object):
         exts.append('    }')
         exts.append('    return VK_SUCCESS;')
         exts.append('}')
+        return "\n".join(exts)
+
+#    def _generate_layer_gpa_function(self, extensions=[]):
+#        func_body = []
+#        func_body.append("VK_LAYER_EXPORT void* VKAPI vkGetProcAddr(VkPhysicalGpu gpu, const char* funcName)\n"
+#                         "{\n"
+#                         "    VkBaseLayerObject* gpuw = (VkBaseLayerObject *) gpu;\n"
+#                         "    void* addr;\n"
+#                         "    if (gpu == NULL)\n"
+#                         "        return NULL;\n"
+#                         "    pCurObj = gpuw;\n"
+#                         "    loader_platform_thread_once(&tabOnce, init%s);\n\n"
+#                         "    addr = layer_intercept_proc(funcName);\n"
+#                         "    if (addr)\n"
+#                         "        return addr;" % self.layer_name)
+#
+#        return "\n".join(exts)
 
     def _generate_layer_gpa_function(self, extensions=[]):
         func_body = []
         func_body.append("VK_LAYER_EXPORT void* VKAPI vkGetProcAddr(VkPhysicalGpu gpu, const char* funcName)\n"
                          "{\n"
                          "    VkBaseLayerObject* gpuw = (VkBaseLayerObject *) gpu;\n"
-                         "    void* addr;\n"
-                         "    if (gpu == NULL)\n"
-                         "        return NULL;\n"
-                         "    pCurObj = gpuw;\n"
-                         "    loader_platform_thread_once(&tabOnce, init%s);\n\n"
-                         "    addr = layer_intercept_proc(funcName);\n"
-                         "    if (addr)\n"
-                         "        return addr;" % self.layer_name)
-
-        return "\n".join(exts)
-
-    def _generate_layer_gpa_function(self, extensions=[]):
-        func_body = []
-        func_body.append("VK_LAYER_EXPORT void* VKAPI vkGetProcAddr(VkPhysicalGpu gpu, const char* funcName)\n"
-                         "{\n"
-                         "    VK_BASE_LAYER_OBJECT* gpuw = (VK_BASE_LAYER_OBJECT *) gpu;\n"
                          "    void* addr;\n"
                          "    if (gpu == NULL)\n"
                          "        return NULL;\n"
@@ -677,7 +700,6 @@ class APIDumpSubcommand(Subcommand):
                 sp_param_dict[pindex] = '*pCount'
             elif 'Wsi' not in proto.name and vk_helper.is_type(p.ty.strip('*').replace('const ', ''), 'struct'):
                 sp_param_dict[pindex] = 'index'
-            pindex += 1
             if p.name.endswith('Count'):
                 if '*' in p.ty:
                     prev_count_name = "*%s" % p.name
@@ -685,20 +707,7 @@ class APIDumpSubcommand(Subcommand):
                     prev_count_name = p.name
             else:
                 log_func_no_addr += '%s = " << %s << ", ' % (p.name, pfi)
-            if prev_count_name != '' and (prev_count_name.replace('Count', '')[1:] in p.name or 'slotCount' == prev_count_name):
-                sp_param_dict[pindex] = prev_count_name
-            elif 'pDescriptorSets' == p.name and proto.params[-1].name == 'pCount':
-                sp_param_dict[pindex] = '*pCount'
-            elif 'Wsi' not in proto.name and vk_helper.is_type(p.ty.strip('*').replace('const ', ''), 'struct'):
-                sp_param_dict[pindex] = 'index'
             pindex += 1
-            if p.name.endswith('Count'):
-                if '*' in p.ty:
-                    prev_count_name = "*%s" % p.name
-                else:
-                    prev_count_name = p.name
-            else:
-                prev_count_name = ''
         log_func = log_func.strip(', ')
         log_func_no_addr = log_func_no_addr.strip(', ')
         if proto.ret != "void":
@@ -710,10 +719,12 @@ class APIDumpSubcommand(Subcommand):
         log_func += ';'
         log_func_no_addr += ';'
         log_func += '\n    }\n    else {%s;\n    }' % log_func_no_addr;
+        #print("Proto %s has param_dict: %s" % (proto.name, sp_param_dict))
         if len(sp_param_dict) > 0:
             i_decl = False
             log_func += '\n    string tmp_str;'
             for sp_index in sp_param_dict:
+                #print("sp_index: %s" % str(sp_index))
                 if 'index' == sp_param_dict[sp_index]:
                     cis_print_func = 'vk_print_%s' % (proto.params[sp_index].ty.replace('const ', '').strip('*').lower())
                     local_name = proto.params[sp_index].name
@@ -783,6 +794,19 @@ class APIDumpSubcommand(Subcommand):
                          '    }\n'
                          '%s'
                          '}' % (qual, decl, self.layer_name, self.layer_name, proto.c_call(), f_open, log_func, f_close, stmt))
+        
+        elif 'vkphysicalgpu' == proto.params[0].ty.lower():
+            c_call = proto.c_call().replace("(" + proto.params[0].name, "((VkPhysicalGpu)gpuw->nextObject", 1)
+            funcs.append('%s%s\n'
+                     '{\n'
+                     '    using namespace StreamControl;\n'
+                     '    VkBaseLayerObject* gpuw = (VkBaseLayerObject *) %s;\n'
+                     '    pCurObj = gpuw;\n'
+                     '    loader_platform_thread_once(&tabOnce, init%s);\n'
+                     '    %snextTable.%s;\n'
+                     '    %s%s%s\n'
+                     '%s'
+                     '}' % (qual, decl, proto.params[0].name, self.layer_name, ret_val, c_call, f_open, log_func, f_close, stmt))
         else:
             funcs.append('%s%s\n'
                      '{\n'
@@ -791,18 +815,6 @@ class APIDumpSubcommand(Subcommand):
                      '    %s%s%s\n'
                      '%s'
                      '}' % (qual, decl, ret_val, proto.c_call(), f_open, log_func, f_close, stmt))
-        else:
-            c_call = proto.c_call().replace("(" + proto.params[0].name, "((VkPhysicalGpu)gpuw->nextObject", 1)
-            funcs.append('%s%s\n'
-                     '{\n'
-                     '    using namespace StreamControl;\n'
-                     '    VK_BASE_LAYER_OBJECT* gpuw = (VK_BASE_LAYER_OBJECT *) %s;\n'
-                     '    pCurObj = gpuw;\n'
-                     '    loader_platform_thread_once(&tabOnce, init%s);\n'
-                     '    %snextTable.%s;\n'
-                     '    %s%s%s\n'
-                     '%s'
-                     '}' % (qual, decl, proto.params[0].name, self.layer_name, ret_val, c_call, f_open, log_func, f_close, stmt))
         if 'WsiX11QueuePresent' == proto.name:
             funcs.append("#endif")
         return "\n\n".join(funcs)
@@ -824,7 +836,7 @@ class APIDumpSubcommand(Subcommand):
 #        header_txt.append('// The following is #included again to catch certain OS-specific functions being used:')
 #        header_txt.append('#include "loader_platform.h"')
 #        header_txt.append('static VkLayerDispatchTable nextTable;')
-#        header_txt.append('static VK_BASE_LAYER_OBJECT *pCurObj;\n')
+#        header_txt.append('static VkBaseLayerObject *pCurObj;\n')
 #        header_txt.append('static LOADER_PLATFORM_THREAD_ONCE_DECLARATION(tabOnce);')
 #        header_txt.append('static int printLockInitialized = 0;')
 #        header_txt.append('static loader_platform_thread_mutex printLock;\n')
@@ -1303,7 +1315,7 @@ class ObjectTrackerSubcommand(Subcommand):
         if proto.name in [ 'DbgRegisterMsgCallback', 'DbgUnregisterMsgCallback', 'GetGlobalExtensionInfo' ]:
             # use default version
             return None
-        obj_type_mapping = {base_t : base_t.replace("VK_", "VK_OBJECT_TYPE_") for base_t in vulkan.object_type_list}
+        obj_type_mapping = {base_t : base_t.replace("Vk", "VkObjectType") for base_t in vulkan.object_type_list}
         # For the various "super-types" we have to use function to distinguish sub type
         for obj_type in ["VK_BASE_OBJECT", "VK_OBJECT", "VK_DYNAMIC_STATE_OBJECT", "VkObject", "VkBaseObject"]:
             obj_type_mapping[obj_type] = "ll_get_obj_type(object)"
@@ -1322,15 +1334,15 @@ class ObjectTrackerSubcommand(Subcommand):
             using_line += '    ll_increment_use_count((void*)%s, %s);\n' % (param0_name, obj_type_mapping[p0_type])
             using_line += '    loader_platform_thread_unlock_mutex(&objLock);\n'
         if 'QueueSubmit' in proto.name:
-            using_line += '    set_status((void*)fence, VK_OBJECT_TYPE_FENCE, OBJSTATUS_FENCE_IS_SUBMITTED);\n'
+            using_line += '    set_status((void*)fence, VkObjectTypeFence, OBJSTATUS_FENCE_IS_SUBMITTED);\n'
             using_line += '    // TODO: Fix for updated memory reference mechanism\n'
             using_line += '    // validate_memory_mapping_status(pMemRefs, memRefCount);\n'
             using_line += '    // validate_mem_ref_count(memRefCount);\n'
         elif 'GetFenceStatus' in proto.name:
             using_line += '    // Warn if submitted_flag is not set\n'
-            using_line += '    validate_status((void*)fence, VK_OBJECT_TYPE_FENCE, OBJSTATUS_FENCE_IS_SUBMITTED, OBJSTATUS_FENCE_IS_SUBMITTED, VK_DBG_MSG_ERROR, OBJTRACK_INVALID_FENCE, "Status Requested for Unsubmitted Fence");\n'
+            using_line += '    validate_status((void*)fence, VkObjectTypeFence, OBJSTATUS_FENCE_IS_SUBMITTED, OBJSTATUS_FENCE_IS_SUBMITTED, VK_DBG_MSG_ERROR, OBJTRACK_INVALID_FENCE, "Status Requested for Unsubmitted Fence");\n'
         elif 'EndCommandBuffer' in proto.name:
-            using_line += '    reset_status((void*)cmdBuffer, VK_OBJECT_TYPE_CMD_BUFFER, (OBJSTATUS_VIEWPORT_BOUND    |\n'
+            using_line += '    reset_status((void*)cmdBuffer, VkObjectTypeCmdBuffer, (OBJSTATUS_VIEWPORT_BOUND    |\n'
             using_line += '                                                                OBJSTATUS_RASTER_BOUND      |\n'
             using_line += '                                                                OBJSTATUS_COLOR_BLEND_BOUND |\n'
             using_line += '                                                                OBJSTATUS_DEPTH_STENCIL_BOUND));\n'
@@ -1339,20 +1351,20 @@ class ObjectTrackerSubcommand(Subcommand):
         elif 'CmdDraw' in proto.name:
             using_line += '    validate_draw_state_flags((void *)cmdBuffer);\n'
         elif 'MapMemory' in proto.name:
-            using_line += '    set_status((void*)mem, VK_OBJECT_TYPE_GPU_MEMORY, OBJSTATUS_GPU_MEM_MAPPED);\n'
+            using_line += '    set_status((void*)mem, VkObjectTypeGpuMemory, OBJSTATUS_GPU_MEM_MAPPED);\n'
         elif 'UnmapMemory' in proto.name:
-            using_line += '    reset_status((void*)mem, VK_OBJECT_TYPE_GPU_MEMORY, OBJSTATUS_GPU_MEM_MAPPED);\n'
+            using_line += '    reset_status((void*)mem, VkObjectTypeGpuMemory, OBJSTATUS_GPU_MEM_MAPPED);\n'
         if 'AllocDescriptor' in proto.name: # Allocates array of DSs
             create_line =  '    for (uint32_t i = 0; i < *pCount; i++) {\n'
             create_line += '        loader_platform_thread_lock_mutex(&objLock);\n'
-            create_line += '        ll_insert_obj((void*)pDescriptorSets[i], VK_OBJECT_TYPE_DESCRIPTOR_SET);\n'
+            create_line += '        ll_insert_obj((void*)pDescriptorSets[i], VkObjectTypeDescriptorSet);\n'
             create_line += '        loader_platform_thread_unlock_mutex(&objLock);\n'
             create_line += '    }\n'
         elif 'CreatePresentableImage' in proto.name:
             create_line = '    loader_platform_thread_lock_mutex(&objLock);\n'
             create_line += '    ll_insert_obj((void*)*%s, %s);\n' % (proto.params[-2].name, obj_type_mapping[proto.params[-2].ty.strip('*').replace('const ', '')])
-            create_line += '    ll_insert_obj((void*)*pMem, VK_OBJECT_TYPE_PRESENTABLE_IMAGE_MEMORY);\n'
-            # create_line += '    ll_insert_obj((void*)*%s, VK_OBJECT_TYPE_PRESENTABLE_IMAGE_MEMORY);\n' % (obj_type_mapping[proto.params[-1].ty.strip('*').replace('const ', '')])
+            create_line += '    ll_insert_obj((void*)*pMem, VkObjectTypePresentableImageMemory);\n'
+            # create_line += '    ll_insert_obj((void*)*%s, VkObjectTypePresentableImageMemory);\n' % (obj_type_mapping[proto.params[-1].ty.strip('*').replace('const ', '')])
             create_line += '    loader_platform_thread_unlock_mutex(&objLock);\n'
         elif 'Create' in proto.name or 'Alloc' in proto.name:
             create_line = '    loader_platform_thread_lock_mutex(&objLock);\n'
@@ -1371,7 +1383,7 @@ class ObjectTrackerSubcommand(Subcommand):
                 using_line = ''
             if 'DestroyDevice' in proto.name:
                 destroy_line += '    // Report any remaining objects in LL\n    objNode *pTrav = pGlobalHead;\n    while (pTrav) {\n'
-                destroy_line += '        if (pTrav->obj.objType == VK_OBJECT_TYPE_PRESENTABLE_IMAGE_MEMORY) {\n'
+                destroy_line += '        if (pTrav->obj.objType == VkObjectTypePresentableImageMemory) {\n'
                 destroy_line += '            objNode *pDel = pTrav;\n'
                 destroy_line += '            pTrav = pTrav->pNextGlobal;\n'
                 destroy_line += '            ll_destroy_obj((void*)(pDel->obj.pObj));\n'
