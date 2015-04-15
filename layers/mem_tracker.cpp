@@ -250,7 +250,7 @@ static void retireQueueFences(VkQueue queue)
     map<uint64_t, MT_FENCE_INFO*>::iterator it = fenceMap.begin();
     map<uint64_t, MT_FENCE_INFO*>::iterator temp;
     while (it != fenceMap.end()) {
-        if (((*it).second)->queue == queue) {
+        if ((((*it).second) != NULL) && ((*it).second)->queue == queue) {
             temp = it;
             ++temp;
             deleteFenceInfo((*it).first);
