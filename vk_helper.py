@@ -1286,11 +1286,19 @@ class EnumCodeGen:
         body = []
         for bet in sorted(self.et_dict):
             fet = self.tf_dict[bet]
-            body.append("static inline uint32_t validate_%s(%s input_value)\n{\n    switch ((%s)input_value)\n    {" % (fet, fet, fet))
-            for e in sorted(self.et_dict[bet]):
-                if (self.ev_dict[e]['unique']):
-                    body.append('        case %s:' % (e))
-            body.append('            return 1;\n        default:\n            return 0;\n    }\n}\n\n')
+            body.append("static inline uint32_t validate_%s(%s input_value)\n{" % (fet, fet))
+            # TODO : This is not ideal, but allows for flag combinations. Need more rigorous validation of realistic flag combinations
+            if 'flags' in bet.lower():
+                body.append('    if (input_value > (%s))' % (' | '.join(self.et_dict[bet])))
+                body.append('        return 0;')
+                body.append('    return 1;')
+                body.append('}\n\n')
+            else:
+                body.append('    switch ((%s)input_value)\n    {' % (fet))
+                for e in sorted(self.et_dict[bet]):
+                    if (self.ev_dict[e]['unique']):
+                        body.append('        case %s:' % (e))
+                body.append('            return 1;\n        default:\n            return 0;\n    }\n}\n\n')
         return "\n".join(body)
 
     def _generateSHBody(self):
