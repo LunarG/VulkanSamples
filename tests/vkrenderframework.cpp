@@ -956,8 +956,10 @@ VkShaderObj::VkShaderObj(VkDeviceObj *device, const char * shader_code, VkShader
         createInfo.codeSize = spv.size() * sizeof(unsigned int);
         createInfo.flags = 0;
 
-        init(*m_device, createInfo);
+        err = init_try(*m_device, createInfo);
     }
+
+    assert(VK_SUCCESS == err);
 }
 
 VkPipelineObj::VkPipelineObj(VkDeviceObj *device)

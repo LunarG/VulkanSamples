@@ -3158,6 +3158,725 @@ TEST_F(VkRenderTest, TriangleUniformBufferLayout)
     RecordImages(m_renderTargets);
 }
 
+TEST_F(VkRenderTest, GeometryShaderHelloWorld)
+{
+    // This test introduces a geometry shader that simply
+    // changes the color of each vertex to red, green, blue
+
+    static const char *vertShaderText =
+            "#version 140\n"
+            "#extension GL_ARB_separate_shader_objects : enable\n"
+            "#extension GL_ARB_shading_language_420pack : enable\n"
+            "layout (location = 0) out vec4 color;"
+            "void main() {\n"
+
+            // VS writes out red
+            "   color = vec4(1.0, 0.0, 0.0, 1.0);\n"
+
+            // generic position stuff
+            "   vec2 vertices;\n"
+            "   int vertexSelector = gl_VertexID;\n"
+            "   if (vertexSelector == 0)\n"
+            "      vertices = vec2(-0.5, -0.5);\n"
+            "   else if (vertexSelector == 1)\n"
+            "      vertices = vec2( 0.5, -0.5);\n"
+            "   else if (vertexSelector == 2)\n"
+            "      vertices = vec2( 0.5, 0.5);\n"
+            "   else\n"
+            "      vertices = vec2( 0.0,  0.0);\n"
+            "   gl_Position = vec4(vertices, 0.0, 1.0);\n"
+
+            "}\n";
+
+    static const char *geomShaderText =
+            "#version 330\n"
+            "#extension GL_ARB_separate_shader_objects : enable\n"
+            "#extension GL_ARB_shading_language_420pack : enable\n"
+            "layout( triangles ) in;\n"
+            "layout( triangle_strip, max_vertices = 3 ) out;\n"
+            "layout( location = 0 ) in vec4 inColor[3];\n"
+            "layout( location = 0 ) out vec4 outColor;\n"
+            "void main()\n"
+            "{\n"
+
+            // first vertex, pass through red
+            "    gl_Position = gl_in[0].gl_Position;\n"
+            "    outColor = inColor[0];\n"
+            "    EmitVertex();\n"
+
+            // second vertex, green
+            "    gl_Position = gl_in[1].gl_Position;\n"
+            "    outColor = vec4(0.0, 1.0, 0.0, 1.0);\n"
+            "    EmitVertex();\n"
+
+            // third vertex, blue
+            "    gl_Position = gl_in[2].gl_Position;\n"
+            "    outColor = vec4(0.0, 0.0, 1.0, 1.0);\n"
+            "    EmitVertex();\n"
+
+            // done
+            "    EndPrimitive();\n"
+            "}\n";
+
+
+    static const char *fragShaderText =
+            "#version 140\n"
+            "#extension GL_ARB_separate_shader_objects : enable\n"
+            "#extension GL_ARB_shading_language_420pack : enable\n"
+            "layout (location = 0) in vec4 color;\n"
+            "void main() {\n"
+            // pass through
+            "   gl_FragColor = color;\n"
+            "}\n";
+
+
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+    ASSERT_NO_FATAL_FAILURE(InitViewport());
+
+    VkShaderObj vs(m_device, vertShaderText, VK_SHADER_STAGE_VERTEX,   this);
+    VkShaderObj gs(m_device, geomShaderText, VK_SHADER_STAGE_GEOMETRY, this);
+    VkShaderObj ps(m_device, fragShaderText, VK_SHADER_STAGE_FRAGMENT, this);
+
+    VkPipelineObj pipelineobj(m_device);
+    pipelineobj.AddShader(&vs);
+    pipelineobj.AddShader(&gs);
+    pipelineobj.AddShader(&ps);
+
+    ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
+    VkCommandBufferObj cmdBuffer(m_device);
+    cmdBuffer.AddRenderTarget(m_renderTargets[0]);
+
+    ASSERT_VK_SUCCESS(BeginCommandBuffer(cmdBuffer));
+
+    VkDescriptorSetObj descriptorSet(m_device);
+
+    GenericDrawPreparation(&cmdBuffer, pipelineobj, descriptorSet);
+
+    // render triangle
+    cmdBuffer.Draw(0, 3, 0, 1);
+
+    // finalize recording of the command buffer
+    EndCommandBuffer(cmdBuffer);
+    cmdBuffer.QueueCommandBuffer();
+
+    RecordImages(m_renderTargets);
+}
+
+TEST_F(VkRenderTest, GSUniformBufferLayout)
+{
+    // This test is just like TriangleUniformBufferLayout but adds
+    // geometry as a stage that also does UBO lookups
+    // The expected result from this test is a green triangle
+
+    static const char *vertShaderText =
+            "#version 140\n"
+            "#extension GL_ARB_separate_shader_objects : enable\n"
+            "#extension GL_ARB_shading_language_420pack : enable\n"
+            "layout (std140, binding = 0) uniform mixedBuffer {\n"
+            "    vec4 fRed;\n"
+            "    vec4 fGreen;\n"
+            "    layout(row_major) mat4 worldToProj;\n"
+            "    layout(row_major) mat4 projToWorld;\n"
+            "    layout(row_major) mat4 worldToView;\n"
+            "    layout(row_major) mat4 viewToProj;\n"
+            "    layout(row_major) mat4 worldToShadow[4];\n"
+            "    float fZero;\n"
+            "    float fOne;\n"
+            "    float fTwo;\n"
+            "    float fThree;\n"
+            "    vec3 fZeroZeroZero;\n"
+            "    float fFour;\n"
+            "    vec3 fZeroZeroOne;\n"
+            "    float fFive;\n"
+            "    vec3 fZeroOneZero;\n"
+            "    float fSix;\n"
+            "    float fSeven;\n"
+            "    float fEight;\n"
+            "    float fNine;\n"
+            "    vec2 fZeroZero;\n"
+            "    vec2 fZeroOne;\n"
+            "    vec4 fBlue;\n"
+            "    vec2 fOneZero;\n"
+            "    vec2 fOneOne;\n"
+            "    vec3 fZeroOneOne;\n"
+            "    float fTen;\n"
+            "    float fEleven;\n"
+            "    float fTwelve;\n"
+            "    vec3 fOneZeroZero;\n"
+            "    vec4 uvOffsets[4];\n"
+            "};\n"
+            "layout (location = 0) out vec4 color;"
+            "void main() {\n"
+
+            "   vec4 right = vec4(0.0, 1.0, 0.0, 1.0);\n"
+            "   vec4 wrong = vec4(1.0, 0.0, 0.0, 1.0);\n"
+            "   \n"
+
+            // do some exact comparisons, even though we should
+            // really have an epsilon involved.
+            "   vec4 outColor = right;\n"
+            "   if (fRed != vec4(1.0, 0.0, 0.0, 1.0))\n"
+            "       outColor = wrong;\n"
+            "   if (fGreen != vec4(0.0, 1.0, 0.0, 1.0))\n"
+            "       outColor = wrong;\n"
+            "   if (fBlue != vec4(0.0, 0.0, 1.0, 1.0))\n"
+            "       outColor = wrong;\n"
+
+            "   color = outColor;\n"
+
+            // generic position stuff
+            "   vec2 vertices;\n"
+            "   int vertexSelector = gl_VertexID;\n"
+            "   if (vertexSelector == 0)\n"
+            "      vertices = vec2(-0.5, -0.5);\n"
+            "   else if (vertexSelector == 1)\n"
+            "      vertices = vec2( 0.5, -0.5);\n"
+            "   else if (vertexSelector == 2)\n"
+            "      vertices = vec2( 0.5, 0.5);\n"
+            "   else\n"
+            "      vertices = vec2( 0.0,  0.0);\n"
+            "   gl_Position = vec4(vertices, 0.0, 1.0);\n"
+            "}\n";
+
+    static const char *geomShaderText =
+            "#version 330\n"
+            "#extension GL_ARB_separate_shader_objects : enable\n"
+            "#extension GL_ARB_shading_language_420pack : enable\n"
+
+            // GS layout stuff
+            "layout( triangles ) in;\n"
+            "layout( triangle_strip, max_vertices = 3 ) out;\n"
+
+            // Between stage IO
+            "layout( location = 0 ) in vec4 inColor[3];\n"
+            "layout( location = 0 ) out vec4 color;\n"
+
+            "layout (std140, binding = 0) uniform mixedBuffer {\n"
+            "    vec4 fRed;\n"
+            "    vec4 fGreen;\n"
+            "    layout(row_major) mat4 worldToProj;\n"
+            "    layout(row_major) mat4 projToWorld;\n"
+            "    layout(row_major) mat4 worldToView;\n"
+            "    layout(row_major) mat4 viewToProj;\n"
+            "    layout(row_major) mat4 worldToShadow[4];\n"
+            "    float fZero;\n"
+            "    float fOne;\n"
+            "    float fTwo;\n"
+            "    float fThree;\n"
+            "    vec3 fZeroZeroZero;\n"
+            "    float fFour;\n"
+            "    vec3 fZeroZeroOne;\n"
+            "    float fFive;\n"
+            "    vec3 fZeroOneZero;\n"
+            "    float fSix;\n"
+            "    float fSeven;\n"
+            "    float fEight;\n"
+            "    float fNine;\n"
+            "    vec2 fZeroZero;\n"
+            "    vec2 fZeroOne;\n"
+            "    vec4 fBlue;\n"
+            "    vec2 fOneZero;\n"
+            "    vec2 fOneOne;\n"
+            "    vec3 fZeroOneOne;\n"
+            "    float fTen;\n"
+            "    float fEleven;\n"
+            "    float fTwelve;\n"
+            "    vec3 fOneZeroZero;\n"
+            "    vec4 uvOffsets[4];\n"
+            "};\n"
+
+            "void main()\n"
+            "{\n"
+
+            "   vec4 right = vec4(0.0, 1.0, 0.0, 1.0);\n"
+            "   vec4 wrong = vec4(1.0, 0.0, 0.0, 1.0);\n"
+
+            // Each vertex will validate it can read VS output
+            // then check a few values from the UBO
+
+            // first vertex
+            "   vec4 outColor = inColor[0];\n"
+
+            "   if (fRed != vec4(1.0, 0.0, 0.0, 1.0))\n"
+            "       outColor = wrong;\n"
+            "   if (fGreen != vec4(0.0, 1.0, 0.0, 1.0))\n"
+            "       outColor = wrong;\n"
+            "   if (fBlue != vec4(0.0, 0.0, 1.0, 1.0))\n"
+            "       outColor = wrong;\n"
+            "   if (projToWorld[1] != vec4(0.0, 2.0, 0.0, 0.0))\n"
+            "       outColor = wrong;\n"
+
+            "   gl_Position = gl_in[0].gl_Position;\n"
+            "   color = outColor;\n"
+            "   EmitVertex();\n"
+
+            // second vertex
+            "   outColor = inColor[1];\n"
+
+            "   if (worldToShadow[2][1] != vec4(0.0, 7.0, 0.0, 0.0))\n"
+            "       outColor = wrong;\n"
+            "   if (fSix != 6.0)\n"
+            "       outColor = wrong;\n"
+            "   if (fOneOne != vec2(1.0, 1.0))\n"
+            "       outColor = wrong;\n"
+
+            "   gl_Position = gl_in[1].gl_Position;\n"
+            "   color = outColor;\n"
+            "   EmitVertex();\n"
+
+            // third vertex
+            "   outColor = inColor[2];\n"
+
+            "   if (fSeven != 7.0)\n"
+            "       outColor = wrong;\n"
+            "   if (uvOffsets[2] != vec4(0.9, 1.0, 1.1, 1.2))\n"
+            "       outColor = wrong;\n"
+
+            "   gl_Position = gl_in[2].gl_Position;\n"
+            "   color = outColor;\n"
+            "   EmitVertex();\n"
+
+            // done
+            "    EndPrimitive();\n"
+            "}\n";
+
+    static const char *fragShaderText =
+            "#version 140\n"
+            "#extension GL_ARB_separate_shader_objects : enable\n"
+            "#extension GL_ARB_shading_language_420pack : enable\n"
+            "layout (std140, binding = 0) uniform mixedBuffer {\n"
+            "    vec4 fRed;\n"
+            "    vec4 fGreen;\n"
+            "    layout(row_major) mat4 worldToProj;\n"
+            "    layout(row_major) mat4 projToWorld;\n"
+            "    layout(row_major) mat4 worldToView;\n"
+            "    layout(row_major) mat4 viewToProj;\n"
+            "    layout(row_major) mat4 worldToShadow[4];\n"
+            "    float fZero;\n"
+            "    float fOne;\n"
+            "    float fTwo;\n"
+            "    float fThree;\n"
+            "    vec3 fZeroZeroZero;\n"
+            "    float fFour;\n"
+            "    vec3 fZeroZeroOne;\n"
+            "    float fFive;\n"
+            "    vec3 fZeroOneZero;\n"
+            "    float fSix;\n"
+            "    float fSeven;\n"
+            "    float fEight;\n"
+            "    float fNine;\n"
+            "    vec2 fZeroZero;\n"
+            "    vec2 fZeroOne;\n"
+            "    vec4 fBlue;\n"
+            "    vec2 fOneZero;\n"
+            "    vec2 fOneOne;\n"
+            "    vec3 fZeroOneOne;\n"
+            "    float fTen;\n"
+            "    float fEleven;\n"
+            "    float fTwelve;\n"
+            "    vec3 fOneZeroZero;\n"
+            "    vec4 uvOffsets[4];\n"
+            "};\n"
+            "layout (location = 0) in vec4 color;\n"
+            "void main() {\n"
+            "   vec4 right = vec4(0.0, 1.0, 0.0, 1.0);\n"
+            "   vec4 wrong = vec4(1.0, 0.0, 0.0, 1.0);\n"
+            "   \n"
+
+            // start with GS value to ensure it passed
+            "   vec4 outColor = color;\n"
+
+            // do some exact comparisons, even though we should
+            // really have an epsilon involved.
+            "   if (fRed != vec4(1.0, 0.0, 0.0, 1.0))\n"
+            "       outColor = wrong;\n"
+            "   if (fGreen != vec4(0.0, 1.0, 0.0, 1.0))\n"
+            "       outColor = wrong;\n"
+            "   if (projToWorld[1] != vec4(0.0, 2.0, 0.0, 0.0))\n"
+            "       outColor = wrong;\n"
+            "   if (worldToShadow[2][1] != vec4(0.0, 7.0, 0.0, 0.0))\n"
+            "       outColor = wrong;\n"
+            "   if (fTwo != 2.0)\n"
+            "       outColor = wrong;\n"
+            "   if (fOneOne != vec2(1.0, 1.0))\n"
+            "       outColor = wrong;\n"
+            "   if (fTen != 10.0)\n"
+            "       outColor = wrong;\n"
+            "   if (uvOffsets[2] != vec4(0.9, 1.0, 1.1, 1.2))\n"
+            "       outColor = wrong;\n"
+            "   \n"
+            "   gl_FragColor = outColor;\n"
+            "}\n";
+
+
+    const float mixedVals[196] = {   1.0, 0.0, 0.0, 1.0,   //        vec4 fRed;            // align
+                                     0.0, 1.0, 0.0, 1.0,   //        vec4 fGreen;          // align
+                                     1.0, 0.0, 0.0, 1.0,   //        layout(row_major) mat4 worldToProj;
+                                     0.0, 1.0, 0.0, 1.0,   //        align
+                                     0.0, 0.0, 1.0, 1.0,   //        align
+                                     0.0, 0.0, 0.0, 1.0,   //        align
+                                     2.0, 0.0, 0.0, 2.0,   //        layout(row_major) mat4 projToWorld;
+                                     0.0, 2.0, 0.0, 2.0,   //        align
+                                     0.0, 0.0, 2.0, 2.0,   //        align
+                                     0.0, 0.0, 0.0, 2.0,   //        align
+                                     3.0, 0.0, 0.0, 3.0,   //        layout(row_major) mat4 worldToView;
+                                     0.0, 3.0, 0.0, 3.0,   //        align
+                                     0.0, 0.0, 3.0, 3.0,   //        align
+                                     0.0, 0.0, 0.0, 3.0,   //        align
+                                     4.0, 0.0, 0.0, 4.0,   //        layout(row_major) mat4 viewToProj;
+                                     0.0, 4.0, 0.0, 4.0,   //        align
+                                     0.0, 0.0, 4.0, 4.0,   //        align
+                                     0.0, 0.0, 0.0, 4.0,   //        align
+                                     5.0, 0.0, 0.0, 5.0,   //        layout(row_major) mat4 worldToShadow[4];
+                                     0.0, 5.0, 0.0, 5.0,   //        align
+                                     0.0, 0.0, 5.0, 5.0,   //        align
+                                     0.0, 0.0, 0.0, 5.0,   //        align
+                                     6.0, 0.0, 0.0, 6.0,   //        align
+                                     0.0, 6.0, 0.0, 6.0,   //        align
+                                     0.0, 0.0, 6.0, 6.0,   //        align
+                                     0.0, 0.0, 0.0, 6.0,   //        align
+                                     7.0, 0.0, 0.0, 7.0,   //        align
+                                     0.0, 7.0, 0.0, 7.0,   //        align
+                                     0.0, 0.0, 7.0, 7.0,   //        align
+                                     0.0, 0.0, 0.0, 7.0,   //        align
+                                     8.0, 0.0, 0.0, 8.0,   //        align
+                                     0.0, 8.0, 0.0, 8.0,   //        align
+                                     0.0, 0.0, 8.0, 8.0,   //        align
+                                     0.0, 0.0, 0.0, 8.0,   //        align
+                                     0.0,                  //        float fZero;          // align
+                                     1.0,                  //        float fOne;           // pack
+                                     2.0,                  //        float fTwo;           // pack
+                                     3.0,                  //        float fThree;         // pack
+                                     0.0, 0.0, 0.0,        //        vec3 fZeroZeroZero;   // align
+                                     4.0,                  //        float fFour;          // pack
+                                     0.0, 0.0, 1.0,        //        vec3 fZeroZeroOne;    // align
+                                     5.0,                  //        float fFive;          // pack
+                                     0.0, 1.0, 0.0,        //        vec3 fZeroOneZero;    // align
+                                     6.0,                  //        float fSix;           // pack
+                                     7.0,                  //        float fSeven;         // align
+                                     8.0,                  //        float fEight;         // pack
+                                     9.0,                  //        float fNine;          // pack
+                                     0.0,                  //        BUFFER
+                                     0.0, 0.0,             //        vec2 fZeroZero;       // align
+                                     0.0, 1.0,             //        vec2 fZeroOne;        // pack
+                                     0.0, 0.0, 1.0, 1.0,   //        vec4 fBlue;           // align
+                                     1.0, 0.0,             //        vec2 fOneZero;        // align
+                                     1.0, 1.0,             //        vec2 fOneOne;         // pack
+                                     0.0, 1.0, 1.0,        //        vec3 fZeroOneOne;     // align
+                                     10.0,                 //        float fTen;           // pack
+                                     11.0,                 //        float fEleven;        // align
+                                     12.0,                 //        float fTwelve;        // pack
+                                     0.0, 0.0,             //        BUFFER
+                                     1.0, 0.0, 0.0,        //        vec3 fOneZeroZero;    // align
+                                     0.0,                  //        BUFFER
+                                     0.1, 0.2, 0.3, 0.4,   //        vec4 uvOffsets[4];
+                                     0.5, 0.6, 0.7, 0.8,   //        align
+                                     0.9, 1.0, 1.1, 1.2,   //        align
+                                     1.3, 1.4, 1.5, 1.6,   //        align
+                                  };
+
+
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+    ASSERT_NO_FATAL_FAILURE(InitViewport());
+
+    const int constCount   = sizeof(mixedVals)   / sizeof(float);
+
+    VkShaderObj vs(m_device, vertShaderText, VK_SHADER_STAGE_VERTEX,   this);
+    VkShaderObj gs(m_device, geomShaderText, VK_SHADER_STAGE_GEOMETRY, this);
+    VkShaderObj ps(m_device, fragShaderText, VK_SHADER_STAGE_FRAGMENT, this);
+
+    VkConstantBufferObj mixedBuffer(m_device, constCount, sizeof(mixedVals[0]), (const void*) mixedVals);
+
+    VkPipelineObj pipelineobj(m_device);
+    pipelineobj.AddShader(&vs);
+    pipelineobj.AddShader(&gs);
+    pipelineobj.AddShader(&ps);
+
+    ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
+    VkCommandBufferObj cmdBuffer(m_device);
+    cmdBuffer.AddRenderTarget(m_renderTargets[0]);
+
+    ASSERT_VK_SUCCESS(BeginCommandBuffer(cmdBuffer));
+
+    VkDescriptorSetObj descriptorSet(m_device);
+    descriptorSet.AppendBuffer(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, mixedBuffer);
+
+    GenericDrawPreparation(&cmdBuffer, pipelineobj, descriptorSet);
+
+    // render triangle
+    cmdBuffer.Draw(0, 3, 0, 1);
+
+    // finalize recording of the command buffer
+    EndCommandBuffer(cmdBuffer);
+    cmdBuffer.QueueCommandBuffer();
+
+    RecordImages(m_renderTargets);
+}
+
+TEST_F(VkRenderTest, GSPositions)
+{
+    // This test adds more inputs from the vertex shader and perturbs positions
+    // Expected result is white triangle with weird positions
+
+    static const char *vertShaderText =
+            "#version 140\n"
+            "#extension GL_ARB_separate_shader_objects : enable\n"
+            "#extension GL_ARB_shading_language_420pack : enable\n"
+
+            "layout(location = 0) out vec3 out_a;\n"
+            "layout(location = 1) out vec3 out_b;\n"
+            "layout(location = 2) out vec3 out_c;\n"
+
+            "void main() {\n"
+
+            // write a solid color to each
+            "   out_a = vec3(1.0, 0.0, 0.0);\n"
+            "   out_b = vec3(0.0, 1.0, 0.0);\n"
+            "   out_c = vec3(0.0, 0.0, 1.0);\n"
+
+            // generic position stuff
+            "   vec2 vertices;\n"
+            "   int vertexSelector = gl_VertexID;\n"
+            "   if (vertexSelector == 0)\n"
+            "      vertices = vec2(-0.5, -0.5);\n"
+            "   else if (vertexSelector == 1)\n"
+            "      vertices = vec2( 0.5, -0.5);\n"
+            "   else if (vertexSelector == 2)\n"
+            "      vertices = vec2( 0.5, 0.5);\n"
+            "   else\n"
+            "      vertices = vec2( 0.0,  0.0);\n"
+            "   gl_Position = vec4(vertices, 0.0, 1.0);\n"
+
+            "}\n";
+
+    static const char *geomShaderText =
+            "#version 330\n"
+            "#extension GL_ARB_separate_shader_objects : enable\n"
+            "#extension GL_ARB_shading_language_420pack : enable\n"
+            "layout( triangles ) in;\n"
+            "layout( triangle_strip, max_vertices = 3 ) out;\n"
+
+            "layout(location = 0) in vec3 in_a[3];\n"
+            "layout(location = 1) in vec3 in_b[3];\n"
+            "layout(location = 2) in vec3 in_c[3];\n"
+
+            "layout(location = 0) out vec3 out_a;\n"
+            "layout(location = 1) out vec3 out_b;\n"
+            "layout(location = 2) out vec3 out_c;\n"
+
+            "void main()\n"
+            "{\n"
+
+            "    gl_Position = gl_in[0].gl_Position;\n"
+            "    gl_Position.xy *= vec2(0.75);\n"
+            "    out_a = in_a[0];\n"
+            "    out_b = in_b[0];\n"
+            "    out_c = in_c[0];\n"
+            "    EmitVertex();\n"
+
+            "    gl_Position = gl_in[1].gl_Position;\n"
+            "    gl_Position.xy *= vec2(1.5);\n"
+            "    out_a = in_a[1];\n"
+            "    out_b = in_b[1];\n"
+            "    out_c = in_c[1];\n"
+            "    EmitVertex();\n"
+
+            "    gl_Position = gl_in[2].gl_Position;\n"
+            "    gl_Position.xy *= vec2(-0.1);\n"
+            "    out_a = in_a[2];\n"
+            "    out_b = in_b[2];\n"
+            "    out_c = in_c[2];\n"
+            "    EmitVertex();\n"
+
+            "    EndPrimitive();\n"
+            "}\n";
+
+
+    static const char *fragShaderText =
+            "#version 140\n"
+            "#extension GL_ARB_separate_shader_objects : enable\n"
+            "#extension GL_ARB_shading_language_420pack : enable\n"
+
+            "layout(location = 0) in vec3 in_a;\n"
+            "layout(location = 1) in vec3 in_b;\n"
+            "layout(location = 2) in vec3 in_c;\n"
+
+            "void main() {\n"
+            "   gl_FragColor = vec4(in_a.x, in_b.y, in_c.z, 1.0);\n"
+            "}\n";
+
+
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+    ASSERT_NO_FATAL_FAILURE(InitViewport());
+
+    VkShaderObj vs(m_device, vertShaderText, VK_SHADER_STAGE_VERTEX,   this);
+    VkShaderObj gs(m_device, geomShaderText, VK_SHADER_STAGE_GEOMETRY, this);
+    VkShaderObj ps(m_device, fragShaderText, VK_SHADER_STAGE_FRAGMENT, this);
+
+    VkPipelineObj pipelineobj(m_device);
+    pipelineobj.AddShader(&vs);
+    pipelineobj.AddShader(&gs);
+    pipelineobj.AddShader(&ps);
+
+    ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
+    VkCommandBufferObj cmdBuffer(m_device);
+    cmdBuffer.AddRenderTarget(m_renderTargets[0]);
+
+    ASSERT_VK_SUCCESS(BeginCommandBuffer(cmdBuffer));
+
+    VkDescriptorSetObj descriptorSet(m_device);
+
+    GenericDrawPreparation(&cmdBuffer, pipelineobj, descriptorSet);
+
+    // render triangle
+    cmdBuffer.Draw(0, 3, 0, 1);
+
+    // finalize recording of the command buffer
+    EndCommandBuffer(cmdBuffer);
+    cmdBuffer.QueueCommandBuffer();
+
+    RecordImages(m_renderTargets);
+}
+
+TEST_F(VkRenderTest, GSTriStrip)
+{
+    // This test emits multiple multiple triangles using a GS
+    // Correct result is an multicolor circle
+
+    static const char *vertShaderText =
+            "#version 140\n"
+            "#extension GL_ARB_separate_shader_objects : enable\n"
+            "#extension GL_ARB_shading_language_420pack : enable\n"
+
+            "void main() {\n"
+
+            // generic position stuff
+            "   vec2 vertices;\n"
+            "   int vertexSelector = gl_VertexID;\n"
+            "   if (vertexSelector == 0)\n"
+            "      vertices = vec2(-0.5, -0.5);\n"
+            "   else if (vertexSelector == 1)\n"
+            "      vertices = vec2( 0.5, -0.5);\n"
+            "   else if (vertexSelector == 2)\n"
+            "      vertices = vec2( 0.5, 0.5);\n"
+            "   else\n"
+            "      vertices = vec2( 0.0,  0.0);\n"
+            "   gl_Position = vec4(vertices, 0.0, 1.0);\n"
+
+            "}\n";
+
+    static const char *geomShaderText =
+            "#version 330\n"
+            "#extension GL_ARB_separate_shader_objects : enable\n"
+            "#extension GL_ARB_shading_language_420pack : enable\n"
+            "layout( triangles ) in;\n"
+            "layout( triangle_strip, max_vertices = 18 ) out;\n"
+
+            "layout(location = 0) out vec4 outColor;\n"
+
+            "void main()\n"
+            "{\n"
+            // init with first position to get zw
+            "    gl_Position = gl_in[0].gl_Position;\n"
+
+            "    vec4 red    = vec4(1.0, 0.0, 0.0, 1.0);\n"
+            "    vec4 yellow = vec4(1.0, 1.0, 0.0, 1.0);\n"
+            "    vec4 blue   = vec4(0.0, 0.0, 1.0, 1.0);\n"
+            "    vec4 white  = vec4(1.0, 1.0, 1.0, 1.0);\n"
+
+            // different color per tri
+            "    vec4[6] colors = { red,    white,   \n"
+            "                       yellow, white,   \n"
+            "                       blue,   white }; \n"
+
+            // fan out the triangles
+            "    vec2[18] positions = { vec2(0.0, 0.0), vec2(-0.5,   0.0), vec2(-0.25, -0.5),   \n"
+            "                           vec2(0.0, 0.0), vec2(-0.25, -0.5), vec2( 0.25, -0.5),   \n"
+            "                           vec2(0.0, 0.0), vec2( 0.25, -0.5), vec2( 0.5,   0.0),   \n"
+            "                           vec2(0.0, 0.0), vec2( 0.5,   0.0), vec2( 0.25,  0.5),   \n"
+            "                           vec2(0.0, 0.0), vec2( 0.25,  0.5), vec2(-0.25,  0.5),   \n"
+            "                           vec2(0.0, 0.0), vec2(-0.25,  0.5), vec2(-0.5,   0.0) }; \n"
+
+            // make a triangle list of 6
+            "    for (int i = 0; i < 6; ++i) { \n"
+            "        outColor = colors[i]; \n"
+            "        for (int j = 0; j < 3; ++j) { \n"
+            "            gl_Position.xy = positions[i * 3 + j]; \n"
+            "            EmitVertex(); \n"
+            "        } \n"
+            "        EndPrimitive();\n"
+            "    } \n"
+
+            "}\n";
+
+
+    static const char *fragShaderText =
+            "#version 150\n"
+            "#extension GL_ARB_separate_shader_objects : enable\n"
+            "#extension GL_ARB_shading_language_420pack : enable\n"
+
+
+            "layout(binding = 0) uniform windowDimensions {\n"
+            "    vec4 dimensions;\n"
+            "};\n"
+
+            "layout(location = 0) in vec4 inColor;\n"
+            "layout(origin_upper_left) in vec4 gl_FragCoord;\n"
+
+            "void main() {\n"
+
+            // discard to make a nice circle
+            "    vec2 pos = abs(gl_FragCoord.xy) - vec2(dimensions.x, dimensions.y) / 2;\n"
+            "    float dist = sqrt(dot(pos, pos));\n"
+            "    if (dist > 50.0)\n"
+            "        discard;\n"
+
+            "    gl_FragColor = inColor;\n"
+
+            "}\n";
+
+
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+    ASSERT_NO_FATAL_FAILURE(InitViewport());
+
+    VkShaderObj vs(m_device, vertShaderText, VK_SHADER_STAGE_VERTEX,   this);
+    VkShaderObj gs(m_device, geomShaderText, VK_SHADER_STAGE_GEOMETRY, this);
+    VkShaderObj ps(m_device, fragShaderText, VK_SHADER_STAGE_FRAGMENT, this);
+
+    VkPipelineObj pipelineobj(m_device);
+    pipelineobj.AddShader(&vs);
+    pipelineobj.AddShader(&gs);
+    pipelineobj.AddShader(&ps);
+
+    const float dimensions[4]  = { VkRenderFramework::m_width, VkRenderFramework::m_height , 0.0, 0.0};
+
+    VkConstantBufferObj windowDimensions(m_device, sizeof(dimensions) / sizeof(dimensions[0]), sizeof(dimensions[0]), (const void*) dimensions);
+
+    ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
+    VkCommandBufferObj cmdBuffer(m_device);
+    cmdBuffer.AddRenderTarget(m_renderTargets[0]);
+
+    ASSERT_VK_SUCCESS(BeginCommandBuffer(cmdBuffer));
+
+    VkDescriptorSetObj descriptorSet(m_device);
+    descriptorSet.AppendBuffer(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, windowDimensions);
+
+    GenericDrawPreparation(&cmdBuffer, pipelineobj, descriptorSet);
+
+    // render triangle
+    cmdBuffer.Draw(0, 3, 0, 1);
+
+    // finalize recording of the command buffer
+    EndCommandBuffer(cmdBuffer);
+    cmdBuffer.QueueCommandBuffer();
+
+    RecordImages(m_renderTargets);
+}
+
 int main(int argc, char **argv) {
     int result;
 
