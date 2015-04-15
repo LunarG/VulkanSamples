@@ -59,8 +59,10 @@ static inline void *loader_get_data(const void *obj)
 
 static inline void loader_init_data(void *obj, const void *data)
 {
+#ifdef DEBUG
     assert(valid_loader_magic_value(obj) &&
             "Incompatible ICD, first dword must be initialized to ICD_LOADER_MAGIC. See loader/README.md for details.");
+#endif
 
     loader_set_data(obj, data);
 }
