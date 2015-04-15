@@ -2229,7 +2229,7 @@ typedef VkResult (VKAPI *PFN_vkDestroyObject)(VkObject object);
 typedef VkResult (VKAPI *PFN_vkGetObjectInfo)(VkBaseObject object, VkObjectInfoType infoType, size_t* pDataSize, void* pData);
 typedef VkResult (VKAPI *PFN_vkQueueBindObjectMemory)(VkQueue queue, VkObject object, uint32_t allocationIdx, VkGpuMemory mem, VkGpuSize offset);
 typedef VkResult (VKAPI *PFN_vkQueueBindObjectMemoryRange)(VkQueue queue, VkObject object, uint32_t allocationIdx, VkGpuSize rangeOffset,VkGpuSize rangeSize, VkGpuMemory mem, VkGpuSize memOffset);
-typedef VkResult (VKAPI *PFN_vkQueueBindImageMemoryRange)(VkQueue queue, VkImage image, uint32_t allocationIdx, const VkImageMemoryBindInfo* bindInfo, VkGpuMemory mem, VkGpuSize memOffset);
+typedef VkResult (VKAPI *PFN_vkQueueBindImageMemoryRange)(VkQueue queue, VkImage image, uint32_t allocationIdx, const VkImageMemoryBindInfo* pBindInfo, VkGpuMemory mem, VkGpuSize memOffset);
 typedef VkResult (VKAPI *PFN_vkCreateFence)(VkDevice device, const VkFenceCreateInfo* pCreateInfo, VkFence* pFence);
 typedef VkResult (VKAPI *PFN_vkResetFences)(VkDevice device, uint32_t fenceCount, VkFence* pFences);
 typedef VkResult (VKAPI *PFN_vkGetFenceStatus)(VkFence fence);
@@ -2495,7 +2495,7 @@ VkResult VKAPI vkQueueBindImageMemoryRange(
     VkQueue                                     queue,
     VkImage                                     image,
     uint32_t                                    allocationIdx,
-    const VkImageMemoryBindInfo*                bindInfo,
+    const VkImageMemoryBindInfo*                pBindInfo,
     VkGpuMemory                                 mem,
     VkGpuSize                                   memOffset);
 

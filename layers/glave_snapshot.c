@@ -740,12 +740,12 @@ VK_LAYER_EXPORT VkResult VKAPI vkBindObjectMemoryRange(VkObject object, uint32_t
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkBindImageMemoryRange(VkImage image, uint32_t allocationIdx, const VkImageMemoryBindInfo* bindInfo, VkGpuMemory mem, VkGpuSize memOffset)
+VK_LAYER_EXPORT VkResult VKAPI vkBindImageMemoryRange(VkImage image, uint32_t allocationIdx, const VkImageMemoryBindInfo* pBindInfo, VkGpuMemory mem, VkGpuSize memOffset)
 {
     loader_platform_thread_lock_mutex(&objLock);
     ll_increment_use_count((void*)image, VK_OBJECT_TYPE_IMAGE);
     loader_platform_thread_unlock_mutex(&objLock);
-    VkResult result = nextTable.BindImageMemoryRange(image, allocationIdx, bindInfo, mem, memOffset);
+    VkResult result = nextTable.BindImageMemoryRange(image, allocationIdx, pBindInfo, mem, memOffset);
     return result;
 }
 

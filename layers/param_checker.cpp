@@ -519,18 +519,18 @@ VK_LAYER_EXPORT VkResult VKAPI vkQueueBindObjectMemoryRange(VkQueue queue, VkObj
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkQueueBindImageMemoryRange(VkQueue queue, VkImage image, uint32_t allocationIdx, const VkImageMemoryBindInfo* bindInfo, VkGpuMemory mem, VkGpuSize memOffset)
+VK_LAYER_EXPORT VkResult VKAPI vkQueueBindImageMemoryRange(VkQueue queue, VkImage image, uint32_t allocationIdx, const VkImageMemoryBindInfo* pBindInfo, VkGpuMemory mem, VkGpuSize memOffset)
 {
     char str[1024];
-    if (!bindInfo) {
-        sprintf(str, "Struct ptr parameter bindInfo to function QueueBindImageMemoryRange is NULL.");
+    if (!pBindInfo) {
+        sprintf(str, "Struct ptr parameter pBindInfo to function QueueBindImageMemoryRange is NULL.");
         layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
     }
-    else if (!vk_validate_vkimagememorybindinfo(bindInfo)) {
-        sprintf(str, "Parameter bindInfo to function BindImageMemoryRange contains an invalid value.");
+    else if (!vk_validate_vkimagememorybindinfo(pBindInfo)) {
+        sprintf(str, "Parameter pBindInfo to function BindImageMemoryRange contains an invalid value.");
         layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
     }
-    VkResult result = nextTable.QueueBindImageMemoryRange(queue, image, allocationIdx, bindInfo, mem, memOffset);
+    VkResult result = nextTable.QueueBindImageMemoryRange(queue, image, allocationIdx, pBindInfo, mem, memOffset);
     return result;
 }
 

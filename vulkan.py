@@ -379,7 +379,7 @@ core = Extension(
             [Param("VkQueue", "queue"),
              Param("VkImage", "image"),
              Param("uint32_t", "allocationIdx"),
-             Param("const VkImageMemoryBindInfo*", "bindInfo"),
+             Param("const VkImageMemoryBindInfo*", "pBindInfo"),
              Param("VkGpuMemory", "mem"),
              Param("VkGpuSize", "memOffset")]),
 

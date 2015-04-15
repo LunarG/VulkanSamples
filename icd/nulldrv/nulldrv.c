@@ -1632,7 +1632,7 @@ ICD_EXPORT VkResult VKAPI vkQueueBindImageMemoryRange(
     VkQueue                                   queue,
     VkImage                                   image,
     uint32_t                                    allocationIdx,
-    const VkImageMemoryBindInfo*           bindInfo,
+    const VkImageMemoryBindInfo*           pBindInfo,
     VkGpuMemory                              mem,
     VkGpuSize                                memOffset)
 {
