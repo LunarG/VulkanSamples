@@ -367,22 +367,6 @@ class Subcommand(object):
         exts.append('}')
         return "\n".join(exts)
 
-#    def _generate_layer_gpa_function(self, extensions=[]):
-#        func_body = []
-#        func_body.append("VK_LAYER_EXPORT void* VKAPI vkGetProcAddr(VkPhysicalGpu gpu, const char* funcName)\n"
-#                         "{\n"
-#                         "    VkBaseLayerObject* gpuw = (VkBaseLayerObject *) gpu;\n"
-#                         "    void* addr;\n"
-#                         "    if (gpu == NULL)\n"
-#                         "        return NULL;\n"
-#                         "    pCurObj = gpuw;\n"
-#                         "    loader_platform_thread_once(&tabOnce, init%s);\n\n"
-#                         "    addr = layer_intercept_proc(funcName);\n"
-#                         "    if (addr)\n"
-#                         "        return addr;" % self.layer_name)
-#
-#        return "\n".join(exts)
-
     def _generate_layer_gpa_function(self, extensions=[]):
         func_body = []
         func_body.append("VK_LAYER_EXPORT void* VKAPI vkGetProcAddr(VkPhysicalGpu gpu, const char* funcName)\n"
@@ -486,7 +470,6 @@ class GenericLayerSubcommand(Subcommand):
             # use default version
             return None
         decl = proto.c_func(prefix="vk", attr="VKAPI")
-        param0_name = proto.params[0].name
         ret_val = ''
         stmt = ''
         funcs = []
@@ -755,8 +738,6 @@ class APIDumpSubcommand(Subcommand):
                         print_func = 'string_convert_helper'
                         #cis_print_func = 'tmp_str = string_convert_helper((void*)%s[i], "    ");' % proto.params[sp_index].name
                     cis_print_func = 'tmp_str = %s(%s%s[i], "    ");' % (print_func, print_cast, proto.params[sp_index].name)
-#                                else:
-#                                    cis_print_func = ''
                     if not i_decl:
                         log_func += '\n    uint32_t i;'
                         i_decl = True
@@ -804,19 +785,18 @@ class APIDumpSubcommand(Subcommand):
                          '    }\n'
                          '%s'
                          '}' % (qual, decl, self.layer_name, self.layer_name, proto.c_call(), f_open, log_func, f_close, stmt))
-        
-        elif 'vkphysicalgpu' == proto.params[0].ty.lower():
-            c_call = proto.c_call().replace("(" + proto.params[0].name, "((VkPhysicalGpu)gpuw->nextObject", 1)
-            funcs.append('%s%s\n'
-                     '{\n'
-                     '    using namespace StreamControl;\n'
-                     '    VkBaseLayerObject* gpuw = (VkBaseLayerObject *) %s;\n'
-                     '    pCurObj = gpuw;\n'
-                     '    loader_platform_thread_once(&tabOnce, init%s);\n'
-                     '    %snextTable.%s;\n'
-                     '    %s%s%s\n'
-                     '%s'
-                     '}' % (qual, decl, proto.params[0].name, self.layer_name, ret_val, c_call, f_open, log_func, f_close, stmt))
+#        elif 'vkphysicalgpu' == proto.params[0].ty.lower():
+#            c_call = proto.c_call().replace("(" + proto.params[0].name, "((VkPhysicalGpu)gpuw->nextObject", 1)
+#            funcs.append('%s%s\n'
+#                     '{\n'
+#                     '    using namespace StreamControl;\n'
+#                     '    VkBaseLayerObject* gpuw = (VkBaseLayerObject *) %s;\n'
+#                     '    pCurObj = gpuw;\n'
+#                     '    loader_platform_thread_once(&tabOnce, init%s);\n'
+#                     '    %snextTable.%s;\n'
+#                     '    %s%s%s\n'
+#                     '%s'
+#                     '}' % (qual, decl, proto.params[0].name, self.layer_name, ret_val, c_call, f_open, log_func, f_close, stmt))
         else:
             funcs.append('%s%s\n'
                      '{\n'
@@ -836,48 +816,6 @@ class APIDumpSubcommand(Subcommand):
                 self._generate_layer_gpa_function()]
         return "\n\n".join(body)
 
-## subclass from APIDumpCppSubcommand instead of Subcommand
-#class APIDumpNoAddrCppSubcommand(APIDumpCppSubcommand):
-#    def generate_header(self):
-#        header_txt = []
-#        header_txt.append('#include <stdio.h>\n#include <stdlib.h>\n#include <string.h>')
-#        header_txt.append('#include "loader_platform.h"')
-#        header_txt.append('#include "vkLayer.h"\n#include "vk_struct_string_helper_no_addr_cpp.h"\n')
-#        header_txt.append('// The following is #included again to catch certain OS-specific functions being used:')
-#        header_txt.append('#include "loader_platform.h"')
-#        header_txt.append('static VkLayerDispatchTable nextTable;')
-#        header_txt.append('static VkBaseLayerObject *pCurObj;\n')
-#        header_txt.append('static LOADER_PLATFORM_THREAD_ONCE_DECLARATION(tabOnce);')
-#        header_txt.append('static int printLockInitialized = 0;')
-#        header_txt.append('static loader_platform_thread_mutex printLock;\n')
-#        header_txt.append('#define MAX_TID 513')
-#        header_txt.append('static loader_platform_thread_id tidMapping[MAX_TID] = {0};')
-#        header_txt.append('static uint32_t maxTID = 0;')
-#        header_txt.append('// Map actual TID to an index value and return that index')
-#        header_txt.append('//  This keeps TIDs in range from 0-MAX_TID and simplifies compares between runs')
-#        header_txt.append('static uint32_t getTIDIndex() {')
-#        header_txt.append('    loader_platform_thread_id tid = loader_platform_get_thread_id();')
-#        header_txt.append('    for (uint32_t i = 0; i < maxTID; i++) {')
-#        header_txt.append('        if (tid == tidMapping[i])')
-#        header_txt.append('            return i;')
-#        header_txt.append('    }')
-#        header_txt.append("    // Don't yet have mapping, set it and return newly set index")
-#        header_txt.append('    uint32_t retVal = (uint32_t) maxTID;')
-#        header_txt.append('    tidMapping[maxTID++] = tid;')
-#        header_txt.append('    assert(maxTID < MAX_TID);')
-#        header_txt.append('    return retVal;')
-#        header_txt.append('}')
-#        return "\n".join(header_txt)
-#
-#    def generate_body(self):
-#        self.layer_name = "APIDumpNoAddrCpp"
-#        self.no_addr = True
-#        body = [self._generate_layer_initialization_with_lock(),
-#                self._generate_dispatch_entrypoints("VK_LAYER_EXPORT"),
-#                self._generate_layer_gpa_function()]
-#
-#        return "\n\n".join(body)
-#
 class ObjectTrackerSubcommand(Subcommand):
     def generate_header(self):
         header_txt = []
@@ -1374,7 +1312,7 @@ class ObjectTrackerSubcommand(Subcommand):
             create_line = '    loader_platform_thread_lock_mutex(&objLock);\n'
             create_line += '    ll_insert_obj((void*)*%s, %s);\n' % (proto.params[-2].name, obj_type_mapping[proto.params[-2].ty.strip('*').replace('const ', '')])
             create_line += '    ll_insert_obj((void*)*pMem, VkObjectTypePresentableImageMemory);\n'
-            # create_line += '    ll_insert_obj((void*)*%s, VkObjectTypePresentableImageMemory);\n' % (obj_type_mapping[proto.params[-1].ty.strip('*').replace('const ', '')])
+
             create_line += '    loader_platform_thread_unlock_mutex(&objLock);\n'
         elif 'Create' in proto.name or 'Alloc' in proto.name:
             create_line = '    loader_platform_thread_lock_mutex(&objLock);\n'
