@@ -209,6 +209,13 @@ class Subcommand(object):
             ggei_body.append('    {0x10, "objTrackGetObjectCount"},')
             ggei_body.append('    {0x10, "objTrackGetObjects"}')
             ggei_body.append('};')
+        elif layer == 'Threading':
+            ggei_body.append('#define LAYER_EXT_ARRAY_SIZE 2')
+            ggei_body.append('static const struct extProps layerExts[LAYER_EXT_ARRAY_SIZE] = {')
+            ggei_body.append('    // TODO what is the version?')
+            ggei_body.append('    {0x10, "%s"},' % layer)
+            ggei_body.append('    {0x10, "Validation"},')
+            ggei_body.append('};')
         else:
             ggei_body.append('#define LAYER_EXT_ARRAY_SIZE 1')
             ggei_body.append('static const struct extProps layerExts[LAYER_EXT_ARRAY_SIZE] = {')
