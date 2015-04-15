@@ -196,7 +196,7 @@ public:
             VK_MEMORY_OUTPUT_SHADER_WRITE_BIT |
             VK_MEMORY_OUTPUT_COLOR_ATTACHMENT_BIT |
             VK_MEMORY_OUTPUT_DEPTH_STENCIL_ATTACHMENT_BIT |
-            VK_MEMORY_OUTPUT_COPY_BIT,
+            VK_MEMORY_OUTPUT_TRANSFER_BIT,
         VkFlags inputMask =
             VK_MEMORY_INPUT_CPU_READ_BIT |
             VK_MEMORY_INPUT_INDIRECT_COMMAND_BIT |
@@ -206,7 +206,7 @@ public:
             VK_MEMORY_INPUT_SHADER_READ_BIT |
             VK_MEMORY_INPUT_COLOR_ATTACHMENT_BIT |
             VK_MEMORY_INPUT_DEPTH_STENCIL_ATTACHMENT_BIT |
-            VK_MEMORY_INPUT_COPY_BIT);
+            VK_MEMORY_INPUT_TRANSFER_BIT);
 
     void Bind(VkCmdBuffer cmdBuffer, VkGpuSize offset, uint32_t binding);
 

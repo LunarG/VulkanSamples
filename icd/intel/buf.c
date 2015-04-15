@@ -60,8 +60,10 @@ static VkResult buf_get_info(struct intel_base *base, int type,
              *      bytes added beyond that to account for the L1 cache line."
              */
             mem_req->size = buf->size;
-            if (buf->usage & VK_BUFFER_USAGE_SHADER_ACCESS_READ_BIT)
+            if (buf->usage & (VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT |
+                             VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT)) {
                 mem_req->size = u_align(mem_req->size, 256) + 16;
+            }
 
             mem_req->alignment = 4096;
             mem_req->memType = VK_MEMORY_TYPE_BUFFER;

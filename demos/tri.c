@@ -179,12 +179,12 @@ static void demo_set_image_layout(
 
     if (new_image_layout == VK_IMAGE_LAYOUT_TRANSFER_DESTINATION_OPTIMAL) {
         /* Make sure anything that was copying from this image has completed */
-        image_memory_barrier.inputMask = VK_MEMORY_INPUT_COPY_BIT;
+        image_memory_barrier.inputMask = VK_MEMORY_INPUT_TRANSFER_BIT;
     }
 
     if (new_image_layout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL) {
         /* Make sure any Copy or CPU writes to image are flushed */
-        image_memory_barrier.outputMask = VK_MEMORY_OUTPUT_COPY_BIT | VK_MEMORY_OUTPUT_CPU_WRITE_BIT;
+        image_memory_barrier.outputMask = VK_MEMORY_OUTPUT_TRANSFER_BIT | VK_MEMORY_OUTPUT_CPU_WRITE_BIT;
     }
 
     VkImageMemoryBarrier *pmemory_barrier = &image_memory_barrier;
@@ -633,11 +633,11 @@ static void demo_prepare_textures(struct demo *demo)
     assert(!err);
 
     for (i = 0; i < DEMO_TEXTURE_COUNT; i++) {
-        if ((props.linearTilingFeatures & VK_FORMAT_IMAGE_SHADER_READ_BIT) && !demo->use_staging_buffer) {
+        if ((props.linearTilingFeatures & VK_FORMAT_SAMPLED_IMAGE_BIT) && !demo->use_staging_buffer) {
             /* Device can texture using linear textures */
             demo_prepare_texture_image(demo, tex_colors[i], &demo->textures[i],
                                        VK_LINEAR_TILING, VK_MEMORY_PROPERTY_CPU_VISIBLE_BIT);
-        } else if (props.optimalTilingFeatures & VK_FORMAT_IMAGE_SHADER_READ_BIT){
+        } else if (props.optimalTilingFeatures & VK_FORMAT_SAMPLED_IMAGE_BIT){
             /* Must use staging buffer to copy linear texture to optimized */
             struct texture_object staging_texture;
 
@@ -739,7 +739,7 @@ static void demo_prepare_vertices(struct demo *demo)
         .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
         .pNext = NULL,
         .size = sizeof(vb),
-        .usage = VK_BUFFER_USAGE_VERTEX_FETCH_BIT,
+        .usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
         .flags = 0,
     };
     VkMemoryAllocBufferInfo buf_alloc = {
@@ -829,7 +829,7 @@ static void demo_prepare_vertices(struct demo *demo)
 static void demo_prepare_descriptor_layout(struct demo *demo)
 {
     const VkDescriptorSetLayoutBinding layout_binding = {
-        .descriptorType = VK_DESCRIPTOR_TYPE_SAMPLER_TEXTURE,
+        .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
         .count = DEMO_TEXTURE_COUNT,
         .stageFlags = VK_SHADER_STAGE_FLAGS_FRAGMENT_BIT,
         .pImmutableSamplers = NULL,
@@ -1078,7 +1078,7 @@ static void demo_prepare_dynamic_states(struct demo *demo)
 static void demo_prepare_descriptor_pool(struct demo *demo)
 {
     const VkDescriptorTypeCount type_count = {
-        .type = VK_DESCRIPTOR_TYPE_SAMPLER_TEXTURE,
+        .type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
         .count = DEMO_TEXTURE_COUNT,
     };
     const VkDescriptorPoolCreateInfo descriptor_pool = {

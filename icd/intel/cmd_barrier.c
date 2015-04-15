@@ -244,7 +244,7 @@ static void cmd_memory_barriers(struct intel_cmd *cmd,
     }
 
     /* CPU write is cache coherent, so VK_MEMORY_OUTPUT_CPU_WRITE_BIT needs no flush. */
-    /* Meta handles flushes, so VK_MEMORY_OUTPUT_COPY_BIT needs no flush. */
+    /* Meta handles flushes, so VK_MEMORY_OUTPUT_TRANSFER_BIT needs no flush. */
 
     if (input_mask & (VK_MEMORY_INPUT_SHADER_READ_BIT | VK_MEMORY_INPUT_UNIFORM_READ_BIT)) {
         flush_flags |= GEN6_PIPE_CONTROL_TEXTURE_CACHE_INVALIDATE;
@@ -264,7 +264,7 @@ static void cmd_memory_barriers(struct intel_cmd *cmd,
      * VK_MEMORY_INPUT_INDEX_FETCH_BIT
      * VK_MEMORY_INPUT_COLOR_ATTACHMENT_BIT
      * VK_MEMORY_INPUT_DEPTH_STENCIL_ATTACHMENT_BIT
-     * VK_MEMORY_INPUT_COPY_BIT
+     * VK_MEMORY_INPUT_TRANSFER_BIT
      */
 
     cmd_batch_flush(cmd, flush_flags);

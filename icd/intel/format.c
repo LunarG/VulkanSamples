@@ -577,7 +577,7 @@ static VkFlags intel_format_get_color_features(const struct intel_dev *dev,
     vf = (fmt < ARRAY_SIZE(intel_vf_caps)) ?  &intel_vf_caps[fmt] : NULL;
     dp = (fmt < ARRAY_SIZE(intel_dp_caps)) ?  &intel_dp_caps[fmt] : NULL;
 
-    features = VK_FORMAT_MEMORY_SHADER_ACCESS_BIT;
+    features = VK_FORMAT_STORAGE_IMAGE_BIT;
 
 #define TEST(dev, func, cap) ((func) && (func)->cap && \
         intel_gpu_gen((dev)->gpu) >= (func)->cap)
@@ -588,20 +588,20 @@ static VkFlags intel_format_get_color_features(const struct intel_dev *dev,
     if (TEST(dev, sampler, sampling)) {
         if (icd_format_is_int(format) ||
             TEST(dev, sampler, filtering))
-            features |= VK_FORMAT_IMAGE_SHADER_READ_BIT;
+            features |= VK_FORMAT_SAMPLED_IMAGE_BIT;
     }
 
     if (TEST(dev, dp, typed_write))
-        features |= VK_FORMAT_IMAGE_SHADER_WRITE_BIT;
+        features |= VK_FORMAT_SAMPLED_IMAGE_BIT;
 
     if (TEST(dev, dp, rt_write)) {
-        features |= VK_FORMAT_COLOR_ATTACHMENT_WRITE_BIT;
+        features |= VK_FORMAT_COLOR_ATTACHMENT_BIT;
 
         if (TEST(dev, dp, rt_write_blending))
             features |= VK_FORMAT_COLOR_ATTACHMENT_BLEND_BIT;
 
-        if (features & VK_FORMAT_IMAGE_SHADER_READ_BIT) {
-            features |= VK_FORMAT_IMAGE_COPY_BIT |
+        if (features & VK_FORMAT_SAMPLED_IMAGE_BIT) {
+            features |= VK_FORMAT_SAMPLED_IMAGE_BIT |
                         VK_FORMAT_CONVERSION_BIT;
         }
     }
@@ -619,18 +619,18 @@ static VkFlags intel_format_get_ds_features(const struct intel_dev *dev,
 
     switch (format) {
     case VK_FMT_S8_UINT:
-        features = VK_FORMAT_STENCIL_ATTACHMENT_BIT;;
+        features = VK_FORMAT_DEPTH_STENCIL_ATTACHMENT_BIT;;
         break;
     case VK_FMT_D16_UNORM:
     case VK_FMT_D24_UNORM:
     case VK_FMT_D32_SFLOAT:
-        features = VK_FORMAT_DEPTH_ATTACHMENT_BIT;
+        features = VK_FORMAT_DEPTH_STENCIL_ATTACHMENT_BIT;
         break;
     case VK_FMT_D16_UNORM_S8_UINT:
     case VK_FMT_D24_UNORM_S8_UINT:
     case VK_FMT_D32_SFLOAT_S8_UINT:
-        features = VK_FORMAT_DEPTH_ATTACHMENT_BIT |
-                   VK_FORMAT_STENCIL_ATTACHMENT_BIT;
+        features = VK_FORMAT_DEPTH_STENCIL_ATTACHMENT_BIT |
+                   VK_FORMAT_DEPTH_STENCIL_ATTACHMENT_BIT;
         break;
     default:
         features = 0;
@@ -644,7 +644,7 @@ static VkFlags intel_format_get_raw_features(const struct intel_dev *dev,
                                                VkFormat format)
 {
     return (format == VK_FMT_UNDEFINED) ?
-        VK_FORMAT_MEMORY_SHADER_ACCESS_BIT : 0;
+        VK_FORMAT_STORAGE_IMAGE_BIT : 0;
 }
 
 static void intel_format_get_props(const struct intel_dev *dev,

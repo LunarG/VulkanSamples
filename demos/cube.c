@@ -351,12 +351,12 @@ static void demo_set_image_layout(
 
     if (new_image_layout == VK_IMAGE_LAYOUT_TRANSFER_DESTINATION_OPTIMAL) {
         /* Make sure anything that was copying from this image has completed */
-        image_memory_barrier.inputMask = VK_MEMORY_INPUT_COPY_BIT;
+        image_memory_barrier.inputMask = VK_MEMORY_INPUT_TRANSFER_BIT;
     }
 
     if (new_image_layout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL) {
         /* Make sure any Copy or CPU writes to image are flushed */
-        image_memory_barrier.outputMask = VK_MEMORY_OUTPUT_COPY_BIT | VK_MEMORY_OUTPUT_CPU_WRITE_BIT;
+        image_memory_barrier.outputMask = VK_MEMORY_OUTPUT_CPU_WRITE_BIT | VK_MEMORY_OUTPUT_TRANSFER_BIT;
     }
 
     VkImageMemoryBarrier *pmemory_barrier = &image_memory_barrier;
@@ -990,11 +990,11 @@ static void demo_prepare_textures(struct demo *demo)
 
     for (i = 0; i < DEMO_TEXTURE_COUNT; i++) {
 
-        if (props.linearTilingFeatures & VK_FORMAT_IMAGE_SHADER_READ_BIT && !demo->use_staging_buffer) {
+        if (props.linearTilingFeatures & VK_FORMAT_SAMPLED_IMAGE_BIT && !demo->use_staging_buffer) {
             /* Device can texture using linear textures */
             demo_prepare_texture_image(demo, tex_files[i], &demo->textures[i],
                                        VK_LINEAR_TILING, VK_MEMORY_PROPERTY_CPU_VISIBLE_BIT);
-        } else if (props.optimalTilingFeatures & VK_FORMAT_IMAGE_SHADER_READ_BIT) {
+        } else if (props.optimalTilingFeatures & VK_FORMAT_SAMPLED_IMAGE_BIT) {
             /* Must use staging buffer to copy linear texture to optimized */
             struct texture_object staging_texture;
 
@@ -1132,7 +1132,7 @@ void demo_prepare_cube_data_buffer(struct demo *demo)
     memset(&buf_info, 0, sizeof(buf_info));
     buf_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
     buf_info.size = sizeof(data);
-    buf_info.usage = VK_BUFFER_USAGE_UNIFORM_READ_BIT;
+    buf_info.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
     err = vkCreateBuffer(demo->device, &buf_info, &demo->uniform_data.buf);
     assert(!err);
 
@@ -1196,7 +1196,7 @@ static void demo_prepare_descriptor_layout(struct demo *demo)
             .pImmutableSamplers = NULL,
         },
         [1] = {
-            .descriptorType = VK_DESCRIPTOR_TYPE_SAMPLER_TEXTURE,
+            .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
             .count = DEMO_TEXTURE_COUNT,
             .stageFlags = VK_SHADER_STAGE_FLAGS_FRAGMENT_BIT,
             .pImmutableSamplers = NULL,
@@ -1508,7 +1508,7 @@ static void demo_prepare_descriptor_pool(struct demo *demo)
             .count = 1,
         },
         [1] = {
-            .type = VK_DESCRIPTOR_TYPE_SAMPLER_TEXTURE,
+            .type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
             .count = DEMO_TEXTURE_COUNT,
         },
     };

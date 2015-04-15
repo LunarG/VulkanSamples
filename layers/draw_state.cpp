@@ -677,7 +677,7 @@ static bool32_t validateUpdateType(const LAYOUT_NODE* pLayout, const GENERIC_HEA
             actualType = VK_DESCRIPTOR_TYPE_SAMPLER;
             break;
         case VK_STRUCTURE_TYPE_UPDATE_SAMPLER_TEXTURES:
-            actualType = VK_DESCRIPTOR_TYPE_SAMPLER_TEXTURE;
+            actualType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
             break;
         case VK_STRUCTURE_TYPE_UPDATE_IMAGES:
             actualType = ((VkUpdateImages*)pUpdateStruct)->descriptorType;

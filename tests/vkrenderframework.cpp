@@ -203,7 +203,6 @@ void VkRenderFramework::InitRenderTarget(uint32_t targets, VkDepthStencilBindInf
     for (i = 0; i < targets; i++) {
         VkImageObj *img = new VkImageObj(m_device);
         img->init(m_width, m_height, m_render_target_fmt,
-                VK_IMAGE_USAGE_SHADER_ACCESS_WRITE_BIT |
                 VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT);
         m_colorBindings[i].view  = img->targetView();
         m_colorBindings[i].layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
@@ -284,7 +283,7 @@ int VkDescriptorSetObj::AppendDummy()
 {
     /* request a descriptor but do not update it */
     VkDescriptorTypeCount tc = {};
-    tc.type = VK_DESCRIPTOR_TYPE_SHADER_STORAGE_BUFFER;
+    tc.type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
     tc.count = 1;
     m_type_counts.push_back(tc);
 
@@ -310,7 +309,7 @@ int VkDescriptorSetObj::AppendBuffer(VkDescriptorType type, VkConstantBufferObj 
 int VkDescriptorSetObj::AppendSamplerTexture( VkSamplerObj* sampler, VkTextureObj* texture)
 {
     VkDescriptorTypeCount tc = {};
-    tc.type = VK_DESCRIPTOR_TYPE_SAMPLER_TEXTURE;
+    tc.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
     tc.count = 1;
     m_type_counts.push_back(tc);
 
@@ -449,7 +448,7 @@ void VkImageObj::SetLayout(VkCommandBufferObj *cmd_buf,
             VK_MEMORY_OUTPUT_SHADER_WRITE_BIT |
             VK_MEMORY_OUTPUT_COLOR_ATTACHMENT_BIT |
             VK_MEMORY_OUTPUT_DEPTH_STENCIL_ATTACHMENT_BIT |
-            VK_MEMORY_OUTPUT_COPY_BIT;
+            VK_MEMORY_OUTPUT_TRANSFER_BIT;
     const VkFlags all_cache_inputs =
             VK_MEMORY_INPUT_CPU_READ_BIT |
             VK_MEMORY_INPUT_INDIRECT_COMMAND_BIT |
@@ -459,7 +458,7 @@ void VkImageObj::SetLayout(VkCommandBufferObj *cmd_buf,
             VK_MEMORY_INPUT_SHADER_READ_BIT |
             VK_MEMORY_INPUT_COLOR_ATTACHMENT_BIT |
             VK_MEMORY_INPUT_DEPTH_STENCIL_ATTACHMENT_BIT |
-            VK_MEMORY_INPUT_COPY_BIT;
+            VK_MEMORY_INPUT_TRANSFER_BIT;
 
     if (image_layout == m_imageInfo.layout) {
         return;
@@ -467,21 +466,21 @@ void VkImageObj::SetLayout(VkCommandBufferObj *cmd_buf,
 
     switch (image_layout) {
     case VK_IMAGE_LAYOUT_TRANSFER_SOURCE_OPTIMAL:
-        output_mask = VK_MEMORY_OUTPUT_COPY_BIT;
-        input_mask = VK_MEMORY_INPUT_SHADER_READ_BIT | VK_MEMORY_INPUT_COPY_BIT;
+        output_mask = VK_MEMORY_OUTPUT_TRANSFER_BIT;
+        input_mask = VK_MEMORY_INPUT_SHADER_READ_BIT | VK_MEMORY_INPUT_TRANSFER_BIT;
         break;
 
     case VK_IMAGE_LAYOUT_TRANSFER_DESTINATION_OPTIMAL:
-        output_mask = VK_MEMORY_OUTPUT_COPY_BIT;
-        input_mask = VK_MEMORY_INPUT_SHADER_READ_BIT | VK_MEMORY_INPUT_COPY_BIT;
+        output_mask = VK_MEMORY_OUTPUT_TRANSFER_BIT;
+        input_mask = VK_MEMORY_INPUT_SHADER_READ_BIT | VK_MEMORY_INPUT_TRANSFER_BIT;
         break;
 
     case VK_IMAGE_LAYOUT_CLEAR_OPTIMAL:
         break;
 
     case VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL:
-        output_mask = VK_MEMORY_OUTPUT_COPY_BIT;
-        input_mask = VK_MEMORY_INPUT_SHADER_READ_BIT | VK_MEMORY_INPUT_COPY_BIT;
+        output_mask = VK_MEMORY_OUTPUT_TRANSFER_BIT;
+        input_mask = VK_MEMORY_INPUT_SHADER_READ_BIT | VK_MEMORY_INPUT_TRANSFER_BIT;
         break;
 
     default:
@@ -514,12 +513,8 @@ void VkImageObj::SetLayout(VkImageAspect aspect,
 
 bool VkImageObj::IsCompatible(VkFlags usage, VkFlags features)
 {
-    if ((usage & VK_IMAGE_USAGE_SHADER_ACCESS_READ_BIT) &&
-            !(features & VK_FORMAT_IMAGE_SHADER_READ_BIT))
-        return false;
-
-    if ((usage & VK_IMAGE_USAGE_SHADER_ACCESS_WRITE_BIT) &&
-            !(features & VK_FORMAT_IMAGE_SHADER_WRITE_BIT))
+    if ((usage & VK_IMAGE_USAGE_SAMPLED_BIT) &&
+            !(features & VK_FORMAT_SAMPLED_IMAGE_BIT))
         return false;
 
     return true;
@@ -580,7 +575,7 @@ void VkImageObj::init(uint32_t w, uint32_t h,
 
     vk_testing::Image::init(*m_device, imageCreateInfo);
 
-    if (usage & VK_IMAGE_USAGE_SHADER_ACCESS_READ_BIT) {
+    if (usage & VK_IMAGE_USAGE_SAMPLED_BIT) {
         SetLayout(VK_IMAGE_ASPECT_COLOR, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
     } else {
         SetLayout(VK_IMAGE_ASPECT_COLOR, VK_IMAGE_LAYOUT_GENERAL);
@@ -688,7 +683,7 @@ VkTextureObj::VkTextureObj(VkDeviceObj *device, uint32_t *colors)
     view.minLod = 0.0f;
 
     /* create image */
-    init(16, 16, tex_format, VK_IMAGE_USAGE_SHADER_ACCESS_READ_BIT, VK_OPTIMAL_TILING);
+    init(16, 16, tex_format, VK_IMAGE_USAGE_SAMPLED_BIT, VK_OPTIMAL_TILING);
 
     /* create image view */
     view.image = obj();
@@ -899,7 +894,7 @@ void VkIndexBufferObj::CreateAndInitBuffer(int numIndexes, VkIndexType indexType
     VkBufferViewCreateInfo view_info = {};
     view_info.sType = VK_STRUCTURE_TYPE_BUFFER_VIEW_CREATE_INFO;
     view_info.buffer = obj();
-    view_info.viewType = VK_BUFFER_VIEW_TYPED;
+    view_info.viewType = VK_BUFFER_VIEW_FORMATTED;
     view_info.format = viewFormat;
     view_info.offset = 0;
     view_info.range  = allocationSize;
@@ -1201,7 +1196,7 @@ void VkCommandBufferObj::ClearAllBuffers(VkClearColor clear_color, float depth_c
         VK_MEMORY_OUTPUT_SHADER_WRITE_BIT |
         VK_MEMORY_OUTPUT_COLOR_ATTACHMENT_BIT |
         VK_MEMORY_OUTPUT_DEPTH_STENCIL_ATTACHMENT_BIT |
-        VK_MEMORY_OUTPUT_COPY_BIT;
+        VK_MEMORY_OUTPUT_TRANSFER_BIT;
     const VkFlags input_mask = 0;
 
     // whatever we want to do, we do it to the whole buffer
@@ -1283,7 +1278,7 @@ void VkCommandBufferObj::PrepareAttachments()
         VK_MEMORY_OUTPUT_SHADER_WRITE_BIT |
         VK_MEMORY_OUTPUT_COLOR_ATTACHMENT_BIT |
         VK_MEMORY_OUTPUT_DEPTH_STENCIL_ATTACHMENT_BIT |
-        VK_MEMORY_OUTPUT_COPY_BIT;
+        VK_MEMORY_OUTPUT_TRANSFER_BIT;
     const VkFlags input_mask =
         VK_MEMORY_INPUT_CPU_READ_BIT |
         VK_MEMORY_INPUT_INDIRECT_COMMAND_BIT |
@@ -1293,7 +1288,7 @@ void VkCommandBufferObj::PrepareAttachments()
         VK_MEMORY_INPUT_SHADER_READ_BIT |
         VK_MEMORY_INPUT_COLOR_ATTACHMENT_BIT |
         VK_MEMORY_INPUT_DEPTH_STENCIL_ATTACHMENT_BIT |
-        VK_MEMORY_INPUT_COPY_BIT;
+        VK_MEMORY_INPUT_TRANSFER_BIT;
 
     VkImageSubresourceRange srRange = {};
     srRange.aspect = VK_IMAGE_ASPECT_COLOR;

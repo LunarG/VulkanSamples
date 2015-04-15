@@ -407,7 +407,7 @@ public:
     VkSubresourceLayout subresource_layout(const VkImageSubresource &subres) const;
 
     bool transparent() const;
-    bool copyable() const { return (format_features_ & VK_FORMAT_IMAGE_COPY_BIT); }
+    bool copyable() const { return (format_features_ & VK_FORMAT_SAMPLED_IMAGE_BIT); }
 
     VkImageSubresourceRange subresource_range(VkImageAspect aspect) const { return subresource_range(create_info_, aspect); }
     VkExtent3D extent() const { return create_info_.extent; }

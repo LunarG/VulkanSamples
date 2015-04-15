@@ -1070,9 +1070,9 @@ VkResult intel_buf_view_create(struct intel_dev *dev,
                                  struct intel_buf_view **view_ret)
 {
     struct intel_buf *buf = intel_buf(info->buffer);
-    const bool will_write = (buf->usage |
-            (VK_BUFFER_USAGE_SHADER_ACCESS_WRITE_BIT &
-             VK_BUFFER_USAGE_SHADER_ACCESS_ATOMIC_BIT));
+    /* TODO: Is transfer destination the only shader write operation? */
+    const bool will_write = (buf->usage & (VK_BUFFER_USAGE_STORAGE_TEXEL_BUFFER_BIT |
+                             VK_BUFFER_USAGE_STORAGE_BUFFER_BIT));
     VkFormat format;
     VkGpuSize stride;
     uint32_t *cmd;

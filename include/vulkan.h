@@ -33,7 +33,7 @@
 #include "vk_platform.h"
 
 // Vulkan API version supported by this file
-#define VK_API_VERSION VK_MAKE_VERSION(0, 72, 0)
+#define VK_API_VERSION VK_MAKE_VERSION(0, 78, 0)
 
 #ifdef __cplusplus
 extern "C"
@@ -176,7 +176,7 @@ typedef enum VkMemoryOutputFlags_
     VK_MEMORY_OUTPUT_SHADER_WRITE_BIT                       = 0x00000002,   // Controls output coherency of generic shader writes
     VK_MEMORY_OUTPUT_COLOR_ATTACHMENT_BIT                   = 0x00000004,   // Controls output coherency of color attachment writes
     VK_MEMORY_OUTPUT_DEPTH_STENCIL_ATTACHMENT_BIT           = 0x00000008,   // Controls output coherency of depth/stencil attachment writes
-    VK_MEMORY_OUTPUT_COPY_BIT                               = 0x00000010,   // Controls output coherency of copy operations
+    VK_MEMORY_OUTPUT_TRANSFER_BIT                           = 0x00000010,   // Controls output coherency of transfer operations
     VK_MAX_ENUM(VkMemoryOutputFlags)
 } VkMemoryOutputFlags;
 
@@ -190,7 +190,7 @@ typedef enum VkMemoryInputFlags_
     VK_MEMORY_INPUT_SHADER_READ_BIT                         = 0x00000020,   // Controls input coherency of generic shader reads
     VK_MEMORY_INPUT_COLOR_ATTACHMENT_BIT                    = 0x00000040,   // Controls input coherency of color attachment reads
     VK_MEMORY_INPUT_DEPTH_STENCIL_ATTACHMENT_BIT            = 0x00000080,   // Controls input coherency of depth/stencil attachment reads
-    VK_MEMORY_INPUT_COPY_BIT                                = 0x00000100,   // Controls input coherency of copy operations
+    VK_MEMORY_INPUT_TRANSFER_BIT                            = 0x00000100,   // Controls input coherency of transfer operations
     VK_MAX_ENUM(VkMemoryInputFlags)
 } VkMemoryInputFlags;
 
@@ -284,18 +284,18 @@ typedef enum VkChannelSwizzle_
 typedef enum VkDescriptorType_
 {
     VK_DESCRIPTOR_TYPE_SAMPLER                              = 0x00000000,
-    VK_DESCRIPTOR_TYPE_SAMPLER_TEXTURE                      = 0x00000001,
-    VK_DESCRIPTOR_TYPE_TEXTURE                              = 0x00000002,
-    VK_DESCRIPTOR_TYPE_TEXTURE_BUFFER                       = 0x00000003,
-    VK_DESCRIPTOR_TYPE_IMAGE                                = 0x00000004,
-    VK_DESCRIPTOR_TYPE_IMAGE_BUFFER                         = 0x00000005,
+    VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER               = 0x00000001,
+    VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE                        = 0x00000002,
+    VK_DESCRIPTOR_TYPE_STORAGE_IMAGE                        = 0x00000003,
+    VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER                 = 0x00000004,
+    VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER                 = 0x00000005,
     VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER                       = 0x00000006,
-    VK_DESCRIPTOR_TYPE_SHADER_STORAGE_BUFFER                = 0x00000007,
+    VK_DESCRIPTOR_TYPE_STORAGE_BUFFER                       = 0x00000007,
     VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC               = 0x00000008,
-    VK_DESCRIPTOR_TYPE_SHADER_STORAGE_BUFFER_DYNAMIC        = 0x00000009,
+    VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC               = 0x00000009,
 
     VK_DESCRIPTOR_TYPE_BEGIN_RANGE                          = VK_DESCRIPTOR_TYPE_SAMPLER,
-    VK_DESCRIPTOR_TYPE_END_RANGE                            = VK_DESCRIPTOR_TYPE_SHADER_STORAGE_BUFFER_DYNAMIC,
+    VK_DESCRIPTOR_TYPE_END_RANGE                            = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC,
     VK_NUM_DESCRIPTOR_TYPE                                  = (VK_DESCRIPTOR_TYPE_END_RANGE - VK_DESCRIPTOR_TYPE_BEGIN_RANGE + 1),
     VK_MAX_ENUM(VkDescriptorType)
 } VkDescriptorType;
@@ -1125,19 +1125,16 @@ typedef enum VkMemoryType_
 // Buffer and buffer allocation usage flags
 typedef enum VkBufferUsageFlags_
 {
-    VK_BUFFER_USAGE_GENERAL                                 = 0x00000000,   // no special usage
-    VK_BUFFER_USAGE_SHADER_ACCESS_READ_BIT                  = 0x00000001,   // Shader read (e.g. TBO, image buffer, UBO, SSBO)
-    VK_BUFFER_USAGE_SHADER_ACCESS_WRITE_BIT                 = 0x00000002,   // Shader write (e.g. image buffer, SSBO)
-    VK_BUFFER_USAGE_SHADER_ACCESS_ATOMIC_BIT                = 0x00000004,   // Shader atomic operations (e.g. image buffer, SSBO)
-    VK_BUFFER_USAGE_TRANSFER_SOURCE_BIT                     = 0x00000008,   // used as a source for copies
-    VK_BUFFER_USAGE_TRANSFER_DESTINATION_BIT                = 0x00000010,   // used as a destination for copies
-    VK_BUFFER_USAGE_UNIFORM_READ_BIT                        = 0x00000020,   // Uniform read (UBO)
-    VK_BUFFER_USAGE_INDEX_FETCH_BIT                         = 0x00000040,   // Fixed function index fetch (index buffer)
-    VK_BUFFER_USAGE_VERTEX_FETCH_BIT                        = 0x00000080,   // Fixed function vertex fetch (VBO)
-    VK_BUFFER_USAGE_SHADER_STORAGE_BIT                      = 0x00000100,   // Shader storage buffer (SSBO)
-    VK_BUFFER_USAGE_INDIRECT_PARAMETER_FETCH_BIT            = 0x00000200,   // Can be the source of indirect parameters (e.g. indirect buffer, parameter buffer)
-    VK_BUFFER_USAGE_TEXTURE_BUFFER_BIT                      = 0x00000400,   // texture buffer (TBO)
-    VK_BUFFER_USAGE_IMAGE_BUFFER_BIT                        = 0x00000800,   // image buffer (load/store)
+    VK_BUFFER_USAGE_GENERAL                                 = 0x00000000,   // No special usage
+    VK_BUFFER_USAGE_TRANSFER_SOURCE_BIT                     = 0x00000001,   // Can be used as a source of transfer operations
+    VK_BUFFER_USAGE_TRANSFER_DESTINATION_BIT                = 0x00000002,   // Can be used as a destination of transfer operations
+    VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT                = 0x00000004,   // Can be used as TBO
+    VK_BUFFER_USAGE_STORAGE_TEXEL_BUFFER_BIT                = 0x00000008,   // Can be used as IBO
+    VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT                      = 0x00000010,   // Can be used as UBO
+    VK_BUFFER_USAGE_STORAGE_BUFFER_BIT                      = 0x00000020,   // Can be used as SSBO
+    VK_BUFFER_USAGE_INDEX_BUFFER_BIT                        = 0x00000040,   // Can be used as source of fixed function index fetch (index buffer)
+    VK_BUFFER_USAGE_VERTEX_BUFFER_BIT                       = 0x00000080,   // Can be used as source of fixed function vertex fetch (VBO)
+    VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT                     = 0x00000100,   // Can be the source of indirect parameters (e.g. indirect buffer, parameter buffer)
     VK_MAX_ENUM(VkBufferUsageFlags)
 } VkBufferUsageFlags;
 
@@ -1151,11 +1148,11 @@ typedef enum VkBufferCreateFlags_
 
 typedef enum VkBufferViewType_
 {
-    VK_BUFFER_VIEW_RAW                                      = 0x00000000,   // Raw buffer without special structure (e.g. UBO, SSBO, indirect and parameter buffers)
-    VK_BUFFER_VIEW_TYPED                                    = 0x00000001,   // Typed buffer, format and channels are used (TBO, image buffer)
+    VK_BUFFER_VIEW_RAW                                      = 0x00000000,   // Raw buffer without special structure (UBO, SSBO)
+    VK_BUFFER_VIEW_FORMATTED                                = 0x00000001,   // Buffer with format (TBO, IBO)
 
     VK_BUFFER_VIEW_TYPE_BEGIN_RANGE                         = VK_BUFFER_VIEW_RAW,
-    VK_BUFFER_VIEW_TYPE_END_RANGE                           = VK_BUFFER_VIEW_TYPED,
+    VK_BUFFER_VIEW_TYPE_END_RANGE                           = VK_BUFFER_VIEW_FORMATTED,
     VK_NUM_BUFFER_VIEW_TYPE                                 = (VK_BUFFER_VIEW_TYPE_END_RANGE - VK_BUFFER_VIEW_TYPE_BEGIN_RANGE + 1),
     VK_MAX_ENUM(VkBufferViewType)
 } VkBufferViewType;
@@ -1193,16 +1190,13 @@ typedef enum VkImageFormatClass_
 typedef enum VkImageUsageFlags_
 {
     VK_IMAGE_USAGE_GENERAL                                  = 0x00000000,   // no special usage
-    VK_IMAGE_USAGE_SHADER_ACCESS_READ_BIT                   = 0x00000001,   // shader read (e.g. texture, image)
-    VK_IMAGE_USAGE_SHADER_ACCESS_WRITE_BIT                  = 0x00000002,   // shader write (e.g. image)
-    VK_IMAGE_USAGE_SHADER_ACCESS_ATOMIC_BIT                 = 0x00000004,   // shader atomic operations (e.g. image)
-    VK_IMAGE_USAGE_TRANSFER_SOURCE_BIT                      = 0x00000008,   // used as a source for copies
-    VK_IMAGE_USAGE_TRANSFER_DESTINATION_BIT                 = 0x00000010,   // used as a destination for copies
-    VK_IMAGE_USAGE_TEXTURE_BIT                              = 0x00000020,   // opaque texture (2d, 3d, etc.)
-    VK_IMAGE_USAGE_IMAGE_BIT                                = 0x00000040,   // opaque image (2d, 3d, etc.)
-    VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT                     = 0x00000080,   // framebuffer color attachment
-    VK_IMAGE_USAGE_DEPTH_STENCIL_BIT                        = 0x00000100,   // framebuffer depth/stencil
-    VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT                 = 0x00000200,   // image data not needed outside of rendering.
+    VK_IMAGE_USAGE_TRANSFER_SOURCE_BIT                      = 0x00000001,   // Can be used as a source of transfer operations
+    VK_IMAGE_USAGE_TRANSFER_DESTINATION_BIT                 = 0x00000002,   // Can be used as a destination of transfer operations
+    VK_IMAGE_USAGE_SAMPLED_BIT                              = 0x00000004,   // Can be sampled from (SAMPLED_IMAGE and COMBINED_IMAGE_SAMPLER descriptor types)
+    VK_IMAGE_USAGE_STORAGE_BIT                              = 0x00000008,   // Can be used as storage image (STORAGE_IMAGE descriptor type)
+    VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT                     = 0x00000010,   // Can be used as framebuffer color attachment
+    VK_IMAGE_USAGE_DEPTH_STENCIL_BIT                        = 0x00000020,   // Can be used as framebuffer depth/stencil attachment
+    VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT                 = 0x00000040,   // Image data not needed outside of rendering
     VK_MAX_ENUM(VkImageUsageFlags)
 } VkImageUsageFlags;
 
@@ -1251,16 +1245,17 @@ typedef enum VkSemaphoreCreateFlags_
 // Format capability flags
 typedef enum VkFormatFeatureFlags_
 {
-    VK_FORMAT_IMAGE_SHADER_READ_BIT                         = 0x00000001,
-    VK_FORMAT_IMAGE_SHADER_WRITE_BIT                        = 0x00000002,
-    VK_FORMAT_IMAGE_COPY_BIT                                = 0x00000004,
-    VK_FORMAT_MEMORY_SHADER_ACCESS_BIT                      = 0x00000008,
-    VK_FORMAT_COLOR_ATTACHMENT_WRITE_BIT                    = 0x00000010,
-    VK_FORMAT_COLOR_ATTACHMENT_BLEND_BIT                    = 0x00000020,
-    VK_FORMAT_DEPTH_ATTACHMENT_BIT                          = 0x00000040,
-    VK_FORMAT_STENCIL_ATTACHMENT_BIT                        = 0x00000080,
-    VK_FORMAT_MSAA_ATTACHMENT_BIT                           = 0x00000100,
-    VK_FORMAT_CONVERSION_BIT                                = 0x00000200,
+    VK_FORMAT_SAMPLED_IMAGE_BIT                             = 0x00000001,   // Format can be used for sampled images (SAMPLED_IMAGE and COMBINED_IMAGE_SAMPLER descriptor types)
+    VK_FORMAT_STORAGE_IMAGE_BIT                             = 0x00000002,   // Format can be used for storage images (STORAGE_IMAGE descriptor type)
+    VK_FORMAT_STORAGE_IMAGE_ATOMIC_BIT                      = 0x00000004,   // Format supports atomic operations in case it's used for storage images
+    VK_FORMAT_UNIFORM_TEXEL_BUFFER_BIT                      = 0x00000008,   // Format can be used for uniform texel buffers (TBOs)
+    VK_FORMAT_STORAGE_TEXEL_BUFFER_BIT                      = 0x00000010,   // Format can be used for storage texel buffers (IBOs)
+    VK_FORMAT_STORAGE_TEXEL_BUFFER_ATOMIC_BIT               = 0x00000020,   // Format supports atomic operations in case it's used for storage texel buffers
+    VK_FORMAT_VERTEX_BUFFER_BIT                             = 0x00000040,   // Format can be used for vertex buffers (VBOs)
+    VK_FORMAT_COLOR_ATTACHMENT_BIT                          = 0x00000080,   // Format can be used for color attachment images
+    VK_FORMAT_COLOR_ATTACHMENT_BLEND_BIT                    = 0x00000100,   // Format supports blending in case it's used for color attachment images
+    VK_FORMAT_DEPTH_STENCIL_ATTACHMENT_BIT                  = 0x00000200,   // Format can be used for depth/stencil attachment images
+    VK_FORMAT_CONVERSION_BIT                                = 0x00000400,   // Format can be used as the source or destination of format converting blits
     VK_MAX_ENUM(VkFormatFeatureFlags)
 } VkFormatFeatureFlags;
 
@@ -1808,28 +1803,28 @@ typedef struct VkImageMemoryBindInfo_
 typedef struct VkImageCopy_
 {
     VkImageSubresource                          srcSubresource;
-    VkOffset3D                                  srcOffset;
+    VkOffset3D                                  srcOffset;             // Specified in pixels for both compressed and uncompressed images
     VkImageSubresource                          destSubresource;
-    VkOffset3D                                  destOffset;
-    VkExtent3D                                  extent;
+    VkOffset3D                                  destOffset;            // Specified in pixels for both compressed and uncompressed images
+    VkExtent3D                                  extent;                // Specified in pixels for both compressed and uncompressed images
 } VkImageCopy;
 
 typedef struct VkImageBlit_
 {
     VkImageSubresource                          srcSubresource;
-    VkOffset3D                                  srcOffset;
-    VkExtent3D                                  srcExtent;
+    VkOffset3D                                  srcOffset;              // Specified in pixels for both compressed and uncompressed images
+    VkExtent3D                                  srcExtent;              // Specified in pixels for both compressed and uncompressed images
     VkImageSubresource                          destSubresource;
-    VkOffset3D                                  destOffset;
-    VkExtent3D                                  destExtent;
+    VkOffset3D                                  destOffset;             // Specified in pixels for both compressed and uncompressed images
+    VkExtent3D                                  destExtent;             // Specified in pixels for both compressed and uncompressed images
 } VkImageBlit;
 
 typedef struct VkBufferImageCopy_
 {
     VkGpuSize                                   bufferOffset;           // Specified in bytes
     VkImageSubresource                          imageSubresource;
-    VkOffset3D                                  imageOffset;           // Specified in pixels for both compressed and uncompressed images
-    VkExtent3D                                  imageExtent;           // Specified in pixels for both compressed and uncompressed images
+    VkOffset3D                                  imageOffset;            // Specified in pixels for both compressed and uncompressed images
+    VkExtent3D                                  imageExtent;            // Specified in pixels for both compressed and uncompressed images
 } VkBufferImageCopy;
 
 typedef struct VkImageResolve_
@@ -1925,7 +1920,7 @@ typedef struct VkComputePipelineCreateInfo_
 typedef struct VkVertexInputBindingDescription_
 {
     uint32_t                                    binding;        // Vertex buffer binding id
-    uint32_t                                    strideInBytes;  // Distance between vertices in bytes (0  = no advancement)
+    uint32_t                                    strideInBytes;  // Distance between vertices in bytes (0 = no advancement)
 
     VkVertexInputStepRate                       stepRate;       // Rate at which binding is incremented
 } VkVertexInputBindingDescription;
@@ -2851,7 +2846,7 @@ void VKAPI vkCmdBindDescriptorSets(
     uint32_t                                    layoutChainSlot,
     uint32_t                                    count,
     const VkDescriptorSet*                      pDescriptorSets,
-    const uint32_t    *                         pUserData);
+    const uint32_t*                             pUserData);
 
 void VKAPI vkCmdBindIndexBuffer(
     VkCmdBuffer                                 cmdBuffer,

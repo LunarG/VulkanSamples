@@ -180,18 +180,18 @@ static VkResult desc_region_get_desc_size(const struct intel_desc_region *region
     case VK_DESCRIPTOR_TYPE_SAMPLER:
         sampler_size = region->sampler_desc_size;
         break;
-    case VK_DESCRIPTOR_TYPE_SAMPLER_TEXTURE:
+    case VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER:
         surface_size = region->surface_desc_size;
         sampler_size = region->sampler_desc_size;
         break;
-    case VK_DESCRIPTOR_TYPE_TEXTURE:
-    case VK_DESCRIPTOR_TYPE_TEXTURE_BUFFER:
-    case VK_DESCRIPTOR_TYPE_IMAGE:
-    case VK_DESCRIPTOR_TYPE_IMAGE_BUFFER:
+    case VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE:
+    case VK_DESCRIPTOR_TYPE_STORAGE_IMAGE:
+    case VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER:
+    case VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER:
     case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER:
-    case VK_DESCRIPTOR_TYPE_SHADER_STORAGE_BUFFER:
+    case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER:
     case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC:
-    case VK_DESCRIPTOR_TYPE_SHADER_STORAGE_BUFFER_DYNAMIC:
+    case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC:
         surface_size = region->surface_desc_size;
         break;
     default:
@@ -559,7 +559,7 @@ void intel_desc_set_update_sampler_textures(struct intel_desc_set *set,
     const struct intel_desc_layout_binding *binding;
     uint32_t i;
 
-    if (!desc_iter_init_for_update(&iter, set, VK_DESCRIPTOR_TYPE_SAMPLER_TEXTURE,
+    if (!desc_iter_init_for_update(&iter, set, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
                 update->binding, update->arrayIndex))
         return;
 
@@ -667,7 +667,7 @@ void intel_desc_set_update_as_copy(struct intel_desc_set *set,
     uint32_t i;
 
     /* disallow combined sampler textures */
-    if (update->descriptorType == VK_DESCRIPTOR_TYPE_SAMPLER_TEXTURE)
+    if (update->descriptorType == VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER)
         return;
 
     if (!desc_iter_init_for_update(&iter, set, update->descriptorType,
@@ -726,7 +726,7 @@ static VkResult desc_layout_init_bindings(struct intel_desc_layout *layout,
 
         switch (lb->descriptorType) {
         case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC:
-        case VK_DESCRIPTOR_TYPE_SHADER_STORAGE_BUFFER_DYNAMIC:
+        case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC:
             layout->dynamic_desc_count += lb->count;
             break;
         default:

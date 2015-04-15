@@ -570,15 +570,7 @@ void XglTest::CreateImageTest()
     imageCreateInfo.samples = 1;
     imageCreateInfo.tiling = VK_LINEAR_TILING;
 
-// Image usage flags
-//    typedef enum VkImageUsageFlags_
-//    {
-//        VK_IMAGE_USAGE_SHADER_ACCESS_READ_BIT                  = 0x00000001,
-//        VK_IMAGE_USAGE_SHADER_ACCESS_WRITE_BIT                 = 0x00000002,
-//        VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT                    = 0x00000004,
-//        VK_IMAGE_USAGE_DEPTH_STENCIL_BIT                       = 0x00000008,
-//    } VkImageUsageFlags;
-    imageCreateInfo.usage = VK_IMAGE_USAGE_SHADER_ACCESS_WRITE_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+    imageCreateInfo.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 
 //    VkResult VKAPI vkCreateImage(
 //        VkDevice                                  device,

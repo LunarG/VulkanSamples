@@ -487,17 +487,19 @@ static void app_dev_dump_format_props(const struct app_dev *dev, VkFormat fmt)
             continue;
 
         printf("\t%s tiling image =%s%s%s\n", tilings[i].name,
-                (tilings[i].flags & VK_FORMAT_IMAGE_SHADER_READ_BIT)      ? " read" : "",
-                (tilings[i].flags & VK_FORMAT_IMAGE_SHADER_WRITE_BIT)     ? " write" : "",
-                (tilings[i].flags & VK_FORMAT_IMAGE_COPY_BIT)             ? " copy" : "");
-        printf("\t%s tiling memory =%s\n", tilings[i].name,
-                (tilings[i].flags & VK_FORMAT_MEMORY_SHADER_ACCESS_BIT)   ? " access" : "");
-        printf("\t%s tiling attachment =%s%s%s%s%s\n", tilings[i].name,
-                (tilings[i].flags & VK_FORMAT_COLOR_ATTACHMENT_WRITE_BIT) ? " color" : "",
+                (tilings[i].flags & VK_FORMAT_SAMPLED_IMAGE_BIT)      ? " sampled" : "",
+                (tilings[i].flags & VK_FORMAT_STORAGE_IMAGE_BIT)   ? " storage" : "",
+                (tilings[i].flags & VK_FORMAT_STORAGE_IMAGE_ATOMIC_BIT) ? " atomic" : "");
+        printf("\t%s tiling texel =%s%s%s\n", tilings[i].name,
+                (tilings[i].flags & VK_FORMAT_UNIFORM_TEXEL_BUFFER_BIT)      ? " TBO" : "",
+                (tilings[i].flags & VK_FORMAT_STORAGE_TEXEL_BUFFER_BIT)   ? " IBO" : "",
+                (tilings[i].flags & VK_FORMAT_STORAGE_TEXEL_BUFFER_ATOMIC_BIT) ? " atomic" : "");
+        printf("\t%s tiling attachment =%s%s%s\n", tilings[i].name,
+                (tilings[i].flags & VK_FORMAT_COLOR_ATTACHMENT_BIT) ? " color" : "",
                 (tilings[i].flags & VK_FORMAT_COLOR_ATTACHMENT_BLEND_BIT) ? " blend" : "",
-                (tilings[i].flags & VK_FORMAT_DEPTH_ATTACHMENT_BIT)       ? " depth" : "",
-                (tilings[i].flags & VK_FORMAT_STENCIL_ATTACHMENT_BIT)     ? " stencil" : "",
-                (tilings[i].flags & VK_FORMAT_MSAA_ATTACHMENT_BIT)        ? " msaa" : "");
+                (tilings[i].flags & VK_FORMAT_DEPTH_STENCIL_ATTACHMENT_BIT)       ? " depth/stencil" : "");
+        printf("\t%s tiling vertex = %u\n", tilings[i].name,
+                (bool) (tilings[i].flags & VK_FORMAT_VERTEX_BUFFER_BIT));
         printf("\t%s tiling conversion = %u\n", tilings[i].name,
                 (bool) (tilings[i].flags & VK_FORMAT_CONVERSION_BIT));
     }

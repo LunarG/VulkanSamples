@@ -534,7 +534,7 @@ layout_get_valid_tilings(const struct intel_layout *layout,
       valid_tilings &= ~LAYOUT_TILING_W;
    }
 
-   if (info->usage & VK_IMAGE_USAGE_SHADER_ACCESS_READ_BIT) {
+   if (info->usage & VK_IMAGE_USAGE_SAMPLED_BIT) {
       if (intel_gpu_gen(params->gpu) < INTEL_GEN(8))
          valid_tilings &= ~LAYOUT_TILING_W;
    }
@@ -561,7 +561,7 @@ layout_init_tiling(struct intel_layout *layout,
       preferred_tilings &= ~LAYOUT_TILING_W;
 
    if (info->usage & (VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT |
-                      VK_IMAGE_USAGE_SHADER_ACCESS_READ_BIT)) {
+                      VK_IMAGE_USAGE_SAMPLED_BIT)) {
       /*
        * heuristically set a minimum width/height for enabling tiling
        */
@@ -844,7 +844,7 @@ layout_align(struct intel_layout *layout, struct intel_layout_params *params)
     *      padding purposes. The value of 4 for j still applies for mip level
     *      alignment and QPitch calculation."
     */
-   if (info->usage & VK_IMAGE_USAGE_SHADER_ACCESS_READ_BIT) {
+   if (info->usage & VK_IMAGE_USAGE_SAMPLED_BIT) {
       if (align_w < layout->align_i)
           align_w = layout->align_i;
       if (align_h < layout->align_j)
@@ -911,7 +911,7 @@ layout_calculate_bo_size(struct intel_layout *layout,
        *      required above."
        */
       if (intel_gpu_gen(params->gpu) >= INTEL_GEN(7.5) &&
-          (params->info->usage & VK_IMAGE_USAGE_SHADER_ACCESS_READ_BIT) &&
+          (params->info->usage & VK_IMAGE_USAGE_SAMPLED_BIT) &&
           layout->tiling == GEN6_TILING_NONE)
          h += (64 + layout->bo_stride - 1) / layout->bo_stride;
 

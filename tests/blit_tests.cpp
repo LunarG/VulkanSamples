@@ -814,7 +814,7 @@ TEST_F(VkCmdCopyBufferTest, RAWHazard)
     vkCmdFillBuffer(cmd_.obj(), bufs[0].obj(), 0, 4, 0x11111111);
     // is this necessary?
     VkBufferMemoryBarrier memory_barrier = bufs[0].buffer_memory_barrier(
-            VK_MEMORY_OUTPUT_COPY_BIT, VK_MEMORY_INPUT_COPY_BIT, 0, 4);
+            VK_MEMORY_OUTPUT_TRANSFER_BIT, VK_MEMORY_INPUT_TRANSFER_BIT, 0, 4);
     VkBufferMemoryBarrier *pmemory_barrier = &memory_barrier;
 
     VkPipeEvent set_events[] = { VK_PIPE_EVENT_TRANSFER_COMPLETE };
@@ -832,7 +832,7 @@ TEST_F(VkCmdCopyBufferTest, RAWHazard)
     vkCmdCopyBuffer(cmd_.obj(), bufs[0].obj(), bufs[1].obj(), 1, &region);
 
     memory_barrier = bufs[1].buffer_memory_barrier(
-            VK_MEMORY_OUTPUT_COPY_BIT, VK_MEMORY_INPUT_COPY_BIT, 0, 4);
+            VK_MEMORY_OUTPUT_TRANSFER_BIT, VK_MEMORY_INPUT_TRANSFER_BIT, 0, 4);
     pmemory_barrier = &memory_barrier;
     pipeline_barrier.sType = VK_STRUCTURE_TYPE_PIPELINE_BARRIER;
     pipeline_barrier.eventCount = 1;
@@ -852,7 +852,7 @@ TEST_F(VkCmdCopyBufferTest, RAWHazard)
     // Additional commands could go into the buffer here before the wait.
 
     memory_barrier = bufs[1].buffer_memory_barrier(
-            VK_MEMORY_OUTPUT_COPY_BIT, VK_MEMORY_INPUT_CPU_READ_BIT, 0, 4);
+            VK_MEMORY_OUTPUT_TRANSFER_BIT, VK_MEMORY_INPUT_CPU_READ_BIT, 0, 4);
     pmemory_barrier = &memory_barrier;
     VkEventWaitInfo wait_info = {};
     wait_info.sType = VK_STRUCTURE_TYPE_EVENT_WAIT_INFO;
@@ -973,7 +973,7 @@ protected:
     virtual void SetUp()
     {
         VkCmdBlitTest::SetUp();
-        init_test_formats(VK_FORMAT_IMAGE_COPY_BIT);
+        init_test_formats(VK_FORMAT_COLOR_ATTACHMENT_BIT);
         ASSERT_NE(true, test_formats_.empty());
     }
 
@@ -1041,7 +1041,7 @@ protected:
     virtual void SetUp()
     {
         VkCmdBlitTest::SetUp();
-        init_test_formats(VK_FORMAT_IMAGE_COPY_BIT);
+        init_test_formats(VK_FORMAT_COLOR_ATTACHMENT_BIT);
         ASSERT_NE(true, test_formats_.empty());
     }
 
@@ -1109,7 +1109,7 @@ protected:
     virtual void SetUp()
     {
         VkCmdBlitTest::SetUp();
-        init_test_formats(VK_FORMAT_IMAGE_COPY_BIT);
+        init_test_formats(VK_FORMAT_COLOR_ATTACHMENT_BIT);
         ASSERT_NE(true, test_formats_.empty());
     }
 
@@ -1357,7 +1357,7 @@ protected:
                 VK_MEMORY_OUTPUT_SHADER_WRITE_BIT |
                 VK_MEMORY_OUTPUT_COLOR_ATTACHMENT_BIT |
                 VK_MEMORY_OUTPUT_DEPTH_STENCIL_ATTACHMENT_BIT |
-                VK_MEMORY_OUTPUT_COPY_BIT;
+                VK_MEMORY_OUTPUT_TRANSFER_BIT;
         const VkFlags all_cache_inputs =
                 VK_MEMORY_INPUT_CPU_READ_BIT |
                 VK_MEMORY_INPUT_INDIRECT_COMMAND_BIT |
@@ -1367,7 +1367,7 @@ protected:
                 VK_MEMORY_INPUT_SHADER_READ_BIT |
                 VK_MEMORY_INPUT_COLOR_ATTACHMENT_BIT |
                 VK_MEMORY_INPUT_DEPTH_STENCIL_ATTACHMENT_BIT |
-                VK_MEMORY_INPUT_COPY_BIT;
+                VK_MEMORY_INPUT_TRANSFER_BIT;
 
         std::vector<VkImageMemoryBarrier> to_clear;
         std::vector<VkImageMemoryBarrier *> p_to_clear;
@@ -1517,8 +1517,7 @@ protected:
     virtual void SetUp()
     {
         VkCmdBlitTest::SetUp();
-        init_test_formats(VK_FORMAT_DEPTH_ATTACHMENT_BIT |
-                          VK_FORMAT_STENCIL_ATTACHMENT_BIT);
+        init_test_formats(VK_FORMAT_DEPTH_STENCIL_ATTACHMENT_BIT);
         ASSERT_NE(true, test_formats_.empty());
     }
 
@@ -1588,7 +1587,7 @@ protected:
                 VK_MEMORY_OUTPUT_SHADER_WRITE_BIT |
                 VK_MEMORY_OUTPUT_COLOR_ATTACHMENT_BIT |
                 VK_MEMORY_OUTPUT_DEPTH_STENCIL_ATTACHMENT_BIT |
-                VK_MEMORY_OUTPUT_COPY_BIT;
+                VK_MEMORY_OUTPUT_TRANSFER_BIT;
         const VkFlags all_cache_inputs =
                 VK_MEMORY_INPUT_CPU_READ_BIT |
                 VK_MEMORY_INPUT_INDIRECT_COMMAND_BIT |
@@ -1598,7 +1597,7 @@ protected:
                 VK_MEMORY_INPUT_SHADER_READ_BIT |
                 VK_MEMORY_INPUT_COLOR_ATTACHMENT_BIT |
                 VK_MEMORY_INPUT_DEPTH_STENCIL_ATTACHMENT_BIT |
-                VK_MEMORY_INPUT_COPY_BIT;
+                VK_MEMORY_INPUT_TRANSFER_BIT;
 
         std::vector<VkImageMemoryBarrier> to_clear;
         std::vector<VkImageMemoryBarrier *> p_to_clear;
