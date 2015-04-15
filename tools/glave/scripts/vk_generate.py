@@ -350,8 +350,6 @@ class Subcommand(object):
                                         'finalize_txt': 'default'},
                            'pDescriptorSets': {'add_txt': 'glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pDescriptorSets), customSize, pDescriptorSets)',
                                                'finalize_txt': 'default'},
-                           'pUpdateChain': {'add_txt': 'add_update_descriptors_to_trace_packet(pHeader, (void**)&(pPacket->pUpdateChain), pUpdateChain)',
-                                            'finalize_txt': 'default'},
                            'VkShaderCreateInfo': {'add_txt': 'glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo), sizeof(VkShaderCreateInfo), pCreateInfo);\n    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo->pCode), ((pCreateInfo != NULL) ? pCreateInfo->codeSize : 0), pCreateInfo->pCode)',
                                                       'finalize_txt': 'glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pCreateInfo->pCode));\n    glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pCreateInfo))'},
                            'VkFramebufferCreateInfo': {'add_txt': 'glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo), sizeof(VkFramebufferCreateInfo), pCreateInfo);\n    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo->pColorAttachments), colorCount * sizeof(VkColorAttachmentBindInfo), pCreateInfo->pColorAttachments);\n    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo->pDepthStencilAttachment), dsSize, pCreateInfo->pDepthStencilAttachment)',
@@ -402,7 +400,7 @@ class Subcommand(object):
                             }
         for p in params:
             #First handle custom cases
-            if p.name in ['pCreateInfo', 'pUpdateChain', 'pSetLayoutInfoList', 'pBeginInfo', 'pAllocInfo']:
+            if p.name in ['pCreateInfo', 'pSetLayoutInfoList', 'pBeginInfo', 'pAllocInfo']:
                 ps.append('get_struct_chain_size((void*)%s)' % p.name)
                 skip_list.append(p.name)
             elif p.name in custom_size_dict:
@@ -528,7 +526,7 @@ class Subcommand(object):
                 if 'void' not in proto.ret or '*' in proto.ret:
                     func_body.append('    pPacket->result = result;')
                 for pp_dict in ptr_packet_update_list:
-                    if ('DeviceCreateInfo' not in proto.params[pp_dict['index']].ty) and ('APPLICATION_INFO' not in proto.params[pp_dict['index']].ty) and ('pUpdateChain' != proto.params[pp_dict['index']].name):
+                    if ('DeviceCreateInfo' not in proto.params[pp_dict['index']].ty) and ('APPLICATION_INFO' not in proto.params[pp_dict['index']].ty):
                         func_body.append('    %s;' % (pp_dict['finalize_txt']))
                 func_body.append('    FINISH_TRACE_PACKET();')
                 if 'AllocMemory' in proto.name:
@@ -952,73 +950,6 @@ class Subcommand(object):
                                                                                          '    // This is unexpected.\n',
                                                                                          '    glv_LogError("AllocMemory must have AllocInfo stype of VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO.\\n");\n',
                                                                                          '    pPacket->header = NULL;\n',
-                                                                                         '}']},
-                             'UpdateDescriptors' : {'param': 'pUpdateChain', 'txt': ['VkUpdateSamplers* pNext = (VkUpdateSamplers*)pPacket->pUpdateChain;\n',
-                                                                                         'while ((NULL != pNext) && (VK_NULL_HANDLE != pNext))\n', '{\n',
-                                                                                         '    switch(pNext->sType)\n', '    {\n',
-                                                                                         '        case VK_STRUCTURE_TYPE_UPDATE_AS_COPY:\n',
-                                                                                         '        {\n',
-                                                                                         '            void** ppNextVoidPtr = (void**)&pNext->pNext;\n',
-                                                                                         '            *ppNextVoidPtr = (void*)glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pNext->pNext);\n',
-                                                                                         '            break;\n',
-                                                                                         '        }\n',
-                                                                                         '        case VK_STRUCTURE_TYPE_UPDATE_SAMPLERS:\n',
-                                                                                         '        {\n',
-                                                                                         '            void** ppNextVoidPtr = (void**)&pNext->pNext;\n',
-                                                                                         '            VkUpdateSamplers* pUS = (VkUpdateSamplers*)pNext;\n',
-                                                                                         '            *ppNextVoidPtr = (void*)glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pNext->pNext);\n',
-                                                                                         '            pUS->pSamplers = (VK_SAMPLER*) glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pUS->pSamplers);\n',
-                                                                                         '            break;\n',
-                                                                                         '        }\n',
-                                                                                         '        case VK_STRUCTURE_TYPE_UPDATE_SAMPLER_TEXTURES:\n',
-                                                                                         '        {\n',
-                                                                                         '            void** ppNextVoidPtr = (void**)&pNext->pNext;\n',
-                                                                                         '            VkUpdateSamplerTextures* pUST = (VkUpdateSamplerTextures*)pNext;\n',
-                                                                                         '            *ppNextVoidPtr = (void*)glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pNext->pNext);\n',
-                                                                                         '            pUST->pSamplerImageViews = (VK_SAMPLER_IMAGE_VIEW_INFO*) glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pUST->pSamplerImageViews);\n',
-                                                                                         '            uint32_t i;\n',
-                                                                                         '            for (i = 0; i < pUST->count; i++) {\n',
-                                                                                         '                VkImageViewAttachInfo** ppLocalImageView = (VkImageViewAttachInfo**)&pUST->pSamplerImageViews[i].pImageView;\n',
-                                                                                         '                *ppLocalImageView = (VkImageViewAttachInfo*) glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pUST->pSamplerImageViews[i].pImageView);\n',
-                                                                                         '            }\n',
-                                                                                         '            break;\n',
-                                                                                         '        }\n',
-                                                                                         '        case VK_STRUCTURE_TYPE_UPDATE_IMAGES:\n',
-                                                                                         '        {\n',
-                                                                                         '            void** ppNextVoidPtr = (void**)&pNext->pNext;\n',
-                                                                                         '            VkUpdateImages* pUI = (VkUpdateImages*)pNext;\n',
-                                                                                         '            *ppNextVoidPtr = (void*)glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pNext->pNext);\n',
-                                                                                         '            VkImageViewAttachInfo** ppLocalImageView = (VkImageViewAttachInfo**)&pUI->pImageViews;\n',
-                                                                                         '            *ppLocalImageView = (VkImageViewAttachInfo*) glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pUI->pImageViews);\n',
-                                                                                         '            uint32_t i;\n',
-                                                                                         '            for (i = 0; i < pUI->count; i++) {\n',
-                                                                                         '                VkImageViewAttachInfo** ppLocalImageViews = (VkImageViewAttachInfo**)&pUI->pImageViews[i];\n',
-                                                                                         '                *ppLocalImageViews = (VkImageViewAttachInfo*) glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pUI->pImageViews[i]);\n',
-                                                                                         '            }\n',
-                                                                                         '            break;\n',
-                                                                                         '        }\n',
-                                                                                         '        case VK_STRUCTURE_TYPE_UPDATE_BUFFERS:\n',
-                                                                                         '        {\n',
-                                                                                         '            void** ppNextVoidPtr = (void**)&pNext->pNext;\n',
-                                                                                         '            VkUpdateBuffers* pUB = (VkUpdateBuffers*)pNext;\n',
-                                                                                         '            *ppNextVoidPtr = (void*)glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pNext->pNext);\n',
-                                                                                         '            VkBufferViewAttachInfo** ppLocalBufferView = (VkBufferViewAttachInfo**)&pUB->pBufferViews;\n',
-                                                                                         '            *ppLocalBufferView = (VkBufferViewAttachInfo*) glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pUB->pBufferViews);\n',
-                                                                                         '            uint32_t i;\n',
-                                                                                         '            for (i = 0; i < pUB->count; i++) {\n',
-                                                                                         '                VkBufferViewAttachInfo** ppLocalBufferViews = (VkBufferViewAttachInfo**)&pUB->pBufferViews[i];\n',
-                                                                                         '                *ppLocalBufferViews = (VkBufferViewAttachInfo*) glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pUB->pBufferViews[i]);\n',
-                                                                                         '            }\n',
-                                                                                         '            break;\n',
-                                                                                         '        }\n',
-                                                                                         '        default:\n',
-                                                                                         '        {\n',
-                                                                                         '           glv_LogError("Encountered an unexpected type in update descriptors pUpdateChain.\\n");\n',
-                                                                                         '           pPacket->header = NULL;\n',
-                                                                                         '           pNext->pNext = NULL;\n',
-                                                                                         '        }\n',
-                                                                                         '    }\n',
-                                                                                         '    pNext = (VkUpdateSamplers*)pNext->pNext;\n',
                                                                                          '}']},
                              'CreateGraphicsPipeline' : {'param': 'pCreateInfo', 'txt': ['if (pPacket->pCreateInfo->sType == VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO) {\n',
                                                                                          '    // need to make a non-const pointer to the pointer so that we can properly change the original pointer to the interpretted one\n',
