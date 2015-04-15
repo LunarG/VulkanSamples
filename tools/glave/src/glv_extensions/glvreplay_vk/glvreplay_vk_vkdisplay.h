@@ -58,8 +58,8 @@ private:
     unsigned int m_frameNumber;
     std::vector<uint32_t> imageWidth;
     std::vector<uint32_t> imageHeight;
-    std::vector<VK_IMAGE> imageHandles;
-    std::vector<VK_GPU_MEMORY> imageMemory;
+    std::vector<VkImage> imageHandles;
+    std::vector<VkGpuMemory> imageMemory;
 #if 0
     VK_DEVICE m_dev[VK_MAX_PHYSICAL_GPUS];
     uint32_t m_gpuCount;

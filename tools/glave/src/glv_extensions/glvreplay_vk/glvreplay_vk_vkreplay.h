@@ -67,7 +67,7 @@ public:
     glv_replay::GLV_REPLAY_RESULT replay(glv_trace_packet_header *packet);
     glv_replay::GLV_REPLAY_RESULT handle_replay_errors(const char* entrypointName, const VkResult resCall, const VkResult resTrace, const glv_replay::GLV_REPLAY_RESULT resIn);
 
-    void push_validation_msg(VK_VALIDATION_LEVEL validationLevel, VK_BASE_OBJECT srcObject, size_t location, int32_t msgCode, const char* pMsg);
+    void push_validation_msg(VkValidationLevel validationLevel, VkBaseObject srcObject, size_t location, int32_t msgCode, const char* pMsg);
     glv_replay::GLV_REPLAY_RESULT pop_validation_msgs();
     int dump_validation_data();
 private:
@@ -78,12 +78,12 @@ private:
     GLVSNAPSHOT_PRINT_OBJECTS m_pGlvSnapshotPrint;
     vkDisplay *m_display;
     struct shaderPair {
-        VK_SHADER *addr;
-        VK_SHADER val;
+        VkShader *addr;
+        VkShader val;
     };
     struct validationMsg {
-        VK_VALIDATION_LEVEL validationLevel;
-        VK_BASE_OBJECT srcObject;
+        VkValidationLevel validationLevel;
+        VkBaseObject srcObject;
         size_t location;
         int32_t msgCode;
         char msg[256];

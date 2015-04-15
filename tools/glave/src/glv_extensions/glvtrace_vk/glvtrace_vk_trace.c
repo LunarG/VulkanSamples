@@ -67,7 +67,9 @@ GLVTRACER_EXPORT VkResult VKAPI __HOOKED_vkCreateInstance(
     }
     pPacket = interpret_body_as_vkCreateInstance(pHeader);
 
-    add_VK_INSTANCE_CREATE_INFO_to_packet(pHeader, (VkInstanceCreateInfo**)&(pPacket->pCreateInfo), pCreateInfo);
+    //add_VK_INSTANCE_CREATE_INFO_to_packet(pHeader, (VkInstanceCreateInfo**)&(pPacket->pCreateInfo), pCreateInfo);
+    //TODO : Need definition for this function
+    //add_VkInstanceCreateInfo_to_packet(pHeader, (VkInstanceCreateInfo**)&(pPacket->pCreateInfo), pCreateInfo);
     glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pInstance), sizeof(VkInstance), pInstance);
     pPacket->result = result;
     glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pInstance));
@@ -76,7 +78,7 @@ GLVTRACER_EXPORT VkResult VKAPI __HOOKED_vkCreateInstance(
 }
 
 GLVTRACER_EXPORT VkResult VKAPI __HOOKED_vkEnumerateLayers(
-    VK_PHYSICAL_GPU gpu,
+    VkPhysicalGpu gpu,
     size_t maxLayerCount,
     size_t maxStringSize,
     size_t* pOutLayerCount,
@@ -117,7 +119,7 @@ GLVTRACER_EXPORT VkResult VKAPI __HOOKED_vkEnumerateGpus(
     VkInstance instance,
     uint32_t maxGpus,
     uint32_t* pGpuCount,
-    VK_PHYSICAL_GPU* pGpus)
+    VkPhysicalGpu* pGpus)
 {
     glv_trace_packet_header* pHeader;
     VkResult result;
@@ -126,13 +128,13 @@ GLVTRACER_EXPORT VkResult VKAPI __HOOKED_vkEnumerateGpus(
     SEND_ENTRYPOINT_ID(vkEnumerateGpus);
     startTime = glv_get_time();
     result = real_vkEnumerateGpus(instance, maxGpus, pGpuCount, pGpus);
-    CREATE_TRACE_PACKET(vkEnumerateGpus, sizeof(uint32_t) + ((pGpus && pGpuCount) ? *pGpuCount * sizeof(VK_PHYSICAL_GPU) : 0));
+    CREATE_TRACE_PACKET(vkEnumerateGpus, sizeof(uint32_t) + ((pGpus && pGpuCount) ? *pGpuCount * sizeof(VkPhysicalGpu) : 0));
     pHeader->entrypoint_begin_time = startTime;
     pPacket = interpret_body_as_vkEnumerateGpus(pHeader);
     pPacket->instance = instance;
     pPacket->maxGpus = maxGpus;
     glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pGpuCount), sizeof(uint32_t), pGpuCount);
-    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pGpus), *pGpuCount*sizeof(VK_PHYSICAL_GPU), pGpus);
+    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pGpus), *pGpuCount*sizeof(VkPhysicalGpu), pGpus);
     pPacket->result = result;
     glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pGpuCount));
     glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pGpus));
@@ -141,11 +143,11 @@ GLVTRACER_EXPORT VkResult VKAPI __HOOKED_vkEnumerateGpus(
 }
 
 GLVTRACER_EXPORT VkResult VKAPI __HOOKED_vkAllocDescriptorSets(
-    VK_DESCRIPTOR_POOL descriptorPool,
-    VK_DESCRIPTOR_SET_USAGE setUsage,
+    VkDescriptorPool descriptorPool,
+    VkDescriptorSetUsage setUsage,
     uint32_t count,
-    const VK_DESCRIPTOR_SET_LAYOUT* pSetLayouts,
-    VK_DESCRIPTOR_SET* pDescriptorSets,
+    const VkDescriptorSetLayout* pSetLayouts,
+    VkDescriptorSet* pDescriptorSets,
     uint32_t* pCount)
 {
     glv_trace_packet_header* pHeader;
@@ -155,14 +157,14 @@ GLVTRACER_EXPORT VkResult VKAPI __HOOKED_vkAllocDescriptorSets(
     SEND_ENTRYPOINT_ID(vkAllocDescriptorSets);
     startTime = glv_get_time();
     result = real_vkAllocDescriptorSets(descriptorPool, setUsage, count, pSetLayouts, pDescriptorSets, pCount);
-    size_t customSize = (*pCount <= 0) ? (sizeof(VK_DESCRIPTOR_SET)) : (*pCount * sizeof(VK_DESCRIPTOR_SET));
-    CREATE_TRACE_PACKET(vkAllocDescriptorSets, sizeof(VK_DESCRIPTOR_SET_LAYOUT) + customSize + sizeof(uint32_t));
+    size_t customSize = (*pCount <= 0) ? (sizeof(VkDescriptorSet)) : (*pCount * sizeof(VkDescriptorSet));
+    CREATE_TRACE_PACKET(vkAllocDescriptorSets, sizeof(VkDescriptorSetLayout) + customSize + sizeof(uint32_t));
     pHeader->entrypoint_begin_time = startTime;
     pPacket = interpret_body_as_vkAllocDescriptorSets(pHeader);
     pPacket->descriptorPool = descriptorPool;
     pPacket->setUsage = setUsage;
     pPacket->count = count;
-    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pSetLayouts), count*sizeof(VK_DESCRIPTOR_SET_LAYOUT), pSetLayouts);
+    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pSetLayouts), count*sizeof(VkDescriptorSetLayout), pSetLayouts);
     glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pDescriptorSets), customSize, pDescriptorSets);
     glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCount), sizeof(uint32_t), pCount);
     pPacket->result = result;
@@ -174,8 +176,8 @@ GLVTRACER_EXPORT VkResult VKAPI __HOOKED_vkAllocDescriptorSets(
 }
 
 GLVTRACER_EXPORT VkResult VKAPI __HOOKED_vkMapMemory(
-    VK_GPU_MEMORY mem,
-    VK_FLAGS flags,
+    VkGpuMemory mem,
+    VkFlags flags,
     void** ppData)
 {
     glv_trace_packet_header* pHeader;
@@ -197,7 +199,7 @@ GLVTRACER_EXPORT VkResult VKAPI __HOOKED_vkMapMemory(
     return result;
 }
 
-GLVTRACER_EXPORT VkResult VKAPI __HOOKED_vkUnmapMemory(VK_GPU_MEMORY mem)
+GLVTRACER_EXPORT VkResult VKAPI __HOOKED_vkUnmapMemory(VkGpuMemory mem)
 {
     glv_trace_packet_header* pHeader;
     VkResult result;
@@ -230,35 +232,35 @@ GLVTRACER_EXPORT VkResult VKAPI __HOOKED_vkUnmapMemory(VK_GPU_MEMORY mem)
 }
 
 GLVTRACER_EXPORT void VKAPI __HOOKED_vkCmdWaitEvents(
-    VK_CMD_BUFFER cmdBuffer,
-    const VK_EVENT_WAIT_INFO* pWaitInfo)
+    VkCmdBuffer cmdBuffer,
+    const VkEventWaitInfo* pWaitInfo)
 {
     glv_trace_packet_header* pHeader;
     struct_vkCmdWaitEvents* pPacket = NULL;
     size_t customSize;
     uint32_t eventCount = (pWaitInfo != NULL && pWaitInfo->pEvents != NULL) ? pWaitInfo->eventCount : 0;
     uint32_t mbCount = (pWaitInfo != NULL && pWaitInfo->ppMemBarriers != NULL) ? pWaitInfo->memBarrierCount : 0;
-    customSize = (eventCount * sizeof(VK_EVENT)) + mbCount * sizeof(void*) + calculate_memory_barrier_size(mbCount, pWaitInfo->ppMemBarriers);
-    CREATE_TRACE_PACKET(vkCmdWaitEvents, sizeof(VK_EVENT_WAIT_INFO) + customSize);
+    customSize = (eventCount * sizeof(VkEvent)) + mbCount * sizeof(void*) + calculate_memory_barrier_size(mbCount, pWaitInfo->ppMemBarriers);
+    CREATE_TRACE_PACKET(vkCmdWaitEvents, sizeof(VkEventWaitInfo) + customSize);
     real_vkCmdWaitEvents(cmdBuffer, pWaitInfo);
     pPacket = interpret_body_as_vkCmdWaitEvents(pHeader);
     pPacket->cmdBuffer = cmdBuffer;
-    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pWaitInfo), sizeof(VK_EVENT_WAIT_INFO), pWaitInfo);
-    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pWaitInfo->pEvents), eventCount * sizeof(VK_EVENT), pWaitInfo->pEvents);
+    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pWaitInfo), sizeof(VkEventWaitInfo), pWaitInfo);
+    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pWaitInfo->pEvents), eventCount * sizeof(VkEvent), pWaitInfo->pEvents);
     glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pWaitInfo->pEvents));
     glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pWaitInfo->ppMemBarriers), mbCount * sizeof(void*), pWaitInfo->ppMemBarriers);
     uint32_t i, siz;
     for (i = 0; i < mbCount; i++) {
-        VK_MEMORY_BARRIER *pNext = (VK_MEMORY_BARRIER *) pWaitInfo->ppMemBarriers[i];
+        VkMemoryBarrier *pNext = (VkMemoryBarrier *) pWaitInfo->ppMemBarriers[i];
         switch (pNext->sType) {
             case VK_STRUCTURE_TYPE_MEMORY_BARRIER:
-                siz = sizeof(VK_MEMORY_BARRIER);
+                siz = sizeof(VkMemoryBarrier);
                 break;
             case VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER:
-                siz = sizeof(VK_BUFFER_MEMORY_BARRIER);
+                siz = sizeof(VkBufferMemoryBarrier);
                 break;
             case VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER:
-                siz = sizeof(VK_IMAGE_MEMORY_BARRIER);
+                siz = sizeof(VkImageMemoryBarrier);
                 break;
             default:
                 assert(0);
@@ -274,35 +276,35 @@ GLVTRACER_EXPORT void VKAPI __HOOKED_vkCmdWaitEvents(
 }
 
 GLVTRACER_EXPORT void VKAPI __HOOKED_vkCmdPipelineBarrier(
-    VK_CMD_BUFFER cmdBuffer,
-    const VK_PIPELINE_BARRIER* pBarrier)
+    VkCmdBuffer cmdBuffer,
+    const VkPipelineBarrier* pBarrier)
 {
     glv_trace_packet_header* pHeader;
     struct_vkCmdPipelineBarrier* pPacket = NULL;
     size_t customSize;
     uint32_t eventCount = (pBarrier != NULL && pBarrier->pEvents != NULL) ? pBarrier->eventCount : 0;
     uint32_t mbCount = (pBarrier != NULL && pBarrier->ppMemBarriers != NULL) ? pBarrier->memBarrierCount : 0;
-    customSize = (eventCount * sizeof(VK_PIPE_EVENT)) + mbCount * sizeof(void*) + calculate_memory_barrier_size(mbCount, pBarrier->ppMemBarriers);
-    CREATE_TRACE_PACKET(vkCmdPipelineBarrier, sizeof(VK_PIPELINE_BARRIER) + customSize);
+    customSize = (eventCount * sizeof(VkPipeEvent)) + mbCount * sizeof(void*) + calculate_memory_barrier_size(mbCount, pBarrier->ppMemBarriers);
+    CREATE_TRACE_PACKET(vkCmdPipelineBarrier, sizeof(VkPipelineBarrier) + customSize);
     real_vkCmdPipelineBarrier(cmdBuffer, pBarrier);
     pPacket = interpret_body_as_vkCmdPipelineBarrier(pHeader);
     pPacket->cmdBuffer = cmdBuffer;
-    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pBarrier), sizeof(VK_PIPELINE_BARRIER), pBarrier);
-    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pBarrier->pEvents), eventCount * sizeof(VK_PIPE_EVENT), pBarrier->pEvents);
+    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pBarrier), sizeof(VkPipelineBarrier), pBarrier);
+    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pBarrier->pEvents), eventCount * sizeof(VkPipeEvent), pBarrier->pEvents);
     glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pBarrier->pEvents));
     glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pBarrier->ppMemBarriers), mbCount * sizeof(void*), pBarrier->ppMemBarriers);
     uint32_t i, siz;
     for (i = 0; i < mbCount; i++) {
-        VK_MEMORY_BARRIER *pNext = (VK_MEMORY_BARRIER *) pBarrier->ppMemBarriers[i];
+        VkMemoryBarrier *pNext = (VkMemoryBarrier *) pBarrier->ppMemBarriers[i];
         switch (pNext->sType) {
             case VK_STRUCTURE_TYPE_MEMORY_BARRIER:
-                siz = sizeof(VK_MEMORY_BARRIER);
+                siz = sizeof(VkMemoryBarrier);
                 break;
             case VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER:
-                siz = sizeof(VK_BUFFER_MEMORY_BARRIER);
+                siz = sizeof(VkBufferMemoryBarrier);
                 break;
             case VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER:
-                siz = sizeof(VK_IMAGE_MEMORY_BARRIER);
+                siz = sizeof(VkImageMemoryBarrier);
                 break;
             default:
                 assert(0);

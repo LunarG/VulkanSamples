@@ -99,9 +99,9 @@ class Subcommand(object):
     def _get_printf_params(self, vk_type, name, output_param):
         deref = ""
         # TODO : Need ENUM and STRUCT checks here
-        if "VK_IMAGE_LAYOUT" in vk_type:
+        if "VkImage_LAYOUT" in vk_type:
             return ("%s", "string_%s(%s)" % (vk_type.replace('const ', '').strip('*'), name), deref)
-        if "VK_CLEAR_COLOR" in vk_type:
+        if "VkClearColor" in vk_type:
             return ("%p", "(void*)&%s" % name, deref)
         if "_type" in vk_type.lower(): # TODO : This should be generic ENUM check
             return ("%s", "string_%s(%s)" % (vk_type.replace('const ', '').strip('*'), name), deref)
@@ -190,10 +190,7 @@ class Subcommand(object):
             if 'Dbg' not in proto.name and 'Wsi' not in proto.name:
                 func_ptr_assign.append('extern %s( VKAPI * real_vk%s)(' % (proto.ret, proto.name))
                 for p in proto.params:
-                    if 'color' == p.name:
-                        func_ptr_assign.append('    %s %s[4],' % (p.ty.replace('[4]', ''), p.name))
-                    else:
-                        func_ptr_assign.append('    %s %s,' % (p.ty, p.name))
+                    func_ptr_assign.append('    %s %s,' % (p.ty, p.name))
                 func_ptr_assign[-1] = func_ptr_assign[-1].replace(',', ');\n')
         return "\n".join(func_ptr_assign)
 
@@ -203,10 +200,7 @@ class Subcommand(object):
             if 'Dbg' not in proto.name and 'Wsi' not in proto.name:
                 func_ptr_assign.append('%s( VKAPI * real_vk%s)(' % (proto.ret, proto.name))
                 for p in proto.params:
-                    if 'color' == p.name:
-                        func_ptr_assign.append('    %s %s[4],' % (p.ty.replace('[4]', ''), p.name))
-                    else:
-                        func_ptr_assign.append('    %s %s,' % (p.ty, p.name))
+                    func_ptr_assign.append('    %s %s,' % (p.ty, p.name))
                 func_ptr_assign[-1] = func_ptr_assign[-1].replace(',', ') = vk%s;\n' % (proto.name))
         return "\n".join(func_ptr_assign)
 
@@ -358,25 +352,23 @@ class Subcommand(object):
                                                'finalize_txt': 'default'},
                            'pUpdateChain': {'add_txt': 'add_update_descriptors_to_trace_packet(pHeader, (void**)&(pPacket->pUpdateChain), pUpdateChain)',
                                             'finalize_txt': 'default'},
-                           'VK_SHADER_CREATE_INFO': {'add_txt': 'glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo), sizeof(VK_SHADER_CREATE_INFO), pCreateInfo);\n    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo->pCode), ((pCreateInfo != NULL) ? pCreateInfo->codeSize : 0), pCreateInfo->pCode)',
+                           'VkShaderCreateInfo': {'add_txt': 'glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo), sizeof(VkShaderCreateInfo), pCreateInfo);\n    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo->pCode), ((pCreateInfo != NULL) ? pCreateInfo->codeSize : 0), pCreateInfo->pCode)',
                                                       'finalize_txt': 'glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pCreateInfo->pCode));\n    glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pCreateInfo))'},
-                           'VK_FRAMEBUFFER_CREATE_INFO': {'add_txt': 'glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo), sizeof(VK_FRAMEBUFFER_CREATE_INFO), pCreateInfo);\n    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo->pColorAttachments), colorCount * sizeof(VK_COLOR_ATTACHMENT_BIND_INFO), pCreateInfo->pColorAttachments);\n    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo->pDepthStencilAttachment), dsSize, pCreateInfo->pDepthStencilAttachment)',
+                           'VkFramebufferCreateInfo': {'add_txt': 'glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo), sizeof(VkFramebufferCreateInfo), pCreateInfo);\n    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo->pColorAttachments), colorCount * sizeof(VkColorAttachmentBindInfo), pCreateInfo->pColorAttachments);\n    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo->pDepthStencilAttachment), dsSize, pCreateInfo->pDepthStencilAttachment)',
                                                            'finalize_txt': 'glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pCreateInfo->pColorAttachments));\n    glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pCreateInfo->pDepthStencilAttachment));\n    glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pCreateInfo))'},
-                           'VK_RENDER_PASS_CREATE_INFO': {'add_txt': 'glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo), sizeof(VK_RENDER_PASS_CREATE_INFO), pCreateInfo);\n    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo->pColorLoadOps), colorCount * sizeof(VK_ATTACHMENT_LOAD_OP), pCreateInfo->pColorLoadOps);\n    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo->pColorStoreOps), colorCount * sizeof(VK_ATTACHMENT_STORE_OP), pCreateInfo->pColorStoreOps);\n    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo->pColorLoadClearValues), colorCount * sizeof(VK_CLEAR_COLOR), pCreateInfo->pColorLoadClearValues)',
+                           'VkRenderPassCreateInfo': {'add_txt': 'glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo), sizeof(VkRenderPassCreateInfo), pCreateInfo);\n    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo->pColorLoadOps), colorCount * sizeof(VkAttachmentLoadOp), pCreateInfo->pColorLoadOps);\n    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo->pColorStoreOps), colorCount * sizeof(VkAttachmentStoreOp), pCreateInfo->pColorStoreOps);\n    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo->pColorLoadClearValues), colorCount * sizeof(VkClearColor), pCreateInfo->pColorLoadClearValues)',
                                                           'finalize_txt': 'glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pCreateInfo->pColorLoadOps));\n    glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pCreateInfo->pColorStoreOps));\n    glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pCreateInfo->pColorLoadClearValues));\n    glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pCreateInfo))'},
-                           'VK_CMD_BUFFER_BEGIN_INFO': {'add_txt': 'glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pBeginInfo), sizeof(VK_CMD_BUFFER_BEGIN_INFO), pBeginInfo);\n    add_begin_cmdbuf_to_trace_packet(pHeader, (void**)&(pPacket->pBeginInfo->pNext), pBeginInfo->pNext)',
+                           'VkCmdBufferBeginInfo': {'add_txt': 'glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pBeginInfo), sizeof(VkCmdBufferBeginInfo), pBeginInfo);\n    add_begin_cmdbuf_to_trace_packet(pHeader, (void**)&(pPacket->pBeginInfo->pNext), pBeginInfo->pNext)',
                                                          'finalize_txt': 'glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pBeginInfo))'},
-                           'VK_DYNAMIC_VP_STATE_CREATE_INFO': {'add_txt': 'glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo), sizeof(VK_DYNAMIC_VP_STATE_CREATE_INFO), pCreateInfo);\n    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo->pViewports), vpsCount * sizeof(VK_VIEWPORT), pCreateInfo->pViewports);\n    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo->pScissors), vpsCount * sizeof(VK_RECT), pCreateInfo->pScissors)',
+                           'VkDynamicVpStateCreateInfo': {'add_txt': 'glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo), sizeof(VkDynamicVpStateCreateInfo), pCreateInfo);\n    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo->pViewports), vpsCount * sizeof(VkViewport), pCreateInfo->pViewports);\n    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo->pScissors), vpsCount * sizeof(VkRect), pCreateInfo->pScissors)',
                                                                 'finalize_txt': 'glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pCreateInfo->pViewports));\n    glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pCreateInfo->pScissors));\n    glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pCreateInfo))'},
-                           'VK_MEMORY_ALLOC_INFO': {'add_txt': 'glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pAllocInfo), sizeof(VK_MEMORY_ALLOC_INFO), pAllocInfo);\n    add_alloc_memory_to_trace_packet(pHeader, (void**)&(pPacket->pAllocInfo->pNext), pAllocInfo->pNext)',
+                           'VkMemoryAllocInfo': {'add_txt': 'glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pAllocInfo), sizeof(VkMemoryAllocInfo), pAllocInfo);\n    add_alloc_memory_to_trace_packet(pHeader, (void**)&(pPacket->pAllocInfo->pNext), pAllocInfo->pNext)',
                                                      'finalize_txt': 'glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pAllocInfo))'},
-                           'VK_GRAPHICS_PIPELINE_CREATE_INFO': {'add_txt': 'glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo), sizeof(VK_GRAPHICS_PIPELINE_CREATE_INFO), pCreateInfo);\n    add_pipeline_state_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo->pNext), pCreateInfo->pNext)',
+                           'VkGraphicsPipelineCreateInfo': {'add_txt': 'glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo), sizeof(VkGraphicsPipelineCreateInfo), pCreateInfo);\n    add_pipeline_state_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo->pNext), pCreateInfo->pNext)',
                                                                  'finalize_txt': 'glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pCreateInfo))'},
-                           'VK_DESCRIPTOR_SET_LAYOUT_CREATE_INFO': {'add_txt': 'glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pSetLayoutInfoList), sizeof(VK_DESCRIPTOR_SET_LAYOUT_CREATE_INFO), pSetLayoutInfoList);\n    if (pSetLayoutInfoList)\n        add_create_ds_layout_to_trace_packet(pHeader, (void**)&(pPacket->pSetLayoutInfoList->pNext), pSetLayoutInfoList->pNext)',
-                                                                     'finalize_txt': 'glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pSetLayoutInfoList))'},
-                           'VK_DESCRIPTOR_POOL_CREATE_INFO': {'add_txt': 'glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo), sizeof(VK_DESCRIPTOR_POOL_CREATE_INFO), pCreateInfo);\n    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo->pTypeCount), rgCount * sizeof(VK_DESCRIPTOR_TYPE_COUNT), pCreateInfo->pTypeCount)',
+                           'VkDescriptorPoolCreateInfo': {'add_txt': 'glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo), sizeof(VkDescriptorPoolCreateInfo), pCreateInfo);\n    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo->pTypeCount), pCreateInfo->count * sizeof(VkDescriptorTypeCount), pCreateInfo->pTypeCount)',
                                                                  'finalize_txt': 'glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pCreateInfo->pTypeCount));\n    glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pCreateInfo))'},
-                           'VK_COMPUTE_PIPELINE_CREATE_INFO': {'add_txt': 'glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo), sizeof(VK_COMPUTE_PIPELINE_CREATE_INFO), pCreateInfo);\n    add_pipeline_state_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo->pNext), pCreateInfo->pNext);\n    add_pipeline_shader_to_trace_packet(pHeader, (VK_PIPELINE_SHADER*)&pPacket->pCreateInfo->cs, &pCreateInfo->cs)',
+                           'VkComputePipelineCreateInfo': {'add_txt': 'glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo), sizeof(VkComputePipelineCreateInfo), pCreateInfo);\n    add_pipeline_state_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo->pNext), pCreateInfo->pNext);\n    add_pipeline_shader_to_trace_packet(pHeader, (VkPipelineShader*)&pPacket->pCreateInfo->cs, &pCreateInfo->cs)',
                                                                 'finalize_txt': 'finalize_pipeline_shader_address(pHeader, &pPacket->pCreateInfo->cs);\n    glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pCreateInfo))'},
                                                   }
         for p in params:
@@ -446,7 +438,7 @@ class Subcommand(object):
                 elif 'pDataSize' in p.name:
                     ps.append('((pDataSize != NULL) ? sizeof(size_t) : 0)')
                 elif 'IMAGE_SUBRESOURCE' in p.ty and 'pSubresource' == p.name:
-                    ps.append('((pSubresource != NULL) ? sizeof(VK_IMAGE_SUBRESOURCE) : 0)')
+                    ps.append('((pSubresource != NULL) ? sizeof(VkImage_SUBRESOURCE) : 0)')
                 else:
                     ps.append('sizeof(%s)' % (p.ty.strip('*').replace('const ', '')))
         return ps
@@ -508,18 +500,18 @@ class Subcommand(object):
                                   'CreateDescriptorRegion']:
                     # these are regular case as far as sequence of tracing but have some custom size element
                     if 'CreateFramebuffer' == proto.name:
-                        func_body.append('    int dsSize = (pCreateInfo != NULL && pCreateInfo->pDepthStencilAttachment != NULL) ? sizeof(VK_DEPTH_STENCIL_BIND_INFO) : 0;')
+                        func_body.append('    int dsSize = (pCreateInfo != NULL && pCreateInfo->pDepthStencilAttachment != NULL) ? sizeof(VkDepthStencilBindInfo) : 0;')
                         func_body.append('    uint32_t colorCount = (pCreateInfo != NULL && pCreateInfo->pColorAttachments != NULL) ? pCreateInfo->colorAttachmentCount : 0;')
-                        func_body.append('    CREATE_TRACE_PACKET(vkCreateFramebuffer, get_struct_chain_size((void*)pCreateInfo) + sizeof(VK_FRAMEBUFFER));')
+                        func_body.append('    CREATE_TRACE_PACKET(vkCreateFramebuffer, get_struct_chain_size((void*)pCreateInfo) + sizeof(VkFramebuffer));')
                     elif 'CreateRenderPass' == proto.name:
                         func_body.append('    uint32_t colorCount = (pCreateInfo != NULL && (pCreateInfo->pColorLoadOps != NULL || pCreateInfo->pColorStoreOps != NULL || pCreateInfo->pColorLoadClearValues != NULL)) ? pCreateInfo->colorAttachmentCount : 0;')
-                        func_body.append('    CREATE_TRACE_PACKET(vkCreateRenderPass, get_struct_chain_size((void*)pCreateInfo) + sizeof(VK_RENDER_PASS));')
+                        func_body.append('    CREATE_TRACE_PACKET(vkCreateRenderPass, get_struct_chain_size((void*)pCreateInfo) + sizeof(VkRenderPass));')
                     elif 'CreateDynamicViewportState' == proto.name:
                         func_body.append('    uint32_t vpsCount = (pCreateInfo != NULL && pCreateInfo->pViewports != NULL) ? pCreateInfo->viewportAndScissorCount : 0;')
-                        func_body.append('    CREATE_TRACE_PACKET(vkCreateDynamicViewportState,  get_struct_chain_size((void*)pCreateInfo) + sizeof(VK_DYNAMIC_VP_STATE_OBJECT));')
+                        func_body.append('    CREATE_TRACE_PACKET(vkCreateDynamicViewportState,  get_struct_chain_size((void*)pCreateInfo) + sizeof(VkDynamicVpState));')
                     elif 'CreateDescriptorRegion' == proto.name:
                         func_body.append('    uint32_t rgCount = (pCreateInfo != NULL && pCreateInfo->pTypeCount != NULL) ? pCreateInfo->count : 0;')
-                        func_body.append('    CREATE_TRACE_PACKET(vkCreateDescriptorRegion,  get_struct_chain_size((void*)pCreateInfo) + sizeof(VK_DESCRIPTOR_REGION));')
+                        func_body.append('    CREATE_TRACE_PACKET(vkCreateDescriptorRegion,  get_struct_chain_size((void*)pCreateInfo) + sizeof(VkDescriptorRegion));')
                     func_body.append('    %sreal_vk%s;' % (return_txt, proto.c_call()))
                 else:
                     if (0 == len(packet_size)):
@@ -713,6 +705,7 @@ class Subcommand(object):
         pid_enum.append('    glv_finalize_buffer_address(pHeader, (void**)&*ppStruct);')
         pid_enum.append('};\n')
         pid_enum.append('//=============================================================================\n')
+        # TODO : Create add_VkInstanceCreateInfo_to_packet() function here - used in glvtrace_vk_trace.c = add_VkInstanceCreateInfo_to_packet(pHeader, (VkInstanceCreateInfo**)&(pPacket->pCreateInfo), pCreateInfo);
         pid_enum.append('static void add_VkDeviceCreateInfo_to_packet(glv_trace_packet_header*  pHeader, VkDeviceCreateInfo** ppStruct, const VkDeviceCreateInfo *pInStruct)')
         pid_enum.append('{')
         pid_enum.append('    uint32_t i;')
@@ -783,7 +776,7 @@ class Subcommand(object):
         pid_enum.append('    }\n')
         pid_enum.append('    return pVkDeviceCreateInfo;')
         pid_enum.append('}\n')
-        pid_enum.append('static void interpret_pipeline_shader(glv_trace_packet_header*  pHeader, VK_PIPELINE_SHADER* pShader)')
+        pid_enum.append('static void interpret_pipeline_shader(glv_trace_packet_header*  pHeader, VkPipelineShader* pShader)')
         pid_enum.append('{')
         pid_enum.append('    if (pShader != NULL)')
         pid_enum.append('    {')
@@ -791,10 +784,10 @@ class Subcommand(object):
         pid_enum.append('        if (pShader->linkConstBufferCount > 0)')
         pid_enum.append('        {')
         pid_enum.append('            uint32_t i;')
-        pid_enum.append('            pShader->pLinkConstBufferInfo = (const VK_LINK_CONST_BUFFER*)glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pShader->pLinkConstBufferInfo);')
+        pid_enum.append('            pShader->pLinkConstBufferInfo = (const VkLinkConstBuffer*)glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pShader->pLinkConstBufferInfo);')
         pid_enum.append('            for (i = 0; i < pShader->linkConstBufferCount; i++)')
         pid_enum.append('            {')
-        pid_enum.append('                VK_LINK_CONST_BUFFER* pBuffer = (VK_LINK_CONST_BUFFER*)pShader->pLinkConstBufferInfo;')
+        pid_enum.append('                VkLinkConstBuffer* pBuffer = (VkLinkConstBuffer*)pShader->pLinkConstBufferInfo;')
         pid_enum.append('                pBuffer[i].pBufferData = (const void*)glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pShader->pLinkConstBufferInfo[i].pBufferData);')
         pid_enum.append('            }')
         pid_enum.append('        }')
@@ -811,30 +804,30 @@ class Subcommand(object):
         custom_case_dict = { 'CreateInstance' : {'param': 'pAppInfo', 'txt': ['VkApplicationInfo* pInfo = (VkApplicationInfo*)pPacket->pAppInfo;\n',
                                                        'pInfo->pAppName = (const char*)glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->pAppInfo->pAppName);\n',
                                                        'pInfo->pEngineName = (const char*)glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->pAppInfo->pEngineName);']},
-                             'CreateShader' : {'param': 'pCreateInfo', 'txt': ['VK_SHADER_CREATE_INFO* pInfo = (VK_SHADER_CREATE_INFO*)pPacket->pCreateInfo;\n',
+                             'CreateShader' : {'param': 'pCreateInfo', 'txt': ['VkShaderCreateInfo* pInfo = (VkShaderCreateInfo*)pPacket->pCreateInfo;\n',
                                                'pInfo->pCode = glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->pCreateInfo->pCode);']},
-                             'CreateDynamicViewportState' : {'param': 'pCreateInfo', 'txt': ['VK_DYNAMIC_VP_STATE_CREATE_INFO* pInfo = (VK_DYNAMIC_VP_STATE_CREATE_INFO*)pPacket->pCreateInfo;\n',
-                                                                                             'pInfo->pViewports = (VK_VIEWPORT*) glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->pCreateInfo->pViewports);\n',
-                                                                                             'pInfo->pScissors = (VK_RECT*) glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->pCreateInfo->pScissors);']},
-                             'CreateFramebuffer' : {'param': 'pCreateInfo', 'txt': ['VK_FRAMEBUFFER_CREATE_INFO* pInfo = (VK_FRAMEBUFFER_CREATE_INFO*)pPacket->pCreateInfo;\n',
-                                                    'pInfo->pColorAttachments = (VK_COLOR_ATTACHMENT_BIND_INFO*) glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->pCreateInfo->pColorAttachments);\n',
-                                                    'pInfo->pDepthStencilAttachment = (VK_DEPTH_STENCIL_BIND_INFO*) glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->pCreateInfo->pDepthStencilAttachment);\n']},
-                             'CreateRenderPass' : {'param': 'pCreateInfo', 'txt': ['VK_RENDER_PASS_CREATE_INFO* pInfo = (VK_RENDER_PASS_CREATE_INFO*)pPacket->pCreateInfo;\n',
-                                                   'pInfo->pColorLoadOps = (VK_ATTACHMENT_LOAD_OP*) glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->pCreateInfo->pColorLoadOps);\n',
-                                                   'pInfo->pColorStoreOps = (VK_ATTACHMENT_STORE_OP*) glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->pCreateInfo->pColorStoreOps);\n',
-                                                   'pInfo->pColorLoadClearValues = (VK_CLEAR_COLOR*) glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->pCreateInfo->pColorLoadClearValues);\n']},
-                             'CreateDescriptorPool' : {'param': 'pCreateInfo', 'txt': ['VK_DESCRIPTOR_POOL_CREATE_INFO* pInfo = (VK_DESCRIPTOR_POOL_CREATE_INFO*)pPacket->pCreateInfo;\n',
-                                                                                             'pInfo->pTypeCount = (VK_DESCRIPTOR_TYPE_COUNT*) glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->pCreateInfo->pTypeCount);\n']},
-                             'CmdWaitEvents' : {'param': 'pWaitInfo', 'txt': ['VK_EVENT_WAIT_INFO* pInfo = (VK_EVENT_WAIT_INFO*)pPacket->pWaitInfo;\n',
-                                                                          'pInfo->pEvents = (VK_EVENT*) glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->pWaitInfo->pEvents);\n',
+                             'CreateDynamicViewportState' : {'param': 'pCreateInfo', 'txt': ['VkDynamicVpStateCreateInfo* pInfo = (VkDynamicVpStateCreateInfo*)pPacket->pCreateInfo;\n',
+                                                                                             'pInfo->pViewports = (VkViewport*) glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->pCreateInfo->pViewports);\n',
+                                                                                             'pInfo->pScissors = (VkRect*) glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->pCreateInfo->pScissors);']},
+                             'CreateFramebuffer' : {'param': 'pCreateInfo', 'txt': ['VkFramebufferCreateInfo* pInfo = (VkFramebufferCreateInfo*)pPacket->pCreateInfo;\n',
+                                                    'pInfo->pColorAttachments = (VkColorAttachmentBindInfo*) glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->pCreateInfo->pColorAttachments);\n',
+                                                    'pInfo->pDepthStencilAttachment = (VkDepthStencilBindInfo*) glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->pCreateInfo->pDepthStencilAttachment);\n']},
+                             'CreateRenderPass' : {'param': 'pCreateInfo', 'txt': ['VkRenderPassCreateInfo* pInfo = (VkRenderPassCreateInfo*)pPacket->pCreateInfo;\n',
+                                                   'pInfo->pColorLoadOps = (VkAttachmentLoadOp*) glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->pCreateInfo->pColorLoadOps);\n',
+                                                   'pInfo->pColorStoreOps = (VkAttachmentStoreOp*) glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->pCreateInfo->pColorStoreOps);\n',
+                                                   'pInfo->pColorLoadClearValues = (VkClearColor*) glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->pCreateInfo->pColorLoadClearValues);\n']},
+                             'CreateDescriptorPool' : {'param': 'pCreateInfo', 'txt': ['VkDescriptorPoolCreateInfo* pInfo = (VkDescriptorPoolCreateInfo*)pPacket->pCreateInfo;\n',
+                                                                                             'pInfo->pTypeCount = (VkDescriptorTypeCount*) glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->pCreateInfo->pTypeCount);\n']},
+                             'CmdWaitEvents' : {'param': 'pWaitInfo', 'txt': ['VkEventWaitInfo* pInfo = (VkEventWaitInfo*)pPacket->pWaitInfo;\n',
+                                                                          'pInfo->pEvents = (VkEvent*) glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->pWaitInfo->pEvents);\n',
                                                                           'pInfo->ppMemBarriers = (const void**) glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->pWaitInfo->ppMemBarriers);\n',
                                                                           'uint32_t i;\n',
                                                                           'for (i = 0; i < pInfo->memBarrierCount; i++) {\n',
                                                                           '    void** ppLocalMemBarriers = (void**)&pInfo->ppMemBarriers[i];\n',
                                                                           '    *ppLocalMemBarriers = (void*) glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pInfo->ppMemBarriers[i]);\n',
                                                                           '}']},
-                             'CmdPipelineBarrier' : {'param': 'pBarrier', 'txt': ['VK_PIPELINE_BARRIER* pBarrier = (VK_PIPELINE_BARRIER*)pPacket->pBarrier;\n',
-                                                                          'pBarrier->pEvents = (VK_PIPE_EVENT*) glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->pBarrier->pEvents);\n',
+                             'CmdPipelineBarrier' : {'param': 'pBarrier', 'txt': ['VkPipelineBarrier* pBarrier = (VkPipelineBarrier*)pPacket->pBarrier;\n',
+                                                                          'pBarrier->pEvents = (VkPipeEvent*) glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->pBarrier->pEvents);\n',
                                                                           'pBarrier->ppMemBarriers = (const void**) glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->pBarrier->ppMemBarriers);\n',
                                                                           'uint32_t i;\n',
                                                                           'for (i = 0; i < pBarrier->memBarrierCount; i++) {\n',
@@ -845,7 +838,7 @@ class Subcommand(object):
                                                                                          '    // need to make a non-const pointer to the pointer so that we can properly change the original pointer to the interpretted one\n',
                                                                                          '    void** ppNextVoidPtr = (void**)&(pPacket->pSetLayoutInfoList->pNext);\n',
                                                                                          '    *ppNextVoidPtr = (void*)glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->pSetLayoutInfoList->pNext);\n',
-                                                                                         '    VK_DESCRIPTOR_SET_LAYOUT_CREATE_INFO* pNext = (VK_DESCRIPTOR_SET_LAYOUT_CREATE_INFO*)pPacket->pSetLayoutInfoList->pNext;\n',
+                                                                                         '    VkDescriptorSetLayoutCreateInfo* pNext = (VkDescriptorSetLayoutCreateInfo*)pPacket->pSetLayoutInfoList->pNext;\n',
                                                                                          '    while (NULL != pNext)\n', '    {\n',
                                                                                          '        switch(pNext->sType)\n', '        {\n',
                                                                                          '            case VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO:\n',
@@ -861,7 +854,7 @@ class Subcommand(object):
                                                                                          '                pNext->pNext = NULL;\n',
                                                                                          '            }\n',
                                                                                          '        }\n',
-                                                                                         '        pNext = (VK_DESCRIPTOR_SET_LAYOUT_CREATE_INFO*)pNext->pNext;\n',
+                                                                                         '        pNext = (VkDescriptorSetLayoutCreateInfo*)pNext->pNext;\n',
                                                                                          '     }\n',
                                                                                          '} else {\n',
                                                                                          '     // This is unexpected.\n',
@@ -870,15 +863,15 @@ class Subcommand(object):
                                                                                          '}']},
                              'BeginCommandBuffer' : {'param': 'pBeginInfo', 'txt': ['if (pPacket->pBeginInfo->sType == VK_STRUCTURE_TYPE_CMD_BUFFER_BEGIN_INFO) {\n',
                                                                                          '    // need to make a non-const pointer to the pointer so that we can properly change the original pointer to the interpretted one\n',
-                                                                                         '    VK_CMD_BUFFER_GRAPHICS_BEGIN_INFO** ppNext = (VK_CMD_BUFFER_GRAPHICS_BEGIN_INFO**)&(pPacket->pBeginInfo->pNext);\n',
-                                                                                         '    *ppNext = (VK_CMD_BUFFER_GRAPHICS_BEGIN_INFO*) glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->pBeginInfo->pNext);\n',
-                                                                                         '    VK_CMD_BUFFER_GRAPHICS_BEGIN_INFO* pNext = *ppNext;\n',
+                                                                                         '    VkCmdBufferGraphicsBeginInfo** ppNext = (VkCmdBufferGraphicsBeginInfo**)&(pPacket->pBeginInfo->pNext);\n',
+                                                                                         '    *ppNext = (VkCmdBufferGraphicsBeginInfo*) glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->pBeginInfo->pNext);\n',
+                                                                                         '    VkCmdBufferGraphicsBeginInfo* pNext = *ppNext;\n',
                                                                                          '    while (NULL != pNext)\n', '    {\n',
                                                                                          '        switch(pNext->sType)\n', '        {\n',
                                                                                          '            case VK_STRUCTURE_TYPE_CMD_BUFFER_GRAPHICS_BEGIN_INFO:\n',
                                                                                          '            {\n',
-                                                                                         '                ppNext = (VK_CMD_BUFFER_GRAPHICS_BEGIN_INFO**) &pNext->pNext;\n',
-                                                                                         '                *ppNext = (VK_CMD_BUFFER_GRAPHICS_BEGIN_INFO*)glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pNext->pNext);\n',
+                                                                                         '                ppNext = (VkCmdBufferGraphicsBeginInfo**) &pNext->pNext;\n',
+                                                                                         '                *ppNext = (VkCmdBufferGraphicsBeginInfo*)glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pNext->pNext);\n',
                                                                                          '                break;\n',
                                                                                          '            }\n',
                                                                                          '            default:\n',
@@ -888,7 +881,7 @@ class Subcommand(object):
                                                                                          '                pNext->pNext = NULL;\n',
                                                                                          '            }\n',
                                                                                          '        }\n',
-                                                                                         '        pNext = (VK_CMD_BUFFER_GRAPHICS_BEGIN_INFO*)pNext->pNext;\n',
+                                                                                         '        pNext = (VkCmdBufferGraphicsBeginInfo*)pNext->pNext;\n',
                                                                                          '    }\n',
                                                                                          '} else {\n',
                                                                                          '    // This is unexpected.\n',
@@ -896,16 +889,16 @@ class Subcommand(object):
                                                                                          '    pPacket->header = NULL;\n',
                                                                                          '}']},
                              'AllocMemory' : {'param': 'pAllocInfo', 'txt': ['if (pPacket->pAllocInfo->sType == VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO) {\n',
-                                                                                         '    VK_MEMORY_ALLOC_INFO** ppNext = (VK_MEMORY_ALLOC_INFO**) &(pPacket->pAllocInfo->pNext);\n',
-                                                                                         '    *ppNext = (VK_MEMORY_ALLOC_INFO*) glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->pAllocInfo->pNext);\n',
-                                                                                         '    VK_MEMORY_ALLOC_INFO* pNext = (VK_MEMORY_ALLOC_INFO*) *ppNext;\n',
+                                                                                         '    VkMemoryAllocInfo** ppNext = (VkMemoryAllocInfo**) &(pPacket->pAllocInfo->pNext);\n',
+                                                                                         '    *ppNext = (VkMemoryAllocInfo*) glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->pAllocInfo->pNext);\n',
+                                                                                         '    VkMemoryAllocInfo* pNext = (VkMemoryAllocInfo*) *ppNext;\n',
                                                                                          '    while (NULL != pNext)\n', '    {\n',
                                                                                          '        switch(pNext->sType)\n', '        {\n',
                                                                                          '            case VK_STRUCTURE_TYPE_MEMORY_ALLOC_BUFFER_INFO:\n',
                                                                                          '            case VK_STRUCTURE_TYPE_MEMORY_ALLOC_IMAGE_INFO:\n',
                                                                                          '            {\n',
-                                                                                         '                ppNext = (VK_MEMORY_ALLOC_INFO **) &(pNext->pNext);\n',
-                                                                                         '                *ppNext = (VK_MEMORY_ALLOC_INFO*)glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pNext->pNext);\n',
+                                                                                         '                ppNext = (VkMemoryAllocInfo **) &(pNext->pNext);\n',
+                                                                                         '                *ppNext = (VkMemoryAllocInfo*)glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pNext->pNext);\n',
                                                                                          '                break;\n',
                                                                                          '            }\n',
                                                                                          '            default:\n',
@@ -915,14 +908,14 @@ class Subcommand(object):
                                                                                          '               pNext->pNext = NULL;\n',
                                                                                          '            }\n',
                                                                                          '        }\n',
-                                                                                         '        pNext = (VK_MEMORY_ALLOC_INFO*)pNext->pNext;\n',
+                                                                                         '        pNext = (VkMemoryAllocInfo*)pNext->pNext;\n',
                                                                                          '    }\n',
                                                                                          '} else {\n',
                                                                                          '    // This is unexpected.\n',
                                                                                          '    glv_LogError("AllocMemory must have AllocInfo stype of VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO.\\n");\n',
                                                                                          '    pPacket->header = NULL;\n',
                                                                                          '}']},
-                             'UpdateDescriptors' : {'param': 'pUpdateChain', 'txt': ['VK_UPDATE_SAMPLERS* pNext = (VK_UPDATE_SAMPLERS*)pPacket->pUpdateChain;\n',
+                             'UpdateDescriptors' : {'param': 'pUpdateChain', 'txt': ['VkUpdateSamplers* pNext = (VkUpdateSamplers*)pPacket->pUpdateChain;\n',
                                                                                          'while ((NULL != pNext) && (VK_NULL_HANDLE != pNext))\n', '{\n',
                                                                                          '    switch(pNext->sType)\n', '    {\n',
                                                                                          '        case VK_STRUCTURE_TYPE_UPDATE_AS_COPY:\n',
@@ -934,7 +927,7 @@ class Subcommand(object):
                                                                                          '        case VK_STRUCTURE_TYPE_UPDATE_SAMPLERS:\n',
                                                                                          '        {\n',
                                                                                          '            void** ppNextVoidPtr = (void**)&pNext->pNext;\n',
-                                                                                         '            VK_UPDATE_SAMPLERS* pUS = (VK_UPDATE_SAMPLERS*)pNext;\n',
+                                                                                         '            VkUpdateSamplers* pUS = (VkUpdateSamplers*)pNext;\n',
                                                                                          '            *ppNextVoidPtr = (void*)glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pNext->pNext);\n',
                                                                                          '            pUS->pSamplers = (VK_SAMPLER*) glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pUS->pSamplers);\n',
                                                                                          '            break;\n',
@@ -942,41 +935,41 @@ class Subcommand(object):
                                                                                          '        case VK_STRUCTURE_TYPE_UPDATE_SAMPLER_TEXTURES:\n',
                                                                                          '        {\n',
                                                                                          '            void** ppNextVoidPtr = (void**)&pNext->pNext;\n',
-                                                                                         '            VK_UPDATE_SAMPLER_TEXTURES* pUST = (VK_UPDATE_SAMPLER_TEXTURES*)pNext;\n',
+                                                                                         '            VkUpdateSamplerTextures* pUST = (VkUpdateSamplerTextures*)pNext;\n',
                                                                                          '            *ppNextVoidPtr = (void*)glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pNext->pNext);\n',
                                                                                          '            pUST->pSamplerImageViews = (VK_SAMPLER_IMAGE_VIEW_INFO*) glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pUST->pSamplerImageViews);\n',
                                                                                          '            uint32_t i;\n',
                                                                                          '            for (i = 0; i < pUST->count; i++) {\n',
-                                                                                         '                VK_IMAGE_VIEW_ATTACH_INFO** ppLocalImageView = (VK_IMAGE_VIEW_ATTACH_INFO**)&pUST->pSamplerImageViews[i].pImageView;\n',
-                                                                                         '                *ppLocalImageView = (VK_IMAGE_VIEW_ATTACH_INFO*) glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pUST->pSamplerImageViews[i].pImageView);\n',
+                                                                                         '                VkImageViewAttachInfo** ppLocalImageView = (VkImageViewAttachInfo**)&pUST->pSamplerImageViews[i].pImageView;\n',
+                                                                                         '                *ppLocalImageView = (VkImageViewAttachInfo*) glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pUST->pSamplerImageViews[i].pImageView);\n',
                                                                                          '            }\n',
                                                                                          '            break;\n',
                                                                                          '        }\n',
                                                                                          '        case VK_STRUCTURE_TYPE_UPDATE_IMAGES:\n',
                                                                                          '        {\n',
                                                                                          '            void** ppNextVoidPtr = (void**)&pNext->pNext;\n',
-                                                                                         '            VK_UPDATE_IMAGES* pUI = (VK_UPDATE_IMAGES*)pNext;\n',
+                                                                                         '            VkUpdateImages* pUI = (VkUpdateImages*)pNext;\n',
                                                                                          '            *ppNextVoidPtr = (void*)glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pNext->pNext);\n',
-                                                                                         '            VK_IMAGE_VIEW_ATTACH_INFO** ppLocalImageView = (VK_IMAGE_VIEW_ATTACH_INFO**)&pUI->pImageViews;\n',
-                                                                                         '            *ppLocalImageView = (VK_IMAGE_VIEW_ATTACH_INFO*) glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pUI->pImageViews);\n',
+                                                                                         '            VkImageViewAttachInfo** ppLocalImageView = (VkImageViewAttachInfo**)&pUI->pImageViews;\n',
+                                                                                         '            *ppLocalImageView = (VkImageViewAttachInfo*) glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pUI->pImageViews);\n',
                                                                                          '            uint32_t i;\n',
                                                                                          '            for (i = 0; i < pUI->count; i++) {\n',
-                                                                                         '                VK_IMAGE_VIEW_ATTACH_INFO** ppLocalImageViews = (VK_IMAGE_VIEW_ATTACH_INFO**)&pUI->pImageViews[i];\n',
-                                                                                         '                *ppLocalImageViews = (VK_IMAGE_VIEW_ATTACH_INFO*) glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pUI->pImageViews[i]);\n',
+                                                                                         '                VkImageViewAttachInfo** ppLocalImageViews = (VkImageViewAttachInfo**)&pUI->pImageViews[i];\n',
+                                                                                         '                *ppLocalImageViews = (VkImageViewAttachInfo*) glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pUI->pImageViews[i]);\n',
                                                                                          '            }\n',
                                                                                          '            break;\n',
                                                                                          '        }\n',
                                                                                          '        case VK_STRUCTURE_TYPE_UPDATE_BUFFERS:\n',
                                                                                          '        {\n',
                                                                                          '            void** ppNextVoidPtr = (void**)&pNext->pNext;\n',
-                                                                                         '            VK_UPDATE_BUFFERS* pUB = (VK_UPDATE_BUFFERS*)pNext;\n',
+                                                                                         '            VkUpdateBuffers* pUB = (VkUpdateBuffers*)pNext;\n',
                                                                                          '            *ppNextVoidPtr = (void*)glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pNext->pNext);\n',
-                                                                                         '            VK_BUFFER_VIEW_ATTACH_INFO** ppLocalBufferView = (VK_BUFFER_VIEW_ATTACH_INFO**)&pUB->pBufferViews;\n',
-                                                                                         '            *ppLocalBufferView = (VK_BUFFER_VIEW_ATTACH_INFO*) glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pUB->pBufferViews);\n',
+                                                                                         '            VkBufferViewAttachInfo** ppLocalBufferView = (VkBufferViewAttachInfo**)&pUB->pBufferViews;\n',
+                                                                                         '            *ppLocalBufferView = (VkBufferViewAttachInfo*) glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pUB->pBufferViews);\n',
                                                                                          '            uint32_t i;\n',
                                                                                          '            for (i = 0; i < pUB->count; i++) {\n',
-                                                                                         '                VK_BUFFER_VIEW_ATTACH_INFO** ppLocalBufferViews = (VK_BUFFER_VIEW_ATTACH_INFO**)&pUB->pBufferViews[i];\n',
-                                                                                         '                *ppLocalBufferViews = (VK_BUFFER_VIEW_ATTACH_INFO*) glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pUB->pBufferViews[i]);\n',
+                                                                                         '                VkBufferViewAttachInfo** ppLocalBufferViews = (VkBufferViewAttachInfo**)&pUB->pBufferViews[i];\n',
+                                                                                         '                *ppLocalBufferViews = (VkBufferViewAttachInfo*) glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pUB->pBufferViews[i]);\n',
                                                                                          '            }\n',
                                                                                          '            break;\n',
                                                                                          '        }\n',
@@ -987,13 +980,13 @@ class Subcommand(object):
                                                                                          '           pNext->pNext = NULL;\n',
                                                                                          '        }\n',
                                                                                          '    }\n',
-                                                                                         '    pNext = (VK_UPDATE_SAMPLERS*)pNext->pNext;\n',
+                                                                                         '    pNext = (VkUpdateSamplers*)pNext->pNext;\n',
                                                                                          '}']},
                              'CreateGraphicsPipeline' : {'param': 'pCreateInfo', 'txt': ['if (pPacket->pCreateInfo->sType == VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO) {\n',
                                                                                          '    // need to make a non-const pointer to the pointer so that we can properly change the original pointer to the interpretted one\n',
                                                                                          '    void** ppNextVoidPtr = (void**)&pPacket->pCreateInfo->pNext;\n',
                                                                                          '    *ppNextVoidPtr = (void*)glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->pCreateInfo->pNext);\n',
-                                                                                         '    VK_PIPELINE_SHADER_STAGE_CREATE_INFO* pNext = (VK_PIPELINE_SHADER_STAGE_CREATE_INFO*)pPacket->pCreateInfo->pNext;\n',
+                                                                                         '    VkPipelineShaderStageCreateInfo* pNext = (VkPipelineShaderStageCreateInfo*)pPacket->pCreateInfo->pNext;\n',
                                                                                          '    while ((NULL != pNext) && (VK_NULL_HANDLE != pNext))\n', '{\n',
                                                                                          '        switch(pNext->sType)\n', '    {\n',
                                                                                          '            case VK_STRUCTURE_TYPE_PIPELINE_IA_STATE_CREATE_INFO:\n',
@@ -1010,9 +1003,9 @@ class Subcommand(object):
                                                                                          '            case VK_STRUCTURE_TYPE_PIPELINE_CB_STATE_CREATE_INFO:\n',
                                                                                          '            {\n',
                                                                                          '                void** ppNextVoidPtr = (void**)&pNext->pNext;\n',
-                                                                                         '                VK_PIPELINE_CB_STATE_CREATE_INFO *pCb = (VK_PIPELINE_CB_STATE_CREATE_INFO *) pNext;\n',
+                                                                                         '                VkPipelineCbStateCreateInfo *pCb = (VkPipelineCbStateCreateInfo *) pNext;\n',
                                                                                          '                *ppNextVoidPtr = (void*)glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pNext->pNext);\n',
-                                                                                         '                pCb->pAttachments = (VK_PIPELINE_CB_ATTACHMENT_STATE*) glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pCb->pAttachments);\n',
+                                                                                         '                pCb->pAttachments = (VkPipelineCbAttachmentState*) glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pCb->pAttachments);\n',
                                                                                          '                break;\n',
                                                                                          '            }\n',
                                                                                          '            case VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO:\n',
@@ -1025,10 +1018,10 @@ class Subcommand(object):
                                                                                          '            case VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_CREATE_INFO:\n',
                                                                                          '            {\n',
                                                                                          '                void** ppNextVoidPtr = (void**)&pNext->pNext;\n',
-                                                                                         '                VK_PIPELINE_VERTEX_INPUT_CREATE_INFO *pVi = (VK_PIPELINE_VERTEX_INPUT_CREATE_INFO *) pNext;\n',
+                                                                                         '                VkPipelineVertexInputCreateInfo *pVi = (VkPipelineVertexInputCreateInfo *) pNext;\n',
                                                                                          '                *ppNextVoidPtr = (void*)glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pNext->pNext);\n',
-                                                                                         '                pVi->pVertexBindingDescriptions = (VK_VERTEX_INPUT_BINDING_DESCRIPTION*) glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pVi->pVertexBindingDescriptions);\n',
-                                                                                         '                pVi->pVertexAttributeDescriptions = (VK_VERTEX_INPUT_ATTRIBUTE_DESCRIPTION*) glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pVi->pVertexAttributeDescriptions);\n',
+                                                                                         '                pVi->pVertexBindingDescriptions = (VkVertexInputBindingDescription*) glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pVi->pVertexBindingDescriptions);\n',
+                                                                                         '                pVi->pVertexAttributeDescriptions = (VkVertexInputAttributeDescription*) glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pVi->pVertexAttributeDescriptions);\n',
                                                                                          '                break;\n',
                                                                                          '            }\n',
                                                                                          '            default:\n',
@@ -1038,14 +1031,14 @@ class Subcommand(object):
                                                                                          '               pNext->pNext = NULL;\n',
                                                                                          '            }\n',
                                                                                          '        }\n',
-                                                                                         '        pNext = (VK_PIPELINE_SHADER_STAGE_CREATE_INFO*)pNext->pNext;\n',
+                                                                                         '        pNext = (VkPipelineShaderStageCreateInfo*)pNext->pNext;\n',
                                                                                          '    }\n',
                                                                                          '} else {\n',
                                                                                          '    // This is unexpected.\n',
                                                                                          '    glv_LogError("CreateGraphicsPipeline must have CreateInfo stype of VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO.\\n");\n',
                                                                                          '    pPacket->header = NULL;\n',
                                                                                          '}']},
-                             'CreateComputePipeline' : {'param': 'pCreateInfo', 'txt': ['interpret_pipeline_shader(pHeader, (VK_PIPELINE_SHADER*)(&pPacket->pCreateInfo->cs));']}}
+                             'CreateComputePipeline' : {'param': 'pCreateInfo', 'txt': ['interpret_pipeline_shader(pHeader, (VkPipelineShader*)(&pPacket->pCreateInfo->cs));']}}
         if_body = []
         if_body.append('typedef struct struct_vkApiVersion {')
         if_body.append('    glv_trace_packet_header* header;')
@@ -1163,7 +1156,7 @@ class Subcommand(object):
         rof_body.append('        return m_pendingAlloc;')
         rof_body.append('    }')
         rof_body.append('')
-        rof_body.append('    void setAllocInfo(const VK_MEMORY_ALLOC_INFO *info, const bool pending)')
+        rof_body.append('    void setAllocInfo(const VkMemoryAllocInfo *info, const bool pending)')
         rof_body.append('    {')
         rof_body.append('        m_pendingAlloc = pending;')
         rof_body.append('        m_allocInfo = *info;')
@@ -1223,7 +1216,7 @@ class Subcommand(object):
         return "\n".join(rof_body)
 
     def _generate_replay_objmapper_class(self):
-        # Create dict mapping member var names to VK type (i.e. 'm_imageViews' : 'VK_IMAGE_VIEW')
+        # Create dict mapping member var names to VK type (i.e. 'm_imageViews' : 'VkImage_VIEW')
         obj_map_dict = {}
         for ty in vulkan.object_type_list:
             if ty in vulkan.object_parent_list:
@@ -1234,7 +1227,7 @@ class Subcommand(object):
             obj_map_dict[mem_var] = ty
         rc_body = []
         rc_body.append('typedef struct _VKAllocInfo {')
-        rc_body.append('    VK_GPU_SIZE size;')
+        rc_body.append('    VkGpuSize size;')
         rc_body.append('    void *pData;')
         rc_body.append('} VKAllocInfo;')
         rc_body.append('')
@@ -1246,13 +1239,13 @@ class Subcommand(object):
         rc_body.append('    {')
         rc_body.append('        m_numAllocations = num;')
         rc_body.append('    }\n')
-        rc_body.append('    void setReqs(const VK_MEMORY_REQUIREMENTS *pReqs, const uint32_t num)')
+        rc_body.append('    void setReqs(const VkMemoryRequirements *pReqs, const uint32_t num)')
         rc_body.append('    {')
         rc_body.append('        if (m_numAllocations != num && m_numAllocations != 0)')
         rc_body.append('            glv_LogError("objMemory::setReqs, internal mismatch on number of allocations");')
         rc_body.append('        if (m_pMemReqs == NULL && pReqs != NULL)')
         rc_body.append('        {')
-        rc_body.append('            m_pMemReqs = (VK_MEMORY_REQUIREMENTS *) glv_malloc(num * sizeof(VK_MEMORY_REQUIREMENTS));')
+        rc_body.append('            m_pMemReqs = (VkMemoryRequirements *) glv_malloc(num * sizeof(VkMemoryRequirements));')
         rc_body.append('            if (m_pMemReqs == NULL)')
         rc_body.append('            {')
         rc_body.append('                glv_LogError("objMemory::setReqs out of memory");')
@@ -1263,7 +1256,7 @@ class Subcommand(object):
         rc_body.append('    }\n')
         rc_body.append('private:')
         rc_body.append('    uint32_t m_numAllocations;')
-        rc_body.append('    VK_MEMORY_REQUIREMENTS *m_pMemReqs;')
+        rc_body.append('    VkMemoryRequirements *m_pMemReqs;')
         rc_body.append('};')
         rc_body.append('')
         rc_body.append('class gpuMemory {')
@@ -1280,22 +1273,22 @@ class Subcommand(object):
         rc_body.append('        void* pData;')
         rc_body.append('    };')
         rc_body.append('    std::vector<MapRange> m_mapRange;')
-        rc_body.append('    VK_MEMORY_ALLOC_INFO m_allocInfo;')
+        rc_body.append('    VkMemoryAllocInfo m_allocInfo;')
         rc_body.append('};')
         rc_body.append('')
         rc_body.append('typedef struct _imageObj {')
         rc_body.append('     objMemory imageMem;')
-        rc_body.append('     VK_IMAGE replayImage;')
+        rc_body.append('     VkImage replayImage;')
         rc_body.append(' } imageObj;')
         rc_body.append('')
         rc_body.append('typedef struct _bufferObj {')
         rc_body.append('     objMemory bufferMem;')
-        rc_body.append('     VK_BUFFER replayBuffer;')
+        rc_body.append('     VkBuffer replayBuffer;')
         rc_body.append(' } bufferObj;')
         rc_body.append('')
         rc_body.append('typedef struct _gpuMemObj {')
         rc_body.append('     gpuMemory *pGpuMem;')
-        rc_body.append('     VK_GPU_MEMORY replayGpuMem;')
+        rc_body.append('     VkGpuMemory replayGpuMem;')
         rc_body.append(' } gpuMemObj;')
         rc_body.append('')
         rc_body.append('class vkReplayObjMapper {')
@@ -1305,17 +1298,17 @@ class Subcommand(object):
         rc_body.append('')
         rc_body.append(' bool m_adjustForGPU; // true if replay adjusts behavior based on GPU')
         # Code for memory objects for handling replay GPU != trace GPU object memory requirements
-        rc_body.append(' void init_objMemCount(const VK_BASE_OBJECT& object, const uint32_t &num)\n {')
-        rc_body.append('     VK_IMAGE img = static_cast <VK_IMAGE> (object);')
-        rc_body.append('     std::map<VK_IMAGE, imageObj>::const_iterator it = m_images.find(img);')
+        rc_body.append(' void init_objMemCount(const VkBaseObject& object, const uint32_t &num)\n {')
+        rc_body.append('     VkImage img = static_cast <VkImage> (object);')
+        rc_body.append('     std::map<VkImage, imageObj>::const_iterator it = m_images.find(img);')
         rc_body.append('     if (it != m_images.end())')
         rc_body.append('     {')
         rc_body.append('         objMemory obj = it->second.imageMem;')
         rc_body.append('         obj.setCount(num);')
         rc_body.append('         return;')
         rc_body.append('     }')
-        rc_body.append('     VK_BUFFER buf = static_cast <VK_BUFFER> (object);')
-        rc_body.append('     std::map<VK_BUFFER, bufferObj>::const_iterator itb = m_buffers.find(buf);')
+        rc_body.append('     VkBuffer buf = static_cast <VkBuffer> (object);')
+        rc_body.append('     std::map<VkBuffer, bufferObj>::const_iterator itb = m_buffers.find(buf);')
         rc_body.append('     if (itb != m_buffers.end())')
         rc_body.append('     {')
         rc_body.append('         objMemory obj = itb->second.bufferMem;')
@@ -1324,17 +1317,17 @@ class Subcommand(object):
         rc_body.append('     }')
         rc_body.append('     return;')
         rc_body.append(' }\n')
-        rc_body.append('    void init_objMemReqs(const VK_BASE_OBJECT& object, const VK_MEMORY_REQUIREMENTS *pMemReqs, const unsigned int num)\n    {')
-        rc_body.append('        VK_IMAGE img = static_cast <VK_IMAGE> (object);')
-        rc_body.append('        std::map<VK_IMAGE, imageObj>::const_iterator it = m_images.find(img);')
+        rc_body.append('    void init_objMemReqs(const VkBaseObject& object, const VkMemoryRequirements *pMemReqs, const unsigned int num)\n    {')
+        rc_body.append('        VkImage img = static_cast <VkImage> (object);')
+        rc_body.append('        std::map<VkImage, imageObj>::const_iterator it = m_images.find(img);')
         rc_body.append('        if (it != m_images.end())')
         rc_body.append('        {')
         rc_body.append('            objMemory obj = it->second.imageMem;')
         rc_body.append('            obj.setReqs(pMemReqs, num);')
         rc_body.append('            return;')
         rc_body.append('        }')
-        rc_body.append('        VK_BUFFER buf = static_cast <VK_BUFFER> (object);')
-        rc_body.append('        std::map<VK_BUFFER, bufferObj>::const_iterator itb = m_buffers.find(buf);')
+        rc_body.append('        VkBuffer buf = static_cast <VkBuffer> (object);')
+        rc_body.append('        std::map<VkBuffer, bufferObj>::const_iterator itb = m_buffers.find(buf);')
         rc_body.append('        if (itb != m_buffers.end())')
         rc_body.append('        {')
         rc_body.append('            objMemory obj = itb->second.bufferMem;')
@@ -1349,31 +1342,31 @@ class Subcommand(object):
             rc_body.append('        %s.clear();' % var)
         rc_body.append('    }\n')
         for var in sorted(obj_map_dict):
-            if obj_map_dict[var] == 'VK_IMAGE':
+            if obj_map_dict[var] == 'VkImage':
                 rc_body.append(self._map_decl(obj_map_dict[var], 'imageObj', var))
                 rc_body.append(self._add_to_map_decl(obj_map_dict[var], 'imageObj', var))
                 rc_body.append(self._rm_from_map_decl(obj_map_dict[var], var))
-                rc_body.append('    VK_IMAGE remap(const VK_IMAGE& value)')
+                rc_body.append('    VkImage remap(const VkImage& value)')
                 rc_body.append('    {')
-                rc_body.append('        std::map<VK_IMAGE, imageObj>::const_iterator q = m_images.find(value);')
+                rc_body.append('        std::map<VkImage, imageObj>::const_iterator q = m_images.find(value);')
                 rc_body.append('        return (q == m_images.end()) ? VK_NULL_HANDLE : q->second.replayImage;')
                 rc_body.append('    }\n')
-            elif obj_map_dict[var] == 'VK_BUFFER':
+            elif obj_map_dict[var] == 'VkBuffer':
                 rc_body.append(self._map_decl(obj_map_dict[var], 'bufferObj', var))
                 rc_body.append(self._add_to_map_decl(obj_map_dict[var], 'bufferObj', var))
                 rc_body.append(self._rm_from_map_decl(obj_map_dict[var], var))
-                rc_body.append('    VK_BUFFER remap(const VK_BUFFER& value)')
+                rc_body.append('    VkBuffer remap(const VkBuffer& value)')
                 rc_body.append('    {')
-                rc_body.append('        std::map<VK_BUFFER, bufferObj>::const_iterator q = m_buffers.find(value);')
+                rc_body.append('        std::map<VkBuffer, bufferObj>::const_iterator q = m_buffers.find(value);')
                 rc_body.append('        return (q == m_buffers.end()) ? VK_NULL_HANDLE : q->second.replayBuffer;')
                 rc_body.append('    }\n')
-            elif obj_map_dict[var] == 'VK_GPU_MEMORY':
+            elif obj_map_dict[var] == 'VkGpuMemory':
                 rc_body.append(self._map_decl(obj_map_dict[var], 'gpuMemObj', var))
                 rc_body.append(self._add_to_map_decl(obj_map_dict[var], 'gpuMemObj', var))
                 rc_body.append(self._rm_from_map_decl(obj_map_dict[var], var))
-                rc_body.append('    VK_GPU_MEMORY remap(const VK_GPU_MEMORY& value)')
+                rc_body.append('    VkGpuMemory remap(const VkGpuMemory& value)')
                 rc_body.append('    {')
-                rc_body.append('        std::map<VK_GPU_MEMORY, gpuMemObj>::const_iterator q = m_gpuMemorys.find(value);')
+                rc_body.append('        std::map<VkGpuMemory, gpuMemObj>::const_iterator q = m_gpuMemorys.find(value);')
                 rc_body.append('        return (q == m_gpuMemorys.end()) ? VK_NULL_HANDLE : q->second.replayGpuMem;')
                 rc_body.append('    }\n')
             else:
@@ -1381,34 +1374,34 @@ class Subcommand(object):
                 rc_body.append(self._add_to_map_decl(obj_map_dict[var], obj_map_dict[var], var))
                 rc_body.append(self._rm_from_map_decl(obj_map_dict[var], var))
                 rc_body.append(self._remap_decl(obj_map_dict[var], var))
-        # VK_DYNAMIC_STATE_OBJECT code
+        # VkDynamicStateObject code
         state_obj_remap_types = vulkan.object_dynamic_state_list
-        rc_body.append('    VK_DYNAMIC_STATE_OBJECT remap(const VK_DYNAMIC_STATE_OBJECT& state)\n    {')
-        rc_body.append('        VK_DYNAMIC_STATE_OBJECT obj;')
+        rc_body.append('    VkDynamicStateObject remap(const VkDynamicStateObject& state)\n    {')
+        rc_body.append('        VkDynamicStateObject obj;')
         for t in state_obj_remap_types:
             rc_body.append('        if ((obj = remap(static_cast <%s> (state))) != VK_NULL_HANDLE)' % t)
             rc_body.append('            return obj;')
         rc_body.append('        return VK_NULL_HANDLE;\n    }')
-        rc_body.append('    void rm_from_map(const VK_DYNAMIC_STATE_OBJECT& state)\n    {')
+        rc_body.append('    void rm_from_map(const VkDynamicStateObject& state)\n    {')
         for t in state_obj_remap_types:
             rc_body.append('        rm_from_map(static_cast <%s> (state));' % t)
         rc_body.append('    }')
         rc_body.append('')
         # OBJECT code
-        rc_body.append('    VK_OBJECT remap(const VK_OBJECT& object)\n    {')
-        rc_body.append('        VK_OBJECT obj;')
+        rc_body.append('    VkObject remap(const VkObject& object)\n    {')
+        rc_body.append('        VkObject obj;')
         obj_remap_types = vulkan.object_list
         for var in obj_remap_types:
             rc_body.append('        if ((obj = remap(static_cast <%s> (object))) != VK_NULL_HANDLE)' % (var))
             rc_body.append('            return obj;')
         rc_body.append('        return VK_NULL_HANDLE;\n    }')
-        rc_body.append('    void rm_from_map(const VK_OBJECT & objKey)\n    {')
+        rc_body.append('    void rm_from_map(const VkObject & objKey)\n    {')
         for var in obj_remap_types:
             rc_body.append('        rm_from_map(static_cast <%s> (objKey));' % (var))
         rc_body.append('    }')
-        rc_body.append('    VK_BASE_OBJECT remap(const VK_BASE_OBJECT& object)\n    {')
-        rc_body.append('        VK_BASE_OBJECT obj;')
-        base_obj_remap_types = ['VK_DEVICE', 'VK_QUEUE', 'VK_GPU_MEMORY', 'VK_OBJECT']
+        rc_body.append('    VkBaseObject remap(const VkBaseObject& object)\n    {')
+        rc_body.append('        VkBaseObject obj;')
+        base_obj_remap_types = ['VK_DEVICE', 'VK_QUEUE', 'VkGpuMemory', 'VkObject']
         for t in base_obj_remap_types:
             rc_body.append('        if ((obj = remap(static_cast <%s> (object))) != VK_NULL_HANDLE)' % t)
             rc_body.append('            return obj;')
@@ -1677,7 +1670,7 @@ class Subcommand(object):
         # Functions to treat as "Create' that don't have 'Create' in the name
         special_create_list = ['LoadPipeline', 'AllocMemory', 'GetDeviceQueue', 'PinSystemMemory', 'AllocDescriptorSets']
         # A couple funcs use do while loops
-        do_while_dict = {'GetFenceStatus': 'replayResult != pPacket->result  && pPacket->result == VK_SUCCESS', 'GetEventStatus': '(pPacket->result == VK_EVENT_SET || pPacket->result == VK_EVENT_RESET) && replayResult != pPacket->result'}
+        do_while_dict = {'GetFenceStatus': 'replayResult != pPacket->result  && pPacket->result == VK_SUCCESS', 'GetEventStatus': '(pPacket->result == VkEvent_SET || pPacket->result == VkEvent_RESET) && replayResult != pPacket->result'}
         rbody = []
         rbody.append('glv_replay::GLV_REPLAY_RESULT vkReplay::replay(glv_trace_packet_header *packet)')
         rbody.append('{')
