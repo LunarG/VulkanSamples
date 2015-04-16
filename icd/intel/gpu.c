@@ -42,9 +42,12 @@ struct intel_gpu_ext_props {
     uint32_t version;
     const char * const name;
 };
+
 static const struct intel_gpu_ext_props intel_gpu_exts[INTEL_EXT_COUNT] = {
-    [INTEL_EXT_WSI_X11].version = 0x10, // TODO what is the version?
-    [INTEL_EXT_WSI_X11].name = "VK_WSI_X11"
+    [INTEL_EXT_WSI_LUNARG] = {
+        .version = VK_WSI_LUNARG_REVISION,
+        .name = "VK_WSI_LunarG"
+    }
 };
 
 static int gpu_open_primary_node(struct intel_gpu *gpu)

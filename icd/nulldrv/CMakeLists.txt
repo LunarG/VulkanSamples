@@ -16,10 +16,6 @@ set(definitions "")
 set(libraries
     icd)
 
-if (WIN32)
-    list(APPEND definitions -DENABLE_WSI_WINDOWS)
-endif()
-
 add_library(VK_nulldrv SHARED ${sources})
 target_compile_definitions(VK_nulldrv PRIVATE ${definitions})
 target_include_directories(VK_nulldrv PRIVATE ${include_dirs})

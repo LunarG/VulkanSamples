@@ -30,11 +30,7 @@
 
 #include <vulkan.h>
 #include <vkDbg.h>
-#if defined(WIN32)
-// FIXME: NEED WINDOWS EQUIVALENT
-#else // WIN32
-#include <vkWsiX11Ext.h>
-#endif // WIN32
+#include <vk_wsi_lunarg.h>
 #include <vkLayer.h>
 #include <vkIcd.h>
 #include <assert.h>

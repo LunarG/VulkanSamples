@@ -90,7 +90,11 @@ typedef enum _VK_OBJECT_TYPE
     VK_OBJECT_TYPE_DYNAMIC_RS_STATE_OBJECT,
     VK_OBJECT_TYPE_FENCE,
     VK_OBJECT_TYPE_CMD_BUFFER,
-    VK_OBJECT_TYPE_PRESENTABLE_IMAGE_MEMORY,
+
+    VK_OBJECT_TYPE_DISPLAY_WSI,
+    VK_OBJECT_TYPE_SWAP_CHAIN_WSI,
+    VK_OBJECT_TYPE_SWAP_CHAIN_IMAGE_WSI,
+    VK_OBJECT_TYPE_SWAP_CHAIN_MEMORY_WSI,
 
     VK_NUM_OBJECT_TYPE,
     VK_OBJECT_TYPE_ANY, // Allow global object list to be queried/retrieved
@@ -157,8 +161,14 @@ static const char* string_VK_OBJECT_TYPE(VK_OBJECT_TYPE type) {
             return "QUERY_POOL";
         case VK_OBJECT_TYPE_DESCRIPTOR_POOL:
             return "DESCRIPTOR_POOL";
-        case VK_OBJECT_TYPE_PRESENTABLE_IMAGE_MEMORY:
-            return "PRESENTABLE_IMAGE_MEMORY";
+        case VK_OBJECT_TYPE_DISPLAY_WSI:
+            return "DISPLAY_WSI";
+        case VK_OBJECT_TYPE_SWAP_CHAIN_WSI:
+            return "SWAP_CHAIN_WSI";
+        case VK_OBJECT_TYPE_SWAP_CHAIN_IMAGE_WSI:
+            return "SWAP_CHAIN_IMAGE_WSI";
+        case VK_OBJECT_TYPE_SWAP_CHAIN_MEMORY_WSI:
+            return "SWAP_CHAIN_MEMORY_WSI";
         default:
             return "UNKNOWN";
     }

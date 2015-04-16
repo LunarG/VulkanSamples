@@ -31,16 +31,7 @@
 #include <vulkan.h>
 #include <vk_platform.h>
 #include <vkDbg.h>
-
-#if defined(PLATFORM_LINUX)
-
-#include <vkWsiX11Ext.h>
-
-#else
-
-#include <vkWsiWinExt.h>
-
-#endif
+#include <vk_wsi_lunarg.h>
 
 #if defined(__GNUC__) && __GNUC__ >= 4
 #  define ICD_EXPORT __attribute__((visibility("default")))

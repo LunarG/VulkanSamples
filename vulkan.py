@@ -923,40 +923,48 @@ core = Extension(
     ],
 )
 
-wsi_x11 = Extension(
-    name="VK_WSI_X11",
-    headers=["vkWsiX11Ext.h"],
-    objects=[],
+wsi_lunarg = Extension(
+    name="VK_WSI_LunarG",
+    headers=["vk_wsi_lunarg.h"],
+    objects=[
+        "VkDisplayWSI",
+        "VkSwapChainWSI",
+    ],
     protos=[
-        Proto("VkResult", "WsiX11AssociateConnection",
-            [Param("VkPhysicalDevice", "gpu"),
-             Param("const VK_WSI_X11_CONNECTION_INFO*", "pConnectionInfo")]),
+        Proto("VkResult", "GetDisplayInfoWSI",
+            [Param("VkDisplayWSI", "display"),
+             Param("VkDisplayInfoTypeWSI", "infoType"),
+             Param("size_t*", "pDataSize"),
+             Param("void*", "pData")]),
 
-        Proto("VkResult", "WsiX11GetMSC",
+        Proto("VkResult", "CreateSwapChainWSI",
             [Param("VkDevice", "device"),
-             Param("xcb_window_t", "window"),
-             Param("xcb_randr_crtc_t", "crtc"),
-             Param("uint64_t*", "pMsc")]),
+             Param("const VkSwapChainCreateInfoWSI*", "pCreateInfo"),
+             Param("VkSwapChainWSI*", "pSwapChain")]),
 
-        Proto("VkResult", "WsiX11CreatePresentableImage",
-            [Param("VkDevice", "device"),
-             Param("const VK_WSI_X11_PRESENTABLE_IMAGE_CREATE_INFO*", "pCreateInfo"),
-             Param("VkImage*", "pImage"),
-             Param("VkDeviceMemory*", "pMem")]),
+        Proto("VkResult", "DestroySwapChainWSI",
+            [Param("VkSwapChainWSI", "swapChain")]),
 
-        Proto("VkResult", "WsiX11QueuePresent",
+        Proto("VkResult", "GetSwapChainInfoWSI",
+            [Param("VkSwapChainWSI", "swapChain"),
+             Param("VkSwapChainInfoTypeWSI", "infoType"),
+             Param("size_t*", "pDataSize"),
+             Param("void*", "pData")]),
+
+        Proto("VkResult", "QueuePresentWSI",
             [Param("VkQueue", "queue"),
-             Param("const VK_WSI_X11_PRESENT_INFO*", "pPresentInfo"),
-             Param("VkFence", "fence")]),
+             Param("const VkPresentInfoWSI*", "pPresentInfo")]),
     ],
 )
 
-extensions = [core, wsi_x11]
+extensions = [core, wsi_lunarg]
 
 object_root_list = [
     "VkInstance",
     "VkPhysicalDevice",
-    "VkBaseObject"
+    "VkBaseObject",
+    "VkDisplayWSI",
+    "VkSwapChainWSI",
 ]
 
 object_base_list = [

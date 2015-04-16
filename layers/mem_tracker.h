@@ -22,6 +22,7 @@
  * DEALINGS IN THE SOFTWARE.
  */
 #pragma once
+#include <vector>
 #include "vkLayer.h"
 
 #ifdef __cplusplus
@@ -108,9 +109,7 @@ struct MT_OBJ_INFO {
         VkComputePipelineCreateInfo          compute_pipeline_create_info;
         VkSamplerCreateInfo                   sampler_create_info;
         VkFenceCreateInfo                     fence_create_info;
-#ifndef _WIN32
-        VK_WSI_X11_PRESENTABLE_IMAGE_CREATE_INFO wsi_x11_presentable_image_create_info;
-#endif // _WIN32
+        VkSwapChainCreateInfoWSI            swap_chain_create_info;
     } create_info;
     char object_name[64];
 };
@@ -141,6 +140,11 @@ struct MT_QUEUE_INFO {
     uint64_t                      lastSubmittedId;
     list<VkCmdBuffer>          pQueueCmdBuffers;
     list<VkDeviceMemory>          pMemRefList;
+};
+
+struct MT_SWAP_CHAIN_INFO {
+    VkSwapChainCreateInfoWSI createInfo;
+    std::vector<VkSwapChainImageInfoWSI> images;
 };
 
 #ifdef __cplusplus

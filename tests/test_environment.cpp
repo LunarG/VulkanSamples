@@ -7,7 +7,7 @@
 namespace vk_testing {
 
 Environment::Environment() :
-    m_connection(NULL), default_dev_(0)
+    default_dev_(0)
 {
     app_.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
     app_.pAppName = "vk_testing";
@@ -77,64 +77,8 @@ void Environment::SetUp()
     }
 }
 
-void Environment::X11SetUp()
-{
-
-    uint32_t count;
-    VkResult err;
-    const xcb_setup_t *setup;
-    xcb_screen_iterator_t iter;
-    int scr;
-    VkInstanceCreateInfo instInfo = {};
-    instInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
-    instInfo.pNext = NULL;
-    instInfo.pAppInfo = &app_;
-    instInfo.pAllocCb = NULL;
-    instInfo.extensionCount = 0;
-    instInfo.ppEnabledExtensionNames = NULL;
-
-    err = vkCreateInstance(&instInfo, &inst);
-    ASSERT_EQ(VK_SUCCESS, err);
-    err = vkEnumeratePhysicalDevices(inst, &count, NULL);
-    ASSERT_EQ(VK_SUCCESS, err);
-    ASSERT_LE(count, ARRAY_SIZE(gpus));
-    err = vkEnumeratePhysicalDevices(inst, &count, gpus);
-    ASSERT_EQ(VK_SUCCESS, err);
-    ASSERT_GT(count, default_dev_);
-
-    m_connection = xcb_connect(NULL, &scr);
-
-    setup = xcb_get_setup(m_connection);
-    iter = xcb_setup_roots_iterator(setup);
-    while (scr-- > 0)
-        xcb_screen_next(&iter);
-
-    m_screen = iter.data;
-
-    VK_WSI_X11_CONNECTION_INFO connection_info = {};
-    connection_info.pConnection = m_connection;
-    connection_info.root = m_screen->root;
-    connection_info.provider = 0;
-
-    err = vkWsiX11AssociateConnection(gpus[0], &connection_info);
-    assert(!err);
-
-
-    devs_.reserve(count);
-    for (uint32_t i = 0; i < count; i++) {
-        devs_.push_back(new Device(gpus[i]));
-        if (i == default_dev_) {
-            devs_[i]->init();
-            ASSERT_NE(true, devs_[i]->graphics_queues().empty());
-        }
-    }
-}
-
 void Environment::TearDown()
 {
-    if (m_connection)
-        xcb_disconnect(m_connection);
-
     // destroy devices first
     for (std::vector<Device *>::iterator it = devs_.begin(); it != devs_.end(); it++)
         delete *it;

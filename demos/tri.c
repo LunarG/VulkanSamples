@@ -13,7 +13,7 @@
 #include <xcb/xcb.h>
 #include <vulkan.h>
 #include <vkDbg.h>
-#include <vkWsiX11Ext.h>
+#include <vk_wsi_lunarg.h>
 
 #include "icd-spv.h"
 
@@ -36,6 +36,8 @@ struct texture_object {
 struct demo {
     xcb_connection_t *connection;
     xcb_screen_t *screen;
+    xcb_window_t window;
+    xcb_intern_atom_reply_t *atom_wm_delete_window;
 
     VkInstance inst;
     VkPhysicalDevice gpu;
@@ -48,12 +50,12 @@ struct demo {
     int width, height;
     VkFormat format;
 
+    VkSwapChainWSI swap_chain;
     struct {
         VkImage image;
         VkDeviceMemory mem;
 
         VkColorAttachmentView view;
-        VkFence fence;
     } buffers[DEMO_BUFFER_COUNT];
 
     struct {
@@ -89,9 +91,6 @@ struct demo {
 
     VkDescriptorPool desc_pool;
     VkDescriptorSet desc_set;
-
-    xcb_window_t window;
-    xcb_intern_atom_reply_t *atom_wm_delete_window;
 
     bool quit;
     bool use_staging_buffer;
@@ -298,45 +297,56 @@ static void demo_draw_build_cmd(struct demo *demo)
 
 static void demo_draw(struct demo *demo)
 {
-    const VK_WSI_X11_PRESENT_INFO present = {
-        .destWindow = demo->window,
-        .srcImage = demo->buffers[demo->current_buffer].image,
+    const VkPresentInfoWSI present = {
+        .sType = VK_STRUCTURE_TYPE_PRESENT_INFO_WSI,
+        .pNext = NULL,
+        .image = demo->buffers[demo->current_buffer].image,
+        .flipInterval = 0,
     };
-    VkFence fence = demo->buffers[demo->current_buffer].fence;
     VkResult err;
 
     demo_draw_build_cmd(demo);
 
-    err = vkWaitForFences(demo->device, 1, &fence, VK_TRUE, ~((uint64_t) 0));
-    assert(err == VK_SUCCESS || err == VK_ERROR_UNAVAILABLE);
-
     err = vkQueueSubmit(demo->queue, 1, &demo->cmd, VK_NULL_HANDLE);
     assert(!err);
 
-    err = vkWsiX11QueuePresent(demo->queue, &present, fence);
+    err = vkQueuePresentWSI(demo->queue, &present);
     assert(!err);
 
     demo->current_buffer = (demo->current_buffer + 1) % DEMO_BUFFER_COUNT;
+
+    err = vkQueueWaitIdle(demo->queue);
+    assert(err == VK_SUCCESS);
 }
 
 static void demo_prepare_buffers(struct demo *demo)
 {
-    const VK_WSI_X11_PRESENTABLE_IMAGE_CREATE_INFO presentable_image = {
-        .format = demo->format,
-        .usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
-        .extent = {
+    const VkSwapChainCreateInfoWSI swap_chain = {
+        .sType = VK_STRUCTURE_TYPE_SWAP_CHAIN_CREATE_INFO_WSI,
+        .pNext = NULL,
+        .pNativeWindowSystemHandle = demo->connection,
+        .pNativeWindowHandle = (void *) (intptr_t) demo->window,
+        .imageCount = DEMO_BUFFER_COUNT,
+        .imageFormat = demo->format,
+        .imageExtent = {
             .width = demo->width,
             .height = demo->height,
         },
-        .flags = 0,
+        .imageArraySize = 1,
+        .imageUsageFlags = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
     };
-    const VkFenceCreateInfo fence = {
-        .sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
-        .pNext = NULL,
-        .flags = 0,
-    };
+    VkSwapChainImageInfoWSI images[DEMO_BUFFER_COUNT];
+    size_t images_size = sizeof(images);
     VkResult err;
     uint32_t i;
+
+    err = vkCreateSwapChainWSI(demo->device, &swap_chain, &demo->swap_chain);
+    assert(!err);
+
+    err = vkGetSwapChainInfoWSI(demo->swap_chain,
+            VK_SWAP_CHAIN_INFO_TYPE_PERSISTENT_IMAGES_WSI,
+            &images_size, images);
+    assert(!err && images_size == sizeof(images));
 
     for (i = 0; i < DEMO_BUFFER_COUNT; i++) {
         VkColorAttachmentViewCreateInfo color_attachment_view = {
@@ -348,11 +358,10 @@ static void demo_prepare_buffers(struct demo *demo)
             .arraySize = 1,
         };
 
-        err = vkWsiX11CreatePresentableImage(demo->device, &presentable_image,
-                &demo->buffers[i].image, &demo->buffers[i].mem);
-        assert(!err);
+        demo->buffers[i].image = images[i].image;
+        demo->buffers[i].mem = images[i].memory;
 
-        demo_add_mem_refs(demo, 1, demo->buffers[i].mem);
+        demo_add_mem_refs(demo, 1, &demo->buffers[i].mem);
         demo_set_image_layout(demo, demo->buffers[i].image,
                                VK_IMAGE_LAYOUT_UNDEFINED,
                                VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
@@ -361,10 +370,6 @@ static void demo_prepare_buffers(struct demo *demo)
 
         err = vkCreateColorAttachmentView(demo->device,
                 &color_attachment_view, &demo->buffers[i].view);
-        assert(!err);
-
-        err = vkCreateFence(demo->device,
-                &fence, &demo->buffers[i].fence);
         assert(!err);
     }
 
@@ -1201,7 +1206,7 @@ static void demo_init_vk(struct demo *demo)
     VkResult err;
     // Extensions to enable
     const char *ext_names[] = {
-        "VK_WSI_X11",
+        "VK_WSI_LunarG",
     };
     size_t extSize = sizeof(uint32_t);
     uint32_t extCount = 0;
@@ -1234,11 +1239,6 @@ static void demo_init_vk(struct demo *demo)
         .extensionCount = 1,
         .ppEnabledExtensionNames = ext_names,
     };
-    const VK_WSI_X11_CONNECTION_INFO connection = {
-        .pConnection = demo->connection,
-        .root = demo->screen->root,
-        .provider = 0,
-    };
     const VkDeviceQueueCreateInfo queue = {
         .queueNodeIndex = 0,
         .queueCount = 1,
@@ -1270,9 +1270,6 @@ static void demo_init_vk(struct demo *demo)
     gpu_count = 1;
     err = vkEnumeratePhysicalDevices(demo->inst, &gpu_count, &demo->gpu);
     assert(!err && gpu_count == 1);
-
-    err = vkWsiX11AssociateConnection(demo->gpu, &connection);
-    assert(!err);
 
     err = vkCreateDevice(demo->gpu, &device, &demo->device);
     assert(!err);
@@ -1393,11 +1390,10 @@ static void demo_cleanup(struct demo *demo)
         vkFreeMemory(demo->depth.mem[j]);
 
     for (i = 0; i < DEMO_BUFFER_COUNT; i++) {
-        vkDestroyObject(demo->buffers[i].fence);
         vkDestroyObject(demo->buffers[i].view);
-        vkDestroyObject(demo->buffers[i].image);
         demo_remove_mem_refs(demo, 1, &demo->buffers[i].mem);
     }
+    vkDestroySwapChainWSI(demo->swap_chain);
 
     vkDestroyDevice(demo->device);
     vkDestroyInstance(demo->inst);
@@ -1411,9 +1407,9 @@ int main(const int argc, const char *argv[])
     struct demo demo;
 
     demo_init(&demo, argc, argv);
+    demo_create_window(&demo);
 
     demo_prepare(&demo);
-    demo_create_window(&demo);
     demo_run(&demo);
 
     demo_cleanup(&demo);

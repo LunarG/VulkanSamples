@@ -40,8 +40,7 @@
 
 // The null driver supports all WSI extenstions ... for now ...
 static const char * const nulldrv_gpu_exts[NULLDRV_EXT_COUNT] = {
-	[NULLDRV_EXT_WSI_X11] = "VK_WSI_X11",
-	[NULLDRV_EXT_WSI_WINDOWS] = "VK_WSI_WINDOWS"
+	[NULLDRV_EXT_WSI_LUNARG] = "VK_WSI_LunarG",
 };
 
 static struct nulldrv_base *nulldrv_base(VkBaseObject base)

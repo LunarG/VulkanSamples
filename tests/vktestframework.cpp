@@ -28,6 +28,8 @@
 #include <limits.h>
 #include <math.h>
 #include <wand/MagickWand.h>
+#include <xcb/xcb.h>
+#include <vk_wsi_lunarg.h>
 
 // Command-line options
 enum TOptions {
@@ -45,6 +47,43 @@ enum TOptions {
     EOptionDumpVersions       = 0x400,
     EOptionSpv                = 0x800,
     EOptionDefaultDesktop     = 0x1000,
+};
+
+class TestFrameworkVkPresent
+{
+public:
+    TestFrameworkVkPresent(vk_testing::Device &device);
+
+    void Run();
+    void InitPresentFramework(std::list<VkTestImageRecord> &imagesIn);
+    void CreateMyWindow();
+    void CreateSwapChain();
+    void TearDown();
+
+protected:
+    vk_testing::Device                    &m_device;
+    vk_testing::Queue                     &m_queue;
+    vk_testing::CmdBuffer                  m_cmdbuf;
+
+private:
+    xcb_connection_t                       *m_connection;
+    xcb_screen_t                           *m_screen;
+    xcb_window_t                            m_window;
+    xcb_intern_atom_reply_t                *m_atom_wm_delete_window;
+    std::list<VkTestImageRecord>           m_images;
+
+    VkSwapChainWSI                          m_swap_chain;
+
+    bool                                    m_quit;
+    bool                                    m_pause;
+
+    uint32_t                                m_width;
+    uint32_t                                m_height;
+
+    std::list<VkTestImageRecord>::iterator m_display_image;
+
+    void Display();
+    void HandleEvent(xcb_generic_event_t *event);
 };
 
 #ifndef _WIN32
@@ -380,10 +419,8 @@ void VkTestFramework::RecordImage(VkImageObj * image)
     }
 }
 
-static vk_testing::Environment *environment;
-
-TestFrameworkVkPresent::TestFrameworkVkPresent() :
-   m_device(environment->default_device()),
+TestFrameworkVkPresent::TestFrameworkVkPresent(vk_testing::Device &device) :
+   m_device(device),
    m_queue(*m_device.graphics_queues()[0]),
    m_cmdbuf(m_device, vk_testing::CmdBuffer::create_info(m_device.graphics_queue_node_index_))
 {
@@ -397,11 +434,12 @@ void  TestFrameworkVkPresent::Display()
 {
     VkResult err;
 
-    VK_WSI_X11_PRESENT_INFO present = {};
-    present.destWindow = m_window;
-    present.srcImage = m_display_image->m_presentableImage;
+    VkPresentInfoWSI present = {};
+    present.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_WSI;
+    present.image = m_display_image->m_presentableImage;
+    present.flipInterval = 1;
 
-    xcb_change_property (environment->m_connection,
+    xcb_change_property (m_connection,
                          XCB_PROP_MODE_REPLACE,
                          m_window,
                          XCB_ATOM_WM_NAME,
@@ -410,7 +448,7 @@ void  TestFrameworkVkPresent::Display()
                          m_display_image->m_title.size(),
                          m_display_image->m_title.c_str());
 
-    err = vkWsiX11QueuePresent(m_queue.obj(), &present, NULL);
+    err = vkQueuePresentWSI(m_queue.obj(), &present);
     assert(!err);
 
     m_queue.wait();
@@ -466,15 +504,15 @@ void  TestFrameworkVkPresent::HandleEvent(xcb_generic_event_t *event)
 
 void  TestFrameworkVkPresent::Run()
 {
-    xcb_flush(environment->m_connection);
+    xcb_flush(m_connection);
 
     while (! m_quit) {
         xcb_generic_event_t *event;
 
         if (m_pause) {
-            event = xcb_wait_for_event(environment->m_connection);
+            event = xcb_wait_for_event(m_connection);
         } else {
-            event = xcb_poll_for_event(environment->m_connection);
+            event = xcb_poll_for_event(m_connection);
         }
         if (event) {
             HandleEvent(event);
@@ -483,26 +521,42 @@ void  TestFrameworkVkPresent::Run()
     }
 }
 
-void TestFrameworkVkPresent::CreatePresentableImages()
+void TestFrameworkVkPresent::CreateSwapChain()
 {
     VkResult err;
+
+    VkSwapChainCreateInfoWSI swap_chain = {};
+    swap_chain.sType = VK_STRUCTURE_TYPE_SWAP_CHAIN_CREATE_INFO_WSI;
+    swap_chain.pNativeWindowSystemHandle = (void *) m_connection;
+    swap_chain.pNativeWindowHandle = (void *) (intptr_t) m_window;
+    swap_chain.imageCount = m_images.size();
+    swap_chain.imageFormat = VK_FORMAT_B8G8R8A8_UNORM;
+    swap_chain.imageExtent.width = m_width;
+    swap_chain.imageExtent.height = m_height;
+    swap_chain.imageArraySize = 1;
+    swap_chain.imageUsageFlags = VK_IMAGE_USAGE_TRANSFER_DESTINATION_BIT;
+    swap_chain.swapModeFlags = VK_SWAP_MODE_FLIP_BIT_WSI |
+                               VK_SWAP_MODE_BLIT_BIT_WSI;
+
+    err = vkCreateSwapChainWSI(m_device.obj(), &swap_chain, &m_swap_chain);
+    assert(!err);
+
+    size_t size = sizeof(VkSwapChainImageInfoWSI) * m_images.size();
+    std::vector<VkSwapChainImageInfoWSI> persistent_images;
+    persistent_images.resize(m_images.size());
+    err = vkGetSwapChainInfoWSI(m_swap_chain,
+            VK_SWAP_CHAIN_INFO_TYPE_PERSISTENT_IMAGES_WSI,
+            &size, &persistent_images[0]);
+    assert(!err && size == sizeof(VkSwapChainImageInfoWSI) * m_images.size());
 
     m_display_image = m_images.begin();
 
     for (int x=0; x < m_images.size(); x++)
     {
-        VK_WSI_X11_PRESENTABLE_IMAGE_CREATE_INFO presentable_image_info = {};
-        presentable_image_info.format = VK_FORMAT_B8G8R8A8_UNORM;
-        presentable_image_info.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
-        presentable_image_info.extent.width = m_display_image->m_width;
-        presentable_image_info.extent.height = m_display_image->m_height;
-        presentable_image_info.flags = 0;
-
         void *dest_ptr;
 
-        err = vkWsiX11CreatePresentableImage(m_device.obj(), &presentable_image_info,
-                        &m_display_image->m_presentableImage, &m_display_image->m_presentableMemory);
-        assert(!err);
+        m_display_image->m_presentableImage = persistent_images[x].image;
+        m_display_image->m_presentableMemory = persistent_images[x].memory;
 
         vk_testing::Buffer buf;
         buf.init(m_device, (VkDeviceSize) m_display_image->m_data_size);
@@ -535,15 +589,7 @@ void TestFrameworkVkPresent::CreatePresentableImages()
         vkQueueRemoveMemReferences(m_queue.obj(), 1, &m_display_image->m_presentableMemory);
         vkQueueRemoveMemReferences(m_queue.obj(), buf.memories().size(), &buf.memories()[0]);
 
-        if (m_display_image->m_width > m_width)
-            m_width = m_display_image->m_width;
-
-        if (m_display_image->m_height > m_height)
-            m_height = m_display_image->m_height;
-
-
         ++m_display_image;
-
     }
 
     m_display_image = m_images.begin();
@@ -556,67 +602,83 @@ void  TestFrameworkVkPresent::InitPresentFramework(std::list<VkTestImageRecord> 
 
 void  TestFrameworkVkPresent::CreateMyWindow()
 {
+    const xcb_setup_t *setup;
+    xcb_screen_iterator_t iter;
+    int scr;
     uint32_t value_mask, value_list[32];
 
-    m_window = xcb_generate_id(environment->m_connection);
+    m_connection = xcb_connect(NULL, &scr);
+
+    setup = xcb_get_setup(m_connection);
+    iter = xcb_setup_roots_iterator(setup);
+    while (scr-- > 0)
+        xcb_screen_next(&iter);
+
+    m_screen = iter.data;
+
+    for (std::list<VkTestImageRecord>::const_iterator it = m_images.begin();
+         it != m_images.end(); it++) {
+        if (m_width < it->m_width)
+            m_width = it->m_width;
+        if (m_height < it->m_height)
+            m_height = it->m_height;
+    }
+
+    m_window = xcb_generate_id(m_connection);
 
     value_mask = XCB_CW_BACK_PIXEL | XCB_CW_EVENT_MASK;
-    value_list[0] = environment->m_screen->black_pixel;
+    value_list[0] = m_screen->black_pixel;
     value_list[1] = XCB_EVENT_MASK_KEY_RELEASE |
                     XCB_EVENT_MASK_EXPOSURE |
                     XCB_EVENT_MASK_STRUCTURE_NOTIFY;
 
-    xcb_create_window(environment->m_connection,
+    xcb_create_window(m_connection,
             XCB_COPY_FROM_PARENT,
-            m_window, environment->m_screen->root,
+            m_window, m_screen->root,
             0, 0, m_width, m_height, 0,
             XCB_WINDOW_CLASS_INPUT_OUTPUT,
-            environment->m_screen->root_visual,
+            m_screen->root_visual,
             value_mask, value_list);
 
     /* Magic code that will send notification when window is destroyed */
-    xcb_intern_atom_cookie_t cookie = xcb_intern_atom(environment->m_connection, 1, 12,
+    xcb_intern_atom_cookie_t cookie = xcb_intern_atom(m_connection, 1, 12,
                                                       "WM_PROTOCOLS");
-    xcb_intern_atom_reply_t* reply = xcb_intern_atom_reply(environment->m_connection, cookie, 0);
+    xcb_intern_atom_reply_t* reply = xcb_intern_atom_reply(m_connection, cookie, 0);
 
-    xcb_intern_atom_cookie_t cookie2 = xcb_intern_atom(environment->m_connection, 0, 16, "WM_DELETE_WINDOW");
-    m_atom_wm_delete_window = xcb_intern_atom_reply(environment->m_connection, cookie2, 0);
+    xcb_intern_atom_cookie_t cookie2 = xcb_intern_atom(m_connection, 0, 16, "WM_DELETE_WINDOW");
+    m_atom_wm_delete_window = xcb_intern_atom_reply(m_connection, cookie2, 0);
 
-    xcb_change_property(environment->m_connection, XCB_PROP_MODE_REPLACE,
+    xcb_change_property(m_connection, XCB_PROP_MODE_REPLACE,
                         m_window, (*reply).atom, 4, 32, 1,
                         &(*m_atom_wm_delete_window).atom);
     free(reply);
 
-    xcb_map_window(environment->m_connection, m_window);
+    xcb_map_window(m_connection, m_window);
 }
 
 void TestFrameworkVkPresent::TearDown()
 {
-    std::list<VkTestImageRecord>::const_iterator iterator;
-    for (iterator = m_images.begin(); iterator != m_images.end(); ++iterator) {
-        vkDestroyObject(iterator->m_presentableImage);
-    }
-    xcb_destroy_window(environment->m_connection, m_window);
+    vkDestroySwapChainWSI(m_swap_chain);
+    xcb_destroy_window(m_connection, m_window);
+    xcb_disconnect(m_connection);
 }
 
 void VkTestFramework::Finish()
 {
     if (m_images.size() == 0) return;
 
-    environment = new vk_testing::Environment();
-    ::testing::AddGlobalTestEnvironment(environment);
-    environment->X11SetUp();
-
+    vk_testing::Environment env;
+    env.SetUp();
     {
-        TestFrameworkVkPresent vkPresent;
+        TestFrameworkVkPresent vkPresent(env.default_device());
 
         vkPresent.InitPresentFramework(m_images);
-        vkPresent.CreatePresentableImages();
         vkPresent.CreateMyWindow();
+        vkPresent.CreateSwapChain();
         vkPresent.Run();
         vkPresent.TearDown();
     }
-    environment->TearDown();
+    env.TearDown();
 }
 
 //

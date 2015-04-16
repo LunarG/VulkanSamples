@@ -29,6 +29,7 @@
 #include <assert.h>
 #include <list>
 #include <map>
+#include <vector>
 using namespace std;
 
 #include "loader_platform.h"
@@ -55,6 +56,7 @@ map<VkDeviceMemory, MT_MEM_OBJ_INFO*> memObjMap;
 map<VkObject,     MT_OBJ_INFO*>     objectMap;
 map<uint64_t,       MT_FENCE_INFO*>   fenceMap;    // Map fenceId to fence info
 map<VkQueue,      MT_QUEUE_INFO*>   queueMap;
+map<VkSwapChainWSI, MT_SWAP_CHAIN_INFO*>   swapChainMap;
 
 // TODO : Add per-device fence completion
 static uint64_t     g_currentFenceId  = 1;
@@ -76,6 +78,12 @@ static void deleteQueueInfoList(void)
         (*ii).second->pQueueCmdBuffers.clear();
     }
     queueMap.clear();
+}
+
+static void addSwapChainInfo(const VkSwapChainWSI swapChain)
+{
+    MT_SWAP_CHAIN_INFO* pInfo = new MT_SWAP_CHAIN_INFO;
+    swapChainMap[swapChain] = pInfo;
 }
 
 // Add new CBInfo for this cb to map container
@@ -362,7 +370,7 @@ static void addMemObjInfo(const VkDeviceMemory mem, const VkMemoryAllocInfo* pAl
     pInfo->refCount           = 0;
     memset(&pInfo->allocInfo, 0, sizeof(VkMemoryAllocInfo));
 
-    if (pAllocInfo) {  // MEM alloc created by vkWsiX11CreatePresentableImage() doesn't have alloc info struct
+    if (pAllocInfo) {  // MEM alloc created by vkCreateSwapChainWSI() doesn't have alloc info struct
         memcpy(&pInfo->allocInfo, pAllocInfo, sizeof(VkMemoryAllocInfo));
         // TODO:  Update for real hardware, actually process allocation info structures
         pInfo->allocInfo.pNext = NULL;
@@ -570,7 +578,7 @@ static bool32_t freeMemObjInfo(VkDeviceMemory mem, bool internal)
     } else {
         if (pInfo->allocInfo.allocationSize == 0 && !internal) {
             char str[1024];
-            sprintf(str, "Attempting to free memory associated with a Presentable Image, %p, this should not be explicitly freed\n", (void*)mem);
+            sprintf(str, "Attempting to free memory associated with a Persistent Image, %p, this should not be explicitly freed\n", (void*)mem);
             layerCbMsg(VK_DBG_MSG_WARNING, VK_VALIDATION_LEVEL_0, mem, 0, MEMTRACK_INVALID_MEM_OBJ, "MEM", str);
             result = VK_FALSE;
         } else {
@@ -767,7 +775,7 @@ static void printMemList()
             sprintf(str, "    Mem Alloc info:\n%s", pAllocInfoMsg.c_str());
             layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, NULL, 0, MEMTRACK_NONE, "MEM", str);
         } else {
-            sprintf(str, "    Mem Alloc info is NULL (alloc done by vkWsiX11CreatePresentableImage())");
+            sprintf(str, "    Mem Alloc info is NULL (alloc done by vkCreateSwapChainWSI())");
             layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, NULL, 0, MEMTRACK_NONE, "MEM", str);
         }
 
@@ -1938,40 +1946,82 @@ VK_LAYER_EXPORT VkResult VKAPI vkDbgUnregisterMsgCallback(VkInstance instance, V
     return result;
 }
 
-#if !defined(WIN32)
-VK_LAYER_EXPORT VkResult VKAPI vkWsiX11CreatePresentableImage(VkDevice device, const VK_WSI_X11_PRESENTABLE_IMAGE_CREATE_INFO* pCreateInfo,
-    VkImage* pImage, VkDeviceMemory* pMem)
+VK_LAYER_EXPORT VkResult VKAPI vkCreateSwapChainWSI(VkDevice device, const VkSwapChainCreateInfoWSI* pCreateInfo, VkSwapChainWSI* pSwapChain)
 {
-    VkResult result = nextTable.WsiX11CreatePresentableImage(device, pCreateInfo, pImage, pMem);
-    loader_platform_thread_lock_mutex(&globalLock);
+    VkResult result = nextTable.CreateSwapChainWSI(device, pCreateInfo, pSwapChain);
+
     if (VK_SUCCESS == result) {
-        // Add image object, then insert the new Mem Object and then bind it to created image
-        addObjectInfo(*pImage, VK_STRUCTURE_TYPE_MAX_ENUM, pCreateInfo, sizeof(VK_WSI_X11_PRESENTABLE_IMAGE_CREATE_INFO), "wsi_x11_image");
-        addMemObjInfo(*pMem, NULL);
-        if (VK_FALSE == updateObjectBinding(*pImage, *pMem)) {
-            char str[1024];
-            sprintf(str, "In vkWsiX11CreatePresentableImage(), unable to set image %p binding to mem obj %p", (void*)*pImage, (void*)*pMem);
-            layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, *pImage, 0, MEMTRACK_MEMORY_BINDING_ERROR, "MEM", str);
-        }
+        loader_platform_thread_lock_mutex(&globalLock);
+        addSwapChainInfo(*pSwapChain);
+        loader_platform_thread_unlock_mutex(&globalLock);
     }
-    printObjList();
-    printMemList();
-    loader_platform_thread_unlock_mutex(&globalLock);
+
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkWsiX11QueuePresent(VkQueue queue, const VK_WSI_X11_PRESENT_INFO*  pPresentInfo, VkFence fence)
+VK_LAYER_EXPORT VkResult VKAPI vkDestroySwapChainWSI(VkSwapChainWSI swapChain)
 {
     loader_platform_thread_lock_mutex(&globalLock);
-    addFenceInfo(fence, queue);
-    char            str[1024];
-    sprintf(str, "In vkWsiX11QueuePresent(), checking queue %p for fence %p", queue, fence);
-    layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, queue, 0, MEMTRACK_NONE, "MEM", str);
+
+    if (swapChainMap.find(swapChain) != swapChainMap.end()) {
+        MT_SWAP_CHAIN_INFO* pInfo = swapChainMap[swapChain];
+
+        for (std::vector<VkSwapChainImageInfoWSI>::const_iterator it = pInfo->images.begin();
+             it != pInfo->images.end(); it++) {
+            clearObjectBinding(it->image);
+            freeMemObjInfo(it->memory, true);
+
+            MT_OBJ_INFO* pDelInfo = objectMap[it->image];
+            delete pDelInfo;
+            objectMap.erase(it->image);
+        }
+
+        delete pInfo;
+        swapChainMap.erase(swapChain);
+    }
+
     loader_platform_thread_unlock_mutex(&globalLock);
-    VkResult result = nextTable.WsiX11QueuePresent(queue, pPresentInfo, fence);
+
+    return nextTable.DestroySwapChainWSI(swapChain);
+}
+
+VK_LAYER_EXPORT VkResult VKAPI vkGetSwapChainInfoWSI(VkSwapChainWSI swapChain, VkSwapChainInfoTypeWSI infoType, size_t* pDataSize, void* pData)
+{
+    VkResult result = nextTable.GetSwapChainInfoWSI(swapChain, infoType, pDataSize, pData);
+
+    if (infoType == VK_SWAP_CHAIN_INFO_TYPE_PERSISTENT_IMAGES_WSI && result == VK_SUCCESS) {
+        const size_t count = *pDataSize / sizeof(VkSwapChainImageInfoWSI);
+        MT_SWAP_CHAIN_INFO *pInfo = swapChainMap[swapChain];
+
+        if (pInfo->images.empty()) {
+            pInfo->images.resize(count);
+            memcpy(&pInfo->images[0], pData, sizeof(pInfo->images[0]) * count);
+
+            for (std::vector<VkSwapChainImageInfoWSI>::const_iterator it = pInfo->images.begin();
+                 it != pInfo->images.end(); it++) {
+                // Add image object, then insert the new Mem Object and then bind it to created image
+                addObjectInfo(it->image, VK_STRUCTURE_TYPE_MAX_ENUM, &pInfo->createInfo, sizeof(pInfo->createInfo), "persistent_image");
+                addMemObjInfo(it->memory, NULL);
+                if (VK_FALSE == updateObjectBinding(it->image, it->memory)) {
+                    char str[1024];
+                    sprintf(str, "In vkGetSwapChainInfoWSI(), unable to set image %p binding to mem obj %p", (void*)it->image, (void*)it->memory);
+                    layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, it->image, 0, MEMTRACK_MEMORY_BINDING_ERROR, "MEM", str);
+                }
+            }
+        } else {
+            const bool mismatch = (pInfo->images.size() != count ||
+                    memcmp(&pInfo->images[0], pData, sizeof(pInfo->images[0]) * count));
+
+            if (mismatch) {
+                char str[1024];
+                sprintf(str, "vkGetSwapChainInfoWSI(%p, VK_SWAP_CHAIN_INFO_TYPE_PERSISTENT_IMAGES_WSI) returned mismatching data", swapChain);
+                layerCbMsg(VK_DBG_MSG_WARNING, VK_VALIDATION_LEVEL_0, (VkBaseObject) swapChain, 0, MEMTRACK_NONE, "SWAP_CHAIN", str);
+            }
+        }
+    }
+
     return result;
 }
-#endif // WIN32
 
 VK_LAYER_EXPORT void* VKAPI vkGetProcAddr(VkPhysicalDevice gpu, const char* funcName)
 {
@@ -2122,12 +2172,12 @@ VK_LAYER_EXPORT void* VKAPI vkGetProcAddr(VkPhysicalDevice gpu, const char* func
         return (void*) vkQueueAddMemReferences;
     if (!strcmp(funcName, "vkQueueRemoveMemReferences"))
         return (void*) vkQueueRemoveMemReferences;
-#if !defined(WIN32)
-    if (!strcmp(funcName, "vkWsiX11CreatePresentableImage"))
-        return (void*) vkWsiX11CreatePresentableImage;
-    if (!strcmp(funcName, "vkWsiX11QueuePresent"))
-        return (void*) vkWsiX11QueuePresent;
-#endif
+    if (!strcmp(funcName, "vkCreateSwapChainWSI"))
+        return (void*) vkCreateSwapChainWSI;
+    if (!strcmp(funcName, "vkDestroySwapChainWSI"))
+        return (void*) vkDestroySwapChainWSI;
+    if (!strcmp(funcName, "vkGetSwapChainInfoWSI"))
+        return (void*) vkGetSwapChainInfoWSI;
     else {
         if (gpuw->pGPA == NULL)
             return NULL;

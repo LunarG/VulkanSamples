@@ -6,9 +6,7 @@
 
 #include "vulkan.h"
 #include "vkDbg.h"
-#if defined(__linux__) || defined(XCB_NVIDIA)
-#include "vkWsiX11Ext.h"
-#endif
+#include "vk_wsi_lunarg.h"
 #if defined(__GNUC__) && __GNUC__ >= 4
 #  define VK_LAYER_EXPORT __attribute__((visibility("default")))
 #elif defined(__SUNPRO_C) && (__SUNPRO_C >= 0x590)
@@ -153,12 +151,11 @@ typedef struct VkLayerDispatchTable_
     PFN_vkDbgSetDeviceOption DbgSetDeviceOption;
     PFN_vkCmdDbgMarkerBegin CmdDbgMarkerBegin;
     PFN_vkCmdDbgMarkerEnd CmdDbgMarkerEnd;
-#if defined(__linux__) || defined(XCB_NVIDIA)
-    PFN_vkWsiX11AssociateConnection WsiX11AssociateConnection;
-    PFN_vkWsiX11GetMSC WsiX11GetMSC;
-    PFN_vkWsiX11CreatePresentableImage WsiX11CreatePresentableImage;
-    PFN_vkWsiX11QueuePresent WsiX11QueuePresent;
-#endif // WIN32
+    PFN_vkGetDisplayInfoWSI GetDisplayInfoWSI;
+    PFN_vkCreateSwapChainWSI CreateSwapChainWSI;
+    PFN_vkDestroySwapChainWSI DestroySwapChainWSI;
+    PFN_vkGetSwapChainInfoWSI GetSwapChainInfoWSI;
+    PFN_vkQueuePresentWSI QueuePresentWSI;
 } VkLayerDispatchTable;
 
 // LL node for tree of dbg callback functions

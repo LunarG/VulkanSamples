@@ -525,7 +525,8 @@ VK_LAYER_EXPORT VkResult VKAPI vkDestroyDevice(VkDevice device)
     GLV_VK_SNAPSHOT_LL_NODE *pTrav = s_delta.pGlobalObjs;
     while (pTrav != NULL)
     {
-        if (pTrav->obj.objType == VK_OBJECT_TYPE_PRESENTABLE_IMAGE_MEMORY)
+        if (pTrav->obj.objType == VK_OBJECT_TYPE_SWAP_CHAIN_IMAGE_WSI ||
+            pTrav->obj.objType == VK_OBJECT_TYPE_SWAP_CHAIN_MEMORY_WSI)
         {
             GLV_VK_SNAPSHOT_LL_NODE *pDel = pTrav;
             pTrav = pTrav->pNextGlobal;
@@ -1691,58 +1692,67 @@ VK_LAYER_EXPORT void VKAPI vkCmdDbgMarkerEnd(VkCmdBuffer cmdBuffer)
     nextTable.CmdDbgMarkerEnd(cmdBuffer);
 }
 
-#if defined(__linux__) || defined(XCB_NVIDIA)
-
-VK_LAYER_EXPORT VkResult VKAPI vkWsiX11AssociateConnection(VkPhysicalGpu gpu, const VK_WSI_X11_CONNECTION_INFO* pConnectionInfo)
+VK_LAYER_EXPORT VkResult VKAPI xglGetDisplayInfoWSI(VkDisplayWSI display, VkDisplayInfoTypeWSI infoType, size_t* pDataSize, void* pData)
 {
-    VkBaseLayerObject* gpuw = (VkBaseLayerObject *) gpu;
     loader_platform_thread_lock_mutex(&objLock);
-    ll_increment_use_count((void*)gpu, VK_OBJECT_TYPE_PHYSICAL_GPU);
+    ll_increment_use_count((void*)display, VK_OBJECT_TYPE_DISPLAY_WSI);
     loader_platform_thread_unlock_mutex(&objLock);
-    pCurObj = gpuw;
-    loader_platform_thread_once(&tabOnce, initGlaveSnapshot);
-    VkResult result = nextTable.WsiX11AssociateConnection((VkPhysicalGpu)gpuw->nextObject, pConnectionInfo);
+    VkResult result = nextTable.GetDisplayInfoWSI(display, infoType, pDataSize, pData);
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkWsiX11GetMSC(VkDevice device, xcb_window_t window, xcb_randr_crtc_t crtc, uint64_t* pMsc)
+VK_LAYER_EXPORT VkResult VKAPI xglCreateSwapChainWSI(VkDevice device, const VkSwapChainCreateInfoWSI* pCreateInfo, VkSwapChainWSI* pSwapChain)
 {
     loader_platform_thread_lock_mutex(&objLock);
     ll_increment_use_count((void*)device, VK_OBJECT_TYPE_DEVICE);
     loader_platform_thread_unlock_mutex(&objLock);
-    VkResult result = nextTable.WsiX11GetMSC(device, window, crtc, pMsc);
-    return result;
-}
-
-VK_LAYER_EXPORT VkResult VKAPI vkWsiX11CreatePresentableImage(VkDevice device, const VK_WSI_X11_PRESENTABLE_IMAGE_CREATE_INFO* pCreateInfo, VkImage* pImage, VkGpuMemory* pMem)
-{
-    loader_platform_thread_lock_mutex(&objLock);
-    ll_increment_use_count((void*)device, VK_OBJECT_TYPE_DEVICE);
-    loader_platform_thread_unlock_mutex(&objLock);
-    VkResult result = nextTable.WsiX11CreatePresentableImage(device, pCreateInfo, pImage, pMem);
-
+    VkResult result = nextTable.CreateSwapChainWSI(device, pCreateInfo, pSwapChain);
     if (result == VK_SUCCESS)
     {
         loader_platform_thread_lock_mutex(&objLock);
 
+#if 0
         GLV_VK_SNAPSHOT_LL_NODE* pNode = snapshot_insert_object(&s_delta, *pImage, VK_OBJECT_TYPE_IMAGE);
         pNode->obj.pStruct = NULL;
 
         GLV_VK_SNAPSHOT_LL_NODE* pMemNode = snapshot_insert_object(&s_delta, *pMem, VK_OBJECT_TYPE_PRESENTABLE_IMAGE_MEMORY);
         pMemNode->obj.pStruct = NULL;
+#else
+        snapshot_insert_object(&s_delta, (void*)*pSwapChain, VK_OBJECT_TYPE_SWAP_CHAIN_WSI);
+#endif
 
         loader_platform_thread_unlock_mutex(&objLock);
     }
     return result;
+
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkWsiX11QueuePresent(VkQueue queue, const VK_WSI_X11_PRESENT_INFO* pPresentInfo, VkFence fence)
+VK_LAYER_EXPORT VkResult VKAPI xglDestroySwapChainWSI(VkSwapChainWSI swapChain)
 {
-    VkResult result = nextTable.WsiX11QueuePresent(queue, pPresentInfo, fence);
+    VkResult result = nextTable.DestroySwapChainWSI(swapChain);
+    loader_platform_thread_lock_mutex(&objLock);
+    snapshot_remove_object(&s_delta, (void*)swapChain);
+    loader_platform_thread_unlock_mutex(&objLock);
     return result;
 }
 
-#endif
+VK_LAYER_EXPORT VkResult VKAPI xglGetSwapChainInfoWSI(VkSwapChainWSI swapChain, VkSwapChainInfoTypeWSI infoType, size_t* pDataSize, void* pData)
+{
+    loader_platform_thread_lock_mutex(&objLock);
+    ll_increment_use_count((void*)swapChain, VK_OBJECT_TYPE_SWAP_CHAIN_WSI);
+    loader_platform_thread_unlock_mutex(&objLock);
+    VkResult result = nextTable.GetSwapChainInfoWSI(swapChain, infoType, pDataSize, pData);
+    return result;
+}
+
+VK_LAYER_EXPORT VkResult VKAPI xglQueuePresentWSI(VkQueue queue, const VkPresentInfoWSI* pPresentInfo)
+{
+    loader_platform_thread_lock_mutex(&objLock);
+    ll_increment_use_count((void*)queue, VK_OBJECT_TYPE_QUEUE);
+    loader_platform_thread_unlock_mutex(&objLock);
+    VkResult result = nextTable.QueuePresentWSI(queue, pPresentInfo);
+    return result;
+}
 
 //=================================================================================================
 // Exported methods

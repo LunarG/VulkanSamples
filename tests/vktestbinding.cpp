@@ -150,7 +150,7 @@ std::vector<const char *> PhysicalGpu::extensions() const
 {
     // Extensions to enable
     static const char *known_exts[] = {
-        "VK_WSI_X11",
+        "VK_WSI_LunarG",
     };
     std::vector<const char *> exts;
     size_t extSize = sizeof(uint32_t);

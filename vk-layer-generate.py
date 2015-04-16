@@ -308,24 +308,16 @@ class Subcommand(object):
         prefix="vk"
         lookups = []
         for proto in intercepted:
-            if 'WsiX11' in proto.name:
-                lookups.append("#if defined(__linux__) || defined(XCB_NVIDIA)")
             lookups.append("if (!strcmp(name, \"%s\"))" % proto.name)
             lookups.append("    return (void*) %s%s;" %
                     (prefix, proto.name))
-            if 'WsiX11' in proto.name:
-                lookups.append("#endif")
 
         prefix="vk"
         lookups = []
         for proto in intercepted:
-            if 'WsiX11' in proto.name:
-                lookups.append("#if defined(__linux__) || defined(XCB_NVIDIA)")
             lookups.append("if (!strcmp(name, \"%s\"))" % proto.name)
             lookups.append("    return (void*) %s%s;" %
                     (prefix, proto.name))
-            if 'WsiX11' in proto.name:
-                lookups.append("#endif")
 
         # add customized layer_intercept_proc
         body = []
@@ -485,8 +477,6 @@ class GenericLayerSubcommand(Subcommand):
         if proto.ret != "void":
             ret_val = "VkResult result = "
             stmt = "    return result;\n"
-        if 'WsiX11AssociateConnection' == proto.name:
-            funcs.append("#if defined(__linux__) || defined(XCB_NVIDIA)")
         if proto.name == "EnumerateLayers":
             funcs.append('%s%s\n'
                      '{\n'
@@ -516,8 +506,6 @@ class GenericLayerSubcommand(Subcommand):
                      '    %snextTable.%s;\n'
                      '%s'
                      '}' % (qual, decl, ret_val, proto.c_call(), stmt))
-        if 'WsiX11QueuePresent' == proto.name:
-            funcs.append("#endif")
         return "\n\n".join(funcs)
 
     def generate_body(self):
@@ -669,7 +657,7 @@ class APIDumpSubcommand(Subcommand):
         funcs = []
         sp_param_dict = {} # Store 'index' for struct param to print, or an name of binding "Count" param for array to print
         create_params = 0 # Num of params at end of function that are created and returned as output values
-        if 'WsiX11CreatePresentableImage' in proto.name or 'AllocDescriptorSets' in proto.name:
+        if 'AllocDescriptorSets' in proto.name:
             create_params = -2
         elif 'Create' in proto.name or 'Alloc' in proto.name or 'MapMemory' in proto.name:
             create_params = -1
@@ -701,7 +689,7 @@ class APIDumpSubcommand(Subcommand):
                 prev_count_name = ''
             elif 'pDescriptorSets' == p.name and proto.params[-1].name == 'pCount':
                 sp_param_dict[pindex] = '*pCount'
-            elif 'Wsi' not in proto.name and vk_helper.is_type(p.ty.strip('*').replace('const ', ''), 'struct'):
+            elif vk_helper.is_type(p.ty.strip('*').replace('const ', ''), 'struct'):
                 sp_param_dict[pindex] = 'index'
             if p.name.endswith('Count'):
                 if '*' in p.ty:
@@ -753,8 +741,6 @@ class APIDumpSubcommand(Subcommand):
                     log_func += '\n        %s' % (cis_print_func)
                     log_func += '\n        (*outputStream) << "   %s[" << i << "] (" << %s%s[i] << ")" << endl << tmp_str << endl;' % (proto.params[sp_index].name, '&', proto.params[sp_index].name)
                     log_func += '\n    }'
-        if 'WsiX11AssociateConnection' == proto.name:
-            funcs.append("#if defined(__linux__) || defined(XCB_NVIDIA)")
         if proto.name == "EnumerateLayers":
             c_call = proto.c_call().replace("(" + proto.params[0].name, "((VkPhysicalDevice)gpuw->nextObject", 1)
             funcs.append('%s%s\n'
@@ -813,8 +799,6 @@ class APIDumpSubcommand(Subcommand):
                      '    %s%s%s\n'
                      '%s'
                      '}' % (qual, decl, ret_val, proto.c_call(), f_open, log_func, f_close, stmt))
-        if 'WsiX11QueuePresent' == proto.name:
-            funcs.append("#endif")
         return "\n\n".join(funcs)
 
     def generate_body(self):
@@ -1121,7 +1105,8 @@ class ObjectTrackerSubcommand(Subcommand):
         header_txt.append('        }')
         header_txt.append('        pTrav = pTrav->pNextObj;')
         header_txt.append('    }')
-        header_txt.append('    if (objType != VkObjectTypePresentableImageMemory) {')
+        header_txt.append('    if (objType != VkObjectTypeSwapChainImageWSI &&')
+        header_txt.append('        objType != VkObjectTypeSwapChainMemoryWSI) {')
         header_txt.append('        // If we do not find it print an error')
         header_txt.append('        char str[1024];')
         header_txt.append('        sprintf(str, "Unable to obtain status for non-existent object %p of %s type", pObj, string_VK_OBJECT_TYPE(objType));')
@@ -1158,7 +1143,7 @@ class ObjectTrackerSubcommand(Subcommand):
         destroy_line = ''
         funcs = []
         # Special cases for API funcs that don't use an object as first arg
-        if True in [no_use_proto in proto.name for no_use_proto in ['GlobalOption', 'CreateInstance', 'QueueSubmit', 'QueueAddMemReferences', 'QueueRemoveMemReferences', 'QueueWaitIdle', 'GetGlobalExtensionInfo', 'CreateDevice', 'GetGpuInfo', 'QueueSignalSemaphore', 'QueueWaitSemaphore', 'WsiX11QueuePresent']]:
+        if True in [no_use_proto in proto.name for no_use_proto in ['GlobalOption', 'CreateInstance', 'QueueSubmit', 'QueueAddMemReferences', 'QueueRemoveMemReferences', 'QueueWaitIdle', 'GetGlobalExtensionInfo', 'CreateDevice', 'GetGpuInfo', 'QueueSignalSemaphore', 'QueueWaitSemaphore']]:
             using_line = ''
         else:
             using_line = '    loader_platform_thread_lock_mutex(&objLock);\n'
@@ -1191,12 +1176,6 @@ class ObjectTrackerSubcommand(Subcommand):
             create_line += '        ll_insert_obj((void*)pDescriptorSets[i], VkObjectTypeDescriptorSet);\n'
             create_line += '        loader_platform_thread_unlock_mutex(&objLock);\n'
             create_line += '    }\n'
-        elif 'CreatePresentableImage' in proto.name:
-            create_line = '    loader_platform_thread_lock_mutex(&objLock);\n'
-            create_line += '    ll_insert_obj((void*)*%s, %s);\n' % (proto.params[-2].name, obj_type_mapping[proto.params[-2].ty.strip('*').replace('const ', '')])
-            create_line += '    ll_insert_obj((void*)*pMem, VkObjectTypePresentableImageMemory);\n'
-
-            create_line += '    loader_platform_thread_unlock_mutex(&objLock);\n'
         elif 'Create' in proto.name or 'Alloc' in proto.name:
             create_line = '    loader_platform_thread_lock_mutex(&objLock);\n'
             create_line += '    ll_insert_obj((void*)*%s, %s);\n' % (proto.params[-1].name, obj_type_mapping[proto.params[-1].ty.strip('*').replace('const ', '')])
@@ -1214,7 +1193,8 @@ class ObjectTrackerSubcommand(Subcommand):
                 using_line = ''
             if 'DestroyDevice' in proto.name:
                 destroy_line += '    // Report any remaining objects in LL\n    objNode *pTrav = pGlobalHead;\n    while (pTrav) {\n'
-                destroy_line += '        if (pTrav->obj.objType == VkObjectTypePresentableImageMemory) {\n'
+                destroy_line += '        if (pTrav->obj.objType == VkObjectTypeSwapChainImageWSI ||\n'
+                destroy_line += '            pTrav->obj.objType == VkObjectTypeSwapChainMemoryWSI) {\n'
                 destroy_line += '            objNode *pDel = pTrav;\n'
                 destroy_line += '            pTrav = pTrav->pNextGlobal;\n'
                 destroy_line += '            ll_destroy_obj((void*)(pDel->obj.pObj));\n'
@@ -1237,8 +1217,6 @@ class ObjectTrackerSubcommand(Subcommand):
         if proto.ret != "void":
             ret_val = "VkResult result = "
             stmt = "    return result;\n"
-        if 'WsiX11AssociateConnection' == proto.name:
-            funcs.append("#if defined(__linux__) || defined(XCB_NVIDIA)")
         if proto.name == "EnumerateLayers":
             funcs.append('%s%s\n'
                      '{\n'
@@ -1302,8 +1280,6 @@ class ObjectTrackerSubcommand(Subcommand):
                      '%s%s'
                      '%s'
                      '}' % (qual, decl, using_line, ret_val, proto.c_call(), create_line, destroy_line, stmt))
-        if 'WsiX11QueuePresent' == proto.name:
-            funcs.append("#endif")
         return "\n\n".join(funcs)
 
     def generate_body(self):

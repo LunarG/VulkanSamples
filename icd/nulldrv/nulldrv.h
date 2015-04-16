@@ -33,12 +33,7 @@
 #include <vulkan.h>
 #include <vkDbg.h>
 #include <vkIcd.h>
-
-#if defined(PLATFORM_LINUX)
-#include <vkWsiX11Ext.h>
-#else
-#include <vkWsiWinExt.h>
-#endif
+#include <vk_wsi_lunarg.h>
 
 #include "icd.h"
 
@@ -57,8 +52,7 @@ struct nulldrv_obj {
 };
 
 enum nulldrv_ext_type {
-   NULLDRV_EXT_WSI_X11,
-   NULLDRV_EXT_WSI_WINDOWS,
+   NULLDRV_EXT_WSI_LUNARG,
    NULLDRV_EXT_COUNT,
    NULLDRV_EXT_INVALID = NULLDRV_EXT_COUNT,
 };

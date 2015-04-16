@@ -38,7 +38,6 @@
 #include <iostream>
 #include <fstream>
 #include <list>
-#include <vkWsiX11Ext.h>
 
 // Can be used by tests to record additional details / description of test
 #define TEST_DESCRIPTION(desc) RecordProperty("description", desc)
@@ -114,40 +113,6 @@ private:
     int                                     m_frameNum;
     string                                  m_testName;
 
-};
-
-
-class TestFrameworkVkPresent
-{
-public:
-    TestFrameworkVkPresent();
-
-    void Run();
-    void InitPresentFramework(std::list<VkTestImageRecord> &imagesIn);
-    void CreateMyWindow();
-    void CreatePresentableImages();
-    void TearDown();
-
-protected:
-    vk_testing::Device                    &m_device;
-    vk_testing::Queue                     &m_queue;
-    vk_testing::CmdBuffer                  m_cmdbuf;
-
-private:
-    xcb_window_t                            m_window;
-    xcb_intern_atom_reply_t                *m_atom_wm_delete_window;
-    std::list<VkTestImageRecord>           m_images;
-
-    bool                                    m_quit;
-    bool                                    m_pause;
-
-    uint32_t                                m_width;
-    uint32_t                                m_height;
-
-    std::list<VkTestImageRecord>::iterator m_display_image;
-
-    void Display();
-    void HandleEvent(xcb_generic_event_t *event);
 };
 
 class TestEnvironment : public ::testing::Environment

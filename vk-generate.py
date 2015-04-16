@@ -133,6 +133,29 @@ class LoaderEntrypointsSubcommand(Subcommand):
             setup.append("uint32_t i;")
             setup.append("for (i = 0; i < *%s; i++)" % pcount)
             setup.append("    %s(%s[i], disp);" % (method, psets))
+        elif proto.name == "GetPhysicalDeviceInfo":
+            ptype = proto.params[-3].name
+            psize = proto.params[-2].name
+            pdata = proto.params[-1].name
+            cond = ("%s == VK_PHYSICAL_DEVICE_INFO_TYPE_DISPLAY_PROPERTIES_WSI && "
+                    "%s && %s" % (ptype, pdata, cond))
+            setup.append("VkDisplayPropertiesWSI *info = %s;" % pdata)
+            setup.append("uint32_t count = *%s / sizeof(*info), i;" % psize)
+            setup.append("for (i = 0; i < count; i++) {")
+            setup.append("    %s(info[i].display, disp);" % method)
+            setup.append("}")
+        elif proto.name == "GetSwapChainInfoWSI":
+            ptype = proto.params[-3].name
+            psize = proto.params[-2].name
+            pdata = proto.params[-1].name
+            cond = ("%s == VK_SWAP_CHAIN_INFO_TYPE_PERSISTENT_IMAGES_WSI && "
+                    "%s && %s" % (ptype, pdata, cond))
+            setup.append("VkSwapChainImageInfoWSI *info = %s;" % pdata)
+            setup.append("uint32_t count = *%s / sizeof(*info), i;" % psize)
+            setup.append("for (i = 0; i < count; i++) {")
+            setup.append("    %s(info[i].image, disp);" % method)
+            setup.append("    %s(info[i].memory, disp);" % method)
+            setup.append("}")
         else:
             obj_params = proto.object_out_params()
             for param in obj_params:
@@ -187,12 +210,8 @@ class LoaderEntrypointsSubcommand(Subcommand):
 
             func.append("}")
 
-            if 'WsiX11AssociateConnection' == proto.name:
-                funcs.append("#if defined(__linux__) || defined(XCB_NVIDIA)")
-
             funcs.append("\n".join(func))
 
-        funcs.append("#endif")
         return "\n\n".join(funcs)
 
     def generate_body(self):
@@ -218,15 +237,12 @@ class DispatchTableOpsSubcommand(Subcommand):
     def _generate_init(self):
         stmts = []
         for proto in self.protos:
-            if 'WsiX11AssociateConnection' == proto.name:
-                stmts.append("#if defined(__linux__) || defined(XCB_NVIDIA)")
             if self.is_dispatchable_object_first_param(proto) or proto.name == "CreateInstance":
                 stmts.append("table->%s = (PFN_vk%s) gpa(gpu, \"vk%s\");" %
                         (proto.name, proto.name, proto.name))
             else:
                 stmts.append("table->%s = vk%s; /* non-dispatchable */" %
                              (proto.name, proto.name))
-        stmts.append("#endif")
 
         func = []
         func.append("static inline void %s_initialize_dispatch_table(VkLayerDispatchTable *table,"
@@ -244,13 +260,10 @@ class DispatchTableOpsSubcommand(Subcommand):
     def _generate_lookup(self):
         lookups = []
         for proto in self.protos:
-            if 'WsiX11AssociateConnection' == proto.name:
-                lookups.append("#if defined(__linux__) || defined(XCB_NVIDIA)")
             if self.is_dispatchable_object_first_param(proto):
                 lookups.append("if (!strcmp(name, \"%s\"))" % (proto.name))
                 lookups.append("    return (void *) table->%s;"
                     % (proto.name))
-        lookups.append("#endif")
 
         func = []
         func.append("static inline void *%s_lookup_dispatch_table(const VkLayerDispatchTable *table,"
@@ -321,13 +334,10 @@ class IcdGetProcAddrSubcommand(IcdDummyEntrypointsSubcommand):
 
         lookups = []
         for proto in self.protos:
-            if 'WsiX11AssociateConnection' == proto.name:
-                lookups.append("#if defined(__linux__) || defined(XCB_NVIDIA)")
             lookups.append("if (!strcmp(%s, \"%s\"))" %
                     (gpa_pname, proto.name))
             lookups.append("    return (%s) %s%s;" %
                     (gpa_proto.ret, self.prefix, proto.name))
-        lookups.append("#endif")
 
         body = []
         body.append("%s %s" % (self.qual, gpa_decl))
@@ -366,12 +376,9 @@ class LayerInterceptProcSubcommand(Subcommand):
                 lookups.append("/* no %s%s */" % (self.prefix, proto.name))
                 continue
 
-            if 'WsiX11AssociateConnection' == proto.name:
-                lookups.append("#if defined(__linux__) || defined(XCB_NVIDIA)")
             lookups.append("if (!strcmp(name, \"%s\"))" % proto.name)
             lookups.append("    return (%s) %s%s;" %
                     (self.gpa.ret, self.prefix, proto.name))
-        lookups.append("#endif")
 
         body = []
         body.append("static inline %s layer_intercept_proc(const char *name)" %
@@ -479,12 +486,9 @@ class LoaderGetProcAddrSubcommand(Subcommand):
                 lookups.append("/* no %s%s */" % (self.prefix, proto.name))
                 continue
 
-            if 'WsiX11AssociateConnection' == proto.name:
-                lookups.append("#if defined(__linux__) || defined(XCB_NVIDIA)")
             lookups.append("if (!strcmp(name, \"%s\"))" % proto.name)
             lookups.append("    return (%s) %s%s;" %
                     (self.gpa.ret, self.prefix, proto.name))
-        lookups.append("#endif")
 
         special_lookups = []
         # these functions require special trampoline code beyond just the normal create object trampoline code

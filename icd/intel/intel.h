@@ -38,7 +38,7 @@
 
 #include <vulkan.h>
 #include <vkDbg.h>
-#include <vkWsiX11Ext.h>
+#include <vk_wsi_lunarg.h>
 #include <vkIcd.h>
 
 #include "icd.h"

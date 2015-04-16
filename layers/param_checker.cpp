@@ -1952,39 +1952,35 @@ VK_LAYER_EXPORT void VKAPI vkCmdDbgMarkerEnd(VkCmdBuffer cmdBuffer)
     nextTable.CmdDbgMarkerEnd(cmdBuffer);
 }
 
-#if defined(__linux__) || defined(XCB_NVIDIA)
-
-VK_LAYER_EXPORT VkResult VKAPI vkWsiX11AssociateConnection(VkPhysicalDevice gpu, const VK_WSI_X11_CONNECTION_INFO* pConnectionInfo)
+VK_LAYER_EXPORT VkResult VKAPI vkGetDisplayInfoWSI(VkDisplayWSI display, VkDisplayInfoTypeWSI infoType, size_t* pDataSize, void* pData)
 {
-    pCurObj = (VkBaseLayerObject *) gpu;
-    loader_platform_thread_once(&tabOnce, initParamChecker);
-
-    VkResult result = nextTable.WsiX11AssociateConnection(gpu, pConnectionInfo);
+    VkResult result = nextTable.GetDisplayInfoWSI(display, infoType, pDataSize, pData);
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkWsiX11GetMSC(VkDevice device, xcb_window_t window, xcb_randr_crtc_t crtc, uint64_t* pMsc)
+VK_LAYER_EXPORT VkResult VKAPI vkCreateSwapChainWSI(VkDevice device, const VkSwapChainCreateInfoWSI* pCreateInfo, VkSwapChainWSI* pSwapChain)
 {
-
-    VkResult result = nextTable.WsiX11GetMSC(device, window, crtc, pMsc);
+    VkResult result = nextTable.CreateSwapChainWSI(device, pCreateInfo, pSwapChain);
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkWsiX11CreatePresentableImage(VkDevice device, const VK_WSI_X11_PRESENTABLE_IMAGE_CREATE_INFO* pCreateInfo, VkImage* pImage, VkDeviceMemory* pMem)
+VK_LAYER_EXPORT VkResult VKAPI vkDestroySwapChainWSI(VkSwapChainWSI swapChain)
 {
-
-    VkResult result = nextTable.WsiX11CreatePresentableImage(device, pCreateInfo, pImage, pMem);
+    VkResult result = nextTable.DestroySwapChainWSI(swapChain);
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkWsiX11QueuePresent(VkQueue queue, const VK_WSI_X11_PRESENT_INFO* pPresentInfo, VkFence fence)
+VK_LAYER_EXPORT VkResult VKAPI vkGetSwapChainInfoWSI(VkSwapChainWSI swapChain, VkSwapChainInfoTypeWSI infoType, size_t* pDataSize, void* pData)
 {
-
-    VkResult result = nextTable.WsiX11QueuePresent(queue, pPresentInfo, fence);
+    VkResult result = nextTable.GetSwapChainInfoWSI(swapChain, infoType, pDataSize, pData);
     return result;
 }
 
-#endif
+VK_LAYER_EXPORT VkResult VKAPI vkQueuePresentWSI(VkQueue queue, const VkPresentInfoWSI* pPresentInfo)
+{
+    VkResult result = nextTable.QueuePresentWSI(queue, pPresentInfo);
+    return result;
+}
 
 #include "vk_generic_intercept_proc_helper.h"
 VK_LAYER_EXPORT void* VKAPI vkGetProcAddr(VkPhysicalDevice gpu, const char* funcName)

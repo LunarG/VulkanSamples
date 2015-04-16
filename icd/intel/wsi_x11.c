@@ -62,9 +62,16 @@ struct intel_x11_swap_chain {
 
     xcb_connection_t *c;
     xcb_window_t window;
+    bool force_copy;
+
+    int dri3_major, dri3_minor;
+    int present_major, present_minor;
 
     xcb_present_event_t present_special_event_id;
     xcb_special_event_t *present_special_event;
+
+    struct intel_img **persistent_images;
+    uint32_t persistent_image_count;
 
     struct {
         uint32_t serial;
@@ -74,24 +81,10 @@ struct intel_x11_swap_chain {
         uint32_t serial;
         uint64_t msc;
     } remote;
-
-    struct intel_x11_swap_chain *next;
-};
-
-struct intel_wsi_x11 {
-    struct intel_handle handle;
-
-    xcb_connection_t *c;
-    xcb_window_t root;
-    int root_depth;
-
-    int dri3_major, dri3_minor;
-    int present_major, present_minor;
-
-    struct intel_x11_swap_chain *swap_chains;
 };
 
 struct intel_x11_img_data {
+    struct intel_x11_swap_chain *swap_chain;
     struct intel_mem *mem;
     int prime_fd;
     uint32_t pixmap;
@@ -102,18 +95,34 @@ struct intel_x11_fence_data {
     uint32_t serial;
 };
 
+/* these are what DDX expects */
+static const VkFormat x11_presentable_formats[] = {
+    VK_FORMAT_B5G6R5_UNORM,
+    VK_FORMAT_B8G8R8A8_UNORM,
+    VK_FORMAT_B8G8R8A8_SRGB,
+};
+
+static inline struct intel_x11_display *x11_display(VkDisplayWSI dpy)
+{
+    return (struct intel_x11_display *) dpy;
+}
+
+static inline struct intel_x11_swap_chain *x11_swap_chain(VkSwapChainWSI sc)
+{
+    return (struct intel_x11_swap_chain *) sc;
+}
+
 static bool x11_is_format_presentable(const struct intel_dev *dev,
                                       VkFormat format)
 {
-    /* this is what DDX expects */
-    switch (format) {
-    case VK_FORMAT_B5G6R5_UNORM:
-    case VK_FORMAT_B8G8R8A8_UNORM:
-    case VK_FORMAT_B8G8R8A8_SRGB:
-        return true;
-    default:
-        return false;
+    uint32_t i;
+
+    for (i = 0; i < ARRAY_SIZE(x11_presentable_formats); i++) {
+        if (x11_presentable_formats[i] == format)
+            return true;
     }
+
+    return false;
 }
 
 static int x11_export_prime_fd(struct intel_dev *dev,
@@ -261,32 +270,32 @@ static xcb_pixmap_t x11_dri3_pixmap_from_buffer(xcb_connection_t *c,
 /**
  * Send DRI3QueryVersion and PresentQueryVersion to query extension versions.
  */
-static bool wsi_x11_dri3_and_present_query_version(struct intel_wsi_x11 *x11)
+static bool x11_swap_chain_dri3_and_present_query_version(struct intel_x11_swap_chain *sc)
 {
     xcb_dri3_query_version_cookie_t dri3_cookie;
     xcb_dri3_query_version_reply_t *dri3_reply;
     xcb_present_query_version_cookie_t present_cookie;
     xcb_present_query_version_reply_t *present_reply;
 
-    dri3_cookie = xcb_dri3_query_version(x11->c,
+    dri3_cookie = xcb_dri3_query_version(sc->c,
             XCB_DRI3_MAJOR_VERSION, XCB_DRI3_MINOR_VERSION);
-    present_cookie = xcb_present_query_version(x11->c,
+    present_cookie = xcb_present_query_version(sc->c,
             XCB_PRESENT_MAJOR_VERSION, XCB_PRESENT_MINOR_VERSION);
 
-    dri3_reply = xcb_dri3_query_version_reply(x11->c, dri3_cookie, NULL);
+    dri3_reply = xcb_dri3_query_version_reply(sc->c, dri3_cookie, NULL);
     if (!dri3_reply)
         return false;
 
-    x11->dri3_major = dri3_reply->major_version;
-    x11->dri3_minor = dri3_reply->minor_version;
+    sc->dri3_major = dri3_reply->major_version;
+    sc->dri3_minor = dri3_reply->minor_version;
     free(dri3_reply);
 
-    present_reply = xcb_present_query_version_reply(x11->c, present_cookie, NULL);
+    present_reply = xcb_present_query_version_reply(sc->c, present_cookie, NULL);
     if (!present_reply)
         return false;
 
-    x11->present_major = present_reply->major_version;
-    x11->present_minor = present_reply->minor_version;
+    sc->present_major = present_reply->major_version;
+    sc->present_minor = present_reply->minor_version;
     free(present_reply);
 
     return true;
@@ -295,7 +304,7 @@ static bool wsi_x11_dri3_and_present_query_version(struct intel_wsi_x11 *x11)
 /**
  * Send a PresentSelectInput to select interested events.
  */
-static VkResult x11_swap_chain_present_select_input(struct intel_x11_swap_chain *sc)
+static bool x11_swap_chain_present_select_input(struct intel_x11_swap_chain *sc)
 {
     xcb_void_cookie_t cookie;
     xcb_generic_error_t *error;
@@ -312,72 +321,28 @@ static VkResult x11_swap_chain_present_select_input(struct intel_x11_swap_chain 
     error = xcb_request_check(sc->c, cookie);
     if (error) {
         free(error);
-        return VK_ERROR_UNKNOWN;
+        return false;
     }
 
-    return VK_SUCCESS;
+    return true;
 }
 
-static VkResult wsi_x11_dri3_pixmap_from_buffer(struct intel_wsi_x11 *x11,
-                                                 struct intel_dev *dev,
-                                                 struct intel_img *img,
-                                                 struct intel_mem *mem)
+static struct intel_img *x11_swap_chain_create_persistent_image(struct intel_x11_swap_chain *sc,
+                                                                struct intel_dev *dev,
+                                                                const VkImageCreateInfo *img_info)
 {
-    struct intel_x11_img_data *data =
-        (struct intel_x11_img_data *) img->wsi_data;
-
-    data->prime_fd = x11_export_prime_fd(dev, mem->bo, &img->layout);
-    if (data->prime_fd < 0)
-        return VK_ERROR_UNKNOWN;
-
-    data->pixmap = x11_dri3_pixmap_from_buffer(x11->c, x11->root,
-            x11->root_depth, data->prime_fd, &img->layout);
-
-    data->mem = mem;
-
-    return VK_SUCCESS;
-}
-
-/**
- * Create a presentable image.
- */
-static VkResult wsi_x11_img_create(struct intel_wsi_x11 *x11,
-                                    struct intel_dev *dev,
-                                    const VK_WSI_X11_PRESENTABLE_IMAGE_CREATE_INFO *info,
-                                    struct intel_img **img_ret)
-{
-    VkImageCreateInfo img_info;
-    VkMemoryAllocInfo mem_info;
     struct intel_img *img;
     struct intel_mem *mem;
+    struct intel_x11_img_data *data;
+    VkMemoryAllocInfo mem_info;
+    int prime_fd;
+    xcb_pixmap_t pixmap;
     VkResult ret;
 
-    if (!x11_is_format_presentable(dev, info->format)) {
-        intel_dev_log(dev, VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0,
-                VK_NULL_HANDLE, 0, 0, "invalid presentable image format");
-        return VK_ERROR_INVALID_VALUE;
-    }
-
-    /* create image */
-    memset(&img_info, 0, sizeof(img_info));
-    img_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
-    img_info.imageType = VK_IMAGE_TYPE_2D;
-    img_info.format = info->format;
-    img_info.extent.width = info->extent.width;
-    img_info.extent.height = info->extent.height;
-    img_info.extent.depth = 1;
-    img_info.mipLevels = 1;
-    img_info.arraySize = 1;
-    img_info.samples = 1;
-    img_info.tiling = VK_IMAGE_TILING_OPTIMAL;
-    img_info.usage = info->usage;
-    img_info.flags = 0;
-
-    ret = intel_img_create(dev, &img_info, true, &img);
+    ret = intel_img_create(dev, img_info, true, &img);
     if (ret != VK_SUCCESS)
-        return ret;
+        return NULL;
 
-    /* allocate memory */
     memset(&mem_info, 0, sizeof(mem_info));
     mem_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO;
     mem_info.allocationSize = img->total_size;
@@ -387,39 +352,102 @@ static VkResult wsi_x11_img_create(struct intel_wsi_x11 *x11,
     ret = intel_mem_alloc(dev, &mem_info, &mem);
     if (ret != VK_SUCCESS) {
         intel_img_destroy(img);
-        return ret;
+        return NULL;
     }
 
-    ret = wsi_x11_dri3_pixmap_from_buffer(x11, dev, img, mem);
-    if (ret != VK_SUCCESS) {
+    prime_fd = x11_export_prime_fd(dev, mem->bo, &img->layout);
+    if (prime_fd < 0) {
         intel_mem_free(mem);
         intel_img_destroy(img);
-        return ret;
+        return NULL;
     }
+
+    pixmap = x11_dri3_pixmap_from_buffer(sc->c, sc->window,
+            x11_get_drawable_depth(sc->c, sc->window),
+            prime_fd, &img->layout);
+
+    data = (struct intel_x11_img_data *) img->wsi_data;
+    data->swap_chain = sc;
+    data->mem = mem;
+    data->prime_fd = prime_fd;
+    data->pixmap = pixmap;
 
     intel_obj_bind_mem(&img->obj, mem, 0);
 
-    *img_ret = img;
+    return img;
+}
 
-    return VK_SUCCESS;
+static bool x11_swap_chain_create_persistent_images(struct intel_x11_swap_chain *sc,
+                                                    struct intel_dev *dev,
+                                                    const VkSwapChainCreateInfoWSI *info)
+{
+    struct intel_img **images;
+    VkImageCreateInfo img_info;
+    uint32_t i;
+
+    images = intel_alloc(sc, sizeof(*images) * info->imageCount,
+            0, VK_SYSTEM_ALLOC_TYPE_INTERNAL);
+    if (!images)
+        return false;
+
+    memset(&img_info, 0, sizeof(img_info));
+    img_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+    img_info.imageType = VK_IMAGE_TYPE_2D;
+    img_info.format = info->imageFormat;
+    img_info.extent.width = info->imageExtent.width;
+    img_info.extent.height = info->imageExtent.height;
+    img_info.extent.depth = 1;
+    img_info.mipLevels = 1;
+    img_info.arraySize = info->imageArraySize;
+    img_info.samples = 1;
+    img_info.tiling = VK_IMAGE_TILING_OPTIMAL;
+    img_info.usage = info->imageUsageFlags;
+    img_info.flags = 0;
+
+    for (i = 0; i < info->imageCount; i++) {
+        images[i] = x11_swap_chain_create_persistent_image(sc,
+                dev, &img_info);
+        if (!images[i])
+            break;
+    }
+
+    if (i < info->imageCount) {
+        uint32_t j;
+        for (j = 0; j < i; j++)
+            intel_img_destroy(images[i]);
+
+        intel_free(sc, images);
+
+        return false;
+    }
+
+    sc->persistent_images = images;
+    sc->persistent_image_count = info->imageCount;
+
+    return true;
 }
 
 /**
  * Send a PresentPixmap.
  */
 static VkResult x11_swap_chain_present_pixmap(struct intel_x11_swap_chain *sc,
-                                               const VK_WSI_X11_PRESENT_INFO *info)
+                                              const VkPresentInfoWSI *info)
 {
-    struct intel_img *img = intel_img(info->srcImage);
+    struct intel_img *img = intel_img(info->image);
     struct intel_x11_img_data *data =
         (struct intel_x11_img_data *) img->wsi_data;
     uint32_t options = XCB_PRESENT_OPTION_NONE;
+    uint32_t target_msc, divisor, remainder;
     xcb_void_cookie_t cookie;
     xcb_generic_error_t *err;
 
-    if (info->async)
+    target_msc = 0;
+    divisor = info->flipInterval;
+    remainder = 0;
+    if (!info->flipInterval)
         options |= XCB_PRESENT_OPTION_ASYNC;
-    if (!info->flip)
+
+    if (sc->force_copy)
         options |= XCB_PRESENT_OPTION_COPY;
 
     cookie = xcb_present_pixmap(sc->c,
@@ -430,13 +458,13 @@ static VkResult x11_swap_chain_present_pixmap(struct intel_x11_swap_chain *sc,
             0, /* update-area */
             0, /* x-off */
             0, /* y-off */
-            info->crtc,
+            0, /* crtc */
             0, /* wait-fence */
             0, /* idle-fence */
             options,
-            info->target_msc,
-            info->divisor,
-            info->remainder,
+            target_msc,
+            divisor,
+            remainder,
             0, NULL);
 
     err = xcb_request_check(sc->c, cookie);
@@ -446,17 +474,6 @@ static VkResult x11_swap_chain_present_pixmap(struct intel_x11_swap_chain *sc,
     }
 
     return VK_SUCCESS;
-}
-
-/**
- * Send a PresentNotifyMSC for the current MSC.
- */
-static void x11_swap_chain_present_notify_msc(struct intel_x11_swap_chain *sc)
-{
-    /* cannot specify CRTC? */
-    xcb_present_notify_msc(sc->c, sc->window, ++sc->local.serial, 0, 0, 0);
-
-    xcb_flush(sc->c);
 }
 
 /**
@@ -481,7 +498,7 @@ static void x11_swap_chain_present_event(struct intel_x11_swap_chain *sc,
 }
 
 static VkResult x11_swap_chain_wait(struct intel_x11_swap_chain *sc,
-                                      uint32_t serial, int64_t timeout)
+                                    uint32_t serial, int64_t timeout)
 {
     const bool wait = (timeout != 0);
 
@@ -510,126 +527,71 @@ static VkResult x11_swap_chain_wait(struct intel_x11_swap_chain *sc,
 
 static void x11_swap_chain_destroy(struct intel_x11_swap_chain *sc)
 {
+    if (sc->persistent_images) {
+        uint32_t i;
+
+        for (i = 0; i < sc->persistent_image_count; i++)
+            intel_img_destroy(sc->persistent_images[i]);
+        intel_free(sc, sc->persistent_images);
+    }
+
     if (sc->present_special_event)
         xcb_unregister_for_special_event(sc->c, sc->present_special_event);
 
     intel_free(sc, sc);
 }
 
-static void wsi_x11_destroy(struct intel_wsi_x11 *x11)
+static VkResult x11_swap_chain_create(struct intel_dev *dev,
+                                      const VkSwapChainCreateInfoWSI *info,
+                                      struct intel_x11_swap_chain **sc_ret)
 {
-    struct intel_x11_swap_chain *sc = x11->swap_chains;
+    const xcb_randr_provider_t provider = 0;
+    xcb_connection_t *c = (xcb_connection_t *)
+        info->pNativeWindowSystemHandle;
+    xcb_window_t window = (xcb_window_t)
+        ((intptr_t) info->pNativeWindowHandle);
+    struct intel_x11_swap_chain *sc;
+    int fd;
 
-    while (sc) {
-        struct intel_x11_swap_chain *next = sc->next;
-        x11_swap_chain_destroy(sc);
-        sc = next;
+    if (!x11_is_format_presentable(dev, info->imageFormat)) {
+        intel_dev_log(dev, VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0,
+                VK_NULL_HANDLE, 0, 0, "invalid presentable image format");
+        return VK_ERROR_INVALID_VALUE;
     }
 
-    intel_free(x11, x11);
-}
+    if (!x11_is_dri3_and_present_supported(c))
+        return VK_ERROR_INVALID_VALUE;
 
-static struct intel_wsi_x11 *wsi_x11_create(struct intel_gpu *gpu,
-                                            const VK_WSI_X11_CONNECTION_INFO *info)
-{
-    struct intel_wsi_x11 *x11;
-    int depth, fd;
-
-    if (!x11_is_dri3_and_present_supported(info->pConnection))
-        return NULL;
-
-    depth = x11_get_drawable_depth(info->pConnection, info->root);
-    if (!depth)
-        return NULL;
-
-    fd = x11_dri3_open(info->pConnection, info->root, info->provider);
-    if (fd < 0 || !x11_gpu_match_fd(gpu, fd)) {
+    fd = x11_dri3_open(c, window, provider);
+    if (fd < 0 || !x11_gpu_match_fd(dev->gpu, fd)) {
         if (fd >= 0)
             close(fd);
-        return NULL;
+        return VK_ERROR_INVALID_VALUE;
     }
 
-    x11 = intel_alloc(gpu, sizeof(*x11), 0, VK_SYSTEM_ALLOC_TYPE_API_OBJECT);
-    if (!x11)
-        return NULL;
-
-    memset(x11, 0, sizeof(*x11));
-    /* there is no VK_DBG_OBJECT_WSI_DISPLAY */
-    intel_handle_init(&x11->handle, VK_DBG_OBJECT_UNKNOWN, gpu->handle.icd);
-
-    x11->c = info->pConnection;
-    x11->root = info->root;
-
-    x11->root_depth = depth;
-
-    if (!wsi_x11_dri3_and_present_query_version(x11)) {
-        wsi_x11_destroy(x11);
-        return NULL;
-    }
-
-    return x11;
-}
-
-static struct intel_x11_swap_chain *x11_swap_chain_create(struct intel_dev *dev,
-                                                          xcb_window_t window)
-{
-    struct intel_wsi_x11 *x11 = (struct intel_wsi_x11 *) dev->gpu->wsi_data;
-    struct intel_x11_swap_chain *sc;
+    close(fd);
 
     sc = intel_alloc(dev, sizeof(*sc), 0, VK_SYSTEM_ALLOC_TYPE_API_OBJECT);
     if (!sc)
-        return NULL;
+        return VK_ERROR_OUT_OF_HOST_MEMORY;
 
     memset(sc, 0, sizeof(*sc));
-    /* there is no VK_DBG_OBJECT_WSI_SWAP_CHAIN */
-    intel_handle_init(&sc->handle, VK_DBG_OBJECT_UNKNOWN,
-            dev->base.handle.icd);
+    intel_handle_init(&sc->handle, VK_DBG_OBJECT_SWAP_CHAIN_WSI, dev->base.handle.icd);
 
-    sc->c = x11->c;
+    sc->c = c;
     sc->window = window;
 
-    if (x11_swap_chain_present_select_input(sc) != VK_SUCCESS) {
-        intel_free(dev, sc);
-        return NULL;
-    }
+    /* always copy unless flip bit is set */
+    sc->force_copy = !(info->swapModeFlags & VK_SWAP_MODE_FLIP_BIT_WSI);
 
-    return sc;
-}
-
-static struct intel_x11_swap_chain *x11_swap_chain_lookup(struct intel_dev *dev,
-                                                          xcb_window_t window)
-{
-    struct intel_wsi_x11 *x11 = (struct intel_wsi_x11 *) dev->gpu->wsi_data;
-    struct intel_x11_swap_chain *sc = x11->swap_chains;
-
-    while (sc) {
-        if (sc->window == window)
-            break;
-        sc = sc->next;
-    }
-
-    /* lookup failed */
-    if (!sc) {
-        sc = x11_swap_chain_create(dev, window);
-        if (sc) {
-            sc->next = x11->swap_chains;
-            x11->swap_chains = sc;
-        }
-    }
-
-    return sc;
-}
-
-static VkResult intel_wsi_gpu_init(struct intel_gpu *gpu,
-                                     const VK_WSI_X11_CONNECTION_INFO *info)
-{
-    struct intel_wsi_x11 *x11;
-
-    x11 = wsi_x11_create(gpu, info);
-    if (!x11)
+    if (!x11_swap_chain_dri3_and_present_query_version(sc) ||
+        !x11_swap_chain_present_select_input(sc) ||
+        !x11_swap_chain_create_persistent_images(sc, dev, info)) {
+        x11_swap_chain_destroy(sc);
         return VK_ERROR_UNKNOWN;
+    }
 
-    gpu->wsi_data = x11;
+    *sc_ret = sc;
 
     return VK_SUCCESS;
 }
@@ -659,8 +621,10 @@ static void x11_display_init_modes(struct intel_x11_display *dpy,
 
     dpy->mode_count = conn->count_modes;
 
+#if 0 // Remove this until we support an upstream version of WSI that has this:
     dpy->physical_dimension.width = conn->mmWidth;
     dpy->physical_dimension.height = conn->mmHeight;
+#endif
 }
 
 static void x11_display_init_name(struct intel_x11_display *dpy,
@@ -714,8 +678,7 @@ static struct intel_x11_display *x11_display_create(struct intel_gpu *gpu,
         return NULL;
 
     memset(dpy, 0, sizeof(*dpy));
-    /* there is no VK_DBG_OBJECT_WSI_DISPLAY */
-    intel_handle_init(&dpy->handle, VK_DBG_OBJECT_UNKNOWN, gpu->handle.icd);
+    intel_handle_init(&dpy->handle, VK_DBG_OBJECT_DISPLAY_WSI, gpu->handle.icd);
 
     dpy->fd = fd;
     dpy->connector_id = connector_id;
@@ -768,13 +731,69 @@ static void x11_display_scan(struct intel_gpu *gpu)
 }
 
 VkResult intel_wsi_gpu_get_info(struct intel_gpu *gpu,
-                                  VkPhysicalDeviceInfoType type,
-                                  size_t *size, void *data)
+                                VkPhysicalDeviceInfoType type,
+                                size_t *size, void *data)
 {
-    if (false)
-        x11_display_scan(gpu);
+    VkResult ret = VK_SUCCESS;
 
-    return VK_ERROR_INVALID_VALUE;
+    if (!size)
+        return VK_ERROR_INVALID_POINTER;
+
+    switch ((int) type) {
+    case VK_PHYSICAL_DEVICE_INFO_TYPE_DISPLAY_PROPERTIES_WSI:
+        {
+            VkDisplayPropertiesWSI *dst = data;
+            size_t size_ret;
+            uint32_t i;
+
+            if (!gpu->display_count)
+                x11_display_scan(gpu);
+
+            size_ret = sizeof(*dst) * gpu->display_count;
+
+            if (dst && *size < size_ret)
+                return VK_ERROR_INVALID_VALUE;
+
+            *size = size_ret;
+            if (!dst)
+                return VK_SUCCESS;
+
+            for (i = 0; i < gpu->display_count; i++) {
+                struct intel_x11_display *dpy =
+                    (struct intel_x11_display *) gpu->displays[i];
+
+                dst[i].display = (VkDisplayWSI) dpy;
+#if 0 // Remove this until we support an upstream version of WSI that has this:
+                dst[i].displayName = dpy->name;
+#endif
+            }
+        }
+        break;
+    case VK_PHYSICAL_DEVICE_INFO_TYPE_QUEUE_PRESENT_PROPERTIES_WSI:
+        {
+            VkPhysicalDeviceQueuePresentPropertiesWSI *dst = data;
+            size_t size_ret;
+            uint32_t i;
+
+            size_ret = sizeof(*dst) * INTEL_GPU_ENGINE_COUNT;
+
+            if (dst && *size < size_ret)
+                return VK_ERROR_INVALID_VALUE;
+
+            *size = size_ret;
+            if (!dst)
+                return VK_SUCCESS;
+
+            for (i = 0; i < INTEL_GPU_ENGINE_COUNT; i++)
+                dst[i].supportsPresent = true;
+        }
+        break;
+    default:
+        ret = VK_ERROR_INVALID_VALUE;
+        break;
+    }
+
+    return ret;
 }
 
 void intel_wsi_gpu_cleanup(struct intel_gpu *gpu)
@@ -788,11 +807,6 @@ void intel_wsi_gpu_cleanup(struct intel_gpu *gpu)
             x11_display_destroy(dpy);
         }
         intel_free(gpu, gpu->displays);
-    }
-
-    if (gpu->wsi_data) {
-        struct intel_wsi_x11 *x11 = (struct intel_wsi_x11 *) gpu->wsi_data;
-        wsi_x11_destroy(x11);
     }
 }
 
@@ -854,7 +868,7 @@ void intel_wsi_fence_copy(struct intel_fence *fence,
 }
 
 VkResult intel_wsi_fence_wait(struct intel_fence *fence,
-                                int64_t timeout_ns)
+                              int64_t timeout_ns)
 {
     struct intel_x11_fence_data *data =
         (struct intel_x11_fence_data *) fence->wsi_data;
@@ -865,77 +879,119 @@ VkResult intel_wsi_fence_wait(struct intel_fence *fence,
     return x11_swap_chain_wait(data->swap_chain, data->serial, timeout_ns);
 }
 
-ICD_EXPORT VkResult VKAPI vkWsiX11AssociateConnection(
-    VkPhysicalDevice                            gpu_,
-    const VK_WSI_X11_CONNECTION_INFO*          pConnectionInfo)
+ICD_EXPORT VkResult VKAPI vkGetDisplayInfoWSI(
+    VkDisplayWSI                            display,
+    VkDisplayInfoTypeWSI                    infoType,
+    size_t*                                 pDataSize,
+    void*                                   pData)
 {
-    struct intel_gpu *gpu = intel_gpu(gpu_);
+    VkResult ret = VK_SUCCESS;
 
-    return intel_wsi_gpu_init(gpu, pConnectionInfo);
-}
+    if (!pDataSize)
+        return VK_ERROR_INVALID_POINTER;
 
-ICD_EXPORT VkResult VKAPI vkWsiX11GetMSC(
-    VkDevice                                   device,
-    xcb_window_t                                window,
-    xcb_randr_crtc_t                            crtc,
-    uint64_t  *                                 pMsc)
-{
-    struct intel_dev *dev = intel_dev(device);
-    struct intel_x11_swap_chain *sc;
-    VkResult ret;
+    switch (infoType) {
+    case VK_DISPLAY_INFO_TYPE_FORMAT_PROPERTIES_WSI:
+       {
+            VkDisplayFormatPropertiesWSI *dst = pData;
+            size_t size_ret;
+            uint32_t i;
 
-    sc = x11_swap_chain_lookup(dev, window);
-    if (!sc)
-        return VK_ERROR_UNKNOWN;
+            size_ret = sizeof(*dst) * ARRAY_SIZE(x11_presentable_formats);
 
-    x11_swap_chain_present_notify_msc(sc);
+            if (dst && *pDataSize < size_ret)
+                return VK_ERROR_INVALID_VALUE;
 
-    /* wait for the event */
-    ret = x11_swap_chain_wait(sc, sc->local.serial, -1);
-    if (ret != VK_SUCCESS)
-        return ret;
+            *pDataSize = size_ret;
+            if (!dst)
+                return VK_SUCCESS;
 
-    *pMsc = sc->remote.msc;
-
-    return VK_SUCCESS;
-}
-
-ICD_EXPORT VkResult VKAPI vkWsiX11CreatePresentableImage(
-    VkDevice                                  device,
-    const VK_WSI_X11_PRESENTABLE_IMAGE_CREATE_INFO* pCreateInfo,
-    VkImage*                                  pImage,
-    VkDeviceMemory*                             pMem)
-{
-    struct intel_dev *dev = intel_dev(device);
-    struct intel_wsi_x11 *x11 = (struct intel_wsi_x11 *) dev->gpu->wsi_data;
-    struct intel_img *img;
-    VkResult ret;
-
-    ret = wsi_x11_img_create(x11, dev, pCreateInfo, &img);
-    if (ret == VK_SUCCESS) {
-        *pImage = (VkImage) img;
-        *pMem = (VkDeviceMemory) img->obj.mem;
+            for (i = 0; i < ARRAY_SIZE(x11_presentable_formats); i++)
+                dst[i].swapChainFormat = x11_presentable_formats[i];
+        }
+        break;
+    default:
+        ret = VK_ERROR_INVALID_VALUE;
+        break;
     }
 
     return ret;
 }
 
-ICD_EXPORT VkResult VKAPI vkWsiX11QueuePresent(
-    VkQueue                                   queue_,
-    const VK_WSI_X11_PRESENT_INFO*             pPresentInfo,
-    VkFence                                   fence_)
+ICD_EXPORT VkResult VKAPI vkCreateSwapChainWSI(
+    VkDevice                                device,
+    const VkSwapChainCreateInfoWSI*         pCreateInfo,
+    VkSwapChainWSI*                         pSwapChain)
+{
+    struct intel_dev *dev = intel_dev(device);
+
+    return x11_swap_chain_create(dev, pCreateInfo,
+            (struct intel_x11_swap_chain **) pSwapChain);
+}
+
+ICD_EXPORT VkResult VKAPI vkDestroySwapChainWSI(
+    VkSwapChainWSI                          swapChain)
+{
+    struct intel_x11_swap_chain *sc = x11_swap_chain(swapChain);
+
+    x11_swap_chain_destroy(sc);
+
+    return VK_SUCCESS;
+}
+
+ICD_EXPORT VkResult VKAPI vkGetSwapChainInfoWSI(
+    VkSwapChainWSI                          swapChain,
+    VkSwapChainInfoTypeWSI                  infoType,
+    size_t*                                 pDataSize,
+    void*                                   pData)
+{
+    struct intel_x11_swap_chain *sc = x11_swap_chain(swapChain);
+    VkResult ret = VK_SUCCESS;
+
+    if (!pDataSize)
+        return VK_ERROR_INVALID_POINTER;
+
+    switch (infoType) {
+    case VK_SWAP_CHAIN_INFO_TYPE_PERSISTENT_IMAGES_WSI:
+        {
+            VkSwapChainImageInfoWSI *images;
+            const size_t size = sizeof(*images) * sc->persistent_image_count;
+            uint32_t i;
+
+            if (pData && *pDataSize < size)
+                return VK_ERROR_INVALID_VALUE;
+
+            *pDataSize = size;
+            if (!pData)
+                return VK_SUCCESS;
+
+            images = (VkSwapChainImageInfoWSI *) pData;
+            for (i = 0; i < sc->persistent_image_count; i++) {
+                images[i].image = (VkImage) sc->persistent_images[i];
+                images[i].memory =
+                    (VkDeviceMemory) sc->persistent_images[i]->obj.mem;
+            }
+        }
+        break;
+    default:
+        ret = VK_ERROR_INVALID_VALUE;
+        break;
+    }
+
+    return ret;
+}
+
+ICD_EXPORT VkResult VKAPI vkQueuePresentWSI(
+    VkQueue                                 queue_,
+    const VkPresentInfoWSI*                 pPresentInfo)
 {
     struct intel_queue *queue = intel_queue(queue_);
-    struct intel_dev *dev = queue->dev;
+    struct intel_img *img = intel_img(pPresentInfo->image);
+    struct intel_x11_swap_chain *sc =
+        ((struct intel_x11_img_data *) img->wsi_data)->swap_chain;
     struct intel_x11_fence_data *data =
         (struct intel_x11_fence_data *) queue->fence->wsi_data;
-    struct intel_img *img = intel_img(pPresentInfo->srcImage);
-    struct intel_x11_swap_chain *sc;
     VkResult ret;
-
-    sc = x11_swap_chain_lookup(dev, pPresentInfo->destWindow);
-    if (!sc)
-        return VK_ERROR_UNKNOWN;
 
     ret = x11_swap_chain_present_pixmap(sc, pPresentInfo);
     if (ret != VK_SUCCESS)
@@ -944,11 +1000,6 @@ ICD_EXPORT VkResult VKAPI vkWsiX11QueuePresent(
     data->swap_chain = sc;
     data->serial = sc->local.serial;
     intel_fence_set_seqno(queue->fence, img->obj.mem->bo);
-
-    if (fence_ != VK_NULL_HANDLE) {
-        struct intel_fence *fence = intel_fence(fence_);
-        intel_fence_copy(fence, queue->fence);
-    }
 
     return VK_SUCCESS;
 }

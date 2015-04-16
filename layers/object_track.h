@@ -87,7 +87,11 @@ typedef enum _VK_OBJECT_TYPE
     VkObjectTypeDynamicRsState,
     VkObjectTypeFence,
     VkObjectTypeCmdBuffer,
-    VkObjectTypePresentableImageMemory,
+
+    VkObjectTypeDisplayWSI,
+    VkObjectTypeSwapChainWSI,
+    VkObjectTypeSwapChainImageWSI,
+    VkObjectTypeSwapChainMemoryWSI,
 
     VkObjectTypeUnknown,
     VkNumObjectType,
@@ -155,8 +159,15 @@ static const char* string_VK_OBJECT_TYPE(VK_OBJECT_TYPE type) {
             return "QUERY_POOL";
         case VkObjectTypeDescriptorPool:
             return "DESCRIPTOR_POOL";
-        case VkObjectTypePresentableImageMemory:
-            return "PRESENTABLE_IMAGE_MEMORY";
+
+        case VkObjectTypeDisplayWSI:
+            return "DISPLAY_WSI";
+        case VkObjectTypeSwapChainWSI:
+            return "SWAP_CHAIN_WSI";
+        case VkObjectTypeSwapChainImageWSI:
+            return "SWAP_CHAIN_IMAGE_WSI";
+        case VkObjectTypeSwapChainMemoryWSI:
+            return "SWAP_CHAIN_MEMORY_WSI";
         default:
             return "UNKNOWN";
     }

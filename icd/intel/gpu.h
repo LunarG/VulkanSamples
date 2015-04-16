@@ -35,7 +35,7 @@
               intel_gpu_gen(gpu) <= INTEL_GEN(max_gen))
 
 enum intel_ext_type {
-    INTEL_EXT_WSI_X11,
+    INTEL_EXT_WSI_LUNARG,
 
     INTEL_EXT_COUNT,
     INTEL_EXT_INVALID = INTEL_EXT_COUNT,
@@ -86,8 +86,6 @@ struct intel_gpu {
     int render_fd_internal;
 
     struct intel_winsys *winsys;
-
-    void *wsi_data;
 
     struct intel_wsi_display **displays;
     uint32_t display_count;
