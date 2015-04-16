@@ -1519,24 +1519,6 @@ VK_LAYER_EXPORT VkResult VKAPI vkGetGlobalExtensionInfo(
     return VK_SUCCESS;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkGetExtensionSupport(VkPhysicalGpu gpu, const char* pExtName)
-{
-    VkResult result;
-
-    /* This entrypoint is NOT going to init its own dispatch table since loader calls here early */
-    if (!strcmp(pExtName, "DrawState") || !strcmp(pExtName, "drawStateDumpDotFile") ||
-        !strcmp(pExtName, "drawStateDumpCommandBufferDotFile") || !strcmp(pExtName, "drawStateDumpPngFile"))
-    {
-        result = VK_SUCCESS;
-    } else if (nextTable.GetExtensionSupport != NULL)
-    {
-        result = nextTable.GetExtensionSupport(gpu, pExtName);
-    } else {
-        result = VK_ERROR_INVALID_EXTENSION;
-    }
-    return result;
-}
-
 VK_LAYER_EXPORT VkResult VKAPI vkEnumerateLayers(VkPhysicalGpu gpu, size_t maxLayerCount, size_t maxStringSize, size_t* pOutLayerCount, char* const* pOutLayers, void* pReserved)
 {
     if (gpu != NULL)
@@ -2754,8 +2736,6 @@ VK_LAYER_EXPORT void* VKAPI vkGetProcAddr(VkPhysicalGpu gpu, const char* funcNam
         return (void*) vkCreateDevice;
     if (!strcmp(funcName, "vkDestroyDevice"))
         return (void*) vkDestroyDevice;
-    if (!strcmp(funcName, "vkGetExtensionSupport"))
-        return (void*) vkGetExtensionSupport;
     if (!strcmp(funcName, "vkEnumerateLayers"))
         return (void*) vkEnumerateLayers;
     if (!strcmp(funcName, "vkQueueSubmit"))

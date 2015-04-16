@@ -541,18 +541,6 @@ VK_LAYER_EXPORT VkResult VKAPI vkDestroyDevice(VkDevice device)
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkGetExtensionSupport(VkPhysicalGpu gpu, const char* pExtName)
-{
-    VkBaseLayerObject* gpuw = (VkBaseLayerObject *) gpu;
-    loader_platform_thread_lock_mutex(&objLock);
-    ll_increment_use_count((void*)gpu, VK_OBJECT_TYPE_PHYSICAL_GPU);
-    loader_platform_thread_unlock_mutex(&objLock);
-    pCurObj = gpuw;
-    loader_platform_thread_once(&tabOnce, initGlaveSnapshot);
-    VkResult result = nextTable.GetExtensionSupport((VkPhysicalGpu)gpuw->nextObject, pExtName);
-    return result;
-}
-
 VK_LAYER_EXPORT VkResult VKAPI vkEnumerateLayers(VkPhysicalGpu gpu, size_t maxLayerCount, size_t maxStringSize, size_t* pOutLayerCount, char* const* pOutLayers, void* pReserved)
 {
     if (gpu != NULL) {

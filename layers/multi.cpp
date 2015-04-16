@@ -111,21 +111,6 @@ VK_LAYER_EXPORT VkResult VKAPI multi1EnumerateLayers(VkPhysicalGpu gpu, size_t m
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI multi1GetExtensionSupport(VkPhysicalGpu gpu, const char* pExtName)
-{
-    VkResult result;
-
-    if (!tableMap1.empty() && (tableMap1.find(gpu) != tableMap1.end()))
-    {
-        VkLayerDispatchTable* pTable = tableMap1[gpu];
-        result = pTable->GetExtensionSupport(gpu, pExtName);
-    } else
-    {
-        result = VK_ERROR_INVALID_EXTENSION;
-    }
-    return result;
-}
-
 VK_LAYER_EXPORT void * VKAPI multi1GetProcAddr(VkPhysicalGpu gpu, const char* pName)
 {
     VkBaseLayerObject* gpuw = (VkBaseLayerObject *) gpu;
@@ -143,8 +128,6 @@ VK_LAYER_EXPORT void * VKAPI multi1GetProcAddr(VkPhysicalGpu gpu, const char* pN
         return (void *) multi1CreateGraphicsPipeline;
     else if (!strncmp("vkStorePipeline", pName, sizeof ("vkStorePipeline")))
         return (void *) multi1StorePipeline;
-    else if (!strncmp("vkGetExtensionSupport", pName, sizeof ("vkGetExtensionSupport")))
-        return (void *) multi1GetExtensionSupport;
     else {
         if (gpuw->pGPA == NULL)
             return NULL;
@@ -226,21 +209,6 @@ VK_LAYER_EXPORT VkResult VKAPI multi2EnumerateLayers(VkPhysicalGpu gpu, size_t m
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI multi2GetExtensionSupport(VkPhysicalGpu gpu, const char* pExtName)
-{
-    VkResult result;
-
-    if (!tableMap2.empty() && (tableMap2.find(gpu) != tableMap2.end()))
-    {
-        VkLayerDispatchTable* pTable = tableMap2[gpu];
-        result = pTable->GetExtensionSupport(gpu, pExtName);
-    } else
-    {
-        result = VK_ERROR_INVALID_EXTENSION;
-    }
-    return result;
-}
-
 VK_LAYER_EXPORT void * VKAPI multi2GetProcAddr(VkPhysicalGpu gpu, const char* pName)
 {
     VkBaseLayerObject* gpuw = (VkBaseLayerObject *) gpu;
@@ -258,8 +226,6 @@ VK_LAYER_EXPORT void * VKAPI multi2GetProcAddr(VkPhysicalGpu gpu, const char* pN
         return (void *) multi2CreateCommandBuffer;
     else if (!strncmp("vkBeginCommandBuffer", pName, sizeof ("vkBeginCommandBuffer")))
         return (void *) multi2BeginCommandBuffer;
-    else if (!strncmp("vkGetExtensionSupport", pName, sizeof ("vkGetExtensionSupport")))
-        return (void *) multi2GetExtensionSupport;
     else {
         if (gpuw->pGPA == NULL)
             return NULL;
@@ -335,32 +301,6 @@ VK_LAYER_EXPORT VkResult VKAPI vkGetGlobalExtensionInfo(
     };
 
     return VK_SUCCESS;
-}
-
-VK_LAYER_EXPORT VkResult VKAPI vkGetExtensionSupport(VkPhysicalGpu gpu, const char* pExtName)
-{
-    VkResult result;
-
-    /* This entrypoint is NOT going to init it's own dispatch table since loader calls here early */
-    if (!strncmp(pExtName, "multi1", strlen("multi1")))
-    {
-        result = VK_SUCCESS;
-    } else if (!strncmp(pExtName, "multi2", strlen("multi2")))
-    {
-        result = VK_SUCCESS;
-    } else if (!tableMap1.empty() && (tableMap1.find(gpu) != tableMap1.end()))
-    {
-        VkLayerDispatchTable* pTable = tableMap1[gpu];
-        result = pTable->GetExtensionSupport(gpu, pExtName);
-    } else if (!tableMap2.empty() && (tableMap2.find(gpu) != tableMap2.end()))
-    {
-        VkLayerDispatchTable* pTable = tableMap2[gpu];
-        result = pTable->GetExtensionSupport(gpu, pExtName);
-    } else
-    {
-        result = VK_ERROR_INVALID_EXTENSION;
-    }
-    return result;
 }
 
 VK_LAYER_EXPORT void * VKAPI vkGetProcAddr(VkPhysicalGpu gpu, const char* pName)

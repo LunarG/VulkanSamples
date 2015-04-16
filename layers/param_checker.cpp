@@ -304,15 +304,6 @@ VK_LAYER_EXPORT VkResult VKAPI vkGetGlobalExtensionInfo(
     return VK_SUCCESS;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkGetExtensionSupport(VkPhysicalGpu gpu, const char* pExtName)
-{
-    pCurObj = (VkBaseLayerObject *) gpu;
-    loader_platform_thread_once(&tabOnce, initParamChecker);
-
-    VkResult result = nextTable.GetExtensionSupport(gpu, pExtName);
-    return result;
-}
-
 VK_LAYER_EXPORT VkResult VKAPI vkEnumerateLayers(VkPhysicalGpu gpu, size_t maxLayerCount, size_t maxStringSize, size_t* pOutLayerCount, char* const* pOutLayers, void* pReserved)
 {
     char str[1024];

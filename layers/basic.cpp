@@ -114,30 +114,6 @@ VK_LAYER_EXPORT VkResult VKAPI vkGetGlobalExtensionInfo(
     return VK_SUCCESS;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkGetExtensionSupport(VkPhysicalGpu gpu, const char* pExtName)
-{
-    VkResult result;
-
-    /* This entrypoint is NOT going to init it's own dispatch table since loader calls here early */
-    if (!strncmp(pExtName, "vkLayerExtension1", strlen("vkLayerExtension1")))
-    {
-        result = VK_SUCCESS;
-    } else if (!strncmp(pExtName, "Basic", strlen("Basic")))
-    {
-        result = VK_SUCCESS;
-    } else if (!tableMap.empty() && (tableMap.find(gpu) != tableMap.end()))
-    {
-        printf("At start of wrapped vkGetExtensionSupport() call w/ gpu: %p\n", (void*)gpu);
-        VkLayerDispatchTable* pTable = tableMap[gpu];
-        result = pTable->GetExtensionSupport(gpu, pExtName);
-        printf("Completed wrapped vkGetExtensionSupport() call w/ gpu: %p\n", (void*)gpu);
-    } else
-    {
-        result = VK_ERROR_INVALID_EXTENSION;
-    }
-    return result;
-}
-
 VK_LAYER_EXPORT VkResult VKAPI vkCreateDevice(VkPhysicalGpu gpu, const VkDeviceCreateInfo* pCreateInfo, VkDevice* pDevice)
 {
     VkLayerDispatchTable* pTable = tableMap[gpu];
@@ -203,8 +179,6 @@ VK_LAYER_EXPORT void * VKAPI vkGetProcAddr(VkPhysicalGpu gpu, const char* pName)
         return (void *) vkGetProcAddr;
     else if (!strncmp("vkCreateDevice", pName, sizeof ("vkCreateDevice")))
         return (void *) vkCreateDevice;
-    else if (!strncmp("vkGetExtensionSupport", pName, sizeof ("vkGetExtensionSupport")))
-        return (void *) vkGetExtensionSupport;
     else if (!strncmp("vkEnumerateLayers", pName, sizeof ("vkEnumerateLayers")))
         return (void *) vkEnumerateLayers;
     else if (!strncmp("vkGetFormatInfo", pName, sizeof ("vkGetFormatInfo")))
