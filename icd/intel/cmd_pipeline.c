@@ -3382,14 +3382,16 @@ ICD_EXPORT void VKAPI vkCmdBindDynamicStateObject(
 ICD_EXPORT void VKAPI vkCmdBindDescriptorSets(
     VkCmdBuffer                              cmdBuffer,
     VkPipelineBindPoint                     pipelineBindPoint,
-    uint32_t                                    layoutChainSlot,
-    uint32_t                                    count,
-    const VkDescriptorSet*                   pDescriptorSets,
-    const uint32_t*                             pUserData)
+    uint32_t                                firstSet,
+    uint32_t                                setCount,
+    const VkDescriptorSet*                  pDescriptorSets,
+    uint32_t                                dynamicOffsetCount,
+    const uint32_t*                         pDynamicOffsets)
 {
     struct intel_cmd *cmd = intel_cmd(cmdBuffer);
     const struct intel_desc_layout_chain *chain;
     struct intel_cmd_dset_data *data;
+    uint32_t offset_count = 0;
     uint32_t i;
 
     switch (pipelineBindPoint) {
@@ -3407,12 +3409,15 @@ ICD_EXPORT void VKAPI vkCmdBindDescriptorSets(
         break;
     }
 
-    for (i = 0; i < count; i++) {
+    for (i = 0; i < setCount; i++) {
         struct intel_desc_set *dset = intel_desc_set(pDescriptorSets[i]);
 
-        cmd_copy_dset_data(cmd, data, chain, layoutChainSlot + i,
-                dset, pUserData);
-        pUserData += chain->layouts[layoutChainSlot + i]->dynamic_desc_count;
+        offset_count += chain->layouts[firstSet + i]->dynamic_desc_count;
+        if (offset_count <= dynamicOffsetCount) {
+            cmd_copy_dset_data(cmd, data, chain, firstSet + i,
+                    dset, pDynamicOffsets);
+            pDynamicOffsets += chain->layouts[firstSet + i]->dynamic_desc_count;
+        }
     }
 }
 

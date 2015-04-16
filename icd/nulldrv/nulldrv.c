@@ -1060,10 +1060,11 @@ ICD_EXPORT void VKAPI vkCmdBindDynamicStateObject(
 ICD_EXPORT void VKAPI vkCmdBindDescriptorSets(
     VkCmdBuffer                              cmdBuffer,
     VkPipelineBindPoint                     pipelineBindPoint,
-    uint32_t                                    layoutChainSlot,
-    uint32_t                                    count,
-    const VkDescriptorSet*                   pDescriptorSets,
-    const uint32_t*                             pUserData)
+    uint32_t                                firstSet,
+    uint32_t                                setCount,
+    const VkDescriptorSet*                  pDescriptorSets,
+    uint32_t                                dynamicOffsetCount,
+    const uint32_t*                         pDynamicOffsets)
 {
     NULLDRV_LOG_FUNC;
 }

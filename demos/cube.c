@@ -430,7 +430,7 @@ static void demo_draw_build_cmd(struct demo *demo, VkCmdBuffer cmd_buf)
     vkCmdBindPipeline(cmd_buf, VK_PIPELINE_BIND_POINT_GRAPHICS,
                                   demo->pipeline);
     vkCmdBindDescriptorSets(cmd_buf, VK_PIPELINE_BIND_POINT_GRAPHICS,
-            0, 1, &demo->desc_set, NULL);
+            0, 1, &demo->desc_set, 0, NULL);
 
     vkCmdBindDynamicStateObject(cmd_buf, VK_STATE_BIND_POINT_VIEWPORT, demo->viewport);
     vkCmdBindDynamicStateObject(cmd_buf, VK_STATE_BIND_POINT_RASTER, demo->raster);
