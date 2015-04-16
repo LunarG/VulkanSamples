@@ -807,6 +807,16 @@ core = Extension(
              Param("VkBuffer", "destBuffer"),
              Param("VkGpuSize", "destOffset")]),
 
+        Proto("void", "CmdCopyQueryPoolResults",
+            [Param("VkCmdBuffer", "cmdBuffer"),
+             Param("VkQueryPool", "queryPool"),
+             Param("uint32_t", "startQuery"),
+             Param("uint32_t", "queryCount"),
+             Param("VkBuffer", "destBuffer"),
+             Param("VkGpuSize", "destOffset"),
+             Param("VkGpuSize", "destStride"),
+             Param("VkFlags", "flags")]),
+
         Proto("void", "CmdInitAtomicCounters",
             [Param("VkCmdBuffer", "cmdBuffer"),
              Param("VkPipelineBindPoint", "pipelineBindPoint"),

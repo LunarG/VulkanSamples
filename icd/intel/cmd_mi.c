@@ -231,6 +231,19 @@ ICD_EXPORT void VKAPI vkCmdResetEvent(
     cmd_write_event_value(cmd, event, pipeEvent, 0);
 }
 
+ICD_EXPORT void VKAPI vkCmdCopyQueryPoolResults(
+    VkCmdBuffer                                 cmdBuffer,
+    VkQueryPool                                 queryPool,
+    uint32_t                                    startQuery,
+    uint32_t                                    queryCount,
+    VkBuffer                                    destBuffer,
+    VkGpuSize                                   destOffset,
+    VkGpuSize                                   destStride,
+    VkFlags                                     flags)
+{
+    /* TODO: Fill in functionality here */
+}
+
 ICD_EXPORT void VKAPI vkCmdWriteTimestamp(
     VkCmdBuffer                              cmdBuffer,
     VkTimestampType                          timestampType,

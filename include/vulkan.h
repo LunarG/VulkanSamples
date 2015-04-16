@@ -33,7 +33,7 @@
 #include "vk_platform.h"
 
 // Vulkan API version supported by this file
-#define VK_API_VERSION VK_MAKE_VERSION(0, 78, 0)
+#define VK_API_VERSION VK_MAKE_VERSION(0, 80, 0)
 
 #ifdef __cplusplus
 extern "C"
@@ -1208,6 +1208,18 @@ typedef enum VkQueryControlFlags_
     VK_MAX_ENUM(VkQueryControlFlags)
 } VkQueryControlFlags;
 
+// Query result flags
+typedef enum VkQueryResultFlags_
+{
+    VK_QUERY_RESULT_32_BIT                                  = 0x00000000,   // Results of the queries are written to the destination buffer as 32-bit values
+    VK_QUERY_RESULT_64_BIT                                  = 0x00000001,   // Results of the queries are written to the destination buffer as 64-bit values
+    // Duplicate enum result messes with validation
+//    VK_QUERY_RESULT_NO_WAIT_BIT                             = 0x00000000,   // Results of the queries aren't waited on before proceeding with the result copy
+    VK_QUERY_RESULT_WAIT_BIT                                = 0x00000002,   // Results of the queries are waited on before proceeding with the result copy
+    VK_QUERY_RESULT_WITH_AVAILABILITY_BIT                   = 0x00000004,   // Besides the results of the query, the availability of the results is also written
+    VK_QUERY_RESULT_PARTIAL_BIT                             = 0x00000008    // Copy the partial results of the query even if the final results aren't available
+} VkQueryResultFlags;
+
 // GPU compatibility flags
 typedef enum VkGpuCompatibilityFlags_
 {
@@ -2293,6 +2305,7 @@ typedef void     (VKAPI *PFN_vkCmdBeginQuery)(VkCmdBuffer cmdBuffer, VkQueryPool
 typedef void     (VKAPI *PFN_vkCmdEndQuery)(VkCmdBuffer cmdBuffer, VkQueryPool queryPool, uint32_t slot);
 typedef void     (VKAPI *PFN_vkCmdResetQueryPool)(VkCmdBuffer cmdBuffer, VkQueryPool queryPool, uint32_t startQuery, uint32_t queryCount);
 typedef void     (VKAPI *PFN_vkCmdWriteTimestamp)(VkCmdBuffer cmdBuffer, VkTimestampType timestampType, VkBuffer destBuffer, VkGpuSize destOffset);
+typedef void     (VKAPI *PFN_vkCmdCopyQueryPoolResults)(VkCmdBuffer cmdBuffer, VkQueryPool queryPool, uint32_t startQuery, uint32_t queryCount, VkBuffer destBuffer, VkGpuSize destOffset, VkGpuSize destStride, VkFlags flags);
 typedef void     (VKAPI *PFN_vkCmdInitAtomicCounters)(VkCmdBuffer cmdBuffer, VkPipelineBindPoint pipelineBindPoint, uint32_t startCounter, uint32_t counterCount, const uint32_t* pData);
 typedef void     (VKAPI *PFN_vkCmdLoadAtomicCounters)(VkCmdBuffer cmdBuffer, VkPipelineBindPoint pipelineBindPoint, uint32_t startCounter, uint32_t counterCount, VkBuffer srcBuffer, VkGpuSize srcOffset);
 typedef void     (VKAPI *PFN_vkCmdSaveAtomicCounters)(VkCmdBuffer cmdBuffer, VkPipelineBindPoint pipelineBindPoint, uint32_t startCounter, uint32_t counterCount, VkBuffer destBuffer, VkGpuSize destOffset);
@@ -2940,6 +2953,16 @@ void VKAPI vkCmdWriteTimestamp(
     VkTimestampType                             timestampType,
     VkBuffer                                    destBuffer,
     VkGpuSize                                   destOffset);
+
+void VKAPI vkCmdCopyQueryPoolResults(
+    VkCmdBuffer                                 cmdBuffer,
+    VkQueryPool                                 queryPool,
+    uint32_t                                    startQuery,
+    uint32_t                                    queryCount,
+    VkBuffer                                    destBuffer,
+    VkGpuSize                                   destOffset,
+    VkGpuSize                                   destStride,
+    VkFlags                                     flags); // VkQueryResultFlags
 
 void VKAPI vkCmdInitAtomicCounters(
     VkCmdBuffer                                 cmdBuffer,
