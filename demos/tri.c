@@ -10,7 +10,14 @@
 #include <stdbool.h>
 #include <assert.h>
 
+#ifdef _WIN32
+#pragma comment(linker, "/subsystem:windows")
+#include <windows.h>
+#define APP_NAME_STR_LEN 80
+#else  // _WIN32
 #include <xcb/xcb.h>
+#endif // _WIN32
+
 #include <vulkan.h>
 #include <vkDbg.h>
 #include <vk_wsi_lunarg.h>
@@ -34,10 +41,18 @@ struct texture_object {
 };
 
 struct demo {
+#ifdef _WIN32
+#define APP_NAME_STR_LEN 80
+    HINSTANCE connection;        // hInstance - Windows Instance
+    char name[APP_NAME_STR_LEN]; // Name to put on the window/icon
+    HWND        window;          // hWnd - window handle
+#else  // _WIN32
     xcb_connection_t *connection;
     xcb_screen_t *screen;
     xcb_window_t window;
     xcb_intern_atom_reply_t *atom_wm_delete_window;
+#endif // _WIN32
+    bool use_staging_buffer;
 
     VkInstance inst;
     VkPhysicalDevice gpu;
@@ -93,7 +108,6 @@ struct demo {
     VkDescriptorSet desc_set;
 
     bool quit;
-    bool use_staging_buffer;
     uint32_t current_buffer;
 };
 
@@ -1120,6 +1134,88 @@ static void demo_prepare(struct demo *demo)
     demo_prepare_descriptor_set(demo);
 }
 
+#ifdef _WIN32
+static void demo_run(struct demo *demo)
+{
+    demo_draw(demo);
+}
+
+// On MS-Windows, make this a global, so it's available to WndProc()
+struct demo demo;
+
+// MS-Windows event handling function:
+LRESULT CALLBACK WndProc(HWND hWnd,
+                         UINT uMsg,
+                         WPARAM wParam,
+                         LPARAM lParam)
+{
+    PAINTSTRUCT paint_struct;
+    HDC hDC; // Device context
+    char tmp_str[] = "Test Vulkan Triangle Program"; 
+
+    switch(uMsg)
+    {
+    case WM_CREATE: 
+        return 0;
+    case WM_CLOSE: 
+        PostQuitMessage(0);
+        return 0;
+    case WM_PAINT: 
+        demo_run(&demo);
+        return 0;
+    default:
+        break;
+    }
+    return (DefWindowProc(hWnd, uMsg, wParam, lParam));
+}
+
+static void demo_create_window(struct demo *demo)
+{
+    WNDCLASSEX  win_class;
+
+    // Initialize the window class structure:
+    win_class.cbSize = sizeof(WNDCLASSEX);
+    win_class.style = CS_HREDRAW | CS_VREDRAW;
+    win_class.lpfnWndProc = WndProc;
+    win_class.cbClsExtra = 0;
+    win_class.cbWndExtra = 0;
+    win_class.hInstance = demo->connection; // hInstance
+    win_class.hIcon = LoadIcon(NULL, IDI_APPLICATION);
+    win_class.hCursor = LoadCursor(NULL, IDC_ARROW);
+    win_class.hbrBackground = (HBRUSH)GetStockObject(WHITE_BRUSH);
+    win_class.lpszMenuName = NULL;
+    win_class.lpszClassName = demo->name;
+    win_class.hIconSm = LoadIcon(NULL, IDI_WINLOGO);
+    // Register window class:
+    if (!RegisterClassEx(&win_class)) {
+        // It didn't work, so try to give a useful error:
+        printf("Unexpected error trying to start the application!\n");
+        fflush(stdout);
+        exit(1);
+    }
+    // Create window with the registered class:
+    demo->window = CreateWindowEx(0,
+                                  demo->name,           // class name
+                                  demo->name,           // app name
+                                  WS_OVERLAPPEDWINDOW | // window style
+                                  WS_VISIBLE |
+                                  WS_SYSMENU,
+                                  100,100,              // x/y coords
+                                  demo->width,          // width
+                                  demo->height,         // height
+                                  NULL,                 // handle to parent
+                                  NULL,                 // handle to menu
+                                  demo->connection,     // hInstance
+                                  NULL);                // no extra parameters
+    if (!demo->window) {
+        // It didn't work, so try to give a useful error:
+        printf("Cannot create a window in which to draw!\n");
+        fflush(stdout);
+        exit(1);
+    }
+}
+#else  // _WIN32
+
 static void demo_handle_event(struct demo *demo,
                               const xcb_generic_event_t *event)
 {
@@ -1200,6 +1296,7 @@ static void demo_create_window(struct demo *demo)
 
     xcb_map_window(demo->connection, demo->window);
 }
+#endif // _WIN32
 
 static void demo_init_vk(struct demo *demo)
 {
@@ -1310,6 +1407,7 @@ static void demo_init_vk(struct demo *demo)
 
 static void demo_init_connection(struct demo *demo)
 {
+#ifndef _WIN32
     const xcb_setup_t *setup;
     xcb_screen_iterator_t iter;
     int scr;
@@ -1328,15 +1426,39 @@ static void demo_init_connection(struct demo *demo)
         xcb_screen_next(&iter);
 
     demo->screen = iter.data;
+#endif // _WIN32
 }
 
+#ifdef _WIN32
+static void demo_init(struct demo *demo, HINSTANCE hInstance, LPSTR pCmdLine)
+#else  // _WIN32
 static void demo_init(struct demo *demo, const int argc, const char *argv[])
+#endif // _WIN32
 {
+    bool argv_error = false;
+
     memset(demo, 0, sizeof(*demo));
 
+#ifdef _WIN32
+    demo->connection = hInstance;
+    strncpy(demo->name, "tri", APP_NAME_STR_LEN);
+
+    if (strncmp(pCmdLine, "--use_staging", strlen("--use_staging")) == 0)
+        demo->use_staging_buffer = true;
+    else if (strlen(pCmdLine) != 0) {
+        fprintf(stderr, "Do not recognize argument \"%s\".\n", pCmdLine);
+        argv_error = true;
+    }
+#else  // _WIN32
     for (int i = 0; i < argc; i++) {
         if (strncmp(argv[i], "--use_staging", strlen("--use_staging")) == 0)
             demo->use_staging_buffer = true;
+    }
+#endif // _WIN32
+    if (argv_error) {
+        fprintf(stderr, "Usage:\n  tri [--use_staging]\n");
+        fflush(stderr);
+        exit(1);
     }
 
     demo_init_connection(demo);
@@ -1398,10 +1520,48 @@ static void demo_cleanup(struct demo *demo)
     vkDestroyDevice(demo->device);
     vkDestroyInstance(demo->inst);
 
+#ifndef _WIN32
     xcb_destroy_window(demo->connection, demo->window);
     xcb_disconnect(demo->connection);
+#endif // _WIN32
 }
 
+#ifdef _WIN32
+int APIENTRY WinMain(HINSTANCE hInstance,
+                     HINSTANCE hPrevInstance,
+                     LPSTR pCmdLine,
+                     int nCmdShow)
+{
+    MSG msg;         // message
+    bool done;        // flag saying when app is complete
+
+    demo_init(&demo, hInstance, pCmdLine);
+    demo_create_window(&demo);
+
+    demo_prepare(&demo);
+
+    done = false; //initialize loop condition variable
+    /* main message loop*/
+    while(!done)
+    {
+        PeekMessage(&msg,NULL,NULL,NULL,PM_REMOVE);
+        if (msg.message == WM_QUIT) //check for a quit message
+        {
+            done = true; //if found, quit app
+        }
+        else
+        {
+            /* Translate and dispatch to event queue*/
+            TranslateMessage(&msg); 
+            DispatchMessage(&msg);
+        }
+    }
+
+    demo_cleanup(&demo);
+
+    return msg.wParam;
+}
+#else  // _WIN32
 int main(const int argc, const char *argv[])
 {
     struct demo demo;
@@ -1416,3 +1576,4 @@ int main(const int argc, const char *argv[])
 
     return 0;
 }
+#endif // _WIN32
