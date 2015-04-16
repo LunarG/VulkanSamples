@@ -148,15 +148,17 @@ std::vector<const char *> PhysicalGpu::layers(std::vector<char> &buf) const
 
 std::vector<const char *> PhysicalGpu::extensions() const
 {
+    // TODO : Should fill this out using GetGlobalExtensionInfo to query count
+    //   Then fill in extensions based on that count
     static const char *known_exts[] = {
         "VK_WSI_X11",
     };
 
     std::vector<const char *> exts;
     for (int i = 0; i < sizeof(known_exts) / sizeof(known_exts[0]); i++) {
-        VkResult err = vkGetExtensionSupport(gpu_, known_exts[i]);
-        if (err == VK_SUCCESS)
-            exts.push_back(known_exts[i]);
+//        VkResult err = vkGetExtensionSupport(gpu_, known_exts[i]);
+//        if (err == VK_SUCCESS)
+        exts.push_back(known_exts[i]);
     }
 
     return exts;

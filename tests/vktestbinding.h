@@ -79,8 +79,7 @@ public:
     // vkGetProcAddr()
     void *get_proc(const char *name) const { return vkGetProcAddr(gpu_, name); }
 
-    // vkGetExtensionSupport()
-    bool has_extension(const char *ext) const { return (vkGetExtensionSupport(gpu_, ext) == VK_SUCCESS); }
+    // vkGetGlobalExtensionInfo()
     std::vector<const char *> extensions() const;
 
     // vkEnumerateLayers()
