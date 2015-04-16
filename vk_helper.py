@@ -881,6 +881,14 @@ class StructWrapperGen:
         sh_funcs.append('    string final_str = prefix + ss.str();')
         sh_funcs.append("    return final_str;")
         sh_funcs.append("}")
+        # Add function to return a string value for input uint32_t
+        sh_funcs.append("string string_convert_helper(const uint32_t toString, const string prefix)\n{")
+        sh_funcs.append("    using namespace StreamControl;")
+        sh_funcs.append("    stringstream ss;")
+        sh_funcs.append('    ss << toString;')
+        sh_funcs.append('    string final_str = prefix + ss.str();')
+        sh_funcs.append("    return final_str;")
+        sh_funcs.append("}")
         # Add function to dynamically print out unknown struct
         sh_funcs.append("string dynamic_display(const void* pStruct, const string prefix)\n{")
         sh_funcs.append("    // Cast to APP_INFO ptr initially just to pull sType off struct")

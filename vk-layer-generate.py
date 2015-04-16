@@ -672,8 +672,9 @@ class APIDumpSubcommand(Subcommand):
                 log_func_no_addr += '%s = address, ' % (p.name)
             else:
                 log_func_no_addr += '%s = " << %s << ", ' % (p.name, pfi)
-            if prev_count_name != '' and (prev_count_name.replace('Count', '')[1:] in p.name or 'slotCount' == prev_count_name):
+            if prev_count_name != '' and (prev_count_name.replace('Count', '')[1:] in p.name):
                 sp_param_dict[pindex] = prev_count_name
+                prev_count_name = ''
             elif 'pDescriptorSets' == p.name and proto.params[-1].name == 'pCount':
                 sp_param_dict[pindex] = '*pCount'
             elif 'Wsi' not in proto.name and vk_helper.is_type(p.ty.strip('*').replace('const ', ''), 'struct'):
