@@ -125,7 +125,7 @@ static struct icd_drm_device *probe_syspath(const struct icd_instance *instance,
         return devices;
     } else {
         dev = icd_instance_alloc(instance, sizeof(*dev), 0,
-                VK_SYSTEM_ALLOC_INTERNAL_TEMP);
+                VK_SYSTEM_ALLOC_TYPE_INTERNAL_TEMP);
         if (!dev)
             return devices;
 

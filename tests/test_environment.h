@@ -18,7 +18,7 @@ public:
 
     const std::vector<Device *> &devices() { return devs_; }
     Device &default_device() { return *(devs_[default_dev_]); }
-    VkPhysicalGpu gpus[16];
+    VkPhysicalDevice gpus[16];
 
 private:
     VkApplicationInfo app_;

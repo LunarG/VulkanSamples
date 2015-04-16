@@ -203,20 +203,20 @@ static void surface_state_buf_gen7(const struct intel_gpu *gpu,
 static int img_type_to_view_type(VkImageType type)
 {
     switch (type) {
-    case VK_IMAGE_1D:   return VK_IMAGE_VIEW_1D;
-    case VK_IMAGE_2D:   return VK_IMAGE_VIEW_2D;
-    case VK_IMAGE_3D:   return VK_IMAGE_VIEW_3D;
-    default: assert(!"unknown img type"); return VK_IMAGE_VIEW_1D;
+    case VK_IMAGE_TYPE_1D:   return VK_IMAGE_VIEW_TYPE_1D;
+    case VK_IMAGE_TYPE_2D:   return VK_IMAGE_VIEW_TYPE_2D;
+    case VK_IMAGE_TYPE_3D:   return VK_IMAGE_VIEW_TYPE_3D;
+    default: assert(!"unknown img type"); return VK_IMAGE_VIEW_TYPE_1D;
     }
 }
 
 static int view_type_to_surface_type(VkImageViewType type)
 {
     switch (type) {
-    case VK_IMAGE_VIEW_1D:   return GEN6_SURFTYPE_1D;
-    case VK_IMAGE_VIEW_2D:   return GEN6_SURFTYPE_2D;
-    case VK_IMAGE_VIEW_3D:   return GEN6_SURFTYPE_3D;
-    case VK_IMAGE_VIEW_CUBE: return GEN6_SURFTYPE_CUBE;
+    case VK_IMAGE_VIEW_TYPE_1D:   return GEN6_SURFTYPE_1D;
+    case VK_IMAGE_VIEW_TYPE_2D:   return GEN6_SURFTYPE_2D;
+    case VK_IMAGE_VIEW_TYPE_3D:   return GEN6_SURFTYPE_3D;
+    case VK_IMAGE_VIEW_TYPE_CUBE: return GEN6_SURFTYPE_CUBE;
     default: assert(!"unknown view type"); return GEN6_SURFTYPE_NULL;
     }
 }
@@ -259,7 +259,7 @@ static void surface_state_tex_gen7(const struct intel_gpu *gpu,
 
    width = img->layout.width0;
    height = img->layout.height0;
-   depth = (type == VK_IMAGE_VIEW_3D) ?
+   depth = (type == VK_IMAGE_VIEW_TYPE_3D) ?
       img->depth : num_layers;
    pitch = img->layout.bo_stride;
 
@@ -592,7 +592,7 @@ static void surface_state_tex_gen6(const struct intel_gpu *gpu,
 
    width = img->layout.width0;
    height = img->layout.height0;
-   depth = (type == VK_IMAGE_VIEW_3D) ?
+   depth = (type == VK_IMAGE_VIEW_TYPE_3D) ?
       img->depth : num_layers;
    pitch = img->layout.bo_stride;
 
@@ -817,18 +817,18 @@ ds_init_info(const struct intel_gpu *gpu,
     * As for GEN7+, separate_stencil is always true.
     */
    switch (format) {
-   case VK_FMT_D16_UNORM:
+   case VK_FORMAT_D16_UNORM:
       info->format = GEN6_ZFORMAT_D16_UNORM;
       break;
-   case VK_FMT_D32_SFLOAT:
+   case VK_FORMAT_D32_SFLOAT:
       info->format = GEN6_ZFORMAT_D32_FLOAT;
       break;
-   case VK_FMT_D32_SFLOAT_S8_UINT:
+   case VK_FORMAT_D32_SFLOAT_S8_UINT:
       info->format = (separate_stencil) ?
          GEN6_ZFORMAT_D32_FLOAT :
          GEN6_ZFORMAT_D32_FLOAT_S8X24_UINT;
       break;
-   case VK_FMT_S8_UINT:
+   case VK_FORMAT_S8_UINT:
       if (separate_stencil) {
          info->format = GEN6_ZFORMAT_D32_FLOAT;
          break;
@@ -841,7 +841,7 @@ ds_init_info(const struct intel_gpu *gpu,
       break;
    }
 
-   if (format != VK_FMT_S8_UINT)
+   if (format != VK_FORMAT_S8_UINT)
       info->zs.stride = img->layout.bo_stride;
 
    if (img->s8_layout) {
@@ -866,7 +866,7 @@ ds_init_info(const struct intel_gpu *gpu,
          intel_layout_pos_to_mem(img->s8_layout, x, y, &x, &y);
          info->stencil.offset = intel_layout_mem_to_raw(img->s8_layout, x, y);
       }
-   } else if (format == VK_FMT_S8_UINT) {
+   } else if (format == VK_FORMAT_S8_UINT) {
       info->stencil.stride = img->layout.bo_stride * 2;
    }
 
@@ -880,7 +880,7 @@ ds_init_info(const struct intel_gpu *gpu,
 
    info->width = img->layout.width0;
    info->height = img->layout.height0;
-   info->depth = (img->type == VK_IMAGE_3D) ?
+   info->depth = (img->type == VK_IMAGE_TYPE_3D) ?
       img->depth : num_layers;
 
    info->lod = level;
@@ -1074,7 +1074,7 @@ VkResult intel_buf_view_create(struct intel_dev *dev,
     const bool will_write = (buf->usage & (VK_BUFFER_USAGE_STORAGE_TEXEL_BUFFER_BIT |
                              VK_BUFFER_USAGE_STORAGE_BUFFER_BIT));
     VkFormat format;
-    VkGpuSize stride;
+    VkDeviceSize stride;
     uint32_t *cmd;
     struct intel_buf_view *view;
     int i;
@@ -1083,7 +1083,7 @@ VkResult intel_buf_view_create(struct intel_dev *dev,
             sizeof(*view), dev->base.dbg, VK_DBG_OBJECT_BUFFER_VIEW,
             info, 0);
     if (!view)
-        return VK_ERROR_OUT_OF_MEMORY;
+        return VK_ERROR_OUT_OF_HOST_MEMORY;
 
     view->obj.destroy = buf_view_destroy;
 
@@ -1092,10 +1092,10 @@ VkResult intel_buf_view_create(struct intel_dev *dev,
     /*
      * The compiler expects uniform buffers to have pitch of
      * 4 for fragment shaders, but 16 for other stages.  The format
-     * must be VK_FMT_R32G32B32A32_SFLOAT.
+     * must be VK_FORMAT_R32G32B32A32_SFLOAT.
      */
-    if (info->viewType == VK_BUFFER_VIEW_RAW) {
-        format = VK_FMT_R32G32B32A32_SFLOAT;
+    if (info->viewType == VK_BUFFER_VIEW_TYPE_RAW) {
+        format = VK_FORMAT_R32G32B32A32_SFLOAT;
         stride = 16;
     } else {
         format = info->format;
@@ -1117,7 +1117,7 @@ VkResult intel_buf_view_create(struct intel_dev *dev,
         }
 
         /* switch to view->fs_cmd */
-        if (info->viewType == VK_BUFFER_VIEW_RAW) {
+        if (info->viewType == VK_BUFFER_VIEW_TYPE_RAW) {
             cmd = view->fs_cmd;
             stride = 4;
         } else {
@@ -1169,7 +1169,7 @@ VkResult intel_img_view_create(struct intel_dev *dev,
     view = (struct intel_img_view *) intel_base_create(&dev->base.handle,
             sizeof(*view), dev->base.dbg, VK_DBG_OBJECT_IMAGE_VIEW, info, 0);
     if (!view)
-        return VK_ERROR_OUT_OF_MEMORY;
+        return VK_ERROR_OUT_OF_HOST_MEMORY;
 
     view->obj.destroy = img_view_destroy;
 
@@ -1248,7 +1248,7 @@ VkResult intel_rt_view_create(struct intel_dev *dev,
             sizeof(*view), dev->base.dbg, VK_DBG_OBJECT_COLOR_TARGET_VIEW,
             info, 0);
     if (!view)
-        return VK_ERROR_OUT_OF_MEMORY;
+        return VK_ERROR_OUT_OF_HOST_MEMORY;
 
     view->obj.destroy = rt_view_destroy;
 
@@ -1300,7 +1300,7 @@ VkResult intel_ds_view_create(struct intel_dev *dev,
             sizeof(*view), dev->base.dbg, VK_DBG_OBJECT_DEPTH_STENCIL_VIEW,
             info, 0);
     if (!view)
-        return VK_ERROR_OUT_OF_MEMORY;
+        return VK_ERROR_OUT_OF_HOST_MEMORY;
 
     view->obj.destroy = ds_view_destroy;
 

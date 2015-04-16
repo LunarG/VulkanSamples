@@ -226,7 +226,7 @@ protected:
     VkImage m_texture;
     VkImageView m_textureView;
     VkImageViewAttachInfo m_textureViewInfo;
-    VkGpuMemory m_textureMem;
+    VkDeviceMemory m_textureMem;
 
     VkSampler m_sampler;
 
@@ -291,10 +291,10 @@ void VkRenderTest::GenericDrawPreparation(VkCommandBufferObj *cmdBuffer, VkPipel
     }
 
     cmdBuffer->PrepareAttachments();
-    cmdBuffer->BindStateObject(VK_STATE_BIND_RASTER, m_stateRaster);
-    cmdBuffer->BindStateObject(VK_STATE_BIND_VIEWPORT, m_stateViewport);
-    cmdBuffer->BindStateObject(VK_STATE_BIND_COLOR_BLEND, m_colorBlend);
-    cmdBuffer->BindStateObject(VK_STATE_BIND_DEPTH_STENCIL, m_stateDepthStencil);
+    cmdBuffer->BindStateObject(VK_STATE_BIND_POINT_RASTER, m_stateRaster);
+    cmdBuffer->BindStateObject(VK_STATE_BIND_POINT_VIEWPORT, m_stateViewport);
+    cmdBuffer->BindStateObject(VK_STATE_BIND_POINT_COLOR_BLEND, m_colorBlend);
+    cmdBuffer->BindStateObject(VK_STATE_BIND_POINT_DEPTH_STENCIL, m_stateDepthStencil);
     descriptorSet.CreateVKDescriptorSet(cmdBuffer);
     pipelineobj.CreateVKPipeline(descriptorSet);
     cmdBuffer->BindPipeline(pipelineobj);
@@ -701,11 +701,11 @@ TEST_F(VkRenderTest, QuadWithVertexFetch)
     VkVertexInputAttributeDescription vi_attribs[2];
     vi_attribs[0].binding = MESH_BIND_ID;               // Binding ID
     vi_attribs[0].location = 0;                         // location, position
-    vi_attribs[0].format = VK_FMT_R32G32B32A32_SFLOAT; // format of source data
+    vi_attribs[0].format = VK_FORMAT_R32G32B32A32_SFLOAT; // format of source data
     vi_attribs[0].offsetInBytes = 0;                    // Offset of first element in bytes from base of vertex
     vi_attribs[1].binding = MESH_BIND_ID;               // Binding ID
     vi_attribs[1].location = 1;                         // location, color
-    vi_attribs[1].format = VK_FMT_R32G32B32A32_SFLOAT; // format of source data
+    vi_attribs[1].format = VK_FORMAT_R32G32B32A32_SFLOAT; // format of source data
     vi_attribs[1].offsetInBytes = 1*sizeof(float)*4;     // Offset of first element in bytes from base of vertex
 
     pipelineobj.AddVertexInputAttribs(vi_attribs,2);
@@ -779,7 +779,7 @@ TEST_F(VkRenderTest, TriangleMRT)
     VkVertexInputAttributeDescription vi_attrib;
     vi_attrib.binding = MESH_BUF_ID;            // index into vertexBindingDescriptions
     vi_attrib.location = 0;
-    vi_attrib.format = VK_FMT_R32G32_SFLOAT;   // format of source data
+    vi_attrib.format = VK_FORMAT_R32G32_SFLOAT;   // format of source data
     vi_attrib.offsetInBytes = 0;                // Offset of first element in bytes from base of vertex
 
     pipelineobj.AddVertexInputAttribs(&vi_attrib, 1);
@@ -871,7 +871,7 @@ TEST_F(VkRenderTest, QuadWithIndexedVertexFetch)
     meshBuffer.BufferMemoryBarrier();
 
     VkIndexBufferObj indexBuffer(m_device);
-    indexBuffer.CreateAndInitBuffer(sizeof(g_idxData)/sizeof(g_idxData[0]), VK_INDEX_16, g_idxData);
+    indexBuffer.CreateAndInitBuffer(sizeof(g_idxData)/sizeof(g_idxData[0]), VK_INDEX_TYPE_UINT16, g_idxData);
     indexBuffer.BufferMemoryBarrier();
 
     VkShaderObj vs(m_device,vertShaderText,VK_SHADER_STAGE_VERTEX, this);
@@ -896,11 +896,11 @@ TEST_F(VkRenderTest, QuadWithIndexedVertexFetch)
     VkVertexInputAttributeDescription vi_attribs[2];
     vi_attribs[0].binding = MESH_BIND_ID;               // binding ID from BINDING_DESCRIPTION array to use for this attribute
     vi_attribs[0].location = 0;                         // layout location of vertex attribute
-    vi_attribs[0].format = VK_FMT_R32G32B32A32_SFLOAT; // format of source data
+    vi_attribs[0].format = VK_FORMAT_R32G32B32A32_SFLOAT; // format of source data
     vi_attribs[0].offsetInBytes = 0;                    // Offset of first element in bytes from base of vertex
     vi_attribs[1].binding = MESH_BIND_ID;               // binding ID from BINDING_DESCRIPTION array to use for this attribute
     vi_attribs[1].location = 1;                         // layout location of vertex attribute
-    vi_attribs[1].format = VK_FMT_R32G32B32A32_SFLOAT; // format of source data
+    vi_attribs[1].format = VK_FORMAT_R32G32B32A32_SFLOAT; // format of source data
     vi_attribs[1].offsetInBytes = 16;                   // Offset of first element in bytes from base of vertex
 
     pipelineobj.AddVertexInputAttribs(vi_attribs,2);
@@ -990,7 +990,7 @@ TEST_F(VkRenderTest, GreyandRedCirclesonBlue)
     VkVertexInputAttributeDescription vi_attribs[1];
     vi_attribs[0].binding = MESH_BIND_ID;               // binding ID
     vi_attribs[0].location = 0;
-    vi_attribs[0].format = VK_FMT_R32G32B32A32_SFLOAT; // format of source data
+    vi_attribs[0].format = VK_FORMAT_R32G32B32A32_SFLOAT; // format of source data
     vi_attribs[0].offsetInBytes = 0;                    // Offset of first element in bytes from base of vertex
 
     pipelineobj.AddVertexInputAttribs(vi_attribs,1);
@@ -1080,7 +1080,7 @@ TEST_F(VkRenderTest, RedCirclesonBlue)
     VkVertexInputAttributeDescription vi_attribs[1];
     vi_attribs[0].binding = MESH_BIND_ID;               // binding ID
     vi_attribs[0].location = 0;
-    vi_attribs[0].format = VK_FMT_R32G32B32A32_SFLOAT; // format of source data
+    vi_attribs[0].format = VK_FORMAT_R32G32B32A32_SFLOAT; // format of source data
     vi_attribs[0].offsetInBytes = 0;                    // Offset of first element in bytes from base of vertex
 
     pipelineobj.AddVertexInputAttribs(vi_attribs,1);
@@ -1180,7 +1180,7 @@ TEST_F(VkRenderTest, GreyCirclesonBlueFade)
     VkVertexInputAttributeDescription vi_attribs[1];
     vi_attribs[0].binding = MESH_BIND_ID;               // binding ID
     vi_attribs[0].location = 0;
-    vi_attribs[0].format = VK_FMT_R32G32B32A32_SFLOAT; // format of source data
+    vi_attribs[0].format = VK_FORMAT_R32G32B32A32_SFLOAT; // format of source data
     vi_attribs[0].offsetInBytes = 0;                    // Offset of first element in bytes from base of vertex
 
     pipelineobj.AddVertexInputAttribs(vi_attribs,1);
@@ -1271,7 +1271,7 @@ TEST_F(VkRenderTest, GreyCirclesonBlueDiscard)
     VkVertexInputAttributeDescription vi_attribs[1];
     vi_attribs[0].binding = MESH_BIND_ID;               // binding ID
     vi_attribs[0].location = 0;
-    vi_attribs[0].format = VK_FMT_R32G32B32A32_SFLOAT; // format of source data
+    vi_attribs[0].format = VK_FORMAT_R32G32B32A32_SFLOAT; // format of source data
     vi_attribs[0].offsetInBytes = 0;                    // Offset of first element in bytes from base of vertex
 
     pipelineobj.AddVertexInputAttribs(vi_attribs,1);
@@ -1505,11 +1505,11 @@ TEST_F(VkRenderTest, QuadVertFetchAndVertID)
     VkVertexInputAttributeDescription vi_attribs[2];
     vi_attribs[0].binding = MESH_BUF_ID;            // binding ID
     vi_attribs[0].location = 0;
-    vi_attribs[0].format = VK_FMT_R32G32_SFLOAT;   // format of source data
+    vi_attribs[0].format = VK_FORMAT_R32G32_SFLOAT;   // format of source data
     vi_attribs[0].offsetInBytes = 0;                // Offset of first element in bytes from base of vertex
     vi_attribs[1].binding = MESH_BUF_ID;            // binding ID
     vi_attribs[1].location = 1;
-    vi_attribs[1].format = VK_FMT_R32G32_SFLOAT;   // format of source data
+    vi_attribs[1].format = VK_FORMAT_R32G32_SFLOAT;   // format of source data
     vi_attribs[1].offsetInBytes = 16;                // Offset of first element in bytes from base of vertex
 
     pipelineobj.AddVertexInputAttribs(vi_attribs, 2);
@@ -1610,11 +1610,11 @@ TEST_F(VkRenderTest, QuadSparseVertFetch)
     VkVertexInputAttributeDescription vi_attribs[2];
     vi_attribs[0].binding = MESH_BUF_ID;                                        // binding ID
     vi_attribs[0].location = 4;
-    vi_attribs[0].format = VK_FMT_R32G32B32A32_SFLOAT;                         // format of source data
+    vi_attribs[0].format = VK_FORMAT_R32G32B32A32_SFLOAT;                         // format of source data
     vi_attribs[0].offsetInBytes = sizeof(float) * 4 * 2;   // Offset of first element in bytes from base of vertex
     vi_attribs[1].binding = MESH_BUF_ID;                                        // binding ID
     vi_attribs[1].location = 1;
-    vi_attribs[1].format = VK_FMT_R32G32B32A32_SFLOAT;                         // format of source data
+    vi_attribs[1].format = VK_FORMAT_R32G32B32A32_SFLOAT;                         // format of source data
     vi_attribs[1].offsetInBytes = sizeof(float) * 4 * 1;   // Offset of first element in bytes from base of vertex
 
     pipelineobj.AddVertexInputAttribs(vi_attribs, 2);
@@ -1705,11 +1705,11 @@ TEST_F(VkRenderTest, TriVertFetchDeadAttr)
     VkVertexInputAttributeDescription vi_attribs[2];
     vi_attribs[0].binding = MESH_BUF_ID;            // binding ID
     vi_attribs[0].location = 0;
-    vi_attribs[0].format = VK_FMT_R32G32B32A32_SFLOAT;            // format of source data
+    vi_attribs[0].format = VK_FORMAT_R32G32B32A32_SFLOAT;            // format of source data
     vi_attribs[0].offsetInBytes = 0;                // Offset of first element in bytes from base of vertex
     vi_attribs[1].binding = MESH_BUF_ID;            // binding ID
     vi_attribs[1].location = 1;
-    vi_attribs[1].format = VK_FMT_R32G32B32A32_SFLOAT;            // format of source data
+    vi_attribs[1].format = VK_FORMAT_R32G32B32A32_SFLOAT;            // format of source data
     vi_attribs[1].offsetInBytes = 16;                // Offset of first element in bytes from base of vertex
 
     pipelineobj.AddVertexInputAttribs(vi_attribs, 2);
@@ -1795,14 +1795,14 @@ TEST_F(VkRenderTest, CubeWithVertexFetchAndMVP)
     VkPipelineDsStateCreateInfo ds_state;
     ds_state.depthTestEnable = VK_TRUE;
     ds_state.depthWriteEnable = VK_TRUE;
-    ds_state.depthFunc = VK_COMPARE_LESS_EQUAL;
+    ds_state.depthCompareOp = VK_COMPARE_OP_LESS_EQUAL;
     ds_state.depthBoundsEnable = VK_FALSE;
     ds_state.stencilTestEnable = VK_FALSE;
     ds_state.back.stencilDepthFailOp = VK_STENCIL_OP_KEEP;
     ds_state.back.stencilFailOp = VK_STENCIL_OP_KEEP;
     ds_state.back.stencilPassOp = VK_STENCIL_OP_KEEP;
-    ds_state.back.stencilFunc = VK_COMPARE_ALWAYS;
-    ds_state.format = VK_FMT_D32_SFLOAT;
+    ds_state.back.stencilCompareOp = VK_COMPARE_OP_ALWAYS;
+    ds_state.format = VK_FORMAT_D32_SFLOAT;
     ds_state.front = ds_state.back;
     pipelineobj.SetDepthStencil(&ds_state);
 
@@ -1819,11 +1819,11 @@ TEST_F(VkRenderTest, CubeWithVertexFetchAndMVP)
     VkVertexInputAttributeDescription vi_attribs[2];
     vi_attribs[0].binding = MESH_BUF_ID;            // binding ID
     vi_attribs[0].location = 0;
-    vi_attribs[0].format = VK_FMT_R32G32B32A32_SFLOAT;            // format of source data
+    vi_attribs[0].format = VK_FORMAT_R32G32B32A32_SFLOAT;            // format of source data
     vi_attribs[0].offsetInBytes = 0;                // Offset of first element in bytes from base of vertex
     vi_attribs[1].binding = MESH_BUF_ID;            // binding ID
     vi_attribs[1].location = 1;
-    vi_attribs[1].format = VK_FMT_R32G32B32A32_SFLOAT;            // format of source data
+    vi_attribs[1].format = VK_FORMAT_R32G32B32A32_SFLOAT;            // format of source data
     vi_attribs[1].offsetInBytes = 16;                // Offset of first element in bytes from base of vertex
 
     pipelineobj.AddVertexInputAttribs(vi_attribs, 2);
@@ -2582,11 +2582,11 @@ TEST_F(VkRenderTest, CubeWithVertexFetchAndMVPAndTexture)
     VkVertexInputAttributeDescription vi_attribs[2];
     vi_attribs[0].binding = MESH_BIND_ID;               // Binding ID
     vi_attribs[0].location = 0;                         // location
-    vi_attribs[0].format = VK_FMT_R32G32B32A32_SFLOAT; // format of source data
+    vi_attribs[0].format = VK_FORMAT_R32G32B32A32_SFLOAT; // format of source data
     vi_attribs[0].offsetInBytes = 0;                    // Offset of first element in bytes from base of vertex
     vi_attribs[1].binding = MESH_BIND_ID;               // Binding ID
     vi_attribs[1].location = 1;                         // location
-    vi_attribs[1].format = VK_FMT_R32G32B32A32_SFLOAT; // format of source data
+    vi_attribs[1].format = VK_FORMAT_R32G32B32A32_SFLOAT; // format of source data
     vi_attribs[1].offsetInBytes = 16;                   // Offset of first element in bytes from base of vertex
 
     pipelineobj.AddVertexInputAttribs(vi_attribs,2);
@@ -2596,14 +2596,14 @@ TEST_F(VkRenderTest, CubeWithVertexFetchAndMVPAndTexture)
     VkPipelineDsStateCreateInfo ds_state;
     ds_state.depthTestEnable = VK_TRUE;
     ds_state.depthWriteEnable = VK_TRUE;
-    ds_state.depthFunc = VK_COMPARE_LESS_EQUAL;
+    ds_state.depthCompareOp = VK_COMPARE_OP_LESS_EQUAL;
     ds_state.depthBoundsEnable = VK_FALSE;
     ds_state.stencilTestEnable = VK_FALSE;
     ds_state.back.stencilDepthFailOp = VK_STENCIL_OP_KEEP;
     ds_state.back.stencilFailOp = VK_STENCIL_OP_KEEP;
     ds_state.back.stencilPassOp = VK_STENCIL_OP_KEEP;
-    ds_state.back.stencilFunc = VK_COMPARE_ALWAYS;
-    ds_state.format = VK_FMT_D32_SFLOAT;
+    ds_state.back.stencilCompareOp = VK_COMPARE_OP_ALWAYS;
+    ds_state.format = VK_FORMAT_D32_SFLOAT;
     ds_state.front = ds_state.back;
     pipelineobj.SetDepthStencil(&ds_state);
 

@@ -78,11 +78,11 @@ public:
 protected:
     vk_testing::Device *m_device;
     VkApplicationInfo app_info;
-    VkPhysicalGpu objs[16];
+    VkPhysicalDevice objs[16];
     uint32_t gpu_count;
     VkInstance inst;
     VkImage m_image;
-    VkGpuMemory *m_image_mem;
+    VkDeviceMemory *m_image_mem;
     uint32_t m_num_mem;
 
     virtual void SetUp() {
@@ -140,11 +140,11 @@ void VkImageTest::CreateImage(uint32_t w, uint32_t h)
         mipCount++;
     }
 
-    fmt = VK_FMT_R8G8B8A8_UINT;
+    fmt = VK_FORMAT_R8G8B8A8_UINT;
     // TODO: Pick known good format rather than just expect common format
     /*
      * XXX: What should happen if given NULL HANDLE for the pData argument?
-     * We're not requesting VK_INFO_TYPE_MEMORY_REQUIREMENTS so there is
+     * We're not requesting VK_OBJECT_INFO_TYPE_MEMORY_REQUIREMENTS so there is
      * an expectation that pData is a valid pointer.
      * However, why include a returned size value? That implies that the
      * amount of data may vary and that doesn't work well for using a
@@ -152,7 +152,7 @@ void VkImageTest::CreateImage(uint32_t w, uint32_t h)
      */
     size = sizeof(image_fmt);
     err = vkGetFormatInfo(this->device(), fmt,
-                           VK_INFO_TYPE_FORMAT_PROPERTIES,
+                           VK_FORMAT_INFO_TYPE_PROPERTIES,
                            &size, &image_fmt);
     ASSERT_VK_SUCCESS(err);
 
@@ -174,7 +174,7 @@ void VkImageTest::CreateImage(uint32_t w, uint32_t h)
 
     VkImageCreateInfo imageCreateInfo = {};
     imageCreateInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
-    imageCreateInfo.imageType = VK_IMAGE_2D;
+    imageCreateInfo.imageType = VK_IMAGE_TYPE_2D;
     imageCreateInfo.format = fmt;
     imageCreateInfo.arraySize = 1;
     imageCreateInfo.extent.width = w;
@@ -182,11 +182,11 @@ void VkImageTest::CreateImage(uint32_t w, uint32_t h)
     imageCreateInfo.extent.depth = 1;
     imageCreateInfo.mipLevels = mipCount;
     imageCreateInfo.samples = 1;
-    if (image_fmt.linearTilingFeatures & VK_FORMAT_SAMPLED_IMAGE_BIT) {
-        imageCreateInfo.tiling = VK_LINEAR_TILING;
+    if (image_fmt.linearTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT) {
+        imageCreateInfo.tiling = VK_IMAGE_TILING_LINEAR;
     }
-    else if (image_fmt.optimalTilingFeatures & VK_FORMAT_SAMPLED_IMAGE_BIT) {
-        imageCreateInfo.tiling = VK_OPTIMAL_TILING;
+    else if (image_fmt.optimalTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT) {
+        imageCreateInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
     }
     else {
         ASSERT_TRUE(false) << "Cannot find supported tiling format - Exiting";
@@ -223,15 +223,15 @@ void VkImageTest::CreateImage(uint32_t w, uint32_t h)
     mem_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO;
     mem_info.pNext = NULL;
 
-    err = vkGetObjectInfo(m_image, VK_INFO_TYPE_MEMORY_ALLOCATION_COUNT,
+    err = vkGetObjectInfo(m_image, VK_OBJECT_INFO_TYPE_MEMORY_ALLOCATION_COUNT,
                     &num_alloc_size, &num_allocations);
     ASSERT_VK_SUCCESS(err);
     ASSERT_EQ(num_alloc_size,sizeof(num_allocations));
     mem_req = (VkMemoryRequirements *) malloc(num_allocations * sizeof(VkMemoryRequirements));
-    m_image_mem = (VkGpuMemory *) malloc(num_allocations * sizeof(VkGpuMemory));
+    m_image_mem = (VkDeviceMemory *) malloc(num_allocations * sizeof(VkDeviceMemory));
     m_num_mem = num_allocations;
     err = vkGetObjectInfo(m_image,
-                    VK_INFO_TYPE_MEMORY_REQUIREMENTS,
+                    VK_OBJECT_INFO_TYPE_MEMORY_REQUIREMENTS,
                     &mem_reqs_size, mem_req);
     ASSERT_VK_SUCCESS(err);
     ASSERT_EQ(mem_reqs_size, num_allocations * sizeof(VkMemoryRequirements));
@@ -285,7 +285,7 @@ TEST_F(VkImageTest, CreateImageViewTest) {
     VkFormat fmt;
     VkImageView imageView;
 
-    fmt = VK_FMT_R8G8B8A8_UINT;
+    fmt = VK_FORMAT_R8G8B8A8_UINT;
 
     CreateImage(512, 256);
 
@@ -302,7 +302,7 @@ TEST_F(VkImageTest, CreateImageViewTest) {
     //    } VkImageViewCreateInfo;
     VkImageViewCreateInfo viewInfo = {};
     viewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-    viewInfo.viewType = VK_IMAGE_VIEW_2D;
+    viewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
     viewInfo.format = fmt;
 
     viewInfo.channels.r = VK_CHANNEL_SWIZZLE_R;

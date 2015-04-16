@@ -96,7 +96,7 @@ static VkResult event_get_info(struct intel_base *base, int type,
     VkResult ret = VK_SUCCESS;
 
     switch (type) {
-    case VK_INFO_TYPE_MEMORY_REQUIREMENTS:
+    case VK_OBJECT_INFO_TYPE_MEMORY_REQUIREMENTS:
         {
             VkMemoryRequirements *mem_req = data;
 
@@ -126,7 +126,7 @@ VkResult intel_event_create(struct intel_dev *dev,
     event = (struct intel_event *) intel_base_create(&dev->base.handle,
             sizeof(*event), dev->base.dbg, VK_DBG_OBJECT_EVENT, info, 0);
     if (!event)
-        return VK_ERROR_OUT_OF_MEMORY;
+        return VK_ERROR_OUT_OF_HOST_MEMORY;
 
     event->obj.base.get_info = event_get_info;
     event->obj.destroy = event_destroy;

@@ -716,7 +716,7 @@ static void layer_lib_scan(void)
     loader.layer_scanned = true;
 }
 
-static void loader_init_dispatch_table(VkLayerDispatchTable *tab, PFN_vkGetProcAddr fpGPA, VkPhysicalGpu gpu)
+static void loader_init_dispatch_table(VkLayerDispatchTable *tab, PFN_vkGetProcAddr fpGPA, VkPhysicalDevice gpu)
 {
     loader_initialize_dispatch_table(tab, fpGPA, gpu);
 
@@ -724,7 +724,7 @@ static void loader_init_dispatch_table(VkLayerDispatchTable *tab, PFN_vkGetProcA
         tab->EnumerateLayers = vkEnumerateLayers;
 }
 
-static void *loader_gpa_internal(VkPhysicalGpu gpu, const char * pName)
+static void *loader_gpa_internal(VkPhysicalDevice gpu, const char * pName)
 {
     if (gpu == NULL) {
         return NULL;;
@@ -1099,20 +1099,20 @@ LOADER_EXPORT VkResult VKAPI vkCreateInstance(
 
     ptr_instance = (struct loader_instance*) malloc(sizeof(struct loader_instance));
     if (ptr_instance == NULL) {
-        return VK_ERROR_OUT_OF_MEMORY;
+        return VK_ERROR_OUT_OF_HOST_MEMORY;
     }
     memset(ptr_instance, 0, sizeof(struct loader_instance));
     ptr_instance->extension_count = pCreateInfo->extensionCount;
     ptr_instance->extension_names = (ptr_instance->extension_count > 0) ?
                 malloc(sizeof (char *) * ptr_instance->extension_count) : NULL;
     if (ptr_instance->extension_names == NULL && (ptr_instance->extension_count > 0))
-        return VK_ERROR_OUT_OF_MEMORY;
+        return VK_ERROR_OUT_OF_HOST_MEMORY;
     for (i = 0; i < ptr_instance->extension_count; i++) {
         if (!loader_is_extension_scanned(pCreateInfo->ppEnabledExtensionNames[i]))
             return VK_ERROR_INVALID_EXTENSION;
         ptr_instance->extension_names[i] = malloc(strlen(pCreateInfo->ppEnabledExtensionNames[i]) + 1);
         if (ptr_instance->extension_names[i] == NULL)
-            return VK_ERROR_OUT_OF_MEMORY;
+            return VK_ERROR_OUT_OF_HOST_MEMORY;
         strcpy(ptr_instance->extension_names[i], pCreateInfo->ppEnabledExtensionNames[i]);
     }
     ptr_instance->next = loader.instances;
@@ -1198,7 +1198,7 @@ LOADER_EXPORT VkResult VKAPI vkEnumeratePhysicalDevices(
 
         VkInstance                                instance,
         uint32_t*                                 pPhysicalDeviceCount,
-        VkPhysicalGpu*                            pPhysicalDevices)
+        VkPhysicalDevice*                            pPhysicalDevices)
 {
     struct loader_instance *ptr_instance = (struct loader_instance *) instance;
     struct loader_icd *icd;
@@ -1223,12 +1223,12 @@ LOADER_EXPORT VkResult VKAPI vkEnumeratePhysicalDevices(
 
     } else
     {
-        VkPhysicalGpu* gpus;
+        VkPhysicalDevice* gpus;
         if (*pPhysicalDeviceCount < ptr_instance->total_gpu_count)
             return VK_ERROR_INVALID_VALUE;
-        gpus = malloc( sizeof(VkPhysicalGpu) *  *pPhysicalDeviceCount);
+        gpus = malloc( sizeof(VkPhysicalDevice) *  *pPhysicalDeviceCount);
         if (!gpus)
-            return VK_ERROR_OUT_OF_MEMORY;
+            return VK_ERROR_OUT_OF_HOST_MEMORY;
         while (icd) {
             VkBaseLayerObject * wrapped_gpus;
             PFN_vkGetProcAddr get_proc_addr = icd->scanned_icds->GetProcAddr;
@@ -1282,7 +1282,7 @@ LOADER_EXPORT VkResult VKAPI vkEnumeratePhysicalDevices(
     return (count > 0) ? VK_SUCCESS : res;
 }
 
-LOADER_EXPORT void * VKAPI vkGetProcAddr(VkPhysicalGpu gpu, const char * pName)
+LOADER_EXPORT void * VKAPI vkGetProcAddr(VkPhysicalDevice gpu, const char * pName)
 {
     if (gpu == NULL) {
 
@@ -1369,7 +1369,7 @@ LOADER_EXPORT VkResult VKAPI vkGetGlobalExtensionInfo(
     return VK_SUCCESS;
 }
 
-LOADER_EXPORT VkResult VKAPI vkEnumerateLayers(VkPhysicalGpu gpu, size_t maxLayerCount, size_t maxStringSize, size_t* pOutLayerCount, char* const* pOutLayers, void* pReserved)
+LOADER_EXPORT VkResult VKAPI vkEnumerateLayers(VkPhysicalDevice gpu, size_t maxLayerCount, size_t maxStringSize, size_t* pOutLayerCount, char* const* pOutLayers, void* pReserved)
 {
     uint32_t gpu_index;
     size_t count = 0;

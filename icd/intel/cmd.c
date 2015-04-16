@@ -107,7 +107,7 @@ static VkResult cmd_writer_alloc_and_map(struct intel_cmd *cmd,
         /* reuse the old bo */
         cmd_writer_discard(cmd, which);
     } else {
-        return VK_ERROR_OUT_OF_GPU_MEMORY;
+        return VK_ERROR_OUT_OF_DEVICE_MEMORY;
     }
 
     writer->used = 0;
@@ -152,7 +152,7 @@ void cmd_writer_grow(struct intel_cmd *cmd,
     new_bo = alloc_writer_bo(cmd->dev->winsys, which, new_size);
     if (!new_bo) {
         cmd_writer_discard(cmd, which);
-        cmd_fail(cmd, VK_ERROR_OUT_OF_GPU_MEMORY);
+        cmd_fail(cmd, VK_ERROR_OUT_OF_DEVICE_MEMORY);
         return;
     }
 
@@ -192,10 +192,10 @@ void cmd_writer_record(struct intel_cmd *cmd,
         struct intel_cmd_item *items;
 
         items = intel_alloc(cmd, sizeof(writer->items[0]) * new_alloc,
-                0, VK_SYSTEM_ALLOC_DEBUG);
+                0, VK_SYSTEM_ALLOC_TYPE_DEBUG);
         if (!items) {
             writer->item_used = 0;
-            cmd_fail(cmd, VK_ERROR_OUT_OF_MEMORY);
+            cmd_fail(cmd, VK_ERROR_OUT_OF_HOST_MEMORY);
             return;
         }
 
@@ -275,7 +275,7 @@ VkResult intel_cmd_create(struct intel_dev *dev,
     cmd = (struct intel_cmd *) intel_base_create(&dev->base.handle,
             sizeof(*cmd), dev->base.dbg, VK_DBG_OBJECT_CMD_BUFFER, info, 0);
     if (!cmd)
-        return VK_ERROR_OUT_OF_MEMORY;
+        return VK_ERROR_OUT_OF_HOST_MEMORY;
 
     cmd->obj.destroy = cmd_destroy;
 
@@ -290,10 +290,10 @@ VkResult intel_cmd_create(struct intel_dev *dev,
      */
     cmd->reloc_count = dev->gpu->batch_buffer_reloc_count;
     cmd->relocs = intel_alloc(cmd, sizeof(cmd->relocs[0]) * cmd->reloc_count,
-            4096, VK_SYSTEM_ALLOC_INTERNAL);
+            4096, VK_SYSTEM_ALLOC_TYPE_INTERNAL);
     if (!cmd->relocs) {
         intel_cmd_destroy(cmd);
-        return VK_ERROR_OUT_OF_MEMORY;
+        return VK_ERROR_OUT_OF_HOST_MEMORY;
     }
 
     *cmd_ret = cmd;
@@ -345,7 +345,7 @@ VkResult intel_cmd_begin(struct intel_cmd *cmd, const VkCmdBufferBeginInfo *info
         const uint32_t size = cmd->dev->gpu->max_batch_buffer_size / 2;
         uint32_t divider = 1;
 
-        if (flags & VK_CMD_BUFFER_OPTIMIZE_GPU_SMALL_BATCH_BIT)
+        if (flags & VK_CMD_BUFFER_OPTIMIZE_SMALL_BATCH_BIT)
             divider *= 4;
 
         cmd->writers[INTEL_CMD_WRITER_BATCH].size = size / divider;
@@ -495,7 +495,7 @@ ICD_EXPORT void VKAPI vkCmdLoadAtomicCounters(
     uint32_t                                    startCounter,
     uint32_t                                    counterCount,
     VkBuffer                                  srcBuffer,
-    VkGpuSize                                srcOffset)
+    VkDeviceSize                                srcOffset)
 {
 }
 
@@ -505,7 +505,7 @@ ICD_EXPORT void VKAPI vkCmdSaveAtomicCounters(
     uint32_t                                    startCounter,
     uint32_t                                    counterCount,
     VkBuffer                                  destBuffer,
-    VkGpuSize                                destOffset)
+    VkDeviceSize                                destOffset)
 {
 }
 

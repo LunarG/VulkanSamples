@@ -39,8 +39,8 @@ VkRenderFramework::VkRenderFramework() :
     m_stateDepthStencil( VK_NULL_HANDLE ),
     m_width( 256.0 ),                   // default window width
     m_height( 256.0 ),                  // default window height
-    m_render_target_fmt( VK_FMT_R8G8B8A8_UNORM ),
-    m_depth_stencil_fmt( VK_FMT_UNDEFINED ),
+    m_render_target_fmt( VK_FORMAT_R8G8B8A8_UNORM ),
+    m_depth_stencil_fmt( VK_FORMAT_UNDEFINED ),
     m_depth_clear_color( 1.0 ),
     m_stencil_clear_color( 0 )
 {
@@ -114,7 +114,7 @@ void VkRenderFramework::InitState()
 {
     VkResult err;
 
-    m_render_target_fmt = VK_FMT_B8G8R8A8_UNORM;
+    m_render_target_fmt = VK_FORMAT_B8G8R8A8_UNORM;
 
     // create a raster state (solid, back-face culling)
     VkDynamicRsStateCreateInfo raster = {};
@@ -256,7 +256,7 @@ void VkRenderFramework::InitRenderTarget(uint32_t targets, VkDepthStencilBindInf
 
 
 
-VkDeviceObj::VkDeviceObj(uint32_t id, VkPhysicalGpu obj) :
+VkDeviceObj::VkDeviceObj(uint32_t id, VkPhysicalDevice obj) :
     vk_testing::Device(obj), id(id)
 {
     init();
@@ -356,7 +356,7 @@ void VkDescriptorSetObj::CreateVKDescriptorSet(VkCommandBufferObj *cmdBuffer)
     for (int i = 0; i < m_type_counts.size(); i++) {
         bindings[i].descriptorType = m_type_counts[i].type;
         bindings[i].count = m_type_counts[i].count;
-        bindings[i].stageFlags = VK_SHADER_STAGE_FLAGS_ALL;
+        bindings[i].stageFlags = VK_SHADER_STAGE_ALL;
         bindings[i].pImmutableSamplers = NULL;
     }
 
@@ -428,18 +428,10 @@ void VkImageObj::ImageMemoryBarrier(
 
     VkImageMemoryBarrier *pmemory_barrier = &barrier;
 
-    VkPipeEvent pipe_events[] = { VK_PIPE_EVENT_GPU_COMMANDS_COMPLETE };
-    VkPipelineBarrier pipeline_barrier = {};
-    pipeline_barrier.sType = VK_STRUCTURE_TYPE_PIPELINE_BARRIER;
-    pipeline_barrier.pNext = NULL;
-    pipeline_barrier.eventCount = 1;
-    pipeline_barrier.pEvents = pipe_events;
-    pipeline_barrier.waitEvent = VK_WAIT_EVENT_TOP_OF_PIPE;
-    pipeline_barrier.memBarrierCount = 1;
-    pipeline_barrier.ppMemBarriers = (const void **)&pmemory_barrier;
+    VkPipeEvent pipe_events[] = { VK_PIPE_EVENT_COMMANDS_COMPLETE };
 
     // write barrier to the command buffer
-    vkCmdPipelineBarrier(cmd_buf->obj(), &pipeline_barrier);
+    vkCmdPipelineBarrier(cmd_buf->obj(), VK_WAIT_EVENT_TOP_OF_PIPE, 1, pipe_events, 1, (const void **)&pmemory_barrier);
 }
 
 void VkImageObj::SetLayout(VkCommandBufferObj *cmd_buf,
@@ -518,7 +510,7 @@ void VkImageObj::SetLayout(VkImageAspect aspect,
 bool VkImageObj::IsCompatible(VkFlags usage, VkFlags features)
 {
     if ((usage & VK_IMAGE_USAGE_SAMPLED_BIT) &&
-            !(features & VK_FORMAT_SAMPLED_IMAGE_BIT))
+            !(features & VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT))
         return false;
 
     return true;
@@ -547,28 +539,28 @@ void VkImageObj::init(uint32_t w, uint32_t h,
 
     size = sizeof(image_fmt);
     err = vkGetFormatInfo(m_device->obj(), fmt,
-        VK_INFO_TYPE_FORMAT_PROPERTIES,
+        VK_FORMAT_INFO_TYPE_PROPERTIES,
         &size, &image_fmt);
     ASSERT_VK_SUCCESS(err);
 
-    if (requested_tiling == VK_LINEAR_TILING) {
+    if (requested_tiling == VK_IMAGE_TILING_LINEAR) {
         if (IsCompatible(usage, image_fmt.linearTilingFeatures)) {
-            tiling = VK_LINEAR_TILING;
+            tiling = VK_IMAGE_TILING_LINEAR;
         } else if (IsCompatible(usage, image_fmt.optimalTilingFeatures)) {
-            tiling = VK_OPTIMAL_TILING;
+            tiling = VK_IMAGE_TILING_OPTIMAL;
         } else {
             ASSERT_TRUE(false) << "Error: Cannot find requested tiling configuration";
         }
     } else if (IsCompatible(usage, image_fmt.optimalTilingFeatures)) {
-        tiling = VK_OPTIMAL_TILING;
+        tiling = VK_IMAGE_TILING_OPTIMAL;
     } else if (IsCompatible(usage, image_fmt.linearTilingFeatures)) {
-        tiling = VK_LINEAR_TILING;
+        tiling = VK_IMAGE_TILING_LINEAR;
     } else {
          ASSERT_TRUE(false) << "Error: Cannot find requested tiling configuration";
     }
 
     VkImageCreateInfo imageCreateInfo = vk_testing::Image::create_info();
-    imageCreateInfo.imageType = VK_IMAGE_2D;
+    imageCreateInfo.imageType = VK_IMAGE_TYPE_2D;
     imageCreateInfo.format = fmt;
     imageCreateInfo.extent.width = w;
     imageCreateInfo.extent.height = h;
@@ -653,13 +645,13 @@ VkTextureObj::VkTextureObj(VkDeviceObj *device, uint32_t *colors)
     :VkImageObj(device)
 {
     m_device = device;
-    const VkFormat tex_format = VK_FMT_B8G8R8A8_UNORM;
+    const VkFormat tex_format = VK_FORMAT_B8G8R8A8_UNORM;
     uint32_t tex_colors[2] = { 0xffff0000, 0xff00ff00 };
     void *data;
     int32_t x, y;
     VkImageObj stagingImage(device);
 
-    stagingImage.init(16, 16, tex_format, 0, VK_LINEAR_TILING);
+    stagingImage.init(16, 16, tex_format, 0, VK_IMAGE_TILING_LINEAR);
     VkSubresourceLayout layout = stagingImage.subresource_layout(subresource(VK_IMAGE_ASPECT_COLOR, 0, 0));
 
     if (colors == NULL)
@@ -673,7 +665,7 @@ VkTextureObj::VkTextureObj(VkDeviceObj *device, uint32_t *colors)
     view.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
     view.pNext = NULL;
     view.image = VK_NULL_HANDLE;
-    view.viewType = VK_IMAGE_VIEW_2D;
+    view.viewType = VK_IMAGE_VIEW_TYPE_2D;
     view.format = tex_format;
     view.channels.r = VK_CHANNEL_SWIZZLE_R;
     view.channels.g = VK_CHANNEL_SWIZZLE_G;
@@ -687,7 +679,7 @@ VkTextureObj::VkTextureObj(VkDeviceObj *device, uint32_t *colors)
     view.minLod = 0.0f;
 
     /* create image */
-    init(16, 16, tex_format, VK_IMAGE_USAGE_SAMPLED_BIT, VK_OPTIMAL_TILING);
+    init(16, 16, tex_format, VK_IMAGE_USAGE_SAMPLED_BIT, VK_IMAGE_TILING_OPTIMAL);
 
     /* create image view */
     view.image = obj();
@@ -714,16 +706,16 @@ VkSamplerObj::VkSamplerObj(VkDeviceObj *device)
     samplerCreateInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
     samplerCreateInfo.magFilter = VK_TEX_FILTER_NEAREST;
     samplerCreateInfo.minFilter = VK_TEX_FILTER_NEAREST;
-    samplerCreateInfo.mipMode = VK_TEX_MIPMAP_BASE;
+    samplerCreateInfo.mipMode = VK_TEX_MIPMAP_MODE_BASE;
     samplerCreateInfo.addressU = VK_TEX_ADDRESS_WRAP;
     samplerCreateInfo.addressV = VK_TEX_ADDRESS_WRAP;
     samplerCreateInfo.addressW = VK_TEX_ADDRESS_WRAP;
     samplerCreateInfo.mipLodBias = 0.0;
     samplerCreateInfo.maxAnisotropy = 0.0;
-    samplerCreateInfo.compareFunc = VK_COMPARE_NEVER;
+    samplerCreateInfo.compareOp = VK_COMPARE_OP_NEVER;
     samplerCreateInfo.minLod = 0.0;
     samplerCreateInfo.maxLod = 0.0;
-    samplerCreateInfo.borderColorType = VK_BORDER_COLOR_OPAQUE_WHITE;
+    samplerCreateInfo.borderColor = VK_BORDER_COLOR_OPAQUE_WHITE;
 
     init(*m_device, samplerCreateInfo);
 }
@@ -767,7 +759,7 @@ VkConstantBufferObj::VkConstantBufferObj(VkDeviceObj *device, int constantCount,
     VkBufferViewCreateInfo view_info = {};
     view_info.sType = VK_STRUCTURE_TYPE_BUFFER_VIEW_CREATE_INFO;
     view_info.buffer = obj();
-    view_info.viewType = VK_BUFFER_VIEW_RAW;
+    view_info.viewType = VK_BUFFER_VIEW_TYPE_RAW;
     view_info.offset = 0;
     view_info.range  = allocationSize;
     m_bufferView.init(*m_device, view_info);
@@ -776,7 +768,7 @@ VkConstantBufferObj::VkConstantBufferObj(VkDeviceObj *device, int constantCount,
     this->m_bufferViewInfo.view = m_bufferView.obj();
 }
 
-void VkConstantBufferObj::Bind(VkCmdBuffer cmdBuffer, VkGpuSize offset, uint32_t binding)
+void VkConstantBufferObj::Bind(VkCmdBuffer cmdBuffer, VkDeviceSize offset, uint32_t binding)
 {
     vkCmdBindVertexBuffers(cmdBuffer, binding, 1, &obj(), &offset);
 }
@@ -827,17 +819,10 @@ void VkConstantBufferObj::BufferMemoryBarrier(
         buffer_memory_barrier(outputMask, inputMask, 0, m_numVertices * m_stride);
     VkBufferMemoryBarrier *pmemory_barrier = &memory_barrier;
 
-    VkPipeEvent set_events[] = { VK_PIPE_EVENT_GPU_COMMANDS_COMPLETE };
-    VkPipelineBarrier pipeline_barrier = {};
-    pipeline_barrier.sType = VK_STRUCTURE_TYPE_PIPELINE_BARRIER;
-    pipeline_barrier.eventCount = 1;
-    pipeline_barrier.pEvents = set_events;
-    pipeline_barrier.waitEvent = VK_WAIT_EVENT_TOP_OF_PIPE;
-    pipeline_barrier.memBarrierCount = 1;
-    pipeline_barrier.ppMemBarriers = (const void **)&pmemory_barrier;
+    VkPipeEvent set_events[] = { VK_PIPE_EVENT_COMMANDS_COMPLETE };
 
     // write barrier to the command buffer
-    m_commandBuffer->PipelineBarrier(&pipeline_barrier);
+    m_commandBuffer->PipelineBarrier(VK_WAIT_EVENT_TOP_OF_PIPE, 1, set_events, 1, (const void **)&pmemory_barrier);
 
     // finish recording the command buffer
     err = m_commandBuffer->EndCommandBuffer();
@@ -870,17 +855,17 @@ void VkIndexBufferObj::CreateAndInitBuffer(int numIndexes, VkIndexType indexType
     m_numVertices = numIndexes;
     m_indexType = indexType;
     switch (indexType) {
-    case VK_INDEX_8:
+    case VK_INDEX_TYPE_UINT8:
         m_stride = 1;
-        viewFormat = VK_FMT_R8_UINT;
+        viewFormat = VK_FORMAT_R8_UINT;
         break;
-    case VK_INDEX_16:
+    case VK_INDEX_TYPE_UINT16:
         m_stride = 2;
-        viewFormat = VK_FMT_R16_UINT;
+        viewFormat = VK_FORMAT_R16_UINT;
         break;
-    case VK_INDEX_32:
+    case VK_INDEX_TYPE_UINT32:
         m_stride = 4;
-        viewFormat = VK_FMT_R32_UINT;
+        viewFormat = VK_FORMAT_R32_UINT;
         break;
     default:
         assert(!"unknown index type");
@@ -898,7 +883,7 @@ void VkIndexBufferObj::CreateAndInitBuffer(int numIndexes, VkIndexType indexType
     VkBufferViewCreateInfo view_info = {};
     view_info.sType = VK_STRUCTURE_TYPE_BUFFER_VIEW_CREATE_INFO;
     view_info.buffer = obj();
-    view_info.viewType = VK_BUFFER_VIEW_FORMATTED;
+    view_info.viewType = VK_BUFFER_VIEW_TYPE_FORMATTED;
     view_info.format = viewFormat;
     view_info.offset = 0;
     view_info.range  = allocationSize;
@@ -908,7 +893,7 @@ void VkIndexBufferObj::CreateAndInitBuffer(int numIndexes, VkIndexType indexType
     this->m_bufferViewInfo.view = m_bufferView.obj();
 }
 
-void VkIndexBufferObj::Bind(VkCmdBuffer cmdBuffer, VkGpuSize offset)
+void VkIndexBufferObj::Bind(VkCmdBuffer cmdBuffer, VkDeviceSize offset)
 {
     vkCmdBindIndexBuffer(cmdBuffer, obj(), offset, m_indexType);
 }
@@ -930,7 +915,7 @@ VkPipelineShaderStageCreateInfo* VkShaderObj::GetStageCreateInfo()
     return stageInfo;
 }
 
-VkShaderObj::VkShaderObj(VkDeviceObj *device, const char * shader_code, VkPipelineShaderStage stage, VkRenderFramework *framework)
+VkShaderObj::VkShaderObj(VkDeviceObj *device, const char * shader_code, VkShaderStage stage, VkRenderFramework *framework)
 {
     VkResult err = VK_SUCCESS;
     std::vector<unsigned int> spv;
@@ -950,7 +935,7 @@ VkShaderObj::VkShaderObj(VkDeviceObj *device, const char * shader_code, VkPipeli
         createInfo.pCode = malloc(createInfo.codeSize);
         createInfo.flags = 0;
 
-        /* try version 0 first: VkPipelineShaderStage followed by GLSL */
+        /* try version 0 first: VkShaderStage followed by GLSL */
         ((uint32_t *) createInfo.pCode)[0] = ICD_SPV_MAGIC;
         ((uint32_t *) createInfo.pCode)[1] = 0;
         ((uint32_t *) createInfo.pCode)[2] = stage;
@@ -981,7 +966,7 @@ VkPipelineObj::VkPipelineObj(VkDeviceObj *device)
 
     m_ia_state.sType = VK_STRUCTURE_TYPE_PIPELINE_IA_STATE_CREATE_INFO;
     m_ia_state.pNext = VK_NULL_HANDLE;
-    m_ia_state.topology = VK_TOPOLOGY_TRIANGLE_LIST;
+    m_ia_state.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
     m_ia_state.disableVertexReuse = VK_FALSE;
     m_ia_state.primitiveRestartEnable = VK_FALSE;
     m_ia_state.primitiveRestartIndex = 0;
@@ -993,8 +978,8 @@ VkPipelineObj::VkPipelineObj(VkDeviceObj *device)
     m_rs_state.programPointSize = VK_FALSE;
     m_rs_state.pointOrigin = VK_COORDINATE_ORIGIN_UPPER_LEFT;
     m_rs_state.provokingVertex = VK_PROVOKING_VERTEX_LAST;
-    m_rs_state.fillMode = VK_FILL_SOLID;
-    m_rs_state.cullMode = VK_CULL_NONE;
+    m_rs_state.fillMode = VK_FILL_MODE_SOLID;
+    m_rs_state.cullMode = VK_CULL_MODE_NONE;
     m_rs_state.frontFace = VK_FRONT_FACE_CCW;
 
     memset(&m_cb_state,0,sizeof(m_cb_state));
@@ -1013,21 +998,21 @@ VkPipelineObj::VkPipelineObj(VkDeviceObj *device)
 
     m_ds_state.sType = VK_STRUCTURE_TYPE_PIPELINE_DS_STATE_CREATE_INFO;
     m_ds_state.pNext = &m_ms_state,
-    m_ds_state.format = VK_FMT_D32_SFLOAT;
+    m_ds_state.format = VK_FORMAT_D32_SFLOAT;
     m_ds_state.depthTestEnable      = VK_FALSE;
     m_ds_state.depthWriteEnable     = VK_FALSE;
     m_ds_state.depthBoundsEnable    = VK_FALSE;
-    m_ds_state.depthFunc = VK_COMPARE_LESS_EQUAL;
+    m_ds_state.depthCompareOp = VK_COMPARE_OP_LESS_EQUAL;
     m_ds_state.back.stencilDepthFailOp = VK_STENCIL_OP_KEEP;
     m_ds_state.back.stencilFailOp = VK_STENCIL_OP_KEEP;
     m_ds_state.back.stencilPassOp = VK_STENCIL_OP_KEEP;
-    m_ds_state.back.stencilFunc = VK_COMPARE_ALWAYS;
+    m_ds_state.back.stencilCompareOp = VK_COMPARE_OP_ALWAYS;
     m_ds_state.stencilTestEnable = VK_FALSE;
     m_ds_state.front = m_ds_state.back;
 
     VkPipelineCbAttachmentState att = {};
     att.blendEnable = VK_FALSE;
-    att.format = VK_FMT_B8G8R8A8_UNORM;
+    att.format = VK_FORMAT_B8G8R8A8_UNORM;
     att.channelWriteMask = 0xf;
     AddColorAttachment(0, &att);
 
@@ -1072,7 +1057,7 @@ void VkPipelineObj::SetDepthStencil(VkPipelineDsStateCreateInfo *ds_state)
     m_ds_state.depthTestEnable = ds_state->depthTestEnable;
     m_ds_state.depthWriteEnable = ds_state->depthWriteEnable;
     m_ds_state.depthBoundsEnable = ds_state->depthBoundsEnable;
-    m_ds_state.depthFunc = ds_state->depthFunc;
+    m_ds_state.depthCompareOp = ds_state->depthCompareOp;
     m_ds_state.stencilTestEnable = ds_state->stencilTestEnable;
     m_ds_state.back = ds_state->back;
     m_ds_state.front = ds_state->front;
@@ -1110,9 +1095,9 @@ void VkPipelineObj::CreateVKPipeline(VkDescriptorSetObj &descriptorSet)
     init(*m_device, info);
 }
 
-vector<VkGpuMemory> VkMemoryRefManager::mem_refs() const
+vector<VkDeviceMemory> VkMemoryRefManager::mem_refs() const
 {
-    std::vector<VkGpuMemory> mems;
+    std::vector<VkDeviceMemory> mems;
     if (this->mem_refs_.size()) {
         mems.reserve(this->mem_refs_.size());
         for (uint32_t i = 0; i < this->mem_refs_.size(); i++)
@@ -1124,11 +1109,11 @@ vector<VkGpuMemory> VkMemoryRefManager::mem_refs() const
 
 void VkMemoryRefManager::AddMemoryRefs(vk_testing::Object &vkObject)
 {
-    const std::vector<VkGpuMemory> mems = vkObject.memories();
+    const std::vector<VkDeviceMemory> mems = vkObject.memories();
     AddMemoryRefs(mems);
 }
 
-void VkMemoryRefManager::AddMemoryRefs(vector<VkGpuMemory> mem)
+void VkMemoryRefManager::AddMemoryRefs(vector<VkDeviceMemory> mem)
 {
     for (size_t i = 0; i < mem.size(); i++) {
         if (mem[i] != NULL) {
@@ -1182,9 +1167,9 @@ VkResult VkCommandBufferObj::EndCommandBuffer()
     return VK_SUCCESS;
 }
 
-void VkCommandBufferObj::PipelineBarrier(VkPipelineBarrier *barrierPtr)
+void VkCommandBufferObj::PipelineBarrier(VkWaitEvent waitEvent, uint32_t pipeEventCount, const VkPipeEvent* pPipeEvents, uint32_t memBarrierCount, const void** ppMemBarriers)
 {
-    vkCmdPipelineBarrier(obj(), barrierPtr);
+    vkCmdPipelineBarrier(obj(), waitEvent, pipeEventCount, pPipeEvents, memBarrierCount, ppMemBarriers);
 }
 
 void VkCommandBufferObj::ClearAllBuffers(VkClearColor clear_color, float depth_clear_color, uint32_t stencil_clear_color,
@@ -1215,19 +1200,12 @@ void VkCommandBufferObj::ClearAllBuffers(VkClearColor clear_color, float depth_c
     memory_barrier.subresourceRange = srRange;
     VkImageMemoryBarrier *pmemory_barrier = &memory_barrier;
 
-    VkPipeEvent set_events[] = { VK_PIPE_EVENT_GPU_COMMANDS_COMPLETE };
-    VkPipelineBarrier pipeline_barrier = {};
-    pipeline_barrier.sType = VK_STRUCTURE_TYPE_PIPELINE_BARRIER;
-    pipeline_barrier.eventCount = 1;
-    pipeline_barrier.pEvents = set_events;
-    pipeline_barrier.waitEvent = VK_WAIT_EVENT_TOP_OF_PIPE;
-    pipeline_barrier.memBarrierCount = 1;
-    pipeline_barrier.ppMemBarriers = (const void **)&pmemory_barrier;
+    VkPipeEvent set_events[] = { VK_PIPE_EVENT_COMMANDS_COMPLETE };
 
     for (i = 0; i < m_renderTargets.size(); i++) {
         memory_barrier.image = m_renderTargets[i]->image();
         memory_barrier.oldLayout = m_renderTargets[i]->layout();
-        vkCmdPipelineBarrier( obj(), &pipeline_barrier);
+        vkCmdPipelineBarrier( obj(), VK_WAIT_EVENT_TOP_OF_PIPE, 1, set_events, 1, (const void **)&pmemory_barrier);
         m_renderTargets[i]->layout(memory_barrier.newLayout);
 
         vkCmdClearColorImage(obj(),
@@ -1253,7 +1231,7 @@ void VkCommandBufferObj::ClearAllBuffers(VkClearColor clear_color, float depth_c
         memory_barrier.image = depthStencilObj->obj();
         memory_barrier.subresourceRange = dsRange;
 
-        vkCmdPipelineBarrier( obj(), &pipeline_barrier);
+        vkCmdPipelineBarrier( obj(), VK_WAIT_EVENT_TOP_OF_PIPE, 1, set_events, 1, (const void **)&pmemory_barrier);
 
         vkCmdClearDepthStencil(obj(),
                                 depthStencilObj->obj(), VK_IMAGE_LAYOUT_CLEAR_OPTIMAL,
@@ -1266,7 +1244,7 @@ void VkCommandBufferObj::ClearAllBuffers(VkClearColor clear_color, float depth_c
         memory_barrier.oldLayout = VK_IMAGE_LAYOUT_CLEAR_OPTIMAL;
         memory_barrier.newLayout = depthStencilObj->BindInfo()->layout;
         memory_barrier.subresourceRange = dsRange;
-        vkCmdPipelineBarrier( obj(), &pipeline_barrier);
+        vkCmdPipelineBarrier( obj(), VK_WAIT_EVENT_TOP_OF_PIPE, 1, set_events, 1, (const void **)&pmemory_barrier);
     }
 }
 
@@ -1305,20 +1283,13 @@ void VkCommandBufferObj::PrepareAttachments()
     memory_barrier.subresourceRange = srRange;
     VkImageMemoryBarrier *pmemory_barrier = &memory_barrier;
 
-    VkPipeEvent set_events[] = { VK_PIPE_EVENT_GPU_COMMANDS_COMPLETE };
-    VkPipelineBarrier pipeline_barrier = {};
-    pipeline_barrier.sType = VK_STRUCTURE_TYPE_PIPELINE_BARRIER;
-    pipeline_barrier.eventCount = 1;
-    pipeline_barrier.pEvents = set_events;
-    pipeline_barrier.waitEvent = VK_WAIT_EVENT_TOP_OF_PIPE;
-    pipeline_barrier.memBarrierCount = 1;
-    pipeline_barrier.ppMemBarriers = (const void **)&pmemory_barrier;
+    VkPipeEvent set_events[] = { VK_PIPE_EVENT_COMMANDS_COMPLETE };
 
     for(i=0; i<m_renderTargets.size(); i++)
     {
         memory_barrier.image = m_renderTargets[i]->image();
         memory_barrier.oldLayout = m_renderTargets[i]->layout();
-        vkCmdPipelineBarrier( obj(), &pipeline_barrier);
+        vkCmdPipelineBarrier( obj(), VK_WAIT_EVENT_TOP_OF_PIPE, 1, set_events, 1, (const void **)&pmemory_barrier);
         m_renderTargets[i]->layout(memory_barrier.newLayout);
     }
 }
@@ -1411,7 +1382,7 @@ void VkCommandBufferObj::BindIndexBuffer(VkIndexBufferObj *indexBuffer, uint32_t
     mem_ref_mgr.AddMemoryRefs(*indexBuffer);
 }
 
-void VkCommandBufferObj::BindVertexBuffer(VkConstantBufferObj *vertexBuffer, VkGpuSize offset, uint32_t binding)
+void VkCommandBufferObj::BindVertexBuffer(VkConstantBufferObj *vertexBuffer, VkDeviceSize offset, uint32_t binding)
 {
     vkCmdBindVertexBuffers(obj(), binding, 1, &vertexBuffer->obj(), &offset);
     mem_ref_mgr.AddMemoryRefs(*vertexBuffer);
@@ -1438,11 +1409,11 @@ void VkDepthStencilObj::Init(VkDeviceObj *device, int32_t width, int32_t height)
 
     m_device = device;
     m_initialized = true;
-    m_depth_stencil_fmt = VK_FMT_D16_UNORM;
+    m_depth_stencil_fmt = VK_FORMAT_D16_UNORM;
 
     image_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
     image_info.pNext = NULL;
-    image_info.imageType = VK_IMAGE_2D;
+    image_info.imageType = VK_IMAGE_TYPE_2D;
     image_info.format = m_depth_stencil_fmt;
     image_info.extent.width = width;
     image_info.extent.height = height;
@@ -1450,7 +1421,7 @@ void VkDepthStencilObj::Init(VkDeviceObj *device, int32_t width, int32_t height)
     image_info.mipLevels = 1;
     image_info.arraySize = 1;
     image_info.samples = 1;
-    image_info.tiling = VK_OPTIMAL_TILING;
+    image_info.tiling = VK_IMAGE_TILING_OPTIMAL;
     image_info.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_BIT;
     image_info.flags = 0;
     init(*m_device, image_info);

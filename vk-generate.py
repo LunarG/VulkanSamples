@@ -233,7 +233,7 @@ class DispatchTableOpsSubcommand(Subcommand):
                 % self.prefix)
         func.append("%s                                              PFN_vkGetProcAddr gpa,"
                 % (" " * len(self.prefix)))
-        func.append("%s                                              VkPhysicalGpu gpu)"
+        func.append("%s                                              VkPhysicalDevice gpu)"
                 % (" " * len(self.prefix)))
         func.append("{")
         func.append("    %s" % "\n    ".join(stmts))
@@ -392,7 +392,7 @@ class WinDefFileSubcommand(Subcommand):
         library_exports = {
                 "all": [],
                 "icd": [
-                    "EnumerateGpus",
+                    "EnumeratePhysicalDevices",
                     "CreateInstance",
                     "DestroyInstance",
                     "GetProcAddr",
@@ -488,7 +488,7 @@ class LoaderGetProcAddrSubcommand(Subcommand):
 
         special_lookups = []
         # these functions require special trampoline code beyond just the normal create object trampoline code
-        special_names = ["AllocDescriptorSets", "GetMultiGpuCompatibility"]
+        special_names = ["AllocDescriptorSets", "GetMultiDeviceCompatibility"]
         for proto in self.protos:
             if self._is_loader_special_case(proto) or self._does_function_create_object(proto) or proto.name in special_names:
                 special_lookups.append("if (!strcmp(name, \"%s\"))" % proto.name)

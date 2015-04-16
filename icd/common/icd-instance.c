@@ -76,7 +76,7 @@ struct icd_instance *icd_instance_create(const VkApplicationInfo *app_info,
         alloc_cb = &default_alloc_cb;
 
     instance = alloc_cb->pfnAlloc(alloc_cb->pUserData, sizeof(*instance), 0,
-            VK_SYSTEM_ALLOC_API_OBJECT);
+            VK_SYSTEM_ALLOC_TYPE_API_OBJECT);
     if (!instance)
         return NULL;
 
@@ -85,7 +85,7 @@ struct icd_instance *icd_instance_create(const VkApplicationInfo *app_info,
     name = (app_info->pAppName) ? app_info->pAppName : "unnamed";
     len = strlen(name);
     instance->name = alloc_cb->pfnAlloc(alloc_cb->pUserData, len + 1, 0,
-            VK_SYSTEM_ALLOC_INTERNAL);
+            VK_SYSTEM_ALLOC_TYPE_INTERNAL);
     if (!instance->name) {
         alloc_cb->pfnFree(alloc_cb->pUserData, instance);
         return NULL;
@@ -150,9 +150,9 @@ VkResult icd_instance_add_logger(struct icd_instance *instance,
 
     if (!logger) {
         logger = icd_instance_alloc(instance, sizeof(*logger), 0,
-                VK_SYSTEM_ALLOC_DEBUG);
+                VK_SYSTEM_ALLOC_TYPE_DEBUG);
         if (!logger)
-            return VK_ERROR_OUT_OF_MEMORY;
+            return VK_ERROR_OUT_OF_HOST_MEMORY;
 
         logger->func = func;
         logger->next = instance->loggers;

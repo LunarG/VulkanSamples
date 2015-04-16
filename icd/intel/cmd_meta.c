@@ -33,17 +33,17 @@
 
 static VkResult cmd_meta_create_buf_view(struct intel_cmd *cmd,
                                            VkBuffer buf,
-                                           VkGpuSize range,
+                                           VkDeviceSize range,
                                            VkFormat format,
                                            struct intel_buf_view **view)
 {
     VkBufferViewCreateInfo info;
-    VkGpuSize stride;
+    VkDeviceSize stride;
 
     memset(&info, 0, sizeof(info));
     info.sType = VK_STRUCTURE_TYPE_BUFFER_VIEW_CREATE_INFO;
     info.buffer = buf;
-    info.viewType = VK_BUFFER_VIEW_FORMATTED;
+    info.viewType = VK_BUFFER_VIEW_TYPE_FORMATTED;
     info.format = format;
     info.range = range;
 
@@ -129,14 +129,14 @@ static void cmd_meta_set_src_for_img(struct intel_cmd *cmd,
     info.image = (VkImage) img;
 
     switch (img->type) {
-    case VK_IMAGE_1D:
-        info.viewType = VK_IMAGE_VIEW_1D;
+    case VK_IMAGE_TYPE_1D:
+        info.viewType = VK_IMAGE_VIEW_TYPE_1D;
         break;
-    case VK_IMAGE_2D:
-        info.viewType = VK_IMAGE_VIEW_2D;
+    case VK_IMAGE_TYPE_2D:
+        info.viewType = VK_IMAGE_VIEW_TYPE_2D;
         break;
-    case VK_IMAGE_3D:
-        info.viewType = VK_IMAGE_VIEW_3D;
+    case VK_IMAGE_TYPE_3D:
+        info.viewType = VK_IMAGE_VIEW_TYPE_3D;
         break;
     default:
         break;
@@ -275,7 +275,7 @@ static void cmd_meta_set_dst_for_img(struct intel_cmd *cmd,
 
 static void cmd_meta_set_src_for_writer(struct intel_cmd *cmd,
                                         enum intel_cmd_writer_type writer,
-                                        VkGpuSize size,
+                                        VkDeviceSize size,
                                         VkFormat format,
                                         struct intel_cmd_meta *meta)
 {
@@ -343,16 +343,16 @@ static enum intel_dev_meta_shader get_shader_id(const struct intel_dev *dev,
     enum intel_dev_meta_shader shader_id;
 
     switch (img->type) {
-    case VK_IMAGE_1D:
+    case VK_IMAGE_TYPE_1D:
         shader_id = (copy_array) ?
             INTEL_DEV_META_FS_COPY_1D_ARRAY : INTEL_DEV_META_FS_COPY_1D;
         break;
-    case VK_IMAGE_2D:
+    case VK_IMAGE_TYPE_2D:
         shader_id = (img->samples > 1) ? INTEL_DEV_META_FS_COPY_2D_MS :
                     (copy_array) ?  INTEL_DEV_META_FS_COPY_2D_ARRAY :
                     INTEL_DEV_META_FS_COPY_2D;
         break;
-    case VK_IMAGE_3D:
+    case VK_IMAGE_TYPE_3D:
     default:
         shader_id = INTEL_DEV_META_FS_COPY_2D_ARRAY;
         break;
@@ -362,9 +362,9 @@ static enum intel_dev_meta_shader get_shader_id(const struct intel_dev *dev,
 }
 
 static bool cmd_meta_mem_dword_aligned(const struct intel_cmd *cmd,
-                                       VkGpuSize src_offset,
-                                       VkGpuSize dst_offset,
-                                       VkGpuSize size)
+                                       VkDeviceSize src_offset,
+                                       VkDeviceSize dst_offset,
+                                       VkDeviceSize size)
 {
     return !((src_offset | dst_offset | size) & 0x3);
 }
@@ -374,23 +374,23 @@ static VkFormat cmd_meta_img_raw_format(const struct intel_cmd *cmd,
 {
     switch (icd_format_get_size(format)) {
     case 1:
-        format = VK_FMT_R8_UINT;
+        format = VK_FORMAT_R8_UINT;
         break;
     case 2:
-        format = VK_FMT_R16_UINT;
+        format = VK_FORMAT_R16_UINT;
         break;
     case 4:
-        format = VK_FMT_R32_UINT;
+        format = VK_FORMAT_R32_UINT;
         break;
     case 8:
-        format = VK_FMT_R32G32_UINT;
+        format = VK_FORMAT_R32G32_UINT;
         break;
     case 16:
-        format = VK_FMT_R32G32B32A32_UINT;
+        format = VK_FORMAT_R32G32B32A32_UINT;
         break;
     default:
         assert(!"unsupported image format for raw blit op");
-        format = VK_FMT_UNDEFINED;
+        format = VK_FORMAT_UNDEFINED;
         break;
     }
 
@@ -417,7 +417,7 @@ ICD_EXPORT void VKAPI vkCmdCopyBuffer(
     meta.height = 1;
     meta.samples = 1;
 
-    format = VK_FMT_UNDEFINED;
+    format = VK_FORMAT_UNDEFINED;
 
     for (i = 0; i < regionCount; i++) {
         const VkBufferCopy *region = &pRegions[i];
@@ -438,7 +438,7 @@ ICD_EXPORT void VKAPI vkCmdCopyBuffer(
              * INTEL_DEV_META_VS_COPY_MEM is untyped but expects the stride to
              * be 16
              */
-            fmt = VK_FMT_R32G32B32A32_UINT;
+            fmt = VK_FORMAT_R32G32B32A32_UINT;
         } else {
             if (cmd_gen(cmd) == INTEL_GEN(6)) {
                 intel_dev_log(cmd->dev, VK_DBG_MSG_ERROR,
@@ -454,7 +454,7 @@ ICD_EXPORT void VKAPI vkCmdCopyBuffer(
              * INTEL_DEV_META_VS_COPY_MEM_UNALIGNED is untyped but expects the
              * stride to be 4
              */
-            fmt = VK_FMT_R8G8B8A8_UINT;
+            fmt = VK_FORMAT_R8G8B8A8_UINT;
         }
 
         if (format != fmt) {
@@ -647,33 +647,33 @@ ICD_EXPORT void VKAPI vkCmdCopyImageToBuffer(
 
     /* buf_format is ignored by hw, but we derive stride from it */
     switch (img_format) {
-    case VK_FMT_R8_UINT:
+    case VK_FORMAT_R8_UINT:
         meta.shader_id = INTEL_DEV_META_VS_COPY_R8_TO_MEM;
-        buf_format = VK_FMT_R8G8B8A8_UINT;
+        buf_format = VK_FORMAT_R8G8B8A8_UINT;
         break;
-    case VK_FMT_R16_UINT:
+    case VK_FORMAT_R16_UINT:
         meta.shader_id = INTEL_DEV_META_VS_COPY_R16_TO_MEM;
-        buf_format = VK_FMT_R8G8B8A8_UINT;
+        buf_format = VK_FORMAT_R8G8B8A8_UINT;
         break;
-    case VK_FMT_R32_UINT:
+    case VK_FORMAT_R32_UINT:
         meta.shader_id = INTEL_DEV_META_VS_COPY_R32_TO_MEM;
-        buf_format = VK_FMT_R32G32B32A32_UINT;
+        buf_format = VK_FORMAT_R32G32B32A32_UINT;
         break;
-    case VK_FMT_R32G32_UINT:
+    case VK_FORMAT_R32G32_UINT:
         meta.shader_id = INTEL_DEV_META_VS_COPY_R32G32_TO_MEM;
-        buf_format = VK_FMT_R32G32B32A32_UINT;
+        buf_format = VK_FORMAT_R32G32B32A32_UINT;
         break;
-    case VK_FMT_R32G32B32A32_UINT:
+    case VK_FORMAT_R32G32B32A32_UINT:
         meta.shader_id = INTEL_DEV_META_VS_COPY_R32G32B32A32_TO_MEM;
-        buf_format = VK_FMT_R32G32B32A32_UINT;
+        buf_format = VK_FORMAT_R32G32B32A32_UINT;
         break;
     default:
-        img_format = VK_FMT_UNDEFINED;
-        buf_format = VK_FMT_UNDEFINED;
+        img_format = VK_FORMAT_UNDEFINED;
+        buf_format = VK_FORMAT_UNDEFINED;
         break;
     }
 
-    if (img_format == VK_FMT_UNDEFINED ||
+    if (img_format == VK_FORMAT_UNDEFINED ||
         (cmd_gen(cmd) == INTEL_GEN(6) &&
          icd_format_get_size(img_format) < 4)) {
         intel_dev_log(cmd->dev, VK_DBG_MSG_ERROR,
@@ -762,8 +762,8 @@ ICD_EXPORT void VKAPI vkCmdCloneImageData(
 ICD_EXPORT void VKAPI vkCmdUpdateBuffer(
     VkCmdBuffer                              cmdBuffer,
     VkBuffer                                  destBuffer,
-    VkGpuSize                                destOffset,
-    VkGpuSize                                dataSize,
+    VkDeviceSize                                destOffset,
+    VkDeviceSize                                dataSize,
     const uint32_t*                             pData)
 {
     struct intel_cmd *cmd = intel_cmd(cmdBuffer);
@@ -798,7 +798,7 @@ ICD_EXPORT void VKAPI vkCmdUpdateBuffer(
     /*
      * INTEL_DEV_META_VS_COPY_MEM is untyped but expects the stride to be 16
      */
-    format = VK_FMT_R32G32B32A32_UINT;
+    format = VK_FORMAT_R32G32B32A32_UINT;
 
     cmd_meta_set_src_for_writer(cmd, INTEL_CMD_WRITER_STATE,
             offset + dataSize, format, &meta);
@@ -810,8 +810,8 @@ ICD_EXPORT void VKAPI vkCmdUpdateBuffer(
 ICD_EXPORT void VKAPI vkCmdFillBuffer(
     VkCmdBuffer                              cmdBuffer,
     VkBuffer                                  destBuffer,
-    VkGpuSize                                destOffset,
-    VkGpuSize                                fillSize,
+    VkDeviceSize                                destOffset,
+    VkDeviceSize                                fillSize,
     uint32_t                                    data)
 {
     struct intel_cmd *cmd = intel_cmd(cmdBuffer);
@@ -840,7 +840,7 @@ ICD_EXPORT void VKAPI vkCmdFillBuffer(
     /*
      * INTEL_DEV_META_VS_FILL_MEM is untyped but expects the stride to be 16
      */
-    format = VK_FMT_R32G32B32A32_UINT;
+    format = VK_FORMAT_R32G32B32A32_UINT;
 
     cmd_meta_set_dst_for_buf(cmd, dst, format, &meta);
 

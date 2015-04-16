@@ -66,15 +66,15 @@ class CmdBuffer;
 
 class PhysicalGpu {
 public:
-    explicit PhysicalGpu(VkPhysicalGpu gpu) : gpu_(gpu) {}
+    explicit PhysicalGpu(VkPhysicalDevice gpu) : gpu_(gpu) {}
 
-    const VkPhysicalGpu &obj() const { return gpu_; }
+    const VkPhysicalDevice &obj() const { return gpu_; }
 
-    // vkGetGpuInfo()
-    VkPhysicalGpuProperties properties() const;
-    VkPhysicalGpuPerformance performance() const;
-    VkPhysicalGpuMemoryProperties memory_properties() const;
-    std::vector<VkPhysicalGpuQueueProperties> queue_properties() const;
+    // vkGetPhysicalDeviceInfo()
+    VkPhysicalDeviceProperties properties() const;
+    VkPhysicalDevicePerformance performance() const;
+    VkPhysicalDeviceMemoryProperties memory_properties() const;
+    std::vector<VkPhysicalDeviceQueueProperties> queue_properties() const;
 
     // vkGetProcAddr()
     void *get_proc(const char *name) const { return vkGetProcAddr(gpu_, name); }
@@ -85,11 +85,11 @@ public:
     // vkEnumerateLayers()
     std::vector<const char *> layers(std::vector<char> &buf) const;
 
-    // vkGetMultiGpuCompatibility()
-    VkGpuCompatibilityInfo compatibility(const PhysicalGpu &other) const;
+    // vkGetMultiDeviceCompatibility()
+    VkPhysicalDeviceCompatibilityInfo compatibility(const PhysicalGpu &other) const;
 
 private:
-    VkPhysicalGpu gpu_;
+    VkPhysicalDevice gpu_;
 };
 
 class BaseObject {
@@ -127,18 +127,18 @@ public:
     const VkObject &obj() const { return reinterpret_cast<const VkObject &>(BaseObject::obj()); }
 
     // vkQueueBindObjectMemory()
-    void bind_memory(const Device &dev, uint32_t alloc_idx, const GpuMemory &mem, VkGpuSize mem_offset);
+    void bind_memory(const Device &dev, uint32_t alloc_idx, const GpuMemory &mem, VkDeviceSize mem_offset);
     void unbind_memory(const Device &dev, uint32_t alloc_idx);
     void unbind_memory(const Device &dev);
 
     // vkQueueBindObjectMemoryRange()
-    void bind_memory(const Device &dev, uint32_t alloc_idx, VkGpuSize offset, VkGpuSize size,
-                     const GpuMemory &mem, VkGpuSize mem_offset);
+    void bind_memory(const Device &dev, uint32_t alloc_idx, VkDeviceSize offset, VkDeviceSize size,
+                     const GpuMemory &mem, VkDeviceSize mem_offset);
 
     // Unless an object is initialized with init_no_mem(), memories are
     // automatically allocated and bound.  These methods can be used to get
     // the memories (for vkQueueAddMemReferences), or to map/unmap the primary memory.
-    std::vector<VkGpuMemory> memories() const;
+    std::vector<VkDeviceMemory> memories() const;
 
     const void *map(VkFlags flags) const;
           void *map(VkFlags flags);
@@ -161,7 +161,7 @@ protected:
 
     // allocate and bind internal memories
     void alloc_memory(const Device &dev);
-    void alloc_memory(const Device &dev, const std::vector<VkGpuMemory> &mems);
+    void alloc_memory(const Device &dev, const std::vector<VkDeviceMemory> &mems);
 
 private:
     void cleanup();
@@ -196,7 +196,7 @@ protected:
 
 class Device : public DerivedObject<VkDevice, BaseObject> {
 public:
-    explicit Device(VkPhysicalGpu gpu) : gpu_(gpu) {}
+    explicit Device(VkPhysicalDevice gpu) : gpu_(gpu) {}
     ~Device();
 
     // vkCreateDevice()
@@ -261,8 +261,8 @@ public:
 
     // vkQueueAddMemReferences()
     // vkQueueRemoveMemReferences()
-    void add_mem_references(const std::vector<VkGpuMemory> &mem_refs);
-    void remove_mem_references(const std::vector<VkGpuMemory> &mem_refs);
+    void add_mem_references(const std::vector<VkDeviceMemory> &mem_refs);
+    void remove_mem_references(const std::vector<VkDeviceMemory> &mem_refs);
 
     // vkQueueWaitIdle()
     void wait();
@@ -273,7 +273,7 @@ public:
     void wait_semaphore(Semaphore &sem);
 };
 
-class GpuMemory : public DerivedObject<VkGpuMemory, BaseObject> {
+class GpuMemory : public DerivedObject<VkDeviceMemory, BaseObject> {
 public:
     ~GpuMemory();
 
@@ -286,7 +286,7 @@ public:
     // vkOpenPeerMemory()
     void init(const Device &dev, const VkPeerMemoryOpenInfo &info);
 
-    void init(VkGpuMemory mem) { BaseObject::init(mem, false); }
+    void init(VkDeviceMemory mem) { BaseObject::init(mem, false); }
 
     // vkSetMemoryPriority()
     void set_priority(VkMemoryPriority priority);
@@ -356,17 +356,17 @@ class Buffer : public DerivedObject<VkBuffer, Object> {
 public:
     explicit Buffer() {}
     explicit Buffer(const Device &dev, const VkBufferCreateInfo &info) { init(dev, info); }
-    explicit Buffer(const Device &dev, VkGpuSize size) { init(dev, size); }
+    explicit Buffer(const Device &dev, VkDeviceSize size) { init(dev, size); }
 
     // vkCreateBuffer()
     void init(const Device &dev, const VkBufferCreateInfo &info);
-    void init(const Device &dev, VkGpuSize size) { init(dev, create_info(size, 0)); }
+    void init(const Device &dev, VkDeviceSize size) { init(dev, create_info(size, 0)); }
     void init_no_mem(const Device &dev, const VkBufferCreateInfo &info);
 
-    static VkBufferCreateInfo create_info(VkGpuSize size, VkFlags usage);
+    static VkBufferCreateInfo create_info(VkDeviceSize size, VkFlags usage);
 
     VkBufferMemoryBarrier buffer_memory_barrier(VkFlags output_mask, VkFlags input_mask,
-                                                 VkGpuSize offset, VkGpuSize size) const
+                                                 VkDeviceSize offset, VkDeviceSize size) const
     {
         VkBufferMemoryBarrier barrier = {};
         barrier.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
@@ -400,13 +400,13 @@ public:
 
     // vkQueueBindImageMemoryRange()
     void bind_memory(const Device &dev, uint32_t alloc_idx, const VkImageMemoryBindInfo &info,
-                     const GpuMemory &mem, VkGpuSize mem_offset);
+                     const GpuMemory &mem, VkDeviceSize mem_offset);
 
     // vkGetImageSubresourceInfo()
     VkSubresourceLayout subresource_layout(const VkImageSubresource &subres) const;
 
     bool transparent() const;
-    bool copyable() const { return (format_features_ & VK_FORMAT_SAMPLED_IMAGE_BIT); }
+    bool copyable() const { return (format_features_ & VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT); }
 
     VkImageSubresourceRange subresource_range(VkImageAspect aspect) const { return subresource_range(create_info_, aspect); }
     VkExtent3D extent() const { return create_info_.extent; }
@@ -632,7 +632,7 @@ inline VkMemoryAllocInfo GpuMemory::alloc_info(const VkMemoryRequirements &reqs,
     return info;
 }
 
-inline VkBufferCreateInfo Buffer::create_info(VkGpuSize size, VkFlags usage)
+inline VkBufferCreateInfo Buffer::create_info(VkDeviceSize size, VkFlags usage)
 {
     VkBufferCreateInfo info = {};
     info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;

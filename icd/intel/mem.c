@@ -39,7 +39,7 @@ VkResult intel_mem_alloc(struct intel_dev *dev,
     mem = (struct intel_mem *) intel_base_create(&dev->base.handle,
             sizeof(*mem), dev->base.dbg, VK_DBG_OBJECT_GPU_MEMORY, info, 0);
     if (!mem)
-        return VK_ERROR_OUT_OF_MEMORY;
+        return VK_ERROR_OUT_OF_HOST_MEMORY;
 
     mem->bo = intel_winsys_alloc_bo(dev->winsys,
             "vk-gpu-memory", info->allocationSize, 0);
@@ -76,7 +76,7 @@ VkResult intel_mem_import_userptr(struct intel_dev *dev,
     mem = (struct intel_mem *) intel_base_create(&dev->base.handle,
             sizeof(*mem), dev->base.dbg, VK_DBG_OBJECT_GPU_MEMORY, NULL, 0);
     if (!mem)
-        return VK_ERROR_OUT_OF_MEMORY;
+        return VK_ERROR_OUT_OF_HOST_MEMORY;
 
     mem->bo = intel_winsys_import_userptr(dev->winsys,
             "vk-gpu-memory-userptr", (void *) userptr, size, 0);
@@ -102,7 +102,7 @@ VkResult intel_mem_set_priority(struct intel_mem *mem,
 ICD_EXPORT VkResult VKAPI vkAllocMemory(
     VkDevice                                  device,
     const VkMemoryAllocInfo*                pAllocInfo,
-    VkGpuMemory*                             pMem)
+    VkDeviceMemory*                             pMem)
 {
     struct intel_dev *dev = intel_dev(device);
 
@@ -110,7 +110,7 @@ ICD_EXPORT VkResult VKAPI vkAllocMemory(
 }
 
 ICD_EXPORT VkResult VKAPI vkFreeMemory(
-    VkGpuMemory                              mem_)
+    VkDeviceMemory                              mem_)
 {
     struct intel_mem *mem = intel_mem(mem_);
 
@@ -120,7 +120,7 @@ ICD_EXPORT VkResult VKAPI vkFreeMemory(
 }
 
 ICD_EXPORT VkResult VKAPI vkSetMemoryPriority(
-    VkGpuMemory                              mem_,
+    VkDeviceMemory                              mem_,
     VkMemoryPriority                         priority)
 {
     struct intel_mem *mem = intel_mem(mem_);
@@ -129,7 +129,7 @@ ICD_EXPORT VkResult VKAPI vkSetMemoryPriority(
 }
 
 ICD_EXPORT VkResult VKAPI vkMapMemory(
-    VkGpuMemory                              mem_,
+    VkDeviceMemory                              mem_,
     VkFlags                                   flags,
     void**                                      ppData)
 {
@@ -142,7 +142,7 @@ ICD_EXPORT VkResult VKAPI vkMapMemory(
 }
 
 ICD_EXPORT VkResult VKAPI vkUnmapMemory(
-    VkGpuMemory                              mem_)
+    VkDeviceMemory                              mem_)
 {
     struct intel_mem *mem = intel_mem(mem_);
 
@@ -155,7 +155,7 @@ ICD_EXPORT VkResult VKAPI vkPinSystemMemory(
     VkDevice                                  device,
     const void*                                 pSysMem,
     size_t                                      memSize,
-    VkGpuMemory*                             pMem)
+    VkDeviceMemory*                             pMem)
 {
     struct intel_dev *dev = intel_dev(device);
 
@@ -166,7 +166,7 @@ ICD_EXPORT VkResult VKAPI vkPinSystemMemory(
 ICD_EXPORT VkResult VKAPI vkOpenSharedMemory(
     VkDevice                                  device,
     const VkMemoryOpenInfo*                 pOpenInfo,
-    VkGpuMemory*                             pMem)
+    VkDeviceMemory*                             pMem)
 {
     return VK_ERROR_UNAVAILABLE;
 }
@@ -174,7 +174,7 @@ ICD_EXPORT VkResult VKAPI vkOpenSharedMemory(
 ICD_EXPORT VkResult VKAPI vkOpenPeerMemory(
     VkDevice                                  device,
     const VkPeerMemoryOpenInfo*            pOpenInfo,
-    VkGpuMemory*                             pMem)
+    VkDeviceMemory*                             pMem)
 {
     return VK_ERROR_UNAVAILABLE;
 }

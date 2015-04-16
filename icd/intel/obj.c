@@ -38,7 +38,7 @@ VkResult intel_base_get_info(struct intel_base *base, int type,
     uint32_t *count;
 
     switch (type) {
-    case VK_INFO_TYPE_MEMORY_REQUIREMENTS:
+    case VK_OBJECT_INFO_TYPE_MEMORY_REQUIREMENTS:
         {
             s = sizeof(VkMemoryRequirements);
             *size = s;
@@ -49,7 +49,7 @@ VkResult intel_base_get_info(struct intel_base *base, int type,
             mem_req->memPropsAllowed = INTEL_MEMORY_PROPERTY_ALL;
             break;
         }
-    case VK_INFO_TYPE_MEMORY_ALLOCATION_COUNT:
+    case VK_OBJECT_INFO_TYPE_MEMORY_ALLOCATION_COUNT:
         *size = sizeof(uint32_t);
         if (data == NULL)
             return ret;
@@ -182,7 +182,7 @@ static bool base_dbg_copy_create_info(const struct intel_handle *handle,
 
     if (shallow_copy) {
         dbg->create_info = intel_alloc(handle, shallow_copy, 0,
-                VK_SYSTEM_ALLOC_DEBUG);
+                VK_SYSTEM_ALLOC_TYPE_DEBUG);
         if (!dbg->create_info)
             return false;
 
@@ -197,7 +197,7 @@ static bool base_dbg_copy_create_info(const struct intel_handle *handle,
         size = sizeof(*src);
 
         dbg->create_info_size = size;
-        dst = intel_alloc(handle, size, 0, VK_SYSTEM_ALLOC_DEBUG);
+        dst = intel_alloc(handle, size, 0, VK_SYSTEM_ALLOC_TYPE_DEBUG);
         if (!dst)
             return false;
         memcpy(dst, src, sizeof(*src));
@@ -223,7 +223,7 @@ static bool base_dbg_copy_create_info(const struct intel_handle *handle,
             size += 1 + strlen(src->ppEnabledExtensionNames[i]);
         }
 
-        dst = intel_alloc(handle, size, 0, VK_SYSTEM_ALLOC_DEBUG);
+        dst = intel_alloc(handle, size, 0, VK_SYSTEM_ALLOC_TYPE_DEBUG);
         if (!dst)
             return false;
 
@@ -272,7 +272,7 @@ struct intel_base_dbg *intel_base_dbg_create(const struct intel_handle *handle,
 
     assert(dbg_size >= sizeof(*dbg));
 
-    dbg = intel_alloc(handle, dbg_size, 0, VK_SYSTEM_ALLOC_DEBUG);
+    dbg = intel_alloc(handle, dbg_size, 0, VK_SYSTEM_ALLOC_TYPE_DEBUG);
     if (!dbg)
         return NULL;
 
@@ -317,7 +317,7 @@ struct intel_base *intel_base_create(const struct intel_handle *handle,
 
     assert(obj_size >= sizeof(*base));
 
-    base = intel_alloc(handle, obj_size, 0, VK_SYSTEM_ALLOC_API_OBJECT);
+    base = intel_alloc(handle, obj_size, 0, VK_SYSTEM_ALLOC_TYPE_API_OBJECT);
     if (!base)
         return NULL;
 
@@ -370,8 +370,8 @@ ICD_EXPORT VkResult VKAPI vkQueueBindObjectMemory(
     VkQueue                                  queue,
     VkObject                                 object,
     uint32_t                                 allocationIdx,
-    VkGpuMemory                              mem_,
-    VkGpuSize                                memOffset)
+    VkDeviceMemory                              mem_,
+    VkDeviceSize                                memOffset)
 {
     struct intel_obj *obj = intel_obj(object);
     struct intel_mem *mem = intel_mem(mem_);
@@ -385,29 +385,29 @@ ICD_EXPORT VkResult VKAPI vkQueueBindObjectMemoryRange(
     VkQueue                                   queue,
     VkObject                                  object,
     uint32_t                                    allocationIdx,
-    VkGpuSize                                rangeOffset,
-    VkGpuSize                                rangeSize,
-    VkGpuMemory                              mem,
-    VkGpuSize                                memOffset)
+    VkDeviceSize                                rangeOffset,
+    VkDeviceSize                                rangeSize,
+    VkDeviceMemory                              mem,
+    VkDeviceSize                                memOffset)
 {
     return VK_ERROR_UNKNOWN;
 }
 
 ICD_EXPORT VkResult VKAPI vkQueueBindImageMemoryRange(
-    VkQueue                                   queue,
-    VkImage                                   image,
+    VkQueue                                     queue,
+    VkImage                                     image,
     uint32_t                                    allocationIdx,
-    const VkImageMemoryBindInfo*           pBindInfo,
-    VkGpuMemory                              mem,
-    VkGpuSize                                memOffset)
+    const VkImageMemoryBindInfo*                pBindInfo,
+    VkDeviceMemory                              mem,
+    VkDeviceSize                                memOffset)
 {
     return VK_ERROR_UNKNOWN;
 }
 
 ICD_EXPORT VkResult VKAPI vkDbgSetObjectTag(
-    VkBaseObject                             object,
-    size_t                                      tagSize,
-    const void*                                 pTag)
+    VkBaseObject                               object,
+    size_t                                     tagSize,
+    const void*                                pTag)
 {
     struct intel_base *base = intel_base(object);
     struct intel_base_dbg *dbg = base->dbg;
@@ -416,9 +416,9 @@ ICD_EXPORT VkResult VKAPI vkDbgSetObjectTag(
     if (!dbg)
         return VK_SUCCESS;
 
-    tag = intel_alloc(base, tagSize, 0, VK_SYSTEM_ALLOC_DEBUG);
+    tag = intel_alloc(base, tagSize, 0, VK_SYSTEM_ALLOC_TYPE_DEBUG);
     if (!tag)
-        return VK_ERROR_OUT_OF_MEMORY;
+        return VK_ERROR_OUT_OF_HOST_MEMORY;
 
     memcpy(tag, pTag, tagSize);
 

@@ -47,7 +47,7 @@ VkResult intel_fence_create(struct intel_dev *dev,
     fence = (struct intel_fence *) intel_base_create(&dev->base.handle,
             sizeof(*fence), dev->base.dbg, VK_DBG_OBJECT_FENCE, info, 0);
     if (!fence)
-        return VK_ERROR_OUT_OF_MEMORY;
+        return VK_ERROR_OUT_OF_HOST_MEMORY;
 
     if (dev->exts[INTEL_EXT_WSI_X11]) {
         VkResult ret = intel_wsi_fence_init(fence);

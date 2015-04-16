@@ -51,7 +51,7 @@ static loader_platform_thread_mutex globalLock;
 #define MAX_BINDING 0xFFFFFFFF
 
 map<VkCmdBuffer, MT_CB_INFO*>      cbMap;
-map<VkGpuMemory, MT_MEM_OBJ_INFO*> memObjMap;
+map<VkDeviceMemory, MT_MEM_OBJ_INFO*> memObjMap;
 map<VkObject,     MT_OBJ_INFO*>     objectMap;
 map<uint64_t,       MT_FENCE_INFO*>   fenceMap;    // Map fenceId to fence info
 map<VkQueue,      MT_QUEUE_INFO*>   queueMap;
@@ -82,7 +82,7 @@ static void deleteQueueInfoList(void)
 static void addCBInfo(const VkCmdBuffer cb)
 {
     MT_CB_INFO* pInfo = new MT_CB_INFO;
-    memset(pInfo, 0, (sizeof(MT_CB_INFO) - sizeof(list<VkGpuMemory>)));
+    memset(pInfo, 0, (sizeof(MT_CB_INFO) - sizeof(list<VkDeviceMemory>)));
     pInfo->cmdBuffer = cb;
     cbMap[cb]        = pInfo;
 }
@@ -277,10 +277,10 @@ static void retireDeviceFences(VkDevice device)
 // Queue is validated by caller
 static bool32_t checkMemRef(
     VkQueue      queue,
-    VkGpuMemory mem)
+    VkDeviceMemory mem)
 {
     bool32_t result = VK_FALSE;
-    list<VkGpuMemory>::iterator it;
+    list<VkDeviceMemory>::iterator it;
     MT_QUEUE_INFO *pQueueInfo = queueMap[queue];
     for (it = pQueueInfo->pMemRefList.begin(); it != pQueueInfo->pMemRefList.end(); ++it) {
         if ((*it) == mem) {
@@ -316,7 +316,7 @@ static bool32_t validateQueueMemRefs(
                 result = VK_FALSE;
             } else {
                 // Validate that all actual references are accounted for in pMemRefs
-                for (list<VkGpuMemory>::iterator it = pCBInfo->pMemObjList.begin(); it != pCBInfo->pMemObjList.end(); ++it) {
+                for (list<VkDeviceMemory>::iterator it = pCBInfo->pMemObjList.begin(); it != pCBInfo->pMemObjList.end(); ++it) {
                     // Search for each memref in queues memreflist.
                     if (checkMemRef(queue, *it)) {
                         char str[1024];
@@ -346,7 +346,7 @@ static bool32_t validateQueueMemRefs(
 
 // Return ptr to info in map container containing mem, or NULL if not found
 //  Calls to this function should be wrapped in mutex
-static MT_MEM_OBJ_INFO* getMemObjInfo(const VkGpuMemory mem)
+static MT_MEM_OBJ_INFO* getMemObjInfo(const VkDeviceMemory mem)
 {
     MT_MEM_OBJ_INFO* pMemObjInfo = NULL;
 
@@ -356,7 +356,7 @@ static MT_MEM_OBJ_INFO* getMemObjInfo(const VkGpuMemory mem)
     return pMemObjInfo;
 }
 
-static void addMemObjInfo(const VkGpuMemory mem, const VkMemoryAllocInfo* pAllocInfo)
+static void addMemObjInfo(const VkDeviceMemory mem, const VkMemoryAllocInfo* pAllocInfo)
 {
     MT_MEM_OBJ_INFO* pInfo = new MT_MEM_OBJ_INFO;
     pInfo->refCount           = 0;
@@ -373,7 +373,7 @@ static void addMemObjInfo(const VkGpuMemory mem, const VkMemoryAllocInfo* pAlloc
 
 // Find CB Info and add mem binding to list container
 // Find Mem Obj Info and add CB binding to list container
-static bool32_t updateCBBinding(const VkCmdBuffer cb, const VkGpuMemory mem)
+static bool32_t updateCBBinding(const VkCmdBuffer cb, const VkDeviceMemory mem)
 {
     bool32_t result = VK_TRUE;
     // First update CB binding in MemObj mini CB list
@@ -408,7 +408,7 @@ static bool32_t updateCBBinding(const VkCmdBuffer cb, const VkGpuMemory mem)
         } else {
             // Search for memory object in cmd buffer's binding list
             bool32_t found  = VK_FALSE;
-            for (list<VkGpuMemory>::iterator it = pCBInfo->pMemObjList.begin(); it != pCBInfo->pMemObjList.end(); ++it) {
+            for (list<VkDeviceMemory>::iterator it = pCBInfo->pMemObjList.begin(); it != pCBInfo->pMemObjList.end(); ++it) {
                 if ((*it) == mem) {
                     found = VK_TRUE;
                     break;
@@ -425,7 +425,7 @@ static bool32_t updateCBBinding(const VkCmdBuffer cb, const VkGpuMemory mem)
 
 // Clear the CB Binding for mem
 //  Calls to this function should be wrapped in mutex
-static void clearCBBinding(const VkCmdBuffer cb, const VkGpuMemory mem)
+static void clearCBBinding(const VkCmdBuffer cb, const VkDeviceMemory mem)
 {
     MT_MEM_OBJ_INFO* pInfo = getMemObjInfo(mem);
     // TODO : Having this check is not ideal, really if memInfo was deleted,
@@ -452,7 +452,7 @@ static bool32_t freeCBBindings(const VkCmdBuffer cb)
             deleteFenceInfo(pCBInfo->fenceId);
         }
 
-        for (list<VkGpuMemory>::iterator it=pCBInfo->pMemObjList.begin(); it!=pCBInfo->pMemObjList.end(); ++it) {
+        for (list<VkDeviceMemory>::iterator it=pCBInfo->pMemObjList.begin(); it!=pCBInfo->pMemObjList.end(); ++it) {
             clearCBBinding(cb, (*it));
         }
         pCBInfo->pMemObjList.clear();
@@ -522,7 +522,7 @@ static void reportMemReferencesAndCleanUp(MT_MEM_OBJ_INFO* pMemObjInfo)
     }
 }
 
-static void deleteMemObjInfo(VkGpuMemory mem)
+static void deleteMemObjInfo(VkDeviceMemory mem)
 {
     if (memObjMap.find(mem) != memObjMap.end()) {
         MT_MEM_OBJ_INFO* pDelInfo = memObjMap[mem];
@@ -557,7 +557,7 @@ static bool32_t checkCBCompleted(const VkCmdBuffer cb)
     return result;
 }
 
-static bool32_t freeMemObjInfo(VkGpuMemory mem, bool internal)
+static bool32_t freeMemObjInfo(VkDeviceMemory mem, bool internal)
 {
     bool32_t result = VK_TRUE;
     // Parse global list to find info w/ mem
@@ -652,7 +652,7 @@ static bool32_t clearObjectBinding(VkObject object)
 //  Add reference from objectInfo to memoryInfo
 //  Add reference off of objInfo
 // Return VK_TRUE if addition is successful, VK_FALSE otherwise
-static bool32_t updateObjectBinding(VkObject object, VkGpuMemory mem)
+static bool32_t updateObjectBinding(VkObject object, VkDeviceMemory mem)
 {
     bool32_t result = VK_FALSE;
     // Handle NULL case separately, just clear previous binding & decrement reference
@@ -720,9 +720,9 @@ static void printObjList()
 }
 
 // For given Object, get 'mem' obj that it's bound to or NULL if no binding
-static VkGpuMemory getMemBindingFromObject(const VkObject object)
+static VkDeviceMemory getMemBindingFromObject(const VkObject object)
 {
-    VkGpuMemory mem = NULL;
+    VkDeviceMemory mem = NULL;
     MT_OBJ_INFO* pObjInfo = getObjectInfo(object);
     if (pObjInfo) {
         if (pObjInfo->pMemObjInfo) {
@@ -753,7 +753,7 @@ static void printMemList()
     sprintf(str, "MEM INFO : Details of Memory Object list of size %lu elements", memObjMap.size());
     layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, NULL, 0, MEMTRACK_NONE, "MEM", str);
 
-    for (map<VkGpuMemory, MT_MEM_OBJ_INFO*>::iterator ii=memObjMap.begin(); ii!=memObjMap.end(); ++ii) {
+    for (map<VkDeviceMemory, MT_MEM_OBJ_INFO*>::iterator ii=memObjMap.begin(); ii!=memObjMap.end(); ++ii) {
         pInfo = (*ii).second;
 
         sprintf(str, "    ===MemObjInfo at %p===", (void*)pInfo);
@@ -802,7 +802,7 @@ static void printCBList()
             (void*)getFenceFromId(pCBInfo->fenceId));
         layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, NULL, 0, MEMTRACK_NONE, "MEM", str);
 
-        for (list<VkGpuMemory>::iterator it = pCBInfo->pMemObjList.begin(); it != pCBInfo->pMemObjList.end(); ++it) {
+        for (list<VkDeviceMemory>::iterator it = pCBInfo->pMemObjList.begin(); it != pCBInfo->pMemObjList.end(); ++it) {
             sprintf(str, "      Mem obj %p", (*it));
             layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, NULL, 0, MEMTRACK_NONE, "MEM", str);
         }
@@ -833,7 +833,7 @@ static void initMemTracker(void)
     fpNextGPA = pCurObj->pGPA;
     assert(fpNextGPA);
 
-    layer_initialize_dispatch_table(&nextTable, fpNextGPA, (VkPhysicalGpu) pCurObj->nextObject);
+    layer_initialize_dispatch_table(&nextTable, fpNextGPA, (VkPhysicalDevice) pCurObj->nextObject);
 
     if (!globalLockInitialized)
     {
@@ -847,7 +847,7 @@ static void initMemTracker(void)
     }
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkCreateDevice(VkPhysicalGpu gpu, const VkDeviceCreateInfo* pCreateInfo, VkDevice* pDevice)
+VK_LAYER_EXPORT VkResult VKAPI vkCreateDevice(VkPhysicalDevice gpu, const VkDeviceCreateInfo* pCreateInfo, VkDevice* pDevice)
 {
     pCurObj = (VkBaseLayerObject *) gpu;
     loader_platform_thread_once(&g_initOnce, initMemTracker);
@@ -872,7 +872,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkDestroyDevice(VkDevice device)
     }
     // Report any memory leaks
     MT_MEM_OBJ_INFO* pInfo = NULL;
-    for (map<VkGpuMemory, MT_MEM_OBJ_INFO*>::iterator ii=memObjMap.begin(); ii!=memObjMap.end(); ++ii) {
+    for (map<VkDeviceMemory, MT_MEM_OBJ_INFO*>::iterator ii=memObjMap.begin(); ii!=memObjMap.end(); ++ii) {
         pInfo = (*ii).second;
 
         if (pInfo->allocInfo.allocationSize != 0) {
@@ -943,7 +943,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkGetGlobalExtensionInfo(
     return VK_SUCCESS;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkEnumerateLayers(VkPhysicalGpu gpu, size_t maxLayerCount,
+VK_LAYER_EXPORT VkResult VKAPI vkEnumerateLayers(VkPhysicalDevice gpu, size_t maxLayerCount,
     size_t maxStringSize, size_t* pOutLayerCount, char* const* pOutLayers, void* pReserved)
 {
         if (gpu != NULL)
@@ -975,7 +975,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkGetDeviceQueue(VkDevice device, uint32_t queueN
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkQueueAddMemReferences(VkQueue queue, uint32_t count, const VkGpuMemory* pMems)
+VK_LAYER_EXPORT VkResult VKAPI vkQueueAddMemReferences(VkQueue queue, uint32_t count, const VkDeviceMemory* pMems)
 {
     VkResult result = nextTable.QueueAddMemReferences(queue, count, pMems);
     if (result == VK_SUCCESS) {
@@ -1004,7 +1004,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkQueueAddMemReferences(VkQueue queue, uint32_t c
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkQueueRemoveMemReferences(VkQueue queue, uint32_t count, const VkGpuMemory* pMems)
+VK_LAYER_EXPORT VkResult VKAPI vkQueueRemoveMemReferences(VkQueue queue, uint32_t count, const VkDeviceMemory* pMems)
 {
     // TODO : Decrement ref count for this memory reference on this queue. Remove if ref count is zero.
     VkResult result = nextTable.QueueRemoveMemReferences(queue, count, pMems);
@@ -1018,7 +1018,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkQueueRemoveMemReferences(VkQueue queue, uint32_
             layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, queue, 0, MEMTRACK_INVALID_QUEUE, "MEM", str);
         } else {
             for (int i = 0; i < count; i++) {
-                for (list<VkGpuMemory>::iterator it = pQueueInfo->pMemRefList.begin(); it != pQueueInfo->pMemRefList.end(); ++it) {
+                for (list<VkDeviceMemory>::iterator it = pQueueInfo->pMemRefList.begin(); it != pQueueInfo->pMemRefList.end(); ++it) {
                     if ((*it) == pMems[i]) {
                         it = pQueueInfo->pMemRefList.erase(it);
                     }
@@ -1059,7 +1059,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkQueueSubmit(
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkAllocMemory(VkDevice device, const VkMemoryAllocInfo* pAllocInfo, VkGpuMemory* pMem)
+VK_LAYER_EXPORT VkResult VKAPI vkAllocMemory(VkDevice device, const VkMemoryAllocInfo* pAllocInfo, VkDeviceMemory* pMem)
 {
     VkResult result = nextTable.AllocMemory(device, pAllocInfo, pMem);
     // TODO : Track allocations and overall size here
@@ -1070,7 +1070,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkAllocMemory(VkDevice device, const VkMemoryAllo
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkFreeMemory(VkGpuMemory mem)
+VK_LAYER_EXPORT VkResult VKAPI vkFreeMemory(VkDeviceMemory mem)
 {
     /* From spec : A memory object is freed by calling vkFreeMemory() when it is no longer needed. Before
      * freeing a memory object, an application must ensure the memory object is unbound from
@@ -1090,7 +1090,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkFreeMemory(VkGpuMemory mem)
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkSetMemoryPriority(VkGpuMemory mem, VkMemoryPriority priority)
+VK_LAYER_EXPORT VkResult VKAPI vkSetMemoryPriority(VkDeviceMemory mem, VkMemoryPriority priority)
 {
     // TODO : Update tracking for this alloc
     //  Make sure memory is not pinned, which can't have priority set
@@ -1098,14 +1098,14 @@ VK_LAYER_EXPORT VkResult VKAPI vkSetMemoryPriority(VkGpuMemory mem, VkMemoryPrio
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkMapMemory(VkGpuMemory mem, VkFlags flags, void** ppData)
+VK_LAYER_EXPORT VkResult VKAPI vkMapMemory(VkDeviceMemory mem, VkFlags flags, void** ppData)
 {
     // TODO : Track when memory is mapped
     loader_platform_thread_lock_mutex(&globalLock);
     MT_MEM_OBJ_INFO *pMemObj = getMemObjInfo(mem);
-    if ((pMemObj->allocInfo.memProps & VK_MEMORY_PROPERTY_CPU_VISIBLE_BIT) == 0) {
+    if ((pMemObj->allocInfo.memProps & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT) == 0) {
         char str[1024];
-        sprintf(str, "Mapping Memory (%p) without VK_MEMORY_PROPERTY_CPU_VISIBLE_BIT set", (void*)mem);
+        sprintf(str, "Mapping Memory (%p) without VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT set", (void*)mem);
         layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, mem, 0, MEMTRACK_INVALID_STATE, "MEM", str);
     }
     loader_platform_thread_unlock_mutex(&globalLock);
@@ -1113,7 +1113,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkMapMemory(VkGpuMemory mem, VkFlags flags, void*
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkUnmapMemory(VkGpuMemory mem)
+VK_LAYER_EXPORT VkResult VKAPI vkUnmapMemory(VkDeviceMemory mem)
 {
     // TODO : Track as memory gets unmapped, do we want to check what changed following map?
     //   Make sure that memory was ever mapped to begin with
@@ -1121,7 +1121,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkUnmapMemory(VkGpuMemory mem)
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkPinSystemMemory(VkDevice device, const void* pSysMem, size_t memSize, VkGpuMemory* pMem)
+VK_LAYER_EXPORT VkResult VKAPI vkPinSystemMemory(VkDevice device, const void* pSysMem, size_t memSize, VkDeviceMemory* pMem)
 {
     // TODO : Track this
     //  Verify that memory is actually pinnable
@@ -1129,21 +1129,21 @@ VK_LAYER_EXPORT VkResult VKAPI vkPinSystemMemory(VkDevice device, const void* pS
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkOpenSharedMemory(VkDevice device, const VkMemoryOpenInfo* pOpenInfo, VkGpuMemory* pMem)
+VK_LAYER_EXPORT VkResult VKAPI vkOpenSharedMemory(VkDevice device, const VkMemoryOpenInfo* pOpenInfo, VkDeviceMemory* pMem)
 {
     // TODO : Track this
     VkResult result = nextTable.OpenSharedMemory(device, pOpenInfo, pMem);
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkOpenPeerMemory(VkDevice device, const VkPeerMemoryOpenInfo* pOpenInfo, VkGpuMemory* pMem)
+VK_LAYER_EXPORT VkResult VKAPI vkOpenPeerMemory(VkDevice device, const VkPeerMemoryOpenInfo* pOpenInfo, VkDeviceMemory* pMem)
 {
     // TODO : Track this
     VkResult result = nextTable.OpenPeerMemory(device, pOpenInfo, pMem);
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkOpenPeerImage(VkDevice device, const VkPeerImageOpenInfo* pOpenInfo, VkImage* pImage, VkGpuMemory* pMem)
+VK_LAYER_EXPORT VkResult VKAPI vkOpenPeerImage(VkDevice device, const VkPeerImageOpenInfo* pOpenInfo, VkImage* pImage, VkDeviceMemory* pMem)
 {
     // TODO : Track this
     VkResult result = nextTable.OpenPeerImage(device, pOpenInfo, pImage, pMem);
@@ -1164,7 +1164,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkDestroyObject(VkObject object)
         if (pDelInfo->pMemObjInfo) {
             // Wsi allocated Memory is tied to image object so clear the binding and free that memory automatically
             if (0 == pDelInfo->pMemObjInfo->allocInfo.allocationSize) { // Wsi allocated memory has NULL allocInfo w/ 0 size
-                VkGpuMemory memToFree = pDelInfo->pMemObjInfo->mem;
+                VkDeviceMemory memToFree = pDelInfo->pMemObjInfo->mem;
                 clearObjectBinding(object);
                 freeMemObjInfo(memToFree, true);
             }
@@ -1194,7 +1194,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkGetObjectInfo(VkBaseObject object, VkObjectInfo
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkQueueBindObjectMemory(VkQueue queue, VkObject object, uint32_t allocationIdx, VkGpuMemory mem, VkGpuSize offset)
+VK_LAYER_EXPORT VkResult VKAPI vkQueueBindObjectMemory(VkQueue queue, VkObject object, uint32_t allocationIdx, VkDeviceMemory mem, VkDeviceSize offset)
 {
     VkResult result = nextTable.QueueBindObjectMemory(queue, object, allocationIdx, mem, offset);
     loader_platform_thread_lock_mutex(&globalLock);
@@ -1621,20 +1621,20 @@ VK_LAYER_EXPORT void VKAPI vkCmdBindVertexBuffers(
     uint32_t                                    startBinding,
     uint32_t                                    bindingCount,
     const VkBuffer*                             pBuffers,
-    const VkGpuSize*                            pOffsets)
+    const VkDeviceSize*                         pOffsets)
 {
     nextTable.CmdBindVertexBuffers(cmdBuffer, startBinding, bindingCount, pBuffers, pOffsets);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdBindIndexBuffer(VkCmdBuffer cmdBuffer, VkBuffer buffer, VkGpuSize offset, VkIndexType indexType)
+VK_LAYER_EXPORT void VKAPI vkCmdBindIndexBuffer(VkCmdBuffer cmdBuffer, VkBuffer buffer, VkDeviceSize offset, VkIndexType indexType)
 {
     nextTable.CmdBindIndexBuffer(cmdBuffer, buffer, offset, indexType);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdDrawIndirect(VkCmdBuffer cmdBuffer, VkBuffer buffer, VkGpuSize offset, uint32_t count, uint32_t stride)
+VK_LAYER_EXPORT void VKAPI vkCmdDrawIndirect(VkCmdBuffer cmdBuffer, VkBuffer buffer, VkDeviceSize offset, uint32_t count, uint32_t stride)
 {
     loader_platform_thread_lock_mutex(&globalLock);
-    VkGpuMemory mem = getMemBindingFromObject(buffer);
+    VkDeviceMemory mem = getMemBindingFromObject(buffer);
     if (VK_FALSE == updateCBBinding(cmdBuffer, mem)) {
         char str[1024];
         sprintf(str, "In vkCmdDrawIndirect() call unable to update binding of buffer %p to cmdBuffer %p", buffer, cmdBuffer);
@@ -1644,10 +1644,10 @@ VK_LAYER_EXPORT void VKAPI vkCmdDrawIndirect(VkCmdBuffer cmdBuffer, VkBuffer buf
     nextTable.CmdDrawIndirect(cmdBuffer, buffer, offset, count, stride);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdDrawIndexedIndirect(VkCmdBuffer cmdBuffer, VkBuffer buffer, VkGpuSize offset, uint32_t count, uint32_t stride)
+VK_LAYER_EXPORT void VKAPI vkCmdDrawIndexedIndirect(VkCmdBuffer cmdBuffer, VkBuffer buffer, VkDeviceSize offset, uint32_t count, uint32_t stride)
 {
     loader_platform_thread_lock_mutex(&globalLock);
-    VkGpuMemory mem = getMemBindingFromObject(buffer);
+    VkDeviceMemory mem = getMemBindingFromObject(buffer);
     if (VK_FALSE == updateCBBinding(cmdBuffer, mem)) {
         char str[1024];
         sprintf(str, "In vkCmdDrawIndexedIndirect() call unable to update binding of buffer %p to cmdBuffer %p", buffer, cmdBuffer);
@@ -1657,10 +1657,10 @@ VK_LAYER_EXPORT void VKAPI vkCmdDrawIndexedIndirect(VkCmdBuffer cmdBuffer, VkBuf
     nextTable.CmdDrawIndexedIndirect(cmdBuffer, buffer, offset, count, stride);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdDispatchIndirect(VkCmdBuffer cmdBuffer, VkBuffer buffer, VkGpuSize offset)
+VK_LAYER_EXPORT void VKAPI vkCmdDispatchIndirect(VkCmdBuffer cmdBuffer, VkBuffer buffer, VkDeviceSize offset)
 {
     loader_platform_thread_lock_mutex(&globalLock);
-    VkGpuMemory mem = getMemBindingFromObject(buffer);
+    VkDeviceMemory mem = getMemBindingFromObject(buffer);
     if (VK_FALSE == updateCBBinding(cmdBuffer, mem)) {
         char str[1024];
         sprintf(str, "In vkCmdDispatchIndirect() call unable to update binding of buffer %p to cmdBuffer %p", buffer, cmdBuffer);
@@ -1674,7 +1674,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdCopyBuffer(VkCmdBuffer cmdBuffer, VkBuffer srcBu
     uint32_t regionCount, const VkBufferCopy* pRegions)
 {
     loader_platform_thread_lock_mutex(&globalLock);
-    VkGpuMemory mem = getMemBindingFromObject(srcBuffer);
+    VkDeviceMemory mem = getMemBindingFromObject(srcBuffer);
     if (VK_FALSE == updateCBBinding(cmdBuffer, mem)) {
         char str[1024];
         sprintf(str, "In vkCmdCopyBuffer() call unable to update binding of srcBuffer %p to cmdBuffer %p", srcBuffer, cmdBuffer);
@@ -1715,7 +1715,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdCopyBufferToImage(VkCmdBuffer cmdBuffer,
 {
     // TODO : Track this
     loader_platform_thread_lock_mutex(&globalLock);
-    VkGpuMemory mem = getMemBindingFromObject(destImage);
+    VkDeviceMemory mem = getMemBindingFromObject(destImage);
     if (VK_FALSE == updateCBBinding(cmdBuffer, mem)) {
         char str[1024];
         sprintf(str, "In vkCmdCopyMemoryToImage() call unable to update binding of destImage buffer %p to cmdBuffer %p", destImage, cmdBuffer);
@@ -1739,7 +1739,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdCopyImageToBuffer(VkCmdBuffer cmdBuffer,
 {
     // TODO : Track this
     loader_platform_thread_lock_mutex(&globalLock);
-    VkGpuMemory mem = getMemBindingFromObject(srcImage);
+    VkDeviceMemory mem = getMemBindingFromObject(srcImage);
     if (VK_FALSE == updateCBBinding(cmdBuffer, mem)) {
         char str[1024];
         sprintf(str, "In vkCmdCopyImageToMemory() call unable to update binding of srcImage buffer %p to cmdBuffer %p", srcImage, cmdBuffer);
@@ -1760,7 +1760,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdCloneImageData(VkCmdBuffer cmdBuffer, VkImage sr
 {
     // TODO : Each image will have mem mapping so track them
     loader_platform_thread_lock_mutex(&globalLock);
-    VkGpuMemory mem = getMemBindingFromObject(srcImage);
+    VkDeviceMemory mem = getMemBindingFromObject(srcImage);
     if (VK_FALSE == updateCBBinding(cmdBuffer, mem)) {
         char str[1024];
         sprintf(str, "In vkCmdCloneImageData() call unable to update binding of srcImage buffer %p to cmdBuffer %p", srcImage, cmdBuffer);
@@ -1776,10 +1776,10 @@ VK_LAYER_EXPORT void VKAPI vkCmdCloneImageData(VkCmdBuffer cmdBuffer, VkImage sr
     nextTable.CmdCloneImageData(cmdBuffer, srcImage, srcImageLayout, destImage, destImageLayout);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdUpdateBuffer(VkCmdBuffer cmdBuffer, VkBuffer destBuffer, VkGpuSize destOffset, VkGpuSize dataSize, const uint32_t* pData)
+VK_LAYER_EXPORT void VKAPI vkCmdUpdateBuffer(VkCmdBuffer cmdBuffer, VkBuffer destBuffer, VkDeviceSize destOffset, VkDeviceSize dataSize, const uint32_t* pData)
 {
     loader_platform_thread_lock_mutex(&globalLock);
-    VkGpuMemory mem = getMemBindingFromObject(destBuffer);
+    VkDeviceMemory mem = getMemBindingFromObject(destBuffer);
     if (VK_FALSE == updateCBBinding(cmdBuffer, mem)) {
         char str[1024];
         sprintf(str, "In vkCmdUpdateMemory() call unable to update binding of destBuffer %p to cmdBuffer %p", destBuffer, cmdBuffer);
@@ -1789,10 +1789,10 @@ VK_LAYER_EXPORT void VKAPI vkCmdUpdateBuffer(VkCmdBuffer cmdBuffer, VkBuffer des
     nextTable.CmdUpdateBuffer(cmdBuffer, destBuffer, destOffset, dataSize, pData);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdFillBuffer(VkCmdBuffer cmdBuffer, VkBuffer destBuffer, VkGpuSize destOffset, VkGpuSize fillSize, uint32_t data)
+VK_LAYER_EXPORT void VKAPI vkCmdFillBuffer(VkCmdBuffer cmdBuffer, VkBuffer destBuffer, VkDeviceSize destOffset, VkDeviceSize fillSize, uint32_t data)
 {
     loader_platform_thread_lock_mutex(&globalLock);
-    VkGpuMemory mem = getMemBindingFromObject(destBuffer);
+    VkDeviceMemory mem = getMemBindingFromObject(destBuffer);
     if (VK_FALSE == updateCBBinding(cmdBuffer, mem)) {
         char str[1024];
         sprintf(str, "In vkCmdFillMemory() call unable to update binding of destBuffer %p to cmdBuffer %p", destBuffer, cmdBuffer);
@@ -1809,7 +1809,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdClearColorImage(VkCmdBuffer cmdBuffer,
 {
     // TODO : Verify memory is in VK_IMAGE_STATE_CLEAR state
     loader_platform_thread_lock_mutex(&globalLock);
-    VkGpuMemory mem = getMemBindingFromObject(image);
+    VkDeviceMemory mem = getMemBindingFromObject(image);
     if (VK_FALSE == updateCBBinding(cmdBuffer, mem)) {
         char str[1024];
         sprintf(str, "In vkCmdClearColorImage() call unable to update binding of image buffer %p to cmdBuffer %p", image, cmdBuffer);
@@ -1826,7 +1826,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdClearDepthStencil(VkCmdBuffer cmdBuffer,
 {
     // TODO : Verify memory is in VK_IMAGE_STATE_CLEAR state
     loader_platform_thread_lock_mutex(&globalLock);
-    VkGpuMemory mem = getMemBindingFromObject(image);
+    VkDeviceMemory mem = getMemBindingFromObject(image);
     if (VK_FALSE == updateCBBinding(cmdBuffer, mem)) {
         char str[1024];
         sprintf(str, "In vkCmdClearDepthStencil() call unable to update binding of image buffer %p to cmdBuffer %p", image, cmdBuffer);
@@ -1842,7 +1842,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdResolveImage(VkCmdBuffer cmdBuffer,
                                                 uint32_t regionCount, const VkImageResolve* pRegions)
 {
     loader_platform_thread_lock_mutex(&globalLock);
-    VkGpuMemory mem = getMemBindingFromObject(srcImage);
+    VkDeviceMemory mem = getMemBindingFromObject(srcImage);
     if (VK_FALSE == updateCBBinding(cmdBuffer, mem)) {
         char str[1024];
         sprintf(str, "In vkCmdResolveImage() call unable to update binding of srcImage buffer %p to cmdBuffer %p", srcImage, cmdBuffer);
@@ -1861,7 +1861,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdResolveImage(VkCmdBuffer cmdBuffer,
 VK_LAYER_EXPORT void VKAPI vkCmdBeginQuery(VkCmdBuffer cmdBuffer, VkQueryPool queryPool, uint32_t slot, VkFlags flags)
 {
     loader_platform_thread_lock_mutex(&globalLock);
-    VkGpuMemory mem = getMemBindingFromObject(queryPool);
+    VkDeviceMemory mem = getMemBindingFromObject(queryPool);
     if (VK_FALSE == updateCBBinding(cmdBuffer, mem)) {
         char str[1024];
         sprintf(str, "In vkCmdBeginQuery() call unable to update binding of queryPool buffer %p to cmdBuffer %p", queryPool, cmdBuffer);
@@ -1874,7 +1874,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdBeginQuery(VkCmdBuffer cmdBuffer, VkQueryPool qu
 VK_LAYER_EXPORT void VKAPI vkCmdEndQuery(VkCmdBuffer cmdBuffer, VkQueryPool queryPool, uint32_t slot)
 {
     loader_platform_thread_lock_mutex(&globalLock);
-    VkGpuMemory mem = getMemBindingFromObject(queryPool);
+    VkDeviceMemory mem = getMemBindingFromObject(queryPool);
     if (VK_FALSE == updateCBBinding(cmdBuffer, mem)) {
         char str[1024];
         sprintf(str, "In vkCmdEndQuery() call unable to update binding of queryPool buffer %p to cmdBuffer %p", queryPool, cmdBuffer);
@@ -1887,7 +1887,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdEndQuery(VkCmdBuffer cmdBuffer, VkQueryPool quer
 VK_LAYER_EXPORT void VKAPI vkCmdResetQueryPool(VkCmdBuffer cmdBuffer, VkQueryPool queryPool, uint32_t startQuery, uint32_t queryCount)
 {
     loader_platform_thread_lock_mutex(&globalLock);
-    VkGpuMemory mem = getMemBindingFromObject(queryPool);
+    VkDeviceMemory mem = getMemBindingFromObject(queryPool);
     if (VK_FALSE == updateCBBinding(cmdBuffer, mem)) {
         char str[1024];
         sprintf(str, "In vkCmdResetQueryPool() call unable to update binding of queryPool buffer %p to cmdBuffer %p", queryPool, cmdBuffer);
@@ -1902,7 +1902,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkDbgRegisterMsgCallback(VkInstance instance, VK_
     // This layer intercepts callbacks
     VK_LAYER_DBG_FUNCTION_NODE *pNewDbgFuncNode = (VK_LAYER_DBG_FUNCTION_NODE*)malloc(sizeof(VK_LAYER_DBG_FUNCTION_NODE));
     if (!pNewDbgFuncNode)
-        return VK_ERROR_OUT_OF_MEMORY;
+        return VK_ERROR_OUT_OF_HOST_MEMORY;
     pNewDbgFuncNode->pfnMsgCallback = pfnMsgCallback;
     pNewDbgFuncNode->pUserData = pUserData;
     pNewDbgFuncNode->pNext = g_pDbgFunctionHead;
@@ -1944,13 +1944,13 @@ VK_LAYER_EXPORT VkResult VKAPI vkDbgUnregisterMsgCallback(VkInstance instance, V
 
 #if !defined(WIN32)
 VK_LAYER_EXPORT VkResult VKAPI vkWsiX11CreatePresentableImage(VkDevice device, const VK_WSI_X11_PRESENTABLE_IMAGE_CREATE_INFO* pCreateInfo,
-    VkImage* pImage, VkGpuMemory* pMem)
+    VkImage* pImage, VkDeviceMemory* pMem)
 {
     VkResult result = nextTable.WsiX11CreatePresentableImage(device, pCreateInfo, pImage, pMem);
     loader_platform_thread_lock_mutex(&globalLock);
     if (VK_SUCCESS == result) {
         // Add image object, then insert the new Mem Object and then bind it to created image
-        addObjectInfo(*pImage, VkStructureType_MAX_ENUM, pCreateInfo, sizeof(VK_WSI_X11_PRESENTABLE_IMAGE_CREATE_INFO), "wsi_x11_image");
+        addObjectInfo(*pImage, VK_STRUCTURE_TYPE_MAX_ENUM, pCreateInfo, sizeof(VK_WSI_X11_PRESENTABLE_IMAGE_CREATE_INFO), "wsi_x11_image");
         addMemObjInfo(*pMem, NULL);
         if (VK_FALSE == updateObjectBinding(*pImage, *pMem)) {
             char str[1024];
@@ -1977,7 +1977,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkWsiX11QueuePresent(VkQueue queue, const VK_WSI_
 }
 #endif // WIN32
 
-VK_LAYER_EXPORT void* VKAPI vkGetProcAddr(VkPhysicalGpu gpu, const char* funcName)
+VK_LAYER_EXPORT void* VKAPI vkGetProcAddr(VkPhysicalDevice gpu, const char* funcName)
 {
     VkBaseLayerObject* gpuw = (VkBaseLayerObject *) gpu;
 
@@ -2135,6 +2135,6 @@ VK_LAYER_EXPORT void* VKAPI vkGetProcAddr(VkPhysicalGpu gpu, const char* funcNam
     else {
         if (gpuw->pGPA == NULL)
             return NULL;
-        return gpuw->pGPA((VkPhysicalGpu)gpuw->nextObject, funcName);
+        return gpuw->pGPA((VkPhysicalDevice)gpuw->nextObject, funcName);
     }
 }

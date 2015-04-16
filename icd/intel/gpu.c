@@ -164,9 +164,9 @@ VkResult intel_gpu_create(const struct intel_instance *instance, int devid,
         return VK_ERROR_INITIALIZATION_FAILED;
     }
 
-    gpu = intel_alloc(instance, sizeof(*gpu), 0, VK_SYSTEM_ALLOC_API_OBJECT);
+    gpu = intel_alloc(instance, sizeof(*gpu), 0, VK_SYSTEM_ALLOC_TYPE_API_OBJECT);
     if (!gpu)
-        return VK_ERROR_OUT_OF_MEMORY;
+        return VK_ERROR_OUT_OF_HOST_MEMORY;
 
     memset(gpu, 0, sizeof(*gpu));
     /* there is no VK_DBG_OBJECT_GPU */
@@ -178,10 +178,10 @@ VkResult intel_gpu_create(const struct intel_instance *instance, int devid,
     render_len = (render_node) ? strlen(render_node) : 0;
 
     gpu->primary_node = intel_alloc(gpu, primary_len + 1 +
-            ((render_len) ? (render_len + 1) : 0), 0, VK_SYSTEM_ALLOC_INTERNAL);
+            ((render_len) ? (render_len + 1) : 0), 0, VK_SYSTEM_ALLOC_TYPE_INTERNAL);
     if (!gpu->primary_node) {
         intel_free(instance, gpu);
-        return VK_ERROR_OUT_OF_MEMORY;
+        return VK_ERROR_OUT_OF_HOST_MEMORY;
     }
 
     memcpy(gpu->primary_node, primary_node, primary_len + 1);
@@ -221,7 +221,7 @@ VkResult intel_gpu_create(const struct intel_instance *instance, int devid,
 }
 
 void intel_gpu_get_props(const struct intel_gpu *gpu,
-                         VkPhysicalGpuProperties *props)
+                         VkPhysicalDeviceProperties *props)
 {
     const char *name;
     size_t name_len;
@@ -232,15 +232,15 @@ void intel_gpu_get_props(const struct intel_gpu *gpu,
     props->vendorId = 0x8086;
     props->deviceId = gpu->devid;
 
-    props->gpuType = VK_GPU_TYPE_INTEGRATED;
+    props->deviceType = VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU;
 
     /* copy GPU name */
     name = gpu_get_name(gpu);
     name_len = strlen(name);
-    if (name_len > sizeof(props->gpuName) - 1)
-        name_len = sizeof(props->gpuName) - 1;
-    memcpy(props->gpuName, name, name_len);
-    props->gpuName[name_len] = '\0';
+    if (name_len > sizeof(props->deviceName) - 1)
+        name_len = sizeof(props->deviceName) - 1;
+    memcpy(props->deviceName, name, name_len);
+    props->deviceName[name_len] = '\0';
 
 
     /* no size limit, but no bounded buffer could exceed 2GB */
@@ -255,10 +255,10 @@ void intel_gpu_get_props(const struct intel_gpu *gpu,
 }
 
 void intel_gpu_get_perf(const struct intel_gpu *gpu,
-                        VkPhysicalGpuPerformance *perf)
+                        VkPhysicalDevicePerformance *perf)
 {
     /* TODO */
-    perf->maxGpuClock = 1.0f;
+    perf->maxDeviceClock = 1.0f;
     perf->aluPerClock = 1.0f;
     perf->texPerClock = 1.0f;
     perf->primsPerClock = 1.0f;
@@ -267,7 +267,7 @@ void intel_gpu_get_perf(const struct intel_gpu *gpu,
 
 void intel_gpu_get_queue_props(const struct intel_gpu *gpu,
                                enum intel_gpu_engine_type engine,
-                               VkPhysicalGpuQueueProperties *props)
+                               VkPhysicalDeviceQueueProperties *props)
 {
     switch (engine) {
     case INTEL_GPU_ENGINE_3D:
@@ -284,14 +284,14 @@ void intel_gpu_get_queue_props(const struct intel_gpu *gpu,
 }
 
 void intel_gpu_get_memory_props(const struct intel_gpu *gpu,
-                                VkPhysicalGpuMemoryProperties *props)
+                                VkPhysicalDeviceMemoryProperties *props)
 {
     props->supportsMigration = false;
     props->supportsPinning = true;
 }
 
 int intel_gpu_get_max_threads(const struct intel_gpu *gpu,
-                              VkPipelineShaderStage stage)
+                              VkShaderStage stage)
 {
     switch (intel_gpu_gen(gpu)) {
     case INTEL_GEN(7.5):
@@ -395,7 +395,7 @@ enum intel_ext_type intel_gpu_lookup_extension(const struct intel_gpu *gpu,
 }
 
 ICD_EXPORT VkResult VKAPI vkEnumerateLayers(
-    VkPhysicalGpu                            gpu,
+    VkPhysicalDevice                            gpu,
     size_t                                      maxLayerCount,
     size_t                                      maxStringSize,
     size_t*                                     pOutLayerCount,
@@ -410,9 +410,9 @@ ICD_EXPORT VkResult VKAPI vkEnumerateLayers(
     return VK_SUCCESS;
 }
 
-ICD_EXPORT VkResult VKAPI vkGetGpuInfo(
-    VkPhysicalGpu                            gpu_,
-    VkPhysicalGpuInfoType                  infoType,
+ICD_EXPORT VkResult VKAPI vkGetPhysicalDeviceInfo(
+    VkPhysicalDevice                            gpu_,
+    VkPhysicalDeviceInfoType                  infoType,
     size_t*                                     pDataSize,
     void*                                       pData)
 {
@@ -420,34 +420,34 @@ ICD_EXPORT VkResult VKAPI vkGetGpuInfo(
     VkResult ret = VK_SUCCESS;
 
     switch (infoType) {
-    case VK_INFO_TYPE_PHYSICAL_GPU_PROPERTIES:
-        *pDataSize = sizeof(VkPhysicalGpuProperties);
+    case VK_PHYSICAL_DEVICE_INFO_TYPE_PROPERTIES:
+        *pDataSize = sizeof(VkPhysicalDeviceProperties);
         if (pData == NULL) {
             return ret;
         }
         intel_gpu_get_props(gpu, pData);
         break;
 
-    case VK_INFO_TYPE_PHYSICAL_GPU_PERFORMANCE:
-        *pDataSize = sizeof(VkPhysicalGpuPerformance);
+    case VK_PHYSICAL_DEVICE_INFO_TYPE_PERFORMANCE:
+        *pDataSize = sizeof(VkPhysicalDevicePerformance);
         if (pData == NULL) {
             return ret;
         }
         intel_gpu_get_perf(gpu, pData);
         break;
 
-    case VK_INFO_TYPE_PHYSICAL_GPU_QUEUE_PROPERTIES:
+    case VK_PHYSICAL_DEVICE_INFO_TYPE_QUEUE_PROPERTIES:
         /*
          * Vulkan Programmers guide, page 33:
          * to determine the data size an application calls
-         * vkGetGpuInfo() with a NULL data pointer. The
+         * vkGetPhysicalDeviceInfo() with a NULL data pointer. The
          * expected data size for all queue property structures
          * is returned in pDataSize
          */
-        *pDataSize = sizeof(VkPhysicalGpuQueueProperties) *
+        *pDataSize = sizeof(VkPhysicalDeviceQueueProperties) *
             INTEL_GPU_ENGINE_COUNT;
         if (pData != NULL) {
-            VkPhysicalGpuQueueProperties *dst = pData;
+            VkPhysicalDeviceQueueProperties *dst = pData;
             int engine;
 
             for (engine = 0; engine < INTEL_GPU_ENGINE_COUNT; engine++) {
@@ -457,8 +457,8 @@ ICD_EXPORT VkResult VKAPI vkGetGpuInfo(
         }
         break;
 
-    case VK_INFO_TYPE_PHYSICAL_GPU_MEMORY_PROPERTIES:
-        *pDataSize = sizeof(VkPhysicalGpuMemoryProperties);
+    case VK_PHYSICAL_DEVICE_INFO_TYPE_MEMORY_PROPERTIES:
+        *pDataSize = sizeof(VkPhysicalDeviceMemoryProperties);
         if (pData == NULL) {
             return ret;
         }
@@ -513,7 +513,7 @@ ICD_EXPORT VkResult VKAPI vkGetGlobalExtensionInfo(
 }
 
 ICD_EXPORT VkResult VKAPI vkGetPhysicalDeviceExtensionInfo(
-                                               VkPhysicalGpu gpu,
+                                               VkPhysicalDevice gpu,
                                                VkExtensionInfoType infoType,
                                                uint32_t extensionIndex,
                                                size_t*  pDataSize,
@@ -554,21 +554,21 @@ ICD_EXPORT VkResult VKAPI vkGetPhysicalDeviceExtensionInfo(
     return VK_SUCCESS;
 }
 
-ICD_EXPORT VkResult VKAPI vkGetMultiGpuCompatibility(
-    VkPhysicalGpu                            gpu0_,
-    VkPhysicalGpu                            gpu1_,
-    VkGpuCompatibilityInfo*                 pInfo)
+ICD_EXPORT VkResult VKAPI vkGetMultiDeviceCompatibility(
+    VkPhysicalDevice                            gpu0_,
+    VkPhysicalDevice                            gpu1_,
+    VkPhysicalDeviceCompatibilityInfo*                 pInfo)
 {
     const struct intel_gpu *gpu0 = intel_gpu(gpu0_);
     const struct intel_gpu *gpu1 = intel_gpu(gpu1_);
-    VkFlags compat = VK_GPU_COMPAT_IQ_MATCH_BIT |
-                       VK_GPU_COMPAT_PEER_TRANSFER_BIT |
-                       VK_GPU_COMPAT_SHARED_MEMORY_BIT |
-                       VK_GPU_COMPAT_SHARED_GPU0_DISPLAY_BIT |
-                       VK_GPU_COMPAT_SHARED_GPU1_DISPLAY_BIT;
+    VkFlags compat = VK_PHYSICAL_DEVICE_COMPATIBILITY_IQ_MATCH_BIT |
+                       VK_PHYSICAL_DEVICE_COMPATIBILITY_PEER_TRANSFER_BIT |
+                       VK_PHYSICAL_DEVICE_COMPATIBILITY_SHARED_MEMORY_BIT |
+                       VK_PHYSICAL_DEVICE_COMPATIBILITY_SHARED_DEVICE0_DISPLAY_BIT |
+                       VK_PHYSICAL_DEVICE_COMPATIBILITY_SHARED_DEVICE1_DISPLAY_BIT;
 
     if (intel_gpu_gen(gpu0) == intel_gpu_gen(gpu1))
-        compat |= VK_GPU_COMPAT_ASIC_FEATURES_BIT;
+        compat |= VK_PHYSICAL_DEVICE_COMPATIBILITY_FEATURES_BIT;
 
     pInfo->compatibilityFlags = compat;
 

@@ -135,7 +135,7 @@ struct intel_pipeline_shader {
     VkFlags barycentric_interps;
     VkFlags point_sprite_enables;
 
-    VkGpuSize per_thread_scratch_size;
+    VkDeviceSize per_thread_scratch_size;
 
     enum intel_computed_depth_mode computed_depth_mode;
 
@@ -143,7 +143,7 @@ struct intel_pipeline_shader {
 
     /* these are set up by the driver */
     uint32_t max_threads;
-    VkGpuSize scratch_offset;
+    VkDeviceSize scratch_offset;
 };
 
 /*
@@ -209,7 +209,7 @@ struct intel_pipeline {
     struct intel_pipeline_shader gs;
     struct intel_pipeline_shader fs;
     struct intel_pipeline_shader cs;
-    VkGpuSize scratch_size;
+    VkDeviceSize scratch_size;
 
     uint32_t wa_flags;
 

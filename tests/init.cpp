@@ -80,13 +80,13 @@ public:
 protected:
     VkApplicationInfo app_info;
     VkInstance inst;
-    VkPhysicalGpu objs[16];
+    VkPhysicalDevice objs[16];
     uint32_t gpu_count;
 
     uint32_t m_device_id;
     vk_testing::Device *m_device;
-    VkPhysicalGpuProperties props;
-    std::vector<VkPhysicalGpuQueueProperties> queue_props;
+    VkPhysicalDeviceProperties props;
+    std::vector<VkPhysicalDeviceQueueProperties> queue_props;
     uint32_t graphics_queue_node_index;
 
     virtual void SetUp() {
@@ -137,10 +137,10 @@ protected:
     }
 };
 
-TEST(Initialization, vkEnumerateGpus) {
+TEST(Initialization, vkEnumeratePhysicalDevices) {
     VkApplicationInfo app_info = {};
     VkInstance inst;
-    VkPhysicalGpu objs[16];
+    VkPhysicalDevice objs[16];
     uint32_t gpu_count;
     VkResult err;
     vk_testing::PhysicalGpu *gpu;
@@ -192,13 +192,13 @@ TEST(Initialization, vkEnumerateGpus) {
 TEST_F(XglTest, AllocMemory) {
     VkResult err;
     VkMemoryAllocInfo alloc_info = {};
-    VkGpuMemory gpu_mem;
+    VkDeviceMemory gpu_mem;
     uint8_t *pData;
 
     alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO;
     alloc_info.allocationSize = 1024 * 1024; // 1MB
     alloc_info.memProps = VK_MEMORY_PROPERTY_SHAREABLE_BIT |
-                          VK_MEMORY_PROPERTY_CPU_VISIBLE_BIT;
+                          VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
 
 
     // TODO: Try variety of memory priorities
@@ -239,16 +239,16 @@ TEST_F(XglTest, Event) {
     err = vkCreateEvent(device(), &event_info, &event);
     ASSERT_VK_SUCCESS(err);
 
-    err = vkGetObjectInfo(event, VK_INFO_TYPE_MEMORY_REQUIREMENTS,
+    err = vkGetObjectInfo(event, VK_OBJECT_INFO_TYPE_MEMORY_REQUIREMENTS,
                            &data_size, &mem_req);
     ASSERT_VK_SUCCESS(err);
 
     //        VkResult VKAPI vkAllocMemory(
     //            VkDevice                                  device,
     //            const VkMemoryAllocInfo*                pAllocInfo,
-    //            VkGpuMemory*                             pMem);
+    //            VkDeviceMemory*                             pMem);
     VkMemoryAllocInfo mem_info;
-    VkGpuMemory event_mem;
+    VkDeviceMemory event_mem;
 
     ASSERT_NE(0, mem_req.size) << "vkGetObjectInfo (Event): Failed - expect events to require memory";
 
@@ -339,11 +339,11 @@ TEST_F(XglTest, Query) {
 
     //        typedef enum VkQueryType_
     //        {
-    //            VK_QUERY_OCCLUSION                                     = 0x00000000,
-    //            VK_QUERY_PIPELINE_STATISTICS                           = 0x00000001,
+    //            VK_QUERY_TYPE_OCCLUSION                                     = 0x00000000,
+    //            VK_QUERY_TYPE_PIPELINE_STATISTICS                           = 0x00000001,
 
-    //            VK_QUERY_TYPE_BEGIN_RANGE                              = VK_QUERY_OCCLUSION,
-    //            VK_QUERY_TYPE_END_RANGE                                = VK_QUERY_PIPELINE_STATISTICS,
+    //            VK_QUERY_TYPE_BEGIN_RANGE                              = VK_QUERY_TYPE_OCCLUSION,
+    //            VK_QUERY_TYPE_END_RANGE                                = VK_QUERY_TYPE_PIPELINE_STATISTICS,
     //            VK_NUM_QUERY_TYPE                                      = (VK_QUERY_TYPE_END_RANGE - VK_QUERY_TYPE_BEGIN_RANGE + 1),
     //            VK_MAX_ENUM(VkQueryType_)
     //        } VkQueryType;
@@ -358,7 +358,7 @@ TEST_F(XglTest, Query) {
 
     memset(&query_info, 0, sizeof(query_info));
     query_info.sType = VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO;
-    query_info.queryType = VK_QUERY_OCCLUSION;
+    query_info.queryType = VK_QUERY_TYPE_OCCLUSION;
     query_info.slots = MAX_QUERY_SLOTS;
 
     //        VkResult VKAPI vkCreateQueryPool(
@@ -370,7 +370,7 @@ TEST_F(XglTest, Query) {
     ASSERT_VK_SUCCESS(err);
 
     data_size = sizeof(mem_req);
-    err = vkGetObjectInfo(query_pool, VK_INFO_TYPE_MEMORY_REQUIREMENTS,
+    err = vkGetObjectInfo(query_pool, VK_OBJECT_INFO_TYPE_MEMORY_REQUIREMENTS,
                            &data_size, &mem_req);
     ASSERT_VK_SUCCESS(err);
     ASSERT_NE(0, data_size) << "Invalid data_size";
@@ -378,9 +378,9 @@ TEST_F(XglTest, Query) {
     //        VkResult VKAPI vkAllocMemory(
     //            VkDevice                                  device,
     //            const VkMemoryAllocInfo*                pAllocInfo,
-    //            VkGpuMemory*                             pMem);
+    //            VkDeviceMemory*                             pMem);
     VkMemoryAllocInfo mem_info;
-    VkGpuMemory query_mem;
+    VkDeviceMemory query_mem;
 
     memset(&mem_info, 0, sizeof(mem_info));
     mem_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO;
@@ -404,13 +404,13 @@ TEST_F(XglTest, Query) {
     // TOOD: vkCmdEndQuery
 
     err = vkGetQueryPoolResults(query_pool, 0, MAX_QUERY_SLOTS,
-                                 &query_result_size, VK_NULL_HANDLE);
+                                 &query_result_size, VK_NULL_HANDLE, 0);
     ASSERT_VK_SUCCESS(err);
 
     if (query_result_size > 0) {
         query_result_data = new uint32_t [query_result_size];
         err = vkGetQueryPoolResults(query_pool, 0, MAX_QUERY_SLOTS,
-                                     &query_result_size, query_result_data);
+                                     &query_result_size, query_result_data, 0);
         ASSERT_VK_SUCCESS(err);
 
         // TODO: Test Query result data.
@@ -431,7 +431,7 @@ void getQueue(vk_testing::Device *device, uint32_t queue_node_index, const char 
     VkResult err;
     VkQueue queue;
 
-    const VkPhysicalGpuQueueProperties props = device->gpu().queue_properties()[queue_node_index];
+    const VkPhysicalDeviceQueueProperties props = device->gpu().queue_properties()[queue_node_index];
     for (que_idx = 0; que_idx < props.queueCount; que_idx++) {
         // TODO: Need to add support for separate MEMMGR and work queues, including synchronization
         err = vkGetDeviceQueue(device->obj(), queue_node_index, que_idx, &queue);
@@ -443,12 +443,12 @@ void getQueue(vk_testing::Device *device, uint32_t queue_node_index, const char 
 void print_queue_info(vk_testing::Device *device, uint32_t queue_node_index)
 {
     uint32_t que_idx;
-    VkPhysicalGpuQueueProperties queue_props;
-    VkPhysicalGpuProperties props;
+    VkPhysicalDeviceQueueProperties queue_props;
+    VkPhysicalDeviceProperties props;
 
     props = device->gpu().properties();
     queue_props = device->gpu().queue_properties()[queue_node_index];
-    ASSERT_NE(0, queue_props.queueCount) << "No Queues available at Node Index #" << queue_node_index << " GPU: " << props.gpuName;
+    ASSERT_NE(0, queue_props.queueCount) << "No Queues available at Node Index #" << queue_node_index << " GPU: " << props.deviceName;
 
 //            VkResult VKAPI vkGetDeviceQueue(
 //                VkDevice                                  device,
@@ -459,7 +459,7 @@ void print_queue_info(vk_testing::Device *device, uint32_t queue_node_index)
      * queue handles are retrieved from the device by calling
      * vkGetDeviceQueue() with a queue node index and a requested logical
      * queue ID. The queue node index is the index into the array of
-     * VkPhysicalGpuQueueProperties returned by GetGpuInfo. Each
+     * VkPhysicalDeviceQueueProperties returned by GetPhysicalDeviceInfo. Each
      * queue node index has different attributes specified by the VkQueueFlags property.
      * The logical queue ID is a sequential number starting from zero
      * and referencing up to the number of queues supported of that node index
@@ -533,11 +533,11 @@ void XglTest::CreateImageTest()
         mipCount++;
     }
 
-    fmt = VK_FMT_R8G8B8A8_UINT;
+    fmt = VK_FORMAT_R8G8B8A8_UINT;
     // TODO: Pick known good format rather than just expect common format
     /*
      * XXX: What should happen if given NULL HANDLE for the pData argument?
-     * We're not requesting VK_INFO_TYPE_MEMORY_REQUIREMENTS so there is
+     * We're not requesting VK_OBJECT_INFO_TYPE_MEMORY_REQUIREMENTS so there is
      * an expectation that pData is a valid pointer.
      * However, why include a returned size value? That implies that the
      * amount of data may vary and that doesn't work well for using a
@@ -546,7 +546,7 @@ void XglTest::CreateImageTest()
 
     size = sizeof(image_fmt);
     err = vkGetFormatInfo(device(), fmt,
-                           VK_INFO_TYPE_FORMAT_PROPERTIES,
+                           VK_FORMAT_INFO_TYPE_PROPERTIES,
                            &size, &image_fmt);
     ASSERT_VK_SUCCESS(err);
 
@@ -568,7 +568,7 @@ void XglTest::CreateImageTest()
 
     VkImageCreateInfo imageCreateInfo = {};
     imageCreateInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
-    imageCreateInfo.imageType = VK_IMAGE_2D;
+    imageCreateInfo.imageType = VK_IMAGE_TYPE_2D;
     imageCreateInfo.format = fmt;
     imageCreateInfo.arraySize = 1;
     imageCreateInfo.extent.width = w;
@@ -576,7 +576,7 @@ void XglTest::CreateImageTest()
     imageCreateInfo.extent.depth = 1;
     imageCreateInfo.mipLevels = mipCount;
     imageCreateInfo.samples = 1;
-    imageCreateInfo.tiling = VK_LINEAR_TILING;
+    imageCreateInfo.tiling = VK_IMAGE_TILING_LINEAR;
 
     imageCreateInfo.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 
@@ -596,10 +596,10 @@ void XglTest::CreateImageTest()
 //        void*                                       pData);
 //    typedef struct VkSubresourceLayout_
 //    {
-//        VkGpuSize                            offset;                 // Specified in bytes
-//        VkGpuSize                            size;                   // Specified in bytes
-//        VkGpuSize                            rowPitch;               // Specified in bytes
-//        VkGpuSize                            depthPitch;             // Specified in bytes
+//        VkDeviceSize                            offset;                 // Specified in bytes
+//        VkDeviceSize                            size;                   // Specified in bytes
+//        VkDeviceSize                            rowPitch;               // Specified in bytes
+//        VkDeviceSize                            depthPitch;             // Specified in bytes
 //    } VkSubresourceLayout;
 
 //    typedef struct VkImageSubresource_
@@ -611,7 +611,7 @@ void XglTest::CreateImageTest()
 //    typedef enum VkSubresourceInfoType_
 //    {
 //        // Info type for vkGetImageSubresourceInfo()
-//        VK_INFO_TYPE_SUBRESOURCE_LAYOUT                        = 0x00000000,
+//        VK_SUBRESOURCE_INFO_TYPE_LAYOUT                        = 0x00000000,
 
 //        VK_MAX_ENUM(VkSubresourceInfoType_)
 //    } VkSubresourceInfoType;
@@ -625,7 +625,7 @@ void XglTest::CreateImageTest()
     {
         VkSubresourceLayout layout = {};
         data_size = sizeof(layout);
-        err = vkGetImageSubresourceInfo(image, &subresource, VK_INFO_TYPE_SUBRESOURCE_LAYOUT,
+        err = vkGetImageSubresourceInfo(image, &subresource, VK_SUBRESOURCE_INFO_TYPE_LAYOUT,
                                          &data_size, &layout);
         ASSERT_VK_SUCCESS(err);
         ASSERT_EQ(sizeof(VkSubresourceLayout), data_size) << "Invalid structure (VkSubresourceLayout) size";
@@ -640,7 +640,7 @@ void XglTest::CreateImageTest()
 
     VkMemoryRequirements mem_req;
     data_size = sizeof(mem_req);
-    err = vkGetObjectInfo(image, VK_INFO_TYPE_MEMORY_REQUIREMENTS,
+    err = vkGetObjectInfo(image, VK_OBJECT_INFO_TYPE_MEMORY_REQUIREMENTS,
                            &data_size, &mem_req);
     ASSERT_VK_SUCCESS(err);
     ASSERT_EQ(data_size, sizeof(mem_req));
@@ -648,9 +648,9 @@ void XglTest::CreateImageTest()
     //        VkResult VKAPI vkAllocMemory(
     //            VkDevice                                  device,
     //            const VkMemoryAllocInfo*                pAllocInfo,
-    //            VkGpuMemory*                             pMem);
+    //            VkDeviceMemory*                             pMem);
     VkMemoryAllocInfo mem_info = {};
-    VkGpuMemory image_mem;
+    VkDeviceMemory image_mem;
 
     mem_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO;
     mem_info.pNext = NULL;
@@ -679,7 +679,7 @@ void XglTest::CreateImageTest()
     VkImageView view;
     viewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
     viewInfo.image = image;
-    viewInfo.viewType = VK_IMAGE_VIEW_2D;
+    viewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
     viewInfo.format = fmt;
 
     viewInfo.channels.r = VK_CHANNEL_SWIZZLE_R;

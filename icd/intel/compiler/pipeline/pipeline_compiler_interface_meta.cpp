@@ -619,7 +619,7 @@ void *intel_meta_compiler::codegen(uint32_t *code_size)
 
     prog = get_program(&prog_size, stderr);
 
-    code = intel_alloc(gpu, prog_size, 0, VK_SYSTEM_ALLOC_INTERNAL);
+    code = intel_alloc(gpu, prog_size, 0, VK_SYSTEM_ALLOC_TYPE_INTERNAL);
     if (!code)
         return NULL;
 

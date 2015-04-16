@@ -74,7 +74,7 @@ struct intel_gpu {
     int gen_opaque;     /* always read this with intel_gpu_gen() */
     int gt;
 
-    VkGpuSize max_batch_buffer_size;
+    VkDeviceSize max_batch_buffer_size;
     uint32_t batch_buffer_reloc_count;
 
     /*
@@ -93,7 +93,7 @@ struct intel_gpu {
     uint32_t display_count;
 };
 
-static inline struct intel_gpu *intel_gpu(VkPhysicalGpu gpu)
+static inline struct intel_gpu *intel_gpu(VkPhysicalDevice gpu)
 {
     return (struct intel_gpu *) gpu;
 }
@@ -113,17 +113,17 @@ VkResult intel_gpu_create(const struct intel_instance *instance, int devid,
 void intel_gpu_destroy(struct intel_gpu *gpu);
 
 void intel_gpu_get_props(const struct intel_gpu *gpu,
-                         VkPhysicalGpuProperties *props);
+                         VkPhysicalDeviceProperties *props);
 void intel_gpu_get_perf(const struct intel_gpu *gpu,
-                        VkPhysicalGpuPerformance *perf);
+                        VkPhysicalDevicePerformance *perf);
 void intel_gpu_get_queue_props(const struct intel_gpu *gpu,
                                enum intel_gpu_engine_type engine,
-                               VkPhysicalGpuQueueProperties *props);
+                               VkPhysicalDeviceQueueProperties *props);
 void intel_gpu_get_memory_props(const struct intel_gpu *gpu,
-                                VkPhysicalGpuMemoryProperties *props);
+                                VkPhysicalDeviceMemoryProperties *props);
 
 int intel_gpu_get_max_threads(const struct intel_gpu *gpu,
-                              VkPipelineShaderStage stage);
+                              VkShaderStage stage);
 
 int intel_gpu_get_primary_fd(struct intel_gpu *gpu);
 

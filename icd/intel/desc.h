@@ -255,7 +255,7 @@ void intel_desc_region_copy(struct intel_desc_region *region,
 
 void intel_desc_region_read_surface(const struct intel_desc_region *region,
                                     const struct intel_desc_offset *offset,
-                                    VkPipelineShaderStage stage,
+                                    VkShaderStage stage,
                                     const struct intel_mem **mem,
                                     bool *read_only,
                                     const uint32_t **cmd,

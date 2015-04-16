@@ -8,7 +8,7 @@ This sample driver implementation provide multiple subcomponents required to bui
 common/ provides helper and utility functions, as well as all VK entry points
 except vkInitAndEnumerateGpus.  Hardware drivers are required to provide that
 function, and to embed a "VkLayerDispatchTable *" as the first member of
-VkPhysicalGpu and all VkBaseObject.
+VkPhysicalDevice and all VkBaseObject.
 
 Thread safety
 

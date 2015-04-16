@@ -47,7 +47,7 @@ static void queue_submit_hang(struct intel_queue *queue,
 
 static VkResult queue_submit_bo(struct intel_queue *queue,
                                   struct intel_bo *bo,
-                                  VkGpuSize used)
+                                  VkDeviceSize used)
 {
     struct intel_winsys *winsys = queue->dev->winsys;
     int err;
@@ -61,7 +61,7 @@ static VkResult queue_submit_bo(struct intel_queue *queue,
 }
 
 static struct intel_bo *queue_create_bo(struct intel_queue *queue,
-                                        VkGpuSize size,
+                                        VkDeviceSize size,
                                         const void *cmd,
                                         size_t cmd_len)
 {
@@ -119,7 +119,7 @@ static VkResult queue_select_pipeline(struct intel_queue *queue,
         bo = queue_create_bo(queue, sizeof(pipeline_select_cmd),
                 pipeline_select_cmd, sizeof(pipeline_select_cmd));
         if (!bo)
-            return VK_ERROR_OUT_OF_GPU_MEMORY;
+            return VK_ERROR_OUT_OF_DEVICE_MEMORY;
 
         switch (pipeline_select) {
         case GEN6_PIPELINE_SELECT_DW0_SELECT_3D:
@@ -163,14 +163,14 @@ static VkResult queue_init_hw_and_atomic_bo(struct intel_queue *queue)
         queue->atomic_bo = queue_create_bo(queue,
                 sizeof(uint32_t) * INTEL_QUEUE_ATOMIC_COUNTER_COUNT,
                 NULL, 0);
-        return (queue->atomic_bo) ? VK_SUCCESS : VK_ERROR_OUT_OF_GPU_MEMORY;
+        return (queue->atomic_bo) ? VK_SUCCESS : VK_ERROR_OUT_OF_DEVICE_MEMORY;
     }
 
     bo = queue_create_bo(queue,
             sizeof(uint32_t) * INTEL_QUEUE_ATOMIC_COUNTER_COUNT,
             ctx_init_cmd, sizeof(ctx_init_cmd));
     if (!bo)
-        return VK_ERROR_OUT_OF_GPU_MEMORY;
+        return VK_ERROR_OUT_OF_DEVICE_MEMORY;
 
     ret = queue_submit_bo(queue, bo, sizeof(ctx_init_cmd));
     if (ret != VK_SUCCESS) {
@@ -203,7 +203,7 @@ static VkResult queue_submit_cmd_debug(struct intel_queue *queue,
 {
     uint32_t active[2], pending[2];
     struct intel_bo *bo;
-    VkGpuSize used;
+    VkDeviceSize used;
     VkResult ret;
 
     ret = queue_submit_cmd_prepare(queue, cmd);
@@ -241,7 +241,7 @@ static VkResult queue_submit_cmd(struct intel_queue *queue,
                                    struct intel_cmd *cmd)
 {
     struct intel_bo *bo;
-    VkGpuSize used;
+    VkDeviceSize used;
     VkResult ret;
 
     ret = queue_submit_cmd_prepare(queue, cmd);
@@ -274,7 +274,7 @@ VkResult intel_queue_create(struct intel_dev *dev,
     queue = (struct intel_queue *) intel_base_create(&dev->base.handle,
             sizeof(*queue), dev->base.dbg, VK_DBG_OBJECT_QUEUE, NULL, 0);
     if (!queue)
-        return VK_ERROR_OUT_OF_MEMORY;
+        return VK_ERROR_OUT_OF_HOST_MEMORY;
 
     queue->dev = dev;
     queue->ring = ring;
@@ -321,7 +321,7 @@ VkResult intel_queue_wait(struct intel_queue *queue, int64_t timeout)
 ICD_EXPORT VkResult VKAPI vkQueueAddMemReferences(
     VkQueue                                     queue,
     uint32_t                                    count,
-    const VkGpuMemory*                          pMems)
+    const VkDeviceMemory*                       pMems)
 {
     /*
      * The winsys maintains the list of memory references.  These are ignored
@@ -333,7 +333,7 @@ ICD_EXPORT VkResult VKAPI vkQueueAddMemReferences(
 ICD_EXPORT VkResult VKAPI vkQueueRemoveMemReferences(
     VkQueue                                     queue,
     uint32_t                                    count,
-    const VkGpuMemory*                          pMems)
+    const VkDeviceMemory*                       pMems)
 {
     /*
      * The winsys maintains the list of memory references.  These are ignored

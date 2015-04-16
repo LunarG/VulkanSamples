@@ -184,7 +184,7 @@ void VkTestFramework::WritePPM( const char *basename, VkImageObj *image )
     int x, y;
     VkImageObj displayImage(image->device());
 
-    displayImage.init(image->extent().width, image->extent().height, image->format(), 0, VK_LINEAR_TILING);
+    displayImage.init(image->extent().width, image->extent().height, image->format(), 0, VK_IMAGE_TILING_LINEAR);
     displayImage.CopyImage(*image);
 
     filename.append(basename);
@@ -197,7 +197,7 @@ void VkTestFramework::WritePPM( const char *basename, VkImageObj *image )
     size_t data_size = sizeof(sr_layout);
 
     err = vkGetImageSubresourceInfo( image->image(), &sr,
-                                      VK_INFO_TYPE_SUBRESOURCE_LAYOUT,
+                                      VK_SUBRESOURCE_INFO_TYPE_LAYOUT,
                                       &data_size, &sr_layout);
     ASSERT_VK_SUCCESS( err );
     ASSERT_EQ(data_size, sizeof(sr_layout));
@@ -218,7 +218,7 @@ void VkTestFramework::WritePPM( const char *basename, VkImageObj *image )
         const int *row = (const int *) ptr;
         int swapped;
 
-        if (displayImage.format() == VK_FMT_B8G8R8A8_UNORM)
+        if (displayImage.format() == VK_FORMAT_B8G8R8A8_UNORM)
         {
             for (x = 0; x < displayImage.width(); x++) {
                 swapped = (*row & 0xff00ff00) | (*row & 0x000000ff) << 16 | (*row & 0x00ff0000) >> 16;
@@ -226,7 +226,7 @@ void VkTestFramework::WritePPM( const char *basename, VkImageObj *image )
                 row++;
             }
         }
-        else if (displayImage.format() == VK_FMT_R8G8B8A8_UNORM)
+        else if (displayImage.format() == VK_FORMAT_R8G8B8A8_UNORM)
         {
             for (x = 0; x < displayImage.width(); x++) {
                 file.write((char *) row, 3);
@@ -311,7 +311,7 @@ void VkTestFramework::Show(const char *comment, VkImageObj *image)
 
     if (!m_show_images) return;
 
-    err = vkGetImageSubresourceInfo( image->image(), &sr, VK_INFO_TYPE_SUBRESOURCE_LAYOUT,
+    err = vkGetImageSubresourceInfo( image->image(), &sr, VK_SUBRESOURCE_INFO_TYPE_LAYOUT,
                                       &data_size, &sr_layout);
     ASSERT_VK_SUCCESS( err );
     ASSERT_EQ(data_size, sizeof(sr_layout));
@@ -492,7 +492,7 @@ void TestFrameworkVkPresent::CreatePresentableImages()
     for (int x=0; x < m_images.size(); x++)
     {
         VK_WSI_X11_PRESENTABLE_IMAGE_CREATE_INFO presentable_image_info = {};
-        presentable_image_info.format = VK_FMT_B8G8R8A8_UNORM;
+        presentable_image_info.format = VK_FORMAT_B8G8R8A8_UNORM;
         presentable_image_info.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
         presentable_image_info.extent.width = m_display_image->m_width;
         presentable_image_info.extent.height = m_display_image->m_height;
@@ -505,7 +505,7 @@ void TestFrameworkVkPresent::CreatePresentableImages()
         assert(!err);
 
         vk_testing::Buffer buf;
-        buf.init(m_device, (VkGpuSize) m_display_image->m_data_size);
+        buf.init(m_device, (VkDeviceSize) m_display_image->m_data_size);
         dest_ptr = buf.map();
         memcpy(dest_ptr,m_display_image->m_data, m_display_image->m_data_size);
         buf.unmap();
@@ -1081,7 +1081,7 @@ EShLanguage VkTestFramework::FindLanguage(const std::string& name)
 //
 // Convert VK shader type to compiler's
 //
-EShLanguage VkTestFramework::FindLanguage(const VkPipelineShaderStage shader_type)
+EShLanguage VkTestFramework::FindLanguage(const VkShaderStage shader_type)
 {
     switch (shader_type) {
     case VK_SHADER_STAGE_VERTEX:
@@ -1112,7 +1112,7 @@ EShLanguage VkTestFramework::FindLanguage(const VkPipelineShaderStage shader_typ
 // Compile a given string containing GLSL into SPV for use by VK
 // Return value of false means an error was encountered.
 //
-bool VkTestFramework::GLSLtoSPV(const VkPipelineShaderStage shader_type,
+bool VkTestFramework::GLSLtoSPV(const VkShaderStage shader_type,
                                  const char *pshader,
                                  std::vector<unsigned int> &spv)
 {

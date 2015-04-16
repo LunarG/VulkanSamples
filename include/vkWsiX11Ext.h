@@ -80,9 +80,9 @@ typedef struct _VK_WSI_X11_PRESENT_INFO
     bool32_t flip;
 } VK_WSI_X11_PRESENT_INFO;
 
-typedef VkResult (VKAPI *PFN_vkWsiX11AssociateConnection)(VkPhysicalGpu gpu, const VK_WSI_X11_CONNECTION_INFO* pConnectionInfo);
+typedef VkResult (VKAPI *PFN_vkWsiX11AssociateConnection)(VkPhysicalDevice gpu, const VK_WSI_X11_CONNECTION_INFO* pConnectionInfo);
 typedef VkResult (VKAPI *PFN_vkWsiX11GetMSC)(VkDevice device, xcb_window_t window, xcb_randr_crtc_t crtc, uint64_t* pMsc);
-typedef VkResult (VKAPI *PFN_vkWsiX11CreatePresentableImage)(VkDevice device, const VK_WSI_X11_PRESENTABLE_IMAGE_CREATE_INFO* pCreateInfo, VkImage* pImage, VkGpuMemory* pMem);
+typedef VkResult (VKAPI *PFN_vkWsiX11CreatePresentableImage)(VkDevice device, const VK_WSI_X11_PRESENTABLE_IMAGE_CREATE_INFO* pCreateInfo, VkImage* pImage, VkDeviceMemory* pMem);
 typedef VkResult (VKAPI *PFN_vkWsiX11QueuePresent)(VkQueue queue, const VK_WSI_X11_PRESENT_INFO* pPresentInfo, VkFence fence);
 
 /**
@@ -98,7 +98,7 @@ typedef VkResult (VKAPI *PFN_vkWsiX11QueuePresent)(VkQueue queue, const VK_WSI_X
  * is supported.
  */
 VkResult VKAPI vkWsiX11AssociateConnection(
-    VkPhysicalGpu                            gpu,
+    VkPhysicalDevice                            gpu,
     const VK_WSI_X11_CONNECTION_INFO*          pConnectionInfo);
 
 /**
@@ -113,7 +113,7 @@ VkResult VKAPI vkWsiX11GetMSC(
     uint64_t*                                   pMsc);
 
 /**
- * Create an VkImage that can be presented.  An VkGpuMemory is created
+ * Create an VkImage that can be presented.  An VkDeviceMemory is created
  * and bound automatically.  The memory returned can only be used in
  * vkQueue[Add|Remove]MemReference.  Destroying the memory or binding another memory to the
  * image is not allowed.
@@ -122,7 +122,7 @@ VkResult VKAPI vkWsiX11CreatePresentableImage(
     VkDevice                                  device,
     const VK_WSI_X11_PRESENTABLE_IMAGE_CREATE_INFO* pCreateInfo,
     VkImage*                                  pImage,
-    VkGpuMemory*                             pMem);
+    VkDeviceMemory*                             pMem);
 
 /**
  * Present an image to an X11 window.  The presentation always occurs after

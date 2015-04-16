@@ -121,7 +121,7 @@ static struct intel_instance *intel_instance_create(const VkInstanceCreateInfo* 
         return NULL;
 
     instance = icd_instance_alloc(icd, sizeof(*instance), 0,
-            VK_SYSTEM_ALLOC_API_OBJECT);
+            VK_SYSTEM_ALLOC_TYPE_API_OBJECT);
     if (!instance) {
         icd_instance_destroy(icd);
         return NULL;
@@ -150,7 +150,7 @@ ICD_EXPORT VkResult VKAPI vkCreateInstance(
 
     instance = intel_instance_create(pCreateInfo);
     if (!instance)
-        return VK_ERROR_OUT_OF_MEMORY;
+        return VK_ERROR_OUT_OF_HOST_MEMORY;
 
     *pInstance = (VkInstance) instance;
 
@@ -170,7 +170,7 @@ ICD_EXPORT VkResult VKAPI vkDestroyInstance(
 ICD_EXPORT VkResult VKAPI vkEnumeratePhysicalDevices(
     VkInstance                                instance_,
     uint32_t*                                 pPhysicalDeviceCount,
-    VkPhysicalGpu*                            pPhysicalDevices)
+    VkPhysicalDevice*                            pPhysicalDevices)
 {
     struct intel_instance *instance = intel_instance(instance_);
     struct icd_drm_device *devices, *dev;
@@ -205,7 +205,7 @@ ICD_EXPORT VkResult VKAPI vkEnumeratePhysicalDevices(
         if (ret == VK_SUCCESS) {
             intel_instance_add_gpu(instance, gpu);
 
-            pPhysicalDevices[count++] = (VkPhysicalGpu) gpu;
+            pPhysicalDevices[count++] = (VkPhysicalDevice) gpu;
             if (count >= *pPhysicalDeviceCount)
                 break;
         }

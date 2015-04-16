@@ -271,8 +271,12 @@ static void cmd_memory_barriers(struct intel_cmd *cmd,
 }
 
 ICD_EXPORT void VKAPI vkCmdWaitEvents(
-    VkCmdBuffer                              cmdBuffer,
-    const VkEventWaitInfo*                  pWaitInfo)
+    VkCmdBuffer                                 cmdBuffer,
+    VkWaitEvent                                 waitEvent,
+    uint32_t                                    eventCount,
+    const VkEvent*                              pEvents,
+    uint32_t                                    memBarrierCount,
+    const void**                                ppMemBarriers)
 {
     struct intel_cmd *cmd = intel_cmd(cmdBuffer);
 
@@ -290,12 +294,16 @@ ICD_EXPORT void VKAPI vkCmdWaitEvents(
      */
     cmd_memory_barriers(cmd,
             GEN6_PIPE_CONTROL_CS_STALL,
-            pWaitInfo->memBarrierCount, pWaitInfo->ppMemBarriers);
+            memBarrierCount, ppMemBarriers);
 }
 
 ICD_EXPORT void VKAPI vkCmdPipelineBarrier(
-    VkCmdBuffer                              cmdBuffer,
-    const VkPipelineBarrier*                 pBarrier)
+        VkCmdBuffer                                 cmdBuffer,
+        VkWaitEvent                                 waitEvent,
+        uint32_t                                    pipeEventCount,
+        const VkPipeEvent*                          pPipeEvents,
+        uint32_t                                    memBarrierCount,
+        const void**                                ppMemBarriers)
 {
     struct intel_cmd *cmd = intel_cmd(cmdBuffer);
     uint32_t pipe_control_flags = 0;
@@ -308,10 +316,10 @@ ICD_EXPORT void VKAPI vkCmdPipelineBarrier(
 
     /* Cache control is done with PIPE_CONTROL flags.
      * With no GEN6_PIPE_CONTROL_CS_STALL flag set, it behaves as VK_PIPE_EVENT_TOP_OF_PIPE.
-     * All other pEvents values will behave as VK_PIPE_EVENT_GPU_COMMANDS_COMPLETE.
+     * All other pEvents values will behave as VK_PIPE_EVENT_COMMANDS_COMPLETE.
      */
-    for (i = 0; i < pBarrier->eventCount; i++) {
-        switch(pBarrier->pEvents[i])
+    for (i = 0; i < pipeEventCount; i++) {
+        switch(pPipeEvents[i])
         {
         case VK_PIPE_EVENT_TOP_OF_PIPE:
             break;
@@ -321,7 +329,7 @@ ICD_EXPORT void VKAPI vkCmdPipelineBarrier(
         case VK_PIPE_EVENT_GRAPHICS_PIPELINE_COMPLETE:
         case VK_PIPE_EVENT_COMPUTE_PIPELINE_COMPLETE:
         case VK_PIPE_EVENT_TRANSFER_COMPLETE:
-        case VK_PIPE_EVENT_GPU_COMMANDS_COMPLETE:
+        case VK_PIPE_EVENT_COMMANDS_COMPLETE:
             pipe_control_flags |= GEN6_PIPE_CONTROL_CS_STALL;
             break;
         default:
@@ -336,5 +344,5 @@ ICD_EXPORT void VKAPI vkCmdPipelineBarrier(
      */
     cmd_memory_barriers(cmd,
             pipe_control_flags,
-            pBarrier->memBarrierCount, pBarrier->ppMemBarriers);
+            memBarrierCount, ppMemBarriers);
 }

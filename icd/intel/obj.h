@@ -74,7 +74,7 @@ static inline struct intel_obj *intel_obj(VkObject obj)
 
 static inline void intel_obj_bind_mem(struct intel_obj *obj,
                                       struct intel_mem *mem,
-                                      VkGpuSize offset)
+                                      VkDeviceSize offset)
 {
     obj->mem = mem;
     obj->offset = offset;

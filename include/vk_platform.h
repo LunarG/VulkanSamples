@@ -76,7 +76,7 @@ extern "C"
     #endif
 #endif // !defined(VK_NO_STDINT_H)
 
-typedef uint64_t   VkGpuSize;
+typedef uint64_t   VkDeviceSize;
 typedef uint32_t   bool32_t;
 
 typedef uint32_t   VkSampleMask;

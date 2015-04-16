@@ -35,7 +35,7 @@ struct intel_gpu;
 struct intel_img;
 
 VkResult intel_wsi_gpu_get_info(struct intel_gpu *gpu,
-                                  VkPhysicalGpuInfoType type,
+                                  VkPhysicalDeviceInfoType type,
                                   size_t *size, void *data);
 void intel_wsi_gpu_cleanup(struct intel_gpu *gpu);
 

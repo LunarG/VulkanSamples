@@ -57,7 +57,7 @@ static VkResult nulldrv_base_get_info(struct nulldrv_base *base, int type,
     uint32_t *count;
 
     switch (type) {
-    case VK_INFO_TYPE_MEMORY_REQUIREMENTS:
+    case VK_OBJECT_INFO_TYPE_MEMORY_REQUIREMENTS:
         {
             s = sizeof(VkMemoryRequirements);
             *size = s;
@@ -66,7 +66,7 @@ static VkResult nulldrv_base_get_info(struct nulldrv_base *base, int type,
             memset(data, 0, s);
             break;
         }
-    case VK_INFO_TYPE_MEMORY_ALLOCATION_COUNT:
+    case VK_OBJECT_INFO_TYPE_MEMORY_ALLOCATION_COUNT:
         *size = sizeof(uint32_t);
         if (data == NULL)
             return ret;
@@ -122,7 +122,7 @@ static VkResult nulldrv_gpu_add(int devid, const char *primary_node,
 
 	gpu = malloc(sizeof(*gpu));
     if (!gpu)
-        return VK_ERROR_OUT_OF_MEMORY;
+        return VK_ERROR_OUT_OF_HOST_MEMORY;
 	memset(gpu, 0, sizeof(*gpu));
 
     // Initialize pointer to loader's dispatch table with ICD_LOADER_MAGIC
@@ -142,7 +142,7 @@ static VkResult nulldrv_queue_create(struct nulldrv_dev *dev,
     queue = (struct nulldrv_queue *) nulldrv_base_create(dev, sizeof(*queue),
             VK_DBG_OBJECT_QUEUE);
     if (!queue)
-        return VK_ERROR_OUT_OF_MEMORY;
+        return VK_ERROR_OUT_OF_HOST_MEMORY;
 
     queue->dev = dev;
 
@@ -202,7 +202,7 @@ static VkResult nulldrv_desc_ooxx_create(struct nulldrv_dev *dev,
 
     ooxx = malloc(sizeof(*ooxx));
     if (!ooxx) 
-        return VK_ERROR_OUT_OF_MEMORY;
+        return VK_ERROR_OUT_OF_HOST_MEMORY;
 
     memset(ooxx, 0, sizeof(*ooxx));
 
@@ -225,7 +225,7 @@ static VkResult nulldrv_dev_create(struct nulldrv_gpu *gpu,
     dev = (struct nulldrv_dev *) nulldrv_base_create(NULL, sizeof(*dev),
             VK_DBG_OBJECT_DEVICE);
     if (!dev)
-        return VK_ERROR_OUT_OF_MEMORY;
+        return VK_ERROR_OUT_OF_HOST_MEMORY;
 
     for (i = 0; i < info->extensionCount; i++) {
         const enum nulldrv_ext_type ext = nulldrv_gpu_lookup_extension(gpu,
@@ -253,7 +253,7 @@ static VkResult nulldrv_dev_create(struct nulldrv_gpu *gpu,
     return VK_SUCCESS;
 }
 
-static struct nulldrv_gpu *nulldrv_gpu(VkPhysicalGpu gpu)
+static struct nulldrv_gpu *nulldrv_gpu(VkPhysicalDevice gpu)
 {
     return (struct nulldrv_gpu *) gpu;
 }
@@ -267,7 +267,7 @@ static VkResult nulldrv_rt_view_create(struct nulldrv_dev *dev,
     view = (struct nulldrv_rt_view *) nulldrv_base_create(dev, sizeof(*view),
             VK_DBG_OBJECT_COLOR_TARGET_VIEW);
     if (!view)
-        return VK_ERROR_OUT_OF_MEMORY;
+        return VK_ERROR_OUT_OF_HOST_MEMORY;
 
     *view_ret = view;
 
@@ -283,7 +283,7 @@ static VkResult nulldrv_fence_create(struct nulldrv_dev *dev,
     fence = (struct nulldrv_fence *) nulldrv_base_create(dev, sizeof(*fence),
             VK_DBG_OBJECT_FENCE);
     if (!fence)
-        return VK_ERROR_OUT_OF_MEMORY;
+        return VK_ERROR_OUT_OF_HOST_MEMORY;
 
     *fence_ret = fence;
 
@@ -308,7 +308,7 @@ static VkResult img_get_info(struct nulldrv_base *base, int type,
     VkResult ret = VK_SUCCESS;
 
     switch (type) {
-    case VK_INFO_TYPE_MEMORY_REQUIREMENTS:
+    case VK_OBJECT_INFO_TYPE_MEMORY_REQUIREMENTS:
         {
             VkMemoryRequirements *mem_req = data;
 
@@ -337,7 +337,7 @@ static VkResult nulldrv_img_create(struct nulldrv_dev *dev,
     img = (struct nulldrv_img *) nulldrv_base_create(dev, sizeof(*img),
             VK_DBG_OBJECT_IMAGE);
     if (!img)
-        return VK_ERROR_OUT_OF_MEMORY;
+        return VK_ERROR_OUT_OF_HOST_MEMORY;
 
     img->type = info->imageType;
     img->depth = info->extent.depth;
@@ -367,11 +367,11 @@ static VkResult nulldrv_mem_alloc(struct nulldrv_dev *dev,
     mem = (struct nulldrv_mem *) nulldrv_base_create(dev, sizeof(*mem),
             VK_DBG_OBJECT_GPU_MEMORY);
     if (!mem)
-        return VK_ERROR_OUT_OF_MEMORY;
+        return VK_ERROR_OUT_OF_HOST_MEMORY;
 
     mem->bo = malloc(info->allocationSize);
     if (!mem->bo) {
-        return VK_ERROR_OUT_OF_MEMORY;
+        return VK_ERROR_OUT_OF_HOST_MEMORY;
     }
 
     mem->size = info->allocationSize;
@@ -391,7 +391,7 @@ static VkResult nulldrv_ds_view_create(struct nulldrv_dev *dev,
     view = (struct nulldrv_ds_view *) nulldrv_base_create(dev, sizeof(*view),
             VK_DBG_OBJECT_DEPTH_STENCIL_VIEW);
     if (!view)
-        return VK_ERROR_OUT_OF_MEMORY;
+        return VK_ERROR_OUT_OF_HOST_MEMORY;
 
     view->img = img;
 
@@ -411,7 +411,7 @@ static VkResult nulldrv_sampler_create(struct nulldrv_dev *dev,
     sampler = (struct nulldrv_sampler *) nulldrv_base_create(dev,
             sizeof(*sampler), VK_DBG_OBJECT_SAMPLER);
     if (!sampler)
-        return VK_ERROR_OUT_OF_MEMORY;
+        return VK_ERROR_OUT_OF_HOST_MEMORY;
 
     *sampler_ret = sampler;
 
@@ -428,7 +428,7 @@ static VkResult nulldrv_img_view_create(struct nulldrv_dev *dev,
     view = (struct nulldrv_img_view *) nulldrv_base_create(dev, sizeof(*view),
             VK_DBG_OBJECT_IMAGE_VIEW);
     if (!view)
-        return VK_ERROR_OUT_OF_MEMORY;
+        return VK_ERROR_OUT_OF_HOST_MEMORY;
 
     view->img = img;
     view->min_lod = info->minLod;
@@ -445,7 +445,7 @@ static void *nulldrv_mem_map(struct nulldrv_mem *mem, VkFlags flags)
     return mem->bo;
 }
 
-static struct nulldrv_mem *nulldrv_mem(VkGpuMemory mem)
+static struct nulldrv_mem *nulldrv_mem(VkDeviceMemory mem)
 {
     return (struct nulldrv_mem *) mem;
 }
@@ -462,7 +462,7 @@ static VkResult buf_get_info(struct nulldrv_base *base, int type,
     VkResult ret = VK_SUCCESS;
 
     switch (type) {
-    case VK_INFO_TYPE_MEMORY_REQUIREMENTS:
+    case VK_OBJECT_INFO_TYPE_MEMORY_REQUIREMENTS:
         {
             VkMemoryRequirements *mem_req = data;
 
@@ -492,7 +492,7 @@ static VkResult nulldrv_buf_create(struct nulldrv_dev *dev,
     buf = (struct nulldrv_buf *) nulldrv_base_create(dev, sizeof(*buf),
             VK_DBG_OBJECT_BUFFER);
     if (!buf)
-        return VK_ERROR_OUT_OF_MEMORY;
+        return VK_ERROR_OUT_OF_HOST_MEMORY;
 
     buf->size = info->size;
     buf->usage = info->usage;
@@ -514,7 +514,7 @@ static VkResult nulldrv_desc_layout_create(struct nulldrv_dev *dev,
         nulldrv_base_create(dev, sizeof(*layout),
                 VK_DBG_OBJECT_DESCRIPTOR_SET_LAYOUT);
     if (!layout)
-        return VK_ERROR_OUT_OF_MEMORY;
+        return VK_ERROR_OUT_OF_HOST_MEMORY;
 
     *layout_ret = layout;
 
@@ -532,7 +532,7 @@ static VkResult nulldrv_desc_layout_chain_create(struct nulldrv_dev *dev,
         nulldrv_base_create(dev, sizeof(*chain),
                 VK_DBG_OBJECT_DESCRIPTOR_SET_LAYOUT_CHAIN);
     if (!chain)
-        return VK_ERROR_OUT_OF_MEMORY;
+        return VK_ERROR_OUT_OF_HOST_MEMORY;
 
     *chain_ret = chain;
 
@@ -553,7 +553,7 @@ static VkResult shader_create(struct nulldrv_dev *dev,
     sh = (struct nulldrv_shader *) nulldrv_base_create(dev, sizeof(*sh),
             VK_DBG_OBJECT_SHADER);
     if (!sh)
-        return VK_ERROR_OUT_OF_MEMORY;
+        return VK_ERROR_OUT_OF_HOST_MEMORY;
 
     *sh_ret = sh;
 
@@ -570,7 +570,7 @@ static VkResult graphics_pipeline_create(struct nulldrv_dev *dev,
         nulldrv_base_create(dev, sizeof(*pipeline), 
                 VK_DBG_OBJECT_GRAPHICS_PIPELINE);
     if (!pipeline)
-        return VK_ERROR_OUT_OF_MEMORY;
+        return VK_ERROR_OUT_OF_HOST_MEMORY;
 
     *pipeline_ret = pipeline;
 
@@ -586,7 +586,7 @@ static VkResult nulldrv_viewport_state_create(struct nulldrv_dev *dev,
     state = (struct nulldrv_dynamic_vp *) nulldrv_base_create(dev,
             sizeof(*state), VK_DBG_OBJECT_VIEWPORT_STATE);
     if (!state)
-        return VK_ERROR_OUT_OF_MEMORY;
+        return VK_ERROR_OUT_OF_HOST_MEMORY;
 
     *state_ret = state;
 
@@ -602,7 +602,7 @@ static VkResult nulldrv_raster_state_create(struct nulldrv_dev *dev,
     state = (struct nulldrv_dynamic_rs *) nulldrv_base_create(dev,
             sizeof(*state), VK_DBG_OBJECT_RASTER_STATE);
     if (!state)
-        return VK_ERROR_OUT_OF_MEMORY;
+        return VK_ERROR_OUT_OF_HOST_MEMORY;
 
     *state_ret = state;
 
@@ -618,7 +618,7 @@ static VkResult nulldrv_blend_state_create(struct nulldrv_dev *dev,
     state = (struct nulldrv_dynamic_cb *) nulldrv_base_create(dev,
             sizeof(*state), VK_DBG_OBJECT_COLOR_BLEND_STATE);
     if (!state)
-        return VK_ERROR_OUT_OF_MEMORY;
+        return VK_ERROR_OUT_OF_HOST_MEMORY;
 
     *state_ret = state;
 
@@ -634,7 +634,7 @@ static VkResult nulldrv_ds_state_create(struct nulldrv_dev *dev,
     state = (struct nulldrv_dynamic_ds *) nulldrv_base_create(dev,
             sizeof(*state), VK_DBG_OBJECT_DEPTH_STENCIL_STATE);
     if (!state)
-        return VK_ERROR_OUT_OF_MEMORY;
+        return VK_ERROR_OUT_OF_HOST_MEMORY;
 
     *state_ret = state;
 
@@ -651,7 +651,7 @@ static VkResult nulldrv_cmd_create(struct nulldrv_dev *dev,
     cmd = (struct nulldrv_cmd *) nulldrv_base_create(dev, sizeof(*cmd),
             VK_DBG_OBJECT_CMD_BUFFER);
     if (!cmd)
-        return VK_ERROR_OUT_OF_MEMORY;
+        return VK_ERROR_OUT_OF_HOST_MEMORY;
 
     *cmd_ret = cmd;
 
@@ -670,7 +670,7 @@ static VkResult nulldrv_desc_pool_create(struct nulldrv_dev *dev,
         nulldrv_base_create(dev, sizeof(*pool),
                 VK_DBG_OBJECT_DESCRIPTOR_POOL);
     if (!pool)
-        return VK_ERROR_OUT_OF_MEMORY;
+        return VK_ERROR_OUT_OF_HOST_MEMORY;
 
     pool->dev = dev;
 
@@ -691,7 +691,7 @@ static VkResult nulldrv_desc_set_create(struct nulldrv_dev *dev,
         nulldrv_base_create(dev, sizeof(*set), 
                 VK_DBG_OBJECT_DESCRIPTOR_SET);
     if (!set)
-        return VK_ERROR_OUT_OF_MEMORY;
+        return VK_ERROR_OUT_OF_HOST_MEMORY;
 
     set->ooxx = dev->desc_ooxx;
     set->layout = layout;
@@ -714,7 +714,7 @@ static VkResult nulldrv_fb_create(struct nulldrv_dev *dev,
     fb = (struct nulldrv_framebuffer *) nulldrv_base_create(dev, sizeof(*fb),
             VK_DBG_OBJECT_FRAMEBUFFER);
     if (!fb)
-        return VK_ERROR_OUT_OF_MEMORY;
+        return VK_ERROR_OUT_OF_HOST_MEMORY;
 
     *fb_ret = fb;
 
@@ -730,7 +730,7 @@ static VkResult nulldrv_render_pass_create(struct nulldrv_dev *dev,
     rp = (struct nulldrv_render_pass *) nulldrv_base_create(dev, sizeof(*rp),
             VK_DBG_OBJECT_RENDER_PASS);
     if (!rp)
-        return VK_ERROR_OUT_OF_MEMORY;
+        return VK_ERROR_OUT_OF_HOST_MEMORY;
 
     *rp_ret = rp;
 
@@ -752,7 +752,7 @@ static VkResult nulldrv_buf_view_create(struct nulldrv_dev *dev,
     view = (struct nulldrv_buf_view *) nulldrv_base_create(dev, sizeof(*view),
             VK_DBG_OBJECT_BUFFER_VIEW);
     if (!view)
-        return VK_ERROR_OUT_OF_MEMORY;
+        return VK_ERROR_OUT_OF_HOST_MEMORY;
 
     view->buf = buf;
 
@@ -827,7 +827,7 @@ ICD_EXPORT void VKAPI vkCmdLoadAtomicCounters(
     uint32_t                                    startCounter,
     uint32_t                                    counterCount,
     VkBuffer                                  srcBuffer,
-    VkGpuSize                                srcOffset)
+    VkDeviceSize                                srcOffset)
 {
     NULLDRV_LOG_FUNC;
 }
@@ -838,7 +838,7 @@ ICD_EXPORT void VKAPI vkCmdSaveAtomicCounters(
     uint32_t                                    startCounter,
     uint32_t                                    counterCount,
     VkBuffer                                  destBuffer,
-    VkGpuSize                                destOffset)
+    VkDeviceSize                                destOffset)
 {
     NULLDRV_LOG_FUNC;
 }
@@ -925,8 +925,8 @@ ICD_EXPORT void VKAPI vkCmdCloneImageData(
 ICD_EXPORT void VKAPI vkCmdUpdateBuffer(
     VkCmdBuffer                              cmdBuffer,
     VkBuffer                                  destBuffer,
-    VkGpuSize                                destOffset,
-    VkGpuSize                                dataSize,
+    VkDeviceSize                                destOffset,
+    VkDeviceSize                                dataSize,
     const uint32_t*                             pData)
 {
     NULLDRV_LOG_FUNC;
@@ -935,8 +935,8 @@ ICD_EXPORT void VKAPI vkCmdUpdateBuffer(
 ICD_EXPORT void VKAPI vkCmdFillBuffer(
     VkCmdBuffer                              cmdBuffer,
     VkBuffer                                  destBuffer,
-    VkGpuSize                                destOffset,
-    VkGpuSize                                fillSize,
+    VkDeviceSize                                destOffset,
+    VkDeviceSize                                fillSize,
     uint32_t                                    data)
 {
     NULLDRV_LOG_FUNC;
@@ -1025,8 +1025,8 @@ ICD_EXPORT void VKAPI vkCmdCopyQueryPoolResults(
     uint32_t                                    startQuery,
     uint32_t                                    queryCount,
     VkBuffer                                    destBuffer,
-    VkGpuSize                                   destOffset,
-    VkGpuSize                                   destStride,
+    VkDeviceSize                                destOffset,
+    VkDeviceSize                                destStride,
     VkFlags                                     flags)
 {
     NULLDRV_LOG_FUNC;
@@ -1036,7 +1036,7 @@ ICD_EXPORT void VKAPI vkCmdWriteTimestamp(
     VkCmdBuffer                              cmdBuffer,
     VkTimestampType                          timestampType,
     VkBuffer                                  destBuffer,
-    VkGpuSize                                destOffset)
+    VkDeviceSize                                destOffset)
 {
     NULLDRV_LOG_FUNC;
 }
@@ -1074,7 +1074,7 @@ ICD_EXPORT void VKAPI vkCmdBindVertexBuffers(
     uint32_t                                    startBinding,
     uint32_t                                    bindingCount,
     const VkBuffer*                             pBuffers,
-    const VkGpuSize*                            pOffsets)
+    const VkDeviceSize*                            pOffsets)
 {
     NULLDRV_LOG_FUNC;
 }
@@ -1082,7 +1082,7 @@ ICD_EXPORT void VKAPI vkCmdBindVertexBuffers(
 ICD_EXPORT void VKAPI vkCmdBindIndexBuffer(
     VkCmdBuffer                              cmdBuffer,
     VkBuffer                                  buffer,
-    VkGpuSize                                offset,
+    VkDeviceSize                                offset,
     VkIndexType                              indexType)
 {
     NULLDRV_LOG_FUNC;
@@ -1112,7 +1112,7 @@ ICD_EXPORT void VKAPI vkCmdDrawIndexed(
 ICD_EXPORT void VKAPI vkCmdDrawIndirect(
     VkCmdBuffer                              cmdBuffer,
     VkBuffer                                  buffer,
-    VkGpuSize                                offset,
+    VkDeviceSize                                offset,
     uint32_t                                    count,
     uint32_t                                    stride)
 {
@@ -1122,7 +1122,7 @@ ICD_EXPORT void VKAPI vkCmdDrawIndirect(
 ICD_EXPORT void VKAPI vkCmdDrawIndexedIndirect(
     VkCmdBuffer                              cmdBuffer,
     VkBuffer                                  buffer,
-    VkGpuSize                                offset,
+    VkDeviceSize                                offset,
     uint32_t                                    count,
     uint32_t                                    stride)
 {
@@ -1141,27 +1141,35 @@ ICD_EXPORT void VKAPI vkCmdDispatch(
 ICD_EXPORT void VKAPI vkCmdDispatchIndirect(
     VkCmdBuffer                              cmdBuffer,
     VkBuffer                                  buffer,
-    VkGpuSize                                offset)
+    VkDeviceSize                                offset)
 {
     NULLDRV_LOG_FUNC;
 }
 
-ICD_EXPORT void VKAPI vkCmdWaitEvents(
-    VkCmdBuffer                              cmdBuffer,
-    const VkEventWaitInfo*                  pWaitInfo)
+void VKAPI vkCmdWaitEvents(
+    VkCmdBuffer                                 cmdBuffer,
+    VkWaitEvent                                 waitEvent,
+    uint32_t                                    eventCount,
+    const VkEvent*                              pEvents,
+    uint32_t                                    memBarrierCount,
+    const void**                                ppMemBarriers)
 {
     NULLDRV_LOG_FUNC;
 }
 
-ICD_EXPORT void VKAPI vkCmdPipelineBarrier(
-    VkCmdBuffer                              cmdBuffer,
-    const VkPipelineBarrier*                 pBarrier)
+void VKAPI vkCmdPipelineBarrier(
+    VkCmdBuffer                                 cmdBuffer,
+    VkWaitEvent                                 waitEvent,
+    uint32_t                                    pipeEventCount,
+    const VkPipeEvent*                          pPipeEvents,
+    uint32_t                                    memBarrierCount,
+    const void**                                ppMemBarriers)
 {
     NULLDRV_LOG_FUNC;
 }
 
 ICD_EXPORT VkResult VKAPI vkCreateDevice(
-    VkPhysicalGpu                            gpu_,
+    VkPhysicalDevice                            gpu_,
     const VkDeviceCreateInfo*               pCreateInfo,
     VkDevice*                                 pDevice)
 {
@@ -1303,9 +1311,9 @@ ICD_EXPORT VkResult VKAPI vkGetFormatInfo(
     return VK_SUCCESS;
 }
 
-ICD_EXPORT VkResult VKAPI vkGetGpuInfo(
-    VkPhysicalGpu                            gpu_,
-    VkPhysicalGpuInfoType                  infoType,
+ICD_EXPORT VkResult VKAPI vkGetPhysicalDeviceInfo(
+    VkPhysicalDevice                            gpu_,
+    VkPhysicalDeviceInfoType                  infoType,
     size_t*                                     pDataSize,
     void*                                       pData)
 {
@@ -1347,7 +1355,7 @@ ICD_EXPORT VkResult VKAPI vkGetGlobalExtensionInfo(
 }
 
 VkResult VKAPI vkGetPhysicalDeviceExtensionInfo(
-                                               VkPhysicalGpu gpu,
+                                               VkPhysicalDevice gpu,
                                                VkExtensionInfoType infoType,
                                                uint32_t extensionIndex,
                                                size_t*  pDataSize,
@@ -1378,10 +1386,10 @@ VkResult VKAPI vkGetPhysicalDeviceExtensionInfo(
     return VK_SUCCESS;
 }
 
-ICD_EXPORT VkResult VKAPI vkGetMultiGpuCompatibility(
-    VkPhysicalGpu                            gpu0_,
-    VkPhysicalGpu                            gpu1_,
-    VkGpuCompatibilityInfo*                 pInfo)
+ICD_EXPORT VkResult VKAPI vkGetMultiDeviceCompatibility(
+    VkPhysicalDevice                            gpu0_,
+    VkPhysicalDevice                            gpu1_,
+    VkPhysicalDeviceCompatibilityInfo*                 pInfo)
 {
     NULLDRV_LOG_FUNC;
     return VK_SUCCESS;
@@ -1391,7 +1399,7 @@ ICD_EXPORT VkResult VKAPI vkOpenPeerImage(
     VkDevice                                  device,
     const VkPeerImageOpenInfo*             pOpenInfo,
     VkImage*                                  pImage,
-    VkGpuMemory*                             pMem)
+    VkDeviceMemory*                             pMem)
 {
     NULLDRV_LOG_FUNC;
     return VK_SUCCESS;
@@ -1420,7 +1428,7 @@ ICD_EXPORT VkResult VKAPI vkGetImageSubresourceInfo(
     VkResult ret = VK_SUCCESS;
 
     switch (infoType) {
-    case VK_INFO_TYPE_SUBRESOURCE_LAYOUT:
+    case VK_SUBRESOURCE_INFO_TYPE_LAYOUT:
         {
             VkSubresourceLayout *layout = (VkSubresourceLayout *) pData;
 
@@ -1445,7 +1453,7 @@ ICD_EXPORT VkResult VKAPI vkGetImageSubresourceInfo(
 ICD_EXPORT VkResult VKAPI vkAllocMemory(
     VkDevice                                  device,
     const VkMemoryAllocInfo*                pAllocInfo,
-    VkGpuMemory*                             pMem)
+    VkDeviceMemory*                             pMem)
 {
     NULLDRV_LOG_FUNC;
     struct nulldrv_dev *dev = nulldrv_dev(device);
@@ -1454,14 +1462,14 @@ ICD_EXPORT VkResult VKAPI vkAllocMemory(
 }
 
 ICD_EXPORT VkResult VKAPI vkFreeMemory(
-    VkGpuMemory                              mem_)
+    VkDeviceMemory                              mem_)
 {
     NULLDRV_LOG_FUNC;
     return VK_SUCCESS;
 }
 
 ICD_EXPORT VkResult VKAPI vkSetMemoryPriority(
-    VkGpuMemory                              mem_,
+    VkDeviceMemory                              mem_,
     VkMemoryPriority                         priority)
 {
     NULLDRV_LOG_FUNC;
@@ -1469,7 +1477,7 @@ ICD_EXPORT VkResult VKAPI vkSetMemoryPriority(
 }
 
 ICD_EXPORT VkResult VKAPI vkMapMemory(
-    VkGpuMemory                              mem_,
+    VkDeviceMemory                              mem_,
     VkFlags                                   flags,
     void**                                      ppData)
 {
@@ -1483,7 +1491,7 @@ ICD_EXPORT VkResult VKAPI vkMapMemory(
 }
 
 ICD_EXPORT VkResult VKAPI vkUnmapMemory(
-    VkGpuMemory                              mem_)
+    VkDeviceMemory                              mem_)
 {
     NULLDRV_LOG_FUNC;
     return VK_SUCCESS;
@@ -1493,7 +1501,7 @@ ICD_EXPORT VkResult VKAPI vkPinSystemMemory(
     VkDevice                                  device,
     const void*                                 pSysMem,
     size_t                                      memSize,
-    VkGpuMemory*                             pMem)
+    VkDeviceMemory*                             pMem)
 {
     NULLDRV_LOG_FUNC;
     return VK_SUCCESS;
@@ -1502,7 +1510,7 @@ ICD_EXPORT VkResult VKAPI vkPinSystemMemory(
 ICD_EXPORT VkResult VKAPI vkOpenSharedMemory(
     VkDevice                                  device,
     const VkMemoryOpenInfo*                 pOpenInfo,
-    VkGpuMemory*                             pMem)
+    VkDeviceMemory*                             pMem)
 {
     NULLDRV_LOG_FUNC;
     return VK_SUCCESS;
@@ -1511,7 +1519,7 @@ ICD_EXPORT VkResult VKAPI vkOpenSharedMemory(
 ICD_EXPORT VkResult VKAPI vkOpenPeerMemory(
     VkDevice                                  device,
     const VkPeerMemoryOpenInfo*            pOpenInfo,
-    VkGpuMemory*                             pMem)
+    VkDeviceMemory*                             pMem)
 {
     NULLDRV_LOG_FUNC;
     return VK_SUCCESS;
@@ -1527,7 +1535,7 @@ ICD_EXPORT VkResult VKAPI vkCreateInstance(
     inst = (struct nulldrv_instance *) nulldrv_base_create(NULL, sizeof(*inst),
                 VK_DBG_OBJECT_INSTANCE);
     if (!inst)
-        return VK_ERROR_OUT_OF_MEMORY;
+        return VK_ERROR_OUT_OF_HOST_MEMORY;
 
     inst->obj.base.get_info = NULL;
 
@@ -1543,11 +1551,10 @@ ICD_EXPORT VkResult VKAPI vkDestroyInstance(
     return VK_SUCCESS;
 }
 
-ICD_EXPORT VkResult VKAPI vkEnumerateGpus(
+ICD_EXPORT VkResult VKAPI vkEnumeratePhysicalDevices(
     VkInstance                                instance,
-    uint32_t                                    maxGpus,
     uint32_t*                                   pGpuCount,
-    VkPhysicalGpu*                           pGpus)
+    VkPhysicalDevice*                           pGpus)
 {
     NULLDRV_LOG_FUNC;
     VkResult ret;
@@ -1555,12 +1562,12 @@ ICD_EXPORT VkResult VKAPI vkEnumerateGpus(
     *pGpuCount = 1;
     ret = nulldrv_gpu_add(0, 0, 0, &gpu);
     if (ret == VK_SUCCESS)
-        pGpus[0] = (VkPhysicalGpu) gpu;
+        pGpus[0] = (VkPhysicalDevice) gpu;
     return ret;
 }
 
 ICD_EXPORT VkResult VKAPI vkEnumerateLayers(
-    VkPhysicalGpu                            gpu,
+    VkPhysicalDevice                            gpu,
     size_t                                      maxLayerCount,
     size_t                                      maxStringSize,
     size_t*                                     pOutLayerCount,
@@ -1621,8 +1628,8 @@ ICD_EXPORT VkResult VKAPI vkQueueBindObjectMemory(
     VkQueue                                   queue,
     VkObject                                  object,
     uint32_t                                    allocationIdx,
-    VkGpuMemory                              mem_,
-    VkGpuSize                                memOffset)
+    VkDeviceMemory                              mem_,
+    VkDeviceSize                                memOffset)
 {
     NULLDRV_LOG_FUNC;
     return VK_SUCCESS;
@@ -1632,10 +1639,10 @@ ICD_EXPORT VkResult VKAPI vkQueueBindObjectMemoryRange(
     VkQueue                                   queue,
     VkObject                                  object,
     uint32_t                                    allocationIdx,
-    VkGpuSize                                rangeOffset,
-    VkGpuSize                                rangeSize,
-    VkGpuMemory                              mem,
-    VkGpuSize                                memOffset)
+    VkDeviceSize                                rangeOffset,
+    VkDeviceSize                                rangeSize,
+    VkDeviceMemory                              mem,
+    VkDeviceSize                                memOffset)
 {
     NULLDRV_LOG_FUNC;
     return VK_SUCCESS;
@@ -1644,10 +1651,10 @@ ICD_EXPORT VkResult VKAPI vkQueueBindObjectMemoryRange(
 ICD_EXPORT VkResult VKAPI vkQueueBindImageMemoryRange(
     VkQueue                                   queue,
     VkImage                                   image,
-    uint32_t                                    allocationIdx,
-    const VkImageMemoryBindInfo*           pBindInfo,
-    VkGpuMemory                              mem,
-    VkGpuSize                                memOffset)
+    uint32_t                                  allocationIdx,
+    const VkImageMemoryBindInfo*              pBindInfo,
+    VkDeviceMemory                            mem,
+    VkDeviceSize                              memOffset)
 {
     NULLDRV_LOG_FUNC;
     return VK_SUCCESS;
@@ -1740,7 +1747,8 @@ ICD_EXPORT VkResult VKAPI vkGetQueryPoolResults(
     uint32_t                                    startQuery,
     uint32_t                                    queryCount,
     size_t*                                     pDataSize,
-    void*                                       pData)
+    void*                                       pData,
+    VkQueryResultFlags                          flags)
 {
     NULLDRV_LOG_FUNC;
     return VK_SUCCESS;
@@ -1749,7 +1757,7 @@ ICD_EXPORT VkResult VKAPI vkGetQueryPoolResults(
 ICD_EXPORT VkResult VKAPI vkQueueAddMemReferences(
     VkQueue                                     queue,
     uint32_t                                    count,
-    const VkGpuMemory*                          pMems)
+    const VkDeviceMemory*                       pMems)
 {
     NULLDRV_LOG_FUNC;
     return VK_SUCCESS;
@@ -1758,7 +1766,7 @@ ICD_EXPORT VkResult VKAPI vkQueueAddMemReferences(
 ICD_EXPORT VkResult VKAPI vkQueueRemoveMemReferences(
     VkQueue                                     queue,
     uint32_t                                    count,
-    const VkGpuMemory*                          pMems)
+    const VkDeviceMemory*                       pMems)
 {
     NULLDRV_LOG_FUNC;
     return VK_SUCCESS;

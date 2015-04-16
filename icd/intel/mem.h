@@ -36,7 +36,7 @@ struct intel_mem {
     struct intel_base base;
 
     struct intel_bo *bo;
-    VkGpuSize size;
+    VkDeviceSize size;
 };
 
 VkResult intel_mem_alloc(struct intel_dev *dev,
@@ -72,7 +72,7 @@ static inline bool intel_mem_is_busy(struct intel_mem *mem)
     return intel_bo_is_busy(mem->bo);
 }
 
-static inline struct intel_mem *intel_mem(VkGpuMemory mem)
+static inline struct intel_mem *intel_mem(VkDeviceMemory mem)
 {
     return (struct intel_mem *) mem;
 }

@@ -74,7 +74,7 @@ typedef enum _VK_OBJECT_TYPE
     VkObjectTypeQueryPool,
     VkObjectTypeEvent,
     VkObjectTypeQueue,
-    VkObjectTypePhysicalGpu,
+    VkObjectTypePhysicalDevice,
     VkObjectTypeRenderPass,
     VkObjectTypeFramebuffer,
     VkObjectTypeImage,
@@ -83,7 +83,7 @@ typedef enum _VK_OBJECT_TYPE
     VkObjectTypeInstance,
     VkObjectTypeDynamicVpState,
     VkObjectTypeColorAttachmentView,
-    VkObjectTypeGpuMemory,
+    VkObjectTypeDeviceMemory,
     VkObjectTypeDynamicRsState,
     VkObjectTypeFence,
     VkObjectTypeCmdBuffer,
@@ -107,8 +107,8 @@ static const char* string_VK_OBJECT_TYPE(VK_OBJECT_TYPE type) {
             return "DESCRIPTOR_SET_LAYOUT";
         case VkObjectTypeDescriptorSetLayoutChain:
             return "DESCRIPTOR_SET_LAYOUT_CHAIN";
-        case VkObjectTypeGpuMemory:
-            return "GPU_MEMORY";
+        case VkObjectTypeDeviceMemory:
+            return "DEVICE_MEMORY";
         case VkObjectTypeQueue:
             return "QUEUE";
         case VkObjectTypeImage:
@@ -127,8 +127,8 @@ static const char* string_VK_OBJECT_TYPE(VK_OBJECT_TYPE type) {
             return "BUFFER_VIEW";
         case VkObjectTypeDescriptorSet:
             return "DESCRIPTOR_SET";
-        case VkObjectTypePhysicalGpu:
-            return "PHYSICAL_GPU";
+        case VkObjectTypePhysicalDevice:
+            return "PHYSICAL_DEVICE";
         case VkObjectTypeImageView:
             return "IMAGE_VIEW";
         case VkObjectTypeBuffer:

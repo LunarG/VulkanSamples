@@ -34,7 +34,7 @@
 struct intel_buf {
     struct intel_obj obj;
 
-    VkGpuSize size;
+    VkDeviceSize size;
     VkFlags usage;
 };
 

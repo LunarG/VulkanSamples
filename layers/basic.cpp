@@ -49,7 +49,7 @@ static VkLayerDispatchTable * initLayerTable(const VkBaseLayerObject *gpuw)
         return it->second;
     }
 
-    layer_initialize_dispatch_table(pTable, gpuw->pGPA, (VkPhysicalGpu) gpuw->nextObject);
+    layer_initialize_dispatch_table(pTable, gpuw->pGPA, (VkPhysicalDevice) gpuw->nextObject);
 
     return pTable;
 }
@@ -114,7 +114,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkGetGlobalExtensionInfo(
     return VK_SUCCESS;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkCreateDevice(VkPhysicalGpu gpu, const VkDeviceCreateInfo* pCreateInfo, VkDevice* pDevice)
+VK_LAYER_EXPORT VkResult VKAPI vkCreateDevice(VkPhysicalDevice gpu, const VkDeviceCreateInfo* pCreateInfo, VkDevice* pDevice)
 {
     VkLayerDispatchTable* pTable = tableMap[gpu];
 
@@ -135,7 +135,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkGetFormatInfo(VkDevice device, VkFormat format,
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkEnumerateLayers(VkPhysicalGpu gpu, size_t maxLayerCount, size_t maxStringSize, size_t* pOutLayerCount, char* const* pOutLayers, void* pReserved)
+VK_LAYER_EXPORT VkResult VKAPI vkEnumerateLayers(VkPhysicalDevice gpu, size_t maxLayerCount, size_t maxStringSize, size_t* pOutLayerCount, char* const* pOutLayers, void* pReserved)
 {
     if (gpu != NULL)
     {
@@ -151,11 +151,11 @@ VK_LAYER_EXPORT VkResult VKAPI vkEnumerateLayers(VkPhysicalGpu gpu, size_t maxLa
 
         // Example of a layer that is only compatible with Intel's GPUs
         VkBaseLayerObject* gpuw = (VkBaseLayerObject*) pReserved;
-        PFN_vkGetGpuInfo fpGetGpuInfo;
-        VkPhysicalGpuProperties gpuProps;
-        size_t dataSize = sizeof(VkPhysicalGpuProperties);
-        fpGetGpuInfo = (PFN_vkGetGpuInfo) gpuw->pGPA((VkPhysicalGpu) gpuw->nextObject, "vkGetGpuInfo");
-        fpGetGpuInfo((VkPhysicalGpu) gpuw->nextObject, VK_INFO_TYPE_PHYSICAL_GPU_PROPERTIES, &dataSize, &gpuProps);
+        PFN_vkGetPhysicalDeviceInfo fpGetGpuInfo;
+        VkPhysicalDeviceProperties gpuProps;
+        size_t dataSize = sizeof(VkPhysicalDeviceProperties);
+        fpGetGpuInfo = (PFN_vkGetPhysicalDeviceInfo) gpuw->pGPA((VkPhysicalDevice) gpuw->nextObject, "vkGetPhysicalDeviceInfo");
+        fpGetGpuInfo((VkPhysicalDevice) gpuw->nextObject, VK_PHYSICAL_DEVICE_INFO_TYPE_PROPERTIES, &dataSize, &gpuProps);
         if (gpuProps.vendorId == 0x8086)
         {
             *pOutLayerCount = 1;
@@ -168,7 +168,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkEnumerateLayers(VkPhysicalGpu gpu, size_t maxLa
     }
 }
 
-VK_LAYER_EXPORT void * VKAPI vkGetProcAddr(VkPhysicalGpu gpu, const char* pName)
+VK_LAYER_EXPORT void * VKAPI vkGetProcAddr(VkPhysicalDevice gpu, const char* pName)
 {
     if (gpu == NULL)
         return NULL;
@@ -189,6 +189,6 @@ VK_LAYER_EXPORT void * VKAPI vkGetProcAddr(VkPhysicalGpu gpu, const char* pName)
         VkBaseLayerObject* gpuw = (VkBaseLayerObject *) gpu;
         if (gpuw->pGPA == NULL)
             return NULL;
-        return gpuw->pGPA((VkPhysicalGpu) gpuw->nextObject, pName);
+        return gpuw->pGPA((VkPhysicalDevice) gpuw->nextObject, pName);
     }
 }

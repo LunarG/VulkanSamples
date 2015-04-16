@@ -48,21 +48,21 @@ struct app_dev {
     VkDevice obj;
 
 
-    VkFormatProperties format_props[VK_NUM_FMT];
+    VkFormatProperties format_props[VK_NUM_FORMAT];
 };
 
 struct app_gpu {
     uint32_t id;
-    VkPhysicalGpu obj;
+    VkPhysicalDevice obj;
 
-    VkPhysicalGpuProperties props;
-    VkPhysicalGpuPerformance perf;
+    VkPhysicalDeviceProperties props;
+    VkPhysicalDevicePerformance perf;
 
     uint32_t queue_count;
-    VkPhysicalGpuQueueProperties *queue_props;
+    VkPhysicalDeviceQueueProperties *queue_props;
     VkDeviceQueueCreateInfo *queue_reqs;
 
-    VkPhysicalGpuMemoryProperties memory_props;
+    VkPhysicalDeviceMemoryProperties memory_props;
 
     uint32_t extension_count;
     char **extensions;
@@ -83,8 +83,8 @@ static const char *vk_result_string(VkResult err)
     STR(VK_ERROR_UNKNOWN);
     STR(VK_ERROR_UNAVAILABLE);
     STR(VK_ERROR_INITIALIZATION_FAILED);
-    STR(VK_ERROR_OUT_OF_MEMORY);
-    STR(VK_ERROR_OUT_OF_GPU_MEMORY);
+    STR(VK_ERROR_OUT_OF_HOST_MEMORY);
+    STR(VK_ERROR_OUT_OF_DEVICE_MEMORY);
     STR(VK_ERROR_DEVICE_ALREADY_CREATED);
     STR(VK_ERROR_DEVICE_LOST);
     STR(VK_ERROR_INVALID_POINTER);
@@ -119,23 +119,23 @@ static const char *vk_result_string(VkResult err)
     }
 }
 
-static const char *vk_gpu_type_string(VkPhysicalGpuType type)
+static const char *vk_physical_device_type_string(VkPhysicalDeviceType type)
 {
     switch (type) {
-#define STR(r) case VK_GPU_TYPE_ ##r: return #r
+#define STR(r) case VK_PHYSICAL_DEVICE_TYPE_ ##r: return #r
     STR(OTHER);
-    STR(INTEGRATED);
-    STR(DISCRETE);
-    STR(VIRTUAL);
+    STR(INTEGRATED_GPU);
+    STR(DISCRETE_GPU);
+    STR(VIRTUAL_GPU);
 #undef STR
-    default: return "UNKNOWN_GPU";
+    default: return "UNKNOWN_DEVICE";
     }
 }
 
 static const char *vk_format_string(VkFormat fmt)
 {
     switch (fmt) {
-#define STR(r) case VK_FMT_ ##r: return #r
+#define STR(r) case VK_FORMAT_ ##r: return #r
     STR(UNDEFINED);
     STR(R4G4_UNORM);
     STR(R4G4_USCALED);
@@ -312,13 +312,13 @@ static void app_dev_init_formats(struct app_dev *dev)
 {
     VkFormat f;
 
-    for (f = 0; f < VK_NUM_FMT; f++) {
+    for (f = 0; f < VK_NUM_FORMAT; f++) {
         const VkFormat fmt = f;
         VkResult err;
         size_t size = sizeof(dev->format_props[f]);
 
         err = vkGetFormatInfo(dev->obj, fmt,
-                               VK_INFO_TYPE_FORMAT_PROPERTIES,
+                               VK_FORMAT_INFO_TYPE_PROPERTIES,
                                &size, &dev->format_props[f]);
         if (err) {
             memset(&dev->format_props[f], 0,
@@ -384,7 +384,7 @@ static void app_gpu_init_extensions(struct app_gpu *gpu)
     gpu->extensions =
             malloc(sizeof(gpu->extensions[0]) * gpu->extension_count);
     if (!gpu->extensions)
-        ERR_EXIT(VK_ERROR_OUT_OF_MEMORY);
+        ERR_EXIT(VK_ERROR_OUT_OF_HOST_MEMORY);
 
     gpu->extension_count = 0;
     for (i = 0; i < ARRAY_SIZE(known_extensions); i++) {
@@ -396,7 +396,7 @@ static void app_gpu_init_extensions(struct app_gpu *gpu)
     }
 }
 
-static void app_gpu_init(struct app_gpu *gpu, uint32_t id, VkPhysicalGpu obj)
+static void app_gpu_init(struct app_gpu *gpu, uint32_t id, VkPhysicalDevice obj)
 {
     size_t size;
     VkResult err;
@@ -407,22 +407,22 @@ static void app_gpu_init(struct app_gpu *gpu, uint32_t id, VkPhysicalGpu obj)
     gpu->id = id;
     gpu->obj = obj;
     size = sizeof(gpu->props);
-    err = vkGetGpuInfo(gpu->obj,
-                        VK_INFO_TYPE_PHYSICAL_GPU_PROPERTIES,
+    err = vkGetPhysicalDeviceInfo(gpu->obj,
+                        VK_PHYSICAL_DEVICE_INFO_TYPE_PROPERTIES,
                         &size, &gpu->props);
     if (err || size != sizeof(gpu->props))
         ERR_EXIT(err);
 
     size = sizeof(gpu->perf);
-    err = vkGetGpuInfo(gpu->obj,
-                        VK_INFO_TYPE_PHYSICAL_GPU_PERFORMANCE,
+    err = vkGetPhysicalDeviceInfo(gpu->obj,
+                        VK_PHYSICAL_DEVICE_INFO_TYPE_PERFORMANCE,
                         &size, &gpu->perf);
     if (err || size != sizeof(gpu->perf))
         ERR_EXIT(err);
 
     /* get queue count */
-    err = vkGetGpuInfo(gpu->obj,
-                        VK_INFO_TYPE_PHYSICAL_GPU_QUEUE_PROPERTIES,
+    err = vkGetPhysicalDeviceInfo(gpu->obj,
+                        VK_PHYSICAL_DEVICE_INFO_TYPE_QUEUE_PROPERTIES,
                         &size, NULL);
     if (err || size % sizeof(gpu->queue_props[0]))
         ERR_EXIT(err);
@@ -432,9 +432,9 @@ static void app_gpu_init(struct app_gpu *gpu, uint32_t id, VkPhysicalGpu obj)
             malloc(sizeof(gpu->queue_props[0]) * gpu->queue_count);
     size = sizeof(gpu->queue_props[0]) * gpu->queue_count;
     if (!gpu->queue_props)
-        ERR_EXIT(VK_ERROR_OUT_OF_MEMORY);
-    err = vkGetGpuInfo(gpu->obj,
-                        VK_INFO_TYPE_PHYSICAL_GPU_QUEUE_PROPERTIES,
+        ERR_EXIT(VK_ERROR_OUT_OF_HOST_MEMORY);
+    err = vkGetPhysicalDeviceInfo(gpu->obj,
+                        VK_PHYSICAL_DEVICE_INFO_TYPE_QUEUE_PROPERTIES,
                         &size, gpu->queue_props);
     if (err || size != sizeof(gpu->queue_props[0]) * gpu->queue_count)
         ERR_EXIT(err);
@@ -443,15 +443,15 @@ static void app_gpu_init(struct app_gpu *gpu, uint32_t id, VkPhysicalGpu obj)
     size = sizeof(*gpu->queue_reqs) * gpu->queue_count;
     gpu->queue_reqs = malloc(sizeof(*gpu->queue_reqs) * gpu->queue_count);
     if (!gpu->queue_reqs)
-        ERR_EXIT(VK_ERROR_OUT_OF_MEMORY);
+        ERR_EXIT(VK_ERROR_OUT_OF_HOST_MEMORY);
     for (i = 0; i < gpu->queue_count; i++) {
         gpu->queue_reqs[i].queueNodeIndex = i;
         gpu->queue_reqs[i].queueCount = gpu->queue_props[i].queueCount;
     }
 
     size = sizeof(gpu->memory_props);
-    err = vkGetGpuInfo(gpu->obj,
-                        VK_INFO_TYPE_PHYSICAL_GPU_MEMORY_PROPERTIES,
+    err = vkGetPhysicalDeviceInfo(gpu->obj,
+                        VK_PHYSICAL_DEVICE_INFO_TYPE_MEMORY_PROPERTIES,
                         &size, &gpu->memory_props);
     if (err || size != sizeof(gpu->memory_props))
         ERR_EXIT(err);
@@ -492,21 +492,21 @@ static void app_dev_dump_format_props(const struct app_dev *dev, VkFormat fmt)
             continue;
 
         printf("\t%s tiling image =%s%s%s\n", tilings[i].name,
-                (tilings[i].flags & VK_FORMAT_SAMPLED_IMAGE_BIT)      ? " sampled" : "",
-                (tilings[i].flags & VK_FORMAT_STORAGE_IMAGE_BIT)   ? " storage" : "",
-                (tilings[i].flags & VK_FORMAT_STORAGE_IMAGE_ATOMIC_BIT) ? " atomic" : "");
+                (tilings[i].flags & VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT)      ? " sampled" : "",
+                (tilings[i].flags & VK_FORMAT_FEATURE_STORAGE_IMAGE_BIT)   ? " storage" : "",
+                (tilings[i].flags & VK_FORMAT_FEATURE_STORAGE_IMAGE_ATOMIC_BIT) ? " atomic" : "");
         printf("\t%s tiling texel =%s%s%s\n", tilings[i].name,
-                (tilings[i].flags & VK_FORMAT_UNIFORM_TEXEL_BUFFER_BIT)      ? " TBO" : "",
-                (tilings[i].flags & VK_FORMAT_STORAGE_TEXEL_BUFFER_BIT)   ? " IBO" : "",
-                (tilings[i].flags & VK_FORMAT_STORAGE_TEXEL_BUFFER_ATOMIC_BIT) ? " atomic" : "");
+                (tilings[i].flags & VK_FORMAT_FEATURE_UNIFORM_TEXEL_BUFFER_BIT)      ? " TBO" : "",
+                (tilings[i].flags & VK_FORMAT_FEATURE_STORAGE_TEXEL_BUFFER_BIT)   ? " IBO" : "",
+                (tilings[i].flags & VK_FORMAT_FEATURE_STORAGE_TEXEL_BUFFER_ATOMIC_BIT) ? " atomic" : "");
         printf("\t%s tiling attachment =%s%s%s\n", tilings[i].name,
-                (tilings[i].flags & VK_FORMAT_COLOR_ATTACHMENT_BIT) ? " color" : "",
-                (tilings[i].flags & VK_FORMAT_COLOR_ATTACHMENT_BLEND_BIT) ? " blend" : "",
-                (tilings[i].flags & VK_FORMAT_DEPTH_STENCIL_ATTACHMENT_BIT)       ? " depth/stencil" : "");
+                (tilings[i].flags & VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT) ? " color" : "",
+                (tilings[i].flags & VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BLEND_BIT) ? " blend" : "",
+                (tilings[i].flags & VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT)       ? " depth/stencil" : "");
         printf("\t%s tiling vertex = %u\n", tilings[i].name,
-                (bool) (tilings[i].flags & VK_FORMAT_VERTEX_BUFFER_BIT));
+                (bool) (tilings[i].flags & VK_FORMAT_FEATURE_VERTEX_BUFFER_BIT));
         printf("\t%s tiling conversion = %u\n", tilings[i].name,
-                (bool) (tilings[i].flags & VK_FORMAT_CONVERSION_BIT));
+                (bool) (tilings[i].flags & VK_FORMAT_FEATURE_CONVERSION_BIT));
     }
 }
 
@@ -516,24 +516,24 @@ app_dev_dump(const struct app_dev *dev)
 {
     VkFormat fmt;
 
-    for (fmt = 0; fmt < VK_NUM_FMT; fmt++) {
+    for (fmt = 0; fmt < VK_NUM_FORMAT; fmt++) {
         app_dev_dump_format_props(dev, fmt);
     }
 }
 
 static void app_gpu_dump_multi_compat(const struct app_gpu *gpu, const struct app_gpu *other,
-        const VkGpuCompatibilityInfo *info)
+        const VkPhysicalDeviceCompatibilityInfo *info)
 {
-    printf("VkGpuCompatibilityInfo[GPU%d]\n", other->id);
+    printf("VkPhysicalDeviceCompatibilityInfo[GPU%d]\n", other->id);
 
-#define TEST(info, b) printf(#b " = %u\n", (bool) (info->compatibilityFlags & VK_GPU_COMPAT_ ##b## _BIT))
-    TEST(info, ASIC_FEATURES);
+#define TEST(info, b) printf(#b " = %u\n", (bool) (info->compatibilityFlags & VK_PHYSICAL_DEVICE_COMPATIBILITY_ ##b## _BIT))
+    TEST(info, FEATURES);
     TEST(info, IQ_MATCH);
     TEST(info, PEER_TRANSFER);
     TEST(info, SHARED_MEMORY);
     TEST(info, SHARED_SYNC);
-    TEST(info, SHARED_GPU0_DISPLAY);
-    TEST(info, SHARED_GPU1_DISPLAY);
+    TEST(info, SHARED_DEVICE0_DISPLAY);
+    TEST(info, SHARED_DEVICE1_DISPLAY);
 #undef TEST
 }
 
@@ -544,12 +544,12 @@ static void app_gpu_multi_compat(struct app_gpu *gpus, uint32_t gpu_count)
 
         for (i = 0; i < gpu_count; i++) {
                 for (j = 0; j < gpu_count; j++) {
-                        VkGpuCompatibilityInfo info;
+                        VkPhysicalDeviceCompatibilityInfo info;
 
                         if (i == j)
                                 continue;
 
-                        err = vkGetMultiGpuCompatibility(gpus[i].obj,
+                        err = vkGetMultiDeviceCompatibility(gpus[i].obj,
                                         gpus[j].obj, &info);
                         if (err)
                                 ERR_EXIT(err);
@@ -561,15 +561,15 @@ static void app_gpu_multi_compat(struct app_gpu *gpus, uint32_t gpu_count)
 
 static void app_gpu_dump_props(const struct app_gpu *gpu)
 {
-    const VkPhysicalGpuProperties *props = &gpu->props;
+    const VkPhysicalDeviceProperties *props = &gpu->props;
 
-    printf("VkPhysicalGpuProperties\n");
+    printf("VkPhysicalDeviceProperties\n");
     printf("\tapiVersion = %u\n",                   props->apiVersion);
     printf("\tdriverVersion = %u\n",                props->driverVersion);
     printf("\tvendorId = 0x%04x\n",                 props->vendorId);
     printf("\tdeviceId = 0x%04x\n",                 props->deviceId);
-    printf("\tgpuType = %s\n",                      vk_gpu_type_string(props->gpuType));
-    printf("\tgpuName = %s\n",                      props->gpuName);
+    printf("\tdeviceType = %s\n",                   vk_physical_device_type_string(props->deviceType));
+    printf("\tdeviceName = %s\n",                   props->deviceName);
     printf("\tmaxInlineMemoryUpdateSize = %zu\n",   props->maxInlineMemoryUpdateSize);
     printf("\tmaxBoundDescriptorSets = %u\n",       props->maxBoundDescriptorSets);
     printf("\tmaxThreadGroupSize = %u\n",           props->maxThreadGroupSize);
@@ -579,10 +579,10 @@ static void app_gpu_dump_props(const struct app_gpu *gpu)
 
 static void app_gpu_dump_perf(const struct app_gpu *gpu)
 {
-    const VkPhysicalGpuPerformance *perf = &gpu->perf;
+    const VkPhysicalDevicePerformance *perf = &gpu->perf;
 
-    printf("VkPhysicalGpuPerformance\n");
-    printf("\tmaxGpuClock = %f\n",      perf->maxGpuClock);
+    printf("VkPhysicalDevicePerformance\n");
+    printf("\tmaxGpuClock = %f\n",      perf->maxDeviceClock);
     printf("\taluPerClock = %f\n",      perf->aluPerClock);
     printf("\ttexPerClock = %f\n",      perf->texPerClock);
     printf("\tprimsPerClock = %f\n",    perf->primsPerClock);
@@ -605,9 +605,9 @@ static void app_gpu_dump_extensions(const struct app_gpu *gpu)
 
 static void app_gpu_dump_queue_props(const struct app_gpu *gpu, uint32_t id)
 {
-    const VkPhysicalGpuQueueProperties *props = &gpu->queue_props[id];
+    const VkPhysicalDeviceQueueProperties *props = &gpu->queue_props[id];
 
-    printf("VkPhysicalGpuQueueProperties[%d]\n", id);
+    printf("VkPhysicalDeviceQueueProperties[%d]\n", id);
     printf("\tqueueFlags = %c%c%c%c\n",
             (props->queueFlags & VK_QUEUE_GRAPHICS_BIT) ? 'G' : '.',
             (props->queueFlags & VK_QUEUE_COMPUTE_BIT)  ? 'C' : '.',
@@ -621,9 +621,9 @@ static void app_gpu_dump_queue_props(const struct app_gpu *gpu, uint32_t id)
 
 static void app_gpu_dump_memory_props(const struct app_gpu *gpu)
 {
-    const VkPhysicalGpuMemoryProperties *props = &gpu->memory_props;
+    const VkPhysicalDeviceMemoryProperties *props = &gpu->memory_props;
 
-    printf("VkPhysicalGpuMemoryProperties\n");
+    printf("VkPhysicalDeviceMemoryProperties\n");
     printf("\tsupportsMigration = %u\n",                props->supportsMigration);
     printf("\tsupportsPinning = %u\n",                  props->supportsPinning);
 }
@@ -668,7 +668,7 @@ int main(int argc, char **argv)
         .ppEnabledExtensionNames = NULL,
     };
     struct app_gpu gpus[MAX_GPUS];
-    VkPhysicalGpu objs[MAX_GPUS];
+    VkPhysicalDevice objs[MAX_GPUS];
     VkInstance inst;
     uint32_t gpu_count, i;
     VkResult err;

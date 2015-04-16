@@ -506,16 +506,16 @@ void cmd_batch_flush_all(struct intel_cmd *cmd);
 
 void cmd_batch_depth_count(struct intel_cmd *cmd,
                            struct intel_bo *bo,
-                           VkGpuSize offset);
+                           VkDeviceSize offset);
 
 void cmd_batch_timestamp(struct intel_cmd *cmd,
                          struct intel_bo *bo,
-                         VkGpuSize offset);
+                         VkDeviceSize offset);
 
 void cmd_batch_immediate(struct intel_cmd *cmd,
                          uint32_t pipe_control_flags,
                          struct intel_bo *bo,
-                         VkGpuSize offset,
+                         VkDeviceSize offset,
                          uint64_t val);
 
 void cmd_draw_meta(struct intel_cmd *cmd, const struct intel_cmd_meta *meta);

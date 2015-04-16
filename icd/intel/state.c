@@ -118,9 +118,9 @@ viewport_state_alloc_cmd(struct intel_dynamic_vp *state,
     state->cmd_len += 2 * info->viewportAndScissorCount;
 
     state->cmd = intel_alloc(state, sizeof(uint32_t) * state->cmd_len,
-            0, VK_SYSTEM_ALLOC_INTERNAL);
+            0, VK_SYSTEM_ALLOC_TYPE_INTERNAL);
     if (!state->cmd)
-        return VK_ERROR_OUT_OF_MEMORY;
+        return VK_ERROR_OUT_OF_HOST_MEMORY;
 
     return VK_SUCCESS;
 }
@@ -232,7 +232,7 @@ VkResult intel_viewport_state_create(struct intel_dev *dev,
             sizeof(*state), dev->base.dbg, VK_DBG_OBJECT_VIEWPORT_STATE,
             info, 0);
     if (!state)
-        return VK_ERROR_OUT_OF_MEMORY;
+        return VK_ERROR_OUT_OF_HOST_MEMORY;
 
     state->obj.destroy = viewport_state_destroy;
 
@@ -270,7 +270,7 @@ VkResult intel_raster_state_create(struct intel_dev *dev,
             sizeof(*state), dev->base.dbg, VK_DBG_OBJECT_RASTER_STATE,
             info, 0);
     if (!state)
-        return VK_ERROR_OUT_OF_MEMORY;
+        return VK_ERROR_OUT_OF_HOST_MEMORY;
 
     state->obj.destroy = raster_state_destroy;
     state->rs_info = *info;
@@ -302,7 +302,7 @@ VkResult intel_blend_state_create(struct intel_dev *dev,
             sizeof(*state), dev->base.dbg, VK_DBG_OBJECT_COLOR_BLEND_STATE,
             info, 0);
     if (!state)
-        return VK_ERROR_OUT_OF_MEMORY;
+        return VK_ERROR_OUT_OF_HOST_MEMORY;
 
     state->obj.destroy = blend_state_destroy;
     state->cb_info = *info;
@@ -334,7 +334,7 @@ VkResult intel_ds_state_create(struct intel_dev *dev,
             sizeof(*state), dev->base.dbg, VK_DBG_OBJECT_DEPTH_STENCIL_STATE,
             info, 0);
     if (!state)
-        return VK_ERROR_OUT_OF_MEMORY;
+        return VK_ERROR_OUT_OF_HOST_MEMORY;
 
     state->obj.destroy = ds_state_destroy;
 

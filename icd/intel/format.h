@@ -38,12 +38,12 @@ static inline bool intel_format_has_depth(const struct intel_gpu *gpu,
     bool has_depth = false;
 
     switch (format) {
-    case VK_FMT_D16_UNORM:
-    case VK_FMT_D24_UNORM:
-    case VK_FMT_D32_SFLOAT:
-    /* VK_FMT_D16_UNORM_S8_UINT is unsupported */
-    case VK_FMT_D24_UNORM_S8_UINT:
-    case VK_FMT_D32_SFLOAT_S8_UINT:
+    case VK_FORMAT_D16_UNORM:
+    case VK_FORMAT_D24_UNORM:
+    case VK_FORMAT_D32_SFLOAT:
+    /* VK_FORMAT_D16_UNORM_S8_UINT is unsupported */
+    case VK_FORMAT_D24_UNORM_S8_UINT:
+    case VK_FORMAT_D32_SFLOAT_S8_UINT:
         has_depth = true;
         break;
     default:

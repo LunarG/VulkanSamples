@@ -33,7 +33,7 @@
 
 static inline bool icd_format_is_undef(VkFormat format)
 {
-    return (format == VK_FMT_UNDEFINED);
+    return (format == VK_FORMAT_UNDEFINED);
 }
 
 bool icd_format_is_ds(VkFormat format);

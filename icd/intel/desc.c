@@ -124,9 +124,9 @@ VkResult intel_desc_region_create(struct intel_dev *dev,
     const uint32_t sampler_count = 16384;
     struct intel_desc_region *region;
 
-    region = intel_alloc(dev, sizeof(*region), 0, VK_SYSTEM_ALLOC_INTERNAL);
+    region = intel_alloc(dev, sizeof(*region), 0, VK_SYSTEM_ALLOC_TYPE_INTERNAL);
     if (!region)
-        return VK_ERROR_OUT_OF_MEMORY;
+        return VK_ERROR_OUT_OF_HOST_MEMORY;
 
     memset(region, 0, sizeof(*region));
 
@@ -140,18 +140,18 @@ VkResult intel_desc_region_create(struct intel_dev *dev,
             region->sampler_desc_size * sampler_count);
 
     region->surfaces = intel_alloc(dev, region->size.surface,
-            64, VK_SYSTEM_ALLOC_INTERNAL);
+            64, VK_SYSTEM_ALLOC_TYPE_INTERNAL);
     if (!region->surfaces) {
         intel_free(dev, region);
-        return VK_ERROR_OUT_OF_MEMORY;
+        return VK_ERROR_OUT_OF_HOST_MEMORY;
     }
 
     region->samplers = intel_alloc(dev, region->size.sampler,
-            64, VK_SYSTEM_ALLOC_INTERNAL);
+            64, VK_SYSTEM_ALLOC_TYPE_INTERNAL);
     if (!region->samplers) {
         intel_free(dev, region->surfaces);
         intel_free(dev, region);
-        return VK_ERROR_OUT_OF_MEMORY;
+        return VK_ERROR_OUT_OF_HOST_MEMORY;
     }
 
     *region_ret = region;
@@ -234,7 +234,7 @@ VkResult intel_desc_region_alloc(struct intel_desc_region *region,
     intel_desc_offset_add(end, &region->cur, &alloc);
 
     if (!intel_desc_offset_within(end, &region->size))
-        return VK_ERROR_OUT_OF_MEMORY;
+        return VK_ERROR_OUT_OF_HOST_MEMORY;
 
     /* increment the writer pointer */
     region->cur = *end;
@@ -348,7 +348,7 @@ void intel_desc_region_copy(struct intel_desc_region *region,
 
 void intel_desc_region_read_surface(const struct intel_desc_region *region,
                                     const struct intel_desc_offset *offset,
-                                    VkPipelineShaderStage stage,
+                                    VkShaderStage stage,
                                     const struct intel_mem **mem,
                                     bool *read_only,
                                     const uint32_t **cmd,
@@ -421,7 +421,7 @@ VkResult intel_desc_pool_create(struct intel_dev *dev,
             sizeof(*pool), dev->base.dbg, VK_DBG_OBJECT_DESCRIPTOR_POOL,
             info, 0);
     if (!pool)
-        return VK_ERROR_OUT_OF_MEMORY;
+        return VK_ERROR_OUT_OF_HOST_MEMORY;
 
     pool->dev = dev;
 
@@ -458,7 +458,7 @@ VkResult intel_desc_pool_alloc(struct intel_desc_pool *pool,
     intel_desc_offset_add(end, &pool->cur, &layout->region_size);
 
     if (!intel_desc_offset_within(end, &pool->region_end))
-        return VK_ERROR_OUT_OF_MEMORY;
+        return VK_ERROR_OUT_OF_HOST_MEMORY;
 
     /* increment the writer pointer */
     pool->cur = *end;
@@ -492,7 +492,7 @@ VkResult intel_desc_set_create(struct intel_dev *dev,
             sizeof(*set), dev->base.dbg, VK_DBG_OBJECT_DESCRIPTOR_SET,
             NULL, 0);
     if (!set)
-        return VK_ERROR_OUT_OF_MEMORY;
+        return VK_ERROR_OUT_OF_HOST_MEMORY;
 
     set->region = dev->desc_region;
     ret = intel_desc_pool_alloc(pool, layout,
@@ -711,9 +711,9 @@ static VkResult desc_layout_init_bindings(struct intel_desc_layout *layout,
 
     /* allocate bindings */
     layout->bindings = intel_alloc(layout, sizeof(layout->bindings[0]) *
-            info->count, 0, VK_SYSTEM_ALLOC_INTERNAL);
+            info->count, 0, VK_SYSTEM_ALLOC_TYPE_INTERNAL);
     if (!layout->bindings)
-        return VK_ERROR_OUT_OF_MEMORY;
+        return VK_ERROR_OUT_OF_HOST_MEMORY;
 
     memset(layout->bindings, 0, sizeof(layout->bindings[0]) * info->count);
     layout->binding_count = info->count;
@@ -766,9 +766,9 @@ static VkResult desc_layout_init_bindings(struct intel_desc_layout *layout,
             } else {
                 binding->immutable_samplers = intel_alloc(layout,
                         sizeof(binding->immutable_samplers[0]) * lb->count,
-                        0, VK_SYSTEM_ALLOC_INTERNAL);
+                        0, VK_SYSTEM_ALLOC_TYPE_INTERNAL);
                 if (!binding->immutable_samplers)
-                    return VK_ERROR_OUT_OF_MEMORY;
+                    return VK_ERROR_OUT_OF_HOST_MEMORY;
 
                 for (j = 0; j < lb->count; j++) {
                     binding->immutable_samplers[j] =
@@ -799,7 +799,7 @@ VkResult intel_desc_layout_create(struct intel_dev *dev,
             sizeof(*layout), dev->base.dbg,
             VK_DBG_OBJECT_DESCRIPTOR_SET_LAYOUT, info, 0);
     if (!layout)
-        return VK_ERROR_OUT_OF_MEMORY;
+        return VK_ERROR_OUT_OF_HOST_MEMORY;
 
     ret = desc_layout_init_bindings(layout, dev->desc_region, info);
     if (ret != VK_SUCCESS) {
@@ -848,21 +848,21 @@ VkResult intel_desc_layout_chain_create(struct intel_dev *dev,
         intel_base_create(&dev->base.handle, sizeof(*chain), dev->base.dbg,
                 VK_DBG_OBJECT_DESCRIPTOR_SET_LAYOUT_CHAIN, NULL, 0);
     if (!chain)
-        return VK_ERROR_OUT_OF_MEMORY;
+        return VK_ERROR_OUT_OF_HOST_MEMORY;
 
     chain->layouts = intel_alloc(chain, sizeof(chain->layouts[0]) * count,
-            0, VK_SYSTEM_ALLOC_INTERNAL);
+            0, VK_SYSTEM_ALLOC_TYPE_INTERNAL);
     if (!chain) {
         intel_desc_layout_chain_destroy(chain);
-        return VK_ERROR_OUT_OF_MEMORY;
+        return VK_ERROR_OUT_OF_HOST_MEMORY;
     }
 
     chain->dynamic_desc_indices = intel_alloc(chain,
             sizeof(chain->dynamic_desc_indices[0]) * count,
-            0, VK_SYSTEM_ALLOC_INTERNAL);
+            0, VK_SYSTEM_ALLOC_TYPE_INTERNAL);
     if (!chain->dynamic_desc_indices) {
         intel_desc_layout_chain_destroy(chain);
-        return VK_ERROR_OUT_OF_MEMORY;
+        return VK_ERROR_OUT_OF_HOST_MEMORY;
     }
 
     for (i = 0; i < count; i++) {

@@ -41,7 +41,7 @@ public:
 
     void set_solid_pattern(const std::vector<uint8_t> &solid);
 
-    VkGpuSize buffer_size() const;
+    VkDeviceSize buffer_size() const;
     bool fill(Buffer &buf) const { return walk(FILL, buf); }
     bool fill(Image &img) const { return walk(FILL, img); }
     bool check(Buffer &buf) const { return walk(CHECK, buf); }
@@ -87,7 +87,7 @@ ImageChecker::ImageChecker(const VkImageCreateInfo &info)
     : info_(info), regions_(), pattern_(HASH)
 {
     // create a region for every mip level in array slice 0
-    VkGpuSize offset = 0;
+    VkDeviceSize offset = 0;
     for (uint32_t lv = 0; lv < info_.mipLevels; lv++) {
         VkBufferImageCopy region = {};
 
@@ -97,14 +97,14 @@ ImageChecker::ImageChecker(const VkImageCreateInfo &info)
         region.imageExtent = Image::extent(info_.extent, lv);
 
         if (info_.usage & VK_IMAGE_USAGE_DEPTH_STENCIL_BIT) {
-            if (info_.format != VK_FMT_S8_UINT) {
+            if (info_.format != VK_FORMAT_S8_UINT) {
                 region.imageSubresource.aspect = VK_IMAGE_ASPECT_DEPTH;
                 regions_.push_back(region);
             }
 
-            if (info_.format == VK_FMT_D16_UNORM_S8_UINT ||
-                info_.format == VK_FMT_D32_SFLOAT_S8_UINT ||
-                info_.format == VK_FMT_S8_UINT) {
+            if (info_.format == VK_FORMAT_D16_UNORM_S8_UINT ||
+                info_.format == VK_FORMAT_D32_SFLOAT_S8_UINT ||
+                info_.format == VK_FORMAT_S8_UINT) {
                 region.imageSubresource.aspect = VK_IMAGE_ASPECT_STENCIL;
                 regions_.push_back(region);
             }
@@ -119,7 +119,7 @@ ImageChecker::ImageChecker(const VkImageCreateInfo &info)
     // arraySize should be limited in our tests.  If this proves to be an
     // issue, we can store only the regions for array slice 0 and be smart.
     if (info_.arraySize > 1) {
-        const VkGpuSize slice_pitch = offset;
+        const VkDeviceSize slice_pitch = offset;
         const uint32_t slice_region_count = regions_.size();
 
         regions_.reserve(slice_region_count * info_.arraySize);
@@ -139,7 +139,7 @@ ImageChecker::ImageChecker(const VkImageCreateInfo &info)
 ImageChecker::ImageChecker(const VkImageCreateInfo &info, const std::vector<VkImageSubresourceRange> &ranges)
     : info_(info), regions_(), pattern_(HASH)
 {
-    VkGpuSize offset = 0;
+    VkDeviceSize offset = 0;
     for (std::vector<VkImageSubresourceRange>::const_iterator it = ranges.begin();
          it != ranges.end(); it++) {
         for (uint32_t lv = 0; lv < it->mipLevels; lv++) {
@@ -182,9 +182,9 @@ VkSubresourceLayout ImageChecker::buffer_layout(const VkBufferImageCopy &region)
     return layout;
 }
 
-VkGpuSize ImageChecker::buffer_size() const
+VkDeviceSize ImageChecker::buffer_size() const
 {
-    VkGpuSize size = 0;
+    VkDeviceSize size = 0;
 
     for (std::vector<VkBufferImageCopy>::const_iterator it = regions_.begin();
          it != regions_.end(); it++) {
@@ -301,182 +301,182 @@ size_t get_format_size(VkFormat format)
     static const struct format_info {
         size_t size;
         uint32_t channel_count;
-    } format_table[VK_NUM_FMT] = {
-        [VK_FMT_UNDEFINED]            = { 0,  0 },
-        [VK_FMT_R4G4_UNORM]           = { 1,  2 },
-        [VK_FMT_R4G4_USCALED]         = { 1,  2 },
-        [VK_FMT_R4G4B4A4_UNORM]       = { 2,  4 },
-        [VK_FMT_R4G4B4A4_USCALED]     = { 2,  4 },
-        [VK_FMT_R5G6B5_UNORM]         = { 2,  3 },
-        [VK_FMT_R5G6B5_USCALED]       = { 2,  3 },
-        [VK_FMT_R5G5B5A1_UNORM]       = { 2,  4 },
-        [VK_FMT_R5G5B5A1_USCALED]     = { 2,  4 },
-        [VK_FMT_R8_UNORM]             = { 1,  1 },
-        [VK_FMT_R8_SNORM]             = { 1,  1 },
-        [VK_FMT_R8_USCALED]           = { 1,  1 },
-        [VK_FMT_R8_SSCALED]           = { 1,  1 },
-        [VK_FMT_R8_UINT]              = { 1,  1 },
-        [VK_FMT_R8_SINT]              = { 1,  1 },
-        [VK_FMT_R8_SRGB]              = { 1,  1 },
-        [VK_FMT_R8G8_UNORM]           = { 2,  2 },
-        [VK_FMT_R8G8_SNORM]           = { 2,  2 },
-        [VK_FMT_R8G8_USCALED]         = { 2,  2 },
-        [VK_FMT_R8G8_SSCALED]         = { 2,  2 },
-        [VK_FMT_R8G8_UINT]            = { 2,  2 },
-        [VK_FMT_R8G8_SINT]            = { 2,  2 },
-        [VK_FMT_R8G8_SRGB]            = { 2,  2 },
-        [VK_FMT_R8G8B8_UNORM]         = { 3,  3 },
-        [VK_FMT_R8G8B8_SNORM]         = { 3,  3 },
-        [VK_FMT_R8G8B8_USCALED]       = { 3,  3 },
-        [VK_FMT_R8G8B8_SSCALED]       = { 3,  3 },
-        [VK_FMT_R8G8B8_UINT]          = { 3,  3 },
-        [VK_FMT_R8G8B8_SINT]          = { 3,  3 },
-        [VK_FMT_R8G8B8_SRGB]          = { 3,  3 },
-        [VK_FMT_R8G8B8A8_UNORM]       = { 4,  4 },
-        [VK_FMT_R8G8B8A8_SNORM]       = { 4,  4 },
-        [VK_FMT_R8G8B8A8_USCALED]     = { 4,  4 },
-        [VK_FMT_R8G8B8A8_SSCALED]     = { 4,  4 },
-        [VK_FMT_R8G8B8A8_UINT]        = { 4,  4 },
-        [VK_FMT_R8G8B8A8_SINT]        = { 4,  4 },
-        [VK_FMT_R8G8B8A8_SRGB]        = { 4,  4 },
-        [VK_FMT_R10G10B10A2_UNORM]    = { 4,  4 },
-        [VK_FMT_R10G10B10A2_SNORM]    = { 4,  4 },
-        [VK_FMT_R10G10B10A2_USCALED]  = { 4,  4 },
-        [VK_FMT_R10G10B10A2_SSCALED]  = { 4,  4 },
-        [VK_FMT_R10G10B10A2_UINT]     = { 4,  4 },
-        [VK_FMT_R10G10B10A2_SINT]     = { 4,  4 },
-        [VK_FMT_R16_UNORM]            = { 2,  1 },
-        [VK_FMT_R16_SNORM]            = { 2,  1 },
-        [VK_FMT_R16_USCALED]          = { 2,  1 },
-        [VK_FMT_R16_SSCALED]          = { 2,  1 },
-        [VK_FMT_R16_UINT]             = { 2,  1 },
-        [VK_FMT_R16_SINT]             = { 2,  1 },
-        [VK_FMT_R16_SFLOAT]           = { 2,  1 },
-        [VK_FMT_R16G16_UNORM]         = { 4,  2 },
-        [VK_FMT_R16G16_SNORM]         = { 4,  2 },
-        [VK_FMT_R16G16_USCALED]       = { 4,  2 },
-        [VK_FMT_R16G16_SSCALED]       = { 4,  2 },
-        [VK_FMT_R16G16_UINT]          = { 4,  2 },
-        [VK_FMT_R16G16_SINT]          = { 4,  2 },
-        [VK_FMT_R16G16_SFLOAT]        = { 4,  2 },
-        [VK_FMT_R16G16B16_UNORM]      = { 6,  3 },
-        [VK_FMT_R16G16B16_SNORM]      = { 6,  3 },
-        [VK_FMT_R16G16B16_USCALED]    = { 6,  3 },
-        [VK_FMT_R16G16B16_SSCALED]    = { 6,  3 },
-        [VK_FMT_R16G16B16_UINT]       = { 6,  3 },
-        [VK_FMT_R16G16B16_SINT]       = { 6,  3 },
-        [VK_FMT_R16G16B16_SFLOAT]     = { 6,  3 },
-        [VK_FMT_R16G16B16A16_UNORM]   = { 8,  4 },
-        [VK_FMT_R16G16B16A16_SNORM]   = { 8,  4 },
-        [VK_FMT_R16G16B16A16_USCALED] = { 8,  4 },
-        [VK_FMT_R16G16B16A16_SSCALED] = { 8,  4 },
-        [VK_FMT_R16G16B16A16_UINT]    = { 8,  4 },
-        [VK_FMT_R16G16B16A16_SINT]    = { 8,  4 },
-        [VK_FMT_R16G16B16A16_SFLOAT]  = { 8,  4 },
-        [VK_FMT_R32_UINT]             = { 4,  1 },
-        [VK_FMT_R32_SINT]             = { 4,  1 },
-        [VK_FMT_R32_SFLOAT]           = { 4,  1 },
-        [VK_FMT_R32G32_UINT]          = { 8,  2 },
-        [VK_FMT_R32G32_SINT]          = { 8,  2 },
-        [VK_FMT_R32G32_SFLOAT]        = { 8,  2 },
-        [VK_FMT_R32G32B32_UINT]       = { 12, 3 },
-        [VK_FMT_R32G32B32_SINT]       = { 12, 3 },
-        [VK_FMT_R32G32B32_SFLOAT]     = { 12, 3 },
-        [VK_FMT_R32G32B32A32_UINT]    = { 16, 4 },
-        [VK_FMT_R32G32B32A32_SINT]    = { 16, 4 },
-        [VK_FMT_R32G32B32A32_SFLOAT]  = { 16, 4 },
-        [VK_FMT_R64_SFLOAT]           = { 8,  1 },
-        [VK_FMT_R64G64_SFLOAT]        = { 16, 2 },
-        [VK_FMT_R64G64B64_SFLOAT]     = { 24, 3 },
-        [VK_FMT_R64G64B64A64_SFLOAT]  = { 32, 4 },
-        [VK_FMT_R11G11B10_UFLOAT]     = { 4,  3 },
-        [VK_FMT_R9G9B9E5_UFLOAT]      = { 4,  3 },
-        [VK_FMT_D16_UNORM]            = { 2,  1 },
-        [VK_FMT_D24_UNORM]            = { 3,  1 },
-        [VK_FMT_D32_SFLOAT]           = { 4,  1 },
-        [VK_FMT_S8_UINT]              = { 1,  1 },
-        [VK_FMT_D16_UNORM_S8_UINT]    = { 3,  2 },
-        [VK_FMT_D24_UNORM_S8_UINT]    = { 4,  2 },
-        [VK_FMT_D32_SFLOAT_S8_UINT]   = { 4,  2 },
-        [VK_FMT_BC1_RGB_UNORM]        = { 8,  4 },
-        [VK_FMT_BC1_RGB_SRGB]         = { 8,  4 },
-        [VK_FMT_BC1_RGBA_UNORM]       = { 8,  4 },
-        [VK_FMT_BC1_RGBA_SRGB]        = { 8,  4 },
-        [VK_FMT_BC2_UNORM]            = { 16, 4 },
-        [VK_FMT_BC2_SRGB]             = { 16, 4 },
-        [VK_FMT_BC3_UNORM]            = { 16, 4 },
-        [VK_FMT_BC3_SRGB]             = { 16, 4 },
-        [VK_FMT_BC4_UNORM]            = { 8,  4 },
-        [VK_FMT_BC4_SNORM]            = { 8,  4 },
-        [VK_FMT_BC5_UNORM]            = { 16, 4 },
-        [VK_FMT_BC5_SNORM]            = { 16, 4 },
-        [VK_FMT_BC6H_UFLOAT]          = { 16, 4 },
-        [VK_FMT_BC6H_SFLOAT]          = { 16, 4 },
-        [VK_FMT_BC7_UNORM]            = { 16, 4 },
-        [VK_FMT_BC7_SRGB]             = { 16, 4 },
+    } format_table[VK_NUM_FORMAT] = {
+        [VK_FORMAT_UNDEFINED]            = { 0,  0 },
+        [VK_FORMAT_R4G4_UNORM]           = { 1,  2 },
+        [VK_FORMAT_R4G4_USCALED]         = { 1,  2 },
+        [VK_FORMAT_R4G4B4A4_UNORM]       = { 2,  4 },
+        [VK_FORMAT_R4G4B4A4_USCALED]     = { 2,  4 },
+        [VK_FORMAT_R5G6B5_UNORM]         = { 2,  3 },
+        [VK_FORMAT_R5G6B5_USCALED]       = { 2,  3 },
+        [VK_FORMAT_R5G5B5A1_UNORM]       = { 2,  4 },
+        [VK_FORMAT_R5G5B5A1_USCALED]     = { 2,  4 },
+        [VK_FORMAT_R8_UNORM]             = { 1,  1 },
+        [VK_FORMAT_R8_SNORM]             = { 1,  1 },
+        [VK_FORMAT_R8_USCALED]           = { 1,  1 },
+        [VK_FORMAT_R8_SSCALED]           = { 1,  1 },
+        [VK_FORMAT_R8_UINT]              = { 1,  1 },
+        [VK_FORMAT_R8_SINT]              = { 1,  1 },
+        [VK_FORMAT_R8_SRGB]              = { 1,  1 },
+        [VK_FORMAT_R8G8_UNORM]           = { 2,  2 },
+        [VK_FORMAT_R8G8_SNORM]           = { 2,  2 },
+        [VK_FORMAT_R8G8_USCALED]         = { 2,  2 },
+        [VK_FORMAT_R8G8_SSCALED]         = { 2,  2 },
+        [VK_FORMAT_R8G8_UINT]            = { 2,  2 },
+        [VK_FORMAT_R8G8_SINT]            = { 2,  2 },
+        [VK_FORMAT_R8G8_SRGB]            = { 2,  2 },
+        [VK_FORMAT_R8G8B8_UNORM]         = { 3,  3 },
+        [VK_FORMAT_R8G8B8_SNORM]         = { 3,  3 },
+        [VK_FORMAT_R8G8B8_USCALED]       = { 3,  3 },
+        [VK_FORMAT_R8G8B8_SSCALED]       = { 3,  3 },
+        [VK_FORMAT_R8G8B8_UINT]          = { 3,  3 },
+        [VK_FORMAT_R8G8B8_SINT]          = { 3,  3 },
+        [VK_FORMAT_R8G8B8_SRGB]          = { 3,  3 },
+        [VK_FORMAT_R8G8B8A8_UNORM]       = { 4,  4 },
+        [VK_FORMAT_R8G8B8A8_SNORM]       = { 4,  4 },
+        [VK_FORMAT_R8G8B8A8_USCALED]     = { 4,  4 },
+        [VK_FORMAT_R8G8B8A8_SSCALED]     = { 4,  4 },
+        [VK_FORMAT_R8G8B8A8_UINT]        = { 4,  4 },
+        [VK_FORMAT_R8G8B8A8_SINT]        = { 4,  4 },
+        [VK_FORMAT_R8G8B8A8_SRGB]        = { 4,  4 },
+        [VK_FORMAT_R10G10B10A2_UNORM]    = { 4,  4 },
+        [VK_FORMAT_R10G10B10A2_SNORM]    = { 4,  4 },
+        [VK_FORMAT_R10G10B10A2_USCALED]  = { 4,  4 },
+        [VK_FORMAT_R10G10B10A2_SSCALED]  = { 4,  4 },
+        [VK_FORMAT_R10G10B10A2_UINT]     = { 4,  4 },
+        [VK_FORMAT_R10G10B10A2_SINT]     = { 4,  4 },
+        [VK_FORMAT_R16_UNORM]            = { 2,  1 },
+        [VK_FORMAT_R16_SNORM]            = { 2,  1 },
+        [VK_FORMAT_R16_USCALED]          = { 2,  1 },
+        [VK_FORMAT_R16_SSCALED]          = { 2,  1 },
+        [VK_FORMAT_R16_UINT]             = { 2,  1 },
+        [VK_FORMAT_R16_SINT]             = { 2,  1 },
+        [VK_FORMAT_R16_SFLOAT]           = { 2,  1 },
+        [VK_FORMAT_R16G16_UNORM]         = { 4,  2 },
+        [VK_FORMAT_R16G16_SNORM]         = { 4,  2 },
+        [VK_FORMAT_R16G16_USCALED]       = { 4,  2 },
+        [VK_FORMAT_R16G16_SSCALED]       = { 4,  2 },
+        [VK_FORMAT_R16G16_UINT]          = { 4,  2 },
+        [VK_FORMAT_R16G16_SINT]          = { 4,  2 },
+        [VK_FORMAT_R16G16_SFLOAT]        = { 4,  2 },
+        [VK_FORMAT_R16G16B16_UNORM]      = { 6,  3 },
+        [VK_FORMAT_R16G16B16_SNORM]      = { 6,  3 },
+        [VK_FORMAT_R16G16B16_USCALED]    = { 6,  3 },
+        [VK_FORMAT_R16G16B16_SSCALED]    = { 6,  3 },
+        [VK_FORMAT_R16G16B16_UINT]       = { 6,  3 },
+        [VK_FORMAT_R16G16B16_SINT]       = { 6,  3 },
+        [VK_FORMAT_R16G16B16_SFLOAT]     = { 6,  3 },
+        [VK_FORMAT_R16G16B16A16_UNORM]   = { 8,  4 },
+        [VK_FORMAT_R16G16B16A16_SNORM]   = { 8,  4 },
+        [VK_FORMAT_R16G16B16A16_USCALED] = { 8,  4 },
+        [VK_FORMAT_R16G16B16A16_SSCALED] = { 8,  4 },
+        [VK_FORMAT_R16G16B16A16_UINT]    = { 8,  4 },
+        [VK_FORMAT_R16G16B16A16_SINT]    = { 8,  4 },
+        [VK_FORMAT_R16G16B16A16_SFLOAT]  = { 8,  4 },
+        [VK_FORMAT_R32_UINT]             = { 4,  1 },
+        [VK_FORMAT_R32_SINT]             = { 4,  1 },
+        [VK_FORMAT_R32_SFLOAT]           = { 4,  1 },
+        [VK_FORMAT_R32G32_UINT]          = { 8,  2 },
+        [VK_FORMAT_R32G32_SINT]          = { 8,  2 },
+        [VK_FORMAT_R32G32_SFLOAT]        = { 8,  2 },
+        [VK_FORMAT_R32G32B32_UINT]       = { 12, 3 },
+        [VK_FORMAT_R32G32B32_SINT]       = { 12, 3 },
+        [VK_FORMAT_R32G32B32_SFLOAT]     = { 12, 3 },
+        [VK_FORMAT_R32G32B32A32_UINT]    = { 16, 4 },
+        [VK_FORMAT_R32G32B32A32_SINT]    = { 16, 4 },
+        [VK_FORMAT_R32G32B32A32_SFLOAT]  = { 16, 4 },
+        [VK_FORMAT_R64_SFLOAT]           = { 8,  1 },
+        [VK_FORMAT_R64G64_SFLOAT]        = { 16, 2 },
+        [VK_FORMAT_R64G64B64_SFLOAT]     = { 24, 3 },
+        [VK_FORMAT_R64G64B64A64_SFLOAT]  = { 32, 4 },
+        [VK_FORMAT_R11G11B10_UFLOAT]     = { 4,  3 },
+        [VK_FORMAT_R9G9B9E5_UFLOAT]      = { 4,  3 },
+        [VK_FORMAT_D16_UNORM]            = { 2,  1 },
+        [VK_FORMAT_D24_UNORM]            = { 3,  1 },
+        [VK_FORMAT_D32_SFLOAT]           = { 4,  1 },
+        [VK_FORMAT_S8_UINT]              = { 1,  1 },
+        [VK_FORMAT_D16_UNORM_S8_UINT]    = { 3,  2 },
+        [VK_FORMAT_D24_UNORM_S8_UINT]    = { 4,  2 },
+        [VK_FORMAT_D32_SFLOAT_S8_UINT]   = { 4,  2 },
+        [VK_FORMAT_BC1_RGB_UNORM]        = { 8,  4 },
+        [VK_FORMAT_BC1_RGB_SRGB]         = { 8,  4 },
+        [VK_FORMAT_BC1_RGBA_UNORM]       = { 8,  4 },
+        [VK_FORMAT_BC1_RGBA_SRGB]        = { 8,  4 },
+        [VK_FORMAT_BC2_UNORM]            = { 16, 4 },
+        [VK_FORMAT_BC2_SRGB]             = { 16, 4 },
+        [VK_FORMAT_BC3_UNORM]            = { 16, 4 },
+        [VK_FORMAT_BC3_SRGB]             = { 16, 4 },
+        [VK_FORMAT_BC4_UNORM]            = { 8,  4 },
+        [VK_FORMAT_BC4_SNORM]            = { 8,  4 },
+        [VK_FORMAT_BC5_UNORM]            = { 16, 4 },
+        [VK_FORMAT_BC5_SNORM]            = { 16, 4 },
+        [VK_FORMAT_BC6H_UFLOAT]          = { 16, 4 },
+        [VK_FORMAT_BC6H_SFLOAT]          = { 16, 4 },
+        [VK_FORMAT_BC7_UNORM]            = { 16, 4 },
+        [VK_FORMAT_BC7_SRGB]             = { 16, 4 },
         // TODO: Initialize remaining compressed formats.
-        [VK_FMT_ETC2_R8G8B8_UNORM]    = { 0, 0 },
-        [VK_FMT_ETC2_R8G8B8_SRGB]     = { 0, 0 },
-        [VK_FMT_ETC2_R8G8B8A1_UNORM]  = { 0, 0 },
-        [VK_FMT_ETC2_R8G8B8A1_SRGB]   = { 0, 0 },
-        [VK_FMT_ETC2_R8G8B8A8_UNORM]  = { 0, 0 },
-        [VK_FMT_ETC2_R8G8B8A8_SRGB]   = { 0, 0 },
-        [VK_FMT_EAC_R11_UNORM]        = { 0, 0 },
-        [VK_FMT_EAC_R11_SNORM]        = { 0, 0 },
-        [VK_FMT_EAC_R11G11_UNORM]     = { 0, 0 },
-        [VK_FMT_EAC_R11G11_SNORM]     = { 0, 0 },
-        [VK_FMT_ASTC_4x4_UNORM]       = { 0, 0 },
-        [VK_FMT_ASTC_4x4_SRGB]        = { 0, 0 },
-        [VK_FMT_ASTC_5x4_UNORM]       = { 0, 0 },
-        [VK_FMT_ASTC_5x4_SRGB]        = { 0, 0 },
-        [VK_FMT_ASTC_5x5_UNORM]       = { 0, 0 },
-        [VK_FMT_ASTC_5x5_SRGB]        = { 0, 0 },
-        [VK_FMT_ASTC_6x5_UNORM]       = { 0, 0 },
-        [VK_FMT_ASTC_6x5_SRGB]        = { 0, 0 },
-        [VK_FMT_ASTC_6x6_UNORM]       = { 0, 0 },
-        [VK_FMT_ASTC_6x6_SRGB]        = { 0, 0 },
-        [VK_FMT_ASTC_8x5_UNORM]       = { 0, 0 },
-        [VK_FMT_ASTC_8x5_SRGB]        = { 0, 0 },
-        [VK_FMT_ASTC_8x6_UNORM]       = { 0, 0 },
-        [VK_FMT_ASTC_8x6_SRGB]        = { 0, 0 },
-        [VK_FMT_ASTC_8x8_UNORM]       = { 0, 0 },
-        [VK_FMT_ASTC_8x8_SRGB]        = { 0, 0 },
-        [VK_FMT_ASTC_10x5_UNORM]      = { 0, 0 },
-        [VK_FMT_ASTC_10x5_SRGB]       = { 0, 0 },
-        [VK_FMT_ASTC_10x6_UNORM]      = { 0, 0 },
-        [VK_FMT_ASTC_10x6_SRGB]       = { 0, 0 },
-        [VK_FMT_ASTC_10x8_UNORM]      = { 0, 0 },
-        [VK_FMT_ASTC_10x8_SRGB]       = { 0, 0 },
-        [VK_FMT_ASTC_10x10_UNORM]     = { 0, 0 },
-        [VK_FMT_ASTC_10x10_SRGB]      = { 0, 0 },
-        [VK_FMT_ASTC_12x10_UNORM]     = { 0, 0 },
-        [VK_FMT_ASTC_12x10_SRGB]      = { 0, 0 },
-        [VK_FMT_ASTC_12x12_UNORM]     = { 0, 0 },
-        [VK_FMT_ASTC_12x12_SRGB]      = { 0, 0 },
-        [VK_FMT_B4G4R4A4_UNORM]       = { 2, 4 },
-        [VK_FMT_B5G5R5A1_UNORM]       = { 2, 4 },
-        [VK_FMT_B5G6R5_UNORM]         = { 2, 3 },
-        [VK_FMT_B5G6R5_USCALED]       = { 2, 3 },
-        [VK_FMT_B8G8R8_UNORM]         = { 3, 3 },
-        [VK_FMT_B8G8R8_SNORM]         = { 3, 3 },
-        [VK_FMT_B8G8R8_USCALED]       = { 3, 3 },
-        [VK_FMT_B8G8R8_SSCALED]       = { 3, 3 },
-        [VK_FMT_B8G8R8_UINT]          = { 3, 3 },
-        [VK_FMT_B8G8R8_SINT]          = { 3, 3 },
-        [VK_FMT_B8G8R8_SRGB]          = { 3, 3 },
-        [VK_FMT_B8G8R8A8_UNORM]       = { 4, 4 },
-        [VK_FMT_B8G8R8A8_SNORM]       = { 4, 4 },
-        [VK_FMT_B8G8R8A8_USCALED]     = { 4, 4 },
-        [VK_FMT_B8G8R8A8_SSCALED]     = { 4, 4 },
-        [VK_FMT_B8G8R8A8_UINT]        = { 4, 4 },
-        [VK_FMT_B8G8R8A8_SINT]        = { 4, 4 },
-        [VK_FMT_B8G8R8A8_SRGB]        = { 4, 4 },
-        [VK_FMT_B10G10R10A2_UNORM]    = { 4, 4 },
-        [VK_FMT_B10G10R10A2_SNORM]    = { 4, 4 },
-        [VK_FMT_B10G10R10A2_USCALED]  = { 4, 4 },
-        [VK_FMT_B10G10R10A2_SSCALED]  = { 4, 4 },
-        [VK_FMT_B10G10R10A2_UINT]     = { 4, 4 },
-        [VK_FMT_B10G10R10A2_SINT]     = { 4, 4 },
+        [VK_FORMAT_ETC2_R8G8B8_UNORM]    = { 0, 0 },
+        [VK_FORMAT_ETC2_R8G8B8_SRGB]     = { 0, 0 },
+        [VK_FORMAT_ETC2_R8G8B8A1_UNORM]  = { 0, 0 },
+        [VK_FORMAT_ETC2_R8G8B8A1_SRGB]   = { 0, 0 },
+        [VK_FORMAT_ETC2_R8G8B8A8_UNORM]  = { 0, 0 },
+        [VK_FORMAT_ETC2_R8G8B8A8_SRGB]   = { 0, 0 },
+        [VK_FORMAT_EAC_R11_UNORM]        = { 0, 0 },
+        [VK_FORMAT_EAC_R11_SNORM]        = { 0, 0 },
+        [VK_FORMAT_EAC_R11G11_UNORM]     = { 0, 0 },
+        [VK_FORMAT_EAC_R11G11_SNORM]     = { 0, 0 },
+        [VK_FORMAT_ASTC_4x4_UNORM]       = { 0, 0 },
+        [VK_FORMAT_ASTC_4x4_SRGB]        = { 0, 0 },
+        [VK_FORMAT_ASTC_5x4_UNORM]       = { 0, 0 },
+        [VK_FORMAT_ASTC_5x4_SRGB]        = { 0, 0 },
+        [VK_FORMAT_ASTC_5x5_UNORM]       = { 0, 0 },
+        [VK_FORMAT_ASTC_5x5_SRGB]        = { 0, 0 },
+        [VK_FORMAT_ASTC_6x5_UNORM]       = { 0, 0 },
+        [VK_FORMAT_ASTC_6x5_SRGB]        = { 0, 0 },
+        [VK_FORMAT_ASTC_6x6_UNORM]       = { 0, 0 },
+        [VK_FORMAT_ASTC_6x6_SRGB]        = { 0, 0 },
+        [VK_FORMAT_ASTC_8x5_UNORM]       = { 0, 0 },
+        [VK_FORMAT_ASTC_8x5_SRGB]        = { 0, 0 },
+        [VK_FORMAT_ASTC_8x6_UNORM]       = { 0, 0 },
+        [VK_FORMAT_ASTC_8x6_SRGB]        = { 0, 0 },
+        [VK_FORMAT_ASTC_8x8_UNORM]       = { 0, 0 },
+        [VK_FORMAT_ASTC_8x8_SRGB]        = { 0, 0 },
+        [VK_FORMAT_ASTC_10x5_UNORM]      = { 0, 0 },
+        [VK_FORMAT_ASTC_10x5_SRGB]       = { 0, 0 },
+        [VK_FORMAT_ASTC_10x6_UNORM]      = { 0, 0 },
+        [VK_FORMAT_ASTC_10x6_SRGB]       = { 0, 0 },
+        [VK_FORMAT_ASTC_10x8_UNORM]      = { 0, 0 },
+        [VK_FORMAT_ASTC_10x8_SRGB]       = { 0, 0 },
+        [VK_FORMAT_ASTC_10x10_UNORM]     = { 0, 0 },
+        [VK_FORMAT_ASTC_10x10_SRGB]      = { 0, 0 },
+        [VK_FORMAT_ASTC_12x10_UNORM]     = { 0, 0 },
+        [VK_FORMAT_ASTC_12x10_SRGB]      = { 0, 0 },
+        [VK_FORMAT_ASTC_12x12_UNORM]     = { 0, 0 },
+        [VK_FORMAT_ASTC_12x12_SRGB]      = { 0, 0 },
+        [VK_FORMAT_B4G4R4A4_UNORM]       = { 2, 4 },
+        [VK_FORMAT_B5G5R5A1_UNORM]       = { 2, 4 },
+        [VK_FORMAT_B5G6R5_UNORM]         = { 2, 3 },
+        [VK_FORMAT_B5G6R5_USCALED]       = { 2, 3 },
+        [VK_FORMAT_B8G8R8_UNORM]         = { 3, 3 },
+        [VK_FORMAT_B8G8R8_SNORM]         = { 3, 3 },
+        [VK_FORMAT_B8G8R8_USCALED]       = { 3, 3 },
+        [VK_FORMAT_B8G8R8_SSCALED]       = { 3, 3 },
+        [VK_FORMAT_B8G8R8_UINT]          = { 3, 3 },
+        [VK_FORMAT_B8G8R8_SINT]          = { 3, 3 },
+        [VK_FORMAT_B8G8R8_SRGB]          = { 3, 3 },
+        [VK_FORMAT_B8G8R8A8_UNORM]       = { 4, 4 },
+        [VK_FORMAT_B8G8R8A8_SNORM]       = { 4, 4 },
+        [VK_FORMAT_B8G8R8A8_USCALED]     = { 4, 4 },
+        [VK_FORMAT_B8G8R8A8_SSCALED]     = { 4, 4 },
+        [VK_FORMAT_B8G8R8A8_UINT]        = { 4, 4 },
+        [VK_FORMAT_B8G8R8A8_SINT]        = { 4, 4 },
+        [VK_FORMAT_B8G8R8A8_SRGB]        = { 4, 4 },
+        [VK_FORMAT_B10G10R10A2_UNORM]    = { 4, 4 },
+        [VK_FORMAT_B10G10R10A2_SNORM]    = { 4, 4 },
+        [VK_FORMAT_B10G10R10A2_USCALED]  = { 4, 4 },
+        [VK_FORMAT_B10G10R10A2_SSCALED]  = { 4, 4 },
+        [VK_FORMAT_B10G10R10A2_UINT]     = { 4, 4 },
+        [VK_FORMAT_B10G10R10A2_SINT]     = { 4, 4 },
     };
 
     return format_table[format].size;
@@ -522,9 +522,9 @@ protected:
 
     void add_memory_ref(const vk_testing::Object &obj)
     {
-        const std::vector<VkGpuMemory> mems = obj.memories();
-        for (std::vector<VkGpuMemory>::const_iterator it = mems.begin(); it != mems.end(); it++) {
-            std::vector<VkGpuMemory>::iterator ref;
+        const std::vector<VkDeviceMemory> mems = obj.memories();
+        for (std::vector<VkDeviceMemory>::const_iterator it = mems.begin(); it != mems.end(); it++) {
+            std::vector<VkDeviceMemory>::iterator ref;
             for (ref = mem_refs_.begin(); ref != mem_refs_.end(); ref++) {
                 if (*ref == *it)
                     break;
@@ -540,7 +540,7 @@ protected:
     vk_testing::Queue &queue_;
     vk_testing::CmdBuffer cmd_;
 
-    std::vector<VkGpuMemory> mem_refs_;
+    std::vector<VkDeviceMemory> mem_refs_;
 };
 
 typedef VkCmdBlitTest VkCmdFillBufferTest;
@@ -570,7 +570,7 @@ TEST_F(VkCmdFillBufferTest, Basic)
 
 TEST_F(VkCmdFillBufferTest, Large)
 {
-    const VkGpuSize size = 32 * 1024 * 1024;
+    const VkDeviceSize size = 32 * 1024 * 1024;
     vk_testing::Buffer buf;
 
     buf.init(dev_, size);
@@ -584,7 +584,7 @@ TEST_F(VkCmdFillBufferTest, Large)
     submit_and_done();
 
     const uint32_t *data = static_cast<const uint32_t *>(buf.map());
-    VkGpuSize offset;
+    VkDeviceSize offset;
     for (offset = 0; offset < size / 2; offset += 4)
         EXPECT_EQ(0x11111111, data[offset / 4]) << "Offset is: " << offset;
     for (; offset < size; offset += 4)
@@ -607,7 +607,7 @@ TEST_F(VkCmdFillBufferTest, Overlap)
     submit_and_done();
 
     const uint32_t *data = static_cast<const uint32_t *>(buf.map());
-    VkGpuSize offset;
+    VkDeviceSize offset;
     for (offset = 0; offset < 32; offset += 4)
         EXPECT_EQ(0x11111111, data[offset / 4]) << "Offset is: " << offset;
     for (; offset < 64; offset += 4)
@@ -618,7 +618,7 @@ TEST_F(VkCmdFillBufferTest, Overlap)
 TEST_F(VkCmdFillBufferTest, MultiAlignments)
 {
     vk_testing::Buffer bufs[9];
-    VkGpuSize size = 4;
+    VkDeviceSize size = 4;
 
     cmd_.begin();
     for (int i = 0; i < ARRAY_SIZE(bufs); i++) {
@@ -634,7 +634,7 @@ TEST_F(VkCmdFillBufferTest, MultiAlignments)
     size = 4;
     for (int i = 0; i < ARRAY_SIZE(bufs); i++) {
         const uint32_t *data = static_cast<const uint32_t *>(bufs[i].map());
-        VkGpuSize offset;
+        VkDeviceSize offset;
         for (offset = 0; offset < size; offset += 4)
             EXPECT_EQ(0x11111111, data[offset / 4]) << "Buffser is: " << i << "\n" <<
                                                        "Offset is: " << offset;
@@ -674,12 +674,12 @@ TEST_F(VkCmdCopyBufferTest, Basic)
 
 TEST_F(VkCmdCopyBufferTest, Large)
 {
-    const VkGpuSize size = 32 * 1024 * 1024;
+    const VkDeviceSize size = 32 * 1024 * 1024;
     vk_testing::Buffer src, dst;
 
     src.init(dev_, size);
     uint32_t *data = static_cast<uint32_t *>(src.map());
-    VkGpuSize offset;
+    VkDeviceSize offset;
     for (offset = 0; offset < size; offset += 4)
         data[offset / 4] = offset;
     src.unmap();
@@ -772,16 +772,16 @@ TEST_F(VkCmdCopyBufferTest, RAWHazard)
     err = vkCreateEvent(dev_.obj(), &event_info, &event);
     ASSERT_VK_SUCCESS(err);
 
-    err = vkGetObjectInfo(event, VK_INFO_TYPE_MEMORY_REQUIREMENTS,
+    err = vkGetObjectInfo(event, VK_OBJECT_INFO_TYPE_MEMORY_REQUIREMENTS,
                            &data_size, &mem_req);
     ASSERT_VK_SUCCESS(err);
 
     //        VkResult VKAPI vkAllocMemory(
     //            VkDevice                                  device,
     //            const VkMemoryAllocInfo*                pAllocInfo,
-    //            VkGpuMemory*                             pMem);
+    //            VkDeviceMemory*                             pMem);
     VkMemoryAllocInfo mem_info;
-    VkGpuMemory event_mem;
+    VkDeviceMemory event_mem;
 
     ASSERT_NE(0, mem_req.size) << "vkGetObjectInfo (Event): Failed - expect events to require memory";
 
@@ -817,14 +817,7 @@ TEST_F(VkCmdCopyBufferTest, RAWHazard)
     VkBufferMemoryBarrier *pmemory_barrier = &memory_barrier;
 
     VkPipeEvent set_events[] = { VK_PIPE_EVENT_TRANSFER_COMPLETE };
-    VkPipelineBarrier pipeline_barrier = {};
-    pipeline_barrier.sType = VK_STRUCTURE_TYPE_PIPELINE_BARRIER;
-    pipeline_barrier.eventCount = 1;
-    pipeline_barrier.pEvents = set_events;
-    pipeline_barrier.waitEvent = VK_WAIT_EVENT_TOP_OF_PIPE;
-    pipeline_barrier.memBarrierCount = 1;
-    pipeline_barrier.ppMemBarriers = (const void **)&pmemory_barrier;
-    vkCmdPipelineBarrier(cmd_.obj(), &pipeline_barrier);
+    vkCmdPipelineBarrier(cmd_.obj(), VK_WAIT_EVENT_TOP_OF_PIPE, 1, set_events, 1, (const void **)&pmemory_barrier);
 
     VkBufferCopy region = {};
     region.copySize = 4;
@@ -833,13 +826,7 @@ TEST_F(VkCmdCopyBufferTest, RAWHazard)
     memory_barrier = bufs[1].buffer_memory_barrier(
             VK_MEMORY_OUTPUT_TRANSFER_BIT, VK_MEMORY_INPUT_TRANSFER_BIT, 0, 4);
     pmemory_barrier = &memory_barrier;
-    pipeline_barrier.sType = VK_STRUCTURE_TYPE_PIPELINE_BARRIER;
-    pipeline_barrier.eventCount = 1;
-    pipeline_barrier.pEvents = set_events;
-    pipeline_barrier.waitEvent = VK_WAIT_EVENT_TOP_OF_PIPE;
-    pipeline_barrier.memBarrierCount = 1;
-    pipeline_barrier.ppMemBarriers = (const void **)&pmemory_barrier;
-    vkCmdPipelineBarrier(cmd_.obj(), &pipeline_barrier);
+    vkCmdPipelineBarrier(cmd_.obj(), VK_WAIT_EVENT_TOP_OF_PIPE, 1, set_events, 1, (const void **)&pmemory_barrier);
 
     vkCmdCopyBuffer(cmd_.obj(), bufs[1].obj(), bufs[2].obj(), 1, &region);
 
@@ -853,14 +840,7 @@ TEST_F(VkCmdCopyBufferTest, RAWHazard)
     memory_barrier = bufs[1].buffer_memory_barrier(
             VK_MEMORY_OUTPUT_TRANSFER_BIT, VK_MEMORY_INPUT_CPU_READ_BIT, 0, 4);
     pmemory_barrier = &memory_barrier;
-    VkEventWaitInfo wait_info = {};
-    wait_info.sType = VK_STRUCTURE_TYPE_EVENT_WAIT_INFO;
-    wait_info.eventCount = 1;
-    wait_info.pEvents = &event;
-    wait_info.waitEvent = VK_WAIT_EVENT_TOP_OF_PIPE;
-    wait_info.memBarrierCount = 1;
-    wait_info.ppMemBarriers = (const void **)&pmemory_barrier;
-    vkCmdWaitEvents(cmd_.obj(), &wait_info);
+    vkCmdWaitEvents(cmd_.obj(), VK_WAIT_EVENT_TOP_OF_PIPE, 1, &event, 1, (const void **)&pmemory_barrier);
 
     cmd_.end();
 
@@ -885,19 +865,19 @@ class VkCmdBlitImageTest : public VkCmdBlitTest {
 protected:
     void init_test_formats(VkFlags features)
     {
-        first_linear_format_ = VK_FMT_UNDEFINED;
-        first_optimal_format_ = VK_FMT_UNDEFINED;
+        first_linear_format_ = VK_FORMAT_UNDEFINED;
+        first_optimal_format_ = VK_FORMAT_UNDEFINED;
 
         for (std::vector<vk_testing::Device::Format>::const_iterator it = dev_.formats().begin();
              it != dev_.formats().end(); it++) {
             if (it->features & features) {
                 test_formats_.push_back(*it);
 
-                if (it->tiling == VK_LINEAR_TILING &&
-                    first_linear_format_ == VK_FMT_UNDEFINED)
+                if (it->tiling == VK_IMAGE_TILING_LINEAR &&
+                    first_linear_format_ == VK_FORMAT_UNDEFINED)
                     first_linear_format_ = it->format;
-                if (it->tiling == VK_OPTIMAL_TILING &&
-                    first_optimal_format_ == VK_FMT_UNDEFINED)
+                if (it->tiling == VK_IMAGE_TILING_OPTIMAL &&
+                    first_optimal_format_ == VK_FORMAT_UNDEFINED)
                     first_optimal_format_ = it->format;
             }
         }
@@ -972,7 +952,7 @@ protected:
     virtual void SetUp()
     {
         VkCmdBlitTest::SetUp();
-        init_test_formats(VK_FORMAT_COLOR_ATTACHMENT_BIT);
+        init_test_formats(VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT);
         ASSERT_NE(true, test_formats_.empty());
     }
 
@@ -1019,13 +999,13 @@ TEST_F(VkCmdCopyBufferToImageTest, Basic)
          it != test_formats_.end(); it++) {
 
         // not sure what to do here
-        if (it->format == VK_FMT_UNDEFINED ||
-            (it->format >= VK_FMT_B8G8R8_UNORM &&
-             it->format <= VK_FMT_B8G8R8_SRGB))
+        if (it->format == VK_FORMAT_UNDEFINED ||
+            (it->format >= VK_FORMAT_B8G8R8_UNORM &&
+             it->format <= VK_FORMAT_B8G8R8_SRGB))
             continue;
 
         VkImageCreateInfo img_info = vk_testing::Image::create_info();
-        img_info.imageType = VK_IMAGE_2D;
+        img_info.imageType = VK_IMAGE_TYPE_2D;
         img_info.format = it->format;
         img_info.extent.width = 64;
         img_info.extent.height = 64;
@@ -1040,7 +1020,7 @@ protected:
     virtual void SetUp()
     {
         VkCmdBlitTest::SetUp();
-        init_test_formats(VK_FORMAT_COLOR_ATTACHMENT_BIT);
+        init_test_formats(VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT);
         ASSERT_NE(true, test_formats_.empty());
     }
 
@@ -1087,13 +1067,13 @@ TEST_F(VkCmdCopyImageToBufferTest, Basic)
          it != test_formats_.end(); it++) {
 
         // not sure what to do here
-        if (it->format == VK_FMT_UNDEFINED ||
-            (it->format >= VK_FMT_B8G8R8_UNORM &&
-             it->format <= VK_FMT_B8G8R8_SRGB))
+        if (it->format == VK_FORMAT_UNDEFINED ||
+            (it->format >= VK_FORMAT_B8G8R8_UNORM &&
+             it->format <= VK_FORMAT_B8G8R8_SRGB))
             continue;
 
         VkImageCreateInfo img_info = vk_testing::Image::create_info();
-        img_info.imageType = VK_IMAGE_2D;
+        img_info.imageType = VK_IMAGE_TYPE_2D;
         img_info.format = it->format;
         img_info.extent.width = 64;
         img_info.extent.height = 64;
@@ -1108,7 +1088,7 @@ protected:
     virtual void SetUp()
     {
         VkCmdBlitTest::SetUp();
-        init_test_formats(VK_FORMAT_COLOR_ATTACHMENT_BIT);
+        init_test_formats(VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT);
         ASSERT_NE(true, test_formats_.empty());
     }
 
@@ -1117,7 +1097,7 @@ protected:
     {
         // convert VkImageCopy to two sets of VkBufferImageCopy
         std::vector<VkBufferImageCopy> src_regions, dst_regions;
-        VkGpuSize src_offset = 0, dst_offset = 0;
+        VkDeviceSize src_offset = 0, dst_offset = 0;
         for (std::vector<VkImageCopy>::const_iterator it = copies.begin(); it != copies.end(); it++) {
             VkBufferImageCopy src_region = {}, dst_region = {};
 
@@ -1133,7 +1113,7 @@ protected:
             dst_region.imageExtent = it->extent;
             dst_regions.push_back(dst_region);
 
-            const VkGpuSize size = it->extent.width * it->extent.height * it->extent.depth;
+            const VkDeviceSize size = it->extent.width * it->extent.height * it->extent.depth;
             src_offset += vk_testing::get_format_size(src_info.format) * size;
             dst_offset += vk_testing::get_format_size(dst_info.format) * size;
         }
@@ -1169,13 +1149,13 @@ TEST_F(VkCmdCopyImageTest, Basic)
          it != test_formats_.end(); it++) {
 
         // not sure what to do here
-        if (it->format == VK_FMT_UNDEFINED ||
-            (it->format >= VK_FMT_B8G8R8_UNORM &&
-             it->format <= VK_FMT_B8G8R8_SRGB))
+        if (it->format == VK_FORMAT_UNDEFINED ||
+            (it->format >= VK_FORMAT_B8G8R8_UNORM &&
+             it->format <= VK_FORMAT_B8G8R8_SRGB))
             continue;
 
         VkImageCreateInfo img_info = vk_testing::Image::create_info();
-        img_info.imageType = VK_IMAGE_2D;
+        img_info.imageType = VK_IMAGE_TYPE_2D;
         img_info.format = it->format;
         img_info.extent.width = 64;
         img_info.extent.height = 64;
@@ -1233,21 +1213,21 @@ TEST_F(VkCmdCloneImageDataTest, Basic)
     for (std::vector<vk_testing::Device::Format>::const_iterator it = test_formats_.begin();
          it != test_formats_.end(); it++) {
         // not sure what to do here
-        if (it->format == VK_FMT_UNDEFINED ||
-            (it->format >= VK_FMT_R32G32B32_UINT &&
-             it->format <= VK_FMT_R32G32B32_SFLOAT) ||
-            (it->format >= VK_FMT_B8G8R8_UNORM &&
-             it->format <= VK_FMT_B8G8R8_SRGB) ||
-            (it->format >= VK_FMT_BC1_RGB_UNORM &&
-             it->format <= VK_FMT_ASTC_12x12_SRGB) ||
-            (it->format >= VK_FMT_D16_UNORM &&
-             it->format <= VK_FMT_D32_SFLOAT_S8_UINT) ||
-            it->format == VK_FMT_R64G64B64_SFLOAT ||
-            it->format == VK_FMT_R64G64B64A64_SFLOAT)
+        if (it->format == VK_FORMAT_UNDEFINED ||
+            (it->format >= VK_FORMAT_R32G32B32_UINT &&
+             it->format <= VK_FORMAT_R32G32B32_SFLOAT) ||
+            (it->format >= VK_FORMAT_B8G8R8_UNORM &&
+             it->format <= VK_FORMAT_B8G8R8_SRGB) ||
+            (it->format >= VK_FORMAT_BC1_RGB_UNORM &&
+             it->format <= VK_FORMAT_ASTC_12x12_SRGB) ||
+            (it->format >= VK_FORMAT_D16_UNORM &&
+             it->format <= VK_FORMAT_D32_SFLOAT_S8_UINT) ||
+            it->format == VK_FORMAT_R64G64B64_SFLOAT ||
+            it->format == VK_FORMAT_R64G64B64A64_SFLOAT)
             continue;
 
         VkImageCreateInfo img_info = vk_testing::Image::create_info();
-        img_info.imageType = VK_IMAGE_2D;
+        img_info.imageType = VK_IMAGE_TYPE_2D;
         img_info.format = it->format;
         img_info.extent.width = 64;
         img_info.extent.height = 64;
@@ -1274,7 +1254,7 @@ protected:
         if (test_raw_)
             init_test_formats();
         else
-            init_test_formats(VK_FORMAT_CONVERSION_BIT);
+            init_test_formats(VK_FORMAT_FEATURE_CONVERSION_BIT);
 
         ASSERT_NE(true, test_formats_.empty());
     }
@@ -1292,13 +1272,13 @@ protected:
 
         // TODO support all formats
         switch (format) {
-        case VK_FMT_R8G8B8A8_UNORM:
+        case VK_FORMAT_R8G8B8A8_UNORM:
             raw.push_back(color[0] * 255.0f);
             raw.push_back(color[1] * 255.0f);
             raw.push_back(color[2] * 255.0f);
             raw.push_back(color[3] * 255.0f);
             break;
-        case VK_FMT_B8G8R8A8_UNORM:
+        case VK_FORMAT_B8G8R8A8_UNORM:
             raw.push_back(color[2] * 255.0f);
             raw.push_back(color[1] * 255.0f);
             raw.push_back(color[0] * 255.0f);
@@ -1317,13 +1297,13 @@ protected:
 
         // TODO support all formats
         switch (format) {
-        case VK_FMT_R8G8B8A8_UNORM:
+        case VK_FORMAT_R8G8B8A8_UNORM:
             raw.push_back(static_cast<uint8_t>(color[0]));
             raw.push_back(static_cast<uint8_t>(color[1]));
             raw.push_back(static_cast<uint8_t>(color[2]));
             raw.push_back(static_cast<uint8_t>(color[3]));
             break;
-        case VK_FMT_B8G8R8A8_UNORM:
+        case VK_FORMAT_B8G8R8A8_UNORM:
             raw.push_back(static_cast<uint8_t>(color[2]));
             raw.push_back(static_cast<uint8_t>(color[1]));
             raw.push_back(static_cast<uint8_t>(color[0]));
@@ -1388,27 +1368,14 @@ protected:
 
         cmd_.begin();
 
-        VkPipeEvent set_events[] = { VK_PIPE_EVENT_GPU_COMMANDS_COMPLETE };
-        VkPipelineBarrier pipeline_barrier = {};
-        pipeline_barrier.sType = VK_STRUCTURE_TYPE_PIPELINE_BARRIER;
-        pipeline_barrier.eventCount = 1;
-        pipeline_barrier.pEvents = set_events;
-        pipeline_barrier.waitEvent = VK_WAIT_EVENT_TOP_OF_PIPE;
-        pipeline_barrier.memBarrierCount = to_clear.size();
-        pipeline_barrier.ppMemBarriers = (const void **)&p_to_clear[0];
-        vkCmdPipelineBarrier(cmd_.obj(), &pipeline_barrier);
+        VkPipeEvent set_events[] = { VK_PIPE_EVENT_COMMANDS_COMPLETE };
+        vkCmdPipelineBarrier(cmd_.obj(), VK_WAIT_EVENT_TOP_OF_PIPE, 1, set_events, 1, (const void **)&p_to_clear[0]);
 
         vkCmdClearColorImage(cmd_.obj(),
                               img.obj(), VK_IMAGE_LAYOUT_CLEAR_OPTIMAL,
                               clear_color, ranges.size(), &ranges[0]);
 
-        pipeline_barrier.sType = VK_STRUCTURE_TYPE_PIPELINE_BARRIER;
-        pipeline_barrier.eventCount = 1;
-        pipeline_barrier.pEvents = set_events;
-        pipeline_barrier.waitEvent = VK_WAIT_EVENT_TOP_OF_PIPE;
-        pipeline_barrier.memBarrierCount = to_xfer.size();
-        pipeline_barrier.ppMemBarriers = (const void **)&p_to_xfer[0];
-        vkCmdPipelineBarrier(cmd_.obj(), &pipeline_barrier);
+        vkCmdPipelineBarrier(cmd_.obj(), VK_WAIT_EVENT_TOP_OF_PIPE, 1, set_events, 1, (const void **)&p_to_xfer[0]);
 
         cmd_.end();
 
@@ -1445,7 +1412,7 @@ TEST_F(VkCmdClearColorImageTest, Basic)
         const float color[4] = { 0.0f, 1.0f, 0.0f, 1.0f };
 
         VkImageCreateInfo img_info = vk_testing::Image::create_info();
-        img_info.imageType = VK_IMAGE_2D;
+        img_info.imageType = VK_IMAGE_TYPE_2D;
         img_info.format = it->format;
         img_info.extent.width = 64;
         img_info.extent.height = 64;
@@ -1481,23 +1448,23 @@ TEST_F(VkCmdClearColorImageRawTest, Basic)
         const uint32_t color[4] = { 0x11111111, 0x22222222, 0x33333333, 0x44444444 };
 
         // not sure what to do here
-        if (it->format == VK_FMT_UNDEFINED ||
-            (it->format >= VK_FMT_R8G8B8_UNORM &&
-             it->format <= VK_FMT_R8G8B8_SRGB) ||
-            (it->format >= VK_FMT_B8G8R8_UNORM &&
-             it->format <= VK_FMT_B8G8R8_SRGB) ||
-            (it->format >= VK_FMT_R16G16B16_UNORM &&
-             it->format <= VK_FMT_R16G16B16_SFLOAT) ||
-            (it->format >= VK_FMT_R32G32B32_UINT &&
-             it->format <= VK_FMT_R32G32B32_SFLOAT) ||
-            it->format == VK_FMT_R64G64B64_SFLOAT ||
-            it->format == VK_FMT_R64G64B64A64_SFLOAT ||
-            (it->format >= VK_FMT_D16_UNORM &&
-             it->format <= VK_FMT_D32_SFLOAT_S8_UINT))
+        if (it->format == VK_FORMAT_UNDEFINED ||
+            (it->format >= VK_FORMAT_R8G8B8_UNORM &&
+             it->format <= VK_FORMAT_R8G8B8_SRGB) ||
+            (it->format >= VK_FORMAT_B8G8R8_UNORM &&
+             it->format <= VK_FORMAT_B8G8R8_SRGB) ||
+            (it->format >= VK_FORMAT_R16G16B16_UNORM &&
+             it->format <= VK_FORMAT_R16G16B16_SFLOAT) ||
+            (it->format >= VK_FORMAT_R32G32B32_UINT &&
+             it->format <= VK_FORMAT_R32G32B32_SFLOAT) ||
+            it->format == VK_FORMAT_R64G64B64_SFLOAT ||
+            it->format == VK_FORMAT_R64G64B64A64_SFLOAT ||
+            (it->format >= VK_FORMAT_D16_UNORM &&
+             it->format <= VK_FORMAT_D32_SFLOAT_S8_UINT))
             continue;
 
         VkImageCreateInfo img_info = vk_testing::Image::create_info();
-        img_info.imageType = VK_IMAGE_2D;
+        img_info.imageType = VK_IMAGE_TYPE_2D;
         img_info.format = it->format;
         img_info.extent.width = 64;
         img_info.extent.height = 64;
@@ -1516,7 +1483,7 @@ protected:
     virtual void SetUp()
     {
         VkCmdBlitTest::SetUp();
-        init_test_formats(VK_FORMAT_DEPTH_STENCIL_ATTACHMENT_BIT);
+        init_test_formats(VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT);
         ASSERT_NE(true, test_formats_.empty());
     }
 
@@ -1526,16 +1493,16 @@ protected:
 
         // depth
         switch (format) {
-        case VK_FMT_D16_UNORM:
-        case VK_FMT_D16_UNORM_S8_UINT:
+        case VK_FORMAT_D16_UNORM:
+        case VK_FORMAT_D16_UNORM_S8_UINT:
             {
                 const uint16_t unorm = depth * 65535.0f;
                 raw.push_back(unorm & 0xff);
                 raw.push_back(unorm >> 8);
             }
             break;
-        case VK_FMT_D32_SFLOAT:
-        case VK_FMT_D32_SFLOAT_S8_UINT:
+        case VK_FORMAT_D32_SFLOAT:
+        case VK_FORMAT_D32_SFLOAT_S8_UINT:
             {
                 const union {
                     float depth;
@@ -1554,14 +1521,14 @@ protected:
 
         // stencil
         switch (format) {
-        case VK_FMT_S8_UINT:
+        case VK_FORMAT_S8_UINT:
             raw.push_back(stencil);
             break;
-        case VK_FMT_D16_UNORM_S8_UINT:
+        case VK_FORMAT_D16_UNORM_S8_UINT:
             raw.push_back(stencil);
             raw.push_back(0);
             break;
-        case VK_FMT_D32_SFLOAT_S8_UINT:
+        case VK_FORMAT_D32_SFLOAT_S8_UINT:
             raw.push_back(stencil);
             raw.push_back(0);
             raw.push_back(0);
@@ -1618,28 +1585,15 @@ protected:
 
         cmd_.begin();
 
-        VkPipeEvent set_events[] = { VK_PIPE_EVENT_GPU_COMMANDS_COMPLETE };
-        VkPipelineBarrier pipeline_barrier = {};
-        pipeline_barrier.sType = VK_STRUCTURE_TYPE_PIPELINE_BARRIER;
-        pipeline_barrier.eventCount = 1;
-        pipeline_barrier.pEvents = set_events;
-        pipeline_barrier.waitEvent = VK_WAIT_EVENT_TOP_OF_PIPE;
-        pipeline_barrier.memBarrierCount = to_clear.size();
-        pipeline_barrier.ppMemBarriers = (const void **)&p_to_clear[0];
-        vkCmdPipelineBarrier(cmd_.obj(), &pipeline_barrier);
+        VkPipeEvent set_events[] = { VK_PIPE_EVENT_COMMANDS_COMPLETE };
+        vkCmdPipelineBarrier(cmd_.obj(), VK_WAIT_EVENT_TOP_OF_PIPE, 1, set_events, to_clear.size(), (const void **)&p_to_clear[0]);
 
         vkCmdClearDepthStencil(cmd_.obj(),
                                 img.obj(), VK_IMAGE_LAYOUT_CLEAR_OPTIMAL,
                                 depth, stencil,
                                 ranges.size(), &ranges[0]);
 
-        pipeline_barrier.sType = VK_STRUCTURE_TYPE_PIPELINE_BARRIER;
-        pipeline_barrier.eventCount = 1;
-        pipeline_barrier.pEvents = set_events;
-        pipeline_barrier.waitEvent = VK_WAIT_EVENT_TOP_OF_PIPE;
-        pipeline_barrier.memBarrierCount = to_xfer.size();
-        pipeline_barrier.ppMemBarriers = (const void **)&p_to_xfer[0];
-        vkCmdPipelineBarrier(cmd_.obj(), &pipeline_barrier);
+        vkCmdPipelineBarrier(cmd_.obj(), VK_WAIT_EVENT_TOP_OF_PIPE, 1, set_events, to_xfer.size(), (const void **)&p_to_xfer[0]);
 
         cmd_.end();
 
@@ -1661,14 +1615,14 @@ TEST_F(VkCmdClearDepthStencilTest, Basic)
     for (std::vector<vk_testing::Device::Format>::const_iterator it = test_formats_.begin();
          it != test_formats_.end(); it++) {
         // known driver issues
-        if (it->format == VK_FMT_S8_UINT ||
-            it->format == VK_FMT_D24_UNORM ||
-            it->format == VK_FMT_D16_UNORM_S8_UINT ||
-            it->format == VK_FMT_D24_UNORM_S8_UINT)
+        if (it->format == VK_FORMAT_S8_UINT ||
+            it->format == VK_FORMAT_D24_UNORM ||
+            it->format == VK_FORMAT_D16_UNORM_S8_UINT ||
+            it->format == VK_FORMAT_D24_UNORM_S8_UINT)
             continue;
 
         VkImageCreateInfo img_info = vk_testing::Image::create_info();
-        img_info.imageType = VK_IMAGE_2D;
+        img_info.imageType = VK_IMAGE_TYPE_2D;
         img_info.format = it->format;
         img_info.extent.width = 64;
         img_info.extent.height = 64;

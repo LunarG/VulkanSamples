@@ -54,7 +54,7 @@ static VkResult img_get_info(struct intel_base *base, int type,
     VkResult ret = VK_SUCCESS;
 
     switch (type) {
-    case VK_INFO_TYPE_MEMORY_REQUIREMENTS:
+    case VK_OBJECT_INFO_TYPE_MEMORY_REQUIREMENTS:
         {
             VkMemoryRequirements *mem_req = data;
 
@@ -85,7 +85,7 @@ VkResult intel_img_create(struct intel_dev *dev,
     img = (struct intel_img *) intel_base_create(&dev->base.handle,
             sizeof(*img), dev->base.dbg, VK_DBG_OBJECT_IMAGE, info, 0);
     if (!img)
-        return VK_ERROR_OUT_OF_MEMORY;
+        return VK_ERROR_OUT_OF_HOST_MEMORY;
 
     layout = &img->layout;
 
@@ -116,14 +116,14 @@ VkResult intel_img_create(struct intel_dev *dev,
         VkImageCreateInfo s8_info;
 
         img->s8_layout = intel_alloc(img, sizeof(*img->s8_layout), 0,
-                VK_SYSTEM_ALLOC_INTERNAL);
+                VK_SYSTEM_ALLOC_TYPE_INTERNAL);
         if (!img->s8_layout) {
             intel_img_destroy(img);
-            return VK_ERROR_OUT_OF_MEMORY;
+            return VK_ERROR_OUT_OF_HOST_MEMORY;
         }
 
         s8_info = *info;
-        s8_info.format = VK_FMT_S8_UINT;
+        s8_info.format = VK_FORMAT_S8_UINT;
         /* no stencil texturing */
         s8_info.usage &= ~VK_IMAGE_USAGE_SAMPLED_BIT;
         assert(icd_format_is_ds(info->format));
@@ -166,7 +166,7 @@ ICD_EXPORT VkResult VKAPI vkOpenPeerImage(
     VkDevice                                  device,
     const VkPeerImageOpenInfo*             pOpenInfo,
     VkImage*                                  pImage,
-    VkGpuMemory*                             pMem)
+    VkDeviceMemory*                             pMem)
 {
     return VK_ERROR_UNAVAILABLE;
 }
@@ -193,7 +193,7 @@ ICD_EXPORT VkResult VKAPI vkGetImageSubresourceInfo(
     VkResult ret = VK_SUCCESS;
 
     switch (infoType) {
-    case VK_INFO_TYPE_SUBRESOURCE_LAYOUT:
+    case VK_SUBRESOURCE_INFO_TYPE_LAYOUT:
         {
             VkSubresourceLayout *layout = (VkSubresourceLayout *) pData;
             unsigned x, y;

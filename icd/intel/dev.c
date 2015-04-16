@@ -114,7 +114,7 @@ VkResult intel_dev_create(struct intel_gpu *gpu,
             sizeof(*dev), info->flags,
             VK_DBG_OBJECT_DEVICE, info, sizeof(struct intel_dev_dbg));
     if (!dev)
-        return VK_ERROR_OUT_OF_MEMORY;
+        return VK_ERROR_OUT_OF_HOST_MEMORY;
 
     for (i = 0; i < info->extensionCount; i++) {
         const enum intel_ext_type ext = intel_gpu_lookup_extension(gpu,
@@ -138,12 +138,12 @@ VkResult intel_dev_create(struct intel_gpu *gpu,
             "command buffer scratch", 4096, false);
     if (!dev->cmd_scratch_bo) {
         intel_dev_destroy(dev);
-        return VK_ERROR_OUT_OF_GPU_MEMORY;
+        return VK_ERROR_OUT_OF_DEVICE_MEMORY;
     }
 
     if (!dev_create_meta_shaders(dev)) {
         intel_dev_destroy(dev);
-        return VK_ERROR_OUT_OF_MEMORY;
+        return VK_ERROR_OUT_OF_HOST_MEMORY;
     }
 
     ret = intel_desc_region_create(dev, &dev->desc_region);
@@ -233,9 +233,9 @@ VkResult intel_dev_add_msg_filter(struct intel_dev *dev,
             f->triggered = false;
         }
     } else {
-        f = intel_alloc(dev, sizeof(*f), 0, VK_SYSTEM_ALLOC_DEBUG);
+        f = intel_alloc(dev, sizeof(*f), 0, VK_SYSTEM_ALLOC_TYPE_DEBUG);
         if (!f)
-            return VK_ERROR_OUT_OF_MEMORY;
+            return VK_ERROR_OUT_OF_HOST_MEMORY;
 
         f->msg_code = msg_code;
         f->filter = filter;
@@ -320,7 +320,7 @@ void intel_dev_log(struct intel_dev *dev,
 }
 
 ICD_EXPORT VkResult VKAPI vkCreateDevice(
-    VkPhysicalGpu                            gpu_,
+    VkPhysicalDevice                            gpu_,
     const VkDeviceCreateInfo*               pCreateInfo,
     VkDevice*                                 pDevice)
 {

@@ -85,7 +85,7 @@ typedef enum _MEM_TRACK_ERROR
 // Data struct for tracking memory object
 struct MT_MEM_OBJ_INFO {
     uint32_t                     refCount;           // Count of references (obj bindings or CB use)
-    VkGpuMemory               mem;
+    VkDeviceMemory               mem;
     VkMemoryAllocInfo        allocInfo;
     list<VkObject>             pObjBindings;       // list container of objects bound to this memory
     list<VkCmdBuffer>         pCmdBufferBindings; // list container of cmd buffers that reference this mem object
@@ -125,7 +125,7 @@ struct MT_CB_INFO {
     VkCmdBuffer                  cmdBuffer;
     uint64_t                        fenceId;
     // Order dependent, stl containers must be at end of struct
-    list<VkGpuMemory>            pMemObjList; // List container of Mem objs referenced by this CB
+    list<VkDeviceMemory>            pMemObjList; // List container of Mem objs referenced by this CB
 };
 
 // Associate fenceId with a fence object
@@ -140,7 +140,7 @@ struct MT_QUEUE_INFO {
     uint64_t                      lastRetiredId;
     uint64_t                      lastSubmittedId;
     list<VkCmdBuffer>          pQueueCmdBuffers;
-    list<VkGpuMemory>          pMemRefList;
+    list<VkDeviceMemory>          pMemRefList;
 };
 
 #ifdef __cplusplus

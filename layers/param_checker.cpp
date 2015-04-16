@@ -68,7 +68,7 @@ static void initParamChecker(void)
     fpNextGPA = pCurObj->pGPA;
     assert(fpNextGPA);
 
-    layer_initialize_dispatch_table(&nextTable, fpNextGPA, (VkPhysicalGpu) pCurObj->nextObject);
+    layer_initialize_dispatch_table(&nextTable, fpNextGPA, (VkPhysicalDevice) pCurObj->nextObject);
 }
 
 void PreCreateInstance(const VkApplicationInfo* pAppInfo, const VkAllocCallbacks* pAllocCb)
@@ -139,24 +139,24 @@ VK_LAYER_EXPORT VkResult VKAPI vkDestroyInstance(VkInstance instance)
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkGetGpuInfo(VkPhysicalGpu gpu, VkPhysicalGpuInfoType infoType, size_t* pDataSize, void* pData)
+VK_LAYER_EXPORT VkResult VKAPI vkGetPhysicalDeviceInfo(VkPhysicalDevice gpu, VkPhysicalDeviceInfoType infoType, size_t* pDataSize, void* pData)
 {
     pCurObj = (VkBaseLayerObject *) gpu;
     loader_platform_thread_once(&tabOnce, initParamChecker);
     char str[1024];
-    if (!validate_VkPhysicalGpuInfoType(infoType)) {
-        sprintf(str, "Parameter infoType to function GetGpuInfo has invalid value of %i.", (int)infoType);
+    if (!validate_VkPhysicalDeviceInfoType(infoType)) {
+        sprintf(str, "Parameter infoType to function GetPhysicalDeviceInfo has invalid value of %i.", (int)infoType);
         layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
     }
-    VkResult result = nextTable.GetGpuInfo(gpu, infoType, pDataSize, pData);
+    VkResult result = nextTable.GetPhysicalDeviceInfo(gpu, infoType, pDataSize, pData);
     return result;
 }
 
-void PreCreateDevice(VkPhysicalGpu gpu, const VkDeviceCreateInfo* pCreateInfo)
+void PreCreateDevice(VkPhysicalDevice gpu, const VkDeviceCreateInfo* pCreateInfo)
 {
     if(gpu == nullptr)
     {
-        char const str[] = "vkCreateDevice parameter, VkPhysicalGpu gpu, is nullptr "\
+        char const str[] = "vkCreateDevice parameter, VkPhysicalDevice gpu, is nullptr "\
             "(precondition).";
         layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
         return;
@@ -226,7 +226,7 @@ void PostCreateDevice(VkResult result, VkDevice* pDevice)
     }
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkCreateDevice(VkPhysicalGpu gpu, const VkDeviceCreateInfo* pCreateInfo, VkDevice* pDevice)
+VK_LAYER_EXPORT VkResult VKAPI vkCreateDevice(VkPhysicalDevice gpu, const VkDeviceCreateInfo* pCreateInfo, VkDevice* pDevice)
 {
     pCurObj = (VkBaseLayerObject *) gpu;
     loader_platform_thread_once(&tabOnce, initParamChecker);
@@ -297,7 +297,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkGetGlobalExtensionInfo(
     return VK_SUCCESS;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkEnumerateLayers(VkPhysicalGpu gpu, size_t maxLayerCount, size_t maxStringSize, size_t* pOutLayerCount, char* const* pOutLayers, void* pReserved)
+VK_LAYER_EXPORT VkResult VKAPI vkEnumerateLayers(VkPhysicalDevice gpu, size_t maxLayerCount, size_t maxStringSize, size_t* pOutLayerCount, char* const* pOutLayers, void* pReserved)
 {
     char str[1024];
     if (gpu != NULL) {
@@ -333,13 +333,13 @@ VK_LAYER_EXPORT VkResult VKAPI vkQueueSubmit(VkQueue queue, uint32_t cmdBufferCo
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkQueueAddMemReferences(VkQueue queue, uint32_t count, const VkGpuMemory* pMems)
+VK_LAYER_EXPORT VkResult VKAPI vkQueueAddMemReferences(VkQueue queue, uint32_t count, const VkDeviceMemory* pMems)
 {
     VkResult result = nextTable.QueueAddMemReferences(queue, count, pMems);
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkQueueRemoveMemReferences(VkQueue queue, uint32_t count, const VkGpuMemory* pMems)
+VK_LAYER_EXPORT VkResult VKAPI vkQueueRemoveMemReferences(VkQueue queue, uint32_t count, const VkDeviceMemory* pMems)
 {
     VkResult result = nextTable.QueueRemoveMemReferences(queue, count, pMems);
     return result;
@@ -358,7 +358,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkDeviceWaitIdle(VkDevice device)
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkAllocMemory(VkDevice device, const VkMemoryAllocInfo* pAllocInfo, VkGpuMemory* pMem)
+VK_LAYER_EXPORT VkResult VKAPI vkAllocMemory(VkDevice device, const VkMemoryAllocInfo* pAllocInfo, VkDeviceMemory* pMem)
 {
     char str[1024];
     if (!pAllocInfo) {
@@ -372,14 +372,14 @@ VK_LAYER_EXPORT VkResult VKAPI vkAllocMemory(VkDevice device, const VkMemoryAllo
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkFreeMemory(VkGpuMemory mem)
+VK_LAYER_EXPORT VkResult VKAPI vkFreeMemory(VkDeviceMemory mem)
 {
 
     VkResult result = nextTable.FreeMemory(mem);
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkSetMemoryPriority(VkGpuMemory mem, VkMemoryPriority priority)
+VK_LAYER_EXPORT VkResult VKAPI vkSetMemoryPriority(VkDeviceMemory mem, VkMemoryPriority priority)
 {
     char str[1024];
     if (!validate_VkMemoryPriority(priority)) {
@@ -390,37 +390,37 @@ VK_LAYER_EXPORT VkResult VKAPI vkSetMemoryPriority(VkGpuMemory mem, VkMemoryPrio
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkMapMemory(VkGpuMemory mem, VkFlags flags, void** ppData)
+VK_LAYER_EXPORT VkResult VKAPI vkMapMemory(VkDeviceMemory mem, VkFlags flags, void** ppData)
 {
 
     VkResult result = nextTable.MapMemory(mem, flags, ppData);
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkUnmapMemory(VkGpuMemory mem)
+VK_LAYER_EXPORT VkResult VKAPI vkUnmapMemory(VkDeviceMemory mem)
 {
 
     VkResult result = nextTable.UnmapMemory(mem);
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkPinSystemMemory(VkDevice device, const void* pSysMem, size_t memSize, VkGpuMemory* pMem)
+VK_LAYER_EXPORT VkResult VKAPI vkPinSystemMemory(VkDevice device, const void* pSysMem, size_t memSize, VkDeviceMemory* pMem)
 {
 
     VkResult result = nextTable.PinSystemMemory(device, pSysMem, memSize, pMem);
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkGetMultiGpuCompatibility(VkPhysicalGpu gpu0, VkPhysicalGpu gpu1, VkGpuCompatibilityInfo* pInfo)
+VK_LAYER_EXPORT VkResult VKAPI vkGetMultiDeviceCompatibility(VkPhysicalDevice gpu0, VkPhysicalDevice gpu1, VkPhysicalDeviceCompatibilityInfo* pInfo)
 {
     pCurObj = (VkBaseLayerObject *) gpu0;
     loader_platform_thread_once(&tabOnce, initParamChecker);
 
-    VkResult result = nextTable.GetMultiGpuCompatibility(gpu0, gpu1, pInfo);
+    VkResult result = nextTable.GetMultiDeviceCompatibility(gpu0, gpu1, pInfo);
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkOpenSharedMemory(VkDevice device, const VkMemoryOpenInfo* pOpenInfo, VkGpuMemory* pMem)
+VK_LAYER_EXPORT VkResult VKAPI vkOpenSharedMemory(VkDevice device, const VkMemoryOpenInfo* pOpenInfo, VkDeviceMemory* pMem)
 {
     char str[1024];
     if (!pOpenInfo) {
@@ -450,7 +450,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkOpenSharedSemaphore(VkDevice device, const VkSe
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkOpenPeerMemory(VkDevice device, const VkPeerMemoryOpenInfo* pOpenInfo, VkGpuMemory* pMem)
+VK_LAYER_EXPORT VkResult VKAPI vkOpenPeerMemory(VkDevice device, const VkPeerMemoryOpenInfo* pOpenInfo, VkDeviceMemory* pMem)
 {
     char str[1024];
     if (!pOpenInfo) {
@@ -465,7 +465,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkOpenPeerMemory(VkDevice device, const VkPeerMem
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkOpenPeerImage(VkDevice device, const VkPeerImageOpenInfo* pOpenInfo, VkImage* pImage, VkGpuMemory* pMem)
+VK_LAYER_EXPORT VkResult VKAPI vkOpenPeerImage(VkDevice device, const VkPeerImageOpenInfo* pOpenInfo, VkImage* pImage, VkDeviceMemory* pMem)
 {
     char str[1024];
     if (!pOpenInfo) {
@@ -498,21 +498,21 @@ VK_LAYER_EXPORT VkResult VKAPI vkGetObjectInfo(VkBaseObject object, VkObjectInfo
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkQueueBindObjectMemory(VkQueue queue, VkObject object, uint32_t allocationIdx, VkGpuMemory mem, VkGpuSize offset)
+VK_LAYER_EXPORT VkResult VKAPI vkQueueBindObjectMemory(VkQueue queue, VkObject object, uint32_t allocationIdx, VkDeviceMemory mem, VkDeviceSize offset)
 {
 
     VkResult result = nextTable.QueueBindObjectMemory(queue, object, allocationIdx, mem, offset);
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkQueueBindObjectMemoryRange(VkQueue queue, VkObject object, uint32_t allocationIdx, VkGpuSize rangeOffset, VkGpuSize rangeSize, VkGpuMemory mem, VkGpuSize memOffset)
+VK_LAYER_EXPORT VkResult VKAPI vkQueueBindObjectMemoryRange(VkQueue queue, VkObject object, uint32_t allocationIdx, VkDeviceSize rangeOffset, VkDeviceSize rangeSize, VkDeviceMemory mem, VkDeviceSize memOffset)
 {
 
     VkResult result = nextTable.QueueBindObjectMemoryRange(queue, object, allocationIdx, rangeOffset, rangeSize, mem, memOffset);
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkQueueBindImageMemoryRange(VkQueue queue, VkImage image, uint32_t allocationIdx, const VkImageMemoryBindInfo* pBindInfo, VkGpuMemory mem, VkGpuSize memOffset)
+VK_LAYER_EXPORT VkResult VKAPI vkQueueBindImageMemoryRange(VkQueue queue, VkImage image, uint32_t allocationIdx, const VkImageMemoryBindInfo* pBindInfo, VkDeviceMemory mem, VkDeviceSize memOffset)
 {
     char str[1024];
     if (!pBindInfo) {
@@ -643,10 +643,10 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateQueryPool(VkDevice device, const VkQueryP
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkGetQueryPoolResults(VkQueryPool queryPool, uint32_t startQuery, uint32_t queryCount, size_t* pDataSize, void* pData)
+VK_LAYER_EXPORT VkResult VKAPI vkGetQueryPoolResults(VkQueryPool queryPool, uint32_t startQuery, uint32_t queryCount, size_t* pDataSize, void* pData, VkQueryResultFlags flags)
 {
 
-    VkResult result = nextTable.GetQueryPoolResults(queryPool, startQuery, queryCount, pDataSize, pData);
+    VkResult result = nextTable.GetQueryPoolResults(queryPool, startQuery, queryCount, pDataSize, pData, flags);
     return result;
 }
 
@@ -732,7 +732,7 @@ void PreCreateImage(VkDevice device, const VkImageCreateInfo* pCreateInfo)
     VkFormatProperties properties;
     size_t size = sizeof(properties);
     VkResult result = nextTable.GetFormatInfo(device, pCreateInfo->format,
-        VK_INFO_TYPE_FORMAT_PROPERTIES, &size, &properties);
+        VK_FORMAT_INFO_TYPE_PROPERTIES, &size, &properties);
     if(result != VK_SUCCESS)
     {
         char const str[] = "vkCreateImage parameter, VkFormat pCreateInfo->format, cannot be "\
@@ -1219,12 +1219,12 @@ VK_LAYER_EXPORT void VKAPI vkCmdBindVertexBuffers(
     uint32_t                                    startBinding,
     uint32_t                                    bindingCount,
     const VkBuffer*                             pBuffers,
-    const VkGpuSize*                            pOffsets)
+    const VkDeviceSize*                         pOffsets)
 {
     nextTable.CmdBindVertexBuffers(cmdBuffer, startBinding, bindingCount, pBuffers, pOffsets);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdBindIndexBuffer(VkCmdBuffer cmdBuffer, VkBuffer buffer, VkGpuSize offset, VkIndexType indexType)
+VK_LAYER_EXPORT void VKAPI vkCmdBindIndexBuffer(VkCmdBuffer cmdBuffer, VkBuffer buffer, VkDeviceSize offset, VkIndexType indexType)
 {
     char str[1024];
     if (!validate_VkIndexType(indexType)) {
@@ -1246,13 +1246,13 @@ VK_LAYER_EXPORT void VKAPI vkCmdDrawIndexed(VkCmdBuffer cmdBuffer, uint32_t firs
     nextTable.CmdDrawIndexed(cmdBuffer, firstIndex, indexCount, vertexOffset, firstInstance, instanceCount);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdDrawIndirect(VkCmdBuffer cmdBuffer, VkBuffer buffer, VkGpuSize offset, uint32_t count, uint32_t stride)
+VK_LAYER_EXPORT void VKAPI vkCmdDrawIndirect(VkCmdBuffer cmdBuffer, VkBuffer buffer, VkDeviceSize offset, uint32_t count, uint32_t stride)
 {
 
     nextTable.CmdDrawIndirect(cmdBuffer, buffer, offset, count, stride);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdDrawIndexedIndirect(VkCmdBuffer cmdBuffer, VkBuffer buffer, VkGpuSize offset, uint32_t count, uint32_t stride)
+VK_LAYER_EXPORT void VKAPI vkCmdDrawIndexedIndirect(VkCmdBuffer cmdBuffer, VkBuffer buffer, VkDeviceSize offset, uint32_t count, uint32_t stride)
 {
 
     nextTable.CmdDrawIndexedIndirect(cmdBuffer, buffer, offset, count, stride);
@@ -1264,7 +1264,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdDispatch(VkCmdBuffer cmdBuffer, uint32_t x, uint
     nextTable.CmdDispatch(cmdBuffer, x, y, z);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdDispatchIndirect(VkCmdBuffer cmdBuffer, VkBuffer buffer, VkGpuSize offset)
+VK_LAYER_EXPORT void VKAPI vkCmdDispatchIndirect(VkCmdBuffer cmdBuffer, VkBuffer buffer, VkDeviceSize offset)
 {
 
     nextTable.CmdDispatchIndirect(cmdBuffer, buffer, offset);
@@ -1373,13 +1373,13 @@ VK_LAYER_EXPORT void VKAPI vkCmdCloneImageData(VkCmdBuffer cmdBuffer, VkImage sr
     nextTable.CmdCloneImageData(cmdBuffer, srcImage, srcImageLayout, destImage, destImageLayout);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdUpdateBuffer(VkCmdBuffer cmdBuffer, VkBuffer destBuffer, VkGpuSize destOffset, VkGpuSize dataSize, const uint32_t* pData)
+VK_LAYER_EXPORT void VKAPI vkCmdUpdateBuffer(VkCmdBuffer cmdBuffer, VkBuffer destBuffer, VkDeviceSize destOffset, VkDeviceSize dataSize, const uint32_t* pData)
 {
 
     nextTable.CmdUpdateBuffer(cmdBuffer, destBuffer, destOffset, dataSize, pData);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdFillBuffer(VkCmdBuffer cmdBuffer, VkBuffer destBuffer, VkGpuSize destOffset, VkGpuSize fillSize, uint32_t data)
+VK_LAYER_EXPORT void VKAPI vkCmdFillBuffer(VkCmdBuffer cmdBuffer, VkBuffer destBuffer, VkDeviceSize destOffset, VkDeviceSize fillSize, uint32_t data)
 {
 
     nextTable.CmdFillBuffer(cmdBuffer, destBuffer, destOffset, fillSize, data);
@@ -1460,32 +1460,14 @@ VK_LAYER_EXPORT void VKAPI vkCmdResetEvent(VkCmdBuffer cmdBuffer, VkEvent event,
     nextTable.CmdResetEvent(cmdBuffer, event, pipeEvent);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdWaitEvents(VkCmdBuffer cmdBuffer, const VkEventWaitInfo* pWaitInfo)
+VK_LAYER_EXPORT void VKAPI vkCmdWaitEvents(VkCmdBuffer cmdBuffer, VkWaitEvent waitEvent, uint32_t eventCount, const VkEvent* pEvents, uint32_t memBarrierCount, const void** ppMemBarriers)
 {
-    char str[1024];
-    if (!pWaitInfo) {
-        sprintf(str, "Struct ptr parameter pWaitInfo to function CmdWaitEvents is NULL.");
-        layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
-    }
-    else if (!vk_validate_vkeventwaitinfo(pWaitInfo)) {
-        sprintf(str, "Parameter pWaitInfo to function CmdWaitEvents contains an invalid value.");
-        layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
-    }
-    nextTable.CmdWaitEvents(cmdBuffer, pWaitInfo);
+    nextTable.CmdWaitEvents(cmdBuffer, waitEvent, eventCount, pEvents, memBarrierCount, ppMemBarriers);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdPipelineBarrier(VkCmdBuffer cmdBuffer, const VkPipelineBarrier* pBarrier)
+VK_LAYER_EXPORT void VKAPI vkCmdPipelineBarrier(VkCmdBuffer cmdBuffer, VkWaitEvent waitEvent, uint32_t pipeEventCount, const VkPipeEvent* pPipeEvents, uint32_t memBarrierCount, const void** ppMemBarriers)
 {
-    char str[1024];
-    if (!pBarrier) {
-        sprintf(str, "Struct ptr parameter pBarrier to function CmdPipelineBarrier is NULL.");
-        layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
-    }
-    else if (!vk_validate_vkpipelinebarrier(pBarrier)) {
-        sprintf(str, "Parameter pBarrier to function CmdPipelineBarrier contains an invalid value.");
-        layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
-    }
-    nextTable.CmdPipelineBarrier(cmdBuffer, pBarrier);
+    nextTable.CmdPipelineBarrier(cmdBuffer, waitEvent, pipeEventCount, pPipeEvents, memBarrierCount, ppMemBarriers);
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdBeginQuery(VkCmdBuffer cmdBuffer, VkQueryPool queryPool, uint32_t slot, VkFlags flags)
@@ -1506,7 +1488,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdResetQueryPool(VkCmdBuffer cmdBuffer, VkQueryPoo
     nextTable.CmdResetQueryPool(cmdBuffer, queryPool, startQuery, queryCount);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdWriteTimestamp(VkCmdBuffer cmdBuffer, VkTimestampType timestampType, VkBuffer destBuffer, VkGpuSize destOffset)
+VK_LAYER_EXPORT void VKAPI vkCmdWriteTimestamp(VkCmdBuffer cmdBuffer, VkTimestampType timestampType, VkBuffer destBuffer, VkDeviceSize destOffset)
 {
     char str[1024];
     if (!validate_VkTimestampType(timestampType)) {
@@ -1526,7 +1508,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdInitAtomicCounters(VkCmdBuffer cmdBuffer, VkPipe
     nextTable.CmdInitAtomicCounters(cmdBuffer, pipelineBindPoint, startCounter, counterCount, pData);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdLoadAtomicCounters(VkCmdBuffer cmdBuffer, VkPipelineBindPoint pipelineBindPoint, uint32_t startCounter, uint32_t counterCount, VkBuffer srcBuffer, VkGpuSize srcOffset)
+VK_LAYER_EXPORT void VKAPI vkCmdLoadAtomicCounters(VkCmdBuffer cmdBuffer, VkPipelineBindPoint pipelineBindPoint, uint32_t startCounter, uint32_t counterCount, VkBuffer srcBuffer, VkDeviceSize srcOffset)
 {
     char str[1024];
     if (!validate_VkPipelineBindPoint(pipelineBindPoint)) {
@@ -1536,7 +1518,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdLoadAtomicCounters(VkCmdBuffer cmdBuffer, VkPipe
     nextTable.CmdLoadAtomicCounters(cmdBuffer, pipelineBindPoint, startCounter, counterCount, srcBuffer, srcOffset);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdSaveAtomicCounters(VkCmdBuffer cmdBuffer, VkPipelineBindPoint pipelineBindPoint, uint32_t startCounter, uint32_t counterCount, VkBuffer destBuffer, VkGpuSize destOffset)
+VK_LAYER_EXPORT void VKAPI vkCmdSaveAtomicCounters(VkCmdBuffer cmdBuffer, VkPipelineBindPoint pipelineBindPoint, uint32_t startCounter, uint32_t counterCount, VkBuffer destBuffer, VkDeviceSize destOffset)
 {
     char str[1024];
     if (!validate_VkPipelineBindPoint(pipelineBindPoint)) {
@@ -1618,7 +1600,7 @@ void PreCreateRenderPass(VkDevice device, const VkRenderPassCreateInfo* pCreateI
         VkFormatProperties properties;
         size_t size = sizeof(properties);
         VkResult result = nextTable.GetFormatInfo(device, pCreateInfo->pColorFormats[i],
-            VK_INFO_TYPE_FORMAT_PROPERTIES, &size, &properties);
+            VK_FORMAT_INFO_TYPE_PROPERTIES, &size, &properties);
         if(result != VK_SUCCESS)
         {
             std::stringstream ss;
@@ -1746,7 +1728,7 @@ void PreCreateRenderPass(VkDevice device, const VkRenderPassCreateInfo* pCreateI
     VkFormatProperties properties;
     size_t size = sizeof(properties);
     VkResult result = nextTable.GetFormatInfo(device, pCreateInfo->depthStencilFormat,
-        VK_INFO_TYPE_FORMAT_PROPERTIES, &size, &properties);
+        VK_FORMAT_INFO_TYPE_PROPERTIES, &size, &properties);
     if(result != VK_SUCCESS)
     {
         char const str[] = "vkCreateRenderPass parameter, VkFormat pCreateInfo->"\
@@ -1861,7 +1843,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkDbgRegisterMsgCallback(VkInstance instance, VK_
     // This layer intercepts callbacks
     VK_LAYER_DBG_FUNCTION_NODE *pNewDbgFuncNode = (VK_LAYER_DBG_FUNCTION_NODE*)malloc(sizeof(VK_LAYER_DBG_FUNCTION_NODE));
     if (!pNewDbgFuncNode)
-        return VK_ERROR_OUT_OF_MEMORY;
+        return VK_ERROR_OUT_OF_HOST_MEMORY;
     pNewDbgFuncNode->pfnMsgCallback = pfnMsgCallback;
     pNewDbgFuncNode->pUserData = pUserData;
     pNewDbgFuncNode->pNext = g_pDbgFunctionHead;
@@ -1942,7 +1924,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdDbgMarkerEnd(VkCmdBuffer cmdBuffer)
 
 #if defined(__linux__) || defined(XCB_NVIDIA)
 
-VK_LAYER_EXPORT VkResult VKAPI vkWsiX11AssociateConnection(VkPhysicalGpu gpu, const VK_WSI_X11_CONNECTION_INFO* pConnectionInfo)
+VK_LAYER_EXPORT VkResult VKAPI vkWsiX11AssociateConnection(VkPhysicalDevice gpu, const VK_WSI_X11_CONNECTION_INFO* pConnectionInfo)
 {
     pCurObj = (VkBaseLayerObject *) gpu;
     loader_platform_thread_once(&tabOnce, initParamChecker);
@@ -1958,7 +1940,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkWsiX11GetMSC(VkDevice device, xcb_window_t wind
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkWsiX11CreatePresentableImage(VkDevice device, const VK_WSI_X11_PRESENTABLE_IMAGE_CREATE_INFO* pCreateInfo, VkImage* pImage, VkGpuMemory* pMem)
+VK_LAYER_EXPORT VkResult VKAPI vkWsiX11CreatePresentableImage(VkDevice device, const VK_WSI_X11_PRESENTABLE_IMAGE_CREATE_INFO* pCreateInfo, VkImage* pImage, VkDeviceMemory* pMem)
 {
 
     VkResult result = nextTable.WsiX11CreatePresentableImage(device, pCreateInfo, pImage, pMem);
@@ -1975,7 +1957,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkWsiX11QueuePresent(VkQueue queue, const VK_WSI_
 #endif
 
 #include "vk_generic_intercept_proc_helper.h"
-VK_LAYER_EXPORT void* VKAPI vkGetProcAddr(VkPhysicalGpu gpu, const char* funcName)
+VK_LAYER_EXPORT void* VKAPI vkGetProcAddr(VkPhysicalDevice gpu, const char* funcName)
 {
     VkBaseLayerObject* gpuw = (VkBaseLayerObject *) gpu;
     void* addr;
@@ -1990,7 +1972,7 @@ VK_LAYER_EXPORT void* VKAPI vkGetProcAddr(VkPhysicalGpu gpu, const char* funcNam
     else {
         if (gpuw->pGPA == NULL)
             return NULL;
-        return gpuw->pGPA((VkPhysicalGpu)gpuw->nextObject, funcName);
+        return gpuw->pGPA((VkPhysicalDevice)gpuw->nextObject, funcName);
     }
 }
 

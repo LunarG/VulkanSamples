@@ -31,7 +31,7 @@ typedef struct VkLayerDispatchTable_
     PFN_vkCreateInstance CreateInstance;
     PFN_vkDestroyInstance DestroyInstance;
     PFN_vkEnumeratePhysicalDevices EnumeratePhysicalDevices;
-    PFN_vkGetGpuInfo GetGpuInfo;
+    PFN_vkGetPhysicalDeviceInfo GetPhysicalDeviceInfo;
     PFN_vkCreateDevice CreateDevice;
     PFN_vkDestroyDevice DestroyDevice;
     PFN_vkGetGlobalExtensionInfo GetGlobalExtensionInfo;
@@ -49,7 +49,7 @@ typedef struct VkLayerDispatchTable_
     PFN_vkMapMemory MapMemory;
     PFN_vkUnmapMemory UnmapMemory;
     PFN_vkPinSystemMemory PinSystemMemory;
-    PFN_vkGetMultiGpuCompatibility GetMultiGpuCompatibility;
+    PFN_vkGetMultiDeviceCompatibility GetMultiDeviceCompatibility;
     PFN_vkOpenSharedMemory OpenSharedMemory;
     PFN_vkOpenSharedSemaphore OpenSharedSemaphore;
     PFN_vkOpenPeerMemory OpenPeerMemory;

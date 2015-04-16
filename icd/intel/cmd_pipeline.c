@@ -218,13 +218,13 @@ static bool gen6_can_primitive_restart(const struct intel_cmd *cmd)
         return false;
 
     switch (cmd->bind.index.type) {
-    case VK_INDEX_8:
+    case VK_INDEX_TYPE_UINT8:
         supported = (p->primitive_restart_index != 0xffu);
         break;
-    case VK_INDEX_16:
+    case VK_INDEX_TYPE_UINT16:
         supported = (p->primitive_restart_index != 0xffffu);
         break;
-    case VK_INDEX_32:
+    case VK_INDEX_TYPE_UINT32:
         supported = (p->primitive_restart_index != 0xffffffffu);
         break;
     default:
@@ -237,7 +237,7 @@ static bool gen6_can_primitive_restart(const struct intel_cmd *cmd)
 
 static void gen6_3DSTATE_INDEX_BUFFER(struct intel_cmd *cmd,
                                       const struct intel_buf *buf,
-                                      VkGpuSize offset,
+                                      VkDeviceSize offset,
                                       VkIndexType type,
                                       bool enable_cut_index)
 {
@@ -257,15 +257,15 @@ static void gen6_3DSTATE_INDEX_BUFFER(struct intel_cmd *cmd,
         dw0 |= GEN6_IB_DW0_CUT_INDEX_ENABLE;
 
     switch (type) {
-    case VK_INDEX_8:
+    case VK_INDEX_TYPE_UINT8:
         dw0 |= GEN6_IB_DW0_FORMAT_BYTE;
         offset_align = 1;
         break;
-    case VK_INDEX_16:
+    case VK_INDEX_TYPE_UINT16:
         dw0 |= GEN6_IB_DW0_FORMAT_WORD;
         offset_align = 2;
         break;
-    case VK_INDEX_32:
+    case VK_INDEX_TYPE_UINT32:
         dw0 |= GEN6_IB_DW0_FORMAT_DWORD;
         offset_align = 4;
         break;
@@ -391,11 +391,11 @@ static void gen7_fill_3DSTATE_SF_body(const struct intel_cmd *cmd,
         int format;
 
         switch (pipeline->db_format) {
-        case VK_FMT_D16_UNORM:
+        case VK_FORMAT_D16_UNORM:
             format = GEN6_ZFORMAT_D16_UNORM;
             break;
-        case VK_FMT_D32_SFLOAT:
-        case VK_FMT_D32_SFLOAT_S8_UINT:
+        case VK_FORMAT_D32_SFLOAT:
+        case VK_FORMAT_D32_SFLOAT_S8_UINT:
             format = GEN6_ZFORMAT_D32_FLOAT;
             break;
         default:
@@ -1357,7 +1357,7 @@ void cmd_batch_flush_all(struct intel_cmd *cmd)
 
 void cmd_batch_depth_count(struct intel_cmd *cmd,
                            struct intel_bo *bo,
-                           VkGpuSize offset)
+                           VkDeviceSize offset)
 {
     cmd_wa_gen6_pre_depth_stall_write(cmd);
 
@@ -1369,7 +1369,7 @@ void cmd_batch_depth_count(struct intel_cmd *cmd,
 
 void cmd_batch_timestamp(struct intel_cmd *cmd,
                          struct intel_bo *bo,
-                         VkGpuSize offset)
+                         VkDeviceSize offset)
 {
     /* need any WA or stall? */
     gen6_PIPE_CONTROL(cmd, GEN6_PIPE_CONTROL_WRITE_TIMESTAMP, bo, offset, 0);
@@ -1378,7 +1378,7 @@ void cmd_batch_timestamp(struct intel_cmd *cmd,
 void cmd_batch_immediate(struct intel_cmd *cmd,
                          uint32_t pipe_control_flags,
                          struct intel_bo *bo,
-                         VkGpuSize offset,
+                         VkDeviceSize offset,
                          uint64_t val)
 {
     /* need any WA or stall? */
@@ -1638,7 +1638,7 @@ static uint32_t emit_samplers(struct intel_cmd *cmd,
 
 static uint32_t emit_binding_table(struct intel_cmd *cmd,
                                    const struct intel_pipeline_rmap *rmap,
-                                   const VkPipelineShaderStage stage)
+                                   const VkShaderStage stage)
 {
     const struct intel_desc_region *region = cmd->dev->desc_region;
     const struct intel_cmd_dset_data *data = &cmd->bind.dset.graphics_data;
@@ -1796,7 +1796,7 @@ static void gen6_3DSTATE_VERTEX_BUFFERS(struct intel_cmd *cmd)
 
         if (cmd->bind.vertex.buf[i]) {
             const struct intel_buf *buf = cmd->bind.vertex.buf[i];
-            const VkGpuSize offset = cmd->bind.vertex.offset[i];
+            const VkDeviceSize offset = cmd->bind.vertex.offset[i];
 
             cmd_reserve_reloc(cmd, 2);
             cmd_batch_reloc(cmd, pos + 1, buf->obj.mem->bo, offset, 0);
@@ -2010,7 +2010,7 @@ static uint32_t emit_shader(struct intel_cmd *cmd,
         void *entries;
 
         entries = intel_alloc(cmd, sizeof(cache->entries[0]) * count, 0,
-                VK_SYSTEM_ALLOC_INTERNAL);
+                VK_SYSTEM_ALLOC_TYPE_INTERNAL);
         if (entries) {
             if (cache->entries) {
                 memcpy(entries, cache->entries,
@@ -3044,9 +3044,9 @@ static bool cmd_alloc_dset_data(struct intel_cmd *cmd,
 
         data->set_offsets = intel_alloc(cmd,
                 sizeof(data->set_offsets[0]) * chain->layout_count,
-                sizeof(data->set_offsets[0]), VK_SYSTEM_ALLOC_INTERNAL);
+                sizeof(data->set_offsets[0]), VK_SYSTEM_ALLOC_TYPE_INTERNAL);
         if (!data->set_offsets) {
-            cmd_fail(cmd, VK_ERROR_OUT_OF_MEMORY);
+            cmd_fail(cmd, VK_ERROR_OUT_OF_HOST_MEMORY);
             data->set_offset_count = 0;
             return false;
         }
@@ -3060,9 +3060,9 @@ static bool cmd_alloc_dset_data(struct intel_cmd *cmd,
 
         data->dynamic_offsets = intel_alloc(cmd,
                 sizeof(data->dynamic_offsets[0]) * chain->total_dynamic_desc_count,
-                sizeof(data->dynamic_offsets[0]), VK_SYSTEM_ALLOC_INTERNAL);
+                sizeof(data->dynamic_offsets[0]), VK_SYSTEM_ALLOC_TYPE_INTERNAL);
         if (!data->dynamic_offsets) {
-            cmd_fail(cmd, VK_ERROR_OUT_OF_MEMORY);
+            cmd_fail(cmd, VK_ERROR_OUT_OF_HOST_MEMORY);
             data->dynamic_offset_count = 0;
             return false;
         }
@@ -3097,7 +3097,7 @@ static void cmd_copy_dset_data(struct intel_cmd *cmd,
 
 static void cmd_bind_vertex_data(struct intel_cmd *cmd,
                                  const struct intel_buf *buf,
-                                 VkGpuSize offset, uint32_t binding)
+                                 VkDeviceSize offset, uint32_t binding)
 {
     if (binding >= ARRAY_SIZE(cmd->bind.vertex.buf)) {
         cmd_fail(cmd, VK_ERROR_UNKNOWN);
@@ -3110,7 +3110,7 @@ static void cmd_bind_vertex_data(struct intel_cmd *cmd,
 
 static void cmd_bind_index_data(struct intel_cmd *cmd,
                                 const struct intel_buf *buf,
-                                VkGpuSize offset, VkIndexType type)
+                                VkDeviceSize offset, VkIndexType type)
 {
     cmd->bind.index.buf = buf;
     cmd->bind.index.offset = offset;
@@ -3349,19 +3349,19 @@ ICD_EXPORT void VKAPI vkCmdBindDynamicStateObject(
     struct intel_cmd *cmd = intel_cmd(cmdBuffer);
 
     switch (stateBindPoint) {
-    case VK_STATE_BIND_VIEWPORT:
+    case VK_STATE_BIND_POINT_VIEWPORT:
         cmd_bind_viewport_state(cmd,
                 intel_dynamic_vp((VkDynamicVpState) state));
         break;
-    case VK_STATE_BIND_RASTER:
+    case VK_STATE_BIND_POINT_RASTER:
         cmd_bind_raster_state(cmd,
                 intel_dynamic_rs((VkDynamicRsState) state));
         break;
-    case VK_STATE_BIND_DEPTH_STENCIL:
+    case VK_STATE_BIND_POINT_DEPTH_STENCIL:
         cmd_bind_ds_state(cmd,
                 intel_dynamic_ds((VkDynamicDsState) state));
         break;
-    case VK_STATE_BIND_COLOR_BLEND:
+    case VK_STATE_BIND_POINT_COLOR_BLEND:
         cmd_bind_blend_state(cmd,
                 intel_dynamic_cb((VkDynamicCbState) state));
         break;
@@ -3413,12 +3413,13 @@ ICD_EXPORT void VKAPI vkCmdBindDescriptorSets(
     }
 }
 
+
 ICD_EXPORT void VKAPI vkCmdBindVertexBuffers(
     VkCmdBuffer                                 cmdBuffer,
     uint32_t                                    startBinding,
     uint32_t                                    bindingCount,
     const VkBuffer*                             pBuffers,
-    const VkGpuSize*                            pOffsets)
+    const VkDeviceSize*                         pOffsets)
 {
     struct intel_cmd *cmd = intel_cmd(cmdBuffer);
 
@@ -3431,7 +3432,7 @@ ICD_EXPORT void VKAPI vkCmdBindVertexBuffers(
 ICD_EXPORT void VKAPI vkCmdBindIndexBuffer(
     VkCmdBuffer                              cmdBuffer,
     VkBuffer                                  buffer,
-    VkGpuSize                                offset,
+    VkDeviceSize                                offset,
     VkIndexType                              indexType)
 {
     struct intel_cmd *cmd = intel_cmd(cmdBuffer);
@@ -3470,7 +3471,7 @@ ICD_EXPORT void VKAPI vkCmdDrawIndexed(
 ICD_EXPORT void VKAPI vkCmdDrawIndirect(
     VkCmdBuffer                              cmdBuffer,
     VkBuffer                                  buffer,
-    VkGpuSize                                offset,
+    VkDeviceSize                                offset,
     uint32_t                                    count,
     uint32_t                                    stride)
 {
@@ -3482,7 +3483,7 @@ ICD_EXPORT void VKAPI vkCmdDrawIndirect(
 ICD_EXPORT void VKAPI vkCmdDrawIndexedIndirect(
     VkCmdBuffer                              cmdBuffer,
     VkBuffer                                  buffer,
-    VkGpuSize                                offset,
+    VkDeviceSize                                offset,
     uint32_t                                    count,
     uint32_t                                    stride)
 {
@@ -3505,7 +3506,7 @@ ICD_EXPORT void VKAPI vkCmdDispatch(
 ICD_EXPORT void VKAPI vkCmdDispatchIndirect(
     VkCmdBuffer                              cmdBuffer,
     VkBuffer                                  buffer,
-    VkGpuSize                                offset)
+    VkDeviceSize                                offset)
 {
     struct intel_cmd *cmd = intel_cmd(cmdBuffer);
 

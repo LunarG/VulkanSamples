@@ -34,14 +34,14 @@
 class VkDeviceObj : public vk_testing::Device
 {
 public:
-    VkDeviceObj(uint32_t id, VkPhysicalGpu obj);
+    VkDeviceObj(uint32_t id, VkPhysicalDevice obj);
 
     VkDevice device() { return obj(); }
     void get_device_queue();
 
     uint32_t id;
-    VkPhysicalGpuProperties props;
-    const VkPhysicalGpuQueueProperties *queue_props;
+    VkPhysicalDeviceProperties props;
+    const VkPhysicalDeviceQueueProperties *queue_props;
 
     VkQueue m_queue;
 };
@@ -50,13 +50,13 @@ class VkMemoryRefManager
 {
 public:
     void AddMemoryRefs(vk_testing::Object &vkObject);
-    void AddMemoryRefs(vector<VkGpuMemory> mem);
+    void AddMemoryRefs(vector<VkDeviceMemory> mem);
     void EmitAddMemoryRefs(VkQueue queue);
     void EmitRemoveMemoryRefs(VkQueue queue);
-    vector<VkGpuMemory> mem_refs() const;
+    vector<VkDeviceMemory> mem_refs() const;
 
 protected:
-    vector<VkGpuMemory>      mem_refs_;
+    vector<VkDeviceMemory>      mem_refs_;
 
 };
 
@@ -83,7 +83,7 @@ public:
     ~VkRenderFramework();
 
     VkDevice device() {return m_device->device();}
-    VkPhysicalGpu gpu() {return objs[0];}
+    VkPhysicalDevice gpu() {return objs[0];}
     VkRenderPass renderPass() {return m_renderPass;}
     VkFramebuffer framebuffer() {return m_framebuffer;}
     void InitViewport(float width, float height);
@@ -100,7 +100,7 @@ public:
 protected:
     VkApplicationInfo                    app_info;
     VkInstance                            inst;
-    VkPhysicalGpu                        objs[16];
+    VkPhysicalDevice                        objs[16];
     uint32_t                                gpu_count;
     VkDeviceObj                           *m_device;
     VkCmdBuffer                            m_cmdBuffer;
@@ -157,17 +157,17 @@ public:
     VkResult BeginCommandBuffer(VkCmdBufferBeginInfo *pInfo);
     VkResult BeginCommandBuffer(VkRenderPass renderpass_obj, VkFramebuffer framebuffer_obj);
     VkResult EndCommandBuffer();
-    void PipelineBarrier(VkPipelineBarrier *barrierPtr);
+    void PipelineBarrier(VkWaitEvent waitEvent, uint32_t pipeEventCount, const VkPipeEvent* pPipeEvents, uint32_t memBarrierCount, const void** ppMemBarriers);
     void AddRenderTarget(VkImageObj *renderTarget);
     void AddDepthStencil();
     void ClearAllBuffers(VkClearColor clear_color, float depth_clear_color, uint32_t stencil_clear_color, VkDepthStencilObj *depthStencilObj);
     void PrepareAttachments();
     void AddMemoryRefs(vk_testing::Object &vkObject);
-    void AddMemoryRefs(uint32_t ref_count, const VkGpuMemory *mem);
+    void AddMemoryRefs(uint32_t ref_count, const VkDeviceMemory *mem);
     void AddMemoryRefs(vector<vk_testing::Object *> images);
     void BindPipeline(VkPipelineObj &pipeline);
     void BindDescriptorSet(VkDescriptorSetObj &descriptorSet);
-    void BindVertexBuffer(VkConstantBufferObj *vertexBuffer, VkGpuSize offset, uint32_t binding);
+    void BindVertexBuffer(VkConstantBufferObj *vertexBuffer, VkDeviceSize offset, uint32_t binding);
     void BindIndexBuffer(VkIndexBufferObj *indexBuffer, uint32_t offset);
     void BindStateObject(VkStateBindPoint stateBindPoint, VkDynamicStateObject stateObject);
     void BeginRenderPass(VkRenderPass renderpass, VkFramebuffer framebuffer);
@@ -208,7 +208,7 @@ public:
             VK_MEMORY_INPUT_DEPTH_STENCIL_ATTACHMENT_BIT |
             VK_MEMORY_INPUT_TRANSFER_BIT);
 
-    void Bind(VkCmdBuffer cmdBuffer, VkGpuSize offset, uint32_t binding);
+    void Bind(VkCmdBuffer cmdBuffer, VkDeviceSize offset, uint32_t binding);
 
     VkBufferViewAttachInfo     m_bufferViewInfo;
 
@@ -226,7 +226,7 @@ class VkIndexBufferObj : public VkConstantBufferObj
 public:
     VkIndexBufferObj(VkDeviceObj *device);
     void CreateAndInitBuffer(int numIndexes, VkIndexType dataFormat, const void* data);
-    void Bind(VkCmdBuffer cmdBuffer, VkGpuSize offset);
+    void Bind(VkCmdBuffer cmdBuffer, VkDeviceSize offset);
     VkIndexType GetIndexType();
 
 protected:
@@ -242,7 +242,7 @@ public:
 public:
     void init(uint32_t w, uint32_t h,
               VkFormat fmt, VkFlags usage,
-              VkImageTiling tiling=VK_LINEAR_TILING);
+              VkImageTiling tiling=VK_IMAGE_TILING_LINEAR);
 
     //    void clear( CommandBuffer*, uint32_t[4] );
 
@@ -251,9 +251,9 @@ public:
         m_imageInfo.layout = layout;
     }
 
-    VkGpuMemory memory() const
+    VkDeviceMemory memory() const
     {
-        const std::vector<VkGpuMemory> mems = memories();
+        const std::vector<VkDeviceMemory> mems = memories();
         return mems.empty() ? VK_NULL_HANDLE : mems[0];
     }
 
@@ -278,7 +278,7 @@ public:
                 VK_STRUCTURE_TYPE_COLOR_ATTACHMENT_VIEW_CREATE_INFO,
                 VK_NULL_HANDLE,
                 obj(),
-                VK_FMT_B8G8R8A8_UNORM,
+                VK_FORMAT_B8G8R8A8_UNORM,
                 0,
                 0,
                 1
@@ -328,7 +328,7 @@ public:
 protected:
     VkDeviceObj                 *m_device;
     vk_testing::ImageView     m_textureView;
-    VkGpuSize               m_rowPitch;
+    VkDeviceSize               m_rowPitch;
 };
 
 class VkSamplerObj : public vk_testing::Sampler
@@ -376,12 +376,12 @@ protected:
 class VkShaderObj : public vk_testing::Shader
 {
 public:
-    VkShaderObj(VkDeviceObj *device, const char * shaderText, VkPipelineShaderStage stage, VkRenderFramework *framework);
+    VkShaderObj(VkDeviceObj *device, const char * shaderText, VkShaderStage stage, VkRenderFramework *framework);
     VkPipelineShaderStageCreateInfo* GetStageCreateInfo();
 
 protected:
     VkPipelineShaderStageCreateInfo stage_info;
-    VkPipelineShaderStage m_stage;
+    VkShaderStage m_stage;
     VkDeviceObj *m_device;
 
 };

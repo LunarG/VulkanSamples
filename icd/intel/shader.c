@@ -50,7 +50,7 @@ static VkResult shader_create(struct intel_dev *dev,
     sh = (struct intel_shader *) intel_base_create(&dev->base.handle,
             sizeof(*sh), dev->base.dbg, VK_DBG_OBJECT_SHADER, info, 0);
     if (!sh)
-        return VK_ERROR_OUT_OF_MEMORY;
+        return VK_ERROR_OUT_OF_HOST_MEMORY;
 
     if (info->codeSize < sizeof(*spv))
         return VK_ERROR_INVALID_MEMORY_SIZE;

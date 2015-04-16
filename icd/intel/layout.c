@@ -259,7 +259,7 @@ layout_init_lods(struct intel_layout *layout,
 
          /* every LOD begins at tile boundaries */
          if (info->mipLevels > 1) {
-            assert(layout->format == VK_FMT_S8_UINT);
+            assert(layout->format == VK_FORMAT_S8_UINT);
             cur_x = u_align(cur_x, 64);
             cur_y = u_align(cur_y, 64);
          }
@@ -403,11 +403,11 @@ layout_init_alignments(struct intel_layout *layout,
    } else if (info->usage & VK_IMAGE_USAGE_DEPTH_STENCIL_BIT) {
       if (intel_gpu_gen(params->gpu) >= INTEL_GEN(7)) {
          switch (layout->format) {
-         case VK_FMT_D16_UNORM:
+         case VK_FORMAT_D16_UNORM:
             layout->align_i = 8;
             layout->align_j = 4;
             break;
-         case VK_FMT_S8_UINT:
+         case VK_FORMAT_S8_UINT:
             layout->align_i = 8;
             layout->align_j = 8;
             break;
@@ -418,7 +418,7 @@ layout_init_alignments(struct intel_layout *layout,
          }
       } else {
          switch (layout->format) {
-         case VK_FMT_S8_UINT:
+         case VK_FORMAT_S8_UINT:
             layout->align_i = 4;
             layout->align_j = 2;
             break;
@@ -438,7 +438,7 @@ layout_init_alignments(struct intel_layout *layout,
 
       if (intel_gpu_gen(params->gpu) >= INTEL_GEN(7) &&
           intel_gpu_gen(params->gpu) <= INTEL_GEN(7.5) && valign_4)
-         assert(layout->format != VK_FMT_R32G32B32_SFLOAT);
+         assert(layout->format != VK_FORMAT_R32G32B32_SFLOAT);
 
       layout->align_i = 4;
       layout->align_j = (valign_4) ? 4 : 2;
@@ -477,7 +477,7 @@ layout_get_valid_tilings(const struct intel_layout *layout,
    if (params->scanout)
        valid_tilings &= LAYOUT_TILING_X;
 
-   if (info->tiling == VK_LINEAR_TILING)
+   if (info->tiling == VK_IMAGE_TILING_LINEAR)
        valid_tilings &= LAYOUT_TILING_NONE;
 
    /*
@@ -494,7 +494,7 @@ layout_get_valid_tilings(const struct intel_layout *layout,
     */
    if (info->usage & VK_IMAGE_USAGE_DEPTH_STENCIL_BIT) {
       switch (format) {
-      case VK_FMT_S8_UINT:
+      case VK_FORMAT_S8_UINT:
          valid_tilings &= LAYOUT_TILING_W;
          break;
       default:
@@ -528,7 +528,7 @@ layout_get_valid_tilings(const struct intel_layout *layout,
        */
       if (intel_gpu_gen(params->gpu) >= INTEL_GEN(7) &&
           intel_gpu_gen(params->gpu) <= INTEL_GEN(7.5) &&
-          layout->format == VK_FMT_R32G32B32_SFLOAT)
+          layout->format == VK_FORMAT_R32G32B32_SFLOAT)
          valid_tilings &= ~LAYOUT_TILING_Y;
 
       valid_tilings &= ~LAYOUT_TILING_W;
@@ -609,7 +609,7 @@ layout_init_walk_gen7(struct intel_layout *layout,
        *     "note that the depth buffer and stencil buffer have an implied
        *      value of ARYSPC_FULL"
        */
-      layout->walk = (info->imageType == VK_IMAGE_3D) ?
+      layout->walk = (info->imageType == VK_IMAGE_TYPE_3D) ?
          INTEL_LAYOUT_WALK_3D : INTEL_LAYOUT_WALK_LAYER;
 
       layout->interleaved_samples = true;
@@ -628,7 +628,7 @@ layout_init_walk_gen7(struct intel_layout *layout,
          assert(info->mipLevels == 1);
 
       layout->walk =
-         (info->imageType == VK_IMAGE_3D) ? INTEL_LAYOUT_WALK_3D :
+         (info->imageType == VK_IMAGE_TYPE_3D) ? INTEL_LAYOUT_WALK_3D :
          (info->mipLevels > 1) ? INTEL_LAYOUT_WALK_LAYER :
          INTEL_LAYOUT_WALK_LOD;
 
@@ -652,8 +652,8 @@ layout_init_walk_gen6(struct intel_layout *layout,
     * GEN6 does not support compact spacing otherwise.
     */
    layout->walk =
-      (params->info->imageType == VK_IMAGE_3D) ? INTEL_LAYOUT_WALK_3D :
-      (layout->format == VK_FMT_S8_UINT) ? INTEL_LAYOUT_WALK_LOD :
+      (params->info->imageType == VK_IMAGE_TYPE_3D) ? INTEL_LAYOUT_WALK_3D :
+      (layout->format == VK_FORMAT_S8_UINT) ? INTEL_LAYOUT_WALK_LOD :
       INTEL_LAYOUT_WALK_LAYER;
 
    /* GEN6 supports only interleaved samples */
@@ -697,15 +697,15 @@ layout_init_size_and_format(struct intel_layout *layout,
    }
 
    switch (format) {
-   case VK_FMT_D24_UNORM_S8_UINT:
+   case VK_FORMAT_D24_UNORM_S8_UINT:
       if (require_separate_stencil) {
-         format = VK_FMT_D24_UNORM;
+         format = VK_FORMAT_D24_UNORM;
          layout->separate_stencil = true;
       }
       break;
-   case VK_FMT_D32_SFLOAT_S8_UINT:
+   case VK_FORMAT_D32_SFLOAT_S8_UINT:
       if (require_separate_stencil) {
-         format = VK_FMT_D32_SFLOAT;
+         format = VK_FORMAT_D32_SFLOAT;
          layout->separate_stencil = true;
       }
       break;
@@ -732,7 +732,7 @@ layout_want_mcs(struct intel_layout *layout,
    if (intel_gpu_gen(params->gpu) < INTEL_GEN(7))
       return false;
 
-   if (info->imageType != VK_IMAGE_2D ||
+   if (info->imageType != VK_IMAGE_TYPE_2D ||
        !(info->usage & VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT))
       return false;
 
@@ -851,7 +851,7 @@ layout_align(struct intel_layout *layout, struct intel_layout_params *params)
           align_h = layout->align_j;
 
       /* in case it is used as a cube */
-      if (info->imageType == VK_IMAGE_2D)
+      if (info->imageType == VK_IMAGE_TYPE_2D)
          pad_h += 2;
 
       if (params->compressed && align_h < layout->align_j * 2)

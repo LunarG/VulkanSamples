@@ -112,7 +112,7 @@ struct nulldrv_img {
 struct nulldrv_mem {
     struct nulldrv_base base;
     struct nulldrv_bo *bo;
-    VkGpuSize size;
+    VkDeviceSize size;
 };
 
 struct nulldrv_ds_view {
@@ -134,7 +134,7 @@ struct nulldrv_img_view {
 
 struct nulldrv_buf {
     struct nulldrv_obj obj;
-    VkGpuSize size;
+    VkDeviceSize size;
     VkFlags usage;
 };
 

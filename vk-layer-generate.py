@@ -151,7 +151,7 @@ class Subcommand(object):
         r_body.append('    // This layer intercepts callbacks')
         r_body.append('    VK_LAYER_DBG_FUNCTION_NODE *pNewDbgFuncNode = (VK_LAYER_DBG_FUNCTION_NODE*)malloc(sizeof(VK_LAYER_DBG_FUNCTION_NODE));')
         r_body.append('    if (!pNewDbgFuncNode)')
-        r_body.append('        return VK_ERROR_OUT_OF_MEMORY;')
+        r_body.append('        return VK_ERROR_OUT_OF_HOST_MEMORY;')
         r_body.append('    pNewDbgFuncNode->pfnMsgCallback = pfnMsgCallback;')
         r_body.append('    pNewDbgFuncNode->pUserData = pUserData;')
         r_body.append('    pNewDbgFuncNode->pNext = g_pDbgFunctionHead;')
@@ -258,6 +258,28 @@ class Subcommand(object):
         ggei_body.append('}')
         return "\n".join(ggei_body)
 
+    def _gen_layer_get_extension_support(self, layer="Generic"):
+        ges_body = []
+        ges_body.append('VK_LAYER_EXPORT VkResult VKAPI xglGetExtensionSupport(VkPhysicalDevice gpu, const char* pExtName)')
+        ges_body.append('{')
+        ges_body.append('    VkResult result;')
+        ges_body.append('    VkBaseLayerObject* gpuw = (VkBaseLayerObject *) gpu;')
+        ges_body.append('')
+        ges_body.append('    /* This entrypoint is NOT going to init its own dispatch table since loader calls here early */')
+        ges_body.append('    if (!strncmp(pExtName, "%s", strlen("%s")))' % (layer, layer))
+        ges_body.append('    {')
+        ges_body.append('        result = VK_SUCCESS;')
+        ges_body.append('    } else if (nextTable.GetExtensionSupport != NULL)')
+        ges_body.append('    {')
+        ges_body.append('        result = nextTable.GetExtensionSupport((VkPhysicalDevice)gpuw->nextObject, pExtName);')
+        ges_body.append('    } else')
+        ges_body.append('    {')
+        ges_body.append('        result = VK_ERROR_INVALID_EXTENSION;')
+        ges_body.append('    }')
+        ges_body.append('    return result;')
+        ges_body.append('}')
+        return "\n".join(ges_body)
+
     def _generate_dispatch_entrypoints(self, qual=""):
         if qual:
             qual += " "
@@ -354,7 +376,7 @@ class Subcommand(object):
 
     def _generate_layer_gpa_function(self, extensions=[]):
         func_body = []
-        func_body.append("VK_LAYER_EXPORT void* VKAPI vkGetProcAddr(VkPhysicalGpu gpu, const char* funcName)\n"
+        func_body.append("VK_LAYER_EXPORT void* VKAPI vkGetProcAddr(VkPhysicalDevice gpu, const char* funcName)\n"
                          "{\n"
                          "    VkBaseLayerObject* gpuw = (VkBaseLayerObject *) gpu;\n"
                          "    void* addr;\n"
@@ -373,7 +395,7 @@ class Subcommand(object):
         func_body.append("    else {\n"
                          "        if (gpuw->pGPA == NULL)\n"
                          "            return NULL;\n"
-                         "        return gpuw->pGPA((VkPhysicalGpu)gpuw->nextObject, funcName);\n"
+                         "        return gpuw->pGPA((VkPhysicalDevice)gpuw->nextObject, funcName);\n"
                          "    }\n"
                          "}\n")
         return "\n".join(func_body)
@@ -403,7 +425,7 @@ class Subcommand(object):
                          '    fpNextGPA = pCurObj->pGPA;\n'
                          '    assert(fpNextGPA);\n')
 
-        func_body.append("    layer_initialize_dispatch_table(&nextTable, fpNextGPA, (VkPhysicalGpu) pCurObj->nextObject);")
+        func_body.append("    layer_initialize_dispatch_table(&nextTable, fpNextGPA, (VkPhysicalDevice) pCurObj->nextObject);")
         if lockname is not None:
             func_body.append("    if (!%sLockInitialized)" % lockname)
             func_body.append("    {")
@@ -422,7 +444,7 @@ class Subcommand(object):
                          '    fpNextGPA = pCurObj->pGPA;\n'
                          '    assert(fpNextGPA);\n' % self.layer_name)
 
-        func_body.append("    layer_initialize_dispatch_table(&nextTable, fpNextGPA, (VkPhysicalGpu) pCurObj->nextObject);\n")
+        func_body.append("    layer_initialize_dispatch_table(&nextTable, fpNextGPA, (VkPhysicalDevice) pCurObj->nextObject);\n")
         func_body.append("    if (!printLockInitialized)")
         func_body.append("    {")
         func_body.append("        // TODO/TBD: Need to delete this mutex sometime.  How???")
@@ -624,7 +646,7 @@ class APIDumpSubcommand(Subcommand):
         func_body.append('    PFN_vkGetProcAddr fpNextGPA;')
         func_body.append('    fpNextGPA = pCurObj->pGPA;')
         func_body.append('    assert(fpNextGPA);')
-        func_body.append('    layer_initialize_dispatch_table(&nextTable, fpNextGPA, (VkPhysicalGpu) pCurObj->nextObject);')
+        func_body.append('    layer_initialize_dispatch_table(&nextTable, fpNextGPA, (VkPhysicalDevice) pCurObj->nextObject);')
         func_body.append('')
         func_body.append('    if (!printLockInitialized)')
         func_body.append('    {')
@@ -732,7 +754,7 @@ class APIDumpSubcommand(Subcommand):
         if 'WsiX11AssociateConnection' == proto.name:
             funcs.append("#if defined(__linux__) || defined(XCB_NVIDIA)")
         if proto.name == "EnumerateLayers":
-            c_call = proto.c_call().replace("(" + proto.params[0].name, "((VkPhysicalGpu)gpuw->nextObject", 1)
+            c_call = proto.c_call().replace("(" + proto.params[0].name, "((VkPhysicalDevice)gpuw->nextObject", 1)
             funcs.append('%s%s\n'
                      '{\n'
                      '    using namespace StreamControl;\n'
@@ -751,6 +773,36 @@ class APIDumpSubcommand(Subcommand):
                      '        return VK_SUCCESS;\n'
                      '    }\n'
                          '}' % (qual, decl, self.layer_name, ret_val, proto.c_call(),f_open, log_func, f_close, stmt, self.layer_name))
+        elif 'GetExtensionSupport' == proto.name:
+            funcs.append('%s%s\n'
+                         '{\n'
+                         '    VkResult result;\n'
+                         '    /* This entrypoint is NOT going to init its own dispatch table since loader calls here early */\n'
+                         '    if (!strncmp(pExtName, "%s", strlen("%s")))\n'
+                         '    {\n'
+                         '        result = VK_SUCCESS;\n'
+                         '    } else if (nextTable.GetExtensionSupport != NULL)\n'
+                         '    {\n'
+                         '        result = nextTable.%s;\n'
+                         '        %s    %s        %s\n'
+                         '    } else\n'
+                         '    {\n'
+                         '        result = VK_ERROR_INVALID_EXTENSION;\n'
+                         '    }\n'
+                         '%s'
+                         '}' % (qual, decl, self.layer_name, self.layer_name, proto.c_call(), f_open, log_func, f_close, stmt))
+#        elif 'vkphysicalgpu' == proto.params[0].ty.lower():
+#            c_call = proto.c_call().replace("(" + proto.params[0].name, "((VkPhysicalDevice)gpuw->nextObject", 1)
+#            funcs.append('%s%s\n'
+#                     '{\n'
+#                     '    using namespace StreamControl;\n'
+#                     '    VkBaseLayerObject* gpuw = (VkBaseLayerObject *) %s;\n'
+#                     '    pCurObj = gpuw;\n'
+#                     '    loader_platform_thread_once(&tabOnce, init%s);\n'
+#                     '    %snextTable.%s;\n'
+#                     '    %s%s%s\n'
+#                     '%s'
+#                     '}' % (qual, decl, proto.params[0].name, self.layer_name, ret_val, c_call, f_open, log_func, f_close, stmt))
         else:
             funcs.append('%s%s\n'
                      '{\n'
@@ -801,7 +853,7 @@ class ObjectTrackerSubcommand(Subcommand):
         header_txt.append('')
         header_txt.append('// For each Queue\'s doubly linked-list of mem refs')
         header_txt.append('typedef struct _OT_MEM_INFO {')
-        header_txt.append('    VkGpuMemory        mem;')
+        header_txt.append('    VkDeviceMemory        mem;')
         header_txt.append('    struct _OT_MEM_INFO *pNextMI;')
         header_txt.append('    struct _OT_MEM_INFO *pPrevMI;')
         header_txt.append('')
@@ -831,7 +883,7 @@ class ObjectTrackerSubcommand(Subcommand):
         header_txt.append('    }')
         header_txt.append('    else {')
         header_txt.append('        char str[1024];')
-        header_txt.append('        sprintf(str, "ERROR:  VK_ERROR_OUT_OF_MEMORY -- could not allocate memory for Queue Information");')
+        header_txt.append('        sprintf(str, "ERROR:  VK_ERROR_OUT_OF_HOST_MEMORY -- could not allocate memory for Queue Information");')
         header_txt.append('        layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, queue, 0, OBJTRACK_INTERNAL_ERROR, "OBJTRACK", str);')
         header_txt.append('    }')
         header_txt.append('}')
@@ -1017,13 +1069,13 @@ class ObjectTrackerSubcommand(Subcommand):
         header_txt.append('')
         header_txt.append('    while (pTrav) {')
         header_txt.append('        if (pTrav->obj.pObj == pObj) {')
-        header_txt.append('            if (stateBindPoint == VK_STATE_BIND_VIEWPORT) {')
+        header_txt.append('            if (stateBindPoint == VK_STATE_BIND_POINT_VIEWPORT) {')
         header_txt.append('                pTrav->obj.status |= OBJSTATUS_VIEWPORT_BOUND;')
-        header_txt.append('            } else if (stateBindPoint == VK_STATE_BIND_RASTER) {')
+        header_txt.append('            } else if (stateBindPoint == VK_STATE_BIND_POINT_RASTER) {')
         header_txt.append('                pTrav->obj.status |= OBJSTATUS_RASTER_BOUND;')
-        header_txt.append('            } else if (stateBindPoint == VK_STATE_BIND_COLOR_BLEND) {')
+        header_txt.append('            } else if (stateBindPoint == VK_STATE_BIND_POINT_COLOR_BLEND) {')
         header_txt.append('                pTrav->obj.status |= OBJSTATUS_COLOR_BLEND_BOUND;')
-        header_txt.append('            } else if (stateBindPoint == VK_STATE_BIND_DEPTH_STENCIL) {')
+        header_txt.append('            } else if (stateBindPoint == VK_STATE_BIND_POINT_DEPTH_STENCIL) {')
         header_txt.append('                pTrav->obj.status |= OBJSTATUS_DEPTH_STENCIL_BOUND;')
         header_txt.append('            }')
         header_txt.append('            return;')
@@ -1084,7 +1136,7 @@ class ObjectTrackerSubcommand(Subcommand):
         header_txt.append('}')
         header_txt.append('')
         header_txt.append('static void setGpuQueueInfoState(void *pData) {')
-        header_txt.append('    maxMemReferences = ((VkPhysicalGpuQueueProperties *)pData)->maxMemReferences;')
+        header_txt.append('    maxMemReferences = ((VkPhysicalDeviceQueueProperties *)pData)->maxMemReferences;')
         header_txt.append('}')
         return "\n".join(header_txt)
 
@@ -1128,9 +1180,9 @@ class ObjectTrackerSubcommand(Subcommand):
         elif 'CmdDraw' in proto.name:
             using_line += '    validate_draw_state_flags((void *)cmdBuffer);\n'
         elif 'MapMemory' in proto.name:
-            using_line += '    set_status((void*)mem, VkObjectTypeGpuMemory, OBJSTATUS_GPU_MEM_MAPPED);\n'
+            using_line += '    set_status((void*)mem, VkObjectTypeDeviceMemory, OBJSTATUS_GPU_MEM_MAPPED);\n'
         elif 'UnmapMemory' in proto.name:
-            using_line += '    reset_status((void*)mem, VkObjectTypeGpuMemory, OBJSTATUS_GPU_MEM_MAPPED);\n'
+            using_line += '    reset_status((void*)mem, VkObjectTypeDeviceMemory, OBJSTATUS_GPU_MEM_MAPPED);\n'
         if 'AllocDescriptor' in proto.name: # Allocates array of DSs
             create_line =  '    for (uint32_t i = 0; i < *pCount; i++) {\n'
             create_line += '        loader_platform_thread_lock_mutex(&objLock);\n'
@@ -1201,8 +1253,28 @@ class ObjectTrackerSubcommand(Subcommand):
                      '        return VK_SUCCESS;\n'
                      '    }\n'
                          '}' % (qual, decl, using_line, self.layer_name, ret_val, proto.c_call(), create_line, destroy_line, stmt, self.layer_name))
-        elif 'GetGpuInfo' in proto.name:
-            gpu_state =  '    if (infoType == VK_INFO_TYPE_PHYSICAL_GPU_QUEUE_PROPERTIES) {\n'
+        elif 'GetExtensionSupport' == proto.name:
+            funcs.append('%s%s\n'
+                     '{\n'
+                     '    VkResult result;\n'
+                     '    /* This entrypoint is NOT going to init its own dispatch table since loader calls this early */\n'
+                     '    if (!strncmp(pExtName, "%s", strlen("%s")) ||\n'
+                     '        !strncmp(pExtName, "objTrackGetObjectCount", strlen("objTrackGetObjectCount")) ||\n'
+                     '        !strncmp(pExtName, "objTrackGetObjects", strlen("objTrackGetObjects")))\n'
+                     '    {\n'
+                     '        result = VK_SUCCESS;\n'
+                     '    } else if (nextTable.GetExtensionSupport != NULL)\n'
+                     '    {\n'
+                     '    %s'
+                     '        result = nextTable.%s;\n'
+                     '    } else\n'
+                     '    {\n'
+                     '        result = VK_ERROR_INVALID_EXTENSION;\n'
+                     '    }\n'
+                     '%s'
+                     '}' % (qual, decl, self.layer_name, self.layer_name, using_line, proto.c_call(),  stmt))
+        elif 'GetPhysicalDeviceInfo' in proto.name:
+            gpu_state =  '    if (infoType == VK_PHYSICAL_DEVICE_INFO_TYPE_QUEUE_PROPERTIES) {\n'
             gpu_state += '        if (pData != NULL) {\n'
             gpu_state += '            setGpuQueueInfoState(pData);\n'
             gpu_state += '        }\n'
@@ -1335,7 +1407,7 @@ class ThreadingSubcommand(Subcommand):
         # Only watch core objects passed as first parameter
         elif proto.params[0].ty not in vulkan.core.objects:
             return None
-        elif proto.params[0].ty != "VkPhysicalGpu":
+        elif proto.params[0].ty != "VkPhysicalDevice":
             funcs.append('%s%s\n'
                      '{\n'
                      '    useObject((VkObject) %s, "%s");\n'

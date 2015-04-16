@@ -33,14 +33,14 @@
 #include "shader.h"
 #include "pipeline.h"
 
-static int translate_blend_func(VkBlendFunc func)
+static int translate_blend_func(VkBlendOp func)
 {
    switch (func) {
-   case VK_BLEND_FUNC_ADD:                return GEN6_BLENDFUNCTION_ADD;
-   case VK_BLEND_FUNC_SUBTRACT:           return GEN6_BLENDFUNCTION_SUBTRACT;
-   case VK_BLEND_FUNC_REVERSE_SUBTRACT:   return GEN6_BLENDFUNCTION_REVERSE_SUBTRACT;
-   case VK_BLEND_FUNC_MIN:                return GEN6_BLENDFUNCTION_MIN;
-   case VK_BLEND_FUNC_MAX:                return GEN6_BLENDFUNCTION_MAX;
+   case VK_BLEND_OP_ADD:                return GEN6_BLENDFUNCTION_ADD;
+   case VK_BLEND_OP_SUBTRACT:           return GEN6_BLENDFUNCTION_SUBTRACT;
+   case VK_BLEND_OP_REVERSE_SUBTRACT:   return GEN6_BLENDFUNCTION_REVERSE_SUBTRACT;
+   case VK_BLEND_OP_MIN:                return GEN6_BLENDFUNCTION_MIN;
+   case VK_BLEND_OP_MAX:                return GEN6_BLENDFUNCTION_MAX;
    default:
       assert(!"unknown blend func");
       return GEN6_BLENDFUNCTION_ADD;
@@ -75,17 +75,17 @@ static int translate_blend(VkBlend blend)
    };
 }
 
-static int translate_compare_func(VkCompareFunc func)
+static int translate_compare_func(VkCompareOp func)
 {
     switch (func) {
-    case VK_COMPARE_NEVER:         return GEN6_COMPAREFUNCTION_NEVER;
-    case VK_COMPARE_LESS:          return GEN6_COMPAREFUNCTION_LESS;
-    case VK_COMPARE_EQUAL:         return GEN6_COMPAREFUNCTION_EQUAL;
-    case VK_COMPARE_LESS_EQUAL:    return GEN6_COMPAREFUNCTION_LEQUAL;
-    case VK_COMPARE_GREATER:       return GEN6_COMPAREFUNCTION_GREATER;
-    case VK_COMPARE_NOT_EQUAL:     return GEN6_COMPAREFUNCTION_NOTEQUAL;
-    case VK_COMPARE_GREATER_EQUAL: return GEN6_COMPAREFUNCTION_GEQUAL;
-    case VK_COMPARE_ALWAYS:        return GEN6_COMPAREFUNCTION_ALWAYS;
+    case VK_COMPARE_OP_NEVER:         return GEN6_COMPAREFUNCTION_NEVER;
+    case VK_COMPARE_OP_LESS:          return GEN6_COMPAREFUNCTION_LESS;
+    case VK_COMPARE_OP_EQUAL:         return GEN6_COMPAREFUNCTION_EQUAL;
+    case VK_COMPARE_OP_LESS_EQUAL:    return GEN6_COMPAREFUNCTION_LEQUAL;
+    case VK_COMPARE_OP_GREATER:       return GEN6_COMPAREFUNCTION_GREATER;
+    case VK_COMPARE_OP_NOT_EQUAL:     return GEN6_COMPAREFUNCTION_NOTEQUAL;
+    case VK_COMPARE_OP_GREATER_EQUAL: return GEN6_COMPAREFUNCTION_GEQUAL;
+    case VK_COMPARE_OP_ALWAYS:        return GEN6_COMPAREFUNCTION_ALWAYS;
     default:
       assert(!"unknown compare_func");
       return GEN6_COMPAREFUNCTION_NEVER;
@@ -204,7 +204,7 @@ struct intel_pipeline_shader *intel_pipeline_shader_create_meta(struct intel_dev
     struct intel_pipeline_shader *sh;
     VkResult ret;
 
-    sh = intel_alloc(dev, sizeof(*sh), 0, VK_SYSTEM_ALLOC_INTERNAL);
+    sh = intel_alloc(dev, sizeof(*sh), 0, VK_SYSTEM_ALLOC_TYPE_INTERNAL);
     if (!sh)
         return NULL;
     memset(sh, 0, sizeof(*sh));
@@ -316,37 +316,37 @@ static VkResult pipeline_build_ia(struct intel_pipeline *pipeline,
     pipeline->disable_vs_cache = info->ia.disableVertexReuse;
 
     switch (info->ia.topology) {
-    case VK_TOPOLOGY_POINT_LIST:
+    case VK_PRIMITIVE_TOPOLOGY_POINT_LIST:
         pipeline->prim_type = GEN6_3DPRIM_POINTLIST;
         break;
-    case VK_TOPOLOGY_LINE_LIST:
+    case VK_PRIMITIVE_TOPOLOGY_LINE_LIST:
         pipeline->prim_type = GEN6_3DPRIM_LINELIST;
         break;
-    case VK_TOPOLOGY_LINE_STRIP:
+    case VK_PRIMITIVE_TOPOLOGY_LINE_STRIP:
         pipeline->prim_type = GEN6_3DPRIM_LINESTRIP;
         break;
-    case VK_TOPOLOGY_TRIANGLE_LIST:
+    case VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST:
         pipeline->prim_type = GEN6_3DPRIM_TRILIST;
         break;
-    case VK_TOPOLOGY_TRIANGLE_STRIP:
+    case VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP:
         pipeline->prim_type = GEN6_3DPRIM_TRISTRIP;
         break;
-    case VK_TOPOLOGY_TRIANGLE_FAN:
+    case VK_PRIMITIVE_TOPOLOGY_TRIANGLE_FAN:
         pipeline->prim_type = GEN6_3DPRIM_TRIFAN;
         break;
-    case VK_TOPOLOGY_LINE_LIST_ADJ:
+    case VK_PRIMITIVE_TOPOLOGY_LINE_LIST_ADJ:
         pipeline->prim_type = GEN6_3DPRIM_LINELIST_ADJ;
         break;
-    case VK_TOPOLOGY_LINE_STRIP_ADJ:
+    case VK_PRIMITIVE_TOPOLOGY_LINE_STRIP_ADJ:
         pipeline->prim_type = GEN6_3DPRIM_LINESTRIP_ADJ;
         break;
-    case VK_TOPOLOGY_TRIANGLE_LIST_ADJ:
+    case VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST_ADJ:
         pipeline->prim_type = GEN6_3DPRIM_TRILIST_ADJ;
         break;
-    case VK_TOPOLOGY_TRIANGLE_STRIP_ADJ:
+    case VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP_ADJ:
         pipeline->prim_type = GEN6_3DPRIM_TRISTRIP_ADJ;
         break;
-    case VK_TOPOLOGY_PATCH:
+    case VK_PRIMITIVE_TOPOLOGY_PATCH:
         if (!info->tess.patchControlPoints ||
             info->tess.patchControlPoints > 32)
             return VK_ERROR_BAD_PIPELINE_DATA;
@@ -388,15 +388,15 @@ static VkResult pipeline_build_rs_state(struct intel_pipeline *pipeline,
     }
 
     switch (rs_state->fillMode) {
-    case VK_FILL_POINTS:
+    case VK_FILL_MODE_POINTS:
         pipeline->cmd_sf_fill |= GEN7_SF_DW1_FRONTFACE_POINT |
                               GEN7_SF_DW1_BACKFACE_POINT;
         break;
-    case VK_FILL_WIREFRAME:
+    case VK_FILL_MODE_WIREFRAME:
         pipeline->cmd_sf_fill |= GEN7_SF_DW1_FRONTFACE_WIREFRAME |
                               GEN7_SF_DW1_BACKFACE_WIREFRAME;
         break;
-    case VK_FILL_SOLID:
+    case VK_FILL_MODE_SOLID:
     default:
         pipeline->cmd_sf_fill |= GEN7_SF_DW1_FRONTFACE_SOLID |
                               GEN7_SF_DW1_BACKFACE_SOLID;
@@ -414,20 +414,20 @@ static VkResult pipeline_build_rs_state(struct intel_pipeline *pipeline,
     }
 
     switch (rs_state->cullMode) {
-    case VK_CULL_NONE:
+    case VK_CULL_MODE_NONE:
     default:
         pipeline->cmd_sf_cull |= GEN7_SF_DW2_CULLMODE_NONE;
         pipeline->cmd_clip_cull |= GEN7_CLIP_DW1_CULLMODE_NONE;
         break;
-    case VK_CULL_FRONT:
+    case VK_CULL_MODE_FRONT:
         pipeline->cmd_sf_cull |= GEN7_SF_DW2_CULLMODE_FRONT;
         pipeline->cmd_clip_cull |= GEN7_CLIP_DW1_CULLMODE_FRONT;
         break;
-    case VK_CULL_BACK:
+    case VK_CULL_MODE_BACK:
         pipeline->cmd_sf_cull |= GEN7_SF_DW2_CULLMODE_BACK;
         pipeline->cmd_clip_cull |= GEN7_CLIP_DW1_CULLMODE_BACK;
         break;
-    case VK_CULL_FRONT_AND_BACK:
+    case VK_CULL_MODE_FRONT_AND_BACK:
         pipeline->cmd_sf_cull |= GEN7_SF_DW2_CULLMODE_BOTH;
         pipeline->cmd_clip_cull |= GEN7_CLIP_DW1_CULLMODE_BOTH;
         break;
@@ -478,7 +478,7 @@ static VkResult pipeline_get_info(struct intel_base *base, int type,
     VkResult ret = VK_SUCCESS;
 
     switch (type) {
-    case VK_INFO_TYPE_MEMORY_REQUIREMENTS:
+    case VK_OBJECT_INFO_TYPE_MEMORY_REQUIREMENTS:
         {
             VkMemoryRequirements *mem_req = data;
 
@@ -527,16 +527,16 @@ static VkResult pipeline_validate(struct intel_pipeline *pipeline)
     }
 
     /*
-     * VK_TOPOLOGY_PATCH primitive topology is only valid for tessellation pipelines.
+     * VK_PRIMITIVE_TOPOLOGY_PATCH primitive topology is only valid for tessellation pipelines.
      * Mismatching primitive topology and tessellation fails graphics pipeline creation.
      */
     if (pipeline->active_shaders & (SHADER_TESS_CONTROL_FLAG | SHADER_TESS_EVAL_FLAG) &&
-        (pipeline->topology != VK_TOPOLOGY_PATCH)) {
+        (pipeline->topology != VK_PRIMITIVE_TOPOLOGY_PATCH)) {
         // TODO: Log debug message: Invalid topology used with tessalation shader.
         return VK_ERROR_BAD_PIPELINE_DATA;
     }
 
-    if ((pipeline->topology == VK_TOPOLOGY_PATCH) &&
+    if ((pipeline->topology == VK_PRIMITIVE_TOPOLOGY_PATCH) &&
             (pipeline->active_shaders & ~(SHADER_TESS_CONTROL_FLAG | SHADER_TESS_EVAL_FLAG))) {
         // TODO: Log debug message: Cannot use TOPOLOGY_PATCH on non-tessalation shader.
         return VK_ERROR_BAD_PIPELINE_DATA;
@@ -949,7 +949,7 @@ static void pipeline_build_fragment_SBE(struct intel_pipeline *pipeline,
         body[2 + i] = hi << GEN8_SBE_SWIZ_HIGH__SHIFT | lo;
     }
 
-    if (info->ia.topology == VK_TOPOLOGY_POINT_LIST)
+    if (info->ia.topology == VK_PRIMITIVE_TOPOLOGY_POINT_LIST)
         body[10] = fs->point_sprite_enables;
     else
         body[10] = 0;
@@ -1025,12 +1025,12 @@ static void pipeline_build_depth_stencil(struct intel_pipeline *pipeline,
 
     if (info->db.stencilTestEnable) {
         pipeline->cmd_depth_stencil = 1 << 31 |
-               translate_compare_func(info->db.front.stencilFunc) << 28 |
+               translate_compare_func(info->db.front.stencilCompareOp) << 28 |
                translate_stencil_op(info->db.front.stencilFailOp) << 25 |
                translate_stencil_op(info->db.front.stencilDepthFailOp) << 22 |
                translate_stencil_op(info->db.front.stencilPassOp) << 19 |
                1 << 15 |
-               translate_compare_func(info->db.back.stencilFunc) << 12 |
+               translate_compare_func(info->db.back.stencilCompareOp) << 12 |
                translate_stencil_op(info->db.back.stencilFailOp) << 9 |
                translate_stencil_op(info->db.back.stencilDepthFailOp) << 6 |
                translate_stencil_op(info->db.back.stencilPassOp) << 3;
@@ -1053,7 +1053,7 @@ static void pipeline_build_depth_stencil(struct intel_pipeline *pipeline,
      */
     if (info->db.depthTestEnable) {
        pipeline->cmd_depth_test = GEN6_ZS_DW2_DEPTH_TEST_ENABLE |
-               translate_compare_func(info->db.depthFunc) << 27;
+               translate_compare_func(info->db.depthCompareOp) << 27;
     } else {
        pipeline->cmd_depth_test = GEN6_COMPAREFUNCTION_ALWAYS << 27;
     }
@@ -1105,14 +1105,14 @@ static void pipeline_build_cb(struct intel_pipeline *pipeline,
 
         if (att->blendEnable) {
             dw0 = 1 << 31 |
-                    translate_blend_func(att->blendFuncAlpha) << 26 |
+                    translate_blend_func(att->blendOpAlpha) << 26 |
                     translate_blend(att->srcBlendAlpha) << 20 |
                     translate_blend(att->destBlendAlpha) << 15 |
-                    translate_blend_func(att->blendFuncColor) << 11 |
+                    translate_blend_func(att->blendOpColor) << 11 |
                     translate_blend(att->srcBlendColor) << 5 |
                     translate_blend(att->destBlendColor);
 
-            if (att->blendFuncAlpha != att->blendFuncColor ||
+            if (att->blendOpAlpha != att->blendOpColor ||
                 att->srcBlendAlpha != att->srcBlendColor ||
                 att->destBlendAlpha != att->destBlendColor)
                 dw0 |= 1 << 30;
@@ -1357,7 +1357,7 @@ static VkResult graphics_pipeline_create(struct intel_dev *dev,
             sizeof(*pipeline), dev->base.dbg,
             VK_DBG_OBJECT_GRAPHICS_PIPELINE, info_, 0);
     if (!pipeline)
-        return VK_ERROR_OUT_OF_MEMORY;
+        return VK_ERROR_OUT_OF_HOST_MEMORY;
 
     pipeline->dev = dev;
     pipeline->obj.base.get_info = pipeline_get_info;

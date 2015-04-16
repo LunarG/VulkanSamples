@@ -46,9 +46,9 @@ static int translate_tex_filter(VkTexFilter filter)
 static int translate_tex_mipmap_mode(VkTexMipmapMode mode)
 {
    switch (mode) {
-   case VK_TEX_MIPMAP_NEAREST: return GEN6_MIPFILTER_NEAREST;
-   case VK_TEX_MIPMAP_LINEAR:  return GEN6_MIPFILTER_LINEAR;
-   case VK_TEX_MIPMAP_BASE:    return GEN6_MIPFILTER_NONE;
+   case VK_TEX_MIPMAP_MODE_NEAREST: return GEN6_MIPFILTER_NEAREST;
+   case VK_TEX_MIPMAP_MODE_LINEAR:  return GEN6_MIPFILTER_LINEAR;
+   case VK_TEX_MIPMAP_MODE_BASE:    return GEN6_MIPFILTER_NONE;
    default:
       assert(!"unknown tex mipmap mode");
       return GEN6_MIPFILTER_NONE;
@@ -69,24 +69,24 @@ static int translate_tex_addr(VkTexAddress addr)
    }
 }
 
-static int translate_compare_func(VkCompareFunc func)
+static int translate_compare_func(VkCompareOp func)
 {
     switch (func) {
-    case VK_COMPARE_NEVER:         return GEN6_COMPAREFUNCTION_NEVER;
-    case VK_COMPARE_LESS:          return GEN6_COMPAREFUNCTION_LESS;
-    case VK_COMPARE_EQUAL:         return GEN6_COMPAREFUNCTION_EQUAL;
-    case VK_COMPARE_LESS_EQUAL:    return GEN6_COMPAREFUNCTION_LEQUAL;
-    case VK_COMPARE_GREATER:       return GEN6_COMPAREFUNCTION_GREATER;
-    case VK_COMPARE_NOT_EQUAL:     return GEN6_COMPAREFUNCTION_NOTEQUAL;
-    case VK_COMPARE_GREATER_EQUAL: return GEN6_COMPAREFUNCTION_GEQUAL;
-    case VK_COMPARE_ALWAYS:        return GEN6_COMPAREFUNCTION_ALWAYS;
+    case VK_COMPARE_OP_NEVER:         return GEN6_COMPAREFUNCTION_NEVER;
+    case VK_COMPARE_OP_LESS:          return GEN6_COMPAREFUNCTION_LESS;
+    case VK_COMPARE_OP_EQUAL:         return GEN6_COMPAREFUNCTION_EQUAL;
+    case VK_COMPARE_OP_LESS_EQUAL:    return GEN6_COMPAREFUNCTION_LEQUAL;
+    case VK_COMPARE_OP_GREATER:       return GEN6_COMPAREFUNCTION_GREATER;
+    case VK_COMPARE_OP_NOT_EQUAL:     return GEN6_COMPAREFUNCTION_NOTEQUAL;
+    case VK_COMPARE_OP_GREATER_EQUAL: return GEN6_COMPAREFUNCTION_GEQUAL;
+    case VK_COMPARE_OP_ALWAYS:        return GEN6_COMPAREFUNCTION_ALWAYS;
     default:
       assert(!"unknown compare_func");
       return GEN6_COMPAREFUNCTION_NEVER;
     }
 }
 
-static void translate_border_color(VkBorderColorType type, float rgba[4])
+static void translate_border_color(VkBorderColor type, float rgba[4])
 {
     switch (type) {
     case VK_BORDER_COLOR_OPAQUE_WHITE:
@@ -253,7 +253,7 @@ sampler_init(struct intel_sampler *sampler,
     * To achieve our goal, we just need to set MinLod to zero and set
     * MagFilter to MinFilter when mipmapping is disabled.
     */
-   if (info->mipMode == VK_TEX_MIPMAP_BASE && min_lod) {
+   if (info->mipMode == VK_TEX_MIPMAP_MODE_BASE && min_lod) {
       min_lod = 0;
       mag_filter = min_filter;
    }
@@ -263,7 +263,7 @@ sampler_init(struct intel_sampler *sampler,
    wrap_t = translate_tex_addr(info->addressV);
    wrap_r = translate_tex_addr(info->addressW);
 
-   translate_border_color(info->borderColorType, border_color);
+   translate_border_color(info->borderColor, border_color);
 
    if (intel_gpu_gen(gpu) >= INTEL_GEN(7)) {
       dw0 = 1 << 28 |
@@ -282,7 +282,7 @@ sampler_init(struct intel_sampler *sampler,
       dw1 = min_lod << 20 |
             max_lod << 8;
 
-      dw1 |= translate_compare_func(info->compareFunc) << 1;
+      dw1 |= translate_compare_func(info->compareOp) << 1;
 
       dw3 = max_aniso << 19;
 
@@ -313,7 +313,7 @@ sampler_init(struct intel_sampler *sampler,
             mip_filter << 20 |
             lod_bias << 3;
 
-      dw0 |= translate_compare_func(info->compareFunc);
+      dw0 |= translate_compare_func(info->compareOp);
 
       if (info->maxAnisotropy > 1) {
          dw0 |= GEN6_MAPFILTER_ANISOTROPIC << 17 |
@@ -370,7 +370,7 @@ VkResult intel_sampler_create(struct intel_dev *dev,
     sampler = (struct intel_sampler *) intel_base_create(&dev->base.handle,
             sizeof(*sampler), dev->base.dbg, VK_DBG_OBJECT_SAMPLER, info, 0);
     if (!sampler)
-        return VK_ERROR_OUT_OF_MEMORY;
+        return VK_ERROR_OUT_OF_HOST_MEMORY;
 
     sampler->obj.destroy = sampler_destroy;
 

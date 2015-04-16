@@ -28,7 +28,7 @@ struct texture_object {
     VkImageLayout imageLayout;
 
     uint32_t  num_mem;
-    VkGpuMemory *mem;
+    VkDeviceMemory *mem;
     VkImageView view;
     int32_t tex_width, tex_height;
 };
@@ -203,12 +203,12 @@ struct demo {
     bool use_staging_buffer;
 
     VkInstance inst;
-    VkPhysicalGpu gpu;
+    VkPhysicalDevice gpu;
     VkDevice device;
     VkQueue queue;
     uint32_t graphics_queue_node_index;
-    VkPhysicalGpuProperties *gpu_props;
-    VkPhysicalGpuQueueProperties *queue_props;
+    VkPhysicalDeviceProperties *gpu_props;
+    VkPhysicalDeviceQueueProperties *queue_props;
 
     VkFramebuffer framebuffer;
     int width, height;
@@ -216,7 +216,7 @@ struct demo {
 
     struct {
         VkImage image;
-        VkGpuMemory mem;
+        VkDeviceMemory mem;
         VkCmdBuffer cmd;
 
         VkColorAttachmentView view;
@@ -228,7 +228,7 @@ struct demo {
 
         VkImage image;
         uint32_t num_mem;
-        VkGpuMemory *mem;
+        VkDeviceMemory *mem;
         VkDepthStencilView view;
     } depth;
 
@@ -237,7 +237,7 @@ struct demo {
     struct {
         VkBuffer buf;
         uint32_t num_mem;
-        VkGpuMemory *mem;
+        VkDeviceMemory *mem;
         VkBufferView view;
         VkBufferViewAttachInfo attach;
     } uniform_data;
@@ -294,14 +294,14 @@ static void demo_flush_init_cmd(struct demo *demo)
 
 static void demo_add_mem_refs(
         struct demo *demo,
-        int num_refs, VkGpuMemory *mem)
+        int num_refs, VkDeviceMemory *mem)
 {
     vkQueueAddMemReferences(demo->queue, num_refs, mem);
 }
 
 static void demo_remove_mem_refs(
         struct demo *demo,
-        int num_refs, VkGpuMemory *mem)
+        int num_refs, VkDeviceMemory *mem)
 {
     vkQueueRemoveMemReferences(demo->queue, num_refs, mem);
 }
@@ -328,7 +328,7 @@ static void demo_set_image_layout(
         VkCmdBufferBeginInfo cmd_buf_info = {
             .sType = VK_STRUCTURE_TYPE_CMD_BUFFER_BEGIN_INFO,
             .pNext = NULL,
-            .flags = VK_CMD_BUFFER_OPTIMIZE_GPU_SMALL_BATCH_BIT |
+            .flags = VK_CMD_BUFFER_OPTIMIZE_SMALL_BATCH_BIT |
                 VK_CMD_BUFFER_OPTIMIZE_ONE_TIME_SUBMIT_BIT,
         };
         err = vkBeginCommandBuffer(demo->cmd, &cmd_buf_info);
@@ -359,16 +359,7 @@ static void demo_set_image_layout(
 
     VkPipeEvent set_events[] = { VK_PIPE_EVENT_TOP_OF_PIPE };
 
-    VkPipelineBarrier pipeline_barrier;
-    pipeline_barrier.sType = VK_STRUCTURE_TYPE_PIPELINE_BARRIER;
-    pipeline_barrier.pNext = NULL;
-    pipeline_barrier.eventCount = 1;
-    pipeline_barrier.pEvents = set_events;
-    pipeline_barrier.waitEvent = VK_WAIT_EVENT_TOP_OF_PIPE;
-    pipeline_barrier.memBarrierCount = 1;
-    pipeline_barrier.ppMemBarriers = (const void **)&pmemory_barrier;
-
-    vkCmdPipelineBarrier(demo->cmd, &pipeline_barrier);
+    vkCmdPipelineBarrier(demo->cmd, VK_WAIT_EVENT_TOP_OF_PIPE, 1, set_events, 1, (const void **)&pmemory_barrier);
 }
 
 static void demo_draw_build_cmd(struct demo *demo, VkCmdBuffer cmd_buf)
@@ -390,7 +381,7 @@ static void demo_draw_build_cmd(struct demo *demo, VkCmdBuffer cmd_buf)
     VkCmdBufferBeginInfo cmd_buf_info = {
         .sType = VK_STRUCTURE_TYPE_CMD_BUFFER_BEGIN_INFO,
         .pNext = NULL,
-        .flags = VK_CMD_BUFFER_OPTIMIZE_GPU_SMALL_BATCH_BIT |
+        .flags = VK_CMD_BUFFER_OPTIMIZE_SMALL_BATCH_BIT |
             VK_CMD_BUFFER_OPTIMIZE_ONE_TIME_SUBMIT_BIT,
     };
     VkResult err;
@@ -422,7 +413,7 @@ static void demo_draw_build_cmd(struct demo *demo, VkCmdBuffer cmd_buf)
     rp_info.pColorLoadOps = &load_op;
     rp_info.pColorStoreOps = &store_op;
     rp_info.pColorLoadClearValues = &clear_color;
-    rp_info.depthStencilFormat = VK_FMT_D16_UNORM;
+    rp_info.depthStencilFormat = VK_FORMAT_D16_UNORM;
     rp_info.depthStencilLayout = depth_stencil.layout;
     rp_info.depthLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
     rp_info.depthLoadClearValue = clear_depth;
@@ -441,11 +432,11 @@ static void demo_draw_build_cmd(struct demo *demo, VkCmdBuffer cmd_buf)
     vkCmdBindDescriptorSets(cmd_buf, VK_PIPELINE_BIND_POINT_GRAPHICS,
             demo->desc_layout_chain, 0, 1, &demo->desc_set, NULL);
 
-    vkCmdBindDynamicStateObject(cmd_buf, VK_STATE_BIND_VIEWPORT, demo->viewport);
-    vkCmdBindDynamicStateObject(cmd_buf, VK_STATE_BIND_RASTER, demo->raster);
-    vkCmdBindDynamicStateObject(cmd_buf, VK_STATE_BIND_COLOR_BLEND,
+    vkCmdBindDynamicStateObject(cmd_buf, VK_STATE_BIND_POINT_VIEWPORT, demo->viewport);
+    vkCmdBindDynamicStateObject(cmd_buf, VK_STATE_BIND_POINT_RASTER, demo->raster);
+    vkCmdBindDynamicStateObject(cmd_buf, VK_STATE_BIND_POINT_COLOR_BLEND,
                                      demo->color_blend);
-    vkCmdBindDynamicStateObject(cmd_buf, VK_STATE_BIND_DEPTH_STENCIL,
+    vkCmdBindDynamicStateObject(cmd_buf, VK_STATE_BIND_POINT_DEPTH_STENCIL,
                                      demo->depth_stencil);
 
     vkCmdBeginRenderPass(cmd_buf, &rp_begin);
@@ -576,17 +567,17 @@ static void demo_prepare_buffers(struct demo *demo)
 
 static void demo_prepare_depth(struct demo *demo)
 {
-    const VkFormat depth_format = VK_FMT_D16_UNORM;
+    const VkFormat depth_format = VK_FORMAT_D16_UNORM;
     const VkImageCreateInfo image = {
         .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
         .pNext = NULL,
-        .imageType = VK_IMAGE_2D,
+        .imageType = VK_IMAGE_TYPE_2D,
         .format = depth_format,
         .extent = { demo->width, demo->height, 1 },
         .mipLevels = 1,
         .arraySize = 1,
         .samples = 1,
-        .tiling = VK_OPTIMAL_TILING,
+        .tiling = VK_IMAGE_TILING_OPTIMAL,
         .usage = VK_IMAGE_USAGE_DEPTH_STENCIL_BIT,
         .flags = 0,
     };
@@ -594,7 +585,7 @@ static void demo_prepare_depth(struct demo *demo)
         .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO,
         .pNext = NULL,
         .allocationSize = 0,
-        .memProps = VK_MEMORY_PROPERTY_GPU_ONLY,
+        .memProps = VK_MEMORY_PROPERTY_DEVICE_ONLY,
         .memPriority = VK_MEMORY_PRIORITY_NORMAL,
     };
     VkDepthStencilViewCreateInfo view = {
@@ -619,13 +610,13 @@ static void demo_prepare_depth(struct demo *demo)
             &demo->depth.image);
     assert(!err);
 
-    err = vkGetObjectInfo(demo->depth.image, VK_INFO_TYPE_MEMORY_ALLOCATION_COUNT, &num_alloc_size, &num_allocations);
+    err = vkGetObjectInfo(demo->depth.image, VK_OBJECT_INFO_TYPE_MEMORY_ALLOCATION_COUNT, &num_alloc_size, &num_allocations);
     assert(!err && num_alloc_size == sizeof(num_allocations));
     mem_reqs = malloc(num_allocations * sizeof(VkMemoryRequirements));
-    demo->depth.mem = malloc(num_allocations * sizeof(VkGpuMemory));
+    demo->depth.mem = malloc(num_allocations * sizeof(VkDeviceMemory));
     demo->depth.num_mem = num_allocations;
     err = vkGetObjectInfo(demo->depth.image,
-                    VK_INFO_TYPE_MEMORY_REQUIREMENTS,
+                    VK_OBJECT_INFO_TYPE_MEMORY_REQUIREMENTS,
                     &mem_reqs_size, mem_reqs);
     assert(!err && mem_reqs_size == num_allocations * sizeof(VkMemoryRequirements));
     for (uint32_t i = 0; i < num_allocations; i ++) {
@@ -809,7 +800,7 @@ static void demo_prepare_texture_image(struct demo *demo,
                                        VkImageTiling tiling,
                                        VkFlags mem_props)
 {
-    const VkFormat tex_format = VK_FMT_B8G8R8A8_UNORM;
+    const VkFormat tex_format = VK_FORMAT_B8G8R8A8_UNORM;
     int32_t tex_width;
     int32_t tex_height;
     VkResult err;
@@ -823,7 +814,7 @@ static void demo_prepare_texture_image(struct demo *demo,
     const VkImageCreateInfo image_create_info = {
         .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
         .pNext = NULL,
-        .imageType = VK_IMAGE_2D,
+        .imageType = VK_IMAGE_TYPE_2D,
         .format = tex_format,
         .extent = { tex_width, tex_height, 1 },
         .mipLevels = 1,
@@ -851,16 +842,16 @@ static void demo_prepare_texture_image(struct demo *demo,
     assert(!err);
 
     err = vkGetObjectInfo(tex_obj->image,
-                VK_INFO_TYPE_MEMORY_ALLOCATION_COUNT,
+                VK_OBJECT_INFO_TYPE_MEMORY_ALLOCATION_COUNT,
                 &num_alloc_size, &num_allocations);
     assert(!err && num_alloc_size == sizeof(num_allocations));
     mem_reqs = malloc(num_allocations * sizeof(VkMemoryRequirements));
-    tex_obj->mem = malloc(num_allocations * sizeof(VkGpuMemory));
+    tex_obj->mem = malloc(num_allocations * sizeof(VkDeviceMemory));
     err = vkGetObjectInfo(tex_obj->image,
-                VK_INFO_TYPE_MEMORY_REQUIREMENTS,
+                VK_OBJECT_INFO_TYPE_MEMORY_REQUIREMENTS,
                 &mem_reqs_size, mem_reqs);
     assert(!err && mem_reqs_size == num_allocations * sizeof(VkMemoryRequirements));
-    mem_alloc.memProps = VK_MEMORY_PROPERTY_CPU_VISIBLE_BIT;
+    mem_alloc.memProps = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
     for (uint32_t j = 0; j < num_allocations; j ++) {
         mem_alloc.allocationSize = mem_reqs[j].size;
 
@@ -878,7 +869,7 @@ static void demo_prepare_texture_image(struct demo *demo,
 
     tex_obj->num_mem = num_allocations;
 
-    if (mem_props & VK_MEMORY_PROPERTY_CPU_VISIBLE_BIT) {
+    if (mem_props & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT) {
         const VkImageSubresource subres = {
             .aspect = VK_IMAGE_ASPECT_COLOR,
             .mipLevel = 0,
@@ -889,7 +880,7 @@ static void demo_prepare_texture_image(struct demo *demo,
         void *data;
 
         err = vkGetImageSubresourceInfo(tex_obj->image, &subres,
-                                         VK_INFO_TYPE_SUBRESOURCE_LAYOUT,
+                                         VK_SUBRESOURCE_INFO_TYPE_LAYOUT,
                                          &layout_size, &layout);
         assert(!err && layout_size == sizeof(layout));
         /* Linear texture must be within a single memory object */
@@ -927,33 +918,33 @@ static void demo_destroy_texture_image(struct demo *demo, struct texture_object 
 
 static void demo_prepare_textures(struct demo *demo)
 {
-    const VkFormat tex_format = VK_FMT_R8G8B8A8_UNORM;
+    const VkFormat tex_format = VK_FORMAT_R8G8B8A8_UNORM;
     VkFormatProperties props;
     size_t size = sizeof(props);
     VkResult err;
     uint32_t i;
 
     err = vkGetFormatInfo(demo->device, tex_format,
-                           VK_INFO_TYPE_FORMAT_PROPERTIES,
+                           VK_FORMAT_INFO_TYPE_PROPERTIES,
                            &size, &props);
     assert(!err);
 
     for (i = 0; i < DEMO_TEXTURE_COUNT; i++) {
 
-        if (props.linearTilingFeatures & VK_FORMAT_SAMPLED_IMAGE_BIT && !demo->use_staging_buffer) {
+        if (props.linearTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT && !demo->use_staging_buffer) {
             /* Device can texture using linear textures */
             demo_prepare_texture_image(demo, tex_files[i], &demo->textures[i],
-                                       VK_LINEAR_TILING, VK_MEMORY_PROPERTY_CPU_VISIBLE_BIT);
-        } else if (props.optimalTilingFeatures & VK_FORMAT_SAMPLED_IMAGE_BIT) {
+                                       VK_IMAGE_TILING_LINEAR, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+        } else if (props.optimalTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT) {
             /* Must use staging buffer to copy linear texture to optimized */
             struct texture_object staging_texture;
 
             memset(&staging_texture, 0, sizeof(staging_texture));
             demo_prepare_texture_image(demo, tex_files[i], &staging_texture,
-                                       VK_LINEAR_TILING, VK_MEMORY_PROPERTY_CPU_VISIBLE_BIT);
+                                       VK_IMAGE_TILING_LINEAR, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
 
             demo_prepare_texture_image(demo, tex_files[i], &demo->textures[i],
-                                       VK_OPTIMAL_TILING, VK_MEMORY_PROPERTY_GPU_ONLY);
+                                       VK_IMAGE_TILING_OPTIMAL, VK_MEMORY_PROPERTY_DEVICE_ONLY);
 
             demo_set_image_layout(demo, staging_texture.image,
                                    staging_texture.imageLayout,
@@ -987,7 +978,7 @@ static void demo_prepare_textures(struct demo *demo)
             demo_destroy_texture_image(demo, &staging_texture);
             demo_remove_mem_refs(demo, staging_texture.num_mem, staging_texture.mem);
         } else {
-            /* Can't support VK_FMT_B8G8R8A8_UNORM !? */
+            /* Can't support VK_FORMAT_B8G8R8A8_UNORM !? */
             assert(!"No support for tB8G8R8A8_UNORM as texture image format");
         }
 
@@ -996,23 +987,23 @@ static void demo_prepare_textures(struct demo *demo)
             .pNext = NULL,
             .magFilter = VK_TEX_FILTER_NEAREST,
             .minFilter = VK_TEX_FILTER_NEAREST,
-            .mipMode = VK_TEX_MIPMAP_BASE,
+            .mipMode = VK_TEX_MIPMAP_MODE_BASE,
             .addressU = VK_TEX_ADDRESS_CLAMP,
             .addressV = VK_TEX_ADDRESS_CLAMP,
             .addressW = VK_TEX_ADDRESS_CLAMP,
             .mipLodBias = 0.0f,
             .maxAnisotropy = 1,
-            .compareFunc = VK_COMPARE_NEVER,
+            .compareOp = VK_COMPARE_OP_NEVER,
             .minLod = 0.0f,
             .maxLod = 0.0f,
-            .borderColorType = VK_BORDER_COLOR_OPAQUE_WHITE,
+            .borderColor = VK_BORDER_COLOR_OPAQUE_WHITE,
         };
 
         VkImageViewCreateInfo view = {
             .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
             .pNext = NULL,
             .image = VK_NULL_HANDLE,
-            .viewType = VK_IMAGE_VIEW_2D,
+            .viewType = VK_IMAGE_VIEW_TYPE_2D,
             .format = tex_format,
             .channels = { VK_CHANNEL_SWIZZLE_R,
                           VK_CHANNEL_SWIZZLE_G,
@@ -1043,7 +1034,7 @@ void demo_prepare_cube_data_buffer(struct demo *demo)
         .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO,
         .pNext = NULL,
         .allocationSize = 0,
-        .memProps = VK_MEMORY_PROPERTY_CPU_VISIBLE_BIT,
+        .memProps = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
         .memPriority = VK_MEMORY_PRIORITY_NORMAL,
     };
     VkMemoryRequirements *mem_reqs;
@@ -1080,14 +1071,14 @@ void demo_prepare_cube_data_buffer(struct demo *demo)
     assert(!err);
 
     err = vkGetObjectInfo(demo->uniform_data.buf,
-                           VK_INFO_TYPE_MEMORY_ALLOCATION_COUNT,
+                           VK_OBJECT_INFO_TYPE_MEMORY_ALLOCATION_COUNT,
                            &num_alloc_size, &num_allocations);
     assert(!err && num_alloc_size == sizeof(num_allocations));
     mem_reqs = malloc(num_allocations * sizeof(VkMemoryRequirements));
-    demo->uniform_data.mem = malloc(num_allocations * sizeof(VkGpuMemory));
+    demo->uniform_data.mem = malloc(num_allocations * sizeof(VkDeviceMemory));
     demo->uniform_data.num_mem = num_allocations;
     err = vkGetObjectInfo(demo->uniform_data.buf,
-            VK_INFO_TYPE_MEMORY_REQUIREMENTS,
+            VK_OBJECT_INFO_TYPE_MEMORY_REQUIREMENTS,
             &mem_reqs_size, mem_reqs);
     assert(!err && mem_reqs_size == num_allocations * sizeof(*mem_reqs));
     for (uint32_t i = 0; i < num_allocations; i ++) {
@@ -1113,7 +1104,7 @@ void demo_prepare_cube_data_buffer(struct demo *demo)
     memset(&view_info, 0, sizeof(view_info));
     view_info.sType = VK_STRUCTURE_TYPE_BUFFER_VIEW_CREATE_INFO;
     view_info.buffer = demo->uniform_data.buf;
-    view_info.viewType = VK_BUFFER_VIEW_RAW;
+    view_info.viewType = VK_BUFFER_VIEW_TYPE_RAW;
     view_info.offset = 0;
     view_info.range = sizeof(data);
 
@@ -1130,13 +1121,13 @@ static void demo_prepare_descriptor_layout(struct demo *demo)
         [0] = {
             .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
             .count = 1,
-            .stageFlags = VK_SHADER_STAGE_FLAGS_VERTEX_BIT,
+            .stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
             .pImmutableSamplers = NULL,
         },
         [1] = {
             .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
             .count = DEMO_TEXTURE_COUNT,
-            .stageFlags = VK_SHADER_STAGE_FLAGS_FRAGMENT_BIT,
+            .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
             .pImmutableSamplers = NULL,
         },
     };
@@ -1158,7 +1149,7 @@ static void demo_prepare_descriptor_layout(struct demo *demo)
 }
 
 static VkShader demo_prepare_shader(struct demo *demo,
-                                      VkPipelineShaderStage stage,
+                                      VkShaderStage stage,
                                       const void *code,
                                       size_t size)
 {
@@ -1186,7 +1177,7 @@ static VkShader demo_prepare_shader(struct demo *demo,
     createInfo.pCode = malloc(createInfo.codeSize);
     createInfo.flags = 0;
 
-    /* try version 0 first: VkPipelineShaderStage followed by GLSL */
+    /* try version 0 first: VkShaderStage followed by GLSL */
     ((uint32_t *) createInfo.pCode)[0] = ICD_SPV_MAGIC;
     ((uint32_t *) createInfo.pCode)[1] = 0;
     ((uint32_t *) createInfo.pCode)[2] = stage;
@@ -1306,12 +1297,12 @@ static void demo_prepare_pipeline(struct demo *demo)
 
     memset(&ia, 0, sizeof(ia));
     ia.sType = VK_STRUCTURE_TYPE_PIPELINE_IA_STATE_CREATE_INFO;
-    ia.topology = VK_TOPOLOGY_TRIANGLE_LIST;
+    ia.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
 
     memset(&rs, 0, sizeof(rs));
     rs.sType = VK_STRUCTURE_TYPE_PIPELINE_RS_STATE_CREATE_INFO;
-    rs.fillMode = VK_FILL_SOLID;
-    rs.cullMode = VK_CULL_BACK;
+    rs.fillMode = VK_FILL_MODE_SOLID;
+    rs.cullMode = VK_CULL_MODE_BACK;
     rs.frontFace = VK_FRONT_FACE_CCW;
 
     memset(&cb, 0, sizeof(cb));
@@ -1326,7 +1317,7 @@ static void demo_prepare_pipeline(struct demo *demo)
 
     memset(&vp, 0, sizeof(vp));
     vp.sType = VK_STRUCTURE_TYPE_PIPELINE_VP_STATE_CREATE_INFO;
-    vp.numViewports = 1;
+    vp.viewportCount = 1;
     vp.clipOrigin = VK_COORDINATE_ORIGIN_LOWER_LEFT;
 
     memset(&ds, 0, sizeof(ds));
@@ -1334,11 +1325,11 @@ static void demo_prepare_pipeline(struct demo *demo)
     ds.format = demo->depth.format;
     ds.depthTestEnable = VK_TRUE;
     ds.depthWriteEnable = VK_TRUE;
-    ds.depthFunc = VK_COMPARE_LESS_EQUAL;
+    ds.depthCompareOp = VK_COMPARE_OP_LESS_EQUAL;
     ds.depthBoundsEnable = VK_FALSE;
     ds.back.stencilFailOp = VK_STENCIL_OP_KEEP;
     ds.back.stencilPassOp = VK_STENCIL_OP_KEEP;
-    ds.back.stencilFunc = VK_COMPARE_ALWAYS;
+    ds.back.stencilCompareOp = VK_COMPARE_OP_ALWAYS;
     ds.stencilTestEnable = VK_FALSE;
     ds.front = ds.back;
 
@@ -1727,24 +1718,24 @@ static void demo_init_vk(struct demo *demo)
     err = vkCreateDevice(demo->gpu, &device, &demo->device);
     assert(!err);
 
-    err = vkGetGpuInfo(demo->gpu, VK_INFO_TYPE_PHYSICAL_GPU_PROPERTIES,
+    err = vkGetPhysicalDeviceInfo(demo->gpu, VK_PHYSICAL_DEVICE_INFO_TYPE_PROPERTIES,
                         &data_size, NULL);
     assert(!err);
 
-    demo->gpu_props = (VkPhysicalGpuProperties *) malloc(data_size);
-    err = vkGetGpuInfo(demo->gpu, VK_INFO_TYPE_PHYSICAL_GPU_PROPERTIES,
+    demo->gpu_props = (VkPhysicalDeviceProperties *) malloc(data_size);
+    err = vkGetPhysicalDeviceInfo(demo->gpu, VK_PHYSICAL_DEVICE_INFO_TYPE_PROPERTIES,
                         &data_size, demo->gpu_props);
     assert(!err);
 
-    err = vkGetGpuInfo(demo->gpu, VK_INFO_TYPE_PHYSICAL_GPU_QUEUE_PROPERTIES,
+    err = vkGetPhysicalDeviceInfo(demo->gpu, VK_PHYSICAL_DEVICE_INFO_TYPE_QUEUE_PROPERTIES,
                         &data_size, NULL);
     assert(!err);
 
-    demo->queue_props = (VkPhysicalGpuQueueProperties *) malloc(data_size);
-    err = vkGetGpuInfo(demo->gpu, VK_INFO_TYPE_PHYSICAL_GPU_QUEUE_PROPERTIES,
+    demo->queue_props = (VkPhysicalDeviceQueueProperties *) malloc(data_size);
+    err = vkGetPhysicalDeviceInfo(demo->gpu, VK_PHYSICAL_DEVICE_INFO_TYPE_QUEUE_PROPERTIES,
                         &data_size, demo->queue_props);
     assert(!err);
-	queue_count = (uint32_t)(data_size / sizeof(VkPhysicalGpuQueueProperties));
+	queue_count = (uint32_t)(data_size / sizeof(VkPhysicalDeviceQueueProperties));
     assert(queue_count >= 1);
 
     // Graphics queue and MemMgr queue can be separate.
@@ -1803,7 +1794,7 @@ static void demo_init(struct demo *demo, int argc, char **argv)
 
     demo->width = 500;
     demo->height = 500;
-    demo->format = VK_FMT_B8G8R8A8_UNORM;
+    demo->format = VK_FORMAT_B8G8R8A8_UNORM;
 
     demo->spin_angle = 0.01f;
     demo->spin_increment = 0.01f;

@@ -296,7 +296,7 @@ static struct intel_pipeline_rmap *rmap_create(const struct intel_gpu *gpu,
     uint32_t surface_count, i;
 
     rmap = (struct intel_pipeline_rmap *)
-        intel_alloc(gpu, sizeof(*rmap), 0, VK_SYSTEM_ALLOC_INTERNAL);
+        intel_alloc(gpu, sizeof(*rmap), 0, VK_SYSTEM_ALLOC_TYPE_INTERNAL);
     if (!rmap)
         return NULL;
 
@@ -313,7 +313,7 @@ static struct intel_pipeline_rmap *rmap_create(const struct intel_gpu *gpu,
 
     rmap->slots = (struct intel_pipeline_rmap_slot *)
         intel_alloc(gpu, sizeof(rmap->slots[0]) * rmap->slot_count,
-            0, VK_SYSTEM_ALLOC_INTERNAL);
+            0, VK_SYSTEM_ALLOC_TYPE_INTERNAL);
     if (!rmap->slots) {
         intel_free(gpu, rmap);
         return NULL;
@@ -427,9 +427,9 @@ VkResult intel_pipeline_shader_compile(struct intel_pipeline_shader *pipe_shader
         {
             pipe_shader->codeSize = get_vs_program_size(brw->shader_prog);
 
-            pipe_shader->pCode = intel_alloc(gpu, pipe_shader->codeSize, 0, VK_SYSTEM_ALLOC_INTERNAL_SHADER);
+            pipe_shader->pCode = intel_alloc(gpu, pipe_shader->codeSize, 0, VK_SYSTEM_ALLOC_TYPE_INTERNAL_SHADER);
             if (!pipe_shader->pCode) {
-                status = VK_ERROR_OUT_OF_MEMORY;
+                status = VK_ERROR_OUT_OF_HOST_MEMORY;
                 break;
             }
 
@@ -546,9 +546,9 @@ VkResult intel_pipeline_shader_compile(struct intel_pipeline_shader *pipe_shader
 
             pipe_shader->codeSize = get_wm_program_size(brw->shader_prog);
 
-            pipe_shader->pCode = intel_alloc(gpu, pipe_shader->codeSize, 0, VK_SYSTEM_ALLOC_INTERNAL_SHADER);
+            pipe_shader->pCode = intel_alloc(gpu, pipe_shader->codeSize, 0, VK_SYSTEM_ALLOC_TYPE_INTERNAL_SHADER);
             if (!pipe_shader->pCode) {
-                status = VK_ERROR_OUT_OF_MEMORY;
+                status = VK_ERROR_OUT_OF_HOST_MEMORY;
                 break;
             }
 
@@ -698,7 +698,7 @@ VkResult intel_pipeline_shader_compile(struct intel_pipeline_shader *pipe_shader
         pipe_shader->rmap = rmap_create(gpu, chain, &bt);
         if (!pipe_shader->rmap) {
             intel_pipeline_shader_cleanup(pipe_shader, gpu);
-            status = VK_ERROR_OUT_OF_MEMORY;
+            status = VK_ERROR_OUT_OF_HOST_MEMORY;
         }
     }
 

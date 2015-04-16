@@ -179,12 +179,12 @@ struct intel_cmd_bind {
 
     struct {
         const struct intel_buf *buf[INTEL_MAX_VERTEX_BINDING_COUNT];
-        VkGpuSize offset[INTEL_MAX_VERTEX_BINDING_COUNT];
+        VkDeviceSize offset[INTEL_MAX_VERTEX_BINDING_COUNT];
     } vertex;
 
     struct {
         const struct intel_buf *buf;
-        VkGpuSize offset;
+        VkDeviceSize offset;
         VkIndexType type;
     } index;
 
@@ -253,7 +253,7 @@ VkResult intel_cmd_end(struct intel_cmd *cmd);
 void intel_cmd_decode(struct intel_cmd *cmd, bool decode_inst_writer);
 
 static inline struct intel_bo *intel_cmd_get_batch(const struct intel_cmd *cmd,
-                                                   VkGpuSize *used)
+                                                   VkDeviceSize *used)
 {
     const struct intel_cmd_writer *writer =
         &cmd->writers[INTEL_CMD_WRITER_BATCH];

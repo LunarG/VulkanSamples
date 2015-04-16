@@ -43,7 +43,7 @@ static VkResult query_get_info(struct intel_base *base, int type,
     VkResult ret = VK_SUCCESS;
 
     switch (type) {
-    case VK_INFO_TYPE_MEMORY_REQUIREMENTS:
+    case VK_OBJECT_INFO_TYPE_MEMORY_REQUIREMENTS:
         {
             VkMemoryRequirements *mem_req = data;
 
@@ -73,7 +73,7 @@ VkResult intel_query_create(struct intel_dev *dev,
             sizeof(*query), dev->base.dbg, VK_DBG_OBJECT_QUERY_POOL,
             info, 0);
     if (!query)
-        return VK_ERROR_OUT_OF_MEMORY;
+        return VK_ERROR_OUT_OF_HOST_MEMORY;
 
     query->type = info->queryType;
     query->slot_count = info->slots;
@@ -84,10 +84,10 @@ VkResult intel_query_create(struct intel_dev *dev,
      * compare the differences to get the query results.
      */
     switch (info->queryType) {
-    case VK_QUERY_OCCLUSION:
+    case VK_QUERY_TYPE_OCCLUSION:
         query->slot_stride = u_align(sizeof(uint64_t) * 2, 64);
         break;
-    case VK_QUERY_PIPELINE_STATISTICS:
+    case VK_QUERY_TYPE_PIPELINE_STATISTICS:
         query->slot_stride =
             u_align(sizeof(VkPipelineStatisticsData) * 2, 64);
         break;
@@ -167,10 +167,10 @@ VkResult intel_query_get_results(struct intel_query *query,
     ptr += query->obj.offset + query->slot_stride * slot_start;
 
     switch (query->type) {
-    case VK_QUERY_OCCLUSION:
+    case VK_QUERY_TYPE_OCCLUSION:
         query_process_occlusion(query, slot_count, ptr, results);
         break;
-    case VK_QUERY_PIPELINE_STATISTICS:
+    case VK_QUERY_TYPE_PIPELINE_STATISTICS:
         query_process_pipeline_statistics(query, slot_count, ptr, results);
         break;
     default:
@@ -199,15 +199,16 @@ ICD_EXPORT VkResult VKAPI vkGetQueryPoolResults(
     uint32_t                                    startQuery,
     uint32_t                                    queryCount,
     size_t*                                     pDataSize,
-    void*                                       pData)
+    void*                                       pData,
+    VkQueryResultFlags                          flags)
 {
     struct intel_query *query = intel_query(queryPool);
 
     switch (query->type) {
-    case VK_QUERY_OCCLUSION:
+    case VK_QUERY_TYPE_OCCLUSION:
         *pDataSize = sizeof(uint64_t) * queryCount;
         break;
-    case VK_QUERY_PIPELINE_STATISTICS:
+    case VK_QUERY_TYPE_PIPELINE_STATISTICS:
         *pDataSize = sizeof(VkPipelineStatisticsData) * queryCount;
         break;
     default:

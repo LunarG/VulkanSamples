@@ -87,7 +87,7 @@ static void gen6_MI_STORE_DATA_IMM(struct intel_cmd *cmd,
 
 static void cmd_query_pipeline_statistics(struct intel_cmd *cmd,
                                           struct intel_bo *bo,
-                                          VkGpuSize offset)
+                                          VkDeviceSize offset)
 {
     const uint32_t regs[] = {
         GEN6_REG_PS_INVOCATION_COUNT,
@@ -130,13 +130,13 @@ ICD_EXPORT void VKAPI vkCmdBeginQuery(
     struct intel_cmd *cmd = intel_cmd(cmdBuffer);
     struct intel_query *query = intel_query(queryPool);
     struct intel_bo *bo = query->obj.mem->bo;
-    const VkGpuSize offset = query->slot_stride * slot;
+    const VkDeviceSize offset = query->slot_stride * slot;
 
     switch (query->type) {
-    case VK_QUERY_OCCLUSION:
+    case VK_QUERY_TYPE_OCCLUSION:
         cmd_batch_depth_count(cmd, bo, offset);
         break;
-    case VK_QUERY_PIPELINE_STATISTICS:
+    case VK_QUERY_TYPE_PIPELINE_STATISTICS:
         cmd_query_pipeline_statistics(cmd, bo, offset);
         break;
     default:
@@ -153,13 +153,13 @@ ICD_EXPORT void VKAPI vkCmdEndQuery(
     struct intel_cmd *cmd = intel_cmd(cmdBuffer);
     struct intel_query *query = intel_query(queryPool);
     struct intel_bo *bo = query->obj.mem->bo;
-    const VkGpuSize offset = query->slot_stride * slot;
+    const VkDeviceSize offset = query->slot_stride * slot;
 
     switch (query->type) {
-    case VK_QUERY_OCCLUSION:
+    case VK_QUERY_TYPE_OCCLUSION:
         cmd_batch_depth_count(cmd, bo, offset + sizeof(uint64_t));
         break;
-    case VK_QUERY_PIPELINE_STATISTICS:
+    case VK_QUERY_TYPE_PIPELINE_STATISTICS:
         cmd_query_pipeline_statistics(cmd, bo,
                 offset + sizeof(VkPipelineStatisticsData));
         break;
@@ -185,7 +185,7 @@ static void cmd_write_event_value(struct intel_cmd *cmd, struct intel_event *eve
 
     /* Event setting is done with PIPE_CONTROL post-sync write immediate.
      * With no other PIPE_CONTROL flags set, it behaves as VK_PIPE_EVENT_TOP_OF_PIPE.
-     * All other pipeEvent values will behave as VK_PIPE_EVENT_GPU_COMMANDS_COMPLETE.
+     * All other pipeEvent values will behave as VK_PIPE_EVENT_COMMANDS_COMPLETE.
      */
     switch(pipeEvent)
     {
@@ -198,7 +198,7 @@ static void cmd_write_event_value(struct intel_cmd *cmd, struct intel_event *eve
     case VK_PIPE_EVENT_GRAPHICS_PIPELINE_COMPLETE:
     case VK_PIPE_EVENT_COMPUTE_PIPELINE_COMPLETE:
     case VK_PIPE_EVENT_TRANSFER_COMPLETE:
-    case VK_PIPE_EVENT_GPU_COMMANDS_COMPLETE:
+    case VK_PIPE_EVENT_COMMANDS_COMPLETE:
         pipe_control_flags = GEN6_PIPE_CONTROL_CS_STALL;
         break;
     default:
@@ -237,8 +237,8 @@ ICD_EXPORT void VKAPI vkCmdCopyQueryPoolResults(
     uint32_t                                    startQuery,
     uint32_t                                    queryCount,
     VkBuffer                                    destBuffer,
-    VkGpuSize                                   destOffset,
-    VkGpuSize                                   destStride,
+    VkDeviceSize                                destOffset,
+    VkDeviceSize                                destStride,
     VkFlags                                     flags)
 {
     /* TODO: Fill in functionality here */
@@ -248,20 +248,20 @@ ICD_EXPORT void VKAPI vkCmdWriteTimestamp(
     VkCmdBuffer                              cmdBuffer,
     VkTimestampType                          timestampType,
     VkBuffer                                  destBuffer,
-    VkGpuSize                                destOffset)
+    VkDeviceSize                                destOffset)
 {
     struct intel_cmd *cmd = intel_cmd(cmdBuffer);
     struct intel_buf *buf = intel_buf(destBuffer);
 
     switch (timestampType) {
-    case VK_TIMESTAMP_TOP:
+    case VK_TIMESTAMP_TYPE_TOP:
         /* XXX we are not supposed to use two commands... */
         gen6_MI_STORE_REGISTER_MEM(cmd, buf->obj.mem->bo,
                 destOffset, GEN6_REG_TIMESTAMP);
         gen6_MI_STORE_REGISTER_MEM(cmd, buf->obj.mem->bo,
                 destOffset + 4, GEN6_REG_TIMESTAMP + 4);
         break;
-    case VK_TIMESTAMP_BOTTOM:
+    case VK_TIMESTAMP_TYPE_BOTTOM:
         cmd_batch_timestamp(cmd, buf->obj.mem->bo, destOffset);
         break;
     default:

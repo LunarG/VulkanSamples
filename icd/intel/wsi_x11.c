@@ -107,9 +107,9 @@ static bool x11_is_format_presentable(const struct intel_dev *dev,
 {
     /* this is what DDX expects */
     switch (format) {
-    case VK_FMT_B5G6R5_UNORM:
-    case VK_FMT_B8G8R8A8_UNORM:
-    case VK_FMT_B8G8R8A8_SRGB:
+    case VK_FORMAT_B5G6R5_UNORM:
+    case VK_FORMAT_B8G8R8A8_UNORM:
+    case VK_FORMAT_B8G8R8A8_SRGB:
         return true;
     default:
         return false;
@@ -361,7 +361,7 @@ static VkResult wsi_x11_img_create(struct intel_wsi_x11 *x11,
     /* create image */
     memset(&img_info, 0, sizeof(img_info));
     img_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
-    img_info.imageType = VK_IMAGE_2D;
+    img_info.imageType = VK_IMAGE_TYPE_2D;
     img_info.format = info->format;
     img_info.extent.width = info->extent.width;
     img_info.extent.height = info->extent.height;
@@ -369,7 +369,7 @@ static VkResult wsi_x11_img_create(struct intel_wsi_x11 *x11,
     img_info.mipLevels = 1;
     img_info.arraySize = 1;
     img_info.samples = 1;
-    img_info.tiling = VK_OPTIMAL_TILING;
+    img_info.tiling = VK_IMAGE_TILING_OPTIMAL;
     img_info.usage = info->usage;
     img_info.flags = 0;
 
@@ -549,7 +549,7 @@ static struct intel_wsi_x11 *wsi_x11_create(struct intel_gpu *gpu,
         return NULL;
     }
 
-    x11 = intel_alloc(gpu, sizeof(*x11), 0, VK_SYSTEM_ALLOC_API_OBJECT);
+    x11 = intel_alloc(gpu, sizeof(*x11), 0, VK_SYSTEM_ALLOC_TYPE_API_OBJECT);
     if (!x11)
         return NULL;
 
@@ -576,7 +576,7 @@ static struct intel_x11_swap_chain *x11_swap_chain_create(struct intel_dev *dev,
     struct intel_wsi_x11 *x11 = (struct intel_wsi_x11 *) dev->gpu->wsi_data;
     struct intel_x11_swap_chain *sc;
 
-    sc = intel_alloc(dev, sizeof(*sc), 0, VK_SYSTEM_ALLOC_API_OBJECT);
+    sc = intel_alloc(dev, sizeof(*sc), 0, VK_SYSTEM_ALLOC_TYPE_API_OBJECT);
     if (!sc)
         return NULL;
 
@@ -643,7 +643,7 @@ static void x11_display_init_modes(struct intel_x11_display *dpy,
         return;
 
     dpy->modes = intel_alloc(dpy, sizeof(dpy->modes[0]) * conn->count_modes,
-            0, VK_SYSTEM_ALLOC_INTERNAL);
+            0, VK_SYSTEM_ALLOC_TYPE_INTERNAL);
     if (!dpy->modes)
         return;
 
@@ -709,7 +709,7 @@ static struct intel_x11_display *x11_display_create(struct intel_gpu *gpu,
     struct intel_x11_display *dpy;
     drmModeConnectorPtr conn;
 
-    dpy = intel_alloc(gpu, sizeof(*dpy), 0, VK_SYSTEM_ALLOC_API_OBJECT);
+    dpy = intel_alloc(gpu, sizeof(*dpy), 0, VK_SYSTEM_ALLOC_TYPE_API_OBJECT);
     if (!dpy)
         return NULL;
 
@@ -749,7 +749,7 @@ static void x11_display_scan(struct intel_gpu *gpu)
         return;
 
     displays = intel_alloc(gpu, sizeof(*displays) * res->count_connectors,
-            0, VK_SYSTEM_ALLOC_INTERNAL);
+            0, VK_SYSTEM_ALLOC_TYPE_INTERNAL);
     if (!displays) {
         drmModeFreeResources(res);
         return;
@@ -768,7 +768,7 @@ static void x11_display_scan(struct intel_gpu *gpu)
 }
 
 VkResult intel_wsi_gpu_get_info(struct intel_gpu *gpu,
-                                  VkPhysicalGpuInfoType type,
+                                  VkPhysicalDeviceInfoType type,
                                   size_t *size, void *data)
 {
     if (false)
@@ -800,9 +800,9 @@ VkResult intel_wsi_img_init(struct intel_img *img)
 {
     struct intel_x11_img_data *data;
 
-    data = intel_alloc(img, sizeof(*data), 0, VK_SYSTEM_ALLOC_INTERNAL);
+    data = intel_alloc(img, sizeof(*data), 0, VK_SYSTEM_ALLOC_TYPE_INTERNAL);
     if (!data)
-        return VK_ERROR_OUT_OF_MEMORY;
+        return VK_ERROR_OUT_OF_HOST_MEMORY;
 
     memset(data, 0, sizeof(*data));
 
@@ -829,9 +829,9 @@ VkResult intel_wsi_fence_init(struct intel_fence *fence)
 {
     struct intel_x11_fence_data *data;
 
-    data = intel_alloc(fence, sizeof(*data), 0, VK_SYSTEM_ALLOC_INTERNAL);
+    data = intel_alloc(fence, sizeof(*data), 0, VK_SYSTEM_ALLOC_TYPE_INTERNAL);
     if (!data)
-        return VK_ERROR_OUT_OF_MEMORY;
+        return VK_ERROR_OUT_OF_HOST_MEMORY;
 
     memset(data, 0, sizeof(*data));
 
@@ -866,7 +866,7 @@ VkResult intel_wsi_fence_wait(struct intel_fence *fence,
 }
 
 ICD_EXPORT VkResult VKAPI vkWsiX11AssociateConnection(
-    VkPhysicalGpu                            gpu_,
+    VkPhysicalDevice                            gpu_,
     const VK_WSI_X11_CONNECTION_INFO*          pConnectionInfo)
 {
     struct intel_gpu *gpu = intel_gpu(gpu_);
@@ -904,7 +904,7 @@ ICD_EXPORT VkResult VKAPI vkWsiX11CreatePresentableImage(
     VkDevice                                  device,
     const VK_WSI_X11_PRESENTABLE_IMAGE_CREATE_INFO* pCreateInfo,
     VkImage*                                  pImage,
-    VkGpuMemory*                             pMem)
+    VkDeviceMemory*                             pMem)
 {
     struct intel_dev *dev = intel_dev(device);
     struct intel_wsi_x11 *x11 = (struct intel_wsi_x11 *) dev->gpu->wsi_data;
@@ -914,7 +914,7 @@ ICD_EXPORT VkResult VKAPI vkWsiX11CreatePresentableImage(
     ret = wsi_x11_img_create(x11, dev, pCreateInfo, &img);
     if (ret == VK_SUCCESS) {
         *pImage = (VkImage) img;
-        *pMem = (VkGpuMemory) img->obj.mem;
+        *pMem = (VkDeviceMemory) img->obj.mem;
     }
 
     return ret;
