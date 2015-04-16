@@ -707,11 +707,9 @@ typedef enum VkObjectInfoType_
     // Info type for vkGetObjectInfo()
     VK_INFO_TYPE_MEMORY_ALLOCATION_COUNT                    = 0x00000000,
     VK_INFO_TYPE_MEMORY_REQUIREMENTS                        = 0x00000001,
-    VK_INFO_TYPE_BUFFER_MEMORY_REQUIREMENTS                 = 0x00000002,
-    VK_INFO_TYPE_IMAGE_MEMORY_REQUIREMENTS                  = 0x00000003,
 
     VK_INFO_TYPE_BEGIN_RANGE                                = VK_INFO_TYPE_MEMORY_ALLOCATION_COUNT,
-    VK_INFO_TYPE_END_RANGE                                  = VK_INFO_TYPE_IMAGE_MEMORY_REQUIREMENTS,
+    VK_INFO_TYPE_END_RANGE                                  = VK_INFO_TYPE_MEMORY_REQUIREMENTS,
     VK_NUM_INFO_TYPE                                        = (VK_INFO_TYPE_END_RANGE - VK_INFO_TYPE_BEGIN_RANGE + 1),
     VK_MAX_ENUM(VkObjectInfoType)
 } VkObjectInfoType;
@@ -1051,9 +1049,7 @@ typedef enum VkStructureType_
     VK_STRUCTURE_TYPE_UPDATE_IMAGES                         = 51,
     VK_STRUCTURE_TYPE_UPDATE_BUFFERS                        = 52,
     VK_STRUCTURE_TYPE_UPDATE_AS_COPY                        = 53,
-    VK_STRUCTURE_TYPE_MEMORY_ALLOC_BUFFER_INFO              = 54,
-    VK_STRUCTURE_TYPE_MEMORY_ALLOC_IMAGE_INFO               = 55,
-    VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO                  = 56,
+    VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO                  = 54,
 
     VK_STRUCTURE_TYPE_BEGIN_RANGE                           = VK_STRUCTURE_TYPE_APPLICATION_INFO,
     VK_STRUCTURE_TYPE_END_RANGE                             = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
@@ -1096,18 +1092,6 @@ typedef enum VkMemoryPropertyFlags_
     VK_MAX_ENUM(VkMemoryPropertyFlags)
 } VkMemoryPropertyFlags;
 
-typedef enum VkMemoryType_
-{
-    VK_MEMORY_TYPE_OTHER                                    = 0x00000000,   // device memory that is not any of the others
-    VK_MEMORY_TYPE_BUFFER                                   = 0x00000001,   // memory for buffers and associated information
-    VK_MEMORY_TYPE_IMAGE                                    = 0x00000002,   // memory for images and associated information
-
-    VK_MEMORY_TYPE_BEGIN_RANGE                              = VK_MEMORY_TYPE_OTHER,
-    VK_MEMORY_TYPE_END_RANGE                                = VK_MEMORY_TYPE_IMAGE,
-    VK_NUM_MEMORY_TYPE                                      = (VK_MEMORY_TYPE_END_RANGE - VK_MEMORY_TYPE_BEGIN_RANGE + 1),
-    VK_MAX_ENUM(VkMemoryType)
-} VkMemoryType;
-
 // Buffer and buffer allocation usage flags
 typedef enum VkBufferUsageFlags_
 {
@@ -1142,35 +1126,6 @@ typedef enum VkBufferViewType_
     VK_NUM_BUFFER_VIEW_TYPE                                 = (VK_BUFFER_VIEW_TYPE_END_RANGE - VK_BUFFER_VIEW_TYPE_BEGIN_RANGE + 1),
     VK_MAX_ENUM(VkBufferViewType)
 } VkBufferViewType;
-
-
-// Images memory allocations can be used for resources of a given format class.
-typedef enum VkImageFormatClass_
-{
-    VK_IMAGE_FORMAT_CLASS_128_BITS                          = 1,  // color formats
-    VK_IMAGE_FORMAT_CLASS_96_BITS                           = 2,
-    VK_IMAGE_FORMAT_CLASS_64_BITS                           = 3,
-    VK_IMAGE_FORMAT_CLASS_48_BITS                           = 4,
-    VK_IMAGE_FORMAT_CLASS_32_BITS                           = 5,
-    VK_IMAGE_FORMAT_CLASS_24_BITS                           = 6,
-    VK_IMAGE_FORMAT_CLASS_16_BITS                           = 7,
-    VK_IMAGE_FORMAT_CLASS_8_BITS                            = 8,
-    VK_IMAGE_FORMAT_CLASS_128_BIT_BLOCK                     = 9,  // 128-bit block compressed formats
-    VK_IMAGE_FORMAT_CLASS_64_BIT_BLOCK                      = 10, // 64-bit block compressed formats
-    VK_IMAGE_FORMAT_CLASS_D32                               = 11, // D32_SFLOAT
-    VK_IMAGE_FORMAT_CLASS_D24                               = 12, // D24_UNORM
-    VK_IMAGE_FORMAT_CLASS_D16                               = 13, // D16_UNORM
-    VK_IMAGE_FORMAT_CLASS_S8                                = 14, // S8_UINT
-    VK_IMAGE_FORMAT_CLASS_D32S8                             = 15, // D32_SFLOAT_S8_UINT
-    VK_IMAGE_FORMAT_CLASS_D24S8                             = 16, // D24_UNORM_S8_UINT
-    VK_IMAGE_FORMAT_CLASS_D16S8                             = 17, // D16_UNORM_S8_UINT
-    VK_IMAGE_FORMAT_CLASS_LINEAR                            = 18, // used for pitch-linear (transparent) textures
-
-    VK_IMAGE_FORMAT_CLASS_BEGIN_RANGE                       = VK_IMAGE_FORMAT_CLASS_128_BITS,
-    VK_IMAGE_FORMAT_CLASS_END_RANGE                         = VK_IMAGE_FORMAT_CLASS_LINEAR,
-    VK_NUM_IMAGE_FORMAT_CLASS                               = (VK_IMAGE_FORMAT_CLASS_END_RANGE - VK_IMAGE_FORMAT_CLASS_BEGIN_RANGE + 1),
-    VK_MAX_ENUM(VkImageFormatClass)
-} VkImageFormatClass;
 
 // Image and image allocation usage flags
 typedef enum VkImageUsageFlags_
@@ -1451,29 +1406,8 @@ typedef struct VkMemoryAllocInfo_
     const void*                                 pNext;                      // Pointer to next structure
     VkGpuSize                                   allocationSize;             // Size of memory allocation
     VkFlags                                     memProps;                   // VkMemoryPropertyFlags
-    VkMemoryType                                memType;
     VkMemoryPriority                            memPriority;
 } VkMemoryAllocInfo;
-
-// This structure is included in the VkMemoryAllocInfo chain
-// for memory regions allocated for buffer usage.
-typedef struct VkMemoryAllocBufferInfo_
-{
-    VkStructureType                             sType;                      // Must be VK_STRUCTURE_TYPE_MEMORY_ALLOC_BUFFER_INFO
-    const void*                                 pNext;                      // Pointer to next structure
-    VkFlags                                     usage;                      // VkBufferUsageFlags
-} VkMemoryAllocBufferInfo;
-
-// This structure is included in the VkMemoryAllocInfo chain
-// for memory regions allocated for image usage.
-typedef struct VkMemoryAllocImageInfo_
-{
-    VkStructureType                             sType;                      // Must be VK_STRUCTURE_TYPE_MEMORY_ALLOC_IMAGE_INFO
-    const void*                                 pNext;                      // Pointer to next structure
-    VkFlags                                     usage;                      // VkImageUsageFlags
-    VkImageFormatClass                          formatClass;
-    uint32_t                                    samples;
-} VkMemoryAllocImageInfo;
 
 typedef struct VkMemoryOpenInfo_
 {
@@ -1495,20 +1429,7 @@ typedef struct VkMemoryRequirements_
     VkGpuSize                                   alignment;                  // Specified in bytes
     VkGpuSize                                   granularity;                // Granularity on which vkBindObjectMemoryRange can bind sub-ranges of memory specified in bytes (usually the page size)
     VkFlags                                     memProps;                   // VkMemoryPropertyFlags
-    VkMemoryType                                memType;
 } VkMemoryRequirements;
-
-typedef struct VkBufferMemoryRequirements_
-{
-    VkFlags                                     usage;                      // VkBufferUsageFlags
-} VkBufferMemoryRequirements;
-
-typedef struct VkImageMemoryRequirements_
-{
-    VkFlags                                     usage;                      // VkImageUsageFlags
-    VkImageFormatClass                          formatClass;
-    uint32_t                                    samples;
-} VkImageMemoryRequirements;
 
 typedef struct VkFormatProperties_
 {

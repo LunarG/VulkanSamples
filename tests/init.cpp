@@ -192,7 +192,6 @@ TEST_F(XglTest, AllocMemory) {
     alloc_info.allocationSize = 1024 * 1024; // 1MB
     alloc_info.memProps = VK_MEMORY_PROPERTY_SHAREABLE_BIT |
                           VK_MEMORY_PROPERTY_CPU_VISIBLE_BIT;
-    alloc_info.memType = VK_MEMORY_TYPE_OTHER;
 
 
     // TODO: Try variety of memory priorities
@@ -251,7 +250,6 @@ TEST_F(XglTest, Event) {
     mem_info.allocationSize = mem_req.size;
     mem_info.memProps = VK_MEMORY_PROPERTY_SHAREABLE_BIT;
     mem_info.memPriority = VK_MEMORY_PRIORITY_NORMAL;
-    mem_info.memType = VK_MEMORY_TYPE_OTHER;
     err = vkAllocMemory(device(), &mem_info, &event_mem);
     ASSERT_VK_SUCCESS(err);
 
@@ -381,7 +379,6 @@ TEST_F(XglTest, Query) {
     // TODO: Is a simple multiple all that's needed here?
     mem_info.allocationSize = mem_req.size * MAX_QUERY_SLOTS;
     mem_info.memProps = VK_MEMORY_PROPERTY_SHAREABLE_BIT;
-    mem_info.memType = VK_MEMORY_TYPE_OTHER;
     mem_info.memPriority = VK_MEMORY_PRIORITY_NORMAL;
     // TODO: Should this be pinned? Or maybe a separate test with pinned.
     err = vkAllocMemory(device(), &mem_info, &query_mem);
@@ -630,27 +627,13 @@ void XglTest::CreateImageTest()
         subresource.mipLevel++;
     }
 
-    VkMemoryAllocImageInfo img_alloc = {
-        .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOC_IMAGE_INFO,
-        .pNext = NULL,
-
-    };
     VkMemoryRequirements mem_req;
-    VkImageMemoryRequirements img_reqs;
-    size_t img_reqs_size = sizeof(VkImageMemoryRequirements);
     data_size = sizeof(mem_req);
     err = vkGetObjectInfo(image, VK_INFO_TYPE_MEMORY_REQUIREMENTS,
                            &data_size, &mem_req);
     ASSERT_VK_SUCCESS(err);
     ASSERT_EQ(data_size, sizeof(mem_req));
     ASSERT_NE(0, mem_req.size) << "vkGetObjectInfo (Event): Failed - expect images to require memory";
-    err = vkGetObjectInfo(image, VK_INFO_TYPE_IMAGE_MEMORY_REQUIREMENTS,
-                           &img_reqs_size, &img_reqs);
-    ASSERT_VK_SUCCESS(err);
-    ASSERT_EQ(img_reqs_size, sizeof(VkImageMemoryRequirements));
-    img_alloc.usage = img_reqs.usage;
-    img_alloc.formatClass = img_reqs.formatClass;
-    img_alloc.samples = img_reqs.samples;
     //        VkResult VKAPI vkAllocMemory(
     //            VkDevice                                  device,
     //            const VkMemoryAllocInfo*                pAllocInfo,
@@ -659,10 +642,9 @@ void XglTest::CreateImageTest()
     VkGpuMemory image_mem;
 
     mem_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO;
-    mem_info.pNext = &img_alloc;
+    mem_info.pNext = NULL;
     mem_info.allocationSize = mem_req.size;
     mem_info.memProps = VK_MEMORY_PROPERTY_SHAREABLE_BIT;
-    mem_info.memType = VK_MEMORY_TYPE_IMAGE;
     mem_info.memPriority = VK_MEMORY_PRIORITY_NORMAL;
     err = vkAllocMemory(device(), &mem_info, &image_mem);
     ASSERT_VK_SUCCESS(err);

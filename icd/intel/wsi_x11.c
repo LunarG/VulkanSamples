@@ -382,7 +382,6 @@ static VkResult wsi_x11_img_create(struct intel_wsi_x11 *x11,
     mem_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO;
     mem_info.allocationSize = img->total_size;
     mem_info.memProps =  0;
-    mem_info.memType = VK_MEMORY_TYPE_IMAGE;
     mem_info.memPriority = VK_MEMORY_PRIORITY_HIGH;
 
     ret = intel_mem_alloc(dev, &mem_info, &mem);

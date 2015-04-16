@@ -212,17 +212,12 @@ void VkImageTest::CreateImage(uint32_t w, uint32_t h)
 
     VkMemoryRequirements *mem_req;
     size_t mem_reqs_size = sizeof(VkMemoryRequirements);
-    VkImageMemoryRequirements img_reqs;
-    size_t img_reqs_size = sizeof(VkImageMemoryRequirements);
     uint32_t num_allocations = 0;
     size_t num_alloc_size = sizeof(num_allocations);
-    VkMemoryAllocImageInfo img_alloc = {};
-    img_alloc.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOC_IMAGE_INFO;
-    img_alloc.pNext = NULL;
 
     VkMemoryAllocInfo mem_info = {};
     mem_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO;
-    mem_info.pNext = &img_alloc;
+    mem_info.pNext = NULL;
 
     err = vkGetObjectInfo(m_image, VK_INFO_TYPE_MEMORY_ALLOCATION_COUNT,
                     &num_alloc_size, &num_allocations);
@@ -236,20 +231,11 @@ void VkImageTest::CreateImage(uint32_t w, uint32_t h)
                     &mem_reqs_size, mem_req);
     ASSERT_VK_SUCCESS(err);
     ASSERT_EQ(mem_reqs_size, num_allocations * sizeof(VkMemoryRequirements));
-    err = vkGetObjectInfo(m_image,
-                        VK_INFO_TYPE_IMAGE_MEMORY_REQUIREMENTS,
-                        &img_reqs_size, &img_reqs);
-    ASSERT_VK_SUCCESS(err);
-    ASSERT_EQ(img_reqs_size, sizeof(VkImageMemoryRequirements));
-    img_alloc.usage = img_reqs.usage;
-    img_alloc.formatClass = img_reqs.formatClass;
-    img_alloc.samples = img_reqs.samples;
 
     for (uint32_t i = 0; i < num_allocations; i ++) {
         ASSERT_NE(0, mem_req[i].size) << "vkGetObjectInfo (Image): Failed - expect images to require memory";
         mem_info.allocationSize = mem_req[i].size;
         mem_info.memProps = VK_MEMORY_PROPERTY_SHAREABLE_BIT;
-        mem_info.memType = VK_MEMORY_TYPE_IMAGE;
         mem_info.memPriority = VK_MEMORY_PRIORITY_NORMAL;
 
         /* allocate memory */

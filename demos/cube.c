@@ -594,16 +594,11 @@ static void demo_prepare_depth(struct demo *demo)
         .usage = VK_IMAGE_USAGE_DEPTH_STENCIL_BIT,
         .flags = 0,
     };
-    VkMemoryAllocImageInfo img_alloc = {
-        .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOC_IMAGE_INFO,
-        .pNext = NULL,
-    };
     VkMemoryAllocInfo mem_alloc = {
         .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO,
-        .pNext = &img_alloc,
+        .pNext = NULL,
         .allocationSize = 0,
         .memProps = VK_MEMORY_PROPERTY_GPU_ONLY,
-        .memType = VK_MEMORY_TYPE_IMAGE,
         .memPriority = VK_MEMORY_PRIORITY_NORMAL,
     };
     VkDepthStencilViewCreateInfo view = {
@@ -617,8 +612,6 @@ static void demo_prepare_depth(struct demo *demo)
     };
     VkMemoryRequirements *mem_reqs;
     size_t mem_reqs_size = sizeof(VkMemoryRequirements);
-    VkImageMemoryRequirements img_reqs;
-    size_t img_reqs_size = sizeof(VkImageMemoryRequirements);
     VkResult err;
     uint32_t num_allocations = 0;
     size_t num_alloc_size = sizeof(num_allocations);
@@ -639,13 +632,6 @@ static void demo_prepare_depth(struct demo *demo)
                     VK_INFO_TYPE_MEMORY_REQUIREMENTS,
                     &mem_reqs_size, mem_reqs);
     assert(!err && mem_reqs_size == num_allocations * sizeof(VkMemoryRequirements));
-    err = vkGetObjectInfo(demo->depth.image,
-                    VK_INFO_TYPE_IMAGE_MEMORY_REQUIREMENTS,
-                    &img_reqs_size, &img_reqs);
-    assert(!err && img_reqs_size == sizeof(VkImageMemoryRequirements));
-    img_alloc.usage = img_reqs.usage;
-    img_alloc.formatClass = img_reqs.formatClass;
-    img_alloc.samples = img_reqs.samples;
     for (uint32_t i = 0; i < num_allocations; i ++) {
         mem_alloc.allocationSize = mem_reqs[i].size;
 
@@ -851,29 +837,16 @@ static void demo_prepare_texture_image(struct demo *demo,
         .usage = VK_IMAGE_USAGE_TRANSFER_SOURCE_BIT,
         .flags = 0,
     };
-    VkMemoryAllocBufferInfo buf_alloc = {
-        .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOC_BUFFER_INFO,
-        .pNext = NULL,
-    };
-    VkMemoryAllocImageInfo img_alloc = {
-        .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOC_IMAGE_INFO,
-        .pNext = &buf_alloc,
-    };
     VkMemoryAllocInfo mem_alloc = {
         .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO,
-        .pNext = &img_alloc,
+        .pNext = NULL,
         .allocationSize = 0,
         .memProps = mem_props,
-        .memType = VK_MEMORY_TYPE_IMAGE,
         .memPriority = VK_MEMORY_PRIORITY_NORMAL,
     };
 
     VkMemoryRequirements *mem_reqs;
     size_t mem_reqs_size = sizeof(VkMemoryRequirements);
-    VkBufferMemoryRequirements buf_reqs;
-    size_t buf_reqs_size = sizeof(VkBufferMemoryRequirements);
-    VkImageMemoryRequirements img_reqs;
-    size_t img_reqs_size = sizeof(VkImageMemoryRequirements);
     uint32_t num_allocations = 0;
     size_t num_alloc_size = sizeof(num_allocations);
 
@@ -891,28 +864,9 @@ static void demo_prepare_texture_image(struct demo *demo,
                 VK_INFO_TYPE_MEMORY_REQUIREMENTS,
                 &mem_reqs_size, mem_reqs);
     assert(!err && mem_reqs_size == num_allocations * sizeof(VkMemoryRequirements));
-    err = vkGetObjectInfo(tex_obj->image,
-                    VK_INFO_TYPE_IMAGE_MEMORY_REQUIREMENTS,
-                    &img_reqs_size, &img_reqs);
-    assert(!err && img_reqs_size == sizeof(VkImageMemoryRequirements));
-    img_alloc.usage = img_reqs.usage;
-    img_alloc.formatClass = img_reqs.formatClass;
-    img_alloc.samples = img_reqs.samples;
     mem_alloc.memProps = VK_MEMORY_PROPERTY_CPU_VISIBLE_BIT;
     for (uint32_t j = 0; j < num_allocations; j ++) {
-        mem_alloc.memType = mem_reqs[j].memType;
         mem_alloc.allocationSize = mem_reqs[j].size;
-
-        if (mem_alloc.memType == VK_MEMORY_TYPE_BUFFER) {
-            err = vkGetObjectInfo(tex_obj->image,
-                            VK_INFO_TYPE_BUFFER_MEMORY_REQUIREMENTS,
-                            &buf_reqs_size, &buf_reqs);
-            assert(!err && buf_reqs_size == sizeof(VkBufferMemoryRequirements));
-            buf_alloc.usage = buf_reqs.usage;
-            img_alloc.pNext = &buf_alloc;
-        } else {
-            img_alloc.pNext = 0;
-        }
 
         /* allocate memory */
         err = vkAllocMemory(demo->device, &mem_alloc,
@@ -1089,22 +1043,15 @@ void demo_prepare_cube_data_buffer(struct demo *demo)
 {
     VkBufferCreateInfo buf_info;
     VkBufferViewCreateInfo view_info;
-    VkMemoryAllocBufferInfo buf_alloc = {
-        .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOC_BUFFER_INFO,
-        .pNext = NULL,
-    };
     VkMemoryAllocInfo alloc_info = {
         .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO,
-        .pNext = &buf_alloc,
+        .pNext = NULL,
         .allocationSize = 0,
         .memProps = VK_MEMORY_PROPERTY_CPU_VISIBLE_BIT,
-        .memType = VK_MEMORY_TYPE_BUFFER,
         .memPriority = VK_MEMORY_PRIORITY_NORMAL,
     };
     VkMemoryRequirements *mem_reqs;
     size_t mem_reqs_size = sizeof(VkMemoryRequirements);
-    VkBufferMemoryRequirements buf_reqs;
-    size_t buf_reqs_size = sizeof(VkBufferMemoryRequirements);
     uint32_t num_allocations = 0;
     size_t num_alloc_size = sizeof(num_allocations);
     uint8_t *pData;
@@ -1147,11 +1094,6 @@ void demo_prepare_cube_data_buffer(struct demo *demo)
             VK_INFO_TYPE_MEMORY_REQUIREMENTS,
             &mem_reqs_size, mem_reqs);
     assert(!err && mem_reqs_size == num_allocations * sizeof(*mem_reqs));
-    err = vkGetObjectInfo(demo->uniform_data.buf,
-                    VK_INFO_TYPE_BUFFER_MEMORY_REQUIREMENTS,
-                    &buf_reqs_size, &buf_reqs);
-    assert(!err && buf_reqs_size == sizeof(VkBufferMemoryRequirements));
-    buf_alloc.usage = buf_reqs.usage;
     for (uint32_t i = 0; i < num_allocations; i ++) {
         alloc_info.allocationSize = mem_reqs[i].size;
 

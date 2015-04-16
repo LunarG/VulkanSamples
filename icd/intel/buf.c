@@ -66,18 +66,7 @@ static VkResult buf_get_info(struct intel_base *base, int type,
             }
 
             mem_req->alignment = 4096;
-            mem_req->memType = VK_MEMORY_TYPE_BUFFER;
 
-        }
-        break;
-        case VK_INFO_TYPE_BUFFER_MEMORY_REQUIREMENTS:
-        {
-            VkBufferMemoryRequirements *buf_req = data;
-
-            *size = sizeof(VkBufferMemoryRequirements);
-            if (data == NULL)
-                return ret;
-            buf_req->usage = buf->usage;
         }
         break;
     default:

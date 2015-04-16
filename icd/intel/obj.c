@@ -40,13 +40,11 @@ VkResult intel_base_get_info(struct intel_base *base, int type,
     switch (type) {
     case VK_INFO_TYPE_MEMORY_REQUIREMENTS:
         {
-            VkMemoryRequirements *mem_req = data;
             s = sizeof(VkMemoryRequirements);
             *size = s;
             if (data == NULL)
                 return ret;
             memset(data, 0, s);
-            mem_req->memType =  VK_MEMORY_TYPE_OTHER;
             break;
         }
     case VK_INFO_TYPE_MEMORY_ALLOCATION_COUNT:
@@ -55,20 +53,6 @@ VkResult intel_base_get_info(struct intel_base *base, int type,
             return ret;
         count = (uint32_t *) data;
         *count = 1;
-        break;
-    case VK_INFO_TYPE_IMAGE_MEMORY_REQUIREMENTS:
-        s = sizeof(VkImageMemoryRequirements);
-        *size = s;
-        if (data == NULL)
-            return ret;
-        memset(data, 0, s);
-        break;
-    case VK_INFO_TYPE_BUFFER_MEMORY_REQUIREMENTS:
-        s = sizeof(VkBufferMemoryRequirements);
-        *size = s;
-        if (data == NULL)
-            return ret;
-        memset(data, 0, s);
         break;
     default:
         ret = VK_ERROR_INVALID_VALUE;
@@ -205,49 +189,20 @@ static bool base_dbg_copy_create_info(const struct intel_handle *handle,
     } else if (info.header->struct_type ==
             VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO) {
         size_t size;
-        const VkMemoryAllocInfo *ptr_next, *src = info.ptr;
+        const VkMemoryAllocInfo *src = info.ptr;
         VkMemoryAllocInfo *dst;
         uint8_t *d;
         size = sizeof(*src);
 
-        ptr_next = src->pNext;
-        while (ptr_next != NULL) {
-            switch (ptr_next->sType) {
-                case VK_STRUCTURE_TYPE_MEMORY_ALLOC_IMAGE_INFO:
-                    size += sizeof(VkMemoryAllocImageInfo);
-                    break;
-                case VK_STRUCTURE_TYPE_MEMORY_ALLOC_BUFFER_INFO:
-                    size += sizeof(VkMemoryAllocBufferInfo);
-                    break;
-                default:
-                    return false;
-            }
-            ptr_next = (VkMemoryAllocInfo *) ptr_next->pNext;
-        }
         dbg->create_info_size = size;
         dst = intel_alloc(handle, size, 0, VK_SYSTEM_ALLOC_DEBUG);
         if (!dst)
             return false;
         memcpy(dst, src, sizeof(*src));
 
-        ptr_next = src->pNext;
         d = (uint8_t *) dst;
         d += sizeof(*src);
-        while (ptr_next != NULL) {
-            switch (ptr_next->sType) {
-            case VK_STRUCTURE_TYPE_MEMORY_ALLOC_IMAGE_INFO:
-                memcpy(d, ptr_next, sizeof(VkMemoryAllocImageInfo));
-                d += sizeof(VkMemoryAllocImageInfo);
-                break;
-            case VK_STRUCTURE_TYPE_MEMORY_ALLOC_BUFFER_INFO:
-                memcpy(d, ptr_next, sizeof(VkMemoryAllocBufferInfo));
-                d += sizeof(VkMemoryAllocBufferInfo);
-                break;
-            default:
-                return false;
-            }
-            ptr_next = (VkMemoryAllocInfo *) ptr_next->pNext;
-        }
+
         dbg->create_info = dst;
     } else if (info.header->struct_type ==
             VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO) {

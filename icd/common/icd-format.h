@@ -80,8 +80,6 @@ static inline bool icd_pipeline_cb_att_needs_dual_source_blending(const VkPipeli
 
 size_t icd_format_get_size(VkFormat format);
 
-VkImageFormatClass icd_format_get_class(VkFormat format);
-
 unsigned int icd_format_get_channel_count(VkFormat format);
 
 void icd_format_get_raw_value(VkFormat format,

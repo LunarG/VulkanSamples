@@ -261,7 +261,7 @@ void Object::unbind_memory()
         unbind_memory(i);
 }
 
-void Object::alloc_memory(const Device &dev, bool for_buf, bool for_img)
+void Object::alloc_memory(const Device &dev)
 {
     if (!EXPECT(!internal_mems_) || !mem_alloc_count_)
         return;
@@ -269,55 +269,11 @@ void Object::alloc_memory(const Device &dev, bool for_buf, bool for_img)
     internal_mems_ = new GpuMemory[mem_alloc_count_];
 
     const std::vector<VkMemoryRequirements> mem_reqs = memory_requirements();
-    std::vector<VkImageMemoryRequirements> img_reqs;
-    std::vector<VkBufferMemoryRequirements> buf_reqs;
-    VkMemoryAllocImageInfo img_info;
-    VkMemoryAllocBufferInfo buf_info;
     VkMemoryAllocInfo info, *next_info = NULL;
-
-    if (for_img) {
-        img_reqs = get_info<VkImageMemoryRequirements>(obj(),
-                        VK_INFO_TYPE_IMAGE_MEMORY_REQUIREMENTS, 0);
-        EXPECT(img_reqs.size() == 1);
-        next_info = (VkMemoryAllocInfo *) &img_info;
-        img_info.pNext = NULL;
-        img_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOC_IMAGE_INFO;
-        img_info.usage = img_reqs[0].usage;
-        img_info.formatClass = img_reqs[0].formatClass;
-        img_info.samples = img_reqs[0].samples;
-    }
-
-
-    if (for_buf) {
-        buf_reqs = get_info<VkBufferMemoryRequirements>(obj(),
-                        VK_INFO_TYPE_BUFFER_MEMORY_REQUIREMENTS, 0);
-        if (for_img)
-            img_info.pNext = &buf_info;
-        else
-            next_info = (VkMemoryAllocInfo *) &buf_info;
-        buf_info.pNext = NULL;
-        buf_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOC_BUFFER_INFO;
-        buf_info.usage = buf_reqs[0].usage;
-    }
-
 
     for (int i = 0; i < mem_reqs.size(); i++) {
         info = GpuMemory::alloc_info(mem_reqs[i], next_info);
-
-        switch (info.memType) {
-        case VK_MEMORY_TYPE_BUFFER:
-            EXPECT(for_buf);
-            info.memProps |= VK_MEMORY_PROPERTY_CPU_VISIBLE_BIT;
-            primary_mem_ = &internal_mems_[i];
-            break;
-        case VK_MEMORY_TYPE_IMAGE:
-            EXPECT(for_img);
-            primary_mem_ = &internal_mems_[i];
-            break;
-        default:
-            break;
-        }
-
+        primary_mem_ = &internal_mems_[i];
         internal_mems_[i].init(dev, info);
         bind_memory(i, internal_mems_[i], 0);
     }
@@ -672,7 +628,7 @@ VkResult QueryPool::results(uint32_t start, uint32_t count, size_t size, void *d
 void Buffer::init(const Device &dev, const VkBufferCreateInfo &info)
 {
     init_no_mem(dev, info);
-    alloc_memory(dev, true, false);
+    alloc_memory(dev);
 }
 
 void Buffer::init_no_mem(const Device &dev, const VkBufferCreateInfo &info)
@@ -690,7 +646,7 @@ void BufferView::init(const Device &dev, const VkBufferViewCreateInfo &info)
 void Image::init(const Device &dev, const VkImageCreateInfo &info)
 {
     init_no_mem(dev, info);
-    alloc_memory(dev, info.tiling == VK_LINEAR_TILING, true);
+    alloc_memory(dev);
 }
 
 void Image::init_no_mem(const Device &dev, const VkImageCreateInfo &info)

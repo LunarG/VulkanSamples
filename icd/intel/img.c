@@ -63,33 +63,6 @@ static VkResult img_get_info(struct intel_base *base, int type,
                 return ret;
             mem_req->size = img->total_size;
             mem_req->alignment = 4096;
-            if (img->format_class == VK_IMAGE_FORMAT_CLASS_LINEAR) {
-                mem_req->memType = VK_MEMORY_TYPE_BUFFER;
-            } else {
-                mem_req->memType = VK_MEMORY_TYPE_IMAGE;
-            }
-        }
-        break;
-    case VK_INFO_TYPE_IMAGE_MEMORY_REQUIREMENTS:
-        {
-            VkImageMemoryRequirements *img_req = data;
-
-            *size = sizeof(VkImageMemoryRequirements);
-            if (data == NULL)
-                return ret;
-            img_req->usage = img->usage;
-            img_req->formatClass = img->format_class;
-            img_req->samples = img->samples;
-        }
-        break;
-    case VK_INFO_TYPE_BUFFER_MEMORY_REQUIREMENTS:
-        {
-            VkBufferMemoryRequirements *buf_req = data;
-
-            *size = sizeof(VkBufferMemoryRequirements);
-            if (data == NULL)
-                return ret;
-            buf_req->usage = img->usage;
         }
         break;
     default:
@@ -120,10 +93,6 @@ VkResult intel_img_create(struct intel_dev *dev,
     img->mip_levels = info->mipLevels;
     img->array_size = info->arraySize;
     img->usage = info->usage;
-    if (info->tiling == VK_LINEAR_TILING)
-        img->format_class = VK_IMAGE_FORMAT_CLASS_LINEAR;
-    else
-        img->format_class = icd_format_get_class(info->format);
     img->samples = info->samples;
     intel_layout_init(layout, dev, info, scanout);
 

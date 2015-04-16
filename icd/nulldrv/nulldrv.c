@@ -59,13 +59,11 @@ static VkResult nulldrv_base_get_info(struct nulldrv_base *base, int type,
     switch (type) {
     case VK_INFO_TYPE_MEMORY_REQUIREMENTS:
         {
-            VkMemoryRequirements *mem_req = data;
             s = sizeof(VkMemoryRequirements);
             *size = s;
             if (data == NULL)
                 return ret;
             memset(data, 0, s);
-            mem_req->memType =  VK_MEMORY_TYPE_OTHER;
             break;
         }
     case VK_INFO_TYPE_MEMORY_ALLOCATION_COUNT:
@@ -74,20 +72,6 @@ static VkResult nulldrv_base_get_info(struct nulldrv_base *base, int type,
             return ret;
         count = (uint32_t *) data;
         *count = 1;
-        break;
-    case VK_INFO_TYPE_IMAGE_MEMORY_REQUIREMENTS:
-        s = sizeof(VkImageMemoryRequirements);
-        *size = s;
-        if (data == NULL)
-            return ret;
-        memset(data, 0, s);
-        break;
-    case VK_INFO_TYPE_BUFFER_MEMORY_REQUIREMENTS:
-        s = sizeof(VkBufferMemoryRequirements);
-        *size = s;
-        if (data == NULL)
-            return ret;
-        memset(data, 0, s);
         break;
     default:
         ret = VK_ERROR_INVALID_VALUE;
@@ -140,7 +124,7 @@ static VkResult nulldrv_gpu_add(int devid, const char *primary_node,
     if (!gpu)
         return VK_ERROR_OUT_OF_MEMORY;
 	memset(gpu, 0, sizeof(*gpu));
-    
+
     // Initialize pointer to loader's dispatch table with ICD_LOADER_MAGIC
     set_loader_magic_value(gpu);
 
@@ -333,29 +317,6 @@ static VkResult img_get_info(struct nulldrv_base *base, int type,
                 return ret;
             mem_req->size = img->total_size;
             mem_req->alignment = 4096;
-            mem_req->memType = VK_MEMORY_TYPE_IMAGE;
-        }
-        break;
-    case VK_INFO_TYPE_IMAGE_MEMORY_REQUIREMENTS:
-        {
-            VkImageMemoryRequirements *img_req = data;
-
-            *size = sizeof(VkImageMemoryRequirements);
-            if (data == NULL)
-                return ret;
-            img_req->usage = img->usage;
-            img_req->formatClass = img->format_class;
-            img_req->samples = img->samples;
-        }
-        break;
-    case VK_INFO_TYPE_BUFFER_MEMORY_REQUIREMENTS:
-        {
-            VkBufferMemoryRequirements *buf_req = data;
-
-            *size = sizeof(VkBufferMemoryRequirements);
-            if (data == NULL)
-                return ret;
-            buf_req->usage = img->usage;
         }
         break;
     default:
@@ -383,10 +344,6 @@ static VkResult nulldrv_img_create(struct nulldrv_dev *dev,
     img->mip_levels = info->mipLevels;
     img->array_size = info->arraySize;
     img->usage = info->usage;
-    if (info->tiling == VK_LINEAR_TILING)
-        img->format_class = VK_IMAGE_FORMAT_CLASS_LINEAR;
-    else
-        img->format_class = icd_format_get_class(info->format);
     img->samples = info->samples;
 
     img->obj.base.get_info = img_get_info;
@@ -515,18 +472,7 @@ static VkResult buf_get_info(struct nulldrv_base *base, int type,
 
             mem_req->size = buf->size;
             mem_req->alignment = 4096;
-            mem_req->memType = VK_MEMORY_TYPE_BUFFER;
 
-        }
-        break;
-        case VK_INFO_TYPE_BUFFER_MEMORY_REQUIREMENTS:
-        {
-            VkBufferMemoryRequirements *buf_req = data;
-
-            *size = sizeof(VkBufferMemoryRequirements);
-            if (data == NULL)
-                return ret;
-            buf_req->usage = buf->usage;
         }
         break;
     default:

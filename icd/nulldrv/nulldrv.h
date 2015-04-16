@@ -105,7 +105,6 @@ struct nulldrv_img {
     uint32_t mip_levels;
     uint32_t array_size;
     VkFlags usage;
-    VkImageFormatClass format_class;
     uint32_t samples;
     size_t total_size;
 };

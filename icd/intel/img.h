@@ -41,7 +41,6 @@ struct intel_img {
     uint32_t mip_levels;
     uint32_t array_size;
     VkFlags usage;
-    VkImageFormatClass format_class;  // should this be integrated into intel_layout?
     uint32_t samples;
     struct intel_layout layout;
 

@@ -160,8 +160,7 @@ protected:
     void reinit(VkObject obj) { init(obj, true); }
 
     // allocate and bind internal memories
-    void alloc_memory(const Device &dev, bool for_linear_img, bool for_img);
-    void alloc_memory(const Device &dev) { alloc_memory(dev, false, false); }
+    void alloc_memory(const Device &dev);
     void alloc_memory(const std::vector<VkGpuMemory> &mems);
 
 private:
@@ -629,7 +628,6 @@ inline VkMemoryAllocInfo GpuMemory::alloc_info(const VkMemoryRequirements &reqs,
 
     info.allocationSize = reqs.size;
     info.memProps = reqs.memProps;
-    info.memType = reqs.memType;
     info.memPriority = VK_MEMORY_PRIORITY_NORMAL;
     return info;
 }
