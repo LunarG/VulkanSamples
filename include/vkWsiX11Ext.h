@@ -94,7 +94,7 @@ typedef VkResult (VKAPI *PFN_vkWsiX11QueuePresent)(VkQueue queue, const VK_WSI_X
  * without having a GPU as the first parameter, the loader could not find the
  * dispatch table.
  *
- * This function is available when vkGetExtensionSupport says "VK_WSI_X11"
+ * This function is available when vkGetGlobalExtensionInfo says "VK_WSI_X11"
  * is supported.
  */
 VkResult VKAPI vkWsiX11AssociateConnection(

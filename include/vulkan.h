@@ -2205,7 +2205,7 @@ typedef void *   (VKAPI *PFN_vkGetProcAddr)(VkPhysicalGpu gpu, const char * pNam
 typedef VkResult (VKAPI *PFN_vkCreateDevice)(VkPhysicalGpu gpu, const VkDeviceCreateInfo* pCreateInfo, VkDevice* pDevice);
 typedef VkResult (VKAPI *PFN_vkDestroyDevice)(VkDevice device);
 typedef VkResult (VKAPI *PFN_vkGetGlobalExtensionInfo)(VkExtensionInfoType infoType, uint32_t extensionIndex, size_t* pDataSize, void* pData);
-typedef VkResult (VKAPI *PFN_vkGetExtensionSupport)(VkPhysicalGpu gpu, const char* pExtName);
+typedef VkResult (VKAPI *PFN_vkGetPhysicalDeviceExtensionInfo)(VkPhysicalGpu gpu, VkExtensionInfoType infoType, uint32_t extensionIndex, size_t* pDataSize, void* pData);
 typedef VkResult (VKAPI *PFN_vkEnumerateLayers)(VkPhysicalGpu gpu, size_t maxLayerCount, size_t maxStringSize, size_t* pOutLayerCount, char* const* pOutLayers, void* pReserved);
 typedef VkResult (VKAPI *PFN_vkGetDeviceQueue)(VkDevice device, uint32_t queueNodeIndex, uint32_t queueIndex, VkQueue* pQueue);
 typedef VkResult (VKAPI *PFN_vkQueueSubmit)(VkQueue queue, uint32_t cmdBufferCount, const VkCmdBuffer* pCmdBuffers, VkFence fence);
@@ -2358,9 +2358,12 @@ VkResult VKAPI vkGetGlobalExtensionInfo(
                                                size_t*  pDataSize,
                                                void*    pData);
 
-VkResult VKAPI vkGetExtensionSupport(
-    VkPhysicalGpu                               gpu,
-    const char*                                 pExtName);
+VkResult VKAPI vkGetPhysicalDeviceExtensionInfo(
+                                               VkPhysicalGpu gpu,
+                                               VkExtensionInfoType infoType,
+                                               uint32_t extensionIndex,
+                                               size_t*  pDataSize,
+                                               void*    pData);
 
 // Layer discovery functions
 

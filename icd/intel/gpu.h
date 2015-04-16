@@ -41,6 +41,14 @@ enum intel_ext_type {
     INTEL_EXT_INVALID = INTEL_EXT_COUNT,
 };
 
+/*
+ * No device-specific extensions at thie point, so this enum is a placeholder
+ */
+enum intel_physical_device_ext_type {
+    INTEL_PHY_DEV_EXT_COUNT,
+    INTEL_PHY_DEV_EXT_INVALID = INTEL_PHY_DEV_EXT_COUNT,
+};
+
 enum intel_gpu_engine_type {
     /* TODO BLT support */
     INTEL_GPU_ENGINE_3D,

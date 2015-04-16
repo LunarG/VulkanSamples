@@ -255,6 +255,13 @@ core = Extension(
              Param("size_t*", "pDataSize"),
              Param("void*", "pData")]),
 
+        Proto("VkResult", "GetPhysicalDeviceExtensionInfo",
+            [Param("VkPhysicalGpu", "gpu"),
+             Param("VkExtensionInfoType", "infoType"),
+             Param("uint32_t", "extensionIndex"),
+             Param("size_t*", "pDataSize"),
+             Param("void*", "pData")]),
+
         Proto("VkResult", "EnumerateLayers",
             [Param("VkPhysicalGpu", "gpu"),
              Param("size_t", "maxLayerCount"),

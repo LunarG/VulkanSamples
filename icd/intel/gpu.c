@@ -512,15 +512,46 @@ ICD_EXPORT VkResult VKAPI vkGetGlobalExtensionInfo(
     return VK_SUCCESS;
 }
 
-ICD_EXPORT VkResult VKAPI vkGetExtensionSupport(
-    VkPhysicalGpu                               gpu_,
-    const char*                                 pExtName)
+ICD_EXPORT VkResult VKAPI vkGetPhysicalDeviceExtensionInfo(
+                                               VkPhysicalGpu gpu,
+                                               VkExtensionInfoType infoType,
+                                               uint32_t extensionIndex,
+                                               size_t*  pDataSize,
+                                               void*    pData)
 {
-    struct intel_gpu *gpu = intel_gpu(gpu_);
-    const enum intel_ext_type ext = intel_gpu_lookup_extension(gpu, pExtName);
+    /*
+     * If/when we have device-specific extensions, should retrieve them
+     * based on the passed-in physical device
+     *
+     *VkExtensionProperties *ext_props;
+     */
+    uint32_t *count;
 
-    return (ext != INTEL_EXT_INVALID) ?
-        VK_SUCCESS : VK_ERROR_INVALID_EXTENSION;
+    if (pDataSize == NULL)
+        return VK_ERROR_INVALID_POINTER;
+
+    switch (infoType) {
+        case VK_EXTENSION_INFO_TYPE_COUNT:
+            *pDataSize = sizeof(uint32_t);
+            if (pData == NULL)
+                return VK_SUCCESS;
+            count = (uint32_t *) pData;
+            *count = INTEL_PHY_DEV_EXT_COUNT;
+            break;
+        case VK_EXTENSION_INFO_TYPE_PROPERTIES:
+            *pDataSize = sizeof(VkExtensionProperties);
+            if (pData == NULL)
+                return VK_SUCCESS;
+            /*
+             * Currently no device-specific extensions
+             */
+            return VK_ERROR_INVALID_VALUE;
+            break;
+        default:
+            return VK_ERROR_INVALID_VALUE;
+    };
+
+    return VK_SUCCESS;
 }
 
 ICD_EXPORT VkResult VKAPI vkGetMultiGpuCompatibility(

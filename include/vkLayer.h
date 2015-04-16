@@ -35,7 +35,7 @@ typedef struct VkLayerDispatchTable_
     PFN_vkCreateDevice CreateDevice;
     PFN_vkDestroyDevice DestroyDevice;
     PFN_vkGetGlobalExtensionInfo GetGlobalExtensionInfo;
-    PFN_vkGetExtensionSupport GetExtensionSupport;
+    PFN_vkGetPhysicalDeviceExtensionInfo GetPhysicalDeviceExtensionInfo;
     PFN_vkEnumerateLayers EnumerateLayers;
     PFN_vkGetDeviceQueue GetDeviceQueue;
     PFN_vkQueueSubmit QueueSubmit;
