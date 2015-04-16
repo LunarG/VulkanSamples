@@ -1664,6 +1664,7 @@ static void demo_create_window(struct demo *demo)
 
 static void demo_init_vk(struct demo *demo)
 {
+    // TODO : Should query count w/ GetGlobalExtensionInfo, then enable via CreateInstance
     const VkApplicationInfo app = {
         .sType = VK_STRUCTURE_TYPE_APPLICATION_INFO,
         .pNext = NULL,
@@ -1690,15 +1691,17 @@ static void demo_init_vk(struct demo *demo)
         .queueNodeIndex = 0,
         .queueCount = 1,
     };
+    
     const char *ext_names[] = {
         "VK_WSI_X11",
     };
+
     const VkDeviceCreateInfo device = {
         .sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
         .pNext = NULL,
         .queueRecordCount = 1,
         .pRequestedQueues = &queue,
-        .extensionCount = 1,
+        .extensionCount = 1, // TODO : Should query count w/ GetGlobalExtensionInfo
         .ppEnabledExtensionNames = ext_names,
         .flags = VK_DEVICE_CREATE_VALIDATION_BIT,
     };
@@ -1720,11 +1723,6 @@ static void demo_init_vk(struct demo *demo)
 
     err = vkEnumerateGpus(demo->inst, 1, &gpu_count, &demo->gpu);
     assert(!err && gpu_count == 1);
-
-    for (i = 0; i < device.extensionCount; i++) {
-        err = vkGetExtensionSupport(demo->gpu, ext_names[i]);
-        assert(!err);
-    }
 
     err = vkWsiX11AssociateConnection(demo->gpu, &connection);
     assert(!err);

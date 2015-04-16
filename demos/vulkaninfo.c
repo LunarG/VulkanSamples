@@ -364,17 +364,21 @@ static void app_dev_destroy(struct app_dev *dev)
 
 static void app_gpu_init_extensions(struct app_gpu *gpu)
 {
-    VkResult err;
+    //VkResult err;
     uint32_t i;
+    // TODO : Should query count w/ GetGlobalExtensionInfo,
+    //  Then dynamically set extensions based on returned count
 
     static char *known_extensions[] = {
         "VK_WSI_X11",
     };
 
     for (i = 0; i < ARRAY_SIZE(known_extensions); i++) {
+/*
         err = vkGetExtensionSupport(gpu->obj, known_extensions[i]);
         if (!err)
-            gpu->extension_count++;
+*/
+        gpu->extension_count++;
     }
 
     gpu->extensions =
@@ -384,9 +388,11 @@ static void app_gpu_init_extensions(struct app_gpu *gpu)
 
     gpu->extension_count = 0;
     for (i = 0; i < ARRAY_SIZE(known_extensions); i++) {
+/*
         err = vkGetExtensionSupport(gpu->obj, known_extensions[i]);
         if (!err)
-            gpu->extensions[gpu->extension_count++] = known_extensions[i];
+*/
+        gpu->extensions[gpu->extension_count++] = known_extensions[i];
     }
 }
 
