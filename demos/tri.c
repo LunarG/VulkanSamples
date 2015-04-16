@@ -263,7 +263,6 @@ static void demo_prepare_buffers(struct demo *demo)
             .arraySize = 1,
         };
 
-        demo->buffers[i].mem = malloc(sizeof(XGL_GPU_MEMORY));
         err = xglWsiX11CreatePresentableImage(demo->device, &presentable_image,
                 &demo->buffers[i].image, &demo->buffers[i].mem);
         assert(!err);
