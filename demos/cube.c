@@ -641,7 +641,7 @@ static void demo_prepare_depth(struct demo *demo)
         assert(!err);
 
         /* bind memory */
-        err = vkBindObjectMemory(demo->depth.image, i,
+        err = vkQueueBindObjectMemory(demo->queue, demo->depth.image, i,
                 demo->depth.mem[i], 0);
         assert(!err);
     }
@@ -874,7 +874,7 @@ static void demo_prepare_texture_image(struct demo *demo,
         assert(!err);
 
         /* bind memory */
-        err = vkBindObjectMemory(tex_obj->image, j, tex_obj->mem[j], 0);
+        err = vkQueueBindObjectMemory(demo->queue, tex_obj->image, j, tex_obj->mem[j], 0);
         assert(!err);
     }
     free(mem_reqs);
@@ -917,11 +917,11 @@ static void demo_prepare_texture_image(struct demo *demo,
     /* setting the image layout does not reference the actual memory so no need to add a mem ref */
 }
 
-static void demo_destroy_texture_image(struct texture_object *tex_objs)
+static void demo_destroy_texture_image(struct demo *demo, struct texture_object *tex_objs)
 {
     /* clean up staging resources */
     for (uint32_t j = 0; j < tex_objs->num_mem; j ++) {
-        vkBindObjectMemory(tex_objs->image, j, VK_NULL_HANDLE, 0);
+        vkQueueBindObjectMemory(demo->queue, tex_objs->image, j, VK_NULL_HANDLE, 0);
         vkFreeMemory(tex_objs->mem[j]);
     }
 
@@ -988,7 +988,7 @@ static void demo_prepare_textures(struct demo *demo)
 
             demo_flush_init_cmd(demo);
 
-            demo_destroy_texture_image(&staging_texture);
+            demo_destroy_texture_image(demo, &staging_texture);
             demo_remove_mem_refs(demo, staging_texture.num_mem, staging_texture.mem);
         } else {
             /* Can't support VK_FMT_B8G8R8A8_UNORM !? */
@@ -1108,7 +1108,7 @@ void demo_prepare_cube_data_buffer(struct demo *demo)
         err = vkUnmapMemory(demo->uniform_data.mem[i]);
         assert(!err);
 
-        err = vkBindObjectMemory(demo->uniform_data.buf, i,
+        err = vkQueueBindObjectMemory(demo->queue, demo->uniform_data.buf, i,
                     demo->uniform_data.mem[i], 0);
         assert(!err);
     }
@@ -1752,8 +1752,12 @@ static void demo_init_vk(struct demo *demo)
 	queue_count = (uint32_t)(data_size / sizeof(VkPhysicalGpuQueueProperties));
     assert(queue_count >= 1);
 
+    // Graphics queue and MemMgr queue can be separate.
+    // TODO: Add support for separate queues, including synchronization,
+    //       and appropriate tracking for QueueSubmit and QueueBindObjectMemory
     for (i = 0; i < queue_count; i++) {
-        if (demo->queue_props[i].queueFlags & VK_QUEUE_GRAPHICS_BIT)
+        if ((demo->queue_props[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) &&
+            (demo->queue_props[i].queueFlags & VK_QUEUE_MEMMGR_BIT)      )
             break;
     }
     assert(i < queue_count);
@@ -1833,7 +1837,7 @@ static void demo_cleanup(struct demo *demo)
 
     for (i = 0; i < DEMO_TEXTURE_COUNT; i++) {
         vkDestroyObject(demo->textures[i].view);
-        vkBindObjectMemory(demo->textures[i].image, 0, VK_NULL_HANDLE, 0);
+        vkQueueBindObjectMemory(demo->queue, demo->textures[i].image, 0, VK_NULL_HANDLE, 0);
         vkDestroyObject(demo->textures[i].image);
         demo_remove_mem_refs(demo, demo->textures[i].num_mem, demo->textures[i].mem);
         for (j = 0; j < demo->textures[i].num_mem; j++)
@@ -1842,7 +1846,7 @@ static void demo_cleanup(struct demo *demo)
     }
 
     vkDestroyObject(demo->depth.view);
-    vkBindObjectMemory(demo->depth.image, 0, VK_NULL_HANDLE, 0);
+    vkQueueBindObjectMemory(demo->queue, demo->depth.image, 0, VK_NULL_HANDLE, 0);
     vkDestroyObject(demo->depth.image);
     demo_remove_mem_refs(demo, demo->depth.num_mem, demo->depth.mem);
     for (j = 0; j < demo->depth.num_mem; j++) {
@@ -1850,7 +1854,7 @@ static void demo_cleanup(struct demo *demo)
     }
 
     vkDestroyObject(demo->uniform_data.view);
-    vkBindObjectMemory(demo->uniform_data.buf, 0, VK_NULL_HANDLE, 0);
+    vkQueueBindObjectMemory(demo->queue, demo->uniform_data.buf, 0, VK_NULL_HANDLE, 0);
     vkDestroyObject(demo->uniform_data.buf);
     demo_remove_mem_refs(demo, demo->uniform_data.num_mem, demo->uniform_data.mem);
     for (j = 0; j < demo->uniform_data.num_mem; j++)

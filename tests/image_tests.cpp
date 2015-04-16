@@ -243,7 +243,8 @@ void VkImageTest::CreateImage(uint32_t w, uint32_t h)
         ASSERT_VK_SUCCESS(err);
 
         /* bind memory */
-        err = vkBindObjectMemory(m_image, i, m_image_mem[i], 0);
+        VkQueue queue = m_device->graphics_queues()[0]->obj();
+        err = vkQueueBindObjectMemory(queue, m_image, i, m_image_mem[i], 0);
         ASSERT_VK_SUCCESS(err);
     }
 }
@@ -252,7 +253,8 @@ void VkImageTest::DestroyImage()
 {
     VkResult err;
     // All done with image memory, clean up
-    ASSERT_VK_SUCCESS(vkBindObjectMemory(m_image, 0, VK_NULL_HANDLE, 0));
+    VkQueue queue = m_device->graphics_queues()[0]->obj();
+    ASSERT_VK_SUCCESS(vkQueueBindObjectMemory(queue, m_image, 0, VK_NULL_HANDLE, 0));
 
     for (uint32_t i = 0 ; i < m_num_mem; i++) {
         err = vkFreeMemory(m_image_mem[i]);

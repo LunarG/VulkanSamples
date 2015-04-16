@@ -127,13 +127,13 @@ class Object : public BaseObject {
 public:
     const VkObject &obj() const { return reinterpret_cast<const VkObject &>(BaseObject::obj()); }
 
-    // vkBindObjectMemory()
-    void bind_memory(uint32_t alloc_idx, const GpuMemory &mem, VkGpuSize mem_offset);
-    void unbind_memory(uint32_t alloc_idx);
-    void unbind_memory();
+    // vkQueueBindObjectMemory()
+    void bind_memory(const Device &dev, uint32_t alloc_idx, const GpuMemory &mem, VkGpuSize mem_offset);
+    void unbind_memory(const Device &dev, uint32_t alloc_idx);
+    void unbind_memory(const Device &dev);
 
-    // vkBindObjectMemoryRange()
-    void bind_memory(uint32_t alloc_idx, VkGpuSize offset, VkGpuSize size,
+    // vkQueueBindObjectMemoryRange()
+    void bind_memory(const Device &dev, uint32_t alloc_idx, VkGpuSize offset, VkGpuSize size,
                      const GpuMemory &mem, VkGpuSize mem_offset);
 
     // Unless an object is initialized with init_no_mem(), memories are
@@ -147,6 +147,7 @@ public:
           void *map()       { return map(0); }
 
     void unmap() const;
+    const Device* dev_;
 
 protected:
     explicit Object() : mem_alloc_count_(0), internal_mems_(NULL), primary_mem_(NULL), bound(false) {}
@@ -161,7 +162,7 @@ protected:
 
     // allocate and bind internal memories
     void alloc_memory(const Device &dev);
-    void alloc_memory(const std::vector<VkGpuMemory> &mems);
+    void alloc_memory(const Device &dev, const std::vector<VkGpuMemory> &mems);
 
 private:
     void cleanup();
@@ -207,7 +208,7 @@ public:
     const PhysicalGpu &gpu() const { return gpu_; }
 
     // vkGetDeviceQueue()
-    const std::vector<Queue *> &graphics_queues() { return queues_[GRAPHICS]; }
+    const std::vector<Queue *> &graphics_queues() const { return queues_[GRAPHICS]; }
     const std::vector<Queue *> &compute_queues() { return queues_[COMPUTE]; }
     const std::vector<Queue *> &dma_queues() { return queues_[DMA]; }
     uint32_t graphics_queue_node_index_;
@@ -398,8 +399,8 @@ public:
     // vkOpenPeerImage()
     void init(const Device &dev, const VkPeerImageOpenInfo &info, const VkImageCreateInfo &original_info);
 
-    // vkBindImageMemoryRange()
-    void bind_memory(uint32_t alloc_idx, const VkImageMemoryBindInfo &info,
+    // vkQueueBindImageMemoryRange()
+    void bind_memory(const Device &dev, uint32_t alloc_idx, const VkImageMemoryBindInfo &info,
                      const GpuMemory &mem, VkGpuSize mem_offset);
 
     // vkGetImageSubresourceInfo()
@@ -523,9 +524,9 @@ public:
     void reset();
 
     // vkAllocDescriptorSets()
-    std::vector<DescriptorSet *> alloc_sets(VkDescriptorSetUsage usage, const std::vector<const DescriptorSetLayout *> &layouts);
-    std::vector<DescriptorSet *> alloc_sets(VkDescriptorSetUsage usage, const DescriptorSetLayout &layout, uint32_t count);
-    DescriptorSet *alloc_sets(VkDescriptorSetUsage usage, const DescriptorSetLayout &layout);
+    std::vector<DescriptorSet *> alloc_sets(const Device &dev, VkDescriptorSetUsage usage, const std::vector<const DescriptorSetLayout *> &layouts);
+    std::vector<DescriptorSet *> alloc_sets(const Device &dev, VkDescriptorSetUsage usage, const DescriptorSetLayout &layout, uint32_t count);
+    DescriptorSet *alloc_sets(const Device &dev, VkDescriptorSetUsage usage, const DescriptorSetLayout &layout);
 
     // vkClearDescriptorSets()
     void clear_sets(const std::vector<DescriptorSet *> &sets);

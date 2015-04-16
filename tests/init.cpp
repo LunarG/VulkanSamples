@@ -253,7 +253,8 @@ TEST_F(XglTest, Event) {
     err = vkAllocMemory(device(), &mem_info, &event_mem);
     ASSERT_VK_SUCCESS(err);
 
-    err = vkBindObjectMemory(event, 0, event_mem, 0);
+    VkQueue queue = m_device->graphics_queues()[0]->obj();
+    err = vkQueueBindObjectMemory(queue, event, 0, event_mem, 0);
     ASSERT_VK_SUCCESS(err);
 
     err = vkResetEvent(event);
@@ -271,7 +272,7 @@ TEST_F(XglTest, Event) {
     // TODO: Test actual synchronization with command buffer event.
 
     // All done with event memory, clean up
-    err = vkBindObjectMemory(event, 0, VK_NULL_HANDLE, 0);
+    err = vkQueueBindObjectMemory(queue, event, 0, VK_NULL_HANDLE, 0);
     ASSERT_VK_SUCCESS(err);
 
     err = vkDestroyObject(event);
@@ -384,7 +385,8 @@ TEST_F(XglTest, Query) {
     err = vkAllocMemory(device(), &mem_info, &query_mem);
     ASSERT_VK_SUCCESS(err);
 
-    err = vkBindObjectMemory(query_pool, 0, query_mem, 0);
+    VkQueue queue = m_device->graphics_queues()[0]->obj();
+    err = vkQueueBindObjectMemory(queue, query_pool, 0, query_mem, 0);
     ASSERT_VK_SUCCESS(err);
 
     // TODO: Test actual synchronization with command buffer event.
@@ -409,7 +411,7 @@ TEST_F(XglTest, Query) {
     }
 
     // All done with QueryPool memory, clean up
-    err = vkBindObjectMemory(query_pool, 0, VK_NULL_HANDLE, 0);
+    err = vkQueueBindObjectMemory(queue, query_pool, 0, VK_NULL_HANDLE, 0);
     ASSERT_VK_SUCCESS(err);
 
     err = vkDestroyObject(query_pool);
@@ -424,6 +426,7 @@ void getQueue(vk_testing::Device *device, uint32_t queue_node_index, const char 
 
     const VkPhysicalGpuQueueProperties props = device->gpu().queue_properties()[queue_node_index];
     for (que_idx = 0; que_idx < props.queueCount; que_idx++) {
+        // TODO: Need to add support for separate MEMMGR and work queues, including synchronization
         err = vkGetDeviceQueue(device->obj(), queue_node_index, que_idx, &queue);
         ASSERT_EQ(VK_SUCCESS, err) << "vkGetDeviceQueue: " << qname << " queue #" << que_idx << ": Failed with error: " << vk_result_string(err);
     }
@@ -463,6 +466,7 @@ void print_queue_info(vk_testing::Device *device, uint32_t queue_node_index)
 //                    VK_QUEUE_GRAPHICS_BIT                                  = 0x00000001,   // Queue supports graphics operations
 //                    VK_QUEUE_COMPUTE_BIT                                   = 0x00000002,   // Queue supports compute operations
 //                    VK_QUEUE_DMA_BIT                                       = 0x00000004,   // Queue supports DMA operations
+//                    VK_QUEUE_MEMMGR_BIT                                    = 0x00000008,   // Queue supports MEMMGR operations
 //                    VK_QUEUE_EXTENDED_BIT                                  = 0x80000000    // Extended queue
 //                } VkQueueFlags;
 
@@ -649,7 +653,8 @@ void XglTest::CreateImageTest()
     err = vkAllocMemory(device(), &mem_info, &image_mem);
     ASSERT_VK_SUCCESS(err);
 
-    err = vkBindObjectMemory(image, 0, image_mem, 0);
+    VkQueue queue = m_device->graphics_queues()[0]->obj();
+    err = vkQueueBindObjectMemory(queue, image, 0, image_mem, 0);
     ASSERT_VK_SUCCESS(err);
 
 //    typedef struct VkImageViewCreateInfo_
@@ -692,7 +697,7 @@ void XglTest::CreateImageTest()
     // TODO: Test image memory.
 
     // All done with image memory, clean up
-    ASSERT_VK_SUCCESS(vkBindObjectMemory(image, 0, VK_NULL_HANDLE, 0));
+    ASSERT_VK_SUCCESS(vkQueueBindObjectMemory(queue, image, 0, VK_NULL_HANDLE, 0));
 
     ASSERT_VK_SUCCESS(vkFreeMemory(image_mem));
 

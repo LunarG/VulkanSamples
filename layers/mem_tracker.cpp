@@ -490,35 +490,49 @@ static bool32_t deleteCBInfoList()
 }
 
 // For given MemObjInfo, report Obj & CB bindings
-static void reportMemReferences(const MT_MEM_OBJ_INFO* pMemObjInfo)
+static void reportMemReferencesAndCleanUp(MT_MEM_OBJ_INFO* pMemObjInfo)
 {
-    uint32_t refCount = 0; // Count found references
+    uint32_t cmdBufRefCount = pMemObjInfo->pCmdBufferBindings.size();
+    uint32_t objRefCount    = pMemObjInfo->pObjBindings.size();
 
-    for (list<VkCmdBuffer>::const_iterator it = pMemObjInfo->pCmdBufferBindings.begin(); it != pMemObjInfo->pCmdBufferBindings.end(); ++it) {
-        refCount++;
+    if ((pMemObjInfo->pCmdBufferBindings.size() + pMemObjInfo->pObjBindings.size()) != 0) {
         char str[1024];
-        sprintf(str, "Command Buffer %p has reference to mem obj %p", (*it), pMemObjInfo->mem);
-        layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, (*it), 0, MEMTRACK_NONE, "MEM", str);
-    }
-    for (list<VkObject>::const_iterator it = pMemObjInfo->pObjBindings.begin(); it != pMemObjInfo->pObjBindings.end(); ++it) {
-        char str[1024];
-        sprintf(str, "VK Object %p has reference to mem obj %p", (*it), pMemObjInfo->mem);
-        layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, (*it), 0, MEMTRACK_NONE, "MEM", str);
-    }
-    if (refCount != pMemObjInfo->refCount) {
-        char str[1024];
-        sprintf(str, "Refcount of %u for Mem Obj %p does't match reported refs of %u", pMemObjInfo->refCount, pMemObjInfo->mem, refCount);
+        sprintf(str, "Attempting to free memory object %p which still contains %d references", pMemObjInfo->mem, (cmdBufRefCount + objRefCount));
         layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, pMemObjInfo->mem, 0, MEMTRACK_INTERNAL_ERROR, "MEM", str);
+    }
+
+    if (cmdBufRefCount > 0) {
+        for (list<VkCmdBuffer>::const_iterator it = pMemObjInfo->pCmdBufferBindings.begin(); it != pMemObjInfo->pCmdBufferBindings.end(); ++it) {
+            char str[1024];
+            sprintf(str, "Command Buffer %p still has a reference to mem obj %p", (*it), pMemObjInfo->mem);
+            layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, (*it), 0, MEMTRACK_NONE, "MEM", str);
+        }
+        // Clear the list of hanging references
+        pMemObjInfo->pCmdBufferBindings.clear();
+    }
+
+    if (objRefCount > 0) {
+        for (list<VkObject>::const_iterator it = pMemObjInfo->pObjBindings.begin(); it != pMemObjInfo->pObjBindings.end(); ++it) {
+            char str[1024];
+            sprintf(str, "VK Object %p still has a reference to mem obj %p", (*it), pMemObjInfo->mem);
+            layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, (*it), 0, MEMTRACK_NONE, "MEM", str);
+        }
+        // Clear the list of hanging references
+        pMemObjInfo->pObjBindings.clear();
     }
 }
 
 static void deleteMemObjInfo(VkGpuMemory mem)
 {
-    MT_MEM_OBJ_INFO* pDelInfo = memObjMap[mem];
     if (memObjMap.find(mem) != memObjMap.end()) {
         MT_MEM_OBJ_INFO* pDelInfo = memObjMap[mem];
         delete pDelInfo;
         memObjMap.erase(mem);
+    }
+    else {
+        char str[1024];
+        sprintf(str, "Request to delete memory object %p not present in memory Object Map", mem);
+        layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, mem, 0, MEMTRACK_INVALID_MEM_OBJ, "MEM", str);
     }
 }
 
@@ -582,7 +596,7 @@ static bool32_t freeMemObjInfo(VkGpuMemory mem, bool internal)
                 char str[1024];
                 sprintf(str, "Freeing mem obj %p while it still has references", (void*)mem);
                 layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, mem, 0, MEMTRACK_FREED_MEM_REF, "MEM", str);
-                reportMemReferences(pInfo);
+                reportMemReferencesAndCleanUp(pInfo);
                 result = VK_FALSE;
             }
             // Delete mem obj info
@@ -610,12 +624,16 @@ static bool32_t clearObjectBinding(VkObject object)
             sprintf(str, "Attempting to clear mem binding on obj %p but it has no binding.", (void*)object);
             layerCbMsg(VK_DBG_MSG_WARNING, VK_VALIDATION_LEVEL_0, object, 0, MEMTRACK_MEM_OBJ_CLEAR_EMPTY_BINDINGS, "MEM", str);
         } else {
+            // This obj is bound to a memory object. Remove the reference to this object in that memory object's list, decrement the memObj's refcount
+            // and set the objects memory binding pointer to NULL.
             for (list<VkObject>::iterator it = pObjInfo->pMemObjInfo->pObjBindings.begin(); it != pObjInfo->pMemObjInfo->pObjBindings.end(); ++it) {
-                pObjInfo->pMemObjInfo->refCount--;
-                pObjInfo->pMemObjInfo = NULL;
-                it = pObjInfo->pMemObjInfo->pObjBindings.erase(it);
-                result = VK_TRUE;
-                break;
+                if ((*it) == object) {
+                    pObjInfo->pMemObjInfo->refCount--;
+                    pObjInfo->pMemObjInfo->pObjBindings.erase(it);
+                    pObjInfo->pMemObjInfo = NULL;
+                    result = VK_TRUE;
+                    break;
+                }
             }
             if (result == VK_FALSE) {
                 char str[1024];
@@ -1168,7 +1186,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkDestroyObject(VkObject object)
             }
             else {
                 char str[1024];
-                sprintf(str, "Destroying obj %p that is still bound to memory object %p\nYou should first clear binding by calling vkBindObjectMemory(%p, 0, VK_NULL_HANDLE, 0)", object, (void*)pDelInfo->pMemObjInfo->mem, object);
+                sprintf(str, "Destroying obj %p that is still bound to memory object %p\nYou should first clear binding by calling vkQueueBindObjectMemory(queue, %p, 0, VK_NULL_HANDLE, 0)", object, (void*)pDelInfo->pMemObjInfo->mem, object);
                 layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, object, 0, MEMTRACK_DESTROY_OBJECT_ERROR, "MEM", str);
                 // From the spec : If an object has previous memory binding, it is required to unbind memory from an API object before it is destroyed.
                 clearObjectBinding(object);
@@ -1186,15 +1204,15 @@ VK_LAYER_EXPORT VkResult VKAPI vkDestroyObject(VkObject object)
 VK_LAYER_EXPORT VkResult VKAPI vkGetObjectInfo(VkBaseObject object, VkObjectInfoType infoType, size_t* pDataSize, void* pData)
 {
     // TODO : What to track here?
-    //   Could potentially save returned mem requirements and validate values passed into BindObjectMemory for this object
+    //   Could potentially save returned mem requirements and validate values passed into QueueBindObjectMemory for this object
     // From spec : The only objects that are guaranteed to have no external memory requirements are devices, queues, command buffers, shaders and memory objects.
     VkResult result = nextTable.GetObjectInfo(object, infoType, pDataSize, pData);
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkBindObjectMemory(VkObject object, uint32_t allocationIdx, VkGpuMemory mem, VkGpuSize offset)
+VK_LAYER_EXPORT VkResult VKAPI vkQueueBindObjectMemory(VkQueue queue, VkObject object, uint32_t allocationIdx, VkGpuMemory mem, VkGpuSize offset)
 {
-    VkResult result = nextTable.BindObjectMemory(object, allocationIdx, mem, offset);
+    VkResult result = nextTable.QueueBindObjectMemory(queue, object, allocationIdx, mem, offset);
     loader_platform_thread_lock_mutex(&globalLock);
     // Track objects tied to memory
     if (VK_FALSE == updateObjectBinding(object, mem)) {
@@ -2013,8 +2031,8 @@ VK_LAYER_EXPORT void* VKAPI vkGetProcAddr(VkPhysicalGpu gpu, const char* funcNam
         return (void*) vkDestroyObject;
     if (!strcmp(funcName, "vkGetObjectInfo"))
         return (void*) vkGetObjectInfo;
-    if (!strcmp(funcName, "vkBindObjectMemory"))
-        return (void*) vkBindObjectMemory;
+    if (!strcmp(funcName, "vkQueueBindObjectMemory"))
+        return (void*) vkQueueBindObjectMemory;
     if (!strcmp(funcName, "vkCreateFence"))
         return (void*) vkCreateFence;
     if (!strcmp(funcName, "vkGetFenceStatus"))

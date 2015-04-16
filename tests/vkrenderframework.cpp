@@ -93,7 +93,7 @@ void VkRenderFramework::ShutdownFramework()
     }
     while (!m_renderTargets.empty()) {
         vkDestroyObject(m_renderTargets.back()->targetView());
-        vkBindObjectMemory(m_renderTargets.back()->image(), 0, VK_NULL_HANDLE, 0);
+        vkQueueBindObjectMemory(m_device->m_queue, m_renderTargets.back()->image(), 0, VK_NULL_HANDLE, 0);
         vkDestroyObject(m_renderTargets.back()->image());
         vkFreeMemory(m_renderTargets.back()->memory());
         m_renderTargets.pop_back();
@@ -369,7 +369,7 @@ void VkDescriptorSetObj::CreateVKDescriptorSet(VkCommandBufferObj *cmdBuffer)
     m_layout_chain.init(*m_device, layouts);
 
     // create VkDescriptorSet
-    m_set = alloc_sets(VK_DESCRIPTOR_SET_USAGE_STATIC, m_layout);
+    m_set = alloc_sets(*m_device, VK_DESCRIPTOR_SET_USAGE_STATIC, m_layout);
 
     // build the update array
     vector<const void *> update_array;

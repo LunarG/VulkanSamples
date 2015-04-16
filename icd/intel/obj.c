@@ -364,9 +364,10 @@ ICD_EXPORT VkResult VKAPI vkGetObjectInfo(
     return base->get_info(base, infoType, pDataSize, pData);
 }
 
-ICD_EXPORT VkResult VKAPI vkBindObjectMemory(
-    VkObject                                  object,
-    uint32_t                                    allocationIdx,
+ICD_EXPORT VkResult VKAPI vkQueueBindObjectMemory(
+    VkQueue                                  queue,
+    VkObject                                 object,
+    uint32_t                                 allocationIdx,
     VkGpuMemory                              mem_,
     VkGpuSize                                memOffset)
 {
@@ -378,7 +379,8 @@ ICD_EXPORT VkResult VKAPI vkBindObjectMemory(
     return VK_SUCCESS;
 }
 
-ICD_EXPORT VkResult VKAPI vkBindObjectMemoryRange(
+ICD_EXPORT VkResult VKAPI vkQueueBindObjectMemoryRange(
+    VkQueue                                   queue,
     VkObject                                  object,
     uint32_t                                    allocationIdx,
     VkGpuSize                                rangeOffset,
@@ -389,7 +391,8 @@ ICD_EXPORT VkResult VKAPI vkBindObjectMemoryRange(
     return VK_ERROR_UNKNOWN;
 }
 
-ICD_EXPORT VkResult VKAPI vkBindImageMemoryRange(
+ICD_EXPORT VkResult VKAPI vkQueueBindImageMemoryRange(
+    VkQueue                                   queue,
     VkImage                                   image,
     uint32_t                                    allocationIdx,
     const VkImageMemoryBindInfo*           bindInfo,

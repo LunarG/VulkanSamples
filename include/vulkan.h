@@ -1075,6 +1075,7 @@ typedef enum VkQueueFlags_
     VK_QUEUE_GRAPHICS_BIT                                   = 0x00000001,   // Queue supports graphics operations
     VK_QUEUE_COMPUTE_BIT                                    = 0x00000002,   // Queue supports compute operations
     VK_QUEUE_DMA_BIT                                        = 0x00000004,   // Queue supports DMA operations
+    VK_QUEUE_MEMMGR_BIT                                     = 0x00000008,   // Queue supports memory management operations
     VK_QUEUE_EXTENDED_BIT                                   = 0x40000000,   // Extended queue
     VK_MAX_ENUM(VkQueueFlags)
 } VkQueueFlags;
@@ -1427,7 +1428,7 @@ typedef struct VkMemoryRequirements_
 {
     VkGpuSize                                   size;                       // Specified in bytes
     VkGpuSize                                   alignment;                  // Specified in bytes
-    VkGpuSize                                   granularity;                // Granularity on which vkBindObjectMemoryRange can bind sub-ranges of memory specified in bytes (usually the page size)
+    VkGpuSize                                   granularity;                // Granularity on which vkQueueBindObjectMemoryRange can bind sub-ranges of memory specified in bytes (usually the page size)
     VkFlags                                     memProps;                   // VkMemoryPropertyFlags
 } VkMemoryRequirements;
 
@@ -2213,9 +2214,9 @@ typedef VkResult (VKAPI *PFN_vkOpenPeerMemory)(VkDevice device, const VkPeerMemo
 typedef VkResult (VKAPI *PFN_vkOpenPeerImage)(VkDevice device, const VkPeerImageOpenInfo* pOpenInfo, VkImage* pImage, VkGpuMemory* pMem);
 typedef VkResult (VKAPI *PFN_vkDestroyObject)(VkObject object);
 typedef VkResult (VKAPI *PFN_vkGetObjectInfo)(VkBaseObject object, VkObjectInfoType infoType, size_t* pDataSize, void* pData);
-typedef VkResult (VKAPI *PFN_vkBindObjectMemory)(VkObject object, uint32_t allocationIdx, VkGpuMemory mem, VkGpuSize offset);
-typedef VkResult (VKAPI *PFN_vkBindObjectMemoryRange)(VkObject object, uint32_t allocationIdx, VkGpuSize rangeOffset,VkGpuSize rangeSize, VkGpuMemory mem, VkGpuSize memOffset);
-typedef VkResult (VKAPI *PFN_vkBindImageMemoryRange)(VkImage image, uint32_t allocationIdx, const VkImageMemoryBindInfo* bindInfo, VkGpuMemory mem, VkGpuSize memOffset);
+typedef VkResult (VKAPI *PFN_vkQueueBindObjectMemory)(VkQueue queue, VkObject object, uint32_t allocationIdx, VkGpuMemory mem, VkGpuSize offset);
+typedef VkResult (VKAPI *PFN_vkQueueBindObjectMemoryRange)(VkQueue queue, VkObject object, uint32_t allocationIdx, VkGpuSize rangeOffset,VkGpuSize rangeSize, VkGpuMemory mem, VkGpuSize memOffset);
+typedef VkResult (VKAPI *PFN_vkQueueBindImageMemoryRange)(VkQueue queue, VkImage image, uint32_t allocationIdx, const VkImageMemoryBindInfo* bindInfo, VkGpuMemory mem, VkGpuSize memOffset);
 typedef VkResult (VKAPI *PFN_vkCreateFence)(VkDevice device, const VkFenceCreateInfo* pCreateInfo, VkFence* pFence);
 typedef VkResult (VKAPI *PFN_vkResetFences)(VkDevice device, uint32_t fenceCount, VkFence* pFences);
 typedef VkResult (VKAPI *PFN_vkGetFenceStatus)(VkFence fence);
@@ -2453,13 +2454,17 @@ VkResult VKAPI vkGetObjectInfo(
     size_t*                                     pDataSize,
     void*                                       pData);
 
-VkResult VKAPI vkBindObjectMemory(
+// Memory namagement API functions
+
+VkResult VKAPI vkQueueBindObjectMemory(
+    VkQueue                                     queue,
     VkObject                                    object,
     uint32_t                                    allocationIdx,
     VkGpuMemory                                 mem,
     VkGpuSize                                   memOffset);
 
-VkResult VKAPI vkBindObjectMemoryRange(
+VkResult VKAPI vkQueueBindObjectMemoryRange(
+    VkQueue                                     queue,
     VkObject                                    object,
     uint32_t                                    allocationIdx,
     VkGpuSize                                   rangeOffset,
@@ -2467,7 +2472,8 @@ VkResult VKAPI vkBindObjectMemoryRange(
     VkGpuMemory                                 mem,
     VkGpuSize                                   memOffset);
 
-VkResult VKAPI vkBindImageMemoryRange(
+VkResult VKAPI vkQueueBindImageMemoryRange(
+    VkQueue                                     queue,
     VkImage                                     image,
     uint32_t                                    allocationIdx,
     const VkImageMemoryBindInfo*                bindInfo,
