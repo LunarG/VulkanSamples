@@ -157,6 +157,59 @@ int vkReplay::dump_validation_data()
    return 0;
 }
 
+glv_replay::GLV_REPLAY_RESULT vkReplay::manually_handle_vkCreateInstance(struct_vkCreateInstance* pPacket)
+{
+    VkResult replayResult = VK_ERROR_UNKNOWN;
+    glv_replay::GLV_REPLAY_RESULT returnValue = glv_replay::GLV_REPLAY_SUCCESS;
+    if (!m_display->m_initedVK)
+    {
+        VkInstance inst;
+        if (g_vkReplaySettings.debugLevel > 0)
+        {
+            VkInstanceCreateInfo cInfo, *ci, *pCreateInfoSaved;
+            unsigned int numLayers = 0;
+            char ** layersStr = get_enableLayers_list(&numLayers);
+            apply_layerSettings_overrides();
+            //VkLayerCreateInfo layerInfo;
+            pCreateInfoSaved = (VkInstanceCreateInfo *) pPacket->pCreateInfo;
+            ci = (VkInstanceCreateInfo *) pPacket->pCreateInfo;
+            if (layersStr != NULL && numLayers > 0)
+            {
+                // TODO change this to add the layers into the extension string
+#if 0
+                while (ci->pNext != NULL)
+                    ci = (VkInstanceCreateInfo *) ci->pNext;
+                ci->pNext = &layerInfo;
+                layerInfo.sType = VK_STRUCTURE_TYPE_LAYER_CREATE_INFO;
+                layerInfo.pNext = 0;
+                layerInfo.layerCount = numLayers;
+                layerInfo.ppActiveLayerNames = layersStr;
+#endif
+            }
+            memcpy(&cInfo, pPacket->pCreateInfo, sizeof(VkInstanceCreateInfo));
+            pPacket->pCreateInfo = &cInfo;
+            replayResult = m_vkFuncs.real_vkCreateInstance(pPacket->pCreateInfo, &inst);
+            // restore the packet for next replay
+            ci->pNext = NULL;
+            pPacket->pCreateInfo = pCreateInfoSaved;
+            release_enableLayer_list(layersStr);
+#if !defined(_WIN32)
+            m_pDSDump = (void (*)(char*)) m_vkFuncs.real_vkGetProcAddr(NULL, "drawStateDumpDotFile");
+            m_pCBDump = (void (*)(char*)) m_vkFuncs.real_vkGetProcAddr(NULL, "drawStateDumpCommandBufferDotFile");
+            m_pGlvSnapshotPrint = (GLVSNAPSHOT_PRINT_OBJECTS) m_vkFuncs.real_vkGetProcAddr(NULL, "glvSnapshotPrintObjects");
+#endif
+        }
+        else
+            replayResult = m_vkFuncs.real_vkCreateInstance(pPacket->pCreateInfo, &inst);
+        CHECK_RETURN_VALUE(vkCreateInstance);
+        if (replayResult == VK_SUCCESS)
+        {
+            m_objMapper.add_to_map(pPacket->pInstance, &inst);
+        }
+    }
+    return returnValue;
+}
+
 glv_replay::GLV_REPLAY_RESULT vkReplay::manually_handle_vkCreateDevice(struct_vkCreateDevice* pPacket)
 {
     VkResult replayResult = VK_ERROR_UNKNOWN;
@@ -185,7 +238,6 @@ glv_replay::GLV_REPLAY_RESULT vkReplay::manually_handle_vkCreateDevice(struct_vk
             }
             memcpy(&cInfo, pPacket->pCreateInfo, sizeof(VkDeviceCreateInfo));
             cInfo.flags = pPacket->pCreateInfo->flags | VK_DEVICE_CREATE_VALIDATION_BIT;
-            cInfo.maxValidationLevel = (VkValidationLevel)((g_vkReplaySettings.debugLevel <= 4) ? (unsigned int) VK_VALIDATION_LEVEL_0 + g_vkReplaySettings.debugLevel : (unsigned int) VK_VALIDATION_LEVEL_0);
             pPacket->pCreateInfo = &cInfo;
             replayResult = m_vkFuncs.real_vkCreateDevice(m_objMapper.remap(pPacket->gpu), pPacket->pCreateInfo, &device);
             // restore the packet for next replay

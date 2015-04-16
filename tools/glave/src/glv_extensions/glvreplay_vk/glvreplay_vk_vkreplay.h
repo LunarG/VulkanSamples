@@ -1,5 +1,3 @@
-/* THIS FILE IS GENERATED.  DO NOT EDIT. */
-
 /*
  * Vulkan
  *
@@ -90,6 +88,7 @@ private:
     };
     std::vector<struct validationMsg> m_validationMsgs;
     std::vector<int> m_screenshotFrames;
+    glv_replay::GLV_REPLAY_RESULT manually_handle_vkCreateInstance(struct_vkCreateInstance* pPacket);
     glv_replay::GLV_REPLAY_RESULT manually_handle_vkCreateDevice(struct_vkCreateDevice* pPacket);
     glv_replay::GLV_REPLAY_RESULT manually_handle_vkEnumerateGpus(struct_vkEnumerateGpus* pPacket);
     glv_replay::GLV_REPLAY_RESULT manually_handle_vkGetGpuInfo(struct_vkGetGpuInfo* pPacket);

@@ -702,7 +702,6 @@ class Subcommand(object):
         pid_enum.append('    glv_finalize_buffer_address(pHeader, (void**)&((*ppStruct)->pEngineName));')
         pid_enum.append('    glv_finalize_buffer_address(pHeader, (void**)&*ppStruct);')
         pid_enum.append('};\n')
-        pid_enum.append('//=============================================================================\n')
         pid_enum.append('static void add_VkInstanceCreateInfo_to_packet(glv_trace_packet_header* pHeader, VkInstanceCreateInfo** ppStruct, VkInstanceCreateInfo *pInStruct)')
         pid_enum.append('{')
         pid_enum.append('    uint32_t i;')
@@ -776,6 +775,46 @@ class Subcommand(object):
         pid_enum.append('    }')
         pid_enum.append('    glv_finalize_buffer_address(pHeader, (void**)ppStruct);')
         pid_enum.append('}\n')
+        pid_enum.append('//=============================================================================\n')
+        pid_enum.append('static VkInstanceCreateInfo* interpret_VkInstanceCreateInfo(glv_trace_packet_header*  pHeader, intptr_t ptr_variable)')
+        pid_enum.append('{')
+        pid_enum.append('    VkInstanceCreateInfo* pVkInstanceCreateInfo = (VkInstanceCreateInfo*)glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)ptr_variable);\n')
+        pid_enum.append('    if (pVkInstanceCreateInfo != NULL)')
+        pid_enum.append('    {')
+        pid_enum.append('            uint32_t i;')
+        pid_enum.append('            const char** pNames;')
+        pid_enum.append('            pVkInstanceCreateInfo->pAppInfo = (VkApplicationInfo*)glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pVkInstanceCreateInfo->pAppInfo);')
+        pid_enum.append('            pVkInstanceCreateInfo->pAllocCb = (VkAllocCallbacks*)glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pVkInstanceCreateInfo->pAllocCb);')
+        pid_enum.append('            VkApplicationInfo** ppAppInfo = (VkApplicationInfo**) &pVkInstanceCreateInfo->pAppInfo;')
+        pid_enum.append('            (*ppAppInfo)->pAppName = (const char*)glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pVkInstanceCreateInfo->pAppInfo->pAppName);')
+        pid_enum.append('            (*ppAppInfo)->pEngineName = (const char*)glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pVkInstanceCreateInfo->pAppInfo->pEngineName);')
+
+        pid_enum.append('        if (pVkInstanceCreateInfo->extensionCount > 0)')
+        pid_enum.append('        {')
+        pid_enum.append('            pVkInstanceCreateInfo->ppEnabledExtensionNames = (const char *const*)glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pVkInstanceCreateInfo->ppEnabledExtensionNames);')
+        pid_enum.append('            pNames = (const char**)pVkInstanceCreateInfo->ppEnabledExtensionNames;')
+        pid_enum.append('            for (i = 0; i < pVkInstanceCreateInfo->extensionCount; i++)')
+        pid_enum.append('            {')
+        pid_enum.append('                pNames[i] = (const char*)glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)(pVkInstanceCreateInfo->ppEnabledExtensionNames[i]));')
+        pid_enum.append('            }')
+        pid_enum.append('        }')
+        pid_enum.append('        VkLayerCreateInfo *pNext = ( VkLayerCreateInfo *) glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pVkInstanceCreateInfo->pNext);')
+        pid_enum.append('        while (pNext != NULL)')
+        pid_enum.append('        {')
+        pid_enum.append('            if ((pNext->sType == VK_STRUCTURE_TYPE_LAYER_CREATE_INFO) && pNext->layerCount > 0)')
+        pid_enum.append('            {')
+        pid_enum.append('                pNext->ppActiveLayerNames = (const char**) glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)(pNext->ppActiveLayerNames));')
+        pid_enum.append('                pNames = (const char**)pNext->ppActiveLayerNames;')
+        pid_enum.append('                for (i = 0; i < pNext->layerCount; i++)')
+        pid_enum.append('                {')
+        pid_enum.append('                    pNames[i] = (const char*)glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)(pNext->ppActiveLayerNames[i]));')
+        pid_enum.append('                }')
+        pid_enum.append('            }')
+        pid_enum.append('            pNext = ( VkLayerCreateInfo *) glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pNext->pNext);')
+        pid_enum.append('        }')
+        pid_enum.append('    }\n')
+        pid_enum.append('    return pVkInstanceCreateInfo;')
+        pid_enum.append('}\n')
         pid_enum.append('static VkDeviceCreateInfo* interpret_VkDeviceCreateInfo(glv_trace_packet_header*  pHeader, intptr_t ptr_variable)')
         pid_enum.append('{')
         pid_enum.append('    VkDeviceCreateInfo* pVkDeviceCreateInfo = (VkDeviceCreateInfo*)glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)ptr_variable);\n')
@@ -835,10 +874,7 @@ class Subcommand(object):
     def _generate_interp_funcs(self):
         # Custom txt for given function and parameter.  First check if param is NULL, then insert txt if not
         # TODO : This code is now too large and complex, need to make codegen smarter for pointers embedded in struct params to handle those cases automatically
-        custom_case_dict = { 'CreateInstance' : {'param': 'pAppInfo', 'txt': ['VkApplicationInfo* pInfo = (VkApplicationInfo*)pPacket->pAppInfo;\n',
-                                                       'pInfo->pAppName = (const char*)glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->pAppInfo->pAppName);\n',
-                                                       'pInfo->pEngineName = (const char*)glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->pAppInfo->pEngineName);']},
-                             'CreateShader' : {'param': 'pCreateInfo', 'txt': ['VkShaderCreateInfo* pInfo = (VkShaderCreateInfo*)pPacket->pCreateInfo;\n',
+        custom_case_dict = { 'CreateShader' : {'param': 'pCreateInfo', 'txt': ['VkShaderCreateInfo* pInfo = (VkShaderCreateInfo*)pPacket->pCreateInfo;\n',
                                                'pInfo->pCode = glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->pCreateInfo->pCode);']},
                              'CreateDynamicViewportState' : {'param': 'pCreateInfo', 'txt': ['VkDynamicVpStateCreateInfo* pInfo = (VkDynamicVpStateCreateInfo*)pPacket->pCreateInfo;\n',
                                                                                              'pInfo->pViewports = (VkViewport*) glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->pCreateInfo->pViewports);\n',
@@ -1043,6 +1079,8 @@ class Subcommand(object):
                     if '*' in p.ty:
                         if 'DeviceCreateInfo' in p.ty:
                             if_body.append('    pPacket->%s = interpret_VkDeviceCreateInfo(pHeader, (intptr_t)pPacket->%s);' % (p.name, p.name))
+                        elif 'InstanceCreateInfo' in p.ty:
+                            if_body.append('    pPacket->%s = interpret_VkInstanceCreateInfo(pHeader, (intptr_t)pPacket->%s);' % (p.name, p.name))
                         else:
                             if_body.append('    pPacket->%s = (%s)glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->%s);' % (p.name, p.ty, p.name))
                         # TODO : Generalize this custom code to kill dict data struct above.
@@ -1401,6 +1439,11 @@ class Subcommand(object):
             return 'm_objMapper.remap(pPacket->%s)' % (n)
         return 'pPacket->%s' % (n)
 
+    def _gen_replay_create_instance(self):
+        ci_body = []
+        ci_body.append('            returnValue = manually_handle_vkCreateInstance(pPacket);')
+        return "\n".join(ci_body)
+
     def _gen_replay_enum_gpus(self):
         ieg_body = []
         ieg_body.append('            returnValue = manually_handle_vkEnumerateGpus(pPacket);')
@@ -1591,7 +1634,8 @@ class Subcommand(object):
     # Generate main replay case statements where actual replay API call is dispatched based on input packet data
     def _generate_replay(self):
         # map protos to custom functions if body is fully custom
-        custom_body_dict = {'EnumerateGpus': self._gen_replay_enum_gpus,
+        custom_body_dict = {'CreateInstance': self._gen_replay_create_instance,
+                            'EnumerateGpus': self._gen_replay_enum_gpus,
                             'GetGpuInfo': self._gen_replay_get_gpu_info,
                             'CreateDevice': self._gen_replay_create_device,
                             'GetExtensionSupport': self._gen_replay_get_extension_support,
@@ -1623,9 +1667,8 @@ class Subcommand(object):
                             'CreateDescriptorSetLayout': self._gen_replay_create_descriptor_set_layout,
                             'CmdWaitEvents': self._gen_replay_cmd_wait_events,
                             'CmdPipelineBarrier': self._gen_replay_cmd_pipeline_barrier}
-        # TODO : Need to guard CreateInstance with "if (!m_display->m_initedVK)" check
         # Despite returning a value, don't check these funcs b/c custom code includes check already
-        custom_check_ret_val = ['EnumerateGpus', 'GetGpuInfo', 'CreateDevice', 'GetExtensionSupport', 'QueueSubmit', 'GetObjectInfo',
+        custom_check_ret_val = ['CreateInstance', 'EnumerateGpus', 'GetGpuInfo', 'CreateDevice', 'GetExtensionSupport', 'QueueSubmit', 'GetObjectInfo',
                                 'GetFormatInfo', 'GetImageSubresourceInfo', 'CreateDescriptorSetLayout', 'CreateGraphicsPipeline',
                                 'CreateFramebuffer', 'CreateRenderPass', 'BeginCommandBuffer', 'StorePipeline', 'GetMultiGpuCompatibility',
                                 'DestroyObject', 'WaitForFences', 'FreeMemory', 'MapMemory', 'UnmapMemory',
