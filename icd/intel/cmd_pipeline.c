@@ -1683,6 +1683,8 @@ static uint32_t emit_binding_table(struct intel_cmd *cmd,
             break;
         case INTEL_PIPELINE_RMAP_SURFACE:
             {
+                const struct intel_desc_layout_chain *chain =
+                    cmd->bind.pipeline.graphics->layout_chain;
                 const int32_t dyn_idx = slot->u.surface.dynamic_offset_index;
                 struct intel_desc_offset desc_offset;
                 const struct intel_mem *mem;
@@ -1690,8 +1692,8 @@ static uint32_t emit_binding_table(struct intel_cmd *cmd,
                 const uint32_t *cmd_data;
                 uint32_t cmd_len;
 
-                assert(dyn_idx < 0 || dyn_idx <
-                        cmd->bind.dset.graphics->total_dynamic_desc_count);
+                assert(dyn_idx < 0 ||
+                        dyn_idx < chain->total_dynamic_desc_count);
 
                 intel_desc_offset_add(&desc_offset, &slot->u.surface.offset,
                         &data->set_offsets[slot->index]);
@@ -3022,18 +3024,6 @@ static void gen6_meta_depth_buffer(struct intel_cmd *cmd)
         gen6_3DSTATE_CLEAR_PARAMS(cmd, 0);
 }
 
-static void cmd_bind_graphics_pipeline(struct intel_cmd *cmd,
-                                       const struct intel_pipeline *pipeline)
-{
-    cmd->bind.pipeline.graphics = pipeline;
-}
-
-static void cmd_bind_compute_pipeline(struct intel_cmd *cmd,
-                                      const struct intel_pipeline *pipeline)
-{
-    cmd->bind.pipeline.compute = pipeline;
-}
-
 static bool cmd_alloc_dset_data(struct intel_cmd *cmd,
                                 struct intel_cmd_dset_data *data,
                                 const struct intel_desc_layout_chain *chain)
@@ -3071,6 +3061,24 @@ static bool cmd_alloc_dset_data(struct intel_cmd *cmd,
     }
 
     return true;
+}
+
+static void cmd_bind_graphics_pipeline(struct intel_cmd *cmd,
+                                       const struct intel_pipeline *pipeline)
+{
+    cmd->bind.pipeline.graphics = pipeline;
+
+    cmd_alloc_dset_data(cmd, &cmd->bind.dset.graphics_data,
+            pipeline->layout_chain);
+}
+
+static void cmd_bind_compute_pipeline(struct intel_cmd *cmd,
+                                      const struct intel_pipeline *pipeline)
+{
+    cmd->bind.pipeline.compute = pipeline;
+
+    cmd_alloc_dset_data(cmd, &cmd->bind.dset.compute_data,
+            pipeline->layout_chain);
 }
 
 static void cmd_copy_dset_data(struct intel_cmd *cmd,
@@ -3374,25 +3382,23 @@ ICD_EXPORT void VKAPI vkCmdBindDynamicStateObject(
 ICD_EXPORT void VKAPI vkCmdBindDescriptorSets(
     VkCmdBuffer                              cmdBuffer,
     VkPipelineBindPoint                     pipelineBindPoint,
-    VkDescriptorSetLayoutChain             layoutChain,
     uint32_t                                    layoutChainSlot,
     uint32_t                                    count,
     const VkDescriptorSet*                   pDescriptorSets,
     const uint32_t*                             pUserData)
 {
     struct intel_cmd *cmd = intel_cmd(cmdBuffer);
-    struct intel_desc_layout_chain *chain =
-        intel_desc_layout_chain(layoutChain);
+    const struct intel_desc_layout_chain *chain;
     struct intel_cmd_dset_data *data;
     uint32_t i;
 
     switch (pipelineBindPoint) {
     case VK_PIPELINE_BIND_POINT_COMPUTE:
-        cmd->bind.dset.compute = chain;
+        chain = cmd->bind.pipeline.compute->layout_chain;
         data = &cmd->bind.dset.compute_data;
         break;
     case VK_PIPELINE_BIND_POINT_GRAPHICS:
-        cmd->bind.dset.graphics = chain;
+        chain = cmd->bind.pipeline.graphics->layout_chain;
         data = &cmd->bind.dset.graphics_data;
         break;
     default:
@@ -3400,9 +3406,6 @@ ICD_EXPORT void VKAPI vkCmdBindDescriptorSets(
         return;
         break;
     }
-
-    if (!cmd_alloc_dset_data(cmd, data, chain))
-        return;
 
     for (i = 0; i < count; i++) {
         struct intel_desc_set *dset = intel_desc_set(pDescriptorSets[i]);

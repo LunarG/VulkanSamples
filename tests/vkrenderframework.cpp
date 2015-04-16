@@ -1369,7 +1369,7 @@ void VkCommandBufferObj::BindDescriptorSet(VkDescriptorSetObj &descriptorSet)
 
     // bind pipeline, vertex buffer (descriptor set) and WVP (dynamic buffer view)
     vkCmdBindDescriptorSets(obj(), VK_PIPELINE_BIND_POINT_GRAPHICS,
-           descriptorSet.GetLayoutChain(), 0, 1, &set_obj, NULL );
+           0, 1, &set_obj, NULL );
 
     // Add descriptor set mem refs to command buffer's list
     mem_ref_mgr.AddMemoryRefs(descriptorSet.memories());

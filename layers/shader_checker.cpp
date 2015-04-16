@@ -143,13 +143,13 @@ static VkLayerDispatchTable * initLayerTable(const VkBaseLayerObject *gpuw)
         return it->second;
     }
 
-    layer_initialize_dispatch_table(pTable, gpuw->pGPA, (VkPhysicalGpu) gpuw->nextObject);
+    layer_initialize_dispatch_table(pTable, gpuw->pGPA, (VkPhysicalDevice) gpuw->nextObject);
 
     return pTable;
 }
 
 
-VK_LAYER_EXPORT VkResult VKAPI vkCreateDevice(VkPhysicalGpu gpu, const VkDeviceCreateInfo* pCreateInfo, VkDevice* pDevice)
+VK_LAYER_EXPORT VkResult VKAPI vkCreateDevice(VkPhysicalDevice gpu, const VkDeviceCreateInfo* pCreateInfo, VkDevice* pDevice)
 {
     VkLayerDispatchTable* pTable = tableMap[gpu];
     VkResult result = pTable->CreateDevice(gpu, pCreateInfo, pDevice);
@@ -161,7 +161,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateDevice(VkPhysicalGpu gpu, const VkDeviceC
 }
 
 
-VK_LAYER_EXPORT VkResult VKAPI vkEnumerateLayers(VkPhysicalGpu gpu, size_t maxLayerCount, size_t maxStringSize, size_t* pOutLayerCount, char* const* pOutLayers, void* pReserved)
+VK_LAYER_EXPORT VkResult VKAPI vkEnumerateLayers(VkPhysicalDevice gpu, size_t maxLayerCount, size_t maxStringSize, size_t* pOutLayerCount, char* const* pOutLayers, void* pReserved)
 {
     if (pOutLayerCount == NULL || pOutLayers == NULL || pOutLayers[0] == NULL || pOutLayers[1] == NULL || pReserved == NULL)
         return VK_ERROR_INVALID_POINTER;
@@ -539,41 +539,41 @@ enum FORMAT_TYPE {
 static unsigned
 get_format_type(VkFormat fmt) {
     switch (fmt) {
-    case VK_FMT_UNDEFINED:
+    case VK_FORMAT_UNDEFINED:
         return FORMAT_TYPE_UNDEFINED;
-    case VK_FMT_R8_SINT:
-    case VK_FMT_R8G8_SINT:
-    case VK_FMT_R8G8B8_SINT:
-    case VK_FMT_R8G8B8A8_SINT:
-    case VK_FMT_R16_SINT:
-    case VK_FMT_R16G16_SINT:
-    case VK_FMT_R16G16B16_SINT:
-    case VK_FMT_R16G16B16A16_SINT:
-    case VK_FMT_R32_SINT:
-    case VK_FMT_R32G32_SINT:
-    case VK_FMT_R32G32B32_SINT:
-    case VK_FMT_R32G32B32A32_SINT:
-    case VK_FMT_B8G8R8_SINT:
-    case VK_FMT_B8G8R8A8_SINT:
-    case VK_FMT_R10G10B10A2_SINT:
-    case VK_FMT_B10G10R10A2_SINT:
+    case VK_FORMAT_R8_SINT:
+    case VK_FORMAT_R8G8_SINT:
+    case VK_FORMAT_R8G8B8_SINT:
+    case VK_FORMAT_R8G8B8A8_SINT:
+    case VK_FORMAT_R16_SINT:
+    case VK_FORMAT_R16G16_SINT:
+    case VK_FORMAT_R16G16B16_SINT:
+    case VK_FORMAT_R16G16B16A16_SINT:
+    case VK_FORMAT_R32_SINT:
+    case VK_FORMAT_R32G32_SINT:
+    case VK_FORMAT_R32G32B32_SINT:
+    case VK_FORMAT_R32G32B32A32_SINT:
+    case VK_FORMAT_B8G8R8_SINT:
+    case VK_FORMAT_B8G8R8A8_SINT:
+    case VK_FORMAT_R10G10B10A2_SINT:
+    case VK_FORMAT_B10G10R10A2_SINT:
         return FORMAT_TYPE_SINT;
-    case VK_FMT_R8_UINT:
-    case VK_FMT_R8G8_UINT:
-    case VK_FMT_R8G8B8_UINT:
-    case VK_FMT_R8G8B8A8_UINT:
-    case VK_FMT_R16_UINT:
-    case VK_FMT_R16G16_UINT:
-    case VK_FMT_R16G16B16_UINT:
-    case VK_FMT_R16G16B16A16_UINT:
-    case VK_FMT_R32_UINT:
-    case VK_FMT_R32G32_UINT:
-    case VK_FMT_R32G32B32_UINT:
-    case VK_FMT_R32G32B32A32_UINT:
-    case VK_FMT_B8G8R8_UINT:
-    case VK_FMT_B8G8R8A8_UINT:
-    case VK_FMT_R10G10B10A2_UINT:
-    case VK_FMT_B10G10R10A2_UINT:
+    case VK_FORMAT_R8_UINT:
+    case VK_FORMAT_R8G8_UINT:
+    case VK_FORMAT_R8G8B8_UINT:
+    case VK_FORMAT_R8G8B8A8_UINT:
+    case VK_FORMAT_R16_UINT:
+    case VK_FORMAT_R16G16_UINT:
+    case VK_FORMAT_R16G16B16_UINT:
+    case VK_FORMAT_R16G16B16A16_UINT:
+    case VK_FORMAT_R32_UINT:
+    case VK_FORMAT_R32G32_UINT:
+    case VK_FORMAT_R32G32B32_UINT:
+    case VK_FORMAT_R32G32B32A32_UINT:
+    case VK_FORMAT_B8G8R8_UINT:
+    case VK_FORMAT_B8G8R8A8_UINT:
+    case VK_FORMAT_R10G10B10A2_UINT:
+    case VK_FORMAT_B10G10R10A2_UINT:
         return FORMAT_TYPE_UINT;
     default:
         return FORMAT_TYPE_FLOAT;
@@ -744,7 +744,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateGraphicsPipeline(VkDevice device,
 }
 
 
-VK_LAYER_EXPORT void * VKAPI vkGetProcAddr(VkPhysicalGpu gpu, const char* pName)
+VK_LAYER_EXPORT void * VKAPI vkGetProcAddr(VkPhysicalDevice gpu, const char* pName)
 {
     if (gpu == NULL)
         return NULL;
@@ -766,5 +766,5 @@ VK_LAYER_EXPORT void * VKAPI vkGetProcAddr(VkPhysicalGpu gpu, const char* pName)
     VkBaseLayerObject* gpuw = (VkBaseLayerObject *) gpu;
     if (gpuw->pGPA == NULL)
         return NULL;
-    return gpuw->pGPA((VkPhysicalGpu) gpuw->nextObject, pName);
+    return gpuw->pGPA((VkPhysicalDevice) gpuw->nextObject, pName);
 }

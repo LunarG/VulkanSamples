@@ -1060,7 +1060,6 @@ ICD_EXPORT void VKAPI vkCmdBindDynamicStateObject(
 ICD_EXPORT void VKAPI vkCmdBindDescriptorSets(
     VkCmdBuffer                              cmdBuffer,
     VkPipelineBindPoint                     pipelineBindPoint,
-    VkDescriptorSetLayoutChain             layoutChain,
     uint32_t                                    layoutChainSlot,
     uint32_t                                    count,
     const VkDescriptorSet*                   pDescriptorSets,

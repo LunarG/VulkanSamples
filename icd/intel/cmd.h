@@ -170,10 +170,7 @@ struct intel_cmd_bind {
     } state;
 
     struct {
-        const struct intel_desc_layout_chain *graphics;
         struct intel_cmd_dset_data graphics_data;
-
-        const struct intel_desc_layout_chain *compute;
         struct intel_cmd_dset_data compute_data;
     } dset;
 

@@ -625,7 +625,6 @@ core = Extension(
         Proto("void", "CmdBindDescriptorSets",
             [Param("VkCmdBuffer", "cmdBuffer"),
              Param("VkPipelineBindPoint", "pipelineBindPoint"),
-             Param("VkDescriptorSetLayoutChain", "layoutChain"),
              Param("uint32_t", "layoutChainSlot"),
              Param("uint32_t", "count"),
              Param("const VkDescriptorSet*", "pDescriptorSets"),
