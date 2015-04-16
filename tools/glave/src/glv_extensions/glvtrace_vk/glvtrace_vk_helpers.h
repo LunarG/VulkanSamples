@@ -243,28 +243,11 @@ static void add_begin_cmdbuf_to_trace_packet(glv_trace_packet_header* pHeader, v
 static void add_alloc_memory_to_trace_packet(glv_trace_packet_header* pHeader, void** ppOut, const void* pIn)
 {
     const VkMemoryAllocInfo* pInNow = pIn;
-    VkMemoryAllocInfo** ppOutNext = (VkMemoryAllocInfo**)ppOut;
     while (pInNow != NULL)
     {
-        VkMemoryAllocInfo** ppOutNow = ppOutNext;
-        ppOutNext = NULL;
 
         switch (pInNow->sType)
         {
-        case VK_STRUCTURE_TYPE_MEMORY_ALLOC_BUFFER_INFO:
-        {
-            glv_add_buffer_to_trace_packet(pHeader, (void**)(ppOutNow), sizeof(VkMemoryAllocBufferInfo), pInNow);
-            ppOutNext = (VkMemoryAllocInfo**)&(*ppOutNow)->pNext;
-            glv_finalize_buffer_address(pHeader, (void**)(ppOutNow));
-            break;
-        }
-        case VK_STRUCTURE_TYPE_MEMORY_ALLOC_IMAGE_INFO:
-        {
-            glv_add_buffer_to_trace_packet(pHeader, (void**)(ppOutNow), sizeof(VkMemoryAllocImageInfo), pInNow);
-            ppOutNext = (VkMemoryAllocInfo**)&(*ppOutNow)->pNext;
-            glv_finalize_buffer_address(pHeader, (void**)(ppOutNow));
-            break;
-        }
         default:
             assert(!"Encountered an unexpected type in memory_alloc_info list");
         }

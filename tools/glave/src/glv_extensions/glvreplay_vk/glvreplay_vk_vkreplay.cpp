@@ -489,8 +489,6 @@ glv_replay::GLV_REPLAY_RESULT vkReplay::manually_handle_vkGetObjectInfo(struct_v
                             glv_LogWarn("vkGetObjectInfo(INFO_TYPE_MEMORY_REQUIREMENTS) mismatch: trace granularity %u, replay granularity %u\\n", traceReqs->granularity, replayReqs->granularity);
                         if (traceReqs->memProps != replayReqs->memProps)
                             glv_LogWarn("vkGetObjectInfo(INFO_TYPE_MEMORY_REQUIREMENTS) mismatch: trace memProps %u, replay memProps %u\\n", traceReqs->memProps, replayReqs->memProps);
-                        if (traceReqs->memType != replayReqs->memType)
-                            glv_LogWarn("vkGetObjectInfo(INFO_TYPE_MEMORY_REQUIREMENTS) mismatch: trace memType %u, replay memType %u\\n", traceReqs->memType, replayReqs->memType);
                         traceReqs++;
                         replayReqs++;
                     }
