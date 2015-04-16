@@ -39,8 +39,8 @@ typedef struct VkLayerDispatchTable_
     PFN_vkEnumerateLayers EnumerateLayers;
     PFN_vkGetDeviceQueue GetDeviceQueue;
     PFN_vkQueueSubmit QueueSubmit;
-    PFN_vkQueueAddMemReference QueueAddMemReference;
-    PFN_vkQueueRemoveMemReference QueueRemoveMemReference;
+    PFN_vkQueueAddMemReferences QueueAddMemReferences;
+    PFN_vkQueueRemoveMemReferences QueueRemoveMemReferences;
     PFN_vkQueueWaitIdle QueueWaitIdle;
     PFN_vkDeviceWaitIdle DeviceWaitIdle;
     PFN_vkAllocMemory AllocMemory;
@@ -108,7 +108,7 @@ typedef struct VkLayerDispatchTable_
     PFN_vkCmdBindPipeline CmdBindPipeline;
     PFN_vkCmdBindDynamicStateObject CmdBindDynamicStateObject;
     PFN_vkCmdBindDescriptorSets CmdBindDescriptorSets;
-    PFN_vkCmdBindVertexBuffer CmdBindVertexBuffer;
+    PFN_vkCmdBindVertexBuffers CmdBindVertexBuffers;
     PFN_vkCmdBindIndexBuffer CmdBindIndexBuffer;
     PFN_vkCmdDraw CmdDraw;
     PFN_vkCmdDrawIndexed CmdDrawIndexed;

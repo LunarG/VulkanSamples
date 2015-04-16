@@ -296,18 +296,14 @@ static void demo_add_mem_refs(
         struct demo *demo,
         int num_refs, VkGpuMemory *mem)
 {
-    for (int i = 0; i < num_refs; i++) {
-        vkQueueAddMemReference(demo->queue, mem[i]);
-    }
+    vkQueueAddMemReferences(demo->queue, num_refs, mem);
 }
 
 static void demo_remove_mem_refs(
         struct demo *demo,
         int num_refs, VkGpuMemory *mem)
 {
-    for (int i = 0; i < num_refs; i++) {
-        vkQueueRemoveMemReference(demo->queue, mem[i]);
-    }
+    vkQueueRemoveMemReferences(demo->queue, num_refs, mem);
 }
 
 static void demo_set_image_layout(

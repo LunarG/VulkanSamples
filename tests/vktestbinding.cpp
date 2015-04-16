@@ -499,16 +499,12 @@ void Queue::submit(const CmdBuffer &cmd)
 
 void Queue::add_mem_references(const std::vector<VkGpuMemory> &mem_refs)
 {
-    for (int i = 0; i < mem_refs.size(); i++) {
-        EXPECT(vkQueueAddMemReference(obj(), mem_refs[i]) == VK_SUCCESS);
-    }
+    EXPECT(vkQueueAddMemReferences(obj(), mem_refs.size(), &mem_refs[0]) == VK_SUCCESS);
 }
 
 void Queue::remove_mem_references(const std::vector<VkGpuMemory> &mem_refs)
 {
-    for (int i = 0; i < mem_refs.size(); i++) {
-        EXPECT(vkQueueRemoveMemReference(obj(), mem_refs[i]) == VK_SUCCESS);
-    }
+    EXPECT(vkQueueRemoveMemReferences(obj(), mem_refs.size(), &mem_refs[0]) == VK_SUCCESS);
 }
 
 void Queue::wait()

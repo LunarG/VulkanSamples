@@ -282,13 +282,15 @@ core = Extension(
              Param("const VkCmdBuffer*", "pCmdBuffers"),
              Param("VkFence", "fence")]),
 
-        Proto("VkResult", "QueueAddMemReference",
+        Proto("VkResult", "QueueAddMemReferences",
             [Param("VkQueue", "queue"),
-             Param("VkGpuMemory", "mem")]),
+             Param("uint32_t", "count"),
+             Param("const VkGpuMemory*", "pMems")]),
 
-        Proto("VkResult", "QueueRemoveMemReference",
+        Proto("VkResult", "QueueRemoveMemReferences",
             [Param("VkQueue", "queue"),
-             Param("VkGpuMemory", "mem")]),
+             Param("uint32_t", "count"),
+             Param("const VkGpuMemory*", "pMems")]),
 
         Proto("VkResult", "QueueWaitIdle",
             [Param("VkQueue", "queue")]),
@@ -629,11 +631,12 @@ core = Extension(
              Param("const VkDescriptorSet*", "pDescriptorSets"),
              Param("const uint32_t*", "pUserData")]),
 
-        Proto("void", "CmdBindVertexBuffer",
+        Proto("void", "CmdBindVertexBuffers",
             [Param("VkCmdBuffer", "cmdBuffer"),
-             Param("VkBuffer", "buffer"),
-             Param("VkGpuSize", "offset"),
-             Param("uint32_t", "binding")]),
+             Param("uint32_t", "startBinding"),
+             Param("uint32_t", "bindingCount"),
+             Param("const VkBuffer*", "pBuffers"),
+             Param("const VkGpuSize*", "pOffsets")]),
 
         Proto("void", "CmdBindIndexBuffer",
             [Param("VkCmdBuffer", "cmdBuffer"),

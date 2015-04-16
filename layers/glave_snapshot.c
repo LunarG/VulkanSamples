@@ -1305,12 +1305,17 @@ VK_LAYER_EXPORT void VKAPI vkCmdBindDescriptorSets(VkCmdBuffer cmdBuffer, VkPipe
     nextTable.CmdBindDescriptorSets(cmdBuffer, pipelineBindPoint, layoutChain, layoutChainSlot, count, pDescriptorSets, pUserData);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdBindVertexBuffer(VkCmdBuffer cmdBuffer, VkBuffer buffer, VkGpuSize offset, uint32_t binding)
+VK_LAYER_EXPORT void VKAPI vkCmdBindVertexBuffers(
+    VkCmdBuffer                                 cmdBuffer,
+    uint32_t                                    startBinding,
+    uint32_t                                    bindingCount,
+    const VkBuffer*                             pBuffers
+    const VkGpuSize*                            pOffsets)
 {
     loader_platform_thread_lock_mutex(&objLock);
     ll_increment_use_count((void*)cmdBuffer, VK_OBJECT_TYPE_CMD_BUFFER);
     loader_platform_thread_unlock_mutex(&objLock);
-    nextTable.CmdBindVertexBuffer(cmdBuffer, buffer, offset, binding);
+    nextTable.CmdBindVertexBuffers(cmdBuffer, startBinding, bindingCount, pBuffers, pOffsets);
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdBindIndexBuffer(VkCmdBuffer cmdBuffer, VkBuffer buffer, VkGpuSize offset, VkIndexType indexType)

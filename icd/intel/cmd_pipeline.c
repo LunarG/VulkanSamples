@@ -3413,16 +3413,19 @@ ICD_EXPORT void VKAPI vkCmdBindDescriptorSets(
     }
 }
 
-ICD_EXPORT void VKAPI vkCmdBindVertexBuffer(
-    VkCmdBuffer                              cmdBuffer,
-    VkBuffer                                  buffer,
-    VkGpuSize                                offset,
-    uint32_t                                    binding)
+ICD_EXPORT void VKAPI vkCmdBindVertexBuffers(
+    VkCmdBuffer                                 cmdBuffer,
+    uint32_t                                    startBinding,
+    uint32_t                                    bindingCount,
+    const VkBuffer*                             pBuffers,
+    const VkGpuSize*                            pOffsets)
 {
     struct intel_cmd *cmd = intel_cmd(cmdBuffer);
-    struct intel_buf *buf = intel_buf(buffer);
 
-    cmd_bind_vertex_data(cmd, buf, offset, binding);
+    for (uint32_t i = 0; i < bindingCount; i++) {
+        struct intel_buf *buf = intel_buf(pBuffers[i]);
+        cmd_bind_vertex_data(cmd, buf, pOffsets[i], startBinding + i);
+    }
 }
 
 ICD_EXPORT void VKAPI vkCmdBindIndexBuffer(

@@ -2210,8 +2210,8 @@ typedef VkResult (VKAPI *PFN_vkGetPhysicalDeviceExtensionInfo)(VkPhysicalGpu gpu
 typedef VkResult (VKAPI *PFN_vkEnumerateLayers)(VkPhysicalGpu gpu, size_t maxLayerCount, size_t maxStringSize, size_t* pOutLayerCount, char* const* pOutLayers, void* pReserved);
 typedef VkResult (VKAPI *PFN_vkGetDeviceQueue)(VkDevice device, uint32_t queueNodeIndex, uint32_t queueIndex, VkQueue* pQueue);
 typedef VkResult (VKAPI *PFN_vkQueueSubmit)(VkQueue queue, uint32_t cmdBufferCount, const VkCmdBuffer* pCmdBuffers, VkFence fence);
-typedef VkResult (VKAPI *PFN_vkQueueAddMemReference)(VkQueue queue, VkGpuMemory mem);
-typedef VkResult (VKAPI *PFN_vkQueueRemoveMemReference)(VkQueue queue, VkGpuMemory mem);
+typedef VkResult (VKAPI *PFN_vkQueueAddMemReferences)(VkQueue queue, uint32_t count, const VkGpuMemory* pMems);
+typedef VkResult (VKAPI *PFN_vkQueueRemoveMemReferences)(VkQueue queue, uint32_t count, const VkGpuMemory* pMems);
 typedef VkResult (VKAPI *PFN_vkQueueWaitIdle)(VkQueue queue);
 typedef VkResult (VKAPI *PFN_vkDeviceWaitIdle)(VkDevice device);
 typedef VkResult (VKAPI *PFN_vkAllocMemory)(VkDevice device, const VkMemoryAllocInfo* pAllocInfo, VkGpuMemory* pMem);
@@ -2280,7 +2280,7 @@ typedef void     (VKAPI *PFN_vkCmdBindPipeline)(VkCmdBuffer cmdBuffer, VkPipelin
 typedef void     (VKAPI *PFN_vkCmdBindDynamicStateObject)(VkCmdBuffer cmdBuffer, VkStateBindPoint stateBindPoint, VkDynamicStateObject state);
 typedef void     (VKAPI *PFN_vkCmdBindDescriptorSets)(VkCmdBuffer cmdBuffer, VkPipelineBindPoint pipelineBindPoint, VkDescriptorSetLayoutChain layoutChain, uint32_t layoutChainSlot, uint32_t count, const VkDescriptorSet* pDescriptorSets, const uint32_t* pUserData);
 typedef void     (VKAPI *PFN_vkCmdBindIndexBuffer)(VkCmdBuffer cmdBuffer, VkBuffer buffer, VkGpuSize offset, VkIndexType indexType);
-typedef void     (VKAPI *PFN_vkCmdBindVertexBuffer)(VkCmdBuffer cmdBuffer, VkBuffer buffer, VkGpuSize offset, uint32_t binding);
+typedef void     (VKAPI *PFN_vkCmdBindVertexBuffers)(VkCmdBuffer cmdBuffer, uint32_t startBinding, uint32_t bindingCount, const VkBuffer* pBuffers, const VkGpuSize* pOffsets);
 typedef void     (VKAPI *PFN_vkCmdDraw)(VkCmdBuffer cmdBuffer, uint32_t firstVertex, uint32_t vertexCount, uint32_t firstInstance, uint32_t instanceCount);
 typedef void     (VKAPI *PFN_vkCmdDrawIndexed)(VkCmdBuffer cmdBuffer, uint32_t firstIndex, uint32_t indexCount, int32_t vertexOffset, uint32_t firstInstance, uint32_t instanceCount);
 typedef void     (VKAPI *PFN_vkCmdDrawIndirect)(VkCmdBuffer cmdBuffer, VkBuffer buffer, VkGpuSize offset, uint32_t count, uint32_t stride);
@@ -2390,13 +2390,15 @@ VkResult VKAPI vkQueueSubmit(
     const VkCmdBuffer*                          pCmdBuffers,
     VkFence                                     fence);
 
-VkResult VKAPI vkQueueAddMemReference(
+VkResult VKAPI vkQueueAddMemReferences(
     VkQueue                                     queue,
-    VkGpuMemory                                 mem);
+    uint32_t                                    count,
+    const VkGpuMemory*                          pMems);
 
-VkResult VKAPI vkQueueRemoveMemReference(
+VkResult VKAPI vkQueueRemoveMemReferences(
     VkQueue                                     queue,
-    VkGpuMemory                                 mem);
+    uint32_t                                    count,
+    const VkGpuMemory*                          pMems);
 
 VkResult VKAPI vkQueueWaitIdle(
     VkQueue                                     queue);
@@ -2783,11 +2785,12 @@ void VKAPI vkCmdBindIndexBuffer(
     VkGpuSize                                   offset,
     VkIndexType                                 indexType);
 
-void VKAPI vkCmdBindVertexBuffer(
+void VKAPI vkCmdBindVertexBuffers(
     VkCmdBuffer                                 cmdBuffer,
-    VkBuffer                                    buffer,
-    VkGpuSize                                   offset,
-    uint32_t                                    binding);
+    uint32_t                                    startBinding,
+    uint32_t                                    bindingCount,
+    const VkBuffer*                             pBuffers,
+    const VkGpuSize*                            pOffsets);
 
 void VKAPI vkCmdDraw(
     VkCmdBuffer                                 cmdBuffer,

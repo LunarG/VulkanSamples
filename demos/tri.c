@@ -125,18 +125,14 @@ static void demo_add_mem_refs(
         struct demo *demo,
         int num_refs, VkGpuMemory *mem)
 {
-    for (int i = 0; i < num_refs; i++) {
-        vkQueueAddMemReference(demo->queue, mem[i]);
-    }
+    vkQueueAddMemReferences(demo->queue, num_refs, mem);
 }
 
 static void demo_remove_mem_refs(
         struct demo *demo,
         int num_refs, VkGpuMemory *mem)
 {
-    for (int i = 0; i < num_refs; i++) {
-        vkQueueRemoveMemReference(demo->queue, mem[i]);
-    }
+    vkQueueRemoveMemReferences(demo->queue, num_refs, mem);
 }
 
 static void demo_set_image_layout(
@@ -281,8 +277,8 @@ static void demo_draw_build_cmd(struct demo *demo)
     vkCmdBindDynamicStateObject(demo->cmd, VK_STATE_BIND_DEPTH_STENCIL,
                                      demo->depth_stencil);
 
-
-    vkCmdBindVertexBuffer(demo->cmd, demo->vertices.buf, 0, VERTEX_BUFFER_BIND_ID);
+    VkGpuSize offsets[1] = {0};
+    vkCmdBindVertexBuffers(demo->cmd, VERTEX_BUFFER_BIND_ID, 1, &demo->vertices.buf, offsets);
 
     vkCmdBeginRenderPass(demo->cmd, &rp_begin);
     clear_range.aspect = VK_IMAGE_ASPECT_COLOR;

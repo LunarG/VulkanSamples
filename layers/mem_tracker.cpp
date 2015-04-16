@@ -975,9 +975,9 @@ VK_LAYER_EXPORT VkResult VKAPI vkGetDeviceQueue(VkDevice device, uint32_t queueN
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkQueueAddMemReference(VkQueue queue, VkGpuMemory mem)
+VK_LAYER_EXPORT VkResult VKAPI vkQueueAddMemReferences(VkQueue queue, uint32_t count, const VkGpuMemory* pMems)
 {
-    VkResult result = nextTable.QueueAddMemReference(queue, mem);
+    VkResult result = nextTable.QueueAddMemReferences(queue, count, pMems);
     if (result == VK_SUCCESS) {
         loader_platform_thread_lock_mutex(&globalLock);
 
@@ -986,17 +986,17 @@ VK_LAYER_EXPORT VkResult VKAPI vkQueueAddMemReference(VkQueue queue, VkGpuMemory
             char str[1024];
             sprintf(str, "Unknown Queue %p", queue);
             layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, queue, 0, MEMTRACK_INVALID_QUEUE, "MEM", str);
-        }
-        else {
-            if (checkMemRef(queue, mem) == VK_TRUE) {
-                // Alread in list, just warn
-                char str[1024];
-                sprintf(str, "Request to add a memory reference (%p) to Queue %p -- ref is already present in the queue's reference list", mem, queue);
-                layerCbMsg(VK_DBG_MSG_WARNING, VK_VALIDATION_LEVEL_0, mem, 0, MEMTRACK_INVALID_MEM_REF, "MEM", str);
-            }
-            else {
-                // Add to queue's memory reference list
-                pQueueInfo->pMemRefList.push_front(mem);
+        } else {
+            for (int i = 0; i < count; i++) {
+                if (checkMemRef(queue, pMems[i]) == VK_TRUE) {
+                    // Alread in list, just warn
+                    char str[1024];
+                    sprintf(str, "Request to add a memory reference (%p) to Queue %p -- ref is already present in the queue's reference list", pMems[i], queue);
+                    layerCbMsg(VK_DBG_MSG_WARNING, VK_VALIDATION_LEVEL_0, pMems[i], 0, MEMTRACK_INVALID_MEM_REF, "MEM", str);
+                } else {
+                    // Add to queue's memory reference list
+                    pQueueInfo->pMemRefList.push_front(pMems[i]);
+                }
             }
         }
         loader_platform_thread_unlock_mutex(&globalLock);
@@ -1004,10 +1004,10 @@ VK_LAYER_EXPORT VkResult VKAPI vkQueueAddMemReference(VkQueue queue, VkGpuMemory
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkQueueRemoveMemReference(VkQueue queue, VkGpuMemory mem)
+VK_LAYER_EXPORT VkResult VKAPI vkQueueRemoveMemReferences(VkQueue queue, uint32_t count, const VkGpuMemory* pMems)
 {
     // TODO : Decrement ref count for this memory reference on this queue. Remove if ref count is zero.
-    VkResult result = nextTable.QueueRemoveMemReference(queue, mem);
+    VkResult result = nextTable.QueueRemoveMemReferences(queue, count, pMems);
     if (result == VK_SUCCESS) {
         loader_platform_thread_lock_mutex(&globalLock);
 
@@ -1016,11 +1016,12 @@ VK_LAYER_EXPORT VkResult VKAPI vkQueueRemoveMemReference(VkQueue queue, VkGpuMem
             char str[1024];
             sprintf(str, "Unknown Queue %p", queue);
             layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, queue, 0, MEMTRACK_INVALID_QUEUE, "MEM", str);
-        }
-        else {
-            for (list<VkGpuMemory>::iterator it = pQueueInfo->pMemRefList.begin(); it != pQueueInfo->pMemRefList.end(); ++it) {
-                if ((*it) == mem) {
-                    it = pQueueInfo->pMemRefList.erase(it);
+        } else {
+            for (int i = 0; i < count; i++) {
+                for (list<VkGpuMemory>::iterator it = pQueueInfo->pMemRefList.begin(); it != pQueueInfo->pMemRefList.end(); ++it) {
+                    if ((*it) == pMems[i]) {
+                        it = pQueueInfo->pMemRefList.erase(it);
+                    }
                 }
             }
         }
@@ -1615,9 +1616,14 @@ VK_LAYER_EXPORT void VKAPI vkCmdBindDescriptorSets(
     nextTable.CmdBindDescriptorSets(cmdBuffer, pipelineBindPoint, layoutChain, layoutChainSlot, count, pDescriptorSets, pUserData);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdBindVertexBuffer(VkCmdBuffer cmdBuffer, VkBuffer buffer, VkGpuSize offset, uint32_t binding)
+VK_LAYER_EXPORT void VKAPI vkCmdBindVertexBuffers(
+    VkCmdBuffer                                 cmdBuffer,
+    uint32_t                                    startBinding,
+    uint32_t                                    bindingCount,
+    const VkBuffer*                             pBuffers,
+    const VkGpuSize*                            pOffsets)
 {
-    nextTable.CmdBindVertexBuffer(cmdBuffer, buffer, offset, binding);
+    nextTable.CmdBindVertexBuffers(cmdBuffer, startBinding, bindingCount, pBuffers, pOffsets);
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdBindIndexBuffer(VkCmdBuffer cmdBuffer, VkBuffer buffer, VkGpuSize offset, VkIndexType indexType)
@@ -2074,8 +2080,8 @@ VK_LAYER_EXPORT void* VKAPI vkGetProcAddr(VkPhysicalGpu gpu, const char* funcNam
         return (void*) vkCmdBindDynamicStateObject;
     if (!strcmp(funcName, "vkCmdBindDescriptorSets"))
         return (void*) vkCmdBindDescriptorSets;
-    if (!strcmp(funcName, "vkCmdBindVertexBuffer"))
-        return (void*) vkCmdBindVertexBuffer;
+    if (!strcmp(funcName, "vkCmdBindVertexBuffers"))
+        return (void*) vkCmdBindVertexBuffers;
     if (!strcmp(funcName, "vkCmdBindIndexBuffer"))
         return (void*) vkCmdBindIndexBuffer;
     if (!strcmp(funcName, "vkCmdDrawIndirect"))
@@ -2116,10 +2122,10 @@ VK_LAYER_EXPORT void* VKAPI vkGetProcAddr(VkPhysicalGpu gpu, const char* funcNam
         return (void*) vkDbgUnregisterMsgCallback;
     if (!strcmp(funcName, "vkGetDeviceQueue"))
         return (void*) vkGetDeviceQueue;
-    if (!strcmp(funcName, "vkQueueAddMemReference"))
-        return (void*) vkQueueAddMemReference;
-    if (!strcmp(funcName, "vkQueueRemoveMemReference"))
-        return (void*) vkQueueRemoveMemReference;
+    if (!strcmp(funcName, "vkQueueAddMemReferences"))
+        return (void*) vkQueueAddMemReferences;
+    if (!strcmp(funcName, "vkQueueRemoveMemReferences"))
+        return (void*) vkQueueRemoveMemReferences;
 #if !defined(WIN32)
     if (!strcmp(funcName, "vkWsiX11CreatePresentableImage"))
         return (void*) vkWsiX11CreatePresentableImage;

@@ -318,9 +318,10 @@ VkResult intel_queue_wait(struct intel_queue *queue, int64_t timeout)
     return intel_fence_wait(queue->fence, timeout);
 }
 
-ICD_EXPORT VkResult VKAPI vkQueueAddMemReference(
-    VkQueue                                   queue,
-    VkGpuMemory                              mem)
+ICD_EXPORT VkResult VKAPI vkQueueAddMemReferences(
+    VkQueue                                     queue,
+    uint32_t                                    count,
+    const VkGpuMemory*                          pMems)
 {
     /*
      * The winsys maintains the list of memory references.  These are ignored
@@ -329,9 +330,10 @@ ICD_EXPORT VkResult VKAPI vkQueueAddMemReference(
     return VK_SUCCESS;
 }
 
-ICD_EXPORT VkResult VKAPI vkQueueRemoveMemReference(
-    VkQueue                                   queue,
-    VkGpuMemory                              mem)
+ICD_EXPORT VkResult VKAPI vkQueueRemoveMemReferences(
+    VkQueue                                     queue,
+    uint32_t                                    count,
+    const VkGpuMemory*                          pMems)
 {
     /*
      * The winsys maintains the list of memory references.  These are ignored

@@ -167,7 +167,7 @@ public:
     void AddMemoryRefs(vector<vk_testing::Object *> images);
     void BindPipeline(VkPipelineObj &pipeline);
     void BindDescriptorSet(VkDescriptorSetObj &descriptorSet);
-    void BindVertexBuffer(VkConstantBufferObj *vertexBuffer, uint32_t offset, uint32_t binding);
+    void BindVertexBuffer(VkConstantBufferObj *vertexBuffer, VkGpuSize offset, uint32_t binding);
     void BindIndexBuffer(VkIndexBufferObj *indexBuffer, uint32_t offset);
     void BindStateObject(VkStateBindPoint stateBindPoint, VkDynamicStateObject stateObject);
     void BeginRenderPass(VkRenderPass renderpass, VkFramebuffer framebuffer);

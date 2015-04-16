@@ -340,15 +340,15 @@ VK_LAYER_EXPORT VkResult VKAPI vkQueueSubmit(VkQueue queue, uint32_t cmdBufferCo
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkQueueAddMemReference(VkQueue queue, VkGpuMemory mem)
+VK_LAYER_EXPORT VkResult VKAPI vkQueueAddMemReferences(VkQueue queue, uint32_t count, const VkGpuMemory* pMems)
 {
-    VkResult result = nextTable.QueueAddMemReference(queue, mem);
+    VkResult result = nextTable.QueueAddMemReferences(queue, count, pMems);
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkQueueRemoveMemReference(VkQueue queue, VkGpuMemory mem)
+VK_LAYER_EXPORT VkResult VKAPI vkQueueRemoveMemReferences(VkQueue queue, uint32_t count, const VkGpuMemory* pMems)
 {
-    VkResult result = nextTable.QueueRemoveMemReference(queue, mem);
+    VkResult result = nextTable.QueueRemoveMemReferences(queue, count, pMems);
     return result;
 }
 VK_LAYER_EXPORT VkResult VKAPI vkQueueWaitIdle(VkQueue queue)
@@ -1221,10 +1221,14 @@ VK_LAYER_EXPORT void VKAPI vkCmdBindDescriptorSets(VkCmdBuffer cmdBuffer, VkPipe
     nextTable.CmdBindDescriptorSets(cmdBuffer, pipelineBindPoint, layoutChain, layoutChainSlot, count, pDescriptorSets, pUserData);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdBindVertexBuffer(VkCmdBuffer cmdBuffer, VkBuffer buffer, VkGpuSize offset, uint32_t binding)
+VK_LAYER_EXPORT void VKAPI vkCmdBindVertexBuffers(
+    VkCmdBuffer                                 cmdBuffer,
+    uint32_t                                    startBinding,
+    uint32_t                                    bindingCount,
+    const VkBuffer*                             pBuffers,
+    const VkGpuSize*                            pOffsets)
 {
-
-    nextTable.CmdBindVertexBuffer(cmdBuffer, buffer, offset, binding);
+    nextTable.CmdBindVertexBuffers(cmdBuffer, startBinding, bindingCount, pBuffers, pOffsets);
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdBindIndexBuffer(VkCmdBuffer cmdBuffer, VkBuffer buffer, VkGpuSize offset, VkIndexType indexType)

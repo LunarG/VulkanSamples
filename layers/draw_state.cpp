@@ -2053,21 +2053,26 @@ VK_LAYER_EXPORT void VKAPI vkCmdBindIndexBuffer(VkCmdBuffer cmdBuffer, VkBuffer 
     nextTable.CmdBindIndexBuffer(cmdBuffer, buffer, offset, indexType);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdBindVertexBuffer(VkCmdBuffer cmdBuffer, VkBuffer buffer, VkGpuSize offset, uint32_t binding)
+VK_LAYER_EXPORT void VKAPI vkCmdBindVertexBuffers(
+    VkCmdBuffer                                 cmdBuffer,
+    uint32_t                                    startBinding,
+    uint32_t                                    bindingCount,
+    const VkBuffer*                             pBuffers,
+    const VkGpuSize*                            pOffsets)
 {
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
+        /* TODO: Need to track all the vertex buffers, not just last one */
         updateCBTracking(cmdBuffer);
         addCmd(pCB, CMD_BINDVERTEXBUFFER);
-        pCB->lastVtxBinding = binding;
+        pCB->lastVtxBinding = startBinding + bindingCount -1;
         validateVBBinding(cmdBuffer);
-    }
-    else {
+    } else {
         char str[1024];
         sprintf(str, "Attempt to use CmdBuffer %p that doesn't exist!", (void*)cmdBuffer);
         layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, cmdBuffer, 0, DRAWSTATE_INVALID_CMD_BUFFER, "DS", str);
     }
-    nextTable.CmdBindVertexBuffer(cmdBuffer, buffer, offset, binding);
+    nextTable.CmdBindVertexBuffers(cmdBuffer, startBinding, bindingCount, pBuffers, pOffsets);
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdDraw(VkCmdBuffer cmdBuffer, uint32_t firstVertex, uint32_t vertexCount, uint32_t firstInstance, uint32_t instanceCount)
@@ -2792,8 +2797,8 @@ VK_LAYER_EXPORT void* VKAPI vkGetProcAddr(VkPhysicalGpu gpu, const char* funcNam
         return (void*) vkCmdBindDynamicStateObject;
     if (!strcmp(funcName, "vkCmdBindDescriptorSets"))
         return (void*) vkCmdBindDescriptorSets;
-    if (!strcmp(funcName, "vkCmdBindVertexBuffer"))
-        return (void*) vkCmdBindVertexBuffer;
+    if (!strcmp(funcName, "vkCmdBindVertexBuffers"))
+        return (void*) vkCmdBindVertexBuffers;
     if (!strcmp(funcName, "vkCmdBindIndexBuffer"))
         return (void*) vkCmdBindIndexBuffer;
     if (!strcmp(funcName, "vkCmdDraw"))

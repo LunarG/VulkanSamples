@@ -137,7 +137,7 @@ public:
 
     // Unless an object is initialized with init_no_mem(), memories are
     // automatically allocated and bound.  These methods can be used to get
-    // the memories (for vkQueueAddMemReference), or to map/unmap the primary memory.
+    // the memories (for vkQueueAddMemReferences), or to map/unmap the primary memory.
     std::vector<VkGpuMemory> memories() const;
 
     const void *map(VkFlags flags) const;
@@ -259,8 +259,8 @@ public:
     void submit(const CmdBuffer &cmd, Fence &fence);
     void submit(const CmdBuffer &cmd);
 
-    // vkQueueAddMemReference()
-    // vkQueueRemoveMemReference()
+    // vkQueueAddMemReferences()
+    // vkQueueRemoveMemReferences()
     void add_mem_references(const std::vector<VkGpuMemory> &mem_refs);
     void remove_mem_references(const std::vector<VkGpuMemory> &mem_refs);
 

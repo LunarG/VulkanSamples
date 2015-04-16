@@ -523,8 +523,8 @@ void TestFrameworkVkPresent::CreatePresentableImages()
                 1, &region);
         m_cmdbuf.end();
 
-        vkQueueAddMemReference(m_queue.obj(), m_display_image->m_presentableMemory);
-        vkQueueAddMemReference(m_queue.obj(), buf.memories()[0]);
+        vkQueueAddMemReferences(m_queue.obj(), 1, &m_display_image->m_presentableMemory);
+        vkQueueAddMemReferences(m_queue.obj(), buf.memories().size(), &buf.memories()[0]);
 
         VkCmdBuffer cmdBufs[1];
         cmdBufs[0] = m_cmdbuf.obj();
@@ -532,8 +532,8 @@ void TestFrameworkVkPresent::CreatePresentableImages()
         vkQueueSubmit(m_queue.obj(), 1, cmdBufs, NULL);
         m_queue.wait();
 
-        vkQueueRemoveMemReference(m_queue.obj(), m_display_image->m_presentableMemory);
-        vkQueueRemoveMemReference(m_queue.obj(), buf.memories()[0]);
+        vkQueueRemoveMemReferences(m_queue.obj(), 1, &m_display_image->m_presentableMemory);
+        vkQueueRemoveMemReferences(m_queue.obj(), buf.memories().size(), &buf.memories()[0]);
 
         if (m_display_image->m_width > m_width)
             m_width = m_display_image->m_width;

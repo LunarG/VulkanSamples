@@ -774,7 +774,7 @@ VkConstantBufferObj::VkConstantBufferObj(VkDeviceObj *device, int constantCount,
 
 void VkConstantBufferObj::Bind(VkCmdBuffer cmdBuffer, VkGpuSize offset, uint32_t binding)
 {
-    vkCmdBindVertexBuffer(cmdBuffer, obj(), offset, binding);
+    vkCmdBindVertexBuffers(cmdBuffer, binding, 1, &obj(), &offset);
 }
 
 
@@ -1135,16 +1135,12 @@ void VkMemoryRefManager::AddMemoryRefs(vector<VkGpuMemory> mem)
 
 void VkMemoryRefManager::EmitAddMemoryRefs(VkQueue queue)
 {
-    for (uint32_t i = 0; i < mem_refs_.size(); i++) {
-        vkQueueAddMemReference(queue, mem_refs_[i]);
-    }
+    vkQueueAddMemReferences(queue, mem_refs_.size(), &mem_refs_[0]);
 }
 
 void VkMemoryRefManager::EmitRemoveMemoryRefs(VkQueue queue)
 {
-    for (uint32_t i = 0; i < mem_refs_.size(); i++) {
-        vkQueueRemoveMemReference(queue, mem_refs_[i]);
-    }
+    vkQueueRemoveMemReferences(queue, mem_refs_.size(), &mem_refs_[0]);
 }
 
 VkCommandBufferObj::VkCommandBufferObj(VkDeviceObj *device)
@@ -1411,9 +1407,9 @@ void VkCommandBufferObj::BindIndexBuffer(VkIndexBufferObj *indexBuffer, uint32_t
     mem_ref_mgr.AddMemoryRefs(*indexBuffer);
 }
 
-void VkCommandBufferObj::BindVertexBuffer(VkConstantBufferObj *vertexBuffer, uint32_t offset, uint32_t binding)
+void VkCommandBufferObj::BindVertexBuffer(VkConstantBufferObj *vertexBuffer, VkGpuSize offset, uint32_t binding)
 {
-    vkCmdBindVertexBuffer(obj(), vertexBuffer->obj(), offset, binding);
+    vkCmdBindVertexBuffers(obj(), binding, 1, &vertexBuffer->obj(), &offset);
     mem_ref_mgr.AddMemoryRefs(*vertexBuffer);
 }
 

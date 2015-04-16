@@ -1056,11 +1056,12 @@ ICD_EXPORT void VKAPI vkCmdBindDescriptorSets(
     NULLDRV_LOG_FUNC;
 }
 
-ICD_EXPORT void VKAPI vkCmdBindVertexBuffer(
-    VkCmdBuffer                              cmdBuffer,
-    VkBuffer                                  buffer,
-    VkGpuSize                                offset,
-    uint32_t                                    binding)
+ICD_EXPORT void VKAPI vkCmdBindVertexBuffers(
+    VkCmdBuffer                                 cmdBuffer,
+    uint32_t                                    startBinding,
+    uint32_t                                    bindingCount,
+    const VkBuffer*                             pBuffers,
+    const VkGpuSize*                            pOffsets)
 {
     NULLDRV_LOG_FUNC;
 }
@@ -1732,17 +1733,19 @@ ICD_EXPORT VkResult VKAPI vkGetQueryPoolResults(
     return VK_SUCCESS;
 }
 
-ICD_EXPORT VkResult VKAPI vkQueueAddMemReference(
-    VkQueue                                   queue,
-    VkGpuMemory                              mem)
+ICD_EXPORT VkResult VKAPI vkQueueAddMemReferences(
+    VkQueue                                     queue,
+    uint32_t                                    count,
+    const VkGpuMemory*                          pMems)
 {
     NULLDRV_LOG_FUNC;
     return VK_SUCCESS;
 }
 
-ICD_EXPORT VkResult VKAPI vkQueueRemoveMemReference(
-    VkQueue                                   queue,
-    VkGpuMemory                              mem)
+ICD_EXPORT VkResult VKAPI vkQueueRemoveMemReferences(
+    VkQueue                                     queue,
+    uint32_t                                    count,
+    const VkGpuMemory*                          pMems)
 {
     NULLDRV_LOG_FUNC;
     return VK_SUCCESS;
