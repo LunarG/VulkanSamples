@@ -239,14 +239,13 @@ void intel_pipeline_shader_destroy(struct intel_dev *dev,
 }
 
 static VkResult pipeline_build_shader(struct intel_pipeline *pipeline,
-                                        const struct intel_desc_layout_chain *chain,
                                         const VkPipelineShader *sh_info,
                                         struct intel_pipeline_shader *sh)
 {
     VkResult ret;
 
     ret = intel_pipeline_shader_compile(sh,
-            pipeline->dev->gpu, chain, sh_info);
+            pipeline->dev->gpu, pipeline->layout_chain, sh_info);
     if (ret != VK_SUCCESS)
         return ret;
 
@@ -266,34 +265,21 @@ static VkResult pipeline_build_shader(struct intel_pipeline *pipeline,
 static VkResult pipeline_build_shaders(struct intel_pipeline *pipeline,
                                          const struct intel_pipeline_create_info *info)
 {
-    const struct intel_desc_layout_chain *chain =
-        intel_desc_layout_chain(info->graphics.pSetLayoutChain);
     VkResult ret = VK_SUCCESS;
 
-    if (ret == VK_SUCCESS && info->vs.shader) {
-        ret = pipeline_build_shader(pipeline, chain,
-                &info->vs, &pipeline->vs);
-    }
-    if (ret == VK_SUCCESS && info->tcs.shader) {
-        ret = pipeline_build_shader(pipeline, chain,
-                &info->tcs,&pipeline->tcs);
-    }
-    if (ret == VK_SUCCESS && info->tes.shader) {
-        ret = pipeline_build_shader(pipeline, chain,
-                &info->tes,&pipeline->tes);
-    }
-    if (ret == VK_SUCCESS && info->gs.shader) {
-        ret = pipeline_build_shader(pipeline, chain,
-                &info->gs, &pipeline->gs);
-    }
-    if (ret == VK_SUCCESS && info->fs.shader) {
-        ret = pipeline_build_shader(pipeline, chain,
-                &info->fs, &pipeline->fs);
-    }
+    if (ret == VK_SUCCESS && info->vs.shader)
+        ret = pipeline_build_shader(pipeline, &info->vs, &pipeline->vs);
+    if (ret == VK_SUCCESS && info->tcs.shader)
+        ret = pipeline_build_shader(pipeline, &info->tcs,&pipeline->tcs);
+    if (ret == VK_SUCCESS && info->tes.shader)
+        ret = pipeline_build_shader(pipeline, &info->tes,&pipeline->tes);
+    if (ret == VK_SUCCESS && info->gs.shader)
+        ret = pipeline_build_shader(pipeline, &info->gs, &pipeline->gs);
+    if (ret == VK_SUCCESS && info->fs.shader)
+        ret = pipeline_build_shader(pipeline, &info->fs, &pipeline->fs);
 
     if (ret == VK_SUCCESS && info->compute.cs.shader) {
-        chain = intel_desc_layout_chain(info->compute.setLayoutChain);
-        ret = pipeline_build_shader(pipeline, chain,
+        ret = pipeline_build_shader(pipeline,
                 &info->compute.cs, &pipeline->cs);
     }
 
@@ -1360,6 +1346,9 @@ static VkResult graphics_pipeline_create(struct intel_dev *dev,
         return VK_ERROR_OUT_OF_HOST_MEMORY;
 
     pipeline->dev = dev;
+    pipeline->layout_chain =
+        intel_desc_layout_chain(info.graphics.pSetLayoutChain);
+
     pipeline->obj.base.get_info = pipeline_get_info;
     pipeline->obj.destroy = pipeline_destroy;
 

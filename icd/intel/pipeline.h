@@ -173,6 +173,8 @@ struct intel_pipeline {
 
     struct intel_dev *dev;
 
+    const struct intel_desc_layout_chain *layout_chain;
+
     VkVertexInputBindingDescription vb[INTEL_MAX_VERTEX_BINDING_COUNT];
     uint32_t vb_count;
 
