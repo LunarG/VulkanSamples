@@ -35,8 +35,10 @@ struct intel_query {
     struct intel_obj obj;
 
     VkQueryType type;
+    uint32_t reg_count;
     uint32_t slot_stride;
     uint32_t slot_count;
+    uint32_t regs[32];
 };
 
 static inline struct intel_query *intel_query(VkQueryPool pool)

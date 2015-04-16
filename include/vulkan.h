@@ -33,7 +33,7 @@
 #include "vk_platform.h"
 
 // Vulkan API version supported by this file
-#define VK_API_VERSION VK_MAKE_VERSION(0, 80, 0)
+#define VK_API_VERSION VK_MAKE_VERSION(0, 84, 0)
 
 #ifdef __cplusplus
 extern "C"
@@ -1137,6 +1137,23 @@ typedef enum VkCmdBufferOptimizeFlagBits_
 // Memory mapping flags
 typedef VkFlags VkMemoryMapFlags;
 
+// Pipeline statistics flags
+typedef VkFlags VkQueryPipelineStatisticFlags;
+typedef enum VkQueryPipelineStatisticFlagBits_ {
+    VK_QUERY_PIPELINE_STATISTIC_IA_VERTICES_BIT             = VK_BIT(0),  // Optional
+    VK_QUERY_PIPELINE_STATISTIC_IA_PRIMITIVES_BIT           = VK_BIT(1),  // Optional
+    VK_QUERY_PIPELINE_STATISTIC_VS_INVOCATIONS_BIT          = VK_BIT(2),  // Optional
+    VK_QUERY_PIPELINE_STATISTIC_GS_INVOCATIONS_BIT          = VK_BIT(3),  // Optional
+    VK_QUERY_PIPELINE_STATISTIC_GS_PRIMITIVES_BIT           = VK_BIT(4),  // Optional
+    VK_QUERY_PIPELINE_STATISTIC_C_INVOCATIONS_BIT           = VK_BIT(5),  // Optional
+    VK_QUERY_PIPELINE_STATISTIC_C_PRIMITIVES_BIT            = VK_BIT(6),  // Optional
+    VK_QUERY_PIPELINE_STATISTIC_FS_INVOCATIONS_BIT          = VK_BIT(7),  // Optional
+    VK_QUERY_PIPELINE_STATISTIC_TCS_PATCHES_BIT             = VK_BIT(8),  // Optional
+    VK_QUERY_PIPELINE_STATISTIC_TES_INVOCATIONS_BIT         = VK_BIT(9),  // Optional
+    VK_QUERY_PIPELINE_STATISTIC_CS_INVOCATIONS_BIT          = VK_BIT(10), // Optional
+} VkQueryPipelineStatisticFlagBits;
+
+
 // ------------------------------------------------------------------------------------------------
 // Vulkan structures
 
@@ -1999,27 +2016,13 @@ typedef struct VkSemaphoreOpenInfo_
     VkSemaphore                                 sharedSemaphore;
 } VkSemaphoreOpenInfo;
 
-typedef struct VkPipelineStatisticsData_
-{
-    uint64_t                                    fsInvocations;            // Fragment shader invocations
-    uint64_t                                    cPrimitives;              // Clipper primitives
-    uint64_t                                    cInvocations;             // Clipper invocations
-    uint64_t                                    vsInvocations;            // Vertex shader invocations
-    uint64_t                                    gsInvocations;            // Geometry shader invocations
-    uint64_t                                    gsPrimitives;             // Geometry shader primitives
-    uint64_t                                    iaPrimitives;             // Input primitives
-    uint64_t                                    iaVertices;               // Input vertices
-    uint64_t                                    tcsInvocations;           // Tessellation control shader invocations
-    uint64_t                                    tesInvocations;           // Tessellation evaluation shader invocations
-    uint64_t                                    csInvocations;            // Compute shader invocations
-} VkPipelineStatisticsData;
-
 typedef struct VkQueryPoolCreateInfo_
 {
-    VkStructureType                             sType;      // Must be VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO
-    const void*                                 pNext;      // Pointer to next structure
+    VkStructureType                             sType;              // Must be VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO
+    const void*                                 pNext;              // Pointer to next structure
     VkQueryType                                 queryType;
     uint32_t                                    slots;
+    VkQueryPipelineStatisticFlags               pipelineStatistics; // Optional
 } VkQueryPoolCreateInfo;
 
 typedef struct VkFramebufferCreateInfo_

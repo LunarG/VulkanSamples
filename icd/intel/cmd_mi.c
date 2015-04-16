@@ -86,33 +86,20 @@ static void gen6_MI_STORE_DATA_IMM(struct intel_cmd *cmd,
 }
 
 static void cmd_query_pipeline_statistics(struct intel_cmd *cmd,
+                                          const struct intel_query *query,
                                           struct intel_bo *bo,
                                           VkDeviceSize offset)
 {
-    const uint32_t regs[] = {
-        GEN6_REG_PS_INVOCATION_COUNT,
-        GEN6_REG_CL_PRIMITIVES_COUNT,
-        GEN6_REG_CL_INVOCATION_COUNT,
-        GEN6_REG_VS_INVOCATION_COUNT,
-        GEN6_REG_GS_INVOCATION_COUNT,
-        GEN6_REG_GS_PRIMITIVES_COUNT,
-        /* well, we do not enable 3DSTATE_VF_STATISTICS yet */
-        GEN6_REG_IA_PRIMITIVES_COUNT,
-        GEN6_REG_IA_VERTICES_COUNT,
-        (cmd_gen(cmd) >= INTEL_GEN(7)) ? GEN7_REG_HS_INVOCATION_COUNT : 0,
-        (cmd_gen(cmd) >= INTEL_GEN(7)) ? GEN7_REG_DS_INVOCATION_COUNT : 0,
-        0,
-    };
     uint32_t i;
 
     cmd_batch_flush(cmd, GEN6_PIPE_CONTROL_CS_STALL);
 
-    for (i = 0; i < ARRAY_SIZE(regs); i++) {
-        if (regs[i]) {
+    for (i = 0; i < query->reg_count; i++) {
+        if (query->regs[i]) {
             /* store lower 32 bits */
-            gen6_MI_STORE_REGISTER_MEM(cmd, bo, offset, regs[i]);
+            gen6_MI_STORE_REGISTER_MEM(cmd, bo, offset, query->regs[i]);
             /* store higher 32 bits */
-            gen6_MI_STORE_REGISTER_MEM(cmd, bo, offset + 4, regs[i] + 4);
+            gen6_MI_STORE_REGISTER_MEM(cmd, bo, offset + 4, query->regs[i] + 4);
         } else {
             gen6_MI_STORE_DATA_IMM(cmd, bo, offset, 0);
         }
@@ -122,10 +109,10 @@ static void cmd_query_pipeline_statistics(struct intel_cmd *cmd,
 }
 
 ICD_EXPORT void VKAPI vkCmdBeginQuery(
-    VkCmdBuffer                              cmdBuffer,
-    VkQueryPool                              queryPool,
+    VkCmdBuffer                                 cmdBuffer,
+    VkQueryPool                                 queryPool,
     uint32_t                                    slot,
-    VkFlags                                   flags)
+    VkQueryControlFlags                         flags)
 {
     struct intel_cmd *cmd = intel_cmd(cmdBuffer);
     struct intel_query *query = intel_query(queryPool);
@@ -137,7 +124,7 @@ ICD_EXPORT void VKAPI vkCmdBeginQuery(
         cmd_batch_depth_count(cmd, bo, offset);
         break;
     case VK_QUERY_TYPE_PIPELINE_STATISTICS:
-        cmd_query_pipeline_statistics(cmd, bo, offset);
+        cmd_query_pipeline_statistics(cmd, query, bo, offset);
         break;
     default:
         cmd_fail(cmd, VK_ERROR_UNKNOWN);
@@ -146,8 +133,8 @@ ICD_EXPORT void VKAPI vkCmdBeginQuery(
 }
 
 ICD_EXPORT void VKAPI vkCmdEndQuery(
-    VkCmdBuffer                              cmdBuffer,
-    VkQueryPool                              queryPool,
+    VkCmdBuffer                                 cmdBuffer,
+    VkQueryPool                                 queryPool,
     uint32_t                                    slot)
 {
     struct intel_cmd *cmd = intel_cmd(cmdBuffer);
@@ -160,8 +147,7 @@ ICD_EXPORT void VKAPI vkCmdEndQuery(
         cmd_batch_depth_count(cmd, bo, offset + sizeof(uint64_t));
         break;
     case VK_QUERY_TYPE_PIPELINE_STATISTICS:
-        cmd_query_pipeline_statistics(cmd, bo,
-                offset + sizeof(VkPipelineStatisticsData));
+        cmd_query_pipeline_statistics(cmd, query, bo, offset + query->slot_stride);
         break;
     default:
         cmd_fail(cmd, VK_ERROR_UNKNOWN);
@@ -170,8 +156,8 @@ ICD_EXPORT void VKAPI vkCmdEndQuery(
 }
 
 ICD_EXPORT void VKAPI vkCmdResetQueryPool(
-    VkCmdBuffer                              cmdBuffer,
-    VkQueryPool                              queryPool,
+    VkCmdBuffer                                 cmdBuffer,
+    VkQueryPool                                 queryPool,
     uint32_t                                    startQuery,
     uint32_t                                    queryCount)
 {

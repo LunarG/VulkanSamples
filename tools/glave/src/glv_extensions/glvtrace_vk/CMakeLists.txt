@@ -36,6 +36,8 @@ add_custom_command(OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/codegen/glvtrace_vk_vk.h
         COMMAND ${PYTHON_CMD} ${SRC_DIR}/../../../vk_helper.py --gen_enum_string_helper ${SRC_DIR}/../../../include/vulkan.h --abs_out_dir ${CMAKE_CURRENT_SOURCE_DIR}/codegen
                    DEPENDS ${SRC_DIR}/../../../vk_helper.py
                            ${SRC_DIR}/../scripts/vk_generate.py
+                           ${SRC_DIR}/include/vulkan.h
+                           ${SRC_DIR}/include/vulkan.py
                    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/codegen)
 
 set(SRC_LIST

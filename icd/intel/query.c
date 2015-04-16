@@ -28,6 +28,7 @@
 #include "dev.h"
 #include "mem.h"
 #include "query.h"
+#include "genhw/genhw.h"
 
 static void query_destroy(struct intel_obj *obj)
 {
@@ -63,9 +64,48 @@ static VkResult query_get_info(struct intel_base *base, int type,
     return ret;
 }
 
+static void query_init_pipeline_statistics(
+        struct intel_dev *dev,
+        const VkQueryPoolCreateInfo *info,
+        struct intel_query *query)
+{
+    /*
+     * Note: order defined by Vulkan spec.
+     */
+    const uint32_t regs[][2] = {
+        {VK_QUERY_PIPELINE_STATISTIC_IA_PRIMITIVES_BIT, GEN6_REG_IA_PRIMITIVES_COUNT},
+        {VK_QUERY_PIPELINE_STATISTIC_VS_INVOCATIONS_BIT, GEN6_REG_VS_INVOCATION_COUNT},
+        {VK_QUERY_PIPELINE_STATISTIC_GS_INVOCATIONS_BIT, GEN6_REG_GS_INVOCATION_COUNT},
+        {VK_QUERY_PIPELINE_STATISTIC_GS_PRIMITIVES_BIT, GEN6_REG_GS_PRIMITIVES_COUNT},
+        {VK_QUERY_PIPELINE_STATISTIC_C_INVOCATIONS_BIT, GEN6_REG_CL_INVOCATION_COUNT},
+        {VK_QUERY_PIPELINE_STATISTIC_C_PRIMITIVES_BIT, GEN6_REG_CL_PRIMITIVES_COUNT},
+        {VK_QUERY_PIPELINE_STATISTIC_FS_INVOCATIONS_BIT, GEN6_REG_PS_INVOCATION_COUNT},
+        {VK_QUERY_PIPELINE_STATISTIC_TCS_PATCHES_BIT, (intel_gpu_gen(dev->gpu) >= INTEL_GEN(7)) ? GEN7_REG_HS_INVOCATION_COUNT : 0},
+        {VK_QUERY_PIPELINE_STATISTIC_TES_INVOCATIONS_BIT, (intel_gpu_gen(dev->gpu) >= INTEL_GEN(7)) ? GEN7_REG_DS_INVOCATION_COUNT : 0},
+        {VK_QUERY_PIPELINE_STATISTIC_CS_INVOCATIONS_BIT, 0}
+    };
+    STATIC_ASSERT(ARRAY_SIZE(regs) < 32);
+    uint32_t i;
+    uint32_t reg_count = 0;
+
+    /*
+     * Only query registers indicated via pipeline statistics flags.
+     * If HW does not support a flag, fill value with 0.
+     */
+    for (i=0; i < ARRAY_SIZE(regs); i++) {
+        if ((regs[i][0] & info->pipelineStatistics)) {
+            query->regs[reg_count] = regs[i][1];
+            reg_count++;
+        }
+    }
+
+    query->reg_count = reg_count;
+    query->slot_stride = u_align(reg_count * sizeof(uint64_t) * 2, 64);
+}
+
 VkResult intel_query_create(struct intel_dev *dev,
-                              const VkQueryPoolCreateInfo *info,
-                              struct intel_query **query_ret)
+                            const VkQueryPoolCreateInfo *info,
+                            struct intel_query **query_ret)
 {
     struct intel_query *query;
 
@@ -88,8 +128,7 @@ VkResult intel_query_create(struct intel_dev *dev,
         query->slot_stride = u_align(sizeof(uint64_t) * 2, 64);
         break;
     case VK_QUERY_TYPE_PIPELINE_STATISTICS:
-        query->slot_stride =
-            u_align(sizeof(VkPipelineStatisticsData) * 2, 64);
+        query_init_pipeline_statistics(dev, info, query);
         break;
     default:
         break;
@@ -131,9 +170,9 @@ query_process_occlusion(const struct intel_query *query,
 static void
 query_process_pipeline_statistics(const struct intel_query *query,
                                   uint32_t count, const uint8_t *raw,
-                                  VkPipelineStatisticsData *results)
+                                  void *results)
 {
-    const uint32_t num_regs = sizeof(results[0]) / sizeof(uint64_t);
+    const uint32_t num_regs = query->reg_count;
     uint32_t i, j;
 
     for (i = 0; i < count; i++) {
@@ -149,8 +188,8 @@ query_process_pipeline_statistics(const struct intel_query *query,
 }
 
 VkResult intel_query_get_results(struct intel_query *query,
-                                   uint32_t slot_start, uint32_t slot_count,
-                                   void *results)
+                                 uint32_t slot_start, uint32_t slot_count,
+                                 void *results)
 {
     const uint8_t *ptr;
 
@@ -184,9 +223,9 @@ VkResult intel_query_get_results(struct intel_query *query,
 }
 
 ICD_EXPORT VkResult VKAPI vkCreateQueryPool(
-    VkDevice                                  device,
-    const VkQueryPoolCreateInfo*           pCreateInfo,
-    VkQueryPool*                             pQueryPool)
+    VkDevice                                    device,
+    const VkQueryPoolCreateInfo*                pCreateInfo,
+    VkQueryPool*                                pQueryPool)
 {
     struct intel_dev *dev = intel_dev(device);
 
@@ -195,7 +234,7 @@ ICD_EXPORT VkResult VKAPI vkCreateQueryPool(
 }
 
 ICD_EXPORT VkResult VKAPI vkGetQueryPoolResults(
-    VkQueryPool                              queryPool,
+    VkQueryPool                                 queryPool,
     uint32_t                                    startQuery,
     uint32_t                                    queryCount,
     size_t*                                     pDataSize,
@@ -209,7 +248,7 @@ ICD_EXPORT VkResult VKAPI vkGetQueryPoolResults(
         *pDataSize = sizeof(uint64_t) * queryCount;
         break;
     case VK_QUERY_TYPE_PIPELINE_STATISTICS:
-        *pDataSize = sizeof(VkPipelineStatisticsData) * queryCount;
+        *pDataSize = query->slot_stride * queryCount;
         break;
     default:
         return VK_ERROR_INVALID_HANDLE;
