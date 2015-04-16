@@ -200,4 +200,9 @@ struct nulldrv_buf_view {
     uint32_t cmd_len;
 };
 
+struct nulldrv_swap_chain {
+    struct nulldrv_base base;
+    struct nulldrv_dev *dev;
+};
+
 #endif /* NULLDRV_H */

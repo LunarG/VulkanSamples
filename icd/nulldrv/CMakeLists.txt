@@ -1,6 +1,10 @@
 # Create the nulldrv Vulkan DRI library
 
+if (WIN32)
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DVK_PROTOTYPES -D_CRT_SECURE_NO_WARNINGS")
+else()
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DVK_PROTOTYPES")
+endif()
 
 add_custom_command(OUTPUT nulldrv_gpa.c
     COMMAND ${PYTHON_CMD} ${PROJECT_SOURCE_DIR}/vk-generate.py icd-get-proc-addr > nulldrv_gpa.c

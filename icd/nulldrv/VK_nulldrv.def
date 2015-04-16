@@ -29,6 +29,7 @@ EXPORTS
    vkGetProcAddr
    vkCreateInstance
    vkDestroyInstance
+   vkEnumeratePhysicalDevices
    vkGetGlobalExtensionInfo
    xcbCreateWindow
    xcbDestroyWindow

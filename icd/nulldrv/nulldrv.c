@@ -854,6 +854,150 @@ ICD_EXPORT void VKAPI vkCmdDbgMarkerEnd(
     NULLDRV_LOG_FUNC;
 }
 
+static const VkFormat nulldrv_presentable_formats[] = {
+    VK_FORMAT_B8G8R8A8_UNORM,
+};
+
+ICD_EXPORT VkResult VKAPI vkGetDisplayInfoWSI(
+    VkDisplayWSI                            display,
+    VkDisplayInfoTypeWSI                    infoType,
+    size_t*                                 pDataSize,
+    void*                                   pData)
+{
+    VkResult ret = VK_SUCCESS;
+
+    NULLDRV_LOG_FUNC;
+
+    if (!pDataSize)
+        return VK_ERROR_INVALID_POINTER;
+
+    switch (infoType) {
+    case VK_DISPLAY_INFO_TYPE_FORMAT_PROPERTIES_WSI:
+       {
+            VkDisplayFormatPropertiesWSI *dst = pData;
+            size_t size_ret;
+            uint32_t i;
+
+            size_ret = sizeof(*dst) * ARRAY_SIZE(nulldrv_presentable_formats);
+
+            if (dst && *pDataSize < size_ret)
+                return VK_ERROR_INVALID_VALUE;
+
+            *pDataSize = size_ret;
+            if (!dst)
+                return VK_SUCCESS;
+
+            for (i = 0; i < ARRAY_SIZE(nulldrv_presentable_formats); i++)
+                dst[i].swapChainFormat = nulldrv_presentable_formats[i];
+        }
+        break;
+    default:
+        ret = VK_ERROR_INVALID_VALUE;
+        break;
+    }
+
+    return ret;
+}
+
+ICD_EXPORT VkResult VKAPI vkCreateSwapChainWSI(
+    VkDevice                                device,
+    const VkSwapChainCreateInfoWSI*         pCreateInfo,
+    VkSwapChainWSI*                         pSwapChain)
+{
+    NULLDRV_LOG_FUNC;
+    struct nulldrv_dev *dev = nulldrv_dev(device);
+    struct nulldrv_swap_chain *sc;
+
+    sc = (struct nulldrv_swap_chain *) nulldrv_base_create(dev, sizeof(*sc),
+            /*VK_OBJECT_TYPE_SWAP_CHAIN_WSI*//* FIXME: DELETE THIS HACK: */VK_DBG_OBJECT_QUEUE);
+    if (!sc) {
+        return VK_ERROR_OUT_OF_HOST_MEMORY;
+    }
+    sc->dev = dev;
+
+    *pSwapChain = (VkSwapChainWSI *) sc;
+
+    return VK_SUCCESS;
+}
+
+ICD_EXPORT VkResult VKAPI vkDestroySwapChainWSI(
+    VkSwapChainWSI                          swapChain)
+{
+    NULLDRV_LOG_FUNC;
+    struct nulldrv_swap_chain *sc = (struct nulldrv_swap_chain *) swapChain;
+
+    free(sc);
+
+    return VK_SUCCESS;
+}
+
+ICD_EXPORT VkResult VKAPI vkGetSwapChainInfoWSI(
+    VkSwapChainWSI                          swapChain,
+    VkSwapChainInfoTypeWSI                  infoType,
+    size_t*                                 pDataSize,
+    void*                                   pData)
+{
+    NULLDRV_LOG_FUNC;
+    struct nulldrv_swap_chain *sc = (struct nulldrv_swap_chain *) swapChain;
+    struct nulldrv_dev *dev = sc->dev;
+    VkResult ret = VK_SUCCESS;
+
+    if (!pDataSize)
+        return VK_ERROR_INVALID_POINTER;
+
+    switch (infoType) {
+    case VK_SWAP_CHAIN_INFO_TYPE_PERSISTENT_IMAGES_WSI:
+        {
+            VkSwapChainImageInfoWSI *images;
+            const size_t size = sizeof(*images) * 2;
+            uint32_t i;
+
+            if (pData && *pDataSize < size)
+                return VK_ERROR_INVALID_VALUE;
+
+            *pDataSize = size;
+            if (!pData)
+                return VK_SUCCESS;
+
+            images = (VkSwapChainImageInfoWSI *) pData;
+            for (i = 0; i < 2; i++) {
+                struct nulldrv_img *img;
+                struct nulldrv_mem *mem;
+
+                img = (struct nulldrv_img *) nulldrv_base_create(dev,
+                        sizeof(*img),
+                        VK_DBG_OBJECT_IMAGE);
+                if (!img)
+                    return VK_ERROR_OUT_OF_HOST_MEMORY;
+
+                mem = (struct nulldrv_mem *) nulldrv_base_create(dev,
+                        sizeof(*mem),
+                        VK_DBG_OBJECT_GPU_MEMORY);
+                if (!mem)
+                    return VK_ERROR_OUT_OF_HOST_MEMORY;
+
+                images[i].image = (VkImage) img;
+                images[i].memory = (VkDeviceMemory) mem;
+            }
+        }
+        break;
+    default:
+        ret = VK_ERROR_INVALID_VALUE;
+        break;
+    }
+
+    return ret;
+}
+
+ICD_EXPORT VkResult VKAPI vkQueuePresentWSI(
+    VkQueue                                 queue_,
+    const VkPresentInfoWSI*                 pPresentInfo)
+{
+    NULLDRV_LOG_FUNC;
+
+    return VK_SUCCESS;
+}
+
 ICD_EXPORT void VKAPI vkCmdCopyBuffer(
     VkCmdBuffer                              cmdBuffer,
     VkBuffer                                  srcBuffer,
@@ -1306,7 +1450,24 @@ ICD_EXPORT VkResult VKAPI vkGetFormatInfo(
     void*                                       pData)
 {
     NULLDRV_LOG_FUNC;
-    return VK_SUCCESS;
+    struct nulldrv_dev *dev = nulldrv_dev(device);
+    VkFormatProperties *fmt = (VkFormatProperties *) pData;
+    VkResult ret = VK_SUCCESS;
+
+    switch (infoType) {
+    case VK_FORMAT_INFO_TYPE_PROPERTIES:
+        *pDataSize = sizeof(VkFormatProperties);
+        if (pData == NULL)
+            return ret;
+        fmt->linearTilingFeatures = VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT;
+        fmt->optimalTilingFeatures = fmt->linearTilingFeatures;
+        break;
+    default:
+        ret = VK_ERROR_INVALID_VALUE;
+        break;
+    }
+
+    return ret;
 }
 
 ICD_EXPORT VkResult VKAPI vkGetPhysicalDeviceInfo(
@@ -1316,7 +1477,67 @@ ICD_EXPORT VkResult VKAPI vkGetPhysicalDeviceInfo(
     void*                                       pData)
 {
     NULLDRV_LOG_FUNC;
-    return VK_SUCCESS;
+    struct nulldrv_gpu *gpu = nulldrv_gpu(gpu_);
+    VkResult ret = VK_SUCCESS;
+
+    switch (infoType) {
+    case VK_PHYSICAL_DEVICE_INFO_TYPE_PROPERTIES:
+      {
+        VkPhysicalDeviceProperties *props =
+            (VkPhysicalDeviceProperties *) pData;
+        *pDataSize = sizeof(VkPhysicalDeviceProperties);
+        if (pData == NULL) {
+            return ret;
+        }
+        props->apiVersion = VK_API_VERSION;
+        props->driverVersion = 0; // Appropriate that the nulldrv have 0's
+        props->vendorId = 0;
+        props->deviceId = 0;
+        props->deviceType = VK_PHYSICAL_DEVICE_TYPE_OTHER;
+        strncpy(props->deviceName, "nulldrv", strlen("nulldrv"));
+        props->maxInlineMemoryUpdateSize = 0;
+        props->maxBoundDescriptorSets = 0;
+        props->maxThreadGroupSize = 0;
+        props->timestampFrequency = 0;
+        props->multiColorAttachmentClears = false;
+        break;
+      }
+    case VK_PHYSICAL_DEVICE_INFO_TYPE_PERFORMANCE:
+      {
+        VkPhysicalDevicePerformance *perf =
+            (VkPhysicalDevicePerformance *) pData;
+        *pDataSize = sizeof(VkPhysicalDevicePerformance);
+        if (pData == NULL) {
+            return ret;
+        }
+        perf->maxDeviceClock = 1.0f;
+        perf->aluPerClock = 1.0f;
+        perf->texPerClock = 1.0f;
+        perf->primsPerClock = 1.0f;
+        perf->pixelsPerClock = 1.0f;
+        break;
+      }
+    case VK_PHYSICAL_DEVICE_INFO_TYPE_QUEUE_PROPERTIES:
+      {
+        VkPhysicalDeviceQueueProperties *props =
+            (VkPhysicalDeviceQueueProperties *) pData;
+        *pDataSize = sizeof(VkPhysicalDeviceQueueProperties);
+        if (pData == NULL) {
+            return ret;
+        }
+        props->queueFlags = VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_MEMMGR_BIT;
+        props->queueCount = 1;
+        props->maxAtomicCounters = 1;
+        props->supportsTimestamps = false;
+        props->maxMemReferences = 1;
+        break;
+      }
+    default:
+/* FIXME: WRITE THE REAL CODE*/return ret;
+        break;
+    }
+
+    return ret;
 }
 
 ICD_EXPORT VkResult VKAPI vkGetGlobalExtensionInfo(
@@ -1325,6 +1546,7 @@ ICD_EXPORT VkResult VKAPI vkGetGlobalExtensionInfo(
                                                size_t*  pDataSize,
                                                void*    pData)
 {
+    VkExtensionProperties *ext_props;
     uint32_t *count;
 
     if (pDataSize == NULL)
@@ -1336,14 +1558,19 @@ ICD_EXPORT VkResult VKAPI vkGetGlobalExtensionInfo(
             if (pData == NULL)
                 return VK_SUCCESS;
             count = (uint32_t *) pData;
-            *count = 0;
+            *count = 1;
             break;
         case VK_EXTENSION_INFO_TYPE_PROPERTIES:
-            *pDataSize = 0;
+            *pDataSize = sizeof(VkExtensionProperties);
             if (pData == NULL)
                 return VK_SUCCESS;
-            else
-                return VK_ERROR_INVALID_EXTENSION;
+            else {
+                ext_props = (VkExtensionProperties *) pData;
+                ext_props->version = VK_WSI_LUNARG_REVISION;
+                strncpy(ext_props->extName, "VK_WSI_LunarG",
+                        strlen("VK_WSI_LunarG")+1);
+                return VK_SUCCESS;
+            }
             break;
         default:
             return VK_ERROR_INVALID_VALUE;
