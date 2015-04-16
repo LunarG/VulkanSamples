@@ -27,7 +27,7 @@
 #include "glvreplay_vk_settings.h"
 #include "layers_config.h"
 // declared as extern in header
-static glvreplay_vk_settings s_defaultVkReplaySettings = { 1, "DrawState,ObjectTracker",
+static glvreplay_vk_settings s_defaultVkReplaySettings = { 1, "",
                                                             STRINGIFY(VK_DBG_LAYER_LEVEL_ERROR), STRINGIFY(VK_DBG_LAYER_ACTION_CALLBACK),
                                                             STRINGIFY(VK_DBG_LAYER_LEVEL_ERROR), STRINGIFY(VK_DBG_LAYER_ACTION_CALLBACK),
                                                             STRINGIFY(VK_DBG_LAYER_LEVEL_ERROR), STRINGIFY(VK_DBG_LAYER_ACTION_CALLBACK)};
