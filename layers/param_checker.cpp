@@ -213,13 +213,6 @@ void PreCreateDevice(VkPhysicalGpu gpu, const VkDeviceCreateInfo* pCreateInfo)
         }
     }
 
-    if(!validate_VkValidationLevel(pCreateInfo->maxValidationLevel))
-    {
-        char const str[] = "vkCreateDevice parameter, VkValidationLevel pCreateInfo->maxValidationLevel, is "\
-            "unrecognized (precondition).";
-        layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
-        return;
-    }
 }
 
 void PostCreateDevice(VkResult result, VkDevice* pDevice)
@@ -1871,11 +1864,6 @@ VK_LAYER_EXPORT void VKAPI vkCmdEndRenderPass(VkCmdBuffer cmdBuffer, VkRenderPas
 
 VK_LAYER_EXPORT VkResult VKAPI vkDbgSetValidationLevel(VkDevice device, VkValidationLevel validationLevel)
 {
-    char str[1024];
-    if (!validate_VkValidationLevel(validationLevel)) {
-        sprintf(str, "Parameter validationLevel to function DbgSetValidationLevel has invalid value of %i.", (int)validationLevel);
-        layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
-    }
     VkResult result = nextTable.DbgSetValidationLevel(device, validationLevel);
     return result;
 }

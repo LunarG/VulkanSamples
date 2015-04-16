@@ -8,6 +8,21 @@ extern "C"
 {
 #endif // __cplusplus
 
+typedef enum VkValidationLevel_
+{
+    VK_VALIDATION_LEVEL_0                                   = 0x00000000,
+    VK_VALIDATION_LEVEL_1                                   = 0x00000001,
+    VK_VALIDATION_LEVEL_2                                   = 0x00000002,
+    VK_VALIDATION_LEVEL_3                                   = 0x00000003,
+    VK_VALIDATION_LEVEL_4                                   = 0x00000004,
+
+    VK_VALIDATION_LEVEL_BEGIN_RANGE                         = VK_VALIDATION_LEVEL_0,
+    VK_VALIDATION_LEVEL_END_RANGE                           = VK_VALIDATION_LEVEL_4,
+    VK_NUM_VALIDATION_LEVEL                                 = (VK_VALIDATION_LEVEL_END_RANGE - VK_VALIDATION_LEVEL_BEGIN_RANGE + 1),
+
+    VK_MAX_ENUM(VkValidationLevel)
+} VkValidationLevel;
+
 typedef enum _VK_DBG_MSG_TYPE
 {
     VK_DBG_MSG_UNKNOWN      = 0x0,

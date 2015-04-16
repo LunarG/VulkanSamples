@@ -1758,7 +1758,6 @@ static void demo_init_vk(struct demo *demo)
         .pRequestedQueues = &queue,
         .extensionCount = 1,
         .ppEnabledExtensionNames = ext_names,
-        .maxValidationLevel = VK_VALIDATION_LEVEL_END_RANGE,
         .flags = VK_DEVICE_CREATE_VALIDATION_BIT,
     };
     VkResult err;

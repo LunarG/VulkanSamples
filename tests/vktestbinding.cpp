@@ -405,7 +405,6 @@ void Device::init(bool enable_layers)
     dev_info.pRequestedQueues = &queue_info[0];
     dev_info.extensionCount = exts.size();
     dev_info.ppEnabledExtensionNames = &exts[0];
-    dev_info.maxValidationLevel = VK_VALIDATION_LEVEL_END_RANGE;
     dev_info.flags = VK_DEVICE_CREATE_VALIDATION_BIT;
 
     init(dev_info);

@@ -716,20 +716,6 @@ typedef enum VkObjectInfoType_
     VK_MAX_ENUM(VkObjectInfoType)
 } VkObjectInfoType;
 
-typedef enum VkValidationLevel_
-{
-    VK_VALIDATION_LEVEL_0                                   = 0x00000000,
-    VK_VALIDATION_LEVEL_1                                   = 0x00000001,
-    VK_VALIDATION_LEVEL_2                                   = 0x00000002,
-    VK_VALIDATION_LEVEL_3                                   = 0x00000003,
-    VK_VALIDATION_LEVEL_4                                   = 0x00000004,
-
-    VK_VALIDATION_LEVEL_BEGIN_RANGE                         = VK_VALIDATION_LEVEL_0,
-    VK_VALIDATION_LEVEL_END_RANGE                           = VK_VALIDATION_LEVEL_4,
-    VK_NUM_VALIDATION_LEVEL                                 = (VK_VALIDATION_LEVEL_END_RANGE - VK_VALIDATION_LEVEL_BEGIN_RANGE + 1),
-
-    VK_MAX_ENUM(VkValidationLevel)
-} VkValidationLevel;
 
 // ------------------------------------------------------------------------------------------------
 // Error and return codes
@@ -1422,7 +1408,6 @@ typedef struct VkDeviceCreateInfo_
     const VkDeviceQueueCreateInfo*              pRequestedQueues;
     uint32_t                                    extensionCount;
     const char*const*                           ppEnabledExtensionNames;
-    VkValidationLevel                           maxValidationLevel;
     VkFlags                                     flags;                      // VkDeviceCreateFlags
 } VkDeviceCreateInfo;
 
