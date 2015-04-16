@@ -383,7 +383,7 @@ ICD_EXPORT VkResult VKAPI vkQueueSubmit(
 
     if (ret == VK_SUCCESS) {
         intel_fence_set_seqno(queue->fence,
-                intel_bo_ref(intel_cmd_get_batch(last_cmd, NULL)));
+                intel_cmd_get_batch(last_cmd, NULL));
 
         if (fence_ != VK_NULL_HANDLE) {
             struct intel_fence *fence = intel_fence(fence_);
