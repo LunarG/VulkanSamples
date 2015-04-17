@@ -191,8 +191,6 @@ VK_LAYER_EXPORT VkResult VKAPI vkGetGlobalExtensionInfo(
                                                size_t*  pDataSize,
                                                void*    pData)
 {
-    VkResult result;
-
     /* This entrypoint is NOT going to init it's own dispatch table since loader calls here early */
     VkExtensionProperties *ext_props;
     uint32_t *count;
@@ -283,7 +281,7 @@ describe_type(char *dst, shader_source const *src, unsigned type)
             {
                 unsigned oplen = code[0] >> 16;
                 dst += sprintf(dst, "struct of (");
-                for (int i = 2; i < oplen; i++) {
+                for (unsigned i = 2; i < oplen; i++) {
                     dst = describe_type(dst, src, code[i]);
                     dst += sprintf(dst, i == oplen-1 ? ")" : ", ");
                 }
@@ -349,7 +347,7 @@ types_match(shader_source const *a, shader_source const *b, unsigned a_type, uns
                     return false;   /* structs cannot match if member counts differ */
                 }
 
-                for (int i = 2; i < a_len; i++) {
+                for (unsigned i = 2; i < a_len; i++) {
                     if (!types_match(a, b, a_code[i], b_code[i])) {
                         return false;
                     }
@@ -390,7 +388,7 @@ struct interface_var {
 
 
 static void
-collect_interface_by_location(shader_source const *src, spv::StorageClass interface,
+collect_interface_by_location(shader_source const *src, spv::StorageClass sinterface,
                               std::map<uint32_t, interface_var> &out,
                               std::map<uint32_t, interface_var> &builtins_out)
 {
@@ -429,7 +427,7 @@ collect_interface_by_location(shader_source const *src, spv::StorageClass interf
         /* TODO: handle index=1 dual source outputs from FS -- two vars will
          * have the same location, and we DONT want to clobber. */
 
-        if (opcode == spv::OpVariable && code[word+3] == interface) {
+        if (opcode == spv::OpVariable && code[word+3] == sinterface) {
             int location = value_or_default(var_locations, code[word+2], -1);
             int builtin = value_or_default(var_builtins, code[word+2], -1);
 
@@ -440,7 +438,7 @@ collect_interface_by_location(shader_source const *src, spv::StorageClass interf
                  */
                 char str[1024];
                 sprintf(str, "var %d (type %d) in %s interface has no Location or Builtin decoration\n",
-                       code[word+2], code[word+1], storage_class_name(interface));
+                       code[word+2], code[word+1], storage_class_name(sinterface));
                 layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, NULL, 0, SHADER_CHECKER_INCONSISTENT_SPIRV, "SC", str);
             }
             else if (location != -1) {
@@ -595,7 +593,7 @@ validate_vi_against_vs_inputs(VkPipelineVertexInputCreateInfo const *vi, shader_
 
     /* Build index by location */
     std::map<uint32_t, VkVertexInputAttributeDescription const *> attribs;
-    for (int i = 0; i < vi->attributeCount; i++)
+    for (unsigned i = 0; i < vi->attributeCount; i++)
         attribs[vi->pVertexAttributeDescriptions[i].location] = &vi->pVertexAttributeDescriptions[i];
 
     auto it_a = attribs.begin();
@@ -644,7 +642,7 @@ validate_fs_outputs_against_cb(shader_source const *fs, VkPipelineCbStateCreateI
             broadcast_err = true;
         }
 
-        for (int i = 0; i < cb->attachmentCount; i++) {
+        for (unsigned i = 0; i < cb->attachmentCount; i++) {
             unsigned attachmentType = get_format_type(cb->pAttachments[i].format);
             if (attachmentType == FORMAT_TYPE_SINT || attachmentType == FORMAT_TYPE_UINT) {
                 layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, SHADER_CHECKER_INTERFACE_TYPE_MISMATCH, "SC",
