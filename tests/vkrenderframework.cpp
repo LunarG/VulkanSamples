@@ -85,21 +85,21 @@ void VkRenderFramework::InitFramework()
 
 void VkRenderFramework::ShutdownFramework()
 {
-    if (m_colorBlend) vkDestroyObject(m_colorBlend);
-    if (m_stateDepthStencil) vkDestroyObject(m_stateDepthStencil);
-    if (m_stateRaster) vkDestroyObject(m_stateRaster);
-    if (m_cmdBuffer) vkDestroyObject(m_cmdBuffer);
-    if (m_framebuffer) vkDestroyObject(m_framebuffer);
-    if (m_renderPass) vkDestroyObject(m_renderPass);
+    if (m_colorBlend) vkDestroyObject(device(), VK_OBJECT_TYPE_DYNAMIC_CB_STATE, m_colorBlend);
+    if (m_stateDepthStencil) vkDestroyObject(device(), VK_OBJECT_TYPE_DYNAMIC_DS_STATE, m_stateDepthStencil);
+    if (m_stateRaster) vkDestroyObject(device(), VK_OBJECT_TYPE_DYNAMIC_RS_STATE, m_stateRaster);
+    if (m_cmdBuffer) vkDestroyObject(device(), VK_OBJECT_TYPE_COMMAND_BUFFER, m_cmdBuffer);
+    if (m_framebuffer) vkDestroyObject(device(), VK_OBJECT_TYPE_FRAMEBUFFER, m_framebuffer);
+    if (m_renderPass) vkDestroyObject(device(), VK_OBJECT_TYPE_RENDER_PASS, m_renderPass);
 
     if (m_stateViewport) {
-        vkDestroyObject(m_stateViewport);
+        vkDestroyObject(device(), VK_OBJECT_TYPE_DYNAMIC_VP_STATE, m_stateViewport);
     }
     while (!m_renderTargets.empty()) {
-        vkDestroyObject(m_renderTargets.back()->targetView());
-        vkQueueBindObjectMemory(m_device->m_queue, m_renderTargets.back()->image(), 0, VK_NULL_HANDLE, 0);
-        vkDestroyObject(m_renderTargets.back()->image());
-        vkFreeMemory(m_renderTargets.back()->memory());
+        vkDestroyObject(device(), VK_OBJECT_TYPE_COLOR_ATTACHMENT_VIEW, m_renderTargets.back()->targetView());
+        vkQueueBindObjectMemory(m_device->m_queue, VK_OBJECT_TYPE_IMAGE, m_renderTargets.back()->image(), 0, VK_NULL_HANDLE, 0);
+        vkDestroyObject(device(), VK_OBJECT_TYPE_IMAGE, m_renderTargets.back()->image());
+        vkFreeMemory(device(), m_renderTargets.back()->memory());
         m_renderTargets.pop_back();
     }
 

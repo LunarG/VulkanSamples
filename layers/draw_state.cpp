@@ -1546,10 +1546,10 @@ VK_LAYER_EXPORT VkResult VKAPI vkQueueSubmit(VkQueue queue, uint32_t cmdBufferCo
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkDestroyObject(VkObject object)
+VK_LAYER_EXPORT VkResult VKAPI vkDestroyObject(VkDevice device, VkObjectType objType, VkObject object)
 {
     // TODO : When wrapped objects (such as dynamic state) are destroyed, need to clean up memory
-    VkResult result = nextTable.DestroyObject(object);
+    VkResult result = nextTable.DestroyObject(device, objType, object);
     return result;
 }
 
@@ -1746,13 +1746,13 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateDescriptorPool(VkDevice device, VkDescrip
         // Insert this pool into Global Pool LL at head
         char str[1024];
         sprintf(str, "Created Descriptor Pool %p", (void*)*pDescriptorPool);
-        layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, (VkBaseObject)pDescriptorPool, 0, DRAWSTATE_NONE, "DS", str);
+        layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, (VkObject)pDescriptorPool, 0, DRAWSTATE_NONE, "DS", str);
         loader_platform_thread_lock_mutex(&globalLock);
         POOL_NODE* pNewNode = new POOL_NODE;
         if (NULL == pNewNode) {
             char str[1024];
             sprintf(str, "Out of memory while attempting to allocate POOL_NODE in vkCreateDescriptorPool()");
-            layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, (VkBaseObject)*pDescriptorPool, 0, DRAWSTATE_OUT_OF_MEMORY, "DS", str);
+            layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, (VkObject)*pDescriptorPool, 0, DRAWSTATE_OUT_OF_MEMORY, "DS", str);
         }
         else {
             memset(pNewNode, 0, sizeof(POOL_NODE));
@@ -1777,18 +1777,18 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateDescriptorPool(VkDevice device, VkDescrip
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkResetDescriptorPool(VkDescriptorPool descriptorPool)
+VK_LAYER_EXPORT VkResult VKAPI vkResetDescriptorPool(VkDevice device, VkDescriptorPool descriptorPool)
 {
-    VkResult result = nextTable.ResetDescriptorPool(descriptorPool);
+    VkResult result = nextTable.ResetDescriptorPool(device, descriptorPool);
     if (VK_SUCCESS == result) {
         clearDescriptorPool(descriptorPool);
     }
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkAllocDescriptorSets(VkDescriptorPool descriptorPool, VkDescriptorSetUsage setUsage, uint32_t count, const VkDescriptorSetLayout* pSetLayouts, VkDescriptorSet* pDescriptorSets, uint32_t* pCount)
+VK_LAYER_EXPORT VkResult VKAPI vkAllocDescriptorSets(VkDevice device, VkDescriptorPool descriptorPool, VkDescriptorSetUsage setUsage, uint32_t count, const VkDescriptorSetLayout* pSetLayouts, VkDescriptorSet* pDescriptorSets, uint32_t* pCount)
 {
-    VkResult result = nextTable.AllocDescriptorSets(descriptorPool, setUsage, count, pSetLayouts, pDescriptorSets, pCount);
+    VkResult result = nextTable.AllocDescriptorSets(device, descriptorPool, setUsage, count, pSetLayouts, pDescriptorSets, pCount);
     if ((VK_SUCCESS == result) || (*pCount > 0)) {
         POOL_NODE *pPoolNode = getPoolNode(descriptorPool);
         if (!pPoolNode) {
@@ -1837,15 +1837,15 @@ VK_LAYER_EXPORT VkResult VKAPI vkAllocDescriptorSets(VkDescriptorPool descriptor
     return result;
 }
 
-VK_LAYER_EXPORT void VKAPI vkClearDescriptorSets(VkDescriptorPool descriptorPool, uint32_t count, const VkDescriptorSet* pDescriptorSets)
+VK_LAYER_EXPORT void VKAPI vkClearDescriptorSets(VkDevice device, VkDescriptorPool descriptorPool, uint32_t count, const VkDescriptorSet* pDescriptorSets)
 {
     for (uint32_t i = 0; i < count; i++) {
         clearDescriptorSet(pDescriptorSets[i]);
     }
-    nextTable.ClearDescriptorSets(descriptorPool, count, pDescriptorSets);
+    nextTable.ClearDescriptorSets(device, descriptorPool, count, pDescriptorSets);
 }
 
-VK_LAYER_EXPORT void VKAPI vkUpdateDescriptors(VkDescriptorSet descriptorSet, uint32_t updateCount, const void** ppUpdateArray)
+VK_LAYER_EXPORT void VKAPI vkUpdateDescriptors(VkDevice device, VkDescriptorSet descriptorSet, uint32_t updateCount, const void** ppUpdateArray)
 {
     SET_NODE* pSet = getSetNode(descriptorSet);
     if (!dsUpdateActive(descriptorSet)) {
@@ -1858,7 +1858,7 @@ VK_LAYER_EXPORT void VKAPI vkUpdateDescriptors(VkDescriptorSet descriptorSet, ui
         dsUpdate(descriptorSet, updateCount, ppUpdateArray);
     }
 
-    nextTable.UpdateDescriptors(descriptorSet, updateCount, ppUpdateArray);
+    nextTable.UpdateDescriptors(device, descriptorSet, updateCount, ppUpdateArray);
 }
 
 VK_LAYER_EXPORT VkResult VKAPI vkCreateDynamicViewportState(VkDevice device, const VkDynamicVpStateCreateInfo* pCreateInfo, VkDynamicVpState* pState)

@@ -87,12 +87,12 @@ VK_LAYER_EXPORT VkResult VKAPI multi1CreateGraphicsPipeline(VkDevice device, con
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI multi1StorePipeline(VkPipeline pipeline, size_t* pDataSize, void* pData)
+VK_LAYER_EXPORT VkResult VKAPI multi1StorePipeline(VkDevice device, VkPipeline pipeline, size_t* pDataSize, void* pData)
 {
     VkLayerDispatchTable* pTable = tableMap1[pipeline];
 
     printf("At start of multi1 layer vkStorePipeline()\n");
-    VkResult result = pTable->StorePipeline(pipeline, pDataSize, pData);
+    VkResult result = pTable->StorePipeline(device, pipeline, pDataSize, pData);
     printf("Completed multi1 layer vkStorePipeline()\n");
     return result;
 }

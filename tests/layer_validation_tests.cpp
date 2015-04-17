@@ -6,7 +6,7 @@
 void VKAPI myDbgFunc(
     VK_DBG_MSG_TYPE     msgType,
     VkValidationLevel validationLevel,
-    VkBaseObject      srcObject,
+    VkObject             srcObject,
     size_t               location,
     int32_t              msgCode,
     const char*          pMsg,
@@ -42,9 +42,9 @@ private:
 
 };
 void VKAPI myDbgFunc(
-    VK_DBG_MSG_TYPE     msgType,
-    VkValidationLevel validationLevel,
-    VkBaseObject      srcObject,
+    VK_DBG_MSG_TYPE      msgType,
+    VkValidationLevel    validationLevel,
+    VkObject             srcObject,
     size_t               location,
     int32_t              msgCode,
     const char*          pMsg,

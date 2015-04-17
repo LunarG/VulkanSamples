@@ -62,7 +62,7 @@ struct intel_obj {
     size_t offset;
 };
 
-static inline struct intel_base *intel_base(VkBaseObject base)
+static inline struct intel_base *intel_base(VkObject base)
 {
     return (struct intel_base *) base;
 }

@@ -773,7 +773,7 @@ TEST_F(VkCmdCopyBufferTest, RAWHazard)
     err = vkCreateEvent(dev_.obj(), &event_info, &event);
     ASSERT_VK_SUCCESS(err);
 
-    err = vkGetObjectInfo(event, VK_OBJECT_INFO_TYPE_MEMORY_REQUIREMENTS,
+    err = vkGetObjectInfo(dev_.obj(), VK_OBJECT_TYPE_EVENT, event, VK_OBJECT_INFO_TYPE_MEMORY_REQUIREMENTS,
                            &data_size, &mem_req);
     ASSERT_VK_SUCCESS(err);
 
@@ -794,10 +794,10 @@ TEST_F(VkCmdCopyBufferTest, RAWHazard)
     err = vkAllocMemory(dev_.obj(), &mem_info, &event_mem);
     ASSERT_VK_SUCCESS(err);
 
-    err = vkQueueBindObjectMemory(queue_.obj(), event, 0, event_mem, 0);
+    err = vkQueueBindObjectMemory(queue_.obj(), VK_OBJECT_TYPE_EVENT, event, 0, event_mem, 0);
     ASSERT_VK_SUCCESS(err);
 
-    err = vkResetEvent(event);
+    err = vkResetEvent(dev_.obj(), event);
     ASSERT_VK_SUCCESS(err);
 
     for (int i = 0; i < ARRAY_SIZE(bufs); i++) {
@@ -852,13 +852,13 @@ TEST_F(VkCmdCopyBufferTest, RAWHazard)
     bufs[2].unmap();
 
     // All done with event memory, clean up
-    err = vkQueueBindObjectMemory(queue_.obj(), event, 0, VK_NULL_HANDLE, 0);
+    err = vkQueueBindObjectMemory(queue_.obj(), VK_OBJECT_TYPE_EVENT, event, 0, VK_NULL_HANDLE, 0);
     ASSERT_VK_SUCCESS(err);
 
-    err = vkDestroyObject(event);
+    err = vkDestroyObject(dev_.obj(), VK_OBJECT_TYPE_EVENT, event);
     ASSERT_VK_SUCCESS(err);
 
-    err = vkFreeMemory(event_mem);
+    err = vkFreeMemory(dev_.obj(), event_mem);
     ASSERT_VK_SUCCESS(err);
 }
 

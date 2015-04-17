@@ -132,7 +132,7 @@ class LoaderEntrypointsSubcommand(Subcommand):
             pcount = proto.params[-1].name
             setup.append("uint32_t i;")
             setup.append("for (i = 0; i < *%s; i++)" % pcount)
-            setup.append("    %s(%s[i], disp);" % (method, psets))
+            setup.append("    %s((void*)%s[i], disp);" % (method, psets))
         elif proto.name == "GetPhysicalDeviceInfo":
             ptype = proto.params[-3].name
             psize = proto.params[-2].name
@@ -159,7 +159,7 @@ class LoaderEntrypointsSubcommand(Subcommand):
         else:
             obj_params = proto.object_out_params()
             for param in obj_params:
-                setup.append("%s(*%s, disp);" % (method, param.name))
+                setup.append("%s((void*)*%s, disp);" % (method, param.name))
 
         if setup:
             joined = "\n        ".join(setup)
@@ -192,7 +192,7 @@ class LoaderEntrypointsSubcommand(Subcommand):
             func.append("")
 
             # get dispatch table
-            func.append("    disp = loader_get_data(%s);" %
+            func.append("    disp = loader_get_data((void*)%s);" %
                     proto.params[0].name)
             func.append("")
 

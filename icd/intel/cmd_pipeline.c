@@ -3527,7 +3527,7 @@ ICD_EXPORT void VKAPI vkCmdBeginRenderPass(
 {
    struct intel_cmd *cmd = intel_cmd(cmdBuffer);
 
-   cmd_begin_render_pass(cmd, (struct intel_render_pass *) pRenderPassBegin->renderPass, pRenderPassBegin->framebuffer);
+   cmd_begin_render_pass(cmd, (struct intel_render_pass *) pRenderPassBegin->renderPass, (struct intel_fb *) pRenderPassBegin->framebuffer);
 }
 
 ICD_EXPORT void VKAPI vkCmdEndRenderPass(

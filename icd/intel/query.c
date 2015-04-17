@@ -234,6 +234,7 @@ ICD_EXPORT VkResult VKAPI vkCreateQueryPool(
 }
 
 ICD_EXPORT VkResult VKAPI vkGetQueryPoolResults(
+    VkDevice                                    device,
     VkQueryPool                                 queryPool,
     uint32_t                                    startQuery,
     uint32_t                                    queryCount,

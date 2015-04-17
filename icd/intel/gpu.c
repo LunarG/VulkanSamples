@@ -71,7 +71,7 @@ static int gpu_open_render_node(struct intel_gpu *gpu)
     if (gpu->render_fd_internal < 0 && gpu->render_node) {
         gpu->render_fd_internal = open(gpu->render_node, O_RDWR);
         if (gpu->render_fd_internal < 0) {
-            intel_log(gpu, VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0,
+            intel_log(gpu, VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, VK_NULL_HANDLE, 0,
                     0, "failed to open %s", gpu->render_node);
         }
     }

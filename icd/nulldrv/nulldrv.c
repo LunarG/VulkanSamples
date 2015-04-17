@@ -43,7 +43,7 @@ static const char * const nulldrv_gpu_exts[NULLDRV_EXT_COUNT] = {
 	[NULLDRV_EXT_WSI_LUNARG] = "VK_WSI_LunarG",
 };
 
-static struct nulldrv_base *nulldrv_base(VkBaseObject base)
+static struct nulldrv_base *nulldrv_base(VkObject base)
 {
     return (struct nulldrv_base *) base;
 }
@@ -1335,7 +1335,7 @@ ICD_EXPORT VkResult VKAPI vkGetDeviceQueue(
 {
     NULLDRV_LOG_FUNC;
     struct nulldrv_dev *dev = nulldrv_dev(device);
-    *pQueue = dev->queues[0];
+    *pQueue = (VkQueue) dev->queues[0];
     return VK_SUCCESS;
 }
 
@@ -1383,6 +1383,7 @@ ICD_EXPORT VkResult VKAPI vkCreateEvent(
 }
 
 ICD_EXPORT VkResult VKAPI vkGetEventStatus(
+    VkDevice                                  device,
     VkEvent                                   event_)
 {
     NULLDRV_LOG_FUNC;
@@ -1390,6 +1391,7 @@ ICD_EXPORT VkResult VKAPI vkGetEventStatus(
 }
 
 ICD_EXPORT VkResult VKAPI vkSetEvent(
+    VkDevice                                  device,
     VkEvent                                   event_)
 {
     NULLDRV_LOG_FUNC;
@@ -1397,6 +1399,7 @@ ICD_EXPORT VkResult VKAPI vkSetEvent(
 }
 
 ICD_EXPORT VkResult VKAPI vkResetEvent(
+    VkDevice                                  device,
     VkEvent                                   event_)
 {
     NULLDRV_LOG_FUNC;
@@ -1416,6 +1419,7 @@ ICD_EXPORT VkResult VKAPI vkCreateFence(
 }
 
 ICD_EXPORT VkResult VKAPI vkGetFenceStatus(
+    VkDevice                                  device,
     VkFence                                   fence_)
 {
     NULLDRV_LOG_FUNC;
@@ -1643,9 +1647,10 @@ ICD_EXPORT VkResult VKAPI vkCreateImage(
 }
 
 ICD_EXPORT VkResult VKAPI vkGetImageSubresourceInfo(
-    VkImage                                   image,
-    const VkImageSubresource*                pSubresource,
-    VkSubresourceInfoType                   infoType,
+    VkDevice                                    device,
+    VkImage                                     image,
+    const VkImageSubresource*                   pSubresource,
+    VkSubresourceInfoType                       infoType,
     size_t*                                     pDataSize,
     void*                                       pData)
 {
@@ -1687,6 +1692,7 @@ ICD_EXPORT VkResult VKAPI vkAllocMemory(
 }
 
 ICD_EXPORT VkResult VKAPI vkFreeMemory(
+    VkDevice                                    device,
     VkDeviceMemory                              mem_)
 {
     NULLDRV_LOG_FUNC;
@@ -1694,14 +1700,16 @@ ICD_EXPORT VkResult VKAPI vkFreeMemory(
 }
 
 ICD_EXPORT VkResult VKAPI vkSetMemoryPriority(
+    VkDevice                                    device,
     VkDeviceMemory                              mem_,
-    VkMemoryPriority                         priority)
+    VkMemoryPriority                            priority)
 {
     NULLDRV_LOG_FUNC;
     return VK_SUCCESS;
 }
 
 ICD_EXPORT VkResult VKAPI vkMapMemory(
+    VkDevice                                    device,
     VkDeviceMemory                              mem_,
     VkDeviceSize                                offset,
     VkDeviceSize                                size,
@@ -1718,6 +1726,7 @@ ICD_EXPORT VkResult VKAPI vkMapMemory(
 }
 
 ICD_EXPORT VkResult VKAPI vkUnmapMemory(
+    VkDevice                                    device,
     VkDeviceMemory                              mem_)
 {
     NULLDRV_LOG_FUNC;
@@ -1725,6 +1734,7 @@ ICD_EXPORT VkResult VKAPI vkUnmapMemory(
 }
 
 ICD_EXPORT VkResult VKAPI vkFlushMappedMemory(
+    VkDevice                                  device,
     VkDeviceMemory                            mem_,
     VkDeviceSize                              offset,
     VkDeviceSize                              size)
@@ -1775,7 +1785,7 @@ ICD_EXPORT VkResult VKAPI vkCreateInstance(
 
     inst->obj.base.get_info = NULL;
 
-    *pInstance = (VkInstance*)inst;
+    *pInstance = (VkInstance) inst;
 
     return VK_SUCCESS;
 }
@@ -1842,6 +1852,8 @@ ICD_EXPORT VkResult VKAPI vkDbgSetGlobalOption(
 }
 
 ICD_EXPORT VkResult VKAPI vkDestroyObject(
+    VkDevice                                  device,
+    VkObjectType                                objType,
     VkObject                                  object)
 {
     NULLDRV_LOG_FUNC;
@@ -1849,8 +1861,10 @@ ICD_EXPORT VkResult VKAPI vkDestroyObject(
 }
 
 ICD_EXPORT VkResult VKAPI vkGetObjectInfo(
-    VkBaseObject                             object,
-    VkObjectInfoType                        infoType,
+    VkDevice                                    device,
+    VkObjectType                                objType,
+    VkObject                                    object,
+    VkObjectInfoType                            infoType,
     size_t*                                     pDataSize,
     void*                                       pData)
 {
@@ -1861,8 +1875,9 @@ ICD_EXPORT VkResult VKAPI vkGetObjectInfo(
 }
 
 ICD_EXPORT VkResult VKAPI vkQueueBindObjectMemory(
-    VkQueue                                   queue,
-    VkObject                                  object,
+    VkQueue                                     queue,
+    VkObjectType                                objType,
+    VkObject                                    object,
     uint32_t                                    allocationIdx,
     VkDeviceMemory                              mem_,
     VkDeviceSize                                memOffset)
@@ -1872,8 +1887,9 @@ ICD_EXPORT VkResult VKAPI vkQueueBindObjectMemory(
 }
 
 ICD_EXPORT VkResult VKAPI vkQueueBindObjectMemoryRange(
-    VkQueue                                   queue,
-    VkObject                                  object,
+    VkQueue                                     queue,
+    VkObjectType                                objType,
+    VkObject                                    object,
     uint32_t                                    allocationIdx,
     VkDeviceSize                                rangeOffset,
     VkDeviceSize                                rangeSize,
@@ -1897,7 +1913,8 @@ ICD_EXPORT VkResult VKAPI vkQueueBindImageMemoryRange(
 }
 
 ICD_EXPORT VkResult VKAPI vkDbgSetObjectTag(
-    VkBaseObject                             object,
+    VkDevice                                    device,
+    VkObject                                    object,
     size_t                                      tagSize,
     const void*                                 pTag)
 {
@@ -1940,6 +1957,7 @@ ICD_EXPORT VkResult VKAPI vkCreateComputePipeline(
 }
 
 ICD_EXPORT VkResult VKAPI vkStorePipeline(
+    VkDevice                                  device,
     VkPipeline                                pipeline,
     size_t*                                     pDataSize,
     void*                                       pData)
@@ -1979,7 +1997,8 @@ ICD_EXPORT VkResult VKAPI vkCreateQueryPool(
 }
 
 ICD_EXPORT VkResult VKAPI vkGetQueryPoolResults(
-    VkQueryPool                              queryPool,
+    VkDevice                                    device,
+    VkQueryPool                                 queryPool,
     uint32_t                                    startQuery,
     uint32_t                                    queryCount,
     size_t*                                     pDataSize,
@@ -2235,6 +2254,7 @@ ICD_EXPORT VkResult VKAPI vkCreateDescriptorPool(
 }
 
 ICD_EXPORT VkResult VKAPI vkResetDescriptorPool(
+    VkDevice                                device,
     VkDescriptorPool                        descriptorPool)
 {
     NULLDRV_LOG_FUNC;
@@ -2242,6 +2262,7 @@ ICD_EXPORT VkResult VKAPI vkResetDescriptorPool(
 }
 
 ICD_EXPORT VkResult VKAPI vkAllocDescriptorSets(
+    VkDevice                                device,
     VkDescriptorPool                        descriptorPool,
     VkDescriptorSetUsage                     setUsage,
     uint32_t                                     count,
@@ -2272,6 +2293,7 @@ ICD_EXPORT VkResult VKAPI vkAllocDescriptorSets(
 }
 
 ICD_EXPORT void VKAPI vkClearDescriptorSets(
+    VkDevice                                device,
     VkDescriptorPool                        descriptorPool,
     uint32_t                                     count,
     const VkDescriptorSet*                    pDescriptorSets)
@@ -2280,6 +2302,7 @@ ICD_EXPORT void VKAPI vkClearDescriptorSets(
 }
 
 ICD_EXPORT void VKAPI vkUpdateDescriptors(
+    VkDevice                                  device,
     VkDescriptorSet                           descriptorSet,
     uint32_t                                     updateCount,
     const void**                                 ppUpdateArray)

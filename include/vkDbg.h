@@ -118,9 +118,9 @@ typedef enum _VK_DBG_OBJECT_TYPE
 } VK_DBG_OBJECT_TYPE;
 
 typedef void (VKAPI *VK_DBG_MSG_CALLBACK_FUNCTION)(
-    VK_DBG_MSG_TYPE     msgType,
-    VkValidationLevel validationLevel,
-    VkBaseObject      srcObject,
+    VK_DBG_MSG_TYPE      msgType,
+    VkValidationLevel    validationLevel,
+    VkObject             srcObject,
     size_t               location,
     int32_t              msgCode,
     const char*          pMsg,
@@ -131,7 +131,7 @@ typedef VkResult (VKAPI *PFN_vkDbgSetValidationLevel)(VkDevice device, VkValidat
 typedef VkResult (VKAPI *PFN_vkDbgRegisterMsgCallback)(VkInstance instance, VK_DBG_MSG_CALLBACK_FUNCTION pfnMsgCallback, void* pUserData);
 typedef VkResult (VKAPI *PFN_vkDbgUnregisterMsgCallback)(VkInstance instance, VK_DBG_MSG_CALLBACK_FUNCTION pfnMsgCallback);
 typedef VkResult (VKAPI *PFN_vkDbgSetMessageFilter)(VkDevice device, int32_t msgCode, VK_DBG_MSG_FILTER filter);
-typedef VkResult (VKAPI *PFN_vkDbgSetObjectTag)(VkBaseObject object, size_t tagSize, const void* pTag);
+typedef VkResult (VKAPI *PFN_vkDbgSetObjectTag)(VkDevice device, VkObject object, size_t tagSize, const void* pTag);
 typedef VkResult (VKAPI *PFN_vkDbgSetGlobalOption)(VkInstance instance, VK_DBG_GLOBAL_OPTION dbgOption, size_t dataSize, const void* pData);
 typedef VkResult (VKAPI *PFN_vkDbgSetDeviceOption)(VkDevice device, VK_DBG_DEVICE_OPTION dbgOption, size_t dataSize, const void* pData);
 typedef void (VKAPI *PFN_vkCmdDbgMarkerBegin)(VkCmdBuffer cmdBuffer, const char* pMarker);
@@ -157,7 +157,8 @@ VkResult VKAPI vkDbgSetMessageFilter(
     VK_DBG_MSG_FILTER filter);
 
 VkResult VKAPI vkDbgSetObjectTag(
-    VkBaseObject object,
+    VkDevice        device,
+    VkObject        object,
     size_t          tagSize,
     const void*     pTag);
 

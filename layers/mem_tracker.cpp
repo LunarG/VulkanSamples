@@ -177,7 +177,7 @@ static void deleteFenceInfo(uint64_t fenceId)
             MT_FENCE_INFO* pDelInfo = fenceMap[fenceId];
             if (pDelInfo != NULL) {
                 if (pDelInfo->localFence == VK_TRUE) {
-                    nextTable.DestroyObject(pDelInfo->fence);
+                    nextTable.DestroyObject(globalDevice, VK_OBJECT_TYPE_FENCE, pDelInfo->fence);
                 }
                 delete pDelInfo;
             }
@@ -1074,7 +1074,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkAllocMemory(VkDevice device, const VkMemoryAllo
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkFreeMemory(VkDeviceMemory mem)
+VK_LAYER_EXPORT VkResult VKAPI vkFreeMemory(VkDevice device, VkDeviceMemory mem)
 {
     /* From spec : A memory object is freed by calling vkFreeMemory() when it is no longer needed. Before
      * freeing a memory object, an application must ensure the memory object is unbound from
@@ -1090,19 +1090,19 @@ VK_LAYER_EXPORT VkResult VKAPI vkFreeMemory(VkDeviceMemory mem)
     printObjList();
     printCBList();
     loader_platform_thread_unlock_mutex(&globalLock);
-    VkResult result = nextTable.FreeMemory(mem);
+    VkResult result = nextTable.FreeMemory(device, mem);
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkSetMemoryPriority(VkDeviceMemory mem, VkMemoryPriority priority)
+VK_LAYER_EXPORT VkResult VKAPI vkSetMemoryPriority(VkDevice device, VkDeviceMemory mem, VkMemoryPriority priority)
 {
     // TODO : Update tracking for this alloc
     //  Make sure memory is not pinned, which can't have priority set
-    VkResult result = nextTable.SetMemoryPriority(mem, priority);
+    VkResult result = nextTable.SetMemoryPriority(device, mem, priority);
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkMapMemory(VkDeviceMemory mem, VkDeviceSize offset, VkDeviceSize size, VkFlags flags, void** ppData)
+VK_LAYER_EXPORT VkResult VKAPI vkMapMemory(VkDevice device, VkDeviceMemory mem, VkDeviceSize offset, VkDeviceSize size, VkFlags flags, void** ppData)
 {
     // TODO : Track when memory is mapped
     loader_platform_thread_lock_mutex(&globalLock);
@@ -1113,15 +1113,15 @@ VK_LAYER_EXPORT VkResult VKAPI vkMapMemory(VkDeviceMemory mem, VkDeviceSize offs
         layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, mem, 0, MEMTRACK_INVALID_STATE, "MEM", str);
     }
     loader_platform_thread_unlock_mutex(&globalLock);
-    VkResult result = nextTable.MapMemory(mem, offset, size, flags, ppData);
+    VkResult result = nextTable.MapMemory(device, mem, offset, size, flags, ppData);
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkUnmapMemory(VkDeviceMemory mem)
+VK_LAYER_EXPORT VkResult VKAPI vkUnmapMemory(VkDevice device, VkDeviceMemory mem)
 {
     // TODO : Track as memory gets unmapped, do we want to check what changed following map?
     //   Make sure that memory was ever mapped to begin with
-    VkResult result = nextTable.UnmapMemory(mem);
+    VkResult result = nextTable.UnmapMemory(device, mem);
     return result;
 }
 
@@ -1154,7 +1154,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkOpenPeerImage(VkDevice device, const VkPeerImag
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkDestroyObject(VkObject object)
+VK_LAYER_EXPORT VkResult VKAPI vkDestroyObject(VkDevice device, VkObjectType objType, VkObject object)
 {
     loader_platform_thread_lock_mutex(&globalLock);
 
@@ -1185,22 +1185,38 @@ VK_LAYER_EXPORT VkResult VKAPI vkDestroyObject(VkObject object)
     }
 
     loader_platform_thread_unlock_mutex(&globalLock);
-    VkResult result = nextTable.DestroyObject(object);
+    VkResult result = nextTable.DestroyObject(device, objType, object);
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkGetObjectInfo(VkBaseObject object, VkObjectInfoType infoType, size_t* pDataSize, void* pData)
+VK_LAYER_EXPORT VkResult VKAPI vkGetObjectInfo(VkDevice device, VkObjectType objType, VkObject object, VkObjectInfoType infoType, size_t* pDataSize, void* pData)
 {
     // TODO : What to track here?
     //   Could potentially save returned mem requirements and validate values passed into QueueBindObjectMemory for this object
     // From spec : The only objects that are guaranteed to have no external memory requirements are devices, queues, command buffers, shaders and memory objects.
-    VkResult result = nextTable.GetObjectInfo(object, infoType, pDataSize, pData);
+    VkResult result = nextTable.GetObjectInfo(device, objType, object, infoType, pDataSize, pData);
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkQueueBindObjectMemory(VkQueue queue, VkObject object, uint32_t allocationIdx, VkDeviceMemory mem, VkDeviceSize offset)
+VK_LAYER_EXPORT VkResult VKAPI vkQueueBindObjectMemory(VkQueue queue, VkObjectType objType, VkObject object, uint32_t allocationIdx, VkDeviceMemory mem, VkDeviceSize offset)
 {
-    VkResult result = nextTable.QueueBindObjectMemory(queue, object, allocationIdx, mem, offset);
+    VkResult result = nextTable.QueueBindObjectMemory(queue, objType, object, allocationIdx, mem, offset);
+    loader_platform_thread_lock_mutex(&globalLock);
+    // Track objects tied to memory
+    if (VK_FALSE == updateObjectBinding(object, mem)) {
+        char str[1024];
+        sprintf(str, "Unable to set object %p binding to mem obj %p", (void*)object, (void*)mem);
+        layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, object, 0, MEMTRACK_MEMORY_BINDING_ERROR, "MEM", str);
+    }
+    printObjList();
+    printMemList();
+    loader_platform_thread_unlock_mutex(&globalLock);
+    return result;
+}
+
+VK_LAYER_EXPORT VkResult VKAPI vkQueueBindObjectMemoryRange(VkQueue queue, VkObjectType objType, VkObject object, uint32_t allocationIdx, VkDeviceSize rangeOffset, VkDeviceSize rangeSize, VkDeviceMemory mem, VkDeviceSize memOffset)
+{
+    VkResult result = nextTable.QueueBindObjectMemoryRange(queue, objType, object, allocationIdx, rangeOffset, rangeSize, mem, memOffset);
     loader_platform_thread_lock_mutex(&globalLock);
     // Track objects tied to memory
     if (VK_FALSE == updateObjectBinding(object, mem)) {
@@ -1252,9 +1268,9 @@ VK_LAYER_EXPORT VkResult VKAPI vkResetFences(VkDevice device, uint32_t fenceCoun
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkGetFenceStatus(VkFence fence)
+VK_LAYER_EXPORT VkResult VKAPI vkGetFenceStatus(VkDevice device, VkFence fence)
 {
-    VkResult result = nextTable.GetFenceStatus(fence);
+    VkResult result = nextTable.GetFenceStatus(device, fence);
     if (VK_SUCCESS == result) {
         loader_platform_thread_lock_mutex(&globalLock);
         updateFenceTracking(fence);
@@ -2015,7 +2031,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkGetSwapChainInfoWSI(VkSwapChainWSI swapChain, V
             if (mismatch) {
                 char str[1024];
                 sprintf(str, "vkGetSwapChainInfoWSI(%p, VK_SWAP_CHAIN_INFO_TYPE_PERSISTENT_IMAGES_WSI) returned mismatching data", swapChain);
-                layerCbMsg(VK_DBG_MSG_WARNING, VK_VALIDATION_LEVEL_0, (VkBaseObject) swapChain, 0, MEMTRACK_NONE, "SWAP_CHAIN", str);
+                layerCbMsg(VK_DBG_MSG_WARNING, VK_VALIDATION_LEVEL_0, (VkObject) swapChain, 0, MEMTRACK_NONE, "SWAP_CHAIN", str);
             }
         }
     }
@@ -2066,6 +2082,8 @@ VK_LAYER_EXPORT void* VKAPI vkGetProcAddr(VkPhysicalDevice gpu, const char* func
         return (void*) vkGetObjectInfo;
     if (!strcmp(funcName, "vkQueueBindObjectMemory"))
         return (void*) vkQueueBindObjectMemory;
+    if (!strcmp(funcName, "vkQueueBindObjectMemoryRange"))
+        return (void*) vkQueueBindObjectMemoryRange;
     if (!strcmp(funcName, "vkCreateFence"))
         return (void*) vkCreateFence;
     if (!strcmp(funcName, "vkGetFenceStatus"))

@@ -346,6 +346,8 @@ void intel_base_destroy(struct intel_base *base)
 }
 
 ICD_EXPORT VkResult VKAPI vkDestroyObject(
+    VkDevice                                  device,
+    VkObjectType                              objType,
     VkObject                                  object)
 {
     struct intel_obj *obj = intel_obj(object);
@@ -356,8 +358,10 @@ ICD_EXPORT VkResult VKAPI vkDestroyObject(
 }
 
 ICD_EXPORT VkResult VKAPI vkGetObjectInfo(
-    VkBaseObject                             object,
-    VkObjectInfoType                        infoType,
+    VkDevice                                    device,
+    VkObjectType                                objType,
+    VkObject                                    object,
+    VkObjectInfoType                            infoType,
     size_t*                                     pDataSize,
     void*                                       pData)
 {
@@ -367,9 +371,10 @@ ICD_EXPORT VkResult VKAPI vkGetObjectInfo(
 }
 
 ICD_EXPORT VkResult VKAPI vkQueueBindObjectMemory(
-    VkQueue                                  queue,
-    VkObject                                 object,
-    uint32_t                                 allocationIdx,
+    VkQueue                                     queue,
+    VkObjectType                                objType,
+    VkObject                                    object,
+    uint32_t                                    allocationIdx,
     VkDeviceMemory                              mem_,
     VkDeviceSize                                memOffset)
 {
@@ -382,8 +387,9 @@ ICD_EXPORT VkResult VKAPI vkQueueBindObjectMemory(
 }
 
 ICD_EXPORT VkResult VKAPI vkQueueBindObjectMemoryRange(
-    VkQueue                                   queue,
-    VkObject                                  object,
+    VkQueue                                     queue,
+    VkObjectType                                objType,
+    VkObject                                    object,
     uint32_t                                    allocationIdx,
     VkDeviceSize                                rangeOffset,
     VkDeviceSize                                rangeSize,
@@ -405,7 +411,8 @@ ICD_EXPORT VkResult VKAPI vkQueueBindImageMemoryRange(
 }
 
 ICD_EXPORT VkResult VKAPI vkDbgSetObjectTag(
-    VkBaseObject                               object,
+    VkDevice                                   device,
+    VkObject                                   object,
     size_t                                     tagSize,
     const void*                                pTag)
 {

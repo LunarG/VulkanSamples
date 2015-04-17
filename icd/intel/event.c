@@ -175,6 +175,7 @@ ICD_EXPORT VkResult VKAPI vkCreateEvent(
 }
 
 ICD_EXPORT VkResult VKAPI vkGetEventStatus(
+    VkDevice                                  device,
     VkEvent                                   event_)
 {
     struct intel_event *event = intel_event(event_);
@@ -183,6 +184,7 @@ ICD_EXPORT VkResult VKAPI vkGetEventStatus(
 }
 
 ICD_EXPORT VkResult VKAPI vkSetEvent(
+    VkDevice                                  device,
     VkEvent                                   event_)
 {
     struct intel_event *event = intel_event(event_);
@@ -191,6 +193,7 @@ ICD_EXPORT VkResult VKAPI vkSetEvent(
 }
 
 ICD_EXPORT VkResult VKAPI vkResetEvent(
+    VkDevice                                  device,
     VkEvent                                   event_)
 {
     struct intel_event *event = intel_event(event_);

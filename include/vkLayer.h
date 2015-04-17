@@ -19,8 +19,8 @@
 typedef struct VkBaseLayerObject_
 {
     PFN_vkGetProcAddr pGPA;
-    VkBaseObject nextObject;
-    VkBaseObject baseObject;
+    VkObject nextObject;
+    VkObject baseObject;
 } VkBaseLayerObject;
 
 typedef struct VkLayerDispatchTable_

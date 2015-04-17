@@ -183,9 +183,10 @@ ICD_EXPORT VkResult VKAPI vkCreateImage(
 }
 
 ICD_EXPORT VkResult VKAPI vkGetImageSubresourceInfo(
-    VkImage                                   image,
-    const VkImageSubresource*                pSubresource,
-    VkSubresourceInfoType                   infoType,
+    VkDevice                                    device,
+    VkImage                                     image,
+    const VkImageSubresource*                   pSubresource,
+    VkSubresourceInfoType                       infoType,
     size_t*                                     pDataSize,
     void*                                       pData)
 {

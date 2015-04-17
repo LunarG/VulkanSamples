@@ -127,6 +127,7 @@ ICD_EXPORT VkResult VKAPI vkCreateFence(
 }
 
 ICD_EXPORT VkResult VKAPI vkGetFenceStatus(
+    VkDevice                                  device,
     VkFence                                   fence_)
 {
     struct intel_fence *fence = intel_fence(fence_);

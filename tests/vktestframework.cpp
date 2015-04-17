@@ -235,7 +235,7 @@ void VkTestFramework::WritePPM( const char *basename, VkImageObj *image )
     VkSubresourceLayout sr_layout;
     size_t data_size = sizeof(sr_layout);
 
-    err = vkGetImageSubresourceInfo( image->image(), &sr,
+    err = vkGetImageSubresourceInfo(image->device()->device(),  image->image(), &sr,
                                       VK_SUBRESOURCE_INFO_TYPE_LAYOUT,
                                       &data_size, &sr_layout);
     ASSERT_VK_SUCCESS( err );
@@ -350,7 +350,7 @@ void VkTestFramework::Show(const char *comment, VkImageObj *image)
 
     if (!m_show_images) return;
 
-    err = vkGetImageSubresourceInfo( image->image(), &sr, VK_SUBRESOURCE_INFO_TYPE_LAYOUT,
+    err = vkGetImageSubresourceInfo( image->device()->device(), image->image(), &sr, VK_SUBRESOURCE_INFO_TYPE_LAYOUT,
                                       &data_size, &sr_layout);
     ASSERT_VK_SUCCESS( err );
     ASSERT_EQ(data_size, sizeof(sr_layout));

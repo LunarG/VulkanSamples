@@ -123,7 +123,7 @@ glv_replay::GLV_REPLAY_RESULT vkReplay::handle_replay_errors(const char* entrypo
     return res;
 }
 
-void vkReplay::push_validation_msg(VkValidationLevel validationLevel, VkBaseObject srcObject, size_t location, int32_t msgCode, const char * pMsg)
+void vkReplay::push_validation_msg(VkValidationLevel validationLevel, VkObject srcObject, size_t location, int32_t msgCode, const char * pMsg)
 {
     struct validationMsg msgObj;
     msgObj.validationLevel = validationLevel;

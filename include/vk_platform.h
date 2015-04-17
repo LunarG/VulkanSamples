@@ -2,7 +2,7 @@
 // File: vk_platform.h
 //
 /*
-** Copyright (c) 2014 The Khronos Group Inc.
+** Copyright (c) 2014-2015 The Khronos Group Inc.
 **
 ** Permission is hereby granted, free of charge, to any person obtaining a
 ** copy of this software and/or associated documentation files (the
@@ -81,6 +81,16 @@ typedef uint32_t   bool32_t;
 
 typedef uint32_t   VkSampleMask;
 typedef uint32_t   VkFlags;
+
+#if (UINTPTR_MAX >= UINT64_MAX)
+    #define VK_UINTPTRLEAST64_MAX UINTPTR_MAX
+
+    typedef uintptr_t VkUintPtrLeast64;
+#else
+    #define VK_UINTPTRLEAST64_MAX UINT64_MAX
+
+    typedef uint64_t  VkUintPtrLeast64;
+#endif
 
 #ifdef __cplusplus
 } // extern "C"

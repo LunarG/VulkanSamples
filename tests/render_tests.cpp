@@ -83,7 +83,7 @@ using namespace std;
 void VKAPI myDbgFunc(
     VK_DBG_MSG_TYPE     msgType,
     VkValidationLevel validationLevel,
-    VkBaseObject      srcObject,
+    VkObject             srcObject,
     size_t               location,
     int32_t              msgCode,
     const char*          pMsg,

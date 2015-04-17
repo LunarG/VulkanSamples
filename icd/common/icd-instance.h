@@ -84,7 +84,7 @@ VkResult icd_instance_remove_logger(struct icd_instance *instance,
 void icd_instance_log(const struct icd_instance *instance,
                       VK_DBG_MSG_TYPE msg_type,
                       VkValidationLevel validation_level,
-                      VkBaseObject src_object,
+                      VkObject src_object,
                       size_t location, int32_t msg_code,
                       const char *msg);
 

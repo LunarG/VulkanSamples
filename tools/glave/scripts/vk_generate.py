@@ -1299,7 +1299,7 @@ class Subcommand(object):
         rc_body.append('')
         rc_body.append(' bool m_adjustForGPU; // true if replay adjusts behavior based on GPU')
         # Code for memory objects for handling replay GPU != trace GPU object memory requirements
-        rc_body.append(' void init_objMemCount(const VkBaseObject& object, const uint32_t &num)\n {')
+        rc_body.append(' void init_objMemCount(const VkObject& object, const uint32_t &num)\n {')
         rc_body.append('     VkImage img = static_cast <VkImage> (object);')
         rc_body.append('     std::map<VkImage, imageObj>::const_iterator it = m_images.find(img);')
         rc_body.append('     if (it != m_images.end())')
@@ -1318,7 +1318,7 @@ class Subcommand(object):
         rc_body.append('     }')
         rc_body.append('     return;')
         rc_body.append(' }\n')
-        rc_body.append('    void init_objMemReqs(const VkBaseObject& object, const VkMemoryRequirements *pMemReqs, const unsigned int num)\n    {')
+        rc_body.append('    void init_objMemReqs(const VkObject& object, const VkMemoryRequirements *pMemReqs, const unsigned int num)\n    {')
         rc_body.append('        VkImage img = static_cast <VkImage> (object);')
         rc_body.append('        std::map<VkImage, imageObj>::const_iterator it = m_images.find(img);')
         rc_body.append('        if (it != m_images.end())')
@@ -1400,8 +1400,8 @@ class Subcommand(object):
         for var in obj_remap_types:
             rc_body.append('        rm_from_map(static_cast <%s> (objKey));' % (var))
         rc_body.append('    }')
-        rc_body.append('    VkBaseObject remap(const VkBaseObject& object)\n    {')
-        rc_body.append('        VkBaseObject obj;')
+        rc_body.append('    VkObject remap(const VkObject& object)\n    {')
+        rc_body.append('        VkObject obj;')
         base_obj_remap_types = ['VkDevice', 'VkQueue', 'VkGpuMemory', 'VkObject']
         for t in base_obj_remap_types:
             rc_body.append('        if ((obj = remap(static_cast <%s> (object))) != VK_NULL_HANDLE)' % t)

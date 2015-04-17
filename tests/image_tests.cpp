@@ -223,14 +223,14 @@ void VkImageTest::CreateImage(uint32_t w, uint32_t h)
     mem_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO;
     mem_info.pNext = NULL;
 
-    err = vkGetObjectInfo(m_image, VK_OBJECT_INFO_TYPE_MEMORY_ALLOCATION_COUNT,
+    err = vkGetObjectInfo(device(), VK_OBJECT_TYPE_IMAGE, m_image, VK_OBJECT_INFO_TYPE_MEMORY_ALLOCATION_COUNT,
                     &num_alloc_size, &num_allocations);
     ASSERT_VK_SUCCESS(err);
     ASSERT_EQ(num_alloc_size,sizeof(num_allocations));
     mem_req = (VkMemoryRequirements *) malloc(num_allocations * sizeof(VkMemoryRequirements));
     m_image_mem = (VkDeviceMemory *) malloc(num_allocations * sizeof(VkDeviceMemory));
     m_num_mem = num_allocations;
-    err = vkGetObjectInfo(m_image,
+    err = vkGetObjectInfo(device(), VK_OBJECT_TYPE_IMAGE, m_image,
                     VK_OBJECT_INFO_TYPE_MEMORY_REQUIREMENTS,
                     &mem_reqs_size, mem_req);
     ASSERT_VK_SUCCESS(err);
@@ -248,7 +248,7 @@ void VkImageTest::CreateImage(uint32_t w, uint32_t h)
 
         /* bind memory */
         VkQueue queue = m_device->graphics_queues()[0]->obj();
-        err = vkQueueBindObjectMemory(queue, m_image, i, m_image_mem[i], 0);
+        err = vkQueueBindObjectMemory(queue, VK_OBJECT_TYPE_IMAGE, m_image, i, m_image_mem[i], 0);
         ASSERT_VK_SUCCESS(err);
     }
 }
@@ -258,15 +258,15 @@ void VkImageTest::DestroyImage()
     VkResult err;
     // All done with image memory, clean up
     VkQueue queue = m_device->graphics_queues()[0]->obj();
-    ASSERT_VK_SUCCESS(vkQueueBindObjectMemory(queue, m_image, 0, VK_NULL_HANDLE, 0));
+    ASSERT_VK_SUCCESS(vkQueueBindObjectMemory(queue, VK_OBJECT_TYPE_IMAGE, m_image, 0, VK_NULL_HANDLE, 0));
 
     for (uint32_t i = 0 ; i < m_num_mem; i++) {
-        err = vkFreeMemory(m_image_mem[i]);
+        err = vkFreeMemory(device(), m_image_mem[i]);
         ASSERT_VK_SUCCESS(err);
     }
 
 
-    ASSERT_VK_SUCCESS(vkDestroyObject(m_image));
+    ASSERT_VK_SUCCESS(vkDestroyObject(device(), VK_OBJECT_TYPE_IMAGE, m_image));
 }
 
 void VkImageTest::CreateImageView(VkImageViewCreateInfo *pCreateInfo,
@@ -278,7 +278,7 @@ void VkImageTest::CreateImageView(VkImageViewCreateInfo *pCreateInfo,
 
 void VkImageTest::DestroyImageView(VkImageView imageView)
 {
-    ASSERT_VK_SUCCESS(vkDestroyObject(imageView));
+    ASSERT_VK_SUCCESS(vkDestroyObject(device(), VK_OBJECT_TYPE_IMAGE, imageView));
 }
 
 TEST_F(VkImageTest, CreateImageViewTest) {

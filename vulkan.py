@@ -186,7 +186,6 @@ core = Extension(
     objects=[
         "VkInstance",
         "VkPhysicalDevice",
-        "VkBaseObject",
         "VkDevice",
         "VkQueue",
         "VkDeviceMemory",
@@ -303,24 +302,29 @@ core = Extension(
              Param("VkDeviceMemory*", "pMem")]),
 
         Proto("VkResult", "FreeMemory",
-            [Param("VkDeviceMemory", "mem")]),
+            [Param("VkDevice", "device"),
+             Param("VkDeviceMemory", "mem")]),
 
         Proto("VkResult", "SetMemoryPriority",
-            [Param("VkDeviceMemory", "mem"),
+            [Param("VkDevice", "device"),
+             Param("VkDeviceMemory", "mem"),
              Param("VkMemoryPriority", "priority")]),
 
         Proto("VkResult", "MapMemory",
-            [Param("VkDeviceMemory", "mem"),
+            [Param("VkDevice", "device"),
+             Param("VkDeviceMemory", "mem"),
              Param("VkDeviceSize", "offset"),
              Param("VkDeviceSize", "size"),
              Param("VkFlags", "flags"),
              Param("void**", "ppData")]),
 
         Proto("VkResult", "UnmapMemory",
-            [Param("VkDeviceMemory", "mem")]),
+            [Param("VkDevice", "device"),
+             Param("VkDeviceMemory", "mem")]),
 
         Proto("VkResult", "FlushMappedMemory",
-            [Param("VkDeviceMemory", "mem"),
+            [Param("VkDevice", "device"),
+             Param("VkDeviceMemory", "mem"),
              Param("VkDeviceSize", "offset"),
              Param("VkDeviceSize", "size")]),
 
@@ -357,16 +361,21 @@ core = Extension(
              Param("VkDeviceMemory*", "pMem")]),
 
         Proto("VkResult", "DestroyObject",
-            [Param("VkObject", "object")]),
+            [Param("VkDevice", "device"),
+             Param("VkObjectType", "objType"), 
+             Param("VkObject", "object")]),
 
         Proto("VkResult", "GetObjectInfo",
-            [Param("VkBaseObject", "object"),
+            [Param("VkDevice", "device"),
+             Param("VkObjectType", "objType"), 
+             Param("VkObject", "object"),
              Param("VkObjectInfoType", "infoType"),
              Param("size_t*", "pDataSize"),
              Param("void*", "pData")]),
 
         Proto("VkResult", "QueueBindObjectMemory",
             [Param("VkQueue", "queue"),
+             Param("VkObjectType", "objType"), 
              Param("VkObject", "object"),
              Param("uint32_t", "allocationIdx"),
              Param("VkDeviceMemory", "mem"),
@@ -374,6 +383,7 @@ core = Extension(
 
         Proto("VkResult", "QueueBindObjectMemoryRange",
             [Param("VkQueue", "queue"),
+             Param("VkObjectType", "objType"), 
              Param("VkObject", "object"),
              Param("uint32_t", "allocationIdx"),
              Param("VkDeviceSize", "rangeOffset"),
@@ -400,7 +410,8 @@ core = Extension(
              Param("VkFence*", "pFences")]),
 
         Proto("VkResult", "GetFenceStatus",
-            [Param("VkFence", "fence")]),
+            [Param("VkDevice", "device"),
+             Param("VkFence", "fence")]),
 
         Proto("VkResult", "WaitForFences",
             [Param("VkDevice", "device"),
@@ -428,13 +439,16 @@ core = Extension(
              Param("VkEvent*", "pEvent")]),
 
         Proto("VkResult", "GetEventStatus",
-            [Param("VkEvent", "event")]),
+            [Param("VkDevice", "device"),
+             Param("VkEvent", "event")]),
 
         Proto("VkResult", "SetEvent",
-            [Param("VkEvent", "event")]),
+            [Param("VkDevice", "device"),
+             Param("VkEvent", "event")]),
 
         Proto("VkResult", "ResetEvent",
-            [Param("VkEvent", "event")]),
+            [Param("VkDevice", "device"),
+             Param("VkEvent", "event")]),
 
         Proto("VkResult", "CreateQueryPool",
             [Param("VkDevice", "device"),
@@ -442,7 +456,8 @@ core = Extension(
              Param("VkQueryPool*", "pQueryPool")]),
 
         Proto("VkResult", "GetQueryPoolResults",
-            [Param("VkQueryPool", "queryPool"),
+            [Param("VkDevice", "device"),
+             Param("VkQueryPool", "queryPool"),
              Param("uint32_t", "startQuery"),
              Param("uint32_t", "queryCount"),
              Param("size_t*", "pDataSize"),
@@ -472,7 +487,8 @@ core = Extension(
              Param("VkImage*", "pImage")]),
 
         Proto("VkResult", "GetImageSubresourceInfo",
-            [Param("VkImage", "image"),
+            [Param("VkDevice", "device"),
+             Param("VkImage", "image"),
              Param("const VkImageSubresource*", "pSubresource"),
              Param("VkSubresourceInfoType", "infoType"),
              Param("size_t*", "pDataSize"),
@@ -515,7 +531,8 @@ core = Extension(
              Param("VkPipeline*", "pPipeline")]),
 
         Proto("VkResult", "StorePipeline",
-            [Param("VkPipeline", "pipeline"),
+            [Param("VkDevice", "device"),
+             Param("VkPipeline", "pipeline"),
              Param("size_t*", "pDataSize"),
              Param("void*", "pData")]),
 
@@ -563,10 +580,12 @@ core = Extension(
              Param("VkDescriptorPool*", "pDescriptorPool")]),
 
         Proto("VkResult", "ResetDescriptorPool",
-            [Param("VkDescriptorPool", "descriptorPool")]),
+            [Param("VkDevice", "device"),
+             Param("VkDescriptorPool", "descriptorPool")]),
 
         Proto("VkResult", "AllocDescriptorSets",
-            [Param("VkDescriptorPool", "descriptorPool"),
+            [Param("VkDevice", "device"),
+             Param("VkDescriptorPool", "descriptorPool"),
              Param("VkDescriptorSetUsage", "setUsage"),
              Param("uint32_t", "count"),
              Param("const VkDescriptorSetLayout*", "pSetLayouts"),
@@ -574,12 +593,14 @@ core = Extension(
              Param("uint32_t*", "pCount")]),
 
         Proto("void", "ClearDescriptorSets",
-            [Param("VkDescriptorPool", "descriptorPool"),
+            [Param("VkDevice", "device"),
+             Param("VkDescriptorPool", "descriptorPool"),
              Param("uint32_t", "count"),
              Param("const VkDescriptorSet*", "pDescriptorSets")]),
 
         Proto("void", "UpdateDescriptors",
-            [Param("VkDescriptorSet", "descriptorSet"),
+            [Param("VkDevice", "device"),
+             Param("VkDescriptorSet", "descriptorSet"),
              Param("uint32_t", "updateCount"),
              Param("const void**", "ppUpdateArray")]),
 
@@ -757,7 +778,7 @@ core = Extension(
             [Param("VkCmdBuffer", "cmdBuffer"),
              Param("VkImage", "image"),
              Param("VkImageLayout", "imageLayout"),
-	     Param("VkClearColor", "color"),
+             Param("VkClearColor", "color"),
              Param("uint32_t", "rangeCount"),
              Param("const VkImageSubresourceRange*", "pRanges")]),
 
@@ -898,7 +919,8 @@ core = Extension(
              Param("VK_DBG_MSG_FILTER", "filter")]),
 
         Proto("VkResult", "DbgSetObjectTag",
-            [Param("VkBaseObject", "object"),
+            [Param("VkDevice", "device"),
+             Param("VkObject", "object"),
              Param("size_t", "tagSize"),
              Param("const void*", "pTag")]),
 
@@ -962,7 +984,6 @@ extensions = [core, wsi_lunarg]
 object_root_list = [
     "VkInstance",
     "VkPhysicalDevice",
-    "VkBaseObject",
     "VkDisplayWSI",
     "VkSwapChainWSI",
 ]
@@ -1007,7 +1028,7 @@ object_dynamic_state_list = [
 
 object_type_list = object_root_list + object_base_list + object_list + object_dynamic_state_list
 
-object_parent_list = ["VkBaseObject", "VkObject", "VkDynamicStateObject"]
+object_parent_list = ["VkObject", "VkDynamicStateObject"]
 
 headers = []
 objects = []

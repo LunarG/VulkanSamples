@@ -94,7 +94,7 @@ private:
 
 class BaseObject {
 public:
-    const VkBaseObject &obj() const { return obj_; }
+    const VkObject &obj() const { return obj_; }
     bool initialized() const { return (obj_ != VK_NULL_HANDLE); }
 
     // vkGetObjectInfo()
@@ -103,22 +103,25 @@ public:
 
 protected:
     explicit BaseObject() : obj_(VK_NULL_HANDLE), own_obj_(false) {}
-    explicit BaseObject(VkBaseObject obj) : obj_(VK_NULL_HANDLE), own_obj_(false) { init(obj); }
+    explicit BaseObject(VkObject obj) : obj_(VK_NULL_HANDLE), own_obj_(false) { init(obj); }
 
-    void init(VkBaseObject obj, bool own);
-    void init(VkBaseObject obj) { init(obj, true); }
+    void init(VkObject obj, bool own);
+    void init(VkObject obj) { init(obj, true); }
 
-    void reinit(VkBaseObject obj, bool own);
-    void reinit(VkBaseObject obj) { reinit(obj, true); }
+    void reinit(VkObject obj, bool own);
+    void reinit(VkObject obj) { reinit(obj, true); }
 
     bool own() const { return own_obj_; }
+    VkDevice device() const { return device_; }
+    VkObjectType object_type_;
+    VkDevice device_;
 
 private:
     // base objects are non-copyable
     BaseObject(const BaseObject &);
     BaseObject &operator=(const BaseObject &);
 
-    VkBaseObject obj_;
+    VkObject obj_;
     bool own_obj_;
 };
 
@@ -310,7 +313,7 @@ public:
     void init(const Device &dev, const VkFenceCreateInfo &info);
 
     // vkGetFenceStatus()
-    VkResult status() const { return vkGetFenceStatus(obj()); }
+    VkResult status() const { return vkGetFenceStatus(device(), obj()); }
 
     static VkFenceCreateInfo create_info(VkFenceCreateFlags flags);
     static VkFenceCreateInfo create_info();
@@ -334,7 +337,7 @@ public:
     // vkGetEventStatus()
     // vkSetEvent()
     // vkResetEvent()
-    VkResult status() const { return vkGetEventStatus(obj()); }
+    VkResult status() const { return vkGetEventStatus(device(), obj()); }
     void set();
     void reset();
 

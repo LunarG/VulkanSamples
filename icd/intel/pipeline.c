@@ -1399,6 +1399,7 @@ ICD_EXPORT VkResult VKAPI vkCreateComputePipeline(
 }
 
 ICD_EXPORT VkResult VKAPI vkStorePipeline(
+    VkDevice                                  device,
     VkPipeline                                pipeline,
     size_t*                                     pDataSize,
     void*                                       pData)

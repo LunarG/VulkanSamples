@@ -383,42 +383,42 @@ VK_LAYER_EXPORT VkResult VKAPI vkAllocMemory(VkDevice device, const VkMemoryAllo
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkFreeMemory(VkDeviceMemory mem)
+VK_LAYER_EXPORT VkResult VKAPI vkFreeMemory(VkDevice device, VkDeviceMemory mem)
 {
 
-    VkResult result = nextTable.FreeMemory(mem);
+    VkResult result = nextTable.FreeMemory(device, mem);
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkSetMemoryPriority(VkDeviceMemory mem, VkMemoryPriority priority)
+VK_LAYER_EXPORT VkResult VKAPI vkSetMemoryPriority(VkDevice device, VkDeviceMemory mem, VkMemoryPriority priority)
 {
     char str[1024];
     if (!validate_VkMemoryPriority(priority)) {
         sprintf(str, "Parameter priority to function SetMemoryPriority has invalid value of %i.", (int)priority);
         layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
     }
-    VkResult result = nextTable.SetMemoryPriority(mem, priority);
+    VkResult result = nextTable.SetMemoryPriority(device, mem, priority);
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkMapMemory(VkDeviceMemory mem, VkDeviceSize offset, VkDeviceSize size, VkFlags flags, void** ppData)
+VK_LAYER_EXPORT VkResult VKAPI vkMapMemory(VkDevice device, VkDeviceMemory mem, VkDeviceSize offset, VkDeviceSize size, VkFlags flags, void** ppData)
 {
 
-    VkResult result = nextTable.MapMemory(mem, offset, size, flags, ppData);
+    VkResult result = nextTable.MapMemory(device, mem, offset, size, flags, ppData);
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkUnmapMemory(VkDeviceMemory mem)
+VK_LAYER_EXPORT VkResult VKAPI vkUnmapMemory(VkDevice device, VkDeviceMemory mem)
 {
 
-    VkResult result = nextTable.UnmapMemory(mem);
+    VkResult result = nextTable.UnmapMemory(device, mem);
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkFlushMappedMemory(VkDeviceMemory mem, VkDeviceSize offset, VkDeviceSize size)
+VK_LAYER_EXPORT VkResult VKAPI vkFlushMappedMemory(VkDevice device, VkDeviceMemory mem, VkDeviceSize offset, VkDeviceSize size)
 {
 
-    VkResult result = nextTable.FlushMappedMemory(mem, offset, size);
+    VkResult result = nextTable.FlushMappedMemory(device, mem, offset, size);
     return result;
 }
 
@@ -498,35 +498,35 @@ VK_LAYER_EXPORT VkResult VKAPI vkOpenPeerImage(VkDevice device, const VkPeerImag
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkDestroyObject(VkObject object)
+VK_LAYER_EXPORT VkResult VKAPI vkDestroyObject(VkDevice device, VkObjectType objType, VkObject object)
 {
 
-    VkResult result = nextTable.DestroyObject(object);
+    VkResult result = nextTable.DestroyObject(device, objType, object);
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkGetObjectInfo(VkBaseObject object, VkObjectInfoType infoType, size_t* pDataSize, void* pData)
+VK_LAYER_EXPORT VkResult VKAPI vkGetObjectInfo(VkDevice device, VkObjectType objType, VkObject object, VkObjectInfoType infoType, size_t* pDataSize, void* pData)
 {
     char str[1024];
     if (!validate_VkObjectInfoType(infoType)) {
         sprintf(str, "Parameter infoType to function GetObjectInfo has invalid value of %i.", (int)infoType);
         layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
     }
-    VkResult result = nextTable.GetObjectInfo(object, infoType, pDataSize, pData);
+    VkResult result = nextTable.GetObjectInfo(device, objType, object, infoType, pDataSize, pData);
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkQueueBindObjectMemory(VkQueue queue, VkObject object, uint32_t allocationIdx, VkDeviceMemory mem, VkDeviceSize offset)
+VK_LAYER_EXPORT VkResult VKAPI vkQueueBindObjectMemory(VkQueue queue, VkObjectType objType, VkObject object, uint32_t allocationIdx, VkDeviceMemory mem, VkDeviceSize offset)
 {
 
-    VkResult result = nextTable.QueueBindObjectMemory(queue, object, allocationIdx, mem, offset);
+    VkResult result = nextTable.QueueBindObjectMemory(queue, objType, object, allocationIdx, mem, offset);
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkQueueBindObjectMemoryRange(VkQueue queue, VkObject object, uint32_t allocationIdx, VkDeviceSize rangeOffset, VkDeviceSize rangeSize, VkDeviceMemory mem, VkDeviceSize memOffset)
+VK_LAYER_EXPORT VkResult VKAPI vkQueueBindObjectMemoryRange(VkQueue queue, VkObjectType objType, VkObject object, uint32_t allocationIdx, VkDeviceSize rangeOffset, VkDeviceSize rangeSize, VkDeviceMemory mem, VkDeviceSize memOffset)
 {
 
-    VkResult result = nextTable.QueueBindObjectMemoryRange(queue, object, allocationIdx, rangeOffset, rangeSize, mem, memOffset);
+    VkResult result = nextTable.QueueBindObjectMemoryRange(queue, objType, object, allocationIdx, rangeOffset, rangeSize, mem, memOffset);
     return result;
 }
 
@@ -560,10 +560,10 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateFence(VkDevice device, const VkFenceCreat
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkGetFenceStatus(VkFence fence)
+VK_LAYER_EXPORT VkResult VKAPI vkGetFenceStatus(VkDevice device, VkFence fence)
 {
 
-    VkResult result = nextTable.GetFenceStatus(fence);
+    VkResult result = nextTable.GetFenceStatus(device, fence);
     return result;
 }
 
@@ -625,24 +625,24 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateEvent(VkDevice device, const VkEventCreat
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkGetEventStatus(VkEvent event)
+VK_LAYER_EXPORT VkResult VKAPI vkGetEventStatus(VkDevice device, VkEvent event)
 {
 
-    VkResult result = nextTable.GetEventStatus(event);
+    VkResult result = nextTable.GetEventStatus(device, event);
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkSetEvent(VkEvent event)
+VK_LAYER_EXPORT VkResult VKAPI vkSetEvent(VkDevice device, VkEvent event)
 {
 
-    VkResult result = nextTable.SetEvent(event);
+    VkResult result = nextTable.SetEvent(device, event);
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkResetEvent(VkEvent event)
+VK_LAYER_EXPORT VkResult VKAPI vkResetEvent(VkDevice device, VkEvent event)
 {
 
-    VkResult result = nextTable.ResetEvent(event);
+    VkResult result = nextTable.ResetEvent(device, event);
     return result;
 }
 
@@ -661,10 +661,10 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateQueryPool(VkDevice device, const VkQueryP
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkGetQueryPoolResults(VkQueryPool queryPool, uint32_t startQuery, uint32_t queryCount, size_t* pDataSize, void* pData, VkQueryResultFlags flags)
+VK_LAYER_EXPORT VkResult VKAPI vkGetQueryPoolResults(VkDevice device, VkQueryPool queryPool, uint32_t startQuery, uint32_t queryCount, size_t* pDataSize, void* pData, VkQueryResultFlags flags)
 {
 
-    VkResult result = nextTable.GetQueryPoolResults(queryPool, startQuery, queryCount, pDataSize, pData, flags);
+    VkResult result = nextTable.GetQueryPoolResults(device, queryPool, startQuery, queryCount, pDataSize, pData, flags);
     return result;
 }
 
@@ -811,7 +811,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateImage(VkDevice device, const VkImageCreat
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkGetImageSubresourceInfo(VkImage image, const VkImageSubresource* pSubresource, VkSubresourceInfoType infoType, size_t* pDataSize, void* pData)
+VK_LAYER_EXPORT VkResult VKAPI vkGetImageSubresourceInfo(VkDevice device, VkImage image, const VkImageSubresource* pSubresource, VkSubresourceInfoType infoType, size_t* pDataSize, void* pData)
 {
     char str[1024];
     if (!pSubresource) {
@@ -825,7 +825,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkGetImageSubresourceInfo(VkImage image, const Vk
         sprintf(str, "Parameter infoType to function GetImageSubresourceInfo has invalid value of %i.", (int)infoType);
         layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
     }
-    VkResult result = nextTable.GetImageSubresourceInfo(image, pSubresource, infoType, pDataSize, pData);
+    VkResult result = nextTable.GetImageSubresourceInfo(device, image, pSubresource, infoType, pDataSize, pData);
     return result;
 }
 
@@ -934,10 +934,10 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateComputePipeline(VkDevice device, const Vk
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkStorePipeline(VkPipeline pipeline, size_t* pDataSize, void* pData)
+VK_LAYER_EXPORT VkResult VKAPI vkStorePipeline(VkDevice device, VkPipeline pipeline, size_t* pDataSize, void* pData)
 {
 
-    VkResult result = nextTable.StorePipeline(pipeline, pDataSize, pData);
+    VkResult result = nextTable.StorePipeline(device, pipeline, pDataSize, pData);
     return result;
 }
 
@@ -1028,34 +1028,34 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateDescriptorPool(VkDevice device, VkDescrip
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkResetDescriptorPool(VkDescriptorPool descriptorPool)
+VK_LAYER_EXPORT VkResult VKAPI vkResetDescriptorPool(VkDevice device, VkDescriptorPool descriptorPool)
 {
 
-    VkResult result = nextTable.ResetDescriptorPool(descriptorPool);
+    VkResult result = nextTable.ResetDescriptorPool(device, descriptorPool);
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkAllocDescriptorSets(VkDescriptorPool descriptorPool, VkDescriptorSetUsage setUsage, uint32_t count, const VkDescriptorSetLayout* pSetLayouts, VkDescriptorSet* pDescriptorSets, uint32_t* pCount)
+VK_LAYER_EXPORT VkResult VKAPI vkAllocDescriptorSets(VkDevice device, VkDescriptorPool descriptorPool, VkDescriptorSetUsage setUsage, uint32_t count, const VkDescriptorSetLayout* pSetLayouts, VkDescriptorSet* pDescriptorSets, uint32_t* pCount)
 {
     char str[1024];
     if (!validate_VkDescriptorSetUsage(setUsage)) {
         sprintf(str, "Parameter setUsage to function AllocDescriptorSets has invalid value of %i.", (int)setUsage);
         layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
     }
-    VkResult result = nextTable.AllocDescriptorSets(descriptorPool, setUsage, count, pSetLayouts, pDescriptorSets, pCount);
+    VkResult result = nextTable.AllocDescriptorSets(device, descriptorPool, setUsage, count, pSetLayouts, pDescriptorSets, pCount);
     return result;
 }
 
-VK_LAYER_EXPORT void VKAPI vkClearDescriptorSets(VkDescriptorPool descriptorPool, uint32_t count, const VkDescriptorSet* pDescriptorSets)
+VK_LAYER_EXPORT void VKAPI vkClearDescriptorSets(VkDevice device, VkDescriptorPool descriptorPool, uint32_t count, const VkDescriptorSet* pDescriptorSets)
 {
 
-    nextTable.ClearDescriptorSets(descriptorPool, count, pDescriptorSets);
+    nextTable.ClearDescriptorSets(device, descriptorPool, count, pDescriptorSets);
 }
 
-VK_LAYER_EXPORT void VKAPI vkUpdateDescriptors(VkDescriptorSet descriptorSet, uint32_t updateCount, const void** ppUpdateArray)
+VK_LAYER_EXPORT void VKAPI vkUpdateDescriptors(VkDevice device, VkDescriptorSet descriptorSet, uint32_t updateCount, const void** ppUpdateArray)
 {
 
-    nextTable.UpdateDescriptors(descriptorSet, updateCount, ppUpdateArray);
+    nextTable.UpdateDescriptors(device, descriptorSet, updateCount, ppUpdateArray);
 }
 
 VK_LAYER_EXPORT VkResult VKAPI vkCreateDynamicViewportState(VkDevice device, const VkDynamicVpStateCreateInfo* pCreateInfo, VkDynamicVpState* pState)
@@ -1919,10 +1919,10 @@ VK_LAYER_EXPORT VkResult VKAPI vkDbgSetMessageFilter(VkDevice device, int32_t ms
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkDbgSetObjectTag(VkBaseObject object, size_t tagSize, const void* pTag)
+VK_LAYER_EXPORT VkResult VKAPI vkDbgSetObjectTag(VkDevice device, VkObject object, size_t tagSize, const void* pTag)
 {
 
-    VkResult result = nextTable.DbgSetObjectTag(object, tagSize, pTag);
+    VkResult result = nextTable.DbgSetObjectTag(device, object, tagSize, pTag);
     return result;
 }
 

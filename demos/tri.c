@@ -129,7 +129,7 @@ static void demo_flush_init_cmd(struct demo *demo)
     err = vkQueueWaitIdle(demo->queue);
     assert(!err);
 
-    vkDestroyObject(demo->cmd);
+    vkDestroyObject(demo->device, VK_OBJECT_TYPE_COMMAND_BUFFER, demo->cmd);
     demo->cmd = VK_NULL_HANDLE;
 }
 
@@ -305,8 +305,8 @@ static void demo_draw_build_cmd(struct demo *demo)
     err = vkEndCommandBuffer(demo->cmd);
     assert(!err);
 
-    vkDestroyObject(rp_begin.renderPass);
-    vkDestroyObject(rp_begin.framebuffer);
+    vkDestroyObject(demo->device, VK_OBJECT_TYPE_RENDER_PASS, rp_begin.renderPass);
+    vkDestroyObject(demo->device, VK_OBJECT_TYPE_FRAMEBUFFER, rp_begin.framebuffer);
 }
 
 static void demo_draw(struct demo *demo)
@@ -436,12 +436,16 @@ static void demo_prepare_depth(struct demo *demo)
             &demo->depth.image);
     assert(!err);
 
-    err = vkGetObjectInfo(demo->depth.image, VK_OBJECT_INFO_TYPE_MEMORY_ALLOCATION_COUNT, &num_alloc_size, &num_allocations);
+    err = vkGetObjectInfo(demo->device,
+                    VK_OBJECT_TYPE_IMAGE, demo->depth.image,
+                    VK_OBJECT_INFO_TYPE_MEMORY_ALLOCATION_COUNT,
+                    &num_alloc_size, &num_allocations);
     assert(!err && num_alloc_size == sizeof(num_allocations));
     mem_reqs = malloc(num_allocations * sizeof(VkMemoryRequirements));
     demo->depth.mem = malloc(num_allocations * sizeof(VkDeviceMemory));
     demo->depth.num_mem = num_allocations;
-    err = vkGetObjectInfo(demo->depth.image,
+    err = vkGetObjectInfo(demo->device,
+                    VK_OBJECT_TYPE_IMAGE, demo->depth.image,
                     VK_OBJECT_INFO_TYPE_MEMORY_REQUIREMENTS,
                     &mem_reqs_size, mem_reqs);
     assert(!err && mem_reqs_size == num_allocations * sizeof(VkMemoryRequirements));
@@ -454,8 +458,9 @@ static void demo_prepare_depth(struct demo *demo)
         assert(!err);
 
         /* bind memory */
-        err = vkQueueBindObjectMemory(demo->queue, demo->depth.image, i,
-                demo->depth.mem[i], 0);
+        err = vkQueueBindObjectMemory(demo->queue,
+                VK_OBJECT_TYPE_IMAGE, demo->depth.image,
+                i, demo->depth.mem[i], 0);
         assert(!err);
     }
 
@@ -516,13 +521,15 @@ static void demo_prepare_texture_image(struct demo *demo,
             &tex_obj->image);
     assert(!err);
 
-    err = vkGetObjectInfo(tex_obj->image,
+    err = vkGetObjectInfo(demo->device,
+                VK_OBJECT_TYPE_IMAGE, tex_obj->image,
                 VK_OBJECT_INFO_TYPE_MEMORY_ALLOCATION_COUNT,
                 &num_alloc_size, &num_allocations);
     assert(!err && num_alloc_size == sizeof(num_allocations));
     mem_reqs = malloc(num_allocations * sizeof(VkMemoryRequirements));
     tex_obj->mem = malloc(num_allocations * sizeof(VkDeviceMemory));
-    err = vkGetObjectInfo(tex_obj->image,
+    err = vkGetObjectInfo(demo->device,
+                VK_OBJECT_TYPE_IMAGE, tex_obj->image,
                 VK_OBJECT_INFO_TYPE_MEMORY_REQUIREMENTS,
                 &mem_reqs_size, mem_reqs);
     assert(!err && mem_reqs_size == num_allocations * sizeof(VkMemoryRequirements));
@@ -536,7 +543,9 @@ static void demo_prepare_texture_image(struct demo *demo,
         assert(!err);
 
         /* bind memory */
-        err = vkQueueBindObjectMemory(demo->queue, tex_obj->image, j, tex_obj->mem[j], 0);
+        err = vkQueueBindObjectMemory(demo->queue,
+                VK_OBJECT_TYPE_IMAGE, tex_obj->image,
+                j, tex_obj->mem[j], 0);
         assert(!err);
     }
     free(mem_reqs);
@@ -555,14 +564,14 @@ static void demo_prepare_texture_image(struct demo *demo,
         void *data;
         int32_t x, y;
 
-        err = vkGetImageSubresourceInfo(tex_obj->image, &subres,
+        err = vkGetImageSubresourceInfo(demo->device, tex_obj->image, &subres,
                                          VK_SUBRESOURCE_INFO_TYPE_LAYOUT,
                                          &layout_size, &layout);
         assert(!err && layout_size == sizeof(layout));
         /* Linear texture must be within a single memory object */
         assert(num_allocations == 1);
 
-        err = vkMapMemory(tex_obj->mem[0], 0, 0, 0, &data);
+        err = vkMapMemory(demo->device, tex_obj->mem[0], 0, 0, 0, &data);
         assert(!err);
 
         for (y = 0; y < tex_height; y++) {
@@ -571,7 +580,7 @@ static void demo_prepare_texture_image(struct demo *demo,
                 row[x] = tex_colors[(x & 1) ^ (y & 1)];
         }
 
-        err = vkUnmapMemory(tex_obj->mem[0]);
+        err = vkUnmapMemory(demo->device, tex_obj->mem[0]);
         assert(!err);
     }
 
@@ -586,12 +595,13 @@ static void demo_destroy_texture_image(struct demo *demo, struct texture_object 
 {
     /* clean up staging resources */
     for (uint32_t j = 0; j < tex_obj->num_mem; j ++) {
-        vkQueueBindObjectMemory(demo->queue, tex_obj->image, j, VK_NULL_HANDLE, 0);
-        vkFreeMemory(tex_obj->mem[j]);
+        vkQueueBindObjectMemory(demo->queue,
+                VK_OBJECT_TYPE_IMAGE, tex_obj->image, j, VK_NULL_HANDLE, 0);
+        vkFreeMemory(demo->device, tex_obj->mem[j]);
     }
 
     free(tex_obj->mem);
-    vkDestroyObject(tex_obj->image);
+    vkDestroyObject(demo->device, VK_OBJECT_TYPE_IMAGE, tex_obj->image);
 }
 
 static void demo_prepare_textures(struct demo *demo)
@@ -739,14 +749,16 @@ static void demo_prepare_vertices(struct demo *demo)
     err = vkCreateBuffer(demo->device, &buf_info, &demo->vertices.buf);
     assert(!err);
 
-    err = vkGetObjectInfo(demo->vertices.buf,
+    err = vkGetObjectInfo(demo->device,
+                           VK_OBJECT_TYPE_BUFFER, demo->vertices.buf,
                            VK_OBJECT_INFO_TYPE_MEMORY_ALLOCATION_COUNT,
                            &num_alloc_size, &num_allocations);
     assert(!err && num_alloc_size == sizeof(num_allocations));
     mem_reqs = malloc(num_allocations * sizeof(VkMemoryRequirements));
     demo->vertices.mem = malloc(num_allocations * sizeof(VkDeviceMemory));
     demo->vertices.num_mem = num_allocations;
-    err = vkGetObjectInfo(demo->vertices.buf,
+    err = vkGetObjectInfo(demo->device,
+            VK_OBJECT_TYPE_BUFFER, demo->vertices.buf,
             VK_OBJECT_INFO_TYPE_MEMORY_REQUIREMENTS,
             &mem_reqs_size, mem_reqs);
     assert(!err && mem_reqs_size == sizeof(*mem_reqs));
@@ -756,15 +768,17 @@ static void demo_prepare_vertices(struct demo *demo)
         err = vkAllocMemory(demo->device, &mem_alloc, &demo->vertices.mem[i]);
         assert(!err);
 
-        err = vkMapMemory(demo->vertices.mem[i], 0, 0, 0, &data);
+        err = vkMapMemory(demo->device, demo->vertices.mem[i], 0, 0, 0, &data);
         assert(!err);
 
         memcpy(data, vb, sizeof(vb));
 
-        err = vkUnmapMemory(demo->vertices.mem[i]);
+        err = vkUnmapMemory(demo->device, demo->vertices.mem[i]);
         assert(!err);
 
-        err = vkQueueBindObjectMemory(demo->queue, demo->vertices.buf, i, demo->vertices.mem[i], 0);
+        err = vkQueueBindObjectMemory(demo->queue,
+                VK_OBJECT_TYPE_BUFFER, demo->vertices.buf,
+                i, demo->vertices.mem[i], 0);
         assert(!err);
     }
 
@@ -852,7 +866,7 @@ static VkShader demo_prepare_shader(struct demo *demo,
     err = vkCreateShader(demo->device, &createInfo, &shader);
     if (err) {
         free((void *) createInfo.pCode);
-        return NULL;
+        return VK_NULL_HANDLE;
     }
 
     return shader;
@@ -983,8 +997,8 @@ static void demo_prepare_pipeline(struct demo *demo)
     err = vkCreateGraphicsPipeline(demo->device, &pipeline, &demo->pipeline);
     assert(!err);
 
-    vkDestroyObject(vs.shader.shader);
-    vkDestroyObject(fs.shader.shader);
+    vkDestroyObject(demo->device, VK_OBJECT_TYPE_SHADER, vs.shader.shader);
+    vkDestroyObject(demo->device, VK_OBJECT_TYPE_SHADER, fs.shader.shader);
 }
 
 static void demo_prepare_dynamic_states(struct demo *demo)
@@ -1094,7 +1108,7 @@ static void demo_prepare_descriptor_set(struct demo *demo)
     update.count = DEMO_TEXTURE_COUNT;
     update.pSamplerImageViews = combined_info;
 
-    err = vkAllocDescriptorSets(demo->desc_pool,
+    err = vkAllocDescriptorSets(demo->device, demo->desc_pool,
             VK_DESCRIPTOR_SET_USAGE_STATIC,
             1, &demo->desc_layout,
             &demo->desc_set, &count);
@@ -1103,8 +1117,8 @@ static void demo_prepare_descriptor_set(struct demo *demo)
     vkBeginDescriptorPoolUpdate(demo->device,
             VK_DESCRIPTOR_UPDATE_MODE_FASTEST);
 
-    vkClearDescriptorSets(demo->desc_pool, 1, &demo->desc_set);
-    vkUpdateDescriptors(demo->desc_set, 1, update_array);
+    vkClearDescriptorSets(demo->device, demo->desc_pool, 1, &demo->desc_set);
+    vkUpdateDescriptors(demo->device, demo->desc_set, 1, update_array);
 
     vkEndDescriptorPoolUpdate(demo->device, demo->cmd);
 }
@@ -1391,7 +1405,7 @@ static void demo_init_vk(struct demo *demo)
     err = vkGetPhysicalDeviceInfo(demo->gpu, VK_PHYSICAL_DEVICE_INFO_TYPE_QUEUE_PROPERTIES,
                         &data_size, demo->queue_props);
     assert(!err);
-	queue_count = (uint32_t) (data_size / sizeof(VkPhysicalDeviceQueueProperties));
+    queue_count = (uint32_t) (data_size / sizeof(VkPhysicalDeviceQueueProperties));
     assert(queue_count >= 1);
 
     for (i = 0; i < queue_count; i++) {
@@ -1476,46 +1490,47 @@ static void demo_cleanup(struct demo *demo)
 {
     uint32_t i, j;
 
-    vkDestroyObject(demo->desc_set);
-    vkDestroyObject(demo->desc_pool);
+    vkDestroyObject(demo->device, VK_OBJECT_TYPE_DESCRIPTOR_SET, demo->desc_set);
+    vkDestroyObject(demo->device, VK_OBJECT_TYPE_DESCRIPTOR_POOL, demo->desc_pool);
 
-    vkDestroyObject(demo->cmd);
+    vkDestroyObject(demo->device, VK_OBJECT_TYPE_COMMAND_BUFFER, demo->cmd);
 
-    vkDestroyObject(demo->viewport);
-    vkDestroyObject(demo->raster);
-    vkDestroyObject(demo->color_blend);
-    vkDestroyObject(demo->depth_stencil);
+    vkDestroyObject(demo->device, VK_OBJECT_TYPE_DYNAMIC_VP_STATE, demo->viewport);
+    vkDestroyObject(demo->device, VK_OBJECT_TYPE_DYNAMIC_RS_STATE, demo->raster);
+    vkDestroyObject(demo->device, VK_OBJECT_TYPE_DYNAMIC_CB_STATE, demo->color_blend);
+    vkDestroyObject(demo->device, VK_OBJECT_TYPE_DYNAMIC_DS_STATE, demo->depth_stencil);
 
-    vkDestroyObject(demo->pipeline);
-    vkDestroyObject(demo->pipeline_layout);
-    vkDestroyObject(demo->desc_layout);
+    vkDestroyObject(demo->device, VK_OBJECT_TYPE_PIPELINE, demo->pipeline);
+    vkDestroyObject(demo->device, VK_OBJECT_TYPE_PIPELINE_LAYOUT, demo->pipeline_layout);
+    vkDestroyObject(demo->device, VK_OBJECT_TYPE_DESCRIPTOR_SET_LAYOUT, demo->desc_layout);
 
-    vkQueueBindObjectMemory(demo->queue, demo->vertices.buf, 0, VK_NULL_HANDLE, 0);
-    vkDestroyObject(demo->vertices.buf);
+    vkQueueBindObjectMemory(demo->queue, VK_OBJECT_TYPE_BUFFER, demo->vertices.buf, 0, VK_NULL_HANDLE, 0);
+    vkDestroyObject(demo->device, VK_OBJECT_TYPE_BUFFER, demo->vertices.buf);
     demo_remove_mem_refs(demo, demo->vertices.num_mem, demo->vertices.mem);
     for (j = 0; j < demo->vertices.num_mem; j++)
-        vkFreeMemory(demo->vertices.mem[j]);
+        vkFreeMemory(demo->device, demo->vertices.mem[j]);
 
     for (i = 0; i < DEMO_TEXTURE_COUNT; i++) {
-        vkDestroyObject(demo->textures[i].view);
-        vkQueueBindObjectMemory(demo->queue, demo->textures[i].image, 0, VK_NULL_HANDLE, 0);
-        vkDestroyObject(demo->textures[i].image);
+        vkDestroyObject(demo->device, VK_OBJECT_TYPE_IMAGE_VIEW, demo->textures[i].view);
+        vkQueueBindObjectMemory(demo->queue, VK_OBJECT_TYPE_IMAGE, demo->textures[i].image, 0, VK_NULL_HANDLE, 0);
+        vkDestroyObject(demo->device, VK_OBJECT_TYPE_IMAGE, demo->textures[i].image);
         demo_remove_mem_refs(demo, demo->textures[i].num_mem, demo->textures[i].mem);
         for (j = 0; j < demo->textures[i].num_mem; j++)
-            vkFreeMemory(demo->textures[i].mem[j]);
+            vkFreeMemory(demo->device, demo->textures[i].mem[j]);
         free(demo->textures[i].mem);
-        vkDestroyObject(demo->textures[i].sampler);
+        vkDestroyObject(demo->device, VK_OBJECT_TYPE_SAMPLER, demo->textures[i].sampler);
     }
 
-    vkDestroyObject(demo->depth.view);
-    vkQueueBindObjectMemory(demo->queue, demo->depth.image, 0, VK_NULL_HANDLE, 0);
+    vkDestroyObject(demo->device, VK_OBJECT_TYPE_DEPTH_STENCIL_VIEW, demo->depth.view);
+    vkQueueBindObjectMemory(demo->queue, VK_OBJECT_TYPE_IMAGE, demo->depth.image, 0, VK_NULL_HANDLE, 0);
     demo_remove_mem_refs(demo, demo->depth.num_mem, demo->depth.mem);
-    vkDestroyObject(demo->depth.image);
-    for (j = 0; j < demo->depth.num_mem; j++)
-        vkFreeMemory(demo->depth.mem[j]);
+    vkDestroyObject(demo->device, VK_OBJECT_TYPE_IMAGE, demo->depth.image);
+    for (j = 0; j < demo->depth.num_mem; j++) {
+        vkFreeMemory(demo->device, demo->depth.mem[j]);
+    }
 
     for (i = 0; i < DEMO_BUFFER_COUNT; i++) {
-        vkDestroyObject(demo->buffers[i].view);
+        vkDestroyObject(demo->device, VK_OBJECT_TYPE_COLOR_ATTACHMENT_VIEW, demo->buffers[i].view);
         demo_remove_mem_refs(demo, 1, &demo->buffers[i].mem);
     }
     vkDestroySwapChainWSI(demo->swap_chain);

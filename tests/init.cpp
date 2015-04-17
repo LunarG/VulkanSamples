@@ -207,16 +207,16 @@ TEST_F(XglTest, AllocMemory) {
     err = vkAllocMemory(device(), &alloc_info, &gpu_mem);
     ASSERT_VK_SUCCESS(err);
 
-    err = vkMapMemory(gpu_mem, 0, 0, 0, (void **) &pData);
+    err = vkMapMemory(device(), gpu_mem, 0, 0, 0, (void **) &pData);
     ASSERT_VK_SUCCESS(err);
 
     memset(pData, 0x55, alloc_info.allocationSize);
     EXPECT_EQ(0x55, pData[0]) << "Memory read not same a write";
 
-    err = vkUnmapMemory(gpu_mem);
+    err = vkUnmapMemory(device(), gpu_mem);
     ASSERT_VK_SUCCESS(err);
 
-    err = vkFreeMemory(gpu_mem);
+    err = vkFreeMemory(device(), gpu_mem);
     ASSERT_VK_SUCCESS(err);
 }
 
@@ -239,7 +239,7 @@ TEST_F(XglTest, Event) {
     err = vkCreateEvent(device(), &event_info, &event);
     ASSERT_VK_SUCCESS(err);
 
-    err = vkGetObjectInfo(event, VK_OBJECT_INFO_TYPE_MEMORY_REQUIREMENTS,
+    err = vkGetObjectInfo(device(), VK_OBJECT_TYPE_EVENT, event, VK_OBJECT_INFO_TYPE_MEMORY_REQUIREMENTS,
                            &data_size, &mem_req);
     ASSERT_VK_SUCCESS(err);
 
@@ -261,28 +261,28 @@ TEST_F(XglTest, Event) {
     ASSERT_VK_SUCCESS(err);
 
     VkQueue queue = m_device->graphics_queues()[0]->obj();
-    err = vkQueueBindObjectMemory(queue, event, 0, event_mem, 0);
+    err = vkQueueBindObjectMemory(queue, VK_OBJECT_TYPE_EVENT, event, 0, event_mem, 0);
     ASSERT_VK_SUCCESS(err);
 
-    err = vkResetEvent(event);
+    err = vkResetEvent(device(), event);
     ASSERT_VK_SUCCESS(err);
 
-    err = vkGetEventStatus(event);
+    err = vkGetEventStatus(device(), event);
     ASSERT_EQ(VK_EVENT_RESET, err);
 
-    err = vkSetEvent(event);
+    err = vkSetEvent(device(), event);
     ASSERT_VK_SUCCESS(err);
 
-    err = vkGetEventStatus(event);
+    err = vkGetEventStatus(device(), event);
     ASSERT_EQ(VK_EVENT_SET, err);
 
     // TODO: Test actual synchronization with command buffer event.
 
     // All done with event memory, clean up
-    err = vkQueueBindObjectMemory(queue, event, 0, VK_NULL_HANDLE, 0);
+    err = vkQueueBindObjectMemory(queue, VK_OBJECT_TYPE_EVENT, event, 0, VK_NULL_HANDLE, 0);
     ASSERT_VK_SUCCESS(err);
 
-    err = vkDestroyObject(event);
+    err = vkDestroyObject(device(), VK_OBJECT_TYPE_EVENT, event);
     ASSERT_VK_SUCCESS(err);
 }
 
@@ -303,7 +303,7 @@ TEST_F(XglTest, Fence) {
     err = vkCreateFence(device(), &fence_info, &fence);
     ASSERT_VK_SUCCESS(err);
 
-    err = vkGetFenceStatus(fence);
+    err = vkGetFenceStatus(device(), fence);
     // We've not submitted this fence on a command buffer so should get
     // VK_ERROR_UNAVAILABLE
     EXPECT_EQ(VK_ERROR_UNAVAILABLE, err);
@@ -321,7 +321,7 @@ TEST_F(XglTest, Fence) {
     // TODO: Attached to command buffer and test GetFenceStatus
     // TODO: Add some commands and submit the command buffer
 
-    err = vkDestroyObject(fence);
+    err = vkDestroyObject(device(), VK_OBJECT_TYPE_FENCE, fence);
     ASSERT_VK_SUCCESS(err);
 
 }
@@ -370,7 +370,7 @@ TEST_F(XglTest, Query) {
     ASSERT_VK_SUCCESS(err);
 
     data_size = sizeof(mem_req);
-    err = vkGetObjectInfo(query_pool, VK_OBJECT_INFO_TYPE_MEMORY_REQUIREMENTS,
+    err = vkGetObjectInfo(device(), VK_OBJECT_TYPE_QUERY_POOL, query_pool, VK_OBJECT_INFO_TYPE_MEMORY_REQUIREMENTS,
                            &data_size, &mem_req);
     ASSERT_VK_SUCCESS(err);
     ASSERT_NE(0, data_size) << "Invalid data_size";
@@ -393,7 +393,7 @@ TEST_F(XglTest, Query) {
     ASSERT_VK_SUCCESS(err);
 
     VkQueue queue = m_device->graphics_queues()[0]->obj();
-    err = vkQueueBindObjectMemory(queue, query_pool, 0, query_mem, 0);
+    err = vkQueueBindObjectMemory(queue, VK_OBJECT_TYPE_QUERY_POOL, query_pool, 0, query_mem, 0);
     ASSERT_VK_SUCCESS(err);
 
     // TODO: Test actual synchronization with command buffer event.
@@ -403,13 +403,13 @@ TEST_F(XglTest, Query) {
     // TODO: commands
     // TOOD: vkCmdEndQuery
 
-    err = vkGetQueryPoolResults(query_pool, 0, MAX_QUERY_SLOTS,
+    err = vkGetQueryPoolResults(device(), query_pool, 0, MAX_QUERY_SLOTS,
                                  &query_result_size, VK_NULL_HANDLE, 0);
     ASSERT_VK_SUCCESS(err);
 
     if (query_result_size > 0) {
         query_result_data = new uint32_t [query_result_size];
-        err = vkGetQueryPoolResults(query_pool, 0, MAX_QUERY_SLOTS,
+        err = vkGetQueryPoolResults(device(), query_pool, 0, MAX_QUERY_SLOTS,
                                      &query_result_size, query_result_data, 0);
         ASSERT_VK_SUCCESS(err);
 
@@ -418,10 +418,10 @@ TEST_F(XglTest, Query) {
     }
 
     // All done with QueryPool memory, clean up
-    err = vkQueueBindObjectMemory(queue, query_pool, 0, VK_NULL_HANDLE, 0);
+    err = vkQueueBindObjectMemory(queue, VK_OBJECT_TYPE_QUERY_POOL, query_pool, 0, VK_NULL_HANDLE, 0);
     ASSERT_VK_SUCCESS(err);
 
-    err = vkDestroyObject(query_pool);
+    err = vkDestroyObject(device(), VK_OBJECT_TYPE_QUERY_POOL, query_pool);
     ASSERT_VK_SUCCESS(err);
 }
 
@@ -625,7 +625,7 @@ void XglTest::CreateImageTest()
     {
         VkSubresourceLayout layout = {};
         data_size = sizeof(layout);
-        err = vkGetImageSubresourceInfo(image, &subresource, VK_SUBRESOURCE_INFO_TYPE_LAYOUT,
+        err = vkGetImageSubresourceInfo(device(), image, &subresource, VK_SUBRESOURCE_INFO_TYPE_LAYOUT,
                                          &data_size, &layout);
         ASSERT_VK_SUCCESS(err);
         ASSERT_EQ(sizeof(VkSubresourceLayout), data_size) << "Invalid structure (VkSubresourceLayout) size";
@@ -640,7 +640,7 @@ void XglTest::CreateImageTest()
 
     VkMemoryRequirements mem_req;
     data_size = sizeof(mem_req);
-    err = vkGetObjectInfo(image, VK_OBJECT_INFO_TYPE_MEMORY_REQUIREMENTS,
+    err = vkGetObjectInfo(device(), VK_OBJECT_TYPE_IMAGE, image, VK_OBJECT_INFO_TYPE_MEMORY_REQUIREMENTS,
                            &data_size, &mem_req);
     ASSERT_VK_SUCCESS(err);
     ASSERT_EQ(data_size, sizeof(mem_req));
@@ -661,7 +661,7 @@ void XglTest::CreateImageTest()
     ASSERT_VK_SUCCESS(err);
 
     VkQueue queue = m_device->graphics_queues()[0]->obj();
-    err = vkQueueBindObjectMemory(queue, image, 0, image_mem, 0);
+    err = vkQueueBindObjectMemory(queue, VK_OBJECT_TYPE_IMAGE, image, 0, image_mem, 0);
     ASSERT_VK_SUCCESS(err);
 
 //    typedef struct VkImageViewCreateInfo_
@@ -704,11 +704,11 @@ void XglTest::CreateImageTest()
     // TODO: Test image memory.
 
     // All done with image memory, clean up
-    ASSERT_VK_SUCCESS(vkQueueBindObjectMemory(queue, image, 0, VK_NULL_HANDLE, 0));
+    ASSERT_VK_SUCCESS(vkQueueBindObjectMemory(queue, VK_OBJECT_TYPE_IMAGE, image, 0, VK_NULL_HANDLE, 0));
 
-    ASSERT_VK_SUCCESS(vkFreeMemory(image_mem));
+    ASSERT_VK_SUCCESS(vkFreeMemory(device(), image_mem));
 
-    ASSERT_VK_SUCCESS(vkDestroyObject(image));
+    ASSERT_VK_SUCCESS(vkDestroyObject(device(), VK_OBJECT_TYPE_IMAGE, image));
 }
 
 TEST_F(XglTest, CreateImage) {
@@ -734,7 +734,7 @@ void XglTest::CreateCommandBufferTest()
     err = vkCreateCommandBuffer(device(), &info, &cmdBuffer);
     ASSERT_VK_SUCCESS(err) << "vkCreateCommandBuffer failed";
 
-    ASSERT_VK_SUCCESS(vkDestroyObject(cmdBuffer));
+    ASSERT_VK_SUCCESS(vkDestroyObject(device(), VK_OBJECT_TYPE_COMMAND_BUFFER, cmdBuffer));
 }
 
 TEST_F(XglTest, TestComandBuffer) {

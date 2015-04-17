@@ -314,7 +314,7 @@ void intel_dev_log(struct intel_dev *dev,
         return;
 
     va_start(ap, format);
-    intel_logv(dev, msg_type, validation_level, (VkBaseObject) src_object,
+    intel_logv(dev, msg_type, validation_level, (VkObject) src_object,
             location, msg_code, format, ap);
     va_end(ap);
 }
@@ -354,7 +354,7 @@ ICD_EXPORT VkResult VKAPI vkGetDeviceQueue(
     if (queueIndex > 0)
         return VK_ERROR_UNAVAILABLE;
 
-    *pQueue = dev->queues[queueNodeIndex];
+    *pQueue = (VkQueue) dev->queues[queueNodeIndex];
     return VK_SUCCESS;
 }
 

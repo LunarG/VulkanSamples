@@ -726,7 +726,7 @@ static void loader_init_dispatch_table(VkLayerDispatchTable *tab, PFN_vkGetProcA
 
 static void * VKAPI loader_gpa_internal(VkPhysicalDevice gpu, const char * pName)
 {
-    if (gpu == NULL) {
+    if (gpu == VK_NULL_HANDLE) {
         return NULL;;
     }
     VkBaseLayerObject* gpuw = (VkBaseLayerObject *) gpu;
@@ -756,8 +756,7 @@ extern struct loader_icd * loader_get_icd(const VkBaseLayerObject *gpu, uint32_t
     for (struct loader_instance *inst = loader.instances; inst; inst = inst->next) {
         for (struct loader_icd *icd = inst->icds; icd; icd = icd->next) {
             for (uint32_t i = 0; i < icd->gpu_count; i++)
-                if ((icd->gpus + i) == gpu || (icd->gpus +i)->baseObject ==
-                                                            gpu) {
+                if ((icd->gpus + i) == gpu || (void*)(icd->gpus +i)->baseObject == gpu) {
                     *gpu_index = i;
                     return icd;
                 }
@@ -1023,7 +1022,7 @@ extern uint32_t loader_activate_layers(struct loader_icd *icd, uint32_t gpu_inde
     /* activate any layer libraries */
     if (!loader_layers_activated(icd, gpu_index)) {
         VkBaseLayerObject *gpuObj = gpu;
-        VkBaseLayerObject *nextGpuObj, *baseObj = gpuObj->baseObject;
+        VkBaseLayerObject *nextGpuObj, *baseObj = (VkBaseLayerObject *) gpuObj->baseObject;
         PFN_vkGetProcAddr nextGPA = loader_gpa_internal;
 
         count = loader_get_layer_libs(icd, gpu_index, ext_count, ext_names, &pLayerNames);
@@ -1037,8 +1036,8 @@ extern uint32_t loader_activate_layers(struct loader_icd *icd, uint32_t gpu_inde
         for (int32_t i = icd->layer_count[gpu_index] - 1; i >= 0; i--) {
             nextGpuObj = (icd->wrappedGpus[gpu_index] + i);
             nextGpuObj->pGPA = nextGPA;
-            nextGpuObj->baseObject = baseObj;
-            nextGpuObj->nextObject = gpuObj;
+            nextGpuObj->baseObject = (VkObject) baseObj;
+            nextGpuObj->nextObject = (VkObject) gpuObj;
             gpuObj = nextGpuObj;
 
             char funcStr[256];
@@ -1051,12 +1050,12 @@ extern uint32_t loader_activate_layers(struct loader_icd *icd, uint32_t gpu_inde
             }
 
             if (i == 0) {
-                loader_init_dispatch_table(icd->loader_dispatch + gpu_index, nextGPA, gpuObj);
+                loader_init_dispatch_table(icd->loader_dispatch + gpu_index, nextGPA, (VkPhysicalDevice) gpuObj);
                 //Insert the new wrapped objects into the list with loader object at head
-                gpu->nextObject = gpuObj;
+                gpu->nextObject = (VkObject) gpuObj;
                 gpu->pGPA = nextGPA;
                 gpuObj = icd->wrappedGpus[gpu_index] + icd->layer_count[gpu_index] - 1;
-                gpuObj->nextObject = baseObj;
+                gpuObj->nextObject = (VkObject) baseObj;
                 gpuObj->pGPA = icd->scanned_icds->GetProcAddr;
             }
 
@@ -1128,7 +1127,7 @@ LOADER_EXPORT VkResult VKAPI vkCreateInstance(
             {
                 ptr_instance->icds = ptr_instance->icds->next;
                 loader_icd_destroy(icd);
-                scanned_icds->instance = NULL;
+                scanned_icds->instance = VK_NULL_HANDLE;
                 loader_log(VK_DBG_MSG_WARNING, 0,
                         "ICD ignored: failed to CreateInstance on device");
             }
@@ -1185,7 +1184,7 @@ LOADER_EXPORT VkResult VKAPI vkDestroyInstance(
         if (res != VK_SUCCESS)
             loader_log(VK_DBG_MSG_WARNING, 0,
                         "ICD ignored: failed to DestroyInstance on device");
-        scanned_icds->instance = NULL;
+        scanned_icds->instance = VK_NULL_HANDLE;
         scanned_icds = scanned_icds->next;
     }
 
@@ -1253,7 +1252,7 @@ LOADER_EXPORT VkResult VKAPI vkEnumeratePhysicalDevices(
                                                get_proc_addr, gpus[i]);
 
                     /* Verify ICD compatibility */
-                    if (!valid_loader_magic_value(gpus[i])) {
+                    if (!valid_loader_magic_value((void*) gpus[i])) {
                         loader_log(VK_DBG_MSG_WARNING, 0,
                             "Loader: Incompatible ICD, first dword must be initialized to ICD_LOADER_MAGIC. See loader/README.md for details.\n");
                         assert(0);
@@ -1284,7 +1283,7 @@ LOADER_EXPORT VkResult VKAPI vkEnumeratePhysicalDevices(
 
 LOADER_EXPORT void * VKAPI vkGetProcAddr(VkPhysicalDevice gpu, const char * pName)
 {
-    if (gpu == NULL) {
+    if (gpu == VK_NULL_HANDLE) {
 
         /* return entrypoint addresses that are global (in the loader)*/
         return globalGetProcAddr(pName);
@@ -1422,7 +1421,7 @@ LOADER_EXPORT VkResult VKAPI vkEnumerateLayers(VkPhysicalDevice gpu, size_t maxL
             uint32_t n;
             VkResult res;
             n = (uint32_t) ((maxStringSize < 256) ? maxStringSize : 256);
-            res = fpEnumerateLayers(NULL, 16, n, &cnt, layers, (char *) icd->gpus + gpu_index);
+            res = fpEnumerateLayers((VkPhysicalDevice) NULL, 16, n, &cnt, layers, (char *) icd->gpus + gpu_index);
             loader_platform_close_library(handle);
             if (res != VK_SUCCESS)
                 continue;
@@ -1455,7 +1454,7 @@ LOADER_EXPORT VkResult VKAPI vkDbgRegisterMsgCallback(VkInstance instance, VK_DB
     assert(loader.icds_scanned);
 
     for (inst = loader.instances; inst; inst = inst->next) {
-        if (inst == instance)
+        if ((VkInstance) inst == instance)
             break;
     }
 
@@ -1503,7 +1502,7 @@ LOADER_EXPORT VkResult VKAPI vkDbgUnregisterMsgCallback(VkInstance instance, VK_
     assert(loader.icds_scanned);
 
     for (inst = loader.instances; inst; inst = inst->next) {
-        if (inst == instance)
+        if ((VkInstance) inst == instance)
             break;
     }
 
@@ -1532,7 +1531,7 @@ LOADER_EXPORT VkResult VKAPI vkDbgSetGlobalOption(VkInstance instance, VK_DBG_GL
     assert(loader.icds_scanned);
 
     for (inst = loader.instances; inst; inst = inst->next) {
-        if (inst == instance)
+        if ((VkInstance) inst == instance)
             break;
     }
 

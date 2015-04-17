@@ -374,7 +374,7 @@ class Subcommand(object):
                          "{\n"
                          "    VkBaseLayerObject* gpuw = (VkBaseLayerObject *) gpu;\n"
                          "    void* addr;\n"
-                         "    if (gpu == NULL)\n"
+                         "    if (gpu == VK_NULL_HANDLE)\n"
                          "        return NULL;\n"
                          "    pCurObj = gpuw;\n"
                          "    loader_platform_thread_once(&tabOnce, init%s);\n\n"
@@ -481,7 +481,7 @@ class GenericLayerSubcommand(Subcommand):
             funcs.append('%s%s\n'
                      '{\n'
                      '    char str[1024];\n'
-                     '    if (gpu != NULL) {\n'
+                     '    if (gpu != VK_NULL_HANDLE) {\n'
                      '        sprintf(str, "At start of layered %s\\n");\n'
                      '        layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, gpu, 0, 0, (char *) "GENERIC", (char *) str);\n'
                      '        pCurObj = (VkBaseLayerObject *) gpu;\n'
@@ -1133,7 +1133,7 @@ class ObjectTrackerSubcommand(Subcommand):
             return None
         obj_type_mapping = {base_t : base_t.replace("Vk", "VkObjectType") for base_t in vulkan.object_type_list}
         # For the various "super-types" we have to use function to distinguish sub type
-        for obj_type in ["VK_BASE_OBJECT", "VK_OBJECT", "VK_DYNAMIC_STATE_OBJECT", "VkObject", "VkBaseObject"]:
+        for obj_type in ["VK_BASE_OBJECT", "VK_OBJECT", "VK_DYNAMIC_STATE_OBJECT", "VkObject"]:
             obj_type_mapping[obj_type] = "ll_get_obj_type(object)"
 
         decl = proto.c_func(prefix="vk", attr="VKAPI")

@@ -100,9 +100,9 @@ VkResult intel_mem_set_priority(struct intel_mem *mem,
 }
 
 ICD_EXPORT VkResult VKAPI vkAllocMemory(
-    VkDevice                                  device,
+    VkDevice                                device,
     const VkMemoryAllocInfo*                pAllocInfo,
-    VkDeviceMemory*                             pMem)
+    VkDeviceMemory*                         pMem)
 {
     struct intel_dev *dev = intel_dev(device);
 
@@ -110,7 +110,8 @@ ICD_EXPORT VkResult VKAPI vkAllocMemory(
 }
 
 ICD_EXPORT VkResult VKAPI vkFreeMemory(
-    VkDeviceMemory                              mem_)
+    VkDevice                                  device,
+    VkDeviceMemory                            mem_)
 {
     struct intel_mem *mem = intel_mem(mem_);
 
@@ -120,7 +121,8 @@ ICD_EXPORT VkResult VKAPI vkFreeMemory(
 }
 
 ICD_EXPORT VkResult VKAPI vkSetMemoryPriority(
-    VkDeviceMemory                              mem_,
+    VkDevice                                 device,
+    VkDeviceMemory                           mem_,
     VkMemoryPriority                         priority)
 {
     struct intel_mem *mem = intel_mem(mem_);
@@ -129,6 +131,7 @@ ICD_EXPORT VkResult VKAPI vkSetMemoryPriority(
 }
 
 ICD_EXPORT VkResult VKAPI vkMapMemory(
+    VkDevice                                  device,
     VkDeviceMemory                            mem_,
     VkDeviceSize                              offset,
     VkDeviceSize                              size,
@@ -144,6 +147,7 @@ ICD_EXPORT VkResult VKAPI vkMapMemory(
 }
 
 ICD_EXPORT VkResult VKAPI vkUnmapMemory(
+    VkDevice                                    device,
     VkDeviceMemory                              mem_)
 {
     struct intel_mem *mem = intel_mem(mem_);
@@ -154,6 +158,7 @@ ICD_EXPORT VkResult VKAPI vkUnmapMemory(
 }
 
 ICD_EXPORT VkResult VKAPI vkFlushMappedMemory(
+    VkDevice                                  device,
     VkDeviceMemory                            mem_,
     VkDeviceSize                              offset,
     VkDeviceSize                              size)

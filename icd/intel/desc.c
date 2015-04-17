@@ -951,6 +951,7 @@ ICD_EXPORT VkResult VKAPI vkCreateDescriptorPool(
 }
 
 ICD_EXPORT VkResult VKAPI vkResetDescriptorPool(
+    VkDevice                                  device,
     VkDescriptorPool                          descriptorPool)
 {
     struct intel_desc_pool *pool = intel_desc_pool(descriptorPool);
@@ -961,6 +962,7 @@ ICD_EXPORT VkResult VKAPI vkResetDescriptorPool(
 }
 
 ICD_EXPORT VkResult VKAPI vkAllocDescriptorSets(
+    VkDevice                                  device,
     VkDescriptorPool                          descriptorPool,
     VkDescriptorSetUsage                     setUsage,
     uint32_t                                     count,
@@ -990,6 +992,7 @@ ICD_EXPORT VkResult VKAPI vkAllocDescriptorSets(
 }
 
 ICD_EXPORT void VKAPI vkClearDescriptorSets(
+    VkDevice                                  device,
     VkDescriptorPool                          descriptorPool,
     uint32_t                                     count,
     const VkDescriptorSet*                    pDescriptorSets)
@@ -1005,6 +1008,7 @@ ICD_EXPORT void VKAPI vkClearDescriptorSets(
 }
 
 ICD_EXPORT void VKAPI vkUpdateDescriptors(
+    VkDevice                                  device,
     VkDescriptorSet                           descriptorSet,
     uint32_t                                     updateCount,
     const void**                                 ppUpdateArray)

@@ -137,7 +137,7 @@ static inline void intel_free(const void *handle, void *ptr)
 static inline void intel_logv(const void *handle,
                               VK_DBG_MSG_TYPE msg_type,
                               VkValidationLevel validation_level,
-                              VkBaseObject src_object,
+                              VkObject src_object,
                               size_t location, int32_t msg_code,
                               const char *format, va_list ap)
 {
@@ -156,7 +156,7 @@ static inline void intel_logv(const void *handle,
 static inline void intel_log(const void *handle,
                              VK_DBG_MSG_TYPE msg_type,
                              VkValidationLevel validation_level,
-                             VkBaseObject src_object,
+                             VkObject src_object,
                              size_t location, int32_t msg_code,
                              const char *format, ...)
 {
