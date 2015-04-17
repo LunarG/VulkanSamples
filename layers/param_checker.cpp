@@ -404,6 +404,13 @@ VK_LAYER_EXPORT VkResult VKAPI vkUnmapMemory(VkDeviceMemory mem)
     return result;
 }
 
+VK_LAYER_EXPORT VkResult VKAPI vkFlushMappedMemory(VkDeviceMemory mem, VkDeviceSize offset, VkDeviceSize size)
+{
+
+    VkResult result = nextTable.FlushMappedMemory(mem, offset, size);
+    return result;
+}
+
 VK_LAYER_EXPORT VkResult VKAPI vkPinSystemMemory(VkDevice device, const void* pSysMem, size_t memSize, VkDeviceMemory* pMem)
 {
 

@@ -2295,6 +2295,11 @@ VkResult VKAPI vkMapMemory(
 VkResult VKAPI vkUnmapMemory(
     VkDeviceMemory                              mem);
 
+VkResult VKAPI vkFlushMappedMemory(
+    VkDeviceMemory mem,
+    VkDeviceSize offset,
+    VkDeviceSize size);
+
 VkResult VKAPI vkPinSystemMemory(
     VkDevice                                    device,
     const void*                                 pSysMem,

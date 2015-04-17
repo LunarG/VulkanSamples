@@ -48,6 +48,7 @@ typedef struct VkLayerDispatchTable_
     PFN_vkSetMemoryPriority SetMemoryPriority;
     PFN_vkMapMemory MapMemory;
     PFN_vkUnmapMemory UnmapMemory;
+    PFN_vkFlushMappedMemory FlushMappedMemory;
     PFN_vkPinSystemMemory PinSystemMemory;
     PFN_vkGetMultiDeviceCompatibility GetMultiDeviceCompatibility;
     PFN_vkOpenSharedMemory OpenSharedMemory;

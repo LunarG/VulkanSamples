@@ -319,6 +319,11 @@ core = Extension(
         Proto("VkResult", "UnmapMemory",
             [Param("VkDeviceMemory", "mem")]),
 
+        Proto("VkResult", "FlushMappedMemory",
+            [Param("VkDeviceMemory", "mem"),
+             Param("VkDeviceSize", "offset"),
+             Param("VkDeviceSize", "size")]),
+
         Proto("VkResult", "PinSystemMemory",
             [Param("VkDevice", "device"),
              Param("const void*", "pSysMem"),
