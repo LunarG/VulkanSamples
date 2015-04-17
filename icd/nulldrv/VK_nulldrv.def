@@ -28,7 +28,6 @@ LIBRARY VK_nulldrv
 EXPORTS
    vkGetProcAddr
    vkCreateInstance
-   vkEnumerateGpus
    vkDestroyInstance
    vkGetGlobalExtensionInfo
    xcbCreateWindow

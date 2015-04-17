@@ -1498,6 +1498,15 @@ ICD_EXPORT VkResult VKAPI vkUnmapMemory(
     return VK_SUCCESS;
 }
 
+ICD_EXPORT VkResult VKAPI vkFlushMappedMemory(
+    VkDeviceMemory                            mem_,
+    VkDeviceSize                              offset,
+    VkDeviceSize                              size)
+{
+    NULLDRV_LOG_FUNC;
+    return VK_SUCCESS;
+}
+
 ICD_EXPORT VkResult VKAPI vkPinSystemMemory(
     VkDevice                                  device,
     const void*                                 pSysMem,
