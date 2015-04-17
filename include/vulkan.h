@@ -1095,6 +1095,7 @@ typedef enum VkQueryResultFlagBits_
 {
     VK_QUERY_RESULT_32_BIT                                  = 0,           // Results of the queries are written to the destination buffer as 32-bit values
     VK_QUERY_RESULT_64_BIT                                  = VK_BIT(0),   // Results of the queries are written to the destination buffer as 64-bit values
+    // TODO: need to resolve removal of this enum. see bug 13466 for details
     // VK_QUERY_RESULT_NO_WAIT_BIT                             = 0,           // Results of the queries aren't waited on before proceeding with the result copy
     VK_QUERY_RESULT_WAIT_BIT                                = VK_BIT(1),   // Results of the queries are waited on before proceeding with the result copy
     VK_QUERY_RESULT_WITH_AVAILABILITY_BIT                   = VK_BIT(2),   // Besides the results of the query, the availability of the results is also written
