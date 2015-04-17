@@ -23,7 +23,7 @@
  */
 
 #ifndef NULLDRV_H
-#define NULLDRV_H 
+#define NULLDRV_H
 #include <stdlib.h>
 #include <stdbool.h>
 #include <stdint.h>
@@ -142,7 +142,7 @@ struct nulldrv_desc_layout {
     struct nulldrv_obj obj;
 };
 
-struct nulldrv_desc_layout_chain {
+struct nulldrv_pipeline_layout {
     struct nulldrv_obj obj;
 };
 
@@ -150,7 +150,6 @@ struct nulldrv_shader {
     struct nulldrv_obj obj;
 
 };
-
 
 struct nulldrv_pipeline {
     struct nulldrv_obj obj;

@@ -820,12 +820,13 @@ void DescriptorSetLayout::init(const Device &dev, const VkDescriptorSetLayoutCre
     alloc_memory(dev);
 }
 
-void DescriptorSetLayoutChain::init(const Device &dev, const std::vector<const DescriptorSetLayout *> &layouts)
+void PipelineLayout::init(const Device &dev, VkPipelineLayoutCreateInfo &info, const std::vector<const DescriptorSetLayout *> &layouts)
 {
     DEV_INIT(dev);
     const std::vector<VkDescriptorSetLayout> layout_objs = make_objects<VkDescriptorSetLayout>(layouts);
+    info.pSetLayouts = &layout_objs[0];
 
-    DERIVED_OBJECT_INIT(vkCreateDescriptorSetLayoutChain, dev.obj(), layout_objs.size(), &layout_objs[0]);
+    DERIVED_OBJECT_INIT(vkCreatePipelineLayout, dev.obj(), &info);
     alloc_memory(dev);
 }
 

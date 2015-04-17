@@ -67,7 +67,7 @@ typedef enum _VK_OBJECT_TYPE
     VkObjectTypeSemaphore,
     VkObjectTypeShader,
     VkObjectTypeDescriptorSetLayout,
-    VkObjectTypeDescriptorSetLayoutChain,
+    VkObjectTypePipelineLayout,
     VkObjectTypeBuffer,
     VkObjectTypePipeline,
     VkObjectTypeDevice,
@@ -105,10 +105,10 @@ static const char* string_VK_OBJECT_TYPE(VK_OBJECT_TYPE type) {
             return "FENCE";
         case VkObjectTypeDescriptorSetLayout:
             return "DESCRIPTOR_SET_LAYOUT";
-        case VkObjectTypeDescriptorSetLayoutChain:
-            return "DESCRIPTOR_SET_LAYOUT_CHAIN";
         case VkObjectTypeDeviceMemory:
             return "DEVICE_MEMORY";
+        case VkObjectTypePipelineLayout:
+            return "PIPELINE_LAYOUT";
         case VkObjectTypeQueue:
             return "QUEUE";
         case VkObjectTypeImage:

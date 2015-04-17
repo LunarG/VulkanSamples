@@ -828,67 +828,69 @@ void intel_desc_layout_destroy(struct intel_desc_layout *layout)
     intel_base_destroy(&layout->obj.base);
 }
 
-static void desc_layout_chain_destroy(struct intel_obj *obj)
+static void pipeline_layout_destroy(struct intel_obj *obj)
 {
-    struct intel_desc_layout_chain *chain =
-        intel_desc_layout_chain_from_obj(obj);
+    struct intel_pipeline_layout *pipeline_layout =
+        intel_pipeline_layout_from_obj(obj);
 
-    intel_desc_layout_chain_destroy(chain);
+    intel_pipeline_layout_destroy(pipeline_layout);
 }
 
-VkResult intel_desc_layout_chain_create(struct intel_dev *dev,
-                                          const VkDescriptorSetLayout *layouts,
-                                          uint32_t count,
-                                          struct intel_desc_layout_chain **chain_ret)
+VkResult intel_pipeline_layout_create(struct intel_dev                   *dev,
+                                      const VkPipelineLayoutCreateInfo   *pPipelineCreateInfo,
+                                      struct intel_pipeline_layout      **pipeline_layout_ret)
 {
-    struct intel_desc_layout_chain *chain;
+    struct intel_pipeline_layout *pipeline_layout;
+    uint32_t count = pPipelineCreateInfo->descriptorSetCount;
     uint32_t i;
 
-    chain = (struct intel_desc_layout_chain *)
-        intel_base_create(&dev->base.handle, sizeof(*chain), dev->base.dbg,
-                VK_DBG_OBJECT_DESCRIPTOR_SET_LAYOUT_CHAIN, NULL, 0);
-    if (!chain)
+    pipeline_layout = (struct intel_pipeline_layout *) intel_base_create(
+        &dev->base.handle, sizeof(*pipeline_layout), dev->base.dbg,
+        VK_DBG_OBJECT_PIPELINE_LAYOUT, NULL, 0);
+
+    if (!pipeline_layout)
         return VK_ERROR_OUT_OF_HOST_MEMORY;
 
-    chain->layouts = intel_alloc(chain, sizeof(chain->layouts[0]) * count,
-            0, VK_SYSTEM_ALLOC_TYPE_INTERNAL);
-    if (!chain) {
-        intel_desc_layout_chain_destroy(chain);
+    pipeline_layout->layouts = intel_alloc(pipeline_layout,
+                                           sizeof(pipeline_layout->layouts[0]) * count,
+                                           0, VK_SYSTEM_ALLOC_TYPE_INTERNAL);
+    if (!pipeline_layout->layouts) {
+        intel_pipeline_layout_destroy(pipeline_layout);
         return VK_ERROR_OUT_OF_HOST_MEMORY;
     }
 
-    chain->dynamic_desc_indices = intel_alloc(chain,
-            sizeof(chain->dynamic_desc_indices[0]) * count,
+    pipeline_layout->dynamic_desc_indices = intel_alloc(pipeline_layout,
+            sizeof(pipeline_layout->dynamic_desc_indices[0]) * count,
             0, VK_SYSTEM_ALLOC_TYPE_INTERNAL);
-    if (!chain->dynamic_desc_indices) {
-        intel_desc_layout_chain_destroy(chain);
+    if (!pipeline_layout->dynamic_desc_indices) {
+        intel_pipeline_layout_destroy(pipeline_layout);
         return VK_ERROR_OUT_OF_HOST_MEMORY;
     }
 
     for (i = 0; i < count; i++) {
-        chain->layouts[i] = intel_desc_layout(layouts[i]);
-        chain->dynamic_desc_indices[i] = chain->total_dynamic_desc_count;
+        pipeline_layout->layouts[i] = intel_desc_layout(pPipelineCreateInfo->pSetLayouts[i]);
+        pipeline_layout->dynamic_desc_indices[i] = pipeline_layout->total_dynamic_desc_count;
 
-        chain->total_dynamic_desc_count +=
-            chain->layouts[i]->dynamic_desc_count;
+        pipeline_layout->total_dynamic_desc_count +=
+            pipeline_layout->layouts[i]->dynamic_desc_count;
     }
 
-    chain->layout_count = count;
+    pipeline_layout->layout_count = count;
 
-    chain->obj.destroy = desc_layout_chain_destroy;
+    pipeline_layout->obj.destroy = pipeline_layout_destroy;
 
-    *chain_ret = chain;
+    *pipeline_layout_ret = pipeline_layout;
 
     return VK_SUCCESS;
 }
 
-void intel_desc_layout_chain_destroy(struct intel_desc_layout_chain *chain)
+void intel_pipeline_layout_destroy(struct intel_pipeline_layout *pipeline_layout)
 {
-    if (chain->dynamic_desc_indices)
-        intel_free(chain, chain->dynamic_desc_indices);
-    if (chain->layouts)
-        intel_free(chain, chain->layouts);
-    intel_base_destroy(&chain->obj.base);
+    if (pipeline_layout->dynamic_desc_indices)
+        intel_free(pipeline_layout, pipeline_layout->dynamic_desc_indices);
+    if (pipeline_layout->layouts)
+        intel_free(pipeline_layout, pipeline_layout->layouts);
+    intel_base_destroy(&pipeline_layout->obj.base);
 }
 
 ICD_EXPORT VkResult VKAPI vkCreateDescriptorSetLayout(
@@ -902,17 +904,16 @@ ICD_EXPORT VkResult VKAPI vkCreateDescriptorSetLayout(
             (struct intel_desc_layout **) pSetLayout);
 }
 
-ICD_EXPORT VkResult VKAPI vkCreateDescriptorSetLayoutChain(
-    VkDevice                                   device,
-    uint32_t                                     setLayoutArrayCount,
-    const VkDescriptorSetLayout*             pSetLayoutArray,
-    VkDescriptorSetLayoutChain*             pLayoutChain)
+ICD_EXPORT VkResult VKAPI vkCreatePipelineLayout(
+    VkDevice                                device,
+    const VkPipelineLayoutCreateInfo*       pCreateInfo,
+    VkPipelineLayout*                       pPipelineLayout)
 {
     struct intel_dev *dev = intel_dev(device);
 
-    return intel_desc_layout_chain_create(dev,
-            pSetLayoutArray, setLayoutArrayCount,
-            (struct intel_desc_layout_chain **) pLayoutChain);
+    return intel_pipeline_layout_create(dev,
+                                        pCreateInfo,
+                                        (struct intel_pipeline_layout **) pPipelineLayout);
 }
 
 ICD_EXPORT VkResult VKAPI vkBeginDescriptorPoolUpdate(

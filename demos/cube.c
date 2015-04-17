@@ -243,7 +243,7 @@ struct demo {
     } uniform_data;
 
     VkCmdBuffer cmd;  // Buffer for initialization commands
-    VkDescriptorSetLayoutChain desc_layout_chain;
+    VkPipelineLayout pipeline_layout;
     VkDescriptorSetLayout desc_layout;
     VkPipeline pipeline;
 
@@ -1143,8 +1143,16 @@ static void demo_prepare_descriptor_layout(struct demo *demo)
             &descriptor_layout, &demo->desc_layout);
     assert(!err);
 
-    err = vkCreateDescriptorSetLayoutChain(demo->device,
-            1, &demo->desc_layout, &demo->desc_layout_chain);
+    const VkPipelineLayoutCreateInfo pPipelineLayoutCreateInfo = {
+        .sType              = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
+        .pNext              = NULL,
+        .descriptorSetCount = 1,
+        .pSetLayouts        = &demo->desc_layout,
+    };
+
+    err = vkCreatePipelineLayout(demo->device,
+                                 &pPipelineLayoutCreateInfo,
+                                 &demo->pipeline_layout);
     assert(!err);
 }
 
@@ -1293,7 +1301,7 @@ static void demo_prepare_pipeline(struct demo *demo)
 
     memset(&pipeline, 0, sizeof(pipeline));
     pipeline.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
-    pipeline.pSetLayoutChain = demo->desc_layout_chain;
+    pipeline.layout = demo->pipeline_layout;
 
     memset(&ia, 0, sizeof(ia));
     ia.sType = VK_STRUCTURE_TYPE_PIPELINE_IA_STATE_CREATE_INFO;
@@ -1831,7 +1839,7 @@ static void demo_cleanup(struct demo *demo)
     vkDestroyObject(demo->depth_stencil);
 
     vkDestroyObject(demo->pipeline);
-    vkDestroyObject(demo->desc_layout_chain);
+    vkDestroyObject(demo->pipeline_layout);
     vkDestroyObject(demo->desc_layout);
 
     for (i = 0; i < DEMO_TEXTURE_COUNT; i++) {

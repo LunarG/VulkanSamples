@@ -245,7 +245,7 @@ static VkResult pipeline_build_shader(struct intel_pipeline *pipeline,
     VkResult ret;
 
     ret = intel_pipeline_shader_compile(sh,
-            pipeline->dev->gpu, pipeline->layout_chain, sh_info);
+            pipeline->dev->gpu, pipeline->pipeline_layout, sh_info);
     if (ret != VK_SUCCESS)
         return ret;
 
@@ -1346,8 +1346,8 @@ static VkResult graphics_pipeline_create(struct intel_dev *dev,
         return VK_ERROR_OUT_OF_HOST_MEMORY;
 
     pipeline->dev = dev;
-    pipeline->layout_chain =
-        intel_desc_layout_chain(info.graphics.pSetLayoutChain);
+    pipeline->pipeline_layout =
+        intel_pipeline_layout(info.graphics.layout);
 
     pipeline->obj.base.get_info = pipeline_get_info;
     pipeline->obj.destroy = pipeline_destroy;

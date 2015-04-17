@@ -36,7 +36,7 @@ extern "C" {
 #include "dev.h"
 
 struct brw_context;
-struct intel_desc_layout_chain;
+struct intel_pipeline_layout;
 struct intel_gpu;
 struct intel_ir;
 struct intel_pipeline_shader;
@@ -46,7 +46,7 @@ void intel_destroy_brw_context(struct brw_context *brw);
 
 VkResult intel_pipeline_shader_compile(struct intel_pipeline_shader *ips,
                                          const struct intel_gpu *gpu,
-                                         const struct intel_desc_layout_chain *chain,
+                                         const struct intel_pipeline_layout *pipeline_layout,
                                          const VkPipelineShader *info);
 
 void intel_pipeline_shader_cleanup(struct intel_pipeline_shader *sh,

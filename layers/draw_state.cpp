@@ -1684,11 +1684,11 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateDescriptorSetLayout(VkDevice device, cons
     return result;
 }
 
-VkResult VKAPI vkCreateDescriptorSetLayoutChain(VkDevice device, uint32_t setLayoutArrayCount, const VkDescriptorSetLayout* pSetLayoutArray, VkDescriptorSetLayoutChain* pLayoutChain)
+VkResult VKAPI vkCreatePipelineLayout(VkDevice device, const VkPipelineLayoutCreateInfo* pCreateInfo, VkPipelineLayout* pPipelineLayout)
 {
-    VkResult result = nextTable.CreateDescriptorSetLayoutChain(device, setLayoutArrayCount, pSetLayoutArray, pLayoutChain);
+    VkResult result = nextTable.CreatePipelineLayout(device, pCreateInfo, pPipelineLayout);
     if (VK_SUCCESS == result) {
-        // TODO : Need to capture the layout chains
+        // TODO : Need to capture the pipeline layout
     }
     return result;
 }
@@ -2759,8 +2759,8 @@ VK_LAYER_EXPORT void* VKAPI vkGetProcAddr(VkPhysicalDevice gpu, const char* func
         return (void*) vkCreateSampler;
     if (!strcmp(funcName, "vkCreateDescriptorSetLayout"))
         return (void*) vkCreateDescriptorSetLayout;
-    if (!strcmp(funcName, "vkCreateDescriptorSetLayoutChain"))
-        return (void*) vkCreateDescriptorSetLayoutChain;
+    if (!strcmp(funcName, "vkCreatePipelineLayout"))
+        return (void*) vkCreatePipelineLayout;
     if (!strcmp(funcName, "vkBeginDescriptorPoolUpdate"))
         return (void*) vkBeginDescriptorPoolUpdate;
     if (!strcmp(funcName, "vkEndDescriptorPoolUpdate"))

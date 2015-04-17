@@ -69,10 +69,10 @@ VK_DEFINE_SUBCLASS_HANDLE(VkColorAttachmentView, VkObject)
 VK_DEFINE_SUBCLASS_HANDLE(VkDepthStencilView, VkObject)
 VK_DEFINE_SUBCLASS_HANDLE(VkShader, VkObject)
 VK_DEFINE_SUBCLASS_HANDLE(VkPipeline, VkObject)
+VK_DEFINE_SUBCLASS_HANDLE(VkPipelineLayout, VkObject)
 VK_DEFINE_SUBCLASS_HANDLE(VkSampler, VkObject)
 VK_DEFINE_SUBCLASS_HANDLE(VkDescriptorSet, VkObject)
 VK_DEFINE_SUBCLASS_HANDLE(VkDescriptorSetLayout, VkObject)
-VK_DEFINE_SUBCLASS_HANDLE(VkDescriptorSetLayoutChain, VkObject)
 VK_DEFINE_SUBCLASS_HANDLE(VkDescriptorPool, VkObject)
 VK_DEFINE_SUBCLASS_HANDLE(VkDynamicStateObject, VkObject)
 VK_DEFINE_SUBCLASS_HANDLE(VkDynamicVpState, VkDynamicStateObject)
@@ -844,8 +844,9 @@ typedef enum VkStructureType_
     VK_STRUCTURE_TYPE_UPDATE_BUFFERS                        = 49,
     VK_STRUCTURE_TYPE_UPDATE_AS_COPY                        = 50,
     VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO                  = 51,
+    VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO           = 52,
 
-    VK_ENUM_RANGE(STRUCTURE_TYPE, APPLICATION_INFO, INSTANCE_CREATE_INFO)
+    VK_ENUM_RANGE(STRUCTURE_TYPE, APPLICATION_INFO, PIPELINE_LAYOUT_CREATE_INFO)
 } VkStructureType;
 
 // ------------------------------------------------------------------------------------------------
@@ -1713,7 +1714,7 @@ typedef struct VkComputePipelineCreateInfo_
     const void*                                 pNext;          // Pointer to next structure
     VkPipelineShader                            cs;
     VkPipelineCreateFlags                       flags;          // Pipeline creation flags
-    VkDescriptorSetLayoutChain                  setLayoutChain;
+    VkPipelineLayout                            layout;         // Interface layout of the pipeline
     uint32_t                                    localSizeX;
     uint32_t                                    localSizeY;
     uint32_t                                    localSizeZ;
@@ -1858,8 +1859,16 @@ typedef struct VkGraphicsPipelineCreateInfo_
     VkStructureType                             sType;      // Must be VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO
     const void*                                 pNext;      // Pointer to next structure
     VkPipelineCreateFlags                       flags;      // Pipeline creation flags
-    VkDescriptorSetLayoutChain                  pSetLayoutChain;
+    VkPipelineLayout                            layout;     // Interface layout of the pipeline
 } VkGraphicsPipelineCreateInfo;
+
+typedef struct VkPipelineLayoutCreateInfo_
+{
+    VkStructureType                             sType;              // Must be VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO
+    const void*                                 pNext;              // Pointer to next structure
+    uint32_t                                    descriptorSetCount; // Number of descriptor sets interfaced by the pipeline
+    const VkDescriptorSetLayout*                pSetLayouts;        // Array of <setCount> number of descriptor set layout objects defining the layout of the
+} VkPipelineLayoutCreateInfo;
 
 typedef struct VkSamplerCreateInfo_
 {
@@ -2128,9 +2137,9 @@ typedef VkResult (VKAPI *PFN_vkCreateComputePipeline)(VkDevice device, const VkC
 typedef VkResult (VKAPI *PFN_vkStorePipeline)(VkPipeline pipeline, size_t* pDataSize, void* pData);
 typedef VkResult (VKAPI *PFN_vkLoadPipeline)(VkDevice device, size_t dataSize, const void* pData, VkPipeline* pPipeline);
 typedef VkResult (VKAPI *PFN_vkLoadPipelineDerivative)(VkDevice device, size_t dataSize, const void* pData, VkPipeline basePipeline, VkPipeline* pPipeline);
+typedef VkResult (VKAPI *PFN_vkCreatePipelineLayout)(VkDevice device, const VkPipelineLayoutCreateInfo* pCreateInfo, VkPipelineLayout* pPipelineLayout);
 typedef VkResult (VKAPI *PFN_vkCreateSampler)(VkDevice device, const VkSamplerCreateInfo* pCreateInfo, VkSampler* pSampler);
 typedef VkResult (VKAPI *PFN_vkCreateDescriptorSetLayout)(VkDevice device, const VkDescriptorSetLayoutCreateInfo* pCreateInfo, VkDescriptorSetLayout* pSetLayout);
-typedef VkResult (VKAPI *PFN_vkCreateDescriptorSetLayoutChain)(VkDevice device, uint32_t setLayoutArrayCount, const VkDescriptorSetLayout* pSetLayoutArray, VkDescriptorSetLayoutChain* pLayoutChain);
 typedef VkResult (VKAPI *PFN_vkBeginDescriptorPoolUpdate)(VkDevice device, VkDescriptorUpdateMode updateMode);
 typedef VkResult (VKAPI *PFN_vkEndDescriptorPoolUpdate)(VkDevice device, VkCmdBuffer cmd);
 typedef VkResult (VKAPI *PFN_vkCreateDescriptorPool)(VkDevice device, VkDescriptorPoolUsage poolUsage, uint32_t maxSets, const VkDescriptorPoolCreateInfo* pCreateInfo, VkDescriptorPool* pDescriptorPool);
@@ -2540,6 +2549,13 @@ VkResult VKAPI vkLoadPipelineDerivative(
     VkPipeline                                  basePipeline,
     VkPipeline*                                 pPipeline);
 
+// Pipeline layout functions
+
+VkResult VKAPI vkCreatePipelineLayout(
+    VkDevice                                    device,
+    const VkPipelineLayoutCreateInfo*           pCreateInfo,
+    VkPipelineLayout*                           pPipelineLayout);
+
 // Sampler functions
 
 VkResult VKAPI vkCreateSampler(
@@ -2553,12 +2569,6 @@ VkResult VKAPI vkCreateDescriptorSetLayout(
     VkDevice                                    device,
     const VkDescriptorSetLayoutCreateInfo*      pCreateInfo,
     VkDescriptorSetLayout*                      pSetLayout);
-
-VkResult VKAPI vkCreateDescriptorSetLayoutChain(
-    VkDevice                                    device,
-    uint32_t                                    setLayoutArrayCount,
-    const VkDescriptorSetLayout*                pSetLayoutArray,
-    VkDescriptorSetLayoutChain*                 pLayoutChain);
 
 VkResult VKAPI vkBeginDescriptorPoolUpdate(
     VkDevice                                    device,

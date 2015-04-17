@@ -521,20 +521,19 @@ static VkResult nulldrv_desc_layout_create(struct nulldrv_dev *dev,
     return VK_SUCCESS;
 }
 
-static VkResult nulldrv_desc_layout_chain_create(struct nulldrv_dev *dev,
-                                    uint32_t setLayoutArrayCount,
-                                    const VkDescriptorSetLayout *pSetLayoutArray,
-                                    struct nulldrv_desc_layout_chain **chain_ret)
+static VkResult nulldrv_pipeline_layout_create(struct nulldrv_dev *dev,
+                                    const VkPipelineLayoutCreateInfo* pCreateInfo,
+                                    struct nulldrv_pipeline_layout **pipeline_layout_ret)
 {
-    struct nulldrv_desc_layout_chain *chain;
+    struct nulldrv_pipeline_layout *pipeline_layout;
 
-    chain = (struct nulldrv_desc_layout_chain *)
-        nulldrv_base_create(dev, sizeof(*chain),
-                VK_DBG_OBJECT_DESCRIPTOR_SET_LAYOUT_CHAIN);
-    if (!chain)
+    pipeline_layout = (struct nulldrv_pipeline_layout *)
+        nulldrv_base_create(dev, sizeof(*pipeline_layout),
+                VK_DBG_OBJECT_PIPELINE_LAYOUT);
+    if (!pipeline_layout)
         return VK_ERROR_OUT_OF_HOST_MEMORY;
 
-    *chain_ret = chain;
+    *pipeline_layout_ret = pipeline_layout;
 
     return VK_SUCCESS;
 }
@@ -1966,18 +1965,17 @@ ICD_EXPORT VkResult VKAPI vkCreateDescriptorSetLayout(
             (struct nulldrv_desc_layout **) pSetLayout);
 }
 
-ICD_EXPORT VkResult VKAPI vkCreateDescriptorSetLayoutChain(
-    VkDevice                                   device,
-    uint32_t                                     setLayoutArrayCount,
-    const VkDescriptorSetLayout*             pSetLayoutArray,
-    VkDescriptorSetLayoutChain*             pLayoutChain)
+ICD_EXPORT VkResult VKAPI  vkCreatePipelineLayout(
+    VkDevice                                device,
+    const VkPipelineLayoutCreateInfo*       pCreateInfo,
+    VkPipelineLayout*                       pPipelineLayout)
 {
     NULLDRV_LOG_FUNC;
     struct nulldrv_dev *dev = nulldrv_dev(device);
 
-    return nulldrv_desc_layout_chain_create(dev,
-            setLayoutArrayCount, pSetLayoutArray,
-            (struct nulldrv_desc_layout_chain **) pLayoutChain);
+    return nulldrv_pipeline_layout_create(dev,
+            pCreateInfo,
+            (struct nulldrv_pipeline_layout **) pPipelineLayout);
 }
 
 ICD_EXPORT VkResult VKAPI vkBeginDescriptorPoolUpdate(

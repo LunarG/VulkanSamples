@@ -331,9 +331,9 @@ int VkDescriptorSetObj::AppendSamplerTexture( VkSamplerObj* sampler, VkTextureOb
     return m_nextSlot++;
 }
 
-VkDescriptorSetLayoutChain VkDescriptorSetObj::GetLayoutChain() const
+VkPipelineLayout VkDescriptorSetObj::GetPipelineLayout() const
 {
-    return m_layout_chain.obj();
+    return m_pipeline_layout.obj();
 }
 
 VkDescriptorSet VkDescriptorSetObj::GetDescriptorSetHandle() const
@@ -367,10 +367,16 @@ void VkDescriptorSetObj::CreateVKDescriptorSet(VkCommandBufferObj *cmdBuffer)
     layout.pBinding = &bindings[0];
 
     m_layout.init(*m_device, layout);
-
     vector<const vk_testing::DescriptorSetLayout *> layouts;
     layouts.push_back(&m_layout);
-    m_layout_chain.init(*m_device, layouts);
+
+    // create VkPipelineLayout
+    VkPipelineLayoutCreateInfo pipeline_layout = {};
+    pipeline_layout.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+    pipeline_layout.descriptorSetCount = layouts.size();
+    pipeline_layout.pSetLayouts = NULL;
+
+    m_pipeline_layout.init(*m_device, pipeline_layout, layouts);
 
     // create VkDescriptorSet
     m_set = alloc_sets(*m_device, VK_DESCRIPTOR_SET_USAGE_STATIC, m_layout);
@@ -1084,10 +1090,10 @@ void VkPipelineObj::CreateVKPipeline(VkDescriptorSetObj &descriptorSet)
         head_ptr = &m_vi_state;
     }
 
-    info.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
-    info.pNext = head_ptr;
-    info.flags = 0;
-    info.pSetLayoutChain = descriptorSet.GetLayoutChain();
+    info.sType  = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
+    info.pNext  = head_ptr;
+    info.flags  = 0;
+    info.layout = descriptorSet.GetPipelineLayout();
 
     m_cb_state.attachmentCount = m_colorAttachments.size();
     m_cb_state.pAttachments = &m_colorAttachments[0];

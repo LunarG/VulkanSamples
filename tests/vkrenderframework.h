@@ -353,7 +353,7 @@ public:
     void CreateVKDescriptorSet(VkCommandBufferObj *cmdBuffer);
 
     VkDescriptorSet GetDescriptorSetHandle() const;
-    VkDescriptorSetLayoutChain GetLayoutChain() const;
+    VkPipelineLayout GetPipelineLayout() const;
 
     VkMemoryRefManager                   mem_ref_mgr;
 
@@ -368,7 +368,7 @@ protected:
     vector<VkUpdateSamplerTextures>  m_updateSamplerTextures;
 
     vk_testing::DescriptorSetLayout     m_layout;
-    vk_testing::DescriptorSetLayoutChain m_layout_chain;
+    vk_testing::PipelineLayout          m_pipeline_layout;
     vk_testing::DescriptorSet          *m_set;
 };
 

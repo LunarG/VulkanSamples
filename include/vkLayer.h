@@ -88,9 +88,9 @@ typedef struct VkLayerDispatchTable_
     PFN_vkStorePipeline StorePipeline;
     PFN_vkLoadPipeline LoadPipeline;
     PFN_vkLoadPipelineDerivative LoadPipelineDerivative;
+    PFN_vkCreatePipelineLayout CreatePipelineLayout;
     PFN_vkCreateSampler CreateSampler;
     PFN_vkCreateDescriptorSetLayout CreateDescriptorSetLayout;
-    PFN_vkCreateDescriptorSetLayoutChain CreateDescriptorSetLayoutChain;
     PFN_vkBeginDescriptorPoolUpdate BeginDescriptorPoolUpdate;
     PFN_vkEndDescriptorPoolUpdate EndDescriptorPoolUpdate;
     PFN_vkCreateDescriptorPool CreateDescriptorPool;

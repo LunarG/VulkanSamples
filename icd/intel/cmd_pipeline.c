@@ -1683,8 +1683,8 @@ static uint32_t emit_binding_table(struct intel_cmd *cmd,
             break;
         case INTEL_PIPELINE_RMAP_SURFACE:
             {
-                const struct intel_desc_layout_chain *chain =
-                    cmd->bind.pipeline.graphics->layout_chain;
+                const struct intel_pipeline_layout *pipeline_layout =
+                    cmd->bind.pipeline.graphics->pipeline_layout;
                 const int32_t dyn_idx = slot->u.surface.dynamic_offset_index;
                 struct intel_desc_offset desc_offset;
                 const struct intel_mem *mem;
@@ -1693,7 +1693,7 @@ static uint32_t emit_binding_table(struct intel_cmd *cmd,
                 uint32_t cmd_len;
 
                 assert(dyn_idx < 0 ||
-                        dyn_idx < chain->total_dynamic_desc_count);
+                        dyn_idx < pipeline_layout->total_dynamic_desc_count);
 
                 intel_desc_offset_add(&desc_offset, &slot->u.surface.offset,
                         &data->set_offsets[slot->index]);
@@ -3026,14 +3026,14 @@ static void gen6_meta_depth_buffer(struct intel_cmd *cmd)
 
 static bool cmd_alloc_dset_data(struct intel_cmd *cmd,
                                 struct intel_cmd_dset_data *data,
-                                const struct intel_desc_layout_chain *chain)
+                                const struct intel_pipeline_layout *pipeline_layout)
 {
-    if (data->set_offset_count < chain->layout_count) {
+    if (data->set_offset_count < pipeline_layout->layout_count) {
         if (data->set_offsets)
             intel_free(cmd, data->set_offsets);
 
         data->set_offsets = intel_alloc(cmd,
-                sizeof(data->set_offsets[0]) * chain->layout_count,
+                sizeof(data->set_offsets[0]) * pipeline_layout->layout_count,
                 sizeof(data->set_offsets[0]), VK_SYSTEM_ALLOC_TYPE_INTERNAL);
         if (!data->set_offsets) {
             cmd_fail(cmd, VK_ERROR_OUT_OF_HOST_MEMORY);
@@ -3041,15 +3041,15 @@ static bool cmd_alloc_dset_data(struct intel_cmd *cmd,
             return false;
         }
 
-        data->set_offset_count = chain->layout_count;
+        data->set_offset_count = pipeline_layout->layout_count;
     }
 
-    if (data->dynamic_offset_count < chain->total_dynamic_desc_count) {
+    if (data->dynamic_offset_count < pipeline_layout->total_dynamic_desc_count) {
         if (data->dynamic_offsets)
             intel_free(cmd, data->dynamic_offsets);
 
         data->dynamic_offsets = intel_alloc(cmd,
-                sizeof(data->dynamic_offsets[0]) * chain->total_dynamic_desc_count,
+                sizeof(data->dynamic_offsets[0]) * pipeline_layout->total_dynamic_desc_count,
                 sizeof(data->dynamic_offsets[0]), VK_SYSTEM_ALLOC_TYPE_INTERNAL);
         if (!data->dynamic_offsets) {
             cmd_fail(cmd, VK_ERROR_OUT_OF_HOST_MEMORY);
@@ -3057,7 +3057,7 @@ static bool cmd_alloc_dset_data(struct intel_cmd *cmd,
             return false;
         }
 
-        data->dynamic_offset_count = chain->total_dynamic_desc_count;
+        data->dynamic_offset_count = pipeline_layout->total_dynamic_desc_count;
     }
 
     return true;
@@ -3069,7 +3069,7 @@ static void cmd_bind_graphics_pipeline(struct intel_cmd *cmd,
     cmd->bind.pipeline.graphics = pipeline;
 
     cmd_alloc_dset_data(cmd, &cmd->bind.dset.graphics_data,
-            pipeline->layout_chain);
+            pipeline->pipeline_layout);
 }
 
 static void cmd_bind_compute_pipeline(struct intel_cmd *cmd,
@@ -3078,26 +3078,26 @@ static void cmd_bind_compute_pipeline(struct intel_cmd *cmd,
     cmd->bind.pipeline.compute = pipeline;
 
     cmd_alloc_dset_data(cmd, &cmd->bind.dset.compute_data,
-            pipeline->layout_chain);
+            pipeline->pipeline_layout);
 }
 
 static void cmd_copy_dset_data(struct intel_cmd *cmd,
                                struct intel_cmd_dset_data *data,
-                               const struct intel_desc_layout_chain *chain,
+                               const struct intel_pipeline_layout *pipeline_layout,
                                uint32_t index,
                                const struct intel_desc_set *set,
                                const uint32_t *dynamic_offsets)
 {
-    const struct intel_desc_layout *layout = chain->layouts[index];
+    const struct intel_desc_layout *layout = pipeline_layout->layouts[index];
 
     assert(index < data->set_offset_count);
     data->set_offsets[index] = set->region_begin;
 
     if (layout->dynamic_desc_count) {
-        assert(chain->dynamic_desc_indices[index] +
+        assert(pipeline_layout->dynamic_desc_indices[index] +
                 layout->dynamic_desc_count - 1 < data->dynamic_offset_count);
 
-        memcpy(&data->dynamic_offsets[chain->dynamic_desc_indices[index]],
+        memcpy(&data->dynamic_offsets[pipeline_layout->dynamic_desc_indices[index]],
                 dynamic_offsets,
                 sizeof(dynamic_offsets[0]) * layout->dynamic_desc_count);
     }
@@ -3389,18 +3389,18 @@ ICD_EXPORT void VKAPI vkCmdBindDescriptorSets(
     const uint32_t*                         pDynamicOffsets)
 {
     struct intel_cmd *cmd = intel_cmd(cmdBuffer);
-    const struct intel_desc_layout_chain *chain;
+    const struct intel_pipeline_layout *pipeline_layout;
     struct intel_cmd_dset_data *data;
     uint32_t offset_count = 0;
     uint32_t i;
 
     switch (pipelineBindPoint) {
     case VK_PIPELINE_BIND_POINT_COMPUTE:
-        chain = cmd->bind.pipeline.compute->layout_chain;
+        pipeline_layout = cmd->bind.pipeline.compute->pipeline_layout;
         data = &cmd->bind.dset.compute_data;
         break;
     case VK_PIPELINE_BIND_POINT_GRAPHICS:
-        chain = cmd->bind.pipeline.graphics->layout_chain;
+        pipeline_layout = cmd->bind.pipeline.graphics->pipeline_layout;
         data = &cmd->bind.dset.graphics_data;
         break;
     default:
@@ -3412,11 +3412,11 @@ ICD_EXPORT void VKAPI vkCmdBindDescriptorSets(
     for (i = 0; i < setCount; i++) {
         struct intel_desc_set *dset = intel_desc_set(pDescriptorSets[i]);
 
-        offset_count += chain->layouts[firstSet + i]->dynamic_desc_count;
+        offset_count += pipeline_layout->layouts[firstSet + i]->dynamic_desc_count;
         if (offset_count <= dynamicOffsetCount) {
-            cmd_copy_dset_data(cmd, data, chain, firstSet + i,
+            cmd_copy_dset_data(cmd, data, pipeline_layout, firstSet + i,
                     dset, pDynamicOffsets);
-            pDynamicOffsets += chain->layouts[firstSet + i]->dynamic_desc_count;
+            pDynamicOffsets += pipeline_layout->layouts[firstSet + i]->dynamic_desc_count;
         }
     }
 }

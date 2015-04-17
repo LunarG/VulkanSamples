@@ -288,7 +288,7 @@ static void rmap_destroy(const struct intel_gpu *gpu,
 }
 
 static struct intel_pipeline_rmap *rmap_create(const struct intel_gpu *gpu,
-                                               const struct intel_desc_layout_chain *chain,
+                                               const struct intel_pipeline_layout *pipeline_layout,
                                                const struct brw_binding_table *bt)
 {
     struct intel_pipeline_rmap *rmap;
@@ -337,7 +337,7 @@ static struct intel_pipeline_rmap *rmap_create(const struct intel_gpu *gpu,
         // XXX validate both set and binding
         // XXX no array support
         intel_desc_iter_init_for_binding(&iter,
-                chain->layouts[rmap->slots[i].index],
+                pipeline_layout->layouts[rmap->slots[i].index],
                 bt->sampler_binding[i - bt->texture_start], 0);
 
         rmap->slots[i].u.surface.offset = iter.begin;
@@ -359,7 +359,7 @@ static struct intel_pipeline_rmap *rmap_create(const struct intel_gpu *gpu,
         // XXX validate both set and binding
         // XXX no array support
         intel_desc_iter_init_for_binding(&iter,
-                chain->layouts[rmap->slots[i].index],
+                pipeline_layout->layouts[rmap->slots[i].index],
                 bt->uniform_binding[i - bt->ubo_start], 0);
 
         rmap->slots[i].u.surface.offset = iter.begin;
@@ -403,7 +403,7 @@ void unpack_set_and_binding(const int location, int &set, int &binding)
 // invoke backend compiler to generate ISA and supporting data structures
 VkResult intel_pipeline_shader_compile(struct intel_pipeline_shader *pipe_shader,
                                          const struct intel_gpu *gpu,
-                                         const struct intel_desc_layout_chain *chain,
+                                         const struct intel_pipeline_layout *pipeline_layout,
                                          const VkPipelineShader *info)
 {
     const struct intel_ir *ir = intel_shader(info->shader)->ir;
@@ -695,7 +695,7 @@ VkResult intel_pipeline_shader_compile(struct intel_pipeline_shader *pipe_shader
     }
 
     if (status == VK_SUCCESS) {
-        pipe_shader->rmap = rmap_create(gpu, chain, &bt);
+        pipe_shader->rmap = rmap_create(gpu, pipeline_layout, &bt);
         if (!pipe_shader->rmap) {
             intel_pipeline_shader_cleanup(pipe_shader, gpu);
             status = VK_ERROR_OUT_OF_HOST_MEMORY;

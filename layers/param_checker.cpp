@@ -985,10 +985,9 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateDescriptorSetLayout(VkDevice device, cons
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkCreateDescriptorSetLayoutChain(VkDevice device, uint32_t setLayoutArrayCount, const VkDescriptorSetLayout* pSetLayoutArray, VkDescriptorSetLayoutChain* pLayoutChain)
+VK_LAYER_EXPORT VkResult VKAPI vkCreatePipelineLayout(VkDevice device, const VkPipelineLayoutCreateInfo* pCreateInfo, VkPipelineLayout* pPipelineLayout)
 {
-
-    VkResult result = nextTable.CreateDescriptorSetLayoutChain(device, setLayoutArrayCount, pSetLayoutArray, pLayoutChain);
+    VkResult result = nextTable.CreatePipelineLayout(device, pCreateInfo, pPipelineLayout);
     return result;
 }
 

@@ -124,7 +124,7 @@ struct intel_desc_layout {
     struct intel_desc_offset region_size;
 };
 
-struct intel_desc_layout_chain {
+struct intel_pipeline_layout {
     struct intel_obj obj;
 
     struct intel_desc_layout **layouts;
@@ -164,14 +164,14 @@ static inline struct intel_desc_layout *intel_desc_layout_from_obj(struct intel_
     return (struct intel_desc_layout *) obj;
 }
 
-static inline struct intel_desc_layout_chain *intel_desc_layout_chain(VkDescriptorSetLayoutChain chain)
+static inline struct intel_pipeline_layout *intel_pipeline_layout(VkPipelineLayout pipeline_layout)
 {
-    return (struct intel_desc_layout_chain *) chain;
+    return (struct intel_pipeline_layout *) pipeline_layout;
 }
 
-static inline struct intel_desc_layout_chain *intel_desc_layout_chain_from_obj(struct intel_obj *obj)
+static inline struct intel_pipeline_layout *intel_pipeline_layout_from_obj(struct intel_obj *obj)
 {
-    return (struct intel_desc_layout_chain *) obj;
+    return (struct intel_pipeline_layout *) obj;
 }
 
 static inline void intel_desc_offset_set(struct intel_desc_offset *offset,
@@ -300,10 +300,9 @@ VkResult intel_desc_layout_create(struct intel_dev *dev,
                                     struct intel_desc_layout **layout_ret);
 void intel_desc_layout_destroy(struct intel_desc_layout *layout);
 
-VkResult intel_desc_layout_chain_create(struct intel_dev *dev,
-                                          const VkDescriptorSetLayout *layouts,
-                                          uint32_t count,
-                                          struct intel_desc_layout_chain **chain_ret);
-void intel_desc_layout_chain_destroy(struct intel_desc_layout_chain *chain);
+VkResult intel_pipeline_layout_create(struct intel_dev *dev,
+                                          const VkPipelineLayoutCreateInfo  *pPipelineCreateInfo,
+                                          struct intel_pipeline_layout **pipeline_layout_ret);
+void intel_pipeline_layout_destroy(struct intel_pipeline_layout *pipeline_layout);
 
 #endif /* DESC_H */

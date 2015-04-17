@@ -54,7 +54,7 @@ class Pipeline;
 class PipelineDelta;
 class Sampler;
 class DescriptorSetLayout;
-class DescriptorSetLayoutChain;
+class PipelineLayout;
 class DescriptorSetPool;
 class DescriptorSet;
 class DynamicVpStateObject;
@@ -507,10 +507,10 @@ public:
     void init(const Device &dev, const VkDescriptorSetLayoutCreateInfo &info);
 };
 
-class DescriptorSetLayoutChain : public DerivedObject<VkDescriptorSetLayoutChain, Object> {
+class PipelineLayout : public DerivedObject<VkPipelineLayout, Object> {
 public:
-    // vkCreateDescriptorSetLayoutChain()
-    void init(const Device &dev, const std::vector<const DescriptorSetLayout *> &layouts);
+    // vCreatePipelineLayout()
+    void init(const Device &dev, VkPipelineLayoutCreateInfo &info, const std::vector<const DescriptorSetLayout *> &layouts);
 };
 
 class DescriptorPool : public DerivedObject<VkDescriptorPool, Object> {
