@@ -724,7 +724,7 @@ static void loader_init_dispatch_table(VkLayerDispatchTable *tab, PFN_vkGetProcA
         tab->EnumerateLayers = vkEnumerateLayers;
 }
 
-static void *loader_gpa_internal(VkPhysicalDevice gpu, const char * pName)
+static void * VKAPI loader_gpa_internal(VkPhysicalDevice gpu, const char * pName)
 {
     if (gpu == NULL) {
         return NULL;;
