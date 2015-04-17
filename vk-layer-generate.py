@@ -1216,7 +1216,7 @@ class ObjectTrackerSubcommand(Subcommand):
                 destroy_line += '            objNode *pDel = pTrav;\n'
                 destroy_line += '            pTrav = pTrav->pNextGlobal;\n'
                 destroy_line += '            ll_destroy_obj((void*)(pDel->obj.pObj));\n'
-                destroy_line += '        } else if (pTrav->obj.objType == VkObjectTypePhysicalDevice) {\n'
+                destroy_line += '        } else if ((pTrav->obj.objType == VkObjectTypePhysicalDevice) || (pTrav->obj.objType == VkObjectTypeQueue)) {\n'
                 destroy_line += '            // Cannot destroy physical device so ignore\n'
                 destroy_line += '            pTrav = pTrav->pNextGlobal;\n'
                 destroy_line += '        } else {\n'
