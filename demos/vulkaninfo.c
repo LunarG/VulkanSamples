@@ -367,7 +367,7 @@ static void app_gpu_init_extensions(struct app_gpu *gpu)
     VkResult err;
     // Extensions to enable
     static char *known_extensions[] = {
-        "VK_WSI_X11",
+        "VK_WSI_LunarG",
     };
     size_t extSize = sizeof(uint32_t);
     uint32_t extCount = 0;
