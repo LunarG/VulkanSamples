@@ -545,7 +545,7 @@ static void demo_prepare_texture_image(struct demo *demo,
         /* Linear texture must be within a single memory object */
         assert(num_allocations == 1);
 
-        err = vkMapMemory(tex_obj->mem[0], 0, &data);
+        err = vkMapMemory(tex_obj->mem[0], 0, 0, 0, &data);
         assert(!err);
 
         for (y = 0; y < tex_height; y++) {
@@ -739,7 +739,7 @@ static void demo_prepare_vertices(struct demo *demo)
         err = vkAllocMemory(demo->device, &mem_alloc, &demo->vertices.mem[i]);
         assert(!err);
 
-        err = vkMapMemory(demo->vertices.mem[i], 0, &data);
+        err = vkMapMemory(demo->vertices.mem[i], 0, 0, 0, &data);
         assert(!err);
 
         memcpy(data, vb, sizeof(vb));

@@ -1098,7 +1098,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkSetMemoryPriority(VkDeviceMemory mem, VkMemoryP
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkMapMemory(VkDeviceMemory mem, VkFlags flags, void** ppData)
+VK_LAYER_EXPORT VkResult VKAPI vkMapMemory(VkDeviceMemory mem, VkDeviceSize offset, VkDeviceSize size, VkFlags flags, void** ppData)
 {
     // TODO : Track when memory is mapped
     loader_platform_thread_lock_mutex(&globalLock);
@@ -1109,7 +1109,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkMapMemory(VkDeviceMemory mem, VkFlags flags, vo
         layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, mem, 0, MEMTRACK_INVALID_STATE, "MEM", str);
     }
     loader_platform_thread_unlock_mutex(&globalLock);
-    VkResult result = nextTable.MapMemory(mem, flags, ppData);
+    VkResult result = nextTable.MapMemory(mem, offset, size, flags, ppData);
     return result;
 }
 

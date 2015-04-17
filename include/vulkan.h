@@ -145,7 +145,7 @@ typedef enum VkImageLayout_
     VK_IMAGE_LAYOUT_CLEAR_OPTIMAL                           = 0x00000006,   // Optimal layout when image is used only for clear operations
     VK_IMAGE_LAYOUT_TRANSFER_SOURCE_OPTIMAL                 = 0x00000007,   // Optimal layout when image is used only as source of transfer operations
     VK_IMAGE_LAYOUT_TRANSFER_DESTINATION_OPTIMAL            = 0x00000008,   // Optimal layout when image is used only as destination of transfer operations
- 
+
     VK_ENUM_RANGE(IMAGE_LAYOUT, UNDEFINED, TRANSFER_DESTINATION_OPTIMAL)
 } VkImageLayout;
 
@@ -595,7 +595,6 @@ typedef enum VkVertexInputStepRate_
     VK_ENUM_RANGE(VERTEX_INPUT_STEP_RATE, VERTEX, DRAW)
 } VkVertexInputStepRate;
 
-// ------------------------------------------------------------------------------------------------
 // Vulkan format definitions
 typedef enum VkFormat_
 {
@@ -1334,7 +1333,7 @@ typedef struct VkMemoryRequirements_
 {
     VkDeviceSize                                size;                       // Specified in bytes
     VkDeviceSize                                alignment;                  // Specified in bytes
-    VkDeviceSize                                granularity;                // Granularity on which vkBindObjectMemoryRange can bind sub-ranges of memory specified in bytes (usually the page size)
+    VkDeviceSize                                granularity;                // Granularity on which vkQueueBindObjectMemoryRange can bind sub-ranges of memory specified in bytes (usually the page size)
     VkMemoryPropertyFlags                       memPropsAllowed;            // Allowed memory property flags
     VkMemoryPropertyFlags                       memPropsRequired;           // Required memory property flags
 } VkMemoryRequirements;
@@ -1700,7 +1699,6 @@ typedef struct VkComputePipelineCreateInfo_
     uint32_t                                    localSizeX;
     uint32_t                                    localSizeY;
     uint32_t                                    localSizeZ;
-
 } VkComputePipelineCreateInfo;
 
 typedef struct VkVertexInputBindingDescription_
@@ -2084,8 +2082,9 @@ typedef VkResult (VKAPI *PFN_vkDeviceWaitIdle)(VkDevice device);
 typedef VkResult (VKAPI *PFN_vkAllocMemory)(VkDevice device, const VkMemoryAllocInfo* pAllocInfo, VkDeviceMemory* pMem);
 typedef VkResult (VKAPI *PFN_vkFreeMemory)(VkDeviceMemory mem);
 typedef VkResult (VKAPI *PFN_vkSetMemoryPriority)(VkDeviceMemory mem, VkMemoryPriority priority);
-typedef VkResult (VKAPI *PFN_vkMapMemory)(VkDeviceMemory mem, VkFlags flags, void** ppData);
+typedef VkResult (VKAPI *PFN_vkMapMemory)(VkDeviceMemory mem, VkDeviceSize offset, VkDeviceSize size, VkMemoryMapFlags flags, void** ppData);
 typedef VkResult (VKAPI *PFN_vkUnmapMemory)(VkDeviceMemory mem);
+typedef VkResult (VKAPI *PFN_vkFlushMappedMemory)(VkDeviceMemory mem, VkDeviceSize offset, VkDeviceSize size);
 typedef VkResult (VKAPI *PFN_vkPinSystemMemory)(VkDevice device, const void* pSysMem, size_t memSize, VkDeviceMemory* pMem);
 typedef VkResult (VKAPI *PFN_vkGetMultiDeviceCompatibility)(VkPhysicalDevice physicalDevice0, VkPhysicalDevice physicalDevice1, VkPhysicalDeviceCompatibilityInfo* pInfo);
 typedef VkResult (VKAPI *PFN_vkOpenSharedMemory)(VkDevice device, const VkMemoryOpenInfo* pOpenInfo, VkDeviceMemory* pMem);
@@ -2095,7 +2094,7 @@ typedef VkResult (VKAPI *PFN_vkOpenPeerImage)(VkDevice device, const VkPeerImage
 typedef VkResult (VKAPI *PFN_vkDestroyObject)(VkObject object);
 typedef VkResult (VKAPI *PFN_vkGetObjectInfo)(VkBaseObject object, VkObjectInfoType infoType, size_t* pDataSize, void* pData);
 typedef VkResult (VKAPI *PFN_vkQueueBindObjectMemory)(VkQueue queue, VkObject object, uint32_t allocationIdx, VkDeviceMemory mem, VkDeviceSize offset);
-typedef VkResult (VKAPI *PFN_vkQueueBindObjectMemoryRange)(VkQueue queue, VkObject object, uint32_t allocationIdx, VkDeviceSize rangeOffset,VkDeviceSize rangeSize, VkDeviceMemory mem, VkDeviceSize memOffset);
+typedef VkResult (VKAPI *PFN_vkQueueBindObjectMemoryRange)(VkQueue queue, VkObject object, uint32_t allocationIdx, VkDeviceSize rangeOffset, VkDeviceSize rangeSize, VkDeviceMemory mem, VkDeviceSize memOffset);
 typedef VkResult (VKAPI *PFN_vkQueueBindImageMemoryRange)(VkQueue queue, VkImage image, uint32_t allocationIdx, const VkImageMemoryBindInfo* pBindInfo, VkDeviceMemory mem, VkDeviceSize memOffset);
 typedef VkResult (VKAPI *PFN_vkCreateFence)(VkDevice device, const VkFenceCreateInfo* pCreateInfo, VkFence* pFence);
 typedef VkResult (VKAPI *PFN_vkResetFences)(VkDevice device, uint32_t fenceCount, VkFence* pFences);
@@ -2173,7 +2172,7 @@ typedef void     (VKAPI *PFN_vkCmdBeginQuery)(VkCmdBuffer cmdBuffer, VkQueryPool
 typedef void     (VKAPI *PFN_vkCmdEndQuery)(VkCmdBuffer cmdBuffer, VkQueryPool queryPool, uint32_t slot);
 typedef void     (VKAPI *PFN_vkCmdResetQueryPool)(VkCmdBuffer cmdBuffer, VkQueryPool queryPool, uint32_t startQuery, uint32_t queryCount);
 typedef void     (VKAPI *PFN_vkCmdWriteTimestamp)(VkCmdBuffer cmdBuffer, VkTimestampType timestampType, VkBuffer destBuffer, VkDeviceSize destOffset);
-typedef void     (VKAPI *PFN_vkCmdCopyQueryPoolResults)(VkCmdBuffer cmdBuffer, VkQueryPool queryPool, uint32_t startQuery, uint32_t queryCount, VkBuffer destBuffer, VkDeviceSize destOffset, VkDeviceSize destStride, VkFlags flags);
+typedef void     (VKAPI *PFN_vkCmdCopyQueryPoolResults)(VkCmdBuffer cmdBuffer, VkQueryPool queryPool, uint32_t startQuery, uint32_t queryCount, VkBuffer destBuffer, VkDeviceSize destOffset, VkDeviceSize destStride, VkQueryResultFlags flags);
 typedef void     (VKAPI *PFN_vkCmdInitAtomicCounters)(VkCmdBuffer cmdBuffer, VkPipelineBindPoint pipelineBindPoint, uint32_t startCounter, uint32_t counterCount, const uint32_t* pData);
 typedef void     (VKAPI *PFN_vkCmdLoadAtomicCounters)(VkCmdBuffer cmdBuffer, VkPipelineBindPoint pipelineBindPoint, uint32_t startCounter, uint32_t counterCount, VkBuffer srcBuffer, VkDeviceSize srcOffset);
 typedef void     (VKAPI *PFN_vkCmdSaveAtomicCounters)(VkCmdBuffer cmdBuffer, VkPipelineBindPoint pipelineBindPoint, uint32_t startCounter, uint32_t counterCount, VkBuffer destBuffer, VkDeviceSize destOffset);
@@ -2259,12 +2258,12 @@ VkResult VKAPI vkQueueSubmit(
 VkResult VKAPI vkQueueAddMemReferences(
     VkQueue                                     queue,
     uint32_t                                    count,
-    const VkDeviceMemory*                          pMems);
+    const VkDeviceMemory*                       pMems);
 
 VkResult VKAPI vkQueueRemoveMemReferences(
     VkQueue                                     queue,
     uint32_t                                    count,
-    const VkDeviceMemory*                          pMems);
+    const VkDeviceMemory*                       pMems);
 
 VkResult VKAPI vkQueueWaitIdle(
     VkQueue                                     queue);
@@ -2288,6 +2287,8 @@ VkResult VKAPI vkSetMemoryPriority(
 
 VkResult VKAPI vkMapMemory(
     VkDeviceMemory                              mem,
+    VkDeviceSize                                offset,
+    VkDeviceSize                                size,
     VkMemoryMapFlags                            flags,
     void**                                      ppData);
 
@@ -2339,7 +2340,7 @@ VkResult VKAPI vkGetObjectInfo(
     size_t*                                     pDataSize,
     void*                                       pData);
 
-// Memory namagement API functions
+// Memory management API functions
 
 VkResult VKAPI vkQueueBindObjectMemory(
     VkQueue                                     queue,
@@ -2643,7 +2644,7 @@ void VKAPI vkCmdBindDescriptorSets(
     uint32_t                                    layoutChainSlot,
     uint32_t                                    count,
     const VkDescriptorSet*                      pDescriptorSets,
-    const uint32_t    *                         pUserData);
+    const uint32_t*                             pUserData);
 
 void VKAPI vkCmdBindIndexBuffer(
     VkCmdBuffer                                 cmdBuffer,
@@ -2843,7 +2844,7 @@ void VKAPI vkCmdCopyQueryPoolResults(
     VkBuffer                                    destBuffer,
     VkDeviceSize                                destOffset,
     VkDeviceSize                                destStride,
-    VkFlags                                     flags); // VkQueryResultFlags
+    VkQueryResultFlags                          flags);
 
 void VKAPI vkCmdInitAtomicCounters(
     VkCmdBuffer                                 cmdBuffer,

@@ -390,10 +390,10 @@ VK_LAYER_EXPORT VkResult VKAPI vkSetMemoryPriority(VkDeviceMemory mem, VkMemoryP
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkMapMemory(VkDeviceMemory mem, VkFlags flags, void** ppData)
+VK_LAYER_EXPORT VkResult VKAPI vkMapMemory(VkDeviceMemory mem, VkDeviceSize offset, VkDeviceSize size, VkFlags flags, void** ppData)
 {
 
-    VkResult result = nextTable.MapMemory(mem, flags, ppData);
+    VkResult result = nextTable.MapMemory(mem, offset, size, flags, ppData);
     return result;
 }
 

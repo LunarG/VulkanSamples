@@ -129,14 +129,16 @@ ICD_EXPORT VkResult VKAPI vkSetMemoryPriority(
 }
 
 ICD_EXPORT VkResult VKAPI vkMapMemory(
-    VkDeviceMemory                              mem_,
+    VkDeviceMemory                            mem_,
+    VkDeviceSize                              offset,
+    VkDeviceSize                              size,
     VkFlags                                   flags,
-    void**                                      ppData)
+    void**                                    ppData)
 {
     struct intel_mem *mem = intel_mem(mem_);
     void *ptr = intel_mem_map(mem, flags);
 
-    *ppData = ptr;
+    *ppData = (void *)((size_t)ptr + offset);
 
     return (ptr) ? VK_SUCCESS : VK_ERROR_UNKNOWN;
 }

@@ -556,7 +556,7 @@ void GpuMemory::set_priority(VkMemoryPriority priority)
 const void *GpuMemory::map(VkFlags flags) const
 {
     void *data;
-    if (!EXPECT(vkMapMemory(obj(), flags, &data) == VK_SUCCESS))
+    if (!EXPECT(vkMapMemory(obj(), 0 ,0, flags, &data) == VK_SUCCESS))
         data = NULL;
 
     return data;
@@ -565,7 +565,7 @@ const void *GpuMemory::map(VkFlags flags) const
 void *GpuMemory::map(VkFlags flags)
 {
     void *data;
-    if (!EXPECT(vkMapMemory(obj(), flags, &data) == VK_SUCCESS))
+    if (!EXPECT(vkMapMemory(obj(), 0, 0, flags, &data) == VK_SUCCESS))
         data = NULL;
 
     return data;

@@ -481,7 +481,7 @@ void demo_update_data_buffer(struct demo *demo)
     mat4x4_mul(MVP, VP, demo->model_matrix);
 
     assert(demo->uniform_data.num_mem == 1);
-    err = vkMapMemory(demo->uniform_data.mem[0], 0, (void **) &pData);
+    err = vkMapMemory(demo->uniform_data.mem[0], 0, 0, 0, (void **) &pData);
     assert(!err);
 
     memcpy(pData, (const void*) &MVP[0][0], matrixSize);
@@ -886,7 +886,7 @@ static void demo_prepare_texture_image(struct demo *demo,
         /* Linear texture must be within a single memory object */
         assert(num_allocations == 1);
 
-        err = vkMapMemory(tex_obj->mem[0], 0, &data);
+        err = vkMapMemory(tex_obj->mem[0], 0, 0, 0, &data);
         assert(!err);
 
         if (!loadTexture(filename, data, &layout, &tex_width, &tex_height)) {
@@ -1087,7 +1087,7 @@ void demo_prepare_cube_data_buffer(struct demo *demo)
         err = vkAllocMemory(demo->device, &alloc_info, &(demo->uniform_data.mem[i]));
         assert(!err);
 
-        err = vkMapMemory(demo->uniform_data.mem[i], 0, (void **) &pData);
+        err = vkMapMemory(demo->uniform_data.mem[i], 0, 0, 0, (void **) &pData);
         assert(!err);
 
         memcpy(pData, &data, (size_t)alloc_info.allocationSize);

@@ -311,6 +311,8 @@ core = Extension(
 
         Proto("VkResult", "MapMemory",
             [Param("VkDeviceMemory", "mem"),
+             Param("VkDeviceSize", "offset"),
+             Param("VkDeviceSize", "size"),
              Param("VkFlags", "flags"),
              Param("void**", "ppData")]),
 

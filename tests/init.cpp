@@ -207,7 +207,7 @@ TEST_F(XglTest, AllocMemory) {
     err = vkAllocMemory(device(), &alloc_info, &gpu_mem);
     ASSERT_VK_SUCCESS(err);
 
-    err = vkMapMemory(gpu_mem, 0, (void **) &pData);
+    err = vkMapMemory(gpu_mem, 0, 0, 0, (void **) &pData);
     ASSERT_VK_SUCCESS(err);
 
     memset(pData, 0x55, alloc_info.allocationSize);

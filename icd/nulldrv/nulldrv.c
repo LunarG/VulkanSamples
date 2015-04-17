@@ -1477,7 +1477,9 @@ ICD_EXPORT VkResult VKAPI vkSetMemoryPriority(
 
 ICD_EXPORT VkResult VKAPI vkMapMemory(
     VkDeviceMemory                              mem_,
-    VkFlags                                   flags,
+    VkDeviceSize                                offset,
+    VkDeviceSize                                size,
+    VkFlags                                     flags,
     void**                                      ppData)
 {
     NULLDRV_LOG_FUNC;
