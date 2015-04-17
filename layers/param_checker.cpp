@@ -297,6 +297,17 @@ VK_LAYER_EXPORT VkResult VKAPI vkGetGlobalExtensionInfo(
     return VK_SUCCESS;
 }
 
+VK_LAYER_EXPORT VkResult VKAPI vkGetPhysicalDeviceExtensionInfo(
+                                               VkPhysicalDevice gpu,
+                                               VkExtensionInfoType infoType,
+                                               uint32_t extensionIndex,
+                                               size_t*  pDataSize,
+                                               void*    pData)
+{
+    VkResult result = nextTable.GetPhysicalDeviceExtensionInfo(gpu, infoType, extensionIndex, pDataSize, pData);
+    return result;
+}
+
 VK_LAYER_EXPORT VkResult VKAPI vkEnumerateLayers(VkPhysicalDevice gpu, size_t maxLayerCount, size_t maxStringSize, size_t* pOutLayerCount, char* const* pOutLayers, void* pReserved)
 {
     char str[1024];
@@ -1503,6 +1514,19 @@ VK_LAYER_EXPORT void VKAPI vkCmdWriteTimestamp(VkCmdBuffer cmdBuffer, VkTimestam
         layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
     }
     nextTable.CmdWriteTimestamp(cmdBuffer, timestampType, destBuffer, destOffset);
+}
+
+VK_LAYER_EXPORT void VKAPI vkCmdCopyQueryPoolResults(
+    VkCmdBuffer                                 cmdBuffer,
+    VkQueryPool                                 queryPool,
+    uint32_t                                    startQuery,
+    uint32_t                                    queryCount,
+    VkBuffer                                    destBuffer,
+    VkDeviceSize                                destOffset,
+    VkDeviceSize                                destStride,
+    VkQueryResultFlags                          flags)
+{
+    nextTable.CmdCopyQueryPoolResults(cmdBuffer, queryPool, startQuery, queryCount, destBuffer, destOffset, destStride, flags);
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdInitAtomicCounters(VkCmdBuffer cmdBuffer, VkPipelineBindPoint pipelineBindPoint, uint32_t startCounter, uint32_t counterCount, const uint32_t* pData)
