@@ -514,6 +514,7 @@ protected:
 
     bool submit_and_done()
     {
+        queue_.add_mem_references(mem_refs_);
         queue_.submit(cmd_);
         queue_.wait();
         mem_refs_.clear();

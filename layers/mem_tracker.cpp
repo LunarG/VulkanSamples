@@ -1048,11 +1048,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkQueueSubmit(
         pCBInfo->fenceId = fenceId;
     }
 
-    if (VK_FALSE == validateQueueMemRefs(queue, cmdBufferCount, pCmdBuffers)) {
-        char str[1024];
-        sprintf(str, "Unable to verify memory references for Queue %p", queue);
-        layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, queue, 0, MEMTRACK_INVALID_MEM_REF, "MEM", str);
-    }
+    validateQueueMemRefs(queue, cmdBufferCount, pCmdBuffers);
 
     loader_platform_thread_unlock_mutex(&globalLock);
     VkResult result = nextTable.QueueSubmit(queue, cmdBufferCount, pCmdBuffers, getFenceFromId(fenceId));
