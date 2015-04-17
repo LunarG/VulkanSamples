@@ -50,7 +50,6 @@ struct demo {
 
     struct {
         VkImage image;
-        uint32_t num_mem;
         VkDeviceMemory mem;
 
         VkColorAttachmentView view;
@@ -353,8 +352,7 @@ static void demo_prepare_buffers(struct demo *demo)
                 &demo->buffers[i].image, &demo->buffers[i].mem);
         assert(!err);
 
-        demo->buffers[i].num_mem = 1;
-        demo_add_mem_refs(demo, demo->buffers[i].num_mem, demo->buffers[i].mem);
+        demo_add_mem_refs(demo, 1, demo->buffers[i].mem);
         demo_set_image_layout(demo, demo->buffers[i].image,
                                VK_IMAGE_LAYOUT_UNDEFINED,
                                VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
