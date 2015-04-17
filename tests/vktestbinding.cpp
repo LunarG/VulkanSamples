@@ -148,17 +148,25 @@ std::vector<const char *> PhysicalGpu::layers(std::vector<char> &buf) const
 
 std::vector<const char *> PhysicalGpu::extensions() const
 {
-    // TODO : Should fill this out using GetGlobalExtensionInfo to query count
-    //   Then fill in extensions based on that count
+    // Extensions to enable
     static const char *known_exts[] = {
         "VK_WSI_X11",
     };
-
     std::vector<const char *> exts;
-    for (int i = 0; i < sizeof(known_exts) / sizeof(known_exts[0]); i++) {
-//        VkResult err = vkGetExtensionSupport(gpu_, known_exts[i]);
-//        if (err == VK_SUCCESS)
-        exts.push_back(known_exts[i]);
+    size_t extSize = sizeof(uint32_t);
+    uint32_t extCount = 0;
+    if (!EXPECT(vkGetGlobalExtensionInfo(VK_EXTENSION_INFO_TYPE_COUNT, 0, &extSize, &extCount) == VK_SUCCESS))
+        return exts;
+
+    VkExtensionProperties extProp;
+    extSize = sizeof(VkExtensionProperties);
+    // TODO : Need to update this if/when we have more than 1 extension to enable
+    for (uint32_t i = 0; i < extCount; i++) {
+        if (!EXPECT(vkGetGlobalExtensionInfo(VK_EXTENSION_INFO_TYPE_PROPERTIES, i, &extSize, &extProp) == VK_SUCCESS))
+            return exts;
+
+        if (!strcmp(known_exts[0], extProp.extName))
+            exts.push_back(known_exts[i]);
     }
 
     return exts;

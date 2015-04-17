@@ -364,22 +364,27 @@ static void app_dev_destroy(struct app_dev *dev)
 
 static void app_gpu_init_extensions(struct app_gpu *gpu)
 {
-    //VkResult err;
-    uint32_t i;
-    // TODO : Should query count w/ GetGlobalExtensionInfo,
-    //  Then dynamically set extensions based on returned count
-
+    VkResult err;
+    // Extensions to enable
     static char *known_extensions[] = {
         "VK_WSI_X11",
     };
+    size_t extSize = sizeof(uint32_t);
+    uint32_t extCount = 0;
+    err = vkGetGlobalExtensionInfo(VK_EXTENSION_INFO_TYPE_COUNT, 0, &extSize, &extCount);
+    assert(!err);
 
-    for (i = 0; i < ARRAY_SIZE(known_extensions); i++) {
-/*
-        err = vkGetExtensionSupport(gpu->obj, known_extensions[i]);
-        if (!err)
-*/
-        gpu->extension_count++;
+    VkExtensionProperties extProp;
+    extSize = sizeof(VkExtensionProperties);
+    bool32_t extFound = 0; // TODO : Need to enhance this if/when we enable multiple extensions
+    for (uint32_t i = 0; i < extCount; i++) {
+        err = vkGetGlobalExtensionInfo(VK_EXTENSION_INFO_TYPE_PROPERTIES, i, &extSize, &extProp);
+        if (!strcmp(known_extensions[0], extProp.extName)) {
+            extFound = 1;
+            gpu->extension_count++;
+        }
     }
+    assert(extFound);
 
     gpu->extensions =
             malloc(sizeof(gpu->extensions[0]) * gpu->extension_count);
@@ -387,11 +392,9 @@ static void app_gpu_init_extensions(struct app_gpu *gpu)
         ERR_EXIT(VK_ERROR_OUT_OF_HOST_MEMORY);
 
     gpu->extension_count = 0;
+    uint32_t i;
     for (i = 0; i < ARRAY_SIZE(known_extensions); i++) {
-/*
-        err = vkGetExtensionSupport(gpu->obj, known_extensions[i]);
-        if (!err)
-*/
+        // known_extensions were validated above so copy them over here
         gpu->extensions[gpu->extension_count++] = known_extensions[i];
     }
 }

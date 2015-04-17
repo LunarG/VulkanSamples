@@ -1651,7 +1651,25 @@ static void demo_create_window(struct demo *demo)
 
 static void demo_init_vk(struct demo *demo)
 {
-    // TODO : Should query count w/ GetGlobalExtensionInfo, then enable via CreateInstance
+    VkResult err;
+    // Extensions to enable
+    const char *ext_names[] = {
+        "VK_WSI_X11",
+    };
+    size_t extSize = sizeof(uint32_t);
+    uint32_t extCount = 0;
+    err = vkGetGlobalExtensionInfo(VK_EXTENSION_INFO_TYPE_COUNT, 0, &extSize, &extCount);
+    assert(!err);
+
+    VkExtensionProperties extProp;
+    extSize = sizeof(VkExtensionProperties);
+    bool32_t extFound = 0;
+    for (uint32_t i = 0; i < extCount; i++) {
+        err = vkGetGlobalExtensionInfo(VK_EXTENSION_INFO_TYPE_PROPERTIES, i, &extSize, &extProp);
+        if (!strcmp(ext_names[0], extProp.extName))
+            extFound = 1;
+    }
+    assert(extFound);
     const VkApplicationInfo app = {
         .sType = VK_STRUCTURE_TYPE_APPLICATION_INFO,
         .pNext = NULL,
@@ -1666,8 +1684,8 @@ static void demo_init_vk(struct demo *demo)
         .pNext = NULL,
         .pAppInfo = &app,
         .pAllocCb = NULL,
-        .extensionCount = 0,
-        .ppEnabledExtensionNames = NULL,
+        .extensionCount = 1,
+        .ppEnabledExtensionNames = ext_names,
     };
     const VK_WSI_X11_CONNECTION_INFO connection = {
         .pConnection = demo->connection,
@@ -1679,20 +1697,15 @@ static void demo_init_vk(struct demo *demo)
         .queueCount = 1,
     };
     
-    const char *ext_names[] = {
-        "VK_WSI_X11",
-    };
-
     const VkDeviceCreateInfo device = {
         .sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
         .pNext = NULL,
         .queueRecordCount = 1,
         .pRequestedQueues = &queue,
-        .extensionCount = 1, // TODO : Should query count w/ GetGlobalExtensionInfo
+        .extensionCount = 1,
         .ppEnabledExtensionNames = ext_names,
         .flags = VK_DEVICE_CREATE_VALIDATION_BIT,
     };
-    VkResult err;
     uint32_t gpu_count;
     uint32_t i;
     size_t data_size;
