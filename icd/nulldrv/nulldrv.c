@@ -1019,6 +1019,19 @@ ICD_EXPORT void VKAPI vkCmdResetEvent(
     NULLDRV_LOG_FUNC;
 }
 
+ICD_EXPORT void VKAPI vkCmdCopyQueryPoolResults(
+    VkCmdBuffer                                 cmdBuffer,
+    VkQueryPool                                 queryPool,
+    uint32_t                                    startQuery,
+    uint32_t                                    queryCount,
+    VkBuffer                                    destBuffer,
+    VkGpuSize                                   destOffset,
+    VkGpuSize                                   destStride,
+    VkFlags                                     flags)
+{
+    NULLDRV_LOG_FUNC;
+}
+
 ICD_EXPORT void VKAPI vkCmdWriteTimestamp(
     VkCmdBuffer                              cmdBuffer,
     VkTimestampType                          timestampType,
