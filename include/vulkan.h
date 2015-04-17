@@ -288,7 +288,7 @@ typedef enum VkDescriptorSetUsage_
 typedef enum VkQueryType_
 {
     VK_QUERY_TYPE_OCCLUSION                                 = 0x00000000,
-    VK_QUERY_TYPE_PIPELINE_STATISTICS                       = 0x00000001,
+    VK_QUERY_TYPE_PIPELINE_STATISTICS                       = 0x00000001, // Optional
 
     VK_ENUM_RANGE(QUERY_TYPE, OCCLUSION, PIPELINE_STATISTICS)
 } VkQueryType;
@@ -1274,15 +1274,15 @@ typedef struct VkDeviceCreateInfo_
 
 typedef struct VkInstanceCreateInfo_
 {
-    VkStructureType                           sType;                      // Should be VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO
+    VkStructureType                             sType;                      // Should be VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO
     const void*                                 pNext;                      // Pointer to next structure
-    const VkApplicationInfo*                  pAppInfo;
-    const VkAllocCallbacks*                   pAllocCb;
+    const VkApplicationInfo*                    pAppInfo;
+    const VkAllocCallbacks*                     pAllocCb;
     uint32_t                                    extensionCount;
     const char*const*                           ppEnabledExtensionNames;    // layer or extension name to be enabled
 } VkInstanceCreateInfo;
 
-// can be added to VkDeviceCreateInfo or VkInstanceCreateInfo via pNext
+// can be added to VkDeviceCreateInfo via pNext
 typedef struct _VkLayerCreateInfo
 {
     VkStructureType                             sType;                      // Should be VK_STRUCTURE_TYPE_LAYER_CREATE_INFO
@@ -2296,9 +2296,9 @@ VkResult VKAPI vkUnmapMemory(
     VkDeviceMemory                              mem);
 
 VkResult VKAPI vkFlushMappedMemory(
-    VkDeviceMemory mem,
-    VkDeviceSize offset,
-    VkDeviceSize size);
+    VkDeviceMemory                              mem,
+    VkDeviceSize                                offset,
+    VkDeviceSize                                size);
 
 VkResult VKAPI vkPinSystemMemory(
     VkDevice                                    device,
