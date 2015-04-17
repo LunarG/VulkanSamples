@@ -131,6 +131,8 @@ class Subcommand(object):
             if '*' in vk_type:
                 if 'pUserData' == name:
                     return ("%i", "((pUserData == 0) ? 0 : *(pUserData))")
+                if 'const' in vk_type.lower():
+                    return ("%p", "(void*)(%s)" % name)
                 return ("%i", "*(%s)" % name)
             return ("%i", name)
         # TODO : This is special-cased as there's only one "format" param currently and it's nice to expand it

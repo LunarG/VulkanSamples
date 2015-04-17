@@ -773,16 +773,16 @@ class StructWrapperGen:
                     if 1 < stp_list[index]['full_type'].count('*'):
                         addr_char = ''
                     if (stp_list[index]['array']):
-                        sh_funcs.append('/* A */');
+                        #sh_funcs.append('/* A */');
                         if stp_list[index]['dyn_array']:
-                            sh_funcs.append('/* AA */');
+                            #sh_funcs.append('/* AA */');
                             array_count = 'pStruct->%s' % (stp_list[index]['array_size'])
                         else:
-                            sh_funcs.append('/* AB */');
+                            #sh_funcs.append('/* AB */');
                             array_count = '%s' % (stp_list[index]['array_size'])
                         sh_funcs.append('%sstp_strs[%u] = "";' % (indent, index))
                         if not idx_ss_decl:
-                            sh_funcs.append('/* AC */');
+                            #sh_funcs.append('/* AC */');
                             sh_funcs.append('%sstringstream index_ss;' % (indent))
                             idx_ss_decl = True
                         sh_funcs.append('%sif (pStruct->%s) {' % (indent, stp_list[index]['name']))
@@ -792,27 +792,27 @@ class StructWrapperGen:
                         sh_funcs.append('%sindex_ss.str("");' % (indent))
                         sh_funcs.append('%sindex_ss << i;' % (indent))
                         if not is_type(stp_list[index]['type'], 'struct'):
-                            sh_funcs.append('/* AD */');
+                            #sh_funcs.append('/* AD */');
                             addr_char = ''
                             sh_funcs.append('%sss[%u] << %spStruct->%s[i];' % (indent, index, addr_char, stp_list[index]['name']))
                             sh_funcs.append('%sstp_strs[%u] += " " + prefix + "%s[" + index_ss.str() + "] = " + ss[%u].str() + "\\n";' % (indent, index, stp_list[index]['name'], index))
                         else:
-                            sh_funcs.append('/* AD */');
+                            #sh_funcs.append('/* AD */');
                             sh_funcs.append('%sss[%u] << %spStruct->%s[i];' % (indent, index, addr_char, stp_list[index]['name']))
                             sh_funcs.append('%stmp_str = %s(%spStruct->%s[i], extra_indent);' % (indent, self._get_sh_func_name(stp_list[index]['type']), addr_char, stp_list[index]['name']))
                             if self.no_addr:
-                                sh_funcs.append('/* ADA */');
+                                #sh_funcs.append('/* ADA */');
                                 sh_funcs.append('%sstp_strs[%u] += " " + prefix + "%s[" + index_ss.str() + "] (addr)\\n" + tmp_str;' % (indent, index, stp_list[index]['name']))
                             else:
-                                sh_funcs.append('/* ADB */');
+                                #sh_funcs.append('/* ADB */');
                                 sh_funcs.append('%sstp_strs[%u] += " " + prefix + "%s[" + index_ss.str() + "] (" + ss[%u].str() + ")\\n" + tmp_str;' % (indent, index, stp_list[index]['name'], index))
-                        indent = indent[4:]
-                        sh_funcs.append('%s}' % (indent))
                         sh_funcs.append('%sss[%u].str("");' % (indent, index))
                         indent = indent[4:]
                         sh_funcs.append('%s}' % (indent))
+                        indent = indent[4:]
+                        sh_funcs.append('%s}' % (indent))
                     elif (stp_list[index]['ptr']):
-                        sh_funcs.append('/* B */');
+                        #sh_funcs.append('/* B */');
                         sh_funcs.append('    if (pStruct->%s) {' % stp_list[index]['name'])
                         if 'pNext' == stp_list[index]['name']:
                             sh_funcs.append('        tmp_str = dynamic_display((void*)pStruct->pNext, prefix);')
@@ -832,7 +832,7 @@ class StructWrapperGen:
                         sh_funcs.append('    else')
                         sh_funcs.append('        stp_strs[%u] = "";' % index)
                     else:
-                        sh_funcs.append('/* C */');
+                        #sh_funcs.append('/* C */');
                         sh_funcs.append('    tmp_str = %s(&pStruct->%s, extra_indent);' % (self._get_sh_func_name(stp_list[index]['type']), stp_list[index]['name']))
                         sh_funcs.append('    ss[%u] << %spStruct->%s;' % (index, addr_char, stp_list[index]['name']))
                         if self.no_addr:
