@@ -103,7 +103,6 @@ typedef struct VkDisplayPropertiesWSI_
 
 typedef struct VkDisplayFormatPropertiesWSI_
 {
-    VkDisplayWSI                            display;            // Handle of the display object
     VkFormat                                swapChainFormat;    // Format of the images of the swap chain
 } VkDisplayFormatPropertiesWSI;
 
@@ -132,11 +131,11 @@ typedef struct VkSwapChainCreateInfoWSI_
     VkFlags                                 swapModeFlags;      // Allowed swap modes (see VkSwapModeFlagsWSI)
 } VkSwapChainCreateInfoWSI;
 
-typedef struct VkSwapChainImageInfo_
+typedef struct VkSwapChainImageInfoWSI_
 {
     VkImage                                 image;              // Persistent swap chain image handle
     VkDeviceMemory                          memory;             // Persistent swap chain image's memory handle
-} VkSwapChainImageInfo;
+} VkSwapChainImageInfoWSI;
 
 typedef struct VkPhysicalDeviceQueuePresentPropertiesWSI_
 {
@@ -158,7 +157,7 @@ typedef VkResult (VKAPI *PFN_vkGetDisplayInfoWSI)(VkDisplayWSI display, VkDispla
 typedef VkResult (VKAPI *PFN_vkCreateSwapChainWSI)(VkDevice device, const VkSwapChainCreateInfoWSI* pCreateInfo, VkSwapChainWSI* pSwapChain);
 typedef VkResult (VKAPI *PFN_vkDestroySwapChainWSI)(VkSwapChainWSI swapChain);
 typedef VkResult (VKAPI *PFN_vkGetSwapChainInfoWSI)(VkSwapChainWSI swapChain, VkSwapChainInfoTypeWSI infoType, size_t* pDataSize, void* pData);
-typedef VkResult (VKAPI *PFN_vkQueuePresentWSI)(VkQueue queue, VkPresentInfoWSI* pPresentInfo);
+typedef VkResult (VKAPI *PFN_vkQueuePresentWSI)(VkQueue queue, const VkPresentInfoWSI* pPresentInfo);
 
 // ------------------------------------------------------------------------------------------------
 // Function prototypes
@@ -187,7 +186,7 @@ VkResult VKAPI vkGetSwapChainInfoWSI(
 
 VkResult VKAPI vkQueuePresentWSI(
     VkQueue                                 queue,
-    VkPresentInfoWSI*                       pPresentInfo);
+    const VkPresentInfoWSI*                 pPresentInfo);
 
 #endif // VK_PROTOTYPES
 
