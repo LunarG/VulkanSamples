@@ -178,12 +178,12 @@ struct extProps {
     uint32_t version;
     const char * const name;
 };
-#define SHADER_CHECKER_LAYER_EXT_ARRAY_SIZE 1
+#define SHADER_CHECKER_LAYER_EXT_ARRAY_SIZE 2
 static const struct extProps shaderCheckerExts[SHADER_CHECKER_LAYER_EXT_ARRAY_SIZE] = {
     // TODO what is the version?
     0x10, "ShaderChecker",
+    0x10, "Validation",
 };
-
 
 VK_LAYER_EXPORT VkResult VKAPI vkGetGlobalExtensionInfo(
                                                VkExtensionInfoType infoType,
