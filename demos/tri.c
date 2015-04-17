@@ -1355,13 +1355,16 @@ static void demo_init_vk(struct demo *demo)
     uint32_t queue_count;
 
     err = vkCreateInstance(&inst_info, &demo->inst);
-    if (err == VK_ERROR_INCOMPATIBLE_DRIVER) {
-        printf("Cannot find a compatible Vulkan installable client driver "
-               "(ICD).\nExiting ...\n");
+    if (err) {
+#ifdef _WIN32
+        MessageBox(NULL, "vkCreateInstance failed - do you have a Vulkan graphics driver installed?",
+                   "vkCreateInstance Failure", MB_OK);
+#else
+        printf("vkCreateInstance failed - Do you have a Vulkan graphics driver installed?"
+               "(\nExiting ...\n");
         fflush(stdout);
+#endif
         exit(1);
-    } else {
-        assert(!err);
     }
 
     gpu_count = 1;
