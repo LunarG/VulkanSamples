@@ -569,7 +569,7 @@ typedef enum VkExtensionInfoType_
     VK_EXTENSION_INFO_TYPE_COUNT                            = 0x00000000,
     VK_EXTENSION_INFO_TYPE_PROPERTIES                       = 0x00000001,
 
-    //VK_ENUM_RANGE(EXTENSION_INFO_TYPE, COUNT, PROPERTIES)
+    VK_ENUM_RANGE(EXTENSION_INFO_TYPE, COUNT, PROPERTIES)
 } VkExtensionInfoType;
 
 typedef enum VkFormatInfoType_
@@ -1186,9 +1186,6 @@ typedef enum VkCmdBufferOptimizeFlagBits_
     VK_CMD_BUFFER_OPTIMIZE_DESCRIPTOR_SET_SWITCH_BIT        = VK_BIT(3),
 } VkCmdBufferOptimizeFlagBits;
 
-// Memory mapping flags
-typedef VkFlags VkMemoryMapFlags;
-
 // Pipeline statistics flags
 typedef VkFlags VkQueryPipelineStatisticFlags;
 typedef enum VkQueryPipelineStatisticFlagBits_ {
@@ -1205,6 +1202,8 @@ typedef enum VkQueryPipelineStatisticFlagBits_ {
     VK_QUERY_PIPELINE_STATISTIC_CS_INVOCATIONS_BIT          = VK_BIT(10), // Optional
 } VkQueryPipelineStatisticFlagBits;
 
+// Memory mapping flags
+typedef VkFlags VkMemoryMapFlags;
 
 // ------------------------------------------------------------------------------------------------
 // Vulkan structures
@@ -1915,6 +1914,7 @@ typedef struct VkPipelineLayoutCreateInfo_
 {
     VkStructureType                             sType;              // Must be VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO
     const void*                                 pNext;              // Pointer to next structure
+
     uint32_t                                    descriptorSetCount; // Number of descriptor sets interfaced by the pipeline
     const VkDescriptorSetLayout*                pSetLayouts;        // Array of <setCount> number of descriptor set layout objects defining the layout of the
 } VkPipelineLayoutCreateInfo;
@@ -2133,7 +2133,6 @@ typedef VkResult (VKAPI *PFN_vkCreateDevice)(VkPhysicalDevice physicalDevice, co
 typedef VkResult (VKAPI *PFN_vkDestroyDevice)(VkDevice device);
 typedef VkResult (VKAPI *PFN_vkGetGlobalExtensionInfo)(VkExtensionInfoType infoType, uint32_t extensionIndex, size_t* pDataSize, void* pData);
 typedef VkResult (VKAPI *PFN_vkGetPhysicalDeviceExtensionInfo)(VkPhysicalDevice gpu, VkExtensionInfoType infoType, uint32_t extensionIndex, size_t* pDataSize, void* pData);
-typedef VkResult (VKAPI *PFN_vkGetExtensionSupport)(VkPhysicalDevice physicalDevice, const char* pExtName);
 typedef VkResult (VKAPI *PFN_vkEnumerateLayers)(VkPhysicalDevice physicalDevice, size_t maxLayerCount, size_t maxStringSize, size_t* pOutLayerCount, char* const* pOutLayers, void* pReserved);
 typedef VkResult (VKAPI *PFN_vkGetDeviceQueue)(VkDevice device, uint32_t queueNodeIndex, uint32_t queueIndex, VkQueue* pQueue);
 typedef VkResult (VKAPI *PFN_vkQueueSubmit)(VkQueue queue, uint32_t cmdBufferCount, const VkCmdBuffer* pCmdBuffers, VkFence fence);
@@ -2281,17 +2280,17 @@ VkResult VKAPI vkDestroyDevice(
 
 // Extension discovery functions
 VkResult VKAPI vkGetGlobalExtensionInfo(
-                                               VkExtensionInfoType infoType,
-                                               uint32_t extensionIndex,
-                                               size_t*  pDataSize,
-                                               void*    pData);
+    VkExtensionInfoType                         infoType,
+    uint32_t                                    extensionIndex,
+    size_t*                                     pDataSize,
+    void*                                       pData);
 
 VkResult VKAPI vkGetPhysicalDeviceExtensionInfo(
-                                               VkPhysicalDevice gpu,
-                                               VkExtensionInfoType infoType,
-                                               uint32_t extensionIndex,
-                                               size_t*  pDataSize,
-                                               void*    pData);
+    VkPhysicalDevice                            physicalDevice,
+    VkExtensionInfoType                         infoType,
+    uint32_t                                    extensionIndex,
+    size_t*                                     pDataSize,
+    void*                                       pData);
 
 // Layer discovery functions
 
@@ -2299,7 +2298,7 @@ VkResult VKAPI vkEnumerateLayers(
     VkPhysicalDevice                            physicalDevice,
     size_t                                      maxLayerCount,
     size_t                                      maxStringSize,
-    size_t*                                     pOutLayerCount,
+    size_t*                                     pLayerCount,
     char* const*                                pOutLayers,
     void*                                       pReserved);
 

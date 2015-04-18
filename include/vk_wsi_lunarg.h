@@ -32,10 +32,6 @@
 #define VK_WSI_LUNARG_REVISION             3
 #define VK_WSI_LUNARG_EXTENSION_NUMBER     1
 
-#ifndef VK_DEFINE_DISP_SUBCLASS_HANDLE
-#define VK_DEFINE_DISP_SUBCLASS_HANDLE(_obj, _base) VK_DEFINE_HANDLE(_obj)
-#endif
-
 #ifdef __cplusplus
 extern "C"
 {
