@@ -27,6 +27,10 @@
 #include <string.h>
 #include <assert.h>
 
+#ifdef _WIN32
+#include <Windows.h>
+#endif
+
 #include <vulkan.h>
 
 #define ERR(err) printf("%s:%d: failed with %s\n", \
@@ -713,3 +717,12 @@ int main(int argc, char **argv)
 
     return 0;
 }
+
+#ifdef _WIN32
+int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR pCmdLine, int nCmdShow)
+{
+    char *argv = pCmdLine;
+    main(1, &argv);
+    fflush(stdout);
+}
+#endif
