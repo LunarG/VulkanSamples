@@ -95,32 +95,29 @@ private:
 class BaseObject {
 public:
     const VkObject &obj() const { return obj_; }
+    VkObjectType type() const { return object_type_; }
     bool initialized() const { return (obj_ != VK_NULL_HANDLE); }
 
-    // vkGetObjectInfo()
-    uint32_t memory_allocation_count() const;
-    std::vector<VkMemoryRequirements> memory_requirements() const;
-
 protected:
-    explicit BaseObject() : obj_(VK_NULL_HANDLE), own_obj_(false) {}
-    explicit BaseObject(VkObject obj) : obj_(VK_NULL_HANDLE), own_obj_(false) { init(obj); }
+    explicit BaseObject() :
+        object_type_((VkObjectType) 0), obj_(VK_NULL_HANDLE), own_obj_(false){}
+    explicit BaseObject(VkObject obj, VkObjectType object_type) :
+        object_type_(object_type), obj_(obj), own_obj_(false){}
 
-    void init(VkObject obj, bool own);
-    void init(VkObject obj) { init(obj, true); }
+    void init(VkObject obj, VkObjectType object_type, bool own);
+    void init(VkObject obj, VkObjectType object_type) { init(obj, object_type, true); }
 
-    void reinit(VkObject obj, bool own);
-    void reinit(VkObject obj) { reinit(obj, true); }
+    void reinit(VkObject obj, VkObjectType object_type, bool own);
+    void reinit(VkObject obj, VkObjectType object_type) { reinit(obj, object_type, true); }
 
     bool own() const { return own_obj_; }
-    VkDevice device() const { return device_; }
-    VkObjectType object_type_;
-    VkDevice device_;
 
 private:
     // base objects are non-copyable
     BaseObject(const BaseObject &);
     BaseObject &operator=(const BaseObject &);
 
+    VkObjectType object_type_;
     VkObject obj_;
     bool own_obj_;
 };
@@ -128,6 +125,10 @@ private:
 class Object : public BaseObject {
 public:
     const VkObject &obj() const { return reinterpret_cast<const VkObject &>(BaseObject::obj()); }
+
+    // vkGetObjectInfo()
+    uint32_t memory_allocation_count() const;
+    std::vector<VkMemoryRequirements> memory_requirements() const;
 
     // vkQueueBindObjectMemory()
     void bind_memory(const Device &dev, uint32_t alloc_idx, const GpuMemory &mem, VkDeviceSize mem_offset);
@@ -152,15 +153,20 @@ public:
     const Device* dev_;
 
 protected:
-    explicit Object() : mem_alloc_count_(0), internal_mems_(NULL), primary_mem_(NULL), bound(false) {}
-    explicit Object(VkObject obj) : mem_alloc_count_(0), internal_mems_(NULL), primary_mem_(NULL) { init(obj); }
+    explicit Object() :
+        mem_alloc_count_(0), internal_mems_(NULL),
+        primary_mem_(NULL), bound(false) {}
+    explicit Object(const Device &dev, VkObject obj, VkObjectType object_type) :
+        dev_(&dev),
+        mem_alloc_count_(0), internal_mems_(NULL),
+        primary_mem_(NULL) { init(obj, object_type); }
     ~Object() { cleanup(); }
 
-    void init(VkObject obj, bool own);
-    void init(VkObject obj) { init(obj, true); }
+    void init(VkObject obj, VkObjectType object_type, bool own);
+    void init(VkObject obj, VkObjectType object_type) { init(obj, object_type, true); }
 
-    void reinit(VkObject obj, bool own);
-    void reinit(VkObject obj) { init(obj, true); }
+    void reinit(VkObject obj, VkObjectType object_type, bool own);
+    void reinit(VkObject obj, VkObjectType object_type) { init(obj, object_type, true); }
 
     // allocate and bind internal memories
     void alloc_memory(const Device &dev);
@@ -180,11 +186,10 @@ public:
     const VkDynamicStateObject &obj() const { return reinterpret_cast<const VkDynamicStateObject &>(Object::obj()); }
 
 protected:
-    explicit DynamicStateObject() {}
-    explicit DynamicStateObject(VkDynamicStateObject obj) : Object(obj) {}
+    explicit DynamicStateObject() : Object() {}
 };
 
-template<typename T, class C>
+template<typename T, class C, VkObjectType V>
 class DerivedObject : public C {
 public:
     const T &obj() const { return reinterpret_cast<const T &>(C::obj()); }
@@ -194,13 +199,16 @@ protected:
     typedef C base_type;
 
     explicit DerivedObject() {}
-    explicit DerivedObject(T obj) : C(obj) {}
+    explicit DerivedObject(T obj) : C(obj, V) {}
+    explicit DerivedObject(const Device &dev, T obj) : C(dev, obj, V) {}
 };
 
-class Device : public DerivedObject<VkDevice, BaseObject> {
+class Device : public DerivedObject<VkDevice, BaseObject, VK_OBJECT_TYPE_DEVICE> {
 public:
     explicit Device(VkPhysicalDevice gpu) : gpu_(gpu) {}
     ~Device();
+
+    VkDevice device() const { return obj(); }
 
     // vkCreateDevice()
     void init(const VkDeviceCreateInfo &info);
@@ -253,7 +261,7 @@ private:
     std::vector<Format> formats_;
 };
 
-class Queue : public DerivedObject<VkQueue, BaseObject> {
+class Queue : public DerivedObject<VkQueue, BaseObject, VK_OBJECT_TYPE_QUEUE> {
 public:
     explicit Queue(VkQueue queue) : DerivedObject(queue) {}
 
@@ -276,7 +284,10 @@ public:
     void wait_semaphore(Semaphore &sem);
 };
 
-class GpuMemory : public DerivedObject<VkDeviceMemory, BaseObject> {
+/* Note: This needs to be BaseObject so that we don't try to destroy
+ * the object when the object is device memory.
+ */
+class GpuMemory : public DerivedObject<VkDeviceMemory, BaseObject, VK_OBJECT_TYPE_DEVICE_MEMORY> {
 public:
     ~GpuMemory();
 
@@ -289,7 +300,7 @@ public:
     // vkOpenPeerMemory()
     void init(const Device &dev, const VkPeerMemoryOpenInfo &info);
 
-    void init(VkDeviceMemory mem) { BaseObject::init(mem, false); }
+    void init(const Device &dev, VkDeviceMemory mem);
 
     // vkSetMemoryPriority()
     void set_priority(VkMemoryPriority priority);
@@ -305,21 +316,23 @@ public:
 
     static VkMemoryAllocInfo alloc_info(const VkMemoryRequirements &reqs,
                   const VkMemoryAllocInfo *next_info);
+private:
+    const Device* dev_;
 };
 
-class Fence : public DerivedObject<VkFence, Object> {
+class Fence : public DerivedObject<VkFence, Object, VK_OBJECT_TYPE_FENCE> {
 public:
     // vkCreateFence()
     void init(const Device &dev, const VkFenceCreateInfo &info);
 
     // vkGetFenceStatus()
-    VkResult status() const { return vkGetFenceStatus(device(), obj()); }
+    VkResult status() const { return vkGetFenceStatus(dev_->obj(), obj()); }
 
     static VkFenceCreateInfo create_info(VkFenceCreateFlags flags);
     static VkFenceCreateInfo create_info();
 };
 
-class Semaphore : public DerivedObject<VkSemaphore, Object> {
+class Semaphore : public DerivedObject<VkSemaphore, Object, VK_OBJECT_TYPE_SEMAPHORE> {
 public:
     // vkCreateSemaphore()
     void init(const Device &dev, const VkSemaphoreCreateInfo &info);
@@ -329,7 +342,7 @@ public:
     static VkSemaphoreCreateInfo create_info(uint32_t init_count, VkFlags flags);
 };
 
-class Event : public DerivedObject<VkEvent, Object> {
+class Event : public DerivedObject<VkEvent, Object, VK_OBJECT_TYPE_EVENT> {
 public:
     // vkCreateEvent()
     void init(const Device &dev, const VkEventCreateInfo &info);
@@ -337,14 +350,14 @@ public:
     // vkGetEventStatus()
     // vkSetEvent()
     // vkResetEvent()
-    VkResult status() const { return vkGetEventStatus(device(), obj()); }
+    VkResult status() const { return vkGetEventStatus(dev_->obj(), obj()); }
     void set();
     void reset();
 
     static VkEventCreateInfo create_info(VkFlags flags);
 };
 
-class QueryPool : public DerivedObject<VkQueryPool, Object> {
+class QueryPool : public DerivedObject<VkQueryPool, Object, VK_OBJECT_TYPE_QUERY_POOL> {
 public:
     // vkCreateQueryPool()
     void init(const Device &dev, const VkQueryPoolCreateInfo &info);
@@ -355,7 +368,7 @@ public:
     static VkQueryPoolCreateInfo create_info(VkQueryType type, uint32_t slot_count);
 };
 
-class Buffer : public DerivedObject<VkBuffer, Object> {
+class Buffer : public DerivedObject<VkBuffer, Object, VK_OBJECT_TYPE_BUFFER> {
 public:
     explicit Buffer() {}
     explicit Buffer(const Device &dev, const VkBufferCreateInfo &info) { init(dev, info); }
@@ -384,13 +397,13 @@ private:
     VkBufferCreateInfo create_info_;
 };
 
-class BufferView : public DerivedObject<VkBufferView, Object> {
+class BufferView : public DerivedObject<VkBufferView, Object, VK_OBJECT_TYPE_BUFFER_VIEW> {
 public:
     // vkCreateBufferView()
     void init(const Device &dev, const VkBufferViewCreateInfo &info);
 };
 
-class Image : public DerivedObject<VkImage, Object> {
+class Image : public DerivedObject<VkImage, Object, VK_OBJECT_TYPE_IMAGE> {
 public:
     explicit Image() : format_features_(0) {}
     explicit Image(const Device &dev, const VkImageCreateInfo &info) : format_features_(0) { init(dev, info); }
@@ -454,25 +467,25 @@ private:
     VkFlags format_features_;
 };
 
-class ImageView : public DerivedObject<VkImageView, Object> {
+class ImageView : public DerivedObject<VkImageView, Object, VK_OBJECT_TYPE_IMAGE_VIEW> {
 public:
     // vkCreateImageView()
     void init(const Device &dev, const VkImageViewCreateInfo &info);
 };
 
-class ColorAttachmentView : public DerivedObject<VkColorAttachmentView, Object> {
+class ColorAttachmentView : public DerivedObject<VkColorAttachmentView, Object, VK_OBJECT_TYPE_COLOR_ATTACHMENT_VIEW> {
 public:
     // vkCreateColorAttachmentView()
     void init(const Device &dev, const VkColorAttachmentViewCreateInfo &info);
 };
 
-class DepthStencilView : public DerivedObject<VkDepthStencilView, Object> {
+class DepthStencilView : public DerivedObject<VkDepthStencilView, Object, VK_OBJECT_TYPE_DEPTH_STENCIL_VIEW> {
 public:
     // vkCreateDepthStencilView()
     void init(const Device &dev, const VkDepthStencilViewCreateInfo &info);
 };
 
-class Shader : public DerivedObject<VkShader, Object> {
+class Shader : public DerivedObject<VkShader, Object, VK_OBJECT_TYPE_SHADER> {
 public:
     // vkCreateShader()
     void init(const Device &dev, const VkShaderCreateInfo &info);
@@ -481,7 +494,7 @@ public:
     static VkShaderCreateInfo create_info(size_t code_size, const void *code, VkFlags flags);
 };
 
-class Pipeline : public DerivedObject<VkPipeline, Object> {
+class Pipeline : public DerivedObject<VkPipeline, Object, VK_OBJECT_TYPE_PIPELINE> {
 public:
     // vkCreateGraphicsPipeline()
     void init(const Device &dev, const VkGraphicsPipelineCreateInfo &info);
@@ -498,25 +511,25 @@ public:
     size_t store(size_t size, void *data);
 };
 
-class Sampler : public DerivedObject<VkSampler, Object> {
+class Sampler : public DerivedObject<VkSampler, Object, VK_OBJECT_TYPE_SAMPLER> {
 public:
     // vkCreateSampler()
     void init(const Device &dev, const VkSamplerCreateInfo &info);
 };
 
-class DescriptorSetLayout : public DerivedObject<VkDescriptorSetLayout, Object> {
+class DescriptorSetLayout : public DerivedObject<VkDescriptorSetLayout, Object, VK_OBJECT_TYPE_DESCRIPTOR_SET_LAYOUT> {
 public:
     // vkCreateDescriptorSetLayout()
     void init(const Device &dev, const VkDescriptorSetLayoutCreateInfo &info);
 };
 
-class PipelineLayout : public DerivedObject<VkPipelineLayout, Object> {
+class PipelineLayout : public DerivedObject<VkPipelineLayout, Object, VK_OBJECT_TYPE_PIPELINE_LAYOUT> {
 public:
     // vCreatePipelineLayout()
     void init(const Device &dev, VkPipelineLayoutCreateInfo &info, const std::vector<const DescriptorSetLayout *> &layouts);
 };
 
-class DescriptorPool : public DerivedObject<VkDescriptorPool, Object> {
+class DescriptorPool : public DerivedObject<VkDescriptorPool, Object, VK_OBJECT_TYPE_DESCRIPTOR_POOL> {
 public:
     // vkCreateDescriptorPool()
     void init(const Device &dev, VkDescriptorPoolUsage usage,
@@ -535,9 +548,9 @@ public:
     void clear_sets(DescriptorSet &set) { clear_sets(std::vector<DescriptorSet *>(1, &set)); }
 };
 
-class DescriptorSet : public DerivedObject<VkDescriptorSet, Object> {
+class DescriptorSet : public DerivedObject<VkDescriptorSet, Object, VK_OBJECT_TYPE_DESCRIPTOR_SET> {
 public:
-    explicit DescriptorSet(VkDescriptorSet set) : DerivedObject(set) {}
+    explicit DescriptorSet(const Device &dev, VkDescriptorSet set) : DerivedObject(dev, set) {}
 
     // vkUpdateDescriptors()
     void update(const std::vector<const void *> &update_array);
@@ -560,31 +573,31 @@ public:
     static VkImageViewAttachInfo attach_info(const ImageView &view, VkImageLayout layout);
 };
 
-class DynamicVpStateObject : public DerivedObject<VkDynamicVpState, DynamicStateObject> {
+class DynamicVpStateObject : public DerivedObject<VkDynamicVpState, DynamicStateObject, VK_OBJECT_TYPE_DYNAMIC_VP_STATE> {
 public:
     // vkCreateDynamicViewportState()
     void init(const Device &dev, const VkDynamicVpStateCreateInfo &info);
 };
 
-class DynamicRsStateObject : public DerivedObject<VkDynamicRsState, DynamicStateObject> {
+class DynamicRsStateObject : public DerivedObject<VkDynamicRsState, DynamicStateObject, VK_OBJECT_TYPE_DYNAMIC_RS_STATE> {
 public:
     // vkCreateDynamicRasterState()
     void init(const Device &dev, const VkDynamicRsStateCreateInfo &info);
 };
 
-class DynamicCbStateObject : public DerivedObject<VkDynamicCbState, DynamicStateObject> {
+class DynamicCbStateObject : public DerivedObject<VkDynamicCbState, DynamicStateObject, VK_OBJECT_TYPE_DYNAMIC_CB_STATE> {
 public:
     // vkCreateDynamicColorBlendState()
     void init(const Device &dev, const VkDynamicCbStateCreateInfo &info);
 };
 
-class DynamicDsStateObject : public DerivedObject<VkDynamicDsState, DynamicStateObject> {
+class DynamicDsStateObject : public DerivedObject<VkDynamicDsState, DynamicStateObject, VK_OBJECT_TYPE_DYNAMIC_DS_STATE> {
 public:
     // vkCreateDynamicDepthStencilState()
     void init(const Device &dev, const VkDynamicDsStateCreateInfo &info);
 };
 
-class CmdBuffer : public DerivedObject<VkCmdBuffer, Object> {
+class CmdBuffer : public DerivedObject<VkCmdBuffer, Object, VK_OBJECT_TYPE_COMMAND_BUFFER> {
 public:
     explicit CmdBuffer() {}
     explicit CmdBuffer(const Device &dev, const VkCmdBufferCreateInfo &info) { init(dev, info); }
