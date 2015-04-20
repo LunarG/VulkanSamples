@@ -1194,10 +1194,9 @@ LOADER_EXPORT VkResult VKAPI vkDestroyInstance(
 }
 
 LOADER_EXPORT VkResult VKAPI vkEnumeratePhysicalDevices(
-
-        VkInstance                                instance,
-        uint32_t*                                 pPhysicalDeviceCount,
-        VkPhysicalDevice*                            pPhysicalDevices)
+        VkInstance                              instance,
+        uint32_t*                               pPhysicalDeviceCount,
+        VkPhysicalDevice*                       pPhysicalDevices)
 {
     struct loader_instance *ptr_instance = (struct loader_instance *) instance;
     struct loader_icd *icd;
@@ -1232,6 +1231,7 @@ LOADER_EXPORT VkResult VKAPI vkEnumeratePhysicalDevices(
             VkBaseLayerObject * wrapped_gpus;
             PFN_vkGetProcAddr get_proc_addr = icd->scanned_icds->GetProcAddr;
 
+            n = *pPhysicalDeviceCount;
             res = icd->scanned_icds->EnumeratePhysicalDevices(
                                             icd->scanned_icds->instance,
                                             &n,
