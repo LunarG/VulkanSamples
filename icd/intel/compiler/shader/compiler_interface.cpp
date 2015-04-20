@@ -396,13 +396,13 @@ struct intel_ir *shader_create_ir(const struct intel_gpu *gpu,
         shader->Source = (const GLchar*)code;
         shader->Size   = size / sizeof(unsigned);  // size in SPV words
 
-        spv::ExecutionModel executionModel = spv::ModelVertex;
+        spv::ExecutionModel executionModel = spv::ExecutionModelVertex;
 
         unsigned spvWord = 5;
 
         while (spvWord < size) {
             const unsigned    opWord = ((unsigned int*)code)[spvWord];
-            const spv::OpCode op     = spv::OpCode((opWord & 0xffff));
+            const spv::Op op     = spv::Op((opWord & 0xffff));
 
             if (op == spv::OpEntryPoint) {
                 executionModel = spv::ExecutionModel(((unsigned int*)code)[spvWord+1]);
@@ -415,10 +415,10 @@ struct intel_ir *shader_create_ir(const struct intel_gpu *gpu,
         // We should parse the glsl text out of spv right now, but
         // instead we are just plopping down our glsl
         switch(executionModel) {
-        case spv::ModelVertex:
+        case spv::ExecutionModelVertex:
             shader->Type = GL_VERTEX_SHADER;
             break;
-        case spv::ModelFragment:
+        case spv::ExecutionModelFragment:
             shader->Type = GL_FRAGMENT_SHADER;
             break;
         default:

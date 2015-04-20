@@ -230,17 +230,17 @@ static char const *
 storage_class_name(unsigned sc)
 {
     switch (sc) {
-    case spv::StorageInput: return "input";
-    case spv::StorageOutput: return "output";
-    case spv::StorageConstantUniform: return "const uniform";
-    case spv::StorageUniform: return "uniform";
-    case spv::StorageWorkgroupLocal: return "workgroup local";
-    case spv::StorageWorkgroupGlobal: return "workgroup global";
-    case spv::StoragePrivateGlobal: return "private global";
-    case spv::StorageFunction: return "function";
-    case spv::StorageGeneric: return "generic";
-    case spv::StoragePrivate: return "private";
-    case spv::StorageAtomicCounter: return "atomic counter";
+    case spv::StorageClassInput: return "input";
+    case spv::StorageClassOutput: return "output";
+    case spv::StorageClassUniformConstant: return "const uniform";
+    case spv::StorageClassUniform: return "uniform";
+    case spv::StorageClassWorkgroupLocal: return "workgroup local";
+    case spv::StorageClassWorkgroupGlobal: return "workgroup global";
+    case spv::StorageClassPrivateGlobal: return "private global";
+    case spv::StorageClassFunction: return "function";
+    case spv::StorageClassGeneric: return "generic";
+    case spv::StorageClassPrivate: return "private";
+    case spv::StorageClassAtomicCounter: return "atomic counter";
     default: return "unknown";
     }
 }
@@ -414,11 +414,11 @@ collect_interface_by_location(shader_source const *src, spv::StorageClass sinter
          * builtins. Complain about anything that fits neither model.
          */
         if (opcode == spv::OpDecorate) {
-            if (code[word+2] == spv::DecLocation) {
+            if (code[word+2] == spv::DecorationLocation) {
                 var_locations[code[word+1]] = code[word+3];
             }
 
-            if (code[word+2] == spv::DecBuiltIn) {
+            if (code[word+2] == spv::DecorationBuiltIn) {
                 var_builtins[code[word+1]] = code[word+3];
             }
         }
@@ -485,8 +485,8 @@ validate_interface_between_stages(shader_source const *producer, char const *pro
 
     char str[1024];
 
-    collect_interface_by_location(producer, spv::StorageOutput, outputs, builtin_outputs);
-    collect_interface_by_location(consumer, spv::StorageInput, inputs, builtin_inputs);
+    collect_interface_by_location(producer, spv::StorageClassOutput, outputs, builtin_outputs);
+    collect_interface_by_location(consumer, spv::StorageClassInput, inputs, builtin_inputs);
 
     auto a_it = outputs.begin();
     auto b_it = inputs.begin();
@@ -594,7 +594,7 @@ validate_vi_against_vs_inputs(VkPipelineVertexInputCreateInfo const *vi, shader_
     std::map<uint32_t, interface_var> builtin_inputs;
     char str[1024];
 
-    collect_interface_by_location(vs, spv::StorageInput, inputs, builtin_inputs);
+    collect_interface_by_location(vs, spv::StorageClassInput, inputs, builtin_inputs);
 
     /* Build index by location */
     std::map<uint32_t, VkVertexInputAttributeDescription const *> attribs;
@@ -638,7 +638,7 @@ validate_fs_outputs_against_cb(shader_source const *fs, VkPipelineCbStateCreateI
 
     /* TODO: dual source blend index (spv::DecIndex, zero if not provided) */
 
-    collect_interface_by_location(fs, spv::StorageOutput, outputs, builtin_outputs);
+    collect_interface_by_location(fs, spv::StorageClassOutput, outputs, builtin_outputs);
 
     /* Check for legacy gl_FragColor broadcast: In this case, we should have no user-defined outputs,
      * and all color attachment should be UNORM/SNORM/FLOAT.
