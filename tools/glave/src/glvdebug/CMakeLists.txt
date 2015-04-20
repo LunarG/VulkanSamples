@@ -20,7 +20,6 @@ message(WARNING "WARNING: glvdebug will be excluded because Qt5 was not found.")
 else()
 
 find_package(Threads REQUIRED)
-find_package(X11 REQUIRED)
 
 require_pthreads()
 
@@ -119,7 +118,6 @@ target_link_libraries(${PROJECT_NAME}
     Qt5::Svg
     glvcommon
     ${CMAKE_DL_LIBS}
-    ${X11_X11_LIB}
 )
 
 if (MSVC)
