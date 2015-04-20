@@ -440,6 +440,75 @@ void unpack_set_and_binding(const int location, int &set, int &binding)
         --set;
 }
 
+const char *shader_stage_to_string(VkShaderStage stage)
+{
+   switch (stage) {
+   case VK_SHADER_STAGE_VERTEX:          return "vertex";
+   case VK_SHADER_STAGE_TESS_CONTROL:    return "tessellation evaluation";
+   case VK_SHADER_STAGE_TESS_EVALUATION: return "tessellation control";
+   case VK_SHADER_STAGE_GEOMETRY:        return "geometry";
+   case VK_SHADER_STAGE_FRAGMENT:        return "fragment";
+   case VK_SHADER_STAGE_COMPUTE:         return "compute";
+   default:
+       assert(0 && "Unknown shader stage");
+       return "unknown";
+   }
+}
+
+static VkResult build_binding_table(const struct intel_gpu *gpu,
+                                    struct brw_context *brw,
+                                    struct brw_binding_table *bt,
+                                    brw_stage_prog_data data,
+                                    struct gl_shader *sh,
+                                    VkShaderStage stage)
+{
+    bt->count         = data.binding_table.size_bytes / 4;
+    bt->texture_start = data.binding_table.texture_start;
+    bt->texture_count = data.binding_table.ubo_start - data.binding_table.texture_start;
+    bt->ubo_start     = data.binding_table.ubo_start;
+    bt->ubo_count     = bt->count - data.binding_table.ubo_start;
+
+    if (bt->ubo_count != sh->NumUniformBlocks) {
+        // If there is no UBO data to pull from, the shader is using a default uniform, which
+        // will not work in VK.  We need a binding slot to pull from.
+        intel_log(gpu, VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, VK_NULL_HANDLE, 0, 0,
+                "compile error: UBO mismatch, %s shader may read from global, non-block uniform", shader_stage_to_string(stage));
+
+        assert(0);
+        return VK_ERROR_BAD_PIPELINE_DATA;
+    }
+
+    // Sampler mapping data
+    bt->sampler_binding = (uint32_t*) rzalloc_size(brw, bt->texture_count * sizeof(uint32_t));
+    bt->sampler_set     = (uint32_t*) rzalloc_size(brw, bt->texture_count * sizeof(uint32_t));
+    for (int i = 0; i < bt->texture_count; ++i) {
+        int location = sh->SamplerUnits[i];
+        int set = 0;
+        int binding = 0;
+
+        unpack_set_and_binding(location, set, binding);
+
+        bt->sampler_binding[i] = binding;
+        bt->sampler_set[i]     = set;
+    }
+
+    // UBO mapping data
+    bt->uniform_binding = (uint32_t*) rzalloc_size(brw, bt->ubo_count * sizeof(uint32_t));
+    bt->uniform_set     = (uint32_t*) rzalloc_size(brw, bt->ubo_count * sizeof(uint32_t));
+    for (int i = 0; i < bt->ubo_count; ++i) {
+        int location = sh->UniformBlocks[i].Binding;
+        int set = 0;
+        int binding = 0;
+
+        unpack_set_and_binding(location, set, binding);
+
+        bt->uniform_binding[i] = binding;
+        bt->uniform_set[i]     = set;
+    }
+
+    return VK_SUCCESS;
+}
+
 // invoke backend compiler to generate ISA and supporting data structures
 VkResult intel_pipeline_shader_compile(struct intel_pipeline_shader *pipe_shader,
                                          const struct intel_gpu *gpu,
@@ -515,54 +584,11 @@ VkResult intel_pipeline_shader_compile(struct intel_pipeline_shader *pipe_shader
             pipe_shader->urb_grf_start = data->base.dispatch_grf_start_reg;// = 1;
             pipe_shader->surface_count = data->base.base.binding_table.size_bytes / 4;
             pipe_shader->ubo_start     = data->base.base.binding_table.ubo_start;
-
-            bt.count         = data->base.base.binding_table.size_bytes / 4;
-            bt.texture_start = data->base.base.binding_table.texture_start;
-            bt.texture_count = data->base.base.binding_table.ubo_start -
-                               data->base.base.binding_table.texture_start;
-            bt.ubo_start     = data->base.base.binding_table.ubo_start;
-            bt.ubo_count     = bt.count - data->base.base.binding_table.ubo_start;
-
-            if (bt.ubo_count != sh_prog->_LinkedShaders[MESA_SHADER_VERTEX]->NumUniformBlocks) {
-                // If there is no UBO data to pull from, the shader is using a default uniform, which
-                // will not work in VK.  We need a binding slot to pull from.
-                intel_log(gpu, VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, VK_NULL_HANDLE, 0, 0,
-                        "compile error: VS reads from global, non-block uniform");
-
-                assert(0);
-                status = VK_ERROR_BAD_PIPELINE_DATA;
-                break;
-            }
-
-            // Sampler mapping data
-            bt.sampler_binding = (uint32_t*) rzalloc_size(brw, bt.texture_count * sizeof(uint32_t));
-            bt.sampler_set     = (uint32_t*) rzalloc_size(brw, bt.texture_count * sizeof(uint32_t));
-            for (int i = 0; i < bt.texture_count; ++i) {
-                int location = sh_prog->_LinkedShaders[MESA_SHADER_VERTEX]->SamplerUnits[i];
-                int set = 0;
-                int binding = 0;
-
-                unpack_set_and_binding(location, set, binding);
-
-                bt.sampler_binding[i] = binding;
-                bt.sampler_set[i]     = set;
-            }
-
-            // UBO mapping data
-            bt.uniform_binding = (uint32_t*) rzalloc_size(brw, bt.ubo_count * sizeof(uint32_t));
-            bt.uniform_set     = (uint32_t*) rzalloc_size(brw, bt.ubo_count * sizeof(uint32_t));
-            for (int i = 0; i < bt.ubo_count; ++i) {
-                int location = sh_prog->_LinkedShaders[MESA_SHADER_VERTEX]->UniformBlocks[i].Binding;
-                int set = 0;
-                int binding = 0;
-
-                unpack_set_and_binding(location, set, binding);
-
-                bt.uniform_binding[i] = binding;
-                bt.uniform_set[i]     = set;
-            }
-
             pipe_shader->per_thread_scratch_size = data->base.total_scratch;
+
+            status = build_binding_table(gpu, brw, &bt, data->base.base, sh_prog->_LinkedShaders[MESA_SHADER_VERTEX], VK_SHADER_STAGE_VERTEX);
+            if (status != VK_SUCCESS)
+                break;
 
             if (unlikely(INTEL_DEBUG & DEBUG_VS)) {
                 printf("out_count: %d\n", pipe_shader->out_count);
@@ -650,53 +676,6 @@ VkResult intel_pipeline_shader_compile(struct intel_pipeline_shader *pipe_shader
                 }
             }
 
-            bt.count = data->base.binding_table.size_bytes / 4;
-            bt.rt_start = data->binding_table.render_target_start;
-            bt.texture_start = data->base.binding_table.texture_start;
-            bt.texture_count = data->base.binding_table.ubo_start -
-                               data->base.binding_table.texture_start;
-            bt.ubo_start = data->base.binding_table.ubo_start;
-            bt.ubo_count = bt.count - data->base.binding_table.ubo_start;
-
-            if (bt.ubo_count != sh_prog->_LinkedShaders[MESA_SHADER_FRAGMENT]->NumUniformBlocks) {
-                // If there is no UBO data to pull from, the shader is using a default uniform, which
-                // will not work in VK.  We need a binding slot to pull from.
-                intel_log(gpu, VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, VK_NULL_HANDLE, 0, 0,
-                        "compile error: FS reads from global, non-block uniform");
-
-                assert(0);
-                status = VK_ERROR_BAD_PIPELINE_DATA;
-                break;
-            }
-
-            // Sampler mapping data
-            bt.sampler_binding = (uint32_t*) rzalloc_size(brw, bt.texture_count * sizeof(uint32_t));
-            bt.sampler_set     = (uint32_t*) rzalloc_size(brw, bt.texture_count * sizeof(uint32_t));
-            for (int i = 0; i < bt.texture_count; ++i) {
-                int location = sh_prog->_LinkedShaders[MESA_SHADER_FRAGMENT]->SamplerUnits[i];
-                int set = 0;
-                int binding = 0;
-
-                unpack_set_and_binding(location, set, binding);
-
-                bt.sampler_binding[i] = binding;
-                bt.sampler_set[i]     = set;
-            }
-
-            // UBO mapping data
-            bt.uniform_binding = (uint32_t*) rzalloc_size(brw, bt.ubo_count * sizeof(uint32_t));
-            bt.uniform_set     = (uint32_t*) rzalloc_size(brw, bt.ubo_count * sizeof(uint32_t));
-            for (int i = 0; i < bt.ubo_count; ++i) {
-                int location = sh_prog->_LinkedShaders[MESA_SHADER_FRAGMENT]->UniformBlocks[i].Binding;
-                int set = 0;
-                int binding = 0;
-
-                unpack_set_and_binding(location, set, binding);
-
-                bt.uniform_binding[i] = binding;
-                bt.uniform_set[i]     = set;
-            }
-
             // Ensure this is 1:1, or create a converter
             pipe_shader->barycentric_interps = data->barycentric_interp_modes;
 
@@ -710,6 +689,14 @@ VkResult intel_pipeline_shader_compile(struct intel_pipeline_shader *pipe_shader
             pipe_shader->out_count = 1;
 
             pipe_shader->per_thread_scratch_size = data->total_scratch;
+
+            // call common code for common binding table entries
+            status = build_binding_table(gpu, brw, &bt, data->base, sh_prog->_LinkedShaders[MESA_SHADER_FRAGMENT], VK_SHADER_STAGE_FRAGMENT);
+            if (status != VK_SUCCESS)
+                break;
+
+            // and then tack on the remaining field for FS
+            bt.rt_start = data->binding_table.render_target_start;
 
             if (unlikely(INTEL_DEBUG & DEBUG_WM)) {
                 // print out the supporting structures generated by the BE compile:
