@@ -399,16 +399,15 @@ enum intel_ext_type intel_gpu_lookup_extension(const struct intel_gpu *gpu,
 
 ICD_EXPORT VkResult VKAPI vkEnumerateLayers(
     VkPhysicalDevice                            gpu,
-    size_t                                      maxLayerCount,
     size_t                                      maxStringSize,
-    size_t*                                     pOutLayerCount,
+    size_t*                                     pLayerCount,
     char* const*                                pOutLayers,
     void*                                       pReserved)
 {
-    if (!pOutLayerCount)
+    if (!pLayerCount)
         return VK_ERROR_INVALID_POINTER;
 
-    *pOutLayerCount = 0;
+    *pLayerCount = 0;
 
     return VK_SUCCESS;
 }

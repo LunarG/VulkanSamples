@@ -1519,19 +1519,19 @@ VK_LAYER_EXPORT VkResult VKAPI vkGetGlobalExtensionInfo(
     return VK_SUCCESS;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkEnumerateLayers(VkPhysicalDevice gpu, size_t maxLayerCount, size_t maxStringSize, size_t* pOutLayerCount, char* const* pOutLayers, void* pReserved)
+VK_LAYER_EXPORT VkResult VKAPI vkEnumerateLayers(VkPhysicalDevice gpu, size_t maxStringSize, size_t* pLayerCount, char* const* pOutLayers, void* pReserved)
 {
     if (gpu != NULL)
     {
         pCurObj = (VkBaseLayerObject *) gpu;
         loader_platform_thread_once(&g_initOnce, initDrawState);
-        VkResult result = nextTable.EnumerateLayers(gpu, maxLayerCount, maxStringSize, pOutLayerCount, pOutLayers, pReserved);
+        VkResult result = nextTable.EnumerateLayers(gpu, maxStringSize, pLayerCount, pOutLayers, pReserved);
         return result;
     } else {
-        if (pOutLayerCount == NULL || pOutLayers == NULL || pOutLayers[0] == NULL)
+        if (pLayerCount == NULL || pOutLayers == NULL || pOutLayers[0] == NULL)
             return VK_ERROR_INVALID_POINTER;
         // This layer compatible with all GPUs
-        *pOutLayerCount = 1;
+        *pLayerCount = 1;
         strncpy((char *) pOutLayers[0], "DrawState", maxStringSize);
         return VK_SUCCESS;
     }

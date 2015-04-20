@@ -97,16 +97,16 @@ VK_LAYER_EXPORT VkResult VKAPI multi1StorePipeline(VkDevice device, VkPipeline p
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI multi1EnumerateLayers(VkPhysicalDevice gpu, size_t maxLayerCount, size_t maxStringSize,
-                                                         size_t* pOutLayerCount, char* const* pOutLayers,
+VK_LAYER_EXPORT VkResult VKAPI multi1EnumerateLayers(VkPhysicalDevice gpu, size_t maxStringSize,
+                                                         size_t* pLayerCount, char* const* pOutLayers,
                                                          void* pReserved)
 {
     if (gpu == NULL)
-        return vkEnumerateLayers(gpu, maxLayerCount, maxStringSize, pOutLayerCount, pOutLayers, pReserved);
+        return vkEnumerateLayers(gpu, maxStringSize, pLayerCount, pOutLayers, pReserved);
 
     VkLayerDispatchTable* pTable = tableMap1[gpu];
     printf("At start of multi1 layer vkEnumerateLayers()\n");
-    VkResult result = pTable->EnumerateLayers(gpu, maxLayerCount, maxStringSize, pOutLayerCount, pOutLayers, pReserved);
+    VkResult result = pTable->EnumerateLayers(gpu, maxStringSize, pLayerCount, pOutLayers, pReserved);
     printf("Completed multi1 layer vkEnumerateLayers()\n");
     return result;
 }
@@ -194,17 +194,17 @@ VK_LAYER_EXPORT VkResult VKAPI multi2BeginCommandBuffer(VkCmdBuffer cmdBuffer, c
 
 }
 
-VK_LAYER_EXPORT VkResult VKAPI multi2EnumerateLayers(VkPhysicalDevice gpu, size_t maxLayerCount, size_t maxStringSize,
-                                                         size_t* pOutLayerCount, char* const* pOutLayers,
+VK_LAYER_EXPORT VkResult VKAPI multi2EnumerateLayers(VkPhysicalDevice gpu, size_t maxStringSize,
+                                                         size_t* pLayerCount, char* const* pOutLayers,
                                                          void* pReserved)
 {
     if (gpu == NULL)
-        return vkEnumerateLayers(gpu, maxLayerCount, maxStringSize, pOutLayerCount, pOutLayers, pReserved);
+        return vkEnumerateLayers(gpu, maxStringSize, pLayerCount, pOutLayers, pReserved);
 
     VkLayerDispatchTable* pTable = tableMap2[gpu];
 
     printf("At start of multi2 layer vkEnumerateLayers()\n");
-    VkResult result = pTable->EnumerateLayers(gpu, maxLayerCount, maxStringSize, pOutLayerCount, pOutLayers, pReserved);
+    VkResult result = pTable->EnumerateLayers(gpu, maxStringSize, pLayerCount, pOutLayers, pReserved);
     printf("Completed multi2 layer vkEnumerateLayers()\n");
     return result;
 }
@@ -234,16 +234,16 @@ VK_LAYER_EXPORT void * VKAPI multi2GetProcAddr(VkPhysicalDevice gpu, const char*
 }
 
 /********************************* Common functions ********************************/
-VK_LAYER_EXPORT VkResult VKAPI vkEnumerateLayers(VkPhysicalDevice gpu, size_t maxLayerCount, size_t maxStringSize,
-                                                      size_t* pOutLayerCount, char* const* pOutLayers,
-                                                      void* pReserved)
+VK_LAYER_EXPORT VkResult VKAPI vkEnumerateLayers(VkPhysicalDevice gpu, size_t maxStringSize,
+                                                 size_t* pLayerCount, char* const* pOutLayers,
+                                                 void* pReserved)
 {
-    if (pOutLayerCount == NULL || pOutLayers == NULL || pOutLayers[0] == NULL || pOutLayers[1] == NULL || pReserved == NULL)
+    if (pLayerCount == NULL || pOutLayers == NULL || pOutLayers[0] == NULL || pOutLayers[1] == NULL || pReserved == NULL)
         return VK_ERROR_INVALID_POINTER;
 
-    if (maxLayerCount < 2)
+    if (*pLayerCount < 2)
         return VK_ERROR_INITIALIZATION_FAILED;
-    *pOutLayerCount = 2;
+    *pLayerCount = 2;
     strncpy((char *) pOutLayers[0], "multi1", maxStringSize);
     strncpy((char *) pOutLayers[1], "multi2", maxStringSize);
     return VK_SUCCESS;

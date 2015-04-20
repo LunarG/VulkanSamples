@@ -262,9 +262,8 @@ core = Extension(
 
         Proto("VkResult", "EnumerateLayers",
             [Param("VkPhysicalDevice", "gpu"),
-             Param("size_t", "maxLayerCount"),
              Param("size_t", "maxStringSize"),
-             Param("size_t*", "pOutLayerCount"),
+             Param("size_t*", "pLayerCount"),
              Param("char* const*", "pOutLayers"),
              Param("void*", "pReserved")]),
 

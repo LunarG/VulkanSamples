@@ -308,7 +308,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkGetPhysicalDeviceExtensionInfo(
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkEnumerateLayers(VkPhysicalDevice gpu, size_t maxLayerCount, size_t maxStringSize, size_t* pOutLayerCount, char* const* pOutLayers, void* pReserved)
+VK_LAYER_EXPORT VkResult VKAPI vkEnumerateLayers(VkPhysicalDevice gpu, size_t maxStringSize, size_t* pLayerCount, char* const* pOutLayers, void* pReserved)
 {
     char str[1024];
     if (gpu != NULL) {
@@ -316,16 +316,16 @@ VK_LAYER_EXPORT VkResult VKAPI vkEnumerateLayers(VkPhysicalDevice gpu, size_t ma
         layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, nullptr, 0, 0, "PARAMCHECK", str);
         pCurObj = (VkBaseLayerObject *) gpu;
         loader_platform_thread_once(&tabOnce, initParamChecker);
-        VkResult result = nextTable.EnumerateLayers(gpu, maxLayerCount, maxStringSize, pOutLayerCount, pOutLayers, pReserved);
+        VkResult result = nextTable.EnumerateLayers(gpu, maxStringSize, pLayerCount, pOutLayers, pReserved);
         sprintf(str, "Completed layered EnumerateLayers\n");
         layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, nullptr, 0, 0, "PARAMCHECK", str);
         fflush(stdout);
         return result;
     } else {
-        if (pOutLayerCount == NULL || pOutLayers == NULL || pOutLayers[0] == NULL)
+        if (pLayerCount == NULL || pOutLayers == NULL || pOutLayers[0] == NULL)
             return VK_ERROR_INVALID_POINTER;
         // This layer compatible with all GPUs
-        *pOutLayerCount = 1;
+        *pLayerCount = 1;
         strncpy(pOutLayers[0], "ParamChecker", maxStringSize);
         return VK_SUCCESS;
     }

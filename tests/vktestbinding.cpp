@@ -147,8 +147,8 @@ std::vector<const char *> PhysicalGpu::layers(std::vector<char> &buf) const
         layers.push_back(&buf[0] + max_string_size * i);
 
     char * const *out = const_cast<char * const *>(&layers[0]);
-    size_t count;
-    if (!EXPECT(vkEnumerateLayers(gpu_, max_layer_count, max_string_size, &count, out, NULL) == VK_SUCCESS))
+    size_t count = max_layer_count; /* allow up to 16 layer names to be returned */
+    if (!EXPECT(vkEnumerateLayers(gpu_, max_string_size, &count, out, NULL) == VK_SUCCESS))
         count = 0;
     layers.resize(count);
 

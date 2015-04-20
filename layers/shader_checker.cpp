@@ -161,14 +161,14 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateDevice(VkPhysicalDevice gpu, const VkDevi
 }
 
 
-VK_LAYER_EXPORT VkResult VKAPI vkEnumerateLayers(VkPhysicalDevice gpu, size_t maxLayerCount, size_t maxStringSize, size_t* pOutLayerCount, char* const* pOutLayers, void* pReserved)
+VK_LAYER_EXPORT VkResult VKAPI vkEnumerateLayers(VkPhysicalDevice physicalDevice, size_t maxStringSize, size_t* pLayerCount, char* const* pOutLayers, void* pReserved)
 {
-    if (pOutLayerCount == NULL || pOutLayers == NULL || pOutLayers[0] == NULL || pOutLayers[1] == NULL || pReserved == NULL)
+    if (pLayerCount == NULL || pOutLayers == NULL || pOutLayers[0] == NULL || pOutLayers[1] == NULL || pReserved == NULL)
         return VK_ERROR_INVALID_POINTER;
 
-    if (maxLayerCount < 1)
+    if (*pLayerCount < 1)
         return VK_ERROR_INITIALIZATION_FAILED;
-    *pOutLayerCount = 1;
+    *pLayerCount = 1;
     strncpy((char *) pOutLayers[0], "ShaderChecker", maxStringSize);
     return VK_SUCCESS;
 }

@@ -145,7 +145,7 @@ TEST(Initialization, vkEnumeratePhysicalDevices) {
     VkResult err;
     vk_testing::PhysicalGpu *gpu;
     char *layers[16];
-    size_t layer_count;
+    size_t layer_count = 16; /* accept 16 layer names to be returned */
     char layer_buf[16][256];
     VkInstanceCreateInfo inst_info = {};
     inst_info.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
@@ -173,7 +173,7 @@ TEST(Initialization, vkEnumeratePhysicalDevices) {
 
     for (int i = 0; i < 16; i++)
         layers[i] = &layer_buf[i][0];
-    err = vkEnumerateLayers(objs[0], 16, 256, &layer_count, (char * const *) layers, NULL);
+    err = vkEnumerateLayers(objs[0], 256, &layer_count, (char * const *) layers, NULL);
     ASSERT_VK_SUCCESS(err);
     for (int i = 0; i < layer_count; i++) {
         printf("Enumerated layers: %s ", layers[i]);

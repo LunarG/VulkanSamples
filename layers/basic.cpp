@@ -135,18 +135,18 @@ VK_LAYER_EXPORT VkResult VKAPI vkGetFormatInfo(VkDevice device, VkFormat format,
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkEnumerateLayers(VkPhysicalDevice gpu, size_t maxLayerCount, size_t maxStringSize, size_t* pOutLayerCount, char* const* pOutLayers, void* pReserved)
+VK_LAYER_EXPORT VkResult VKAPI vkEnumerateLayers(VkPhysicalDevice gpu, size_t maxStringSize, size_t* pLayerCount, char* const* pOutLayers, void* pReserved)
 {
     if (gpu != NULL)
     {
         VkLayerDispatchTable* pTable = initLayerTable((const VkBaseLayerObject *) gpu);
 
         printf("At start of wrapped vkEnumerateLayers() call w/ gpu: %p\n", gpu);
-        VkResult result = pTable->EnumerateLayers(gpu, maxLayerCount, maxStringSize, pOutLayerCount, pOutLayers, pReserved);
+        VkResult result = pTable->EnumerateLayers(gpu, maxStringSize, pLayerCount, pOutLayers, pReserved);
         return result;
     } else
     {
-        if (pOutLayerCount == NULL || pOutLayers == NULL || pOutLayers[0] == NULL || pReserved == NULL)
+        if (pLayerCount == NULL || pOutLayers == NULL || pOutLayers[0] == NULL || pReserved == NULL)
             return VK_ERROR_INVALID_POINTER;
 
         // Example of a layer that is only compatible with Intel's GPUs
@@ -158,11 +158,11 @@ VK_LAYER_EXPORT VkResult VKAPI vkEnumerateLayers(VkPhysicalDevice gpu, size_t ma
         fpGetGpuInfo((VkPhysicalDevice) gpuw->nextObject, VK_PHYSICAL_DEVICE_INFO_TYPE_PROPERTIES, &dataSize, &gpuProps);
         if (gpuProps.vendorId == 0x8086)
         {
-            *pOutLayerCount = 1;
+            *pLayerCount = 1;
             strncpy((char *) pOutLayers[0], "Basic", maxStringSize);
         } else
         {
-            *pOutLayerCount = 0;
+            *pLayerCount = 0;
         }
         return VK_SUCCESS;
     }

@@ -1812,9 +1812,8 @@ ICD_EXPORT VkResult VKAPI vkEnumeratePhysicalDevices(
 
 ICD_EXPORT VkResult VKAPI vkEnumerateLayers(
     VkPhysicalDevice                            gpu,
-    size_t                                      maxLayerCount,
     size_t                                      maxStringSize,
-    size_t*                                     pOutLayerCount,
+    size_t*                                     pLayerCount,
     char* const*                                pOutLayers,
     void*                                       pReserved)
 {

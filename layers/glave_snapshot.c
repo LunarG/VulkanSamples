@@ -542,22 +542,22 @@ VK_LAYER_EXPORT VkResult VKAPI vkDestroyDevice(VkDevice device)
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkEnumerateLayers(VkPhysicalGpu gpu, size_t maxLayerCount, size_t maxStringSize, size_t* pOutLayerCount, char* const* pOutLayers, void* pReserved)
+VK_LAYER_EXPORT VkResult VKAPI vkEnumerateLayers(VkPhysicalGpu gpu, size_t maxStringSize, size_t* pLayerCount, char* const* pOutLayers, void* pReserved)
 {
     if (gpu != NULL) {
         VkBaseLayerObject* gpuw = (VkBaseLayerObject *) gpu;
         loader_platform_thread_lock_mutex(&objLock);
-    ll_increment_use_count((void*)gpu, VK_OBJECT_TYPE_PHYSICAL_GPU);
-    loader_platform_thread_unlock_mutex(&objLock);
+        ll_increment_use_count((void*)gpu, VK_OBJECT_TYPE_PHYSICAL_GPU);
+        loader_platform_thread_unlock_mutex(&objLock);
         pCurObj = gpuw;
         loader_platform_thread_once(&tabOnce, initGlaveSnapshot);
-        VkResult result = nextTable.EnumerateLayers((VkPhysicalGpu)gpuw->nextObject, maxLayerCount, maxStringSize, pOutLayerCount, pOutLayers, pReserved);
-            return result;
+        VkResult result = nextTable.EnumerateLayers((VkPhysicalGpu)gpuw->nextObject, maxStringSize, pLayerCount, pOutLayers, pReserved);
+        return result;
     } else {
-        if (pOutLayerCount == NULL || pOutLayers == NULL || pOutLayers[0] == NULL)
+        if (pLayerCount == NULL || pOutLayers == NULL || pOutLayers[0] == NULL)
             return VK_ERROR_INVALID_POINTER;
         // This layer compatible with all GPUs
-        *pOutLayerCount = 1;
+        *pLayerCount = 1;
         strncpy((char *) pOutLayers[0], LAYER_NAME_STR, maxStringSize);
         return VK_SUCCESS;
     }
