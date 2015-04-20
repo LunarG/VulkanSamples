@@ -43,17 +43,17 @@
 #  define LOADER_EXPORT
 #endif
 
-static inline void loader_set_data(void *obj, const void *data)
+static inline void loader_set_data(VkObject obj, const void *data)
 {
     *((const void **) obj) = data;
 }
 
-static inline void *loader_get_data(const void *obj)
+static inline void *loader_get_data(const VkObject obj)
 {
     return *((void **) obj);
 }
 
-static inline void loader_init_data(void *obj, const void *data)
+static inline void loader_init_data(VkObject obj, const void *data)
 {
 #ifdef DEBUG
     assert(valid_loader_magic_value(obj) &&

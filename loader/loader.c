@@ -1252,7 +1252,7 @@ LOADER_EXPORT VkResult VKAPI vkEnumeratePhysicalDevices(
                                                get_proc_addr, gpus[i]);
 
                     /* Verify ICD compatibility */
-                    if (!valid_loader_magic_value((void*) gpus[i])) {
+                    if (!valid_loader_magic_value(gpus[i])) {
                         loader_log(VK_DBG_MSG_WARNING, 0,
                             "Loader: Incompatible ICD, first dword must be initialized to ICD_LOADER_MAGIC. See loader/README.md for details.\n");
                         assert(0);

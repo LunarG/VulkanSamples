@@ -98,7 +98,7 @@ static struct nulldrv_base *nulldrv_base_create(struct nulldrv_dev *dev,
     memset(base, 0, obj_size);
 
     // Initialize pointer to loader's dispatch table with ICD_LOADER_MAGIC
-    set_loader_magic_value(base);
+    set_loader_magic_value((VkObject) base);
 
     if (dev == NULL) {
         /*
@@ -125,7 +125,7 @@ static VkResult nulldrv_gpu_add(int devid, const char *primary_node,
 	memset(gpu, 0, sizeof(*gpu));
 
     // Initialize pointer to loader's dispatch table with ICD_LOADER_MAGIC
-    set_loader_magic_value(gpu);
+    set_loader_magic_value((VkObject) gpu);
 
     *gpu_ret = gpu;
 
@@ -915,7 +915,7 @@ ICD_EXPORT VkResult VKAPI vkCreateSwapChainWSI(
     }
     sc->dev = dev;
 
-    *pSwapChain = (VkSwapChainWSI *) sc;
+    *pSwapChain = (VkSwapChainWSI) sc;
 
     return VK_SUCCESS;
 }
@@ -1454,7 +1454,6 @@ ICD_EXPORT VkResult VKAPI vkGetFormatInfo(
     void*                                       pData)
 {
     NULLDRV_LOG_FUNC;
-    struct nulldrv_dev *dev = nulldrv_dev(device);
     VkFormatProperties *fmt = (VkFormatProperties *) pData;
     VkResult ret = VK_SUCCESS;
 
@@ -1481,7 +1480,6 @@ ICD_EXPORT VkResult VKAPI vkGetPhysicalDeviceInfo(
     void*                                       pData)
 {
     NULLDRV_LOG_FUNC;
-    struct nulldrv_gpu *gpu = nulldrv_gpu(gpu_);
     VkResult ret = VK_SUCCESS;
 
     switch (infoType) {

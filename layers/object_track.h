@@ -174,8 +174,8 @@ static const char* string_VK_OBJECT_TYPE(VK_OBJECT_TYPE type) {
 }
 
 typedef struct _OBJTRACK_NODE {
-    void            *pObj;
-    VK_OBJECT_TYPE objType;
+    VkObject        pObj;
+    VK_OBJECT_TYPE  objType;
     uint64_t        numUses;
     OBJECT_STATUS   status;
 } OBJTRACK_NODE;

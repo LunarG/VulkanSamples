@@ -86,7 +86,7 @@ static inline void intel_handle_init(struct intel_handle *handle,
                                      VK_DBG_OBJECT_TYPE type,
                                      const struct icd_instance *icd)
 {
-    set_loader_magic_value(handle);
+    set_loader_magic_value((VkObject) handle);
 
     handle->magic = intel_handle_magic + type;
     handle->icd = icd;
