@@ -1805,7 +1805,7 @@ ICD_EXPORT VkResult VKAPI vkEnumeratePhysicalDevices(
     struct nulldrv_gpu *gpu;
     *pGpuCount = 1;
     ret = nulldrv_gpu_add(0, 0, 0, &gpu);
-    if (ret == VK_SUCCESS)
+    if (ret == VK_SUCCESS && pGpus)
         pGpus[0] = (VkPhysicalDevice) gpu;
     return ret;
 }
