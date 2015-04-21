@@ -29,6 +29,8 @@
 
 #ifdef _WIN32
 #include <Windows.h>
+#include <fcntl.h>
+#include <io.h>
 #endif
 
 #include <vulkan.h>
@@ -36,7 +38,27 @@
 #define ERR(err) printf("%s:%d: failed with %s\n", \
     __FILE__, __LINE__, vk_result_string(err));
 
-#define ERR_EXIT(err) do { ERR(err); exit(-1); } while (0)
+#ifdef _WIN32
+
+bool consoleCreated = false;
+
+#define WAIT_FOR_CONSOLE_DESTROY \
+    do { \
+        if (consoleCreated) \
+            Sleep(INFINITE); \
+    } while (0)
+#else
+    #define WAIT_FOR_CONSOLE_DESTROY
+#endif
+
+
+#define ERR_EXIT(err) \
+    do { \
+        ERR(err); \
+        fflush(stdout); \
+        WAIT_FOR_CONSOLE_DESTROY; \
+        exit(-1); \
+   } while (0)
 
 #define ARRAY_SIZE(a) (sizeof(a) / sizeof(a[0]))
 
@@ -683,9 +705,8 @@ int main(int argc, char **argv)
     err = vkCreateInstance(&inst_info, &inst);
     if (err == VK_ERROR_INCOMPATIBLE_DRIVER) {
         printf("Cannot find a compatible Vulkan installable client driver "
-               "(ICD).\nExiting ...\n");
-        fflush(stdout);
-        exit(1);
+               "(ICD).\n");
+        ERR_EXIT(err);
     } else if (err) {
 
         ERR_EXIT(err);
@@ -694,9 +715,8 @@ int main(int argc, char **argv)
     if (err)
         ERR_EXIT(err);
     if (gpu_count > MAX_GPUS) {
-        printf("Too many GPUS found \nExiting ...\n");
-        fflush(stdout);
-        exit(1);
+        printf("Too many GPUS found \n");
+        ERR_EXIT(VK_ERROR_UNKNOWN);
     }
     err = vkEnumeratePhysicalDevices(inst, &gpu_count, objs);
     if (err)
@@ -719,10 +739,55 @@ int main(int argc, char **argv)
 }
 
 #ifdef _WIN32
+
+// Create a console window with a large scrollback size to which to send stdout.
+// Returns true if console window was successfully created, false otherwise.
+bool SetStdOutToNewConsole()
+{
+    // don't do anything if we already have a console
+    if (GetStdHandle(STD_OUTPUT_HANDLE))
+        return false;
+
+    // allocate a console for this app
+    AllocConsole();
+
+    // redirect unbuffered STDOUT to the console
+    HANDLE consoleHandle = GetStdHandle(STD_OUTPUT_HANDLE);
+    int fileDescriptor = _open_osfhandle((intptr_t)consoleHandle, _O_TEXT);
+    FILE *fp = _fdopen( fileDescriptor, "w" );
+    *stdout = *fp;
+    setvbuf( stdout, NULL, _IONBF, 0 );
+
+    // make the console window bigger
+    CONSOLE_SCREEN_BUFFER_INFO csbi;
+    SMALL_RECT r;
+    COORD bufferSize;
+    if (!GetConsoleScreenBufferInfo(consoleHandle, &csbi))
+        return false;
+    bufferSize.X = csbi.dwSize.X;
+    bufferSize.Y = 1000;
+    if (!SetConsoleScreenBufferSize(consoleHandle, bufferSize))
+        return false;
+    r.Left = r.Top = 0;
+    r.Right = csbi.dwSize.X-1;
+    r.Bottom = 60;
+    if (!SetConsoleWindowInfo(consoleHandle, true, &r))
+        return false;
+
+    // change the console window title
+    if (!SetConsoleTitle(TEXT("vulkaninfo")))
+        return false;
+
+    return true;
+}
+
 int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR pCmdLine, int nCmdShow)
 {
     char *argv = pCmdLine;
+    consoleCreated = SetStdOutToNewConsole();
     main(1, &argv);
     fflush(stdout);
+    if (consoleCreated)
+        Sleep(INFINITE);
 }
 #endif
