@@ -85,65 +85,65 @@ typedef enum _MEM_TRACK_ERROR
 
 // Data struct for tracking memory object
 struct MT_MEM_OBJ_INFO {
-    uint32_t                     refCount;           // Count of references (obj bindings or CB use)
-    VkDeviceMemory               mem;
-    VkMemoryAllocInfo        allocInfo;
-    list<VkObject>             pObjBindings;       // list container of objects bound to this memory
-    list<VkCmdBuffer>         pCmdBufferBindings; // list container of cmd buffers that reference this mem object
+    uint32_t                    refCount;           // Count of references (obj bindings or CB use)
+    VkDeviceMemory              mem;
+    VkMemoryAllocInfo           allocInfo;
+    list<VkObject>              pObjBindings;       // list container of objects bound to this memory
+    list<VkCmdBuffer>           pCmdBufferBindings; // list container of cmd buffers that reference this mem object
 };
 
 struct MT_OBJ_INFO {
-    MT_MEM_OBJ_INFO*            pMemObjInfo;
-    VkObject                  object;
-    VkStructureType          sType;
-    uint32_t                    ref_count;
+    MT_MEM_OBJ_INFO*                       pMemObjInfo;
+    VkObject                               object;
+    VkStructureType                        sType;
+    uint32_t                               ref_count;
     // Capture all object types that may have memory bound. From prog guide:
     // The only objects that are guaranteed to have no external memory
-    //   requirements are devices, queues, command buffers, shaders and memory objects.
+    // requirements are devices, queues, command buffers, shaders and memory objects.
     union {
-        VkColorAttachmentViewCreateInfo     color_attachment_view_create_info;
-        VkDepthStencilViewCreateInfo        ds_view_create_info;
-        VkImageViewCreateInfo                image_view_create_info;
-        VkImageCreateInfo                     image_create_info;
-        VkGraphicsPipelineCreateInfo         graphics_pipeline_create_info;
-        VkComputePipelineCreateInfo          compute_pipeline_create_info;
-        VkSamplerCreateInfo                   sampler_create_info;
-        VkFenceCreateInfo                     fence_create_info;
-        VkSwapChainCreateInfoWSI            swap_chain_create_info;
+        VkColorAttachmentViewCreateInfo    color_attachment_view_create_info;
+        VkDepthStencilViewCreateInfo       ds_view_create_info;
+        VkImageViewCreateInfo              image_view_create_info;
+        VkImageCreateInfo                  image_create_info;
+        VkGraphicsPipelineCreateInfo       graphics_pipeline_create_info;
+        VkComputePipelineCreateInfo        compute_pipeline_create_info;
+        VkSamplerCreateInfo                sampler_create_info;
+        VkFenceCreateInfo                  fence_create_info;
+        VkSwapChainCreateInfoWSI           swap_chain_create_info;
     } create_info;
     char object_name[64];
 };
 
 // Track all command buffers
 struct MT_CB_INFO {
-    VkCmdBufferCreateInfo      createInfo;
-    MT_OBJ_INFO*                    pDynamicState[VK_NUM_STATE_BIND_POINT];
-    VkPipeline                    pipelines[VK_NUM_PIPELINE_BIND_POINT];
-    uint32_t                        colorAttachmentCount;
-    VkDepthStencilBindInfo     dsBindInfo;
-    VkCmdBuffer                  cmdBuffer;
-    uint64_t                        fenceId;
+    VkCmdBufferCreateInfo       createInfo;
+    MT_OBJ_INFO*                pDynamicState[VK_NUM_STATE_BIND_POINT];
+    VkPipeline                  pipelines[VK_NUM_PIPELINE_BIND_POINT];
+    uint32_t                    colorAttachmentCount;
+    VkDepthStencilBindInfo      dsBindInfo;
+    VkCmdBuffer                 cmdBuffer;
+    uint64_t                    fenceId;
     // Order dependent, stl containers must be at end of struct
-    list<VkDeviceMemory>            pMemObjList; // List container of Mem objs referenced by this CB
+    list<VkDeviceMemory>        pMemObjList; // List container of Mem objs referenced by this CB
 };
 
 // Associate fenceId with a fence object
 struct MT_FENCE_INFO {
-    VkFence   fence;         // Handle to fence object
-    VkQueue   queue;         // Queue that this fence is submitted against
-    bool32_t    localFence;    // Is fence created by layer?
+    VkFence   fence;            // Handle to fence object
+    VkQueue   queue;            // Queue that this fence is submitted against
+    bool32_t    localFence;     // Is fence created by layer?
 };
 
 // Track Queue information
 struct MT_QUEUE_INFO {
-    uint64_t                      lastRetiredId;
-    uint64_t                      lastSubmittedId;
-    list<VkCmdBuffer>          pQueueCmdBuffers;
-    list<VkDeviceMemory>          pMemRefList;
+    uint64_t                    lastRetiredId;
+    uint64_t                    lastSubmittedId;
+    list<VkCmdBuffer>           pQueueCmdBuffers;
+    list<VkDeviceMemory>        pMemRefList;
 };
 
 struct MT_SWAP_CHAIN_INFO {
-    VkSwapChainCreateInfoWSI createInfo;
+    VkSwapChainCreateInfoWSI             createInfo;
     std::vector<VkSwapChainImageInfoWSI> images;
 };
 
