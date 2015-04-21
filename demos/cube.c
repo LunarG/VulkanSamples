@@ -1003,8 +1003,8 @@ static void demo_prepare_textures(struct demo *demo)
 
             demo_flush_init_cmd(demo);
 
-            demo_destroy_texture_image(demo, &staging_texture);
             demo_remove_mem_refs(demo, staging_texture.num_mem, staging_texture.mem);
+            demo_destroy_texture_image(demo, &staging_texture);
         } else {
             /* Can't support VK_FORMAT_B8G8R8A8_UNORM !? */
             assert(!"No support for tB8G8R8A8_UNORM as texture image format");
