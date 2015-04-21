@@ -1157,15 +1157,21 @@ class ObjectTrackerSubcommand(Subcommand):
             create_line += '    loader_platform_thread_unlock_mutex(&objLock);\n'
         if 'DestroyObject' in proto.name:
             destroy_line = '    loader_platform_thread_lock_mutex(&objLock);\n'
-            destroy_line += '    ll_destroy_obj(%s);\n' % (param0_name)
+            destroy_line += '    ll_destroy_obj(%s);\n' % (proto.params[2].name)
             destroy_line += '    loader_platform_thread_unlock_mutex(&objLock);\n'
             using_line = ''
         else:
-            if 'Destroy' in proto.name or 'Free' in proto.name:
+            if 'Destroy' in proto.name:
                 destroy_line = '    loader_platform_thread_lock_mutex(&objLock);\n'
                 destroy_line += '    ll_destroy_obj(%s);\n' % (param0_name)
                 destroy_line += '    loader_platform_thread_unlock_mutex(&objLock);\n'
                 using_line = ''
+            else:
+                if 'Free' in proto.name:
+                    destroy_line = '    loader_platform_thread_lock_mutex(&objLock);\n'
+                    destroy_line += '    ll_destroy_obj(%s);\n' % (proto.params[1].name)
+                    destroy_line += '    loader_platform_thread_unlock_mutex(&objLock);\n'
+                    using_line = ''
             if 'DestroyDevice' in proto.name:
                 destroy_line += '    // Report any remaining objects in LL\n    objNode *pTrav = pGlobalHead;\n    while (pTrav) {\n'
                 destroy_line += '        if (pTrav->obj.objType == VkObjectTypeSwapChainImageWSI ||\n'
