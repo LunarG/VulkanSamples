@@ -481,6 +481,7 @@ static void demo_prepare_texture_image(struct demo *demo,
                                        const uint32_t *tex_colors,
                                        struct texture_object *tex_obj,
                                        VkImageTiling tiling,
+                                       VkImageUsageFlags usage,
                                        VkFlags mem_props)
 {
     const VkFormat tex_format = VK_FORMAT_B8G8R8A8_UNORM;
@@ -501,7 +502,7 @@ static void demo_prepare_texture_image(struct demo *demo,
         .arraySize = 1,
         .samples = 1,
         .tiling = tiling,
-        .usage = VK_IMAGE_USAGE_TRANSFER_SOURCE_BIT,
+        .usage = usage,
         .flags = 0,
     };
     VkMemoryAllocInfo mem_alloc = {
@@ -533,7 +534,6 @@ static void demo_prepare_texture_image(struct demo *demo,
                 VK_OBJECT_INFO_TYPE_MEMORY_REQUIREMENTS,
                 &mem_reqs_size, mem_reqs);
     assert(!err && mem_reqs_size == num_allocations * sizeof(VkMemoryRequirements));
-    mem_alloc.memProps = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
     for (uint32_t j = 0; j < num_allocations; j ++) {
         mem_alloc.allocationSize = mem_reqs[j].size;
 
@@ -624,17 +624,19 @@ static void demo_prepare_textures(struct demo *demo)
         if ((props.linearTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT) && !demo->use_staging_buffer) {
             /* Device can texture using linear textures */
             demo_prepare_texture_image(demo, tex_colors[i], &demo->textures[i],
-                                       VK_IMAGE_TILING_LINEAR, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+                                       VK_IMAGE_TILING_LINEAR, VK_IMAGE_USAGE_SAMPLED_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
         } else if (props.optimalTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT){
             /* Must use staging buffer to copy linear texture to optimized */
             struct texture_object staging_texture;
 
             memset(&staging_texture, 0, sizeof(staging_texture));
             demo_prepare_texture_image(demo, tex_colors[i], &staging_texture,
-                                       VK_IMAGE_TILING_LINEAR, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+                                       VK_IMAGE_TILING_LINEAR, VK_IMAGE_USAGE_TRANSFER_SOURCE_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
 
             demo_prepare_texture_image(demo, tex_colors[i], &demo->textures[i],
-                                       VK_IMAGE_TILING_OPTIMAL, VK_MEMORY_PROPERTY_DEVICE_ONLY);
+                                       VK_IMAGE_TILING_OPTIMAL,
+                                       (VK_IMAGE_USAGE_TRANSFER_DESTINATION_BIT | VK_IMAGE_USAGE_SAMPLED_BIT),
+                                       VK_MEMORY_PROPERTY_DEVICE_ONLY);
 
             demo_set_image_layout(demo, staging_texture.image,
                                    staging_texture.imageLayout,
