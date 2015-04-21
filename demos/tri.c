@@ -118,6 +118,8 @@ struct demo {
     int width, height;
     VkFormat format;
 
+    VkDisplayPropertiesWSI *display_props;
+    int num_displays;
     VkSwapChainWSI swap_chain;
     struct {
         VkImage image;
@@ -380,6 +382,7 @@ static void demo_prepare_buffers(struct demo *demo)
         .pNext = NULL,
         .pNativeWindowSystemHandle = demo->connection,
         .pNativeWindowHandle = (void *) (intptr_t) demo->window,
+        .displayCount = 1,
         .imageCount = DEMO_BUFFER_COUNT,
         .imageFormat = demo->format,
         .imageExtent = {
@@ -1460,6 +1463,32 @@ static void demo_init_vk(struct demo *demo)
     err = vkGetDeviceQueue(demo->device, demo->graphics_queue_node_index,
             0, &demo->queue);
     assert(!err);
+
+
+    // Get the VkDisplayWSI's associated with this physical device:
+    VkDisplayWSI display;
+    err = vkGetPhysicalDeviceInfo(demo->gpu, VK_PHYSICAL_DEVICE_INFO_TYPE_DISPLAY_PROPERTIES_WSI,
+                                  &data_size, NULL);
+    assert(!err);
+    demo->display_props = (VkDisplayPropertiesWSI *) malloc(data_size);
+    err = vkGetPhysicalDeviceInfo(demo->gpu, VK_PHYSICAL_DEVICE_INFO_TYPE_DISPLAY_PROPERTIES_WSI,
+                                  &data_size, demo->display_props);
+    assert(!err);
+    demo->num_displays = data_size / sizeof(VkDisplayPropertiesWSI);
+    // For now, simply use the first display (TODO: Enhance this for the
+    // future):
+    display = demo->display_props[0].display;
+
+    // Get a VkFormat to use with the VkDisplayWSI we are using:
+    err = vkGetDisplayInfoWSI(display, VK_DISPLAY_INFO_TYPE_FORMAT_PROPERTIES_WSI,
+                              &data_size, NULL);
+    VkDisplayFormatPropertiesWSI* display_format_props =
+        (VkDisplayFormatPropertiesWSI*) malloc(data_size);
+    err = vkGetDisplayInfoWSI(display, VK_DISPLAY_INFO_TYPE_FORMAT_PROPERTIES_WSI,
+                              &data_size, display_format_props);
+    // For now, simply use the first VkFormat (TODO: Enhance this for the
+    // future):
+    demo->format = display_format_props[0].swapChainFormat;
 }
 
 static void demo_init_connection(struct demo *demo)
@@ -1523,7 +1552,6 @@ static void demo_init(struct demo *demo, const int argc, const char *argv[])
 
     demo->width = 300;
     demo->height = 300;
-    demo->format = VK_FORMAT_B8G8R8A8_UNORM;
 }
 
 static void demo_cleanup(struct demo *demo)

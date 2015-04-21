@@ -97,9 +97,9 @@ struct intel_x11_fence_data {
 
 /* these are what DDX expects */
 static const VkFormat x11_presentable_formats[] = {
-    VK_FORMAT_B5G6R5_UNORM,
     VK_FORMAT_B8G8R8A8_UNORM,
     VK_FORMAT_B8G8R8A8_SRGB,
+    VK_FORMAT_B5G6R5_UNORM,
 };
 
 static inline struct intel_x11_display *x11_display(VkDisplayWSI dpy)

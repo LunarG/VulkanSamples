@@ -1472,6 +1472,24 @@ ICD_EXPORT VkResult VKAPI vkGetPhysicalDeviceInfo(
     NULLDRV_LOG_FUNC;
     VkResult ret = VK_SUCCESS;
 
+    if (infoType == VK_PHYSICAL_DEVICE_INFO_TYPE_DISPLAY_PROPERTIES_WSI) {
+        // NOTE: Handle this extension value as a special case:
+        struct nulldrv_display *display;
+        VkDisplayPropertiesWSI *props =
+            (VkDisplayPropertiesWSI *) pData;
+        *pDataSize = sizeof(VkDisplayPropertiesWSI);
+        if (pData == NULL) {
+            return ret;
+        }
+        display = (struct nulldrv_display *) nulldrv_base_create(NULL, sizeof(*display),
+                /*VK_OBJECT_TYPE_SWAP_CHAIN_WSI*//* FIXME: DELETE THIS HACK: */VK_DBG_OBJECT_QUEUE);
+        props->display = (VkDisplayWSI) display;
+        props->physicalResolution.width = 1920;
+        props->physicalResolution.height = 1080;
+
+        return ret;
+    }
+
     switch (infoType) {
     case VK_PHYSICAL_DEVICE_INFO_TYPE_PROPERTIES:
       {
