@@ -477,14 +477,12 @@ void VkImageObj::SetLayout(VkCommandBufferObj *cmd_buf,
         input_mask = VK_MEMORY_INPUT_SHADER_READ_BIT | VK_MEMORY_INPUT_TRANSFER_BIT;
         break;
 
-    case VK_IMAGE_LAYOUT_CLEAR_OPTIMAL:
-        break;
-
     case VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL:
         output_mask = VK_MEMORY_OUTPUT_TRANSFER_BIT;
         input_mask = VK_MEMORY_INPUT_SHADER_READ_BIT | VK_MEMORY_INPUT_TRANSFER_BIT;
         break;
 
+    case VK_IMAGE_LAYOUT_CLEAR_OPTIMAL:
     default:
         output_mask =  all_cache_outputs;
         input_mask = all_cache_inputs;
@@ -498,7 +496,7 @@ void VkImageObj::SetLayout(VkCommandBufferObj *cmd_buf,
 void VkImageObj::SetLayout(VkImageAspect aspect,
                            VkImageLayout image_layout)
 {
-    VkResult err;
+    VkResult U_ASSERT_ONLY err;
     VkCommandBufferObj cmd_buf(m_device);
 
     /* Build command buffer to set image layout in the driver */
@@ -598,7 +596,7 @@ VkResult VkImageObj::UnmapMemory()
 
 VkResult VkImageObj::CopyImage(VkImageObj &src_image)
 {
-    VkResult err;
+    VkResult U_ASSERT_ONLY err;
     VkCommandBufferObj cmd_buf(m_device);
     VkImageLayout src_image_layout, dest_image_layout;
 
@@ -875,6 +873,8 @@ void VkIndexBufferObj::CreateAndInitBuffer(int numIndexes, VkIndexType indexType
         break;
     default:
         assert(!"unknown index type");
+        m_stride = 2;
+        viewFormat = VK_FORMAT_R16_UINT;
         break;
     }
 

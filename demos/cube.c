@@ -25,6 +25,12 @@
 #define DEMO_BUFFER_COUNT 2
 #define DEMO_TEXTURE_COUNT 1
 
+#if defined(NDEBUG) && defined(__GNUC__)
+#define U_ASSERT_ONLY __attribute__((unused))
+#else
+#define U_ASSERT_ONLY
+#endif
+
 /*
  * structure to track all objects related to a texture.
  */
@@ -285,7 +291,7 @@ struct demo {
 
 static void demo_flush_init_cmd(struct demo *demo)
 {
-    VkResult err;
+    VkResult U_ASSERT_ONLY err;
 
     if (demo->cmd == VK_NULL_HANDLE)
         return;
@@ -325,7 +331,7 @@ static void demo_set_image_layout(
         VkImageLayout old_image_layout,
         VkImageLayout new_image_layout)
 {
-    VkResult err;
+    VkResult U_ASSERT_ONLY err;
 
     if (demo->cmd == VK_NULL_HANDLE) {
         const VkCmdBufferCreateInfo cmd = {
@@ -397,7 +403,7 @@ static void demo_draw_build_cmd(struct demo *demo, VkCmdBuffer cmd_buf)
         .flags = VK_CMD_BUFFER_OPTIMIZE_SMALL_BATCH_BIT |
             VK_CMD_BUFFER_OPTIMIZE_ONE_TIME_SUBMIT_BIT,
     };
-    VkResult err;
+    VkResult U_ASSERT_ONLY err;
     VkAttachmentLoadOp load_op = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
     VkAttachmentStoreOp store_op = VK_ATTACHMENT_STORE_OP_DONT_CARE;
     const VkFramebufferCreateInfo fb_info = {
@@ -484,7 +490,7 @@ void demo_update_data_buffer(struct demo *demo)
     mat4x4 MVP, Model, VP;
     int matrixSize = sizeof(MVP);
     uint8_t *pData;
-    VkResult err;
+    VkResult U_ASSERT_ONLY err;
 
     mat4x4_mul(VP, demo->projection_matrix, demo->view_matrix);
 
@@ -511,7 +517,7 @@ static void demo_draw(struct demo *demo)
         .image = demo->buffers[demo->current_buffer].image,
         .flipInterval = 0,
     };
-    VkResult err;
+    VkResult U_ASSERT_ONLY err;
 
     err = vkQueueSubmit(demo->queue, 1, &demo->buffers[demo->current_buffer].cmd,
             VK_NULL_HANDLE);
@@ -544,7 +550,7 @@ static void demo_prepare_buffers(struct demo *demo)
     };
     VkSwapChainImageInfoWSI images[DEMO_BUFFER_COUNT];
     size_t images_size = sizeof(images);
-    VkResult err;
+    VkResult U_ASSERT_ONLY err;
     uint32_t i;
 
     err = vkCreateSwapChainWSI(demo->device, &swap_chain, &demo->swap_chain);
@@ -617,7 +623,7 @@ static void demo_prepare_depth(struct demo *demo)
 
     VkMemoryRequirements *mem_reqs;
     size_t mem_reqs_size = sizeof(VkMemoryRequirements);
-    VkResult err;
+    VkResult U_ASSERT_ONLY err;
     uint32_t num_allocations = 0;
     size_t num_alloc_size = sizeof(num_allocations);
 
@@ -690,7 +696,7 @@ bool loadTexture(const char *filename, uint8_t *rgba_data,
 {
   //header for testing if it is a png
   png_byte header[8];
-  int is_png, bit_depth, color_type,rowbytes;
+  int is_png, bit_depth, color_type,rowbytes, retval;
   png_uint_32 i, twidth, theight;
   png_structp  png_ptr;
   png_infop info_ptr, end_info;
@@ -704,7 +710,11 @@ bool loadTexture(const char *filename, uint8_t *rgba_data,
   }
 
   //read the header
-  fread(header, 1, 8, fp);
+  retval = fread(header, 1, 8, fp);
+  if (retval != 8) {
+      fclose(fp);
+      return false;
+  }
 
   //test if png
   is_png = !png_sig_cmp(header, 0, 8);
@@ -827,7 +837,7 @@ static void demo_prepare_texture_image(struct demo *demo,
     const VkFormat tex_format = VK_FORMAT_B8G8R8A8_UNORM;
     int32_t tex_width;
     int32_t tex_height;
-    VkResult err;
+    VkResult U_ASSERT_ONLY err;
 
     err = loadTexture(filename, NULL, NULL, &tex_width, &tex_height);
     assert(err);
@@ -949,7 +959,7 @@ static void demo_prepare_textures(struct demo *demo)
     const VkFormat tex_format = VK_FORMAT_R8G8B8A8_UNORM;
     VkFormatProperties props;
     size_t size = sizeof(props);
-    VkResult err;
+    VkResult U_ASSERT_ONLY err;
     uint32_t i;
 
     err = vkGetFormatInfo(demo->device, tex_format,
@@ -1074,7 +1084,7 @@ void demo_prepare_cube_data_buffer(struct demo *demo)
     uint8_t *pData;
     int i;
     mat4x4 MVP, VP;
-    VkResult err;
+    VkResult U_ASSERT_ONLY err;
     struct vktexcube_vs_uniform data;
 
     mat4x4_mul(VP, demo->projection_matrix, demo->view_matrix);
@@ -1170,7 +1180,7 @@ static void demo_prepare_descriptor_layout(struct demo *demo)
         .count = 2,
         .pBinding = layout_bindings,
     };
-    VkResult err;
+    VkResult U_ASSERT_ONLY err;
 
     err = vkCreateDescriptorSetLayout(demo->device,
             &descriptor_layout, &demo->desc_layout);
@@ -1237,6 +1247,7 @@ static VkShader demo_prepare_shader(struct demo *demo,
 char *demo_read_spv(const char *filename, size_t *psize)
 {
     long int size;
+    int U_ASSERT_ONLY retval;
     void *shader_code;
 
     FILE *fp = fopen(filename, "rb");
@@ -1248,7 +1259,8 @@ char *demo_read_spv(const char *filename, size_t *psize)
     fseek(fp, 0L, SEEK_SET);
 
     shader_code = malloc(size);
-    fread(shader_code, size, 1, fp);
+    retval = fread(shader_code, size, 1, fp);
+    assert(retval == 1);
 
     *psize = size;
 
@@ -1330,7 +1342,7 @@ static void demo_prepare_pipeline(struct demo *demo)
     VkPipelineShaderStageCreateInfo fs;
     VkPipelineVpStateCreateInfo vp;
     VkPipelineMsStateCreateInfo ms;
-    VkResult err;
+    VkResult U_ASSERT_ONLY err;
 
     memset(&pipeline, 0, sizeof(pipeline));
     pipeline.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
@@ -1414,7 +1426,7 @@ static void demo_prepare_dynamic_states(struct demo *demo)
     VkDynamicRsStateCreateInfo raster;
     VkDynamicCbStateCreateInfo color_blend;
     VkDynamicDsStateCreateInfo depth_stencil;
-    VkResult err;
+    VkResult U_ASSERT_ONLY err;
 
     memset(&viewport_create, 0, sizeof(viewport_create));
     viewport_create.sType = VK_STRUCTURE_TYPE_DYNAMIC_VP_STATE_CREATE_INFO;
@@ -1488,7 +1500,7 @@ static void demo_prepare_descriptor_pool(struct demo *demo)
         .count = 2,
         .pTypeCount = type_counts,
     };
-    VkResult err;
+    VkResult U_ASSERT_ONLY err;
 
     err = vkCreateDescriptorPool(demo->device,
             VK_DESCRIPTOR_POOL_USAGE_ONE_SHOT, 1,
@@ -1503,7 +1515,7 @@ static void demo_prepare_descriptor_set(struct demo *demo)
     VkUpdateSamplerTextures update_fs;
     VkUpdateBuffers update_vs;
     const void *update_array[2] = { &update_vs, &update_fs };
-    VkResult err;
+    VkResult U_ASSERT_ONLY err;
     uint32_t count;
     uint32_t i;
 
@@ -1553,7 +1565,7 @@ static void demo_prepare(struct demo *demo)
         .queueNodeIndex = demo->graphics_queue_node_index,
         .flags = 0,
     };
-    VkResult err;
+    VkResult U_ASSERT_ONLY err;
 
     demo_prepare_buffers(demo);
     demo_prepare_depth(demo);
@@ -1793,7 +1805,7 @@ static void demo_init_vk(struct demo *demo)
 
     VkExtensionProperties extProp;
     extSize = sizeof(VkExtensionProperties);
-    bool32_t extFound = 0;
+    bool32_t U_ASSERT_ONLY extFound = 0;
     for (uint32_t i = 0; i < extCount; i++) {
         err = vkGetGlobalExtensionInfo(VK_EXTENSION_INFO_TYPE_PROPERTIES, i, &extSize, &extProp);
         if (!strcmp(ext_names[0], extProp.extName))

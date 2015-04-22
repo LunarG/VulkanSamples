@@ -314,7 +314,7 @@ ir_deserializer::read_ir_swizzle()
 {
    VALIDATE_RVALUE(ir_type_swizzle);
 
-   struct ir_swizzle_mask mask;
+   struct ir_swizzle_mask mask = {};
    map->read(&mask, sizeof(ir_swizzle_mask));
 
    ir_rvalue *rval = read_ir_rvalue();

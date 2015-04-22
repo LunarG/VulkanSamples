@@ -777,7 +777,8 @@ brw_instruction_name(enum opcode op)
       /* Yes, this leaks.  It's in debug code, it should never occur, and if
        * it does, you should just add the case to the list above.
        */
-      asprintf(&fallback, "op%d", op);
+      int U_ASSERT_ONLY retval = asprintf(&fallback, "op%d", op);
+      assert(retval != -1);
       return fallback;
    }
 }

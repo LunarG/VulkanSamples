@@ -60,6 +60,12 @@ bool consoleCreated = false;
         exit(-1); \
    } while (0)
 
+#if defined(NDEBUG) && defined(__GNUC__)
+#define U_ASSERT_ONLY __attribute__((unused))
+#else
+#define U_ASSERT_ONLY
+#endif
+
 #define ARRAY_SIZE(a) (sizeof(a) / sizeof(a[0]))
 
 #define MAX_GPUS 8
@@ -390,7 +396,7 @@ static void app_dev_destroy(struct app_dev *dev)
 
 static void app_gpu_init_extensions(struct app_gpu *gpu)
 {
-    VkResult err;
+    VkResult U_ASSERT_ONLY err;
     // Extensions to enable
     static char *known_extensions[] = {
         "VK_WSI_LunarG",
@@ -402,7 +408,7 @@ static void app_gpu_init_extensions(struct app_gpu *gpu)
 
     VkExtensionProperties extProp;
     extSize = sizeof(VkExtensionProperties);
-    bool32_t extFound = 0; // TODO : Need to enhance this if/when we enable multiple extensions
+    bool32_t U_ASSERT_ONLY extFound = 0; // TODO : Need to enhance this if/when we enable multiple extensions
     for (uint32_t i = 0; i < extCount; i++) {
         err = vkGetGlobalExtensionInfo(VK_EXTENSION_INFO_TYPE_PROPERTIES, i, &extSize, &extProp);
         if (!strcmp(known_extensions[0], extProp.extName)) {

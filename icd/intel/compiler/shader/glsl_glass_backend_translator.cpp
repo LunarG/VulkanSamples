@@ -130,6 +130,10 @@ namespace {
          default:           metaType.qualifier = EVQUndef;   break;
          }
          if (metaType.qualifier != EVQUndef)
+            // interpMode is initialized by the call to CrackIOMd above.
+            #if defined(__GNUC__)
+            #pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
+            #endif
             CrackInterpolationMode(interpMode, metaType.interpMethod, metaType.interpLocation);
       } else {
          if (! CrackAggregateMd(mdNode, metaType.name, metaType.typeLayout,
@@ -908,6 +912,7 @@ inline void MesaGlassTranslator::emitIRTextureQuery(const llvm::IntrinsicInst* l
       break;
 
    default:
+      name = "error";
       error("unexpected texture query intrinsic");
       break;
    }

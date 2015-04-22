@@ -1395,7 +1395,8 @@ static void synchAndPrintDSConfig(const VkCmdBuffer cb)
 #else // WIN32
         // Convert dot to svg if dot available
         if(access( "/usr/bin/dot", X_OK) != -1) {
-            system("/usr/bin/dot pipeline_dump.dot -Tsvg -o pipeline_dump.svg");
+            int retval = system("/usr/bin/dot pipeline_dump.dot -Tsvg -o pipeline_dump.svg");
+            assert(retval != -1);
         }
 #endif // WIN32
     }
@@ -2715,7 +2716,8 @@ void drawStateDumpPngFile(char* outFileName)
         dumpDotFile(g_lastCmdBuffer[getTIDIndex()], "/tmp/tmp.dot");
         char dotCmd[1024];
         sprintf(dotCmd, "%s /tmp/tmp.dot -Tpng -o %s", dotExe, outFileName);
-        system(dotCmd);
+        int retval = system(dotCmd);
+        assert(retval != -1);
         remove("/tmp/tmp.dot");
     }
     else {

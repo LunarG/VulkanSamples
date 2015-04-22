@@ -494,7 +494,7 @@ _mesa_lookup_parameter_constant(const struct gl_program_parameter_list *list,
                    }
                 }
                 /* smear last value to remaining positions */
-                for (; j < 4; j++)
+                for (; j < 4 && j > 0; j++)
                    swz[j] = swz[j-1];
 
                 if (match == vSize) {

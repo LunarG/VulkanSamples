@@ -432,7 +432,7 @@ TestFrameworkVkPresent::TestFrameworkVkPresent(vk_testing::Device &device) :
 
 void  TestFrameworkVkPresent::Display()
 {
-    VkResult err;
+    VkResult U_ASSERT_ONLY err;
 
     VkPresentInfoWSI present = {};
     present.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_WSI;
@@ -523,7 +523,7 @@ void  TestFrameworkVkPresent::Run()
 
 void TestFrameworkVkPresent::CreateSwapChain()
 {
-    VkResult err;
+    VkResult U_ASSERT_ONLY err;
 
     VkSwapChainCreateInfoWSI swap_chain = {};
     swap_chain.sType = VK_STRUCTURE_TYPE_SWAP_CHAIN_CREATE_INFO_WSI;

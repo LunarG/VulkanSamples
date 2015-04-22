@@ -25,6 +25,12 @@
 #include "glsl_types.h"
 #include "ir.h"
 
+#if defined(NDEBUG) && defined(__GNUC__)
+#define U_ASSERT_ONLY __attribute__((unused))
+#else
+#define U_ASSERT_ONLY
+#endif
+
 void
 ast_array_specifier::print(void) const
 {
@@ -83,7 +89,7 @@ update_max_array_access(ir_rvalue *ir, unsigned idx, YYLTYPE *loc,
 
       if (deref_var != NULL) {
          if (deref_var->var->is_interface_instance()) {
-            const glsl_type *interface_type =
+            const glsl_type U_ASSERT_ONLY *interface_type =
                deref_var->var->get_interface_type();
             unsigned field_index =
                deref_record->record->type->field_index(deref_record->field);

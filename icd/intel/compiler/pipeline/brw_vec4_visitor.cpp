@@ -1771,7 +1771,7 @@ vec4_visitor::visit(ir_swizzle *ir)
 	    break;
       }
    }
-   for (; i < 4; i++) {
+   for (; i < 4 && ir->type->vector_elements < 4 && ir->type->vector_elements > 0; i++) {
       /* Replicate the last channel out. */
       swizzle[i] = swizzle[ir->type->vector_elements - 1];
    }

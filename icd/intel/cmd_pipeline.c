@@ -1683,7 +1683,7 @@ static uint32_t emit_binding_table(struct intel_cmd *cmd,
             break;
         case INTEL_PIPELINE_RMAP_SURFACE:
             {
-                const struct intel_pipeline_layout *pipeline_layout =
+                const struct intel_pipeline_layout U_ASSERT_ONLY *pipeline_layout =
                     cmd->bind.pipeline.graphics->pipeline_layout;
                 const int32_t dyn_idx = slot->u.surface.dynamic_offset_index;
                 struct intel_desc_offset desc_offset;

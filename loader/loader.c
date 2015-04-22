@@ -1179,11 +1179,12 @@ LOADER_EXPORT VkResult VKAPI vkDestroyInstance(
 
     scanned_icds = loader.scanned_icd_list;
     while (scanned_icds) {
-        if (scanned_icds->instance)
+        if (scanned_icds->instance) {
             res = scanned_icds->DestroyInstance(scanned_icds->instance);
-        if (res != VK_SUCCESS)
-            loader_log(VK_DBG_MSG_WARNING, 0,
-                        "ICD ignored: failed to DestroyInstance on device");
+            if (res != VK_SUCCESS)
+                loader_log(VK_DBG_MSG_WARNING, 0,
+                            "ICD ignored: failed to DestroyInstance on device");
+        }
         scanned_icds->instance = VK_NULL_HANDLE;
         scanned_icds = scanned_icds->next;
     }
@@ -1201,7 +1202,7 @@ LOADER_EXPORT VkResult VKAPI vkEnumeratePhysicalDevices(
     struct loader_instance *ptr_instance = (struct loader_instance *) instance;
     struct loader_icd *icd;
     uint32_t n, count = 0;
-    VkResult res;
+    VkResult res = VK_ERROR_UNKNOWN;
 
     //in spirit of VK don't error check on the instance parameter
     icd = ptr_instance->icds;
