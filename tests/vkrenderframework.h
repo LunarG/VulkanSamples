@@ -39,8 +39,8 @@ public:
     VkDevice device() { return obj(); }
     void get_device_queue();
 
-    uint32_t id;
-    VkPhysicalDeviceProperties props;
+    uint32_t                               id;
+    VkPhysicalDeviceProperties             props;
     const VkPhysicalDeviceQueueProperties *queue_props;
 
     VkQueue m_queue;
@@ -56,7 +56,7 @@ public:
     vector<VkDeviceMemory> mem_refs() const;
 
 protected:
-    vector<VkDeviceMemory>      mem_refs_;
+    vector<VkDeviceMemory>              mem_refs_;
 
 };
 
@@ -69,11 +69,11 @@ public:
     VkDepthStencilBindInfo* BindInfo();
 
 protected:
-    VkDeviceObj                         *m_device;
-    bool                               m_initialized;
-    vk_testing::DepthStencilView      m_depthStencilView;
-    VkFormat                         m_depth_stencil_fmt;
-    VkDepthStencilBindInfo        m_depthStencilBindInfo;
+    VkDeviceObj                        *m_device;
+    bool                                m_initialized;
+    vk_testing::DepthStencilView        m_depthStencilView;
+    VkFormat                            m_depth_stencil_fmt;
+    VkDepthStencilBindInfo              m_depthStencilBindInfo;
 };
 
 class VkRenderFramework : public VkTestFramework
@@ -98,28 +98,28 @@ public:
 
 
 protected:
-    VkApplicationInfo                    app_info;
-    VkInstance                            inst;
-    VkPhysicalDevice                        objs[16];
-    uint32_t                                gpu_count;
-    VkDeviceObj                           *m_device;
-    VkCmdBuffer                            m_cmdBuffer;
-    VkRenderPass                           m_renderPass;
-    VkFramebuffer                          m_framebuffer;
-    VkDynamicRsState                       m_stateRaster;
-    VkDynamicCbState                       m_colorBlend;
-    VkDynamicVpState                       m_stateViewport;
-    VkDynamicDsState                       m_stateDepthStencil;
-    vector<VkImageObj*>                    m_renderTargets;
-    float                                   m_width, m_height;
-    VkFormat                              m_render_target_fmt;
-    VkFormat                              m_depth_stencil_fmt;
-    VkColorAttachmentBindInfo          m_colorBindings[8];
-    VkClearColor                         m_clear_color;
-    float                                   m_depth_clear_color;
-    uint32_t                                m_stencil_clear_color;
-    VkDepthStencilObj                     *m_depthStencil;
-    VkMemoryRefManager                     m_mem_ref_mgr;
+    VkApplicationInfo                   app_info;
+    VkInstance                          inst;
+    VkPhysicalDevice                    objs[16];
+    uint32_t                            gpu_count;
+    VkDeviceObj                        *m_device;
+    VkCmdBuffer                         m_cmdBuffer;
+    VkRenderPass                        m_renderPass;
+    VkFramebuffer                       m_framebuffer;
+    VkDynamicRsState                    m_stateRaster;
+    VkDynamicCbState                    m_colorBlend;
+    VkDynamicVpState                    m_stateViewport;
+    VkDynamicDsState                    m_stateDepthStencil;
+    vector<VkImageObj*>                 m_renderTargets;
+    float                               m_width, m_height;
+    VkFormat                            m_render_target_fmt;
+    VkFormat                            m_depth_stencil_fmt;
+    VkColorAttachmentBindInfo           m_colorBindings[8];
+    VkClearColor                        m_clear_color;
+    float                               m_depth_clear_color;
+    uint32_t                            m_stencil_clear_color;
+    VkDepthStencilObj                  *m_depthStencil;
+    VkMemoryRefManager                  m_mem_ref_mgr;
 
     /*
      * SetUp and TearDown are called by the Google Test framework
@@ -177,11 +177,11 @@ public:
     void QueueCommandBuffer();
     void QueueCommandBuffer(VkFence fence);
 
-    VkMemoryRefManager             mem_ref_mgr;
+    VkMemoryRefManager                  mem_ref_mgr;
 
 protected:
-    VkDeviceObj                      *m_device;
-    vector<VkImageObj*>               m_renderTargets;
+    VkDeviceObj                        *m_device;
+    vector<VkImageObj*>                 m_renderTargets;
 };
 
 class VkConstantBufferObj : public vk_testing::Buffer
@@ -213,12 +213,12 @@ public:
     VkBufferViewAttachInfo     m_bufferViewInfo;
 
 protected:
-    VkDeviceObj                      *m_device;
-    vk_testing::BufferView         m_bufferView;
-    int                             m_numVertices;
-    int                             m_stride;
-    VkCommandBufferObj             *m_commandBuffer;
-    vk_testing::Fence              m_fence;
+    VkDeviceObj                        *m_device;
+    vk_testing::BufferView              m_bufferView;
+    int                                 m_numVertices;
+    int                                 m_stride;
+    VkCommandBufferObj                 *m_commandBuffer;
+    vk_testing::Fence                   m_fence;
 };
 
 class VkIndexBufferObj : public VkConstantBufferObj
@@ -230,7 +230,7 @@ public:
     VkIndexType GetIndexType();
 
 protected:
-    VkIndexType  m_indexType;
+    VkIndexType                         m_indexType;
 };
 
 class VkImageObj : public vk_testing::Image
@@ -312,10 +312,10 @@ public:
     VkResult UnmapMemory();
 
 protected:
-    VkDeviceObj *m_device;
+    VkDeviceObj                        *m_device;
 
-    vk_testing::ColorAttachmentView m_targetView;
-    VkImageViewAttachInfo   m_imageInfo;
+    vk_testing::ColorAttachmentView     m_targetView;
+    VkImageViewAttachInfo               m_imageInfo;
 };
 
 class VkTextureObj : public VkImageObj
@@ -326,9 +326,9 @@ public:
 
 
 protected:
-    VkDeviceObj                 *m_device;
-    vk_testing::ImageView     m_textureView;
-    VkDeviceSize               m_rowPitch;
+    VkDeviceObj                        *m_device;
+    vk_testing::ImageView               m_textureView;
+    VkDeviceSize                        m_rowPitch;
 };
 
 class VkSamplerObj : public vk_testing::Sampler
@@ -337,7 +337,7 @@ public:
     VkSamplerObj(VkDeviceObj *device);
 
 protected:
-     VkDeviceObj *m_device;
+     VkDeviceObj                       *m_device;
 
 };
 
@@ -355,17 +355,17 @@ public:
     VkDescriptorSet GetDescriptorSetHandle() const;
     VkPipelineLayout GetPipelineLayout() const;
 
-    VkMemoryRefManager                   mem_ref_mgr;
+    VkMemoryRefManager                  mem_ref_mgr;
 
 protected:
-    VkDeviceObj                         *m_device;
-    vector<VkDescriptorTypeCount>        m_type_counts;
-    int                                  m_nextSlot;
+    VkDeviceObj                        *m_device;
+    vector<VkDescriptorTypeCount>       m_type_counts;
+    int                                 m_nextSlot;
 
-    vector<VkUpdateBuffers>           m_updateBuffers;
+    vector<VkUpdateBuffers>             m_updateBuffers;
 
-    vector<VkSamplerImageViewInfo>  m_samplerTextureInfo;
-    vector<VkUpdateSamplerTextures>  m_updateSamplerTextures;
+    vector<VkSamplerImageViewInfo>      m_samplerTextureInfo;
+    vector<VkUpdateSamplerTextures>     m_updateSamplerTextures;
 
     vk_testing::DescriptorSetLayout     m_layout;
     vk_testing::PipelineLayout          m_pipeline_layout;
@@ -380,9 +380,9 @@ public:
     VkPipelineShaderStageCreateInfo* GetStageCreateInfo();
 
 protected:
-    VkPipelineShaderStageCreateInfo stage_info;
-    VkShaderStage m_stage;
-    VkDeviceObj *m_device;
+    VkPipelineShaderStageCreateInfo     stage_info;
+    VkShaderStage                       m_stage;
+    VkDeviceObj                        *m_device;
 
 };
 
@@ -399,18 +399,18 @@ public:
     void CreateVKPipeline(VkDescriptorSetObj &descriptorSet);
 
 protected:
-    VkPipelineVertexInputCreateInfo m_vi_state;
-    VkPipelineIaStateCreateInfo m_ia_state;
-    VkPipelineRsStateCreateInfo m_rs_state;
-    VkPipelineCbStateCreateInfo m_cb_state;
-    VkPipelineDsStateCreateInfo m_ds_state;
-    VkPipelineMsStateCreateInfo m_ms_state;
-    VkDeviceObj *m_device;
-    vector<VkShaderObj*> m_shaderObjs;
-    vector<VkConstantBufferObj*> m_vertexBufferObjs;
-    vector<int> m_vertexBufferBindings;
+    VkPipelineVertexInputCreateInfo     m_vi_state;
+    VkPipelineIaStateCreateInfo         m_ia_state;
+    VkPipelineRsStateCreateInfo         m_rs_state;
+    VkPipelineCbStateCreateInfo         m_cb_state;
+    VkPipelineDsStateCreateInfo         m_ds_state;
+    VkPipelineMsStateCreateInfo         m_ms_state;
+    VkDeviceObj                        *m_device;
+    vector<VkShaderObj*>                m_shaderObjs;
+    vector<VkConstantBufferObj*>        m_vertexBufferObjs;
+    vector<int>                         m_vertexBufferBindings;
     vector<VkPipelineCbAttachmentState> m_colorAttachments;
-    int m_vertexBufferCount;
+    int                                 m_vertexBufferCount;
 
 };
 

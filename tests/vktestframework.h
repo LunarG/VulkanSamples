@@ -61,7 +61,7 @@ public:
     int                       m_width;
     int                       m_height;
     void                     *m_data;
-    VkImage                 m_presentableImage;
+    VkImage                   m_presentableImage;
     VkDeviceMemory            m_presentableMemory;
     unsigned                  m_data_size;
 };
@@ -103,7 +103,7 @@ private:
     static bool                             m_save_images;
     static bool                             m_compare_images;
 
-    static std::list<VkTestImageRecord>    m_images;
+    static std::list<VkTestImageRecord>     m_images;
     static std::list<VkTestImageRecord>::iterator m_display_image;
     static int                              m_display_image_idx;
 

@@ -70,7 +70,7 @@ private:
     xcb_screen_t                           *m_screen;
     xcb_window_t                            m_window;
     xcb_intern_atom_reply_t                *m_atom_wm_delete_window;
-    std::list<VkTestImageRecord>           m_images;
+    std::list<VkTestImageRecord>            m_images;
 
     VkSwapChainWSI                          m_swap_chain;
 
