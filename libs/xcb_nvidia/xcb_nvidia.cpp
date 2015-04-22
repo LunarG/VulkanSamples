@@ -91,9 +91,7 @@ xcb_connection_t * xcb_connect(const char *displayname, int *screenp)
     if (!module) {
         // TODO: Adapted up the following code (copied from "loader.c"):
         char *registry_str = NULL;
-        DWORD registry_len = 0;
-        DWORD registry_value_type;
-        LONG  registry_return_value;
+        size_t registry_len = 0;
         char *rtn_str = NULL;
         size_t rtn_len;
 

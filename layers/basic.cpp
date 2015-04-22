@@ -78,8 +78,6 @@ VK_LAYER_EXPORT VkResult VKAPI vkGetGlobalExtensionInfo(
                                                size_t*  pDataSize,
                                                void*    pData)
 {
-    VkResult result;
-
     /* This entrypoint is NOT going to init it's own dispatch table since loader calls here early */
     VkExtensionProperties *ext_props;
     uint32_t *count;

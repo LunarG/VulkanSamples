@@ -1172,8 +1172,6 @@ LRESULT CALLBACK WndProc(HWND hWnd,
                          WPARAM wParam,
                          LPARAM lParam)
 {
-    PAINTSTRUCT paint_struct;
-    HDC hDC; // Device context
     char tmp_str[] = "Test Vulkan Triangle Program"; 
 
     switch(uMsg)
@@ -1571,7 +1569,7 @@ int APIENTRY WinMain(HINSTANCE hInstance,
     /* main message loop*/
     while(!done)
     {
-        PeekMessage(&msg,NULL,NULL,NULL,PM_REMOVE);
+        PeekMessage(&msg,0,0,0,PM_REMOVE);
         if (msg.message == WM_QUIT) //check for a quit message
         {
             done = true; //if found, quit app
@@ -1586,7 +1584,7 @@ int APIENTRY WinMain(HINSTANCE hInstance,
 
     demo_cleanup(&demo);
 
-    return msg.wParam;
+    return (int) msg.wParam;
 }
 #else  // _WIN32
 int main(const int argc, const char *argv[])

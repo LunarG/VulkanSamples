@@ -696,7 +696,8 @@ bool loadTexture(const char *filename, uint8_t *rgba_data,
 {
   //header for testing if it is a png
   png_byte header[8];
-  int is_png, bit_depth, color_type,rowbytes, retval;
+  int is_png, bit_depth, color_type, rowbytes;
+  size_t retval;
   png_uint_32 i, twidth, theight;
   png_structp  png_ptr;
   png_infop info_ptr, end_info;
@@ -1237,7 +1238,7 @@ static VkShader demo_prepare_shader(struct demo *demo,
     err = vkCreateShader(demo->device, &createInfo, &shader);
     if (err) {
         free((void *) createInfo.pCode);
-        return NULL;
+        return (VkShader) VK_NULL_HANDLE;
     }
 #endif
 
@@ -1247,7 +1248,7 @@ static VkShader demo_prepare_shader(struct demo *demo,
 char *demo_read_spv(const char *filename, size_t *psize)
 {
     long int size;
-    int U_ASSERT_ONLY retval;
+    size_t U_ASSERT_ONLY retval;
     void *shader_code;
 
     FILE *fp = fopen(filename, "rb");
@@ -1621,8 +1622,6 @@ LRESULT CALLBACK WndProc(HWND hWnd,
                          WPARAM wParam,
                          LPARAM lParam)
 {
-    PAINTSTRUCT paint_struct;
-    HDC hDC; // Device context
     char tmp_str[] = "Test Vulkan Cube Program"; 
 
     switch(uMsg)
@@ -2059,7 +2058,7 @@ int APIENTRY WinMain(HINSTANCE hInstance,
     /* main message loop*/
     while(!done)
     {
-        PeekMessage(&msg,NULL,NULL,NULL,PM_REMOVE);
+        PeekMessage(&msg,0,0,0,PM_REMOVE);
         if (msg.message == WM_QUIT) //check for a quit message
         {
             done = true; //if found, quit app
@@ -2074,7 +2073,7 @@ int APIENTRY WinMain(HINSTANCE hInstance,
 
     demo_cleanup(&demo);
 
-    return msg.wParam;
+    return (int) msg.wParam;
 }
 #else  // _WIN32
 int main(int argc, char **argv)

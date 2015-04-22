@@ -127,7 +127,7 @@ char *loader_get_registry_string(const HKEY hive,
     HKEY key;
     LONG  rtn_value;
     char *rtn_str = NULL;
-    size_t rtn_len = 0;
+    DWORD rtn_len = 0;
     size_t allocated_len = 0;
 
     rtn_value = RegOpenKeyEx(hive, sub_key, 0, access_flags, &key);
@@ -177,7 +177,7 @@ static char *loader_get_registry_and_env(const char *env_var,
     char *env_str = getenv(env_var);
     size_t env_len = (env_str == NULL) ? 0 : strlen(env_str);
     char *registry_str = NULL;
-    DWORD registry_len = 0;
+    size_t registry_len = 0;
     char *rtn_str = NULL;
     size_t rtn_len;
 
@@ -363,7 +363,7 @@ static bool loader_is_extension_scanned(const char *name)
     return false;
 }
 
-static void loader_coalesce_extensions()
+static void loader_coalesce_extensions(void)
 {
     uint32_t i;
     struct loader_scanned_icds *icd_list = loader.scanned_icd_list;

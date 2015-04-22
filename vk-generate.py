@@ -140,7 +140,7 @@ class LoaderEntrypointsSubcommand(Subcommand):
             cond = ("%s == VK_PHYSICAL_DEVICE_INFO_TYPE_DISPLAY_PROPERTIES_WSI && "
                     "%s && %s" % (ptype, pdata, cond))
             setup.append("VkDisplayPropertiesWSI *info = %s;" % pdata)
-            setup.append("uint32_t count = *%s / sizeof(*info), i;" % psize)
+            setup.append("size_t count = *%s / sizeof(*info), i;" % psize)
             setup.append("for (i = 0; i < count; i++) {")
             setup.append("    %s(info[i].display, disp);" % method)
             setup.append("}")
@@ -151,7 +151,7 @@ class LoaderEntrypointsSubcommand(Subcommand):
             cond = ("%s == VK_SWAP_CHAIN_INFO_TYPE_PERSISTENT_IMAGES_WSI && "
                     "%s && %s" % (ptype, pdata, cond))
             setup.append("VkSwapChainImageInfoWSI *info = %s;" % pdata)
-            setup.append("uint32_t count = *%s / sizeof(*info), i;" % psize)
+            setup.append("size_t count = *%s / sizeof(*info), i;" % psize)
             setup.append("for (i = 0; i < count; i++) {")
             setup.append("    %s(info[i].image, disp);" % method)
             setup.append("    %s(info[i].memory, disp);" % method)
