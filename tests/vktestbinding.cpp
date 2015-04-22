@@ -251,7 +251,6 @@ void Object::cleanup()
         EXPECT(vkDestroyObject(dev_->obj(), type(), obj()) == VK_SUCCESS);
 }
 
-//void Object::bind_memory(const Device &dev, uint32_t alloc_idx, const GpuMemory &mem, VkDeviceSize mem_offset)
 void Object::bind_memory(uint32_t alloc_idx, const GpuMemory &mem, VkDeviceSize mem_offset)
 {
     bound = true;
@@ -259,8 +258,6 @@ void Object::bind_memory(uint32_t alloc_idx, const GpuMemory &mem, VkDeviceSize 
     EXPECT(vkQueueBindObjectMemory(queue, type(), obj(), alloc_idx, mem.obj(), mem_offset) == VK_SUCCESS);
 }
 
-//void Object::bind_memory(const Device &dev, uint32_t alloc_idx, VkDeviceSize offset, VkDeviceSize size,
-//                         const GpuMemory &mem, VkDeviceSize mem_offset)
 void Object::bind_memory(uint32_t alloc_idx, VkDeviceSize offset, VkDeviceSize size,
                          const GpuMemory &mem, VkDeviceSize mem_offset)
 {
@@ -269,21 +266,18 @@ void Object::bind_memory(uint32_t alloc_idx, VkDeviceSize offset, VkDeviceSize s
     EXPECT(!alloc_idx && vkQueueBindObjectMemoryRange(queue, type(), obj(), 0, offset, size, mem.obj(), mem_offset) == VK_SUCCESS);
 }
 
-//void Object::unbind_memory(const Device &dev, uint32_t alloc_idx)
 void Object::unbind_memory(uint32_t alloc_idx)
 {
     VkQueue queue = dev_->graphics_queues()[0]->obj();
     EXPECT(vkQueueBindObjectMemory(queue, type(), obj(), alloc_idx, VK_NULL_HANDLE, 0) == VK_SUCCESS);
 }
 
-//void Object::unbind_memory(const Device &dev)
 void Object::unbind_memory()
 {
     for (uint32_t i = 0; i < mem_alloc_count_; i++)
         unbind_memory(i);
 }
 
-//void Object::alloc_memory(const Device &dev)
 void Object::alloc_memory()
 {
     if (!EXPECT(!internal_mems_) || !mem_alloc_count_)
@@ -302,7 +296,6 @@ void Object::alloc_memory()
     }
 }
 
-//void Object::alloc_memory(const Device &dev, const std::vector<VkDeviceMemory> &mems)
 void Object::alloc_memory(const std::vector<VkDeviceMemory> &mems)
 {
     if (!EXPECT(!internal_mems_) || !mem_alloc_count_)
