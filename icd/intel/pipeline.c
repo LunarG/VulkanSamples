@@ -1179,6 +1179,11 @@ static VkResult pipeline_build_all(struct intel_pipeline *pipeline,
         info->vi.attributeCount > ARRAY_SIZE(pipeline->vb))
         return VK_ERROR_BAD_PIPELINE_DATA;
 
+    if (info->vp.clipOrigin != VK_COORDINATE_ORIGIN_UPPER_LEFT) {
+        assert(!"only VK_COORDINATE_ORIGIN_UPPER_LEFT is supported");
+        return VK_ERROR_INVALID_VALUE;
+    }
+
     pipeline->vb_count = info->vi.bindingCount;
     memcpy(pipeline->vb, info->vi.pVertexBindingDescriptions,
             sizeof(pipeline->vb[0]) * pipeline->vb_count);
