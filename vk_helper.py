@@ -184,8 +184,14 @@ class HeaderFileParser:
         # strip comma and comment, then extra split in case of no comma w/ comments
         enum_val = enum_val.strip().split(',', 1)[0]
         self.enum_val_dict[enum_name]['val'] = enum_val.split()[0]
-        # account for negative values surrounded by parens
-        self.enum_val_dict[enum_name]['val'] = self.enum_val_dict[enum_name]['val'].strip(')').replace('-(', '-')
+        # Perform conversion of VK_BIT macro
+        if 'VK_BIT' in self.enum_val_dict[enum_name]['val']:
+            vk_bit_val = self.enum_val_dict[enum_name]['val']
+            bit_shift = int(vk_bit_val[vk_bit_val.find('(')+1:vk_bit_val.find(')')], 0)
+            self.enum_val_dict[enum_name]['val'] = str(1 << bit_shift)
+        else:
+            # account for negative values surrounded by parens
+            self.enum_val_dict[enum_name]['val'] = self.enum_val_dict[enum_name]['val'].strip(')').replace('-(', '-')
         # Try to cast to int to determine if enum value is unique
         try:
             #print("ENUM val:", self.enum_val_dict[enum_name]['val'])
@@ -1296,7 +1302,7 @@ class EnumCodeGen:
             fet = self.tf_dict[bet]
             body.append("static inline uint32_t validate_%s(%s input_value)\n{" % (fet, fet))
             # TODO : This is not ideal, but allows for flag combinations. Need more rigorous validation of realistic flag combinations
-            if 'flags' in bet.lower():
+            if 'flagbits' in bet.lower():
                 body.append('    if (input_value > (%s))' % (' | '.join(self.et_dict[bet])))
                 body.append('        return 0;')
                 body.append('    return 1;')
