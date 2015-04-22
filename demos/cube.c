@@ -1362,6 +1362,7 @@ static VkShader demo_prepare_vs(struct demo *demo)
             "\n"
             "   // GL->VK conventions\n"
             "   gl_Position.y = -gl_Position.y;\n"
+            "   gl_Position.z = (gl_Position.z + gl_Position.w) / 2.0;\n"
             "}\n";
 
     return demo_prepare_shader(demo, VK_SHADER_STAGE_VERTEX,
@@ -1424,6 +1425,7 @@ static void demo_prepare_pipeline(struct demo *demo)
     rs.fillMode = VK_FILL_MODE_SOLID;
     rs.cullMode = VK_CULL_MODE_BACK;
     rs.frontFace = VK_FRONT_FACE_CCW;
+    rs.depthClipEnable = VK_TRUE;
 
     memset(&cb, 0, sizeof(cb));
     cb.sType = VK_STRUCTURE_TYPE_PIPELINE_CB_STATE_CREATE_INFO;

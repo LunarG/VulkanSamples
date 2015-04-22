@@ -155,10 +155,10 @@ viewport_state_init(struct intel_dynamic_vp *state,
 
         scale[0] = viewport->width / 2.0f;
         scale[1] = viewport->height / 2.0f;
-        scale[2] = (viewport->maxDepth - viewport->minDepth) / 2.0;
+        scale[2] = viewport->maxDepth - viewport->minDepth;
         translate[0] = viewport->originX + scale[0];
         translate[1] = viewport->originY + scale[1];
-        translate[2] = (viewport->minDepth + viewport->maxDepth) / 2.0f;
+        translate[2] = viewport->minDepth;
 
         viewport_get_guardband(gpu, (int) translate[0], (int) translate[1],
                 &min_gbx, &max_gbx, &min_gby, &max_gby);

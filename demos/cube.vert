@@ -18,4 +18,5 @@ void main()
 
    // GL->VK conventions
    gl_Position.y = -gl_Position.y;
+   gl_Position.z = (gl_Position.z + gl_Position.w) / 2.0;
 }

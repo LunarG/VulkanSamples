@@ -193,8 +193,6 @@ struct intel_pipeline {
     /* Depth Buffer format */
     VkFormat db_format;
 
-    bool depth_zero_to_one;
-
     VkPipelineCbStateCreateInfo cb_state;
 
     // VkPipelineRsStateCreateInfo rs_state;

@@ -809,20 +809,6 @@ static void pipeline_build_vertex_elements(struct intel_pipeline *pipeline,
     }
 }
 
-static void pipeline_build_viewport(struct intel_pipeline *pipeline,
-                                    const struct intel_pipeline_create_info *info)
-{
-    switch (info->vp.depthMode) {
-    case VK_DEPTH_MODE_ZERO_TO_ONE:
-        pipeline->depth_zero_to_one = true;
-        break;
-    case VK_DEPTH_MODE_NEGATIVE_ONE_TO_ONE:
-    default:
-        pipeline->depth_zero_to_one = false;
-        break;
-    }
-}
-
 static void pipeline_build_fragment_SBE(struct intel_pipeline *pipeline,
                                         const struct intel_pipeline_create_info *info)
 {
@@ -1184,12 +1170,16 @@ static VkResult pipeline_build_all(struct intel_pipeline *pipeline,
         return VK_ERROR_INVALID_VALUE;
     }
 
+    if (info->vp.depthMode != VK_DEPTH_MODE_ZERO_TO_ONE) {
+        assert(!"only VK_DEPTH_MODE_ZERO_TO_ONE is supported");
+        return VK_ERROR_INVALID_VALUE;
+    }
+
     pipeline->vb_count = info->vi.bindingCount;
     memcpy(pipeline->vb, info->vi.pVertexBindingDescriptions,
             sizeof(pipeline->vb[0]) * pipeline->vb_count);
 
     pipeline_build_vertex_elements(pipeline, info);
-    pipeline_build_viewport(pipeline, info);
     pipeline_build_fragment_SBE(pipeline, info);
     pipeline_build_msaa(pipeline, info);
     pipeline_build_depth_stencil(pipeline, info);

@@ -775,8 +775,8 @@ static void demo_prepare_vertices(struct demo *demo)
 {
     const float vb[3][5] = {
         /*      position             texcoord */
-        { -1.0f, -1.0f, -0.6f,      0.0f, 0.0f },
-        {  1.0f, -1.0f, -0.5f,      1.0f, 0.0f },
+        { -1.0f, -1.0f,  0.2f,      0.0f, 0.0f },
+        {  1.0f, -1.0f,  0.25f,     1.0f, 0.0f },
         {  0.0f,  1.0f,  1.0f,      0.5f, 1.0f },
     };
     const VkBufferCreateInfo buf_info = {
@@ -993,6 +993,7 @@ static void demo_prepare_pipeline(struct demo *demo)
     rs.fillMode = VK_FILL_MODE_SOLID;
     rs.cullMode = VK_CULL_MODE_BACK;
     rs.frontFace = VK_FRONT_FACE_CW;
+    rs.depthClipEnable = VK_TRUE;
 
     memset(&cb, 0, sizeof(cb));
     cb.sType = VK_STRUCTURE_TYPE_PIPELINE_CB_STATE_CREATE_INFO;
