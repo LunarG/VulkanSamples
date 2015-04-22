@@ -172,6 +172,37 @@ TEST_F(VkLayerTest, ResetUnsignaledFence)
 
 }
 
+TEST_F(VkLayerTest, WaitForUnsubmittedFence)
+{
+    vk_testing::Fence testFence;
+    VK_DBG_MSG_TYPE msgType;
+    std::string msgString;
+    VkFenceCreateInfo fenceInfo = {};
+    fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+    fenceInfo.pNext = NULL;
+
+    // Verifiy that the appropriate layer is loaded
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+    testFence.init(*m_device, fenceInfo);
+    m_errorMonitor->ClearState();
+    vkGetFenceStatus(m_device->device(),testFence.obj());
+    msgType = m_errorMonitor->GetState(&msgString);
+    ASSERT_EQ(msgType, VK_DBG_MSG_ERROR) << "Did not receive an error asking for status of unsubmitted fence";
+    if (!strstr(msgString.c_str(),"Status Requested for Unsubmitted Fence")) {
+        FAIL() << "Error received was not Status Requested for Unsubmitted Fence";
+    }
+
+    VkFence fences[1] = {testFence.obj()};
+    m_errorMonitor->ClearState();
+    vkWaitForFences(m_device->device(), 1, fences, VK_TRUE, 0);
+    msgType = m_errorMonitor->GetState(&msgString);
+    ASSERT_EQ(msgType, VK_DBG_MSG_ERROR) << "Did not receive an error for waiting for unsubmitted fence";
+    if (!strstr(msgString.c_str(),"Waiting for Unsubmitted Fence")) {
+        FAIL() << "Error received was not Waiting for Unsubmitted Fence";
+    }
+}
+
 int main(int argc, char **argv) {
     int result;
 

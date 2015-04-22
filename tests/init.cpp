@@ -286,46 +286,6 @@ TEST_F(XglTest, Event) {
     ASSERT_VK_SUCCESS(err);
 }
 
-TEST_F(XglTest, Fence) {
-    VkResult err;
-    VkFenceCreateInfo fence_info;
-    VkFence fence;
-
-    memset(&fence_info, 0, sizeof(fence_info));
-
-    //            typedef struct VkFenceCreateInfo_
-    //            {
-    //                VkStructureType                      sType;      // Must be VK_STRUCTURE_TYPE_FENCE_CREATE_INFO
-    //                const void*                             pNext;      // Pointer to next structure
-    //                VkFlags                               flags;      // Reserved
-    fence_info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-
-    err = vkCreateFence(device(), &fence_info, &fence);
-    ASSERT_VK_SUCCESS(err);
-
-    err = vkGetFenceStatus(device(), fence);
-    // We've not submitted this fence on a command buffer so should get
-    // VK_ERROR_UNAVAILABLE
-    EXPECT_EQ(VK_ERROR_UNAVAILABLE, err);
-
-    // Test glxWaitForFences
-    //        VkResult VKAPI vkWaitForFences(
-    //            VkDevice                                  device,
-    //            uint32_t                                    fenceCount,
-    //            const VkFence*                            pFences,
-    //            bool32_t                                    waitAll,
-    //            uint64_t                                    timeout);
-    err = vkWaitForFences(device(), 1, &fence, VK_TRUE, 0);
-    EXPECT_EQ(VK_ERROR_UNAVAILABLE, err);
-
-    // TODO: Attached to command buffer and test GetFenceStatus
-    // TODO: Add some commands and submit the command buffer
-
-    err = vkDestroyObject(device(), VK_OBJECT_TYPE_FENCE, fence);
-    ASSERT_VK_SUCCESS(err);
-
-}
-
 #define MAX_QUERY_SLOTS 10
 
 TEST_F(XglTest, Query) {
