@@ -991,8 +991,8 @@ static void demo_prepare_pipeline(struct demo *demo)
     memset(&rs, 0, sizeof(rs));
     rs.sType = VK_STRUCTURE_TYPE_PIPELINE_RS_STATE_CREATE_INFO;
     rs.fillMode = VK_FILL_MODE_SOLID;
-    rs.cullMode = VK_CULL_MODE_NONE;
-    rs.frontFace = VK_FRONT_FACE_CCW;
+    rs.cullMode = VK_CULL_MODE_BACK;
+    rs.frontFace = VK_FRONT_FACE_CW;
 
     memset(&cb, 0, sizeof(cb));
     cb.sType = VK_STRUCTURE_TYPE_PIPELINE_CB_STATE_CREATE_INFO;
