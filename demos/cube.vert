@@ -15,4 +15,7 @@ void main()
 {
    texcoord = ubuf.attr[gl_VertexID];
    gl_Position = ubuf.MVP * ubuf.position[gl_VertexID];
+
+   // GL->VK conventions
+   gl_Position.y = -gl_Position.y;
 }

@@ -130,111 +130,91 @@ struct VertexPosTex
 #define UV(_u_, _v_)                (_u_), (_v_), 0.f, 1.f
 
 static const float g_vertex_buffer_data[] = {
-    -1.0f,-1.0f,-1.0f,  // Vertex 0
+    -1.0f,-1.0f,-1.0f,  // -X side
     -1.0f,-1.0f, 1.0f,
     -1.0f, 1.0f, 1.0f,
-
-    -1.0f, 1.0f, 1.0f,  // Vertex 1
+    -1.0f, 1.0f, 1.0f,
     -1.0f, 1.0f,-1.0f,
     -1.0f,-1.0f,-1.0f,
 
-    -1.0f,-1.0f,-1.0f,  // Vertex 2
+    -1.0f,-1.0f,-1.0f,  // -Z side
      1.0f, 1.0f,-1.0f,
      1.0f,-1.0f,-1.0f,
-
-    -1.0f,-1.0f,-1.0f,  // Vertex 3
+    -1.0f,-1.0f,-1.0f,
     -1.0f, 1.0f,-1.0f,
      1.0f, 1.0f,-1.0f,
 
-    -1.0f,-1.0f,-1.0f,  // Vertex 4
+    -1.0f,-1.0f,-1.0f,  // -Y side
      1.0f,-1.0f,-1.0f,
      1.0f,-1.0f, 1.0f,
-
-    -1.0f,-1.0f,-1.0f,  // Vertex 5
+    -1.0f,-1.0f,-1.0f,
      1.0f,-1.0f, 1.0f,
     -1.0f,-1.0f, 1.0f,
 
-    -1.0f, 1.0f,-1.0f,  // Vertex 6
+    -1.0f, 1.0f,-1.0f,  // +Y side
     -1.0f, 1.0f, 1.0f,
      1.0f, 1.0f, 1.0f,
-
-    -1.0f, 1.0f,-1.0f,  // Vertex 7
+    -1.0f, 1.0f,-1.0f,
      1.0f, 1.0f, 1.0f,
      1.0f, 1.0f,-1.0f,
 
-     1.0f, 1.0f,-1.0f,  // Vertex 8
+     1.0f, 1.0f,-1.0f,  // +X side
      1.0f, 1.0f, 1.0f,
      1.0f,-1.0f, 1.0f,
-
-     1.0f,-1.0f, 1.0f,  // Vertex 9
+     1.0f,-1.0f, 1.0f,
      1.0f,-1.0f,-1.0f,
      1.0f, 1.0f,-1.0f,
 
-    -1.0f, 1.0f, 1.0f,  // Vertex 10
+    -1.0f, 1.0f, 1.0f,  // +Z side
     -1.0f,-1.0f, 1.0f,
      1.0f, 1.0f, 1.0f,
-
-    -1.0f,-1.0f, 1.0f,  // Vertex 11
+    -1.0f,-1.0f, 1.0f,
      1.0f,-1.0f, 1.0f,
      1.0f, 1.0f, 1.0f,
 };
 
 static const float g_uv_buffer_data[] = {
-    1.0f, 0.0f,  // Vertex 0
+    0.0f, 0.0f,  // -X side
+    1.0f, 0.0f,
+    1.0f, 1.0f,
+    1.0f, 1.0f,
+    0.0f, 1.0f,
+    0.0f, 0.0f,
+
+    1.0f, 0.0f,  // -Z side
+    0.0f, 1.0f,
+    0.0f, 0.0f,
+    1.0f, 0.0f,
+    1.0f, 1.0f,
+    0.0f, 1.0f,
+
+    1.0f, 1.0f,  // -Y side
+    1.0f, 0.0f,
+    0.0f, 0.0f,
+    1.0f, 1.0f,
     0.0f, 0.0f,
     0.0f, 1.0f,
 
-    0.0f, 1.0f,  // Vertex 1
-    1.0f, 1.0f,
-    1.0f, 0.0f,
-
-//    0.0f, 1.0f,  // Vertex 2
-//    1.0f, 0.0f,
-//    0.0f, 0.0f,
-
-//    0.0f, 1.0f,  // Vertex 3
-//    1.0f, 0.0f,
-//    1.0f, 1.0f,
-
-    0.0f, 0.0f,  // Vertex 2
-    1.0f, 1.0f,
-    1.0f, 0.0f,
-
-    0.0f, 0.0f,  // Vertex 3
+    1.0f, 1.0f,  // +Y side
     0.0f, 1.0f,
+    0.0f, 0.0f,
     1.0f, 1.0f,
-
-    0.0f, 1.0f,  // Vertex 4
     0.0f, 0.0f,
     1.0f, 0.0f,
 
-    0.0f, 1.0f,  // Vertex 5
+    1.0f, 1.0f,  // +X side
+    0.0f, 1.0f,
+    0.0f, 0.0f,
+    0.0f, 0.0f,
     1.0f, 0.0f,
     1.0f, 1.0f,
 
-    0.0f, 1.0f,  // Vertex 6
+    0.0f, 1.0f,  // +Z side
+    0.0f, 0.0f,
     1.0f, 1.0f,
-    1.0f, 0.0f,
-
-    0.0f, 1.0f,  // Vertex 7
-    1.0f, 0.0f,
     0.0f, 0.0f,
-
-    0.0f, 1.0f,  // Vertex 8
+    1.0f, 0.0f,
     1.0f, 1.0f,
-    1.0f, 0.0f,
-
-    1.0f, 0.0f,  // Vertex 9
-    0.0f, 0.0f,
-    0.0f, 1.0f,
-
-    1.0f, 1.0f,  // Vertex 10
-    1.0f, 0.0f,
-    0.0f, 1.0f,
-
-    1.0f, 0.0f,  // Vertex 11
-    0.0f, 0.0f,
-    0.0f, 1.0f,
 };
 
 void dumpMatrix(const char *note, mat4x4 MVP)
@@ -1379,6 +1359,9 @@ static VkShader demo_prepare_vs(struct demo *demo)
             "{\n"
             "   texcoord = ubuf.attr[gl_VertexID];\n"
             "   gl_Position = ubuf.MVP * ubuf.position[gl_VertexID];\n"
+            "\n"
+            "   // GL->VK conventions\n"
+            "   gl_Position.y = -gl_Position.y;\n"
             "}\n";
 
     return demo_prepare_shader(demo, VK_SHADER_STAGE_VERTEX,
@@ -1455,7 +1438,6 @@ static void demo_prepare_pipeline(struct demo *demo)
     memset(&vp, 0, sizeof(vp));
     vp.sType = VK_STRUCTURE_TYPE_PIPELINE_VP_STATE_CREATE_INFO;
     vp.viewportCount = 1;
-    vp.clipOrigin = VK_COORDINATE_ORIGIN_LOWER_LEFT;
 
     memset(&ds, 0, sizeof(ds));
     ds.sType = VK_STRUCTURE_TYPE_PIPELINE_DS_STATE_CREATE_INFO;
@@ -2035,7 +2017,7 @@ static void demo_init(struct demo *demo, int argc, char **argv)
 {
     vec3 eye = {0.0f, 3.0f, 5.0f};
     vec3 origin = {0, 0, 0};
-    vec3 up = {0.0f, -1.0f, 0.0};
+    vec3 up = {0.0f, 1.0f, 0.0};
 
     memset(demo, 0, sizeof(*demo));
 
