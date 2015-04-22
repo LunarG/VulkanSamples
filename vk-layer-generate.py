@@ -1132,6 +1132,11 @@ class ObjectTrackerSubcommand(Subcommand):
         elif 'GetFenceStatus' in proto.name:
             using_line += '    // Warn if submitted_flag is not set\n'
             using_line += '    validate_status(fence, VkObjectTypeFence, OBJSTATUS_FENCE_IS_SUBMITTED, OBJSTATUS_FENCE_IS_SUBMITTED, VK_DBG_MSG_ERROR, OBJTRACK_INVALID_FENCE, "Status Requested for Unsubmitted Fence");\n'
+        elif 'WaitForFences' in proto.name:
+            using_line += '    // Warn if waiting on unsubmitted fence\n'
+            using_line += '    for (uint32_t i = 0; i < fenceCount; i++) {\n'
+            using_line += '        validate_status(pFences[i], VkObjectTypeFence, OBJSTATUS_FENCE_IS_SUBMITTED, OBJSTATUS_FENCE_IS_SUBMITTED, VK_DBG_MSG_ERROR, OBJTRACK_INVALID_FENCE, "Waiting for Unsubmitted Fence");\n'
+            using_line += '    }\n'
         elif 'EndCommandBuffer' in proto.name:
             using_line += '    reset_status(cmdBuffer, VkObjectTypeCmdBuffer, (OBJSTATUS_VIEWPORT_BOUND    |\n'
             using_line += '                                                                OBJSTATUS_RASTER_BOUND      |\n'
