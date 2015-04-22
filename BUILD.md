@@ -176,7 +176,7 @@ To run VK programs you must have an appropriate ICD (installable client driver) 
 
 - Registry:
   - Root Key: HKEY_LOCAL_MACHINE
-  - Key: "SOFTWARE\VK"
+  - Key: "SOFTWARE\Vulcan"
   - Value: "VK_DRIVERS_PATH" (semi-colon-delimited set of folders to look for ICDs)
 - Environment Variable: "VK_DRIVERS_PATH" (semi-colon-delimited set of folders to look for ICDs)
 
@@ -199,7 +199,7 @@ where to find the layer libraries, and which ones you desire to use.  The defaul
 
 - Registry:
   - Root Key: HKEY_LOCAL_MACHINE
-  - Key: "System\VK"
+  - Key: "SOFTWARE\Vulcan"
   - Value: "VK_LAYERS_PATH" (semi-colon-delimited set of folders to look for layers)
   - Value: "VK_LAYER_NAMES" (semi-colon-delimited list of layer names)
 - Environment Variables:
