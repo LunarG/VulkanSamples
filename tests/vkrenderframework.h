@@ -242,7 +242,8 @@ public:
 public:
     void init(uint32_t w, uint32_t h,
               VkFormat fmt, VkFlags usage,
-              VkImageTiling tiling=VK_IMAGE_TILING_LINEAR);
+              VkImageTiling tiling=VK_IMAGE_TILING_LINEAR,
+              VkMemoryPropertyFlags reqs=0);
 
     //    void clear( CommandBuffer*, uint32_t[4] );
 

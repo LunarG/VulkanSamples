@@ -522,7 +522,8 @@ bool VkImageObj::IsCompatible(VkFlags usage, VkFlags features)
 
 void VkImageObj::init(uint32_t w, uint32_t h,
                       VkFormat fmt, VkFlags usage,
-                      VkImageTiling requested_tiling)
+                      VkImageTiling requested_tiling,
+                      VkMemoryPropertyFlags reqs)
 {
     uint32_t mipCount;
     VkFormatProperties image_fmt;
@@ -573,7 +574,7 @@ void VkImageObj::init(uint32_t w, uint32_t h,
 
     imageCreateInfo.usage = usage;
 
-    vk_testing::Image::init(*m_device, imageCreateInfo);
+    vk_testing::Image::init(*m_device, imageCreateInfo, reqs);
 
     if (usage & VK_IMAGE_USAGE_SAMPLED_BIT) {
         SetLayout(VK_IMAGE_ASPECT_COLOR, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
@@ -654,8 +655,9 @@ VkTextureObj::VkTextureObj(VkDeviceObj *device, uint32_t *colors)
     void *data;
     int32_t x, y;
     VkImageObj stagingImage(device);
+    VkMemoryPropertyFlags reqs = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
 
-    stagingImage.init(16, 16, tex_format, 0, VK_IMAGE_TILING_LINEAR);
+    stagingImage.init(16, 16, tex_format, 0, VK_IMAGE_TILING_LINEAR, reqs);
     VkSubresourceLayout layout = stagingImage.subresource_layout(subresource(VK_IMAGE_ASPECT_COLOR, 0, 0));
 
     if (colors == NULL)
@@ -752,8 +754,9 @@ VkConstantBufferObj::VkConstantBufferObj(VkDeviceObj *device, int constantCount,
     m_numVertices = constantCount;
     m_stride = constantSize;
 
+    VkMemoryPropertyFlags reqs = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
     const size_t allocationSize = constantCount * constantSize;
-    init(*m_device, allocationSize);
+    init(*m_device, allocationSize, reqs);
 
     void *pData = map();
     memcpy(pData, data, allocationSize);
@@ -879,7 +882,8 @@ void VkIndexBufferObj::CreateAndInitBuffer(int numIndexes, VkIndexType indexType
     }
 
     const size_t allocationSize = numIndexes * m_stride;
-    init(*m_device, allocationSize);
+    VkMemoryPropertyFlags reqs = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
+    init(*m_device, allocationSize, reqs);
 
     void *pData = map();
     memcpy(pData, data, allocationSize);

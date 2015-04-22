@@ -222,8 +222,9 @@ void VkTestFramework::WritePPM( const char *basename, VkImageObj *image )
     VkResult err;
     int x, y;
     VkImageObj displayImage(image->device());
+    VkMemoryPropertyFlags reqs = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
 
-    displayImage.init(image->extent().width, image->extent().height, image->format(), 0, VK_IMAGE_TILING_LINEAR);
+    displayImage.init(image->extent().width, image->extent().height, image->format(), 0, VK_IMAGE_TILING_LINEAR, reqs);
     displayImage.CopyImage(*image);
 
     filename.append(basename);

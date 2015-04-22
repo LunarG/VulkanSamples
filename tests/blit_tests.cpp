@@ -549,8 +549,9 @@ typedef VkCmdBlitTest VkCmdFillBufferTest;
 TEST_F(VkCmdFillBufferTest, Basic)
 {
     vk_testing::Buffer buf;
+    VkMemoryPropertyFlags reqs = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
 
-    buf.init(dev_, 20);
+    buf.init(dev_, 20, reqs);
     add_memory_ref(buf);
 
     cmd_.begin();
@@ -573,8 +574,9 @@ TEST_F(VkCmdFillBufferTest, Large)
 {
     const VkDeviceSize size = 32 * 1024 * 1024;
     vk_testing::Buffer buf;
+    VkMemoryPropertyFlags reqs = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
 
-    buf.init(dev_, size);
+    buf.init(dev_, size, reqs);
     add_memory_ref(buf);
 
     cmd_.begin();
@@ -596,8 +598,9 @@ TEST_F(VkCmdFillBufferTest, Large)
 TEST_F(VkCmdFillBufferTest, Overlap)
 {
     vk_testing::Buffer buf;
+    VkMemoryPropertyFlags reqs = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
 
-    buf.init(dev_, 64);
+    buf.init(dev_, 64, reqs);
     add_memory_ref(buf);
 
     cmd_.begin();
@@ -620,10 +623,11 @@ TEST_F(VkCmdFillBufferTest, MultiAlignments)
 {
     vk_testing::Buffer bufs[9];
     VkDeviceSize size = 4;
+    VkMemoryPropertyFlags reqs = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
 
     cmd_.begin();
     for (int i = 0; i < ARRAY_SIZE(bufs); i++) {
-        bufs[i].init(dev_, size);
+        bufs[i].init(dev_, size, reqs);
         add_memory_ref(bufs[i]);
         vkCmdFillBuffer(cmd_.obj(), bufs[i].obj(), 0, size, 0x11111111);
         size <<= 1;
@@ -650,14 +654,15 @@ typedef VkCmdBlitTest VkCmdCopyBufferTest;
 TEST_F(VkCmdCopyBufferTest, Basic)
 {
     vk_testing::Buffer src, dst;
+    VkMemoryPropertyFlags reqs = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
 
-    src.init(dev_, 4);
+    src.init(dev_, 4, reqs);
     uint32_t *data = static_cast<uint32_t *>(src.map());
     data[0] = 0x11111111;
     src.unmap();
     add_memory_ref(src);
 
-    dst.init(dev_, 4);
+    dst.init(dev_, 4, reqs);
     add_memory_ref(dst);
 
     cmd_.begin();
@@ -677,8 +682,9 @@ TEST_F(VkCmdCopyBufferTest, Large)
 {
     const VkDeviceSize size = 32 * 1024 * 1024;
     vk_testing::Buffer src, dst;
+    VkMemoryPropertyFlags reqs = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
 
-    src.init(dev_, size);
+    src.init(dev_, size, reqs);
     uint32_t *data = static_cast<uint32_t *>(src.map());
     VkDeviceSize offset;
     for (offset = 0; offset < size; offset += 4)
@@ -686,7 +692,7 @@ TEST_F(VkCmdCopyBufferTest, Large)
     src.unmap();
     add_memory_ref(src);
 
-    dst.init(dev_, size);
+    dst.init(dev_, size, reqs);
     add_memory_ref(dst);
 
     cmd_.begin();
@@ -722,15 +728,16 @@ TEST_F(VkCmdCopyBufferTest, MultiAlignments)
         { 50, 590,    1 },
     };
     vk_testing::Buffer src, dst;
+    VkMemoryPropertyFlags reqs = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
 
-    src.init(dev_, 256);
+    src.init(dev_, 256, reqs);
     uint8_t *data = static_cast<uint8_t *>(src.map());
     for (int i = 0; i < 256; i++)
         data[i] = i;
     src.unmap();
     add_memory_ref(src);
 
-    dst.init(dev_, 1024);
+    dst.init(dev_, 1024, reqs);
     add_memory_ref(dst);
 
     cmd_.begin();
@@ -760,6 +767,7 @@ TEST_F(VkCmdCopyBufferTest, RAWHazard)
     VkMemoryRequirements mem_req;
     size_t data_size = sizeof(mem_req);
     VkResult err;
+    VkMemoryPropertyFlags reqs = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
 
     //        typedef struct VkEventCreateInfo_
     //        {
@@ -801,7 +809,7 @@ TEST_F(VkCmdCopyBufferTest, RAWHazard)
     ASSERT_VK_SUCCESS(err);
 
     for (int i = 0; i < ARRAY_SIZE(bufs); i++) {
-        bufs[i].init(dev_, 4);
+        bufs[i].init(dev_, 4, reqs);
         add_memory_ref(bufs[i]);
 
         uint32_t *data = static_cast<uint32_t *>(bufs[i].map());
@@ -899,7 +907,9 @@ protected:
         ASSERT_EQ(true, img.copyable());
 
         vk_testing::Buffer in_buf;
-        in_buf.init(dev_, checker.buffer_size());
+        VkMemoryPropertyFlags reqs = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
+
+        in_buf.init(dev_, checker.buffer_size(), reqs);
         checker.fill(in_buf);
 
         add_memory_ref(in_buf);
@@ -925,7 +935,8 @@ protected:
         ASSERT_EQ(true, img.copyable());
 
         vk_testing::Buffer out_buf;
-        out_buf.init(dev_, checker.buffer_size());
+        VkMemoryPropertyFlags reqs = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
+        out_buf.init(dev_, checker.buffer_size(), reqs);
 
         add_memory_ref(img);
         add_memory_ref(out_buf);
@@ -961,12 +972,13 @@ protected:
     {
         vk_testing::Buffer buf;
         vk_testing::Image img;
+        VkMemoryPropertyFlags reqs = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
 
-        buf.init(dev_, checker.buffer_size());
+        buf.init(dev_, checker.buffer_size(), reqs);
         checker.fill(buf);
         add_memory_ref(buf);
 
-        img.init(dev_, img_info);
+        img.init(dev_, img_info, reqs);
         add_memory_ref(img);
 
         cmd_.begin();
@@ -1029,12 +1041,13 @@ protected:
     {
         vk_testing::Image img;
         vk_testing::Buffer buf;
+        VkMemoryPropertyFlags reqs = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
 
-        img.init(dev_, img_info);
+        img.init(dev_, img_info, reqs);
         fill_src(img, checker);
         add_memory_ref(img);
 
-        buf.init(dev_, checker.buffer_size());
+        buf.init(dev_, checker.buffer_size(), reqs);
         add_memory_ref(buf);
 
         cmd_.begin();
@@ -1121,14 +1134,15 @@ protected:
 
         vk_testing::ImageChecker src_checker(src_info, src_regions);
         vk_testing::ImageChecker dst_checker(dst_info, dst_regions);
+        VkMemoryPropertyFlags reqs = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
 
         vk_testing::Image src;
-        src.init(dev_, src_info);
+        src.init(dev_, src_info, reqs);
         fill_src(src, src_checker);
         add_memory_ref(src);
 
         vk_testing::Image dst;
-        dst.init(dev_, dst_info);
+        dst.init(dev_, dst_info, reqs);
         add_memory_ref(dst);
 
         cmd_.begin();
@@ -1184,13 +1198,14 @@ protected:
     {
         vk_testing::ImageChecker checker(img_info);
         vk_testing::Image src, dst;
+        VkMemoryPropertyFlags reqs = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
 
-        src.init(dev_, img_info);
+        src.init(dev_, img_info, reqs);
         if (src.transparent() || src.copyable())
             fill_src(src, checker);
         add_memory_ref(src);
 
-        dst.init(dev_, img_info);
+        dst.init(dev_, img_info, reqs);
         add_memory_ref(dst);
 
         const VkImageLayout layout = VK_IMAGE_LAYOUT_GENERAL;
@@ -1330,7 +1345,9 @@ protected:
                                 const std::vector<VkImageSubresourceRange> &ranges)
     {
         vk_testing::Image img;
-        img.init(dev_, img_info);
+        VkMemoryPropertyFlags reqs = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
+
+        img.init(dev_, img_info, reqs);
         add_memory_ref(img);
         const VkFlags all_cache_outputs =
                 VK_MEMORY_OUTPUT_CPU_WRITE_BIT |
@@ -1547,7 +1564,9 @@ protected:
                                   const std::vector<VkImageSubresourceRange> &ranges)
     {
         vk_testing::Image img;
-        img.init(dev_, img_info);
+        VkMemoryPropertyFlags reqs = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
+
+        img.init(dev_, img_info, reqs);
         add_memory_ref(img);
         const VkFlags all_cache_outputs =
                 VK_MEMORY_OUTPUT_CPU_WRITE_BIT |

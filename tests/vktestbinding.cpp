@@ -296,6 +296,25 @@ void Object::alloc_memory()
     }
 }
 
+void Object::alloc_memory(VkMemoryPropertyFlags &reqs)
+{
+    if (!EXPECT(!internal_mems_) || !mem_alloc_count_)
+        return;
+
+    internal_mems_ = new GpuMemory[mem_alloc_count_];
+
+    std::vector<VkMemoryRequirements> mem_reqs = memory_requirements();
+    VkMemoryAllocInfo info, *next_info = NULL;
+
+    for (int i = 0; i < mem_reqs.size(); i++) {
+        mem_reqs[i].memPropsRequired |= reqs;
+        info = GpuMemory::alloc_info(mem_reqs[i], next_info);
+        primary_mem_ = &internal_mems_[i];
+        internal_mems_[i].init(*dev_, info);
+        bind_memory(i, internal_mems_[i], 0);
+    }
+}
+
 void Object::alloc_memory(const std::vector<VkDeviceMemory> &mems)
 {
     if (!EXPECT(!internal_mems_) || !mem_alloc_count_)
@@ -654,6 +673,12 @@ void Buffer::init(const Device &dev, const VkBufferCreateInfo &info)
     alloc_memory();
 }
 
+void Buffer::init(const Device &dev, const VkBufferCreateInfo &info, VkMemoryPropertyFlags &reqs)
+{
+    init_no_mem(dev, info);
+    alloc_memory(reqs);
+}
+
 void Buffer::init_no_mem(const Device &dev, const VkBufferCreateInfo &info)
 {
     DERIVED_OBJECT_TYPE_INIT(vkCreateBuffer, dev, VK_OBJECT_TYPE_BUFFER, &info);
@@ -670,6 +695,12 @@ void Image::init(const Device &dev, const VkImageCreateInfo &info)
 {
     init_no_mem(dev, info);
     alloc_memory();
+}
+
+void Image::init(const Device &dev, const VkImageCreateInfo &info, VkMemoryPropertyFlags &reqs)
+{
+    init_no_mem(dev, info);
+    alloc_memory(reqs);
 }
 
 void Image::init_no_mem(const Device &dev, const VkImageCreateInfo &info)

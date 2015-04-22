@@ -170,6 +170,7 @@ protected:
 
     // allocate and bind internal memories
     void alloc_memory();
+    void alloc_memory(VkMemoryPropertyFlags &reqs);
     void alloc_memory(const std::vector<VkDeviceMemory> &mems);
 
 private:
@@ -377,6 +378,8 @@ public:
     // vkCreateBuffer()
     void init(const Device &dev, const VkBufferCreateInfo &info);
     void init(const Device &dev, VkDeviceSize size) { init(dev, create_info(size, 0)); }
+    void init(const Device &dev, VkDeviceSize size, VkMemoryPropertyFlags &reqs) { init(dev, create_info(size, 0), reqs); }
+    void init(const Device &dev, const VkBufferCreateInfo &info, VkMemoryPropertyFlags &reqs);
     void init_no_mem(const Device &dev, const VkBufferCreateInfo &info);
 
     static VkBufferCreateInfo create_info(VkDeviceSize size, VkFlags usage);
@@ -410,6 +413,7 @@ public:
 
     // vkCreateImage()
     void init(const Device &dev, const VkImageCreateInfo &info);
+    void init(const Device &dev, const VkImageCreateInfo &info, VkMemoryPropertyFlags &reqs);
     void init_no_mem(const Device &dev, const VkImageCreateInfo &info);
     // vkOpenPeerImage()
     void init(const Device &dev, const VkPeerImageOpenInfo &info, const VkImageCreateInfo &original_info);
