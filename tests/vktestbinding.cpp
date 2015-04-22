@@ -236,7 +236,7 @@ void Object::cleanup()
         return;
 
     if(bound) {
-       unbind_memory(*dev_);
+       unbind_memory();
     }
 
     if (internal_mems_) {
@@ -251,34 +251,40 @@ void Object::cleanup()
         EXPECT(vkDestroyObject(dev_->obj(), type(), obj()) == VK_SUCCESS);
 }
 
-void Object::bind_memory(const Device &dev, uint32_t alloc_idx, const GpuMemory &mem, VkDeviceSize mem_offset)
+//void Object::bind_memory(const Device &dev, uint32_t alloc_idx, const GpuMemory &mem, VkDeviceSize mem_offset)
+void Object::bind_memory(uint32_t alloc_idx, const GpuMemory &mem, VkDeviceSize mem_offset)
 {
     bound = true;
-    VkQueue queue = dev.graphics_queues()[0]->obj();
+    VkQueue queue = dev_->graphics_queues()[0]->obj();
     EXPECT(vkQueueBindObjectMemory(queue, type(), obj(), alloc_idx, mem.obj(), mem_offset) == VK_SUCCESS);
 }
 
-void Object::bind_memory(const Device &dev, uint32_t alloc_idx, VkDeviceSize offset, VkDeviceSize size,
+//void Object::bind_memory(const Device &dev, uint32_t alloc_idx, VkDeviceSize offset, VkDeviceSize size,
+//                         const GpuMemory &mem, VkDeviceSize mem_offset)
+void Object::bind_memory(uint32_t alloc_idx, VkDeviceSize offset, VkDeviceSize size,
                          const GpuMemory &mem, VkDeviceSize mem_offset)
 {
     bound = true;
-    VkQueue queue = dev.graphics_queues()[0]->obj();
+    VkQueue queue = dev_->graphics_queues()[0]->obj();
     EXPECT(!alloc_idx && vkQueueBindObjectMemoryRange(queue, type(), obj(), 0, offset, size, mem.obj(), mem_offset) == VK_SUCCESS);
 }
 
-void Object::unbind_memory(const Device &dev, uint32_t alloc_idx)
+//void Object::unbind_memory(const Device &dev, uint32_t alloc_idx)
+void Object::unbind_memory(uint32_t alloc_idx)
 {
-    VkQueue queue = dev.graphics_queues()[0]->obj();
+    VkQueue queue = dev_->graphics_queues()[0]->obj();
     EXPECT(vkQueueBindObjectMemory(queue, type(), obj(), alloc_idx, VK_NULL_HANDLE, 0) == VK_SUCCESS);
 }
 
-void Object::unbind_memory(const Device &dev)
+//void Object::unbind_memory(const Device &dev)
+void Object::unbind_memory()
 {
     for (uint32_t i = 0; i < mem_alloc_count_; i++)
-        unbind_memory(dev, i);
+        unbind_memory(i);
 }
 
-void Object::alloc_memory(const Device &dev)
+//void Object::alloc_memory(const Device &dev)
+void Object::alloc_memory()
 {
     if (!EXPECT(!internal_mems_) || !mem_alloc_count_)
         return;
@@ -291,12 +297,13 @@ void Object::alloc_memory(const Device &dev)
     for (int i = 0; i < mem_reqs.size(); i++) {
         info = GpuMemory::alloc_info(mem_reqs[i], next_info);
         primary_mem_ = &internal_mems_[i];
-        internal_mems_[i].init(dev, info);
-        bind_memory(dev, i, internal_mems_[i], 0);
+        internal_mems_[i].init(*dev_, info);
+        bind_memory(i, internal_mems_[i], 0);
     }
 }
 
-void Object::alloc_memory(const Device &dev, const std::vector<VkDeviceMemory> &mems)
+//void Object::alloc_memory(const Device &dev, const std::vector<VkDeviceMemory> &mems)
+void Object::alloc_memory(const std::vector<VkDeviceMemory> &mems)
 {
     if (!EXPECT(!internal_mems_) || !mem_alloc_count_)
         return;
@@ -310,8 +317,8 @@ void Object::alloc_memory(const Device &dev, const std::vector<VkDeviceMemory> &
     for (int i = 0; i < mem_reqs.size(); i++) {
         primary_mem_ = &internal_mems_[i];
 
-        internal_mems_[i].init(dev, mems[i]);
-        bind_memory(dev, i, internal_mems_[i], 0);
+        internal_mems_[i].init(*dev_, mems[i]);
+        bind_memory(i, internal_mems_[i], 0);
     }
 }
 
@@ -598,13 +605,13 @@ void GpuMemory::unmap() const
 void Fence::init(const Device &dev, const VkFenceCreateInfo &info)
 {
     DERIVED_OBJECT_TYPE_INIT(vkCreateFence, dev, VK_OBJECT_TYPE_FENCE, &info);
-    alloc_memory(dev);
+    alloc_memory();
 }
 
 void Semaphore::init(const Device &dev, const VkSemaphoreCreateInfo &info)
 {
     DERIVED_OBJECT_TYPE_INIT(vkCreateSemaphore, dev, VK_OBJECT_TYPE_SEMAPHORE, &info);
-    alloc_memory(dev);
+    alloc_memory();
 }
 
 void Semaphore::init(const Device &dev, const VkSemaphoreOpenInfo &info)
@@ -615,7 +622,7 @@ void Semaphore::init(const Device &dev, const VkSemaphoreOpenInfo &info)
 void Event::init(const Device &dev, const VkEventCreateInfo &info)
 {
     DERIVED_OBJECT_TYPE_INIT(vkCreateEvent, dev, VK_OBJECT_TYPE_EVENT, &info);
-    alloc_memory(dev);
+    alloc_memory();
 }
 
 void Event::set()
@@ -631,7 +638,7 @@ void Event::reset()
 void QueryPool::init(const Device &dev, const VkQueryPoolCreateInfo &info)
 {
     DERIVED_OBJECT_TYPE_INIT(vkCreateQueryPool, dev, VK_OBJECT_TYPE_QUERY_POOL, &info);
-    alloc_memory(dev);
+    alloc_memory();
 }
 
 VkResult QueryPool::results(uint32_t start, uint32_t count, size_t size, void *data)
@@ -651,7 +658,7 @@ VkResult QueryPool::results(uint32_t start, uint32_t count, size_t size, void *d
 void Buffer::init(const Device &dev, const VkBufferCreateInfo &info)
 {
     init_no_mem(dev, info);
-    alloc_memory(dev);
+    alloc_memory();
 }
 
 void Buffer::init_no_mem(const Device &dev, const VkBufferCreateInfo &info)
@@ -663,13 +670,13 @@ void Buffer::init_no_mem(const Device &dev, const VkBufferCreateInfo &info)
 void BufferView::init(const Device &dev, const VkBufferViewCreateInfo &info)
 {
     DERIVED_OBJECT_TYPE_INIT(vkCreateBufferView, dev, VK_OBJECT_TYPE_BUFFER_VIEW, &info);
-    alloc_memory(dev);
+    alloc_memory();
 }
 
 void Image::init(const Device &dev, const VkImageCreateInfo &info)
 {
     init_no_mem(dev, info);
-    alloc_memory(dev);
+    alloc_memory();
 }
 
 void Image::init_no_mem(const Device &dev, const VkImageCreateInfo &info)
@@ -687,7 +694,7 @@ void Image::init(const Device &dev, const VkPeerImageOpenInfo &info, const VkIma
     Object::init(img, VK_OBJECT_TYPE_IMAGE);
 
     init_info(dev, original_info);
-    alloc_memory(dev, std::vector<VkDeviceMemory>(1, mem));
+    alloc_memory(std::vector<VkDeviceMemory>(1, mem));
 }
 
 void Image::init_info(const Device &dev, const VkImageCreateInfo &info)
@@ -731,19 +738,19 @@ bool Image::transparent() const
 void ImageView::init(const Device &dev, const VkImageViewCreateInfo &info)
 {
     DERIVED_OBJECT_TYPE_INIT(vkCreateImageView, dev, VK_OBJECT_TYPE_IMAGE_VIEW, &info);
-    alloc_memory(dev);
+    alloc_memory();
 }
 
 void ColorAttachmentView::init(const Device &dev, const VkColorAttachmentViewCreateInfo &info)
 {
     DERIVED_OBJECT_TYPE_INIT(vkCreateColorAttachmentView, dev, VK_OBJECT_TYPE_COLOR_ATTACHMENT_VIEW, &info);
-    alloc_memory(dev);
+    alloc_memory();
 }
 
 void DepthStencilView::init(const Device &dev, const VkDepthStencilViewCreateInfo &info)
 {
     DERIVED_OBJECT_TYPE_INIT(vkCreateDepthStencilView, dev, VK_OBJECT_TYPE_DEPTH_STENCIL_VIEW, &info);
-    alloc_memory(dev);
+    alloc_memory();
 }
 
 void Shader::init(const Device &dev, const VkShaderCreateInfo &info)
@@ -769,7 +776,7 @@ VkResult Shader::init_try(const Device &dev, const VkShaderCreateInfo &info)
 void Pipeline::init(const Device &dev, const VkGraphicsPipelineCreateInfo &info)
 {
     DERIVED_OBJECT_TYPE_INIT(vkCreateGraphicsPipeline, dev, VK_OBJECT_TYPE_PIPELINE, &info);
-    alloc_memory(dev);
+    alloc_memory();
 }
 
 void Pipeline::init(
@@ -778,19 +785,19 @@ void Pipeline::init(
         const VkPipeline basePipeline)
 {
     DERIVED_OBJECT_TYPE_INIT(vkCreateGraphicsPipelineDerivative, dev, VK_OBJECT_TYPE_PIPELINE, &info, basePipeline);
-    alloc_memory(dev);
+    alloc_memory();
 }
 
 void Pipeline::init(const Device &dev, const VkComputePipelineCreateInfo &info)
 {
     DERIVED_OBJECT_TYPE_INIT(vkCreateComputePipeline, dev, VK_OBJECT_TYPE_PIPELINE, &info);
-    alloc_memory(dev);
+    alloc_memory();
 }
 
 void Pipeline::init(const Device&dev, size_t size, const void *data)
 {
     DERIVED_OBJECT_TYPE_INIT(vkLoadPipeline, dev, VK_OBJECT_TYPE_PIPELINE, size, data);
-    alloc_memory(dev);
+    alloc_memory();
 }
 
 void Pipeline::init(
@@ -800,7 +807,7 @@ void Pipeline::init(
         const VkPipeline basePipeline)
 {
     DERIVED_OBJECT_TYPE_INIT(vkLoadPipelineDerivative, dev, VK_OBJECT_TYPE_PIPELINE, size, data, basePipeline);
-    alloc_memory(dev);
+    alloc_memory();
 }
 
 size_t Pipeline::store(size_t size, void *data)
@@ -814,13 +821,13 @@ size_t Pipeline::store(size_t size, void *data)
 void Sampler::init(const Device &dev, const VkSamplerCreateInfo &info)
 {
     DERIVED_OBJECT_TYPE_INIT(vkCreateSampler, dev, VK_OBJECT_TYPE_SAMPLER, &info);
-    alloc_memory(dev);
+    alloc_memory();
 }
 
 void DescriptorSetLayout::init(const Device &dev, const VkDescriptorSetLayoutCreateInfo &info)
 {
     DERIVED_OBJECT_TYPE_INIT(vkCreateDescriptorSetLayout, dev, VK_OBJECT_TYPE_DESCRIPTOR_SET_LAYOUT, &info);
-    alloc_memory(dev);
+    alloc_memory();
 }
 
 void PipelineLayout::init(const Device &dev, VkPipelineLayoutCreateInfo &info, const std::vector<const DescriptorSetLayout *> &layouts)
@@ -829,14 +836,14 @@ void PipelineLayout::init(const Device &dev, VkPipelineLayoutCreateInfo &info, c
     info.pSetLayouts = &layout_objs[0];
 
     DERIVED_OBJECT_TYPE_INIT(vkCreatePipelineLayout, dev, VK_OBJECT_TYPE_PIPELINE_LAYOUT, &info);
-    alloc_memory(dev);
+    alloc_memory();
 }
 
 void DescriptorPool::init(const Device &dev, VkDescriptorPoolUsage usage,
                           uint32_t max_sets, const VkDescriptorPoolCreateInfo &info)
 {
     DERIVED_OBJECT_TYPE_INIT(vkCreateDescriptorPool, dev, VK_OBJECT_TYPE_DESCRIPTOR_POOL, usage, max_sets, &info);
-    alloc_memory(dev);
+    alloc_memory();
 }
 
 void DescriptorPool::reset()
@@ -892,25 +899,25 @@ void DescriptorSet::update(const std::vector<const void *> &update_array)
 void DynamicVpStateObject::init(const Device &dev, const VkDynamicVpStateCreateInfo &info)
 {
     DERIVED_OBJECT_TYPE_INIT(vkCreateDynamicViewportState, dev, VK_OBJECT_TYPE_DYNAMIC_VP_STATE, &info);
-    alloc_memory(dev);
+    alloc_memory();
 }
 
 void DynamicRsStateObject::init(const Device &dev, const VkDynamicRsStateCreateInfo &info)
 {
     DERIVED_OBJECT_TYPE_INIT(vkCreateDynamicRasterState, dev, VK_OBJECT_TYPE_DYNAMIC_RS_STATE, &info);
-    alloc_memory(dev);
+    alloc_memory();
 }
 
 void DynamicCbStateObject::init(const Device &dev, const VkDynamicCbStateCreateInfo &info)
 {
     DERIVED_OBJECT_TYPE_INIT(vkCreateDynamicColorBlendState, dev, VK_OBJECT_TYPE_DYNAMIC_CB_STATE, &info);
-    alloc_memory(dev);
+    alloc_memory();
 }
 
 void DynamicDsStateObject::init(const Device &dev, const VkDynamicDsStateCreateInfo &info)
 {
     DERIVED_OBJECT_TYPE_INIT(vkCreateDynamicDepthStencilState, dev, VK_OBJECT_TYPE_DYNAMIC_DS_STATE, &info);
-    alloc_memory(dev);
+    alloc_memory();
 }
 
 void CmdBuffer::init(const Device &dev, const VkCmdBufferCreateInfo &info)

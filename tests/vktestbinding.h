@@ -131,12 +131,12 @@ public:
     std::vector<VkMemoryRequirements> memory_requirements() const;
 
     // vkQueueBindObjectMemory()
-    void bind_memory(const Device &dev, uint32_t alloc_idx, const GpuMemory &mem, VkDeviceSize mem_offset);
-    void unbind_memory(const Device &dev, uint32_t alloc_idx);
-    void unbind_memory(const Device &dev);
+    void bind_memory(uint32_t alloc_idx, const GpuMemory &mem, VkDeviceSize mem_offset);
+    void unbind_memory(uint32_t alloc_idx);
+    void unbind_memory();
 
     // vkQueueBindObjectMemoryRange()
-    void bind_memory(const Device &dev, uint32_t alloc_idx, VkDeviceSize offset, VkDeviceSize size,
+    void bind_memory(uint32_t alloc_idx, VkDeviceSize offset, VkDeviceSize size,
                      const GpuMemory &mem, VkDeviceSize mem_offset);
 
     // Unless an object is initialized with init_no_mem(), memories are
@@ -169,8 +169,8 @@ protected:
     void reinit(VkObject obj, VkObjectType object_type) { init(obj, object_type, true); }
 
     // allocate and bind internal memories
-    void alloc_memory(const Device &dev);
-    void alloc_memory(const Device &dev, const std::vector<VkDeviceMemory> &mems);
+    void alloc_memory();
+    void alloc_memory(const std::vector<VkDeviceMemory> &mems);
 
 private:
     void cleanup();
