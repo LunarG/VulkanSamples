@@ -35,7 +35,6 @@ class VkDeviceObj : public vk_testing::Device
 {
 public:
     VkDeviceObj(uint32_t id, VkPhysicalDevice obj);
-    VkDeviceObj(uint32_t id, VkPhysicalDevice obj, const std::vector<const char *> &layers);
 
     VkDevice device() { return obj(); }
     void get_device_queue();

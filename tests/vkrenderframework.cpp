@@ -60,11 +60,11 @@ VkRenderFramework::~VkRenderFramework()
 
 void VkRenderFramework::InitFramework()
 {
-     const std::vector<const char *> layers;
-     InitFramework(layers);
+     const std::vector<const char *> extensions;
+     InitFramework(extensions);
 }
 
-void VkRenderFramework::InitFramework(const std::vector<const char *> &layers)
+void VkRenderFramework::InitFramework(const std::vector<const char *> &extensions)
 {
     VkResult err;
     VkInstanceCreateInfo instInfo = {};
@@ -72,8 +72,8 @@ void VkRenderFramework::InitFramework(const std::vector<const char *> &layers)
     instInfo.pNext = NULL;
     instInfo.pAppInfo = &app_info;
     instInfo.pAllocCb = NULL;
-    instInfo.extensionCount = 0;
-    instInfo.ppEnabledExtensionNames = NULL;
+    instInfo.extensionCount = extensions.size();
+    instInfo.ppEnabledExtensionNames = (extensions.size()) ? &extensions[0] : NULL;;
     err = vkCreateInstance(&instInfo, &this->inst);
     ASSERT_VK_SUCCESS(err);
     err = vkEnumeratePhysicalDevices(inst, &this->gpu_count, NULL);
@@ -83,7 +83,7 @@ void VkRenderFramework::InitFramework(const std::vector<const char *> &layers)
     ASSERT_VK_SUCCESS(err);
     ASSERT_GE(this->gpu_count, 1) << "No GPU available";
 
-    m_device = new VkDeviceObj(0, objs[0], layers);
+    m_device = new VkDeviceObj(0, objs[0]);
     m_device->get_device_queue();
 
     m_depthStencil = new VkDepthStencilObj();
@@ -266,15 +266,6 @@ VkDeviceObj::VkDeviceObj(uint32_t id, VkPhysicalDevice obj) :
     vk_testing::Device(obj), id(id)
 {
     init();
-
-    props = gpu().properties();
-    queue_props = &gpu().queue_properties()[0];
-}
-
-VkDeviceObj::VkDeviceObj(uint32_t id, VkPhysicalDevice obj, const std::vector<const char *> &layers) :
-    vk_testing::Device(obj), id(id)
-{
-    init(layers);
 
     props = gpu().properties();
     queue_props = &gpu().queue_properties()[0];
