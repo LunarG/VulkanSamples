@@ -1229,7 +1229,7 @@ void VkCommandBufferObj::ClearAllBuffers(VkClearColor clear_color, float depth_c
 
         vkCmdClearColorImage(obj(),
                m_renderTargets[i]->image(), VK_IMAGE_LAYOUT_CLEAR_OPTIMAL,
-               clear_color, 1, &srRange );
+               &clear_color, 1, &srRange );
 
         mem_ref_mgr.AddMemoryRefs(*m_renderTargets[i]);
     }

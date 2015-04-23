@@ -777,7 +777,7 @@ core = Extension(
             [Param("VkCmdBuffer", "cmdBuffer"),
              Param("VkImage", "image"),
              Param("VkImageLayout", "imageLayout"),
-             Param("VkClearColor", "color"),
+             Param("const VkClearColor*", "pColor"),
              Param("uint32_t", "rangeCount"),
              Param("const VkImageSubresourceRange*", "pRanges")]),
 

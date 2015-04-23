@@ -1391,7 +1391,7 @@ protected:
 
         vkCmdClearColorImage(cmd_.obj(),
                               img.obj(), VK_IMAGE_LAYOUT_CLEAR_OPTIMAL,
-                              clear_color, ranges.size(), &ranges[0]);
+                              &clear_color, ranges.size(), &ranges[0]);
 
         vkCmdPipelineBarrier(cmd_.obj(), VK_WAIT_EVENT_TOP_OF_PIPE, 1, set_events, 1, (const void **)&p_to_xfer[0]);
 

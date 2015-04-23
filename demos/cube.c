@@ -526,7 +526,7 @@ static void demo_draw_build_cmd(struct demo *demo, VkCmdBuffer cmd_buf)
     vkCmdClearColorImage(cmd_buf,
             demo->buffers[demo->current_buffer].image,
             VK_IMAGE_LAYOUT_CLEAR_OPTIMAL,
-            clear_color, 1, &clear_range);
+            &clear_color, 1, &clear_range);
 
     clear_range.aspect = VK_IMAGE_ASPECT_DEPTH;
     vkCmdClearDepthStencil(cmd_buf, demo->depth.image,

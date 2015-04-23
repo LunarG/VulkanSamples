@@ -2120,7 +2120,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdClearColorImage(
     VkCmdBuffer                    cmdBuffer,
     VkImage                        image,
     VkImageLayout                  imageLayout,
-    VkClearColor                   color,
+    const VkClearColor            *pColor,
     uint32_t                       rangeCount,
     const VkImageSubresourceRange *pRanges)
 {
@@ -2133,7 +2133,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdClearColorImage(
         layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, cmdBuffer, 0, MEMTRACK_MEMORY_BINDING_ERROR, "MEM", str);
     }
     loader_platform_thread_unlock_mutex(&globalLock);
-    nextTable.CmdClearColorImage(cmdBuffer, image, imageLayout, color, rangeCount, pRanges);
+    nextTable.CmdClearColorImage(cmdBuffer, image, imageLayout, pColor, rangeCount, pRanges);
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdClearDepthStencil(

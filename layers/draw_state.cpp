@@ -2344,10 +2344,11 @@ VK_LAYER_EXPORT void VKAPI vkCmdFillBuffer(VkCmdBuffer cmdBuffer, VkBuffer destB
     nextTable.CmdFillBuffer(cmdBuffer, destBuffer, destOffset, fillSize, data);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdClearColorImage(VkCmdBuffer cmdBuffer,
-                                                   VkImage image, VkImageLayout imageLayout,
-                                                   VkClearColor color,
-                                                   uint32_t rangeCount, const VkImageSubresourceRange* pRanges)
+VK_LAYER_EXPORT void VKAPI vkCmdClearColorImage(
+        VkCmdBuffer cmdBuffer,
+        VkImage image, VkImageLayout imageLayout,
+        const VkClearColor *pColor,
+        uint32_t rangeCount, const VkImageSubresourceRange* pRanges)
 {
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
@@ -2359,7 +2360,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdClearColorImage(VkCmdBuffer cmdBuffer,
         sprintf(str, "Attempt to use CmdBuffer %p that doesn't exist!", (void*)cmdBuffer);
         layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, cmdBuffer, 0, DRAWSTATE_INVALID_CMD_BUFFER, "DS", str);
     }
-    nextTable.CmdClearColorImage(cmdBuffer, image, imageLayout, color, rangeCount, pRanges);
+    nextTable.CmdClearColorImage(cmdBuffer, image, imageLayout, pColor, rangeCount, pRanges);
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdClearDepthStencil(VkCmdBuffer cmdBuffer,

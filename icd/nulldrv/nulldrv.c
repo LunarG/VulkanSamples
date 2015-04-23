@@ -1085,12 +1085,12 @@ ICD_EXPORT void VKAPI vkCmdFillBuffer(
 }
 
 ICD_EXPORT void VKAPI vkCmdClearColorImage(
-    VkCmdBuffer                              cmdBuffer,
-    VkImage                                   image,
-    VkImageLayout                            imageLayout,
-    VkClearColor                             color,
-    uint32_t                                    rangeCount,
-    const VkImageSubresourceRange*          pRanges)
+    VkCmdBuffer                         cmdBuffer,
+    VkImage                             image,
+    VkImageLayout                       imageLayout,
+    const VkClearColor                 *pColor,
+    uint32_t                            rangeCount,
+    const VkImageSubresourceRange*      pRanges)
 {
     NULLDRV_LOG_FUNC;
 }
