@@ -214,6 +214,7 @@ public:
     // vkCreateDevice()
     void init(const VkDeviceCreateInfo &info);
     void init(bool enable_layers); // all queues, all extensions, etc
+    void init(const std::vector<const char *> &layers);
     void init() { init(false); };
 
     const PhysicalGpu &gpu() const { return gpu_; }

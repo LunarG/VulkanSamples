@@ -401,6 +401,43 @@ void Device::init(bool enable_layers)
 
     init(dev_info);
 }
+void Device::init(const std::vector<const char *> &layers)
+{
+    const char *ext_names[] = {
+        "VK_WSI_LunarG",
+    };
+
+    // request all queues
+    const std::vector<VkPhysicalDeviceQueueProperties> queue_props = gpu_.queue_properties();
+    std::vector<VkDeviceQueueCreateInfo> queue_info;
+    queue_info.reserve(queue_props.size());
+    for (int i = 0; i < queue_props.size(); i++) {
+        VkDeviceQueueCreateInfo qi = {};
+        qi.queueNodeIndex = i;
+        qi.queueCount = queue_props[i].queueCount;
+        if (queue_props[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) {
+            graphics_queue_node_index_ = i;
+        }
+        queue_info.push_back(qi);
+    }
+    VkLayerCreateInfo layer_info = {};
+    if (layers.size()) {
+        layer_info.sType = VK_STRUCTURE_TYPE_LAYER_CREATE_INFO;
+        layer_info.layerCount = layers.size();
+        layer_info.ppActiveLayerNames = &layers[0];
+    }
+
+    VkDeviceCreateInfo dev_info = {};
+    dev_info.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
+    dev_info.pNext = (layers.size()) ? static_cast<void *>(&layer_info) : NULL;
+    dev_info.queueRecordCount = queue_info.size();
+    dev_info.pRequestedQueues = &queue_info[0];
+    dev_info.extensionCount = 1;
+    dev_info.ppEnabledExtensionNames = ext_names;
+    dev_info.flags = VK_DEVICE_CREATE_VALIDATION_BIT;
+
+    init(dev_info);
+}
 
 void Device::init(const VkDeviceCreateInfo &info)
 {

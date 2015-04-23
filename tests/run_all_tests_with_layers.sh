@@ -37,6 +37,8 @@ echo "ThreadingReportLevel = $OUTPUT_LEVEL" >> $SETTINGS_NAME
 # a saved "golden" image and will report an error if there is any difference
 ./vk_render_tests --compare-images
 
+./vk_layer_validation_tests
+
 if [ "$RESTORE_SETTINGS" = "true" ]; then
     echo Restore $SETTINGS_NAME from $TMP_SETTINGS_NAME
     mv $TMP_SETTINGS_NAME $SETTINGS_NAME

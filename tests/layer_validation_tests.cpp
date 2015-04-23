@@ -66,6 +66,30 @@ protected:
         ErrorMonitor               *m_errorMonitor;
 
     virtual void SetUp() {
+        const char *layer_names[] = {"MemTracker", "ObjectTracker"};
+        const std::vector<const char *> layers(layer_names, layer_names + 2);
+
+        size_t extSize = sizeof(uint32_t);
+        uint32_t extCount = 0;
+        VkResult err;
+        err = vkGetGlobalExtensionInfo(VK_EXTENSION_INFO_TYPE_COUNT, 0, &extSize, &extCount);
+        assert(!err);
+
+        VkExtensionProperties extProp;
+        extSize = sizeof(VkExtensionProperties);
+        bool32_t extFound;
+
+        for (uint32_t i = 0; i < layers.size(); i++) {
+            extFound = 0;
+            for (uint32_t j = 0; j < extCount; j++) {
+                err = vkGetGlobalExtensionInfo(VK_EXTENSION_INFO_TYPE_PROPERTIES, j, &extSize, &extProp);
+                if (!strcmp(layers[i], extProp.extName)) {
+                   extFound = 1;
+                   break;
+                }
+            }
+            ASSERT_EQ(extFound, 1) << "ERROR: Cannot find extension named " << layers[i] << " which is necessary to pass this test";
+        }
 
         this->app_info.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
         this->app_info.pNext = NULL;
@@ -75,7 +99,7 @@ protected:
         this->app_info.engineVersion = 1;
         this->app_info.apiVersion = VK_API_VERSION;
 
-        InitFramework();
+        InitFramework(layers);
         m_errorMonitor = new ErrorMonitor(inst);
     }
 
