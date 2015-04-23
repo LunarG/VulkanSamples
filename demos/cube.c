@@ -841,8 +841,12 @@ static void demo_prepare_texture_image(struct demo *demo,
     int32_t tex_height;
     VkResult U_ASSERT_ONLY err;
 
-    err = loadTexture(filename, NULL, NULL, &tex_width, &tex_height);
-    assert(err);
+    if (!loadTexture(filename, NULL, NULL, &tex_width, &tex_height))
+    {
+        printf("Failed to load textures\n");
+        fflush(stdout);
+        exit(1);
+    }
 
     tex_obj->tex_width = tex_width;
     tex_obj->tex_height = tex_height;
