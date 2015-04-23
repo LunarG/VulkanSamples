@@ -156,7 +156,7 @@ class LoaderEntrypointsSubcommand(Subcommand):
             setup.append("    %s(info[i].image, disp);" % method)
             setup.append("    %s(info[i].memory, disp);" % method)
             setup.append("}")
-        else:
+        elif proto.name != "ResetFences":
             obj_params = proto.object_out_params()
             for param in obj_params:
                 setup.append("%s(*%s, disp);" % (method, param.name))
