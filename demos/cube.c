@@ -222,6 +222,7 @@ struct demo {
     xcb_window_t window;
     xcb_intern_atom_reply_t *atom_wm_delete_window;
 #endif // _WIN32
+	bool prepared;
     bool use_staging_buffer;
 
     VkInstance inst;
@@ -1598,11 +1599,14 @@ static void demo_prepare(struct demo *demo)
     demo_flush_init_cmd(demo);
 
     demo->current_buffer = 0;
+	demo->prepared = true;
 }
 
 #ifdef _WIN32
 static void demo_run(struct demo *demo)
 {
+	if (!demo->prepared)
+		return;
     // Wait for work to finish before updating MVP.
     vkDeviceWaitIdle(demo->device);
     demo_update_data_buffer(demo);

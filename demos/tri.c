@@ -59,6 +59,7 @@ struct demo {
     xcb_window_t window;
     xcb_intern_atom_reply_t *atom_wm_delete_window;
 #endif // _WIN32
+	bool prepared;
     bool use_staging_buffer;
 
     VkInstance inst;
@@ -1155,11 +1156,14 @@ static void demo_prepare(struct demo *demo)
 
     demo_prepare_descriptor_pool(demo);
     demo_prepare_descriptor_set(demo);
+	demo->prepared = true;
 }
 
 #ifdef _WIN32
 static void demo_run(struct demo *demo)
 {
+	if (!demo->prepared)
+		return;
     demo_draw(demo);
 }
 
