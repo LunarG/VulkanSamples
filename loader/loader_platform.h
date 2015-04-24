@@ -162,7 +162,7 @@ using namespace std;
 #define VK_DRIVER_LIBRARY_PREFIX_LEN 3
 // TODO/TBD: Is this an appropriate suffix for Windows?
 #define VK_LAYER_LIBRARY_PREFIX "VKLayer"
-#define VK_LAYER_LIBRARY_PREFIX_LEN 8
+#define VK_LAYER_LIBRARY_PREFIX_LEN 7
 #define VK_LIBRARY_SUFFIX ".dll"
 #define VK_LIBRARY_SUFFIX_LEN 4
 #endif //  DEFAULT_VK_DRIVERS_PATH

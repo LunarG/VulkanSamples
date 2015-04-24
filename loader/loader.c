@@ -233,8 +233,12 @@ static void loader_log(VK_DBG_MSG_TYPE msg_type, int32_t msg_code,
     }
     va_end(ap);
 
+#if defined(WIN32)
+	OutputDebugString(msg);
+#else
     fputs(msg, stderr);
     fputc('\n', stderr);
+#endif
 }
 
 static bool has_extension(struct extension_property *exts, uint32_t count,

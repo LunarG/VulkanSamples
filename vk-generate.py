@@ -407,6 +407,7 @@ class WinDefFileSubcommand(Subcommand):
                 "layer": [
                     "GetProcAddr",
                     "EnumerateLayers",
+                    "GetGlobalExtensionInfo",
                 ],
         }
 
