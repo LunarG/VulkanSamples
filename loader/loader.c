@@ -746,6 +746,8 @@ static void * VKAPI loader_gpa_internal(VkPhysicalDevice gpu, const char * pName
     else  {
         if (disp_table->GetProcAddr == NULL)
             return NULL;
+        if (gpuw->baseObject == gpuw->nextObject)
+            return gpuw->pGPA(gpuw->baseObject, pName);
         return disp_table->GetProcAddr(gpuw->nextObject, pName);
     }
 }
