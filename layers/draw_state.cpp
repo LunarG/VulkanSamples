@@ -232,6 +232,8 @@ static void insertDynamicState(const VkDynamicStateObject state, const GENERIC_H
 // Free all allocated nodes for Dynamic State objs
 static void deleteDynamicState()
 {
+    if (dynamicStateMap.size() <= 0)
+        return;
     for (unordered_map<VkDynamicStateObject, DYNAMIC_STATE_NODE*>::iterator ii=dynamicStateMap.begin(); ii!=dynamicStateMap.end(); ++ii) {
         if (VK_STRUCTURE_TYPE_DYNAMIC_VP_STATE_CREATE_INFO == (*ii).second->create_info.vpci.sType) {
             delete[] (*ii).second->create_info.vpci.pScissors;
@@ -243,6 +245,8 @@ static void deleteDynamicState()
 // Free all sampler nodes
 static void deleteSamplers()
 {
+    if (sampleMap.size() <= 0)
+        return;
     for (unordered_map<VkSampler, SAMPLER_NODE*>::iterator ii=sampleMap.begin(); ii!=sampleMap.end(); ++ii) {
         delete (*ii).second;
     }
@@ -262,6 +266,8 @@ static VkImageViewCreateInfo* getImageViewCreateInfo(VkImageView view)
 // Free all image nodes
 static void deleteImages()
 {
+    if (imageMap.size() <= 0)
+        return;
     for (unordered_map<VkImageView, IMAGE_NODE*>::iterator ii=imageMap.begin(); ii!=imageMap.end(); ++ii) {
         delete (*ii).second;
     }
@@ -281,6 +287,8 @@ static VkBufferViewCreateInfo* getBufferViewCreateInfo(VkBufferView view)
 // Free all buffer nodes
 static void deleteBuffers()
 {
+    if (bufferMap.size() <= 0)
+        return;
     for (unordered_map<VkBufferView, BUFFER_NODE*>::iterator ii=bufferMap.begin(); ii!=bufferMap.end(); ++ii) {
         delete (*ii).second;
     }
@@ -480,6 +488,8 @@ static void initPipeline(PIPELINE_NODE* pPipeline, const VkGraphicsPipelineCreat
 // Free the Pipeline nodes
 static void deletePipelines()
 {
+    if (pipelineMap.size() <= 0)
+        return;
     for (unordered_map<VkPipeline, PIPELINE_NODE*>::iterator ii=pipelineMap.begin(); ii!=pipelineMap.end(); ++ii) {
         if ((*ii).second->pVertexBindingDescriptions) {
             delete[] (*ii).second->pVertexBindingDescriptions;
@@ -893,6 +903,8 @@ static void freeShadowUpdateTree(SET_NODE* pSet)
 // NOTE : Calls to this function should be wrapped in mutex
 static void deletePools()
 {
+    if (poolMap.size() <= 0)
+        return;
     for (unordered_map<VkDescriptorPool, POOL_NODE*>::iterator ii=poolMap.begin(); ii!=poolMap.end(); ++ii) {
         SET_NODE* pSet = (*ii).second->pSets;
         SET_NODE* pFreeSet = pSet;
@@ -917,6 +929,8 @@ static void deletePools()
 // NOTE : Calls to this function should be wrapped in mutex
 static void deleteLayouts()
 {
+    if (layoutMap.size() <= 0)
+        return;
     for (unordered_map<VkDescriptorSetLayout, LAYOUT_NODE*>::iterator ii=layoutMap.begin(); ii!=layoutMap.end(); ++ii) {
         LAYOUT_NODE* pLayout = (*ii).second;
         if (pLayout->createInfo.pBinding) {
@@ -979,6 +993,8 @@ static GLOBAL_CB_NODE* getCBNode(VkCmdBuffer cb)
 // NOTE : Calls to this function should be wrapped in mutex
 static void deleteCmdBuffers()
 {
+    if (cmdBufferMap.size() <= 0)
+        return;
     for (unordered_map<VkCmdBuffer, GLOBAL_CB_NODE*>::iterator ii=cmdBufferMap.begin(); ii!=cmdBufferMap.end(); ++ii) {
         vector<CMD_NODE*> cmd_node_list = (*ii).second->pCmds;
         while (!cmd_node_list.empty()) {
@@ -1211,7 +1227,7 @@ static void cbDumpDotFile(string outFileName)
     GLOBAL_CB_NODE* pCB = NULL;
     for (uint32_t i = 0; i < NUM_COMMAND_BUFFERS_TO_DISPLAY; i++) {
         pCB = g_pLastTouchedCB[i];
-        if (pCB) {
+        if (pCB && pCB->pCmds.size() > 0) {
             fprintf(pOutFile, "subgraph cluster_cmdBuffer%u\n{\nlabel=\"Command Buffer #%u\"\n", i, i);
             uint32_t instNum = 0;
             vector<CMD_NODE*> cmd_list = pCB->pCmds;
@@ -1374,7 +1390,7 @@ static void printDSConfig(const VkCmdBuffer cb)
 static void printCB(const VkCmdBuffer cb)
 {
     GLOBAL_CB_NODE* pCB = getCBNode(cb);
-    if (pCB) {
+    if (pCB && pCB->pCmds.size() > 0) {
         char str[1024];
         sprintf(str, "Cmds in CB %p", (void*)cb);
         layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, NULL, 0, DRAWSTATE_NONE, "DS", str);

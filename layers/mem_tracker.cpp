@@ -75,6 +75,8 @@ static void deleteQueueInfoList(
     void)
 {
     // Process queue list, cleaning up each entry before deleting
+    if (queueMap.size() <= 0)
+        return;
     for (map<VkQueue, MT_QUEUE_INFO*>::iterator ii=queueMap.begin(); ii!=queueMap.end(); ++ii) {
         (*ii).second->pQueueCmdBuffers.clear();
     }
@@ -209,6 +211,8 @@ static void updateFenceTracking(
     VkQueue        queue         = NULL;
     bool           found         = false;
 
+    if (fenceMap.size() <= 0)
+        return;
     for (map<uint64_t, MT_FENCE_INFO*>::iterator ii=fenceMap.begin(); !found && ii!=fenceMap.end(); ++ii) {
         if ((*ii).second != NULL) {
             if (fence == ((*ii).second)->fence) {
@@ -277,7 +281,7 @@ static void retireQueueFences(
     // Set Queue's lastRetired to lastSubmitted, free items in queue's fence list
     map<uint64_t, MT_FENCE_INFO*>::iterator it = fenceMap.begin();
     map<uint64_t, MT_FENCE_INFO*>::iterator temp;
-    while (it != fenceMap.end()) {
+    while (fenceMap.size() > 0 && it != fenceMap.end()) {
         if ((((*it).second) != NULL) && ((*it).second)->queue == queue) {
             temp = it;
             ++temp;
@@ -295,6 +299,8 @@ static void retireDeviceFences(
 {
     // Process each queue for device
     // TODO: Add multiple device support
+    if (queueMap.size() <= 0)
+        return;
     for (map<VkQueue, MT_QUEUE_INFO*>::iterator ii=queueMap.begin(); ii!=queueMap.end(); ++ii) {
         retireQueueFences((*ii).first);
     }
@@ -309,6 +315,8 @@ static bool32_t checkMemRef(
     bool32_t result = VK_FALSE;
     list<VkDeviceMemory>::iterator it;
     MT_QUEUE_INFO *pQueueInfo = queueMap[queue];
+    if (pQueueInfo->pMemRefList.size() <= 0)
+        return result;
     for (it = pQueueInfo->pMemRefList.begin(); it != pQueueInfo->pMemRefList.end(); ++it) {
         if ((*it) == mem) {
             result = VK_TRUE;
@@ -345,19 +353,21 @@ static bool32_t validateQueueMemRefs(
                 result = VK_FALSE;
             } else {
                 // Validate that all actual references are accounted for in pMemRefs
-                for (list<VkDeviceMemory>::iterator it = pCBInfo->pMemObjList.begin(); it != pCBInfo->pMemObjList.end(); ++it) {
-                    // Search for each memref in queues memreflist.
-                    if (checkMemRef(queue, *it)) {
-                        char str[1024];
-                        sprintf(str, "Found Mem Obj %p binding to CB %p for queue %p", (*it), pCmdBuffers[i], queue);
-                        layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, pCmdBuffers[i], 0, MEMTRACK_NONE, "MEM", str);
-                    }
-                    else {
-                        char str[1024];
-                        sprintf(str, "Queue %p Memory reference list for Command Buffer %p is missing ref to mem obj %p",
-                            queue, pCmdBuffers[i], (*it));
-                        layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, pCmdBuffers[i], 0, MEMTRACK_INVALID_MEM_REF, "MEM", str);
-                        result = VK_FALSE;
+                if (pCBInfo->pMemObjList.size() > 0) {
+                    for (list<VkDeviceMemory>::iterator it = pCBInfo->pMemObjList.begin(); it != pCBInfo->pMemObjList.end(); ++it) {
+                        // Search for each memref in queues memreflist.
+                        if (checkMemRef(queue, *it)) {
+                            char str[1024];
+                            sprintf(str, "Found Mem Obj %p binding to CB %p for queue %p", (*it), pCmdBuffers[i], queue);
+                            layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, pCmdBuffers[i], 0, MEMTRACK_NONE, "MEM", str);
+                        }
+                        else {
+                            char str[1024];
+                            sprintf(str, "Queue %p Memory reference list for Command Buffer %p is missing ref to mem obj %p",
+                                queue, pCmdBuffers[i], (*it));
+                            layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, pCmdBuffers[i], 0, MEMTRACK_INVALID_MEM_REF, "MEM", str);
+                            result = VK_FALSE;
+                        }
                     }
                 }
             }
@@ -422,10 +432,12 @@ static bool32_t updateCBBinding(
     } else {
         // Search for cmd buffer object in memory object's binding list
         bool32_t found  = VK_FALSE;
-        for (list<VkCmdBuffer>::iterator it = pMemInfo->pCmdBufferBindings.begin(); it != pMemInfo->pCmdBufferBindings.end(); ++it) {
-            if ((*it) == cb) {
-                found = VK_TRUE;
-                break;
+        if (pMemInfo->pCmdBufferBindings.size() > 0) {
+            for (list<VkCmdBuffer>::iterator it = pMemInfo->pCmdBufferBindings.begin(); it != pMemInfo->pCmdBufferBindings.end(); ++it) {
+                if ((*it) == cb) {
+                    found = VK_TRUE;
+                    break;
+                }
             }
         }
         // If not present, add to list
@@ -444,10 +456,12 @@ static bool32_t updateCBBinding(
         } else {
             // Search for memory object in cmd buffer's binding list
             bool32_t found  = VK_FALSE;
-            for (list<VkDeviceMemory>::iterator it = pCBInfo->pMemObjList.begin(); it != pCBInfo->pMemObjList.end(); ++it) {
-                if ((*it) == mem) {
-                    found = VK_TRUE;
-                    break;
+            if (pCBInfo->pMemObjList.size() > 0) {
+                for (list<VkDeviceMemory>::iterator it = pCBInfo->pMemObjList.begin(); it != pCBInfo->pMemObjList.end(); ++it) {
+                    if ((*it) == mem) {
+                        found = VK_TRUE;
+                        break;
+                    }
                 }
             }
             // If not present, add to list
@@ -491,8 +505,10 @@ static bool32_t freeCBBindings(
             deleteFenceInfo(pCBInfo->fenceId);
         }
 
-        for (list<VkDeviceMemory>::iterator it=pCBInfo->pMemObjList.begin(); it!=pCBInfo->pMemObjList.end(); ++it) {
-            clearCBBinding(cb, (*it));
+        if (pCBInfo->pMemObjList.size() <= 0) {
+            for (list<VkDeviceMemory>::iterator it=pCBInfo->pMemObjList.begin(); it!=pCBInfo->pMemObjList.end(); ++it) {
+                clearCBBinding(cb, (*it));
+            }
         }
         pCBInfo->pMemObjList.clear();
     }
@@ -523,6 +539,8 @@ static bool32_t deleteCBInfoList(
     void)
 {
     bool32_t result = VK_TRUE;
+    if (cbMap.size() <= 0)
+        return result;
     for (map<VkCmdBuffer, MT_CB_INFO*>::iterator ii=cbMap.begin(); ii!=cbMap.end(); ++ii) {
         freeCBBindings((*ii).first);
         delete (*ii).second;
@@ -544,7 +562,7 @@ static void reportMemReferencesAndCleanUp(
         layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, pMemObjInfo->mem, 0, MEMTRACK_INTERNAL_ERROR, "MEM", str);
     }
 
-    if (cmdBufRefCount > 0) {
+    if (cmdBufRefCount > 0 && pMemObjInfo->pCmdBufferBindings.size() > 0) {
         for (list<VkCmdBuffer>::const_iterator it = pMemObjInfo->pCmdBufferBindings.begin(); it != pMemObjInfo->pCmdBufferBindings.end(); ++it) {
             char str[1024];
             sprintf(str, "Command Buffer %p still has a reference to mem obj %p", (*it), pMemObjInfo->mem);
@@ -554,7 +572,7 @@ static void reportMemReferencesAndCleanUp(
         pMemObjInfo->pCmdBufferBindings.clear();
     }
 
-    if (objRefCount > 0) {
+    if (objRefCount > 0 && pMemObjInfo->pObjBindings.size() > 0) {
         for (list<VkObject>::const_iterator it = pMemObjInfo->pObjBindings.begin(); it != pMemObjInfo->pObjBindings.end(); ++it) {
             char str[1024];
             sprintf(str, "VK Object %p still has a reference to mem obj %p", (*it), pMemObjInfo->mem);
@@ -629,7 +647,7 @@ static bool32_t freeMemObjInfo(
 
             list<VkCmdBuffer>::iterator it = pInfo->pCmdBufferBindings.begin();
             list<VkCmdBuffer>::iterator temp;
-            while (it != pInfo->pCmdBufferBindings.end()) {
+            while (pInfo->pCmdBufferBindings.size() > 0 && it != pInfo->pCmdBufferBindings.end()) {
                 if (VK_TRUE == checkCBCompleted(*it)) {
                     temp = it;
                     ++temp;
@@ -672,7 +690,7 @@ static bool32_t clearObjectBinding(
                      "unneccessary to call bind/unbindObjectMemory on them.", object);
         layerCbMsg(VK_DBG_MSG_WARNING, VK_VALIDATION_LEVEL_0, object, 0, MEMTRACK_INVALID_OBJECT, "MEM", str);
     } else {
-        if (!pObjInfo->pMemObjInfo) {
+        if (!pObjInfo->pMemObjInfo || pObjInfo->pMemObjInfo->pObjBindings.size() <= 0) {
             char str[1024];
             sprintf(str, "Attempting to clear mem binding on obj %p but it has no binding.", (void*)object);
             layerCbMsg(VK_DBG_MSG_WARNING, VK_VALIDATION_LEVEL_0, object, 0, MEMTRACK_MEM_OBJ_CLEAR_EMPTY_BINDINGS, "MEM", str);
@@ -724,7 +742,7 @@ static bool32_t updateObjectBinding(
         }
         // non-null case so should have real mem obj
         MT_MEM_OBJ_INFO* pInfo = getMemObjInfo(mem);
-        if (!pInfo) {
+        if (!pInfo || pInfo->pObjBindings.size() <=0) {
             sprintf(str, "While trying to bind mem for obj %p, couldn't find info for mem obj %p", (void*)object, (void*)mem);
             layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, mem, 0, MEMTRACK_INVALID_MEM_OBJ, "MEM", str);
         } else {
@@ -769,6 +787,8 @@ static void printObjList(
     char str[1024];
     sprintf(str, "Details of Object list of size %lu elements", objectMap.size());
     layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, NULL, 0, MEMTRACK_NONE, "MEM", str);
+    if (objectMap.size() <= 0)
+        return;
     for (map<VkObject, MT_OBJ_INFO*>::iterator ii=objectMap.begin(); ii!=objectMap.end(); ++ii) {
         pInfo = (*ii).second;
         sprintf(str, "    ObjInfo %p has object %p, pMemObjInfo %p", pInfo, pInfo->object, pInfo->pMemObjInfo);
@@ -812,6 +832,9 @@ static void printMemList(
     sprintf(str, "MEM INFO : Details of Memory Object list of size %lu elements", memObjMap.size());
     layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, NULL, 0, MEMTRACK_NONE, "MEM", str);
 
+    if (memObjMap.size() <= 0)
+        return;
+
     for (map<VkDeviceMemory, MT_MEM_OBJ_INFO*>::iterator ii=memObjMap.begin(); ii!=memObjMap.end(); ++ii) {
         pInfo = (*ii).second;
 
@@ -832,16 +855,21 @@ static void printMemList(
 
         sprintf(str, "    VK OBJECT Binding list of size %lu elements:", pInfo->pObjBindings.size());
         layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, NULL, 0, MEMTRACK_NONE, "MEM", str);
-        for (list<VkObject>::iterator it = pInfo->pObjBindings.begin(); it != pInfo->pObjBindings.end(); ++it) {
-            sprintf(str, "       VK OBJECT %p", (*it));
-            layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, NULL, 0, MEMTRACK_NONE, "MEM", str);
+        if (pInfo->pObjBindings.size() > 0) {
+            for (list<VkObject>::iterator it = pInfo->pObjBindings.begin(); it != pInfo->pObjBindings.end(); ++it) {
+                sprintf(str, "       VK OBJECT %p", (*it));
+                layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, NULL, 0, MEMTRACK_NONE, "MEM", str);
+            }
         }
 
         sprintf(str, "    VK Command Buffer (CB) binding list of size %lu elements", pInfo->pCmdBufferBindings.size());
         layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, NULL, 0, MEMTRACK_NONE, "MEM", str);
-        for (list<VkCmdBuffer>::iterator it = pInfo->pCmdBufferBindings.begin(); it != pInfo->pCmdBufferBindings.end(); ++it) {
-            sprintf(str, "      VK CB %p", (*it));
-            layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, NULL, 0, MEMTRACK_NONE, "MEM", str);
+        if (pInfo->pCmdBufferBindings.size() > 0)
+        {
+            for (list<VkCmdBuffer>::iterator it = pInfo->pCmdBufferBindings.begin(); it != pInfo->pCmdBufferBindings.end(); ++it) {
+                sprintf(str, "      VK CB %p", (*it));
+                layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, NULL, 0, MEMTRACK_NONE, "MEM", str);
+            }
         }
     }
 }
@@ -854,6 +882,9 @@ static void printCBList(
     sprintf(str, "Details of CB list of size %lu elements", cbMap.size());
     layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, NULL, 0, MEMTRACK_NONE, "MEM", str);
 
+    if (cbMap.size() <= 0)
+        return;
+
     for (map<VkCmdBuffer, MT_CB_INFO*>::iterator ii=cbMap.begin(); ii!=cbMap.end(); ++ii) {
         pCBInfo = (*ii).second;
 
@@ -862,6 +893,8 @@ static void printCBList(
             (void*)getFenceFromId(pCBInfo->fenceId));
         layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, NULL, 0, MEMTRACK_NONE, "MEM", str);
 
+        if (pCBInfo->pMemObjList.size() <= 0)
+            continue;
         for (list<VkDeviceMemory>::iterator it = pCBInfo->pMemObjList.begin(); it != pCBInfo->pMemObjList.end(); ++it) {
             sprintf(str, "      Mem obj %p", (*it));
             layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, NULL, 0, MEMTRACK_NONE, "MEM", str);
@@ -937,13 +970,15 @@ VK_LAYER_EXPORT VkResult VKAPI vkDestroyDevice(
     }
     // Report any memory leaks
     MT_MEM_OBJ_INFO* pInfo = NULL;
-    for (map<VkDeviceMemory, MT_MEM_OBJ_INFO*>::iterator ii=memObjMap.begin(); ii!=memObjMap.end(); ++ii) {
-        pInfo = (*ii).second;
+    if (memObjMap.size() > 0) {
+        for (map<VkDeviceMemory, MT_MEM_OBJ_INFO*>::iterator ii=memObjMap.begin(); ii!=memObjMap.end(); ++ii) {
+            pInfo = (*ii).second;
 
-        if (pInfo->allocInfo.allocationSize != 0) {
-            sprintf(str, "Mem Object %p has not been freed. You should clean up this memory by calling "
+            if (pInfo->allocInfo.allocationSize != 0) {
+                sprintf(str, "Mem Object %p has not been freed. You should clean up this memory by calling "
                          "vkFreeMemory(%p) prior to vkDestroyDevice().", pInfo->mem, pInfo->mem);
-            layerCbMsg(VK_DBG_MSG_WARNING, VK_VALIDATION_LEVEL_0, pInfo->mem, 0, MEMTRACK_MEMORY_LEAK, "MEM", str);
+                layerCbMsg(VK_DBG_MSG_WARNING, VK_VALIDATION_LEVEL_0, pInfo->mem, 0, MEMTRACK_MEMORY_LEAK, "MEM", str);
+            }
         }
     }
 
@@ -1100,12 +1135,14 @@ VK_LAYER_EXPORT VkResult VKAPI vkQueueRemoveMemReferences(
             sprintf(str, "Unknown Queue %p", queue);
             layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, queue, 0, MEMTRACK_INVALID_QUEUE, "MEM", str);
         } else {
-            for (uint32_t i = 0; i < count; i++) {
-                for (list<VkDeviceMemory>::iterator it = pQueueInfo->pMemRefList.begin(); it != pQueueInfo->pMemRefList.end();) {
-                    if ((*it) == pMems[i]) {
-                        it = pQueueInfo->pMemRefList.erase(it);
-                    } else {
-                        ++it;
+            for (int i = 0; i < count; i++) {
+                if (pQueueInfo->pMemRefList.size() > 0) {
+                    for (list<VkDeviceMemory>::iterator it = pQueueInfo->pMemRefList.begin(); it != pQueueInfo->pMemRefList.end();) {
+                        if ((*it) == pMems[i]) {
+                            it = pQueueInfo->pMemRefList.erase(it);
+                        } else {
+                            ++it;
+                        }
                     }
                 }
             }
@@ -2269,14 +2306,16 @@ VK_LAYER_EXPORT VkResult VKAPI vkDestroySwapChainWSI(
     if (swapChainMap.find(swapChain) != swapChainMap.end()) {
         MT_SWAP_CHAIN_INFO* pInfo = swapChainMap[swapChain];
 
-        for (std::vector<VkSwapChainImageInfoWSI>::const_iterator it = pInfo->images.begin();
-             it != pInfo->images.end(); it++) {
-            clearObjectBinding(it->image);
-            freeMemObjInfo(it->memory, true);
+        if (pInfo->images.size() > 0) {
+            for (std::vector<VkSwapChainImageInfoWSI>::const_iterator it = pInfo->images.begin();
+                 it != pInfo->images.end(); it++) {
+                clearObjectBinding(it->image);
+                freeMemObjInfo(it->memory, true);
 
-            MT_OBJ_INFO* pDelInfo = objectMap[it->image];
-            delete pDelInfo;
-            objectMap.erase(it->image);
+                MT_OBJ_INFO* pDelInfo = objectMap[it->image];
+                delete pDelInfo;
+                objectMap.erase(it->image);
+            }
         }
 
         delete pInfo;
@@ -2304,15 +2343,17 @@ VK_LAYER_EXPORT VkResult VKAPI vkGetSwapChainInfoWSI(
             pInfo->images.resize(count);
             memcpy(&pInfo->images[0], pData, sizeof(pInfo->images[0]) * count);
 
-            for (std::vector<VkSwapChainImageInfoWSI>::const_iterator it = pInfo->images.begin();
-                 it != pInfo->images.end(); it++) {
-                // Add image object, then insert the new Mem Object and then bind it to created image
-                addObjectInfo(it->image, VK_STRUCTURE_TYPE_MAX_ENUM, &pInfo->createInfo, sizeof(pInfo->createInfo), "persistent_image");
-                addMemObjInfo(it->memory, NULL);
-                if (VK_FALSE == updateObjectBinding(it->image, it->memory)) {
-                    char str[1024];
-                    sprintf(str, "In vkGetSwapChainInfoWSI(), unable to set image %p binding to mem obj %p", (void*)it->image, (void*)it->memory);
-                    layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, it->image, 0, MEMTRACK_MEMORY_BINDING_ERROR, "MEM", str);
+            if (pInfo->images.size() > 0) {
+                for (std::vector<VkSwapChainImageInfoWSI>::const_iterator it = pInfo->images.begin();
+                     it != pInfo->images.end(); it++) {
+                    // Add image object, then insert the new Mem Object and then bind it to created image
+                    addObjectInfo(it->image, VK_STRUCTURE_TYPE_MAX_ENUM, &pInfo->createInfo, sizeof(pInfo->createInfo), "persistent_image");
+                    addMemObjInfo(it->memory, NULL);
+                    if (VK_FALSE == updateObjectBinding(it->image, it->memory)) {
+                        char str[1024];
+                        sprintf(str, "In vkGetSwapChainInfoWSI(), unable to set image %p binding to mem obj %p", (void*)it->image, (void*)it->memory);
+                        layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, it->image, 0, MEMTRACK_MEMORY_BINDING_ERROR, "MEM", str);
+                    }
                 }
             }
         } else {

@@ -492,16 +492,21 @@ validate_interface_between_stages(shader_source const *producer, char const *pro
     auto b_it = inputs.begin();
 
     /* maps sorted by key (location); walk them together to find mismatches */
-    while (a_it != outputs.end() || b_it != inputs.end()) {
-        if (b_it == inputs.end() || a_it->first < b_it->first) {
+    while ((outputs.size() > 0 && a_it != outputs.end()) || ( inputs.size() && b_it != inputs.end())) {
+        bool a_at_end = outputs.size() == 0 || a_it == outputs.end();
+        bool b_at_end = inputs.size() == 0  || b_it == inputs.end();
+        auto a_first = (outputs.size() > 0 ? a_it->first : 0);
+        auto b_first = (inputs.size()  > 0 ? b_it->first : 0);
+
+        if (b_at_end || a_first < b_first) {
             sprintf(str, "%s writes to output location %d which is not consumed by %s\n",
-                   producer_name, a_it->first, consumer_name);
+                   producer_name, a_first, consumer_name);
             layerCbMsg(VK_DBG_MSG_WARNING, VK_VALIDATION_LEVEL_0, NULL, 0, SHADER_CHECKER_OUTPUT_NOT_CONSUMED, "SC", str);
             a_it++;
         }
-        else if (a_it == outputs.end() || a_it->first > b_it->first) {
+        else if (a_at_end || a_first > b_first) {
             sprintf(str, "%s consumes input location %d which is not written by %s\n",
-                   consumer_name, b_it->first, producer_name);
+                   consumer_name, b_first, producer_name);
             layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, SHADER_CHECKER_OUTPUT_NOT_CONSUMED, "SC", str);
             b_it++;
         }
@@ -599,14 +604,18 @@ validate_vi_against_vs_inputs(VkPipelineVertexInputCreateInfo const *vi, shader_
     auto it_a = attribs.begin();
     auto it_b = inputs.begin();
 
-    while (it_a != attribs.end() || it_b != inputs.end()) {
-        if (it_b == inputs.end() || it_a->first < it_b->first) {
-            sprintf(str, "Vertex attribute at location %d not consumed by VS", it_a->first);
+    while ((attribs.size() > 0 && it_a != attribs.end()) || (inputs.size() > 0 && it_b != inputs.end())) {
+        bool a_at_end = attribs.size() == 0 || it_a == attribs.end();
+        bool b_at_end = inputs.size() == 0  || it_b == inputs.end();
+        auto a_first = (attribs.size() > 0 ? it_a->first : 0);
+        auto b_first = (inputs.size()  > 0 ? it_b->first : 0);
+        if (b_at_end || a_first < b_first) {
+            sprintf(str, "Vertex attribute at location %d not consumed by VS", a_first);
             layerCbMsg(VK_DBG_MSG_WARNING, VK_VALIDATION_LEVEL_0, NULL, 0, SHADER_CHECKER_OUTPUT_NOT_CONSUMED, "SC", str);
             it_a++;
         }
-        else if (it_a == attribs.end() || it_b->first < it_a->first) {
-            sprintf(str, "VS consumes input at location %d but not provided", it_b->first);
+        else if (a_at_end || b_first < a_first) {
+            sprintf(str, "VS consumes input at location %d but not provided", b_first);
             layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, SHADER_CHECKER_INPUT_NOT_PRODUCED, "SC", str);
             it_b++;
         }
