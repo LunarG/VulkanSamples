@@ -1162,12 +1162,14 @@ class ObjectTrackerSubcommand(Subcommand):
         else:
             using_line = '    loader_platform_thread_lock_mutex(&objLock);\n'
             using_line += '    ll_increment_use_count(%s, %s);\n' % (param0_name, obj_type_mapping[p0_type])
-            using_line += '    loader_platform_thread_unlock_mutex(&objLock);\n'
+            # using_line += '    loader_platform_thread_unlock_mutex(&objLock);\n'  -- Add in after special case sections below.
         if 'QueueSubmit' in proto.name:
+            using_line = '    loader_platform_thread_lock_mutex(&objLock);\n'
             using_line += '    set_status(fence, VkObjectTypeFence, OBJSTATUS_FENCE_IS_SUBMITTED);\n'
             using_line += '    // TODO: Fix for updated memory reference mechanism\n'
             using_line += '    // validate_memory_mapping_status(pMemRefs, memRefCount);\n'
             using_line += '    // validate_mem_ref_count(memRefCount);\n'
+            using_line += '    loader_platform_thread_unlock_mutex(&objLock);\n'
         elif 'MemoryRange' in proto.name:
             using_line = '    loader_platform_thread_lock_mutex(&objLock);\n'
             using_line += '    if (validateQueueFlags(queue) == VK_FALSE) {\n'
@@ -1207,6 +1209,11 @@ class ObjectTrackerSubcommand(Subcommand):
             create_line = '    loader_platform_thread_lock_mutex(&objLock);\n'
             create_line += '    ll_insert_obj(*%s, %s);\n' % (proto.params[-1].name, obj_type_mapping[proto.params[-1].ty.strip('*').replace('const ', '')])
             create_line += '    loader_platform_thread_unlock_mutex(&objLock);\n'
+        # Add thread unlock statement following objecttracker processing code.
+        if True in [no_use_proto in proto.name for no_use_proto in ['GlobalOption', 'GetPhysicalDeviceInfo', 'CreateInstance', 'QueueSubmit', 'QueueAddMemReferences', 'QueueRemoveMemReferences', 'QueueWaitIdle', 'QueueBindObjectMemory', 'QueueBindObjectMemoryRange', 'QueueBindImageMemoryRange', 'QueuePresentWSI', 'GetGlobalExtensionInfo', 'CreateDevice', 'GetGpuInfo', 'QueueSignalSemaphore', 'QueueWaitSemaphore']]:
+             using_line += ''
+        else:
+            using_line += '    loader_platform_thread_unlock_mutex(&objLock);\n'
         if 'DestroyObject' in proto.name:
             destroy_line = '    loader_platform_thread_lock_mutex(&objLock);\n'
             destroy_line += '    ll_destroy_obj(%s);\n' % (proto.params[2].name)
