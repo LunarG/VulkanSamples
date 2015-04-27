@@ -1101,9 +1101,11 @@ VK_LAYER_EXPORT VkResult VKAPI vkQueueRemoveMemReferences(
             layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, queue, 0, MEMTRACK_INVALID_QUEUE, "MEM", str);
         } else {
             for (uint32_t i = 0; i < count; i++) {
-                for (list<VkDeviceMemory>::iterator it = pQueueInfo->pMemRefList.begin(); it != pQueueInfo->pMemRefList.end(); ++it) {
+                for (list<VkDeviceMemory>::iterator it = pQueueInfo->pMemRefList.begin(); it != pQueueInfo->pMemRefList.end();) {
                     if ((*it) == pMems[i]) {
                         it = pQueueInfo->pMemRefList.erase(it);
+                    } else {
+                        ++it;
                     }
                 }
             }
