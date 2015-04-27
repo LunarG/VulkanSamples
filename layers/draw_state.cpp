@@ -1373,7 +1373,8 @@ static void printCB(const VkCmdBuffer cb)
         char str[1024];
         sprintf(str, "Cmds in CB %p", (void*)cb);
         layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, NULL, 0, DRAWSTATE_NONE, "DS", str);
-        for (vector<CMD_NODE*>::iterator ii=pCB->pCmds.begin(); ii!=pCB->pCmds.end(); ++ii) {
+        vector<CMD_NODE*> pCmds = pCB->pCmds;
+        for (vector<CMD_NODE*>::iterator ii=pCmds.begin(); ii!=pCmds.end(); ++ii) {
             sprintf(str, "  CMD#%lu: %s", (*ii)->cmdNumber, cmdTypeToString((*ii)->type).c_str());
             layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, cb, 0, DRAWSTATE_NONE, "DS", str);
         }
