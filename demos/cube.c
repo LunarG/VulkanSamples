@@ -1609,8 +1609,8 @@ static void demo_prepare(struct demo *demo)
 #ifdef _WIN32
 static void demo_run(struct demo *demo)
 {
-	if (!demo->prepared)
-		return;
+    if (!demo->prepared)
+        return;
     // Wait for work to finish before updating MVP.
     vkDeviceWaitIdle(demo->device);
     demo_update_data_buffer(demo);
@@ -1993,6 +1993,8 @@ static void demo_init(struct demo *demo, int argc, char **argv)
 static void demo_cleanup(struct demo *demo)
 {
     uint32_t i, j;
+
+    demo->prepared = false;
 
     vkDestroyObject(demo->device, VK_OBJECT_TYPE_DESCRIPTOR_SET, demo->desc_set);
     vkDestroyObject(demo->device, VK_OBJECT_TYPE_DESCRIPTOR_POOL, demo->desc_pool);
