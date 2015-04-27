@@ -504,13 +504,25 @@ static VkResult x11_swap_chain_wait(struct intel_x11_swap_chain *sc,
 
     while (sc->remote.serial < serial) {
         xcb_present_generic_event_t *ev;
+        xcb_intern_atom_reply_t *reply;
 
         if (wait) {
             ev = (xcb_present_generic_event_t *)
                 xcb_wait_for_special_event(sc->c, sc->present_special_event);
+            /* use xcb_intern_atom_reply just to wake other threads waiting on sc->c */
+            reply = xcb_intern_atom_reply(sc->c, xcb_intern_atom(sc->c, 1, 1, "a"), NULL);
+            if (reply) {
+                free(reply);
+            }
+
             if (!ev)
                 return VK_ERROR_UNKNOWN;
         } else {
+            /* use xcb_intern_atom_reply just to check socket for special event */
+            reply = xcb_intern_atom_reply(sc->c, xcb_intern_atom(sc->c, 1, 1, "a"), NULL);
+            if (reply) {
+                free(reply);
+            }
             ev = (xcb_present_generic_event_t *)
                 xcb_poll_for_special_event(sc->c, sc->present_special_event);
             if (!ev)
