@@ -1009,10 +1009,12 @@ static void resetCB(const VkCmdBuffer cb)
 {
     GLOBAL_CB_NODE* pCB = getCBNode(cb);
     if (pCB) {
-        while (!pCB->pCmds.empty()) {
-            delete pCB->pCmds.back();
-            pCB->pCmds.pop_back();
+        vector<CMD_NODE*> cmd_list = pCB->pCmds;
+        while (!cmd_list.empty()) {
+            delete cmd_list.back();
+            cmd_list.pop_back();
         }
+        pCB->pCmds.clear();
         // Reset CB state
         VkFlags saveFlags = pCB->flags;
         uint32_t saveQueueNodeIndex = pCB->queueNodeIndex;
@@ -1212,7 +1214,8 @@ static void cbDumpDotFile(string outFileName)
         if (pCB) {
             fprintf(pOutFile, "subgraph cluster_cmdBuffer%u\n{\nlabel=\"Command Buffer #%u\"\n", i, i);
             uint32_t instNum = 0;
-            for (vector<CMD_NODE*>::iterator ii=pCB->pCmds.begin(); ii!=pCB->pCmds.end(); ++ii) {
+            vector<CMD_NODE*> cmd_list = pCB->pCmds;
+            for (vector<CMD_NODE*>::iterator ii= cmd_list.begin(); ii!= cmd_list.end(); ++ii) {
                 if (instNum) {
                     fprintf(pOutFile, "\"CB%pCMD%u\" -> \"CB%pCMD%u\" [];\n", (void*)pCB->cmdBuffer, instNum-1, (void*)pCB->cmdBuffer, instNum);
                 }
