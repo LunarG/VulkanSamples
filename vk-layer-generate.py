@@ -557,6 +557,7 @@ class APIDumpSubcommand(Subcommand):
         header_txt.append('')
         header_txt.append('static VkLayerDispatchTable nextTable;')
         header_txt.append('static VkBaseLayerObject *pCurObj;')
+        header_txt.append('static bool g_APIDumpDetailed = true;')
         header_txt.append('')
         header_txt.append('static LOADER_PLATFORM_THREAD_ONCE_DECLARATION(tabOnce);')
         header_txt.append('static int printLockInitialized = 0;')
@@ -589,6 +590,19 @@ class APIDumpSubcommand(Subcommand):
         func_body.append('static void init%s(void)' % self.layer_name)
         func_body.append('{')
         func_body.append('    using namespace StreamControl;')
+        func_body.append('')
+        func_body.append('    char const*const detailedStr = getLayerOption("APIDumpDetailed");')
+        func_body.append('    if(detailedStr != NULL)')
+        func_body.append('    {')
+        func_body.append('        if(strcmp(detailedStr, "TRUE") == 0)')
+        func_body.append('        {')
+        func_body.append('            g_APIDumpDetailed = true;')
+        func_body.append('        }')
+        func_body.append('        else if(strcmp(detailedStr, "FALSE") == 0)')
+        func_body.append('        {')
+        func_body.append('            g_APIDumpDetailed = false;')
+        func_body.append('        }')
+        func_body.append('    }')
         func_body.append('')
         func_body.append('    char const*const writeToFileStr = getLayerOption("APIDumpFile");')
         func_body.append('    bool writeToFile = false;')
@@ -710,8 +724,11 @@ class APIDumpSubcommand(Subcommand):
         log_func += '\n    }\n    else {%s;\n    }' % log_func_no_addr;
         #print("Proto %s has param_dict: %s" % (proto.name, sp_param_dict))
         if len(sp_param_dict) > 0:
+            indent = '    '
+            log_func += '\n%sif (g_APIDumpDetailed) {' % indent
+            indent += '    '
             i_decl = False
-            log_func += '\n    string tmp_str;'
+            log_func += '\n%sstring tmp_str;' % indent
             for sp_index in sp_param_dict:
                 #print("sp_index: %s" % str(sp_index))
                 if 'index' == sp_param_dict[sp_index]:
@@ -719,10 +736,12 @@ class APIDumpSubcommand(Subcommand):
                     local_name = proto.params[sp_index].name
                     if '*' not in proto.params[sp_index].ty:
                         local_name = '&%s' % proto.params[sp_index].name
-                    log_func += '\n    if (%s) {' % (local_name)
-                    log_func += '\n        tmp_str = %s(%s, "    ");' % (cis_print_func, local_name)
-                    log_func += '\n        (*outputStream) << "   %s (" << %s << ")" << endl << tmp_str << endl;' % (local_name, local_name)
-                    log_func += '\n    }'
+                    log_func += '\n%sif (%s) {' % (indent, local_name)
+                    indent += '    '
+                    log_func += '\n%stmp_str = %s(%s, "    ");' % (indent, cis_print_func, local_name)
+                    log_func += '\n%s(*outputStream) << "   %s (" << %s << ")" << endl << tmp_str << endl;' % (indent, local_name, local_name)
+                    indent = indent[4:]
+                    log_func += '\n%s}' % (indent)
                 else: # We have a count value stored to iterate over an array
                     print_cast = ''
                     print_func = ''
@@ -735,14 +754,17 @@ class APIDumpSubcommand(Subcommand):
                         #cis_print_func = 'tmp_str = string_convert_helper((void*)%s[i], "    ");' % proto.params[sp_index].name
                     cis_print_func = 'tmp_str = %s(%s%s[i], "    ");' % (print_func, print_cast, proto.params[sp_index].name)
                     if not i_decl:
-                        log_func += '\n    uint32_t i;'
+                        log_func += '\n%suint32_t i;' % (indent)
                         i_decl = True
-                    log_func += '\n    for (i = 0; i < %s; i++) {' % (sp_param_dict[sp_index])
-                    log_func += '\n        %s' % (cis_print_func)
-                    log_func += '\n        (*outputStream) << "   %s[" << i << "] (" << %s%s[i] << ")" << endl << tmp_str << endl;' % (proto.params[sp_index].name, '&', proto.params[sp_index].name)
-                    log_func += '\n    }'
+                    log_func += '\n%sfor (i = 0; i < %s; i++) {' % (indent, sp_param_dict[sp_index])
+                    indent += '    '
+                    log_func += '\n%s%s' % (indent, cis_print_func)
+                    log_func += '\n%s(*outputStream) << "   %s[" << i << "] (" << %s%s[i] << ")" << endl << tmp_str << endl;' % (indent, proto.params[sp_index].name, '&', proto.params[sp_index].name)
+                    indent = indent[4:]
+                    log_func += '\n%s}' % (indent)
+            indent = indent[4:]
+            log_func += '\n%s}' % (indent)
         if proto.name == "EnumerateLayers":
-            c_call = proto.c_call().replace("(" + proto.params[0].name, "((VkPhysicalDevice)gpuw->nextObject", 1)
             funcs.append('%s%s\n'
                      '{\n'
                      '    using namespace StreamControl;\n'
@@ -779,18 +801,6 @@ class APIDumpSubcommand(Subcommand):
                          '    }\n'
                          '%s'
                          '}' % (qual, decl, self.layer_name, self.layer_name, proto.c_call(), f_open, log_func, f_close, stmt))
-#        elif 'vkphysicalgpu' == proto.params[0].ty.lower():
-#            c_call = proto.c_call().replace("(" + proto.params[0].name, "((VkPhysicalDevice)gpuw->nextObject", 1)
-#            funcs.append('%s%s\n'
-#                     '{\n'
-#                     '    using namespace StreamControl;\n'
-#                     '    VkBaseLayerObject* gpuw = (VkBaseLayerObject *) %s;\n'
-#                     '    pCurObj = gpuw;\n'
-#                     '    loader_platform_thread_once(&tabOnce, init%s);\n'
-#                     '    %snextTable.%s;\n'
-#                     '    %s%s%s\n'
-#                     '%s'
-#                     '}' % (qual, decl, proto.params[0].name, self.layer_name, ret_val, c_call, f_open, log_func, f_close, stmt))
         else:
             funcs.append('%s%s\n'
                      '{\n'
