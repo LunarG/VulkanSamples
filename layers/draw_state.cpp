@@ -980,9 +980,11 @@ static GLOBAL_CB_NODE* getCBNode(VkCmdBuffer cb)
 static void deleteCmdBuffers()
 {
     for (unordered_map<VkCmdBuffer, GLOBAL_CB_NODE*>::iterator ii=cmdBufferMap.begin(); ii!=cmdBufferMap.end(); ++ii) {
-        while (!(*ii).second->pCmds.empty()) {
-            delete (*ii).second->pCmds.back();
-            (*ii).second->pCmds.pop_back();
+        vector<CMD_NODE*> cmd_node_list = (*ii).second->pCmds;
+        while (!cmd_node_list.empty()) {
+            CMD_NODE* cmd_node = cmd_node_list.back();
+            delete cmd_node;
+            cmd_node_list.pop_back();
         }
         delete (*ii).second;
     }
