@@ -1008,7 +1008,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkGetGlobalExtensionInfo(
     size_t              *pDataSize,
     void                *pData)
 {
-    // This entrypoint is NOT going to init its own dispatch table since loader calls here early
+    /* This entrypoint is NOT going to init it's own dispatch table since loader calls here early */
     VkExtensionProperties *ext_props;
     uint32_t *count;
 
@@ -1136,7 +1136,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkQueueRemoveMemReferences(
             sprintf(str, "Unknown Queue %p", queue);
             layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, queue, 0, MEMTRACK_INVALID_QUEUE, "MEM", str);
         } else {
-            for (int i = 0; i < count; i++) {
+            for (uint32_t i = 0; i < count; i++) {
                 if (pQueueInfo->pMemRefList.size() > 0) {
                     for (list<VkDeviceMemory>::iterator it = pQueueInfo->pMemRefList.begin(); it != pQueueInfo->pMemRefList.end();) {
                         if ((*it) == pMems[i]) {

@@ -1336,6 +1336,9 @@ class EnumCodeGen:
     def _generateSHHeader(self):
         header = []
         header.append('#pragma once\n')
+        header.append('#ifdef _WIN32\n')
+        header.append('#pragma warning( disable : 4065 )\n')
+        header.append('#endif\n')
         header.append('#include <%s>\n\n\n' % self.in_file)
         return "\n".join(header)
         
