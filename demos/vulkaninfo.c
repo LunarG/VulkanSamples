@@ -71,6 +71,7 @@ bool consoleCreated = false;
 #define MAX_GPUS 8
 
 #define MAX_QUEUE_TYPES 5
+#define APP_SHORT_NAME "vulkaninfo"
 
 struct app_gpu;
 
@@ -688,9 +689,9 @@ int main(int argc, char **argv)
     static const VkApplicationInfo app_info = {
         .sType = VK_STRUCTURE_TYPE_APPLICATION_INFO,
         .pNext = NULL,
-        .pAppName = "vkinfo",
+        .pAppName = APP_SHORT_NAME,
         .appVersion = 1,
-        .pEngineName = "vkinfo",
+        .pEngineName = APP_SHORT_NAME,
         .engineVersion = 1,
         .apiVersion = VK_API_VERSION,
     };
@@ -781,7 +782,7 @@ bool SetStdOutToNewConsole()
         return false;
 
     // change the console window title
-    if (!SetConsoleTitle(TEXT("vulkaninfo")))
+    if (!SetConsoleTitle(TEXT(APP_SHORT_NAME)))
         return false;
 
     return true;

@@ -24,6 +24,8 @@
 
 #define DEMO_BUFFER_COUNT 2
 #define DEMO_TEXTURE_COUNT 1
+#define APP_SHORT_NAME "cube"
+#define APP_LONG_NAME "The Vulkan Cube Demo Program"
 
 #if defined(NDEBUG) && defined(__GNUC__)
 #define U_ASSERT_ONLY __attribute__((unused))
@@ -1630,7 +1632,13 @@ LRESULT CALLBACK WndProc(HWND hWnd,
                          WPARAM wParam,
                          LPARAM lParam)
 {
+<<<<<<< HEAD
     char tmp_str[] = "Test Vulkan Cube Program"; 
+=======
+    PAINTSTRUCT paint_struct;
+    HDC hDC; // Device context
+    char tmp_str[] = APP_LONG_NAME;
+>>>>>>> 7224550... demos: Use macros for the app name, and window name.
 
     switch(uMsg)
     {
@@ -1822,9 +1830,9 @@ static void demo_init_vk(struct demo *demo)
     const VkApplicationInfo app = {
         .sType = VK_STRUCTURE_TYPE_APPLICATION_INFO,
         .pNext = NULL,
-        .pAppName = "cube",
+        .pAppName = APP_SHORT_NAME,
         .appVersion = 0,
-        .pEngineName = "cube",
+        .pEngineName = APP_SHORT_NAME,
         .engineVersion = 0,
         .apiVersion = VK_API_VERSION,
     };
@@ -1950,7 +1958,7 @@ static void demo_init(struct demo *demo, int argc, char **argv)
 
 #ifdef _WIN32
     demo->connection = hInstance;
-    strncpy(demo->name, "cube", APP_NAME_STR_LEN);
+    strncpy(demo->name, APP_SHORT_NAME, APP_NAME_STR_LEN);
 
     if (strncmp(pCmdLine, "--use_staging", strlen("--use_staging")) == 0)
         demo->use_staging_buffer = true;
@@ -1969,7 +1977,7 @@ static void demo_init(struct demo *demo, int argc, char **argv)
     }
 #endif // _WIN32
     if (argv_error) {
-        fprintf(stderr, "Usage:\n  cube [--use_staging]\n");
+        fprintf(stderr, "Usage:\n  %s [--use_staging]\n", APP_SHORT_NAME);
         fflush(stderr);
         exit(1);
     }
