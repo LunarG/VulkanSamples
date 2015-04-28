@@ -2051,6 +2051,7 @@ static void demo_cleanup(struct demo *demo)
 }
 
 #ifdef _WIN32
+
 int APIENTRY WinMain(HINSTANCE hInstance,
                      HINSTANCE hPrevInstance,
                      LPSTR pCmdLine,
