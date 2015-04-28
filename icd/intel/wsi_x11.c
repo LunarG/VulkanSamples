@@ -450,7 +450,7 @@ static VkResult x11_swap_chain_present_pixmap(struct intel_x11_swap_chain *sc,
     if (sc->force_copy)
         options |= XCB_PRESENT_OPTION_COPY;
 
-    cookie = xcb_present_pixmap(sc->c,
+    cookie = xcb_present_pixmap_checked(sc->c,
             sc->window,
             data->pixmap,
             ++sc->local.serial,
