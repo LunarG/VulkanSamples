@@ -1390,7 +1390,14 @@ static void demo_init_vk(struct demo *demo)
         if (!strcmp(ext_names[0], extProp.extName))
             extFound = 1;
     }
-    assert(extFound);
+    if (!extFound) {
+        ERR_EXIT("vkGetGlobalExtensionInfo failed to find the "
+                 "\"VK_WSI_LunarG\" extension.\n\nDo you have a compatible "
+                 "Vulkan installable client driver (ICD) installed?\nPlease "
+                 "look at the Getting Started guide for additional "
+                 "information.\n",
+                 "vkCreateInstance Failure");
+    }
     const VkApplicationInfo app = {
         .sType = VK_STRUCTURE_TYPE_APPLICATION_INFO,
         .pNext = NULL,
@@ -1429,12 +1436,12 @@ static void demo_init_vk(struct demo *demo)
     err = vkCreateInstance(&inst_info, &demo->inst);
     if (err == VK_ERROR_INCOMPATIBLE_DRIVER) {
         ERR_EXIT("Cannot find a compatible Vulkan installable client driver "
-                 "(ICD).\nPlease look at the Getting Started guide for "
+                 "(ICD).\n\nPlease look at the Getting Started guide for "
                  "additional information.\n",
                  "vkCreateInstance Failure");
     } else if (err) {
-        ERR_EXIT("vkCreateInstance failed.  Do you have a compatible Vulkan "
-                 "installable client driver (ICD) installed.  Please look at "
+        ERR_EXIT("vkCreateInstance failed.\n\nDo you have a compatible Vulkan "
+                 "installable client driver (ICD) installed?\nPlease look at "
                  "the Getting Started guide for additional information.\n",
                  "vkCreateInstance Failure");
     }
