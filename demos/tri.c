@@ -59,6 +59,26 @@
 #define U_ASSERT_ONLY
 #endif
 
+#ifdef _WIN32
+#define ERR_EXIT(err_msg, err_class)                    \
+    do {                                                \
+        MessageBox(NULL, err_msg, err_class, MB_OK);    \
+        exit(1);                                        \
+   } while (0)
+
+// NOTE: If the following values (copied from "loader_platform.h") change, they
+// need to change here as well:
+#define LAYER_NAMES_ENV "VK_LAYER_NAMES"
+#define LAYER_NAMES_REGISTRY_VALUE "VK_LAYER_NAMES"
+#else  // _WIN32
+
+#define ERR_EXIT(err_msg, err_class)                    \
+    do {                                                \
+        printf(err_msg);                                \
+        fflush(stdout);                                 \
+        exit(1);                                        \
+   } while (0)
+#endif // _WIN32
 
 struct texture_object {
     VkSampler sampler;
@@ -1407,16 +1427,16 @@ static void demo_init_vk(struct demo *demo)
     uint32_t queue_count;
 
     err = vkCreateInstance(&inst_info, &demo->inst);
-    if (err) {
-#ifdef _WIN32
-        MessageBox(NULL, "vkCreateInstance failed - do you have a Vulkan graphics driver installed?",
-                   "vkCreateInstance Failure", MB_OK);
-#else
-        printf("vkCreateInstance failed - Do you have a Vulkan graphics driver installed?"
-               "(\nExiting ...\n");
-        fflush(stdout);
-#endif
-        exit(1);
+    if (err == VK_ERROR_INCOMPATIBLE_DRIVER) {
+        ERR_EXIT("Cannot find a compatible Vulkan installable client driver "
+                 "(ICD).\nPlease look at the Getting Started guide for "
+                 "additional information.\n",
+                 "vkCreateInstance Failure");
+    } else if (err) {
+        ERR_EXIT("vkCreateInstance failed.  Do you have a compatible Vulkan "
+                 "installable client driver (ICD) installed.  Please look at "
+                 "the Getting Started guide for additional information.\n",
+                 "vkCreateInstance Failure");
     }
 
     gpu_count = 1;
