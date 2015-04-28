@@ -1136,7 +1136,7 @@ class ObjectTrackerSubcommand(Subcommand):
         destroy_line = ''
         funcs = []
         # Special cases for API funcs that don't use an object as first arg
-        if True in [no_use_proto in proto.name for no_use_proto in ['GlobalOption', 'CreateInstance', 'QueueSubmit', 'QueueAddMemReferences', 'QueueRemoveMemReferences', 'QueueWaitIdle', 'QueueBindObjectMemory', 'QueueBindObjectMemoryRange', 'QueueBindImageMemoryRange', 'GetGlobalExtensionInfo', 'CreateDevice', 'GetGpuInfo', 'QueueSignalSemaphore', 'QueueWaitSemaphore']]:
+        if True in [no_use_proto in proto.name for no_use_proto in ['GlobalOption', 'CreateInstance', 'QueueSubmit', 'QueueAddMemReferences', 'QueueRemoveMemReferences', 'QueueWaitIdle', 'QueueBindObjectMemory', 'QueueBindObjectMemoryRange', 'QueueBindImageMemoryRange', 'QueuePresentWSI', 'GetGlobalExtensionInfo', 'CreateDevice', 'GetGpuInfo', 'QueueSignalSemaphore', 'QueueWaitSemaphore']]:
             using_line = ''
         else:
             using_line = '    loader_platform_thread_lock_mutex(&objLock);\n'
