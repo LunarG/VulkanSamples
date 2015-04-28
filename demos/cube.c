@@ -1873,7 +1873,7 @@ static void demo_init_vk(struct demo *demo)
         .queueNodeIndex = 0,
         .queueCount = 1,
     };
-    
+
     const VkDeviceCreateInfo device = {
         .sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
         .pNext = NULL,
