@@ -1675,7 +1675,7 @@ _mesa_glsl_compile_shader(struct gl_context *ctx, struct gl_shader *shader,
 
       // We must provide some state that lower level functions depend upon
       state->es_shader = (manager->getProfile() == EEsProfile);
-      state->language_version = manager->getVersion();
+      state->language_version = useSPV ? 450 : manager->getVersion();
       
       // TODO: enable key extensions, in advance of better integration,
       // so that texture fn lookup can find them.  This isn't the right way to
