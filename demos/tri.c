@@ -1221,8 +1221,6 @@ LRESULT CALLBACK WndProc(HWND hWnd,
                          WPARAM wParam,
                          LPARAM lParam)
 {
-    PAINTSTRUCT paint_struct;
-    HDC hDC; // Device context
     char tmp_str[] = APP_LONG_NAME;
 
     switch(uMsg)
@@ -1627,7 +1625,7 @@ int APIENTRY WinMain(HINSTANCE hInstance,
     /* main message loop*/
     while(!done)
     {
-        PeekMessage(&msg,0,0,0,PM_REMOVE);
+        PeekMessage(&msg, NULL, 0, 0, PM_REMOVE);
         if (msg.message == WM_QUIT) //check for a quit message
         {
             done = true; //if found, quit app

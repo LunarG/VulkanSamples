@@ -1,3 +1,26 @@
+/*
+ * Vulkan
+ *
+ * Copyright (C) 2014-2015 LunarG, Inc.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a
+ * copy of this software and associated documentation files (the "Software"),
+ * to deal in the Software without restriction, including without limitation
+ * the rights to use, copy, modify, merge, publish, distribute, sublicense,
+ * and/or sell copies of the Software, and to permit persons to whom the
+ * Software is furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included
+ * in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL
+ * THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+ * DEALINGS IN THE SOFTWARE.
+ */
 #define _GNU_SOURCE
 #include <stdio.h>
 #include <stdlib.h>
@@ -1654,8 +1677,6 @@ LRESULT CALLBACK WndProc(HWND hWnd,
                          WPARAM wParam,
                          LPARAM lParam)
 {
-    PAINTSTRUCT paint_struct;
-    HDC hDC; // Device context
     char tmp_str[] = APP_LONG_NAME;
 
     switch(uMsg)
@@ -2085,10 +2106,10 @@ static void demo_cleanup(struct demo *demo)
 
 #ifdef _WIN32
 
-int APIENTRY WinMain(HINSTANCE hInstance,
-                     HINSTANCE hPrevInstance,
-                     LPSTR pCmdLine,
-                     int nCmdShow)
+int WINAPI WinMain(HINSTANCE hInstance,
+                   HINSTANCE hPrevInstance,
+                   LPSTR pCmdLine,
+                   int nCmdShow)
 {
     MSG msg;         // message
     bool done;        // flag saying when app is complete
@@ -2102,7 +2123,7 @@ int APIENTRY WinMain(HINSTANCE hInstance,
     /* main message loop*/
     while(!done)
     {
-        PeekMessage(&msg,0,0,0,PM_REMOVE);
+        PeekMessage(&msg, NULL, 0, 0, PM_REMOVE);
         if (msg.message == WM_QUIT) //check for a quit message
         {
             done = true; //if found, quit app
