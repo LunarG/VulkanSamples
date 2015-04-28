@@ -278,7 +278,7 @@ void VkImageTest::CreateImageView(VkImageViewCreateInfo *pCreateInfo,
 
 void VkImageTest::DestroyImageView(VkImageView imageView)
 {
-    ASSERT_VK_SUCCESS(vkDestroyObject(device(), VK_OBJECT_TYPE_IMAGE, imageView));
+    ASSERT_VK_SUCCESS(vkDestroyObject(device(), VK_OBJECT_TYPE_IMAGE_VIEW, imageView));
 }
 
 TEST_F(VkImageTest, CreateImageViewTest) {
