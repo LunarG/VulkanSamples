@@ -861,6 +861,11 @@ class StructWrapperGen:
                         sh_funcs.append('    ss[%u].str(pStruct->%s ? "TRUE" : "FALSE");' % (index, self.struct_dict[s][m]['name']))
                     elif 'uint8' in self.struct_dict[s][m]['type'].lower():
                         sh_funcs.append('    ss[%u] << (uint32_t)pStruct->%s;' % (index, self.struct_dict[s][m]['name']))
+                    elif 'void' in self.struct_dict[s][m]['type'].lower() and self.struct_dict[s][m]['ptr']:
+                        sh_funcs.append('    if (StreamControl::writeAddress)')
+                        sh_funcs.append('        ss[%u] << pStruct->%s;' % (index, self.struct_dict[s][m]['name']))
+                        sh_funcs.append('    else')
+                        sh_funcs.append('        ss[%u].str("address");' % (index))
                     else:
                         (po, pa) = self._get_struct_print_formatted(self.struct_dict[s][m])
                         if "addr" in po: # or self.struct_dict[s][m]['ptr']:
