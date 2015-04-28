@@ -649,6 +649,8 @@ void icd_format_get_raw_value(VkFormat format,
         break;
     case VK_FORMAT_BC1_RGB_UNORM:
     case VK_FORMAT_BC1_RGB_SRGB:
+    case VK_FORMAT_BC1_RGBA_UNORM:
+    case VK_FORMAT_BC1_RGBA_SRGB:
     case VK_FORMAT_BC4_UNORM:
     case VK_FORMAT_BC4_SNORM:
         memcpy(value, color, 8);
