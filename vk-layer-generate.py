@@ -759,7 +759,15 @@ class APIDumpSubcommand(Subcommand):
                     log_func += '\n%sfor (i = 0; i < %s; i++) {' % (indent, sp_param_dict[sp_index])
                     indent += '    '
                     log_func += '\n%s%s' % (indent, cis_print_func)
+                    log_func += '\n%sif (StreamControl::writeAddress == true) {' % (indent)
+                    indent += '    '
                     log_func += '\n%s(*outputStream) << "   %s[" << i << "] (" << %s%s[i] << ")" << endl << tmp_str << endl;' % (indent, proto.params[sp_index].name, '&', proto.params[sp_index].name)
+                    indent = indent[4:]
+                    log_func += '\n%s} else {' % (indent)
+                    indent += '    '
+                    log_func += '\n%s(*outputStream) << "   %s[" << i << "] (address)" << endl << "    address" << endl;' % (indent, proto.params[sp_index].name)
+                    indent = indent[4:]
+                    log_func += '\n%s}' % (indent)
                     indent = indent[4:]
                     log_func += '\n%s}' % (indent)
             indent = indent[4:]
