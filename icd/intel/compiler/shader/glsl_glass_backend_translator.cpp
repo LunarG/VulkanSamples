@@ -859,7 +859,7 @@ inline void MesaGlassTranslator::emitIRTexture(const llvm::IntrinsicInst* llvmIn
    // so, have to stick to old-style for those cases.
    const bool forceOldStyle = IsVector(llvmInst->getType()) && (texFlags & ETFShadow) && ((texFlags & ETFGather) == 0);
 
-   if (manager->getVersion() >= 130 && !forceOldStyle) {
+   if (state->language_version >= 130 && !forceOldStyle) {
       if (texFlags & ETFFetch)
          txName = "texelFetch";
       else

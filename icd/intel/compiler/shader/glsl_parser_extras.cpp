@@ -1721,7 +1721,7 @@ _mesa_glsl_compile_shader(struct gl_context *ctx, struct gl_shader *shader,
 
    shader->symbols                = state->symbols;
    shader->CompileStatus          = !state->error;
-   shader->Version                = manager->getVersion();
+   shader->Version                = useSPV ? 450 : manager->getVersion();
    shader->uses_builtin_functions = state->uses_builtin_functions;
    shader->IsES                   = state->es_shader;
 
