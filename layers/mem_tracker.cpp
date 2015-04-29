@@ -505,8 +505,9 @@ static bool32_t freeCBBindings(
             deleteFenceInfo(pCBInfo->fenceId);
         }
 
-        if (pCBInfo->pMemObjList.size() <= 0) {
-            for (list<VkDeviceMemory>::iterator it=pCBInfo->pMemObjList.begin(); it!=pCBInfo->pMemObjList.end(); ++it) {
+        if (pCBInfo->pMemObjList.size() > 0) {
+            list<VkDeviceMemory> mem_obj_list = pCBInfo->pMemObjList;
+            for (list<VkDeviceMemory>::iterator it=mem_obj_list.begin(); it!=mem_obj_list.end(); ++it) {
                 clearCBBinding(cb, (*it));
             }
         }
@@ -742,16 +743,18 @@ static bool32_t updateObjectBinding(
         }
         // non-null case so should have real mem obj
         MT_MEM_OBJ_INFO* pInfo = getMemObjInfo(mem);
-        if (!pInfo || pInfo->pObjBindings.size() <=0) {
+        if (!pInfo) {
             sprintf(str, "While trying to bind mem for obj %p, couldn't find info for mem obj %p", (void*)object, (void*)mem);
             layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, mem, 0, MEMTRACK_INVALID_MEM_OBJ, "MEM", str);
         } else {
             // Search for object in memory object's binding list
             bool32_t found  = VK_FALSE;
-            for (list<VkObject>::iterator it = pInfo->pObjBindings.begin(); it != pInfo->pObjBindings.end(); ++it) {
-                if ((*it) == object) {
-                    found = VK_TRUE;
-                    break;
+            if (pInfo->pObjBindings.size() > 0) {
+                for (list<VkObject>::iterator it = pInfo->pObjBindings.begin(); it != pInfo->pObjBindings.end(); ++it) {
+                    if ((*it) == object) {
+                        found = VK_TRUE;
+                        break;
+                    }
                 }
             }
             // If not present, add to list
@@ -805,15 +808,13 @@ static VkDeviceMemory getMemBindingFromObject(
     if (pObjInfo) {
         if (pObjInfo->pMemObjInfo) {
             mem = pObjInfo->pMemObjInfo->mem;
-        }
-        else {
+        } else {
             char str[1024];
             sprintf(str, "Trying to get mem binding for object %p but object has no mem binding", (void*)object);
             layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, object, 0, MEMTRACK_MISSING_MEM_BINDINGS, "MEM", str);
             printObjList();
         }
-    }
-    else {
+    } else {
         char str[1024];
         sprintf(str, "Trying to get mem binding for object %p but no such object in global list", (void*)object);
         layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, object, 0, MEMTRACK_INVALID_OBJECT, "MEM", str);
