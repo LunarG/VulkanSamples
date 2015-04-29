@@ -64,7 +64,7 @@ void VkRenderFramework::InitFramework()
      InitFramework(extensions);
 }
 
-void VkRenderFramework::InitFramework(const std::vector<const char *> &extensions)
+void VkRenderFramework::InitFramework(const std::vector<const char *> &extensions, VK_DBG_MSG_CALLBACK_FUNCTION dbgFunction, void *userData)
 {
     VkResult err;
     VkInstanceCreateInfo instInfo = {};
@@ -82,7 +82,10 @@ void VkRenderFramework::InitFramework(const std::vector<const char *> &extension
     err = vkEnumeratePhysicalDevices(inst, &this->gpu_count, objs);
     ASSERT_VK_SUCCESS(err);
     ASSERT_GE(this->gpu_count, 1) << "No GPU available";
-
+    if (dbgFunction) {
+        err = vkDbgRegisterMsgCallback(this->inst, dbgFunction, userData);
+        ASSERT_VK_SUCCESS(err);
+    }
     m_device = new VkDeviceObj(0, objs[0]);
     m_device->get_device_queue();
 

@@ -29,6 +29,7 @@
 #define VKRENDERFRAMEWORK_H
 
 #include "vktestframework.h"
+#include <vkDbg.h>
 
 
 class VkDeviceObj : public vk_testing::Device
@@ -93,7 +94,7 @@ public:
     void InitRenderTarget(VkDepthStencilBindInfo *dsBinding);
     void InitRenderTarget(uint32_t targets, VkDepthStencilBindInfo *dsBinding);
     void InitFramework();
-    void InitFramework(const std::vector<const char *> &layers);
+    void InitFramework(const std::vector<const char *> &layers, VK_DBG_MSG_CALLBACK_FUNCTION=NULL, void *userData=NULL);
     void ShutdownFramework();
     void InitState();
 

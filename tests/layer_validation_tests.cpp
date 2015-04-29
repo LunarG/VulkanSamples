@@ -14,9 +14,8 @@ void VKAPI myDbgFunc(
 
 class ErrorMonitor {
 public:
-    ErrorMonitor(VkInstance inst)
+    ErrorMonitor()
     {
-        vkDbgRegisterMsgCallback(inst, myDbgFunc, this);
         m_msgType = VK_DBG_MSG_UNKNOWN;
     }
     void ClearState()
@@ -100,8 +99,9 @@ protected:
         this->app_info.engineVersion = 1;
         this->app_info.apiVersion = VK_API_VERSION;
 
-        InitFramework(extensions);
-        m_errorMonitor = new ErrorMonitor(inst);
+        m_errorMonitor = new ErrorMonitor;
+        InitFramework(extensions, myDbgFunc, m_errorMonitor);
+
     }
 
     virtual void TearDown() {
