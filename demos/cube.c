@@ -257,6 +257,36 @@ void dumpVec4(const char *note, vec4 vector)
     fflush(stdout);
 }
 
+void VKAPI dbgFunc(
+    VK_DBG_MSG_TYPE      msgType,
+    VkValidationLevel    validationLevel,
+    VkObject             srcObject,
+    size_t               location,
+    int32_t              msgCode,
+    const char*          pMsg,
+    void*                pUserData)
+{
+    char *message = (char *) malloc(strlen(pMsg)+100);
+
+    assert (message);
+
+    if (msgType == VK_DBG_MSG_ERROR) {
+        sprintf(message,"ERROR: Code %d : %s", msgCode, pMsg);
+    } else if (msgType == VK_DBG_MSG_WARNING) {
+        sprintf(message,"WARNING: Code %d : %s", msgCode, pMsg);
+    } else {
+        return;
+    }
+
+#ifdef _WIN32
+    MessageBox(NULL, message, "Alert", MB_OK);
+#else
+    printf("%s\n",message);
+    fflush(stdout);
+#endif
+    free(message);
+}
+
 struct demo {
 #ifdef _WIN32
 #define APP_NAME_STR_LEN 80
@@ -334,6 +364,7 @@ struct demo {
     VkDescriptorSet desc_set;
 
     bool quit;
+    bool validate;
     uint32_t current_buffer;
 };
 
@@ -1677,15 +1708,11 @@ LRESULT CALLBACK WndProc(HWND hWnd,
                          WPARAM wParam,
                          LPARAM lParam)
 {
-    char tmp_str[] = APP_LONG_NAME;
-
     switch(uMsg)
     {
-    case WM_CREATE: 
-        return 0;
     case WM_CLOSE: 
         PostQuitMessage(0);
-        return 0;
+        break;
     case WM_PAINT: 
         demo_run(&demo);
         return 0;
@@ -1851,6 +1878,7 @@ static void demo_init_vk(struct demo *demo)
     // Extensions to enable
     const char *ext_names[] = {
         "VK_WSI_LunarG",
+        "Validation"
     };
     size_t extSize = sizeof(uint32_t);
     uint32_t extCount = 0;
@@ -1882,7 +1910,7 @@ static void demo_init_vk(struct demo *demo)
         .engineVersion = 0,
         .apiVersion = VK_API_VERSION,
     };
-    const VkInstanceCreateInfo inst_info = {
+    VkInstanceCreateInfo inst_info = {
         .sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
         .pNext = NULL,
         .pAppInfo = &app,
@@ -1909,11 +1937,19 @@ static void demo_init_vk(struct demo *demo)
     size_t data_size;
     uint32_t queue_count;
 
+    if (demo->validate) {
+        inst_info.extensionCount = 2;
+    }
+
     err = vkCreateInstance(&inst_info, &demo->inst);
     if (err == VK_ERROR_INCOMPATIBLE_DRIVER) {
         ERR_EXIT("Cannot find a compatible Vulkan installable client driver "
                  "(ICD).\n\nPlease look at the Getting Started guide for "
                  "additional information.\n",
+                 "vkCreateInstance Failure");
+    } else if (err == VK_ERROR_INVALID_EXTENSION) {
+        ERR_EXIT("Cannot find a specified extension library"
+                 ".\nMake sure your layers path is set appropriately\n",
                  "vkCreateInstance Failure");
     } else if (err) {
         ERR_EXIT("vkCreateInstance failed.\n\nDo you have a compatible Vulkan "
@@ -1922,9 +1958,14 @@ static void demo_init_vk(struct demo *demo)
                  "vkCreateInstance Failure");
     }
 
+
     gpu_count = 1;
     err = vkEnumeratePhysicalDevices(demo->inst, &gpu_count, &demo->gpu);
     assert(!err && gpu_count == 1);
+
+    if (demo->validate) {
+        vkDbgRegisterMsgCallback(demo->inst, dbgFunc, NULL);
+    }
 
     err = vkCreateDevice(demo->gpu, &device, &demo->device);
     assert(!err);
@@ -1963,6 +2004,7 @@ static void demo_init_vk(struct demo *demo)
     err = vkGetDeviceQueue(demo->device, demo->graphics_queue_node_index,
             0, &demo->queue);
     assert(!err);
+
 }
 
 static void demo_init_connection(struct demo *demo)
@@ -1989,41 +2031,25 @@ static void demo_init_connection(struct demo *demo)
 #endif // _WIN32
 }
 
-#ifdef _WIN32
-static void demo_init(struct demo *demo, HINSTANCE hInstance, LPSTR pCmdLine)
-#else  // _WIN32
 static void demo_init(struct demo *demo, int argc, char **argv)
-#endif // _WIN32
 {
     vec3 eye = {0.0f, 3.0f, 5.0f};
     vec3 origin = {0, 0, 0};
     vec3 up = {0.0f, -1.0f, 0.0};
-    bool argv_error = false;
 
     memset(demo, 0, sizeof(*demo));
 
-#ifdef _WIN32
-    demo->connection = hInstance;
-    strncpy(demo->name, APP_SHORT_NAME, APP_NAME_STR_LEN);
-
-    if (strncmp(pCmdLine, "--use_staging", strlen("--use_staging")) == 0)
-        demo->use_staging_buffer = true;
-    else if (strlen(pCmdLine) != 0) {
-        fprintf(stderr, "Do not recognize argument \"%s\".\n", pCmdLine);
-        argv_error = true;
-    }
-#else  // _WIN32
     for (int i = 1; i < argc; i++) {
-        if (strncmp(argv[i], "--use_staging", strlen("--use_staging")) == 0)
+        if (strcmp(argv[i], "--use_staging") == 0) {
             demo->use_staging_buffer = true;
-        else {
-            fprintf(stderr, "Do not recognize argument \"%s\".\n", argv[i]);
-            argv_error = true;
+            continue;
         }
-    }
-#endif // _WIN32
-    if (argv_error) {
-        fprintf(stderr, "Usage:\n  %s [--use_staging]\n", APP_SHORT_NAME);
+        if (strcmp(argv[i], "--validate") == 0) {
+            demo->validate = true;
+            continue;
+        }
+
+        fprintf(stderr, "Usage:\n  %s [--use_staging] [--validate}\n", APP_SHORT_NAME);
         fflush(stderr);
         exit(1);
     }
@@ -2105,6 +2131,12 @@ static void demo_cleanup(struct demo *demo)
 }
 
 #ifdef _WIN32
+extern int __getmainargs(
+        int * _Argc,
+        char *** _Argv,
+        char *** _Env,
+        int _DoWildCard,
+        int * new_mode);
 
 int WINAPI WinMain(HINSTANCE hInstance,
                    HINSTANCE hPrevInstance,
@@ -2113,8 +2145,16 @@ int WINAPI WinMain(HINSTANCE hInstance,
 {
     MSG msg;         // message
     bool done;        // flag saying when app is complete
+    int argc;
+    char** argv;
+    char** env;
+    int new_mode = 0;
 
-    demo_init(&demo, hInstance, pCmdLine);
+    __getmainargs(&argc,&argv,&env,0,&new_mode);
+
+    demo_init(&demo, argc, argv);
+    demo.connection = hInstance;
+    strncpy(demo.name, "cube", APP_NAME_STR_LEN);
     demo_create_window(&demo);
 
     demo_prepare(&demo);
