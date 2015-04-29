@@ -847,7 +847,7 @@ TEST_F(VkCmdCopyBufferTest, RAWHazard)
     // Additional commands could go into the buffer here before the wait.
 
     memory_barrier = bufs[1].buffer_memory_barrier(
-            VK_MEMORY_OUTPUT_TRANSFER_BIT, VK_MEMORY_INPUT_CPU_READ_BIT, 0, 4);
+            VK_MEMORY_OUTPUT_TRANSFER_BIT, VK_MEMORY_INPUT_HOST_READ_BIT, 0, 4);
     pmemory_barrier = &memory_barrier;
     vkCmdWaitEvents(cmd_.obj(), VK_WAIT_EVENT_TOP_OF_PIPE, 1, &event, 1, (const void **)&pmemory_barrier);
 
@@ -1350,13 +1350,13 @@ protected:
         img.init(dev_, img_info, reqs);
         add_memory_ref(img);
         const VkFlags all_cache_outputs =
-                VK_MEMORY_OUTPUT_CPU_WRITE_BIT |
+                VK_MEMORY_OUTPUT_HOST_WRITE_BIT |
                 VK_MEMORY_OUTPUT_SHADER_WRITE_BIT |
                 VK_MEMORY_OUTPUT_COLOR_ATTACHMENT_BIT |
                 VK_MEMORY_OUTPUT_DEPTH_STENCIL_ATTACHMENT_BIT |
                 VK_MEMORY_OUTPUT_TRANSFER_BIT;
         const VkFlags all_cache_inputs =
-                VK_MEMORY_INPUT_CPU_READ_BIT |
+                VK_MEMORY_INPUT_HOST_READ_BIT |
                 VK_MEMORY_INPUT_INDIRECT_COMMAND_BIT |
                 VK_MEMORY_INPUT_INDEX_FETCH_BIT |
                 VK_MEMORY_INPUT_VERTEX_ATTRIBUTE_FETCH_BIT |
@@ -1569,13 +1569,13 @@ protected:
         img.init(dev_, img_info, reqs);
         add_memory_ref(img);
         const VkFlags all_cache_outputs =
-                VK_MEMORY_OUTPUT_CPU_WRITE_BIT |
+                VK_MEMORY_OUTPUT_HOST_WRITE_BIT |
                 VK_MEMORY_OUTPUT_SHADER_WRITE_BIT |
                 VK_MEMORY_OUTPUT_COLOR_ATTACHMENT_BIT |
                 VK_MEMORY_OUTPUT_DEPTH_STENCIL_ATTACHMENT_BIT |
                 VK_MEMORY_OUTPUT_TRANSFER_BIT;
         const VkFlags all_cache_inputs =
-                VK_MEMORY_INPUT_CPU_READ_BIT |
+                VK_MEMORY_INPUT_HOST_READ_BIT |
                 VK_MEMORY_INPUT_INDIRECT_COMMAND_BIT |
                 VK_MEMORY_INPUT_INDEX_FETCH_BIT |
                 VK_MEMORY_INPUT_VERTEX_ATTRIBUTE_FETCH_BIT |

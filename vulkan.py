@@ -321,11 +321,15 @@ core = Extension(
             [Param("VkDevice", "device"),
              Param("VkDeviceMemory", "mem")]),
 
-        Proto("VkResult", "FlushMappedMemory",
+        Proto("VkResult", "FlushMappedMemoryRanges",
             [Param("VkDevice", "device"),
-             Param("VkDeviceMemory", "mem"),
-             Param("VkDeviceSize", "offset"),
-             Param("VkDeviceSize", "size")]),
+             Param("uint32_t", "memRangeCount"),
+             Param("const VkMappedMemoryRange*", "pMemRanges")]),
+
+        Proto("VkResult", "InvalidateMappedMemoryRanges",
+            [Param("VkDevice", "device"),
+             Param("uint32_t", "memRangeCount"),
+             Param("const VkMappedMemoryRange*", "pMemRanges")]),
 
         Proto("VkResult", "PinSystemMemory",
             [Param("VkDevice", "device"),

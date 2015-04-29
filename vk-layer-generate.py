@@ -1170,7 +1170,7 @@ class ObjectTrackerSubcommand(Subcommand):
             using_line += '    // validate_memory_mapping_status(pMemRefs, memRefCount);\n'
             using_line += '    // validate_mem_ref_count(memRefCount);\n'
             using_line += '    loader_platform_thread_unlock_mutex(&objLock);\n'
-        elif 'MemoryRange' in proto.name:
+        elif 'QueueBindObjectMemoryRange' in proto.name or 'QueueBindImageMemoryRange' in proto.name:
             using_line = '    loader_platform_thread_lock_mutex(&objLock);\n'
             using_line += '    if (validateQueueFlags(queue) == VK_FALSE) {\n'
             using_line += '        char str[1024];\n'

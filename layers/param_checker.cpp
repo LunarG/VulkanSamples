@@ -413,10 +413,23 @@ VK_LAYER_EXPORT VkResult VKAPI vkUnmapMemory(VkDevice device, VkDeviceMemory mem
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkFlushMappedMemory(VkDevice device, VkDeviceMemory mem, VkDeviceSize offset, VkDeviceSize size)
+VK_LAYER_EXPORT VkResult VKAPI vkFlushMappedMemoryRanges(
+        VkDevice device,
+        uint32_t memRangeCount,
+        const VkMappedMemoryRange* pMemRanges)
 {
 
-    VkResult result = nextTable.FlushMappedMemory(device, mem, offset, size);
+    VkResult result = nextTable.FlushMappedMemoryRanges(device, memRangeCount, pMemRanges);
+    return result;
+}
+
+VK_LAYER_EXPORT VkResult VKAPI vkInvalidateMappedMemoryRanges(
+        VkDevice device,
+        uint32_t memRangeCount,
+        const VkMappedMemoryRange* pMemRanges)
+{
+
+    VkResult result = nextTable.InvalidateMappedMemoryRanges(device, memRangeCount, pMemRanges);
     return result;
 }
 

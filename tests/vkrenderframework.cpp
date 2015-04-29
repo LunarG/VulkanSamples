@@ -419,13 +419,13 @@ void VkImageObj::ImageMemoryBarrier(
         VkCommandBufferObj *cmd_buf,
         VkImageAspect aspect,
         VkFlags output_mask /*=
-            VK_MEMORY_OUTPUT_CPU_WRITE_BIT |
+            VK_MEMORY_OUTPUT_HOST_WRITE_BIT |
             VK_MEMORY_OUTPUT_SHADER_WRITE_BIT |
             VK_MEMORY_OUTPUT_COLOR_ATTACHMENT_BIT |
             VK_MEMORY_OUTPUT_DEPTH_STENCIL_ATTACHMENT_BIT |
             VK_MEMORY_OUTPUT_COPY_BIT*/,
         VkFlags input_mask /*=
-            VK_MEMORY_INPUT_CPU_READ_BIT |
+            VK_MEMORY_INPUT_HOST_READ_BIT |
             VK_MEMORY_INPUT_INDIRECT_COMMAND_BIT |
             VK_MEMORY_INPUT_INDEX_FETCH_BIT |
             VK_MEMORY_INPUT_VERTEX_ATTRIBUTE_FETCH_BIT |
@@ -455,13 +455,13 @@ void VkImageObj::SetLayout(VkCommandBufferObj *cmd_buf,
 {
     VkFlags output_mask, input_mask;
     const VkFlags all_cache_outputs =
-            VK_MEMORY_OUTPUT_CPU_WRITE_BIT |
+            VK_MEMORY_OUTPUT_HOST_WRITE_BIT |
             VK_MEMORY_OUTPUT_SHADER_WRITE_BIT |
             VK_MEMORY_OUTPUT_COLOR_ATTACHMENT_BIT |
             VK_MEMORY_OUTPUT_DEPTH_STENCIL_ATTACHMENT_BIT |
             VK_MEMORY_OUTPUT_TRANSFER_BIT;
     const VkFlags all_cache_inputs =
-            VK_MEMORY_INPUT_CPU_READ_BIT |
+            VK_MEMORY_INPUT_HOST_READ_BIT |
             VK_MEMORY_INPUT_INDIRECT_COMMAND_BIT |
             VK_MEMORY_INPUT_INDEX_FETCH_BIT |
             VK_MEMORY_INPUT_VERTEX_ATTRIBUTE_FETCH_BIT |
@@ -792,13 +792,13 @@ void VkConstantBufferObj::Bind(VkCmdBuffer cmdBuffer, VkDeviceSize offset, uint3
 
 void VkConstantBufferObj::BufferMemoryBarrier(
         VkFlags outputMask /*=
-            VK_MEMORY_OUTPUT_CPU_WRITE_BIT |
+            VK_MEMORY_OUTPUT_HOST_WRITE_BIT |
             VK_MEMORY_OUTPUT_SHADER_WRITE_BIT |
             VK_MEMORY_OUTPUT_COLOR_ATTACHMENT_BIT |
             VK_MEMORY_OUTPUT_DEPTH_STENCIL_ATTACHMENT_BIT |
             VK_MEMORY_OUTPUT_COPY_BIT*/,
         VkFlags inputMask /*=
-            VK_MEMORY_INPUT_CPU_READ_BIT |
+            VK_MEMORY_INPUT_HOST_READ_BIT |
             VK_MEMORY_INPUT_INDIRECT_COMMAND_BIT |
             VK_MEMORY_INPUT_INDEX_FETCH_BIT |
             VK_MEMORY_INPUT_VERTEX_ATTRIBUTE_FETCH_BIT |
@@ -1196,7 +1196,7 @@ void VkCommandBufferObj::ClearAllBuffers(VkClearColor clear_color, float depth_c
 {
     uint32_t i;
     const VkFlags output_mask =
-        VK_MEMORY_OUTPUT_CPU_WRITE_BIT |
+        VK_MEMORY_OUTPUT_HOST_WRITE_BIT |
         VK_MEMORY_OUTPUT_SHADER_WRITE_BIT |
         VK_MEMORY_OUTPUT_COLOR_ATTACHMENT_BIT |
         VK_MEMORY_OUTPUT_DEPTH_STENCIL_ATTACHMENT_BIT |
@@ -1271,13 +1271,13 @@ void VkCommandBufferObj::PrepareAttachments()
 {
     uint32_t i;
     const VkFlags output_mask =
-        VK_MEMORY_OUTPUT_CPU_WRITE_BIT |
+        VK_MEMORY_OUTPUT_HOST_WRITE_BIT |
         VK_MEMORY_OUTPUT_SHADER_WRITE_BIT |
         VK_MEMORY_OUTPUT_COLOR_ATTACHMENT_BIT |
         VK_MEMORY_OUTPUT_DEPTH_STENCIL_ATTACHMENT_BIT |
         VK_MEMORY_OUTPUT_TRANSFER_BIT;
     const VkFlags input_mask =
-        VK_MEMORY_INPUT_CPU_READ_BIT |
+        VK_MEMORY_INPUT_HOST_READ_BIT |
         VK_MEMORY_INPUT_INDIRECT_COMMAND_BIT |
         VK_MEMORY_INPUT_INDEX_FETCH_BIT |
         VK_MEMORY_INPUT_VERTEX_ATTRIBUTE_FETCH_BIT |

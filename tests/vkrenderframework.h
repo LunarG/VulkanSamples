@@ -194,13 +194,13 @@ public:
     ~VkConstantBufferObj();
     void BufferMemoryBarrier(
         VkFlags outputMask =
-            VK_MEMORY_OUTPUT_CPU_WRITE_BIT |
+            VK_MEMORY_OUTPUT_HOST_WRITE_BIT |
             VK_MEMORY_OUTPUT_SHADER_WRITE_BIT |
             VK_MEMORY_OUTPUT_COLOR_ATTACHMENT_BIT |
             VK_MEMORY_OUTPUT_DEPTH_STENCIL_ATTACHMENT_BIT |
             VK_MEMORY_OUTPUT_TRANSFER_BIT,
         VkFlags inputMask =
-            VK_MEMORY_INPUT_CPU_READ_BIT |
+            VK_MEMORY_INPUT_HOST_READ_BIT |
             VK_MEMORY_INPUT_INDIRECT_COMMAND_BIT |
             VK_MEMORY_INPUT_INDEX_FETCH_BIT |
             VK_MEMORY_INPUT_VERTEX_ATTRIBUTE_FETCH_BIT |

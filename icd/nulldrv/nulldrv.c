@@ -1731,11 +1731,19 @@ ICD_EXPORT VkResult VKAPI vkUnmapMemory(
     return VK_SUCCESS;
 }
 
-ICD_EXPORT VkResult VKAPI vkFlushMappedMemory(
+ICD_EXPORT VkResult VKAPI vkFlushMappedMemoryRanges(
     VkDevice                                  device,
-    VkDeviceMemory                            mem_,
-    VkDeviceSize                              offset,
-    VkDeviceSize                              size)
+    uint32_t                                  memRangeCount,
+    const VkMappedMemoryRange*                pMemRanges)
+{
+    NULLDRV_LOG_FUNC;
+    return VK_SUCCESS;
+}
+
+ICD_EXPORT VkResult VKAPI vkInvalidateMappedMemoryRanges(
+    VkDevice                                  device,
+    uint32_t                                  memRangeCount,
+    const VkMappedMemoryRange*                pMemRanges)
 {
     NULLDRV_LOG_FUNC;
     return VK_SUCCESS;

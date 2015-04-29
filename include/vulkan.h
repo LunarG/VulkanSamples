@@ -33,7 +33,7 @@
 #include "vk_platform.h"
 
 // Vulkan API version supported by this file
-#define VK_API_VERSION VK_MAKE_VERSION(0, 91, 0)
+#define VK_API_VERSION VK_MAKE_VERSION(0, 92, 0)
 
 #ifdef __cplusplus
 extern "C"
@@ -856,8 +856,9 @@ typedef enum VkStructureType_
     VK_STRUCTURE_TYPE_UPDATE_AS_COPY                        = 50,
     VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO                  = 51,
     VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO           = 52,
+    VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE                   = 53,
 
-    VK_ENUM_RANGE(STRUCTURE_TYPE, APPLICATION_INFO, PIPELINE_LAYOUT_CREATE_INFO)
+    VK_ENUM_RANGE(STRUCTURE_TYPE, APPLICATION_INFO, MAPPED_MEMORY_RANGE)
 } VkStructureType;
 
 // Object type enumerant
@@ -980,7 +981,8 @@ typedef enum VkMemoryPropertyFlagBits_
 {
     VK_MEMORY_PROPERTY_DEVICE_ONLY                          = 0,            // If otherwise stated, then allocate memory on device
     VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT                     = VK_BIT(0),    // Memory should be mappable by host
-    VK_MEMORY_PROPERTY_HOST_DEVICE_COHERENT_BIT             = VK_BIT(1),    // Memory should be coherent between host and device accesses
+    VK_MEMORY_PROPERTY_HOST_NON_COHERENT_BIT                = VK_BIT(1),    // Memory may not have i/o coherency so vkFlushMappedMemoryRanges and
+                                                                            // vkInvalidateMappedMemoryRanges must be used flush/invalidate host cache
     VK_MEMORY_PROPERTY_HOST_UNCACHED_BIT                    = VK_BIT(2),    // Memory should not be cached by the host
     VK_MEMORY_PROPERTY_HOST_WRITE_COMBINED_BIT              = VK_BIT(3),    // Memory should support host write combining
     VK_MEMORY_PROPERTY_PREFER_HOST_LOCAL                    = VK_BIT(4),    // If set, prefer host access
@@ -991,7 +993,7 @@ typedef enum VkMemoryPropertyFlagBits_
 typedef VkFlags VkMemoryOutputFlags;
 typedef enum VkMemoryOutputFlagBits_
 {
-    VK_MEMORY_OUTPUT_CPU_WRITE_BIT                          = VK_BIT(0),    // Controls output coherency of CPU writes
+    VK_MEMORY_OUTPUT_HOST_WRITE_BIT                         = VK_BIT(0),    // Controls output coherency of host writes
     VK_MEMORY_OUTPUT_SHADER_WRITE_BIT                       = VK_BIT(1),    // Controls output coherency of generic shader writes
     VK_MEMORY_OUTPUT_COLOR_ATTACHMENT_BIT                   = VK_BIT(2),    // Controls output coherency of color attachment writes
     VK_MEMORY_OUTPUT_DEPTH_STENCIL_ATTACHMENT_BIT           = VK_BIT(3),    // Controls output coherency of depth/stencil attachment writes
@@ -1002,7 +1004,7 @@ typedef enum VkMemoryOutputFlagBits_
 typedef VkFlags VkMemoryInputFlags;
 typedef enum VkMemoryInputFlagBits_
 {
-    VK_MEMORY_INPUT_CPU_READ_BIT                            = VK_BIT(0),    // Controls input coherency of CPU reads
+    VK_MEMORY_INPUT_HOST_READ_BIT                           = VK_BIT(0),    // Controls input coherency of host reads
     VK_MEMORY_INPUT_INDIRECT_COMMAND_BIT                    = VK_BIT(1),    // Controls input coherency of indirect command reads
     VK_MEMORY_INPUT_INDEX_FETCH_BIT                         = VK_BIT(2),    // Controls input coherency of index fetches
     VK_MEMORY_INPUT_VERTEX_ATTRIBUTE_FETCH_BIT              = VK_BIT(3),    // Controls input coherency of vertex attribute fetches
@@ -1405,8 +1407,16 @@ typedef struct VkMemoryRequirements_
     VkDeviceSize                                granularity;                // Granularity on which vkQueueBindObjectMemoryRange can bind sub-ranges of memory specified in bytes (usually the page size)
     VkMemoryPropertyFlags                       memPropsAllowed;            // Allowed memory property flags
     VkMemoryPropertyFlags                       memPropsRequired;           // Required memory property flags
-    
 } VkMemoryRequirements;
+
+typedef struct VkMappedMemoryRange_
+{
+    VkStructureType                             sType;                      // Must be VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE
+    const void*                                 pNext;                      // Pointer to next structure
+    VkDeviceMemory                              mem;                        // Mapped memory object
+    VkDeviceSize                                offset;                     // Offset within the mapped memory the range starts from
+    VkDeviceSize                                size;                       // Size of the range within the mapped memory
+} VkMappedMemoryRange;
 
 typedef struct VkFormatProperties_
 {
@@ -2145,7 +2155,8 @@ typedef VkResult (VKAPI *PFN_vkFreeMemory)(VkDevice device, VkDeviceMemory mem);
 typedef VkResult (VKAPI *PFN_vkSetMemoryPriority)(VkDevice device, VkDeviceMemory mem, VkMemoryPriority priority);
 typedef VkResult (VKAPI *PFN_vkMapMemory)(VkDevice device, VkDeviceMemory mem, VkDeviceSize offset, VkDeviceSize size, VkMemoryMapFlags flags, void** ppData);
 typedef VkResult (VKAPI *PFN_vkUnmapMemory)(VkDevice device, VkDeviceMemory mem);
-typedef VkResult (VKAPI *PFN_vkFlushMappedMemory)(VkDevice device, VkDeviceMemory mem, VkDeviceSize offset, VkDeviceSize size);
+typedef VkResult (VKAPI *PFN_vkFlushMappedMemoryRanges)(VkDevice device, uint32_t memRangeCount, const VkMappedMemoryRange* pMemRanges);
+typedef VkResult (VKAPI *PFN_vkInvalidateMappedMemoryRanges)(VkDevice device, uint32_t memRangeCount, const VkMappedMemoryRange* pMemRanges);
 typedef VkResult (VKAPI *PFN_vkPinSystemMemory)(VkDevice device, const void* pSysMem, size_t memSize, VkDeviceMemory* pMem);
 typedef VkResult (VKAPI *PFN_vkGetMultiDeviceCompatibility)(VkPhysicalDevice physicalDevice0, VkPhysicalDevice physicalDevice1, VkPhysicalDeviceCompatibilityInfo* pInfo);
 typedef VkResult (VKAPI *PFN_vkOpenSharedMemory)(VkDevice device, const VkMemoryOpenInfo* pOpenInfo, VkDeviceMemory* pMem);
@@ -2360,11 +2371,15 @@ VkResult VKAPI vkUnmapMemory(
     VkDevice                                    device,
     VkDeviceMemory                              mem);
 
-VkResult VKAPI vkFlushMappedMemory(
+VkResult VKAPI vkFlushMappedMemoryRanges(
     VkDevice                                    device,
-    VkDeviceMemory                              mem,
-    VkDeviceSize                                offset,
-    VkDeviceSize                                size);
+    uint32_t                                    memRangeCount,
+    const VkMappedMemoryRange*                  pMemRanges);
+
+VkResult VKAPI vkInvalidateMappedMemoryRanges(
+    VkDevice                                    device,
+    uint32_t                                    memRangeCount,
+    const VkMappedMemoryRange*                  pMemRanges);
 
 VkResult VKAPI vkPinSystemMemory(
     VkDevice                                    device,
