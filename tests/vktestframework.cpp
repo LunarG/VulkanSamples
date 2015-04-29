@@ -341,41 +341,45 @@ void VkTestFramework::Compare(const char *basename, VkImageObj *image )
 void VkTestFramework::Show(const char *comment, VkImageObj *image)
 {
     VkResult err;
+    VkSubresourceLayout sr_layout;
+    char *ptr;
+    VkTestImageRecord record;
+    size_t data_size = sizeof(sr_layout);
+    VkImageObj displayImage(image->device());
+    VkMemoryPropertyFlags reqs = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
+
+    if (!m_show_images) return;
+
+    displayImage.init(image->extent().width, image->extent().height, image->format(), 0, VK_IMAGE_TILING_LINEAR, reqs);
+    displayImage.CopyImage(*image);
 
     const VkImageSubresource sr = {
         VK_IMAGE_ASPECT_COLOR, 0, 0
     };
-    VkSubresourceLayout sr_layout;
-    size_t data_size = sizeof(sr_layout);
-    VkTestImageRecord record;
 
-    if (!m_show_images) return;
-
-    err = vkGetImageSubresourceInfo( image->device()->device(), image->image(), &sr, VK_SUBRESOURCE_INFO_TYPE_LAYOUT,
-                                      &data_size, &sr_layout);
+    err = vkGetImageSubresourceInfo(displayImage.device()->device(), displayImage.image(), &sr,
+                                    VK_SUBRESOURCE_INFO_TYPE_LAYOUT,
+                                    &data_size, &sr_layout);
     ASSERT_VK_SUCCESS( err );
     ASSERT_EQ(data_size, sizeof(sr_layout));
 
-    char *ptr;
-
-    err = image->MapMemory( (void **) &ptr );
+    err = displayImage.MapMemory( (void **) &ptr );
     ASSERT_VK_SUCCESS( err );
 
     ptr += sr_layout.offset;
 
     record.m_title.append(comment);
-    record.m_width = image->width();
-    record.m_height = image->height();
+    record.m_width = displayImage.width();
+    record.m_height = displayImage.height();
     // TODO: Need to make this more robust to handle different image formats
-    record.m_data_size = image->width()*image->height()*4;
+    record.m_data_size = displayImage.width()*displayImage.height()*4;
     record.m_data = malloc(record.m_data_size);
     memcpy(record.m_data, ptr, record.m_data_size);
     m_images.push_back(record);
     m_display_image = --m_images.end();
 
-    err = image->UnmapMemory();
+    err = displayImage.UnmapMemory();
     ASSERT_VK_SUCCESS( err );
-
 }
 
 void VkTestFramework::RecordImages(vector<VkImageObj *> images)
