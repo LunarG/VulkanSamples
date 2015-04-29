@@ -116,6 +116,7 @@ SET(COMPILER_INCLUDE_DIRS
     ${LUNARGLASS_PREFIX}/Core/LLVM/llvm-3.4/build/install/usr/local/include
     ${LUNARGLASS_PREFIX}
     shader
+    pipeline
     mesa-utils/include
     mesa-utils/src
     mesa-utils/src/glsl
@@ -124,7 +125,7 @@ SET(COMPILER_INCLUDE_DIRS
     mesa-utils/src/mapi
 )
 
-SET(COMPILER_SOURCES
+SET(CREATE_SHADER_SOURCES
     shader/ast_array_index.cpp
     shader/ast_expr.cpp
     shader/ast_function.cpp
@@ -263,11 +264,11 @@ SET(COMPILER_SOURCES
     shader/glsl_symbol_table.cpp
     shader/hir_field_selection.cpp
 
-    shader/compiler_interface.cpp
+)
 
+
+SET(CREATE_PIPELINE_SOURCES
     # File required for backend compiler
-    pipeline/pipeline_compiler_interface.cpp
-    pipeline/pipeline_compiler_interface_meta.cpp
     pipeline/brw_blorp_blit_eu.cpp
     pipeline/brw_shader.cpp
     pipeline/brw_fs.cpp
@@ -318,17 +319,18 @@ set_source_files_properties(
 	shader/glsl_parser_extras.cpp
 	PROPERTIES COMPILE_FLAGS "-Wno-unknown-pragmas -Wno-ignored-qualifiers")
 
-SET(STANDALONE_COMPILER_SOURCES
-    shader/main.cpp
-    ${COMPILER_SOURCES}
-)
-
 # needed by libglslang.a
 add_library(intelcompiler-os STATIC shader/ossource.cpp)
 target_include_directories(intelcompiler-os PRIVATE ${COMPILER_INCLUDE_DIRS})
 set_target_properties(intelcompiler-os PROPERTIES POSITION_INDEPENDENT_CODE ON)
 
-add_library(intelcompiler STATIC ${COMPILER_SOURCES})
+add_library(intelcompiler STATIC
+            shader/compiler_interface.cpp
+            pipeline/pipeline_compiler_interface.cpp
+            pipeline/pipeline_compiler_interface_meta.cpp
+            ${CREATE_SHADER_SOURCES}
+            ${CREATE_PIPELINE_SOURCES}
+)
 
 target_include_directories(intelcompiler
     PRIVATE ${COMPILER_INCLUDE_DIRS}
@@ -346,6 +348,34 @@ target_link_libraries(intelcompiler
 
 set_target_properties(intelcompiler PROPERTIES POSITION_INDEPENDENT_CODE ON)
 
-#add_executable(xglCompiler
-#   ${STANDALONE_COMPILER_SOURCES}
-#)
+# The following generates standalone_compiler executable
+
+SET(STANDALONE_COMPILER_SOURCES
+    shader/main.cpp
+    shader/compiler_interface.cpp
+    pipeline/pipeline_compiler_interface.cpp
+    ${CREATE_SHADER_SOURCES}
+    ${CREATE_PIPELINE_SOURCES}
+)
+
+add_executable(standalone_compiler
+   ${STANDALONE_COMPILER_SOURCES}
+)
+
+target_include_directories(standalone_compiler
+    PRIVATE ${COMPILER_INCLUDE_DIRS}
+    PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/..
+)
+
+# This define is used to turn off driver portions of the compiler/pipeline interface
+target_compile_definitions(standalone_compiler PRIVATE "-DSTANDALONE_SHADER_COMPILER")
+
+target_link_libraries(standalone_compiler
+    icd
+    ${COMPILER_LINK_DIRS}
+    ${COMPILER_LIBS}
+    intelcompiler-os
+    m
+    pthread
+    dl
+)
