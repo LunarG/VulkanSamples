@@ -47,7 +47,8 @@ void intel_destroy_brw_context(struct brw_context *brw);
 VkResult intel_pipeline_shader_compile(struct intel_pipeline_shader *ips,
                                          const struct intel_gpu *gpu,
                                          const struct intel_pipeline_layout *pipeline_layout,
-                                         const VkPipelineShader *info);
+                                         const VkPipelineShader *info,
+                                         const struct intel_ir* ir);
 
 void intel_pipeline_shader_cleanup(struct intel_pipeline_shader *sh,
                                    const struct intel_gpu *gpu);

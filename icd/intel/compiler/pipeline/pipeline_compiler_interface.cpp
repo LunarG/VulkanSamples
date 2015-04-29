@@ -41,6 +41,24 @@ extern "C" {
 #include "compiler/pipeline/brw_device_info.h"
 #include "compiler/pipeline/brw_wm.h"
 
+#ifndef STANDALONE_SHADER_COMPILER
+
+    static const bool standaloneCompiler = false;
+
+#else
+
+    static const bool standaloneCompiler = true;
+
+    // remove this when standalone resource map creation exists
+    bool intel_desc_iter_init_for_binding(struct intel_desc_iter *iter,
+                                          const struct intel_desc_layout *layout,
+                                          uint32_t binding_index, uint32_t array_base)
+    {
+        return true;
+    }
+
+#endif //STANDALONE_SHADER_COMPILER
+
 struct brw_binding_table {
     uint32_t count;
 
@@ -280,11 +298,29 @@ static void fs_data_dump(FILE *fp, struct brw_wm_prog_data* data)
     fflush(fp);
 }
 
+static inline void pipe_interface_free(const void *handle, void *ptr)
+{
+    if (standaloneCompiler)
+        free(ptr);
+    else
+        intel_free(handle, ptr);
+}
+
+static inline void *pipe_interface_alloc(const void *handle,
+                                                    size_t size, size_t alignment,
+                                                    VkSystemAllocType type)
+{
+    if (standaloneCompiler)
+        return calloc(size, sizeof(char));
+    else
+        return intel_alloc(handle, size, alignment, type);
+}
+
 static void rmap_destroy(const struct intel_gpu *gpu,
                          struct intel_pipeline_rmap *rmap)
 {
-    intel_free(gpu, rmap->slots);
-    intel_free(gpu, rmap);
+    pipe_interface_free(gpu, rmap->slots);
+    pipe_interface_free(gpu, rmap);
 }
 
 static struct intel_pipeline_rmap *rmap_create(const struct intel_gpu *gpu,
@@ -296,9 +332,13 @@ static struct intel_pipeline_rmap *rmap_create(const struct intel_gpu *gpu,
     uint32_t surface_count, i;
 
     rmap = (struct intel_pipeline_rmap *)
-        intel_alloc(gpu, sizeof(*rmap), 0, VK_SYSTEM_ALLOC_TYPE_INTERNAL);
+        pipe_interface_alloc(gpu, sizeof(*rmap), 0, VK_SYSTEM_ALLOC_TYPE_INTERNAL);
     if (!rmap)
         return NULL;
+
+    // remove this when standalone resource map creation exists
+    if (standaloneCompiler)
+        return rmap;
 
     memset(rmap, 0, sizeof(*rmap));
 
@@ -312,10 +352,10 @@ static struct intel_pipeline_rmap *rmap_create(const struct intel_gpu *gpu,
     rmap->slot_count = surface_count + rmap->sampler_count;
 
     rmap->slots = (struct intel_pipeline_rmap_slot *)
-        intel_alloc(gpu, sizeof(rmap->slots[0]) * rmap->slot_count,
+        pipe_interface_alloc(gpu, sizeof(rmap->slots[0]) * rmap->slot_count,
             0, VK_SYSTEM_ALLOC_TYPE_INTERNAL);
     if (!rmap->slots) {
-        intel_free(gpu, rmap);
+        pipe_interface_free(gpu, rmap);
         return NULL;
     }
 
@@ -404,9 +444,9 @@ void unpack_set_and_binding(const int location, int &set, int &binding)
 VkResult intel_pipeline_shader_compile(struct intel_pipeline_shader *pipe_shader,
                                          const struct intel_gpu *gpu,
                                          const struct intel_pipeline_layout *pipeline_layout,
-                                         const VkPipelineShader *info)
+                                         const VkPipelineShader *info,
+                                         const struct intel_ir* ir)
 {
-    const struct intel_ir *ir = intel_shader(info->shader)->ir;
     /* XXX how about constness? */
     struct gl_shader_program *sh_prog = (struct gl_shader_program *) ir;
     VkResult status = VK_SUCCESS;
@@ -427,7 +467,8 @@ VkResult intel_pipeline_shader_compile(struct intel_pipeline_shader *pipe_shader
         {
             pipe_shader->codeSize = get_vs_program_size(brw->shader_prog);
 
-            pipe_shader->pCode = intel_alloc(gpu, pipe_shader->codeSize, 0, VK_SYSTEM_ALLOC_TYPE_INTERNAL_SHADER);
+            pipe_shader->pCode = pipe_interface_alloc(gpu, pipe_shader->codeSize, 0, VK_SYSTEM_ALLOC_TYPE_INTERNAL_SHADER);
+
             if (!pipe_shader->pCode) {
                 status = VK_ERROR_OUT_OF_HOST_MEMORY;
                 break;
@@ -546,7 +587,8 @@ VkResult intel_pipeline_shader_compile(struct intel_pipeline_shader *pipe_shader
 
             pipe_shader->codeSize = get_wm_program_size(brw->shader_prog);
 
-            pipe_shader->pCode = intel_alloc(gpu, pipe_shader->codeSize, 0, VK_SYSTEM_ALLOC_TYPE_INTERNAL_SHADER);
+            pipe_shader->pCode = pipe_interface_alloc(gpu, pipe_shader->codeSize, 0, VK_SYSTEM_ALLOC_TYPE_INTERNAL_SHADER);
+
             if (!pipe_shader->pCode) {
                 status = VK_ERROR_OUT_OF_HOST_MEMORY;
                 break;
@@ -680,6 +722,7 @@ VkResult intel_pipeline_shader_compile(struct intel_pipeline_shader *pipe_shader
                 hexdump(stdout, pipe_shader->pCode, pipe_shader->codeSize);
                 fflush(stdout);
             }
+
         }
             break;
 
@@ -710,11 +753,12 @@ VkResult intel_pipeline_shader_compile(struct intel_pipeline_shader *pipe_shader
 void intel_pipeline_shader_cleanup(struct intel_pipeline_shader *sh,
                                    const struct intel_gpu *gpu)
 {
-    intel_free(gpu, sh->pCode);
+    pipe_interface_free(gpu, sh->pCode);
     if (sh->rmap)
         rmap_destroy(gpu, sh->rmap);
     memset(sh, 0, sizeof(*sh));
 }
+
 
 void intel_disassemble_kernel(const struct intel_gpu *gpu,
                               const void *kernel, size_t size)

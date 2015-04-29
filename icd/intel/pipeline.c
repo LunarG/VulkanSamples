@@ -244,8 +244,11 @@ static VkResult pipeline_build_shader(struct intel_pipeline *pipeline,
 {
     VkResult ret;
 
+    const struct intel_ir* ir = intel_shader(sh_info->shader)->ir;
+
     ret = intel_pipeline_shader_compile(sh,
-            pipeline->dev->gpu, pipeline->pipeline_layout, sh_info);
+            pipeline->dev->gpu, pipeline->pipeline_layout, sh_info, ir);
+
     if (ret != VK_SUCCESS)
         return ret;
 
