@@ -192,6 +192,8 @@ VkResult intel_gpu_create(const struct intel_instance *instance, int devid,
     if (render_node) {
         gpu->render_node = gpu->primary_node + primary_len + 1;
         memcpy(gpu->render_node, render_node, render_len + 1);
+    } else {
+        gpu->render_node = gpu->primary_node;
     }
 
     gpu->gen_opaque = gen;
