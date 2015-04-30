@@ -998,8 +998,8 @@ VkPipelineObj::VkPipelineObj(VkDeviceObj *device)
     m_rs_state.pointOrigin = VK_COORDINATE_ORIGIN_UPPER_LEFT;
     m_rs_state.provokingVertex = VK_PROVOKING_VERTEX_LAST;
     m_rs_state.fillMode = VK_FILL_MODE_SOLID;
-    m_rs_state.cullMode = VK_CULL_MODE_NONE;
-    m_rs_state.frontFace = VK_FRONT_FACE_CCW;
+    m_rs_state.cullMode = VK_CULL_MODE_BACK;
+    m_rs_state.frontFace = VK_FRONT_FACE_CW;
 
     memset(&m_cb_state,0,sizeof(m_cb_state));
     m_cb_state.sType = VK_STRUCTURE_TYPE_PIPELINE_CB_STATE_CREATE_INFO;

@@ -117,7 +117,14 @@ struct Vertex
     float r, g, b, a;                // Color
 };
 
+struct VertexUV
+{
+    float posX, posY, posZ, posW;    // Position data
+    float u, v;                      // texture u,v
+};
+
 #define XYZ1(_x_, _y_, _z_)         (_x_), (_y_), (_z_), 1.f
+#define UV(_u_, _v_)                (_u_), (_v_)
 
 static const Vertex g_vbData[] =
 {
@@ -167,25 +174,25 @@ static const Vertex g_vbData[] =
 static const Vertex g_vb_solid_face_colors_Data[] =
 {
     { XYZ1( -1, -1, -1 ), XYZ1( 1.f, 0.f, 0.f ) },
-    { XYZ1( 1, -1, -1 ), XYZ1( 1.f, 0.f, 0.f ) },
+    { XYZ1(  1, -1, -1 ), XYZ1( 1.f, 0.f, 0.f ) },
     { XYZ1( -1,  1, -1 ), XYZ1( 1.f, 0.f, 0.f ) },
     { XYZ1( -1,  1, -1 ), XYZ1( 1.f, 0.f, 0.f ) },
-    { XYZ1( 1, -1, -1 ), XYZ1( 1.f, 0.f, 0.f ) },
-    { XYZ1( 1,  1, -1 ), XYZ1( 1.f, 0.f, 0.f ) },
+    { XYZ1(  1, -1, -1 ), XYZ1( 1.f, 0.f, 0.f ) },
+    { XYZ1(  1,  1, -1 ), XYZ1( 1.f, 0.f, 0.f ) },
 
     { XYZ1( -1, -1,  1 ), XYZ1( 0.f, 1.f, 0.f ) },
     { XYZ1( -1,  1,  1 ), XYZ1( 0.f, 1.f, 0.f ) },
-    { XYZ1( 1, -1,  1 ), XYZ1( 0.f, 1.f, 0.f ) },
-    { XYZ1( 1, -1,  1 ), XYZ1( 0.f, 1.f, 0.f ) },
+    { XYZ1(  1, -1,  1 ), XYZ1( 0.f, 1.f, 0.f ) },
+    { XYZ1(  1, -1,  1 ), XYZ1( 0.f, 1.f, 0.f ) },
     { XYZ1( -1,  1,  1 ), XYZ1( 0.f, 1.f, 0.f ) },
-    { XYZ1( 1,  1,  1 ), XYZ1( 0.f, 1.f, 0.f ) },
+    { XYZ1(  1,  1,  1 ), XYZ1( 0.f, 1.f, 0.f ) },
 
-    { XYZ1( 1,  1,  1 ), XYZ1( 0.f, 0.f, 1.f ) },
-    { XYZ1( 1,  1, -1 ), XYZ1( 0.f, 0.f, 1.f ) },
-    { XYZ1( 1, -1,  1 ), XYZ1( 0.f, 0.f, 1.f ) },
-    { XYZ1( 1, -1,  1 ), XYZ1( 0.f, 0.f, 1.f ) },
-    { XYZ1( 1,  1, -1 ), XYZ1( 0.f, 0.f, 1.f ) },
-    { XYZ1( 1, -1, -1 ), XYZ1( 0.f, 0.f, 1.f ) },
+    { XYZ1(  1,  1,  1 ), XYZ1( 0.f, 0.f, 1.f ) },
+    { XYZ1(  1,  1, -1 ), XYZ1( 0.f, 0.f, 1.f ) },
+    { XYZ1(  1, -1,  1 ), XYZ1( 0.f, 0.f, 1.f ) },
+    { XYZ1(  1, -1,  1 ), XYZ1( 0.f, 0.f, 1.f ) },
+    { XYZ1(  1,  1, -1 ), XYZ1( 0.f, 0.f, 1.f ) },
+    { XYZ1(  1, -1, -1 ), XYZ1( 0.f, 0.f, 1.f ) },
 
     { XYZ1( -1,  1,  1 ), XYZ1( 1.f, 1.f, 0.f ) },
     { XYZ1( -1, -1,  1 ), XYZ1( 1.f, 1.f, 0.f ) },
@@ -194,10 +201,10 @@ static const Vertex g_vb_solid_face_colors_Data[] =
     { XYZ1( -1, -1,  1 ), XYZ1( 1.f, 1.f, 0.f ) },
     { XYZ1( -1, -1, -1 ), XYZ1( 1.f, 1.f, 0.f ) },
 
-    { XYZ1( 1,  1,  1 ), XYZ1( 1.f, 0.f, 1.f ) },
+    { XYZ1(  1,  1,  1 ), XYZ1( 1.f, 0.f, 1.f ) },
     { XYZ1( -1,  1,  1 ), XYZ1( 1.f, 0.f, 1.f ) },
-    { XYZ1( 1,  1, -1 ), XYZ1( 1.f, 0.f, 1.f ) },
-    { XYZ1( 1,  1, -1 ), XYZ1( 1.f, 0.f, 1.f ) },
+    { XYZ1(  1,  1, -1 ), XYZ1( 1.f, 0.f, 1.f ) },
+    { XYZ1(  1,  1, -1 ), XYZ1( 1.f, 0.f, 1.f ) },
     { XYZ1( -1,  1,  1 ), XYZ1( 1.f, 0.f, 1.f ) },
     { XYZ1( -1,  1, -1 ), XYZ1( 1.f, 0.f, 1.f ) },
 
@@ -207,6 +214,51 @@ static const Vertex g_vb_solid_face_colors_Data[] =
     { XYZ1( -1, -1,  1 ), XYZ1( 0.f, 1.f, 1.f ) },
     { XYZ1( 1, -1, -1 ), XYZ1( 0.f, 1.f, 1.f ) },
     { XYZ1( -1, -1, -1 ), XYZ1( 0.f, 1.f, 1.f ) },
+};
+
+static const VertexUV g_vb_texture_Data[] =
+{
+    { XYZ1( -1, -1, -1 ), UV( 0.f, 0.f ) },
+    { XYZ1( -1,  1,  1 ), UV( 1.f, 1.f ) },
+    { XYZ1( -1, -1,  1 ), UV( 1.f, 0.f ) },
+    { XYZ1( -1,  1,  1 ), UV( 1.f, 1.f ) },
+    { XYZ1( -1, -1, -1 ), UV( 0.f, 0.f ) },
+    { XYZ1( -1,  1, -1 ), UV( 0.f, 1.f ) },
+
+    { XYZ1( -1, -1, -1 ), UV( 1.f, 0.f ) },
+    { XYZ1(  1, -1, -1 ), UV( 0.f, 0.f ) },
+    { XYZ1(  1,  1, -1 ), UV( 0.f, 1.f ) },
+    { XYZ1( -1, -1, -1 ), UV( 1.f, 0.f ) },
+    { XYZ1(  1,  1, -1 ), UV( 0.f, 1.f ) },
+    { XYZ1( -1,  1, -1 ), UV( 1.f, 1.f ) },
+
+    { XYZ1( -1, -1, -1 ), UV( 1.f, 1.f ) },
+    { XYZ1(  1, -1,  1 ), UV( 0.f, 0.f ) },
+    { XYZ1(  1, -1, -1 ), UV( 1.f, 0.f ) },
+    { XYZ1( -1, -1, -1 ), UV( 1.f, 1.f ) },
+    { XYZ1( -1, -1,  1 ), UV( 0.f, 1.f ) },
+    { XYZ1(  1, -1,  1 ), UV( 0.f, 0.f ) },
+
+    { XYZ1( -1,  1, -1 ), UV( 1.f, 1.f ) },
+    { XYZ1(  1,  1,  1 ), UV( 0.f, 0.f ) },
+    { XYZ1( -1,  1,  1 ), UV( 0.f, 1.f ) },
+    { XYZ1( -1,  1, -1 ), UV( 1.f, 1.f ) },
+    { XYZ1(  1,  1, -1 ), UV( 1.f, 0.f ) },
+    { XYZ1(  1,  1,  1 ), UV( 0.f, 0.f ) },
+
+    { XYZ1(  1,  1, -1 ), UV( 1.f, 1.f ) },
+    { XYZ1(  1, -1,  1 ), UV( 0.f, 0.f ) },
+    { XYZ1(  1,  1,  1 ), UV( 0.f, 1.f ) },
+    { XYZ1(  1, -1,  1 ), UV( 0.f, 0.f ) },
+    { XYZ1(  1,  1, -1 ), UV( 1.f, 1.f ) },
+    { XYZ1(  1, -1, -1 ), UV( 1.f, 0.f ) },
+
+    { XYZ1( -1,  1,  1 ), UV( 0.f, 1.f ) },
+    { XYZ1(  1,  1,  1 ), UV( 1.f, 1.f ) },
+    { XYZ1( -1, -1,  1 ), UV( 0.f, 0.f ) },
+    { XYZ1( -1, -1,  1 ), UV( 0.f, 0.f ) },
+    { XYZ1(  1,  1,  1 ), UV( 1.f, 1.f ) },
+    { XYZ1(  1, -1,  1 ), UV( 1.f, 0.f ) },
 };
 
 class VkRenderTest : public VkRenderFramework
@@ -309,7 +361,8 @@ void VkRenderTest::RotateTriangleVSUniform(glm::mat4 Projection, glm::mat4 View,
     int matrixSize = sizeof(MVP);
     VkResult err;
 
-    for (i = 0; i < 8; i++) {
+    /* Only do 3 positions to avoid back face cull */
+    for (i = 0; i < 3; i++) {
         void *pData = constantBuffer->map();
 
         Model = glm::rotate(Model, glm::radians(22.5f), glm::vec3(0.0f, 1.0f, 0.0f));
@@ -1755,6 +1808,8 @@ TEST_F(VkRenderTest, CubeWithVertexFetchAndMVP)
             "void main() {\n"
             "   outColor = inColor;\n"
             "   gl_Position = myBufferVals.mvp * pos;\n"
+            "   gl_Position.y = -gl_Position.y;\n"
+            "   gl_Position.z = (gl_Position.z + gl_Position.w) / 2.0;\n"
             "}\n";
 
     static const char *fragShaderText =
@@ -1768,7 +1823,7 @@ TEST_F(VkRenderTest, CubeWithVertexFetchAndMVP)
     glm::mat4 View       = glm::lookAt(
                            glm::vec3(0,3,10), // Camera is at (0,3,10), in World Space
                            glm::vec3(0,0,0), // and looks at the origin
-                           glm::vec3(0,1,0)  // Head is up (set to 0,-1,0 to look upside-down)
+                           glm::vec3(0,-1,0)  // Head is up (set to 0,-1,0 to look upside-down)
                            );
 
     glm::mat4 Model = glm::mat4(1.0f);
@@ -2515,14 +2570,13 @@ TEST_F(VkRenderTest, CubeWithVertexFetchAndMVPAndTexture)
             "    mat4 mvp;\n"
             "} myBufferVals;\n"
             "layout (location=0) in vec4 pos;\n"
+            "layout (location=1) in vec2 input_uv;\n"
             "layout (location=0) out vec2 UV;\n"
             "void main() {\n"
-            "   vec2 positions[3];"
-            "      positions[0] = vec2( 0.0, 0.0);\n"
-            "      positions[1] = vec2( 0.25, 0.1);\n"
-            "      positions[2] = vec2( 0.1, 0.25);\n"
-            "   UV = positions[gl_VertexID % 3];\n"
+            "   UV = input_uv;\n"
             "   gl_Position = myBufferVals.mvp * pos;\n"
+            "   gl_Position.y = -gl_Position.y;\n"
+            "   gl_Position.z = (gl_Position.z + gl_Position.w) / 2.0;\n"
             "}\n";
 
     static const char *fragShaderText =
@@ -2546,14 +2600,15 @@ TEST_F(VkRenderTest, CubeWithVertexFetchAndMVPAndTexture)
     glm::mat4 Model = glm::mat4(1.0f);
 
     glm::mat4 MVP = Projection * View * Model;
+    int num_verts = sizeof(g_vb_texture_Data) / sizeof(g_vb_texture_Data[0]);
 
 
     ASSERT_NO_FATAL_FAILURE(InitState());
     ASSERT_NO_FATAL_FAILURE(InitViewport());
     m_depthStencil->Init(m_device, m_width, m_height);
 
-    VkConstantBufferObj meshBuffer(m_device,sizeof(g_vb_solid_face_colors_Data)/sizeof(g_vb_solid_face_colors_Data[0]),
-            sizeof(g_vb_solid_face_colors_Data[0]), g_vb_solid_face_colors_Data);
+    VkConstantBufferObj meshBuffer(m_device, num_verts,
+            sizeof(g_vb_texture_Data[0]), g_vb_texture_Data);
     meshBuffer.BufferMemoryBarrier();
 
     const int buf_size = sizeof(MVP) / sizeof(float);
@@ -2575,19 +2630,19 @@ TEST_F(VkRenderTest, CubeWithVertexFetchAndMVPAndTexture)
 #define MESH_BIND_ID 0
     VkVertexInputBindingDescription vi_binding = {
         MESH_BIND_ID,                      // binding ID
-        sizeof(g_vbData[0]),               // strideInBytes;  Distance between vertices in bytes (0 = no advancement)
+        sizeof(g_vb_texture_Data[0]),               // strideInBytes;  Distance between vertices in bytes (0 = no advancement)
         VK_VERTEX_INPUT_STEP_RATE_VERTEX  // stepRate;       // Rate at which binding is incremented
     };
 
     VkVertexInputAttributeDescription vi_attribs[2];
-    vi_attribs[0].binding = MESH_BIND_ID;               // Binding ID
-    vi_attribs[0].location = 0;                         // location
+    vi_attribs[0].binding = MESH_BIND_ID;                 // Binding ID
+    vi_attribs[0].location = 0;                           // location
     vi_attribs[0].format = VK_FORMAT_R32G32B32A32_SFLOAT; // format of source data
-    vi_attribs[0].offsetInBytes = 0;                    // Offset of first element in bytes from base of vertex
-    vi_attribs[1].binding = MESH_BIND_ID;               // Binding ID
-    vi_attribs[1].location = 1;                         // location
-    vi_attribs[1].format = VK_FORMAT_R32G32B32A32_SFLOAT; // format of source data
-    vi_attribs[1].offsetInBytes = 16;                   // Offset of first element in bytes from base of vertex
+    vi_attribs[0].offsetInBytes = 0;                      // Offset of first element in bytes from base of vertex
+    vi_attribs[1].binding = MESH_BIND_ID;                 // Binding ID
+    vi_attribs[1].location = 1;                           // location
+    vi_attribs[1].format = VK_FORMAT_R32G32_SFLOAT;       // format of source data
+    vi_attribs[1].offsetInBytes = 16;                     // Offset of uv components
 
     pipelineobj.AddVertexInputAttribs(vi_attribs,2);
     pipelineobj.AddVertexInputBindings(&vi_binding,1);
@@ -2621,13 +2676,14 @@ TEST_F(VkRenderTest, CubeWithVertexFetchAndMVPAndTexture)
     pDSDumpDot((char*)"triTest2.dot");
 #endif
     // render triangle
-    cmdBuffer.Draw(0, 36, 0, 1);
+    cmdBuffer.Draw(0, num_verts, 0, 1);
 
     // finalize recording of the command buffer
     EndCommandBuffer(cmdBuffer);
     cmdBuffer.QueueCommandBuffer();
 
     RecordImages(m_renderTargets);
+    RotateTriangleVSUniform(Projection, View, Model, &mvpBuffer, &cmdBuffer);
 }
 
 TEST_F(VkRenderTest, TriangleMixedSamplerUniformBlockBinding)
