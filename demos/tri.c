@@ -147,7 +147,8 @@ struct demo {
         VkVertexInputAttributeDescription vi_attrs[2];
     } vertices;
 
-    VkCmdBuffer cmd;  // Buffer for initialization commands
+    VkCmdBuffer setup_cmd;  // Command Buffer for initialization commands
+    VkCmdBuffer draw_cmd;  // Command Buffer for drawing commands
     VkPipelineLayout pipeline_layout;
     VkDescriptorSetLayout desc_layout;
     VkPipeline pipeline;
@@ -168,13 +169,13 @@ static void demo_flush_init_cmd(struct demo *demo)
 {
     VkResult U_ASSERT_ONLY err;
 
-    if (demo->cmd == VK_NULL_HANDLE)
+    if (demo->setup_cmd == VK_NULL_HANDLE)
         return;
 
-    err = vkEndCommandBuffer(demo->cmd);
+    err = vkEndCommandBuffer(demo->setup_cmd);
     assert(!err);
 
-    const VkCmdBuffer cmd_bufs[] = { demo->cmd };
+    const VkCmdBuffer cmd_bufs[] = { demo->setup_cmd };
 
     err = vkQueueSubmit(demo->queue, 1, cmd_bufs, VK_NULL_HANDLE);
     assert(!err);
@@ -182,8 +183,8 @@ static void demo_flush_init_cmd(struct demo *demo)
     err = vkQueueWaitIdle(demo->queue);
     assert(!err);
 
-    vkDestroyObject(demo->device, VK_OBJECT_TYPE_COMMAND_BUFFER, demo->cmd);
-    demo->cmd = VK_NULL_HANDLE;
+    vkDestroyObject(demo->device, VK_OBJECT_TYPE_COMMAND_BUFFER, demo->setup_cmd);
+    demo->setup_cmd = VK_NULL_HANDLE;
 }
 
 static void demo_add_mem_refs(
@@ -208,7 +209,7 @@ static void demo_set_image_layout(
 {
     VkResult U_ASSERT_ONLY err;
 
-    if (demo->cmd == VK_NULL_HANDLE) {
+    if (demo->setup_cmd == VK_NULL_HANDLE) {
         const VkCmdBufferCreateInfo cmd = {
             .sType = VK_STRUCTURE_TYPE_CMD_BUFFER_CREATE_INFO,
             .pNext = NULL,
@@ -216,7 +217,7 @@ static void demo_set_image_layout(
             .flags = 0,
         };
 
-        err = vkCreateCommandBuffer(demo->device, &cmd, &demo->cmd);
+        err = vkCreateCommandBuffer(demo->device, &cmd, &demo->setup_cmd);
         assert(!err);
 
         VkCmdBufferBeginInfo cmd_buf_info = {
@@ -225,7 +226,7 @@ static void demo_set_image_layout(
             .flags = VK_CMD_BUFFER_OPTIMIZE_SMALL_BATCH_BIT |
                 VK_CMD_BUFFER_OPTIMIZE_ONE_TIME_SUBMIT_BIT,
         };
-        err = vkBeginCommandBuffer(demo->cmd, &cmd_buf_info);
+        err = vkBeginCommandBuffer(demo->setup_cmd, &cmd_buf_info);
     }
 
     VkImageMemoryBarrier image_memory_barrier = {
@@ -253,7 +254,7 @@ static void demo_set_image_layout(
 
     VkPipeEvent set_events[] = { VK_PIPE_EVENT_TOP_OF_PIPE };
 
-    vkCmdPipelineBarrier(demo->cmd, VK_WAIT_EVENT_TOP_OF_PIPE, 1, set_events, 1, (const void **)&pmemory_barrier);
+    vkCmdPipelineBarrier(demo->draw_cmd, VK_WAIT_EVENT_TOP_OF_PIPE, 1, set_events, 1, (const void **)&pmemory_barrier);
 }
 
 static void demo_draw_build_cmd(struct demo *demo)
@@ -318,44 +319,44 @@ static void demo_draw_build_cmd(struct demo *demo)
     err = vkCreateRenderPass(demo->device, &rp_info, &(rp_begin.renderPass));
     assert(!err);
 
-    err = vkBeginCommandBuffer(demo->cmd, &cmd_buf_info);
+    err = vkBeginCommandBuffer(demo->draw_cmd, &cmd_buf_info);
     assert(!err);
 
-    vkCmdBindPipeline(demo->cmd, VK_PIPELINE_BIND_POINT_GRAPHICS,
+    vkCmdBindPipeline(demo->draw_cmd, VK_PIPELINE_BIND_POINT_GRAPHICS,
                                   demo->pipeline);
-    vkCmdBindDescriptorSets(demo->cmd, VK_PIPELINE_BIND_POINT_GRAPHICS,
+    vkCmdBindDescriptorSets(demo->draw_cmd, VK_PIPELINE_BIND_POINT_GRAPHICS,
             0, 1, & demo->desc_set, 0, NULL);
 
-    vkCmdBindDynamicStateObject(demo->cmd, VK_STATE_BIND_POINT_VIEWPORT, demo->viewport);
-    vkCmdBindDynamicStateObject(demo->cmd, VK_STATE_BIND_POINT_RASTER, demo->raster);
-    vkCmdBindDynamicStateObject(demo->cmd, VK_STATE_BIND_POINT_COLOR_BLEND,
+    vkCmdBindDynamicStateObject(demo->draw_cmd, VK_STATE_BIND_POINT_VIEWPORT, demo->viewport);
+    vkCmdBindDynamicStateObject(demo->draw_cmd, VK_STATE_BIND_POINT_RASTER, demo->raster);
+    vkCmdBindDynamicStateObject(demo->draw_cmd, VK_STATE_BIND_POINT_COLOR_BLEND,
                                      demo->color_blend);
-    vkCmdBindDynamicStateObject(demo->cmd, VK_STATE_BIND_POINT_DEPTH_STENCIL,
+    vkCmdBindDynamicStateObject(demo->draw_cmd, VK_STATE_BIND_POINT_DEPTH_STENCIL,
                                      demo->depth_stencil);
 
     VkDeviceSize offsets[1] = {0};
-    vkCmdBindVertexBuffers(demo->cmd, VERTEX_BUFFER_BIND_ID, 1, &demo->vertices.buf, offsets);
+    vkCmdBindVertexBuffers(demo->draw_cmd, VERTEX_BUFFER_BIND_ID, 1, &demo->vertices.buf, offsets);
 
-    vkCmdBeginRenderPass(demo->cmd, &rp_begin);
+    vkCmdBeginRenderPass(demo->draw_cmd, &rp_begin);
     clear_range.aspect = VK_IMAGE_ASPECT_COLOR;
     clear_range.baseMipLevel = 0;
     clear_range.mipLevels = 1;
     clear_range.baseArraySlice = 0;
     clear_range.arraySize = 1;
-    vkCmdClearColorImage(demo->cmd,
+    vkCmdClearColorImage(demo->draw_cmd,
             demo->buffers[demo->current_buffer].image,
             VK_IMAGE_LAYOUT_CLEAR_OPTIMAL,
             clear_color, 1, &clear_range);
 
     clear_range.aspect = VK_IMAGE_ASPECT_DEPTH;
-    vkCmdClearDepthStencil(demo->cmd,
+    vkCmdClearDepthStencil(demo->draw_cmd,
             demo->depth.image, VK_IMAGE_LAYOUT_CLEAR_OPTIMAL,
             clear_depth, 0, 1, &clear_range);
 
-    vkCmdDraw(demo->cmd, 0, 3, 0, 1);
-    vkCmdEndRenderPass(demo->cmd, rp_begin.renderPass);
+    vkCmdDraw(demo->draw_cmd, 0, 3, 0, 1);
+    vkCmdEndRenderPass(demo->draw_cmd, rp_begin.renderPass);
 
-    err = vkEndCommandBuffer(demo->cmd);
+    err = vkEndCommandBuffer(demo->draw_cmd);
     assert(!err);
 
     vkDestroyObject(demo->device, VK_OBJECT_TYPE_RENDER_PASS, rp_begin.renderPass);
@@ -374,7 +375,7 @@ static void demo_draw(struct demo *demo)
 
     demo_draw_build_cmd(demo);
 
-    err = vkQueueSubmit(demo->queue, 1, &demo->cmd, VK_NULL_HANDLE);
+    err = vkQueueSubmit(demo->queue, 1, &demo->draw_cmd, VK_NULL_HANDLE);
     assert(!err);
 
     err = vkQueuePresentWSI(demo->queue, &present);
@@ -706,7 +707,7 @@ static void demo_prepare_textures(struct demo *demo)
                 .destOffset = { 0, 0, 0 },
                 .extent = { staging_texture.tex_width, staging_texture.tex_height, 1 },
             };
-            vkCmdCopyImage(demo->cmd,
+            vkCmdCopyImage(demo->setup_cmd,
                             staging_texture.image, VK_IMAGE_LAYOUT_TRANSFER_SOURCE_OPTIMAL,
                             demo->textures[i].image, VK_IMAGE_LAYOUT_TRANSFER_DESTINATION_OPTIMAL,
                             1, &copy_region);
@@ -1175,7 +1176,7 @@ static void demo_prepare_descriptor_set(struct demo *demo)
     vkClearDescriptorSets(demo->device, demo->desc_pool, 1, &demo->desc_set);
     vkUpdateDescriptors(demo->device, demo->desc_set, 1, update_array);
 
-    vkEndDescriptorPoolUpdate(demo->device, demo->cmd);
+    vkEndDescriptorPoolUpdate(demo->device, demo->draw_cmd);
 }
 
 static void demo_prepare(struct demo *demo)
@@ -1188,6 +1189,9 @@ static void demo_prepare(struct demo *demo)
     };
     VkResult U_ASSERT_ONLY err;
 
+    err = vkCreateCommandBuffer(demo->device, &cmd, &demo->draw_cmd);
+    assert(!err);
+
     demo_prepare_buffers(demo);
     demo_prepare_depth(demo);
     demo_prepare_textures(demo);
@@ -1196,19 +1200,16 @@ static void demo_prepare(struct demo *demo)
     demo_prepare_pipeline(demo);
     demo_prepare_dynamic_states(demo);
 
-    err = vkCreateCommandBuffer(demo->device, &cmd, &demo->cmd);
-    assert(!err);
-
     demo_prepare_descriptor_pool(demo);
     demo_prepare_descriptor_set(demo);
-	demo->prepared = true;
+    demo->prepared = true;
 }
 
 #ifdef _WIN32
 static void demo_run(struct demo *demo)
 {
-	if (!demo->prepared)
-		return;
+    if (!demo->prepared)
+        return;
     demo_draw(demo);
 }
 
@@ -1556,7 +1557,10 @@ static void demo_cleanup(struct demo *demo)
     vkDestroyObject(demo->device, VK_OBJECT_TYPE_DESCRIPTOR_SET, demo->desc_set);
     vkDestroyObject(demo->device, VK_OBJECT_TYPE_DESCRIPTOR_POOL, demo->desc_pool);
 
-    vkDestroyObject(demo->device, VK_OBJECT_TYPE_COMMAND_BUFFER, demo->cmd);
+    if (demo->setup_cmd) {
+        vkDestroyObject(demo->device, VK_OBJECT_TYPE_COMMAND_BUFFER, demo->setup_cmd);
+    }
+    vkDestroyObject(demo->device, VK_OBJECT_TYPE_COMMAND_BUFFER, demo->draw_cmd);
 
     vkDestroyObject(demo->device, VK_OBJECT_TYPE_DYNAMIC_VP_STATE, demo->viewport);
     vkDestroyObject(demo->device, VK_OBJECT_TYPE_DYNAMIC_RS_STATE, demo->raster);
