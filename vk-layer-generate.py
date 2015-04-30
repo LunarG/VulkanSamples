@@ -844,16 +844,17 @@ class ObjectTrackerSubcommand(Subcommand):
         header_txt.append('//  per-Object list which just links objects of a given type')
         header_txt.append('// The object node has both pointers so the actual nodes are shared between the two lists')
         header_txt.append('typedef struct _objNode {')
-        header_txt.append('    OBJTRACK_NODE   obj;')
+        header_txt.append('    OBJTRACK_NODE    obj;')
         header_txt.append('    struct _objNode *pNextObj;')
         header_txt.append('    struct _objNode *pNextGlobal;')
         header_txt.append('} objNode;')
         header_txt.append('')
-        header_txt.append('static objNode *pObjectHead[VkNumObjectType] = {0};')
-        header_txt.append('static objNode *pGlobalHead = NULL;')
-        header_txt.append('static uint64_t numObjs[VkNumObjectType] = {0};')
-        header_txt.append('static uint64_t numTotalObjs = 0;')
-        header_txt.append('static uint32_t maxMemReferences = 0;')
+        header_txt.append('static objNode                         *pObjectHead[VkNumObjectType] = {0};')
+        header_txt.append('static objNode                         *pGlobalHead                  = NULL;')
+        header_txt.append('static uint64_t                         numObjs[VkNumObjectType]     = {0};')
+        header_txt.append('static uint64_t                         numTotalObjs                 = 0;')
+        header_txt.append('static VkPhysicalDeviceQueueProperties *queueInfo                    = NULL;')
+        header_txt.append('static uint32_t                         queueCount                   = 0;')
         header_txt.append('')
         header_txt.append('// For each Queue\'s doubly linked-list of mem refs')
         header_txt.append('typedef struct _OT_MEM_INFO {')
@@ -865,21 +866,23 @@ class ObjectTrackerSubcommand(Subcommand):
         header_txt.append('')
         header_txt.append('// Track Queue information')
         header_txt.append('typedef struct _OT_QUEUE_INFO {')
-        header_txt.append('    OT_MEM_INFO           *pMemRefList;')
-        header_txt.append('    struct _OT_QUEUE_INFO *pNextQI;')
-        header_txt.append('    VkQueue               queue;')
-        header_txt.append('    uint32_t               refCount;')
+        header_txt.append('    OT_MEM_INFO                     *pMemRefList;')
+        header_txt.append('    struct _OT_QUEUE_INFO           *pNextQI;')
+        header_txt.append('    VkPhysicalDeviceQueueProperties *pQueueProps;')
+        header_txt.append('    VkQueue                          queue;')
+        header_txt.append('    uint32_t                         refCount;')
         header_txt.append('} OT_QUEUE_INFO;')
         header_txt.append('')
         header_txt.append('// Global list of QueueInfo structures, one per queue')
         header_txt.append('static OT_QUEUE_INFO *g_pQueueInfo;')
         header_txt.append('')
         header_txt.append('// Add new queue to head of global queue list')
-        header_txt.append('static void addQueueInfo(VkQueue queue)')
+        header_txt.append('static void addQueueInfo(uint32_t queueNodeIndex, VkQueue queue)')
         header_txt.append('{')
         header_txt.append('    OT_QUEUE_INFO *pQueueInfo = malloc(sizeof(OT_QUEUE_INFO));')
         header_txt.append('    memset(pQueueInfo, 0, sizeof(OT_QUEUE_INFO));')
-        header_txt.append('    pQueueInfo->queue = queue;')
+        header_txt.append('    pQueueInfo->queue       = queue;')
+        header_txt.append('    pQueueInfo->pQueueProps = &queueInfo[queueNodeIndex];')
         header_txt.append('')
         header_txt.append('    if (pQueueInfo != NULL) {')
         header_txt.append('        pQueueInfo->pNextQI   = g_pQueueInfo;')
@@ -1083,6 +1086,27 @@ class ObjectTrackerSubcommand(Subcommand):
         header_txt.append('    layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, vkObj, 0, OBJTRACK_UNKNOWN_OBJECT, "OBJTRACK", str);')
         header_txt.append('}')
         header_txt.append('')
+        header_txt.append('static void setGpuQueueInfoState(size_t* pDataSize, void *pData) {')
+        header_txt.append('    queueCount = ((uint32_t)*pDataSize / sizeof(VkPhysicalDeviceQueueProperties));')
+        header_txt.append('    queueInfo  = (VkPhysicalDeviceQueueProperties*)malloc(sizeof(pDataSize));')
+        header_txt.append('    memcpy(queueInfo, pData, *pDataSize);')
+        header_txt.append('}')
+        header_txt.append('')
+        header_txt.append('// Check object status for selected flag state')
+        header_txt.append('static bool32_t validateQueueFlags(VkQueue queue) {')
+        header_txt.append('    bool32_t result = VK_TRUE;')
+        header_txt.append('    OT_QUEUE_INFO *pQueueInfo = g_pQueueInfo;')
+        header_txt.append('    while (pQueueInfo->queue != queue) {')
+        header_txt.append('        pQueueInfo = pQueueInfo->pNextQI;')
+        header_txt.append('    }')
+        header_txt.append('    if (pQueueInfo != NULL) {')
+        header_txt.append('        if ((pQueueInfo->pQueueProps->queueFlags & VK_QUEUE_MEMMGR_BIT) == 0) {')
+        header_txt.append('            result = VK_FALSE;')
+        header_txt.append('        }')
+        header_txt.append('    }')
+        header_txt.append('    return result;')
+        header_txt.append('}')
+        header_txt.append('')
         header_txt.append('// Check object status for selected flag state')
         header_txt.append('static bool32_t validate_status(VkObject vkObj, VK_OBJECT_TYPE objType, OBJECT_STATUS status_mask, OBJECT_STATUS status_flag, VK_DBG_MSG_TYPE error_level, OBJECT_TRACK_ERROR error_code, char* fail_msg) {')
         header_txt.append('    objNode *pTrav = pObjectHead[objType];')
@@ -1115,9 +1139,6 @@ class ObjectTrackerSubcommand(Subcommand):
         header_txt.append('    validate_status(vkObj, VkObjectTypeCmdBuffer, OBJSTATUS_DEPTH_STENCIL_BOUND, OBJSTATUS_DEPTH_STENCIL_BOUND, VK_DBG_MSG_UNKNOWN,  OBJTRACK_DEPTH_STENCIL_NOT_BOUND, "Depth-stencil object not bound to this command buffer");')
         header_txt.append('}')
         header_txt.append('')
-        header_txt.append('static void setGpuQueueInfoState(void *pData) {')
-        header_txt.append('    maxMemReferences = ((VkPhysicalDeviceQueueProperties *)pData)->maxMemReferences;')
-        header_txt.append('}')
         return "\n".join(header_txt)
 
     def generate_intercept(self, proto, qual):
@@ -1147,6 +1168,14 @@ class ObjectTrackerSubcommand(Subcommand):
             using_line += '    // TODO: Fix for updated memory reference mechanism\n'
             using_line += '    // validate_memory_mapping_status(pMemRefs, memRefCount);\n'
             using_line += '    // validate_mem_ref_count(memRefCount);\n'
+        elif 'MemoryRange' in proto.name:
+            using_line = '    loader_platform_thread_lock_mutex(&objLock);\n'
+            using_line += '    if (validateQueueFlags(queue) == VK_FALSE) {\n'
+            using_line += '        char str[1024];\n'
+            using_line += '        sprintf(str, "Attempting %s on a non-memory-management capable queue -- VK_QUEUE_MEMMGR_BIT not set");\n' % (proto.name)
+            using_line += '        layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, queue, 0, OBJTRACK_UNKNOWN_OBJECT, "OBJTRACK", str);\n'
+            using_line += '    }\n'
+            using_line += '    loader_platform_thread_unlock_mutex(&objLock);\n'
         elif 'GetFenceStatus' in proto.name:
             using_line += '    // Warn if submitted_flag is not set\n'
             using_line += '    validate_status(fence, VkObjectTypeFence, OBJSTATUS_FENCE_IS_SUBMITTED, OBJSTATUS_FENCE_IS_SUBMITTED, VK_DBG_MSG_ERROR, OBJTRACK_INVALID_FENCE, "Status Requested for Unsubmitted Fence");\n'
@@ -1215,7 +1244,7 @@ class ObjectTrackerSubcommand(Subcommand):
                 destroy_line += '    // Clean up Queue\'s MemRef Linked Lists\n'
                 destroy_line += '    destroyQueueMemRefLists();\n'
             if 'GetDeviceQueue' in proto.name:
-                destroy_line = '    addQueueInfo(*pQueue);\n'
+                destroy_line = '    addQueueInfo(queueNodeIndex, *pQueue);\n'
         ret_val = ''
         stmt = ''
         if proto.ret != "void":
@@ -1263,7 +1292,7 @@ class ObjectTrackerSubcommand(Subcommand):
         elif 'GetPhysicalDeviceInfo' in proto.name:
             gpu_state =  '    if (infoType == VK_PHYSICAL_DEVICE_INFO_TYPE_QUEUE_PROPERTIES) {\n'
             gpu_state += '        if (pData != NULL) {\n'
-            gpu_state += '            setGpuQueueInfoState(pData);\n'
+            gpu_state += '            setGpuQueueInfoState(pDataSize, pData);\n'
             gpu_state += '        }\n'
             gpu_state += '    }\n'
             funcs.append('%s%s\n'
