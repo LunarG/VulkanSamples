@@ -1531,7 +1531,6 @@ ICD_EXPORT VkResult VKAPI vkGetPhysicalDeviceInfo(
         props->queueCount = 1;
         props->maxAtomicCounters = 1;
         props->supportsTimestamps = false;
-        props->maxMemReferences = 1;
         break;
       }
     default:
@@ -2009,24 +2008,6 @@ ICD_EXPORT VkResult VKAPI vkGetQueryPoolResults(
     size_t*                                     pDataSize,
     void*                                       pData,
     VkQueryResultFlags                          flags)
-{
-    NULLDRV_LOG_FUNC;
-    return VK_SUCCESS;
-}
-
-ICD_EXPORT VkResult VKAPI vkQueueAddMemReferences(
-    VkQueue                                     queue,
-    uint32_t                                    count,
-    const VkDeviceMemory*                       pMems)
-{
-    NULLDRV_LOG_FUNC;
-    return VK_SUCCESS;
-}
-
-ICD_EXPORT VkResult VKAPI vkQueueRemoveMemReferences(
-    VkQueue                                     queue,
-    uint32_t                                    count,
-    const VkDeviceMemory*                       pMems)
 {
     NULLDRV_LOG_FUNC;
     return VK_SUCCESS;

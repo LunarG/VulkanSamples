@@ -223,7 +223,6 @@ void VkRenderFramework::InitRenderTarget(uint32_t targets, VkDepthStencilBindInf
         load_ops.push_back(VK_ATTACHMENT_LOAD_OP_LOAD);
         store_ops.push_back(VK_ATTACHMENT_STORE_OP_STORE);
         clear_colors.push_back(m_clear_color);
-//        m_mem_ref_mgr.AddMemoryRefs(*img);
     }
       // Create Framebuffer and RenderPass with color attachments and any depth/stencil attachment
     VkFramebufferCreateInfo fb_info = {};
@@ -313,9 +312,6 @@ int VkDescriptorSetObj::AppendBuffer(VkDescriptorType type, VkConstantBufferObj 
     m_updateBuffers.push_back(vk_testing::DescriptorSet::update(type,
                 m_nextSlot, 0, 1, &constantBuffer.m_bufferViewInfo));
 
-    // Track mem references for this descriptor set object
-    mem_ref_mgr.AddMemoryRefs(constantBuffer);
-
     return m_nextSlot++;
 }
 
@@ -333,9 +329,6 @@ int VkDescriptorSetObj::AppendSamplerTexture( VkSamplerObj* sampler, VkTextureOb
 
     m_updateSamplerTextures.push_back(vk_testing::DescriptorSet::update(m_nextSlot, 0, 1,
                 (const VkSamplerImageViewInfo *) NULL));
-
-    // Track mem references for the texture referenced here
-    mem_ref_mgr.AddMemoryRefs(*texture);
 
     return m_nextSlot++;
 }
@@ -640,8 +633,6 @@ VkResult VkImageObj::CopyImage(VkImageObj &src_image)
                     src_image.obj(), src_image.layout(),
                     obj(), layout(),
                     1, &copy_region);
-    cmd_buf.mem_ref_mgr.AddMemoryRefs(src_image);
-    cmd_buf.mem_ref_mgr.AddMemoryRefs(*this);
 
     src_image.SetLayout(&cmd_buf, VK_IMAGE_ASPECT_COLOR, src_image_layout);
 
@@ -819,7 +810,6 @@ void VkConstantBufferObj::BufferMemoryBarrier(
     else
     {
         m_device->wait(m_fence);
-        m_commandBuffer->mem_ref_mgr.EmitRemoveMemoryRefs(m_device->m_queue);
     }
 
     // open the command buffer
@@ -843,13 +833,6 @@ void VkConstantBufferObj::BufferMemoryBarrier(
     // finish recording the command buffer
     err = m_commandBuffer->EndCommandBuffer();
     ASSERT_VK_SUCCESS(err);
-
-    /*
-     * Tell driver about memory references made in this command buffer
-     * Note: Since this command buffer only has a PipelineBarrier
-     * command there really aren't any memory refs to worry about.
-     */
-    m_commandBuffer->mem_ref_mgr.EmitAddMemoryRefs(m_device->m_queue);
 
     // submit the command buffer to the universal queue
     VkCmdBuffer bufferArray[1];
@@ -1126,31 +1109,6 @@ vector<VkDeviceMemory> VkMemoryRefManager::mem_refs() const
     return mems;
 }
 
-void VkMemoryRefManager::AddMemoryRefs(vk_testing::Object &vkObject)
-{
-    const std::vector<VkDeviceMemory> mems = vkObject.memories();
-    AddMemoryRefs(mems);
-}
-
-void VkMemoryRefManager::AddMemoryRefs(vector<VkDeviceMemory> mem)
-{
-    for (size_t i = 0; i < mem.size(); i++) {
-        if (mem[i] != NULL) {
-            this->mem_refs_.push_back(mem[i]);
-        }
-    }
-}
-
-void VkMemoryRefManager::EmitAddMemoryRefs(VkQueue queue)
-{
-    vkQueueAddMemReferences(queue, mem_refs_.size(), &mem_refs_[0]);
-}
-
-void VkMemoryRefManager::EmitRemoveMemoryRefs(VkQueue queue)
-{
-    vkQueueRemoveMemReferences(queue, mem_refs_.size(), &mem_refs_[0]);
-}
-
 VkCommandBufferObj::VkCommandBufferObj(VkDeviceObj *device)
     : vk_testing::CmdBuffer(*device, vk_testing::CmdBuffer::create_info(device->graphics_queue_node_index_))
 {
@@ -1231,7 +1189,6 @@ void VkCommandBufferObj::ClearAllBuffers(VkClearColor clear_color, float depth_c
                m_renderTargets[i]->image(), VK_IMAGE_LAYOUT_CLEAR_OPTIMAL,
                &clear_color, 1, &srRange );
 
-        mem_ref_mgr.AddMemoryRefs(*m_renderTargets[i]);
     }
 
     if (depthStencilObj)
@@ -1256,7 +1213,6 @@ void VkCommandBufferObj::ClearAllBuffers(VkClearColor clear_color, float depth_c
                                 depthStencilObj->obj(), VK_IMAGE_LAYOUT_CLEAR_OPTIMAL,
                                 depth_clear_color,  stencil_clear_color,
                                 1, &dsRange);
-        mem_ref_mgr.AddMemoryRefs(*depthStencilObj);
 
         // prepare depth buffer for rendering
         memory_barrier.image = depthStencilObj->obj();
@@ -1357,8 +1313,6 @@ void VkCommandBufferObj::QueueCommandBuffer(VkFence fence)
 {
     VkResult err = VK_SUCCESS;
 
-    mem_ref_mgr.EmitAddMemoryRefs(m_device->m_queue);
-
     // submit the command buffer to the universal queue
     err = vkQueueSubmit( m_device->m_queue, 1, &obj(), fence );
     ASSERT_VK_SUCCESS( err );
@@ -1368,18 +1322,11 @@ void VkCommandBufferObj::QueueCommandBuffer(VkFence fence)
 
     // Wait for work to finish before cleaning up.
     vkDeviceWaitIdle(m_device->device());
-
-    /*
-     * Now that processing on this command buffer is complete
-     * we can remove the memory references.
-     */
-    mem_ref_mgr.EmitRemoveMemoryRefs(m_device->m_queue);
 }
 
 void VkCommandBufferObj::BindPipeline(VkPipelineObj &pipeline)
 {
     vkCmdBindPipeline( obj(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline.obj() );
-    mem_ref_mgr.AddMemoryRefs(pipeline);
 }
 
 void VkCommandBufferObj::BindDescriptorSet(VkDescriptorSetObj &descriptorSet)
@@ -1389,22 +1336,16 @@ void VkCommandBufferObj::BindDescriptorSet(VkDescriptorSetObj &descriptorSet)
     // bind pipeline, vertex buffer (descriptor set) and WVP (dynamic buffer view)
     vkCmdBindDescriptorSets(obj(), VK_PIPELINE_BIND_POINT_GRAPHICS,
            0, 1, &set_obj, 0, NULL );
-
-    // Add descriptor set mem refs to command buffer's list
-    mem_ref_mgr.AddMemoryRefs(descriptorSet.memories());
-    mem_ref_mgr.AddMemoryRefs(descriptorSet.mem_ref_mgr.mem_refs());
 }
 
 void VkCommandBufferObj::BindIndexBuffer(VkIndexBufferObj *indexBuffer, uint32_t offset)
 {
     vkCmdBindIndexBuffer(obj(), indexBuffer->obj(), offset, indexBuffer->GetIndexType());
-    mem_ref_mgr.AddMemoryRefs(*indexBuffer);
 }
 
 void VkCommandBufferObj::BindVertexBuffer(VkConstantBufferObj *vertexBuffer, VkDeviceSize offset, uint32_t binding)
 {
     vkCmdBindVertexBuffers(obj(), binding, 1, &vertexBuffer->obj(), &offset);
-    mem_ref_mgr.AddMemoryRefs(*vertexBuffer);
 }
 
 VkDepthStencilObj::VkDepthStencilObj()

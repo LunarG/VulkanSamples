@@ -529,16 +529,6 @@ void Queue::submit(const CmdBuffer &cmd)
     submit(cmd, fence);
 }
 
-void Queue::add_mem_references(const std::vector<VkDeviceMemory> &mem_refs)
-{
-    EXPECT(vkQueueAddMemReferences(obj(), mem_refs.size(), &mem_refs[0]) == VK_SUCCESS);
-}
-
-void Queue::remove_mem_references(const std::vector<VkDeviceMemory> &mem_refs)
-{
-    EXPECT(vkQueueRemoveMemReferences(obj(), mem_refs.size(), &mem_refs[0]) == VK_SUCCESS);
-}
-
 void Queue::wait()
 {
     EXPECT(vkQueueWaitIdle(obj()) == VK_SUCCESS);

@@ -583,17 +583,11 @@ void TestFrameworkVkPresent::CreateSwapChain()
                 1, &region);
         m_cmdbuf.end();
 
-        vkQueueAddMemReferences(m_queue.obj(), 1, &m_display_image->m_presentableMemory);
-        vkQueueAddMemReferences(m_queue.obj(), buf.memories().size(), &buf.memories()[0]);
-
         VkCmdBuffer cmdBufs[1];
         cmdBufs[0] = m_cmdbuf.obj();
 
         vkQueueSubmit(m_queue.obj(), 1, cmdBufs, NULL);
         m_queue.wait();
-
-        vkQueueRemoveMemReferences(m_queue.obj(), 1, &m_display_image->m_presentableMemory);
-        vkQueueRemoveMemReferences(m_queue.obj(), buf.memories().size(), &buf.memories()[0]);
 
         ++m_display_image;
     }

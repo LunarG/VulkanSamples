@@ -279,16 +279,6 @@ core = Extension(
              Param("const VkCmdBuffer*", "pCmdBuffers"),
              Param("VkFence", "fence")]),
 
-        Proto("VkResult", "QueueAddMemReferences",
-            [Param("VkQueue", "queue"),
-             Param("uint32_t", "count"),
-             Param("const VkDeviceMemory*", "pMems")]),
-
-        Proto("VkResult", "QueueRemoveMemReferences",
-            [Param("VkQueue", "queue"),
-             Param("uint32_t", "count"),
-             Param("const VkDeviceMemory*", "pMems")]),
-
         Proto("VkResult", "QueueWaitIdle",
             [Param("VkQueue", "queue")]),
 

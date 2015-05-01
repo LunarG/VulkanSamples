@@ -136,7 +136,6 @@ static const char *vk_result_string(VkResult err)
     STR(VK_ERROR_UNSUPPORTED_SHADER_IL_VERSION);
     STR(VK_ERROR_BAD_SHADER_CODE);
     STR(VK_ERROR_BAD_PIPELINE_DATA);
-    STR(VK_ERROR_TOO_MANY_MEMORY_REFERENCES);
     STR(VK_ERROR_NOT_MAPPABLE);
     STR(VK_ERROR_MEMORY_MAP_FAILED);
     STR(VK_ERROR_MEMORY_UNMAP_FAILED);
@@ -652,7 +651,6 @@ static void app_gpu_dump_queue_props(const struct app_gpu *gpu, uint32_t id)
     printf("\tqueueCount = %u\n",           props->queueCount);
     printf("\tmaxAtomicCounters = %u\n",    props->maxAtomicCounters);
     printf("\tsupportsTimestamps = %u\n",   props->supportsTimestamps);
-    printf("\tmaxMemReferences = %u\n",     props->maxMemReferences);
 }
 
 static void app_gpu_dump_memory_props(const struct app_gpu *gpu)

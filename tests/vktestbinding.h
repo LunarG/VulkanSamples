@@ -140,8 +140,8 @@ public:
                      const GpuMemory &mem, VkDeviceSize mem_offset);
 
     // Unless an object is initialized with init_no_mem(), memories are
-    // automatically allocated and bound.  These methods can be used to get
-    // the memories (for vkQueueAddMemReferences), or to map/unmap the primary memory.
+    // automatically allocated and bound.  These methods can be used to
+    // map/unmap the primary memory.
     std::vector<VkDeviceMemory> memories() const;
 
     const void *map(VkFlags flags) const;

@@ -33,7 +33,7 @@
 #include "vk_platform.h"
 
 // Vulkan API version supported by this file
-#define VK_API_VERSION VK_MAKE_VERSION(0, 92, 0)
+#define VK_API_VERSION VK_MAKE_VERSION(0, 93, 0)
 
 #ifdef __cplusplus
 extern "C"
@@ -938,17 +938,16 @@ typedef enum VkResult_
     VK_ERROR_UNSUPPORTED_SHADER_IL_VERSION                  = -(0x00000015),
     VK_ERROR_BAD_SHADER_CODE                                = -(0x00000016),
     VK_ERROR_BAD_PIPELINE_DATA                              = -(0x00000017),
-    VK_ERROR_TOO_MANY_MEMORY_REFERENCES                     = -(0x00000018),
-    VK_ERROR_NOT_MAPPABLE                                   = -(0x00000019),
-    VK_ERROR_MEMORY_MAP_FAILED                              = -(0x0000001A),
-    VK_ERROR_MEMORY_UNMAP_FAILED                            = -(0x0000001B),
-    VK_ERROR_INCOMPATIBLE_DEVICE                            = -(0x0000001C),
-    VK_ERROR_INCOMPATIBLE_DRIVER                            = -(0x0000001D),
-    VK_ERROR_INCOMPLETE_COMMAND_BUFFER                      = -(0x0000001E),
-    VK_ERROR_BUILDING_COMMAND_BUFFER                        = -(0x0000001F),
-    VK_ERROR_MEMORY_NOT_BOUND                               = -(0x00000020),
-    VK_ERROR_INCOMPATIBLE_QUEUE                             = -(0x00000021),
-    VK_ERROR_NOT_SHAREABLE                                  = -(0x00000022),
+    VK_ERROR_NOT_MAPPABLE                                   = -(0x00000018),
+    VK_ERROR_MEMORY_MAP_FAILED                              = -(0x00000019),
+    VK_ERROR_MEMORY_UNMAP_FAILED                            = -(0x0000001A),
+    VK_ERROR_INCOMPATIBLE_DEVICE                            = -(0x0000001B),
+    VK_ERROR_INCOMPATIBLE_DRIVER                            = -(0x0000001C),
+    VK_ERROR_INCOMPLETE_COMMAND_BUFFER                      = -(0x0000001D),
+    VK_ERROR_BUILDING_COMMAND_BUFFER                        = -(0x0000001E),
+    VK_ERROR_MEMORY_NOT_BOUND                               = -(0x0000001F),
+    VK_ERROR_INCOMPATIBLE_QUEUE                             = -(0x00000020),
+    VK_ERROR_NOT_SHAREABLE                                  = -(0x00000021),
 
     VK_MAX_ENUM(RESULT)
 } VkResult;
@@ -1368,7 +1367,6 @@ typedef struct VkPhysicalDeviceQueueProperties_
     uint32_t                                    queueCount;
     uint32_t                                    maxAtomicCounters;
     bool32_t                                    supportsTimestamps;
-    uint32_t                                    maxMemReferences;           // Tells how many memory references can be active for the given queue
 } VkPhysicalDeviceQueueProperties;
 
 typedef struct VkPhysicalDeviceMemoryProperties_
@@ -2146,8 +2144,6 @@ typedef VkResult (VKAPI *PFN_vkGetPhysicalDeviceExtensionInfo)(VkPhysicalDevice 
 typedef VkResult (VKAPI *PFN_vkEnumerateLayers)(VkPhysicalDevice physicalDevice, size_t maxStringSize, size_t* pLayerCount, char* const* pOutLayers, void* pReserved);
 typedef VkResult (VKAPI *PFN_vkGetDeviceQueue)(VkDevice device, uint32_t queueNodeIndex, uint32_t queueIndex, VkQueue* pQueue);
 typedef VkResult (VKAPI *PFN_vkQueueSubmit)(VkQueue queue, uint32_t cmdBufferCount, const VkCmdBuffer* pCmdBuffers, VkFence fence);
-typedef VkResult (VKAPI *PFN_vkQueueAddMemReferences)(VkQueue queue, uint32_t count, const VkDeviceMemory* pMems);
-typedef VkResult (VKAPI *PFN_vkQueueRemoveMemReferences)(VkQueue queue, uint32_t count, const VkDeviceMemory* pMems);
 typedef VkResult (VKAPI *PFN_vkQueueWaitIdle)(VkQueue queue);
 typedef VkResult (VKAPI *PFN_vkDeviceWaitIdle)(VkDevice device);
 typedef VkResult (VKAPI *PFN_vkAllocMemory)(VkDevice device, const VkMemoryAllocInfo* pAllocInfo, VkDeviceMemory* pMem);
@@ -2326,16 +2322,6 @@ VkResult VKAPI vkQueueSubmit(
     uint32_t                                    cmdBufferCount,
     const VkCmdBuffer*                          pCmdBuffers,
     VkFence                                     fence);
-
-VkResult VKAPI vkQueueAddMemReferences(
-    VkQueue                                     queue,
-    uint32_t                                    count,
-    const VkDeviceMemory*                       pMems);
-
-VkResult VKAPI vkQueueRemoveMemReferences(
-    VkQueue                                     queue,
-    uint32_t                                    count,
-    const VkDeviceMemory*                       pMems);
 
 VkResult VKAPI vkQueueWaitIdle(
     VkQueue                                     queue);

@@ -439,7 +439,7 @@ VkResult intel_cmd_end(struct intel_cmd *cmd)
                 &cmd->writers[INTEL_CMD_WRITER_BATCH].bo, 1))
         return VK_SUCCESS;
     else
-        return VK_ERROR_TOO_MANY_MEMORY_REFERENCES;
+        return VK_ERROR_UNKNOWN;
 }
 
 ICD_EXPORT VkResult VKAPI vkCreateCommandBuffer(

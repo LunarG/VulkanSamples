@@ -342,17 +342,6 @@ VK_LAYER_EXPORT VkResult VKAPI vkQueueSubmit(VkQueue queue, uint32_t cmdBufferCo
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkQueueAddMemReferences(VkQueue queue, uint32_t count, const VkDeviceMemory* pMems)
-{
-    VkResult result = nextTable.QueueAddMemReferences(queue, count, pMems);
-    return result;
-}
-
-VK_LAYER_EXPORT VkResult VKAPI vkQueueRemoveMemReferences(VkQueue queue, uint32_t count, const VkDeviceMemory* pMems)
-{
-    VkResult result = nextTable.QueueRemoveMemReferences(queue, count, pMems);
-    return result;
-}
 VK_LAYER_EXPORT VkResult VKAPI vkQueueWaitIdle(VkQueue queue)
 {
 

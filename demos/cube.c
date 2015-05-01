@@ -370,20 +370,6 @@ static void demo_flush_init_cmd(struct demo *demo)
     demo->cmd = VK_NULL_HANDLE;
 }
 
-static void demo_add_mem_refs(
-        struct demo *demo,
-        int num_refs, VkDeviceMemory *mem)
-{
-    vkQueueAddMemReferences(demo->queue, num_refs, mem);
-}
-
-static void demo_remove_mem_refs(
-        struct demo *demo,
-        int num_refs, VkDeviceMemory *mem)
-{
-    vkQueueRemoveMemReferences(demo->queue, num_refs, mem);
-}
-
 static void demo_set_image_layout(
         struct demo *demo,
         VkImage image,
@@ -633,8 +619,6 @@ static void demo_prepare_buffers(struct demo *demo)
         demo->buffers[i].image = images[i].image;
         demo->buffers[i].mem = images[i].memory;
 
-        demo_add_mem_refs(demo, 1, &demo->buffers[i].mem);
-
         demo_set_image_layout(demo, demo->buffers[i].image,
                                VK_IMAGE_LAYOUT_UNDEFINED,
                                VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
@@ -724,8 +708,6 @@ static void demo_prepare_depth(struct demo *demo)
     demo_set_image_layout(demo, demo->depth.image,
                            VK_IMAGE_LAYOUT_UNDEFINED,
                            VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
-
-    demo_add_mem_refs(demo, demo->depth.num_mem, demo->depth.mem);
 
     /* create image view */
     view.image = demo->depth.image;
@@ -1070,16 +1052,12 @@ static void demo_prepare_textures(struct demo *demo)
                             demo->textures[i].image, VK_IMAGE_LAYOUT_TRANSFER_DESTINATION_OPTIMAL,
                             1, &copy_region);
 
-            demo_add_mem_refs(demo, staging_texture.num_mem, staging_texture.mem);
-            demo_add_mem_refs(demo, demo->textures[i].num_mem, demo->textures[i].mem);
-
             demo_set_image_layout(demo, demo->textures[i].image,
                                    VK_IMAGE_LAYOUT_TRANSFER_DESTINATION_OPTIMAL,
                                    demo->textures[i].imageLayout);
 
             demo_flush_init_cmd(demo);
 
-            demo_remove_mem_refs(demo, staging_texture.num_mem, staging_texture.mem);
             demo_destroy_texture_image(demo, &staging_texture);
         } else {
             /* Can't support VK_FORMAT_B8G8R8A8_UNORM !? */
@@ -1206,7 +1184,6 @@ void demo_prepare_cube_data_buffer(struct demo *demo)
                 i, demo->uniform_data.mem[i], 0);
         assert(!err);
     }
-    demo_add_mem_refs(demo, demo->uniform_data.num_mem, demo->uniform_data.mem);
 
     memset(&view_info, 0, sizeof(view_info));
     view_info.sType = VK_STRUCTURE_TYPE_BUFFER_VIEW_CREATE_INFO;
@@ -2076,7 +2053,6 @@ static void demo_cleanup(struct demo *demo)
         vkDestroyObject(demo->device, VK_OBJECT_TYPE_IMAGE_VIEW, demo->textures[i].view);
         vkQueueBindObjectMemory(demo->queue, VK_OBJECT_TYPE_IMAGE, demo->textures[i].image, 0, VK_NULL_HANDLE, 0);
         vkDestroyObject(demo->device, VK_OBJECT_TYPE_IMAGE, demo->textures[i].image);
-        demo_remove_mem_refs(demo, demo->textures[i].num_mem, demo->textures[i].mem);
         for (j = 0; j < demo->textures[i].num_mem; j++)
             vkFreeMemory(demo->device, demo->textures[i].mem[j]);
         free(demo->textures[i].mem);
@@ -2086,7 +2062,6 @@ static void demo_cleanup(struct demo *demo)
 
     vkDestroyObject(demo->device, VK_OBJECT_TYPE_DEPTH_STENCIL_VIEW, demo->depth.view);
     vkQueueBindObjectMemory(demo->queue, VK_OBJECT_TYPE_IMAGE, demo->depth.image, 0, VK_NULL_HANDLE, 0);
-    demo_remove_mem_refs(demo, demo->depth.num_mem, demo->depth.mem);
     vkDestroyObject(demo->device, VK_OBJECT_TYPE_IMAGE, demo->depth.image);
     for (j = 0; j < demo->depth.num_mem; j++) {
         vkFreeMemory(demo->device, demo->depth.mem[j]);
@@ -2095,14 +2070,12 @@ static void demo_cleanup(struct demo *demo)
     vkDestroyObject(demo->device, VK_OBJECT_TYPE_BUFFER_VIEW, demo->uniform_data.view);
     vkQueueBindObjectMemory(demo->queue, VK_OBJECT_TYPE_BUFFER, demo->uniform_data.buf, 0, VK_NULL_HANDLE, 0);
     vkDestroyObject(demo->device, VK_OBJECT_TYPE_BUFFER, demo->uniform_data.buf);
-    demo_remove_mem_refs(demo, demo->uniform_data.num_mem, demo->uniform_data.mem);
     for (j = 0; j < demo->uniform_data.num_mem; j++)
         vkFreeMemory(demo->device, demo->uniform_data.mem[j]);
 
     for (i = 0; i < DEMO_BUFFER_COUNT; i++) {
         vkDestroyObject(demo->device, VK_OBJECT_TYPE_COLOR_ATTACHMENT_VIEW, demo->buffers[i].view);
         vkDestroyObject(demo->device, VK_OBJECT_TYPE_COMMAND_BUFFER, demo->buffers[i].cmd);
-        demo_remove_mem_refs(demo, 1, &demo->buffers[i].mem);
     }
 
     vkDestroyDevice(demo->device);

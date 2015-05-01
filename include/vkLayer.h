@@ -37,8 +37,6 @@ typedef struct VkLayerDispatchTable_
     PFN_vkEnumerateLayers EnumerateLayers;
     PFN_vkGetDeviceQueue GetDeviceQueue;
     PFN_vkQueueSubmit QueueSubmit;
-    PFN_vkQueueAddMemReferences QueueAddMemReferences;
-    PFN_vkQueueRemoveMemReferences QueueRemoveMemReferences;
     PFN_vkQueueWaitIdle QueueWaitIdle;
     PFN_vkDeviceWaitIdle DeviceWaitIdle;
     PFN_vkAllocMemory AllocMemory;

@@ -306,84 +306,6 @@ static void retireDeviceFences(
     }
 }
 
-// Returns True if a memory reference is present in a Queue's memory reference list
-// Queue is validated by caller
-static bool32_t checkMemRef(
-    VkQueue        queue,
-    VkDeviceMemory mem)
-{
-    bool32_t result = VK_FALSE;
-    list<VkDeviceMemory>::iterator it;
-    MT_QUEUE_INFO *pQueueInfo = queueMap[queue];
-    if (pQueueInfo->pMemRefList.size() <= 0)
-        return result;
-    for (it = pQueueInfo->pMemRefList.begin(); it != pQueueInfo->pMemRefList.end(); ++it) {
-        if ((*it) == mem) {
-            result = VK_TRUE;
-            break;
-        }
-    }
-    return result;
-}
-
-static bool32_t validateQueueMemRefs(
-    VkQueue            queue,
-    uint32_t           cmdBufferCount,
-    const VkCmdBuffer *pCmdBuffers)
-{
-    bool32_t result = VK_TRUE;
-
-    //  Verify Queue
-    MT_QUEUE_INFO *pQueueInfo = queueMap[queue];
-    if (pQueueInfo == NULL) {
-        char str[1024];
-        sprintf(str, "Unknown Queue %p specified in vkQueueSubmit", queue);
-        layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, queue, 0, MEMTRACK_INVALID_QUEUE, "MEM", str);
-    }
-    else {
-        //  Iterate through all CBs in pCmdBuffers
-        for (uint32_t i = 0; i < cmdBufferCount; i++) {
-            MT_CB_INFO* pCBInfo = getCBInfo(pCmdBuffers[i]);
-            if (!pCBInfo) {
-                char str[1024];
-                sprintf(str, "Unable to find info for CB %p in order to check memory references in "
-                             "vkQueueSubmit for queue %p",
-                    (void*)pCmdBuffers[i], queue);
-                layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, pCmdBuffers[i], 0, MEMTRACK_INVALID_CB, "MEM", str);
-                result = VK_FALSE;
-            } else {
-                // Validate that all actual references are accounted for in pMemRefs
-                if (pCBInfo->pMemObjList.size() > 0) {
-                    for (list<VkDeviceMemory>::iterator it = pCBInfo->pMemObjList.begin(); it != pCBInfo->pMemObjList.end(); ++it) {
-                        // Search for each memref in queues memreflist.
-                        if (checkMemRef(queue, *it)) {
-                            char str[1024];
-                            sprintf(str, "Found Mem Obj %p binding to CB %p for queue %p", (*it), pCmdBuffers[i], queue);
-                            layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, pCmdBuffers[i], 0, MEMTRACK_NONE, "MEM", str);
-                        }
-                        else {
-                            char str[1024];
-                            sprintf(str, "Queue %p Memory reference list for Command Buffer %p is missing ref to mem obj %p",
-                                queue, pCmdBuffers[i], (*it));
-                            layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, pCmdBuffers[i], 0, MEMTRACK_INVALID_MEM_REF, "MEM", str);
-                            result = VK_FALSE;
-                        }
-                    }
-                }
-            }
-        }
-        if (result == VK_TRUE) {
-            char str[1024];
-            sprintf(str, "Verified all memory dependencies for Queue %p are included in pMemRefs list", queue);
-            layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, queue, 0, MEMTRACK_NONE, "MEM", str);
-            // TODO : Could report mem refs in pMemRefs that AREN'T in mem list, that would be primarily informational
-            //   Currently just noting that there is a difference
-        }
-    }
-
-    return result;
-}
-
 // Return ptr to info in map container containing mem, or NULL if not found
 //  Calls to this function should be wrapped in mutex
 static MT_MEM_OBJ_INFO* getMemObjInfo(
@@ -1087,72 +1009,6 @@ VK_LAYER_EXPORT VkResult VKAPI vkGetDeviceQueue(
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkQueueAddMemReferences(
-    VkQueue                queue,
-    uint32_t               count,
-    const VkDeviceMemory  *pMems)
-{
-    VkResult result = nextTable.QueueAddMemReferences(queue, count, pMems);
-    if (result == VK_SUCCESS) {
-        loader_platform_thread_lock_mutex(&globalLock);
-
-        MT_QUEUE_INFO *pQueueInfo = queueMap[queue];
-        if (pQueueInfo == NULL) {
-            char str[1024];
-            sprintf(str, "Unknown Queue %p", queue);
-            layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, queue, 0, MEMTRACK_INVALID_QUEUE, "MEM", str);
-        } else {
-            for (uint32_t i = 0; i < count; i++) {
-                if (checkMemRef(queue, pMems[i]) == VK_TRUE) {
-                    // Alread in list, just warn
-                    char str[1024];
-                    sprintf(str, "Request to add a memory reference (%p) to Queue %p -- ref is already "
-                                 "present in the queue's reference list", pMems[i], queue);
-                    layerCbMsg(VK_DBG_MSG_WARNING, VK_VALIDATION_LEVEL_0, pMems[i], 0, MEMTRACK_INVALID_MEM_REF, "MEM", str);
-                } else {
-                    // Add to queue's memory reference list
-                    pQueueInfo->pMemRefList.push_front(pMems[i]);
-                }
-            }
-        }
-        loader_platform_thread_unlock_mutex(&globalLock);
-    }
-    return result;
-}
-
-VK_LAYER_EXPORT VkResult VKAPI vkQueueRemoveMemReferences(
-    VkQueue               queue,
-    uint32_t              count,
-    const VkDeviceMemory *pMems)
-{
-    // TODO : Decrement ref count for this memory reference on this queue. Remove if ref count is zero.
-    VkResult result = nextTable.QueueRemoveMemReferences(queue, count, pMems);
-    if (result == VK_SUCCESS) {
-        loader_platform_thread_lock_mutex(&globalLock);
-
-        MT_QUEUE_INFO *pQueueInfo = queueMap[queue];
-        if (pQueueInfo == NULL) {
-            char str[1024];
-            sprintf(str, "Unknown Queue %p", queue);
-            layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, queue, 0, MEMTRACK_INVALID_QUEUE, "MEM", str);
-        } else {
-            for (uint32_t i = 0; i < count; i++) {
-                if (pQueueInfo->pMemRefList.size() > 0) {
-                    for (list<VkDeviceMemory>::iterator it = pQueueInfo->pMemRefList.begin(); it != pQueueInfo->pMemRefList.end();) {
-                        if ((*it) == pMems[i]) {
-                            it = pQueueInfo->pMemRefList.erase(it);
-                        } else {
-                            ++it;
-                        }
-                    }
-                }
-            }
-        }
-        loader_platform_thread_unlock_mutex(&globalLock);
-    }
-    return result;
-}
-
 VK_LAYER_EXPORT VkResult VKAPI vkQueueSubmit(
     VkQueue             queue,
     uint32_t            cmdBufferCount,
@@ -1170,8 +1026,6 @@ VK_LAYER_EXPORT VkResult VKAPI vkQueueSubmit(
         pCBInfo = getCBInfo(pCmdBuffers[i]);
         pCBInfo->fenceId = fenceId;
     }
-
-    validateQueueMemRefs(queue, cmdBufferCount, pCmdBuffers);
 
     loader_platform_thread_unlock_mutex(&globalLock);
     VkResult result = nextTable.QueueSubmit(queue, cmdBufferCount, pCmdBuffers, getFenceFromId(fenceId));
@@ -2522,10 +2376,6 @@ VK_LAYER_EXPORT void* VKAPI vkGetProcAddr(
         return (void*) vkDbgUnregisterMsgCallback;
     if (!strcmp(funcName, "vkGetDeviceQueue"))
         return (void*) vkGetDeviceQueue;
-    if (!strcmp(funcName, "vkQueueAddMemReferences"))
-        return (void*) vkQueueAddMemReferences;
-    if (!strcmp(funcName, "vkQueueRemoveMemReferences"))
-        return (void*) vkQueueRemoveMemReferences;
     if (!strcmp(funcName, "vkCreateSwapChainWSI"))
         return (void*) vkCreateSwapChainWSI;
     if (!strcmp(funcName, "vkDestroySwapChainWSI"))
