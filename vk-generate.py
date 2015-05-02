@@ -119,11 +119,11 @@ class LoaderEntrypointsSubcommand(Subcommand):
         return "#include \"loader.h\""
 
     def _generate_object_setup(self, proto):
-        method = "loader_init_data"
+        method = "loader_init_dispatch"
         cond = "res == VK_SUCCESS"
 
         if "Get" in proto.name:
-            method = "loader_set_data"
+            method = "loader_set_dispatch"
 
         setup = []
 
@@ -192,7 +192,7 @@ class LoaderEntrypointsSubcommand(Subcommand):
             func.append("")
 
             # get dispatch table
-            func.append("    disp = loader_get_data(%s);" %
+            func.append("    disp = loader_get_dispatch(%s);" %
                     proto.params[0].name)
             func.append("")
 

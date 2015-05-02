@@ -752,7 +752,7 @@ static void * VKAPI loader_gpa_internal(VkPhysicalDevice gpu, const char * pName
     }
 }
 
-extern struct loader_icd * loader_get_icd(const VkBaseLayerObject *gpu, uint32_t *gpu_index)
+struct loader_icd * loader_get_icd(const VkBaseLayerObject *gpu, uint32_t *gpu_index)
 {
     /*
      * NOTE: at this time icd->gpus is pointing to wrapped GPUs, but no where else

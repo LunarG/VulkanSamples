@@ -43,24 +43,24 @@
 #  define LOADER_EXPORT
 #endif
 
-static inline void loader_set_data(VkObject obj, const void *data)
+static inline void loader_set_dispatch(VkObject obj, const void *data)
 {
     *((const void **) obj) = data;
 }
 
-static inline void *loader_get_data(const VkObject obj)
+static inline VkLayerDispatchTable *loader_get_dispatch(const VkObject obj)
 {
-    return *((void **) obj);
+    return *((VkLayerDispatchTable **) obj);
 }
 
-static inline void loader_init_data(VkObject obj, const void *data)
+static inline void loader_init_dispatch(VkObject obj, const void *data)
 {
 #ifdef DEBUG
     assert(valid_loader_magic_value(obj) &&
             "Incompatible ICD, first dword must be initialized to ICD_LOADER_MAGIC. See loader/README.md for details.");
 #endif
 
-    loader_set_data(obj, data);
+    loader_set_dispatch(obj, data);
 }
 
 struct loader_instance {
@@ -72,7 +72,6 @@ struct loader_instance {
 };
 
 extern uint32_t loader_activate_layers(struct loader_icd *icd, uint32_t gpu_index, uint32_t ext_count, const char *const* ext_names);
-extern struct loader_icd * loader_get_icd(const VkBaseLayerObject *gpu, uint32_t *gpu_index);
 #define MAX_LAYER_LIBRARIES 64
 #define MAX_GPUS_FOR_LAYER 16
 
