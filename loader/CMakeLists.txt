@@ -1,19 +1,19 @@
 add_custom_command(OUTPUT dispatch.c
-	COMMAND ${PYTHON_CMD} ${PROJECT_SOURCE_DIR}/vk-generate.py loader-entrypoints > dispatch.c
-	DEPENDS ${PROJECT_SOURCE_DIR}/vk-generate.py ${PROJECT_SOURCE_DIR}/vulkan.py
+	COMMAND ${PYTHON_CMD} ${PROJECT_SOURCE_DIR}/loader/vk-loader-generate.py loader-entrypoints > dispatch.c
+	DEPENDS ${PROJECT_SOURCE_DIR}/loader/vk-loader-generate.py ${PROJECT_SOURCE_DIR}/vulkan.py
                 ${PROJECT_SOURCE_DIR}/include/vkIcd.h)
 
 add_custom_command(OUTPUT table_ops.h
-	COMMAND ${PYTHON_CMD} ${PROJECT_SOURCE_DIR}/vk-generate.py dispatch-table-ops loader > table_ops.h
-	DEPENDS ${PROJECT_SOURCE_DIR}/vk-generate.py ${PROJECT_SOURCE_DIR}/vulkan.py)
+	COMMAND ${PYTHON_CMD} ${PROJECT_SOURCE_DIR}/loader/vk-loader-generate.py dispatch-table-ops loader > table_ops.h
+	DEPENDS ${PROJECT_SOURCE_DIR}/loader/vk-loader-generate.py ${PROJECT_SOURCE_DIR}/vulkan.py)
 
 add_custom_command(OUTPUT vulkan.def
-	COMMAND ${PYTHON_CMD} ${PROJECT_SOURCE_DIR}/vk-generate.py win-def-file vulkan all > vulkan.def
-	DEPENDS ${PROJECT_SOURCE_DIR}/vk-generate.py ${PROJECT_SOURCE_DIR}/vulkan.py)
+	COMMAND ${PYTHON_CMD} ${PROJECT_SOURCE_DIR}/loader/vk-loader-generate.py win-def-file vulkan all > vulkan.def
+	DEPENDS ${PROJECT_SOURCE_DIR}/loader/vk-loader-generate.py ${PROJECT_SOURCE_DIR}/vulkan.py)
 
 add_custom_command(OUTPUT gpa_helper.h
-	COMMAND ${PYTHON_CMD} ${PROJECT_SOURCE_DIR}/vk-generate.py loader-get-proc-addr loader > gpa_helper.h
-	DEPENDS ${PROJECT_SOURCE_DIR}/vk-generate.py ${PROJECT_SOURCE_DIR}/vulkan.py)
+	COMMAND ${PYTHON_CMD} ${PROJECT_SOURCE_DIR}/loader/vk-loader-generate.py loader-get-proc-addr loader > gpa_helper.h
+	DEPENDS ${PROJECT_SOURCE_DIR}/loader/vk-loader-generate.py ${PROJECT_SOURCE_DIR}/vulkan.py)
 
 include_directories(
 	${CMAKE_CURRENT_SOURCE_DIR}
