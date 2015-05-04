@@ -584,6 +584,38 @@ get_format_type(VkFormat fmt) {
 }
 
 
+/* characterizes a SPIR-V type appearing in an interface to a FF stage,
+ * for comparison to a VkFormat's characterization above. */
+static unsigned
+get_fundamental_type(shader_source const *src, unsigned type)
+{
+    auto type_def_it = src->type_def_index.find(type);
+
+    if (type_def_it == src->type_def_index.end()) {
+        return FORMAT_TYPE_UNDEFINED;
+    }
+
+    unsigned int const *code = (unsigned int const *)&src->words[type_def_it->second];
+    unsigned opcode = code[0] & 0x0ffffu;
+    switch (opcode) {
+        case spv::OpTypeInt:
+            return code[3] ? FORMAT_TYPE_SINT : FORMAT_TYPE_UINT;
+        case spv::OpTypeFloat:
+            return FORMAT_TYPE_FLOAT;
+        case spv::OpTypeVector:
+            return get_fundamental_type(src, code[2]);
+        case spv::OpTypeMatrix:
+            return get_fundamental_type(src, code[2]);
+        case spv::OpTypeArray:
+            return get_fundamental_type(src, code[2]);
+        case spv::OpTypePointer:
+            return get_fundamental_type(src, code[3]);
+        default:
+            return FORMAT_TYPE_UNDEFINED;
+    }
+}
+
+
 static void
 validate_vi_against_vs_inputs(VkPipelineVertexInputCreateInfo const *vi, shader_source const *vs)
 {
