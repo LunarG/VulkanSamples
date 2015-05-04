@@ -27,7 +27,7 @@
 #include <string.h>
 #include "loader_platform.h"
 
-static inline void loader_initialize_dispatch_table(VkLayerDispatchTable *table,
+static inline void loader_init_device_dispatch_table(VkLayerDispatchTable *table,
                                                     PFN_vkGetProcAddr gpa,
                                                     VkPhysicalDevice gpu)
 {
@@ -422,4 +422,20 @@ static inline void *loader_lookup_dispatch_table(const VkLayerDispatchTable *tab
         return (void *) table->QueuePresentWSI;
 
     return NULL;
+}
+
+static inline void loader_init_instance_dispatch_table(VkLayerInstanceDispatchTable *table)
+{
+    table->DestroyInstance = vkDestroyInstance;
+    table->EnumeratePhysicalDevices = vkEnumeratePhysicalDevices;
+    table->GetPhysicalDeviceInfo = vkGetPhysicalDeviceInfo;
+    table->GetInstanceProcAddr = vkGetInstanceProcAddr;
+    table->GetProcAddr = vkGetProcAddr;
+    table->CreateDevice = vkCreateDevice;
+    table->GetPhysicalDeviceExtensionInfo = vkGetPhysicalDeviceExtensionInfo;
+    table->EnumerateLayers = vkEnumerateLayers;
+    table->GetMultiDeviceCompatibility = vkGetMultiDeviceCompatibility;
+    table->DbgRegisterMsgCallback = vkDbgRegisterMsgCallback;
+    table->DbgUnregisterMsgCallback = vkDbgUnregisterMsgCallback;
+    table->DbgSetGlobalOption = vkDbgSetGlobalOption;
 }

@@ -237,23 +237,30 @@ class DispatchTableOpsSubcommand(Subcommand):
                           "#include <string.h>",
                           "#include \"loader_platform.h\""])
 
-    def _generate_init(self):
+    def _generate_init(self, type):
         stmts = []
-        for proto in self.protos:
-            if self.is_dispatchable_object_first_param(proto) or proto.name == "CreateInstance":
-                stmts.append("table->%s = (PFN_vk%s) gpa(gpu, \"vk%s\");" %
-                        (proto.name, proto.name, proto.name))
-            else:
-                stmts.append("table->%s = vk%s; /* non-dispatchable */" %
-                             (proto.name, proto.name))
-
         func = []
-        func.append("static inline void %s_initialize_dispatch_table(VkLayerDispatchTable *table,"
+        if type == "device":
+            for proto in self.protos:
+                if self.is_dispatchable_object_first_param(proto) or proto.name == "CreateInstance":
+                    stmts.append("table->%s = (PFN_vk%s) gpa(gpu, \"vk%s\");" %
+                        (proto.name, proto.name, proto.name))
+                else:
+                    stmts.append("table->%s = vk%s; /* non-dispatchable */" %
+                             (proto.name, proto.name))
+            func.append("static inline void %s_init_device_dispatch_table(VkLayerDispatchTable *table,"
                 % self.prefix)
-        func.append("%s                                              PFN_vkGetProcAddr gpa,"
+            func.append("%s                                              PFN_vkGetProcAddr gpa,"
                 % (" " * len(self.prefix)))
-        func.append("%s                                              VkPhysicalDevice gpu)"
+            func.append("%s                                              VkPhysicalDevice gpu)"
                 % (" " * len(self.prefix)))
+        else:
+            for proto in self.protos:
+                if proto.params[0].ty != "VkInstance" and proto.params[0].ty != "VkPhysicalDevice":
+                    continue
+                stmts.append("table->%s = vk%s;" % (proto.name, proto.name))
+            func.append("static inline void %s_init_instance_dispatch_table(VkLayerInstanceDispatchTable *table)"
+                % self.prefix)
         func.append("{")
         func.append("    %s" % "\n    ".join(stmts))
         func.append("}")
@@ -285,8 +292,9 @@ class DispatchTableOpsSubcommand(Subcommand):
         return "\n".join(func)
 
     def generate_body(self):
-        body = [self._generate_init(),
-                self._generate_lookup()]
+        body = [self._generate_init("device"),
+                self._generate_lookup(),
+                self._generate_init("instance")]
 
         return "\n\n".join(body)
 

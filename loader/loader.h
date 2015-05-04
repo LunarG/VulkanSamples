@@ -64,6 +64,7 @@ static inline void loader_init_dispatch(VkObject obj, const void *data)
 }
 
 struct loader_instance {
+    VkLayerInstanceDispatchTable disp;
     uint32_t total_gpu_count;
     struct loader_icd *icds;
     struct loader_instance *next;

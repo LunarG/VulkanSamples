@@ -720,14 +720,6 @@ static void layer_lib_scan(void)
     loader.layer_scanned = true;
 }
 
-static void loader_init_dispatch_table(VkLayerDispatchTable *tab, PFN_vkGetProcAddr fpGPA, VkPhysicalDevice gpu)
-{
-    loader_initialize_dispatch_table(tab, fpGPA, gpu);
-
-    if (tab->EnumerateLayers == NULL)
-        tab->EnumerateLayers = vkEnumerateLayers;
-}
-
 static void * VKAPI loader_gpa_internal(VkPhysicalDevice gpu, const char * pName)
 {
     if (gpu == VK_NULL_HANDLE) {
@@ -1056,7 +1048,7 @@ extern uint32_t loader_activate_layers(struct loader_icd *icd, uint32_t gpu_inde
             }
 
             if (i == 0) {
-                loader_init_dispatch_table(icd->loader_dispatch + gpu_index, nextGPA, (VkPhysicalDevice) gpuObj);
+                loader_init_device_dispatch_table(icd->loader_dispatch + gpu_index, nextGPA, (VkPhysicalDevice) gpuObj);
                 //Insert the new wrapped objects into the list with loader object at head
                 gpu->nextObject = (VkObject) gpuObj;
                 gpu->pGPA = nextGPA;
@@ -1145,6 +1137,7 @@ LOADER_EXPORT VkResult VKAPI vkCreateInstance(
         return VK_ERROR_INCOMPATIBLE_DRIVER;
     }
 
+    loader_init_instance_dispatch_table(&ptr_instance->disp);
     *pInstance = (VkInstance) ptr_instance;
     return VK_SUCCESS;
 }
@@ -1255,7 +1248,7 @@ LOADER_EXPORT VkResult VKAPI vkEnumeratePhysicalDevices(
                     (wrapped_gpus + i)->pGPA = get_proc_addr;
                     (wrapped_gpus + i)->nextObject = gpus[i];
                     memcpy(pPhysicalDevices + count, gpus, sizeof(*pPhysicalDevices));
-                    loader_init_dispatch_table(icd->loader_dispatch + i,
+                    loader_init_device_dispatch_table(icd->loader_dispatch + i,
                                                get_proc_addr, gpus[i]);
 
                     /* Verify ICD compatibility */

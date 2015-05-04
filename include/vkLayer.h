@@ -25,8 +25,8 @@ typedef struct VkBaseLayerObject_
 
 typedef struct VkLayerDispatchTable_
 {
-    PFN_vkGetProcAddr GetProcAddr;
     PFN_vkGetInstanceProcAddr GetInstanceProcAddr;
+    PFN_vkGetProcAddr GetProcAddr;
     PFN_vkCreateInstance CreateInstance;
     PFN_vkDestroyInstance DestroyInstance;
     PFN_vkEnumeratePhysicalDevices EnumeratePhysicalDevices;
@@ -154,6 +154,24 @@ typedef struct VkLayerDispatchTable_
     PFN_vkGetSwapChainInfoWSI GetSwapChainInfoWSI;
     PFN_vkQueuePresentWSI QueuePresentWSI;
 } VkLayerDispatchTable;
+
+typedef struct VkLayerInstanceDispatchTable_
+{
+    PFN_vkGetInstanceProcAddr GetInstanceProcAddr;
+    PFN_vkGetProcAddr GetProcAddr;
+    /* non-dispatchable PFN_vkCreateInstance CreateInstance; */
+    PFN_vkDestroyInstance DestroyInstance;
+    PFN_vkEnumeratePhysicalDevices EnumeratePhysicalDevices;
+    PFN_vkGetPhysicalDeviceInfo GetPhysicalDeviceInfo;
+    PFN_vkCreateDevice CreateDevice;
+    /* non-dispatchable PFN_vkGetGlobalExtensionInfo GetGlobalExtensionInfo; */
+    PFN_vkGetPhysicalDeviceExtensionInfo GetPhysicalDeviceExtensionInfo;
+    PFN_vkEnumerateLayers EnumerateLayers;
+    PFN_vkGetMultiDeviceCompatibility GetMultiDeviceCompatibility;
+    PFN_vkDbgRegisterMsgCallback DbgRegisterMsgCallback;
+    PFN_vkDbgUnregisterMsgCallback DbgUnregisterMsgCallback;
+    PFN_vkDbgSetGlobalOption DbgSetGlobalOption;
+} VkLayerInstanceDispatchTable;
 
 // LL node for tree of dbg callback functions
 typedef struct _VK_LAYER_DBG_FUNCTION_NODE
