@@ -378,7 +378,7 @@ class LoaderGetProcAddrSubcommand(Subcommand):
 
         special_lookups = []
         # these functions require special trampoline code beyond just the normal create object trampoline code
-        special_names = ["AllocDescriptorSets", "GetMultiDeviceCompatibility"]
+        special_names = ["AllocDescriptorSets", "GetSwapChainInfoWSI", "GetPhysicalDeviceInfo"]
         for proto in self.protos:
             if self._is_loader_special_case(proto) or self._does_function_create_object(proto) or proto.name in special_names:
                 special_lookups.append("if (!strcmp(name, \"%s\"))" % proto.name)
