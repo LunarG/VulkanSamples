@@ -726,8 +726,19 @@ validate_fs_outputs_against_cb(shader_source const *fs, VkPipelineCbStateCreateI
             attachment++;
         }
         else {
+            unsigned output_type = get_fundamental_type(fs, it->second.type_id);
+            unsigned att_type = get_format_type(cb->pAttachments[attachment].format);
+
+            /* type checking */
+            if (att_type != FORMAT_TYPE_UNDEFINED && output_type != FORMAT_TYPE_UNDEFINED && att_type != output_type) {
+                char fs_type[1024];
+                describe_type(fs_type, fs, it->second.type_id);
+                sprintf(str, "Attachment %d of type `%s` does not match FS output type of `%s`",
+                        attachment, string_VkFormat(cb->pAttachments[attachment].format), fs_type);
+                layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, SHADER_CHECKER_INTERFACE_TYPE_MISMATCH, "SC", str);
+            }
+
             /* OK! */
-            /* TODO: typecheck */
             it++;
             attachment++;
         }
