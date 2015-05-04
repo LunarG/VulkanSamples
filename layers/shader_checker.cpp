@@ -670,7 +670,7 @@ validate_fs_outputs_against_cb(shader_source const *fs, VkPipelineCbStateCreateI
      * are currently dense, but the parallel with matching between shader stages is nice.
      */
 
-    while (outputs.size() > 0 && (it != outputs.end() || attachment < cb->attachmentCount)) {
+    while ((outputs.size() > 0 && it != outputs.end()) || attachment < cb->attachmentCount) {
         if (attachment == cb->attachmentCount || it->first < attachment) {
             sprintf(str, "FS writes to output location %d with no matching attachment", it->first);
             layerCbMsg(VK_DBG_MSG_WARNING, VK_VALIDATION_LEVEL_0, NULL, 0, SHADER_CHECKER_OUTPUT_NOT_CONSUMED, "SC", str);
