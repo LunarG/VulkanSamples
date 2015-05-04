@@ -33,6 +33,7 @@
 #include "vkLayer.h"
 #include "layers_config.h"
 #include "layers_msg.h"
+#include "vk_enum_string_helper.h"
 #include "shader_checker.h"
 // The following is #included again to catch certain OS-specific functions
 // being used:
@@ -652,7 +653,18 @@ validate_vi_against_vs_inputs(VkPipelineVertexInputCreateInfo const *vi, shader_
             it_b++;
         }
         else {
-            /* TODO: type check */
+            unsigned attrib_type = get_format_type(it_a->second->format);
+            unsigned input_type = get_fundamental_type(vs, it_b->second.type_id);
+
+            /* type checking */
+            if (attrib_type != FORMAT_TYPE_UNDEFINED && input_type != FORMAT_TYPE_UNDEFINED && attrib_type != input_type) {
+                char vs_type[1024];
+                describe_type(vs_type, vs, it_b->second.type_id);
+                sprintf(str, "Attribute type of `%s` at location %d does not match VS input type of `%s`",
+                        string_VkFormat(it_a->second->format), a_first, vs_type);
+                layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, SHADER_CHECKER_INTERFACE_TYPE_MISMATCH, "SC", str);
+            }
+
             /* OK! */
             it_a++;
             it_b++;
