@@ -384,6 +384,9 @@ struct intel_ir *shader_create_ir(const struct intel_gpu *gpu,
         case VK_SHADER_STAGE_VERTEX:
             shader->Type = GL_VERTEX_SHADER;
             break;
+        case VK_SHADER_STAGE_GEOMETRY:
+            shader->Type = GL_GEOMETRY_SHADER;
+            break;
         case VK_SHADER_STAGE_FRAGMENT:
             shader->Type = GL_FRAGMENT_SHADER;
             break;
@@ -417,6 +420,9 @@ struct intel_ir *shader_create_ir(const struct intel_gpu *gpu,
         switch(executionModel) {
         case spv::ExecutionModelVertex:
             shader->Type = GL_VERTEX_SHADER;
+            break;
+        case spv::ExecutionModelGeometry:
+            shader->Type = GL_GEOMETRY_SHADER;
             break;
         case spv::ExecutionModelFragment:
             shader->Type = GL_FRAGMENT_SHADER;

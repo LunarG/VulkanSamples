@@ -237,8 +237,8 @@ vec4_gs_visitor::emit_thread_end()
    vec4_instruction *inst = emit(MOV(mrf_reg, r0));
    inst->force_writemask_all = true;
    emit(GS_OPCODE_SET_VERTEX_COUNT, mrf_reg, this->vertex_count);
-   if (INTEL_DEBUG & DEBUG_SHADER_TIME)
-      emit_shader_time_end();
+//   if (INTEL_DEBUG & DEBUG_SHADER_TIME)
+//      emit_shader_time_end();
    inst = emit(GS_OPCODE_THREAD_END);
    inst->base_mrf = base_mrf;
    inst->mlen = 1;
@@ -567,15 +567,15 @@ generate_assembly(struct brw_context *brw,
                   exec_list *instructions,
                   unsigned *final_assembly_size)
 {
-   if (brw->gen >= 8) {
-      gen8_vec4_generator g(brw, shader_prog, prog, prog_data, mem_ctx,
-                            INTEL_DEBUG & DEBUG_GS);
-      return g.generate_assembly(instructions, final_assembly_size);
-   } else {
+//   if (brw->gen >= 8) {
+//      gen8_vec4_generator g(brw, shader_prog, prog, prog_data, mem_ctx,
+//                            INTEL_DEBUG & DEBUG_GS);
+//      return g.generate_assembly(instructions, final_assembly_size);
+//   } else {
       vec4_generator g(brw, shader_prog, prog, prog_data, mem_ctx,
                        INTEL_DEBUG & DEBUG_GS);
       return g.generate_assembly(instructions, final_assembly_size);
-   }
+//   }
 }
 
 extern "C" const unsigned *

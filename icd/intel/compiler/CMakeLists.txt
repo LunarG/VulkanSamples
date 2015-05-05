@@ -309,6 +309,10 @@ SET(CREATE_PIPELINE_SOURCES
     pipeline/brw_vec4_copy_propagation.cpp
     pipeline/brw_vec4_reg_allocate.cpp
     pipeline/brw_vec4_generator.cpp
+
+    pipeline/brw_vec4_gs.c
+    pipeline/brw_vec4_gs_visitor.cpp
+
     # pipeline/gen8_vec4_generator.cpp
     )
 

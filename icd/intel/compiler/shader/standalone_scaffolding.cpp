@@ -80,7 +80,10 @@ _mesa_new_shader(struct gl_context *ctx, GLuint name, GLenum type)
 
    (void) ctx;
 
-   assert(type == GL_FRAGMENT_SHADER || type == GL_VERTEX_SHADER);
+   assert(type == GL_VERTEX_SHADER ||
+          type == GL_GEOMETRY_SHADER ||
+          type == GL_FRAGMENT_SHADER);
+
    shader = rzalloc(NULL, struct gl_shader);
    if (shader) {
       shader->Type = type;

@@ -56,6 +56,7 @@
 #include "main/shaderobj.h"
 #include "ir.h"
 #include "glsl_parser_extras.h"
+#include "ast.h"
 
 // LLVM includes
 #include "llvm/IR/IntrinsicInst.h"
@@ -454,13 +455,77 @@ void MesaGlassTranslator::error(const char* msg) const
 /**
  * -----------------------------------------------------------------------------
  * initialize translation state
+ * cribbed from BottomToGLSL
  * -----------------------------------------------------------------------------
  */
 void MesaGlassTranslator::start(llvm::Module& module)
 {
    countReferences(module);
 
-   if (EShLanguage(manager->getStage()) == EShLangFragment) {
+   int mdInt;
+   switch(EShLanguage(manager->getStage())) {
+   case EShLangVertex:
+       break;
+
+   case EShLangGeometry:
+
+       // input primitives are not optional
+       state->gs_input_prim_type_specified = true;
+
+       switch (GetMdNamedInt(module, gla::InputPrimitiveMdName)) {
+       case EMlgPoints:
+           state->in_qualifier->prim_type = GL_POINTS;
+           break;
+       case EMlgLines:
+           state->in_qualifier->prim_type = GL_LINES;
+           break;
+       case EMlgLinesAdjacency:
+           state->in_qualifier->prim_type = GL_LINES_ADJACENCY;
+           break;
+       case EMlgTriangles:
+           state->in_qualifier->prim_type = GL_TRIANGLES;
+           break;
+       case EMlgTrianglesAdjacency:
+           state->in_qualifier->prim_type = GL_TRIANGLES_ADJACENCY;
+           break;
+       default:
+           assert(0 && "Unknown geometry shader input primitive");
+           break;
+       }
+
+       // invocations is optional
+       mdInt = GetMdNamedInt(module, gla::InvocationsMdName);
+       if (mdInt) {
+           state->in_qualifier->flags.q.invocations = true;
+           state->in_qualifier->invocations = mdInt;
+       }
+
+       // output primitives are not optional
+       state->out_qualifier->flags.q.prim_type = true;
+
+       switch (GetMdNamedInt(module, gla::OutputPrimitiveMdName)) {
+       case EMlgPoints:
+           state->out_qualifier->prim_type = GL_POINTS;
+           break;
+       case EMlgLineStrip:
+           state->out_qualifier->prim_type = GL_LINE_STRIP;
+           break;
+       case EMlgTriangleStrip:
+           state->out_qualifier->prim_type = GL_TRIANGLE_STRIP;
+           break;
+       default:
+           assert(0 && "Unknown geometry shader output primitive");
+           break;
+       }
+
+       // max_vertices is not optional
+       state->out_qualifier->flags.q.max_vertices = true;
+       state->out_qualifier->max_vertices = GetMdNamedInt(module, gla::NumVerticesMdName);
+
+       break;
+
+   case EShLangFragment:
+
       if (GetMdNamedInt(module, PixelCenterIntegerMdName))
          state->fs_pixel_center_integer = 1;
       else
@@ -470,6 +535,12 @@ void MesaGlassTranslator::start(llvm::Module& module)
          state->fs_origin_upper_left = 1;
       else
          state->fs_origin_upper_left = 0;
+
+      break;
+
+   default:
+       assert(0 && "Unsupported stage");
+       break;
    }
 }
 

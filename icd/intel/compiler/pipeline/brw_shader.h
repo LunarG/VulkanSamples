@@ -177,6 +177,9 @@ unsigned get_wm_program_size(struct gl_shader_program *prog);
 struct brw_vs_prog_data *get_vs_prog_data(struct gl_shader_program *prog);
 const unsigned *get_vs_program(struct gl_shader_program *prog);
 unsigned get_vs_program_size(struct gl_shader_program *prog);
+struct brw_gs_prog_data *get_gs_prog_data(struct gl_shader_program *prog);
+const unsigned *get_gs_program(struct gl_shader_program *prog);
+unsigned get_gs_program_size(struct gl_shader_program *prog);
 #ifdef __cplusplus
 }
 #endif

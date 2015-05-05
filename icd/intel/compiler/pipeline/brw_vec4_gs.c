@@ -30,8 +30,24 @@
 #include "brw_vec4_gs.h"
 #include "brw_context.h"
 #include "brw_vec4_gs_visitor.h"
-#include "brw_state.h"
+//#include "brw_state.h"
 
+const GLuint prim_to_hw_prim[GL_TRIANGLE_STRIP_ADJACENCY+1] = {
+   _3DPRIM_POINTLIST,
+   _3DPRIM_LINELIST,
+   _3DPRIM_LINELOOP,
+   _3DPRIM_LINESTRIP,
+   _3DPRIM_TRILIST,
+   _3DPRIM_TRISTRIP,
+   _3DPRIM_TRIFAN,
+   _3DPRIM_QUADLIST,
+   _3DPRIM_QUADSTRIP,
+   _3DPRIM_POLYGON,
+   _3DPRIM_LINELIST_ADJ,
+   _3DPRIM_LINESTRIP_ADJ,
+   _3DPRIM_TRILIST_ADJ,
+   _3DPRIM_TRISTRIP_ADJ,
+};
 
 static void
 brw_gs_init_compile(struct brw_context *brw,
@@ -248,126 +264,11 @@ brw_gs_do_compile(struct brw_context *brw,
 }
 
 static void
-brw_gs_upload_compile(struct brw_context *brw,
-                      const struct brw_gs_compile *c)
-{
-   /* Scratch space is used for register spilling */
-   if (c->prog_data.base.total_scratch) {
-      perf_debug("Geometry shader triggered register spilling.  "
-                 "Try reducing the number of live vec4 values to "
-                 "improve performance.\n");
-
-      brw_get_scratch_bo(brw, &brw->gs.base.scratch_bo,
-            c->prog_data.base.total_scratch * brw->max_gs_threads);
-   }
-
-   brw_upload_cache(&brw->cache, BRW_GS_PROG,
-                    &c->key, sizeof(c->key),
-                    c->base.program, c->base.program_size,
-                    &c->prog_data, sizeof(c->prog_data),
-                    &brw->gs.base.prog_offset, &brw->gs.prog_data);
-}
-
-static void
 brw_gs_clear_compile(struct brw_context *brw,
                      struct brw_gs_compile *c)
 {
    ralloc_free(c->base.mem_ctx);
 }
-
-static bool
-do_gs_prog(struct brw_context *brw,
-           struct gl_shader_program *prog,
-           struct brw_geometry_program *gp,
-           struct brw_gs_prog_key *key)
-{
-   struct brw_gs_compile c;
-
-   brw_gs_init_compile(brw, prog, gp, key, &c);
-
-   if (!brw_shader_program_restore_gs_compile(prog, &c)) {
-      if (!brw_gs_do_compile(brw, &c)) {
-         brw_gs_clear_compile(brw, &c);
-         return false;
-      }
-   }
-
-   brw_gs_upload_compile(brw, &c);
-   brw_gs_clear_compile(brw, &c);
-
-   return true;
-}
-
-
-static void
-brw_upload_gs_prog(struct brw_context *brw)
-{
-   struct gl_context *ctx = &brw->ctx;
-   struct brw_stage_state *stage_state = &brw->gs.base;
-   struct brw_gs_prog_key key;
-   /* BRW_NEW_GEOMETRY_PROGRAM */
-   struct brw_geometry_program *gp =
-      (struct brw_geometry_program *) brw->geometry_program;
-
-   if (gp == NULL) {
-      /* No geometry shader.  Vertex data just passes straight through. */
-      if (brw->state.dirty.brw & BRW_NEW_VUE_MAP_VS) {
-         brw->vue_map_geom_out = brw->vue_map_vs;
-         brw->state.dirty.brw |= BRW_NEW_VUE_MAP_GEOM_OUT;
-      }
-
-      /* Other state atoms had better not try to access prog_data, since
-       * there's no GS program.
-       */
-      brw->gs.prog_data = NULL;
-      brw->gs.base.prog_data = NULL;
-
-      return;
-   }
-
-   struct gl_program *prog = &gp->program.Base;
-
-   memset(&key, 0, sizeof(key));
-
-   key.base.program_string_id = gp->id;
-   brw_setup_vec4_key_clip_info(brw, &key.base,
-                                gp->program.Base.UsesClipDistanceOut);
-
-   /* _NEW_LIGHT | _NEW_BUFFERS */
-   key.base.clamp_vertex_color = ctx->Light._ClampVertexColor;
-
-   /* _NEW_TEXTURE */
-   brw_populate_sampler_prog_key_data(ctx, prog, stage_state->sampler_count,
-                                      &key.base.tex);
-
-   /* BRW_NEW_VUE_MAP_VS */
-   key.input_varyings = brw->vue_map_vs.slots_valid;
-
-   if (!brw_search_cache(&brw->cache, BRW_GS_PROG,
-                         &key, sizeof(key),
-                         &stage_state->prog_offset, &brw->gs.prog_data)) {
-      bool success =
-         do_gs_prog(brw, ctx->_Shader->CurrentProgram[MESA_SHADER_GEOMETRY], gp,
-                    &key);
-      assert(success);
-   }
-   brw->gs.base.prog_data = &brw->gs.prog_data->base.base;
-
-   if (memcmp(&brw->vs.prog_data->base.vue_map, &brw->vue_map_geom_out,
-              sizeof(brw->vue_map_geom_out)) != 0) {
-      brw->vue_map_geom_out = brw->gs.prog_data->base.vue_map;
-      brw->state.dirty.brw |= BRW_NEW_VUE_MAP_GEOM_OUT;
-   }
-}
-
-
-const struct brw_tracked_state brw_gs_prog = {
-   .dirty = {
-      .mesa  = (_NEW_LIGHT | _NEW_BUFFERS | _NEW_TEXTURE),
-      .brw   = BRW_NEW_GEOMETRY_PROGRAM | BRW_NEW_VUE_MAP_VS,
-   },
-   .emit = brw_upload_gs_prog
-};
 
 
 bool
@@ -400,18 +301,9 @@ brw_gs_precompile(struct gl_context *ctx, struct gl_shader_program *prog)
       return false;
    }
 
-   if (brw->ctx.Const.DeferLinkProgram) {
-      brw_shader_program_save_gs_compile(prog, &c);
-   }
-   else {
-      uint32_t old_prog_offset = brw->gs.base.prog_offset;
-      struct brw_gs_prog_data *old_prog_data = brw->gs.prog_data;
-
-      brw_gs_upload_compile(brw, &c);
-
-      brw->gs.base.prog_offset = old_prog_offset;
-      brw->gs.prog_data = old_prog_data;
-   }
+   // Rather than defer or upload to cache, hand off
+   // the compile results back to the brw_context
+   brw_shader_program_save_gs_compile(brw->shader_prog, &c);
 
    brw_gs_clear_compile(brw, &c);
 
