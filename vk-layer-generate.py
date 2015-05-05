@@ -923,6 +923,27 @@ class ObjectTrackerSubcommand(Subcommand):
         header_txt.append('    return index;')
         header_txt.append('}')
         header_txt.append('')
+        header_txt.append('// Validate that object parameter matches designated object type')
+        header_txt.append('static void validateObjectType(')
+        header_txt.append('    const char  *apiName,')
+        header_txt.append('    VkObjectType objType,')
+        header_txt.append('    VkObject     object)')
+        header_txt.append('{')
+        header_txt.append('    objNode *pObjNode = pGlobalHead;')
+        header_txt.append('    while ((pObjNode != NULL) && (pObjNode->obj.vkObj != object)) {')
+        header_txt.append('        pObjNode = pObjNode->pNextGlobal;')
+        header_txt.append('    }')
+        header_txt.append('    if (pObjNode != NULL) {')
+        header_txt.append('        // Found our object, check type')
+        header_txt.append('        if (strcmp(string_VkObjectType(pObjNode->obj.objType), string_VkObjectType(objType)) != 0) {')
+        header_txt.append('            char str[1024];')
+        header_txt.append('            sprintf(str, "ERROR: Object Parameter Type %s does not match designated type %s",')
+        header_txt.append('                string_VkObjectType(pObjNode->obj.objType), string_VkObjectType(objType));')
+        header_txt.append('            layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, object, 0, OBJTRACK_OBJECT_TYPE_MISMATCH, "OBJTRACK", str);')
+        header_txt.append('        }')
+        header_txt.append('    }')
+        header_txt.append('}')
+        header_txt.append('')
         header_txt.append('// Add new queue to head of global queue list')
         header_txt.append('static void addQueueInfo(uint32_t queueNodeIndex, VkQueue queue)')
         header_txt.append('{')
@@ -1220,14 +1241,25 @@ class ObjectTrackerSubcommand(Subcommand):
             using_line += '    // validate_memory_mapping_status(pMemRefs, memRefCount);\n'
             using_line += '    // validate_mem_ref_count(memRefCount);\n'
             using_line += '    loader_platform_thread_unlock_mutex(&objLock);\n'
-        elif 'QueueBindObjectMemoryRange' in proto.name or 'QueueBindImageMemoryRange' in proto.name:
-            using_line = '    loader_platform_thread_lock_mutex(&objLock);\n'
+        elif 'QueueBindObject' in proto.name:
+            using_line += '    loader_platform_thread_lock_mutex(&objLock);\n'
+            using_line += '    validateObjectType("vk%s", objType, object);\n' % (proto.name)
             using_line += '    if (validateQueueFlags(queue) == VK_FALSE) {\n'
             using_line += '        char str[1024];\n'
             using_line += '        sprintf(str, "Attempting %s on a non-memory-management capable queue -- VK_QUEUE_MEMMGR_BIT not set");\n' % (proto.name)
             using_line += '        layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, queue, 0, OBJTRACK_UNKNOWN_OBJECT, "OBJTRACK", str);\n'
             using_line += '    }\n'
             using_line += '    loader_platform_thread_unlock_mutex(&objLock);\n'
+        elif 'QueueBindImage' in proto.name:
+            using_line += '    loader_platform_thread_lock_mutex(&objLock);\n'
+            using_line += '    if (validateQueueFlags(queue) == VK_FALSE) {\n'
+            using_line += '        char str[1024];\n'
+            using_line += '        sprintf(str, "Attempting %s on a non-memory-management capable queue -- VK_QUEUE_MEMMGR_BIT not set");\n' % (proto.name)
+            using_line += '        layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, queue, 0, OBJTRACK_UNKNOWN_OBJECT, "OBJTRACK", str);\n'
+            using_line += '    }\n'
+            using_line += '    loader_platform_thread_unlock_mutex(&objLock);\n'
+        elif 'GetObjectInfo' in proto.name:
+            using_line += '    validateObjectType("vk%s", objType, object);\n' % (proto.name)
         elif 'GetFenceStatus' in proto.name:
             using_line += '    // Warn if submitted_flag is not set\n'
             using_line += '    validate_status(fence, VK_OBJECT_TYPE_FENCE, OBJSTATUS_FENCE_IS_SUBMITTED, OBJSTATUS_FENCE_IS_SUBMITTED, VK_DBG_MSG_ERROR, OBJTRACK_INVALID_FENCE, "Status Requested for Unsubmitted Fence");\n'
@@ -1266,6 +1298,7 @@ class ObjectTrackerSubcommand(Subcommand):
             using_line += '    loader_platform_thread_unlock_mutex(&objLock);\n'
         if 'DestroyObject' in proto.name:
             destroy_line = '    loader_platform_thread_lock_mutex(&objLock);\n'
+            destroy_line += '    validateObjectType("vk%s", objType, object);\n' % (proto.name)
             destroy_line += '    ll_destroy_obj(%s);\n' % (proto.params[2].name)
             destroy_line += '    loader_platform_thread_unlock_mutex(&objLock);\n'
             using_line = ''
