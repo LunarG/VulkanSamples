@@ -45,13 +45,17 @@ class Subcommand(object):
     def run(self):
         print(self.generate())
 
-    def _does_function_create_object(self, proto):
-        out_objs = proto.object_out_params()
-        if proto.name == "ResetFences":
-            return False
-        return out_objs and out_objs[-1] == proto.params[-1]
+    def _requires_special_trampoline_code(self, name):
+        # Dont be cute trying to use a general rule to programmatically populate this list
+        # it just obsfucates what is going on!
+        wsi_creates_dispatchable_object = ["GetPhysicalDeviceInfo", "CreateSwapChainWSI"]
+        creates_dispatchable_object = ["CreateDevice", "GetDeviceQueue", "CreateCommandBuffer"] + wsi_creates_dispatchable_object
+        if name in creates_dispatchable_object:
+            return True
+        else:
+           return False
 
-    def _is_loader_special_case(self, proto):
+    def _is_loader_non_trampoline_entrypoint(self, proto):
         if proto.name in ["GetProcAddr", "EnumeratePhysicalDevices", "EnumerateLayers", "DbgRegisterMsgCallback", "DbgUnregisterMsgCallback", "DbgSetGlobalOption", "DestroyInstance"]:
             return True
         return not self.is_dispatchable_object_first_param(proto)
@@ -124,19 +128,15 @@ class LoaderEntrypointsSubcommand(Subcommand):
     def _generate_object_setup(self, proto):
         method = "loader_init_dispatch"
         cond = "res == VK_SUCCESS"
+        setup = []
+
+        if not self._requires_special_trampoline_code(proto.name):
+           return setup
 
         if "Get" in proto.name:
             method = "loader_set_dispatch"
 
-        setup = []
-
-        if proto.name == "AllocDescriptorSets":
-            psets = proto.params[-2].name
-            pcount = proto.params[-1].name
-            setup.append("uint32_t i;")
-            setup.append("for (i = 0; i < *%s; i++)" % pcount)
-            setup.append("    %s(%s[i], disp);" % (method, psets))
-        elif proto.name == "GetPhysicalDeviceInfo":
+        if proto.name == "GetPhysicalDeviceInfo":
             ptype = proto.params[-3].name
             psize = proto.params[-2].name
             pdata = proto.params[-1].name
@@ -159,7 +159,7 @@ class LoaderEntrypointsSubcommand(Subcommand):
             setup.append("    %s(info[i].image, disp);" % method)
             setup.append("    %s(info[i].memory, disp);" % method)
             setup.append("}")
-        elif proto.name != "ResetFences":
+        else:
             obj_params = proto.object_out_params()
             for param in obj_params:
                 setup.append("%s(*%s, disp);" % (method, param.name))
@@ -179,7 +179,7 @@ class LoaderEntrypointsSubcommand(Subcommand):
 
         funcs = []
         for proto in self.protos:
-            if self._is_loader_special_case(proto):
+            if self._is_loader_non_trampoline_entrypoint(proto):
                 continue
             func = []
 
@@ -377,10 +377,8 @@ class LoaderGetProcAddrSubcommand(Subcommand):
                     (self.gpa.ret, self.prefix, proto.name))
 
         special_lookups = []
-        # these functions require special trampoline code beyond just the normal create object trampoline code
-        special_names = ["AllocDescriptorSets", "GetSwapChainInfoWSI", "GetPhysicalDeviceInfo"]
         for proto in self.protos:
-            if self._is_loader_special_case(proto) or self._does_function_create_object(proto) or proto.name in special_names:
+            if self._is_loader_non_trampoline_entrypoint(proto) or self._requires_special_trampoline_code(proto.name):
                 special_lookups.append("if (!strcmp(name, \"%s\"))" % proto.name)
                 special_lookups.append("    return (%s) %s%s;" %
                         (self.gpa.ret, self.prefix, proto.name))
