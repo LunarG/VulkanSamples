@@ -112,7 +112,7 @@ bool checkFileName(char* fileName)
     const unsigned fileNameLength = strlen(fileName);
     if (fileNameLength < 5 ||
             strncmp(".spv", &fileName[fileNameLength - 4], 4) != 0) {
-        printf("file must be .spv, .vert or .frag\n");
+        printf("file must be .spv, .vert, .geom, or .frag\n");
         return false;
     }
 
@@ -140,16 +140,19 @@ int main(int argc, char **argv)
            // Call vkCreateShader on the single shader
 
            printf("Frontend compile %s\n", argv[1]);
+           fflush(stdout);
 
            void *shaderCode;
            size_t size;
 
            if (checkFileExt(argv[1], ".spv")) {
                shaderCode = load_spv_file(argv[1], &size);
-           } else if (checkFileExt(argv[1], ".frag")) {
-               shaderCode = load_glsl_file(argv[1], &size, VK_SHADER_STAGE_FRAGMENT);
            } else if (checkFileExt(argv[1], ".vert")) {
                shaderCode = load_glsl_file(argv[1], &size, VK_SHADER_STAGE_VERTEX);
+           } else if (checkFileExt(argv[1], ".geom")) {
+               shaderCode = load_glsl_file(argv[1], &size, VK_SHADER_STAGE_GEOMETRY);
+           } else if (checkFileExt(argv[1], ".frag")) {
+               shaderCode = load_glsl_file(argv[1], &size, VK_SHADER_STAGE_FRAGMENT);
            } else {
                return EXIT_FAILURE;
            }
@@ -165,6 +168,7 @@ int main(int argc, char **argv)
            gpu.gt = 3;
 
            printf("Backend compile %s\n", argv[1]);
+           fflush(stdout);
 
            // struct timespec before;
            // clock_gettime(CLOCK_MONOTONIC, &before);

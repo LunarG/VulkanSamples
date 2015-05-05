@@ -159,138 +159,169 @@ static void hexdump(FILE *fp, void *ptr, int buflen) {
   fflush(fp);
 }
 
-static void base_prog_dump(FILE *fp, struct brw_stage_prog_data* base)
+static void base_prog_dump(FILE *fp, struct brw_stage_prog_data* stage_prog_data)
 {
-    fprintf(fp, "data->base.binding_table.size_bytes = %u\n",
-                 base->binding_table.size_bytes);
-    fprintf(fp, "data->base.binding_table.pull_constants_start = %u\n",
-                 base->binding_table.pull_constants_start);
-    fprintf(fp, "data->base.binding_table.texture_start = %u\n",
-                 base->binding_table.texture_start);
-    fprintf(fp, "data->base.binding_table.gather_texture_start = %u\n",
-                 base->binding_table.gather_texture_start);
-    fprintf(fp, "data->base.binding_table.ubo_start = %u\n",
-                 base->binding_table.ubo_start);
-    fprintf(fp, "data->base.binding_table.abo_start = %u\n",
-                 base->binding_table.abo_start);
-    fprintf(fp, "data->base.binding_table.shader_time_start = %u\n",
-                 base->binding_table.shader_time_start);
+    fprintf(fp, "stage_prog_data->binding_table.size_bytes = %u\n",
+                 stage_prog_data->binding_table.size_bytes);
+    fprintf(fp, "stage_prog_data->binding_table.pull_constants_start = %u\n",
+                 stage_prog_data->binding_table.pull_constants_start);
+    fprintf(fp, "stage_prog_data->binding_table.texture_start = %u\n",
+                 stage_prog_data->binding_table.texture_start);
+    fprintf(fp, "stage_prog_data->binding_table.gather_texture_start = %u\n",
+                 stage_prog_data->binding_table.gather_texture_start);
+    fprintf(fp, "stage_prog_data->binding_table.ubo_start = %u\n",
+                 stage_prog_data->binding_table.ubo_start);
+    fprintf(fp, "stage_prog_data->binding_table.abo_start = %u\n",
+                 stage_prog_data->binding_table.abo_start);
+    fprintf(fp, "stage_prog_data->binding_table.shader_time_start = %u\n",
+                 stage_prog_data->binding_table.shader_time_start);
 
-    fprintf(fp, "data->base.nr_params = %u\n",
-                 base->nr_params);
-    fprintf(fp, "data->base.nr_pull_params = %u\n",
-                 base->nr_pull_params);
+    fprintf(fp, "stage_prog_data->nr_params = %u\n",
+                 stage_prog_data->nr_params);
+    fprintf(fp, "stage_prog_data->nr_pull_params = %u\n",
+                 stage_prog_data->nr_pull_params);
 
     fprintf(fp, "== push constants: ==\n");
-    fprintf(fp, "data->base.nr_params = %u\n",
-                 base->nr_params);
+    fprintf(fp, "stage_prog_data->nr_params = %u\n",
+                 stage_prog_data->nr_params);
 
-    for (int i = 0; i < base->nr_params; ++i) {
-        fprintf(fp, "data->base.param = %p\n",
-                     base->param);
-        fprintf(fp, "*data->base.param = %p\n",
-                     *base->param);
-        fprintf(fp, "**data->base.param = %f\n",
-                     **base->param);
+    for (int i = 0; i < stage_prog_data->nr_params; ++i) {
+        fprintf(fp, "stage_prog_data->param = %p\n",
+                     stage_prog_data->param);
+        fprintf(fp, "*stage_prog_data->param = %p\n",
+                     *stage_prog_data->param);
+        fprintf(fp, "**stage_prog_data->param = %f\n",
+                     **stage_prog_data->param);
     }
 
     fprintf(fp, "== pull constants: ==\n");
-    fprintf(fp, "data->base.nr_pull_params = %u\n",
-                 base->nr_pull_params);
+    fprintf(fp, "stage_prog_data->nr_pull_params = %u\n",
+                 stage_prog_data->nr_pull_params);
 
-    for (int i = 0; i < base->nr_pull_params; ++i) {
-        fprintf(fp, "data->base.pull_param = %p\n",
-                     base->pull_param);
-        fprintf(fp, "*data->base.pull_param = %p\n",
-                     *base->pull_param);
-        fprintf(fp, "**data->base.pull_param = %f\n",
-                     **base->pull_param);
+    for (int i = 0; i < stage_prog_data->nr_pull_params; ++i) {
+        fprintf(fp, "stage_prog_data->pull_param = %p\n",
+                     stage_prog_data->pull_param);
+        fprintf(fp, "*stage_prog_data->pull_param = %p\n",
+                     *stage_prog_data->pull_param);
+        fprintf(fp, "**stage_prog_data->pull_param = %f\n",
+                     **stage_prog_data->pull_param);
     }
 }
 
-static void vs_data_dump(FILE *fp, struct brw_vs_prog_data *data)
+
+static void base_vec4_prog_dump(FILE *fp, struct brw_vec4_prog_data* vec4_prog_data)
+{
+    fprintf(fp, "vec4_prog_data->vue_map.slots_valid = 0x%" PRIX64 "\n",
+                 vec4_prog_data->vue_map.slots_valid);
+
+    for (int i = 0; i < BRW_VARYING_SLOT_COUNT; ++i)
+        fprintf(fp, "vec4_prog_data->vue_map.varying_to_slot[%i] = %i\n", i,
+               (int) vec4_prog_data->vue_map.varying_to_slot[i]);
+
+    for (int i = 0; i < BRW_VARYING_SLOT_COUNT; ++i)
+        fprintf(fp, "vec4_prog_data->vue_map.slot_to_varying[%i] = %i\n", i,
+               (int) vec4_prog_data->vue_map.slot_to_varying[i]);
+
+    fprintf(fp, "vec4_prog_data->vue_map.num_slots = %i\n",
+                 vec4_prog_data->vue_map.num_slots);
+    fprintf(fp, "vec4_prog_data->dispatch_grf_start_reg = %u\n",
+                 vec4_prog_data->dispatch_grf_start_reg);
+    fprintf(fp, "vec4_prog_data->curb_read_length = %u\n",
+                 vec4_prog_data->curb_read_length);
+    fprintf(fp, "vec4_prog_data->urb_read_length = %u\n",
+                 vec4_prog_data->urb_read_length);
+    fprintf(fp, "vec4_prog_data->total_grf = %u\n",
+                 vec4_prog_data->total_grf);
+    fprintf(fp, "vec4_prog_data->total_scratch = %u\n",
+                 vec4_prog_data->total_scratch);
+    fprintf(fp, "vec4_prog_data->urb_entry_size = %u\n",
+                 vec4_prog_data->urb_entry_size);
+}
+
+static void vs_data_dump(FILE *fp, struct brw_vs_prog_data *vs_prog_data)
 {
     fprintf(fp, "\n=== begin brw_vs_prog_data ===\n");
 
-    base_prog_dump(fp, &data->base.base);
+    base_prog_dump(fp, &vs_prog_data->base.base);
 
-    fprintf(fp, "data->base.vue_map.slots_valid = 0x%" PRIX64 "\n",
-                 data->base.vue_map.slots_valid);
+    base_vec4_prog_dump(fp, &vs_prog_data->base);
 
-    for (int i = 0; i < BRW_VARYING_SLOT_COUNT; ++i)
-        fprintf(fp, "data->base.vue_map.varying_to_slot[%i] = %i\n", i,
-               (int) data->base.vue_map.varying_to_slot[i]);
-
-    for (int i = 0; i < BRW_VARYING_SLOT_COUNT; ++i)
-        fprintf(fp, "data->base.vue_map.slot_to_varying[%i] = %i\n", i,
-               (int) data->base.vue_map.slot_to_varying[i]);
-
-    fprintf(fp, "data->base.vue_map.num_slots = %i\n",
-                 data->base.vue_map.num_slots);
-    fprintf(fp, "data->base.dispatch_grf_start_reg = %u\n",
-                 data->base.dispatch_grf_start_reg);
-    fprintf(fp, "data->base.curb_read_length = %u\n",
-                 data->base.curb_read_length);
-    fprintf(fp, "data->base.urb_read_length = %u\n",
-                 data->base.urb_read_length);
-    fprintf(fp, "data->base.total_grf = %u\n",
-                 data->base.total_grf);
-    fprintf(fp, "data->base.total_scratch = %u\n",
-                 data->base.total_scratch);
-    fprintf(fp, "data->base.urb_entry_size = %u\n",
-                 data->base.urb_entry_size);
-
-    fprintf(fp, "data->inputs_read = 0x%" PRIX64 "\n",
-                 data->inputs_read);
-    fprintf(fp, "data->uses_vertexid = %s\n",
-                 data->uses_vertexid ? "true" : "false");
-    fprintf(fp, "data->uses_instanceid = %s\n",
-                 data->uses_instanceid ? "true" : "false");
+    fprintf(fp, "vs_prog_data->inputs_read = 0x%" PRIX64 "\n",
+                 vs_prog_data->inputs_read);
+    fprintf(fp, "vs_prog_data->uses_vertexid = %s\n",
+                 vs_prog_data->uses_vertexid ? "true" : "false");
+    fprintf(fp, "vs_prog_data->uses_instanceid = %s\n",
+                 vs_prog_data->uses_instanceid ? "true" : "false");
 
     fprintf(fp, "=== end brw_vs_prog_data ===\n");
 
     fflush(fp);
 }
 
-static void fs_data_dump(FILE *fp, struct brw_wm_prog_data* data)
+static void gs_data_dump(FILE *fp, struct brw_gs_prog_data *gs_prog_data)
+{
+    fprintf(fp, "\n=== begin brw_gs_prog_data ===\n");
+
+    base_prog_dump(fp, &gs_prog_data->base.base);
+
+    base_vec4_prog_dump(fp, &gs_prog_data->base);
+
+    fprintf(fp, "gs_prog_data->output_vertex_size_hwords = %u\n",
+                 gs_prog_data->output_vertex_size_hwords);
+    fprintf(fp, "gs_prog_data->output_topology = %u\n",
+                 gs_prog_data->output_topology);
+    fprintf(fp, "gs_prog_data->control_data_header_size_hwords = %u\n",
+                 gs_prog_data->control_data_header_size_hwords);
+    fprintf(fp, "gs_prog_data->control_data_format = %u\n",
+                 gs_prog_data->control_data_format);
+    fprintf(fp, "gs_prog_data->include_primitive_id = %s\n",
+                 gs_prog_data->include_primitive_id ? "true" : "false");
+    fprintf(fp, "gs_prog_data->invocations = %u\n",
+                 gs_prog_data->invocations);
+    fprintf(fp, "gs_prog_data->dual_instanced_dispatch = %s\n",
+                 gs_prog_data->dual_instanced_dispatch ? "true" : "false");
+
+    fprintf(fp, "=== end brw_gs_prog_data ===\n");
+
+    fflush(fp);
+}
+
+static void fs_data_dump(FILE *fp, struct brw_wm_prog_data* wm_prog_data)
 {
     fprintf(fp, "\n=== begin brw_wm_prog_data ===\n");
 
-    base_prog_dump(fp, &data->base);
+    base_prog_dump(fp, &wm_prog_data->base);
 
-    fprintf(fp, "data->curb_read_length = %u\n",
-                 data->curb_read_length);
-    fprintf(fp, "data->num_varying_inputs = %u\n",
-                 data->num_varying_inputs);
-
-    fprintf(fp, "data->first_curbe_grf = %u\n",
-                 data->first_curbe_grf);
-    fprintf(fp, "data->first_curbe_grf_16 = %u\n",
-                 data->first_curbe_grf_16);
-    fprintf(fp, "data->reg_blocks = %u\n",
-                 data->reg_blocks);
-    fprintf(fp, "data->reg_blocks_16 = %u\n",
-                 data->reg_blocks_16);
-    fprintf(fp, "data->total_scratch = %u\n",
-                 data->total_scratch);
-    fprintf(fp, "data->binding_table.render_target_start = %u\n",
-                 data->binding_table.render_target_start);
-
-    fprintf(fp, "data->dual_src_blend = %s\n",
-                 data->dual_src_blend ? "true" : "false");
-    fprintf(fp, "data->uses_pos_offset = %s\n",
-                 data->uses_pos_offset ? "true" : "false");
-    fprintf(fp, "data->uses_omask = %s\n",
-                 data->uses_omask ? "true" : "false");
-    fprintf(fp, "data->prog_offset_16 = %u\n",
-                 data->prog_offset_16);
-
-    fprintf(fp, "data->barycentric_interp_modes = %u\n",
-                 data->barycentric_interp_modes);
+    fprintf(fp, "wm_prog_data->curb_read_length = %u\n",
+                 wm_prog_data->curb_read_length);
+    fprintf(fp, "wm_prog_data->num_varying_inputs = %u\n",
+                 wm_prog_data->num_varying_inputs);
+    fprintf(fp, "wm_prog_data->first_curbe_grf = %u\n",
+                 wm_prog_data->first_curbe_grf);
+    fprintf(fp, "wm_prog_data->first_curbe_grf_16 = %u\n",
+                 wm_prog_data->first_curbe_grf_16);
+    fprintf(fp, "wm_prog_data->reg_blocks = %u\n",
+                 wm_prog_data->reg_blocks);
+    fprintf(fp, "wm_prog_data->reg_blocks_16 = %u\n",
+                 wm_prog_data->reg_blocks_16);
+    fprintf(fp, "wm_prog_data->total_scratch = %u\n",
+                 wm_prog_data->total_scratch);
+    fprintf(fp, "wm_prog_data->binding_table.render_target_start = %u\n",
+                 wm_prog_data->binding_table.render_target_start);
+    fprintf(fp, "wm_prog_data->dual_src_blend = %s\n",
+                 wm_prog_data->dual_src_blend ? "true" : "false");
+    fprintf(fp, "wm_prog_data->uses_pos_offset = %s\n",
+                 wm_prog_data->uses_pos_offset ? "true" : "false");
+    fprintf(fp, "wm_prog_data->uses_omask = %s\n",
+                 wm_prog_data->uses_omask ? "true" : "false");
+    fprintf(fp, "wm_prog_data->prog_offset_16 = %u\n",
+                 wm_prog_data->prog_offset_16);
+    fprintf(fp, "wm_prog_data->barycentric_interp_modes = %u\n",
+                 wm_prog_data->barycentric_interp_modes);
 
     for (int i = 0; i < VARYING_SLOT_MAX; ++i) {
-        fprintf(fp, "data->urb_setup[%i] = %i\n",
-                  i, data->urb_setup[i]);
+        fprintf(fp, "wm_prog_data->urb_setup[%i] = %i\n",
+                  i, wm_prog_data->urb_setup[i]);
     }
 
     fprintf(fp, "=== end brw_wm_prog_data ===\n");
@@ -603,6 +634,77 @@ VkResult intel_pipeline_shader_compile(struct intel_pipeline_shader *pipe_shader
         }
             break;
 
+        case GL_GEOMETRY_SHADER:
+        {
+            pipe_shader->codeSize = get_gs_program_size(brw->shader_prog);
+
+            pipe_shader->pCode = pipe_interface_alloc(gpu, pipe_shader->codeSize, 0, VK_SYSTEM_ALLOC_TYPE_INTERNAL_SHADER);
+
+            if (!pipe_shader->pCode) {
+                status = VK_ERROR_OUT_OF_HOST_MEMORY;
+                break;
+            }
+
+            // copy the ISA out of our compile context, it is about to poof away
+            memcpy(pipe_shader->pCode, get_gs_program(brw->shader_prog), pipe_shader->codeSize);
+
+            struct brw_gs_prog_data *data = get_gs_prog_data(brw->shader_prog);
+
+            struct gl_geometry_program *gp = (struct gl_geometry_program *)
+               sh_prog->_LinkedShaders[MESA_SHADER_GEOMETRY]->Program;
+
+            // for now, assume inputs have not changed, but need to hook up vue_map_vs
+            pipe_shader->inputs_read = gp->Base.InputsRead;
+
+            // urb entries are reported in pairs, see vec4_gs_visitor::setup_varying_inputs()
+            pipe_shader->in_count = data->base.urb_read_length * 2;
+
+            pipe_shader->enable_user_clip = sh_prog->Geom.UsesClipDistance;
+            pipe_shader->discard_adj      = (sh_prog->Geom.InputType == GL_LINES ||
+                                             sh_prog->Geom.InputType == GL_TRIANGLES);
+
+            assert(VARYING_SLOT_MAX - VARYING_SLOT_CLIP_DIST0 < 64);
+            uint64_t varyings_written = 0;
+            for (int i=VARYING_SLOT_CLIP_DIST0; i < VARYING_SLOT_MAX; i++) {
+                if (data->base.vue_map.varying_to_slot[i] >= 0) {
+                    varyings_written |= (1 << (i - VARYING_SLOT_CLIP_DIST0));
+                }
+            }
+            pipe_shader->outputs_written = varyings_written;
+            pipe_shader->outputs_offset = BRW_SF_URB_ENTRY_READ_OFFSET * 2;
+            pipe_shader->out_count = data->base.vue_map.num_slots;
+
+            // The following were all programmed in brw_gs_do_compile
+            pipe_shader->output_size_hwords              = data->output_vertex_size_hwords;
+            pipe_shader->output_topology                 = data->output_topology;
+            pipe_shader->control_data_header_size_hwords = data->control_data_header_size_hwords;
+            pipe_shader->control_data_format             = data->control_data_format;
+            pipe_shader->include_primitive_id            = data->include_primitive_id;
+            pipe_shader->invocations                     = data->invocations;
+            pipe_shader->dual_instanced_dispatch         = data->dual_instanced_dispatch;
+
+            // The rest duplicated from VS, merge it and clean up
+            pipe_shader->urb_grf_start = data->base.dispatch_grf_start_reg;
+            pipe_shader->surface_count = data->base.base.binding_table.size_bytes / 4;
+            pipe_shader->ubo_start     = data->base.base.binding_table.ubo_start;
+            pipe_shader->per_thread_scratch_size = data->base.total_scratch;
+
+            status = build_binding_table(gpu, brw, &bt, data->base.base, sh_prog->_LinkedShaders[MESA_SHADER_GEOMETRY], VK_SHADER_STAGE_GEOMETRY);
+            if (status != VK_SUCCESS)
+
+            if (unlikely(INTEL_DEBUG & DEBUG_GS)) {
+                printf("out_count: %d\n", pipe_shader->out_count);
+
+                gs_data_dump(stdout, data);
+
+                fprintf(stdout,"\nISA generated by compiler:\n");
+                fprintf(stdout,"ISA size: %i\n", pipe_shader->codeSize);
+                hexdump(stdout, pipe_shader->pCode, pipe_shader->codeSize);
+                fflush(stdout);
+            }
+        }
+        break;
+
         case GL_FRAGMENT_SHADER:
         {
             // Start pulling bits out of our compile result.
@@ -709,11 +811,9 @@ VkResult intel_pipeline_shader_compile(struct intel_pipeline_shader *pipe_shader
                 hexdump(stdout, pipe_shader->pCode, pipe_shader->codeSize);
                 fflush(stdout);
             }
-
         }
             break;
 
-        case GL_GEOMETRY_SHADER:
         case GL_COMPUTE_SHADER:
         default:
             assert(0);
