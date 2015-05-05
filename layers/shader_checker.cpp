@@ -159,8 +159,7 @@ static VkLayerDispatchTable * initLayerTable(const VkBaseLayerObject *gpuw)
         return it->second;
     }
 
-    layer_initialize_dispatch_table(pTable, gpuw->pGPA, (VkPhysicalDevice) gpuw->nextObject);
-    pCurObj = (VkBaseLayerObject *)gpuw->baseObject;
+    layer_initialize_dispatch_table(pTable, (PFN_vkGetProcAddr) gpuw->pGPA, (VkPhysicalDevice) gpuw->nextObject);
 
     return pTable;
 }
@@ -1011,6 +1010,7 @@ VK_LAYER_EXPORT void * VKAPI vkGetProcAddr(VkPhysicalDevice gpu, const char* pNa
 
     ADD_HOOK(vkGetProcAddr);
     ADD_HOOK(vkEnumerateLayers);
+    ADD_HOOK(vkGetGlobalExtensionInfo);
     ADD_HOOK(vkCreateDevice);
     ADD_HOOK(vkCreateShader);
     ADD_HOOK(vkCreateGraphicsPipeline);
@@ -1021,5 +1021,30 @@ VK_LAYER_EXPORT void * VKAPI vkGetProcAddr(VkPhysicalDevice gpu, const char* pNa
     VkBaseLayerObject* gpuw = (VkBaseLayerObject *) gpu;
     if (gpuw->pGPA == NULL)
         return NULL;
-    return gpuw->pGPA((VkPhysicalDevice) gpuw->nextObject, pName);
+    return gpuw->pGPA((VkObject) gpuw->nextObject, pName);
+}
+
+VK_LAYER_EXPORT void * VKAPI vkGetInstanceProcAddr(VkInstance inst, const char* pName)
+{
+    if (inst == NULL)
+        return NULL;
+
+    //TODO initLayerTable((const VkBaseLayerObject *) inst);
+
+    // TODO loader_platform_thread_once(&g_initOnce, initInstanceLayer);
+
+#define ADD_HOOK(fn)    \
+    if (!strncmp(#fn, pName, sizeof(#fn))) \
+        return (void *) fn
+
+    ADD_HOOK(vkGetProcAddr);
+    ADD_HOOK(vkGetInstanceProcAddr);
+    ADD_HOOK(vkEnumerateLayers);
+    ADD_HOOK(vkGetGlobalExtensionInfo);
+    ADD_HOOK(vkCreateDevice);
+
+    VkBaseLayerObject* instw = (VkBaseLayerObject *) inst;
+    if (instw->pGPA == NULL)
+        return NULL;
+    return instw->pGPA((VkObject) instw->nextObject, pName);
 }

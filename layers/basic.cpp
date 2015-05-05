@@ -49,7 +49,7 @@ static VkLayerDispatchTable * initLayerTable(const VkBaseLayerObject *gpuw)
         return it->second;
     }
 
-    layer_initialize_dispatch_table(pTable, gpuw->pGPA, (VkPhysicalDevice) gpuw->nextObject);
+    layer_initialize_dispatch_table(pTable, (PFN_vkGetProcAddr) gpuw->pGPA, (VkPhysicalDevice) gpuw->nextObject);
 
     return pTable;
 }
@@ -173,20 +173,47 @@ VK_LAYER_EXPORT void * VKAPI vkGetProcAddr(VkPhysicalDevice gpu, const char* pNa
 
     initLayerTable((const VkBaseLayerObject *) gpu);
 
-    if (!strncmp("vkGetProcAddr", pName, sizeof("vkGetProcAddr")))
+    if (!strcmp("vkGetProcAddr", pName))
         return (void *) vkGetProcAddr;
-    else if (!strncmp("vkCreateDevice", pName, sizeof ("vkCreateDevice")))
+    if (!strcmp("vkCreateDevice", pName))
         return (void *) vkCreateDevice;
-    else if (!strncmp("vkEnumerateLayers", pName, sizeof ("vkEnumerateLayers")))
+    if (!strcmp("GetGlobalExtensionInfo", pName))
+        return (void*) vkGetGlobalExtensionInfo;
+    if (!strcmp("vkEnumerateLayers", pName))
         return (void *) vkEnumerateLayers;
-    else if (!strncmp("vkGetFormatInfo", pName, sizeof ("vkGetFormatInfo")))
+    if (!strcmp("vkGetFormatInfo", pName))
         return (void *) vkGetFormatInfo;
-    else if (!strncmp("vkLayerExtension1", pName, sizeof("vkLayerExtension1")))
+    if (!strcmp("vkLayerExtension1", pName))
         return (void *) vkLayerExtension1;
     else {
         VkBaseLayerObject* gpuw = (VkBaseLayerObject *) gpu;
         if (gpuw->pGPA == NULL)
             return NULL;
-        return gpuw->pGPA((VkPhysicalDevice) gpuw->nextObject, pName);
+        return gpuw->pGPA((VkObject) gpuw->nextObject, pName);
+    }
+}
+
+VK_LAYER_EXPORT void * VKAPI vkGetInstanceProcAddr(VkInstance instance, const char* pName)
+{
+    if (instance == NULL)
+        return NULL;
+
+    // TODO initInstanceLayerTable((const VkBaseLayerObject *) instance);
+
+    if (!strcmp("vkGetInstanceProcAddr", pName))
+        return (void *) vkGetInstanceProcAddr;
+    if (!strcmp("vkGetProcAddr", pName))
+        return (void *) vkGetProcAddr;
+    if (!strcmp("GetGlobalExtensionInfo", pName))
+        return (void*) vkGetGlobalExtensionInfo;
+    if (!strcmp("vkCreateDevice", pName))
+        return (void *) vkCreateDevice;
+    if (!strcmp("vkEnumerateLayers", pName))
+        return (void *) vkEnumerateLayers;
+    else {
+        VkBaseLayerObject* instancew = (VkBaseLayerObject *) instance;
+        if (instancew->pGPA == NULL)
+            return NULL;
+        return instancew->pGPA((VkObject) instancew->nextObject, pName);
     }
 }

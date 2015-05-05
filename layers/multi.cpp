@@ -120,18 +120,42 @@ VK_LAYER_EXPORT void * VKAPI multi1GetProcAddr(VkPhysicalDevice gpu, const char*
 
     getLayer1Table(gpuw);
 
-    if (!strncmp("vkCreateDevice", pName, sizeof ("vkCreateDevice")))
+    if (!strcmp("vkCreateDevice", pName))
         return (void *) multi1CreateDevice;
-    else if (!strncmp("vkEnumerateLayers", pName, sizeof ("vkEnumerateLayers")))
+    else if (!strcmp("vkEnumerateLayers", pName))
         return (void *) multi1EnumerateLayers;
-    else if (!strncmp("vkCreateGraphicsPipeline", pName, sizeof ("vkCreateGraphicsPipeline")))
+    else if (!strcmp("GetGlobalExtensionInfo", pName))
+        return (void*) vkGetGlobalExtensionInfo;
+    else if (!strcmp("vkCreateGraphicsPipeline", pName))
         return (void *) multi1CreateGraphicsPipeline;
-    else if (!strncmp("vkStorePipeline", pName, sizeof ("vkStorePipeline")))
+    else if (!strcmp("vkStorePipeline", pName))
         return (void *) multi1StorePipeline;
     else {
         if (gpuw->pGPA == NULL)
             return NULL;
-        return gpuw->pGPA((VkPhysicalDevice) gpuw->nextObject, pName);
+        return gpuw->pGPA((VkObject) gpuw->nextObject, pName);
+    }
+}
+
+VK_LAYER_EXPORT void * VKAPI multi1InstanceGetProcAddr(VkInstance inst, const char* pName)
+{
+    VkBaseLayerObject* instw = (VkBaseLayerObject *) inst;
+
+    if (inst == NULL)
+        return NULL;
+
+    //TODO getLayer1InstanceTable(instw);
+
+    if (!strcmp("vkCreateDevice", pName))
+        return (void *) multi1CreateDevice;
+    else if (!strcmp("vkEnumerateLayers", pName))
+        return (void *) multi1EnumerateLayers;
+    else if (!strcmp("GetGlobalExtensionInfo", pName))
+        return (void*) vkGetGlobalExtensionInfo;
+    else {
+        if (instw->pGPA == NULL)
+            return NULL;
+        return instw->pGPA((VkObject) instw->nextObject, pName);
     }
 }
 
@@ -218,18 +242,42 @@ VK_LAYER_EXPORT void * VKAPI multi2GetProcAddr(VkPhysicalDevice gpu, const char*
 
     getLayer2Table(gpuw);
 
-    if (!strncmp("vkCreateDevice", pName, sizeof ("vkCreateDevice")))
+    if (!strcmp("vkCreateDevice", pName))
         return (void *) multi2CreateDevice;
-    else if (!strncmp("vkEnumerateLayers", pName, sizeof ("vkEnumerateLayers")))
+    else if (!strcmp("vkEnumerateLayers", pName))
         return (void *) multi2EnumerateLayers;
-    else if (!strncmp("vkCreateCommandBuffer", pName, sizeof ("vkCreateCommandBuffer")))
+    else if (!strcmp("GetGlobalExtensionInfo", pName))
+        return (void*) vkGetGlobalExtensionInfo;
+    else if (!strcmp("vkCreateCommandBuffer", pName))
         return (void *) multi2CreateCommandBuffer;
-    else if (!strncmp("vkBeginCommandBuffer", pName, sizeof ("vkBeginCommandBuffer")))
+    else if (!strcmp("vkBeginCommandBuffer", pName))
         return (void *) multi2BeginCommandBuffer;
     else {
         if (gpuw->pGPA == NULL)
             return NULL;
-        return gpuw->pGPA((VkPhysicalDevice) gpuw->nextObject, pName);
+        return gpuw->pGPA((VkObject) gpuw->nextObject, pName);
+    }
+}
+
+VK_LAYER_EXPORT void * VKAPI multi2InstanceGetProcAddr(VkInstance inst, const char* pName)
+{
+    VkBaseLayerObject* instw = (VkBaseLayerObject *) inst;
+
+    if (inst == NULL)
+        return NULL;
+
+    //TODO getLayer2InstanceTable(instw);
+
+    if (!strcmp("vkCreateDevice", pName))
+        return (void *) multi2CreateDevice;
+    else if (!strcmp("vkEnumerateLayers", pName))
+        return (void *) multi2EnumerateLayers;
+    else if (!strcmp("GetGlobalExtensionInfo", pName))
+        return (void*) vkGetGlobalExtensionInfo;
+    else {
+        if (instw->pGPA == NULL)
+            return NULL;
+        return instw->pGPA((VkObject) instw->nextObject, pName);
     }
 }
 
@@ -304,11 +352,11 @@ VK_LAYER_EXPORT VkResult VKAPI vkGetGlobalExtensionInfo(
 VK_LAYER_EXPORT void * VKAPI vkGetProcAddr(VkPhysicalDevice gpu, const char* pName)
 {
     // to find each layers GPA routine Loader will search via "<layerName>GetProcAddr"
-    if (!strncmp("multi1GetProcAddr", pName, sizeof("multi1GetProcAddr")))
+    if (!strcmp("multi1GetProcAddr", pName))
         return (void *) multi1GetProcAddr;
-    else if (!strncmp("multi2GetProcAddr", pName, sizeof("multi2GetProcAddr")))
+    else if (!strcmp("multi2GetProcAddr", pName))
         return (void *) multi2GetProcAddr;
-    else if (!strncmp("vkGetProcAddr", pName, sizeof("vkGetProcAddr")))
+    else if (!strcmp("vkGetProcAddr", pName))
         return (void *) vkGetProcAddr;
 
     // use first layer activated as GPA dispatch table activation happens in order
@@ -321,6 +369,31 @@ VK_LAYER_EXPORT void * VKAPI vkGetProcAddr(VkPhysicalDevice gpu, const char* pNa
 
 }
 
+VK_LAYER_EXPORT void * VKAPI vkGetInstanceProcAddr(VkInstance inst, const char* pName)
+{
+    // to find each layers GPA routine Loader will search via "<layerName>GetProcAddr"
+    if (!strcmp("multi1GetProcAddr", pName))
+        return (void *) multi1GetProcAddr;
+    else if (!strcmp("multi2GetProcAddr", pName))
+        return (void *) multi2GetProcAddr;
+    else if (!strcmp("vkGetProcAddr", pName))
+        return (void *) vkGetProcAddr;
+    else if (!strcmp("multi1GetInstanceProcAddr", pName))
+        return (void *) multi1GetProcAddr;
+    else if (!strcmp("multi2GetInstanceProcAddr", pName))
+        return (void *) multi2GetProcAddr;
+    else if (!strcmp("vkGetInstanceProcAddr", pName))
+        return (void *) vkGetProcAddr;
+
+    // use first layer activated as GPA dispatch table activation happens in order
+    else if (layer1_first_activated)
+        return multi1InstanceGetProcAddr(inst, pName);
+    else if (layer2_first_activated)
+        return multi2InstanceGetProcAddr(inst, pName);
+    else
+        return NULL;
+
+}
 #ifdef __cplusplus
 }    //extern "C"
 #endif
@@ -332,5 +405,5 @@ static void initLayerTable(const VkBaseLayerObject *gpuw, VkLayerDispatchTable *
     if (layerNum == 1 && layer2_first_activated == false)
         layer1_first_activated = true;
 
-    layer_initialize_dispatch_table(pTable, gpuw->pGPA, (VkPhysicalDevice) gpuw->nextObject);
+    layer_initialize_dispatch_table(pTable, (PFN_vkGetProcAddr) gpuw->pGPA, (VkPhysicalDevice) gpuw->nextObject);
 }

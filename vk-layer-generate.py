@@ -280,7 +280,7 @@ class Subcommand(object):
         funcs = []
         intercepted = []
         for proto in self.protos:
-            if proto.name == "GetProcAddr":
+            if proto.name == "GetProcAddr" or proto.name == "GetInstanceProcAddr":
                 intercepted.append(proto)
             else:
                 intercept = self.generate_intercept(proto, qual)
@@ -314,6 +314,27 @@ class Subcommand(object):
         body.append("")
         body.append("    return NULL;")
         body.append("}")
+        # add layer_intercept_instance_proc
+        lookups = []
+        for proto in self.protos:
+            if proto.params[0].ty != "VkInstance" and proto.params[0].ty != "VkPhysicalDevice" and proto.name != "CreateInstance" and proto.name != "GetGlobalExtensionInfo":
+                continue
+
+            if not proto in intercepted:
+                continue
+            lookups.append("if (!strcmp(name, \"%s\"))" % proto.name)
+            lookups.append("    return (void*) %s%s;" % (prefix, proto.name))
+
+        body.append("static inline void* layer_intercept_instance_proc(const char *name)")
+        body.append("{")
+        body.append(generate_get_proc_addr_check("name"))
+        body.append("")
+        body.append("    name += 2;")
+        body.append("    %s" % "\n    ".join(lookups))
+        body.append("")
+        body.append("    return NULL;")
+        body.append("}")
+
         funcs.append("\n".join(body))
         return "\n\n".join(funcs)
 
@@ -381,7 +402,7 @@ class Subcommand(object):
         exts.append('}')
         return "\n".join(exts)
 
-    def _generate_layer_gpa_function(self, extensions=[]):
+    def _generate_layer_gpa_function(self, extensions=[], instance_extensions=[]):
         func_body = []
         func_body.append("VK_LAYER_EXPORT void* VKAPI vkGetProcAddr(VkPhysicalDevice gpu, const char* funcName)\n"
                          "{\n"
@@ -402,12 +423,39 @@ class Subcommand(object):
                 cpp_prefix = "reinterpret_cast<void*>("
                 cpp_postfix = ")"
             for ext_name in extensions:
+#<<<<<<< HEAD
                 func_body.append('    else if (!strncmp("%s", funcName, sizeof("%s")))\n'
                                  '        return %s%s%s;' % (ext_name, ext_name, cpp_prefix, ext_name, cpp_postfix))
+#=======
+#                func_body.append('    else if (!strcmp("%s", funcName))\n'
+#                                 '        return %s;' % (ext_name, ext_name))
+#>>>>>>> layers: Add GetInstanceProcAddr() to all layers
         func_body.append("    else {\n"
                          "        if (gpuw->pGPA == NULL)\n"
                          "            return NULL;\n"
-                         "        return gpuw->pGPA((VkPhysicalDevice)gpuw->nextObject, funcName);\n"
+                         "        return gpuw->pGPA((VkObject)gpuw->nextObject, funcName);\n"
+                         "    }\n"
+                         "}\n")
+        func_body.append("VK_LAYER_EXPORT void* VKAPI vkGetInstanceProcAddr(VkInstance inst, const char* funcName)\n"
+                         "{\n"
+                         "    VkBaseLayerObject* instw = (VkBaseLayerObject *) inst;\n"
+                         "    void* addr;\n"
+                         "    if (inst == VK_NULL_HANDLE)\n"
+                         "        return NULL;\n"
+                         "    // TODO pCurObj = instw;\n"
+                         "    // TODO loader_platform_thread_once(&tabInstanceOnce, initInstance%s);\n\n"
+                         "    addr = layer_intercept_instance_proc(funcName);\n"
+                         "    if (addr)\n"
+                         "        return addr;" % self.layer_name)
+
+        if 0 != len(instance_extensions):
+            for ext_name in instance_extensions:
+                func_body.append('    else if (!strcmp("%s", funcName))\n'
+                                 '        return %s;' % (ext_name, ext_name))
+        func_body.append("    else {\n"
+                         "        if (instw->pGPA == NULL)\n"
+                         "            return NULL;\n"
+                         "        return instw->pGPA((VkObject)instw->nextObject, funcName);\n"
                          "    }\n"
                          "}\n")
         return "\n".join(func_body)
@@ -434,7 +482,7 @@ class Subcommand(object):
             func_body.append('    }')
             func_body.append('')
         func_body.append('    PFN_vkGetProcAddr fpNextGPA;\n'
-                         '    fpNextGPA = pCurObj->pGPA;\n'
+                         '    fpNextGPA = (PFN_vkGetProcAddr) pCurObj->pGPA;\n'
                          '    assert(fpNextGPA);\n')
 
         func_body.append("    layer_initialize_dispatch_table(&nextTable, fpNextGPA, (VkPhysicalDevice) pCurObj->nextObject);")
@@ -650,7 +698,7 @@ class APIDumpSubcommand(Subcommand):
         func_body.append('    ConfigureOutputStream(writeToFile, flushAfterWrite);')
         func_body.append('')
         func_body.append('    PFN_vkGetProcAddr fpNextGPA;')
-        func_body.append('    fpNextGPA = pCurObj->pGPA;')
+        func_body.append('    fpNextGPA = (PFN_vkGetProcAddr) pCurObj->pGPA;')
         func_body.append('    assert(fpNextGPA);')
         func_body.append('    layer_initialize_dispatch_table(&nextTable, fpNextGPA, (VkPhysicalDevice) pCurObj->nextObject);')
         func_body.append('')

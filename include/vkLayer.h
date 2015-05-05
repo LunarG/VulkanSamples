@@ -16,9 +16,10 @@
 #endif
 
 
+typedef void * (*PFN_vkGPA)(VkObject obj, const char * pName);
 typedef struct VkBaseLayerObject_
 {
-    PFN_vkGetProcAddr pGPA;
+    PFN_vkGPA pGPA;
     VkObject nextObject;
     VkObject baseObject;
 } VkBaseLayerObject;
