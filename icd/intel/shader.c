@@ -60,7 +60,7 @@ static VkResult shader_create(struct intel_dev *dev,
     sh->ir = shader_create_ir(dev->gpu, info->pCode, info->codeSize);
     if (!sh->ir) {
         shader_destroy(&sh->obj);
-        return VK_ERROR_UNKNOWN;
+        return VK_ERROR_BAD_SHADER_CODE;
     }
 
     sh->obj.destroy = shader_destroy;

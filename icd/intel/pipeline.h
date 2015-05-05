@@ -126,6 +126,17 @@ struct intel_pipeline_shader {
     uint32_t surface_count;
 
     uint32_t ubo_start;
+
+    // geometry shader specific
+    uint32_t output_size_hwords;
+    uint32_t output_topology;
+    uint32_t control_data_header_size_hwords;
+    uint32_t control_data_format;
+    bool32_t include_primitive_id;
+    int32_t  invocations;
+    bool32_t dual_instanced_dispatch;
+    bool32_t discard_adj;
+
     uint32_t urb_grf_start;
     uint32_t urb_grf_start_16;
 

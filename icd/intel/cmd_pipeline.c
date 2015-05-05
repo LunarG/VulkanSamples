@@ -309,41 +309,149 @@ static void gen75_3DSTATE_VF(struct intel_cmd *cmd,
     dw[1] = cut_index;
 }
 
+static void gen6_add_scratch_space(struct intel_cmd *cmd,
+                                   uint32_t batch_pos,
+                                   const struct intel_pipeline *pipeline,
+                                   const struct intel_pipeline_shader *sh)
+{
+    int scratch_space;
+
+    CMD_ASSERT(cmd, 6, 7.5);
+
+    assert(sh->per_thread_scratch_size &&
+           sh->per_thread_scratch_size % 1024 == 0 &&
+           u_is_pow2(sh->per_thread_scratch_size) &&
+           sh->scratch_offset % 1024 == 0);
+    scratch_space = u_ffs(sh->per_thread_scratch_size) - 11;
+
+    cmd_reserve_reloc(cmd, 1);
+    cmd_batch_reloc(cmd, batch_pos, pipeline->obj.mem->bo,
+            sh->scratch_offset | scratch_space, INTEL_RELOC_WRITE);
+}
 
 static void gen6_3DSTATE_GS(struct intel_cmd *cmd)
 {
+    const struct intel_pipeline *pipeline = cmd->bind.pipeline.graphics;
+    const struct intel_pipeline_shader *gs = &pipeline->gs;
     const uint8_t cmd_len = 7;
-    const uint32_t dw0 = GEN6_RENDER_CMD(3D, 3DSTATE_GS) | (cmd_len - 2);
-    uint32_t *dw;
-
+    uint32_t dw0, dw2, dw4, dw5, dw6, *dw;
     CMD_ASSERT(cmd, 6, 6);
+    int vue_read_len = 0;
+    int pos = 0;
 
-    cmd_batch_pointer(cmd, cmd_len, &dw);
+    dw0 = GEN6_RENDER_CMD(3D, 3DSTATE_GS) | (cmd_len - 2);
+
+    if (pipeline->active_shaders & SHADER_GEOMETRY_FLAG) {
+
+        // based on ilo_gpe_init_gs_cso_gen6
+        vue_read_len = (gs->in_count + 1) / 2;
+        if (!vue_read_len)
+            vue_read_len = 1;
+
+        dw2 = (gs->sampler_count + 3) / 4 << GEN6_THREADDISP_SAMPLER_COUNT__SHIFT |
+              gs->surface_count << GEN6_THREADDISP_BINDING_TABLE_SIZE__SHIFT |
+              GEN6_THREADDISP_SPF;
+
+        dw4 = vue_read_len << GEN6_GS_DW4_URB_READ_LEN__SHIFT |
+              0 << GEN6_GS_DW4_URB_READ_OFFSET__SHIFT |
+              gs->urb_grf_start << GEN6_GS_DW4_URB_GRF_START__SHIFT;
+
+        dw5 = (gs->max_threads - 1) << GEN6_GS_DW5_MAX_THREADS__SHIFT |
+              GEN6_GS_DW5_STATISTICS |
+              GEN6_GS_DW5_RENDER_ENABLE;
+
+        dw6 = GEN6_GS_DW6_GS_ENABLE;
+
+        if (gs->discard_adj)
+            dw6 |= GEN6_GS_DW6_DISCARD_ADJACENCY;
+
+    } else {
+        dw2 = 0;
+        dw4 = 0;
+        dw5 = GEN6_GS_DW5_STATISTICS;
+        dw6 = 0;
+    }
+
+    pos = cmd_batch_pointer(cmd, cmd_len, &dw);
     dw[0] = dw0;
-    dw[1] = 0;
-    dw[2] = 0;
+    dw[1] = cmd->bind.pipeline.gs_offset;
+    dw[2] = dw2;
     dw[3] = 0;
-    dw[4] = 1 << GEN6_GS_DW4_URB_READ_LEN__SHIFT;
-    dw[5] = GEN6_GS_DW5_STATISTICS;
-    dw[6] = 0;
+    dw[4] = dw4;
+    dw[5] = dw5;
+    dw[6] = dw6;
+
+    if (gs->per_thread_scratch_size)
+        gen6_add_scratch_space(cmd, pos + 3, pipeline, gs);
 }
 
 static void gen7_3DSTATE_GS(struct intel_cmd *cmd)
 {
+    const struct intel_pipeline *pipeline = cmd->bind.pipeline.graphics;
+    const struct intel_pipeline_shader *gs = &pipeline->gs;
     const uint8_t cmd_len = 7;
-    const uint32_t dw0 = GEN6_RENDER_CMD(3D, 3DSTATE_GS) | (cmd_len - 2);
-    uint32_t *dw;
-
+    uint32_t dw0, dw2, dw4, dw5, dw6, *dw;
     CMD_ASSERT(cmd, 7, 7.5);
+    int vue_read_len = 0;
+    int pos = 0;
 
-    cmd_batch_pointer(cmd, cmd_len, &dw);
+    dw0 = GEN6_RENDER_CMD(3D, 3DSTATE_GS) | (cmd_len - 2);
+
+    if (pipeline->active_shaders & SHADER_GEOMETRY_FLAG) {
+
+        // based on upload_gs_state
+        dw2 = (gs->sampler_count + 3) / 4 << GEN6_THREADDISP_SAMPLER_COUNT__SHIFT |
+              gs->surface_count << GEN6_THREADDISP_BINDING_TABLE_SIZE__SHIFT;
+
+        vue_read_len = (gs->in_count + 1) / 2;
+        if (!vue_read_len)
+            vue_read_len = 1;
+
+        dw4 = (gs->output_size_hwords * 2 - 1) << GEN7_GS_DW4_OUTPUT_SIZE__SHIFT |
+               gs->output_topology << GEN7_GS_DW4_OUTPUT_TOPO__SHIFT |
+               vue_read_len << GEN7_GS_DW4_URB_READ_LEN__SHIFT |
+               0 << GEN7_GS_DW4_URB_READ_OFFSET__SHIFT |
+               gs->urb_grf_start << GEN7_GS_DW4_URB_GRF_START__SHIFT;
+
+
+        dw5 = gs->control_data_header_size_hwords << GEN7_GS_DW5_CONTROL_DATA_HEADER_SIZE__SHIFT |
+              (gs->invocations - 1) << GEN7_GS_DW5_INSTANCE_CONTROL__SHIFT |
+              GEN7_GS_DW5_STATISTICS |
+              GEN7_GS_DW5_GS_ENABLE;
+
+        dw5 |= (gs->dual_instanced_dispatch) ? GEN7_GS_DW5_DISPATCH_MODE_DUAL_INSTANCE
+                                             : GEN7_GS_DW5_DISPATCH_MODE_DUAL_OBJECT;
+
+        if (gs->include_primitive_id)
+            dw5 |= GEN7_GS_DW5_INCLUDE_PRIMITIVE_ID;
+
+        if (cmd_gen(cmd) >= INTEL_GEN(7.5)) {
+            dw5 |= (gs->max_threads - 1) << GEN75_GS_DW5_MAX_THREADS__SHIFT;
+            dw5 |= GEN75_GS_DW5_REORDER_TRAILING;
+            dw6  = gs->control_data_format << GEN75_GS_DW6_GSCTRL__SHIFT;
+        } else {
+            dw5 |= (gs->max_threads - 1) << GEN7_GS_DW5_MAX_THREADS__SHIFT;
+            dw5 |= gs->control_data_format << GEN7_GS_DW5_GSCTRL__SHIFT;
+            dw6  = 0;
+        }
+    } else {
+        dw2 = 0;
+        dw4 = 0;
+        dw5 = GEN7_GS_DW5_STATISTICS;
+        dw6 = 0;
+    }
+
+    pos = cmd_batch_pointer(cmd, cmd_len, &dw);
     dw[0] = dw0;
-    dw[1] = 0;
-    dw[2] = 0;
+    dw[1] = cmd->bind.pipeline.gs_offset;
+    dw[2] = dw2;
     dw[3] = 0;
-    dw[4] = 0;
-    dw[5] = GEN6_GS_DW5_STATISTICS;
-    dw[6] = 0;
+    dw[4] = dw4;
+    dw[5] = dw5;
+    dw[6] = dw6;
+
+    if (gs->per_thread_scratch_size)
+        gen6_add_scratch_space(cmd, pos + 3, pipeline, gs);
 }
 
 static void gen6_3DSTATE_DRAWING_RECTANGLE(struct intel_cmd *cmd,
@@ -531,26 +639,6 @@ static void gen6_3DSTATE_CLIP(struct intel_cmd *cmd)
     dw[1] = dw1;
     dw[2] = dw2;
     dw[3] = dw3;
-}
-
-static void gen6_add_scratch_space(struct intel_cmd *cmd,
-                                   uint32_t batch_pos,
-                                   const struct intel_pipeline *pipeline,
-                                   const struct intel_pipeline_shader *sh)
-{
-    int scratch_space;
-
-    CMD_ASSERT(cmd, 6, 7.5);
-
-    assert(sh->per_thread_scratch_size &&
-           sh->per_thread_scratch_size % 1024 == 0 &&
-           u_is_pow2(sh->per_thread_scratch_size) &&
-           sh->scratch_offset % 1024 == 0);
-    scratch_space = u_ffs(sh->per_thread_scratch_size) - 11;
-
-    cmd_reserve_reloc(cmd, 1);
-    cmd_batch_reloc(cmd, batch_pos, pipeline->obj.mem->bo,
-            sh->scratch_offset | scratch_space, INTEL_RELOC_WRITE);
 }
 
 static void gen6_3DSTATE_WM(struct intel_cmd *cmd)
@@ -2062,12 +2150,6 @@ static void emit_graphics_pipeline(struct intel_cmd *cmd)
         cmd->bind.pipeline.fs_offset = emit_shader(cmd, &pipeline->fs);
     }
 
-    if (cmd_gen(cmd) >= INTEL_GEN(7)) {
-        gen7_3DSTATE_GS(cmd);
-    } else {
-        gen6_3DSTATE_GS(cmd);
-    }
-
     if (pipeline->wa_flags & INTEL_CMD_WA_GEN7_POST_COMMAND_CS_STALL)
         cmd_wa_gen7_post_command_cs_stall(cmd);
     if (pipeline->wa_flags & INTEL_CMD_WA_GEN7_POST_COMMAND_DEPTH_STALL)
@@ -2089,9 +2171,12 @@ static void emit_bounded_states(struct intel_cmd *cmd)
 
         gen7_pcb(cmd, GEN6_RENDER_OPCODE_3DSTATE_CONSTANT_VS,
                 &cmd->bind.pipeline.graphics->vs);
+        gen7_pcb(cmd, GEN6_RENDER_OPCODE_3DSTATE_CONSTANT_GS,
+                &cmd->bind.pipeline.graphics->gs);
         gen7_pcb(cmd, GEN6_RENDER_OPCODE_3DSTATE_CONSTANT_PS,
                 &cmd->bind.pipeline.graphics->fs);
 
+        gen7_3DSTATE_GS(cmd);
         gen6_3DSTATE_CLIP(cmd);
         gen7_3DSTATE_SF(cmd);
         gen7_3DSTATE_WM(cmd);
@@ -2102,9 +2187,12 @@ static void emit_bounded_states(struct intel_cmd *cmd)
 
         gen6_pcb(cmd, GEN6_RENDER_OPCODE_3DSTATE_CONSTANT_VS,
                 &cmd->bind.pipeline.graphics->vs);
+        gen6_pcb(cmd, GEN6_RENDER_OPCODE_3DSTATE_CONSTANT_GS,
+                &cmd->bind.pipeline.graphics->gs);
         gen6_pcb(cmd, GEN6_RENDER_OPCODE_3DSTATE_CONSTANT_PS,
                 &cmd->bind.pipeline.graphics->fs);
 
+        gen6_3DSTATE_GS(cmd);
         gen6_3DSTATE_CLIP(cmd);
         gen6_3DSTATE_SF(cmd);
         gen6_3DSTATE_WM(cmd);

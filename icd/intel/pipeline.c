@@ -813,12 +813,17 @@ static void pipeline_build_fragment_SBE(struct intel_pipeline *pipeline,
                                         const struct intel_pipeline_create_info *info)
 {
     const struct intel_pipeline_shader *fs = &pipeline->fs;
-    const struct intel_pipeline_shader *vs = &pipeline->vs;
     uint8_t cmd_len;
     uint32_t *body;
     uint32_t attr_skip, attr_count;
     uint32_t vue_offset, vue_len;
     uint32_t i;
+
+    // If GS is active, use its outputs
+    const struct intel_pipeline_shader *src =
+            (pipeline->active_shaders & SHADER_GEOMETRY_FLAG)
+                    ? &pipeline->gs
+                    : &pipeline->vs;
 
     INTEL_GPU_ASSERT(pipeline->dev->gpu, 6, 7.5);
 
@@ -829,13 +834,13 @@ static void pipeline_build_fragment_SBE(struct intel_pipeline *pipeline,
     else
         body = pipeline->cmd_3dstate_sbe;
 
-    assert(!fs->reads_user_clip || vs->enable_user_clip);
-    attr_skip = vs->outputs_offset;
-    if (vs->enable_user_clip != fs->reads_user_clip) {
+    assert(!fs->reads_user_clip || src->enable_user_clip);
+    attr_skip = src->outputs_offset;
+    if (src->enable_user_clip != fs->reads_user_clip) {
         attr_skip += 2;
     }
-    assert(vs->out_count >= attr_skip);
-    attr_count = vs->out_count - attr_skip;
+    assert(src->out_count >= attr_skip);
+    attr_count = src->out_count - attr_skip;
 
     // LUNARG TODO: We currently are only handling 16 attrs;
     // ultimately, we need to handle 32
@@ -874,24 +879,24 @@ static void pipeline_build_fragment_SBE(struct intel_pipeline *pipeline,
         break;
     }
 
-    uint16_t vs_slot[fs->in_count];
+    uint16_t src_slot[fs->in_count];
     int32_t fs_in = 0;
-    int32_t vs_out = - (vue_offset * 2 - vs->outputs_offset);
+    int32_t src_out = - (vue_offset * 2 - src->outputs_offset);
     for (i=0; i < 64; i++) {
-        bool vsWrites = vs->outputs_written & (1L << i);
-        bool fsReads  = fs->inputs_read     & (1L << i);
+        bool srcWrites = src->outputs_written & (1L << i);
+        bool fsReads   = fs->inputs_read      & (1L << i);
 
         if (fsReads) {
-            assert(vs_out >= 0);
+            assert(src_out >= 0);
             assert(fs_in < fs->in_count);
-            vs_slot[fs_in] = vs_out;
+            src_slot[fs_in] = src_out;
 
-            if (!vsWrites) {
+            if (!srcWrites) {
                 // If the vertex shader did not write this input, we cannot
                 // program the SBE to read it.  Our choices are to allow it to
                 // read junk from a GRF, or get zero.  We're choosing zero.
                 if (i >= fs->generic_input_start) {
-                    vs_slot[fs_in] = GEN8_SBE_SWIZ_CONST_0000 |
+                    src_slot[fs_in] = GEN8_SBE_SWIZ_CONST_0000 |
                                      GEN8_SBE_SWIZ_OVERRIDE_X |
                                      GEN8_SBE_SWIZ_OVERRIDE_Y |
                                      GEN8_SBE_SWIZ_OVERRIDE_Z |
@@ -901,8 +906,8 @@ static void pipeline_build_fragment_SBE(struct intel_pipeline *pipeline,
 
             fs_in += 1;
         }
-        if (vsWrites) {
-            vs_out += 1;
+        if (srcWrites) {
+            src_out += 1;
         }
     }
 
@@ -911,10 +916,10 @@ static void pipeline_build_fragment_SBE(struct intel_pipeline *pipeline,
 
         /* no attr swizzles */
         if (i * 2 + 1 < fs->in_count) {
-            lo = vs_slot[i * 2];
-            hi = vs_slot[i * 2 + 1];
+            lo = src_slot[i * 2];
+            hi = src_slot[i * 2 + 1];
         } else if (i * 2 < fs->in_count) {
-            lo = vs_slot[i * 2];
+            lo = src_slot[i * 2];
             hi = 0;
         } else {
             hi = 0;

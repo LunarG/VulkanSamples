@@ -310,6 +310,9 @@ int intel_gpu_get_max_threads(const struct intel_gpu *gpu,
         switch (stage) {
         case VK_SHADER_STAGE_VERTEX:
             return (gpu->gt >= 2) ? 280 : 70;
+        case VK_SHADER_STAGE_GEOMETRY:
+            /* values from ilo_gpe_init_gs_cso_gen7 */
+            return (gpu->gt >= 2) ? 256 : 70;
         case VK_SHADER_STAGE_FRAGMENT:
             return (gpu->gt == 3) ? 408 :
                    (gpu->gt == 2) ? 204 : 102;
@@ -321,6 +324,9 @@ int intel_gpu_get_max_threads(const struct intel_gpu *gpu,
         switch (stage) {
         case VK_SHADER_STAGE_VERTEX:
             return (gpu->gt == 2) ? 128 : 36;
+        case VK_SHADER_STAGE_GEOMETRY:
+            /* values from ilo_gpe_init_gs_cso_gen7 */
+            return (gpu->gt == 2) ? 128 : 36;
         case VK_SHADER_STAGE_FRAGMENT:
             return (gpu->gt == 2) ? 172 : 48;
         default:
@@ -331,6 +337,9 @@ int intel_gpu_get_max_threads(const struct intel_gpu *gpu,
         switch (stage) {
         case VK_SHADER_STAGE_VERTEX:
             return (gpu->gt == 2) ? 60 : 24;
+        case VK_SHADER_STAGE_GEOMETRY:
+            /* values from ilo_gpe_init_gs_cso_gen6 */
+            return (gpu->gt == 2) ? 28 : 21;
         case VK_SHADER_STAGE_FRAGMENT:
             return (gpu->gt == 2) ? 80 : 40;
         default:
@@ -346,6 +355,8 @@ int intel_gpu_get_max_threads(const struct intel_gpu *gpu,
 
     switch (stage) {
     case VK_SHADER_STAGE_VERTEX:
+        return 1;
+    case VK_SHADER_STAGE_GEOMETRY:
         return 1;
     case VK_SHADER_STAGE_FRAGMENT:
         return 4;
