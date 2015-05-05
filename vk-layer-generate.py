@@ -904,13 +904,13 @@ class ObjectTrackerSubcommand(Subcommand):
         header_txt.append('typedef struct _OT_QUEUE_INFO {')
         header_txt.append('    OT_MEM_INFO                     *pMemRefList;')
         header_txt.append('    struct _OT_QUEUE_INFO           *pNextQI;')
-        header_txt.append('    VkPhysicalDeviceQueueProperties *pQueueProps;')
+        header_txt.append('    uint32_t                         queueNodeIndex;')
         header_txt.append('    VkQueue                          queue;')
         header_txt.append('    uint32_t                         refCount;')
         header_txt.append('} OT_QUEUE_INFO;')
         header_txt.append('')
         header_txt.append('// Global list of QueueInfo structures, one per queue')
-        header_txt.append('static OT_QUEUE_INFO *g_pQueueInfo;')
+        header_txt.append('static OT_QUEUE_INFO *g_pQueueInfo = NULL;')
         header_txt.append('')
         header_txt.append('// Convert an object type enum to an object type array index')
         header_txt.append('static uint32_t objTypeToIndex(uint32_t objType)')
@@ -948,11 +948,11 @@ class ObjectTrackerSubcommand(Subcommand):
         header_txt.append('static void addQueueInfo(uint32_t queueNodeIndex, VkQueue queue)')
         header_txt.append('{')
         header_txt.append('    OT_QUEUE_INFO *pQueueInfo = malloc(sizeof(OT_QUEUE_INFO));')
-        header_txt.append('    memset(pQueueInfo, 0, sizeof(OT_QUEUE_INFO));')
-        header_txt.append('    pQueueInfo->queue       = queue;')
-        header_txt.append('    pQueueInfo->pQueueProps = &queueInfo[queueNodeIndex];')
         header_txt.append('')
         header_txt.append('    if (pQueueInfo != NULL) {')
+        header_txt.append('        memset(pQueueInfo, 0, sizeof(OT_QUEUE_INFO));')
+        header_txt.append('        pQueueInfo->queue       = queue;')
+        header_txt.append('        pQueueInfo->queueNodeIndex = queueNodeIndex;')
         header_txt.append('        pQueueInfo->pNextQI   = g_pQueueInfo;')
         header_txt.append('        g_pQueueInfo          = pQueueInfo;')
         header_txt.append('    }')
@@ -1158,23 +1158,28 @@ class ObjectTrackerSubcommand(Subcommand):
         header_txt.append('')
         header_txt.append('static void setGpuQueueInfoState(size_t* pDataSize, void *pData) {')
         header_txt.append('    queueCount = ((uint32_t)*pDataSize / sizeof(VkPhysicalDeviceQueueProperties));')
-        header_txt.append('    queueInfo  = (VkPhysicalDeviceQueueProperties*)malloc(sizeof(pDataSize));')
-        header_txt.append('    memcpy(queueInfo, pData, *pDataSize);')
+        header_txt.append('    queueInfo  = (VkPhysicalDeviceQueueProperties*)realloc((void*)queueInfo, *pDataSize);')
+        header_txt.append('    if (queueInfo != NULL) {')
+        header_txt.append('        memcpy(queueInfo, pData, *pDataSize);')
+        header_txt.append('    }')
         header_txt.append('}')
         header_txt.append('')
         header_txt.append('// Check object status for selected flag state')
-        header_txt.append('static bool32_t validateQueueFlags(VkQueue queue) {')
-        header_txt.append('    bool32_t result = VK_TRUE;')
+        header_txt.append('static void validateQueueFlags(VkQueue queue, const char *function) {')
         header_txt.append('    OT_QUEUE_INFO *pQueueInfo = g_pQueueInfo;')
-        header_txt.append('    while (pQueueInfo->queue != queue) {')
+        header_txt.append('    while ((pQueueInfo != NULL) && (pQueueInfo->queue != queue)) {')
         header_txt.append('        pQueueInfo = pQueueInfo->pNextQI;')
         header_txt.append('    }')
         header_txt.append('    if (pQueueInfo != NULL) {')
-        header_txt.append('        if ((pQueueInfo->pQueueProps->queueFlags & VK_QUEUE_MEMMGR_BIT) == 0) {')
-        header_txt.append('            result = VK_FALSE;')
+        header_txt.append('        char str[1024];\n')
+        header_txt.append('        if ((queueInfo != NULL) && (queueInfo[pQueueInfo->queueNodeIndex].queueFlags & VK_QUEUE_MEMMGR_BIT) == 0) {')
+        header_txt.append('            sprintf(str, "Attempting %s on a non-memory-management capable queue -- VK_QUEUE_MEMMGR_BIT not set", function);')
+        header_txt.append('            layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, queue, 0, OBJTRACK_UNKNOWN_OBJECT, "OBJTRACK", str);')
+        header_txt.append('        } else {')
+        header_txt.append('            sprintf(str, "Attempting %s on a possibly non-memory-management capable queue -- VK_QUEUE_MEMMGR_BIT not known", function);')
+        header_txt.append('            layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, queue, 0, OBJTRACK_UNKNOWN_OBJECT, "OBJTRACK", str);')
         header_txt.append('        }')
         header_txt.append('    }')
-        header_txt.append('    return result;')
         header_txt.append('}')
         header_txt.append('')
         header_txt.append('// Check object status for selected flag state')
@@ -1241,22 +1246,18 @@ class ObjectTrackerSubcommand(Subcommand):
             using_line += '    // validate_memory_mapping_status(pMemRefs, memRefCount);\n'
             using_line += '    // validate_mem_ref_count(memRefCount);\n'
             using_line += '    loader_platform_thread_unlock_mutex(&objLock);\n'
+        elif 'QueueBindObjectMemoryRange' in proto.name:
+            using_line += '    loader_platform_thread_lock_mutex(&objLock);\n'
+            using_line += '    validateObjectType("vk%s", objType, object);\n' % (proto.name)
+            using_line += '    validateQueueFlags(queue, "%s");\n' % (proto.name)
+            using_line += '    loader_platform_thread_unlock_mutex(&objLock);\n'
         elif 'QueueBindObject' in proto.name:
             using_line += '    loader_platform_thread_lock_mutex(&objLock);\n'
             using_line += '    validateObjectType("vk%s", objType, object);\n' % (proto.name)
-            using_line += '    if (validateQueueFlags(queue) == VK_FALSE) {\n'
-            using_line += '        char str[1024];\n'
-            using_line += '        sprintf(str, "Attempting %s on a non-memory-management capable queue -- VK_QUEUE_MEMMGR_BIT not set");\n' % (proto.name)
-            using_line += '        layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, queue, 0, OBJTRACK_UNKNOWN_OBJECT, "OBJTRACK", str);\n'
-            using_line += '    }\n'
             using_line += '    loader_platform_thread_unlock_mutex(&objLock);\n'
         elif 'QueueBindImage' in proto.name:
             using_line += '    loader_platform_thread_lock_mutex(&objLock);\n'
-            using_line += '    if (validateQueueFlags(queue) == VK_FALSE) {\n'
-            using_line += '        char str[1024];\n'
-            using_line += '        sprintf(str, "Attempting %s on a non-memory-management capable queue -- VK_QUEUE_MEMMGR_BIT not set");\n' % (proto.name)
-            using_line += '        layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, queue, 0, OBJTRACK_UNKNOWN_OBJECT, "OBJTRACK", str);\n'
-            using_line += '    }\n'
+            using_line += '    validateQueueFlags(queue, "%s");\n' % (proto.name)
             using_line += '    loader_platform_thread_unlock_mutex(&objLock);\n'
         elif 'GetObjectInfo' in proto.name:
             using_line += '    validateObjectType("vk%s", objType, object);\n' % (proto.name)
