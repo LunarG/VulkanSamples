@@ -56,10 +56,6 @@ add_custom_command(OUTPUT vk_dispatch_table_helper.h
 	COMMAND ${PYTHON_CMD} ${PROJECT_SOURCE_DIR}/vk-generate.py dispatch-table-ops layer > vk_dispatch_table_helper.h
 	DEPENDS ${PROJECT_SOURCE_DIR}/vk-generate.py ${PROJECT_SOURCE_DIR}/vulkan.py)
 
-add_custom_command(OUTPUT vk_generic_intercept_proc_helper.h
-	COMMAND ${PYTHON_CMD} ${PROJECT_SOURCE_DIR}/vk-generate.py layer-intercept-proc > vk_generic_intercept_proc_helper.h
-	DEPENDS ${PROJECT_SOURCE_DIR}/vk-generate.py ${PROJECT_SOURCE_DIR}/vulkan.py)
-
 run_vk_helper(gen_enum_string_helper vk_enum_string_helper.h)
 run_vk_helper(gen_struct_wrappers
 	vk_struct_string_helper.h
@@ -75,7 +71,6 @@ run_vk_helper(gen_graphviz vk_struct_graphviz_helper.h)
 
 add_custom_target(generate_vk_layer_helpers DEPENDS
 	vk_dispatch_table_helper.h
-	vk_generic_intercept_proc_helper.h
 	vk_enum_string_helper.h
 	vk_struct_string_helper.h
 	vk_struct_string_helper_no_addr.h
