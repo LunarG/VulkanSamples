@@ -488,16 +488,16 @@ void VkRenderTest::VKTriangleTest(const char *vertShaderText, const char *fragSh
         RotateTriangleVSUniform(Projection, View, Model, &constantBuffer, &cmdBuffer);
 
 #ifdef PRINT_OBJECTS
-    //uint64_t objTrackGetObjectCount(VK_OBJECT_TYPE type)
-    OBJ_TRACK_GET_OBJECT_COUNT pObjTrackGetObjectCount = (OBJ_TRACK_GET_OBJECT_COUNT)vkGetProcAddr(gpu(), (char*)"objTrackGetObjectCount");
-    uint64_t numObjects = pObjTrackGetObjectCount(VK_OBJECT_TYPE_ANY);
+    //uint64_t objTrackGetObjectCount(VkObjectType type)
+    OBJ_TRACK_GET_OBJECTS_COUNT pObjTrackGetObjectsCount = (OBJ_TRACK_GET_OBJECTS_COUNT)vkGetProcAddr(gpu(), (char*)"objTrackGetObjectsCount");
+    uint64_t numObjects = pObjTrackGetObjectsCount();
     //OBJ_TRACK_GET_OBJECTS pGetObjsFunc = vkGetProcAddr(gpu(), (char*)"objTrackGetObjects");
     printf("DEBUG : Number of Objects : %lu\n", numObjects);
     OBJ_TRACK_GET_OBJECTS pObjTrackGetObjs = (OBJ_TRACK_GET_OBJECTS)vkGetProcAddr(gpu(), (char*)"objTrackGetObjects");
     OBJTRACK_NODE* pObjNodeArray = (OBJTRACK_NODE*)malloc(sizeof(OBJTRACK_NODE)*numObjects);
-    pObjTrackGetObjs(VK_OBJECT_TYPE_ANY, numObjects, pObjNodeArray);
+    pObjTrackGetObjs(numObjects, pObjNodeArray);
     for (i=0; i < numObjects; i++) {
-        printf("Object %i of type %s has objID (%p) and %lu uses\n", i, string_VK_OBJECT_TYPE(pObjNodeArray[i].objType), pObjNodeArray[i].pObj, pObjNodeArray[i].numUses);
+        printf("Object %i of type %s has objID (%p) and %lu uses\n", i, string_from_vulkan_object_type(pObjNodeArray[i].objType), pObjNodeArray[i].vkObj, pObjNodeArray[i].numUses);
     }
     free(pObjNodeArray);
 #endif

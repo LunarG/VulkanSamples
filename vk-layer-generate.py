@@ -27,6 +27,7 @@
 
 import sys
 import os
+import re
 
 import vulkan
 import vk_helper
@@ -34,6 +35,10 @@ import vk_helper
 def generate_get_proc_addr_check(name):
     return "    if (!%s || %s[0] != 'v' || %s[1] != 'k')\n" \
            "        return NULL;" % ((name,) * 3)
+
+def ucc_to_U_C_C(CamelCase):
+    temp = re.sub('(.)([A-Z][a-z]+)',  r'\1_\2', CamelCase)
+    return re.sub('([a-z0-9])([A-Z])', r'\1_\2', temp).upper()
 
 class Subcommand(object):
     def __init__(self, argv):
@@ -203,13 +208,15 @@ class Subcommand(object):
         ggei_body.append('    const char * const name;')
         ggei_body.append('};')
         if layer == 'ObjectTracker':
-            ggei_body.append('#define LAYER_EXT_ARRAY_SIZE 4')
+            ggei_body.append('#define LAYER_EXT_ARRAY_SIZE 6')
             ggei_body.append('static const struct extProps layerExts[LAYER_EXT_ARRAY_SIZE] = {')
             ggei_body.append('    // TODO what is the version?')
             ggei_body.append('    {0x10, "%s"},' % layer)
             ggei_body.append('    {0x10, "Validation"},')
-            ggei_body.append('    {0x10, "objTrackGetObjectCount"},')
-            ggei_body.append('    {0x10, "objTrackGetObjects"}')
+            ggei_body.append('    {0x10, "objTrackGetObjectsCount"},')
+            ggei_body.append('    {0x10, "objTrackGetObjects"},')
+            ggei_body.append('    {0x10, "objTrackGetObjectsOfTypeCount"},')
+            ggei_body.append('    {0x10, "objTrackGetObjectsOfType"}')
             ggei_body.append('};')
         elif layer == 'Threading':
             ggei_body.append('#define LAYER_EXT_ARRAY_SIZE 2')
@@ -336,33 +343,60 @@ class Subcommand(object):
 
     def _generate_extensions(self):
         exts = []
-        exts.append('uint64_t objTrackGetObjectCount(VK_OBJECT_TYPE type)')
+        exts.append('uint64_t objTrackGetObjectsCount(void)')
         exts.append('{')
-        exts.append('    return (type == VkObjectTypeAny) ? numTotalObjs : numObjs[type];')
+        exts.append('    return numTotalObjs;')
         exts.append('}')
         exts.append('')
-        exts.append('VkResult objTrackGetObjects(VK_OBJECT_TYPE type, uint64_t objCount, OBJTRACK_NODE* pObjNodeArray)')
+        exts.append('VkResult objTrackGetObjects(uint64_t objCount, OBJTRACK_NODE* pObjNodeArray)')
         exts.append('{')
         exts.append("    // This bool flags if we're pulling all objs or just a single class of objs")
-        exts.append('    bool32_t bAllObjs = (type == VkObjectTypeAny);')
         exts.append('    // Check the count first thing')
-        exts.append('    uint64_t maxObjCount = (bAllObjs) ? numTotalObjs : numObjs[type];')
+        exts.append('    uint64_t maxObjCount = numTotalObjs;')
         exts.append('    if (objCount > maxObjCount) {')
         exts.append('        char str[1024];')
-        exts.append('        sprintf(str, "OBJ ERROR : Received objTrackGetObjects() request for %lu objs, but there are only %lu objs of type %s", objCount, maxObjCount, string_VK_OBJECT_TYPE(type));')
+        exts.append('        sprintf(str, "OBJ ERROR : Received objTrackGetObjects() request for %lu objs, but there are only %lu total objs", objCount, maxObjCount);')
         exts.append('        layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, 0, 0, OBJTRACK_OBJCOUNT_MAX_EXCEEDED, "OBJTRACK", str);')
         exts.append('        return VK_ERROR_INVALID_VALUE;')
         exts.append('    }')
-        exts.append('    objNode* pTrav = (bAllObjs) ? pGlobalHead : pObjectHead[type];')
+        exts.append('    objNode* pTrav = pGlobalHead;')
         exts.append('    for (uint64_t i = 0; i < objCount; i++) {')
         exts.append('        if (!pTrav) {')
         exts.append('            char str[1024];')
-        exts.append('            sprintf(str, "OBJ INTERNAL ERROR : Ran out of %s objs! Should have %lu, but only copied %lu and not the requested %lu.", string_VK_OBJECT_TYPE(type), maxObjCount, i, objCount);')
+        exts.append('            sprintf(str, "OBJ INTERNAL ERROR : Ran out of objs! Should have %lu, but only copied %lu and not the requested %lu.", maxObjCount, i, objCount);')
         exts.append('            layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, 0, 0, OBJTRACK_INTERNAL_ERROR, "OBJTRACK", str);')
         exts.append('            return VK_ERROR_UNKNOWN;')
         exts.append('        }')
         exts.append('        memcpy(&pObjNodeArray[i], pTrav, sizeof(OBJTRACK_NODE));')
-        exts.append('        pTrav = (bAllObjs) ? pTrav->pNextGlobal : pTrav->pNextObj;')
+        exts.append('        pTrav = pTrav->pNextGlobal;')
+        exts.append('    }')
+        exts.append('    return VK_SUCCESS;')
+        exts.append('}')
+        exts.append('uint64_t objTrackGetObjectsOfTypeCount(VkObjectType type)')
+        exts.append('{')
+        exts.append('    return numObjs[type];')
+        exts.append('}')
+        exts.append('')
+        exts.append('VkResult objTrackGetObjectsOfType(VkObjectType type, uint64_t objCount, OBJTRACK_NODE* pObjNodeArray)')
+        exts.append('{')
+        exts.append('    // Check the count first thing')
+        exts.append('    uint64_t maxObjCount = numObjs[type];')
+        exts.append('    if (objCount > maxObjCount) {')
+        exts.append('        char str[1024];')
+        exts.append('        sprintf(str, "OBJ ERROR : Received objTrackGetObjects() request for %lu objs, but there are only %lu objs of type %s", objCount, maxObjCount, string_from_vulkan_object_type(type));')
+        exts.append('        layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, 0, 0, OBJTRACK_OBJCOUNT_MAX_EXCEEDED, "OBJTRACK", str);')
+        exts.append('        return VK_ERROR_INVALID_VALUE;')
+        exts.append('    }')
+        exts.append('    objNode* pTrav = pObjectHead[type];')
+        exts.append('    for (uint64_t i = 0; i < objCount; i++) {')
+        exts.append('        if (!pTrav) {')
+        exts.append('            char str[1024];')
+        exts.append('            sprintf(str, "OBJ INTERNAL ERROR : Ran out of %s objs! Should have %lu, but only copied %lu and not the requested %lu.", string_from_vulkan_object_type(type), maxObjCount, i, objCount);')
+        exts.append('            layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, 0, 0, OBJTRACK_INTERNAL_ERROR, "OBJTRACK", str);')
+        exts.append('            return VK_ERROR_UNKNOWN;')
+        exts.append('        }')
+        exts.append('        memcpy(&pObjNodeArray[i], pTrav, sizeof(OBJTRACK_NODE));')
+        exts.append('        pTrav = pTrav->pNextObj;')
         exts.append('    }')
         exts.append('    return VK_SUCCESS;')
         exts.append('}')
@@ -849,16 +883,18 @@ class ObjectTrackerSubcommand(Subcommand):
         header_txt.append('    struct _objNode *pNextGlobal;')
         header_txt.append('} objNode;')
         header_txt.append('')
-        header_txt.append('static objNode                         *pObjectHead[VkNumObjectType] = {0};')
-        header_txt.append('static objNode                         *pGlobalHead                  = NULL;')
-        header_txt.append('static uint64_t                         numObjs[VkNumObjectType]     = {0};')
-        header_txt.append('static uint64_t                         numTotalObjs                 = 0;')
-        header_txt.append('static VkPhysicalDeviceQueueProperties *queueInfo                    = NULL;')
-        header_txt.append('static uint32_t                         queueCount                   = 0;')
+        header_txt.append('#define NUM_OBJECT_TYPES (VK_NUM_OBJECT_TYPE + (VK_OBJECT_TYPE_SWAP_CHAIN_WSI - VK_OBJECT_TYPE_DISPLAY_WSI))')
+        header_txt.append('')
+        header_txt.append('static objNode                         *pObjectHead[NUM_OBJECT_TYPES] = {0};')
+        header_txt.append('static objNode                         *pGlobalHead                   = NULL;')
+        header_txt.append('static uint64_t                         numObjs[NUM_OBJECT_TYPES]     = {0};')
+        header_txt.append('static uint64_t                         numTotalObjs                  = 0;')
+        header_txt.append('static VkPhysicalDeviceQueueProperties *queueInfo                     = NULL;')
+        header_txt.append('static uint32_t                         queueCount                    = 0;')
         header_txt.append('')
         header_txt.append('// For each Queue\'s doubly linked-list of mem refs')
         header_txt.append('typedef struct _OT_MEM_INFO {')
-        header_txt.append('    VkDeviceMemory        mem;')
+        header_txt.append('    VkDeviceMemory       mem;')
         header_txt.append('    struct _OT_MEM_INFO *pNextMI;')
         header_txt.append('    struct _OT_MEM_INFO *pPrevMI;')
         header_txt.append('')
@@ -875,6 +911,17 @@ class ObjectTrackerSubcommand(Subcommand):
         header_txt.append('')
         header_txt.append('// Global list of QueueInfo structures, one per queue')
         header_txt.append('static OT_QUEUE_INFO *g_pQueueInfo;')
+        header_txt.append('')
+        header_txt.append('// Convert an object type enum to an object type array index')
+        header_txt.append('static uint32_t objTypeToIndex(uint32_t objType)')
+        header_txt.append('{')
+        header_txt.append('    uint32_t index = objType;')
+        header_txt.append('    if (objType > VK_OBJECT_TYPE_END_RANGE) {')
+        header_txt.append('        // These come from vk_wsi_lunarg.h, rebase')
+        header_txt.append('        index = (index -(VK_WSI_LUNARG_EXTENSION_NUMBER * -1000)) + VK_OBJECT_TYPE_END_RANGE;')
+        header_txt.append('    }')
+        header_txt.append('    return index;')
+        header_txt.append('}')
         header_txt.append('')
         header_txt.append('// Add new queue to head of global queue list')
         header_txt.append('static void addQueueInfo(uint32_t queueNodeIndex, VkQueue queue)')
@@ -919,23 +966,23 @@ class ObjectTrackerSubcommand(Subcommand):
         header_txt.append('    objNode* pTrav = pGlobalHead;')
         header_txt.append('    printf("=====GLOBAL OBJECT LIST (%lu total objs):\\n", numTotalObjs);')
         header_txt.append('    while (pTrav) {')
-        header_txt.append('        printf("   ObjNode (%p) w/ %s obj 0x%" PRId64 " has pNextGlobal %p\\n", (void*)pTrav, string_VK_OBJECT_TYPE(pTrav->obj.objType), pTrav->obj.vkObj, (void*)pTrav->pNextGlobal);')
+        header_txt.append('        printf("   ObjNode (%p) w/ %s obj 0x%" PRId64 " has pNextGlobal %p\\n", (void*)pTrav, string_from_vulkan_object_type(pTrav->obj.objType), pTrav->obj.vkObj, (void*)pTrav->pNextGlobal);')
         header_txt.append('        pTrav = pTrav->pNextGlobal;')
         header_txt.append('    }')
-        header_txt.append('    for (uint32_t i = 0; i < VkNumObjectType; i++) {')
+        header_txt.append('    for (uint32_t i = 0; i < NUM_OBJECT_TYPES; i++) {')
         header_txt.append('        pTrav = pObjectHead[i];')
         header_txt.append('        if (pTrav) {')
-        header_txt.append('            printf("=====%s OBJECT LIST (%lu objs):\\n", string_VK_OBJECT_TYPE(pTrav->obj.objType), numObjs[i]);')
+        header_txt.append('            printf("=====%s OBJECT LIST (%lu objs):\\n", string_from_vulkan_object_type(pTrav->obj.objType), numObjs[i]);')
         header_txt.append('            while (pTrav) {')
-        header_txt.append('                printf("   ObjNode (%p) w/ %s obj 0x%" PRId64 " has pNextObj %p\\n", (void*)pTrav, string_VK_OBJECT_TYPE(pTrav->obj.objType), pTrav->obj.vkObj, (void*)pTrav->pNextObj);')
+        header_txt.append('                printf("   ObjNode (%p) w/ %s obj 0x%" PRId64 " has pNextObj %p\\n", (void*)pTrav, string_from_vulkan_object_type(pTrav->obj.objType), pTrav->obj.vkObj, (void*)pTrav->pNextObj);')
         header_txt.append('                pTrav = pTrav->pNextObj;')
         header_txt.append('            }')
         header_txt.append('        }')
         header_txt.append('    }')
         header_txt.append('}')
-        header_txt.append('static void ll_insert_obj(VkObject vkObj, VK_OBJECT_TYPE objType) {')
+        header_txt.append('static void ll_insert_obj(VkObject vkObj, VkObjectType objType) {')
         header_txt.append('    char str[1024];')
-        header_txt.append('    sprintf(str, "OBJ[%llu] : CREATE %s object 0x%" PRId64, object_track_index++, string_VK_OBJECT_TYPE(objType), vkObj);')
+        header_txt.append('    sprintf(str, "OBJ[%llu] : CREATE %s object 0x%" PRId64, object_track_index++, string_from_vulkan_object_type(objType), vkObj);')
         header_txt.append('    layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, vkObj, 0, OBJTRACK_NONE, "OBJTRACK", str);')
         header_txt.append('    objNode* pNewObjNode = (objNode*)malloc(sizeof(objNode));')
         header_txt.append('    pNewObjNode->obj.vkObj = vkObj;')
@@ -946,21 +993,22 @@ class ObjectTrackerSubcommand(Subcommand):
         header_txt.append('    pNewObjNode->pNextGlobal = pGlobalHead;')
         header_txt.append('    pGlobalHead = pNewObjNode;')
         header_txt.append('    // insert at front of object list')
-        header_txt.append('    pNewObjNode->pNextObj = pObjectHead[objType];')
-        header_txt.append('    pObjectHead[objType] = pNewObjNode;')
+        header_txt.append('    uint32_t objIndex = objTypeToIndex(objType);')
+        header_txt.append('    pNewObjNode->pNextObj = pObjectHead[objIndex];')
+        header_txt.append('    pObjectHead[objIndex] = pNewObjNode;')
         header_txt.append('    // increment obj counts')
-        header_txt.append('    numObjs[objType]++;')
+        header_txt.append('    numObjs[objIndex]++;')
         header_txt.append('    numTotalObjs++;')
-        header_txt.append('    //sprintf(str, "OBJ_STAT : %lu total objs & %lu %s objs.", numTotalObjs, numObjs[objType], string_VK_OBJECT_TYPE(objType));')
+        header_txt.append('    //sprintf(str, "OBJ_STAT : %lu total objs & %lu %s objs.", numTotalObjs, numObjs[objIndex], string_from_vulkan_object_type(objType));')
         header_txt.append('    if (0) ll_print_lists();')
         header_txt.append('}')
-        header_txt.append('static void ll_increment_use_count(VkObject vkObj, VK_OBJECT_TYPE objType) {')
-        header_txt.append('    objNode *pTrav = pObjectHead[objType];')
+        header_txt.append('static void ll_increment_use_count(VkObject vkObj, VkObjectType objType) {')
+        header_txt.append('    objNode *pTrav = pObjectHead[objTypeToIndex(objType)];')
         header_txt.append('    while (pTrav) {')
         header_txt.append('        if (pTrav->obj.vkObj == vkObj) {')
         header_txt.append('            pTrav->obj.numUses++;')
         header_txt.append('            char str[1024];')
-        header_txt.append('            sprintf(str, "OBJ[%llu] : USING %s object 0x%" PRId64 " (%lu total uses)", object_track_index++, string_VK_OBJECT_TYPE(objType), vkObj, pTrav->obj.numUses);')
+        header_txt.append('            sprintf(str, "OBJ[%llu] : USING %s object 0x%" PRId64 " (%lu total uses)", object_track_index++, string_from_vulkan_object_type(objType), vkObj, pTrav->obj.numUses);')
         header_txt.append('            layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, vkObj, 0, OBJTRACK_NONE, "OBJTRACK", str);')
         header_txt.append('            return;')
         header_txt.append('        }')
@@ -968,7 +1016,7 @@ class ObjectTrackerSubcommand(Subcommand):
         header_txt.append('    }')
         header_txt.append('    // If we do not find obj, insert it and then increment count')
         header_txt.append('    char str[1024];')
-        header_txt.append('    sprintf(str, "Unable to increment count for obj 0x%" PRId64 ", will add to list as %s type and increment count", vkObj, string_VK_OBJECT_TYPE(objType));')
+        header_txt.append('    sprintf(str, "Unable to increment count for obj 0x%" PRId64 ", will add to list as %s type and increment count", vkObj, string_from_vulkan_object_type(objType));')
         header_txt.append('    layerCbMsg(VK_DBG_MSG_WARNING, VK_VALIDATION_LEVEL_0, vkObj, 0, OBJTRACK_UNKNOWN_OBJECT, "OBJTRACK", str);')
         header_txt.append('')
         header_txt.append('    ll_insert_obj(vkObj, objType);')
@@ -977,19 +1025,20 @@ class ObjectTrackerSubcommand(Subcommand):
         header_txt.append('// We usually do not know Obj type when we destroy it so have to fetch')
         header_txt.append('//  Type from global list w/ ll_destroy_obj()')
         header_txt.append('//   and then do the full removal from both lists w/ ll_remove_obj_type()')
-        header_txt.append('static void ll_remove_obj_type(VkObject vkObj, VK_OBJECT_TYPE objType) {')
-        header_txt.append('    objNode *pTrav = pObjectHead[objType];')
-        header_txt.append('    objNode *pPrev = pObjectHead[objType];')
+        header_txt.append('static void ll_remove_obj_type(VkObject vkObj, VkObjectType objType) {')
+        header_txt.append('    uint32_t objIndex = objTypeToIndex(objType);')
+        header_txt.append('    objNode *pTrav = pObjectHead[objIndex];')
+        header_txt.append('    objNode *pPrev = pObjectHead[objIndex];')
         header_txt.append('    while (pTrav) {')
         header_txt.append('        if (pTrav->obj.vkObj == vkObj) {')
         header_txt.append('            pPrev->pNextObj = pTrav->pNextObj;')
         header_txt.append('            // update HEAD of Obj list as needed')
-        header_txt.append('            if (pObjectHead[objType] == pTrav)')
-        header_txt.append('                pObjectHead[objType] = pTrav->pNextObj;')
-        header_txt.append('            assert(numObjs[objType] > 0);')
-        header_txt.append('            numObjs[objType]--;')
+        header_txt.append('            if (pObjectHead[objIndex] == pTrav)')
+        header_txt.append('                pObjectHead[objIndex] = pTrav->pNextObj;')
+        header_txt.append('            assert(numObjs[objIndex] > 0);')
+        header_txt.append('            numObjs[objIndex]--;')
         header_txt.append('            char str[1024];')
-        header_txt.append('            sprintf(str, "OBJ[%llu] : DESTROY %s object 0x%" PRId64, object_track_index++, string_VK_OBJECT_TYPE(objType), vkObj);')
+        header_txt.append('            sprintf(str, "OBJ[%llu] : DESTROY %s object 0x%" PRId64, object_track_index++, string_from_vulkan_object_type(objType), vkObj);')
         header_txt.append('            layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, vkObj, 0, OBJTRACK_NONE, "OBJTRACK", str);')
         header_txt.append('            return;')
         header_txt.append('        }')
@@ -997,7 +1046,7 @@ class ObjectTrackerSubcommand(Subcommand):
         header_txt.append('        pTrav = pTrav->pNextObj;')
         header_txt.append('    }')
         header_txt.append('    char str[1024];')
-        header_txt.append('    sprintf(str, "OBJ INTERNAL ERROR : Obj 0x%" PRId64 " was in global list but not in %s list", vkObj, string_VK_OBJECT_TYPE(objType));')
+        header_txt.append('    sprintf(str, "OBJ INTERNAL ERROR : Obj 0x%" PRId64 " was in global list but not in %s list", vkObj, string_from_vulkan_object_type(objType));')
         header_txt.append('    layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, vkObj, 0, OBJTRACK_INTERNAL_ERROR, "OBJTRACK", str);')
         header_txt.append('}')
         header_txt.append('// Parse global list to find obj type, then remove obj from obj type list, finally')
@@ -1015,7 +1064,7 @@ class ObjectTrackerSubcommand(Subcommand):
         header_txt.append('            assert(numTotalObjs > 0);')
         header_txt.append('            numTotalObjs--;')
         header_txt.append('            char str[1024];')
-        header_txt.append('            sprintf(str, "OBJ_STAT Removed %s obj 0x%" PRId64 " that was used %lu times (%lu total objs remain & %lu %s objs).", string_VK_OBJECT_TYPE(pTrav->obj.objType), pTrav->obj.vkObj, pTrav->obj.numUses, numTotalObjs, numObjs[pTrav->obj.objType], string_VK_OBJECT_TYPE(pTrav->obj.objType));')
+        header_txt.append('            sprintf(str, "OBJ_STAT Removed %s obj 0x%" PRId64 " that was used %lu times (%lu total objs remain & %lu %s objs).", string_from_vulkan_object_type(pTrav->obj.objType), pTrav->obj.vkObj, pTrav->obj.numUses, numTotalObjs, numObjs[objTypeToIndex(pTrav->obj.objType)], string_from_vulkan_object_type(pTrav->obj.objType));')
         header_txt.append('            layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, vkObj, 0, OBJTRACK_NONE, "OBJTRACK", str);')
         header_txt.append('            free(pTrav);')
         header_txt.append('            return;')
@@ -1028,9 +1077,9 @@ class ObjectTrackerSubcommand(Subcommand):
         header_txt.append('    layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, vkObj, 0, OBJTRACK_DESTROY_OBJECT_FAILED, "OBJTRACK", str);')
         header_txt.append('}')
         header_txt.append('// Set selected flag state for an object node')
-        header_txt.append('static void set_status(VkObject vkObj, VK_OBJECT_TYPE objType, OBJECT_STATUS status_flag) {')
+        header_txt.append('static void set_status(VkObject vkObj, VkObjectType objType, OBJECT_STATUS status_flag) {')
         header_txt.append('    if (vkObj != VK_NULL_HANDLE) {')
-        header_txt.append('        objNode *pTrav = pObjectHead[objType];')
+        header_txt.append('        objNode *pTrav = pObjectHead[objTypeToIndex(objType)];')
         header_txt.append('        while (pTrav) {')
         header_txt.append('            if (pTrav->obj.vkObj == vkObj) {')
         header_txt.append('                pTrav->obj.status |= status_flag;')
@@ -1040,14 +1089,14 @@ class ObjectTrackerSubcommand(Subcommand):
         header_txt.append('        }')
         header_txt.append('        // If we do not find it print an error')
         header_txt.append('        char str[1024];')
-        header_txt.append('        sprintf(str, "Unable to set status for non-existent object 0x%" PRId64 " of %s type", vkObj, string_VK_OBJECT_TYPE(objType));')
+        header_txt.append('        sprintf(str, "Unable to set status for non-existent object 0x%" PRId64 " of %s type", vkObj, string_from_vulkan_object_type(objType));')
         header_txt.append('        layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, vkObj, 0, OBJTRACK_UNKNOWN_OBJECT, "OBJTRACK", str);')
         header_txt.append('    }');
         header_txt.append('}')
         header_txt.append('')
         header_txt.append('// Track selected state for an object node')
         header_txt.append('static void track_object_status(VkObject vkObj, VkStateBindPoint stateBindPoint) {')
-        header_txt.append('    objNode *pTrav = pObjectHead[VkObjectTypeCmdBuffer];')
+        header_txt.append('    objNode *pTrav = pObjectHead[VK_OBJECT_TYPE_COMMAND_BUFFER];')
         header_txt.append('')
         header_txt.append('    while (pTrav) {')
         header_txt.append('        if (pTrav->obj.vkObj == vkObj) {')
@@ -1071,8 +1120,8 @@ class ObjectTrackerSubcommand(Subcommand):
         header_txt.append('}')
         header_txt.append('')
         header_txt.append('// Reset selected flag state for an object node')
-        header_txt.append('static void reset_status(VkObject vkObj, VK_OBJECT_TYPE objType, OBJECT_STATUS status_flag) {')
-        header_txt.append('    objNode *pTrav = pObjectHead[objType];')
+        header_txt.append('static void reset_status(VkObject vkObj, VkObjectType objType, OBJECT_STATUS status_flag) {')
+        header_txt.append('    objNode *pTrav = pObjectHead[objTypeToIndex(objType)];')
         header_txt.append('    while (pTrav) {')
         header_txt.append('        if (pTrav->obj.vkObj == vkObj) {')
         header_txt.append('            pTrav->obj.status &= ~status_flag;')
@@ -1082,7 +1131,7 @@ class ObjectTrackerSubcommand(Subcommand):
         header_txt.append('    }')
         header_txt.append('    // If we do not find it print an error')
         header_txt.append('    char str[1024];')
-        header_txt.append('    sprintf(str, "Unable to reset status for non-existent object 0x%" PRId64 " of %s type", vkObj, string_VK_OBJECT_TYPE(objType));')
+        header_txt.append('    sprintf(str, "Unable to reset status for non-existent object 0x%" PRId64 " of %s type", vkObj, string_from_vulkan_object_type(objType));')
         header_txt.append('    layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, vkObj, 0, OBJTRACK_UNKNOWN_OBJECT, "OBJTRACK", str);')
         header_txt.append('}')
         header_txt.append('')
@@ -1108,13 +1157,13 @@ class ObjectTrackerSubcommand(Subcommand):
         header_txt.append('}')
         header_txt.append('')
         header_txt.append('// Check object status for selected flag state')
-        header_txt.append('static bool32_t validate_status(VkObject vkObj, VK_OBJECT_TYPE objType, OBJECT_STATUS status_mask, OBJECT_STATUS status_flag, VK_DBG_MSG_TYPE error_level, OBJECT_TRACK_ERROR error_code, char* fail_msg) {')
-        header_txt.append('    objNode *pTrav = pObjectHead[objType];')
+        header_txt.append('static bool32_t validate_status(VkObject vkObj, VkObjectType objType, OBJECT_STATUS status_mask, OBJECT_STATUS status_flag, VK_DBG_MSG_TYPE error_level, OBJECT_TRACK_ERROR error_code, char* fail_msg) {')
+        header_txt.append('    objNode *pTrav = pObjectHead[objTypeToIndex(objType)];')
         header_txt.append('    while (pTrav) {')
         header_txt.append('        if (pTrav->obj.vkObj == vkObj) {')
         header_txt.append('            if ((pTrav->obj.status & status_mask) != status_flag) {')
         header_txt.append('                char str[1024];')
-        header_txt.append('                sprintf(str, "OBJECT VALIDATION WARNING: %s object 0x%" PRId64 ": %s", string_VK_OBJECT_TYPE(objType), vkObj, fail_msg);')
+        header_txt.append('                sprintf(str, "OBJECT VALIDATION WARNING: %s object 0x%" PRId64 ": %s", string_from_vulkan_object_type(objType), vkObj, fail_msg);')
         header_txt.append('                layerCbMsg(error_level, VK_VALIDATION_LEVEL_0, vkObj, 0, error_code, "OBJTRACK", str);')
         header_txt.append('                return VK_FALSE;')
         header_txt.append('            }')
@@ -1122,21 +1171,18 @@ class ObjectTrackerSubcommand(Subcommand):
         header_txt.append('        }')
         header_txt.append('        pTrav = pTrav->pNextObj;')
         header_txt.append('    }')
-        header_txt.append('    if (objType != VkObjectTypeSwapChainImageWSI &&')
-        header_txt.append('        objType != VkObjectTypeSwapChainMemoryWSI) {')
-        header_txt.append('        // If we do not find it print an error')
-        header_txt.append('        char str[1024];')
-        header_txt.append('        sprintf(str, "Unable to obtain status for non-existent object 0x%" PRId64 " of %s type", vkObj, string_VK_OBJECT_TYPE(objType));')
-        header_txt.append('        layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, vkObj, 0, OBJTRACK_UNKNOWN_OBJECT, "OBJTRACK", str);')
-        header_txt.append('    }')
+        header_txt.append('    // If we do not find it print an error')
+        header_txt.append('    char str[1024];')
+        header_txt.append('    sprintf(str, "Unable to obtain status for non-existent object 0x%" PRId64 " of %s type", vkObj, string_from_vulkan_object_type(objType));')
+        header_txt.append('    layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, vkObj, 0, OBJTRACK_UNKNOWN_OBJECT, "OBJTRACK", str);')
         header_txt.append('    return VK_FALSE;')
         header_txt.append('}')
         header_txt.append('')
         header_txt.append('static void validate_draw_state_flags(VkObject vkObj) {')
-        header_txt.append('    validate_status(vkObj, VkObjectTypeCmdBuffer, OBJSTATUS_VIEWPORT_BOUND,      OBJSTATUS_VIEWPORT_BOUND,      VK_DBG_MSG_ERROR,    OBJTRACK_VIEWPORT_NOT_BOUND,      "Viewport object not bound to this command buffer");')
-        header_txt.append('    validate_status(vkObj, VkObjectTypeCmdBuffer, OBJSTATUS_RASTER_BOUND,        OBJSTATUS_RASTER_BOUND,        VK_DBG_MSG_ERROR,    OBJTRACK_RASTER_NOT_BOUND,        "Raster object not bound to this command buffer");')
-        header_txt.append('    validate_status(vkObj, VkObjectTypeCmdBuffer, OBJSTATUS_COLOR_BLEND_BOUND,   OBJSTATUS_COLOR_BLEND_BOUND,   VK_DBG_MSG_UNKNOWN,  OBJTRACK_COLOR_BLEND_NOT_BOUND,   "Color-blend object not bound to this command buffer");')
-        header_txt.append('    validate_status(vkObj, VkObjectTypeCmdBuffer, OBJSTATUS_DEPTH_STENCIL_BOUND, OBJSTATUS_DEPTH_STENCIL_BOUND, VK_DBG_MSG_UNKNOWN,  OBJTRACK_DEPTH_STENCIL_NOT_BOUND, "Depth-stencil object not bound to this command buffer");')
+        header_txt.append('    validate_status(vkObj, VK_OBJECT_TYPE_COMMAND_BUFFER, OBJSTATUS_VIEWPORT_BOUND,      OBJSTATUS_VIEWPORT_BOUND,      VK_DBG_MSG_ERROR,    OBJTRACK_VIEWPORT_NOT_BOUND,      "Viewport object not bound to this command buffer");')
+        header_txt.append('    validate_status(vkObj, VK_OBJECT_TYPE_COMMAND_BUFFER, OBJSTATUS_RASTER_BOUND,        OBJSTATUS_RASTER_BOUND,        VK_DBG_MSG_ERROR,    OBJTRACK_RASTER_NOT_BOUND,        "Raster object not bound to this command buffer");')
+        header_txt.append('    validate_status(vkObj, VK_OBJECT_TYPE_COMMAND_BUFFER, OBJSTATUS_COLOR_BLEND_BOUND,   OBJSTATUS_COLOR_BLEND_BOUND,   VK_DBG_MSG_UNKNOWN,  OBJTRACK_COLOR_BLEND_NOT_BOUND,   "Color-blend object not bound to this command buffer");')
+        header_txt.append('    validate_status(vkObj, VK_OBJECT_TYPE_COMMAND_BUFFER, OBJSTATUS_DEPTH_STENCIL_BOUND, OBJSTATUS_DEPTH_STENCIL_BOUND, VK_DBG_MSG_UNKNOWN,  OBJTRACK_DEPTH_STENCIL_NOT_BOUND, "Depth-stencil object not bound to this command buffer");')
         header_txt.append('}')
         header_txt.append('')
         return "\n".join(header_txt)
@@ -1145,10 +1191,14 @@ class ObjectTrackerSubcommand(Subcommand):
         if proto.name in [ 'DbgRegisterMsgCallback', 'DbgUnregisterMsgCallback', 'GetGlobalExtensionInfo' ]:
             # use default version
             return None
+
+        # Create map of object names to object type enums of the form VkName : VkObjectTypeName
         obj_type_mapping = {base_t : base_t.replace("Vk", "VkObjectType") for base_t in vulkan.object_type_list}
-        # For the various "super-types" we have to use function to distinguish sub type
-        for obj_type in ["VK_BASE_OBJECT", "VK_OBJECT", "VK_DYNAMIC_STATE_OBJECT", "VkObject"]:
-            obj_type_mapping[obj_type] = "ll_get_obj_type(object)"
+        # Convert object type enum names from UpperCamelCase to UPPER_CASE_WITH_UNDERSCORES
+        for objectName, objectTypeEnum in obj_type_mapping.items():
+            obj_type_mapping[objectName] = ucc_to_U_C_C(objectTypeEnum);
+        # Command Buffer Object doesn't follow the rule.
+        obj_type_mapping['VkCmdBuffer'] = "VK_OBJECT_TYPE_COMMAND_BUFFER"
 
         decl = proto.c_func(prefix="vk", attr="VKAPI")
         param0_name = proto.params[0].name
@@ -1165,7 +1215,7 @@ class ObjectTrackerSubcommand(Subcommand):
             # using_line += '    loader_platform_thread_unlock_mutex(&objLock);\n'  -- Add in after special case sections below.
         if 'QueueSubmit' in proto.name:
             using_line = '    loader_platform_thread_lock_mutex(&objLock);\n'
-            using_line += '    set_status(fence, VkObjectTypeFence, OBJSTATUS_FENCE_IS_SUBMITTED);\n'
+            using_line += '    set_status(fence, VK_OBJECT_TYPE_FENCE, OBJSTATUS_FENCE_IS_SUBMITTED);\n'
             using_line += '    // TODO: Fix for updated memory reference mechanism\n'
             using_line += '    // validate_memory_mapping_status(pMemRefs, memRefCount);\n'
             using_line += '    // validate_mem_ref_count(memRefCount);\n'
@@ -1180,29 +1230,29 @@ class ObjectTrackerSubcommand(Subcommand):
             using_line += '    loader_platform_thread_unlock_mutex(&objLock);\n'
         elif 'GetFenceStatus' in proto.name:
             using_line += '    // Warn if submitted_flag is not set\n'
-            using_line += '    validate_status(fence, VkObjectTypeFence, OBJSTATUS_FENCE_IS_SUBMITTED, OBJSTATUS_FENCE_IS_SUBMITTED, VK_DBG_MSG_ERROR, OBJTRACK_INVALID_FENCE, "Status Requested for Unsubmitted Fence");\n'
+            using_line += '    validate_status(fence, VK_OBJECT_TYPE_FENCE, OBJSTATUS_FENCE_IS_SUBMITTED, OBJSTATUS_FENCE_IS_SUBMITTED, VK_DBG_MSG_ERROR, OBJTRACK_INVALID_FENCE, "Status Requested for Unsubmitted Fence");\n'
         elif 'WaitForFences' in proto.name:
             using_line += '    // Warn if waiting on unsubmitted fence\n'
             using_line += '    for (uint32_t i = 0; i < fenceCount; i++) {\n'
-            using_line += '        validate_status(pFences[i], VkObjectTypeFence, OBJSTATUS_FENCE_IS_SUBMITTED, OBJSTATUS_FENCE_IS_SUBMITTED, VK_DBG_MSG_ERROR, OBJTRACK_INVALID_FENCE, "Waiting for Unsubmitted Fence");\n'
+            using_line += '        validate_status(pFences[i], VK_OBJECT_TYPE_FENCE, OBJSTATUS_FENCE_IS_SUBMITTED, OBJSTATUS_FENCE_IS_SUBMITTED, VK_DBG_MSG_ERROR, OBJTRACK_INVALID_FENCE, "Waiting for Unsubmitted Fence");\n'
             using_line += '    }\n'
         elif 'EndCommandBuffer' in proto.name:
-            using_line += '    reset_status(cmdBuffer, VkObjectTypeCmdBuffer, (OBJSTATUS_VIEWPORT_BOUND    |\n'
-            using_line += '                                                                OBJSTATUS_RASTER_BOUND      |\n'
-            using_line += '                                                                OBJSTATUS_COLOR_BLEND_BOUND |\n'
-            using_line += '                                                                OBJSTATUS_DEPTH_STENCIL_BOUND));\n'
+            using_line += '    reset_status(cmdBuffer, VK_OBJECT_TYPE_COMMAND_BUFFER, (OBJSTATUS_VIEWPORT_BOUND    |\n'
+            using_line += '                                                            OBJSTATUS_RASTER_BOUND      |\n'
+            using_line += '                                                            OBJSTATUS_COLOR_BLEND_BOUND |\n'
+            using_line += '                                                            OBJSTATUS_DEPTH_STENCIL_BOUND));\n'
         elif 'CmdBindDynamicStateObject' in proto.name:
             using_line += '    track_object_status(cmdBuffer, stateBindPoint);\n'
         elif 'CmdDraw' in proto.name:
             using_line += '    validate_draw_state_flags(cmdBuffer);\n'
         elif 'MapMemory' in proto.name:
-            using_line += '    set_status(mem, VkObjectTypeDeviceMemory, OBJSTATUS_GPU_MEM_MAPPED);\n'
+            using_line += '    set_status(mem, VK_OBJECT_TYPE_DEVICE_MEMORY, OBJSTATUS_GPU_MEM_MAPPED);\n'
         elif 'UnmapMemory' in proto.name:
-            using_line += '    reset_status(mem, VkObjectTypeDeviceMemory, OBJSTATUS_GPU_MEM_MAPPED);\n'
+            using_line += '    reset_status(mem, VK_OBJECT_TYPE_DEVICE_MEMORY, OBJSTATUS_GPU_MEM_MAPPED);\n'
         if 'AllocDescriptor' in proto.name: # Allocates array of DSs
             create_line =  '    for (uint32_t i = 0; i < *pCount; i++) {\n'
             create_line += '        loader_platform_thread_lock_mutex(&objLock);\n'
-            create_line += '        ll_insert_obj(pDescriptorSets[i], VkObjectTypeDescriptorSet);\n'
+            create_line += '        ll_insert_obj(pDescriptorSets[i], VK_OBJECT_TYPE_DESCRIPTOR_SET);\n'
             create_line += '        loader_platform_thread_unlock_mutex(&objLock);\n'
             create_line += '    }\n'
         elif 'Create' in proto.name or 'Alloc' in proto.name:
@@ -1233,17 +1283,12 @@ class ObjectTrackerSubcommand(Subcommand):
                     using_line = ''
             if 'DestroyDevice' in proto.name:
                 destroy_line += '    // Report any remaining objects in LL\n    objNode *pTrav = pGlobalHead;\n    while (pTrav) {\n'
-                destroy_line += '        if (pTrav->obj.objType == VkObjectTypeSwapChainImageWSI ||\n'
-                destroy_line += '            pTrav->obj.objType == VkObjectTypeSwapChainMemoryWSI) {\n'
-                destroy_line += '            objNode *pDel = pTrav;\n'
-                destroy_line += '            pTrav = pTrav->pNextGlobal;\n'
-                destroy_line += '            ll_destroy_obj((pDel->obj.vkObj));\n'
-                destroy_line += '        } else if ((pTrav->obj.objType == VkObjectTypePhysicalDevice) || (pTrav->obj.objType == VkObjectTypeQueue)) {\n'
+                destroy_line += '        if ((pTrav->obj.objType == VK_OBJECT_TYPE_PHYSICAL_DEVICE) || (pTrav->obj.objType == VK_OBJECT_TYPE_QUEUE)) {\n'
                 destroy_line += '            // Cannot destroy physical device so ignore\n'
                 destroy_line += '            pTrav = pTrav->pNextGlobal;\n'
                 destroy_line += '        } else {\n'
                 destroy_line += '            char str[1024];\n'
-                destroy_line += '            sprintf(str, "OBJ ERROR : %s object 0x%" PRId64 " has not been destroyed (was used %lu times).", string_VK_OBJECT_TYPE(pTrav->obj.objType), pTrav->obj.vkObj, pTrav->obj.numUses);\n'
+                destroy_line += '            sprintf(str, "OBJ ERROR : %s object 0x%" PRId64 " has not been destroyed (was used %lu times).", string_from_vulkan_object_type(pTrav->obj.objType), pTrav->obj.vkObj, pTrav->obj.numUses);\n'
                 destroy_line += '            layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, device, 0, OBJTRACK_OBJECT_LEAK, "OBJTRACK", str);\n'
                 destroy_line += '            pTrav = pTrav->pNextGlobal;\n'
                 destroy_line += '        }\n'
@@ -1282,8 +1327,10 @@ class ObjectTrackerSubcommand(Subcommand):
                      '    VkResult result;\n'
                      '    /* This entrypoint is NOT going to init its own dispatch table since loader calls this early */\n'
                      '    if (!strncmp(pExtName, "%s", strlen("%s")) ||\n'
-                     '        !strncmp(pExtName, "objTrackGetObjectCount", strlen("objTrackGetObjectCount")) ||\n'
+                     '        !strncmp(pExtName, "objTrackGetObjectsCount", strlen("objTrackGetObjectsCount")) ||\n'
                      '        !strncmp(pExtName, "objTrackGetObjects", strlen("objTrackGetObjects")))\n'
+                     '        !strncmp(pExtName, "objTrackGetObjectsOfTypeCount", strlen("objTrackGetObjectsOfTypeCount")) ||\n'
+                     '        !strncmp(pExtName, "objTrackGetObjectsOfType", strlen("objTrackGetObjectsOfType")))\n'
                      '    {\n'
                      '        result = VK_SUCCESS;\n'
                      '    } else if (nextTable.GetExtensionSupport != NULL)\n'
@@ -1327,8 +1374,7 @@ class ObjectTrackerSubcommand(Subcommand):
         body = [self._generate_layer_initialization(True, lockname='obj'),
                 self._generate_dispatch_entrypoints("VK_LAYER_EXPORT"),
                 self._generate_extensions(),
-                self._generate_layer_gpa_function(extensions=['objTrackGetObjectCount', 'objTrackGetObjects'])]
-
+                self._generate_layer_gpa_function(extensions=['objTrackGetObjectsCount', 'objTrackGetObjects', 'objTrackGetObjectsOfTypeCount', 'objTrackGetObjectsOfType'])]
         return "\n\n".join(body)
 
 class ThreadingSubcommand(Subcommand):

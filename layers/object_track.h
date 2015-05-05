@@ -54,136 +54,114 @@ typedef enum _OBJECT_STATUS
     OBJSTATUS_DEPTH_STENCIL_BOUND               = 0x00000010, // Viewport state object has been bound
     OBJSTATUS_GPU_MEM_MAPPED                    = 0x00000020, // Memory object is currently mapped
 } OBJECT_STATUS;
-// TODO : Make this code-generated
-// Object type enum
-typedef enum _VK_OBJECT_TYPE
-{
-    VkObjectTypeSampler,
-    VkObjectTypeDynamicDsState,
-    VkObjectTypeDescriptorSet,
-    VkObjectTypeDescriptorPool,
-    VkObjectTypeDynamicCbState,
-    VkObjectTypeImageView,
-    VkObjectTypeSemaphore,
-    VkObjectTypeShader,
-    VkObjectTypeDescriptorSetLayout,
-    VkObjectTypePipelineLayout,
-    VkObjectTypeBuffer,
-    VkObjectTypePipeline,
-    VkObjectTypeDevice,
-    VkObjectTypeQueryPool,
-    VkObjectTypeEvent,
-    VkObjectTypeQueue,
-    VkObjectTypePhysicalDevice,
-    VkObjectTypeRenderPass,
-    VkObjectTypeFramebuffer,
-    VkObjectTypeImage,
-    VkObjectTypeBufferView,
-    VkObjectTypeDepthStencilView,
-    VkObjectTypeInstance,
-    VkObjectTypeDynamicVpState,
-    VkObjectTypeColorAttachmentView,
-    VkObjectTypeDeviceMemory,
-    VkObjectTypeDynamicRsState,
-    VkObjectTypeFence,
-    VkObjectTypeCmdBuffer,
 
-    VkObjectTypeDisplayWSI,
-    VkObjectTypeSwapChainWSI,
-    VkObjectTypeSwapChainImageWSI,
-    VkObjectTypeSwapChainMemoryWSI,
-
-    VkObjectTypeUnknown,
-    VkNumObjectType,
-    VkObjectTypeAny, // Allow global object list to be queried/retrieved
-} VK_OBJECT_TYPE;
-
-static const char* string_VK_OBJECT_TYPE(VK_OBJECT_TYPE type) {
+static const char* string_VkObjectType(VkObjectType type) {
     switch (type)
     {
-        case VkObjectTypeDevice:
+        case VK_OBJECT_TYPE_DEVICE:
             return "DEVICE";
-        case VkObjectTypePipeline:
+        case VK_OBJECT_TYPE_PIPELINE:
             return "PIPELINE";
-        case VkObjectTypeFence:
+        case VK_OBJECT_TYPE_FENCE:
             return "FENCE";
-        case VkObjectTypeDescriptorSetLayout:
+        case VK_OBJECT_TYPE_DESCRIPTOR_SET_LAYOUT:
             return "DESCRIPTOR_SET_LAYOUT";
-        case VkObjectTypeDeviceMemory:
+        case VK_OBJECT_TYPE_DEVICE_MEMORY:
             return "DEVICE_MEMORY";
-        case VkObjectTypePipelineLayout:
+        case VK_OBJECT_TYPE_PIPELINE_LAYOUT:
             return "PIPELINE_LAYOUT";
-        case VkObjectTypeQueue:
+        case VK_OBJECT_TYPE_QUEUE:
             return "QUEUE";
-        case VkObjectTypeImage:
+        case VK_OBJECT_TYPE_IMAGE:
             return "IMAGE";
-        case VkObjectTypeCmdBuffer:
+        case VK_OBJECT_TYPE_COMMAND_BUFFER:
             return "CMD_BUFFER";
-        case VkObjectTypeSemaphore:
+        case VK_OBJECT_TYPE_SEMAPHORE:
             return "SEMAPHORE";
-        case VkObjectTypeFramebuffer:
+        case VK_OBJECT_TYPE_FRAMEBUFFER:
             return "FRAMEBUFFER";
-        case VkObjectTypeSampler:
+        case VK_OBJECT_TYPE_SAMPLER:
             return "SAMPLER";
-        case VkObjectTypeColorAttachmentView:
+        case VK_OBJECT_TYPE_COLOR_ATTACHMENT_VIEW:
             return "COLOR_ATTACHMENT_VIEW";
-        case VkObjectTypeBufferView:
+        case VK_OBJECT_TYPE_BUFFER_VIEW:
             return "BUFFER_VIEW";
-        case VkObjectTypeDescriptorSet:
+        case VK_OBJECT_TYPE_DESCRIPTOR_SET:
             return "DESCRIPTOR_SET";
-        case VkObjectTypePhysicalDevice:
+        case VK_OBJECT_TYPE_PHYSICAL_DEVICE:
             return "PHYSICAL_DEVICE";
-        case VkObjectTypeImageView:
+        case VK_OBJECT_TYPE_IMAGE_VIEW:
             return "IMAGE_VIEW";
-        case VkObjectTypeBuffer:
+        case VK_OBJECT_TYPE_BUFFER:
             return "BUFFER";
-        case VkObjectTypeDynamicRsState:
+        case VK_OBJECT_TYPE_DYNAMIC_RS_STATE:
             return "DYNAMIC_RS_STATE_OBJECT";
-        case VkObjectTypeEvent:
+        case VK_OBJECT_TYPE_EVENT:
             return "EVENT";
-        case VkObjectTypeDepthStencilView:
+        case VK_OBJECT_TYPE_DEPTH_STENCIL_VIEW:
             return "DEPTH_STENCIL_VIEW";
-        case VkObjectTypeShader:
+        case VK_OBJECT_TYPE_SHADER:
             return "SHADER";
-        case VkObjectTypeDynamicDsState:
+        case VK_OBJECT_TYPE_DYNAMIC_DS_STATE:
             return "DYNAMIC_DS_STATE_OBJECT";
-        case VkObjectTypeDynamicVpState:
+        case VK_OBJECT_TYPE_DYNAMIC_VP_STATE:
             return "DYNAMIC_VP_STATE_OBJECT";
-        case VkObjectTypeDynamicCbState:
+        case VK_OBJECT_TYPE_DYNAMIC_CB_STATE:
             return "DYNAMIC_CB_STATE_OBJECT";
-        case VkObjectTypeInstance:
+        case VK_OBJECT_TYPE_INSTANCE:
             return "INSTANCE";
-        case VkObjectTypeRenderPass:
+        case VK_OBJECT_TYPE_RENDER_PASS:
             return "RENDER_PASS";
-        case VkObjectTypeQueryPool:
+        case VK_OBJECT_TYPE_QUERY_POOL:
             return "QUERY_POOL";
-        case VkObjectTypeDescriptorPool:
+        case VK_OBJECT_TYPE_DESCRIPTOR_POOL:
             return "DESCRIPTOR_POOL";
-
-        case VkObjectTypeDisplayWSI:
-            return "DISPLAY_WSI";
-        case VkObjectTypeSwapChainWSI:
-            return "SWAP_CHAIN_WSI";
-        case VkObjectTypeSwapChainImageWSI:
-            return "SWAP_CHAIN_IMAGE_WSI";
-        case VkObjectTypeSwapChainMemoryWSI:
-            return "SWAP_CHAIN_MEMORY_WSI";
         default:
-            return "UNKNOWN";
+            return NULL;
     }
+}
+
+static const char* string_VK_OBJECT_TYPE_WSI(uint32_t type) {
+    switch (type)
+    {
+        case VK_OBJECT_TYPE_DISPLAY_WSI:
+            return "DISPLAY_WSI";
+        case VK_OBJECT_TYPE_SWAP_CHAIN_WSI:
+            return "SWAP_CHAIN_WSI";
+        default:
+            return NULL;
+    }
+}
+
+static const char* string_from_vulkan_object_type(uint32_t type) {
+    const char *vkEnumString =  string_VkObjectType((VkObjectType)type);
+    if (vkEnumString != NULL) {
+        return vkEnumString;
+    }
+    else {
+        vkEnumString = string_VK_OBJECT_TYPE_WSI(type);
+        if (vkEnumString != NULL) {
+            return vkEnumString;
+        }
+    }
+    return "Unknown";
 }
 
 typedef struct _OBJTRACK_NODE {
     VkObject        vkObj;
-    VK_OBJECT_TYPE  objType;
+    VkObjectType    objType;
     uint64_t        numUses;
     OBJECT_STATUS   status;
 } OBJTRACK_NODE;
 
 // prototype for extension functions
-uint64_t objTrackGetObjectCount(VK_OBJECT_TYPE type);
-VkResult objTrackGetObjects(VK_OBJECT_TYPE type, uint64_t objCount, OBJTRACK_NODE* pObjNodeArray);
+uint64_t objTrackGetObjectsCount(void);
+VkResult objTrackGetObjects(uint64_t objCount, OBJTRACK_NODE* pObjNodeArray);
+uint64_t objTrackGetObjectsOfTypeCount(VkObjectType type);
+VkResult objTrackGetObjectsOfType(VkObjectType type, uint64_t objCount, OBJTRACK_NODE* pObjNodeArray);
 
 // Func ptr typedefs
-typedef uint64_t (*OBJ_TRACK_GET_OBJECT_COUNT)(VK_OBJECT_TYPE);
-typedef VkResult (*OBJ_TRACK_GET_OBJECTS)(VK_OBJECT_TYPE, uint64_t, OBJTRACK_NODE*);
+typedef uint64_t (*OBJ_TRACK_GET_OBJECTS_COUNT)(void);
+typedef VkResult (*OBJ_TRACK_GET_OBJECTS)(uint64_t, OBJTRACK_NODE*);
+typedef uint64_t (*OBJ_TRACK_GET_OBJECTS_OF_TYPE_COUNT)(VkObjectType);
+typedef VkResult (*OBJ_TRACK_GET_OBJECTS_OF_TYPE)(VkObjectType, uint64_t, OBJTRACK_NODE*);
