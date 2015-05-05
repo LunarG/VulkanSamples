@@ -257,6 +257,14 @@ void intel_gpu_get_props(const struct intel_gpu *gpu,
     props->timestampFrequency = 1000 * 1000 * 1000 / 80;
 
     props->multiColorAttachmentClears = false;
+
+    /* hardware is limited to 16 viewports */
+    props->maxViewports = INTEL_MAX_VIEWPORTS;
+
+    props->maxColorAttachments = INTEL_MAX_RENDER_TARGETS;
+
+    /* ? */
+    props->maxDescriptorSets = 2;
 }
 
 void intel_gpu_get_perf(const struct intel_gpu *gpu,
