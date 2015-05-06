@@ -133,33 +133,8 @@ class DispatchTableOpsSubcommand(Subcommand):
 
         return "\n".join(func)
 
-    def _generate_lookup(self):
-        lookups = []
-        for proto in self.protos:
-            if proto.name != "GetGlobalExtensionInfo":
-                lookups.append("if (!strcmp(name, \"%s\"))" % (proto.name))
-                lookups.append("    return (void *) table->%s;"
-                    % (proto.name))
-
-        func = []
-        func.append("static inline void *%s_lookup_dispatch_table(const VkLayerDispatchTable *table,"
-                % self.prefix)
-        func.append("%s                                           const char *name)"
-                % (" " * len(self.prefix)))
-        func.append("{")
-        func.append(generate_get_proc_addr_check("name"))
-        func.append("")
-        func.append("    name += 2;")
-        func.append("    %s" % "\n    ".join(lookups))
-        func.append("")
-        func.append("    return NULL;")
-        func.append("}")
-
-        return "\n".join(func)
-
     def generate_body(self):
-        body = [self._generate_init(),
-                self._generate_lookup()]
+        body = [self._generate_init()]
 
         return "\n\n".join(body)
 
@@ -248,6 +223,7 @@ class WinDefFileSubcommand(Subcommand):
                     "GetProcAddr",
                 ],
                 "layer": [
+                    "GetInstanceProcAddr",
                     "GetProcAddr",
                     "EnumerateLayers",
                     "GetGlobalExtensionInfo",
