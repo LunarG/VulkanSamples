@@ -70,11 +70,17 @@ struct brw_binding_table {
     uint32_t ubo_start;
     uint32_t ubo_count;
 
+    uint32_t texture_gather_start;
+    uint32_t texture_gather_count;
+
     uint32_t *sampler_binding;
     uint32_t *sampler_set;
 
     uint32_t *uniform_binding;
     uint32_t *uniform_set;
+
+    uint32_t *texture_gather_binding;
+    uint32_t *texture_gather_set;
 };
 
 static void initialize_brw_context(struct brw_context *brw,
@@ -422,7 +428,7 @@ static struct intel_pipeline_rmap *rmap_create(const struct intel_gpu *gpu,
             iter.begin;
     }
 
-    for (i = bt->ubo_start; i < bt->count; i++) {
+    for (i = bt->ubo_start; i < bt->texture_gather_start; i++) {
         rmap->slots[i].type = INTEL_PIPELINE_RMAP_SURFACE;
         rmap->slots[i].index = bt->uniform_set[i - bt->ubo_start];
 
@@ -435,6 +441,28 @@ static struct intel_pipeline_rmap *rmap_create(const struct intel_gpu *gpu,
 
         rmap->slots[i].u.surface.offset = iter.begin;
         rmap->slots[i].u.surface.dynamic_offset_index = -1;
+    }
+
+    for (i = bt->texture_gather_start; i < bt->count; i++) {
+        rmap->slots[i].type = INTEL_PIPELINE_RMAP_SURFACE;
+        rmap->slots[i].index = bt->texture_gather_set[i - bt->texture_gather_start];
+
+        // use the set and binding data to find correct dset slot
+        // XXX validate both set and binding
+        // XXX no array support
+        intel_desc_iter_init_for_binding(&iter,
+                pipeline_layout->layouts[rmap->slots[i].index],
+                bt->texture_gather_binding[i - bt->texture_gather_start], 0);
+
+        rmap->slots[i].u.surface.offset = iter.begin;
+        rmap->slots[i].u.surface.dynamic_offset_index = -1;
+
+        rmap->slots[bt->count + i - bt->texture_gather_start].type =
+            INTEL_PIPELINE_RMAP_SAMPLER;
+        rmap->slots[bt->count + i - bt->texture_gather_start].index =
+            rmap->slots[i].index;
+        rmap->slots[bt->count + i - bt->texture_gather_start].u.sampler =
+            iter.begin;
     }
 
     return rmap;
@@ -490,14 +518,40 @@ static VkResult build_binding_table(const struct intel_gpu *gpu,
                                     struct brw_context *brw,
                                     struct brw_binding_table *bt,
                                     brw_stage_prog_data data,
-                                    struct gl_shader *sh,
+                                    struct gl_shader_program *sh_prog,
                                     VkShaderStage stage)
 {
-    bt->count         = data.binding_table.size_bytes / 4;
+    gl_shader *sh = 0;
+    switch (stage) {
+    case VK_SHADER_STAGE_VERTEX:   sh = sh_prog->_LinkedShaders[MESA_SHADER_VERTEX];   break;
+    case VK_SHADER_STAGE_GEOMETRY: sh = sh_prog->_LinkedShaders[MESA_SHADER_GEOMETRY]; break;
+    case VK_SHADER_STAGE_FRAGMENT: sh = sh_prog->_LinkedShaders[MESA_SHADER_FRAGMENT]; break;
+    default:
+        assert(0 && "Unknown shader stage");
+    }
+
+    bt->count = data.binding_table.size_bytes / 4;
+
+    // See assign_common_binding_table_offsets
+    // If gather is in use (before gen8), shader will use second set of indices for gathers
+    // on instruction by instruction basis.  We must duplicate our texture binding entries to
+    // compensate, and they follow UBO entries.
+    const bool usesGather = sh->Program->UsesGather && (brw->gen < 8);
     bt->texture_start = data.binding_table.texture_start;
     bt->texture_count = data.binding_table.ubo_start - data.binding_table.texture_start;
     bt->ubo_start     = data.binding_table.ubo_start;
-    bt->ubo_count     = bt->count - data.binding_table.ubo_start;
+    if (usesGather) {
+        bt->ubo_count            = data.binding_table.gather_texture_start - data.binding_table.ubo_start;
+        bt->texture_gather_start = data.binding_table.gather_texture_start;
+        bt->texture_gather_count = bt->count - bt->texture_gather_start;
+    } else {
+        bt->ubo_count            = bt->count - data.binding_table.ubo_start;
+        bt->texture_gather_start = bt->count;
+        bt->texture_gather_count = 0;
+    }
+
+    // TODO: handle atomics
+    assert(sh_prog->NumAtomicBuffers == 0);
 
     if (bt->ubo_count != sh->NumUniformBlocks) {
         // If there is no UBO data to pull from, the shader is using a default uniform, which
@@ -535,6 +589,21 @@ static VkResult build_binding_table(const struct intel_gpu *gpu,
 
         bt->uniform_binding[i] = binding;
         bt->uniform_set[i]     = set;
+    }
+
+    // TextureGather mapping data
+    // Currently this is exactly like Sampler mapping data
+    bt->texture_gather_binding = (uint32_t*) rzalloc_size(brw, bt->texture_gather_count * sizeof(uint32_t));
+    bt->texture_gather_set     = (uint32_t*) rzalloc_size(brw, bt->texture_gather_count * sizeof(uint32_t));
+    for (int i = 0; i < bt->texture_gather_count; ++i) {
+        int location = sh->SamplerUnits[i];
+        int set = 0;
+        int binding = 0;
+
+        unpack_set_and_binding(location, set, binding);
+
+        bt->texture_gather_binding[i] = binding;
+        bt->texture_gather_set[i]     = set;
     }
 
     return VK_SUCCESS;
@@ -617,7 +686,7 @@ VkResult intel_pipeline_shader_compile(struct intel_pipeline_shader *pipe_shader
             pipe_shader->ubo_start     = data->base.base.binding_table.ubo_start;
             pipe_shader->per_thread_scratch_size = data->base.total_scratch;
 
-            status = build_binding_table(gpu, brw, &bt, data->base.base, sh_prog->_LinkedShaders[MESA_SHADER_VERTEX], VK_SHADER_STAGE_VERTEX);
+            status = build_binding_table(gpu, brw, &bt, data->base.base, sh_prog, VK_SHADER_STAGE_VERTEX);
             if (status != VK_SUCCESS)
                 break;
 
@@ -689,7 +758,7 @@ VkResult intel_pipeline_shader_compile(struct intel_pipeline_shader *pipe_shader
             pipe_shader->ubo_start     = data->base.base.binding_table.ubo_start;
             pipe_shader->per_thread_scratch_size = data->base.total_scratch;
 
-            status = build_binding_table(gpu, brw, &bt, data->base.base, sh_prog->_LinkedShaders[MESA_SHADER_GEOMETRY], VK_SHADER_STAGE_GEOMETRY);
+            status = build_binding_table(gpu, brw, &bt, data->base.base, sh_prog, VK_SHADER_STAGE_GEOMETRY);
             if (status != VK_SUCCESS)
 
             if (unlikely(INTEL_DEBUG & DEBUG_GS)) {
@@ -793,7 +862,7 @@ VkResult intel_pipeline_shader_compile(struct intel_pipeline_shader *pipe_shader
             pipe_shader->per_thread_scratch_size = data->total_scratch;
 
             // call common code for common binding table entries
-            status = build_binding_table(gpu, brw, &bt, data->base, sh_prog->_LinkedShaders[MESA_SHADER_FRAGMENT], VK_SHADER_STAGE_FRAGMENT);
+            status = build_binding_table(gpu, brw, &bt, data->base, sh_prog, VK_SHADER_STAGE_FRAGMENT);
             if (status != VK_SUCCESS)
                 break;
 
