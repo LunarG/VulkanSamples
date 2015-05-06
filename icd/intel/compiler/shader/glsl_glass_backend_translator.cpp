@@ -2927,7 +2927,15 @@ MesaGlassTranslator::makeIRLoad(const llvm::Instruction* llvmInst, const glsl_ty
    
       load = traverseGEP(gepInst, aggregate, 0);
    } else {
-      load = newIRVariableDeref(irType, name, irMode);
+       const llvm::Value* loadSrc = llvmInst->getOperand(0);
+
+       // Load from existing variable, or declare a new one
+       const tValueMap::const_iterator location = valueMap.find(loadSrc);
+       if (location == valueMap.end()) {
+           load = newIRVariableDeref(srcType, loadSrc, name, irMode);
+       } else {
+           load = getIRValue(loadSrc);
+       }
    }
 
    if (load->as_dereference_variable()) {
