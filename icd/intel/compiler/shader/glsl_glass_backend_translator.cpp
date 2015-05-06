@@ -3887,7 +3887,7 @@ void MesaGlassTranslator::addInstruction(const llvm::Instruction* llvmInst, bool
     case llvm::Instruction::Xor:            return emitOpBit<2>(ir_binop_logic_xor, ir_binop_bit_xor, llvmInst);
     case llvm::Instruction::ICmp:           // fall through...
     case llvm::Instruction::FCmp:           return emitCmp(llvmInst);
-    case llvm::Instruction::FPToUI:         return emitOp<1>(ir_unop_f2u,      llvmInst);
+    case llvm::Instruction::FPToUI:         return emitOp<1>(ir_unop_f2u,      llvmInst, true /* genUnsigned */);
     // TODO: for ZExt, if we need more than 1 to 32 bit conversions, more
     // smarts wil be needed than blind use of ir_unop_b2i.
     case llvm::Instruction::ZExt:           return emitOp<1>(ir_unop_b2i,      llvmInst);
