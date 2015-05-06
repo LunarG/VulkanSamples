@@ -1015,7 +1015,7 @@ static void demo_prepare_textures(struct demo *demo)
 
     for (i = 0; i < DEMO_TEXTURE_COUNT; i++) {
 
-        if (props.linearTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT && !demo->use_staging_buffer) {
+        if ((props.linearTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT) && !demo->use_staging_buffer) {
             /* Device can texture using linear textures */
             demo_prepare_texture_image(demo, tex_files[i], &demo->textures[i],
                                        VK_IMAGE_TILING_LINEAR, VK_IMAGE_USAGE_SAMPLED_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
