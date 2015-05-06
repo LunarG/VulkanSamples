@@ -149,8 +149,6 @@ TEST_F(VkLayerTest, SubmitSignaledFence)
     fenceInfo.pNext = NULL;
     fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
 
-    // Verifiy that the appropriate layer is loaded
-
     ASSERT_NO_FATAL_FAILURE(InitState());
     ASSERT_NO_FATAL_FAILURE(InitViewport());
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
@@ -182,8 +180,6 @@ TEST_F(VkLayerTest, ResetUnsignaledFence)
     fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
     fenceInfo.pNext = NULL;
 
-    // Verifiy that the appropriate layer is loaded
-
     ASSERT_NO_FATAL_FAILURE(InitState());
     testFence.init(*m_device, fenceInfo);
     m_errorMonitor->ClearState();
@@ -206,8 +202,6 @@ TEST_F(VkLayerTest, WaitForUnsubmittedFence)
     fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
     fenceInfo.pNext = NULL;
 
-    // Verifiy that the appropriate layer is loaded
-
     ASSERT_NO_FATAL_FAILURE(InitState());
     testFence.init(*m_device, fenceInfo);
     m_errorMonitor->ClearState();
@@ -226,6 +220,33 @@ TEST_F(VkLayerTest, WaitForUnsubmittedFence)
     if (!strstr(msgString.c_str(),"Waiting for Unsubmitted Fence")) {
         FAIL() << "Error received was not Waiting for Unsubmitted Fence";
     }
+}
+
+TEST_F(VkLayerTest, GetObjectInfoMismatchedType)
+{
+    VkEventCreateInfo event_info;
+    VkEvent event;
+    VkMemoryRequirements mem_req;
+    size_t data_size = sizeof(mem_req);
+    VK_DBG_MSG_TYPE msgType;
+    std::string msgString;
+    VkResult err;
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+    memset(&event_info, 0, sizeof(event_info));
+    event_info.sType = VK_STRUCTURE_TYPE_EVENT_CREATE_INFO;
+
+    err = vkCreateEvent(device(), &event_info, &event);
+    ASSERT_VK_SUCCESS(err);
+    m_errorMonitor->ClearState();
+    err = vkGetObjectInfo(device(), VK_OBJECT_TYPE_IMAGE, event, VK_OBJECT_INFO_TYPE_MEMORY_REQUIREMENTS,
+                           &data_size, &mem_req);
+    msgType = m_errorMonitor->GetState(&msgString);
+    ASSERT_EQ(msgType, VK_DBG_MSG_ERROR) << "Did not receive an error from mismatched types in vkGetObjectInfo";
+    if (!strstr(msgString.c_str(),"does not match designated type")) {
+        FAIL() << "Error received was not event does not match designated type image";
+    }
+
 }
 
 int main(int argc, char **argv) {
