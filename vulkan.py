@@ -235,6 +235,10 @@ core = Extension(
              Param("size_t*", "pDataSize"),
              Param("void*", "pData")]),
 
+        Proto("void*", "GetInstanceProcAddr",
+            [Param("VkInstance", "instance"),
+             Param("const char*", "pName")]),
+
         Proto("void*", "GetProcAddr",
             [Param("VkPhysicalDevice", "gpu"),
              Param("const char*", "pName")]),

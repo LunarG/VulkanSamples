@@ -35,6 +35,7 @@ static inline void loader_initialize_dispatch_table(VkLayerDispatchTable *table,
     table->DestroyInstance = (PFN_vkDestroyInstance) gpa(gpu, "vkDestroyInstance");
     table->EnumeratePhysicalDevices = (PFN_vkEnumeratePhysicalDevices) gpa(gpu, "vkEnumeratePhysicalDevices");
     table->GetPhysicalDeviceInfo = (PFN_vkGetPhysicalDeviceInfo) gpa(gpu, "vkGetPhysicalDeviceInfo");
+    table->GetInstanceProcAddr = (PFN_vkGetInstanceProcAddr) gpa(gpu, "vkGetInstanceProcAddr");
     table->GetProcAddr = (PFN_vkGetProcAddr) gpa(gpu, "vkGetProcAddr");
     table->CreateDevice = (PFN_vkCreateDevice) gpa(gpu, "vkCreateDevice");
     table->DestroyDevice = (PFN_vkDestroyDevice) gpa(gpu, "vkDestroyDevice");
@@ -176,6 +177,8 @@ static inline void *loader_lookup_dispatch_table(const VkLayerDispatchTable *tab
         return (void *) table->EnumeratePhysicalDevices;
     if (!strcmp(name, "GetPhysicalDeviceInfo"))
         return (void *) table->GetPhysicalDeviceInfo;
+    if (!strcmp(name, "GetInstanceProcAddr"))
+        return (void *) table->GetInstanceProcAddr;
     if (!strcmp(name, "GetProcAddr"))
         return (void *) table->GetProcAddr;
     if (!strcmp(name, "CreateDevice"))

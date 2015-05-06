@@ -1288,6 +1288,17 @@ LOADER_EXPORT VkResult VKAPI vkEnumeratePhysicalDevices(
     return (count > 0) ? VK_SUCCESS : res;
 }
 
+LOADER_EXPORT void * VKAPI vkGetInstanceProcAddr(VkInstance instance, const char * pName)
+{
+    if (instance != VK_NULL_HANDLE) {
+
+        /* return entrypoint addresses that are global (in the loader)*/
+        return globalGetProcAddr(pName);
+    }
+
+    return NULL;
+}
+
 LOADER_EXPORT void * VKAPI vkGetProcAddr(VkPhysicalDevice gpu, const char * pName)
 {
     if (gpu == VK_NULL_HANDLE) {

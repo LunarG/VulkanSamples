@@ -510,7 +510,7 @@ class GenericLayerSubcommand(Subcommand):
         stmt = ''
         funcs = []
         if proto.ret != "void":
-            ret_val = "VkResult result = "
+            ret_val = "%s result = " % proto.ret
             stmt = "    return result;\n"
         if proto.name == "EnumerateLayers":
             funcs.append('%s%s\n'
@@ -711,7 +711,7 @@ class APIDumpSubcommand(Subcommand):
         elif 'Create' in proto.name or 'Alloc' in proto.name or 'MapMemory' in proto.name:
             create_params = -1
         if proto.ret != "void":
-            ret_val = "VkResult result = "
+            ret_val = "%s result = " % proto.ret
             stmt = "    return result;\n"
         f_open = 'loader_platform_thread_lock_mutex(&printLock);\n    '
         log_func = '    if (StreamControl::writeAddress == true) {'
@@ -748,9 +748,12 @@ class APIDumpSubcommand(Subcommand):
             pindex += 1
         log_func = log_func.strip(', ')
         log_func_no_addr = log_func_no_addr.strip(', ')
-        if proto.ret != "void":
+        if proto.ret == "VkResult":
             log_func += ') = " << string_VkResult((VkResult)result) << endl'
             log_func_no_addr += ') = " << string_VkResult((VkResult)result) << endl'
+        elif proto.ret == "void*":
+            log_func += ') = " << result << endl'
+            log_func_no_addr += ') = " << result << endl'
         else:
             log_func += ')\\n"'
             log_func_no_addr += ')\\n"'
@@ -1335,7 +1338,7 @@ class ObjectTrackerSubcommand(Subcommand):
         ret_val = ''
         stmt = ''
         if proto.ret != "void":
-            ret_val = "VkResult result = "
+            ret_val = "%s result = " % proto.ret
             stmt = "    return result;\n"
         if proto.name == "EnumerateLayers":
             funcs.append('%s%s\n'
@@ -1476,7 +1479,7 @@ class ThreadingSubcommand(Subcommand):
         stmt = ''
         funcs = []
         if proto.ret != "void":
-            ret_val = "VkResult result = "
+            ret_val = "%s result = " % proto.ret
             stmt = "    return result;\n"
         if proto.name == "EnumerateLayers":
             funcs.append('%s%s\n'

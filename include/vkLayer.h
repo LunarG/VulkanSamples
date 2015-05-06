@@ -26,6 +26,7 @@ typedef struct VkBaseLayerObject_
 typedef struct VkLayerDispatchTable_
 {
     PFN_vkGetProcAddr GetProcAddr;
+    PFN_vkGetInstanceProcAddr GetInstanceProcAddr;
     PFN_vkCreateInstance CreateInstance;
     PFN_vkDestroyInstance DestroyInstance;
     PFN_vkEnumeratePhysicalDevices EnumeratePhysicalDevices;

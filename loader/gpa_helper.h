@@ -38,6 +38,8 @@ static inline void* globalGetProcAddr(const char *name)
         return (void*) vkEnumeratePhysicalDevices;
     if (!strcmp(name, "GetPhysicalDeviceInfo"))
         return (void*) vkGetPhysicalDeviceInfo;
+    if (!strcmp(name, "GetInstanceProcAddr"))
+        return (void*) vkGetInstanceProcAddr;
     if (!strcmp(name, "GetProcAddr"))
         return (void*) vkGetProcAddr;
     if (!strcmp(name, "CreateDevice"))
@@ -312,6 +314,8 @@ static inline void *loader_non_passthrough_gpa(const char *name)
         return (void*) vkEnumeratePhysicalDevices;
     if (!strcmp(name, "GetPhysicalDeviceInfo"))
         return (void*) vkGetPhysicalDeviceInfo;
+    if (!strcmp(name, "GetInstanceProcAddr"))
+        return (void*) vkGetInstanceProcAddr;
     if (!strcmp(name, "GetProcAddr"))
         return (void*) vkGetProcAddr;
     if (!strcmp(name, "CreateDevice"))

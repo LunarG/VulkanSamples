@@ -33,7 +33,7 @@
 #include "vk_platform.h"
 
 // Vulkan API version supported by this file
-#define VK_API_VERSION VK_MAKE_VERSION(0, 93, 0)
+#define VK_API_VERSION VK_MAKE_VERSION(0, 93, 1)
 
 #ifdef __cplusplus
 extern "C"
@@ -2136,6 +2136,7 @@ typedef VkResult (VKAPI *PFN_vkCreateInstance)(const VkInstanceCreateInfo* pCrea
 typedef VkResult (VKAPI *PFN_vkDestroyInstance)(VkInstance instance);
 typedef VkResult (VKAPI *PFN_vkEnumeratePhysicalDevices)(VkInstance instance, uint32_t* pPhysicalDeviceCount, VkPhysicalDevice* pPhysicalDevices);
 typedef VkResult (VKAPI *PFN_vkGetPhysicalDeviceInfo)(VkPhysicalDevice physicalDevice, VkPhysicalDeviceInfoType infoType, size_t* pDataSize, void* pData);
+typedef void *   (VKAPI *PFN_vkGetInstanceProcAddr)(VkInstance instance, const char * pName);
 typedef void *   (VKAPI *PFN_vkGetProcAddr)(VkPhysicalDevice physicalDevice, const char * pName);
 typedef VkResult (VKAPI *PFN_vkCreateDevice)(VkPhysicalDevice physicalDevice, const VkDeviceCreateInfo* pCreateInfo, VkDevice* pDevice);
 typedef VkResult (VKAPI *PFN_vkDestroyDevice)(VkDevice device);
@@ -2271,10 +2272,13 @@ VkResult VKAPI vkGetPhysicalDeviceInfo(
     size_t*                                     pDataSize,
     void*                                       pData);
 
+void * VKAPI vkGetInstanceProcAddr(
+    VkInstance                                  instance,
+    const char*                                 pName);
+
 void * VKAPI vkGetProcAddr(
     VkPhysicalDevice                            physicalDevice,
     const char*                                 pName);
-
 // Device functions
 
 VkResult VKAPI vkCreateDevice(
