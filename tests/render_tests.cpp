@@ -3158,6 +3158,116 @@ TEST_F(VkRenderTest, TriangleUniformBufferLayout)
     RecordImages(m_renderTargets);
 }
 
+TEST_F(VkRenderTest, TextureGather)
+{
+    // This test introduces textureGather and textureGatherOffset
+    // Each call is compared against an expected inline color result
+    // Green triangle means everything worked as expected
+    // Red means something went wrong
+
+    // disable SPV until texture gather is turned on in LunarGLASS
+    bool saved_use_spv = VkTestFramework::m_use_spv;
+    VkTestFramework::m_use_spv = false;
+
+    static const char *vertShaderText =
+            "#version 140\n"
+            "#extension GL_ARB_separate_shader_objects : enable\n"
+            "#extension GL_ARB_shading_language_420pack : enable\n"
+            "void main() {\n"
+            "   vec2 vertices[3];"
+            "      vertices[0] = vec2(-0.5, -0.5);\n"
+            "      vertices[1] = vec2( 0.5, -0.5);\n"
+            "      vertices[2] = vec2( 0.5,  0.5);\n"
+            "   gl_Position = vec4(vertices[gl_VertexID % 3], 0.0, 1.0);\n"
+            "}\n";
+
+    static const char *fragShaderText =
+            "#version 430\n"
+            "#extension GL_ARB_separate_shader_objects : enable\n"
+            "#extension GL_ARB_shading_language_420pack : enable\n"
+            "layout (binding = 0) uniform sampler2D surface0;\n"
+            "layout (binding = 1) uniform sampler2D surface1;\n"
+            "layout (binding = 2) uniform sampler2D surface2;\n"
+            "layout (binding = 3) uniform sampler2D surface3;\n"
+            "layout (location = 0) out vec4 outColor;\n"
+            "void main() {\n"
+
+            "   vec4 right = vec4(0.0, 1.0, 0.0, 1.0);\n"
+            "   vec4 wrong = vec4(1.0, 0.0, 0.0, 1.0);\n"
+
+            "   vec4 color = right;\n"
+
+            // Grab a normal texture sample to ensure it can work in conjuntion
+            // with textureGather (there are some intracacies in the backend)
+            "   vec4 sampledColor = textureLod(surface2, vec2(0.5), 0.0);\n"
+            "   if (sampledColor != vec4(0.0, 0.0, 1.0, 1.0))\n"
+            "       color = wrong;\n"
+
+            "   vec4 gatheredColor = textureGather(surface0, vec2(0.5), 0);\n"
+            // This just grabbed four red components from a red surface
+            "   if (gatheredColor != vec4(1.0, 1.0, 1.0, 1.0))\n"
+            "       color = wrong;\n"
+
+            // Yes, this is using an offset of 0, we don't have enough fine grained
+            // control of the texture contents here.
+            "   gatheredColor = textureGatherOffset(surface1, vec2(0.5), ivec2(0, 0), 1);\n"
+            "   if (gatheredColor != vec4(1.0, 1.0, 1.0, 1.0))\n"
+            "       color = wrong;\n"
+
+            "   outColor = color;\n"
+
+            "}\n";
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+    ASSERT_NO_FATAL_FAILURE(InitViewport());
+
+    VkShaderObj vs(m_device,vertShaderText,VK_SHADER_STAGE_VERTEX, this);
+    VkShaderObj ps(m_device,fragShaderText, VK_SHADER_STAGE_FRAGMENT, this);
+
+    uint32_t tex_colors[2] = { 0xffff0000, 0xffff0000 };
+    VkSamplerObj sampler0(m_device);
+    VkTextureObj texture0(m_device, tex_colors); // Red
+    tex_colors[0] = 0xff00ff00; tex_colors[1] = 0xff00ff00;
+    VkSamplerObj sampler1(m_device);
+    VkTextureObj texture1(m_device, tex_colors); // Green
+    tex_colors[0] = 0xff0000ff; tex_colors[1] = 0xff0000ff;
+    VkSamplerObj sampler2(m_device);
+    VkTextureObj texture2(m_device, tex_colors); // Blue
+    tex_colors[0] = 0xffff00ff; tex_colors[1] = 0xffff00ff;
+    VkSamplerObj sampler3(m_device);
+    VkTextureObj texture3(m_device, tex_colors); // Red and Blue
+
+    VkPipelineObj pipelineobj(m_device);
+    pipelineobj.AddShader(&vs);
+    pipelineobj.AddShader(&ps);
+
+    VkDescriptorSetObj descriptorSet(m_device);
+    descriptorSet.AppendSamplerTexture(&sampler0, &texture0);
+    descriptorSet.AppendSamplerTexture(&sampler1, &texture1);
+    descriptorSet.AppendSamplerTexture(&sampler2, &texture2);
+    descriptorSet.AppendSamplerTexture(&sampler3, &texture3);
+
+    ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
+    VkCommandBufferObj cmdBuffer(m_device);
+    cmdBuffer.AddRenderTarget(m_renderTargets[0]);
+
+    ASSERT_VK_SUCCESS(BeginCommandBuffer(cmdBuffer));
+
+    GenericDrawPreparation(&cmdBuffer, pipelineobj, descriptorSet);
+
+    // render triangle
+    cmdBuffer.Draw(0, 3, 0, 1);
+
+    // finalize recording of the command buffer
+    EndCommandBuffer(cmdBuffer);
+    cmdBuffer.QueueCommandBuffer();
+
+    RecordImages(m_renderTargets);
+
+    // restore SPV setting
+    VkTestFramework::m_use_spv = saved_use_spv;
+}
+
 TEST_F(VkRenderTest, GeometryShaderHelloWorld)
 {
     // This test introduces a geometry shader that simply
