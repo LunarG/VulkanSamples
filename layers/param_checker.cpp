@@ -41,10 +41,31 @@
 #include "layers_msg.h"
 
 static VkLayerDispatchTable nextTable;
+static VkLayerInstanceDispatchTable nextInstanceTable;
 static VkBaseLayerObject *pCurObj;
-static LOADER_PLATFORM_THREAD_ONCE_DECLARATION(tabOnce);
+static LOADER_PLATFORM_THREAD_ONCE_DECLARATION(initOnce);
+static LOADER_PLATFORM_THREAD_ONCE_DECLARATION(tabDeviceOnce);
+static LOADER_PLATFORM_THREAD_ONCE_DECLARATION(tabInstanceOnce);
 
 #include "vk_dispatch_table_helper.h"
+
+// TODO handle multiple GPUs/instances for both instance and device dispatch tables
+static void initDeviceTable(void)
+{
+    PFN_vkGetProcAddr fpNextGPA;
+    fpNextGPA = (PFN_vkGetProcAddr) pCurObj->pGPA;
+    assert(fpNextGPA);
+    layer_initialize_dispatch_table(&nextTable, fpNextGPA, (VkPhysicalDevice) pCurObj->nextObject);
+}
+
+static void initInstanceTable(void)
+{
+    PFN_vkGetInstanceProcAddr fpNextGPA;
+    fpNextGPA = (PFN_vkGetInstanceProcAddr) pCurObj->pGPA;
+    assert(fpNextGPA);
+    layer_init_instance_dispatch_table(&nextInstanceTable, fpNextGPA, (VkInstance) pCurObj->nextObject);
+}
+
 static void initParamChecker(void)
 {
 
@@ -64,11 +85,6 @@ static void initParamChecker(void)
             g_logFile = stdout;
     }
 
-    PFN_vkGetProcAddr fpNextGPA;
-    fpNextGPA = (PFN_vkGetProcAddr) pCurObj->pGPA;
-    assert(fpNextGPA);
-
-    layer_initialize_dispatch_table(&nextTable, fpNextGPA, (VkPhysicalDevice) pCurObj->nextObject);
 }
 
 void PreCreateInstance(const VkApplicationInfo* pAppInfo, const VkAllocCallbacks* pAllocCb)
@@ -141,8 +157,6 @@ VK_LAYER_EXPORT VkResult VKAPI vkDestroyInstance(VkInstance instance)
 
 VK_LAYER_EXPORT VkResult VKAPI vkGetPhysicalDeviceInfo(VkPhysicalDevice gpu, VkPhysicalDeviceInfoType infoType, size_t* pDataSize, void* pData)
 {
-    pCurObj = (VkBaseLayerObject *) gpu;
-    loader_platform_thread_once(&tabOnce, initParamChecker);
     char str[1024];
     if (!validate_VkPhysicalDeviceInfoType(infoType)) {
         sprintf(str, "Parameter infoType to function GetPhysicalDeviceInfo has invalid value of %i.", (int)infoType);
@@ -228,8 +242,6 @@ void PostCreateDevice(VkResult result, VkDevice* pDevice)
 
 VK_LAYER_EXPORT VkResult VKAPI vkCreateDevice(VkPhysicalDevice gpu, const VkDeviceCreateInfo* pCreateInfo, VkDevice* pDevice)
 {
-    pCurObj = (VkBaseLayerObject *) gpu;
-    loader_platform_thread_once(&tabOnce, initParamChecker);
     PreCreateDevice(gpu, pCreateInfo);
     VkResult result = nextTable.CreateDevice(gpu, pCreateInfo, pDevice);
     PostCreateDevice(result, pDevice);
@@ -313,7 +325,8 @@ VK_LAYER_EXPORT VkResult VKAPI vkEnumerateLayers(VkPhysicalDevice gpu, size_t ma
         sprintf(str, "At start of layered EnumerateLayers\n");
         layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, nullptr, 0, 0, "PARAMCHECK", str);
         pCurObj = (VkBaseLayerObject *) gpu;
-        loader_platform_thread_once(&tabOnce, initParamChecker);
+        loader_platform_thread_once(&initOnce, initParamChecker);
+        loader_platform_thread_once(&tabDeviceOnce, initDeviceTable);
         VkResult result = nextTable.EnumerateLayers(gpu, maxStringSize, pLayerCount, pOutLayers, pReserved);
         sprintf(str, "Completed layered EnumerateLayers\n");
         layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, nullptr, 0, 0, "PARAMCHECK", str);
@@ -431,8 +444,6 @@ VK_LAYER_EXPORT VkResult VKAPI vkPinSystemMemory(VkDevice device, const void* pS
 
 VK_LAYER_EXPORT VkResult VKAPI vkGetMultiDeviceCompatibility(VkPhysicalDevice gpu0, VkPhysicalDevice gpu1, VkPhysicalDeviceCompatibilityInfo* pInfo)
 {
-    pCurObj = (VkBaseLayerObject *) gpu0;
-    loader_platform_thread_once(&tabOnce, initParamChecker);
 
     VkResult result = nextTable.GetMultiDeviceCompatibility(gpu0, gpu1, pInfo);
     return result;
@@ -2250,7 +2261,8 @@ VK_LAYER_EXPORT void* VKAPI vkGetProcAddr(VkPhysicalDevice gpu, const char* func
     if (gpu == NULL)
         return NULL;
     pCurObj = gpuw;
-    loader_platform_thread_once(&tabOnce, initParamChecker);
+    loader_platform_thread_once(&initOnce, initParamChecker);
+    loader_platform_thread_once(&tabDeviceOnce, initDeviceTable);
 
     addr = layer_intercept_proc(funcName);
     if (addr)
@@ -2268,8 +2280,9 @@ VK_LAYER_EXPORT void* VKAPI vkGetInstanceProcAddr(VkInstance inst, const char* f
     void* addr;
     if (inst == NULL)
         return NULL;
-    //TODO pCurObj = instw;
-    //TODO loader_platform_thread_once(&tabOnce, initParamChecker);
+    pCurObj = instw;
+    loader_platform_thread_once(&initOnce, initParamChecker);
+    loader_platform_thread_once(&tabInstanceOnce, initInstanceTable);
 
     addr = layer_intercept_instance_proc(funcName);
     if (addr)

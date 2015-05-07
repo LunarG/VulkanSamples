@@ -35,9 +35,11 @@
 #include "loader_platform.h"
 
 static void initLayerTable(const VkBaseLayerObject *gpuw, VkLayerDispatchTable *pTable, const unsigned int layerNum);
+static void initLayerInstanceTable(const VkBaseLayerObject *instw, VkLayerInstanceDispatchTable *pTable, const unsigned int layerNum);
 
 /******************************** Layer multi1 functions **************************/
 static std::unordered_map<void *, VkLayerDispatchTable *> tableMap1;
+static std::unordered_map<void *, VkLayerInstanceDispatchTable *> tableInstanceMap1;
 static bool layer1_first_activated = false;
 
 static VkLayerDispatchTable * getLayer1Table(const VkBaseLayerObject *gpuw)
@@ -51,6 +53,23 @@ static VkLayerDispatchTable * getLayer1Table(const VkBaseLayerObject *gpuw)
         pTable =  new VkLayerDispatchTable;
         tableMap1[(void *) gpuw->baseObject] = pTable;
         initLayerTable(gpuw, pTable, 1);
+        return pTable;
+    } else
+    {
+        return it->second;
+    }
+}
+static VkLayerInstanceDispatchTable * getLayer1InstanceTable(const VkBaseLayerObject *instw)
+{
+    VkLayerInstanceDispatchTable *pTable;
+
+    assert(instw);
+    std::unordered_map<void *, VkLayerInstanceDispatchTable *>::const_iterator it = tableInstanceMap1.find((void *) instw->baseObject);
+    if (it == tableInstanceMap1.end())
+    {
+        pTable =  new VkLayerInstanceDispatchTable;
+        tableInstanceMap1[(void *) instw->baseObject] = pTable;
+        initLayerInstanceTable(instw, pTable, 1);
         return pTable;
     } else
     {
@@ -137,14 +156,14 @@ VK_LAYER_EXPORT void * VKAPI multi1GetProcAddr(VkPhysicalDevice gpu, const char*
     }
 }
 
-VK_LAYER_EXPORT void * VKAPI multi1InstanceGetProcAddr(VkInstance inst, const char* pName)
+VK_LAYER_EXPORT void * VKAPI multi1GetInstanceProcAddr(VkInstance inst, const char* pName)
 {
     VkBaseLayerObject* instw = (VkBaseLayerObject *) inst;
 
     if (inst == NULL)
         return NULL;
 
-    //TODO getLayer1InstanceTable(instw);
+    getLayer1InstanceTable(instw);
 
     if (!strcmp("vkCreateDevice", pName))
         return (void *) multi1CreateDevice;
@@ -161,7 +180,26 @@ VK_LAYER_EXPORT void * VKAPI multi1InstanceGetProcAddr(VkInstance inst, const ch
 
 /******************************** Layer multi2 functions **************************/
 static std::unordered_map<void *, VkLayerDispatchTable *> tableMap2;
+static std::unordered_map<void *, VkLayerInstanceDispatchTable *> tableInstanceMap2;
 static bool layer2_first_activated = false;
+
+static VkLayerInstanceDispatchTable * getLayer2InstanceTable(const VkBaseLayerObject *instw)
+{
+    VkLayerInstanceDispatchTable *pTable;
+
+    assert(instw);
+    std::unordered_map<void *, VkLayerInstanceDispatchTable *>::const_iterator it = tableInstanceMap2.find((void *) instw->baseObject);
+    if (it == tableInstanceMap2.end())
+    {
+        pTable =  new VkLayerInstanceDispatchTable;
+        tableInstanceMap2[(void *) instw->baseObject] = pTable;
+        initLayerInstanceTable(instw, pTable, 2);
+        return pTable;
+    } else
+    {
+        return it->second;
+    }
+}
 
 static VkLayerDispatchTable * getLayer2Table(const VkBaseLayerObject *gpuw)
 {
@@ -259,14 +297,14 @@ VK_LAYER_EXPORT void * VKAPI multi2GetProcAddr(VkPhysicalDevice gpu, const char*
     }
 }
 
-VK_LAYER_EXPORT void * VKAPI multi2InstanceGetProcAddr(VkInstance inst, const char* pName)
+VK_LAYER_EXPORT void * VKAPI multi2GetInstanceProcAddr(VkInstance inst, const char* pName)
 {
     VkBaseLayerObject* instw = (VkBaseLayerObject *) inst;
 
     if (inst == NULL)
         return NULL;
 
-    //TODO getLayer2InstanceTable(instw);
+    getLayer2InstanceTable(instw);
 
     if (!strcmp("vkCreateDevice", pName))
         return (void *) multi2CreateDevice;
@@ -379,17 +417,17 @@ VK_LAYER_EXPORT void * VKAPI vkGetInstanceProcAddr(VkInstance inst, const char* 
     else if (!strcmp("vkGetProcAddr", pName))
         return (void *) vkGetProcAddr;
     else if (!strcmp("multi1GetInstanceProcAddr", pName))
-        return (void *) multi1GetProcAddr;
+        return (void *) multi1GetInstanceProcAddr;
     else if (!strcmp("multi2GetInstanceProcAddr", pName))
-        return (void *) multi2GetProcAddr;
+        return (void *) multi2GetInstanceProcAddr;
     else if (!strcmp("vkGetInstanceProcAddr", pName))
         return (void *) vkGetProcAddr;
 
     // use first layer activated as GPA dispatch table activation happens in order
     else if (layer1_first_activated)
-        return multi1InstanceGetProcAddr(inst, pName);
+        return multi1GetInstanceProcAddr(inst, pName);
     else if (layer2_first_activated)
-        return multi2InstanceGetProcAddr(inst, pName);
+        return multi2GetInstanceProcAddr(inst, pName);
     else
         return NULL;
 
@@ -406,4 +444,14 @@ static void initLayerTable(const VkBaseLayerObject *gpuw, VkLayerDispatchTable *
         layer1_first_activated = true;
 
     layer_initialize_dispatch_table(pTable, (PFN_vkGetProcAddr) gpuw->pGPA, (VkPhysicalDevice) gpuw->nextObject);
+}
+
+static void initLayerInstanceTable(const VkBaseLayerObject *instw, VkLayerInstanceDispatchTable *pTable, const unsigned int layerNum)
+{
+    if (layerNum == 2 && layer1_first_activated == false)
+        layer2_first_activated = true;
+    if (layerNum == 1 && layer2_first_activated == false)
+        layer1_first_activated = true;
+
+    layer_init_instance_dispatch_table(pTable, (PFN_vkGetInstanceProcAddr) instw->pGPA, (VkInstance) instw->nextObject);
 }

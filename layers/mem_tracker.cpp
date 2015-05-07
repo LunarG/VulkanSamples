@@ -43,8 +43,12 @@ using namespace std;
 #include "layers_msg.h"
 
 static VkLayerDispatchTable nextTable;
+static VkLayerInstanceDispatchTable nextInstanceTable;
 static VkBaseLayerObject *pCurObj;
 static LOADER_PLATFORM_THREAD_ONCE_DECLARATION(g_initOnce);
+static LOADER_PLATFORM_THREAD_ONCE_DECLARATION(g_tabDeviceOnce);
+static LOADER_PLATFORM_THREAD_ONCE_DECLARATION(g_tabInstanceOnce);
+
 // TODO : This can be much smarter, using separate locks for separate global data
 static int globalLockInitialized = 0;
 static loader_platform_thread_mutex globalLock;
@@ -771,6 +775,23 @@ static void printCBList(
     }
 }
 
+// TODO handle multiple GPUs/instances for both instance and device dispatch tables
+static void initDeviceTable(void)
+{
+    PFN_vkGetProcAddr fpNextGPA;
+    fpNextGPA = (PFN_vkGetProcAddr) pCurObj->pGPA;
+    assert(fpNextGPA);
+    layer_initialize_dispatch_table(&nextTable, fpNextGPA, (VkPhysicalDevice) pCurObj->nextObject);
+}
+
+static void initInstanceTable(void)
+{
+    PFN_vkGetInstanceProcAddr fpNextGPA;
+    fpNextGPA = (PFN_vkGetInstanceProcAddr) pCurObj->pGPA;
+    assert(fpNextGPA);
+    layer_init_instance_dispatch_table(&nextInstanceTable, fpNextGPA, (VkInstance) pCurObj->nextObject);
+}
+
 static void initMemTracker(
     void)
 {
@@ -790,14 +811,6 @@ static void initMemTracker(
         }
     }
 
-    // initialize Layer dispatch table
-    // TODO handle multiple GPUs
-    PFN_vkGetProcAddr fpNextGPA;
-    fpNextGPA = (PFN_vkGetProcAddr) pCurObj->pGPA;
-    assert(fpNextGPA);
-
-    layer_initialize_dispatch_table(&nextTable, fpNextGPA, (VkPhysicalDevice) pCurObj->nextObject);
-
     if (!globalLockInitialized)
     {
         // TODO/TBD: Need to delete this mutex sometime.  How???  One
@@ -815,8 +828,6 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateDevice(
     const VkDeviceCreateInfo *pCreateInfo,
     VkDevice                 *pDevice)
 {
-    pCurObj = (VkBaseLayerObject *) gpu;
-    loader_platform_thread_once(&g_initOnce, initMemTracker);
     VkResult result = nextTable.CreateDevice(gpu, pCreateInfo, pDevice);
     // Save off device in case we need it to create Fences
     globalDevice = *pDevice;
@@ -925,6 +936,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkEnumerateLayers(
     {
         pCurObj = (VkBaseLayerObject *)  gpu;
         loader_platform_thread_once(&g_initOnce, initMemTracker);
+        loader_platform_thread_once(&g_tabDeviceOnce, initDeviceTable);
         VkResult result = nextTable.EnumerateLayers(gpu,
             maxStringSize, pLayerCount, pOutLayers, pReserved);
         return result;
@@ -2149,6 +2161,7 @@ VK_LAYER_EXPORT void* VKAPI vkGetProcAddr(
     }
     pCurObj = gpuw;
     loader_platform_thread_once(&g_initOnce, initMemTracker);
+    loader_platform_thread_once(&g_tabDeviceOnce, initDeviceTable);
 
     if (!strcmp(funcName, "vkGetProcAddr"))
         return (void *) vkGetProcAddr;
@@ -2311,9 +2324,10 @@ VK_LAYER_EXPORT void* VKAPI vkGetInstanceProcAddr(
     if (instance == NULL) {
         return NULL;
     }
-    //TODO
-    //pCurObj = instw;
-    //loader_platform_thread_once(&g_initInstanceOnce, initInstanceMemTracker);
+
+    pCurObj = instw;
+    loader_platform_thread_once(&g_initOnce, initMemTracker);
+    loader_platform_thread_once(&g_tabInstanceOnce, initInstanceTable);
 
     if (!strcmp(funcName, "vkGetProcAddr"))
         return (void *) vkGetProcAddr;

@@ -411,7 +411,8 @@ class Subcommand(object):
                          "    if (gpu == VK_NULL_HANDLE)\n"
                          "        return NULL;\n"
                          "    pCurObj = gpuw;\n"
-                         "    loader_platform_thread_once(&tabOnce, init%s);\n\n"
+                         "    loader_platform_thread_once(&initOnce, init%s);\n\n"
+                         "    loader_platform_thread_once(&tabDeviceOnce, initDeviceTable);\n\n"
                          "    addr = layer_intercept_proc(funcName);\n"
                          "    if (addr)\n"
                          "        return addr;" % self.layer_name)
@@ -423,13 +424,8 @@ class Subcommand(object):
                 cpp_prefix = "reinterpret_cast<void*>("
                 cpp_postfix = ")"
             for ext_name in extensions:
-#<<<<<<< HEAD
                 func_body.append('    else if (!strncmp("%s", funcName, sizeof("%s")))\n'
                                  '        return %s%s%s;' % (ext_name, ext_name, cpp_prefix, ext_name, cpp_postfix))
-#=======
-#                func_body.append('    else if (!strcmp("%s", funcName))\n'
-#                                 '        return %s;' % (ext_name, ext_name))
-#>>>>>>> layers: Add GetInstanceProcAddr() to all layers
         func_body.append("    else {\n"
                          "        if (gpuw->pGPA == NULL)\n"
                          "            return NULL;\n"
@@ -442,8 +438,9 @@ class Subcommand(object):
                          "    void* addr;\n"
                          "    if (inst == VK_NULL_HANDLE)\n"
                          "        return NULL;\n"
-                         "    // TODO pCurObj = instw;\n"
-                         "    // TODO loader_platform_thread_once(&tabInstanceOnce, initInstance%s);\n\n"
+                         "    pCurObj = instw;\n"
+                         "    loader_platform_thread_once(&initOnce, init%s);\n\n"
+                         "    loader_platform_thread_once(&tabInstanceOnce, initInstanceTable);\n\n"
                          "    addr = layer_intercept_instance_proc(funcName);\n"
                          "    if (addr)\n"
                          "        return addr;" % self.layer_name)
@@ -481,11 +478,7 @@ class Subcommand(object):
             func_body.append('            g_logFile = stdout;')
             func_body.append('    }')
             func_body.append('')
-        func_body.append('    PFN_vkGetProcAddr fpNextGPA;\n'
-                         '    fpNextGPA = (PFN_vkGetProcAddr) pCurObj->pGPA;\n'
-                         '    assert(fpNextGPA);\n')
 
-        func_body.append("    layer_initialize_dispatch_table(&nextTable, fpNextGPA, (VkPhysicalDevice) pCurObj->nextObject);")
         if lockname is not None:
             func_body.append("    if (!%sLockInitialized)" % lockname)
             func_body.append("    {")
@@ -496,6 +489,22 @@ class Subcommand(object):
             func_body.append("        %sLockInitialized = 1;" % lockname)
             func_body.append("    }")
         func_body.append("}\n")
+        func_body.append('')
+        func_body.append('static void initDeviceTable(void)')
+        func_body.append('{')
+        func_body.append('    PFN_vkGetProcAddr fpNextGPA;')
+        func_body.append('    fpNextGPA = (PFN_vkGetProcAddr) pCurObj->pGPA;')
+        func_body.append('    assert(fpNextGPA);')
+        func_body.append('    layer_initialize_dispatch_table(&nextTable, fpNextGPA, (VkPhysicalDevice) pCurObj->nextObject);')
+        func_body.append('}')
+        func_body.append('')
+        func_body.append('static void initInstanceTable(void)')
+        func_body.append('{')
+        func_body.append('    PFN_vkGetInstanceProcAddr fpNextGPA;')
+        func_body.append('    fpNextGPA = (PFN_vkGetInstanceProcAddr) pCurObj->pGPA;')
+        func_body.append('    assert(fpNextGPA);')
+        func_body.append('    layer_init_instance_dispatch_table(&nextInstanceTable, fpNextGPA, (VkInstance) pCurObj->nextObject);')
+        func_body.append('}')
         return "\n".join(func_body)
 
 class LayerFuncsSubcommand(Subcommand):
@@ -514,7 +523,7 @@ class LayerDispatchSubcommand(Subcommand):
 
 class GenericLayerSubcommand(Subcommand):
     def generate_header(self):
-        return '#include <stdio.h>\n#include <stdlib.h>\n#include <string.h>\n#include "loader_platform.h"\n#include "vkLayer.h"\n//The following is #included again to catch certain OS-specific functions being used:\n#include "loader_platform.h"\n\n#include "layers_config.h"\n#include "layers_msg.h"\n\nstatic VkLayerDispatchTable nextTable;\nstatic VkBaseLayerObject *pCurObj;\n\nstatic LOADER_PLATFORM_THREAD_ONCE_DECLARATION(tabOnce);'
+        return '#include <stdio.h>\n#include <stdlib.h>\n#include <string.h>\n#include "loader_platform.h"\n#include "vkLayer.h"\n//The following is #included again to catch certain OS-specific functions being used:\n#include "loader_platform.h"\n\n#include "layers_config.h"\n#include "layers_msg.h"\n\nstatic VkLayerDispatchTable nextTable;\nstatic VkLayerInstanceDispatchTable nextInstanceTable;\nstatic VkBaseLayerObject *pCurObj;\n\nstatic LOADER_PLATFORM_THREAD_ONCE_DECLARATION(tabDeviceOnce);\nstatic LOADER_PLATFORM_THREAD_ONCE_DECLARATION(tabInstanceOnce);\nstatic LOADER_PLATFORM_THREAD_ONCE_DECLARATION(initOnce);'
 
     def generate_intercept(self, proto, qual):
         if proto.name in [ 'DbgRegisterMsgCallback', 'DbgUnregisterMsgCallback' , 'GetGlobalExtensionInfo']:
@@ -535,7 +544,8 @@ class GenericLayerSubcommand(Subcommand):
                      '        sprintf(str, "At start of layered %s\\n");\n'
                      '        layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, gpu, 0, 0, (char *) "GENERIC", (char *) str);\n'
                      '        pCurObj = (VkBaseLayerObject *) gpu;\n'
-                     '        loader_platform_thread_once(&tabOnce, init%s);\n'
+                     '        loader_platform_thread_once(&initOnce, init%s);\n'
+                     '        loader_platform_thread_once(&tabDeviceOnce, initDeviceTable);\n'
                      '        %snextTable.%s;\n'
                      '        sprintf(str, "Completed layered %s\\n");\n'
                      '        layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, gpu, 0, 0, (char *) "GENERIC", (char *) str);\n'
@@ -606,10 +616,13 @@ class APIDumpSubcommand(Subcommand):
         header_txt.append('#include "loader_platform.h"')
         header_txt.append('')
         header_txt.append('static VkLayerDispatchTable nextTable;')
+        header_txt.append('static VkLayerInstanceDispatchTable nextInstanceTable;')
         header_txt.append('static VkBaseLayerObject *pCurObj;')
         header_txt.append('static bool g_APIDumpDetailed = true;')
         header_txt.append('')
-        header_txt.append('static LOADER_PLATFORM_THREAD_ONCE_DECLARATION(tabOnce);')
+        header_txt.append('static LOADER_PLATFORM_THREAD_ONCE_DECLARATION(tabInstanceOnce);')
+        header_txt.append('static LOADER_PLATFORM_THREAD_ONCE_DECLARATION(tabDeviceOnce);')
+        header_txt.append('static LOADER_PLATFORM_THREAD_ONCE_DECLARATION(initOnce);')
         header_txt.append('static int printLockInitialized = 0;')
         header_txt.append('static loader_platform_thread_mutex printLock;')
         header_txt.append('')
@@ -697,17 +710,28 @@ class APIDumpSubcommand(Subcommand):
         func_body.append('')
         func_body.append('    ConfigureOutputStream(writeToFile, flushAfterWrite);')
         func_body.append('')
-        func_body.append('    PFN_vkGetProcAddr fpNextGPA;')
-        func_body.append('    fpNextGPA = (PFN_vkGetProcAddr) pCurObj->pGPA;')
-        func_body.append('    assert(fpNextGPA);')
-        func_body.append('    layer_initialize_dispatch_table(&nextTable, fpNextGPA, (VkPhysicalDevice) pCurObj->nextObject);')
-        func_body.append('')
         func_body.append('    if (!printLockInitialized)')
         func_body.append('    {')
         func_body.append('        // TODO/TBD: Need to delete this mutex sometime.  How???')
         func_body.append('        loader_platform_thread_create_mutex(&printLock);')
         func_body.append('        printLockInitialized = 1;')
         func_body.append('    }')
+        func_body.append('}')
+        func_body.append('')
+        func_body.append('static void initDeviceTable(void)')
+        func_body.append('{')
+        func_body.append('    PFN_vkGetProcAddr fpNextGPA;')
+        func_body.append('    fpNextGPA = (PFN_vkGetProcAddr) pCurObj->pGPA;')
+        func_body.append('    assert(fpNextGPA);')
+        func_body.append('    layer_initialize_dispatch_table(&nextTable, fpNextGPA, (VkPhysicalDevice) pCurObj->nextObject);')
+        func_body.append('}')
+        func_body.append('')
+        func_body.append('static void initInstanceTable(void)')
+        func_body.append('{')
+        func_body.append('    PFN_vkGetInstanceProcAddr fpNextGPA;')
+        func_body.append('    fpNextGPA = (PFN_vkGetInstanceProcAddr) pCurObj->pGPA;')
+        func_body.append('    assert(fpNextGPA);')
+        func_body.append('    layer_init_instance_dispatch_table(&nextInstanceTable, fpNextGPA, (VkInstance) pCurObj->nextObject);')
         func_body.append('}')
         func_body.append('')
         return "\n".join(func_body)
@@ -831,7 +855,8 @@ class APIDumpSubcommand(Subcommand):
                      '    using namespace StreamControl;\n'
                      '    if (gpu != NULL) {\n'
                      '        pCurObj = (VkBaseLayerObject *) gpu;\n'
-                     '        loader_platform_thread_once(&tabOnce, init%s);\n'
+                     '        loader_platform_thread_once(&initOnce, init%s);\n'
+                     '        loader_platform_thread_once(&tabDeviceOnce, initDeviceTable);\n'
                      '        %snextTable.%s;\n'
                      '        %s    %s    %s\n'
                      '    %s'
@@ -865,14 +890,18 @@ class ObjectTrackerSubcommand(Subcommand):
     def generate_header(self):
         header_txt = []
         header_txt.append('#include <stdio.h>\n#include <stdlib.h>\n#include <string.h>\n#include <inttypes.h>\n#include "loader_platform.h"')
-        header_txt.append('#include "object_track.h"\n\nstatic VkLayerDispatchTable nextTable;\nstatic VkBaseLayerObject *pCurObj;')
+        header_txt.append('#include "object_track.h"\n\n')
         header_txt.append('#include <unordered_map>')
         header_txt.append('using namespace std;')
         header_txt.append('// The following is #included again to catch certain OS-specific functions being used:')
         header_txt.append('#include "loader_platform.h"')
         header_txt.append('#include "layers_config.h"')
         header_txt.append('#include "layers_msg.h"')
-        header_txt.append('static LOADER_PLATFORM_THREAD_ONCE_DECLARATION(tabOnce);')
+        header_txt.append('static VkLayerDispatchTable nextTable;\nstatic VkLayerInstanceDispatchTable nextInstanceTable;\n')
+        header_txt.append('static VkBaseLayerObject *pCurObj;')
+        header_txt.append('static LOADER_PLATFORM_THREAD_ONCE_DECLARATION(initOnce);')
+        header_txt.append('static LOADER_PLATFORM_THREAD_ONCE_DECLARATION(tabDeviceOnce);')
+        header_txt.append('static LOADER_PLATFORM_THREAD_ONCE_DECLARATION(tabInstanceOnce);')
         header_txt.append('static long long unsigned int object_track_index = 0;')
         header_txt.append('static int objLockInitialized = 0;')
         header_txt.append('static loader_platform_thread_mutex objLock;')
@@ -1226,7 +1255,8 @@ class ObjectTrackerSubcommand(Subcommand):
                      '{\n'
                      '    if (gpu != VK_NULL_HANDLE) {\n'
                      '        pCurObj = (VkBaseLayerObject *) gpu;\n'
-                     '        loader_platform_thread_once(&tabOnce, init%s);\n'
+                     '        loader_platform_thread_once(&initOnce, init%s);\n'
+                     '        loader_platform_thread_once(&tabDeviceOnce, initDeviceTable);\n'
                      '        %snextTable.%s;\n'
                      '    %s%s'
                      '    %s'
@@ -1238,7 +1268,7 @@ class ObjectTrackerSubcommand(Subcommand):
                      '        strncpy((char *) pOutLayers[0], "%s", maxStringSize);\n'
                      '        return VK_SUCCESS;\n'
                      '    }\n'
-                         '}' % (qual, decl, self.layer_name, ret_val, proto.c_call(), create_line, destroy_line, stmt, self.layer_name))
+                     '}' % (qual, decl, self.layer_name, ret_val, proto.c_call(), create_line, destroy_line, stmt, self.layer_name))
         elif 'GetPhysicalDeviceInfo' in proto.name:
             gpu_state  = '    if (infoType == VK_PHYSICAL_DEVICE_INFO_TYPE_QUEUE_PROPERTIES) {\n'
             gpu_state += '        if (pData != NULL) {\n'
@@ -1249,13 +1279,11 @@ class ObjectTrackerSubcommand(Subcommand):
             gpu_state += '    }\n'
             funcs.append('%s%s\n'
                      '{\n'
-                     '    pCurObj = (VkBaseLayerObject *) gpu;\n'
-                     '    loader_platform_thread_once(&tabOnce, init%s);\n'
                      '    %snextTable.%s;\n'
                      '%s%s'
                      '%s'
                      '%s'
-                     '}' % (qual, decl, self.layer_name, ret_val, proto.c_call(), create_line, destroy_line, gpu_state, stmt))
+                     '}' % (qual, decl, ret_val, proto.c_call(), create_line, destroy_line, gpu_state, stmt))
         else:
             funcs.append('%s%s\n'
                      '{\n'
@@ -1291,8 +1319,11 @@ class ThreadingSubcommand(Subcommand):
         header_txt.append('#include "loader_platform.h"\n')
         header_txt.append('#include "layers_msg.h"\n')
         header_txt.append('static VkLayerDispatchTable nextTable;')
+        header_txt.append('static VkLayerInstanceDispatchTable nextInstanceTable;')
         header_txt.append('static VkBaseLayerObject *pCurObj;')
-        header_txt.append('static LOADER_PLATFORM_THREAD_ONCE_DECLARATION(tabOnce);\n')
+        header_txt.append('static LOADER_PLATFORM_THREAD_ONCE_DECLARATION(tabDeviceOnce);')
+        header_txt.append('static LOADER_PLATFORM_THREAD_ONCE_DECLARATION(tabInstanceOnce);')
+        header_txt.append('static LOADER_PLATFORM_THREAD_ONCE_DECLARATION(initOnce);\n')
         header_txt.append('using namespace std;')
         header_txt.append('static unordered_map<int, void*> proxy_objectsInUse;\n')
         header_txt.append('static unordered_map<VkObject, loader_platform_thread_id> objectsInUse;\n')
@@ -1363,7 +1394,8 @@ class ThreadingSubcommand(Subcommand):
                      '{\n'
                      '    if (gpu != NULL) {\n'
                      '        pCurObj = (VkBaseLayerObject *) %s;\n'
-                     '        loader_platform_thread_once(&tabOnce, init%s);\n'
+                     '        loader_platform_thread_once(&initOnce, init%s);\n'
+                     '        loader_platform_thread_once(&tabDeviceOnce, initDeviceTable);\n'
                      '        %snextTable.%s;\n'
                      '        fflush(stdout);\n'
                      '    %s'
@@ -1402,7 +1434,7 @@ class ThreadingSubcommand(Subcommand):
             funcs.append('%s%s\n'
                      '{\n'
                      '    pCurObj = (VkBaseLayerObject *) %s;\n'
-                     '    loader_platform_thread_once(&tabOnce, init%s);\n'
+                     '    loader_platform_thread_once(&tabDeviceOnce, init%s);\n'
                      '    %snextTable.%s;\n'
                      '%s'
                      '}' % (qual, decl, proto.params[0].name, self.layer_name, ret_val, proto.c_call(), stmt))

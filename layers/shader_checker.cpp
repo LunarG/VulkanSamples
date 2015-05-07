@@ -44,6 +44,7 @@
 
 static std::unordered_map<void *, VkLayerDispatchTable *> tableMap;
 static VkBaseLayerObject *pCurObj;
+static std::unordered_map<void *, VkLayerInstanceDispatchTable *> tableInstanceMap;
 static LOADER_PLATFORM_THREAD_ONCE_DECLARATION(g_initOnce);
 // TODO : This can be much smarter, using separate locks for separate global data
 static int globalLockInitialized = 0;
@@ -164,6 +165,25 @@ static VkLayerDispatchTable * initLayerTable(const VkBaseLayerObject *gpuw)
     return pTable;
 }
 
+static VkLayerInstanceDispatchTable * initLayerInstanceTable(const VkBaseLayerObject *instw)
+{
+    VkLayerInstanceDispatchTable *pTable;
+
+    assert(instw);
+    std::unordered_map<void *, VkLayerInstanceDispatchTable *>::const_iterator it = tableInstanceMap.find((void *) instw->baseObject);
+    if (it == tableInstanceMap.end())
+    {
+        pTable =  new VkLayerInstanceDispatchTable;
+        tableInstanceMap[(void *) instw->baseObject] = pTable;
+    } else
+    {
+        return it->second;
+    }
+
+    layer_init_instance_dispatch_table(pTable, (PFN_vkGetInstanceProcAddr) instw->pGPA, (VkInstance) instw->nextObject);
+
+    return pTable;
+}
 
 VK_LAYER_EXPORT VkResult VKAPI vkCreateDevice(VkPhysicalDevice gpu, const VkDeviceCreateInfo* pCreateInfo, VkDevice* pDevice)
 {
@@ -1029,9 +1049,9 @@ VK_LAYER_EXPORT void * VKAPI vkGetInstanceProcAddr(VkInstance inst, const char* 
     if (inst == NULL)
         return NULL;
 
-    //TODO initLayerTable((const VkBaseLayerObject *) inst);
+    initLayerInstanceTable((const VkBaseLayerObject *) inst);
 
-    // TODO loader_platform_thread_once(&g_initOnce, initInstanceLayer);
+    loader_platform_thread_once(&g_initOnce, initLayer);
 
 #define ADD_HOOK(fn)    \
     if (!strncmp(#fn, pName, sizeof(#fn))) \

@@ -33,6 +33,27 @@
 #include "loader_platform.h"
 
 static std::unordered_map<void *, VkLayerDispatchTable *> tableMap;
+static std::unordered_map<void *, VkLayerInstanceDispatchTable *> tableInstanceMap;
+
+static VkLayerInstanceDispatchTable * initLayerInstanceTable(const VkBaseLayerObject *instancew)
+{
+    VkLayerInstanceDispatchTable *pTable;
+
+    assert(instancew);
+    std::unordered_map<void *, VkLayerInstanceDispatchTable *>::const_iterator it = tableInstanceMap.find((void *) instancew->baseObject);
+    if (it == tableInstanceMap.end())
+    {
+        pTable =  new VkLayerInstanceDispatchTable;
+        tableInstanceMap[(void *) instancew->baseObject] = pTable;
+    } else
+    {
+        return it->second;
+    }
+
+    layer_init_instance_dispatch_table(pTable, (PFN_vkGetInstanceProcAddr) instancew->pGPA, (VkInstance) instancew->nextObject);
+
+    return pTable;
+}
 
 static VkLayerDispatchTable * initLayerTable(const VkBaseLayerObject *gpuw)
 {
@@ -198,7 +219,7 @@ VK_LAYER_EXPORT void * VKAPI vkGetInstanceProcAddr(VkInstance instance, const ch
     if (instance == NULL)
         return NULL;
 
-    // TODO initInstanceLayerTable((const VkBaseLayerObject *) instance);
+    initLayerInstanceTable((const VkBaseLayerObject *) instance);
 
     if (!strcmp("vkGetInstanceProcAddr", pName))
         return (void *) vkGetInstanceProcAddr;
