@@ -38,7 +38,7 @@
 // being used:
 #include "loader_platform.h"
 
-#include "SPIRV/spirv.h"
+#include "spirv/spirv.h"
 
 
 static std::unordered_map<void *, VkLayerDispatchTable *> tableMap;
