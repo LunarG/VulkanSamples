@@ -809,8 +809,7 @@ static void loader_init_layer_libs(struct loader_icd *icd, uint32_t gpu_index,
     }
 }
 
-static bool find_layer_extension(struct loader_icd *icd, uint32_t gpu_index,
-                                 const char *pExtName, uint32_t *out_count,
+static bool find_layer_extension(const char *pExtName, uint32_t *out_count,
                                  char *lib_name[MAX_LAYER_LIBRARIES])
 {
     char *search_name;
@@ -868,7 +867,7 @@ static bool find_layer_extension(struct loader_icd *icd, uint32_t gpu_index,
     return found;
 }
 
-static uint32_t loader_get_layer_env(struct loader_icd *icd, uint32_t gpu_index, struct layer_name_pair *pLayerNames)
+static uint32_t loader_get_layer_env(struct layer_name_pair *pLayerNames)
 {
     char *layerEnv;
     uint32_t i, len, found_count, count = 0;
@@ -909,7 +908,7 @@ static uint32_t loader_get_layer_env(struct loader_icd *icd, uint32_t gpu_index,
             next++;
         }
         name = basename(p);
-        if (!find_layer_extension(icd, gpu_index, name, &found_count, lib_name)) {
+        if (!find_layer_extension(name, &found_count, lib_name)) {
             p = next;
             continue;
         }
@@ -934,7 +933,7 @@ static uint32_t loader_get_layer_env(struct loader_icd *icd, uint32_t gpu_index,
     return count;
 }
 
-static uint32_t loader_get_layer_libs(struct loader_icd *icd, uint32_t gpu_index, uint32_t ext_count, const char *const* ext_names, struct layer_name_pair **ppLayerNames)
+static uint32_t loader_get_layer_libs(uint32_t ext_count, const char *const* ext_names, struct layer_name_pair **ppLayerNames)
 {
     static struct layer_name_pair layerNames[MAX_LAYER_LIBRARIES];
     char *lib_name[MAX_LAYER_LIBRARIES];
@@ -943,7 +942,7 @@ static uint32_t loader_get_layer_libs(struct loader_icd *icd, uint32_t gpu_index
 
     *ppLayerNames =  &layerNames[0];
     /* Load any layers specified in the environment first */
-    count = loader_get_layer_env(icd, gpu_index, layerNames);
+    count = loader_get_layer_env(layerNames);
 
     for (uint32_t i = 0; i < ext_count; i++) {
         const char *pExtName = ext_names[i];
@@ -957,7 +956,7 @@ static uint32_t loader_get_layer_libs(struct loader_icd *icd, uint32_t gpu_index
             }
         }
 
-        if (!skip && find_layer_extension(icd, gpu_index, pExtName, &found_count, lib_name)) {
+        if (!skip && find_layer_extension(pExtName, &found_count, lib_name)) {
 
             for (uint32_t j = 0; j < found_count; j++) {
                 uint32_t len;
@@ -1023,7 +1022,7 @@ extern uint32_t loader_activate_layers(struct loader_icd *icd, uint32_t gpu_inde
         VkBaseLayerObject *nextGpuObj, *baseObj = (VkBaseLayerObject *) gpuObj->baseObject;
         PFN_vkGetProcAddr nextGPA = loader_gpa_internal;
 
-        count = loader_get_layer_libs(icd, gpu_index, ext_count, ext_names, &pLayerNames);
+        count = loader_get_layer_libs(ext_count, ext_names, &pLayerNames);
         if (!count)
             return 0;
         loader_init_layer_libs(icd, gpu_index, pLayerNames, count);
@@ -1061,7 +1060,7 @@ extern uint32_t loader_activate_layers(struct loader_icd *icd, uint32_t gpu_inde
     }
     else {
         //make sure requested Layers matches currently activated Layers
-        count = loader_get_layer_libs(icd, gpu_index, ext_count, ext_names, &pLayerNames);
+        count = loader_get_layer_libs(ext_count, ext_names, &pLayerNames);
         for (uint32_t i = 0; i < count; i++) {
             if (strcmp(icd->layer_libs[gpu_index][i].name, pLayerNames[i].layer_name)) {
                 loader_log(VK_DBG_MSG_ERROR, 0, "Layers activated != Layers requested");
