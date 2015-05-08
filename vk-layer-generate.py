@@ -267,28 +267,6 @@ class Subcommand(object):
         ggei_body.append('}')
         return "\n".join(ggei_body)
 
-    def _gen_layer_get_extension_support(self, layer="Generic"):
-        ges_body = []
-        ges_body.append('VK_LAYER_EXPORT VkResult VKAPI xglGetExtensionSupport(VkPhysicalDevice gpu, const char* pExtName)')
-        ges_body.append('{')
-        ges_body.append('    VkResult result;')
-        ges_body.append('    VkBaseLayerObject* gpuw = (VkBaseLayerObject *) gpu;')
-        ges_body.append('')
-        ges_body.append('    /* This entrypoint is NOT going to init its own dispatch table since loader calls here early */')
-        ges_body.append('    if (!strncmp(pExtName, "%s", strlen("%s")))' % (layer, layer))
-        ges_body.append('    {')
-        ges_body.append('        result = VK_SUCCESS;')
-        ges_body.append('    } else if (nextTable.GetExtensionSupport != NULL)')
-        ges_body.append('    {')
-        ges_body.append('        result = nextTable.GetExtensionSupport((VkPhysicalDevice)gpuw->nextObject, pExtName);')
-        ges_body.append('    } else')
-        ges_body.append('    {')
-        ges_body.append('        result = VK_ERROR_INVALID_EXTENSION;')
-        ges_body.append('    }')
-        ges_body.append('    return result;')
-        ges_body.append('}')
-        return "\n".join(ges_body)
-
     def _generate_dispatch_entrypoints(self, qual=""):
         if qual:
             qual += " "
@@ -829,24 +807,6 @@ class APIDumpSubcommand(Subcommand):
                      '        return VK_SUCCESS;\n'
                      '    }\n'
                          '}' % (qual, decl, self.layer_name, ret_val, proto.c_call(),f_open, log_func, f_close, stmt, self.layer_name))
-        elif 'GetExtensionSupport' == proto.name:
-            funcs.append('%s%s\n'
-                         '{\n'
-                         '    VkResult result;\n'
-                         '    /* This entrypoint is NOT going to init its own dispatch table since loader calls here early */\n'
-                         '    if (!strncmp(pExtName, "%s", strlen("%s")))\n'
-                         '    {\n'
-                         '        result = VK_SUCCESS;\n'
-                         '    } else if (nextTable.GetExtensionSupport != NULL)\n'
-                         '    {\n'
-                         '        result = nextTable.%s;\n'
-                         '        %s    %s        %s\n'
-                         '    } else\n'
-                         '    {\n'
-                         '        result = VK_ERROR_INVALID_EXTENSION;\n'
-                         '    }\n'
-                         '%s'
-                         '}' % (qual, decl, self.layer_name, self.layer_name, proto.c_call(), f_open, log_func, f_close, stmt))
         else:
             funcs.append('%s%s\n'
                      '{\n'
@@ -1013,7 +973,6 @@ class ObjectTrackerSubcommand(Subcommand):
         header_txt.append('    pNewObjNode->obj.vkObj = vkObj;')
         header_txt.append('    pNewObjNode->obj.objType = objType;')
         header_txt.append('    pNewObjNode->obj.status  = OBJSTATUS_NONE;')
-        header_txt.append('    pNewObjNode->obj.numUses = 0;')
         header_txt.append('    // insert at front of global list')
         header_txt.append('    pNewObjNode->pNextGlobal = pGlobalHead;')
         header_txt.append('    pGlobalHead = pNewObjNode;')
@@ -1026,26 +985,6 @@ class ObjectTrackerSubcommand(Subcommand):
         header_txt.append('    numTotalObjs++;')
         header_txt.append('    //sprintf(str, "OBJ_STAT : %lu total objs & %lu %s objs.", numTotalObjs, numObjs[objIndex], string_from_vulkan_object_type(objType));')
         header_txt.append('    if (0) ll_print_lists();')
-        header_txt.append('}')
-        header_txt.append('static void ll_increment_use_count(VkObject vkObj, VkObjectType objType) {')
-        header_txt.append('    objNode *pTrav = pObjectHead[objTypeToIndex(objType)];')
-        header_txt.append('    while (pTrav) {')
-        header_txt.append('        if (pTrav->obj.vkObj == vkObj) {')
-        header_txt.append('            pTrav->obj.numUses++;')
-        header_txt.append('            char str[1024];')
-        header_txt.append('            sprintf(str, "OBJ[%llu] : USING %s object 0x%" PRId64 " (%lu total uses)", object_track_index++, string_from_vulkan_object_type(objType), vkObj, pTrav->obj.numUses);')
-        header_txt.append('            layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, vkObj, 0, OBJTRACK_NONE, "OBJTRACK", str);')
-        header_txt.append('            return;')
-        header_txt.append('        }')
-        header_txt.append('        pTrav = pTrav->pNextObj;')
-        header_txt.append('    }')
-        header_txt.append('    // If we do not find obj, insert it and then increment count')
-        header_txt.append('    char str[1024];')
-        header_txt.append('    sprintf(str, "Unable to increment count for obj 0x%" PRId64 ", will add to list as %s type and increment count", vkObj, string_from_vulkan_object_type(objType));')
-        header_txt.append('    layerCbMsg(VK_DBG_MSG_WARNING, VK_VALIDATION_LEVEL_0, vkObj, 0, OBJTRACK_UNKNOWN_OBJECT, "OBJTRACK", str);')
-        header_txt.append('')
-        header_txt.append('    ll_insert_obj(vkObj, objType);')
-        header_txt.append('    ll_increment_use_count(vkObj, objType);')
         header_txt.append('}')
         header_txt.append('// We usually do not know Obj type when we destroy it so have to fetch')
         header_txt.append('//  Type from global list w/ ll_destroy_obj()')
@@ -1089,7 +1028,7 @@ class ObjectTrackerSubcommand(Subcommand):
         header_txt.append('            assert(numTotalObjs > 0);')
         header_txt.append('            numTotalObjs--;')
         header_txt.append('            char str[1024];')
-        header_txt.append('            sprintf(str, "OBJ_STAT Removed %s obj 0x%" PRId64 " that was used %lu times (%lu total objs remain & %lu %s objs).", string_from_vulkan_object_type(pTrav->obj.objType), pTrav->obj.vkObj, pTrav->obj.numUses, numTotalObjs, numObjs[objTypeToIndex(pTrav->obj.objType)], string_from_vulkan_object_type(pTrav->obj.objType));')
+        header_txt.append('            sprintf(str, "OBJ_STAT Removed %s obj 0x%" PRId64 " (%lu total objs remain & %lu %s objs).", string_from_vulkan_object_type(pTrav->obj.objType), pTrav->obj.vkObj, numTotalObjs, numObjs[objTypeToIndex(pTrav->obj.objType)], string_from_vulkan_object_type(pTrav->obj.objType));')
         header_txt.append('            layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, vkObj, 0, OBJTRACK_NONE, "OBJTRACK", str);')
         header_txt.append('            free(pTrav);')
         header_txt.append('            return;')
@@ -1233,108 +1172,118 @@ class ObjectTrackerSubcommand(Subcommand):
         decl = proto.c_func(prefix="vk", attr="VKAPI")
         param0_name = proto.params[0].name
         p0_type = proto.params[0].ty.strip('*').replace('const ', '')
+        using_line = ''
         create_line = ''
         destroy_line = ''
         funcs = []
-        # Special cases for API funcs that don't use an object as first arg
-        if True in [no_use_proto in proto.name for no_use_proto in ['GlobalOption', 'GetPhysicalDeviceInfo', 'CreateInstance', 'QueueSubmit', 'QueueWaitIdle', 'QueueBindObjectMemory', 'QueueBindObjectMemoryRange', 'QueueBindImageMemoryRange', 'QueuePresentWSI', 'GetGlobalExtensionInfo', 'CreateDevice', 'GetGpuInfo', 'QueueSignalSemaphore', 'QueueWaitSemaphore']]:
-            using_line = ''
-        else:
-            using_line = '    loader_platform_thread_lock_mutex(&objLock);\n'
-            using_line += '    ll_increment_use_count(%s, %s);\n' % (param0_name, obj_type_mapping[p0_type])
-            # using_line += '    loader_platform_thread_unlock_mutex(&objLock);\n'  -- Add in after special case sections below.
+
         if 'QueueSubmit' in proto.name:
-            using_line = '    loader_platform_thread_lock_mutex(&objLock);\n'
+            using_line  = '    loader_platform_thread_lock_mutex(&objLock);\n'
             using_line += '    set_status(fence, VK_OBJECT_TYPE_FENCE, OBJSTATUS_FENCE_IS_SUBMITTED);\n'
             using_line += '    // TODO: Fix for updated memory reference mechanism\n'
             using_line += '    // validate_memory_mapping_status(pMemRefs, memRefCount);\n'
             using_line += '    // validate_mem_ref_count(memRefCount);\n'
             using_line += '    loader_platform_thread_unlock_mutex(&objLock);\n'
         elif 'QueueBindObjectMemoryRange' in proto.name:
-            using_line += '    loader_platform_thread_lock_mutex(&objLock);\n'
+            using_line  = '    loader_platform_thread_lock_mutex(&objLock);\n'
             using_line += '    validateObjectType("vk%s", objType, object);\n' % (proto.name)
             using_line += '    validateQueueFlags(queue, "%s");\n' % (proto.name)
             using_line += '    loader_platform_thread_unlock_mutex(&objLock);\n'
         elif 'QueueBindObject' in proto.name:
-            using_line += '    loader_platform_thread_lock_mutex(&objLock);\n'
+            using_line  = '    loader_platform_thread_lock_mutex(&objLock);\n'
             using_line += '    validateObjectType("vk%s", objType, object);\n' % (proto.name)
             using_line += '    loader_platform_thread_unlock_mutex(&objLock);\n'
         elif 'QueueBindImage' in proto.name:
-            using_line += '    loader_platform_thread_lock_mutex(&objLock);\n'
+            using_line  = '    loader_platform_thread_lock_mutex(&objLock);\n'
             using_line += '    validateQueueFlags(queue, "%s");\n' % (proto.name)
             using_line += '    loader_platform_thread_unlock_mutex(&objLock);\n'
         elif 'GetObjectInfo' in proto.name:
+            using_line  = '    loader_platform_thread_lock_mutex(&objLock);\n'
             using_line += '    validateObjectType("vk%s", objType, object);\n' % (proto.name)
+            using_line += '    loader_platform_thread_unlock_mutex(&objLock);\n'
         elif 'GetFenceStatus' in proto.name:
+            using_line  = '    loader_platform_thread_lock_mutex(&objLock);\n'
             using_line += '    // Warn if submitted_flag is not set\n'
             using_line += '    validate_status(fence, VK_OBJECT_TYPE_FENCE, OBJSTATUS_FENCE_IS_SUBMITTED, OBJSTATUS_FENCE_IS_SUBMITTED, VK_DBG_MSG_ERROR, OBJTRACK_INVALID_FENCE, "Status Requested for Unsubmitted Fence");\n'
+            using_line += '    loader_platform_thread_unlock_mutex(&objLock);\n'
         elif 'WaitForFences' in proto.name:
+            using_line  = '    loader_platform_thread_lock_mutex(&objLock);\n'
             using_line += '    // Warn if waiting on unsubmitted fence\n'
             using_line += '    for (uint32_t i = 0; i < fenceCount; i++) {\n'
             using_line += '        validate_status(pFences[i], VK_OBJECT_TYPE_FENCE, OBJSTATUS_FENCE_IS_SUBMITTED, OBJSTATUS_FENCE_IS_SUBMITTED, VK_DBG_MSG_ERROR, OBJTRACK_INVALID_FENCE, "Waiting for Unsubmitted Fence");\n'
             using_line += '    }\n'
+            using_line += '    loader_platform_thread_unlock_mutex(&objLock);\n'
         elif 'EndCommandBuffer' in proto.name:
+            using_line  = '    loader_platform_thread_lock_mutex(&objLock);\n'
             using_line += '    reset_status(cmdBuffer, VK_OBJECT_TYPE_COMMAND_BUFFER, (OBJSTATUS_VIEWPORT_BOUND    |\n'
             using_line += '                                                            OBJSTATUS_RASTER_BOUND      |\n'
             using_line += '                                                            OBJSTATUS_COLOR_BLEND_BOUND |\n'
             using_line += '                                                            OBJSTATUS_DEPTH_STENCIL_BOUND));\n'
+            using_line += '    loader_platform_thread_unlock_mutex(&objLock);\n'
         elif 'CmdBindDynamicStateObject' in proto.name:
+            using_line  = '    loader_platform_thread_lock_mutex(&objLock);\n'
             using_line += '    track_object_status(cmdBuffer, stateBindPoint);\n'
+            using_line += '    loader_platform_thread_unlock_mutex(&objLock);\n'
         elif 'CmdDraw' in proto.name:
+            using_line  = '    loader_platform_thread_lock_mutex(&objLock);\n'
             using_line += '    validate_draw_state_flags(cmdBuffer);\n'
+            using_line += '    loader_platform_thread_unlock_mutex(&objLock);\n'
         elif 'MapMemory' in proto.name:
+            using_line  = '    loader_platform_thread_lock_mutex(&objLock);\n'
             using_line += '    set_status(mem, VK_OBJECT_TYPE_DEVICE_MEMORY, OBJSTATUS_GPU_MEM_MAPPED);\n'
+            using_line += '    loader_platform_thread_unlock_mutex(&objLock);\n'
         elif 'UnmapMemory' in proto.name:
+            using_line =  '    loader_platform_thread_lock_mutex(&objLock);\n'
             using_line += '    reset_status(mem, VK_OBJECT_TYPE_DEVICE_MEMORY, OBJSTATUS_GPU_MEM_MAPPED);\n'
-        if 'AllocDescriptor' in proto.name: # Allocates array of DSs
-            create_line =  '    for (uint32_t i = 0; i < *pCount; i++) {\n'
-            create_line += '        loader_platform_thread_lock_mutex(&objLock);\n'
+            using_line += '    loader_platform_thread_unlock_mutex(&objLock);\n'
+        elif 'AllocDescriptor' in proto.name: # Allocates array of DSs
+            create_line  = '    loader_platform_thread_lock_mutex(&objLock);\n'
+            create_line += '    for (uint32_t i = 0; i < *pCount; i++) {\n'
             create_line += '        ll_insert_obj(pDescriptorSets[i], VK_OBJECT_TYPE_DESCRIPTOR_SET);\n'
-            create_line += '        loader_platform_thread_unlock_mutex(&objLock);\n'
             create_line += '    }\n'
+            create_line += '    loader_platform_thread_unlock_mutex(&objLock);\n'
         elif 'Create' in proto.name or 'Alloc' in proto.name:
-            create_line = '    loader_platform_thread_lock_mutex(&objLock);\n'
+            create_line =  '    loader_platform_thread_lock_mutex(&objLock);\n'
             create_line += '    ll_insert_obj(*%s, %s);\n' % (proto.params[-1].name, obj_type_mapping[proto.params[-1].ty.strip('*').replace('const ', '')])
             create_line += '    loader_platform_thread_unlock_mutex(&objLock);\n'
-        # Add thread unlock statement following objecttracker processing code.
-        if True in [no_use_proto in proto.name for no_use_proto in ['GlobalOption', 'GetPhysicalDeviceInfo', 'CreateInstance', 'QueueSubmit', 'QueueAddMemReferences', 'QueueRemoveMemReferences', 'QueueWaitIdle', 'QueueBindObjectMemory', 'QueueBindObjectMemoryRange', 'QueueBindImageMemoryRange', 'QueuePresentWSI', 'GetGlobalExtensionInfo', 'CreateDevice', 'GetGpuInfo', 'QueueSignalSemaphore', 'QueueWaitSemaphore']]:
-             using_line += ''
-        else:
-            using_line += '    loader_platform_thread_unlock_mutex(&objLock);\n'
-        if 'DestroyObject' in proto.name:
-            destroy_line = '    loader_platform_thread_lock_mutex(&objLock);\n'
+
+        if 'GetDeviceQueue' in proto.name:
+            destroy_line  = '    loader_platform_thread_lock_mutex(&objLock);\n'
+            destroy_line += '    addQueueInfo(queueNodeIndex, *pQueue);\n'
+            destroy_line += '    loader_platform_thread_unlock_mutex(&objLock);\n'
+        elif 'DestroyObject' in proto.name:
+            destroy_line =  '    loader_platform_thread_lock_mutex(&objLock);\n'
             destroy_line += '    validateObjectType("vk%s", objType, object);\n' % (proto.name)
             destroy_line += '    ll_destroy_obj(%s);\n' % (proto.params[2].name)
             destroy_line += '    loader_platform_thread_unlock_mutex(&objLock);\n'
-            using_line = ''
+        elif 'DestroyDevice' in proto.name:
+            destroy_line =  '    loader_platform_thread_lock_mutex(&objLock);\n'
+            destroy_line += '    ll_destroy_obj(device);\n'
+            destroy_line += '    // Report any remaining objects in LL\n'
+            destroy_line += '    objNode *pTrav = pGlobalHead;\n'
+            destroy_line += '    while (pTrav) {\n'
+            destroy_line += '        if ((pTrav->obj.objType == VK_OBJECT_TYPE_PHYSICAL_DEVICE) || (pTrav->obj.objType == VK_OBJECT_TYPE_QUEUE)) {\n'
+            destroy_line += '            // Cannot destroy physical device so ignore\n'
+            destroy_line += '            pTrav = pTrav->pNextGlobal;\n'
+            destroy_line += '        } else {\n'
+            destroy_line += '            char str[1024];\n'
+            destroy_line += '            sprintf(str, "OBJ ERROR : %s object 0x%" PRId64 " has not been destroyed.", string_from_vulkan_object_type(pTrav->obj.objType), pTrav->obj.vkObj);\n'
+            destroy_line += '            layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, device, 0, OBJTRACK_OBJECT_LEAK, "OBJTRACK", str);\n'
+            destroy_line += '            pTrav = pTrav->pNextGlobal;\n'
+            destroy_line += '        }\n'
+            destroy_line += '    }\n'
+            destroy_line += '    // Clean up Queue\'s MemRef Linked Lists\n'
+            destroy_line += '    destroyQueueMemRefLists();\n'
+            destroy_line += '    loader_platform_thread_unlock_mutex(&objLock);\n'
+        elif 'Free' in proto.name:
+            destroy_line  = '    loader_platform_thread_lock_mutex(&objLock);\n'
+            destroy_line += '    ll_destroy_obj(%s);\n' % (proto.params[1].name)
+            destroy_line += '    loader_platform_thread_unlock_mutex(&objLock);\n'
         else:
             if 'Destroy' in proto.name:
-                destroy_line = '    loader_platform_thread_lock_mutex(&objLock);\n'
+                destroy_line  = '    loader_platform_thread_lock_mutex(&objLock);\n'
                 destroy_line += '    ll_destroy_obj(%s);\n' % (param0_name)
                 destroy_line += '    loader_platform_thread_unlock_mutex(&objLock);\n'
-                using_line = ''
-            else:
-                if 'Free' in proto.name:
-                    destroy_line = '    loader_platform_thread_lock_mutex(&objLock);\n'
-                    destroy_line += '    ll_destroy_obj(%s);\n' % (proto.params[1].name)
-                    destroy_line += '    loader_platform_thread_unlock_mutex(&objLock);\n'
-                    using_line = ''
-            if 'DestroyDevice' in proto.name:
-                destroy_line += '    // Report any remaining objects in LL\n    objNode *pTrav = pGlobalHead;\n    while (pTrav) {\n'
-                destroy_line += '        if ((pTrav->obj.objType == VK_OBJECT_TYPE_PHYSICAL_DEVICE) || (pTrav->obj.objType == VK_OBJECT_TYPE_QUEUE)) {\n'
-                destroy_line += '            // Cannot destroy physical device so ignore\n'
-                destroy_line += '            pTrav = pTrav->pNextGlobal;\n'
-                destroy_line += '        } else {\n'
-                destroy_line += '            char str[1024];\n'
-                destroy_line += '            sprintf(str, "OBJ ERROR : %s object 0x%" PRId64 " has not been destroyed (was used %lu times).", string_from_vulkan_object_type(pTrav->obj.objType), pTrav->obj.vkObj, pTrav->obj.numUses);\n'
-                destroy_line += '            layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, device, 0, OBJTRACK_OBJECT_LEAK, "OBJTRACK", str);\n'
-                destroy_line += '            pTrav = pTrav->pNextGlobal;\n'
-                destroy_line += '        }\n'
-                destroy_line += '    }\n'
-                destroy_line += '    // Clean up Queue\'s MemRef Linked Lists\n'
-                destroy_line += '    destroyQueueMemRefLists();\n'
-            if 'GetDeviceQueue' in proto.name:
-                destroy_line = '    addQueueInfo(queueNodeIndex, *pQueue);\n'
         ret_val = ''
         stmt = ''
         if proto.ret != "void":
@@ -1344,7 +1293,6 @@ class ObjectTrackerSubcommand(Subcommand):
             funcs.append('%s%s\n'
                      '{\n'
                      '    if (gpu != VK_NULL_HANDLE) {\n'
-                     '    %s'
                      '        pCurObj = (VkBaseLayerObject *) gpu;\n'
                      '        loader_platform_thread_once(&tabOnce, init%s);\n'
                      '        %snextTable.%s;\n'
@@ -1358,45 +1306,25 @@ class ObjectTrackerSubcommand(Subcommand):
                      '        strncpy((char *) pOutLayers[0], "%s", maxStringSize);\n'
                      '        return VK_SUCCESS;\n'
                      '    }\n'
-                         '}' % (qual, decl, using_line, self.layer_name, ret_val, proto.c_call(), create_line, destroy_line, stmt, self.layer_name))
-        elif 'GetExtensionSupport' == proto.name:
-            funcs.append('%s%s\n'
-                     '{\n'
-                     '    VkResult result;\n'
-                     '    /* This entrypoint is NOT going to init its own dispatch table since loader calls this early */\n'
-                     '    if (!strncmp(pExtName, "%s", strlen("%s")) ||\n'
-                     '        !strncmp(pExtName, "objTrackGetObjectsCount", strlen("objTrackGetObjectsCount")) ||\n'
-                     '        !strncmp(pExtName, "objTrackGetObjects", strlen("objTrackGetObjects")))\n'
-                     '        !strncmp(pExtName, "objTrackGetObjectsOfTypeCount", strlen("objTrackGetObjectsOfTypeCount")) ||\n'
-                     '        !strncmp(pExtName, "objTrackGetObjectsOfType", strlen("objTrackGetObjectsOfType")))\n'
-                     '    {\n'
-                     '        result = VK_SUCCESS;\n'
-                     '    } else if (nextTable.GetExtensionSupport != NULL)\n'
-                     '    {\n'
-                     '    %s'
-                     '        result = nextTable.%s;\n'
-                     '    } else\n'
-                     '    {\n'
-                     '        result = VK_ERROR_INVALID_EXTENSION;\n'
-                     '    }\n'
-                     '%s'
-                     '}' % (qual, decl, self.layer_name, self.layer_name, using_line, proto.c_call(),  stmt))
+                         '}' % (qual, decl, self.layer_name, ret_val, proto.c_call(), create_line, destroy_line, stmt, self.layer_name))
         elif 'GetPhysicalDeviceInfo' in proto.name:
-            gpu_state =  '    if (infoType == VK_PHYSICAL_DEVICE_INFO_TYPE_QUEUE_PROPERTIES) {\n'
+
+            gpu_state  = '    if (infoType == VK_PHYSICAL_DEVICE_INFO_TYPE_QUEUE_PROPERTIES) {\n'
             gpu_state += '        if (pData != NULL) {\n'
+            gpu_state += '            loader_platform_thread_lock_mutex(&objLock);\n'
             gpu_state += '            setGpuQueueInfoState(pDataSize, pData);\n'
+            gpu_state += '            loader_platform_thread_unlock_mutex(&objLock);\n'
             gpu_state += '        }\n'
             gpu_state += '    }\n'
             funcs.append('%s%s\n'
                      '{\n'
-                     '%s'
                      '    pCurObj = (VkBaseLayerObject *) gpu;\n'
                      '    loader_platform_thread_once(&tabOnce, init%s);\n'
                      '    %snextTable.%s;\n'
                      '%s%s'
                      '%s'
                      '%s'
-                     '}' % (qual, decl, using_line, self.layer_name, ret_val, proto.c_call(), create_line, destroy_line, gpu_state, stmt))
+                     '}' % (qual, decl, self.layer_name, ret_val, proto.c_call(), create_line, destroy_line, gpu_state, stmt))
         else:
             funcs.append('%s%s\n'
                      '{\n'
