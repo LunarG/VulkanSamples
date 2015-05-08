@@ -713,52 +713,6 @@ ICD_EXPORT void VKAPI vkCmdCopyImageToBuffer(
     }
 }
 
-ICD_EXPORT void VKAPI vkCmdCloneImageData(
-    VkCmdBuffer                              cmdBuffer,
-    VkImage                                   srcImage,
-    VkImageLayout                            srcImageLayout,
-    VkImage                                   destImage,
-    VkImageLayout                            destImageLayout)
-{
-    struct intel_cmd *cmd = intel_cmd(cmdBuffer);
-    struct intel_img *src = intel_img(srcImage);
-    struct intel_img *dst = intel_img(destImage);
-    struct intel_buf *src_buf, *dst_buf;
-    VkBufferCreateInfo buf_info;
-    VkBufferCopy buf_region;
-    VkResult res;
-
-    memset(&buf_info, 0, sizeof(buf_info));
-    buf_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-    buf_info.size = src->obj.mem->size;
-
-    memset(&buf_region, 0, sizeof(buf_region));
-    buf_region.copySize = src->obj.mem->size;
-
-    res = intel_buf_create(cmd->dev, &buf_info, &src_buf);
-    if (res != VK_SUCCESS) {
-        cmd_fail(cmd, res);
-        return;
-    }
-
-    res = intel_buf_create(cmd->dev, &buf_info, &dst_buf);
-    if (res != VK_SUCCESS) {
-        intel_buf_destroy(src_buf);
-        cmd_fail(cmd, res);
-        return;
-    }
-
-    intel_obj_bind_mem(&src_buf->obj, src->obj.mem, 0);
-    intel_obj_bind_mem(&dst_buf->obj, dst->obj.mem, 0);
-
-    cmd_batch_flush(cmd, GEN6_PIPE_CONTROL_RENDER_CACHE_FLUSH);
-    vkCmdCopyBuffer(cmdBuffer, (VkBuffer) src_buf,
-            (VkBuffer) dst_buf, 1, &buf_region);
-
-    intel_buf_destroy(src_buf);
-    intel_buf_destroy(dst_buf);
-}
-
 ICD_EXPORT void VKAPI vkCmdUpdateBuffer(
     VkCmdBuffer                              cmdBuffer,
     VkBuffer                                  destBuffer,

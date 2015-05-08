@@ -1376,20 +1376,6 @@ VK_LAYER_EXPORT void VKAPI vkCmdCopyImageToBuffer(VkCmdBuffer cmdBuffer, VkImage
     nextTable.CmdCopyImageToBuffer(cmdBuffer, srcImage, srcImageLayout, destBuffer, regionCount, pRegions);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdCloneImageData(VkCmdBuffer cmdBuffer, VkImage srcImage, VkImageLayout srcImageLayout, VkImage destImage, VkImageLayout destImageLayout)
-{
-    char str[1024];
-    if (!validate_VkImageLayout(srcImageLayout)) {
-        sprintf(str, "Parameter srcImageLayout to function CmdCloneImageData has invalid value of %i.", (int)srcImageLayout);
-        layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
-    }
-    if (!validate_VkImageLayout(destImageLayout)) {
-        sprintf(str, "Parameter destImageLayout to function CmdCloneImageData has invalid value of %i.", (int)destImageLayout);
-        layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
-    }
-    nextTable.CmdCloneImageData(cmdBuffer, srcImage, srcImageLayout, destImage, destImageLayout);
-}
-
 VK_LAYER_EXPORT void VKAPI vkCmdUpdateBuffer(VkCmdBuffer cmdBuffer, VkBuffer destBuffer, VkDeviceSize destOffset, VkDeviceSize dataSize, const uint32_t* pData)
 {
 

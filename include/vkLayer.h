@@ -120,7 +120,6 @@ typedef struct VkLayerDispatchTable_
     PFN_vkCmdBlitImage CmdBlitImage;
     PFN_vkCmdCopyBufferToImage CmdCopyBufferToImage;
     PFN_vkCmdCopyImageToBuffer CmdCopyImageToBuffer;
-    PFN_vkCmdCloneImageData CmdCloneImageData;
     PFN_vkCmdUpdateBuffer CmdUpdateBuffer;
     PFN_vkCmdFillBuffer CmdFillBuffer;
     PFN_vkCmdClearColorImage CmdClearColorImage;

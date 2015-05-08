@@ -845,15 +845,6 @@ LOADER_EXPORT void VKAPI vkCmdCopyImageToBuffer(VkCmdBuffer cmdBuffer, VkImage s
     disp->CmdCopyImageToBuffer(cmdBuffer, srcImage, srcImageLayout, destBuffer, regionCount, pRegions);
 }
 
-LOADER_EXPORT void VKAPI vkCmdCloneImageData(VkCmdBuffer cmdBuffer, VkImage srcImage, VkImageLayout srcImageLayout, VkImage destImage, VkImageLayout destImageLayout)
-{
-    const VkLayerDispatchTable *disp;
-
-    disp = loader_get_dispatch(cmdBuffer);
-
-    disp->CmdCloneImageData(cmdBuffer, srcImage, srcImageLayout, destImage, destImageLayout);
-}
-
 LOADER_EXPORT void VKAPI vkCmdUpdateBuffer(VkCmdBuffer cmdBuffer, VkBuffer destBuffer, VkDeviceSize destOffset, VkDeviceSize dataSize, const uint32_t* pData)
 {
     const VkLayerDispatchTable *disp;

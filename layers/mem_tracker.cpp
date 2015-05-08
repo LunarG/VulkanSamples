@@ -1909,31 +1909,6 @@ VK_LAYER_EXPORT void VKAPI vkCmdCopyImageToBuffer(
     nextTable.CmdCopyImageToBuffer(cmdBuffer, srcImage, srcImageLayout, destBuffer, regionCount, pRegions);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdCloneImageData(
-    VkCmdBuffer   cmdBuffer,
-    VkImage       srcImage,
-    VkImageLayout srcImageLayout,
-    VkImage       destImage,
-    VkImageLayout destImageLayout)
-{
-    // TODO : Each image will have mem mapping so track them
-    loader_platform_thread_lock_mutex(&globalLock);
-    VkDeviceMemory mem = getMemBindingFromObject(srcImage);
-    if (VK_FALSE == updateCBBinding(cmdBuffer, mem)) {
-        char str[1024];
-        sprintf(str, "In vkCmdCloneImageData() call unable to update binding of srcImage buffer %p to cmdBuffer %p", srcImage, cmdBuffer);
-        layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, cmdBuffer, 0, MEMTRACK_MEMORY_BINDING_ERROR, "MEM", str);
-    }
-    mem = getMemBindingFromObject(destImage);
-    if (VK_FALSE == updateCBBinding(cmdBuffer, mem)) {
-        char str[1024];
-        sprintf(str, "In vkCmdCloneImageData() call unable to update binding of destImage buffer %p to cmdBuffer %p", destImage, cmdBuffer);
-        layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, cmdBuffer, 0, MEMTRACK_MEMORY_BINDING_ERROR, "MEM", str);
-    }
-    loader_platform_thread_unlock_mutex(&globalLock);
-    nextTable.CmdCloneImageData(cmdBuffer, srcImage, srcImageLayout, destImage, destImageLayout);
-}
-
 VK_LAYER_EXPORT void VKAPI vkCmdUpdateBuffer(
     VkCmdBuffer     cmdBuffer,
     VkBuffer        destBuffer,
@@ -2352,8 +2327,6 @@ VK_LAYER_EXPORT void* VKAPI vkGetProcAddr(
         return (void*) vkCmdCopyBufferToImage;
     if (!strcmp(funcName, "vkCmdCopyImageToBuffer"))
         return (void*) vkCmdCopyImageToBuffer;
-    if (!strcmp(funcName, "vkCmdCloneImageData"))
-        return (void*) vkCmdCloneImageData;
     if (!strcmp(funcName, "vkCmdUpdateBuffer"))
         return (void*) vkCmdUpdateBuffer;
     if (!strcmp(funcName, "vkCmdFillBuffer"))

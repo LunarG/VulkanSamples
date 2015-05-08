@@ -750,13 +750,6 @@ core = Extension(
              Param("uint32_t", "regionCount"),
              Param("const VkBufferImageCopy*", "pRegions")]),
 
-        Proto("void", "CmdCloneImageData",
-            [Param("VkCmdBuffer", "cmdBuffer"),
-             Param("VkImage", "srcImage"),
-             Param("VkImageLayout", "srcImageLayout"),
-             Param("VkImage", "destImage"),
-             Param("VkImageLayout", "destImageLayout")]),
-
         Proto("void", "CmdUpdateBuffer",
             [Param("VkCmdBuffer", "cmdBuffer"),
              Param("VkBuffer", "destBuffer"),

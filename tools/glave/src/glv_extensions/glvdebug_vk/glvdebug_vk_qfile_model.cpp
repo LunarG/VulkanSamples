@@ -67,7 +67,6 @@ bool glvdebug_vk_QFileModel::isDrawCall(const GLV_TRACE_PACKET_ID packetId) cons
         case GLV_TPI_VK_vkCmdCopyImage:
         case GLV_TPI_VK_vkCmdCopyBufferToImage:
         case GLV_TPI_VK_vkCmdCopyImageToBuffer:
-        case GLV_TPI_VK_vkCmdCloneImageData:
         case GLV_TPI_VK_vkCmdUpdateBuffer:
         case GLV_TPI_VK_vkCmdFillBuffer:
         case GLV_TPI_VK_vkCmdClearColorImage:

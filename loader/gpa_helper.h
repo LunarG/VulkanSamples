@@ -220,8 +220,6 @@ static inline void* globalGetProcAddr(const char *name)
         return (void*) vkCmdCopyBufferToImage;
     if (!strcmp(name, "CmdCopyImageToBuffer"))
         return (void*) vkCmdCopyImageToBuffer;
-    if (!strcmp(name, "CmdCloneImageData"))
-        return (void*) vkCmdCloneImageData;
     if (!strcmp(name, "CmdUpdateBuffer"))
         return (void*) vkCmdUpdateBuffer;
     if (!strcmp(name, "CmdFillBuffer"))

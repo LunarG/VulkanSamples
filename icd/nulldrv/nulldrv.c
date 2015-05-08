@@ -1054,16 +1054,6 @@ ICD_EXPORT void VKAPI vkCmdCopyImageToBuffer(
     NULLDRV_LOG_FUNC;
 }
 
-ICD_EXPORT void VKAPI vkCmdCloneImageData(
-    VkCmdBuffer                              cmdBuffer,
-    VkImage                                   srcImage,
-    VkImageLayout                            srcImageLayout,
-    VkImage                                   destImage,
-    VkImageLayout                            destImageLayout)
-{
-    NULLDRV_LOG_FUNC;
-}
-
 ICD_EXPORT void VKAPI vkCmdUpdateBuffer(
     VkCmdBuffer                              cmdBuffer,
     VkBuffer                                  destBuffer,

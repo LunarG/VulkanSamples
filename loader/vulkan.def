@@ -120,7 +120,6 @@ EXPORTS
    vkCmdBlitImage
    vkCmdCopyBufferToImage
    vkCmdCopyImageToBuffer
-   vkCmdCloneImageData
    vkCmdUpdateBuffer
    vkCmdFillBuffer
    vkCmdClearColorImage

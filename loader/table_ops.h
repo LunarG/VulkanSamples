@@ -126,7 +126,6 @@ static inline void loader_initialize_dispatch_table(VkLayerDispatchTable *table,
     table->CmdBlitImage = (PFN_vkCmdBlitImage) gpa(gpu, "vkCmdBlitImage");
     table->CmdCopyBufferToImage = (PFN_vkCmdCopyBufferToImage) gpa(gpu, "vkCmdCopyBufferToImage");
     table->CmdCopyImageToBuffer = (PFN_vkCmdCopyImageToBuffer) gpa(gpu, "vkCmdCopyImageToBuffer");
-    table->CmdCloneImageData = (PFN_vkCmdCloneImageData) gpa(gpu, "vkCmdCloneImageData");
     table->CmdUpdateBuffer = (PFN_vkCmdUpdateBuffer) gpa(gpu, "vkCmdUpdateBuffer");
     table->CmdFillBuffer = (PFN_vkCmdFillBuffer) gpa(gpu, "vkCmdFillBuffer");
     table->CmdClearColorImage = (PFN_vkCmdClearColorImage) gpa(gpu, "vkCmdClearColorImage");
@@ -357,8 +356,6 @@ static inline void *loader_lookup_dispatch_table(const VkLayerDispatchTable *tab
         return (void *) table->CmdCopyBufferToImage;
     if (!strcmp(name, "CmdCopyImageToBuffer"))
         return (void *) table->CmdCopyImageToBuffer;
-    if (!strcmp(name, "CmdCloneImageData"))
-        return (void *) table->CmdCloneImageData;
     if (!strcmp(name, "CmdUpdateBuffer"))
         return (void *) table->CmdUpdateBuffer;
     if (!strcmp(name, "CmdFillBuffer"))

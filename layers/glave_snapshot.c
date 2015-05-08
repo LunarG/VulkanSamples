@@ -1407,14 +1407,6 @@ VK_LAYER_EXPORT void VKAPI vkCmdCopyImageToBuffer(VkCmdBuffer cmdBuffer, VkImage
     nextTable.CmdCopyImageToBuffer(cmdBuffer, srcImage, srcImageLayout, destBuffer, regionCount, pRegions);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdCloneImageData(VkCmdBuffer cmdBuffer, VkImage srcImage, VkImageLayout srcImageLayout, VkImage destImage, VkImageLayout destImageLayout)
-{
-    loader_platform_thread_lock_mutex(&objLock);
-    ll_increment_use_count((void*)cmdBuffer, VK_OBJECT_TYPE_CMD_BUFFER);
-    loader_platform_thread_unlock_mutex(&objLock);
-    nextTable.CmdCloneImageData(cmdBuffer, srcImage, srcImageLayout, destImage, destImageLayout);
-}
-
 VK_LAYER_EXPORT void VKAPI vkCmdUpdateBuffer(VkCmdBuffer cmdBuffer, VkBuffer destBuffer, VkGpuSize destOffset, VkGpuSize dataSize, const uint32_t* pData)
 {
     loader_platform_thread_lock_mutex(&objLock);

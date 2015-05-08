@@ -1071,11 +1071,10 @@ typedef VkFlags VkImageCreateFlags;
 typedef enum VkImageCreateFlagBits_
 {
     VK_IMAGE_CREATE_INVARIANT_DATA_BIT                      = VK_BIT(0),
-    VK_IMAGE_CREATE_CLONEABLE_BIT                           = VK_BIT(1),
-    VK_IMAGE_CREATE_SHAREABLE_BIT                           = VK_BIT(2),    // Image should be shareable
-    VK_IMAGE_CREATE_SPARSE_BIT                              = VK_BIT(3),    // Image should support sparse backing
-    VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT                      = VK_BIT(4),    // Allows image views to have different format than the base image
-    VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT                     = VK_BIT(5),    // Allows creating image views with cube type from the created image
+    VK_IMAGE_CREATE_SHAREABLE_BIT                           = VK_BIT(1),    // Image should be shareable
+    VK_IMAGE_CREATE_SPARSE_BIT                              = VK_BIT(2),    // Image should support sparse backing
+    VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT                      = VK_BIT(3),    // Allows image views to have different format than the base image
+    VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT                     = VK_BIT(4),    // Allows creating image views with cube type from the created image
 } VkImageCreateFlagBits;
 
 // Depth-stencil view creation flags
@@ -2227,7 +2226,6 @@ typedef void     (VKAPI *PFN_vkCmdCopyImage)(VkCmdBuffer cmdBuffer, VkImage srcI
 typedef void     (VKAPI *PFN_vkCmdBlitImage)(VkCmdBuffer cmdBuffer, VkImage srcImage, VkImageLayout srcImageLayout, VkImage destImage, VkImageLayout destImageLayout, uint32_t regionCount, const VkImageBlit* pRegions);
 typedef void     (VKAPI *PFN_vkCmdCopyBufferToImage)(VkCmdBuffer cmdBuffer, VkBuffer srcBuffer, VkImage destImage, VkImageLayout destImageLayout, uint32_t regionCount, const VkBufferImageCopy* pRegions);
 typedef void     (VKAPI *PFN_vkCmdCopyImageToBuffer)(VkCmdBuffer cmdBuffer, VkImage srcImage, VkImageLayout srcImageLayout, VkBuffer destBuffer, uint32_t regionCount, const VkBufferImageCopy* pRegions);
-typedef void     (VKAPI *PFN_vkCmdCloneImageData)(VkCmdBuffer cmdBuffer, VkImage srcImage, VkImageLayout srcImageLayout, VkImage destImage, VkImageLayout destImageLayout);
 typedef void     (VKAPI *PFN_vkCmdUpdateBuffer)(VkCmdBuffer cmdBuffer, VkBuffer destBuffer, VkDeviceSize destOffset, VkDeviceSize dataSize, const uint32_t* pData);
 typedef void     (VKAPI *PFN_vkCmdFillBuffer)(VkCmdBuffer cmdBuffer, VkBuffer destBuffer, VkDeviceSize destOffset, VkDeviceSize fillSize, uint32_t data);
 typedef void     (VKAPI *PFN_vkCmdClearColorImage)(VkCmdBuffer cmdBuffer, VkImage image, VkImageLayout imageLayout, const VkClearColor* pColor, uint32_t rangeCount, const VkImageSubresourceRange* pRanges);
@@ -2834,13 +2832,6 @@ void VKAPI vkCmdCopyImageToBuffer(
     VkBuffer                                    destBuffer,
     uint32_t                                    regionCount,
     const VkBufferImageCopy*                    pRegions);
-
-void VKAPI vkCmdCloneImageData(
-    VkCmdBuffer                                 cmdBuffer,
-    VkImage                                     srcImage,
-    VkImageLayout                               srcImageLayout,
-    VkImage                                     destImage,
-    VkImageLayout                               destImageLayout);
 
 void VKAPI vkCmdUpdateBuffer(
     VkCmdBuffer                                 cmdBuffer,
