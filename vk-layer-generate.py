@@ -285,18 +285,10 @@ class Subcommand(object):
                     elif 'DbgUnregisterMsgCallback' == proto.name:
                         intercept = self._gen_layer_dbg_callback_unregister()
                     elif 'GetGlobalExtensionInfo' == proto.name:
-                        funcs.append(self._gen_layer_get_global_extension_info(self.layer_name))
-                        intercepted.append(proto)
+                        intercept = self._gen_layer_get_global_extension_info(self.layer_name)
                 if intercept is not None:
                     funcs.append(intercept)
                     intercepted.append(proto)
-
-        prefix="vk"
-        lookups = []
-        for proto in intercepted:
-            lookups.append("if (!strcmp(name, \"%s\"))" % proto.name)
-            lookups.append("    return (void*) %s%s;" %
-                    (prefix, proto.name))
 
         prefix="vk"
         lookups = []
