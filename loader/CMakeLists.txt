@@ -12,7 +12,7 @@ if (WIN32)
 
     add_library(vulkan SHARED loader.c loader.h loader_platform.h dirent_on_windows.c trampoline.c table_ops.h gpa_helper.h vulkan.def)
     set_target_properties(vulkan PROPERTIES LINK_FLAGS "/DEF:${PROJECT_SOURCE_DIR}/loader/vulkan.def")
-    add_library(VKstatic STATIC loader.c loader.h dirent_on_windows.c dispatch.c table_ops.h gpa_helper.h)
+    add_library(VKstatic STATIC loader.c loader.h dirent_on_windows.c trampoline.c table_ops.h gpa_helper.h)
     set_target_properties(VKstatic PROPERTIES OUTPUT_NAME VKstatic)
     target_link_libraries(vulkan)
 endif()

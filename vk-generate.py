@@ -243,7 +243,7 @@ class LayerInterceptProcSubcommand(Subcommand):
 
         # we could get the list from argv if wanted
         self.intercepted = [proto.name for proto in self.protos
-                if proto.name not in ["EnumeratePhysicalDevices"]]
+                if proto.name not in ["EnumeratePhysicalDevices", "GetInstanceProcAddr"]]
 
         for proto in self.protos:
             if proto.name == "GetProcAddr":
