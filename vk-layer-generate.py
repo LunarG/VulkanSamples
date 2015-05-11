@@ -1364,7 +1364,7 @@ class ThreadingSubcommand(Subcommand):
         header_txt.append('    if (objectsInUse.find(object) == objectsInUse.end()) {')
         header_txt.append('        objectsInUse[object] = tid;')
         header_txt.append('    } else {')
-        header_txt.append('        if (objectsInUse[object] == tid) {')
+        header_txt.append('        if (objectsInUse[object] != tid) {')
         header_txt.append('            char str[1024];')
         header_txt.append('            sprintf(str, "THREADING ERROR : object of type %s is simultaneously used in thread %ld and thread %ld", type, objectsInUse[object], tid);')
         header_txt.append('            layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, 0, 0, THREADING_CHECKER_MULTIPLE_THREADS, "THREADING", str);')
@@ -1390,6 +1390,17 @@ class ThreadingSubcommand(Subcommand):
             # use default version
             return None
         decl = proto.c_func(prefix="vk", attr="VKAPI")
+        thread_check_objects = [
+            "VkQueue",
+            "VkDeviceMemory",
+            "VkObject",
+            "VkBuffer",
+            "VkImage",
+            "VkDescriptorSet",
+            "VkDescriptorPool",
+            "VkCmdBuffer",
+            "VkSemaphore"
+        ]
         ret_val = ''
         stmt = ''
         funcs = []
@@ -1414,19 +1425,39 @@ class ThreadingSubcommand(Subcommand):
                      '        return VK_SUCCESS;\n'
                      '    }\n'
                      '}' % (qual, decl, proto.params[0].name, self.layer_name, ret_val, proto.c_call(), stmt, self.layer_name))
+            return "\n".join(funcs)
+        # Memory range calls are special in needed thread checking within structs
+        if proto.name in ["FlushMappedMemoryRanges","InvalidateMappedMemoryRanges"]:
+            funcs.append('%s%s\n'
+                     '{\n'
+                     '    for (int i=0; i<memRangeCount; i++) {\n'
+                     '        useObject((VkObject) pMemRanges[i].mem, "VkDeviceMemory");\n'
+                     '    }\n'
+                     '    %snextTable.%s;\n'
+                     '    for (int i=0; i<memRangeCount; i++) {\n'
+                     '        finishUsingObject((VkObject) pMemRanges[i].mem);\n'
+                     '    }\n'
+                     '%s'
+                     '}' % (qual, decl, ret_val, proto.c_call(), stmt))
+            return "\n".join(funcs)
         # All functions that do a Get are thread safe
-        elif 'Get' in proto.name:
+        if 'Get' in proto.name:
             return None
-        # All Wsi functions are thread safe
-        elif 'WsiX11' in proto.name:
+        # All WSI functions are thread safe
+        if 'WSI' in proto.name:
             return None
-        # All functions that start with a device parameter are thread safe
-        elif proto.params[0].ty in { "VkDevice" }:
-            return None
-        # Only watch core objects passed as first parameter
-        elif proto.params[0].ty not in vulkan.core.objects:
-            return None
-        elif proto.params[0].ty != "VkPhysicalDevice":
+        # Initialize in early calls
+        if proto.params[0].ty == "VkPhysicalDevice":
+            funcs.append('%s%s\n'
+                     '{\n'
+                     '    pCurObj = (VkBaseLayerObject *) %s;\n'
+                     '    loader_platform_thread_once(&tabOnce, init%s);\n'
+                     '    %snextTable.%s;\n'
+                     '%s'
+                     '}' % (qual, decl, proto.params[0].name, self.layer_name, ret_val, proto.c_call(), stmt))
+            return "\n".join(funcs)
+        # Functions changing command buffers need thread safe use of first parameter
+        if proto.params[0].ty == "VkCmdBuffer":
             funcs.append('%s%s\n'
                      '{\n'
                      '    useObject((VkObject) %s, "%s");\n'
@@ -1434,15 +1465,28 @@ class ThreadingSubcommand(Subcommand):
                      '    finishUsingObject((VkObject) %s);\n'
                      '%s'
                      '}' % (qual, decl, proto.params[0].name, proto.params[0].ty, ret_val, proto.c_call(), proto.params[0].name, stmt))
-        else:
-            funcs.append('%s%s\n'
-                     '{\n'
-                     '    pCurObj =  (VkBaseLayerObject *) %s;\n'
-                     '    loader_platform_thread_once(&tabOnce, init%s);\n'
-                     '    %snextTable.%s;\n'
-                     '%s'
-                     '}' % (qual, decl, proto.params[0].name, self.layer_name, ret_val, proto.c_call(), stmt))
-        return "\n\n".join(funcs)
+            return "\n".join(funcs)
+        # Non-Cmd functions that do a Wait are thread safe
+        if 'Wait' in proto.name:
+            return None
+        # Watch use of certain types of objects passed as any parameter
+        checked_params = []
+        for param in proto.params:
+            if param.ty in thread_check_objects:
+                checked_params.append(param)
+        if len(checked_params) == 0:
+            return None
+        # Surround call with useObject and finishUsingObject for each checked_param
+        funcs.append('%s%s' % (qual, decl))
+        funcs.append('{')
+        for param in checked_params:
+            funcs.append('    useObject((VkObject) %s, "%s");' % (param.name, param.ty))
+        funcs.append('    %snextTable.%s;' % (ret_val, proto.c_call()))
+        for param in checked_params:
+            funcs.append('    finishUsingObject((VkObject) %s);' % param.name)
+        funcs.append('%s'
+                 '}' % stmt)
+        return "\n".join(funcs)
 
     def generate_body(self):
         self.layer_name = "Threading"
