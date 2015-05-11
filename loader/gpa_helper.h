@@ -90,12 +90,12 @@ static inline void* globalGetProcAddr(const char *name)
         return (void*) vkDestroyObject;
     if (!strcmp(name, "GetObjectInfo"))
         return (void*) vkGetObjectInfo;
-    if (!strcmp(name, "QueueBindObjectMemory"))
-        return (void*) vkQueueBindObjectMemory;
-    if (!strcmp(name, "QueueBindObjectMemoryRange"))
-        return (void*) vkQueueBindObjectMemoryRange;
-    if (!strcmp(name, "QueueBindImageMemoryRange"))
-        return (void*) vkQueueBindImageMemoryRange;
+    if (!strcmp(name, "BindObjectMemory"))
+        return (void*) vkBindObjectMemory;
+    if (!strcmp(name, "QueueBindSparseBufferMemory"))
+        return (void*) vkQueueBindSparseBufferMemory;
+    if (!strcmp(name, "QueueBindSparseImageMemory"))
+        return (void*) vkQueueBindSparseImageMemory;
     if (!strcmp(name, "CreateFence"))
         return (void*) vkCreateFence;
     if (!strcmp(name, "ResetFences"))

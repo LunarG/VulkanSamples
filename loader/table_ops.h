@@ -61,9 +61,9 @@ static inline void loader_initialize_dispatch_table(VkLayerDispatchTable *table,
     table->OpenPeerImage = (PFN_vkOpenPeerImage) gpa(gpu, "vkOpenPeerImage");
     table->DestroyObject = (PFN_vkDestroyObject) gpa(gpu, "vkDestroyObject");
     table->GetObjectInfo = (PFN_vkGetObjectInfo) gpa(gpu, "vkGetObjectInfo");
-    table->QueueBindObjectMemory = (PFN_vkQueueBindObjectMemory) gpa(gpu, "vkQueueBindObjectMemory");
-    table->QueueBindObjectMemoryRange = (PFN_vkQueueBindObjectMemoryRange) gpa(gpu, "vkQueueBindObjectMemoryRange");
-    table->QueueBindImageMemoryRange = (PFN_vkQueueBindImageMemoryRange) gpa(gpu, "vkQueueBindImageMemoryRange");
+    table->BindObjectMemory = (PFN_vkBindObjectMemory) gpa(gpu, "vkBindObjectMemory");
+    table->QueueBindSparseBufferMemory = (PFN_vkQueueBindSparseBufferMemory) gpa(gpu, "vkQueueBindSparseBufferMemory");
+    table->QueueBindSparseImageMemory = (PFN_vkQueueBindSparseImageMemory) gpa(gpu, "vkQueueBindSparseImageMemory");
     table->CreateFence = (PFN_vkCreateFence) gpa(gpu, "vkCreateFence");
     table->ResetFences = (PFN_vkResetFences) gpa(gpu, "vkResetFences");
     table->GetFenceStatus = (PFN_vkGetFenceStatus) gpa(gpu, "vkGetFenceStatus");
@@ -226,12 +226,12 @@ static inline void *loader_lookup_dispatch_table(const VkLayerDispatchTable *tab
         return (void *) table->DestroyObject;
     if (!strcmp(name, "GetObjectInfo"))
         return (void *) table->GetObjectInfo;
-    if (!strcmp(name, "QueueBindObjectMemory"))
-        return (void *) table->QueueBindObjectMemory;
-    if (!strcmp(name, "QueueBindObjectMemoryRange"))
-        return (void *) table->QueueBindObjectMemoryRange;
-    if (!strcmp(name, "QueueBindImageMemoryRange"))
-        return (void *) table->QueueBindImageMemoryRange;
+    if (!strcmp(name, "BindObjectMemory"))
+        return (void *) table->BindObjectMemory;
+    if (!strcmp(name, "QueueBindSparseBufferMemory"))
+        return (void *) table->QueueBindSparseBufferMemory;
+    if (!strcmp(name, "QueueBindSparseImageMemory"))
+        return (void *) table->QueueBindSparseImageMemory;
     if (!strcmp(name, "CreateFence"))
         return (void *) table->CreateFence;
     if (!strcmp(name, "ResetFences"))

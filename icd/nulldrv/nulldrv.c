@@ -1517,7 +1517,7 @@ ICD_EXPORT VkResult VKAPI vkGetPhysicalDeviceInfo(
         if (pData == NULL) {
             return ret;
         }
-        props->queueFlags = VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_MEMMGR_BIT;
+        props->queueFlags = VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_SPARSE_MEMMGR_BIT;
         props->queueCount = 1;
         props->maxAtomicCounters = 1;
         props->supportsTimestamps = false;
@@ -1868,8 +1868,8 @@ ICD_EXPORT VkResult VKAPI vkGetObjectInfo(
     return base->get_info(base, infoType, pDataSize, pData);
 }
 
-ICD_EXPORT VkResult VKAPI vkQueueBindObjectMemory(
-    VkQueue                                     queue,
+ICD_EXPORT VkResult VKAPI vkBindObjectMemory(
+    VkDevice                                    device,
     VkObjectType                                objType,
     VkObject                                    object,
     uint32_t                                    allocationIdx,
@@ -1880,10 +1880,9 @@ ICD_EXPORT VkResult VKAPI vkQueueBindObjectMemory(
     return VK_SUCCESS;
 }
 
-ICD_EXPORT VkResult VKAPI vkQueueBindObjectMemoryRange(
+ICD_EXPORT VkResult VKAPI vkQueueBindSparseBufferMemory(
     VkQueue                                     queue,
-    VkObjectType                                objType,
-    VkObject                                    object,
+    VkBuffer                                    buffer,
     uint32_t                                    allocationIdx,
     VkDeviceSize                                rangeOffset,
     VkDeviceSize                                rangeSize,
@@ -1894,7 +1893,7 @@ ICD_EXPORT VkResult VKAPI vkQueueBindObjectMemoryRange(
     return VK_SUCCESS;
 }
 
-ICD_EXPORT VkResult VKAPI vkQueueBindImageMemoryRange(
+ICD_EXPORT VkResult VKAPI vkQueueBindSparseImageMemory(
     VkQueue                                   queue,
     VkImage                                   image,
     uint32_t                                  allocationIdx,

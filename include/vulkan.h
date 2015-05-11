@@ -970,7 +970,7 @@ typedef enum VkQueueFlagBits_
     VK_QUEUE_GRAPHICS_BIT                                   = VK_BIT(0),    // Queue supports graphics operations
     VK_QUEUE_COMPUTE_BIT                                    = VK_BIT(1),    // Queue supports compute operations
     VK_QUEUE_DMA_BIT                                        = VK_BIT(2),    // Queue supports DMA operations
-    VK_QUEUE_MEMMGR_BIT                                     = VK_BIT(3),    // Queue supports memory management operations
+    VK_QUEUE_SPARSE_MEMMGR_BIT                              = VK_BIT(3),    // Queue supports sparse resource memory management operations
     VK_QUEUE_EXTENDED_BIT                                   = VK_BIT(30),   // Extended queue
 } VkQueueFlagBits;
 
@@ -1401,7 +1401,7 @@ typedef struct VkMemoryRequirements_
 {
     VkDeviceSize                                size;                       // Specified in bytes
     VkDeviceSize                                alignment;                  // Specified in bytes
-    VkDeviceSize                                granularity;                // Granularity on which vkQueueBindObjectMemoryRange can bind sub-ranges of memory specified in bytes (usually the page size)
+    VkDeviceSize                                granularity;                // Granularity at which memory can be bound to resource sub-ranges specified in bytes (usually the page size)
     VkMemoryPropertyFlags                       memPropsAllowed;            // Allowed memory property flags
     VkMemoryPropertyFlags                       memPropsRequired;           // Required memory property flags
 } VkMemoryRequirements;
@@ -2161,9 +2161,9 @@ typedef VkResult (VKAPI *PFN_vkOpenPeerMemory)(VkDevice device, const VkPeerMemo
 typedef VkResult (VKAPI *PFN_vkOpenPeerImage)(VkDevice device, const VkPeerImageOpenInfo* pOpenInfo, VkImage* pImage, VkDeviceMemory* pMem);
 typedef VkResult (VKAPI *PFN_vkDestroyObject)(VkDevice device, VkObjectType objType, VkObject object);
 typedef VkResult (VKAPI *PFN_vkGetObjectInfo)(VkDevice device, VkObjectType objType, VkObject object, VkObjectInfoType infoType, size_t* pDataSize, void* pData);
-typedef VkResult (VKAPI *PFN_vkQueueBindObjectMemory)(VkQueue queue, VkObjectType objType, VkObject object, uint32_t allocationIdx, VkDeviceMemory mem, VkDeviceSize offset);
-typedef VkResult (VKAPI *PFN_vkQueueBindObjectMemoryRange)(VkQueue queue, VkObjectType objType, VkObject object, uint32_t allocationIdx, VkDeviceSize rangeOffset, VkDeviceSize rangeSize, VkDeviceMemory mem, VkDeviceSize memOffset);
-typedef VkResult (VKAPI *PFN_vkQueueBindImageMemoryRange)(VkQueue queue, VkImage image, uint32_t allocationIdx, const VkImageMemoryBindInfo* pBindInfo, VkDeviceMemory mem, VkDeviceSize memOffset);
+typedef VkResult (VKAPI *PFN_vkBindObjectMemory)(VkDevice device, VkObjectType objType, VkObject object, uint32_t allocationIdx, VkDeviceMemory mem, VkDeviceSize offset);
+typedef VkResult (VKAPI *PFN_vkQueueBindSparseBufferMemory)(VkQueue queue, VkBuffer buffer, uint32_t allocationIdx, VkDeviceSize rangeOffset, VkDeviceSize rangeSize, VkDeviceMemory mem, VkDeviceSize memOffset);
+typedef VkResult (VKAPI *PFN_vkQueueBindSparseImageMemory)(VkQueue queue, VkImage image, uint32_t allocationIdx, const VkImageMemoryBindInfo* pBindInfo, VkDeviceMemory mem, VkDeviceSize memOffset);
 typedef VkResult (VKAPI *PFN_vkCreateFence)(VkDevice device, const VkFenceCreateInfo* pCreateInfo, VkFence* pFence);
 typedef VkResult (VKAPI *PFN_vkResetFences)(VkDevice device, uint32_t fenceCount, VkFence* pFences);
 typedef VkResult (VKAPI *PFN_vkGetFenceStatus)(VkDevice device, VkFence fence);
@@ -2420,25 +2420,24 @@ VkResult VKAPI vkGetObjectInfo(
 
 // Memory management API functions
 
-VkResult VKAPI vkQueueBindObjectMemory(
-    VkQueue                                     queue,
+VkResult VKAPI vkBindObjectMemory(
+    VkDevice                                    device,
     VkObjectType                                objType,
     VkObject                                    object,
     uint32_t                                    allocationIdx,
     VkDeviceMemory                              mem,
     VkDeviceSize                                memOffset);
 
-VkResult VKAPI vkQueueBindObjectMemoryRange(
+VkResult VKAPI vkQueueBindSparseBufferMemory(
     VkQueue                                     queue,
-    VkObjectType                                objType,
-    VkObject                                    object,
+    VkBuffer                                    buffer,
     uint32_t                                    allocationIdx,
     VkDeviceSize                                rangeOffset,
     VkDeviceSize                                rangeSize,
     VkDeviceMemory                              mem,
     VkDeviceSize                                memOffset);
 
-VkResult VKAPI vkQueueBindImageMemoryRange(
+VkResult VKAPI vkQueueBindSparseImageMemory(
     VkQueue                                     queue,
     VkImage                                     image,
     uint32_t                                    allocationIdx,

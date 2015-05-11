@@ -261,7 +261,7 @@ TEST_F(XglTest, Event) {
     ASSERT_VK_SUCCESS(err);
 
     VkQueue queue = m_device->graphics_queues()[0]->obj();
-    err = vkQueueBindObjectMemory(queue, VK_OBJECT_TYPE_EVENT, event, 0, event_mem, 0);
+    err = vkBindObjectMemory(device(), VK_OBJECT_TYPE_EVENT, event, 0, event_mem, 0);
     ASSERT_VK_SUCCESS(err);
 
     err = vkResetEvent(device(), event);
@@ -279,7 +279,7 @@ TEST_F(XglTest, Event) {
     // TODO: Test actual synchronization with command buffer event.
 
     // All done with event memory, clean up
-    err = vkQueueBindObjectMemory(queue, VK_OBJECT_TYPE_EVENT, event, 0, VK_NULL_HANDLE, 0);
+    err = vkBindObjectMemory(device(), VK_OBJECT_TYPE_EVENT, event, 0, VK_NULL_HANDLE, 0);
     ASSERT_VK_SUCCESS(err);
 
     err = vkDestroyObject(device(), VK_OBJECT_TYPE_EVENT, event);
@@ -353,7 +353,7 @@ TEST_F(XglTest, Query) {
     ASSERT_VK_SUCCESS(err);
 
     VkQueue queue = m_device->graphics_queues()[0]->obj();
-    err = vkQueueBindObjectMemory(queue, VK_OBJECT_TYPE_QUERY_POOL, query_pool, 0, query_mem, 0);
+    err = vkBindObjectMemory(device(), VK_OBJECT_TYPE_QUERY_POOL, query_pool, 0, query_mem, 0);
     ASSERT_VK_SUCCESS(err);
 
     // TODO: Test actual synchronization with command buffer event.
@@ -378,7 +378,7 @@ TEST_F(XglTest, Query) {
     }
 
     // All done with QueryPool memory, clean up
-    err = vkQueueBindObjectMemory(queue, VK_OBJECT_TYPE_QUERY_POOL, query_pool, 0, VK_NULL_HANDLE, 0);
+    err = vkBindObjectMemory(device(), VK_OBJECT_TYPE_QUERY_POOL, query_pool, 0, VK_NULL_HANDLE, 0);
     ASSERT_VK_SUCCESS(err);
 
     err = vkDestroyObject(device(), VK_OBJECT_TYPE_QUERY_POOL, query_pool);
@@ -433,7 +433,7 @@ void print_queue_info(vk_testing::Device *device, uint32_t queue_node_index)
 //                    VK_QUEUE_GRAPHICS_BIT                                  = 0x00000001,   // Queue supports graphics operations
 //                    VK_QUEUE_COMPUTE_BIT                                   = 0x00000002,   // Queue supports compute operations
 //                    VK_QUEUE_DMA_BIT                                       = 0x00000004,   // Queue supports DMA operations
-//                    VK_QUEUE_MEMMGR_BIT                                    = 0x00000008,   // Queue supports MEMMGR operations
+//                    VK_QUEUE_SPARSE_MEMMGR_BIT                             = 0x00000008,   // Queue supports sparse resource memory management operations
 //                    VK_QUEUE_EXTENDED_BIT                                  = 0x80000000    // Extended queue
 //                } VkQueueFlags;
 
@@ -621,7 +621,7 @@ void XglTest::CreateImageTest()
     ASSERT_VK_SUCCESS(err);
 
     VkQueue queue = m_device->graphics_queues()[0]->obj();
-    err = vkQueueBindObjectMemory(queue, VK_OBJECT_TYPE_IMAGE, image, 0, image_mem, 0);
+    err = vkBindObjectMemory(device(), VK_OBJECT_TYPE_IMAGE, image, 0, image_mem, 0);
     ASSERT_VK_SUCCESS(err);
 
 //    typedef struct VkImageViewCreateInfo_
@@ -664,7 +664,7 @@ void XglTest::CreateImageTest()
     // TODO: Test image memory.
 
     // All done with image memory, clean up
-    ASSERT_VK_SUCCESS(vkQueueBindObjectMemory(queue, VK_OBJECT_TYPE_IMAGE, image, 0, VK_NULL_HANDLE, 0));
+    ASSERT_VK_SUCCESS(vkBindObjectMemory(device(), VK_OBJECT_TYPE_IMAGE, image, 0, VK_NULL_HANDLE, 0));
 
     ASSERT_VK_SUCCESS(vkFreeMemory(device(), image_mem));
 

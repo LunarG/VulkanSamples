@@ -1115,11 +1115,11 @@ class ObjectTrackerSubcommand(Subcommand):
         header_txt.append('    }')
         header_txt.append('    if (pQueueInfo != NULL) {')
         header_txt.append('        char str[1024];\n')
-        header_txt.append('        if ((queueInfo != NULL) && (queueInfo[pQueueInfo->queueNodeIndex].queueFlags & VK_QUEUE_MEMMGR_BIT) == 0) {')
-        header_txt.append('            sprintf(str, "Attempting %s on a non-memory-management capable queue -- VK_QUEUE_MEMMGR_BIT not set", function);')
+        header_txt.append('        if ((queueInfo != NULL) && (queueInfo[pQueueInfo->queueNodeIndex].queueFlags & VK_QUEUE_SPARSE_MEMMGR_BIT) == 0) {')
+        header_txt.append('            sprintf(str, "Attempting %s on a non-memory-management capable queue -- VK_QUEUE_SPARSE_MEMMGR_BIT not set", function);')
         header_txt.append('            layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, queue, 0, OBJTRACK_UNKNOWN_OBJECT, "OBJTRACK", str);')
         header_txt.append('        } else {')
-        header_txt.append('            sprintf(str, "Attempting %s on a possibly non-memory-management capable queue -- VK_QUEUE_MEMMGR_BIT not known", function);')
+        header_txt.append('            sprintf(str, "Attempting %s on a possibly non-memory-management capable queue -- VK_QUEUE_SPARSE_MEMMGR_BIT not known", function);')
         header_txt.append('            layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, queue, 0, OBJTRACK_UNKNOWN_OBJECT, "OBJTRACK", str);')
         header_txt.append('        }')
         header_txt.append('    }')
@@ -1184,18 +1184,13 @@ class ObjectTrackerSubcommand(Subcommand):
             using_line += '    // validate_memory_mapping_status(pMemRefs, memRefCount);\n'
             using_line += '    // validate_mem_ref_count(memRefCount);\n'
             using_line += '    loader_platform_thread_unlock_mutex(&objLock);\n'
-        elif 'QueueBindObjectMemoryRange' in proto.name:
+        elif 'QueueBindSparse' in proto.name:
             using_line  = '    loader_platform_thread_lock_mutex(&objLock);\n'
-            using_line += '    validateObjectType("vk%s", objType, object);\n' % (proto.name)
             using_line += '    validateQueueFlags(queue, "%s");\n' % (proto.name)
             using_line += '    loader_platform_thread_unlock_mutex(&objLock);\n'
         elif 'QueueBindObject' in proto.name:
             using_line  = '    loader_platform_thread_lock_mutex(&objLock);\n'
             using_line += '    validateObjectType("vk%s", objType, object);\n' % (proto.name)
-            using_line += '    loader_platform_thread_unlock_mutex(&objLock);\n'
-        elif 'QueueBindImage' in proto.name:
-            using_line  = '    loader_platform_thread_lock_mutex(&objLock);\n'
-            using_line += '    validateQueueFlags(queue, "%s");\n' % (proto.name)
             using_line += '    loader_platform_thread_unlock_mutex(&objLock);\n'
         elif 'GetObjectInfo' in proto.name:
             using_line  = '    loader_platform_thread_lock_mutex(&objLock);\n'

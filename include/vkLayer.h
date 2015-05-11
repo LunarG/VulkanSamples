@@ -55,9 +55,9 @@ typedef struct VkLayerDispatchTable_
     PFN_vkOpenPeerImage OpenPeerImage;
     PFN_vkDestroyObject DestroyObject;
     PFN_vkGetObjectInfo GetObjectInfo;
-    PFN_vkQueueBindObjectMemory QueueBindObjectMemory;
-    PFN_vkQueueBindObjectMemoryRange QueueBindObjectMemoryRange;
-    PFN_vkQueueBindImageMemoryRange QueueBindImageMemoryRange;
+    PFN_vkBindObjectMemory BindObjectMemory;
+    PFN_vkQueueBindSparseBufferMemory QueueBindSparseBufferMemory;
+    PFN_vkQueueBindSparseImageMemory QueueBindSparseImageMemory;
     PFN_vkCreateFence CreateFence;
     PFN_vkGetFenceStatus GetFenceStatus;
     PFN_vkResetFences ResetFences;

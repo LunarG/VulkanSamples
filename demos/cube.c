@@ -699,7 +699,7 @@ static void demo_prepare_depth(struct demo *demo)
         assert(!err);
 
         /* bind memory */
-        err = vkQueueBindObjectMemory(demo->queue,
+        err = vkBindObjectMemory(demo->device,
                 VK_OBJECT_TYPE_IMAGE, demo->depth.image,
                 i, demo->depth.mem[i], 0);
         assert(!err);
@@ -942,7 +942,7 @@ static void demo_prepare_texture_image(struct demo *demo,
         assert(!err);
 
         /* bind memory */
-        err = vkQueueBindObjectMemory(demo->queue,
+        err = vkBindObjectMemory(demo->device,
                 VK_OBJECT_TYPE_IMAGE, tex_obj->image,
                 j, tex_obj->mem[j], 0);
         assert(!err);
@@ -991,7 +991,7 @@ static void demo_destroy_texture_image(struct demo *demo, struct texture_object 
 {
     /* clean up staging resources */
     for (uint32_t j = 0; j < tex_objs->num_mem; j ++) {
-        vkQueueBindObjectMemory(demo->queue,
+        vkBindObjectMemory(demo->device,
                 VK_OBJECT_TYPE_IMAGE, tex_objs->image, j, VK_NULL_HANDLE, 0);
         vkFreeMemory(demo->device, tex_objs->mem[j]);
     }
@@ -1179,7 +1179,7 @@ void demo_prepare_cube_data_buffer(struct demo *demo)
         err = vkUnmapMemory(demo->device, demo->uniform_data.mem[i]);
         assert(!err);
 
-        err = vkQueueBindObjectMemory(demo->queue,
+        err = vkBindObjectMemory(demo->device,
                 VK_OBJECT_TYPE_BUFFER, demo->uniform_data.buf,
                 i, demo->uniform_data.mem[i], 0);
         assert(!err);
@@ -1953,10 +1953,9 @@ static void demo_init_vk(struct demo *demo)
 
     // Graphics queue and MemMgr queue can be separate.
     // TODO: Add support for separate queues, including synchronization,
-    //       and appropriate tracking for QueueSubmit and QueueBindObjectMemory
+    //       and appropriate tracking for QueueSubmit
     for (i = 0; i < queue_count; i++) {
-        if ((demo->queue_props[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) &&
-            (demo->queue_props[i].queueFlags & VK_QUEUE_MEMMGR_BIT)      )
+        if (demo->queue_props[i].queueFlags & VK_QUEUE_GRAPHICS_BIT)
             break;
     }
     assert(i < queue_count);
@@ -2051,7 +2050,7 @@ static void demo_cleanup(struct demo *demo)
 
     for (i = 0; i < DEMO_TEXTURE_COUNT; i++) {
         vkDestroyObject(demo->device, VK_OBJECT_TYPE_IMAGE_VIEW, demo->textures[i].view);
-        vkQueueBindObjectMemory(demo->queue, VK_OBJECT_TYPE_IMAGE, demo->textures[i].image, 0, VK_NULL_HANDLE, 0);
+        vkBindObjectMemory(demo->device, VK_OBJECT_TYPE_IMAGE, demo->textures[i].image, 0, VK_NULL_HANDLE, 0);
         vkDestroyObject(demo->device, VK_OBJECT_TYPE_IMAGE, demo->textures[i].image);
         for (j = 0; j < demo->textures[i].num_mem; j++)
             vkFreeMemory(demo->device, demo->textures[i].mem[j]);
@@ -2061,14 +2060,14 @@ static void demo_cleanup(struct demo *demo)
     vkDestroySwapChainWSI(demo->swap_chain);
 
     vkDestroyObject(demo->device, VK_OBJECT_TYPE_DEPTH_STENCIL_VIEW, demo->depth.view);
-    vkQueueBindObjectMemory(demo->queue, VK_OBJECT_TYPE_IMAGE, demo->depth.image, 0, VK_NULL_HANDLE, 0);
+    vkBindObjectMemory(demo->device, VK_OBJECT_TYPE_IMAGE, demo->depth.image, 0, VK_NULL_HANDLE, 0);
     vkDestroyObject(demo->device, VK_OBJECT_TYPE_IMAGE, demo->depth.image);
     for (j = 0; j < demo->depth.num_mem; j++) {
         vkFreeMemory(demo->device, demo->depth.mem[j]);
     }
 
     vkDestroyObject(demo->device, VK_OBJECT_TYPE_BUFFER_VIEW, demo->uniform_data.view);
-    vkQueueBindObjectMemory(demo->queue, VK_OBJECT_TYPE_BUFFER, demo->uniform_data.buf, 0, VK_NULL_HANDLE, 0);
+    vkBindObjectMemory(demo->device, VK_OBJECT_TYPE_BUFFER, demo->uniform_data.buf, 0, VK_NULL_HANDLE, 0);
     vkDestroyObject(demo->device, VK_OBJECT_TYPE_BUFFER, demo->uniform_data.buf);
     for (j = 0; j < demo->uniform_data.num_mem; j++)
         vkFreeMemory(demo->device, demo->uniform_data.mem[j]);

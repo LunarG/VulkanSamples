@@ -130,14 +130,10 @@ public:
     uint32_t memory_allocation_count() const;
     std::vector<VkMemoryRequirements> memory_requirements() const;
 
-    // vkQueueBindObjectMemory()
+    // vkBindObjectMemory()
     void bind_memory(uint32_t alloc_idx, const GpuMemory &mem, VkDeviceSize mem_offset);
     void unbind_memory(uint32_t alloc_idx);
     void unbind_memory();
-
-    // vkQueueBindObjectMemoryRange()
-    void bind_memory(uint32_t alloc_idx, VkDeviceSize offset, VkDeviceSize size,
-                     const GpuMemory &mem, VkDeviceSize mem_offset);
 
     // Unless an object is initialized with init_no_mem(), memories are
     // automatically allocated and bound.  These methods can be used to
@@ -382,6 +378,10 @@ public:
     void init(const Device &dev, const VkBufferCreateInfo &info, VkMemoryPropertyFlags &reqs);
     void init_no_mem(const Device &dev, const VkBufferCreateInfo &info);
 
+    // vkQueueBindSparseBufferMemory()
+    void bind_memory(uint32_t alloc_idx, VkDeviceSize offset, VkDeviceSize size,
+                     const GpuMemory &mem, VkDeviceSize mem_offset);
+
     static VkBufferCreateInfo create_info(VkDeviceSize size, VkFlags usage);
 
     VkBufferMemoryBarrier buffer_memory_barrier(VkFlags output_mask, VkFlags input_mask,
@@ -418,7 +418,7 @@ public:
     // vkOpenPeerImage()
     void init(const Device &dev, const VkPeerImageOpenInfo &info, const VkImageCreateInfo &original_info);
 
-    // vkQueueBindImageMemoryRange()
+    // vkQueueBindSparseImageMemory()
     void bind_memory(const Device &dev, uint32_t alloc_idx, const VkImageMemoryBindInfo &info,
                      const GpuMemory &mem, VkDeviceSize mem_offset);
 

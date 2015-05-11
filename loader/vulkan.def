@@ -55,9 +55,9 @@ EXPORTS
    vkOpenPeerImage
    vkDestroyObject
    vkGetObjectInfo
-   vkQueueBindObjectMemory
-   vkQueueBindObjectMemoryRange
-   vkQueueBindImageMemoryRange
+   vkBindObjectMemory
+   vkQueueBindSparseBufferMemory
+   vkQueueBindSparseImageMemory
    vkCreateFence
    vkResetFences
    vkGetFenceStatus

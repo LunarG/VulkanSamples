@@ -255,21 +255,13 @@ void Object::bind_memory(uint32_t alloc_idx, const GpuMemory &mem, VkDeviceSize 
 {
     bound = true;
     VkQueue queue = dev_->graphics_queues()[0]->obj();
-    EXPECT(vkQueueBindObjectMemory(queue, type(), obj(), alloc_idx, mem.obj(), mem_offset) == VK_SUCCESS);
-}
-
-void Object::bind_memory(uint32_t alloc_idx, VkDeviceSize offset, VkDeviceSize size,
-                         const GpuMemory &mem, VkDeviceSize mem_offset)
-{
-    bound = true;
-    VkQueue queue = dev_->graphics_queues()[0]->obj();
-    EXPECT(!alloc_idx && vkQueueBindObjectMemoryRange(queue, type(), obj(), 0, offset, size, mem.obj(), mem_offset) == VK_SUCCESS);
+    EXPECT(vkBindObjectMemory(dev_->obj(), type(), obj(), alloc_idx, mem.obj(), mem_offset) == VK_SUCCESS);
 }
 
 void Object::unbind_memory(uint32_t alloc_idx)
 {
     VkQueue queue = dev_->graphics_queues()[0]->obj();
-    EXPECT(vkQueueBindObjectMemory(queue, type(), obj(), alloc_idx, VK_NULL_HANDLE, 0) == VK_SUCCESS);
+    EXPECT(vkBindObjectMemory(dev_->obj(), type(), obj(), alloc_idx, VK_NULL_HANDLE, 0) == VK_SUCCESS);
 }
 
 void Object::unbind_memory()
@@ -675,6 +667,13 @@ void Buffer::init_no_mem(const Device &dev, const VkBufferCreateInfo &info)
     create_info_ = info;
 }
 
+void Buffer::bind_memory(uint32_t alloc_idx, VkDeviceSize offset, VkDeviceSize size,
+                         const GpuMemory &mem, VkDeviceSize mem_offset)
+{
+    VkQueue queue = dev_->graphics_queues()[0]->obj();
+    EXPECT(!alloc_idx && vkQueueBindSparseBufferMemory(queue, obj(), 0, offset, size, mem.obj(), mem_offset) == VK_SUCCESS);
+}
+
 void BufferView::init(const Device &dev, const VkBufferViewCreateInfo &info)
 {
     DERIVED_OBJECT_TYPE_INIT(vkCreateBufferView, dev, VK_OBJECT_TYPE_BUFFER_VIEW, &info);
@@ -727,7 +726,7 @@ void Image::bind_memory(const Device &dev, uint32_t alloc_idx, const VkImageMemo
                         const GpuMemory &mem, VkDeviceSize mem_offset)
 {
     VkQueue queue = dev.graphics_queues()[0]->obj();
-    EXPECT(!alloc_idx && vkQueueBindImageMemoryRange(queue, obj(), 0, &info, mem.obj(), mem_offset) == VK_SUCCESS);
+    EXPECT(!alloc_idx && vkQueueBindSparseImageMemory(queue, obj(), 0, &info, mem.obj(), mem_offset) == VK_SUCCESS);
 }
 
 VkSubresourceLayout Image::subresource_layout(const VkImageSubresource &subres) const

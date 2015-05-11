@@ -106,7 +106,7 @@ void VkRenderFramework::ShutdownFramework()
     }
     while (!m_renderTargets.empty()) {
         vkDestroyObject(device(), VK_OBJECT_TYPE_COLOR_ATTACHMENT_VIEW, m_renderTargets.back()->targetView());
-        vkQueueBindObjectMemory(m_device->m_queue, VK_OBJECT_TYPE_IMAGE, m_renderTargets.back()->image(), 0, VK_NULL_HANDLE, 0);
+        vkBindObjectMemory(device(), VK_OBJECT_TYPE_IMAGE, m_renderTargets.back()->image(), 0, VK_NULL_HANDLE, 0);
         vkDestroyObject(device(), VK_OBJECT_TYPE_IMAGE, m_renderTargets.back()->image());
         vkFreeMemory(device(), m_renderTargets.back()->memory());
         m_renderTargets.pop_back();
