@@ -160,12 +160,12 @@ typedef struct VkLayerInstanceDispatchTable_
 {
     PFN_vkGetInstanceProcAddr GetInstanceProcAddr;
     PFN_vkGetProcAddr GetProcAddr;
-    /* non-dispatchable PFN_vkCreateInstance CreateInstance; */
+    PFN_vkCreateInstance CreateInstance;
     PFN_vkDestroyInstance DestroyInstance;
     PFN_vkEnumeratePhysicalDevices EnumeratePhysicalDevices;
     PFN_vkGetPhysicalDeviceInfo GetPhysicalDeviceInfo;
     PFN_vkCreateDevice CreateDevice;
-    /* non-dispatchable PFN_vkGetGlobalExtensionInfo GetGlobalExtensionInfo; */
+    PFN_vkGetGlobalExtensionInfo GetGlobalExtensionInfo;
     PFN_vkGetPhysicalDeviceExtensionInfo GetPhysicalDeviceExtensionInfo;
     PFN_vkEnumerateLayers EnumerateLayers;
     PFN_vkGetMultiDeviceCompatibility GetMultiDeviceCompatibility;

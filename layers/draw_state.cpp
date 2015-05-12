@@ -2638,7 +2638,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkDbgRegisterMsgCallback(VkInstance instance, VK_
 	if (g_actionIsDefault) {
 		g_debugAction = VK_DBG_LAYER_ACTION_CALLBACK;
 	}
-    VkResult result = nextTable.DbgRegisterMsgCallback(instance, pfnMsgCallback, pUserData);
+    VkResult result = nextInstanceTable.DbgRegisterMsgCallback(instance, pfnMsgCallback, pUserData);
     return result;
 }
 
@@ -2664,7 +2664,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkDbgUnregisterMsgCallback(VkInstance instance, V
         else
             g_debugAction = (VK_LAYER_DBG_ACTION)(g_debugAction & ~((uint32_t)VK_DBG_LAYER_ACTION_CALLBACK));
     }
-    VkResult result = nextTable.DbgUnregisterMsgCallback(instance, pfnMsgCallback);
+    VkResult result = nextInstanceTable.DbgUnregisterMsgCallback(instance, pfnMsgCallback);
     return result;
 }
 

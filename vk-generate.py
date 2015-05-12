@@ -125,7 +125,7 @@ class DispatchTableOpsSubcommand(Subcommand):
                 % (" " * len(self.prefix)))
         else:
             for proto in self.protos:
-                if proto.params[0].ty != "VkInstance" and proto.params[0].ty != "VkPhysicalDevice":
+                if proto.name != "CreateInstance"  and proto.name != "GetGlobalExtensionInfo" and proto.params[0].ty != "VkInstance" and proto.params[0].ty != "VkPhysicalDevice":
                     continue
                 stmts.append("table->%s = (PFN_vk%s) gpa(instance, \"vk%s\");" %
                           (proto.name, proto.name, proto.name))

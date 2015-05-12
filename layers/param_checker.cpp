@@ -143,7 +143,7 @@ void PostCreateInstance(VkResult result, VkInstance* pInstance)
 VK_LAYER_EXPORT VkResult VKAPI vkCreateInstance(const VkInstanceCreateInfo* pCreateInfo, VkInstance* pInstance)
 {
     PreCreateInstance(pCreateInfo->pAppInfo, pCreateInfo->pAllocCb);
-    VkResult result = nextTable.CreateInstance(pCreateInfo, pInstance);
+    VkResult result = nextInstanceTable.CreateInstance(pCreateInfo, pInstance);
     PostCreateInstance(result, pInstance);
     return result;
 }
@@ -151,7 +151,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateInstance(const VkInstanceCreateInfo* pCre
 VK_LAYER_EXPORT VkResult VKAPI vkDestroyInstance(VkInstance instance)
 {
 
-    VkResult result = nextTable.DestroyInstance(instance);
+    VkResult result = nextInstanceTable.DestroyInstance(instance);
     return result;
 }
 
@@ -1864,7 +1864,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkDbgRegisterMsgCallback(VkInstance instance, VK_
     if (g_actionIsDefault) {
         g_debugAction = VK_DBG_LAYER_ACTION_CALLBACK;
     }
-    VkResult result = nextTable.DbgRegisterMsgCallback(instance, pfnMsgCallback, pUserData);
+    VkResult result = nextInstanceTable.DbgRegisterMsgCallback(instance, pfnMsgCallback, pUserData);
     return result;
 }
 
@@ -1890,7 +1890,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkDbgUnregisterMsgCallback(VkInstance instance, V
         else
             g_debugAction = (VK_LAYER_DBG_ACTION)(g_debugAction & ~((uint32_t)VK_DBG_LAYER_ACTION_CALLBACK));
     }
-    VkResult result = nextTable.DbgUnregisterMsgCallback(instance, pfnMsgCallback);
+    VkResult result = nextInstanceTable.DbgUnregisterMsgCallback(instance, pfnMsgCallback);
     return result;
 }
 
@@ -1911,7 +1911,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkDbgSetObjectTag(VkDevice device, VkObject objec
 VK_LAYER_EXPORT VkResult VKAPI vkDbgSetGlobalOption(VkInstance instance, VK_DBG_GLOBAL_OPTION dbgOption, size_t dataSize, const void* pData)
 {
 
-    VkResult result = nextTable.DbgSetGlobalOption(instance, dbgOption, dataSize, pData);
+    VkResult result = nextInstanceTable.DbgSetGlobalOption(instance, dbgOption, dataSize, pData);
     return result;
 }
 

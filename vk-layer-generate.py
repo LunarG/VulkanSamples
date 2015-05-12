@@ -170,7 +170,7 @@ class Subcommand(object):
         r_body.append('    if (g_actionIsDefault) {')
         r_body.append('        g_debugAction = VK_DBG_LAYER_ACTION_CALLBACK;')
         r_body.append('    }')
-        r_body.append('    VkResult result = nextTable.DbgRegisterMsgCallback(instance, pfnMsgCallback, pUserData);')
+        r_body.append('    VkResult result = nextInstanceTable.DbgRegisterMsgCallback(instance, pfnMsgCallback, pUserData);')
         r_body.append('    return result;')
         r_body.append('}')
         return "\n".join(r_body)
@@ -202,7 +202,7 @@ class Subcommand(object):
         ur_body.append('        else')
         ur_body.append('            g_debugAction = (VK_LAYER_DBG_ACTION)(g_debugAction & ~((uint32_t)VK_DBG_LAYER_ACTION_CALLBACK));')
         ur_body.append('    }')
-        ur_body.append('    VkResult result = nextTable.DbgUnregisterMsgCallback(instance, pfnMsgCallback);')
+        ur_body.append('    VkResult result = nextInstanceTable.DbgUnregisterMsgCallback(instance, pfnMsgCallback);')
         ur_body.append('    return result;')
         ur_body.append('}')
         return "\n".join(ur_body)
@@ -533,6 +533,10 @@ class GenericLayerSubcommand(Subcommand):
         ret_val = ''
         stmt = ''
         funcs = []
+        table = ''
+        if proto.params[0].ty == "VkInstance" or proto.name == "CreateInstance":
+           table = 'Instance'
+
         if proto.ret != "void":
             ret_val = "%s result = " % proto.ret
             stmt = "    return result;\n"
@@ -546,7 +550,7 @@ class GenericLayerSubcommand(Subcommand):
                      '        pCurObj = (VkBaseLayerObject *) gpu;\n'
                      '        loader_platform_thread_once(&initOnce, init%s);\n'
                      '        loader_platform_thread_once(&tabDeviceOnce, initDeviceTable);\n'
-                     '        %snextTable.%s;\n'
+                     '        %snext%sTable.%s;\n'
                      '        sprintf(str, "Completed layered %s\\n");\n'
                      '        layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, gpu, 0, 0, (char *) "GENERIC", (char *) str);\n'
                      '        fflush(stdout);\n'
@@ -559,13 +563,13 @@ class GenericLayerSubcommand(Subcommand):
                      '        strncpy((char *) pOutLayers[0], "%s", maxStringSize);\n'
                      '        return VK_SUCCESS;\n'
                      '    }\n'
-                     '}' % (qual, decl, proto.name, self.layer_name, ret_val, proto.c_call(), proto.name, stmt, self.layer_name))
+                     '}' % (qual, decl, proto.name, self.layer_name, ret_val, table, proto.c_call(), proto.name, stmt, self.layer_name))
         else:
             funcs.append('%s%s\n'
                      '{\n'
-                     '    %snextTable.%s;\n'
+                     '    %snext%sTable.%s;\n'
                      '%s'
-                     '}' % (qual, decl, ret_val, proto.c_call(), stmt))
+                     '}' % (qual, decl, ret_val, table, proto.c_call(), stmt))
         return "\n\n".join(funcs)
 
     def generate_body(self):
@@ -849,6 +853,10 @@ class APIDumpSubcommand(Subcommand):
                     log_func += '\n%s}' % (indent)
             indent = indent[4:]
             log_func += '\n%s}' % (indent)
+        table = ''
+        if proto.params[0].ty == "VkInstance" or proto.name == "CreateInstance":
+           table = 'Instance'
+
         if proto.name == "EnumerateLayers":
             funcs.append('%s%s\n'
                      '{\n'
@@ -857,7 +865,7 @@ class APIDumpSubcommand(Subcommand):
                      '        pCurObj = (VkBaseLayerObject *) gpu;\n'
                      '        loader_platform_thread_once(&initOnce, init%s);\n'
                      '        loader_platform_thread_once(&tabDeviceOnce, initDeviceTable);\n'
-                     '        %snextTable.%s;\n'
+                     '        %snext%sTable.%s;\n'
                      '        %s    %s    %s\n'
                      '    %s'
                      '    } else {\n'
@@ -868,15 +876,15 @@ class APIDumpSubcommand(Subcommand):
                      '        strncpy((char *) pOutLayers[0], "%s", maxStringSize);\n'
                      '        return VK_SUCCESS;\n'
                      '    }\n'
-                         '}' % (qual, decl, self.layer_name, ret_val, proto.c_call(),f_open, log_func, f_close, stmt, self.layer_name))
+                         '}' % (qual, decl, self.layer_name, ret_val, table, proto.c_call(),f_open, log_func, f_close, stmt, self.layer_name))
         else:
             funcs.append('%s%s\n'
                      '{\n'
                      '    using namespace StreamControl;\n'
-                     '    %snextTable.%s;\n'
+                     '    %snext%sTable.%s;\n'
                      '    %s%s%s\n'
                      '%s'
-                     '}' % (qual, decl, ret_val, proto.c_call(), f_open, log_func, f_close, stmt))
+                     '}' % (qual, decl, ret_val, table, proto.c_call(), f_open, log_func, f_close, stmt))
         return "\n\n".join(funcs)
 
     def generate_body(self):
@@ -1247,9 +1255,13 @@ class ObjectTrackerSubcommand(Subcommand):
             using_line += '    loader_platform_thread_unlock_mutex(&objLock);\n'
         ret_val = ''
         stmt = ''
+        table = ''
         if proto.ret != "void":
             ret_val = "%s result = " % proto.ret
             stmt = "    return result;\n"
+        if proto.params[0].ty == "VkInstance" or proto.name == "CreateInstance":
+           table = 'Instance'
+
         if proto.name == "EnumerateLayers":
             funcs.append('%s%s\n'
                      '{\n'
@@ -1257,7 +1269,7 @@ class ObjectTrackerSubcommand(Subcommand):
                      '        pCurObj = (VkBaseLayerObject *) gpu;\n'
                      '        loader_platform_thread_once(&initOnce, init%s);\n'
                      '        loader_platform_thread_once(&tabDeviceOnce, initDeviceTable);\n'
-                     '        %snextTable.%s;\n'
+                     '        %snext%sTable.%s;\n'
                      '    %s%s'
                      '    %s'
                      '    } else {\n'
@@ -1268,7 +1280,7 @@ class ObjectTrackerSubcommand(Subcommand):
                      '        strncpy((char *) pOutLayers[0], "%s", maxStringSize);\n'
                      '        return VK_SUCCESS;\n'
                      '    }\n'
-                     '}' % (qual, decl, self.layer_name, ret_val, proto.c_call(), create_line, destroy_line, stmt, self.layer_name))
+                     '}' % (qual, decl, self.layer_name, ret_val, table, proto.c_call(), create_line, destroy_line, stmt, self.layer_name))
         elif 'GetPhysicalDeviceInfo' in proto.name:
             gpu_state  = '    if (infoType == VK_PHYSICAL_DEVICE_INFO_TYPE_QUEUE_PROPERTIES) {\n'
             gpu_state += '        if (pData != NULL) {\n'
@@ -1279,19 +1291,19 @@ class ObjectTrackerSubcommand(Subcommand):
             gpu_state += '    }\n'
             funcs.append('%s%s\n'
                      '{\n'
-                     '    %snextTable.%s;\n'
+                     '    %snext%sTable.%s;\n'
                      '%s%s'
                      '%s'
                      '%s'
-                     '}' % (qual, decl, ret_val, proto.c_call(), create_line, destroy_line, gpu_state, stmt))
+                     '}' % (qual, decl, ret_val, table, proto.c_call(), create_line, destroy_line, gpu_state, stmt))
         else:
             funcs.append('%s%s\n'
                      '{\n'
                      '%s'
-                     '    %snextTable.%s;\n'
+                     '    %snext%sTable.%s;\n'
                      '%s%s'
                      '%s'
-                     '}' % (qual, decl, using_line, ret_val, proto.c_call(), create_line, destroy_line, stmt))
+                     '}' % (qual, decl, using_line, ret_val, table, proto.c_call(), create_line, destroy_line, stmt))
         return "\n\n".join(funcs)
 
     def generate_body(self):
@@ -1386,9 +1398,13 @@ class ThreadingSubcommand(Subcommand):
         ret_val = ''
         stmt = ''
         funcs = []
+        table = ''
         if proto.ret != "void":
             ret_val = "%s result = " % proto.ret
             stmt = "    return result;\n"
+        if proto.params[0].ty == "VkInstance" or proto.name == "CreateInstance":
+           table = 'Instance'
+
         if proto.name == "EnumerateLayers":
             funcs.append('%s%s\n'
                      '{\n'
@@ -1396,7 +1412,7 @@ class ThreadingSubcommand(Subcommand):
                      '        pCurObj = (VkBaseLayerObject *) %s;\n'
                      '        loader_platform_thread_once(&initOnce, init%s);\n'
                      '        loader_platform_thread_once(&tabDeviceOnce, initDeviceTable);\n'
-                     '        %snextTable.%s;\n'
+                     '        %snext%sTable.%s;\n'
                      '        fflush(stdout);\n'
                      '    %s'
                      '    } else {\n'
@@ -1407,7 +1423,7 @@ class ThreadingSubcommand(Subcommand):
                      '        strncpy((char *) pOutLayers[0], "%s", maxStringSize);\n'
                      '        return VK_SUCCESS;\n'
                      '    }\n'
-                     '}' % (qual, decl, proto.params[0].name, self.layer_name, ret_val, proto.c_call(), stmt, self.layer_name))
+                     '}' % (qual, decl, proto.params[0].name, self.layer_name, ret_val, table, proto.c_call(), stmt, self.layer_name))
             return "\n".join(funcs)
         # Memory range calls are special in needed thread checking within structs
         if proto.name in ["FlushMappedMemoryRanges","InvalidateMappedMemoryRanges"]:
@@ -1433,21 +1449,19 @@ class ThreadingSubcommand(Subcommand):
         if proto.params[0].ty == "VkPhysicalDevice":
             funcs.append('%s%s\n'
                      '{\n'
-                     '    pCurObj = (VkBaseLayerObject *) %s;\n'
-                     '    loader_platform_thread_once(&tabDeviceOnce, init%s);\n'
-                     '    %snextTable.%s;\n'
+                     '    %snext%sTable.%s;\n'
                      '%s'
-                     '}' % (qual, decl, proto.params[0].name, self.layer_name, ret_val, proto.c_call(), stmt))
+                     '}' % (qual, decl, ret_val, table, proto.c_call(), stmt))
             return "\n".join(funcs)
         # Functions changing command buffers need thread safe use of first parameter
         if proto.params[0].ty == "VkCmdBuffer":
             funcs.append('%s%s\n'
                      '{\n'
                      '    useObject((VkObject) %s, "%s");\n'
-                     '    %snextTable.%s;\n'
+                     '    %snext%sTable.%s;\n'
                      '    finishUsingObject((VkObject) %s);\n'
                      '%s'
-                     '}' % (qual, decl, proto.params[0].name, proto.params[0].ty, ret_val, proto.c_call(), proto.params[0].name, stmt))
+                     '}' % (qual, decl, proto.params[0].name, proto.params[0].ty, ret_val, table, proto.c_call(), proto.params[0].name, stmt))
             return "\n".join(funcs)
         # Non-Cmd functions that do a Wait are thread safe
         if 'Wait' in proto.name:
@@ -1464,7 +1478,7 @@ class ThreadingSubcommand(Subcommand):
         funcs.append('{')
         for param in checked_params:
             funcs.append('    useObject((VkObject) %s, "%s");' % (param.name, param.ty))
-        funcs.append('    %snextTable.%s;' % (ret_val, proto.c_call()))
+        funcs.append('    %snext%sTable.%s;' % (ret_val, table, proto.c_call()))
         for param in checked_params:
             funcs.append('    finishUsingObject((VkObject) %s);' % param.name)
         funcs.append('%s'
