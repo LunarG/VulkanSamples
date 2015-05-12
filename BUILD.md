@@ -157,6 +157,10 @@ Windows 7+ with additional, software:
   - Git (from http://git-scm.com/download/win).
   - Image Magick is used by the tests to compare images (from http://www.imagemagick.org/script/binary-releases.php)
     - Be sure to check box to "Install development headers and libraries"
+  - glslang is required for demos and tests.
+    - You can download and configure it (in a peer directory) here: https://github.com/KhronosGroup/glslang/blob/master/README.md
+    - A windows batch file has been included that will pull and build the correct version.  Run it from Developer Command Prompt for VS2013 like so:
+      - update_external_sources.bat --build-glslang
 
 ## Windows Build
 
