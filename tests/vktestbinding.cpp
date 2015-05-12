@@ -254,13 +254,11 @@ void Object::cleanup()
 void Object::bind_memory(uint32_t alloc_idx, const GpuMemory &mem, VkDeviceSize mem_offset)
 {
     bound = true;
-    VkQueue queue = dev_->graphics_queues()[0]->obj();
     EXPECT(vkBindObjectMemory(dev_->obj(), type(), obj(), alloc_idx, mem.obj(), mem_offset) == VK_SUCCESS);
 }
 
 void Object::unbind_memory(uint32_t alloc_idx)
 {
-    VkQueue queue = dev_->graphics_queues()[0]->obj();
     EXPECT(vkBindObjectMemory(dev_->obj(), type(), obj(), alloc_idx, VK_NULL_HANDLE, 0) == VK_SUCCESS);
 }
 

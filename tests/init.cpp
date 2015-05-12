@@ -260,7 +260,6 @@ TEST_F(XglTest, Event) {
     err = vkAllocMemory(device(), &mem_info, &event_mem);
     ASSERT_VK_SUCCESS(err);
 
-    VkQueue queue = m_device->graphics_queues()[0]->obj();
     err = vkBindObjectMemory(device(), VK_OBJECT_TYPE_EVENT, event, 0, event_mem, 0);
     ASSERT_VK_SUCCESS(err);
 
@@ -352,7 +351,6 @@ TEST_F(XglTest, Query) {
     err = vkAllocMemory(device(), &mem_info, &query_mem);
     ASSERT_VK_SUCCESS(err);
 
-    VkQueue queue = m_device->graphics_queues()[0]->obj();
     err = vkBindObjectMemory(device(), VK_OBJECT_TYPE_QUERY_POOL, query_pool, 0, query_mem, 0);
     ASSERT_VK_SUCCESS(err);
 
@@ -620,7 +618,6 @@ void XglTest::CreateImageTest()
     err = vkAllocMemory(device(), &mem_info, &image_mem);
     ASSERT_VK_SUCCESS(err);
 
-    VkQueue queue = m_device->graphics_queues()[0]->obj();
     err = vkBindObjectMemory(device(), VK_OBJECT_TYPE_IMAGE, image, 0, image_mem, 0);
     ASSERT_VK_SUCCESS(err);
 
