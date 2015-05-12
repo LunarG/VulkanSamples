@@ -21,7 +21,10 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
+#include <stdlib.h>
+#include <string.h>
 
+#include "loader_platform.h"
 #include "loader.h"
 
 #if defined(WIN32)
@@ -31,7 +34,78 @@
 #endif
 
 /* Trampoline entrypoints */
-LOADER_EXPORT VkResult VKAPI vkGetPhysicalDeviceInfo(VkPhysicalDevice gpu, VkPhysicalDeviceInfoType infoType, size_t* pDataSize, void* pData)
+LOADER_EXPORT VkResult VKAPI vkCreateInstance(
+                                            const VkInstanceCreateInfo* pCreateInfo,
+                                            VkInstance* pInstance)
+{
+    struct loader_instance *ptr_instance = NULL;
+
+    VkResult res = VK_ERROR_INITIALIZATION_FAILED;
+    uint32_t i;
+
+    /* Scan/discover all ICD libraries in a single-threaded manner */
+    loader_platform_thread_once(&once_icd, loader_icd_scan);
+
+    /* get layer libraries in a single-threaded manner */
+    loader_platform_thread_once(&once_layer, layer_lib_scan);
+
+    /* merge any duplicate extensions */
+    loader_platform_thread_once(&once_exts, loader_coalesce_extensions);
+
+    ptr_instance = (struct loader_instance*) malloc(sizeof(struct loader_instance));
+    if (ptr_instance == NULL) {
+        return VK_ERROR_OUT_OF_HOST_MEMORY;
+    }
+    memset(ptr_instance, 0, sizeof(struct loader_instance));
+    ptr_instance->extension_count = pCreateInfo->extensionCount;
+    ptr_instance->extension_names = (ptr_instance->extension_count > 0) ?
+                malloc(sizeof (char *) * ptr_instance->extension_count) : NULL;
+    if (ptr_instance->extension_names == NULL && (ptr_instance->extension_count > 0))
+        return VK_ERROR_OUT_OF_HOST_MEMORY;
+    for (i = 0; i < ptr_instance->extension_count; i++) {
+        if (!loader_is_extension_scanned(pCreateInfo->ppEnabledExtensionNames[i]))
+            return VK_ERROR_INVALID_EXTENSION;
+        ptr_instance->extension_names[i] = malloc(strlen(pCreateInfo->ppEnabledExtensionNames[i]) + 1);
+        if (ptr_instance->extension_names[i] == NULL)
+            return VK_ERROR_OUT_OF_HOST_MEMORY;
+        strcpy(ptr_instance->extension_names[i], pCreateInfo->ppEnabledExtensionNames[i]);
+    }
+    ptr_instance->next = loader.instances;
+    loader.instances = ptr_instance;
+    ptr_instance->disp = &instance_disp;
+    loader_activate_instance_layers(ptr_instance);
+
+    res = instance_disp.CreateInstance(pCreateInfo, (VkInstance *) ptr_instance);
+
+    *pInstance = (VkInstance) ptr_instance;
+    return res;
+}
+
+LOADER_EXPORT VkResult VKAPI vkDestroyInstance(
+                                            VkInstance instance)
+{
+    const VkLayerInstanceDispatchTable *disp;
+
+    disp = loader_get_instance_dispatch(instance);
+    return disp->DestroyInstance(instance);
+}
+LOADER_EXPORT VkResult VKAPI vkEnumeratePhysicalDevices(
+                                            VkInstance instance,
+                                            uint32_t* pPhysicalDeviceCount,
+                                            VkPhysicalDevice* pPhysicalDevices)
+{
+    const VkLayerInstanceDispatchTable *disp;
+
+    disp = loader_get_instance_dispatch(instance);
+    return disp->EnumeratePhysicalDevices(instance, pPhysicalDeviceCount,
+                                         pPhysicalDevices);
+}
+
+LOADER_EXPORT VkResult VKAPI vkGetPhysicalDeviceInfo(
+                                            VkPhysicalDevice gpu,
+                                            VkPhysicalDeviceInfoType infoType,
+                                            size_t* pDataSize,
+                                            void* pData)
 {
     const VkLayerDispatchTable *disp;
     VkResult res;
@@ -68,10 +142,23 @@ LOADER_EXPORT VkResult VKAPI vkCreateDevice(VkPhysicalDevice gpu, const VkDevice
 LOADER_EXPORT VkResult VKAPI vkDestroyDevice(VkDevice device)
 {
     const VkLayerDispatchTable *disp;
+    VkResult res;
 
     disp = loader_get_dispatch(device);
 
-    return disp->DestroyDevice(device);
+    res =  disp->DestroyDevice(device);
+    // TODO need to keep track of device objs to be able to get icd/gpu to deactivate
+    //loader_deactivate_device_layer(device);
+    return res;
+}
+
+LOADER_EXPORT VkResult VKAPI vkGetGlobalExtensionInfo(
+                                               VkExtensionInfoType infoType,
+                                               uint32_t extensionIndex,
+                                               size_t*  pDataSize,
+                                               void*    pData)
+{
+    return instance_disp.GetGlobalExtensionInfo(infoType, extensionIndex, pDataSize, pData);
 }
 
 LOADER_EXPORT VkResult VKAPI vkGetPhysicalDeviceExtensionInfo(VkPhysicalDevice gpu, VkExtensionInfoType infoType, uint32_t extensionIndex, size_t* pDataSize, void* pData)
@@ -1020,6 +1107,33 @@ LOADER_EXPORT void VKAPI vkCmdEndRenderPass(VkCmdBuffer cmdBuffer, VkRenderPass 
     disp = loader_get_dispatch(cmdBuffer);
 
     disp->CmdEndRenderPass(cmdBuffer, renderPass);
+}
+
+LOADER_EXPORT VkResult VKAPI vkDbgRegisterMsgCallback(VkInstance instance, VK_DBG_MSG_CALLBACK_FUNCTION pfnMsgCallback, void* pUserData)
+{
+   const VkLayerInstanceDispatchTable *disp;
+
+    disp = loader_get_instance_dispatch(instance);
+
+    return disp->DbgRegisterMsgCallback(instance, pfnMsgCallback, pUserData);
+}
+
+LOADER_EXPORT VkResult VKAPI vkDbgUnregisterMsgCallback(VkInstance instance, VK_DBG_MSG_CALLBACK_FUNCTION pfnMsgCallback)
+{
+   const VkLayerInstanceDispatchTable *disp;
+
+    disp = loader_get_instance_dispatch(instance);
+
+    return disp->DbgUnregisterMsgCallback(instance, pfnMsgCallback);
+}
+
+LOADER_EXPORT VkResult VKAPI vkDbgSetGlobalOption(VkInstance instance, VK_DBG_GLOBAL_OPTION dbgOption, size_t dataSize, const void* pData)
+{
+   const VkLayerInstanceDispatchTable *disp;
+
+    disp = loader_get_instance_dispatch(instance);
+
+    return disp->DbgSetGlobalOption(instance, dbgOption, dataSize, pData);
 }
 
 LOADER_EXPORT VkResult VKAPI vkDbgSetValidationLevel(VkDevice device, VkValidationLevel validationLevel)

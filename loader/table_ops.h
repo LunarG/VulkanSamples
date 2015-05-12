@@ -25,13 +25,14 @@
 #include <vulkan.h>
 #include <vkLayer.h>
 #include <string.h>
+#include "loader.h"
 #include "loader_platform.h"
 
 static inline void loader_init_device_dispatch_table(VkLayerDispatchTable *table,
                                                     PFN_vkGetProcAddr gpa,
                                                     VkPhysicalDevice gpu)
 {
-    table->CreateInstance = (PFN_vkCreateInstance) gpa(gpu, "vkCreateInstance");
+    table->CreateInstance = vkCreateInstance; /* non-dispatchable */
     table->DestroyInstance = (PFN_vkDestroyInstance) gpa(gpu, "vkDestroyInstance");
     table->EnumeratePhysicalDevices = (PFN_vkEnumeratePhysicalDevices) gpa(gpu, "vkEnumeratePhysicalDevices");
     table->GetPhysicalDeviceInfo = (PFN_vkGetPhysicalDeviceInfo) gpa(gpu, "vkGetPhysicalDeviceInfo");
@@ -161,8 +162,9 @@ static inline void loader_init_device_dispatch_table(VkLayerDispatchTable *table
     table->QueuePresentWSI = (PFN_vkQueuePresentWSI) gpa(gpu, "vkQueuePresentWSI");
 }
 
-static inline void *loader_lookup_dispatch_table(const VkLayerDispatchTable *table,
-                                                 const char *name)
+static inline void *loader_lookup_device_dispatch_table(
+                                            const VkLayerDispatchTable *table,
+                                            const char *name)
 {
     if (!name || name[0] != 'v' || name[1] != 'k')
         return NULL;
@@ -424,18 +426,62 @@ static inline void *loader_lookup_dispatch_table(const VkLayerDispatchTable *tab
     return NULL;
 }
 
-static inline void loader_init_instance_dispatch_table(VkLayerInstanceDispatchTable *table)
+static inline void loader_init_instance_dispatch_table(VkLayerInstanceDispatchTable *table,
+                                                PFN_vkGetInstanceProcAddr gpa,
+                                                VkInstance inst)
 {
-    table->DestroyInstance = vkDestroyInstance;
-    table->EnumeratePhysicalDevices = vkEnumeratePhysicalDevices;
-    table->GetPhysicalDeviceInfo = vkGetPhysicalDeviceInfo;
-    table->GetInstanceProcAddr = vkGetInstanceProcAddr;
-    table->GetProcAddr = vkGetProcAddr;
-    table->CreateDevice = vkCreateDevice;
-    table->GetPhysicalDeviceExtensionInfo = vkGetPhysicalDeviceExtensionInfo;
-    table->EnumerateLayers = vkEnumerateLayers;
-    table->GetMultiDeviceCompatibility = vkGetMultiDeviceCompatibility;
-    table->DbgRegisterMsgCallback = vkDbgRegisterMsgCallback;
-    table->DbgUnregisterMsgCallback = vkDbgUnregisterMsgCallback;
-    table->DbgSetGlobalOption = vkDbgSetGlobalOption;
+    table->CreateInstance = (PFN_vkCreateInstance) gpa(inst, "vkCreateInstance");
+    table->DestroyInstance = (PFN_vkDestroyInstance) gpa(inst, "vkDestroyInstance");
+    table->EnumeratePhysicalDevices = (PFN_vkEnumeratePhysicalDevices) gpa(inst, "vkEnumeratePhysicalDevices");
+    table->GetPhysicalDeviceInfo = (PFN_vkGetPhysicalDeviceInfo) gpa(inst, "vkGetPhysicalDeviceInfo");
+    table->GetInstanceProcAddr = (PFN_vkGetInstanceProcAddr) gpa(inst, "vkGetInstanceProcAddr");
+    table->GetProcAddr = (PFN_vkGetProcAddr) gpa(inst, "vkGetProcAddr");
+    table->CreateDevice = (PFN_vkCreateDevice) gpa(inst, "vkCreateDevice");
+    table->GetGlobalExtensionInfo = (PFN_vkGetGlobalExtensionInfo) gpa(inst,"vkGetGlobalExtensionInfo");
+    table->GetPhysicalDeviceExtensionInfo = (PFN_vkGetPhysicalDeviceExtensionInfo) gpa(inst, "vkGetPhysicalDeviceExtensionInfo");
+    table->EnumerateLayers = (PFN_vkEnumerateLayers) gpa(inst, "vkEnumerateLayers");
+    table->GetMultiDeviceCompatibility = (PFN_vkGetMultiDeviceCompatibility) gpa(inst, "vkGetMultiDeviceCompatibility");
+    table->DbgRegisterMsgCallback = (PFN_vkDbgRegisterMsgCallback) gpa(inst, "vkDbgRegisterMsgCallback");
+    table->DbgUnregisterMsgCallback = (PFN_vkDbgUnregisterMsgCallback) gpa(inst, "vkDbgUnregisterMsgCallback");
+    table->DbgSetGlobalOption = (PFN_vkDbgSetGlobalOption) gpa(inst, "vkDbgSetGlobalOption");
+}
+
+static inline void *loader_lookup_instance_dispatch_table(
+                                        const VkLayerInstanceDispatchTable *table,
+                                        const char *name)
+{
+    if (!name || name[0] != 'v' || name[1] != 'k')
+        return NULL;
+
+    name += 2;
+    if (!strcmp(name, "CreateInstance"))
+        return (void *) table->CreateInstance;
+    if (!strcmp(name, "DestroyInstance"))
+        return (void *) table->DestroyInstance;
+    if (!strcmp(name, "EnumeratePhysicalDevices"))
+        return (void *) table->EnumeratePhysicalDevices;
+    if (!strcmp(name, "GetPhysicalDeviceInfo"))
+        return (void *) table->GetPhysicalDeviceInfo;
+    if (!strcmp(name, "GetInstanceProcAddr"))
+        return (void *) table->GetInstanceProcAddr;
+    if (!strcmp(name, "GetProcAddr"))
+        return (void *) table->GetProcAddr;
+    if (!strcmp(name, "CreateDevice"))
+        return (void *) table->CreateDevice;
+    if (!strcmp(name, "GetGlobalExtensionInfo"))
+        return (void *) table->GetGlobalExtensionInfo;
+    if (!strcmp(name, "GetPhysicalDeviceExtensionInfo"))
+        return (void *) table->GetPhysicalDeviceExtensionInfo;
+    if (!strcmp(name, "EnumerateLayers"))
+        return (void *) table->EnumerateLayers;
+    if (!strcmp(name, "GetMultiDeviceCompatibility"))
+        return (void *) table->GetMultiDeviceCompatibility;
+    if (!strcmp(name, "DbgRegisterMsgCallback"))
+        return (void *) table->DbgRegisterMsgCallback;
+    if (!strcmp(name, "DbgUnregisterMsgCallback"))
+        return (void *) table->DbgUnregisterMsgCallback;
+    if (!strcmp(name, "DbgSetGlobalOption"))
+        return (void *) table->DbgSetGlobalOption;
+
+    return NULL;
 }

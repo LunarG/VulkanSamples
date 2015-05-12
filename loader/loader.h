@@ -43,6 +43,45 @@
 #  define LOADER_EXPORT
 #endif
 
+#define MAX_LAYER_LIBRARIES 64
+#define MAX_GPUS_FOR_LAYER 16
+
+struct loader_scanned_layers {
+    char *name;
+    uint32_t extension_count;
+    struct extension_property *extensions;
+};
+
+struct loader_layers {
+    loader_platform_dl_handle lib_handle;
+    char name[256];
+};
+
+struct loader_instance {
+    VkLayerInstanceDispatchTable *disp;
+    uint32_t layer_count;
+    struct loader_layers layer_libs[MAX_LAYER_LIBRARIES];
+    VkBaseLayerObject *wrappedInstance;
+    uint32_t total_gpu_count;
+    struct loader_icd *icds;
+    struct loader_instance *next;
+    uint32_t  extension_count;
+    char **extension_names;
+};
+
+struct loader_struct {
+    struct loader_instance *instances;
+    bool icds_scanned;
+    struct loader_scanned_icds *scanned_icd_list;
+    bool layer_scanned;
+    char *layer_dirs;
+    unsigned int scanned_layer_count;
+    struct loader_scanned_layers scanned_layers[MAX_LAYER_LIBRARIES];
+    size_t scanned_ext_list_capacity;
+    uint32_t scanned_ext_list_count;      // coalesced from all layers/drivers
+    struct extension_property **scanned_ext_list;
+};
+
 static inline void loader_set_dispatch(VkObject obj, const void *data)
 {
     *((const void **) obj) = data;
@@ -51,6 +90,11 @@ static inline void loader_set_dispatch(VkObject obj, const void *data)
 static inline VkLayerDispatchTable *loader_get_dispatch(const VkObject obj)
 {
     return *((VkLayerDispatchTable **) obj);
+}
+
+static inline VkLayerInstanceDispatchTable *loader_get_instance_dispatch(const VkObject obj)
+{
+    return *((VkLayerInstanceDispatchTable **) obj);
 }
 
 static inline void loader_init_dispatch(VkObject obj, const void *data)
@@ -63,17 +107,51 @@ static inline void loader_init_dispatch(VkObject obj, const void *data)
     loader_set_dispatch(obj, data);
 }
 
-struct loader_instance {
-    VkLayerInstanceDispatchTable disp;
-    uint32_t total_gpu_count;
-    struct loader_icd *icds;
-    struct loader_instance *next;
-    uint32_t  extension_count;
-    char **extension_names;
-};
+/* global variables used across files */
+extern struct loader_struct loader;
+extern LOADER_PLATFORM_THREAD_ONCE_DEFINITION(once_icd);
+extern LOADER_PLATFORM_THREAD_ONCE_DEFINITION(once_layer);
+extern LOADER_PLATFORM_THREAD_ONCE_DEFINITION(once_exts);
+extern VkLayerInstanceDispatchTable instance_disp;
 
-extern uint32_t loader_activate_layers(struct loader_icd *icd, uint32_t gpu_index, uint32_t ext_count, const char *const* ext_names);
-#define MAX_LAYER_LIBRARIES 64
-#define MAX_GPUS_FOR_LAYER 16
+/* instance layer chain termination entrypoint definitions */
+VkResult loader_CreateInstance(
+        const VkInstanceCreateInfo*             pCreateInfo,
+        VkInstance*                             pInstance);
 
+VkResult loader_DestroyInstance(
+        VkInstance                              instance);
+
+VkResult loader_EnumeratePhysicalDevices(
+        VkInstance                              instance,
+        uint32_t*                               pPhysicalDeviceCount,
+        VkPhysicalDevice*                       pPhysicalDevices);
+
+VkResult VKAPI loader_GetGlobalExtensionInfo(
+        VkExtensionInfoType                     infoType,
+        uint32_t                                extensionIndex,
+        size_t*                                 pDataSize,
+        void*                                   pData);
+
+VkResult loader_DbgRegisterMsgCallback(
+        VkInstance                              instance,
+        VK_DBG_MSG_CALLBACK_FUNCTION            pfnMsgCallback,
+        void*                                   pUserData);
+
+VkResult loader_DbgUnregisterMsgCallback(
+        VkInstance                              instance,
+        VK_DBG_MSG_CALLBACK_FUNCTION            pfnMsgCallback);
+
+VkResult loader_DbgSetGlobalOption(
+        VkInstance                              instance,
+        VK_DBG_GLOBAL_OPTION                    dbgOption,
+        size_t                                  dataSize,
+        const void*                             pData);
+
+/* function definitions */
+bool loader_is_extension_scanned(const char *name);
+void loader_icd_scan(void);
+void layer_lib_scan(void);
+void loader_coalesce_extensions(void);
+uint32_t loader_activate_instance_layers(struct loader_instance *inst);
 #endif /* LOADER_H */

@@ -41,18 +41,13 @@
 #include <dirent.h>
 #endif // WIN32
 #include "loader_platform.h"
-#include "table_ops.h"
-#include "gpa_helper.h"
 #include "loader.h"
+#include "gpa_helper.h"
+#include "table_ops.h"
 #include "vkIcd.h"
 // The following is #included again to catch certain OS-specific functions
 // being used:
 #include "loader_platform.h"
-
-struct loader_layers {
-    loader_platform_dl_handle lib_handle;
-    char name[256];
-};
 
 struct layer_name_pair {
     char *layer_name;
@@ -93,29 +88,28 @@ struct loader_scanned_icds {
     struct extension_property *extensions;
 };
 
-struct loader_scanned_layers {
-    char *name;
-    uint32_t extension_count;
-    struct extension_property *extensions;
-};
-// Note: Since the following is a static structure, all members are initialized
-// to zero.
-static struct {
-    struct loader_instance *instances;
-    bool icds_scanned;
-    struct loader_scanned_icds *scanned_icd_list;
-    bool layer_scanned;
-    char *layer_dirs;
-    unsigned int scanned_layer_count;
-    struct loader_scanned_layers scanned_layers[MAX_LAYER_LIBRARIES];
-    size_t scanned_ext_list_capacity;
-    uint32_t scanned_ext_list_count;      // coalesced from all layers/drivers
-    struct extension_property **scanned_ext_list;
-} loader;
+struct loader_struct loader = {0};
 
-static LOADER_PLATFORM_THREAD_ONCE_DECLARATION(once_icd);
-static LOADER_PLATFORM_THREAD_ONCE_DECLARATION(once_layer);
-static LOADER_PLATFORM_THREAD_ONCE_DECLARATION(once_exts);
+VkLayerInstanceDispatchTable instance_disp = {
+    .GetInstanceProcAddr = vkGetInstanceProcAddr,
+    .GetProcAddr = vkGetProcAddr,
+    .CreateInstance = loader_CreateInstance,
+    .DestroyInstance = loader_DestroyInstance,
+    .EnumeratePhysicalDevices = loader_EnumeratePhysicalDevices,
+    .GetPhysicalDeviceInfo = vkGetPhysicalDeviceInfo,
+    .CreateDevice = vkCreateDevice,
+    .GetGlobalExtensionInfo = loader_GetGlobalExtensionInfo,
+    .GetPhysicalDeviceExtensionInfo = vkGetPhysicalDeviceExtensionInfo,
+    .EnumerateLayers = vkEnumerateLayers,
+    .GetMultiDeviceCompatibility = vkGetMultiDeviceCompatibility,
+    .DbgRegisterMsgCallback = loader_DbgRegisterMsgCallback,
+    .DbgUnregisterMsgCallback = loader_DbgUnregisterMsgCallback,
+    .DbgSetGlobalOption = loader_DbgSetGlobalOption,
+};
+
+LOADER_PLATFORM_THREAD_ONCE_DECLARATION(once_icd);
+LOADER_PLATFORM_THREAD_ONCE_DECLARATION(once_layer);
+LOADER_PLATFORM_THREAD_ONCE_DECLARATION(once_exts);
 
 #if defined(WIN32)
 char *loader_get_registry_string(const HKEY hive,
@@ -356,7 +350,7 @@ static void loader_add_to_ext_list(uint32_t count,
     }
 }
 
-static bool loader_is_extension_scanned(const char *name)
+bool loader_is_extension_scanned(const char *name)
 {
     uint32_t i;
 
@@ -367,7 +361,7 @@ static bool loader_is_extension_scanned(const char *name)
     return false;
 }
 
-static void loader_coalesce_extensions(void)
+void loader_coalesce_extensions(void)
 {
     uint32_t i;
     struct loader_scanned_icds *icd_list = loader.scanned_icd_list;
@@ -488,7 +482,7 @@ static void loader_scanned_icd_add(const char *filename)
  * \returns
  * void; but side effect is to set loader_icd_scanned to true
  */
-static void loader_icd_scan(void)
+void loader_icd_scan(void)
 {
     const char *p, *next;
     char *libPaths = NULL;
@@ -571,7 +565,7 @@ static void loader_icd_scan(void)
 }
 
 
-static void layer_lib_scan(void)
+void layer_lib_scan(void)
 {
     const char *p, *next;
     char *libPaths = NULL;
@@ -720,27 +714,49 @@ static void layer_lib_scan(void)
     loader.layer_scanned = true;
 }
 
-static void * VKAPI loader_gpa_internal(VkPhysicalDevice gpu, const char * pName)
+static void* VKAPI loader_gpa_device_internal(VkPhysicalDevice physDev, const char * pName)
 {
-    if (gpu == VK_NULL_HANDLE) {
-        return NULL;;
+    if (physDev == VK_NULL_HANDLE) {
+        return NULL;
     }
-    VkBaseLayerObject* gpuw = (VkBaseLayerObject *) gpu;
-    VkLayerDispatchTable * disp_table = * (VkLayerDispatchTable **) gpuw->baseObject;
+    VkBaseLayerObject* physDevWrap = (VkBaseLayerObject *) physDev;
+    VkLayerDispatchTable* disp_table = * (VkLayerDispatchTable **) physDevWrap->baseObject;
     void *addr;
 
     if (disp_table == NULL)
         return NULL;
 
-    addr = loader_lookup_dispatch_table(disp_table, pName);
+    addr = loader_lookup_device_dispatch_table(disp_table, pName);
     if (addr)
         return addr;
     else  {
         if (disp_table->GetProcAddr == NULL)
             return NULL;
-        if (gpuw->baseObject == gpuw->nextObject)
-            return gpuw->pGPA(gpuw->baseObject, pName);
-        return disp_table->GetProcAddr(gpuw->nextObject, pName);
+        if (physDevWrap->baseObject == physDevWrap->nextObject)
+            return physDevWrap->pGPA(physDevWrap->baseObject, pName);
+        return disp_table->GetProcAddr(physDevWrap->nextObject, pName);
+    }
+}
+
+static void* VKAPI loader_gpa_instance_internal(VkInstance inst, const char * pName)
+{
+    // inst is not wrapped
+    if (inst == VK_NULL_HANDLE) {
+        return NULL;
+    }
+    VkLayerInstanceDispatchTable* disp_table = * (VkLayerInstanceDispatchTable **) inst;
+    void *addr;
+
+    if (disp_table == NULL)
+        return NULL;
+
+    addr = loader_lookup_instance_dispatch_table(disp_table, pName);
+    if (addr)
+        return addr;
+    else  {
+        if (disp_table->GetInstanceProcAddr == NULL)
+            return NULL;
+        return disp_table->GetInstanceProcAddr(inst, pName);
     }
 }
 
@@ -771,7 +787,7 @@ static bool loader_layers_activated(const struct loader_icd *icd, const uint32_t
         return false;
 }
 
-static void loader_init_layer_libs(struct loader_icd *icd, uint32_t gpu_index,
+static void loader_init_device_layer_libs(struct loader_icd *icd, uint32_t gpu_index,
                                    struct layer_name_pair * pLayerNames,
                                    uint32_t count)
 {
@@ -800,11 +816,49 @@ static void loader_init_layer_libs(struct loader_icd *icd, uint32_t gpu_index,
                 loader_log(VK_DBG_MSG_ERROR, 0, loader_platform_open_library_error(pLayerNames[i].lib_name));
                 continue;
             } else {
-                loader_log(VK_DBG_MSG_UNKNOWN, 0, "Inserting layer %s from library %s",
+                loader_log(VK_DBG_MSG_UNKNOWN, 0, "Inserting device layer %s from library %s",
                            pLayerNames[i].layer_name, pLayerNames[i].lib_name);
             }
             free(pLayerNames[i].layer_name);
             icd->layer_count[gpu_index]++;
+        }
+    }
+}
+
+static void loader_init_instance_layer_libs(struct loader_instance *inst,
+                                   struct layer_name_pair * pLayerNames,
+                                   uint32_t count)
+{
+    if (!inst)
+        return;
+
+    struct loader_layers *obj;
+    bool foundLib;
+    for (uint32_t i = 0; i < count; i++) {
+        foundLib = false;
+        for (uint32_t j = 0; j < inst->layer_count; j++) {
+            if (inst->layer_libs[j].lib_handle &&
+                    !strcmp(inst->layer_libs[j].name,
+                    (char *) pLayerNames[i].layer_name) &&
+                    strcmp("Validation", (char *) pLayerNames[i].layer_name)) {
+                foundLib = true;
+                break;
+            }
+        }
+        if (!foundLib) {
+            obj = &(inst->layer_libs[i]);
+            strncpy(obj->name, (char *) pLayerNames[i].layer_name, sizeof(obj->name) - 1);
+            obj->name[sizeof(obj->name) - 1] = '\0';
+            // Used to call: dlopen(pLayerNames[i].lib_name, RTLD_LAZY | RTLD_DEEPBIND)
+            if ((obj->lib_handle = loader_platform_open_library(pLayerNames[i].lib_name)) == NULL) {
+                loader_log(VK_DBG_MSG_ERROR, 0, loader_platform_open_library_error(pLayerNames[i].lib_name));
+                continue;
+            } else {
+                loader_log(VK_DBG_MSG_UNKNOWN, 0, "Inserting instance layer %s from library %s",
+                           pLayerNames[i].layer_name, pLayerNames[i].lib_name);
+            }
+            free(pLayerNames[i].layer_name);
+            inst->layer_count++;
         }
     }
 }
@@ -977,7 +1031,9 @@ static uint32_t loader_get_layer_libs(uint32_t ext_count, const char *const* ext
     return count;
 }
 
-static void loader_deactivate_layer(const struct loader_instance *instance)
+//TODO static void loader_deactivate_device_layer(device)
+
+static void loader_deactivate_instance_layer(const struct loader_instance *instance)
 {
     struct loader_icd *icd;
     struct loader_layers *libs;
@@ -1004,9 +1060,63 @@ static void loader_deactivate_layer(const struct loader_instance *instance)
         }
         icd->gpu_count = 0;
     }
+
+    free(instance->wrappedInstance);
 }
 
-extern uint32_t loader_activate_layers(struct loader_icd *icd, uint32_t gpu_index, uint32_t ext_count, const char *const* ext_names)
+uint32_t loader_activate_instance_layers(struct loader_instance *inst)
+{
+    uint32_t count;
+    struct layer_name_pair *pLayerNames;
+    if (inst == NULL)
+        return 0;
+
+    // NOTE inst is unwrapped at this point in time
+    VkObject baseObj = (VkObject) inst;
+    VkObject nextObj = (VkObject) inst;
+    VkBaseLayerObject *nextInstObj;
+    PFN_vkGetInstanceProcAddr nextGPA = loader_gpa_instance_internal;
+
+    count = loader_get_layer_libs(inst->extension_count, (const char *const*) inst->extension_names, &pLayerNames);
+    if (!count)
+        return 0;
+    loader_init_instance_layer_libs(inst, pLayerNames, count);
+
+    inst->wrappedInstance = malloc(sizeof(VkBaseLayerObject) * count);
+    if (! inst->wrappedInstance) {
+        loader_log(VK_DBG_MSG_ERROR, 0, "Failed to malloc Instance objects for layer");
+        return 0;
+    }
+    for (int32_t i = count - 1; i >= 0; i--) {
+        nextInstObj = (inst->wrappedInstance + i);
+        nextInstObj->pGPA = nextGPA;
+        nextInstObj->baseObject = baseObj;
+        nextInstObj->nextObject = nextObj;
+        nextObj = (VkObject) nextInstObj;
+
+        char funcStr[256];
+        snprintf(funcStr, 256, "%sGetInstanceProcAddr",inst->layer_libs[i].name);
+        if ((nextGPA = (PFN_vkGetInstanceProcAddr) loader_platform_get_proc_address(inst->layer_libs[i].lib_handle, funcStr)) == NULL)
+            nextGPA = (PFN_vkGetInstanceProcAddr) loader_platform_get_proc_address(inst->layer_libs[i].lib_handle, "vkGetInstanceProcAddr");
+        if (!nextGPA) {
+            loader_log(VK_DBG_MSG_ERROR, 0, "Failed to find vkGetInstanceProcAddr in layer %s", inst->layer_libs[i].name);
+            continue;
+        }
+
+        if (i == 0) {
+            loader_init_instance_dispatch_table(inst->disp, nextGPA, (VkInstance) nextObj);
+            //Insert the new wrapped objects into the list with loader object at head
+            nextInstObj = inst->wrappedInstance + inst->layer_count - 1;
+            nextInstObj->nextObject = baseObj;
+            nextInstObj->pGPA = loader_gpa_instance_internal;
+        }
+
+    }
+
+    return inst->layer_count;
+}
+
+extern uint32_t loader_activate_device_layers(struct loader_icd *icd, uint32_t gpu_index, uint32_t ext_count, const char *const* ext_names)
 {
     uint32_t count;
     VkBaseLayerObject *gpu;
@@ -1018,18 +1128,21 @@ extern uint32_t loader_activate_layers(struct loader_icd *icd, uint32_t gpu_inde
     gpu = icd->gpus + gpu_index;
     /* activate any layer libraries */
     if (!loader_layers_activated(icd, gpu_index)) {
+        // Note gpu object is wrapped once already
         VkBaseLayerObject *gpuObj = gpu;
         VkBaseLayerObject *nextGpuObj, *baseObj = (VkBaseLayerObject *) gpuObj->baseObject;
-        PFN_vkGetProcAddr nextGPA = loader_gpa_internal;
+        PFN_vkGetProcAddr nextGPA = loader_gpa_device_internal;
 
         count = loader_get_layer_libs(ext_count, ext_names, &pLayerNames);
         if (!count)
             return 0;
-        loader_init_layer_libs(icd, gpu_index, pLayerNames, count);
+        loader_init_device_layer_libs(icd, gpu_index, pLayerNames, count);
 
         icd->wrappedGpus[gpu_index] = malloc(sizeof(VkBaseLayerObject) * icd->layer_count[gpu_index]);
-        if (! icd->wrappedGpus[gpu_index])
+        if (! icd->wrappedGpus[gpu_index]) {
                 loader_log(VK_DBG_MSG_ERROR, 0, "Failed to malloc Gpu objects for layer");
+                return 0;
+        }
         for (int32_t i = icd->layer_count[gpu_index] - 1; i >= 0; i--) {
             nextGpuObj = (icd->wrappedGpus[gpu_index] + i);
             nextGpuObj->pGPA = nextGPA;
@@ -1074,45 +1187,14 @@ extern uint32_t loader_activate_layers(struct loader_icd *icd, uint32_t gpu_inde
     return icd->layer_count[gpu_index];
 }
 
-LOADER_EXPORT VkResult VKAPI vkCreateInstance(
+VkResult loader_CreateInstance(
         const VkInstanceCreateInfo*         pCreateInfo,
         VkInstance*                           pInstance)
 {
-    struct loader_instance *ptr_instance = NULL;
+    struct loader_instance *ptr_instance = (struct loader_instance *) pInstance;
     struct loader_scanned_icds *scanned_icds;
     struct loader_icd *icd;
-    VkResult res = VK_ERROR_INITIALIZATION_FAILED;
-    uint32_t i;
-
-    /* Scan/discover all ICD libraries in a single-threaded manner */
-    loader_platform_thread_once(&once_icd, loader_icd_scan);
-
-    /* get layer libraries in a single-threaded manner */
-    loader_platform_thread_once(&once_layer, layer_lib_scan);
-
-    /* merge any duplicate extensions */
-    loader_platform_thread_once(&once_exts, loader_coalesce_extensions);
-
-    ptr_instance = (struct loader_instance*) malloc(sizeof(struct loader_instance));
-    if (ptr_instance == NULL) {
-        return VK_ERROR_OUT_OF_HOST_MEMORY;
-    }
-    memset(ptr_instance, 0, sizeof(struct loader_instance));
-    ptr_instance->extension_count = pCreateInfo->extensionCount;
-    ptr_instance->extension_names = (ptr_instance->extension_count > 0) ?
-                malloc(sizeof (char *) * ptr_instance->extension_count) : NULL;
-    if (ptr_instance->extension_names == NULL && (ptr_instance->extension_count > 0))
-        return VK_ERROR_OUT_OF_HOST_MEMORY;
-    for (i = 0; i < ptr_instance->extension_count; i++) {
-        if (!loader_is_extension_scanned(pCreateInfo->ppEnabledExtensionNames[i]))
-            return VK_ERROR_INVALID_EXTENSION;
-        ptr_instance->extension_names[i] = malloc(strlen(pCreateInfo->ppEnabledExtensionNames[i]) + 1);
-        if (ptr_instance->extension_names[i] == NULL)
-            return VK_ERROR_OUT_OF_HOST_MEMORY;
-        strcpy(ptr_instance->extension_names[i], pCreateInfo->ppEnabledExtensionNames[i]);
-    }
-    ptr_instance->next = loader.instances;
-    loader.instances = ptr_instance;
+    VkResult res;
 
     scanned_icds = loader.scanned_icd_list;
     while (scanned_icds) {
@@ -1136,12 +1218,10 @@ LOADER_EXPORT VkResult VKAPI vkCreateInstance(
         return VK_ERROR_INCOMPATIBLE_DRIVER;
     }
 
-    loader_init_instance_dispatch_table(&ptr_instance->disp);
-    *pInstance = (VkInstance) ptr_instance;
     return VK_SUCCESS;
 }
 
-LOADER_EXPORT VkResult VKAPI vkDestroyInstance(
+VkResult loader_DestroyInstance(
         VkInstance                                instance)
 {
     struct loader_instance *ptr_instance = (struct loader_instance *) instance;
@@ -1172,8 +1252,7 @@ LOADER_EXPORT VkResult VKAPI vkDestroyInstance(
         return VK_ERROR_INVALID_HANDLE;
     }
 
-    // cleanup any prior layer initializations
-    loader_deactivate_layer(ptr_instance);
+    loader_deactivate_instance_layer(ptr_instance);
 
     scanned_icds = loader.scanned_icd_list;
     while (scanned_icds) {
@@ -1192,7 +1271,7 @@ LOADER_EXPORT VkResult VKAPI vkDestroyInstance(
     return VK_SUCCESS;
 }
 
-LOADER_EXPORT VkResult VKAPI vkEnumeratePhysicalDevices(
+VkResult loader_EnumeratePhysicalDevices(
         VkInstance                              instance,
         uint32_t*                               pPhysicalDeviceCount,
         VkPhysicalDevice*                       pPhysicalDevices)
@@ -1260,7 +1339,7 @@ LOADER_EXPORT VkResult VKAPI vkEnumeratePhysicalDevices(
                     const VkLayerDispatchTable **disp;
                     disp = (const VkLayerDispatchTable **) gpus[i];
                     *disp = icd->loader_dispatch + i;
-                    loader_activate_layers(icd, i, ptr_instance->extension_count,
+                    loader_activate_device_layers(icd, i, ptr_instance->extension_count,
                         (const char *const*) ptr_instance->extension_names);
                 }
 
@@ -1313,7 +1392,7 @@ LOADER_EXPORT void * VKAPI vkGetProcAddr(VkPhysicalDevice gpu, const char * pNam
     if (disp_table == NULL)
         return NULL;
 
-    addr = loader_lookup_dispatch_table(disp_table, pName);
+    addr = loader_lookup_device_dispatch_table(disp_table, pName);
     if (addr)
         return addr;
     else  {
@@ -1329,7 +1408,7 @@ LOADER_EXPORT void * VKAPI vkGetProcAddr(VkPhysicalDevice gpu, const char * pNam
 //TODO how is layer extension going to be enabled?
 //Need to call createInstance on the layer or something
 
-LOADER_EXPORT VkResult VKAPI vkGetGlobalExtensionInfo(
+VkResult loader_GetGlobalExtensionInfo(
                                                VkExtensionInfoType infoType,
                                                uint32_t extensionIndex,
                                                size_t*  pDataSize,
@@ -1454,7 +1533,7 @@ LOADER_EXPORT VkResult VKAPI vkEnumerateLayers(VkPhysicalDevice gpu, size_t maxS
     return VK_SUCCESS;
 }
 
-LOADER_EXPORT VkResult VKAPI vkDbgRegisterMsgCallback(VkInstance instance, VK_DBG_MSG_CALLBACK_FUNCTION pfnMsgCallback, void* pUserData)
+VkResult loader_DbgRegisterMsgCallback(VkInstance instance, VK_DBG_MSG_CALLBACK_FUNCTION pfnMsgCallback, void* pUserData)
 {
     const struct loader_icd *icd;
     struct loader_instance *inst;
@@ -1505,7 +1584,7 @@ LOADER_EXPORT VkResult VKAPI vkDbgRegisterMsgCallback(VkInstance instance, VK_DB
     return VK_SUCCESS;
 }
 
-LOADER_EXPORT VkResult VKAPI vkDbgUnregisterMsgCallback(VkInstance instance, VK_DBG_MSG_CALLBACK_FUNCTION pfnMsgCallback)
+VkResult loader_DbgUnregisterMsgCallback(VkInstance instance, VK_DBG_MSG_CALLBACK_FUNCTION pfnMsgCallback)
 {
     VkResult res = VK_SUCCESS;
     struct loader_instance *inst;
@@ -1534,7 +1613,7 @@ LOADER_EXPORT VkResult VKAPI vkDbgUnregisterMsgCallback(VkInstance instance, VK_
     return res;
 }
 
-LOADER_EXPORT VkResult VKAPI vkDbgSetGlobalOption(VkInstance instance, VK_DBG_GLOBAL_OPTION dbgOption, size_t dataSize, const void* pData)
+VkResult loader_DbgSetGlobalOption(VkInstance instance, VK_DBG_GLOBAL_OPTION dbgOption, size_t dataSize, const void* pData)
 {
     VkResult res = VK_SUCCESS;
     struct loader_instance *inst;

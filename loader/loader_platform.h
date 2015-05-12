@@ -97,6 +97,8 @@ static inline char * loader_platform_get_proc_address_error(const char *name)
 typedef pthread_t loader_platform_thread;
 #define LOADER_PLATFORM_THREAD_ONCE_DECLARATION(var) \
     pthread_once_t var = PTHREAD_ONCE_INIT;
+#define LOADER_PLATFORM_THREAD_ONCE_DEFINITION(var) \
+    pthread_once_t var;
 static inline void loader_platform_thread_once(void *ctl, void (* func) (void))
 {
     assert(func != NULL);
@@ -251,6 +253,8 @@ static char * loader_platform_get_proc_address_error(const char *name)
 typedef HANDLE loader_platform_thread;
 #define LOADER_PLATFORM_THREAD_ONCE_DECLARATION(var) \
     INIT_ONCE var = INIT_ONCE_STATIC_INIT;
+#define LOADER_PLATFORM_THREAD_ONCE_DEFINITION(var) \
+    INIT_ONCE var;
 static BOOL CALLBACK InitFuncWrapper(PINIT_ONCE InitOnce, PVOID Parameter, PVOID *Context)
 {
     void (*func)(void) = (void (*)(void))Parameter;
