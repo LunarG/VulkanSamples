@@ -1432,12 +1432,12 @@ class ThreadingSubcommand(Subcommand):
                      '    for (int i=0; i<memRangeCount; i++) {\n'
                      '        useObject((VkObject) pMemRanges[i].mem, "VkDeviceMemory");\n'
                      '    }\n'
-                     '    %snextTable.%s;\n'
+                     '    %snext%sTable.%s;\n'
                      '    for (int i=0; i<memRangeCount; i++) {\n'
                      '        finishUsingObject((VkObject) pMemRanges[i].mem);\n'
                      '    }\n'
                      '%s'
-                     '}' % (qual, decl, ret_val, proto.c_call(), stmt))
+                     '}' % (qual, decl, ret_val, table, proto.c_call(), stmt))
             return "\n".join(funcs)
         # All functions that do a Get are thread safe
         if 'Get' in proto.name:
