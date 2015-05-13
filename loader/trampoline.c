@@ -24,6 +24,12 @@
 
 #include "loader.h"
 
+#if defined(WIN32)
+// On Windows need to disable global optimization for function entrypoints or
+//  else mhook will not be able to hook all of them
+#pragma optimize( "g", off )
+#endif
+
 /* Trampoline entrypoints */
 LOADER_EXPORT VkResult VKAPI vkGetPhysicalDeviceInfo(VkPhysicalDevice gpu, VkPhysicalDeviceInfoType infoType, size_t* pDataSize, void* pData)
 {
@@ -1138,3 +1144,7 @@ LOADER_EXPORT VkResult VKAPI vkQueuePresentWSI(VkQueue queue, const VkPresentInf
 
     return disp->QueuePresentWSI(queue, pPresentInfo);
 }
+
+#if defined(WIN32)
+#pragma optimize( "", on )
+#endif
