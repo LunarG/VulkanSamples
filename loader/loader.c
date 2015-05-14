@@ -69,7 +69,18 @@ struct loader_icd {
     VkBaseLayerObject *wrappedGpus[MAX_GPUS_FOR_LAYER];
     uint32_t gpu_count;
     VkBaseLayerObject *gpus;
-
+    VkInstance instance;       // instance object from the icd
+    PFN_vkGetProcAddr GetProcAddr;
+    PFN_vkDestroyInstance DestroyInstance;
+    PFN_vkEnumeratePhysicalDevices EnumeratePhysicalDevices;
+    PFN_vkGetPhysicalDeviceInfo GetPhysicalDeviceInfo;
+    PFN_vkCreateDevice CreateDevice;
+    PFN_vkGetPhysicalDeviceExtensionInfo GetPhysicalDeviceExtensionInfo;
+    PFN_vkEnumerateLayers EnumerateLayers;
+    PFN_vkGetMultiDeviceCompatibility GetMultiDeviceCompatibility;
+    PFN_vkDbgRegisterMsgCallback DbgRegisterMsgCallback;
+    PFN_vkDbgUnregisterMsgCallback DbgUnregisterMsgCallback;
+    PFN_vkDbgSetGlobalOption DbgSetGlobalOption;
     struct loader_icd *next;
 };
 
@@ -77,12 +88,8 @@ struct loader_icd {
 struct loader_scanned_icds {
     loader_platform_dl_handle handle;
 
-    PFN_vkGetProcAddr GetProcAddr;
     PFN_vkCreateInstance CreateInstance;
-    PFN_vkDestroyInstance DestroyInstance;
-    PFN_vkEnumeratePhysicalDevices EnumeratePhysicalDevices;
     PFN_vkGetGlobalExtensionInfo GetGlobalExtensionInfo;
-    VkInstance instance;
     struct loader_scanned_icds *next;
     uint32_t extension_count;
     struct extension_property *extensions;
@@ -419,7 +426,7 @@ static struct loader_icd *loader_icd_add(struct loader_instance *ptr_inst,
 static void loader_scanned_icd_add(const char *filename)
 {
     loader_platform_dl_handle handle;
-    void *fp_gpa, *fp_enumerate, *fp_create_inst, *fp_destroy_inst;
+    void *fp_create_inst;
     void *fp_get_global_ext_info;
     struct loader_scanned_icds *new_node;
 
@@ -438,10 +445,7 @@ static void loader_scanned_icd_add(const char *filename)
     }                                                          \
 } while (0)
 
-    LOOKUP(fp_gpa, GetProcAddr);
     LOOKUP(fp_create_inst, CreateInstance);
-    LOOKUP(fp_destroy_inst, DestroyInstance);
-    LOOKUP(fp_enumerate, EnumeratePhysicalDevices);
     LOOKUP(fp_get_global_ext_info, GetGlobalExtensionInfo);
 #undef LOOKUP
 
@@ -452,10 +456,7 @@ static void loader_scanned_icd_add(const char *filename)
     }
 
     new_node->handle = handle;
-    new_node->GetProcAddr = fp_gpa;
     new_node->CreateInstance = fp_create_inst;
-    new_node->DestroyInstance = fp_destroy_inst;
-    new_node->EnumeratePhysicalDevices = fp_enumerate;
     new_node->GetGlobalExtensionInfo = fp_get_global_ext_info;
     new_node->extension_count = 0;
     new_node->extensions = NULL;
@@ -470,6 +471,36 @@ static void loader_scanned_icd_add(const char *filename)
     } else {
         loader_log(VK_DBG_MSG_WARNING, 0, "Couldn't get global extensions from ICD");
     }
+}
+
+static void loader_icd_init_entrys(struct loader_icd *icd,
+                                   struct loader_scanned_icds *scanned_icds)
+{
+    /* initialize entrypoint function pointers */
+
+    #define LOOKUP(func) do {                                 \
+    icd->func = (PFN_vk ##func) loader_platform_get_proc_address(scanned_icds->handle, "vk" #func); \
+    if (!icd->func) {                                           \
+        loader_log(VK_DBG_MSG_WARNING, 0, loader_platform_get_proc_address_error("vk" #func)); \
+        return;                                                \
+    }                                                          \
+    } while (0)
+
+    /* could change this to use GetInstanceProcAddr in driver once they support it */
+    LOOKUP(GetProcAddr);
+    LOOKUP(DestroyInstance);
+    LOOKUP(EnumeratePhysicalDevices);
+    LOOKUP(GetPhysicalDeviceInfo);
+    LOOKUP(CreateDevice);
+    LOOKUP(GetPhysicalDeviceExtensionInfo);
+    LOOKUP(EnumerateLayers);
+    LOOKUP(GetMultiDeviceCompatibility);
+    LOOKUP(DbgRegisterMsgCallback);
+    LOOKUP(DbgUnregisterMsgCallback);
+    LOOKUP(DbgSetGlobalOption);
+#undef LOOKUP
+
+    return;
 }
 
 /**
@@ -1166,7 +1197,7 @@ extern uint32_t loader_activate_device_layers(struct loader_icd *icd, uint32_t g
                 gpu->pGPA = nextGPA;
                 gpuObj = icd->wrappedGpus[gpu_index] + icd->layer_count[gpu_index] - 1;
                 gpuObj->nextObject = (VkObject) baseObj;
-                gpuObj->pGPA = icd->scanned_icds->GetProcAddr;
+                gpuObj->pGPA = icd->GetProcAddr;
             }
 
         }
@@ -1201,14 +1232,17 @@ VkResult loader_CreateInstance(
         icd = loader_icd_add(ptr_instance, scanned_icds);
         if (icd) {
             res = scanned_icds->CreateInstance(pCreateInfo,
-                                           &(scanned_icds->instance));
+                                           &(icd->instance));
             if (res != VK_SUCCESS)
             {
                 ptr_instance->icds = ptr_instance->icds->next;
                 loader_icd_destroy(icd);
-                scanned_icds->instance = VK_NULL_HANDLE;
+                icd->instance = VK_NULL_HANDLE;
                 loader_log(VK_DBG_MSG_WARNING, 0,
                         "ICD ignored: failed to CreateInstance on device");
+            } else
+            {
+                loader_icd_init_entrys(icd, scanned_icds);
             }
         }
         scanned_icds = scanned_icds->next;
@@ -1225,7 +1259,7 @@ VkResult loader_DestroyInstance(
         VkInstance                                instance)
 {
     struct loader_instance *ptr_instance = (struct loader_instance *) instance;
-    struct loader_scanned_icds *scanned_icds;
+    struct loader_icd *icds = ptr_instance->icds;
     VkResult res;
     uint32_t i;
 
@@ -1254,16 +1288,15 @@ VkResult loader_DestroyInstance(
 
     loader_deactivate_instance_layer(ptr_instance);
 
-    scanned_icds = loader.scanned_icd_list;
-    while (scanned_icds) {
-        if (scanned_icds->instance) {
-            res = scanned_icds->DestroyInstance(scanned_icds->instance);
+    while (icds) {
+        if (icds->instance) {
+            res = icds->DestroyInstance(icds->instance);
             if (res != VK_SUCCESS)
                 loader_log(VK_DBG_MSG_WARNING, 0,
                             "ICD ignored: failed to DestroyInstance on device");
         }
-        scanned_icds->instance = VK_NULL_HANDLE;
-        scanned_icds = scanned_icds->next;
+        icds->instance = VK_NULL_HANDLE;
+        icds = icds->next;
     }
 
     free(ptr_instance);
@@ -1285,8 +1318,8 @@ VkResult loader_EnumeratePhysicalDevices(
     icd = ptr_instance->icds;
     if (pPhysicalDevices == NULL) {
         while (icd) {
-            res = icd->scanned_icds->EnumeratePhysicalDevices(
-                                                icd->scanned_icds->instance,
+            res = icd->EnumeratePhysicalDevices(
+                                                icd->instance,
                                                 &n, NULL);
             if (res != VK_SUCCESS)
                 return res;
@@ -1307,11 +1340,11 @@ VkResult loader_EnumeratePhysicalDevices(
             return VK_ERROR_OUT_OF_HOST_MEMORY;
         while (icd) {
             VkBaseLayerObject * wrapped_gpus;
-            PFN_vkGetProcAddr get_proc_addr = icd->scanned_icds->GetProcAddr;
+            PFN_vkGetProcAddr get_proc_addr = icd->GetProcAddr;
 
             n = *pPhysicalDeviceCount;
-            res = icd->scanned_icds->EnumeratePhysicalDevices(
-                                            icd->scanned_icds->instance,
+            res = icd->EnumeratePhysicalDevices(
+                                            icd->instance,
                                             &n,
                                             gpus);
             if (res == VK_SUCCESS && n) {
@@ -1357,6 +1390,22 @@ VkResult loader_EnumeratePhysicalDevices(
     *pPhysicalDeviceCount = count;
 
     return (count > 0) ? VK_SUCCESS : res;
+}
+
+VkResult loader_GetPhysicalDeviceInfo(
+        VkPhysicalDevice                        gpu,
+        VkPhysicalDeviceInfoType                infoType,
+        size_t*                                 pDataSize,
+        void*                                   pData)
+{
+    uint32_t gpu_index;
+    struct loader_icd *icd = loader_get_icd((const VkBaseLayerObject *) gpu, &gpu_index);
+    VkResult res = VK_ERROR_INITIALIZATION_FAILED;
+
+    if (icd->GetPhysicalDeviceInfo)
+        res = icd->GetPhysicalDeviceInfo(gpu, infoType, pDataSize, pData);
+
+    return res;
 }
 
 LOADER_EXPORT void * VKAPI vkGetInstanceProcAddr(VkInstance instance, const char * pName)
@@ -1538,7 +1587,6 @@ VkResult loader_DbgRegisterMsgCallback(VkInstance instance, VK_DBG_MSG_CALLBACK_
     const struct loader_icd *icd;
     struct loader_instance *inst;
     VkResult res;
-    uint32_t gpu_idx;
 
     if (instance == VK_NULL_HANDLE)
         return VK_ERROR_INVALID_HANDLE;
@@ -1554,14 +1602,10 @@ VkResult loader_DbgRegisterMsgCallback(VkInstance instance, VK_DBG_MSG_CALLBACK_
         return VK_ERROR_INVALID_HANDLE;
 
     for (icd = inst->icds; icd; icd = icd->next) {
-        for (uint32_t i = 0; i < icd->gpu_count; i++) {
-            res = (icd->loader_dispatch + i)->DbgRegisterMsgCallback(icd->scanned_icds->instance,
+        if (!icd->DbgRegisterMsgCallback)
+            continue;
+        res = icd->DbgRegisterMsgCallback(icd->instance,
                                                    pfnMsgCallback, pUserData);
-            if (res != VK_SUCCESS) {
-                gpu_idx = i;
-                break;
-            }
-        }
         if (res != VK_SUCCESS)
             break;
     }
@@ -1571,12 +1615,11 @@ VkResult loader_DbgRegisterMsgCallback(VkInstance instance, VK_DBG_MSG_CALLBACK_
     if (icd) {
         for (const struct loader_icd *tmp = inst->icds; tmp != icd;
                                                       tmp = tmp->next) {
-            for (uint32_t i = 0; i < icd->gpu_count; i++)
-                (tmp->loader_dispatch + i)->DbgUnregisterMsgCallback(tmp->scanned_icds->instance, pfnMsgCallback);
+            if (!tmp->DbgUnregisterMsgCallback)
+                continue;
+            tmp->DbgUnregisterMsgCallback(tmp->instance,
+                                                        pfnMsgCallback);
         }
-        /* and gpus on current icd */
-        for (uint32_t i = 0; i < gpu_idx; i++)
-            (icd->loader_dispatch + i)->DbgUnregisterMsgCallback(icd->scanned_icds->instance, pfnMsgCallback);
 
         return res;
     }
@@ -1602,12 +1645,12 @@ VkResult loader_DbgUnregisterMsgCallback(VkInstance instance, VK_DBG_MSG_CALLBAC
         return VK_ERROR_INVALID_HANDLE;
 
     for (const struct loader_icd * icd = inst->icds; icd; icd = icd->next) {
-        for (uint32_t i = 0; i < icd->gpu_count; i++) {
-            VkResult r;
-            r = (icd->loader_dispatch + i)->DbgUnregisterMsgCallback(icd->scanned_icds->instance, pfnMsgCallback);
-            if (r != VK_SUCCESS) {
-                res = r;
-            }
+        VkResult r;
+        if (!icd->DbgUnregisterMsgCallback)
+            continue;
+        r = icd->DbgUnregisterMsgCallback(icd->instance, pfnMsgCallback);
+        if (r != VK_SUCCESS) {
+            res = r;
         }
     }
     return res;
@@ -1630,15 +1673,15 @@ VkResult loader_DbgSetGlobalOption(VkInstance instance, VK_DBG_GLOBAL_OPTION dbg
     if (inst == VK_NULL_HANDLE)
         return VK_ERROR_INVALID_HANDLE;
     for (const struct loader_icd * icd = inst->icds; icd; icd = icd->next) {
-        for (uint32_t i = 0; i < icd->gpu_count; i++) {
             VkResult r;
-            r = (icd->loader_dispatch + i)->DbgSetGlobalOption(icd->scanned_icds->instance, dbgOption,
+            if (!icd->DbgSetGlobalOption)
+                continue;
+            r = icd->DbgSetGlobalOption(icd->instance, dbgOption,
                                                            dataSize, pData);
             /* unfortunately we cannot roll back */
             if (r != VK_SUCCESS) {
                res = r;
             }
-        }
     }
 
     return res;

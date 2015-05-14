@@ -153,5 +153,6 @@ bool loader_is_extension_scanned(const char *name);
 void loader_icd_scan(void);
 void layer_lib_scan(void);
 void loader_coalesce_extensions(void);
+struct loader_icd * loader_get_icd(const VkBaseLayerObject *gpu, uint32_t *gpu_index);
 uint32_t loader_activate_instance_layers(struct loader_instance *inst);
 #endif /* LOADER_H */
