@@ -2,6 +2,7 @@
 #include <vkDbg.h>
 #include "gtest-1.7.0/include/gtest/gtest.h"
 #include "vkrenderframework.h"
+#include "layers_config.h"
 
 #define GLM_FORCE_RADIANS
 #include "glm/glm.hpp"
@@ -161,6 +162,11 @@ protected:
             }
             ASSERT_EQ(extFound, 1) << "ERROR: Cannot find extension named " << extensions[i] << " which is necessary to pass this test";
         }
+
+        // Force layer output level to be >= WARNING so that we catch those messages but ignore others
+        setLayerOptionEnum("MemTrackerReportLevel",    "VK_DBG_LAYER_LEVEL_WARNING");
+        setLayerOptionEnum("ObjectTrackerReportLevel", "VK_DBG_LAYER_LEVEL_WARNING");
+        setLayerOptionEnum("ThreadingReportLevel",     "VK_DBG_LAYER_LEVEL_WARNING");
 
         this->app_info.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
         this->app_info.pNext = NULL;

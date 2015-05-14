@@ -49,6 +49,7 @@ set(TEST_LIBRARIES
 include_directories(
     "${PROJECT_SOURCE_DIR}/tests/gtest-1.7.0/include"
     "${PROJECT_SOURCE_DIR}/icd/common"
+    "${PROJECT_SOURCE_DIR}/layers"
     "${GLSLANG_PREFIX}/glslang/Include"
     "${GLSLANG_PREFIX}/glslang/Public"
     "${GLSLANG_PREFIX}/SPIRV"
@@ -100,6 +101,6 @@ add_executable(vk_layer_validation_tests layer_validation_tests.cpp ${COMMON_CPP
 set_target_properties(vk_layer_validation_tests
    PROPERTIES
    COMPILE_DEFINITIONS "GTEST_LINKED_AS_SHARED_LIBRARY=1")
-target_link_libraries(vk_layer_validation_tests vulkan gtest gtest_main ${TEST_LIBRARIES})
+target_link_libraries(vk_layer_validation_tests vulkan gtest gtest_main layer_utils ${TEST_LIBRARIES})
 
 add_subdirectory(gtest-1.7.0)
