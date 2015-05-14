@@ -775,7 +775,7 @@ TEST_F(VkCmdCopyBufferTest, RAWHazard)
     err = vkAllocMemory(dev_.obj(), &mem_info, &event_mem);
     ASSERT_VK_SUCCESS(err);
 
-    err = vkQueueBindObjectMemory(queue_.obj(), VK_OBJECT_TYPE_EVENT, event, 0, event_mem, 0);
+    err = vkBindObjectMemory(dev_.obj(), VK_OBJECT_TYPE_EVENT, event, 0, event_mem, 0);
     ASSERT_VK_SUCCESS(err);
 
     err = vkResetEvent(dev_.obj(), event);
@@ -832,7 +832,7 @@ TEST_F(VkCmdCopyBufferTest, RAWHazard)
     bufs[2].unmap();
 
     // All done with event memory, clean up
-    err = vkQueueBindObjectMemory(queue_.obj(), VK_OBJECT_TYPE_EVENT, event, 0, VK_NULL_HANDLE, 0);
+    err = vkBindObjectMemory(dev_.obj(), VK_OBJECT_TYPE_EVENT, event, 0, VK_NULL_HANDLE, 0);
     ASSERT_VK_SUCCESS(err);
 
     err = vkDestroyObject(dev_.obj(), VK_OBJECT_TYPE_EVENT, event);
@@ -1142,77 +1142,6 @@ TEST_F(VkCmdCopyImageTest, Basic)
         copy.extent = img_info.extent;
 
         test_copy_image(img_info, img_info, std::vector<VkImageCopy>(&copy, &copy + 1));
-    }
-}
-
-class VkCmdCloneImageDataTest : public VkCmdBlitImageTest {
-protected:
-    virtual void SetUp()
-    {
-        VkCmdBlitTest::SetUp();
-        init_test_formats();
-        ASSERT_NE(true, test_formats_.empty());
-    }
-
-    void test_clone_image_data(const VkImageCreateInfo &img_info)
-    {
-        vk_testing::ImageChecker checker(img_info);
-        vk_testing::Image src, dst;
-        VkMemoryPropertyFlags reqs = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
-
-        src.init(dev_, img_info, reqs);
-        if (src.transparent() || src.copyable())
-            fill_src(src, checker);
-
-        dst.init(dev_, img_info, reqs);
-
-        const VkImageLayout layout = VK_IMAGE_LAYOUT_GENERAL;
-
-        cmd_.begin();
-        vkCmdCloneImageData(cmd_.obj(), src.obj(), layout, dst.obj(), layout);
-        cmd_.end();
-
-        submit_and_done();
-
-        // cannot verify
-        if (!dst.transparent() && !dst.copyable())
-            return;
-
-        check_dst(dst, checker);
-    }
-};
-
-TEST_F(VkCmdCloneImageDataTest, Basic)
-{
-    for (std::vector<vk_testing::Device::Format>::const_iterator it = test_formats_.begin();
-         it != test_formats_.end(); it++) {
-        // not sure what to do here
-        if (it->format == VK_FORMAT_UNDEFINED ||
-            (it->format >= VK_FORMAT_R32G32B32_UINT &&
-             it->format <= VK_FORMAT_R32G32B32_SFLOAT) ||
-            (it->format >= VK_FORMAT_B8G8R8_UNORM &&
-             it->format <= VK_FORMAT_B8G8R8_SRGB) ||
-            (it->format >= VK_FORMAT_BC1_RGB_UNORM &&
-             it->format <= VK_FORMAT_ASTC_12x12_SRGB) ||
-            (it->format >= VK_FORMAT_D16_UNORM &&
-             it->format <= VK_FORMAT_D32_SFLOAT_S8_UINT) ||
-            it->format == VK_FORMAT_R64G64B64_SFLOAT ||
-            it->format == VK_FORMAT_R64G64B64A64_SFLOAT)
-            continue;
-
-        VkImageCreateInfo img_info = vk_testing::Image::create_info();
-        img_info.imageType = VK_IMAGE_TYPE_2D;
-        img_info.format = it->format;
-        img_info.extent.width = 64;
-        img_info.extent.height = 64;
-        img_info.tiling = it->tiling;
-        img_info.flags = VK_IMAGE_CREATE_CLONEABLE_BIT;
-
-        const VkImageSubresourceRange range =
-            vk_testing::Image::subresource_range(img_info, VK_IMAGE_ASPECT_COLOR);
-        std::vector<VkImageSubresourceRange> ranges(&range, &range + 1);
-
-        test_clone_image_data(img_info);
     }
 }
 

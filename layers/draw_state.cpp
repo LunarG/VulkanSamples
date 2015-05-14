@@ -2299,21 +2299,6 @@ VK_LAYER_EXPORT void VKAPI vkCmdCopyImageToBuffer(VkCmdBuffer cmdBuffer,
     nextTable.CmdCopyImageToBuffer(cmdBuffer, srcImage, srcImageLayout, destBuffer, regionCount, pRegions);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdCloneImageData(VkCmdBuffer cmdBuffer, VkImage srcImage, VkImageLayout srcImageLayout, VkImage destImage, VkImageLayout destImageLayout)
-{
-    GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
-    if (pCB) {
-        updateCBTracking(cmdBuffer);
-        addCmd(pCB, CMD_CLONEIMAGEDATA);
-    }
-    else {
-        char str[1024];
-        sprintf(str, "Attempt to use CmdBuffer %p that doesn't exist!", (void*)cmdBuffer);
-        layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, cmdBuffer, 0, DRAWSTATE_INVALID_CMD_BUFFER, "DS", str);
-    }
-    nextTable.CmdCloneImageData(cmdBuffer, srcImage, srcImageLayout, destImage, destImageLayout);
-}
-
 VK_LAYER_EXPORT void VKAPI vkCmdUpdateBuffer(VkCmdBuffer cmdBuffer, VkBuffer destBuffer, VkDeviceSize destOffset, VkDeviceSize dataSize, const uint32_t* pData)
 {
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
@@ -2848,8 +2833,6 @@ VK_LAYER_EXPORT void* VKAPI vkGetProcAddr(VkPhysicalDevice gpu, const char* func
         return (void*) vkCmdCopyBufferToImage;
     if (!strcmp(funcName, "vkCmdCopyImageToBuffer"))
         return (void*) vkCmdCopyImageToBuffer;
-    if (!strcmp(funcName, "vkCmdCloneImageData"))
-        return (void*) vkCmdCloneImageData;
     if (!strcmp(funcName, "vkCmdUpdateBuffer"))
         return (void*) vkCmdUpdateBuffer;
     if (!strcmp(funcName, "vkCmdFillBuffer"))

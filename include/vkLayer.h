@@ -26,6 +26,7 @@ typedef struct VkBaseLayerObject_
 typedef struct VkLayerDispatchTable_
 {
     PFN_vkGetProcAddr GetProcAddr;
+    PFN_vkGetInstanceProcAddr GetInstanceProcAddr;
     PFN_vkCreateInstance CreateInstance;
     PFN_vkDestroyInstance DestroyInstance;
     PFN_vkEnumeratePhysicalDevices EnumeratePhysicalDevices;
@@ -54,9 +55,9 @@ typedef struct VkLayerDispatchTable_
     PFN_vkOpenPeerImage OpenPeerImage;
     PFN_vkDestroyObject DestroyObject;
     PFN_vkGetObjectInfo GetObjectInfo;
-    PFN_vkQueueBindObjectMemory QueueBindObjectMemory;
-    PFN_vkQueueBindObjectMemoryRange QueueBindObjectMemoryRange;
-    PFN_vkQueueBindImageMemoryRange QueueBindImageMemoryRange;
+    PFN_vkBindObjectMemory BindObjectMemory;
+    PFN_vkQueueBindSparseBufferMemory QueueBindSparseBufferMemory;
+    PFN_vkQueueBindSparseImageMemory QueueBindSparseImageMemory;
     PFN_vkCreateFence CreateFence;
     PFN_vkGetFenceStatus GetFenceStatus;
     PFN_vkResetFences ResetFences;
@@ -119,7 +120,6 @@ typedef struct VkLayerDispatchTable_
     PFN_vkCmdBlitImage CmdBlitImage;
     PFN_vkCmdCopyBufferToImage CmdCopyBufferToImage;
     PFN_vkCmdCopyImageToBuffer CmdCopyImageToBuffer;
-    PFN_vkCmdCloneImageData CmdCloneImageData;
     PFN_vkCmdUpdateBuffer CmdUpdateBuffer;
     PFN_vkCmdFillBuffer CmdFillBuffer;
     PFN_vkCmdClearColorImage CmdClearColorImage;

@@ -204,7 +204,10 @@ class IcdGetProcAddrSubcommand(IcdDummyEntrypointsSubcommand):
         for proto in self.protos:
             if proto.name == "GetProcAddr":
                 gpa_proto = proto
+            if proto.name == "GetInstanceProcAddr":
+                gpa_instance_proto = proto
 
+        gpa_instance_decl = self._generate_stub_decl(gpa_instance_proto)
         gpa_decl = self._generate_stub_decl(gpa_proto)
         gpa_pname = gpa_proto.params[-1].name
 
@@ -216,6 +219,12 @@ class IcdGetProcAddrSubcommand(IcdDummyEntrypointsSubcommand):
                     (gpa_proto.ret, self.prefix, proto.name))
 
         body = []
+        body.append("%s %s" % (self.qual, gpa_instance_decl))
+        body.append("{")
+        body.append("    return NULL;")
+        body.append("}")
+        body.append("")
+
         body.append("%s %s" % (self.qual, gpa_decl))
         body.append("{")
         body.append(generate_get_proc_addr_check(gpa_pname))
@@ -234,7 +243,7 @@ class LayerInterceptProcSubcommand(Subcommand):
 
         # we could get the list from argv if wanted
         self.intercepted = [proto.name for proto in self.protos
-                if proto.name not in ["EnumeratePhysicalDevices"]]
+                if proto.name not in ["EnumeratePhysicalDevices", "GetInstanceProcAddr"]]
 
         for proto in self.protos:
             if proto.name == "GetProcAddr":

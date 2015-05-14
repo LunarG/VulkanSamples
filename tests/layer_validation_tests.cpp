@@ -16,29 +16,49 @@ class ErrorMonitor {
 public:
     ErrorMonitor()
     {
+        pthread_mutexattr_t attr;
+        pthread_mutexattr_init(&attr);
+        pthread_mutex_init(&m_mutex, &attr);
+        pthread_mutex_lock(&m_mutex);
         m_msgType = VK_DBG_MSG_UNKNOWN;
+        m_bailout = NULL;
+        pthread_mutex_unlock(&m_mutex);
     }
     void ClearState()
     {
+        pthread_mutex_lock(&m_mutex);
         m_msgType = VK_DBG_MSG_UNKNOWN;
         m_msgString.clear();
+        pthread_mutex_unlock(&m_mutex);
     }
     VK_DBG_MSG_TYPE GetState(std::string *msgString)
     {
+        pthread_mutex_lock(&m_mutex);
         *msgString = m_msgString;
+        pthread_mutex_unlock(&m_mutex);
         return m_msgType;
     }
     void SetState(VK_DBG_MSG_TYPE msgType, const char *msgString)
     {
+        pthread_mutex_lock(&m_mutex);
+        if (m_bailout != NULL) {
+            *m_bailout = true;
+        }
         m_msgType = msgType;
         m_msgString.reserve(strlen(msgString));
         m_msgString = msgString;
+        pthread_mutex_unlock(&m_mutex);
+    }
+    void SetBailout(bool *bailout)
+    {
+        m_bailout = bailout;
     }
 
 private:
     VK_DBG_MSG_TYPE        m_msgType;
-    std::string             m_msgString;
-
+    std::string            m_msgString;
+    pthread_mutex_t        m_mutex;
+    bool*                  m_bailout;
 };
 void VKAPI myDbgFunc(
     VK_DBG_MSG_TYPE      msgType,
@@ -65,8 +85,9 @@ protected:
         ErrorMonitor               *m_errorMonitor;
 
     virtual void SetUp() {
-        const char *extension_names[] = {"MemTracker", "ObjectTracker"};
-        const std::vector<const char *> extensions(extension_names, extension_names + 2);
+        const char *extension_names[] = {"MemTracker", "ObjectTracker", "Threading"};
+        const std::vector<const char *> extensions(extension_names,
+                                        extension_names + sizeof(extension_names)/sizeof(extension_names[0]));
 
         size_t extSize = sizeof(uint32_t);
         uint32_t extCount = 0;
@@ -248,6 +269,100 @@ TEST_F(VkLayerTest, GetObjectInfoMismatchedType)
     }
 
 }
+
+#if GTEST_IS_THREADSAFE
+struct thread_data_struct {
+    VkCmdBuffer cmdBuffer;
+    VkEvent event;
+    bool bailout;
+};
+
+extern "C" void *AddToCommandBuffer(void *arg)
+{
+    struct thread_data_struct *data = (struct thread_data_struct *) arg;
+    std::string msgString;
+
+    for (int i = 0; i<10000; i++) {
+        vkCmdSetEvent(data->cmdBuffer, data->event, VK_PIPE_EVENT_COMMANDS_COMPLETE);
+        if (data->bailout) {
+            break;
+        }
+    }
+    return NULL;
+}
+
+TEST_F(VkLayerTest, ThreadCmdBufferCollision)
+{
+    VK_DBG_MSG_TYPE msgType;
+    std::string msgString;
+    pthread_t thread;
+    pthread_attr_t thread_attr;
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+    ASSERT_NO_FATAL_FAILURE(InitViewport());
+    ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
+
+    VkCommandBufferObj cmdBuffer(m_device);
+
+    m_errorMonitor->ClearState();
+    pthread_attr_init(&thread_attr);
+    BeginCommandBuffer(cmdBuffer);
+
+    VkEventCreateInfo event_info;
+    VkEvent event;
+    VkMemoryRequirements mem_req;
+    size_t data_size = sizeof(mem_req);
+    VkResult err;
+
+    memset(&event_info, 0, sizeof(event_info));
+    event_info.sType = VK_STRUCTURE_TYPE_EVENT_CREATE_INFO;
+
+    err = vkCreateEvent(device(), &event_info, &event);
+    ASSERT_VK_SUCCESS(err);
+
+    err = vkGetObjectInfo(device(), VK_OBJECT_TYPE_EVENT, event, VK_OBJECT_INFO_TYPE_MEMORY_REQUIREMENTS,
+                           &data_size, &mem_req);
+    ASSERT_VK_SUCCESS(err);
+
+    VkMemoryAllocInfo mem_info;
+    VkDeviceMemory event_mem;
+
+    ASSERT_NE(0, mem_req.size) << "vkGetObjectInfo (Event): Failed - expect events to require memory";
+
+    memset(&mem_info, 0, sizeof(mem_info));
+    mem_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO;
+    mem_info.allocationSize = mem_req.size;
+    mem_info.memProps = VK_MEMORY_PROPERTY_SHAREABLE_BIT;
+    mem_info.memPriority = VK_MEMORY_PRIORITY_NORMAL;
+    err = vkAllocMemory(device(), &mem_info, &event_mem);
+    ASSERT_VK_SUCCESS(err);
+
+    err = vkBindObjectMemory(device(), VK_OBJECT_TYPE_EVENT, event, 0, event_mem, 0);
+    ASSERT_VK_SUCCESS(err);
+
+    err = vkResetEvent(device(), event);
+    ASSERT_VK_SUCCESS(err);
+
+    struct thread_data_struct data;
+    data.cmdBuffer = cmdBuffer.obj();
+    data.event = event;
+    data.bailout = false;
+    m_errorMonitor->SetBailout(&data.bailout);
+    // Add many entries to command buffer from another thread.
+    pthread_create(&thread, &thread_attr, AddToCommandBuffer, (void *)&data);
+    // Add many entries to command buffer from this thread at the same time.
+    AddToCommandBuffer(&data);
+    pthread_join(thread, NULL);
+    EndCommandBuffer(cmdBuffer);
+
+    msgType = m_errorMonitor->GetState(&msgString);
+    ASSERT_EQ(msgType, VK_DBG_MSG_ERROR) << "Did not receive an err from using one VkCommandBufferObj in two threads";
+    if (!strstr(msgString.c_str(),"THREADING ERROR")) {
+        FAIL() << "Error received was not THREADING ERROR";
+    }
+
+}
+#endif
 
 int main(int argc, char **argv) {
     int result;

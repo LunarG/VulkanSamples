@@ -33,7 +33,7 @@
 #include "vk_platform.h"
 
 // Vulkan API version supported by this file
-#define VK_API_VERSION VK_MAKE_VERSION(0, 93, 0)
+#define VK_API_VERSION VK_MAKE_VERSION(0, 93, 1)
 
 #ifdef __cplusplus
 extern "C"
@@ -970,7 +970,7 @@ typedef enum VkQueueFlagBits_
     VK_QUEUE_GRAPHICS_BIT                                   = VK_BIT(0),    // Queue supports graphics operations
     VK_QUEUE_COMPUTE_BIT                                    = VK_BIT(1),    // Queue supports compute operations
     VK_QUEUE_DMA_BIT                                        = VK_BIT(2),    // Queue supports DMA operations
-    VK_QUEUE_MEMMGR_BIT                                     = VK_BIT(3),    // Queue supports memory management operations
+    VK_QUEUE_SPARSE_MEMMGR_BIT                              = VK_BIT(3),    // Queue supports sparse resource memory management operations
     VK_QUEUE_EXTENDED_BIT                                   = VK_BIT(30),   // Extended queue
 } VkQueueFlagBits;
 
@@ -1071,11 +1071,10 @@ typedef VkFlags VkImageCreateFlags;
 typedef enum VkImageCreateFlagBits_
 {
     VK_IMAGE_CREATE_INVARIANT_DATA_BIT                      = VK_BIT(0),
-    VK_IMAGE_CREATE_CLONEABLE_BIT                           = VK_BIT(1),
-    VK_IMAGE_CREATE_SHAREABLE_BIT                           = VK_BIT(2),    // Image should be shareable
-    VK_IMAGE_CREATE_SPARSE_BIT                              = VK_BIT(3),    // Image should support sparse backing
-    VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT                      = VK_BIT(4),    // Allows image views to have different format than the base image
-    VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT                     = VK_BIT(5),    // Allows creating image views with cube type from the created image
+    VK_IMAGE_CREATE_SHAREABLE_BIT                           = VK_BIT(1),    // Image should be shareable
+    VK_IMAGE_CREATE_SPARSE_BIT                              = VK_BIT(2),    // Image should support sparse backing
+    VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT                      = VK_BIT(3),    // Allows image views to have different format than the base image
+    VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT                     = VK_BIT(4),    // Allows creating image views with cube type from the created image
 } VkImageCreateFlagBits;
 
 // Depth-stencil view creation flags
@@ -1402,7 +1401,7 @@ typedef struct VkMemoryRequirements_
 {
     VkDeviceSize                                size;                       // Specified in bytes
     VkDeviceSize                                alignment;                  // Specified in bytes
-    VkDeviceSize                                granularity;                // Granularity on which vkQueueBindObjectMemoryRange can bind sub-ranges of memory specified in bytes (usually the page size)
+    VkDeviceSize                                granularity;                // Granularity at which memory can be bound to resource sub-ranges specified in bytes (usually the page size)
     VkMemoryPropertyFlags                       memPropsAllowed;            // Allowed memory property flags
     VkMemoryPropertyFlags                       memPropsRequired;           // Required memory property flags
 } VkMemoryRequirements;
@@ -2136,6 +2135,7 @@ typedef VkResult (VKAPI *PFN_vkCreateInstance)(const VkInstanceCreateInfo* pCrea
 typedef VkResult (VKAPI *PFN_vkDestroyInstance)(VkInstance instance);
 typedef VkResult (VKAPI *PFN_vkEnumeratePhysicalDevices)(VkInstance instance, uint32_t* pPhysicalDeviceCount, VkPhysicalDevice* pPhysicalDevices);
 typedef VkResult (VKAPI *PFN_vkGetPhysicalDeviceInfo)(VkPhysicalDevice physicalDevice, VkPhysicalDeviceInfoType infoType, size_t* pDataSize, void* pData);
+typedef void *   (VKAPI *PFN_vkGetInstanceProcAddr)(VkInstance instance, const char * pName);
 typedef void *   (VKAPI *PFN_vkGetProcAddr)(VkPhysicalDevice physicalDevice, const char * pName);
 typedef VkResult (VKAPI *PFN_vkCreateDevice)(VkPhysicalDevice physicalDevice, const VkDeviceCreateInfo* pCreateInfo, VkDevice* pDevice);
 typedef VkResult (VKAPI *PFN_vkDestroyDevice)(VkDevice device);
@@ -2161,9 +2161,9 @@ typedef VkResult (VKAPI *PFN_vkOpenPeerMemory)(VkDevice device, const VkPeerMemo
 typedef VkResult (VKAPI *PFN_vkOpenPeerImage)(VkDevice device, const VkPeerImageOpenInfo* pOpenInfo, VkImage* pImage, VkDeviceMemory* pMem);
 typedef VkResult (VKAPI *PFN_vkDestroyObject)(VkDevice device, VkObjectType objType, VkObject object);
 typedef VkResult (VKAPI *PFN_vkGetObjectInfo)(VkDevice device, VkObjectType objType, VkObject object, VkObjectInfoType infoType, size_t* pDataSize, void* pData);
-typedef VkResult (VKAPI *PFN_vkQueueBindObjectMemory)(VkQueue queue, VkObjectType objType, VkObject object, uint32_t allocationIdx, VkDeviceMemory mem, VkDeviceSize offset);
-typedef VkResult (VKAPI *PFN_vkQueueBindObjectMemoryRange)(VkQueue queue, VkObjectType objType, VkObject object, uint32_t allocationIdx, VkDeviceSize rangeOffset, VkDeviceSize rangeSize, VkDeviceMemory mem, VkDeviceSize memOffset);
-typedef VkResult (VKAPI *PFN_vkQueueBindImageMemoryRange)(VkQueue queue, VkImage image, uint32_t allocationIdx, const VkImageMemoryBindInfo* pBindInfo, VkDeviceMemory mem, VkDeviceSize memOffset);
+typedef VkResult (VKAPI *PFN_vkBindObjectMemory)(VkDevice device, VkObjectType objType, VkObject object, uint32_t allocationIdx, VkDeviceMemory mem, VkDeviceSize offset);
+typedef VkResult (VKAPI *PFN_vkQueueBindSparseBufferMemory)(VkQueue queue, VkBuffer buffer, uint32_t allocationIdx, VkDeviceSize rangeOffset, VkDeviceSize rangeSize, VkDeviceMemory mem, VkDeviceSize memOffset);
+typedef VkResult (VKAPI *PFN_vkQueueBindSparseImageMemory)(VkQueue queue, VkImage image, uint32_t allocationIdx, const VkImageMemoryBindInfo* pBindInfo, VkDeviceMemory mem, VkDeviceSize memOffset);
 typedef VkResult (VKAPI *PFN_vkCreateFence)(VkDevice device, const VkFenceCreateInfo* pCreateInfo, VkFence* pFence);
 typedef VkResult (VKAPI *PFN_vkResetFences)(VkDevice device, uint32_t fenceCount, VkFence* pFences);
 typedef VkResult (VKAPI *PFN_vkGetFenceStatus)(VkDevice device, VkFence fence);
@@ -2226,7 +2226,6 @@ typedef void     (VKAPI *PFN_vkCmdCopyImage)(VkCmdBuffer cmdBuffer, VkImage srcI
 typedef void     (VKAPI *PFN_vkCmdBlitImage)(VkCmdBuffer cmdBuffer, VkImage srcImage, VkImageLayout srcImageLayout, VkImage destImage, VkImageLayout destImageLayout, uint32_t regionCount, const VkImageBlit* pRegions);
 typedef void     (VKAPI *PFN_vkCmdCopyBufferToImage)(VkCmdBuffer cmdBuffer, VkBuffer srcBuffer, VkImage destImage, VkImageLayout destImageLayout, uint32_t regionCount, const VkBufferImageCopy* pRegions);
 typedef void     (VKAPI *PFN_vkCmdCopyImageToBuffer)(VkCmdBuffer cmdBuffer, VkImage srcImage, VkImageLayout srcImageLayout, VkBuffer destBuffer, uint32_t regionCount, const VkBufferImageCopy* pRegions);
-typedef void     (VKAPI *PFN_vkCmdCloneImageData)(VkCmdBuffer cmdBuffer, VkImage srcImage, VkImageLayout srcImageLayout, VkImage destImage, VkImageLayout destImageLayout);
 typedef void     (VKAPI *PFN_vkCmdUpdateBuffer)(VkCmdBuffer cmdBuffer, VkBuffer destBuffer, VkDeviceSize destOffset, VkDeviceSize dataSize, const uint32_t* pData);
 typedef void     (VKAPI *PFN_vkCmdFillBuffer)(VkCmdBuffer cmdBuffer, VkBuffer destBuffer, VkDeviceSize destOffset, VkDeviceSize fillSize, uint32_t data);
 typedef void     (VKAPI *PFN_vkCmdClearColorImage)(VkCmdBuffer cmdBuffer, VkImage image, VkImageLayout imageLayout, const VkClearColor* pColor, uint32_t rangeCount, const VkImageSubresourceRange* pRanges);
@@ -2271,10 +2270,13 @@ VkResult VKAPI vkGetPhysicalDeviceInfo(
     size_t*                                     pDataSize,
     void*                                       pData);
 
+void * VKAPI vkGetInstanceProcAddr(
+    VkInstance                                  instance,
+    const char*                                 pName);
+
 void * VKAPI vkGetProcAddr(
     VkPhysicalDevice                            physicalDevice,
     const char*                                 pName);
-
 // Device functions
 
 VkResult VKAPI vkCreateDevice(
@@ -2418,25 +2420,24 @@ VkResult VKAPI vkGetObjectInfo(
 
 // Memory management API functions
 
-VkResult VKAPI vkQueueBindObjectMemory(
-    VkQueue                                     queue,
+VkResult VKAPI vkBindObjectMemory(
+    VkDevice                                    device,
     VkObjectType                                objType,
     VkObject                                    object,
     uint32_t                                    allocationIdx,
     VkDeviceMemory                              mem,
     VkDeviceSize                                memOffset);
 
-VkResult VKAPI vkQueueBindObjectMemoryRange(
+VkResult VKAPI vkQueueBindSparseBufferMemory(
     VkQueue                                     queue,
-    VkObjectType                                objType,
-    VkObject                                    object,
+    VkBuffer                                    buffer,
     uint32_t                                    allocationIdx,
     VkDeviceSize                                rangeOffset,
     VkDeviceSize                                rangeSize,
     VkDeviceMemory                              mem,
     VkDeviceSize                                memOffset);
 
-VkResult VKAPI vkQueueBindImageMemoryRange(
+VkResult VKAPI vkQueueBindSparseImageMemory(
     VkQueue                                     queue,
     VkImage                                     image,
     uint32_t                                    allocationIdx,
@@ -2830,13 +2831,6 @@ void VKAPI vkCmdCopyImageToBuffer(
     VkBuffer                                    destBuffer,
     uint32_t                                    regionCount,
     const VkBufferImageCopy*                    pRegions);
-
-void VKAPI vkCmdCloneImageData(
-    VkCmdBuffer                                 cmdBuffer,
-    VkImage                                     srcImage,
-    VkImageLayout                               srcImageLayout,
-    VkImage                                     destImage,
-    VkImageLayout                               destImageLayout);
 
 void VKAPI vkCmdUpdateBuffer(
     VkCmdBuffer                                 cmdBuffer,

@@ -151,7 +151,6 @@ static const char* string_from_vulkan_object_type(uint32_t type) {
 typedef struct _OBJTRACK_NODE {
     VkObject        vkObj;
     VkObjectType    objType;
-    uint64_t        numUses;
     OBJECT_STATUS   status;
 } OBJTRACK_NODE;
 

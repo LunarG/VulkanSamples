@@ -33,12 +33,13 @@
 #include "vkLayer.h"
 #include "layers_config.h"
 #include "layers_msg.h"
+#include "vk_enum_string_helper.h"
 #include "shader_checker.h"
 // The following is #included again to catch certain OS-specific functions
 // being used:
 #include "loader_platform.h"
 
-#include "SPIRV/spirv.h"
+#include "spirv/spirv.h"
 
 
 static std::unordered_map<void *, VkLayerDispatchTable *> tableMap;
@@ -584,6 +585,38 @@ get_format_type(VkFormat fmt) {
 }
 
 
+/* characterizes a SPIR-V type appearing in an interface to a FF stage,
+ * for comparison to a VkFormat's characterization above. */
+static unsigned
+get_fundamental_type(shader_source const *src, unsigned type)
+{
+    auto type_def_it = src->type_def_index.find(type);
+
+    if (type_def_it == src->type_def_index.end()) {
+        return FORMAT_TYPE_UNDEFINED;
+    }
+
+    unsigned int const *code = (unsigned int const *)&src->words[type_def_it->second];
+    unsigned opcode = code[0] & 0x0ffffu;
+    switch (opcode) {
+        case spv::OpTypeInt:
+            return code[3] ? FORMAT_TYPE_SINT : FORMAT_TYPE_UINT;
+        case spv::OpTypeFloat:
+            return FORMAT_TYPE_FLOAT;
+        case spv::OpTypeVector:
+            return get_fundamental_type(src, code[2]);
+        case spv::OpTypeMatrix:
+            return get_fundamental_type(src, code[2]);
+        case spv::OpTypeArray:
+            return get_fundamental_type(src, code[2]);
+        case spv::OpTypePointer:
+            return get_fundamental_type(src, code[3]);
+        default:
+            return FORMAT_TYPE_UNDEFINED;
+    }
+}
+
+
 static void
 validate_vi_against_vs_inputs(VkPipelineVertexInputCreateInfo const *vi, shader_source const *vs)
 {
@@ -620,7 +653,18 @@ validate_vi_against_vs_inputs(VkPipelineVertexInputCreateInfo const *vi, shader_
             it_b++;
         }
         else {
-            /* TODO: type check */
+            unsigned attrib_type = get_format_type(it_a->second->format);
+            unsigned input_type = get_fundamental_type(vs, it_b->second.type_id);
+
+            /* type checking */
+            if (attrib_type != FORMAT_TYPE_UNDEFINED && input_type != FORMAT_TYPE_UNDEFINED && attrib_type != input_type) {
+                char vs_type[1024];
+                describe_type(vs_type, vs, it_b->second.type_id);
+                sprintf(str, "Attribute type of `%s` at location %d does not match VS input type of `%s`",
+                        string_VkFormat(it_a->second->format), a_first, vs_type);
+                layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, SHADER_CHECKER_INTERFACE_TYPE_MISMATCH, "SC", str);
+            }
+
             /* OK! */
             it_a++;
             it_b++;
@@ -670,7 +714,7 @@ validate_fs_outputs_against_cb(shader_source const *fs, VkPipelineCbStateCreateI
      * are currently dense, but the parallel with matching between shader stages is nice.
      */
 
-    while (outputs.size() > 0 && (it != outputs.end() || attachment < cb->attachmentCount)) {
+    while ((outputs.size() > 0 && it != outputs.end()) || attachment < cb->attachmentCount) {
         if (attachment == cb->attachmentCount || it->first < attachment) {
             sprintf(str, "FS writes to output location %d with no matching attachment", it->first);
             layerCbMsg(VK_DBG_MSG_WARNING, VK_VALIDATION_LEVEL_0, NULL, 0, SHADER_CHECKER_OUTPUT_NOT_CONSUMED, "SC", str);
@@ -682,8 +726,19 @@ validate_fs_outputs_against_cb(shader_source const *fs, VkPipelineCbStateCreateI
             attachment++;
         }
         else {
+            unsigned output_type = get_fundamental_type(fs, it->second.type_id);
+            unsigned att_type = get_format_type(cb->pAttachments[attachment].format);
+
+            /* type checking */
+            if (att_type != FORMAT_TYPE_UNDEFINED && output_type != FORMAT_TYPE_UNDEFINED && att_type != output_type) {
+                char fs_type[1024];
+                describe_type(fs_type, fs, it->second.type_id);
+                sprintf(str, "Attachment %d of type `%s` does not match FS output type of `%s`",
+                        attachment, string_VkFormat(cb->pAttachments[attachment].format), fs_type);
+                layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, SHADER_CHECKER_INTERFACE_TYPE_MISMATCH, "SC", str);
+            }
+
             /* OK! */
-            /* TODO: typecheck */
             it++;
             attachment++;
         }

@@ -235,10 +235,10 @@ static void loader_log(VK_DBG_MSG_TYPE msg_type, int32_t msg_code,
 
 #if defined(WIN32)
 	OutputDebugString(msg);
-#else
+#endif
     fputs(msg, stderr);
     fputc('\n', stderr);
-#endif
+
 }
 
 static bool has_extension(struct extension_property *exts, uint32_t count,
@@ -1286,6 +1286,17 @@ LOADER_EXPORT VkResult VKAPI vkEnumeratePhysicalDevices(
     *pPhysicalDeviceCount = count;
 
     return (count > 0) ? VK_SUCCESS : res;
+}
+
+LOADER_EXPORT void * VKAPI vkGetInstanceProcAddr(VkInstance instance, const char * pName)
+{
+    if (instance != VK_NULL_HANDLE) {
+
+        /* return entrypoint addresses that are global (in the loader)*/
+        return globalGetProcAddr(pName);
+    }
+
+    return NULL;
 }
 
 LOADER_EXPORT void * VKAPI vkGetProcAddr(VkPhysicalDevice gpu, const char * pName)

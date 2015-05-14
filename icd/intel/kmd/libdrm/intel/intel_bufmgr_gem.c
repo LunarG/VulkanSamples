@@ -2963,6 +2963,15 @@ drm_intel_gem_compute_batch_space(drm_intel_bo **bo_array, int count)
 {
 	int i;
 	unsigned int total = 0;
+	drm_intel_bufmgr_gem *bufmgr_gem;
+
+	if (count == 0)
+	    return 0;
+
+	/* Protect accesses to aperture counting flags.
+	 */
+	bufmgr_gem = (drm_intel_bufmgr_gem *) bo_array[0]->bufmgr;
+	pthread_mutex_lock(&bufmgr_gem->lock);
 
 	for (i = 0; i < count; i++) {
 		total += drm_intel_gem_bo_get_aperture_space(bo_array[i]);
@@ -2984,6 +2993,9 @@ drm_intel_gem_compute_batch_space(drm_intel_bo **bo_array, int count)
 
 	for (i = 0; i < count; i++)
 		drm_intel_gem_bo_clear_aperture_space_flag(bo_array[i]);
+
+	pthread_mutex_unlock(&bufmgr_gem->lock);
+
 	return total;
 }
 

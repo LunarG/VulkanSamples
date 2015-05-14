@@ -1177,7 +1177,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkDestroyObject(
             else {
                 char str[1024];
                 sprintf(str, "Destroying obj %p that is still bound to memory object %p\nYou should first clear binding "
-                             "by calling vkQueueBindObjectMemory(queue, %p, 0, VK_NULL_HANDLE, 0)",
+                             "by calling vkBindObjectMemory(queue, %p, 0, VK_NULL_HANDLE, 0)",
                              object, (void*)pDelInfo->pMemObjInfo->mem, object);
                 layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, object, 0, MEMTRACK_DESTROY_OBJECT_ERROR, "MEM", str);
                 // From the spec : If an object has previous memory binding, it is required to unbind memory
@@ -1203,22 +1203,22 @@ VK_LAYER_EXPORT VkResult VKAPI vkGetObjectInfo(
     void             *pData)
 {
     // TODO : What to track here?
-    //   Could potentially save returned mem requirements and validate values passed into QueueBindObjectMemory for this object
+    //   Could potentially save returned mem requirements and validate values passed into BindObjectMemory for this object
     // From spec : The only objects that are guaranteed to have no external memory requirements are devices, queues,
     //             command buffers, shaders and memory objects.
     VkResult result = nextTable.GetObjectInfo(device, objType, object, infoType, pDataSize, pData);
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkQueueBindObjectMemory(
-    VkQueue        queue,
+VK_LAYER_EXPORT VkResult VKAPI vkBindObjectMemory(
+    VkDevice       device,
     VkObjectType   objType,
     VkObject       object,
     uint32_t       allocationIdx,
     VkDeviceMemory mem,
     VkDeviceSize   offset)
 {
-    VkResult result = nextTable.QueueBindObjectMemory(queue, objType, object, allocationIdx, mem, offset);
+    VkResult result = nextTable.BindObjectMemory(device, objType, object, allocationIdx, mem, offset);
     loader_platform_thread_lock_mutex(&globalLock);
     // Track objects tied to memory
     if (VK_FALSE == updateObjectBinding(object, mem)) {
@@ -1232,23 +1232,22 @@ VK_LAYER_EXPORT VkResult VKAPI vkQueueBindObjectMemory(
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkQueueBindObjectMemoryRange(
+VK_LAYER_EXPORT VkResult VKAPI vkQueueBindSparseBufferMemory(
     VkQueue        queue,
-    VkObjectType   objType,
-    VkObject       object,
+    VkBuffer       buffer,
     uint32_t       allocationIdx,
     VkDeviceSize   rangeOffset,
     VkDeviceSize   rangeSize,
     VkDeviceMemory mem,
     VkDeviceSize   memOffset)
 {
-    VkResult result = nextTable.QueueBindObjectMemoryRange(queue, objType, object, allocationIdx, rangeOffset, rangeSize, mem, memOffset);
+    VkResult result = nextTable.QueueBindSparseBufferMemory(queue, buffer, allocationIdx, rangeOffset, rangeSize, mem, memOffset);
     loader_platform_thread_lock_mutex(&globalLock);
     // Track objects tied to memory
-    if (VK_FALSE == updateObjectBinding(object, mem)) {
+    if (VK_FALSE == updateObjectBinding(buffer, mem)) {
         char str[1024];
-        sprintf(str, "Unable to set object %p binding to mem obj %p", (void*)object, (void*)mem);
-        layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, object, 0, MEMTRACK_MEMORY_BINDING_ERROR, "MEM", str);
+        sprintf(str, "Unable to set object %p binding to mem obj %p", (void*)buffer, (void*)mem);
+        layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, buffer, 0, MEMTRACK_MEMORY_BINDING_ERROR, "MEM", str);
     }
     printObjList();
     printMemList();
@@ -1909,31 +1908,6 @@ VK_LAYER_EXPORT void VKAPI vkCmdCopyImageToBuffer(
     nextTable.CmdCopyImageToBuffer(cmdBuffer, srcImage, srcImageLayout, destBuffer, regionCount, pRegions);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdCloneImageData(
-    VkCmdBuffer   cmdBuffer,
-    VkImage       srcImage,
-    VkImageLayout srcImageLayout,
-    VkImage       destImage,
-    VkImageLayout destImageLayout)
-{
-    // TODO : Each image will have mem mapping so track them
-    loader_platform_thread_lock_mutex(&globalLock);
-    VkDeviceMemory mem = getMemBindingFromObject(srcImage);
-    if (VK_FALSE == updateCBBinding(cmdBuffer, mem)) {
-        char str[1024];
-        sprintf(str, "In vkCmdCloneImageData() call unable to update binding of srcImage buffer %p to cmdBuffer %p", srcImage, cmdBuffer);
-        layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, cmdBuffer, 0, MEMTRACK_MEMORY_BINDING_ERROR, "MEM", str);
-    }
-    mem = getMemBindingFromObject(destImage);
-    if (VK_FALSE == updateCBBinding(cmdBuffer, mem)) {
-        char str[1024];
-        sprintf(str, "In vkCmdCloneImageData() call unable to update binding of destImage buffer %p to cmdBuffer %p", destImage, cmdBuffer);
-        layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, cmdBuffer, 0, MEMTRACK_MEMORY_BINDING_ERROR, "MEM", str);
-    }
-    loader_platform_thread_unlock_mutex(&globalLock);
-    nextTable.CmdCloneImageData(cmdBuffer, srcImage, srcImageLayout, destImage, destImageLayout);
-}
-
 VK_LAYER_EXPORT void VKAPI vkCmdUpdateBuffer(
     VkCmdBuffer     cmdBuffer,
     VkBuffer        destBuffer,
@@ -2270,10 +2244,10 @@ VK_LAYER_EXPORT void* VKAPI vkGetProcAddr(
         return (void*) vkDestroyObject;
     if (!strcmp(funcName, "vkGetObjectInfo"))
         return (void*) vkGetObjectInfo;
-    if (!strcmp(funcName, "vkQueueBindObjectMemory"))
-        return (void*) vkQueueBindObjectMemory;
-    if (!strcmp(funcName, "vkQueueBindObjectMemoryRange"))
-        return (void*) vkQueueBindObjectMemoryRange;
+    if (!strcmp(funcName, "vkBindObjectMemory"))
+        return (void*) vkBindObjectMemory;
+    if (!strcmp(funcName, "vkQueueBindSparseBufferMemory"))
+        return (void*) vkQueueBindSparseBufferMemory;
     if (!strcmp(funcName, "vkCreateFence"))
         return (void*) vkCreateFence;
     if (!strcmp(funcName, "vkGetFenceStatus"))
@@ -2352,8 +2326,6 @@ VK_LAYER_EXPORT void* VKAPI vkGetProcAddr(
         return (void*) vkCmdCopyBufferToImage;
     if (!strcmp(funcName, "vkCmdCopyImageToBuffer"))
         return (void*) vkCmdCopyImageToBuffer;
-    if (!strcmp(funcName, "vkCmdCloneImageData"))
-        return (void*) vkCmdCloneImageData;
     if (!strcmp(funcName, "vkCmdUpdateBuffer"))
         return (void*) vkCmdUpdateBuffer;
     if (!strcmp(funcName, "vkCmdFillBuffer"))

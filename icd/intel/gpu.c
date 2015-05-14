@@ -257,6 +257,14 @@ void intel_gpu_get_props(const struct intel_gpu *gpu,
     props->timestampFrequency = 1000 * 1000 * 1000 / 80;
 
     props->multiColorAttachmentClears = false;
+
+    /* hardware is limited to 16 viewports */
+    props->maxViewports = INTEL_MAX_VIEWPORTS;
+
+    props->maxColorAttachments = INTEL_MAX_RENDER_TARGETS;
+
+    /* ? */
+    props->maxDescriptorSets = 2;
 }
 
 void intel_gpu_get_perf(const struct intel_gpu *gpu,
@@ -276,7 +284,7 @@ void intel_gpu_get_queue_props(const struct intel_gpu *gpu,
 {
     switch (engine) {
     case INTEL_GPU_ENGINE_3D:
-        props->queueFlags = VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_COMPUTE_BIT | VK_QUEUE_MEMMGR_BIT;
+        props->queueFlags = VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_COMPUTE_BIT;
         props->queueCount = 1;
         props->maxAtomicCounters = INTEL_QUEUE_ATOMIC_COUNTER_COUNT;
         props->supportsTimestamps = true;

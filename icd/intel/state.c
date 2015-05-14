@@ -98,7 +98,7 @@ viewport_state_alloc_cmd(struct intel_dynamic_vp *state,
 
     state->viewport_count = info->viewportAndScissorCount;
 
-    assert(info->viewportAndScissorCount < INTEL_MAX_RENDER_TARGETS);
+    assert(info->viewportAndScissorCount <= INTEL_MAX_VIEWPORTS);
 
     if (intel_gpu_gen(gpu) >= INTEL_GEN(7)) {
         state->cmd_len = 16 * info->viewportAndScissorCount;
