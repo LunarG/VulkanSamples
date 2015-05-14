@@ -1139,11 +1139,13 @@ class ObjectTrackerSubcommand(Subcommand):
         header_txt.append('    return VK_FALSE;')
         header_txt.append('}')
         header_txt.append('')
-        header_txt.append('static void validate_draw_state_flags(VkObject vkObj) {')
-        header_txt.append('    validate_status(vkObj, VK_OBJECT_TYPE_COMMAND_BUFFER, OBJSTATUS_VIEWPORT_BOUND,      OBJSTATUS_VIEWPORT_BOUND,      VK_DBG_MSG_ERROR,    OBJTRACK_VIEWPORT_NOT_BOUND,      "Viewport object not bound to this command buffer");')
-        header_txt.append('    validate_status(vkObj, VK_OBJECT_TYPE_COMMAND_BUFFER, OBJSTATUS_RASTER_BOUND,        OBJSTATUS_RASTER_BOUND,        VK_DBG_MSG_ERROR,    OBJTRACK_RASTER_NOT_BOUND,        "Raster object not bound to this command buffer");')
-        header_txt.append('    validate_status(vkObj, VK_OBJECT_TYPE_COMMAND_BUFFER, OBJSTATUS_COLOR_BLEND_BOUND,   OBJSTATUS_COLOR_BLEND_BOUND,   VK_DBG_MSG_UNKNOWN,  OBJTRACK_COLOR_BLEND_NOT_BOUND,   "Color-blend object not bound to this command buffer");')
-        header_txt.append('    validate_status(vkObj, VK_OBJECT_TYPE_COMMAND_BUFFER, OBJSTATUS_DEPTH_STENCIL_BOUND, OBJSTATUS_DEPTH_STENCIL_BOUND, VK_DBG_MSG_UNKNOWN,  OBJTRACK_DEPTH_STENCIL_NOT_BOUND, "Depth-stencil object not bound to this command buffer");')
+        header_txt.append('static bool32_t validate_draw_state_flags(VkObject vkObj) {')
+        header_txt.append('    bool32_t result1, result2, result3, result4;')
+        header_txt.append('    result1 = validate_status(vkObj, VK_OBJECT_TYPE_COMMAND_BUFFER, OBJSTATUS_VIEWPORT_BOUND,      OBJSTATUS_VIEWPORT_BOUND,      VK_DBG_MSG_ERROR,  OBJTRACK_VIEWPORT_NOT_BOUND,      "Viewport object not bound to this command buffer");')
+        header_txt.append('    result2 = validate_status(vkObj, VK_OBJECT_TYPE_COMMAND_BUFFER, OBJSTATUS_RASTER_BOUND,        OBJSTATUS_RASTER_BOUND,        VK_DBG_MSG_ERROR,  OBJTRACK_RASTER_NOT_BOUND,        "Raster object not bound to this command buffer");')
+        header_txt.append('    result3 = validate_status(vkObj, VK_OBJECT_TYPE_COMMAND_BUFFER, OBJSTATUS_COLOR_BLEND_BOUND,   OBJSTATUS_COLOR_BLEND_BOUND,   VK_DBG_MSG_ERROR,  OBJTRACK_COLOR_BLEND_NOT_BOUND,   "Color-blend object not bound to this command buffer");')
+        header_txt.append('    result4 = validate_status(vkObj, VK_OBJECT_TYPE_COMMAND_BUFFER, OBJSTATUS_DEPTH_STENCIL_BOUND, OBJSTATUS_DEPTH_STENCIL_BOUND, VK_DBG_MSG_ERROR,  OBJTRACK_DEPTH_STENCIL_NOT_BOUND, "Depth-stencil object not bound to this command buffer");')
+        header_txt.append('    return ((result1 == VK_TRUE) && (result2 == VK_TRUE) && (result3 == VK_TRUE) && (result4 == VK_TRUE));')
         header_txt.append('}')
         header_txt.append('')
         return "\n".join(header_txt)
@@ -1212,8 +1214,9 @@ class ObjectTrackerSubcommand(Subcommand):
             using_line += '    track_object_status(cmdBuffer, stateBindPoint);\n'
             using_line += '    loader_platform_thread_unlock_mutex(&objLock);\n'
         elif 'CmdDraw' in proto.name:
-            using_line  = '    loader_platform_thread_lock_mutex(&objLock);\n'
-            using_line += '    validate_draw_state_flags(cmdBuffer);\n'
+            using_line  = '    bool32_t valid;\n'
+            using_line += '    loader_platform_thread_lock_mutex(&objLock);\n'
+            using_line += '    valid = validate_draw_state_flags(cmdBuffer);\n'
             using_line += '    loader_platform_thread_unlock_mutex(&objLock);\n'
         elif 'MapMemory' in proto.name:
             using_line  = '    loader_platform_thread_lock_mutex(&objLock);\n'
@@ -1295,7 +1298,6 @@ class ObjectTrackerSubcommand(Subcommand):
                      '    }\n'
                          '}' % (qual, decl, self.layer_name, ret_val, proto.c_call(), create_line, destroy_line, stmt, self.layer_name))
         elif 'GetPhysicalDeviceInfo' in proto.name:
-
             gpu_state  = '    if (infoType == VK_PHYSICAL_DEVICE_INFO_TYPE_QUEUE_PROPERTIES) {\n'
             gpu_state += '        if (pData != NULL) {\n'
             gpu_state += '            loader_platform_thread_lock_mutex(&objLock);\n'
@@ -1312,6 +1314,15 @@ class ObjectTrackerSubcommand(Subcommand):
                      '%s'
                      '%s'
                      '}' % (qual, decl, self.layer_name, ret_val, proto.c_call(), create_line, destroy_line, gpu_state, stmt))
+        elif 'CmdDraw' in proto.name:
+            funcs.append('%s%s\n'
+                     '{\n'
+                     '%s'
+                     '    if (valid == VK_TRUE) {\n'
+                     '        nextTable.%s;\n'
+                     '    }\n'
+                     '%s'
+                     '}' % (qual, decl, using_line, proto.c_call(), stmt))
         else:
             funcs.append('%s%s\n'
                      '{\n'

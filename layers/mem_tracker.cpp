@@ -482,7 +482,7 @@ static void reportMemReferencesAndCleanUp(
         char str[1024];
         sprintf(str, "Attempting to free memory object %p which still contains %lu references",
             pMemObjInfo->mem, (cmdBufRefCount + objRefCount));
-        layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, pMemObjInfo->mem, 0, MEMTRACK_INTERNAL_ERROR, "MEM", str);
+        layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, pMemObjInfo->mem, 0, MEMTRACK_INTERNAL_ERROR, "MEM", str);
     }
 
     if (cmdBufRefCount > 0 && pMemObjInfo->pCmdBufferBindings.size() > 0) {
@@ -504,6 +504,7 @@ static void reportMemReferencesAndCleanUp(
         // Clear the list of hanging references
         pMemObjInfo->pObjBindings.clear();
     }
+
 }
 
 static void deleteMemObjInfo(
@@ -583,10 +584,6 @@ static bool32_t freeMemObjInfo(
 
             // Now verify that no references to this mem obj remain
             if (0 != pInfo->refCount) {
-                // If references remain, report the error and can search CB list to find references
-                char str[1024];
-                sprintf(str, "Freeing mem obj %p while it still has references", (void*)mem);
-                layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, mem, 0, MEMTRACK_FREED_MEM_REF, "MEM", str);
                 reportMemReferencesAndCleanUp(pInfo);
                 result = VK_FALSE;
             }
@@ -668,6 +665,7 @@ static bool32_t updateObjectBinding(
         if (!pInfo) {
             sprintf(str, "While trying to bind mem for obj %p, couldn't find info for mem obj %p", (void*)object, (void*)mem);
             layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, mem, 0, MEMTRACK_INVALID_MEM_OBJ, "MEM", str);
+            return VK_FALSE;
         } else {
             // Search for object in memory object's binding list
             bool32_t found  = VK_FALSE;
@@ -930,7 +928,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkGetGlobalExtensionInfo(
     size_t              *pDataSize,
     void                *pData)
 {
-    /* This entrypoint is NOT going to init it's own dispatch table since loader calls here early */
+    // This entrypoint is NOT going to init its own dispatch table since loader calls here early
     VkExtensionProperties *ext_props;
     uint32_t *count;
 
@@ -1055,14 +1053,16 @@ VK_LAYER_EXPORT VkResult VKAPI vkFreeMemory(
      * all API objects referencing it and that it is not referenced by any queued command buffers
      */
     loader_platform_thread_lock_mutex(&globalLock);
-    if (VK_FALSE == freeMemObjInfo(mem, false)) {
-        char str[1024];
-        sprintf(str, "Issue while freeing mem obj %p", (void*)mem);
-        layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, mem, 0, MEMTRACK_FREE_MEM_ERROR, "MEM", str);
-    }
+    bool32_t noerror = freeMemObjInfo(mem, false);
     printMemList();
     printObjList();
     printCBList();
+    // Output an warning message for proper error/warning handling
+    if (noerror == VK_FALSE) {
+        char str[1024];
+        sprintf(str, "Freeing memory object while it still has references: mem obj %p", (void*)mem);
+        layerCbMsg(VK_DBG_MSG_WARNING, VK_VALIDATION_LEVEL_0, mem, 0, MEMTRACK_FREED_MEM_REF, "MEM", str);
+    }
     loader_platform_thread_unlock_mutex(&globalLock);
     VkResult result = nextTable.FreeMemory(device, mem);
     return result;
@@ -1092,7 +1092,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkMapMemory(
     MT_MEM_OBJ_INFO *pMemObj = getMemObjInfo(mem);
     if ((pMemObj->allocInfo.memProps & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT) == 0) {
         char str[1024];
-        sprintf(str, "Mapping Memory (%p) without VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT set", (void*)mem);
+        sprintf(str, "Mapping Memory without VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT set: mem obj %p", (void*)mem);
         layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, mem, 0, MEMTRACK_INVALID_STATE, "MEM", str);
     }
     loader_platform_thread_unlock_mutex(&globalLock);
