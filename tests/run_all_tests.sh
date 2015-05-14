@@ -2,6 +2,9 @@
 #
 # Run all the regression tests
 
+# Halt on error
+set -e
+
 # vkbase tests that basic VK calls are working (don't return an error).
 ./vkbase
 
