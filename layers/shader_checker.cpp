@@ -185,19 +185,6 @@ static VkLayerInstanceDispatchTable * initLayerInstanceTable(const VkBaseLayerOb
     return pTable;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkCreateDevice(VkPhysicalDevice gpu, const VkDeviceCreateInfo* pCreateInfo, VkDevice* pDevice)
-{
-    VkLayerDispatchTable* pTable = tableMap[gpu];
-    VkResult result = pTable->CreateDevice(gpu, pCreateInfo, pDevice);
-
-    loader_platform_thread_once(&g_initOnce, initLayer);
-    // create a mapping for the device object into the dispatch table
-    tableMap.emplace(*pDevice, pTable);
-    pCurObj = (VkBaseLayerObject *) *pDevice;
-    return result;
-}
-
-
 VK_LAYER_EXPORT VkResult VKAPI vkEnumerateLayers(VkPhysicalDevice physicalDevice, size_t maxStringSize, size_t* pLayerCount, char* const* pOutLayers, void* pReserved)
 {
     if (pLayerCount == NULL || pOutLayers == NULL || pOutLayers[0] == NULL || pOutLayers[1] == NULL || pReserved == NULL)
@@ -978,7 +965,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkDbgRegisterMsgCallback(
         g_debugAction = VK_DBG_LAYER_ACTION_CALLBACK;
     }
     // NOT CORRECT WITH MULTIPLE DEVICES OR INSTANCES, BUT THIS IS ALL GOING AWAY SOON ANYWAY
-    VkLayerDispatchTable *pTable = tableMap[pCurObj];
+    VkLayerInstanceDispatchTable *pTable = tableInstanceMap[pCurObj];
     VkResult result = pTable->DbgRegisterMsgCallback(instance, pfnMsgCallback, pUserData);
     return result;
 }
@@ -1009,7 +996,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkDbgUnregisterMsgCallback(
         }
     }
     // NOT CORRECT WITH MULTIPLE DEVICES OR INSTANCES, BUT THIS IS ALL GOING AWAY SOON ANYWAY
-    VkLayerDispatchTable *pTable = tableMap[pCurObj];
+    VkLayerInstanceDispatchTable *pTable = tableInstanceMap[pCurObj];
     VkResult result = pTable->DbgUnregisterMsgCallback(instance, pfnMsgCallback);
     return result;
 }
@@ -1031,7 +1018,6 @@ VK_LAYER_EXPORT void * VKAPI vkGetProcAddr(VkPhysicalDevice gpu, const char* pNa
     ADD_HOOK(vkGetProcAddr);
     ADD_HOOK(vkEnumerateLayers);
     ADD_HOOK(vkGetGlobalExtensionInfo);
-    ADD_HOOK(vkCreateDevice);
     ADD_HOOK(vkCreateShader);
     ADD_HOOK(vkCreateGraphicsPipeline);
     ADD_HOOK(vkCreateGraphicsPipelineDerivative);
@@ -1061,7 +1047,6 @@ VK_LAYER_EXPORT void * VKAPI vkGetInstanceProcAddr(VkInstance inst, const char* 
     ADD_HOOK(vkGetInstanceProcAddr);
     ADD_HOOK(vkEnumerateLayers);
     ADD_HOOK(vkGetGlobalExtensionInfo);
-    ADD_HOOK(vkCreateDevice);
 
     VkBaseLayerObject* instw = (VkBaseLayerObject *) inst;
     if (instw->pGPA == NULL)

@@ -89,6 +89,7 @@ LOADER_EXPORT VkResult VKAPI vkDestroyInstance(
     disp = loader_get_instance_dispatch(instance);
     return disp->DestroyInstance(instance);
 }
+
 LOADER_EXPORT VkResult VKAPI vkEnumeratePhysicalDevices(
                                             VkInstance instance,
                                             uint32_t* pPhysicalDeviceCount,
@@ -107,12 +108,13 @@ LOADER_EXPORT VkResult VKAPI vkGetPhysicalDeviceInfo(
                                             size_t* pDataSize,
                                             void* pData)
 {
-    const VkLayerDispatchTable *disp;
+    const VkLayerInstanceDispatchTable *disp;
     VkResult res;
 
-    disp = loader_get_dispatch(gpu);
+    disp = loader_get_instance_dispatch(gpu);
 
     res = disp->GetPhysicalDeviceInfo(gpu, infoType, pDataSize, pData);
+    //TODO add check for extension enabled
     if (infoType == VK_PHYSICAL_DEVICE_INFO_TYPE_DISPLAY_PROPERTIES_WSI && pData && res == VK_SUCCESS) {
         VkDisplayPropertiesWSI *info = pData;
         size_t count = *pDataSize / sizeof(*info), i;
@@ -124,18 +126,18 @@ LOADER_EXPORT VkResult VKAPI vkGetPhysicalDeviceInfo(
     return res;
 }
 
-LOADER_EXPORT VkResult VKAPI vkCreateDevice(VkPhysicalDevice gpu, const VkDeviceCreateInfo* pCreateInfo, VkDevice* pDevice)
+LOADER_EXPORT VkResult VKAPI vkCreateDevice(
+                                        VkPhysicalDevice gpu,
+                                        const VkDeviceCreateInfo* pCreateInfo,
+                                        VkDevice* pDevice)
 {
-    const VkLayerDispatchTable *disp;
+    const VkLayerInstanceDispatchTable *disp;
     VkResult res;
 
-    disp = loader_get_dispatch(gpu);
+    disp = loader_get_instance_dispatch(gpu);
 
+    // CreateDevice is dispatched on the instance chain
     res = disp->CreateDevice(gpu, pCreateInfo, pDevice);
-    if (res == VK_SUCCESS) {
-        loader_init_dispatch(*pDevice, disp);
-    }
-
     return res;
 }
 
@@ -161,13 +163,32 @@ LOADER_EXPORT VkResult VKAPI vkGetGlobalExtensionInfo(
     return instance_disp.GetGlobalExtensionInfo(infoType, extensionIndex, pDataSize, pData);
 }
 
-LOADER_EXPORT VkResult VKAPI vkGetPhysicalDeviceExtensionInfo(VkPhysicalDevice gpu, VkExtensionInfoType infoType, uint32_t extensionIndex, size_t* pDataSize, void* pData)
+LOADER_EXPORT VkResult VKAPI vkGetPhysicalDeviceExtensionInfo(
+                                                VkPhysicalDevice gpu,
+                                                VkExtensionInfoType infoType,
+                                                uint32_t extensionIndex,
+                                                size_t* pDataSize,
+                                                void* pData)
 {
-    const VkLayerDispatchTable *disp;
+    const VkLayerInstanceDispatchTable *disp;
 
-    disp = loader_get_dispatch(gpu);
+    disp = loader_get_instance_dispatch(gpu);
 
     return disp->GetPhysicalDeviceExtensionInfo(gpu, infoType, extensionIndex, pDataSize, pData);
+}
+
+LOADER_EXPORT VkResult VKAPI vkEnumerateLayers(
+                                                VkPhysicalDevice gpu,
+                                                size_t maxStringSize,
+                                                size_t* pLayerCount,
+                                                char* const* pOutLayers,
+                                                void* pReserved)
+{
+    const VkLayerInstanceDispatchTable *disp;
+
+    disp = loader_get_instance_dispatch(gpu);
+
+    return disp->EnumerateLayers(gpu, maxStringSize, pLayerCount,pOutLayers, pReserved);
 }
 
 LOADER_EXPORT VkResult VKAPI vkGetDeviceQueue(VkDevice device, uint32_t queueNodeIndex, uint32_t queueIndex, VkQueue* pQueue)
@@ -286,9 +307,9 @@ LOADER_EXPORT VkResult VKAPI vkPinSystemMemory(VkDevice device, const void* pSys
 
 LOADER_EXPORT VkResult VKAPI vkGetMultiDeviceCompatibility(VkPhysicalDevice gpu0, VkPhysicalDevice gpu1, VkPhysicalDeviceCompatibilityInfo* pInfo)
 {
-    const VkLayerDispatchTable *disp;
+    const VkLayerInstanceDispatchTable *disp;
 
-    disp = loader_get_dispatch(gpu0);
+    disp = loader_get_instance_dispatch(gpu0);
 
     return disp->GetMultiDeviceCompatibility(gpu0, gpu1, pInfo);
 }
@@ -1192,9 +1213,9 @@ LOADER_EXPORT void VKAPI vkCmdDbgMarkerEnd(VkCmdBuffer cmdBuffer)
 
 LOADER_EXPORT VkResult VKAPI vkGetDisplayInfoWSI(VkDisplayWSI display, VkDisplayInfoTypeWSI infoType, size_t* pDataSize, void* pData)
 {
-    const VkLayerDispatchTable *disp;
+    const VkLayerInstanceDispatchTable *disp;
 
-    disp = loader_get_dispatch(display);
+    disp = loader_get_instance_dispatch(display);
 
     return disp->GetDisplayInfoWSI(display, infoType, pDataSize, pData);
 }

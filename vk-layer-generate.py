@@ -32,6 +32,12 @@ import re
 import vulkan
 import vk_helper
 
+def proto_is_global(proto):
+    if proto.params[0].ty == "VkInstance" or proto.params[0].ty == "VkPhysicalDevice" or proto.name == "CreateInstance" or proto.name == "GetGlobalExtensionInfo" or proto.name == "GetDisplayInfoWSI":
+       return True
+    else:
+       return False
+
 def generate_get_proc_addr_check(name):
     return "    if (!%s || %s[0] != 'v' || %s[1] != 'k')\n" \
            "        return NULL;" % ((name,) * 3)
@@ -317,7 +323,7 @@ class Subcommand(object):
         # add layer_intercept_instance_proc
         lookups = []
         for proto in self.protos:
-            if proto.params[0].ty != "VkInstance" and proto.params[0].ty != "VkPhysicalDevice" and proto.name != "CreateInstance" and proto.name != "GetGlobalExtensionInfo":
+            if not proto_is_global(proto):
                 continue
 
             if not proto in intercepted:
@@ -534,7 +540,7 @@ class GenericLayerSubcommand(Subcommand):
         stmt = ''
         funcs = []
         table = ''
-        if proto.params[0].ty == "VkInstance" or proto.name == "CreateInstance":
+        if proto_is_global(proto):
            table = 'Instance'
 
         if proto.ret != "void":
@@ -854,7 +860,7 @@ class APIDumpSubcommand(Subcommand):
             indent = indent[4:]
             log_func += '\n%s}' % (indent)
         table = ''
-        if proto.params[0].ty == "VkInstance" or proto.name == "CreateInstance":
+        if proto_is_global(proto):
            table = 'Instance'
 
         if proto.name == "EnumerateLayers":
@@ -1259,7 +1265,7 @@ class ObjectTrackerSubcommand(Subcommand):
         if proto.ret != "void":
             ret_val = "%s result = " % proto.ret
             stmt = "    return result;\n"
-        if proto.params[0].ty == "VkInstance" or proto.name == "CreateInstance":
+        if proto_is_global(proto):
            table = 'Instance'
 
         if proto.name == "EnumerateLayers":
@@ -1402,7 +1408,7 @@ class ThreadingSubcommand(Subcommand):
         if proto.ret != "void":
             ret_val = "%s result = " % proto.ret
             stmt = "    return result;\n"
-        if proto.params[0].ty == "VkInstance" or proto.name == "CreateInstance":
+        if proto_is_global(proto):
            table = 'Instance'
 
         if proto.name == "EnumerateLayers":

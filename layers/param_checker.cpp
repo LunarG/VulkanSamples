@@ -162,7 +162,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkGetPhysicalDeviceInfo(VkPhysicalDevice gpu, VkP
         sprintf(str, "Parameter infoType to function GetPhysicalDeviceInfo has invalid value of %i.", (int)infoType);
         layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
     }
-    VkResult result = nextTable.GetPhysicalDeviceInfo(gpu, infoType, pDataSize, pData);
+    VkResult result = nextInstanceTable.GetPhysicalDeviceInfo(gpu, infoType, pDataSize, pData);
     return result;
 }
 
@@ -243,7 +243,7 @@ void PostCreateDevice(VkResult result, VkDevice* pDevice)
 VK_LAYER_EXPORT VkResult VKAPI vkCreateDevice(VkPhysicalDevice gpu, const VkDeviceCreateInfo* pCreateInfo, VkDevice* pDevice)
 {
     PreCreateDevice(gpu, pCreateInfo);
-    VkResult result = nextTable.CreateDevice(gpu, pCreateInfo, pDevice);
+    VkResult result = nextInstanceTable.CreateDevice(gpu, pCreateInfo, pDevice);
     PostCreateDevice(result, pDevice);
     return result;
 }
@@ -314,7 +314,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkGetPhysicalDeviceExtensionInfo(
                                                size_t*  pDataSize,
                                                void*    pData)
 {
-    VkResult result = nextTable.GetPhysicalDeviceExtensionInfo(gpu, infoType, extensionIndex, pDataSize, pData);
+    VkResult result = nextInstanceTable.GetPhysicalDeviceExtensionInfo(gpu, infoType, extensionIndex, pDataSize, pData);
     return result;
 }
 
@@ -327,7 +327,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkEnumerateLayers(VkPhysicalDevice gpu, size_t ma
         pCurObj = (VkBaseLayerObject *) gpu;
         loader_platform_thread_once(&initOnce, initParamChecker);
         loader_platform_thread_once(&tabDeviceOnce, initDeviceTable);
-        VkResult result = nextTable.EnumerateLayers(gpu, maxStringSize, pLayerCount, pOutLayers, pReserved);
+        VkResult result = nextInstanceTable.EnumerateLayers(gpu, maxStringSize, pLayerCount, pOutLayers, pReserved);
         sprintf(str, "Completed layered EnumerateLayers\n");
         layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, nullptr, 0, 0, "PARAMCHECK", str);
         fflush(stdout);
@@ -445,7 +445,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkPinSystemMemory(VkDevice device, const void* pS
 VK_LAYER_EXPORT VkResult VKAPI vkGetMultiDeviceCompatibility(VkPhysicalDevice gpu0, VkPhysicalDevice gpu1, VkPhysicalDeviceCompatibilityInfo* pInfo)
 {
 
-    VkResult result = nextTable.GetMultiDeviceCompatibility(gpu0, gpu1, pInfo);
+    VkResult result = nextInstanceTable.GetMultiDeviceCompatibility(gpu0, gpu1, pInfo);
     return result;
 }
 
@@ -1936,7 +1936,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdDbgMarkerEnd(VkCmdBuffer cmdBuffer)
 
 VK_LAYER_EXPORT VkResult VKAPI vkGetDisplayInfoWSI(VkDisplayWSI display, VkDisplayInfoTypeWSI infoType, size_t* pDataSize, void* pData)
 {
-    VkResult result = nextTable.GetDisplayInfoWSI(display, infoType, pDataSize, pData);
+    VkResult result = nextInstanceTable.GetDisplayInfoWSI(display, infoType, pDataSize, pData);
     return result;
 }
 

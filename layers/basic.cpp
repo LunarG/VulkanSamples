@@ -133,17 +133,37 @@ VK_LAYER_EXPORT VkResult VKAPI vkGetGlobalExtensionInfo(
     return VK_SUCCESS;
 }
 
+VK_LAYER_EXPORT VkResult VKAPI vkEnumeratePhysicalDevices(
+                                            VkInstance instance,
+                                            uint32_t* pPhysicalDeviceCount,
+                                            VkPhysicalDevice* pPhysicalDevices)
+{
+    /* Need to intercept this entrypoint to add the physDev objects to instance map */
+    VkLayerInstanceDispatchTable* pInstTable = tableInstanceMap[instance];
+    printf("At start of wrapped vkEnumeratePhysicalDevices() call w/ inst: %p\n", (void*)instance);
+    VkResult result = pInstTable->EnumeratePhysicalDevices(instance, pPhysicalDeviceCount, pPhysicalDevices);
+    if (pPhysicalDevices)
+    {
+        // create a mapping for the objects into the dispatch table
+        for (uint32_t i = 0; i < *pPhysicalDeviceCount; i++)
+        {
+            tableInstanceMap.emplace(*(pPhysicalDevices + i), pInstTable);
+        }
+    }
+    printf("Completed wrapped vkEnumeratePhysicalDevices() call w/ count %u\n", *pPhysicalDeviceCount);
+    return result;
+}
+
 VK_LAYER_EXPORT VkResult VKAPI vkCreateDevice(VkPhysicalDevice gpu, const VkDeviceCreateInfo* pCreateInfo, VkDevice* pDevice)
 {
-    VkLayerDispatchTable* pTable = tableMap[gpu];
+    VkLayerInstanceDispatchTable* pInstTable = tableInstanceMap[gpu];
 
     printf("At start of wrapped vkCreateDevice() call w/ gpu: %p\n", (void*)gpu);
-    VkResult result = pTable->CreateDevice(gpu, pCreateInfo, pDevice);
-    // create a mapping for the device object into the dispatch table
-    tableMap.emplace(*pDevice, pTable);
+    VkResult result = pInstTable->CreateDevice(gpu, pCreateInfo, pDevice);
     printf("Completed wrapped vkCreateDevice() call w/ pDevice, Device %p: %p\n", (void*)pDevice, (void *) *pDevice);
     return result;
 }
+
 VK_LAYER_EXPORT VkResult VKAPI vkGetFormatInfo(VkDevice device, VkFormat format, VkFormatInfoType infoType, size_t* pDataSize, void* pData)
 {
     VkLayerDispatchTable* pTable = tableMap[device];
@@ -158,7 +178,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkEnumerateLayers(VkPhysicalDevice gpu, size_t ma
 {
     if (gpu != NULL)
     {
-        VkLayerDispatchTable* pTable = initLayerTable((const VkBaseLayerObject *) gpu);
+        VkLayerInstanceDispatchTable* pTable = initLayerInstanceTable((const VkBaseLayerObject *) gpu);
 
         printf("At start of wrapped vkEnumerateLayers() call w/ gpu: %p\n", gpu);
         VkResult result = pTable->EnumerateLayers(gpu, maxStringSize, pLayerCount, pOutLayers, pReserved);
@@ -198,7 +218,9 @@ VK_LAYER_EXPORT void * VKAPI vkGetProcAddr(VkPhysicalDevice gpu, const char* pNa
         return (void *) vkGetProcAddr;
     if (!strcmp("vkCreateDevice", pName))
         return (void *) vkCreateDevice;
-    if (!strcmp("GetGlobalExtensionInfo", pName))
+    if (!strcmp("vkEnumeratePhysicalDevices", pName))
+        return (void*) vkEnumeratePhysicalDevices;
+    if (!strcmp("vkGetGlobalExtensionInfo", pName))
         return (void*) vkGetGlobalExtensionInfo;
     if (!strcmp("vkEnumerateLayers", pName))
         return (void *) vkEnumerateLayers;
@@ -225,7 +247,9 @@ VK_LAYER_EXPORT void * VKAPI vkGetInstanceProcAddr(VkInstance instance, const ch
         return (void *) vkGetInstanceProcAddr;
     if (!strcmp("vkGetProcAddr", pName))
         return (void *) vkGetProcAddr;
-    if (!strcmp("GetGlobalExtensionInfo", pName))
+    if (!strcmp("vkEnumeratePhysicalDevices", pName))
+        return (void*) vkEnumeratePhysicalDevices;
+    if (!strcmp("vkGetGlobalExtensionInfo", pName))
         return (void*) vkGetGlobalExtensionInfo;
     if (!strcmp("vkCreateDevice", pName))
         return (void *) vkCreateDevice;

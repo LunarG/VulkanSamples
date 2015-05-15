@@ -32,17 +32,7 @@ static inline void loader_init_device_dispatch_table(VkLayerDispatchTable *table
                                                     PFN_vkGetProcAddr gpa,
                                                     VkPhysicalDevice gpu)
 {
-    table->CreateInstance = vkCreateInstance; /* non-dispatchable */
-    table->DestroyInstance = (PFN_vkDestroyInstance) gpa(gpu, "vkDestroyInstance");
-    table->EnumeratePhysicalDevices = (PFN_vkEnumeratePhysicalDevices) gpa(gpu, "vkEnumeratePhysicalDevices");
-    table->GetPhysicalDeviceInfo = (PFN_vkGetPhysicalDeviceInfo) gpa(gpu, "vkGetPhysicalDeviceInfo");
-    table->GetInstanceProcAddr = (PFN_vkGetInstanceProcAddr) gpa(gpu, "vkGetInstanceProcAddr");
-    table->GetProcAddr = (PFN_vkGetProcAddr) gpa(gpu, "vkGetProcAddr");
-    table->CreateDevice = (PFN_vkCreateDevice) gpa(gpu, "vkCreateDevice");
     table->DestroyDevice = (PFN_vkDestroyDevice) gpa(gpu, "vkDestroyDevice");
-    table->GetGlobalExtensionInfo = vkGetGlobalExtensionInfo; /* non-dispatchable */
-    table->GetPhysicalDeviceExtensionInfo = (PFN_vkGetPhysicalDeviceExtensionInfo) gpa(gpu, "vkGetPhysicalDeviceExtensionInfo");
-    table->EnumerateLayers = (PFN_vkEnumerateLayers) gpa(gpu, "vkEnumerateLayers");
     table->GetDeviceQueue = (PFN_vkGetDeviceQueue) gpa(gpu, "vkGetDeviceQueue");
     table->QueueSubmit = (PFN_vkQueueSubmit) gpa(gpu, "vkQueueSubmit");
     table->QueueWaitIdle = (PFN_vkQueueWaitIdle) gpa(gpu, "vkQueueWaitIdle");
@@ -55,7 +45,6 @@ static inline void loader_init_device_dispatch_table(VkLayerDispatchTable *table
     table->FlushMappedMemoryRanges = (PFN_vkFlushMappedMemoryRanges) gpa(gpu, "vkFlushMappedMemoryRanges");
     table->InvalidateMappedMemoryRanges = (PFN_vkInvalidateMappedMemoryRanges) gpa(gpu, "vkInvalidateMappedMemoryRanges");
     table->PinSystemMemory = (PFN_vkPinSystemMemory) gpa(gpu, "vkPinSystemMemory");
-    table->GetMultiDeviceCompatibility = (PFN_vkGetMultiDeviceCompatibility) gpa(gpu, "vkGetMultiDeviceCompatibility");
     table->OpenSharedMemory = (PFN_vkOpenSharedMemory) gpa(gpu, "vkOpenSharedMemory");
     table->OpenSharedSemaphore = (PFN_vkOpenSharedSemaphore) gpa(gpu, "vkOpenSharedSemaphore");
     table->OpenPeerMemory = (PFN_vkOpenPeerMemory) gpa(gpu, "vkOpenPeerMemory");
@@ -147,15 +136,11 @@ static inline void loader_init_device_dispatch_table(VkLayerDispatchTable *table
     table->CmdBeginRenderPass = (PFN_vkCmdBeginRenderPass) gpa(gpu, "vkCmdBeginRenderPass");
     table->CmdEndRenderPass = (PFN_vkCmdEndRenderPass) gpa(gpu, "vkCmdEndRenderPass");
     table->DbgSetValidationLevel = (PFN_vkDbgSetValidationLevel) gpa(gpu, "vkDbgSetValidationLevel");
-    table->DbgRegisterMsgCallback = (PFN_vkDbgRegisterMsgCallback) gpa(gpu, "vkDbgRegisterMsgCallback");
-    table->DbgUnregisterMsgCallback = (PFN_vkDbgUnregisterMsgCallback) gpa(gpu, "vkDbgUnregisterMsgCallback");
     table->DbgSetMessageFilter = (PFN_vkDbgSetMessageFilter) gpa(gpu, "vkDbgSetMessageFilter");
     table->DbgSetObjectTag = (PFN_vkDbgSetObjectTag) gpa(gpu, "vkDbgSetObjectTag");
-    table->DbgSetGlobalOption = (PFN_vkDbgSetGlobalOption) gpa(gpu, "vkDbgSetGlobalOption");
     table->DbgSetDeviceOption = (PFN_vkDbgSetDeviceOption) gpa(gpu, "vkDbgSetDeviceOption");
     table->CmdDbgMarkerBegin = (PFN_vkCmdDbgMarkerBegin) gpa(gpu, "vkCmdDbgMarkerBegin");
     table->CmdDbgMarkerEnd = (PFN_vkCmdDbgMarkerEnd) gpa(gpu, "vkCmdDbgMarkerEnd");
-    table->GetDisplayInfoWSI = (PFN_vkGetDisplayInfoWSI) gpa(gpu, "vkGetDisplayInfoWSI");
     table->CreateSwapChainWSI = (PFN_vkCreateSwapChainWSI) gpa(gpu, "vkCreateSwapChainWSI");
     table->DestroySwapChainWSI = (PFN_vkDestroySwapChainWSI) gpa(gpu, "vkDestroySwapChainWSI");
     table->GetSwapChainInfoWSI = (PFN_vkGetSwapChainInfoWSI) gpa(gpu, "vkGetSwapChainInfoWSI");
@@ -170,24 +155,8 @@ static inline void *loader_lookup_device_dispatch_table(
         return NULL;
 
     name += 2;
-    if (!strcmp(name, "DestroyInstance"))
-        return (void *) table->DestroyInstance;
-    if (!strcmp(name, "EnumeratePhysicalDevices"))
-        return (void *) table->EnumeratePhysicalDevices;
-    if (!strcmp(name, "GetPhysicalDeviceInfo"))
-        return (void *) table->GetPhysicalDeviceInfo;
-    if (!strcmp(name, "GetInstanceProcAddr"))
-        return (void *) table->GetInstanceProcAddr;
-    if (!strcmp(name, "GetProcAddr"))
-        return (void *) table->GetProcAddr;
-    if (!strcmp(name, "CreateDevice"))
-        return (void *) table->CreateDevice;
     if (!strcmp(name, "DestroyDevice"))
         return (void *) table->DestroyDevice;
-    if (!strcmp(name, "GetPhysicalDeviceExtensionInfo"))
-        return (void *) table->GetPhysicalDeviceExtensionInfo;
-    if (!strcmp(name, "EnumerateLayers"))
-        return (void *) table->EnumerateLayers;
     if (!strcmp(name, "GetDeviceQueue"))
         return (void *) table->GetDeviceQueue;
     if (!strcmp(name, "QueueSubmit"))
@@ -212,8 +181,6 @@ static inline void *loader_lookup_device_dispatch_table(
         return (void *) table->InvalidateMappedMemoryRanges;
     if (!strcmp(name, "PinSystemMemory"))
         return (void *) table->PinSystemMemory;
-    if (!strcmp(name, "GetMultiDeviceCompatibility"))
-        return (void *) table->GetMultiDeviceCompatibility;
     if (!strcmp(name, "OpenSharedMemory"))
         return (void *) table->OpenSharedMemory;
     if (!strcmp(name, "OpenSharedSemaphore"))
@@ -396,24 +363,16 @@ static inline void *loader_lookup_device_dispatch_table(
         return (void *) table->CmdEndRenderPass;
     if (!strcmp(name, "DbgSetValidationLevel"))
         return (void *) table->DbgSetValidationLevel;
-    if (!strcmp(name, "DbgRegisterMsgCallback"))
-        return (void *) table->DbgRegisterMsgCallback;
-    if (!strcmp(name, "DbgUnregisterMsgCallback"))
-        return (void *) table->DbgUnregisterMsgCallback;
     if (!strcmp(name, "DbgSetMessageFilter"))
         return (void *) table->DbgSetMessageFilter;
     if (!strcmp(name, "DbgSetObjectTag"))
         return (void *) table->DbgSetObjectTag;
-    if (!strcmp(name, "DbgSetGlobalOption"))
-        return (void *) table->DbgSetGlobalOption;
     if (!strcmp(name, "DbgSetDeviceOption"))
         return (void *) table->DbgSetDeviceOption;
     if (!strcmp(name, "CmdDbgMarkerBegin"))
         return (void *) table->CmdDbgMarkerBegin;
     if (!strcmp(name, "CmdDbgMarkerEnd"))
         return (void *) table->CmdDbgMarkerEnd;
-    if (!strcmp(name, "GetDisplayInfoWSI"))
-        return (void *) table->GetDisplayInfoWSI;
     if (!strcmp(name, "CreateSwapChainWSI"))
         return (void *) table->CreateSwapChainWSI;
     if (!strcmp(name, "DestroySwapChainWSI"))
@@ -444,6 +403,7 @@ static inline void loader_init_instance_dispatch_table(VkLayerInstanceDispatchTa
     table->DbgRegisterMsgCallback = (PFN_vkDbgRegisterMsgCallback) gpa(inst, "vkDbgRegisterMsgCallback");
     table->DbgUnregisterMsgCallback = (PFN_vkDbgUnregisterMsgCallback) gpa(inst, "vkDbgUnregisterMsgCallback");
     table->DbgSetGlobalOption = (PFN_vkDbgSetGlobalOption) gpa(inst, "vkDbgSetGlobalOption");
+    table->GetDisplayInfoWSI = (PFN_vkGetDisplayInfoWSI) gpa(inst, "vkGetDisplayInfoWSI");
 }
 
 static inline void *loader_lookup_instance_dispatch_table(
@@ -482,6 +442,8 @@ static inline void *loader_lookup_instance_dispatch_table(
         return (void *) table->DbgUnregisterMsgCallback;
     if (!strcmp(name, "DbgSetGlobalOption"))
         return (void *) table->DbgSetGlobalOption;
+    if (!strcmp(name, "GetDisplayInfoWSI"))
+        return (void *) table->GetDisplayInfoWSI;
 
     return NULL;
 }

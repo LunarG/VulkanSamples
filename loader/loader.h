@@ -57,8 +57,34 @@ struct loader_layers {
     char name[256];
 };
 
+struct loader_icd {
+    const struct loader_scanned_icds *scanned_icds;
+
+    VkLayerDispatchTable *loader_dispatch;
+    uint32_t layer_count[MAX_GPUS_FOR_LAYER];
+    struct loader_layers layer_libs[MAX_GPUS_FOR_LAYER][MAX_LAYER_LIBRARIES];
+    VkBaseLayerObject *wrappedGpus[MAX_GPUS_FOR_LAYER];
+    uint32_t gpu_count;
+    VkBaseLayerObject *gpus;
+    VkInstance instance;       // instance object from the icd
+    PFN_vkGetProcAddr GetProcAddr;
+    PFN_vkDestroyInstance DestroyInstance;
+    PFN_vkEnumeratePhysicalDevices EnumeratePhysicalDevices;
+    PFN_vkGetPhysicalDeviceInfo GetPhysicalDeviceInfo;
+    PFN_vkCreateDevice CreateDevice;
+    PFN_vkGetPhysicalDeviceExtensionInfo GetPhysicalDeviceExtensionInfo;
+    PFN_vkEnumerateLayers EnumerateLayers;
+    PFN_vkGetMultiDeviceCompatibility GetMultiDeviceCompatibility;
+    PFN_vkDbgRegisterMsgCallback DbgRegisterMsgCallback;
+    PFN_vkDbgUnregisterMsgCallback DbgUnregisterMsgCallback;
+    PFN_vkDbgSetGlobalOption DbgSetGlobalOption;
+    PFN_vkGetDisplayInfoWSI GetDisplayInfoWSI;
+    struct loader_icd *next;
+};
+
 struct loader_instance {
-    VkLayerInstanceDispatchTable *disp;
+    VkLayerInstanceDispatchTable *disp; // must be first entry in structure
+
     uint32_t layer_count;
     struct loader_layers layer_libs[MAX_LAYER_LIBRARIES];
     VkBaseLayerObject *wrappedInstance;
@@ -126,12 +152,41 @@ VkResult loader_EnumeratePhysicalDevices(
         VkInstance                              instance,
         uint32_t*                               pPhysicalDeviceCount,
         VkPhysicalDevice*                       pPhysicalDevices);
+VkResult loader_GetPhysicalDeviceInfo(
+        VkPhysicalDevice                        gpu,
+        VkPhysicalDeviceInfoType                infoType,
+        size_t*                                 pDataSize,
+        void*                                   pData);
+
+VkResult loader_CreateDevice(
+        VkPhysicalDevice                        gpu,
+        const VkDeviceCreateInfo*               pCreateInfo,
+        VkDevice*                               pDevice);
 
 VkResult VKAPI loader_GetGlobalExtensionInfo(
         VkExtensionInfoType                     infoType,
         uint32_t                                extensionIndex,
         size_t*                                 pDataSize,
         void*                                   pData);
+
+VkResult loader_GetPhysicalDeviceExtensionInfo(
+        VkPhysicalDevice                        gpu,
+        VkExtensionInfoType                     infoType,
+        uint32_t                                extensionIndex,
+        size_t*                                 pDataSize,
+        void*                                   pData);
+
+VkResult loader_EnumerateLayers(
+        VkPhysicalDevice                        gpu,
+        size_t                                  maxStringSize,
+        size_t*                                 pLayerCount,
+        char* const*                            pOutLayers,
+        void*                                   pReserved);
+
+VkResult loader_GetMultiDeviceCompatibility(
+        VkPhysicalDevice                        gpu0,
+        VkPhysicalDevice                        gpu1,
+        VkPhysicalDeviceCompatibilityInfo*      pInfo);
 
 VkResult loader_DbgRegisterMsgCallback(
         VkInstance                              instance,
@@ -148,11 +203,18 @@ VkResult loader_DbgSetGlobalOption(
         size_t                                  dataSize,
         const void*                             pData);
 
+VkResult loader_GetDisplayInfoWSI(
+        VkDisplayWSI                            display,
+        VkDisplayInfoTypeWSI                    infoType,
+        size_t*                                 pDataSize,
+        void*                                   pData);
+
 /* function definitions */
 bool loader_is_extension_scanned(const char *name);
 void loader_icd_scan(void);
 void layer_lib_scan(void);
 void loader_coalesce_extensions(void);
-struct loader_icd * loader_get_icd(const VkBaseLayerObject *gpu, uint32_t *gpu_index);
+struct loader_icd * loader_get_icd(const VkBaseLayerObject *gpu,
+                                   uint32_t *gpu_index);
 uint32_t loader_activate_instance_layers(struct loader_instance *inst);
 #endif /* LOADER_H */

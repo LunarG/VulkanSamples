@@ -1491,7 +1491,7 @@ static void initDrawState(void)
 
 VK_LAYER_EXPORT VkResult VKAPI vkCreateDevice(VkPhysicalDevice gpu, const VkDeviceCreateInfo* pCreateInfo, VkDevice* pDevice)
 {
-    VkResult result = nextTable.CreateDevice(gpu, pCreateInfo, pDevice);
+    VkResult result = nextInstanceTable.CreateDevice(gpu, pCreateInfo, pDevice);
     return result;
 }
 
@@ -1572,7 +1572,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkEnumerateLayers(VkPhysicalDevice gpu, size_t ma
     {
         pCurObj = (VkBaseLayerObject *) gpu;
         loader_platform_thread_once(&g_initOnce, initDrawState);
-        VkResult result = nextTable.EnumerateLayers(gpu, maxStringSize, pLayerCount, pOutLayers, pReserved);
+        VkResult result = nextInstanceTable.EnumerateLayers(gpu, maxStringSize, pLayerCount, pOutLayers, pReserved);
         return result;
     } else {
         if (pLayerCount == NULL || pOutLayers == NULL || pOutLayers[0] == NULL)

@@ -60,31 +60,6 @@ struct extension_property {
     bool hosted;            // does the extension reside in one driver/layer
 };
 
-struct loader_icd {
-    const struct loader_scanned_icds *scanned_icds;
-
-    VkLayerDispatchTable *loader_dispatch;
-    uint32_t layer_count[MAX_GPUS_FOR_LAYER];
-    struct loader_layers layer_libs[MAX_GPUS_FOR_LAYER][MAX_LAYER_LIBRARIES];
-    VkBaseLayerObject *wrappedGpus[MAX_GPUS_FOR_LAYER];
-    uint32_t gpu_count;
-    VkBaseLayerObject *gpus;
-    VkInstance instance;       // instance object from the icd
-    PFN_vkGetProcAddr GetProcAddr;
-    PFN_vkDestroyInstance DestroyInstance;
-    PFN_vkEnumeratePhysicalDevices EnumeratePhysicalDevices;
-    PFN_vkGetPhysicalDeviceInfo GetPhysicalDeviceInfo;
-    PFN_vkCreateDevice CreateDevice;
-    PFN_vkGetPhysicalDeviceExtensionInfo GetPhysicalDeviceExtensionInfo;
-    PFN_vkEnumerateLayers EnumerateLayers;
-    PFN_vkGetMultiDeviceCompatibility GetMultiDeviceCompatibility;
-    PFN_vkDbgRegisterMsgCallback DbgRegisterMsgCallback;
-    PFN_vkDbgUnregisterMsgCallback DbgUnregisterMsgCallback;
-    PFN_vkDbgSetGlobalOption DbgSetGlobalOption;
-    struct loader_icd *next;
-};
-
-
 struct loader_scanned_icds {
     loader_platform_dl_handle handle;
 
@@ -103,15 +78,16 @@ VkLayerInstanceDispatchTable instance_disp = {
     .CreateInstance = loader_CreateInstance,
     .DestroyInstance = loader_DestroyInstance,
     .EnumeratePhysicalDevices = loader_EnumeratePhysicalDevices,
-    .GetPhysicalDeviceInfo = vkGetPhysicalDeviceInfo,
-    .CreateDevice = vkCreateDevice,
+    .GetPhysicalDeviceInfo = loader_GetPhysicalDeviceInfo,
+    .CreateDevice = loader_CreateDevice,
     .GetGlobalExtensionInfo = loader_GetGlobalExtensionInfo,
-    .GetPhysicalDeviceExtensionInfo = vkGetPhysicalDeviceExtensionInfo,
-    .EnumerateLayers = vkEnumerateLayers,
-    .GetMultiDeviceCompatibility = vkGetMultiDeviceCompatibility,
+    .GetPhysicalDeviceExtensionInfo = loader_GetPhysicalDeviceExtensionInfo,
+    .EnumerateLayers = loader_EnumerateLayers,
+    .GetMultiDeviceCompatibility = loader_GetMultiDeviceCompatibility,
     .DbgRegisterMsgCallback = loader_DbgRegisterMsgCallback,
     .DbgUnregisterMsgCallback = loader_DbgUnregisterMsgCallback,
     .DbgSetGlobalOption = loader_DbgSetGlobalOption,
+    .GetDisplayInfoWSI = loader_GetDisplayInfoWSI
 };
 
 LOADER_PLATFORM_THREAD_ONCE_DECLARATION(once_icd);
@@ -498,6 +474,7 @@ static void loader_icd_init_entrys(struct loader_icd *icd,
     LOOKUP(DbgRegisterMsgCallback);
     LOOKUP(DbgUnregisterMsgCallback);
     LOOKUP(DbgSetGlobalOption);
+    LOOKUP(GetDisplayInfoWSI);
 #undef LOOKUP
 
     return;
@@ -747,11 +724,11 @@ void layer_lib_scan(void)
 
 static void* VKAPI loader_gpa_device_internal(VkPhysicalDevice physDev, const char * pName)
 {
+    //physDev is not wrapped
     if (physDev == VK_NULL_HANDLE) {
         return NULL;
     }
-    VkBaseLayerObject* physDevWrap = (VkBaseLayerObject *) physDev;
-    VkLayerDispatchTable* disp_table = * (VkLayerDispatchTable **) physDevWrap->baseObject;
+    VkLayerDispatchTable* disp_table = * (VkLayerDispatchTable **) physDev;
     void *addr;
 
     if (disp_table == NULL)
@@ -763,9 +740,7 @@ static void* VKAPI loader_gpa_device_internal(VkPhysicalDevice physDev, const ch
     else  {
         if (disp_table->GetProcAddr == NULL)
             return NULL;
-        if (physDevWrap->baseObject == physDevWrap->nextObject)
-            return physDevWrap->pGPA(physDevWrap->baseObject, pName);
-        return disp_table->GetProcAddr(physDevWrap->nextObject, pName);
+        return disp_table->GetProcAddr(physDev, pName);
     }
 }
 
@@ -1147,21 +1122,19 @@ uint32_t loader_activate_instance_layers(struct loader_instance *inst)
     return inst->layer_count;
 }
 
-extern uint32_t loader_activate_device_layers(struct loader_icd *icd, uint32_t gpu_index, uint32_t ext_count, const char *const* ext_names)
+uint32_t loader_activate_device_layers(VkDevice device, struct loader_icd *icd, uint32_t gpu_index, uint32_t ext_count, const char *const* ext_names)
 {
     uint32_t count;
-    VkBaseLayerObject *gpu;
     struct layer_name_pair *pLayerNames;
     if (!icd)
         return 0;
     assert(gpu_index < MAX_GPUS_FOR_LAYER);
 
-    gpu = icd->gpus + gpu_index;
     /* activate any layer libraries */
     if (!loader_layers_activated(icd, gpu_index)) {
-        // Note gpu object is wrapped once already
-        VkBaseLayerObject *gpuObj = gpu;
-        VkBaseLayerObject *nextGpuObj, *baseObj = (VkBaseLayerObject *) gpuObj->baseObject;
+        VkObject nextObj =  (VkObject) device;
+        VkObject baseObj = nextObj;
+        VkBaseLayerObject *nextGpuObj;
         PFN_vkGetProcAddr nextGPA = loader_gpa_device_internal;
 
         count = loader_get_layer_libs(ext_count, ext_names, &pLayerNames);
@@ -1177,9 +1150,9 @@ extern uint32_t loader_activate_device_layers(struct loader_icd *icd, uint32_t g
         for (int32_t i = icd->layer_count[gpu_index] - 1; i >= 0; i--) {
             nextGpuObj = (icd->wrappedGpus[gpu_index] + i);
             nextGpuObj->pGPA = nextGPA;
-            nextGpuObj->baseObject = (VkObject) baseObj;
-            nextGpuObj->nextObject = (VkObject) gpuObj;
-            gpuObj = nextGpuObj;
+            nextGpuObj->baseObject = baseObj;
+            nextGpuObj->nextObject = nextObj;
+            nextObj = (VkObject) nextGpuObj;
 
             char funcStr[256];
             snprintf(funcStr, 256, "%sGetProcAddr",icd->layer_libs[gpu_index][i].name);
@@ -1191,13 +1164,11 @@ extern uint32_t loader_activate_device_layers(struct loader_icd *icd, uint32_t g
             }
 
             if (i == 0) {
-                loader_init_device_dispatch_table(icd->loader_dispatch + gpu_index, nextGPA, (VkPhysicalDevice) gpuObj);
+                loader_init_device_dispatch_table(icd->loader_dispatch + gpu_index, nextGPA, (VkPhysicalDevice) nextObj);
                 //Insert the new wrapped objects into the list with loader object at head
-                gpu->nextObject = (VkObject) gpuObj;
-                gpu->pGPA = nextGPA;
-                gpuObj = icd->wrappedGpus[gpu_index] + icd->layer_count[gpu_index] - 1;
-                gpuObj->nextObject = (VkObject) baseObj;
-                gpuObj->pGPA = icd->GetProcAddr;
+                nextGpuObj = icd->wrappedGpus[gpu_index] + icd->layer_count[gpu_index] - 1;
+                nextGpuObj->nextObject = baseObj;
+                nextGpuObj->pGPA = icd->GetProcAddr;
             }
 
         }
@@ -1362,18 +1333,7 @@ VkResult loader_EnumeratePhysicalDevices(
                     loader_init_device_dispatch_table(icd->loader_dispatch + i,
                                                get_proc_addr, gpus[i]);
 
-                    /* Verify ICD compatibility */
-                    if (!valid_loader_magic_value(gpus[i])) {
-                        loader_log(VK_DBG_MSG_WARNING, 0,
-                            "Loader: Incompatible ICD, first dword must be initialized to ICD_LOADER_MAGIC. See loader/README.md for details.\n");
-                        assert(0);
-                    }
-
-                    const VkLayerDispatchTable **disp;
-                    disp = (const VkLayerDispatchTable **) gpus[i];
-                    *disp = icd->loader_dispatch + i;
-                    loader_activate_device_layers(icd, i, ptr_instance->extension_count,
-                        (const char *const*) ptr_instance->extension_names);
+                    loader_init_dispatch(gpus[i], ptr_instance->disp);
                 }
 
                 count += n;
@@ -1404,6 +1364,33 @@ VkResult loader_GetPhysicalDeviceInfo(
 
     if (icd->GetPhysicalDeviceInfo)
         res = icd->GetPhysicalDeviceInfo(gpu, infoType, pDataSize, pData);
+
+    return res;
+}
+
+VkResult loader_CreateDevice(
+        VkPhysicalDevice                        gpu,
+        const VkDeviceCreateInfo*               pCreateInfo,
+        VkDevice*                               pDevice)
+{
+    uint32_t gpu_index;
+    struct loader_icd *icd = loader_get_icd((const VkBaseLayerObject *) gpu, &gpu_index);
+    VkResult res = VK_ERROR_INITIALIZATION_FAILED;
+    struct loader_instance *ptr_instance;
+
+    ptr_instance = loader.instances;
+    if (icd->CreateDevice) {
+        res = icd->CreateDevice(gpu, pCreateInfo, pDevice);
+        if (res == VK_SUCCESS) {
+            VkLayerDispatchTable *dev_disp = icd->loader_dispatch + gpu_index;
+            loader_init_dispatch(*pDevice, dev_disp);
+        }
+        //TODO fix this extension parameters once support GetDeviceExtensionInfo()
+        // don't know which instance we are on with this call
+
+        loader_activate_device_layers(*pDevice, icd, gpu_index, ptr_instance->extension_count,
+                            (const char *const*) ptr_instance->extension_names);
+    }
 
     return res;
 }
@@ -1505,8 +1492,30 @@ VkResult loader_GetGlobalExtensionInfo(
 
     return VK_SUCCESS;
 }
+VkResult loader_GetPhysicalDeviceExtensionInfo(
+        VkPhysicalDevice                        gpu,
+        VkExtensionInfoType                     infoType,
+        uint32_t                                extensionIndex,
+        size_t*                                 pDataSize,
+        void*                                   pData)
+{
+    uint32_t gpu_index;
+    struct loader_icd *icd = loader_get_icd((const VkBaseLayerObject *) gpu, &gpu_index);
+    VkResult res = VK_ERROR_INITIALIZATION_FAILED;
 
-LOADER_EXPORT VkResult VKAPI vkEnumerateLayers(VkPhysicalDevice gpu, size_t maxStringSize, size_t* pLayerCount, char* const* pOutLayers, void* pReserved)
+    if (icd->GetPhysicalDeviceExtensionInfo)
+        res = icd->GetPhysicalDeviceExtensionInfo(gpu, infoType, extensionIndex,
+                                                  pDataSize, pData);
+
+    return res;
+}
+
+VkResult loader_EnumerateLayers(
+        VkPhysicalDevice                        gpu,
+        size_t                                  maxStringSize,
+        size_t*                                 pLayerCount,
+        char* const*                            pOutLayers,
+        void*                                   pReserved)
 {
     size_t maxLayerCount;
     uint32_t gpu_index;
@@ -1580,6 +1589,21 @@ LOADER_EXPORT VkResult VKAPI vkEnumerateLayers(VkPhysicalDevice gpu, size_t maxS
     *pLayerCount = count;
 
     return VK_SUCCESS;
+}
+
+VkResult loader_GetMultiDeviceCompatibility(
+        VkPhysicalDevice                        gpu0,
+        VkPhysicalDevice                        gpu1,
+        VkPhysicalDeviceCompatibilityInfo*      pInfo)
+{
+    uint32_t gpu_index;
+    struct loader_icd *icd = loader_get_icd((const VkBaseLayerObject *) gpu0, &gpu_index);
+    VkResult res = VK_ERROR_INITIALIZATION_FAILED;
+
+    if (icd->GetMultiDeviceCompatibility)
+        res = icd->GetMultiDeviceCompatibility(gpu0, gpu1, pInfo);
+
+    return res;
 }
 
 VkResult loader_DbgRegisterMsgCallback(VkInstance instance, VK_DBG_MSG_CALLBACK_FUNCTION pfnMsgCallback, void* pUserData)
@@ -1683,6 +1707,22 @@ VkResult loader_DbgSetGlobalOption(VkInstance instance, VK_DBG_GLOBAL_OPTION dbg
                res = r;
             }
     }
+
+    return res;
+}
+
+VkResult loader_GetDisplayInfoWSI(
+        VkDisplayWSI                            display,
+        VkDisplayInfoTypeWSI                    infoType,
+        size_t*                                 pDataSize,
+        void*                                   pData)
+{
+    uint32_t gpu_index;
+    struct loader_icd *icd = loader_get_icd((const VkBaseLayerObject *) display, &gpu_index);
+    VkResult res = VK_ERROR_INITIALIZATION_FAILED;
+
+    if (icd->GetDisplayInfoWSI)
+        res = icd->GetDisplayInfoWSI(display, infoType, pDataSize, pData);
 
     return res;
 }

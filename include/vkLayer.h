@@ -26,17 +26,8 @@ typedef struct VkBaseLayerObject_
 
 typedef struct VkLayerDispatchTable_
 {
-    PFN_vkGetInstanceProcAddr GetInstanceProcAddr;
     PFN_vkGetProcAddr GetProcAddr;
-    PFN_vkCreateInstance CreateInstance;
-    PFN_vkDestroyInstance DestroyInstance;
-    PFN_vkEnumeratePhysicalDevices EnumeratePhysicalDevices;
-    PFN_vkGetPhysicalDeviceInfo GetPhysicalDeviceInfo;
-    PFN_vkCreateDevice CreateDevice;
     PFN_vkDestroyDevice DestroyDevice;
-    PFN_vkGetGlobalExtensionInfo GetGlobalExtensionInfo;
-    PFN_vkGetPhysicalDeviceExtensionInfo GetPhysicalDeviceExtensionInfo;
-    PFN_vkEnumerateLayers EnumerateLayers;
     PFN_vkGetDeviceQueue GetDeviceQueue;
     PFN_vkQueueSubmit QueueSubmit;
     PFN_vkQueueWaitIdle QueueWaitIdle;
@@ -49,7 +40,6 @@ typedef struct VkLayerDispatchTable_
     PFN_vkFlushMappedMemoryRanges FlushMappedMemoryRanges;
     PFN_vkInvalidateMappedMemoryRanges InvalidateMappedMemoryRanges;
     PFN_vkPinSystemMemory PinSystemMemory;
-    PFN_vkGetMultiDeviceCompatibility GetMultiDeviceCompatibility;
     PFN_vkOpenSharedMemory OpenSharedMemory;
     PFN_vkOpenSharedSemaphore OpenSharedSemaphore;
     PFN_vkOpenPeerMemory OpenPeerMemory;
@@ -141,15 +131,11 @@ typedef struct VkLayerDispatchTable_
     PFN_vkCmdBeginRenderPass CmdBeginRenderPass;
     PFN_vkCmdEndRenderPass CmdEndRenderPass;
     PFN_vkDbgSetValidationLevel DbgSetValidationLevel;
-    PFN_vkDbgRegisterMsgCallback DbgRegisterMsgCallback;
-    PFN_vkDbgUnregisterMsgCallback DbgUnregisterMsgCallback;
     PFN_vkDbgSetMessageFilter DbgSetMessageFilter;
     PFN_vkDbgSetObjectTag DbgSetObjectTag;
-    PFN_vkDbgSetGlobalOption DbgSetGlobalOption;
     PFN_vkDbgSetDeviceOption DbgSetDeviceOption;
     PFN_vkCmdDbgMarkerBegin CmdDbgMarkerBegin;
     PFN_vkCmdDbgMarkerEnd CmdDbgMarkerEnd;
-    PFN_vkGetDisplayInfoWSI GetDisplayInfoWSI;
     PFN_vkCreateSwapChainWSI CreateSwapChainWSI;
     PFN_vkDestroySwapChainWSI DestroySwapChainWSI;
     PFN_vkGetSwapChainInfoWSI GetSwapChainInfoWSI;
@@ -159,7 +145,7 @@ typedef struct VkLayerDispatchTable_
 typedef struct VkLayerInstanceDispatchTable_
 {
     PFN_vkGetInstanceProcAddr GetInstanceProcAddr;
-    PFN_vkGetProcAddr GetProcAddr;
+    PFN_vkGetProcAddr GetProcAddr;  // TODO remove once GPA takes device parameter
     PFN_vkCreateInstance CreateInstance;
     PFN_vkDestroyInstance DestroyInstance;
     PFN_vkEnumeratePhysicalDevices EnumeratePhysicalDevices;
@@ -172,6 +158,7 @@ typedef struct VkLayerInstanceDispatchTable_
     PFN_vkDbgRegisterMsgCallback DbgRegisterMsgCallback;
     PFN_vkDbgUnregisterMsgCallback DbgUnregisterMsgCallback;
     PFN_vkDbgSetGlobalOption DbgSetGlobalOption;
+    PFN_vkGetDisplayInfoWSI GetDisplayInfoWSI;
 } VkLayerInstanceDispatchTable;
 
 // LL node for tree of dbg callback functions

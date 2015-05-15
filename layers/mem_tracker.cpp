@@ -828,7 +828,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateDevice(
     const VkDeviceCreateInfo *pCreateInfo,
     VkDevice                 *pDevice)
 {
-    VkResult result = nextTable.CreateDevice(gpu, pCreateInfo, pDevice);
+    VkResult result = nextInstanceTable.CreateDevice(gpu, pCreateInfo, pDevice);
     // Save off device in case we need it to create Fences
     globalDevice = *pDevice;
     return result;
@@ -937,7 +937,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkEnumerateLayers(
         pCurObj = (VkBaseLayerObject *)  gpu;
         loader_platform_thread_once(&g_initOnce, initMemTracker);
         loader_platform_thread_once(&g_tabDeviceOnce, initDeviceTable);
-        VkResult result = nextTable.EnumerateLayers(gpu,
+        VkResult result = nextInstanceTable.EnumerateLayers(gpu,
             maxStringSize, pLayerCount, pOutLayers, pReserved);
         return result;
     } else
