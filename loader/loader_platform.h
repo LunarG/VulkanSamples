@@ -290,6 +290,19 @@ static void loader_platform_thread_delete_mutex(loader_platform_thread_mutex* pM
 {
     DeleteCriticalSection(pMutex);
 }
+typedef CONDITION_VARIABLE loader_platform_thread_cond;
+static void loader_platform_thread_init_cond(loader_platform_thread_cond* pCond)
+{
+    InitializeConditionVariable(pCond);
+}
+static void loader_platform_thread_cond_wait(loader_platform_thread_cond* pCond, loader_platform_thread_mutex* pMutex)
+{
+    SleepConditionVariableCS(pCond, pMutex, INFINITE);
+}
+static void loader_platform_thread_cond_broadcast(loader_platform_thread_cond* pCond)
+{
+    WakeAllConditionVariable(pCond);
+}
 
 // Windows Registry:
 char *loader_get_registry_string(const HKEY hive,
