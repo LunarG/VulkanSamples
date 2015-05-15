@@ -135,6 +135,10 @@ void VkRenderFramework::InitState()
 
     VkDynamicCbStateCreateInfo blend = {};
     blend.sType = VK_STRUCTURE_TYPE_DYNAMIC_CB_STATE_CREATE_INFO;
+    blend.blendConst[0] = 1.0f;
+    blend.blendConst[1] = 1.0f;
+    blend.blendConst[2] = 1.0f;
+    blend.blendConst[3] = 1.0f;
     err = vkCreateDynamicColorBlendState(device(), &blend, &m_colorBlend);
     ASSERT_VK_SUCCESS( err );
 
@@ -144,6 +148,8 @@ void VkRenderFramework::InitState()
     depthStencil.maxDepth = 1.f;
     depthStencil.stencilFrontRef = 0;
     depthStencil.stencilBackRef = 0;
+    depthStencil.stencilReadMask = 0xff;
+    depthStencil.stencilWriteMask = 0xff;
 
     err = vkCreateDynamicDepthStencilState( device(), &depthStencil, &m_stateDepthStencil );
     ASSERT_VK_SUCCESS( err );
@@ -1016,8 +1022,14 @@ VkPipelineObj::VkPipelineObj(VkDeviceObj *device)
     m_ms_state.minSampleShading = 0;
     m_ms_state.sampleShadingEnable = 0;
 
+    m_vp_state.sType = VK_STRUCTURE_TYPE_PIPELINE_VP_STATE_CREATE_INFO;
+    m_vp_state.pNext = &m_ms_state;
+    m_vp_state.viewportCount = 1;
+    m_vp_state.depthMode = VK_DEPTH_MODE_ZERO_TO_ONE;
+    m_vp_state.clipOrigin = VK_COORDINATE_ORIGIN_UPPER_LEFT;
+
     m_ds_state.sType = VK_STRUCTURE_TYPE_PIPELINE_DS_STATE_CREATE_INFO;
-    m_ds_state.pNext = &m_ms_state,
+    m_ds_state.pNext = &m_vp_state,
     m_ds_state.format = VK_FORMAT_D32_SFLOAT;
     m_ds_state.depthTestEnable      = VK_FALSE;
     m_ds_state.depthWriteEnable     = VK_FALSE;

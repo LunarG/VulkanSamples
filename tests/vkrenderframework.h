@@ -405,6 +405,7 @@ protected:
     VkPipelineRsStateCreateInfo         m_rs_state;
     VkPipelineCbStateCreateInfo         m_cb_state;
     VkPipelineDsStateCreateInfo         m_ds_state;
+    VkPipelineVpStateCreateInfo         m_vp_state;
     VkPipelineMsStateCreateInfo         m_ms_state;
     VkDeviceObj                        *m_device;
     vector<VkShaderObj*>                m_shaderObjs;
