@@ -67,7 +67,7 @@
 
 #define ARRAY_SIZE(a) (sizeof(a) / sizeof(a[0]))
 
-class XglTest : public ::testing::Test {
+class VkTest : public ::testing::Test {
 public:
     void CreateImageTest();
     void CreateCommandBufferTest();
@@ -137,59 +137,7 @@ protected:
     }
 };
 
-TEST(Initialization, vkEnumeratePhysicalDevices) {
-    VkApplicationInfo app_info = {};
-    VkInstance inst;
-    VkPhysicalDevice objs[16];
-    uint32_t gpu_count;
-    VkResult err;
-    vk_testing::PhysicalGpu *gpu;
-    char *layers[16];
-    size_t layer_count = 16; /* accept 16 layer names to be returned */
-    char layer_buf[16][256];
-    VkInstanceCreateInfo inst_info = {};
-    inst_info.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
-    inst_info.pNext = NULL;
-    inst_info.pAppInfo = &app_info;
-    inst_info.pAllocCb = NULL;
-    inst_info.extensionCount = 0;
-    inst_info.ppEnabledExtensionNames = NULL;
-    app_info.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
-    app_info.pNext = NULL;
-    app_info.pAppName = "base";
-    app_info.appVersion = 1;
-    app_info.pEngineName = "unittest";
-    app_info.engineVersion = 1;
-    app_info.apiVersion = VK_API_VERSION;
-
-    err = vkCreateInstance(&inst_info, &inst);
-    ASSERT_VK_SUCCESS(err);
-    err = vkEnumeratePhysicalDevices(inst, &gpu_count, NULL);
-    ASSERT_VK_SUCCESS(err);
-    ASSERT_LE(gpu_count, ARRAY_SIZE(objs)) << "Too many GPUs";
-    err = vkEnumeratePhysicalDevices(inst, &gpu_count, objs);
-    ASSERT_VK_SUCCESS(err);
-    ASSERT_GE(gpu_count, 1) << "No GPU available";
-
-    for (int i = 0; i < 16; i++)
-        layers[i] = &layer_buf[i][0];
-    err = vkEnumerateLayers(objs[0], 256, &layer_count, (char * const *) layers, NULL);
-    ASSERT_VK_SUCCESS(err);
-    for (int i = 0; i < layer_count; i++) {
-        printf("Enumerated layers: %s ", layers[i]);
-    }
-    printf("\n");
-
-    // TODO: Iterate over all GPUs
-    gpu = new vk_testing::PhysicalGpu(objs[0]);
-    delete gpu;
-
-    // TODO: Verify destroy functions
-    err = vkDestroyInstance(inst);
-    ASSERT_VK_SUCCESS(err);
-}
-
-TEST_F(XglTest, AllocMemory) {
+TEST_F(VkTest, AllocMemory) {
     VkResult err;
     VkMemoryAllocInfo alloc_info = {};
     VkDeviceMemory gpu_mem;
@@ -220,11 +168,12 @@ TEST_F(XglTest, AllocMemory) {
     ASSERT_VK_SUCCESS(err);
 }
 
-TEST_F(XglTest, Event) {
+TEST_F(VkTest, Event) {
     VkEventCreateInfo event_info;
     VkEvent event;
     VkMemoryRequirements mem_req;
-    size_t data_size = sizeof(mem_req);
+    size_t data_size;
+    VkDeviceMemory event_mem;
     VkResult err;
 
     //        typedef struct VkEventCreateInfo_
@@ -239,30 +188,30 @@ TEST_F(XglTest, Event) {
     err = vkCreateEvent(device(), &event_info, &event);
     ASSERT_VK_SUCCESS(err);
 
+    data_size = sizeof(mem_req);
     err = vkGetObjectInfo(device(), VK_OBJECT_TYPE_EVENT, event, VK_OBJECT_INFO_TYPE_MEMORY_REQUIREMENTS,
-                           &data_size, &mem_req);
+        &data_size, &mem_req);
     ASSERT_VK_SUCCESS(err);
 
-    //        VkResult VKAPI vkAllocMemory(
-    //            VkDevice                                  device,
-    //            const VkMemoryAllocInfo*                pAllocInfo,
-    //            VkDeviceMemory*                             pMem);
-    VkMemoryAllocInfo mem_info;
-    VkDeviceMemory event_mem;
+    if (mem_req.size) {
 
-    ASSERT_NE(0, mem_req.size) << "vkGetObjectInfo (Event): Failed - expect events to require memory";
+        //        VkResult VKAPI vkAllocMemory(
+        //            VkDevice                                  device,
+        //            const VkMemoryAllocInfo*                pAllocInfo,
+        //            VkDeviceMemory*                             pMem);
+        VkMemoryAllocInfo mem_info;
 
-    memset(&mem_info, 0, sizeof(mem_info));
-    mem_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO;
-    mem_info.allocationSize = mem_req.size;
-    mem_info.memProps = VK_MEMORY_PROPERTY_SHAREABLE_BIT;
-    mem_info.memPriority = VK_MEMORY_PRIORITY_NORMAL;
-    err = vkAllocMemory(device(), &mem_info, &event_mem);
-    ASSERT_VK_SUCCESS(err);
+        memset(&mem_info, 0, sizeof(mem_info));
+        mem_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO;
+        mem_info.allocationSize = mem_req.size;
+        mem_info.memProps = VK_MEMORY_PROPERTY_SHAREABLE_BIT;
+        mem_info.memPriority = VK_MEMORY_PRIORITY_NORMAL;
+        err = vkAllocMemory(device(), &mem_info, &event_mem);
+        ASSERT_VK_SUCCESS(err);
 
-    err = vkBindObjectMemory(device(), VK_OBJECT_TYPE_EVENT, event, event_mem, 0);
-    ASSERT_VK_SUCCESS(err);
-
+        err = vkBindObjectMemory(device(), VK_OBJECT_TYPE_EVENT, event, event_mem, 0);
+        ASSERT_VK_SUCCESS(err);
+    }
     err = vkResetEvent(device(), event);
     ASSERT_VK_SUCCESS(err);
 
@@ -278,8 +227,12 @@ TEST_F(XglTest, Event) {
     // TODO: Test actual synchronization with command buffer event.
 
     // All done with event memory, clean up
-    err = vkBindObjectMemory(device(), VK_OBJECT_TYPE_EVENT, event, VK_NULL_HANDLE, 0);
-    ASSERT_VK_SUCCESS(err);
+    if (mem_req.size) {
+        err = vkBindObjectMemory(device(), VK_OBJECT_TYPE_EVENT, event, VK_NULL_HANDLE, 0);
+        ASSERT_VK_SUCCESS(err);
+        err = vkFreeMemory(device(), event_mem);
+        ASSERT_VK_SUCCESS(err);
+    }
 
     err = vkDestroyObject(device(), VK_OBJECT_TYPE_EVENT, event);
     ASSERT_VK_SUCCESS(err);
@@ -287,13 +240,14 @@ TEST_F(XglTest, Event) {
 
 #define MAX_QUERY_SLOTS 10
 
-TEST_F(XglTest, Query) {
+TEST_F(VkTest, Query) {
     VkQueryPoolCreateInfo query_info;
     VkQueryPool query_pool;
     size_t data_size;
     VkMemoryRequirements mem_req;
     size_t query_result_size;
     uint32_t *query_result_data;
+    VkDeviceMemory query_mem;
     VkResult err;
 
     //        typedef enum VkQueryType_
@@ -330,30 +284,30 @@ TEST_F(XglTest, Query) {
 
     data_size = sizeof(mem_req);
     err = vkGetObjectInfo(device(), VK_OBJECT_TYPE_QUERY_POOL, query_pool, VK_OBJECT_INFO_TYPE_MEMORY_REQUIREMENTS,
-                           &data_size, &mem_req);
-    ASSERT_VK_SUCCESS(err);
-    ASSERT_NE(0, data_size) << "Invalid data_size";
-
-    //        VkResult VKAPI vkAllocMemory(
-    //            VkDevice                                  device,
-    //            const VkMemoryAllocInfo*                pAllocInfo,
-    //            VkDeviceMemory*                             pMem);
-    VkMemoryAllocInfo mem_info;
-    VkDeviceMemory query_mem;
-
-    memset(&mem_info, 0, sizeof(mem_info));
-    mem_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO;
-    // TODO: Is a simple multiple all that's needed here?
-    mem_info.allocationSize = mem_req.size * MAX_QUERY_SLOTS;
-    mem_info.memProps = VK_MEMORY_PROPERTY_SHAREABLE_BIT;
-    mem_info.memPriority = VK_MEMORY_PRIORITY_NORMAL;
-    // TODO: Should this be pinned? Or maybe a separate test with pinned.
-    err = vkAllocMemory(device(), &mem_info, &query_mem);
+        &data_size, &mem_req);
     ASSERT_VK_SUCCESS(err);
 
-    err = vkBindObjectMemory(device(), VK_OBJECT_TYPE_QUERY_POOL, query_pool, query_mem, 0);
-    ASSERT_VK_SUCCESS(err);
+    if (mem_req.size) {
 
+        //        VkResult VKAPI vkAllocMemory(
+        //            VkDevice                                  device,
+        //            const VkMemoryAllocInfo*                pAllocInfo,
+        //            VkDeviceMemory*                             pMem);
+        VkMemoryAllocInfo mem_info;
+
+        memset(&mem_info, 0, sizeof(mem_info));
+        mem_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO;
+        // TODO: Is a simple multiple all that's needed here?
+        mem_info.allocationSize = mem_req.size * MAX_QUERY_SLOTS;
+        mem_info.memProps = VK_MEMORY_PROPERTY_SHAREABLE_BIT;
+        mem_info.memPriority = VK_MEMORY_PRIORITY_NORMAL;
+        // TODO: Should this be pinned? Or maybe a separate test with pinned.
+        err = vkAllocMemory(device(), &mem_info, &query_mem);
+        ASSERT_VK_SUCCESS(err);
+
+        err = vkBindObjectMemory(device(), VK_OBJECT_TYPE_QUERY_POOL, query_pool, query_mem, 0);
+        ASSERT_VK_SUCCESS(err);
+    }
     // TODO: Test actual synchronization with command buffer event.
     // TODO: Create command buffer
     // TODO: vkCmdResetQueryPool
@@ -375,9 +329,13 @@ TEST_F(XglTest, Query) {
 
     }
 
-    // All done with QueryPool memory, clean up
-    err = vkBindObjectMemory(device(), VK_OBJECT_TYPE_QUERY_POOL, query_pool, VK_NULL_HANDLE, 0);
-    ASSERT_VK_SUCCESS(err);
+    if (mem_req.size) {
+        // All done with QueryPool memory, clean up
+        err = vkBindObjectMemory(device(), VK_OBJECT_TYPE_QUERY_POOL, query_pool, VK_NULL_HANDLE, 0);
+        ASSERT_VK_SUCCESS(err);
+        err = vkFreeMemory(device(), query_mem);
+        ASSERT_VK_SUCCESS(err);
+    }
 
     err = vkDestroyObject(device(), VK_OBJECT_TYPE_QUERY_POOL, query_pool);
     ASSERT_VK_SUCCESS(err);
@@ -397,78 +355,7 @@ void getQueue(vk_testing::Device *device, uint32_t queue_node_index, const char 
     }
 }
 
-
-void print_queue_info(vk_testing::Device *device, uint32_t queue_node_index)
-{
-    uint32_t que_idx;
-    VkPhysicalDeviceQueueProperties queue_props;
-    VkPhysicalDeviceProperties props;
-
-    props = device->gpu().properties();
-    queue_props = device->gpu().queue_properties()[queue_node_index];
-    ASSERT_NE(0, queue_props.queueCount) << "No Queues available at Node Index #" << queue_node_index << " GPU: " << props.deviceName;
-
-//            VkResult VKAPI vkGetDeviceQueue(
-//                VkDevice                                  device,
-//                uint32_t                                    queueNodeIndex,
-//                uint32_t                                    queueIndex,
-//                VkQueue*                                  pQueue);
-    /*
-     * queue handles are retrieved from the device by calling
-     * vkGetDeviceQueue() with a queue node index and a requested logical
-     * queue ID. The queue node index is the index into the array of
-     * VkPhysicalDeviceQueueProperties returned by GetPhysicalDeviceInfo. Each
-     * queue node index has different attributes specified by the VkQueueFlags property.
-     * The logical queue ID is a sequential number starting from zero
-     * and referencing up to the number of queues supported of that node index
-     * at device creation.
-     */
-
-    for (que_idx = 0; que_idx < queue_props.queueCount; que_idx++) {
-
-//                typedef enum VkQueueFlags_
-//                {
-//                    VK_QUEUE_GRAPHICS_BIT                                  = 0x00000001,   // Queue supports graphics operations
-//                    VK_QUEUE_COMPUTE_BIT                                   = 0x00000002,   // Queue supports compute operations
-//                    VK_QUEUE_DMA_BIT                                       = 0x00000004,   // Queue supports DMA operations
-//                    VK_QUEUE_SPARSE_MEMMGR_BIT                             = 0x00000008,   // Queue supports sparse resource memory management operations
-//                    VK_QUEUE_EXTENDED_BIT                                  = 0x80000000    // Extended queue
-//                } VkQueueFlags;
-
-        if (queue_props.queueFlags & VK_QUEUE_GRAPHICS_BIT) {
-            getQueue(device, queue_node_index, "Graphics");
-        }
-
-        if (queue_props.queueFlags & VK_QUEUE_COMPUTE_BIT) {
-            getQueue(device, queue_node_index, "Compute");
-        }
-
-        if (queue_props.queueFlags & VK_QUEUE_DMA_BIT) {
-            getQueue(device, queue_node_index, "DMA");
-        }
-
-        // TODO: What do we do about EXTENDED_BIT?
-
-        /* Guide: pg 34:
-         * The queue objects cannot be destroyed explicitly by an application
-         * and are automatically destroyed when the associated device is destroyed.
-         * Once the device is destroyed, attempting to use a queue results in
-         * undefined behavior.
-         */
-    }
-}
-
-TEST_F(XglTest, Queue)
-{
-    uint32_t i;
-
-    for (i = 0; i < m_device->gpu().queue_properties().size(); i++) {
-        print_queue_info(m_device, i);
-    }
-}
-
-
-void XglTest::CreateImageTest()
+void VkTest::CreateImageTest()
 {
     VkResult err;
     VkImage image;
@@ -534,8 +421,15 @@ void XglTest::CreateImageTest()
     imageCreateInfo.extent.depth = 1;
     imageCreateInfo.mipLevels = mipCount;
     imageCreateInfo.samples = 1;
-    imageCreateInfo.tiling = VK_IMAGE_TILING_LINEAR;
-
+    if (image_fmt.linearTilingFeatures & VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT) {
+        imageCreateInfo.tiling = VK_IMAGE_TILING_LINEAR;
+    }
+    else if (image_fmt.optimalTilingFeatures & VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT) {
+        imageCreateInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
+    }
+    else {
+        FAIL() << "Neither Linear nor Optimal allowed for color attachment";
+    }
     imageCreateInfo.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 
 //    VkResult VKAPI vkCreateImage(
@@ -573,53 +467,59 @@ void XglTest::CreateImageTest()
 
 //        VK_MAX_ENUM(VkSubresourceInfoType_)
 //    } VkSubresourceInfoType;
-    VkImageSubresource subresource = {};
-    subresource.aspect = VK_IMAGE_ASPECT_COLOR;
-    subresource.arraySlice = 0;
 
-    _w = w;
-    _h = h;
-    while( ( _w > 0 ) || ( _h > 0 ) )
-    {
-        VkSubresourceLayout layout = {};
-        data_size = sizeof(layout);
-        err = vkGetImageSubresourceInfo(device(), image, &subresource, VK_SUBRESOURCE_INFO_TYPE_LAYOUT,
-                                         &data_size, &layout);
-        ASSERT_VK_SUCCESS(err);
-        ASSERT_EQ(sizeof(VkSubresourceLayout), data_size) << "Invalid structure (VkSubresourceLayout) size";
+    if (image_fmt.linearTilingFeatures & VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT) {
+        VkImageSubresource subresource = {};
+        subresource.aspect = VK_IMAGE_ASPECT_COLOR;
+        subresource.arraySlice = 0;
 
-        // TODO: 4 should be replaced with pixel size for given format
-        EXPECT_LE(_w * 4, layout.rowPitch) << "Pitch does not match expected image pitch";
-        _w >>= 1;
-        _h >>= 1;
+        _w = w;
+        _h = h;
+        while ((_w > 0) || (_h > 0))
+        {
+            VkSubresourceLayout layout = {};
+            data_size = sizeof(layout);
+            err = vkGetImageSubresourceInfo(device(), image, &subresource, VK_SUBRESOURCE_INFO_TYPE_LAYOUT,
+                &data_size, &layout);
+            ASSERT_VK_SUCCESS(err);
+            ASSERT_EQ(sizeof(VkSubresourceLayout), data_size) << "Invalid structure (VkSubresourceLayout) size";
 
-        subresource.mipLevel++;
+            // TODO: 4 should be replaced with pixel size for given format
+            EXPECT_LE(_w * 4, layout.rowPitch) << "Pitch does not match expected image pitch";
+            _w >>= 1;
+            _h >>= 1;
+
+            subresource.mipLevel++;
+        }
     }
 
     VkMemoryRequirements mem_req;
-    data_size = sizeof(mem_req);
-    err = vkGetObjectInfo(device(), VK_OBJECT_TYPE_IMAGE, image, VK_OBJECT_INFO_TYPE_MEMORY_REQUIREMENTS,
-                           &data_size, &mem_req);
-    ASSERT_VK_SUCCESS(err);
-    ASSERT_EQ(data_size, sizeof(mem_req));
-    ASSERT_NE(0, mem_req.size) << "vkGetObjectInfo (Event): Failed - expect images to require memory";
-    //        VkResult VKAPI vkAllocMemory(
-    //            VkDevice                                  device,
-    //            const VkMemoryAllocInfo*                pAllocInfo,
-    //            VkDeviceMemory*                             pMem);
-    VkMemoryAllocInfo mem_info = {};
     VkDeviceMemory image_mem;
 
-    mem_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO;
-    mem_info.pNext = NULL;
-    mem_info.allocationSize = mem_req.size;
-    mem_info.memProps = VK_MEMORY_PROPERTY_SHAREABLE_BIT;
-    mem_info.memPriority = VK_MEMORY_PRIORITY_NORMAL;
-    err = vkAllocMemory(device(), &mem_info, &image_mem);
+    data_size = sizeof(mem_req);
+    err = vkGetObjectInfo(device(), VK_OBJECT_TYPE_IMAGE, image, VK_OBJECT_INFO_TYPE_MEMORY_REQUIREMENTS,
+        &data_size, &mem_req);
     ASSERT_VK_SUCCESS(err);
 
-    err = vkBindObjectMemory(device(), VK_OBJECT_TYPE_IMAGE, image, image_mem, 0);
-    ASSERT_VK_SUCCESS(err);
+    if (mem_req.size) {
+
+        //        VkResult VKAPI vkAllocMemory(
+        //            VkDevice                                  device,
+        //            const VkMemoryAllocInfo*                pAllocInfo,
+        //            VkDeviceMemory*                             pMem);
+        VkMemoryAllocInfo mem_info = {};
+
+        mem_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO;
+        mem_info.pNext = NULL;
+        mem_info.allocationSize = mem_req.size;
+        mem_info.memProps = VK_MEMORY_PROPERTY_SHAREABLE_BIT;
+        mem_info.memPriority = VK_MEMORY_PRIORITY_NORMAL;
+        err = vkAllocMemory(device(), &mem_info, &image_mem);
+        ASSERT_VK_SUCCESS(err);
+
+        err = vkBindObjectMemory(device(), VK_OBJECT_TYPE_IMAGE, image, image_mem, 0);
+        ASSERT_VK_SUCCESS(err);
+    }
 
 //    typedef struct VkImageViewCreateInfo_
 //    {
@@ -661,18 +561,19 @@ void XglTest::CreateImageTest()
     // TODO: Test image memory.
 
     // All done with image memory, clean up
-    ASSERT_VK_SUCCESS(vkBindObjectMemory(device(), VK_OBJECT_TYPE_IMAGE, image, VK_NULL_HANDLE, 0));
-
-    ASSERT_VK_SUCCESS(vkFreeMemory(device(), image_mem));
+    if (mem_req.size) {
+        ASSERT_VK_SUCCESS(vkBindObjectMemory(device(), VK_OBJECT_TYPE_IMAGE, image, VK_NULL_HANDLE, 0));
+        ASSERT_VK_SUCCESS(vkFreeMemory(device(), image_mem));
+    }
 
     ASSERT_VK_SUCCESS(vkDestroyObject(device(), VK_OBJECT_TYPE_IMAGE, image));
 }
 
-TEST_F(XglTest, CreateImage) {
+TEST_F(VkTest, CreateImage) {
     CreateImageTest();
 }
 
-void XglTest::CreateCommandBufferTest()
+void VkTest::CreateCommandBufferTest()
 {
     VkResult err;
     VkCmdBufferCreateInfo info = {};
@@ -694,11 +595,11 @@ void XglTest::CreateCommandBufferTest()
     ASSERT_VK_SUCCESS(vkDestroyObject(device(), VK_OBJECT_TYPE_COMMAND_BUFFER, cmdBuffer));
 }
 
-TEST_F(XglTest, TestComandBuffer) {
+TEST_F(VkTest, TestCommandBuffer) {
     CreateCommandBufferTest();
 }
 
-void XglTest::CreateShader(VkShader *pshader)
+void VkTest::CreateShader(VkShader *pshader)
 {
     void *code;
     uint32_t codeSize;
