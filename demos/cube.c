@@ -1973,7 +1973,14 @@ static void demo_init_vk(struct demo *demo)
     VkDisplayWSI display;
     err = vkGetPhysicalDeviceInfo(demo->gpu, VK_PHYSICAL_DEVICE_INFO_TYPE_DISPLAY_PROPERTIES_WSI,
                                   &data_size, NULL);
-    assert(!err);
+    if (err != VK_SUCCESS) {
+        printf("The Vulkan installable client driver (ICD) does not support "
+               "querying\nfor the swap-chain image format.  Therefore, am "
+               "hardcoding this\nformat to  VK_FORMAT_B8G8R8A8_UNORM.\n");
+        fflush(stdout);
+        demo->format = VK_FORMAT_B8G8R8A8_UNORM;
+        return;
+    }
     demo->display_props = (VkDisplayPropertiesWSI *) malloc(data_size);
     err = vkGetPhysicalDeviceInfo(demo->gpu, VK_PHYSICAL_DEVICE_INFO_TYPE_DISPLAY_PROPERTIES_WSI,
                                   &data_size, demo->display_props);
