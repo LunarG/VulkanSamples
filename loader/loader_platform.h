@@ -129,6 +129,19 @@ static inline void loader_platform_thread_delete_mutex(loader_platform_thread_mu
 {
     pthread_mutex_destroy(pMutex);
 }
+typedef pthread_cond_t loader_platform_thread_cond;
+static inline void loader_platform_thread_init_cond(loader_platform_thread_cond* pCond)
+{
+    pthread_cond_init(pCond, NULL);
+}
+static inline void loader_platform_thread_cond_wait(loader_platform_thread_cond* pCond, loader_platform_thread_mutex* pMutex)
+{
+    pthread_cond_wait(pCond, pMutex);
+}
+static inline void loader_platform_thread_cond_broadcast(loader_platform_thread_cond* pCond)
+{
+    pthread_cond_broadcast(pCond);
+}
 
 
 #elif defined(_WIN32) // defined(__linux__)

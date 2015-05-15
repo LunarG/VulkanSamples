@@ -399,7 +399,7 @@ class Subcommand(object):
                          "}\n")
         return "\n".join(func_body)
 
-    def _generate_layer_initialization(self, init_opts=False, prefix='vk', lockname=None):
+    def _generate_layer_initialization(self, init_opts=False, prefix='vk', lockname=None, condname=None):
         func_body = ["#include \"vk_dispatch_table_helper.h\""]
         func_body.append('static void init%s(void)\n'
                          '{\n' % self.layer_name)
@@ -430,26 +430,10 @@ class Subcommand(object):
             func_body.append("    {")
             func_body.append("        // TODO/TBD: Need to delete this mutex sometime.  How???")
             func_body.append("        loader_platform_thread_create_mutex(&%sLock);" % lockname)
+            if condname is not None:
+                func_body.append("        loader_platform_thread_init_cond(&%sCond);" % condname)
             func_body.append("        %sLockInitialized = 1;" % lockname)
             func_body.append("    }")
-        func_body.append("}\n")
-        return "\n".join(func_body)
-
-    def _generate_layer_initialization_with_lock(self, prefix='vk'):
-        func_body = ["#include \"vk_dispatch_table_helper.h\""]
-        func_body.append('static void init%s(void)\n'
-                         '{\n'
-                         '    PFN_vkGetProcAddr fpNextGPA;\n'
-                         '    fpNextGPA = pCurObj->pGPA;\n'
-                         '    assert(fpNextGPA);\n' % self.layer_name)
-
-        func_body.append("    layer_initialize_dispatch_table(&nextTable, fpNextGPA, (VkPhysicalDevice) pCurObj->nextObject);\n")
-        func_body.append("    if (!printLockInitialized)")
-        func_body.append("    {")
-        func_body.append("        // TODO/TBD: Need to delete this mutex sometime.  How???")
-        func_body.append("        loader_platform_thread_create_mutex(&printLock);")
-        func_body.append("        printLockInitialized = 1;")
-        func_body.append("    }")
         func_body.append("}\n")
         return "\n".join(func_body)
 
@@ -1365,6 +1349,7 @@ class ThreadingSubcommand(Subcommand):
         header_txt.append('static unordered_map<VkObject, loader_platform_thread_id> objectsInUse;\n')
         header_txt.append('static int threadingLockInitialized = 0;')
         header_txt.append('static loader_platform_thread_mutex threadingLock;')
+        header_txt.append('static loader_platform_thread_cond threadingCond;')
         header_txt.append('static int printLockInitialized = 0;')
         header_txt.append('static loader_platform_thread_mutex printLock;\n')
         header_txt.append('')
@@ -1379,6 +1364,11 @@ class ThreadingSubcommand(Subcommand):
         header_txt.append('            char str[1024];')
         header_txt.append('            sprintf(str, "THREADING ERROR : object of type %s is simultaneously used in thread %ld and thread %ld", type, objectsInUse[object], tid);')
         header_txt.append('            layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, 0, 0, THREADING_CHECKER_MULTIPLE_THREADS, "THREADING", str);')
+        header_txt.append('            // Wait for thread-safe access to object')
+        header_txt.append('            while (objectsInUse.find(object) != objectsInUse.end()) {')
+        header_txt.append('                loader_platform_thread_cond_wait(&threadingCond, &threadingLock);')
+        header_txt.append('            }')
+        header_txt.append('            objectsInUse[object] = tid;')
         header_txt.append('        } else {')
         header_txt.append('            char str[1024];')
         header_txt.append('            sprintf(str, "THREADING ERROR : object of type %s is recursively used in thread %ld", type, tid);')
@@ -1392,6 +1382,7 @@ class ThreadingSubcommand(Subcommand):
         header_txt.append('    // Object is no longer in use')
         header_txt.append('    loader_platform_thread_lock_mutex(&threadingLock);')
         header_txt.append('    objectsInUse.erase(object);')
+        header_txt.append('    loader_platform_thread_cond_broadcast(&threadingCond);')
         header_txt.append('    loader_platform_thread_unlock_mutex(&threadingLock);')
         header_txt.append('}')
         return "\n".join(header_txt)
@@ -1501,7 +1492,7 @@ class ThreadingSubcommand(Subcommand):
 
     def generate_body(self):
         self.layer_name = "Threading"
-        body = [self._generate_layer_initialization(True, lockname='threading'),
+        body = [self._generate_layer_initialization(True, lockname='threading', condname='threading'),
                 self._generate_dispatch_entrypoints("VK_LAYER_EXPORT"),
                 self._generate_layer_gpa_function()]
         return "\n\n".join(body)
