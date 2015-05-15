@@ -36,39 +36,47 @@
 
 static void initLayerTable(const VkBaseLayerObject *gpuw, VkLayerDispatchTable *pTable, const unsigned int layerNum);
 static void initLayerInstanceTable(const VkBaseLayerObject *instw, VkLayerInstanceDispatchTable *pTable, const unsigned int layerNum);
-
+/* Various dispatchable objects will use the same underlying dispatch table if they
+ * are created from that "parent" object. Thus use pointer to dispatch table
+ * as the key to table maps (tableMap1, tableInstanceMap1, tableMap2, tableInstanceMap2.
+ *    Instance -> PhysicalDevice
+ *    Device -> CmdBuffer or Queue
+ * If use the object themselves as key to map then implies Create entrypoints have to be intercepted
+ * and a new key inserted into map */
 /******************************** Layer multi1 functions **************************/
 static std::unordered_map<void *, VkLayerDispatchTable *> tableMap1;
 static std::unordered_map<void *, VkLayerInstanceDispatchTable *> tableInstanceMap1;
 static bool layer1_first_activated = false;
 
-static VkLayerDispatchTable * getLayer1Table(const VkBaseLayerObject *gpuw)
+static VkLayerDispatchTable *getLayer1Table(const VkBaseLayerObject *devw)
 {
     VkLayerDispatchTable *pTable;
+    assert(devw);
+    VkLayerDispatchTable **ppDisp = (VkLayerDispatchTable **) devw->baseObject;
 
-    assert(gpuw);
-    std::unordered_map<void *, VkLayerDispatchTable *>::const_iterator it = tableMap1.find((void *) gpuw->baseObject);
+    std::unordered_map<void *, VkLayerDispatchTable *>::const_iterator it = tableMap1.find((void *) *ppDisp);
     if (it == tableMap1.end())
     {
         pTable =  new VkLayerDispatchTable;
-        tableMap1[(void *) gpuw->baseObject] = pTable;
-        initLayerTable(gpuw, pTable, 1);
+        tableMap1[(void *) *ppDisp] = pTable;
+        initLayerTable(devw, pTable, 1);
         return pTable;
     } else
     {
         return it->second;
     }
 }
-static VkLayerInstanceDispatchTable * getLayer1InstanceTable(const VkBaseLayerObject *instw)
+static VkLayerInstanceDispatchTable *getLayer1InstanceTable(const VkBaseLayerObject *instw)
 {
     VkLayerInstanceDispatchTable *pTable;
-
     assert(instw);
-    std::unordered_map<void *, VkLayerInstanceDispatchTable *>::const_iterator it = tableInstanceMap1.find((void *) instw->baseObject);
+    VkLayerInstanceDispatchTable **ppDisp = (VkLayerInstanceDispatchTable **) instw->baseObject;
+
+    std::unordered_map<void *, VkLayerInstanceDispatchTable *>::const_iterator it = tableInstanceMap1.find((void *) *ppDisp);
     if (it == tableInstanceMap1.end())
     {
         pTable =  new VkLayerInstanceDispatchTable;
-        tableInstanceMap1[(void *) instw->baseObject] = pTable;
+        tableInstanceMap1[(void *) *ppDisp] = pTable;
         initLayerInstanceTable(instw, pTable, 1);
         return pTable;
     } else
@@ -82,7 +90,8 @@ extern "C" {
 
 VK_LAYER_EXPORT VkResult VKAPI multi1CreateSampler(VkDevice device, const VkSamplerCreateInfo* pCreateInfo, VkSampler* pSampler)
 {
-    VkLayerDispatchTable* pTable = tableMap1[device];
+    VkLayerDispatchTable **ppDisp = (VkLayerDispatchTable **) device;
+    VkLayerDispatchTable *pTable = tableMap1[*ppDisp];
 
     printf("At start of multi1 layer vkCreateSampler()\n");
     VkResult result = pTable->CreateSampler(device, pCreateInfo, pSampler);
@@ -93,19 +102,19 @@ VK_LAYER_EXPORT VkResult VKAPI multi1CreateSampler(VkDevice device, const VkSamp
 VK_LAYER_EXPORT VkResult VKAPI multi1CreateGraphicsPipeline(VkDevice device, const VkGraphicsPipelineCreateInfo* pCreateInfo,
                                                                 VkPipeline* pPipeline)
 {
-    VkLayerDispatchTable* pTable = tableMap1[device];
+    VkLayerDispatchTable **ppDisp = (VkLayerDispatchTable **) device;
+    VkLayerDispatchTable *pTable = tableMap1[*ppDisp];
 
     printf("At start of multi1 layer vkCreateGraphicsPipeline()\n");
     VkResult result = pTable->CreateGraphicsPipeline(device, pCreateInfo, pPipeline);
-    // create a mapping for the pipeline object into the dispatch table
-    tableMap1.emplace(*pPipeline, pTable);
     printf("Completed multi1 layer vkCreateGraphicsPipeline()\n");
     return result;
 }
 
 VK_LAYER_EXPORT VkResult VKAPI multi1StorePipeline(VkDevice device, VkPipeline pipeline, size_t* pDataSize, void* pData)
 {
-    VkLayerDispatchTable* pTable = tableMap1[pipeline];
+    VkLayerDispatchTable **ppDisp = (VkLayerDispatchTable **) device;
+    VkLayerDispatchTable *pTable = tableMap1[*ppDisp];
 
     printf("At start of multi1 layer vkStorePipeline()\n");
     VkResult result = pTable->StorePipeline(device, pipeline, pDataSize, pData);
@@ -180,16 +189,17 @@ static std::unordered_map<void *, VkLayerDispatchTable *> tableMap2;
 static std::unordered_map<void *, VkLayerInstanceDispatchTable *> tableInstanceMap2;
 static bool layer2_first_activated = false;
 
-static VkLayerInstanceDispatchTable * getLayer2InstanceTable(const VkBaseLayerObject *instw)
+static VkLayerInstanceDispatchTable *getLayer2InstanceTable(const VkBaseLayerObject *instw)
 {
     VkLayerInstanceDispatchTable *pTable;
-
     assert(instw);
-    std::unordered_map<void *, VkLayerInstanceDispatchTable *>::const_iterator it = tableInstanceMap2.find((void *) instw->baseObject);
+    VkLayerInstanceDispatchTable **ppDisp = (VkLayerInstanceDispatchTable **) instw->baseObject;
+
+    std::unordered_map<void *, VkLayerInstanceDispatchTable *>::const_iterator it = tableInstanceMap2.find((void *) *ppDisp);
     if (it == tableInstanceMap2.end())
     {
         pTable =  new VkLayerInstanceDispatchTable;
-        tableInstanceMap2[(void *) instw->baseObject] = pTable;
+        tableInstanceMap2[(void *) *ppDisp] = pTable;
         initLayerInstanceTable(instw, pTable, 2);
         return pTable;
     } else
@@ -198,17 +208,18 @@ static VkLayerInstanceDispatchTable * getLayer2InstanceTable(const VkBaseLayerOb
     }
 }
 
-static VkLayerDispatchTable * getLayer2Table(const VkBaseLayerObject *gpuw)
+static VkLayerDispatchTable *getLayer2Table(const VkBaseLayerObject *devw)
 {
     VkLayerDispatchTable *pTable;
+    assert(devw);
+    VkLayerDispatchTable **ppDisp = (VkLayerDispatchTable **) devw->baseObject;
 
-    assert(gpuw);
-    std::unordered_map<void *, VkLayerDispatchTable *>::const_iterator it = tableMap2.find((void *) gpuw->baseObject);
+    std::unordered_map<void *, VkLayerDispatchTable *>::const_iterator it = tableMap2.find((void *) *ppDisp);
     if (it == tableMap2.end())
     {
         pTable =  new VkLayerDispatchTable;
-        tableMap2[(void *) gpuw->baseObject] = pTable;
-        initLayerTable(gpuw, pTable, 2);
+        tableMap2[(void *) *ppDisp] = pTable;
+        initLayerTable(devw, pTable, 2);
         return pTable;
     } else
     {
@@ -221,18 +232,11 @@ VK_LAYER_EXPORT VkResult VKAPI multi2EnumeratePhysicalDevices(
                                             uint32_t* pPhysicalDeviceCount,
                                             VkPhysicalDevice* pPhysicalDevices)
 {
-    /* Need to intercept this entrypoint to add the physDev objects to instance map */
-    VkLayerInstanceDispatchTable* pInstTable = tableInstanceMap2[instance];
+    VkLayerInstanceDispatchTable **ppDisp = (VkLayerInstanceDispatchTable **) instance;
+    VkLayerInstanceDispatchTable *pInstTable = tableInstanceMap2[*ppDisp];
+
     printf("At start of wrapped multi2 vkEnumeratePhysicalDevices()\n");
     VkResult result = pInstTable->EnumeratePhysicalDevices(instance, pPhysicalDeviceCount, pPhysicalDevices);
-    if (pPhysicalDevices)
-    {
-        // create a mapping for the objects into the dispatch table
-        for (uint32_t i = 0; i < *pPhysicalDeviceCount; i++)
-        {
-            tableInstanceMap2.emplace(*(pPhysicalDevices + i), pInstTable);
-        }
-    }
     printf("Completed multi2 layer vkEnumeratePhysicalDevices()\n");
     return result;
 }
@@ -240,7 +244,8 @@ VK_LAYER_EXPORT VkResult VKAPI multi2EnumeratePhysicalDevices(
 VK_LAYER_EXPORT VkResult VKAPI multi2CreateDevice(VkPhysicalDevice gpu, const VkDeviceCreateInfo* pCreateInfo,
                                                       VkDevice* pDevice)
 {
-    VkLayerInstanceDispatchTable* pInstTable = tableInstanceMap2[gpu];
+    VkLayerInstanceDispatchTable **ppDisp = (VkLayerInstanceDispatchTable **) gpu;
+    VkLayerInstanceDispatchTable *pInstTable = tableInstanceMap2[*ppDisp];
 
     printf("At start of multi2 vkCreateDevice()\n");
     VkResult result = pInstTable->CreateDevice(gpu, pCreateInfo, pDevice);
@@ -251,19 +256,19 @@ VK_LAYER_EXPORT VkResult VKAPI multi2CreateDevice(VkPhysicalDevice gpu, const Vk
 VK_LAYER_EXPORT VkResult VKAPI multi2CreateCommandBuffer(VkDevice device, const VkCmdBufferCreateInfo* pCreateInfo,
                                                              VkCmdBuffer* pCmdBuffer)
 {
-    VkLayerDispatchTable* pTable = tableMap2[device];
+    VkLayerDispatchTable **ppDisp = (VkLayerDispatchTable **) device;
+    VkLayerDispatchTable *pTable = tableMap2[*ppDisp];
 
     printf("At start of multi2 layer vkCreateCommandBuffer()\n");
     VkResult result = pTable->CreateCommandBuffer(device, pCreateInfo, pCmdBuffer);
-    // create a mapping for CmdBuffer object into the dispatch table for layer 2
-    tableMap2.emplace(*pCmdBuffer, pTable);
     printf("Completed multi2 layer vkCreateCommandBuffer()\n");
     return result;
 }
 
 VK_LAYER_EXPORT VkResult VKAPI multi2BeginCommandBuffer(VkCmdBuffer cmdBuffer, const VkCmdBufferBeginInfo* pBeginInfo)
 {
-    VkLayerDispatchTable* pTable = tableMap2[cmdBuffer];
+    VkLayerDispatchTable **ppDisp = (VkLayerDispatchTable **) cmdBuffer;
+    VkLayerDispatchTable *pTable = tableMap2[*ppDisp];
 
     printf("At start of multi2 layer vkBeginCommandBuffer()\n");
     VkResult result = pTable->BeginCommandBuffer(cmdBuffer, pBeginInfo);

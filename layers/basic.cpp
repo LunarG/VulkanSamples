@@ -35,16 +35,24 @@
 static std::unordered_map<void *, VkLayerDispatchTable *> tableMap;
 static std::unordered_map<void *, VkLayerInstanceDispatchTable *> tableInstanceMap;
 
+/* Various dispatchable objects will use the same underlying dispatch table if they
+ * are created from that "parent" object. Thus use pointer to dispatch table
+ * as the key to these table maps.
+ *    Instance -> PhysicalDevice
+ *    Device -> CmdBuffer or Queue
+ * If use the object themselves as key to map then implies Create entrypoints have to be intercepted
+ * and a new key inserted into map */
 static VkLayerInstanceDispatchTable * initLayerInstanceTable(const VkBaseLayerObject *instancew)
 {
     VkLayerInstanceDispatchTable *pTable;
-
     assert(instancew);
-    std::unordered_map<void *, VkLayerInstanceDispatchTable *>::const_iterator it = tableInstanceMap.find((void *) instancew->baseObject);
+    VkLayerInstanceDispatchTable **ppDisp = (VkLayerInstanceDispatchTable **) instancew->baseObject;
+
+    std::unordered_map<void *, VkLayerInstanceDispatchTable *>::const_iterator it = tableInstanceMap.find((void *) *ppDisp);
     if (it == tableInstanceMap.end())
     {
         pTable =  new VkLayerInstanceDispatchTable;
-        tableInstanceMap[(void *) instancew->baseObject] = pTable;
+        tableInstanceMap[(void *) *ppDisp] = pTable;
     } else
     {
         return it->second;
@@ -55,22 +63,23 @@ static VkLayerInstanceDispatchTable * initLayerInstanceTable(const VkBaseLayerOb
     return pTable;
 }
 
-static VkLayerDispatchTable * initLayerTable(const VkBaseLayerObject *gpuw)
+static VkLayerDispatchTable * initLayerTable(const VkBaseLayerObject *devw)
 {
     VkLayerDispatchTable *pTable;
+    assert(devw);
+    VkLayerDispatchTable **ppDisp = (VkLayerDispatchTable **) (devw->baseObject);
 
-    assert(gpuw);
-    std::unordered_map<void *, VkLayerDispatchTable *>::const_iterator it = tableMap.find((void *) gpuw->baseObject);
+    std::unordered_map<void *, VkLayerDispatchTable *>::const_iterator it = tableMap.find((void *) *ppDisp);
     if (it == tableMap.end())
     {
         pTable =  new VkLayerDispatchTable;
-        tableMap[(void *) gpuw->baseObject] = pTable;
+        tableMap[(void *) *ppDisp] = pTable;
     } else
     {
         return it->second;
     }
 
-    layer_initialize_dispatch_table(pTable, (PFN_vkGetProcAddr) gpuw->pGPA, (VkPhysicalDevice) gpuw->nextObject);
+    layer_initialize_dispatch_table(pTable, (PFN_vkGetProcAddr) devw->pGPA, (VkPhysicalDevice) devw->nextObject);
 
     return pTable;
 }
@@ -138,25 +147,18 @@ VK_LAYER_EXPORT VkResult VKAPI vkEnumeratePhysicalDevices(
                                             uint32_t* pPhysicalDeviceCount,
                                             VkPhysicalDevice* pPhysicalDevices)
 {
-    /* Need to intercept this entrypoint to add the physDev objects to instance map */
-    VkLayerInstanceDispatchTable* pInstTable = tableInstanceMap[instance];
+    VkLayerInstanceDispatchTable **ppDisp = (VkLayerInstanceDispatchTable **) instance;
+    VkLayerInstanceDispatchTable *pInstTable = tableInstanceMap[*ppDisp];
     printf("At start of wrapped vkEnumeratePhysicalDevices() call w/ inst: %p\n", (void*)instance);
     VkResult result = pInstTable->EnumeratePhysicalDevices(instance, pPhysicalDeviceCount, pPhysicalDevices);
-    if (pPhysicalDevices)
-    {
-        // create a mapping for the objects into the dispatch table
-        for (uint32_t i = 0; i < *pPhysicalDeviceCount; i++)
-        {
-            tableInstanceMap.emplace(*(pPhysicalDevices + i), pInstTable);
-        }
-    }
     printf("Completed wrapped vkEnumeratePhysicalDevices() call w/ count %u\n", *pPhysicalDeviceCount);
     return result;
 }
 
 VK_LAYER_EXPORT VkResult VKAPI vkCreateDevice(VkPhysicalDevice gpu, const VkDeviceCreateInfo* pCreateInfo, VkDevice* pDevice)
 {
-    VkLayerInstanceDispatchTable* pInstTable = tableInstanceMap[gpu];
+    VkLayerInstanceDispatchTable **ppDisp = (VkLayerInstanceDispatchTable **) gpu;
+    VkLayerInstanceDispatchTable* pInstTable = tableInstanceMap[*ppDisp];
 
     printf("At start of wrapped vkCreateDevice() call w/ gpu: %p\n", (void*)gpu);
     VkResult result = pInstTable->CreateDevice(gpu, pCreateInfo, pDevice);
@@ -166,7 +168,8 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateDevice(VkPhysicalDevice gpu, const VkDevi
 
 VK_LAYER_EXPORT VkResult VKAPI vkGetFormatInfo(VkDevice device, VkFormat format, VkFormatInfoType infoType, size_t* pDataSize, void* pData)
 {
-    VkLayerDispatchTable* pTable = tableMap[device];
+    VkLayerDispatchTable **ppDisp = (VkLayerDispatchTable **) device;
+    VkLayerDispatchTable* pTable = tableMap[*ppDisp];
 
     printf("At start of wrapped vkGetFormatInfo() call w/ device: %p\n", (void*)device);
     VkResult result = pTable->GetFormatInfo(device, format, infoType, pDataSize, pData);
