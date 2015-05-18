@@ -154,6 +154,7 @@ LOADER_EXPORT VkResult VKAPI vkDestroyDevice(VkDevice device)
     return res;
 }
 
+#if 0 //TODO get working on layer instance chain
 LOADER_EXPORT VkResult VKAPI vkGetGlobalExtensionInfo(
                                                VkExtensionInfoType infoType,
                                                uint32_t extensionIndex,
@@ -162,6 +163,7 @@ LOADER_EXPORT VkResult VKAPI vkGetGlobalExtensionInfo(
 {
     return instance_disp.GetGlobalExtensionInfo(infoType, extensionIndex, pDataSize, pData);
 }
+#endif
 
 LOADER_EXPORT VkResult VKAPI vkGetPhysicalDeviceExtensionInfo(
                                                 VkPhysicalDevice gpu,

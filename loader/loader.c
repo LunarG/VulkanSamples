@@ -80,7 +80,7 @@ VkLayerInstanceDispatchTable instance_disp = {
     .EnumeratePhysicalDevices = loader_EnumeratePhysicalDevices,
     .GetPhysicalDeviceInfo = loader_GetPhysicalDeviceInfo,
     .CreateDevice = loader_CreateDevice,
-    .GetGlobalExtensionInfo = loader_GetGlobalExtensionInfo,
+    .GetGlobalExtensionInfo = vkGetGlobalExtensionInfo,
     .GetPhysicalDeviceExtensionInfo = loader_GetPhysicalDeviceExtensionInfo,
     .EnumerateLayers = loader_EnumerateLayers,
     .GetMultiDeviceCompatibility = loader_GetMultiDeviceCompatibility,
@@ -1444,7 +1444,7 @@ LOADER_EXPORT void * VKAPI vkGetProcAddr(VkPhysicalDevice gpu, const char * pNam
 //TODO how is layer extension going to be enabled?
 //Need to call createInstance on the layer or something
 
-VkResult loader_GetGlobalExtensionInfo(
+LOADER_EXPORT VkResult VKAPI vkGetGlobalExtensionInfo(
                                                VkExtensionInfoType infoType,
                                                uint32_t extensionIndex,
                                                size_t*  pDataSize,
