@@ -1119,7 +1119,33 @@ void MesaGlassTranslator::addIoDeclaration(gla::EVariableQualifier qualifier,
       name = mdNode->getOperand(2)->getName();
       StripSuffix(name, "_typeProxy");
       StripSuffix(name, "_shadow");
-      anonymous = true;
+      // look for builtin; use that name and remap original name
+      std::string bname;
+      const llvm::ConstantInt* constInt = llvm::dyn_cast<llvm::ConstantInt>(mdNode->getOperand(1));
+      if (! constInt)
+          return error("missing InputOutput Metadata");
+      gla::EMdInputOutput io = (gla::EMdInputOutput)constInt->getSExtValue();
+      switch (io) {
+      case EMioVertexPosition: bname = "gl_Position";     break;
+      //case EMioPointSize:      bname = "gl_PointSize";    break;
+      //case EMioClipVertex:     bname = "gl_ClipVertex";   break;
+      case EMioClipDistance:   bname = "gl_ClipDistance"; break;
+      //case EMioFragmentDepth:  bname = "gl_FragDepth";    break;
+      case EMioVertexId:       bname = "gl_VertexID";     break;
+      case EMioInstanceId:     bname = "gl_InstanceID";   break;
+      //case EMioFragmentFace:   bname = "gl_FrontFacing";  break;
+      //case EMioFragmentCoord:  bname = "gl_FragCoord";    break;
+      //case EMioPointCoord:     bname = "gl_PointCoord";   break;
+      // LunarG TODO: Handle other builtins?
+      default: break;
+      } // switch
+      if (!bname.empty()) {
+          nameBuiltinMap[name] = bname;
+          name = bname;
+      }
+      if (io == gla::EMioBufferBlockMember)
+      //if (io == gla::EMioUniformBlockMember)
+          anonymous = true;
    }
 
    const glsl_type*       irInterfaceType = llvmTypeToHirType(mdType, mdNode);
@@ -1235,8 +1261,9 @@ void MesaGlassTranslator::resetFnTranslationState()
  * -----------------------------------------------------------------------------
  */
 const glsl_type*
-MesaGlassTranslator::convertStructType(const llvm::Type*       structType,
+MesaGlassTranslator::convertStructType(const llvm::StructType* structType,
                                        llvm::StringRef         name,
+                                       llvm::StringRef         blockName,
                                        const llvm::MDNode*     mdNode,
                                        gla::EMdTypeLayout      parentTypeLayout,
                                        gla::EVariableQualifier parentQualifier,
@@ -1259,6 +1286,12 @@ MesaGlassTranslator::convertStructType(const llvm::Type*       structType,
       // If there's metadata, use that field name.  Else, make up a field name.
       if (mdNode) {
          subName = mdNode->getOperand(GetAggregateMdNameOp(index))->getName().str();
+         if (subName.empty()) {
+             char anonFieldName[20]; // enough for "anon_" + digits to hold maxint
+             snprintf(anonFieldName, sizeof(anonFieldName), "%s%s%d", blockName.str().c_str(), "_gg_", index);
+             subName.assign(anonFieldName);
+             name = subName;
+         }
       } else {
          char anonFieldName[20]; // enough for "anon_" + digits to hold maxint
          snprintf(anonFieldName, sizeof(anonFieldName), "anon_%d", index);
@@ -1306,7 +1339,7 @@ MesaGlassTranslator::convertStructType(const llvm::Type*       structType,
  * -----------------------------------------------------------------------------
  */
 const glsl_type*
-MesaGlassTranslator::llvmTypeToHirType(const llvm::Type*   type,
+MesaGlassTranslator::llvmTypeToHirType(const llvm::Type* type,
                                        const llvm::MDNode* mdNode,
                                        const llvm::Value*  llvmValue,
                                        const bool genUnsigned)
@@ -1391,8 +1424,14 @@ MesaGlassTranslator::llvmTypeToHirType(const llvm::Type*   type,
 
          // Check for a top level uniform/input/output MD with an aggregate MD hanging off it
          // TODO: set arrayChild properly
+         llvm::StringRef blockName;
          MetaType metaType;
          if (mdNode) {
+             std::string name = mdNode->getOperand(2)->getName();
+             StripSuffix(name, "_typeProxy");
+             StripSuffix(name, "_shadow");
+             blockName = name;
+
              decodeMdTypesEmitMdQualifiers(isIoMd(mdNode), mdNode, type, false, metaType);
 
              // Convert IO metadata to aggregate metadata if needed.
@@ -1403,7 +1442,7 @@ MesaGlassTranslator::llvmTypeToHirType(const llvm::Type*   type,
              typeMdAggregateMap[structType] = mdNode;
          }
 
-         return_type = convertStructType(structType, structName, mdNode,
+         return_type = convertStructType(structType, structName, blockName, mdNode,
                                          metaType.typeLayout,
                                          metaType.qualifier,
                                          metaType.block);
@@ -2942,6 +2981,11 @@ MesaGlassTranslator::makeIRLoad(const llvm::Instruction* llvmInst, const glsl_ty
    else 
       name = llvmInst->getOperand(0)->getName();
 
+   // Look for builtin
+   tNameBuiltinMap::const_iterator got = nameBuiltinMap.find(name);
+   if (got != nameBuiltinMap.end())
+       name = got->second;
+
    if (!mdNode)
       mdNode = typenameMdMap[name];
 
@@ -3623,6 +3667,11 @@ inline void MesaGlassTranslator::emitIRStore(const llvm::Instruction* llvmInst)
    else 
       name = llvmInst->getOperand(1)->getName();
 
+   // Look for builtin
+   tNameBuiltinMap::const_iterator got = nameBuiltinMap.find(name);
+   if (got != nameBuiltinMap.end())
+       name = got->second;
+
    mdNode = typenameMdMap[name];
 
    assert(llvm::isa<llvm::PointerType>(dst->getType()));
@@ -3645,10 +3694,16 @@ inline void MesaGlassTranslator::emitIRStore(const llvm::Instruction* llvmInst)
       // If this is the first write to this aggregate, make up a new one.
       const tValueMap::const_iterator location = valueMap.find(gepSrc);
       if (location == valueMap.end()) {
-         llvm::StringRef name = dst->getName();
+         // llvm::StringRef name = dst->getName();
 
-         if (gepSrc)
+         if (gepSrc) {
             name = gepInst->getPointerOperand()->getName();
+
+            // Look for builtin
+            tNameBuiltinMap::const_iterator got = nameBuiltinMap.find(name);
+            if (got != nameBuiltinMap.end())
+                name = got->second;
+         }
 
          const ir_variable_mode irMode = ir_variable_mode(globalVarModeMap[name]);
 
@@ -3666,7 +3721,7 @@ inline void MesaGlassTranslator::emitIRStore(const llvm::Instruction* llvmInst)
    } else {
       const glsl_type* irType = llvmTypeToHirType(dst->getType()->getContainedType(0), 0, llvmInst);
 
-      llvm::StringRef name = dst->getName();
+      // llvm::StringRef name = dst->getName();
       const ir_variable_mode irMode = ir_variable_mode(globalVarModeMap[name]);
 
       irDst = newIRVariableDeref(irType, name, irMode);

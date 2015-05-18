@@ -166,7 +166,7 @@ namespace gla {
         inline void addIRLoopExit(ir_rvalue* condition=NULL, bool invert=false);
 
         // Convert structure types (also used for blocks)
-        const glsl_type* convertStructType(const llvm::Type*, llvm::StringRef name, const llvm::MDNode*,
+        const glsl_type* convertStructType(const llvm::StructType*, llvm::StringRef name, llvm::StringRef blockName, const llvm::MDNode*,
                                            gla::EMdTypeLayout, gla::EVariableQualifier, bool isBlock);
 
         // Convert an LLVM type to an HIR type
@@ -383,6 +383,11 @@ namespace gla {
         // Alas, we store it as an int here since we can't forward declare an enum.
         typedef std::tr1::unordered_map<std::string, int> tGlobalVarModeMap;
         tGlobalVarModeMap globalVarModeMap;
+
+        // Some builtin variables may be declared and ref'd with another name, especially when
+        // SPIRV debug info is stripped. Remember these mappings here.
+        typedef std::tr1::unordered_map<std::string, std::string> tNameBuiltinMap;
+        tNameBuiltinMap nameBuiltinMap;
 
         // Certain HIR opcodes require proper sint/uint types, and that information is
         // not preserved in LLVM.  LunarGlass provides it in metadata for IO and uniform
