@@ -213,7 +213,7 @@ static void updateFenceTracking(
 
     if (fenceMap.size() <= 0)
         return;
-    for (map<uint64_t, MT_FENCE_INFO*>::iterator ii=fenceMap.begin(); !found && ii!=fenceMap.end(); ++ii) {
+    for (map<uint64_t, MT_FENCE_INFO*>::iterator ii=fenceMap.begin(); !found && ii!=fenceMap.end();) {
         if ((*ii).second != NULL) {
             if (fence == ((*ii).second)->fence) {
                 queue = ((*ii).second)->queue;
@@ -221,7 +221,10 @@ static void updateFenceTracking(
                 pQueueInfo->lastRetiredId = (*ii).first;
                 found = true;
             } else {
-                deleteFenceInfo((*ii).first);
+		// Update iterator before deleting item it referred to
+		uint64_t fenceId = (*ii).first;
+		++ii;
+                deleteFenceInfo(fenceId);
             }
             // Update fence state in fenceCreateInfo structure
             MT_OBJ_INFO* pObjectInfo = getObjectInfo(fence);
