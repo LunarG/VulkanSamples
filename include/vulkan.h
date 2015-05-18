@@ -947,8 +947,7 @@ typedef enum VkResult_
 typedef VkFlags VkDeviceCreateFlags;
 typedef enum VkDeviceCreateFlagBits_
 {
-    VK_DEVICE_CREATE_VALIDATION_BIT                         = VK_BIT(0),
-    VK_DEVICE_CREATE_MULTI_DEVICE_IQ_MATCH_BIT              = VK_BIT(1),
+    VK_DEVICE_CREATE_MULTI_DEVICE_IQ_MATCH_BIT              = VK_BIT(0),
 } VkDeviceCreateFlagBits;
 
 // Queue capabilities

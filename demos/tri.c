@@ -1409,7 +1409,7 @@ static void demo_init_vk(struct demo *demo)
         .pRequestedQueues = &queue,
         .extensionCount = 1,
         .ppEnabledExtensionNames = ext_names,
-        .flags = VK_DEVICE_CREATE_VALIDATION_BIT,
+        .flags = 0,
     };
     uint32_t gpu_count;
     uint32_t i;

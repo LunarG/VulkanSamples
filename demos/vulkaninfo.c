@@ -371,7 +371,7 @@ static void app_dev_init(struct app_dev *dev, struct app_gpu *gpu)
         .pRequestedQueues = NULL,
         .extensionCount = 0,
         .ppEnabledExtensionNames = NULL,
-        .flags = VK_DEVICE_CREATE_VALIDATION_BIT,
+        .flags = 0,
     };
     VkResult err;
 
