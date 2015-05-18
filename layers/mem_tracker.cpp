@@ -708,6 +708,9 @@ static void printObjList(
 {
     MT_OBJ_INFO* pInfo = NULL;
     char str[1024];
+    if (g_reportingLevel > VK_DBG_LAYER_LEVEL_INFO) {
+        return;
+    }
     sprintf(str, "Details of Object list of size %lu elements", objectMap.size());
     layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, NULL, 0, MEMTRACK_NONE, "MEM", str);
     if (objectMap.size() <= 0)
@@ -750,6 +753,9 @@ static void printMemList(
     MT_MEM_OBJ_INFO* pInfo = NULL;
     // Just printing each msg individually for now, may want to package these into single large print
     char str[1024];
+    if (g_reportingLevel > VK_DBG_LAYER_LEVEL_INFO) {
+        return;
+    }
     sprintf(str, "MEM INFO : Details of Memory Object list of size %lu elements", memObjMap.size());
     layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, NULL, 0, MEMTRACK_NONE, "MEM", str);
 
@@ -800,6 +806,9 @@ static void printCBList(
 {
     char str[1024] = {0};
     MT_CB_INFO* pCBInfo = NULL;
+    if (g_reportingLevel > VK_DBG_LAYER_LEVEL_INFO) {
+        return;
+    }
     sprintf(str, "Details of CB list of size %lu elements", cbMap.size());
     layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, NULL, 0, MEMTRACK_NONE, "MEM", str);
 
