@@ -145,22 +145,22 @@ initLayer()
 }
 
 
-static VkLayerDispatchTable * initLayerTable(const VkBaseLayerObject *gpuw)
+static VkLayerDispatchTable * initLayerTable(const VkBaseLayerObject *devw)
 {
     VkLayerDispatchTable *pTable;
 
-    assert(gpuw);
-    std::unordered_map<void *, VkLayerDispatchTable *>::const_iterator it = tableMap.find((void *) gpuw->baseObject);
+    assert(devw);
+    std::unordered_map<void *, VkLayerDispatchTable *>::const_iterator it = tableMap.find((void *) devw->baseObject);
     if (it == tableMap.end())
     {
         pTable =  new VkLayerDispatchTable;
-        tableMap[(void *) gpuw->baseObject] = pTable;
+        tableMap[(void *) devw->baseObject] = pTable;
     } else
     {
         return it->second;
     }
 
-    layer_initialize_dispatch_table(pTable, (PFN_vkGetProcAddr) gpuw->pGPA, (VkPhysicalDevice) gpuw->nextObject);
+    layer_initialize_dispatch_table(pTable, (PFN_vkGetDeviceProcAddr) devw->pGPA, (VkDevice) devw->nextObject);
 
     return pTable;
 }
@@ -1002,12 +1002,12 @@ VK_LAYER_EXPORT VkResult VKAPI vkDbgUnregisterMsgCallback(
 }
 
 
-VK_LAYER_EXPORT void * VKAPI vkGetProcAddr(VkPhysicalDevice gpu, const char* pName)
+VK_LAYER_EXPORT void * VKAPI vkGetDeviceProcAddr(VkDevice device, const char* pName)
 {
-    if (gpu == NULL)
+    if (device == NULL)
         return NULL;
 
-    initLayerTable((const VkBaseLayerObject *) gpu);
+    initLayerTable((const VkBaseLayerObject *) device);
 
     loader_platform_thread_once(&g_initOnce, initLayer);
 
@@ -1015,18 +1015,16 @@ VK_LAYER_EXPORT void * VKAPI vkGetProcAddr(VkPhysicalDevice gpu, const char* pNa
     if (!strncmp(#fn, pName, sizeof(#fn))) \
         return (void *) fn
 
-    ADD_HOOK(vkGetProcAddr);
-    ADD_HOOK(vkEnumerateLayers);
-    ADD_HOOK(vkGetGlobalExtensionInfo);
+    ADD_HOOK(vkGetDeviceProcAddr);
     ADD_HOOK(vkCreateShader);
     ADD_HOOK(vkCreateGraphicsPipeline);
     ADD_HOOK(vkCreateGraphicsPipelineDerivative);
 #undef ADD_HOOK
 
-    VkBaseLayerObject* gpuw = (VkBaseLayerObject *) gpu;
-    if (gpuw->pGPA == NULL)
+    VkBaseLayerObject* devw = (VkBaseLayerObject *) device;
+    if (devw->pGPA == NULL)
         return NULL;
-    return gpuw->pGPA((VkObject) gpuw->nextObject, pName);
+    return devw->pGPA((VkObject) devw->nextObject, pName);
 }
 
 VK_LAYER_EXPORT void * VKAPI vkGetInstanceProcAddr(VkInstance inst, const char* pName)
@@ -1042,7 +1040,6 @@ VK_LAYER_EXPORT void * VKAPI vkGetInstanceProcAddr(VkInstance inst, const char* 
     if (!strncmp(#fn, pName, sizeof(#fn))) \
         return (void *) fn
 
-    ADD_HOOK(vkGetProcAddr);
     ADD_HOOK(vkGetInstanceProcAddr);
     ADD_HOOK(vkEnumerateLayers);
     ADD_HOOK(vkGetGlobalExtensionInfo);

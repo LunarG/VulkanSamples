@@ -67,7 +67,7 @@ struct loader_icd {
     uint32_t gpu_count;
     VkBaseLayerObject *gpus;
     VkInstance instance;       // instance object from the icd
-    PFN_vkGetProcAddr GetProcAddr;
+    PFN_vkGetDeviceProcAddr GetDeviceProcAddr;
     PFN_vkDestroyInstance DestroyInstance;
     PFN_vkEnumeratePhysicalDevices EnumeratePhysicalDevices;
     PFN_vkGetPhysicalDeviceInfo GetPhysicalDeviceInfo;

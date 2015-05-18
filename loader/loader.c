@@ -74,7 +74,6 @@ struct loader_struct loader = {0};
 
 VkLayerInstanceDispatchTable instance_disp = {
     .GetInstanceProcAddr = vkGetInstanceProcAddr,
-    .GetProcAddr = vkGetProcAddr,
     .CreateInstance = loader_CreateInstance,
     .DestroyInstance = loader_DestroyInstance,
     .EnumeratePhysicalDevices = loader_EnumeratePhysicalDevices,
@@ -462,8 +461,8 @@ static void loader_icd_init_entrys(struct loader_icd *icd,
     }                                                          \
     } while (0)
 
-    /* could change this to use GetInstanceProcAddr in driver once they support it */
-    LOOKUP(GetProcAddr);
+    /* could change this to use GetInstanceProcAddr in driver instead of dlsym */
+    LOOKUP(GetDeviceProcAddr);
     LOOKUP(DestroyInstance);
     LOOKUP(EnumeratePhysicalDevices);
     LOOKUP(GetPhysicalDeviceInfo);
@@ -738,9 +737,9 @@ static void* VKAPI loader_gpa_device_internal(VkPhysicalDevice physDev, const ch
     if (addr)
         return addr;
     else  {
-        if (disp_table->GetProcAddr == NULL)
+        if (disp_table->GetDeviceProcAddr == NULL)
             return NULL;
-        return disp_table->GetProcAddr(physDev, pName);
+        return disp_table->GetDeviceProcAddr(physDev, pName);
     }
 }
 
@@ -1135,7 +1134,7 @@ uint32_t loader_activate_device_layers(VkDevice device, struct loader_icd *icd, 
         VkObject nextObj =  (VkObject) device;
         VkObject baseObj = nextObj;
         VkBaseLayerObject *nextGpuObj;
-        PFN_vkGetProcAddr nextGPA = loader_gpa_device_internal;
+        PFN_vkGetDeviceProcAddr nextGPA = loader_gpa_device_internal;
 
         count = loader_get_layer_libs(ext_count, ext_names, &pLayerNames);
         if (!count)
@@ -1155,11 +1154,11 @@ uint32_t loader_activate_device_layers(VkDevice device, struct loader_icd *icd, 
             nextObj = (VkObject) nextGpuObj;
 
             char funcStr[256];
-            snprintf(funcStr, 256, "%sGetProcAddr",icd->layer_libs[gpu_index][i].name);
-            if ((nextGPA = (PFN_vkGetProcAddr) loader_platform_get_proc_address(icd->layer_libs[gpu_index][i].lib_handle, funcStr)) == NULL)
-                nextGPA = (PFN_vkGetProcAddr) loader_platform_get_proc_address(icd->layer_libs[gpu_index][i].lib_handle, "vkGetProcAddr");
+            snprintf(funcStr, 256, "%sGetDeviceProcAddr",icd->layer_libs[gpu_index][i].name);
+            if ((nextGPA = (PFN_vkGetDeviceProcAddr) loader_platform_get_proc_address(icd->layer_libs[gpu_index][i].lib_handle, funcStr)) == NULL)
+                nextGPA = (PFN_vkGetDeviceProcAddr) loader_platform_get_proc_address(icd->layer_libs[gpu_index][i].lib_handle, "vkGetDeviceProcAddr");
             if (!nextGPA) {
-                loader_log(VK_DBG_MSG_ERROR, 0, "Failed to find vkGetProcAddr in layer %s", icd->layer_libs[gpu_index][i].name);
+                loader_log(VK_DBG_MSG_ERROR, 0, "Failed to find vkGetDeviceProcAddr in layer %s", icd->layer_libs[gpu_index][i].name);
                 continue;
             }
 
@@ -1168,7 +1167,7 @@ uint32_t loader_activate_device_layers(VkDevice device, struct loader_icd *icd, 
                 //Insert the new wrapped objects into the list with loader object at head
                 nextGpuObj = icd->wrappedGpus[gpu_index] + icd->layer_count[gpu_index] - 1;
                 nextGpuObj->nextObject = baseObj;
-                nextGpuObj->pGPA = icd->GetProcAddr;
+                nextGpuObj->pGPA = icd->GetDeviceProcAddr;
             }
 
         }
@@ -1311,7 +1310,7 @@ VkResult loader_EnumeratePhysicalDevices(
             return VK_ERROR_OUT_OF_HOST_MEMORY;
         while (icd) {
             VkBaseLayerObject * wrapped_gpus;
-            PFN_vkGetProcAddr get_proc_addr = icd->GetProcAddr;
+            PFN_vkGetDeviceProcAddr get_proc_addr = icd->GetDeviceProcAddr;
 
             n = *pPhysicalDeviceCount;
             res = icd->EnumeratePhysicalDevices(
@@ -1406,12 +1405,10 @@ LOADER_EXPORT void * VKAPI vkGetInstanceProcAddr(VkInstance instance, const char
     return NULL;
 }
 
-LOADER_EXPORT void * VKAPI vkGetProcAddr(VkPhysicalDevice gpu, const char * pName)
+LOADER_EXPORT void * VKAPI vkGetDeviceProcAddr(VkDevice device, const char * pName)
 {
-    if (gpu == VK_NULL_HANDLE) {
-
-        /* return entrypoint addresses that are global (in the loader)*/
-        return globalGetProcAddr(pName);
+    if (device == VK_NULL_HANDLE) {
+        return NULL;
     }
 
     void *addr;
@@ -1424,7 +1421,7 @@ LOADER_EXPORT void * VKAPI vkGetProcAddr(VkPhysicalDevice gpu, const char * pNam
     }
 
     /* return the dispatch table entrypoint for the fastest case */
-    const VkLayerDispatchTable *disp_table = * (VkLayerDispatchTable **) gpu;
+    const VkLayerDispatchTable *disp_table = * (VkLayerDispatchTable **) device;
     if (disp_table == NULL)
         return NULL;
 
@@ -1432,9 +1429,9 @@ LOADER_EXPORT void * VKAPI vkGetProcAddr(VkPhysicalDevice gpu, const char * pNam
     if (addr)
         return addr;
     else  {
-        if (disp_table->GetProcAddr == NULL)
+        if (disp_table->GetDeviceProcAddr == NULL)
             return NULL;
-        return disp_table->GetProcAddr(gpu, pName);
+        return disp_table->GetDeviceProcAddr(device, pName);
     }
 }
 

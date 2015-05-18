@@ -239,8 +239,8 @@ core = Extension(
             [Param("VkInstance", "instance"),
              Param("const char*", "pName")]),
 
-        Proto("void*", "GetProcAddr",
-            [Param("VkPhysicalDevice", "gpu"),
+        Proto("void*", "GetDeviceProcAddr",
+            [Param("VkDevice", "device"),
              Param("const char*", "pName")]),
 
         Proto("VkResult", "CreateDevice",

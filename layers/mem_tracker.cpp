@@ -778,10 +778,10 @@ static void printCBList(
 // TODO handle multiple GPUs/instances for both instance and device dispatch tables
 static void initDeviceTable(void)
 {
-    PFN_vkGetProcAddr fpNextGPA;
-    fpNextGPA = (PFN_vkGetProcAddr) pCurObj->pGPA;
+    PFN_vkGetDeviceProcAddr fpNextGPA;
+    fpNextGPA = (PFN_vkGetDeviceProcAddr) pCurObj->pGPA;
     assert(fpNextGPA);
-    layer_initialize_dispatch_table(&nextTable, fpNextGPA, (VkPhysicalDevice) pCurObj->nextObject);
+    layer_initialize_dispatch_table(&nextTable, fpNextGPA, (VkDevice) pCurObj->nextObject);
 }
 
 static void initInstanceTable(void)
@@ -2150,29 +2150,23 @@ VK_LAYER_EXPORT VkResult VKAPI vkGetSwapChainInfoWSI(
     return result;
 }
 
-VK_LAYER_EXPORT void* VKAPI vkGetProcAddr(
-    VkPhysicalDevice  gpu,
+VK_LAYER_EXPORT void* VKAPI vkGetDeviceProcAddr(
+    VkDevice         dev,
     const char       *funcName)
 {
-    VkBaseLayerObject* gpuw = (VkBaseLayerObject *) gpu;
+    VkBaseLayerObject* devw = (VkBaseLayerObject *) dev;
 
-    if (gpu == NULL) {
+    if (dev == NULL) {
         return NULL;
     }
-    pCurObj = gpuw;
+    pCurObj = devw;
     loader_platform_thread_once(&g_initOnce, initMemTracker);
     loader_platform_thread_once(&g_tabDeviceOnce, initDeviceTable);
 
-    if (!strcmp(funcName, "vkGetProcAddr"))
-        return (void *) vkGetProcAddr;
-    if (!strcmp(funcName, "vkCreateDevice"))
-        return (void*) vkCreateDevice;
+    if (!strcmp(funcName, "vkGetDeviceProcAddr"))
+        return (void *) vkGetDeviceProcAddr;
     if (!strcmp(funcName, "vkDestroyDevice"))
         return (void*) vkDestroyDevice;
-    if (!strcmp(funcName, "GetGlobalExtensionInfo"))
-        return (void*) vkGetGlobalExtensionInfo;
-    if (!strcmp(funcName, "vkEnumerateLayers"))
-        return (void*) vkEnumerateLayers;
     if (!strcmp(funcName, "vkQueueSubmit"))
         return (void*) vkQueueSubmit;
     if (!strcmp(funcName, "vkAllocMemory"))
@@ -2295,10 +2289,6 @@ VK_LAYER_EXPORT void* VKAPI vkGetProcAddr(
         return (void*) vkCmdEndQuery;
     if (!strcmp(funcName, "vkCmdResetQueryPool"))
         return (void*) vkCmdResetQueryPool;
-    if (!strcmp(funcName, "vkDbgRegisterMsgCallback"))
-        return (void*) vkDbgRegisterMsgCallback;
-    if (!strcmp(funcName, "vkDbgUnregisterMsgCallback"))
-        return (void*) vkDbgUnregisterMsgCallback;
     if (!strcmp(funcName, "vkGetDeviceQueue"))
         return (void*) vkGetDeviceQueue;
     if (!strcmp(funcName, "vkCreateSwapChainWSI"))
@@ -2308,10 +2298,10 @@ VK_LAYER_EXPORT void* VKAPI vkGetProcAddr(
     if (!strcmp(funcName, "vkGetSwapChainInfoWSI"))
         return (void*) vkGetSwapChainInfoWSI;
     else {
-        if (gpuw->pGPA == NULL) {
+        if (devw->pGPA == NULL) {
             return NULL;
         }
-        return gpuw->pGPA((VkObject)gpuw->nextObject, funcName);
+        return devw->pGPA((VkObject)devw->nextObject, funcName);
     }
 }
 
@@ -2329,8 +2319,6 @@ VK_LAYER_EXPORT void* VKAPI vkGetInstanceProcAddr(
     loader_platform_thread_once(&g_initOnce, initMemTracker);
     loader_platform_thread_once(&g_tabInstanceOnce, initInstanceTable);
 
-    if (!strcmp(funcName, "vkGetProcAddr"))
-        return (void *) vkGetProcAddr;
     if (!strcmp(funcName, "vkGetInstanceProcAddr"))
         return (void *) vkGetInstanceProcAddr;
     if (!strcmp(funcName, "vkCreateDevice"))

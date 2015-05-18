@@ -76,8 +76,6 @@ public:
     VkPhysicalDeviceMemoryProperties memory_properties() const;
     std::vector<VkPhysicalDeviceQueueProperties> queue_properties() const;
 
-    // vkGetProcAddr()
-    void *get_proc(const char *name) const { return vkGetProcAddr(gpu_, name); }
 
     // vkGetGlobalExtensionInfo()
     std::vector<const char *> extensions() const;
@@ -211,6 +209,9 @@ public:
     void init() { init(false); };
 
     const PhysicalGpu &gpu() const { return gpu_; }
+
+    // vkGetDeviceProcAddr()
+    void *get_proc(const char *name) const { return vkGetDeviceProcAddr(obj(), name); }
 
     // vkGetDeviceQueue()
     const std::vector<Queue *> &graphics_queues() const { return queues_[GRAPHICS]; }

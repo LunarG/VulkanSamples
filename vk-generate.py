@@ -117,13 +117,13 @@ class DispatchTableOpsSubcommand(Subcommand):
             for proto in self.protos:
                 if proto.name == "CreateInstance" or proto.name == "GetGlobalExtensionInfo" or proto.name == "GetDisplayInfoWSI" or proto.params[0].ty == "VkInstance" or proto.params[0].ty == "VkPhysicalDevice":
                     continue
-                stmts.append("table->%s = (PFN_vk%s) gpa(gpu, \"vk%s\");" %
+                stmts.append("table->%s = (PFN_vk%s) gpa(device, \"vk%s\");" %
                         (proto.name, proto.name, proto.name))
             func.append("static inline void %s_initialize_dispatch_table(VkLayerDispatchTable *table,"
                 % self.prefix)
-            func.append("%s                                              PFN_vkGetProcAddr gpa,"
+            func.append("%s                                              PFN_vkGetDeviceProcAddr gpa,"
                 % (" " * len(self.prefix)))
-            func.append("%s                                              VkPhysicalDevice gpu)"
+            func.append("%s                                              VkDevice device)"
                 % (" " * len(self.prefix)))
         else:
             for proto in self.protos:
@@ -188,7 +188,7 @@ class IcdGetProcAddrSubcommand(IcdDummyEntrypointsSubcommand):
 
     def generate_body(self):
         for proto in self.protos:
-            if proto.name == "GetProcAddr":
+            if proto.name == "GetDeviceProcAddr":
                 gpa_proto = proto
             if proto.name == "GetInstanceProcAddr":
                 gpa_instance_proto = proto
@@ -231,11 +231,12 @@ class WinDefFileSubcommand(Subcommand):
                     "EnumeratePhysicalDevices",
                     "CreateInstance",
                     "DestroyInstance",
-                    "GetProcAddr",
+                    "GetDeviceProcAddr",
+                    "GetInstanceProcAddr",
                 ],
                 "layer": [
                     "GetInstanceProcAddr",
-                    "GetProcAddr",
+                    "GetDeviceProcAddr",
                     "EnumerateLayers",
                     "GetGlobalExtensionInfo",
                 ],

@@ -40,8 +40,8 @@ static inline void* globalGetProcAddr(const char *name)
         return (void*) vkGetPhysicalDeviceInfo;
     if (!strcmp(name, "GetInstanceProcAddr"))
         return (void*) vkGetInstanceProcAddr;
-    if (!strcmp(name, "GetProcAddr"))
-        return (void*) vkGetProcAddr;
+    if (!strcmp(name, "GetDeviceProcAddr"))
+        return (void*) vkGetDeviceProcAddr;
     if (!strcmp(name, "CreateDevice"))
         return (void*) vkCreateDevice;
     if (!strcmp(name, "DestroyDevice"))
@@ -310,8 +310,8 @@ static inline void *loader_non_passthrough_gpa(const char *name)
         return (void*) vkGetPhysicalDeviceInfo;
     if (!strcmp(name, "GetInstanceProcAddr"))
         return (void*) vkGetInstanceProcAddr;
-    if (!strcmp(name, "GetProcAddr"))
-        return (void*) vkGetProcAddr;
+    if (!strcmp(name, "GetDeviceProcAddr"))
+        return (void*) vkGetDeviceProcAddr;
     if (!strcmp(name, "CreateDevice"))
         return (void*) vkCreateDevice;
     if (!strcmp(name, "GetGlobalExtensionInfo"))

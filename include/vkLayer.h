@@ -26,7 +26,7 @@ typedef struct VkBaseLayerObject_
 
 typedef struct VkLayerDispatchTable_
 {
-    PFN_vkGetProcAddr GetProcAddr;
+    PFN_vkGetDeviceProcAddr GetDeviceProcAddr;
     PFN_vkDestroyDevice DestroyDevice;
     PFN_vkGetDeviceQueue GetDeviceQueue;
     PFN_vkQueueSubmit QueueSubmit;
@@ -145,7 +145,6 @@ typedef struct VkLayerDispatchTable_
 typedef struct VkLayerInstanceDispatchTable_
 {
     PFN_vkGetInstanceProcAddr GetInstanceProcAddr;
-    PFN_vkGetProcAddr GetProcAddr;  // TODO remove once GPA takes device parameter
     PFN_vkCreateInstance CreateInstance;
     PFN_vkDestroyInstance DestroyInstance;
     PFN_vkEnumeratePhysicalDevices EnumeratePhysicalDevices;

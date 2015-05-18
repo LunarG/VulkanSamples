@@ -79,7 +79,7 @@ static VkLayerDispatchTable * initLayerTable(const VkBaseLayerObject *devw)
         return it->second;
     }
 
-    layer_initialize_dispatch_table(pTable, (PFN_vkGetProcAddr) devw->pGPA, (VkPhysicalDevice) devw->nextObject);
+    layer_initialize_dispatch_table(pTable, (PFN_vkGetDeviceProcAddr) devw->pGPA, (VkDevice) devw->nextObject);
 
     return pTable;
 }
@@ -210,32 +210,24 @@ VK_LAYER_EXPORT VkResult VKAPI vkEnumerateLayers(VkPhysicalDevice gpu, size_t ma
     }
 }
 
-VK_LAYER_EXPORT void * VKAPI vkGetProcAddr(VkPhysicalDevice gpu, const char* pName)
+VK_LAYER_EXPORT void * VKAPI vkGetDeviceProcAddr(VkDevice device, const char* pName)
 {
-    if (gpu == NULL)
+    if (device == NULL)
         return NULL;
 
-    initLayerTable((const VkBaseLayerObject *) gpu);
+    initLayerTable((const VkBaseLayerObject *) device);
 
-    if (!strcmp("vkGetProcAddr", pName))
-        return (void *) vkGetProcAddr;
-    if (!strcmp("vkCreateDevice", pName))
-        return (void *) vkCreateDevice;
-    if (!strcmp("vkEnumeratePhysicalDevices", pName))
-        return (void*) vkEnumeratePhysicalDevices;
-    if (!strcmp("vkGetGlobalExtensionInfo", pName))
-        return (void*) vkGetGlobalExtensionInfo;
-    if (!strcmp("vkEnumerateLayers", pName))
-        return (void *) vkEnumerateLayers;
+    if (!strcmp("vkGetDeviceProcAddr", pName))
+        return (void *) vkGetDeviceProcAddr;
     if (!strcmp("vkGetFormatInfo", pName))
         return (void *) vkGetFormatInfo;
     if (!strcmp("vkLayerExtension1", pName))
         return (void *) vkLayerExtension1;
     else {
-        VkBaseLayerObject* gpuw = (VkBaseLayerObject *) gpu;
-        if (gpuw->pGPA == NULL)
+        VkBaseLayerObject* devw = (VkBaseLayerObject *) device;
+        if (devw->pGPA == NULL)
             return NULL;
-        return gpuw->pGPA((VkObject) gpuw->nextObject, pName);
+        return devw->pGPA((VkObject) devw->nextObject, pName);
     }
 }
 
@@ -248,8 +240,6 @@ VK_LAYER_EXPORT void * VKAPI vkGetInstanceProcAddr(VkInstance instance, const ch
 
     if (!strcmp("vkGetInstanceProcAddr", pName))
         return (void *) vkGetInstanceProcAddr;
-    if (!strcmp("vkGetProcAddr", pName))
-        return (void *) vkGetProcAddr;
     if (!strcmp("vkEnumeratePhysicalDevices", pName))
         return (void*) vkEnumeratePhysicalDevices;
     if (!strcmp("vkGetGlobalExtensionInfo", pName))

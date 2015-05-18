@@ -56,7 +56,7 @@ class Subcommand(object):
            return False
 
     def _is_loader_non_trampoline_entrypoint(self, proto):
-        if proto.name in ["GetProcAddr", "EnumeratePhysicalDevices", "EnumerateLayers", "DbgRegisterMsgCallback", "DbgUnregisterMsgCallback", "DbgSetGlobalOption", "DestroyInstance"]:
+        if proto.name in ["GetDeviceProcAddr", "EnumeratePhysicalDevices", "EnumerateLayers", "DbgRegisterMsgCallback", "DbgUnregisterMsgCallback", "DbgSetGlobalOption", "DestroyInstance"]:
             return True
         return not self.is_dispatchable_object_first_param(proto)
 
@@ -250,7 +250,7 @@ class DispatchTableOpsSubcommand(Subcommand):
                              (proto.name, proto.name))
             func.append("static inline void %s_init_device_dispatch_table(VkLayerDispatchTable *table,"
                 % self.prefix)
-            func.append("%s                                              PFN_vkGetProcAddr gpa,"
+            func.append("%s                                              PFN_vkGetDeviceProcAddr gpa,"
                 % (" " * len(self.prefix)))
             func.append("%s                                              VkPhysicalDevice gpu)"
                 % (" " * len(self.prefix)))
@@ -365,7 +365,7 @@ class LoaderGetProcAddrSubcommand(Subcommand):
         self.intercepted = [proto.name for proto in self.protos]
 
         for proto in self.protos:
-            if proto.name == "GetProcAddr":
+            if proto.name == "GetDeviceProcAddr":
                 self.gpa = proto
 
         super().run()

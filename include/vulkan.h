@@ -2088,7 +2088,7 @@ typedef VkResult (VKAPI *PFN_vkDestroyInstance)(VkInstance instance);
 typedef VkResult (VKAPI *PFN_vkEnumeratePhysicalDevices)(VkInstance instance, uint32_t* pPhysicalDeviceCount, VkPhysicalDevice* pPhysicalDevices);
 typedef VkResult (VKAPI *PFN_vkGetPhysicalDeviceInfo)(VkPhysicalDevice physicalDevice, VkPhysicalDeviceInfoType infoType, size_t* pDataSize, void* pData);
 typedef void *   (VKAPI *PFN_vkGetInstanceProcAddr)(VkInstance instance, const char * pName);
-typedef void *   (VKAPI *PFN_vkGetProcAddr)(VkPhysicalDevice physicalDevice, const char * pName);
+typedef void *   (VKAPI *PFN_vkGetDeviceProcAddr)(VkDevice device, const char * pName);
 typedef VkResult (VKAPI *PFN_vkCreateDevice)(VkPhysicalDevice physicalDevice, const VkDeviceCreateInfo* pCreateInfo, VkDevice* pDevice);
 typedef VkResult (VKAPI *PFN_vkDestroyDevice)(VkDevice device);
 typedef VkResult (VKAPI *PFN_vkGetGlobalExtensionInfo)(VkExtensionInfoType infoType, uint32_t extensionIndex, size_t* pDataSize, void* pData);
@@ -2224,8 +2224,8 @@ void * VKAPI vkGetInstanceProcAddr(
     VkInstance                                  instance,
     const char*                                 pName);
 
-void * VKAPI vkGetProcAddr(
-    VkPhysicalDevice                            physicalDevice,
+void * VKAPI vkGetDeviceProcAddr(
+    VkDevice                                    device,
     const char*                                 pName);
 // Device functions
 

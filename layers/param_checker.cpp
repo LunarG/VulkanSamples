@@ -52,10 +52,10 @@ static LOADER_PLATFORM_THREAD_ONCE_DECLARATION(tabInstanceOnce);
 // TODO handle multiple GPUs/instances for both instance and device dispatch tables
 static void initDeviceTable(void)
 {
-    PFN_vkGetProcAddr fpNextGPA;
-    fpNextGPA = (PFN_vkGetProcAddr) pCurObj->pGPA;
+    PFN_vkGetDeviceProcAddr fpNextGPA;
+    fpNextGPA = (PFN_vkGetDeviceProcAddr) pCurObj->pGPA;
     assert(fpNextGPA);
-    layer_initialize_dispatch_table(&nextTable, fpNextGPA, (VkPhysicalDevice) pCurObj->nextObject);
+    layer_initialize_dispatch_table(&nextTable, fpNextGPA, (VkDevice) pCurObj->nextObject);
 }
 
 static void initInstanceTable(void)
@@ -1970,24 +1970,10 @@ static inline void* layer_intercept_proc(const char *name)
         return NULL;
 
     name += 2;
-    if (!strcmp(name, "CreateInstance"))
-        return (void*) vkCreateInstance;
-    if (!strcmp(name, "DestroyInstance"))
-        return (void*) vkDestroyInstance;
-    if (!strcmp(name, "GetPhysicalDeviceInfo"))
-        return (void*) vkGetPhysicalDeviceInfo;
-    if (!strcmp(name, "GetProcAddr"))
-        return (void*) vkGetProcAddr;
-    if (!strcmp(name, "CreateDevice"))
-        return (void*) vkCreateDevice;
+    if (!strcmp(name, "GetDeviceProcAddr"))
+        return (void*) vkGetDeviceProcAddr;
     if (!strcmp(name, "DestroyDevice"))
         return (void*) vkDestroyDevice;
-    if (!strcmp(name, "GetGlobalExtensionInfo"))
-        return (void*) vkGetGlobalExtensionInfo;
-    if (!strcmp(name, "GetPhysicalDeviceExtensionInfo"))
-        return (void*) vkGetPhysicalDeviceExtensionInfo;
-    if (!strcmp(name, "EnumerateLayers"))
-        return (void*) vkEnumerateLayers;
     if (!strcmp(name, "GetDeviceQueue"))
         return (void*) vkGetDeviceQueue;
     if (!strcmp(name, "QueueSubmit"))
@@ -2012,8 +1998,6 @@ static inline void* layer_intercept_proc(const char *name)
         return (void*) vkInvalidateMappedMemoryRanges;
     if (!strcmp(name, "PinSystemMemory"))
         return (void*) vkPinSystemMemory;
-    if (!strcmp(name, "GetMultiDeviceCompatibility"))
-        return (void*) vkGetMultiDeviceCompatibility;
     if (!strcmp(name, "OpenSharedMemory"))
         return (void*) vkOpenSharedMemory;
     if (!strcmp(name, "OpenSharedSemaphore"))
@@ -2188,16 +2172,10 @@ static inline void* layer_intercept_proc(const char *name)
         return (void*) vkCmdEndRenderPass;
     if (!strcmp(name, "DbgSetValidationLevel"))
         return (void*) vkDbgSetValidationLevel;
-    if (!strcmp(name, "DbgRegisterMsgCallback"))
-        return (void*) vkDbgRegisterMsgCallback;
-    if (!strcmp(name, "DbgUnregisterMsgCallback"))
-        return (void*) vkDbgUnregisterMsgCallback;
     if (!strcmp(name, "DbgSetMessageFilter"))
         return (void*) vkDbgSetMessageFilter;
     if (!strcmp(name, "DbgSetObjectTag"))
         return (void*) vkDbgSetObjectTag;
-    if (!strcmp(name, "DbgSetGlobalOption"))
-        return (void*) vkDbgSetGlobalOption;
     if (!strcmp(name, "DbgSetDeviceOption"))
         return (void*) vkDbgSetDeviceOption;
     if (!strcmp(name, "CmdDbgMarkerBegin"))
@@ -2232,8 +2210,6 @@ static inline void* layer_intercept_instance_proc(const char *name)
         return (void*) vkDestroyInstance;
     if (!strcmp(name, "GetPhysicalDeviceInfo"))
         return (void*) vkGetPhysicalDeviceInfo;
-    if (!strcmp(name, "GetProcAddr"))
-        return (void*) vkGetProcAddr;
     if (!strcmp(name, "CreateDevice"))
         return (void*) vkCreateDevice;
     if (!strcmp(name, "GetGlobalExtensionInfo"))
@@ -2254,13 +2230,13 @@ static inline void* layer_intercept_instance_proc(const char *name)
     return NULL;
 }
 
-VK_LAYER_EXPORT void* VKAPI vkGetProcAddr(VkPhysicalDevice gpu, const char* funcName)
+VK_LAYER_EXPORT void* VKAPI vkGetDeviceProcAddr(VkDevice device, const char* funcName)
 {
-    VkBaseLayerObject* gpuw = (VkBaseLayerObject *) gpu;
+    VkBaseLayerObject* devw = (VkBaseLayerObject *) device;
     void* addr;
-    if (gpu == NULL)
+    if (device == NULL)
         return NULL;
-    pCurObj = gpuw;
+    pCurObj = devw;
     loader_platform_thread_once(&initOnce, initParamChecker);
     loader_platform_thread_once(&tabDeviceOnce, initDeviceTable);
 
@@ -2268,9 +2244,9 @@ VK_LAYER_EXPORT void* VKAPI vkGetProcAddr(VkPhysicalDevice gpu, const char* func
     if (addr)
         return addr;
     else {
-        if (gpuw->pGPA == NULL)
+        if (devw->pGPA == NULL)
             return NULL;
-        return gpuw->pGPA((VkObject)gpuw->nextObject, funcName);
+        return devw->pGPA((VkObject)devw->nextObject, funcName);
     }
 }
 

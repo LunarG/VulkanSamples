@@ -1445,10 +1445,10 @@ static void synchAndPrintDSConfig(const VkCmdBuffer cb)
 // TODO handle multiple GPUs/instances for both instance and device dispatch tables
 static void initDeviceTable(void)
 {
-    PFN_vkGetProcAddr fpNextGPA;
-    fpNextGPA = (PFN_vkGetProcAddr) pCurObj->pGPA;
+    PFN_vkGetDeviceProcAddr fpNextGPA;
+    fpNextGPA = (PFN_vkGetDeviceProcAddr) pCurObj->pGPA;
     assert(fpNextGPA);
-    layer_initialize_dispatch_table(&nextTable, fpNextGPA, (VkPhysicalDevice) pCurObj->nextObject);
+    layer_initialize_dispatch_table(&nextTable, fpNextGPA, (VkDevice) pCurObj->nextObject);
 }
 
 static void initInstanceTable(void)
@@ -2736,24 +2736,20 @@ void drawStateDumpPngFile(char* outFileName)
 #endif // WIN32
 }
 
-VK_LAYER_EXPORT void* VKAPI vkGetProcAddr(VkPhysicalDevice gpu, const char* funcName)
+VK_LAYER_EXPORT void* VKAPI vkGetDeviceProcAddr(VkDevice dev, const char* funcName)
 {
-    VkBaseLayerObject* gpuw = (VkBaseLayerObject *) gpu;
+    VkBaseLayerObject* devw = (VkBaseLayerObject *) dev;
 
-    if (gpu == NULL)
+    if (dev == NULL)
         return NULL;
-    pCurObj = gpuw;
+    pCurObj = devw;
     loader_platform_thread_once(&g_initOnce, initDrawState);
     loader_platform_thread_once(&g_tabDeviceOnce, initDeviceTable);
 
-    if (!strcmp(funcName, "vkGetProcAddr"))
-        return (void *) vkGetProcAddr;
-    if (!strcmp(funcName, "vkCreateDevice"))
-        return (void*) vkCreateDevice;
+    if (!strcmp(funcName, "vkGetDeviceProcAddr"))
+        return (void *) vkGetDeviceProcAddr;
     if (!strcmp(funcName, "vkDestroyDevice"))
         return (void*) vkDestroyDevice;
-    if (!strcmp(funcName, "vkEnumerateLayers"))
-        return (void*) vkEnumerateLayers;
     if (!strcmp(funcName, "vkQueueSubmit"))
         return (void*) vkQueueSubmit;
     if (!strcmp(funcName, "vkDestroyObject"))
@@ -2868,10 +2864,6 @@ VK_LAYER_EXPORT void* VKAPI vkGetProcAddr(VkPhysicalDevice gpu, const char* func
         return (void*) vkCmdBeginRenderPass;
     if (!strcmp(funcName, "vkCmdEndRenderPass"))
         return (void*) vkCmdEndRenderPass;
-    if (!strcmp(funcName, "vkDbgRegisterMsgCallback"))
-        return (void*) vkDbgRegisterMsgCallback;
-    if (!strcmp(funcName, "vkDbgUnregisterMsgCallback"))
-        return (void*) vkDbgUnregisterMsgCallback;
     if (!strcmp(funcName, "vkCmdDbgMarkerBegin"))
         return (void*) vkCmdDbgMarkerBegin;
     if (!strcmp(funcName, "vkCmdDbgMarkerEnd"))
@@ -2883,9 +2875,9 @@ VK_LAYER_EXPORT void* VKAPI vkGetProcAddr(VkPhysicalDevice gpu, const char* func
     if (!strcmp("drawStateDumpPngFile", funcName))
         return (void*) drawStateDumpPngFile;
     else {
-        if (gpuw->pGPA == NULL)
+        if (devw->pGPA == NULL)
             return NULL;
-        return gpuw->pGPA((VkObject)gpuw->nextObject, funcName);
+        return devw->pGPA((VkObject)devw->nextObject, funcName);
     }
 }
 
@@ -2901,8 +2893,6 @@ VK_LAYER_EXPORT void * VKAPI vkGetInstanceProcAddr(VkInstance instance, const ch
 
     if (!strcmp(funcName, "vkGetInstanceProcAddr"))
         return (void *) vkGetInstanceProcAddr;
-    if (!strcmp(funcName, "vkGetProcAddr"))
-        return (void *) vkGetProcAddr;
     if (!strcmp(funcName, "vkCreateDevice"))
         return (void*) vkCreateDevice;
     if (!strcmp(funcName, "vkEnumerateLayers"))

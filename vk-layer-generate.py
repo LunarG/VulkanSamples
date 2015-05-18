@@ -286,7 +286,7 @@ class Subcommand(object):
         funcs = []
         intercepted = []
         for proto in self.protos:
-            if proto.name == "GetProcAddr" or proto.name == "GetInstanceProcAddr":
+            if proto.name == "GetDeviceProcAddr" or proto.name == "GetInstanceProcAddr":
                 intercepted.append(proto)
             else:
                 intercept = self.generate_intercept(proto, qual)
@@ -410,13 +410,13 @@ class Subcommand(object):
 
     def _generate_layer_gpa_function(self, extensions=[], instance_extensions=[]):
         func_body = []
-        func_body.append("VK_LAYER_EXPORT void* VKAPI vkGetProcAddr(VkPhysicalDevice gpu, const char* funcName)\n"
+        func_body.append("VK_LAYER_EXPORT void* VKAPI vkGetDeviceProcAddr(VkDevice device, const char* funcName)\n"
                          "{\n"
-                         "    VkBaseLayerObject* gpuw = (VkBaseLayerObject *) gpu;\n"
+                         "    VkBaseLayerObject* devw = (VkBaseLayerObject *) device;\n"
                          "    void* addr;\n"
-                         "    if (gpu == VK_NULL_HANDLE)\n"
+                         "    if (device == VK_NULL_HANDLE)\n"
                          "        return NULL;\n"
-                         "    pCurObj = gpuw;\n"
+                         "    pCurObj = devw;\n"
                          "    loader_platform_thread_once(&initOnce, init%s);\n\n"
                          "    loader_platform_thread_once(&tabDeviceOnce, initDeviceTable);\n\n"
                          "    addr = layer_intercept_proc(funcName);\n"
@@ -433,9 +433,9 @@ class Subcommand(object):
                 func_body.append('    else if (!strncmp("%s", funcName, sizeof("%s")))\n'
                                  '        return %s%s%s;' % (ext_name, ext_name, cpp_prefix, ext_name, cpp_postfix))
         func_body.append("    else {\n"
-                         "        if (gpuw->pGPA == NULL)\n"
+                         "        if (devw->pGPA == NULL)\n"
                          "            return NULL;\n"
-                         "        return gpuw->pGPA((VkObject)gpuw->nextObject, funcName);\n"
+                         "        return devw->pGPA((VkObject)devw->nextObject, funcName);\n"
                          "    }\n"
                          "}\n")
         func_body.append("VK_LAYER_EXPORT void* VKAPI vkGetInstanceProcAddr(VkInstance inst, const char* funcName)\n"
@@ -498,10 +498,10 @@ class Subcommand(object):
         func_body.append('')
         func_body.append('static void initDeviceTable(void)')
         func_body.append('{')
-        func_body.append('    PFN_vkGetProcAddr fpNextGPA;')
-        func_body.append('    fpNextGPA = (PFN_vkGetProcAddr) pCurObj->pGPA;')
+        func_body.append('    PFN_vkGetDeviceProcAddr fpNextGPA;')
+        func_body.append('    fpNextGPA = (PFN_vkGetDeviceProcAddr) pCurObj->pGPA;')
         func_body.append('    assert(fpNextGPA);')
-        func_body.append('    layer_initialize_dispatch_table(&nextTable, fpNextGPA, (VkPhysicalDevice) pCurObj->nextObject);')
+        func_body.append('    layer_initialize_dispatch_table(&nextTable, fpNextGPA, (VkDevice) pCurObj->nextObject);')
         func_body.append('}')
         func_body.append('')
         func_body.append('static void initInstanceTable(void)')
@@ -730,10 +730,10 @@ class APIDumpSubcommand(Subcommand):
         func_body.append('')
         func_body.append('static void initDeviceTable(void)')
         func_body.append('{')
-        func_body.append('    PFN_vkGetProcAddr fpNextGPA;')
-        func_body.append('    fpNextGPA = (PFN_vkGetProcAddr) pCurObj->pGPA;')
+        func_body.append('    PFN_vkGetDeviceProcAddr fpNextGPA;')
+        func_body.append('    fpNextGPA = (PFN_vkGetDeviceProcAddr) pCurObj->pGPA;')
         func_body.append('    assert(fpNextGPA);')
-        func_body.append('    layer_initialize_dispatch_table(&nextTable, fpNextGPA, (VkPhysicalDevice) pCurObj->nextObject);')
+        func_body.append('    layer_initialize_dispatch_table(&nextTable, fpNextGPA, (VkDevice) pCurObj->nextObject);')
         func_body.append('}')
         func_body.append('')
         func_body.append('static void initInstanceTable(void)')
