@@ -1023,6 +1023,7 @@ class ObjectTrackerSubcommand(Subcommand):
         header_txt.append('        pQueueInfo    = pQueueInfo->pNextQI;')
         header_txt.append('        delete pDelQueueInfo;')
         header_txt.append('    }')
+        header_txt.append('    g_pQueueInfo = pQueueInfo;')
         header_txt.append('}')
         header_txt.append('')
         header_txt.append('static void create_obj(VkObject vkObj, VkObjectType objType) {')
