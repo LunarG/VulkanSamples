@@ -1021,8 +1021,7 @@ VK_LAYER_EXPORT void * VKAPI vkGetProcAddr(VkPhysicalDevice gpu, const char* pNa
     ADD_HOOK(vkCreateShader);
     ADD_HOOK(vkCreateGraphicsPipeline);
     ADD_HOOK(vkCreateGraphicsPipelineDerivative);
-    ADD_HOOK(vkDbgRegisterMsgCallback);
-    ADD_HOOK(vkDbgUnregisterMsgCallback);
+#undef ADD_HOOK
 
     VkBaseLayerObject* gpuw = (VkBaseLayerObject *) gpu;
     if (gpuw->pGPA == NULL)
@@ -1047,6 +1046,7 @@ VK_LAYER_EXPORT void * VKAPI vkGetInstanceProcAddr(VkInstance inst, const char* 
     ADD_HOOK(vkGetInstanceProcAddr);
     ADD_HOOK(vkEnumerateLayers);
     ADD_HOOK(vkGetGlobalExtensionInfo);
+#undef ADD_HOOK
 
     VkBaseLayerObject* instw = (VkBaseLayerObject *) inst;
     if (instw->pGPA == NULL)
