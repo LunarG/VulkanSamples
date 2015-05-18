@@ -1035,7 +1035,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkQueueSubmit(
     }
 
     loader_platform_thread_unlock_mutex(&globalLock);
-    VkResult result = nextTable.QueueSubmit(queue, cmdBufferCount, pCmdBuffers, getFenceFromId(fenceId));
+    VkResult result = nextTable.QueueSubmit(queue, cmdBufferCount, pCmdBuffers, fence);
     return result;
 }
 
