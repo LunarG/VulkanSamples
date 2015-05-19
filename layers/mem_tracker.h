@@ -123,15 +123,16 @@ struct MT_CB_INFO {
     VkDepthStencilBindInfo      dsBindInfo;
     VkCmdBuffer                 cmdBuffer;
     uint64_t                    fenceId;
+    VkFence                     lastSubmittedFence;
+    VkQueue                     lastSubmittedQueue;
     // Order dependent, stl containers must be at end of struct
     list<VkDeviceMemory>        pMemObjList; // List container of Mem objs referenced by this CB
 };
 
 // Associate fenceId with a fence object
 struct MT_FENCE_INFO {
-    VkFence   fence;            // Handle to fence object
-    VkQueue   queue;            // Queue that this fence is submitted against
-    bool32_t    localFence;     // Is fence created by layer?
+    uint64_t  fenceId;          // Sequence number for fence at last submit
+    VkQueue   queue;            // Queue that this fence is submitted against or NULL
 };
 
 // Track Queue information
