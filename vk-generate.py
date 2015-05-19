@@ -117,7 +117,10 @@ class DispatchTableOpsSubcommand(Subcommand):
             for proto in self.protos:
                 if proto.name == "CreateInstance" or proto.name == "GetGlobalExtensionInfo" or proto.name == "GetDisplayInfoWSI" or proto.params[0].ty == "VkInstance" or proto.params[0].ty == "VkPhysicalDevice":
                     continue
-                stmts.append("table->%s = (PFN_vk%s) gpa(device, \"vk%s\");" %
+                if proto.name == "GetDeviceProcAddr":
+                    stmts.append("table->%s = gpa; // direct assignment" % proto.name)
+                else:
+                    stmts.append("table->%s = (PFN_vk%s) gpa(device, \"vk%s\");" %
                         (proto.name, proto.name, proto.name))
             func.append("static inline void %s_initialize_dispatch_table(VkLayerDispatchTable *table,"
                 % self.prefix)
@@ -129,7 +132,10 @@ class DispatchTableOpsSubcommand(Subcommand):
             for proto in self.protos:
                 if proto.name != "CreateInstance"  and proto.name != "GetGlobalExtensionInfo" and proto.name != "GetDisplayInfoWSI" and proto.params[0].ty != "VkInstance" and proto.params[0].ty != "VkPhysicalDevice":
                     continue
-                stmts.append("table->%s = (PFN_vk%s) gpa(instance, \"vk%s\");" %
+                if proto.name == "GetInstanceProcAddr":
+                    stmts.append("table->%s = gpa; // direct assignment" % proto.name)
+                else:
+                    stmts.append("table->%s = (PFN_vk%s) gpa(instance, \"vk%s\");" %
                           (proto.name, proto.name, proto.name))
             func.append("static inline void %s_init_instance_dispatch_table(VkLayerInstanceDispatchTable *table,"
                 % self.prefix)

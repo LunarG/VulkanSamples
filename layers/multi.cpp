@@ -145,6 +145,8 @@ VK_LAYER_EXPORT void * VKAPI multi1GetDeviceProcAddr(VkDevice device, const char
 
     getLayer1Table(devw);
 
+    if (!strcmp("vkGetDeviceProcAddr", pName))
+        return (void *) multi1GetDeviceProcAddr;
     if (!strcmp("vkCreateSampler", pName))
         return (void *) multi1CreateSampler;
     else if (!strcmp("vkCreateGraphicsPipeline", pName))
@@ -167,6 +169,8 @@ VK_LAYER_EXPORT void * VKAPI multi1GetInstanceProcAddr(VkInstance inst, const ch
 
     getLayer1InstanceTable(instw);
 
+    if (!strcmp("vkGetInstanceProcAddr", pName))
+        return (void *) multi1GetInstanceProcAddr;
     if (!strcmp("vkEnumerateLayers", pName))
         return (void *) multi1EnumerateLayers;
     else if (!strcmp("GetGlobalExtensionInfo", pName))
@@ -295,6 +299,8 @@ VK_LAYER_EXPORT void * VKAPI multi2GetDeviceProcAddr(VkDevice device, const char
 
     getLayer2Table(devw);
 
+    if (!strcmp("vkGetDeviceProcAddr", pName))
+        return (void *) multi2GetDeviceProcAddr;
     if (!strcmp("vkCreateCommandBuffer", pName))
         return (void *) multi2CreateCommandBuffer;
     else if (!strcmp("vkBeginCommandBuffer", pName))
@@ -315,6 +321,8 @@ VK_LAYER_EXPORT void * VKAPI multi2GetInstanceProcAddr(VkInstance inst, const ch
 
     getLayer2InstanceTable(instw);
 
+    if (!strcmp("vkGetInstanceProcAddr", pName))
+        return (void *) multi2GetInstanceProcAddr;
     if (!strcmp("vkEnumeratePhysicalDevices", pName))
         return (void *) multi2EnumeratePhysicalDevices;
     if (!strcmp("vkCreateDevice", pName))
