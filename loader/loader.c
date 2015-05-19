@@ -1242,6 +1242,7 @@ VkResult loader_DestroyInstance(
             for (i = 0; i < ptr_instance->extension_count; i++) {
                 free(ptr_instance->extension_names[i]);
             }
+            free(ptr_instance->disp);
             if (prev)
                 prev->next = next->next;
             else

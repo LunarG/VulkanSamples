@@ -70,9 +70,12 @@ LOADER_EXPORT VkResult VKAPI vkCreateInstance(
             return VK_ERROR_OUT_OF_HOST_MEMORY;
         strcpy(ptr_instance->extension_names[i], pCreateInfo->ppEnabledExtensionNames[i]);
     }
+    ptr_instance->disp = malloc(sizeof(VkLayerInstanceDispatchTable));
+    if (ptr_instance->disp == NULL)
+        return VK_ERROR_OUT_OF_HOST_MEMORY;
+    memcpy(ptr_instance->disp, &instance_disp, sizeof(instance_disp));
     ptr_instance->next = loader.instances;
     loader.instances = ptr_instance;
-    ptr_instance->disp = &instance_disp;
     loader_activate_instance_layers(ptr_instance);
 
     res = instance_disp.CreateInstance(pCreateInfo, (VkInstance *) ptr_instance);
