@@ -51,11 +51,11 @@ static loader_platform_thread_mutex globalLock;
 
 #define MAX_BINDING 0xFFFFFFFF
 
-unordered_map<VkCmdBuffer,    MT_CB_INFO*>          cbMap;
-unordered_map<VkDeviceMemory, MT_MEM_OBJ_INFO*>     memObjMap;
-unordered_map<VkObject,       MT_OBJ_INFO*>         objectMap;
-unordered_map<VkFence,        MT_FENCE_INFO*>       fenceMap;    // Map fence to fence info
-unordered_map<VkQueue,        MT_QUEUE_INFO*>       queueMap;
+unordered_map<VkCmdBuffer,    MT_CB_INFO>           cbMap;
+unordered_map<VkDeviceMemory, MT_MEM_OBJ_INFO>      memObjMap;
+unordered_map<VkObject,       MT_OBJ_INFO>          objectMap;
+unordered_map<VkFence,        MT_FENCE_INFO>        fenceMap;    // Map fence to fence info
+unordered_map<VkQueue,        MT_QUEUE_INFO>        queueMap;
 unordered_map<VkSwapChainWSI, MT_SWAP_CHAIN_INFO*>  swapChainMap;
 
 // TODO : Add per-device fence completion
@@ -65,21 +65,15 @@ static VkDevice   globalDevice      = NULL;
 // Add new queue for this device to map container
 static void addQueueInfo(const VkQueue queue)
 {
-    MT_QUEUE_INFO* pInfo   = new MT_QUEUE_INFO;
+    MT_QUEUE_INFO* pInfo   = &queueMap[queue];
     pInfo->lastRetiredId   = 0;
     pInfo->lastSubmittedId = 0;
-    queueMap[queue]        = pInfo;
 }
 
 static void deleteQueueInfoList(
     void)
 {
     // Process queue list, cleaning up each entry before deleting
-    if (queueMap.size() <= 0)
-        return;
-    for (unordered_map<VkQueue, MT_QUEUE_INFO*>::iterator ii=queueMap.begin(); ii!=queueMap.end(); ++ii) {
-        (*ii).second->pQueueCmdBuffers.clear();
-    }
     queueMap.clear();
 }
 
@@ -94,19 +88,16 @@ static void addSwapChainInfo(
 static void addCBInfo(
     const VkCmdBuffer cb)
 {
-    MT_CB_INFO* pInfo = new MT_CB_INFO;
-    memset(pInfo, 0, (sizeof(MT_CB_INFO) - sizeof(list<VkDeviceMemory>)));
-    pInfo->cmdBuffer = cb;
-    cbMap[cb]        = pInfo;
+    cbMap[cb].cmdBuffer = cb;
 }
 
 // Return ptr to Info in CB map, or NULL if not found
 static MT_CB_INFO* getCBInfo(
     const VkCmdBuffer cb)
 {
-    unordered_map<VkCmdBuffer, MT_CB_INFO*>::iterator item = cbMap.find(cb);
+    unordered_map<VkCmdBuffer, MT_CB_INFO>::iterator item = cbMap.find(cb);
     if (item != cbMap.end()) {
-        return (*item).second;
+        return &(*item).second;
     } else {
         return NULL;
     }
@@ -116,9 +107,9 @@ static MT_CB_INFO* getCBInfo(
 static MT_OBJ_INFO* getObjectInfo(
     const VkObject object)
 {
-    unordered_map<VkObject, MT_OBJ_INFO*>::iterator item = objectMap.find(object);
+    unordered_map<VkObject, MT_OBJ_INFO>::iterator item = objectMap.find(object);
     if (item != objectMap.end()) {
-        return (*item).second;
+        return &(*item).second;
     } else {
         return NULL;
     }
@@ -131,7 +122,7 @@ static MT_OBJ_INFO* addObjectInfo(
     const int        struct_size,
     const char      *name_prefix)
 {
-    MT_OBJ_INFO* pInfo = new MT_OBJ_INFO;
+    MT_OBJ_INFO* pInfo = &objectMap[object];
     memset(pInfo, 0, sizeof(MT_OBJ_INFO));
     memcpy(&pInfo->create_info, pCreateInfo, struct_size);
     sprintf(pInfo->object_name, "%s_%p", name_prefix, object);
@@ -139,7 +130,6 @@ static MT_OBJ_INFO* addObjectInfo(
     pInfo->object     = object;
     pInfo->ref_count  = 1;
     pInfo->sType      = sType;
-    objectMap[object] = pInfo;
 
     return pInfo;
 }
@@ -150,13 +140,10 @@ static uint64_t addFenceInfo(
     VkQueue queue)
 {
     // Create fence object
-    MT_QUEUE_INFO* pQueueInfo = queueMap[queue];
     uint64_t       fenceId    = g_currentFenceId++;
     if (fence != NULL) {
-        MT_FENCE_INFO* pFenceInfo = new MT_FENCE_INFO;
-        pFenceInfo->fenceId = fenceId;
-        pFenceInfo->queue = queue;
-        fenceMap[fence] = pFenceInfo;
+        fenceMap[fence].fenceId = fenceId;
+        fenceMap[fence].queue = queue;
         // Validate that fence is in UNSIGNALED state
         MT_OBJ_INFO* pObjectInfo = getObjectInfo(fence);
         if (pObjectInfo != NULL) {
@@ -168,7 +155,7 @@ static uint64_t addFenceInfo(
         }
     }
     // Update most recently submitted fence and fenceId for Queue
-    pQueueInfo->lastSubmittedId = fenceId;
+    queueMap[queue].lastSubmittedId = fenceId;
     return fenceId;
 }
 
@@ -176,28 +163,20 @@ static uint64_t addFenceInfo(
 static void deleteFenceInfo(
     VkFence fence)
 {
-    unordered_map<VkFence, MT_FENCE_INFO*>::iterator item;
-    item = fenceMap.find(fence);
-    if (item != fenceMap.end()) {
-        MT_FENCE_INFO* pDelInfo = (*item).second;
-        if (pDelInfo != NULL) {
-            delete pDelInfo;
-        }
-        fenceMap.erase(item);
-    }
+    fenceMap.erase(fence);
 }
 
 // Record information when a fence is known to be signalled
 static void updateFenceTracking(
     VkFence fence)
 {
-    unordered_map<VkFence, MT_FENCE_INFO*>::iterator fence_item = fenceMap.find(fence);
+    unordered_map<VkFence, MT_FENCE_INFO>::iterator fence_item = fenceMap.find(fence);
     if (fence_item != fenceMap.end()) {
-        MT_FENCE_INFO *pCurFenceInfo = (*fence_item).second;
+        MT_FENCE_INFO *pCurFenceInfo = &(*fence_item).second;
         VkQueue queue = pCurFenceInfo->queue;
-        unordered_map<VkQueue, MT_QUEUE_INFO*>::iterator queue_item = queueMap.find(queue);
+        unordered_map<VkQueue, MT_QUEUE_INFO>::iterator queue_item = queueMap.find(queue);
         if (queue_item != queueMap.end()) {
-            MT_QUEUE_INFO *pQueueInfo = (*queue_item).second;
+            MT_QUEUE_INFO *pQueueInfo = &(*queue_item).second;
             if (pQueueInfo->lastRetiredId < pCurFenceInfo->fenceId) {
                 pQueueInfo->lastRetiredId = pCurFenceInfo->fenceId;
             }
@@ -217,21 +196,21 @@ static void updateFenceTracking(
 static void retireQueueFences(
     VkQueue queue)
 {
-    MT_QUEUE_INFO *pQueueInfo = queueMap[queue];
-    // Set Queue's lastRetired to lastSubmitted
+    MT_QUEUE_INFO *pQueueInfo = &queueMap[queue];
+    // Set queue's lastRetired to lastSubmitted indicating all fences completed
     pQueueInfo->lastRetiredId = pQueueInfo->lastSubmittedId;
 }
 
-// Helper routine that updates fence list for all queues to all-retired
+// Helper routine that updates all queues to all-retired
 static void retireDeviceFences(
     VkDevice device)
 {
     // Process each queue for device
     // TODO: Add multiple device support
-    if (queueMap.size() <= 0)
-        return;
-    for (unordered_map<VkQueue, MT_QUEUE_INFO*>::iterator ii=queueMap.begin(); ii!=queueMap.end(); ++ii) {
-        retireQueueFences((*ii).first);
+    for (unordered_map<VkQueue, MT_QUEUE_INFO>::iterator ii=queueMap.begin(); ii!=queueMap.end(); ++ii) {
+        // Set queue's lastRetired to lastSubmitted indicating all fences completed
+        MT_QUEUE_INFO *pQueueInfo = &(*ii).second;
+        pQueueInfo->lastRetiredId = pQueueInfo->lastSubmittedId;
     }
 }
 
@@ -240,9 +219,9 @@ static void retireDeviceFences(
 static MT_MEM_OBJ_INFO* getMemObjInfo(
     const VkDeviceMemory mem)
 {
-    unordered_map<VkDeviceMemory, MT_MEM_OBJ_INFO*>::iterator item = memObjMap.find(mem);
+    unordered_map<VkDeviceMemory, MT_MEM_OBJ_INFO>::iterator item = memObjMap.find(mem);
     if (item != memObjMap.end()) {
-        return (*item).second;
+        return &(*item).second;
     } else {
         return NULL;
     }
@@ -252,17 +231,15 @@ static void addMemObjInfo(
     const VkDeviceMemory     mem,
     const VkMemoryAllocInfo *pAllocInfo)
 {
-    MT_MEM_OBJ_INFO* pInfo = new MT_MEM_OBJ_INFO;
-    pInfo->refCount        = 0;
-    memset(&pInfo->allocInfo, 0, sizeof(VkMemoryAllocInfo));
-
+    memObjMap[mem].refCount = 0;
     if (pAllocInfo) {  // MEM alloc created by vkCreateSwapChainWSI() doesn't have alloc info struct
-        memcpy(&pInfo->allocInfo, pAllocInfo, sizeof(VkMemoryAllocInfo));
+        memcpy(&memObjMap[mem].allocInfo, pAllocInfo, sizeof(VkMemoryAllocInfo));
         // TODO:  Update for real hardware, actually process allocation info structures
-        pInfo->allocInfo.pNext = NULL;
+        memObjMap[mem].allocInfo.pNext = NULL;
+    } else {
+        memset(&memObjMap[mem].allocInfo, 0, sizeof(VkMemoryAllocInfo));
     }
-    pInfo->mem = mem;
-    memObjMap[mem] = pInfo;
+    memObjMap[mem].mem = mem;
 }
 
 // Find CB Info and add mem binding to list container
@@ -372,11 +349,7 @@ static bool32_t deleteCBInfo(
     result = freeCBBindings(cb);
     // Delete the CBInfo info
     if (result == VK_TRUE) {
-        if (cbMap.find(cb) != cbMap.end()) {
-            MT_CB_INFO* pDelInfo = cbMap[cb];
-            delete pDelInfo;
-            cbMap.erase(cb);
-        }
+        cbMap.erase(cb);
     }
     return result;
 }
@@ -385,14 +358,11 @@ static bool32_t deleteCBInfo(
 static bool32_t deleteCBInfoList(
     void)
 {
-    bool32_t result = VK_TRUE;
-    if (cbMap.size() <= 0)
-        return result;
-    for (unordered_map<VkCmdBuffer, MT_CB_INFO*>::iterator ii=cbMap.begin(); ii!=cbMap.end(); ++ii) {
+    for (unordered_map<VkCmdBuffer, MT_CB_INFO>::iterator ii=cbMap.begin(); ii!=cbMap.end(); ++ii) {
         freeCBBindings((*ii).first);
-        delete (*ii).second;
     }
-    return result;
+    cbMap.clear();
+    return VK_TRUE;
 }
 
 // For given MemObjInfo, report Obj & CB bindings
@@ -434,10 +404,8 @@ static void reportMemReferencesAndCleanUp(
 static void deleteMemObjInfo(
     VkDeviceMemory mem)
 {
-    unordered_map<VkDeviceMemory, MT_MEM_OBJ_INFO*>::iterator item = memObjMap.find(mem);
+    unordered_map<VkDeviceMemory, MT_MEM_OBJ_INFO>::iterator item = memObjMap.find(mem);
     if (item != memObjMap.end()) {
-        MT_MEM_OBJ_INFO* pDelInfo = (*item).second;
-        delete pDelInfo;
         memObjMap.erase(item);
     }
     else {
@@ -460,7 +428,7 @@ static bool32_t checkCBCompleted(
         result = VK_FALSE;
     } else if (pCBInfo->lastSubmittedQueue != NULL) {
         VkQueue queue = pCBInfo->lastSubmittedQueue;
-        MT_QUEUE_INFO *pQueueInfo = queueMap[queue];
+        MT_QUEUE_INFO *pQueueInfo = &queueMap[queue];
         if (pCBInfo->fenceId > pQueueInfo->lastRetiredId) {
             char str[1024];
             sprintf(str, "fence %p for CB %p has not been checked for completion",
@@ -642,8 +610,8 @@ static void printObjList(
     layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, NULL, 0, MEMTRACK_NONE, "MEM", str);
     if (objectMap.size() <= 0)
         return;
-    for (unordered_map<VkObject, MT_OBJ_INFO*>::iterator ii=objectMap.begin(); ii!=objectMap.end(); ++ii) {
-        pInfo = (*ii).second;
+    for (unordered_map<VkObject, MT_OBJ_INFO>::iterator ii=objectMap.begin(); ii!=objectMap.end(); ++ii) {
+        pInfo = &(*ii).second;
         sprintf(str, "    ObjInfo %p has object %p, pMemObjInfo %p", pInfo, pInfo->object, pInfo->pMemObjInfo);
         layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, pInfo->object, 0, MEMTRACK_NONE, "MEM", str);
     }
@@ -689,8 +657,8 @@ static void printMemList(
     if (memObjMap.size() <= 0)
         return;
 
-    for (unordered_map<VkDeviceMemory, MT_MEM_OBJ_INFO*>::iterator ii=memObjMap.begin(); ii!=memObjMap.end(); ++ii) {
-        pInfo = (*ii).second;
+    for (unordered_map<VkDeviceMemory, MT_MEM_OBJ_INFO>::iterator ii=memObjMap.begin(); ii!=memObjMap.end(); ++ii) {
+        pInfo = &(*ii).second;
 
         sprintf(str, "    ===MemObjInfo at %p===", (void*)pInfo);
         layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, NULL, 0, MEMTRACK_NONE, "MEM", str);
@@ -742,8 +710,8 @@ static void printCBList(
     if (cbMap.size() <= 0)
         return;
 
-    for (unordered_map<VkCmdBuffer, MT_CB_INFO*>::iterator ii=cbMap.begin(); ii!=cbMap.end(); ++ii) {
-        pCBInfo = (*ii).second;
+    for (unordered_map<VkCmdBuffer, MT_CB_INFO>::iterator ii=cbMap.begin(); ii!=cbMap.end(); ++ii) {
+        pCBInfo = &(*ii).second;
 
         sprintf(str, "    CB Info (%p) has CB %p, fenceId %" PRIx64", and fence %p",
             (void*)pCBInfo, (void*)pCBInfo->cmdBuffer, pCBInfo->fenceId,
@@ -828,8 +796,8 @@ VK_LAYER_EXPORT VkResult VKAPI vkDestroyDevice(
     // Report any memory leaks
     MT_MEM_OBJ_INFO* pInfo = NULL;
     if (memObjMap.size() > 0) {
-        for (unordered_map<VkDeviceMemory, MT_MEM_OBJ_INFO*>::iterator ii=memObjMap.begin(); ii!=memObjMap.end(); ++ii) {
-            pInfo = (*ii).second;
+        for (unordered_map<VkDeviceMemory, MT_MEM_OBJ_INFO>::iterator ii=memObjMap.begin(); ii!=memObjMap.end(); ++ii) {
+            pInfo = &(*ii).second;
 
             if (pInfo->allocInfo.allocationSize != 0) {
                 sprintf(str, "Mem Object %p has not been freed. You should clean up this memory by calling "
@@ -1096,7 +1064,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkDestroyObject(
     VkObjectType objType,
     VkObject     object)
 {
-    unordered_map<VkObject, MT_OBJ_INFO*>::iterator item;
+    unordered_map<VkObject, MT_OBJ_INFO>::iterator item;
     loader_platform_thread_lock_mutex(&globalLock);
 
     // First check if this is a CmdBuffer or fence
@@ -1112,7 +1080,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkDestroyObject(
     }
 
     if ((item = objectMap.find(object)) != objectMap.end()) {
-        MT_OBJ_INFO* pDelInfo = (*item).second;
+        MT_OBJ_INFO* pDelInfo = &(*item).second;
         if (pDelInfo->pMemObjInfo) {
             // Wsi allocated Memory is tied to image object so clear the binding and free that memory automatically
             if (0 == pDelInfo->pMemObjInfo->allocInfo.allocationSize) { // Wsi allocated memory has NULL allocInfo w/ 0 size
@@ -1133,7 +1101,6 @@ VK_LAYER_EXPORT VkResult VKAPI vkDestroyObject(
                 clearObjectBinding(object);
             }
         }
-        delete pDelInfo;
         objectMap.erase(item);
     }
 
@@ -2082,8 +2049,6 @@ VK_LAYER_EXPORT VkResult VKAPI vkDestroySwapChainWSI(
                 clearObjectBinding(it->image);
                 freeMemObjInfo(it->memory, true);
 
-                MT_OBJ_INFO* pDelInfo = objectMap[it->image];
-                delete pDelInfo;
                 objectMap.erase(it->image);
             }
         }
