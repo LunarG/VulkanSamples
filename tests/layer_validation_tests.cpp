@@ -313,6 +313,86 @@ void VkLayerTest::GenericDrawPreparation(VkCommandBufferObj *cmdBuffer, VkPipeli
 // ********************************************************************************************************************
 // ********************************************************************************************************************
 
+TEST_F(VkLayerTest, CallResetCmdBufferBeforeCompletion)
+{
+    vk_testing::Fence testFence;
+    VK_DBG_MSG_TYPE msgType;
+    std::string msgString;
+
+    VkFenceCreateInfo fenceInfo = {};
+    fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+    fenceInfo.pNext = NULL;
+    fenceInfo.flags = 0;
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+    ASSERT_NO_FATAL_FAILURE(InitViewport());
+    ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
+
+    VkCommandBufferObj cmdBuffer(m_device);
+    cmdBuffer.AddRenderTarget(m_renderTargets[0]);
+
+    BeginCommandBuffer(cmdBuffer);
+    cmdBuffer.ClearAllBuffers(m_clear_color, m_depth_clear_color, m_stencil_clear_color, NULL);
+    EndCommandBuffer(cmdBuffer);
+
+    testFence.init(*m_device, fenceInfo);
+
+    // Bypass framework since it does the waits automatically
+    VkResult err = VK_SUCCESS;
+    err = vkQueueSubmit( m_device->m_queue, 1, &cmdBuffer.obj(), testFence.obj());
+    ASSERT_VK_SUCCESS( err );
+
+    m_errorMonitor->ClearState();
+    // Introduce failure by calling begin again before checking fence
+    vkResetCommandBuffer(cmdBuffer.obj());
+
+    msgType = m_errorMonitor->GetState(&msgString);
+    ASSERT_EQ(msgType, VK_DBG_MSG_ERROR) << "Did not receive an err after calling ResetCommandBuffer on an active Command Buffer";
+    if (!strstr(msgString.c_str(),"Resetting CB")) {
+        FAIL() << "Error received was not 'Resetting CB (0xaddress) before it has completed. You must check CB flag before'";
+    }
+}
+
+TEST_F(VkLayerTest, CallBeginCmdBufferBeforeCompletion)
+{
+    vk_testing::Fence testFence;
+    VK_DBG_MSG_TYPE msgType;
+    std::string msgString;
+
+    VkFenceCreateInfo fenceInfo = {};
+    fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+    fenceInfo.pNext = NULL;
+    fenceInfo.flags = 0;
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+    ASSERT_NO_FATAL_FAILURE(InitViewport());
+    ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
+
+    VkCommandBufferObj cmdBuffer(m_device);
+    cmdBuffer.AddRenderTarget(m_renderTargets[0]);
+
+    BeginCommandBuffer(cmdBuffer);
+    cmdBuffer.ClearAllBuffers(m_clear_color, m_depth_clear_color, m_stencil_clear_color, NULL);
+    EndCommandBuffer(cmdBuffer);
+
+    testFence.init(*m_device, fenceInfo);
+
+    // Bypass framework since it does the waits automatically
+    VkResult err = VK_SUCCESS;
+    err = vkQueueSubmit( m_device->m_queue, 1, &cmdBuffer.obj(), testFence.obj());
+    ASSERT_VK_SUCCESS( err );
+
+    m_errorMonitor->ClearState();
+    // Introduce failure by calling begin again before checking fence
+    BeginCommandBuffer(cmdBuffer);
+
+    msgType = m_errorMonitor->GetState(&msgString);
+    ASSERT_EQ(msgType, VK_DBG_MSG_ERROR) << "Did not receive an err after calling BeginCommandBuffer on an active Command Buffer";
+    if (!strstr(msgString.c_str(),"Calling vkBeginCommandBuffer() on active CB")) {
+        FAIL() << "Error received was not 'Calling vkBeginCommandBuffer() on an active CB (0xaddress) before it has completed'";
+    }
+}
+
 TEST_F(VkLayerTest, MapMemWithoutHostVisibleBit)
 {
     VK_DBG_MSG_TYPE msgType;
