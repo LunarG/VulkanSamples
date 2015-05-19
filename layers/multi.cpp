@@ -88,6 +88,26 @@ static VkLayerInstanceDispatchTable *getLayer1InstanceTable(const VkBaseLayerObj
 extern "C" {
 #endif
 
+/* hook DextroyDevice to remove tableMap entry */
+VK_LAYER_EXPORT VkResult VKAPI multi1DestroyDevice(VkDevice device)
+{
+    VkLayerDispatchTable *pDisp = *(VkLayerDispatchTable **) device;
+    VkLayerDispatchTable *pTable = tableMap1[pDisp];
+    VkResult res = pTable->DestroyDevice(device);
+    tableMap1.erase(pDisp);
+    return res;
+}
+
+/* hook DestroyInstance to remove tableInstanceMap entry */
+VK_LAYER_EXPORT VkResult VKAPI multi1DestroyInstance(VkInstance instance)
+{
+    VkLayerInstanceDispatchTable *pDisp = *(VkLayerInstanceDispatchTable **) instance;
+    VkLayerInstanceDispatchTable *pTable = tableInstanceMap1[pDisp];
+    VkResult res = pTable->DestroyInstance(instance);
+    tableInstanceMap1.erase(pDisp);
+    return res;
+}
+
 VK_LAYER_EXPORT VkResult VKAPI multi1CreateSampler(VkDevice device, const VkSamplerCreateInfo* pCreateInfo, VkSampler* pSampler)
 {
     VkLayerDispatchTable **ppDisp = (VkLayerDispatchTable **) device;
@@ -147,6 +167,8 @@ VK_LAYER_EXPORT void * VKAPI multi1GetDeviceProcAddr(VkDevice device, const char
 
     if (!strcmp("vkGetDeviceProcAddr", pName))
         return (void *) multi1GetDeviceProcAddr;
+    if (!strcmp("vkDestroyDevice", pName))
+        return (void *) multi1DestroyDevice;
     if (!strcmp("vkCreateSampler", pName))
         return (void *) multi1CreateSampler;
     else if (!strcmp("vkCreateGraphicsPipeline", pName))
@@ -171,6 +193,8 @@ VK_LAYER_EXPORT void * VKAPI multi1GetInstanceProcAddr(VkInstance inst, const ch
 
     if (!strcmp("vkGetInstanceProcAddr", pName))
         return (void *) multi1GetInstanceProcAddr;
+    if (!strcmp("vkDestroyInstance", pName))
+        return (void *) multi1DestroyInstance;
     if (!strcmp("vkEnumerateLayers", pName))
         return (void *) multi1EnumerateLayers;
     else if (!strcmp("GetGlobalExtensionInfo", pName))
@@ -239,6 +263,26 @@ VK_LAYER_EXPORT VkResult VKAPI multi2EnumeratePhysicalDevices(
     return result;
 }
 
+/* hook DextroyDevice to remove tableMap entry */
+VK_LAYER_EXPORT VkResult VKAPI multi2DestroyDevice(VkDevice device)
+{
+    VkLayerDispatchTable *pDisp = *(VkLayerDispatchTable **) device;
+    VkLayerDispatchTable *pTable = tableMap2[pDisp];
+    VkResult res = pTable->DestroyDevice(device);
+    tableMap2.erase(pDisp);
+    return res;
+}
+
+/* hook DestroyInstance to remove tableInstanceMap entry */
+VK_LAYER_EXPORT VkResult VKAPI multi2DestroyInstance(VkInstance instance)
+{
+    VkLayerInstanceDispatchTable *pDisp = *(VkLayerInstanceDispatchTable **) instance;
+    VkLayerInstanceDispatchTable *pTable = tableInstanceMap2[pDisp];
+    VkResult res = pTable->DestroyInstance(instance);
+    tableInstanceMap2.erase(pDisp);
+    return res;
+}
+
 VK_LAYER_EXPORT VkResult VKAPI multi2CreateDevice(VkPhysicalDevice gpu, const VkDeviceCreateInfo* pCreateInfo,
                                                       VkDevice* pDevice)
 {
@@ -301,6 +345,8 @@ VK_LAYER_EXPORT void * VKAPI multi2GetDeviceProcAddr(VkDevice device, const char
 
     if (!strcmp("vkGetDeviceProcAddr", pName))
         return (void *) multi2GetDeviceProcAddr;
+    if (!strcmp("vkDestroyDevice", pName))
+        return (void *) multi2DestroyDevice;
     if (!strcmp("vkCreateCommandBuffer", pName))
         return (void *) multi2CreateCommandBuffer;
     else if (!strcmp("vkBeginCommandBuffer", pName))
@@ -325,6 +371,8 @@ VK_LAYER_EXPORT void * VKAPI multi2GetInstanceProcAddr(VkInstance inst, const ch
         return (void *) multi2GetInstanceProcAddr;
     if (!strcmp("vkEnumeratePhysicalDevices", pName))
         return (void *) multi2EnumeratePhysicalDevices;
+    if (!strcmp("vkDestroyInstance", pName))
+        return (void *) multi2DestroyInstance;
     if (!strcmp("vkCreateDevice", pName))
         return (void *) multi2CreateDevice;
     else if (!strcmp("vkEnumerateLayers", pName))

@@ -1001,6 +1001,23 @@ VK_LAYER_EXPORT VkResult VKAPI vkDbgUnregisterMsgCallback(
     return result;
 }
 
+/* hook DextroyDevice to remove tableMap entry */
+VK_LAYER_EXPORT VkResult VKAPI vkDestroyDevice(VkDevice device)
+{
+    VkLayerDispatchTable *pTable = tableMap[(VkBaseLayerObject *)device];
+    VkResult res = pTable->DestroyDevice(device);
+    tableMap.erase(device);
+    return res;
+}
+
+/* hook DestroyInstance to remove tableInstanceMap entry */
+VK_LAYER_EXPORT VkResult VKAPI vkDestroyInstance(VkInstance instance)
+{
+    VkLayerInstanceDispatchTable *pTable = tableInstanceMap[(VkBaseLayerObject *)instance];
+    VkResult res = pTable->DestroyInstance(instance);
+    tableInstanceMap.erase(instance);
+    return res;
+}
 
 VK_LAYER_EXPORT void * VKAPI vkGetDeviceProcAddr(VkDevice device, const char* pName)
 {
@@ -1017,6 +1034,7 @@ VK_LAYER_EXPORT void * VKAPI vkGetDeviceProcAddr(VkDevice device, const char* pN
 
     ADD_HOOK(vkGetDeviceProcAddr);
     ADD_HOOK(vkCreateShader);
+    ADD_HOOK(vkDestroyDevice);
     ADD_HOOK(vkCreateGraphicsPipeline);
     ADD_HOOK(vkCreateGraphicsPipelineDerivative);
 #undef ADD_HOOK
@@ -1041,6 +1059,7 @@ VK_LAYER_EXPORT void * VKAPI vkGetInstanceProcAddr(VkInstance inst, const char* 
         return (void *) fn
 
     ADD_HOOK(vkGetInstanceProcAddr);
+    ADD_HOOK(vkDestroyInstance);
     ADD_HOOK(vkEnumerateLayers);
     ADD_HOOK(vkGetGlobalExtensionInfo);
 #undef ADD_HOOK

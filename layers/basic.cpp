@@ -166,6 +166,26 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateDevice(VkPhysicalDevice gpu, const VkDevi
     return result;
 }
 
+/* hook DestroyDevice to remove tableMap entry */
+VK_LAYER_EXPORT VkResult VKAPI vkDestroyDevice(VkDevice device)
+{
+    VkLayerDispatchTable *pDisp =  *(VkLayerDispatchTable **) device;
+    VkLayerDispatchTable *pTable = tableMap[pDisp];
+    VkResult res = pTable->DestroyDevice(device);
+    tableMap.erase(pDisp);
+    return res;
+}
+
+/* hook DestroyInstance to remove tableInstanceMap entry */
+VK_LAYER_EXPORT VkResult VKAPI vkDestroyInstance(VkInstance instance)
+{
+   VkLayerInstanceDispatchTable *pDisp = *(VkLayerInstanceDispatchTable **) instance;
+    VkLayerInstanceDispatchTable *pTable = tableInstanceMap[pDisp];
+    VkResult res = pTable->DestroyInstance(instance);
+    tableInstanceMap.erase(pDisp);
+    return res;
+}
+
 VK_LAYER_EXPORT VkResult VKAPI vkGetFormatInfo(VkDevice device, VkFormat format, VkFormatInfoType infoType, size_t* pDataSize, void* pData)
 {
     VkLayerDispatchTable **ppDisp = (VkLayerDispatchTable **) device;
@@ -221,6 +241,8 @@ VK_LAYER_EXPORT void * VKAPI vkGetDeviceProcAddr(VkDevice device, const char* pN
         return (void *) vkGetDeviceProcAddr;
     if (!strcmp("vkGetFormatInfo", pName))
         return (void *) vkGetFormatInfo;
+    if (!strcmp("vkDestroyDevice", pName))
+        return (void *) vkDestroyDevice;
     if (!strcmp("vkLayerExtension1", pName))
         return (void *) vkLayerExtension1;
     else {
@@ -240,6 +262,8 @@ VK_LAYER_EXPORT void * VKAPI vkGetInstanceProcAddr(VkInstance instance, const ch
 
     if (!strcmp("vkGetInstanceProcAddr", pName))
         return (void *) vkGetInstanceProcAddr;
+    if (!strcmp("vkDestroyInstance", pName))
+        return (void *) vkDestroyInstance;
     if (!strcmp("vkEnumeratePhysicalDevices", pName))
         return (void*) vkEnumeratePhysicalDevices;
     if (!strcmp("vkGetGlobalExtensionInfo", pName))
