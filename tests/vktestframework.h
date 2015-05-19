@@ -72,8 +72,6 @@ public:
     int                       m_width;
     int                       m_height;
     void                     *m_data;
-    VkImage                   m_presentableImage;
-    VkDeviceMemory            m_presentableMemory;
     unsigned                  m_data_size;
 };
 
@@ -124,7 +122,6 @@ private:
 
     int                                     m_frameNum;
     string                                  m_testName;
-
 };
 
 class TestEnvironment : public ::testing::Environment

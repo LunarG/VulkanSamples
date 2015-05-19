@@ -85,6 +85,8 @@ private:
     std::list<VkTestImageRecord>            m_images;
 
     VkSwapChainWSI                          m_swap_chain;
+    std::vector<VkSwapChainImageInfoWSI>    m_persistent_images;
+    int                                     m_current_buffer;
 
     bool                                    m_quit;
     bool                                    m_pause;
@@ -361,8 +363,6 @@ void VkTestFramework::Show(const char *comment, VkImageObj *image)
     VkImageObj displayImage(image->device());
     VkMemoryPropertyFlags reqs = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
 
-    if (!m_show_images) return;
-
     displayImage.init(image->extent().width, image->extent().height, image->format(), 0, VK_IMAGE_TILING_LINEAR, reqs);
     displayImage.CopyImage(*image);
 
@@ -385,7 +385,7 @@ void VkTestFramework::Show(const char *comment, VkImageObj *image)
     record.m_width = displayImage.width();
     record.m_height = displayImage.height();
     // TODO: Need to make this more robust to handle different image formats
-    record.m_data_size = displayImage.width()*displayImage.height()*4;
+    record.m_data_size = displayImage.width() * displayImage.height() * 4;
     record.m_data = malloc(record.m_data_size);
     memcpy(record.m_data, ptr, record.m_data_size);
     m_images.push_back(record);
@@ -451,10 +451,41 @@ TestFrameworkVkPresent::TestFrameworkVkPresent(vk_testing::Device &device) :
 void  TestFrameworkVkPresent::Display()
 {
     VkResult U_ASSERT_ONLY err;
+    vk_testing::Buffer buf;
+    void *dest_ptr;
+
+    if (m_persistent_images.size() != 2) {
+        return;
+    }
+
+    VkMemoryPropertyFlags flags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
+    buf.init(m_device, (VkDeviceSize)m_display_image->m_data_size, flags);
+    dest_ptr = buf.map();
+    memcpy(dest_ptr, m_display_image->m_data, m_display_image->m_data_size);
+    buf.unmap();
+
+    m_cmdbuf.begin();
+
+    VkBufferImageCopy region = {};
+    region.imageExtent.height = m_display_image->m_height;
+    region.imageExtent.width = m_display_image->m_width;
+    region.imageExtent.depth = 1;
+
+    vkCmdCopyBufferToImage(m_cmdbuf.obj(),
+        buf.obj(),
+        m_persistent_images[m_current_buffer].image, VK_IMAGE_LAYOUT_TRANSFER_DESTINATION_OPTIMAL,
+        1, &region);
+    m_cmdbuf.end();
+
+    VkCmdBuffer cmdBufs[1];
+    cmdBufs[0] = m_cmdbuf.obj();
+
+    vkQueueSubmit(m_queue.obj(), 1, cmdBufs, NULL);
+    m_queue.wait();
 
     VkPresentInfoWSI present = {};
     present.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_WSI;
-    present.image = m_display_image->m_presentableImage;
+    present.image = m_persistent_images[m_current_buffer].image;
     present.flipInterval = 1;
 
 #ifndef _WIN32
@@ -471,10 +502,12 @@ void  TestFrameworkVkPresent::Display()
     assert(!err);
 
     m_queue.wait();
+    m_current_buffer = (m_current_buffer + 1) % 2;
 
 }
 
 #ifdef _WIN32
+# define PREVIOUSLY_DOWN 1<<29
 // MS-Windows event handling function:
 LRESULT CALLBACK TestFrameworkVkPresent::WndProc(HWND hWnd,
                         UINT uMsg,
@@ -492,13 +525,47 @@ LRESULT CALLBACK TestFrameworkVkPresent::WndProc(HWND hWnd,
        {
            TestFrameworkVkPresent* me = reinterpret_cast<TestFrameworkVkPresent*>(GetWindowLongPtr(hWnd, GWLP_USERDATA));
            if (me) {
+               SetWindowText(hWnd, me->m_display_image->m_title.c_str());
                me->Display();
            }
        }
-       return 0;
-         
-        default:
-          break;
+       break;
+
+       case WM_KEYDOWN:
+       {
+           if (lParam & (PREVIOUSLY_DOWN)){
+               break;
+           }
+          // To be able to be a CALLBACK, WndProc had to be static, so it doesn't get a this pointer.  When we created
+          // the window, we put the this pointer into the window's user data so we could get it back now
+          TestFrameworkVkPresent* me = reinterpret_cast<TestFrameworkVkPresent*>(GetWindowLongPtr(hWnd, GWLP_USERDATA));
+          switch (wParam)
+          {
+          case VK_ESCAPE: me->m_quit = true;
+              break;
+
+          case VK_LEFT:          // left arrow key
+              if (me->m_display_image == me->m_images.begin()) {
+                  me->m_display_image = --me->m_images.end();
+              }
+              else {
+                  --me->m_display_image;
+              }
+              break;
+
+          case VK_RIGHT:          // right arrow key
+              ++me->m_display_image;
+              if (me->m_display_image == me->m_images.end()) {
+                  me->m_display_image = me->m_images.begin();
+              }
+              break;
+
+          default:
+              break;
+          }
+          SetWindowText(hWnd, me->m_display_image->m_title.c_str());
+          me->Display();
+       }
     }
     return (DefWindowProc(hWnd, uMsg, wParam, lParam));
 }
@@ -506,14 +573,12 @@ LRESULT CALLBACK TestFrameworkVkPresent::WndProc(HWND hWnd,
 void TestFrameworkVkPresent::Run()
 {
     MSG msg;         // message
-    bool done;
 
-    done = false; //initialize loop condition variable
     /* main message loop*/
-    while(!done) {
-        PeekMessage(&msg, NULL, 0, 0, PM_REMOVE);
+    while(! m_quit) {
+        GetMessage(&msg, m_window, 0, 0);
         if (msg.message == WM_QUIT) {    
-            done = true; //if found, quit app
+            m_quit = true; //if found, quit app
         } else {
             /* Translate and dispatch to event queue*/
             TranslateMessage(&msg);
@@ -594,11 +659,14 @@ void TestFrameworkVkPresent::CreateSwapChain()
 {
     VkResult U_ASSERT_ONLY err;
 
+    m_display_image = m_images.begin();
+    m_current_buffer = 0;
+
     VkSwapChainCreateInfoWSI swap_chain = {};
     swap_chain.sType = VK_STRUCTURE_TYPE_SWAP_CHAIN_CREATE_INFO_WSI;
     swap_chain.pNativeWindowSystemHandle = (void *) m_connection;
     swap_chain.pNativeWindowHandle = (void *) (intptr_t) m_window;
-    swap_chain.imageCount = m_images.size();
+    swap_chain.imageCount = 2;
     swap_chain.imageFormat = VK_FORMAT_B8G8R8A8_UNORM;
     swap_chain.imageExtent.width = m_width;
     swap_chain.imageExtent.height = m_height;
@@ -610,53 +678,15 @@ void TestFrameworkVkPresent::CreateSwapChain()
     err = vkCreateSwapChainWSI(m_device.obj(), &swap_chain, &m_swap_chain);
     assert(!err);
 
-    size_t size = sizeof(VkSwapChainImageInfoWSI) * m_images.size();
-    std::vector<VkSwapChainImageInfoWSI> persistent_images;
-    persistent_images.resize(m_images.size());
+    size_t size = sizeof(VkSwapChainImageInfoWSI) * 2;
+    VkSwapChainImageInfoWSI infos[2];
+    
     err = vkGetSwapChainInfoWSI(m_swap_chain,
             VK_SWAP_CHAIN_INFO_TYPE_PERSISTENT_IMAGES_WSI,
-            &size, &persistent_images[0]);
-    assert(!err && size == sizeof(VkSwapChainImageInfoWSI) * m_images.size());
-
-    m_display_image = m_images.begin();
-
-    for (int x=0; x < m_images.size(); x++)
-    {
-        void *dest_ptr;
-
-        m_display_image->m_presentableImage = persistent_images[x].image;
-        m_display_image->m_presentableMemory = persistent_images[x].memory;
-
-        vk_testing::Buffer buf;
-        VkMemoryPropertyFlags flags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
-        buf.init(m_device, (VkDeviceSize) m_display_image->m_data_size, flags);
-        dest_ptr = buf.map();
-        memcpy(dest_ptr,m_display_image->m_data, m_display_image->m_data_size);
-        buf.unmap();
-
-        m_cmdbuf.begin();
-
-        VkBufferImageCopy region = {};
-        region.imageExtent.height = m_display_image->m_height;
-        region.imageExtent.width = m_display_image->m_width;
-        region.imageExtent.depth = 1;
-
-        vkCmdCopyBufferToImage(m_cmdbuf.obj(),
-                buf.obj(),
-                m_display_image->m_presentableImage, VK_IMAGE_LAYOUT_TRANSFER_DESTINATION_OPTIMAL,
-                1, &region);
-        m_cmdbuf.end();
-
-        VkCmdBuffer cmdBufs[1];
-        cmdBufs[0] = m_cmdbuf.obj();
-
-        vkQueueSubmit(m_queue.obj(), 1, cmdBufs, NULL);
-        m_queue.wait();
-
-        ++m_display_image;
-    }
-
-    m_display_image = m_images.begin();
+            &size, &infos);
+    assert(!err && size == sizeof(VkSwapChainImageInfoWSI) * 2);
+    m_persistent_images.push_back(infos[0]);
+    m_persistent_images.push_back(infos[1]);
 }
 
 void  TestFrameworkVkPresent::InitPresentFramework(std::list<VkTestImageRecord>  &imagesIn)
@@ -722,6 +752,8 @@ void  TestFrameworkVkPresent::CreateMyWindow()
         MessageBox(NULL, message, "Error", MB_OK);
         exit(1);
     }
+    // Put our this pointer into the window's user data so our WndProc can use it when it starts.
+    SetWindowLongPtr(m_window, GWLP_USERDATA, (LONG_PTR) this);
 }
 #else
 void  TestFrameworkVkPresent::CreateMyWindow()
@@ -1366,8 +1398,6 @@ VkTestImageRecord::VkTestImageRecord() : // Constructor
     m_width( 0 ),
     m_height( 0 ),
     m_data( NULL ),
-    m_presentableImage( NULL ),
-    m_presentableMemory( NULL),
     m_data_size( 0 )
 {
 }
@@ -1384,8 +1414,6 @@ VkTestImageRecord::VkTestImageRecord(const VkTestImageRecord &copyin)   // Copy 
     m_height = copyin.m_height;
     m_data_size = copyin.m_data_size;
     m_data = copyin.m_data; // TODO: Do we need to copy the data or is pointer okay?
-    m_presentableImage = copyin.m_presentableImage;
-    m_presentableMemory = copyin.m_presentableMemory;
 }
 
 ostream &operator<<(ostream &output, const VkTestImageRecord &VkTestImageRecord)
@@ -1402,8 +1430,6 @@ VkTestImageRecord& VkTestImageRecord::operator=(const VkTestImageRecord &rhs)
     m_height = rhs.m_height;
     m_data_size = rhs.m_data_size;
     m_data = rhs.m_data;
-    m_presentableImage = rhs.m_presentableImage;
-    m_presentableMemory = rhs.m_presentableMemory;
     return *this;
 }
 
