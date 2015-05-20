@@ -89,7 +89,7 @@ add_custom_target(generate_vk_layer_helpers DEPENDS
 
 run_vk_layer_generate(Generic generic_layer.c)
 run_vk_layer_generate(APIDump api_dump.cpp)
-run_vk_layer_generate(ObjectTracker object_track.c)
+run_vk_layer_generate(ObjectTracker object_track.cpp)
 run_vk_layer_generate(Threading threading.cpp)
 
 add_library(layer_utils SHARED layers_config.cpp)
@@ -108,6 +108,6 @@ add_vk_layer(ShaderChecker shader_checker.cpp)
 # generated
 add_vk_layer(Generic generic_layer.c)
 add_vk_layer(APIDump api_dump.cpp)
-add_vk_layer(ObjectTracker object_track.c)
+add_vk_layer(ObjectTracker object_track.cpp)
 add_vk_layer(ParamChecker param_checker.cpp)
 add_vk_layer(Threading threading.cpp)

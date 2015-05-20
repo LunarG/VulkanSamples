@@ -45,7 +45,8 @@ typedef enum _OBJECT_TRACK_ERROR
 } OBJECT_TRACK_ERROR;
 
 // Object Status -- used to track state of individual objects
-typedef enum _OBJECT_STATUS
+typedef VkFlags ObjectStatusFlags;
+typedef enum _ObjectStatusFlagBits
 {
     OBJSTATUS_NONE                              = 0x00000000, // No status is set
     OBJSTATUS_FENCE_IS_SUBMITTED                = 0x00000001, // Fence has been submitted
@@ -54,7 +55,7 @@ typedef enum _OBJECT_STATUS
     OBJSTATUS_COLOR_BLEND_BOUND                 = 0x00000008, // Viewport state object has been bound
     OBJSTATUS_DEPTH_STENCIL_BOUND               = 0x00000010, // Viewport state object has been bound
     OBJSTATUS_GPU_MEM_MAPPED                    = 0x00000020, // Memory object is currently mapped
-} OBJECT_STATUS;
+} ObjectStatusFlagBits;
 
 static const char* string_VkObjectType(VkObjectType type) {
     switch (type)
@@ -149,9 +150,9 @@ static const char* string_from_vulkan_object_type(uint32_t type) {
 }
 
 typedef struct _OBJTRACK_NODE {
-    VkObject        vkObj;
-    VkObjectType    objType;
-    OBJECT_STATUS   status;
+    VkObject          vkObj;
+    VkObjectType      objType;
+    ObjectStatusFlags status;
 } OBJTRACK_NODE;
 
 // prototype for extension functions
