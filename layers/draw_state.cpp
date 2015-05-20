@@ -58,12 +58,10 @@ unordered_map<VkCmdBuffer, GLOBAL_CB_NODE*> cmdBufferMap;
 unordered_map<VkRenderPass, VkRenderPassCreateInfo*> renderPassMap;
 unordered_map<VkFramebuffer, VkFramebufferCreateInfo*> frameBufferMap;
 
-static VkLayerDispatchTable nextTable;
-static VkLayerInstanceDispatchTable nextInstanceTable;
-static VkBaseLayerObject *pCurObj;
+static std::unordered_map<void *, VkLayerDispatchTable *> tableMap;
+static std::unordered_map<void *, VkLayerInstanceDispatchTable *> tableInstanceMap;
+
 static LOADER_PLATFORM_THREAD_ONCE_DECLARATION(g_initOnce);
-static LOADER_PLATFORM_THREAD_ONCE_DECLARATION(g_tabDeviceOnce);
-static LOADER_PLATFORM_THREAD_ONCE_DECLARATION(g_tabInstanceOnce);
 
 // TODO : This can be much smarter, using separate locks for separate global data
 static int globalLockInitialized = 0;
@@ -1442,21 +1440,47 @@ static void synchAndPrintDSConfig(const VkCmdBuffer cb)
     }
 }
 
-// TODO handle multiple GPUs/instances for both instance and device dispatch tables
-static void initDeviceTable(void)
+static VkLayerDispatchTable * initDeviceTable(const VkBaseLayerObject *devw)
 {
-    PFN_vkGetDeviceProcAddr fpNextGPA;
-    fpNextGPA = (PFN_vkGetDeviceProcAddr) pCurObj->pGPA;
-    assert(fpNextGPA);
-    layer_initialize_dispatch_table(&nextTable, fpNextGPA, (VkDevice) pCurObj->nextObject);
+    VkLayerDispatchTable *pTable;
+
+    assert(devw);
+    VkLayerDispatchTable **ppDisp = (VkLayerDispatchTable **) (devw->baseObject);
+
+    std::unordered_map<void *, VkLayerDispatchTable *>::const_iterator it = tableMap.find((void *) *ppDisp);
+    if (it == tableMap.end())
+    {
+        pTable =  new VkLayerDispatchTable;
+        tableMap[(void *) *ppDisp] = pTable;
+    } else
+    {
+        return it->second;
+    }
+
+    layer_initialize_dispatch_table(pTable, (PFN_vkGetDeviceProcAddr) devw->pGPA, (VkDevice) devw->nextObject);
+
+    return pTable;
 }
 
-static void initInstanceTable(void)
+static VkLayerInstanceDispatchTable * initInstanceTable(const VkBaseLayerObject *instw)
 {
-    PFN_vkGetInstanceProcAddr fpNextGPA;
-    fpNextGPA = (PFN_vkGetInstanceProcAddr) pCurObj->pGPA;
-    assert(fpNextGPA);
-    layer_init_instance_dispatch_table(&nextInstanceTable, fpNextGPA, (VkInstance) pCurObj->nextObject);
+    VkLayerInstanceDispatchTable *pTable;
+    assert(instw);
+    VkLayerInstanceDispatchTable **ppDisp = (VkLayerInstanceDispatchTable **) instw->baseObject;
+
+    std::unordered_map<void *, VkLayerInstanceDispatchTable *>::const_iterator it = tableInstanceMap.find((void *) *ppDisp);
+    if (it == tableInstanceMap.end())
+    {
+        pTable =  new VkLayerInstanceDispatchTable;
+        tableInstanceMap[(void *) *ppDisp] = pTable;
+    } else
+    {
+        return it->second;
+    }
+
+    layer_init_instance_dispatch_table(pTable, (PFN_vkGetInstanceProcAddr) instw->pGPA, (VkInstance) instw->nextObject);
+
+    return pTable;
 }
 
 static void initDrawState(void)
@@ -1489,9 +1513,21 @@ static void initDrawState(void)
     }
 }
 
+/* hook DestroyInstance to remove tableInstanceMap entry */
+VK_LAYER_EXPORT VkResult VKAPI vkDestroyInstance(VkInstance instance)
+{
+   VkLayerInstanceDispatchTable *pDisp = *(VkLayerInstanceDispatchTable **) instance;
+    VkLayerInstanceDispatchTable *pTable = tableInstanceMap[pDisp];
+    VkResult res = pTable->DestroyInstance(instance);
+    tableInstanceMap.erase(pDisp);
+    return res;
+}
+
 VK_LAYER_EXPORT VkResult VKAPI vkCreateDevice(VkPhysicalDevice gpu, const VkDeviceCreateInfo* pCreateInfo, VkDevice* pDevice)
 {
-    VkResult result = nextInstanceTable.CreateDevice(gpu, pCreateInfo, pDevice);
+    VkLayerInstanceDispatchTable **ppDisp = (VkLayerInstanceDispatchTable **) gpu;
+    VkLayerInstanceDispatchTable* pInstTable = tableInstanceMap[*ppDisp];
+    VkResult result = pInstTable->CreateDevice(gpu, pCreateInfo, pDevice);
     return result;
 }
 
@@ -1508,7 +1544,11 @@ VK_LAYER_EXPORT VkResult VKAPI vkDestroyDevice(VkDevice device)
     deletePools();
     deleteLayouts();
     loader_platform_thread_unlock_mutex(&globalLock);
-    VkResult result = nextTable.DestroyDevice(device);
+
+    VkLayerDispatchTable *pDisp =  *(VkLayerDispatchTable **) device;
+    VkLayerDispatchTable *pTable = tableMap[pDisp];
+    VkResult result = pTable->DestroyDevice(device);
+    tableMap.erase(pDisp);
     return result;
 }
 
@@ -1570,9 +1610,9 @@ VK_LAYER_EXPORT VkResult VKAPI vkEnumerateLayers(VkPhysicalDevice gpu, size_t ma
 {
     if (gpu != NULL)
     {
-        pCurObj = (VkBaseLayerObject *) gpu;
-        loader_platform_thread_once(&g_initOnce, initDrawState);
-        VkResult result = nextInstanceTable.EnumerateLayers(gpu, maxStringSize, pLayerCount, pOutLayers, pReserved);
+        VkLayerInstanceDispatchTable* pTable = initInstanceTable((const VkBaseLayerObject *) gpu);
+
+        VkResult result = pTable->EnumerateLayers(gpu, maxStringSize, pLayerCount, pOutLayers, pReserved);
         return result;
     } else {
         if (pLayerCount == NULL || pOutLayers == NULL || pOutLayers[0] == NULL)
@@ -1601,20 +1641,27 @@ VK_LAYER_EXPORT VkResult VKAPI vkQueueSubmit(VkQueue queue, uint32_t cmdBufferCo
         }
         loader_platform_thread_unlock_mutex(&globalLock);
     }
-    VkResult result = nextTable.QueueSubmit(queue, cmdBufferCount, pCmdBuffers, fence);
+
+    VkLayerDispatchTable *pDisp =  *(VkLayerDispatchTable **) queue;
+    VkLayerDispatchTable *pTable = tableMap[pDisp];
+    VkResult result = pTable->QueueSubmit(queue, cmdBufferCount, pCmdBuffers, fence);
     return result;
 }
 
 VK_LAYER_EXPORT VkResult VKAPI vkDestroyObject(VkDevice device, VkObjectType objType, VkObject object)
 {
     // TODO : When wrapped objects (such as dynamic state) are destroyed, need to clean up memory
-    VkResult result = nextTable.DestroyObject(device, objType, object);
+    VkLayerDispatchTable *pDisp =  *(VkLayerDispatchTable **) device;
+    VkLayerDispatchTable *pTable = tableMap[pDisp];
+    VkResult result = pTable->DestroyObject(device, objType, object);
     return result;
 }
 
 VK_LAYER_EXPORT VkResult VKAPI vkCreateBufferView(VkDevice device, const VkBufferViewCreateInfo* pCreateInfo, VkBufferView* pView)
 {
-    VkResult result = nextTable.CreateBufferView(device, pCreateInfo, pView);
+    VkLayerDispatchTable *pDisp =  *(VkLayerDispatchTable **) device;
+    VkLayerDispatchTable *pTable = tableMap[pDisp];
+    VkResult result = pTable->CreateBufferView(device, pCreateInfo, pView);
     if (VK_SUCCESS == result) {
         loader_platform_thread_lock_mutex(&globalLock);
         BUFFER_NODE* pNewNode = new BUFFER_NODE;
@@ -1628,7 +1675,9 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateBufferView(VkDevice device, const VkBuffe
 
 VK_LAYER_EXPORT VkResult VKAPI vkCreateImageView(VkDevice device, const VkImageViewCreateInfo* pCreateInfo, VkImageView* pView)
 {
-    VkResult result = nextTable.CreateImageView(device, pCreateInfo, pView);
+    VkLayerDispatchTable *pDisp =  *(VkLayerDispatchTable **) device;
+    VkLayerDispatchTable *pTable = tableMap[pDisp];
+    VkResult result = pTable->CreateImageView(device, pCreateInfo, pView);
     if (VK_SUCCESS == result) {
         loader_platform_thread_lock_mutex(&globalLock);
         IMAGE_NODE *pNewNode = new IMAGE_NODE;
@@ -1653,7 +1702,9 @@ static void track_pipeline(const VkGraphicsPipelineCreateInfo* pCreateInfo, VkPi
 
 VK_LAYER_EXPORT VkResult VKAPI vkCreateGraphicsPipeline(VkDevice device, const VkGraphicsPipelineCreateInfo* pCreateInfo, VkPipeline* pPipeline)
 {
-    VkResult result = nextTable.CreateGraphicsPipeline(device, pCreateInfo, pPipeline);
+    VkLayerDispatchTable *pDisp =  *(VkLayerDispatchTable **) device;
+    VkLayerDispatchTable *pTable = tableMap[pDisp];
+    VkResult result = pTable->CreateGraphicsPipeline(device, pCreateInfo, pPipeline);
     // Create LL HEAD for this Pipeline
     char str[1024];
     sprintf(str, "Created Gfx Pipeline %p", (void*)*pPipeline);
@@ -1670,7 +1721,9 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateGraphicsPipelineDerivative(
         VkPipeline basePipeline,
         VkPipeline* pPipeline)
 {
-    VkResult result = nextTable.CreateGraphicsPipelineDerivative(device, pCreateInfo, basePipeline, pPipeline);
+    VkLayerDispatchTable *pDisp =  *(VkLayerDispatchTable **) device;
+    VkLayerDispatchTable *pTable = tableMap[pDisp];
+    VkResult result = pTable->CreateGraphicsPipelineDerivative(device, pCreateInfo, basePipeline, pPipeline);
     // Create LL HEAD for this Pipeline
     char str[1024];
     sprintf(str, "Created Gfx Pipeline %p (derived from pipeline %p)", (void*)*pPipeline, basePipeline);
@@ -1685,7 +1738,9 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateGraphicsPipelineDerivative(
 
 VK_LAYER_EXPORT VkResult VKAPI vkCreateSampler(VkDevice device, const VkSamplerCreateInfo* pCreateInfo, VkSampler* pSampler)
 {
-    VkResult result = nextTable.CreateSampler(device, pCreateInfo, pSampler);
+    VkLayerDispatchTable *pDisp =  *(VkLayerDispatchTable **) device;
+    VkLayerDispatchTable *pTable = tableMap[pDisp];
+    VkResult result = pTable->CreateSampler(device, pCreateInfo, pSampler);
     if (VK_SUCCESS == result) {
         loader_platform_thread_lock_mutex(&globalLock);
         SAMPLER_NODE* pNewNode = new SAMPLER_NODE;
@@ -1699,7 +1754,9 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateSampler(VkDevice device, const VkSamplerC
 
 VK_LAYER_EXPORT VkResult VKAPI vkCreateDescriptorSetLayout(VkDevice device, const VkDescriptorSetLayoutCreateInfo* pCreateInfo, VkDescriptorSetLayout* pSetLayout)
 {
-    VkResult result = nextTable.CreateDescriptorSetLayout(device, pCreateInfo, pSetLayout);
+    VkLayerDispatchTable *pDisp =  *(VkLayerDispatchTable **) device;
+    VkLayerDispatchTable *pTable = tableMap[pDisp];
+    VkResult result = pTable->CreateDescriptorSetLayout(device, pCreateInfo, pSetLayout);
     if (VK_SUCCESS == result) {
         LAYOUT_NODE* pNewNode = new LAYOUT_NODE;
         if (NULL == pNewNode) {
@@ -1745,7 +1802,9 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateDescriptorSetLayout(VkDevice device, cons
 
 VkResult VKAPI vkCreatePipelineLayout(VkDevice device, const VkPipelineLayoutCreateInfo* pCreateInfo, VkPipelineLayout* pPipelineLayout)
 {
-    VkResult result = nextTable.CreatePipelineLayout(device, pCreateInfo, pPipelineLayout);
+    VkLayerDispatchTable *pDisp =  *(VkLayerDispatchTable **) device;
+    VkLayerDispatchTable *pTable = tableMap[pDisp];
+    VkResult result = pTable->CreatePipelineLayout(device, pCreateInfo, pPipelineLayout);
     if (VK_SUCCESS == result) {
         // TODO : Need to capture the pipeline layout
     }
@@ -1754,7 +1813,9 @@ VkResult VKAPI vkCreatePipelineLayout(VkDevice device, const VkPipelineLayoutCre
 
 VK_LAYER_EXPORT VkResult VKAPI vkCreateDescriptorPool(VkDevice device, VkDescriptorPoolUsage poolUsage, uint32_t maxSets, const VkDescriptorPoolCreateInfo* pCreateInfo, VkDescriptorPool* pDescriptorPool)
 {
-    VkResult result = nextTable.CreateDescriptorPool(device, poolUsage, maxSets, pCreateInfo, pDescriptorPool);
+    VkLayerDispatchTable *pDisp =  *(VkLayerDispatchTable **) device;
+    VkLayerDispatchTable *pTable = tableMap[pDisp];
+    VkResult result = pTable->CreateDescriptorPool(device, poolUsage, maxSets, pCreateInfo, pDescriptorPool);
     if (VK_SUCCESS == result) {
         // Insert this pool into Global Pool LL at head
         char str[1024];
@@ -1791,7 +1852,9 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateDescriptorPool(VkDevice device, VkDescrip
 
 VK_LAYER_EXPORT VkResult VKAPI vkResetDescriptorPool(VkDevice device, VkDescriptorPool descriptorPool)
 {
-    VkResult result = nextTable.ResetDescriptorPool(device, descriptorPool);
+    VkLayerDispatchTable *pDisp =  *(VkLayerDispatchTable **) device;
+    VkLayerDispatchTable *pTable = tableMap[pDisp];
+    VkResult result = pTable->ResetDescriptorPool(device, descriptorPool);
     if (VK_SUCCESS == result) {
         clearDescriptorPool(descriptorPool);
     }
@@ -1800,7 +1863,9 @@ VK_LAYER_EXPORT VkResult VKAPI vkResetDescriptorPool(VkDevice device, VkDescript
 
 VK_LAYER_EXPORT VkResult VKAPI vkAllocDescriptorSets(VkDevice device, VkDescriptorPool descriptorPool, VkDescriptorSetUsage setUsage, uint32_t count, const VkDescriptorSetLayout* pSetLayouts, VkDescriptorSet* pDescriptorSets, uint32_t* pCount)
 {
-    VkResult result = nextTable.AllocDescriptorSets(device, descriptorPool, setUsage, count, pSetLayouts, pDescriptorSets, pCount);
+    VkLayerDispatchTable *pDisp =  *(VkLayerDispatchTable **) device;
+    VkLayerDispatchTable *pTable = tableMap[pDisp];
+    VkResult result = pTable->AllocDescriptorSets(device, descriptorPool, setUsage, count, pSetLayouts, pDescriptorSets, pCount);
     if ((VK_SUCCESS == result) || (*pCount > 0)) {
         POOL_NODE *pPoolNode = getPoolNode(descriptorPool);
         if (!pPoolNode) {
@@ -1854,49 +1919,63 @@ VK_LAYER_EXPORT void VKAPI vkClearDescriptorSets(VkDevice device, VkDescriptorPo
     for (uint32_t i = 0; i < count; i++) {
         clearDescriptorSet(pDescriptorSets[i]);
     }
-    nextTable.ClearDescriptorSets(device, descriptorPool, count, pDescriptorSets);
+    VkLayerDispatchTable *pDisp =  *(VkLayerDispatchTable **) device;
+    VkLayerDispatchTable *pTable = tableMap[pDisp];
+    pTable->ClearDescriptorSets(device, descriptorPool, count, pDescriptorSets);
 }
 
 VK_LAYER_EXPORT VkResult VKAPI vkUpdateDescriptorSets(VkDevice device, uint32_t writeCount, const VkWriteDescriptorSet* pDescriptorWrites, uint32_t copyCount, const VkCopyDescriptorSet* pDescriptorCopies)
 {
     if (dsUpdate(VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET, writeCount, pDescriptorWrites) &&
-        dsUpdate(VK_STRUCTURE_TYPE_COPY_DESCRIPTOR_SET, copyCount, pDescriptorCopies))
-        return nextTable.UpdateDescriptorSets(device, writeCount, pDescriptorWrites, copyCount, pDescriptorCopies);
-    else
-        return VK_ERROR_UNKNOWN;
+        dsUpdate(VK_STRUCTURE_TYPE_COPY_DESCRIPTOR_SET, copyCount, pDescriptorCopies)) {
+        VkLayerDispatchTable *pDisp =  *(VkLayerDispatchTable **) device;
+        VkLayerDispatchTable *pTable = tableMap[pDisp];
+        return pTable->UpdateDescriptorSets(device, writeCount, pDescriptorWrites, copyCount, pDescriptorCopies);
+    }
+    return VK_ERROR_UNKNOWN;
 }
 
 VK_LAYER_EXPORT VkResult VKAPI vkCreateDynamicViewportState(VkDevice device, const VkDynamicVpStateCreateInfo* pCreateInfo, VkDynamicVpState* pState)
 {
-    VkResult result = nextTable.CreateDynamicViewportState(device, pCreateInfo, pState);
+    VkLayerDispatchTable *pDisp =  *(VkLayerDispatchTable **) device;
+    VkLayerDispatchTable *pTable = tableMap[pDisp];
+    VkResult result = pTable->CreateDynamicViewportState(device, pCreateInfo, pState);
     insertDynamicState(*pState, (GENERIC_HEADER*)pCreateInfo, VK_STATE_BIND_POINT_VIEWPORT);
     return result;
 }
 
 VK_LAYER_EXPORT VkResult VKAPI vkCreateDynamicRasterState(VkDevice device, const VkDynamicRsStateCreateInfo* pCreateInfo, VkDynamicRsState* pState)
 {
-    VkResult result = nextTable.CreateDynamicRasterState(device, pCreateInfo, pState);
+    VkLayerDispatchTable *pDisp =  *(VkLayerDispatchTable **) device;
+    VkLayerDispatchTable *pTable = tableMap[pDisp];
+    VkResult result = pTable->CreateDynamicRasterState(device, pCreateInfo, pState);
     insertDynamicState(*pState, (GENERIC_HEADER*)pCreateInfo, VK_STATE_BIND_POINT_RASTER);
     return result;
 }
 
 VK_LAYER_EXPORT VkResult VKAPI vkCreateDynamicColorBlendState(VkDevice device, const VkDynamicCbStateCreateInfo* pCreateInfo, VkDynamicCbState* pState)
 {
-    VkResult result = nextTable.CreateDynamicColorBlendState(device, pCreateInfo, pState);
+    VkLayerDispatchTable *pDisp =  *(VkLayerDispatchTable **) device;
+    VkLayerDispatchTable *pTable = tableMap[pDisp];
+    VkResult result = pTable->CreateDynamicColorBlendState(device, pCreateInfo, pState);
     insertDynamicState(*pState, (GENERIC_HEADER*)pCreateInfo, VK_STATE_BIND_POINT_COLOR_BLEND);
     return result;
 }
 
 VK_LAYER_EXPORT VkResult VKAPI vkCreateDynamicDepthStencilState(VkDevice device, const VkDynamicDsStateCreateInfo* pCreateInfo, VkDynamicDsState* pState)
 {
-    VkResult result = nextTable.CreateDynamicDepthStencilState(device, pCreateInfo, pState);
+    VkLayerDispatchTable *pDisp =  *(VkLayerDispatchTable **) device;
+    VkLayerDispatchTable *pTable = tableMap[pDisp];
+    VkResult result = pTable->CreateDynamicDepthStencilState(device, pCreateInfo, pState);
     insertDynamicState(*pState, (GENERIC_HEADER*)pCreateInfo, VK_STATE_BIND_POINT_DEPTH_STENCIL);
     return result;
 }
 
 VK_LAYER_EXPORT VkResult VKAPI vkCreateCommandBuffer(VkDevice device, const VkCmdBufferCreateInfo* pCreateInfo, VkCmdBuffer* pCmdBuffer)
 {
-    VkResult result = nextTable.CreateCommandBuffer(device, pCreateInfo, pCmdBuffer);
+    VkLayerDispatchTable *pDisp =  *(VkLayerDispatchTable **) device;
+    VkLayerDispatchTable *pTable = tableMap[pDisp];
+    VkResult result = pTable->CreateCommandBuffer(device, pCreateInfo, pCmdBuffer);
     if (VK_SUCCESS == result) {
         loader_platform_thread_lock_mutex(&globalLock);
         GLOBAL_CB_NODE* pCB = new GLOBAL_CB_NODE;
@@ -1914,7 +1993,9 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateCommandBuffer(VkDevice device, const VkCm
 
 VK_LAYER_EXPORT VkResult VKAPI vkBeginCommandBuffer(VkCmdBuffer cmdBuffer, const VkCmdBufferBeginInfo* pBeginInfo)
 {
-    VkResult result = nextTable.BeginCommandBuffer(cmdBuffer, pBeginInfo);
+    VkLayerDispatchTable *pDisp =  *(VkLayerDispatchTable **) cmdBuffer;
+    VkLayerDispatchTable *pTable = tableMap[pDisp];
+    VkResult result = pTable->BeginCommandBuffer(cmdBuffer, pBeginInfo);
     if (VK_SUCCESS == result) {
         GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
         if (pCB) {
@@ -1940,7 +2021,9 @@ VK_LAYER_EXPORT VkResult VKAPI vkBeginCommandBuffer(VkCmdBuffer cmdBuffer, const
 
 VK_LAYER_EXPORT VkResult VKAPI vkEndCommandBuffer(VkCmdBuffer cmdBuffer)
 {
-    VkResult result = nextTable.EndCommandBuffer(cmdBuffer);
+    VkLayerDispatchTable *pDisp =  *(VkLayerDispatchTable **) cmdBuffer;
+    VkLayerDispatchTable *pTable = tableMap[pDisp];
+    VkResult result = pTable->EndCommandBuffer(cmdBuffer);
     if (VK_SUCCESS == result) {
         GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
         if (pCB) {
@@ -1962,7 +2045,9 @@ VK_LAYER_EXPORT VkResult VKAPI vkEndCommandBuffer(VkCmdBuffer cmdBuffer)
 
 VK_LAYER_EXPORT VkResult VKAPI vkResetCommandBuffer(VkCmdBuffer cmdBuffer)
 {
-    VkResult result = nextTable.ResetCommandBuffer(cmdBuffer);
+    VkLayerDispatchTable *pDisp =  *(VkLayerDispatchTable **) cmdBuffer;
+    VkLayerDispatchTable *pTable = tableMap[pDisp];
+    VkResult result = pTable->ResetCommandBuffer(cmdBuffer);
     if (VK_SUCCESS == result) {
         resetCB(cmdBuffer);
         updateCBTracking(cmdBuffer);
@@ -1983,7 +2068,9 @@ VK_LAYER_EXPORT void VKAPI vkCmdBindPipeline(VkCmdBuffer cmdBuffer, VkPipelineBi
             g_lastBoundPipeline = pPN;
             loader_platform_thread_unlock_mutex(&globalLock);
             validatePipelineState(pCB, pipelineBindPoint, pipeline);
-            nextTable.CmdBindPipeline(cmdBuffer, pipelineBindPoint, pipeline);
+            VkLayerDispatchTable *pDisp =  *(VkLayerDispatchTable **) cmdBuffer;
+            VkLayerDispatchTable *pTable = tableMap[pDisp];
+            pTable->CmdBindPipeline(cmdBuffer, pipelineBindPoint, pipeline);
         }
         else {
             char str[1024];
@@ -2001,7 +2088,9 @@ VK_LAYER_EXPORT void VKAPI vkCmdBindPipeline(VkCmdBuffer cmdBuffer, VkPipelineBi
 VK_LAYER_EXPORT void VKAPI vkCmdBindDynamicStateObject(VkCmdBuffer cmdBuffer, VkStateBindPoint stateBindPoint, VkDynamicStateObject state)
 {
     setLastBoundDynamicState(cmdBuffer, state, stateBindPoint);
-    nextTable.CmdBindDynamicStateObject(cmdBuffer, stateBindPoint, state);
+    VkLayerDispatchTable *pDisp =  *(VkLayerDispatchTable **) cmdBuffer;
+    VkLayerDispatchTable *pTable = tableMap[pDisp];
+    pTable->CmdBindDynamicStateObject(cmdBuffer, stateBindPoint, state);
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdBindDescriptorSets(VkCmdBuffer cmdBuffer, VkPipelineBindPoint pipelineBindPoint, uint32_t firstSet, uint32_t setCount, const VkDescriptorSet* pDescriptorSets, uint32_t dynamicOffsetCount, const uint32_t* pDynamicOffsets)
@@ -2028,7 +2117,9 @@ VK_LAYER_EXPORT void VKAPI vkCmdBindDescriptorSets(VkCmdBuffer cmdBuffer, VkPipe
                     layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, pDescriptorSets[i], 0, DRAWSTATE_INVALID_SET, "DS", str);
                 }
             }
-            nextTable.CmdBindDescriptorSets(cmdBuffer, pipelineBindPoint, firstSet, setCount, pDescriptorSets, dynamicOffsetCount, pDynamicOffsets);
+            VkLayerDispatchTable *pDisp =  *(VkLayerDispatchTable **) cmdBuffer;
+            VkLayerDispatchTable *pTable = tableMap[pDisp];
+            pTable->CmdBindDescriptorSets(cmdBuffer, pipelineBindPoint, firstSet, setCount, pDescriptorSets, dynamicOffsetCount, pDynamicOffsets);
         }
     }
     else {
@@ -2051,7 +2142,9 @@ VK_LAYER_EXPORT void VKAPI vkCmdBindIndexBuffer(VkCmdBuffer cmdBuffer, VkBuffer 
         sprintf(str, "Attempt to use CmdBuffer %p that doesn't exist!", (void*)cmdBuffer);
         layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, cmdBuffer, 0, DRAWSTATE_INVALID_CMD_BUFFER, "DS", str);
     }
-    nextTable.CmdBindIndexBuffer(cmdBuffer, buffer, offset, indexType);
+    VkLayerDispatchTable *pDisp =  *(VkLayerDispatchTable **) cmdBuffer;
+    VkLayerDispatchTable *pTable = tableMap[pDisp];
+    pTable->CmdBindIndexBuffer(cmdBuffer, buffer, offset, indexType);
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdBindVertexBuffers(
@@ -2068,7 +2161,9 @@ VK_LAYER_EXPORT void VKAPI vkCmdBindVertexBuffers(
         addCmd(pCB, CMD_BINDVERTEXBUFFER);
         pCB->lastVtxBinding = startBinding + bindingCount -1;
         if (validateBoundPipeline(cmdBuffer)) {
-            nextTable.CmdBindVertexBuffers(cmdBuffer, startBinding, bindingCount, pBuffers, pOffsets);
+            VkLayerDispatchTable *pDisp =  *(VkLayerDispatchTable **) cmdBuffer;
+            VkLayerDispatchTable *pTable = tableMap[pDisp];
+            pTable->CmdBindVertexBuffers(cmdBuffer, startBinding, bindingCount, pBuffers, pOffsets);
         }
     } else {
         char str[1024];
@@ -2098,8 +2193,11 @@ VK_LAYER_EXPORT void VKAPI vkCmdDraw(VkCmdBuffer cmdBuffer, uint32_t firstVertex
         sprintf(str, "Attempt to use CmdBuffer %p that doesn't exist!", (void*)cmdBuffer);
         layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, cmdBuffer, 0, DRAWSTATE_INVALID_CMD_BUFFER, "DS", str);
     }
-    if (valid)
-        nextTable.CmdDraw(cmdBuffer, firstVertex, vertexCount, firstInstance, instanceCount);
+    if (valid) {
+        VkLayerDispatchTable *pDisp =  *(VkLayerDispatchTable **) cmdBuffer;
+        VkLayerDispatchTable *pTable = tableMap[pDisp];
+        pTable->CmdDraw(cmdBuffer, firstVertex, vertexCount, firstInstance, instanceCount);
+    }
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdDrawIndexed(VkCmdBuffer cmdBuffer, uint32_t firstIndex, uint32_t indexCount, int32_t vertexOffset, uint32_t firstInstance, uint32_t instanceCount)
@@ -2123,8 +2221,11 @@ VK_LAYER_EXPORT void VKAPI vkCmdDrawIndexed(VkCmdBuffer cmdBuffer, uint32_t firs
         sprintf(str, "Attempt to use CmdBuffer %p that doesn't exist!", (void*)cmdBuffer);
         layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, cmdBuffer, 0, DRAWSTATE_INVALID_CMD_BUFFER, "DS", str);
     }
-    if (valid)
-        nextTable.CmdDrawIndexed(cmdBuffer, firstIndex, indexCount, vertexOffset, firstInstance, instanceCount);
+    if (valid) {
+        VkLayerDispatchTable *pDisp =  *(VkLayerDispatchTable **) cmdBuffer;
+        VkLayerDispatchTable *pTable = tableMap[pDisp];
+        pTable->CmdDrawIndexed(cmdBuffer, firstIndex, indexCount, vertexOffset, firstInstance, instanceCount);
+    }
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdDrawIndirect(VkCmdBuffer cmdBuffer, VkBuffer buffer, VkDeviceSize offset, uint32_t count, uint32_t stride)
@@ -2148,8 +2249,11 @@ VK_LAYER_EXPORT void VKAPI vkCmdDrawIndirect(VkCmdBuffer cmdBuffer, VkBuffer buf
         sprintf(str, "Attempt to use CmdBuffer %p that doesn't exist!", (void*)cmdBuffer);
         layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, cmdBuffer, 0, DRAWSTATE_INVALID_CMD_BUFFER, "DS", str);
     }
-    if (valid)
-        nextTable.CmdDrawIndirect(cmdBuffer, buffer, offset, count, stride);
+    if (valid) {
+        VkLayerDispatchTable *pDisp =  *(VkLayerDispatchTable **) cmdBuffer;
+        VkLayerDispatchTable *pTable = tableMap[pDisp];
+        pTable->CmdDrawIndirect(cmdBuffer, buffer, offset, count, stride);
+    }
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdDrawIndexedIndirect(VkCmdBuffer cmdBuffer, VkBuffer buffer, VkDeviceSize offset, uint32_t count, uint32_t stride)
@@ -2173,8 +2277,11 @@ VK_LAYER_EXPORT void VKAPI vkCmdDrawIndexedIndirect(VkCmdBuffer cmdBuffer, VkBuf
         sprintf(str, "Attempt to use CmdBuffer %p that doesn't exist!", (void*)cmdBuffer);
         layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, cmdBuffer, 0, DRAWSTATE_INVALID_CMD_BUFFER, "DS", str);
     }
-    if (valid)
-        nextTable.CmdDrawIndexedIndirect(cmdBuffer, buffer, offset, count, stride);
+    if (valid) {
+        VkLayerDispatchTable *pDisp =  *(VkLayerDispatchTable **) cmdBuffer;
+        VkLayerDispatchTable *pTable = tableMap[pDisp];
+        pTable->CmdDrawIndexedIndirect(cmdBuffer, buffer, offset, count, stride);
+    }
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdDispatch(VkCmdBuffer cmdBuffer, uint32_t x, uint32_t y, uint32_t z)
@@ -2189,7 +2296,9 @@ VK_LAYER_EXPORT void VKAPI vkCmdDispatch(VkCmdBuffer cmdBuffer, uint32_t x, uint
         sprintf(str, "Attempt to use CmdBuffer %p that doesn't exist!", (void*)cmdBuffer);
         layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, cmdBuffer, 0, DRAWSTATE_INVALID_CMD_BUFFER, "DS", str);
     }
-    nextTable.CmdDispatch(cmdBuffer, x, y, z);
+    VkLayerDispatchTable *pDisp =  *(VkLayerDispatchTable **) cmdBuffer;
+    VkLayerDispatchTable *pTable = tableMap[pDisp];
+    pTable->CmdDispatch(cmdBuffer, x, y, z);
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdDispatchIndirect(VkCmdBuffer cmdBuffer, VkBuffer buffer, VkDeviceSize offset)
@@ -2204,7 +2313,9 @@ VK_LAYER_EXPORT void VKAPI vkCmdDispatchIndirect(VkCmdBuffer cmdBuffer, VkBuffer
         sprintf(str, "Attempt to use CmdBuffer %p that doesn't exist!", (void*)cmdBuffer);
         layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, cmdBuffer, 0, DRAWSTATE_INVALID_CMD_BUFFER, "DS", str);
     }
-    nextTable.CmdDispatchIndirect(cmdBuffer, buffer, offset);
+    VkLayerDispatchTable *pDisp =  *(VkLayerDispatchTable **) cmdBuffer;
+    VkLayerDispatchTable *pTable = tableMap[pDisp];
+    pTable->CmdDispatchIndirect(cmdBuffer, buffer, offset);
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdCopyBuffer(VkCmdBuffer cmdBuffer, VkBuffer srcBuffer, VkBuffer destBuffer, uint32_t regionCount, const VkBufferCopy* pRegions)
@@ -2219,7 +2330,9 @@ VK_LAYER_EXPORT void VKAPI vkCmdCopyBuffer(VkCmdBuffer cmdBuffer, VkBuffer srcBu
         sprintf(str, "Attempt to use CmdBuffer %p that doesn't exist!", (void*)cmdBuffer);
         layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, cmdBuffer, 0, DRAWSTATE_INVALID_CMD_BUFFER, "DS", str);
     }
-    nextTable.CmdCopyBuffer(cmdBuffer, srcBuffer, destBuffer, regionCount, pRegions);
+    VkLayerDispatchTable *pDisp =  *(VkLayerDispatchTable **) cmdBuffer;
+    VkLayerDispatchTable *pTable = tableMap[pDisp];
+    pTable->CmdCopyBuffer(cmdBuffer, srcBuffer, destBuffer, regionCount, pRegions);
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdCopyImage(VkCmdBuffer cmdBuffer,
@@ -2239,7 +2352,9 @@ VK_LAYER_EXPORT void VKAPI vkCmdCopyImage(VkCmdBuffer cmdBuffer,
         sprintf(str, "Attempt to use CmdBuffer %p that doesn't exist!", (void*)cmdBuffer);
         layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, cmdBuffer, 0, DRAWSTATE_INVALID_CMD_BUFFER, "DS", str);
     }
-    nextTable.CmdCopyImage(cmdBuffer, srcImage, srcImageLayout, destImage, destImageLayout, regionCount, pRegions);
+    VkLayerDispatchTable *pDisp =  *(VkLayerDispatchTable **) cmdBuffer;
+    VkLayerDispatchTable *pTable = tableMap[pDisp];
+    pTable->CmdCopyImage(cmdBuffer, srcImage, srcImageLayout, destImage, destImageLayout, regionCount, pRegions);
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdBlitImage(VkCmdBuffer cmdBuffer,
@@ -2258,7 +2373,9 @@ VK_LAYER_EXPORT void VKAPI vkCmdBlitImage(VkCmdBuffer cmdBuffer,
         sprintf(str, "Attempt to use CmdBuffer %p that doesn't exist!", (void*)cmdBuffer);
         layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, cmdBuffer, 0, DRAWSTATE_INVALID_CMD_BUFFER, "DS", str);
     }
-    nextTable.CmdBlitImage(cmdBuffer, srcImage, srcImageLayout, destImage, destImageLayout, regionCount, pRegions, filter);
+    VkLayerDispatchTable *pDisp =  *(VkLayerDispatchTable **) cmdBuffer;
+    VkLayerDispatchTable *pTable = tableMap[pDisp];
+    pTable->CmdBlitImage(cmdBuffer, srcImage, srcImageLayout, destImage, destImageLayout, regionCount, pRegions, filter);
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdCopyBufferToImage(VkCmdBuffer cmdBuffer,
@@ -2276,7 +2393,9 @@ VK_LAYER_EXPORT void VKAPI vkCmdCopyBufferToImage(VkCmdBuffer cmdBuffer,
         sprintf(str, "Attempt to use CmdBuffer %p that doesn't exist!", (void*)cmdBuffer);
         layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, cmdBuffer, 0, DRAWSTATE_INVALID_CMD_BUFFER, "DS", str);
     }
-    nextTable.CmdCopyBufferToImage(cmdBuffer, srcBuffer, destImage, destImageLayout, regionCount, pRegions);
+    VkLayerDispatchTable *pDisp =  *(VkLayerDispatchTable **) cmdBuffer;
+    VkLayerDispatchTable *pTable = tableMap[pDisp];
+    pTable->CmdCopyBufferToImage(cmdBuffer, srcBuffer, destImage, destImageLayout, regionCount, pRegions);
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdCopyImageToBuffer(VkCmdBuffer cmdBuffer,
@@ -2294,7 +2413,9 @@ VK_LAYER_EXPORT void VKAPI vkCmdCopyImageToBuffer(VkCmdBuffer cmdBuffer,
         sprintf(str, "Attempt to use CmdBuffer %p that doesn't exist!", (void*)cmdBuffer);
         layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, cmdBuffer, 0, DRAWSTATE_INVALID_CMD_BUFFER, "DS", str);
     }
-    nextTable.CmdCopyImageToBuffer(cmdBuffer, srcImage, srcImageLayout, destBuffer, regionCount, pRegions);
+    VkLayerDispatchTable *pDisp =  *(VkLayerDispatchTable **) cmdBuffer;
+    VkLayerDispatchTable *pTable = tableMap[pDisp];
+    pTable->CmdCopyImageToBuffer(cmdBuffer, srcImage, srcImageLayout, destBuffer, regionCount, pRegions);
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdUpdateBuffer(VkCmdBuffer cmdBuffer, VkBuffer destBuffer, VkDeviceSize destOffset, VkDeviceSize dataSize, const uint32_t* pData)
@@ -2309,7 +2430,9 @@ VK_LAYER_EXPORT void VKAPI vkCmdUpdateBuffer(VkCmdBuffer cmdBuffer, VkBuffer des
         sprintf(str, "Attempt to use CmdBuffer %p that doesn't exist!", (void*)cmdBuffer);
         layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, cmdBuffer, 0, DRAWSTATE_INVALID_CMD_BUFFER, "DS", str);
     }
-    nextTable.CmdUpdateBuffer(cmdBuffer, destBuffer, destOffset, dataSize, pData);
+    VkLayerDispatchTable *pDisp =  *(VkLayerDispatchTable **) cmdBuffer;
+    VkLayerDispatchTable *pTable = tableMap[pDisp];
+    pTable->CmdUpdateBuffer(cmdBuffer, destBuffer, destOffset, dataSize, pData);
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdFillBuffer(VkCmdBuffer cmdBuffer, VkBuffer destBuffer, VkDeviceSize destOffset, VkDeviceSize fillSize, uint32_t data)
@@ -2324,7 +2447,9 @@ VK_LAYER_EXPORT void VKAPI vkCmdFillBuffer(VkCmdBuffer cmdBuffer, VkBuffer destB
         sprintf(str, "Attempt to use CmdBuffer %p that doesn't exist!", (void*)cmdBuffer);
         layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, cmdBuffer, 0, DRAWSTATE_INVALID_CMD_BUFFER, "DS", str);
     }
-    nextTable.CmdFillBuffer(cmdBuffer, destBuffer, destOffset, fillSize, data);
+    VkLayerDispatchTable *pDisp =  *(VkLayerDispatchTable **) cmdBuffer;
+    VkLayerDispatchTable *pTable = tableMap[pDisp];
+    pTable->CmdFillBuffer(cmdBuffer, destBuffer, destOffset, fillSize, data);
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdClearColorImage(
@@ -2343,7 +2468,9 @@ VK_LAYER_EXPORT void VKAPI vkCmdClearColorImage(
         sprintf(str, "Attempt to use CmdBuffer %p that doesn't exist!", (void*)cmdBuffer);
         layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, cmdBuffer, 0, DRAWSTATE_INVALID_CMD_BUFFER, "DS", str);
     }
-    nextTable.CmdClearColorImage(cmdBuffer, image, imageLayout, pColor, rangeCount, pRanges);
+    VkLayerDispatchTable *pDisp =  *(VkLayerDispatchTable **) cmdBuffer;
+    VkLayerDispatchTable *pTable = tableMap[pDisp];
+    pTable->CmdClearColorImage(cmdBuffer, image, imageLayout, pColor, rangeCount, pRanges);
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdClearDepthStencil(VkCmdBuffer cmdBuffer,
@@ -2361,7 +2488,9 @@ VK_LAYER_EXPORT void VKAPI vkCmdClearDepthStencil(VkCmdBuffer cmdBuffer,
         sprintf(str, "Attempt to use CmdBuffer %p that doesn't exist!", (void*)cmdBuffer);
         layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, cmdBuffer, 0, DRAWSTATE_INVALID_CMD_BUFFER, "DS", str);
     }
-    nextTable.CmdClearDepthStencil(cmdBuffer, image, imageLayout, depth, stencil, rangeCount, pRanges);
+    VkLayerDispatchTable *pDisp =  *(VkLayerDispatchTable **) cmdBuffer;
+    VkLayerDispatchTable *pTable = tableMap[pDisp];
+    pTable->CmdClearDepthStencil(cmdBuffer, image, imageLayout, depth, stencil, rangeCount, pRanges);
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdResolveImage(VkCmdBuffer cmdBuffer,
@@ -2379,7 +2508,9 @@ VK_LAYER_EXPORT void VKAPI vkCmdResolveImage(VkCmdBuffer cmdBuffer,
         sprintf(str, "Attempt to use CmdBuffer %p that doesn't exist!", (void*)cmdBuffer);
         layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, cmdBuffer, 0, DRAWSTATE_INVALID_CMD_BUFFER, "DS", str);
     }
-    nextTable.CmdResolveImage(cmdBuffer, srcImage, srcImageLayout, destImage, destImageLayout, regionCount, pRegions);
+    VkLayerDispatchTable *pDisp =  *(VkLayerDispatchTable **) cmdBuffer;
+    VkLayerDispatchTable *pTable = tableMap[pDisp];
+    pTable->CmdResolveImage(cmdBuffer, srcImage, srcImageLayout, destImage, destImageLayout, regionCount, pRegions);
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdSetEvent(VkCmdBuffer cmdBuffer, VkEvent event, VkPipeEvent pipeEvent)
@@ -2394,7 +2525,9 @@ VK_LAYER_EXPORT void VKAPI vkCmdSetEvent(VkCmdBuffer cmdBuffer, VkEvent event, V
         sprintf(str, "Attempt to use CmdBuffer %p that doesn't exist!", (void*)cmdBuffer);
         layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, cmdBuffer, 0, DRAWSTATE_INVALID_CMD_BUFFER, "DS", str);
     }
-    nextTable.CmdSetEvent(cmdBuffer, event, pipeEvent);
+    VkLayerDispatchTable *pDisp =  *(VkLayerDispatchTable **) cmdBuffer;
+    VkLayerDispatchTable *pTable = tableMap[pDisp];
+    pTable->CmdSetEvent(cmdBuffer, event, pipeEvent);
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdResetEvent(VkCmdBuffer cmdBuffer, VkEvent event, VkPipeEvent pipeEvent)
@@ -2409,7 +2542,9 @@ VK_LAYER_EXPORT void VKAPI vkCmdResetEvent(VkCmdBuffer cmdBuffer, VkEvent event,
         sprintf(str, "Attempt to use CmdBuffer %p that doesn't exist!", (void*)cmdBuffer);
         layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, cmdBuffer, 0, DRAWSTATE_INVALID_CMD_BUFFER, "DS", str);
     }
-    nextTable.CmdResetEvent(cmdBuffer, event, pipeEvent);
+    VkLayerDispatchTable *pDisp =  *(VkLayerDispatchTable **) cmdBuffer;
+    VkLayerDispatchTable *pTable = tableMap[pDisp];
+    pTable->CmdResetEvent(cmdBuffer, event, pipeEvent);
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdWaitEvents(VkCmdBuffer cmdBuffer, VkWaitEvent waitEvent, uint32_t eventCount, const VkEvent* pEvents, uint32_t memBarrierCount, const void** ppMemBarriers)
@@ -2424,7 +2559,9 @@ VK_LAYER_EXPORT void VKAPI vkCmdWaitEvents(VkCmdBuffer cmdBuffer, VkWaitEvent wa
         sprintf(str, "Attempt to use CmdBuffer %p that doesn't exist!", (void*)cmdBuffer);
         layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, cmdBuffer, 0, DRAWSTATE_INVALID_CMD_BUFFER, "DS", str);
     }
-    nextTable.CmdWaitEvents(cmdBuffer, waitEvent, eventCount, pEvents, memBarrierCount, ppMemBarriers);
+    VkLayerDispatchTable *pDisp =  *(VkLayerDispatchTable **) cmdBuffer;
+    VkLayerDispatchTable *pTable = tableMap[pDisp];
+    pTable->CmdWaitEvents(cmdBuffer, waitEvent, eventCount, pEvents, memBarrierCount, ppMemBarriers);
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdPipelineBarrier(VkCmdBuffer cmdBuffer, VkWaitEvent waitEvent, uint32_t pipeEventCount, const VkPipeEvent* pPipeEvents, uint32_t memBarrierCount, const void** ppMemBarriers)
@@ -2439,7 +2576,9 @@ VK_LAYER_EXPORT void VKAPI vkCmdPipelineBarrier(VkCmdBuffer cmdBuffer, VkWaitEve
         sprintf(str, "Attempt to use CmdBuffer %p that doesn't exist!", (void*)cmdBuffer);
         layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, cmdBuffer, 0, DRAWSTATE_INVALID_CMD_BUFFER, "DS", str);
     }
-    nextTable.CmdPipelineBarrier(cmdBuffer, waitEvent, pipeEventCount, pPipeEvents, memBarrierCount, ppMemBarriers);
+    VkLayerDispatchTable *pDisp =  *(VkLayerDispatchTable **) cmdBuffer;
+    VkLayerDispatchTable *pTable = tableMap[pDisp];
+    pTable->CmdPipelineBarrier(cmdBuffer, waitEvent, pipeEventCount, pPipeEvents, memBarrierCount, ppMemBarriers);
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdBeginQuery(VkCmdBuffer cmdBuffer, VkQueryPool queryPool, uint32_t slot, VkFlags flags)
@@ -2454,7 +2593,9 @@ VK_LAYER_EXPORT void VKAPI vkCmdBeginQuery(VkCmdBuffer cmdBuffer, VkQueryPool qu
         sprintf(str, "Attempt to use CmdBuffer %p that doesn't exist!", (void*)cmdBuffer);
         layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, cmdBuffer, 0, DRAWSTATE_INVALID_CMD_BUFFER, "DS", str);
     }
-    nextTable.CmdBeginQuery(cmdBuffer, queryPool, slot, flags);
+    VkLayerDispatchTable *pDisp =  *(VkLayerDispatchTable **) cmdBuffer;
+    VkLayerDispatchTable *pTable = tableMap[pDisp];
+    pTable->CmdBeginQuery(cmdBuffer, queryPool, slot, flags);
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdEndQuery(VkCmdBuffer cmdBuffer, VkQueryPool queryPool, uint32_t slot)
@@ -2469,7 +2610,9 @@ VK_LAYER_EXPORT void VKAPI vkCmdEndQuery(VkCmdBuffer cmdBuffer, VkQueryPool quer
         sprintf(str, "Attempt to use CmdBuffer %p that doesn't exist!", (void*)cmdBuffer);
         layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, cmdBuffer, 0, DRAWSTATE_INVALID_CMD_BUFFER, "DS", str);
     }
-    nextTable.CmdEndQuery(cmdBuffer, queryPool, slot);
+    VkLayerDispatchTable *pDisp =  *(VkLayerDispatchTable **) cmdBuffer;
+    VkLayerDispatchTable *pTable = tableMap[pDisp];
+    pTable->CmdEndQuery(cmdBuffer, queryPool, slot);
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdResetQueryPool(VkCmdBuffer cmdBuffer, VkQueryPool queryPool, uint32_t startQuery, uint32_t queryCount)
@@ -2484,7 +2627,9 @@ VK_LAYER_EXPORT void VKAPI vkCmdResetQueryPool(VkCmdBuffer cmdBuffer, VkQueryPoo
         sprintf(str, "Attempt to use CmdBuffer %p that doesn't exist!", (void*)cmdBuffer);
         layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, cmdBuffer, 0, DRAWSTATE_INVALID_CMD_BUFFER, "DS", str);
     }
-    nextTable.CmdResetQueryPool(cmdBuffer, queryPool, startQuery, queryCount);
+    VkLayerDispatchTable *pDisp =  *(VkLayerDispatchTable **) cmdBuffer;
+    VkLayerDispatchTable *pTable = tableMap[pDisp];
+    pTable->CmdResetQueryPool(cmdBuffer, queryPool, startQuery, queryCount);
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdWriteTimestamp(VkCmdBuffer cmdBuffer, VkTimestampType timestampType, VkBuffer destBuffer, VkDeviceSize destOffset)
@@ -2499,7 +2644,9 @@ VK_LAYER_EXPORT void VKAPI vkCmdWriteTimestamp(VkCmdBuffer cmdBuffer, VkTimestam
         sprintf(str, "Attempt to use CmdBuffer %p that doesn't exist!", (void*)cmdBuffer);
         layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, cmdBuffer, 0, DRAWSTATE_INVALID_CMD_BUFFER, "DS", str);
     }
-    nextTable.CmdWriteTimestamp(cmdBuffer, timestampType, destBuffer, destOffset);
+    VkLayerDispatchTable *pDisp =  *(VkLayerDispatchTable **) cmdBuffer;
+    VkLayerDispatchTable *pTable = tableMap[pDisp];
+    pTable->CmdWriteTimestamp(cmdBuffer, timestampType, destBuffer, destOffset);
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdInitAtomicCounters(VkCmdBuffer cmdBuffer, VkPipelineBindPoint pipelineBindPoint, uint32_t startCounter, uint32_t counterCount, const uint32_t* pData)
@@ -2514,7 +2661,9 @@ VK_LAYER_EXPORT void VKAPI vkCmdInitAtomicCounters(VkCmdBuffer cmdBuffer, VkPipe
         sprintf(str, "Attempt to use CmdBuffer %p that doesn't exist!", (void*)cmdBuffer);
         layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, cmdBuffer, 0, DRAWSTATE_INVALID_CMD_BUFFER, "DS", str);
     }
-    nextTable.CmdInitAtomicCounters(cmdBuffer, pipelineBindPoint, startCounter, counterCount, pData);
+    VkLayerDispatchTable *pDisp =  *(VkLayerDispatchTable **) cmdBuffer;
+    VkLayerDispatchTable *pTable = tableMap[pDisp];
+    pTable->CmdInitAtomicCounters(cmdBuffer, pipelineBindPoint, startCounter, counterCount, pData);
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdLoadAtomicCounters(VkCmdBuffer cmdBuffer, VkPipelineBindPoint pipelineBindPoint, uint32_t startCounter, uint32_t counterCount, VkBuffer srcBuffer, VkDeviceSize srcOffset)
@@ -2529,7 +2678,9 @@ VK_LAYER_EXPORT void VKAPI vkCmdLoadAtomicCounters(VkCmdBuffer cmdBuffer, VkPipe
         sprintf(str, "Attempt to use CmdBuffer %p that doesn't exist!", (void*)cmdBuffer);
         layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, cmdBuffer, 0, DRAWSTATE_INVALID_CMD_BUFFER, "DS", str);
     }
-    nextTable.CmdLoadAtomicCounters(cmdBuffer, pipelineBindPoint, startCounter, counterCount, srcBuffer, srcOffset);
+    VkLayerDispatchTable *pDisp =  *(VkLayerDispatchTable **) cmdBuffer;
+    VkLayerDispatchTable *pTable = tableMap[pDisp];
+    pTable->CmdLoadAtomicCounters(cmdBuffer, pipelineBindPoint, startCounter, counterCount, srcBuffer, srcOffset);
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdSaveAtomicCounters(VkCmdBuffer cmdBuffer, VkPipelineBindPoint pipelineBindPoint, uint32_t startCounter, uint32_t counterCount, VkBuffer destBuffer, VkDeviceSize destOffset)
@@ -2544,12 +2695,16 @@ VK_LAYER_EXPORT void VKAPI vkCmdSaveAtomicCounters(VkCmdBuffer cmdBuffer, VkPipe
         sprintf(str, "Attempt to use CmdBuffer %p that doesn't exist!", (void*)cmdBuffer);
         layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, cmdBuffer, 0, DRAWSTATE_INVALID_CMD_BUFFER, "DS", str);
     }
-    nextTable.CmdSaveAtomicCounters(cmdBuffer, pipelineBindPoint, startCounter, counterCount, destBuffer, destOffset);
+    VkLayerDispatchTable *pDisp =  *(VkLayerDispatchTable **) cmdBuffer;
+    VkLayerDispatchTable *pTable = tableMap[pDisp];
+    pTable->CmdSaveAtomicCounters(cmdBuffer, pipelineBindPoint, startCounter, counterCount, destBuffer, destOffset);
 }
 
 VK_LAYER_EXPORT VkResult VKAPI vkCreateFramebuffer(VkDevice device, const VkFramebufferCreateInfo* pCreateInfo, VkFramebuffer* pFramebuffer)
 {
-    VkResult result = nextTable.CreateFramebuffer(device, pCreateInfo, pFramebuffer);
+    VkLayerDispatchTable *pDisp =  *(VkLayerDispatchTable **) device;
+    VkLayerDispatchTable *pTable = tableMap[pDisp];
+    VkResult result = pTable->CreateFramebuffer(device, pCreateInfo, pFramebuffer);
     if (VK_SUCCESS == result) {
         // Shadow create info and store in map
         VkFramebufferCreateInfo* localFBCI = new VkFramebufferCreateInfo(*pCreateInfo);
@@ -2568,7 +2723,9 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateFramebuffer(VkDevice device, const VkFram
 
 VK_LAYER_EXPORT VkResult VKAPI vkCreateRenderPass(VkDevice device, const VkRenderPassCreateInfo* pCreateInfo, VkRenderPass* pRenderPass)
 {
-    VkResult result = nextTable.CreateRenderPass(device, pCreateInfo, pRenderPass);
+    VkLayerDispatchTable *pDisp =  *(VkLayerDispatchTable **) device;
+    VkLayerDispatchTable *pTable = tableMap[pDisp];
+    VkResult result = pTable->CreateRenderPass(device, pCreateInfo, pRenderPass);
     if (VK_SUCCESS == result) {
         // Shadow create info and store in map
         VkRenderPassCreateInfo* localRPCI = new VkRenderPassCreateInfo(*pCreateInfo);
@@ -2605,7 +2762,9 @@ VK_LAYER_EXPORT void VKAPI vkCmdBeginRenderPass(VkCmdBuffer cmdBuffer, const VkR
         sprintf(str, "Attempt to use CmdBuffer %p that doesn't exist!", (void*)cmdBuffer);
         layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, cmdBuffer, 0, DRAWSTATE_INVALID_CMD_BUFFER, "DS", str);
     }
-    nextTable.CmdBeginRenderPass(cmdBuffer, pRenderPassBegin);
+    VkLayerDispatchTable *pDisp =  *(VkLayerDispatchTable **) cmdBuffer;
+    VkLayerDispatchTable *pTable = tableMap[pDisp];
+    pTable->CmdBeginRenderPass(cmdBuffer, pRenderPassBegin);
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdEndRenderPass(VkCmdBuffer cmdBuffer, VkRenderPass renderPass)
@@ -2621,7 +2780,9 @@ VK_LAYER_EXPORT void VKAPI vkCmdEndRenderPass(VkCmdBuffer cmdBuffer, VkRenderPas
         sprintf(str, "Attempt to use CmdBuffer %p that doesn't exist!", (void*)cmdBuffer);
         layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, cmdBuffer, 0, DRAWSTATE_INVALID_CMD_BUFFER, "DS", str);
     }
-    nextTable.CmdEndRenderPass(cmdBuffer, renderPass);
+    VkLayerDispatchTable *pDisp =  *(VkLayerDispatchTable **) cmdBuffer;
+    VkLayerDispatchTable *pTable = tableMap[pDisp];
+    pTable->CmdEndRenderPass(cmdBuffer, renderPass);
 }
 
 VK_LAYER_EXPORT VkResult VKAPI vkDbgRegisterMsgCallback(VkInstance instance, VK_DBG_MSG_CALLBACK_FUNCTION pfnMsgCallback, void* pUserData)
@@ -2635,10 +2796,13 @@ VK_LAYER_EXPORT VkResult VKAPI vkDbgRegisterMsgCallback(VkInstance instance, VK_
     pNewDbgFuncNode->pNext = g_pDbgFunctionHead;
     g_pDbgFunctionHead = pNewDbgFuncNode;
     // force callbacks if DebugAction hasn't been set already other than initial value
-	if (g_actionIsDefault) {
-		g_debugAction = VK_DBG_LAYER_ACTION_CALLBACK;
-	}
-    VkResult result = nextInstanceTable.DbgRegisterMsgCallback(instance, pfnMsgCallback, pUserData);
+    if (g_actionIsDefault) {
+        g_debugAction = VK_DBG_LAYER_ACTION_CALLBACK;
+    }
+
+    VkLayerInstanceDispatchTable **ppDisp = (VkLayerInstanceDispatchTable **) instance;
+    VkLayerInstanceDispatchTable* pInstTable = tableInstanceMap[*ppDisp];
+    VkResult result = pInstTable->DbgRegisterMsgCallback(instance, pfnMsgCallback, pUserData);
     return result;
 }
 
@@ -2664,7 +2828,10 @@ VK_LAYER_EXPORT VkResult VKAPI vkDbgUnregisterMsgCallback(VkInstance instance, V
         else
             g_debugAction = (VK_LAYER_DBG_ACTION)(g_debugAction & ~((uint32_t)VK_DBG_LAYER_ACTION_CALLBACK));
     }
-    VkResult result = nextInstanceTable.DbgUnregisterMsgCallback(instance, pfnMsgCallback);
+
+    VkLayerInstanceDispatchTable **ppDisp = (VkLayerInstanceDispatchTable **) instance;
+    VkLayerInstanceDispatchTable* pInstTable = tableInstanceMap[*ppDisp];
+    VkResult result = pInstTable->DbgUnregisterMsgCallback(instance, pfnMsgCallback);
     return result;
 }
 
@@ -2680,7 +2847,9 @@ VK_LAYER_EXPORT void VKAPI vkCmdDbgMarkerBegin(VkCmdBuffer cmdBuffer, const char
         sprintf(str, "Attempt to use CmdBuffer %p that doesn't exist!", (void*)cmdBuffer);
         layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, cmdBuffer, 0, DRAWSTATE_INVALID_CMD_BUFFER, "DS", str);
     }
-    nextTable.CmdDbgMarkerBegin(cmdBuffer, pMarker);
+    VkLayerDispatchTable *pDisp =  *(VkLayerDispatchTable **) cmdBuffer;
+    VkLayerDispatchTable *pTable = tableMap[pDisp];
+    pTable->CmdDbgMarkerBegin(cmdBuffer, pMarker);
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdDbgMarkerEnd(VkCmdBuffer cmdBuffer)
@@ -2695,7 +2864,9 @@ VK_LAYER_EXPORT void VKAPI vkCmdDbgMarkerEnd(VkCmdBuffer cmdBuffer)
         sprintf(str, "Attempt to use CmdBuffer %p that doesn't exist!", (void*)cmdBuffer);
         layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, cmdBuffer, 0, DRAWSTATE_INVALID_CMD_BUFFER, "DS", str);
     }
-    nextTable.CmdDbgMarkerEnd(cmdBuffer);
+    VkLayerDispatchTable *pDisp =  *(VkLayerDispatchTable **) cmdBuffer;
+    VkLayerDispatchTable *pTable = tableMap[pDisp];
+    pTable->CmdDbgMarkerEnd(cmdBuffer);
 }
 
 // TODO : Want to pass in a cmdBuffer here based on which state to display
@@ -2742,9 +2913,9 @@ VK_LAYER_EXPORT void* VKAPI vkGetDeviceProcAddr(VkDevice dev, const char* funcNa
 
     if (dev == NULL)
         return NULL;
-    pCurObj = devw;
+
     loader_platform_thread_once(&g_initOnce, initDrawState);
-    loader_platform_thread_once(&g_tabDeviceOnce, initDeviceTable);
+    initDeviceTable((const VkBaseLayerObject *) dev);
 
     if (!strcmp(funcName, "vkGetDeviceProcAddr"))
         return (void *) vkGetDeviceProcAddr;
@@ -2887,12 +3058,13 @@ VK_LAYER_EXPORT void * VKAPI vkGetInstanceProcAddr(VkInstance instance, const ch
     if (instance == NULL)
         return NULL;
 
-    pCurObj = instw;
     loader_platform_thread_once(&g_initOnce, initDrawState);
-    loader_platform_thread_once(&g_tabInstanceOnce, initInstanceTable);
+    initInstanceTable((const VkBaseLayerObject *) instance);
 
     if (!strcmp(funcName, "vkGetInstanceProcAddr"))
         return (void *) vkGetInstanceProcAddr;
+    if (!strcmp(funcName, "vkDestroyInstance"))
+        return (void *) vkDestroyInstance;
     if (!strcmp(funcName, "vkCreateDevice"))
         return (void*) vkCreateDevice;
     if (!strcmp(funcName, "vkEnumerateLayers"))
