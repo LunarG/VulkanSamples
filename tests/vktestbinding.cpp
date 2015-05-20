@@ -412,7 +412,7 @@ void Device::init_queues()
     queue_node_count = data_size / sizeof(VkPhysicalDeviceQueueProperties);
     EXPECT(queue_node_count >= 1);
 
-    VkPhysicalDeviceQueueProperties queue_props[queue_node_count];
+    VkPhysicalDeviceQueueProperties* queue_props = new VkPhysicalDeviceQueueProperties[queue_node_count];
 
     err = vkGetPhysicalDeviceInfo(gpu_.obj(), VK_PHYSICAL_DEVICE_INFO_TYPE_QUEUE_PROPERTIES,
                         &data_size, queue_props);
@@ -439,6 +439,8 @@ void Device::init_queues()
             }
         }
     }
+
+    delete queue_props;
 
     EXPECT(!queues_[GRAPHICS].empty() || !queues_[COMPUTE].empty());
 }

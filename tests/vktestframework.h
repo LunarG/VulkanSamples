@@ -39,6 +39,11 @@
 #include <fstream>
 #include <list>
 
+#ifdef _WIN32
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
+#endif
+
 #if defined(NDEBUG) && defined(__GNUC__)
 #define U_ASSERT_ONLY __attribute__((unused))
 #else
@@ -79,6 +84,7 @@ public:
     ~VkTestFramework();
 
     static void InitArgs(int *argc, char *argv[]);
+    static void InitWindow();
     static void Finish();
 
     void WritePPM( const char *basename, VkImageObj *image );

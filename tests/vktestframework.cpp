@@ -22,14 +22,16 @@
 
 #include "vktestframework.h"
 #include "vkrenderframework.h"
-#include "GL/freeglut_std.h"
-//#include "ShaderLang.h"
 #include "GlslangToSpv.h"
 #include <limits.h>
 #include <math.h>
 #include <wand/MagickWand.h>
 #include <xcb/xcb.h>
 #include <vk_wsi_lunarg.h>
+
+#if defined(PATH_MAX) && !defined(MAX_PATH)
+#define MAX_PATH PATH_MAX
+#endif
 
 // Command-line options
 enum TOptions {
@@ -59,6 +61,10 @@ public:
     void CreateMyWindow();
     void CreateSwapChain();
     void TearDown();
+#ifdef _WIN32
+    static LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
+#endif
+
 
 protected:
     vk_testing::Device                    &m_device;
@@ -66,10 +72,16 @@ protected:
     vk_testing::CmdBuffer                  m_cmdbuf;
 
 private:
+#ifdef _WIN32
+    HINSTANCE                              m_connection;        // hInstance - Windows Instance
+    HWND                                   m_window;          // hWnd - window handle
+
+#else
     xcb_connection_t                       *m_connection;
     xcb_screen_t                           *m_screen;
     xcb_window_t                            m_window;
     xcb_intern_atom_reply_t                *m_atom_wm_delete_window;
+#endif
     std::list<VkTestImageRecord>            m_images;
 
     VkSwapChainWSI                          m_swap_chain;
@@ -114,6 +126,8 @@ int fopen_s(
 }
 
 #endif
+
+
 
 // Set up environment for GLSL compiler
 // Must be done once per process
@@ -229,14 +243,14 @@ void VkTestFramework::WritePPM( const char *basename, VkImageObj *image )
 
     filename.append(basename);
     filename.append(".ppm");
-
+    
     const VkImageSubresource sr = {
         VK_IMAGE_ASPECT_COLOR, 0, 0
     };
     VkSubresourceLayout sr_layout;
     size_t data_size = sizeof(sr_layout);
-
-    err = vkGetImageSubresourceInfo(image->device()->device(),  image->image(), &sr,
+   
+    err = vkGetImageSubresourceInfo(image->device()->device(), displayImage.image(), &sr,
                                       VK_SUBRESOURCE_INFO_TYPE_LAYOUT,
                                       &data_size, &sr_layout);
     ASSERT_VK_SUCCESS( err );
@@ -245,8 +259,7 @@ void VkTestFramework::WritePPM( const char *basename, VkImageObj *image )
     char *ptr;
     ptr = (char *) displayImage.map();
     ptr += sr_layout.offset;
-
-    ofstream file (filename.c_str());
+    ofstream file (filename.c_str(), ios::binary);
     ASSERT_TRUE(file.is_open()) << "Unable to open file: " << filename;
 
     file << "P6\n";
@@ -292,7 +305,7 @@ void VkTestFramework::Compare(const char *basename, VkImageObj *image )
     MagickWand *magick_wand_2;
     MagickWand *compare_wand;
     MagickBooleanType status;
-    char testimage[256],golden[PATH_MAX+256],golddir[PATH_MAX] = "./golden";
+    char testimage[256],golden[MAX_PATH+256],golddir[MAX_PATH] = "./golden";
     double differenz;
 
     if (getenv("RENDERTEST_GOLDEN_DIR"))
@@ -444,6 +457,7 @@ void  TestFrameworkVkPresent::Display()
     present.image = m_display_image->m_presentableImage;
     present.flipInterval = 1;
 
+#ifndef _WIN32
     xcb_change_property (m_connection,
                          XCB_PROP_MODE_REPLACE,
                          m_window,
@@ -452,7 +466,7 @@ void  TestFrameworkVkPresent::Display()
                          8,
                          m_display_image->m_title.size(),
                          m_display_image->m_title.c_str());
-
+#endif
     err = vkQueuePresentWSI(m_queue.obj(), &present);
     assert(!err);
 
@@ -460,6 +474,55 @@ void  TestFrameworkVkPresent::Display()
 
 }
 
+#ifdef _WIN32
+// MS-Windows event handling function:
+LRESULT CALLBACK TestFrameworkVkPresent::WndProc(HWND hWnd,
+                        UINT uMsg,
+                         WPARAM wParam,
+                         LPARAM lParam)
+{
+	
+    switch(uMsg)
+    {
+       case WM_CLOSE:
+            PostQuitMessage(0);
+            break;
+            
+       case WM_PAINT:
+       {
+           TestFrameworkVkPresent* me = reinterpret_cast<TestFrameworkVkPresent*>(GetWindowLongPtr(hWnd, GWLP_USERDATA));
+           if (me) {
+               me->Display();
+           }
+       }
+       return 0;
+         
+        default:
+          break;
+    }
+    return (DefWindowProc(hWnd, uMsg, wParam, lParam));
+}
+
+void TestFrameworkVkPresent::Run()
+{
+    MSG msg;         // message
+    bool done;
+
+    done = false; //initialize loop condition variable
+    /* main message loop*/
+    while(!done) {
+        PeekMessage(&msg, NULL, 0, 0, PM_REMOVE);
+        if (msg.message == WM_QUIT) {    
+            done = true; //if found, quit app
+        } else {
+            /* Translate and dispatch to event queue*/
+            TranslateMessage(&msg);
+            DispatchMessage(&msg);
+        }
+    }
+}
+
+#else
 void  TestFrameworkVkPresent::HandleEvent(xcb_generic_event_t *event)
 {
     uint8_t event_code = event->response_type & 0x7f;
@@ -525,6 +588,7 @@ void  TestFrameworkVkPresent::Run()
         }
     }
 }
+#endif // _WIN32
 
 void TestFrameworkVkPresent::CreateSwapChain()
 {
@@ -600,6 +664,66 @@ void  TestFrameworkVkPresent::InitPresentFramework(std::list<VkTestImageRecord> 
     m_images = imagesIn;
 }
 
+#ifdef _WIN32
+void  TestFrameworkVkPresent::CreateMyWindow()
+{
+   WNDCLASSEX  win_class;
+   // const ::testing::TestInfo* const test_info =
+   // 	::testing::UnitTest::GetInstance()->current_test_info();
+   m_connection = GetModuleHandle(NULL);	
+
+	for (std::list<VkTestImageRecord>::const_iterator it = m_images.begin();
+    	it != m_images.end(); it++) {
+		if (m_width < it->m_width)
+			m_width = it->m_width;
+        if (m_height < it->m_height)
+			m_height = it->m_height;
+	}
+    // Initialize the window class structure:
+   win_class.cbSize = sizeof(WNDCLASSEX);
+   win_class.style = CS_HREDRAW | CS_VREDRAW;
+   win_class.lpfnWndProc = (WNDPROC) &TestFrameworkVkPresent::WndProc;
+   win_class.cbClsExtra = 0;
+   win_class.cbWndExtra = 0;
+   win_class.hInstance = m_connection; // hInstance
+   win_class.hIcon = LoadIcon(NULL, IDI_APPLICATION);
+   win_class.hCursor = LoadCursor(NULL, IDC_ARROW);
+   win_class.hbrBackground = (HBRUSH)GetStockObject(WHITE_BRUSH);
+   win_class.lpszMenuName = NULL;
+   win_class.lpszClassName = "Test";
+   win_class.hIconSm = LoadIcon(NULL, IDI_WINLOGO);
+   // Register window class:
+    if (!RegisterClassEx(&win_class)) {
+        // It didn't work, so try to give a useful error:
+            printf("Unexpected error trying to start the application!\n");
+        fflush(stdout);
+        exit(1);
+    }
+   // Create window with the registered class:
+    m_window = CreateWindowEx(0,
+                                  "Test",           // class name
+                                  "Test",           // app name
+                                  WS_OVERLAPPEDWINDOW | // window style
+                                  WS_VISIBLE |
+                                  WS_SYSMENU,
+                                  100,100,              // x/y coords
+                                  m_width,          // width
+                                  m_height,         // height
+                                  NULL,                 // handle to parent
+                                  NULL,                 // handle to menu
+                                  m_connection,     // hInstance
+                                  NULL);                // no extra parameters
+
+   if (!m_window) {
+        // It didn't work, so try to give a useful error:
+        DWORD error = GetLastError();
+        char message[120];
+        sprintf(message, "Cannot create a window in which to draw!\n GetLastError = %d", error);
+        MessageBox(NULL, message, "Error", MB_OK);
+        exit(1);
+    }
+}
+#else
 void  TestFrameworkVkPresent::CreateMyWindow()
 {
     const xcb_setup_t *setup;
@@ -655,12 +779,15 @@ void  TestFrameworkVkPresent::CreateMyWindow()
 
     xcb_map_window(m_connection, m_window);
 }
+#endif
 
 void TestFrameworkVkPresent::TearDown()
 {
     vkDestroySwapChainWSI(m_swap_chain);
+#ifndef _WIN32
     xcb_destroy_window(m_connection, m_window);
     xcb_disconnect(m_connection);
+#endif
 }
 
 void VkTestFramework::Finish()

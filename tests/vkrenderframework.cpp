@@ -215,15 +215,36 @@ void VkRenderFramework::InitRenderTarget(uint32_t targets, VkDepthStencilBindInf
 
     for (i = 0; i < targets; i++) {
         VkImageObj *img = new VkImageObj(m_device);
-        img->init(m_width, m_height, m_render_target_fmt,
-                VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT);
+ 
+        VkFormatProperties props;
+        size_t size = sizeof(props);
+        VkResult err;
+
+        err = vkGetFormatInfo(m_device->obj(), m_render_target_fmt,
+            VK_FORMAT_INFO_TYPE_PROPERTIES,
+            &size, &props);
+        ASSERT_VK_SUCCESS(err);
+
+        if (props.linearTilingFeatures & VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT) {
+            img->init(m_width, m_height, m_render_target_fmt,
+            VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT, VK_IMAGE_TILING_LINEAR);
+        }
+        else if (props.optimalTilingFeatures & VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT) {
+            img->init(m_width, m_height, m_render_target_fmt,
+            VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT, VK_IMAGE_TILING_OPTIMAL);
+        }
+        else {
+            FAIL() << "Neither Linear nor Optimal allowed for render target";
+        }
+        
+        m_renderTargets.push_back(img);
         m_colorBindings[i].view  = img->targetView();
         m_colorBindings[i].layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-        m_renderTargets.push_back(img);
         load_ops.push_back(VK_ATTACHMENT_LOAD_OP_LOAD);
         store_ops.push_back(VK_ATTACHMENT_STORE_OP_STORE);
         clear_colors.push_back(m_clear_color);
     }
+
       // Create Framebuffer and RenderPass with color attachments and any depth/stencil attachment
     VkFramebufferCreateInfo fb_info = {};
     fb_info.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
@@ -493,6 +514,11 @@ void VkImageObj::SetLayout(VkImageAspect aspect,
                            VkImageLayout image_layout)
 {
     VkResult U_ASSERT_ONLY err;
+
+    if (image_layout == m_descriptorInfo.imageLayout) {
+        return;
+    }
+
     VkCommandBufferObj cmd_buf(m_device);
 
     /* Build command buffer to set image layout in the driver */
