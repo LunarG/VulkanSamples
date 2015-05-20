@@ -28,6 +28,7 @@
 #include <string.h>
 #include <assert.h>
 #include <list>
+#include <map>
 #include <unordered_map>
 #include <vector>
 using namespace std;
@@ -42,12 +43,22 @@ using namespace std;
 #include "loader_platform.h"
 #include "layers_msg.h"
 
-static VkLayerDispatchTable nextTable;
-static VkLayerInstanceDispatchTable nextInstanceTable;
-static VkBaseLayerObject *pCurObj;
+static std::unordered_map<void *, VkLayerDispatchTable *> tableMap;
+static std::unordered_map<void *, VkLayerInstanceDispatchTable *> tableInstanceMap;
+
 static LOADER_PLATFORM_THREAD_ONCE_DECLARATION(g_initOnce);
-static LOADER_PLATFORM_THREAD_ONCE_DECLARATION(g_tabDeviceOnce);
-static LOADER_PLATFORM_THREAD_ONCE_DECLARATION(g_tabInstanceOnce);
+
+static inline VkLayerDispatchTable *device_dispatch_table(VkObject object) {
+    VkLayerDispatchTable *pDisp  = *(VkLayerDispatchTable **) object;
+    VkLayerDispatchTable *pTable = tableMap[pDisp];
+    return pTable;
+}
+
+static inline VkLayerInstanceDispatchTable *instance_dispatch_table(VkObject object) {
+    VkLayerInstanceDispatchTable **ppDisp    = (VkLayerInstanceDispatchTable **) object;
+    VkLayerInstanceDispatchTable *pInstanceTable = tableInstanceMap[*ppDisp];
+    return pInstanceTable;
+}
 
 // TODO : This can be much smarter, using separate locks for separate global data
 static int globalLockInitialized = 0;
@@ -145,6 +156,7 @@ static uint64_t add_fence_info(
 {
     // Create fence object
     uint64_t       fenceId    = g_currentFenceId++;
+    // If no fence, create an internal fence to track the submissions
     if (fence != NULL) {
         fenceMap[fence].fenceId = fenceId;
         fenceMap[fence].queue = queue;
@@ -767,21 +779,48 @@ static void printCBList(
     }
 }
 
-// TODO handle multiple GPUs/instances for both instance and device dispatch tables
-static void initDeviceTable(void)
-{
-    PFN_vkGetDeviceProcAddr fpNextGPA;
-    fpNextGPA = (PFN_vkGetDeviceProcAddr) pCurObj->pGPA;
-    assert(fpNextGPA);
-    layer_initialize_dispatch_table(&nextTable, fpNextGPA, (VkDevice) pCurObj->nextObject);
+static VkLayerDispatchTable * initDeviceTable(const VkBaseLayerObject *devw)
+ {
+    VkLayerDispatchTable *pTable;
+
+    assert(devw);
+    VkLayerDispatchTable **ppDisp = (VkLayerDispatchTable **) (devw->baseObject);
+
+    std::unordered_map<void *, VkLayerDispatchTable *>::const_iterator it = tableMap.find((void *) *ppDisp);
+    if (it == tableMap.end())
+    {
+        pTable =  new VkLayerDispatchTable;
+        tableMap[(void *) *ppDisp] = pTable;
+    } else
+    {
+        return it->second;
+    }
+
+    layer_initialize_dispatch_table(pTable, (PFN_vkGetDeviceProcAddr) devw->pGPA, (VkDevice) devw->nextObject);
+
+    return pTable;
 }
 
-static void initInstanceTable(void)
+
+static VkLayerInstanceDispatchTable * initInstanceTable(const VkBaseLayerObject *instw)
 {
-    PFN_vkGetInstanceProcAddr fpNextGPA;
-    fpNextGPA = (PFN_vkGetInstanceProcAddr) pCurObj->pGPA;
-    assert(fpNextGPA);
-    layer_init_instance_dispatch_table(&nextInstanceTable, fpNextGPA, (VkInstance) pCurObj->nextObject);
+    VkLayerInstanceDispatchTable *pTable;
+    assert(instw);
+    VkLayerInstanceDispatchTable **ppDisp = (VkLayerInstanceDispatchTable **) instw->baseObject;
+
+    std::unordered_map<void *, VkLayerInstanceDispatchTable *>::const_iterator it = tableInstanceMap.find((void *) *ppDisp);
+    if (it == tableInstanceMap.end())
+    {
+        pTable =  new VkLayerInstanceDispatchTable;
+        tableInstanceMap[(void *) *ppDisp] = pTable;
+    } else
+    {
+        return it->second;
+    }
+
+    layer_init_instance_dispatch_table(pTable, (PFN_vkGetInstanceProcAddr) instw->pGPA, (VkInstance) instw->nextObject);
+
+    return pTable;
 }
 
 static void initMemTracker(
@@ -815,24 +854,21 @@ static void initMemTracker(
     }
 }
 
-//VkResult VKAPI vkCreateInstance(
-//    const VkInstanceCreateInfo*                 pCreateInfo,
-//    VkInstance*                                 pInstance)
-//{
-//    loader_platform_thread_once(&g_initOnce, initMemTracker);
-//    VkResult result = nextTable.CreateInstance(pCreateInfo, pInstance);
-//    if (result == VK_SUCCESS) {
-//        enable_debug_report(pCreateInfo->extensionCount, pCreateInfo->ppEnabledExtensionNames);
-//    }
-//    return result;
-//}
+// hook DestroyInstance to remove tableInstanceMap entry
+VK_LAYER_EXPORT VkResult VKAPI vkDestroyInstance(VkInstance instance)
+{
+    VkLayerInstanceDispatchTable *pDisp = *(VkLayerInstanceDispatchTable **) instance;
+    VkResult res = instance_dispatch_table(instance)->DestroyInstance(instance);
+    tableInstanceMap.erase(pDisp);
+    return res;
+}
 
 VK_LAYER_EXPORT VkResult VKAPI vkCreateDevice(
     VkPhysicalDevice          gpu,
     const VkDeviceCreateInfo *pCreateInfo,
     VkDevice                 *pDevice)
 {
-    VkResult result = nextInstanceTable.CreateDevice(gpu, pCreateInfo, pDevice);
+    VkResult result = instance_dispatch_table(gpu)->CreateDevice(gpu, pCreateInfo, pDevice);
     if (result == VK_SUCCESS) {
         // Save off device in case we need it to create Fences
         globalDevice = *pDevice;
@@ -874,7 +910,11 @@ VK_LAYER_EXPORT VkResult VKAPI vkDestroyDevice(
     delete_queue_info_list();
 
     loader_platform_thread_unlock_mutex(&globalLock);
-    VkResult result = nextTable.DestroyDevice(device);
+
+    VkLayerDispatchTable *pDisp  =  *(VkLayerDispatchTable **) device;
+    VkLayerDispatchTable *pTable = tableMap[pDisp];
+    VkResult              result = pTable->DestroyDevice(device);
+    tableMap.erase(pDisp);
     return result;
 }
 
@@ -937,7 +977,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkGetDeviceQueue(
     uint32_t  queueIndex,
     VkQueue   *pQueue)
 {
-    VkResult result = nextTable.GetDeviceQueue(device, queueNodeIndex, queueIndex, pQueue);
+    VkResult result = device_dispatch_table(device)->GetDeviceQueue(device, queueNodeIndex, queueIndex, pQueue);
     if (result == VK_SUCCESS) {
         loader_platform_thread_lock_mutex(&globalLock);
         add_queue_info(*pQueue);
@@ -967,7 +1007,8 @@ VK_LAYER_EXPORT VkResult VKAPI vkQueueSubmit(
     }
 
     loader_platform_thread_unlock_mutex(&globalLock);
-    VkResult result = nextTable.QueueSubmit(queue, cmdBufferCount, pCmdBuffers, fence);
+    VkResult result = device_dispatch_table(queue)->QueueSubmit(
+        queue, cmdBufferCount, pCmdBuffers, fence);
     return result;
 }
 
@@ -976,7 +1017,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkAllocMemory(
     const VkMemoryAllocInfo *pAllocInfo,
     VkDeviceMemory          *pMem)
 {
-    VkResult result = nextTable.AllocMemory(device, pAllocInfo, pMem);
+    VkResult result = device_dispatch_table(device)->AllocMemory(device, pAllocInfo, pMem);
     // TODO : Track allocations and overall size here
     loader_platform_thread_lock_mutex(&globalLock);
     add_mem_obj_info(*pMem, pAllocInfo);
@@ -1005,7 +1046,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkFreeMemory(
         layerCbMsg(VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DEVICE_MEMORY, mem, 0, MEMTRACK_DESTROY_OBJECT_ERROR, "MEM", str);
     }
     loader_platform_thread_unlock_mutex(&globalLock);
-    VkResult result = nextTable.FreeMemory(device, mem);
+    VkResult result = device_dispatch_table(device)->FreeMemory(device, mem);
     return result;
 }
 
@@ -1016,7 +1057,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkSetMemoryPriority(
 {
     // TODO : Update tracking for this alloc
     //  Make sure memory is not pinned, which can't have priority set
-    VkResult result = nextTable.SetMemoryPriority(device, mem, priority);
+    VkResult result = device_dispatch_table(device)->SetMemoryPriority(device, mem, priority);
     return result;
 }
 
@@ -1037,7 +1078,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkMapMemory(
         layerCbMsg(VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DEVICE_MEMORY, mem, 0, MEMTRACK_INVALID_STATE, "MEM", str);
     }
     loader_platform_thread_unlock_mutex(&globalLock);
-    VkResult result = nextTable.MapMemory(device, mem, offset, size, flags, ppData);
+    VkResult result = device_dispatch_table(device)->MapMemory(device, mem, offset, size, flags, ppData);
     return result;
 }
 
@@ -1047,7 +1088,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkUnmapMemory(
 {
     // TODO : Track as memory gets unmapped, do we want to check what changed following map?
     //   Make sure that memory was ever mapped to begin with
-    VkResult result = nextTable.UnmapMemory(device, mem);
+    VkResult result = device_dispatch_table(device)->UnmapMemory(device, mem);
     return result;
 }
 
@@ -1059,7 +1100,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkPinSystemMemory(
 {
     // TODO : Track this
     //  Verify that memory is actually pinnable
-    VkResult result = nextTable.PinSystemMemory(device, pSysMem, memSize, pMem);
+    VkResult result = device_dispatch_table(device)->PinSystemMemory(device, pSysMem, memSize, pMem);
     return result;
 }
 
@@ -1069,7 +1110,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkOpenSharedMemory(
     VkDeviceMemory         *pMem)
 {
     // TODO : Track this
-    VkResult result = nextTable.OpenSharedMemory(device, pOpenInfo, pMem);
+    VkResult result = device_dispatch_table(device)->OpenSharedMemory(device, pOpenInfo, pMem);
     return result;
 }
 
@@ -1079,7 +1120,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkOpenPeerMemory(
     VkDeviceMemory             *pMem)
 {
     // TODO : Track this
-    VkResult result = nextTable.OpenPeerMemory(device, pOpenInfo, pMem);
+    VkResult result = device_dispatch_table(device)->OpenPeerMemory(device, pOpenInfo, pMem);
     return result;
 }
 
@@ -1090,7 +1131,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkOpenPeerImage(
     VkDeviceMemory            *pMem)
 {
     // TODO : Track this
-    VkResult result = nextTable.OpenPeerImage(device, pOpenInfo, pImage, pMem);
+    VkResult result = device_dispatch_table(device)->OpenPeerImage(device, pOpenInfo, pImage, pMem);
     return result;
 }
 
@@ -1132,7 +1173,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkDestroyObject(
     }
 
     loader_platform_thread_unlock_mutex(&globalLock);
-    VkResult result = nextTable.DestroyObject(device, objType, object);
+    VkResult result = device_dispatch_table(device)->DestroyObject(device, objType, object);
     return result;
 }
 
@@ -1148,7 +1189,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkGetObjectInfo(
     //   Could potentially save returned mem requirements and validate values passed into BindObjectMemory for this object
     // From spec : The only objects that are guaranteed to have no external memory requirements are devices, queues,
     //             command buffers, shaders and memory objects.
-    VkResult result = nextTable.GetObjectInfo(device, objType, object, infoType, pDataSize, pData);
+    VkResult result = device_dispatch_table(device)->GetObjectInfo(device, objType, object, infoType, pDataSize, pData);
     return result;
 }
 
@@ -1159,7 +1200,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkBindObjectMemory(
     VkDeviceMemory mem,
     VkDeviceSize   offset)
 {
-    VkResult result = nextTable.BindObjectMemory(device, objType, object, mem, offset);
+    VkResult result = device_dispatch_table(device)->BindObjectMemory(device, objType, object, mem, offset);
     loader_platform_thread_lock_mutex(&globalLock);
     // Track objects tied to memory
     set_object_binding(object, mem);
@@ -1177,7 +1218,8 @@ VK_LAYER_EXPORT VkResult VKAPI vkQueueBindSparseBufferMemory(
     VkDeviceMemory mem,
     VkDeviceSize   memOffset)
 {
-    VkResult result = nextTable.QueueBindSparseBufferMemory(queue, buffer, rangeOffset, rangeSize, mem, memOffset);
+    VkResult result = device_dispatch_table(queue)->QueueBindSparseBufferMemory(
+        queue, buffer, rangeOffset, rangeSize, mem, memOffset);
     loader_platform_thread_lock_mutex(&globalLock);
     // Track objects tied to memory
     if (VK_FALSE == set_sparse_buffer_binding(buffer, mem)) {
@@ -1196,7 +1238,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateFence(
     const VkFenceCreateInfo *pCreateInfo,
     VkFence                 *pFence)
 {
-    VkResult result = nextTable.CreateFence(device, pCreateInfo, pFence);
+    VkResult result = device_dispatch_table(device)->CreateFence(device, pCreateInfo, pFence);
     if (VK_SUCCESS == result) {
         loader_platform_thread_lock_mutex(&globalLock);
         add_object_info(*pFence, pCreateInfo->sType, pCreateInfo, sizeof(VkFenceCreateInfo), "fence");
@@ -1210,7 +1252,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkResetFences(
     uint32_t  fenceCount,
     VkFence  *pFences)
 {
-    VkResult result = nextTable.ResetFences(device, fenceCount, pFences);
+    VkResult result = device_dispatch_table(device)->ResetFences(device, fenceCount, pFences);
     if (VK_SUCCESS == result) {
         loader_platform_thread_lock_mutex(&globalLock);
         // Reset fence state in fenceCreateInfo structure
@@ -1239,7 +1281,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkGetFenceStatus(
     VkDevice device,
     VkFence  fence)
 {
-    VkResult result = nextTable.GetFenceStatus(device, fence);
+    VkResult result = device_dispatch_table(device)->GetFenceStatus(device, fence);
     if (VK_SUCCESS == result) {
         loader_platform_thread_lock_mutex(&globalLock);
         update_fence_tracking(fence);
@@ -1267,7 +1309,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkWaitForFences(
         }
     }
 
-    VkResult result = nextTable.WaitForFences(device, fenceCount, pFences, waitAll, timeout);
+    VkResult result = device_dispatch_table(device)->WaitForFences(device, fenceCount, pFences, waitAll, timeout);
     loader_platform_thread_lock_mutex(&globalLock);
 
     if (VK_SUCCESS == result) {
@@ -1284,7 +1326,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkWaitForFences(
 VK_LAYER_EXPORT VkResult VKAPI vkQueueWaitIdle(
     VkQueue queue)
 {
-    VkResult result = nextTable.QueueWaitIdle(queue);
+    VkResult result = device_dispatch_table(queue)->QueueWaitIdle(queue);
     if (VK_SUCCESS == result) {
         loader_platform_thread_lock_mutex(&globalLock);
         retire_queue_fences(queue);
@@ -1296,7 +1338,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkQueueWaitIdle(
 VK_LAYER_EXPORT VkResult VKAPI vkDeviceWaitIdle(
     VkDevice device)
 {
-    VkResult result = nextTable.DeviceWaitIdle(device);
+    VkResult result = device_dispatch_table(device)->DeviceWaitIdle(device);
     if (VK_SUCCESS == result) {
         loader_platform_thread_lock_mutex(&globalLock);
         retire_device_fences(device);
@@ -1310,7 +1352,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateEvent(
     const VkEventCreateInfo *pCreateInfo,
     VkEvent                 *pEvent)
 {
-    VkResult result = nextTable.CreateEvent(device, pCreateInfo, pEvent);
+    VkResult result = device_dispatch_table(device)->CreateEvent(device, pCreateInfo, pEvent);
     if (VK_SUCCESS == result) {
         loader_platform_thread_lock_mutex(&globalLock);
         add_object_info(*pEvent, pCreateInfo->sType, pCreateInfo, sizeof(VkEventCreateInfo), "event");
@@ -1324,7 +1366,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateQueryPool(
     const VkQueryPoolCreateInfo *pCreateInfo,
     VkQueryPool                 *pQueryPool)
 {
-    VkResult result = nextTable.CreateQueryPool(device, pCreateInfo, pQueryPool);
+    VkResult result = device_dispatch_table(device)->CreateQueryPool(device, pCreateInfo, pQueryPool);
     if (VK_SUCCESS == result) {
         loader_platform_thread_lock_mutex(&globalLock);
         add_object_info(*pQueryPool, pCreateInfo->sType, pCreateInfo, sizeof(VkQueryPoolCreateInfo), "query_pool");
@@ -1338,7 +1380,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateBuffer(
     const VkBufferCreateInfo *pCreateInfo,
     VkBuffer                 *pBuffer)
 {
-    VkResult result = nextTable.CreateBuffer(device, pCreateInfo, pBuffer);
+    VkResult result = device_dispatch_table(device)->CreateBuffer(device, pCreateInfo, pBuffer);
     if (VK_SUCCESS == result) {
         loader_platform_thread_lock_mutex(&globalLock);
         add_object_info(*pBuffer, pCreateInfo->sType, pCreateInfo, sizeof(VkBufferCreateInfo), "buffer");
@@ -1352,7 +1394,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateBufferView(
     const VkBufferViewCreateInfo *pCreateInfo,
     VkBufferView                 *pView)
 {
-    VkResult result = nextTable.CreateBufferView(device, pCreateInfo, pView);
+    VkResult result = device_dispatch_table(device)->CreateBufferView(device, pCreateInfo, pView);
     if (result == VK_SUCCESS) {
         loader_platform_thread_lock_mutex(&globalLock);
         add_object_info(*pView, pCreateInfo->sType, pCreateInfo, sizeof(VkBufferViewCreateInfo), "buffer_view");
@@ -1366,7 +1408,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateImage(
     const VkImageCreateInfo *pCreateInfo,
     VkImage                 *pImage)
 {
-    VkResult result = nextTable.CreateImage(device, pCreateInfo, pImage);
+    VkResult result = device_dispatch_table(device)->CreateImage(device, pCreateInfo, pImage);
     if (VK_SUCCESS == result) {
         loader_platform_thread_lock_mutex(&globalLock);
         add_object_info(*pImage, pCreateInfo->sType, pCreateInfo, sizeof(VkImageCreateInfo), "image");
@@ -1380,7 +1422,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateImageView(
     const VkImageViewCreateInfo *pCreateInfo,
     VkImageView                 *pView)
 {
-    VkResult result = nextTable.CreateImageView(device, pCreateInfo, pView);
+    VkResult result = device_dispatch_table(device)->CreateImageView(device, pCreateInfo, pView);
     if (result == VK_SUCCESS) {
         loader_platform_thread_lock_mutex(&globalLock);
         add_object_info(*pView, pCreateInfo->sType, pCreateInfo, sizeof(VkImageViewCreateInfo), "image_view");
@@ -1394,7 +1436,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateColorAttachmentView(
     const VkColorAttachmentViewCreateInfo *pCreateInfo,
     VkColorAttachmentView                 *pView)
 {
-    VkResult result = nextTable.CreateColorAttachmentView(device, pCreateInfo, pView);
+    VkResult result = device_dispatch_table(device)->CreateColorAttachmentView(device, pCreateInfo, pView);
     if (result == VK_SUCCESS) {
         loader_platform_thread_lock_mutex(&globalLock);
         add_object_info(*pView, pCreateInfo->sType, pCreateInfo, sizeof(VkColorAttachmentViewCreateInfo), "color_attachment_view");
@@ -1408,7 +1450,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateDepthStencilView(
     const VkDepthStencilViewCreateInfo *pCreateInfo,
     VkDepthStencilView                 *pView)
 {
-    VkResult result = nextTable.CreateDepthStencilView(device, pCreateInfo, pView);
+    VkResult result = device_dispatch_table(device)->CreateDepthStencilView(device, pCreateInfo, pView);
     if (result == VK_SUCCESS) {
         loader_platform_thread_lock_mutex(&globalLock);
         add_object_info(*pView, pCreateInfo->sType, pCreateInfo, sizeof(VkDepthStencilViewCreateInfo), "ds_view");
@@ -1422,7 +1464,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateShader(
     const VkShaderCreateInfo *pCreateInfo,
     VkShader                 *pShader)
 {
-    VkResult result = nextTable.CreateShader(device, pCreateInfo, pShader);
+    VkResult result = device_dispatch_table(device)->CreateShader(device, pCreateInfo, pShader);
     return result;
 }
 
@@ -1431,7 +1473,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateGraphicsPipeline(
     const VkGraphicsPipelineCreateInfo *pCreateInfo,
     VkPipeline                         *pPipeline)
 {
-    VkResult result = nextTable.CreateGraphicsPipeline(device, pCreateInfo, pPipeline);
+    VkResult result = device_dispatch_table(device)->CreateGraphicsPipeline(device, pCreateInfo, pPipeline);
     if (result == VK_SUCCESS) {
         loader_platform_thread_lock_mutex(&globalLock);
         add_object_info(*pPipeline, pCreateInfo->sType, pCreateInfo, sizeof(VkGraphicsPipelineCreateInfo), "graphics_pipeline");
@@ -1446,7 +1488,8 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateGraphicsPipelineDerivative(
     VkPipeline                          basePipeline,
     VkPipeline                         *pPipeline)
 {
-    VkResult result = nextTable.CreateGraphicsPipelineDerivative(device, pCreateInfo, basePipeline, pPipeline);
+    VkResult result = device_dispatch_table(device)->CreateGraphicsPipelineDerivative(
+        device, pCreateInfo, basePipeline, pPipeline);
     if (result == VK_SUCCESS) {
         loader_platform_thread_lock_mutex(&globalLock);
         add_object_info(*pPipeline, pCreateInfo->sType, pCreateInfo, sizeof(VkGraphicsPipelineCreateInfo), "graphics_pipeline");
@@ -1460,7 +1503,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateComputePipeline(
     const VkComputePipelineCreateInfo *pCreateInfo,
     VkPipeline                        *pPipeline)
 {
-    VkResult result = nextTable.CreateComputePipeline(device, pCreateInfo, pPipeline);
+    VkResult result = device_dispatch_table(device)->CreateComputePipeline(device, pCreateInfo, pPipeline);
     if (result == VK_SUCCESS) {
         loader_platform_thread_lock_mutex(&globalLock);
         add_object_info(*pPipeline, pCreateInfo->sType, pCreateInfo, sizeof(VkComputePipelineCreateInfo), "compute_pipeline");
@@ -1474,7 +1517,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateSampler(
     const VkSamplerCreateInfo *pCreateInfo,
     VkSampler                 *pSampler)
 {
-    VkResult result = nextTable.CreateSampler(device, pCreateInfo, pSampler);
+    VkResult result = device_dispatch_table(device)->CreateSampler(device, pCreateInfo, pSampler);
     if (result == VK_SUCCESS) {
         loader_platform_thread_lock_mutex(&globalLock);
         add_object_info(*pSampler, pCreateInfo->sType, pCreateInfo, sizeof(VkSamplerCreateInfo), "sampler");
@@ -1488,7 +1531,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateDynamicViewportState(
     const VkDynamicVpStateCreateInfo *pCreateInfo,
     VkDynamicVpState                 *pState)
 {
-    VkResult result = nextTable.CreateDynamicViewportState(device, pCreateInfo, pState);
+    VkResult result = device_dispatch_table(device)->CreateDynamicViewportState(device, pCreateInfo, pState);
     if (result == VK_SUCCESS) {
         loader_platform_thread_lock_mutex(&globalLock);
         add_object_info(*pState, pCreateInfo->sType, pCreateInfo, sizeof(VkDynamicVpStateCreateInfo), "viewport_state");
@@ -1502,7 +1545,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateDynamicRasterState(
     const VkDynamicRsStateCreateInfo *pCreateInfo,
     VkDynamicRsState                 *pState)
 {
-    VkResult result = nextTable.CreateDynamicRasterState(device, pCreateInfo, pState);
+    VkResult result = device_dispatch_table(device)->CreateDynamicRasterState(device, pCreateInfo, pState);
     if (result == VK_SUCCESS) {
         loader_platform_thread_lock_mutex(&globalLock);
         add_object_info(*pState, pCreateInfo->sType, pCreateInfo, sizeof(VkDynamicRsStateCreateInfo), "raster_state");
@@ -1516,7 +1559,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateDynamicColorBlendState(
     const VkDynamicCbStateCreateInfo *pCreateInfo,
     VkDynamicCbState                 *pState)
 {
-    VkResult result = nextTable.CreateDynamicColorBlendState(device, pCreateInfo, pState);
+    VkResult result = device_dispatch_table(device)->CreateDynamicColorBlendState(device, pCreateInfo, pState);
     if (result == VK_SUCCESS) {
         loader_platform_thread_lock_mutex(&globalLock);
         add_object_info(*pState, pCreateInfo->sType, pCreateInfo, sizeof(VkDynamicCbStateCreateInfo), "cb_state");
@@ -1530,7 +1573,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateDynamicDepthStencilState(
     const VkDynamicDsStateCreateInfo *pCreateInfo,
     VkDynamicDsState                 *pState)
 {
-    VkResult result = nextTable.CreateDynamicDepthStencilState(device, pCreateInfo, pState);
+    VkResult result = device_dispatch_table(device)->CreateDynamicDepthStencilState(device, pCreateInfo, pState);
     if (result == VK_SUCCESS) {
         loader_platform_thread_lock_mutex(&globalLock);
         add_object_info(*pState, pCreateInfo->sType, pCreateInfo, sizeof(VkDynamicDsStateCreateInfo), "ds_state");
@@ -1544,7 +1587,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateCommandBuffer(
     const VkCmdBufferCreateInfo *pCreateInfo,
     VkCmdBuffer                 *pCmdBuffer)
 {
-    VkResult result = nextTable.CreateCommandBuffer(device, pCreateInfo, pCmdBuffer);
+    VkResult result = device_dispatch_table(device)->CreateCommandBuffer(device, pCreateInfo, pCmdBuffer);
     // At time of cmd buffer creation, create global cmd buffer info for the returned cmd buffer
     loader_platform_thread_lock_mutex(&globalLock);
     if (*pCmdBuffer)
@@ -1567,7 +1610,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkBeginCommandBuffer(
         layerCbMsg(VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, cmdBuffer, 0, MEMTRACK_RESET_CB_WHILE_IN_FLIGHT, "MEM", str);
     }
     loader_platform_thread_unlock_mutex(&globalLock);
-    VkResult result = nextTable.BeginCommandBuffer(cmdBuffer, pBeginInfo);
+    VkResult result = device_dispatch_table(cmdBuffer)->BeginCommandBuffer(cmdBuffer, pBeginInfo);
     loader_platform_thread_lock_mutex(&globalLock);
     clear_cmd_buf_and_mem_references(cmdBuffer);
     loader_platform_thread_unlock_mutex(&globalLock);
@@ -1578,7 +1621,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkEndCommandBuffer(
     VkCmdBuffer cmdBuffer)
 {
     // TODO : Anything to do here?
-    VkResult result = nextTable.EndCommandBuffer(cmdBuffer);
+    VkResult result = device_dispatch_table(cmdBuffer)->EndCommandBuffer(cmdBuffer);
     return result;
 }
 
@@ -1596,7 +1639,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkResetCommandBuffer(
     // Clear memory references as this point.
     clear_cmd_buf_and_mem_references(cmdBuffer);
     loader_platform_thread_unlock_mutex(&globalLock);
-    VkResult result = nextTable.ResetCommandBuffer(cmdBuffer);
+    VkResult result = device_dispatch_table(cmdBuffer)->ResetCommandBuffer(cmdBuffer);
     return result;
 }
 // TODO : For any vkCmdBind* calls that include an object which has mem bound to it,
@@ -1624,7 +1667,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdBindPipeline(
         layerCbMsg(VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_PIPELINE, pipeline, 0, MEMTRACK_INVALID_OBJECT, (char *) "DS", (char *) str);
     }
 #endif
-    nextTable.CmdBindPipeline(cmdBuffer, pipelineBindPoint, pipeline);
+    device_dispatch_table(cmdBuffer)->CmdBindPipeline(cmdBuffer, pipelineBindPoint, pipeline);
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdBindDynamicStateObject(
@@ -1649,7 +1692,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdBindDynamicStateObject(
     }
     pCmdBuf->pDynamicState[stateBindPoint] = pObjInfo;
     loader_platform_thread_unlock_mutex(&globalLock);
-    nextTable.CmdBindDynamicStateObject(cmdBuffer, stateBindPoint, state);
+    device_dispatch_table(cmdBuffer)->CmdBindDynamicStateObject(cmdBuffer, stateBindPoint, state);
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdBindDescriptorSets(
@@ -1662,7 +1705,8 @@ VK_LAYER_EXPORT void VKAPI vkCmdBindDescriptorSets(
     const uint32_t        *pDynamicOffsets)
 {
     // TODO : Somewhere need to verify that all textures referenced by shaders in DS are in some type of *SHADER_READ* state
-    nextTable.CmdBindDescriptorSets(cmdBuffer, pipelineBindPoint, firstSet, setCount, pDescriptorSets, dynamicOffsetCount, pDynamicOffsets);
+    device_dispatch_table(cmdBuffer)->CmdBindDescriptorSets(
+        cmdBuffer, pipelineBindPoint, firstSet, setCount, pDescriptorSets, dynamicOffsetCount, pDynamicOffsets);
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdBindVertexBuffers(
@@ -1672,7 +1716,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdBindVertexBuffers(
     const VkBuffer     *pBuffers,
     const VkDeviceSize *pOffsets)
 {
-    nextTable.CmdBindVertexBuffers(cmdBuffer, startBinding, bindingCount, pBuffers, pOffsets);
+    device_dispatch_table(cmdBuffer)->CmdBindVertexBuffers(cmdBuffer, startBinding, bindingCount, pBuffers, pOffsets);
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdBindIndexBuffer(
@@ -1681,7 +1725,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdBindIndexBuffer(
     VkDeviceSize offset,
     VkIndexType  indexType)
 {
-    nextTable.CmdBindIndexBuffer(cmdBuffer, buffer, offset, indexType);
+    device_dispatch_table(cmdBuffer)->CmdBindIndexBuffer(cmdBuffer, buffer, offset, indexType);
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdDrawIndirect(
@@ -1699,7 +1743,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdDrawIndirect(
         layerCbMsg(VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, cmdBuffer, 0, MEMTRACK_MEMORY_BINDING_ERROR, "MEM", str);
     }
     loader_platform_thread_unlock_mutex(&globalLock);
-    nextTable.CmdDrawIndirect(cmdBuffer, buffer, offset, count, stride);
+    device_dispatch_table(cmdBuffer)->CmdDrawIndirect(cmdBuffer, buffer, offset, count, stride);
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdDrawIndexedIndirect(
@@ -1717,7 +1761,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdDrawIndexedIndirect(
         layerCbMsg(VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, cmdBuffer, 0, MEMTRACK_MEMORY_BINDING_ERROR, "MEM", str);
     }
     loader_platform_thread_unlock_mutex(&globalLock);
-    nextTable.CmdDrawIndexedIndirect(cmdBuffer, buffer, offset, count, stride);
+    device_dispatch_table(cmdBuffer)->CmdDrawIndexedIndirect(cmdBuffer, buffer, offset, count, stride);
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdDispatchIndirect(
@@ -1733,7 +1777,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdDispatchIndirect(
         layerCbMsg(VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, cmdBuffer, 0, MEMTRACK_MEMORY_BINDING_ERROR, "MEM", str);
     }
     loader_platform_thread_unlock_mutex(&globalLock);
-    nextTable.CmdDispatchIndirect(cmdBuffer, buffer, offset);
+    device_dispatch_table(cmdBuffer)->CmdDispatchIndirect(cmdBuffer, buffer, offset);
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdCopyBuffer(
@@ -1757,7 +1801,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdCopyBuffer(
         layerCbMsg(VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, cmdBuffer, 0, MEMTRACK_MEMORY_BINDING_ERROR, "MEM", str);
     }
     loader_platform_thread_unlock_mutex(&globalLock);
-    nextTable.CmdCopyBuffer(cmdBuffer, srcBuffer, destBuffer, regionCount, pRegions);
+    device_dispatch_table(cmdBuffer)->CmdCopyBuffer(cmdBuffer, srcBuffer, destBuffer, regionCount, pRegions);
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdCopyImage(
@@ -1770,7 +1814,8 @@ VK_LAYER_EXPORT void VKAPI vkCmdCopyImage(
     const VkImageCopy *pRegions)
 {
     // TODO : Each image will have mem mapping so track them
-    nextTable.CmdCopyImage(cmdBuffer, srcImage, srcImageLayout, destImage, destImageLayout, regionCount, pRegions);
+    device_dispatch_table(cmdBuffer)->CmdCopyImage(
+        cmdBuffer, srcImage, srcImageLayout, destImage, destImageLayout, regionCount, pRegions);
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdBlitImage(
@@ -1784,7 +1829,8 @@ VK_LAYER_EXPORT void VKAPI vkCmdBlitImage(
     VkTexFilter        filter)
 {
     // TODO : Each image will have mem mapping so track them
-    nextTable.CmdBlitImage(cmdBuffer, srcImage, srcImageLayout, destImage, destImageLayout, regionCount, pRegions, filter);
+    device_dispatch_table(cmdBuffer)->CmdBlitImage(
+        cmdBuffer, srcImage, srcImageLayout, destImage, destImageLayout, regionCount, pRegions, filter);
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdCopyBufferToImage(
@@ -1811,7 +1857,8 @@ VK_LAYER_EXPORT void VKAPI vkCmdCopyBufferToImage(
         layerCbMsg(VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, cmdBuffer, 0, MEMTRACK_MEMORY_BINDING_ERROR, "MEM", str);
     }
     loader_platform_thread_unlock_mutex(&globalLock);
-    nextTable.CmdCopyBufferToImage(cmdBuffer, srcBuffer, destImage, destImageLayout, regionCount, pRegions);
+    device_dispatch_table(cmdBuffer)->CmdCopyBufferToImage(
+        cmdBuffer, srcBuffer, destImage, destImageLayout, regionCount, pRegions);
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdCopyImageToBuffer(
@@ -1837,7 +1884,8 @@ VK_LAYER_EXPORT void VKAPI vkCmdCopyImageToBuffer(
         layerCbMsg(VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, cmdBuffer, 0, MEMTRACK_MEMORY_BINDING_ERROR, "MEM", str);
     }
     loader_platform_thread_unlock_mutex(&globalLock);
-    nextTable.CmdCopyImageToBuffer(cmdBuffer, srcImage, srcImageLayout, destBuffer, regionCount, pRegions);
+    device_dispatch_table(cmdBuffer)->CmdCopyImageToBuffer(
+        cmdBuffer, srcImage, srcImageLayout, destBuffer, regionCount, pRegions);
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdUpdateBuffer(
@@ -1855,7 +1903,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdUpdateBuffer(
         layerCbMsg(VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, cmdBuffer, 0, MEMTRACK_MEMORY_BINDING_ERROR, "MEM", str);
     }
     loader_platform_thread_unlock_mutex(&globalLock);
-    nextTable.CmdUpdateBuffer(cmdBuffer, destBuffer, destOffset, dataSize, pData);
+    device_dispatch_table(cmdBuffer)->CmdUpdateBuffer(cmdBuffer, destBuffer, destOffset, dataSize, pData);
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdFillBuffer(
@@ -1873,7 +1921,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdFillBuffer(
         layerCbMsg(VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, cmdBuffer, 0, MEMTRACK_MEMORY_BINDING_ERROR, "MEM", str);
     }
     loader_platform_thread_unlock_mutex(&globalLock);
-    nextTable.CmdFillBuffer(cmdBuffer, destBuffer, destOffset, fillSize, data);
+    device_dispatch_table(cmdBuffer)->CmdFillBuffer(cmdBuffer, destBuffer, destOffset, fillSize, data);
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdClearColorImage(
@@ -1893,7 +1941,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdClearColorImage(
         layerCbMsg(VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, cmdBuffer, 0, MEMTRACK_MEMORY_BINDING_ERROR, "MEM", str);
     }
     loader_platform_thread_unlock_mutex(&globalLock);
-    nextTable.CmdClearColorImage(cmdBuffer, image, imageLayout, pColor, rangeCount, pRanges);
+    device_dispatch_table(cmdBuffer)->CmdClearColorImage(cmdBuffer, image, imageLayout, pColor, rangeCount, pRanges);
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdClearDepthStencil(
@@ -1914,7 +1962,8 @@ VK_LAYER_EXPORT void VKAPI vkCmdClearDepthStencil(
         layerCbMsg(VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, cmdBuffer, 0, MEMTRACK_MEMORY_BINDING_ERROR, "MEM", str);
     }
     loader_platform_thread_unlock_mutex(&globalLock);
-    nextTable.CmdClearDepthStencil(cmdBuffer, image, imageLayout, depth, stencil, rangeCount, pRanges);
+    device_dispatch_table(cmdBuffer)->CmdClearDepthStencil(
+        cmdBuffer, image, imageLayout, depth, stencil, rangeCount, pRanges);
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdResolveImage(
@@ -1940,7 +1989,8 @@ VK_LAYER_EXPORT void VKAPI vkCmdResolveImage(
         layerCbMsg(VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, cmdBuffer, 0, MEMTRACK_MEMORY_BINDING_ERROR, "MEM", str);
     }
     loader_platform_thread_unlock_mutex(&globalLock);
-    nextTable.CmdResolveImage(cmdBuffer, srcImage, srcImageLayout, destImage, destImageLayout, regionCount, pRegions);
+    device_dispatch_table(cmdBuffer)->CmdResolveImage(
+        cmdBuffer, srcImage, srcImageLayout, destImage, destImageLayout, regionCount, pRegions);
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdBeginQuery(
@@ -1957,7 +2007,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdBeginQuery(
         layerCbMsg(VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, cmdBuffer, 0, MEMTRACK_MEMORY_BINDING_ERROR, "MEM", str);
     }
     loader_platform_thread_unlock_mutex(&globalLock);
-    nextTable.CmdBeginQuery(cmdBuffer, queryPool, slot, flags);
+    device_dispatch_table(cmdBuffer)->CmdBeginQuery(cmdBuffer, queryPool, slot, flags);
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdEndQuery(
@@ -1973,7 +2023,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdEndQuery(
         layerCbMsg(VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, cmdBuffer, 0, MEMTRACK_MEMORY_BINDING_ERROR, "MEM", str);
     }
     loader_platform_thread_unlock_mutex(&globalLock);
-    nextTable.CmdEndQuery(cmdBuffer, queryPool, slot);
+    device_dispatch_table(cmdBuffer)->CmdEndQuery(cmdBuffer, queryPool, slot);
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdResetQueryPool(
@@ -1990,7 +2040,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdResetQueryPool(
         layerCbMsg(VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, cmdBuffer, 0, MEMTRACK_MEMORY_BINDING_ERROR, "MEM", str);
     }
     loader_platform_thread_unlock_mutex(&globalLock);
-    nextTable.CmdResetQueryPool(cmdBuffer, queryPool, startQuery, queryCount);
+    device_dispatch_table(cmdBuffer)->CmdResetQueryPool(cmdBuffer, queryPool, startQuery, queryCount);
 }
 
 VK_LAYER_EXPORT VkResult VKAPI vkDbgCreateMsgCallback(
@@ -2000,14 +2050,14 @@ VK_LAYER_EXPORT VkResult VKAPI vkDbgCreateMsgCallback(
         void* pUserData,
         VkDbgMsgCallback* pMsgCallback)
 {
-    return layer_create_msg_callback(instance, &nextInstanceTable, msgFlags, pfnMsgCallback, pUserData, pMsgCallback);
+    return layer_create_msg_callback(instance, instance_dispatch_table(instance), msgFlags, pfnMsgCallback, pUserData, pMsgCallback);
 }
 
 VK_LAYER_EXPORT VkResult VKAPI vkDbgDestroyMsgCallback(
         VkInstance instance,
         VkDbgMsgCallback msgCallback)
 {
-    return layer_destroy_msg_callback(instance, &nextInstanceTable, msgCallback);
+    return layer_destroy_msg_callback(instance, instance_dispatch_table(instance), msgCallback);
 }
 
 VK_LAYER_EXPORT VkResult VKAPI vkCreateSwapChainWSI(
@@ -2015,7 +2065,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateSwapChainWSI(
     const VkSwapChainCreateInfoWSI *pCreateInfo,
     VkSwapChainWSI                 *pSwapChain)
 {
-    VkResult result = nextTable.CreateSwapChainWSI(device, pCreateInfo, pSwapChain);
+    VkResult result = device_dispatch_table(device)->CreateSwapChainWSI(device, pCreateInfo, pSwapChain);
 
     if (VK_SUCCESS == result) {
         loader_platform_thread_lock_mutex(&globalLock);
@@ -2050,7 +2100,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkDestroySwapChainWSI(
 
     loader_platform_thread_unlock_mutex(&globalLock);
 
-    return nextTable.DestroySwapChainWSI(swapChain);
+    return device_dispatch_table(swapChain)->DestroySwapChainWSI(swapChain);
 }
 
 VK_LAYER_EXPORT VkResult VKAPI vkGetSwapChainInfoWSI(
@@ -2059,7 +2109,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkGetSwapChainInfoWSI(
     size_t                 *pDataSize,
     void                   *pData)
 {
-    VkResult result = nextTable.GetSwapChainInfoWSI(swapChain, infoType, pDataSize, pData);
+    VkResult result = device_dispatch_table(swapChain)->GetSwapChainInfoWSI(swapChain, infoType, pDataSize, pData);
 
     if (infoType == VK_SWAP_CHAIN_INFO_TYPE_PERSISTENT_IMAGES_WSI && result == VK_SUCCESS) {
         const size_t count = *pDataSize / sizeof(VkSwapChainImageInfoWSI);
@@ -2106,9 +2156,9 @@ VK_LAYER_EXPORT void* VKAPI vkGetDeviceProcAddr(
     if (dev == NULL) {
         return NULL;
     }
-    pCurObj = devw;
+
     loader_platform_thread_once(&g_initOnce, initMemTracker);
-    loader_platform_thread_once(&g_tabDeviceOnce, initDeviceTable);
+    initDeviceTable((const VkBaseLayerObject *) dev);
 
     if (!strcmp(funcName, "vkGetDeviceProcAddr"))
         return (void *) vkGetDeviceProcAddr;
@@ -2264,12 +2314,13 @@ VK_LAYER_EXPORT void* VKAPI vkGetInstanceProcAddr(
         return NULL;
     }
 
-    pCurObj = instw;
     loader_platform_thread_once(&g_initOnce, initMemTracker);
-    loader_platform_thread_once(&g_tabInstanceOnce, initInstanceTable);
+    initInstanceTable((const VkBaseLayerObject *) instance);
 
     if (!strcmp(funcName, "vkGetInstanceProcAddr"))
         return (void *) vkGetInstanceProcAddr;
+    if (!strcmp(funcName, "vkDestroyInstance"))
+        return (void *) vkDestroyInstance;
     if (!strcmp(funcName, "vkCreateDevice"))
         return (void*) vkCreateDevice;
     else {
