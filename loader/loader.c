@@ -1192,7 +1192,7 @@ VkResult loader_CreateInstance(
         const VkInstanceCreateInfo*         pCreateInfo,
         VkInstance*                           pInstance)
 {
-    struct loader_instance *ptr_instance = (struct loader_instance *) pInstance;
+    struct loader_instance *ptr_instance = *(struct loader_instance **) pInstance;
     struct loader_scanned_icds *scanned_icds;
     struct loader_icd *icd;
     VkResult res;

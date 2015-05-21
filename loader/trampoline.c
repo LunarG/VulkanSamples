@@ -78,9 +78,10 @@ LOADER_EXPORT VkResult VKAPI vkCreateInstance(
     loader.instances = ptr_instance;
     loader_activate_instance_layers(ptr_instance);
 
-    res = instance_disp.CreateInstance(pCreateInfo, (VkInstance *) ptr_instance);
-
     *pInstance = (VkInstance) ptr_instance;
+
+    res = ptr_instance->disp->CreateInstance(pCreateInfo, pInstance);
+
     return res;
 }
 
