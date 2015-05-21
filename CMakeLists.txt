@@ -23,31 +23,33 @@ if (CMAKE_COMPILER_IS_GNUCC OR CMAKE_C_COMPILER_ID MATCHES "Clang")
     endif()
 endif()
 
-if (NOT WIN32)
-    # Hard code our LunarGLASS and glslang paths for now
-    get_filename_component(GLSLANG_PREFIX ../glslang ABSOLUTE)
-    get_filename_component(LUNARGLASS_PREFIX ../LunarGLASS ABSOLUTE)
+# Hard code our LunarGLASS and glslang paths for now
+get_filename_component(GLSLANG_PREFIX ../glslang ABSOLUTE)
+get_filename_component(LUNARGLASS_PREFIX ../LunarGLASS ABSOLUTE)
 
-    if(NOT EXISTS ${GLSLANG_PREFIX})
-        message(FATAL_ERROR "Necessary glslang components do not exist: " ${GLSLANG_PREFIX})
-    endif()
+if(NOT EXISTS ${GLSLANG_PREFIX})
+    message(FATAL_ERROR "Necessary glslang components do not exist: " ${GLSLANG_PREFIX})
+endif()
 
+if(NOT WIN32)
     if(NOT EXISTS ${LUNARGLASS_PREFIX})
-        message(FATAL_ERROR "Necessary LunarGLASS components do not exist: " ${GLSLANG_PREFIX})
+        message(FATAL_ERROR "Necessary LunarGLASS components do not exist: " ${LUNARGLASS_PREFIX})
     endif()
-    if (${CMAKE_SYSTEM_NAME} MATCHES "Linux")
+    if(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
         set(PYTHON_CMD "python3")
     endif()
 else()
-        set(PYTHON_CMD "py")
+    set(PYTHON_CMD "py")
 endif()
+
+option(BUILD_TESTS "Build tests" ON)
 
 # loader: Generic VULKAN ICD loader
 # icd: Device dependent (DD) VULKAN components
 # tests: VULKAN tests
 add_subdirectory(loader)
 add_subdirectory(icd)
-if (NOT WIN32)
+if(BUILD_TESTS)
     add_subdirectory(tests)
 endif()
 add_subdirectory(layers)

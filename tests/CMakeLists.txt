@@ -1,3 +1,4 @@
+cmake_minimum_required(VERSION 2.8.11)
 include (FindPkgConfig)
 
 if(NOT WIN32)
@@ -5,18 +6,19 @@ if(NOT WIN32)
 endif()
 
 find_package(ImageMagick COMPONENTS MagickWand)
-
-if(NOT EXISTS /usr/include/glm/glm.hpp)
-    message(FATAL_ERROR "Necessary libglm-dev headers cannot be found: sudo apt-get install libglm-dev")
-endif()
-
 if(NOT ImageMagick_FOUND)
-    message(FATAL_ERROR "Missing ImageMagick library: sudo apt-get install libmagickwand-dev")
+    message(FATAL_ERROR "Missing ImageMagick library: sudo apt-get install libmagickwand-dev\nor http://www.imagemagick.org/script/binary-releases.php for Windows")
 endif()
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DVK_PROTOTYPES -Wno-sign-compare")
+if(MSVC)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /DVK_PROTOTYPES /wd4267")
+else()
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DVK_PROTOTYPES -Wno-sign-compare")
+endif()
 
-SET(COMMON_CPP
+set (LIBGLM_INCLUDE_DIR ${PROJECT_SOURCE_DIR}/libs)
+
+set(COMMON_CPP
     vkrenderframework.cpp
     vktestbinding.cpp
     vktestframework.cpp
@@ -36,15 +38,14 @@ link_directories(
    "${GLSLANG_BUILD}/install/lib"
    )
 
-
 set(TEST_LIBRARIES
-   glslang
-   OGLCompiler
-   OSDependent
-   SPIRV
-   ${XCB_LIBRARIES}
-   ${ImageMagick_LIBRARIES}
-   )
+    glslang
+    OGLCompiler
+    OSDependent
+    SPIRV
+    ${XCB_LIBRARIES}
+    ${ImageMagick_LIBRARIES}
+    )
 
 include_directories(
     "${PROJECT_SOURCE_DIR}/tests/gtest-1.7.0/include"
@@ -54,6 +55,7 @@ include_directories(
     "${GLSLANG_PREFIX}/glslang/Public"
     "${GLSLANG_PREFIX}/SPIRV"
     ${XCB_INCLUDE_DIRS}
+    ${LIBGLM_INCLUDE_DIR}
     ${ImageMagick_INCLUDE_DIRS}
     )
 
