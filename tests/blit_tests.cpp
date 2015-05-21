@@ -751,6 +751,8 @@ TEST_F(VkCmdCopyBufferTest, RAWHazard)
     size_t data_size = sizeof(mem_req);
     VkResult err;
     VkMemoryPropertyFlags reqs = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
+    VkMemoryAllocInfo mem_info;
+    VkDeviceMemory event_mem;
 
     //        typedef struct VkEventCreateInfo_
     //        {
@@ -764,29 +766,31 @@ TEST_F(VkCmdCopyBufferTest, RAWHazard)
     err = vkCreateEvent(dev_.obj(), &event_info, &event);
     ASSERT_VK_SUCCESS(err);
 
+    data_size = sizeof(mem_req);
     err = vkGetObjectInfo(dev_.obj(), VK_OBJECT_TYPE_EVENT, event, VK_OBJECT_INFO_TYPE_MEMORY_REQUIREMENTS,
-                           &data_size, &mem_req);
+        &data_size, &mem_req);
     ASSERT_VK_SUCCESS(err);
 
-    //        VkResult VKAPI vkAllocMemory(
-    //            VkDevice                                  device,
-    //            const VkMemoryAllocInfo*                pAllocInfo,
-    //            VkDeviceMemory*                             pMem);
-    VkMemoryAllocInfo mem_info;
-    VkDeviceMemory event_mem;
+    if (mem_req.size) {
 
-    ASSERT_NE(0, mem_req.size) << "vkGetObjectInfo (Event): Failed - expect events to require memory";
+        //        VkResult VKAPI vkAllocMemory(
+        //            VkDevice                                  device,
+        //            const VkMemoryAllocInfo*                pAllocInfo,
+        //            VkDeviceMemory*                             pMem);
 
-    memset(&mem_info, 0, sizeof(mem_info));
-    mem_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO;
-    mem_info.allocationSize = mem_req.size;
-    mem_info.memPriority = VK_MEMORY_PRIORITY_NORMAL;
-    mem_info.memProps = VK_MEMORY_PROPERTY_SHAREABLE_BIT;
-    err = vkAllocMemory(dev_.obj(), &mem_info, &event_mem);
-    ASSERT_VK_SUCCESS(err);
+        ASSERT_NE(0, mem_req.size) << "vkGetObjectInfo (Event): Failed - expect events to require memory";
 
-    err = vkBindObjectMemory(dev_.obj(), VK_OBJECT_TYPE_EVENT, event, event_mem, 0);
-    ASSERT_VK_SUCCESS(err);
+        memset(&mem_info, 0, sizeof(mem_info));
+        mem_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO;
+        mem_info.allocationSize = mem_req.size;
+        mem_info.memPriority = VK_MEMORY_PRIORITY_NORMAL;
+        mem_info.memProps = VK_MEMORY_PROPERTY_SHAREABLE_BIT;
+        err = vkAllocMemory(dev_.obj(), &mem_info, &event_mem);
+        ASSERT_VK_SUCCESS(err);
+
+        err = vkBindObjectMemory(dev_.obj(), VK_OBJECT_TYPE_EVENT, event, event_mem, 0);
+        ASSERT_VK_SUCCESS(err);
+    }
 
     err = vkResetEvent(dev_.obj(), event);
     ASSERT_VK_SUCCESS(err);
@@ -841,14 +845,15 @@ TEST_F(VkCmdCopyBufferTest, RAWHazard)
     EXPECT_EQ(0x11111111, data[0]);
     bufs[2].unmap();
 
-    // All done with event memory, clean up
-    err = vkBindObjectMemory(dev_.obj(), VK_OBJECT_TYPE_EVENT, event, VK_NULL_HANDLE, 0);
-    ASSERT_VK_SUCCESS(err);
+    if (mem_req.size) {
+        // All done with event memory, clean up
+        err = vkBindObjectMemory(dev_.obj(), VK_OBJECT_TYPE_EVENT, event, VK_NULL_HANDLE, 0);
+        ASSERT_VK_SUCCESS(err);
 
+        err = vkFreeMemory(dev_.obj(), event_mem);
+        ASSERT_VK_SUCCESS(err);
+    }
     err = vkDestroyObject(dev_.obj(), VK_OBJECT_TYPE_EVENT, event);
-    ASSERT_VK_SUCCESS(err);
-
-    err = vkFreeMemory(dev_.obj(), event_mem);
     ASSERT_VK_SUCCESS(err);
 }
 
@@ -948,12 +953,14 @@ protected:
     {
         vk_testing::Buffer buf;
         vk_testing::Image img;
-        VkMemoryPropertyFlags reqs = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
+        VkMemoryPropertyFlags buffer_reqs = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
+        VkMemoryPropertyFlags image_reqs =
+            (img_info.tiling == VK_IMAGE_TILING_LINEAR)?VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT:0;
 
-        buf.init(dev_, checker.buffer_size(), reqs);
+        buf.init(dev_, checker.buffer_size(), buffer_reqs);
         checker.fill(buf);
 
-        img.init(dev_, img_info, reqs);
+        img.init(dev_, img_info, image_reqs);
 
         cmd_.begin();
         vkCmdCopyBufferToImage(cmd_.obj(),
@@ -1015,12 +1022,14 @@ protected:
     {
         vk_testing::Image img;
         vk_testing::Buffer buf;
-        VkMemoryPropertyFlags reqs = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
+        VkMemoryPropertyFlags buffer_reqs = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
+        VkMemoryPropertyFlags image_reqs =
+            (img_info.tiling == VK_IMAGE_TILING_LINEAR)?VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT:0;
 
-        img.init(dev_, img_info, reqs);
+        img.init(dev_, img_info, image_reqs);
         fill_src(img, checker);
 
-        buf.init(dev_, checker.buffer_size(), reqs);
+        buf.init(dev_, checker.buffer_size(), buffer_reqs);
 
         cmd_.begin();
         vkCmdCopyImageToBuffer(cmd_.obj(),
@@ -1106,14 +1115,19 @@ protected:
 
         vk_testing::ImageChecker src_checker(src_info, src_regions);
         vk_testing::ImageChecker dst_checker(dst_info, dst_regions);
-        VkMemoryPropertyFlags reqs = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
+        VkMemoryPropertyFlags src_reqs =
+            (src_info.tiling == VK_IMAGE_TILING_LINEAR)?VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT:0;
+        VkMemoryPropertyFlags dst_reqs =
+            (dst_info.tiling == VK_IMAGE_TILING_LINEAR)?VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT:0;
+
+
 
         vk_testing::Image src;
-        src.init(dev_, src_info, reqs);
+        src.init(dev_, src_info, src_reqs);
         fill_src(src, src_checker);
 
         vk_testing::Image dst;
-        dst.init(dev_, dst_info, reqs);
+        dst.init(dev_, dst_info, dst_reqs);
 
         cmd_.begin();
         vkCmdCopyImage(cmd_.obj(),
@@ -1242,9 +1256,10 @@ protected:
                                 const std::vector<VkImageSubresourceRange> &ranges)
     {
         vk_testing::Image img;
-        VkMemoryPropertyFlags reqs = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
+        VkMemoryPropertyFlags image_reqs =
+            (img_info.tiling == VK_IMAGE_TILING_LINEAR)?VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT:0;
 
-        img.init(dev_, img_info, reqs);
+        img.init(dev_, img_info, image_reqs);
         const VkFlags all_cache_outputs =
                 VK_MEMORY_OUTPUT_HOST_WRITE_BIT |
                 VK_MEMORY_OUTPUT_SHADER_WRITE_BIT |
@@ -1460,9 +1475,10 @@ protected:
                                   const std::vector<VkImageSubresourceRange> &ranges)
     {
         vk_testing::Image img;
-        VkMemoryPropertyFlags reqs = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
+        VkMemoryPropertyFlags image_reqs =
+            (img_info.tiling == VK_IMAGE_TILING_LINEAR)?VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT:0;
 
-        img.init(dev_, img_info, reqs);
+        img.init(dev_, img_info, image_reqs);
         const VkFlags all_cache_outputs =
                 VK_MEMORY_OUTPUT_HOST_WRITE_BIT |
                 VK_MEMORY_OUTPUT_SHADER_WRITE_BIT |
