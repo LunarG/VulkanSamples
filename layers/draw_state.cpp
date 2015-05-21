@@ -522,9 +522,9 @@ static void validatePipelineState(const GLOBAL_CB_NODE* pCB, const VkPipelineBin
         if (pCB->activeRenderPass) {
             VkRenderPassCreateInfo* pRPCI = renderPassMap[pCB->activeRenderPass];
             VkFramebufferCreateInfo* pFBCI = frameBufferMap[pCB->framebuffer];
-            if (psoNumSamples != pFBCI->sampleCount) {
+            if ((psoNumSamples != pFBCI->sampleCount) || (psoNumSamples != pRPCI->sampleCount)) {
                 char str[1024];
-                sprintf(str, "Num samples mismatche! Binding PSO (%p) with %u samples while current RenderPass (%p) uses FB (%p) with %u samples!", (void*)pipeline, psoNumSamples, (void*)pCB->activeRenderPass, (void*)pCB->framebuffer, pFBCI->sampleCount);
+                sprintf(str, "Num samples mismatche! Binding PSO (%p) with %u samples while current RenderPass (%p) w/ %u samples uses FB (%p) with %u samples!", (void*)pipeline, psoNumSamples, (void*)pCB->activeRenderPass, pRPCI->sampleCount, (void*)pCB->framebuffer, pFBCI->sampleCount);
                 layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, pipeline, 0, DRAWSTATE_NUM_SAMPLES_MISMATCH, "DS", str);
             }
         } else {
