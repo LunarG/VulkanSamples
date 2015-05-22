@@ -91,8 +91,8 @@ private:
     bool                                    m_quit;
     bool                                    m_pause;
 
-    uint32_t                                m_width;
-    uint32_t                                m_height;
+    int                                     m_width;
+    int                                     m_height;
 
     std::list<VkTestImageRecord>::iterator m_display_image;
 
@@ -236,7 +236,7 @@ void VkTestFramework::WritePPM( const char *basename, VkImageObj *image )
 {
     string filename;
     VkResult err;
-    int x, y;
+    uint32_t x, y;
     VkImageObj displayImage(image->device());
     VkMemoryPropertyFlags reqs = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
 
@@ -319,14 +319,14 @@ void VkTestFramework::Compare(const char *basename, VkImageObj *image )
     magick_wand_1=NewMagickWand();
     sprintf(testimage,"%s.ppm",basename);
     status=MagickReadImage(magick_wand_1,testimage);
-    ASSERT_TRUE(status) << "Unable to open file: " << testimage;
+    ASSERT_EQ(status, MagickTrue) << "Unable to open file: " << testimage;
 
 
     MagickWandGenesis();
     magick_wand_2=NewMagickWand();
     sprintf(golden,"%s/%s.ppm",golddir,basename);
     status=MagickReadImage(magick_wand_2,golden);
-    ASSERT_TRUE(status) << "Unable to open file: " << golden;
+    ASSERT_EQ(status, MagickTrue) << "Unable to open file: " << golden;
 
     compare_wand=MagickCompareImages(magick_wand_1,magick_wand_2, MeanAbsoluteErrorMetric, &differenz);
     if (differenz != 0.0)

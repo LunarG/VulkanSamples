@@ -179,8 +179,8 @@ void VkRenderFramework::InitViewport(float width, float height)
     viewport.height   = 1.f * height;
     viewport.minDepth = 0.f;
     viewport.maxDepth = 1.f;
-    scissor.extent.width = width;
-    scissor.extent.height = height;
+    scissor.extent.width = (int32_t) width;
+    scissor.extent.height = (int32_t) height;
     scissor.offset.x = 0;
     scissor.offset.y = 0;
     viewportCreate.pViewports = &viewport;
@@ -232,11 +232,11 @@ void VkRenderFramework::InitRenderTarget(uint32_t targets, VkDepthStencilBindInf
         ASSERT_VK_SUCCESS(err);
 
         if (props.linearTilingFeatures & VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT) {
-            img->init(m_width, m_height, m_render_target_fmt,
+            img->init((uint32_t)m_width, (uint32_t)m_height, m_render_target_fmt,
             VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT, VK_IMAGE_TILING_LINEAR);
         }
         else if (props.optimalTilingFeatures & VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT) {
-            img->init(m_width, m_height, m_render_target_fmt,
+            img->init((uint32_t)m_width, (uint32_t)m_height, m_render_target_fmt,
             VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT, VK_IMAGE_TILING_OPTIMAL);
         }
         else {
@@ -267,8 +267,8 @@ void VkRenderFramework::InitRenderTarget(uint32_t targets, VkDepthStencilBindInf
 
     VkRenderPassCreateInfo rp_info = {};
     rp_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-    rp_info.renderArea.extent.width = m_width;
-    rp_info.renderArea.extent.height = m_height;
+    rp_info.renderArea.extent.width = (uint32_t) m_width;
+    rp_info.renderArea.extent.height = (uint32_t) m_height;
 
     rp_info.colorAttachmentCount = m_renderTargets.size();
     rp_info.pColorFormats = &m_render_target_fmt;
@@ -741,7 +741,7 @@ VkSamplerObj::VkSamplerObj(VkDeviceObj *device)
     samplerCreateInfo.addressV = VK_TEX_ADDRESS_WRAP;
     samplerCreateInfo.addressW = VK_TEX_ADDRESS_WRAP;
     samplerCreateInfo.mipLodBias = 0.0;
-    samplerCreateInfo.maxAnisotropy = 0.0;
+    samplerCreateInfo.maxAnisotropy = 0;
     samplerCreateInfo.compareOp = VK_COMPARE_OP_NEVER;
     samplerCreateInfo.minLod = 0.0;
     samplerCreateInfo.maxLod = 0.0;

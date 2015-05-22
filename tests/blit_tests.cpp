@@ -1200,16 +1200,16 @@ protected:
         // TODO support all formats
         switch (format) {
         case VK_FORMAT_R8G8B8A8_UNORM:
-            raw.push_back(color[0] * 255.0f);
-            raw.push_back(color[1] * 255.0f);
-            raw.push_back(color[2] * 255.0f);
-            raw.push_back(color[3] * 255.0f);
+            raw.push_back((uint8_t)(color[0] * 255.0f));
+            raw.push_back((uint8_t)(color[1] * 255.0f));
+            raw.push_back((uint8_t)(color[2] * 255.0f));
+            raw.push_back((uint8_t)(color[3] * 255.0f));
             break;
         case VK_FORMAT_B8G8R8A8_UNORM:
-            raw.push_back(color[2] * 255.0f);
-            raw.push_back(color[1] * 255.0f);
-            raw.push_back(color[0] * 255.0f);
-            raw.push_back(color[3] * 255.0f);
+            raw.push_back((uint8_t)(color[2] * 255.0f));
+            raw.push_back((uint8_t)(color[1] * 255.0f));
+            raw.push_back((uint8_t)(color[0] * 255.0f));
+            raw.push_back((uint8_t)(color[3] * 255.0f));
             break;
         default:
             break;
@@ -1425,7 +1425,7 @@ protected:
         case VK_FORMAT_D16_UNORM:
         case VK_FORMAT_D16_UNORM_S8_UINT:
             {
-                const uint16_t unorm = depth * 65535.0f;
+                const uint16_t unorm = (uint16_t)(depth * 65535.0f);
                 raw.push_back(unorm & 0xff);
                 raw.push_back(unorm >> 8);
             }

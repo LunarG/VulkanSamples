@@ -418,10 +418,10 @@ void Device::init_queues()
                         &data_size, queue_props);
     EXPECT(err == VK_SUCCESS);
 
-    for (int i = 0; i < queue_node_count; i++) {
+    for (uint32_t i = 0; i < queue_node_count; i++) {
         VkQueue queue;
 
-        for (int j = 0; j < queue_props[i].queueCount; j++) {
+        for (uint32_t j = 0; j < queue_props[i].queueCount; j++) {
             // TODO: Need to add support for separate MEMMGR and work queues, including synchronization
             err = vkGetDeviceQueue(obj(), i, j, &queue);
             EXPECT(err == VK_SUCCESS);

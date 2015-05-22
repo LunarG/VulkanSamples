@@ -1831,7 +1831,7 @@ TEST_F(VkRenderTest, CubeWithVertexFetchAndMVP)
 
     ASSERT_NO_FATAL_FAILURE(InitState());
     ASSERT_NO_FATAL_FAILURE(InitViewport());
-    m_depthStencil->Init(m_device, m_width, m_height);
+    m_depthStencil->Init(m_device, (int32_t)m_width, (int32_t)m_height);
 
     VkConstantBufferObj meshBuffer(m_device,sizeof(g_vb_solid_face_colors_Data)/sizeof(g_vb_solid_face_colors_Data[0]),
             sizeof(g_vb_solid_face_colors_Data[0]), g_vb_solid_face_colors_Data);
@@ -2604,7 +2604,7 @@ TEST_F(VkRenderTest, CubeWithVertexFetchAndMVPAndTexture)
 
     ASSERT_NO_FATAL_FAILURE(InitState());
     ASSERT_NO_FATAL_FAILURE(InitViewport());
-    m_depthStencil->Init(m_device, m_width, m_height);
+    m_depthStencil->Init(m_device, (int32_t)m_width, (int32_t)m_height);
 
     VkConstantBufferObj meshBuffer(m_device, num_verts,
             sizeof(g_vb_texture_Data[0]), g_vb_texture_Data);

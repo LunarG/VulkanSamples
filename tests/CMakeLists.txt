@@ -10,8 +10,8 @@ if(NOT ImageMagick_FOUND)
     message(FATAL_ERROR "Missing ImageMagick library: sudo apt-get install libmagickwand-dev\nor http://www.imagemagick.org/script/binary-releases.php for Windows")
 endif()
 
-if(MSVC)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /DVK_PROTOTYPES /wd4267")
+if(WIN32)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DVK_PROTOTYPES -D_CRT_SECURE_NO_WARNINGS -D_USE_MATH_DEFINES /wd4267")
 else()
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DVK_PROTOTYPES -Wno-sign-compare")
 endif()
@@ -59,20 +59,17 @@ include_directories(
     ${ImageMagick_INCLUDE_DIRS}
     )
 
-add_definitions(
-    -DMAGICKCORE_QUANTUM_DEPTH=16
-    -DMAGICKCORE_HDRI_ENABLE=0
-    )
-
-# extra setup for out-of-tree builds
-if (NOT (CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_CURRENT_BINARY_DIR))
-    add_custom_target(binary-dir-symlinks ALL
-        COMMAND ln -sf ${CMAKE_CURRENT_SOURCE_DIR}/golden
-        COMMAND ln -sf ${CMAKE_CURRENT_SOURCE_DIR}/run_all_tests.sh
-        COMMAND ln -sf ${CMAKE_CURRENT_SOURCE_DIR}/run_all_tests_with_layers.sh
-        COMMAND ln -sf ${CMAKE_CURRENT_SOURCE_DIR}/layer_test_suite.py
-        VERBATIM
-        )
+if (NOT WIN32)
+    # extra setup for out-of-tree builds
+    if (NOT (CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_CURRENT_BINARY_DIR))
+        add_custom_target(binary-dir-symlinks ALL
+            COMMAND ln -sf ${CMAKE_CURRENT_SOURCE_DIR}/golden
+            COMMAND ln -sf ${CMAKE_CURRENT_SOURCE_DIR}/run_all_tests.sh
+            COMMAND ln -sf ${CMAKE_CURRENT_SOURCE_DIR}/run_all_tests_with_layers.sh
+            COMMAND ln -sf ${CMAKE_CURRENT_SOURCE_DIR}/layer_test_suite.py
+            VERBATIM
+            )
+    endif()
 endif()
 
 add_executable(vkbase init.cpp ${COMMON_CPP})
