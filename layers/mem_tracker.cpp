@@ -1849,10 +1849,11 @@ VK_LAYER_EXPORT void VKAPI vkCmdBlitImage(
     VkImage            destImage,
     VkImageLayout      destImageLayout,
     uint32_t           regionCount,
-    const VkImageBlit *pRegions)
+    const VkImageBlit *pRegions,
+    VkTexFilter        filter)
 {
     // TODO : Each image will have mem mapping so track them
-    nextTable.CmdBlitImage(cmdBuffer, srcImage, srcImageLayout, destImage, destImageLayout, regionCount, pRegions);
+    nextTable.CmdBlitImage(cmdBuffer, srcImage, srcImageLayout, destImage, destImageLayout, regionCount, pRegions, filter);
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdCopyBufferToImage(

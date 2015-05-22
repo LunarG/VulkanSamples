@@ -557,12 +557,13 @@ ICD_EXPORT void VKAPI vkCmdCopyImage(
 
 ICD_EXPORT void VKAPI vkCmdBlitImage(
     VkCmdBuffer                              cmdBuffer,
-    VkImage                                   srcImage,
+    VkImage                                  srcImage,
     VkImageLayout                            srcImageLayout,
-    VkImage                                   destImage,
+    VkImage                                  destImage,
     VkImageLayout                            destImageLayout,
-    uint32_t                                    regionCount,
-    const VkImageBlit*                       pRegions)
+    uint32_t                                 regionCount,
+    const VkImageBlit*                       pRegions,
+    VkTexFilter                              filter)
 {
     struct intel_cmd *cmd = intel_cmd(cmdBuffer);
 
