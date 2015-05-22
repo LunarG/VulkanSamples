@@ -46,7 +46,7 @@ struct intel_gpu_ext_props {
 static const struct intel_gpu_ext_props intel_gpu_exts[INTEL_EXT_COUNT] = {
     [INTEL_EXT_WSI_LUNARG] = {
         .version = VK_WSI_LUNARG_REVISION,
-        .name = "VK_WSI_LunarG"
+        .name = VK_WSI_LUNARG_EXTENSION_NAME,
     }
 };
 

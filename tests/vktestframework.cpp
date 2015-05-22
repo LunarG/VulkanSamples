@@ -58,7 +58,7 @@ public:
     TestFrameworkVkPresent(vk_testing::Device &device);
 
     void Run();
-    void InitPresentFramework(std::list<VkTestImageRecord> &imagesIn);
+    void InitPresentFramework(std::list<VkTestImageRecord> &imagesIn, VkInstance inst);
     void CreateMyWindow();
     void CreateSwapChain();
     void TearDown();
@@ -84,6 +84,11 @@ private:
     xcb_intern_atom_reply_t                *m_atom_wm_delete_window;
 #endif
     std::list<VkTestImageRecord>            m_images;
+
+    PFN_vkCreateSwapChainWSI                m_fpCreateSwapChainWSI;
+    PFN_vkDestroySwapChainWSI               m_fpDestroySwapChainWSI;
+    PFN_vkGetSwapChainInfoWSI               m_fpGetSwapChainInfoWSI;
+    PFN_vkQueuePresentWSI                   m_fpQueuePresentWSI;
 
     VkSwapChainWSI                          m_swap_chain;
     std::vector<VkSwapChainImageInfoWSI>    m_persistent_images;
@@ -510,7 +515,8 @@ void  TestFrameworkVkPresent::Display()
                          m_display_image->m_title.size(),
                          m_display_image->m_title.c_str());
 #endif
-    err = vkQueuePresentWSI(m_queue.obj(), &present);
+
+    err = m_fpQueuePresentWSI(m_queue.obj(), &present);
     assert(!err);
 
     m_queue.wait();
@@ -687,13 +693,14 @@ void TestFrameworkVkPresent::CreateSwapChain()
     swap_chain.swapModeFlags = VK_SWAP_MODE_FLIP_BIT_WSI |
                                VK_SWAP_MODE_BLIT_BIT_WSI;
 
-    err = vkCreateSwapChainWSI(m_device.obj(), &swap_chain, &m_swap_chain);
+    err = m_fpCreateSwapChainWSI(m_device.obj(), &swap_chain, &m_swap_chain);
     assert(!err);
 
-    size_t size = sizeof(VkSwapChainImageInfoWSI) * 2;
     VkSwapChainImageInfoWSI infos[2];
-    
-    err = vkGetSwapChainInfoWSI(m_swap_chain,
+    size_t size = sizeof(VkSwapChainImageInfoWSI) * m_images.size();
+    std::vector<VkSwapChainImageInfoWSI> persistent_images;
+    persistent_images.resize(m_images.size());
+    err = m_fpGetSwapChainInfoWSI(m_swap_chain,
             VK_SWAP_CHAIN_INFO_TYPE_PERSISTENT_IMAGES_WSI,
             &size, &infos);
     assert(!err && size == sizeof(VkSwapChainImageInfoWSI) * 2);
@@ -701,8 +708,20 @@ void TestFrameworkVkPresent::CreateSwapChain()
     m_persistent_images.push_back(infos[1]);
 }
 
-void  TestFrameworkVkPresent::InitPresentFramework(std::list<VkTestImageRecord>  &imagesIn)
+void  TestFrameworkVkPresent::InitPresentFramework(std::list<VkTestImageRecord>  &imagesIn, VkInstance inst)
 {
+    m_fpCreateSwapChainWSI = (PFN_vkCreateSwapChainWSI) vkGetInstanceProcAddr(inst, "vkCreateSwapChainWSI");
+    ASSERT_TRUE(m_fpCreateSwapChainWSI != NULL) << "vkGetInstanceProcAddr failed to find vkCreateSwapChainWSI";
+
+    m_fpDestroySwapChainWSI = (PFN_vkDestroySwapChainWSI) vkGetInstanceProcAddr(inst, "vkDestroySwapChainWSI");
+    ASSERT_TRUE(m_fpDestroySwapChainWSI != NULL) << "vkGetInstanceProcAddr failed to find vkDestroySwapChainWSI";
+
+    m_fpGetSwapChainInfoWSI = (PFN_vkGetSwapChainInfoWSI) vkGetInstanceProcAddr(inst, "vkGetSwapChainInfoWSI");
+    ASSERT_TRUE(m_fpGetSwapChainInfoWSI != NULL) << "vkGetInstanceProcAddr failed to find vkGetSwapChainInfoWSI";
+
+    m_fpQueuePresentWSI = (PFN_vkQueuePresentWSI) vkGetInstanceProcAddr(inst, "vkQueuePresentWSI");
+    ASSERT_TRUE(m_fpQueuePresentWSI != NULL) << "vkGetInstanceProcAddr failed to find vkQueuePresentWSI";
+
     m_images = imagesIn;
 }
 
@@ -827,7 +846,7 @@ void  TestFrameworkVkPresent::CreateMyWindow()
 
 void TestFrameworkVkPresent::TearDown()
 {
-    vkDestroySwapChainWSI(m_swap_chain);
+    m_fpDestroySwapChainWSI(m_swap_chain);
 #ifndef _WIN32
     xcb_destroy_window(m_connection, m_window);
     xcb_disconnect(m_connection);
@@ -843,7 +862,7 @@ void VkTestFramework::Finish()
     {
         TestFrameworkVkPresent vkPresent(env.default_device());
 
-        vkPresent.InitPresentFramework(m_images);
+        vkPresent.InitPresentFramework(m_images, env.get_instance());
         vkPresent.CreateMyWindow();
         vkPresent.CreateSwapChain();
         vkPresent.Run();

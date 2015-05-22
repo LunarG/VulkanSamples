@@ -276,16 +276,6 @@ static inline void* globalGetProcAddr(const char *name)
         return (void*) vkCmdDbgMarkerBegin;
     if (!strcmp(name, "CmdDbgMarkerEnd"))
         return (void*) vkCmdDbgMarkerEnd;
-    if (!strcmp(name, "GetDisplayInfoWSI"))
-        return (void*) vkGetDisplayInfoWSI;
-    if (!strcmp(name, "CreateSwapChainWSI"))
-        return (void*) vkCreateSwapChainWSI;
-    if (!strcmp(name, "DestroySwapChainWSI"))
-        return (void*) vkDestroySwapChainWSI;
-    if (!strcmp(name, "GetSwapChainInfoWSI"))
-        return (void*) vkGetSwapChainInfoWSI;
-    if (!strcmp(name, "QueuePresentWSI"))
-        return (void*) vkQueuePresentWSI;
 
     return NULL;
 }
@@ -328,8 +318,6 @@ static inline void *loader_non_passthrough_gpa(const char *name)
         return (void*) vkDbgUnregisterMsgCallback;
     if (!strcmp(name, "DbgSetGlobalOption"))
         return (void*) vkDbgSetGlobalOption;
-    if (!strcmp(name, "CreateSwapChainWSI"))
-        return (void*) vkCreateSwapChainWSI;
 
     return NULL;
 }

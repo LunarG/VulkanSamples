@@ -205,11 +205,7 @@ VkResult loader_DbgSetGlobalOption(
         size_t                                  dataSize,
         const void*                             pData);
 
-VkResult loader_GetDisplayInfoWSI(
-        VkDisplayWSI                            display,
-        VkDisplayInfoTypeWSI                    infoType,
-        size_t*                                 pDataSize,
-        void*                                   pData);
+
 
 /* function definitions */
 bool loader_is_extension_scanned(const char *name);

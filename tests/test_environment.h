@@ -15,6 +15,7 @@ public:
 
     const std::vector<Device *> &devices() { return devs_; }
     Device &default_device() { return *(devs_[default_dev_]); }
+    VkInstance get_instance() { return inst; }
     VkPhysicalDevice gpus[16];
 
 private:

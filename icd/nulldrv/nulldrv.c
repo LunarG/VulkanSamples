@@ -40,7 +40,7 @@
 
 // The null driver supports all WSI extenstions ... for now ...
 static const char * const nulldrv_gpu_exts[NULLDRV_EXT_COUNT] = {
-	[NULLDRV_EXT_WSI_LUNARG] = "VK_WSI_LunarG",
+	[NULLDRV_EXT_WSI_LUNARG] = VK_WSI_LUNARG_EXTENSION_NAME,
 };
 
 static struct nulldrv_base *nulldrv_base(VkObject base)
@@ -1569,8 +1569,8 @@ ICD_EXPORT VkResult VKAPI vkGetGlobalExtensionInfo(
             else {
                 ext_props = (VkExtensionProperties *) pData;
                 ext_props->version = VK_WSI_LUNARG_REVISION;
-                strncpy(ext_props->extName, "VK_WSI_LunarG",
-                        strlen("VK_WSI_LunarG")+1);
+                strncpy(ext_props->extName, VK_WSI_LUNARG_EXTENSION_NAME,
+                        strlen(VK_WSI_LUNARG_EXTENSION_NAME)+1);
                 return VK_SUCCESS;
             }
             break;

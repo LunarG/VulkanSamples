@@ -296,6 +296,10 @@ struct demo {
 
     VkDisplayPropertiesWSI *display_props;
     int num_displays;
+    PFN_vkCreateSwapChainWSI fpCreateSwapChainWSI;
+    PFN_vkDestroySwapChainWSI fpDestroySwapChainWSI;
+    PFN_vkGetSwapChainInfoWSI fpGetSwapChainInfoWSI;
+    PFN_vkQueuePresentWSI fpQueuePresentWSI;
     VkSwapChainWSI swap_chain;
     struct {
         VkImage image;
@@ -563,7 +567,7 @@ static void demo_draw(struct demo *demo)
             VK_NULL_HANDLE);
     assert(!err);
 
-    err = vkQueuePresentWSI(demo->queue, &present);
+    err = demo->fpQueuePresentWSI(demo->queue, &present);
     assert(!err);
 
     demo->current_buffer = (demo->current_buffer + 1) % DEMO_BUFFER_COUNT;
@@ -594,10 +598,10 @@ static void demo_prepare_buffers(struct demo *demo)
     VkResult U_ASSERT_ONLY err;
     uint32_t i;
 
-    err = vkCreateSwapChainWSI(demo->device, &swap_chain, &demo->swap_chain);
+    err = demo->fpCreateSwapChainWSI(demo->device, &swap_chain, &demo->swap_chain);
     assert(!err);
 
-    err = vkGetSwapChainInfoWSI(demo->swap_chain,
+    err = demo->fpGetSwapChainInfoWSI(demo->swap_chain,
             VK_SWAP_CHAIN_INFO_TYPE_PERSISTENT_IMAGES_WSI,
             &images_size, images);
     assert(!err && images_size == sizeof(images));
@@ -1880,6 +1884,23 @@ static void demo_init_vk(struct demo *demo)
     err = vkCreateDevice(demo->gpu, &device, &demo->device);
     assert(!err);
 
+    demo->fpCreateSwapChainWSI = vkGetDeviceProcAddr(demo->device, "vkCreateSwapChainWSI");
+    if (demo->fpCreateSwapChainWSI == NULL)
+        ERR_EXIT("vkGetDeviceProcAddr failed to find vkCreateSwapChainWSI",
+                                 "vkGetDeviceProcAddr Failure");
+    demo->fpDestroySwapChainWSI = vkGetDeviceProcAddr(demo->device, "vkDestroySwapChainWSI");
+    if (demo->fpDestroySwapChainWSI == NULL)
+        ERR_EXIT("vkGetDeviceProcAddr failed to find vkDestroySwapChainWSI",
+                                 "vkGetDeviceProcAddr Failure");
+    demo->fpGetSwapChainInfoWSI = vkGetDeviceProcAddr(demo->device, "vkGetSwapChainInfoWSI");
+    if (demo->fpGetSwapChainInfoWSI == NULL)
+        ERR_EXIT("vkGetDeviceProcAddr failed to find vkGetSwapChainInfoWSI",
+                                 "vkGetDeviceProcAddr Failure");
+    demo->fpQueuePresentWSI = vkGetDeviceProcAddr(demo->device, "vkQueuePresentWSI");
+    if (demo->fpQueuePresentWSI == NULL)
+        ERR_EXIT("vkGetDeviceProcAddr failed to find vkQueuePresentWSI",
+                                 "vkGetDeviceProcAddr Failure");
+
     err = vkGetPhysicalDeviceInfo(demo->gpu, VK_PHYSICAL_DEVICE_INFO_TYPE_PROPERTIES,
                         &data_size, NULL);
     assert(!err);
@@ -2038,7 +2059,7 @@ static void demo_cleanup(struct demo *demo)
         vkFreeMemory(demo->device, demo->textures[i].mem);
         vkDestroyObject(demo->device, VK_OBJECT_TYPE_SAMPLER, demo->textures[i].sampler);
     }
-    vkDestroySwapChainWSI(demo->swap_chain);
+    demo->fpDestroySwapChainWSI(demo->swap_chain);
 
     vkDestroyObject(demo->device, VK_OBJECT_TYPE_DEPTH_STENCIL_VIEW, demo->depth.view);
     vkDestroyObject(demo->device, VK_OBJECT_TYPE_IMAGE, demo->depth.image);

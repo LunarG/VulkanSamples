@@ -142,6 +142,7 @@ static inline void loader_init_device_dispatch_table(VkLayerDispatchTable *table
     table->DbgSetDeviceOption = (PFN_vkDbgSetDeviceOption) gpa(dev, "vkDbgSetDeviceOption");
     table->CmdDbgMarkerBegin = (PFN_vkCmdDbgMarkerBegin) gpa(dev, "vkCmdDbgMarkerBegin");
     table->CmdDbgMarkerEnd = (PFN_vkCmdDbgMarkerEnd) gpa(dev, "vkCmdDbgMarkerEnd");
+//TODO move into it's own table
     table->CreateSwapChainWSI = (PFN_vkCreateSwapChainWSI) gpa(dev, "vkCreateSwapChainWSI");
     table->DestroySwapChainWSI = (PFN_vkDestroySwapChainWSI) gpa(dev, "vkDestroySwapChainWSI");
     table->GetSwapChainInfoWSI = (PFN_vkGetSwapChainInfoWSI) gpa(dev, "vkGetSwapChainInfoWSI");
@@ -376,6 +377,7 @@ static inline void *loader_lookup_device_dispatch_table(
         return (void *) table->CmdDbgMarkerBegin;
     if (!strcmp(name, "CmdDbgMarkerEnd"))
         return (void *) table->CmdDbgMarkerEnd;
+//TODO put in it's own table
     if (!strcmp(name, "CreateSwapChainWSI"))
         return (void *) table->CreateSwapChainWSI;
     if (!strcmp(name, "DestroySwapChainWSI"))
@@ -405,6 +407,7 @@ static inline void loader_init_instance_dispatch_table(VkLayerInstanceDispatchTa
     table->DbgRegisterMsgCallback = (PFN_vkDbgRegisterMsgCallback) gpa(inst, "vkDbgRegisterMsgCallback");
     table->DbgUnregisterMsgCallback = (PFN_vkDbgUnregisterMsgCallback) gpa(inst, "vkDbgUnregisterMsgCallback");
     table->DbgSetGlobalOption = (PFN_vkDbgSetGlobalOption) gpa(inst, "vkDbgSetGlobalOption");
+//TODO put in it's own table
     table->GetDisplayInfoWSI = (PFN_vkGetDisplayInfoWSI) gpa(inst, "vkGetDisplayInfoWSI");
 }
 
@@ -442,8 +445,8 @@ static inline void *loader_lookup_instance_dispatch_table(
         return (void *) table->DbgUnregisterMsgCallback;
     if (!strcmp(name, "DbgSetGlobalOption"))
         return (void *) table->DbgSetGlobalOption;
+    //TODO eventually extensions are in their own table
     if (!strcmp(name, "GetDisplayInfoWSI"))
         return (void *) table->GetDisplayInfoWSI;
-
     return NULL;
 }

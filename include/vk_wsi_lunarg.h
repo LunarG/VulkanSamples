@@ -31,6 +31,7 @@
 
 #define VK_WSI_LUNARG_REVISION             3
 #define VK_WSI_LUNARG_EXTENSION_NUMBER     1
+#define VK_WSI_LUNARG_EXTENSION_NAME       "VK_WSI_LunarG"
 
 #ifdef __cplusplus
 extern "C"

@@ -42,6 +42,7 @@
 #endif // WIN32
 #include "loader_platform.h"
 #include "loader.h"
+#include "wsi_lunarg.h"
 #include "gpa_helper.h"
 #include "table_ops.h"
 #include "vkIcd.h"
@@ -741,6 +742,15 @@ static void* VKAPI loader_gpa_device_internal(VkPhysicalDevice physDev, const ch
             return NULL;
         return disp_table->GetDeviceProcAddr(physDev, pName);
     }
+#if 0
+    return icd->GetDeviceProcAddr(physDev, pName);
+    uint32_t gpu_index;
+    struct loader_icd *icd = loader_get_icd((const VkBaseLayerObject *) physDev, &gpu_index);
+    if (icd->GetDeviceProcAddr == NULL)
+    //if (disp_table->GetDeviceProcAddr == NULL)
+            return NULL;
+    return icd->GetDeviceProcAddr(physDev, pName);
+#endif
 }
 
 static void* VKAPI loader_gpa_instance_internal(VkInstance inst, const char * pName)
@@ -1397,11 +1407,27 @@ VkResult loader_CreateDevice(
 
 LOADER_EXPORT void * VKAPI vkGetInstanceProcAddr(VkInstance instance, const char * pName)
 {
-    if (instance != VK_NULL_HANDLE) {
+    if (instance == VK_NULL_HANDLE)
+        return NULL;
+    void *addr;
+    /* get entrypoint addresses that are global (in the loader)*/
+    addr = globalGetProcAddr(pName);
+    if (addr)
+        return addr;
 
-        /* return entrypoint addresses that are global (in the loader)*/
-        return globalGetProcAddr(pName);
-    }
+    /* return any extension global entrypoints */
+    addr = wsi_lunarg_GetInstanceProcAddr(instance, pName);
+    if (addr)
+        return addr;
+
+    /* return the instance dispatch table entrypoint for extensions */
+    const VkLayerInstanceDispatchTable *disp_table = * (VkLayerInstanceDispatchTable **) instance;
+    if (disp_table == NULL)
+        return NULL;
+
+    addr = loader_lookup_instance_dispatch_table(disp_table, pName);
+    if (addr)
+        return addr;
 
     return NULL;
 }
@@ -1420,6 +1446,11 @@ LOADER_EXPORT void * VKAPI vkGetDeviceProcAddr(VkDevice device, const char * pNa
     if (addr) {
         return addr;
     }
+
+    /* return any extension device entrypoints the loader knows about */
+    addr = wsi_lunarg_GetDeviceProcAddr(device, pName);
+    if (addr)
+        return addr;
 
     /* return the dispatch table entrypoint for the fastest case */
     const VkLayerDispatchTable *disp_table = * (VkLayerDispatchTable **) device;
@@ -1709,18 +1740,3 @@ VkResult loader_DbgSetGlobalOption(VkInstance instance, VK_DBG_GLOBAL_OPTION dbg
     return res;
 }
 
-VkResult loader_GetDisplayInfoWSI(
-        VkDisplayWSI                            display,
-        VkDisplayInfoTypeWSI                    infoType,
-        size_t*                                 pDataSize,
-        void*                                   pData)
-{
-    uint32_t gpu_index;
-    struct loader_icd *icd = loader_get_icd((const VkBaseLayerObject *) display, &gpu_index);
-    VkResult res = VK_ERROR_INITIALIZATION_FAILED;
-
-    if (icd->GetDisplayInfoWSI)
-        res = icd->GetDisplayInfoWSI(display, infoType, pDataSize, pData);
-
-    return res;
-}

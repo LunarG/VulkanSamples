@@ -26,6 +26,7 @@
 
 #include "loader_platform.h"
 #include "loader.h"
+#include "wsi_lunarg.h"
 
 #if defined(WIN32)
 // On Windows need to disable global optimization for function entrypoints or
@@ -76,6 +77,10 @@ LOADER_EXPORT VkResult VKAPI vkCreateInstance(
     memcpy(ptr_instance->disp, &instance_disp, sizeof(instance_disp));
     ptr_instance->next = loader.instances;
     loader.instances = ptr_instance;
+
+    wsi_lunarg_register_extensions(pCreateInfo);
+
+    /* enable any layers on instance chain */
     loader_activate_instance_layers(ptr_instance);
 
     *pInstance = (VkInstance) ptr_instance;
@@ -1215,48 +1220,6 @@ LOADER_EXPORT void VKAPI vkCmdDbgMarkerEnd(VkCmdBuffer cmdBuffer)
     disp = loader_get_dispatch(cmdBuffer);
 
     disp->CmdDbgMarkerEnd(cmdBuffer);
-}
-
-LOADER_EXPORT VkResult VKAPI vkGetDisplayInfoWSI(VkDisplayWSI display, VkDisplayInfoTypeWSI infoType, size_t* pDataSize, void* pData)
-{
-    const VkLayerInstanceDispatchTable *disp;
-
-    disp = loader_get_instance_dispatch(display);
-
-    return disp->GetDisplayInfoWSI(display, infoType, pDataSize, pData);
-}
-
-LOADER_EXPORT VkResult VKAPI vkCreateSwapChainWSI(VkDevice device, const VkSwapChainCreateInfoWSI* pCreateInfo, VkSwapChainWSI* pSwapChain)
-{
-    const VkLayerDispatchTable *disp;
-    VkResult res;
-
-    disp = loader_get_dispatch(device);
-
-    res = disp->CreateSwapChainWSI(device, pCreateInfo, pSwapChain);
-    if (res == VK_SUCCESS) {
-        loader_init_dispatch(*pSwapChain, disp);
-    }
-
-    return res;
-}
-
-LOADER_EXPORT VkResult VKAPI vkDestroySwapChainWSI(VkSwapChainWSI swapChain)
-{
-    const VkLayerDispatchTable *disp;
-
-    disp = loader_get_dispatch(swapChain);
-
-    return disp->DestroySwapChainWSI(swapChain);
-}
-
-LOADER_EXPORT VkResult VKAPI vkGetSwapChainInfoWSI(VkSwapChainWSI swapChain, VkSwapChainInfoTypeWSI infoType, size_t* pDataSize, void* pData)
-{
-    const VkLayerDispatchTable *disp;
-
-    disp = loader_get_dispatch(swapChain);
-
-    return disp->GetSwapChainInfoWSI(swapChain, infoType, pDataSize, pData);
 }
 
 LOADER_EXPORT VkResult VKAPI vkQueuePresentWSI(VkQueue queue, const VkPresentInfoWSI* pPresentInfo)
