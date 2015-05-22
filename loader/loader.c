@@ -722,37 +722,6 @@ void layer_lib_scan(void)
     loader.layer_scanned = true;
 }
 
-static void* VKAPI loader_gpa_device_internal(VkPhysicalDevice physDev, const char * pName)
-{
-    //physDev is not wrapped
-    if (physDev == VK_NULL_HANDLE) {
-        return NULL;
-    }
-    VkLayerDispatchTable* disp_table = * (VkLayerDispatchTable **) physDev;
-    void *addr;
-
-    if (disp_table == NULL)
-        return NULL;
-
-    addr = loader_lookup_device_dispatch_table(disp_table, pName);
-    if (addr)
-        return addr;
-    else  {
-        if (disp_table->GetDeviceProcAddr == NULL)
-            return NULL;
-        return disp_table->GetDeviceProcAddr(physDev, pName);
-    }
-#if 0
-    return icd->GetDeviceProcAddr(physDev, pName);
-    uint32_t gpu_index;
-    struct loader_icd *icd = loader_get_icd((const VkBaseLayerObject *) physDev, &gpu_index);
-    if (icd->GetDeviceProcAddr == NULL)
-    //if (disp_table->GetDeviceProcAddr == NULL)
-            return NULL;
-    return icd->GetDeviceProcAddr(physDev, pName);
-#endif
-}
-
 static void* VKAPI loader_gpa_instance_internal(VkInstance inst, const char * pName)
 {
     // inst is not wrapped
@@ -1120,10 +1089,6 @@ uint32_t loader_activate_instance_layers(struct loader_instance *inst)
 
         if (i == 0) {
             loader_init_instance_dispatch_table(inst->disp, nextGPA, (VkInstance) nextObj);
-            //Insert the new wrapped objects into the list with loader object at head
-            nextInstObj = inst->wrappedInstance + inst->layer_count - 1;
-            nextInstObj->nextObject = baseObj;
-            nextInstObj->pGPA = loader_gpa_instance_internal;
         }
 
     }
@@ -1144,7 +1109,7 @@ uint32_t loader_activate_device_layers(VkDevice device, struct loader_icd *icd, 
         VkObject nextObj =  (VkObject) device;
         VkObject baseObj = nextObj;
         VkBaseLayerObject *nextGpuObj;
-        PFN_vkGetDeviceProcAddr nextGPA = loader_gpa_device_internal;
+        PFN_vkGetDeviceProcAddr nextGPA = icd->GetDeviceProcAddr;
 
         count = loader_get_layer_libs(ext_count, ext_names, &pLayerNames);
         if (!count)
