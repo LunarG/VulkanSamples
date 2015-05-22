@@ -49,7 +49,8 @@ typedef enum _DRAW_STATE_ERROR
     DRAWSTATE_DESCRIPTOR_UPDATE_OUT_OF_BOUNDS,  // Descriptors set for update out of bounds for corresponding layout section
     DRAWSTATE_INVALID_UPDATE_INDEX,             // Index of requested update is invalid for specified descriptors set
     DRAWSTATE_INVALID_UPDATE_STRUCT,            // Struct in DS Update tree is of invalid type
-    DRAWSTATE_NUM_SAMPLES_MISMATCH              // Number of samples in bound PSO does not match number in FB of current RenderPass
+    DRAWSTATE_NUM_SAMPLES_MISMATCH,             // Number of samples in bound PSO does not match number in FB of current RenderPass
+    DRAWSTATE_NO_END_CMD_BUFFER,                // Must call vkEndCommandBuffer() before QueueSubmit on that cmdBuffer
 } DRAW_STATE_ERROR;
 
 typedef enum _DRAW_TYPE
@@ -219,22 +220,23 @@ typedef enum _CB_STATE
 // Cmd Buffer Wrapper Struct
 typedef struct _GLOBAL_CB_NODE {
     VkCmdBuffer                  cmdBuffer;
-    uint32_t                        queueNodeIndex;
-    VkFlags                       flags;
-    VkFence                       fence;    // fence tracking this cmd buffer
-    uint64_t                        numCmds;  // number of cmds in this CB
-    uint64_t                        drawCount[NUM_DRAW_TYPES]; // Count of each type of draw in this CB
-    CB_STATE                        state; // Track if cmd buffer update status
-    vector<CMD_NODE*>               pCmds;
+    uint32_t                     queueNodeIndex;
+    VkFlags                      flags;
+    VkFence                      fence;    // fence tracking this cmd buffer
+    uint64_t                     numCmds;  // number of cmds in this CB
+    uint64_t                     drawCount[NUM_DRAW_TYPES]; // Count of each type of draw in this CB
+    CB_STATE                     state; // Track if cmd buffer update status
+    vector<CMD_NODE*>            pCmds;
     // Currently storing "lastBound" objects on per-CB basis
     //  long-term may want to create caches of "lastBound" states and could have
     //  each individual CMD_NODE referencing its own "lastBound" state
-    VkPipeline                    lastBoundPipeline;
-    uint32_t                        lastVtxBinding;
-    DYNAMIC_STATE_NODE*             lastBoundDynamicState[VK_NUM_STATE_BIND_POINT];
+    VkPipeline                   lastBoundPipeline;
+    uint32_t                     lastVtxBinding;
+    DYNAMIC_STATE_NODE*          lastBoundDynamicState[VK_NUM_STATE_BIND_POINT];
     VkDescriptorSet              lastBoundDescriptorSet;
     VkRenderPass                 activeRenderPass;
-    VkFramebuffer                 framebuffer;
+    VkFramebuffer                framebuffer;
+    vector<VkDescriptorSet>      boundDescriptorSets;
 } GLOBAL_CB_NODE;
 
 //prototypes for extension functions
