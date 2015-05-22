@@ -486,19 +486,13 @@ class GenericLayerSubcommand(Subcommand):
         if proto.ret != "void":
             ret_val = "%s result = " % proto.ret
             stmt = "    return result;\n"
-        elif proto.name == "CreateDevice":
+        if proto.name == "CreateDevice":
             funcs.append('%s%s\n'
                      '{\n'
                      '    %snextInstanceTable.%s;\n'
                      '    if (result == VK_SUCCESS) {\n'
                      '        enable_debug_report(pCreateInfo->extensionCount, pCreateInfo->pEnabledExtensions);\n'
                      '    }\n'
-                     '%s'
-                     '}' % (qual, decl, ret_val, proto.c_call(), stmt))
-        elif proto.name == "DestroyObject":
-            funcs.append('%s%s\n'
-                     '{\n'
-                     '    %snextTable.%s;\n'
                      '%s'
                      '}' % (qual, decl, ret_val, proto.c_call(), stmt))
         else:
