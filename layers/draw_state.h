@@ -43,7 +43,6 @@ typedef enum _DRAW_STATE_ERROR
     DRAWSTATE_INVALID_DYNAMIC_STATE_OBJECT,     // Invalid dyn state object
     DRAWSTATE_MISSING_DOT_PROGRAM,              // No "dot" program in order to generate png image
     DRAWSTATE_BINDING_DS_NO_END_UPDATE,         // DS bound to CmdBuffer w/o call to vkEndDescriptorSetUpdate())
-    DRAWSTATE_NO_DS_POOL,                       // No DS Pool is available
     DRAWSTATE_OUT_OF_MEMORY,                    // malloc failed
     DRAWSTATE_DESCRIPTOR_TYPE_MISMATCH,         // Type in layout vs. update are not the same
     DRAWSTATE_DESCRIPTOR_UPDATE_OUT_OF_BOUNDS,  // Descriptors set for update out of bounds for corresponding layout section

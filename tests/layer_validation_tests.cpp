@@ -136,7 +136,7 @@ protected:
         ErrorMonitor               *m_errorMonitor;
 
     virtual void SetUp() {
-        const char *extension_names[] = {"MemTracker", "ObjectTracker", "Threading"};
+        const char *extension_names[] = {"MemTracker", "ObjectTracker", "Threading", "DrawState"};
         const std::vector<const char *> extensions(extension_names,
                                         extension_names + sizeof(extension_names)/sizeof(extension_names[0]));
 
@@ -167,6 +167,7 @@ protected:
         setLayerOptionEnum("MemTrackerReportLevel",    "VK_DBG_LAYER_LEVEL_WARNING");
         setLayerOptionEnum("ObjectTrackerReportLevel", "VK_DBG_LAYER_LEVEL_WARNING");
         setLayerOptionEnum("ThreadingReportLevel",     "VK_DBG_LAYER_LEVEL_WARNING");
+        setLayerOptionEnum("DrawStateReportLevel",     "VK_DBG_LAYER_LEVEL_WARNING");
 
         this->app_info.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
         this->app_info.pNext = NULL;
@@ -906,6 +907,103 @@ TEST_F(VkLayerTest, DepthStencilStateNotBound)
     if (!strstr(msgString.c_str(),"Depth-stencil object not bound to this command buffer")) {
         FAIL() << "Error received was not 'Depth-stencil object not bound to this command buffer'";
     }
+}
+
+TEST_F(VkLayerTest, PipelineNotBound)
+{
+    // Initiate Draw w/o a PSO bound
+}
+
+TEST_F(VkLayerTest, InvalidDescriptorPool)
+{
+    // TODO : Simple check for bad object should be added to ObjectTracker to catch this case
+    //   The DS check for this is after driver has been called to validate DS internal data struct
+    // Attempt to clear DS Pool with bad object
+/*    VK_DBG_MSG_TYPE msgType;
+    std::string msgString;
+    VkDescriptorPool badPool = (VkDescriptorPool)0xbaad6001;
+    vkResetDescriptorPool(device(), badPool);
+
+    msgType = m_errorMonitor->GetState(&msgString);
+    ASSERT_EQ(msgType, VK_DBG_MSG_ERROR) << "Did not receive an error from Resetting an invalid DescriptorPool Object";
+    if (!strstr(msgString.c_str(),"Unable to find pool node for pool 0xbaad6001 specified in vkResetDescriptorPool() call")) {
+        FAIL() << "Error received was note 'Unable to find pool node for pool 0xbaad6001 specified in vkResetDescriptorPool() call'";
+    }*/
+}
+
+TEST_F(VkLayerTest, InvalidDescriptorSet)
+{
+    // Create a valid cmd buffer
+    // call vkCmdBindDescriptorSets w/ false DS
+}
+
+TEST_F(VkLayerTest, InvalidDescriptorSetLayout)
+{
+    // TODO : Simple check for bad object should be added to ObjectTracker to catch this case
+    //   The DS check for this is after driver has been called to validate DS internal data struct
+}
+
+TEST_F(VkLayerTest, InvalidPipeline)
+{
+    // Create a valid cmd buffer
+    // call vkCmdBindPipeline w/ false Pipeline
+}
+
+TEST_F(VkLayerTest, InvalidCmdBuffer)
+{
+    // call vkCmd* call w/ false VkCmdBuffer
+}
+
+TEST_F(VkLayerTest, InvalidDynamicStateObject)
+{
+    // Create a valid cmd buffer
+    // call vkCmdBindDynamicStateObject w/ false DS Obj
+}
+
+TEST_F(VkLayerTest, DSUpdateWithoutBegin)
+{
+    // Call vkUpdateDescriptors w/ valid DS, but before vkBeginDescriptorPoolUpdate
+}
+
+TEST_F(VkLayerTest, DSEndWithoutBegin)
+{
+    // With a valid pool & cmdBuffer, call vkEndDescriptorPoolUpdate
+}
+
+TEST_F(VkLayerTest, DSBoundWithoutEnd)
+{
+    // With a valid pool and & cmdBuffer, do Begin/Update w/o End and then QueueSubmit
+}
+
+TEST_F(VkLayerTest, VtxBufferBadIndex)
+{
+    // Bind VBO out-of-bounds for given PSO
+}
+
+TEST_F(VkLayerTest, DSTypeMismatch)
+{
+    // Create DS w/ layout of one type and attempt Update w/ mis-matched type
+}
+
+TEST_F(VkLayerTest, DSUpdateOutOfBounds)
+{
+    // For overlapping Update, have arrayIndex exceed that of layout
+}
+
+TEST_F(VkLayerTest, InvalidDSUpdateIndex)
+{
+    // Create layout w/ count of 1 and attempt update to that layout w/ count > 1
+}
+
+TEST_F(VkLayerTest, InvalidDSUpdateStruct)
+{
+    // Call UpdateDS w/ struct type other than valid VK_STRUCTUR_TYPE_UPDATE_* types
+}
+
+TEST_F(VkLayerTest, NumSamplesMismatch)
+{
+    // Initiate a draw where MSAA samples doesn't match FB sampleCount
+    // Initiate a draw where MSAA samples doesn't match RenderPass sampleCount
 }
 
 #if GTEST_IS_THREADSAFE
