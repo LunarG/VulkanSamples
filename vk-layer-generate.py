@@ -161,7 +161,7 @@ class Subcommand(object):
         r_body = []
         r_body.append('VK_LAYER_EXPORT VkResult VKAPI vkDbgCreateMsgCallback(VkInstance instance, VkFlags msgFlags, const PFN_vkDbgMsgCallback pfnMsgCallback, void* pUserData, VkDbgMsgCallback* pMsgCallback)')
         r_body.append('{')
-        r_body.append('    return layer_create_msg_callback(instance, &nextInstanceTable, msgFlags, pfnMsgCallback, pUserData, pMsgCallback);')
+        r_body.append('    return layer_create_msg_callback(instance, instance_dispatch_table(instance), msgFlags, pfnMsgCallback, pUserData, pMsgCallback);')
         r_body.append('}')
         return "\n".join(r_body)
 
@@ -169,7 +169,7 @@ class Subcommand(object):
         r_body = []
         r_body.append('VK_LAYER_EXPORT VkResult VKAPI vkDbgDestroyMsgCallback(VkInstance instance, VkDbgMsgCallback msgCallback)')
         r_body.append('{')
-        r_body.append('    return layer_destroy_msg_callback(instance, &nextInstanceTable, msgCallback);')
+        r_body.append('    return layer_destroy_msg_callback(instance, instance_dispatch_table(instance), msgCallback);')
         r_body.append('}')
         return "\n".join(r_body)
 
@@ -354,11 +354,11 @@ class Subcommand(object):
                          "{\n"
                          "    VkBaseLayerObject* devw = (VkBaseLayerObject *) device;\n"
                          "    void* addr;\n"
-                         "    if (device == VK_NULL_HANDLE)\n"
+                         "    if (device == VK_NULL_HANDLE) {\n"
                          "        return NULL;\n"
-                         "    pCurObj = devw;\n"
-                         "    loader_platform_thread_once(&initOnce, init%s);\n\n"
-                         "    loader_platform_thread_once(&tabDeviceOnce, initDeviceTable);\n\n"
+                         "    }\n"
+                         "    loader_platform_thread_once(&initOnce, init%s);\n"
+                         "    initDeviceTable((const VkBaseLayerObject *) device);\n\n"
                          "    addr = layer_intercept_proc(funcName);\n"
                          "    if (addr)\n"
                          "        return addr;" % self.layer_name)
@@ -370,23 +370,23 @@ class Subcommand(object):
                 cpp_prefix = "reinterpret_cast<void*>("
                 cpp_postfix = ")"
             for ext_name in extensions:
-                func_body.append('    else if (!strncmp("%s", funcName, sizeof("%s")))\n'
-                                 '        return %s%s%s;' % (ext_name, ext_name, cpp_prefix, ext_name, cpp_postfix))
+                func_body.append('    else if (!strcmp("%s", funcName))\n'
+                                 '        return %s%s%s;' % (ext_name, cpp_prefix, ext_name, cpp_postfix))
         func_body.append("    else {\n"
                          "        if (devw->pGPA == NULL)\n"
                          "            return NULL;\n"
                          "        return devw->pGPA((VkObject)devw->nextObject, funcName);\n"
                          "    }\n"
                          "}\n")
-        func_body.append("VK_LAYER_EXPORT void* VKAPI vkGetInstanceProcAddr(VkInstance inst, const char* funcName)\n"
+        func_body.append("VK_LAYER_EXPORT void* VKAPI vkGetInstanceProcAddr(VkInstance instance, const char* funcName)\n"
                          "{\n"
-                         "    VkBaseLayerObject* instw = (VkBaseLayerObject *) inst;\n"
+                         "    VkBaseLayerObject* instw = (VkBaseLayerObject *) instance;\n"
                          "    void* addr;\n"
-                         "    if (inst == VK_NULL_HANDLE)\n"
+                         "    if (instance == VK_NULL_HANDLE) {\n"
                          "        return NULL;\n"
-                         "    pCurObj = instw;\n"
-                         "    loader_platform_thread_once(&initOnce, init%s);\n\n"
-                         "    loader_platform_thread_once(&tabInstanceOnce, initInstanceTable);\n\n"
+                         "    }\n"
+                         "    loader_platform_thread_once(&initOnce, init%s);\n"
+                         "    initInstanceTable((const VkBaseLayerObject *) instance);\n\n"
                          "    addr = layer_intercept_instance_proc(funcName);\n"
                          "    if (addr)\n"
                          "        return addr;" % self.layer_name)
@@ -436,21 +436,49 @@ class Subcommand(object):
             func_body.append("    }")
         func_body.append("}\n")
         func_body.append('')
-        func_body.append('static void initDeviceTable(void)')
-        func_body.append('{')
-        func_body.append('    PFN_vkGetDeviceProcAddr fpNextGPA;')
-        func_body.append('    fpNextGPA = (PFN_vkGetDeviceProcAddr) pCurObj->pGPA;')
-        func_body.append('    assert(fpNextGPA);')
-        func_body.append('    layer_initialize_dispatch_table(&nextTable, fpNextGPA, (VkDevice) pCurObj->nextObject);')
+        func_body.append('static VkLayerDispatchTable * initDeviceTable(const VkBaseLayerObject *devw)')
+        func_body.append(' {')
+        func_body.append('    VkLayerDispatchTable *pTable;')
+        func_body.append('')
+        func_body.append('    assert(devw);')
+        func_body.append('    VkLayerDispatchTable **ppDisp = (VkLayerDispatchTable **) (devw->baseObject);')
+        func_body.append('')
+        func_body.append('    std::unordered_map<void *, VkLayerDispatchTable *>::const_iterator it = tableMap.find((void *) *ppDisp);')
+        func_body.append('    if (it == tableMap.end())')
+        func_body.append('    {')
+        func_body.append('        pTable =  new VkLayerDispatchTable;')
+        func_body.append('        tableMap[(void *) *ppDisp] = pTable;')
+        func_body.append('    } else')
+        func_body.append('    {')
+        func_body.append('        return it->second;')
+        func_body.append('    }')
+        func_body.append('')
+        func_body.append('    layer_initialize_dispatch_table(pTable, (PFN_vkGetDeviceProcAddr) devw->pGPA, (VkDevice) devw->nextObject);')
+        func_body.append('')
+        func_body.append('    return pTable;')
         func_body.append('}')
         func_body.append('')
-        func_body.append('static void initInstanceTable(void)')
-        func_body.append('{')
-        func_body.append('    PFN_vkGetInstanceProcAddr fpNextGPA;')
-        func_body.append('    fpNextGPA = (PFN_vkGetInstanceProcAddr) pCurObj->pGPA;')
-        func_body.append('    assert(fpNextGPA);')
-        func_body.append('    layer_init_instance_dispatch_table(&nextInstanceTable, fpNextGPA, (VkInstance) pCurObj->nextObject);')
+        func_body.append('static VkLayerInstanceDispatchTable * initInstanceTable(const VkBaseLayerObject *instw)')
+        func_body.append(' {')
+        func_body.append('    VkLayerInstanceDispatchTable *pTable;')
+        func_body.append('    assert(instw);')
+        func_body.append('    VkLayerInstanceDispatchTable **ppDisp = (VkLayerInstanceDispatchTable **) instw->baseObject;')
+        func_body.append('')
+        func_body.append('    std::unordered_map<void *, VkLayerInstanceDispatchTable *>::const_iterator it = tableInstanceMap.find((void *) *ppDisp);')
+        func_body.append('    if (it == tableInstanceMap.end())')
+        func_body.append('    {')
+        func_body.append('        pTable =  new VkLayerInstanceDispatchTable;')
+        func_body.append('        tableInstanceMap[(void *) *ppDisp] = pTable;')
+        func_body.append('    } else')
+        func_body.append('    {')
+        func_body.append('        return it->second;')
+        func_body.append('    }')
+        func_body.append('')
+        func_body.append('    layer_init_instance_dispatch_table(pTable, (PFN_vkGetInstanceProcAddr) instw->pGPA, (VkInstance) instw->nextObject);')
+        func_body.append('')
+        func_body.append('    return pTable;')
         func_body.append('}')
+        func_body.append('')
         return "\n".join(func_body)
 
 class LayerFuncsSubcommand(Subcommand):
@@ -469,8 +497,36 @@ class LayerDispatchSubcommand(Subcommand):
 
 class GenericLayerSubcommand(Subcommand):
     def generate_header(self):
-        return '#include <stdio.h>\n#include <stdlib.h>\n#include <string.h>\n#include "loader_platform.h"\n#include "vkLayer.h"\n//The following is #included again to catch certain OS-specific functions being used:\n#include "loader_platform.h"\n\n#include "layers_config.h"\n#include "layers_msg.h"\n\nstatic VkLayerDispatchTable nextTable;\nstatic VkLayerInstanceDispatchTable nextInstanceTable;\nstatic VkBaseLayerObject *pCurObj;\n\nstatic LOADER_PLATFORM_THREAD_ONCE_DECLARATION(tabDeviceOnce);\nstatic LOADER_PLATFORM_THREAD_ONCE_DECLARATION(tabInstanceOnce);\nstatic LOADER_PLATFORM_THREAD_ONCE_DECLARATION(initOnce);'
-
+        gen_header = []
+        gen_header.append('#include <stdio.h>')
+        gen_header.append('#include <stdlib.h>')
+        gen_header.append('#include <string.h>')
+        gen_header.append('#include <unordered_map>')
+        gen_header.append('#include "loader_platform.h"')
+        gen_header.append('#include "vkLayer.h"')
+        gen_header.append('//The following is #included again to catch certain OS-specific functions being used:')
+        gen_header.append('')
+        gen_header.append('#include "loader_platform.h"')
+        gen_header.append('#include "layers_config.h"')
+        gen_header.append('#include "layers_msg.h"')
+        gen_header.append('')
+        gen_header.append('static std::unordered_map<void *, VkLayerDispatchTable *> tableMap;')
+        gen_header.append('static std::unordered_map<void *, VkLayerInstanceDispatchTable *> tableInstanceMap;')
+        gen_header.append('')
+        gen_header.append('static LOADER_PLATFORM_THREAD_ONCE_DECLARATION(initOnce);')
+        gen_header.append('')
+        gen_header.append('    static inline VkLayerDispatchTable *device_dispatch_table(VkObject object) {')
+        gen_header.append('    VkLayerDispatchTable *pDisp  = *(VkLayerDispatchTable **) object;')
+        gen_header.append('    VkLayerDispatchTable *pTable = tableMap[pDisp];')
+        gen_header.append('    return pTable;')
+        gen_header.append('}')
+        gen_header.append('')
+        gen_header.append('static inline VkLayerInstanceDispatchTable *instance_dispatch_table(VkObject object) {')
+        gen_header.append('    VkLayerInstanceDispatchTable **ppDisp    = (VkLayerInstanceDispatchTable **) object;')
+        gen_header.append('    VkLayerInstanceDispatchTable *pInstanceTable = tableInstanceMap[*ppDisp];')
+        gen_header.append('    return pInstanceTable;')
+        gen_header.append('}')
+        return "\n".join(gen_header)
     def generate_intercept(self, proto, qual):
         if proto.name in [ 'GetGlobalExtensionInfo' ]:
             # use default version
@@ -482,25 +538,56 @@ class GenericLayerSubcommand(Subcommand):
         table = ''
         if proto_is_global(proto):
            table = 'Instance'
-
         if proto.ret != "void":
             ret_val = "%s result = " % proto.ret
             stmt = "    return result;\n"
         if proto.name == "CreateDevice":
             funcs.append('%s%s\n'
                      '{\n'
-                     '    %snextInstanceTable.%s;\n'
+                     '    char str[1024];\n'
+                     '    sprintf(str, "At start of layered %s\\n");\n'
+                     '    layerCbMsg(VK_DBG_REPORT_INFO_BIT,VK_OBJECT_TYPE_PHYSICAL_DEVICE, gpu, 0, 0, (char *) "GENERIC", (char *) str);\n'
+                     '    %sinstance_dispatch_table(gpu)->%s;\n'
                      '    if (result == VK_SUCCESS) {\n'
                      '        enable_debug_report(pCreateInfo->extensionCount, pCreateInfo->pEnabledExtensions);\n'
                      '    }\n'
-                     '%s'
-                     '}' % (qual, decl, ret_val, proto.c_call(), stmt))
+                     '    sprintf(str, "Completed layered %s\\n");\n'
+                     '    layerCbMsg(VK_DBG_REPORT_INFO_BIT, VK_OBJECT_TYPE_PHYSICAL_DEVICE, gpu, 0, 0, (char *) "GENERIC", (char *) str);\n'
+                     '    fflush(stdout);\n'
+                     '    %s'
+                     '}' % (qual, decl, proto.name, ret_val, proto.c_call(), proto.name, stmt))
+        elif proto.name == "DestroyDevice":
+            funcs.append('%s%s\n'
+                         '{\n'
+                         '    VkLayerDispatchTable *pDisp = *(VkLayerDispatchTable **) device;\n'
+                         '    VkResult res = device_dispatch_table(device)->DestroyDevice(device);\n'
+                         '    tableMap.erase(pDisp);\n'
+                         '    return res;\n'
+                         '}\n' % (qual, decl))
+        elif proto.name == "DestroyInstance":
+            funcs.append('%s%s\n'
+                         '{\n'
+                         '    VkLayerInstanceDispatchTable *pDisp = *(VkLayerInstanceDispatchTable **) instance;\n'
+                         '    VkResult res = instance_dispatch_table(instance)->DestroyInstance(instance);\n'
+                         '    tableInstanceMap.erase(pDisp);\n'
+                         '    return res;\n'
+                         '}\n' % (qual, decl))
         else:
+            # CreateInstance needs to use the second parm instead of the first to set the correct dispatch table
+            dispatch_param = proto.params[0].name
+            # Must use 'instance' table for these APIs, 'device' table otherwise
+            table_type = ""
+            if proto_is_global(proto):
+                table_type = "instance"
+            else:
+                table_type = "device"
+            if 'CreateInstance' in proto.name:
+               dispatch_param = '*' + proto.params[1].name
             funcs.append('%s%s\n'
                      '{\n'
-                     '    %snext%sTable.%s;\n'
+                     '    %s%s_dispatch_table(%s)->%s;\n'
                      '%s'
-                     '}' % (qual, decl, ret_val, table, proto.c_call(), stmt))
+                     '}' % (qual, decl, ret_val, table_type, dispatch_param, proto.c_call(), stmt))
         return "\n\n".join(funcs)
 
     def generate_body(self):
@@ -813,7 +900,8 @@ class APIDumpSubcommand(Subcommand):
 class ObjectTrackerSubcommand(Subcommand):
     def generate_header(self):
         header_txt = []
-        header_txt.append('#include <stdio.h>\n#include <stdlib.h>\n#include <string.h>\n#include <inttypes.h>\n#include "loader_platform.h"')
+        header_txt.append('#include <stdio.h>\n#include <stdlib.h>\n#include <string.h>\n#include <inttypes.h>\n')
+        header_txt.append('#include "loader_platform.h"\n')
         header_txt.append('#include "object_track.h"\n\n')
         header_txt.append('#include <unordered_map>')
         header_txt.append('using namespace std;')
@@ -822,11 +910,23 @@ class ObjectTrackerSubcommand(Subcommand):
         header_txt.append('#include "layers_config.h"')
         header_txt.append('#include "layers_msg.h"')
         header_txt.append('#include "vk_debug_report_lunarg.h"')
-        header_txt.append('static VkLayerDispatchTable nextTable;\nstatic VkLayerInstanceDispatchTable nextInstanceTable;\n')
-        header_txt.append('static VkBaseLayerObject *pCurObj;')
+        header_txt.append('')
+        header_txt.append('static std::unordered_map<void *, VkLayerDispatchTable         *> tableMap;')
+        header_txt.append('static std::unordered_map<void *, VkLayerInstanceDispatchTable *> tableInstanceMap;')
         header_txt.append('static LOADER_PLATFORM_THREAD_ONCE_DECLARATION(initOnce);')
-        header_txt.append('static LOADER_PLATFORM_THREAD_ONCE_DECLARATION(tabDeviceOnce);')
-        header_txt.append('static LOADER_PLATFORM_THREAD_ONCE_DECLARATION(tabInstanceOnce);')
+        header_txt.append('')
+        header_txt.append('static inline VkLayerDispatchTable *device_dispatch_table(VkObject object) {')
+        header_txt.append('    VkLayerDispatchTable *pDisp  = *(VkLayerDispatchTable **) object;')
+        header_txt.append('    VkLayerDispatchTable *pTable = tableMap[pDisp];')
+        header_txt.append('    return pTable;')
+        header_txt.append('}')
+        header_txt.append('')
+        header_txt.append('static inline VkLayerInstanceDispatchTable *instance_dispatch_table(VkObject object) {')
+        header_txt.append('    VkLayerInstanceDispatchTable **ppDisp    = (VkLayerInstanceDispatchTable **) object;')
+        header_txt.append('    VkLayerInstanceDispatchTable *pInstanceTable = tableInstanceMap[*ppDisp];')
+        header_txt.append('    return pInstanceTable;')
+        header_txt.append('}')
+        header_txt.append('')
         header_txt.append('static long long unsigned int object_track_index = 0;')
         header_txt.append('static int objLockInitialized = 0;')
         header_txt.append('static loader_platform_thread_mutex objLock;')
@@ -1160,6 +1260,20 @@ class ObjectTrackerSubcommand(Subcommand):
             destroy_line += '    // Clean up Queue\'s MemRef Linked Lists\n'
             destroy_line += '    destroyQueueMemRefLists();\n'
             destroy_line += '    loader_platform_thread_unlock_mutex(&objLock);\n'
+        elif 'DestroyInstance' in proto.name:
+            destroy_line =  '    loader_platform_thread_lock_mutex(&objLock);\n'
+            destroy_line += '    destroy_obj(%s);\n' % (param0_name)
+            destroy_line += '    // Report any remaining objects in LL\n'
+            destroy_line += '    for (auto it = objMap.begin(); it != objMap.end(); ++it) {\n'
+            destroy_line += '        OBJTRACK_NODE* pNode = it->second;        if ((pNode->objType == VK_OBJECT_TYPE_PHYSICAL_DEVICE) || (pNode->objType == VK_OBJECT_TYPE_QUEUE)) {\n'
+            destroy_line += '            // Cannot destroy physical device so ignore\n'
+            destroy_line += '        } else {\n'
+            destroy_line += '            char str[1024];\n'
+            destroy_line += '            sprintf(str, "OBJ ERROR : %s object 0x%" PRIxLEAST64 " has not been destroyed.", string_VkObjectType(pNode->objType), reinterpret_cast<VkUintPtrLeast64>(pNode->vkObj));\n'
+            destroy_line += '            layerCbMsg(VK_DBG_REPORT_ERROR_BIT, pNode->objType, pNode->vkObj, 0, OBJTRACK_OBJECT_LEAK, "OBJTRACK", str);\n'
+            destroy_line += '        }\n'
+            destroy_line += '    }\n'
+            destroy_line += '    loader_platform_thread_unlock_mutex(&objLock);\n'
         elif 'Free' in proto.name:
             destroy_line  = '    loader_platform_thread_lock_mutex(&objLock);\n'
             destroy_line += '    destroy_obj(%s);\n' % (proto.params[1].name)
@@ -1195,19 +1309,30 @@ class ObjectTrackerSubcommand(Subcommand):
             gpu_state += '    }\n'
             funcs.append('%s%s\n'
                      '{\n'
-                     '    %snext%sTable.%s;\n'
+                     '%s'
+                     '    %sinstance_dispatch_table(gpu)->%s;\n'
                      '%s%s'
                      '%s'
                      '%s'
-                     '}' % (qual, decl, ret_val, table, proto.c_call(), create_line, destroy_line, gpu_state, stmt))
+                     '}' % (qual, decl, using_line, ret_val, proto.c_call(), create_line, destroy_line, gpu_state, stmt))
         else:
+            # CreateInstance needs to use the second parm instead of the first to set the correct dispatch table
+            dispatch_param = param0_name
+            # Must use 'instance' table for these APIs, 'device' table otherwise
+            table_type = ""
+            if proto_is_global(proto):
+                table_type = "instance"
+            else:
+                table_type = "device"
+            if 'CreateInstance' in proto.name:
+               dispatch_param = '*' + proto.params[1].name
             funcs.append('%s%s\n'
                      '{\n'
                      '%s'
-                     '    %snext%sTable.%s;\n'
+                     '    %s%s_dispatch_table(%s)->%s;\n'
                      '%s%s'
                      '%s'
-                     '}' % (qual, decl, using_line, ret_val, table, proto.c_call(), create_line, destroy_line, stmt))
+                     '}' % (qual, decl, using_line, ret_val, table_type, dispatch_param, proto.c_call(), create_line, destroy_line, stmt))
         return "\n\n".join(funcs)
 
     def generate_body(self):
@@ -1234,12 +1359,24 @@ class ThreadingSubcommand(Subcommand):
         header_txt.append('//The following is #included again to catch certain OS-specific functions being used:')
         header_txt.append('#include "loader_platform.h"\n')
         header_txt.append('#include "layers_msg.h"\n')
-        header_txt.append('static VkLayerDispatchTable nextTable;')
-        header_txt.append('static VkLayerInstanceDispatchTable nextInstanceTable;')
-        header_txt.append('static VkBaseLayerObject *pCurObj;')
-        header_txt.append('static LOADER_PLATFORM_THREAD_ONCE_DECLARATION(tabDeviceOnce);')
-        header_txt.append('static LOADER_PLATFORM_THREAD_ONCE_DECLARATION(tabInstanceOnce);')
-        header_txt.append('static LOADER_PLATFORM_THREAD_ONCE_DECLARATION(initOnce);\n')
+        header_txt.append('')
+        header_txt.append('static std::unordered_map<void *, VkLayerDispatchTable *> tableMap;')
+        header_txt.append('static std::unordered_map<void *, VkLayerInstanceDispatchTable *> tableInstanceMap;')
+        header_txt.append('')
+        header_txt.append('static LOADER_PLATFORM_THREAD_ONCE_DECLARATION(initOnce);')
+        header_txt.append('')
+        header_txt.append('static inline VkLayerDispatchTable *device_dispatch_table(VkObject object) {')
+        header_txt.append('    VkLayerDispatchTable *pDisp  = *(VkLayerDispatchTable **) object;')
+        header_txt.append('    VkLayerDispatchTable *pTable = tableMap[pDisp];')
+        header_txt.append('    return pTable;')
+        header_txt.append('}')
+        header_txt.append('')
+        header_txt.append('static inline VkLayerInstanceDispatchTable *instance_dispatch_table(VkObject object) {')
+        header_txt.append('    VkLayerInstanceDispatchTable **ppDisp    = (VkLayerInstanceDispatchTable **) object;')
+        header_txt.append('    VkLayerInstanceDispatchTable *pInstanceTable = tableInstanceMap[*ppDisp];')
+        header_txt.append('    return pInstanceTable;')
+        header_txt.append('}')
+        header_txt.append('')
         header_txt.append('using namespace std;')
         header_txt.append('static unordered_map<int, void*> proxy_objectsInUse;\n')
         header_txt.append('static unordered_map<VkObject, loader_platform_thread_id> objectsInUse;\n')
@@ -1302,12 +1439,12 @@ class ThreadingSubcommand(Subcommand):
         ret_val = ''
         stmt = ''
         funcs = []
-        table = ''
+        table = 'device'
         if proto.ret != "void":
             ret_val = "%s result = " % proto.ret
             stmt = "    return result;\n"
         if proto_is_global(proto):
-           table = 'Instance'
+           table = 'instance'
 
         # Memory range calls are special in needed thread checking within structs
         if proto.name in ["FlushMappedMemoryRanges","InvalidateMappedMemoryRanges"]:
@@ -1316,12 +1453,12 @@ class ThreadingSubcommand(Subcommand):
                      '    for (int i=0; i<memRangeCount; i++) {\n'
                      '        useObject((VkObject) pMemRanges[i].mem, "VkDeviceMemory");\n'
                      '    }\n'
-                     '    %snext%sTable.%s;\n'
+                     '    %s%s_dispatch_table(%s)->%s;\n'
                      '    for (int i=0; i<memRangeCount; i++) {\n'
                      '        finishUsingObject((VkObject) pMemRanges[i].mem);\n'
                      '    }\n'
                      '%s'
-                     '}' % (qual, decl, ret_val, table, proto.c_call(), stmt))
+                     '}' % (qual, decl, ret_val, table, proto.params[0].name, proto.c_call(), stmt))
             return "\n".join(funcs)
         # All functions that do a Get are thread safe
         if 'Get' in proto.name:
@@ -1333,19 +1470,19 @@ class ThreadingSubcommand(Subcommand):
         if proto.params[0].ty == "VkPhysicalDevice":
             funcs.append('%s%s\n'
                      '{\n'
-                     '    %snext%sTable.%s;\n'
+                     '    %s%s_dispatch_table(%s)->%s;\n'
                      '%s'
-                     '}' % (qual, decl, ret_val, table, proto.c_call(), stmt))
+                     '}' % (qual, decl, ret_val, table, proto.params[0].name, proto.c_call(), stmt))
             return "\n".join(funcs)
         # Functions changing command buffers need thread safe use of first parameter
         if proto.params[0].ty == "VkCmdBuffer":
             funcs.append('%s%s\n'
                      '{\n'
                      '    useObject((VkObject) %s, "%s");\n'
-                     '    %snext%sTable.%s;\n'
+                     '    %s%s_dispatch_table(%s)->%s;\n'
                      '    finishUsingObject((VkObject) %s);\n'
                      '%s'
-                     '}' % (qual, decl, proto.params[0].name, proto.params[0].ty, ret_val, table, proto.c_call(), proto.params[0].name, stmt))
+                     '}' % (qual, decl, proto.params[0].name, proto.params[0].ty, ret_val, table, proto.params[0].name, proto.c_call(), proto.params[0].name, stmt))
             return "\n".join(funcs)
         # Non-Cmd functions that do a Wait are thread safe
         if 'Wait' in proto.name:
@@ -1355,6 +1492,24 @@ class ThreadingSubcommand(Subcommand):
         for param in proto.params:
             if param.ty in thread_check_objects:
                 checked_params.append(param)
+        if proto.name == "DestroyDevice":
+            funcs.append('%s%s\n'
+                         '{\n'
+                         '    VkLayerDispatchTable *pDisp = *(VkLayerDispatchTable **) device;\n'
+                         '    %s%s_dispatch_table(%s)->%s;\n'
+                         '    tableMap.erase(pDisp);\n'
+                         '    return result;\n'
+                         '}\n' % (qual, decl, ret_val, table, proto.params[0].name, proto.c_call()))
+            return "\n".join(funcs);
+        elif proto.name == "DestroyInstance":
+            funcs.append('%s%s\n'
+                         '{\n'
+                         '    VkLayerInstanceDispatchTable *pDisp = *(VkLayerInstanceDispatchTable **) instance;\n'
+                         '    %s%s_dispatch_table(%s)->%s;\n'
+                         '    tableInstanceMap.erase(pDisp);\n'
+                         '    return result;\n'
+                         '}\n' % (qual, decl, ret_val, table, proto.params[0].name, proto.c_call()))
+            return "\n".join(funcs);
         if len(checked_params) == 0:
             return None
         # Surround call with useObject and finishUsingObject for each checked_param
@@ -1362,7 +1517,7 @@ class ThreadingSubcommand(Subcommand):
         funcs.append('{')
         for param in checked_params:
             funcs.append('    useObject((VkObject) %s, "%s");' % (param.name, param.ty))
-        funcs.append('    %snext%sTable.%s;' % (ret_val, table, proto.c_call()))
+        funcs.append('    %s%s_dispatch_table(%s)->%s;' % (ret_val, table, proto.params[0].name, proto.c_call()))
         for param in checked_params:
             funcs.append('    finishUsingObject((VkObject) %s);' % param.name)
         funcs.append('%s'
