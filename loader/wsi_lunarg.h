@@ -39,8 +39,10 @@ void wsi_lunarg_register_extensions(
 
 void *wsi_lunarg_GetInstanceProcAddr(
         VkInstance                              instance,
-        const char*                             pName);
+        const char*                             pName,
+        bool*                                   enabled);
 
 void *wsi_lunarg_GetDeviceProcAddr(
         VkDevice                                device,
-        const char*                             pName);
+        const char*                             pName,
+        bool*                                   enabled);

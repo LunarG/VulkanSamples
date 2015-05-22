@@ -156,13 +156,13 @@ void wsi_lunarg_register_extensions(
 
 void *wsi_lunarg_GetInstanceProcAddr(
         VkInstance                              instance,
-        const char*                             pName)
+        const char*                             pName,
+        bool                                    *enabled)
 {
     if (instance == VK_NULL_HANDLE)
         return NULL;
 
-    if (wsi_enabled == false)
-	return NULL;
+    *enabled = wsi_enabled;
 
     /* since two of these entrypoints must be loader handled will report all */
     if (!strcmp(pName, "vkGetDisplayInfoWSI"))
@@ -181,13 +181,13 @@ void *wsi_lunarg_GetInstanceProcAddr(
 
 void *wsi_lunarg_GetDeviceProcAddr(
         VkDevice                                device,
-        const char*                             name)
+        const char*                             name,
+        bool                                    *enabled)
 {
     if (device == VK_NULL_HANDLE)
         return NULL;
 
-    if (wsi_enabled == false)
-	    return NULL;
+    *enabled = wsi_enabled;
 
     /* only handle device entrypoints that are loader special cases */
     if (!strcmp(name, "vkCreateSwapChainWSI"))

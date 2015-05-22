@@ -1381,9 +1381,10 @@ LOADER_EXPORT void * VKAPI vkGetInstanceProcAddr(VkInstance instance, const char
         return addr;
 
     /* return any extension global entrypoints */
-    addr = wsi_lunarg_GetInstanceProcAddr(instance, pName);
+    bool wsi_enabled;
+    addr = wsi_lunarg_GetInstanceProcAddr(instance, pName, &wsi_enabled);
     if (addr)
-        return addr;
+        return (wsi_enabled) ? addr : NULL;
 
     /* return the instance dispatch table entrypoint for extensions */
     const VkLayerInstanceDispatchTable *disp_table = * (VkLayerInstanceDispatchTable **) instance;
@@ -1413,9 +1414,10 @@ LOADER_EXPORT void * VKAPI vkGetDeviceProcAddr(VkDevice device, const char * pNa
     }
 
     /* return any extension device entrypoints the loader knows about */
-    addr = wsi_lunarg_GetDeviceProcAddr(device, pName);
+    bool wsi_enabled;
+    addr = wsi_lunarg_GetDeviceProcAddr(device, pName, &wsi_enabled);
     if (addr)
-        return addr;
+        return (wsi_enabled) ? addr : NULL;
 
     /* return the dispatch table entrypoint for the fastest case */
     const VkLayerDispatchTable *disp_table = * (VkLayerDispatchTable **) device;
