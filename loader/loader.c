@@ -1229,11 +1229,6 @@ extern uint32_t loader_activate_device_layers(
         }
 
         loader_init_device_dispatch_table(icd->loader_dispatch + gpu_index, nextGPA, (VkPhysicalDevice) nextObj);
-        //Insert the new wrapped objects into the list with loader object at head
-        nextGpuObj = icd->wrappedGpus[gpu_index] + icd->layer_count[gpu_index] - 1;
-        nextGpuObj->nextObject = baseObj;
-        nextGpuObj->pGPA = icd->GetDeviceProcAddr;
-
     } else {
         // TODO: Check that active layers match requested?
     }
