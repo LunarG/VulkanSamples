@@ -806,6 +806,57 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateGraphicsPipeline(VkDevice device,
 }
 
 
+VK_LAYER_EXPORT VkResult VKAPI vkDbgRegisterMsgCallback(
+    VkInstance                    instance,
+    VK_DBG_MSG_CALLBACK_FUNCTION  pfnMsgCallback,
+    void                         *pUserData)
+{
+    // This layer intercepts callbacks
+    VK_LAYER_DBG_FUNCTION_NODE *pNewDbgFuncNode = (VK_LAYER_DBG_FUNCTION_NODE*)malloc(sizeof(VK_LAYER_DBG_FUNCTION_NODE));
+    if (!pNewDbgFuncNode)
+        return VK_ERROR_OUT_OF_HOST_MEMORY;
+    pNewDbgFuncNode->pfnMsgCallback = pfnMsgCallback;
+    pNewDbgFuncNode->pUserData = pUserData;
+    pNewDbgFuncNode->pNext = g_pDbgFunctionHead;
+    g_pDbgFunctionHead = pNewDbgFuncNode;
+    // force callbacks if DebugAction hasn't been set already other than initial value
+    if (g_actionIsDefault) {
+        g_debugAction = VK_DBG_LAYER_ACTION_CALLBACK;
+    }
+    VkResult result = nextTable.DbgRegisterMsgCallback(instance, pfnMsgCallback, pUserData);
+    return result;
+}
+
+VK_LAYER_EXPORT VkResult VKAPI vkDbgUnregisterMsgCallback(
+    VkInstance                   instance,
+    VK_DBG_MSG_CALLBACK_FUNCTION pfnMsgCallback)
+{
+    VK_LAYER_DBG_FUNCTION_NODE *pInfo = g_pDbgFunctionHead;
+    VK_LAYER_DBG_FUNCTION_NODE *pPrev = pInfo;
+    while (pInfo) {
+        if (pInfo->pfnMsgCallback == pfnMsgCallback) {
+            pPrev->pNext = pInfo->pNext;
+            if (g_pDbgFunctionHead == pInfo) {
+                g_pDbgFunctionHead = pInfo->pNext;
+            }
+            free(pInfo);
+            break;
+        }
+        pPrev = pInfo;
+        pInfo = pInfo->pNext;
+    }
+    if (g_pDbgFunctionHead == NULL) {
+        if (g_actionIsDefault) {
+            g_debugAction = VK_DBG_LAYER_ACTION_LOG_MSG;
+        } else {
+            g_debugAction = (VK_LAYER_DBG_ACTION)(g_debugAction & ~((uint32_t)VK_DBG_LAYER_ACTION_CALLBACK));
+        }
+    }
+    VkResult result = nextTable.DbgUnregisterMsgCallback(instance, pfnMsgCallback);
+    return result;
+}
+
+
 VK_LAYER_EXPORT void * VKAPI vkGetProcAddr(VkPhysicalDevice gpu, const char* pName)
 {
     if (gpu == NULL)
@@ -824,6 +875,8 @@ VK_LAYER_EXPORT void * VKAPI vkGetProcAddr(VkPhysicalDevice gpu, const char* pNa
     ADD_HOOK(vkCreateDevice);
     ADD_HOOK(vkCreateShader);
     ADD_HOOK(vkCreateGraphicsPipeline);
+    ADD_HOOK(vkDbgRegisterMsgCallback);
+    ADD_HOOK(vkDbgUnregisterMsgCallback);
 
     VkBaseLayerObject* gpuw = (VkBaseLayerObject *) gpu;
     if (gpuw->pGPA == NULL)
