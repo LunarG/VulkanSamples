@@ -124,6 +124,21 @@ private:
     string                                  m_testName;
 };
 
+class ScopedUseSpv
+{
+    bool saved_value;
+public:
+    ScopedUseSpv(bool value)
+        : saved_value(VkTestFramework::m_use_spv)
+    {
+        VkTestFramework::m_use_spv = value;
+    }
+
+    ~ScopedUseSpv() {
+        VkTestFramework::m_use_spv = saved_value;
+    }
+};
+
 class TestEnvironment : public ::testing::Environment
 {
  public:

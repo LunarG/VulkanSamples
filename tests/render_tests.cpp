@@ -581,8 +581,6 @@ TEST_F(VkRenderTest, VKTriangle_OutputLocation)
 #ifndef _WIN32 // Implicit (for now at least) in WIN32 is that we are using the Nvidia driver and it won't consume SPIRV yet
 TEST_F(VkRenderTest, SPV_VKTriangle)
 {
-    bool saved_use_spv = VkTestFramework::m_use_spv;
-
     static const char *vertShaderText =
         "#version 140\n"
         "#extension GL_ARB_separate_shader_objects : enable\n"
@@ -616,11 +614,8 @@ TEST_F(VkRenderTest, SPV_VKTriangle)
 
     TEST_DESCRIPTION("VK-style shaders, but force test framework to compile shader to SPV and pass SPV to driver.");
 
-    VkTestFramework::m_use_spv = true;
-
+    ScopedUseSpv spv(true);
     VKTriangleTest(vertShaderText, fragShaderText, true);
-
-    VkTestFramework::m_use_spv = saved_use_spv;
 }
 #endif
 TEST_F(VkRenderTest, GreenTriangle)
@@ -648,8 +643,6 @@ TEST_F(VkRenderTest, GreenTriangle)
 #ifndef _WIN32 // Implicit (for now at least) in WIN32 is that we are using the Nvidia driver and it won't consume SPIRV yet
 TEST_F(VkRenderTest, SPV_GreenTriangle)
 {
-    bool saved_use_spv = VkTestFramework::m_use_spv;
-
     static const char *vertShaderText =
             "#version 130\n"
             "vec2 vertices[3];\n"
@@ -668,9 +661,8 @@ TEST_F(VkRenderTest, SPV_GreenTriangle)
 
     TEST_DESCRIPTION("Same shader as GreenTriangle, but compiles shader to SPV and gives SPV to driver.");
 
-    VkTestFramework::m_use_spv = true;
+    ScopedUseSpv spv(true);
     VKTriangleTest(vertShaderText, fragShaderText, false);
-    VkTestFramework::m_use_spv = saved_use_spv;
 }
 #endif
 TEST_F(VkRenderTest, YellowTriangle)
