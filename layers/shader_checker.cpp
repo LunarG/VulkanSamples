@@ -482,7 +482,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateShader(VkDevice device, const VkShaderCre
 }
 
 
-static void
+static bool
 validate_interface_between_stages(shader_source const *producer, char const *producer_name,
                                   shader_source const *consumer, char const *consumer_name)
 {
@@ -493,6 +493,7 @@ validate_interface_between_stages(shader_source const *producer, char const *pro
     std::map<uint32_t, interface_var> builtin_inputs;
 
     char str[1024];
+    bool pass = true;
 
     collect_interface_by_location(producer, spv::StorageClassOutput, outputs, builtin_outputs);
     collect_interface_by_location(consumer, spv::StorageClassInput, inputs, builtin_inputs);
@@ -517,6 +518,7 @@ validate_interface_between_stages(shader_source const *producer, char const *pro
             sprintf(str, "%s consumes input location %d which is not written by %s\n",
                    consumer_name, b_first, producer_name);
             layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, SHADER_CHECKER_OUTPUT_NOT_CONSUMED, "SC", str);
+            pass = false;
             b_it++;
         }
         else {
@@ -532,11 +534,14 @@ validate_interface_between_stages(shader_source const *producer, char const *pro
                 sprintf(str, "Type mismatch on location %d: '%s' vs '%s'\n", a_it->first,
                        producer_type, consumer_type);
                 layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, SHADER_CHECKER_INTERFACE_TYPE_MISMATCH, "SC", str);
+                pass = false;
             }
             a_it++;
             b_it++;
         }
     }
+
+    return pass;
 }
 
 
@@ -625,7 +630,7 @@ get_fundamental_type(shader_source const *src, unsigned type)
 }
 
 
-static void
+static bool
 validate_vi_against_vs_inputs(VkPipelineVertexInputCreateInfo const *vi, shader_source const *vs)
 {
     std::map<uint32_t, interface_var> inputs;
@@ -634,6 +639,7 @@ validate_vi_against_vs_inputs(VkPipelineVertexInputCreateInfo const *vi, shader_
      */
     std::map<uint32_t, interface_var> builtin_inputs;
     char str[1024];
+    bool pass = true;
 
     collect_interface_by_location(vs, spv::StorageClassInput, inputs, builtin_inputs);
 
@@ -658,6 +664,7 @@ validate_vi_against_vs_inputs(VkPipelineVertexInputCreateInfo const *vi, shader_
         else if (a_at_end || b_first < a_first) {
             sprintf(str, "VS consumes input at location %d but not provided", b_first);
             layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, SHADER_CHECKER_INPUT_NOT_PRODUCED, "SC", str);
+            pass = false;
             it_b++;
         }
         else {
@@ -671,6 +678,7 @@ validate_vi_against_vs_inputs(VkPipelineVertexInputCreateInfo const *vi, shader_
                 sprintf(str, "Attribute type of `%s` at location %d does not match VS input type of `%s`",
                         string_VkFormat(it_a->second->format), a_first, vs_type);
                 layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, SHADER_CHECKER_INTERFACE_TYPE_MISMATCH, "SC", str);
+                pass = false;
             }
 
             /* OK! */
@@ -678,15 +686,18 @@ validate_vi_against_vs_inputs(VkPipelineVertexInputCreateInfo const *vi, shader_
             it_b++;
         }
     }
+
+    return pass;
 }
 
 
-static void
+static bool
 validate_fs_outputs_against_cb(shader_source const *fs, VkPipelineCbStateCreateInfo const *cb)
 {
     std::map<uint32_t, interface_var> outputs;
     std::map<uint32_t, interface_var> builtin_outputs;
     char str[1024];
+    bool pass = true;
 
     /* TODO: dual source blend index (spv::DecIndex, zero if not provided) */
 
@@ -696,11 +707,10 @@ validate_fs_outputs_against_cb(shader_source const *fs, VkPipelineCbStateCreateI
      * and all color attachment should be UNORM/SNORM/FLOAT.
      */
     if (builtin_outputs.find(spv::BuiltInFragColor) != builtin_outputs.end()) {
-        bool broadcast_err = false;
         if (outputs.size()) {
             layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, SHADER_CHECKER_FS_MIXED_BROADCAST, "SC",
                        "Should not have user-defined FS outputs when using broadcast");
-            broadcast_err = true;
+            pass = false;
         }
 
         for (unsigned i = 0; i < cb->attachmentCount; i++) {
@@ -708,11 +718,11 @@ validate_fs_outputs_against_cb(shader_source const *fs, VkPipelineCbStateCreateI
             if (attachmentType == FORMAT_TYPE_SINT || attachmentType == FORMAT_TYPE_UINT) {
                 layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, SHADER_CHECKER_INTERFACE_TYPE_MISMATCH, "SC",
                            "CB format should not be SINT or UINT when using broadcast");
-                broadcast_err = true;
+                pass = false;
             }
         }
 
-        return;
+        return pass;
     }
 
     auto it = outputs.begin();
@@ -732,6 +742,7 @@ validate_fs_outputs_against_cb(shader_source const *fs, VkPipelineCbStateCreateI
             sprintf(str, "Attachment %d not written by FS", attachment);
             layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, SHADER_CHECKER_INPUT_NOT_PRODUCED, "SC", str);
             attachment++;
+            pass = false;
         }
         else {
             unsigned output_type = get_fundamental_type(fs, it->second.type_id);
@@ -744,6 +755,7 @@ validate_fs_outputs_against_cb(shader_source const *fs, VkPipelineCbStateCreateI
                 sprintf(str, "Attachment %d of type `%s` does not match FS output type of `%s`",
                         attachment, string_VkFormat(cb->pAttachments[attachment].format), fs_type);
                 layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, SHADER_CHECKER_INTERFACE_TYPE_MISMATCH, "SC", str);
+                pass = false;
             }
 
             /* OK! */
@@ -751,6 +763,8 @@ validate_fs_outputs_against_cb(shader_source const *fs, VkPipelineCbStateCreateI
             attachment++;
         }
     }
+
+    return pass;
 }
 
 
@@ -768,6 +782,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateGraphicsPipeline(VkDevice device,
     VkPipelineCbStateCreateInfo const *cb = 0;
     VkPipelineVertexInputCreateInfo const *vi = 0;
     char str[1024];
+    bool pass = true;
 
     loader_platform_thread_lock_mutex(&globalLock);
 
@@ -798,23 +813,31 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateGraphicsPipeline(VkDevice device,
     layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, NULL, 0, SHADER_CHECKER_NONE, "SC", str);
 
     if (vi && vs_source) {
-        validate_vi_against_vs_inputs(vi, vs_source);
+        pass = validate_vi_against_vs_inputs(vi, vs_source) && pass;
     }
 
     if (vs_source && fs_source) {
-        validate_interface_between_stages(vs_source, "vertex shader",
-                                          fs_source, "fragment shader");
+        pass = validate_interface_between_stages(vs_source, "vertex shader",
+                                                 fs_source, "fragment shader") && pass;
     }
 
     if (fs_source && cb) {
-        validate_fs_outputs_against_cb(fs_source, cb);
+        pass = validate_fs_outputs_against_cb(fs_source, cb) && pass;
     }
 
     VkLayerDispatchTable *pTable = tableMap[(VkBaseLayerObject *)device];
-    VkResult res = pTable->CreateGraphicsPipeline(device, pCreateInfo, pPipeline);
 
     loader_platform_thread_unlock_mutex(&globalLock);
-    return res;
+
+    if (pass) {
+        /* The driver is allowed to crash if passed junk. Only actually create the
+         * pipeline if we didn't run into any showstoppers above.
+         */
+        return pTable->CreateGraphicsPipeline(device, pCreateInfo, pPipeline);
+    }
+    else {
+        return VK_ERROR_UNKNOWN;
+    }
 }
 
 
