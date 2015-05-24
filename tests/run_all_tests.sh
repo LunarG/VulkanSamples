@@ -1,6 +1,7 @@
 #!/bin/bash
 #
 # Run all the regression tests
+cd $(dirname "$0")
 
 # Halt on error
 set -e
