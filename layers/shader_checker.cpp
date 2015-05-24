@@ -645,8 +645,10 @@ validate_vi_against_vs_inputs(VkPipelineVertexInputCreateInfo const *vi, shader_
 
     /* Build index by location */
     std::map<uint32_t, VkVertexInputAttributeDescription const *> attribs;
-    for (unsigned i = 0; i < vi->attributeCount; i++)
-        attribs[vi->pVertexAttributeDescriptions[i].location] = &vi->pVertexAttributeDescriptions[i];
+    if (vi) {
+        for (unsigned i = 0; i < vi->attributeCount; i++)
+            attribs[vi->pVertexAttributeDescriptions[i].location] = &vi->pVertexAttributeDescriptions[i];
+    }
 
     auto it_a = attribs.begin();
     auto it_b = inputs.begin();
@@ -812,7 +814,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateGraphicsPipeline(VkDevice device,
     sprintf(str, "Pipeline: vi=%p vs=%p fs=%p cb=%p\n", vi, vs_source, fs_source, cb);
     layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, NULL, 0, SHADER_CHECKER_NONE, "SC", str);
 
-    if (vi && vs_source) {
+    if (vs_source) {
         pass = validate_vi_against_vs_inputs(vi, vs_source) && pass;
     }
 
