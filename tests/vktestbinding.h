@@ -154,7 +154,7 @@ protected:
     explicit Object(const Device &dev, VkObject obj, VkObjectType object_type) :
         dev_(&dev),
         mem_alloc_count_(0), internal_mems_(NULL),
-        primary_mem_(NULL) { init(obj, object_type); }
+        primary_mem_(NULL), bound(false) { init(obj, object_type); }
     ~Object() { cleanup(); }
 
     void init(VkObject obj, VkObjectType object_type, bool own);
