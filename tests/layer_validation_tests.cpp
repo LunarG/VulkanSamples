@@ -2167,6 +2167,59 @@ TEST_F(VkLayerTest, CreatePipelineFragmentOutputNotWritten)
     }
 }
 
+TEST_F(VkLayerTest, CreatePipelineFragmentOutputNotConsumed)
+{
+    VK_DBG_MSG_TYPE msgType;
+    std::string msgString;
+    ASSERT_NO_FATAL_FAILURE(InitState());
+    ScopedUseSpv spv(true);
+
+    char const *vsSource =
+        "#version 140\n"
+        "#extension GL_ARB_separate_shader_objects: require\n"
+        "#extension GL_ARB_shading_language_420pack: require\n"
+        "\n"
+        "void main(){\n"
+        "   gl_Position = vec4(1);\n"
+        "}\n";
+    char const *fsSource =
+        "#version 140\n"
+        "#extension GL_ARB_separate_shader_objects: require\n"
+        "#extension GL_ARB_shading_language_420pack: require\n"
+        "\n"
+        "layout(location=0) out vec4 x;\n"
+        "layout(location=1) out vec4 y;\n"  /* no matching attachment for this */
+        "void main(){\n"
+        "   x = vec4(1);\n"
+        "   y = vec4(1);\n"
+        "}\n";
+
+    VkShaderObj vs(m_device, vsSource, VK_SHADER_STAGE_VERTEX, this);
+    VkShaderObj fs(m_device, fsSource, VK_SHADER_STAGE_FRAGMENT, this);
+
+    VkPipelineObj pipe(m_device);
+    pipe.AddShader(&vs);
+    pipe.AddShader(&fs);
+
+    /* implicit CB 0 set up by the test framework */
+    /* FS writes CB 1, but we don't configure it */
+
+    VkCommandBufferObj dummyCmd(m_device);
+    VkDescriptorSetObj descriptorSet(m_device);
+    descriptorSet.AppendDummy();
+    descriptorSet.CreateVKDescriptorSet(&dummyCmd);
+
+    m_errorMonitor->ClearState();
+    pipe.CreateVKPipeline(descriptorSet);
+
+    msgType = m_errorMonitor->GetState(&msgString);
+
+    ASSERT_EQ(VK_DBG_MSG_WARNING, msgType);
+    if (!strstr(msgString.c_str(),"FS writes to output location 1 with no matching attachment")) {
+        FAIL() << "Incorrect warning: " << msgString;
+    }
+}
+
 int main(int argc, char **argv) {
     int result;
 
