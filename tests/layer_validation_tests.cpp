@@ -141,7 +141,7 @@ protected:
         ErrorMonitor               *m_errorMonitor;
 
     virtual void SetUp() {
-        const char *extension_names[] = {"MemTracker", "ObjectTracker", "Threading", "DrawState"};
+        const char *extension_names[] = {"MemTracker", "ObjectTracker", "Threading", "DrawState", "ShaderChecker"};
         const std::vector<const char *> extensions(extension_names,
                                         extension_names + sizeof(extension_names)/sizeof(extension_names[0]));
 
@@ -173,6 +173,7 @@ protected:
         setLayerOptionEnum("ObjectTrackerReportLevel", "VK_DBG_LAYER_LEVEL_WARNING");
         setLayerOptionEnum("ThreadingReportLevel",     "VK_DBG_LAYER_LEVEL_WARNING");
         setLayerOptionEnum("DrawStateReportLevel",     "VK_DBG_LAYER_LEVEL_WARNING");
+        setLayerOptionEnum("ShaderCheckerReportLevel", "VK_DBG_LAYER_LEVEL_WARNING");
 
         this->app_info.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
         this->app_info.pNext = NULL;
