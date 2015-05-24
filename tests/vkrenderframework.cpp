@@ -1096,7 +1096,7 @@ void VkPipelineObj::SetDepthStencil(VkPipelineDsStateCreateInfo *ds_state)
     m_ds_state.front = ds_state->front;
 }
 
-void VkPipelineObj::CreateVKPipeline(VkDescriptorSetObj &descriptorSet)
+VkResult VkPipelineObj::CreateVKPipeline(VkDescriptorSetObj &descriptorSet)
 {
     void* head_ptr = &m_ds_state;
     VkGraphicsPipelineCreateInfo info = {};
@@ -1125,7 +1125,7 @@ void VkPipelineObj::CreateVKPipeline(VkDescriptorSetObj &descriptorSet)
     m_cb_state.attachmentCount = m_colorAttachments.size();
     m_cb_state.pAttachments = &m_colorAttachments[0];
 
-    init(*m_device, info);
+    return init_try(*m_device, info);
 }
 
 vector<VkDeviceMemory> VkMemoryRefManager::mem_refs() const

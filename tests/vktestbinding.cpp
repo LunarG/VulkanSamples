@@ -783,6 +783,19 @@ void Pipeline::init(const Device &dev, const VkGraphicsPipelineCreateInfo &info)
     alloc_memory();
 }
 
+VkResult Pipeline::init_try(const Device &dev, const VkGraphicsPipelineCreateInfo &info)
+{
+    VkPipeline pipe;
+    dev_ = &dev;
+    VkResult err = vkCreateGraphicsPipeline(dev.obj(), &info, &pipe);
+    if (err == VK_SUCCESS) {
+        Object::init(pipe, VK_OBJECT_TYPE_PIPELINE);
+        alloc_memory();
+    }
+
+    return err;
+}
+
 void Pipeline::init(
         const Device &dev,
         const VkGraphicsPipelineCreateInfo &info,

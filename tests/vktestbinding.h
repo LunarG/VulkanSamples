@@ -518,6 +518,9 @@ public:
     // vkLoadPipelineDerivative()
     void init(const Device&dev, size_t size, const void *data, VkPipeline basePipeline);
 
+    // vkCreateGraphicsPipeline with error return
+    VkResult init_try(const Device &dev, const VkGraphicsPipelineCreateInfo &info);
+
     // vkStorePipeline()
     size_t store(size_t size, void *data);
 };

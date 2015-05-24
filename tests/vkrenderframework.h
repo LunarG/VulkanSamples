@@ -397,7 +397,7 @@ public:
     void AddVertexDataBuffer(VkConstantBufferObj* vertexDataBuffer, int binding);
     void AddColorAttachment(uint32_t binding, const VkPipelineCbAttachmentState *att);
     void SetDepthStencil(VkPipelineDsStateCreateInfo *);
-    void CreateVKPipeline(VkDescriptorSetObj &descriptorSet);
+    VkResult CreateVKPipeline(VkDescriptorSetObj &descriptorSet);
 
 protected:
     VkPipelineVertexInputCreateInfo     m_vi_state;
