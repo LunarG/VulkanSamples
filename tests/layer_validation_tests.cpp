@@ -2220,6 +2220,56 @@ TEST_F(VkLayerTest, CreatePipelineFragmentOutputNotConsumed)
     }
 }
 
+TEST_F(VkLayerTest, CreatePipelineFragmentOutputTypeMismatch)
+{
+    VK_DBG_MSG_TYPE msgType;
+    std::string msgString;
+    ASSERT_NO_FATAL_FAILURE(InitState());
+    ScopedUseSpv spv(true);
+
+    char const *vsSource =
+        "#version 140\n"
+        "#extension GL_ARB_separate_shader_objects: require\n"
+        "#extension GL_ARB_shading_language_420pack: require\n"
+        "\n"
+        "void main(){\n"
+        "   gl_Position = vec4(1);\n"
+        "}\n";
+    char const *fsSource =
+        "#version 140\n"
+        "#extension GL_ARB_separate_shader_objects: require\n"
+        "#extension GL_ARB_shading_language_420pack: require\n"
+        "\n"
+        "layout(location=0) out ivec4 x;\n"     /* not UNORM */
+        "void main(){\n"
+        "   x = ivec4(1);\n"
+        "}\n";
+
+    VkShaderObj vs(m_device, vsSource, VK_SHADER_STAGE_VERTEX, this);
+    VkShaderObj fs(m_device, fsSource, VK_SHADER_STAGE_FRAGMENT, this);
+
+    VkPipelineObj pipe(m_device);
+    pipe.AddShader(&vs);
+    pipe.AddShader(&fs);
+
+    /* implicit CB 0 set up by test framework, is UNORM. */
+
+    VkCommandBufferObj dummyCmd(m_device);
+    VkDescriptorSetObj descriptorSet(m_device);
+    descriptorSet.AppendDummy();
+    descriptorSet.CreateVKDescriptorSet(&dummyCmd);
+
+    m_errorMonitor->ClearState();
+    pipe.CreateVKPipeline(descriptorSet);
+
+    msgType = m_errorMonitor->GetState(&msgString);
+
+    ASSERT_EQ(VK_DBG_MSG_ERROR, msgType);
+    if (!strstr(msgString.c_str(),"does not match FS output type")) {
+        FAIL() << "Incorrect error: " << msgString;
+    }
+}
+
 int main(int argc, char **argv) {
     int result;
 
