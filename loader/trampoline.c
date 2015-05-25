@@ -1162,34 +1162,3 @@ LOADER_EXPORT void VKAPI vkCmdEndRenderPass(VkCmdBuffer cmdBuffer, VkRenderPass 
 
     disp->CmdEndRenderPass(cmdBuffer, renderPass);
 }
-
-LOADER_EXPORT void VKAPI vkCmdDbgMarkerBegin(VkCmdBuffer cmdBuffer, const char* pMarker)
-{
-    const VkLayerDispatchTable *disp;
-
-    disp = loader_get_dispatch(cmdBuffer);
-
-    disp->CmdDbgMarkerBegin(cmdBuffer, pMarker);
-}
-
-LOADER_EXPORT void VKAPI vkCmdDbgMarkerEnd(VkCmdBuffer cmdBuffer)
-{
-    const VkLayerDispatchTable *disp;
-
-    disp = loader_get_dispatch(cmdBuffer);
-
-    disp->CmdDbgMarkerEnd(cmdBuffer);
-}
-
-LOADER_EXPORT VkResult VKAPI vkQueuePresentWSI(VkQueue queue, const VkPresentInfoWSI* pPresentInfo)
-{
-    const VkLayerDispatchTable *disp;
-
-    disp = loader_get_dispatch(queue);
-
-    return disp->QueuePresentWSI(queue, pPresentInfo);
-}
-
-#if defined(WIN32)
-#pragma optimize( "", on )
-#endif

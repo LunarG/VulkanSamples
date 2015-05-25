@@ -51,6 +51,7 @@ typedef enum _DRAW_STATE_ERROR
     DRAWSTATE_RASTER_NOT_BOUND,                 // Draw submitted with no raster state object bound
     DRAWSTATE_COLOR_BLEND_NOT_BOUND,            // Draw submitted with no color blend state object bound when color write enabled
     DRAWSTATE_DEPTH_STENCIL_NOT_BOUND,          // Draw submitted with no depth-stencil state object bound when depth write enabled
+    DRAWSTATE_INVALID_EXTENSION
 } DRAW_STATE_ERROR;
 
 typedef enum _DRAW_TYPE

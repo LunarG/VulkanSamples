@@ -132,9 +132,6 @@ typedef struct VkLayerDispatchTable_
     PFN_vkCreateRenderPass CreateRenderPass;
     PFN_vkCmdBeginRenderPass CmdBeginRenderPass;
     PFN_vkCmdEndRenderPass CmdEndRenderPass;
-    PFN_vkDbgSetObjectTag DbgSetObjectTag;
-    PFN_vkCmdDbgMarkerBegin CmdDbgMarkerBegin;
-    PFN_vkCmdDbgMarkerEnd CmdDbgMarkerEnd;
     PFN_vkCreateSwapChainWSI CreateSwapChainWSI;
     PFN_vkDestroySwapChainWSI DestroySwapChainWSI;
     PFN_vkGetSwapChainInfoWSI GetSwapChainInfoWSI;
@@ -144,7 +141,6 @@ typedef struct VkLayerDispatchTable_
     PFN_vkDbgStringCallback DbgStringCallback;
     PFN_vkDbgStdioCallback DbgStdioCallback;
     PFN_vkDbgBreakCallback DbgBreakCallback;
-    PFN_vkDbgSetObjectName DbgSetObjectName;
 } VkLayerDispatchTable;
 
 typedef struct VkLayerInstanceDispatchTable_

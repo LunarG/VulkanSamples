@@ -388,31 +388,3 @@ ICD_EXPORT VkResult VKAPI vkQueueBindSparseImageMemory(
     return VK_ERROR_UNKNOWN;
 }
 
-ICD_EXPORT VkResult VKAPI vkDbgSetObjectTag(
-    VkDevice                            device,
-    VkObjectType                        objType,
-    VkObject                            object,
-    size_t                              tagSize,
-    const void*                         pTag)
-{
-    struct intel_base *base = intel_base(object);
-    struct intel_base_dbg *dbg = base->dbg;
-    void *tag;
-
-    if (!dbg)
-        return VK_SUCCESS;
-
-    tag = intel_alloc(base, tagSize, 0, VK_SYSTEM_ALLOC_TYPE_DEBUG);
-    if (!tag)
-        return VK_ERROR_OUT_OF_HOST_MEMORY;
-
-    memcpy(tag, pTag, tagSize);
-
-    if (dbg->tag)
-        intel_free(base, dbg->tag);
-
-    dbg->tag = tag;
-    dbg->tag_size = tagSize;
-
-    return VK_SUCCESS;
-}

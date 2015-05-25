@@ -40,6 +40,7 @@
 #include "vk_struct_size_helper.h"
 #include "draw_state.h"
 #include "layers_config.h"
+#include "vk_debug_marker_layer.h"
 // The following is #included again to catch certain OS-specific functions
 // being used:
 #include "loader_platform.h"
@@ -59,6 +60,7 @@ unordered_map<VkRenderPass, VkRenderPassCreateInfo*> renderPassMap;
 unordered_map<VkFramebuffer, VkFramebufferCreateInfo*> frameBufferMap;
 
 static std::unordered_map<void *, VkLayerDispatchTable *> tableMap;
+static std::unordered_map<void *, VkLayerDebugMarkerDispatchTable *> tableDebugMarkerMap;
 static std::unordered_map<void *, VkLayerInstanceDispatchTable *> tableInstanceMap;
 
 static LOADER_PLATFORM_THREAD_ONCE_DECLARATION(g_initOnce);
@@ -1443,6 +1445,7 @@ static void synchAndPrintDSConfig(const VkCmdBuffer cb)
 static VkLayerDispatchTable * initDeviceTable(const VkBaseLayerObject *devw)
 {
     VkLayerDispatchTable *pTable;
+    VkLayerDebugMarkerDispatchTable *pDebugMarkerTable;
 
     assert(devw);
     VkLayerDispatchTable **ppDisp = (VkLayerDispatchTable **) (devw->baseObject);
@@ -1452,12 +1455,21 @@ static VkLayerDispatchTable * initDeviceTable(const VkBaseLayerObject *devw)
     {
         pTable =  new VkLayerDispatchTable;
         tableMap[(void *) *ppDisp] = pTable;
+        pDebugMarkerTable = new VkLayerDebugMarkerDispatchTable;
+        tableDebugMarkerMap[(void *) *ppDisp] = pDebugMarkerTable;
     } else
     {
         return it->second;
     }
 
-    layer_initialize_dispatch_table(pTable, (PFN_vkGetDeviceProcAddr) devw->pGPA, (VkDevice) devw->nextObject);
+    VkDevice device = (VkDevice) devw->nextObject;
+    layer_initialize_dispatch_table(pTable, (PFN_vkGetDeviceProcAddr) devw->pGPA, device);
+
+    pDebugMarkerTable->CmdDbgMarkerBegin = (PFN_vkCmdDbgMarkerBegin) devw->pGPA(device, "vkCmdDbgMarkerBegin");
+    pDebugMarkerTable->CmdDbgMarkerEnd = (PFN_vkCmdDbgMarkerEnd) devw->pGPA(device, "vkCmdDbgMarkerEnd");
+    pDebugMarkerTable->DbgSetObjectTag = (PFN_vkDbgSetObjectTag) devw->pGPA(device, "vkDbgSetObjectTag");
+    pDebugMarkerTable->DbgSetObjectName = (PFN_vkDbgSetObjectName) devw->pGPA(device, "vkDbgSetObjectName");
+    pDebugMarkerTable->ext_enabled = false;
 
     return pTable;
 }
@@ -1523,11 +1535,27 @@ VK_LAYER_EXPORT VkResult VKAPI vkDestroyInstance(VkInstance instance)
     return res;
 }
 
+static void createDeviceRegisterExtensions(const VkDeviceCreateInfo* pCreateInfo, VkDevice device)
+{
+    uint32_t i, ext_idx;
+    VkLayerDebugMarkerDispatchTable *pDisp =  *(VkLayerDebugMarkerDispatchTable **) device;
+    VkLayerDebugMarkerDispatchTable *pTable = tableDebugMarkerMap[pDisp];
+
+    for (i = 0; i < pCreateInfo->extensionCount; i++) {
+        if (strcmp(pCreateInfo->pEnabledExtensions[i].name, DEBUG_MARKER_EXTENSION_NAME) == 0) {
+            /* Found a matching extension name, mark it enabled */
+            pTable->ext_enabled = true;
+        }
+
+    }
+}
+
 VK_LAYER_EXPORT VkResult VKAPI vkCreateDevice(VkPhysicalDevice gpu, const VkDeviceCreateInfo* pCreateInfo, VkDevice* pDevice)
 {
     VkLayerInstanceDispatchTable **ppDisp = (VkLayerInstanceDispatchTable **) gpu;
     VkLayerInstanceDispatchTable* pInstTable = tableInstanceMap[*ppDisp];
     VkResult result = pInstTable->CreateDevice(gpu, pCreateInfo, pDevice);
+    createDeviceRegisterExtensions(pCreateInfo, *pDevice);
     return result;
 }
 
@@ -1568,6 +1596,7 @@ static const VkExtensionProperties dsExts[DRAW_STATE_LAYER_EXT_ARRAY_SIZE] = {
     }
 };
 
+//TODO add DEBUG_MARKER to device extension list
 VK_LAYER_EXPORT VkResult VKAPI vkGetGlobalExtensionInfo(
         VkExtensionInfoType infoType,
         uint32_t extensionIndex,
@@ -2788,7 +2817,14 @@ VK_LAYER_EXPORT VkResult VKAPI vkDbgDestroyMsgCallback(
 VK_LAYER_EXPORT void VKAPI vkCmdDbgMarkerBegin(VkCmdBuffer cmdBuffer, const char* pMarker)
 {
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
-    if (pCB) {
+    VkLayerDebugMarkerDispatchTable *pDisp =  *(VkLayerDebugMarkerDispatchTable **) cmdBuffer;
+    VkLayerDebugMarkerDispatchTable *pTable = tableDebugMarkerMap[pDisp];
+    if (!pTable->ext_enabled) {
+        char str[1024];
+        sprintf(str, "Attempt to use CmdDbgMarkerBegin but extension disabled!");
+        layerCbMsg(VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, cmdBuffer, 0, DRAWSTATE_INVALID_EXTENSION, "DS", str);
+    }
+    else if (pCB) {
         updateCBTracking(cmdBuffer);
         addCmd(pCB, CMD_DBGMARKERBEGIN);
     }
@@ -2797,15 +2833,20 @@ VK_LAYER_EXPORT void VKAPI vkCmdDbgMarkerBegin(VkCmdBuffer cmdBuffer, const char
         sprintf(str, "Attempt to use CmdBuffer %p that doesn't exist!", (void*)cmdBuffer);
         layerCbMsg(VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, cmdBuffer, 0, DRAWSTATE_INVALID_CMD_BUFFER, "DS", str);
     }
-    VkLayerDispatchTable *pDisp =  *(VkLayerDispatchTable **) cmdBuffer;
-    VkLayerDispatchTable *pTable = tableMap[pDisp];
     pTable->CmdDbgMarkerBegin(cmdBuffer, pMarker);
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdDbgMarkerEnd(VkCmdBuffer cmdBuffer)
 {
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
-    if (pCB) {
+    VkLayerDebugMarkerDispatchTable *pDisp =  *(VkLayerDebugMarkerDispatchTable **) cmdBuffer;
+    VkLayerDebugMarkerDispatchTable *pTable = tableDebugMarkerMap[pDisp];
+    if (!pTable->ext_enabled) {
+        char str[1024];
+        sprintf(str, "Attempt to use CmdDbgMarkerEnd but extension disabled!");
+        layerCbMsg(VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, cmdBuffer, 0, DRAWSTATE_INVALID_EXTENSION, "DS", str);
+    }
+    else if (pCB) {
         updateCBTracking(cmdBuffer);
         addCmd(pCB, CMD_DBGMARKEREND);
     }
@@ -2814,8 +2855,6 @@ VK_LAYER_EXPORT void VKAPI vkCmdDbgMarkerEnd(VkCmdBuffer cmdBuffer)
         sprintf(str, "Attempt to use CmdBuffer %p that doesn't exist!", (void*)cmdBuffer);
         layerCbMsg(VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, cmdBuffer, 0, DRAWSTATE_INVALID_CMD_BUFFER, "DS", str);
     }
-    VkLayerDispatchTable *pDisp =  *(VkLayerDispatchTable **) cmdBuffer;
-    VkLayerDispatchTable *pTable = tableMap[pDisp];
     pTable->CmdDbgMarkerEnd(cmdBuffer);
 }
 

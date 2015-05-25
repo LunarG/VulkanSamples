@@ -136,9 +136,6 @@ static inline void loader_init_device_dispatch_table(VkLayerDispatchTable *table
     table->CreateRenderPass = (PFN_vkCreateRenderPass) gpa(dev, "vkCreateRenderPass");
     table->CmdBeginRenderPass = (PFN_vkCmdBeginRenderPass) gpa(dev, "vkCmdBeginRenderPass");
     table->CmdEndRenderPass = (PFN_vkCmdEndRenderPass) gpa(dev, "vkCmdEndRenderPass");
-    table->DbgSetObjectTag = (PFN_vkDbgSetObjectTag) gpa(dev, "vkDbgSetObjectTag");
-    table->CmdDbgMarkerBegin = (PFN_vkCmdDbgMarkerBegin) gpa(dev, "vkCmdDbgMarkerBegin");
-    table->CmdDbgMarkerEnd = (PFN_vkCmdDbgMarkerEnd) gpa(dev, "vkCmdDbgMarkerEnd");
 //TODO move into it's own table
     table->CreateSwapChainWSI = (PFN_vkCreateSwapChainWSI) gpa(dev, "vkCreateSwapChainWSI");
     table->DestroySwapChainWSI = (PFN_vkDestroySwapChainWSI) gpa(dev, "vkDestroySwapChainWSI");
@@ -362,12 +359,6 @@ static inline void *loader_lookup_device_dispatch_table(
         return (void *) table->CmdBeginRenderPass;
     if (!strcmp(name, "CmdEndRenderPass"))
         return (void *) table->CmdEndRenderPass;
-    if (!strcmp(name, "DbgSetObjectTag"))
-        return (void *) table->DbgSetObjectTag;
-    if (!strcmp(name, "CmdDbgMarkerBegin"))
-        return (void *) table->CmdDbgMarkerBegin;
-    if (!strcmp(name, "CmdDbgMarkerEnd"))
-        return (void *) table->CmdDbgMarkerEnd;
 //TODO put in it's own table
     if (!strcmp(name, "CreateSwapChainWSI"))
         return (void *) table->CreateSwapChainWSI;

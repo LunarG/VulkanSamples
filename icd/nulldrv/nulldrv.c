@@ -834,18 +834,6 @@ ICD_EXPORT void VKAPI vkCmdSaveAtomicCounters(
     NULLDRV_LOG_FUNC;
 }
 
-ICD_EXPORT void VKAPI vkCmdDbgMarkerBegin(
-    VkCmdBuffer                              cmdBuffer,
-    const char*                                 pMarker)
-{
-    NULLDRV_LOG_FUNC;
-}
-
-ICD_EXPORT void VKAPI vkCmdDbgMarkerEnd(
-    VkCmdBuffer                              cmdBuffer)
-{
-    NULLDRV_LOG_FUNC;
-}
 
 static const VkFormat nulldrv_presentable_formats[] = {
     VK_FORMAT_B8G8R8A8_UNORM,

@@ -509,14 +509,3 @@ ICD_EXPORT void VKAPI vkCmdSaveAtomicCounters(
     VkDeviceSize                                destOffset)
 {
 }
-
-ICD_EXPORT void VKAPI vkCmdDbgMarkerBegin(
-    VkCmdBuffer                              cmdBuffer,
-    const char*                                 pMarker)
-{
-}
-
-ICD_EXPORT void VKAPI vkCmdDbgMarkerEnd(
-    VkCmdBuffer                              cmdBuffer)
-{
-}

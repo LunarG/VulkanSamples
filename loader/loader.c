@@ -887,6 +887,9 @@ static loader_platform_dl_handle loader_add_layer_lib(
         if (strcmp(loader.loaded_layer_lib_list[i].lib_name, ext_prop->lib_name) == 0) {
             /* Have already loaded this library, just increment ref count */
             loader.loaded_layer_lib_list[i].ref_count++;
+            loader_log(VK_DBG_REPORT_INFO_BIT, 0,
+                       "Inserting instance layer %s from library %s",
+                       ext_prop->info.name, ext_prop->lib_name);
             return loader.loaded_layer_lib_list[i].lib_handle;
         }
     }
