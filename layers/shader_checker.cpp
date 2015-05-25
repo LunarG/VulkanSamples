@@ -307,14 +307,10 @@ types_match(shader_source const *a, shader_source const *b, unsigned a_type, uns
     auto b_type_def_it = b->type_def_index.find(b_type);
 
     if (a_type_def_it == a->type_def_index.end()) {
-        printf("ERR: can't find def for type %d in producing shader %p; SPIRV probably invalid.\n",
-                a_type, a);
         return false;
     }
 
     if (b_type_def_it == b->type_def_index.end()) {
-        printf("ERR: can't find def for type %d in consuming shader %p; SPIRV probably invalid.\n",
-                b_type, b);
         return false;
     }
 
@@ -326,7 +322,6 @@ types_match(shader_source const *a, shader_source const *b, unsigned a_type, uns
     unsigned b_opcode = b_code[0] & 0x0ffffu;
 
     if (a_opcode != b_opcode) {
-        printf("  - FAIL: type def opcodes differ: %d vs %d\n", a_opcode, b_opcode);
         return false;
     }
 
