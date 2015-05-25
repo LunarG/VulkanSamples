@@ -212,7 +212,7 @@ public:
 
     void Bind(VkCmdBuffer cmdBuffer, VkDeviceSize offset, uint32_t binding);
 
-    VkBufferViewAttachInfo     m_bufferViewInfo;
+    VkDescriptorInfo                    m_descriptorInfo;
 
 protected:
     VkDeviceObj                        *m_device;
@@ -251,7 +251,7 @@ public:
 
     void layout( VkImageLayout layout )
     {
-        m_imageInfo.layout = layout;
+        m_descriptorInfo.imageLayout = layout;
     }
 
     VkDeviceMemory memory() const
@@ -296,7 +296,7 @@ public:
 
     VkImageLayout layout() const
     {
-        return ( VkImageLayout )m_imageInfo.layout;
+        return m_descriptorInfo.imageLayout;
     }
     uint32_t width() const
     {
@@ -318,15 +318,15 @@ protected:
     VkDeviceObj                        *m_device;
 
     vk_testing::ColorAttachmentView     m_targetView;
-    VkImageViewAttachInfo               m_imageInfo;
+    VkDescriptorInfo                    m_descriptorInfo;
 };
 
 class VkTextureObj : public VkImageObj
 {
 public:
     VkTextureObj(VkDeviceObj *device, uint32_t *colors = NULL);
-    VkImageViewAttachInfo m_textureViewInfo;
 
+    VkDescriptorInfo                    m_descriptorInfo;
 
 protected:
     VkDeviceObj                        *m_device;
@@ -365,10 +365,8 @@ protected:
     vector<VkDescriptorTypeCount>       m_type_counts;
     int                                 m_nextSlot;
 
-    vector<VkUpdateBuffers>             m_updateBuffers;
-
-    vector<VkSamplerImageViewInfo>      m_samplerTextureInfo;
-    vector<VkUpdateSamplerTextures>     m_updateSamplerTextures;
+    vector<VkDescriptorInfo>            m_imageSamplerDescriptors;
+    vector<VkWriteDescriptorSet>        m_writes;
 
     vk_testing::DescriptorSetLayout     m_layout;
     vk_testing::PipelineLayout          m_pipeline_layout;

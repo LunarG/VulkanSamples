@@ -1237,20 +1237,26 @@ TEST_F(VkLayerTest, DSTypeMismatch)
     err = vkCreateSampler(m_device->device(), &sampler_ci, &sampler);
     ASSERT_VK_SUCCESS(err);
 
-    VkUpdateSamplers *pSamplerUpdate = (VkUpdateSamplers*)malloc(sizeof(VkUpdateSamplers));
+    VkDescriptorInfo descriptor_info;
+    memset(&descriptor_info, 0, sizeof(descriptor_info));
+    descriptor_info.sampler = sampler;
+
+    VkWriteDescriptorSet descriptor_write;
+    memset(&descriptor_write, 0, sizeof(descriptor_write));
+    descriptor_write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    descriptor_write.destSet = descriptorSet;
+    descriptor_write.count = 1;
     // This is a mismatched type for the layout which expects BUFFER
-    pSamplerUpdate->sType      = VK_STRUCTURE_TYPE_UPDATE_SAMPLERS;
-    pSamplerUpdate->pNext      = NULL;
-    pSamplerUpdate->binding    = 0;
-    pSamplerUpdate->arrayIndex = 0;
-    pSamplerUpdate->count      = 1;
-    pSamplerUpdate->pSamplers  = &sampler;
-    const void** ppUpdate = (const void**)&pSamplerUpdate;
-    vkUpdateDescriptors(m_device->device(), descriptorSet, 1, ppUpdate);
+    descriptor_write.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLER;
+    descriptor_write.pDescriptors = &descriptor_info;
+
+    vkUpdateDescriptorSets(m_device->device(), 1, &descriptor_write, 0, NULL);
+
     msgType = m_errorMonitor->GetState(&msgString);
+    std::cout << msgString << "\n";
     ASSERT_EQ(msgType, VK_DBG_MSG_ERROR) << "Did not receive error after updating BUFFER Descriptor w/ incorrect type of SAMPLER.";
-    if (!strstr(msgString.c_str(),"Descriptor update type of VK_STRUCTURE_TYPE_UPDATE_SAMPLERS does not match ")) {
-        FAIL() << "Error received was not 'Descriptor update type of VK_STRUCTURE_TYPE_UPDATE_SAMPLERS does not match overlapping binding type!'";
+    if (!strstr(msgString.c_str(),"Descriptor update type of VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET does not match ")) {
+        FAIL() << "Error received was not 'Descriptor update type of VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET does not match overlapping binding type!'";
     }
 }
 
@@ -1318,20 +1324,27 @@ TEST_F(VkLayerTest, DSUpdateOutOfBounds)
     VkSampler sampler;
     err = vkCreateSampler(m_device->device(), &sampler_ci, &sampler);
     ASSERT_VK_SUCCESS(err);
+
+    VkDescriptorInfo descriptor_info;
+    memset(&descriptor_info, 0, sizeof(descriptor_info));
+    descriptor_info.sampler = sampler;
+
+    VkWriteDescriptorSet descriptor_write;
+    memset(&descriptor_write, 0, sizeof(descriptor_write));
+    descriptor_write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    descriptor_write.destSet = descriptorSet;
+    descriptor_write.destArrayElement = 1; /* This index out of bounds for the update */
+    descriptor_write.count = 1;
     // This is the wrong type, but out of bounds will be flagged first
-    VkUpdateSamplers *pSamplerUpdate = (VkUpdateSamplers*)malloc(sizeof(VkUpdateSamplers));
-    pSamplerUpdate->sType      = VK_STRUCTURE_TYPE_UPDATE_SAMPLERS;
-    pSamplerUpdate->pNext      = NULL;
-    pSamplerUpdate->binding    = 0;
-    pSamplerUpdate->arrayIndex = 1; /* This index out of bounds for the update */
-    pSamplerUpdate->count      = 1;
-    pSamplerUpdate->pSamplers  = &sampler;
-    const void** ppUpdate = (const void**)&pSamplerUpdate;
-    vkUpdateDescriptors(m_device->device(), descriptorSet, 1, ppUpdate);
+    descriptor_write.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLER;
+    descriptor_write.pDescriptors = &descriptor_info;
+
+    vkUpdateDescriptorSets(m_device->device(), 1, &descriptor_write, 0, NULL);
+
     msgType = m_errorMonitor->GetState(&msgString);
     ASSERT_EQ(msgType, VK_DBG_MSG_ERROR) << "Did not receive error after updating Descriptor w/ index out of bounds.";
-    if (!strstr(msgString.c_str(),"Descriptor update type of VK_STRUCTURE_TYPE_UPDATE_SAMPLERS is out of bounds for matching binding")) {
-        FAIL() << "Error received was not 'Descriptor update type of VK_STRUCTURE_TYPE_UPDATE_SAMPLERS is out of bounds for matching binding...'";
+    if (!strstr(msgString.c_str(),"Descriptor update type of VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET is out of bounds for matching binding")) {
+        FAIL() << "Error received was not 'Descriptor update type of VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET is out of bounds for matching binding...'";
     }
 }
 
@@ -1399,16 +1412,23 @@ TEST_F(VkLayerTest, InvalidDSUpdateIndex)
     VkSampler sampler;
     err = vkCreateSampler(m_device->device(), &sampler_ci, &sampler);
     ASSERT_VK_SUCCESS(err);
+
+    VkDescriptorInfo descriptor_info;
+    memset(&descriptor_info, 0, sizeof(descriptor_info));
+    descriptor_info.sampler = sampler;
+
+    VkWriteDescriptorSet descriptor_write;
+    memset(&descriptor_write, 0, sizeof(descriptor_write));
+    descriptor_write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    descriptor_write.destSet = descriptorSet;
+    descriptor_write.destBinding = 2;
+    descriptor_write.count = 1;
     // This is the wrong type, but out of bounds will be flagged first
-    VkUpdateSamplers *pSamplerUpdate = (VkUpdateSamplers*)malloc(sizeof(VkUpdateSamplers));
-    pSamplerUpdate->sType      = VK_STRUCTURE_TYPE_UPDATE_SAMPLERS;
-    pSamplerUpdate->pNext      = NULL;
-    pSamplerUpdate->binding    = 2; /* This binding too big for the update */
-    pSamplerUpdate->arrayIndex = 0;
-    pSamplerUpdate->count      = 1;
-    pSamplerUpdate->pSamplers  = &sampler;
-    const void** ppUpdate = (const void**)&pSamplerUpdate;
-    vkUpdateDescriptors(m_device->device(), descriptorSet, 1, ppUpdate);
+    descriptor_write.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLER;
+    descriptor_write.pDescriptors = &descriptor_info;
+
+    vkUpdateDescriptorSets(m_device->device(), 1, &descriptor_write, 0, NULL);
+
     msgType = m_errorMonitor->GetState(&msgString);
     ASSERT_EQ(msgType, VK_DBG_MSG_ERROR) << "Did not receive error after updating Descriptor w/ count too large for layout.";
     if (!strstr(msgString.c_str()," does not have binding to match update binding ")) {
@@ -1480,16 +1500,23 @@ TEST_F(VkLayerTest, InvalidDSUpdateStruct)
     VkSampler sampler;
     err = vkCreateSampler(m_device->device(), &sampler_ci, &sampler);
     ASSERT_VK_SUCCESS(err);
+
+
+    VkDescriptorInfo descriptor_info;
+    memset(&descriptor_info, 0, sizeof(descriptor_info));
+    descriptor_info.sampler = sampler;
+
+    VkWriteDescriptorSet descriptor_write;
+    memset(&descriptor_write, 0, sizeof(descriptor_write));
+    descriptor_write.sType = (VkStructureType)0x99999999; /* Intentionally broken struct type */
+    descriptor_write.destSet = descriptorSet;
+    descriptor_write.count = 1;
     // This is the wrong type, but out of bounds will be flagged first
-    VkUpdateSamplers *pSamplerUpdate = (VkUpdateSamplers*)malloc(sizeof(VkUpdateSamplers));
-    pSamplerUpdate->sType      = (VkStructureType)0x99999999; /* Intentionally broken struct type */
-    pSamplerUpdate->pNext      = NULL;
-    pSamplerUpdate->binding    = 0;
-    pSamplerUpdate->arrayIndex = 0;
-    pSamplerUpdate->count      = 1;
-    pSamplerUpdate->pSamplers  = &sampler;
-    const void** ppUpdate = (const void**)&pSamplerUpdate;
-    vkUpdateDescriptors(m_device->device(), descriptorSet, 1, ppUpdate);
+    descriptor_write.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLER;
+    descriptor_write.pDescriptors = &descriptor_info;
+
+    vkUpdateDescriptorSets(m_device->device(), 1, &descriptor_write, 0, NULL);
+
     msgType = m_errorMonitor->GetState(&msgString);
     ASSERT_EQ(msgType, VK_DBG_MSG_ERROR) << "Did not receive error after updating Descriptor w/ invalid struct type.";
     if (!strstr(msgString.c_str(),"Unexpected UPDATE struct of type ")) {

@@ -488,6 +488,11 @@ VkResult Device::wait(const std::vector<const Fence *> &fences, bool wait_all, u
     return err;
 }
 
+VkResult Device::update_descriptor_sets(const std::vector<VkWriteDescriptorSet> &writes, const std::vector<VkCopyDescriptorSet> &copies)
+{
+    return vkUpdateDescriptorSets(obj(), writes.size(), &writes[0], copies.size(), &copies[0]);
+}
+
 void Queue::submit(const std::vector<const CmdBuffer *> &cmds, Fence &fence)
 {
     const std::vector<VkCmdBuffer> cmd_objs = make_objects<VkCmdBuffer>(cmds);
@@ -886,11 +891,6 @@ void DescriptorPool::clear_sets(const std::vector<DescriptorSet *> &sets)
 {
     const std::vector<VkDescriptorSet> set_objs = make_objects<VkDescriptorSet>(sets);
     vkClearDescriptorSets(dev_->obj(), obj(), set_objs.size(), &set_objs[0]);
-}
-
-void DescriptorSet::update(const std::vector<const void *> &update_array)
-{
-    vkUpdateDescriptors(dev_->obj(), obj(), update_array.size(), const_cast<const void **>(&update_array[0]));
 }
 
 void DynamicVpStateObject::init(const Device &dev, const VkDynamicVpStateCreateInfo &info)

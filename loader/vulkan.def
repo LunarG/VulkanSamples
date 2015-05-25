@@ -93,7 +93,6 @@ EXPORTS
    vkResetDescriptorPool
    vkAllocDescriptorSets
    vkClearDescriptorSets
-   vkUpdateDescriptors
    vkCreateDynamicViewportState
    vkCreateDynamicRasterState
    vkCreateDynamicColorBlendState

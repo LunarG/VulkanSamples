@@ -577,11 +577,8 @@ static bool32_t validUpdateStruct(const GENERIC_HEADER* pUpdateStruct)
     char str[1024];
     switch (pUpdateStruct->sType)
     {
-        case VK_STRUCTURE_TYPE_UPDATE_SAMPLERS:
-        case VK_STRUCTURE_TYPE_UPDATE_SAMPLER_TEXTURES:
-        case VK_STRUCTURE_TYPE_UPDATE_IMAGES:
-        case VK_STRUCTURE_TYPE_UPDATE_BUFFERS:
-        case VK_STRUCTURE_TYPE_UPDATE_AS_COPY:
+        case VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET:
+        case VK_STRUCTURE_TYPE_COPY_DESCRIPTOR_SET:
             return 1;
         default:
             sprintf(str, "Unexpected UPDATE struct of type %s (value %u) in vkUpdateDescriptors() struct tree", string_VkStructureType(pUpdateStruct->sType), pUpdateStruct->sType);
@@ -595,16 +592,10 @@ static uint32_t getUpdateBinding(const GENERIC_HEADER* pUpdateStruct)
     char str[1024];
     switch (pUpdateStruct->sType)
     {
-        case VK_STRUCTURE_TYPE_UPDATE_SAMPLERS:
-            return ((VkUpdateSamplers*)pUpdateStruct)->binding;
-        case VK_STRUCTURE_TYPE_UPDATE_SAMPLER_TEXTURES:
-            return ((VkUpdateSamplerTextures*)pUpdateStruct)->binding;
-        case VK_STRUCTURE_TYPE_UPDATE_IMAGES:
-            return ((VkUpdateImages*)pUpdateStruct)->binding;
-        case VK_STRUCTURE_TYPE_UPDATE_BUFFERS:
-            return ((VkUpdateBuffers*)pUpdateStruct)->binding;
-        case VK_STRUCTURE_TYPE_UPDATE_AS_COPY:
-            return ((VkUpdateAsCopy*)pUpdateStruct)->binding;
+        case VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET:
+            return ((VkWriteDescriptorSet*)pUpdateStruct)->destBinding;
+        case VK_STRUCTURE_TYPE_COPY_DESCRIPTOR_SET:
+            return ((VkCopyDescriptorSet*)pUpdateStruct)->destBinding;
         default:
             sprintf(str, "Unexpected UPDATE struct of type %s (value %u) in vkUpdateDescriptors() struct tree", string_VkStructureType(pUpdateStruct->sType), pUpdateStruct->sType);
             layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, DRAWSTATE_INVALID_UPDATE_STRUCT, "DS", str);
@@ -617,17 +608,11 @@ static uint32_t getUpdateArrayIndex(const GENERIC_HEADER* pUpdateStruct)
     char str[1024];
     switch (pUpdateStruct->sType)
     {
-        case VK_STRUCTURE_TYPE_UPDATE_SAMPLERS:
-            return (((VkUpdateSamplers*)pUpdateStruct)->arrayIndex);
-        case VK_STRUCTURE_TYPE_UPDATE_SAMPLER_TEXTURES:
-            return (((VkUpdateSamplerTextures*)pUpdateStruct)->arrayIndex);
-        case VK_STRUCTURE_TYPE_UPDATE_IMAGES:
-            return (((VkUpdateImages*)pUpdateStruct)->arrayIndex);
-        case VK_STRUCTURE_TYPE_UPDATE_BUFFERS:
-            return (((VkUpdateBuffers*)pUpdateStruct)->arrayIndex);
-        case VK_STRUCTURE_TYPE_UPDATE_AS_COPY:
+        case VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET:
+            return ((VkWriteDescriptorSet*)pUpdateStruct)->destArrayElement;
+        case VK_STRUCTURE_TYPE_COPY_DESCRIPTOR_SET:
             // TODO : Need to understand this case better and make sure code is correct
-            return (((VkUpdateAsCopy*)pUpdateStruct)->arrayElement);
+            return ((VkCopyDescriptorSet*)pUpdateStruct)->destArrayElement;
         default:
             sprintf(str, "Unexpected UPDATE struct of type %s (value %u) in vkUpdateDescriptors() struct tree", string_VkStructureType(pUpdateStruct->sType), pUpdateStruct->sType);
             layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, DRAWSTATE_INVALID_UPDATE_STRUCT, "DS", str);
@@ -640,17 +625,11 @@ static uint32_t getUpdateCount(const GENERIC_HEADER* pUpdateStruct)
     char str[1024];
     switch (pUpdateStruct->sType)
     {
-        case VK_STRUCTURE_TYPE_UPDATE_SAMPLERS:
-            return (((VkUpdateSamplers*)pUpdateStruct)->count);
-        case VK_STRUCTURE_TYPE_UPDATE_SAMPLER_TEXTURES:
-            return (((VkUpdateSamplerTextures*)pUpdateStruct)->count);
-        case VK_STRUCTURE_TYPE_UPDATE_IMAGES:
-            return (((VkUpdateImages*)pUpdateStruct)->count);
-        case VK_STRUCTURE_TYPE_UPDATE_BUFFERS:
-            return (((VkUpdateBuffers*)pUpdateStruct)->count);
-        case VK_STRUCTURE_TYPE_UPDATE_AS_COPY:
+        case VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET:
+            return ((VkWriteDescriptorSet*)pUpdateStruct)->count;
+        case VK_STRUCTURE_TYPE_COPY_DESCRIPTOR_SET:
             // TODO : Need to understand this case better and make sure code is correct
-            return (((VkUpdateAsCopy*)pUpdateStruct)->count);
+            return ((VkCopyDescriptorSet*)pUpdateStruct)->count;
         default:
             sprintf(str, "Unexpected UPDATE struct of type %s (value %u) in vkUpdateDescriptors() struct tree", string_VkStructureType(pUpdateStruct->sType), pUpdateStruct->sType);
             layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, DRAWSTATE_INVALID_UPDATE_STRUCT, "DS", str);
@@ -694,20 +673,12 @@ static bool32_t validateUpdateType(const LAYOUT_NODE* pLayout, const GENERIC_HEA
     char str[1024];
     switch (pUpdateStruct->sType)
     {
-        case VK_STRUCTURE_TYPE_UPDATE_SAMPLERS:
-            actualType = VK_DESCRIPTOR_TYPE_SAMPLER;
+        case VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET:
+            actualType = ((VkWriteDescriptorSet*)pUpdateStruct)->descriptorType;
             break;
-        case VK_STRUCTURE_TYPE_UPDATE_SAMPLER_TEXTURES:
-            actualType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-            break;
-        case VK_STRUCTURE_TYPE_UPDATE_IMAGES:
-            actualType = ((VkUpdateImages*)pUpdateStruct)->descriptorType;
-            break;
-        case VK_STRUCTURE_TYPE_UPDATE_BUFFERS:
-            actualType = ((VkUpdateBuffers*)pUpdateStruct)->descriptorType;
-            break;
-        case VK_STRUCTURE_TYPE_UPDATE_AS_COPY:
-            actualType = ((VkUpdateAsCopy*)pUpdateStruct)->descriptorType;
+        case VK_STRUCTURE_TYPE_COPY_DESCRIPTOR_SET:
+            /* no need to validate */
+            return 1;
             break;
         default:
             sprintf(str, "Unexpected UPDATE struct of type %s (value %u) in vkUpdateDescriptors() struct tree", string_VkStructureType(pUpdateStruct->sType), pUpdateStruct->sType);
@@ -726,61 +697,27 @@ static bool32_t validateUpdateType(const LAYOUT_NODE* pLayout, const GENERIC_HEA
 static GENERIC_HEADER* shadowUpdateNode(GENERIC_HEADER* pUpdate)
 {
     GENERIC_HEADER* pNewNode = NULL;
-    VkUpdateSamplers* pUS = NULL;
-    VkUpdateSamplerTextures* pUST = NULL;
-    VkUpdateBuffers* pUB = NULL;
-    VkUpdateImages* pUI = NULL;
-    VkUpdateAsCopy* pUAC = NULL;
+    VkWriteDescriptorSet* pWDS = NULL;
+    VkCopyDescriptorSet* pCDS = NULL;
     size_t array_size = 0;
     size_t base_array_size = 0;
     size_t total_array_size = 0;
     size_t baseBuffAddr = 0;
-    VkImageViewAttachInfo** ppLocalImageViews = NULL;
-    VkBufferViewAttachInfo** ppLocalBufferViews = NULL;
     char str[1024];
     switch (pUpdate->sType)
     {
-        case VK_STRUCTURE_TYPE_UPDATE_SAMPLERS:
-            pUS = new VkUpdateSamplers;
-            pNewNode = (GENERIC_HEADER*)pUS;
-            memcpy(pUS, pUpdate, sizeof(VkUpdateSamplers));
-            pUS->pSamplers = new VkSampler[pUS->count];
-            array_size = sizeof(VkSampler) * pUS->count;
-            memcpy((void*)pUS->pSamplers, ((VkUpdateSamplers*)pUpdate)->pSamplers, array_size);
+        case VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET:
+            pWDS = new VkWriteDescriptorSet;
+            pNewNode = (GENERIC_HEADER*)pWDS;
+            memcpy(pWDS, pUpdate, sizeof(VkWriteDescriptorSet));
+            pWDS->pDescriptors = new VkDescriptorInfo[pWDS->count];
+            array_size = sizeof(VkDescriptorInfo) * pWDS->count;
+            memcpy((void*)pWDS->pDescriptors, ((VkWriteDescriptorSet*)pUpdate)->pDescriptors, array_size);
             break;
-        case VK_STRUCTURE_TYPE_UPDATE_SAMPLER_TEXTURES:
-            pUST = new VkUpdateSamplerTextures;
-            pNewNode = (GENERIC_HEADER*)pUST;
-            memcpy(pUST, pUpdate, sizeof(VkUpdateSamplerTextures));
-            pUST->pSamplerImageViews = new VkSamplerImageViewInfo[pUST->count];
-            array_size = sizeof(VkSamplerImageViewInfo) * pUST->count;
-            memcpy((void*)pUST->pSamplerImageViews, ((VkUpdateSamplerTextures*)pUpdate)->pSamplerImageViews, array_size);
-            for (uint32_t i = 0; i < pUST->count; i++) {
-                VkImageViewAttachInfo** ppIV = (VkImageViewAttachInfo**)&pUST->pSamplerImageViews[i].pImageView;
-                *ppIV = new VkImageViewAttachInfo;
-                memcpy((void*)*ppIV, ((VkUpdateSamplerTextures*)pUpdate)->pSamplerImageViews[i].pImageView, sizeof(VkImageViewAttachInfo));
-            }
-            break;
-        case VK_STRUCTURE_TYPE_UPDATE_IMAGES:
-            pUI = new VkUpdateImages;
-            pNewNode = (GENERIC_HEADER*)pUI;
-            memcpy(pUI, pUpdate, sizeof(VkUpdateImages));
-            pUI->pImageViews = new VkImageViewAttachInfo[pUI->count];
-            array_size = (sizeof(VkImageViewAttachInfo) * pUI->count);
-            memcpy((void*)pUI->pImageViews, ((VkUpdateImages*)pUpdate)->pImageViews, array_size);
-            break;
-        case VK_STRUCTURE_TYPE_UPDATE_BUFFERS:
-            pUB = new VkUpdateBuffers;
-            pNewNode = (GENERIC_HEADER*)pUB;
-            memcpy(pUB, pUpdate, sizeof(VkUpdateBuffers));
-            pUB->pBufferViews = new VkBufferViewAttachInfo[pUB->count];
-            array_size = (sizeof(VkBufferViewAttachInfo) * pUB->count);
-            memcpy((void*)pUB->pBufferViews, ((VkUpdateBuffers*)pUpdate)->pBufferViews, array_size);
-            break;
-        case VK_STRUCTURE_TYPE_UPDATE_AS_COPY:
-            pUAC = new VkUpdateAsCopy;
-            pUpdate = (GENERIC_HEADER*)pUAC;
-            memcpy(pUAC, pUpdate, sizeof(VkUpdateAsCopy));
+        case VK_STRUCTURE_TYPE_COPY_DESCRIPTOR_SET:
+            pCDS = new VkCopyDescriptorSet;
+            pUpdate = (GENERIC_HEADER*)pCDS;
+            memcpy(pCDS, pUpdate, sizeof(VkCopyDescriptorSet));
             break;
         default:
             sprintf(str, "Unexpected UPDATE struct of type %s (value %u) in vkUpdateDescriptors() struct tree", string_VkStructureType(pUpdate->sType), pUpdate->sType);
@@ -791,19 +728,28 @@ static GENERIC_HEADER* shadowUpdateNode(GENERIC_HEADER* pUpdate)
     pNewNode->pNext = NULL;
     return pNewNode;
 }
-// For given ds, update its mapping based on ppUpdateArray
-static bool32_t dsUpdate(VkDescriptorSet ds, uint32_t updateCount, const void** ppUpdateArray)
+// update DS mappings based on ppUpdateArray
+static bool32_t dsUpdate(VkStructureType type, uint32_t updateCount, const void* pUpdateArray)
 {
+    const VkWriteDescriptorSet *pWDS = NULL;
+    const VkCopyDescriptorSet *pCDS = NULL;
     bool32_t result = 1;
-    SET_NODE* pSet = getSetNode(ds);
+
+    if (type == VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET)
+        pWDS = (const VkWriteDescriptorSet *) pUpdateArray;
+    else
+        pCDS = (const VkCopyDescriptorSet *) pUpdateArray;
+
     loader_platform_thread_lock_mutex(&globalLock);
-    g_lastBoundDescriptorSet = pSet->set;
     LAYOUT_NODE* pLayout = NULL;
     VkDescriptorSetLayoutCreateInfo* pLayoutCI = NULL;
     // TODO : If pCIList is NULL, flag error
     // Perform all updates
     for (uint32_t i = 0; i < updateCount; i++) {
-        GENERIC_HEADER* pUpdate = (GENERIC_HEADER*)ppUpdateArray[i];
+        VkDescriptorSet ds = (pWDS) ? pWDS->destSet : pCDS->destSet;
+        SET_NODE* pSet = setMap[ds]; // getSetNode() without locking
+        g_lastBoundDescriptorSet = pSet->set;
+        GENERIC_HEADER* pUpdate = (pWDS) ? (GENERIC_HEADER*) &pWDS[i] : (GENERIC_HEADER*) &pCDS[i];
         pLayout = pSet->pLayout;
         // First verify valid update struct
         if (!validUpdateStruct(pUpdate)) {
@@ -876,40 +822,17 @@ static void freeShadowUpdateTree(SET_NODE* pSet)
         pFreeUpdate = pShadowUpdate;
         pShadowUpdate = (GENERIC_HEADER*)pShadowUpdate->pNext;
         uint32_t index = 0;
-        VkUpdateSamplers* pUS = NULL;
-        VkUpdateSamplerTextures* pUST = NULL;
-        VkUpdateImages* pUI = NULL;
-        VkUpdateBuffers* pUB = NULL;
+        VkWriteDescriptorSet * pWDS = NULL;
+        VkCopyDescriptorSet * pCDS = NULL;
         void** ppToFree = NULL;
         switch (pFreeUpdate->sType)
         {
-            case VK_STRUCTURE_TYPE_UPDATE_SAMPLERS:
-                pUS = (VkUpdateSamplers*)pFreeUpdate;
-                if (pUS->pSamplers)
-                    delete[] pUS->pSamplers;
+            case VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET:
+                pWDS = (VkWriteDescriptorSet*)pFreeUpdate;
+                if (pWDS->pDescriptors)
+                    delete[] pWDS->pDescriptors;
                 break;
-            case VK_STRUCTURE_TYPE_UPDATE_SAMPLER_TEXTURES:
-                pUST = (VkUpdateSamplerTextures*)pFreeUpdate;
-                if (pUST->pSamplerImageViews) {
-                    for (index = 0; index < pUST->count; index++) {
-                        if (pUST->pSamplerImageViews[index].pImageView) {
-                            delete pUST->pSamplerImageViews[index].pImageView;
-                        }
-                    }
-                    delete[] pUST->pSamplerImageViews;
-                }
-                break;
-            case VK_STRUCTURE_TYPE_UPDATE_IMAGES:
-                pUI = (VkUpdateImages*)pFreeUpdate;
-                if (pUI->pImageViews)
-                    delete[] pUI->pImageViews;
-                break;
-            case VK_STRUCTURE_TYPE_UPDATE_BUFFERS:
-                pUB = (VkUpdateBuffers*)pFreeUpdate;
-                if (pUB->pBufferViews)
-                    delete[] pUB->pBufferViews;
-                break;
-            case VK_STRUCTURE_TYPE_UPDATE_AS_COPY:
+            case VK_STRUCTURE_TYPE_COPY_DESCRIPTOR_SET:
                 break;
             default:
                 assert(0);
@@ -1104,6 +1027,7 @@ static void printPipeline(const VkCmdBuffer cb)
 // Common Dot dumping code
 static void dsCoreDumpDot(const VkDescriptorSet ds, FILE* pOutFile)
 {
+#if 0
     SET_NODE* pSet = getSetNode(ds);
     if (pSet) {
         POOL_NODE* pPool = getPoolNode(pSet->pool);
@@ -1226,6 +1150,7 @@ static void dsCoreDumpDot(const VkDescriptorSet ds, FILE* pOutFile)
         fprintf(pOutFile, "}\n");
         fprintf(pOutFile, "}\n");
     }
+#endif
 }
 // Dump subgraph w/ DS info
 static void dsDumpDot(const VkCmdBuffer cb, FILE* pOutFile)
@@ -1859,14 +1784,13 @@ VK_LAYER_EXPORT void VKAPI vkClearDescriptorSets(VkDevice device, VkDescriptorPo
     nextTable.ClearDescriptorSets(device, descriptorPool, count, pDescriptorSets);
 }
 
-VK_LAYER_EXPORT void VKAPI vkUpdateDescriptors(VkDevice device, VkDescriptorSet descriptorSet, uint32_t updateCount, const void** ppUpdateArray)
+VK_LAYER_EXPORT VkResult VKAPI vkUpdateDescriptorSets(VkDevice device, uint32_t writeCount, const VkWriteDescriptorSet* pDescriptorWrites, uint32_t copyCount, const VkCopyDescriptorSet* pDescriptorCopies)
 {
-    SET_NODE* pSet = getSetNode(descriptorSet);
-
-    // pUpdateChain is an array of VK_UPDATE_* struct ptrs defining the mappings for the descriptors
-    if (dsUpdate(descriptorSet, updateCount, ppUpdateArray)) {
-        nextTable.UpdateDescriptors(device, descriptorSet, updateCount, ppUpdateArray);
-    }
+    if (dsUpdate(VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET, writeCount, pDescriptorWrites) &&
+        dsUpdate(VK_STRUCTURE_TYPE_COPY_DESCRIPTOR_SET, copyCount, pDescriptorCopies))
+        return nextTable.UpdateDescriptorSets(device, writeCount, pDescriptorWrites, copyCount, pDescriptorCopies);
+    else
+        return VK_ERROR_UNKNOWN;
 }
 
 VK_LAYER_EXPORT VkResult VKAPI vkCreateDynamicViewportState(VkDevice device, const VkDynamicVpStateCreateInfo* pCreateInfo, VkDynamicVpState* pState)
@@ -2761,8 +2685,8 @@ VK_LAYER_EXPORT void* VKAPI vkGetProcAddr(VkPhysicalDevice gpu, const char* func
         return (void*) vkAllocDescriptorSets;
     if (!strcmp(funcName, "vkClearDescriptorSets"))
         return (void*) vkClearDescriptorSets;
-    if (!strcmp(funcName, "vkUpdateDescriptors"))
-        return (void*) vkUpdateDescriptors;
+    if (!strcmp(funcName, "vkUpdateDescriptorSets"))
+        return (void*) vkUpdateDescriptorSets;
     if (!strcmp(funcName, "vkCreateDynamicViewportState"))
         return (void*) vkCreateDynamicViewportState;
     if (!strcmp(funcName, "vkCreateDynamicRasterState"))

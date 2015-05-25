@@ -1144,14 +1144,6 @@ VK_LAYER_EXPORT void VKAPI vkClearDescriptorSets(VkDevice device, VkDescriptorPo
     nextTable.ClearDescriptorSets(device, descriptorPool, count, pDescriptorSets);
 }
 
-VK_LAYER_EXPORT void VKAPI vkUpdateDescriptors(VkDevice device, VkDescriptorSet descriptorSet, uint32_t updateCount, const void** ppUpdateArray)
-{
-    loader_platform_thread_lock_mutex(&objLock);
-    ll_increment_use_count((void*)descriptorSet, VK_OBJECT_TYPE_DESCRIPTOR_SET);
-    loader_platform_thread_unlock_mutex(&objLock);
-    nextTable.UpdateDescriptors(device, descriptorSet, updateCount, ppUpdateArray);
-}
-
 VK_LAYER_EXPORT VkResult VKAPI vkCreateDynamicViewportState(VkDevice device, const VkDynamicVpStateCreateInfo* pCreateInfo, VkDynamicVpState* pState)
 {
     loader_platform_thread_lock_mutex(&objLock);

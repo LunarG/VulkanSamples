@@ -318,7 +318,7 @@ struct demo {
         VkBuffer buf;
         VkDeviceMemory mem;
         VkBufferView view;
-        VkBufferViewAttachInfo attach;
+        VkDescriptorInfo desc;
     } uniform_data;
 
     VkCmdBuffer cmd;  // Buffer for initialization commands
@@ -1150,8 +1150,7 @@ void demo_prepare_cube_data_buffer(struct demo *demo)
     err = vkCreateBufferView(demo->device, &view_info, &demo->uniform_data.view);
     assert(!err);
 
-    demo->uniform_data.attach.sType = VK_STRUCTURE_TYPE_BUFFER_VIEW_ATTACH_INFO;
-    demo->uniform_data.attach.view = demo->uniform_data.view;
+    demo->uniform_data.desc.bufferView = demo->uniform_data.view;
 }
 
 static void demo_prepare_descriptor_layout(struct demo *demo)
@@ -1510,37 +1509,11 @@ static void demo_prepare_descriptor_pool(struct demo *demo)
 
 static void demo_prepare_descriptor_set(struct demo *demo)
 {
-    VkImageViewAttachInfo view_info[DEMO_TEXTURE_COUNT];
-    VkSamplerImageViewInfo combined_info[DEMO_TEXTURE_COUNT];
-    VkUpdateSamplerTextures update_fs;
-    VkUpdateBuffers update_vs;
-    const void *update_array[2] = { &update_vs, &update_fs };
+    VkDescriptorInfo tex_descs[DEMO_TEXTURE_COUNT];
+    VkWriteDescriptorSet writes[2];
     VkResult U_ASSERT_ONLY err;
     uint32_t count;
     uint32_t i;
-
-    for (i = 0; i < DEMO_TEXTURE_COUNT; i++) {
-        view_info[i].sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_ATTACH_INFO;
-        view_info[i].pNext = NULL;
-        view_info[i].view = demo->textures[i].view,
-        view_info[i].layout = VK_IMAGE_LAYOUT_GENERAL;
-
-        combined_info[i].sampler = demo->textures[i].sampler;
-        combined_info[i].pImageView = &view_info[i];
-    }
-
-    memset(&update_vs, 0, sizeof(update_vs));
-    update_vs.sType = VK_STRUCTURE_TYPE_UPDATE_BUFFERS;
-    update_vs.pNext = &update_fs;
-    update_vs.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-    update_vs.count = 1;
-    update_vs.pBufferViews = &demo->uniform_data.attach;
-
-    memset(&update_fs, 0, sizeof(update_fs));
-    update_fs.sType = VK_STRUCTURE_TYPE_UPDATE_SAMPLER_TEXTURES;
-    update_fs.binding = 1;
-    update_fs.count = DEMO_TEXTURE_COUNT;
-    update_fs.pSamplerImageViews = combined_info;
 
     err = vkAllocDescriptorSets(demo->device, demo->desc_pool,
             VK_DESCRIPTOR_SET_USAGE_STATIC,
@@ -1549,7 +1522,31 @@ static void demo_prepare_descriptor_set(struct demo *demo)
     assert(!err && count == 1);
 
     vkClearDescriptorSets(demo->device, demo->desc_pool, 1, &demo->desc_set);
-    vkUpdateDescriptors(demo->device, demo->desc_set, 2, update_array);
+
+    memset(&tex_descs, 0, sizeof(tex_descs));
+    for (i = 0; i < DEMO_TEXTURE_COUNT; i++) {
+        tex_descs[i].sampler = demo->textures[i].sampler;
+        tex_descs[i].imageView = demo->textures[i].view;
+        tex_descs[i].imageLayout = VK_IMAGE_LAYOUT_GENERAL;
+    }
+
+    memset(&writes, 0, sizeof(writes));
+
+    writes[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    writes[0].destSet = demo->desc_set;
+    writes[0].count = 1;
+    writes[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    writes[0].pDescriptors = &demo->uniform_data.desc;
+
+    writes[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    writes[1].destSet = demo->desc_set;
+    writes[1].destBinding = 1;
+    writes[1].count = DEMO_TEXTURE_COUNT;
+    writes[1].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    writes[1].pDescriptors = tex_descs;
+
+    err = vkUpdateDescriptorSets(demo->device, 2, writes, 0, NULL);
+    assert(!err);
 }
 
 static void demo_prepare(struct demo *demo)

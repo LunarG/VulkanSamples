@@ -583,11 +583,12 @@ core = Extension(
              Param("uint32_t", "count"),
              Param("const VkDescriptorSet*", "pDescriptorSets")]),
 
-        Proto("void", "UpdateDescriptors",
+        Proto("VkResult", "UpdateDescriptorSets",
             [Param("VkDevice", "device"),
-             Param("VkDescriptorSet", "descriptorSet"),
-             Param("uint32_t", "updateCount"),
-             Param("const void**", "ppUpdateArray")]),
+             Param("uint32_t", "writeCount"),
+             Param("const VkWriteDescriptorSet*", "pDescriptorWrites"),
+             Param("uint32_t", "copyCount"),
+             Param("const VkCopyDescriptorSet*", "pDescriptorCopies")]),
 
         Proto("VkResult", "CreateDynamicViewportState",
             [Param("VkDevice", "device"),

@@ -279,17 +279,6 @@ VkResult intel_desc_set_create(struct intel_dev *dev,
                                  struct intel_desc_set **set_ret);
 void intel_desc_set_destroy(struct intel_desc_set *set);
 
-void intel_desc_set_update_samplers(struct intel_desc_set *set,
-                                    const VkUpdateSamplers *update);
-void intel_desc_set_update_sampler_textures(struct intel_desc_set *set,
-                                            const VkUpdateSamplerTextures *update);
-void intel_desc_set_update_images(struct intel_desc_set *set,
-                                  const VkUpdateImages *update);
-void intel_desc_set_update_buffers(struct intel_desc_set *set,
-                                   const VkUpdateBuffers *update);
-void intel_desc_set_update_as_copy(struct intel_desc_set *set,
-                                   const VkUpdateAsCopy *update);
-
 VkResult intel_desc_layout_create(struct intel_dev *dev,
                                     const VkDescriptorSetLayoutCreateInfo *info,
                                     struct intel_desc_layout **layout_ret);

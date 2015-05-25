@@ -2268,13 +2268,15 @@ ICD_EXPORT void VKAPI vkClearDescriptorSets(
     NULLDRV_LOG_FUNC;
 }
 
-ICD_EXPORT void VKAPI vkUpdateDescriptors(
-    VkDevice                                  device,
-    VkDescriptorSet                           descriptorSet,
-    uint32_t                                     updateCount,
-    const void**                                 ppUpdateArray)
+ICD_EXPORT VkResult VKAPI vkUpdateDescriptorSets(
+    VkDevice                                    device,
+    uint32_t                                    writeCount,
+    const VkWriteDescriptorSet*                 pDescriptorWrites,
+    uint32_t                                    copyCount,
+    const VkCopyDescriptorSet*                  pDescriptorCopies)
 {
     NULLDRV_LOG_FUNC;
+    return VK_SUCCESS;
 }
 
 ICD_EXPORT VkResult VKAPI vkCreateFramebuffer(

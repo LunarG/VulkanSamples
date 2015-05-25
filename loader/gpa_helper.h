@@ -166,8 +166,8 @@ static inline void* globalGetProcAddr(const char *name)
         return (void*) vkAllocDescriptorSets;
     if (!strcmp(name, "ClearDescriptorSets"))
         return (void*) vkClearDescriptorSets;
-    if (!strcmp(name, "UpdateDescriptors"))
-        return (void*) vkUpdateDescriptors;
+    if (!strcmp(name, "UpdateDescriptorSets"))
+        return (void*) vkUpdateDescriptorSets;
     if (!strcmp(name, "CreateDynamicViewportState"))
         return (void*) vkCreateDynamicViewportState;
     if (!strcmp(name, "CreateDynamicRasterState"))

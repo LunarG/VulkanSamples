@@ -108,13 +108,13 @@ typedef struct _SAMPLER_NODE {
 typedef struct _IMAGE_NODE {
     VkImageView             image;
     VkImageViewCreateInfo createInfo;
-    VkImageViewAttachInfo attachInfo;
+    VkDescriptorInfo descriptorInfo;
 } IMAGE_NODE;
 
 typedef struct _BUFFER_NODE {
     VkBufferView             buffer;
     VkBufferViewCreateInfo createInfo;
-    VkBufferViewAttachInfo attachInfo;
+    VkDescriptorInfo descriptorInfo;
 } BUFFER_NODE;
 
 typedef struct _DYNAMIC_STATE_NODE {

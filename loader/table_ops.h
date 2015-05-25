@@ -99,7 +99,7 @@ static inline void loader_initialize_dispatch_table(VkLayerDispatchTable *table,
     table->ResetDescriptorPool = (PFN_vkResetDescriptorPool) gpa(gpu, "vkResetDescriptorPool");
     table->AllocDescriptorSets = (PFN_vkAllocDescriptorSets) gpa(gpu, "vkAllocDescriptorSets");
     table->ClearDescriptorSets = (PFN_vkClearDescriptorSets) gpa(gpu, "vkClearDescriptorSets");
-    table->UpdateDescriptors = (PFN_vkUpdateDescriptors) gpa(gpu, "vkUpdateDescriptors");
+    table->UpdateDescriptorSets = (PFN_vkUpdateDescriptorSets) gpa(gpu, "vkUpdateDescriptorSets");
     table->CreateDynamicViewportState = (PFN_vkCreateDynamicViewportState) gpa(gpu, "vkCreateDynamicViewportState");
     table->CreateDynamicRasterState = (PFN_vkCreateDynamicRasterState) gpa(gpu, "vkCreateDynamicRasterState");
     table->CreateDynamicColorBlendState = (PFN_vkCreateDynamicColorBlendState) gpa(gpu, "vkCreateDynamicColorBlendState");
@@ -300,8 +300,8 @@ static inline void *loader_lookup_dispatch_table(const VkLayerDispatchTable *tab
         return (void *) table->AllocDescriptorSets;
     if (!strcmp(name, "ClearDescriptorSets"))
         return (void *) table->ClearDescriptorSets;
-    if (!strcmp(name, "UpdateDescriptors"))
-        return (void *) table->UpdateDescriptors;
+    if (!strcmp(name, "UpdateDescriptorSets"))
+        return (void *) table->UpdateDescriptorSets;
     if (!strcmp(name, "CreateDynamicViewportState"))
         return (void *) table->CreateDynamicViewportState;
     if (!strcmp(name, "CreateDynamicRasterState"))

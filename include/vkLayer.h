@@ -93,7 +93,7 @@ typedef struct VkLayerDispatchTable_
     PFN_vkResetDescriptorPool ResetDescriptorPool;
     PFN_vkAllocDescriptorSets AllocDescriptorSets;
     PFN_vkClearDescriptorSets ClearDescriptorSets;
-    PFN_vkUpdateDescriptors UpdateDescriptors;
+    PFN_vkUpdateDescriptorSets UpdateDescriptorSets;
     PFN_vkCreateDynamicViewportState CreateDynamicViewportState;
     PFN_vkCreateDynamicRasterState CreateDynamicRasterState;
     PFN_vkCreateDynamicColorBlendState CreateDynamicColorBlendState;

@@ -277,7 +277,7 @@ public:
 protected:
     VkImage m_texture;
     VkImageView m_textureView;
-    VkImageViewAttachInfo m_textureViewInfo;
+    VkDescriptorInfo m_descriptorInfo;
     VkDeviceMemory m_textureMem;
 
     VkSampler m_sampler;
@@ -293,8 +293,7 @@ protected:
         this->app_info.engineVersion = 1;
         this->app_info.apiVersion = VK_API_VERSION;
 
-        memset(&m_textureViewInfo, 0, sizeof(m_textureViewInfo));
-        m_textureViewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_ATTACH_INFO;
+        memset(&m_descriptorInfo, 0, sizeof(m_descriptorInfo));
 
         InitFramework();
     }

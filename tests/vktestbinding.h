@@ -235,6 +235,19 @@ public:
     VkResult wait(const std::vector<const Fence *> &fences, bool wait_all, uint64_t timeout);
     VkResult wait(const Fence &fence) { return wait(std::vector<const Fence *>(1, &fence), true, (uint64_t) -1); }
 
+    // vkUpdateDescriptorSets()
+    VkResult update_descriptor_sets(const std::vector<VkWriteDescriptorSet> &writes, const std::vector<VkCopyDescriptorSet> &copies);
+    VkResult update_descriptor_sets(const std::vector<VkWriteDescriptorSet> &writes) { return update_descriptor_sets(writes, std::vector<VkCopyDescriptorSet>()); }
+
+    static VkWriteDescriptorSet write_descriptor_set(const DescriptorSet &set, uint32_t binding, uint32_t array_element,
+                                                     VkDescriptorType type, uint32_t count, const VkDescriptorInfo *descriptors);
+    static VkWriteDescriptorSet write_descriptor_set(const DescriptorSet &set, uint32_t binding, uint32_t array_element,
+                                                     VkDescriptorType type, const std::vector<VkDescriptorInfo> &descriptors);
+
+    static VkCopyDescriptorSet copy_descriptor_set(const DescriptorSet &src_set, uint32_t src_binding, uint32_t src_array_element,
+                                                   const DescriptorSet &dst_set, uint32_t dst_binding, uint32_t dst_array_element,
+                                                   uint32_t count);
+
 private:
     enum QueueIndex {
         GRAPHICS,
@@ -548,27 +561,8 @@ public:
 
 class DescriptorSet : public DerivedObject<VkDescriptorSet, Object, VK_OBJECT_TYPE_DESCRIPTOR_SET> {
 public:
+    explicit DescriptorSet() : DerivedObject() {}
     explicit DescriptorSet(const Device &dev, VkDescriptorSet set) : DerivedObject(dev, set) {}
-
-    // vkUpdateDescriptors()
-    void update(const std::vector<const void *> &update_array);
-
-    static VkUpdateSamplers update(uint32_t binding, uint32_t index, uint32_t count, const VkSampler *samplers);
-    static VkUpdateSamplers update(uint32_t binding, uint32_t index, const std::vector<VkSampler> &samplers);
-
-    static VkUpdateSamplerTextures update(uint32_t binding, uint32_t index, uint32_t count, const VkSamplerImageViewInfo *textures);
-    static VkUpdateSamplerTextures update(uint32_t binding, uint32_t index, const std::vector<VkSamplerImageViewInfo> &textures);
-
-    static VkUpdateImages update(VkDescriptorType type, uint32_t binding, uint32_t index, uint32_t count, const VkImageViewAttachInfo *views);
-    static VkUpdateImages update(VkDescriptorType type, uint32_t binding, uint32_t index, const std::vector<VkImageViewAttachInfo> &views);
-
-    static VkUpdateBuffers update(VkDescriptorType type, uint32_t binding, uint32_t index, uint32_t count, const VkBufferViewAttachInfo *views);
-    static VkUpdateBuffers update(VkDescriptorType type, uint32_t binding, uint32_t index, const std::vector<VkBufferViewAttachInfo> &views);
-
-    static VkUpdateAsCopy update(VkDescriptorType type, uint32_t binding, uint32_t index, uint32_t count, const DescriptorSet &set);
-
-    static VkBufferViewAttachInfo attach_info(const BufferView &view);
-    static VkImageViewAttachInfo attach_info(const ImageView &view, VkImageLayout layout);
 };
 
 class DynamicVpStateObject : public DerivedObject<VkDynamicVpState, DynamicStateObject, VK_OBJECT_TYPE_DYNAMIC_VP_STATE> {
@@ -792,103 +786,41 @@ inline VkShaderCreateInfo Shader::create_info(size_t code_size, const void *code
     return info;
 }
 
-inline VkBufferViewAttachInfo DescriptorSet::attach_info(const BufferView &view)
+inline VkWriteDescriptorSet Device::write_descriptor_set(const DescriptorSet &set, uint32_t binding, uint32_t array_element,
+                                                         VkDescriptorType type, uint32_t count, const VkDescriptorInfo *descriptors)
 {
-    VkBufferViewAttachInfo info = {};
-    info.sType = VK_STRUCTURE_TYPE_BUFFER_VIEW_ATTACH_INFO;
-    info.view = view.obj();
-    return info;
+    VkWriteDescriptorSet write = {};
+    write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    write.destSet = set.obj();
+    write.destBinding = binding;
+    write.destArrayElement = array_element;
+    write.count = count;
+    write.descriptorType = type;
+    write.pDescriptors = descriptors;
+    return write;
 }
 
-inline VkImageViewAttachInfo DescriptorSet::attach_info(const ImageView &view, VkImageLayout layout)
+inline VkWriteDescriptorSet Device::write_descriptor_set(const DescriptorSet &set, uint32_t binding, uint32_t array_element,
+                                                         VkDescriptorType type, const std::vector<VkDescriptorInfo> &descriptors)
 {
-    VkImageViewAttachInfo info = {};
-    info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_ATTACH_INFO;
-    info.view = view.obj();
-    info.layout = layout;
-    return info;
+    return write_descriptor_set(set, binding, array_element, type, descriptors.size(), &descriptors[0]);
 }
 
-inline VkUpdateSamplers DescriptorSet::update(uint32_t binding, uint32_t index, uint32_t count, const VkSampler *samplers)
+inline VkCopyDescriptorSet Device::copy_descriptor_set(const DescriptorSet &src_set, uint32_t src_binding, uint32_t src_array_element,
+                                                       const DescriptorSet &dst_set, uint32_t dst_binding, uint32_t dst_array_element,
+                                                       uint32_t count)
 {
-    VkUpdateSamplers info = {};
-    info.sType = VK_STRUCTURE_TYPE_UPDATE_SAMPLERS;
-    info.binding = binding;
-    info.arrayIndex = index;
-    info.count = count;
-    info.pSamplers = samplers;
-    return info;
-}
+    VkCopyDescriptorSet copy = {};
+    copy.sType = VK_STRUCTURE_TYPE_COPY_DESCRIPTOR_SET;
+    copy.srcSet = src_set.obj();
+    copy.srcBinding = src_binding;
+    copy.srcArrayElement = src_array_element;
+    copy.destSet = dst_set.obj();
+    copy.destBinding = dst_binding;
+    copy.destArrayElement = dst_array_element;
+    copy.count = count;
 
-inline VkUpdateSamplers DescriptorSet::update(uint32_t binding, uint32_t index, const std::vector<VkSampler> &samplers)
-{
-    return update(binding, index, samplers.size(), &samplers[0]);
-}
-
-inline VkUpdateSamplerTextures DescriptorSet::update(uint32_t binding, uint32_t index, uint32_t count, const VkSamplerImageViewInfo *textures)
-{
-    VkUpdateSamplerTextures info = {};
-    info.sType = VK_STRUCTURE_TYPE_UPDATE_SAMPLER_TEXTURES;
-    info.binding = binding;
-    info.arrayIndex = index;
-    info.count = count;
-    info.pSamplerImageViews = textures;
-    return info;
-}
-
-inline VkUpdateSamplerTextures DescriptorSet::update(uint32_t binding, uint32_t index, const std::vector<VkSamplerImageViewInfo> &textures)
-{
-    return update(binding, index, textures.size(), &textures[0]);
-}
-
-inline VkUpdateImages DescriptorSet::update(VkDescriptorType type, uint32_t binding, uint32_t index, uint32_t count,
-                                               const VkImageViewAttachInfo *views)
-{
-    VkUpdateImages info = {};
-    info.sType = VK_STRUCTURE_TYPE_UPDATE_IMAGES;
-    info.descriptorType = type;
-    info.binding = binding;
-    info.arrayIndex = index;
-    info.count = count;
-    info.pImageViews = views;
-    return info;
-}
-
-inline VkUpdateImages DescriptorSet::update(VkDescriptorType type, uint32_t binding, uint32_t index,
-                                               const std::vector<VkImageViewAttachInfo> &views)
-{
-    return update(type, binding, index, views.size(), &views[0]);
-}
-
-inline VkUpdateBuffers DescriptorSet::update(VkDescriptorType type, uint32_t binding, uint32_t index, uint32_t count,
-                                                const VkBufferViewAttachInfo *views)
-{
-    VkUpdateBuffers info = {};
-    info.sType = VK_STRUCTURE_TYPE_UPDATE_BUFFERS;
-    info.descriptorType = type;
-    info.binding = binding;
-    info.arrayIndex = index;
-    info.count = count;
-    info.pBufferViews = views;
-    return info;
-}
-
-inline VkUpdateBuffers DescriptorSet::update(VkDescriptorType type, uint32_t binding, uint32_t index,
-                                                const std::vector<VkBufferViewAttachInfo> &views)
-{
-    return update(type, binding, index, views.size(), &views[0]);
-}
-
-inline VkUpdateAsCopy DescriptorSet::update(VkDescriptorType type, uint32_t binding, uint32_t index, uint32_t count, const DescriptorSet &set)
-{
-    VkUpdateAsCopy info = {};
-    info.sType = VK_STRUCTURE_TYPE_UPDATE_AS_COPY;
-    info.descriptorType = type;
-    info.binding = binding;
-    info.arrayElement = index;
-    info.count = count;
-    info.descriptorSet = set.obj();
-    return info;
+    return copy;
 }
 
 inline VkCmdBufferCreateInfo CmdBuffer::create_info(uint32_t queueNodeIndex)

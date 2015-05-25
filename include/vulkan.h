@@ -33,7 +33,7 @@
 #include "vk_platform.h"
 
 // Vulkan API version supported by this file
-#define VK_API_VERSION VK_MAKE_VERSION(0, 97, 2)
+#define VK_API_VERSION VK_MAKE_VERSION(0, 98, 0)
 
 #ifdef __cplusplus
 extern "C"
@@ -799,8 +799,8 @@ typedef enum VkStructureType_
     VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO                     = 2,
     VK_STRUCTURE_TYPE_MEMORY_OPEN_INFO                      = 3,
     VK_STRUCTURE_TYPE_PEER_MEMORY_OPEN_INFO                 = 4,
-    VK_STRUCTURE_TYPE_BUFFER_VIEW_ATTACH_INFO               = 5,
-    VK_STRUCTURE_TYPE_IMAGE_VIEW_ATTACH_INFO                = 6,
+//    VK_STRUCTURE_TYPE_BUFFER_VIEW_ATTACH_INFO               = 5,
+//    VK_STRUCTURE_TYPE_IMAGE_VIEW_ATTACH_INFO                = 6,
     VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO                = 7,
     VK_STRUCTURE_TYPE_COLOR_ATTACHMENT_VIEW_CREATE_INFO     = 8,
     VK_STRUCTURE_TYPE_DEPTH_STENCIL_VIEW_CREATE_INFO        = 9,
@@ -840,14 +840,11 @@ typedef enum VkStructureType_
     VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER                 = 43,
     VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER                  = 44,
     VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO           = 45,
-    VK_STRUCTURE_TYPE_UPDATE_SAMPLERS                       = 46,
-    VK_STRUCTURE_TYPE_UPDATE_SAMPLER_TEXTURES               = 47,
-    VK_STRUCTURE_TYPE_UPDATE_IMAGES                         = 48,
-    VK_STRUCTURE_TYPE_UPDATE_BUFFERS                        = 49,
-    VK_STRUCTURE_TYPE_UPDATE_AS_COPY                        = 50,
-    VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO                  = 51,
-    VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO           = 52,
-    VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE                   = 53,
+    VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET                  = 46,
+    VK_STRUCTURE_TYPE_COPY_DESCRIPTOR_SET                   = 47,
+    VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO                  = 48,
+    VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO           = 49,
+    VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE                   = 50,
 
     VK_ENUM_RANGE(STRUCTURE_TYPE, APPLICATION_INFO, MAPPED_MEMORY_RANGE)
 } VkStructureType;
@@ -1412,79 +1409,44 @@ typedef struct VkFormatProperties_
     VkFormatFeatureFlags                        optimalTilingFeatures;      // Format features in case of optimal tiling
 } VkFormatProperties;
 
-typedef struct VkBufferViewAttachInfo_
+typedef struct VkDescriptorInfo_
 {
-    VkStructureType                             sType;                      // Must be VK_STRUCTURE_TYPE_BUFFER_VIEW_ATTACH_INFO
+    VkBufferView                                bufferView;                 // Buffer view to write to the descriptor (in case it's a buffer descriptor, otherwise should be VK_NULL_HANDLE)
+    VkSampler                                   sampler;                    // Sampler to write to the descriptor (in case it's a SAMPLER or COMBINED_IMAGE_SAMPLER descriptor, otherwise should be VK_NULL_HANDLE)
+    VkImageView                                 imageView;                  // Image view to write to the descriptor (in case it's a SAMPLED_IMAGE, STORAGE_IMAGE, or COMBINED_IMAGE_SAMPLER descriptor, otherwise should be VK_NULL_HANDLE)
+    VkImageLayout                               imageLayout;                // Layout the image is expected to be in when accessed using this descriptor (only used if <imageView> is not VK_NULL_HANDLE)
+} VkDescriptorInfo;
+
+typedef struct VkWriteDescriptorSet_
+{
+    VkStructureType                             sType;                      // Must be VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET
     const void*                                 pNext;                      // Pointer to next structure
-    VkBufferView                                view;
-} VkBufferViewAttachInfo;
 
-typedef struct VkImageViewAttachInfo_
+    VkDescriptorSet                             destSet;                    // Destination descriptor set
+    uint32_t                                    destBinding;                // Binding within the destination descriptor set to write
+    uint32_t                                    destArrayElement;           // Array element within the destination binding to write
+
+    uint32_t                                    count;                      // Number of descriptors to write (determines the size of the array pointed by <pDescriptors>)
+
+    VkDescriptorType                            descriptorType;             // Descriptor type to write (determines which fields of the array pointed by <pDescriptors> are going to be used)
+    const VkDescriptorInfo*                     pDescriptors;               // Array of info structures describing the descriptors to write
+} VkWriteDescriptorSet;
+
+typedef struct VkCopyDescriptorSet_
 {
-    VkStructureType                             sType;                      // Must be VK_STRUCTURE_TYPE_IMAGE_VIEW_ATTACH_INFO
+    VkStructureType                             sType;                      // Must be VK_STRUCTURE_TYPE_COPY_DESCRIPTOR_SET
     const void*                                 pNext;                      // Pointer to next structure
-    VkImageView                                 view;
-    VkImageLayout                               layout;
-} VkImageViewAttachInfo;
 
-typedef struct VkUpdateSamplers_
-{
-    VkStructureType                             sType;                      // Must be VK_STRUCTURE_TYPE_UPDATE_SAMPLERS
-    const void*                                 pNext;                      // Pointer to next structure
-    uint32_t                                    binding;                    // Binding of the sampler (array)
-    uint32_t                                    arrayIndex;                 // First element of the array to update or zero otherwise
-    uint32_t                                    count;                      // Number of elements to update
-    const VkSampler*                            pSamplers;
-} VkUpdateSamplers;
+    VkDescriptorSet                             srcSet;                     // Source descriptor set
+    uint32_t                                    srcBinding;                 // Binding within the source descriptor set to copy from
+    uint32_t                                    srcArrayElement;            // Array element within the source binding to copy from
 
-typedef struct VkSamplerImageViewInfo_
-{
-    VkSampler                                   sampler;
-    const VkImageViewAttachInfo*                pImageView;
-} VkSamplerImageViewInfo;
+    VkDescriptorSet                             destSet;                    // Destination descriptor set
+    uint32_t                                    destBinding;                // Binding within the destination descriptor set to copy to
+    uint32_t                                    destArrayElement;           // Array element within the destination binding to copy to
 
-typedef struct VkUpdateSamplerTextures_
-{
-    VkStructureType                             sType;                      // Must be VK_STRUCTURE_TYPE_UPDATE_SAMPLER_TEXTURES
-    const void*                                 pNext;                      // Pointer to next structure
-    uint32_t                                    binding;                    // Binding of the combined texture sampler (array)
-    uint32_t                                    arrayIndex;                 // First element of the array to update or zero otherwise
-    uint32_t                                    count;                      // Number of elements to update
-    const VkSamplerImageViewInfo*               pSamplerImageViews;
-} VkUpdateSamplerTextures;
-
-typedef struct VkUpdateImages_
-{
-    VkStructureType                             sType;                     // Must be VK_STRUCTURE_TYPE_UPDATE_IMAGES
-    const void*                                 pNext;                     // Pointer to next structure
-    VkDescriptorType                            descriptorType;
-    uint32_t                                    binding;                   // Binding of the image (array)
-    uint32_t                                    arrayIndex;                // First element of the array to update or zero otherwise
-    uint32_t                                    count;                     // Number of elements to update
-    const VkImageViewAttachInfo*                pImageViews;
-} VkUpdateImages;
-
-typedef struct VkUpdateBuffers_
-{
-    VkStructureType                             sType;                    // Must be VK_STRUCTURE_TYPE_UPDATE_BUFFERS
-    const void*                                 pNext;                    // Pointer to next structure
-    VkDescriptorType                            descriptorType;
-    uint32_t                                    binding;                  // Binding of the buffer (array)
-    uint32_t                                    arrayIndex;               // First element of the array to update or zero otherwise
-    uint32_t                                    count;                    // Number of elements to update
-    const VkBufferViewAttachInfo*               pBufferViews;
-} VkUpdateBuffers;
-
-typedef struct VkUpdateAsCopy_
-{
-    VkStructureType                             sType;                      // Must be VK_STRUCTURE_TYPE_UPDATE_AS_COPY
-    const void*                                 pNext;                      // Pointer to next structure
-    VkDescriptorType                            descriptorType;
-    VkDescriptorSet                             descriptorSet;
-    uint32_t                                    binding;
-    uint32_t                                    arrayElement;
-    uint32_t                                    count;
-} VkUpdateAsCopy;
+    uint32_t                                    count;                      // Number of descriptors to copy
+} VkCopyDescriptorSet;
 
 typedef struct VkBufferCreateInfo_
 {
@@ -2190,7 +2152,7 @@ typedef VkResult (VKAPI *PFN_vkCreateDescriptorPool)(VkDevice device, VkDescript
 typedef VkResult (VKAPI *PFN_vkResetDescriptorPool)(VkDevice device, VkDescriptorPool descriptorPool);
 typedef VkResult (VKAPI *PFN_vkAllocDescriptorSets)(VkDevice device, VkDescriptorPool descriptorPool, VkDescriptorSetUsage setUsage, uint32_t count, const VkDescriptorSetLayout* pSetLayouts, VkDescriptorSet* pDescriptorSets, uint32_t* pCount);
 typedef void     (VKAPI *PFN_vkClearDescriptorSets)(VkDevice device, VkDescriptorPool descriptorPool, uint32_t count, const VkDescriptorSet* pDescriptorSets);
-typedef void     (VKAPI *PFN_vkUpdateDescriptors)(VkDevice device, VkDescriptorSet descriptorSet, uint32_t updateCount, const void** ppUpdateArray);
+typedef VkResult (VKAPI *PFN_vkUpdateDescriptorSets)(VkDevice device, uint32_t writeCount, const VkWriteDescriptorSet* pDescriptorWrites, uint32_t copyCount, const VkCopyDescriptorSet* pDescriptorCopies);
 typedef VkResult (VKAPI *PFN_vkCreateDynamicViewportState)(VkDevice device, const VkDynamicVpStateCreateInfo* pCreateInfo, VkDynamicVpState* pState);
 typedef VkResult (VKAPI *PFN_vkCreateDynamicRasterState)(VkDevice device, const VkDynamicRsStateCreateInfo* pCreateInfo, VkDynamicRsState* pState);
 typedef VkResult (VKAPI *PFN_vkCreateDynamicColorBlendState)(VkDevice device, const VkDynamicCbStateCreateInfo* pCreateInfo, VkDynamicCbState* pState);
@@ -2650,11 +2612,12 @@ void VKAPI vkClearDescriptorSets(
     uint32_t                                    count,
     const VkDescriptorSet*                      pDescriptorSets);
 
-void VKAPI vkUpdateDescriptors(
+VkResult VKAPI vkUpdateDescriptorSets(
     VkDevice                                    device,
-    VkDescriptorSet                             descriptorSet,
-    uint32_t                                    updateCount,
-    const void**                                ppUpdateArray);
+    uint32_t                                    writeCount,
+    const VkWriteDescriptorSet*                 pDescriptorWrites,
+    uint32_t                                    copyCount,
+    const VkCopyDescriptorSet*                  pDescriptorCopies);
 
 // State object functions
 

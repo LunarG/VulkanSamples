@@ -80,13 +80,12 @@ bool intel_desc_iter_init_for_binding(struct intel_desc_iter *iter,
     return true;
 }
 
-static bool desc_iter_init_for_update(struct intel_desc_iter *iter,
-                                      const struct intel_desc_set *set,
-                                      VkDescriptorType type,
-                                      uint32_t binding_index, uint32_t array_base)
+static bool desc_iter_init_for_writing(struct intel_desc_iter *iter,
+                                       const struct intel_desc_set *set,
+                                       uint32_t binding_index, uint32_t array_base)
 {
     if (!intel_desc_iter_init_for_binding(iter, set->layout,
-                binding_index, array_base) || iter->type != type)
+                binding_index, array_base))
         return false;
 
     intel_desc_offset_add(&iter->begin, &iter->begin, &set->region_begin);
@@ -514,168 +513,64 @@ static bool desc_set_img_layout_read_only(VkImageLayout layout)
     }
 }
 
-void intel_desc_set_update_samplers(struct intel_desc_set *set,
-                                    const VkUpdateSamplers *update)
+static void desc_set_write_sampler(struct intel_desc_set *set,
+                                   const struct intel_desc_iter *iter,
+                                   const struct intel_sampler *sampler)
 {
-    struct intel_desc_iter iter;
-    uint32_t i;
+    struct intel_desc_sampler desc;
 
-    if (!desc_iter_init_for_update(&iter, set, VK_DESCRIPTOR_TYPE_SAMPLER,
-                update->binding, update->arrayIndex))
-        return;
-
-    for (i = 0; i < update->count; i++) {
-        const struct intel_sampler *sampler =
-            intel_sampler((VkSampler) update->pSamplers[i]);
-        struct intel_desc_sampler desc;
-
-        desc.sampler = sampler;
-        intel_desc_region_update(set->region, &iter.begin, &iter.end,
-                NULL, &desc);
-
-        if (!intel_desc_iter_advance(&iter))
-            break;
-    }
+    desc.sampler = sampler;
+    intel_desc_region_update(set->region, &iter->begin, &iter->end,
+            NULL, &desc);
 }
 
-void intel_desc_set_update_sampler_textures(struct intel_desc_set *set,
-                                            const VkUpdateSamplerTextures *update)
+static void desc_set_write_combined_image_sampler(struct intel_desc_set *set,
+                                                  const struct intel_desc_iter *iter,
+                                                  const struct intel_img_view *img_view,
+                                                  VkImageLayout img_layout,
+                                                  const struct intel_sampler *sampler)
 {
-    struct intel_desc_iter iter;
-    const struct intel_desc_layout_binding *binding;
-    uint32_t i;
+    struct intel_desc_surface view_desc;
+    struct intel_desc_sampler sampler_desc;
 
-    if (!desc_iter_init_for_update(&iter, set, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-                update->binding, update->arrayIndex))
-        return;
+    view_desc.mem = img_view->img->obj.mem;
+    view_desc.read_only = desc_set_img_layout_read_only(img_layout);
+    view_desc.type = INTEL_DESC_SURFACE_IMG;
+    view_desc.u.img = img_view;
 
-    binding = &set->layout->bindings[update->binding];
+    sampler_desc.sampler = sampler;
 
-    if (binding->shared_immutable_sampler) {
-        struct intel_desc_offset end;
-        struct intel_desc_sampler sampler_desc;
-
-        assert(!iter.increment.sampler);
-        intel_desc_offset_set(&end, iter.begin.surface,
-                iter.begin.sampler + set->region->sampler_desc_size);
-
-        sampler_desc.sampler = binding->shared_immutable_sampler;
-        intel_desc_region_update(set->region, &iter.begin, &end,
-                NULL, &sampler_desc);
-    }
-
-    for (i = 0; i < update->count; i++) {
-        const struct intel_sampler *sampler = (binding->immutable_samplers) ?
-            binding->immutable_samplers[update->arrayIndex + i] :
-            intel_sampler(update->pSamplerImageViews[i].sampler);
-        const VkImageViewAttachInfo *info =
-            update->pSamplerImageViews[i].pImageView;
-        const struct intel_img_view *view = intel_img_view(info->view);
-        struct intel_desc_surface view_desc;
-        struct intel_desc_sampler sampler_desc;
-
-        view_desc.mem = view->img->obj.mem;
-        view_desc.read_only = desc_set_img_layout_read_only(info->layout);
-        view_desc.type = INTEL_DESC_SURFACE_IMG;
-        view_desc.u.img = view;
-
-        sampler_desc.sampler = sampler;
-
-        intel_desc_region_update(set->region, &iter.begin, &iter.end,
-                &view_desc, &sampler_desc);
-
-        if (!intel_desc_iter_advance(&iter))
-            break;
-    }
+    intel_desc_region_update(set->region, &iter->begin, &iter->end,
+            &view_desc, &sampler_desc);
 }
 
-void intel_desc_set_update_images(struct intel_desc_set *set,
-                                  const VkUpdateImages *update)
+static void desc_set_write_image(struct intel_desc_set *set,
+                                 const struct intel_desc_iter *iter,
+                                 const struct intel_img_view *img_view,
+                                 VkImageLayout img_layout)
 {
-    struct intel_desc_iter iter;
-    uint32_t i;
+    struct intel_desc_surface desc;
 
-    if (!desc_iter_init_for_update(&iter, set, update->descriptorType,
-                update->binding, update->arrayIndex))
-        return;
-
-    for (i = 0; i < update->count; i++) {
-        const VkImageViewAttachInfo *info = &update->pImageViews[i];
-        const struct intel_img_view *view = intel_img_view(info->view);
-        struct intel_desc_surface desc;
-
-        desc.mem = view->img->obj.mem;
-        desc.read_only = desc_set_img_layout_read_only(info->layout);
-        desc.type = INTEL_DESC_SURFACE_IMG;
-        desc.u.img = view;
-        intel_desc_region_update(set->region, &iter.begin, &iter.end,
-                &desc, NULL);
-
-        if (!intel_desc_iter_advance(&iter))
-            break;
-    }
+    desc.mem = img_view->img->obj.mem;
+    desc.read_only = desc_set_img_layout_read_only(img_layout);
+    desc.type = INTEL_DESC_SURFACE_IMG;
+    desc.u.img = img_view;
+    intel_desc_region_update(set->region, &iter->begin, &iter->end,
+            &desc, NULL);
 }
 
-void intel_desc_set_update_buffers(struct intel_desc_set *set,
-                                   const VkUpdateBuffers *update)
+static void desc_set_write_buffer(struct intel_desc_set *set,
+                                  const struct intel_desc_iter *iter,
+                                  const struct intel_buf_view *buf_view)
 {
-    struct intel_desc_iter iter;
-    uint32_t i;
+    struct intel_desc_surface desc;
 
-    if (!desc_iter_init_for_update(&iter, set, update->descriptorType,
-                update->binding, update->arrayIndex))
-        return;
-
-    for (i = 0; i < update->count; i++) {
-        const VkBufferViewAttachInfo *info = &update->pBufferViews[i];
-        const struct intel_buf_view *view = intel_buf_view(info->view);
-        struct intel_desc_surface desc;
-
-        desc.mem = view->buf->obj.mem;
-        desc.read_only = false;
-        desc.type = INTEL_DESC_SURFACE_BUF;
-        desc.u.buf = view;
-        intel_desc_region_update(set->region, &iter.begin, &iter.end,
-                &desc, NULL);
-
-        if (!intel_desc_iter_advance(&iter))
-            break;
-    }
-}
-
-void intel_desc_set_update_as_copy(struct intel_desc_set *set,
-                                   const VkUpdateAsCopy *update)
-{
-    const struct intel_desc_set *src_set =
-        intel_desc_set(update->descriptorSet);
-    struct intel_desc_iter iter, src_iter;
-    struct intel_desc_offset begin, src_begin;
-    uint32_t i;
-
-    /* disallow combined sampler textures */
-    if (update->descriptorType == VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER)
-        return;
-
-    if (!desc_iter_init_for_update(&iter, set, update->descriptorType,
-                update->binding, update->arrayElement) ||
-        !desc_iter_init_for_update(&src_iter, src_set, update->descriptorType,
-                update->binding, update->arrayElement))
-        return;
-
-    /* save the begin offsets */
-    begin = iter.begin;
-    src_begin = src_iter.begin;
-
-    /* advance to the end */
-    for (i = 0; i < update->count; i++) {
-        if (!intel_desc_iter_advance(&iter) ||
-            !intel_desc_iter_advance(&src_iter)) {
-            /* out of bound */
-            return;
-        }
-    }
-
-    intel_desc_region_copy(set->region, &begin, &iter.end, &src_begin);
+    desc.mem = buf_view->buf->obj.mem;
+    desc.read_only = false;
+    desc.type = INTEL_DESC_SURFACE_BUF;
+    desc.u.buf = buf_view;
+    intel_desc_region_update(set->region, &iter->begin, &iter->end,
+            &desc, NULL);
 }
 
 static void desc_layout_destroy(struct intel_obj *obj)
@@ -972,48 +867,140 @@ ICD_EXPORT void VKAPI vkClearDescriptorSets(
     }
 }
 
-ICD_EXPORT void VKAPI vkUpdateDescriptors(
-    VkDevice                                  device,
-    VkDescriptorSet                           descriptorSet,
-    uint32_t                                     updateCount,
-    const void**                                 ppUpdateArray)
+ICD_EXPORT VkResult VKAPI vkUpdateDescriptorSets(
+    VkDevice                                    device,
+    uint32_t                                    writeCount,
+    const VkWriteDescriptorSet*                 pDescriptorWrites,
+    uint32_t                                    copyCount,
+    const VkCopyDescriptorSet*                  pDescriptorCopies)
 {
-    struct intel_desc_set *set = intel_desc_set(descriptorSet);
-    uint32_t i;
+    uint32_t i, j;
 
-    for (i = 0; i < updateCount; i++) {
-        const union {
-            struct {
-                VkStructureType                      sType;
-                const void*                             pNext;
-            } common;
+    for (i = 0; i < writeCount; i++) {
+        const VkWriteDescriptorSet *write = &pDescriptorWrites[i];
+        struct intel_desc_set *set = intel_desc_set(write->destSet);
+        const struct intel_desc_layout_binding *binding;
+        struct intel_desc_iter iter;
 
-            VkUpdateSamplers samplers;
-            VkUpdateSamplerTextures sampler_textures;
-            VkUpdateImages images;
-            VkUpdateBuffers buffers;
-            VkUpdateAsCopy as_copy;
-        } *u = ppUpdateArray[i];
+        if (!desc_iter_init_for_writing(&iter, set, write->destBinding,
+                    write->destArrayElement) ||
+            iter.type != write->descriptorType)
+            return VK_ERROR_INVALID_VALUE;
 
-        switch (u->common.sType) {
-        case VK_STRUCTURE_TYPE_UPDATE_SAMPLERS:
-            intel_desc_set_update_samplers(set, &u->samplers);
+        switch (write->descriptorType) {
+        case VK_DESCRIPTOR_TYPE_SAMPLER:
+            for (j = 0; j < write->count; j++) {
+                const VkDescriptorInfo *info = &write->pDescriptors[j];
+                const struct intel_sampler *sampler =
+                    intel_sampler(info->sampler);
+
+                desc_set_write_sampler(set, &iter, sampler);
+
+                if (!intel_desc_iter_advance(&iter))
+                    return VK_ERROR_INVALID_VALUE;
+            }
             break;
-        case VK_STRUCTURE_TYPE_UPDATE_SAMPLER_TEXTURES:
-            intel_desc_set_update_sampler_textures(set, &u->sampler_textures);
+        case VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER:
+            binding = &set->layout->bindings[write->destBinding];
+
+            /* write the shared immutable sampler */
+            if (binding->shared_immutable_sampler) {
+                struct intel_desc_offset end;
+                struct intel_desc_sampler sampler_desc;
+
+                assert(!iter.increment.sampler);
+                intel_desc_offset_set(&end, iter.begin.surface,
+                        iter.begin.sampler + set->region->sampler_desc_size);
+
+                sampler_desc.sampler = binding->shared_immutable_sampler;
+                intel_desc_region_update(set->region, &iter.begin, &end,
+                        NULL, &sampler_desc);
+            }
+
+            for (j = 0; j < write->count; j++) {
+                const VkDescriptorInfo *info = &write->pDescriptors[j];
+                const struct intel_img_view *img_view =
+                    intel_img_view(info->imageView);
+                const struct intel_sampler *sampler =
+                    (binding->immutable_samplers) ?
+                    binding->immutable_samplers[write->destArrayElement + j] :
+                    intel_sampler(info->sampler);
+
+                desc_set_write_combined_image_sampler(set, &iter,
+                        img_view, info->imageLayout, sampler);
+
+                if (!intel_desc_iter_advance(&iter))
+                    return VK_ERROR_INVALID_VALUE;
+            }
             break;
-        case VK_STRUCTURE_TYPE_UPDATE_IMAGES:
-            intel_desc_set_update_images(set, &u->images);
+        case VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE:
+        case VK_DESCRIPTOR_TYPE_STORAGE_IMAGE:
+            for (j = 0; j < write->count; j++) {
+                const VkDescriptorInfo *info = &write->pDescriptors[j];
+                const struct intel_img_view *img_view =
+                    intel_img_view(info->imageView);
+
+                desc_set_write_image(set, &iter, img_view, info->imageLayout);
+
+                if (!intel_desc_iter_advance(&iter))
+                    return VK_ERROR_INVALID_VALUE;
+            }
             break;
-        case VK_STRUCTURE_TYPE_UPDATE_BUFFERS:
-            intel_desc_set_update_buffers(set, &u->buffers);
-            break;
-        case VK_STRUCTURE_TYPE_UPDATE_AS_COPY:
-            intel_desc_set_update_as_copy(set, &u->as_copy);
+        case VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER:
+        case VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER:
+        case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER:
+        case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER:
+        case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC:
+        case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC:
+            for (j = 0; j < write->count; j++) {
+                const VkDescriptorInfo *info = &write->pDescriptors[j];
+                const struct intel_buf_view *buf_view =
+                    intel_buf_view(info->bufferView);
+
+                desc_set_write_buffer(set, &iter, buf_view);
+
+                if (!intel_desc_iter_advance(&iter))
+                    return VK_ERROR_INVALID_VALUE;
+            }
             break;
         default:
-            assert(!"unknown descriptor update");
+            return VK_ERROR_INVALID_VALUE;
             break;
         }
     }
+
+    for (i = 0; i < copyCount; i++) {
+        const VkCopyDescriptorSet *copy = &pDescriptorCopies[i];
+        const struct intel_desc_set *src_set = intel_desc_set(copy->srcSet);
+        const struct intel_desc_set *dst_set = intel_desc_set(copy->destSet);
+        struct intel_desc_iter src_iter, dst_iter;
+        struct intel_desc_offset src_begin, dst_begin;
+
+        if (!desc_iter_init_for_writing(&src_iter, src_set,
+                    copy->srcBinding, copy->srcArrayElement) ||
+            !desc_iter_init_for_writing(&dst_iter, dst_set,
+                    copy->destBinding, copy->destArrayElement) ||
+            src_iter.type != dst_iter.type)
+            return VK_ERROR_INVALID_VALUE;
+
+        /* disallow combined image samplers */
+        if (dst_iter.type == VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER)
+            return VK_ERROR_UNKNOWN;
+
+        /* save the begin offsets */
+        src_begin = src_iter.begin;
+        dst_begin = dst_iter.begin;
+
+        /* advance to the end */
+        for (j = 0; j < copy->count; j++) {
+            if (!intel_desc_iter_advance(&src_iter) ||
+                !intel_desc_iter_advance(&dst_iter))
+                return VK_ERROR_INVALID_VALUE;
+        }
+
+        intel_desc_region_copy(dst_set->region, &dst_begin,
+                &dst_iter.end, &src_begin);
+    }
+
+    return VK_SUCCESS;
 }
