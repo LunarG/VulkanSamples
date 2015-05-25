@@ -33,7 +33,7 @@
 #include "vk_platform.h"
 
 // Vulkan API version supported by this file
-#define VK_API_VERSION VK_MAKE_VERSION(0, 97, 0)
+#define VK_API_VERSION VK_MAKE_VERSION(0, 97, 1)
 
 #ifdef __cplusplus
 extern "C"
@@ -1709,7 +1709,7 @@ typedef struct VkShaderCreateInfo_
 typedef struct VkDescriptorSetLayoutBinding_
 {
     VkDescriptorType                            descriptorType;     // Type of the descriptors in this binding
-    uint32_t                                    count;              // Number of descriptors in this binding
+    uint32_t                                    arraySize;          // Number of descriptors in this binding
     VkShaderStageFlags                          stageFlags;         // Shader stages this binding is visible to
     const VkSampler*                            pImmutableSamplers; // Immutable samplers (used if descriptor type is SAMPLER or COMBINED_IMAGE_SAMPLER, is either NULL or contains <count> number of elements)
 } VkDescriptorSetLayoutBinding;

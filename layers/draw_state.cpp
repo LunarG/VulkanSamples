@@ -676,7 +676,7 @@ static uint32_t getBindingStartIndex(const LAYOUT_NODE* pLayout, const uint32_t 
 {
     uint32_t offsetIndex = 0;
     for (uint32_t i = 0; i<binding; i++) {
-        offsetIndex += pLayout->createInfo.pBinding[i].count;
+        offsetIndex += pLayout->createInfo.pBinding[i].arraySize;
     }
     return offsetIndex;
 }
@@ -685,7 +685,7 @@ static uint32_t getBindingEndIndex(const LAYOUT_NODE* pLayout, const uint32_t bi
 {
     uint32_t offsetIndex = 0;
     for (uint32_t i = 0; i<=binding; i++) {
-        offsetIndex += pLayout->createInfo.pBinding[i].count;
+        offsetIndex += pLayout->createInfo.pBinding[i].arraySize;
     }
     return offsetIndex-1;
 }
@@ -1737,11 +1737,11 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateDescriptorSetLayout(VkDevice device, cons
         memcpy((void*)pNewNode->createInfo.pBinding, pCreateInfo->pBinding, sizeof(VkDescriptorSetLayoutBinding)*pCreateInfo->count);
         uint32_t totalCount = 0;
         for (uint32_t i=0; i<pCreateInfo->count; i++) {
-            totalCount += pCreateInfo->pBinding[i].count;
+            totalCount += pCreateInfo->pBinding[i].arraySize;
             if (pCreateInfo->pBinding[i].pImmutableSamplers) {
                 VkSampler** ppIS = (VkSampler**)&pNewNode->createInfo.pBinding[i].pImmutableSamplers;
-                *ppIS = new VkSampler[pCreateInfo->pBinding[i].count];
-                memcpy(*ppIS, pCreateInfo->pBinding[i].pImmutableSamplers, pCreateInfo->pBinding[i].count*sizeof(VkSampler));
+                *ppIS = new VkSampler[pCreateInfo->pBinding[i].arraySize];
+                memcpy(*ppIS, pCreateInfo->pBinding[i].pImmutableSamplers, pCreateInfo->pBinding[i].arraySize*sizeof(VkSampler));
             }
         }
         if (totalCount > 0) {
@@ -1749,7 +1749,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateDescriptorSetLayout(VkDevice device, cons
             uint32_t offset = 0;
             uint32_t j = 0;
             for (uint32_t i=0; i<pCreateInfo->count; i++) {
-                for (j = 0; j < pCreateInfo->pBinding[i].count; j++) {
+                for (j = 0; j < pCreateInfo->pBinding[i].arraySize; j++) {
                     pNewNode->pTypes[offset + j] = pCreateInfo->pBinding[i].descriptorType;
                 }
                 offset += j;

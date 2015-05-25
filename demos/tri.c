@@ -795,7 +795,7 @@ static void demo_prepare_descriptor_layout(struct demo *demo)
 {
     const VkDescriptorSetLayoutBinding layout_binding = {
         .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-        .count = DEMO_TEXTURE_COUNT,
+        .arraySize = DEMO_TEXTURE_COUNT,
         .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
         .pImmutableSamplers = NULL,
     };

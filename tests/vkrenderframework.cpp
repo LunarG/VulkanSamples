@@ -356,7 +356,7 @@ void VkDescriptorSetObj::CreateVKDescriptorSet(VkCommandBufferObj *cmdBuffer)
     bindings.resize(m_type_counts.size());
     for (int i = 0; i < m_type_counts.size(); i++) {
         bindings[i].descriptorType = m_type_counts[i].type;
-        bindings[i].count = m_type_counts[i].count;
+        bindings[i].arraySize = m_type_counts[i].count;
         bindings[i].stageFlags = VK_SHADER_STAGE_ALL;
         bindings[i].pImmutableSamplers = NULL;
     }

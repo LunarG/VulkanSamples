@@ -963,7 +963,7 @@ TEST_F(VkLayerTest, NoEndCmdBuffer)
 
     const VkDescriptorSetLayoutBinding dsl_binding = {
         .descriptorType     = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-        .count              = 1,
+        .arraySize          = 1,
         .stageFlags         = VK_SHADER_STAGE_ALL,
         .pImmutableSamplers = NULL,
     };
@@ -1085,7 +1085,7 @@ TEST_F(VkLayerTest, DSUpdateWithoutBegin)
     ASSERT_VK_SUCCESS(err);
     const VkDescriptorSetLayoutBinding dsl_binding = {
         .descriptorType     = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-        .count              = 1,
+        .arraySize          = 1,
         .stageFlags         = VK_SHADER_STAGE_ALL,
         .pImmutableSamplers = NULL,
     };
@@ -1171,7 +1171,7 @@ TEST_F(VkLayerTest, DSBoundWithoutEnd)
 
     const VkDescriptorSetLayoutBinding dsl_binding = {
         .descriptorType     = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-        .count              = 1,
+        .arraySize          = 1,
         .stageFlags         = VK_SHADER_STAGE_ALL,
         .pImmutableSamplers = NULL,
     };
@@ -1290,7 +1290,7 @@ TEST_F(VkLayerTest, VtxBufferBadIndex)
 
     const VkDescriptorSetLayoutBinding dsl_binding = {
         .descriptorType     = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-        .count              = 1,
+        .arraySize          = 1,
         .stageFlags         = VK_SHADER_STAGE_ALL,
         .pImmutableSamplers = NULL,
     };
@@ -1402,7 +1402,7 @@ TEST_F(VkLayerTest, DSTypeMismatch)
     ASSERT_VK_SUCCESS(err);
     const VkDescriptorSetLayoutBinding dsl_binding = {
         .descriptorType     = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-        .count              = 1,
+        .arraySize          = 1,
         .stageFlags         = VK_SHADER_STAGE_ALL,
         .pImmutableSamplers = NULL,
     };
@@ -1485,7 +1485,7 @@ TEST_F(VkLayerTest, DSUpdateOutOfBounds)
     ASSERT_VK_SUCCESS(err);
     const VkDescriptorSetLayoutBinding dsl_binding = {
         .descriptorType     = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-        .count              = 1,
+        .arraySize          = 1,
         .stageFlags         = VK_SHADER_STAGE_ALL,
         .pImmutableSamplers = NULL,
     };
@@ -1567,7 +1567,7 @@ TEST_F(VkLayerTest, InvalidDSUpdateIndex)
     ASSERT_VK_SUCCESS(err);
     const VkDescriptorSetLayoutBinding dsl_binding = {
         .descriptorType     = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-        .count              = 1,
+        .arraySize          = 1,
         .stageFlags         = VK_SHADER_STAGE_ALL,
         .pImmutableSamplers = NULL,
     };
@@ -1649,7 +1649,7 @@ TEST_F(VkLayerTest, InvalidDSUpdateStruct)
     ASSERT_VK_SUCCESS(err);
     const VkDescriptorSetLayoutBinding dsl_binding = {
         .descriptorType     = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-        .count              = 1,
+        .arraySize          = 1,
         .stageFlags         = VK_SHADER_STAGE_ALL,
         .pImmutableSamplers = NULL,
     };
@@ -1734,7 +1734,7 @@ TEST_F(VkLayerTest, NumSamplesMismatch)
 
     const VkDescriptorSetLayoutBinding dsl_binding = {
         .descriptorType     = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-        .count              = 1,
+        .arraySize          = 1,
         .stageFlags         = VK_SHADER_STAGE_ALL,
         .pImmutableSamplers = NULL,
     };
