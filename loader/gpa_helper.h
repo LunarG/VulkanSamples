@@ -158,10 +158,6 @@ static inline void* globalGetProcAddr(const char *name)
         return (void*) vkCreateSampler;
     if (!strcmp(name, "CreateDescriptorSetLayout"))
         return (void*) vkCreateDescriptorSetLayout;
-    if (!strcmp(name, "BeginDescriptorPoolUpdate"))
-        return (void*) vkBeginDescriptorPoolUpdate;
-    if (!strcmp(name, "EndDescriptorPoolUpdate"))
-        return (void*) vkEndDescriptorPoolUpdate;
     if (!strcmp(name, "CreateDescriptorPool"))
         return (void*) vkCreateDescriptorPool;
     if (!strcmp(name, "ResetDescriptorPool"))

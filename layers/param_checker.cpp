@@ -991,24 +991,6 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreatePipelineLayout(VkDevice device, const VkP
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkBeginDescriptorPoolUpdate(VkDevice device, VkDescriptorUpdateMode updateMode)
-{
-    char str[1024];
-    if (!validate_VkDescriptorUpdateMode(updateMode)) {
-        sprintf(str, "Parameter updateMode to function BeginDescriptorPoolUpdate has invalid value of %i.", (int)updateMode);
-        layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
-    }
-    VkResult result = nextTable.BeginDescriptorPoolUpdate(device, updateMode);
-    return result;
-}
-
-VK_LAYER_EXPORT VkResult VKAPI vkEndDescriptorPoolUpdate(VkDevice device, VkCmdBuffer cmd)
-{
-
-    VkResult result = nextTable.EndDescriptorPoolUpdate(device, cmd);
-    return result;
-}
-
 VK_LAYER_EXPORT VkResult VKAPI vkCreateDescriptorPool(VkDevice device, VkDescriptorPoolUsage poolUsage, uint32_t maxSets, const VkDescriptorPoolCreateInfo* pCreateInfo, VkDescriptorPool* pDescriptorPool)
 {
     char str[1024];

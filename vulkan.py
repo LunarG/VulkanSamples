@@ -557,14 +557,6 @@ core = Extension(
              Param("const VkDescriptorSetLayoutCreateInfo*", "pCreateInfo"),
              Param("VkDescriptorSetLayout*", "pSetLayout")]),
 
-        Proto("VkResult", "BeginDescriptorPoolUpdate",
-            [Param("VkDevice", "device"),
-             Param("VkDescriptorUpdateMode", "updateMode")]),
-
-        Proto("VkResult", "EndDescriptorPoolUpdate",
-            [Param("VkDevice", "device"),
-             Param("VkCmdBuffer", "cmd")]),
-
         Proto("VkResult", "CreateDescriptorPool",
             [Param("VkDevice", "device"),
              Param("VkDescriptorPoolUsage", "poolUsage"),

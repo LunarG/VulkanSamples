@@ -1548,13 +1548,8 @@ static void demo_prepare_descriptor_set(struct demo *demo)
             &demo->desc_set, &count);
     assert(!err && count == 1);
 
-    vkBeginDescriptorPoolUpdate(demo->device,
-            VK_DESCRIPTOR_UPDATE_MODE_FASTEST);
-
     vkClearDescriptorSets(demo->device, demo->desc_pool, 1, &demo->desc_set);
     vkUpdateDescriptors(demo->device, demo->desc_set, 2, update_array);
-
-    vkEndDescriptorPoolUpdate(demo->device, demo->buffers[demo->current_buffer].cmd);
 }
 
 static void demo_prepare(struct demo *demo)

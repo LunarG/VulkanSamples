@@ -394,10 +394,8 @@ void VkDescriptorSetObj::CreateVKDescriptorSet(VkCommandBufferObj *cmdBuffer)
     }
 
     // do the updates
-    m_device->begin_descriptor_pool_update(VK_DESCRIPTOR_UPDATE_MODE_FASTEST);
     clear_sets(*m_set);
     m_set->update(update_array);
-    m_device->end_descriptor_pool_update(*cmdBuffer);
 }
 
 VkImageObj::VkImageObj(VkDeviceObj *dev)

@@ -566,24 +566,6 @@ LOADER_EXPORT VkResult VKAPI vkCreateDescriptorSetLayout(VkDevice device, const 
     return disp->CreateDescriptorSetLayout(device, pCreateInfo, pSetLayout);
 }
 
-LOADER_EXPORT VkResult VKAPI vkBeginDescriptorPoolUpdate(VkDevice device, VkDescriptorUpdateMode updateMode)
-{
-    const VkLayerDispatchTable *disp;
-
-    disp = loader_get_dispatch(device);
-
-    return disp->BeginDescriptorPoolUpdate(device, updateMode);
-}
-
-LOADER_EXPORT VkResult VKAPI vkEndDescriptorPoolUpdate(VkDevice device, VkCmdBuffer cmd)
-{
-    const VkLayerDispatchTable *disp;
-
-    disp = loader_get_dispatch(device);
-
-    return disp->EndDescriptorPoolUpdate(device, cmd);
-}
-
 LOADER_EXPORT VkResult VKAPI vkCreateDescriptorPool(VkDevice device, VkDescriptorPoolUsage poolUsage, uint32_t maxSets, const VkDescriptorPoolCreateInfo* pCreateInfo, VkDescriptorPool* pDescriptorPool)
 {
     const VkLayerDispatchTable *disp;

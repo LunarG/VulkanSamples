@@ -89,8 +89,6 @@ EXPORTS
    vkCreatePipelineLayout
    vkCreateSampler
    vkCreateDescriptorSetLayout
-   vkBeginDescriptorPoolUpdate
-   vkEndDescriptorPoolUpdate
    vkCreateDescriptorPool
    vkResetDescriptorPool
    vkAllocDescriptorSets

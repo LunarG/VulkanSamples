@@ -562,20 +562,6 @@ static SET_NODE* getSetNode(VkDescriptorSet set)
     return setMap[set];
 }
 
-// Return VK_TRUE if DS Exists and is within an vkBeginDescriptorPoolUpdate() call sequence, otherwise VK_FALSE
-static bool32_t dsUpdateActive(VkDescriptorSet ds)
-{
-    // Note, both "get" functions use global mutex so this guy does not
-    SET_NODE* pTrav = getSetNode(ds);
-    if (pTrav) {
-        POOL_NODE* pPool = getPoolNode(pTrav->pool);
-        if (pPool) {
-            return pPool->updateActive;
-        }
-    }
-    return VK_FALSE;
-}
-
 static LAYOUT_NODE* getLayoutNode(const VkDescriptorSetLayout layout) {
     loader_platform_thread_lock_mutex(&globalLock);
     if (layoutMap.find(layout) == layoutMap.end()) {
@@ -1616,14 +1602,6 @@ VK_LAYER_EXPORT VkResult VKAPI vkQueueSubmit(VkQueue queue, uint32_t cmdBufferCo
             return VK_ERROR_UNKNOWN;
         }
         loader_platform_thread_unlock_mutex(&globalLock);
-        for (auto ii=pCB->boundDescriptorSets.begin(); ii != pCB->boundDescriptorSets.end(); ++ii) {
-            if (dsUpdateActive(*ii)) {
-                char str[1024];
-                sprintf(str, "You must call vkEndDescriptorPoolUpdate() before this call to vkQueueSubmit()!");
-                layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, *ii, 0, DRAWSTATE_BINDING_DS_NO_END_UPDATE, "DS", str);
-                return VK_ERROR_UNKNOWN;
-            }
-        }
     }
     VkResult result = nextTable.QueueSubmit(queue, cmdBufferCount, pCmdBuffers, fence);
     return result;
@@ -1776,56 +1754,6 @@ VkResult VKAPI vkCreatePipelineLayout(VkDevice device, const VkPipelineLayoutCre
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkBeginDescriptorPoolUpdate(VkDevice device, VkDescriptorUpdateMode updateMode)
-{
-    VkResult result = nextTable.BeginDescriptorPoolUpdate(device, updateMode);
-    if (VK_SUCCESS == result) {
-        loader_platform_thread_lock_mutex(&globalLock);
-        POOL_NODE* pPoolNode = poolMap.begin()->second;
-        if (!pPoolNode) {
-            char str[1024];
-            sprintf(str, "Unable to find pool node");
-            layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, DRAWSTATE_INTERNAL_ERROR, "DS", str);
-        }
-        else {
-            pPoolNode->updateActive = 1;
-        }
-        loader_platform_thread_unlock_mutex(&globalLock);
-    }
-    return result;
-}
-
-VK_LAYER_EXPORT VkResult VKAPI vkEndDescriptorPoolUpdate(VkDevice device, VkCmdBuffer cmd)
-{
-    // Perform some initial validation checks
-    POOL_NODE* pPoolNode = NULL;
-    loader_platform_thread_lock_mutex(&globalLock);
-    auto poolEntry = poolMap.begin();
-    if (poolEntry == poolMap.end()) {
-        char str[1024];
-        sprintf(str, "Unable to find pool node");
-        layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, DRAWSTATE_INTERNAL_ERROR, "DS", str);
-        loader_platform_thread_unlock_mutex(&globalLock);
-        return VK_ERROR_UNKNOWN;
-    }
-    else {
-        pPoolNode = poolEntry->second;
-        if (!pPoolNode->updateActive) {
-            char str[1024];
-            sprintf(str, "You must call vkBeginDescriptorPoolUpdate() before this call to vkEndDescriptorPoolUpdate()!");
-            layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, DRAWSTATE_DS_END_WITHOUT_BEGIN, "DS", str);
-            loader_platform_thread_unlock_mutex(&globalLock);
-            return VK_ERROR_UNKNOWN;
-        }
-    }
-    loader_platform_thread_unlock_mutex(&globalLock);
-    VkResult result = nextTable.EndDescriptorPoolUpdate(device, cmd);
-    if (VK_SUCCESS == result) {
-        pPoolNode->updateActive = 0;
-    }
-    return result;
-}
-
 VK_LAYER_EXPORT VkResult VKAPI vkCreateDescriptorPool(VkDevice device, VkDescriptorPoolUsage poolUsage, uint32_t maxSets, const VkDescriptorPoolCreateInfo* pCreateInfo, VkDescriptorPool* pDescriptorPool)
 {
     VkResult result = nextTable.CreateDescriptorPool(device, poolUsage, maxSets, pCreateInfo, pDescriptorPool);
@@ -1851,7 +1779,6 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateDescriptorPool(VkDevice device, VkDescrip
                 memcpy((void*)pNewNode->createInfo.pTypeCount, pCreateInfo->pTypeCount, typeCountSize);
             }
             pNewNode->poolUsage  = poolUsage;
-            pNewNode->updateActive = 0;
             pNewNode->maxSets      = maxSets;
             pNewNode->pool       = *pDescriptorPool;
             poolMap[*pDescriptorPool] = pNewNode;
@@ -1935,16 +1862,10 @@ VK_LAYER_EXPORT void VKAPI vkClearDescriptorSets(VkDevice device, VkDescriptorPo
 VK_LAYER_EXPORT void VKAPI vkUpdateDescriptors(VkDevice device, VkDescriptorSet descriptorSet, uint32_t updateCount, const void** ppUpdateArray)
 {
     SET_NODE* pSet = getSetNode(descriptorSet);
-    if (!dsUpdateActive(descriptorSet)) {
-        char str[1024];
-        sprintf(str, "You must call vkBeginDescriptorPoolUpdate() before this call to vkUpdateDescriptors()!");
-        layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, descriptorSet, 0, DRAWSTATE_UPDATE_WITHOUT_BEGIN, "DS", str);
-    }
-    else {
-        // pUpdateChain is an array of VK_UPDATE_* struct ptrs defining the mappings for the descriptors
-        if (dsUpdate(descriptorSet, updateCount, ppUpdateArray)) {
-            nextTable.UpdateDescriptors(device, descriptorSet, updateCount, ppUpdateArray);
-        }
+
+    // pUpdateChain is an array of VK_UPDATE_* struct ptrs defining the mappings for the descriptors
+    if (dsUpdate(descriptorSet, updateCount, ppUpdateArray)) {
+        nextTable.UpdateDescriptors(device, descriptorSet, updateCount, ppUpdateArray);
     }
 }
 
@@ -2832,10 +2753,6 @@ VK_LAYER_EXPORT void* VKAPI vkGetProcAddr(VkPhysicalDevice gpu, const char* func
         return (void*) vkCreateDescriptorSetLayout;
     if (!strcmp(funcName, "vkCreatePipelineLayout"))
         return (void*) vkCreatePipelineLayout;
-    if (!strcmp(funcName, "vkBeginDescriptorPoolUpdate"))
-        return (void*) vkBeginDescriptorPoolUpdate;
-    if (!strcmp(funcName, "vkEndDescriptorPoolUpdate"))
-        return (void*) vkEndDescriptorPoolUpdate;
     if (!strcmp(funcName, "vkCreateDescriptorPool"))
         return (void*) vkCreateDescriptorPool;
     if (!strcmp(funcName, "vkResetDescriptorPool"))

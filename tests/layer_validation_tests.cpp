@@ -959,7 +959,6 @@ TEST_F(VkLayerTest, NoEndCmdBuffer)
     VkDescriptorPool ds_pool;
     err = vkCreateDescriptorPool(m_device->device(), VK_DESCRIPTOR_POOL_USAGE_ONE_SHOT, 1, &ds_pool_ci, &ds_pool);
     ASSERT_VK_SUCCESS(err);
-    vkBeginDescriptorPoolUpdate(m_device->device(), VK_DESCRIPTOR_UPDATE_MODE_COPY);
 
     const VkDescriptorSetLayoutBinding dsl_binding = {
         .descriptorType     = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
@@ -1060,209 +1059,6 @@ TEST_F(VkLayerTest, InvalidDynamicStateObject)
     //   The DS check for this is after driver has been called to validate DS internal data struct
 }
 
-TEST_F(VkLayerTest, DSUpdateWithoutBegin)
-{
-    // Call vkUpdateDescriptors w/ valid DS, but before vkBeginDescriptorPoolUpdate
-    VK_DBG_MSG_TYPE msgType;
-    std::string     msgString;
-    VkResult        err;
-
-    ASSERT_NO_FATAL_FAILURE(InitState());
-    m_errorMonitor->ClearState();
-    //VkDescriptorSetObj descriptorSet(m_device);
-    const VkDescriptorTypeCount ds_type_count = {
-        .type       = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-        .count      = 1,
-    };
-    const VkDescriptorPoolCreateInfo ds_pool_ci = {
-        .sType      = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
-        .pNext      = NULL,
-        .count      = 1,
-        .pTypeCount = &ds_type_count,
-    };
-    VkDescriptorPool ds_pool;
-    err = vkCreateDescriptorPool(m_device->device(), VK_DESCRIPTOR_POOL_USAGE_ONE_SHOT, 1, &ds_pool_ci, &ds_pool);
-    ASSERT_VK_SUCCESS(err);
-    const VkDescriptorSetLayoutBinding dsl_binding = {
-        .descriptorType     = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-        .arraySize          = 1,
-        .stageFlags         = VK_SHADER_STAGE_ALL,
-        .pImmutableSamplers = NULL,
-    };
-
-    const VkDescriptorSetLayoutCreateInfo ds_layout_ci = {
-        .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
-        .pNext = NULL,
-        .count = 1,
-        .pBinding = &dsl_binding,
-    };
-    VkDescriptorSetLayout ds_layout;
-    err = vkCreateDescriptorSetLayout(m_device->device(), &ds_layout_ci, &ds_layout);
-    ASSERT_VK_SUCCESS(err);
-
-    VkDescriptorSet descriptorSet;
-    uint32_t ds_count = 0;
-    err = vkAllocDescriptorSets(m_device->device(), ds_pool, VK_DESCRIPTOR_SET_USAGE_ONE_SHOT, 1, &ds_layout, &descriptorSet, &ds_count);
-    ASSERT_VK_SUCCESS(err);
-    // Should fail before we attempt update so don't care about update contents
-    vkUpdateDescriptors(m_device->device(), descriptorSet, 0, NULL);
-    msgType = m_errorMonitor->GetState(&msgString);
-    ASSERT_EQ(msgType, VK_DBG_MSG_ERROR) << "Did not receive error after updating Descriptors w/o first calling vkBeginDescriptorPoolUpdate().";
-    if (!strstr(msgString.c_str(),"You must call vkBeginDescriptorPoolUpdate() before ")) {
-        FAIL() << "Error received was not 'You must call vkBeginDescriptorPoolUpdate() before this call to vkUpdateDescriptors()!'";
-    }
-}
-
-TEST_F(VkLayerTest, DSEndWithoutBegin)
-{
-    // With a valid pool & cmdBuffer, call vkEndDescriptorPoolUpdate
-    VK_DBG_MSG_TYPE msgType;
-    std::string     msgString;
-    VkResult        err;
-
-    ASSERT_NO_FATAL_FAILURE(InitState());
-    m_errorMonitor->ClearState();
-    VkCommandBufferObj cmdBuffer(m_device);
-    const VkDescriptorTypeCount ds_type_count = {
-        .type       = VK_DESCRIPTOR_TYPE_SAMPLER,
-        .count      = 1,
-    };
-    const VkDescriptorPoolCreateInfo ds_pool_ci = {
-        .sType      = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
-        .pNext      = NULL,
-        .count      = 1,
-        .pTypeCount = &ds_type_count,
-    };
-    VkDescriptorPool ds_pool;
-    err = vkCreateDescriptorPool(m_device->device(), VK_DESCRIPTOR_POOL_USAGE_ONE_SHOT, 1, &ds_pool_ci, &ds_pool);
-    ASSERT_VK_SUCCESS(err);
-    vkEndDescriptorPoolUpdate(m_device->device(), cmdBuffer.GetBufferHandle());
-    msgType = m_errorMonitor->GetState(&msgString);
-    ASSERT_EQ(msgType, VK_DBG_MSG_ERROR) << "Did not receive error after vkEndDescriptorPoolUpdate() w/o first calling vkBeginDescriptorPoolUpdate().";
-    if (!strstr(msgString.c_str(),"You must call vkBeginDescriptorPoolUpdate() before this call to vkEndDescriptorPoolUpdate()!")) {
-        FAIL() << "Error received was not 'You must call vkBeginDescriptorPoolUpdate() before this call to vkEndDescriptorPoolUpdate()!'";
-    }
-}
-
-TEST_F(VkLayerTest, DSBoundWithoutEnd)
-{
-    // With a valid pool and & cmdBuffer, do Begin/Update w/o End and then QueueSubmit
-    VK_DBG_MSG_TYPE msgType;
-    std::string     msgString;
-    VkResult        err;
-
-    ASSERT_NO_FATAL_FAILURE(InitState());
-    m_errorMonitor->ClearState();
-    VkCommandBufferObj cmdBuffer(m_device);
-    const VkDescriptorTypeCount ds_type_count = {
-        .type       = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-        .count      = 1,
-    };
-    const VkDescriptorPoolCreateInfo ds_pool_ci = {
-        .sType      = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
-        .pNext      = NULL,
-        .count      = 1,
-        .pTypeCount = &ds_type_count,
-    };
-    VkDescriptorPool ds_pool;
-    err = vkCreateDescriptorPool(m_device->device(), VK_DESCRIPTOR_POOL_USAGE_ONE_SHOT, 1, &ds_pool_ci, &ds_pool);
-    ASSERT_VK_SUCCESS(err);
-    vkBeginDescriptorPoolUpdate(m_device->device(), VK_DESCRIPTOR_UPDATE_MODE_COPY);
-
-    const VkDescriptorSetLayoutBinding dsl_binding = {
-        .descriptorType     = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-        .arraySize          = 1,
-        .stageFlags         = VK_SHADER_STAGE_ALL,
-        .pImmutableSamplers = NULL,
-    };
-
-    const VkDescriptorSetLayoutCreateInfo ds_layout_ci = {
-        .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
-        .pNext = NULL,
-        .count = 1,
-        .pBinding = &dsl_binding,
-    };
-    VkDescriptorSetLayout ds_layout;
-    err = vkCreateDescriptorSetLayout(m_device->device(), &ds_layout_ci, &ds_layout);
-    ASSERT_VK_SUCCESS(err);
-
-    VkDescriptorSet descriptorSet;
-    uint32_t ds_count = 0;
-    err = vkAllocDescriptorSets(m_device->device(), ds_pool, VK_DESCRIPTOR_SET_USAGE_ONE_SHOT, 1, &ds_layout, &descriptorSet, &ds_count);
-    ASSERT_VK_SUCCESS(err);
-
-    const VkPipelineLayoutCreateInfo pipeline_layout_ci = {
-        .sType              = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
-        .pNext               = NULL,
-        .descriptorSetCount = 1,
-        .pSetLayouts        = &ds_layout,
-    };
-
-    VkPipelineLayout pipeline_layout;
-    err = vkCreatePipelineLayout(m_device->device(), &pipeline_layout_ci, &pipeline_layout);
-    ASSERT_VK_SUCCESS(err);
-
-    size_t shader_len = strlen(bindStateVertShaderText);
-    size_t codeSize = 3 * sizeof(uint32_t) + shader_len + 1;
-    void* pCode = malloc(codeSize);
-
-    /* try version 0 first: VkShaderStage followed by GLSL */
-    ((uint32_t *) pCode)[0] = ICD_SPV_MAGIC;
-    ((uint32_t *) pCode)[1] = 0;
-    ((uint32_t *) pCode)[2] = VK_SHADER_STAGE_VERTEX;
-    memcpy(((uint32_t *) pCode + 3), bindStateVertShaderText, shader_len + 1);
-
-    const VkShaderCreateInfo vs_ci = {
-        .sType = VK_STRUCTURE_TYPE_SHADER_CREATE_INFO,
-        .pNext = NULL,
-        .codeSize = codeSize,
-        .pCode = pCode,
-        .flags = 0,
-    };
-    VkShader vs;
-    err = vkCreateShader(m_device->device(), &vs_ci, &vs);
-
-    const VkPipelineShader vs_pipe_shader = {
-        .stage                = VK_SHADER_STAGE_VERTEX,
-        .shader               = vs,
-        .linkConstBufferCount = 0,
-        .pLinkConstBufferInfo = NULL,
-        .pSpecializationInfo  = NULL,
-    };
-    const VkPipelineShaderStageCreateInfo pipe_vs_ci = {
-        .sType  = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
-        .pNext  = NULL,
-        .shader = vs_pipe_shader,
-    };
-    const VkGraphicsPipelineCreateInfo gp_ci = {
-        .sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
-        .pNext = &pipe_vs_ci,
-        .flags = VK_PIPELINE_CREATE_DISABLE_OPTIMIZATION_BIT,
-        .layout = pipeline_layout,
-    };
-
-    VkPipeline pipeline;
-    err = vkCreateGraphicsPipeline(m_device->device(), &gp_ci, &pipeline);
-    ASSERT_VK_SUCCESS(err);
-
-    err= cmdBuffer.BeginCommandBuffer();
-    ASSERT_VK_SUCCESS(err);
-
-    vkCmdBindPipeline(cmdBuffer.GetBufferHandle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
-    vkCmdBindDescriptorSets(cmdBuffer.GetBufferHandle(), VK_PIPELINE_BIND_POINT_GRAPHICS, 0, 1, &descriptorSet, 0, NULL);
-    cmdBuffer.EndCommandBuffer();
-
-    VkCmdBuffer localCmdBuffer = cmdBuffer.GetBufferHandle();
-    m_device->get_device_queue();
-    vkQueueSubmit(m_device->m_queue, 1, &localCmdBuffer, NULL);
-
-    msgType = m_errorMonitor->GetState(&msgString);
-    ASSERT_EQ(msgType, VK_DBG_MSG_ERROR) << "Did not receive error after vkEndDescriptorPoolUpdate() w/o first calling vkBeginDescriptorPoolUpdate().";
-    if (!strstr(msgString.c_str(),"You must call vkEndDescriptorPoolUpdate() before this call to vkQueueSubmit()!")) {
-        FAIL() << "Error received was not 'You must call vkEndDescriptorPoolUpdate() before this call to vkQueueSubmit()!'";
-    }
-}
-
 TEST_F(VkLayerTest, VtxBufferBadIndex)
 {
     // Bind VBO out-of-bounds for given PSO
@@ -1286,7 +1082,6 @@ TEST_F(VkLayerTest, VtxBufferBadIndex)
     VkDescriptorPool ds_pool;
     err = vkCreateDescriptorPool(m_device->device(), VK_DESCRIPTOR_POOL_USAGE_ONE_SHOT, 1, &ds_pool_ci, &ds_pool);
     ASSERT_VK_SUCCESS(err);
-    vkBeginDescriptorPoolUpdate(m_device->device(), VK_DESCRIPTOR_UPDATE_MODE_COPY);
 
     const VkDescriptorSetLayoutBinding dsl_binding = {
         .descriptorType     = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
@@ -1421,7 +1216,6 @@ TEST_F(VkLayerTest, DSTypeMismatch)
     uint32_t ds_count = 0;
     err = vkAllocDescriptorSets(m_device->device(), ds_pool, VK_DESCRIPTOR_SET_USAGE_ONE_SHOT, 1, &ds_layout, &descriptorSet, &ds_count);
     ASSERT_VK_SUCCESS(err);
-    vkBeginDescriptorPoolUpdate(m_device->device(), VK_DESCRIPTOR_UPDATE_MODE_COPY);
 
     const VkSamplerCreateInfo sampler_ci = {
         .sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
@@ -1504,7 +1298,6 @@ TEST_F(VkLayerTest, DSUpdateOutOfBounds)
     uint32_t ds_count = 0;
     err = vkAllocDescriptorSets(m_device->device(), ds_pool, VK_DESCRIPTOR_SET_USAGE_ONE_SHOT, 1, &ds_layout, &descriptorSet, &ds_count);
     ASSERT_VK_SUCCESS(err);
-    vkBeginDescriptorPoolUpdate(m_device->device(), VK_DESCRIPTOR_UPDATE_MODE_COPY);
 
     const VkSamplerCreateInfo sampler_ci = {
         .sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
@@ -1586,7 +1379,6 @@ TEST_F(VkLayerTest, InvalidDSUpdateIndex)
     uint32_t ds_count = 0;
     err = vkAllocDescriptorSets(m_device->device(), ds_pool, VK_DESCRIPTOR_SET_USAGE_ONE_SHOT, 1, &ds_layout, &descriptorSet, &ds_count);
     ASSERT_VK_SUCCESS(err);
-    vkBeginDescriptorPoolUpdate(m_device->device(), VK_DESCRIPTOR_UPDATE_MODE_COPY);
 
     const VkSamplerCreateInfo sampler_ci = {
         .sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
@@ -1668,7 +1460,6 @@ TEST_F(VkLayerTest, InvalidDSUpdateStruct)
     uint32_t ds_count = 0;
     err = vkAllocDescriptorSets(m_device->device(), ds_pool, VK_DESCRIPTOR_SET_USAGE_ONE_SHOT, 1, &ds_layout, &descriptorSet, &ds_count);
     ASSERT_VK_SUCCESS(err);
-    vkBeginDescriptorPoolUpdate(m_device->device(), VK_DESCRIPTOR_UPDATE_MODE_COPY);
 
     const VkSamplerCreateInfo sampler_ci = {
         .sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
@@ -1730,7 +1521,6 @@ TEST_F(VkLayerTest, NumSamplesMismatch)
     VkDescriptorPool ds_pool;
     err = vkCreateDescriptorPool(m_device->device(), VK_DESCRIPTOR_POOL_USAGE_ONE_SHOT, 1, &ds_pool_ci, &ds_pool);
     ASSERT_VK_SUCCESS(err);
-    vkBeginDescriptorPoolUpdate(m_device->device(), VK_DESCRIPTOR_UPDATE_MODE_COPY);
 
     const VkDescriptorSetLayoutBinding dsl_binding = {
         .descriptorType     = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,

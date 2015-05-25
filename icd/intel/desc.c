@@ -262,20 +262,6 @@ void intel_desc_region_free(struct intel_desc_region *region,
     /* is it ok not to reclaim? */
 }
 
-VkResult intel_desc_region_begin_update(struct intel_desc_region *region,
-                                          VkDescriptorUpdateMode mode)
-{
-    /* no-op */
-    return VK_SUCCESS;
-}
-
-VkResult intel_desc_region_end_update(struct intel_desc_region *region,
-                                        struct intel_cmd *cmd)
-{
-    /* No pipelined update.  cmd_draw() will do the work. */
-    return VK_SUCCESS;
-}
-
 void intel_desc_region_clear(struct intel_desc_region *region,
                              const struct intel_desc_offset *begin,
                              const struct intel_desc_offset *end)
@@ -914,27 +900,6 @@ ICD_EXPORT VkResult VKAPI vkCreatePipelineLayout(
     return intel_pipeline_layout_create(dev,
                                         pCreateInfo,
                                         (struct intel_pipeline_layout **) pPipelineLayout);
-}
-
-ICD_EXPORT VkResult VKAPI vkBeginDescriptorPoolUpdate(
-    VkDevice                                   device,
-    VkDescriptorUpdateMode                   updateMode)
-{
-    struct intel_dev *dev = intel_dev(device);
-    struct intel_desc_region *region = dev->desc_region;
-
-    return intel_desc_region_begin_update(region, updateMode);
-}
-
-ICD_EXPORT VkResult VKAPI vkEndDescriptorPoolUpdate(
-    VkDevice                                   device,
-    VkCmdBuffer                               cmd_)
-{
-    struct intel_dev *dev = intel_dev(device);
-    struct intel_desc_region *region = dev->desc_region;
-    struct intel_cmd *cmd = intel_cmd(cmd_);
-
-    return intel_desc_region_end_update(region, cmd);
 }
 
 ICD_EXPORT VkResult VKAPI vkCreateDescriptorPool(

@@ -1093,24 +1093,6 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateDescriptorSetLayout( VkDevice device, con
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkBeginDescriptorPoolUpdate(VkDevice device, VkDescriptorUpdateMode updateMode)
-{
-    loader_platform_thread_lock_mutex(&objLock);
-    ll_increment_use_count((void*)device, VK_OBJECT_TYPE_DEVICE);
-    loader_platform_thread_unlock_mutex(&objLock);
-    VkResult result = nextTable.BeginDescriptorPoolUpdate(device, updateMode);
-    return result;
-}
-
-VK_LAYER_EXPORT VkResult VKAPI vkEndDescriptorPoolUpdate(VkDevice device, VkCmdBuffer cmd)
-{
-    loader_platform_thread_lock_mutex(&objLock);
-    ll_increment_use_count((void*)device, VK_OBJECT_TYPE_DEVICE);
-    loader_platform_thread_unlock_mutex(&objLock);
-    VkResult result = nextTable.EndDescriptorPoolUpdate(device, cmd);
-    return result;
-}
-
 VK_LAYER_EXPORT VkResult VKAPI vkCreateDescriptorPool(VkDevice device, VkDescriptorPoolUsage poolUsage, uint32_t maxSets, const VkDescriptorPoolCreateInfo* pCreateInfo, VkDescriptorPool* pDescriptorPool)
 {
     loader_platform_thread_lock_mutex(&objLock);

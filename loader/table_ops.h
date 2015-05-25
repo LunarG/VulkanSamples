@@ -95,8 +95,6 @@ static inline void loader_initialize_dispatch_table(VkLayerDispatchTable *table,
     table->CreatePipelineLayout = (PFN_vkCreatePipelineLayout) gpa(gpu, "vkCreatePipelineLayout");
     table->CreateSampler = (PFN_vkCreateSampler) gpa(gpu, "vkCreateSampler");
     table->CreateDescriptorSetLayout = (PFN_vkCreateDescriptorSetLayout) gpa(gpu, "vkCreateDescriptorSetLayout");
-    table->BeginDescriptorPoolUpdate = (PFN_vkBeginDescriptorPoolUpdate) gpa(gpu, "vkBeginDescriptorPoolUpdate");
-    table->EndDescriptorPoolUpdate = (PFN_vkEndDescriptorPoolUpdate) gpa(gpu, "vkEndDescriptorPoolUpdate");
     table->CreateDescriptorPool = (PFN_vkCreateDescriptorPool) gpa(gpu, "vkCreateDescriptorPool");
     table->ResetDescriptorPool = (PFN_vkResetDescriptorPool) gpa(gpu, "vkResetDescriptorPool");
     table->AllocDescriptorSets = (PFN_vkAllocDescriptorSets) gpa(gpu, "vkAllocDescriptorSets");
@@ -294,10 +292,6 @@ static inline void *loader_lookup_dispatch_table(const VkLayerDispatchTable *tab
         return (void *) table->CreateSampler;
     if (!strcmp(name, "CreateDescriptorSetLayout"))
         return (void *) table->CreateDescriptorSetLayout;
-    if (!strcmp(name, "BeginDescriptorPoolUpdate"))
-        return (void *) table->BeginDescriptorPoolUpdate;
-    if (!strcmp(name, "EndDescriptorPoolUpdate"))
-        return (void *) table->EndDescriptorPoolUpdate;
     if (!strcmp(name, "CreateDescriptorPool"))
         return (void *) table->CreateDescriptorPool;
     if (!strcmp(name, "ResetDescriptorPool"))

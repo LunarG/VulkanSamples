@@ -2206,22 +2206,6 @@ ICD_EXPORT VkResult VKAPI  vkCreatePipelineLayout(
             (struct nulldrv_pipeline_layout **) pPipelineLayout);
 }
 
-ICD_EXPORT VkResult VKAPI vkBeginDescriptorPoolUpdate(
-    VkDevice                                   device,
-    VkDescriptorUpdateMode                   updateMode)
-{
-    NULLDRV_LOG_FUNC;
-    return VK_SUCCESS;
-}
-
-ICD_EXPORT VkResult VKAPI vkEndDescriptorPoolUpdate(
-    VkDevice                                   device,
-    VkCmdBuffer                               cmd_)
-{
-    NULLDRV_LOG_FUNC;
-    return VK_SUCCESS;
-}
-
 ICD_EXPORT VkResult VKAPI vkCreateDescriptorPool(
     VkDevice                                   device,
     VkDescriptorPoolUsage                  poolUsage,

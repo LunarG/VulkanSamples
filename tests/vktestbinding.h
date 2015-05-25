@@ -235,11 +235,6 @@ public:
     VkResult wait(const std::vector<const Fence *> &fences, bool wait_all, uint64_t timeout);
     VkResult wait(const Fence &fence) { return wait(std::vector<const Fence *>(1, &fence), true, (uint64_t) -1); }
 
-    // vkBeginDescriptorPoolUpdate()
-    // vkEndDescriptorPoolUpdate()
-    void begin_descriptor_pool_update(VkDescriptorUpdateMode mode);
-    void end_descriptor_pool_update(CmdBuffer &cmd);
-
 private:
     enum QueueIndex {
         GRAPHICS,

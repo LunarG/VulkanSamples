@@ -488,16 +488,6 @@ VkResult Device::wait(const std::vector<const Fence *> &fences, bool wait_all, u
     return err;
 }
 
-void Device::begin_descriptor_pool_update(VkDescriptorUpdateMode mode)
-{
-    EXPECT(vkBeginDescriptorPoolUpdate(obj(), mode) == VK_SUCCESS);
-}
-
-void Device::end_descriptor_pool_update(CmdBuffer &cmd)
-{
-    EXPECT(vkEndDescriptorPoolUpdate(obj(), cmd.obj()) == VK_SUCCESS);
-}
-
 void Queue::submit(const std::vector<const CmdBuffer *> &cmds, Fence &fence)
 {
     const std::vector<VkCmdBuffer> cmd_objs = make_objects<VkCmdBuffer>(cmds);

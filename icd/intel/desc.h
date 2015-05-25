@@ -233,11 +233,6 @@ void intel_desc_region_free(struct intel_desc_region *region,
                             const struct intel_desc_offset *begin,
                             const struct intel_desc_offset *end);
 
-VkResult intel_desc_region_begin_update(struct intel_desc_region *region,
-                                          VkDescriptorUpdateMode mode);
-VkResult intel_desc_region_end_update(struct intel_desc_region *region,
-                                        struct intel_cmd *cmd);
-
 void intel_desc_region_clear(struct intel_desc_region *region,
                              const struct intel_desc_offset *begin,
                              const struct intel_desc_offset *end);
