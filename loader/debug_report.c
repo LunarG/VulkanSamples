@@ -276,11 +276,11 @@ void *debug_report_instance_gpa(
         return (void *) debug_report_DbgCreateMsgCallback;
     else if (!strcmp("vkDbgDestroyMsgCallback", name))
         return (void *) debug_report_DbgDestroyMsgCallback;
-    else if (!strcmp("vkStringCallback", name))
+    else if (!strcmp("vkDbgStringCallback", name))
         return (void *) StringCallback;
-    else if (!strcmp("vkStdioCallback", name))
+    else if (!strcmp("vkDbgStdioCallback", name))
         return (void *) StdioCallback;
-    else if (!strcmp("vkBreakCallback", name))
+    else if (!strcmp("vkDbgBreakCallback", name))
         return (void *) BreakCallback;
 
     return NULL;
