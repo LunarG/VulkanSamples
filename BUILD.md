@@ -3,7 +3,7 @@ This project fully supports Linux today.
 Support for Windows is for the loader, layers, and the Glave debugger (additional info below).  Additional Windows support will be coming in Q1'15.
 Support for Android is TBD.
 
-##Git the Bits
+## Git the Bits
 
 Make sure you have access to the Khronos Github repository. If not, send an email to
 jens@lunarg.com or courtney@lunarg.com and we can add you if you have a Khronos account.
@@ -13,9 +13,9 @@ the preferred work flow is to fork that repo, commit work on to your fork and th
 pull request to integrate that work into the Khronos repo. If that's too much, it's okay
 to clone the Khronos repository directly.
 
-Note: If you are doing ICD (driver) development, please make sure to look at documentation in the [*ICD Loader*](loader/README.md) and the [*Sample Driver*](icd).
+Note: If you are doing ICD (driver) development, please make sure to look at documentation in the [ICD Loader](loader/README.md) and the [Sample Driver](icd).
 
-##Linux System Requirements
+## Linux System Requirements
 Ubuntu 14.10 needed for DRI 3
 
 ```
@@ -61,7 +61,7 @@ git clone -o khronos git@github.com:KhronosGroup/GL-Next.git .
 # Or substitute the URL from your forked repo for git@github.com:KhronosGroup above.
 ```
 
-##Linux Build
+## Linux Build
 
 The sample driver uses cmake and should work with the usual cmake options and utilities.
 The standard build process builds the icd, the icd loader and all the tests.
@@ -91,7 +91,7 @@ export LIBVK_LAYERS_PATH=$PWD/layers
 export LIBVK_LAYER_NAMES=APIDump:DrawState
 ```
 
-##Linux Test
+## Linux Test
 
 The test executibles can be found in the dbuild/tests directory. The tests use the Google
 gtest infrastructure. Tests available so far:
@@ -102,14 +102,14 @@ gtest infrastructure. Tests available so far:
 - vk_render_tests: Render a single triangle with VK. Triangle will be in a .ppm in
 the current directory at the end of the test.
 
-##Linux Demos
+## Linux Demos
 
 The demos executables can be found in the dbuild/demos directory. The demos use DRI 3
 to render directly onto window surfaces.
 - tri: a textured triangle
 - cube: a textured spinning cube
 
-##Linux Render Nodes
+## Linux Render Nodes
 
 The render tests depend on access to DRM render nodes.
 To make that available, a couple of config files need to be created to set a module option
@@ -132,7 +132,7 @@ SUBSYSTEM=="drm", ACTION=="add", DEVPATH=="/devices/*/renderD*", MODE="020666"
 EOF
 ```
 
-##Windows System Requirements
+## Windows System Requirements
 
 Windows 7+ with additional, software:
 
@@ -156,7 +156,7 @@ Windows 7+ with additional, software:
       You can also use a Git package that doesn't come from Cygwin.
   - Git (from http://git-scm.com/download/win).
 
-##Windows Build
+## Windows Build
 
 Cygwin is used in order to obtain a local copy of the Git repository, and to run the CMake command that creates Visual Studio files.  Visual Studio is used to build the software, and will re-run CMake as appropriate.
 
@@ -168,7 +168,7 @@ cd _out64
 cmake -G "Visual Studio 12 Win64" -DCMAKE_BUILD_TYPE=Debug ..
 ```
 
-At this point, you can use Windows Explorer to launch Visual Studio by double-clicking on the "VULKAN.sln" file in the _out64 folder.  Once Visual Studio comes up, you can select "Debug" or "Release" from a drop-down list.  You can start a build with either the menu (Build->Build Solution), or a keyboard shortcut (Ctrl+Shift+B).  As part of the build process, Python scripts will create additional Visual Studio files and projects, along with additional source files.  All of these auto-generated files are under the "_out64" folder.
+At this point, you can use Windows Explorer to launch Visual Studio by double-clicking on the "VULKAN.sln" file in the \_out64 folder.  Once Visual Studio comes up, you can select "Debug" or "Release" from a drop-down list.  You can start a build with either the menu (Build->Build Solution), or a keyboard shortcut (Ctrl+Shift+B).  As part of the build process, Python scripts will create additional Visual Studio files and projects, along with additional source files.  All of these auto-generated files are under the "_out64" folder.
 
 VK programs must be able to find and use the VK.dll libary. Make sure it is either installed in the C:\Windows\System32 folder, or the PATH enviroment variable includes the folder that it is located in.
 
