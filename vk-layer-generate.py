@@ -1330,6 +1330,7 @@ class ObjectTrackerSubcommand(Subcommand):
             destroy_line += '    destroy_obj(%s);\n' % (proto.params[2].name)
             destroy_line += '    loader_platform_thread_unlock_mutex(&objLock);\n'
         elif 'DestroyDevice' in proto.name:
+            using_line   =  '    VkLayerDispatchTable *pDisp =  *(VkLayerDispatchTable **) device;\n'
             destroy_line =  '    loader_platform_thread_lock_mutex(&objLock);\n'
             destroy_line += '    destroy_obj(device);\n'
             destroy_line += '    // Report any remaining objects\n'
@@ -1347,6 +1348,7 @@ class ObjectTrackerSubcommand(Subcommand):
             destroy_line += '    destroyQueueMemRefLists();\n'
             destroy_line += '    loader_platform_thread_unlock_mutex(&objLock);\n'
         elif 'DestroyInstance' in proto.name:
+            using_line   =  '    VkLayerInstanceDispatchTable *pDisp = *(VkLayerInstanceDispatchTable **) instance;\n'
             destroy_line =  '    loader_platform_thread_lock_mutex(&objLock);\n'
             destroy_line += '    destroy_obj(%s);\n' % (param0_name)
             destroy_line += '    // Report any remaining objects in LL\n'
