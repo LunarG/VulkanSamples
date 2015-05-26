@@ -58,13 +58,6 @@ void loader_add_to_ext_list(
 
 static void loader_deactivate_instance_layers(struct loader_instance *instance);
 
-enum intel_ext_type {
-    LOADER_EXT_DEBUG_REPORT,
-
-    LOADER_EXT_COUNT,
-    LOADER_EXT_INVALID = LOADER_EXT_COUNT,
-};
-
 /* TODO: do we need to lock around access to linked lists and such? */
 struct loader_struct loader = {0};
 
@@ -447,6 +440,7 @@ void loader_coalesce_extensions(void)
 
     // Traverse loader's extensions, adding non-duplicate extensions to the list
     debug_report_add_instance_extensions(&loader.global_extensions);
+    wsi_lunarg_add_instance_extensions(&loader.global_extensions);
 }
 
 static void loader_icd_destroy(

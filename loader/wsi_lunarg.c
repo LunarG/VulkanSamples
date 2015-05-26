@@ -138,6 +138,12 @@ static const struct loader_extension_property wsi_lunarg_extension_info = {
     .hosted = true,
 };
 
+void wsi_lunarg_add_instance_extensions(
+        struct loader_extension_list *ext_list)
+{
+    loader_add_to_ext_list(ext_list, 1, &wsi_lunarg_extension_info);
+}
+
 void wsi_lunarg_create_instance(
         struct loader_instance *ptr_instance)
 {

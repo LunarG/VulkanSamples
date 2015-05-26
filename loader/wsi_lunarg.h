@@ -34,6 +34,9 @@ VkResult loader_GetDisplayInfoWSI(
         size_t*                                 pDataSize,
         void*                                   pData);
 
+void wsi_lunarg_add_instance_extensions(
+        struct loader_extension_list *ext_list);
+
 void wsi_lunarg_create_instance(
         struct loader_instance *ptr_instance);
 
