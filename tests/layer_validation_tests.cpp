@@ -8,6 +8,11 @@
 #include "glm/glm.hpp"
 #include <glm/gtc/matrix_transform.hpp>
 
+#define MEM_TRACKER_TESTS 1
+#define OBJ_TRACKER_TESTS 1
+#define DRAW_STATE_TESTS 1
+#define THREADING_TESTS 1
+
 //--------------------------------------------------------------------------------------
 // Mesh and VertexFormat Data
 //--------------------------------------------------------------------------------------
@@ -313,7 +318,7 @@ void VkLayerTest::GenericDrawPreparation(VkCommandBufferObj *cmdBuffer, VkPipeli
 // ********************************************************************************************************************
 // ********************************************************************************************************************
 // ********************************************************************************************************************
-
+#if MEM_TRACKER_TESTS
 TEST_F(VkLayerTest, CallResetCmdBufferBeforeCompletion)
 {
     vk_testing::Fence testFence;
@@ -790,7 +795,8 @@ TEST_F(VkLayerTest, ResetUnsignaledFence)
     }
 
 }
-
+#endif
+#if OBJECT_TRACKER_TESTS
 TEST_F(VkLayerTest, WaitForUnsubmittedFence)
 {
     vk_testing::Fence testFence;
@@ -908,7 +914,8 @@ TEST_F(VkLayerTest, DepthStencilStateNotBound)
         FAIL() << "Error received was not 'Depth-stencil object not bound to this command buffer'";
     }
 }
-
+#endif
+#if DRAW_STATE_TESTS
 TEST_F(VkLayerTest, PipelineNotBound)
 {
     // Initiate Draw w/o a PSO bound
@@ -947,11 +954,41 @@ TEST_F(VkLayerTest, InvalidPipeline)
 {
     // Create a valid cmd buffer
     // call vkCmdBindPipeline w/ false Pipeline
+    VK_DBG_MSG_TYPE msgType;
+    std::string     msgString;
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+    m_errorMonitor->ClearState();
+    VkCommandBufferObj cmdBuffer(m_device);
+    BeginCommandBuffer(cmdBuffer);
+    VkPipeline badPipeline = (VkPipeline)0xbaadb1be;
+    vkCmdBindPipeline(cmdBuffer.GetBufferHandle(), VK_PIPELINE_BIND_POINT_GRAPHICS, badPipeline);
+    msgType = m_errorMonitor->GetState(&msgString);
+    ASSERT_EQ(msgType, VK_DBG_MSG_ERROR) << "Did not receive error after binding invalid pipeline to CmdBuffer";
+    if (!strstr(msgString.c_str(),"Attempt to bind Pipeline ")) {
+        FAIL() << "Error received was not 'Attempt to bind Pipeline 0xbaadb1be that doesn't exist!'";
+    }
 }
 
 TEST_F(VkLayerTest, InvalidCmdBuffer)
 {
     // call vkCmd* call w/ false VkCmdBuffer
+    // NOTE : This may be an invalid test. Since cmdBuffer is a dispatchable
+    //  object, a bad CB will fail in loader before it can get to the layer
+//    VK_DBG_MSG_TYPE msgType;
+//    std::string     msgString;
+//
+//    ASSERT_NO_FATAL_FAILURE(InitState());
+//    m_errorMonitor->ClearState();
+//    // Create false VkCmdBuffer
+//    VkCmdBuffer badCmdBuffer = (VkCmdBuffer)0xbadcb0ff;
+//    // Just use NULL pipeline here since we should fail before caring about pipeline
+//    vkCmdBindPipeline(badCmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, NULL);
+//    msgType = m_errorMonitor->GetState(&msgString);
+//    ASSERT_EQ(msgType, VK_DBG_MSG_ERROR) << "Did not receive error after using invalid CmdBuffer";
+//    if (!strstr(msgString.c_str(),"Attempt to use CmdBuffer ")) {
+//        FAIL() << "Error received was not 'Attempt to use CmdBuffer 0xbadcb0ff that doesn't exist!'";
+//    }
 }
 
 TEST_F(VkLayerTest, InvalidDynamicStateObject)
@@ -1005,7 +1042,8 @@ TEST_F(VkLayerTest, NumSamplesMismatch)
     // Initiate a draw where MSAA samples doesn't match FB sampleCount
     // Initiate a draw where MSAA samples doesn't match RenderPass sampleCount
 }
-
+#endif
+#if THREADING_TESTS
 #if GTEST_IS_THREADSAFE
 struct thread_data_struct {
     VkCmdBuffer cmdBuffer;
@@ -1099,7 +1137,7 @@ TEST_F(VkLayerTest, ThreadCmdBufferCollision)
 
 }
 #endif
-
+#endif
 int main(int argc, char **argv) {
     int result;
 
