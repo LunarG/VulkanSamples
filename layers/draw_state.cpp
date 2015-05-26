@@ -1575,6 +1575,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkQueueSubmit(VkQueue queue, uint32_t cmdBufferCo
             sprintf(str, "You must call vkEndCommandBuffer() on CB %p before this call to vkQueueSubmit()!", pCB->cmdBuffer);
             layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, pCB->cmdBuffer, 0, DRAWSTATE_NO_END_CMD_BUFFER, "DS", str);
         }
+        loader_platform_thread_unlock_mutex(&globalLock);
         for (auto ii=pCB->boundDescriptorSets.begin(); ii != pCB->boundDescriptorSets.end(); ++ii) {
             if (dsUpdateActive(*ii)) {
                 char str[1024];
@@ -1582,7 +1583,6 @@ VK_LAYER_EXPORT VkResult VKAPI vkQueueSubmit(VkQueue queue, uint32_t cmdBufferCo
                 layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, *ii, 0, DRAWSTATE_BINDING_DS_NO_END_UPDATE, "DS", str);
             }
         }
-        loader_platform_thread_unlock_mutex(&globalLock);
     }
     VkResult result = nextTable.QueueSubmit(queue, cmdBufferCount, pCmdBuffers, fence);
     return result;
@@ -2018,6 +2018,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdBindPipeline(VkCmdBuffer cmdBuffer, VkPipelineBi
             g_lastBoundPipeline = pPN;
             loader_platform_thread_unlock_mutex(&globalLock);
             validatePipelineState(pCB, pipelineBindPoint, pipeline);
+            nextTable.CmdBindPipeline(cmdBuffer, pipelineBindPoint, pipeline);
         }
         else {
             char str[1024];
@@ -2030,7 +2031,6 @@ VK_LAYER_EXPORT void VKAPI vkCmdBindPipeline(VkCmdBuffer cmdBuffer, VkPipelineBi
         sprintf(str, "Attempt to use CmdBuffer %p that doesn't exist!", (void*)cmdBuffer);
         layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, cmdBuffer, 0, DRAWSTATE_INVALID_CMD_BUFFER, "DS", str);
     }
-    nextTable.CmdBindPipeline(cmdBuffer, pipelineBindPoint, pipeline);
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdBindDynamicStateObject(VkCmdBuffer cmdBuffer, VkStateBindPoint stateBindPoint, VkDynamicStateObject state)
