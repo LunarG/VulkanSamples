@@ -1111,18 +1111,53 @@ TEST_F(VkLayerTest, InvalidDynamicStateObject)
     // TODO : Simple check for bad object should be added to ObjectTracker to catch this case
     //   The DS check for this is after driver has been called to validate DS internal data struct
 }
-#if 0
+
 TEST_F(VkLayerTest, DSUpdateWithoutBegin)
 {
     // Call vkUpdateDescriptors w/ valid DS, but before vkBeginDescriptorPoolUpdate
     VK_DBG_MSG_TYPE msgType;
     std::string     msgString;
+    VkResult        err;
 
     ASSERT_NO_FATAL_FAILURE(InitState());
     m_errorMonitor->ClearState();
-    VkDescriptorSetObj descriptorSet(m_device);
+    //VkDescriptorSetObj descriptorSet(m_device);
+    const VkDescriptorTypeCount ds_type_count = {
+        .type       = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+        .count      = 1,
+    };
+    const VkDescriptorPoolCreateInfo ds_pool_ci = {
+        .sType      = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
+        .pNext      = NULL,
+        .count      = 1,
+        .pTypeCount = &ds_type_count,
+    };
+    VkDescriptorPool ds_pool;
+    err = vkCreateDescriptorPool(m_device->device(), VK_DESCRIPTOR_POOL_USAGE_ONE_SHOT, 1, &ds_pool_ci, &ds_pool);
+    ASSERT_VK_SUCCESS(err);
+    const VkDescriptorSetLayoutBinding dsl_binding = {
+        .descriptorType     = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+        .count              = 1,
+        .stageFlags         = VK_SHADER_STAGE_ALL,
+        .pImmutableSamplers = NULL,
+    };
+
+    const VkDescriptorSetLayoutCreateInfo ds_layout_ci = {
+        .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
+        .pNext = NULL,
+        .count = 1,
+        .pBinding = &dsl_binding,
+    };
+    VkDescriptorSetLayout ds_layout;
+    err = vkCreateDescriptorSetLayout(m_device->device(), &ds_layout_ci, &ds_layout);
+    ASSERT_VK_SUCCESS(err);
+
+    VkDescriptorSet descriptorSet;
+    uint32_t ds_count = 0;
+    err = vkAllocDescriptorSets(m_device->device(), ds_pool, VK_DESCRIPTOR_SET_USAGE_ONE_SHOT, 1, &ds_layout, &descriptorSet, &ds_count);
+    ASSERT_VK_SUCCESS(err);
     // Should fail before we attempt update so don't care about update contents
-    vkUpdateDescriptors(m_device->device(), descriptorSet.GetDescriptorSetHandle(), 0, NULL);
+    vkUpdateDescriptors(m_device->device(), descriptorSet, 0, NULL);
     msgType = m_errorMonitor->GetState(&msgString);
     ASSERT_EQ(msgType, VK_DBG_MSG_ERROR) << "Did not receive error after updating Descriptors w/o first calling vkBeginDescriptorPoolUpdate().";
     if (!strstr(msgString.c_str(),"You must call vkBeginDescriptorPoolUpdate() before ")) {
@@ -1130,7 +1165,7 @@ TEST_F(VkLayerTest, DSUpdateWithoutBegin)
         FAIL() << "Error received was not 'You must call vkBeginDescriptorPoolUpdate() before this call to vkUpdateDescriptors()!'";
     }
 }
-#endif
+
 TEST_F(VkLayerTest, DSEndWithoutBegin)
 {
     // With a valid pool & cmdBuffer, call vkEndDescriptorPoolUpdate
