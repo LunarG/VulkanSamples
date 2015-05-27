@@ -594,6 +594,12 @@ static void app_gpu_multi_compat(struct app_gpu *gpus, uint32_t gpu_count)
         }
 }
 
+#ifdef _WIN32
+#define PRINTF_SIZE_T_SPECIFIER    "%Iu"
+#else
+#define PRINTF_SIZE_T_SPECIFIER    "%zu"
+#endif
+
 static void app_gpu_dump_props(const struct app_gpu *gpu)
 {
     const VkPhysicalDeviceProperties *props = &gpu->props;
@@ -605,7 +611,7 @@ static void app_gpu_dump_props(const struct app_gpu *gpu)
     printf("\tdeviceId = 0x%04x\n",                 props->deviceId);
     printf("\tdeviceType = %s\n",                   vk_physical_device_type_string(props->deviceType));
     printf("\tdeviceName = %s\n",                   props->deviceName);
-    printf("\tmaxInlineMemoryUpdateSize = %zu\n",   props->maxInlineMemoryUpdateSize);
+    printf("\tmaxInlineMemoryUpdateSize = " PRINTF_SIZE_T_SPECIFIER "\n",   props->maxInlineMemoryUpdateSize);
     printf("\tmaxBoundDescriptorSets = %u\n",       props->maxBoundDescriptorSets);
     printf("\tmaxThreadGroupSize = %u\n",           props->maxThreadGroupSize);
     printf("\ttimestampFrequency = %lu\n",          props->timestampFrequency);
