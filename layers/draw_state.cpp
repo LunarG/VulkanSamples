@@ -1309,8 +1309,8 @@ static void dumpDotFile(const VkCmdBuffer cb, string outFileName)
         }
     }
 }
-// Verify VB Buffer binding
-static void validateVBBinding(const VkCmdBuffer cb)
+// Verify bound Pipeline State Object
+static void validateBoundPipeline(const VkCmdBuffer cb)
 {
     GLOBAL_CB_NODE* pCB = getCBNode(cb);
     if (pCB && pCB->lastBoundPipeline) {
@@ -1574,6 +1574,8 @@ VK_LAYER_EXPORT VkResult VKAPI vkQueueSubmit(VkQueue queue, uint32_t cmdBufferCo
             char str[1024];
             sprintf(str, "You must call vkEndCommandBuffer() on CB %p before this call to vkQueueSubmit()!", pCB->cmdBuffer);
             layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, pCB->cmdBuffer, 0, DRAWSTATE_NO_END_CMD_BUFFER, "DS", str);
+            loader_platform_thread_unlock_mutex(&globalLock);
+            return VK_ERROR_UNKNOWN;
         }
         loader_platform_thread_unlock_mutex(&globalLock);
         for (auto ii=pCB->boundDescriptorSets.begin(); ii != pCB->boundDescriptorSets.end(); ++ii) {
@@ -1581,6 +1583,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkQueueSubmit(VkQueue queue, uint32_t cmdBufferCo
                 char str[1024];
                 sprintf(str, "You must call vkEndDescriptorPoolUpdate() before this call to vkQueueSubmit()!");
                 layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, *ii, 0, DRAWSTATE_BINDING_DS_NO_END_UPDATE, "DS", str);
+                return VK_ERROR_UNKNOWN;
             }
         }
     }
@@ -1764,6 +1767,8 @@ VK_LAYER_EXPORT VkResult VKAPI vkEndDescriptorPoolUpdate(VkDevice device, VkCmdB
         char str[1024];
         sprintf(str, "Unable to find pool node");
         layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, DRAWSTATE_INTERNAL_ERROR, "DS", str);
+        loader_platform_thread_unlock_mutex(&globalLock);
+        return VK_ERROR_UNKNOWN;
     }
     else {
         pPoolNode = poolEntry->second;
@@ -1771,6 +1776,8 @@ VK_LAYER_EXPORT VkResult VKAPI vkEndDescriptorPoolUpdate(VkDevice device, VkCmdB
             char str[1024];
             sprintf(str, "You must call vkBeginDescriptorPoolUpdate() before this call to vkEndDescriptorPoolUpdate()!");
             layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, DRAWSTATE_DS_END_WITHOUT_BEGIN, "DS", str);
+            loader_platform_thread_unlock_mutex(&globalLock);
+            return VK_ERROR_UNKNOWN;
         }
     }
     loader_platform_thread_unlock_mutex(&globalLock);
@@ -1893,7 +1900,7 @@ VK_LAYER_EXPORT void VKAPI vkUpdateDescriptors(VkDevice device, VkDescriptorSet 
     if (!dsUpdateActive(descriptorSet)) {
         char str[1024];
         sprintf(str, "You must call vkBeginDescriptorPoolUpdate() before this call to vkUpdateDescriptors()!");
-        layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, pSet->pool, 0, DRAWSTATE_UPDATE_WITHOUT_BEGIN, "DS", str);
+        layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, descriptorSet, 0, DRAWSTATE_UPDATE_WITHOUT_BEGIN, "DS", str);
     }
     else {
         // pUpdateChain is a Linked-list of VK_UPDATE_* structures defining the mappings for the descriptors
@@ -2101,7 +2108,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdBindVertexBuffers(
         updateCBTracking(cmdBuffer);
         addCmd(pCB, CMD_BINDVERTEXBUFFER);
         pCB->lastVtxBinding = startBinding + bindingCount -1;
-        validateVBBinding(cmdBuffer);
+        validateBoundPipeline(cmdBuffer);
     } else {
         char str[1024];
         sprintf(str, "Attempt to use CmdBuffer %p that doesn't exist!", (void*)cmdBuffer);
