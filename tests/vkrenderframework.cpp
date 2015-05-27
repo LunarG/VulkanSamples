@@ -279,10 +279,9 @@ void VkDeviceObj::get_device_queue()
     m_queue = graphics_queues()[0]->obj();
 }
 
-VkDescriptorSetObj::VkDescriptorSetObj(VkDeviceObj *device)
+VkDescriptorSetObj::VkDescriptorSetObj(VkDeviceObj *device) :
+        m_device(device), m_nextSlot(0)
 {
-    m_device = device;
-    m_nextSlot = 0;
 
 }
 
