@@ -867,7 +867,7 @@ static bool loader_layers_activated(const struct loader_icd *icd, const uint32_t
 }
 
 static loader_platform_dl_handle loader_add_layer_lib(
-        struct loader_instance *inst,
+        const char *chain_type,
         struct loader_extension_property *ext_prop)
 {
     struct loader_lib_info *new_layer_lib_list, *my_lib;
@@ -882,7 +882,7 @@ static loader_platform_dl_handle loader_add_layer_lib(
             /* Have already loaded this library, just increment ref count */
             loader.loaded_layer_lib_list[i].ref_count++;
             loader_log(VK_DBG_REPORT_INFO_BIT, 0,
-                       "Inserting instance layer %s from library %s",
+                       "Inserting %s layer %s from library %s", chain_type,
                        ext_prop->info.name, ext_prop->lib_name);
             return loader.loaded_layer_lib_list[i].lib_handle;
         }
@@ -909,7 +909,7 @@ static loader_platform_dl_handle loader_add_layer_lib(
         return NULL;
     } else {
         loader_log(VK_DBG_REPORT_INFO_BIT, 0,
-                   "Inserting instance layer %s from library %s",
+                   "Inserting %s layer %s from library %s", chain_type,
                    ext_prop->info.name, ext_prop->lib_name);
     }
     loader.loaded_layer_lib_count++;
@@ -1127,7 +1127,7 @@ uint32_t loader_activate_instance_layers(struct loader_instance *inst)
 
         char funcStr[256];
         snprintf(funcStr, 256, "%sGetInstanceProcAddr", ext_prop->info.name);
-        lib_handle = loader_add_layer_lib(inst, ext_prop);
+        lib_handle = loader_add_layer_lib("instance", ext_prop);
         if ((nextGPA = (PFN_vkGetInstanceProcAddr) loader_platform_get_proc_address(lib_handle, funcStr)) == NULL)
             nextGPA = (PFN_vkGetInstanceProcAddr) loader_platform_get_proc_address(lib_handle, "vkGetInstanceProcAddr");
         if (!nextGPA) {
@@ -1214,7 +1214,7 @@ extern uint32_t loader_activate_device_layers(
 
             char funcStr[256];
             snprintf(funcStr, 256, "%sGetDeviceProcAddr", ext_prop->info.name);
-            lib_handle = loader_add_layer_lib((struct loader_instance *) (icd->instance), ext_prop);
+            lib_handle = loader_add_layer_lib("device", ext_prop);
             if ((nextGPA = (PFN_vkGetDeviceProcAddr) loader_platform_get_proc_address(lib_handle, funcStr)) == NULL)
                 nextGPA = (PFN_vkGetDeviceProcAddr) loader_platform_get_proc_address(lib_handle, "vkGetDeviceProcAddr");
             if (!nextGPA) {
