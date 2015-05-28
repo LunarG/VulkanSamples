@@ -796,7 +796,7 @@ static VkLayerDispatchTable * initDeviceTable(const VkBaseLayerObject *devw)
         return it->second;
     }
 
-    layer_initialize_dispatch_table(pTable, (PFN_vkGetDeviceProcAddr) devw->pGPA, (VkDevice) devw->nextObject);
+    layer_initialize_dispatch_table(pTable, devw);
 
     return pTable;
 }
@@ -818,7 +818,7 @@ static VkLayerInstanceDispatchTable * initInstanceTable(const VkBaseLayerObject 
         return it->second;
     }
 
-    layer_init_instance_dispatch_table(pTable, (PFN_vkGetInstanceProcAddr) instw->pGPA, (VkInstance) instw->nextObject);
+    layer_init_instance_dispatch_table(pTable, instw);
 
     return pTable;
 }
@@ -2151,17 +2151,17 @@ VK_LAYER_EXPORT void* VKAPI vkGetDeviceProcAddr(
     VkDevice         dev,
     const char       *funcName)
 {
-    VkBaseLayerObject* devw = (VkBaseLayerObject *) dev;
-
     if (dev == NULL) {
         return NULL;
     }
 
     loader_platform_thread_once(&g_initOnce, initMemTracker);
-    initDeviceTable((const VkBaseLayerObject *) dev);
 
-    if (!strcmp(funcName, "vkGetDeviceProcAddr"))
+    /* loader uses this to force layer initialization; device object is wrapped */
+    if (!strcmp(funcName, "vkGetDeviceProcAddr")) {
+        initDeviceTable((const VkBaseLayerObject *) dev);
         return (void *) vkGetDeviceProcAddr;
+    }
     if (!strcmp(funcName, "vkDestroyDevice"))
         return (void*) vkDestroyDevice;
     if (!strcmp(funcName, "vkQueueSubmit"))
@@ -2296,11 +2296,13 @@ VK_LAYER_EXPORT void* VKAPI vkGetDeviceProcAddr(
         return (void*) vkDestroySwapChainWSI;
     if (!strcmp(funcName, "vkGetSwapChainInfoWSI"))
         return (void*) vkGetSwapChainInfoWSI;
-    else {
-        if (devw->pGPA == NULL) {
+    else
+    {
+        VkLayerDispatchTable **ppDisp = (VkLayerDispatchTable **) dev;
+        VkLayerDispatchTable* pTable = tableMap[*ppDisp];
+        if (pTable->GetDeviceProcAddr == NULL)
             return NULL;
-        }
-        return devw->pGPA((VkObject)devw->nextObject, funcName);
+        return pTable->GetDeviceProcAddr(dev, funcName);
     }
 }
 
@@ -2308,25 +2310,28 @@ VK_LAYER_EXPORT void* VKAPI vkGetInstanceProcAddr(
     VkInstance       instance,
     const char       *funcName)
 {
-    VkBaseLayerObject* instw = (VkBaseLayerObject *) instance;
-
     if (instance == NULL) {
         return NULL;
     }
 
     loader_platform_thread_once(&g_initOnce, initMemTracker);
-    initInstanceTable((const VkBaseLayerObject *) instance);
 
-    if (!strcmp(funcName, "vkGetInstanceProcAddr"))
+    /* loader uses this to force layer initialization; instance object is wrapped */
+    if (!strcmp(funcName, "vkGetInstanceProcAddr")) {
+        initInstanceTable((const VkBaseLayerObject *) instance);
         return (void *) vkGetInstanceProcAddr;
+    }
+
     if (!strcmp(funcName, "vkDestroyInstance"))
         return (void *) vkDestroyInstance;
     if (!strcmp(funcName, "vkCreateDevice"))
         return (void*) vkCreateDevice;
-    else {
-        if (instw->pGPA == NULL) {
+    else
+    {
+        VkLayerInstanceDispatchTable **ppDisp = (VkLayerInstanceDispatchTable **) instance;
+        VkLayerInstanceDispatchTable* pTable = tableInstanceMap[*ppDisp];
+        if (pTable->GetInstanceProcAddr == NULL)
             return NULL;
-        }
-        return instw->pGPA((VkObject)instw->nextObject, funcName);
+        return pTable->GetInstanceProcAddr(instance, funcName);
     }
 }

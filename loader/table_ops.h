@@ -30,9 +30,13 @@
 
 static inline void loader_init_device_dispatch_table(VkLayerDispatchTable *table,
                                                     PFN_vkGetDeviceProcAddr gpa,
+                                                    VkDevice dev_next,
                                                     VkDevice dev)
 {
-    table->GetDeviceProcAddr = gpa;
+    // If layer is next, this will trigger layers to initialize their dispatch tables
+    //then use the gpa in their dispatch for subsequent layers in the chain
+    table->GetDeviceProcAddr = (PFN_vkGetDeviceProcAddr) gpa(dev_next, "vkGetDeviceProcAddr");
+
     table->DestroyDevice = (PFN_vkDestroyDevice) gpa(dev, "vkDestroyDevice");
     table->GetDeviceQueue = (PFN_vkGetDeviceQueue) gpa(dev, "vkGetDeviceQueue");
     table->QueueSubmit = (PFN_vkQueueSubmit) gpa(dev, "vkQueueSubmit");
@@ -137,6 +141,8 @@ static inline void loader_init_device_dispatch_table(VkLayerDispatchTable *table
     table->CmdBeginRenderPass = (PFN_vkCmdBeginRenderPass) gpa(dev, "vkCmdBeginRenderPass");
     table->CmdEndRenderPass = (PFN_vkCmdEndRenderPass) gpa(dev, "vkCmdEndRenderPass");
 //TODO move into it's own table
+//TODO also consider dropping trampoline code for these device level extensions entirely
+// then don't need loader to know about these at all but then not queryable via GIPA
     table->CreateSwapChainWSI = (PFN_vkCreateSwapChainWSI) gpa(dev, "vkCreateSwapChainWSI");
     table->DestroySwapChainWSI = (PFN_vkDestroySwapChainWSI) gpa(dev, "vkDestroySwapChainWSI");
     table->GetSwapChainInfoWSI = (PFN_vkGetSwapChainInfoWSI) gpa(dev, "vkGetSwapChainInfoWSI");
@@ -359,28 +365,23 @@ static inline void *loader_lookup_device_dispatch_table(
         return (void *) table->CmdBeginRenderPass;
     if (!strcmp(name, "CmdEndRenderPass"))
         return (void *) table->CmdEndRenderPass;
-//TODO put in it's own table
-    if (!strcmp(name, "CreateSwapChainWSI"))
-        return (void *) table->CreateSwapChainWSI;
-    if (!strcmp(name, "DestroySwapChainWSI"))
-        return (void *) table->DestroySwapChainWSI;
-    if (!strcmp(name, "GetSwapChainInfoWSI"))
-        return (void *) table->GetSwapChainInfoWSI;
-    if (!strcmp(name, "QueuePresentWSI"))
-        return (void *) table->QueuePresentWSI;
 
     return NULL;
 }
 
 static inline void loader_init_instance_core_dispatch_table(VkLayerInstanceDispatchTable *table,
                                                 PFN_vkGetInstanceProcAddr gpa,
+                                                VkInstance inst_next,
                                                 VkInstance inst)
 {
+    // If layer is next, this will trigger layers to initialize their dispatch tables
+    //then use the gpa in their dispatch for subsequent layers in the chain
+    table->GetInstanceProcAddr = (PFN_vkGetInstanceProcAddr) gpa(inst_next, "vkGetInstanceProcAddr");
+
     table->CreateInstance = (PFN_vkCreateInstance) gpa(inst, "vkCreateInstance");
     table->DestroyInstance = (PFN_vkDestroyInstance) gpa(inst, "vkDestroyInstance");
     table->EnumeratePhysicalDevices = (PFN_vkEnumeratePhysicalDevices) gpa(inst, "vkEnumeratePhysicalDevices");
     table->GetPhysicalDeviceInfo = (PFN_vkGetPhysicalDeviceInfo) gpa(inst, "vkGetPhysicalDeviceInfo");
-    table->GetInstanceProcAddr = (PFN_vkGetInstanceProcAddr) gpa(inst, "vkGetInstanceProcAddr");
     table->CreateDevice = (PFN_vkCreateDevice) gpa(inst, "vkCreateDevice");
     table->GetGlobalExtensionInfo = (PFN_vkGetGlobalExtensionInfo) gpa(inst,"vkGetGlobalExtensionInfo");
     table->GetPhysicalDeviceExtensionInfo = (PFN_vkGetPhysicalDeviceExtensionInfo) gpa(inst, "vkGetPhysicalDeviceExtensionInfo");

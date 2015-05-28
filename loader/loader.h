@@ -321,13 +321,6 @@ VkResult loader_GetPhysicalDeviceExtensionInfo(
         size_t*                                 pDataSize,
         void*                                   pData);
 
-VkResult loader_EnumerateLayers(
-        VkPhysicalDevice                        gpu,
-        size_t                                  maxStringSize,
-        size_t*                                 pLayerCount,
-        char* const*                            pOutLayers,
-        void*                                   pReserved);
-
 VkResult loader_GetMultiDeviceCompatibility(
         VkPhysicalDevice                        gpu0,
         VkPhysicalDevice                        gpu1,

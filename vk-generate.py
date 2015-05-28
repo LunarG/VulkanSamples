@@ -110,38 +110,42 @@ class DispatchTableOpsSubcommand(Subcommand):
                           "#include <vkLayer.h>",
                           "#include <string.h>"])
 
-    def _generate_init(self, type):
+    def _generate_init_dispatch(self, type):
         stmts = []
         func = []
         if type == "device":
+            # GPA has to be first one and uses wrapped object
+            stmts.append("VkDevice device = (VkDevice) devw->nextObject;")
+            stmts.append("PFN_vkGetDeviceProcAddr gpa = (PFN_vkGetDeviceProcAddr) devw->pGPA;")
+            stmts.append("VkDevice baseDevice = (VkDevice) devw->baseObject;")
+            stmts.append("// GPA has to be first entry inited and uses wrapped object since it triggers init")
+            stmts.append("table->GetDeviceProcAddr =(PFN_vkGetDeviceProcAddr)  gpa(device,\"vkGetDeviceProcAddr\");")
             for proto in self.protos:
                 if proto.name == "CreateInstance" or proto.name == "GetGlobalExtensionInfo" or proto.name == "GetDisplayInfoWSI" or proto.params[0].ty == "VkInstance" or proto.params[0].ty == "VkPhysicalDevice":
                     continue
-                if proto.name == "GetDeviceProcAddr":
-                    stmts.append("table->%s = gpa; // direct assignment" % proto.name)
-                else:
-                    stmts.append("table->%s = (PFN_vk%s) gpa(device, \"vk%s\");" %
+                if proto.name != "GetDeviceProcAddr":
+                    stmts.append("table->%s = (PFN_vk%s) gpa(baseDevice, \"vk%s\");" %
                         (proto.name, proto.name, proto.name))
             func.append("static inline void %s_initialize_dispatch_table(VkLayerDispatchTable *table,"
                 % self.prefix)
-            func.append("%s                                              PFN_vkGetDeviceProcAddr gpa,"
-                % (" " * len(self.prefix)))
-            func.append("%s                                              VkDevice device)"
+            func.append("%s                                              const VkBaseLayerObject *devw)"
                 % (" " * len(self.prefix)))
         else:
+            # GPA has to be first one and uses wrapped object
+            stmts.append("VkInstance instance = (VkInstance) instw->nextObject;")
+            stmts.append("PFN_vkGetInstanceProcAddr gpa = (PFN_vkGetInstanceProcAddr) instw->pGPA;")
+            stmts.append("VkInstance baseInstance = (VkInstance) instw->baseObject;")
+            stmts.append("// GPA has to be first entry inited and uses wrapped object since it triggers init")
+            stmts.append("table->GetInstanceProcAddr =(PFN_vkGetInstanceProcAddr)  gpa(instance,\"vkGetInstanceProcAddr\");")
             for proto in self.protos:
                 if proto.name != "CreateInstance"  and proto.name != "GetGlobalExtensionInfo" and proto.name != "GetDisplayInfoWSI" and proto.params[0].ty != "VkInstance" and proto.params[0].ty != "VkPhysicalDevice":
                     continue
-                if proto.name == "GetInstanceProcAddr":
-                    stmts.append("table->%s = gpa; // direct assignment" % proto.name)
-                else:
-                    stmts.append("table->%s = (PFN_vk%s) gpa(instance, \"vk%s\");" %
+                if proto.name != "GetInstanceProcAddr":
+                    stmts.append("table->%s = (PFN_vk%s) gpa(baseInstance, \"vk%s\");" %
                           (proto.name, proto.name, proto.name))
             func.append("static inline void %s_init_instance_dispatch_table(VkLayerInstanceDispatchTable *table,"
                 % self.prefix)
-            func.append("%s                                              PFN_vkGetInstanceProcAddr gpa,"
-                % (" " * len(self.prefix)))
-            func.append("%s                                              VkInstance instance)"
+            func.append("%s                                              const VkBaseLayerObject *instw)"
                 % (" " * len(self.prefix)))
         func.append("{")
         func.append("    %s" % "\n    ".join(stmts))
@@ -150,8 +154,8 @@ class DispatchTableOpsSubcommand(Subcommand):
         return "\n".join(func)
 
     def generate_body(self):
-        body = [self._generate_init("device"),
-                self._generate_init("instance")]
+        body = [self._generate_init_dispatch("device"),
+                self._generate_init_dispatch("instance")]
 
         return "\n\n".join(body)
 

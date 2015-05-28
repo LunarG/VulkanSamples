@@ -223,7 +223,7 @@ class Subcommand(object):
         intercepted = []
         for proto in self.protos:
             if proto.name == "GetDeviceProcAddr" or proto.name == "GetInstanceProcAddr":
-                intercepted.append(proto)
+                continue
             else:
                 intercept = self.generate_intercept(proto, qual)
                 if intercept is None:
@@ -352,13 +352,16 @@ class Subcommand(object):
         func_body = []
         func_body.append("VK_LAYER_EXPORT void* VKAPI vkGetDeviceProcAddr(VkDevice device, const char* funcName)\n"
                          "{\n"
-                         "    VkBaseLayerObject* devw = (VkBaseLayerObject *) device;\n"
                          "    void* addr;\n"
                          "    if (device == VK_NULL_HANDLE) {\n"
                          "        return NULL;\n"
                          "    }\n"
-                         "    loader_platform_thread_once(&initOnce, init%s);\n"
-                         "    initDeviceTable((const VkBaseLayerObject *) device);\n\n"
+                         "    loader_platform_thread_once(&initOnce, init%s);\n\n"
+                         "    /* loader uses this to force layer initialization; device object is wrapped */\n"
+                         "    if (!strcmp(\"vkGetDeviceProcAddr\", funcName)) {\n"
+                         "        initDeviceTable((const VkBaseLayerObject *) device);\n"
+                         "        return (void *) vkGetDeviceProcAddr;\n"
+                         "    }\n\n"
                          "    addr = layer_intercept_proc(funcName);\n"
                          "    if (addr)\n"
                          "        return addr;" % self.layer_name)
@@ -373,20 +376,25 @@ class Subcommand(object):
                 func_body.append('    else if (!strcmp("%s", funcName))\n'
                                  '        return %s%s%s;' % (ext_name, cpp_prefix, ext_name, cpp_postfix))
         func_body.append("    else {\n"
-                         "        if (devw->pGPA == NULL)\n"
+                         "        VkLayerDispatchTable **ppDisp = (VkLayerDispatchTable **) device;\n"
+                         "        VkLayerDispatchTable* pTable = tableMap[*ppDisp];\n"
+                         "        if (pTable->GetDeviceProcAddr == NULL)\n"
                          "            return NULL;\n"
-                         "        return devw->pGPA((VkObject)devw->nextObject, funcName);\n"
+                         "        return pTable->GetDeviceProcAddr(device, funcName);\n"
                          "    }\n"
                          "}\n")
         func_body.append("VK_LAYER_EXPORT void* VKAPI vkGetInstanceProcAddr(VkInstance instance, const char* funcName)\n"
                          "{\n"
-                         "    VkBaseLayerObject* instw = (VkBaseLayerObject *) instance;\n"
                          "    void* addr;\n"
                          "    if (instance == VK_NULL_HANDLE) {\n"
                          "        return NULL;\n"
                          "    }\n"
-                         "    loader_platform_thread_once(&initOnce, init%s);\n"
-                         "    initInstanceTable((const VkBaseLayerObject *) instance);\n\n"
+                         "    loader_platform_thread_once(&initOnce, init%s);\n\n"
+                         "    /* loader uses this to force layer initialization; instance object is wrapped */\n"
+                         "    if (!strcmp(\"vkGetInstanceProcAddr\", funcName)) {\n"
+                         "        initInstanceTable((const VkBaseLayerObject *) instance);\n"
+                         "        return (void *) vkGetInstanceProcAddr;\n"
+                         "    }\n\n"
                          "    addr = layer_intercept_instance_proc(funcName);\n"
                          "    if (addr)\n"
                          "        return addr;" % self.layer_name)
@@ -396,9 +404,11 @@ class Subcommand(object):
                 func_body.append('    else if (!strcmp("%s", funcName))\n'
                                  '        return %s;' % (ext_name, ext_name))
         func_body.append("    else {\n"
-                         "        if (instw->pGPA == NULL)\n"
+                         "        VkLayerInstanceDispatchTable **ppDisp = (VkLayerInstanceDispatchTable **) instance;\n"
+                         "        VkLayerInstanceDispatchTable* pTable = tableInstanceMap[*ppDisp];\n"
+                         "        if (pTable->GetInstanceProcAddr == NULL)\n"
                          "            return NULL;\n"
-                         "        return instw->pGPA((VkObject)instw->nextObject, funcName);\n"
+                         "        return pTable->GetInstanceProcAddr(instance, funcName);\n"
                          "    }\n"
                          "}\n")
         return "\n".join(func_body)
@@ -453,7 +463,7 @@ class Subcommand(object):
         func_body.append('        return it->second;')
         func_body.append('    }')
         func_body.append('')
-        func_body.append('    layer_initialize_dispatch_table(pTable, (PFN_vkGetDeviceProcAddr) devw->pGPA, (VkDevice) devw->nextObject);')
+        func_body.append('    layer_initialize_dispatch_table(pTable, devw);')
         func_body.append('')
         func_body.append('    return pTable;')
         func_body.append('}')
@@ -474,7 +484,7 @@ class Subcommand(object):
         func_body.append('        return it->second;')
         func_body.append('    }')
         func_body.append('')
-        func_body.append('    layer_init_instance_dispatch_table(pTable, (PFN_vkGetInstanceProcAddr) instw->pGPA, (VkInstance) instw->nextObject);')
+        func_body.append('    layer_init_instance_dispatch_table(pTable, instw);')
         func_body.append('')
         func_body.append('    return pTable;')
         func_body.append('}')
@@ -773,7 +783,7 @@ class APIDumpSubcommand(Subcommand):
         func_body.append('        return it->second;')
         func_body.append('    }')
         func_body.append('')
-        func_body.append('    layer_initialize_dispatch_table(pTable, (PFN_vkGetDeviceProcAddr) devw->pGPA, (VkDevice) devw->nextObject);')
+        func_body.append('    layer_initialize_dispatch_table(pTable, devw);')
         func_body.append('')
         func_body.append('    return pTable;')
         func_body.append('}')
@@ -794,7 +804,7 @@ class APIDumpSubcommand(Subcommand):
         func_body.append('        return it->second;')
         func_body.append('    }')
         func_body.append('')
-        func_body.append('    layer_init_instance_dispatch_table(pTable, (PFN_vkGetInstanceProcAddr) instw->pGPA, (VkInstance) instw->nextObject);')
+        func_body.append('    layer_init_instance_dispatch_table(pTable, instw);')
         func_body.append('')
         func_body.append('    return pTable;')
         func_body.append('}')

@@ -83,9 +83,9 @@ static VkLayerDispatchTable * initDeviceTable(const VkBaseLayerObject *devw)
         return it->second;
     }
 
-    VkDevice device = (VkDevice) devw->nextObject;
-    layer_initialize_dispatch_table(pTable, (PFN_vkGetDeviceProcAddr) devw->pGPA, (VkDevice) device);
+    layer_initialize_dispatch_table(pTable, devw);
 
+    VkDevice device = (VkDevice) devw->baseObject;
     pDebugMarkerTable->CmdDbgMarkerBegin = (PFN_vkCmdDbgMarkerBegin) devw->pGPA(device, "vkCmdDbgMarkerBegin");
     pDebugMarkerTable->CmdDbgMarkerEnd   = (PFN_vkCmdDbgMarkerEnd) devw->pGPA(device, "vkCmdDbgMarkerEnd");
     pDebugMarkerTable->DbgSetObjectTag   = (PFN_vkDbgSetObjectTag) devw->pGPA(device, "vkDbgSetObjectTag");
@@ -111,7 +111,7 @@ static VkLayerInstanceDispatchTable * initInstanceTable(const VkBaseLayerObject 
         return it->second;
     }
 
-    layer_init_instance_dispatch_table(pTable, (PFN_vkGetInstanceProcAddr) instw->pGPA, (VkInstance) instw->nextObject);
+    layer_init_instance_dispatch_table(pTable, instw);
 
     return pTable;
 }
@@ -1977,8 +1977,6 @@ static inline void* layer_intercept_proc(const char *name)
         return NULL;
 
     name += 2;
-    if (!strcmp(name, "GetDeviceProcAddr"))
-        return (void*) vkGetDeviceProcAddr;
     if (!strcmp(name, "DestroyDevice"))
         return (void*) vkDestroyDevice;
     if (!strcmp(name, "GetDeviceQueue"))
@@ -2201,8 +2199,6 @@ static inline void* layer_intercept_instance_proc(const char *name)
         return NULL;
 
     name += 2;
-    if (!strcmp(name, "GetInstanceProcAddr"))
-        return (void*) vkGetInstanceProcAddr;
     if (!strcmp(name, "CreateInstance"))
         return (void*) vkCreateInstance;
     if (!strcmp(name, "DestroyInstance"))
@@ -2223,46 +2219,56 @@ static inline void* layer_intercept_instance_proc(const char *name)
 
 VK_LAYER_EXPORT void* VKAPI vkGetDeviceProcAddr(VkDevice device, const char* funcName)
 {
-    VkBaseLayerObject* devw = (VkBaseLayerObject *) device;
     void* addr;
     if (device == NULL) {
         return NULL;
     }
 
     loader_platform_thread_once(&initOnce, initParamChecker);
-    initDeviceTable((const VkBaseLayerObject *) device);
+
+    /* loader uses this to force layer initialization; device object is wrapped */
+    if (!strcmp(funcName, "vkGetDeviceProcAddr")) {
+        initDeviceTable((const VkBaseLayerObject *) device);
+        return (void*) vkGetDeviceProcAddr;
+    }
 
     addr = layer_intercept_proc(funcName);
     if (addr) {
         return addr;
     }
     else {
-        if (devw->pGPA == NULL) {
+        VkLayerDispatchTable **ppDisp = (VkLayerDispatchTable **) device;
+        VkLayerDispatchTable* pTable = tableMap[*ppDisp];
+        if (pTable->GetDeviceProcAddr == NULL)
             return NULL;
-        }
-        return devw->pGPA((VkObject)devw->nextObject, funcName);
+        return pTable->GetDeviceProcAddr(device, funcName);
     }
 }
 
 VK_LAYER_EXPORT void* VKAPI vkGetInstanceProcAddr(VkInstance instance, const char* funcName)
 {
-    VkBaseLayerObject* instw = (VkBaseLayerObject *) instance;
     void* addr;
     if (instance == NULL) {
         return NULL;
     }
 
     loader_platform_thread_once(&initOnce, initParamChecker);
-    initInstanceTable((const VkBaseLayerObject *) instance);
+
+    /* loader uses this to force layer initialization; instance object is wrapped */
+    if (!strcmp(funcName, "vkGetInstanceProcAddr")) {
+        initInstanceTable((const VkBaseLayerObject *) instance);
+        return (void*) vkGetInstanceProcAddr;
+    }
 
     addr = layer_intercept_instance_proc(funcName);
     if (addr) {
         return addr;
     }
     else {
-        if (instw->pGPA == NULL) {
+        VkLayerInstanceDispatchTable **ppDisp = (VkLayerInstanceDispatchTable **) instance;
+        VkLayerInstanceDispatchTable* pTable = tableInstanceMap[*ppDisp];
+        if (pTable->GetInstanceProcAddr == NULL)
             return NULL;
-        }
-        return instw->pGPA((VkObject)instw->nextObject, funcName);
+        return pTable->GetInstanceProcAddr(instance, funcName);
     }
 }

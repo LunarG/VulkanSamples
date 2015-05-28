@@ -149,22 +149,26 @@ VK_LAYER_EXPORT void * VKAPI multi1GetDeviceProcAddr(VkDevice device, const char
     if (device == NULL)
         return NULL;
 
-    getLayer1Table(devw);
 
-    if (!strcmp("vkGetDeviceProcAddr", pName))
+
+    if (!strcmp("vkGetDeviceProcAddr", pName)) {
+        getLayer1Table(devw);
         return (void *) multi1GetDeviceProcAddr;
+    }
     if (!strcmp("vkDestroyDevice", pName))
         return (void *) multi1DestroyDevice;
     if (!strcmp("vkCreateSampler", pName))
         return (void *) multi1CreateSampler;
-    else if (!strcmp("vkCreateGraphicsPipeline", pName))
+    if (!strcmp("vkCreateGraphicsPipeline", pName))
         return (void *) multi1CreateGraphicsPipeline;
-    else if (!strcmp("vkStorePipeline", pName))
+    if (!strcmp("vkStorePipeline", pName))
         return (void *) multi1StorePipeline;
     else {
-        if (devw->pGPA == NULL)
+        VkLayerDispatchTable **ppDisp = (VkLayerDispatchTable **) device;
+        VkLayerDispatchTable* pTable = tableMap1[*ppDisp];
+        if (pTable->GetDeviceProcAddr == NULL)
             return NULL;
-        return devw->pGPA((VkObject) devw->nextObject, pName);
+        return pTable->GetDeviceProcAddr(device, pName);
     }
 }
 
@@ -175,18 +179,22 @@ VK_LAYER_EXPORT void * VKAPI multi1GetInstanceProcAddr(VkInstance inst, const ch
     if (inst == NULL)
         return NULL;
 
-    getLayer1InstanceTable(instw);
 
-    if (!strcmp("vkGetInstanceProcAddr", pName))
+
+    if (!strcmp("vkGetInstanceProcAddr", pName)) {
+        getLayer1InstanceTable(instw);
         return (void *) multi1GetInstanceProcAddr;
+    }
     if (!strcmp("vkDestroyInstance", pName))
         return (void *) multi1DestroyInstance;
-    else if (!strcmp("GetGlobalExtensionInfo", pName))
+    if (!strcmp("GetGlobalExtensionInfo", pName))
         return (void*) vkGetGlobalExtensionInfo;
     else {
-        if (instw->pGPA == NULL)
+        VkLayerInstanceDispatchTable **ppDisp = (VkLayerInstanceDispatchTable **) inst;
+        VkLayerInstanceDispatchTable* pTable = tableInstanceMap1[*ppDisp];
+        if (pTable->GetInstanceProcAddr == NULL)
             return NULL;
-        return instw->pGPA((VkObject) instw->nextObject, pName);
+        return pTable->GetInstanceProcAddr(inst, pName);
     }
 }
 
@@ -310,10 +318,10 @@ VK_LAYER_EXPORT void * VKAPI multi2GetDeviceProcAddr(VkDevice device, const char
     if (device == NULL)
         return NULL;
 
-    getLayer2Table(devw);
-
-    if (!strcmp("vkGetDeviceProcAddr", pName))
+    if (!strcmp("vkGetDeviceProcAddr", pName)) {
+        getLayer2Table(devw);
         return (void *) multi2GetDeviceProcAddr;
+    }
     if (!strcmp("vkDestroyDevice", pName))
         return (void *) multi2DestroyDevice;
     if (!strcmp("vkCreateCommandBuffer", pName))
@@ -321,9 +329,11 @@ VK_LAYER_EXPORT void * VKAPI multi2GetDeviceProcAddr(VkDevice device, const char
     else if (!strcmp("vkBeginCommandBuffer", pName))
         return (void *) multi2BeginCommandBuffer;
     else {
-        if (devw->pGPA == NULL)
+        VkLayerDispatchTable **ppDisp = (VkLayerDispatchTable **) device;
+        VkLayerDispatchTable* pTable = tableMap2[*ppDisp];
+        if (pTable->GetDeviceProcAddr == NULL)
             return NULL;
-        return devw->pGPA((VkObject) devw->nextObject, pName);
+        return pTable->GetDeviceProcAddr(device, pName);
     }
 }
 
@@ -334,10 +344,10 @@ VK_LAYER_EXPORT void * VKAPI multi2GetInstanceProcAddr(VkInstance inst, const ch
     if (inst == NULL)
         return NULL;
 
-    getLayer2InstanceTable(instw);
-
-    if (!strcmp("vkGetInstanceProcAddr", pName))
+    if (!strcmp("vkGetInstanceProcAddr", pName)) {
+        getLayer2InstanceTable(instw);
         return (void *) multi2GetInstanceProcAddr;
+    }
     if (!strcmp("vkEnumeratePhysicalDevices", pName))
         return (void *) multi2EnumeratePhysicalDevices;
     if (!strcmp("vkDestroyInstance", pName))
@@ -347,27 +357,15 @@ VK_LAYER_EXPORT void * VKAPI multi2GetInstanceProcAddr(VkInstance inst, const ch
     else if (!strcmp("GetGlobalExtensionInfo", pName))
         return (void*) vkGetGlobalExtensionInfo;
     else {
-        if (instw->pGPA == NULL)
+        VkLayerInstanceDispatchTable **ppDisp = (VkLayerInstanceDispatchTable **) inst;
+        VkLayerInstanceDispatchTable* pTable = tableInstanceMap2[*ppDisp];
+        if (pTable->GetInstanceProcAddr == NULL)
             return NULL;
-        return instw->pGPA((VkObject) instw->nextObject, pName);
+        return pTable->GetInstanceProcAddr(inst, pName);
     }
 }
 
 /********************************* Common functions ********************************/
-VK_LAYER_EXPORT VkResult VKAPI vkEnumerateLayers(VkPhysicalDevice gpu, size_t maxStringSize,
-                                                 size_t* pLayerCount, char* const* pOutLayers,
-                                                 void* pReserved)
-{
-    if (pLayerCount == NULL || pOutLayers == NULL || pOutLayers[0] == NULL || pOutLayers[1] == NULL || pReserved == NULL)
-        return VK_ERROR_INVALID_POINTER;
-
-    if (*pLayerCount < 2)
-        return VK_ERROR_INITIALIZATION_FAILED;
-    *pLayerCount = 2;
-    strncpy((char *) pOutLayers[0], "multi1", maxStringSize);
-    strncpy((char *) pOutLayers[1], "multi2", maxStringSize);
-    return VK_SUCCESS;
-}
 
 struct extProps {
     uint32_t version;
@@ -479,7 +477,7 @@ static void initLayerTable(const VkBaseLayerObject *devw, VkLayerDispatchTable *
     if (layerNum == 1 && layer2_first_activated == false)
         layer1_first_activated = true;
 
-    layer_initialize_dispatch_table(pTable, (PFN_vkGetDeviceProcAddr) devw->pGPA, (VkDevice) devw->nextObject);
+    layer_initialize_dispatch_table(pTable, devw);
 }
 
 static void initLayerInstanceTable(const VkBaseLayerObject *instw, VkLayerInstanceDispatchTable *pTable, const unsigned int layerNum)
@@ -489,5 +487,5 @@ static void initLayerInstanceTable(const VkBaseLayerObject *instw, VkLayerInstan
     if (layerNum == 1 && layer2_first_activated == false)
         layer1_first_activated = true;
 
-    layer_init_instance_dispatch_table(pTable, (PFN_vkGetInstanceProcAddr) instw->pGPA, (VkInstance) instw->nextObject);
+    layer_init_instance_dispatch_table(pTable, instw);
 }

@@ -820,13 +820,11 @@ static void* VKAPI loader_gpa_instance_internal(VkInstance inst, const char * pN
     VkLayerInstanceDispatchTable* disp_table = * (VkLayerInstanceDispatchTable **) inst;
     void *addr;
 
+    if (!strcmp(pName, "vkGetInstanceProcAddr"))
+        return (void *) loader_gpa_instance_internal;
+
     if (disp_table == NULL)
         return NULL;
-
-//    addr = debug_report_instance_gpa((struct loader_instance *) inst, pName);
-//    if (addr) {
-//        return addr;
-//    }
 
     addr = loader_lookup_instance_dispatch_table(disp_table, pName);
     if (addr) {
@@ -1138,7 +1136,7 @@ uint32_t loader_activate_instance_layers(struct loader_instance *inst)
         layer_idx--;
     }
 
-    loader_init_instance_core_dispatch_table(inst->disp, nextGPA, (VkInstance) nextObj);
+    loader_init_instance_core_dispatch_table(inst->disp, nextGPA, (VkInstance) nextObj, (VkInstance) baseObj);
 
     return inst->layer_count;
 }
@@ -1225,7 +1223,8 @@ extern uint32_t loader_activate_device_layers(
             layer_idx--;
         }
 
-        loader_init_device_dispatch_table(icd->loader_dispatch + gpu_index, nextGPA, (VkPhysicalDevice) nextObj);
+        loader_init_device_dispatch_table(icd->loader_dispatch + gpu_index, nextGPA,
+                           (VkPhysicalDevice) nextObj, (VkPhysicalDevice) baseObj);
     } else {
         // TODO: Check that active layers match requested?
     }
@@ -1370,7 +1369,7 @@ VkResult loader_EnumeratePhysicalDevices(
                     (wrapped_gpus + i)->nextObject = gpus[i];
                     memcpy(pPhysicalDevices + count, gpus, sizeof(*pPhysicalDevices));
                     loader_init_device_dispatch_table(icd->loader_dispatch + i,
-                                               get_proc_addr, gpus[i]);
+                                               get_proc_addr, gpus[i], gpus[i]);
 
                     loader_init_dispatch(gpus[i], ptr_instance->disp);
                 }

@@ -160,7 +160,7 @@ static VkLayerDispatchTable * initLayerTable(const VkBaseLayerObject *devw)
         return it->second;
     }
 
-    layer_initialize_dispatch_table(pTable, (PFN_vkGetDeviceProcAddr) devw->pGPA, (VkDevice) devw->nextObject);
+    layer_initialize_dispatch_table(pTable, devw);
 
     return pTable;
 }
@@ -180,23 +180,10 @@ static VkLayerInstanceDispatchTable * initLayerInstanceTable(const VkBaseLayerOb
         return it->second;
     }
 
-    layer_init_instance_dispatch_table(pTable, (PFN_vkGetInstanceProcAddr) instw->pGPA, (VkInstance) instw->nextObject);
+    layer_init_instance_dispatch_table(pTable, instw);
 
     return pTable;
 }
-
-VK_LAYER_EXPORT VkResult VKAPI vkEnumerateLayers(VkPhysicalDevice physicalDevice, size_t maxStringSize, size_t* pLayerCount, char* const* pOutLayers, void* pReserved)
-{
-    if (pLayerCount == NULL || pOutLayers == NULL || pOutLayers[0] == NULL || pOutLayers[1] == NULL || pReserved == NULL)
-        return VK_ERROR_INVALID_POINTER;
-
-    if (*pLayerCount < 1)
-        return VK_ERROR_INITIALIZATION_FAILED;
-    *pLayerCount = 1;
-    strncpy((char *) pOutLayers[0], "ShaderChecker", maxStringSize);
-    return VK_SUCCESS;
-}
-
 
 #define SHADER_CHECKER_LAYER_EXT_ARRAY_SIZE 2
 static const VkExtensionProperties shaderCheckerExts[SHADER_CHECKER_LAYER_EXT_ARRAY_SIZE] = {
@@ -966,25 +953,27 @@ VK_LAYER_EXPORT void * VKAPI vkGetDeviceProcAddr(VkDevice device, const char* pN
     if (device == NULL)
         return NULL;
 
-    initLayerTable((const VkBaseLayerObject *) device);
-
     loader_platform_thread_once(&g_initOnce, initLayer);
+
+    /* loader uses this to force layer initialization; device object is wrapped */
+    if (!strcmp("vkGetDeviceProcAddr", pName)) {
+        initLayerTable((const VkBaseLayerObject *) device);
+        return (void *) vkGetDeviceProcAddr;
+    }
 
 #define ADD_HOOK(fn)    \
     if (!strncmp(#fn, pName, sizeof(#fn))) \
         return (void *) fn
 
-    ADD_HOOK(vkGetDeviceProcAddr);
     ADD_HOOK(vkCreateShader);
     ADD_HOOK(vkDestroyDevice);
     ADD_HOOK(vkCreateGraphicsPipeline);
     ADD_HOOK(vkCreateGraphicsPipelineDerivative);
 #undef ADD_HOOK
-
-    VkBaseLayerObject* devw = (VkBaseLayerObject *) device;
-    if (devw->pGPA == NULL)
+    VkLayerDispatchTable* pTable = tableMap[(VkBaseLayerObject *)device];
+    if (pTable->GetDeviceProcAddr == NULL)
         return NULL;
-    return devw->pGPA((VkObject) devw->nextObject, pName);
+    return pTable->GetDeviceProcAddr(device, pName);
 }
 
 VK_LAYER_EXPORT void * VKAPI vkGetInstanceProcAddr(VkInstance inst, const char* pName)
@@ -992,22 +981,22 @@ VK_LAYER_EXPORT void * VKAPI vkGetInstanceProcAddr(VkInstance inst, const char* 
     if (inst == NULL)
         return NULL;
 
-    initLayerInstanceTable((const VkBaseLayerObject *) inst);
-
     loader_platform_thread_once(&g_initOnce, initLayer);
 
+    if (!strcmp("vkGetInstanceProcAddr", pName)) {
+        initLayerInstanceTable((const VkBaseLayerObject *) inst);
+        return (void *) vkGetInstanceProcAddr;
+    }
 #define ADD_HOOK(fn)    \
     if (!strncmp(#fn, pName, sizeof(#fn))) \
         return (void *) fn
 
-    ADD_HOOK(vkGetInstanceProcAddr);
     ADD_HOOK(vkDestroyInstance);
-    ADD_HOOK(vkEnumerateLayers);
     ADD_HOOK(vkGetGlobalExtensionInfo);
 #undef ADD_HOOK
 
-    VkBaseLayerObject* instw = (VkBaseLayerObject *) inst;
-    if (instw->pGPA == NULL)
+    VkLayerInstanceDispatchTable* pTable = tableInstanceMap[(VkBaseLayerObject *) inst];
+    if (pTable->GetInstanceProcAddr == NULL)
         return NULL;
-    return instw->pGPA((VkObject) instw->nextObject, pName);
+    return pTable->GetInstanceProcAddr(inst, pName);
 }
