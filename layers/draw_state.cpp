@@ -524,7 +524,7 @@ static void validatePipelineState(const GLOBAL_CB_NODE* pCB, const VkPipelineBin
             VkFramebufferCreateInfo* pFBCI = frameBufferMap[pCB->framebuffer];
             if ((psoNumSamples != pFBCI->sampleCount) || (psoNumSamples != pRPCI->sampleCount)) {
                 char str[1024];
-                sprintf(str, "Num samples mismatche! Binding PSO (%p) with %u samples while current RenderPass (%p) w/ %u samples uses FB (%p) with %u samples!", (void*)pipeline, psoNumSamples, (void*)pCB->activeRenderPass, pRPCI->sampleCount, (void*)pCB->framebuffer, pFBCI->sampleCount);
+                sprintf(str, "Num samples mismatch! Binding PSO (%p) with %u samples while current RenderPass (%p) w/ %u samples uses FB (%p) with %u samples!", (void*)pipeline, psoNumSamples, (void*)pCB->activeRenderPass, pRPCI->sampleCount, (void*)pCB->framebuffer, pFBCI->sampleCount);
                 layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, pipeline, 0, DRAWSTATE_NUM_SAMPLES_MISMATCH, "DS", str);
             }
         } else {
@@ -585,10 +585,28 @@ static LAYOUT_NODE* getLayoutNode(const VkDescriptorSetLayout layout) {
     loader_platform_thread_unlock_mutex(&globalLock);
     return layoutMap[layout];
 }
-
+// Return 1 if update struct is of valid type, 0 otherwise
+static bool32_t validUpdateStruct(const GENERIC_HEADER* pUpdateStruct)
+{
+    char str[1024];
+    switch (pUpdateStruct->sType)
+    {
+        case VK_STRUCTURE_TYPE_UPDATE_SAMPLERS:
+        case VK_STRUCTURE_TYPE_UPDATE_SAMPLER_TEXTURES:
+        case VK_STRUCTURE_TYPE_UPDATE_IMAGES:
+        case VK_STRUCTURE_TYPE_UPDATE_BUFFERS:
+        case VK_STRUCTURE_TYPE_UPDATE_AS_COPY:
+            return 1;
+        default:
+            sprintf(str, "Unexpected UPDATE struct of type %s (value %u) in vkUpdateDescriptors() struct tree", string_VkStructureType(pUpdateStruct->sType), pUpdateStruct->sType);
+            layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, DRAWSTATE_INVALID_UPDATE_STRUCT, "DS", str);
+            return 0;
+    }
+}
 // For given update struct, return binding
 static uint32_t getUpdateBinding(const GENERIC_HEADER* pUpdateStruct)
 {
+    char str[1024];
     switch (pUpdateStruct->sType)
     {
         case VK_STRUCTURE_TYPE_UPDATE_SAMPLERS:
@@ -602,14 +620,15 @@ static uint32_t getUpdateBinding(const GENERIC_HEADER* pUpdateStruct)
         case VK_STRUCTURE_TYPE_UPDATE_AS_COPY:
             return ((VkUpdateAsCopy*)pUpdateStruct)->binding;
         default:
-            // TODO : Flag specific error for this case
-            assert(0);
-            return 0;
+            sprintf(str, "Unexpected UPDATE struct of type %s (value %u) in vkUpdateDescriptors() struct tree", string_VkStructureType(pUpdateStruct->sType), pUpdateStruct->sType);
+            layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, DRAWSTATE_INVALID_UPDATE_STRUCT, "DS", str);
+            return 0xFFFFFFFF;
     }
 }
 // Return count for given update struct
 static uint32_t getUpdateArrayIndex(const GENERIC_HEADER* pUpdateStruct)
 {
+    char str[1024];
     switch (pUpdateStruct->sType)
     {
         case VK_STRUCTURE_TYPE_UPDATE_SAMPLERS:
@@ -624,14 +643,15 @@ static uint32_t getUpdateArrayIndex(const GENERIC_HEADER* pUpdateStruct)
             // TODO : Need to understand this case better and make sure code is correct
             return (((VkUpdateAsCopy*)pUpdateStruct)->arrayElement);
         default:
-            // TODO : Flag specific error for this case
-            assert(0);
+            sprintf(str, "Unexpected UPDATE struct of type %s (value %u) in vkUpdateDescriptors() struct tree", string_VkStructureType(pUpdateStruct->sType), pUpdateStruct->sType);
+            layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, DRAWSTATE_INVALID_UPDATE_STRUCT, "DS", str);
             return 0;
     }
 }
 // Return count for given update struct
 static uint32_t getUpdateCount(const GENERIC_HEADER* pUpdateStruct)
 {
+    char str[1024];
     switch (pUpdateStruct->sType)
     {
         case VK_STRUCTURE_TYPE_UPDATE_SAMPLERS:
@@ -646,8 +666,8 @@ static uint32_t getUpdateCount(const GENERIC_HEADER* pUpdateStruct)
             // TODO : Need to understand this case better and make sure code is correct
             return (((VkUpdateAsCopy*)pUpdateStruct)->count);
         default:
-            // TODO : Flag specific error for this case
-            assert(0);
+            sprintf(str, "Unexpected UPDATE struct of type %s (value %u) in vkUpdateDescriptors() struct tree", string_VkStructureType(pUpdateStruct->sType), pUpdateStruct->sType);
+            layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, DRAWSTATE_INVALID_UPDATE_STRUCT, "DS", str);
             return 0;
     }
 }
@@ -685,6 +705,7 @@ static bool32_t validateUpdateType(const LAYOUT_NODE* pLayout, const GENERIC_HEA
     // First get actual type of update
     VkDescriptorType actualType;
     uint32_t i = 0;
+    char str[1024];
     switch (pUpdateStruct->sType)
     {
         case VK_STRUCTURE_TYPE_UPDATE_SAMPLERS:
@@ -703,7 +724,8 @@ static bool32_t validateUpdateType(const LAYOUT_NODE* pLayout, const GENERIC_HEA
             actualType = ((VkUpdateAsCopy*)pUpdateStruct)->descriptorType;
             break;
         default:
-            // TODO : Flag specific error for this case
+            sprintf(str, "Unexpected UPDATE struct of type %s (value %u) in vkUpdateDescriptors() struct tree", string_VkStructureType(pUpdateStruct->sType), pUpdateStruct->sType);
+            layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, DRAWSTATE_INVALID_UPDATE_STRUCT, "DS", str);
             return 0;
     }
     for (i = getUpdateStartIndex(pLayout, pUpdateStruct); i <= getUpdateEndIndex(pLayout, pUpdateStruct); i++) {
@@ -784,8 +806,9 @@ static GENERIC_HEADER* shadowUpdateNode(GENERIC_HEADER* pUpdate)
     return pNewNode;
 }
 // For given ds, update its mapping based on ppUpdateArray
-static void dsUpdate(VkDescriptorSet ds, uint32_t updateCount, const void** ppUpdateArray)
+static bool32_t dsUpdate(VkDescriptorSet ds, uint32_t updateCount, const void** ppUpdateArray)
 {
+    bool32_t result = 1;
     SET_NODE* pSet = getSetNode(ds);
     loader_platform_thread_lock_mutex(&globalLock);
     g_lastBoundDescriptorSet = pSet->set;
@@ -796,11 +819,17 @@ static void dsUpdate(VkDescriptorSet ds, uint32_t updateCount, const void** ppUp
     for (uint32_t i = 0; i < updateCount; i++) {
         GENERIC_HEADER* pUpdate = (GENERIC_HEADER*)ppUpdateArray[i];
         pLayout = pSet->pLayout;
+        // First verify valid update struct
+        if (!validUpdateStruct(pUpdate)) {
+            result = 0;
+            break;
+        }
         // Make sure that binding is within bounds
         if (pLayout->createInfo.count < getUpdateBinding(pUpdate)) {
             char str[1024];
             sprintf(str, "Descriptor Set %p does not have binding to match update binding %u for update type %s!", ds, getUpdateBinding(pUpdate), string_VkStructureType(pUpdate->sType));
             layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, ds, 0, DRAWSTATE_INVALID_UPDATE_INDEX, "DS", str);
+            result = 0;
         }
         else {
             // Next verify that update falls within size of given binding
@@ -810,6 +839,7 @@ static void dsUpdate(VkDescriptorSet ds, uint32_t updateCount, const void** ppUp
                 string DSstr = vk_print_vkdescriptorsetlayoutcreateinfo(pLayoutCI, "{DS}    ");
                 sprintf(str, "Descriptor update type of %s is out of bounds for matching binding %u in Layout w/ CI:\n%s!", string_VkStructureType(pUpdate->sType), getUpdateBinding(pUpdate), DSstr.c_str());
                 layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, ds, 0, DRAWSTATE_DESCRIPTOR_UPDATE_OUT_OF_BOUNDS, "DS", str);
+                result = 0;
             }
             else { // TODO : should we skip update on a type mismatch or force it?
                 // Layout bindings match w/ update ok, now verify that update is of the right type
@@ -817,6 +847,7 @@ static void dsUpdate(VkDescriptorSet ds, uint32_t updateCount, const void** ppUp
                     char str[1024];
                     sprintf(str, "Descriptor update type of %s does not match overlapping binding type!", string_VkStructureType(pUpdate->sType));
                     layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, ds, 0, DRAWSTATE_DESCRIPTOR_TYPE_MISMATCH, "DS", str);
+                    result = 0;
                 }
                 else {
                     // Save the update info
@@ -827,6 +858,7 @@ static void dsUpdate(VkDescriptorSet ds, uint32_t updateCount, const void** ppUp
                         char str[1024];
                         sprintf(str, "Out of memory while attempting to allocate UPDATE struct in vkUpdateDescriptors()");
                         layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, ds, 0, DRAWSTATE_OUT_OF_MEMORY, "DS", str);
+                        result = 0;
                     }
                     else {
                         // Insert shadow node into LL of updates for this set
@@ -843,6 +875,7 @@ static void dsUpdate(VkDescriptorSet ds, uint32_t updateCount, const void** ppUp
         }
     }
     loader_platform_thread_unlock_mutex(&globalLock);
+    return result;
 }
 // Free the shadowed update node for this Set
 // NOTE : Calls to this function should be wrapped in mutex
@@ -1310,7 +1343,7 @@ static void dumpDotFile(const VkCmdBuffer cb, string outFileName)
     }
 }
 // Verify bound Pipeline State Object
-static void validateBoundPipeline(const VkCmdBuffer cb)
+static bool validateBoundPipeline(const VkCmdBuffer cb)
 {
     GLOBAL_CB_NODE* pCB = getCBNode(cb);
     if (pCB && pCB->lastBoundPipeline) {
@@ -1320,6 +1353,7 @@ static void validateBoundPipeline(const VkCmdBuffer cb)
         if (!pPipeTrav) {
             sprintf(str, "Can't find last bound Pipeline %p!", (void*)pCB->lastBoundPipeline);
             layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, DRAWSTATE_NO_PIPELINE_BOUND, "DS", str);
+            return false;
         }
         else {
             // Verify Vtx binding
@@ -1328,10 +1362,12 @@ static void validateBoundPipeline(const VkCmdBuffer cb)
                     if (0 == pPipeTrav->vtxBindingCount) {
                         sprintf(str, "Vtx Buffer Index %u was bound, but no vtx buffers are attached to PSO.", pCB->lastVtxBinding);
                         layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, DRAWSTATE_VTX_INDEX_OUT_OF_BOUNDS, "DS", str);
+                        return false;
                     }
                     else {
                         sprintf(str, "Vtx binding Index of %u exceeds PSO pVertexBindingDescriptions max array index of %u.", pCB->lastVtxBinding, (pPipeTrav->vtxBindingCount - 1));
                         layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, DRAWSTATE_VTX_INDEX_OUT_OF_BOUNDS, "DS", str);
+                        return false;
                     }
                 }
                 else {
@@ -1340,7 +1376,9 @@ static void validateBoundPipeline(const VkCmdBuffer cb)
                 }
             }
         }
+        return true;
     }
+    return false;
 }
 // Print details of DS config to stdout
 static void printDSConfig(const VkCmdBuffer cb)
@@ -1903,11 +1941,11 @@ VK_LAYER_EXPORT void VKAPI vkUpdateDescriptors(VkDevice device, VkDescriptorSet 
         layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, descriptorSet, 0, DRAWSTATE_UPDATE_WITHOUT_BEGIN, "DS", str);
     }
     else {
-        // pUpdateChain is a Linked-list of VK_UPDATE_* structures defining the mappings for the descriptors
-        dsUpdate(descriptorSet, updateCount, ppUpdateArray);
+        // pUpdateChain is an array of VK_UPDATE_* struct ptrs defining the mappings for the descriptors
+        if (dsUpdate(descriptorSet, updateCount, ppUpdateArray)) {
+            nextTable.UpdateDescriptors(device, descriptorSet, updateCount, ppUpdateArray);
+        }
     }
-
-    nextTable.UpdateDescriptors(device, descriptorSet, updateCount, ppUpdateArray);
 }
 
 VK_LAYER_EXPORT VkResult VKAPI vkCreateDynamicViewportState(VkDevice device, const VkDynamicVpStateCreateInfo* pCreateInfo, VkDynamicVpState* pState)
@@ -2052,23 +2090,26 @@ VK_LAYER_EXPORT void VKAPI vkCmdBindDescriptorSets(VkCmdBuffer cmdBuffer, VkPipe
     if (pCB) {
         updateCBTracking(cmdBuffer);
         addCmd(pCB, CMD_BINDDESCRIPTORSETS);
-        for (uint32_t i=0; i<setCount; i++) {
-            if (getSetNode(pDescriptorSets[i])) {
-                loader_platform_thread_lock_mutex(&globalLock);
-                pCB->lastBoundDescriptorSet = pDescriptorSets[i];
-                pCB->boundDescriptorSets.push_back(pDescriptorSets[i]);
-                g_lastBoundDescriptorSet = pDescriptorSets[i];
-                loader_platform_thread_unlock_mutex(&globalLock);
-                char str[1024];
-                sprintf(str, "DS %p bound on pipeline %s", (void*)pDescriptorSets[i], string_VkPipelineBindPoint(pipelineBindPoint));
-                layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, pDescriptorSets[i], 0, DRAWSTATE_NONE, "DS", str);
-                synchAndPrintDSConfig(cmdBuffer);
+        if (validateBoundPipeline(cmdBuffer)) {
+            for (uint32_t i=0; i<setCount; i++) {
+                if (getSetNode(pDescriptorSets[i])) {
+                    loader_platform_thread_lock_mutex(&globalLock);
+                    pCB->lastBoundDescriptorSet = pDescriptorSets[i];
+                    pCB->boundDescriptorSets.push_back(pDescriptorSets[i]);
+                    g_lastBoundDescriptorSet = pDescriptorSets[i];
+                    loader_platform_thread_unlock_mutex(&globalLock);
+                    char str[1024];
+                    sprintf(str, "DS %p bound on pipeline %s", (void*)pDescriptorSets[i], string_VkPipelineBindPoint(pipelineBindPoint));
+                    layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, pDescriptorSets[i], 0, DRAWSTATE_NONE, "DS", str);
+                    synchAndPrintDSConfig(cmdBuffer);
+                }
+                else {
+                    char str[1024];
+                    sprintf(str, "Attempt to bind DS %p that doesn't exist!", (void*)pDescriptorSets[i]);
+                    layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, pDescriptorSets[i], 0, DRAWSTATE_INVALID_SET, "DS", str);
+                }
             }
-            else {
-                char str[1024];
-                sprintf(str, "Attempt to bind DS %p that doesn't exist!", (void*)pDescriptorSets[i]);
-                layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, pDescriptorSets[i], 0, DRAWSTATE_INVALID_SET, "DS", str);
-            }
+            nextTable.CmdBindDescriptorSets(cmdBuffer, pipelineBindPoint, firstSet, setCount, pDescriptorSets, dynamicOffsetCount, pDynamicOffsets);
         }
     }
     else {
@@ -2076,7 +2117,6 @@ VK_LAYER_EXPORT void VKAPI vkCmdBindDescriptorSets(VkCmdBuffer cmdBuffer, VkPipe
         sprintf(str, "Attempt to use CmdBuffer %p that doesn't exist!", (void*)cmdBuffer);
         layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, cmdBuffer, 0, DRAWSTATE_INVALID_CMD_BUFFER, "DS", str);
     }
-    nextTable.CmdBindDescriptorSets(cmdBuffer, pipelineBindPoint, firstSet, setCount, pDescriptorSets, dynamicOffsetCount, pDynamicOffsets);
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdBindIndexBuffer(VkCmdBuffer cmdBuffer, VkBuffer buffer, VkDeviceSize offset, VkIndexType indexType)
@@ -2108,13 +2148,14 @@ VK_LAYER_EXPORT void VKAPI vkCmdBindVertexBuffers(
         updateCBTracking(cmdBuffer);
         addCmd(pCB, CMD_BINDVERTEXBUFFER);
         pCB->lastVtxBinding = startBinding + bindingCount -1;
-        validateBoundPipeline(cmdBuffer);
+        if (validateBoundPipeline(cmdBuffer)) {
+            nextTable.CmdBindVertexBuffers(cmdBuffer, startBinding, bindingCount, pBuffers, pOffsets);
+        }
     } else {
         char str[1024];
         sprintf(str, "Attempt to use CmdBuffer %p that doesn't exist!", (void*)cmdBuffer);
         layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, cmdBuffer, 0, DRAWSTATE_INVALID_CMD_BUFFER, "DS", str);
     }
-    nextTable.CmdBindVertexBuffers(cmdBuffer, startBinding, bindingCount, pBuffers, pOffsets);
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdDraw(VkCmdBuffer cmdBuffer, uint32_t firstVertex, uint32_t vertexCount, uint32_t firstInstance, uint32_t instanceCount)
