@@ -19,11 +19,41 @@ file(COPY ${TEXTURES} DESTINATION ${CMAKE_BINARY_DIR}/demos)
 set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DVK_PROTOTYPES")
 set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DVK_PROTOTYPES")
 
+set (LIBRARIES "vulkan")
+
 if(WIN32)
-    set (LIBRARIES "vulkan")
+    add_custom_command(OUTPUT ${CMAKE_BINARY_DIR}/demos/tri-vert.spv
+       COMMAND ${GLSLANG_PREFIX}/build/install/bin/glslangValidator -s -V ${PROJECT_SOURCE_DIR}/demos/tri.vert
+       COMMAND move vert.spv ${CMAKE_BINARY_DIR}/demos/tri-vert.spv
+       DEPENDS tri.vert ${GLSLANG_PREFIX}/build/install/bin/glslangValidator
+       )
+    add_custom_command(OUTPUT ${CMAKE_BINARY_DIR}/demos/tri-frag.spv
+       COMMAND ${GLSLANG_PREFIX}/build/install/bin/glslangValidator -s -V ${PROJECT_SOURCE_DIR}/demos/tri.frag
+       COMMAND move frag.spv ${CMAKE_BINARY_DIR}/demos/tri-frag.spv
+       DEPENDS tri.frag ${GLSLANG_PREFIX}/build/install/bin/glslangValidator
+       )
+    add_custom_command(OUTPUT ${CMAKE_BINARY_DIR}/demos/cube-vert.spv
+       COMMAND ${GLSLANG_PREFIX}/build/install/bin/glslangValidator -s -V ${PROJECT_SOURCE_DIR}/demos/cube.vert
+       COMMAND move vert.spv ${CMAKE_BINARY_DIR}/demos/cube-vert.spv
+       DEPENDS cube.vert ${GLSLANG_PREFIX}/build/install/bin/glslangValidator
+       )
+    add_custom_command(OUTPUT ${CMAKE_BINARY_DIR}/demos/cube-frag.spv
+       COMMAND ${GLSLANG_PREFIX}/build/install/bin/glslangValidator -s -V ${PROJECT_SOURCE_DIR}/demos/cube.frag
+       COMMAND move frag.spv ${CMAKE_BINARY_DIR}/demos/cube-frag.spv
+       DEPENDS cube.frag ${GLSLANG_PREFIX}/build/install/bin/glslangValidator
+       )
 endif()
 if(NOT WIN32)
-    set (LIBRARIES "vulkan")
+    add_custom_command(OUTPUT ${CMAKE_BINARY_DIR}/demos/tri-vert.spv
+       COMMAND ${GLSLANG_PREFIX}/build/install/bin/glslangValidator -s -V ${PROJECT_SOURCE_DIR}/demos/tri.vert
+       COMMAND mv vert.spv ${CMAKE_BINARY_DIR}/demos/tri-vert.spv
+       DEPENDS tri.vert ${GLSLANG_PREFIX}/build/install/bin/glslangValidator
+       )
+    add_custom_command(OUTPUT ${CMAKE_BINARY_DIR}/demos/tri-frag.spv
+       COMMAND ${GLSLANG_PREFIX}/build/install/bin/glslangValidator -s -V ${PROJECT_SOURCE_DIR}/demos/tri.frag
+       COMMAND mv frag.spv ${CMAKE_BINARY_DIR}/demos/tri-frag.spv
+       DEPENDS tri.frag ${GLSLANG_PREFIX}/build/install/bin/glslangValidator
+       )
     add_custom_command(OUTPUT ${CMAKE_BINARY_DIR}/demos/cube-vert.spv
        COMMAND ${GLSLANG_PREFIX}/build/install/bin/glslangValidator -s -V ${PROJECT_SOURCE_DIR}/demos/cube.vert
        COMMAND mv vert.spv ${CMAKE_BINARY_DIR}/demos/cube-vert.spv
@@ -54,8 +84,6 @@ if(WIN32)
 
     set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -D_CRT_SECURE_NO_WARNINGS -D_USE_MATH_DEFINES")
     set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D_CRT_SECURE_NO_WARNINGS -D_USE_MATH_DEFINES")
-else()
-    set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DEXTERNAL_SPV")
 endif()
 
 if(UNIX)
@@ -66,9 +94,9 @@ endif()
 target_link_libraries(vulkaninfo ${LIBRARIES})
 
 if(UNIX)
-    add_executable(tri tri.c)
+    add_executable(tri tri.c ${CMAKE_BINARY_DIR}/demos/tri-vert.spv ${CMAKE_BINARY_DIR}/demos/tri-frag.spv)
 else()
-    add_executable(tri WIN32 tri.c)
+    add_executable(tri WIN32 tri.c ${CMAKE_BINARY_DIR}/demos/tri-vert.spv ${CMAKE_BINARY_DIR}/demos/tri-frag.spv)
 endif()
 target_link_libraries(tri ${LIBRARIES})
 

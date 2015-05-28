@@ -105,6 +105,7 @@ struct demo {
 #endif // _WIN32
 	bool prepared;
     bool use_staging_buffer;
+    bool use_glsl;
 
     VkInstance inst;
     VkPhysicalDevice gpu;
@@ -840,30 +841,71 @@ static VkShader demo_prepare_shader(struct demo *demo,
     createInfo.sType = VK_STRUCTURE_TYPE_SHADER_CREATE_INFO;
     createInfo.pNext = NULL;
 
-    // Create fake SPV structure to feed GLSL
-    // to the driver "under the covers"
-    createInfo.codeSize = 3 * sizeof(uint32_t) + size + 1;
-    createInfo.pCode = malloc(createInfo.codeSize);
-    createInfo.flags = 0;
+    if (!demo->use_glsl) {
+       createInfo.codeSize = size;
+       createInfo.pCode = code;
+       createInfo.flags = 0;
 
-    /* try version 0 first: VkShaderStage followed by GLSL */
-    ((uint32_t *) createInfo.pCode)[0] = ICD_SPV_MAGIC;
-    ((uint32_t *) createInfo.pCode)[1] = 0;
-    ((uint32_t *) createInfo.pCode)[2] = stage;
-    memcpy(((uint32_t *) createInfo.pCode + 3), code, size + 1);
+       err = vkCreateShader(demo->device, &createInfo, &shader);
+       if (err) {
+          free((void *)createInfo.pCode);
+       }
+    } else {
+        // Create fake SPV structure to feed GLSL
+        // to the driver "under the covers"
+        createInfo.codeSize = 3 * sizeof(uint32_t) + size + 1;
+        createInfo.pCode = malloc(createInfo.codeSize);
+        createInfo.flags = 0;
 
-    err = vkCreateShader(demo->device, &createInfo, &shader);
-    if (err) {
-        free((void *) createInfo.pCode);
-        return VK_NULL_HANDLE;
+        /* try version 0 first: VkShaderStage followed by GLSL */
+        ((uint32_t *) createInfo.pCode)[0] = ICD_SPV_MAGIC;
+        ((uint32_t *) createInfo.pCode)[1] = 0;
+        ((uint32_t *) createInfo.pCode)[2] = stage;
+        memcpy(((uint32_t *) createInfo.pCode + 3), code, size + 1);
+
+        err = vkCreateShader(demo->device, &createInfo, &shader);
+        if (err) {
+            free((void *) createInfo.pCode);
+            return VK_NULL_HANDLE;
+        }
     }
 
     return shader;
 }
 
+char *demo_read_spv(const char *filename, size_t *psize)
+{
+    long int size;
+    void *shader_code;
+
+    FILE *fp = fopen(filename, "rb");
+    if (!fp) return NULL;
+
+    fseek(fp, 0L, SEEK_END);
+    size = ftell(fp);
+
+    fseek(fp, 0L, SEEK_SET);
+
+    shader_code = malloc(size);
+    fread(shader_code, size, 1, fp);
+
+    *psize = size;
+
+    return shader_code;
+}
+
 static VkShader demo_prepare_vs(struct demo *demo)
 {
-    static const char *vertShaderText =
+    if (!demo->use_glsl) {
+       void *vertShaderCode;
+       size_t size;
+
+       vertShaderCode = demo_read_spv("tri-vert.spv", &size);
+
+       return demo_prepare_shader(demo, VK_SHADER_STAGE_VERTEX,
+          vertShaderCode, size);
+    } else {
+        static const char *vertShaderText =
             "#version 140\n"
             "#extension GL_ARB_separate_shader_objects : enable\n"
             "#extension GL_ARB_shading_language_420pack : enable\n"
@@ -875,27 +917,38 @@ static VkShader demo_prepare_vs(struct demo *demo)
             "   gl_Position = pos;\n"
             "}\n";
 
-    return demo_prepare_shader(demo, VK_SHADER_STAGE_VERTEX,
-                               (const void *) vertShaderText,
-                               strlen(vertShaderText));
+        return demo_prepare_shader(demo, VK_SHADER_STAGE_VERTEX,
+                                   (const void *) vertShaderText,
+                                   strlen(vertShaderText));
+    }
 }
 
 static VkShader demo_prepare_fs(struct demo *demo)
 {
-    static const char *fragShaderText =
-            "#version 140\n"
-            "#extension GL_ARB_separate_shader_objects : enable\n"
-            "#extension GL_ARB_shading_language_420pack : enable\n"
-            "layout (binding = 0) uniform sampler2D tex;\n"
-            "layout (location = 0) in vec2 texcoord;\n"
-            "layout (location = 0) out vec4 uFragColor;\n"
-            "void main() {\n"
-            "   uFragColor = texture(tex, texcoord);\n"
-            "}\n";
+    if (!demo->use_glsl) {
+       void *fragShaderCode;
+       size_t size;
 
-    return demo_prepare_shader(demo, VK_SHADER_STAGE_FRAGMENT,
-                               (const void *) fragShaderText,
-                               strlen(fragShaderText));
+       fragShaderCode = demo_read_spv("tri-frag.spv", &size);
+
+       return demo_prepare_shader(demo, VK_SHADER_STAGE_FRAGMENT,
+          fragShaderCode, size);
+    } else {
+        static const char *fragShaderText =
+                "#version 140\n"
+                "#extension GL_ARB_separate_shader_objects : enable\n"
+                "#extension GL_ARB_shading_language_420pack : enable\n"
+                "layout (binding = 0) uniform sampler2D tex;\n"
+                "layout (location = 0) in vec2 texcoord;\n"
+                "layout (location = 0) out vec4 uFragColor;\n"
+                "void main() {\n"
+                "   uFragColor = texture(tex, texcoord);\n"
+                "}\n";
+
+        return demo_prepare_shader(demo, VK_SHADER_STAGE_FRAGMENT,
+                                   (const void *) fragShaderText,
+                                   strlen(fragShaderText));
+    }
 }
 
 static void demo_prepare_pipeline(struct demo *demo)
@@ -1488,6 +1541,8 @@ static void demo_init(struct demo *demo, const int argc, const char *argv[])
 
     if (strncmp(pCmdLine, "--use_staging", strlen("--use_staging")) == 0)
         demo->use_staging_buffer = true;
+    else if (strncmp(pCmdLine, "--use_glsl", strlen("--use_glsl")) == 0)
+        demo->use_glsl = true;
     else if (strlen(pCmdLine) != 0) {
         fprintf(stderr, "Do not recognize argument \"%s\".\n", pCmdLine);
         argv_error = true;
@@ -1496,6 +1551,8 @@ static void demo_init(struct demo *demo, const int argc, const char *argv[])
     for (int i = 0; i < argc; i++) {
         if (strncmp(argv[i], "--use_staging", strlen("--use_staging")) == 0)
             demo->use_staging_buffer = true;
+        else if (strncmp(argv[i], "--use_glsl", strlen("--use_glsl")) == 0)
+            demo->use_glsl = true;
     }
 #endif // _WIN32
     if (argv_error) {
