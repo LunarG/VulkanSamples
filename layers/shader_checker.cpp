@@ -43,7 +43,11 @@
 
 
 static std::unordered_map<void *, VkLayerDispatchTable *> tableMap;
+static VkBaseLayerObject *pCurObj;
 static LOADER_PLATFORM_THREAD_ONCE_DECLARATION(g_initOnce);
+// TODO : This can be much smarter, using separate locks for separate global data
+static int globalLockInitialized = 0;
+static loader_platform_thread_mutex globalLock;
 
 
 static void
@@ -145,6 +149,7 @@ static VkLayerDispatchTable * initLayerTable(const VkBaseLayerObject *gpuw)
     }
 
     layer_initialize_dispatch_table(pTable, gpuw->pGPA, (VkPhysicalDevice) gpuw->nextObject);
+    pCurObj = (VkBaseLayerObject *)gpuw->baseObject;
 
     return pTable;
 }
@@ -158,6 +163,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateDevice(VkPhysicalDevice gpu, const VkDevi
     loader_platform_thread_once(&g_initOnce, initLayer);
     // create a mapping for the device object into the dispatch table
     tableMap.emplace(*pDevice, pTable);
+    pCurObj = (VkBaseLayerObject *) *pDevice;
     return result;
 }
 
@@ -466,10 +472,12 @@ collect_interface_by_location(shader_source const *src, spv::StorageClass sinter
 VK_LAYER_EXPORT VkResult VKAPI vkCreateShader(VkDevice device, const VkShaderCreateInfo *pCreateInfo,
                                                    VkShader *pShader)
 {
+    loader_platform_thread_lock_mutex(&globalLock);
     VkLayerDispatchTable* pTable = tableMap[(VkBaseLayerObject *)device];
     VkResult res = pTable->CreateShader(device, pCreateInfo, pShader);
 
     shader_map[(VkBaseLayerObject *) *pShader] = new shader_source(pCreateInfo);
+    loader_platform_thread_unlock_mutex(&globalLock);
     return res;
 }
 
@@ -761,6 +769,8 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateGraphicsPipeline(VkDevice device,
     VkPipelineVertexInputCreateInfo const *vi = 0;
     char str[1024];
 
+    loader_platform_thread_lock_mutex(&globalLock);
+
     for (auto stage = pCreateInfo; stage; stage = (decltype(stage))stage->pNext) {
         if (stage->sType == VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO) {
             auto shader_stage = (VkPipelineShaderStageCreateInfo const *)stage;
@@ -802,6 +812,8 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateGraphicsPipeline(VkDevice device,
 
     VkLayerDispatchTable *pTable = tableMap[(VkBaseLayerObject *)device];
     VkResult res = pTable->CreateGraphicsPipeline(device, pCreateInfo, pPipeline);
+
+    loader_platform_thread_unlock_mutex(&globalLock);
     return res;
 }
 
@@ -823,7 +835,9 @@ VK_LAYER_EXPORT VkResult VKAPI vkDbgRegisterMsgCallback(
     if (g_actionIsDefault) {
         g_debugAction = VK_DBG_LAYER_ACTION_CALLBACK;
     }
-    VkResult result = nextTable.DbgRegisterMsgCallback(instance, pfnMsgCallback, pUserData);
+    // NOT CORRECT WITH MULTIPLE DEVICES OR INSTANCES, BUT THIS IS ALL GOING AWAY SOON ANYWAY
+    VkLayerDispatchTable *pTable = tableMap[pCurObj];
+    VkResult result = pTable->DbgRegisterMsgCallback(instance, pfnMsgCallback, pUserData);
     return result;
 }
 
@@ -852,7 +866,9 @@ VK_LAYER_EXPORT VkResult VKAPI vkDbgUnregisterMsgCallback(
             g_debugAction = (VK_LAYER_DBG_ACTION)(g_debugAction & ~((uint32_t)VK_DBG_LAYER_ACTION_CALLBACK));
         }
     }
-    VkResult result = nextTable.DbgUnregisterMsgCallback(instance, pfnMsgCallback);
+    // NOT CORRECT WITH MULTIPLE DEVICES OR INSTANCES, BUT THIS IS ALL GOING AWAY SOON ANYWAY
+    VkLayerDispatchTable *pTable = tableMap[pCurObj];
+    VkResult result = pTable->DbgUnregisterMsgCallback(instance, pfnMsgCallback);
     return result;
 }
 
