@@ -57,12 +57,15 @@ LOADER_EXPORT VkResult VKAPI vkCreateInstance(
     if (ptr_instance == NULL) {
         return VK_ERROR_OUT_OF_HOST_MEMORY;
     }
+    loader_platform_thread_lock_mutex(&loader_lock);
     memset(ptr_instance, 0, sizeof(struct loader_instance));
     ptr_instance->app_extension_count = pCreateInfo->extensionCount;
     ptr_instance->app_extension_props = (ptr_instance->app_extension_count > 0) ?
                 malloc(sizeof (VkExtensionProperties) * ptr_instance->app_extension_count) : NULL;
-    if (ptr_instance->app_extension_props == NULL && (ptr_instance->app_extension_count > 0))
+    if (ptr_instance->app_extension_props == NULL && (ptr_instance->app_extension_count > 0)) {
+        loader_platform_thread_unlock_mutex(&loader_lock);
         return VK_ERROR_OUT_OF_HOST_MEMORY;
+    }
 
     /*
      * Make local copy of extension properties indicated by application.
@@ -74,8 +77,10 @@ LOADER_EXPORT VkResult VKAPI vkCreateInstance(
     }
 
     ptr_instance->disp = malloc(sizeof(VkLayerInstanceDispatchTable));
-    if (ptr_instance->disp == NULL)
+    if (ptr_instance->disp == NULL) {
+        loader_platform_thread_unlock_mutex(&loader_lock);
         return VK_ERROR_OUT_OF_HOST_MEMORY;
+    }
     memcpy(ptr_instance->disp, &instance_disp, sizeof(instance_disp));
     ptr_instance->next = loader.instances;
     loader.instances = ptr_instance;
@@ -100,6 +105,8 @@ LOADER_EXPORT VkResult VKAPI vkCreateInstance(
      */
     loader_activate_instance_layer_extensions(ptr_instance);
 
+    loader_platform_thread_unlock_mutex(&loader_lock);
+
     return res;
 }
 
@@ -107,10 +114,12 @@ LOADER_EXPORT VkResult VKAPI vkDestroyInstance(
                                             VkInstance instance)
 {
     const VkLayerInstanceDispatchTable *disp;
-
+    VkResult res;
     disp = loader_get_instance_dispatch(instance);
 
-    VkResult res = disp->DestroyInstance(instance);
+    loader_platform_thread_lock_mutex(&loader_lock);
+
+    res = disp->DestroyInstance(instance);
 
     struct loader_instance *ptr_instance = loader_instance(instance);
     loader_deactivate_instance_layers(ptr_instance);
@@ -118,6 +127,8 @@ LOADER_EXPORT VkResult VKAPI vkDestroyInstance(
     loader_destroy_ext_list(&ptr_instance->activated_layer_list);
 
     free(ptr_instance);
+
+    loader_platform_thread_unlock_mutex(&loader_lock);
 
     return res;
 }
@@ -128,10 +139,14 @@ LOADER_EXPORT VkResult VKAPI vkEnumeratePhysicalDevices(
                                             VkPhysicalDevice* pPhysicalDevices)
 {
     const VkLayerInstanceDispatchTable *disp;
-
+    VkResult res;
     disp = loader_get_instance_dispatch(instance);
-    return disp->EnumeratePhysicalDevices(instance, pPhysicalDeviceCount,
+
+    loader_platform_thread_lock_mutex(&loader_lock);
+    res = disp->EnumeratePhysicalDevices(instance, pPhysicalDeviceCount,
                                          pPhysicalDevices);
+    loader_platform_thread_unlock_mutex(&loader_lock);
+    return res;
 }
 
 LOADER_EXPORT VkResult VKAPI vkGetPhysicalDeviceInfo(
@@ -145,8 +160,10 @@ LOADER_EXPORT VkResult VKAPI vkGetPhysicalDeviceInfo(
 
     disp = loader_get_instance_dispatch(gpu);
 
+    loader_platform_thread_lock_mutex(&loader_lock);
     res = disp->GetPhysicalDeviceInfo(gpu, infoType, pDataSize, pData);
     //TODO add check for extension enabled
+    loader_platform_thread_unlock_mutex(&loader_lock);
     if (infoType == VK_PHYSICAL_DEVICE_INFO_TYPE_DISPLAY_PROPERTIES_WSI && pData && res == VK_SUCCESS) {
         VkDisplayPropertiesWSI *info = pData;
         size_t count = *pDataSize / sizeof(*info), i;
@@ -168,8 +185,10 @@ LOADER_EXPORT VkResult VKAPI vkCreateDevice(
 
     disp = loader_get_instance_dispatch(gpu);
 
+    loader_platform_thread_lock_mutex(&loader_lock);
     // CreateDevice is dispatched on the instance chain
     res = disp->CreateDevice(gpu, pCreateInfo, pDevice);
+    loader_platform_thread_unlock_mutex(&loader_lock);
     return res;
 }
 
@@ -180,9 +199,26 @@ LOADER_EXPORT VkResult VKAPI vkDestroyDevice(VkDevice device)
 
     disp = loader_get_dispatch(device);
 
+    loader_platform_thread_lock_mutex(&loader_lock);
     res =  disp->DestroyDevice(device);
     // TODO need to keep track of device objs to be able to get icd/gpu to deactivate
     //loader_deactivate_device_layer(device);
+    loader_platform_thread_unlock_mutex(&loader_lock);
+    return res;
+}
+
+LOADER_EXPORT VkResult VKAPI vkGetPhysicalDeviceExtensionInfo(
+                                                VkPhysicalDevice gpu,
+                                                VkExtensionInfoType infoType,
+                                                uint32_t extensionIndex,
+                                                size_t* pDataSize,
+                                                void* pData)
+{
+    VkResult res;
+
+    loader_platform_thread_lock_mutex(&loader_lock);
+    res = loader_GetPhysicalDeviceExtensionInfo(gpu, infoType, extensionIndex, pDataSize, pData);
+    loader_platform_thread_unlock_mutex(&loader_lock);
     return res;
 }
 
@@ -303,10 +339,14 @@ LOADER_EXPORT VkResult VKAPI vkPinSystemMemory(VkDevice device, const void* pSys
 LOADER_EXPORT VkResult VKAPI vkGetMultiDeviceCompatibility(VkPhysicalDevice gpu0, VkPhysicalDevice gpu1, VkPhysicalDeviceCompatibilityInfo* pInfo)
 {
     const VkLayerInstanceDispatchTable *disp;
+    VkResult res;
 
     disp = loader_get_instance_dispatch(gpu0);
 
-    return disp->GetMultiDeviceCompatibility(gpu0, gpu1, pInfo);
+    loader_platform_thread_lock_mutex(&loader_lock);
+    res = disp->GetMultiDeviceCompatibility(gpu0, gpu1, pInfo);
+    loader_platform_thread_unlock_mutex(&loader_lock);
+    return res;
 }
 
 LOADER_EXPORT VkResult VKAPI vkOpenSharedMemory(VkDevice device, const VkMemoryOpenInfo* pOpenInfo, VkDeviceMemory* pMem)

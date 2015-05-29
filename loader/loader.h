@@ -292,7 +292,8 @@ extern struct loader_struct loader;
 extern LOADER_PLATFORM_THREAD_ONCE_DEFINITION(once_icd);
 extern LOADER_PLATFORM_THREAD_ONCE_DEFINITION(once_layer);
 extern LOADER_PLATFORM_THREAD_ONCE_DEFINITION(once_exts);
-extern VkLayerInstanceDispatchTable instance_disp;
+extern loader_platform_thread_mutex loader_lock;
+extern const VkLayerInstanceDispatchTable instance_disp;
 
 struct loader_msg_callback_map_entry {
     VkDbgMsgCallback icd_obj;
@@ -318,6 +319,13 @@ VkResult loader_EnumeratePhysicalDevices(
 VkResult loader_GetPhysicalDeviceInfo(
         VkPhysicalDevice                        gpu,
         VkPhysicalDeviceInfoType                infoType,
+        size_t*                                 pDataSize,
+        void*                                   pData);
+
+VkResult loader_GetPhysicalDeviceExtensionInfo(
+        VkPhysicalDevice                        gpu,
+        VkExtensionInfoType                     infoType,
+        uint32_t                                extensionIndex,
         size_t*                                 pDataSize,
         void*                                   pData);
 

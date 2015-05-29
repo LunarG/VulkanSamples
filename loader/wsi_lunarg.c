@@ -40,10 +40,14 @@ VkResult VKAPI wsi_lunarg_GetDisplayInfoWSI(
         void*                                   pData)
 {
     const VkLayerInstanceDispatchTable *disp;
+    VkResult res;
 
     disp = loader_get_instance_dispatch(display);
 
-    return disp->GetDisplayInfoWSI(display, infoType, pDataSize, pData);
+    loader_platform_thread_lock_mutex(&loader_lock);
+    res = disp->GetDisplayInfoWSI(display, infoType, pDataSize, pData);
+    loader_platform_thread_unlock_mutex(&loader_lock);
+    return res;
 }
 
 VkResult wsi_lunarg_CreateSwapChainWSI(

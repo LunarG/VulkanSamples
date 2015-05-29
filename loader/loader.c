@@ -64,7 +64,6 @@ static void loader_remove_layer_lib(
         struct loader_instance *inst,
         struct loader_extension_property *ext_prop);
 
-/* TODO: do we need to lock around access to linked lists and such? */
 struct loader_struct loader = {0};
 
 enum loader_debug {
@@ -78,7 +77,12 @@ enum loader_debug {
 uint32_t g_loader_debug = 0;
 uint32_t g_loader_log_msgs = 0;
 
-VkLayerInstanceDispatchTable instance_disp = {
+//thread safety lock for accessing global data structures such as "loader"
+// all entrypoints on the instance chain need to be locked except GPA
+// additionally DestroyDevice needs to be locked
+loader_platform_thread_mutex loader_lock;
+
+const VkLayerInstanceDispatchTable instance_disp = {
     .GetInstanceProcAddr = vkGetInstanceProcAddr,
     .CreateInstance = loader_CreateInstance,
     .DestroyInstance = loader_DestroyInstance,
@@ -86,7 +90,7 @@ VkLayerInstanceDispatchTable instance_disp = {
     .GetPhysicalDeviceInfo = loader_GetPhysicalDeviceInfo,
     .CreateDevice = loader_CreateDevice,
     .GetGlobalExtensionInfo = vkGetGlobalExtensionInfo,
-    .GetPhysicalDeviceExtensionInfo = vkGetPhysicalDeviceExtensionInfo,
+    .GetPhysicalDeviceExtensionInfo = loader_GetPhysicalDeviceExtensionInfo,
     .GetMultiDeviceCompatibility = loader_GetMultiDeviceCompatibility,
     .GetDisplayInfoWSI = loader_GetDisplayInfoWSI,
     .DbgCreateMsgCallback = loader_DbgCreateMsgCallback,
@@ -703,6 +707,10 @@ void loader_icd_scan(void)
     char icd_library[1024];
     char path[1024];
     uint32_t len;
+
+    // convenient place to initialize a mutex
+    loader_platform_thread_create_mutex(&loader_lock);
+
 #if defined(WIN32)
     bool must_free_libPaths;
     libPaths = loader_get_registry_and_env(DRIVER_PATH_ENV,
@@ -1743,6 +1751,8 @@ LOADER_EXPORT VkResult VKAPI vkGetGlobalExtensionInfo(
                                                void*    pData)
 {
     uint32_t *count;
+    VkResult res = VK_SUCCESS;
+
     /* Scan/discover all ICD libraries in a single-threaded manner */
     loader_platform_thread_once(&once_icd, loader_icd_scan);
 
@@ -1752,22 +1762,26 @@ LOADER_EXPORT VkResult VKAPI vkGetGlobalExtensionInfo(
     /* merge any duplicate extensions */
     loader_platform_thread_once(&once_exts, loader_coalesce_extensions);
 
-
     if (pDataSize == NULL)
         return VK_ERROR_INVALID_POINTER;
 
+    loader_platform_thread_lock_mutex(&loader_lock);
     switch (infoType) {
         case VK_EXTENSION_INFO_TYPE_COUNT:
             *pDataSize = sizeof(uint32_t);
-            if (pData == NULL)
+            if (pData == NULL) {
+                loader_platform_thread_unlock_mutex(&loader_lock);
                 return VK_SUCCESS;
+            }
             count = (uint32_t *) pData;
             *count = loader.global_extensions.count;
             break;
         case VK_EXTENSION_INFO_TYPE_PROPERTIES:
             *pDataSize = sizeof(VkExtensionProperties);
-            if (pData == NULL)
+            if (pData == NULL) {
+                loader_platform_thread_unlock_mutex(&loader_lock);
                 return VK_SUCCESS;
+            }
             if (extensionIndex >= loader.global_extensions.count)
                 return VK_ERROR_INVALID_VALUE;
             memcpy((VkExtensionProperties *) pData,
@@ -1776,13 +1790,13 @@ LOADER_EXPORT VkResult VKAPI vkGetGlobalExtensionInfo(
             break;
         default:
             loader_log(VK_DBG_REPORT_WARN_BIT, 0, "Invalid infoType in vkGetGlobalExtensionInfo");
-            return VK_ERROR_INVALID_VALUE;
+            res = VK_ERROR_INVALID_VALUE;
     };
-
-    return VK_SUCCESS;
+    loader_platform_thread_unlock_mutex(&loader_lock);
+    return res;
 }
 
-LOADER_EXPORT VkResult VKAPI vkGetPhysicalDeviceExtensionInfo(
+VkResult loader_GetPhysicalDeviceExtensionInfo(
         VkPhysicalDevice                        gpu,
         VkExtensionInfoType                     infoType,
         uint32_t                                extensionIndex,
