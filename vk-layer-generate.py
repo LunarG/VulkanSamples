@@ -994,24 +994,7 @@ class APIDumpSubcommand(Subcommand):
         else:
             dispatch_param = proto.params[0].name
 
-        if proto.name == "EnumerateLayers":
-            funcs.append('%s%s\n'
-                     '{\n'
-                     '    using namespace StreamControl;\n'
-                     '    if (gpu != VK_NULL_HANDLE) {\n'
-                     '        %sinstance_dispatch_table(gpu)->%s;\n'
-                     '        %s    %s    %s\n'
-                     '        %s'
-                     '    } else {\n'
-                     '        if (pLayerCount == NULL || pOutLayers == NULL || pOutLayers[0] == NULL)\n'
-                     '            return VK_ERROR_INVALID_POINTER;\n'
-                     '        // This layer compatible with all GPUs\n'
-                     '        *pLayerCount = 1;\n'
-                     '        strncpy((char *) pOutLayers[0], "%s", maxStringSize);\n'
-                     '        return VK_SUCCESS;\n'
-                     '    }\n'
-                     '}' % (qual, decl, ret_val, proto.c_call(), f_open, log_func, f_close, stmt, self.layer_name))
-        elif proto.name == "DestroyDevice":
+        if proto.name == "DestroyDevice":
             funcs.append('%s%s\n'
                  '{\n'
                  '    using namespace StreamControl;\n'
