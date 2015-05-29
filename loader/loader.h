@@ -99,7 +99,7 @@ struct loader_icd {
     uint32_t layer_count[MAX_GPUS_FOR_LAYER];
     VkBaseLayerObject *wrappedGpus[MAX_GPUS_FOR_LAYER];
     uint32_t gpu_count;
-    VkBaseLayerObject *gpus;
+    VkPhysicalDevice *gpus;
     VkInstance instance;       // instance object from the icd
     PFN_vkGetDeviceProcAddr GetDeviceProcAddr;
     PFN_vkDestroyInstance DestroyInstance;
@@ -131,7 +131,6 @@ struct loader_instance {
 
     uint32_t layer_count;
 //    struct loader_layers layer_libs[MAX_LAYER_LIBRARIES];
-    VkBaseLayerObject *wrappedInstance;
     uint32_t total_gpu_count;
     uint32_t total_icd_count;
     struct loader_icd *icds;
@@ -361,7 +360,7 @@ void loader_icd_scan(void);
 void layer_lib_scan(void);
 void loader_coalesce_extensions(void);
 
-struct loader_icd * loader_get_icd(const VkBaseLayerObject *gpu,
+struct loader_icd * loader_get_icd(const VkPhysicalDevice gpu,
                                    uint32_t *gpu_index);
 uint32_t loader_activate_instance_layers(struct loader_instance *inst);
 void loader_activate_instance_layer_extensions(struct loader_instance *inst);

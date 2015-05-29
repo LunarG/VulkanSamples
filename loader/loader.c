@@ -299,14 +299,16 @@ static void get_physical_device_layer_extensions(
 
     ext_props.origin = VK_EXTENSION_ORIGIN_LAYER;
     ext_props.lib_name = loader.scanned_layers[layer_index].lib_name;
-    char funcStr[256];
-    snprintf(funcStr, 256, "%sGetPhysicalDeviceExtensionInfo", ext_props.info.name);
+    char funcStr[MAX_EXTENSION_NAME_SIZE+1];  // add one character for 0 termination
+    snprintf(funcStr, MAX_EXTENSION_NAME_SIZE, "%sGetPhysicalDeviceExtensionInfo", ext_props.info.name);
+    funcStr[MAX_EXTENSION_NAME_SIZE] = 0; // make sure string is 0 terminated
     lib_handle = loader_add_layer_lib("device", &ext_props);
 
     /* first try extension specific function, then generic */
     fp_get = (PFN_vkGetPhysicalDeviceExtensionInfo) loader_platform_get_proc_address(lib_handle, funcStr);
     if (!fp_get) {
-        fp_get = (PFN_vkGetPhysicalDeviceExtensionInfo) loader_platform_get_proc_address(lib_handle, "vkGetPhysicalDeviceExtensionInfo");
+        sprintf(funcStr, "vkGetPhysicalDeviceExtensionInfo");
+        fp_get = (PFN_vkGetPhysicalDeviceExtensionInfo) loader_platform_get_proc_address(lib_handle, funcStr);
     }
     if (fp_get) {
         res = fp_get(physical_device, VK_EXTENSION_INFO_TYPE_COUNT, 0, &siz, &count);
@@ -318,6 +320,7 @@ static void get_physical_device_layer_extensions(
                 if (res == VK_SUCCESS && (ext_props.info.sType == VK_STRUCTURE_TYPE_EXTENSION_PROPERTIES)) {
                     ext_props.hosted = false;
                     ext_props.origin = VK_EXTENSION_ORIGIN_LAYER;
+                    strcpy(ext_props.get_extension_info_name, funcStr);
                     ext_props.lib_name = loader.scanned_layers[layer_index].lib_name;
                     loader_add_to_ext_list(ext_list, 1, &ext_props);
                 }
@@ -498,6 +501,9 @@ static void loader_icd_destroy(
 {
     loader_platform_close_library(icd->scanned_icds->handle);
     ptr_inst->total_icd_count--;
+    free(icd->gpus);
+    free(icd->loader_dispatch);
+    //TODO free wrappedGpus  or remove them
     free(icd);
 }
 
@@ -902,17 +908,13 @@ static void* VKAPI loader_gpa_instance_internal(VkInstance inst, const char * pN
     return disp_table->GetInstanceProcAddr(inst, pName);
 }
 
-struct loader_icd * loader_get_icd(const VkBaseLayerObject *gpu, uint32_t *gpu_index)
+struct loader_icd * loader_get_icd(const VkPhysicalDevice gpu, uint32_t *gpu_index)
 {
-    /*
-     * NOTE: at this time icd->gpus is pointing to wrapped GPUs, but no where else
-     * are wrapped gpus used. Should go away. The incoming gpu is NOT wrapped so
-     * need to test it against the wrapped GPU's base object.
-     */
+
     for (struct loader_instance *inst = loader.instances; inst; inst = inst->next) {
         for (struct loader_icd *icd = inst->icds; icd; icd = icd->next) {
             for (uint32_t i = 0; i < icd->gpu_count; i++)
-                if ((icd->gpus + i) == gpu || (void*)(icd->gpus +i)->baseObject == gpu) {
+                if (icd->gpus[i] == gpu) {
                     *gpu_index = i;
                     return icd;
                 }
@@ -1108,7 +1110,6 @@ static void loader_deactivate_instance_layers(struct loader_instance *instance)
         instance->layer_count--;
     }
 
-    free(instance->wrappedInstance);
 }
 
 void loader_enable_instance_layers(struct loader_instance *inst)
@@ -1130,6 +1131,7 @@ void loader_enable_instance_layers(struct loader_instance *inst)
 uint32_t loader_activate_instance_layers(struct loader_instance *inst)
 {
     uint32_t layer_idx;
+    VkBaseLayerObject *wrappedInstance;
 
     if (inst == NULL)
         return 0;
@@ -1160,9 +1162,9 @@ uint32_t loader_activate_instance_layers(struct loader_instance *inst)
         return 0;
     }
 
-    inst->wrappedInstance = malloc(sizeof(VkBaseLayerObject)
+    wrappedInstance = malloc(sizeof(VkBaseLayerObject)
                                    * inst->layer_count);
-    if (!inst->wrappedInstance) {
+    if (!wrappedInstance) {
         loader_log(VK_DBG_REPORT_ERROR_BIT, 0, "Failed to malloc Instance objects for layer");
         return 0;
     }
@@ -1204,7 +1206,7 @@ uint32_t loader_activate_instance_layers(struct loader_instance *inst)
          */
         assert(ext_prop->origin == VK_EXTENSION_ORIGIN_LAYER);
 
-        nextInstObj = (inst->wrappedInstance + layer_idx);
+        nextInstObj = (wrappedInstance + layer_idx);
         nextInstObj->pGPA = nextGPA;
         nextInstObj->baseObject = baseObj;
         nextInstObj->nextObject = nextObj;
@@ -1231,6 +1233,7 @@ uint32_t loader_activate_instance_layers(struct loader_instance *inst)
 
     loader_init_instance_core_dispatch_table(inst->disp, nextGPA, (VkInstance) nextObj, (VkInstance) baseObj);
 
+    free(wrappedInstance);
     return inst->layer_count;
 }
 
@@ -1239,7 +1242,7 @@ void loader_activate_instance_layer_extensions(struct loader_instance *inst)
 
     loader_init_instance_extension_dispatch_table(inst->disp,
                                                   inst->disp->GetInstanceProcAddr,
-                                                  (VkInstance) inst->wrappedInstance);
+                                                  (VkInstance) inst);
 }
 
 void loader_enable_device_layers(struct loader_icd *icd, uint32_t gpu_index)
@@ -1411,6 +1414,7 @@ VkResult loader_DestroyInstance(
                 loader_log(VK_DBG_REPORT_WARN_BIT, 0,
                             "ICD ignored: failed to DestroyInstance on device");
         }
+        loader_icd_destroy(ptr_instance, icds);
         icds->instance = VK_NULL_HANDLE;
         icds = icds->next;
     }
@@ -1439,42 +1443,30 @@ VkResult loader_init_physical_device_info(
 
     ptr_instance->total_gpu_count = count;
 
-    VkPhysicalDevice* gpus;
-    gpus = malloc( sizeof(VkPhysicalDevice) *  count);
-    if (!gpus) {
-        return VK_ERROR_OUT_OF_HOST_MEMORY;
-    }
-
     icd = ptr_instance->icds;
     while (icd) {
-        VkBaseLayerObject * wrapped_gpus;
         PFN_vkGetDeviceProcAddr get_proc_addr = icd->GetDeviceProcAddr;
 
         n = icd->gpu_count;
+        icd->gpus = (VkPhysicalDevice *) malloc(n * sizeof(VkPhysicalDevice));
+        if (!icd->gpus) {
+            /* TODO: Add cleanup code here */
+            return VK_ERROR_OUT_OF_HOST_MEMORY;
+        }
         res = icd->EnumeratePhysicalDevices(
                                         icd->instance,
                                         &n,
-                                        gpus);
-        if (res == VK_SUCCESS && n) {
-            wrapped_gpus = (VkBaseLayerObject*) malloc(n *
-                                        sizeof(VkBaseLayerObject));
-            if (!wrapped_gpus) {
-                /* TODO: Add cleanup code here */
-                return VK_ERROR_OUT_OF_HOST_MEMORY;
-            }
+                                        icd->gpus);
+        if ((res == VK_SUCCESS) && (n == icd->gpu_count)) {
 
-            icd->gpus = wrapped_gpus;
             icd->loader_dispatch = (VkLayerDispatchTable *) malloc(n *
                                     sizeof(VkLayerDispatchTable));
             for (unsigned int i = 0; i < n; i++) {
-                (wrapped_gpus + i)->baseObject = gpus[i];
-                (wrapped_gpus + i)->pGPA = get_proc_addr;
-                (wrapped_gpus + i)->nextObject = gpus[i];
 
                 loader_init_device_dispatch_table(icd->loader_dispatch + i,
-                                           get_proc_addr, gpus[i], gpus[i]);
+                                           get_proc_addr, icd->gpus[i], icd->gpus[i]);
 
-                loader_init_dispatch(gpus[i], ptr_instance->disp);
+                loader_init_dispatch(icd->gpus[i], ptr_instance->disp);
 
                 if (!loader_init_ext_list(&icd->device_extension_cache[i])) {
                     /* TODO: Add cleanup code here */
@@ -1485,26 +1477,28 @@ VkResult loader_init_physical_device_info(
                     uint32_t extension_count;
 
                     data_size = sizeof(extension_count);
-                    res = icd->GetPhysicalDeviceExtensionInfo(gpus[i], VK_EXTENSION_INFO_TYPE_COUNT, 0, &data_size, &extension_count);
+                    res = icd->GetPhysicalDeviceExtensionInfo(icd->gpus[i], VK_EXTENSION_INFO_TYPE_COUNT, 0, &data_size, &extension_count);
                     if (data_size == sizeof(extension_count) && res == VK_SUCCESS) {
                         struct loader_extension_property ext_props;
 
                         /* Gather all the ICD extensions */
                         for (uint32_t extension_id = 0; extension_id < extension_count; extension_id++) {
                             data_size = sizeof(VkExtensionProperties);
-                            res = icd->GetPhysicalDeviceExtensionInfo(gpus[i], VK_EXTENSION_INFO_TYPE_PROPERTIES,
+                            res = icd->GetPhysicalDeviceExtensionInfo(icd->gpus[i], VK_EXTENSION_INFO_TYPE_PROPERTIES,
                                                                       extension_id, &data_size, &ext_props.info);
                             if (data_size == sizeof(VkExtensionProperties) && res == VK_SUCCESS) {
                                 ext_props.hosted = false;
                                 ext_props.origin = VK_EXTENSION_ORIGIN_ICD;
                                 ext_props.lib_name = icd->scanned_icds->lib_name;
+                                // For ICDs, this is the only option
+                                strcpy(ext_props.get_extension_info_name, "vkGetPhysicalDeviceExtensionInfo");
                                 loader_add_to_ext_list(&icd->device_extension_cache[i], 1, &ext_props);
                             }
                         }
 
                         // Traverse layers list adding non-duplicate extensions to the list
                         for (uint32_t l = 0; l < loader.scanned_layer_count; l++) {
-                            get_physical_device_layer_extensions(ptr_instance, gpus[i], l, &icd->device_extension_cache[i]);
+                            get_physical_device_layer_extensions(ptr_instance, icd->gpus[i], l, &icd->device_extension_cache[i]);
                         }
                     }
                 }
@@ -1547,9 +1541,7 @@ VkResult loader_EnumeratePhysicalDevices(
 
     while (icd) {
         assert((index + icd->gpu_count) <= *pPhysicalDeviceCount);
-        for (uint32_t i = 0; i < icd->gpu_count; i++) {
-            memcpy(&pPhysicalDevices[index], &icd->gpus[i].baseObject, sizeof(VkPhysicalDevice));
-        }
+        memcpy(&pPhysicalDevices[index], icd->gpus, icd->gpu_count * sizeof(VkPhysicalDevice));
         index += icd->gpu_count;
         icd = icd->next;
     }
@@ -1564,7 +1556,7 @@ VkResult loader_GetPhysicalDeviceInfo(
         void*                                   pData)
 {
     uint32_t gpu_index;
-    struct loader_icd *icd = loader_get_icd((const VkBaseLayerObject *) gpu, &gpu_index);
+    struct loader_icd *icd = loader_get_icd(gpu, &gpu_index);
     VkResult res = VK_ERROR_INITIALIZATION_FAILED;
 
     if (icd->GetPhysicalDeviceInfo)
@@ -1579,7 +1571,7 @@ VkResult loader_CreateDevice(
         VkDevice*                               pDevice)
 {
     uint32_t gpu_index;
-    struct loader_icd *icd = loader_get_icd((const VkBaseLayerObject *) gpu, &gpu_index);
+    struct loader_icd *icd = loader_get_icd(gpu, &gpu_index);
     VkResult res = VK_ERROR_INITIALIZATION_FAILED;
 
     if (icd->CreateDevice) {
@@ -1747,7 +1739,7 @@ LOADER_EXPORT VkResult VKAPI vkGetPhysicalDeviceExtensionInfo(
 {
     uint32_t gpu_index;
     uint32_t *count;
-    struct loader_icd *icd = loader_get_icd((const VkBaseLayerObject *) gpu, &gpu_index);
+    struct loader_icd *icd = loader_get_icd(gpu, &gpu_index);
 
     if (pDataSize == NULL)
         return VK_ERROR_INVALID_POINTER;
@@ -1783,7 +1775,7 @@ VkResult loader_GetMultiDeviceCompatibility(
         VkPhysicalDeviceCompatibilityInfo*      pInfo)
 {
     uint32_t gpu_index;
-    struct loader_icd *icd = loader_get_icd((const VkBaseLayerObject *) gpu0, &gpu_index);
+    struct loader_icd *icd = loader_get_icd(gpu0, &gpu_index);
     VkResult res = VK_ERROR_INITIALIZATION_FAILED;
 
     if (icd->GetMultiDeviceCompatibility)
