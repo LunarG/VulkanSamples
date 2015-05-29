@@ -3515,7 +3515,7 @@ inline void MesaGlassTranslator::unPackSetAndBinding(const int location, int& se
 void MesaGlassTranslator::setIoParameters(ir_variable* ioVar, const llvm::MDNode* mdNode)
 {
    if (ioVar && mdNode) {
-      const llvm::Type*   mdType;
+      const llvm::Type*   mdType = 0;
       MetaType metaType;
 
       // Glean information from metadata for intrinsic
