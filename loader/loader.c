@@ -514,7 +514,6 @@ static void loader_icd_destroy(
     ptr_inst->total_icd_count--;
     free(icd->gpus);
     free(icd->loader_dispatch);
-    //TODO free wrappedGpus  or remove them
     free(icd);
 }
 
@@ -1337,7 +1336,7 @@ extern uint32_t loader_activate_device_layers(
         VkObject baseObj = nextObj;
         VkBaseLayerObject *nextGpuObj;
         PFN_vkGetDeviceProcAddr nextGPA = icd->GetDeviceProcAddr;
-
+        VkBaseLayerObject *wrappedGpus;
         count = 0;
         for (uint32_t i = 0; i < icd->enabled_device_extensions[gpu_index].count; i++) {
             struct loader_extension_property *ext_prop = &icd->enabled_device_extensions[gpu_index].list[i];
@@ -1350,8 +1349,8 @@ extern uint32_t loader_activate_device_layers(
 
         icd->layer_count[gpu_index] = count;
 
-        icd->wrappedGpus[gpu_index] = malloc(sizeof(VkBaseLayerObject) * icd->layer_count[gpu_index]);
-        if (! icd->wrappedGpus[gpu_index]) {
+        wrappedGpus = malloc(sizeof(VkBaseLayerObject) * icd->layer_count[gpu_index]);
+        if (! wrappedGpus) {
                 loader_log(VK_DBG_REPORT_ERROR_BIT, 0, "Failed to malloc Gpu objects for layer");
                 return 0;
         }
@@ -1364,7 +1363,7 @@ extern uint32_t loader_activate_device_layers(
                 continue;
             }
 
-            nextGpuObj = (icd->wrappedGpus[gpu_index] + i);
+            nextGpuObj = (wrappedGpus + i);
             nextGpuObj->pGPA = nextGPA;
             nextGpuObj->baseObject = baseObj;
             nextGpuObj->nextObject = nextObj;
@@ -1389,6 +1388,7 @@ extern uint32_t loader_activate_device_layers(
 
         loader_init_device_dispatch_table(icd->loader_dispatch + gpu_index, nextGPA,
                            (VkPhysicalDevice) nextObj, (VkPhysicalDevice) baseObj);
+        free(wrappedGpus);
     } else {
         // TODO: Check that active layers match requested?
     }

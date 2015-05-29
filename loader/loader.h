@@ -97,7 +97,6 @@ struct loader_icd {
 
     VkLayerDispatchTable *loader_dispatch;
     uint32_t layer_count[MAX_GPUS_FOR_LAYER];
-    VkBaseLayerObject *wrappedGpus[MAX_GPUS_FOR_LAYER];
     uint32_t gpu_count;
     VkPhysicalDevice *gpus;
     VkInstance instance;       // instance object from the icd
