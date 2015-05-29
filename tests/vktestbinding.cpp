@@ -197,17 +197,18 @@ void BaseObject::reinit(VkObject obj, VkObjectType type, bool own)
 
 uint32_t Object::memory_allocation_count() const
 {
-    return get_info<uint32_t>(dev_->obj(), type(), obj(), VK_OBJECT_INFO_TYPE_MEMORY_ALLOCATION_COUNT, 1)[0];
+    /// LUGMAL return get_info<uint32_t>(dev_->obj(), type(), obj(), VK_OBJECT_INFO_TYPE_MEMORY_ALLOCATION_COUNT, 1)[0];
+    return 1;
 }
 
 std::vector<VkMemoryRequirements> Object::memory_requirements() const
 {
-    VkResult err;
-    uint32_t num_allocations = 0;
-    size_t num_alloc_size = sizeof(num_allocations);
-    err = vkGetObjectInfo(dev_->obj(), type(), obj(), VK_OBJECT_INFO_TYPE_MEMORY_ALLOCATION_COUNT,
-                           &num_alloc_size, &num_allocations);
-    EXPECT(err == VK_SUCCESS && num_alloc_size == sizeof(num_allocations));
+    //// VkResult err;
+    uint32_t num_allocations = 1;
+    //// size_t num_alloc_size = sizeof(num_allocations);
+    //// err = vkGetObjectInfo(dev_->obj(), type(), obj(), VK_OBJECT_INFO_TYPE_MEMORY_ALLOCATION_COUNT,
+    ////                        &num_alloc_size, &num_allocations);
+    //// EXPECT(err == VK_SUCCESS && num_alloc_size == sizeof(num_allocations));
     std::vector<VkMemoryRequirements> info =
         get_info<VkMemoryRequirements>(dev_->obj(), type(), obj(), VK_OBJECT_INFO_TYPE_MEMORY_REQUIREMENTS, 0);
     EXPECT(info.size() == num_allocations);
@@ -251,21 +252,16 @@ void Object::cleanup()
         EXPECT(vkDestroyObject(dev_->obj(), type(), obj()) == VK_SUCCESS);
 }
 
-void Object::bind_memory(uint32_t alloc_idx, const GpuMemory &mem, VkDeviceSize mem_offset)
+void Object::bind_memory(const GpuMemory &mem, VkDeviceSize mem_offset)
 {
     bound = true;
-    EXPECT(vkBindObjectMemory(dev_->obj(), type(), obj(), alloc_idx, mem.obj(), mem_offset) == VK_SUCCESS);
+    EXPECT(vkBindObjectMemory(dev_->obj(), type(), obj(), mem.obj(), mem_offset) == VK_SUCCESS);
 }
 
-void Object::unbind_memory(uint32_t alloc_idx)
-{
-    EXPECT(vkBindObjectMemory(dev_->obj(), type(), obj(), alloc_idx, VK_NULL_HANDLE, 0) == VK_SUCCESS);
-}
 
 void Object::unbind_memory()
 {
-    for (uint32_t i = 0; i < mem_alloc_count_; i++)
-        unbind_memory(i);
+    EXPECT(vkBindObjectMemory(dev_->obj(), type(), obj(), VK_NULL_HANDLE, 0) == VK_SUCCESS);
 }
 
 void Object::alloc_memory()
@@ -282,7 +278,7 @@ void Object::alloc_memory()
         info = GpuMemory::alloc_info(mem_reqs[i], next_info);
         primary_mem_ = &internal_mems_[i];
         internal_mems_[i].init(*dev_, info);
-        bind_memory(i, internal_mems_[i], 0);
+        bind_memory(internal_mems_[i], 0);
     }
 }
 
@@ -301,7 +297,7 @@ void Object::alloc_memory(VkMemoryPropertyFlags &reqs)
         info = GpuMemory::alloc_info(mem_reqs[i], next_info);
         primary_mem_ = &internal_mems_[i];
         internal_mems_[i].init(*dev_, info);
-        bind_memory(i, internal_mems_[i], 0);
+        bind_memory(internal_mems_[i], 0);
     }
 }
 
@@ -320,7 +316,7 @@ void Object::alloc_memory(const std::vector<VkDeviceMemory> &mems)
         primary_mem_ = &internal_mems_[i];
 
         internal_mems_[i].init(*dev_, mems[i]);
-        bind_memory(i, internal_mems_[i], 0);
+        bind_memory(internal_mems_[i], 0);
     }
 }
 
@@ -665,11 +661,11 @@ void Buffer::init_no_mem(const Device &dev, const VkBufferCreateInfo &info)
     create_info_ = info;
 }
 
-void Buffer::bind_memory(uint32_t alloc_idx, VkDeviceSize offset, VkDeviceSize size,
+void Buffer::bind_memory(VkDeviceSize offset, VkDeviceSize size,
                          const GpuMemory &mem, VkDeviceSize mem_offset)
 {
     VkQueue queue = dev_->graphics_queues()[0]->obj();
-    EXPECT(!alloc_idx && vkQueueBindSparseBufferMemory(queue, obj(), 0, offset, size, mem.obj(), mem_offset) == VK_SUCCESS);
+    EXPECT(vkQueueBindSparseBufferMemory(queue, obj(), offset, size, mem.obj(), mem_offset) == VK_SUCCESS);
 }
 
 void BufferView::init(const Device &dev, const VkBufferViewCreateInfo &info)
@@ -720,11 +716,11 @@ void Image::init_info(const Device &dev, const VkImageCreateInfo &info)
     }
 }
 
-void Image::bind_memory(const Device &dev, uint32_t alloc_idx, const VkImageMemoryBindInfo &info,
+void Image::bind_memory(const Device &dev, const VkImageMemoryBindInfo &info,
                         const GpuMemory &mem, VkDeviceSize mem_offset)
 {
     VkQueue queue = dev.graphics_queues()[0]->obj();
-    EXPECT(!alloc_idx && vkQueueBindSparseImageMemory(queue, obj(), 0, &info, mem.obj(), mem_offset) == VK_SUCCESS);
+    EXPECT(vkQueueBindSparseImageMemory(queue, obj(), &info, mem.obj(), mem_offset) == VK_SUCCESS);
 }
 
 VkSubresourceLayout Image::subresource_layout(const VkImageSubresource &subres) const

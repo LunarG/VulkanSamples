@@ -53,7 +53,6 @@ static VkResult nulldrv_base_get_info(struct nulldrv_base *base, int type,
 {
     VkResult ret = VK_SUCCESS;
     size_t s;
-    uint32_t *count;
 
     switch (type) {
     case VK_OBJECT_INFO_TYPE_MEMORY_REQUIREMENTS:
@@ -65,13 +64,6 @@ static VkResult nulldrv_base_get_info(struct nulldrv_base *base, int type,
             memset(data, 0, s);
             break;
         }
-    case VK_OBJECT_INFO_TYPE_MEMORY_ALLOCATION_COUNT:
-        *size = sizeof(uint32_t);
-        if (data == NULL)
-            return ret;
-        count = (uint32_t *) data;
-        *count = 1;
-        break;
     default:
         ret = VK_ERROR_INVALID_VALUE;
         break;
@@ -1891,7 +1883,6 @@ ICD_EXPORT VkResult VKAPI vkBindObjectMemory(
     VkDevice                                    device,
     VkObjectType                                objType,
     VkObject                                    object,
-    uint32_t                                    allocationIdx,
     VkDeviceMemory                              mem_,
     VkDeviceSize                                memOffset)
 {
@@ -1902,7 +1893,6 @@ ICD_EXPORT VkResult VKAPI vkBindObjectMemory(
 ICD_EXPORT VkResult VKAPI vkQueueBindSparseBufferMemory(
     VkQueue                                     queue,
     VkBuffer                                    buffer,
-    uint32_t                                    allocationIdx,
     VkDeviceSize                                rangeOffset,
     VkDeviceSize                                rangeSize,
     VkDeviceMemory                              mem,
@@ -1915,7 +1905,6 @@ ICD_EXPORT VkResult VKAPI vkQueueBindSparseBufferMemory(
 ICD_EXPORT VkResult VKAPI vkQueueBindSparseImageMemory(
     VkQueue                                   queue,
     VkImage                                   image,
-    uint32_t                                  allocationIdx,
     const VkImageMemoryBindInfo*              pBindInfo,
     VkDeviceMemory                            mem,
     VkDeviceSize                              memOffset)

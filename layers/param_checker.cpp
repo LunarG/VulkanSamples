@@ -516,21 +516,21 @@ VK_LAYER_EXPORT VkResult VKAPI vkGetObjectInfo(VkDevice device, VkObjectType obj
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkBindObjectMemory(VkDevice device, VkObjectType objType, VkObject object, uint32_t allocationIdx, VkDeviceMemory mem, VkDeviceSize offset)
+VK_LAYER_EXPORT VkResult VKAPI vkBindObjectMemory(VkDevice device, VkObjectType objType, VkObject object, VkDeviceMemory mem, VkDeviceSize offset)
 {
 
-    VkResult result = nextTable.BindObjectMemory(device, objType, object, allocationIdx, mem, offset);
+    VkResult result = nextTable.BindObjectMemory(device, objType, object, mem, offset);
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkQueueBindSparseBufferMemory(VkQueue queue, VkBuffer buffer, uint32_t allocationIdx, VkDeviceSize rangeOffset, VkDeviceSize rangeSize, VkDeviceMemory mem, VkDeviceSize memOffset)
+VK_LAYER_EXPORT VkResult VKAPI vkQueueBindSparseBufferMemory(VkQueue queue, VkBuffer buffer, VkDeviceSize rangeOffset, VkDeviceSize rangeSize, VkDeviceMemory mem, VkDeviceSize memOffset)
 {
 
-    VkResult result = nextTable.QueueBindSparseBufferMemory(queue, buffer, allocationIdx, rangeOffset, rangeSize, mem, memOffset);
+    VkResult result = nextTable.QueueBindSparseBufferMemory(queue, buffer, rangeOffset, rangeSize, mem, memOffset);
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkQueueBindSparseImageMemory(VkQueue queue, VkImage image, uint32_t allocationIdx, const VkImageMemoryBindInfo* pBindInfo, VkDeviceMemory mem, VkDeviceSize memOffset)
+VK_LAYER_EXPORT VkResult VKAPI vkQueueBindSparseImageMemory(VkQueue queue, VkImage image, const VkImageMemoryBindInfo* pBindInfo, VkDeviceMemory mem, VkDeviceSize memOffset)
 {
     char str[1024];
     if (!pBindInfo) {
@@ -541,7 +541,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkQueueBindSparseImageMemory(VkQueue queue, VkIma
         sprintf(str, "Parameter pBindInfo to function BindImageMemoryRange contains an invalid value.");
         layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
     }
-    VkResult result = nextTable.QueueBindSparseImageMemory(queue, image, allocationIdx, pBindInfo, mem, memOffset);
+    VkResult result = nextTable.QueueBindSparseImageMemory(queue, image, pBindInfo, mem, memOffset);
     return result;
 }
 

@@ -82,8 +82,7 @@ protected:
     uint32_t gpu_count;
     VkInstance inst;
     VkImage m_image;
-    VkDeviceMemory *m_image_mem;
-    uint32_t m_num_mem;
+    VkDeviceMemory m_image_mem;
 
     virtual void SetUp() {
         VkResult err;
@@ -214,54 +213,40 @@ void VkImageTest::CreateImage(uint32_t w, uint32_t h)
     err = vkCreateImage(device(), &imageCreateInfo, &m_image);
     ASSERT_VK_SUCCESS(err);
 
-    VkMemoryRequirements *mem_req;
+    VkMemoryRequirements mem_req;
     size_t mem_reqs_size = sizeof(VkMemoryRequirements);
-    uint32_t num_allocations = 0;
-    size_t num_alloc_size = sizeof(num_allocations);
 
     VkMemoryAllocInfo mem_info = {};
     mem_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO;
     mem_info.pNext = NULL;
 
-    err = vkGetObjectInfo(device(), VK_OBJECT_TYPE_IMAGE, m_image, VK_OBJECT_INFO_TYPE_MEMORY_ALLOCATION_COUNT,
-                    &num_alloc_size, &num_allocations);
-    ASSERT_VK_SUCCESS(err);
-    ASSERT_EQ(num_alloc_size,sizeof(num_allocations));
-    mem_req = (VkMemoryRequirements *) malloc(num_allocations * sizeof(VkMemoryRequirements));
-    m_image_mem = (VkDeviceMemory *) malloc(num_allocations * sizeof(VkDeviceMemory));
-    m_num_mem = num_allocations;
     err = vkGetObjectInfo(device(), VK_OBJECT_TYPE_IMAGE, m_image,
                     VK_OBJECT_INFO_TYPE_MEMORY_REQUIREMENTS,
-                    &mem_reqs_size, mem_req);
+                    &mem_reqs_size, &mem_req);
     ASSERT_VK_SUCCESS(err);
-    ASSERT_EQ(mem_reqs_size, num_allocations * sizeof(VkMemoryRequirements));
 
-    for (uint32_t i = 0; i < num_allocations; i ++) {
-        ASSERT_NE(0, mem_req[i].size) << "vkGetObjectInfo (Image): Failed - expect images to require memory";
-        mem_info.allocationSize = mem_req[i].size;
-        mem_info.memProps = VK_MEMORY_PROPERTY_SHAREABLE_BIT;
-        mem_info.memPriority = VK_MEMORY_PRIORITY_NORMAL;
+    ASSERT_NE(0, mem_req.size) << "vkGetObjectInfo (Image): Failed - expect images to require memory";
+    mem_info.allocationSize = mem_req.size;
+    mem_info.memProps       = VK_MEMORY_PROPERTY_SHAREABLE_BIT;
+    mem_info.memPriority    = VK_MEMORY_PRIORITY_NORMAL;
 
-        /* allocate memory */
-        err = vkAllocMemory(device(), &mem_info, &m_image_mem[i]);
-        ASSERT_VK_SUCCESS(err);
+    /* allocate memory */
+    err = vkAllocMemory(device(), &mem_info, &m_image_mem);
+    ASSERT_VK_SUCCESS(err);
 
-        /* bind memory */
-        err = vkBindObjectMemory(device(), VK_OBJECT_TYPE_IMAGE, m_image, i, m_image_mem[i], 0);
-        ASSERT_VK_SUCCESS(err);
-    }
+    /* bind memory */
+    err = vkBindObjectMemory(device(), VK_OBJECT_TYPE_IMAGE, m_image, m_image_mem, 0);
+    ASSERT_VK_SUCCESS(err);
 }
 
 void VkImageTest::DestroyImage()
 {
     VkResult err;
     // All done with image memory, clean up
-    ASSERT_VK_SUCCESS(vkBindObjectMemory(device(), VK_OBJECT_TYPE_IMAGE, m_image, 0, VK_NULL_HANDLE, 0));
+    ASSERT_VK_SUCCESS(vkBindObjectMemory(device(), VK_OBJECT_TYPE_IMAGE, m_image, VK_NULL_HANDLE, 0));
 
-    for (uint32_t i = 0 ; i < m_num_mem; i++) {
-        err = vkFreeMemory(device(), m_image_mem[i]);
-        ASSERT_VK_SUCCESS(err);
-    }
+    err = vkFreeMemory(device(), m_image_mem);
+    ASSERT_VK_SUCCESS(err);
 
 
     ASSERT_VK_SUCCESS(vkDestroyObject(device(), VK_OBJECT_TYPE_IMAGE, m_image));

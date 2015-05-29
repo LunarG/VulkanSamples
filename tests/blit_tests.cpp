@@ -775,7 +775,7 @@ TEST_F(VkCmdCopyBufferTest, RAWHazard)
     err = vkAllocMemory(dev_.obj(), &mem_info, &event_mem);
     ASSERT_VK_SUCCESS(err);
 
-    err = vkBindObjectMemory(dev_.obj(), VK_OBJECT_TYPE_EVENT, event, 0, event_mem, 0);
+    err = vkBindObjectMemory(dev_.obj(), VK_OBJECT_TYPE_EVENT, event, event_mem, 0);
     ASSERT_VK_SUCCESS(err);
 
     err = vkResetEvent(dev_.obj(), event);
@@ -832,7 +832,7 @@ TEST_F(VkCmdCopyBufferTest, RAWHazard)
     bufs[2].unmap();
 
     // All done with event memory, clean up
-    err = vkBindObjectMemory(dev_.obj(), VK_OBJECT_TYPE_EVENT, event, 0, VK_NULL_HANDLE, 0);
+    err = vkBindObjectMemory(dev_.obj(), VK_OBJECT_TYPE_EVENT, event, VK_NULL_HANDLE, 0);
     ASSERT_VK_SUCCESS(err);
 
     err = vkDestroyObject(dev_.obj(), VK_OBJECT_TYPE_EVENT, event);

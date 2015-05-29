@@ -260,7 +260,7 @@ TEST_F(XglTest, Event) {
     err = vkAllocMemory(device(), &mem_info, &event_mem);
     ASSERT_VK_SUCCESS(err);
 
-    err = vkBindObjectMemory(device(), VK_OBJECT_TYPE_EVENT, event, 0, event_mem, 0);
+    err = vkBindObjectMemory(device(), VK_OBJECT_TYPE_EVENT, event, event_mem, 0);
     ASSERT_VK_SUCCESS(err);
 
     err = vkResetEvent(device(), event);
@@ -278,7 +278,7 @@ TEST_F(XglTest, Event) {
     // TODO: Test actual synchronization with command buffer event.
 
     // All done with event memory, clean up
-    err = vkBindObjectMemory(device(), VK_OBJECT_TYPE_EVENT, event, 0, VK_NULL_HANDLE, 0);
+    err = vkBindObjectMemory(device(), VK_OBJECT_TYPE_EVENT, event, VK_NULL_HANDLE, 0);
     ASSERT_VK_SUCCESS(err);
 
     err = vkDestroyObject(device(), VK_OBJECT_TYPE_EVENT, event);
@@ -351,7 +351,7 @@ TEST_F(XglTest, Query) {
     err = vkAllocMemory(device(), &mem_info, &query_mem);
     ASSERT_VK_SUCCESS(err);
 
-    err = vkBindObjectMemory(device(), VK_OBJECT_TYPE_QUERY_POOL, query_pool, 0, query_mem, 0);
+    err = vkBindObjectMemory(device(), VK_OBJECT_TYPE_QUERY_POOL, query_pool, query_mem, 0);
     ASSERT_VK_SUCCESS(err);
 
     // TODO: Test actual synchronization with command buffer event.
@@ -376,7 +376,7 @@ TEST_F(XglTest, Query) {
     }
 
     // All done with QueryPool memory, clean up
-    err = vkBindObjectMemory(device(), VK_OBJECT_TYPE_QUERY_POOL, query_pool, 0, VK_NULL_HANDLE, 0);
+    err = vkBindObjectMemory(device(), VK_OBJECT_TYPE_QUERY_POOL, query_pool, VK_NULL_HANDLE, 0);
     ASSERT_VK_SUCCESS(err);
 
     err = vkDestroyObject(device(), VK_OBJECT_TYPE_QUERY_POOL, query_pool);
@@ -618,7 +618,7 @@ void XglTest::CreateImageTest()
     err = vkAllocMemory(device(), &mem_info, &image_mem);
     ASSERT_VK_SUCCESS(err);
 
-    err = vkBindObjectMemory(device(), VK_OBJECT_TYPE_IMAGE, image, 0, image_mem, 0);
+    err = vkBindObjectMemory(device(), VK_OBJECT_TYPE_IMAGE, image, image_mem, 0);
     ASSERT_VK_SUCCESS(err);
 
 //    typedef struct VkImageViewCreateInfo_
@@ -661,7 +661,7 @@ void XglTest::CreateImageTest()
     // TODO: Test image memory.
 
     // All done with image memory, clean up
-    ASSERT_VK_SUCCESS(vkBindObjectMemory(device(), VK_OBJECT_TYPE_IMAGE, image, 0, VK_NULL_HANDLE, 0));
+    ASSERT_VK_SUCCESS(vkBindObjectMemory(device(), VK_OBJECT_TYPE_IMAGE, image, VK_NULL_HANDLE, 0));
 
     ASSERT_VK_SUCCESS(vkFreeMemory(device(), image_mem));
 

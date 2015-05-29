@@ -260,31 +260,31 @@ LOADER_EXPORT VkResult VKAPI vkGetObjectInfo(VkDevice device, VkObjectType objTy
     return disp->GetObjectInfo(device, objType, object, infoType, pDataSize, pData);
 }
 
-LOADER_EXPORT VkResult VKAPI vkBindObjectMemory(VkDevice device, VkObjectType objType, VkObject object, uint32_t allocationIdx, VkDeviceMemory mem, VkDeviceSize offset)
+LOADER_EXPORT VkResult VKAPI vkBindObjectMemory(VkDevice device, VkObjectType objType, VkObject object, VkDeviceMemory mem, VkDeviceSize offset)
 {
     const VkLayerDispatchTable *disp;
 
     disp = loader_get_dispatch(device);
 
-    return disp->BindObjectMemory(device, objType, object, allocationIdx, mem, offset);
+    return disp->BindObjectMemory(device, objType, object, mem, offset);
 }
 
-LOADER_EXPORT VkResult VKAPI vkQueueBindSparseBufferMemory(VkQueue queue, VkBuffer buffer, uint32_t allocationIdx, VkDeviceSize rangeOffset, VkDeviceSize rangeSize, VkDeviceMemory mem, VkDeviceSize memOffset)
+LOADER_EXPORT VkResult VKAPI vkQueueBindSparseBufferMemory(VkQueue queue, VkBuffer buffer, VkDeviceSize rangeOffset, VkDeviceSize rangeSize, VkDeviceMemory mem, VkDeviceSize memOffset)
 {
     const VkLayerDispatchTable *disp;
 
     disp = loader_get_dispatch(queue);
 
-    return disp->QueueBindSparseBufferMemory(queue, buffer, allocationIdx, rangeOffset, rangeSize, mem, memOffset);
+    return disp->QueueBindSparseBufferMemory(queue, buffer, rangeOffset, rangeSize, mem, memOffset);
 }
 
-LOADER_EXPORT VkResult VKAPI vkQueueBindSparseImageMemory(VkQueue queue, VkImage image, uint32_t allocationIdx, const VkImageMemoryBindInfo* pBindInfo, VkDeviceMemory mem, VkDeviceSize memOffset)
+LOADER_EXPORT VkResult VKAPI vkQueueBindSparseImageMemory(VkQueue queue, VkImage image, const VkImageMemoryBindInfo* pBindInfo, VkDeviceMemory mem, VkDeviceSize memOffset)
 {
     const VkLayerDispatchTable *disp;
 
     disp = loader_get_dispatch(queue);
 
-    return disp->QueueBindSparseImageMemory(queue, image, allocationIdx, pBindInfo, mem, memOffset);
+    return disp->QueueBindSparseImageMemory(queue, image, pBindInfo, mem, memOffset);
 }
 
 LOADER_EXPORT VkResult VKAPI vkCreateFence(VkDevice device, const VkFenceCreateInfo* pCreateInfo, VkFence* pFence)

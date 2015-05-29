@@ -410,15 +410,13 @@ TEST_F(VkLayerTest, MapMemWithoutHostVisibleBit)
 
     // Create an image, allocate memory, free it, and then try to bind it
     VkImage               image;
-    VkDeviceMemory       *mem;
-    VkMemoryRequirements *mem_reqs;
+    VkDeviceMemory        mem;
+    VkMemoryRequirements  mem_reqs;
 
     const VkFormat tex_format      = VK_FORMAT_B8G8R8A8_UNORM;
     const int32_t  tex_width       = 32;
     const int32_t  tex_height      = 32;
     size_t         mem_reqs_size   = sizeof(VkMemoryRequirements);
-    uint32_t       num_allocations = 0;
-    size_t         num_alloc_size  = sizeof(num_allocations);
 
     const VkImageCreateInfo image_create_info = {
         .sType          = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
@@ -448,35 +446,24 @@ TEST_F(VkLayerTest, MapMemWithoutHostVisibleBit)
     err = vkGetObjectInfo(m_device->device(),
                           VK_OBJECT_TYPE_IMAGE,
                           image,
-                          VK_OBJECT_INFO_TYPE_MEMORY_ALLOCATION_COUNT,
-                          &num_alloc_size,
-                          &num_allocations);
-    ASSERT_VK_SUCCESS(err);
-
-    mem_reqs = new VkMemoryRequirements[num_allocations];
-    mem      = new VkDeviceMemory[num_allocations];
-
-    err = vkGetObjectInfo(m_device->device(),
-                          VK_OBJECT_TYPE_IMAGE,
-                          image,
                           VK_OBJECT_INFO_TYPE_MEMORY_REQUIREMENTS,
                           &mem_reqs_size,
-                          mem_reqs);
+                          &mem_reqs);
     ASSERT_VK_SUCCESS(err);
 
-    mem_alloc.allocationSize = mem_reqs[0].size;
+    mem_alloc.allocationSize = mem_reqs.size;
 
     // allocate memory
-    err = vkAllocMemory(m_device->device(), &mem_alloc, &(mem[0]));
+    err = vkAllocMemory(m_device->device(), &mem_alloc, &mem);
     ASSERT_VK_SUCCESS(err);
 
     // Try to bind free memory that has been freed
-    err = vkBindObjectMemory(m_device->device(), VK_OBJECT_TYPE_IMAGE, image, 0, mem[0], 0);
+    err = vkBindObjectMemory(m_device->device(), VK_OBJECT_TYPE_IMAGE, image, mem, 0);
     ASSERT_VK_SUCCESS(err);
 
     // Map memory as if to initialize the image
     void *mappedAddress = NULL;
-    err = vkMapMemory(m_device->device(), mem[0], 0, 0, 0, &mappedAddress);
+    err = vkMapMemory(m_device->device(), mem, 0, 0, 0, &mappedAddress);
 
     msgType = m_errorMonitor->GetState(&msgString);
     ASSERT_EQ(msgType, VK_DBG_MSG_ERROR) << "Did not receive an error while tring to map memory not visible to CPU";
@@ -496,15 +483,13 @@ TEST_F(VkLayerTest, BindInvalidMemory)
 
     // Create an image, allocate memory, free it, and then try to bind it
     VkImage               image;
-    VkDeviceMemory       *mem;
-    VkMemoryRequirements *mem_reqs;
+    VkDeviceMemory        mem;
+    VkMemoryRequirements  mem_reqs;
 
     const VkFormat tex_format      = VK_FORMAT_B8G8R8A8_UNORM;
     const int32_t  tex_width       = 32;
     const int32_t  tex_height      = 32;
     size_t         mem_reqs_size   = sizeof(VkMemoryRequirements);
-    uint32_t       num_allocations = 0;
-    size_t         num_alloc_size  = sizeof(num_allocations);
 
     const VkImageCreateInfo image_create_info = {
         .sType          = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
@@ -533,34 +518,23 @@ TEST_F(VkLayerTest, BindInvalidMemory)
     err = vkGetObjectInfo(m_device->device(),
                           VK_OBJECT_TYPE_IMAGE,
                           image,
-                          VK_OBJECT_INFO_TYPE_MEMORY_ALLOCATION_COUNT,
-                          &num_alloc_size,
-                          &num_allocations);
-    ASSERT_VK_SUCCESS(err);
-
-    mem_reqs = new VkMemoryRequirements[num_allocations];
-    mem      = new VkDeviceMemory[num_allocations];
-
-    err = vkGetObjectInfo(m_device->device(),
-                          VK_OBJECT_TYPE_IMAGE,
-                          image,
                           VK_OBJECT_INFO_TYPE_MEMORY_REQUIREMENTS,
                           &mem_reqs_size,
-                          mem_reqs);
+                          &mem_reqs);
     ASSERT_VK_SUCCESS(err);
 
-    mem_alloc.allocationSize = mem_reqs[0].size;
+    mem_alloc.allocationSize = mem_reqs.size;
 
     // allocate memory
-    err = vkAllocMemory(m_device->device(), &mem_alloc, &(mem[0]));
+    err = vkAllocMemory(m_device->device(), &mem_alloc, &mem);
     ASSERT_VK_SUCCESS(err);
 
     // Introduce validation failure, free memory before binding
-    vkFreeMemory(m_device->device(), mem[0]);
+    vkFreeMemory(m_device->device(), mem);
     ASSERT_VK_SUCCESS(err);
 
     // Try to bind free memory that has been freed
-    err = vkBindObjectMemory(m_device->device(), VK_OBJECT_TYPE_IMAGE, image, 0, mem[0], 0);
+    err = vkBindObjectMemory(m_device->device(), VK_OBJECT_TYPE_IMAGE, image, mem, 0);
     ASSERT_VK_SUCCESS(err);
 
     msgType = m_errorMonitor->GetState(&msgString);
@@ -581,15 +555,13 @@ TEST_F(VkLayerTest, FreeBoundMemory)
 
     // Create an image, allocate memory, free it, and then try to bind it
     VkImage               image;
-    VkDeviceMemory       *mem;
-    VkMemoryRequirements *mem_reqs;
+    VkDeviceMemory        mem;
+    VkMemoryRequirements  mem_reqs;
 
     const VkFormat tex_format      = VK_FORMAT_B8G8R8A8_UNORM;
     const int32_t  tex_width       = 32;
     const int32_t  tex_height      = 32;
     size_t         mem_reqs_size   = sizeof(VkMemoryRequirements);
-    uint32_t       num_allocations = 0;
-    size_t         num_alloc_size  = sizeof(num_allocations);
 
     const VkImageCreateInfo image_create_info = {
         .sType          = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
@@ -618,34 +590,23 @@ TEST_F(VkLayerTest, FreeBoundMemory)
     err = vkGetObjectInfo(m_device->device(),
                           VK_OBJECT_TYPE_IMAGE,
                           image,
-                          VK_OBJECT_INFO_TYPE_MEMORY_ALLOCATION_COUNT,
-                          &num_alloc_size,
-                          &num_allocations);
-    ASSERT_VK_SUCCESS(err);
-
-    mem_reqs = new VkMemoryRequirements[num_allocations];
-    mem      = new VkDeviceMemory[num_allocations];
-
-    err = vkGetObjectInfo(m_device->device(),
-                          VK_OBJECT_TYPE_IMAGE,
-                          image,
                           VK_OBJECT_INFO_TYPE_MEMORY_REQUIREMENTS,
                           &mem_reqs_size,
-                          mem_reqs);
+                          &mem_reqs);
     ASSERT_VK_SUCCESS(err);
 
-    mem_alloc.allocationSize = mem_reqs[0].size;
+    mem_alloc.allocationSize = mem_reqs.size;
 
     // allocate memory
-    err = vkAllocMemory(m_device->device(), &mem_alloc, &(mem[0]));
+    err = vkAllocMemory(m_device->device(), &mem_alloc, &mem);
     ASSERT_VK_SUCCESS(err);
 
     // Bind memory to Image object
-    err = vkBindObjectMemory(m_device->device(), VK_OBJECT_TYPE_IMAGE, image, 0, mem[0], 0);
+    err = vkBindObjectMemory(m_device->device(), VK_OBJECT_TYPE_IMAGE, image, mem, 0);
     ASSERT_VK_SUCCESS(err);
 
     // Introduce validation failure, free memory while still bound to object
-    vkFreeMemory(m_device->device(), mem[0]);
+    vkFreeMemory(m_device->device(), mem);
     ASSERT_VK_SUCCESS(err);
 
     msgType = m_errorMonitor->GetState(&msgString);
@@ -667,15 +628,13 @@ TEST_F(VkLayerTest, BindMemoryToDestroyedObject)
 
     // Create an image object, allocate memory, destroy the object and then try to bind it
     VkImage               image;
-    VkDeviceMemory       *mem;
-    VkMemoryRequirements *mem_reqs;
+    VkDeviceMemory        mem;
+    VkMemoryRequirements  mem_reqs;
 
     const VkFormat tex_format      = VK_FORMAT_B8G8R8A8_UNORM;
     const int32_t  tex_width       = 32;
     const int32_t  tex_height      = 32;
     size_t         mem_reqs_size   = sizeof(VkMemoryRequirements);
-    uint32_t       num_allocations = 0;
-    size_t         num_alloc_size  = sizeof(num_allocations);
 
     const VkImageCreateInfo image_create_info = {
         .sType          = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
@@ -704,26 +663,15 @@ TEST_F(VkLayerTest, BindMemoryToDestroyedObject)
     err = vkGetObjectInfo(m_device->device(),
                           VK_OBJECT_TYPE_IMAGE,
                           image,
-                          VK_OBJECT_INFO_TYPE_MEMORY_ALLOCATION_COUNT,
-                          &num_alloc_size,
-                          &num_allocations);
-    ASSERT_VK_SUCCESS(err);
-
-    mem_reqs = new VkMemoryRequirements[num_allocations];
-    mem      = new VkDeviceMemory[num_allocations];
-
-    err = vkGetObjectInfo(m_device->device(),
-                          VK_OBJECT_TYPE_IMAGE,
-                          image,
                           VK_OBJECT_INFO_TYPE_MEMORY_REQUIREMENTS,
                           &mem_reqs_size,
-                          mem_reqs);
+                          &mem_reqs);
     ASSERT_VK_SUCCESS(err);
 
-    mem_alloc.allocationSize = mem_reqs[0].size;
+    mem_alloc.allocationSize = mem_reqs.size;
 
     // Allocate memory
-    err = vkAllocMemory(m_device->device(), &mem_alloc, &(mem[0]));
+    err = vkAllocMemory(m_device->device(), &mem_alloc, &mem);
     ASSERT_VK_SUCCESS(err);
 
     // Introduce validation failure, destroy Image object before binding
@@ -731,7 +679,7 @@ TEST_F(VkLayerTest, BindMemoryToDestroyedObject)
     ASSERT_VK_SUCCESS(err);
 
     // Now Try to bind memory to this destroyted object
-    err = vkBindObjectMemory(m_device->device(), VK_OBJECT_TYPE_IMAGE, image, 0, mem[0], 0);
+    err = vkBindObjectMemory(m_device->device(), VK_OBJECT_TYPE_IMAGE, image, mem, 0);
     ASSERT_VK_SUCCESS(err);
 
     msgType = m_errorMonitor->GetState(&msgString);
@@ -1950,7 +1898,7 @@ TEST_F(VkLayerTest, ThreadCmdBufferCollision)
     err = vkAllocMemory(device(), &mem_info, &event_mem);
     ASSERT_VK_SUCCESS(err);
 
-    err = vkBindObjectMemory(device(), VK_OBJECT_TYPE_EVENT, event, 0, event_mem, 0);
+    err = vkBindObjectMemory(device(), VK_OBJECT_TYPE_EVENT, event, event_mem, 0);
     ASSERT_VK_SUCCESS(err);
 
     err = vkResetEvent(device(), event);

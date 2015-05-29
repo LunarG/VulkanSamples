@@ -86,8 +86,7 @@ struct texture_object {
     VkImage image;
     VkImageLayout imageLayout;
 
-    uint32_t  num_mem;
-    VkDeviceMemory *mem;
+    VkDeviceMemory mem;
     VkImageView view;
     int32_t tex_width, tex_height;
 };
@@ -132,8 +131,7 @@ struct demo {
         VkFormat format;
 
         VkImage image;
-        uint32_t  num_mem;
-        VkDeviceMemory *mem;
+        VkDeviceMemory mem;
         VkDepthStencilView view;
     } depth;
 
@@ -141,8 +139,7 @@ struct demo {
 
     struct {
         VkBuffer buf;
-        uint32_t  num_mem;
-        VkDeviceMemory *mem;
+        VkDeviceMemory mem;
 
         VkPipelineVertexInputCreateInfo vi;
         VkVertexInputBindingDescription vi_bindings[1];
@@ -465,11 +462,9 @@ static void demo_prepare_depth(struct demo *demo)
         .flags = 0,
     };
 
-    VkMemoryRequirements *mem_reqs;
+    VkMemoryRequirements mem_reqs;
     size_t mem_reqs_size = sizeof(VkMemoryRequirements);
     VkResult U_ASSERT_ONLY err;
-    uint32_t num_allocations = 0;
-    size_t num_alloc_size = sizeof(num_allocations);
 
     demo->depth.format = depth_format;
 
@@ -480,31 +475,19 @@ static void demo_prepare_depth(struct demo *demo)
 
     err = vkGetObjectInfo(demo->device,
                     VK_OBJECT_TYPE_IMAGE, demo->depth.image,
-                    VK_OBJECT_INFO_TYPE_MEMORY_ALLOCATION_COUNT,
-                    &num_alloc_size, &num_allocations);
-    assert(!err && num_alloc_size == sizeof(num_allocations));
-    mem_reqs = malloc(num_allocations * sizeof(VkMemoryRequirements));
-    demo->depth.mem = malloc(num_allocations * sizeof(VkDeviceMemory));
-    demo->depth.num_mem = num_allocations;
-    err = vkGetObjectInfo(demo->device,
-                    VK_OBJECT_TYPE_IMAGE, demo->depth.image,
                     VK_OBJECT_INFO_TYPE_MEMORY_REQUIREMENTS,
-                    &mem_reqs_size, mem_reqs);
-    assert(!err && mem_reqs_size == num_allocations * sizeof(VkMemoryRequirements));
-    for (uint32_t i = 0; i < num_allocations; i ++) {
-        mem_alloc.allocationSize = mem_reqs[i].size;
+                    &mem_reqs_size, &mem_reqs);
+    mem_alloc.allocationSize = mem_reqs.size;
 
-        /* allocate memory */
-        err = vkAllocMemory(demo->device, &mem_alloc,
-                    &(demo->depth.mem[i]));
-        assert(!err);
+    /* allocate memory */
+    err = vkAllocMemory(demo->device, &mem_alloc, &demo->depth.mem);
+    assert(!err);
 
-        /* bind memory */
-        err = vkBindObjectMemory(demo->device,
-                VK_OBJECT_TYPE_IMAGE, demo->depth.image,
-                i, demo->depth.mem[i], 0);
-        assert(!err);
-    }
+    /* bind memory */
+    err = vkBindObjectMemory(demo->device,
+            VK_OBJECT_TYPE_IMAGE, demo->depth.image,
+            demo->depth.mem, 0);
+    assert(!err);
 
     demo_set_image_layout(demo, demo->depth.image,
                            VK_IMAGE_LAYOUT_UNDEFINED,
@@ -553,10 +536,8 @@ static void demo_prepare_texture_image(struct demo *demo,
         .memPriority = VK_MEMORY_PRIORITY_NORMAL,
     };
 
-    VkMemoryRequirements *mem_reqs;
+    VkMemoryRequirements mem_reqs;
     size_t mem_reqs_size = sizeof(VkMemoryRequirements);
-    uint32_t num_allocations = 0;
-    size_t num_alloc_size = sizeof(num_allocations);
 
     err = vkCreateImage(demo->device, &image_create_info,
             &tex_obj->image);
@@ -564,34 +545,19 @@ static void demo_prepare_texture_image(struct demo *demo,
 
     err = vkGetObjectInfo(demo->device,
                 VK_OBJECT_TYPE_IMAGE, tex_obj->image,
-                VK_OBJECT_INFO_TYPE_MEMORY_ALLOCATION_COUNT,
-                &num_alloc_size, &num_allocations);
-    assert(!err && num_alloc_size == sizeof(num_allocations));
-    mem_reqs = malloc(num_allocations * sizeof(VkMemoryRequirements));
-    tex_obj->mem = malloc(num_allocations * sizeof(VkDeviceMemory));
-    err = vkGetObjectInfo(demo->device,
-                VK_OBJECT_TYPE_IMAGE, tex_obj->image,
                 VK_OBJECT_INFO_TYPE_MEMORY_REQUIREMENTS,
-                &mem_reqs_size, mem_reqs);
-    assert(!err && mem_reqs_size == num_allocations * sizeof(VkMemoryRequirements));
-    for (uint32_t j = 0; j < num_allocations; j ++) {
-        mem_alloc.allocationSize = mem_reqs[j].size;
+                &mem_reqs_size, &mem_reqs);
+    mem_alloc.allocationSize = mem_reqs.size;
 
-        /* allocate memory */
-        err = vkAllocMemory(demo->device, &mem_alloc,
-                    &(tex_obj->mem[j]));
-        assert(!err);
+    /* allocate memory */
+    err = vkAllocMemory(demo->device, &mem_alloc, &tex_obj->mem);
+    assert(!err);
 
-        /* bind memory */
-        err = vkBindObjectMemory(demo->device,
-                VK_OBJECT_TYPE_IMAGE, tex_obj->image,
-                j, tex_obj->mem[j], 0);
-        assert(!err);
-    }
-    free(mem_reqs);
-    mem_reqs = NULL;
-
-    tex_obj->num_mem = num_allocations;
+    /* bind memory */
+    err = vkBindObjectMemory(demo->device,
+            VK_OBJECT_TYPE_IMAGE, tex_obj->image,
+            tex_obj->mem, 0);
+    assert(!err);
 
     if (mem_props & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT) {
         const VkImageSubresource subres = {
@@ -608,10 +574,8 @@ static void demo_prepare_texture_image(struct demo *demo,
                                          VK_SUBRESOURCE_INFO_TYPE_LAYOUT,
                                          &layout_size, &layout);
         assert(!err && layout_size == sizeof(layout));
-        /* Linear texture must be within a single memory object */
-        assert(num_allocations == 1);
 
-        err = vkMapMemory(demo->device, tex_obj->mem[0], 0, 0, 0, &data);
+        err = vkMapMemory(demo->device, tex_obj->mem, 0, 0, 0, &data);
         assert(!err);
 
         for (y = 0; y < tex_height; y++) {
@@ -620,7 +584,7 @@ static void demo_prepare_texture_image(struct demo *demo,
                 row[x] = tex_colors[(x & 1) ^ (y & 1)];
         }
 
-        err = vkUnmapMemory(demo->device, tex_obj->mem[0]);
+        err = vkUnmapMemory(demo->device, tex_obj->mem);
         assert(!err);
     }
 
@@ -634,13 +598,10 @@ static void demo_prepare_texture_image(struct demo *demo,
 static void demo_destroy_texture_image(struct demo *demo, struct texture_object *tex_obj)
 {
     /* clean up staging resources */
-    for (uint32_t j = 0; j < tex_obj->num_mem; j ++) {
-        vkBindObjectMemory(demo->device,
-                VK_OBJECT_TYPE_IMAGE, tex_obj->image, j, VK_NULL_HANDLE, 0);
-        vkFreeMemory(demo->device, tex_obj->mem[j]);
-    }
+    vkBindObjectMemory(demo->device,
+        VK_OBJECT_TYPE_IMAGE, tex_obj->image, VK_NULL_HANDLE, 0);
+    vkFreeMemory(demo->device, tex_obj->mem);
 
-    free(tex_obj->mem);
     vkDestroyObject(demo->device, VK_OBJECT_TYPE_IMAGE, tex_obj->image);
 }
 
@@ -775,10 +736,8 @@ static void demo_prepare_vertices(struct demo *demo)
         .memProps = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
         .memPriority = VK_MEMORY_PRIORITY_NORMAL,
     };
-    VkMemoryRequirements *mem_reqs;
+    VkMemoryRequirements mem_reqs;
     size_t mem_reqs_size = sizeof(VkMemoryRequirements);
-    uint32_t num_allocations = 0;
-    size_t num_alloc_size = sizeof(num_allocations);
     VkResult U_ASSERT_ONLY err;
     void *data;
 
@@ -788,37 +747,27 @@ static void demo_prepare_vertices(struct demo *demo)
     assert(!err);
 
     err = vkGetObjectInfo(demo->device,
-                           VK_OBJECT_TYPE_BUFFER, demo->vertices.buf,
-                           VK_OBJECT_INFO_TYPE_MEMORY_ALLOCATION_COUNT,
-                           &num_alloc_size, &num_allocations);
-    assert(!err && num_alloc_size == sizeof(num_allocations));
-    mem_reqs = malloc(num_allocations * sizeof(VkMemoryRequirements));
-    demo->vertices.mem = malloc(num_allocations * sizeof(VkDeviceMemory));
-    demo->vertices.num_mem = num_allocations;
-    err = vkGetObjectInfo(demo->device,
             VK_OBJECT_TYPE_BUFFER, demo->vertices.buf,
             VK_OBJECT_INFO_TYPE_MEMORY_REQUIREMENTS,
-            &mem_reqs_size, mem_reqs);
-    assert(!err && mem_reqs_size == sizeof(*mem_reqs));
-    for (uint32_t i = 0; i < num_allocations; i ++) {
-        mem_alloc.allocationSize = mem_reqs[i].size;
+            &mem_reqs_size, &mem_reqs);
 
-        err = vkAllocMemory(demo->device, &mem_alloc, &demo->vertices.mem[i]);
-        assert(!err);
+    mem_alloc.allocationSize = mem_reqs.size;
 
-        err = vkMapMemory(demo->device, demo->vertices.mem[i], 0, 0, 0, &data);
-        assert(!err);
+    err = vkAllocMemory(demo->device, &mem_alloc, &demo->vertices.mem);
+    assert(!err);
 
-        memcpy(data, vb, sizeof(vb));
+    err = vkMapMemory(demo->device, demo->vertices.mem, 0, 0, 0, &data);
+    assert(!err);
 
-        err = vkUnmapMemory(demo->device, demo->vertices.mem[i]);
-        assert(!err);
+    memcpy(data, vb, sizeof(vb));
 
-        err = vkBindObjectMemory(demo->device,
-                VK_OBJECT_TYPE_BUFFER, demo->vertices.buf,
-                i, demo->vertices.mem[i], 0);
-        assert(!err);
-    }
+    err = vkUnmapMemory(demo->device, demo->vertices.mem);
+    assert(!err);
+
+    err = vkBindObjectMemory(demo->device,
+            VK_OBJECT_TYPE_BUFFER, demo->vertices.buf,
+            demo->vertices.mem, 0);
+    assert(!err);
 
     demo->vertices.vi.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_CREATE_INFO;
     demo->vertices.vi.pNext = NULL;
@@ -1563,7 +1512,7 @@ static void demo_init(struct demo *demo, const int argc, const char *argv[])
 
 static void demo_cleanup(struct demo *demo)
 {
-    uint32_t i, j;
+    uint32_t i;
 
     vkDestroyObject(demo->device, VK_OBJECT_TYPE_DESCRIPTOR_SET, demo->desc_set);
     vkDestroyObject(demo->device, VK_OBJECT_TYPE_DESCRIPTOR_POOL, demo->desc_pool);
@@ -1582,27 +1531,22 @@ static void demo_cleanup(struct demo *demo)
     vkDestroyObject(demo->device, VK_OBJECT_TYPE_PIPELINE_LAYOUT, demo->pipeline_layout);
     vkDestroyObject(demo->device, VK_OBJECT_TYPE_DESCRIPTOR_SET_LAYOUT, demo->desc_layout);
 
-    vkBindObjectMemory(demo->device, VK_OBJECT_TYPE_BUFFER, demo->vertices.buf, 0, VK_NULL_HANDLE, 0);
+    vkBindObjectMemory(demo->device, VK_OBJECT_TYPE_BUFFER, demo->vertices.buf, VK_NULL_HANDLE, 0);
     vkDestroyObject(demo->device, VK_OBJECT_TYPE_BUFFER, demo->vertices.buf);
-    for (j = 0; j < demo->vertices.num_mem; j++)
-        vkFreeMemory(demo->device, demo->vertices.mem[j]);
+    vkFreeMemory(demo->device, demo->vertices.mem);
 
     for (i = 0; i < DEMO_TEXTURE_COUNT; i++) {
         vkDestroyObject(demo->device, VK_OBJECT_TYPE_IMAGE_VIEW, demo->textures[i].view);
-        vkBindObjectMemory(demo->device, VK_OBJECT_TYPE_IMAGE, demo->textures[i].image, 0, VK_NULL_HANDLE, 0);
+        vkBindObjectMemory(demo->device, VK_OBJECT_TYPE_IMAGE, demo->textures[i].image, VK_NULL_HANDLE, 0);
         vkDestroyObject(demo->device, VK_OBJECT_TYPE_IMAGE, demo->textures[i].image);
-        for (j = 0; j < demo->textures[i].num_mem; j++)
-            vkFreeMemory(demo->device, demo->textures[i].mem[j]);
-        free(demo->textures[i].mem);
+        vkFreeMemory(demo->device, demo->textures[i].mem);
         vkDestroyObject(demo->device, VK_OBJECT_TYPE_SAMPLER, demo->textures[i].sampler);
     }
 
     vkDestroyObject(demo->device, VK_OBJECT_TYPE_DEPTH_STENCIL_VIEW, demo->depth.view);
-    vkBindObjectMemory(demo->device, VK_OBJECT_TYPE_IMAGE, demo->depth.image, 0, VK_NULL_HANDLE, 0);
+    vkBindObjectMemory(demo->device, VK_OBJECT_TYPE_IMAGE, demo->depth.image, VK_NULL_HANDLE, 0);
     vkDestroyObject(demo->device, VK_OBJECT_TYPE_IMAGE, demo->depth.image);
-    for (j = 0; j < demo->depth.num_mem; j++) {
-        vkFreeMemory(demo->device, demo->depth.mem[j]);
-    }
+    vkFreeMemory(demo->device, demo->depth.mem);
 
     for (i = 0; i < DEMO_BUFFER_COUNT; i++) {
         vkDestroyObject(demo->device, VK_OBJECT_TYPE_COLOR_ATTACHMENT_VIEW, demo->buffers[i].view);

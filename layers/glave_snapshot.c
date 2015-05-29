@@ -723,30 +723,30 @@ VK_LAYER_EXPORT VkResult VKAPI vkGetObjectInfo(VkDevice device, VkObjectType obj
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkBindObjectMemory(VkQueue queue, VkObjectType objType, VkObject object, uint32_t allocationIdx, VkGpuMemory mem, VkGpuSize offset)
+VK_LAYER_EXPORT VkResult VKAPI vkBindObjectMemory(VkQueue queue, VkObjectType objType, VkObject object, VkGpuMemory mem, VkGpuSize offset)
 {
     loader_platform_thread_lock_mutex(&objLock);
     ll_increment_use_count((void*)object, ll_get_obj_type(object));
     loader_platform_thread_unlock_mutex(&objLock);
-    VkResult result = nextTable.BindObjectMemory(queue, objType, object, allocationIdx, mem, offset);
+    VkResult result = nextTable.BindObjectMemory(queue, objType, object, mem, offset);
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkBindObjectMemoryRange(VkQueue queue, VkObjectType objType, VkObject object, uint32_t allocationIdx, VkGpuSize rangeOffset, VkGpuSize rangeSize, VkGpuMemory mem, VkGpuSize memOffset)
+VK_LAYER_EXPORT VkResult VKAPI vkBindObjectMemoryRange(VkQueue queue, VkObjectType objType, VkObject object, VkGpuSize rangeOffset, VkGpuSize rangeSize, VkGpuMemory mem, VkGpuSize memOffset)
 {
     loader_platform_thread_lock_mutex(&objLock);
     ll_increment_use_count((void*)object, ll_get_obj_type(object));
     loader_platform_thread_unlock_mutex(&objLock);
-    VkResult result = nextTable.BindObjectMemoryRange(queue, objType, object, allocationIdx, rangeOffset, rangeSize, mem, memOffset);
+    VkResult result = nextTable.BindObjectMemoryRange(queue, objType, object, rangeOffset, rangeSize, mem, memOffset);
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkBindImageMemoryRange(VkImage image, uint32_t allocationIdx, const VkImageMemoryBindInfo* pBindInfo, VkGpuMemory mem, VkGpuSize memOffset)
+VK_LAYER_EXPORT VkResult VKAPI vkBindImageMemoryRange(VkImage image, const VkImageMemoryBindInfo* pBindInfo, VkGpuMemory mem, VkGpuSize memOffset)
 {
     loader_platform_thread_lock_mutex(&objLock);
     ll_increment_use_count((void*)image, VK_OBJECT_TYPE_IMAGE);
     loader_platform_thread_unlock_mutex(&objLock);
-    VkResult result = nextTable.BindImageMemoryRange(image, allocationIdx, pBindInfo, mem, memOffset);
+    VkResult result = nextTable.BindImageMemoryRange(image, pBindInfo, mem, memOffset);
     return result;
 }
 

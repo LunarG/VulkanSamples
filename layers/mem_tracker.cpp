@@ -608,7 +608,7 @@ static bool32_t clearObjectBinding(
         sprintf(str, "Attempting to clear mem binding for object %p: devices, queues, command buffers, "
                      "shaders and memory objects do not have external memory requirements and it is "
                      "unneccessary to call bind/unbindObjectMemory on them.", object);
-        layerCbMsg(VK_DBG_MSG_WARNING, VK_VALIDATION_LEVEL_0, object, 0, MEMTRACK_INVALID_OBJECT, "MEM", str);
+        layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, object, 0, MEMTRACK_INVALID_OBJECT, "MEM", str);
     } else {
         if (!pObjInfo->pMemObjInfo || pObjInfo->pMemObjInfo->pObjBindings.size() <= 0) {
             char str[1024];
@@ -1214,11 +1214,10 @@ VK_LAYER_EXPORT VkResult VKAPI vkBindObjectMemory(
     VkDevice       device,
     VkObjectType   objType,
     VkObject       object,
-    uint32_t       allocationIdx,
     VkDeviceMemory mem,
     VkDeviceSize   offset)
 {
-    VkResult result = nextTable.BindObjectMemory(device, objType, object, allocationIdx, mem, offset);
+    VkResult result = nextTable.BindObjectMemory(device, objType, object, mem, offset);
     loader_platform_thread_lock_mutex(&globalLock);
     // Track objects tied to memory
     if (VK_FALSE == updateObjectBinding(object, mem)) {
@@ -1235,13 +1234,12 @@ VK_LAYER_EXPORT VkResult VKAPI vkBindObjectMemory(
 VK_LAYER_EXPORT VkResult VKAPI vkQueueBindSparseBufferMemory(
     VkQueue        queue,
     VkBuffer       buffer,
-    uint32_t       allocationIdx,
     VkDeviceSize   rangeOffset,
     VkDeviceSize   rangeSize,
     VkDeviceMemory mem,
     VkDeviceSize   memOffset)
 {
-    VkResult result = nextTable.QueueBindSparseBufferMemory(queue, buffer, allocationIdx, rangeOffset, rangeSize, mem, memOffset);
+    VkResult result = nextTable.QueueBindSparseBufferMemory(queue, buffer, rangeOffset, rangeSize, mem, memOffset);
     loader_platform_thread_lock_mutex(&globalLock);
     // Track objects tied to memory
     if (VK_FALSE == updateObjectBinding(buffer, mem)) {
