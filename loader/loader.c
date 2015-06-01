@@ -218,38 +218,6 @@ bool compare_vk_extension_properties(const VkExtensionProperties *op1, const VkE
 }
 
 /*
- * Used to look for an extension with a specific name.
- * Ignores all other extension info (i.e. version, origin & dependencies)
- */
-static bool has_extension_name(
-        uint32_t count,
-        struct loader_extension_property *exts,
-        const char *target_ext_name,
-        bool must_be_hosted)
-{
-    uint32_t i;
-    for (i = 0; i < count; i++) {
-        if (!strcmp(exts[i].info.name, target_ext_name) && (!must_be_hosted || exts[i].hosted))
-            return true;
-    }
-    return false;
-}
-
-static bool has_extension(
-        uint32_t count,
-        struct loader_extension_property *exts,
-        const VkExtensionProperties *target_ext,
-        bool must_be_hosted)
-{
-    uint32_t i;
-    for (i = 0; i < count; i++) {
-        if (compare_vk_extension_properties(&exts[i].info, target_ext) && (!must_be_hosted || exts[i].hosted))
-            return true;
-    }
-    return false;
-}
-
-/*
  * Search the given ext_list for an extension
  * matching the given vk_ext_prop
  */
