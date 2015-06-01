@@ -46,24 +46,18 @@ static const VkExtensionProperties intel_gpu_exts[INTEL_EXT_COUNT] = {
         .name = VK_WSI_LUNARG_EXTENSION_NAME,
         .version = VK_WSI_LUNARG_REVISION,
         .description = "Intel sample driver",
-//        .dependencyCount = 0,
-//        .pDependencyList = NULL,
     },
     {
         .sType = VK_STRUCTURE_TYPE_EXTENSION_PROPERTIES,
         .name = DEBUG_REPORT_EXTENSION_NAME,
         .version = VK_DEBUG_REPORT_EXTENSION_VERSION,
         .description = "Intel sample driver",
-//        .dependencyCount = 0,
-//        .pDependencyList = NULL,
     },
     {
         .sType = VK_STRUCTURE_TYPE_EXTENSION_PROPERTIES,
         .name = DEBUG_MARKER_EXTENSION_NAME,
         .version = VK_DEBUG_MARKER_EXTENSION_VERSION,
         .description = "Intel sample driver",
-//        .dependencyCount = 0,
-//        .pDependencyList = NULL,
     }
 };
 
