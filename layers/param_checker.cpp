@@ -193,7 +193,6 @@ void PostCreateInstance(VkResult result, const VkInstanceCreateInfo *pCreateInfo
 
 VK_LAYER_EXPORT VkResult VKAPI vkCreateInstance(const VkInstanceCreateInfo* pCreateInfo, VkInstance* pInstance)
 {
-    /* TODO: shouldn't we have initInstanceDispatch here? */
     loader_platform_thread_once(&initOnce, initParamChecker);
     initInstanceTable((const VkBaseLayerObject *) (*pInstance));
 
@@ -1931,6 +1930,15 @@ VK_LAYER_EXPORT VkResult VKAPI vkDbgCreateMsgCallback(
     return layer_create_msg_callback(instance, pTable, msgFlags, pfnMsgCallback, pUserData, pMsgCallback);
 }
 
+VK_LAYER_EXPORT VkResult VKAPI vkDbgDestroyMsgCallback(
+        VkInstance instance,
+        VkDbgMsgCallback msgCallback)
+{
+    VkLayerInstanceDispatchTable *pDisp = *(VkLayerInstanceDispatchTable **) instance;
+    VkLayerInstanceDispatchTable *pTable = tableInstanceMap[pDisp];
+    return layer_destroy_msg_callback(instance, pTable, msgCallback);
+}
+
 VK_LAYER_EXPORT void VKAPI vkCmdDbgMarkerBegin(VkCmdBuffer cmdBuffer, const char* pMarker)
 {
     VkLayerDebugMarkerDispatchTable *pDisp  = *(VkLayerDebugMarkerDispatchTable **) cmdBuffer;
@@ -2282,6 +2290,7 @@ VK_LAYER_EXPORT void* VKAPI vkGetDeviceProcAddr(VkDevice device, const char* fun
 
 VK_LAYER_EXPORT void* VKAPI vkGetInstanceProcAddr(VkInstance instance, const char* funcName)
 {
+    void *fptr;
     void* addr;
     if (instance == NULL) {
         return NULL;
@@ -2299,7 +2308,12 @@ VK_LAYER_EXPORT void* VKAPI vkGetInstanceProcAddr(VkInstance instance, const cha
     if (addr) {
         return addr;
     }
-    else {
+
+    fptr = msg_callback_get_proc_addr(funcName);
+    if (fptr)
+        return fptr;
+
+    {
         VkLayerInstanceDispatchTable **ppDisp = (VkLayerInstanceDispatchTable **) instance;
         VkLayerInstanceDispatchTable* pTable = tableInstanceMap[*ppDisp];
         if (pTable->GetInstanceProcAddr == NULL)
