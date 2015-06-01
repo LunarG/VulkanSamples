@@ -446,7 +446,6 @@ void loader_coalesce_extensions(void)
 
     // traverse scanned icd list adding non-duplicate extensions to the list
     while (icd_list != NULL) {
-        /* TODO: convert to use ext_list */
         loader_add_to_ext_list(&loader.global_extensions,
                                icd_list->global_extension_list.count,
                                icd_list->global_extension_list.list);
@@ -1055,8 +1054,6 @@ static void loader_add_layer_env(
 }
 
 
-//TODO static void loader_deactivate_device_layer(device)
-
 static void loader_deactivate_instance_layers(struct loader_instance *instance)
 {
     if (!instance->layer_count) {
@@ -1137,19 +1134,33 @@ uint32_t loader_activate_instance_layers(struct loader_instance *inst)
         loader_platform_dl_handle lib_handle;
 
         /*
-         * TODO: Need to figure out how to hook in extensions implemented
-         * within the loader.
-         * What GetProcAddr do we use?
-         * How do we make the loader call first in the chain? It may not be first
-         * in the list. Does it have to be first?
-         * How does the chain for DbgCreateMsgCallback get made?
-         * Do we need to add the function pointer to the VkLayerInstanceDispatchTable?
-         * Seems like we will.
-         * What happens with more than one loader implemented extension?
-         * Issue: Process of building instance chain requires that we call GetInstanceProcAddr
-         * on the various extension components. However, if we are asking for an extension
-         * entry point we won't get it because we haven't enabled the extension yet.
-         * Must not call GPA on extensions at this time.
+         * For global exenstions implemented within the loader (i.e. WSI, DEBUG_REPORT
+         * the extension must provide two entry points for the loader to use:
+         * - "trampoline" entry point - this is the address returned by GetProcAddr
+         * and will always do what's necessary to support a global call.
+         * - "terminator" function - this function will be put at the end of the
+         * instance chain and will contain the necessary logica to call / process
+         * the extension for the appropriate ICDs that are available.
+         * There is no generic mechanism for including these functions, the references
+         * must be placed into the appropriate loader entry points.
+         * GetInstanceProcAddr: call extension GetInstanceProcAddr to check for GetProcAddr requests
+         * loader_coalesce_extensions(void) - add extension records to the list of global
+         * extension available to the app.
+         * instance_disp - add function pointer for terminator function to this array.
+         * The extension itself should be in a separate file that will be
+         * linked directly with the loader.
+         * Note: An extension's Get*ProcAddr should not return a function pointer for
+         * any extension entry points until the extension has been enabled.
+         * To do this requires a different behavior from Get*ProcAddr functions implemented
+         * in layers.
+         * The very first call to a layer will be it's Get*ProcAddr function requesting
+         * the layer's vkGet*ProcAddr. The layer should intialize it's internal dispatch table
+         * with the wrapped object given (either Instance or Device) and return the layer's
+         * Get*ProcAddr function. The layer should also use this opportunity to record the
+         * baseObject so that it can find the correct local dispatch table on future calls.
+         * Subsequent calls to Get*ProcAddr, CreateInstance, CreateDevice
+         * will not use a wrapped object and must look up their local dispatch table from
+         * the given baseObject.
          */
         if (ext_prop->origin != VK_EXTENSION_ORIGIN_LAYER) {
             continue;
@@ -1485,7 +1496,6 @@ VkResult loader_EnumeratePhysicalDevices(
     struct loader_instance *ptr_instance = (struct loader_instance *) instance;
     struct loader_icd *icd = ptr_instance->icds;
 
-    /* TODO: How do we only do this once? */
     if (ptr_instance->total_gpu_count == 0) {
         loader_init_physical_device_info(ptr_instance);
     }
@@ -1552,13 +1562,18 @@ VkResult loader_CreateDevice(
             memcpy(icd->app_extension_props[gpu_index], pCreateInfo->pEnabledExtensions, sizeof(VkExtensionProperties) * pCreateInfo->extensionCount);
         }
 
-        // TODO: Add dependency check here.
-
+        /*
+         * Put together the complete list of extensions to enable
+         * This includes extensions requested via environment variables.
+         */
         loader_enable_device_layers(icd, gpu_index);
 
-        //TODO fix this extension parameters once support GetDeviceExtensionInfo()
-        // don't know which instance we are on with this call
-
+        /*
+         * Load the libraries needed by the extensions on the
+         * enabled extension list. This will build the
+         * device instance chain terminating with the
+         * selected device.
+         */
         loader_activate_device_layers(*pDevice, icd, gpu_index,
                                       icd->app_extension_count[gpu_index],
                                       icd->app_extension_props[gpu_index]);
@@ -1619,7 +1634,6 @@ LOADER_EXPORT void * VKAPI vkGetDeviceProcAddr(VkDevice device, const char * pNa
 
     /* return any extension device entrypoints the loader knows about */
     addr = wsi_lunarg_GetDeviceProcAddr(device, pName);
-    /* TODO: Where does device wsi_enabled go? */
     if (addr)
         return addr;
 
@@ -1637,12 +1651,6 @@ LOADER_EXPORT void * VKAPI vkGetDeviceProcAddr(VkDevice device, const char * pNa
         return disp_table->GetDeviceProcAddr(device, pName);
     }
 }
-
-//TODO make sure createInstance enables extensions that are valid (loader does)
-//TODO make sure CreateDevice enables extensions that are valid (left for layers/drivers to do)
-
-//TODO how is layer extension going to be enabled?
-//Need to call createInstance on the layer or something
 
 LOADER_EXPORT VkResult VKAPI vkGetGlobalExtensionInfo(
                                                VkExtensionInfoType infoType,
