@@ -3037,8 +3037,6 @@ VK_LAYER_EXPORT void* VKAPI vkGetDeviceProcAddr(VkDevice dev, const char* funcNa
         return (void*) vkCmdBeginRenderPass;
     if (!strcmp(funcName, "vkCmdEndRenderPass"))
         return (void*) vkCmdEndRenderPass;
-    if (!strcmp(funcName, "vkDbgCreateMsgCallback"))
-        return (void*) vkDbgCreateMsgCallback;
     if (!strcmp(funcName, "vkCmdDbgMarkerBegin"))
         return (void*) vkCmdDbgMarkerBegin;
     if (!strcmp(funcName, "vkCmdDbgMarkerEnd"))
@@ -3061,6 +3059,7 @@ VK_LAYER_EXPORT void* VKAPI vkGetDeviceProcAddr(VkDevice dev, const char* funcNa
 
 VK_LAYER_EXPORT void * VKAPI vkGetInstanceProcAddr(VkInstance instance, const char* funcName)
 {
+    void *fptr;
     if (instance == NULL)
         return NULL;
 
@@ -3077,7 +3076,11 @@ VK_LAYER_EXPORT void * VKAPI vkGetInstanceProcAddr(VkInstance instance, const ch
         return (void *) vkDestroyInstance;
     if (!strcmp(funcName, "vkCreateDevice"))
         return (void*) vkCreateDevice;
-    else
+
+    fptr = msg_callback_get_proc_addr(funcName);
+    if (fptr)
+        return fptr;
+
     {
         VkLayerInstanceDispatchTable **ppDisp = (VkLayerInstanceDispatchTable **) instance;
         VkLayerInstanceDispatchTable* pTable = tableInstanceMap[*ppDisp];
