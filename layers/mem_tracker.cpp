@@ -2349,8 +2349,6 @@ VK_LAYER_EXPORT void* VKAPI vkGetDeviceProcAddr(
         return (void*) vkCmdEndQuery;
     if (!strcmp(funcName, "vkCmdResetQueryPool"))
         return (void*) vkCmdResetQueryPool;
-    if (g_DEBUG_REPORT && !strcmp(funcName, "vkDbgCreateMsgCallback"))
-        return (void*) vkDbgCreateMsgCallback;
     if (!strcmp(funcName, "vkGetDeviceQueue"))
         return (void*) vkGetDeviceQueue;
     if (!strcmp(funcName, "vkCreateSwapChainWSI"))
