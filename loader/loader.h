@@ -347,13 +347,6 @@ void loader_icd_scan(void);
 void layer_lib_scan(void);
 void loader_coalesce_extensions(void);
 
-static loader_platform_dl_handle loader_add_layer_lib(
-        const char *chain_type,
-        struct loader_extension_property *ext_prop);
-static void loader_remove_layer_lib(
-        struct loader_instance *inst,
-        struct loader_extension_property *ext_prop);
-
 struct loader_icd * loader_get_icd(const VkBaseLayerObject *gpu,
                                    uint32_t *gpu_index);
 uint32_t loader_activate_instance_layers(struct loader_instance *inst);

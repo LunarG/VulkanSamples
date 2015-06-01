@@ -56,6 +56,14 @@ void loader_add_to_ext_list(
         uint32_t prop_list_count,
         const struct loader_extension_property *prop_list);
 
+static loader_platform_dl_handle loader_add_layer_lib(
+        const char *chain_type,
+        struct loader_extension_property *ext_prop);
+
+static void loader_remove_layer_lib(
+        struct loader_instance *inst,
+        struct loader_extension_property *ext_prop);
+
 static void loader_deactivate_instance_layers(struct loader_instance *instance);
 
 /* TODO: do we need to lock around access to linked lists and such? */
