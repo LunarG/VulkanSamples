@@ -154,7 +154,7 @@ protected:
         instance_extension_names.push_back(DEBUG_REPORT_EXTENSION_NAME);
         instance_extension_names.push_back("MemTracker");
         instance_extension_names.push_back("ObjectTracker");
-        instance_extension_names.push_back("Threading");
+//        instance_extension_names.push_back("Threading");
 
         device_extension_names.push_back("MemTracker");
         device_extension_names.push_back("ObjectTracker");
