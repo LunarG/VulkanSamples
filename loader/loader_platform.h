@@ -169,7 +169,7 @@ using namespace std;
 #ifndef DEFAULT_VK_DRIVERS_PATH
 // TODO: Is this a good default location?
 // Need to search for both 32bit and 64bit ICDs
-#define DEFAULT_VK_DRIVERS_PATH "C:\\Windows\\System32"
+#define DEFAULT_VK_DRIVERS_PATH "C:\\Windows\\System32;C:\\Windows\\SysWow64"
 // TODO/TBD: Is this an appropriate prefix for Windows?
 #define VK_DRIVER_LIBRARY_PREFIX "VK_"
 #define VK_DRIVER_LIBRARY_PREFIX_LEN 3
