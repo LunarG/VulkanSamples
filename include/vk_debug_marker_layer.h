@@ -42,5 +42,4 @@ typedef struct VkLayerDebugMarkerDispatchTable_
     PFN_vkCmdDbgMarkerEnd CmdDbgMarkerEnd;
     PFN_vkDbgSetObjectTag DbgSetObjectTag;
     PFN_vkDbgSetObjectName DbgSetObjectName;
-    bool ext_enabled;
 } VkLayerDebugMarkerDispatchTable;

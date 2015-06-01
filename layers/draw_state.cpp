@@ -45,6 +45,7 @@
 // being used:
 #include "loader_platform.h"
 #include "layers_msg.h"
+#include "layers_debug_marker_table.h"
 
 unordered_map<VkSampler, SAMPLER_NODE*> sampleMap;
 unordered_map<VkImageView, IMAGE_NODE*> imageMap;
@@ -59,9 +60,13 @@ unordered_map<VkCmdBuffer, GLOBAL_CB_NODE*> cmdBufferMap;
 unordered_map<VkRenderPass, VkRenderPassCreateInfo*> renderPassMap;
 unordered_map<VkFramebuffer, VkFramebufferCreateInfo*> frameBufferMap;
 
+struct devExts {
+    bool debug_marker_enabled;
+};
+
 static std::unordered_map<void *, VkLayerDispatchTable *> tableMap;
-static std::unordered_map<void *, VkLayerDebugMarkerDispatchTable *> tableDebugMarkerMap;
 static std::unordered_map<void *, VkLayerInstanceDispatchTable *> tableInstanceMap;
+static std::unordered_map<void *, struct devExts> deviceExtMap;
 
 static LOADER_PLATFORM_THREAD_ONCE_DECLARATION(g_initOnce);
 
@@ -1445,7 +1450,6 @@ static void synchAndPrintDSConfig(const VkCmdBuffer cb)
 static VkLayerDispatchTable * initDeviceTable(const VkBaseLayerObject *devw)
 {
     VkLayerDispatchTable *pTable;
-    VkLayerDebugMarkerDispatchTable *pDebugMarkerTable;
 
     assert(devw);
     VkLayerDispatchTable **ppDisp = (VkLayerDispatchTable **) (devw->baseObject);
@@ -1455,21 +1459,13 @@ static VkLayerDispatchTable * initDeviceTable(const VkBaseLayerObject *devw)
     {
         pTable =  new VkLayerDispatchTable;
         tableMap[(void *) *ppDisp] = pTable;
-        pDebugMarkerTable = new VkLayerDebugMarkerDispatchTable;
-        tableDebugMarkerMap[(void *) *ppDisp] = pDebugMarkerTable;
+
     } else
     {
         return it->second;
     }
 
     layer_initialize_dispatch_table(pTable, devw);
-
-    VkDevice device = (VkDevice) devw->baseObject;
-    pDebugMarkerTable->CmdDbgMarkerBegin = (PFN_vkCmdDbgMarkerBegin) devw->pGPA(device, "vkCmdDbgMarkerBegin");
-    pDebugMarkerTable->CmdDbgMarkerEnd = (PFN_vkCmdDbgMarkerEnd) devw->pGPA(device, "vkCmdDbgMarkerEnd");
-    pDebugMarkerTable->DbgSetObjectTag = (PFN_vkDbgSetObjectTag) devw->pGPA(device, "vkDbgSetObjectTag");
-    pDebugMarkerTable->DbgSetObjectName = (PFN_vkDbgSetObjectName) devw->pGPA(device, "vkDbgSetObjectName");
-    pDebugMarkerTable->ext_enabled = false;
 
     return pTable;
 }
@@ -1558,13 +1554,14 @@ VK_LAYER_EXPORT VkResult VKAPI vkDestroyInstance(VkInstance instance)
 static void createDeviceRegisterExtensions(const VkDeviceCreateInfo* pCreateInfo, VkDevice device)
 {
     uint32_t i, ext_idx;
-    VkLayerDebugMarkerDispatchTable *pDisp =  *(VkLayerDebugMarkerDispatchTable **) device;
-    VkLayerDebugMarkerDispatchTable *pTable = tableDebugMarkerMap[pDisp];
+    VkLayerDispatchTable *pDisp =  *(VkLayerDispatchTable **) device;
+    deviceExtMap[pDisp].debug_marker_enabled = false;
 
     for (i = 0; i < pCreateInfo->extensionCount; i++) {
         if (strcmp(pCreateInfo->pEnabledExtensions[i].name, DEBUG_MARKER_EXTENSION_NAME) == 0) {
-            /* Found a matching extension name, mark it enabled */
-            pTable->ext_enabled = true;
+            /* Found a matching extension name, mark it enabled and init dispatch table*/
+            initDebugMarkerTable(device);
+            deviceExtMap[pDisp].debug_marker_enabled = true;
         }
 
     }
@@ -1597,6 +1594,8 @@ VK_LAYER_EXPORT VkResult VKAPI vkDestroyDevice(VkDevice device)
     VkLayerDispatchTable *pTable = tableMap[pDisp];
     VkResult result = pTable->DestroyDevice(device);
     tableMap.erase(pDisp);
+    tableDebugMarkerMap.erase(pDisp);
+    deviceExtMap.erase(pDisp);
     return result;
 }
 
@@ -2841,12 +2840,12 @@ VK_LAYER_EXPORT VkResult VKAPI vkDbgDestroyMsgCallback(
 VK_LAYER_EXPORT void VKAPI vkCmdDbgMarkerBegin(VkCmdBuffer cmdBuffer, const char* pMarker)
 {
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
-    VkLayerDebugMarkerDispatchTable *pDisp =  *(VkLayerDebugMarkerDispatchTable **) cmdBuffer;
-    VkLayerDebugMarkerDispatchTable *pTable = tableDebugMarkerMap[pDisp];
-    if (!pTable->ext_enabled) {
+    VkLayerDispatchTable *pDisp =  *(VkLayerDispatchTable **) cmdBuffer;
+    if (!deviceExtMap[pDisp].debug_marker_enabled) {
         char str[1024];
         sprintf(str, "Attempt to use CmdDbgMarkerBegin but extension disabled!");
         layerCbMsg(VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, cmdBuffer, 0, DRAWSTATE_INVALID_EXTENSION, "DS", str);
+        return;
     }
     else if (pCB) {
         updateCBTracking(cmdBuffer);
@@ -2857,18 +2856,18 @@ VK_LAYER_EXPORT void VKAPI vkCmdDbgMarkerBegin(VkCmdBuffer cmdBuffer, const char
         sprintf(str, "Attempt to use CmdBuffer %p that doesn't exist!", (void*)cmdBuffer);
         layerCbMsg(VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, cmdBuffer, 0, DRAWSTATE_INVALID_CMD_BUFFER, "DS", str);
     }
-    pTable->CmdDbgMarkerBegin(cmdBuffer, pMarker);
+    debug_marker_dispatch_table(cmdBuffer)->CmdDbgMarkerBegin(cmdBuffer, pMarker);
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdDbgMarkerEnd(VkCmdBuffer cmdBuffer)
 {
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
-    VkLayerDebugMarkerDispatchTable *pDisp =  *(VkLayerDebugMarkerDispatchTable **) cmdBuffer;
-    VkLayerDebugMarkerDispatchTable *pTable = tableDebugMarkerMap[pDisp];
-    if (!pTable->ext_enabled) {
+    VkLayerDispatchTable *pDisp =  *(VkLayerDispatchTable **) cmdBuffer;
+    if (!deviceExtMap[pDisp].debug_marker_enabled) {
         char str[1024];
         sprintf(str, "Attempt to use CmdDbgMarkerEnd but extension disabled!");
         layerCbMsg(VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, cmdBuffer, 0, DRAWSTATE_INVALID_EXTENSION, "DS", str);
+        return;
     }
     else if (pCB) {
         updateCBTracking(cmdBuffer);
@@ -2879,7 +2878,29 @@ VK_LAYER_EXPORT void VKAPI vkCmdDbgMarkerEnd(VkCmdBuffer cmdBuffer)
         sprintf(str, "Attempt to use CmdBuffer %p that doesn't exist!", (void*)cmdBuffer);
         layerCbMsg(VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, cmdBuffer, 0, DRAWSTATE_INVALID_CMD_BUFFER, "DS", str);
     }
-    pTable->CmdDbgMarkerEnd(cmdBuffer);
+    debug_marker_dispatch_table(cmdBuffer)->CmdDbgMarkerEnd(cmdBuffer);
+}
+
+VK_LAYER_EXPORT VkResult VKAPI vkDbgSetObjectTag(VkDevice device, VkObjectType  objType, VkObject object, size_t tagSize, const void* pTag)
+{
+    VkLayerDispatchTable *pDisp  =  *(VkLayerDispatchTable **) device;
+    if (!deviceExtMap[pDisp].debug_marker_enabled) {
+        char const str[] = "Attempt to use DbgSetObjectTag but extension disabled!";
+        layerCbMsg(VK_DBG_REPORT_ERROR_BIT, objType, object, 0, DRAWSTATE_INVALID_EXTENSION, "DS", str);
+        return VK_ERROR_UNAVAILABLE;
+    }
+    debug_marker_dispatch_table(device)->DbgSetObjectTag(device, objType, object, tagSize, pTag);
+}
+
+VK_LAYER_EXPORT VkResult VKAPI vkDbgSetObjectName(VkDevice device, VkObjectType  objType, VkObject object, size_t nameSize, const char* pName)
+{
+    VkLayerDispatchTable *pDisp  =  *(VkLayerDispatchTable **) device;
+    if (!deviceExtMap[pDisp].debug_marker_enabled) {
+        char const str[] = "Attempt to use DbgSetObjectName but extension disabled!";
+        layerCbMsg(VK_DBG_REPORT_ERROR_BIT, objType, object, 0, DRAWSTATE_INVALID_EXTENSION, "DS", str);
+        return VK_ERROR_UNAVAILABLE;
+    }
+    debug_marker_dispatch_table(device)->DbgSetObjectName(device, objType, object, nameSize, pName);
 }
 
 // TODO : Want to pass in a cmdBuffer here based on which state to display
@@ -3048,20 +3069,27 @@ VK_LAYER_EXPORT void* VKAPI vkGetDeviceProcAddr(VkDevice dev, const char* funcNa
         return (void*) vkCmdBeginRenderPass;
     if (!strcmp(funcName, "vkCmdEndRenderPass"))
         return (void*) vkCmdEndRenderPass;
-    if (!strcmp(funcName, "vkCmdDbgMarkerBegin"))
-        return (void*) vkCmdDbgMarkerBegin;
-    if (!strcmp(funcName, "vkCmdDbgMarkerEnd"))
-        return (void*) vkCmdDbgMarkerEnd;
     if (!strcmp("drawStateDumpDotFile", funcName))
         return (void*) drawStateDumpDotFile;
     if (!strcmp("drawStateDumpCommandBufferDotFile", funcName))
         return (void*) drawStateDumpCommandBufferDotFile;
     if (!strcmp("drawStateDumpPngFile", funcName))
         return (void*) drawStateDumpPngFile;
-    else
+
+    VkLayerDispatchTable *pDisp =  *(VkLayerDispatchTable **) dev;
+    if (!deviceExtMap[pDisp].debug_marker_enabled)
     {
-        VkLayerDispatchTable **ppDisp = (VkLayerDispatchTable **) dev;
-        VkLayerDispatchTable* pTable = tableMap[*ppDisp];
+        if (!strcmp(funcName, "CmdDbgMarkerBegin"))
+            return (void*) vkCmdDbgMarkerBegin;
+        if (!strcmp(funcName, "CmdDbgMarkerEnd"))
+            return (void*) vkCmdDbgMarkerEnd;
+        if (!strcmp(funcName, "DbgSetObjectTag"))
+            return (void*) vkDbgSetObjectTag;
+        if (!strcmp(funcName, "DbgSetObjectName"))
+            return (void*) vkDbgSetObjectName;
+    }
+    {
+        VkLayerDispatchTable* pTable = tableMap[pDisp];
         if (pTable->GetDeviceProcAddr == NULL)
             return NULL;
         return pTable->GetDeviceProcAddr(dev, funcName);
