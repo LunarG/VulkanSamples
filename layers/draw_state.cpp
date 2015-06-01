@@ -1599,11 +1599,17 @@ struct extProps {
     uint32_t version;
     const char * const name;
 };
-#define DRAW_STATE_LAYER_EXT_ARRAY_SIZE 1
+#define DRAW_STATE_LAYER_EXT_ARRAY_SIZE 2
 static const VkExtensionProperties dsExts[DRAW_STATE_LAYER_EXT_ARRAY_SIZE] = {
     {
         VK_STRUCTURE_TYPE_EXTENSION_PROPERTIES,
         "DrawState",
+        0x10,
+        "Sample layer: DrawState",
+    },
+    {
+        VK_STRUCTURE_TYPE_EXTENSION_PROPERTIES,
+        "Validation",
         0x10,
         "Sample layer: DrawState",
     }
@@ -3088,5 +3094,4 @@ VK_LAYER_EXPORT void * VKAPI vkGetInstanceProcAddr(VkInstance instance, const ch
             return NULL;
         return pTable->GetInstanceProcAddr(instance, funcName);
     }
-
 }
