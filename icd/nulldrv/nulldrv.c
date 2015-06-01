@@ -42,6 +42,14 @@
 static const char * const nulldrv_gpu_exts[NULLDRV_EXT_COUNT] = {
 	[NULLDRV_EXT_WSI_LUNARG] = VK_WSI_LUNARG_EXTENSION_NAME,
 };
+static const VkExtensionProperties intel_gpu_exts[NULLDRV_EXT_COUNT] = {
+    {
+        .sType = VK_STRUCTURE_TYPE_EXTENSION_PROPERTIES,
+        .name = VK_WSI_LUNARG_EXTENSION_NAME,
+        .version = VK_WSI_LUNARG_REVISION,
+        .description = "Null driver",
+    }
+};
 
 static struct nulldrv_base *nulldrv_base(VkObject base)
 {
@@ -172,13 +180,14 @@ static VkResult dev_create_queues(struct nulldrv_dev *dev,
     return VK_SUCCESS;
 }
 
-static enum nulldrv_ext_type nulldrv_gpu_lookup_extension(const struct nulldrv_gpu *gpu,
-                                               const char *ext)
+static enum nulldrv_ext_type nulldrv_gpu_lookup_extension(
+        const struct nulldrv_gpu *gpu,
+        const VkExtensionProperties *ext)
 {
     enum nulldrv_ext_type type;
 
     for (type = 0; type < ARRAY_SIZE(nulldrv_gpu_exts); type++) {
-        if (nulldrv_gpu_exts[type] && strcmp(nulldrv_gpu_exts[type], ext) == 0)
+        if (memcmp(&nulldrv_gpu_exts[type], ext, sizeof(VkExtensionProperties)) == 0)
             break;
     }
 
@@ -219,15 +228,16 @@ static VkResult nulldrv_dev_create(struct nulldrv_gpu *gpu,
     if (!dev)
         return VK_ERROR_OUT_OF_HOST_MEMORY;
 
-//    for (i = 0; i < info->extensionCount; i++) {
-//        const enum nulldrv_ext_type ext = nulldrv_gpu_lookup_extension(gpu,
-//                info->ppEnabledExtensionNames[i]);
+    for (i = 0; i < info->extensionCount; i++) {
+        const enum nulldrv_ext_type ext = nulldrv_gpu_lookup_extension(
+                    gpu,
+                    &info->pEnabledExtensions[i]);
 
-//        if (ext == NULLDRV_EXT_INVALID)
-//            return VK_ERROR_INVALID_EXTENSION;
+        if (ext == NULLDRV_EXT_INVALID)
+            return VK_ERROR_INVALID_EXTENSION;
 
-//        dev->exts[ext] = true;
-//    }
+        dev->exts[ext] = true;
+    }
 
     ret = nulldrv_desc_ooxx_create(dev, &dev->desc_ooxx);
     if (ret != VK_SUCCESS) {
@@ -1510,7 +1520,6 @@ ICD_EXPORT VkResult VKAPI vkGetGlobalExtensionInfo(
                                                size_t*  pDataSize,
                                                void*    pData)
 {
-    VkExtensionProperties *ext_props;
     uint32_t *count;
 
     if (pDataSize == NULL)
@@ -1522,17 +1531,17 @@ ICD_EXPORT VkResult VKAPI vkGetGlobalExtensionInfo(
             if (pData == NULL)
                 return VK_SUCCESS;
             count = (uint32_t *) pData;
-            *count = 1;
+            *count = NULLDRV_EXT_COUNT;
             break;
         case VK_EXTENSION_INFO_TYPE_PROPERTIES:
             *pDataSize = sizeof(VkExtensionProperties);
             if (pData == NULL)
                 return VK_SUCCESS;
             else {
-                ext_props = (VkExtensionProperties *) pData;
-                ext_props->version = VK_WSI_LUNARG_REVISION;
-                strncpy(ext_props->name, VK_WSI_LUNARG_EXTENSION_NAME,
-                        strlen(VK_WSI_LUNARG_EXTENSION_NAME)+1);
+                if (extensionIndex >= NULLDRV_EXT_COUNT)
+                    return VK_ERROR_INVALID_VALUE;
+
+                memcpy((VkExtensionProperties *) pData, &intel_gpu_exts[extensionIndex], sizeof(VkExtensionProperties));
                 return VK_SUCCESS;
             }
             break;
