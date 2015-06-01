@@ -868,11 +868,6 @@ VkResult VKAPI vkCreateInstance(
     VkInstance*                                 pInstance)
 {
     loader_platform_thread_once(&g_initOnce, initMemTracker);
-    /*
-     * For layers, the pInstance has already been filled out
-     * by the loader so that dispatch table is available.
-     */
-    initInstanceTable((const VkBaseLayerObject *) (*pInstance));
 
     VkResult result = instance_dispatch_table(*pInstance)->CreateInstance(pCreateInfo, pInstance);
 
