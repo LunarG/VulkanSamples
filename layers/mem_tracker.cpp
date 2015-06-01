@@ -886,8 +886,6 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateDevice(
     if (result == VK_SUCCESS) {
         // Save off device in case we need it to create Fences
         globalDevice = *pDevice;
-
-        enable_debug_report(pCreateInfo->extensionCount, pCreateInfo->pEnabledExtensions);
     }
     return result;
 }
