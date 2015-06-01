@@ -939,6 +939,26 @@ VK_LAYER_EXPORT VkResult VKAPI vkDestroyDevice(VkDevice device)
     return res;
 }
 
+VkResult VKAPI vkCreateInstance(
+    const VkInstanceCreateInfo*                 pCreateInfo,
+    VkInstance*                                 pInstance)
+{
+
+    loader_platform_thread_once(&g_initOnce, initLayer);
+    /*
+     * For layers, the pInstance has already been filled out
+     * by the loader so that dispatch table is available.
+     */
+    VkLayerInstanceDispatchTable *pTable = initLayerInstanceTable((const VkBaseLayerObject *) (*pInstance));
+
+    VkResult result = pTable->CreateInstance(pCreateInfo, pInstance);
+
+    if (result == VK_SUCCESS) {
+        enable_debug_report(pCreateInfo->extensionCount, pCreateInfo->pEnabledExtensions);
+    }
+    return result;
+}
+
 /* hook DestroyInstance to remove tableInstanceMap entry */
 VK_LAYER_EXPORT VkResult VKAPI vkDestroyInstance(VkInstance instance)
 {
@@ -946,6 +966,25 @@ VK_LAYER_EXPORT VkResult VKAPI vkDestroyInstance(VkInstance instance)
     VkResult res = pTable->DestroyInstance(instance);
     tableInstanceMap.erase(instance);
     return res;
+}
+
+VK_LAYER_EXPORT VkResult VKAPI vkDbgCreateMsgCallback(
+        VkInstance instance,
+        VkFlags msgFlags,
+        const PFN_vkDbgMsgCallback pfnMsgCallback,
+        void* pUserData,
+        VkDbgMsgCallback* pMsgCallback)
+{
+    VkLayerInstanceDispatchTable *pTable = tableInstanceMap[(VkBaseLayerObject *)instance];
+    return layer_create_msg_callback(instance, pTable, msgFlags, pfnMsgCallback, pUserData, pMsgCallback);
+}
+
+VK_LAYER_EXPORT VkResult VKAPI vkDbgDestroyMsgCallback(
+        VkInstance instance,
+        VkDbgMsgCallback msgCallback)
+{
+    VkLayerInstanceDispatchTable *pTable = tableInstanceMap[(VkBaseLayerObject *)instance];
+    return layer_destroy_msg_callback(instance, pTable, msgCallback);
 }
 
 VK_LAYER_EXPORT void * VKAPI vkGetDeviceProcAddr(VkDevice device, const char* pName)
@@ -978,6 +1017,8 @@ VK_LAYER_EXPORT void * VKAPI vkGetDeviceProcAddr(VkDevice device, const char* pN
 
 VK_LAYER_EXPORT void * VKAPI vkGetInstanceProcAddr(VkInstance inst, const char* pName)
 {
+    void *fptr;
+
     if (inst == NULL)
         return NULL;
 
@@ -991,9 +1032,14 @@ VK_LAYER_EXPORT void * VKAPI vkGetInstanceProcAddr(VkInstance inst, const char* 
     if (!strncmp(#fn, pName, sizeof(#fn))) \
         return (void *) fn
 
+    ADD_HOOK(vkCreateInstance);
     ADD_HOOK(vkDestroyInstance);
     ADD_HOOK(vkGetGlobalExtensionInfo);
 #undef ADD_HOOK
+
+    fptr = msg_callback_get_proc_addr(pName);
+    if (fptr)
+        return fptr;
 
     VkLayerInstanceDispatchTable* pTable = tableInstanceMap[(VkBaseLayerObject *) inst];
     if (pTable->GetInstanceProcAddr == NULL)
