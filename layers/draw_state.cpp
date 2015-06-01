@@ -1525,6 +1525,21 @@ static void initDrawState(void)
     }
 }
 
+VK_LAYER_EXPORT VkResult VKAPI vkCreateInstance(const VkInstanceCreateInfo* pCreateInfo, VkInstance* pInstance)
+{
+    VkLayerInstanceDispatchTable *pDisp = *(VkLayerInstanceDispatchTable **) (*pInstance);
+    VkLayerInstanceDispatchTable *pTable = tableInstanceMap[pDisp];
+
+    loader_platform_thread_once(&g_initOnce, initDrawState);
+
+    VkResult result = pTable->CreateInstance(pCreateInfo, pInstance);
+
+    if (result == VK_SUCCESS) {
+        enable_debug_report(pCreateInfo->extensionCount, pCreateInfo->pEnabledExtensions);
+    }
+    return result;
+}
+
 /* hook DestroyInstance to remove tableInstanceMap entry */
 VK_LAYER_EXPORT VkResult VKAPI vkDestroyInstance(VkInstance instance)
 {
@@ -3056,6 +3071,8 @@ VK_LAYER_EXPORT void * VKAPI vkGetInstanceProcAddr(VkInstance instance, const ch
         initInstanceTable((const VkBaseLayerObject *) instance);
         return (void *) vkGetInstanceProcAddr;
     }
+    if (!strcmp(funcName, "vkCreateInstance"))
+        return (void *) vkCreateInstance;
     if (!strcmp(funcName, "vkDestroyInstance"))
         return (void *) vkDestroyInstance;
     if (!strcmp(funcName, "vkCreateDevice"))
