@@ -453,9 +453,12 @@ class Subcommand(object):
 
         if 0 != len(instance_extensions):
             for ext_name in instance_extensions:
-                func_body.append('    else if (!strcmp("%s", funcName))\n'
-                                 '        return %s;' % (ext_name, ext_name))
-        func_body.append("    else {\n"
+                func_body.append("    {\n"
+                                 "        void *fptr;\n"
+                                 "        fptr = %s(funcName);\n"
+                                 "        if (fptr) return fptr;\n"
+                                 "    }\n" % ext_name)
+        func_body.append("    {\n"
                          "        VkLayerInstanceDispatchTable **ppDisp = (VkLayerInstanceDispatchTable **) instance;\n"
                          "        VkLayerInstanceDispatchTable* pTable = tableInstanceMap[*ppDisp];\n"
                          "        if (pTable->GetInstanceProcAddr == NULL)\n"
@@ -1490,7 +1493,8 @@ class ObjectTrackerSubcommand(Subcommand):
         body = [self._generate_layer_initialization(True, lockname='obj'),
                 self._generate_dispatch_entrypoints("VK_LAYER_EXPORT"),
                 self._generate_extensions(),
-                self._generate_layer_gpa_function(extensions=['objTrackGetObjectsCount', 'objTrackGetObjects', 'objTrackGetObjectsOfTypeCount', 'objTrackGetObjectsOfType'])]
+                self._generate_layer_gpa_function(extensions=['objTrackGetObjectsCount', 'objTrackGetObjects', 'objTrackGetObjectsOfTypeCount', 'objTrackGetObjectsOfType'],
+                                                  instance_extensions=['msg_callback_get_proc_addr'])]
         return "\n\n".join(body)
 
 class ThreadingSubcommand(Subcommand):
@@ -1678,7 +1682,10 @@ class ThreadingSubcommand(Subcommand):
         self.layer_name = "Threading"
         body = [self._generate_layer_initialization(True, lockname='threading', condname='threading'),
                 self._generate_dispatch_entrypoints("VK_LAYER_EXPORT"),
-                self._generate_layer_gpa_function()]
+                self._generate_layer_gpa_function(extensions=[],
+                                                  instance_extensions=['msg_callback_get_proc_addr']),
+                self._gen_create_msg_callback(),
+                self._gen_destroy_msg_callback()]
         return "\n\n".join(body)
 
 def main():
