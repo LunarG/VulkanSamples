@@ -780,10 +780,13 @@ void layer_lib_scan(void)
                      snprintf(temp_str, sizeof(temp_str),
                               "%s" DIRECTORY_SYMBOL "%s",p,dent->d_name);
                      // Used to call: dlopen(temp_str, RTLD_LAZY)
+                     fprintf(stderr, "Attempt to open library: %s\n", temp_str);
                      if ((handle = loader_platform_open_library(temp_str)) == NULL) {
                          dent = readdir(curdir);
                          continue;
                      }
+                     fprintf(stderr, "Opened library: %s\n", temp_str);
+
                      /* TODO: Remove fixed count */
                      if (count == MAX_LAYER_LIBRARIES) {
                          loader_log(VK_DBG_REPORT_ERROR_BIT, 0,
@@ -795,12 +798,13 @@ void layer_lib_scan(void)
                                                "vkGetGlobalExtensionInfo");
 
                      if (!fp_get_ext) {
-                        loader_log(VK_DBG_REPORT_WARN_BIT, 0,
+                         fprintf(stderr, "Unable to find vkGetGlobalExtensionInfo\n");
+                         loader_log(VK_DBG_REPORT_WARN_BIT, 0,
                               "Couldn't dlsym vkGetGlobalExtensionInfo from library %s",
                                temp_str);
-                        dent = readdir(curdir);
-                        loader_platform_close_library(handle);
-                        continue;
+                         dent = readdir(curdir);
+                         loader_platform_close_library(handle);
+                         continue;
                      }
 
                      loader.scanned_layers[count].lib_name =
@@ -812,6 +816,7 @@ void layer_lib_scan(void)
 
                      strcpy(loader.scanned_layers[count].lib_name, temp_str);
 
+                     fprintf(stderr, "Collecting global extensions for %s\n", temp_str);
                      get_global_extensions(
                                  fp_get_ext,
                                  loader.scanned_layers[count].lib_name,
@@ -1179,6 +1184,8 @@ uint32_t loader_activate_instance_layers(struct loader_instance *inst)
             nextGPA = (PFN_vkGetInstanceProcAddr) loader_platform_get_proc_address(lib_handle, "vkGetInstanceProcAddr");
         if (!nextGPA) {
             loader_log(VK_DBG_REPORT_ERROR_BIT, 0, "Failed to find vkGetInstanceProcAddr in layer %s", ext_prop->lib_name);
+
+            /* TODO: Should we return nextObj, nextGPA to previous? */
             continue;
         }
 
