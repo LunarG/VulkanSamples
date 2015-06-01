@@ -42,72 +42,16 @@
 
 #include "layers_msg.h"
 #include "layers_debug_marker_table.h"
+#include "layers_table.h"
 
 static LOADER_PLATFORM_THREAD_ONCE_DECLARATION(initOnce);
 struct devExts {
     bool debug_marker_enabled;
 };
-static std::unordered_map<void *, VkLayerDispatchTable *>            tableMap;
-static std::unordered_map<void *, VkLayerInstanceDispatchTable *>    tableInstanceMap;
 static std::unordered_map<void *, struct devExts>     deviceExtMap;
-
-static inline VkLayerDispatchTable *device_dispatch_table(VkObject object) {
-    VkLayerDispatchTable *pDisp  = *(VkLayerDispatchTable **) object;
-    VkLayerDispatchTable *pTable = tableMap[pDisp];
-    return pTable;
-}
-
-static inline VkLayerInstanceDispatchTable *instance_dispatch_table(VkObject object) {
-    VkLayerInstanceDispatchTable **ppDisp    = (VkLayerInstanceDispatchTable **) object;
-    VkLayerInstanceDispatchTable *pInstanceTable = tableInstanceMap[*ppDisp];
-    return pInstanceTable;
-}
 
 
 #include "vk_dispatch_table_helper.h"
-
-static VkLayerDispatchTable * initDeviceTable(const VkBaseLayerObject *devw)
-{
-    VkLayerDispatchTable *pTable;
-
-    assert(devw);
-    VkLayerDispatchTable **ppDisp = (VkLayerDispatchTable **) (devw->baseObject);
-
-    std::unordered_map<void *, VkLayerDispatchTable *>::const_iterator it = tableMap.find((void *) *ppDisp);
-    if (it == tableMap.end())
-    {
-        pTable =  new VkLayerDispatchTable;
-        tableMap[(void *) *ppDisp] = pTable;
-    } else
-    {
-        return it->second;
-    }
-
-    layer_initialize_dispatch_table(pTable, devw);
-
-    return pTable;
-}
-
-static VkLayerInstanceDispatchTable * initInstanceTable(const VkBaseLayerObject *instw)
-{
-    VkLayerInstanceDispatchTable *pTable;
-    assert(instw);
-    VkLayerInstanceDispatchTable **ppDisp = (VkLayerInstanceDispatchTable **) instw->baseObject;
-
-    std::unordered_map<void *, VkLayerInstanceDispatchTable *>::const_iterator it = tableInstanceMap.find((void *) *ppDisp);
-    if (it == tableInstanceMap.end())
-    {
-        pTable =  new VkLayerInstanceDispatchTable;
-        tableInstanceMap[(void *) *ppDisp] = pTable;
-    } else
-    {
-        return it->second;
-    }
-
-    layer_init_instance_dispatch_table(pTable, instw);
-
-    return pTable;
-}
 
 static void initParamChecker(void)
 {
@@ -323,8 +267,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateDevice(VkPhysicalDevice gpu, const VkDevi
 VK_LAYER_EXPORT VkResult VKAPI vkDestroyDevice(VkDevice device)
 {
     VkLayerDispatchTable *pDisp  =  *(VkLayerDispatchTable **) device;
-    VkLayerDispatchTable *pTable = tableMap[pDisp];
-    VkResult              result = pTable->DestroyDevice(device);
+    VkResult result = device_dispatch_table(device)->DestroyDevice(device);
     tableMap.erase(pDisp);
     tableDebugMarkerMap.erase(pDisp);
     deviceExtMap.erase(pDisp);
@@ -1927,8 +1870,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkDbgCreateMsgCallback(
         void* pUserData,
         VkDbgMsgCallback* pMsgCallback)
 {
-    VkLayerInstanceDispatchTable *pDisp = *(VkLayerInstanceDispatchTable **) instance;
-    VkLayerInstanceDispatchTable *pTable = tableInstanceMap[pDisp];
+    VkLayerInstanceDispatchTable *pTable = instance_dispatch_table(instance);
     return layer_create_msg_callback(instance, pTable, msgFlags, pfnMsgCallback, pUserData, pMsgCallback);
 }
 
@@ -2290,8 +2232,7 @@ VK_LAYER_EXPORT void* VKAPI vkGetDeviceProcAddr(VkDevice device, const char* fun
             return (void*) vkDbgSetObjectName;
     }
     {
-        VkLayerDispatchTable **ppDisp = (VkLayerDispatchTable **) device;
-        VkLayerDispatchTable* pTable = tableMap[*ppDisp];
+        VkLayerDispatchTable* pTable = device_dispatch_table(device);
         if (pTable->GetDeviceProcAddr == NULL)
             return NULL;
         return pTable->GetDeviceProcAddr(device, funcName);
@@ -2323,11 +2264,8 @@ VK_LAYER_EXPORT void* VKAPI vkGetInstanceProcAddr(VkInstance instance, const cha
     if (fptr)
         return fptr;
 
-    {
-        VkLayerInstanceDispatchTable **ppDisp = (VkLayerInstanceDispatchTable **) instance;
-        VkLayerInstanceDispatchTable* pTable = tableInstanceMap[*ppDisp];
-        if (pTable->GetInstanceProcAddr == NULL)
-            return NULL;
-        return pTable->GetInstanceProcAddr(instance, funcName);
-    }
+    VkLayerInstanceDispatchTable* pTable = instance_dispatch_table(instance);
+    if (pTable->GetInstanceProcAddr == NULL)
+        return NULL;
+    return pTable->GetInstanceProcAddr(instance, funcName);
 }

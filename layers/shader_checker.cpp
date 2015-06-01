@@ -33,6 +33,7 @@
 #include "vkLayer.h"
 #include "layers_config.h"
 #include "layers_msg.h"
+#include "layers_table.h"
 #include "vk_enum_string_helper.h"
 #include "shader_checker.h"
 // The following is #included again to catch certain OS-specific functions
@@ -42,9 +43,6 @@
 #include "spirv/spirv.h"
 
 
-static std::unordered_map<void *, VkLayerDispatchTable *> tableMap;
-static VkBaseLayerObject *pCurObj;
-static std::unordered_map<void *, VkLayerInstanceDispatchTable *> tableInstanceMap;
 static LOADER_PLATFORM_THREAD_ONCE_DECLARATION(g_initOnce);
 // TODO : This can be much smarter, using separate locks for separate global data
 static int globalLockInitialized = 0;
@@ -142,47 +140,6 @@ initLayer()
         if (g_logFile == NULL)
             g_logFile = stdout;
     }
-}
-
-
-static VkLayerDispatchTable * initLayerTable(const VkBaseLayerObject *devw)
-{
-    VkLayerDispatchTable *pTable;
-
-    assert(devw);
-    std::unordered_map<void *, VkLayerDispatchTable *>::const_iterator it = tableMap.find((void *) devw->baseObject);
-    if (it == tableMap.end())
-    {
-        pTable =  new VkLayerDispatchTable;
-        tableMap[(void *) devw->baseObject] = pTable;
-    } else
-    {
-        return it->second;
-    }
-
-    layer_initialize_dispatch_table(pTable, devw);
-
-    return pTable;
-}
-
-static VkLayerInstanceDispatchTable * initLayerInstanceTable(const VkBaseLayerObject *instw)
-{
-    VkLayerInstanceDispatchTable *pTable;
-
-    assert(instw);
-    std::unordered_map<void *, VkLayerInstanceDispatchTable *>::const_iterator it = tableInstanceMap.find((void *) instw->baseObject);
-    if (it == tableInstanceMap.end())
-    {
-        pTable =  new VkLayerInstanceDispatchTable;
-        tableInstanceMap[(void *) instw->baseObject] = pTable;
-    } else
-    {
-        return it->second;
-    }
-
-    layer_init_instance_dispatch_table(pTable, instw);
-
-    return pTable;
 }
 
 #define SHADER_CHECKER_LAYER_EXT_ARRAY_SIZE 2
@@ -474,8 +431,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateShader(VkDevice device, const VkShaderCre
                                                    VkShader *pShader)
 {
     loader_platform_thread_lock_mutex(&globalLock);
-    VkLayerDispatchTable* pTable = tableMap[(VkBaseLayerObject *)device];
-    VkResult res = pTable->CreateShader(device, pCreateInfo, pShader);
+    VkResult res = device_dispatch_table(device)->CreateShader(device, pCreateInfo, pShader);
 
     shader_map[(VkBaseLayerObject *) *pShader] = new shader_source(pCreateInfo);
     loader_platform_thread_unlock_mutex(&globalLock);
@@ -900,8 +856,7 @@ vkCreateGraphicsPipeline(VkDevice device,
         /* The driver is allowed to crash if passed junk. Only actually create the
          * pipeline if we didn't run into any showstoppers above.
          */
-        VkLayerDispatchTable *pTable = tableMap[(VkBaseLayerObject *)device];
-        return pTable->CreateGraphicsPipeline(device, pCreateInfo, pPipeline);
+        return device_dispatch_table(device)->CreateGraphicsPipeline(device, pCreateInfo, pPipeline);
     }
     else {
         return VK_ERROR_UNKNOWN;
@@ -921,8 +876,7 @@ vkCreateGraphicsPipelineDerivative(VkDevice device,
         /* The driver is allowed to crash if passed junk. Only actually create the
          * pipeline if we didn't run into any showstoppers above.
          */
-        VkLayerDispatchTable *pTable = tableMap[(VkBaseLayerObject *)device];
-        return pTable->CreateGraphicsPipelineDerivative(device, pCreateInfo, basePipeline, pPipeline);
+        return device_dispatch_table(device)->CreateGraphicsPipelineDerivative(device, pCreateInfo, basePipeline, pPipeline);
     }
     else {
         return VK_ERROR_UNKNOWN;
@@ -933,9 +887,9 @@ vkCreateGraphicsPipelineDerivative(VkDevice device,
 /* hook DextroyDevice to remove tableMap entry */
 VK_LAYER_EXPORT VkResult VKAPI vkDestroyDevice(VkDevice device)
 {
-    VkLayerDispatchTable *pTable = tableMap[(VkBaseLayerObject *)device];
-    VkResult res = pTable->DestroyDevice(device);
-    tableMap.erase(device);
+    VkLayerDispatchTable *pDisp =  *(VkLayerDispatchTable **) device;
+    VkResult res = device_dispatch_table(device)->DestroyDevice(device);
+    tableMap.erase(pDisp);
     return res;
 }
 
@@ -949,7 +903,7 @@ VkResult VKAPI vkCreateInstance(
      * For layers, the pInstance has already been filled out
      * by the loader so that dispatch table is available.
      */
-    VkLayerInstanceDispatchTable *pTable = initLayerInstanceTable((const VkBaseLayerObject *) (*pInstance));
+    VkLayerInstanceDispatchTable *pTable = initInstanceTable((const VkBaseLayerObject *) (*pInstance));
 
     VkResult result = pTable->CreateInstance(pCreateInfo, pInstance);
 
@@ -967,9 +921,9 @@ VkResult VKAPI vkCreateInstance(
 /* hook DestroyInstance to remove tableInstanceMap entry */
 VK_LAYER_EXPORT VkResult VKAPI vkDestroyInstance(VkInstance instance)
 {
-    VkLayerInstanceDispatchTable *pTable = tableInstanceMap[(VkBaseLayerObject *)instance];
-    VkResult res = pTable->DestroyInstance(instance);
-    tableInstanceMap.erase(instance);
+    VkLayerInstanceDispatchTable *pDisp = *(VkLayerInstanceDispatchTable **) instance;
+    VkResult res = instance_dispatch_table(instance)->DestroyInstance(instance);
+    tableInstanceMap.erase(pDisp);
     return res;
 }
 
@@ -1001,7 +955,7 @@ VK_LAYER_EXPORT void * VKAPI vkGetDeviceProcAddr(VkDevice device, const char* pN
 
     /* loader uses this to force layer initialization; device object is wrapped */
     if (!strcmp("vkGetDeviceProcAddr", pName)) {
-        initLayerTable((const VkBaseLayerObject *) device);
+        initDeviceTable((const VkBaseLayerObject *) device);
         return (void *) vkGetDeviceProcAddr;
     }
 
@@ -1014,7 +968,7 @@ VK_LAYER_EXPORT void * VKAPI vkGetDeviceProcAddr(VkDevice device, const char* pN
     ADD_HOOK(vkCreateGraphicsPipeline);
     ADD_HOOK(vkCreateGraphicsPipelineDerivative);
 #undef ADD_HOOK
-    VkLayerDispatchTable* pTable = tableMap[(VkBaseLayerObject *)device];
+    VkLayerDispatchTable* pTable = device_dispatch_table(device);
     if (pTable->GetDeviceProcAddr == NULL)
         return NULL;
     return pTable->GetDeviceProcAddr(device, pName);
@@ -1030,7 +984,7 @@ VK_LAYER_EXPORT void * VKAPI vkGetInstanceProcAddr(VkInstance inst, const char* 
     loader_platform_thread_once(&g_initOnce, initLayer);
 
     if (!strcmp("vkGetInstanceProcAddr", pName)) {
-        initLayerInstanceTable((const VkBaseLayerObject *) inst);
+        initInstanceTable((const VkBaseLayerObject *) inst);
         return (void *) vkGetInstanceProcAddr;
     }
 #define ADD_HOOK(fn)    \
@@ -1046,7 +1000,7 @@ VK_LAYER_EXPORT void * VKAPI vkGetInstanceProcAddr(VkInstance inst, const char* 
     if (fptr)
         return fptr;
 
-    VkLayerInstanceDispatchTable* pTable = tableInstanceMap[(VkBaseLayerObject *) inst];
+    VkLayerInstanceDispatchTable* pTable = instance_dispatch_table(inst);
     if (pTable->GetInstanceProcAddr == NULL)
         return NULL;
     return pTable->GetInstanceProcAddr(inst, pName);
