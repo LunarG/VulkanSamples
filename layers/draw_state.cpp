@@ -1591,8 +1591,6 @@ static const VkExtensionProperties dsExts[DRAW_STATE_LAYER_EXT_ARRAY_SIZE] = {
         "DrawState",
         0x10,
         "Sample layer: DrawState",
-//        0,
-//        NULL,
     }
 };
 

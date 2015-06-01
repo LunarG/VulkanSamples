@@ -37,8 +37,6 @@ static const struct loader_extension_property debug_report_extension_info = {
         .name = DEBUG_REPORT_EXTENSION_NAME,
         .version = VK_DEBUG_REPORT_EXTENSION_VERSION,
         .description = "loader: debug report extension",
-//        .dependencyCount = 0,
-//        .pDependencyList = NULL,
         },
     .origin = VK_EXTENSION_ORIGIN_LOADER,
     .hosted = true,
