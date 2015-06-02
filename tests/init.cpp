@@ -133,6 +133,7 @@ protected:
     }
 
     virtual void TearDown() {
+        delete m_device;
         vkDestroyInstance(inst);
     }
 };
