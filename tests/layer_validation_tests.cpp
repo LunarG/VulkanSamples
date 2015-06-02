@@ -39,7 +39,7 @@ struct vktriangle_vs_uniform {
     float   color[3][4];
 };
 
-static const char *bindStateVertShaderText =
+static const char bindStateVertShaderText[] =
         "#version 130\n"
         "vec2 vertices[3];\n"
         "void main() {\n"
@@ -49,7 +49,7 @@ static const char *bindStateVertShaderText =
         "   gl_Position = vec4(vertices[gl_VertexID % 3], 0.0, 1.0);\n"
         "}\n";
 
-static const char *bindStateFragShaderText =
+static const char bindStateFragShaderText[] =
    "#version 130\n"
    "void main() {\n"
    "   gl_FragColor = vec4(0,1,0,1);\n"
