@@ -124,6 +124,11 @@ namespace gla {
         void addIf(const llvm::Value* cond, bool invert=false);
         void addElse();
         void addEndif();
+        void addSwitch(const llvm::Value* cond);
+        void addCase(int);
+        void addDefault();
+        void endCase(bool withBreak);
+        void endSwitch();
         void beginConditionalLoop();
         void beginSimpleConditionalLoop(const llvm::CmpInst* cmp, const llvm::Value* op1, const llvm::Value* op2, bool invert=false);
         void beginForLoop(const llvm::PHINode* phi, llvm::ICmpInst::Predicate, unsigned bound, unsigned increment);

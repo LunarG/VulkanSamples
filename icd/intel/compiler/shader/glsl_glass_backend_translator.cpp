@@ -87,6 +87,7 @@ namespace {
                    matrix(false), notSigned(false), block(false), mdAggregate(0), mdSampler(0) { }
       std::string                 name;
       gla::EMdPrecision           precision;
+      gla::EMdBuiltIn             builtIn;
       gla::EMdTypeLayout          typeLayout;
       gla::EInterpolationMethod   interpMethod;
       gla::EInterpolationLocation interpLocation;
@@ -111,7 +112,7 @@ namespace {
          llvm::Type* proxyType;
          int interpMode;
          if (! CrackIOMd(mdNode, metaType.name, ioKind, proxyType, metaType.typeLayout,
-                         metaType.precision, metaType.location, metaType.mdSampler, metaType.mdAggregate, interpMode)) {
+                         metaType.precision, metaType.location, metaType.mdSampler, metaType.mdAggregate, interpMode, metaType.builtIn)) {
             return false;
          }
 
@@ -138,7 +139,7 @@ namespace {
             CrackInterpolationMode(interpMode, metaType.interpMethod, metaType.interpLocation);
       } else {
          if (! CrackAggregateMd(mdNode, metaType.name, metaType.typeLayout,
-                                metaType.precision, metaType.location, metaType.mdSampler))
+                                metaType.precision, metaType.location, metaType.mdSampler, metaType.builtIn))
             return false;
          metaType.mdAggregate = mdNode;
       }
@@ -229,7 +230,8 @@ namespace {
       return 1;
    }
 
-   static const int NumSamplerTypes     = 2;
+   // Sampler types grew to include include image types with formats.  We don't have image support yet.
+   static const int NumSamplerTypes     = 40;
    static const int NumSamplerBaseTypes = 3;
    static const int NumSamplerDims      = 6;
    static const glsl_type* SamplerTypes[NumSamplerTypes][NumSamplerBaseTypes][NumSamplerDims][true+1][true+1];
@@ -1156,6 +1158,7 @@ void MesaGlassTranslator::addIoDeclaration(gla::EVariableQualifier qualifier,
             assert(irInterfaceType->fields.structure[field].location == -1);
 
             // Look up the binding info for each member
+            // LunarG TODO: This looks like a no-op
             MetaType metaType;
             decodeMdTypesEmitMdQualifiers(isIoMd(mdNode), mdNode, mdType, false, metaType);
 
@@ -2441,6 +2444,55 @@ void MesaGlassTranslator::addEndif()
    ifStack.pop_back();
 }
 
+/**
+ * -----------------------------------------------------------------------------
+ * Emit switch
+ * -----------------------------------------------------------------------------
+ */
+void MesaGlassTranslator::addSwitch(const llvm::Value* cond)
+{
+   assert(0 && "TODO: ...");
+}
+
+/**
+ * -----------------------------------------------------------------------------
+ * Emit case
+ * -----------------------------------------------------------------------------
+ */
+void MesaGlassTranslator::addCase(int)
+{
+   assert(0 && "TODO: ...");
+}
+
+/**
+ * -----------------------------------------------------------------------------
+ * Emit default
+ * -----------------------------------------------------------------------------
+ */
+void MesaGlassTranslator::addDefault()
+{
+   assert(0 && "TODO: ...");
+}
+
+/**
+ * -----------------------------------------------------------------------------
+ * Emit endcase
+ * -----------------------------------------------------------------------------
+ */
+void MesaGlassTranslator::endCase(bool withBreak)
+{
+   assert(0 && "TODO: ...");
+}
+
+/**
+ * -----------------------------------------------------------------------------
+ * Emit endswitch
+ * -----------------------------------------------------------------------------
+ */
+void MesaGlassTranslator::endSwitch()
+{
+   assert(0 && "TODO: ...");
+}
 
 /**
  * -----------------------------------------------------------------------------
