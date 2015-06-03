@@ -164,12 +164,12 @@ bool VkTestFramework::m_show_images = false;
 bool VkTestFramework::m_save_images = false;
 bool VkTestFramework::m_compare_images = false;
 #ifdef _WIN32
-bool VkTestFramework::m_use_spv = false;
+bool VkTestFramework::m_use_glsl = false;
 bool VkTestFramework::m_canonicalize_spv = false;
 bool VkTestFramework::m_strip_spv = false;
 bool VkTestFramework::m_do_everything_spv = false;
 #else
-bool VkTestFramework::m_use_spv = true;
+bool VkTestFramework::m_use_glsl = false;
 bool VkTestFramework::m_canonicalize_spv = false;
 bool VkTestFramework::m_strip_spv = false;
 bool VkTestFramework::m_do_everything_spv = false;
@@ -180,40 +180,34 @@ std::list<VkTestImageRecord> VkTestFramework::m_images;
 std::list<VkTestImageRecord>::iterator VkTestFramework::m_display_image;
 int m_display_image_idx = 0;
 
+bool VkTestFramework::optionMatch(const char* option, char* optionLine)
+{
+    if (strncmp(option, optionLine, strlen(option)) == 0)
+        return true;
+    else
+        return false;
+}
+
 void VkTestFramework::InitArgs(int *argc, char *argv[])
 {
     int i, n;
 
-    for (i=0, n=0; i< *argc; i++) {
-        if (strncmp("--show-images", argv[i], 13) == 0) {
+    for (i=1, n=1; i< *argc; i++) {
+        if (optionMatch("--show-images", argv[i]))
             m_show_images = true;
-            continue;
-        }
-        if (strncmp("--save-images", argv[i], 13) == 0) {
+        else if (optionMatch("--save-images", argv[i]))
             m_save_images = true;
-            continue;
-        }
-
-        if (strncmp("--use-SPV", argv[i], 13) == 0) {
-            m_use_spv = true;
-            continue;
-        }
-
-        if (strncmp("--no-SPV", argv[i], 13) == 0) {
-            m_use_spv = false;
-            continue;
-        }
-
-        if (strncmp("--compare-images", argv[i], 16) == 0) {
+        else if (optionMatch("--no-SPV", argv[i]))
+            m_use_glsl = true;
+        else if (optionMatch("--strip-SPV", argv[i]))
+             m_strip_spv = true;
+        else if (optionMatch("--canonicalize-SPV", argv[i]))
+            m_canonicalize_spv = true;
+        else if (optionMatch("--compare-images", argv[i]))
             m_compare_images = true;
-            continue;
-        }
 
-        /*
-         * Since the above "consume" inputs, update argv
-         * so that it contains the trimmed list of args for glutInit
-         */
-        if (strncmp("--help", argv[i], 6) == 0 || strncmp("-h", argv[i], 2) == 0) {
+        else if (optionMatch("--help", argv[i]) ||
+                 optionMatch("-h", argv[i])) {
             printf("\nOther options:\n");
             printf("\t--show-images\n"
                    "\t\tDisplay test images in viewer after tests complete.\n");
@@ -227,12 +221,23 @@ void VkTestFramework::InitArgs(int *argc, char *argv[])
                    "\t\tSetting RENDERTEST_GOLDEN_DIR environment variable can specify\n"
                    "\t\t\tdifferent directory for golden images\n"
                    "\t\tSignal test failure if different.\n");
-            printf("\t--use-SPV\n"
-                   "\t\tUse SPV code path (default).\n");
             printf("\t--no-SPV\n"
                    "\t\tUse built-in GLSL compiler rather than SPV code path.\n");
+            printf("\t--strip-SPV\n"
+                   "\t\tUse built-in GLSL compiler rather than SPV code path.\n");
+            printf("\t--canonicalize-SPV\n"
+                   "\t\tUse built-in GLSL compiler rather than SPV code path.\n");
+            exit(0);
+        } else {
+            printf("\nUnrecognized option: %s\n", argv[i]);
+            printf("\nUse --help or -h for option list.\n");
             exit(0);
         }
+
+        /*
+         * Since the above "consume" inputs, update argv
+         * so that it contains the trimmed list of args for glutInit
+         */
 
         argv[n] = argv[i];
         n++;

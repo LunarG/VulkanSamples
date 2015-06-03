@@ -616,7 +616,7 @@ TEST_F(VkRenderTest, SPV_VKTriangle)
 
     TEST_DESCRIPTION("VK-style shaders, but force test framework to compile shader to SPV and pass SPV to driver.");
 
-    ScopedUseSpv spv(true);
+    ScopedUseGlsl useGlsl(false);
     VKTriangleTest(vertShaderText, fragShaderText, true);
 }
 #endif
@@ -663,7 +663,8 @@ TEST_F(VkRenderTest, SPV_GreenTriangle)
 
     TEST_DESCRIPTION("Same shader as GreenTriangle, but compiles shader to SPV and gives SPV to driver.");
 
-    ScopedUseSpv spv(true);
+    ScopedUseGlsl useGlsl(false);
+
     VKTriangleTest(vertShaderText, fragShaderText, false);
 }
 #endif
@@ -3159,8 +3160,7 @@ TEST_F(VkRenderTest, TextureGather)
     // Red means something went wrong
 
     // disable SPV until texture gather is turned on in LunarGLASS
-    bool saved_use_spv = VkTestFramework::m_use_spv;
-    VkTestFramework::m_use_spv = false;
+    ScopedUseGlsl useGlsl(true);
 
     static const char *vertShaderText =
             "#version 140\n"
@@ -3256,9 +3256,6 @@ TEST_F(VkRenderTest, TextureGather)
     cmdBuffer.QueueCommandBuffer();
 
     RecordImages(m_renderTargets);
-
-    // restore SPV setting
-    VkTestFramework::m_use_spv = saved_use_spv;
 }
 
 TEST_F(VkRenderTest, GeometryShaderHelloWorld)

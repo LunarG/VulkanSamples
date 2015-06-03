@@ -953,7 +953,7 @@ VkShaderObj::VkShaderObj(VkDeviceObj *device, const char * shader_code, VkShader
     createInfo.sType = VK_STRUCTURE_TYPE_SHADER_CREATE_INFO;
     createInfo.pNext = NULL;
 
-    if (!framework->m_use_spv) {
+    if (framework->m_use_glsl) {
 
         shader_len = strlen(shader_code);
         createInfo.codeSize = 3 * sizeof(uint32_t) + shader_len + 1;
@@ -966,21 +966,16 @@ VkShaderObj::VkShaderObj(VkDeviceObj *device, const char * shader_code, VkShader
         ((uint32_t *) createInfo.pCode)[2] = stage;
         memcpy(((uint32_t *) createInfo.pCode + 3), shader_code, shader_len + 1);
 
-        err = init_try(*m_device, createInfo);
-    }
-
-    if (framework->m_use_spv || err) {
-        std::vector<unsigned int> spv;
-        err = VK_SUCCESS;
+    } else {
 
         // Use Reference GLSL to SPV compiler
         framework->GLSLtoSPV(stage, shader_code, spv);
         createInfo.pCode = spv.data();
         createInfo.codeSize = spv.size() * sizeof(unsigned int);
         createInfo.flags = 0;
-
-        err = init_try(*m_device, createInfo);
     }
+
+    err = init_try(*m_device, createInfo);
 
     assert(VK_SUCCESS == err);
 }

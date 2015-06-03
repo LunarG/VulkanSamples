@@ -81,6 +81,7 @@ public:
     VkTestFramework();
     ~VkTestFramework();
 
+    static bool optionMatch(const char* option, char* optionLine);
     static void InitArgs(int *argc, char *argv[]);
     static void InitWindow();
     static void Finish();
@@ -93,7 +94,7 @@ public:
     bool GLSLtoSPV(const VkShaderStage shader_type,
                    const char *pshader,
                    std::vector<unsigned int> &spv);
-    static bool         m_use_spv;
+    static bool         m_use_glsl;
     static bool         m_canonicalize_spv;
     static bool         m_strip_spv;
     static bool         m_do_everything_spv;
@@ -127,18 +128,18 @@ private:
     string                                  m_testName;
 };
 
-class ScopedUseSpv
+class ScopedUseGlsl
 {
     bool saved_value;
 public:
-    ScopedUseSpv(bool value)
-        : saved_value(VkTestFramework::m_use_spv)
+    ScopedUseGlsl(bool value)
+        : saved_value(VkTestFramework::m_use_glsl)
     {
-        VkTestFramework::m_use_spv = value;
+        VkTestFramework::m_use_glsl = value;
     }
 
-    ~ScopedUseSpv() {
-        VkTestFramework::m_use_spv = saved_value;
+    ~ScopedUseGlsl() {
+        VkTestFramework::m_use_glsl = saved_value;
     }
 };
 
