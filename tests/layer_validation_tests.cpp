@@ -1574,7 +1574,7 @@ TEST_F(VkLayerTest, NumSamplesMismatch)
     const VkPipelineMsStateCreateInfo pipe_ms_state_ci = {
         .sType               = VK_STRUCTURE_TYPE_PIPELINE_MS_STATE_CREATE_INFO,
         .pNext               = NULL,
-        .samples             = 1,
+        .samples             = 4,
         .multisampleEnable   = 1,
         .sampleShadingEnable = 0,
         .minSampleShading    = 1.0,
