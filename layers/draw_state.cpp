@@ -857,12 +857,12 @@ static void deletePools()
             // Free Update shadow struct tree
             freeShadowUpdateTree(pFreeSet);
             if (pFreeSet->ppDescriptors) {
-                delete pFreeSet->ppDescriptors;
+                delete[] pFreeSet->ppDescriptors;
             }
             delete pFreeSet;
         }
         if ((*ii).second->createInfo.pTypeCount) {
-            delete (*ii).second->createInfo.pTypeCount;
+            delete[] (*ii).second->createInfo.pTypeCount;
         }
         delete (*ii).second;
     }
@@ -883,7 +883,7 @@ static void deleteLayouts()
             delete[] pLayout->createInfo.pBinding;
         }
         if (pLayout->pTypes) {
-            delete pLayout->pTypes;
+            delete[] pLayout->pTypes;
         }
         delete pLayout;
     }

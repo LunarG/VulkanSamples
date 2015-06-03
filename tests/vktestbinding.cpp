@@ -440,7 +440,7 @@ void Device::init_queues()
         }
     }
 
-    delete queue_props;
+    delete[] queue_props;
 
     EXPECT(!queues_[GRAPHICS].empty() || !queues_[COMPUTE].empty());
 }
