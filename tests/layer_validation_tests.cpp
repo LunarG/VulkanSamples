@@ -1795,7 +1795,6 @@ TEST_F(VkLayerTest, CreatePipelineVertexOutputNotConsumed)
         FAIL() << "Incorrect warning: " << msgString;
     }
 }
-#endif
 
 TEST_F(VkLayerTest, CreatePipelineFragmentInputNotProvided)
 {
@@ -2269,6 +2268,7 @@ TEST_F(VkLayerTest, CreatePipelineFragmentOutputTypeMismatch)
         FAIL() << "Incorrect error: " << msgString;
     }
 }
+#endif
 
 int main(int argc, char **argv) {
     int result;
