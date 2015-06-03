@@ -567,6 +567,7 @@ void VkTest::CreateImageTest()
         ASSERT_VK_SUCCESS(vkFreeMemory(device(), image_mem));
     }
 
+    ASSERT_VK_SUCCESS(vkDestroyObject(device(), VK_OBJECT_TYPE_IMAGE_VIEW, view));
     ASSERT_VK_SUCCESS(vkDestroyObject(device(), VK_OBJECT_TYPE_IMAGE, image));
 }
 

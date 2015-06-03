@@ -286,6 +286,7 @@ void VkRenderFramework::InitRenderTarget(uint32_t targets, VkDepthStencilBindInf
     rp_info.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
     rp_info.stencilLoadClearValue = m_stencil_clear_color;
     rp_info.stencilStoreOp = VK_ATTACHMENT_STORE_OP_STORE;
+    rp_info.sampleCount = 1;
     vkCreateRenderPass(device(), &rp_info, &m_renderPass);
 }
 
