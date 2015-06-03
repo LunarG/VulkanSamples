@@ -55,9 +55,7 @@ include_directories(
     "${PROJECT_SOURCE_DIR}/tests/gtest-1.7.0/include"
     "${PROJECT_SOURCE_DIR}/icd/common"
     "${PROJECT_SOURCE_DIR}/layers"
-    "${GLSLANG_PREFIX}/glslang/Include"
-    "${GLSLANG_PREFIX}/glslang/Public"
-    "${GLSLANG_PREFIX}/SPIRV"
+    ${GLSLANG_PREFIX}
     ${XCB_INCLUDE_DIRS}
     ${LIBGLM_INCLUDE_DIR}
     ${ImageMagick_INCLUDE_DIRS}

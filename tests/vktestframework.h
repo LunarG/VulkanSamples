@@ -24,8 +24,8 @@
 #define VKTESTFRAMEWORK_H
 
 #include "gtest-1.7.0/include/gtest/gtest.h"
-#include "ShaderLang.h"
-#include "GLSL450Lib.h"
+#include "glslang/Public/ShaderLang.h"
+#include "SPIRV/GLSL450Lib.h"
 #include "icd-spv.h"
 #include "test_common.h"
 #include "vktestbinding.h"
@@ -94,6 +94,9 @@ public:
                    const char *pshader,
                    std::vector<unsigned int> &spv);
     static bool         m_use_spv;
+    static bool         m_canonicalize_spv;
+    static bool         m_strip_spv;
+    static bool         m_do_everything_spv;
 
     char** ReadFileData(const char* fileName);
     void FreeFileData(char** data);

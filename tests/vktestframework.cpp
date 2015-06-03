@@ -22,7 +22,8 @@
 
 #include "vktestframework.h"
 #include "vkrenderframework.h"
-#include "GlslangToSpv.h"
+#include "SPIRV/GlslangToSpv.h"
+#include "SPIRV/SPVRemapper.h"
 #include <limits.h>
 #include <math.h>
 #include <wand/MagickWand.h>
@@ -164,8 +165,14 @@ bool VkTestFramework::m_save_images = false;
 bool VkTestFramework::m_compare_images = false;
 #ifdef _WIN32
 bool VkTestFramework::m_use_spv = false;
+bool VkTestFramework::m_canonicalize_spv = false;
+bool VkTestFramework::m_strip_spv = false;
+bool VkTestFramework::m_do_everything_spv = false;
 #else
 bool VkTestFramework::m_use_spv = true;
+bool VkTestFramework::m_canonicalize_spv = false;
+bool VkTestFramework::m_strip_spv = false;
+bool VkTestFramework::m_do_everything_spv = false;
 #endif
 int VkTestFramework::m_width = 0;
 int VkTestFramework::m_height = 0;
@@ -1335,7 +1342,7 @@ EShLanguage VkTestFramework::FindLanguage(const VkShaderStage shader_type)
 //
 bool VkTestFramework::GLSLtoSPV(const VkShaderStage shader_type,
                                  const char *pshader,
-                                 std::vector<unsigned int> &spv)
+                                 std::vector<unsigned int> &spirv)
 {
     glslang::TProgram& program = *new glslang::TProgram;
     const char *shaderStrings[1];
@@ -1387,7 +1394,23 @@ bool VkTestFramework::GLSLtoSPV(const VkShaderStage shader_type,
         program.dumpReflection();
     }
 
-    glslang::GlslangToSpv(*program.getIntermediate(stage), spv);
+    glslang::GlslangToSpv(*program.getIntermediate(stage), spirv);
+
+    //
+    // Test the different modes of SPIR-V modification
+    //
+    if (this->m_canonicalize_spv) {
+        spv::spirvbin_t(0).remap(spirv, spv::spirvbin_t::ALL_BUT_STRIP);
+    }
+
+    if (this->m_strip_spv) {
+        spv::spirvbin_t(0).remap(spirv, spv::spirvbin_t::STRIP);
+    }
+
+    if (this->m_do_everything_spv) {
+        spv::spirvbin_t(0).remap(spirv, spv::spirvbin_t::DO_EVERYTHING);
+    }
+
 
     return true;
 }
