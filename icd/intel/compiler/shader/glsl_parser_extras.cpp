@@ -32,6 +32,9 @@
 #include "Frontends/glslang/GlslangToTop.h"
 #include "Frontends/SPIRV/SpvToTop.h"
 #include "SPIRV/GlslangToSpv.h"
+#include "SPIRV/GLSL450Lib.h"
+#include "SPIRV/disassemble.h"
+#include "SPIRV/doc.h"
 #include "glsl_glass_manager.h"
 #include "glsl_glass_backend_translator.h"
 
@@ -1566,9 +1569,11 @@ EShLanguage _mesa_shader_stage_to_glslang_stage(unsigned stage)
    }
 }
 
+const char* GlslStd450DebugNames[GLSL_STD_450::Count];
+
 void
 _mesa_glsl_compile_shader(struct gl_context *ctx, struct gl_shader *shader,
-                          bool dump_ast, bool dump_hir)
+                          bool dump_ast, bool dump_SPV, bool dump_hir)
 {
    const char* infoLog = "";
 
@@ -1642,6 +1647,12 @@ _mesa_glsl_compile_shader(struct gl_context *ctx, struct gl_shader *shader,
                spv.reserve(shader->Size);
                for (int x=0; x<shader->Size; ++x)
                    spv.push_back(((unsigned int *)shader->Source)[x]);
+
+               if (dump_SPV) {
+                   spv::Parameterize();
+                   GLSL_STD_450::GetDebugNames(GlslStd450DebugNames);
+                   spv::Disassemble(std::cout, spv);
+               }
 
                gla::SpvToTop(spv, *manager);
            } else {

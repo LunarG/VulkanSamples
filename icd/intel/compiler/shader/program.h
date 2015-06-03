@@ -30,7 +30,7 @@ extern "C" {
 
 extern void
 _mesa_glsl_compile_shader(struct gl_context *ctx, struct gl_shader *shader,
-			  bool dump_ast, bool dump_hir);
+			  bool dump_ast, bool dump_SPV, bool dump_hir);
 
 #ifdef __cplusplus
 } /* extern "C" */
