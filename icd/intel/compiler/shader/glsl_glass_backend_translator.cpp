@@ -88,6 +88,7 @@ namespace {
       std::string                 name;
       gla::EMdPrecision           precision;
       gla::EMdBuiltIn             builtIn;
+      gla::EMdInputOutput         ioKind;
       gla::EMdTypeLayout          typeLayout;
       gla::EInterpolationMethod   interpMethod;
       gla::EInterpolationLocation interpLocation;
@@ -108,25 +109,24 @@ namespace {
       using namespace gla;
 
       if (ioRoot) {
-         EMdInputOutput ioKind;
          llvm::Type* proxyType;
          int interpMode;
-         if (! CrackIOMd(mdNode, metaType.name, ioKind, proxyType, metaType.typeLayout,
+         if (! CrackIOMd(mdNode, metaType.name, metaType.ioKind, proxyType, metaType.typeLayout,
                          metaType.precision, metaType.location, metaType.mdSampler, metaType.mdAggregate, interpMode, metaType.builtIn)) {
             return false;
          }
 
          metaType.block =
-            ioKind == EMioUniformBlockMember ||
-            ioKind == EMioBufferBlockMember  ||
-            ioKind == EMioPipeOutBlock       ||
-            ioKind == EMioPipeInBlock;
+            metaType.ioKind == EMioUniformBlockMember ||
+            metaType.ioKind == EMioBufferBlockMember  ||
+            metaType.ioKind == EMioPipeOutBlock       ||
+            metaType.ioKind == EMioPipeInBlock;
 
          if (type == 0)
             type = proxyType;
 
          // emit interpolation qualifier, if appropriate
-         switch (ioKind) {
+         switch (metaType.ioKind) {
          case EMioPipeIn:   metaType.qualifier = EVQInput;   break;
          case EMioPipeOut:  metaType.qualifier = EVQOutput;  break;
          default:           metaType.qualifier = EVQUndef;   break;
@@ -1110,42 +1110,76 @@ void MesaGlassTranslator::addGlobal(const llvm::GlobalVariable* global)
 void MesaGlassTranslator::addIoDeclaration(gla::EVariableQualifier qualifier,
                                            const llvm::MDNode* mdNode)
 {
-   const llvm::Type* mdType = mdNode->getOperand(2)->getType()->getContainedType(0);
+   const llvm::Type* mdRawType = 0;
+   MetaType metaType;
+   decodeMdTypesEmitMdQualifiers(true, mdNode, mdRawType, false, metaType);
+   const llvm::Type* mdType = mdRawType->getContainedType(0);
 
-   std::string name = mdNode->getOperand(0)->getName();
+   std::string name = metaType.name;
    bool anonymous = false;
 
+   std::string bname;
    if (name.empty()) {
-      name = mdNode->getOperand(2)->getName();
-      StripSuffix(name, "_typeProxy");
-      StripSuffix(name, "_shadow");
-      // look for builtin; use that name and remap original name
-      std::string bname;
-      const llvm::ConstantInt* constInt = llvm::dyn_cast<llvm::ConstantInt>(mdNode->getOperand(1));
-      if (! constInt)
-          return error("missing InputOutput Metadata");
-      gla::EMdInputOutput io = (gla::EMdInputOutput)constInt->getSExtValue();
-      switch (io) {
-      case EMioVertexPosition: bname = "gl_Position";     break;
-      //case EMioPointSize:      bname = "gl_PointSize";    break;
-      //case EMioClipVertex:     bname = "gl_ClipVertex";   break;
-      case EMioClipDistance:   bname = "gl_ClipDistance"; break;
-      //case EMioFragmentDepth:  bname = "gl_FragDepth";    break;
-      case EMioVertexId:       bname = "gl_VertexID";     break;
-      case EMioInstanceId:     bname = "gl_InstanceID";   break;
-      //case EMioFragmentFace:   bname = "gl_FrontFacing";  break;
-      //case EMioFragmentCoord:  bname = "gl_FragCoord";    break;
-      //case EMioPointCoord:     bname = "gl_PointCoord";   break;
-      // LunarG TODO: Handle other builtins?
-      default: break;
-      } // switch
-      if (!bname.empty()) {
-          nameBuiltinMap[name] = bname;
-          name = bname;
-      }
-      if (io == gla::EMioBufferBlockMember)
-      //if (io == gla::EMioUniformBlockMember)
-          anonymous = true;
+       name = mdNode->getOperand(2)->getName();
+       StripSuffix(name, "_typeProxy");
+       StripSuffix(name, "_shadow");
+       if (metaType.ioKind == gla::EMioUniformBlockMember)
+           anonymous = true;
+   }
+
+   switch (metaType.builtIn) {
+   case EmbPosition:       bname = "gl_Position";     break;
+   case EmbPointSize:      bname = "gl_PointSize";    break;
+   //case EMioClipVertex:     bname = "gl_ClipVertex";   break;
+   case EmbClipDistance:   bname = "gl_ClipDistance"; break;
+   //case EMioFragmentDepth:  bname = "gl_FragDepth";    break;
+   case EmbVertexId:       bname = "gl_VertexID";     break;
+   case EmbInstanceId:     bname = "gl_InstanceID";   break;
+   //case EMioFragmentFace:   bname = "gl_FrontFacing";  break;
+   case EmbFragCoord:      bname = "gl_FragCoord";    break;
+   //case EMioPointCoord:     bname = "gl_PointCoord";   break;
+   // LunarG TODO: Handle other builtins?
+   case EmbNone:
+       if (metaType.ioKind == gla::EMioPipeInBlock)
+            bname = "gl_in";
+       break;
+   default: break;
+   } // switch
+
+#if 0
+   std::string bname;
+   switch (metaType.builtIn) {
+   case EmbPosition:       bname = "gl_Position";     break;
+   case EmbPointSize:      bname = "gl_PointSize";    break;
+   //case EMioClipVertex:     bname = "gl_ClipVertex";   break;
+   case EmbClipDistance:   bname = "gl_ClipDistance"; break;
+   //case EMioFragmentDepth:  bname = "gl_FragDepth";    break;
+   case EmbVertexId:       bname = "gl_VertexID";     break;
+   case EmbInstanceId:     bname = "gl_InstanceID";   break;
+   //case EMioFragmentFace:   bname = "gl_FrontFacing";  break;
+   case EmbFragCoord:      bname = "gl_FragCoord";    break;
+   //case EMioPointCoord:     bname = "gl_PointCoord";   break;
+   // LunarG TODO: Handle other builtins?
+   case EmbNone:
+       if (name.empty()) {
+           name = mdNode->getOperand(2)->getName();
+           StripSuffix(name, "_typeProxy");
+           StripSuffix(name, "_shadow");
+           if (metaType.ioKind == gla::EMioPipeInBlock) {
+               bname = "gl_in";
+           } else {
+               if (metaType.ioKind == gla::EMioUniformBlockMember)
+                   anonymous = true;
+           }
+       }
+       break;
+   default: break;
+   } // switch
+#endif
+
+   if (!bname.empty()) {
+       nameBuiltinMap[name] = bname;
+       name = bname;
    }
 
    const glsl_type*       irInterfaceType = llvmTypeToHirType(mdType, mdNode);
@@ -1283,14 +1317,37 @@ MesaGlassTranslator::convertStructType(const llvm::StructType* structType,
 
       const llvm::Type* containedType  = structType->getContainedType(index);
 
+      MetaType metaType;
+      if (subMdAggregate)
+         decodeMdTypesEmitMdQualifiers(false, subMdAggregate, containedType, false, metaType);
+
       // If there's metadata, use that field name.  Else, make up a field name.
       if (mdNode) {
          subName = mdNode->getOperand(GetAggregateMdNameOp(index))->getName().str();
          if (subName.empty()) {
-             char anonFieldName[20]; // enough for "anon_" + digits to hold maxint
-             snprintf(anonFieldName, sizeof(anonFieldName), "%s%s%d", blockName.str().c_str(), "_gg_", index);
-             subName.assign(anonFieldName);
-             name = subName;
+             if (subMdAggregate && metaType.builtIn != EmbNone) {
+                 std::string bname;
+                 switch (metaType.builtIn) {
+                 case EmbPosition: bname = "gl_Position";     break;
+                 case EmbPointSize:      bname = "gl_PointSize";    break;
+                 //case EMioClipVertex:     bname = "gl_ClipVertex";   break;
+                 case EmbClipDistance:   bname = "gl_ClipDistance"; break;
+                 //case EMioFragmentDepth:  bname = "gl_FragDepth";    break;
+                 case EmbVertexId:       bname = "gl_VertexID";     break;
+                 case EmbInstanceId:     bname = "gl_InstanceID";   break;
+                 //case EMioFragmentFace:   bname = "gl_FrontFacing";  break;
+                 case EmbFragCoord:  bname = "gl_FragCoord";    break;
+                 //case EMioPointCoord:     bname = "gl_PointCoord";   break;
+                 // LunarG TODO: Handle other builtins?
+                 default: error("unhandled builtIn");
+                 } // switch
+                 subName.assign(bname);
+             } else {
+                char anonFieldName[20]; // enough for "anon_" + digits to hold maxint
+                snprintf(anonFieldName, sizeof(anonFieldName), "%s%s%d", blockName.str().c_str(), "_gg_", index);
+                subName.assign(anonFieldName);
+                name = subName;
+             }
          }
       } else {
          char anonFieldName[20]; // enough for "anon_" + digits to hold maxint
@@ -1299,13 +1356,11 @@ MesaGlassTranslator::convertStructType(const llvm::StructType* structType,
       }
 
       // TODO: set arrayChild, etc properly
-      MetaType metaType;
 
       fields[index].name          = ralloc_strdup(shader, subName.c_str());
       fields[index].type          = llvmTypeToHirType(containedType, subMdAggregate);
 
       if (subMdAggregate) {
-         decodeMdTypesEmitMdQualifiers(false, subMdAggregate, containedType, false, metaType);
 
          if (metaType.location < gla::MaxUserLayoutLocation) {
             fields[index].location      = metaType.location;
@@ -1420,7 +1475,7 @@ MesaGlassTranslator::llvmTypeToHirType(const llvm::Type* type,
          const llvm::StructType* structType = llvm::dyn_cast<const llvm::StructType>(type);
          assert(structType);
 
-         const llvm::StringRef structName = structType->isLiteral() ? "" : structType->getName();
+         llvm::StringRef structName = structType->isLiteral() ? "" : structType->getName();
 
          // Check for a top level uniform/input/output MD with an aggregate MD hanging off it
          // TODO: set arrayChild properly
@@ -1433,6 +1488,11 @@ MesaGlassTranslator::llvmTypeToHirType(const llvm::Type* type,
              blockName = name;
 
              decodeMdTypesEmitMdQualifiers(isIoMd(mdNode), mdNode, type, false, metaType);
+
+             if (metaType.ioKind == EMioPipeOutBlock)
+                 structName = "gl_PerVertex";
+             else if (metaType.ioKind == EMioPipeInBlock)
+                 structName = "gl_PerVertex.0";
 
              // Convert IO metadata to aggregate metadata if needed.
              if (isIoAggregateMd(mdNode))
@@ -2968,7 +3028,9 @@ inline const glsl_type* MesaGlassTranslator::glslMatType(int numCols, int numRow
 inline ir_rvalue*
 MesaGlassTranslator::makeIRLoad(const llvm::Instruction* llvmInst, const glsl_type* typeOverride)
 {
-   const llvm::GetElementPtrInst* gepInst = getGepAsInst(llvmInst->getOperand(0));
+   const llvm::Value*             src     = llvmInst->getOperand(0);
+   const llvm::GetElementPtrInst* gepInst = getGepAsInst(src);
+
    const llvm::MDNode*            mdNode  = llvmInst->getMetadata(UniformMdName);
    std::string                    name;
 
@@ -3008,6 +3070,35 @@ MesaGlassTranslator::makeIRLoad(const llvm::Instruction* llvmInst, const glsl_ty
    // Handle GEP traversal
    if (gepInst) {
       const llvm::Value* gepSrc = gepInst->getPointerOperand();
+
+      // If this is the first load from this aggregate, make up a new one.
+      const tValueMap::const_iterator location = valueMap.find(gepSrc);
+      if (location == valueMap.end()) {
+          const llvm::MDNode* mdNode;
+          const llvm::Type*   mdType;
+          const llvm::Type*   mdAggregateType;
+
+          FindGepType(gepInst, mdType, mdAggregateType, mdNode);
+          const glsl_type* irType = llvmTypeToHirType(mdType, mdNode, llvmInst);
+
+          llvm::StringRef name = src->getName();
+
+          if (gepSrc) {
+             name = gepSrc->getName();
+
+             // Look for builtin
+             tNameBuiltinMap::const_iterator got = nameBuiltinMap.find(name);
+             if (got != nameBuiltinMap.end())
+                 name = got->second;
+          }
+
+          const ir_variable_mode irMode = ir_variable_mode(globalVarModeMap[name]);
+
+          ir_rvalue* irDst = newIRVariableDeref(irType, name, irMode);
+
+          valueMap.insert(tValueMap::value_type(gepSrc, irDst)).first;
+       }
+
 
       // TODO: For globals, do we really have to look this up from the
       // global decl?  The global decl can't put any llvm::Value in the map,
