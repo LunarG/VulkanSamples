@@ -825,6 +825,8 @@ void layer_lib_scan(void)
     len = strlen(libPaths);
     loader.layer_dirs = malloc(len+1);
     if (loader.layer_dirs == NULL) {
+        loader_log(VK_DBG_REPORT_WARN_BIT, 0, "Out of memory can't add layer directories");
+
         free(libPaths);
         return;
     }
