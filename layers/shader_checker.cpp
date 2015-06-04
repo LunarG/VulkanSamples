@@ -765,9 +765,8 @@ validate_fs_outputs_against_cb(shader_source const *fs, VkPipelineCbStateCreateI
 }
 
 
-VK_LAYER_EXPORT VkResult VKAPI vkCreateGraphicsPipeline(VkDevice device,
-                                                             const VkGraphicsPipelineCreateInfo *pCreateInfo,
-                                                             VkPipeline *pPipeline)
+static bool
+validate_graphics_pipeline(VkGraphicsPipelineCreateInfo const *pCreateInfo)
 {
     /* TODO: run cross-stage validation for GS, TCS, TES stages */
 
@@ -822,14 +821,22 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateGraphicsPipeline(VkDevice device,
         pass = validate_fs_outputs_against_cb(fs_source, cb) && pass;
     }
 
-    VkLayerDispatchTable *pTable = tableMap[(VkBaseLayerObject *)device];
-
     loader_platform_thread_unlock_mutex(&globalLock);
+    return pass;
+}
+
+
+VK_LAYER_EXPORT VkResult VKAPI vkCreateGraphicsPipeline(VkDevice device,
+                                                        const VkGraphicsPipelineCreateInfo *pCreateInfo,
+                                                        VkPipeline *pPipeline)
+{
+    bool pass = validate_graphics_pipeline(pCreateInfo);
 
     if (pass) {
         /* The driver is allowed to crash if passed junk. Only actually create the
          * pipeline if we didn't run into any showstoppers above.
          */
+        VkLayerDispatchTable *pTable = tableMap[(VkBaseLayerObject *)device];
         return pTable->CreateGraphicsPipeline(device, pCreateInfo, pPipeline);
     }
     else {
