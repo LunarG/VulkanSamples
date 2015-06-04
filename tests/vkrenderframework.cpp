@@ -1275,9 +1275,9 @@ void VkCommandBufferObj::ClearAllBuffers(VkClearColor clear_color, float depth_c
     VkImageSubresourceRange srRange = {};
     srRange.aspect = VK_IMAGE_ASPECT_COLOR;
     srRange.baseMipLevel = 0;
-    srRange.mipLevels = VK_LAST_MIP_OR_SLICE;
+    srRange.mipLevels = VK_LAST_MIP_LEVEL;
     srRange.baseArraySlice = 0;
-    srRange.arraySize = VK_LAST_MIP_OR_SLICE;
+    srRange.arraySize = VK_LAST_ARRAY_SLICE;
 
     VkImageMemoryBarrier memory_barrier = {};
     memory_barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
@@ -1306,9 +1306,9 @@ void VkCommandBufferObj::ClearAllBuffers(VkClearColor clear_color, float depth_c
         VkImageSubresourceRange dsRange = {};
         dsRange.aspect = VK_IMAGE_ASPECT_DEPTH;
         dsRange.baseMipLevel = 0;
-        dsRange.mipLevels = VK_LAST_MIP_OR_SLICE;
+        dsRange.mipLevels = VK_LAST_MIP_LEVEL;
         dsRange.baseArraySlice = 0;
-        dsRange.arraySize = VK_LAST_MIP_OR_SLICE;
+        dsRange.arraySize = VK_LAST_ARRAY_SLICE;
 
         // prepare the depth buffer for clear
 
@@ -1356,9 +1356,9 @@ void VkCommandBufferObj::PrepareAttachments()
     VkImageSubresourceRange srRange = {};
     srRange.aspect = VK_IMAGE_ASPECT_COLOR;
     srRange.baseMipLevel = 0;
-    srRange.mipLevels = VK_LAST_MIP_OR_SLICE;
+    srRange.mipLevels = VK_LAST_MIP_LEVEL;
     srRange.baseArraySlice = 0;
-    srRange.arraySize = VK_LAST_MIP_OR_SLICE;
+    srRange.arraySize = VK_LAST_ARRAY_SLICE;
 
     VkImageMemoryBarrier memory_barrier = {};
     memory_barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;

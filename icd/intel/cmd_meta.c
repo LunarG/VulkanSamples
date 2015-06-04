@@ -149,9 +149,9 @@ static void cmd_meta_set_src_for_img(struct intel_cmd *cmd,
     info.channels.a = VK_CHANNEL_SWIZZLE_A;
     info.subresourceRange.aspect = aspect;
     info.subresourceRange.baseMipLevel = 0;
-    info.subresourceRange.mipLevels = VK_LAST_MIP_OR_SLICE;
+    info.subresourceRange.mipLevels = VK_LAST_MIP_LEVEL;
     info.subresourceRange.baseArraySlice = 0;
-    info.subresourceRange.arraySize = VK_LAST_MIP_OR_SLICE;
+    info.subresourceRange.arraySize = VK_LAST_ARRAY_SLICE;
 
     ret = intel_img_view_create(cmd->dev, &info, &view);
     if (ret != VK_SUCCESS) {

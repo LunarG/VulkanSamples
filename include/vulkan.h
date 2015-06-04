@@ -102,7 +102,9 @@ VK_DEFINE_NONDISP_SUBCLASS_HANDLE(VkRenderPass, VkNonDispatchable)
 #define VK_MAX_EXTENSION_NAME       256
 
 #define VK_LOD_CLAMP_NONE       MAX_FLOAT
-#define VK_LAST_MIP_OR_SLICE    0xffffffff
+#define VK_LAST_MIP_LEVEL       UINT32_MAX
+#define VK_LAST_ARRAY_SLICE     UINT32_MAX
+
 
 #define VK_WHOLE_SIZE           UINT64_MAX
 
