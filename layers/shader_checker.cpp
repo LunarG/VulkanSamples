@@ -826,9 +826,10 @@ validate_graphics_pipeline(VkGraphicsPipelineCreateInfo const *pCreateInfo)
 }
 
 
-VK_LAYER_EXPORT VkResult VKAPI vkCreateGraphicsPipeline(VkDevice device,
-                                                        const VkGraphicsPipelineCreateInfo *pCreateInfo,
-                                                        VkPipeline *pPipeline)
+VK_LAYER_EXPORT VkResult VKAPI
+vkCreateGraphicsPipeline(VkDevice device,
+                         const VkGraphicsPipelineCreateInfo *pCreateInfo,
+                         VkPipeline *pPipeline)
 {
     bool pass = validate_graphics_pipeline(pCreateInfo);
 
@@ -838,6 +839,27 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateGraphicsPipeline(VkDevice device,
          */
         VkLayerDispatchTable *pTable = tableMap[(VkBaseLayerObject *)device];
         return pTable->CreateGraphicsPipeline(device, pCreateInfo, pPipeline);
+    }
+    else {
+        return VK_ERROR_UNKNOWN;
+    }
+}
+
+
+VK_LAYER_EXPORT VkResult VKAPI
+vkCreateGraphicsPipelineDerivative(VkDevice device,
+                                   const VkGraphicsPipelineCreateInfo *pCreateInfo,
+                                   VkPipeline basePipeline,
+                                   VkPipeline *pPipeline)
+{
+    bool pass = validate_graphics_pipeline(pCreateInfo);
+
+    if (pass) {
+        /* The driver is allowed to crash if passed junk. Only actually create the
+         * pipeline if we didn't run into any showstoppers above.
+         */
+        VkLayerDispatchTable *pTable = tableMap[(VkBaseLayerObject *)device];
+        return pTable->CreateGraphicsPipelineDerivative(device, pCreateInfo, basePipeline, pPipeline);
     }
     else {
         return VK_ERROR_UNKNOWN;
@@ -918,6 +940,7 @@ VK_LAYER_EXPORT void * VKAPI vkGetProcAddr(VkPhysicalDevice gpu, const char* pNa
     ADD_HOOK(vkCreateDevice);
     ADD_HOOK(vkCreateShader);
     ADD_HOOK(vkCreateGraphicsPipeline);
+    ADD_HOOK(vkCreateGraphicsPipelineDerivative);
     ADD_HOOK(vkDbgRegisterMsgCallback);
     ADD_HOOK(vkDbgUnregisterMsgCallback);
 
