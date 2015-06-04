@@ -505,8 +505,6 @@ void VkRenderTest::VKTriangleTest(const char *vertShaderText, const char *fragSh
 
 }
 
-#if 0
-
 TEST_F(VkRenderTest, VKTriangle_FragColor)
 {
     static const char *vertShaderText =
@@ -1086,10 +1084,6 @@ TEST_F(VkRenderTest, GreyandRedCirclesonBlue)
 
     RecordImages(m_renderTargets);
 }
-
-//good
-
-
 
 TEST_F(VkRenderTest, RedCirclesonBlue)
 {
@@ -1821,10 +1815,6 @@ TEST_F(VkRenderTest, TriVertFetchDeadAttr)
     RecordImages(m_renderTargets);
 }
 
-
-// good
-
-
 TEST_F(VkRenderTest, CubeWithVertexFetchAndMVP)
 {
     static const char *vertShaderText =
@@ -2168,9 +2158,6 @@ TEST_F(VkRenderTest, TexturedTriangleClip)
 
     RecordImages(m_renderTargets);
 }
-
-//bad
-
 
 TEST_F(VkRenderTest, FSTriangle)
 {
@@ -3900,8 +3887,6 @@ TEST_F(VkRenderTest, GSPositions)
 
     RecordImages(m_renderTargets);
 }
-
-#endif
 
 TEST_F(VkRenderTest, GSTriStrip)
 {
