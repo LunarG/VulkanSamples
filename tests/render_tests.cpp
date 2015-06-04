@@ -505,6 +505,8 @@ void VkRenderTest::VKTriangleTest(const char *vertShaderText, const char *fragSh
 
 }
 
+#if 0
+
 TEST_F(VkRenderTest, VKTriangle_FragColor)
 {
     static const char *vertShaderText =
@@ -532,10 +534,11 @@ TEST_F(VkRenderTest, VKTriangle_FragColor)
         "#extension GL_ARB_shading_language_420pack : enable\n"
         "\n"
         "layout (location = 0) in vec4 inColor;\n"
+        "layout (location = 0) out vec4 uFragColor;\n"
         "\n"
         "void main()\n"
         "{\n"
-        "   gl_FragColor = inColor;\n"
+        "   uFragColor = inColor;\n"
         "}\n";
 
     TEST_DESCRIPTION("VK-style shaders where fragment shader outputs to GLSL built-in gl_FragColor");
@@ -608,10 +611,11 @@ TEST_F(VkRenderTest, SPV_VKTriangle)
         "#extension GL_ARB_shading_language_420pack : enable\n"
         "\n"
         "layout (location = 0) in vec4 inColor;\n"
+        "layout (location = 0) out vec4 outColor;\n"
         "\n"
         "void main()\n"
         "{\n"
-        "   gl_FragColor = inColor;\n"
+        "   outColor = inColor;\n"
         "}\n";
 
     TEST_DESCRIPTION("VK-style shaders, but force test framework to compile shader to SPV and pass SPV to driver.");
@@ -633,9 +637,12 @@ TEST_F(VkRenderTest, GreenTriangle)
             "}\n";
 
     static const char *fragShaderText =
-       "#version 130\n"
+       "#version 140\n"
+       "#extension GL_ARB_separate_shader_objects : enable\n"
+       "#extension GL_ARB_shading_language_420pack : enable\n"
+       "layout (location = 0) out vec4 outColor;\n"
        "void main() {\n"
-       "   gl_FragColor = vec4(0,1,0,1);\n"
+       "   outColor = vec4(0,1,0,1);\n"
        "}\n";
 
     TEST_DESCRIPTION("Basic shader that renders a fixed Green triangle coded as part of the vertex shader.");
@@ -656,9 +663,12 @@ TEST_F(VkRenderTest, SPV_GreenTriangle)
             "}\n";
 
     static const char *fragShaderText =
-       "#version 130\n"
+       "#version 140\n"
+       "#extension GL_ARB_separate_shader_objects : enable\n"
+       "#extension GL_ARB_shading_language_420pack : enable\n"
+       "layout (location = 0) out vec4 outColor;\n"
        "void main() {\n"
-       "   gl_FragColor = vec4(0,1,0,1);\n"
+       "   outColor = vec4(0,1,0,1);\n"
        "}\n";
 
     TEST_DESCRIPTION("Same shader as GreenTriangle, but compiles shader to SPV and gives SPV to driver.");
@@ -685,9 +695,12 @@ TEST_F(VkRenderTest, YellowTriangle)
             "}\n";
 
     static const char *fragShaderText =
-            "#version 130\n"
+            "#version 140\n"
+            "#extension GL_ARB_separate_shader_objects : enable\n"
+            "#extension GL_ARB_shading_language_420pack : enable\n"
+            "layout (location = 0) out vec4 outColor;\n"
             "void main() {\n"
-            "  gl_FragColor = vec4(1.0, 1.0, 0.0, 1.0);\n"
+            "  outColor = vec4(1.0, 1.0, 0.0, 1.0);\n"
             "}\n";
 
     VKTriangleTest(vertShaderText, fragShaderText, false);
@@ -792,10 +805,14 @@ TEST_F(VkRenderTest, TriangleMRT)
             "}\n";
 
     static const char *fragShaderText =
-            "#version 130\n"
+            "#version 140\n"
+            "#extension GL_ARB_separate_shader_objects : enable\n"
+            "#extension GL_ARB_shading_language_420pack : enable\n"
+            "layout (location = 0) out vec4 uFragData0;\n"
+            "layout (location = 1) out vec4 uFragData1;\n"
             "void main() {\n"
-            "   gl_FragData[0] = vec4(1.0, 0.0, 0.0, 1.0);\n"
-            "   gl_FragData[1] = vec4(0.0, 1.0, 0.0, 1.0);\n"
+            "   uFragData0 = vec4(1.0, 0.0, 0.0, 1.0);\n"
+            "   uFragData1 = vec4(0.0, 1.0, 0.0, 1.0);\n"
             "}\n";
     const float vb_data[][2] = {
         { -1.0f, -1.0f },
@@ -889,8 +906,9 @@ TEST_F(VkRenderTest, QuadWithIndexedVertexFetch)
             "#extension GL_ARB_separate_shader_objects : enable\n"
             "#extension GL_ARB_shading_language_420pack : enable\n"
             "layout(location = 0) in vec4 color;\n"
+            "layout (location = 0) out vec4 outColor;\n"
             "void main() {\n"
-            "   gl_FragColor = color;\n"
+            "   outColor = color;\n"
             "}\n";
 
     const Vertex g_vbData[] =
@@ -1003,10 +1021,11 @@ TEST_F(VkRenderTest, GreyandRedCirclesonBlue)
             //"layout (pixel_center_integer) in vec4 gl_FragCoord;\n"
             "layout (location = 0) in vec4 color;\n"
             "layout (location = 1) in vec4 color2;\n"
+            "layout (location = 0) out vec4 outColor;\n"
             "void main() {\n"
             "    vec2 pos = mod(gl_FragCoord.xy, vec2(50.0)) - vec2(25.0);\n"
             "    float dist_squared = dot(pos, pos);\n"
-            "    gl_FragColor = (dist_squared < 400.0)\n"
+            "    outColor = (dist_squared < 400.0)\n"
             "        ? ((gl_FragCoord.y < 100.0) ? vec4(1.0, 0.0, 0.0, 0.0) : color)\n"
             "        : color2;\n"
             "}\n";
@@ -1068,6 +1087,10 @@ TEST_F(VkRenderTest, GreyandRedCirclesonBlue)
     RecordImages(m_renderTargets);
 }
 
+//good
+
+
+
 TEST_F(VkRenderTest, RedCirclesonBlue)
 {
     // This tests that we correctly handle unread fragment inputs
@@ -1093,10 +1116,11 @@ TEST_F(VkRenderTest, RedCirclesonBlue)
             //"layout (pixel_center_integer) in vec4 gl_FragCoord;\n"
             "layout (location = 0) in vec4 color;\n"
             "layout (location = 1) in vec4 color2;\n"
+            "layout (location = 0) out vec4 outColor;\n"
             "void main() {\n"
             "    vec2 pos = mod(gl_FragCoord.xy, vec2(50.0)) - vec2(25.0);\n"
             "    float dist_squared = dot(pos, pos);\n"
-            "    gl_FragColor = (dist_squared < 400.0)\n"
+            "    outColor = (dist_squared < 400.0)\n"
             "        ? vec4(1.0, 0.0, 0.0, 1.0)\n"
             "        : color2;\n"
             "}\n";
@@ -1162,6 +1186,7 @@ TEST_F(VkRenderTest, GreyCirclesonBlueFade)
     // This tests reading gl_ClipDistance from FS
 
     static const char *vertShaderText =
+            //"#version 140\n"
             "#version 330\n"
             "#extension GL_ARB_separate_shader_objects : enable\n"
             "#extension GL_ARB_shading_language_420pack : enable\n"
@@ -1185,18 +1210,19 @@ TEST_F(VkRenderTest, GreyCirclesonBlueFade)
 
 
     static const char *fragShaderText =
-            //"#version 140\n"
-            "#version 330\n"
+            "#version 140\n"
+            //"#version 330\n"
             "#extension GL_ARB_separate_shader_objects : enable\n"
             "#extension GL_ARB_shading_language_420pack : enable\n"
             //"#extension GL_ARB_fragment_coord_conventions : enable\n"
             //"layout (pixel_center_integer) in vec4 gl_FragCoord;\n"
             "layout (location = 0) in vec4 color;\n"
             "layout (location = 1) in vec4 color2;\n"
+            "layout (location = 0) out vec4 uFragColor;\n"
             "void main() {\n"
             "    vec2 pos = mod(gl_FragCoord.xy, vec2(50.0)) - vec2(25.0);\n"
             "    float dist_squared = dot(pos, pos);\n"
-            "    gl_FragColor = (dist_squared < 400.0)\n"
+            "    uFragColor = (dist_squared < 400.0)\n"
             "        ? color * gl_ClipDistance[0]\n"
             "        : color2;\n"
             "}\n";
@@ -1282,12 +1308,13 @@ TEST_F(VkRenderTest, GreyCirclesonBlueDiscard)
             //"layout (pixel_center_integer) in vec4 gl_FragCoord;\n"
             "layout (location = 0) in vec4 color;\n"
             "layout (location = 1) in vec4 color2;\n"
+            "layout (location = 0) out vec4 outColor;\n"
             "void main() {\n"
             "    vec2 pos = mod(gl_FragCoord.xy, vec2(50.0)) - vec2(25.0);\n"
             "    float dist_squared = dot(pos, pos);\n"
             "    if (dist_squared < 100.0)\n"
             "        discard;\n"
-            "    gl_FragColor = (dist_squared < 400.0)\n"
+            "    outColor = (dist_squared < 400.0)\n"
             "        ? color\n"
             "        : color2;\n"
             "}\n";
@@ -1369,9 +1396,12 @@ TEST_F(VkRenderTest, TriangleVSUniform)
             "}\n";
 
     static const char *fragShaderText =
-            "#version 130\n"
+            "#version 140\n"
+            "#extension GL_ARB_separate_shader_objects : enable\n"
+            "#extension GL_ARB_shading_language_420pack : enable\n"
+            "layout (location = 0) out vec4 outColor;\n"
             "void main() {\n"
-            "   gl_FragColor = vec4(1.0, 0.0, 0.0, 1.0);\n"
+            "   outColor = vec4(1.0, 0.0, 0.0, 1.0);\n"
             "}\n";
 
     ASSERT_NO_FATAL_FAILURE(InitState());
@@ -1456,8 +1486,9 @@ TEST_F(VkRenderTest, MixTriangle)
            "layout (location = 1) in vec4 bar;\n"
            "layout (location = 0) in vec4 foo;\n"
            "layout (location = 2) in float scale;\n"
+           "layout (location = 0) out vec4 outColor;\n"
            "void main() {\n"
-           "   gl_FragColor = bar * scale + foo * (1.0-scale);\n"
+           "   outColor = bar * scale + foo * (1.0-scale);\n"
            "}\n";
 
     ASSERT_NO_FATAL_FAILURE(InitState());
@@ -1522,8 +1553,9 @@ TEST_F(VkRenderTest, QuadVertFetchAndVertID)
             "#extension GL_ARB_separate_shader_objects : enable\n"
             "#extension GL_ARB_shading_language_420pack : enable\n"
             "layout (location = 0) in vec4 color;\n"
+            "layout (location = 0) out vec4 outColor;\n"
             "void main() {\n"
-            "   gl_FragColor = color;\n"
+            "   outColor = color;\n"
             "}\n";
 
     ASSERT_NO_FATAL_FAILURE(InitState());
@@ -1611,8 +1643,9 @@ TEST_F(VkRenderTest, QuadSparseVertFetch)
             "#extension GL_ARB_separate_shader_objects : enable\n"
             "#extension GL_ARB_shading_language_420pack : enable\n"
             "layout (location = 0) in vec4 color;\n"
+            "layout (location = 0) out vec4 outColor;\n"
             "void main() {\n"
-            "   gl_FragColor = color;\n"
+            "   outColor = color;\n"
             "}\n";
 
     ASSERT_NO_FATAL_FAILURE(InitState());
@@ -1722,8 +1755,9 @@ TEST_F(VkRenderTest, TriVertFetchDeadAttr)
             "#extension GL_ARB_separate_shader_objects : enable\n"
             "#extension GL_ARB_shading_language_420pack : enable\n"
             "layout (location = 0) in vec4 color;\n"
+            "layout (location = 0) out vec4 outColor;\n"
             "void main() {\n"
-            "   gl_FragColor = color;\n"
+            "   outColor = color;\n"
             "}\n";
 
     ASSERT_NO_FATAL_FAILURE(InitState());
@@ -1787,13 +1821,17 @@ TEST_F(VkRenderTest, TriVertFetchDeadAttr)
     RecordImages(m_renderTargets);
 }
 
+
+// good
+
+
 TEST_F(VkRenderTest, CubeWithVertexFetchAndMVP)
 {
     static const char *vertShaderText =
             "#version 140\n"
             "#extension GL_ARB_separate_shader_objects : enable\n"
             "#extension GL_ARB_shading_language_420pack : enable\n"
-            "layout (std140) uniform bufferVals {\n"
+            "layout (std140, binding = 0) uniform bufferVals {\n"
             "    mat4 mvp;\n"
             "} myBufferVals;\n"
             "layout (location = 0) in vec4 pos;\n"
@@ -1807,10 +1845,13 @@ TEST_F(VkRenderTest, CubeWithVertexFetchAndMVP)
             "}\n";
 
     static const char *fragShaderText =
-            "#version 130\n"
-            "in vec4 color;\n"
+            "#version 140\n"
+            "#extension GL_ARB_separate_shader_objects : enable\n"
+            "#extension GL_ARB_shading_language_420pack : enable\n"
+            "layout (location = 0) in vec4 color;\n"
+            "layout (location = 0) out vec4 outColor;\n"
             "void main() {\n"
-            "   gl_FragColor = color;\n"
+            "   outColor = color;\n"
             "}\n";
     glm::mat4 Projection = glm::perspective(glm::radians(45.0f), 1.0f, 0.1f, 100.0f);
 
@@ -1927,10 +1968,13 @@ TEST_F(VkRenderTest, VSTexture)
             "}\n";
 
     static const char *fragShaderText =
-            "#version 130\n"
-            "in vec4 texColor;\n"
+            "#version 140\n"
+            "#extension GL_ARB_separate_shader_objects : enable\n"
+            "#extension GL_ARB_shading_language_420pack : enable\n"
+            "layout (location = 0) in vec4 texColor;\n"
+            "layout (location = 0) out vec4 outColor;\n"
             "void main() {\n"
-            "   gl_FragColor = texColor;\n"
+            "   outColor = texColor;\n"
             "}\n";
 
     ASSERT_NO_FATAL_FAILURE(InitState());
@@ -1970,6 +2014,9 @@ TEST_F(VkRenderTest, VSTexture)
 
     RecordImages(m_renderTargets);
 }
+
+
+
 TEST_F(VkRenderTest, TexturedTriangle)
 {
     // The expected result from this test is a red and green checkered triangle
@@ -2119,6 +2166,10 @@ TEST_F(VkRenderTest, TexturedTriangleClip)
 
     RecordImages(m_renderTargets);
 }
+
+//bad
+
+
 TEST_F(VkRenderTest, FSTriangle)
 {
     // The expected result from this test is a red and green checkered triangle
@@ -2223,8 +2274,9 @@ TEST_F(VkRenderTest, SamplerBindingsTriangle)
             "layout (binding = 0) uniform sampler2D surface0;\n"
             "layout (binding = 1) uniform sampler2D surface1;\n"
             "layout (binding = 12) uniform sampler2D surface2;\n"
+            "layout (location = 0) out vec4 outColor;\n"
             "void main() {\n"
-            "   gl_FragColor = textureLod(surface2, samplePos.xy, 0.0);\n"
+            "   outColor = textureLod(surface2, samplePos.xy, 0.0);\n"
             "}\n";
 
     ASSERT_NO_FATAL_FAILURE(InitState());
@@ -2306,8 +2358,9 @@ TEST_F(VkRenderTest, TriangleVSUniformBlock)
             "#extension GL_ARB_separate_shader_objects : enable\n"
             "#extension GL_ARB_shading_language_420pack : enable\n"
             "layout (location = 0) in vec4 inColor;\n"
+            "layout (location = 0) out vec4 outColor;\n"
             "void main() {\n"
-            "   gl_FragColor = inColor;\n"
+            "   outColor = inColor;\n"
             "}\n";
 
     ASSERT_NO_FATAL_FAILURE(InitState());
@@ -2388,9 +2441,10 @@ TEST_F(VkRenderTest, TriangleFSUniformBlockBinding)
             "layout (std140, binding = 1) uniform greenVal { vec4 color; } myGreenVal\n;"
             "layout (std140, binding = 2) uniform blueVal  { vec4 color; } myBlueVal\n;"
             "layout (std140, binding = 3) uniform whiteVal { vec4 color; } myWhiteVal\n;"
+            "layout (location = 0) out vec4 outColor;\n"
             "void main() {\n"
-            "   gl_FragColor = myBlueVal.color;\n"
-            "   gl_FragColor += myRedVal.color;\n"
+            "   outColor = myBlueVal.color;\n"
+            "   outColor += myRedVal.color;\n"
             "}\n";
 
     ASSERT_NO_FATAL_FAILURE(InitState());
@@ -3016,6 +3070,7 @@ TEST_F(VkRenderTest, TriangleUniformBufferLayout)
             "    vec4 uvOffsets[4];\n"
             "};\n"
             "layout (location = 0) in vec4 color;\n"
+            "layout (location = 0) out vec4 uFragColor;\n"
             "void main() {\n"
             "   vec4 right = vec4(0.0, 1.0, 0.0, 1.0);\n"
             "   vec4 wrong = vec4(1.0, 0.0, 0.0, 1.0);\n"
@@ -3043,7 +3098,7 @@ TEST_F(VkRenderTest, TriangleUniformBufferLayout)
             "   if (uvOffsets[2] != vec4(0.9, 1.0, 1.1, 1.2))\n"
             "       outColor = wrong;\n"
             "   \n"
-            "   gl_FragColor = outColor;\n"
+            "   uFragColor = outColor;\n"
             "}\n";
 
 
@@ -3324,9 +3379,10 @@ TEST_F(VkRenderTest, GeometryShaderHelloWorld)
             "#extension GL_ARB_separate_shader_objects : enable\n"
             "#extension GL_ARB_shading_language_420pack : enable\n"
             "layout (location = 0) in vec4 color;\n"
+            "layout (location = 0) out vec4 outColor;\n"
             "void main() {\n"
             // pass through
-            "   gl_FragColor = color;\n"
+            "   outColor = color;\n"
             "}\n";
 
 
@@ -3579,6 +3635,7 @@ TEST_F(VkRenderTest, GSUniformBufferLayout)
             "    vec4 uvOffsets[4];\n"
             "};\n"
             "layout (location = 0) in vec4 color;\n"
+            "layout (location = 0) out vec4 uFragColor;\n"
             "void main() {\n"
             "   vec4 right = vec4(0.0, 1.0, 0.0, 1.0);\n"
             "   vec4 wrong = vec4(1.0, 0.0, 0.0, 1.0);\n"
@@ -3606,7 +3663,7 @@ TEST_F(VkRenderTest, GSUniformBufferLayout)
             "   if (uvOffsets[2] != vec4(0.9, 1.0, 1.1, 1.2))\n"
             "       outColor = wrong;\n"
             "   \n"
-            "   gl_FragColor = outColor;\n"
+            "   uFragColor = outColor;\n"
             "}\n";
 
 
@@ -3802,9 +3859,10 @@ TEST_F(VkRenderTest, GSPositions)
             "layout(location = 0) in vec3 in_a;\n"
             "layout(location = 1) in vec3 in_b;\n"
             "layout(location = 2) in vec3 in_c;\n"
+            "layout (location = 0) out vec4 outColor;\n"
 
             "void main() {\n"
-            "   gl_FragColor = vec4(in_a.x, in_b.y, in_c.z, 1.0);\n"
+            "   outColor = vec4(in_a.x, in_b.y, in_c.z, 1.0);\n"
             "}\n";
 
 
@@ -3840,6 +3898,8 @@ TEST_F(VkRenderTest, GSPositions)
 
     RecordImages(m_renderTargets);
 }
+
+#endif
 
 TEST_F(VkRenderTest, GSTriStrip)
 {
@@ -3925,6 +3985,7 @@ TEST_F(VkRenderTest, GSTriStrip)
 
             "layout(location = 0) in vec4 inColor;\n"
             "layout(origin_upper_left) in vec4 gl_FragCoord;\n"
+            "layout (location = 0) out vec4 outColor;\n"
 
             "void main() {\n"
 
@@ -3934,7 +3995,7 @@ TEST_F(VkRenderTest, GSTriStrip)
             "    if (dist > 50.0)\n"
             "        discard;\n"
 
-            "    gl_FragColor = inColor;\n"
+            "    outColor = inColor;\n"
 
             "}\n";
 
