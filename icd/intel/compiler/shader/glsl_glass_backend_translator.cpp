@@ -1118,6 +1118,8 @@ void MesaGlassTranslator::addIoDeclaration(gla::EVariableQualifier qualifier,
    std::string name = metaType.name;
    bool anonymous = false;
 
+   // Name may be missing either because of anonymous block or SPIR-V
+   // debug strings were stripped. Grab a name from the metadata type
    std::string bname;
    if (name.empty()) {
        name = mdNode->getOperand(2)->getName();
@@ -1127,55 +1129,37 @@ void MesaGlassTranslator::addIoDeclaration(gla::EVariableQualifier qualifier,
            anonymous = true;
    }
 
+   // If its a builtin, the name might not be correct due to SPIR-V stripping.
+   // Make sure we are using the standard name as the rest of the driver relies on this.
    switch (metaType.builtIn) {
    case EmbPosition:       bname = "gl_Position";     break;
    case EmbPointSize:      bname = "gl_PointSize";    break;
-   //case EMioClipVertex:     bname = "gl_ClipVertex";   break;
    case EmbClipDistance:   bname = "gl_ClipDistance"; break;
-   //case EMioFragmentDepth:  bname = "gl_FragDepth";    break;
+   case EmbCullDistance:   bname = "gl_CullDistance"; break;
+   case EmbFragDepth:      bname = "gl_FragDepth";    break;
    case EmbVertexId:       bname = "gl_VertexID";     break;
+   case EmbPrimitiveId:    bname = "gl_PrimitiveID";  break;
    case EmbInstanceId:     bname = "gl_InstanceID";   break;
-   //case EMioFragmentFace:   bname = "gl_FrontFacing";  break;
+   case EmbFace:           bname = "gl_FrontFacing";  break;
    case EmbFragCoord:      bname = "gl_FragCoord";    break;
-   //case EMioPointCoord:     bname = "gl_PointCoord";   break;
-   // LunarG TODO: Handle other builtins?
+   case EmbPointCoord:     bname = "gl_PointCoord";   break;
+   case EmbSampleId:       bname = "gl_SampleID";     break;
+   case EmbLayer:          bname = "gl_Layer";        break;
+   case EmbSamplePosition:   bname = "gl_SamplePosition";   break;
+   case EmbViewportIndex:    bname = "gl_ViewportIndex";    break;
+   case EmbHelperInvocation: bname = "gl_HelperInvocation"; break;
+   case EmbSampleMask:       bname = (metaType.ioKind == gla::EMioPipeIn)
+                                         ? "gl_SampleMaskIn"
+                                         : "gl_SampleMask";   break;
    case EmbNone:
        if (metaType.ioKind == gla::EMioPipeInBlock)
             bname = "gl_in";
        break;
-   default: break;
-   } // switch
-
-#if 0
-   std::string bname;
-   switch (metaType.builtIn) {
-   case EmbPosition:       bname = "gl_Position";     break;
-   case EmbPointSize:      bname = "gl_PointSize";    break;
-   //case EMioClipVertex:     bname = "gl_ClipVertex";   break;
-   case EmbClipDistance:   bname = "gl_ClipDistance"; break;
-   //case EMioFragmentDepth:  bname = "gl_FragDepth";    break;
-   case EmbVertexId:       bname = "gl_VertexID";     break;
-   case EmbInstanceId:     bname = "gl_InstanceID";   break;
-   //case EMioFragmentFace:   bname = "gl_FrontFacing";  break;
-   case EmbFragCoord:      bname = "gl_FragCoord";    break;
-   //case EMioPointCoord:     bname = "gl_PointCoord";   break;
-   // LunarG TODO: Handle other builtins?
-   case EmbNone:
-       if (name.empty()) {
-           name = mdNode->getOperand(2)->getName();
-           StripSuffix(name, "_typeProxy");
-           StripSuffix(name, "_shadow");
-           if (metaType.ioKind == gla::EMioPipeInBlock) {
-               bname = "gl_in";
-           } else {
-               if (metaType.ioKind == gla::EMioUniformBlockMember)
-                   anonymous = true;
-           }
-       }
+   default:
+       // Any builtins not in GLSL 4.5 will not come through SPIR-V and will
+       // have the correct name.
        break;
-   default: break;
    } // switch
-#endif
 
    if (!bname.empty()) {
        nameBuiltinMap[name] = bname;
@@ -1330,15 +1314,7 @@ MesaGlassTranslator::convertStructType(const llvm::StructType* structType,
                  switch (metaType.builtIn) {
                  case EmbPosition: bname = "gl_Position";     break;
                  case EmbPointSize:      bname = "gl_PointSize";    break;
-                 //case EMioClipVertex:     bname = "gl_ClipVertex";   break;
                  case EmbClipDistance:   bname = "gl_ClipDistance"; break;
-                 //case EMioFragmentDepth:  bname = "gl_FragDepth";    break;
-                 case EmbVertexId:       bname = "gl_VertexID";     break;
-                 case EmbInstanceId:     bname = "gl_InstanceID";   break;
-                 //case EMioFragmentFace:   bname = "gl_FrontFacing";  break;
-                 case EmbFragCoord:  bname = "gl_FragCoord";    break;
-                 //case EMioPointCoord:     bname = "gl_PointCoord";   break;
-                 // LunarG TODO: Handle other builtins?
                  default: error("unhandled builtIn");
                  } // switch
                  subName.assign(bname);
@@ -3788,7 +3764,6 @@ inline void MesaGlassTranslator::emitIRStore(const llvm::Instruction* llvmInst)
       // If this is the first write to this aggregate, make up a new one.
       const tValueMap::const_iterator location = valueMap.find(gepSrc);
       if (location == valueMap.end()) {
-         // llvm::StringRef name = dst->getName();
 
          if (gepSrc) {
             name = gepInst->getPointerOperand()->getName();
