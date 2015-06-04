@@ -84,6 +84,12 @@ struct app_dev {
     VkFormatProperties format_props[VK_NUM_FORMAT];
 };
 
+struct app_instance {
+    VkInstance  instance;
+    uint32_t global_extension_count;
+    VkExtensionProperties *global_extensions;
+};
+
 struct app_gpu {
     uint32_t id;
     VkPhysicalDevice obj;
@@ -97,8 +103,8 @@ struct app_gpu {
 
     VkPhysicalDeviceMemoryProperties memory_props;
 
-    uint32_t extension_count;
-    char **extensions;
+    uint32_t device_extension_count;
+    VkExtensionProperties *device_extensions;
 
     struct app_dev dev;
 };
@@ -373,20 +379,53 @@ static void app_dev_init(struct app_dev *dev, struct app_gpu *gpu)
         .pEnabledExtensions = NULL,
         .flags = 0,
     };
-    VkResult err;
+    VkResult U_ASSERT_ONLY err;
+    // Extensions to enable
+    VkExtensionProperties *enable_extension_list;
+    static char *known_extensions[] = {
+        "Validation",
+    };
+    size_t extSize = sizeof(uint32_t);
+    uint32_t extCount = 0;
+    err = vkGetPhysicalDeviceExtensionInfo(gpu->obj, VK_EXTENSION_INFO_TYPE_COUNT, 0, &extSize, &extCount);
+    assert(!err);
+
+    enable_extension_list = malloc(sizeof(VkExtensionProperties) * extCount);
+    if (!enable_extension_list) {
+        ERR_EXIT(VK_ERROR_OUT_OF_HOST_MEMORY);
+    }
+
+    VkExtensionProperties extProp;
+    extSize = sizeof(VkExtensionProperties);
+    gpu->device_extension_count = 0;
+    bool32_t U_ASSERT_ONLY extFound = 0; // TODO : Need to enhance this if/when we enable multiple extensions
+    for (uint32_t i = 0; i < ARRAY_SIZE(known_extensions); i++) {
+        for (uint32_t j = 0; j < extCount; j++) {
+            err = vkGetPhysicalDeviceExtensionInfo(
+                      gpu->obj, VK_EXTENSION_INFO_TYPE_PROPERTIES,
+                      j, &extSize,
+                      &extProp);
+            if (!strcmp(known_extensions[i], extProp.name)) {
+                extFound = 1;
+                memcpy(&enable_extension_list[gpu->device_extension_count], &extProp, sizeof(extProp));
+                gpu->device_extension_count++;
+            }
+        }
+    }
+    assert(extFound);
+
+    gpu->device_extensions = enable_extension_list;
 
     /* request all queues */
     info.queueRecordCount = gpu->queue_count;
     info.pRequestedQueues = gpu->queue_reqs;
 
-    /* enable all extensions */
-    /* TODO: Enable extensions here */
-//    info.extensionCount = gpu->extension_count;
-//    info.ppEnabledExtensionNames = (const char*const*) gpu->extensions;
-//    dev->gpu = gpu;
-//    err = vkCreateDevice(gpu->obj, &info, &dev->obj);
-//    if (err)
-//        ERR_EXIT(err);
+    info.extensionCount = extCount;
+    info.pEnabledExtensions = enable_extension_list;
+    dev->gpu = gpu;
+    err = vkCreateDevice(gpu->obj, &info, &dev->obj);
+    if (err)
+        ERR_EXIT(err);
 
 }
 
@@ -395,42 +434,79 @@ static void app_dev_destroy(struct app_dev *dev)
     vkDestroyDevice(dev->obj);
 }
 
-static void app_gpu_init_extensions(struct app_gpu *gpu)
+static void app_create_instance(struct app_instance *inst)
 {
+    const VkApplicationInfo app_info = {
+        .sType = VK_STRUCTURE_TYPE_APPLICATION_INFO,
+        .pNext = NULL,
+        .pAppName = APP_SHORT_NAME,
+        .appVersion = 1,
+        .pEngineName = APP_SHORT_NAME,
+        .engineVersion = 1,
+        .apiVersion = VK_API_VERSION,
+    };
+    VkInstanceCreateInfo inst_info = {
+        .sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
+        .pNext = NULL,
+        .pAppInfo = &app_info,
+        .pAllocCb = NULL,
+        .extensionCount = 0,
+        .pEnabledExtensions = NULL,
+    };
     VkResult U_ASSERT_ONLY err;
-    // Extensions to enable
+    // Global Extensions to enable
     static char *known_extensions[] = {
         "VK_WSI_LunarG",
     };
     size_t extSize = sizeof(uint32_t);
     uint32_t extCount = 0;
+    VkExtensionProperties extProp;
+    VkExtensionProperties *enable_extension_list;
+    uint32_t global_extension_count = 0;
+
     err = vkGetGlobalExtensionInfo(VK_EXTENSION_INFO_TYPE_COUNT, 0, &extSize, &extCount);
     assert(!err);
 
-    VkExtensionProperties extProp;
+    enable_extension_list = malloc(sizeof(VkExtensionProperties) * extCount);
+    if (!enable_extension_list) {
+        ERR_EXIT(VK_ERROR_OUT_OF_HOST_MEMORY);
+    }
+
     extSize = sizeof(VkExtensionProperties);
     bool32_t U_ASSERT_ONLY extFound = 0; // TODO : Need to enhance this if/when we enable multiple extensions
-    for (uint32_t i = 0; i < extCount; i++) {
-        err = vkGetGlobalExtensionInfo(VK_EXTENSION_INFO_TYPE_PROPERTIES, i, &extSize, &extProp);
-        if (!strcmp(known_extensions[0], extProp.name)) {
-            extFound = 1;
-            gpu->extension_count++;
+    for (uint32_t i = 0; i < ARRAY_SIZE(known_extensions); i++) {
+        for (uint32_t j = 0; j < extCount; j++) {
+            err = vkGetGlobalExtensionInfo(VK_EXTENSION_INFO_TYPE_PROPERTIES, j, &extSize, &extProp);
+            if (!strcmp(known_extensions[i], extProp.name)) {
+                extFound = 1;
+                memcpy(&enable_extension_list[global_extension_count], &extProp, sizeof(extProp));
+                global_extension_count++;
+            }
         }
     }
     assert(extFound);
 
-    gpu->extensions =
-            malloc(sizeof(gpu->extensions[0]) * gpu->extension_count);
-    if (!gpu->extensions)
-        ERR_EXIT(VK_ERROR_OUT_OF_HOST_MEMORY);
+    inst_info.extensionCount = global_extension_count;
+    inst_info.pEnabledExtensions = enable_extension_list;
 
-    gpu->extension_count = 0;
-    uint32_t i;
-    for (i = 0; i < ARRAY_SIZE(known_extensions); i++) {
-        // known_extensions were validated above so copy them over here
-        gpu->extensions[gpu->extension_count++] = known_extensions[i];
+    err = vkCreateInstance(&inst_info, &inst->instance);
+    if (err == VK_ERROR_INCOMPATIBLE_DRIVER) {
+        printf("Cannot create Vulkan instance.\n");
+        ERR_EXIT(err);
+    } else if (err) {
+        ERR_EXIT(err);
     }
+
+    inst->global_extension_count = global_extension_count;
+    inst->global_extensions = enable_extension_list;
 }
+
+static void app_destroy_instance(struct app_instance *inst)
+{
+    free(inst->global_extensions);
+    vkDestroyInstance(inst->instance);
+}
+
 
 static void app_gpu_init(struct app_gpu *gpu, uint32_t id, VkPhysicalDevice obj)
 {
@@ -492,7 +568,6 @@ static void app_gpu_init(struct app_gpu *gpu, uint32_t id, VkPhysicalDevice obj)
     if (err || size != sizeof(gpu->memory_props))
         ERR_EXIT(err);
 
-    app_gpu_init_extensions(gpu);
     app_dev_init(&gpu->dev, gpu);
     app_dev_init_formats(&gpu->dev);
 }
@@ -500,7 +575,7 @@ static void app_gpu_init(struct app_gpu *gpu, uint32_t id, VkPhysicalDevice obj)
 static void app_gpu_destroy(struct app_gpu *gpu)
 {
     app_dev_destroy(&gpu->dev);
-    free(gpu->extensions);
+    free(gpu->device_extensions);
     free(gpu->queue_reqs);
     free(gpu->queue_props);
 }
@@ -631,16 +706,32 @@ static void app_gpu_dump_perf(const struct app_gpu *gpu)
     printf("\tpixelsPerClock = %f\n",   perf->pixelsPerClock);
 }
 
+static void app_gpu_dump_instance_extensions(const struct app_instance *inst)
+{
+    uint32_t i;
+    printf("Extensions");
+    printf("\tcount = %d\n",            inst->global_extension_count);
+    printf("\t");
+    for (i=0; i< inst->global_extension_count; i++) {
+        if (i>0)
+            printf(", "); // separator between extension names
+        printf("%s",                    inst->global_extensions[i].name);
+    }
+    printf("\n");
+}
+
 static void app_gpu_dump_extensions(const struct app_gpu *gpu)
 {
     uint32_t i;
     printf("Extensions");
-    printf("\tcount = %d\n",            gpu->extension_count);
+    printf("\tcount = %d\n",            gpu->device_extension_count);
     printf("\t");
-    for (i=0; i< gpu->extension_count; i++) {
+    for (i=0; i< gpu->device_extension_count; i++) {
         if (i>0)
             printf(", "); // separator between extension names
-        printf("%s",                    gpu->extensions[i]);
+        printf("%s(%d): %s", gpu->device_extensions[i].name,
+               gpu->device_extensions[i].version,
+               gpu->device_extensions[i].description);
     }
     printf("\n");
 }
@@ -691,46 +782,23 @@ static void app_gpu_dump(const struct app_gpu *gpu)
 
 int main(int argc, char **argv)
 {
-    static const VkApplicationInfo app_info = {
-        .sType = VK_STRUCTURE_TYPE_APPLICATION_INFO,
-        .pNext = NULL,
-        .pAppName = APP_SHORT_NAME,
-        .appVersion = 1,
-        .pEngineName = APP_SHORT_NAME,
-        .engineVersion = 1,
-        .apiVersion = VK_API_VERSION,
-    };
-    static const VkInstanceCreateInfo inst_info = {
-        .sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
-        .pNext = NULL,
-        .pAppInfo = &app_info,
-        .pAllocCb = NULL,
-        .extensionCount = 0,
-        .pEnabledExtensions = NULL,
-    };
     struct app_gpu gpus[MAX_GPUS];
     VkPhysicalDevice objs[MAX_GPUS];
-    VkInstance inst;
     uint32_t gpu_count, i;
     VkResult err;
+    struct app_instance inst;
 
-    err = vkCreateInstance(&inst_info, &inst);
-    if (err == VK_ERROR_INCOMPATIBLE_DRIVER) {
-        printf("Cannot find a compatible Vulkan installable client driver "
-               "(ICD).\n");
-        ERR_EXIT(err);
-    } else if (err) {
+    app_create_instance(&inst);
+    app_gpu_dump_instance_extensions(&inst);
 
-        ERR_EXIT(err);
-    }
-    err = vkEnumeratePhysicalDevices(inst, &gpu_count, NULL);
+    err = vkEnumeratePhysicalDevices(inst.instance, &gpu_count, NULL);
     if (err)
         ERR_EXIT(err);
     if (gpu_count > MAX_GPUS) {
         printf("Too many GPUS found \n");
         ERR_EXIT(VK_ERROR_UNKNOWN);
     }
-    err = vkEnumeratePhysicalDevices(inst, &gpu_count, objs);
+    err = vkEnumeratePhysicalDevices(inst.instance, &gpu_count, objs);
     if (err)
         ERR_EXIT(err);
 
@@ -745,7 +813,7 @@ int main(int argc, char **argv)
     for (i = 0; i < gpu_count; i++)
         app_gpu_destroy(&gpus[i]);
 
-    vkDestroyInstance(inst);
+    app_destroy_instance(&inst);
 
     return 0;
 }
