@@ -301,7 +301,7 @@ describe_type(char *dst, shader_source const *src, unsigned type)
 
 
 static bool
-types_match(shader_source const *a, shader_source const *b, unsigned a_type, unsigned b_type)
+types_match(shader_source const *a, shader_source const *b, unsigned a_type, unsigned b_type, bool b_arrayed)
 {
     auto a_type_def_it = a->type_def_index.find(a_type);
     auto b_type_def_it = b->type_def_index.find(b_type);
@@ -321,27 +321,39 @@ types_match(shader_source const *a, shader_source const *b, unsigned a_type, uns
     unsigned a_opcode = a_code[0] & 0x0ffffu;
     unsigned b_opcode = b_code[0] & 0x0ffffu;
 
+    if (b_arrayed && b_opcode == spv::OpTypeArray) {
+        /* we probably just found the extra level of arrayness in b_type: compare the type inside it to a_type */
+        return types_match(a, b, a_type, b_code[2], false);
+    }
+
     if (a_opcode != b_opcode) {
         return false;
     }
 
     switch (a_opcode) {
+        /* if b_arrayed and we hit a leaf type, then we can't match -- there's nowhere for the extra OpTypeArray to be! */
         case spv::OpTypeBool:
-            return true;
+            return true && !b_arrayed;
         case spv::OpTypeInt:
             /* match on width, signedness */
-            return a_code[2] == b_code[2] && a_code[3] == b_code[3];
+            return a_code[2] == b_code[2] && a_code[3] == b_code[3] && !b_arrayed;
         case spv::OpTypeFloat:
             /* match on width */
-            return a_code[2] == b_code[2];
+            return a_code[2] == b_code[2] && !b_arrayed;
         case spv::OpTypeVector:
         case spv::OpTypeMatrix:
         case spv::OpTypeArray:
-            /* match on element type, count. these all have the same layout */
-            return types_match(a, b, a_code[2], b_code[2]) && a_code[3] == b_code[3];
+            /* match on element type, count. these all have the same layout. we don't get here if
+             * b_arrayed -- that is handled above. */
+            return !b_arrayed && types_match(a, b, a_code[2], b_code[2], b_arrayed) && a_code[3] == b_code[3];
         case spv::OpTypeStruct:
             /* match on all element types */
             {
+                if (b_arrayed) {
+                    /* for the purposes of matching different levels of arrayness, structs are leaves. */
+                    return false;
+                }
+
                 unsigned a_len = a_code[0] >> 16;
                 unsigned b_len = b_code[0] >> 16;
 
@@ -350,7 +362,7 @@ types_match(shader_source const *a, shader_source const *b, unsigned a_type, uns
                 }
 
                 for (unsigned i = 2; i < a_len; i++) {
-                    if (!types_match(a, b, a_code[i], b_code[i])) {
+                    if (!types_match(a, b, a_code[i], b_code[i], b_arrayed)) {
                         return false;
                     }
                 }
@@ -359,7 +371,7 @@ types_match(shader_source const *a, shader_source const *b, unsigned a_type, uns
             }
         case spv::OpTypePointer:
             /* match on pointee type. storage class is expected to differ */
-            return types_match(a, b, a_code[3], b_code[3]);
+            return types_match(a, b, a_code[3], b_code[3], b_arrayed);
 
         default:
             /* remaining types are CLisms, or may not appear in the interfaces we
@@ -517,7 +529,7 @@ validate_interface_between_stages(shader_source const *producer, char const *pro
             b_it++;
         }
         else {
-            if (types_match(producer, consumer, a_it->second.type_id, b_it->second.type_id)) {
+            if (types_match(producer, consumer, a_it->second.type_id, b_it->second.type_id, false)) {
                 /* OK! */
             }
             else {
