@@ -963,10 +963,7 @@ static void demo_prepare_texture_image(struct demo *demo,
 static void demo_destroy_texture_image(struct demo *demo, struct texture_object *tex_objs)
 {
     /* clean up staging resources */
-    vkBindObjectMemory(demo->device,
-            VK_OBJECT_TYPE_IMAGE, tex_objs->image, VK_NULL_HANDLE, 0);
     vkFreeMemory(demo->device, tex_objs->mem);
-
     vkDestroyObject(demo->device, VK_OBJECT_TYPE_IMAGE, tex_objs->image);
 }
 
@@ -2035,7 +2032,6 @@ static void demo_cleanup(struct demo *demo)
 
     for (i = 0; i < DEMO_TEXTURE_COUNT; i++) {
         vkDestroyObject(demo->device, VK_OBJECT_TYPE_IMAGE_VIEW, demo->textures[i].view);
-        vkBindObjectMemory(demo->device, VK_OBJECT_TYPE_IMAGE, demo->textures[i].image, VK_NULL_HANDLE, 0);
         vkDestroyObject(demo->device, VK_OBJECT_TYPE_IMAGE, demo->textures[i].image);
         vkFreeMemory(demo->device, demo->textures[i].mem);
         vkDestroyObject(demo->device, VK_OBJECT_TYPE_SAMPLER, demo->textures[i].sampler);
@@ -2043,12 +2039,10 @@ static void demo_cleanup(struct demo *demo)
     vkDestroySwapChainWSI(demo->swap_chain);
 
     vkDestroyObject(demo->device, VK_OBJECT_TYPE_DEPTH_STENCIL_VIEW, demo->depth.view);
-    vkBindObjectMemory(demo->device, VK_OBJECT_TYPE_IMAGE, demo->depth.image, VK_NULL_HANDLE, 0);
     vkDestroyObject(demo->device, VK_OBJECT_TYPE_IMAGE, demo->depth.image);
     vkFreeMemory(demo->device, demo->depth.mem);
 
     vkDestroyObject(demo->device, VK_OBJECT_TYPE_BUFFER_VIEW, demo->uniform_data.view);
-    vkBindObjectMemory(demo->device, VK_OBJECT_TYPE_BUFFER, demo->uniform_data.buf, VK_NULL_HANDLE, 0);
     vkDestroyObject(demo->device, VK_OBJECT_TYPE_BUFFER, demo->uniform_data.buf);
     vkFreeMemory(demo->device, demo->uniform_data.mem);
 

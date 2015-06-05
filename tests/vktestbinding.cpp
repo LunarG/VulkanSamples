@@ -236,10 +236,6 @@ void Object::cleanup()
     if (!initialized())
         return;
 
-    if(bound) {
-       unbind_memory();
-    }
-
     if (internal_mems_) {
         delete[] internal_mems_;
         internal_mems_ = NULL;
@@ -256,12 +252,6 @@ void Object::bind_memory(const GpuMemory &mem, VkDeviceSize mem_offset)
 {
     bound = true;
     EXPECT(vkBindObjectMemory(dev_->obj(), type(), obj(), mem.obj(), mem_offset) == VK_SUCCESS);
-}
-
-
-void Object::unbind_memory()
-{
-    EXPECT(vkBindObjectMemory(dev_->obj(), type(), obj(), VK_NULL_HANDLE, 0) == VK_SUCCESS);
 }
 
 void Object::alloc_memory()

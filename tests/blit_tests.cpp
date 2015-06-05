@@ -847,9 +847,6 @@ TEST_F(VkCmdCopyBufferTest, RAWHazard)
 
     if (mem_req.size) {
         // All done with event memory, clean up
-        err = vkBindObjectMemory(dev_.obj(), VK_OBJECT_TYPE_EVENT, event, VK_NULL_HANDLE, 0);
-        ASSERT_VK_SUCCESS(err);
-
         err = vkFreeMemory(dev_.obj(), event_mem);
         ASSERT_VK_SUCCESS(err);
     }

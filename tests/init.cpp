@@ -229,8 +229,6 @@ TEST_F(VkTest, Event) {
 
     // All done with event memory, clean up
     if (mem_req.size) {
-        err = vkBindObjectMemory(device(), VK_OBJECT_TYPE_EVENT, event, VK_NULL_HANDLE, 0);
-        ASSERT_VK_SUCCESS(err);
         err = vkFreeMemory(device(), event_mem);
         ASSERT_VK_SUCCESS(err);
     }
@@ -332,8 +330,6 @@ TEST_F(VkTest, Query) {
 
     if (mem_req.size) {
         // All done with QueryPool memory, clean up
-        err = vkBindObjectMemory(device(), VK_OBJECT_TYPE_QUERY_POOL, query_pool, VK_NULL_HANDLE, 0);
-        ASSERT_VK_SUCCESS(err);
         err = vkFreeMemory(device(), query_mem);
         ASSERT_VK_SUCCESS(err);
     }
@@ -563,7 +559,6 @@ void VkTest::CreateImageTest()
 
     // All done with image memory, clean up
     if (mem_req.size) {
-        ASSERT_VK_SUCCESS(vkBindObjectMemory(device(), VK_OBJECT_TYPE_IMAGE, image, VK_NULL_HANDLE, 0));
         ASSERT_VK_SUCCESS(vkFreeMemory(device(), image_mem));
     }
 

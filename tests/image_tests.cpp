@@ -243,11 +243,8 @@ void VkImageTest::DestroyImage()
 {
     VkResult err;
     // All done with image memory, clean up
-    ASSERT_VK_SUCCESS(vkBindObjectMemory(device(), VK_OBJECT_TYPE_IMAGE, m_image, VK_NULL_HANDLE, 0));
-
     err = vkFreeMemory(device(), m_image_mem);
     ASSERT_VK_SUCCESS(err);
-
 
     ASSERT_VK_SUCCESS(vkDestroyObject(device(), VK_OBJECT_TYPE_IMAGE, m_image));
 }

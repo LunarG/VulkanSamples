@@ -132,7 +132,6 @@ public:
 
     // vkBindObjectMemory()
     void bind_memory(const GpuMemory &mem, VkDeviceSize mem_offset);
-    void unbind_memory();
 
     // Unless an object is initialized with init_no_mem(), memories are
     // automatically allocated and bound.  These methods can be used to
