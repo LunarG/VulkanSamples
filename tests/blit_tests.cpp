@@ -1336,6 +1336,19 @@ TEST_F(VkCmdClearColorImageTest, Basic)
     for (std::vector<vk_testing::Device::Format>::const_iterator it = test_formats_.begin();
          it != test_formats_.end(); it++) {
         const float color[4] = { 0.0f, 1.0f, 0.0f, 1.0f };
+        VkFormatProperties props;
+        size_t size = sizeof(props);
+        VkResult err;
+
+        err = vkGetFormatInfo(dev_.obj(), it->format,
+                               VK_FORMAT_INFO_TYPE_PROPERTIES,
+                               &size, &props);
+        ASSERT_EQ(err, VK_SUCCESS);
+        if (it->tiling == VK_IMAGE_TILING_LINEAR && !(props.linearTilingFeatures & VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT))
+            continue;
+
+        if (it->tiling == VK_IMAGE_TILING_OPTIMAL && !(props.optimalTilingFeatures & VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT))
+            continue;
 
         VkImageCreateInfo img_info = vk_testing::Image::create_info();
         img_info.imageType = VK_IMAGE_TYPE_2D;
@@ -1343,6 +1356,7 @@ TEST_F(VkCmdClearColorImageTest, Basic)
         img_info.extent.width = 64;
         img_info.extent.height = 64;
         img_info.tiling = it->tiling;
+        img_info.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 
         const VkImageSubresourceRange range =
             vk_testing::Image::subresource_range(img_info, VK_IMAGE_ASPECT_COLOR);
@@ -1372,6 +1386,19 @@ TEST_F(VkCmdClearColorImageRawTest, Basic)
     for (std::vector<vk_testing::Device::Format>::const_iterator it = test_formats_.begin();
          it != test_formats_.end(); it++) {
         const uint32_t color[4] = { 0x11111111, 0x22222222, 0x33333333, 0x44444444 };
+        VkFormatProperties props;
+        size_t size = sizeof(props);
+        VkResult err;
+
+        err = vkGetFormatInfo(dev_.obj(), it->format,
+                               VK_FORMAT_INFO_TYPE_PROPERTIES,
+                               &size, &props);
+        ASSERT_EQ(err, VK_SUCCESS);
+        if (it->tiling == VK_IMAGE_TILING_LINEAR && !(props.linearTilingFeatures & VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT))
+            continue;
+
+        if (it->tiling == VK_IMAGE_TILING_OPTIMAL && !(props.optimalTilingFeatures & VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT))
+            continue;
 
         // not sure what to do here
         if (it->format == VK_FORMAT_UNDEFINED ||
@@ -1395,6 +1422,7 @@ TEST_F(VkCmdClearColorImageRawTest, Basic)
         img_info.extent.width = 64;
         img_info.extent.height = 64;
         img_info.tiling = it->tiling;
+        img_info.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 
         const VkImageSubresourceRange range =
             vk_testing::Image::subresource_range(img_info, VK_IMAGE_ASPECT_COLOR);
@@ -1542,6 +1570,20 @@ TEST_F(VkCmdClearDepthStencilTest, Basic)
 {
     for (std::vector<vk_testing::Device::Format>::const_iterator it = test_formats_.begin();
          it != test_formats_.end(); it++) {
+        VkFormatProperties props;
+        size_t size = sizeof(props);
+        VkResult err;
+
+        err = vkGetFormatInfo(dev_.obj(), it->format,
+                               VK_FORMAT_INFO_TYPE_PROPERTIES,
+                               &size, &props);
+        ASSERT_EQ(err, VK_SUCCESS);
+        if (it->tiling == VK_IMAGE_TILING_LINEAR && !(props.linearTilingFeatures & VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT))
+            continue;
+
+        if (it->tiling == VK_IMAGE_TILING_OPTIMAL && !(props.optimalTilingFeatures & VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT))
+            continue;
+
         // known driver issues
         if (it->format == VK_FORMAT_S8_UINT ||
             it->format == VK_FORMAT_D24_UNORM ||
