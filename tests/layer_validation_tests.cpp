@@ -2342,6 +2342,62 @@ TEST_F(VkLayerTest, CreatePipelineFragmentOutputTypeMismatch)
         FAIL() << "Incorrect error: " << msgString;
     }
 }
+
+TEST_F(VkLayerTest, CreatePipelineNonSpirvShader)
+{
+    VK_DBG_MSG_TYPE msgType;
+    std::string msgString;
+    ASSERT_NO_FATAL_FAILURE(InitState());
+    /* Intentionally provided GLSL rather than compiling to SPIRV first */
+    ScopedUseSpv spv(false);
+
+    char const *vsSource =
+        "#version 140\n"
+        "#extension GL_ARB_separate_shader_objects: require\n"
+        "#extension GL_ARB_shading_language_420pack: require\n"
+        "\n"
+        "void main(){\n"
+        "   gl_Position = vec4(1);\n"
+        "}\n";
+    char const *fsSource =
+        "#version 140\n"
+        "#extension GL_ARB_separate_shader_objects: require\n"
+        "#extension GL_ARB_shading_language_420pack: require\n"
+        "\n"
+        "layout(location=0) out vec4 x;\n"
+        "void main(){\n"
+        "   x = vec4(1);\n"
+        "}\n";
+
+    m_errorMonitor->ClearState();
+
+    VkShaderObj vs(m_device, vsSource, VK_SHADER_STAGE_VERTEX, this);
+    VkShaderObj fs(m_device, fsSource, VK_SHADER_STAGE_FRAGMENT, this);
+
+
+    VkPipelineObj pipe(m_device);
+    pipe.AddShader(&vs);
+    pipe.AddShader(&fs);
+
+    /* implicit CB 0 set up by test framework, is UNORM. */
+
+    VkCommandBufferObj dummyCmd(m_device);
+    VkDescriptorSetObj descriptorSet(m_device);
+    descriptorSet.AppendDummy();
+    descriptorSet.CreateVKDescriptorSet(&dummyCmd);
+
+    VkResult res = pipe.CreateVKPipeline(descriptorSet);
+    /* pipeline creation should have succeeded */
+    ASSERT_EQ(VK_SUCCESS, res);
+
+    /* should have emitted a warning: the shader is not SPIRV, so we're
+     * not going to be able to analyze it */
+    msgType = m_errorMonitor->GetState(&msgString);
+    ASSERT_EQ(VK_DBG_MSG_WARNING, msgType);
+    if (!strstr(msgString.c_str(),"is not SPIR-V")) {
+        FAIL() << "Incorrect warning: " << msgString;
+    }
+}
 #endif
 
 int main(int argc, char **argv) {
