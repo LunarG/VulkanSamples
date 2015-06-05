@@ -1319,8 +1319,9 @@ static VkShader demo_prepare_fs(struct demo *demo)
             "layout (binding = 1) uniform sampler2D tex;\n"
             "\n"
             "layout (location = 0) in vec4 texcoord;\n"
+            "layout (location = 0) out vec4 uFragColor;\n"
             "void main() {\n"
-            "   gl_FragColor = texture(tex, texcoord.xy);\n"
+            "   uFragColor = texture(tex, texcoord.xy);\n"
             "}\n";
 
     return demo_prepare_shader(demo, VK_SHADER_STAGE_FRAGMENT,

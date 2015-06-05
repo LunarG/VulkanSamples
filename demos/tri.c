@@ -888,8 +888,9 @@ static VkShader demo_prepare_fs(struct demo *demo)
             "#extension GL_ARB_shading_language_420pack : enable\n"
             "layout (binding = 0) uniform sampler2D tex;\n"
             "layout (location = 0) in vec2 texcoord;\n"
+            "layout (location = 0) out vec4 uFragColor;\n"
             "void main() {\n"
-            "   gl_FragColor = texture(tex, texcoord);\n"
+            "   uFragColor = texture(tex, texcoord);\n"
             "}\n";
 
     return demo_prepare_shader(demo, VK_SHADER_STAGE_FRAGMENT,
