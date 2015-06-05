@@ -441,7 +441,10 @@ struct intel_ir *shader_create_ir(const struct intel_gpu *gpu,
     bool dump_SPV = false;
     bool dump_hir = false;
 
-    _mesa_glsl_compile_shader(ctx, shader, dump_ast, dump_SPV, dump_hir);
+    bool strip_SPV = false;
+    bool canonicalize_SPV = false;
+
+    _mesa_glsl_compile_shader(ctx, shader, dump_ast, dump_SPV, dump_hir, strip_SPV, canonicalize_SPV);
 
     if (strlen(shader->InfoLog) > 0) {
         printf("Info log:\n%s\n", shader->InfoLog);

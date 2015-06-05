@@ -32,6 +32,7 @@
 #include "Frontends/glslang/GlslangToTop.h"
 #include "Frontends/SPIRV/SpvToTop.h"
 #include "SPIRV/GlslangToSpv.h"
+#include "SPIRV/SPVRemapper.h"
 #include "SPIRV/GLSL450Lib.h"
 #include "SPIRV/disassemble.h"
 #include "SPIRV/doc.h"
@@ -1573,7 +1574,8 @@ const char* GlslStd450DebugNames[GLSL_STD_450::Count];
 
 void
 _mesa_glsl_compile_shader(struct gl_context *ctx, struct gl_shader *shader,
-                          bool dump_ast, bool dump_SPV, bool dump_hir)
+                          bool dump_ast, bool dump_SPV, bool dump_hir,
+                          bool strip_SPV, bool canonicalize_SPV)
 {
    const char* infoLog = "";
 
@@ -1642,19 +1644,26 @@ _mesa_glsl_compile_shader(struct gl_context *ctx, struct gl_shader *shader,
        } else {
            // Verify that the SPV really is SPV
            if (((unsigned int *)shader->Source)[0] == spv::MagicNumber) {
-               std::vector<unsigned int> spv;
+               std::vector<unsigned int> spirv;
 
-               spv.reserve(shader->Size);
+               spirv.reserve(shader->Size);
                for (int x=0; x<shader->Size; ++x)
-                   spv.push_back(((unsigned int *)shader->Source)[x]);
+                   spirv.push_back(((unsigned int *)shader->Source)[x]);
+
+               if (strip_SPV || canonicalize_SPV) {
+                   // remap is expensive, just call once with OR'd feature mask
+                   spv::spirvbin_t(0).remap(spirv,
+                       strip_SPV        ? spv::spirvbin_t::STRIP         : 0 |
+                       canonicalize_SPV ? spv::spirvbin_t::ALL_BUT_STRIP : 0);
+               }
 
                if (dump_SPV) {
                    spv::Parameterize();
                    GLSL_STD_450::GetDebugNames(GlslStd450DebugNames);
-                   spv::Disassemble(std::cout, spv);
+                   spv::Disassemble(std::cout, spirv);
                }
 
-               gla::SpvToTop(spv, *manager);
+               gla::SpvToTop(spirv, *manager);
            } else {
                state->error = true;
            }
