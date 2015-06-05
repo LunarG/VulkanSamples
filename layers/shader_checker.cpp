@@ -100,9 +100,20 @@ struct shader_source {
      * trees requires jumping all over the instruction stream.
      */
     std::unordered_map<unsigned, unsigned> type_def_index;
+    bool is_spirv;
 
     shader_source(VkShaderCreateInfo const *pCreateInfo) :
-        words((uint32_t *)pCreateInfo->pCode, (uint32_t *)pCreateInfo->pCode + pCreateInfo->codeSize / sizeof(uint32_t)) {
+        words((uint32_t *)pCreateInfo->pCode, (uint32_t *)pCreateInfo->pCode + pCreateInfo->codeSize / sizeof(uint32_t)),
+        type_def_index(),
+        is_spirv(true) {
+
+        if (words.size() < 5 || words[0] != spv::MagicNumber || words[1] != spv::Version) {
+            layerCbMsg(VK_DBG_MSG_WARNING, VK_VALIDATION_LEVEL_0, NULL, 0, SHADER_CHECKER_NON_SPIRV_SHADER, "SC",
+                       "Shader is not SPIR-V, most checks will not be possible");
+            is_spirv = false;
+            return;
+        }
+
 
         build_type_def_index(words, type_def_index);
     }
@@ -409,12 +420,6 @@ collect_interface_by_location(shader_source const *src, spv::StorageClass sinter
     unsigned int const *code = (unsigned int const *)&src->words[0];
     size_t size = src->words.size();
 
-    if (code[0] != spv::MagicNumber) {
-        layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, NULL, 0, SHADER_CHECKER_NON_SPIRV_SHADER, "SC",
-                   "Shader is not SPIR-V, unable to extract interface");
-        return;
-    }
-
     std::unordered_map<unsigned, unsigned> var_locations;
     std::unordered_map<unsigned, unsigned> var_builtins;
 
@@ -491,7 +496,8 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateShader(VkDevice device, const VkShaderCre
 
 static bool
 validate_interface_between_stages(shader_source const *producer, char const *producer_name,
-                                  shader_source const *consumer, char const *consumer_name)
+                                  shader_source const *consumer, char const *consumer_name,
+                                  bool consumer_arrayed_input)
 {
     std::map<uint32_t, interface_var> outputs;
     std::map<uint32_t, interface_var> inputs;
@@ -529,7 +535,7 @@ validate_interface_between_stages(shader_source const *producer, char const *pro
             b_it++;
         }
         else {
-            if (types_match(producer, consumer, a_it->second.type_id, b_it->second.type_id, false)) {
+            if (types_match(producer, consumer, a_it->second.type_id, b_it->second.type_id, consumer_arrayed_input)) {
                 /* OK! */
             }
             else {
@@ -777,16 +783,30 @@ validate_fs_outputs_against_cb(shader_source const *fs, VkPipelineCbStateCreateI
 }
 
 
+struct shader_stage_attributes {
+    char const * const name;
+    bool arrayed_input;
+};
+
+
+static shader_stage_attributes
+shader_stage_attribs[VK_SHADER_STAGE_FRAGMENT + 1] = {
+    { "vertex shader", false },
+    { "tessellation control shader", true },
+    { "tessellation evaluation shader", false },
+    { "geometry shader", true },
+    { "fragment shader", false },
+};
+
+
 static bool
 validate_graphics_pipeline(VkGraphicsPipelineCreateInfo const *pCreateInfo)
 {
-    /* TODO: run cross-stage validation for GS, TCS, TES stages */
-
     /* We seem to allow pipeline stages to be specified out of order, so collect and identify them
      * before trying to do anything more: */
 
-    shader_source const *vs_source = 0;
-    shader_source const *fs_source = 0;
+    shader_source const *shaders[VK_SHADER_STAGE_FRAGMENT + 1];  /* exclude CS */
+    memset(shaders, 0, sizeof(shaders));
     VkPipelineCbStateCreateInfo const *cb = 0;
     VkPipelineVertexInputCreateInfo const *vi = 0;
     char str[1024];
@@ -798,15 +818,12 @@ validate_graphics_pipeline(VkGraphicsPipelineCreateInfo const *pCreateInfo)
         if (stage->sType == VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO) {
             auto shader_stage = (VkPipelineShaderStageCreateInfo const *)stage;
 
-            if (shader_stage->shader.stage == VK_SHADER_STAGE_VERTEX) {
-                vs_source = shader_map[(void *)(shader_stage->shader.shader)];
-            }
-            else if (shader_stage->shader.stage == VK_SHADER_STAGE_FRAGMENT) {
-                fs_source = shader_map[(void *)(shader_stage->shader.shader)];
-            }
-            else {
+            if (shader_stage->shader.stage < VK_SHADER_STAGE_VERTEX || shader_stage->shader.stage > VK_SHADER_STAGE_FRAGMENT) {
                 sprintf(str, "Unknown shader stage %d\n", shader_stage->shader.stage);
                 layerCbMsg(VK_DBG_MSG_WARNING, VK_VALIDATION_LEVEL_0, NULL, 0, SHADER_CHECKER_UNKNOWN_STAGE, "SC", str);
+            }
+            else {
+                shaders[shader_stage->shader.stage] = shader_map[(void *)(shader_stage->shader.shader)];
             }
         }
         else if (stage->sType == VK_STRUCTURE_TYPE_PIPELINE_CB_STATE_CREATE_INFO) {
@@ -817,20 +834,34 @@ validate_graphics_pipeline(VkGraphicsPipelineCreateInfo const *pCreateInfo)
         }
     }
 
-    sprintf(str, "Pipeline: vi=%p vs=%p fs=%p cb=%p\n", vi, vs_source, fs_source, cb);
-    layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, NULL, 0, SHADER_CHECKER_NONE, "SC", str);
-
-    if (vs_source) {
-        pass = validate_vi_against_vs_inputs(vi, vs_source) && pass;
+    if (shaders[VK_SHADER_STAGE_VERTEX] && shaders[VK_SHADER_STAGE_VERTEX]->is_spirv) {
+        pass = validate_vi_against_vs_inputs(vi, shaders[VK_SHADER_STAGE_VERTEX]) && pass;
     }
 
-    if (vs_source && fs_source) {
-        pass = validate_interface_between_stages(vs_source, "vertex shader",
-                                                 fs_source, "fragment shader") && pass;
+    /* TODO: enforce rules about present combinations of shaders */
+    int producer = VK_SHADER_STAGE_VERTEX;
+    int consumer = VK_SHADER_STAGE_GEOMETRY;
+
+    while (!shaders[producer] && producer != VK_SHADER_STAGE_FRAGMENT) {
+        producer++;
+        consumer++;
     }
 
-    if (fs_source && cb) {
-        pass = validate_fs_outputs_against_cb(fs_source, cb) && pass;
+    for (; producer != VK_SHADER_STAGE_FRAGMENT; consumer++) {
+        assert(shaders[producer]);
+        if (shaders[consumer]) {
+            if (shaders[producer]->is_spirv && shaders[consumer]->is_spirv) {
+                pass = validate_interface_between_stages(shaders[producer], shader_stage_attribs[producer].name,
+                                                         shaders[consumer], shader_stage_attribs[consumer].name,
+                                                         shader_stage_attribs[consumer].arrayed_input) && pass;
+            }
+
+            producer = consumer;
+        }
+    }
+
+    if (shaders[VK_SHADER_STAGE_FRAGMENT] && shaders[VK_SHADER_STAGE_FRAGMENT]->is_spirv && cb) {
+        pass = validate_fs_outputs_against_cb(shaders[VK_SHADER_STAGE_FRAGMENT], cb) && pass;
     }
 
     loader_platform_thread_unlock_mutex(&globalLock);
