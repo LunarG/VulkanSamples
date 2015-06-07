@@ -175,7 +175,7 @@ class Subcommand(object):
 
     def _gen_layer_get_global_extension_info(self, layer="Generic"):
         ggei_body = []
-        if layer == 'APIDump':
+        if layer == 'APIDump' or layer == 'Generic':
             ggei_body.append('#define LAYER_EXT_ARRAY_SIZE 1')
             ggei_body.append('static const VkExtensionProperties layerExts[LAYER_EXT_ARRAY_SIZE] = {')
             ggei_body.append('    {')
