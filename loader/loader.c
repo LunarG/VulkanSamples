@@ -249,6 +249,7 @@ static struct loader_extension_property *get_extension_property_from_vkext(
 
 static void get_global_extensions(
         const PFN_vkGetGlobalExtensionInfo fp_get,
+        const char *get_extension_info_name,
         const char *lib_name,
         const enum extension_origin origin,
         struct loader_extension_list *ext_list)
@@ -265,12 +266,13 @@ static void get_global_extensions(
     }
     siz = sizeof(VkExtensionProperties);
     for (i = 0; i < count; i++) {
-        memset(&ext_props, 1, sizeof(ext_props));
+        memset(&ext_props, 0, sizeof(ext_props));
         res = fp_get(VK_EXTENSION_INFO_TYPE_PROPERTIES, i, &siz, &ext_props.info);
         if (res == VK_SUCCESS) {
             ext_props.hosted = false;
             ext_props.origin = origin;
             ext_props.lib_name = lib_name;
+            strncpy(ext_props.get_extension_info_name, get_extension_info_name, MAX_EXTENSION_NAME_SIZE);
             loader_add_to_ext_list(ext_list, 1, &ext_props);
         }
     }
@@ -300,7 +302,12 @@ static void get_physical_device_layer_extensions(
     char funcStr[256];
     snprintf(funcStr, 256, "%sGetPhysicalDeviceExtensionInfo", ext_props.info.name);
     lib_handle = loader_add_layer_lib("device", &ext_props);
-    fp_get = (PFN_vkGetPhysicalDeviceExtensionInfo) loader_platform_get_proc_address(lib_handle, "vkGetPhysicalDeviceExtensionInfo");
+
+    /* first try extension specific function, then generic */
+    fp_get = (PFN_vkGetPhysicalDeviceExtensionInfo) loader_platform_get_proc_address(lib_handle, funcStr);
+    if (!fp_get) {
+        fp_get = (PFN_vkGetPhysicalDeviceExtensionInfo) loader_platform_get_proc_address(lib_handle, "vkGetPhysicalDeviceExtensionInfo");
+    }
     if (fp_get) {
         res = fp_get(physical_device, VK_EXTENSION_INFO_TYPE_COUNT, 0, &siz, &count);
         if (res == VK_SUCCESS) {
@@ -402,6 +409,27 @@ void loader_add_to_ext_list(
             ext_list->capacity *= 2;
             ext_list->list = realloc(ext_list->list, ext_list->capacity);
         }
+
+        /*
+         * Check if any extensions already on the list come from the same
+         * library and use the same Get*ExtensionInfo. If so, link this
+         * extension to the previous as an alias. That way when we activate
+         * extensions we only activiate the associated layer once no
+         * matter how many extensions are used.
+         */
+        for (uint32_t j = 0; j < ext_list->count; j++) {
+            struct loader_extension_property *active_property = &ext_list->list[j];
+            if (cur_ext->lib_name &&
+                cur_ext->origin == VK_EXTENSION_ORIGIN_LAYER &&
+                active_property->origin == VK_EXTENSION_ORIGIN_LAYER &&
+                strcmp(cur_ext->lib_name, active_property->lib_name) == 0 &&
+                strcmp(cur_ext->get_extension_info_name, active_property->get_extension_info_name) == 0 &&
+                    active_property->alias == NULL) {
+                cur_ext->alias = active_property;
+                break;
+            }
+        }
+
         memcpy(&ext_list->list[ext_list->count], cur_ext, sizeof(struct loader_extension_property));
         ext_list->count++;
     }
@@ -559,6 +587,7 @@ static void loader_scanned_icd_add(const char *filename)
 
     get_global_extensions(
                 (PFN_vkGetGlobalExtensionInfo) fp_get_global_ext_info,
+                "vkGetGlobalExtensionInfo",
                 new_node->lib_name,
                 VK_EXTENSION_ORIGIN_ICD,
                 &new_node->global_extension_list);
@@ -751,95 +780,96 @@ void layer_lib_scan(void)
     for (p = libPaths; *p; p = next) {
         next = strchr(p, PATH_SEPERATOR);
         if (next == NULL) {
-           len = (uint32_t) strlen(p);
-           next = p + len;
+            len = (uint32_t) strlen(p);
+            next = p + len;
         }
         else {
-           len = (uint32_t) (next - p);
-           *(char *) next = '\0';
-           next++;
+            len = (uint32_t) (next - p);
+            *(char *) next = '\0';
+            next++;
         }
 
-       curdir = opendir(p);
-       if (curdir) {
-          dent = readdir(curdir);
-          while (dent) {
-             /* Look for layers starting with VK_LAYER_LIBRARY_PREFIX and
-              * ending with VK_LIBRARY_SUFFIX
-              */
-              if (!strncmp(dent->d_name,
-                          VK_LAYER_LIBRARY_PREFIX,
-                          VK_LAYER_LIBRARY_PREFIX_LEN)) {
-                 uint32_t nlen = (uint32_t) strlen(dent->d_name);
-                 const char *suf = dent->d_name + nlen - VK_LIBRARY_SUFFIX_LEN;
-                 if ((nlen > VK_LIBRARY_SUFFIX_LEN) &&
-                     !strncmp(suf,
-                              VK_LIBRARY_SUFFIX,
-                              VK_LIBRARY_SUFFIX_LEN)) {
-                     loader_platform_dl_handle handle;
-                     snprintf(temp_str, sizeof(temp_str),
-                              "%s" DIRECTORY_SYMBOL "%s",p,dent->d_name);
-                     // Used to call: dlopen(temp_str, RTLD_LAZY)
-                     fprintf(stderr, "Attempt to open library: %s\n", temp_str);
-                     if ((handle = loader_platform_open_library(temp_str)) == NULL) {
-                         dent = readdir(curdir);
-                         continue;
-                     }
-                     fprintf(stderr, "Opened library: %s\n", temp_str);
+        curdir = opendir(p);
+        if (curdir) {
+            dent = readdir(curdir);
+            while (dent) {
+                /* Look for layers starting with VK_LAYER_LIBRARY_PREFIX and
+                 * ending with VK_LIBRARY_SUFFIX
+                 */
+                if (!strncmp(dent->d_name,
+                             VK_LAYER_LIBRARY_PREFIX,
+                             VK_LAYER_LIBRARY_PREFIX_LEN)) {
+                    uint32_t nlen = (uint32_t) strlen(dent->d_name);
+                    const char *suf = dent->d_name + nlen - VK_LIBRARY_SUFFIX_LEN;
+                    if ((nlen > VK_LIBRARY_SUFFIX_LEN) &&
+                            !strncmp(suf,
+                                     VK_LIBRARY_SUFFIX,
+                                     VK_LIBRARY_SUFFIX_LEN)) {
+                        loader_platform_dl_handle handle;
+                        snprintf(temp_str, sizeof(temp_str),
+                                 "%s" DIRECTORY_SYMBOL "%s",p,dent->d_name);
+                        // Used to call: dlopen(temp_str, RTLD_LAZY)
+                        loader_log(VK_DBG_REPORT_DEBUG_BIT, 0,
+                                   "Attempt to open library: %s\n", temp_str);
+                        if ((handle = loader_platform_open_library(temp_str)) == NULL) {
+                            dent = readdir(curdir);
+                            continue;
+                        }
+                        loader_log(VK_DBG_REPORT_DEBUG_BIT, 0,
+                                   "Opened library: %s\n", temp_str);
 
-                     /* TODO: Remove fixed count */
-                     if (count == MAX_LAYER_LIBRARIES) {
-                         loader_log(VK_DBG_REPORT_ERROR_BIT, 0,
-                                    "%s ignored: max layer libraries exceed",
-                                    temp_str);
-                         break;
-                     }
-                     fp_get_ext = loader_platform_get_proc_address(handle,
-                                               "vkGetGlobalExtensionInfo");
+                        /* TODO: Remove fixed count */
+                        if (count == MAX_LAYER_LIBRARIES) {
+                            loader_log(VK_DBG_REPORT_ERROR_BIT, 0,
+                                       "%s ignored: max layer libraries exceed",
+                                       temp_str);
+                            break;
+                        }
 
-                     if (!fp_get_ext) {
-                         fprintf(stderr, "Unable to find vkGetGlobalExtensionInfo\n");
-                         loader_log(VK_DBG_REPORT_WARN_BIT, 0,
-                              "Couldn't dlsym vkGetGlobalExtensionInfo from library %s",
-                               temp_str);
-                         dent = readdir(curdir);
-                         loader_platform_close_library(handle);
-                         continue;
-                     }
+                        fp_get_ext = loader_platform_get_proc_address(handle, "vkGetGlobalExtensionInfo");
+                        if (!fp_get_ext) {
+                            loader_log(VK_DBG_REPORT_WARN_BIT, 0,
+                                       "Couldn't dlsym vkGetGlobalExtensionInfo from library %s",
+                                       temp_str);
+                            dent = readdir(curdir);
+                            loader_platform_close_library(handle);
+                            continue;
+                        }
 
-                     loader.scanned_layers[count].lib_name =
-                                                   malloc(strlen(temp_str) + 1);
-                     if (loader.scanned_layers[count].lib_name == NULL) {
-                         loader_log(VK_DBG_REPORT_ERROR_BIT, 0, "%s ignored: out of memory", temp_str);
-                         break;
-                     }
+                        loader.scanned_layers[count].lib_name =
+                                malloc(strlen(temp_str) + 1);
+                        if (loader.scanned_layers[count].lib_name == NULL) {
+                            loader_log(VK_DBG_REPORT_ERROR_BIT, 0, "%s ignored: out of memory", temp_str);
+                            break;
+                        }
 
-                     strcpy(loader.scanned_layers[count].lib_name, temp_str);
+                        strcpy(loader.scanned_layers[count].lib_name, temp_str);
 
-                     fprintf(stderr, "Collecting global extensions for %s\n", temp_str);
-                     get_global_extensions(
-                                 fp_get_ext,
-                                 loader.scanned_layers[count].lib_name,
-                                 VK_EXTENSION_ORIGIN_LAYER,
-                                 &loader.scanned_layers[count].global_extension_list);
+                        fprintf(stderr, "Collecting global extensions for %s\n", temp_str);
+                        get_global_extensions(
+                                    fp_get_ext,
+                                    "vkGetGlobalExtensionInfo",
+                                    loader.scanned_layers[count].lib_name,
+                                    VK_EXTENSION_ORIGIN_LAYER,
+                                    &loader.scanned_layers[count].global_extension_list);
 
-                     fp_get_ext = loader_platform_get_proc_address(handle,
-                                               "vkGetPhysicalDeviceExtensionInfo");
-                     if (fp_get_ext) {
-                         loader.scanned_layers[count].physical_device_extensions_supported = true;
-                     }
+                        fp_get_ext = loader_platform_get_proc_address(handle,
+                                                                      "vkGetPhysicalDeviceExtensionInfo");
+                        if (fp_get_ext) {
+                            loader.scanned_layers[count].physical_device_extensions_supported = true;
+                        }
 
-                     count++;
-                     loader_platform_close_library(handle);
-                 }
-             }
+                        count++;
+                        loader_platform_close_library(handle);
+                    }
+                }
 
-             dent = readdir(curdir);
-          } // while (dir_entry)
-          if (count == MAX_LAYER_LIBRARIES)
-             break;
-          closedir(curdir);
-       } // if (curdir))
+                dent = readdir(curdir);
+            } // while (dir_entry)
+            if (count == MAX_LAYER_LIBRARIES)
+                break;
+            closedir(curdir);
+        } // if (curdir))
     } // for (libpaths)
 
     loader.scanned_layer_count = count;
@@ -1113,13 +1143,18 @@ uint32_t loader_activate_instance_layers(struct loader_instance *inst)
     /*
      * Figure out how many actual layers will need to be wrapped.
      */
-    inst->layer_count = 0;
     for (uint32_t i = 0; i < inst->enabled_instance_extensions.count; i++) {
         struct loader_extension_property *ext_prop = &inst->enabled_instance_extensions.list[i];
-        if (ext_prop->origin == VK_EXTENSION_ORIGIN_LAYER) {
-            inst->layer_count++;
+        if (ext_prop->alias) {
+            ext_prop = ext_prop->alias;
         }
+        if (ext_prop->origin != VK_EXTENSION_ORIGIN_LAYER) {
+            continue;
+        }
+        loader_add_to_ext_list(&inst->activated_layer_list, 1, ext_prop);
     }
+
+    inst->layer_count = inst->activated_layer_list.count;
 
     if (!inst->layer_count) {
         return 0;
@@ -1134,8 +1169,8 @@ uint32_t loader_activate_instance_layers(struct loader_instance *inst)
 
     /* Create instance chain of enabled layers */
     layer_idx = inst->layer_count - 1;
-    for (int32_t i = inst->enabled_instance_extensions.count - 1; i >= 0; i--) {
-        struct loader_extension_property *ext_prop = &inst->enabled_instance_extensions.list[i];
+    for (int32_t i = inst->activated_layer_list.count - 1; i >= 0; i--) {
+        struct loader_extension_property *ext_prop = &inst->activated_layer_list.list[i];
         loader_platform_dl_handle lib_handle;
 
         /*
@@ -1167,9 +1202,7 @@ uint32_t loader_activate_instance_layers(struct loader_instance *inst)
          * will not use a wrapped object and must look up their local dispatch table from
          * the given baseObject.
          */
-        if (ext_prop->origin != VK_EXTENSION_ORIGIN_LAYER) {
-            continue;
-        }
+        assert(ext_prop->origin == VK_EXTENSION_ORIGIN_LAYER);
 
         nextInstObj = (inst->wrappedInstance + layer_idx);
         nextInstObj->pGPA = nextGPA;

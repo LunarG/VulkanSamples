@@ -43,6 +43,7 @@
 #  define LOADER_EXPORT
 #endif
 
+#define MAX_EXTENSION_NAME_SIZE 63
 #define MAX_LAYER_LIBRARIES 64
 #define MAX_GPUS_FOR_LAYER 16
 
@@ -56,6 +57,18 @@ struct loader_extension_property {
     VkExtensionProperties info;
     const char *lib_name;
     enum extension_origin origin;
+    // An extension library can export the same extension
+    // under different names. Handy to provide a "grouping"
+    // such as Validation. However, the loader requires
+    // that a layer be included only once in a chain.
+    // During layer scanning the loader will check if
+    // the vkGet*ProcAddr is the same as an existing extension
+    // If so, it will link them together via the alias pointer.
+    // At initialization time we'll follow the alias pointer
+    // to the "base" extension and then use that extension
+    // internally to ensure we reject duplicates
+    char get_extension_info_name[MAX_EXTENSION_NAME_SIZE+1];
+    struct loader_extension_property *alias;
     bool hosted;        // does the extension reside in one driver/layer
 };
 
@@ -189,6 +202,7 @@ struct loader_instance {
     struct loader_msg_callback_map_entry *icd_msg_callback_map;
 
     struct loader_extension_list enabled_instance_extensions;
+    struct loader_extension_list activated_layer_list;
 
     uint32_t  app_extension_count;
     VkExtensionProperties *app_extension_props;
