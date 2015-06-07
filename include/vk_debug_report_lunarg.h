@@ -60,6 +60,7 @@ typedef enum VkDbgReportFlags_
     VK_DBG_REPORT_WARN_BIT       = VK_BIT(1),
     VK_DBG_REPORT_PERF_WARN_BIT  = VK_BIT(2),
     VK_DBG_REPORT_ERROR_BIT      = VK_BIT(3),
+    VK_DBG_REPORT_DEBUG_BIT      = VK_BIT(4),
 } VkDbgReportFlags;
 
 #define VK_DEBUG_REPORT_ENUM_EXTEND(type, id)    ((type)(VK_DEBUG_REPORT_EXTENSION_NUMBER * -1000 + (id)))
