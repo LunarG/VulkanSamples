@@ -73,34 +73,6 @@ LOADER_EXPORT VkResult VKAPI vkCreateInstance(
                sizeof(VkExtensionProperties) * ptr_instance->app_extension_count);
     }
 
-#if 0
-    /*
-     * Now that we have list of enabled extensions, verify that their dependencies
-     * have been satisfied.
-     * If A depends on B, then B should come after A in the list.
-     */
-    for (i = 0; i < ptr_instance->app_extension_count; i++) {
-        if (ptr_instance->app_extension_props[i].dependencyCount == 0)
-            continue;
-
-        const VkExtensionProperties *dependencies = ptr_instance->app_extension_props[i].pDependencyList;
-        const VkExtensionProperties *enabled_extensions = &ptr_instance->app_extension_props[i+1];
-        uint32_t dependency_extensions_count = ptr_instance->app_extension_count - i - 1;
-        for (dependency = 0; dependency < ptr_instance->app_extension_props[i].dependencyCount; dependency++) {
-            bool found = false;
-            for (j = 0; j < dependency_extensions_count; j++) {
-                if (compare_vk_extension_properties(&dependencies[j], &enabled_extensions[j])) {
-                    found = true;
-                }
-            }
-            if (!found) {
-                /* TODO: Log message about extension dependency not found */
-                return VK_ERROR_INVALID_EXTENSION;
-            }
-        }
-    }
-#endif
-
     ptr_instance->disp = malloc(sizeof(VkLayerInstanceDispatchTable));
     if (ptr_instance->disp == NULL)
         return VK_ERROR_OUT_OF_HOST_MEMORY;

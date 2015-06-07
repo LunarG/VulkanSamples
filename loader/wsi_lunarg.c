@@ -131,8 +131,6 @@ static const struct loader_extension_property wsi_lunarg_extension_info = {
         .name = VK_WSI_LUNARG_EXTENSION_NAME,
         .version = VK_WSI_LUNARG_REVISION,
         .description = "loader: LunarG WSI extension",
-//        .dependencyCount = 0,
-//        .pDependencyList = NULL,
         },
     .origin = VK_EXTENSION_ORIGIN_LOADER,
     .hosted = true,

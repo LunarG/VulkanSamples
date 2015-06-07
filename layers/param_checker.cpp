@@ -194,7 +194,6 @@ void PostCreateInstance(VkResult result, const VkInstanceCreateInfo *pCreateInfo
 VK_LAYER_EXPORT VkResult VKAPI vkCreateInstance(const VkInstanceCreateInfo* pCreateInfo, VkInstance* pInstance)
 {
     loader_platform_thread_once(&initOnce, initParamChecker);
-    initInstanceTable((const VkBaseLayerObject *) (*pInstance));
 
     PreCreateInstance(pCreateInfo->pAppInfo, pCreateInfo->pAllocCb);
     VkResult result = instance_dispatch_table(*pInstance)->CreateInstance(pCreateInfo, pInstance);
