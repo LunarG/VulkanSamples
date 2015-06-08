@@ -64,8 +64,6 @@ static void loader_remove_layer_lib(
         struct loader_instance *inst,
         struct loader_extension_property *ext_prop);
 
-static void loader_deactivate_instance_layers(struct loader_instance *instance);
-
 /* TODO: do we need to lock around access to linked lists and such? */
 struct loader_struct loader = {0};
 
@@ -346,7 +344,7 @@ static bool loader_init_ext_list(struct loader_extension_list *ext_info)
     return true;
 }
 
-static void loader_destroy_ext_list(struct loader_extension_list *ext_info)
+void loader_destroy_ext_list(struct loader_extension_list *ext_info)
 {
     free(ext_info->list);
     ext_info->count = 0;
@@ -499,7 +497,6 @@ static void loader_icd_destroy(
         struct loader_instance *ptr_inst,
         struct loader_icd *icd)
 {
-    loader_platform_close_library(icd->scanned_icds->handle);
     ptr_inst->total_icd_count--;
     free(icd->gpus);
     free(icd->loader_dispatch);
@@ -1091,19 +1088,15 @@ static void loader_add_layer_env(
 }
 
 
-static void loader_deactivate_instance_layers(struct loader_instance *instance)
+void loader_deactivate_instance_layers(struct loader_instance *instance)
 {
     if (!instance->layer_count) {
         return;
     }
 
     /* Create instance chain of enabled layers */
-    for (uint32_t i = 0; i < instance->enabled_instance_extensions.count; i++) {
-        struct loader_extension_property *ext_prop = &instance->enabled_instance_extensions.list[i];
-
-        if (ext_prop->origin == VK_EXTENSION_ORIGIN_ICD) {
-            continue;
-        }
+    for (uint32_t i = 0; i < instance->activated_layer_list.count; i++) {
+        struct loader_extension_property *ext_prop = &instance->activated_layer_list.list[i];
 
         loader_remove_layer_lib(instance, ext_prop);
 
@@ -1404,9 +1397,6 @@ VkResult loader_DestroyInstance(
         return VK_ERROR_INVALID_HANDLE;
     }
 
-    loader_deactivate_instance_layers(ptr_instance);
-    loader_destroy_ext_list(&ptr_instance->enabled_instance_extensions);
-
     while (icds) {
         if (icds->instance) {
             res = icds->DestroyInstance(icds->instance);
@@ -1419,7 +1409,6 @@ VkResult loader_DestroyInstance(
         icds = icds->next;
     }
 
-    free(ptr_instance);
 
     return VK_SUCCESS;
 }

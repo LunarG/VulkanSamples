@@ -90,7 +90,7 @@ static VkResult debug_report_DbgDestroyMsgCallback(
     VkLayerDbgFunctionNode *pTrav = inst->DbgFunctionHead;
     VkLayerDbgFunctionNode *pPrev = pTrav;
 
-    VkResult result = nextTable.DbgDestroyMsgCallback(instance, msg_callback);
+    VkResult result = inst->disp->DbgDestroyMsgCallback(instance, msg_callback);
 
     while (pTrav) {
         if (pTrav->msgCallback == msg_callback) {
@@ -214,7 +214,7 @@ VkResult loader_DbgDestroyMsgCallback(
     for (icd = inst->icds; icd; icd = icd->next) {
         if (icd_info[storage_idx]) {
             icd->DbgDestroyMsgCallback(
-                  icd->scanned_icds->instance,
+                  icd->instance,
                   icd_info[storage_idx]);
         }
         storage_idx++;

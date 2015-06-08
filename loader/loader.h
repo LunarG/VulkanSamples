@@ -356,8 +356,10 @@ void loader_add_to_ext_list(
         struct loader_extension_list *ext_list,
         uint32_t prop_list_count,
         const struct loader_extension_property *props);
+void loader_destroy_ext_list(struct loader_extension_list *ext_info);
 
 void loader_enable_instance_layers(struct loader_instance *inst);
+void loader_deactivate_instance_layers(struct loader_instance *instance);
 
 bool loader_is_extension_scanned(const VkExtensionProperties *ext_prop);
 void loader_icd_scan(void);

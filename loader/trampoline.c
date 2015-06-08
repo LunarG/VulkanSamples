@@ -110,9 +110,16 @@ LOADER_EXPORT VkResult VKAPI vkDestroyInstance(
 
     disp = loader_get_instance_dispatch(instance);
 
-    /* TODO: Need to free memory allocated in trampoline's CreateInstance call */
+    VkResult res = disp->DestroyInstance(instance);
 
-    return disp->DestroyInstance(instance);
+    struct loader_instance *ptr_instance = loader_instance(instance);
+    loader_deactivate_instance_layers(ptr_instance);
+    loader_destroy_ext_list(&ptr_instance->enabled_instance_extensions);
+    loader_destroy_ext_list(&ptr_instance->activated_layer_list);
+
+    free(ptr_instance);
+
+    return res;
 }
 
 LOADER_EXPORT VkResult VKAPI vkEnumeratePhysicalDevices(
