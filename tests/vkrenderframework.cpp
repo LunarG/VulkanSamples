@@ -43,7 +43,12 @@ VkRenderFramework::VkRenderFramework() :
     m_depth_stencil_fmt( VK_FORMAT_UNDEFINED ),
     m_clear_via_load_op( false ),
     m_depth_clear_color( 1.0 ),
-    m_stencil_clear_color( 0 )
+    m_stencil_clear_color( 0 ),
+    m_depthStencil( NULL ),
+    m_dbgCreateMsgCallback( VK_NULL_HANDLE ),
+    m_dbgDestroyMsgCallback( VK_NULL_HANDLE ),
+    m_globalMsgCallback( VK_NULL_HANDLE ),
+    m_devMsgCallback( VK_NULL_HANDLE )
 {
 
     // clear the back buffer to dark grey
