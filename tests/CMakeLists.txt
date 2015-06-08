@@ -70,6 +70,18 @@ if (NOT WIN32)
             VERBATIM
             )
     endif()
+else()
+    if (NOT (CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_CURRENT_BINARY_DIR))
+        FILE(TO_NATIVE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/golden GOLDEN)
+        FILE(TO_NATIVE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/run_all_tests.ps1 RUN_ALL)
+        FILE(TO_NATIVE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/run_all_tests_with_layers.ps1 RUN_ALL_WITH_LAYERS)
+        add_custom_target(binary-dir-symlinks ALL
+            COMMAND copy ${RUN_ALL} run_all_tests.ps1
+            COMMAND copy ${RUN_ALL_WITH_LAYERS} run_all_tests_with_layers.ps1
+            COMMAND mklink /J golden ${GOLDEN}
+            VERBATIM
+            )
+    endif()
 endif()
 
 add_executable(vkbase init.cpp ${COMMON_CPP})
