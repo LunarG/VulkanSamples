@@ -1379,7 +1379,7 @@ VkResult loader_CreateInstance(
 VkResult loader_DestroyInstance(
         VkInstance                                instance)
 {
-    struct loader_instance *ptr_instance = (struct loader_instance *) instance;
+    struct loader_instance *ptr_instance = loader_instance(instance);
     struct loader_icd *icds = ptr_instance->icds;
     VkResult res;
 

@@ -211,6 +211,10 @@ struct loader_instance {
     VkLayerDbgFunctionNode *DbgFunctionHead;
 };
 
+static inline struct loader_instance *loader_instance(VkInstance instance) {
+    return (struct loader_instance *) instance;
+}
+
 struct loader_lib_info {
     const char *lib_name;
     uint32_t ref_count;
