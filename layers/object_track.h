@@ -42,6 +42,7 @@ typedef enum _OBJECT_TRACK_ERROR
     OBJTRACK_GPU_MEM_MAPPED,                    // Mem object ref'd in cmd buff is still mapped
     OBJTRACK_GETGPUINFO_NOT_CALLED,             // Gpu Information has not been requested before drawing
     OBJTRACK_MEMREFCOUNT_MAX_EXCEEDED,          // Number of QueueSubmit memory references exceeds GPU maximum
+    OBJTRACK_INVALID_OBJECT,                    // Object used that has never been created
 } OBJECT_TRACK_ERROR;
 
 // Object Status -- used to track state of individual objects
