@@ -240,7 +240,7 @@ static void demo_set_image_layout(
 
     VkPipeEvent set_events[] = { VK_PIPE_EVENT_TOP_OF_PIPE };
 
-    vkCmdPipelineBarrier(demo->draw_cmd, VK_WAIT_EVENT_TOP_OF_PIPE, 1, set_events, 1, (const void **)&pmemory_barrier);
+    vkCmdPipelineBarrier(demo->setup_cmd, VK_WAIT_EVENT_TOP_OF_PIPE, 1, set_events, 1, (const void **)&pmemory_barrier);
 }
 
 static void demo_draw_build_cmd(struct demo *demo)
