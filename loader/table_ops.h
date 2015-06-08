@@ -383,7 +383,6 @@ static inline void loader_init_instance_core_dispatch_table(VkLayerInstanceDispa
     table->EnumeratePhysicalDevices = (PFN_vkEnumeratePhysicalDevices) gpa(inst, "vkEnumeratePhysicalDevices");
     table->GetPhysicalDeviceInfo = (PFN_vkGetPhysicalDeviceInfo) gpa(inst, "vkGetPhysicalDeviceInfo");
     table->CreateDevice = (PFN_vkCreateDevice) gpa(inst, "vkCreateDevice");
-    table->GetGlobalExtensionInfo = (PFN_vkGetGlobalExtensionInfo) gpa(inst,"vkGetGlobalExtensionInfo");
     table->GetPhysicalDeviceExtensionInfo = (PFN_vkGetPhysicalDeviceExtensionInfo) gpa(inst, "vkGetPhysicalDeviceExtensionInfo");
     table->GetMultiDeviceCompatibility = (PFN_vkGetMultiDeviceCompatibility) gpa(inst, "vkGetMultiDeviceCompatibility");
     table->GetDisplayInfoWSI = (PFN_vkGetDisplayInfoWSI) gpa(inst, "vkGetDisplayInfoWSI");
@@ -418,8 +417,6 @@ static inline void *loader_lookup_instance_dispatch_table(
         return (void *) table->GetInstanceProcAddr;
     if (!strcmp(name, "CreateDevice"))
         return (void *) table->CreateDevice;
-    if (!strcmp(name, "GetGlobalExtensionInfo"))
-        return (void *) table->GetGlobalExtensionInfo;
     if (!strcmp(name, "GetPhysicalDeviceExtensionInfo"))
         return (void *) table->GetPhysicalDeviceExtensionInfo;
     if (!strcmp(name, "GetMultiDeviceCompatibility"))

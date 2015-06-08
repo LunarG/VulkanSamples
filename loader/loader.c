@@ -89,7 +89,6 @@ const VkLayerInstanceDispatchTable instance_disp = {
     .EnumeratePhysicalDevices = loader_EnumeratePhysicalDevices,
     .GetPhysicalDeviceInfo = loader_GetPhysicalDeviceInfo,
     .CreateDevice = loader_CreateDevice,
-    .GetGlobalExtensionInfo = vkGetGlobalExtensionInfo,
     .GetPhysicalDeviceExtensionInfo = loader_GetPhysicalDeviceExtensionInfo,
     .GetMultiDeviceCompatibility = loader_GetMultiDeviceCompatibility,
     .GetDisplayInfoWSI = loader_GetDisplayInfoWSI,

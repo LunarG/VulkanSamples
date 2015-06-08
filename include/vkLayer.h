@@ -151,7 +151,7 @@ typedef struct VkLayerInstanceDispatchTable_
     PFN_vkEnumeratePhysicalDevices EnumeratePhysicalDevices;
     PFN_vkGetPhysicalDeviceInfo GetPhysicalDeviceInfo;
     PFN_vkCreateDevice CreateDevice;
-    PFN_vkGetGlobalExtensionInfo GetGlobalExtensionInfo;
+    /* PFN_vkGetGlobalExtensionInfo GetGlobalExtensionInfo; non-dispatchable */
     PFN_vkGetPhysicalDeviceExtensionInfo GetPhysicalDeviceExtensionInfo;
     PFN_vkGetMultiDeviceCompatibility GetMultiDeviceCompatibility;
     PFN_vkGetDisplayInfoWSI GetDisplayInfoWSI;
