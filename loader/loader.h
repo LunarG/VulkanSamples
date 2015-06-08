@@ -327,21 +327,6 @@ VkResult loader_CreateDevice(
         const VkDeviceCreateInfo*               pCreateInfo,
         VkDevice*                               pDevice);
 
-#if 0
-VkResult VKAPI loader_GetGlobalExtensionInfo(
-        VkExtensionInfoType                     infoType,
-        uint32_t                                extensionIndex,
-        size_t*                                 pDataSize,
-        void*                                   pData);
-
-VkResult loader_GetPhysicalDeviceExtensionInfo(
-        VkPhysicalDevice                        gpu,
-        VkExtensionInfoType                     infoType,
-        uint32_t                                extensionIndex,
-        size_t*                                 pDataSize,
-        void*                                   pData);
-#endif
-
 VkResult loader_GetMultiDeviceCompatibility(
         VkPhysicalDevice                        gpu0,
         VkPhysicalDevice                        gpu1,

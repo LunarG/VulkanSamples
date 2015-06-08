@@ -37,8 +37,8 @@
 
 /* Trampoline entrypoints */
 LOADER_EXPORT VkResult VKAPI vkCreateInstance(
-                                            const VkInstanceCreateInfo* pCreateInfo,
-                                            VkInstance* pInstance)
+        const VkInstanceCreateInfo* pCreateInfo,
+        VkInstance* pInstance)
 {
     struct loader_instance *ptr_instance = NULL;
 

@@ -877,6 +877,7 @@ void layer_lib_scan(void)
                         loader_log(VK_DBG_REPORT_DEBUG_BIT, 0,
                                    "Attempt to open library: %s\n", temp_str);
                         if ((handle = loader_platform_open_library(temp_str)) == NULL) {
+                            loader_log(VK_DBG_REPORT_DEBUG_BIT, 0, "open library failed\n");
                             dent = readdir(curdir);
                             continue;
                         }
