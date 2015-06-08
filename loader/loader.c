@@ -67,6 +67,17 @@ static void loader_remove_layer_lib(
 /* TODO: do we need to lock around access to linked lists and such? */
 struct loader_struct loader = {0};
 
+enum loader_debug {
+    LOADER_INFO_BIT       = VK_BIT(0),
+    LOADER_WARN_BIT       = VK_BIT(1),
+    LOADER_PERF_BIT       = VK_BIT(2),
+    LOADER_ERROR_BIT      = VK_BIT(3),
+    LOADER_DEBUG_BIT      = VK_BIT(4),
+};
+
+uint32_t g_loader_debug = 0;
+uint32_t g_loader_log_msgs = 0;
+
 VkLayerInstanceDispatchTable instance_disp = {
     .GetInstanceProcAddr = vkGetInstanceProcAddr,
     .CreateInstance = loader_CreateInstance,
@@ -195,6 +206,10 @@ static void loader_log(VkFlags msg_type, int32_t msg_code,
     va_list ap;
     int ret;
 
+    if (!(msg_code & g_loader_log_msgs)) {
+        return;
+    }
+
     va_start(ap, format);
     ret = vsnprintf(msg, sizeof(msg), format, ap);
     if ((ret >= (int) sizeof(msg)) || ret < 0) {
@@ -203,11 +218,10 @@ static void loader_log(VkFlags msg_type, int32_t msg_code,
     va_end(ap);
 
 #if defined(WIN32)
-	OutputDebugString(msg);
+        OutputDebugString(msg);
 #endif
     fputs(msg, stderr);
     fputc('\n', stderr);
-
 }
 
 bool compare_vk_extension_properties(const VkExtensionProperties *op1, const VkExtensionProperties *op2)
@@ -625,6 +639,52 @@ static void loader_icd_init_entrys(struct loader_icd *icd,
     return;
 }
 
+static void loader_debug_init(void)
+{
+    const char *env;
+
+    if (g_loader_debug > 0)
+        return;
+
+    g_loader_debug = 0;
+
+    /* parse comma-separated debug options */
+    env = getenv("LOADER_DEBUG");
+    while (env) {
+        const char *p = strchr(env, ',');
+        size_t len;
+
+        if (p)
+            len = p - env;
+        else
+            len = strlen(env);
+
+        if (len > 0) {
+            if (strncmp(env, "warn", len) == 0) {
+                g_loader_debug |= LOADER_WARN_BIT;
+                g_loader_log_msgs |= VK_DBG_REPORT_WARN_BIT;
+            } else if (strncmp(env, "info", len) == 0) {
+                g_loader_debug |= LOADER_INFO_BIT;
+                g_loader_log_msgs |= VK_DBG_REPORT_INFO_BIT;
+            } else if (strncmp(env, "perf", len) == 0) {
+                g_loader_debug |= LOADER_PERF_BIT;
+                g_loader_log_msgs |= VK_DBG_REPORT_PERF_WARN_BIT;
+            } else if (strncmp(env, "error", len) == 0) {
+                g_loader_debug |= LOADER_ERROR_BIT;
+                g_loader_log_msgs |= VK_DBG_REPORT_ERROR_BIT;
+            } else if (strncmp(env, "debug", len) == 0) {
+                g_loader_debug |= LOADER_DEBUG_BIT;
+                g_loader_log_msgs |= VK_DBG_REPORT_DEBUG_BIT;
+            }
+        }
+
+        if (!p)
+            break;
+
+        env = p + 1;
+    }
+}
+
 /**
  * Try to \c loader_icd_scan VK driver(s).
  *
@@ -663,6 +723,8 @@ void loader_icd_scan(void)
         libPaths = DEFAULT_VK_DRIVERS_PATH;
     }
 #endif // WIN32
+
+    loader_debug_init();
 
     for (p = libPaths; *p; p = next) {
        next = strchr(p, PATH_SEPERATOR);
@@ -848,7 +910,7 @@ void layer_lib_scan(void)
 
                         strcpy(loader.scanned_layers[count].lib_name, temp_str);
 
-                        fprintf(stderr, "Collecting global extensions for %s\n", temp_str);
+                        loader_log(VK_DBG_REPORT_DEBUG_BIT, 0, "Collecting global extensions for %s\n", temp_str);
                         get_global_extensions(
                                     fp_get_ext,
                                     "vkGetGlobalExtensionInfo",
