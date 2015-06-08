@@ -955,6 +955,11 @@ VkResult VKAPI vkCreateInstance(
 
     if (result == VK_SUCCESS) {
         enable_debug_report(pCreateInfo->extensionCount, pCreateInfo->pEnabledExtensions);
+
+        debug_report_init_instance_extension_dispatch_table(
+                    pTable,
+                    pTable->GetInstanceProcAddr,
+                    *pInstance);
     }
     return result;
 }

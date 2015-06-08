@@ -1536,6 +1536,11 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateInstance(const VkInstanceCreateInfo* pCre
 
     if (result == VK_SUCCESS) {
         enable_debug_report(pCreateInfo->extensionCount, pCreateInfo->pEnabledExtensions);
+
+        debug_report_init_instance_extension_dispatch_table(
+                    pTable,
+                    pTable->GetInstanceProcAddr,
+                    *pInstance);
     }
     return result;
 }

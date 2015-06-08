@@ -96,6 +96,15 @@ static VkResult layer_destroy_msg_callback(
     return result;
 }
 
+static inline void debug_report_init_instance_extension_dispatch_table(
+        VkLayerInstanceDispatchTable *table,
+        PFN_vkGetInstanceProcAddr gpa,
+        VkInstance inst)
+{
+    table->DbgCreateMsgCallback = (PFN_vkDbgCreateMsgCallback) gpa(inst, "vkDbgCreateMsgCallback");
+    table->DbgDestroyMsgCallback = (PFN_vkDbgDestroyMsgCallback) gpa(inst, "vkDbgDestroyMsgCallback");
+}
+
 static void* msg_callback_get_proc_addr(
         const char      *funcName)
 {

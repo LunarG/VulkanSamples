@@ -1378,12 +1378,19 @@ class ObjectTrackerSubcommand(Subcommand):
             create_line += '    loader_platform_thread_unlock_mutex(&objLock);\n'
         elif 'Create' in proto.name or 'Alloc' in proto.name:
             create_line =  '    loader_platform_thread_lock_mutex(&objLock);\n'
-            create_line += '    create_obj(*%s, %s);\n' % (proto.params[-1].name, obj_type_mapping[proto.params[-1].ty.strip('*').replace('const ', '')])
-            create_line += '    loader_platform_thread_unlock_mutex(&objLock);\n'
+            create_line += '    if (result == VK_SUCCESS) {\n'
             if 'CreateDevice' in proto.name:
-                create_line += '    if (result == VK_SUCCESS) {\n'
-                create_line += '         enable_debug_report(pCreateInfo->extensionCount, pCreateInfo->pEnabledExtensions);\n'
-                create_line += '    }\n'
+                create_line += '        enable_debug_report(pCreateInfo->extensionCount, pCreateInfo->pEnabledExtensions);\n'
+            elif 'CreateInstance' in proto.name:
+                create_line += '        enable_debug_report(pCreateInfo->extensionCount, pCreateInfo->pEnabledExtensions);\n'
+                create_line += '        VkLayerInstanceDispatchTable *pTable = instance_dispatch_table(*pInstance);\n'
+                create_line += '        debug_report_init_instance_extension_dispatch_table(\n'
+                create_line += '                    pTable,\n'
+                create_line += '                    pTable->GetInstanceProcAddr,\n'
+                create_line += '                    *pInstance);\n'
+            create_line += '        create_obj(*%s, %s);\n' % (proto.params[-1].name, obj_type_mapping[proto.params[-1].ty.strip('*').replace('const ', '')])
+            create_line += '    }\n'
+            create_line += '    loader_platform_thread_unlock_mutex(&objLock);\n'
 
         if 'GetDeviceQueue' in proto.name:
             destroy_line  = '    loader_platform_thread_lock_mutex(&objLock);\n'
@@ -1663,6 +1670,24 @@ class ThreadingSubcommand(Subcommand):
                          '    tableInstanceMap.erase(pDisp);\n'
                          '    return result;\n'
                          '}\n' % (qual, decl, ret_val, table, proto.params[0].name, proto.c_call()))
+            return "\n".join(funcs);
+        elif proto.name == "CreateInstance":
+            funcs.append('%s%s\n'
+                         '{\n'
+                         '    loader_platform_thread_once(&initOnce, initThreading);\n'
+                         '\n'
+                         '    %s %s_dispatch_table(*pInstance)->CreateInstance(pCreateInfo, pInstance);\n'
+                         '\n'
+                         '    if (result == VK_SUCCESS) {\n'
+                         '        enable_debug_report(pCreateInfo->extensionCount, pCreateInfo->pEnabledExtensions);\n'
+                         '        VkLayerInstanceDispatchTable *pTable = instance_dispatch_table(*pInstance);\n'
+                         '        debug_report_init_instance_extension_dispatch_table(\n'
+                         '                    pTable,\n'
+                         '                    pTable->GetInstanceProcAddr,\n'
+                         '                    *pInstance);\n'
+                         '    }\n'
+                         '    return result;\n'
+                         '}\n' % (qual, decl, ret_val, table))
             return "\n".join(funcs);
         if len(checked_params) == 0:
             return None

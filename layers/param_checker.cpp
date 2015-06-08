@@ -189,6 +189,12 @@ void PostCreateInstance(VkResult result, const VkInstanceCreateInfo *pCreateInfo
         layerCbMsg(VK_DBG_REPORT_INFO_BIT, (VkObjectType) 0, NULL, 0, 1, "PARAMCHECK", str);
         return;
     }
+
+    VkLayerInstanceDispatchTable *pTable = instance_dispatch_table(*pInstance);
+    debug_report_init_instance_extension_dispatch_table(
+                pTable,
+                pTable->GetInstanceProcAddr,
+                *pInstance);
 }
 
 VK_LAYER_EXPORT VkResult VKAPI vkCreateInstance(const VkInstanceCreateInfo* pCreateInfo, VkInstance* pInstance)

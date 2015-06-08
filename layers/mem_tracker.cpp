@@ -869,10 +869,16 @@ VkResult VKAPI vkCreateInstance(
 {
     loader_platform_thread_once(&g_initOnce, initMemTracker);
 
-    VkResult result = instance_dispatch_table(*pInstance)->CreateInstance(pCreateInfo, pInstance);
+    VkLayerInstanceDispatchTable *pTable = instance_dispatch_table(*pInstance);
+    VkResult result = pTable->CreateInstance(pCreateInfo, pInstance);
 
     if (result == VK_SUCCESS) {
         enable_debug_report(pCreateInfo->extensionCount, pCreateInfo->pEnabledExtensions);
+
+        debug_report_init_instance_extension_dispatch_table(
+                    pTable,
+                    pTable->GetInstanceProcAddr,
+                    *pInstance);
     }
     return result;
 }
