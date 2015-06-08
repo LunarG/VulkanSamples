@@ -515,7 +515,6 @@ static void loader_icd_destroy(
 {
     ptr_inst->total_icd_count--;
     free(icd->gpus);
-    free(icd->loader_dispatch);
     free(icd);
 }
 
@@ -1504,7 +1503,6 @@ VkResult loader_init_physical_device_info(
 
     icd = ptr_instance->icds;
     while (icd) {
-        PFN_vkGetDeviceProcAddr get_proc_addr = icd->GetDeviceProcAddr;
 
         n = icd->gpu_count;
         icd->gpus = (VkPhysicalDevice *) malloc(n * sizeof(VkPhysicalDevice));
@@ -1518,12 +1516,7 @@ VkResult loader_init_physical_device_info(
                                         icd->gpus);
         if ((res == VK_SUCCESS) && (n == icd->gpu_count)) {
 
-            icd->loader_dispatch = (VkLayerDispatchTable *) malloc(n *
-                                    sizeof(VkLayerDispatchTable));
             for (unsigned int i = 0; i < n; i++) {
-
-                loader_init_device_dispatch_table(icd->loader_dispatch + i,
-                                           get_proc_addr, icd->gpus[i], icd->gpus[i]);
 
                 loader_init_dispatch(icd->gpus[i], ptr_instance->disp);
 
@@ -1637,6 +1630,9 @@ VkResult loader_CreateDevice(
         if (res != VK_SUCCESS) {
             return res;
         }
+        PFN_vkGetDeviceProcAddr get_proc_addr = icd->GetDeviceProcAddr;
+        loader_init_device_dispatch_table(icd->loader_dispatch + gpu_index,
+                                          get_proc_addr, icd->gpus[gpu_index], icd->gpus[gpu_index]);
 
         VkLayerDispatchTable *dev_disp = icd->loader_dispatch + gpu_index;
         loader_init_dispatch(*pDevice, dev_disp);

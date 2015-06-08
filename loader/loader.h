@@ -94,7 +94,7 @@ struct loader_scanned_layers {
 struct loader_icd {
     const struct loader_scanned_icds *scanned_icds;
 
-    VkLayerDispatchTable *loader_dispatch;
+    VkLayerDispatchTable loader_dispatch[MAX_GPUS_FOR_LAYER];
     uint32_t layer_count[MAX_GPUS_FOR_LAYER];
     uint32_t gpu_count;
     VkPhysicalDevice *gpus;
