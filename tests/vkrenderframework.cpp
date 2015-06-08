@@ -122,6 +122,9 @@ void VkRenderFramework::InitFramework(
                                          userData,
                                          &m_globalMsgCallback);
             ASSERT_VK_SUCCESS(err);
+
+            m_dbgDestroyMsgCallback = (PFN_vkDbgDestroyMsgCallback) vkGetInstanceProcAddr(this->inst, "vkDbgDestroyMsgCallback");
+            ASSERT_NE(m_dbgDestroyMsgCallback, (PFN_vkDbgDestroyMsgCallback) NULL) << "Did not get function pointer for DbgDestroyMsgCallback";
         }
     }
 
@@ -174,6 +177,9 @@ void VkRenderFramework::ShutdownFramework()
     if (m_cmdBuffer) vkDestroyObject(device(), VK_OBJECT_TYPE_COMMAND_BUFFER, m_cmdBuffer);
     if (m_framebuffer) vkDestroyObject(device(), VK_OBJECT_TYPE_FRAMEBUFFER, m_framebuffer);
     if (m_renderPass) vkDestroyObject(device(), VK_OBJECT_TYPE_RENDER_PASS, m_renderPass);
+
+    if (m_globalMsgCallback) m_dbgDestroyMsgCallback(this->inst, m_globalMsgCallback);
+    if (m_devMsgCallback) m_dbgDestroyMsgCallback(this->inst, m_devMsgCallback);
 
     if (m_stateViewport) {
         vkDestroyObject(device(), VK_OBJECT_TYPE_DYNAMIC_VP_STATE, m_stateViewport);

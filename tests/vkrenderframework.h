@@ -129,6 +129,7 @@ protected:
     VkDepthStencilObj                  *m_depthStencil;
     VkMemoryRefManager                  m_mem_ref_mgr;
     PFN_vkDbgCreateMsgCallback          m_dbgCreateMsgCallback;
+    PFN_vkDbgDestroyMsgCallback         m_dbgDestroyMsgCallback;
     VkDbgMsgCallback                    m_globalMsgCallback;
     VkDbgMsgCallback                    m_devMsgCallback;
 
