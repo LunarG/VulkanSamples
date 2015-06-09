@@ -676,7 +676,9 @@ void TestFrameworkVkPresent::CreateSwapChain()
     swap_chain.imageExtent.width = m_width;
     swap_chain.imageExtent.height = m_height;
     swap_chain.imageArraySize = 1;
-    swap_chain.imageUsageFlags = VK_IMAGE_USAGE_TRANSFER_DESTINATION_BIT;
+    // Note: Addition of color attachment is a workaround needed for some implementations
+    swap_chain.imageUsageFlags = VK_IMAGE_USAGE_TRANSFER_DESTINATION_BIT |
+                                 VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
     swap_chain.swapModeFlags = VK_SWAP_MODE_FLIP_BIT_WSI |
                                VK_SWAP_MODE_BLIT_BIT_WSI;
 
