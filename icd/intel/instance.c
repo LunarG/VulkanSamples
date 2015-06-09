@@ -219,6 +219,43 @@ ICD_EXPORT VkResult VKAPI vkDestroyInstance(
     return VK_SUCCESS;
 }
 
+ICD_EXPORT VkResult VKAPI vkGetGlobalExtensionInfo(
+        VkExtensionInfoType infoType,
+        uint32_t extensionIndex,
+        size_t*  pDataSize,
+        void*    pData)
+{
+    uint32_t *count;
+
+    if (pDataSize == NULL)
+        return VK_ERROR_INVALID_POINTER;
+
+    switch (infoType) {
+        case VK_EXTENSION_INFO_TYPE_COUNT:
+            *pDataSize = sizeof(uint32_t);
+            if (pData == NULL)
+                return VK_SUCCESS;
+            count = (uint32_t *) pData;
+            *count = INTEL_GLOBAL_EXT_COUNT;
+            break;
+        case VK_EXTENSION_INFO_TYPE_PROPERTIES:
+            if (*pDataSize < sizeof(VkExtensionProperties))
+                return VK_ERROR_INVALID_MEMORY_SIZE;
+
+            *pDataSize = sizeof(VkExtensionProperties);
+            if (pData == NULL)
+                return VK_SUCCESS;
+            if (extensionIndex >= INTEL_GLOBAL_EXT_COUNT)
+                return VK_ERROR_INVALID_VALUE;
+            memcpy((VkExtensionProperties *) pData, &intel_global_exts[extensionIndex], sizeof(VkExtensionProperties));
+            break;
+        default:
+            return VK_ERROR_INVALID_VALUE;
+    };
+
+    return VK_SUCCESS;
+}
+
 ICD_EXPORT VkResult VKAPI vkEnumeratePhysicalDevices(
     VkInstance                                instance_,
     uint32_t*                                 pPhysicalDeviceCount,
