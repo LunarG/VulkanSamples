@@ -33,6 +33,42 @@
 static int intel_devid_override;
 int intel_debug = -1;
 
+void *intel_alloc(const void *handle,
+                                size_t size, size_t alignment,
+                                VkSystemAllocType type)
+{
+    assert(intel_handle_validate(handle));
+    return icd_instance_alloc(((const struct intel_handle *) handle)->instance->icd,
+            size, alignment, type);
+}
+
+void intel_free(const void *handle, void *ptr)
+{
+    assert(intel_handle_validate(handle));
+    icd_instance_free(((const struct intel_handle *) handle)->instance->icd, ptr);
+}
+
+void intel_logv(const void *handle,
+                VkFlags msg_flags,
+                VkObjectType obj_type, VkObject src_object,
+                size_t location, int32_t msg_code,
+                const char *format, va_list ap)
+{
+    char msg[256];
+    int ret;
+
+    ret = vsnprintf(msg, sizeof(msg), format, ap);
+    if (ret >= sizeof(msg) || ret < 0)
+        msg[sizeof(msg) - 1] = '\0';
+
+    assert(intel_handle_validate(handle));
+    icd_instance_log(((const struct intel_handle *) handle)->instance->icd,
+                     msg_flags,
+                     obj_type, src_object,              /* obj_type, object */
+                     location, msg_code,                /* location, msg_code */
+                     msg);
+}
+
 static void intel_debug_init(void)
 {
     const char *env;

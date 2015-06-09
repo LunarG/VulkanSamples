@@ -25,8 +25,10 @@
  *   LunarG
  */
 
+extern "C" {
 #include "gpu.h"
 #include "pipeline.h"
+}
 #include "compiler/shader/compiler_interface.h"
 #include "compiler/pipeline/pipeline_compiler_interface.h"
 #include "compiler/pipeline/brw_blorp_blit_eu.h"

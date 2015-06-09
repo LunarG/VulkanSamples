@@ -122,20 +122,11 @@ static inline bool intel_handle_validate_type(const void *handle,
     return (handle_type == (uint32_t) type);
 }
 
-static inline void *intel_alloc(const void *handle,
-                                size_t size, size_t alignment,
-                                VkSystemAllocType type)
-{
-    assert(intel_handle_validate(handle));
-    return icd_instance_alloc(((const struct intel_handle *) handle)->icd,
-            size, alignment, type);
-}
+void *intel_alloc(const void *handle,
+                  size_t size, size_t alignment,
+                  VkSystemAllocType type);
 
-static inline void intel_free(const void *handle, void *ptr)
-{
-    assert(intel_handle_validate(handle));
-    icd_instance_free(((const struct intel_handle *) handle)->icd, ptr);
-}
+void intel_free(const void *handle, void *ptr);
 
 static inline void intel_logv(const void *handle,
                               VkFlags msg_flags,

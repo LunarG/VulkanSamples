@@ -356,6 +356,7 @@ set_target_properties(intelcompiler PROPERTIES POSITION_INDEPENDENT_CODE ON)
 
 SET(STANDALONE_COMPILER_SOURCES
     shader/main.cpp
+    shader/standalone_utils.c
     shader/compiler_interface.cpp
     pipeline/pipeline_compiler_interface.cpp
     ${CREATE_SHADER_SOURCES}
