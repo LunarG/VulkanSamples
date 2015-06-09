@@ -29,19 +29,6 @@ set(COMMON_CPP
     test_environment.cpp
    )
 
-# Expect libraries to be in either the build (release build) or dbuild (debug) directories
-if(EXISTS ${GLSLANG_PREFIX}/build/install/lib)
-    set(GLSLANG_BUILD ${GLSLANG_PREFIX}/build)
-elseif(EXISTS ${GLSLANG_PREFIX}/dbuild/install/lib)
-    set(GLSLANG_BUILD ${GLSLANG_PREFIX}/dbuild)
-else()
-    message(FATAL_ERROR "Necessary glslang libraries cannot be found: " ${GLSLANG_PREFIX})
-endif()
-
-link_directories(
-   "${GLSLANG_BUILD}/install/lib"
-   )
-
 set(TEST_LIBRARIES
     glslang
     OGLCompiler
@@ -50,6 +37,36 @@ set(TEST_LIBRARIES
     ${XCB_LIBRARIES}
     ${ImageMagick_LIBRARIES}
     )
+
+add_library(glslang     STATIC IMPORTED)
+add_library(OGLCompiler STATIC IMPORTED)
+add_library(OSDependent STATIC IMPORTED)
+add_library(SPIRV       STATIC IMPORTED)
+
+# On Windows, we must pair Debug and Release appropriately
+if (WIN32)
+   set_target_properties(glslang PROPERTIES
+                         IMPORTED_LOCATION       "${GLSLANG_PREFIX}/build/glslang/Release/glslang.lib"
+                         IMPORTED_LOCATION_DEBUG "${GLSLANG_PREFIX}/build/glslang/Debug/glslang.lib")
+   set_target_properties(OGLCompiler PROPERTIES
+                         IMPORTED_LOCATION       "${GLSLANG_PREFIX}/build/OGLCompilersDLL/Release/OGLCompiler.lib"
+                         IMPORTED_LOCATION_DEBUG "${GLSLANG_PREFIX}/build/OGLCompilersDLL/Debug/OGLCompiler.lib")
+   set_target_properties(OSDependent PROPERTIES
+                         IMPORTED_LOCATION       "${GLSLANG_PREFIX}/build/glslang/OSDependent/Windows/Release/OSDependent.lib"
+                         IMPORTED_LOCATION_DEBUG "${GLSLANG_PREFIX}/build/glslang/OSDependent/Windows/Debug/OSDependent.lib")
+   set_target_properties(SPIRV PROPERTIES
+                         IMPORTED_LOCATION       "${GLSLANG_PREFIX}/build/SPIRV/Release/SPIRV.lib"
+                         IMPORTED_LOCATION_DEBUG "${GLSLANG_PREFIX}/build/SPIRV/Debug/SPIRV.lib")
+else ()
+   set_target_properties(glslang PROPERTIES
+                         IMPORTED_LOCATION       "${GLSLANG_PREFIX}/build/install/lib/libglslang.a")
+   set_target_properties(OGLCompiler PROPERTIES
+                         IMPORTED_LOCATION       "${GLSLANG_PREFIX}/build/install/lib/libOGLCompiler.a")
+   set_target_properties(OSDependent PROPERTIES
+                         IMPORTED_LOCATION       "${GLSLANG_PREFIX}/build/install/lib/libOSDependent.a")
+   set_target_properties(SPIRV PROPERTIES
+                         IMPORTED_LOCATION       "${GLSLANG_PREFIX}/build/install/lib/libSPIRV.a")
+endif()
 
 include_directories(
     "${PROJECT_SOURCE_DIR}/tests/gtest-1.7.0/include"
