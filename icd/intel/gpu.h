@@ -29,21 +29,11 @@
 #define GPU_H
 
 #include "intel.h"
+#include "extension_info.h"
 
 #define INTEL_GPU_ASSERT(gpu, min_gen, max_gen)   \
        assert(intel_gpu_gen(gpu) >= INTEL_GEN(min_gen) && \
               intel_gpu_gen(gpu) <= INTEL_GEN(max_gen))
-
-/*
- * No device-specific extensions at thie point, so this enum is a placeholder
- */
-enum intel_phy_dev_ext_type {
-    INTEL_PHY_DEV_EXT_DEBUG_REPORT,
-    INTEL_PHY_DEV_EXT_DEBUG_MARKER,
-
-    INTEL_PHY_DEV_EXT_COUNT,
-    INTEL_PHY_DEV_EXT_INVALID = INTEL_PHY_DEV_EXT_COUNT,
-};
 
 enum intel_gpu_engine_type {
     /* TODO BLT support */

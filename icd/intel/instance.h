@@ -29,15 +29,9 @@
 #define INSTANCE_H
 
 #include "intel.h"
+#include "extension_info.h"
 
 struct intel_gpu;
-
-enum intel_global_ext_type {
-    INTEL_GLOBAL_EXT_WSI_LUNARG,
-
-    INTEL_GLOBAL_EXT_COUNT,
-    INTEL_GLOBAL_EXT_INVALID = INTEL_GLOBAL_EXT_COUNT,
-};
 
 struct intel_instance {
     struct intel_handle handle;

@@ -40,21 +40,6 @@
 #include "vk_debug_report_lunarg.h"
 #include "vk_debug_marker_lunarg.h"
 
-static const VkExtensionProperties intel_phy_dev_gpu_exts[INTEL_PHY_DEV_EXT_COUNT] = {
-    {
-        .sType = VK_STRUCTURE_TYPE_EXTENSION_PROPERTIES,
-        .name = DEBUG_REPORT_EXTENSION_NAME,
-        .version = VK_DEBUG_REPORT_EXTENSION_VERSION,
-        .description = "Intel sample driver",
-    },
-    {
-        .sType = VK_STRUCTURE_TYPE_EXTENSION_PROPERTIES,
-        .name = DEBUG_MARKER_EXTENSION_NAME,
-        .version = VK_DEBUG_MARKER_EXTENSION_VERSION,
-        .description = "Intel sample driver",
-    }
-};
-
 static int gpu_open_primary_node(struct intel_gpu *gpu)
 {
     if (gpu->primary_fd_internal < 0)
@@ -405,13 +390,6 @@ void intel_gpu_cleanup_winsys(struct intel_gpu *gpu)
 
     gpu_close_primary_node(gpu);
     gpu_close_render_node(gpu);
-}
-
-static bool compare_vk_extension_properties(
-        const VkExtensionProperties *op1,
-        const VkExtensionProperties *op2)
-{
-    return memcmp(op1, op2, sizeof(VkExtensionProperties)) == 0 ? true : false;
 }
 
 enum intel_phy_dev_ext_type intel_gpu_lookup_phy_dev_extension(

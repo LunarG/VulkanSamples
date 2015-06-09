@@ -178,15 +178,6 @@ static struct intel_instance *intel_instance_create(const VkInstanceCreateInfo* 
     return instance;
 }
 
-static const VkExtensionProperties intel_global_exts[INTEL_GLOBAL_EXT_COUNT] = {
-    {
-        .sType = VK_STRUCTURE_TYPE_EXTENSION_PROPERTIES,
-        .name = VK_WSI_LUNARG_EXTENSION_NAME,
-        .version = VK_WSI_LUNARG_REVISION,
-        .description = "Intel sample driver",
-    }
-};
-
 enum intel_global_ext_type intel_gpu_lookup_global_extension(
         const struct intel_instance *instance,
         const VkExtensionProperties *ext)
