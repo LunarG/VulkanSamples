@@ -883,14 +883,14 @@ void layer_lib_scan(void)
                                  "%s" DIRECTORY_SYMBOL "%s",p,dent->d_name);
                         // Used to call: dlopen(temp_str, RTLD_LAZY)
                         loader_log(VK_DBG_REPORT_DEBUG_BIT, 0,
-                                   "Attempt to open library: %s\n", temp_str);
+                                   "Attempt to open library: %s", temp_str);
                         if ((handle = loader_platform_open_library(temp_str)) == NULL) {
-                            loader_log(VK_DBG_REPORT_DEBUG_BIT, 0, "open library failed\n");
+                            loader_log(VK_DBG_REPORT_DEBUG_BIT, 0, "open library failed");
                             dent = readdir(curdir);
                             continue;
                         }
                         loader_log(VK_DBG_REPORT_DEBUG_BIT, 0,
-                                   "Opened library: %s\n", temp_str);
+                                   "Opened library: %s", temp_str);
 
                         /* TODO: Remove fixed count */
                         if (count == MAX_LAYER_LIBRARIES) {
@@ -919,7 +919,7 @@ void layer_lib_scan(void)
 
                         strcpy(loader.scanned_layers[count].lib_name, temp_str);
 
-                        loader_log(VK_DBG_REPORT_DEBUG_BIT, 0, "Collecting global extensions for %s\n", temp_str);
+                        loader_log(VK_DBG_REPORT_DEBUG_BIT, 0, "Collecting global extensions for %s", temp_str);
                         get_global_extensions(
                                     fp_get_ext,
                                     "vkGetGlobalExtensionInfo",
