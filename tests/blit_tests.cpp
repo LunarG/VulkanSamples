@@ -22,6 +22,7 @@
 
 // Blit (copy, clear, and resolve) tests
 
+#include "math.h"
 #include "test_common.h"
 #include "vktestbinding.h"
 #include "test_environment.h"
@@ -399,7 +400,7 @@ size_t get_format_size(VkFormat format)
         { VK_FORMAT_S8_UINT,               1,  1 },
         { VK_FORMAT_D16_UNORM_S8_UINT,     3,  2 },
         { VK_FORMAT_D24_UNORM_S8_UINT,     4,  2 },
-        { VK_FORMAT_D32_SFLOAT_S8_UINT,    4,  2 },
+        { VK_FORMAT_D32_SFLOAT_S8_UINT,    8,  2 },
         { VK_FORMAT_BC1_RGB_UNORM,         8,  4 },
         { VK_FORMAT_BC1_RGB_SRGB,          8,  4 },
         { VK_FORMAT_BC1_RGBA_UNORM,        8,  4 },
@@ -1450,7 +1451,7 @@ protected:
         case VK_FORMAT_D16_UNORM:
         case VK_FORMAT_D16_UNORM_S8_UINT:
             {
-                const uint16_t unorm = (uint16_t)(depth * 65535.0f);
+                const uint16_t unorm = (uint16_t)roundf(depth * 65535.0f);
                 raw.push_back(unorm & 0xff);
                 raw.push_back(unorm >> 8);
             }
@@ -1602,6 +1603,15 @@ TEST_F(VkCmdClearDepthStencilTest, Basic)
         const VkImageSubresourceRange range =
             vk_testing::Image::subresource_range(img_info, VK_IMAGE_ASPECT_DEPTH);
         std::vector<VkImageSubresourceRange> ranges(&range, &range + 1);
+
+        if (it->format == VK_FORMAT_D32_SFLOAT_S8_UINT ||
+            it->format == VK_FORMAT_D16_UNORM_S8_UINT ||
+            it->format == VK_FORMAT_D24_UNORM_S8_UINT) {
+                const VkImageSubresourceRange range2 =
+                    vk_testing::Image::subresource_range(img_info, VK_IMAGE_ASPECT_STENCIL);
+                ranges.push_back(range2);
+            }
+
 
         test_clear_depth_stencil(img_info, 0.25f, 63, ranges);
     }
