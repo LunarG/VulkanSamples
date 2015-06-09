@@ -37,8 +37,6 @@
 #include <assert.h>
 
 #include <vulkan.h>
-#include <vk_debug_report_lunarg.h>
-#include <vk_wsi_lunarg.h>
 #include <vkIcd.h>
 
 #include "icd.h"
@@ -71,12 +69,14 @@ enum intel_debug_flags {
     INTEL_DEBUG_HANG        = 1 << 23,
 };
 
+struct intel_instance;
+
 struct intel_handle {
     /* the loader expects a "void *" at the beginning */
     void *loader_data;
 
     uint32_t magic;
-    const struct icd_instance *icd;
+    const struct intel_instance *instance;
 };
 
 extern int intel_debug;
@@ -85,12 +85,12 @@ static const uint32_t intel_handle_magic = 0x494e544c;
 
 static inline void intel_handle_init(struct intel_handle *handle,
                                      VkObjectType type,
-                                     const struct icd_instance *icd)
+                                     const struct intel_instance *instance)
 {
     set_loader_magic_value((VkObject) handle);
 
     handle->magic = intel_handle_magic + type;
-    handle->icd = icd;
+    handle->instance = instance;
 }
 
 /**

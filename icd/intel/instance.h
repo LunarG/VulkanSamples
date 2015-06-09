@@ -39,7 +39,7 @@ struct intel_instance {
     struct icd_instance *icd;
 
     struct intel_gpu *gpus;
-    bool exts[INTEL_GLOBAL_EXT_COUNT];
+    bool global_exts[INTEL_GLOBAL_EXT_COUNT];
 };
 
 static inline struct intel_instance *intel_instance(VkInstance instance)
@@ -47,7 +47,5 @@ static inline struct intel_instance *intel_instance(VkInstance instance)
     return (struct intel_instance *) instance;
 }
 
-enum intel_global_ext_type intel_gpu_lookup_global_extension(
-        const struct intel_instance *instance,
-        const VkExtensionProperties *ext);
+enum intel_global_ext_type intel_gpu_lookup_global_extension(const VkExtensionProperties *ext);
 #endif /* INSTANCE_H */

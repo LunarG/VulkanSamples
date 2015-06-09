@@ -163,7 +163,7 @@ VkResult intel_gpu_create(const struct intel_instance *instance, int devid,
 
     memset(gpu, 0, sizeof(*gpu));
     /* there is no VK_DBG_OBJECT_GPU */
-    intel_handle_init(&gpu->handle, VK_OBJECT_TYPE_PHYSICAL_DEVICE, instance->icd);
+    intel_handle_init(&gpu->handle, VK_OBJECT_TYPE_PHYSICAL_DEVICE, instance);
 
     gpu->devid = devid;
 
@@ -370,7 +370,7 @@ VkResult intel_gpu_init_winsys(struct intel_gpu *gpu)
     if (fd < 0)
         return VK_ERROR_UNKNOWN;
 
-    gpu->winsys = intel_winsys_create_for_fd(gpu->handle.icd, fd);
+    gpu->winsys = intel_winsys_create_for_fd(gpu->handle.instance->icd, fd);
     if (!gpu->winsys) {
         intel_log(gpu, VK_DBG_REPORT_ERROR_BIT, 0,
                 VK_NULL_HANDLE, 0, 0, "failed to create GPU winsys");

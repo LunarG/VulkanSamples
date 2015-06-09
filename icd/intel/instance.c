@@ -164,22 +164,27 @@ static struct intel_instance *intel_instance_create(const VkInstanceCreateInfo* 
     }
 
     memset(instance, 0, sizeof(*instance));
-    intel_handle_init(&instance->handle, VK_OBJECT_TYPE_INSTANCE, icd);
+    intel_handle_init(&instance->handle, VK_OBJECT_TYPE_INSTANCE, instance);
 
     instance->icd = icd;
 
     for (i = 0; i < info->extensionCount; i++) {
-        const enum intel_global_ext_type ext = intel_gpu_lookup_global_extension(NULL,
-                &info->pEnabledExtensions[i]);
+        const enum intel_global_ext_type ext = intel_gpu_lookup_global_extension(&info->pEnabledExtensions[i]);
 
-        if (ext != INTEL_GLOBAL_EXT_INVALID)
-            instance->exts[ext] = true;
+        if (ext != INTEL_GLOBAL_EXT_INVALID) {
+            instance->global_exts[ext] = true;
+        } else {
+            /* TODO: ICD should fail create if extensions are specified that
+             * ICD cannot satisfy. Except this messes with chaining!
+             * Seems that a chain needs to consume the enables it
+             * uses leaving only the ICD ones here.
+             */
+        }
     }
     return instance;
 }
 
 enum intel_global_ext_type intel_gpu_lookup_global_extension(
-        const struct intel_instance *instance,
         const VkExtensionProperties *ext)
 {
     enum intel_global_ext_type type;

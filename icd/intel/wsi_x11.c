@@ -588,7 +588,7 @@ static VkResult x11_swap_chain_create(struct intel_dev *dev,
         return VK_ERROR_OUT_OF_HOST_MEMORY;
 
     memset(sc, 0, sizeof(*sc));
-    intel_handle_init(&sc->handle, VK_OBJECT_TYPE_SWAP_CHAIN_WSI, dev->base.handle.icd);
+    intel_handle_init(&sc->handle, VK_OBJECT_TYPE_SWAP_CHAIN_WSI, dev->base.handle.instance);
 
     sc->c = c;
     sc->window = window;
@@ -690,7 +690,7 @@ static struct intel_x11_display *x11_display_create(struct intel_gpu *gpu,
         return NULL;
 
     memset(dpy, 0, sizeof(*dpy));
-    intel_handle_init(&dpy->handle, VK_OBJECT_TYPE_DISPLAY_WSI, gpu->handle.icd);
+    intel_handle_init(&dpy->handle, VK_OBJECT_TYPE_DISPLAY_WSI, gpu->handle.instance);
 
     dpy->fd = fd;
     dpy->connector_id = connector_id;
