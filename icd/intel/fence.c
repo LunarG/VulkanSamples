@@ -49,7 +49,7 @@ VkResult intel_fence_create(struct intel_dev *dev,
     if (!fence)
         return VK_ERROR_OUT_OF_HOST_MEMORY;
 
-    if (dev->exts[INTEL_EXT_WSI_LUNARG]) {
+    if (dev->global_exts[INTEL_GLOBAL_EXT_WSI_LUNARG]) {
         VkResult ret = intel_wsi_fence_init(fence);
         if (ret != VK_SUCCESS) {
             intel_fence_destroy(fence);

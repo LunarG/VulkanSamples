@@ -34,19 +34,13 @@
        assert(intel_gpu_gen(gpu) >= INTEL_GEN(min_gen) && \
               intel_gpu_gen(gpu) <= INTEL_GEN(max_gen))
 
-enum intel_ext_type {
-    INTEL_EXT_WSI_LUNARG,
-    INTEL_EXT_DEBUG_REPORT,
-    INTEL_EXT_DEBUG_MARKER,
-
-    INTEL_EXT_COUNT,
-    INTEL_EXT_INVALID = INTEL_EXT_COUNT,
-};
-
 /*
  * No device-specific extensions at thie point, so this enum is a placeholder
  */
-enum intel_physical_device_ext_type {
+enum intel_phy_dev_ext_type {
+    INTEL_PHY_DEV_EXT_DEBUG_REPORT,
+    INTEL_PHY_DEV_EXT_DEBUG_MARKER,
+
     INTEL_PHY_DEV_EXT_COUNT,
     INTEL_PHY_DEV_EXT_INVALID = INTEL_PHY_DEV_EXT_COUNT,
 };
@@ -130,7 +124,8 @@ int intel_gpu_get_primary_fd(struct intel_gpu *gpu);
 VkResult intel_gpu_init_winsys(struct intel_gpu *gpu);
 void intel_gpu_cleanup_winsys(struct intel_gpu *gpu);
 
-enum intel_ext_type intel_gpu_lookup_extension(const struct intel_gpu *gpu,
-                                               const VkExtensionProperties *ext);
+enum intel_phy_dev_ext_type intel_gpu_lookup_phy_dev_extension(
+        const struct intel_gpu *gpu,
+        const VkExtensionProperties *ext);
 
 #endif /* GPU_H */

@@ -22,38 +22,39 @@
  * DEALINGS IN THE SOFTWARE.
  *
  * Authors:
- *   Chia-I Wu <olv@lunarg.com>
+ *   Courtney Goeltzenleuchter <courtney@lunarg.com>
  */
 
-#ifndef INSTANCE_H
-#define INSTANCE_H
+#include "extension_info.h"
+#include "vk_debug_marker_layer.h"
 
-#include "intel.h"
-
-struct intel_gpu;
-
-enum intel_global_ext_type {
-    INTEL_GLOBAL_EXT_WSI_LUNARG,
-
-    INTEL_GLOBAL_EXT_COUNT,
-    INTEL_GLOBAL_EXT_INVALID = INTEL_GLOBAL_EXT_COUNT,
+const VkExtensionProperties intel_global_exts[INTEL_GLOBAL_EXT_COUNT] = {
+    {
+        .sType = VK_STRUCTURE_TYPE_EXTENSION_PROPERTIES,
+        .name = DEBUG_REPORT_EXTENSION_NAME,
+        .version = VK_DEBUG_REPORT_EXTENSION_VERSION,
+        .description = "Intel sample driver",
+    },
+    {
+        .sType = VK_STRUCTURE_TYPE_EXTENSION_PROPERTIES,
+        .name = VK_WSI_LUNARG_EXTENSION_NAME,
+        .version = VK_WSI_LUNARG_REVISION,
+        .description = "Intel sample driver",
+    }
 };
 
-struct intel_instance {
-    struct intel_handle handle;
-
-    struct icd_instance *icd;
-
-    struct intel_gpu *gpus;
-    bool exts[INTEL_GLOBAL_EXT_COUNT];
+const VkExtensionProperties intel_phy_dev_gpu_exts[INTEL_PHY_DEV_EXT_COUNT] = {
+    {
+        .sType = VK_STRUCTURE_TYPE_EXTENSION_PROPERTIES,
+        .name = DEBUG_MARKER_EXTENSION_NAME,
+        .version = VK_DEBUG_MARKER_EXTENSION_VERSION,
+        .description = "Intel sample driver",
+    }
 };
 
-static inline struct intel_instance *intel_instance(VkInstance instance)
+bool compare_vk_extension_properties(
+        const VkExtensionProperties *op1,
+        const VkExtensionProperties *op2)
 {
-    return (struct intel_instance *) instance;
+    return memcmp(op1, op2, sizeof(VkExtensionProperties)) == 0 ? true : false;
 }
-
-enum intel_global_ext_type intel_gpu_lookup_global_extension(
-        const struct intel_instance *instance,
-        const VkExtensionProperties *ext);
-#endif /* INSTANCE_H */

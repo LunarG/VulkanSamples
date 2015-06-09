@@ -142,7 +142,7 @@ struct intel_dev_dbg {
 struct intel_dev {
     struct intel_base base;
 
-    bool exts[INTEL_EXT_COUNT];
+    bool phy_dev_exts[INTEL_PHY_DEV_EXT_COUNT];
 
     struct intel_gpu *gpu;
     struct intel_winsys *winsys;

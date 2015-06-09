@@ -25,35 +25,33 @@
  *   Chia-I Wu <olv@lunarg.com>
  */
 
-#ifndef INSTANCE_H
-#define INSTANCE_H
+#ifndef EXTENSION_INFO_H
+#define EXTENSION_INFO_H
 
 #include "intel.h"
 
-struct intel_gpu;
+/*
+ * No device-specific extensions at this point, so this enum is a placeholder
+ */
+enum intel_phy_dev_ext_type {
+    INTEL_PHY_DEV_EXT_DEBUG_MARKER,
+
+    INTEL_PHY_DEV_EXT_COUNT,
+    INTEL_PHY_DEV_EXT_INVALID = INTEL_PHY_DEV_EXT_COUNT,
+};
 
 enum intel_global_ext_type {
+    INTEL_PHY_DEV_EXT_DEBUG_REPORT,
     INTEL_GLOBAL_EXT_WSI_LUNARG,
 
     INTEL_GLOBAL_EXT_COUNT,
     INTEL_GLOBAL_EXT_INVALID = INTEL_GLOBAL_EXT_COUNT,
 };
 
-struct intel_instance {
-    struct intel_handle handle;
+extern const VkExtensionProperties intel_phy_dev_gpu_exts[INTEL_PHY_DEV_EXT_COUNT];
+extern const VkExtensionProperties intel_global_exts[INTEL_GLOBAL_EXT_COUNT];
 
-    struct icd_instance *icd;
-
-    struct intel_gpu *gpus;
-    bool exts[INTEL_GLOBAL_EXT_COUNT];
-};
-
-static inline struct intel_instance *intel_instance(VkInstance instance)
-{
-    return (struct intel_instance *) instance;
-}
-
-enum intel_global_ext_type intel_gpu_lookup_global_extension(
-        const struct intel_instance *instance,
-        const VkExtensionProperties *ext);
-#endif /* INSTANCE_H */
+bool compare_vk_extension_properties(
+        const VkExtensionProperties *op1,
+        const VkExtensionProperties *op2);
+#endif /* EXTENSION_INFO_H */

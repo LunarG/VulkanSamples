@@ -40,13 +40,7 @@
 #include "vk_debug_report_lunarg.h"
 #include "vk_debug_marker_lunarg.h"
 
-static const VkExtensionProperties intel_gpu_exts[INTEL_EXT_COUNT] = {
-    {
-        .sType = VK_STRUCTURE_TYPE_EXTENSION_PROPERTIES,
-        .name = VK_WSI_LUNARG_EXTENSION_NAME,
-        .version = VK_WSI_LUNARG_REVISION,
-        .description = "Intel sample driver",
-    },
+static const VkExtensionProperties intel_phy_dev_gpu_exts[INTEL_PHY_DEV_EXT_COUNT] = {
     {
         .sType = VK_STRUCTURE_TYPE_EXTENSION_PROPERTIES,
         .name = DEBUG_REPORT_EXTENSION_NAME,
@@ -420,17 +414,18 @@ static bool compare_vk_extension_properties(
     return memcmp(op1, op2, sizeof(VkExtensionProperties)) == 0 ? true : false;
 }
 
-enum intel_ext_type intel_gpu_lookup_extension(const struct intel_gpu *gpu,
-                                               const VkExtensionProperties *ext)
+enum intel_phy_dev_ext_type intel_gpu_lookup_phy_dev_extension(
+        const struct intel_gpu *gpu,
+        const VkExtensionProperties *ext)
 {
-    enum intel_ext_type type;
+    enum intel_phy_dev_ext_type type;
 
-    for (type = 0; type < ARRAY_SIZE(intel_gpu_exts); type++) {
-        if (compare_vk_extension_properties(&intel_gpu_exts[type], ext))
+    for (type = 0; type < ARRAY_SIZE(intel_phy_dev_gpu_exts); type++) {
+        if (compare_vk_extension_properties(&intel_phy_dev_gpu_exts[type], ext))
             break;
     }
 
-    assert(type < INTEL_EXT_COUNT || type == INTEL_EXT_INVALID);
+    assert(type < INTEL_PHY_DEV_EXT_COUNT || type == INTEL_PHY_DEV_EXT_INVALID);
 
     return type;
 }
@@ -515,7 +510,7 @@ ICD_EXPORT VkResult VKAPI vkGetGlobalExtensionInfo(
             if (pData == NULL)
                 return VK_SUCCESS;
             count = (uint32_t *) pData;
-            *count = INTEL_EXT_COUNT;
+            *count = INTEL_GLOBAL_EXT_COUNT;
             break;
         case VK_EXTENSION_INFO_TYPE_PROPERTIES:
             /* check that *pDataSize is big enough*/
@@ -525,9 +520,9 @@ ICD_EXPORT VkResult VKAPI vkGetGlobalExtensionInfo(
             *pDataSize = sizeof(VkExtensionProperties);
             if (pData == NULL)
                 return VK_SUCCESS;
-            if (extensionIndex >= INTEL_EXT_COUNT)
+            if (extensionIndex >= INTEL_GLOBAL_EXT_COUNT)
                 return VK_ERROR_INVALID_VALUE;
-            memcpy((VkExtensionProperties *) pData, &intel_gpu_exts[extensionIndex], sizeof(VkExtensionProperties));
+            memcpy((VkExtensionProperties *) pData, &intel_global_gpu_exts[extensionIndex], sizeof(VkExtensionProperties));
             break;
         default:
             return VK_ERROR_INVALID_VALUE;
@@ -566,10 +561,13 @@ ICD_EXPORT VkResult VKAPI vkGetPhysicalDeviceExtensionInfo(
             *pDataSize = sizeof(VkExtensionProperties);
             if (pData == NULL)
                 return VK_SUCCESS;
-            /*
-             * Currently no device-specific extensions
-             */
-            return VK_ERROR_INVALID_VALUE;
+
+            *pDataSize = sizeof(VkExtensionProperties);
+            if (pData == NULL)
+                return VK_SUCCESS;
+            if (extensionIndex >= INTEL_PHY_DEV_EXT_COUNT)
+                return VK_ERROR_INVALID_VALUE;
+            memcpy((VkExtensionProperties *) pData, &intel_phy_dev_gpu_exts[extensionIndex], sizeof(VkExtensionProperties));
             break;
         default:
             return VK_ERROR_INVALID_VALUE;

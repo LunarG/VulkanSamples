@@ -169,13 +169,38 @@ static struct intel_instance *intel_instance_create(const VkInstanceCreateInfo* 
     instance->icd = icd;
 
     for (i = 0; i < info->extensionCount; i++) {
-        const enum intel_ext_type ext = intel_gpu_lookup_extension(NULL,
+        const enum intel_global_ext_type ext = intel_gpu_lookup_global_extension(NULL,
                 &info->pEnabledExtensions[i]);
 
-        if (ext != INTEL_EXT_INVALID)
+        if (ext != INTEL_GLOBAL_EXT_INVALID)
             instance->exts[ext] = true;
     }
     return instance;
+}
+
+static const VkExtensionProperties intel_global_exts[INTEL_GLOBAL_EXT_COUNT] = {
+    {
+        .sType = VK_STRUCTURE_TYPE_EXTENSION_PROPERTIES,
+        .name = VK_WSI_LUNARG_EXTENSION_NAME,
+        .version = VK_WSI_LUNARG_REVISION,
+        .description = "Intel sample driver",
+    }
+};
+
+enum intel_global_ext_type intel_gpu_lookup_global_extension(
+        const struct intel_instance *instance,
+        const VkExtensionProperties *ext)
+{
+    enum intel_global_ext_type type;
+
+    for (type = 0; type < ARRAY_SIZE(intel_global_exts); type++) {
+        if (compare_vk_extension_properties(&intel_global_exts[type], ext))
+            break;
+    }
+
+    assert(type < INTEL_GLOBAL_EXT_COUNT || type == INTEL_GLOBAL_EXT_INVALID);
+
+    return type;
 }
 
 ICD_EXPORT VkResult VKAPI vkCreateInstance(
