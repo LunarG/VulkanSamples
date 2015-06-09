@@ -1329,9 +1329,6 @@ extern uint32_t loader_activate_device_layers(
             uint32_t ext_count,
             const VkExtensionProperties *ext_props)
 {
-    uint32_t count;
-    uint32_t layer_idx;
-
     if (!icd)
         return 0;
     assert(gpu_index < MAX_GPUS_FOR_LAYER);
@@ -1343,31 +1340,36 @@ extern uint32_t loader_activate_device_layers(
         VkBaseLayerObject *nextGpuObj;
         PFN_vkGetDeviceProcAddr nextGPA = icd->GetDeviceProcAddr;
         VkBaseLayerObject *wrappedGpus;
-        count = 0;
+        /*
+         * Figure out how many actual layers will need to be wrapped.
+         */
         for (uint32_t i = 0; i < icd->enabled_device_extensions[gpu_index].count; i++) {
             struct loader_extension_property *ext_prop = &icd->enabled_device_extensions[gpu_index].list[i];
-            if (ext_prop->origin == VK_EXTENSION_ORIGIN_LAYER) {
-                count++;
+            if (ext_prop->alias) {
+                ext_prop = ext_prop->alias;
             }
+            if (ext_prop->origin != VK_EXTENSION_ORIGIN_LAYER) {
+                continue;
+            }
+            loader_add_to_ext_list(&icd->activated_layer_list[gpu_index], 1, ext_prop);
         }
-        if (!count)
+
+        if (!icd->activated_layer_list[gpu_index].count)
             return 0;
 
-        icd->layer_count[gpu_index] = count;
+        icd->layer_count[gpu_index] = icd->activated_layer_list[gpu_index].count;
 
         wrappedGpus = malloc(sizeof(VkBaseLayerObject) * icd->layer_count[gpu_index]);
         if (! wrappedGpus) {
                 loader_log(VK_DBG_REPORT_ERROR_BIT, 0, "Failed to malloc Gpu objects for layer");
                 return 0;
         }
-        layer_idx = count - 1;
         for (int32_t i = icd->layer_count[gpu_index] - 1; i >= 0; i--) {
-            struct loader_extension_property *ext_prop = &icd->enabled_device_extensions[gpu_index].list[i];
+
+            struct loader_extension_property *ext_prop = &icd->activated_layer_list[gpu_index].list[i];
             loader_platform_dl_handle lib_handle;
 
-            if (ext_prop->origin != VK_EXTENSION_ORIGIN_LAYER) {
-                continue;
-            }
+            assert(ext_prop->origin == VK_EXTENSION_ORIGIN_LAYER);
 
             nextGpuObj = (wrappedGpus + i);
             nextGpuObj->pGPA = nextGPA;
@@ -1389,7 +1391,6 @@ extern uint32_t loader_activate_device_layers(
                        "Insert device layer library %s for extension: %s",
                        ext_prop->lib_name, ext_prop->info.name);
 
-            layer_idx--;
         }
 
         loader_init_device_dispatch_table(icd->loader_dispatch + gpu_index, nextGPA,

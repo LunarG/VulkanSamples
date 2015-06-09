@@ -122,6 +122,7 @@ struct loader_icd {
     struct loader_extension_list device_extension_cache[MAX_GPUS_FOR_LAYER];
 
     struct loader_extension_list enabled_device_extensions[MAX_GPUS_FOR_LAYER];
+    struct loader_extension_list activated_layer_list[MAX_GPUS_FOR_LAYER];
 };
 
 struct loader_instance {
