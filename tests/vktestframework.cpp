@@ -165,20 +165,13 @@ VkTestFramework::~VkTestFramework()
 }
 
 // Define all the static elements
-bool VkTestFramework::m_show_images = false;
-bool VkTestFramework::m_save_images = false;
-bool VkTestFramework::m_compare_images = false;
-#ifdef _WIN32
-bool VkTestFramework::m_use_glsl = false;
-bool VkTestFramework::m_canonicalize_spv = false;
-bool VkTestFramework::m_strip_spv = false;
+bool VkTestFramework::m_show_images       = false;
+bool VkTestFramework::m_save_images       = false;
+bool VkTestFramework::m_compare_images    = false;
+bool VkTestFramework::m_use_glsl          = false;
+bool VkTestFramework::m_canonicalize_spv  = false;
+bool VkTestFramework::m_strip_spv         = false;
 bool VkTestFramework::m_do_everything_spv = false;
-#else
-bool VkTestFramework::m_use_glsl = false;
-bool VkTestFramework::m_canonicalize_spv = false;
-bool VkTestFramework::m_strip_spv = false;
-bool VkTestFramework::m_do_everything_spv = false;
-#endif
 int VkTestFramework::m_width = 0;
 int VkTestFramework::m_height = 0;
 std::list<VkTestImageRecord> VkTestFramework::m_images;
