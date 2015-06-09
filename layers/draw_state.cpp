@@ -425,7 +425,7 @@ static void initPipeline(PIPELINE_NODE* pPipeline, const VkGraphicsPipelineCreat
                 if (pPipeline->vtxBindingCount) {
                     pPipeline->pVertexBindingDescriptions = new VkVertexInputBindingDescription[pPipeline->vtxBindingCount];
                     bufferSize = pPipeline->vtxBindingCount * sizeof(VkVertexInputBindingDescription);
-                    memcpy((void*)pPipeline->pVertexBindingDescriptions, ((VkPipelineVertexInputCreateInfo*)pTrav)->pVertexAttributeDescriptions, bufferSize);
+                    memcpy((void*)pPipeline->pVertexBindingDescriptions, ((VkPipelineVertexInputCreateInfo*)pTrav)->pVertexBindingDescriptions, bufferSize);
                 }
                 pPipeline->vtxAttributeCount = pVICI->attributeCount;
                 if (pPipeline->vtxAttributeCount) {
