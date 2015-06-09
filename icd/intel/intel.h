@@ -128,25 +128,11 @@ void *intel_alloc(const void *handle,
 
 void intel_free(const void *handle, void *ptr);
 
-static inline void intel_logv(const void *handle,
-                              VkFlags msg_flags,
-                              VkObjectType obj_type, VkObject src_object,
-                              size_t location, int32_t msg_code,
-                              const char *format, va_list ap)
-{
-    char msg[256];
-    int ret;
-
-    ret = vsnprintf(msg, sizeof(msg), format, ap);
-    if (ret >= sizeof(msg) || ret < 0)
-        msg[sizeof(msg) - 1] = '\0';
-
-    assert(intel_handle_validate(handle));
-    icd_instance_log(((const struct intel_handle *) handle)->icd, msg_flags,
-                     obj_type, src_object,              /* obj_type, object */
-                     location, msg_code,                /* location, msg_code */
-                     msg);
-}
+void intel_logv(const void *handle,
+                VkFlags msg_flags,
+                VkObjectType obj_type, VkObject src_object,
+                size_t location, int32_t msg_code,
+                const char *format, va_list ap);
 
 static inline void intel_log(const void *handle,
                              VkFlags msg_flags,

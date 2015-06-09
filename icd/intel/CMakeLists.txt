@@ -22,6 +22,7 @@ set(sources
     dev.c
     instance.c
     event.c
+    extension_utils.c
     fb.c
     fence.c
     format.c
