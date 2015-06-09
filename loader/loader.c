@@ -210,7 +210,7 @@ static void loader_log(VkFlags msg_type, int32_t msg_code,
     va_list ap;
     int ret;
 
-    if (!(msg_code & g_loader_log_msgs)) {
+    if (!(msg_type & g_loader_log_msgs)) {
         return;
     }
 
