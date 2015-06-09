@@ -466,7 +466,8 @@ static void loader_search_ext_list_for_name(
 {
     for (uint32_t i = 0; i < search_list->count; i++) {
         struct loader_extension_property *ext_prop = &search_list->list[i];
-        if (0 == strcmp(ext_prop->info.name, ext_name)) {
+        if (ext_prop->origin == VK_EXTENSION_ORIGIN_LAYER &&
+            0 == strcmp(ext_prop->info.name, ext_name)) {
             /* Found an extension with the same name, add to found_list */
             loader_add_to_ext_list(found_list, 1, &search_list->list[i]);
         }
