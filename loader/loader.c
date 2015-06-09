@@ -1139,7 +1139,6 @@ static void loader_add_layer_env(
     pOrig = p;
 
     while (p && *p ) {
-        //memset(&lib_name[0], 0, sizeof(const char *) * MAX_LAYER_LIBRARIES);
         next = strchr(p, PATH_SEPERATOR);
         if (next == NULL) {
             len = (uint32_t) strlen(p);
