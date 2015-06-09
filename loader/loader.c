@@ -285,7 +285,6 @@ static void get_global_extensions(
         memset(&ext_props, 0, sizeof(ext_props));
         res = fp_get(VK_EXTENSION_INFO_TYPE_PROPERTIES, i, &siz, &ext_props.info);
         if (res == VK_SUCCESS) {
-            ext_props.hosted = false;
             ext_props.origin = origin;
             ext_props.lib_name = lib_name;
             strncpy(ext_props.get_extension_info_name, get_extension_info_name, MAX_EXTENSION_NAME_SIZE);
@@ -334,7 +333,6 @@ static void get_physical_device_layer_extensions(
                 memset(&ext_props, 0, sizeof(ext_props));
                 res = fp_get(physical_device, VK_EXTENSION_INFO_TYPE_PROPERTIES, i, &siz, &ext_props.info);
                 if (res == VK_SUCCESS && (ext_props.info.sType == VK_STRUCTURE_TYPE_EXTENSION_PROPERTIES)) {
-                    ext_props.hosted = false;
                     ext_props.origin = VK_EXTENSION_ORIGIN_LAYER;
                     strcpy(ext_props.get_extension_info_name, funcStr);
                     ext_props.lib_name = loader.scanned_layers[layer_index].lib_name;
@@ -1549,7 +1547,6 @@ VkResult loader_init_physical_device_info(
                             res = icd->GetPhysicalDeviceExtensionInfo(icd->gpus[i], VK_EXTENSION_INFO_TYPE_PROPERTIES,
                                                                       extension_id, &data_size, &ext_props.info);
                             if (data_size == sizeof(VkExtensionProperties) && res == VK_SUCCESS) {
-                                ext_props.hosted = false;
                                 ext_props.origin = VK_EXTENSION_ORIGIN_ICD;
                                 ext_props.lib_name = icd->scanned_icds->lib_name;
                                 // For ICDs, this is the only option

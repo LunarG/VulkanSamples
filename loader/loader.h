@@ -69,7 +69,6 @@ struct loader_extension_property {
     // internally to ensure we reject duplicates
     char get_extension_info_name[MAX_EXTENSION_NAME_SIZE+1];
     struct loader_extension_property *alias;
-    bool hosted;        // does the extension reside in one driver/layer
 };
 
 struct loader_extension_list {
