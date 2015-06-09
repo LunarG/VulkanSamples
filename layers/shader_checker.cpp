@@ -518,8 +518,8 @@ validate_interface_between_stages(shader_source const *producer, char const *pro
     while ((outputs.size() > 0 && a_it != outputs.end()) || ( inputs.size() && b_it != inputs.end())) {
         bool a_at_end = outputs.size() == 0 || a_it == outputs.end();
         bool b_at_end = inputs.size() == 0  || b_it == inputs.end();
-        auto a_first = (outputs.size() > 0 ? a_it->first : 0);
-        auto b_first = (inputs.size()  > 0 ? b_it->first : 0);
+        auto a_first = a_at_end ? 0 : a_it->first;
+        auto b_first = b_at_end ? 0 : b_it->first;
 
         if (b_at_end || a_first < b_first) {
             sprintf(str, "%s writes to output location %d which is not consumed by %s\n",
@@ -669,8 +669,8 @@ validate_vi_against_vs_inputs(VkPipelineVertexInputCreateInfo const *vi, shader_
     while ((attribs.size() > 0 && it_a != attribs.end()) || (inputs.size() > 0 && it_b != inputs.end())) {
         bool a_at_end = attribs.size() == 0 || it_a == attribs.end();
         bool b_at_end = inputs.size() == 0  || it_b == inputs.end();
-        auto a_first = (attribs.size() > 0 ? it_a->first : 0);
-        auto b_first = (inputs.size()  > 0 ? it_b->first : 0);
+        auto a_first = a_at_end ? 0 : it_a->first;
+        auto b_first = b_at_end ? 0 : it_b->first;
         if (b_at_end || a_first < b_first) {
             sprintf(str, "Vertex attribute at location %d not consumed by VS", a_first);
             layerCbMsg(VK_DBG_MSG_WARNING, VK_VALIDATION_LEVEL_0, NULL, 0, SHADER_CHECKER_OUTPUT_NOT_CONSUMED, "SC", str);
