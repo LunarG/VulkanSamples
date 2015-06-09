@@ -1297,7 +1297,7 @@ static void printDSConfig(const VkCmdBuffer cb)
     char tmp_str[1024];
     char ds_config_str[1024*256] = {0}; // TODO : Currently making this buffer HUGE w/o overrun protection.  Need to be smarter, start smaller, and grow as needed.
     GLOBAL_CB_NODE* pCB = getCBNode(cb);
-    if (pCB) {
+    if (pCB && pCB->lastBoundDescriptorSet) {
         SET_NODE* pSet = getSetNode(pCB->lastBoundDescriptorSet);
         POOL_NODE* pPool = getPoolNode(pSet->pool);
         // Print out pool details
