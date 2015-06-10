@@ -296,6 +296,7 @@ struct demo {
 
     VkDisplayPropertiesWSI *display_props;
     int num_displays;
+    PFN_vkGetDisplayInfoWSI fpGetDisplayInfoWSI;
     PFN_vkCreateSwapChainWSI fpCreateSwapChainWSI;
     PFN_vkDestroySwapChainWSI fpDestroySwapChainWSI;
     PFN_vkGetSwapChainInfoWSI fpGetSwapChainInfoWSI;
@@ -1884,6 +1885,10 @@ static void demo_init_vk(struct demo *demo)
     err = vkCreateDevice(demo->gpu, &device, &demo->device);
     assert(!err);
 
+    demo->fpGetDisplayInfoWSI = vkGetDeviceProcAddr(demo->device, "vkGetDisplayInfoWSI");
+    if (demo->fpGetDisplayInfoWSI == NULL)
+        ERR_EXIT("vkGetDeviceProcAddr failed to find vkGetDisplayInfoWSI",
+                                 "vkGetDeviceProcAddr Failure");
     demo->fpCreateSwapChainWSI = vkGetDeviceProcAddr(demo->device, "vkCreateSwapChainWSI");
     if (demo->fpCreateSwapChainWSI == NULL)
         ERR_EXIT("vkGetDeviceProcAddr failed to find vkCreateSwapChainWSI",
@@ -1958,11 +1963,11 @@ static void demo_init_vk(struct demo *demo)
     display = demo->display_props[0].display;
 
     // Get a VkFormat to use with the VkDisplayWSI we are using:
-    err = vkGetDisplayInfoWSI(display, VK_DISPLAY_INFO_TYPE_FORMAT_PROPERTIES_WSI,
+    err = demo->fpGetDisplayInfoWSI(display, VK_DISPLAY_INFO_TYPE_FORMAT_PROPERTIES_WSI,
                               &data_size, NULL);
     VkDisplayFormatPropertiesWSI* display_format_props =
         (VkDisplayFormatPropertiesWSI*) malloc(data_size);
-    err = vkGetDisplayInfoWSI(display, VK_DISPLAY_INFO_TYPE_FORMAT_PROPERTIES_WSI,
+    err = demo->fpGetDisplayInfoWSI(display, VK_DISPLAY_INFO_TYPE_FORMAT_PROPERTIES_WSI,
                               &data_size, display_format_props);
     // For now, simply use the first VkFormat (TODO: Enhance this for the
     // future):
