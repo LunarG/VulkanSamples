@@ -62,12 +62,12 @@ struct loader_extension_property {
     // such as Validation. However, the loader requires
     // that a layer be included only once in a chain.
     // During layer scanning the loader will check if
-    // the vkGet*ProcAddr is the same as an existing extension
+    // the vkGetInstanceProcAddr is the same as an existing extension
     // If so, it will link them together via the alias pointer.
     // At initialization time we'll follow the alias pointer
     // to the "base" extension and then use that extension
     // internally to ensure we reject duplicates
-    char get_extension_info_name[MAX_EXTENSION_NAME_SIZE+1];
+    PFN_vkGPA get_proc_addr;
     struct loader_extension_property *alias;
 };
 
@@ -105,12 +105,13 @@ struct loader_device {
     struct loader_device *next;
 };
 
+/* per ICD structure */
 struct loader_icd {
     const struct loader_scanned_icds *scanned_icds;
 
     struct loader_device *logical_device_list;
     uint32_t gpu_count;
-    VkPhysicalDevice *gpus;
+    VkPhysicalDevice *gpus;    // enumerated PhysicalDevices
     VkInstance instance;       // instance object from the icd
     PFN_vkGetDeviceProcAddr GetDeviceProcAddr;
     PFN_vkDestroyInstance DestroyInstance;
@@ -131,11 +132,11 @@ struct loader_icd {
     struct loader_icd *next;
 };
 
+/* per instance structure */
 struct loader_instance {
     VkLayerInstanceDispatchTable *disp; // must be first entry in structure
 
     uint32_t layer_count;
-//    struct loader_layers layer_libs[MAX_LAYER_LIBRARIES];
     uint32_t total_gpu_count;
     uint32_t total_icd_count;
     struct loader_icd *icds;

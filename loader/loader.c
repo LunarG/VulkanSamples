@@ -262,10 +262,11 @@ static struct loader_extension_property *get_extension_property_from_vkext(
     return NULL;
 }
 
-static void get_global_extensions(
+static void loader_get_global_extensions(
         const PFN_vkGetGlobalExtensionInfo fp_get,
-        const char *get_extension_info_name,
+        const PFN_vkGPA get_proc_addr,
         const char *lib_name,
+        const loader_platform_dl_handle lib_handle,
         const enum extension_origin origin,
         struct loader_extension_list *ext_list)
 {
@@ -273,20 +274,33 @@ static void get_global_extensions(
     size_t siz = sizeof(count);
     struct loader_extension_property ext_props;
     VkResult res;
+    PFN_vkGPA ext_get_proc_addr;
+    PFN_vkGetInstanceProcAddr get_instance_proc_addr;
 
     res = fp_get(VK_EXTENSION_INFO_TYPE_COUNT, 0, &siz, &count);
     if (res != VK_SUCCESS) {
         loader_log(VK_DBG_REPORT_WARN_BIT, 0, "Error getting global extension count from ICD");
         return;
     }
+
+    if (get_proc_addr == NULL)
+        get_instance_proc_addr = (PFN_vkGetInstanceProcAddr) loader_platform_get_proc_address(lib_handle, "vkGetInstanceProcAddr");
     siz = sizeof(VkExtensionProperties);
     for (i = 0; i < count; i++) {
         memset(&ext_props, 0, sizeof(ext_props));
         res = fp_get(VK_EXTENSION_INFO_TYPE_PROPERTIES, i, &siz, &ext_props.info);
         if (res == VK_SUCCESS) {
+            //TODO eventually get this from the layer config file
+            if (get_proc_addr == NULL) {
+                char funcStr[MAX_EXTENSION_NAME_SIZE+1];
+                snprintf(funcStr, MAX_EXTENSION_NAME_SIZE, "%sGetInstanceProcAddr", ext_props.info.name);
+
+                if ((ext_get_proc_addr = (PFN_vkGPA) loader_platform_get_proc_address(lib_handle, funcStr)) == NULL)
+                    ext_get_proc_addr = get_instance_proc_addr;
+            }
             ext_props.origin = origin;
             ext_props.lib_name = lib_name;
-            strncpy(ext_props.get_extension_info_name, get_extension_info_name, MAX_EXTENSION_NAME_SIZE);
+            ext_props.get_proc_addr = (get_proc_addr == NULL) ? ext_get_proc_addr : get_proc_addr;
             loader_add_to_ext_list(ext_list, 1, &ext_props);
         }
     }
@@ -294,7 +308,7 @@ static void get_global_extensions(
     return;
 }
 
-static void get_physical_device_layer_extensions(
+static void loader_get_physical_device_layer_extensions(
         struct loader_instance *ptr_instance,
         VkPhysicalDevice physical_device,
         const uint32_t layer_index,
@@ -304,8 +318,10 @@ static void get_physical_device_layer_extensions(
     size_t siz = sizeof(count);
     VkResult res;
     loader_platform_dl_handle lib_handle;
-    PFN_vkGetPhysicalDeviceExtensionInfo fp_get;
+    PFN_vkGetPhysicalDeviceExtensionInfo get_phys_dev_ext_info;
     struct loader_extension_property ext_props;
+    PFN_vkGPA ext_get_proc_addr;
+    PFN_vkGetDeviceProcAddr get_device_proc_addr;
 
     if (!loader.scanned_layers[layer_index].physical_device_extensions_supported) {
         return;
@@ -314,26 +330,26 @@ static void get_physical_device_layer_extensions(
     ext_props.origin = VK_EXTENSION_ORIGIN_LAYER;
     ext_props.lib_name = loader.scanned_layers[layer_index].lib_name;
     char funcStr[MAX_EXTENSION_NAME_SIZE+1];  // add one character for 0 termination
-    snprintf(funcStr, MAX_EXTENSION_NAME_SIZE, "%sGetPhysicalDeviceExtensionInfo", ext_props.info.name);
-    funcStr[MAX_EXTENSION_NAME_SIZE] = 0; // make sure string is 0 terminated
+
     lib_handle = loader_add_layer_lib("device", &ext_props);
 
-    /* first try extension specific function, then generic */
-    fp_get = (PFN_vkGetPhysicalDeviceExtensionInfo) loader_platform_get_proc_address(lib_handle, funcStr);
-    if (!fp_get) {
-        sprintf(funcStr, "vkGetPhysicalDeviceExtensionInfo");
-        fp_get = (PFN_vkGetPhysicalDeviceExtensionInfo) loader_platform_get_proc_address(lib_handle, funcStr);
-    }
-    if (fp_get) {
-        res = fp_get(physical_device, VK_EXTENSION_INFO_TYPE_COUNT, 0, &siz, &count);
+    get_phys_dev_ext_info = (PFN_vkGetPhysicalDeviceExtensionInfo) loader_platform_get_proc_address(lib_handle, "vkGetPhysicalDeviceExtensionInfo");
+    get_device_proc_addr = (PFN_vkGetDeviceProcAddr) loader_platform_get_proc_address(lib_handle, "vkGetDeviceProcAddr");
+    if (get_phys_dev_ext_info) {
+        res = get_phys_dev_ext_info(physical_device, VK_EXTENSION_INFO_TYPE_COUNT, 0, &siz, &count);
         if (res == VK_SUCCESS) {
             siz = sizeof(VkExtensionProperties);
             for (i = 0; i < count; i++) {
                 memset(&ext_props, 0, sizeof(ext_props));
-                res = fp_get(physical_device, VK_EXTENSION_INFO_TYPE_PROPERTIES, i, &siz, &ext_props.info);
+                res = get_phys_dev_ext_info(physical_device, VK_EXTENSION_INFO_TYPE_PROPERTIES, i, &siz, &ext_props.info);
                 if (res == VK_SUCCESS && (ext_props.info.sType == VK_STRUCTURE_TYPE_EXTENSION_PROPERTIES)) {
                     ext_props.origin = VK_EXTENSION_ORIGIN_LAYER;
-                    strcpy(ext_props.get_extension_info_name, funcStr);
+                    //TODO eventually get this from the layer config file
+                    snprintf(funcStr, MAX_EXTENSION_NAME_SIZE, "%sGetDeviceProcAddr", ext_props.info.name);
+
+                    if ((ext_get_proc_addr = (PFN_vkGPA) loader_platform_get_proc_address(lib_handle, funcStr)) == NULL)
+                        ext_get_proc_addr = get_device_proc_addr;
+                    ext_props.get_proc_addr = ext_get_proc_addr;
                     ext_props.lib_name = loader.scanned_layers[layer_index].lib_name;
                     loader_add_to_ext_list(ext_list, 1, &ext_props);
                 }
@@ -428,7 +444,7 @@ void loader_add_to_ext_list(
 
         /*
          * Check if any extensions already on the list come from the same
-         * library and use the same Get*ExtensionInfo. If so, link this
+         * library and use the same Get*ProcAddr. If so, link this
          * extension to the previous as an alias. That way when we activate
          * extensions we only activiate the associated layer once no
          * matter how many extensions are used.
@@ -439,7 +455,7 @@ void loader_add_to_ext_list(
                 cur_ext->origin == VK_EXTENSION_ORIGIN_LAYER &&
                 active_property->origin == VK_EXTENSION_ORIGIN_LAYER &&
                 strcmp(cur_ext->lib_name, active_property->lib_name) == 0 &&
-                strcmp(cur_ext->get_extension_info_name, active_property->get_extension_info_name) == 0 &&
+                (cur_ext->get_proc_addr == active_property->get_proc_addr) &&
                     active_property->alias == NULL) {
                 cur_ext->alias = active_property;
                 break;
@@ -628,6 +644,7 @@ static void loader_scanned_icd_add(const char *filename)
     void *fp_create_inst;
     void *fp_get_global_ext_info;
     void *fp_get_device_ext_info;
+    PFN_vkGPA fp_get_proc_addr;
     struct loader_scanned_icds *new_node;
 
     // Used to call: dlopen(filename, RTLD_LAZY);
@@ -648,6 +665,7 @@ static void loader_scanned_icd_add(const char *filename)
     LOOKUP(fp_create_inst, CreateInstance);
     LOOKUP(fp_get_global_ext_info, GetGlobalExtensionInfo);
     LOOKUP(fp_get_device_ext_info, GetPhysicalDeviceExtensionInfo);
+    LOOKUP(fp_get_proc_addr, GetDeviceProcAddr);
 #undef LOOKUP
 
     new_node = (struct loader_scanned_icds *) malloc(sizeof(struct loader_scanned_icds)
@@ -673,10 +691,11 @@ static void loader_scanned_icd_add(const char *filename)
 
     loader.scanned_icd_list = new_node;
 
-    get_global_extensions(
+    loader_get_global_extensions(
                 (PFN_vkGetGlobalExtensionInfo) fp_get_global_ext_info,
-                "vkGetGlobalExtensionInfo",
+                fp_get_proc_addr,
                 new_node->lib_name,
+                handle,
                 VK_EXTENSION_ORIGIN_ICD,
                 &new_node->global_extension_list);
 }
@@ -989,10 +1008,11 @@ void layer_lib_scan(void)
                         strcpy(loader.scanned_layers[count].lib_name, temp_str);
 
                         loader_log(VK_DBG_REPORT_DEBUG_BIT, 0, "Collecting global extensions for %s", temp_str);
-                        get_global_extensions(
+                        loader_get_global_extensions(
                                     fp_get_ext,
-                                    "vkGetGlobalExtensionInfo",
+                                    NULL,
                                     loader.scanned_layers[count].lib_name,
+                                    handle,
                                     VK_EXTENSION_ORIGIN_LAYER,
                                     &loader.scanned_layers[count].global_extension_list);
 
@@ -1602,15 +1622,14 @@ VkResult loader_init_physical_device_info(
                             if (data_size == sizeof(VkExtensionProperties) && res == VK_SUCCESS) {
                                 ext_props.origin = VK_EXTENSION_ORIGIN_ICD;
                                 ext_props.lib_name = icd->scanned_icds->lib_name;
-                                // For ICDs, this is the only option
-                                strcpy(ext_props.get_extension_info_name, "vkGetPhysicalDeviceExtensionInfo");
+                                ext_props.get_proc_addr = icd->GetDeviceProcAddr;
                                 loader_add_to_ext_list(&icd->device_extension_cache[i], 1, &ext_props);
                             }
                         }
 
                         // Traverse layers list adding non-duplicate extensions to the list
                         for (uint32_t l = 0; l < loader.scanned_layer_count; l++) {
-                            get_physical_device_layer_extensions(ptr_instance, icd->gpus[i], l, &icd->device_extension_cache[i]);
+                            loader_get_physical_device_layer_extensions(ptr_instance, icd->gpus[i], l, &icd->device_extension_cache[i]);
                         }
                     }
                 }
@@ -1720,9 +1739,8 @@ VkResult loader_CreateDevice(
 
         /*
          * Load the libraries needed by the extensions on the
-         * enabled extension list. This will build the
-         * device instance chain terminating with the
-         * selected device.
+         * enabled extension list. This will build the device chain
+         * terminating with the selected device.
          */
         loader_activate_device_layers(*pDevice, dev, icd,
                                       dev->app_extension_count,
