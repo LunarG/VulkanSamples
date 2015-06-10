@@ -36,18 +36,15 @@ extern "C" {
 #endif
 
 struct icd_instance_logger {
-    VK_DBG_MSG_CALLBACK_FUNCTION func;
+    PFN_vkDbgMsgCallback func;
     void *user_data;
+    VkFlags flags;
 
     struct icd_instance_logger *next;
 };
 
 struct icd_instance {
     char *name;
-
-    bool debug_echo_enable;
-    bool break_on_error;
-    bool break_on_warning;
 
     VkAllocCallbacks alloc_cb;
 
@@ -57,9 +54,6 @@ struct icd_instance {
 struct icd_instance *icd_instance_create(const VkApplicationInfo *app_info,
                                          const VkAllocCallbacks *alloc_cb);
 void icd_instance_destroy(struct icd_instance *instance);
-
-VkResult icd_instance_set_bool(struct icd_instance *instance,
-                                 VK_DBG_GLOBAL_OPTION option, bool yes);
 
 static inline void *icd_instance_alloc(const struct icd_instance *instance,
                                        size_t size, size_t alignment,
@@ -75,15 +69,19 @@ static inline void icd_instance_free(const struct icd_instance *instance,
     instance->alloc_cb.pfnFree(instance->alloc_cb.pUserData, ptr);
 }
 
-VkResult icd_instance_add_logger(struct icd_instance *instance,
-                                   VK_DBG_MSG_CALLBACK_FUNCTION func,
-                                   void *user_data);
-VkResult icd_instance_remove_logger(struct icd_instance *instance,
-                                      VK_DBG_MSG_CALLBACK_FUNCTION func);
+VkResult icd_instance_create_logger(struct icd_instance *instance,
+        VkFlags msg_flags,
+        PFN_vkDbgMsgCallback func,
+        void *user_data,
+        VkDbgMsgCallback *msg_obj);
+
+VkResult icd_instance_destroy_logger(
+        struct icd_instance *instance,
+        const VkDbgMsgCallback msg_obj);
 
 void icd_instance_log(const struct icd_instance *instance,
-                      VK_DBG_MSG_TYPE msg_type,
-                      VkValidationLevel validation_level,
+                      VkFlags msg_flags,
+                      VkObjectType obj_type,
                       VkObject src_object,
                       size_t location, int32_t msg_code,
                       const char *msg);

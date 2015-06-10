@@ -45,7 +45,7 @@ VkResult intel_fence_create(struct intel_dev *dev,
     struct intel_fence *fence;
 
     fence = (struct intel_fence *) intel_base_create(&dev->base.handle,
-            sizeof(*fence), dev->base.dbg, VK_DBG_OBJECT_FENCE, info, 0);
+            sizeof(*fence), dev->base.dbg, VK_OBJECT_TYPE_FENCE, info, 0);
     if (!fence)
         return VK_ERROR_OUT_OF_HOST_MEMORY;
 

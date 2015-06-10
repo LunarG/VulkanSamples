@@ -128,13 +128,13 @@ static struct intel_instance *intel_instance_create(const VkInstanceCreateInfo* 
     }
 
     memset(instance, 0, sizeof(*instance));
-    intel_handle_init(&instance->handle, VK_DBG_OBJECT_INSTANCE, icd);
+    intel_handle_init(&instance->handle, VK_OBJECT_TYPE_INSTANCE, icd);
 
     instance->icd = icd;
 
     for (i = 0; i < info->extensionCount; i++) {
         const enum intel_ext_type ext = intel_gpu_lookup_extension(NULL,
-                info->ppEnabledExtensionNames[i]);
+                &info->pEnabledExtensions[i]);
 
         if (ext != INTEL_EXT_INVALID)
             instance->exts[ext] = true;
@@ -220,48 +220,23 @@ ICD_EXPORT VkResult VKAPI vkEnumeratePhysicalDevices(
     return (count > 0) ? VK_SUCCESS : VK_ERROR_UNAVAILABLE;
 }
 
-ICD_EXPORT VkResult VKAPI vkDbgRegisterMsgCallback(
-    VkInstance                                instance_,
-    VK_DBG_MSG_CALLBACK_FUNCTION               pfnMsgCallback,
-    void*                                       pUserData)
+ICD_EXPORT VkResult VKAPI vkDbgCreateMsgCallback(
+    VkInstance                          instance,
+    VkFlags                    msgFlags,
+    PFN_vkDbgMsgCallback                pfnMsgCallback,
+    void*                               pUserData,
+    VkDbgMsgCallback*                   pMsgCallback)
 {
-    struct intel_instance *instance = intel_instance(instance_);
+    struct intel_instance *inst = intel_instance(instance);
 
-    return icd_instance_add_logger(instance->icd, pfnMsgCallback, pUserData);
+    return icd_instance_create_logger(inst->icd, msgFlags, pfnMsgCallback, pUserData, pMsgCallback);
 }
 
-ICD_EXPORT VkResult VKAPI vkDbgUnregisterMsgCallback(
-    VkInstance                                instance_,
-    VK_DBG_MSG_CALLBACK_FUNCTION               pfnMsgCallback)
+ICD_EXPORT VkResult VKAPI vkDbgDestroyMsgCallback(
+    VkInstance                          instance,
+    VkDbgMsgCallback                    msgCallback)
 {
-    struct intel_instance *instance = intel_instance(instance_);
+    struct intel_instance *inst = intel_instance(instance);
 
-    return icd_instance_remove_logger(instance->icd, pfnMsgCallback);
-}
-
-ICD_EXPORT VkResult VKAPI vkDbgSetGlobalOption(
-    VkInstance                                instance_,
-    VK_DBG_GLOBAL_OPTION                       dbgOption,
-    size_t                                      dataSize,
-    const void*                                 pData)
-{
-    struct intel_instance *instance = intel_instance(instance_);
-    VkResult res = VK_SUCCESS;
-
-    if (dataSize == 0)
-        return VK_ERROR_INVALID_VALUE;
-
-    switch (dbgOption) {
-    case VK_DBG_OPTION_DEBUG_ECHO_ENABLE:
-    case VK_DBG_OPTION_BREAK_ON_ERROR:
-    case VK_DBG_OPTION_BREAK_ON_WARNING:
-        res = icd_instance_set_bool(instance->icd, dbgOption,
-                *((const bool *) pData));
-        break;
-    default:
-        res = VK_ERROR_INVALID_VALUE;
-        break;
-    }
-
-    return res;
+    return icd_instance_destroy_logger(inst->icd, msgCallback);
 }

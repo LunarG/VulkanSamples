@@ -142,20 +142,6 @@ VK_LAYER_EXPORT VkResult VKAPI multi1StorePipeline(VkDevice device, VkPipeline p
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI multi1EnumerateLayers(VkPhysicalDevice gpu, size_t maxStringSize,
-                                                         size_t* pLayerCount, char* const* pOutLayers,
-                                                         void* pReserved)
-{
-    if (gpu == NULL)
-        return vkEnumerateLayers(gpu, maxStringSize, pLayerCount, pOutLayers, pReserved);
-
-    VkLayerInstanceDispatchTable* pTable = tableInstanceMap1[gpu];
-    printf("At start of multi1 layer vkEnumerateLayers()\n");
-    VkResult result = pTable->EnumerateLayers(gpu, maxStringSize, pLayerCount, pOutLayers, pReserved);
-    printf("Completed multi1 layer vkEnumerateLayers()\n");
-    return result;
-}
-
 VK_LAYER_EXPORT void * VKAPI multi1GetDeviceProcAddr(VkDevice device, const char* pName)
 {
     VkBaseLayerObject* devw = (VkBaseLayerObject *) device;
@@ -195,8 +181,6 @@ VK_LAYER_EXPORT void * VKAPI multi1GetInstanceProcAddr(VkInstance inst, const ch
         return (void *) multi1GetInstanceProcAddr;
     if (!strcmp("vkDestroyInstance", pName))
         return (void *) multi1DestroyInstance;
-    if (!strcmp("vkEnumerateLayers", pName))
-        return (void *) multi1EnumerateLayers;
     else if (!strcmp("GetGlobalExtensionInfo", pName))
         return (void*) vkGetGlobalExtensionInfo;
     else {
@@ -319,21 +303,6 @@ VK_LAYER_EXPORT VkResult VKAPI multi2BeginCommandBuffer(VkCmdBuffer cmdBuffer, c
 
 }
 
-VK_LAYER_EXPORT VkResult VKAPI multi2EnumerateLayers(VkPhysicalDevice gpu, size_t maxStringSize,
-                                                         size_t* pLayerCount, char* const* pOutLayers,
-                                                         void* pReserved)
-{
-    if (gpu == NULL)
-        return vkEnumerateLayers(gpu, maxStringSize, pLayerCount, pOutLayers, pReserved);
-
-    VkLayerInstanceDispatchTable* pTable = tableInstanceMap2[gpu];
-
-    printf("At start of multi2 layer vkEnumerateLayers()\n");
-    VkResult result = pTable->EnumerateLayers(gpu, maxStringSize, pLayerCount, pOutLayers, pReserved);
-    printf("Completed multi2 layer vkEnumerateLayers()\n");
-    return result;
-}
-
 VK_LAYER_EXPORT void * VKAPI multi2GetDeviceProcAddr(VkDevice device, const char* pName)
 {
     VkBaseLayerObject* devw = (VkBaseLayerObject *) device;
@@ -375,8 +344,6 @@ VK_LAYER_EXPORT void * VKAPI multi2GetInstanceProcAddr(VkInstance inst, const ch
         return (void *) multi2DestroyInstance;
     if (!strcmp("vkCreateDevice", pName))
         return (void *) multi2CreateDevice;
-    else if (!strcmp("vkEnumerateLayers", pName))
-        return (void *) multi2EnumerateLayers;
     else if (!strcmp("GetGlobalExtensionInfo", pName))
         return (void*) vkGetGlobalExtensionInfo;
     else {
@@ -408,20 +375,32 @@ struct extProps {
 };
 
 #define MULTI_LAYER_EXT_ARRAY_SIZE 2
-static const struct extProps multiExts[MULTI_LAYER_EXT_ARRAY_SIZE] = {
-    // TODO what is the version?
-    0x10, "multi1",
-    0x10, "multi2",
+static const VkExtensionProperties multiExts[MULTI_LAYER_EXT_ARRAY_SIZE] = {
+    {
+        VK_STRUCTURE_TYPE_EXTENSION_PROPERTIES,
+        "multi1",
+        0x10,
+        "Sample layer: multi",
+//        0,
+//        NULL,
+    },
+    {
+        VK_STRUCTURE_TYPE_EXTENSION_PROPERTIES,
+        "multi2",
+        0x10,
+        "Sample layer: multi",
+//        0,
+//        NULL,
+    }
 };
 
 VK_LAYER_EXPORT VkResult VKAPI vkGetGlobalExtensionInfo(
-                                               VkExtensionInfoType infoType,
-                                               uint32_t extensionIndex,
-                                               size_t*  pDataSize,
-                                               void*    pData)
+        VkExtensionInfoType infoType,
+        uint32_t extensionIndex,
+        size_t*  pDataSize,
+        void*    pData)
 {
     /* This entrypoint is NOT going to init it's own dispatch table since loader calls here early */
-    VkExtensionProperties *ext_props;
     uint32_t *count;
 
     if (pDataSize == NULL)
@@ -441,11 +420,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkGetGlobalExtensionInfo(
                 return VK_SUCCESS;
             if (extensionIndex >= MULTI_LAYER_EXT_ARRAY_SIZE)
                 return VK_ERROR_INVALID_VALUE;
-            ext_props = (VkExtensionProperties *) pData;
-            ext_props->version = multiExts[extensionIndex].version;
-            strncpy(ext_props->extName, multiExts[extensionIndex].name,
-                                        VK_MAX_EXTENSION_NAME);
-            ext_props->extName[VK_MAX_EXTENSION_NAME - 1] = '\0';
+            memcpy((VkExtensionProperties *) pData, &multiExts[extensionIndex], sizeof(VkExtensionProperties));
             break;
         default:
             return VK_ERROR_INVALID_VALUE;

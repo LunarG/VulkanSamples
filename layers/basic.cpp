@@ -91,15 +91,25 @@ VK_LAYER_EXPORT VkResult VKAPI vkLayerExtension1(VkDevice device)
     return VK_SUCCESS;
 }
 
-struct extProps {
-    uint32_t version;
-    const char * const name;
-};
 #define BASIC_LAYER_EXT_ARRAY_SIZE 2
-static const struct extProps basicExts[BASIC_LAYER_EXT_ARRAY_SIZE] = {
-    // TODO what is the version?
-    0x10, "Basic",
-    0x10, "vkLayerExtension1"
+
+static const VkExtensionProperties basicExts[BASIC_LAYER_EXT_ARRAY_SIZE] = {
+    {
+        VK_STRUCTURE_TYPE_EXTENSION_PROPERTIES,
+        "Basic",
+        0x10,
+        "Sample layer: Basic ",
+//        0,
+//        NULL,
+    },
+    {
+        VK_STRUCTURE_TYPE_EXTENSION_PROPERTIES,
+        "vkLayerExtension1",
+        0x10,
+        "Sample layer: Basic",
+//        0,
+//        NULL,
+    }
 };
 
 VK_LAYER_EXPORT VkResult VKAPI vkGetGlobalExtensionInfo(
@@ -109,7 +119,6 @@ VK_LAYER_EXPORT VkResult VKAPI vkGetGlobalExtensionInfo(
                                                void*    pData)
 {
     /* This entrypoint is NOT going to init it's own dispatch table since loader calls here early */
-    VkExtensionProperties *ext_props;
     uint32_t *count;
 
     if (pDataSize == NULL)
@@ -129,11 +138,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkGetGlobalExtensionInfo(
                 return VK_SUCCESS;
             if (extensionIndex >= BASIC_LAYER_EXT_ARRAY_SIZE)
                 return VK_ERROR_INVALID_VALUE;
-            ext_props = (VkExtensionProperties *) pData;
-            ext_props->version = basicExts[extensionIndex].version;
-            strncpy(ext_props->extName, basicExts[extensionIndex].name,
-                                        VK_MAX_EXTENSION_NAME);
-            ext_props->extName[VK_MAX_EXTENSION_NAME - 1] = '\0';
+            memcpy((VkExtensionProperties *) pData, &basicExts[extensionIndex], sizeof(VkExtensionProperties));
             break;
         default:
             return VK_ERROR_INVALID_VALUE;
@@ -197,39 +202,6 @@ VK_LAYER_EXPORT VkResult VKAPI vkGetFormatInfo(VkDevice device, VkFormat format,
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkEnumerateLayers(VkPhysicalDevice gpu, size_t maxStringSize, size_t* pLayerCount, char* const* pOutLayers, void* pReserved)
-{
-    if (gpu != NULL)
-    {
-        VkLayerInstanceDispatchTable* pTable = initLayerInstanceTable((const VkBaseLayerObject *) gpu);
-
-        printf("At start of wrapped vkEnumerateLayers() call w/ gpu: %p\n", gpu);
-        VkResult result = pTable->EnumerateLayers(gpu, maxStringSize, pLayerCount, pOutLayers, pReserved);
-        return result;
-    } else
-    {
-        if (pLayerCount == NULL || pOutLayers == NULL || pOutLayers[0] == NULL || pReserved == NULL)
-            return VK_ERROR_INVALID_POINTER;
-
-        // Example of a layer that is only compatible with Intel's GPUs
-        VkBaseLayerObject* gpuw = (VkBaseLayerObject*) pReserved;
-        PFN_vkGetPhysicalDeviceInfo fpGetGpuInfo;
-        VkPhysicalDeviceProperties gpuProps;
-        size_t dataSize = sizeof(VkPhysicalDeviceProperties);
-        fpGetGpuInfo = (PFN_vkGetPhysicalDeviceInfo) gpuw->pGPA((VkPhysicalDevice) gpuw->nextObject, "vkGetPhysicalDeviceInfo");
-        fpGetGpuInfo((VkPhysicalDevice) gpuw->nextObject, VK_PHYSICAL_DEVICE_INFO_TYPE_PROPERTIES, &dataSize, &gpuProps);
-        if (gpuProps.vendorId == 0x8086)
-        {
-            *pLayerCount = 1;
-            strncpy((char *) pOutLayers[0], "Basic", maxStringSize);
-        } else
-        {
-            *pLayerCount = 0;
-        }
-        return VK_SUCCESS;
-    }
-}
-
 VK_LAYER_EXPORT void * VKAPI vkGetDeviceProcAddr(VkDevice device, const char* pName)
 {
     if (device == NULL)
@@ -270,8 +242,6 @@ VK_LAYER_EXPORT void * VKAPI vkGetInstanceProcAddr(VkInstance instance, const ch
         return (void*) vkGetGlobalExtensionInfo;
     if (!strcmp("vkCreateDevice", pName))
         return (void *) vkCreateDevice;
-    if (!strcmp("vkEnumerateLayers", pName))
-        return (void *) vkEnumerateLayers;
     else {
         VkBaseLayerObject* instancew = (VkBaseLayerObject *) instance;
         if (instancew->pGPA == NULL)

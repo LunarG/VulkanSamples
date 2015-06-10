@@ -106,7 +106,7 @@ protected:
         inst_info.pAppInfo = &app_info;
         inst_info.pAllocCb = NULL;
         inst_info.extensionCount = 0;
-        inst_info.ppEnabledExtensionNames = NULL;
+        inst_info.pEnabledExtensions = NULL;
         err = vkCreateInstance(&inst_info, &inst);
         ASSERT_VK_SUCCESS(err);
         err = vkEnumeratePhysicalDevices(inst, &this->gpu_count, NULL);

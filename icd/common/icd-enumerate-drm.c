@@ -151,17 +151,20 @@ struct icd_drm_device *icd_drm_enumerate(const struct icd_instance *instance,
 
     udev = udev_new();
     if (udev == NULL) {
-        icd_instance_log(instance, VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0,
-                VK_NULL_HANDLE, 0, 0, "failed to initialize udev context");
+        icd_instance_log(instance, VK_DBG_REPORT_ERROR_BIT,
+                         0, VK_NULL_HANDLE,     /* obj_type, object */
+                         0, 0,                  /* location, msg_code */
+                         "failed to initialize udev context");
 
         return NULL;
     }
 
     e = udev_enumerate_new(udev);
     if (e == NULL) {
-        icd_instance_log(instance, VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0,
-                VK_NULL_HANDLE, 0, 0,
-                "failed to initialize udev enumerate context");
+        icd_instance_log(instance, VK_DBG_REPORT_ERROR_BIT,
+                         0, VK_NULL_HANDLE,     /* obj_type, object */
+                         0, 0,                  /* location, msg_code */
+                         "failed to initialize udev enumerate context");
         udev_unref(udev);
 
         return NULL;

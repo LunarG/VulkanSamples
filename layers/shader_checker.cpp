@@ -109,7 +109,7 @@ struct shader_source {
         is_spirv(true) {
 
         if (words.size() < 5 || words[0] != spv::MagicNumber || words[1] != spv::Version) {
-            layerCbMsg(VK_DBG_MSG_WARNING, VK_VALIDATION_LEVEL_0, NULL, 0, SHADER_CHECKER_NON_SPIRV_SHADER, "SC",
+            layerCbMsg(VK_DBG_REPORT_WARN_BIT, (VkObjectType) 0, NULL, 0, SHADER_CHECKER_NON_SPIRV_SHADER, "SC",
                        "Shader is not SPIR-V, most checks will not be possible");
             is_spirv = false;
             return;
@@ -129,7 +129,7 @@ initLayer()
 {
     const char *strOpt;
     // initialize ShaderChecker options
-    getLayerOptionEnum("ShaderCheckerReportLevel", (uint32_t *) &g_reportingLevel);
+    getLayerOptionEnum("ShaderCheckerReportLevel", (uint32_t *) &g_reportFlags);
     g_actionIsDefault = getLayerOptionEnum("ShaderCheckerDebugAction", (uint32_t *) &g_debugAction);
 
     if (g_debugAction & VK_DBG_LAYER_ACTION_LOG_MSG)
@@ -198,25 +198,25 @@ VK_LAYER_EXPORT VkResult VKAPI vkEnumerateLayers(VkPhysicalDevice physicalDevice
 }
 
 
-struct extProps {
-    uint32_t version;
-    const char * const name;
-};
 #define SHADER_CHECKER_LAYER_EXT_ARRAY_SIZE 2
-static const struct extProps shaderCheckerExts[SHADER_CHECKER_LAYER_EXT_ARRAY_SIZE] = {
-    // TODO what is the version?
-    0x10, "ShaderChecker",
-    0x10, "Validation",
+static const VkExtensionProperties shaderCheckerExts[SHADER_CHECKER_LAYER_EXT_ARRAY_SIZE] = {
+    {
+        VK_STRUCTURE_TYPE_EXTENSION_PROPERTIES,
+        "ShaderChecker",
+        0x10,
+        "Sample layer: ShaderChecker",
+//        0,
+//        NULL,
+    }
 };
 
 VK_LAYER_EXPORT VkResult VKAPI vkGetGlobalExtensionInfo(
-                                               VkExtensionInfoType infoType,
-                                               uint32_t extensionIndex,
-                                               size_t*  pDataSize,
-                                               void*    pData)
+        VkExtensionInfoType infoType,
+        uint32_t extensionIndex,
+        size_t*  pDataSize,
+        void*    pData)
 {
     /* This entrypoint is NOT going to init it's own dispatch table since loader calls here early */
-    VkExtensionProperties *ext_props;
     uint32_t *count;
 
     if (pDataSize == NULL)
@@ -236,11 +236,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkGetGlobalExtensionInfo(
                 return VK_SUCCESS;
             if (extensionIndex >= SHADER_CHECKER_LAYER_EXT_ARRAY_SIZE)
                 return VK_ERROR_INVALID_VALUE;
-            ext_props = (VkExtensionProperties *) pData;
-            ext_props->version = shaderCheckerExts[extensionIndex].version;
-            strncpy(ext_props->extName, shaderCheckerExts[extensionIndex].name,
-                                        VK_MAX_EXTENSION_NAME);
-            ext_props->extName[VK_MAX_EXTENSION_NAME - 1] = '\0';
+            memcpy((VkExtensionProperties *) pData, &shaderCheckerExts[extensionIndex], sizeof(VkExtensionProperties));
             break;
         default:
             return VK_ERROR_INVALID_VALUE;
@@ -464,7 +460,7 @@ collect_interface_by_location(shader_source const *src, spv::StorageClass sinter
                 char str[1024];
                 sprintf(str, "var %d (type %d) in %s interface has no Location or Builtin decoration\n",
                        code[word+2], code[word+1], storage_class_name(sinterface));
-                layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, NULL, 0, SHADER_CHECKER_INCONSISTENT_SPIRV, "SC", str);
+                layerCbMsg(VK_DBG_REPORT_WARN_BIT, (VkObjectType) 0, NULL, 0, SHADER_CHECKER_INCONSISTENT_SPIRV, "SC", str);
             }
             else if (location != -1) {
                 /* A user-defined interface variable, with a location. */
@@ -530,13 +526,13 @@ validate_interface_between_stages(shader_source const *producer, char const *pro
         if (b_at_end || a_first < b_first) {
             sprintf(str, "%s writes to output location %d which is not consumed by %s\n",
                    producer_name, a_first, consumer_name);
-            layerCbMsg(VK_DBG_MSG_WARNING, VK_VALIDATION_LEVEL_0, NULL, 0, SHADER_CHECKER_OUTPUT_NOT_CONSUMED, "SC", str);
+            layerCbMsg(VK_DBG_REPORT_WARN_BIT, (VkObjectType) 0, NULL, 0, SHADER_CHECKER_OUTPUT_NOT_CONSUMED, "SC", str);
             a_it++;
         }
         else if (a_at_end || a_first > b_first) {
             sprintf(str, "%s consumes input location %d which is not written by %s\n",
                    consumer_name, b_first, producer_name);
-            layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, SHADER_CHECKER_OUTPUT_NOT_CONSUMED, "SC", str);
+            layerCbMsg(VK_DBG_REPORT_ERROR_BIT, (VkObjectType) 0, NULL, 0, SHADER_CHECKER_OUTPUT_NOT_CONSUMED, "SC", str);
             pass = false;
             b_it++;
         }
@@ -552,7 +548,7 @@ validate_interface_between_stages(shader_source const *producer, char const *pro
 
                 sprintf(str, "Type mismatch on location %d: '%s' vs '%s'\n", a_it->first,
                        producer_type, consumer_type);
-                layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, SHADER_CHECKER_INTERFACE_TYPE_MISMATCH, "SC", str);
+                layerCbMsg(VK_DBG_REPORT_ERROR_BIT, (VkObjectType) 0, NULL, 0, SHADER_CHECKER_INTERFACE_TYPE_MISMATCH, "SC", str);
                 pass = false;
             }
             a_it++;
@@ -664,7 +660,7 @@ validate_vi_consistency(VkPipelineVertexInputCreateInfo const *vi)
         auto & binding = bindings[desc->binding];
         if (binding) {
             sprintf(str, "Duplicate vertex input binding descriptions for binding %d", desc->binding);
-            layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, SHADER_CHECKER_INCONSISTENT_VI, "SC", str);
+            layerCbMsg(VK_DBG_REPORT_ERROR_BIT, (VkObjectType) 0, NULL, 0, SHADER_CHECKER_INCONSISTENT_VI, "SC", str);
             pass = false;
         }
         else {
@@ -706,12 +702,12 @@ validate_vi_against_vs_inputs(VkPipelineVertexInputCreateInfo const *vi, shader_
         auto b_first = b_at_end ? 0 : it_b->first;
         if (b_at_end || a_first < b_first) {
             sprintf(str, "Vertex attribute at location %d not consumed by VS", a_first);
-            layerCbMsg(VK_DBG_MSG_WARNING, VK_VALIDATION_LEVEL_0, NULL, 0, SHADER_CHECKER_OUTPUT_NOT_CONSUMED, "SC", str);
+            layerCbMsg(VK_DBG_REPORT_WARN_BIT, (VkObjectType) 0, NULL, 0, SHADER_CHECKER_OUTPUT_NOT_CONSUMED, "SC", str);
             it_a++;
         }
         else if (a_at_end || b_first < a_first) {
             sprintf(str, "VS consumes input at location %d but not provided", b_first);
-            layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, SHADER_CHECKER_INPUT_NOT_PRODUCED, "SC", str);
+            layerCbMsg(VK_DBG_REPORT_ERROR_BIT, (VkObjectType) 0, NULL, 0, SHADER_CHECKER_INPUT_NOT_PRODUCED, "SC", str);
             pass = false;
             it_b++;
         }
@@ -725,7 +721,7 @@ validate_vi_against_vs_inputs(VkPipelineVertexInputCreateInfo const *vi, shader_
                 describe_type(vs_type, vs, it_b->second.type_id);
                 sprintf(str, "Attribute type of `%s` at location %d does not match VS input type of `%s`",
                         string_VkFormat(it_a->second->format), a_first, vs_type);
-                layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, SHADER_CHECKER_INTERFACE_TYPE_MISMATCH, "SC", str);
+                layerCbMsg(VK_DBG_REPORT_ERROR_BIT, (VkObjectType) 0, NULL, 0, SHADER_CHECKER_INTERFACE_TYPE_MISMATCH, "SC", str);
                 pass = false;
             }
 
@@ -756,7 +752,7 @@ validate_fs_outputs_against_cb(shader_source const *fs, VkPipelineCbStateCreateI
      */
     if (builtin_outputs.find(spv::BuiltInFragColor) != builtin_outputs.end()) {
         if (outputs.size()) {
-            layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, SHADER_CHECKER_FS_MIXED_BROADCAST, "SC",
+            layerCbMsg(VK_DBG_REPORT_ERROR_BIT, (VkObjectType) 0, NULL, 0, SHADER_CHECKER_FS_MIXED_BROADCAST, "SC",
                        "Should not have user-defined FS outputs when using broadcast");
             pass = false;
         }
@@ -764,7 +760,7 @@ validate_fs_outputs_against_cb(shader_source const *fs, VkPipelineCbStateCreateI
         for (unsigned i = 0; i < cb->attachmentCount; i++) {
             unsigned attachmentType = get_format_type(cb->pAttachments[i].format);
             if (attachmentType == FORMAT_TYPE_SINT || attachmentType == FORMAT_TYPE_UINT) {
-                layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, SHADER_CHECKER_INTERFACE_TYPE_MISMATCH, "SC",
+                layerCbMsg(VK_DBG_REPORT_ERROR_BIT, (VkObjectType) 0, NULL, 0, SHADER_CHECKER_INTERFACE_TYPE_MISMATCH, "SC",
                            "CB format should not be SINT or UINT when using broadcast");
                 pass = false;
             }
@@ -783,12 +779,12 @@ validate_fs_outputs_against_cb(shader_source const *fs, VkPipelineCbStateCreateI
     while ((outputs.size() > 0 && it != outputs.end()) || attachment < cb->attachmentCount) {
         if (attachment == cb->attachmentCount || ( it != outputs.end() && it->first < attachment)) {
             sprintf(str, "FS writes to output location %d with no matching attachment", it->first);
-            layerCbMsg(VK_DBG_MSG_WARNING, VK_VALIDATION_LEVEL_0, NULL, 0, SHADER_CHECKER_OUTPUT_NOT_CONSUMED, "SC", str);
+            layerCbMsg(VK_DBG_REPORT_WARN_BIT, (VkObjectType) 0, NULL, 0, SHADER_CHECKER_OUTPUT_NOT_CONSUMED, "SC", str);
             it++;
         }
         else if (it == outputs.end() || it->first > attachment) {
             sprintf(str, "Attachment %d not written by FS", attachment);
-            layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, SHADER_CHECKER_INPUT_NOT_PRODUCED, "SC", str);
+            layerCbMsg(VK_DBG_REPORT_ERROR_BIT, (VkObjectType) 0, NULL, 0, SHADER_CHECKER_INPUT_NOT_PRODUCED, "SC", str);
             attachment++;
             pass = false;
         }
@@ -802,7 +798,7 @@ validate_fs_outputs_against_cb(shader_source const *fs, VkPipelineCbStateCreateI
                 describe_type(fs_type, fs, it->second.type_id);
                 sprintf(str, "Attachment %d of type `%s` does not match FS output type of `%s`",
                         attachment, string_VkFormat(cb->pAttachments[attachment].format), fs_type);
-                layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, SHADER_CHECKER_INTERFACE_TYPE_MISMATCH, "SC", str);
+                layerCbMsg(VK_DBG_REPORT_ERROR_BIT, (VkObjectType) 0, NULL, 0, SHADER_CHECKER_INTERFACE_TYPE_MISMATCH, "SC", str);
                 pass = false;
             }
 
@@ -853,7 +849,7 @@ validate_graphics_pipeline(VkGraphicsPipelineCreateInfo const *pCreateInfo)
 
             if (shader_stage->shader.stage < VK_SHADER_STAGE_VERTEX || shader_stage->shader.stage > VK_SHADER_STAGE_FRAGMENT) {
                 sprintf(str, "Unknown shader stage %d\n", shader_stage->shader.stage);
-                layerCbMsg(VK_DBG_MSG_WARNING, VK_VALIDATION_LEVEL_0, NULL, 0, SHADER_CHECKER_UNKNOWN_STAGE, "SC", str);
+                layerCbMsg(VK_DBG_REPORT_WARN_BIT, (VkObjectType) 0, NULL, 0, SHADER_CHECKER_UNKNOWN_STAGE, "SC", str);
             }
             else {
                 shaders[shader_stage->shader.stage] = shader_map[(void *)(shader_stage->shader.shader)];
@@ -946,60 +942,6 @@ vkCreateGraphicsPipelineDerivative(VkDevice device,
     }
 }
 
-
-VK_LAYER_EXPORT VkResult VKAPI vkDbgRegisterMsgCallback(
-    VkInstance                    instance,
-    VK_DBG_MSG_CALLBACK_FUNCTION  pfnMsgCallback,
-    void                         *pUserData)
-{
-    // This layer intercepts callbacks
-    VK_LAYER_DBG_FUNCTION_NODE *pNewDbgFuncNode = (VK_LAYER_DBG_FUNCTION_NODE*)malloc(sizeof(VK_LAYER_DBG_FUNCTION_NODE));
-    if (!pNewDbgFuncNode)
-        return VK_ERROR_OUT_OF_HOST_MEMORY;
-    pNewDbgFuncNode->pfnMsgCallback = pfnMsgCallback;
-    pNewDbgFuncNode->pUserData = pUserData;
-    pNewDbgFuncNode->pNext = g_pDbgFunctionHead;
-    g_pDbgFunctionHead = pNewDbgFuncNode;
-    // force callbacks if DebugAction hasn't been set already other than initial value
-    if (g_actionIsDefault) {
-        g_debugAction = VK_DBG_LAYER_ACTION_CALLBACK;
-    }
-    // NOT CORRECT WITH MULTIPLE DEVICES OR INSTANCES, BUT THIS IS ALL GOING AWAY SOON ANYWAY
-    VkLayerInstanceDispatchTable *pTable = tableInstanceMap[pCurObj];
-    VkResult result = pTable->DbgRegisterMsgCallback(instance, pfnMsgCallback, pUserData);
-    return result;
-}
-
-VK_LAYER_EXPORT VkResult VKAPI vkDbgUnregisterMsgCallback(
-    VkInstance                   instance,
-    VK_DBG_MSG_CALLBACK_FUNCTION pfnMsgCallback)
-{
-    VK_LAYER_DBG_FUNCTION_NODE *pInfo = g_pDbgFunctionHead;
-    VK_LAYER_DBG_FUNCTION_NODE *pPrev = pInfo;
-    while (pInfo) {
-        if (pInfo->pfnMsgCallback == pfnMsgCallback) {
-            pPrev->pNext = pInfo->pNext;
-            if (g_pDbgFunctionHead == pInfo) {
-                g_pDbgFunctionHead = pInfo->pNext;
-            }
-            free(pInfo);
-            break;
-        }
-        pPrev = pInfo;
-        pInfo = pInfo->pNext;
-    }
-    if (g_pDbgFunctionHead == NULL) {
-        if (g_actionIsDefault) {
-            g_debugAction = VK_DBG_LAYER_ACTION_LOG_MSG;
-        } else {
-            g_debugAction = (VK_LAYER_DBG_ACTION)(g_debugAction & ~((uint32_t)VK_DBG_LAYER_ACTION_CALLBACK));
-        }
-    }
-    // NOT CORRECT WITH MULTIPLE DEVICES OR INSTANCES, BUT THIS IS ALL GOING AWAY SOON ANYWAY
-    VkLayerInstanceDispatchTable *pTable = tableInstanceMap[pCurObj];
-    VkResult result = pTable->DbgUnregisterMsgCallback(instance, pfnMsgCallback);
-    return result;
-}
 
 /* hook DextroyDevice to remove tableMap entry */
 VK_LAYER_EXPORT VkResult VKAPI vkDestroyDevice(VkDevice device)

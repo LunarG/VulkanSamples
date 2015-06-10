@@ -403,7 +403,7 @@ VkResult intel_desc_pool_create(struct intel_dev *dev,
     VkResult ret;
 
     pool = (struct intel_desc_pool *) intel_base_create(&dev->base.handle,
-            sizeof(*pool), dev->base.dbg, VK_DBG_OBJECT_DESCRIPTOR_POOL,
+            sizeof(*pool), dev->base.dbg, VK_OBJECT_TYPE_DESCRIPTOR_POOL,
             info, 0);
     if (!pool)
         return VK_ERROR_OUT_OF_HOST_MEMORY;
@@ -474,7 +474,7 @@ VkResult intel_desc_set_create(struct intel_dev *dev,
     VkResult ret;
 
     set = (struct intel_desc_set *) intel_base_create(&dev->base.handle,
-            sizeof(*set), dev->base.dbg, VK_DBG_OBJECT_DESCRIPTOR_SET,
+            sizeof(*set), dev->base.dbg, VK_OBJECT_TYPE_DESCRIPTOR_SET,
             NULL, 0);
     if (!set)
         return VK_ERROR_OUT_OF_HOST_MEMORY;
@@ -678,7 +678,7 @@ VkResult intel_desc_layout_create(struct intel_dev *dev,
 
     layout = (struct intel_desc_layout *) intel_base_create(&dev->base.handle,
             sizeof(*layout), dev->base.dbg,
-            VK_DBG_OBJECT_DESCRIPTOR_SET_LAYOUT, info, 0);
+            VK_OBJECT_TYPE_DESCRIPTOR_SET_LAYOUT, info, 0);
     if (!layout)
         return VK_ERROR_OUT_OF_HOST_MEMORY;
 
@@ -727,7 +727,7 @@ VkResult intel_pipeline_layout_create(struct intel_dev                   *dev,
 
     pipeline_layout = (struct intel_pipeline_layout *) intel_base_create(
         &dev->base.handle, sizeof(*pipeline_layout), dev->base.dbg,
-        VK_DBG_OBJECT_PIPELINE_LAYOUT, NULL, 0);
+        VK_OBJECT_TYPE_PIPELINE_LAYOUT, NULL, 0);
 
     if (!pipeline_layout)
         return VK_ERROR_OUT_OF_HOST_MEMORY;

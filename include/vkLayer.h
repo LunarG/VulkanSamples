@@ -5,7 +5,9 @@
 #pragma once
 
 #include "vulkan.h"
-#include "vkDbg.h"
+#include "vk_debug_report_lunarg.h"
+#include "vk_debug_marker_lunarg.h"
+#include "vk_wsi_lunarg.h"
 #include "vk_wsi_lunarg.h"
 #if defined(__GNUC__) && __GNUC__ >= 4
 #  define VK_LAYER_EXPORT __attribute__((visibility("default")))
@@ -130,16 +132,19 @@ typedef struct VkLayerDispatchTable_
     PFN_vkCreateRenderPass CreateRenderPass;
     PFN_vkCmdBeginRenderPass CmdBeginRenderPass;
     PFN_vkCmdEndRenderPass CmdEndRenderPass;
-    PFN_vkDbgSetValidationLevel DbgSetValidationLevel;
-    PFN_vkDbgSetMessageFilter DbgSetMessageFilter;
     PFN_vkDbgSetObjectTag DbgSetObjectTag;
-    PFN_vkDbgSetDeviceOption DbgSetDeviceOption;
     PFN_vkCmdDbgMarkerBegin CmdDbgMarkerBegin;
     PFN_vkCmdDbgMarkerEnd CmdDbgMarkerEnd;
     PFN_vkCreateSwapChainWSI CreateSwapChainWSI;
     PFN_vkDestroySwapChainWSI DestroySwapChainWSI;
     PFN_vkGetSwapChainInfoWSI GetSwapChainInfoWSI;
     PFN_vkQueuePresentWSI QueuePresentWSI;
+    PFN_vkDbgCreateMsgCallback DbgCreateMsgCallback;
+    PFN_vkDbgDestroyMsgCallback DbgDestroyMsgCallback;
+    PFN_vkDbgStringCallback DbgStringCallback;
+    PFN_vkDbgStdioCallback DbgStdioCallback;
+    PFN_vkDbgBreakCallback DbgBreakCallback;
+    PFN_vkDbgSetObjectName DbgSetObjectName;
 } VkLayerDispatchTable;
 
 typedef struct VkLayerInstanceDispatchTable_
@@ -152,38 +157,32 @@ typedef struct VkLayerInstanceDispatchTable_
     PFN_vkCreateDevice CreateDevice;
     PFN_vkGetGlobalExtensionInfo GetGlobalExtensionInfo;
     PFN_vkGetPhysicalDeviceExtensionInfo GetPhysicalDeviceExtensionInfo;
-    PFN_vkEnumerateLayers EnumerateLayers;
     PFN_vkGetMultiDeviceCompatibility GetMultiDeviceCompatibility;
-    PFN_vkDbgRegisterMsgCallback DbgRegisterMsgCallback;
-    PFN_vkDbgUnregisterMsgCallback DbgUnregisterMsgCallback;
-    PFN_vkDbgSetGlobalOption DbgSetGlobalOption;
     PFN_vkGetDisplayInfoWSI GetDisplayInfoWSI;
+    PFN_vkDbgCreateMsgCallback DbgCreateMsgCallback;
+    PFN_vkDbgDestroyMsgCallback DbgDestroyMsgCallback;
+    PFN_vkDbgStringCallback DbgStringCallback;
+    PFN_vkDbgStdioCallback DbgStdioCallback;
+    PFN_vkDbgBreakCallback DbgBreakCallback;
 } VkLayerInstanceDispatchTable;
 
 // LL node for tree of dbg callback functions
-typedef struct _VK_LAYER_DBG_FUNCTION_NODE
+typedef struct VkLayerDbgFunctionNode_
 {
-    VK_DBG_MSG_CALLBACK_FUNCTION pfnMsgCallback;
-    void *pUserData;
-    struct _VK_LAYER_DBG_FUNCTION_NODE *pNext;
-} VK_LAYER_DBG_FUNCTION_NODE;
+    VkDbgMsgCallback msgCallback;
+    PFN_vkDbgMsgCallback pfnMsgCallback;
+    VkFlags msgFlags;
+    const void *pUserData;
+    struct VkLayerDbgFunctionNode_ *pNext;
+} VkLayerDbgFunctionNode;
 
-typedef enum _VK_LAYER_DBG_ACTION
+typedef enum VkLayerDbgAction_
 {
     VK_DBG_LAYER_ACTION_IGNORE = 0x0,
     VK_DBG_LAYER_ACTION_CALLBACK = 0x1,
     VK_DBG_LAYER_ACTION_LOG_MSG = 0x2,
     VK_DBG_LAYER_ACTION_BREAK = 0x4
-} VK_LAYER_DBG_ACTION;
+} VkLayerDbgAction;
 
-typedef enum _VK_LAYER_DBG_REPORT_LEVEL
-{
-
-    VK_DBG_LAYER_LEVEL_INFO = 0,
-    VK_DBG_LAYER_LEVEL_WARN,
-    VK_DBG_LAYER_LEVEL_PERF_WARN,
-    VK_DBG_LAYER_LEVEL_ERROR,
-    VK_DBG_LAYER_LEVEL_NONE,
-} VK_LAYER_DBG_REPORT_LEVEL;
 // ------------------------------------------------------------------------------------------------
 // API functions

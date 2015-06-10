@@ -37,16 +37,33 @@
 #include "gpu.h"
 #include "instance.h"
 #include "wsi.h"
+#include "vk_debug_report_lunarg.h"
+#include "vk_debug_marker_lunarg.h"
 
-struct intel_gpu_ext_props {
-    uint32_t version;
-    const char * const name;
-};
-
-static const struct intel_gpu_ext_props intel_gpu_exts[INTEL_EXT_COUNT] = {
-    [INTEL_EXT_WSI_LUNARG] = {
-        .version = VK_WSI_LUNARG_REVISION,
+static const VkExtensionProperties intel_gpu_exts[INTEL_EXT_COUNT] = {
+    {
+        .sType = VK_STRUCTURE_TYPE_EXTENSION_PROPERTIES,
         .name = VK_WSI_LUNARG_EXTENSION_NAME,
+        .version = VK_WSI_LUNARG_REVISION,
+        .description = "Intel sample driver",
+//        .dependencyCount = 0,
+//        .pDependencyList = NULL,
+    },
+    {
+        .sType = VK_STRUCTURE_TYPE_EXTENSION_PROPERTIES,
+        .name = DEBUG_REPORT_EXTENSION_NAME,
+        .version = VK_DEBUG_REPORT_EXTENSION_VERSION,
+        .description = "Intel sample driver",
+//        .dependencyCount = 0,
+//        .pDependencyList = NULL,
+    },
+    {
+        .sType = VK_STRUCTURE_TYPE_EXTENSION_PROPERTIES,
+        .name = DEBUG_MARKER_EXTENSION_NAME,
+        .version = VK_DEBUG_MARKER_EXTENSION_VERSION,
+        .description = "Intel sample driver",
+//        .dependencyCount = 0,
+//        .pDependencyList = NULL,
     }
 };
 
@@ -71,7 +88,7 @@ static int gpu_open_render_node(struct intel_gpu *gpu)
     if (gpu->render_fd_internal < 0 && gpu->render_node) {
         gpu->render_fd_internal = open(gpu->render_node, O_RDWR);
         if (gpu->render_fd_internal < 0) {
-            intel_log(gpu, VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, VK_NULL_HANDLE, 0,
+            intel_log(gpu, VK_DBG_REPORT_ERROR_BIT, 0, VK_NULL_HANDLE, 0,
                     0, "failed to open %s", gpu->render_node);
         }
     }
@@ -162,7 +179,7 @@ VkResult intel_gpu_create(const struct intel_instance *instance, int devid,
     struct intel_gpu *gpu;
 
     if (gen < 0) {
-        intel_log(instance, VK_DBG_MSG_WARNING, VK_VALIDATION_LEVEL_0,
+        intel_log(instance, VK_DBG_REPORT_WARN_BIT, 0,
                 VK_NULL_HANDLE, 0, 0, "unsupported device id 0x%04x", devid);
         return VK_ERROR_INITIALIZATION_FAILED;
     }
@@ -173,7 +190,7 @@ VkResult intel_gpu_create(const struct intel_instance *instance, int devid,
 
     memset(gpu, 0, sizeof(*gpu));
     /* there is no VK_DBG_OBJECT_GPU */
-    intel_handle_init(&gpu->handle, VK_DBG_OBJECT_UNKNOWN, instance->icd);
+    intel_handle_init(&gpu->handle, VK_OBJECT_TYPE_PHYSICAL_DEVICE, instance->icd);
 
     gpu->devid = devid;
 
@@ -350,7 +367,7 @@ int intel_gpu_get_max_threads(const struct intel_gpu *gpu,
         break;
     }
 
-    intel_log(gpu, VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, VK_NULL_HANDLE,
+    intel_log(gpu, VK_DBG_REPORT_ERROR_BIT, 0, VK_NULL_HANDLE,
             0, 0, "unknown Gen or shader stage");
 
     switch (stage) {
@@ -382,7 +399,7 @@ VkResult intel_gpu_init_winsys(struct intel_gpu *gpu)
 
     gpu->winsys = intel_winsys_create_for_fd(gpu->handle.icd, fd);
     if (!gpu->winsys) {
-        intel_log(gpu, VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0,
+        intel_log(gpu, VK_DBG_REPORT_ERROR_BIT, 0,
                 VK_NULL_HANDLE, 0, 0, "failed to create GPU winsys");
         gpu_close_render_node(gpu);
         return VK_ERROR_UNKNOWN;
@@ -402,34 +419,26 @@ void intel_gpu_cleanup_winsys(struct intel_gpu *gpu)
     gpu_close_render_node(gpu);
 }
 
+static bool compare_vk_extension_properties(
+        const VkExtensionProperties *op1,
+        const VkExtensionProperties *op2)
+{
+    return memcmp(op1, op2, sizeof(VkExtensionProperties)) == 0 ? true : false;
+}
+
 enum intel_ext_type intel_gpu_lookup_extension(const struct intel_gpu *gpu,
-                                               const char *ext)
+                                               const VkExtensionProperties *ext)
 {
     enum intel_ext_type type;
 
     for (type = 0; type < ARRAY_SIZE(intel_gpu_exts); type++) {
-        if (intel_gpu_exts[type].name && strcmp(intel_gpu_exts[type].name, ext) == 0)
+        if (compare_vk_extension_properties(&intel_gpu_exts[type], ext))
             break;
     }
 
     assert(type < INTEL_EXT_COUNT || type == INTEL_EXT_INVALID);
 
     return type;
-}
-
-ICD_EXPORT VkResult VKAPI vkEnumerateLayers(
-    VkPhysicalDevice                            gpu,
-    size_t                                      maxStringSize,
-    size_t*                                     pLayerCount,
-    char* const*                                pOutLayers,
-    void*                                       pReserved)
-{
-    if (!pLayerCount)
-        return VK_ERROR_INVALID_POINTER;
-
-    *pLayerCount = 0;
-
-    return VK_SUCCESS;
 }
 
 ICD_EXPORT VkResult VKAPI vkGetPhysicalDeviceInfo(
@@ -501,7 +510,6 @@ ICD_EXPORT VkResult VKAPI vkGetGlobalExtensionInfo(
                                                size_t*  pDataSize,
                                                void*    pData)
 {
-    VkExtensionProperties *ext_props;
     uint32_t *count;
 
     if (pDataSize == NULL)
@@ -521,11 +529,7 @@ ICD_EXPORT VkResult VKAPI vkGetGlobalExtensionInfo(
                 return VK_SUCCESS;
             if (extensionIndex >= INTEL_EXT_COUNT)
                 return VK_ERROR_INVALID_VALUE;
-            ext_props = (VkExtensionProperties *) pData;
-            ext_props->version = intel_gpu_exts[extensionIndex].version;
-            strncpy(ext_props->extName, intel_gpu_exts[extensionIndex].name,
-                                            VK_MAX_EXTENSION_NAME);
-            ext_props->extName[VK_MAX_EXTENSION_NAME - 1] = '\0';
+            memcpy((VkExtensionProperties *) pData, &intel_gpu_exts[extensionIndex], sizeof(VkExtensionProperties));
             break;
         default:
             return VK_ERROR_INVALID_VALUE;

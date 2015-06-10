@@ -78,7 +78,7 @@ public:
 
 
     // vkGetGlobalExtensionInfo()
-    std::vector<const char *> extensions() const;
+    std::vector<VkExtensionProperties> extensions() const;
 
     // vkEnumerateLayers()
     std::vector<const char *> layers(std::vector<char> &buf) const;
@@ -87,6 +87,9 @@ public:
     VkPhysicalDeviceCompatibilityInfo compatibility(const PhysicalGpu &other) const;
 
 private:
+    void add_extension_dependencies(uint32_t dependency_count,
+                                    VkExtensionProperties *depencency_props,
+                                    std::vector<VkExtensionProperties> &ext_list);
     VkPhysicalDevice gpu_;
 };
 
@@ -205,8 +208,8 @@ public:
 
     // vkCreateDevice()
     void init(const VkDeviceCreateInfo &info);
-    void init(bool enable_layers); // all queues, all extensions, etc
-    void init() { init(false); };
+    void init(std::vector<VkExtensionProperties> extensions); // all queues, all extensions, etc
+    void init() { std::vector<VkExtensionProperties> extensions; init(extensions); };
 
     const PhysicalGpu &gpu() const { return gpu_; }
 

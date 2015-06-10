@@ -229,7 +229,7 @@ VkResult intel_viewport_state_create(struct intel_dev *dev,
     VkResult ret;
 
     state = (struct intel_dynamic_vp *) intel_base_create(&dev->base.handle,
-            sizeof(*state), dev->base.dbg, VK_DBG_OBJECT_VIEWPORT_STATE,
+            sizeof(*state), dev->base.dbg, VK_OBJECT_TYPE_DYNAMIC_VP_STATE,
             info, 0);
     if (!state)
         return VK_ERROR_OUT_OF_HOST_MEMORY;
@@ -267,7 +267,7 @@ VkResult intel_raster_state_create(struct intel_dev *dev,
     struct intel_dynamic_rs *state;
 
     state = (struct intel_dynamic_rs *) intel_base_create(&dev->base.handle,
-            sizeof(*state), dev->base.dbg, VK_DBG_OBJECT_RASTER_STATE,
+            sizeof(*state), dev->base.dbg, VK_OBJECT_TYPE_DYNAMIC_RS_STATE,
             info, 0);
     if (!state)
         return VK_ERROR_OUT_OF_HOST_MEMORY;
@@ -299,7 +299,7 @@ VkResult intel_blend_state_create(struct intel_dev *dev,
     struct intel_dynamic_cb *state;
 
     state = (struct intel_dynamic_cb *) intel_base_create(&dev->base.handle,
-            sizeof(*state), dev->base.dbg, VK_DBG_OBJECT_COLOR_BLEND_STATE,
+            sizeof(*state), dev->base.dbg, VK_OBJECT_TYPE_DYNAMIC_CB_STATE,
             info, 0);
     if (!state)
         return VK_ERROR_OUT_OF_HOST_MEMORY;
@@ -331,7 +331,7 @@ VkResult intel_ds_state_create(struct intel_dev *dev,
     struct intel_dynamic_ds *state;
 
     state = (struct intel_dynamic_ds *) intel_base_create(&dev->base.handle,
-            sizeof(*state), dev->base.dbg, VK_DBG_OBJECT_DEPTH_STENCIL_STATE,
+            sizeof(*state), dev->base.dbg, VK_OBJECT_TYPE_DYNAMIC_DS_STATE,
             info, 0);
     if (!state)
         return VK_ERROR_OUT_OF_HOST_MEMORY;

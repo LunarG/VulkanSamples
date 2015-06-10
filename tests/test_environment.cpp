@@ -57,7 +57,7 @@ void Environment::SetUp()
     inst_info.pAppInfo = &app_;
     inst_info.pAllocCb = NULL;
     inst_info.extensionCount = 0;
-    inst_info.ppEnabledExtensionNames = NULL;
+    inst_info.pEnabledExtensions = NULL;
     err = vkCreateInstance(&inst_info, &inst);
     ASSERT_EQ(VK_SUCCESS, err);
     err = vkEnumeratePhysicalDevices(inst, &count, NULL);

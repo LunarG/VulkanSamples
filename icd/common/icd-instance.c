@@ -114,64 +114,45 @@ void icd_instance_destroy(struct icd_instance *instance)
     icd_instance_free(instance, instance);
 }
 
-VkResult icd_instance_set_bool(struct icd_instance *instance,
-                                 VK_DBG_GLOBAL_OPTION option, bool yes)
-{
-    VkResult res = VK_SUCCESS;
-
-    switch (option) {
-    case VK_DBG_OPTION_DEBUG_ECHO_ENABLE:
-        instance->debug_echo_enable = yes;
-        break;
-    case VK_DBG_OPTION_BREAK_ON_ERROR:
-        instance->break_on_error = yes;
-        break;
-    case VK_DBG_OPTION_BREAK_ON_WARNING:
-        instance->break_on_warning = yes;
-        break;
-    default:
-        res = VK_ERROR_INVALID_VALUE;
-        break;
-    }
-
-    return res;
-}
-
-VkResult icd_instance_add_logger(struct icd_instance *instance,
-                                   VK_DBG_MSG_CALLBACK_FUNCTION func,
-                                   void *user_data)
+VkResult icd_instance_create_logger(
+        struct icd_instance *instance,
+        VkFlags msg_flags,
+        PFN_vkDbgMsgCallback func,
+        void *user_data,
+        VkDbgMsgCallback *msg_obj)
 {
     struct icd_instance_logger *logger;
 
-    for (logger = instance->loggers; logger; logger = logger->next) {
-        if (logger->func == func)
-            break;
+    if (msg_obj == NULL) {
+        return VK_ERROR_INVALID_POINTER;
     }
 
-    if (!logger) {
-        logger = icd_instance_alloc(instance, sizeof(*logger), 0,
-                VK_SYSTEM_ALLOC_TYPE_DEBUG);
-        if (!logger)
-            return VK_ERROR_OUT_OF_HOST_MEMORY;
+    logger = icd_instance_alloc(instance, sizeof(*logger), 0,
+            VK_SYSTEM_ALLOC_TYPE_DEBUG);
+    if (!logger)
+        return VK_ERROR_OUT_OF_HOST_MEMORY;
 
-        logger->func = func;
-        logger->next = instance->loggers;
-        instance->loggers = logger;
-    }
+    logger->func = func;
+    logger->flags = msg_flags;
+    logger->next = instance->loggers;
+    instance->loggers = logger;
 
-    logger->user_data = user_data;
+    logger->user_data = (void *) user_data;
+
+    *msg_obj = (VkDbgMsgCallback) logger;
 
     return VK_SUCCESS;
 }
 
-VkResult icd_instance_remove_logger(struct icd_instance *instance,
-                                      VK_DBG_MSG_CALLBACK_FUNCTION func)
+VkResult icd_instance_destroy_logger(
+        struct icd_instance *instance,
+        const VkDbgMsgCallback msg_obj)
 {
     struct icd_instance_logger *logger, *prev;
 
     for (prev = NULL, logger = instance->loggers; logger;
          prev = logger, logger = logger->next) {
-        if (logger->func == func)
+        if (logger == (struct icd_instance_logger *) msg_obj)
             break;
     }
 
@@ -189,34 +170,24 @@ VkResult icd_instance_remove_logger(struct icd_instance *instance,
 }
 
 void icd_instance_log(const struct icd_instance *instance,
-                      VK_DBG_MSG_TYPE msg_type,
-                      VkValidationLevel validation_level,
+                      VkFlags msg_flags,
+                      VkObjectType obj_type,
                       VkObject src_object,
                       size_t location, int32_t msg_code,
                       const char *msg)
 {
     const struct icd_instance_logger *logger;
 
-    if (instance->debug_echo_enable || !instance->loggers) {
+    if (!instance->loggers) {
         fputs(msg, stderr);
         fputc('\n', stderr);
+        return;
     }
 
     for (logger = instance->loggers; logger; logger = logger->next) {
-        logger->func(msg_type, validation_level, src_object, location,
-                msg_code, msg, logger->user_data);
-    }
-
-    switch (msg_type) {
-    case VK_DBG_MSG_ERROR:
-        if (instance->break_on_error)
-            abort();
-        /* fall through */
-    case VK_DBG_MSG_WARNING:
-        if (instance->break_on_warning)
-            abort();
-        break;
-    default:
-        break;
+        if (msg_flags & logger->flags) {
+            logger->func(msg_flags, obj_type, src_object, location,
+                         msg_code, instance->name, msg, logger->user_data);
+        }
     }
 }

@@ -566,8 +566,8 @@ static VkResult x11_swap_chain_create(struct intel_dev *dev,
     int fd;
 
     if (!x11_is_format_presentable(dev, info->imageFormat)) {
-        intel_dev_log(dev, VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0,
-                VK_NULL_HANDLE, 0, 0, "invalid presentable image format");
+        intel_dev_log(dev, VK_DBG_REPORT_ERROR_BIT,
+                      VK_NULL_HANDLE, 0, 0, "invalid presentable image format");
         return VK_ERROR_INVALID_VALUE;
     }
 
@@ -588,7 +588,7 @@ static VkResult x11_swap_chain_create(struct intel_dev *dev,
         return VK_ERROR_OUT_OF_HOST_MEMORY;
 
     memset(sc, 0, sizeof(*sc));
-    intel_handle_init(&sc->handle, VK_DBG_OBJECT_SWAP_CHAIN_WSI, dev->base.handle.icd);
+    intel_handle_init(&sc->handle, VK_OBJECT_TYPE_SWAP_CHAIN_WSI, dev->base.handle.icd);
 
     sc->c = c;
     sc->window = window;
@@ -690,7 +690,7 @@ static struct intel_x11_display *x11_display_create(struct intel_gpu *gpu,
         return NULL;
 
     memset(dpy, 0, sizeof(*dpy));
-    intel_handle_init(&dpy->handle, VK_DBG_OBJECT_DISPLAY_WSI, gpu->handle.icd);
+    intel_handle_init(&dpy->handle, VK_OBJECT_TYPE_DISPLAY_WSI, gpu->handle.icd);
 
     dpy->fd = fd;
     dpy->connector_id = connector_id;
@@ -875,6 +875,9 @@ void intel_wsi_fence_cleanup(struct intel_fence *fence)
 void intel_wsi_fence_copy(struct intel_fence *fence,
                           const struct intel_fence *src)
 {
+    if (!fence->wsi_data) {
+        return;
+    }
     memcpy(fence->wsi_data, src->wsi_data,
             sizeof(struct intel_x11_fence_data));
 }
@@ -884,6 +887,9 @@ VkResult intel_wsi_fence_wait(struct intel_fence *fence,
 {
     struct intel_x11_fence_data *data =
         (struct intel_x11_fence_data *) fence->wsi_data;
+
+    if (!data)
+        return VK_SUCCESS;
 
     if (!data->swap_chain)
         return VK_SUCCESS;

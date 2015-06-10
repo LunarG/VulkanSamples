@@ -181,7 +181,7 @@ class Extension(object):
 # VK core API
 core = Extension(
     name="VK_CORE",
-    headers=["vulkan.h", "vkDbg.h"],
+    headers=["vulkan.h", "vk_debug_report_lunarg.h"],
 
     objects=[
         "VkInstance",
@@ -263,13 +263,6 @@ core = Extension(
              Param("uint32_t", "extensionIndex"),
              Param("size_t*", "pDataSize"),
              Param("void*", "pData")]),
-
-        Proto("VkResult", "EnumerateLayers",
-            [Param("VkPhysicalDevice", "gpu"),
-             Param("size_t", "maxStringSize"),
-             Param("size_t*", "pLayerCount"),
-             Param("char* const*", "pOutLayers"),
-             Param("void*", "pReserved")]),
 
         Proto("VkResult", "GetDeviceQueue",
             [Param("VkDevice", "device"),
@@ -879,49 +872,6 @@ core = Extension(
         Proto("void", "CmdEndRenderPass",
             [Param("VkCmdBuffer", "cmdBuffer"),
              Param("VkRenderPass", "renderPass")]),
-
-        Proto("VkResult", "DbgSetValidationLevel",
-            [Param("VkDevice", "device"),
-             Param("VkValidationLevel", "validationLevel")]),
-
-        Proto("VkResult", "DbgRegisterMsgCallback",
-            [Param("VkInstance", "instance"),
-             Param("VK_DBG_MSG_CALLBACK_FUNCTION", "pfnMsgCallback"),
-             Param("void*", "pUserData")]),
-
-        Proto("VkResult", "DbgUnregisterMsgCallback",
-            [Param("VkInstance", "instance"),
-             Param("VK_DBG_MSG_CALLBACK_FUNCTION", "pfnMsgCallback")]),
-
-        Proto("VkResult", "DbgSetMessageFilter",
-            [Param("VkDevice", "device"),
-             Param("int32_t", "msgCode"),
-             Param("VK_DBG_MSG_FILTER", "filter")]),
-
-        Proto("VkResult", "DbgSetObjectTag",
-            [Param("VkDevice", "device"),
-             Param("VkObject", "object"),
-             Param("size_t", "tagSize"),
-             Param("const void*", "pTag")]),
-
-        Proto("VkResult", "DbgSetGlobalOption",
-            [Param("VkInstance", "instance"),
-             Param("VK_DBG_GLOBAL_OPTION", "dbgOption"),
-             Param("size_t", "dataSize"),
-             Param("const void*", "pData")]),
-
-        Proto("VkResult", "DbgSetDeviceOption",
-            [Param("VkDevice", "device"),
-             Param("VK_DBG_DEVICE_OPTION", "dbgOption"),
-             Param("size_t", "dataSize"),
-             Param("const void*", "pData")]),
-
-        Proto("void", "CmdDbgMarkerBegin",
-            [Param("VkCmdBuffer", "cmdBuffer"),
-             Param("const char*", "pMarker")]),
-
-        Proto("void", "CmdDbgMarkerEnd",
-            [Param("VkCmdBuffer", "cmdBuffer")]),
     ],
 )
 
@@ -931,6 +881,7 @@ wsi_lunarg = Extension(
     objects=[
         "VkDisplayWSI",
         "VkSwapChainWSI",
+        "VkDbgMsgCallback",
     ],
     protos=[
         Proto("VkResult", "GetDisplayInfoWSI",
@@ -956,6 +907,13 @@ wsi_lunarg = Extension(
         Proto("VkResult", "QueuePresentWSI",
             [Param("VkQueue", "queue"),
              Param("const VkPresentInfoWSI*", "pPresentInfo")]),
+
+#        Proto("VkResult", "DbgCreateMsgCallback",
+#            [Param("VkInstance", "instance"),
+#             Param("VkFlags", "msgFlags"),
+#             Param("PFN_vkDbgMsgCallback", "pfnMsgCallback"),
+#             Param("void*", "pUserData"),
+#             Param("VkDbgMsgCallback*", "pMsgCallback")]),
     ],
 )
 
@@ -1068,7 +1026,7 @@ def parse_vk_h(filename):
 
     # make them an extension and print
     ext = Extension("VK_CORE",
-            headers=["vulkan.h", "vkDbg.h"],
+            headers=["vulkan.h", "vk_debug_report_lunarg.h"],
             objects=object_lines,
             protos=protos)
     print("core =", str(ext))

@@ -42,7 +42,6 @@
 #endif // _WIN32
 
 #include <vulkan.h>
-#include <vkDbg.h>
 #include <vk_wsi_lunarg.h>
 
 #include "icd-spv.h"
@@ -1362,24 +1361,33 @@ static void demo_create_window(struct demo *demo)
 static void demo_init_vk(struct demo *demo)
 {
     VkResult err;
-    // Extensions to enable
-    const char *ext_names[] = {
-        "VK_WSI_LunarG",
-    };
+    VkExtensionProperties *instance_extensions;
+    uint32_t instance_extension_count = 0;
+    VkExtensionProperties *device_extensions;
+    uint32_t device_extension_count = 0;
     size_t extSize = sizeof(uint32_t);
-    uint32_t extCount = 0;
-    err = vkGetGlobalExtensionInfo(VK_EXTENSION_INFO_TYPE_COUNT, 0, &extSize, &extCount);
+    uint32_t total_extension_count = 0;
+    err = vkGetGlobalExtensionInfo(VK_EXTENSION_INFO_TYPE_COUNT, 0, &extSize, &total_extension_count);
     assert(!err);
 
     VkExtensionProperties extProp;
     extSize = sizeof(VkExtensionProperties);
-    bool32_t U_ASSERT_ONLY extFound = 0;
-    for (uint32_t i = 0; i < extCount; i++) {
+    bool32_t WSIextFound = 0;
+    instance_extensions = malloc(sizeof(VkExtensionProperties) * total_extension_count);
+    device_extensions = malloc(sizeof(VkExtensionProperties) * total_extension_count);
+    for (uint32_t i = 0; i < total_extension_count; i++) {
         err = vkGetGlobalExtensionInfo(VK_EXTENSION_INFO_TYPE_PROPERTIES, i, &extSize, &extProp);
-        if (!strcmp(ext_names[0], extProp.extName))
-            extFound = 1;
+        if (!strcmp("VK_WSI_LunarG", extProp.name)) {
+            WSIextFound = 1;
+            memcpy(&instance_extensions[instance_extension_count++], &extProp, sizeof(VkExtensionProperties));
+            memcpy(&device_extensions[device_extension_count++], &extProp, sizeof(VkExtensionProperties));
+        }
+        if (!strcmp("Validation", extProp.name)) {
+            memcpy(&instance_extensions[instance_extension_count++], &extProp, sizeof(VkExtensionProperties));
+            memcpy(&device_extensions[device_extension_count++], &extProp, sizeof(VkExtensionProperties));
+        }
     }
-    if (!extFound) {
+    if (!WSIextFound) {
         ERR_EXIT("vkGetGlobalExtensionInfo failed to find the "
                  "\"VK_WSI_LunarG\" extension.\n\nDo you have a compatible "
                  "Vulkan installable client driver (ICD) installed?\nPlease "
@@ -1401,8 +1409,8 @@ static void demo_init_vk(struct demo *demo)
         .pNext = NULL,
         .pAppInfo = &app,
         .pAllocCb = NULL,
-        .extensionCount = 1,
-        .ppEnabledExtensionNames = ext_names,
+        .extensionCount = instance_extension_count,
+        .pEnabledExtensions = instance_extensions,
     };
     const VkDeviceQueueCreateInfo queue = {
         .queueNodeIndex = 0,
@@ -1413,8 +1421,8 @@ static void demo_init_vk(struct demo *demo)
         .pNext = NULL,
         .queueRecordCount = 1,
         .pRequestedQueues = &queue,
-        .extensionCount = 1,
-        .ppEnabledExtensionNames = ext_names,
+        .extensionCount = device_extension_count,
+        .pEnabledExtensions = device_extensions,
         .flags = 0,
     };
     uint32_t gpu_count;

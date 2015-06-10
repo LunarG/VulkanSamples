@@ -29,13 +29,15 @@
 #define VKRENDERFRAMEWORK_H
 
 #include "vktestframework.h"
-#include <vkDbg.h>
+#include "vk_debug_report_lunarg.h"
+#include "vk_debug_marker_lunarg.h"
 
 
 class VkDeviceObj : public vk_testing::Device
 {
 public:
     VkDeviceObj(uint32_t id, VkPhysicalDevice obj);
+    VkDeviceObj(uint32_t id, VkPhysicalDevice obj, std::vector<VkExtensionProperties> extension_names);
 
     VkDevice device() { return obj(); }
     void get_device_queue();
@@ -94,7 +96,10 @@ public:
     void InitRenderTarget(VkDepthStencilBindInfo *dsBinding);
     void InitRenderTarget(uint32_t targets, VkDepthStencilBindInfo *dsBinding);
     void InitFramework();
-    void InitFramework(const std::vector<const char *> &layers, VK_DBG_MSG_CALLBACK_FUNCTION=NULL, void *userData=NULL);
+    void InitFramework(std::vector<const char *> instance_extension_names,
+                       std::vector<const char *> device_extension_names,
+                       PFN_vkDbgMsgCallback=NULL,
+                       void *userData=NULL);
     void ShutdownFramework();
     void InitState();
 
@@ -123,6 +128,8 @@ protected:
     uint32_t                            m_stencil_clear_color;
     VkDepthStencilObj                  *m_depthStencil;
     VkMemoryRefManager                  m_mem_ref_mgr;
+    PFN_vkDbgCreateMsgCallback          m_dbgCreateMsgCallback;
+    VkDbgMsgCallback                    m_msgCallback;
 
     /*
      * SetUp and TearDown are called by the Google Test framework

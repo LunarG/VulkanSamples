@@ -122,7 +122,8 @@ typedef struct _BUFFER_NODE {
 } BUFFER_NODE;
 
 typedef struct _DYNAMIC_STATE_NODE {
-    VkDynamicStateObject    stateObj;
+    VkObjectType                objType;
+    VkDynamicStateObject        stateObj;
     GENERIC_HEADER*             pCreateInfo;
     union {
         VkDynamicVpStateCreateInfo vpci;

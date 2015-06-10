@@ -1,5 +1,5 @@
 #include <vulkan.h>
-#include <vkDbg.h>
+#include "vk_debug_report_lunarg.h"
 #include "gtest-1.7.0/include/gtest/gtest.h"
 #include "vkrenderframework.h"
 #include "layers_config.h"
@@ -60,14 +60,15 @@ static const char bindStateFragShaderText[] =
         "   uFragColor = vec4(0,1,0,1);\n"
         "}\n";
 
-void VKAPI myDbgFunc(
-    VK_DBG_MSG_TYPE     msgType,
-    VkValidationLevel validationLevel,
-    VkObject             srcObject,
-    size_t               location,
-    int32_t              msgCode,
-    const char*          pMsg,
-    void*                pUserData);
+static void myDbgFunc(
+    VkFlags                    msgFlags,
+    VkObjectType                        objType,
+    VkObject                            srcObject,
+    size_t                              location,
+    int32_t                             msgCode,
+    const char*                         pLayerPrefix,
+    const char*                         pMsg,
+    void*                               pUserData);
 
 class ErrorMonitor {
 public:
@@ -77,31 +78,31 @@ public:
         pthread_mutexattr_init(&attr);
         pthread_mutex_init(&m_mutex, &attr);
         pthread_mutex_lock(&m_mutex);
-        m_msgType = VK_DBG_MSG_UNKNOWN;
+        m_msgFlags = VK_DBG_REPORT_INFO_BIT;
         m_bailout = NULL;
         pthread_mutex_unlock(&m_mutex);
     }
     void ClearState()
     {
         pthread_mutex_lock(&m_mutex);
-        m_msgType = VK_DBG_MSG_UNKNOWN;
+        m_msgFlags = VK_DBG_REPORT_INFO_BIT;
         m_msgString.clear();
         pthread_mutex_unlock(&m_mutex);
     }
-    VK_DBG_MSG_TYPE GetState(std::string *msgString)
+    VkFlags GetState(std::string *msgString)
     {
         pthread_mutex_lock(&m_mutex);
         *msgString = m_msgString;
         pthread_mutex_unlock(&m_mutex);
-        return m_msgType;
+        return m_msgFlags;
     }
-    void SetState(VK_DBG_MSG_TYPE msgType, const char *msgString)
+    void SetState(VkFlags msgFlags, const char *msgString)
     {
         pthread_mutex_lock(&m_mutex);
         if (m_bailout != NULL) {
             *m_bailout = true;
         }
-        m_msgType = msgType;
+        m_msgFlags = msgFlags;
         m_msgString.reserve(strlen(msgString));
         m_msgString = msgString;
         pthread_mutex_unlock(&m_mutex);
@@ -112,24 +113,25 @@ public:
     }
 
 private:
-    VK_DBG_MSG_TYPE        m_msgType;
+    VkFlags                m_msgFlags;
     std::string            m_msgString;
     pthread_mutex_t        m_mutex;
     bool*                  m_bailout;
 };
 
-void VKAPI myDbgFunc(
-    VK_DBG_MSG_TYPE      msgType,
-    VkValidationLevel    validationLevel,
-    VkObject             srcObject,
-    size_t               location,
-    int32_t              msgCode,
-    const char*          pMsg,
-    void*                pUserData)
+static void myDbgFunc(
+    VkFlags                    msgFlags,
+    VkObjectType               objType,
+    VkObject                   srcObject,
+    size_t                     location,
+    int32_t                    msgCode,
+    const char*                pLayerPrefix,
+    const char*                pMsg,
+    void*                      pUserData)
 {
-    if (msgType == VK_DBG_MSG_WARNING || msgType == VK_DBG_MSG_ERROR) {
+    if (msgFlags & (VK_DBG_REPORT_WARN_BIT | VK_DBG_REPORT_ERROR_BIT)) {
         ErrorMonitor *errMonitor = (ErrorMonitor *)pUserData;
-        errMonitor->SetState(msgType, pMsg);
+        errMonitor->SetState(msgFlags, pMsg);
     }
 }
 
@@ -146,32 +148,10 @@ protected:
         ErrorMonitor               *m_errorMonitor;
 
     virtual void SetUp() {
-        const char *extension_names[] = {"MemTracker", "ObjectTracker", "Threading", "DrawState", "ShaderChecker"};
-        const std::vector<const char *> extensions(extension_names,
-                                        extension_names + sizeof(extension_names)/sizeof(extension_names[0]));
+        std::vector<const char *> instance_extension_names;
+        std::vector<const char *> device_extension_names;
 
-        size_t extSize = sizeof(uint32_t);
-        uint32_t extCount = 0;
-        VkResult U_ASSERT_ONLY err;
-        err = vkGetGlobalExtensionInfo(VK_EXTENSION_INFO_TYPE_COUNT, 0, &extSize, &extCount);
-        assert(!err);
-
-        VkExtensionProperties extProp;
-        extSize = sizeof(VkExtensionProperties);
-        bool32_t extFound;
-
-        for (uint32_t i = 0; i < extensions.size(); i++) {
-            extFound = 0;
-            for (uint32_t j = 0; j < extCount; j++) {
-                err = vkGetGlobalExtensionInfo(VK_EXTENSION_INFO_TYPE_PROPERTIES, j, &extSize, &extProp);
-                assert(!err);
-                if (!strcmp(extensions[i], extProp.extName)) {
-                   extFound = 1;
-                   break;
-                }
-            }
-            ASSERT_EQ(extFound, 1) << "ERROR: Cannot find extension named " << extensions[i] << " which is necessary to pass this test";
-        }
+        instance_extension_names.push_back(DEBUG_REPORT_EXTENSION_NAME);
 
         // Force layer output level to be >= WARNING so that we catch those messages but ignore others
         setLayerOptionEnum("MemTrackerReportLevel",    "VK_DBG_LAYER_LEVEL_WARNING");
@@ -189,8 +169,7 @@ protected:
         this->app_info.apiVersion = VK_API_VERSION;
 
         m_errorMonitor = new ErrorMonitor;
-        InitFramework(extensions, myDbgFunc, m_errorMonitor);
-
+        InitFramework(instance_extension_names, device_extension_names, myDbgFunc, m_errorMonitor);
     }
 
     virtual void TearDown() {
@@ -330,7 +309,7 @@ void VkLayerTest::GenericDrawPreparation(VkCommandBufferObj *cmdBuffer, VkPipeli
 TEST_F(VkLayerTest, CallResetCmdBufferBeforeCompletion)
 {
     vk_testing::Fence testFence;
-    VK_DBG_MSG_TYPE msgType;
+    VkFlags msgFlags;
     std::string msgString;
 
     VkFenceCreateInfo fenceInfo = {};
@@ -360,8 +339,8 @@ TEST_F(VkLayerTest, CallResetCmdBufferBeforeCompletion)
     // Introduce failure by calling begin again before checking fence
     vkResetCommandBuffer(cmdBuffer.obj());
 
-    msgType = m_errorMonitor->GetState(&msgString);
-    ASSERT_EQ(msgType, VK_DBG_MSG_ERROR) << "Did not receive an err after calling ResetCommandBuffer on an active Command Buffer";
+    msgFlags = m_errorMonitor->GetState(&msgString);
+    ASSERT_TRUE(msgFlags & VK_DBG_REPORT_ERROR_BIT) << "Did not receive an err after calling ResetCommandBuffer on an active Command Buffer";
     if (!strstr(msgString.c_str(),"Resetting CB")) {
         FAIL() << "Error received was not 'Resetting CB (0xaddress) before it has completed. You must check CB flag before'";
     }
@@ -370,7 +349,7 @@ TEST_F(VkLayerTest, CallResetCmdBufferBeforeCompletion)
 TEST_F(VkLayerTest, CallBeginCmdBufferBeforeCompletion)
 {
     vk_testing::Fence testFence;
-    VK_DBG_MSG_TYPE msgType;
+    VkFlags msgFlags;
     std::string msgString;
 
     VkFenceCreateInfo fenceInfo = {};
@@ -400,8 +379,8 @@ TEST_F(VkLayerTest, CallBeginCmdBufferBeforeCompletion)
     // Introduce failure by calling begin again before checking fence
     BeginCommandBuffer(cmdBuffer);
 
-    msgType = m_errorMonitor->GetState(&msgString);
-    ASSERT_EQ(msgType, VK_DBG_MSG_ERROR) << "Did not receive an err after calling BeginCommandBuffer on an active Command Buffer";
+    msgFlags = m_errorMonitor->GetState(&msgString);
+    ASSERT_TRUE(msgFlags & VK_DBG_REPORT_ERROR_BIT) << "Did not receive an err after calling BeginCommandBuffer on an active Command Buffer";
     if (!strstr(msgString.c_str(),"Calling vkBeginCommandBuffer() on active CB")) {
         FAIL() << "Error received was not 'Calling vkBeginCommandBuffer() on an active CB (0xaddress) before it has completed'";
     }
@@ -409,7 +388,7 @@ TEST_F(VkLayerTest, CallBeginCmdBufferBeforeCompletion)
 
 TEST_F(VkLayerTest, MapMemWithoutHostVisibleBit)
 {
-    VK_DBG_MSG_TYPE msgType;
+    VkFlags         msgFlags;
     std::string     msgString;
     VkResult        err;
 
@@ -473,8 +452,8 @@ TEST_F(VkLayerTest, MapMemWithoutHostVisibleBit)
     void *mappedAddress = NULL;
     err = vkMapMemory(m_device->device(), mem, 0, 0, 0, &mappedAddress);
 
-    msgType = m_errorMonitor->GetState(&msgString);
-    ASSERT_EQ(msgType, VK_DBG_MSG_ERROR) << "Did not receive an error while tring to map memory not visible to CPU";
+    msgFlags = m_errorMonitor->GetState(&msgString);
+    ASSERT_TRUE(msgFlags & VK_DBG_REPORT_ERROR_BIT) << "Did not receive an error while tring to map memory not visible to CPU";
     if (!strstr(msgString.c_str(),"Mapping Memory without VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT")) {
         FAIL() << "Error received did not match expected error message from vkMapMemory in MemTracker";
     }
@@ -482,7 +461,7 @@ TEST_F(VkLayerTest, MapMemWithoutHostVisibleBit)
 
 TEST_F(VkLayerTest, BindInvalidMemory)
 {
-    VK_DBG_MSG_TYPE msgType;
+    VkFlags         msgFlags;
     std::string     msgString;
     VkResult        err;
 
@@ -545,8 +524,8 @@ TEST_F(VkLayerTest, BindInvalidMemory)
     err = vkBindObjectMemory(m_device->device(), VK_OBJECT_TYPE_IMAGE, image, mem, 0);
     ASSERT_VK_SUCCESS(err);
 
-    msgType = m_errorMonitor->GetState(&msgString);
-    ASSERT_EQ(msgType, VK_DBG_MSG_ERROR) << "Did not receive an error while tring to bind a freed memory object";
+    msgFlags = m_errorMonitor->GetState(&msgString);
+    ASSERT_TRUE(msgFlags & VK_DBG_REPORT_ERROR_BIT) << "Did not receive an error while tring to bind a freed memory object";
     if (!strstr(msgString.c_str(),"couldn't find info for mem obj")) {
         FAIL() << "Error received did not match expected error message from BindObjectMemory in MemTracker";
     }
@@ -554,7 +533,7 @@ TEST_F(VkLayerTest, BindInvalidMemory)
 
 TEST_F(VkLayerTest, FreeBoundMemory)
 {
-    VK_DBG_MSG_TYPE msgType;
+    VkFlags         msgFlags;
     std::string     msgString;
     VkResult        err;
 
@@ -617,8 +596,8 @@ TEST_F(VkLayerTest, FreeBoundMemory)
     vkFreeMemory(m_device->device(), mem);
     ASSERT_VK_SUCCESS(err);
 
-    msgType = m_errorMonitor->GetState(&msgString);
-    ASSERT_EQ(msgType, VK_DBG_MSG_WARNING) << "Did not receive an warning while tring to free bound memory";
+    msgFlags = m_errorMonitor->GetState(&msgString);
+    ASSERT_TRUE(msgFlags & VK_DBG_REPORT_WARN_BIT) << "Did not receive an warning while tring to free bound memory";
     if (!strstr(msgString.c_str(),"Freeing memory object while it still has references")) {
         FAIL() << "Warning received did not match expected message from freeMemObjInfo  in MemTracker";
     }
@@ -626,7 +605,7 @@ TEST_F(VkLayerTest, FreeBoundMemory)
 
 TEST_F(VkLayerTest, RebindMemory)
 {
-    VK_DBG_MSG_TYPE msgType;
+    VkFlags         msgFlags;
     std::string     msgString;
     VkResult        err;
 
@@ -692,8 +671,8 @@ TEST_F(VkLayerTest, RebindMemory)
     err = vkBindObjectMemory(m_device->device(), VK_OBJECT_TYPE_IMAGE, image, mem2, 0);
     ASSERT_VK_SUCCESS(err);
 
-    msgType = m_errorMonitor->GetState(&msgString);
-    ASSERT_EQ(msgType, VK_DBG_MSG_ERROR) << "Did not receive an error while tring to rebind an object";
+    msgFlags = m_errorMonitor->GetState(&msgString);
+    ASSERT_TRUE(msgFlags & VK_DBG_REPORT_ERROR_BIT) << "Did not receive an error while tring to rebind an object";
     if (!strstr(msgString.c_str(),"which has already been bound to mem object")) {
         FAIL() << "Error received did not match expected message when rebinding memory to an object";
     }
@@ -701,7 +680,7 @@ TEST_F(VkLayerTest, RebindMemory)
 
 TEST_F(VkLayerTest, BindMemoryToDestroyedObject)
 {
-    VK_DBG_MSG_TYPE msgType;
+    VkFlags         msgFlags;
     std::string     msgString;
     VkResult        err;
 
@@ -764,8 +743,8 @@ TEST_F(VkLayerTest, BindMemoryToDestroyedObject)
     err = vkBindObjectMemory(m_device->device(), VK_OBJECT_TYPE_IMAGE, image, mem, 0);
     ASSERT_VK_SUCCESS(err);
 
-    msgType = m_errorMonitor->GetState(&msgString);
-    ASSERT_EQ(msgType, VK_DBG_MSG_ERROR) << "Did not receive an error while binding memory to a destroyed object";
+    msgFlags = m_errorMonitor->GetState(&msgString);
+    ASSERT_TRUE(msgFlags & VK_DBG_REPORT_ERROR_BIT) << "Did not receive an error while binding memory to a destroyed object";
     if (!strstr(msgString.c_str(),"that's not in global list")) {
         FAIL() << "Error received did not match expected error message from updateObjectBinding in MemTracker";
     }
@@ -774,7 +753,7 @@ TEST_F(VkLayerTest, BindMemoryToDestroyedObject)
 TEST_F(VkLayerTest, SubmitSignaledFence)
 {
     vk_testing::Fence testFence;
-    VK_DBG_MSG_TYPE msgType;
+    VkFlags msgFlags;
     std::string msgString;
 
     VkFenceCreateInfo fenceInfo = {};
@@ -796,8 +775,8 @@ TEST_F(VkLayerTest, SubmitSignaledFence)
     testFence.init(*m_device, fenceInfo);
     m_errorMonitor->ClearState();
     cmdBuffer.QueueCommandBuffer(testFence.obj());
-    msgType = m_errorMonitor->GetState(&msgString);
-    ASSERT_EQ(msgType, VK_DBG_MSG_ERROR) << "Did not receive an err from using a fence in SIGNALED state in call to vkQueueSubmit";
+    msgFlags = m_errorMonitor->GetState(&msgString);
+    ASSERT_TRUE(msgFlags & VK_DBG_REPORT_ERROR_BIT) << "Did not receive an err from using a fence in SIGNALED state in call to vkQueueSubmit";
     if (!strstr(msgString.c_str(),"submitted in SIGNALED state.  Fences must be reset before being submitted")) {
         FAIL() << "Error received was not 'VkQueueSubmit with fence in SIGNALED_STATE'";
     }
@@ -807,7 +786,7 @@ TEST_F(VkLayerTest, SubmitSignaledFence)
 TEST_F(VkLayerTest, ResetUnsignaledFence)
 {
     vk_testing::Fence testFence;
-    VK_DBG_MSG_TYPE msgType;
+    VkFlags msgFlags;
     std::string msgString;
     VkFenceCreateInfo fenceInfo = {};
     fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
@@ -818,8 +797,8 @@ TEST_F(VkLayerTest, ResetUnsignaledFence)
     m_errorMonitor->ClearState();
     VkFence fences[1] = {testFence.obj()};
     vkResetFences(m_device->device(), 1, fences);
-    msgType = m_errorMonitor->GetState(&msgString);
-    ASSERT_EQ(msgType, VK_DBG_MSG_ERROR) << "Did not receive an error from submitting fence with UNSIGNALED state to vkResetFences";
+    msgFlags = m_errorMonitor->GetState(&msgString);
+    ASSERT_TRUE(msgFlags & VK_DBG_REPORT_ERROR_BIT) << "Did not receive an error from submitting fence with UNSIGNALED state to vkResetFences";
     if (!strstr(msgString.c_str(),"submitted to VkResetFences in UNSIGNALED STATE")) {
         FAIL() << "Error received was not 'VkResetFences with fence in UNSIGNALED_STATE'";
     }
@@ -830,7 +809,7 @@ TEST_F(VkLayerTest, ResetUnsignaledFence)
 TEST_F(VkLayerTest, WaitForUnsubmittedFence)
 {
     vk_testing::Fence testFence;
-    VK_DBG_MSG_TYPE msgType;
+    VkFlags msgFlags;
     std::string msgString;
     VkFenceCreateInfo fenceInfo = {};
     fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
@@ -840,8 +819,8 @@ TEST_F(VkLayerTest, WaitForUnsubmittedFence)
     testFence.init(*m_device, fenceInfo);
     m_errorMonitor->ClearState();
     vkGetFenceStatus(m_device->device(),testFence.obj());
-    msgType = m_errorMonitor->GetState(&msgString);
-    ASSERT_EQ(msgType, VK_DBG_MSG_ERROR) << "Did not receive an error asking for status of unsubmitted fence";
+    msgFlags = m_errorMonitor->GetState(&msgString);
+    ASSERT_TRUE(msgFlags & VK_DBG_REPORT_ERROR_BIT) << "Did not receive an error asking for status of unsubmitted fence";
     if (!strstr(msgString.c_str(),"Status Requested for Unsubmitted Fence")) {
         FAIL() << "Error received was not Status Requested for Unsubmitted Fence";
     }
@@ -849,8 +828,8 @@ TEST_F(VkLayerTest, WaitForUnsubmittedFence)
     VkFence fences[1] = {testFence.obj()};
     m_errorMonitor->ClearState();
     vkWaitForFences(m_device->device(), 1, fences, VK_TRUE, 0);
-    msgType = m_errorMonitor->GetState(&msgString);
-    ASSERT_EQ(msgType, VK_DBG_MSG_ERROR) << "Did not receive an error for waiting for unsubmitted fence";
+    msgFlags = m_errorMonitor->GetState(&msgString);
+    ASSERT_TRUE(msgFlags & VK_DBG_REPORT_ERROR_BIT) << "Did not receive an error for waiting for unsubmitted fence";
     if (!strstr(msgString.c_str(),"Waiting for Unsubmitted Fence")) {
         FAIL() << "Error received was not 'Waiting for Unsubmitted Fence'";
     }
@@ -862,7 +841,7 @@ TEST_F(VkLayerTest, GetObjectInfoMismatchedType)
     VkEvent event;
     VkMemoryRequirements mem_req;
     size_t data_size = sizeof(mem_req);
-    VK_DBG_MSG_TYPE msgType;
+    VkFlags msgFlags;
     std::string msgString;
     VkResult err;
 
@@ -875,8 +854,8 @@ TEST_F(VkLayerTest, GetObjectInfoMismatchedType)
     m_errorMonitor->ClearState();
     err = vkGetObjectInfo(device(), VK_OBJECT_TYPE_IMAGE, event, VK_OBJECT_INFO_TYPE_MEMORY_REQUIREMENTS,
                            &data_size, &mem_req);
-    msgType = m_errorMonitor->GetState(&msgString);
-    ASSERT_EQ(msgType, VK_DBG_MSG_ERROR) << "Did not receive an error from mismatched types in vkGetObjectInfo";
+    msgFlags = m_errorMonitor->GetState(&msgString);
+    ASSERT_TRUE(msgFlags & VK_DBG_REPORT_ERROR_BIT) << "Did not receive an error from mismatched types in vkGetObjectInfo";
     if (!strstr(msgString.c_str(),"does not match designated type")) {
         FAIL() << "Error received was not 'does not match designated type'";
     }
@@ -884,15 +863,15 @@ TEST_F(VkLayerTest, GetObjectInfoMismatchedType)
 
 TEST_F(VkLayerTest, RasterStateNotBound)
 {
-    VK_DBG_MSG_TYPE msgType;
+    VkFlags msgFlags;
     std::string msgString;
 
     TEST_DESCRIPTION("Simple Draw Call that validates failure when a raster state object is not bound beforehand");
 
     VKTriangleTest(bindStateVertShaderText, bindStateFragShaderText, BsoFailRaster);
 
-    msgType = m_errorMonitor->GetState(&msgString);
-    ASSERT_EQ(msgType, VK_DBG_MSG_ERROR) << "Did not receive an error from Not Binding a Raster State Object";
+    msgFlags = m_errorMonitor->GetState(&msgString);
+    ASSERT_EQ(msgFlags, VK_DBG_MSG_ERROR) << "Did not receive an error from Not Binding a Raster State Object";
     if (!strstr(msgString.c_str(),"Raster object not bound to this command buffer")) {
         FAIL() << "Error received was not 'Raster object not bound to this command buffer'";
     }
@@ -900,14 +879,14 @@ TEST_F(VkLayerTest, RasterStateNotBound)
 
 TEST_F(VkLayerTest, ViewportStateNotBound)
 {
-    VK_DBG_MSG_TYPE msgType;
+    VkFlags msgFlags;
     std::string msgString;
     TEST_DESCRIPTION("Simple Draw Call that validates failure when a viewport state object is not bound beforehand");
 
     VKTriangleTest(bindStateVertShaderText, bindStateFragShaderText, BsoFailViewport);
 
-    msgType = m_errorMonitor->GetState(&msgString);
-    ASSERT_EQ(msgType, VK_DBG_MSG_ERROR) << "Did not receive an error from Not Binding a Viewport State Object";
+    msgFlags = m_errorMonitor->GetState(&msgString);
+    ASSERT_EQ(msgFlags, VK_DBG_MSG_ERROR) << "Did not receive an error from Not Binding a Viewport State Object";
     if (!strstr(msgString.c_str(),"Viewport object not bound to this command buffer")) {
         FAIL() << "Error received was not 'Viewport object not bound to this command buffer'";
     }
@@ -915,15 +894,15 @@ TEST_F(VkLayerTest, ViewportStateNotBound)
 
 TEST_F(VkLayerTest, ColorBlendStateNotBound)
 {
-    VK_DBG_MSG_TYPE msgType;
+    VkFlags msgFlags;
     std::string msgString;
 
     TEST_DESCRIPTION("Simple Draw Call that validates failure when a color-blend state object is not bound beforehand");
 
     VKTriangleTest(bindStateVertShaderText, bindStateFragShaderText, BsoFailColorBlend);
 
-    msgType = m_errorMonitor->GetState(&msgString);
-    ASSERT_EQ(msgType, VK_DBG_MSG_ERROR) << "Did not receive an error from Not Binding a ColorBlend State Object";
+    msgFlags = m_errorMonitor->GetState(&msgString);
+    ASSERT_EQ(msgFlags, VK_DBG_MSG_ERROR) << "Did not receive an error from Not Binding a ColorBlend State Object";
     if (!strstr(msgString.c_str(),"Color-blend object not bound to this command buffer")) {
         FAIL() << "Error received was not 'Color-blend object not bound to this command buffer'";
     }
@@ -931,15 +910,15 @@ TEST_F(VkLayerTest, ColorBlendStateNotBound)
 
 TEST_F(VkLayerTest, DepthStencilStateNotBound)
 {
-    VK_DBG_MSG_TYPE msgType;
+    VkFlags msgFlags;
     std::string msgString;
 
     TEST_DESCRIPTION("Simple Draw Call that validates failure when a depth-stencil state object is not bound beforehand");
 
     VKTriangleTest(bindStateVertShaderText, bindStateFragShaderText, BsoFailDepthStencil);
 
-    msgType = m_errorMonitor->GetState(&msgString);
-    ASSERT_EQ(msgType, VK_DBG_MSG_ERROR) << "Did not receive an error from Not Binding a DepthStencil State Object";
+    msgFlags = m_errorMonitor->GetState(&msgString);
+    ASSERT_EQ(msgFlags, VK_DBG_MSG_ERROR) << "Did not receive an error from Not Binding a DepthStencil State Object";
     if (!strstr(msgString.c_str(),"Depth-stencil object not bound to this command buffer")) {
         FAIL() << "Error received was not 'Depth-stencil object not bound to this command buffer'";
     }
@@ -949,7 +928,7 @@ TEST_F(VkLayerTest, DepthStencilStateNotBound)
 TEST_F(VkLayerTest, PipelineNotBound)
 {
     // Initiate Draw w/o a PSO bound
-    VK_DBG_MSG_TYPE msgType;
+    VkFlags         msgFlags;
     std::string     msgString;
 
     ASSERT_NO_FATAL_FAILURE(InitState());
@@ -958,8 +937,8 @@ TEST_F(VkLayerTest, PipelineNotBound)
     BeginCommandBuffer(cmdBuffer);
     VkPipeline badPipeline = (VkPipeline)0xbaadb1be;
     vkCmdBindPipeline(cmdBuffer.GetBufferHandle(), VK_PIPELINE_BIND_POINT_GRAPHICS, badPipeline);
-    msgType = m_errorMonitor->GetState(&msgString);
-    ASSERT_EQ(msgType, VK_DBG_MSG_ERROR) << "Did not receive error after binding invalid pipeline to CmdBuffer";
+    msgFlags = m_errorMonitor->GetState(&msgString);
+    ASSERT_TRUE(msgFlags & VK_DBG_REPORT_ERROR_BIT) << "Did not receive error after binding invalid pipeline to CmdBuffer";
     if (!strstr(msgString.c_str(),"Attempt to bind Pipeline ")) {
         FAIL() << "Error received was not 'Attempt to bind Pipeline 0xbaadb1be that doesn't exist!'";
     }
@@ -970,13 +949,13 @@ TEST_F(VkLayerTest, InvalidDescriptorPool)
     // TODO : Simple check for bad object should be added to ObjectTracker to catch this case
     //   The DS check for this is after driver has been called to validate DS internal data struct
     // Attempt to clear DS Pool with bad object
-/*    VK_DBG_MSG_TYPE msgType;
+/*    VkFlags msgFlags;
     std::string msgString;
     VkDescriptorPool badPool = (VkDescriptorPool)0xbaad6001;
     vkResetDescriptorPool(device(), badPool);
 
-    msgType = m_errorMonitor->GetState(&msgString);
-    ASSERT_EQ(msgType, VK_DBG_MSG_ERROR) << "Did not receive an error from Resetting an invalid DescriptorPool Object";
+    msgFlags = m_errorMonitor->GetState(&msgString);
+    ASSERT_EQ(msgFlags, VK_DBG_MSG_ERROR) << "Did not receive an error from Resetting an invalid DescriptorPool Object";
     if (!strstr(msgString.c_str(),"Unable to find pool node for pool 0xbaad6001 specified in vkResetDescriptorPool() call")) {
         FAIL() << "Error received was note 'Unable to find pool node for pool 0xbaad6001 specified in vkResetDescriptorPool() call'";
     }*/
@@ -1002,7 +981,7 @@ TEST_F(VkLayerTest, InvalidPipeline)
     //   The DS check for this is after driver has been called to validate DS internal data struct
     // Create a valid cmd buffer
     // call vkCmdBindPipeline w/ false Pipeline
-    VK_DBG_MSG_TYPE msgType;
+    VkFlags         msgFlags;
     std::string     msgString;
 
     ASSERT_NO_FATAL_FAILURE(InitState());
@@ -1011,8 +990,8 @@ TEST_F(VkLayerTest, InvalidPipeline)
     BeginCommandBuffer(cmdBuffer);
     VkPipeline badPipeline = (VkPipeline)0xbaadb1be;
     vkCmdBindPipeline(cmdBuffer.GetBufferHandle(), VK_PIPELINE_BIND_POINT_GRAPHICS, badPipeline);
-    msgType = m_errorMonitor->GetState(&msgString);
-    ASSERT_EQ(msgType, VK_DBG_MSG_ERROR) << "Did not receive error after binding invalid pipeline to CmdBuffer";
+    msgFlags = m_errorMonitor->GetState(&msgString);
+    ASSERT_TRUE(msgFlags & VK_DBG_REPORT_ERROR_BIT) << "Did not receive error after binding invalid pipeline to CmdBuffer";
     if (!strstr(msgString.c_str(),"Attempt to bind Pipeline ")) {
         FAIL() << "Error received was not 'Attempt to bind Pipeline 0xbaadb1be that doesn't exist!'";
     }
@@ -1021,7 +1000,7 @@ TEST_F(VkLayerTest, InvalidPipeline)
 TEST_F(VkLayerTest, NoEndCmdBuffer)
 {
     // Create and update CmdBuffer then call QueueSubmit w/o calling End on CmdBuffer
-    VK_DBG_MSG_TYPE msgType;
+    VkFlags         msgFlags;
     std::string     msgString;
     VkResult        err;
 
@@ -1126,8 +1105,8 @@ TEST_F(VkLayerTest, NoEndCmdBuffer)
     m_device->get_device_queue();
     vkQueueSubmit(m_device->m_queue, 1, &localCmdBuffer, NULL);
 
-    msgType = m_errorMonitor->GetState(&msgString);
-    ASSERT_EQ(msgType, VK_DBG_MSG_ERROR) << "Did not receive error after vkEndDescriptorPoolUpdate() w/o first calling vkBeginDescriptorPoolUpdate().";
+    msgFlags = m_errorMonitor->GetState(&msgString);
+    ASSERT_TRUE(msgFlags & VK_DBG_REPORT_ERROR_BIT) << "Did not receive error after vkEndDescriptorPoolUpdate() w/o first calling vkBeginDescriptorPoolUpdate().";
     if (!strstr(msgString.c_str(),"You must call vkEndCommandBuffer() on CB ")) {
         FAIL() << "Error received was not 'You must call vkEndCommandBuffer() on CB <0xblah> before this call to vkQueueSubmit()!'";
     }
@@ -1144,7 +1123,7 @@ TEST_F(VkLayerTest, InvalidDynamicStateObject)
 TEST_F(VkLayerTest, VtxBufferBadIndex)
 {
     // Bind VBO out-of-bounds for given PSO
-        VK_DBG_MSG_TYPE msgType;
+    VkFlags         msgFlags;
     std::string     msgString;
     VkResult        err;
 
@@ -1247,8 +1226,8 @@ TEST_F(VkLayerTest, VtxBufferBadIndex)
     // Should error before calling to driver so don't care about actual data
     vkCmdBindVertexBuffers(cmdBuffer.GetBufferHandle(), 0, 1, NULL, NULL);
 
-    msgType = m_errorMonitor->GetState(&msgString);
-    ASSERT_EQ(msgType, VK_DBG_MSG_ERROR) << "Did not receive error after vkCmdBindVertexBuffers() w/o any Vtx Inputs in PSO.";
+    msgFlags = m_errorMonitor->GetState(&msgString);
+    ASSERT_TRUE(msgFlags & VK_DBG_REPORT_ERROR_BIT) << "Did not receive error after vkCmdBindVertexBuffers() w/o any Vtx Inputs in PSO.";
     if (!strstr(msgString.c_str(),"Vtx Buffer Index 0 was bound, but no vtx buffers are attached to PSO.")) {
         FAIL() << "Error received was not 'Vtx Buffer Index 0 was bound, but no vtx buffers are attached to PSO.'";
     }
@@ -1257,7 +1236,7 @@ TEST_F(VkLayerTest, VtxBufferBadIndex)
 TEST_F(VkLayerTest, DSTypeMismatch)
 {
     // Create DS w/ layout of one type and attempt Update w/ mis-matched type
-    VK_DBG_MSG_TYPE msgType;
+    VkFlags         msgFlags;
     std::string     msgString;
     VkResult        err;
 
@@ -1334,9 +1313,9 @@ TEST_F(VkLayerTest, DSTypeMismatch)
 
     vkUpdateDescriptorSets(m_device->device(), 1, &descriptor_write, 0, NULL);
 
-    msgType = m_errorMonitor->GetState(&msgString);
+    msgFlags = m_errorMonitor->GetState(&msgString);
     std::cout << msgString << "\n";
-    ASSERT_EQ(msgType, VK_DBG_MSG_ERROR) << "Did not receive error after updating BUFFER Descriptor w/ incorrect type of SAMPLER.";
+    ASSERT_TRUE(msgFlags & VK_DBG_REPORT_ERROR_BIT) << "Did not receive error after updating BUFFER Descriptor w/ incorrect type of SAMPLER.";
     if (!strstr(msgString.c_str(),"Descriptor update type of VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET does not match ")) {
         FAIL() << "Error received was not 'Descriptor update type of VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET does not match overlapping binding type!'";
     }
@@ -1345,7 +1324,7 @@ TEST_F(VkLayerTest, DSTypeMismatch)
 TEST_F(VkLayerTest, DSUpdateOutOfBounds)
 {
     // For overlapping Update, have arrayIndex exceed that of layout
-    VK_DBG_MSG_TYPE msgType;
+    VkFlags         msgFlags;
     std::string     msgString;
     VkResult        err;
 
@@ -1423,8 +1402,8 @@ TEST_F(VkLayerTest, DSUpdateOutOfBounds)
 
     vkUpdateDescriptorSets(m_device->device(), 1, &descriptor_write, 0, NULL);
 
-    msgType = m_errorMonitor->GetState(&msgString);
-    ASSERT_EQ(msgType, VK_DBG_MSG_ERROR) << "Did not receive error after updating Descriptor w/ index out of bounds.";
+    msgFlags = m_errorMonitor->GetState(&msgString);
+    ASSERT_TRUE(msgFlags & VK_DBG_REPORT_ERROR_BIT) << "Did not receive error after updating Descriptor w/ index out of bounds.";
     if (!strstr(msgString.c_str(),"Descriptor update type of VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET is out of bounds for matching binding")) {
         FAIL() << "Error received was not 'Descriptor update type of VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET is out of bounds for matching binding...'";
     }
@@ -1433,7 +1412,7 @@ TEST_F(VkLayerTest, DSUpdateOutOfBounds)
 TEST_F(VkLayerTest, InvalidDSUpdateIndex)
 {
     // Create layout w/ count of 1 and attempt update to that layout w/ binding index 2
-    VK_DBG_MSG_TYPE msgType;
+    VkFlags         msgFlags;
     std::string     msgString;
     VkResult        err;
 
@@ -1511,8 +1490,8 @@ TEST_F(VkLayerTest, InvalidDSUpdateIndex)
 
     vkUpdateDescriptorSets(m_device->device(), 1, &descriptor_write, 0, NULL);
 
-    msgType = m_errorMonitor->GetState(&msgString);
-    ASSERT_EQ(msgType, VK_DBG_MSG_ERROR) << "Did not receive error after updating Descriptor w/ count too large for layout.";
+    msgFlags = m_errorMonitor->GetState(&msgString);
+    ASSERT_TRUE(msgFlags & VK_DBG_REPORT_ERROR_BIT) << "Did not receive error after updating Descriptor w/ count too large for layout.";
     if (!strstr(msgString.c_str()," does not have binding to match update binding ")) {
         FAIL() << "Error received was not 'Descriptor Set <blah> does not have binding to match update binding '";
     }
@@ -1521,7 +1500,7 @@ TEST_F(VkLayerTest, InvalidDSUpdateIndex)
 TEST_F(VkLayerTest, InvalidDSUpdateStruct)
 {
     // Call UpdateDS w/ struct type other than valid VK_STRUCTUR_TYPE_UPDATE_* types
-    VK_DBG_MSG_TYPE msgType;
+    VkFlags         msgFlags;
     std::string     msgString;
     VkResult        err;
 
@@ -1599,8 +1578,8 @@ TEST_F(VkLayerTest, InvalidDSUpdateStruct)
 
     vkUpdateDescriptorSets(m_device->device(), 1, &descriptor_write, 0, NULL);
 
-    msgType = m_errorMonitor->GetState(&msgString);
-    ASSERT_EQ(msgType, VK_DBG_MSG_ERROR) << "Did not receive error after updating Descriptor w/ invalid struct type.";
+    msgFlags = m_errorMonitor->GetState(&msgString);
+    ASSERT_TRUE(msgFlags & VK_DBG_REPORT_ERROR_BIT) << "Did not receive error after updating Descriptor w/ invalid struct type.";
     if (!strstr(msgString.c_str(),"Unexpected UPDATE struct of type ")) {
         FAIL() << "Error received was not 'Unexpected UPDATE struct of type '";
     }
@@ -1609,7 +1588,7 @@ TEST_F(VkLayerTest, InvalidDSUpdateStruct)
 TEST_F(VkLayerTest, NumSamplesMismatch)
 {
     // Create CmdBuffer where MSAA samples doesn't match RenderPass sampleCount
-    VK_DBG_MSG_TYPE msgType;
+    VkFlags         msgFlags;
     std::string     msgString;
     VkResult        err;
 
@@ -1722,8 +1701,8 @@ TEST_F(VkLayerTest, NumSamplesMismatch)
     BeginCommandBuffer(cmdBuffer);
     vkCmdBindPipeline(cmdBuffer.GetBufferHandle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
 
-    msgType = m_errorMonitor->GetState(&msgString);
-    ASSERT_EQ(msgType, VK_DBG_MSG_ERROR) << "Did not receive error after binding RenderPass w/ mismatched MSAA from PSO.";
+    msgFlags = m_errorMonitor->GetState(&msgString);
+    ASSERT_TRUE(msgFlags & VK_DBG_REPORT_ERROR_BIT) << "Did not receive error after binding RenderPass w/ mismatched MSAA from PSO.";
     if (!strstr(msgString.c_str(),"Num samples mismatch! ")) {
         FAIL() << "Error received was not 'Num samples mismatch!...'";
     }
@@ -1753,7 +1732,7 @@ extern "C" void *AddToCommandBuffer(void *arg)
 
 TEST_F(VkLayerTest, ThreadCmdBufferCollision)
 {
-    VK_DBG_MSG_TYPE msgType;
+    VkFlags msgFlags;
     std::string msgString;
     pthread_t thread;
     pthread_attr_t thread_attr;
@@ -1815,8 +1794,8 @@ TEST_F(VkLayerTest, ThreadCmdBufferCollision)
     pthread_join(thread, NULL);
     EndCommandBuffer(cmdBuffer);
 
-    msgType = m_errorMonitor->GetState(&msgString);
-    ASSERT_EQ(msgType, VK_DBG_MSG_ERROR) << "Did not receive an err from using one VkCommandBufferObj in two threads";
+    msgFlags = m_errorMonitor->GetState(&msgString);
+    ASSERT_TRUE(msgFlags & VK_DBG_REPORT_INFO_BIT) << "Did not receive an err from using one VkCommandBufferObj in two threads";
     if (!strstr(msgString.c_str(),"THREADING ERROR")) {
         FAIL() << "Error received was not 'THREADING ERROR'";
     }
@@ -1828,7 +1807,7 @@ TEST_F(VkLayerTest, ThreadCmdBufferCollision)
 #if SHADER_CHECKER_TESTS
 TEST_F(VkLayerTest, CreatePipelineVertexOutputNotConsumed)
 {
-    VK_DBG_MSG_TYPE msgType;
+    VkFlags msgFlags;
     std::string msgString;
     ASSERT_NO_FATAL_FAILURE(InitState());
     ScopedUseGlsl useGlsl(false);
@@ -1868,9 +1847,9 @@ TEST_F(VkLayerTest, CreatePipelineVertexOutputNotConsumed)
     m_errorMonitor->ClearState();
     pipe.CreateVKPipeline(descriptorSet);
 
-    msgType = m_errorMonitor->GetState(&msgString);
+    msgFlags = m_errorMonitor->GetState(&msgString);
 
-    ASSERT_EQ(VK_DBG_MSG_WARNING, msgType);
+    ASSERT_TRUE(msgFlags & VK_DBG_REPORT_WARN_BIT);
     if (!strstr(msgString.c_str(),"not consumed by fragment shader")) {
         FAIL() << "Incorrect warning: " << msgString;
     }
@@ -1878,7 +1857,7 @@ TEST_F(VkLayerTest, CreatePipelineVertexOutputNotConsumed)
 
 TEST_F(VkLayerTest, CreatePipelineFragmentInputNotProvided)
 {
-    VK_DBG_MSG_TYPE msgType;
+    VkFlags msgFlags;
     std::string msgString;
     ASSERT_NO_FATAL_FAILURE(InitState());
     ScopedUseGlsl useGlsl(false);
@@ -1917,9 +1896,9 @@ TEST_F(VkLayerTest, CreatePipelineFragmentInputNotProvided)
     m_errorMonitor->ClearState();
     pipe.CreateVKPipeline(descriptorSet);
 
-    msgType = m_errorMonitor->GetState(&msgString);
+    msgFlags = m_errorMonitor->GetState(&msgString);
 
-    ASSERT_EQ(VK_DBG_MSG_ERROR, msgType);
+    ASSERT_TRUE(msgFlags & VK_DBG_REPORT_ERROR_BIT);
     if (!strstr(msgString.c_str(),"not written by vertex shader")) {
         FAIL() << "Incorrect error: " << msgString;
     }
@@ -1927,7 +1906,7 @@ TEST_F(VkLayerTest, CreatePipelineFragmentInputNotProvided)
 
 TEST_F(VkLayerTest, CreatePipelineVsFsTypeMismatch)
 {
-    VK_DBG_MSG_TYPE msgType;
+    VkFlags msgFlags;
     std::string msgString;
     ASSERT_NO_FATAL_FAILURE(InitState());
     ScopedUseGlsl useGlsl(false);
@@ -1968,9 +1947,9 @@ TEST_F(VkLayerTest, CreatePipelineVsFsTypeMismatch)
     m_errorMonitor->ClearState();
     pipe.CreateVKPipeline(descriptorSet);
 
-    msgType = m_errorMonitor->GetState(&msgString);
+    msgFlags = m_errorMonitor->GetState(&msgString);
 
-    ASSERT_EQ(VK_DBG_MSG_ERROR, msgType);
+    ASSERT_TRUE(msgFlags & VK_DBG_REPORT_ERROR_BIT);
     if (!strstr(msgString.c_str(),"Type mismatch on location 0")) {
         FAIL() << "Incorrect error: " << msgString;
     }
@@ -1978,7 +1957,7 @@ TEST_F(VkLayerTest, CreatePipelineVsFsTypeMismatch)
 
 TEST_F(VkLayerTest, CreatePipelineAttribNotConsumed)
 {
-    VK_DBG_MSG_TYPE msgType;
+    VkFlags msgFlags;
     std::string msgString;
     ASSERT_NO_FATAL_FAILURE(InitState());
     ScopedUseGlsl useGlsl(false);
@@ -2026,9 +2005,9 @@ TEST_F(VkLayerTest, CreatePipelineAttribNotConsumed)
     m_errorMonitor->ClearState();
     pipe.CreateVKPipeline(descriptorSet);
 
-    msgType = m_errorMonitor->GetState(&msgString);
+    msgFlags = m_errorMonitor->GetState(&msgString);
 
-    ASSERT_EQ(VK_DBG_MSG_WARNING, msgType);
+    ASSERT_TRUE(msgFlags & VK_DBG_REPORT_WARN_BIT);
     if (!strstr(msgString.c_str(),"location 0 not consumed by VS")) {
         FAIL() << "Incorrect warning: " << msgString;
     }
@@ -2036,7 +2015,7 @@ TEST_F(VkLayerTest, CreatePipelineAttribNotConsumed)
 
 TEST_F(VkLayerTest, CreatePipelineAttribNotProvided)
 {
-    VK_DBG_MSG_TYPE msgType;
+    VkFlags msgFlags;
     std::string msgString;
     ASSERT_NO_FATAL_FAILURE(InitState());
     ScopedUseGlsl useGlsl(false);
@@ -2075,9 +2054,9 @@ TEST_F(VkLayerTest, CreatePipelineAttribNotProvided)
     m_errorMonitor->ClearState();
     pipe.CreateVKPipeline(descriptorSet);
 
-    msgType = m_errorMonitor->GetState(&msgString);
+    msgFlags = m_errorMonitor->GetState(&msgString);
 
-    ASSERT_EQ(VK_DBG_MSG_ERROR, msgType);
+    ASSERT_TRUE(msgFlags & VK_DBG_REPORT_ERROR_BIT);
     if (!strstr(msgString.c_str(),"VS consumes input at location 0 but not provided")) {
         FAIL() << "Incorrect warning: " << msgString;
     }
@@ -2085,7 +2064,7 @@ TEST_F(VkLayerTest, CreatePipelineAttribNotProvided)
 
 TEST_F(VkLayerTest, CreatePipelineAttribTypeMismatch)
 {
-    VK_DBG_MSG_TYPE msgType;
+    VkFlags msgFlags;
     std::string msgString;
     ASSERT_NO_FATAL_FAILURE(InitState());
     ScopedUseGlsl useGlsl(false);
@@ -2134,9 +2113,9 @@ TEST_F(VkLayerTest, CreatePipelineAttribTypeMismatch)
     m_errorMonitor->ClearState();
     pipe.CreateVKPipeline(descriptorSet);
 
-    msgType = m_errorMonitor->GetState(&msgString);
+    msgFlags = m_errorMonitor->GetState(&msgString);
 
-    ASSERT_EQ(VK_DBG_MSG_ERROR, msgType);
+    ASSERT_TRUE(msgFlags & VK_DBG_REPORT_ERROR_BIT);
     if (!strstr(msgString.c_str(),"location 0 does not match VS input type")) {
         FAIL() << "Incorrect error: " << msgString;
     }
@@ -2144,7 +2123,7 @@ TEST_F(VkLayerTest, CreatePipelineAttribTypeMismatch)
 
 TEST_F(VkLayerTest, CreatePipelineAttribBindingConflict)
 {
-    VK_DBG_MSG_TYPE msgType;
+    VkFlags msgFlags;
     std::string msgString;
     ASSERT_NO_FATAL_FAILURE(InitState());
     ScopedUseGlsl useGlsl(false);
@@ -2194,9 +2173,9 @@ TEST_F(VkLayerTest, CreatePipelineAttribBindingConflict)
     m_errorMonitor->ClearState();
     pipe.CreateVKPipeline(descriptorSet);
 
-    msgType = m_errorMonitor->GetState(&msgString);
+    msgFlags = m_errorMonitor->GetState(&msgString);
 
-    ASSERT_EQ(VK_DBG_MSG_ERROR, msgType);
+    ASSERT_TRUE(msgFlags & VK_DBG_REPORT_ERROR_BIT);
     if (!strstr(msgString.c_str(),"Duplicate vertex input binding descriptions for binding 0")) {
         FAIL() << "Incorrect error: " << msgString;
     }
@@ -2207,7 +2186,7 @@ TEST_F(VkLayerTest, CreatePipelineAttribBindingConflict)
 
 TEST_F(VkLayerTest, CreatePipelineFragmentOutputNotWritten)
 {
-    VK_DBG_MSG_TYPE msgType;
+    VkFlags msgFlags;
     std::string msgString;
     ASSERT_NO_FATAL_FAILURE(InitState());
     ScopedUseGlsl useGlsl(false);
@@ -2245,9 +2224,9 @@ TEST_F(VkLayerTest, CreatePipelineFragmentOutputNotWritten)
     m_errorMonitor->ClearState();
     pipe.CreateVKPipeline(descriptorSet);
 
-    msgType = m_errorMonitor->GetState(&msgString);
+    msgFlags = m_errorMonitor->GetState(&msgString);
 
-    ASSERT_EQ(VK_DBG_MSG_ERROR, msgType);
+    ASSERT_TRUE(msgFlags & VK_DBG_REPORT_ERROR_BIT);
     if (!strstr(msgString.c_str(),"Attachment 0 not written by FS")) {
         FAIL() << "Incorrect error: " << msgString;
     }
@@ -2255,7 +2234,7 @@ TEST_F(VkLayerTest, CreatePipelineFragmentOutputNotWritten)
 
 TEST_F(VkLayerTest, CreatePipelineFragmentOutputNotConsumed)
 {
-    VK_DBG_MSG_TYPE msgType;
+    VkFlags msgFlags;
     std::string msgString;
     ASSERT_NO_FATAL_FAILURE(InitState());
     ScopedUseGlsl useGlsl(false);
@@ -2298,9 +2277,9 @@ TEST_F(VkLayerTest, CreatePipelineFragmentOutputNotConsumed)
     m_errorMonitor->ClearState();
     pipe.CreateVKPipeline(descriptorSet);
 
-    msgType = m_errorMonitor->GetState(&msgString);
+    msgFlags = m_errorMonitor->GetState(&msgString);
 
-    ASSERT_EQ(VK_DBG_MSG_WARNING, msgType);
+    ASSERT_TRUE(msgFlags & VK_DBG_REPORT_WARN_BIT);
     if (!strstr(msgString.c_str(),"FS writes to output location 1 with no matching attachment")) {
         FAIL() << "Incorrect warning: " << msgString;
     }
@@ -2308,7 +2287,7 @@ TEST_F(VkLayerTest, CreatePipelineFragmentOutputNotConsumed)
 
 TEST_F(VkLayerTest, CreatePipelineFragmentOutputTypeMismatch)
 {
-    VK_DBG_MSG_TYPE msgType;
+    VkFlags msgFlags;
     std::string msgString;
     ASSERT_NO_FATAL_FAILURE(InitState());
     ScopedUseGlsl useGlsl(false);
@@ -2348,9 +2327,9 @@ TEST_F(VkLayerTest, CreatePipelineFragmentOutputTypeMismatch)
     m_errorMonitor->ClearState();
     pipe.CreateVKPipeline(descriptorSet);
 
-    msgType = m_errorMonitor->GetState(&msgString);
+    msgFlags = m_errorMonitor->GetState(&msgString);
 
-    ASSERT_EQ(VK_DBG_MSG_ERROR, msgType);
+    ASSERT_TRUE(msgFlags & VK_DBG_REPORT_ERROR_BIT);
     if (!strstr(msgString.c_str(),"does not match FS output type")) {
         FAIL() << "Incorrect error: " << msgString;
     }
@@ -2358,7 +2337,7 @@ TEST_F(VkLayerTest, CreatePipelineFragmentOutputTypeMismatch)
 
 TEST_F(VkLayerTest, CreatePipelineNonSpirvShader)
 {
-    VK_DBG_MSG_TYPE msgType;
+    VkFlags msgFlags;
     std::string msgString;
     ASSERT_NO_FATAL_FAILURE(InitState());
     /* Intentionally provided GLSL rather than compiling to SPIRV first */
@@ -2405,8 +2384,8 @@ TEST_F(VkLayerTest, CreatePipelineNonSpirvShader)
 
     /* should have emitted a warning: the shader is not SPIRV, so we're
      * not going to be able to analyze it */
-    msgType = m_errorMonitor->GetState(&msgString);
-    ASSERT_EQ(VK_DBG_MSG_WARNING, msgType);
+    msgFlags = m_errorMonitor->GetState(&msgString);
+    ASSERT_TRUE(msgFlags & VK_DBG_REPORT_WARN_BIT);
     if (!strstr(msgString.c_str(),"is not SPIR-V")) {
         FAIL() << "Incorrect warning: " << msgString;
     }

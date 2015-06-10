@@ -99,7 +99,6 @@ add_vk_layer(Basic basic.cpp)
 add_vk_layer(Multi multi.cpp)
 add_vk_layer(DrawState draw_state.cpp)
 add_vk_layer(MemTracker mem_tracker.cpp)
-#add_vk_layer(GlaveSnapshot glave_snapshot.c)
 add_vk_layer(ShaderChecker shader_checker.cpp)
 # generated
 add_vk_layer(Generic generic_layer.cpp)

@@ -75,15 +75,15 @@ static VkResult img_get_info(struct intel_base *base, int type,
 }
 
 VkResult intel_img_create(struct intel_dev *dev,
-                            const VkImageCreateInfo *info,
-                            bool scanout,
-                            struct intel_img **img_ret)
+                          const VkImageCreateInfo *info,
+                          bool scanout,
+                          struct intel_img **img_ret)
 {
     struct intel_img *img;
     struct intel_layout *layout;
 
     img = (struct intel_img *) intel_base_create(&dev->base.handle,
-            sizeof(*img), dev->base.dbg, VK_DBG_OBJECT_IMAGE, info, 0);
+            sizeof(*img), dev->base.dbg, VK_OBJECT_TYPE_IMAGE, info, 0);
     if (!img)
         return VK_ERROR_OUT_OF_HOST_MEMORY;
 
@@ -98,7 +98,7 @@ VkResult intel_img_create(struct intel_dev *dev,
     intel_layout_init(layout, dev, info, scanout);
 
     if (layout->bo_stride > intel_max_resource_size / layout->bo_height) {
-        intel_dev_log(dev, VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0,
+        intel_dev_log(dev, VK_DBG_REPORT_ERROR_BIT,
                 VK_NULL_HANDLE, 0, 0, "image too big");
         intel_img_destroy(img);
         return VK_ERROR_INVALID_MEMORY_SIZE;

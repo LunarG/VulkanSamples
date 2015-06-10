@@ -53,7 +53,7 @@ private:
 
 static ConfigFile g_configFileObj;
 
-static unsigned int convertStringEnumVal(const char *_enum)
+static VkLayerDbgAction stringToDbgAction(const char *_enum)
 {
     // only handles single enum values
     if (!strcmp(_enum, "VK_DBG_LAYER_ACTION_IGNORE"))
@@ -64,18 +64,34 @@ static unsigned int convertStringEnumVal(const char *_enum)
         return VK_DBG_LAYER_ACTION_LOG_MSG;
     else if (!strcmp(_enum, "VK_DBG_LAYER_ACTION_BREAK"))
         return VK_DBG_LAYER_ACTION_BREAK;
-    else if (!strcmp(_enum, "VK_DBG_LAYER_LEVEL_INFO"))
-        return VK_DBG_LAYER_LEVEL_INFO;
-    else if (!strcmp(_enum, "VK_DBG_LAYER_LEVEL_WARN"))
-        return VK_DBG_LAYER_LEVEL_WARN;
-    else if (!strcmp(_enum, "VK_DBG_LAYER_LEVEL_PERF_WARN"))
-        return VK_DBG_LAYER_LEVEL_PERF_WARN;
-    else if (!strcmp(_enum, "VK_DBG_LAYER_LEVEL_ERROR"))
-        return VK_DBG_LAYER_LEVEL_ERROR;
-    else if (!strcmp(_enum, "VK_DBG_LAYER_LEVEL_NONE"))
-        return VK_DBG_LAYER_LEVEL_NONE;
-    return 0;
+    return (VkLayerDbgAction) 0;
 }
+
+static VkFlags stringToDbgReportFlags(const char *_enum)
+{
+    // only handles single enum values
+    if (!strcmp(_enum, "VK_DBG_REPORT_INFO"))
+        return VK_DBG_REPORT_INFO_BIT;
+    else if (!strcmp(_enum, "VK_DBG_REPORT_WARN"))
+        return VK_DBG_REPORT_WARN_BIT;
+    else if (!strcmp(_enum, "VK_DBG_REPORT_PERF_WARN"))
+        return VK_DBG_REPORT_PERF_WARN_BIT;
+    else if (!strcmp(_enum, "VK_DBG_REPORT_ERROR"))
+        return VK_DBG_REPORT_ERROR_BIT;
+    return (VkFlags) 0;
+}
+
+static unsigned int convertStringEnumVal(const char *_enum)
+{
+    unsigned int ret;
+
+    ret = stringToDbgAction(_enum);
+    if (ret)
+        return ret;
+
+    return stringToDbgReportFlags(_enum);
+}
+
 const char *getLayerOption(const char *_option)
 {
     return g_configFileObj.getOption(_option);

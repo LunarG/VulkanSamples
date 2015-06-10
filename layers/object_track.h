@@ -22,7 +22,9 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
+#include "vulkan.h"
 #include "vkLayer.h"
+#include "vk_enum_string_helper.h"
 // Object Tracker ERROR codes
 typedef enum _OBJECT_TRACK_ERROR
 {
@@ -58,98 +60,6 @@ typedef enum _ObjectStatusFlagBits
     OBJSTATUS_GPU_MEM_MAPPED                    = 0x00000020, // Memory object is currently mapped
 } ObjectStatusFlagBits;
 
-static const char* string_VkObjectType(VkObjectType type) {
-    switch (type)
-    {
-        case VK_OBJECT_TYPE_DEVICE:
-            return "DEVICE";
-        case VK_OBJECT_TYPE_PIPELINE:
-            return "PIPELINE";
-        case VK_OBJECT_TYPE_FENCE:
-            return "FENCE";
-        case VK_OBJECT_TYPE_DESCRIPTOR_SET_LAYOUT:
-            return "DESCRIPTOR_SET_LAYOUT";
-        case VK_OBJECT_TYPE_DEVICE_MEMORY:
-            return "DEVICE_MEMORY";
-        case VK_OBJECT_TYPE_PIPELINE_LAYOUT:
-            return "PIPELINE_LAYOUT";
-        case VK_OBJECT_TYPE_QUEUE:
-            return "QUEUE";
-        case VK_OBJECT_TYPE_IMAGE:
-            return "IMAGE";
-        case VK_OBJECT_TYPE_COMMAND_BUFFER:
-            return "CMD_BUFFER";
-        case VK_OBJECT_TYPE_SEMAPHORE:
-            return "SEMAPHORE";
-        case VK_OBJECT_TYPE_FRAMEBUFFER:
-            return "FRAMEBUFFER";
-        case VK_OBJECT_TYPE_SAMPLER:
-            return "SAMPLER";
-        case VK_OBJECT_TYPE_COLOR_ATTACHMENT_VIEW:
-            return "COLOR_ATTACHMENT_VIEW";
-        case VK_OBJECT_TYPE_BUFFER_VIEW:
-            return "BUFFER_VIEW";
-        case VK_OBJECT_TYPE_DESCRIPTOR_SET:
-            return "DESCRIPTOR_SET";
-        case VK_OBJECT_TYPE_PHYSICAL_DEVICE:
-            return "PHYSICAL_DEVICE";
-        case VK_OBJECT_TYPE_IMAGE_VIEW:
-            return "IMAGE_VIEW";
-        case VK_OBJECT_TYPE_BUFFER:
-            return "BUFFER";
-        case VK_OBJECT_TYPE_DYNAMIC_RS_STATE:
-            return "DYNAMIC_RS_STATE_OBJECT";
-        case VK_OBJECT_TYPE_EVENT:
-            return "EVENT";
-        case VK_OBJECT_TYPE_DEPTH_STENCIL_VIEW:
-            return "DEPTH_STENCIL_VIEW";
-        case VK_OBJECT_TYPE_SHADER:
-            return "SHADER";
-        case VK_OBJECT_TYPE_DYNAMIC_DS_STATE:
-            return "DYNAMIC_DS_STATE_OBJECT";
-        case VK_OBJECT_TYPE_DYNAMIC_VP_STATE:
-            return "DYNAMIC_VP_STATE_OBJECT";
-        case VK_OBJECT_TYPE_DYNAMIC_CB_STATE:
-            return "DYNAMIC_CB_STATE_OBJECT";
-        case VK_OBJECT_TYPE_INSTANCE:
-            return "INSTANCE";
-        case VK_OBJECT_TYPE_RENDER_PASS:
-            return "RENDER_PASS";
-        case VK_OBJECT_TYPE_QUERY_POOL:
-            return "QUERY_POOL";
-        case VK_OBJECT_TYPE_DESCRIPTOR_POOL:
-            return "DESCRIPTOR_POOL";
-        default:
-            return NULL;
-    }
-}
-
-static const char* string_VK_OBJECT_TYPE_WSI(uint32_t type) {
-    switch (type)
-    {
-        case VK_OBJECT_TYPE_DISPLAY_WSI:
-            return "DISPLAY_WSI";
-        case VK_OBJECT_TYPE_SWAP_CHAIN_WSI:
-            return "SWAP_CHAIN_WSI";
-        default:
-            return NULL;
-    }
-}
-
-static const char* string_from_vulkan_object_type(uint32_t type) {
-    const char *vkEnumString =  string_VkObjectType((VkObjectType)type);
-    if (vkEnumString != NULL) {
-        return vkEnumString;
-    }
-    else {
-        vkEnumString = string_VK_OBJECT_TYPE_WSI(type);
-        if (vkEnumString != NULL) {
-            return vkEnumString;
-        }
-    }
-    return "Unknown";
-}
-
 typedef struct _OBJTRACK_NODE {
     VkObject          vkObj;
     VkObjectType      objType;
@@ -157,13 +67,13 @@ typedef struct _OBJTRACK_NODE {
 } OBJTRACK_NODE;
 
 // prototype for extension functions
-uint64_t objTrackGetObjectsCount(void);
-VkResult objTrackGetObjects(uint64_t objCount, OBJTRACK_NODE* pObjNodeArray);
+uint64_t objTrackGetObjectCount(VkObjectType type);
+VkResult objTrackGetObjects(VkObjectType type, uint64_t objCount, OBJTRACK_NODE* pObjNodeArray);
 uint64_t objTrackGetObjectsOfTypeCount(VkObjectType type);
 VkResult objTrackGetObjectsOfType(VkObjectType type, uint64_t objCount, OBJTRACK_NODE* pObjNodeArray);
 
 // Func ptr typedefs
-typedef uint64_t (*OBJ_TRACK_GET_OBJECTS_COUNT)(void);
-typedef VkResult (*OBJ_TRACK_GET_OBJECTS)(uint64_t, OBJTRACK_NODE*);
+typedef uint64_t (*OBJ_TRACK_GET_OBJECT_COUNT)(VkObjectType);
+typedef VkResult (*OBJ_TRACK_GET_OBJECTS)(VkObjectType, uint64_t, OBJTRACK_NODE*);
 typedef uint64_t (*OBJ_TRACK_GET_OBJECTS_OF_TYPE_COUNT)(VkObjectType);
 typedef VkResult (*OBJ_TRACK_GET_OBJECTS_OF_TYPE)(VkObjectType, uint64_t, OBJTRACK_NODE*);

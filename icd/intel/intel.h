@@ -37,7 +37,7 @@
 #include <assert.h>
 
 #include <vulkan.h>
-#include <vkDbg.h>
+#include <vk_debug_report_lunarg.h>
 #include <vk_wsi_lunarg.h>
 #include <vkIcd.h>
 
@@ -84,7 +84,7 @@ extern int intel_debug;
 static const uint32_t intel_handle_magic = 0x494e544c;
 
 static inline void intel_handle_init(struct intel_handle *handle,
-                                     VK_DBG_OBJECT_TYPE type,
+                                     VkObjectType type,
                                      const struct icd_instance *icd)
 {
     set_loader_magic_value((VkObject) handle);
@@ -100,10 +100,12 @@ static inline void intel_handle_init(struct intel_handle *handle,
  */
 static inline bool intel_handle_validate(const void *handle)
 {
-    const uint32_t handle_type =
-        ((const struct intel_handle *) handle)->magic - intel_handle_magic;
+//    const uint32_t handle_type =
+//        ((const struct intel_handle *) handle)->magic - intel_handle_magic;
 
-    return (handle_type <= VK_DBG_OBJECT_TYPE_END_RANGE);
+    /* TODO: this does not work for extensions, needs adjusting */
+//    return (handle_type <= VK_OBJECT_TYPE_END_RANGE);
+    return true;
 }
 
 /**
@@ -112,7 +114,7 @@ static inline bool intel_handle_validate(const void *handle)
  * \see intel_handle_validate().
  */
 static inline bool intel_handle_validate_type(const void *handle,
-                                              VK_DBG_OBJECT_TYPE type)
+                                              VkObjectType type)
 {
     const uint32_t handle_type =
         ((const struct intel_handle *) handle)->magic - intel_handle_magic;
@@ -136,9 +138,8 @@ static inline void intel_free(const void *handle, void *ptr)
 }
 
 static inline void intel_logv(const void *handle,
-                              VK_DBG_MSG_TYPE msg_type,
-                              VkValidationLevel validation_level,
-                              VkObject src_object,
+                              VkFlags msg_flags,
+                              VkObjectType obj_type, VkObject src_object,
                               size_t location, int32_t msg_code,
                               const char *format, va_list ap)
 {
@@ -150,22 +151,23 @@ static inline void intel_logv(const void *handle,
         msg[sizeof(msg) - 1] = '\0';
 
     assert(intel_handle_validate(handle));
-    icd_instance_log(((const struct intel_handle *) handle)->icd,
-            msg_type, validation_level, src_object, location, msg_code, msg);
+    icd_instance_log(((const struct intel_handle *) handle)->icd, msg_flags,
+                     obj_type, src_object,              /* obj_type, object */
+                     location, msg_code,                /* location, msg_code */
+                     msg);
 }
 
 static inline void intel_log(const void *handle,
-                             VK_DBG_MSG_TYPE msg_type,
-                             VkValidationLevel validation_level,
-                             VkObject src_object,
+                             VkFlags msg_flags,
+                             VkObjectType obj_type, VkObject src_object,
                              size_t location, int32_t msg_code,
                              const char *format, ...)
 {
     va_list ap;
 
     va_start(ap, format);
-    intel_logv(handle, msg_type, validation_level, src_object,
-            location, msg_code, format, ap);
+    intel_logv(handle, msg_flags, obj_type, src_object,
+               location, msg_code, format, ap);
     va_end(ap);
 }
 

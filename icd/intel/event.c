@@ -124,7 +124,7 @@ VkResult intel_event_create(struct intel_dev *dev,
     struct intel_event *event;
 
     event = (struct intel_event *) intel_base_create(&dev->base.handle,
-            sizeof(*event), dev->base.dbg, VK_DBG_OBJECT_EVENT, info, 0);
+            sizeof(*event), dev->base.dbg, VK_OBJECT_TYPE_EVENT, info, 0);
     if (!event)
         return VK_ERROR_OUT_OF_HOST_MEMORY;
 

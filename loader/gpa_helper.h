@@ -23,6 +23,7 @@
  */
 
 #include <string.h>
+#include "wsi_lunarg.h"
 
 static inline void* globalGetProcAddr(const char *name)
 {
@@ -50,8 +51,6 @@ static inline void* globalGetProcAddr(const char *name)
         return (void*) vkGetGlobalExtensionInfo;
     if (!strcmp(name, "GetPhysicalDeviceExtensionInfo"))
         return (void*) vkGetPhysicalDeviceExtensionInfo;
-    if (!strcmp(name, "EnumerateLayers"))
-        return (void*) vkEnumerateLayers;
     if (!strcmp(name, "GetDeviceQueue"))
         return (void*) vkGetDeviceQueue;
     if (!strcmp(name, "QueueSubmit"))
@@ -258,24 +257,6 @@ static inline void* globalGetProcAddr(const char *name)
         return (void*) vkCmdBeginRenderPass;
     if (!strcmp(name, "CmdEndRenderPass"))
         return (void*) vkCmdEndRenderPass;
-    if (!strcmp(name, "DbgSetValidationLevel"))
-        return (void*) vkDbgSetValidationLevel;
-    if (!strcmp(name, "DbgRegisterMsgCallback"))
-        return (void*) vkDbgRegisterMsgCallback;
-    if (!strcmp(name, "DbgUnregisterMsgCallback"))
-        return (void*) vkDbgUnregisterMsgCallback;
-    if (!strcmp(name, "DbgSetMessageFilter"))
-        return (void*) vkDbgSetMessageFilter;
-    if (!strcmp(name, "DbgSetObjectTag"))
-        return (void*) vkDbgSetObjectTag;
-    if (!strcmp(name, "DbgSetGlobalOption"))
-        return (void*) vkDbgSetGlobalOption;
-    if (!strcmp(name, "DbgSetDeviceOption"))
-        return (void*) vkDbgSetDeviceOption;
-    if (!strcmp(name, "CmdDbgMarkerBegin"))
-        return (void*) vkCmdDbgMarkerBegin;
-    if (!strcmp(name, "CmdDbgMarkerEnd"))
-        return (void*) vkCmdDbgMarkerEnd;
 
     return NULL;
 }
@@ -306,18 +287,12 @@ static inline void *loader_non_passthrough_gpa(const char *name)
         return (void*) vkCreateDevice;
     if (!strcmp(name, "GetGlobalExtensionInfo"))
         return (void*) vkGetGlobalExtensionInfo;
-    if (!strcmp(name, "EnumerateLayers"))
-        return (void*) vkEnumerateLayers;
     if (!strcmp(name, "GetDeviceQueue"))
         return (void*) vkGetDeviceQueue;
     if (!strcmp(name, "CreateCommandBuffer"))
         return (void*) vkCreateCommandBuffer;
-    if (!strcmp(name, "DbgRegisterMsgCallback"))
-        return (void*) vkDbgRegisterMsgCallback;
-    if (!strcmp(name, "DbgUnregisterMsgCallback"))
-        return (void*) vkDbgUnregisterMsgCallback;
-    if (!strcmp(name, "DbgSetGlobalOption"))
-        return (void*) vkDbgSetGlobalOption;
+    if (!strcmp(name, "CreateSwapChainWSI"))
+        return (void*) wsi_lunarg_CreateSwapChainWSI;
 
     return NULL;
 }

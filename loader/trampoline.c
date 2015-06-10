@@ -27,6 +27,7 @@
 #include "loader_platform.h"
 #include "loader.h"
 #include "wsi_lunarg.h"
+#include "debug_report.h"
 
 #if defined(WIN32)
 // On Windows need to disable global optimization for function entrypoints or
@@ -42,7 +43,6 @@ LOADER_EXPORT VkResult VKAPI vkCreateInstance(
     struct loader_instance *ptr_instance = NULL;
 
     VkResult res = VK_ERROR_INITIALIZATION_FAILED;
-    uint32_t i;
 
     /* Scan/discover all ICD libraries in a single-threaded manner */
     loader_platform_thread_once(&once_icd, loader_icd_scan);
@@ -58,19 +58,49 @@ LOADER_EXPORT VkResult VKAPI vkCreateInstance(
         return VK_ERROR_OUT_OF_HOST_MEMORY;
     }
     memset(ptr_instance, 0, sizeof(struct loader_instance));
-    ptr_instance->extension_count = pCreateInfo->extensionCount;
-    ptr_instance->extension_names = (ptr_instance->extension_count > 0) ?
-                malloc(sizeof (char *) * ptr_instance->extension_count) : NULL;
-    if (ptr_instance->extension_names == NULL && (ptr_instance->extension_count > 0))
+    ptr_instance->app_extension_count = pCreateInfo->extensionCount;
+    ptr_instance->app_extension_props = (ptr_instance->app_extension_count > 0) ?
+                malloc(sizeof (VkExtensionProperties) * ptr_instance->app_extension_count) : NULL;
+    if (ptr_instance->app_extension_props == NULL && (ptr_instance->app_extension_count > 0))
         return VK_ERROR_OUT_OF_HOST_MEMORY;
-    for (i = 0; i < ptr_instance->extension_count; i++) {
-        if (!loader_is_extension_scanned(pCreateInfo->ppEnabledExtensionNames[i]))
-            return VK_ERROR_INVALID_EXTENSION;
-        ptr_instance->extension_names[i] = malloc(strlen(pCreateInfo->ppEnabledExtensionNames[i]) + 1);
-        if (ptr_instance->extension_names[i] == NULL)
-            return VK_ERROR_OUT_OF_HOST_MEMORY;
-        strcpy(ptr_instance->extension_names[i], pCreateInfo->ppEnabledExtensionNames[i]);
+
+    /*
+     * Make local copy of extension properties indicated by application.
+     */
+    if (ptr_instance->app_extension_props) {
+        memcpy(ptr_instance->app_extension_props,
+               pCreateInfo->pEnabledExtensions,
+               sizeof(VkExtensionProperties) * ptr_instance->app_extension_count);
     }
+
+#if 0
+    /*
+     * Now that we have list of enabled extensions, verify that their dependencies
+     * have been satisfied.
+     * If A depends on B, then B should come after A in the list.
+     */
+    for (i = 0; i < ptr_instance->app_extension_count; i++) {
+        if (ptr_instance->app_extension_props[i].dependencyCount == 0)
+            continue;
+
+        const VkExtensionProperties *dependencies = ptr_instance->app_extension_props[i].pDependencyList;
+        const VkExtensionProperties *enabled_extensions = &ptr_instance->app_extension_props[i+1];
+        uint32_t dependency_extensions_count = ptr_instance->app_extension_count - i - 1;
+        for (dependency = 0; dependency < ptr_instance->app_extension_props[i].dependencyCount; dependency++) {
+            bool found = false;
+            for (j = 0; j < dependency_extensions_count; j++) {
+                if (compare_vk_extension_properties(&dependencies[j], &enabled_extensions[j])) {
+                    found = true;
+                }
+            }
+            if (!found) {
+                /* TODO: Log message about extension dependency not found */
+                return VK_ERROR_INVALID_EXTENSION;
+            }
+        }
+    }
+#endif
+
     ptr_instance->disp = malloc(sizeof(VkLayerInstanceDispatchTable));
     if (ptr_instance->disp == NULL)
         return VK_ERROR_OUT_OF_HOST_MEMORY;
@@ -78,7 +108,10 @@ LOADER_EXPORT VkResult VKAPI vkCreateInstance(
     ptr_instance->next = loader.instances;
     loader.instances = ptr_instance;
 
-    wsi_lunarg_register_extensions(pCreateInfo);
+    loader_enable_instance_layers(ptr_instance);
+
+    debug_report_create_instance(ptr_instance);
+    wsi_lunarg_create_instance(ptr_instance);
 
     /* enable any layers on instance chain */
     loader_activate_instance_layers(ptr_instance);
@@ -96,6 +129,9 @@ LOADER_EXPORT VkResult VKAPI vkDestroyInstance(
     const VkLayerInstanceDispatchTable *disp;
 
     disp = loader_get_instance_dispatch(instance);
+
+    /* TODO: Need to free memory allocated in trampoline's CreateInstance call */
+
     return disp->DestroyInstance(instance);
 }
 
@@ -186,20 +222,6 @@ LOADER_EXPORT VkResult VKAPI vkGetPhysicalDeviceExtensionInfo(
     disp = loader_get_instance_dispatch(gpu);
 
     return disp->GetPhysicalDeviceExtensionInfo(gpu, infoType, extensionIndex, pDataSize, pData);
-}
-
-LOADER_EXPORT VkResult VKAPI vkEnumerateLayers(
-                                                VkPhysicalDevice gpu,
-                                                size_t maxStringSize,
-                                                size_t* pLayerCount,
-                                                char* const* pOutLayers,
-                                                void* pReserved)
-{
-    const VkLayerInstanceDispatchTable *disp;
-
-    disp = loader_get_instance_dispatch(gpu);
-
-    return disp->EnumerateLayers(gpu, maxStringSize, pLayerCount,pOutLayers, pReserved);
 }
 
 LOADER_EXPORT VkResult VKAPI vkGetDeviceQueue(VkDevice device, uint32_t queueNodeIndex, uint32_t queueIndex, VkQueue* pQueue)
@@ -1139,69 +1161,6 @@ LOADER_EXPORT void VKAPI vkCmdEndRenderPass(VkCmdBuffer cmdBuffer, VkRenderPass 
     disp = loader_get_dispatch(cmdBuffer);
 
     disp->CmdEndRenderPass(cmdBuffer, renderPass);
-}
-
-LOADER_EXPORT VkResult VKAPI vkDbgRegisterMsgCallback(VkInstance instance, VK_DBG_MSG_CALLBACK_FUNCTION pfnMsgCallback, void* pUserData)
-{
-   const VkLayerInstanceDispatchTable *disp;
-
-    disp = loader_get_instance_dispatch(instance);
-
-    return disp->DbgRegisterMsgCallback(instance, pfnMsgCallback, pUserData);
-}
-
-LOADER_EXPORT VkResult VKAPI vkDbgUnregisterMsgCallback(VkInstance instance, VK_DBG_MSG_CALLBACK_FUNCTION pfnMsgCallback)
-{
-   const VkLayerInstanceDispatchTable *disp;
-
-    disp = loader_get_instance_dispatch(instance);
-
-    return disp->DbgUnregisterMsgCallback(instance, pfnMsgCallback);
-}
-
-LOADER_EXPORT VkResult VKAPI vkDbgSetGlobalOption(VkInstance instance, VK_DBG_GLOBAL_OPTION dbgOption, size_t dataSize, const void* pData)
-{
-   const VkLayerInstanceDispatchTable *disp;
-
-    disp = loader_get_instance_dispatch(instance);
-
-    return disp->DbgSetGlobalOption(instance, dbgOption, dataSize, pData);
-}
-
-LOADER_EXPORT VkResult VKAPI vkDbgSetValidationLevel(VkDevice device, VkValidationLevel validationLevel)
-{
-    const VkLayerDispatchTable *disp;
-
-    disp = loader_get_dispatch(device);
-
-    return disp->DbgSetValidationLevel(device, validationLevel);
-}
-
-LOADER_EXPORT VkResult VKAPI vkDbgSetMessageFilter(VkDevice device, int32_t msgCode, VK_DBG_MSG_FILTER filter)
-{
-    const VkLayerDispatchTable *disp;
-
-    disp = loader_get_dispatch(device);
-
-    return disp->DbgSetMessageFilter(device, msgCode, filter);
-}
-
-LOADER_EXPORT VkResult VKAPI vkDbgSetObjectTag(VkDevice device, VkObject object, size_t tagSize, const void* pTag)
-{
-    const VkLayerDispatchTable *disp;
-
-    disp = loader_get_dispatch(device);
-
-    return disp->DbgSetObjectTag(device, object, tagSize, pTag);
-}
-
-LOADER_EXPORT VkResult VKAPI vkDbgSetDeviceOption(VkDevice device, VK_DBG_DEVICE_OPTION dbgOption, size_t dataSize, const void* pData)
-{
-    const VkLayerDispatchTable *disp;
-
-    disp = loader_get_dispatch(device);
-
-    return disp->DbgSetDeviceOption(device, dbgOption, dataSize, pData);
 }
 
 LOADER_EXPORT void VKAPI vkCmdDbgMarkerBegin(VkCmdBuffer cmdBuffer, const char* pMarker)

@@ -100,8 +100,8 @@ static VkResult dev_create_queues(struct intel_dev *dev,
 }
 
 VkResult intel_dev_create(struct intel_gpu *gpu,
-                            const VkDeviceCreateInfo *info,
-                            struct intel_dev **dev_ret)
+                          const VkDeviceCreateInfo *info,
+                          struct intel_dev **dev_ret)
 {
     struct intel_dev *dev;
     uint32_t i;
@@ -112,13 +112,13 @@ VkResult intel_dev_create(struct intel_gpu *gpu,
 
     dev = (struct intel_dev *) intel_base_create(&gpu->handle,
             sizeof(*dev), info->flags,
-            VK_DBG_OBJECT_DEVICE, info, sizeof(struct intel_dev_dbg));
+            VK_OBJECT_TYPE_DEVICE, info, sizeof(struct intel_dev_dbg));
     if (!dev)
         return VK_ERROR_OUT_OF_HOST_MEMORY;
 
     for (i = 0; i < info->extensionCount; i++) {
         const enum intel_ext_type ext = intel_gpu_lookup_extension(gpu,
-                info->ppEnabledExtensionNames[i]);
+                &info->pEnabledExtensions[i]);
 
         if (ext != INTEL_EXT_INVALID)
             dev->exts[ext] = true;
@@ -171,28 +171,10 @@ VkResult intel_dev_create(struct intel_gpu *gpu,
     return VK_SUCCESS;
 }
 
-static void dev_clear_msg_filters(struct intel_dev *dev)
-{
-    struct intel_dev_dbg *dbg = intel_dev_dbg(dev);
-    struct intel_dev_dbg_msg_filter *filter;
-
-    filter = dbg->filters;
-    while (filter) {
-        struct intel_dev_dbg_msg_filter *next = filter->next;
-        intel_free(dev, filter);
-        filter = next;
-    }
-
-    dbg->filters = NULL;
-}
-
 void intel_dev_destroy(struct intel_dev *dev)
 {
     struct intel_gpu *gpu = dev->gpu;
     uint32_t i;
-
-    if (dev->base.dbg)
-        dev_clear_msg_filters(dev);
 
     for (i = 0; i < ARRAY_SIZE(dev->queues); i++) {
         if (dev->queues[i])
@@ -212,97 +194,8 @@ void intel_dev_destroy(struct intel_dev *dev)
         intel_gpu_cleanup_winsys(gpu);
 }
 
-VkResult intel_dev_add_msg_filter(struct intel_dev *dev,
-                                    int32_t msg_code,
-                                    VK_DBG_MSG_FILTER filter)
-{
-    struct intel_dev_dbg *dbg = intel_dev_dbg(dev);
-    struct intel_dev_dbg_msg_filter *f = dbg->filters;
-
-    assert(filter != VK_DBG_MSG_FILTER_NONE);
-
-    while (f) {
-        if (f->msg_code == msg_code)
-            break;
-        f = f->next;
-    }
-
-    if (f) {
-        if (f->filter != filter) {
-            f->filter = filter;
-            f->triggered = false;
-        }
-    } else {
-        f = intel_alloc(dev, sizeof(*f), 0, VK_SYSTEM_ALLOC_TYPE_DEBUG);
-        if (!f)
-            return VK_ERROR_OUT_OF_HOST_MEMORY;
-
-        f->msg_code = msg_code;
-        f->filter = filter;
-        f->triggered = false;
-
-        f->next = dbg->filters;
-        dbg->filters = f;
-    }
-
-    return VK_SUCCESS;
-}
-
-void intel_dev_remove_msg_filter(struct intel_dev *dev,
-                                 int32_t msg_code)
-{
-    struct intel_dev_dbg *dbg = intel_dev_dbg(dev);
-    struct intel_dev_dbg_msg_filter *f = dbg->filters, *prev = NULL;
-
-    while (f) {
-        if (f->msg_code == msg_code) {
-            if (prev)
-                prev->next = f->next;
-            else
-                dbg->filters = f->next;
-
-            intel_free(dev, f);
-            break;
-        }
-
-        prev = f;
-        f = f->next;
-    }
-}
-
-static bool dev_filter_msg(struct intel_dev *dev,
-                           int32_t msg_code)
-{
-    struct intel_dev_dbg *dbg = intel_dev_dbg(dev);
-    struct intel_dev_dbg_msg_filter *filter;
-
-    if (!dbg)
-        return false;
-
-    filter = dbg->filters;
-    while (filter) {
-        if (filter->msg_code != msg_code) {
-            filter = filter->next;
-            continue;
-        }
-
-        if (filter->filter == VK_DBG_MSG_FILTER_ALL)
-            return true;
-
-        if (filter->filter == VK_DBG_MSG_FILTER_REPEATED &&
-            filter->triggered)
-            return true;
-
-        filter->triggered = true;
-        break;
-    }
-
-    return false;
-}
-
 void intel_dev_log(struct intel_dev *dev,
-                   VK_DBG_MSG_TYPE msg_type,
-                   VkValidationLevel validation_level,
+                   VkFlags msg_flags,
                    struct intel_base *src_object,
                    size_t location,
                    int32_t msg_code,
@@ -310,19 +203,19 @@ void intel_dev_log(struct intel_dev *dev,
 {
     va_list ap;
 
-    if (dev_filter_msg(dev, msg_code))
-        return;
-
     va_start(ap, format);
-    intel_logv(dev, msg_type, validation_level, (VkObject) src_object,
-            location, msg_code, format, ap);
+    intel_logv(dev, msg_flags,
+               (src_object->dbg ? src_object->dbg->type : (VkObjectType) 0),
+               (VkObject) src_object,
+               location, msg_code,
+               format, ap);
     va_end(ap);
 }
 
 ICD_EXPORT VkResult VKAPI vkCreateDevice(
-    VkPhysicalDevice                            gpu_,
-    const VkDeviceCreateInfo*               pCreateInfo,
-    VkDevice*                                 pDevice)
+    VkPhysicalDevice                    gpu_,
+    const VkDeviceCreateInfo*           pCreateInfo,
+    VkDevice*                           pDevice)
 {
     struct intel_gpu *gpu = intel_gpu(gpu_);
 
@@ -371,71 +264,6 @@ ICD_EXPORT VkResult VKAPI vkDeviceWaitIdle(
             if (r != VK_SUCCESS)
                 ret = r;
         }
-    }
-
-    return ret;
-}
-
-ICD_EXPORT VkResult VKAPI vkDbgSetValidationLevel(
-    VkDevice                                  device,
-    VkValidationLevel                        validationLevel)
-{
-    struct intel_dev *dev = intel_dev(device);
-    struct intel_dev_dbg *dbg = intel_dev_dbg(dev);
-
-    if (dbg)
-        dbg->validation_level = validationLevel;
-
-    return VK_SUCCESS;
-}
-
-ICD_EXPORT VkResult VKAPI vkDbgSetMessageFilter(
-    VkDevice                                  device,
-    int32_t                                     msgCode,
-    VK_DBG_MSG_FILTER                          filter)
-{
-    struct intel_dev *dev = intel_dev(device);
-
-    if (!dev->base.dbg)
-        return VK_SUCCESS;
-
-    if (filter == VK_DBG_MSG_FILTER_NONE) {
-        intel_dev_remove_msg_filter(dev, msgCode);
-        return VK_SUCCESS;
-    }
-
-    return intel_dev_add_msg_filter(dev, msgCode, filter);
-}
-
-ICD_EXPORT VkResult VKAPI vkDbgSetDeviceOption(
-    VkDevice                                  device,
-    VK_DBG_DEVICE_OPTION                       dbgOption,
-    size_t                                      dataSize,
-    const void*                                 pData)
-{
-    struct intel_dev *dev = intel_dev(device);
-    struct intel_dev_dbg *dbg = intel_dev_dbg(dev);
-    VkResult ret = VK_SUCCESS;
-
-    if (dataSize == 0)
-        return VK_ERROR_INVALID_VALUE;
-
-    switch (dbgOption) {
-    case VK_DBG_OPTION_DISABLE_PIPELINE_LOADS:
-        if (dbg)
-            dbg->disable_pipeline_loads = *((const bool *) pData);
-        break;
-    case VK_DBG_OPTION_FORCE_OBJECT_MEMORY_REQS:
-        if (dbg)
-            dbg->force_object_memory_reqs = *((const bool *) pData);
-        break;
-    case VK_DBG_OPTION_FORCE_LARGE_IMAGE_ALIGNMENT:
-        if (dbg)
-            dbg->force_large_image_alignment = *((const bool *) pData);
-        break;
-    default:
-        ret = VK_ERROR_INVALID_VALUE;
-        break;
     }
 
     return ret;

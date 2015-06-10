@@ -33,6 +33,7 @@
 #include "obj.h"
 #include "cmd_priv.h"
 #include "fb.h"
+#include "vk_debug_marker_lunarg.h"
 
 /**
  * Free all resources used by a writer.  Note that the initial size is not
@@ -273,7 +274,7 @@ VkResult intel_cmd_create(struct intel_dev *dev,
     }
 
     cmd = (struct intel_cmd *) intel_base_create(&dev->base.handle,
-            sizeof(*cmd), dev->base.dbg, VK_DBG_OBJECT_CMD_BUFFER, info, 0);
+            sizeof(*cmd), dev->base.dbg, VK_OBJECT_TYPE_COMMAND_BUFFER, info, 0);
     if (!cmd)
         return VK_ERROR_OUT_OF_HOST_MEMORY;
 

@@ -36,6 +36,8 @@
 
 enum intel_ext_type {
     INTEL_EXT_WSI_LUNARG,
+    INTEL_EXT_DEBUG_REPORT,
+    INTEL_EXT_DEBUG_MARKER,
 
     INTEL_EXT_COUNT,
     INTEL_EXT_INVALID = INTEL_EXT_COUNT,
@@ -129,6 +131,6 @@ VkResult intel_gpu_init_winsys(struct intel_gpu *gpu);
 void intel_gpu_cleanup_winsys(struct intel_gpu *gpu);
 
 enum intel_ext_type intel_gpu_lookup_extension(const struct intel_gpu *gpu,
-                                               const char *ext);
+                                               const VkExtensionProperties *ext);
 
 #endif /* GPU_H */

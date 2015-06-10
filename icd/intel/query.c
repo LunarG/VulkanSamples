@@ -110,7 +110,7 @@ VkResult intel_query_create(struct intel_dev *dev,
     struct intel_query *query;
 
     query = (struct intel_query *) intel_base_create(&dev->base.handle,
-            sizeof(*query), dev->base.dbg, VK_DBG_OBJECT_QUERY_POOL,
+            sizeof(*query), dev->base.dbg, VK_OBJECT_TYPE_QUEUE,
             info, 0);
     if (!query)
         return VK_ERROR_OUT_OF_HOST_MEMORY;

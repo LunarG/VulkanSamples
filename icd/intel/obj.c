@@ -29,6 +29,7 @@
 #include "gpu.h"
 #include "mem.h"
 #include "obj.h"
+#include "vk_debug_marker_lunarg.h"
 
 VkResult intel_base_get_info(struct intel_base *base, int type,
                                size_t *size, void *data)
@@ -73,96 +74,96 @@ static bool base_dbg_copy_create_info(const struct intel_handle *handle,
         return true;
 
     switch (dbg->type) {
-    case VK_DBG_OBJECT_DEVICE:
+    case VK_OBJECT_TYPE_DEVICE:
         assert(info.header->struct_type == VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO);
         break;
-    case VK_DBG_OBJECT_GPU_MEMORY:
+    case VK_OBJECT_TYPE_DEVICE_MEMORY:
         assert(info.header->struct_type == VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO);
         break;
-    case VK_DBG_OBJECT_EVENT:
+    case VK_OBJECT_TYPE_EVENT:
         assert(info.header->struct_type == VK_STRUCTURE_TYPE_EVENT_CREATE_INFO);
         shallow_copy = sizeof(VkEventCreateInfo);
         break;
-    case VK_DBG_OBJECT_FENCE:
+    case VK_OBJECT_TYPE_FENCE:
         assert(info.header->struct_type == VK_STRUCTURE_TYPE_FENCE_CREATE_INFO);
         shallow_copy = sizeof(VkFenceCreateInfo);
         break;
-    case VK_DBG_OBJECT_QUERY_POOL:
+    case VK_OBJECT_TYPE_QUERY_POOL:
         assert(info.header->struct_type == VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO);
         shallow_copy = sizeof(VkQueryPoolCreateInfo);
         break;
-    case VK_DBG_OBJECT_BUFFER:
+    case VK_OBJECT_TYPE_BUFFER:
         assert(info.header->struct_type == VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO);
         shallow_copy = sizeof(VkBufferCreateInfo);
         break;
-    case VK_DBG_OBJECT_BUFFER_VIEW:
+    case VK_OBJECT_TYPE_BUFFER_VIEW:
         assert(info.header->struct_type == VK_STRUCTURE_TYPE_BUFFER_VIEW_CREATE_INFO);
         shallow_copy = sizeof(VkBufferViewCreateInfo);
         break;
-    case VK_DBG_OBJECT_IMAGE:
+    case VK_OBJECT_TYPE_IMAGE:
         assert(info.header->struct_type == VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO);
         shallow_copy = sizeof(VkImageCreateInfo);
         break;
-    case VK_DBG_OBJECT_IMAGE_VIEW:
+    case VK_OBJECT_TYPE_IMAGE_VIEW:
         assert(info.header->struct_type == VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO);
         shallow_copy = sizeof(VkImageViewCreateInfo);
         break;
-    case VK_DBG_OBJECT_COLOR_TARGET_VIEW:
+    case VK_OBJECT_TYPE_COLOR_ATTACHMENT_VIEW:
         assert(info.header->struct_type == VK_STRUCTURE_TYPE_COLOR_ATTACHMENT_VIEW_CREATE_INFO);
         shallow_copy = sizeof(VkColorAttachmentViewCreateInfo);
         break;
-    case VK_DBG_OBJECT_DEPTH_STENCIL_VIEW:
+    case VK_OBJECT_TYPE_DEPTH_STENCIL_VIEW:
         assert(info.header->struct_type == VK_STRUCTURE_TYPE_DEPTH_STENCIL_VIEW_CREATE_INFO);
         shallow_copy = sizeof(VkDepthStencilViewCreateInfo);
         break;
-    case VK_DBG_OBJECT_SAMPLER:
+    case VK_OBJECT_TYPE_SAMPLER:
         assert(info.header->struct_type == VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO);
         shallow_copy = sizeof(VkSamplerCreateInfo);
         break;
-    case VK_DBG_OBJECT_DESCRIPTOR_SET:
+    case VK_OBJECT_TYPE_DESCRIPTOR_SET:
         /* no create info */
         break;
-    case VK_DBG_OBJECT_VIEWPORT_STATE:
+    case VK_OBJECT_TYPE_DYNAMIC_VP_STATE:
         assert(info.header->struct_type == VK_STRUCTURE_TYPE_DYNAMIC_VP_STATE_CREATE_INFO);
         shallow_copy = sizeof(VkDynamicVpStateCreateInfo);
         break;
-    case VK_DBG_OBJECT_RASTER_STATE:
+    case VK_OBJECT_TYPE_DYNAMIC_RS_STATE:
         assert(info.header->struct_type == VK_STRUCTURE_TYPE_DYNAMIC_RS_STATE_CREATE_INFO);
         shallow_copy = sizeof(VkDynamicRsStateCreateInfo);
         break;
-    case VK_DBG_OBJECT_COLOR_BLEND_STATE:
+    case VK_OBJECT_TYPE_DYNAMIC_CB_STATE:
         assert(info.header->struct_type == VK_STRUCTURE_TYPE_DYNAMIC_CB_STATE_CREATE_INFO);
         shallow_copy = sizeof(VkDynamicCbStateCreateInfo);
         break;
-    case VK_DBG_OBJECT_DEPTH_STENCIL_STATE:
+    case VK_OBJECT_TYPE_DYNAMIC_DS_STATE:
         assert(info.header->struct_type == VK_STRUCTURE_TYPE_DYNAMIC_DS_STATE_CREATE_INFO);
         shallow_copy = sizeof(VkDynamicDsStateCreateInfo);
         break;
-    case VK_DBG_OBJECT_CMD_BUFFER:
+    case VK_OBJECT_TYPE_COMMAND_BUFFER:
         assert(info.header->struct_type == VK_STRUCTURE_TYPE_CMD_BUFFER_CREATE_INFO);
         shallow_copy = sizeof(VkCmdBufferCreateInfo);
         break;
-    case VK_DBG_OBJECT_GRAPHICS_PIPELINE:
+    case VK_OBJECT_TYPE_PIPELINE:
         assert(info.header->struct_type == VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO);
         break;
-    case VK_DBG_OBJECT_SHADER:
+    case VK_OBJECT_TYPE_SHADER:
         assert(info.header->struct_type == VK_STRUCTURE_TYPE_SHADER_CREATE_INFO);
         shallow_copy = sizeof(VkShaderCreateInfo);
         break;
-    case VK_DBG_OBJECT_FRAMEBUFFER:
+    case VK_OBJECT_TYPE_FRAMEBUFFER:
         assert(info.header->struct_type ==  VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO);
         shallow_copy = sizeof(VkFramebufferCreateInfo);
         break;
-    case VK_DBG_OBJECT_RENDER_PASS:
+    case VK_OBJECT_TYPE_RENDER_PASS:
         assert(info.header->struct_type ==  VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO);
         shallow_copy = sizeof(VkRenderPassCreateInfo);
         break;
-    case VK_DBG_OBJECT_DESCRIPTOR_SET_LAYOUT:
+    case VK_OBJECT_TYPE_DESCRIPTOR_SET_LAYOUT:
         assert(info.header->struct_type ==  VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO);
         /* TODO */
         shallow_copy = sizeof(VkDescriptorSetLayoutCreateInfo) * 0;
         break;
-    case VK_DBG_OBJECT_DESCRIPTOR_POOL:
+    case VK_OBJECT_TYPE_DESCRIPTOR_POOL:
         assert(info.header->struct_type ==  VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO);
         shallow_copy = sizeof(VkDescriptorPoolCreateInfo);
         break;
@@ -204,16 +205,12 @@ static bool base_dbg_copy_create_info(const struct intel_handle *handle,
         VkDeviceCreateInfo *dst;
         uint8_t *d;
         size_t size;
-        uint32_t i;
 
         size = sizeof(*src);
         dbg->create_info_size = size;
 
         size += sizeof(src->pRequestedQueues[0]) * src->queueRecordCount;
-        size += sizeof(src->ppEnabledExtensionNames[0]) * src->extensionCount;
-        for (i = 0; i < src->extensionCount; i++) {
-            size += 1 + strlen(src->ppEnabledExtensionNames[i]);
-        }
+        size += sizeof(src->pEnabledExtensions[0]) * src->extensionCount;
 
         dst = intel_alloc(handle, size, 0, VK_SYSTEM_ALLOC_TYPE_DEBUG);
         if (!dst)
@@ -229,17 +226,10 @@ static bool base_dbg_copy_create_info(const struct intel_handle *handle,
         dst->pRequestedQueues = (const VkDeviceQueueCreateInfo *) d;
         d += size;
 
-        size = sizeof(src->ppEnabledExtensionNames[0]) * src->extensionCount;
-        dst->ppEnabledExtensionNames = (const char * const *) d;
+        size = sizeof(src->pEnabledExtensions[0]) * src->extensionCount;
+        dst->pEnabledExtensions = (const VkExtensionProperties *) d;
+        memcpy(d, src->pEnabledExtensions, size);
 
-        for (i = 0; i < src->extensionCount; i++) {
-            const size_t len = strlen(src->ppEnabledExtensionNames[i]);
-
-            memcpy(d + size, src->ppEnabledExtensionNames[i], len + 1);
-            ((const char **) d)[i] = (const char *) (d + size);
-
-            size += len + 1;
-        }
         dbg->create_info = dst;
     } else if (info.header->struct_type == VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO) {
         // TODO: What do we want to copy here?
@@ -253,7 +243,7 @@ static bool base_dbg_copy_create_info(const struct intel_handle *handle,
  * size is allocated and zeroed.
  */
 struct intel_base_dbg *intel_base_dbg_create(const struct intel_handle *handle,
-                                             VK_DBG_OBJECT_TYPE type,
+                                             VkObjectType type,
                                              const void *create_info,
                                              size_t dbg_size)
 {
@@ -298,7 +288,7 @@ void intel_base_dbg_destroy(const struct intel_handle *handle,
  */
 struct intel_base *intel_base_create(const struct intel_handle *handle,
                                      size_t obj_size, bool debug,
-                                     VK_DBG_OBJECT_TYPE type,
+                                     VkObjectType type,
                                      const void *create_info,
                                      size_t dbg_size)
 {
@@ -399,10 +389,11 @@ ICD_EXPORT VkResult VKAPI vkQueueBindSparseImageMemory(
 }
 
 ICD_EXPORT VkResult VKAPI vkDbgSetObjectTag(
-    VkDevice                                   device,
-    VkObject                                   object,
-    size_t                                     tagSize,
-    const void*                                pTag)
+    VkDevice                            device,
+    VkObjectType                        objType,
+    VkObject                            object,
+    size_t                              tagSize,
+    const void*                         pTag)
 {
     struct intel_base *base = intel_base(object);
     struct intel_base_dbg *dbg = base->dbg;

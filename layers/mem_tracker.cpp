@@ -154,7 +154,7 @@ static uint64_t add_fence_info(
             if (pObjectInfo->create_info.fence_create_info.flags & VK_FENCE_CREATE_SIGNALED_BIT) {
                 char str[1024];
                 sprintf(str, "Fence %p submitted in SIGNALED state.  Fences must be reset before being submitted", fence);
-                layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, fence, 0, MEMTRACK_INVALID_FENCE_STATE, "MEM", str);
+                layerCbMsg(VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_FENCE, fence, 0, MEMTRACK_INVALID_FENCE_STATE, "MEM", str);
             }
         }
     }
@@ -259,7 +259,7 @@ static bool32_t update_cmd_buf_and_mem_references(
         char str[1024];
         sprintf(str, "Trying to bind mem obj %p to CB %p but no info for that mem obj.\n    "
                      "Was it correctly allocated? Did it already get freed?", mem, cb);
-        layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, cb, 0, MEMTRACK_INVALID_MEM_OBJ, "MEM", str);
+        layerCbMsg(VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, cb, 0, MEMTRACK_INVALID_MEM_OBJ, "MEM", str);
         result = VK_FALSE;
     } else {
         // Search for cmd buffer object in memory object's binding list
@@ -284,7 +284,7 @@ static bool32_t update_cmd_buf_and_mem_references(
         if (!pCBInfo) {
             char str[1024];
             sprintf(str, "Trying to bind mem obj %p to CB %p but no info for that CB. Was CB incorrectly destroyed?", mem, cb);
-            layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, cb, 0, MEMTRACK_INVALID_MEM_OBJ, "MEM", str);
+            layerCbMsg(VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, cb, 0, MEMTRACK_INVALID_MEM_OBJ, "MEM", str);
             result = VK_FALSE;
         } else {
             // Search for memory object in cmd buffer's reference list
@@ -331,7 +331,7 @@ static bool32_t clear_cmd_buf_and_mem_references(
     if (!pCBInfo) {
         char str[1024];
         sprintf(str, "Unable to find global CB info %p for deletion", cb);
-        layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, cb, 0, MEMTRACK_INVALID_CB, "MEM", str);
+        layerCbMsg(VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, cb, 0, MEMTRACK_INVALID_CB, "MEM", str);
         result = VK_FALSE;
     } else {
         if (pCBInfo->pMemObjList.size() > 0) {
@@ -381,14 +381,14 @@ static void reportMemReferencesAndCleanUp(
         char str[1024];
         sprintf(str, "Attempting to free memory object %p which still contains %lu references",
             pMemObjInfo->mem, (cmdBufRefCount + objRefCount));
-        layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, pMemObjInfo->mem, 0, MEMTRACK_INTERNAL_ERROR, "MEM", str);
+        layerCbMsg(VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DEVICE_MEMORY, pMemObjInfo->mem, 0, MEMTRACK_INTERNAL_ERROR, "MEM", str);
     }
 
     if (cmdBufRefCount > 0 && pMemObjInfo->pCmdBufferBindings.size() > 0) {
         for (list<VkCmdBuffer>::const_iterator it = pMemObjInfo->pCmdBufferBindings.begin(); it != pMemObjInfo->pCmdBufferBindings.end(); ++it) {
             char str[1024];
             sprintf(str, "Command Buffer %p still has a reference to mem obj %p", (*it), pMemObjInfo->mem);
-            layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, (*it), 0, MEMTRACK_NONE, "MEM", str);
+            layerCbMsg(VK_DBG_REPORT_INFO_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, (*it), 0, MEMTRACK_NONE, "MEM", str);
         }
         // Clear the list of hanging references
         pMemObjInfo->pCmdBufferBindings.clear();
@@ -398,7 +398,8 @@ static void reportMemReferencesAndCleanUp(
         for (list<VkObject>::const_iterator it = pMemObjInfo->pObjBindings.begin(); it != pMemObjInfo->pObjBindings.end(); ++it) {
             char str[1024];
             sprintf(str, "VK Object %p still has a reference to mem obj %p", (*it), pMemObjInfo->mem);
-            layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, (*it), 0, MEMTRACK_NONE, "MEM", str);
+            /* TODO: Would be nice to return the actual object type */
+            layerCbMsg(VK_DBG_REPORT_INFO_BIT, (VkObjectType) 0, (*it), 0, MEMTRACK_NONE, "MEM", str);
         }
         // Clear the list of hanging references
         pMemObjInfo->pObjBindings.clear();
@@ -416,7 +417,7 @@ static void deleteMemObjInfo(
     else {
         char str[1024];
         sprintf(str, "Request to delete memory object %p not present in memory Object Map", mem);
-        layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, mem, 0, MEMTRACK_INVALID_MEM_OBJ, "MEM", str);
+        layerCbMsg(VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DEVICE_MEMORY, mem, 0, MEMTRACK_INVALID_MEM_OBJ, "MEM", str);
     }
 }
 
@@ -429,7 +430,7 @@ static bool32_t checkCBCompleted(
     if (!pCBInfo) {
         char str[1024];
         sprintf(str, "Unable to find global CB info %p to check for completion", cb);
-        layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, cb, 0, MEMTRACK_INVALID_CB, "MEM", str);
+        layerCbMsg(VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, cb, 0, MEMTRACK_INVALID_CB, "MEM", str);
         result = VK_FALSE;
     } else if (pCBInfo->lastSubmittedQueue != NULL) {
         VkQueue queue = pCBInfo->lastSubmittedQueue;
@@ -438,7 +439,7 @@ static bool32_t checkCBCompleted(
             char str[1024];
             sprintf(str, "fence %p for CB %p has not been checked for completion",
                 (void*)pCBInfo->lastSubmittedFence, cb);
-            layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, cb, 0, MEMTRACK_NONE, "MEM", str);
+            layerCbMsg(VK_DBG_REPORT_INFO_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, cb, 0, MEMTRACK_NONE, "MEM", str);
             result = VK_FALSE;
         }
     }
@@ -456,14 +457,14 @@ static bool32_t freeMemObjInfo(
         char str[1024];
         sprintf(str, "Couldn't find mem info object for %p\n    Was %p never allocated or previously freed?",
             (void*)mem, (void*)mem);
-        layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, mem, 0, MEMTRACK_INVALID_MEM_OBJ, "MEM", str);
+        layerCbMsg(VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DEVICE_MEMORY, mem, 0, MEMTRACK_INVALID_MEM_OBJ, "MEM", str);
         result = VK_FALSE;
     } else {
         if (pInfo->allocInfo.allocationSize == 0 && !internal) {
             char str[1024];
             sprintf(str, "Attempting to free memory associated with a Persistent Image, %p, "
                          "this should not be explicitly freed\n", (void*)mem);
-            layerCbMsg(VK_DBG_MSG_WARNING, VK_VALIDATION_LEVEL_0, mem, 0, MEMTRACK_INVALID_MEM_OBJ, "MEM", str);
+            layerCbMsg(VK_DBG_REPORT_WARN_BIT, VK_OBJECT_TYPE_DEVICE_MEMORY, mem, 0, MEMTRACK_INVALID_MEM_OBJ, "MEM", str);
             result = VK_FALSE;
         } else {
             // Clear any CB bindings for completed CBs
@@ -507,7 +508,7 @@ static bool32_t clear_object_binding(
         if (!pObjInfo->pMemObjInfo || pObjInfo->pMemObjInfo->pObjBindings.size() <= 0) {
             char str[1024];
             sprintf(str, "Attempting to clear mem binding on obj %p but it has no binding.", (void*)object);
-            layerCbMsg(VK_DBG_MSG_WARNING, VK_VALIDATION_LEVEL_0, object, 0, MEMTRACK_MEM_OBJ_CLEAR_EMPTY_BINDINGS, "MEM", str);
+            layerCbMsg(VK_DBG_REPORT_WARN_BIT, (VkObjectType) 0, object, 0, MEMTRACK_MEM_OBJ_CLEAR_EMPTY_BINDINGS, "MEM", str);
         } else {
             // This obj is bound to a memory object. Remove the reference to this object in that memory object's list, decrement the memObj's refcount
             // and set the objects memory binding pointer to NULL.
@@ -524,7 +525,7 @@ static bool32_t clear_object_binding(
                 char str[1024];
                 sprintf(str, "While trying to clear mem binding for object %p, unable to find that object referenced by mem obj %p",
                     object, pObjInfo->pMemObjInfo->mem);
-                layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, object, 0, MEMTRACK_INTERNAL_ERROR, "MEM", str);
+                layerCbMsg(VK_DBG_REPORT_ERROR_BIT, (VkObjectType) 0, object, 0, MEMTRACK_INTERNAL_ERROR, "MEM", str);
             }
         }
     }
@@ -546,27 +547,27 @@ static bool32_t set_object_binding(
     if (mem == VK_NULL_HANDLE) {
         char str[1024];
         sprintf(str, "Attempting to Bind Obj(%p) to NULL", (void*)object);
-        layerCbMsg(VK_DBG_MSG_WARNING, VK_VALIDATION_LEVEL_0, object, 0, MEMTRACK_INTERNAL_ERROR, "MEM", str);
+        layerCbMsg(VK_DBG_REPORT_WARN_BIT, (VkObjectType) 0, object, 0, MEMTRACK_INTERNAL_ERROR, "MEM", str);
         return VK_TRUE;
     } else {
         char str[1024];
         MT_OBJ_INFO* pObjInfo = get_object_info(object);
         if (!pObjInfo) {
             sprintf(str, "Attempting to update Binding of Obj(%p) that's not in global list()", (void*)object);
-            layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, object, 0, MEMTRACK_INTERNAL_ERROR, "MEM", str);
+            layerCbMsg(VK_DBG_REPORT_ERROR_BIT, (VkObjectType) 0, object, 0, MEMTRACK_INTERNAL_ERROR, "MEM", str);
             return VK_FALSE;
         }
         // non-null case so should have real mem obj
         MT_MEM_OBJ_INFO* pInfo = get_mem_obj_info(mem);
         if (!pInfo) {
             sprintf(str, "While trying to bind mem for obj %p, couldn't find info for mem obj %p", (void*)object, (void*)mem);
-            layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, mem, 0, MEMTRACK_INVALID_MEM_OBJ, "MEM", str);
+            layerCbMsg(VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DEVICE_MEMORY, mem, 0, MEMTRACK_INVALID_MEM_OBJ, "MEM", str);
             return VK_FALSE;
         } else {
             if (pObjInfo->pMemObjInfo != NULL) {
                 sprintf(str, "Attempting to bind memory (%p) to object (%p) which has already been bound to mem object %p",
                     (void*)mem, (void*)object, (void*)pObjInfo->pMemObjInfo->mem);
-                layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, mem, 0, MEMTRACK_REBIND_OBJECT, "MEM", str);
+                layerCbMsg(VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DEVICE_MEMORY, mem, 0, MEMTRACK_REBIND_OBJECT, "MEM", str);
                 return VK_FALSE;
             }
             else {
@@ -608,14 +609,14 @@ static bool32_t set_sparse_buffer_binding(
         MT_OBJ_INFO* pObjInfo = get_object_info(object);
         if (!pObjInfo) {
             sprintf(str, "Attempting to update Binding of Obj(%p) that's not in global list()", (void*)object);
-            layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, object, 0, MEMTRACK_INTERNAL_ERROR, "MEM", str);
+            layerCbMsg(VK_DBG_REPORT_ERROR_BIT, (VkObjectType) 0, object, 0, MEMTRACK_INTERNAL_ERROR, "MEM", str);
             return VK_FALSE;
         }
         // non-null case so should have real mem obj
         MT_MEM_OBJ_INFO* pInfo = get_mem_obj_info(mem);
         if (!pInfo) {
             sprintf(str, "While trying to bind mem for obj %p, couldn't find info for mem obj %p", (void*)object, (void*)mem);
-            layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, mem, 0, MEMTRACK_INVALID_MEM_OBJ, "MEM", str);
+            layerCbMsg(VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DEVICE_MEMORY, mem, 0, MEMTRACK_INVALID_MEM_OBJ, "MEM", str);
             return VK_FALSE;
         } else {
             // Search for object in memory object's binding list
@@ -637,7 +638,7 @@ static bool32_t set_sparse_buffer_binding(
             if (pObjInfo->pMemObjInfo) {
                 clear_object_binding(object); // Need to clear the previous object binding before setting new binding
                 sprintf(str, "Updating memory binding for object %p from mem obj %p to %p", object, pObjInfo->pMemObjInfo->mem, mem);
-                layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, object, 0, MEMTRACK_NONE, "MEM", str);
+                layerCbMsg(VK_DBG_REPORT_INFO_BIT, (VkObjectType) 0, object, 0, MEMTRACK_NONE, "MEM", str);
             }
             pObjInfo->pMemObjInfo = pInfo;
         }
@@ -651,17 +652,14 @@ static void print_object_list(
 {
     MT_OBJ_INFO* pInfo = NULL;
     char str[1024];
-    if (g_reportingLevel > VK_DBG_LAYER_LEVEL_INFO) {
-        return;
-    }
     sprintf(str, "Details of Object list of size %lu elements", objectMap.size());
-    layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, NULL, 0, MEMTRACK_NONE, "MEM", str);
+    layerCbMsg(VK_DBG_REPORT_INFO_BIT, (VkObjectType) 0, NULL, 0, MEMTRACK_NONE, "MEM", str);
     if (objectMap.size() <= 0)
         return;
     for (unordered_map<VkObject, MT_OBJ_INFO>::iterator ii=objectMap.begin(); ii!=objectMap.end(); ++ii) {
         pInfo = &(*ii).second;
         sprintf(str, "    ObjInfo %p has object %p, pMemObjInfo %p", pInfo, pInfo->object, pInfo->pMemObjInfo);
-        layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, pInfo->object, 0, MEMTRACK_NONE, "MEM", str);
+        layerCbMsg(VK_DBG_REPORT_INFO_BIT, (VkObjectType) 0, pInfo->object, 0, MEMTRACK_NONE, "MEM", str);
     }
 }
 
@@ -677,13 +675,13 @@ static VkDeviceMemory get_mem_binding_from_object(
         } else {
             char str[1024];
             sprintf(str, "Trying to get mem binding for object %p but object has no mem binding", (void*)object);
-            layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, object, 0, MEMTRACK_MISSING_MEM_BINDINGS, "MEM", str);
+            layerCbMsg(VK_DBG_REPORT_ERROR_BIT, (VkObjectType) 0, object, 0, MEMTRACK_MISSING_MEM_BINDINGS, "MEM", str);
             print_object_list();
         }
     } else {
         char str[1024];
         sprintf(str, "Trying to get mem binding for object %p but no such object in global list", (void*)object);
-        layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, object, 0, MEMTRACK_INVALID_OBJECT, "MEM", str);
+        layerCbMsg(VK_DBG_REPORT_ERROR_BIT, (VkObjectType) 0, object, 0, MEMTRACK_INVALID_OBJECT, "MEM", str);
         print_object_list();
     }
     return mem;
@@ -696,11 +694,8 @@ static void print_mem_list(
     MT_MEM_OBJ_INFO* pInfo = NULL;
     // Just printing each msg individually for now, may want to package these into single large print
     char str[1024];
-    if (g_reportingLevel > VK_DBG_LAYER_LEVEL_INFO) {
-        return;
-    }
     sprintf(str, "MEM INFO : Details of Memory Object list of size %lu elements", memObjMap.size());
-    layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, NULL, 0, MEMTRACK_NONE, "MEM", str);
+    layerCbMsg(VK_DBG_REPORT_INFO_BIT, (VkObjectType) 0, NULL, 0, MEMTRACK_NONE, "MEM", str);
 
     if (memObjMap.size() <= 0)
         return;
@@ -709,36 +704,36 @@ static void print_mem_list(
         pInfo = &(*ii).second;
 
         sprintf(str, "    ===MemObjInfo at %p===", (void*)pInfo);
-        layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, NULL, 0, MEMTRACK_NONE, "MEM", str);
+        layerCbMsg(VK_DBG_REPORT_INFO_BIT, (VkObjectType) 0, NULL, 0, MEMTRACK_NONE, "MEM", str);
         sprintf(str, "    Mem object: %p", (void*)pInfo->mem);
-        layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, NULL, 0, MEMTRACK_NONE, "MEM", str);
+        layerCbMsg(VK_DBG_REPORT_INFO_BIT, (VkObjectType) 0, NULL, 0, MEMTRACK_NONE, "MEM", str);
         sprintf(str, "    Ref Count: %u", pInfo->refCount);
-        layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, NULL, 0, MEMTRACK_NONE, "MEM", str);
+        layerCbMsg(VK_DBG_REPORT_INFO_BIT, (VkObjectType) 0, NULL, 0, MEMTRACK_NONE, "MEM", str);
         if (0 != pInfo->allocInfo.allocationSize) {
             string pAllocInfoMsg = vk_print_vkmemoryallocinfo(&pInfo->allocInfo, "{MEM}INFO :       ");
             sprintf(str, "    Mem Alloc info:\n%s", pAllocInfoMsg.c_str());
-            layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, NULL, 0, MEMTRACK_NONE, "MEM", str);
+            layerCbMsg(VK_DBG_REPORT_INFO_BIT, (VkObjectType) 0, NULL, 0, MEMTRACK_NONE, "MEM", str);
         } else {
             sprintf(str, "    Mem Alloc info is NULL (alloc done by vkCreateSwapChainWSI())");
-            layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, NULL, 0, MEMTRACK_NONE, "MEM", str);
+            layerCbMsg(VK_DBG_REPORT_INFO_BIT, (VkObjectType) 0, NULL, 0, MEMTRACK_NONE, "MEM", str);
         }
 
         sprintf(str, "    VK OBJECT Binding list of size %lu elements:", pInfo->pObjBindings.size());
-        layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, NULL, 0, MEMTRACK_NONE, "MEM", str);
+        layerCbMsg(VK_DBG_REPORT_INFO_BIT, (VkObjectType) 0, NULL, 0, MEMTRACK_NONE, "MEM", str);
         if (pInfo->pObjBindings.size() > 0) {
             for (list<VkObject>::iterator it = pInfo->pObjBindings.begin(); it != pInfo->pObjBindings.end(); ++it) {
                 sprintf(str, "       VK OBJECT %p", (*it));
-                layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, NULL, 0, MEMTRACK_NONE, "MEM", str);
+                layerCbMsg(VK_DBG_REPORT_INFO_BIT, (VkObjectType) 0, NULL, 0, MEMTRACK_NONE, "MEM", str);
             }
         }
 
         sprintf(str, "    VK Command Buffer (CB) binding list of size %lu elements", pInfo->pCmdBufferBindings.size());
-        layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, NULL, 0, MEMTRACK_NONE, "MEM", str);
+        layerCbMsg(VK_DBG_REPORT_INFO_BIT, (VkObjectType) 0, NULL, 0, MEMTRACK_NONE, "MEM", str);
         if (pInfo->pCmdBufferBindings.size() > 0)
         {
             for (list<VkCmdBuffer>::iterator it = pInfo->pCmdBufferBindings.begin(); it != pInfo->pCmdBufferBindings.end(); ++it) {
                 sprintf(str, "      VK CB %p", (*it));
-                layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, NULL, 0, MEMTRACK_NONE, "MEM", str);
+                layerCbMsg(VK_DBG_REPORT_INFO_BIT, (VkObjectType) 0, NULL, 0, MEMTRACK_NONE, "MEM", str);
             }
         }
     }
@@ -749,11 +744,8 @@ static void printCBList(
 {
     char str[1024];
     MT_CB_INFO* pCBInfo = NULL;
-    if (g_reportingLevel > VK_DBG_LAYER_LEVEL_INFO) {
-        return;
-    }
     sprintf(str, "Details of CB list of size %lu elements", cbMap.size());
-    layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, NULL, 0, MEMTRACK_NONE, "MEM", str);
+    layerCbMsg(VK_DBG_REPORT_INFO_BIT, (VkObjectType) 0, NULL, 0, MEMTRACK_NONE, "MEM", str);
 
     if (cbMap.size() <= 0)
         return;
@@ -764,13 +756,13 @@ static void printCBList(
         sprintf(str, "    CB Info (%p) has CB %p, fenceId %" PRIx64", and fence %p",
             (void*)pCBInfo, (void*)pCBInfo->cmdBuffer, pCBInfo->fenceId,
             (void*)pCBInfo->lastSubmittedFence);
-        layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, NULL, 0, MEMTRACK_NONE, "MEM", str);
+        layerCbMsg(VK_DBG_REPORT_INFO_BIT, (VkObjectType) 0, NULL, 0, MEMTRACK_NONE, "MEM", str);
 
         if (pCBInfo->pMemObjList.size() <= 0)
             continue;
         for (list<VkDeviceMemory>::iterator it = pCBInfo->pMemObjList.begin(); it != pCBInfo->pMemObjList.end(); ++it) {
             sprintf(str, "      Mem obj %p", (*it));
-            layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, NULL, 0, MEMTRACK_NONE, "MEM", str);
+            layerCbMsg(VK_DBG_REPORT_INFO_BIT, (VkObjectType) 0, NULL, 0, MEMTRACK_NONE, "MEM", str);
         }
     }
 }
@@ -797,7 +789,7 @@ static void initMemTracker(
 {
     const char *strOpt;
     // initialize MemTracker options
-    getLayerOptionEnum("MemTrackerReportLevel", (uint32_t *) &g_reportingLevel);
+    getLayerOptionEnum("MemTrackerReportLevel", (uint32_t *) &g_reportFlags);
     g_actionIsDefault = getLayerOptionEnum("MemTrackerDebugAction", (uint32_t *) &g_debugAction);
 
     if (g_debugAction & VK_DBG_LAYER_ACTION_LOG_MSG)
@@ -823,14 +815,30 @@ static void initMemTracker(
     }
 }
 
+//VkResult VKAPI vkCreateInstance(
+//    const VkInstanceCreateInfo*                 pCreateInfo,
+//    VkInstance*                                 pInstance)
+//{
+//    loader_platform_thread_once(&g_initOnce, initMemTracker);
+//    VkResult result = nextTable.CreateInstance(pCreateInfo, pInstance);
+//    if (result == VK_SUCCESS) {
+//        enable_debug_report(pCreateInfo->extensionCount, pCreateInfo->ppEnabledExtensionNames);
+//    }
+//    return result;
+//}
+
 VK_LAYER_EXPORT VkResult VKAPI vkCreateDevice(
     VkPhysicalDevice          gpu,
     const VkDeviceCreateInfo *pCreateInfo,
     VkDevice                 *pDevice)
 {
     VkResult result = nextInstanceTable.CreateDevice(gpu, pCreateInfo, pDevice);
-    // Save off device in case we need it to create Fences
-    globalDevice = *pDevice;
+    if (result == VK_SUCCESS) {
+        // Save off device in case we need it to create Fences
+        globalDevice = *pDevice;
+
+        enable_debug_report(pCreateInfo->extensionCount, pCreateInfo->pEnabledExtensions);
+    }
     return result;
 }
 
@@ -840,13 +848,13 @@ VK_LAYER_EXPORT VkResult VKAPI vkDestroyDevice(
     char str[1024];
     sprintf(str, "Printing List details prior to vkDestroyDevice()");
     loader_platform_thread_lock_mutex(&globalLock);
-    layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, device, 0, MEMTRACK_NONE, "MEM", str);
+    layerCbMsg(VK_DBG_REPORT_INFO_BIT, VK_OBJECT_TYPE_DEVICE, device, 0, MEMTRACK_NONE, "MEM", str);
     print_mem_list();
     printCBList();
     print_object_list();
     if (VK_FALSE == delete_cmd_buf_info_list()) {
         sprintf(str, "Issue deleting global CB list in vkDestroyDevice()");
-        layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, device, 0, MEMTRACK_INTERNAL_ERROR, "MEM", str);
+        layerCbMsg(VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DEVICE, device, 0, MEMTRACK_INTERNAL_ERROR, "MEM", str);
     }
     // Report any memory leaks
     MT_MEM_OBJ_INFO* pInfo = NULL;
@@ -857,7 +865,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkDestroyDevice(
             if (pInfo->allocInfo.allocationSize != 0) {
                 sprintf(str, "Mem Object %p has not been freed. You should clean up this memory by calling "
                          "vkFreeMemory(%p) prior to vkDestroyDevice().", pInfo->mem, pInfo->mem);
-                layerCbMsg(VK_DBG_MSG_WARNING, VK_VALIDATION_LEVEL_0, pInfo->mem, 0, MEMTRACK_MEMORY_LEAK, "MEM", str);
+                layerCbMsg(VK_DBG_REPORT_WARN_BIT, VK_OBJECT_TYPE_DEVICE_MEMORY, pInfo->mem, 0, MEMTRACK_MEMORY_LEAK, "MEM", str);
             }
         }
     }
@@ -874,11 +882,14 @@ struct extProps {
     uint32_t version;
     const char * const name;
 };
-#define MEM_TRACKER_LAYER_EXT_ARRAY_SIZE 2
-static const struct extProps mtExts[MEM_TRACKER_LAYER_EXT_ARRAY_SIZE] = {
-    // TODO what is the version?
-    0x10, "MemTracker",
-    0x10, "Validation"
+#define MEM_TRACKER_LAYER_EXT_ARRAY_SIZE 1
+static const VkExtensionProperties mtExts[MEM_TRACKER_LAYER_EXT_ARRAY_SIZE] = {
+    {
+        VK_STRUCTURE_TYPE_EXTENSION_PROPERTIES,
+        "MemTracker",
+        0x10,
+        "Sample layer: MemTracker",
+    }
 };
 
 VK_LAYER_EXPORT VkResult VKAPI vkGetGlobalExtensionInfo(
@@ -888,7 +899,6 @@ VK_LAYER_EXPORT VkResult VKAPI vkGetGlobalExtensionInfo(
     void                *pData)
 {
     // This entrypoint is NOT going to init its own dispatch table since loader calls here early
-    VkExtensionProperties *ext_props;
     uint32_t *count;
 
     if (pDataSize == NULL) {
@@ -912,44 +922,13 @@ VK_LAYER_EXPORT VkResult VKAPI vkGetGlobalExtensionInfo(
             if (extensionIndex >= MEM_TRACKER_LAYER_EXT_ARRAY_SIZE) {
                 return VK_ERROR_INVALID_VALUE;
             }
-            ext_props = (VkExtensionProperties *) pData;
-            ext_props->version = mtExts[extensionIndex].version;
-            strncpy(ext_props->extName, mtExts[extensionIndex].name,
-                                        VK_MAX_EXTENSION_NAME);
-            ext_props->extName[VK_MAX_EXTENSION_NAME - 1] = '\0';
+            memcpy((VkExtensionProperties *) pData, &mtExts[extensionIndex], sizeof(VkExtensionProperties));
             break;
         default:
             return VK_ERROR_INVALID_VALUE;
     };
 
     return VK_SUCCESS;
-}
-
-VK_LAYER_EXPORT VkResult VKAPI vkEnumerateLayers(
-    VkPhysicalDevice  gpu,
-    size_t            maxStringSize,
-    size_t           *pLayerCount,
-    char* const      *pOutLayers,
-    void             *pReserved)
-{
-    if (gpu != NULL)
-    {
-        pCurObj = (VkBaseLayerObject *)  gpu;
-        loader_platform_thread_once(&g_initOnce, initMemTracker);
-        loader_platform_thread_once(&g_tabDeviceOnce, initDeviceTable);
-        VkResult result = nextInstanceTable.EnumerateLayers(gpu,
-            maxStringSize, pLayerCount, pOutLayers, pReserved);
-        return result;
-    } else
-    {
-        if (pLayerCount == NULL || pOutLayers == NULL || pOutLayers[0] == NULL) {
-            return VK_ERROR_INVALID_POINTER;
-        }
-        // This layer compatible with all GPUs
-        *pLayerCount = 1;
-        strncpy((char *) pOutLayers[0], "MemTracker", maxStringSize);
-        return VK_SUCCESS;
-    }
 }
 
 VK_LAYER_EXPORT VkResult VKAPI vkGetDeviceQueue(
@@ -1023,7 +1002,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkFreeMemory(
     if (noerror == VK_FALSE) {
         char str[1024];
         sprintf(str, "Freeing memory object while it still has references: mem obj %p", (void*)mem);
-        layerCbMsg(VK_DBG_MSG_WARNING, VK_VALIDATION_LEVEL_0, mem, 0, MEMTRACK_FREED_MEM_REF, "MEM", str);
+        layerCbMsg(VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DEVICE_MEMORY, mem, 0, MEMTRACK_DESTROY_OBJECT_ERROR, "MEM", str);
     }
     loader_platform_thread_unlock_mutex(&globalLock);
     VkResult result = nextTable.FreeMemory(device, mem);
@@ -1055,7 +1034,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkMapMemory(
     if ((pMemObj->allocInfo.memProps & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT) == 0) {
         char str[1024];
         sprintf(str, "Mapping Memory without VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT set: mem obj %p", (void*)mem);
-        layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, mem, 0, MEMTRACK_INVALID_STATE, "MEM", str);
+        layerCbMsg(VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DEVICE_MEMORY, mem, 0, MEMTRACK_INVALID_STATE, "MEM", str);
     }
     loader_platform_thread_unlock_mutex(&globalLock);
     VkResult result = nextTable.MapMemory(device, mem, offset, size, flags, ppData);
@@ -1204,7 +1183,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkQueueBindSparseBufferMemory(
     if (VK_FALSE == set_sparse_buffer_binding(buffer, mem)) {
         char str[1024];
         sprintf(str, "Unable to set object %p binding to mem obj %p", (void*)buffer, (void*)mem);
-        layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, buffer, 0, MEMTRACK_MEMORY_BINDING_ERROR, "MEM", str);
+        layerCbMsg(VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_BUFFER, buffer, 0, MEMTRACK_MEMORY_BINDING_ERROR, "MEM", str);
     }
     print_object_list();
     print_mem_list();
@@ -1242,7 +1221,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkResetFences(
                 if (!(pObjectInfo->create_info.fence_create_info.flags & VK_FENCE_CREATE_SIGNALED_BIT)) {
                     char str[1024];
                     sprintf(str, "Fence %p submitted to VkResetFences in UNSIGNALED STATE", pFences[i]);
-                    layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, pFences[i], 0, MEMTRACK_INVALID_FENCE_STATE, "MEM", str);
+                    layerCbMsg(VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_FENCE, pFences[i], 0, MEMTRACK_INVALID_FENCE_STATE, "MEM", str);
                     result = VK_ERROR_INVALID_VALUE;
                 }
                 else {
@@ -1283,7 +1262,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkWaitForFences(
             if (pObjectInfo->create_info.fence_create_info.flags & VK_FENCE_CREATE_SIGNALED_BIT) {
                 char str[1024];
                 sprintf(str, "VkWaitForFences specified fence %p already in SIGNALED state.", pFences[i]);
-                layerCbMsg(VK_DBG_MSG_WARNING, VK_VALIDATION_LEVEL_0, pFences[i], 0, MEMTRACK_INVALID_FENCE_STATE, "MEM", str);
+                layerCbMsg(VK_DBG_REPORT_WARN_BIT, VK_OBJECT_TYPE_FENCE, pFences[i], 0, MEMTRACK_INVALID_FENCE_STATE, "MEM", str);
             }
         }
     }
@@ -1585,7 +1564,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkBeginCommandBuffer(
         char str[1024];
         sprintf(str, "Calling vkBeginCommandBuffer() on active CB %p before it has completed. "
                      "You must check CB flag before this call.", cmdBuffer);
-        layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, cmdBuffer, 0, MEMTRACK_RESET_CB_WHILE_IN_FLIGHT, "MEM", str);
+        layerCbMsg(VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, cmdBuffer, 0, MEMTRACK_RESET_CB_WHILE_IN_FLIGHT, "MEM", str);
     }
     loader_platform_thread_unlock_mutex(&globalLock);
     VkResult result = nextTable.BeginCommandBuffer(cmdBuffer, pBeginInfo);
@@ -1612,7 +1591,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkResetCommandBuffer(
         char str[1024];
         sprintf(str, "Resetting CB %p before it has completed. You must check CB flag before "
                      "calling vkResetCommandBuffer().", cmdBuffer);
-        layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, cmdBuffer, 0, MEMTRACK_RESET_CB_WHILE_IN_FLIGHT, "MEM", str);
+        layerCbMsg(VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, cmdBuffer, 0, MEMTRACK_RESET_CB_WHILE_IN_FLIGHT, "MEM", str);
     }
     // Clear memory references as this point.
     clear_cmd_buf_and_mem_references(cmdBuffer);
@@ -1636,13 +1615,13 @@ VK_LAYER_EXPORT void VKAPI vkCmdBindPipeline(
         } else {
             char str[1024];
             sprintf(str, "Attempt to bind Pipeline %p to non-existant command buffer %p!", (void*)pipeline, cmdBuffer);
-            layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, cmdBuffer, 0, MEMTRACK_INVALID_CB, (char *) "DS", (char *) str);
+            layerCbMsg(VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, cmdBuffer, 0, MEMTRACK_INVALID_CB, (char *) "DS", (char *) str);
         }
     }
     else {
         char str[1024];
         sprintf(str, "Attempt to bind Pipeline %p that doesn't exist!", (void*)pipeline);
-        layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, pipeline, 0, MEMTRACK_INVALID_OBJECT, (char *) "DS", (char *) str);
+        layerCbMsg(VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_PIPELINE, pipeline, 0, MEMTRACK_INVALID_OBJECT, (char *) "DS", (char *) str);
     }
 #endif
     nextTable.CmdBindPipeline(cmdBuffer, pipelineBindPoint, pipeline);
@@ -1659,13 +1638,14 @@ VK_LAYER_EXPORT void VKAPI vkCmdBindDynamicStateObject(
     if (!pCmdBuf) {
         char str[1024];
         sprintf(str, "Unable to find command buffer object %p, was it ever created?", (void*)cmdBuffer);
-        layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, cmdBuffer, 0, MEMTRACK_INVALID_CB, "DD", str);
+        layerCbMsg(VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, cmdBuffer, 0, MEMTRACK_INVALID_CB, "DD", str);
     }
     pObjInfo = get_object_info(state);
     if (!pObjInfo) {
         char str[1024];
         sprintf(str, "Unable to find dynamic state object %p, was it ever created?", (void*)state);
-        layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, state, 0, MEMTRACK_INVALID_OBJECT, "DD", str);
+        /* TODO: put in real object type */
+        layerCbMsg(VK_DBG_REPORT_ERROR_BIT, (VkObjectType) 0, state, 0, MEMTRACK_INVALID_OBJECT, "DD", str);
     }
     pCmdBuf->pDynamicState[stateBindPoint] = pObjInfo;
     loader_platform_thread_unlock_mutex(&globalLock);
@@ -1716,7 +1696,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdDrawIndirect(
     if (VK_FALSE == update_cmd_buf_and_mem_references(cmdBuffer, mem)) {
         char str[1024];
         sprintf(str, "In vkCmdDrawIndirect() call unable to update binding of buffer %p to cmdBuffer %p", buffer, cmdBuffer);
-        layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, cmdBuffer, 0, MEMTRACK_MEMORY_BINDING_ERROR, "MEM", str);
+        layerCbMsg(VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, cmdBuffer, 0, MEMTRACK_MEMORY_BINDING_ERROR, "MEM", str);
     }
     loader_platform_thread_unlock_mutex(&globalLock);
     nextTable.CmdDrawIndirect(cmdBuffer, buffer, offset, count, stride);
@@ -1734,7 +1714,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdDrawIndexedIndirect(
     if (VK_FALSE == update_cmd_buf_and_mem_references(cmdBuffer, mem)) {
         char str[1024];
         sprintf(str, "In vkCmdDrawIndexedIndirect() call unable to update binding of buffer %p to cmdBuffer %p", buffer, cmdBuffer);
-        layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, cmdBuffer, 0, MEMTRACK_MEMORY_BINDING_ERROR, "MEM", str);
+        layerCbMsg(VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, cmdBuffer, 0, MEMTRACK_MEMORY_BINDING_ERROR, "MEM", str);
     }
     loader_platform_thread_unlock_mutex(&globalLock);
     nextTable.CmdDrawIndexedIndirect(cmdBuffer, buffer, offset, count, stride);
@@ -1750,7 +1730,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdDispatchIndirect(
     if (VK_FALSE == update_cmd_buf_and_mem_references(cmdBuffer, mem)) {
         char str[1024];
         sprintf(str, "In vkCmdDispatchIndirect() call unable to update binding of buffer %p to cmdBuffer %p", buffer, cmdBuffer);
-        layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, cmdBuffer, 0, MEMTRACK_MEMORY_BINDING_ERROR, "MEM", str);
+        layerCbMsg(VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, cmdBuffer, 0, MEMTRACK_MEMORY_BINDING_ERROR, "MEM", str);
     }
     loader_platform_thread_unlock_mutex(&globalLock);
     nextTable.CmdDispatchIndirect(cmdBuffer, buffer, offset);
@@ -1768,13 +1748,13 @@ VK_LAYER_EXPORT void VKAPI vkCmdCopyBuffer(
     if (VK_FALSE == update_cmd_buf_and_mem_references(cmdBuffer, mem)) {
         char str[1024];
         sprintf(str, "In vkCmdCopyBuffer() call unable to update binding of srcBuffer %p to cmdBuffer %p", srcBuffer, cmdBuffer);
-        layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, cmdBuffer, 0, MEMTRACK_MEMORY_BINDING_ERROR, "MEM", str);
+        layerCbMsg(VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, cmdBuffer, 0, MEMTRACK_MEMORY_BINDING_ERROR, "MEM", str);
     }
     mem = get_mem_binding_from_object(destBuffer);
     if (VK_FALSE == update_cmd_buf_and_mem_references(cmdBuffer, mem)) {
         char str[1024];
         sprintf(str, "In vkCmdCopyBuffer() call unable to update binding of destBuffer %p to cmdBuffer %p", destBuffer, cmdBuffer);
-        layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, cmdBuffer, 0, MEMTRACK_MEMORY_BINDING_ERROR, "MEM", str);
+        layerCbMsg(VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, cmdBuffer, 0, MEMTRACK_MEMORY_BINDING_ERROR, "MEM", str);
     }
     loader_platform_thread_unlock_mutex(&globalLock);
     nextTable.CmdCopyBuffer(cmdBuffer, srcBuffer, destBuffer, regionCount, pRegions);
@@ -1821,14 +1801,14 @@ VK_LAYER_EXPORT void VKAPI vkCmdCopyBufferToImage(
     if (VK_FALSE == update_cmd_buf_and_mem_references(cmdBuffer, mem)) {
         char str[1024];
         sprintf(str, "In vkCmdCopyMemoryToImage() call unable to update binding of destImage buffer %p to cmdBuffer %p", destImage, cmdBuffer);
-        layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, cmdBuffer, 0, MEMTRACK_MEMORY_BINDING_ERROR, "MEM", str);
+        layerCbMsg(VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, cmdBuffer, 0, MEMTRACK_MEMORY_BINDING_ERROR, "MEM", str);
     }
 
     mem = get_mem_binding_from_object(srcBuffer);
     if (VK_FALSE == update_cmd_buf_and_mem_references(cmdBuffer, mem)) {
         char str[1024];
         sprintf(str, "In vkCmdCopyMemoryToImage() call unable to update binding of srcBuffer %p to cmdBuffer %p", srcBuffer, cmdBuffer);
-        layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, cmdBuffer, 0, MEMTRACK_MEMORY_BINDING_ERROR, "MEM", str);
+        layerCbMsg(VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, cmdBuffer, 0, MEMTRACK_MEMORY_BINDING_ERROR, "MEM", str);
     }
     loader_platform_thread_unlock_mutex(&globalLock);
     nextTable.CmdCopyBufferToImage(cmdBuffer, srcBuffer, destImage, destImageLayout, regionCount, pRegions);
@@ -1848,13 +1828,13 @@ VK_LAYER_EXPORT void VKAPI vkCmdCopyImageToBuffer(
     if (VK_FALSE == update_cmd_buf_and_mem_references(cmdBuffer, mem)) {
         char str[1024];
         sprintf(str, "In vkCmdCopyImageToMemory() call unable to update binding of srcImage buffer %p to cmdBuffer %p", srcImage, cmdBuffer);
-        layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, cmdBuffer, 0, MEMTRACK_MEMORY_BINDING_ERROR, "MEM", str);
+        layerCbMsg(VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, cmdBuffer, 0, MEMTRACK_MEMORY_BINDING_ERROR, "MEM", str);
     }
     mem = get_mem_binding_from_object(destBuffer);
     if (VK_FALSE == update_cmd_buf_and_mem_references(cmdBuffer, mem)) {
         char str[1024];
         sprintf(str, "In vkCmdCopyImageToMemory() call unable to update binding of destBuffer %p to cmdBuffer %p", destBuffer, cmdBuffer);
-        layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, cmdBuffer, 0, MEMTRACK_MEMORY_BINDING_ERROR, "MEM", str);
+        layerCbMsg(VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, cmdBuffer, 0, MEMTRACK_MEMORY_BINDING_ERROR, "MEM", str);
     }
     loader_platform_thread_unlock_mutex(&globalLock);
     nextTable.CmdCopyImageToBuffer(cmdBuffer, srcImage, srcImageLayout, destBuffer, regionCount, pRegions);
@@ -1872,7 +1852,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdUpdateBuffer(
     if (VK_FALSE == update_cmd_buf_and_mem_references(cmdBuffer, mem)) {
         char str[1024];
         sprintf(str, "In vkCmdUpdateMemory() call unable to update binding of destBuffer %p to cmdBuffer %p", destBuffer, cmdBuffer);
-        layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, cmdBuffer, 0, MEMTRACK_MEMORY_BINDING_ERROR, "MEM", str);
+        layerCbMsg(VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, cmdBuffer, 0, MEMTRACK_MEMORY_BINDING_ERROR, "MEM", str);
     }
     loader_platform_thread_unlock_mutex(&globalLock);
     nextTable.CmdUpdateBuffer(cmdBuffer, destBuffer, destOffset, dataSize, pData);
@@ -1890,7 +1870,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdFillBuffer(
     if (VK_FALSE == update_cmd_buf_and_mem_references(cmdBuffer, mem)) {
         char str[1024];
         sprintf(str, "In vkCmdFillMemory() call unable to update binding of destBuffer %p to cmdBuffer %p", destBuffer, cmdBuffer);
-        layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, cmdBuffer, 0, MEMTRACK_MEMORY_BINDING_ERROR, "MEM", str);
+        layerCbMsg(VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, cmdBuffer, 0, MEMTRACK_MEMORY_BINDING_ERROR, "MEM", str);
     }
     loader_platform_thread_unlock_mutex(&globalLock);
     nextTable.CmdFillBuffer(cmdBuffer, destBuffer, destOffset, fillSize, data);
@@ -1910,7 +1890,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdClearColorImage(
     if (VK_FALSE == update_cmd_buf_and_mem_references(cmdBuffer, mem)) {
         char str[1024];
         sprintf(str, "In vkCmdClearColorImage() call unable to update binding of image buffer %p to cmdBuffer %p", image, cmdBuffer);
-        layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, cmdBuffer, 0, MEMTRACK_MEMORY_BINDING_ERROR, "MEM", str);
+        layerCbMsg(VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, cmdBuffer, 0, MEMTRACK_MEMORY_BINDING_ERROR, "MEM", str);
     }
     loader_platform_thread_unlock_mutex(&globalLock);
     nextTable.CmdClearColorImage(cmdBuffer, image, imageLayout, pColor, rangeCount, pRanges);
@@ -1931,7 +1911,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdClearDepthStencil(
     if (VK_FALSE == update_cmd_buf_and_mem_references(cmdBuffer, mem)) {
         char str[1024];
         sprintf(str, "In vkCmdClearDepthStencil() call unable to update binding of image buffer %p to cmdBuffer %p", image, cmdBuffer);
-        layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, cmdBuffer, 0, MEMTRACK_MEMORY_BINDING_ERROR, "MEM", str);
+        layerCbMsg(VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, cmdBuffer, 0, MEMTRACK_MEMORY_BINDING_ERROR, "MEM", str);
     }
     loader_platform_thread_unlock_mutex(&globalLock);
     nextTable.CmdClearDepthStencil(cmdBuffer, image, imageLayout, depth, stencil, rangeCount, pRanges);
@@ -1951,13 +1931,13 @@ VK_LAYER_EXPORT void VKAPI vkCmdResolveImage(
     if (VK_FALSE == update_cmd_buf_and_mem_references(cmdBuffer, mem)) {
         char str[1024];
         sprintf(str, "In vkCmdResolveImage() call unable to update binding of srcImage buffer %p to cmdBuffer %p", srcImage, cmdBuffer);
-        layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, cmdBuffer, 0, MEMTRACK_MEMORY_BINDING_ERROR, "MEM", str);
+        layerCbMsg(VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, cmdBuffer, 0, MEMTRACK_MEMORY_BINDING_ERROR, "MEM", str);
     }
     mem = get_mem_binding_from_object(destImage);
     if (VK_FALSE == update_cmd_buf_and_mem_references(cmdBuffer, mem)) {
         char str[1024];
         sprintf(str, "In vkCmdResolveImage() call unable to update binding of destImage buffer %p to cmdBuffer %p", destImage, cmdBuffer);
-        layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, cmdBuffer, 0, MEMTRACK_MEMORY_BINDING_ERROR, "MEM", str);
+        layerCbMsg(VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, cmdBuffer, 0, MEMTRACK_MEMORY_BINDING_ERROR, "MEM", str);
     }
     loader_platform_thread_unlock_mutex(&globalLock);
     nextTable.CmdResolveImage(cmdBuffer, srcImage, srcImageLayout, destImage, destImageLayout, regionCount, pRegions);
@@ -1974,7 +1954,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdBeginQuery(
     if (VK_FALSE == update_cmd_buf_and_mem_references(cmdBuffer, mem)) {
         char str[1024];
         sprintf(str, "In vkCmdBeginQuery() call unable to update binding of queryPool buffer %p to cmdBuffer %p", queryPool, cmdBuffer);
-        layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, cmdBuffer, 0, MEMTRACK_MEMORY_BINDING_ERROR, "MEM", str);
+        layerCbMsg(VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, cmdBuffer, 0, MEMTRACK_MEMORY_BINDING_ERROR, "MEM", str);
     }
     loader_platform_thread_unlock_mutex(&globalLock);
     nextTable.CmdBeginQuery(cmdBuffer, queryPool, slot, flags);
@@ -1990,7 +1970,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdEndQuery(
     if (VK_FALSE == update_cmd_buf_and_mem_references(cmdBuffer, mem)) {
         char str[1024];
         sprintf(str, "In vkCmdEndQuery() call unable to update binding of queryPool buffer %p to cmdBuffer %p", queryPool, cmdBuffer);
-        layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, cmdBuffer, 0, MEMTRACK_MEMORY_BINDING_ERROR, "MEM", str);
+        layerCbMsg(VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, cmdBuffer, 0, MEMTRACK_MEMORY_BINDING_ERROR, "MEM", str);
     }
     loader_platform_thread_unlock_mutex(&globalLock);
     nextTable.CmdEndQuery(cmdBuffer, queryPool, slot);
@@ -2007,60 +1987,27 @@ VK_LAYER_EXPORT void VKAPI vkCmdResetQueryPool(
     if (VK_FALSE == update_cmd_buf_and_mem_references(cmdBuffer, mem)) {
         char str[1024];
         sprintf(str, "In vkCmdResetQueryPool() call unable to update binding of queryPool buffer %p to cmdBuffer %p", queryPool, cmdBuffer);
-        layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, cmdBuffer, 0, MEMTRACK_MEMORY_BINDING_ERROR, "MEM", str);
+        layerCbMsg(VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, cmdBuffer, 0, MEMTRACK_MEMORY_BINDING_ERROR, "MEM", str);
     }
     loader_platform_thread_unlock_mutex(&globalLock);
     nextTable.CmdResetQueryPool(cmdBuffer, queryPool, startQuery, queryCount);
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkDbgRegisterMsgCallback(
-    VkInstance                    instance,
-    VK_DBG_MSG_CALLBACK_FUNCTION  pfnMsgCallback,
-    void                         *pUserData)
+VK_LAYER_EXPORT VkResult VKAPI vkDbgCreateMsgCallback(
+        VkInstance instance,
+        VkFlags msgFlags,
+        const PFN_vkDbgMsgCallback pfnMsgCallback,
+        void* pUserData,
+        VkDbgMsgCallback* pMsgCallback)
 {
-    // This layer intercepts callbacks
-    VK_LAYER_DBG_FUNCTION_NODE *pNewDbgFuncNode = (VK_LAYER_DBG_FUNCTION_NODE*)malloc(sizeof(VK_LAYER_DBG_FUNCTION_NODE));
-    if (!pNewDbgFuncNode)
-        return VK_ERROR_OUT_OF_HOST_MEMORY;
-    pNewDbgFuncNode->pfnMsgCallback = pfnMsgCallback;
-    pNewDbgFuncNode->pUserData = pUserData;
-    pNewDbgFuncNode->pNext = g_pDbgFunctionHead;
-    g_pDbgFunctionHead = pNewDbgFuncNode;
-    // force callbacks if DebugAction hasn't been set already other than initial value
-    if (g_actionIsDefault) {
-        g_debugAction = VK_DBG_LAYER_ACTION_CALLBACK;
-    }
-    VkResult result = nextInstanceTable.DbgRegisterMsgCallback(instance, pfnMsgCallback, pUserData);
-    return result;
+    return layer_create_msg_callback(instance, &nextInstanceTable, msgFlags, pfnMsgCallback, pUserData, pMsgCallback);
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkDbgUnregisterMsgCallback(
-    VkInstance                   instance,
-    VK_DBG_MSG_CALLBACK_FUNCTION pfnMsgCallback)
+VK_LAYER_EXPORT VkResult VKAPI vkDbgDestroyMsgCallback(
+        VkInstance instance,
+        VkDbgMsgCallback msgCallback)
 {
-    VK_LAYER_DBG_FUNCTION_NODE *pInfo = g_pDbgFunctionHead;
-    VK_LAYER_DBG_FUNCTION_NODE *pPrev = pInfo;
-    while (pInfo) {
-        if (pInfo->pfnMsgCallback == pfnMsgCallback) {
-            pPrev->pNext = pInfo->pNext;
-            if (g_pDbgFunctionHead == pInfo) {
-                g_pDbgFunctionHead = pInfo->pNext;
-            }
-            free(pInfo);
-            break;
-        }
-        pPrev = pInfo;
-        pInfo = pInfo->pNext;
-    }
-    if (g_pDbgFunctionHead == NULL) {
-        if (g_actionIsDefault) {
-            g_debugAction = VK_DBG_LAYER_ACTION_LOG_MSG;
-        } else {
-            g_debugAction = (VK_LAYER_DBG_ACTION)(g_debugAction & ~((uint32_t)VK_DBG_LAYER_ACTION_CALLBACK));
-        }
-    }
-    VkResult result = nextInstanceTable.DbgUnregisterMsgCallback(instance, pfnMsgCallback);
-    return result;
+    return layer_destroy_msg_callback(instance, &nextInstanceTable, msgCallback);
 }
 
 VK_LAYER_EXPORT VkResult VKAPI vkCreateSwapChainWSI(
@@ -2131,7 +2078,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkGetSwapChainInfoWSI(
                     if (VK_FALSE == set_object_binding(it->image, it->memory)) {
                         char str[1024];
                         sprintf(str, "In vkGetSwapChainInfoWSI(), unable to set image %p binding to mem obj %p", (void*)it->image, (void*)it->memory);
-                        layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, it->image, 0, MEMTRACK_MEMORY_BINDING_ERROR, "MEM", str);
+                        layerCbMsg(VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_IMAGE, it->image, 0, MEMTRACK_MEMORY_BINDING_ERROR, "MEM", str);
                     }
                 }
             }
@@ -2142,7 +2089,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkGetSwapChainInfoWSI(
             if (mismatch) {
                 char str[1024];
                 sprintf(str, "vkGetSwapChainInfoWSI(%p, VK_SWAP_CHAIN_INFO_TYPE_PERSISTENT_IMAGES_WSI) returned mismatching data", swapChain);
-                layerCbMsg(VK_DBG_MSG_WARNING, VK_VALIDATION_LEVEL_0, (VkObject) swapChain, 0, MEMTRACK_NONE, "SWAP_CHAIN", str);
+                layerCbMsg(VK_DBG_REPORT_WARN_BIT, VK_OBJECT_TYPE_SWAP_CHAIN_WSI, (VkObject) swapChain, 0, MEMTRACK_NONE, "SWAP_CHAIN", str);
             }
         }
     }
@@ -2289,6 +2236,8 @@ VK_LAYER_EXPORT void* VKAPI vkGetDeviceProcAddr(
         return (void*) vkCmdEndQuery;
     if (!strcmp(funcName, "vkCmdResetQueryPool"))
         return (void*) vkCmdResetQueryPool;
+    if (g_DEBUG_REPORT && !strcmp(funcName, "vkDbgCreateMsgCallback"))
+        return (void*) vkDbgCreateMsgCallback;
     if (!strcmp(funcName, "vkGetDeviceQueue"))
         return (void*) vkGetDeviceQueue;
     if (!strcmp(funcName, "vkCreateSwapChainWSI"))
@@ -2323,14 +2272,6 @@ VK_LAYER_EXPORT void* VKAPI vkGetInstanceProcAddr(
         return (void *) vkGetInstanceProcAddr;
     if (!strcmp(funcName, "vkCreateDevice"))
         return (void*) vkCreateDevice;
-    if (!strcmp(funcName, "GetGlobalExtensionInfo"))
-        return (void*) vkGetGlobalExtensionInfo;
-    if (!strcmp(funcName, "vkEnumerateLayers"))
-        return (void*) vkEnumerateLayers;
-        if (!strcmp(funcName, "vkDbgRegisterMsgCallback"))
-        return (void*) vkDbgRegisterMsgCallback;
-    if (!strcmp(funcName, "vkDbgUnregisterMsgCallback"))
-        return (void*) vkDbgUnregisterMsgCallback;
     else {
         if (instw->pGPA == NULL) {
             return NULL;

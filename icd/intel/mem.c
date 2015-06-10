@@ -37,7 +37,7 @@ VkResult intel_mem_alloc(struct intel_dev *dev,
     /* ignore any IMAGE_INFO and BUFFER_INFO usage: they don't alter allocations */
 
     mem = (struct intel_mem *) intel_base_create(&dev->base.handle,
-            sizeof(*mem), dev->base.dbg, VK_DBG_OBJECT_GPU_MEMORY, info, 0);
+            sizeof(*mem), dev->base.dbg, VK_OBJECT_TYPE_DEVICE_MEMORY, info, 0);
     if (!mem)
         return VK_ERROR_OUT_OF_HOST_MEMORY;
 
@@ -74,7 +74,7 @@ VkResult intel_mem_import_userptr(struct intel_dev *dev,
         return VK_ERROR_INVALID_ALIGNMENT;
 
     mem = (struct intel_mem *) intel_base_create(&dev->base.handle,
-            sizeof(*mem), dev->base.dbg, VK_DBG_OBJECT_GPU_MEMORY, NULL, 0);
+            sizeof(*mem), dev->base.dbg, VK_OBJECT_TYPE_DEVICE_MEMORY, NULL, 0);
     if (!mem)
         return VK_ERROR_OUT_OF_HOST_MEMORY;
 

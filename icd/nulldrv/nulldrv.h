@@ -31,7 +31,7 @@
 #include <assert.h>
 
 #include <vulkan.h>
-#include <vkDbg.h>
+#include <vk_debug_report_lunarg.h>
 #include <vkIcd.h>
 #include <vk_wsi_lunarg.h>
 

@@ -136,10 +136,7 @@ static inline void loader_init_device_dispatch_table(VkLayerDispatchTable *table
     table->CreateRenderPass = (PFN_vkCreateRenderPass) gpa(dev, "vkCreateRenderPass");
     table->CmdBeginRenderPass = (PFN_vkCmdBeginRenderPass) gpa(dev, "vkCmdBeginRenderPass");
     table->CmdEndRenderPass = (PFN_vkCmdEndRenderPass) gpa(dev, "vkCmdEndRenderPass");
-    table->DbgSetValidationLevel = (PFN_vkDbgSetValidationLevel) gpa(dev, "vkDbgSetValidationLevel");
-    table->DbgSetMessageFilter = (PFN_vkDbgSetMessageFilter) gpa(dev, "vkDbgSetMessageFilter");
     table->DbgSetObjectTag = (PFN_vkDbgSetObjectTag) gpa(dev, "vkDbgSetObjectTag");
-    table->DbgSetDeviceOption = (PFN_vkDbgSetDeviceOption) gpa(dev, "vkDbgSetDeviceOption");
     table->CmdDbgMarkerBegin = (PFN_vkCmdDbgMarkerBegin) gpa(dev, "vkCmdDbgMarkerBegin");
     table->CmdDbgMarkerEnd = (PFN_vkCmdDbgMarkerEnd) gpa(dev, "vkCmdDbgMarkerEnd");
 //TODO move into it's own table
@@ -365,14 +362,8 @@ static inline void *loader_lookup_device_dispatch_table(
         return (void *) table->CmdBeginRenderPass;
     if (!strcmp(name, "CmdEndRenderPass"))
         return (void *) table->CmdEndRenderPass;
-    if (!strcmp(name, "DbgSetValidationLevel"))
-        return (void *) table->DbgSetValidationLevel;
-    if (!strcmp(name, "DbgSetMessageFilter"))
-        return (void *) table->DbgSetMessageFilter;
     if (!strcmp(name, "DbgSetObjectTag"))
         return (void *) table->DbgSetObjectTag;
-    if (!strcmp(name, "DbgSetDeviceOption"))
-        return (void *) table->DbgSetDeviceOption;
     if (!strcmp(name, "CmdDbgMarkerBegin"))
         return (void *) table->CmdDbgMarkerBegin;
     if (!strcmp(name, "CmdDbgMarkerEnd"))
@@ -390,7 +381,7 @@ static inline void *loader_lookup_device_dispatch_table(
     return NULL;
 }
 
-static inline void loader_init_instance_dispatch_table(VkLayerInstanceDispatchTable *table,
+static inline void loader_init_instance_core_dispatch_table(VkLayerInstanceDispatchTable *table,
                                                 PFN_vkGetInstanceProcAddr gpa,
                                                 VkInstance inst)
 {
@@ -402,13 +393,11 @@ static inline void loader_init_instance_dispatch_table(VkLayerInstanceDispatchTa
     table->CreateDevice = (PFN_vkCreateDevice) gpa(inst, "vkCreateDevice");
     table->GetGlobalExtensionInfo = (PFN_vkGetGlobalExtensionInfo) gpa(inst,"vkGetGlobalExtensionInfo");
     table->GetPhysicalDeviceExtensionInfo = (PFN_vkGetPhysicalDeviceExtensionInfo) gpa(inst, "vkGetPhysicalDeviceExtensionInfo");
-    table->EnumerateLayers = (PFN_vkEnumerateLayers) gpa(inst, "vkEnumerateLayers");
     table->GetMultiDeviceCompatibility = (PFN_vkGetMultiDeviceCompatibility) gpa(inst, "vkGetMultiDeviceCompatibility");
-    table->DbgRegisterMsgCallback = (PFN_vkDbgRegisterMsgCallback) gpa(inst, "vkDbgRegisterMsgCallback");
-    table->DbgUnregisterMsgCallback = (PFN_vkDbgUnregisterMsgCallback) gpa(inst, "vkDbgUnregisterMsgCallback");
-    table->DbgSetGlobalOption = (PFN_vkDbgSetGlobalOption) gpa(inst, "vkDbgSetGlobalOption");
-//TODO put in it's own table
     table->GetDisplayInfoWSI = (PFN_vkGetDisplayInfoWSI) gpa(inst, "vkGetDisplayInfoWSI");
+
+    table->DbgCreateMsgCallback = (PFN_vkDbgCreateMsgCallback) gpa(inst, "vkDbgCreateMsgCallback");
+    table->DbgDestroyMsgCallback = (PFN_vkDbgDestroyMsgCallback) gpa(inst, "vkDbgDestroyMsgCallback");
 }
 
 static inline void *loader_lookup_instance_dispatch_table(
@@ -435,18 +424,14 @@ static inline void *loader_lookup_instance_dispatch_table(
         return (void *) table->GetGlobalExtensionInfo;
     if (!strcmp(name, "GetPhysicalDeviceExtensionInfo"))
         return (void *) table->GetPhysicalDeviceExtensionInfo;
-    if (!strcmp(name, "EnumerateLayers"))
-        return (void *) table->EnumerateLayers;
     if (!strcmp(name, "GetMultiDeviceCompatibility"))
         return (void *) table->GetMultiDeviceCompatibility;
-    if (!strcmp(name, "DbgRegisterMsgCallback"))
-        return (void *) table->DbgRegisterMsgCallback;
-    if (!strcmp(name, "DbgUnregisterMsgCallback"))
-        return (void *) table->DbgUnregisterMsgCallback;
-    if (!strcmp(name, "DbgSetGlobalOption"))
-        return (void *) table->DbgSetGlobalOption;
-    //TODO eventually extensions are in their own table
     if (!strcmp(name, "GetDisplayInfoWSI"))
         return (void *) table->GetDisplayInfoWSI;
+    if (!strcmp(name, "DbgCreateMsgCallback"))
+        return (void *) table->DbgCreateMsgCallback;
+    if (!strcmp(name, "DbgDestroyMsgCallback"))
+        return (void *) table->DbgDestroyMsgCallback;
+
     return NULL;
 }

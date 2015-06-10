@@ -257,8 +257,13 @@ class HeaderFileParser:
         self.struct_dict[struct_type][num]['type'] = member_type
         if '[' in member_name:
             (member_name, array_size) = member_name.split('[', 1)
-            self.struct_dict[struct_type][num]['array'] = True
-            self.struct_dict[struct_type][num]['array_size'] = array_size.strip(']')
+            if 'char' in member_type:
+                self.struct_dict[struct_type][num]['array'] = False
+                self.struct_dict[struct_type][num]['array_size'] = 0
+                self.struct_dict[struct_type][num]['ptr'] = True
+            else:
+                self.struct_dict[struct_type][num]['array'] = True
+                self.struct_dict[struct_type][num]['array_size'] = array_size.strip(']')
         elif self._is_dynamic_array(self.struct_dict[struct_type][num]['full_type'], member_name):
             #print("Found dynamic array %s of size %s" % (member_name, self.last_struct_count_name))
             self.struct_dict[struct_type][num]['array'] = True
@@ -778,17 +783,17 @@ class StructWrapperGen:
                     addr_char = '&'
                     if 1 < stp_list[index]['full_type'].count('*'):
                         addr_char = ''
-                    if (stp_list[index]['array']):
-                        #sh_funcs.append('/* A */');
+                    if (stp_list[index]['array'] and 'char' not in stp_list[index]['type']):
+                        sh_funcs.append('/* A */');
                         if stp_list[index]['dyn_array']:
-                            #sh_funcs.append('/* AA */');
+                            sh_funcs.append('/* AA */');
                             array_count = 'pStruct->%s' % (stp_list[index]['array_size'])
                         else:
-                            #sh_funcs.append('/* AB */');
+                            sh_funcs.append('/* AB */');
                             array_count = '%s' % (stp_list[index]['array_size'])
                         sh_funcs.append('%sstp_strs[%u] = "";' % (indent, index))
                         if not idx_ss_decl:
-                            #sh_funcs.append('/* AC */');
+                            sh_funcs.append('/* AC */');
                             sh_funcs.append('%sstringstream index_ss;' % (indent))
                             idx_ss_decl = True
                         sh_funcs.append('%sif (pStruct->%s) {' % (indent, stp_list[index]['name']))
@@ -808,10 +813,10 @@ class StructWrapperGen:
                             sh_funcs.append('%sss[%u] << %spStruct->%s[i];' % (indent, index, addr_char, stp_list[index]['name']))
                             sh_funcs.append('%stmp_str = %s(%spStruct->%s[i], extra_indent);' % (indent, self._get_sh_func_name(stp_list[index]['type']), addr_char, stp_list[index]['name']))
                             if self.no_addr:
-                                #sh_funcs.append('/* ADA */');
+                                sh_funcs.append('/* AEA */');
                                 sh_funcs.append('%sstp_strs[%u] += " " + prefix + "%s[" + index_ss.str() + "] (addr)\\n" + tmp_str;' % (indent, index, stp_list[index]['name']))
                             else:
-                                #sh_funcs.append('/* ADB */');
+                                sh_funcs.append('/* AEB */');
                                 sh_funcs.append('%sstp_strs[%u] += " " + prefix + "%s[" + index_ss.str() + "] (" + ss[%u].str() + ")\\n" + tmp_str;' % (indent, index, stp_list[index]['name'], index))
                         else:
                             #sh_funcs.append('/* AD */');
@@ -824,7 +829,7 @@ class StructWrapperGen:
                         indent = indent[4:]
                         sh_funcs.append('%s}' % (indent))
                     elif (stp_list[index]['ptr']):
-                        #sh_funcs.append('/* B */');
+                        sh_funcs.append('/* B */');
                         sh_funcs.append('    if (pStruct->%s) {' % stp_list[index]['name'])
                         if 'pNext' == stp_list[index]['name']:
                             sh_funcs.append('        tmp_str = dynamic_display((void*)pStruct->pNext, prefix);')

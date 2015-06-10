@@ -398,11 +398,11 @@ static VkFormat cmd_meta_img_raw_format(const struct intel_cmd *cmd,
 }
 
 ICD_EXPORT void VKAPI vkCmdCopyBuffer(
-    VkCmdBuffer                              cmdBuffer,
-    VkBuffer                                  srcBuffer,
-    VkBuffer                                  destBuffer,
-    uint32_t                                    regionCount,
-    const VkBufferCopy*                      pRegions)
+    VkCmdBuffer                 cmdBuffer,
+    VkBuffer                    srcBuffer,
+    VkBuffer                    destBuffer,
+    uint32_t                    regionCount,
+    const VkBufferCopy*         pRegions)
 {
     struct intel_cmd *cmd = intel_cmd(cmdBuffer);
     struct intel_buf *src = intel_buf(srcBuffer);
@@ -441,8 +441,8 @@ ICD_EXPORT void VKAPI vkCmdCopyBuffer(
             fmt = VK_FORMAT_R32G32B32A32_UINT;
         } else {
             if (cmd_gen(cmd) == INTEL_GEN(6)) {
-                intel_dev_log(cmd->dev, VK_DBG_MSG_ERROR,
-                        VK_VALIDATION_LEVEL_0, VK_NULL_HANDLE, 0, 0,
+                intel_dev_log(cmd->dev, VK_DBG_REPORT_ERROR_BIT,
+                        &cmd->obj.base, 0, 0,
                         "unaligned vkCmdCopyBuffer unsupported");
                 cmd_fail(cmd, VK_ERROR_UNKNOWN);
                 continue;
@@ -677,10 +677,10 @@ ICD_EXPORT void VKAPI vkCmdCopyImageToBuffer(
     if (img_format == VK_FORMAT_UNDEFINED ||
         (cmd_gen(cmd) == INTEL_GEN(6) &&
          icd_format_get_size(img_format) < 4)) {
-        intel_dev_log(cmd->dev, VK_DBG_MSG_ERROR,
-                VK_VALIDATION_LEVEL_0, VK_NULL_HANDLE, 0, 0,
-                "vkCmdCopyImageToBuffer with bpp %d unsupported",
-                icd_format_get_size(img->layout.format));
+        intel_dev_log(cmd->dev, VK_DBG_REPORT_ERROR_BIT,
+                      &cmd->obj.base, 0, 0,
+                      "vkCmdCopyImageToBuffer with bpp %d unsupported",
+                      icd_format_get_size(img->layout.format));
         cmd_fail(cmd, VK_ERROR_UNKNOWN);
         return;
     }

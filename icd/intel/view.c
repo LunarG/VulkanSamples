@@ -1080,7 +1080,7 @@ VkResult intel_buf_view_create(struct intel_dev *dev,
     int i;
 
     view = (struct intel_buf_view *) intel_base_create(&dev->base.handle,
-            sizeof(*view), dev->base.dbg, VK_DBG_OBJECT_BUFFER_VIEW,
+            sizeof(*view), dev->base.dbg, VK_OBJECT_TYPE_BUFFER_VIEW,
             info, 0);
     if (!view)
         return VK_ERROR_OUT_OF_HOST_MEMORY;
@@ -1144,8 +1144,8 @@ static void img_view_destroy(struct intel_obj *obj)
 }
 
 VkResult intel_img_view_create(struct intel_dev *dev,
-                                 const VkImageViewCreateInfo *info,
-                                 struct intel_img_view **view_ret)
+                               const VkImageViewCreateInfo *info,
+                               struct intel_img_view **view_ret)
 {
     struct intel_img *img = intel_img(info->image);
     struct intel_img_view *view;
@@ -1167,7 +1167,7 @@ VkResult intel_img_view_create(struct intel_dev *dev,
         array_size = img->array_size - info->subresourceRange.baseArraySlice;
 
     view = (struct intel_img_view *) intel_base_create(&dev->base.handle,
-            sizeof(*view), dev->base.dbg, VK_DBG_OBJECT_IMAGE_VIEW, info, 0);
+            sizeof(*view), dev->base.dbg, VK_OBJECT_TYPE_IMAGE_VIEW, info, 0);
     if (!view)
         return VK_ERROR_OUT_OF_HOST_MEMORY;
 
@@ -1195,9 +1195,9 @@ VkResult intel_img_view_create(struct intel_dev *dev,
         view->shader_swizzles.g != VK_CHANNEL_SWIZZLE_G ||
         view->shader_swizzles.b != VK_CHANNEL_SWIZZLE_B ||
         view->shader_swizzles.a != VK_CHANNEL_SWIZZLE_A) {
-        intel_dev_log(dev, VK_DBG_MSG_WARNING,
-                VK_VALIDATION_LEVEL_0, VK_NULL_HANDLE, 0, 0,
-                "image data swizzling is ignored");
+        intel_dev_log(dev, VK_DBG_REPORT_WARN_BIT,
+                      VK_NULL_HANDLE, 0, 0,
+                      "image data swizzling is ignored");
     }
 
     if (intel_gpu_gen(dev->gpu) >= INTEL_GEN(7)) {
@@ -1245,7 +1245,7 @@ VkResult intel_rt_view_create(struct intel_dev *dev,
     struct intel_rt_view *view;
 
     view = (struct intel_rt_view *) intel_base_create(&dev->base.handle,
-            sizeof(*view), dev->base.dbg, VK_DBG_OBJECT_COLOR_TARGET_VIEW,
+            sizeof(*view), dev->base.dbg, VK_OBJECT_TYPE_COLOR_ATTACHMENT_VIEW,
             info, 0);
     if (!view)
         return VK_ERROR_OUT_OF_HOST_MEMORY;
@@ -1299,7 +1299,7 @@ VkResult intel_ds_view_create(struct intel_dev *dev,
     struct intel_ds_view *view;
 
     view = (struct intel_ds_view *) intel_base_create(&dev->base.handle,
-            sizeof(*view), dev->base.dbg, VK_DBG_OBJECT_DEPTH_STENCIL_VIEW,
+            sizeof(*view), dev->base.dbg, VK_OBJECT_TYPE_DEPTH_STENCIL_VIEW,
             info, 0);
     if (!view)
         return VK_ERROR_OUT_OF_HOST_MEMORY;

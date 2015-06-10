@@ -135,23 +135,8 @@ enum intel_dev_meta_shader {
     INTEL_DEV_META_SHADER_COUNT,
 };
 
-struct intel_dev_dbg_msg_filter {
-    int32_t msg_code;
-    VK_DBG_MSG_FILTER filter;
-    bool triggered;
-
-    struct intel_dev_dbg_msg_filter *next;
-};
-
 struct intel_dev_dbg {
     struct intel_base_dbg base;
-
-    VkValidationLevel validation_level;
-    bool disable_pipeline_loads;
-    bool force_object_memory_reqs;
-    bool force_large_image_alignment;
-
-    struct intel_dev_dbg_msg_filter *filters;
 };
 
 struct intel_dev {
@@ -191,16 +176,8 @@ VkResult intel_dev_create(struct intel_gpu *gpu,
                             struct intel_dev **dev_ret);
 void intel_dev_destroy(struct intel_dev *dev);
 
-VkResult intel_dev_add_msg_filter(struct intel_dev *dev,
-                                    int32_t msg_code,
-                                    VK_DBG_MSG_FILTER filter);
-
-void intel_dev_remove_msg_filter(struct intel_dev *dev,
-                                 int32_t msg_code);
-
 void intel_dev_log(struct intel_dev *dev,
-                   VK_DBG_MSG_TYPE msg_type,
-                   VkValidationLevel validation_level,
+                   VkFlags msg_flags,
                    struct intel_base *src_object,
                    size_t location,
                    int32_t msg_code,

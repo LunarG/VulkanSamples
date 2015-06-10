@@ -37,8 +37,8 @@
 #endif // _WIN32
 
 #include <vulkan.h>
-#include <vkDbg.h>
 #include <vk_wsi_lunarg.h>
+#include "vk_debug_report_lunarg.h"
 
 #include "icd-spv.h"
 
@@ -236,23 +236,24 @@ void dumpVec4(const char *note, vec4 vector)
     fflush(stdout);
 }
 
-void VKAPI dbgFunc(
-    VK_DBG_MSG_TYPE      msgType,
-    VkValidationLevel    validationLevel,
-    VkObject             srcObject,
-    size_t               location,
-    int32_t              msgCode,
-    const char*          pMsg,
-    void*                pUserData)
+void dbgFunc(
+    VkFlags                    msgFlags,
+    VkObjectType                        objType,
+    VkObject                            srcObject,
+    size_t                              location,
+    int32_t                             msgCode,
+    const char*                         pLayerPrefix,
+    const char*                         pMsg,
+    void*                               pUserData)
 {
     char *message = (char *) malloc(strlen(pMsg)+100);
 
     assert (message);
 
-    if (msgType == VK_DBG_MSG_ERROR) {
-        sprintf(message,"ERROR: Code %d : %s", msgCode, pMsg);
-    } else if (msgType == VK_DBG_MSG_WARNING) {
-        sprintf(message,"WARNING: Code %d : %s", msgCode, pMsg);
+    if (msgFlags & VK_DBG_REPORT_ERROR_BIT) {
+        sprintf(message,"ERROR: [%s] Code %d : %s", pLayerPrefix, msgCode, pMsg);
+    } else if (msgFlags & VK_DBG_REPORT_WARN_BIT) {
+        sprintf(message,"WARNING: [%s] Code %d : %s", pLayerPrefix, msgCode, pMsg);
     } else {
         return;
     }
@@ -350,6 +351,9 @@ struct demo {
 
     bool quit;
     bool validate;
+    PFN_vkDbgCreateMsgCallback dbgCreateMsgCallback;
+    VkDbgMsgCallback msg_callback;
+
     uint32_t current_buffer;
 };
 
@@ -1790,25 +1794,36 @@ static void demo_create_window(struct demo *demo)
 static void demo_init_vk(struct demo *demo)
 {
     VkResult err;
-    // Extensions to enable
-    const char *ext_names[] = {
-        "VK_WSI_LunarG",
-        "Validation"
-    };
+    VkExtensionProperties *instance_extensions;
+    uint32_t instance_extension_count = 0;
+    VkExtensionProperties *device_extensions;
+    uint32_t device_extension_count = 0;
     size_t extSize = sizeof(uint32_t);
-    uint32_t extCount = 0;
-    err = vkGetGlobalExtensionInfo(VK_EXTENSION_INFO_TYPE_COUNT, 0, &extSize, &extCount);
+    uint32_t total_extension_count = 0;
+    err = vkGetGlobalExtensionInfo(VK_EXTENSION_INFO_TYPE_COUNT, 0, &extSize, &total_extension_count);
     assert(!err);
 
     VkExtensionProperties extProp;
     extSize = sizeof(VkExtensionProperties);
-    bool32_t U_ASSERT_ONLY extFound = 0;
-    for (uint32_t i = 0; i < extCount; i++) {
+    bool32_t WSIextFound = 0;
+    instance_extensions = malloc(sizeof(VkExtensionProperties) * total_extension_count);
+    device_extensions = malloc(sizeof(VkExtensionProperties) * total_extension_count);
+    for (uint32_t i = 0; i < total_extension_count; i++) {
         err = vkGetGlobalExtensionInfo(VK_EXTENSION_INFO_TYPE_PROPERTIES, i, &extSize, &extProp);
-        if (!strcmp(ext_names[0], extProp.extName))
-            extFound = 1;
+        if (!strcmp("VK_WSI_LunarG", extProp.name)) {
+            WSIextFound = 1;
+            memcpy(&instance_extensions[instance_extension_count++], &extProp, sizeof(VkExtensionProperties));
+            memcpy(&device_extensions[device_extension_count++], &extProp, sizeof(VkExtensionProperties));
+        }
+        if (!strcmp("Validation", extProp.name)) {
+            memcpy(&instance_extensions[instance_extension_count++], &extProp, sizeof(VkExtensionProperties));
+            memcpy(&device_extensions[device_extension_count++], &extProp, sizeof(VkExtensionProperties));
+        }
+        if (!strcmp(DEBUG_REPORT_EXTENSION_NAME, extProp.name)) {
+            memcpy(&instance_extensions[instance_extension_count++], &extProp, sizeof(VkExtensionProperties));
+        }
     }
-    if (!extFound) {
+    if (!WSIextFound) {
         ERR_EXIT("vkGetGlobalExtensionInfo failed to find the "
                  "\"VK_WSI_LunarG\" extension.\n\nDo you have a compatible "
                  "Vulkan installable client driver (ICD) installed?\nPlease "
@@ -1830,21 +1845,21 @@ static void demo_init_vk(struct demo *demo)
         .pNext = NULL,
         .pAppInfo = &app,
         .pAllocCb = NULL,
-        .extensionCount = 1,
-        .ppEnabledExtensionNames = ext_names,
+        .extensionCount = instance_extension_count,
+        .pEnabledExtensions = instance_extensions,
     };
     const VkDeviceQueueCreateInfo queue = {
         .queueNodeIndex = 0,
         .queueCount = 1,
     };
 
-    const VkDeviceCreateInfo device = {
+    VkDeviceCreateInfo device = {
         .sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
         .pNext = NULL,
         .queueRecordCount = 1,
         .pRequestedQueues = &queue,
-        .extensionCount = 1,
-        .ppEnabledExtensionNames = ext_names,
+        .extensionCount = device_extension_count,
+        .pEnabledExtensions = device_extensions,
         .flags = 0,
     };
     uint32_t gpu_count;
@@ -1853,7 +1868,8 @@ static void demo_init_vk(struct demo *demo)
     uint32_t queue_count;
 
     if (demo->validate) {
-        inst_info.extensionCount = 2;
+        inst_info.extensionCount = 3;
+        device.extensionCount = 3;
     }
 
     err = vkCreateInstance(&inst_info, &demo->inst);
@@ -1878,8 +1894,34 @@ static void demo_init_vk(struct demo *demo)
     err = vkEnumeratePhysicalDevices(demo->inst, &gpu_count, &demo->gpu);
     assert(!err && gpu_count == 1);
 
+
     if (demo->validate) {
-        vkDbgRegisterMsgCallback(demo->inst, dbgFunc, NULL);
+        demo->dbgCreateMsgCallback = vkGetInstanceProcAddr((VkPhysicalDevice) NULL, "vkDbgCreateMsgCallback");
+        if (!demo->dbgCreateMsgCallback) {
+            ERR_EXIT("GetProcAddr: Unable to find vkDbgCreateMsgCallback\n",
+                     "vkGetProcAddr Failure");
+        }
+        err = demo->dbgCreateMsgCallback(
+                  demo->inst,
+                  VK_DBG_REPORT_ERROR_BIT | VK_DBG_REPORT_WARN_BIT,
+                  dbgFunc, NULL,
+                  &demo->msg_callback);
+        switch (err) {
+        case VK_SUCCESS:
+            break;
+        case VK_ERROR_INVALID_POINTER:
+            ERR_EXIT("dbgCreateMsgCallback: Invalid pointer\n",
+                     "dbgCreateMsgCallback Failure");
+            break;
+        case VK_ERROR_OUT_OF_HOST_MEMORY:
+            ERR_EXIT("dbgCreateMsgCallback: out of host memory\n",
+                     "dbgCreateMsgCallback Failure");
+            break;
+        default:
+            ERR_EXIT("dbgCreateMsgCallback: unknown failure\n",
+                     "dbgCreateMsgCallback Failure");
+            break;
+        }
     }
 
     err = vkCreateDevice(demo->gpu, &device, &demo->device);

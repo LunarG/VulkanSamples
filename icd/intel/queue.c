@@ -39,10 +39,10 @@ static void queue_submit_hang(struct intel_queue *queue,
 {
     intel_cmd_decode(cmd, true);
 
-    intel_dev_log(queue->dev, VK_DBG_MSG_ERROR,
-            VK_VALIDATION_LEVEL_0, VK_NULL_HANDLE, 0, 0,
-            "GPU hanged with %d/%d active/pending command buffers lost",
-            active_lost, pending_lost);
+    intel_dev_log(queue->dev, VK_DBG_REPORT_ERROR_BIT,
+                  VK_NULL_HANDLE, 0, 0,
+                  "GPU hanged with %d/%d active/pending command buffers lost",
+                  active_lost, pending_lost);
 }
 
 static VkResult queue_submit_bo(struct intel_queue *queue,
@@ -189,9 +189,9 @@ static VkResult queue_submit_cmd_prepare(struct intel_queue *queue,
                                            struct intel_cmd *cmd)
 {
     if (unlikely(cmd->result != VK_SUCCESS)) {
-        intel_dev_log(cmd->dev, VK_DBG_MSG_ERROR,
-                VK_VALIDATION_LEVEL_0, VK_NULL_HANDLE, 0, 0,
-                "invalid command buffer submitted");
+        intel_dev_log(cmd->dev, VK_DBG_REPORT_ERROR_BIT,
+                      &cmd->obj.base, 0, 0,
+                      "invalid command buffer submitted");
         return cmd->result;
     }
 
@@ -272,7 +272,7 @@ VkResult intel_queue_create(struct intel_dev *dev,
     }
 
     queue = (struct intel_queue *) intel_base_create(&dev->base.handle,
-            sizeof(*queue), dev->base.dbg, VK_DBG_OBJECT_QUEUE, NULL, 0);
+            sizeof(*queue), dev->base.dbg, VK_OBJECT_TYPE_QUEUE, NULL, 0);
     if (!queue)
         return VK_ERROR_OUT_OF_HOST_MEMORY;
 

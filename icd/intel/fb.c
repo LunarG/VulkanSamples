@@ -47,7 +47,7 @@ VkResult intel_fb_create(struct intel_dev *dev,
         return VK_ERROR_INVALID_VALUE;
 
     fb = (struct intel_fb *) intel_base_create(&dev->base.handle,
-            sizeof(*fb), dev->base.dbg, VK_DBG_OBJECT_FRAMEBUFFER, info, 0);
+            sizeof(*fb), dev->base.dbg, VK_OBJECT_TYPE_FRAMEBUFFER, info, 0);
     if (!fb)
         return VK_ERROR_OUT_OF_HOST_MEMORY;
 
@@ -146,7 +146,7 @@ VkResult intel_render_pass_create(struct intel_dev *dev,
     uint32_t i;
 
     rp = (struct intel_render_pass *) intel_base_create(&dev->base.handle,
-            sizeof(*rp), dev->base.dbg, VK_DBG_OBJECT_RENDER_PASS, info, 0);
+            sizeof(*rp), dev->base.dbg, VK_OBJECT_TYPE_RENDER_PASS, info, 0);
     if (!rp)
         return VK_ERROR_OUT_OF_HOST_MEMORY;
 

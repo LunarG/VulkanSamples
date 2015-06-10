@@ -22,6 +22,7 @@
  * DEALINGS IN THE SOFTWARE.
  */
 #include "vkLayer.h"
+#include "vk_debug_report_lunarg.h"
 
 
 /* Shader checker error codes */

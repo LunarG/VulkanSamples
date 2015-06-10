@@ -126,34 +126,23 @@ VkPhysicalDeviceMemoryProperties PhysicalGpu::memory_properties() const
     return get_info<VkPhysicalDeviceMemoryProperties>(gpu_, VK_PHYSICAL_DEVICE_INFO_TYPE_MEMORY_PROPERTIES, 1)[0];
 }
 
-std::vector<const char *> PhysicalGpu::layers(std::vector<char> &buf) const
+void PhysicalGpu::add_extension_dependencies(
+        uint32_t dependency_count,
+        VkExtensionProperties *depencency_props,
+        std::vector<VkExtensionProperties> &ext_list)
 {
-    const size_t max_layer_count = 16;
-    const size_t max_string_size = 256;
+    for (uint32_t i = 0; i < dependency_count; i++) {
 
-    buf.resize(max_layer_count * max_string_size);
-
-    std::vector<const char *> layers;
-    layers.reserve(max_layer_count);
-    for (size_t i = 0; i < max_layer_count; i++)
-        layers.push_back(&buf[0] + max_string_size * i);
-
-    char * const *out = const_cast<char * const *>(&layers[0]);
-    size_t count = max_layer_count; /* allow up to 16 layer names to be returned */
-    if (!EXPECT(vkEnumerateLayers(gpu_, max_string_size, &count, out, NULL) == VK_SUCCESS))
-        count = 0;
-    layers.resize(count);
-
-    return layers;
+    }
 }
 
-std::vector<const char *> PhysicalGpu::extensions() const
+std::vector<VkExtensionProperties> PhysicalGpu::extensions() const
 {
     // Extensions to enable
     static const char *known_exts[] = {
         "VK_WSI_LunarG",
     };
-    std::vector<const char *> exts;
+    std::vector<VkExtensionProperties> exts;
     size_t extSize = sizeof(uint32_t);
     uint32_t extCount = 0;
     if (!EXPECT(vkGetGlobalExtensionInfo(VK_EXTENSION_INFO_TYPE_COUNT, 0, &extSize, &extCount) == VK_SUCCESS))
@@ -166,8 +155,8 @@ std::vector<const char *> PhysicalGpu::extensions() const
         if (!EXPECT(vkGetGlobalExtensionInfo(VK_EXTENSION_INFO_TYPE_PROPERTIES, i, &extSize, &extProp) == VK_SUCCESS))
             return exts;
 
-        if (!strcmp(known_exts[0], extProp.extName))
-            exts.push_back(known_exts[i]);
+        if (!strcmp(known_exts[0], extProp.name))
+            exts.push_back(extProp);
     }
 
     return exts;
@@ -336,7 +325,7 @@ Device::~Device()
     EXPECT(vkDestroyDevice(obj()) == VK_SUCCESS);
 }
 
-void Device::init(bool enable_layers)
+void Device::init(std::vector<VkExtensionProperties> extensions)
 {
     // request all queues
     const std::vector<VkPhysicalDeviceQueueProperties> queue_props = gpu_.queue_properties();
@@ -352,27 +341,13 @@ void Device::init(bool enable_layers)
         queue_info.push_back(qi);
     }
 
-    VkLayerCreateInfo layer_info = {};
-    layer_info.sType = VK_STRUCTURE_TYPE_LAYER_CREATE_INFO;
-
-    std::vector<const char *> layers;
-    std::vector<char> layer_buf;
-    // request all layers
-    if (enable_layers) {
-        layers = gpu_.layers(layer_buf);
-        layer_info.layerCount = layers.size();
-        layer_info.ppActiveLayerNames = &layers[0];
-    }
-
-    const std::vector<const char *> exts = gpu_.extensions();
-
     VkDeviceCreateInfo dev_info = {};
     dev_info.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
-    dev_info.pNext = (enable_layers) ? static_cast<void *>(&layer_info) : NULL;
+    dev_info.pNext = NULL;
     dev_info.queueRecordCount = queue_info.size();
     dev_info.pRequestedQueues = &queue_info[0];
-    dev_info.extensionCount = exts.size();
-    dev_info.ppEnabledExtensionNames = &exts[0];
+    dev_info.extensionCount = extensions.size();
+    dev_info.pEnabledExtensions = &extensions[0];
     dev_info.flags = 0;
 
     init(dev_info);

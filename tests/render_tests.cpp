@@ -68,7 +68,7 @@ using namespace std;
 #include "../layers/object_track.h"
 #endif
 #ifdef DEBUG_CALLBACK
-#include <vkDbg.h>
+#include <vk_debug_report_lunarg.h>
 #endif
 #include "gtest-1.7.0/include/gtest/gtest.h"
 
@@ -94,7 +94,7 @@ void VKAPI myDbgFunc(
         case VK_DBG_MSG_WARNING:
             printf("CALLBACK WARNING : %s\n", pMsg);
             break;
-        case VK_DBG_MSG_ERROR:
+        case VK_DBG_REPORT_ERROR_BIT:
             printf("CALLBACK ERROR : %s\n", pMsg);
             break;
         default:
@@ -498,7 +498,7 @@ void VkRenderTest::VKTriangleTest(const char *vertShaderText, const char *fragSh
     OBJTRACK_NODE* pObjNodeArray = (OBJTRACK_NODE*)malloc(sizeof(OBJTRACK_NODE)*numObjects);
     pObjTrackGetObjs(numObjects, pObjNodeArray);
     for (i=0; i < numObjects; i++) {
-        printf("Object %i of type %s has objID (%p) and %lu uses\n", i, string_from_vulkan_object_type(pObjNodeArray[i].objType), pObjNodeArray[i].vkObj, pObjNodeArray[i].numUses);
+        printf("Object %i of type %s has objID (%p) and %lu uses\n", i, string_VkObjectType(pObjNodeArray[i].objType), pObjNodeArray[i].pObj, pObjNodeArray[i].numUses);
     }
     free(pObjNodeArray);
 #endif

@@ -71,7 +71,7 @@ static void initParamChecker(void)
 
     const char *strOpt;
     // initialize ParamChecker options
-    getLayerOptionEnum("ParamCheckerReportLevel", (uint32_t *) &g_reportingLevel);
+    getLayerOptionEnum("ParamCheckerReportLevel", (uint32_t *) &g_reportFlags);
     g_actionIsDefault = getLayerOptionEnum("ParamCheckerDebugAction", (uint32_t *) &g_debugAction);
 
     if (g_debugAction & VK_DBG_LAYER_ACTION_LOG_MSG)
@@ -93,7 +93,7 @@ void PreCreateInstance(const VkApplicationInfo* pAppInfo, const VkAllocCallbacks
     {
         char const str[] = "vkCreateInstance parameter, VkApplicationInfo* pAppInfo, is "\
             "nullptr (precondition).";
-        layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
+        layerCbMsg(VK_DBG_REPORT_INFO_BIT, (VkObjectType) 0, NULL, 0, 1, "PARAMCHECK", str);
         return;
     }
 
@@ -101,7 +101,7 @@ void PreCreateInstance(const VkApplicationInfo* pAppInfo, const VkAllocCallbacks
     {
         char const str[] = "vkCreateInstance parameter, VK_STRUCTURE_TYPE_APPLICATION_INFO "\
             "pAppInfo->sType, is not VK_STRUCTURE_TYPE_APPLICATION_INFO (precondition).";
-        layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
+        layerCbMsg(VK_DBG_REPORT_INFO_BIT, (VkObjectType) 0, NULL, 0, 1, "PARAMCHECK", str);
         return;
     }
 
@@ -115,27 +115,29 @@ void PreCreateInstance(const VkApplicationInfo* pAppInfo, const VkAllocCallbacks
         {
             char const str[] = "vkCreateInstance parameter, VkAllocCallbacks* pAllocCb, "\
                 "contains an invalid value (precondition).";
-            layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
+            layerCbMsg(VK_DBG_REPORT_INFO_BIT, (VkObjectType) 0, NULL, 0, 1, "PARAMCHECK", str);
             return;
         }
     }
 }
 
-void PostCreateInstance(VkResult result, VkInstance* pInstance)
+void PostCreateInstance(VkResult result, const VkInstanceCreateInfo *pCreateInfo, VkInstance* pInstance)
 {
     if(result != VK_SUCCESS)
     {
         // TODO: Spit out VkResult value.
         char const str[] = "vkCreateInstance failed (postcondition).";
-        layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
+        layerCbMsg(VK_DBG_REPORT_INFO_BIT, (VkObjectType) 0, NULL, 0, 1, "PARAMCHECK", str);
         return;
     }
+
+    enable_debug_report(pCreateInfo->extensionCount, pCreateInfo->pEnabledExtensions);
 
     if(pInstance == nullptr)
     {
         char const str[] = "vkCreateInstance parameter, VkInstance* pInstance, is nullptr "\
             "(postcondition).";
-        layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
+        layerCbMsg(VK_DBG_REPORT_INFO_BIT, (VkObjectType) 0, NULL, 0, 1, "PARAMCHECK", str);
         return;
     }
 }
@@ -144,7 +146,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateInstance(const VkInstanceCreateInfo* pCre
 {
     PreCreateInstance(pCreateInfo->pAppInfo, pCreateInfo->pAllocCb);
     VkResult result = nextInstanceTable.CreateInstance(pCreateInfo, pInstance);
-    PostCreateInstance(result, pInstance);
+    PostCreateInstance(result, pCreateInfo, pInstance);
     return result;
 }
 
@@ -160,7 +162,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkGetPhysicalDeviceInfo(VkPhysicalDevice gpu, VkP
     char str[1024];
     if (!validate_VkPhysicalDeviceInfoType(infoType)) {
         sprintf(str, "Parameter infoType to function GetPhysicalDeviceInfo has invalid value of %i.", (int)infoType);
-        layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
+        layerCbMsg(VK_DBG_REPORT_ERROR_BIT, (VkObjectType) 0, NULL, 0, 1, "PARAMCHECK", str);
     }
     VkResult result = nextInstanceTable.GetPhysicalDeviceInfo(gpu, infoType, pDataSize, pData);
     return result;
@@ -172,7 +174,7 @@ void PreCreateDevice(VkPhysicalDevice gpu, const VkDeviceCreateInfo* pCreateInfo
     {
         char const str[] = "vkCreateDevice parameter, VkPhysicalDevice gpu, is nullptr "\
             "(precondition).";
-        layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
+        layerCbMsg(VK_DBG_REPORT_INFO_BIT, (VkObjectType) 0, NULL, 0, 1, "PARAMCHECK", str);
         return;
     }
 
@@ -180,7 +182,7 @@ void PreCreateDevice(VkPhysicalDevice gpu, const VkDeviceCreateInfo* pCreateInfo
     {
         char const str[] = "vkCreateDevice parameter, VkDeviceCreateInfo* pCreateInfo, is "\
             "nullptr (precondition).";
-        layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
+        layerCbMsg(VK_DBG_REPORT_INFO_BIT, (VkObjectType) 0, NULL, 0, 1, "PARAMCHECK", str);
         return;
     }
 
@@ -188,7 +190,7 @@ void PreCreateDevice(VkPhysicalDevice gpu, const VkDeviceCreateInfo* pCreateInfo
     {
         char const str[] = "vkCreateDevice parameter, VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO "\
             "pCreateInfo->sType, is not VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO (precondition).";
-        layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
+        layerCbMsg(VK_DBG_REPORT_INFO_BIT, (VkObjectType) 0, NULL, 0, 1, "PARAMCHECK", str);
         return;
     }
 
@@ -196,7 +198,7 @@ void PreCreateDevice(VkPhysicalDevice gpu, const VkDeviceCreateInfo* pCreateInfo
     {
         char const str[] = "vkCreateDevice parameter, uint32_t pCreateInfo->queueRecordCount, is "\
             "zero (precondition).";
-        layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
+        layerCbMsg(VK_DBG_REPORT_INFO_BIT, (VkObjectType) 0, NULL, 0, 1, "PARAMCHECK", str);
         return;
     }
 
@@ -204,7 +206,7 @@ void PreCreateDevice(VkPhysicalDevice gpu, const VkDeviceCreateInfo* pCreateInfo
     {
         char const str[] = "vkCreateDevice parameter, VkDeviceQueueCreateInfo* pCreateInfo->pRequestedQueues, is "\
             "nullptr (precondition).";
-        layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
+        layerCbMsg(VK_DBG_REPORT_INFO_BIT, (VkObjectType) 0, NULL, 0, 1, "PARAMCHECK", str);
         return;
     }
 
@@ -215,27 +217,29 @@ void PreCreateDevice(VkPhysicalDevice gpu, const VkDeviceCreateInfo* pCreateInfo
             std::stringstream ss;
             ss << "vkCreateDevice parameter, VkDeviceQueueCreateInfo pCreateInfo->pRequestedQueues[" << i <<
                 "], is invalid (precondition).";
-            layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", ss.str().c_str());
+            layerCbMsg(VK_DBG_REPORT_ERROR_BIT, (VkObjectType) 0, NULL, 0, 1, "PARAMCHECK", ss.str().c_str());
             continue;
         }
     }
 
 }
 
-void PostCreateDevice(VkResult result, VkDevice* pDevice)
+void PostCreateDevice(VkResult result, const VkDeviceCreateInfo *pCreateInfo, VkDevice* pDevice)
 {
     if(result != VK_SUCCESS)
     {
         // TODO: Spit out VkResult value.
         char const str[] = "vkCreateDevice failed (postcondition).";
-        layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
+        layerCbMsg(VK_DBG_REPORT_INFO_BIT, (VkObjectType) 0, NULL, 0, 1, "PARAMCHECK", str);
         return;
     }
+
+    enable_debug_report(pCreateInfo->extensionCount, pCreateInfo->pEnabledExtensions);
 
     if(pDevice == nullptr)
     {
         char const str[] = "vkCreateDevice parameter, VkDevice* pDevice, is nullptr (postcondition).";
-        layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
+        layerCbMsg(VK_DBG_REPORT_INFO_BIT, (VkObjectType) 0, NULL, 0, 1, "PARAMCHECK", str);
         return;
     }
 }
@@ -244,7 +248,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateDevice(VkPhysicalDevice gpu, const VkDevi
 {
     PreCreateDevice(gpu, pCreateInfo);
     VkResult result = nextInstanceTable.CreateDevice(gpu, pCreateInfo, pDevice);
-    PostCreateDevice(result, pDevice);
+    PostCreateDevice(result, pCreateInfo, pDevice);
     return result;
 }
 
@@ -255,26 +259,23 @@ VK_LAYER_EXPORT VkResult VKAPI vkDestroyDevice(VkDevice device)
     return result;
 }
 
-struct extProps {
-    uint32_t version;
-    const char * const name;
-};
-
-#define PARAM_CHECKER_LAYER_EXT_ARRAY_SIZE 2
-static const struct extProps pcExts[PARAM_CHECKER_LAYER_EXT_ARRAY_SIZE] = {
-    // TODO what is the version?
-    0x10, "ParamChecker",
-    0x10, "Validation",
+#define PARAM_CHECKER_LAYER_EXT_ARRAY_SIZE 1
+static const VkExtensionProperties pcExts[PARAM_CHECKER_LAYER_EXT_ARRAY_SIZE] = {
+    {
+        VK_STRUCTURE_TYPE_EXTENSION_PROPERTIES,
+        "ParamChecker",
+        0x10,
+        "Sample layer: ParamChecker",
+    }
 };
 
 VK_LAYER_EXPORT VkResult VKAPI vkGetGlobalExtensionInfo(
-                                               VkExtensionInfoType infoType,
-                                               uint32_t extensionIndex,
-                                               size_t*  pDataSize,
-                                               void*    pData)
+        VkExtensionInfoType infoType,
+        uint32_t extensionIndex,
+        size_t*  pDataSize,
+        void*    pData)
 {
     /* This entrypoint is NOT going to init it's own dispatch table since loader calls here early */
-    VkExtensionProperties *ext_props;
     uint32_t *count;
 
     if (pDataSize == NULL)
@@ -294,11 +295,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkGetGlobalExtensionInfo(
                 return VK_SUCCESS;
             if (extensionIndex >= PARAM_CHECKER_LAYER_EXT_ARRAY_SIZE)
                 return VK_ERROR_INVALID_VALUE;
-            ext_props = (VkExtensionProperties *) pData;
-            ext_props->version = pcExts[extensionIndex].version;
-            strncpy(ext_props->extName, pcExts[extensionIndex].name,
-                                        VK_MAX_EXTENSION_NAME);
-            ext_props->extName[VK_MAX_EXTENSION_NAME - 1] = '\0';
+            memcpy((VkExtensionProperties *) pData, &pcExts[extensionIndex], sizeof(VkExtensionProperties));
             break;
         default:
             return VK_ERROR_INVALID_VALUE;
@@ -316,30 +313,6 @@ VK_LAYER_EXPORT VkResult VKAPI vkGetPhysicalDeviceExtensionInfo(
 {
     VkResult result = nextInstanceTable.GetPhysicalDeviceExtensionInfo(gpu, infoType, extensionIndex, pDataSize, pData);
     return result;
-}
-
-VK_LAYER_EXPORT VkResult VKAPI vkEnumerateLayers(VkPhysicalDevice gpu, size_t maxStringSize, size_t* pLayerCount, char* const* pOutLayers, void* pReserved)
-{
-    char str[1024];
-    if (gpu != NULL) {
-        sprintf(str, "At start of layered EnumerateLayers\n");
-        layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, nullptr, 0, 0, "PARAMCHECK", str);
-        pCurObj = (VkBaseLayerObject *) gpu;
-        loader_platform_thread_once(&initOnce, initParamChecker);
-        loader_platform_thread_once(&tabDeviceOnce, initDeviceTable);
-        VkResult result = nextInstanceTable.EnumerateLayers(gpu, maxStringSize, pLayerCount, pOutLayers, pReserved);
-        sprintf(str, "Completed layered EnumerateLayers\n");
-        layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, nullptr, 0, 0, "PARAMCHECK", str);
-        fflush(stdout);
-        return result;
-    } else {
-        if (pLayerCount == NULL || pOutLayers == NULL || pOutLayers[0] == NULL)
-            return VK_ERROR_INVALID_POINTER;
-        // This layer compatible with all GPUs
-        *pLayerCount = 1;
-        strncpy(pOutLayers[0], "ParamChecker", maxStringSize);
-        return VK_SUCCESS;
-    }
 }
 
 VK_LAYER_EXPORT VkResult VKAPI vkGetDeviceQueue(VkDevice device, uint32_t queueNodeIndex, uint32_t queueIndex, VkQueue* pQueue)
@@ -374,10 +347,10 @@ VK_LAYER_EXPORT VkResult VKAPI vkAllocMemory(VkDevice device, const VkMemoryAllo
     char str[1024];
     if (!pAllocInfo) {
         sprintf(str, "Struct ptr parameter pAllocInfo to function AllocMemory is NULL.");
-        layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
+        layerCbMsg(VK_DBG_REPORT_INFO_BIT, (VkObjectType) 0, NULL, 0, 1, "PARAMCHECK", str);
     } else if (!vk_validate_vkmemoryallocinfo(pAllocInfo)) {
         sprintf(str, "Parameter pAllocInfo to function AllocMemory contains an invalid value.");
-        layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
+        layerCbMsg(VK_DBG_REPORT_ERROR_BIT, (VkObjectType) 0, NULL, 0, 1, "PARAMCHECK", str);
     }
     VkResult result = nextTable.AllocMemory(device, pAllocInfo, pMem);
     return result;
@@ -395,7 +368,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkSetMemoryPriority(VkDevice device, VkDeviceMemo
     char str[1024];
     if (!validate_VkMemoryPriority(priority)) {
         sprintf(str, "Parameter priority to function SetMemoryPriority has invalid value of %i.", (int)priority);
-        layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
+        layerCbMsg(VK_DBG_REPORT_ERROR_BIT, (VkObjectType) 0, NULL, 0, 1, "PARAMCHECK", str);
     }
     VkResult result = nextTable.SetMemoryPriority(device, mem, priority);
     return result;
@@ -454,11 +427,11 @@ VK_LAYER_EXPORT VkResult VKAPI vkOpenSharedMemory(VkDevice device, const VkMemor
     char str[1024];
     if (!pOpenInfo) {
         sprintf(str, "Struct ptr parameter pOpenInfo to function OpenSharedMemory is NULL.");
-        layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
+        layerCbMsg(VK_DBG_REPORT_INFO_BIT, (VkObjectType) 0, NULL, 0, 1, "PARAMCHECK", str);
     }
     else if (!vk_validate_vkmemoryopeninfo(pOpenInfo)) {
         sprintf(str, "Parameter pOpenInfo to function OpenSharedMemory contains an invalid value.");
-        layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
+        layerCbMsg(VK_DBG_REPORT_ERROR_BIT, (VkObjectType) 0, NULL, 0, 1, "PARAMCHECK", str);
     }
     VkResult result = nextTable.OpenSharedMemory(device, pOpenInfo, pMem);
     return result;
@@ -469,11 +442,11 @@ VK_LAYER_EXPORT VkResult VKAPI vkOpenSharedSemaphore(VkDevice device, const VkSe
     char str[1024];
     if (!pOpenInfo) {
         sprintf(str, "Struct ptr parameter pOpenInfo to function OpenSharedSemaphore is NULL.");
-        layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
+        layerCbMsg(VK_DBG_REPORT_INFO_BIT, (VkObjectType) 0, NULL, 0, 1, "PARAMCHECK", str);
     }
     else if (!vk_validate_vksemaphoreopeninfo(pOpenInfo)) {
         sprintf(str, "Parameter pOpenInfo to function OpenSharedSemaphore contains an invalid value.");
-        layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
+        layerCbMsg(VK_DBG_REPORT_ERROR_BIT, (VkObjectType) 0, NULL, 0, 1, "PARAMCHECK", str);
     }
     VkResult result = nextTable.OpenSharedSemaphore(device, pOpenInfo, pSemaphore);
     return result;
@@ -484,11 +457,11 @@ VK_LAYER_EXPORT VkResult VKAPI vkOpenPeerMemory(VkDevice device, const VkPeerMem
     char str[1024];
     if (!pOpenInfo) {
         sprintf(str, "Struct ptr parameter pOpenInfo to function OpenPeerMemory is NULL.");
-        layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
+        layerCbMsg(VK_DBG_REPORT_INFO_BIT, (VkObjectType) 0, NULL, 0, 1, "PARAMCHECK", str);
     }
     else if (!vk_validate_vkpeermemoryopeninfo(pOpenInfo)) {
         sprintf(str, "Parameter pOpenInfo to function OpenPeerMemory contains an invalid value.");
-        layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
+        layerCbMsg(VK_DBG_REPORT_ERROR_BIT, (VkObjectType) 0, NULL, 0, 1, "PARAMCHECK", str);
     }
     VkResult result = nextTable.OpenPeerMemory(device, pOpenInfo, pMem);
     return result;
@@ -499,11 +472,11 @@ VK_LAYER_EXPORT VkResult VKAPI vkOpenPeerImage(VkDevice device, const VkPeerImag
     char str[1024];
     if (!pOpenInfo) {
         sprintf(str, "Struct ptr parameter pOpenInfo to function OpenPeerImage is NULL.");
-        layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
+        layerCbMsg(VK_DBG_REPORT_INFO_BIT, (VkObjectType) 0, NULL, 0, 1, "PARAMCHECK", str);
     }
     else if (!vk_validate_vkpeerimageopeninfo(pOpenInfo)) {
         sprintf(str, "Parameter pOpenInfo to function OpenPeerImage contains an invalid value.");
-        layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
+        layerCbMsg(VK_DBG_REPORT_ERROR_BIT, (VkObjectType) 0, NULL, 0, 1, "PARAMCHECK", str);
     }
     VkResult result = nextTable.OpenPeerImage(device, pOpenInfo, pImage, pMem);
     return result;
@@ -511,7 +484,6 @@ VK_LAYER_EXPORT VkResult VKAPI vkOpenPeerImage(VkDevice device, const VkPeerImag
 
 VK_LAYER_EXPORT VkResult VKAPI vkDestroyObject(VkDevice device, VkObjectType objType, VkObject object)
 {
-
     VkResult result = nextTable.DestroyObject(device, objType, object);
     return result;
 }
@@ -521,7 +493,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkGetObjectInfo(VkDevice device, VkObjectType obj
     char str[1024];
     if (!validate_VkObjectInfoType(infoType)) {
         sprintf(str, "Parameter infoType to function GetObjectInfo has invalid value of %i.", (int)infoType);
-        layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
+        layerCbMsg(VK_DBG_REPORT_ERROR_BIT, (VkObjectType) 0, NULL, 0, 1, "PARAMCHECK", str);
     }
     VkResult result = nextTable.GetObjectInfo(device, objType, object, infoType, pDataSize, pData);
     return result;
@@ -546,11 +518,11 @@ VK_LAYER_EXPORT VkResult VKAPI vkQueueBindSparseImageMemory(VkQueue queue, VkIma
     char str[1024];
     if (!pBindInfo) {
         sprintf(str, "Struct ptr parameter pBindInfo to function QueueBindSparseImageMemory is NULL.");
-        layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
+        layerCbMsg(VK_DBG_REPORT_INFO_BIT, (VkObjectType) 0, NULL, 0, 1, "PARAMCHECK", str);
     }
     else if (!vk_validate_vkimagememorybindinfo(pBindInfo)) {
         sprintf(str, "Parameter pBindInfo to function BindImageMemoryRange contains an invalid value.");
-        layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
+        layerCbMsg(VK_DBG_REPORT_ERROR_BIT, (VkObjectType) 0, NULL, 0, 1, "PARAMCHECK", str);
     }
     VkResult result = nextTable.QueueBindSparseImageMemory(queue, image, pBindInfo, mem, memOffset);
     return result;
@@ -561,11 +533,11 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateFence(VkDevice device, const VkFenceCreat
     char str[1024];
     if (!pCreateInfo) {
         sprintf(str, "Struct ptr parameter pCreateInfo to function CreateFence is NULL.");
-        layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
+        layerCbMsg(VK_DBG_REPORT_INFO_BIT, (VkObjectType) 0, NULL, 0, 1, "PARAMCHECK", str);
     }
     else if (!vk_validate_vkfencecreateinfo(pCreateInfo)) {
         sprintf(str, "Parameter pCreateInfo to function CreateFence contains an invalid value.");
-        layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
+        layerCbMsg(VK_DBG_REPORT_ERROR_BIT, (VkObjectType) 0, NULL, 0, 1, "PARAMCHECK", str);
     }
     VkResult result = nextTable.CreateFence(device, pCreateInfo, pFence);
     return result;
@@ -597,11 +569,11 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateSemaphore(VkDevice device, const VkSemaph
     char str[1024];
     if (!pCreateInfo) {
         sprintf(str, "Struct ptr parameter pCreateInfo to function CreateSemaphore is NULL.");
-        layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
+        layerCbMsg(VK_DBG_REPORT_INFO_BIT, (VkObjectType) 0, NULL, 0, 1, "PARAMCHECK", str);
     }
     else if (!vk_validate_vksemaphorecreateinfo(pCreateInfo)) {
         sprintf(str, "Parameter pCreateInfo to function CreateSemaphore contains an invalid value.");
-        layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
+        layerCbMsg(VK_DBG_REPORT_ERROR_BIT, (VkObjectType) 0, NULL, 0, 1, "PARAMCHECK", str);
     }
     VkResult result = nextTable.CreateSemaphore(device, pCreateInfo, pSemaphore);
     return result;
@@ -626,11 +598,11 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateEvent(VkDevice device, const VkEventCreat
     char str[1024];
     if (!pCreateInfo) {
         sprintf(str, "Struct ptr parameter pCreateInfo to function CreateEvent is NULL.");
-        layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
+        layerCbMsg(VK_DBG_REPORT_INFO_BIT, (VkObjectType) 0, NULL, 0, 1, "PARAMCHECK", str);
     }
     else if (!vk_validate_vkeventcreateinfo(pCreateInfo)) {
         sprintf(str, "Parameter pCreateInfo to function CreateEvent contains an invalid value.");
-        layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
+        layerCbMsg(VK_DBG_REPORT_ERROR_BIT, (VkObjectType) 0, NULL, 0, 1, "PARAMCHECK", str);
     }
     VkResult result = nextTable.CreateEvent(device, pCreateInfo, pEvent);
     return result;
@@ -662,11 +634,11 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateQueryPool(VkDevice device, const VkQueryP
     char str[1024];
     if (!pCreateInfo) {
         sprintf(str, "Struct ptr parameter pCreateInfo to function CreateQueryPool is NULL.");
-        layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
+        layerCbMsg(VK_DBG_REPORT_INFO_BIT, (VkObjectType) 0, NULL, 0, 1, "PARAMCHECK", str);
     }
     else if (!vk_validate_vkquerypoolcreateinfo(pCreateInfo)) {
         sprintf(str, "Parameter pCreateInfo to function CreateQueryPool contains an invalid value.");
-        layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
+        layerCbMsg(VK_DBG_REPORT_ERROR_BIT, (VkObjectType) 0, NULL, 0, 1, "PARAMCHECK", str);
     }
     VkResult result = nextTable.CreateQueryPool(device, pCreateInfo, pQueryPool);
     return result;
@@ -684,11 +656,11 @@ VK_LAYER_EXPORT VkResult VKAPI vkGetFormatInfo(VkDevice device, VkFormat format,
     char str[1024];
     if (!validate_VkFormat(format)) {
         sprintf(str, "Parameter format to function GetFormatInfo has invalid value of %i.", (int)format);
-        layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
+        layerCbMsg(VK_DBG_REPORT_ERROR_BIT, (VkObjectType) 0, NULL, 0, 1, "PARAMCHECK", str);
     }
     if (!validate_VkFormatInfoType(infoType)) {
         sprintf(str, "Parameter infoType to function GetFormatInfo has invalid value of %i.", (int)infoType);
-        layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
+        layerCbMsg(VK_DBG_REPORT_ERROR_BIT, (VkObjectType) 0, NULL, 0, 1, "PARAMCHECK", str);
     }
     VkResult result = nextTable.GetFormatInfo(device, format, infoType, pDataSize, pData);
     return result;
@@ -699,11 +671,11 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateBuffer(VkDevice device, const VkBufferCre
     char str[1024];
     if (!pCreateInfo) {
         sprintf(str, "Struct ptr parameter pCreateInfo to function CreateBuffer is NULL.");
-        layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
+        layerCbMsg(VK_DBG_REPORT_INFO_BIT, (VkObjectType) 0, NULL, 0, 1, "PARAMCHECK", str);
     }
     else if (!vk_validate_vkbuffercreateinfo(pCreateInfo)) {
         sprintf(str, "Parameter pCreateInfo to function CreateBuffer contains an invalid value.");
-        layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
+        layerCbMsg(VK_DBG_REPORT_ERROR_BIT, (VkObjectType) 0, NULL, 0, 1, "PARAMCHECK", str);
     }
     VkResult result = nextTable.CreateBuffer(device, pCreateInfo, pBuffer);
     return result;
@@ -714,11 +686,11 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateBufferView(VkDevice device, const VkBuffe
     char str[1024];
     if (!pCreateInfo) {
         sprintf(str, "Struct ptr parameter pCreateInfo to function CreateBufferView is NULL.");
-        layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
+        layerCbMsg(VK_DBG_REPORT_INFO_BIT, (VkObjectType) 0, NULL, 0, 1, "PARAMCHECK", str);
     }
     else if (!vk_validate_vkbufferviewcreateinfo(pCreateInfo)) {
         sprintf(str, "Parameter pCreateInfo to function CreateBufferView contains an invalid value.");
-        layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
+        layerCbMsg(VK_DBG_REPORT_ERROR_BIT, (VkObjectType) 0, NULL, 0, 1, "PARAMCHECK", str);
     }
     VkResult result = nextTable.CreateBufferView(device, pCreateInfo, pView);
     return result;
@@ -730,7 +702,7 @@ void PreCreateImage(VkDevice device, const VkImageCreateInfo* pCreateInfo)
     {
         char const str[] = "vkCreateImage parameter, VkImageCreateInfo* pCreateInfo, is "\
             "nullptr (precondition).";
-        layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
+        layerCbMsg(VK_DBG_REPORT_INFO_BIT, (VkObjectType) 0, NULL, 0, 1, "PARAMCHECK", str);
         return;
     }
 
@@ -738,7 +710,7 @@ void PreCreateImage(VkDevice device, const VkImageCreateInfo* pCreateInfo)
     {
         char const str[] = "vkCreateImage parameter, VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO "\
             "pCreateInfo->sType, is not VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO (precondition).";
-        layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
+        layerCbMsg(VK_DBG_REPORT_INFO_BIT, (VkObjectType) 0, NULL, 0, 1, "PARAMCHECK", str);
         return;
     }
 
@@ -746,7 +718,7 @@ void PreCreateImage(VkDevice device, const VkImageCreateInfo* pCreateInfo)
     {
         char const str[] = "vkCreateImage parameter, VkImageType pCreateInfo->imageType, is "\
             "unrecognized (precondition).";
-        layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
+        layerCbMsg(VK_DBG_REPORT_INFO_BIT, (VkObjectType) 0, NULL, 0, 1, "PARAMCHECK", str);
         return;
     }
 
@@ -754,7 +726,7 @@ void PreCreateImage(VkDevice device, const VkImageCreateInfo* pCreateInfo)
     {
         char const str[] = "vkCreateImage parameter, VkFormat pCreateInfo->format, is "\
             "unrecognized (precondition).";
-        layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
+        layerCbMsg(VK_DBG_REPORT_ERROR_BIT, (VkObjectType) 0, NULL, 0, 1, "PARAMCHECK", str);
         return;
     }
 
@@ -766,7 +738,7 @@ void PreCreateImage(VkDevice device, const VkImageCreateInfo* pCreateInfo)
     {
         char const str[] = "vkCreateImage parameter, VkFormat pCreateInfo->format, cannot be "\
             "validated (precondition).";
-        layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
+        layerCbMsg(VK_DBG_REPORT_ERROR_BIT, (VkObjectType) 0, NULL, 0, 1, "PARAMCHECK", str);
         return;
     }
 
@@ -774,7 +746,7 @@ void PreCreateImage(VkDevice device, const VkImageCreateInfo* pCreateInfo)
     {
         char const str[] = "vkCreateImage parameter, VkFormat pCreateInfo->format, contains "\
             "unsupported format (precondition).";
-        layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
+        layerCbMsg(VK_DBG_REPORT_ERROR_BIT, (VkObjectType) 0, NULL, 0, 1, "PARAMCHECK", str);
         return;
     }
 
@@ -783,7 +755,7 @@ void PreCreateImage(VkDevice device, const VkImageCreateInfo* pCreateInfo)
     {
         char const str[] = "vkCreateImage parameter, VkExtent3D pCreateInfo->extent, is invalid "\
             "(precondition).";
-        layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
+        layerCbMsg(VK_DBG_REPORT_ERROR_BIT, (VkObjectType) 0, NULL, 0, 1, "PARAMCHECK", str);
         return;
     }
 
@@ -791,7 +763,7 @@ void PreCreateImage(VkDevice device, const VkImageCreateInfo* pCreateInfo)
     {
         char const str[] = "vkCreateImage parameter, VkImageTiling pCreateInfo->tiling, is "\
             "unrecoginized (precondition).";
-        layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
+        layerCbMsg(VK_DBG_REPORT_ERROR_BIT, (VkObjectType) 0, NULL, 0, 1, "PARAMCHECK", str);
         return;
     }
 }
@@ -802,14 +774,14 @@ void PostCreateImage(VkResult result, VkImage* pImage)
     {
         // TODO: Spit out VkResult value.
         char const str[] = "vkCreateImage failed (postcondition).";
-        layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
+        layerCbMsg(VK_DBG_REPORT_INFO_BIT, (VkObjectType) 0, NULL, 0, 1, "PARAMCHECK", str);
         return;
     }
 
     if(pImage == nullptr)
     {
         char const str[] = "vkCreateImage parameter, VkImage* pImage, is nullptr (postcondition).";
-        layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
+        layerCbMsg(VK_DBG_REPORT_INFO_BIT, (VkObjectType) 0, NULL, 0, 1, "PARAMCHECK", str);
         return;
     }
 }
@@ -827,14 +799,14 @@ VK_LAYER_EXPORT VkResult VKAPI vkGetImageSubresourceInfo(VkDevice device, VkImag
     char str[1024];
     if (!pSubresource) {
         sprintf(str, "Struct ptr parameter pSubresource to function GetImageSubresourceInfo is NULL.");
-        layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
+        layerCbMsg(VK_DBG_REPORT_INFO_BIT, (VkObjectType) 0, NULL, 0, 1, "PARAMCHECK", str);
     } else if (!vk_validate_vkimagesubresource(pSubresource)) {
         sprintf(str, "Parameter pSubresource to function GetImageSubresourceInfo contains an invalid value.");
-        layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
+        layerCbMsg(VK_DBG_REPORT_ERROR_BIT, (VkObjectType) 0, NULL, 0, 1, "PARAMCHECK", str);
     }
     if (!validate_VkSubresourceInfoType(infoType)) {
         sprintf(str, "Parameter infoType to function GetImageSubresourceInfo has invalid value of %i.", (int)infoType);
-        layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
+        layerCbMsg(VK_DBG_REPORT_ERROR_BIT, (VkObjectType) 0, NULL, 0, 1, "PARAMCHECK", str);
     }
     VkResult result = nextTable.GetImageSubresourceInfo(device, image, pSubresource, infoType, pDataSize, pData);
     return result;
@@ -845,11 +817,11 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateImageView(VkDevice device, const VkImageV
     char str[1024];
     if (!pCreateInfo) {
         sprintf(str, "Struct ptr parameter pCreateInfo to function CreateImageView is NULL.");
-        layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
+        layerCbMsg(VK_DBG_REPORT_INFO_BIT, (VkObjectType) 0, NULL, 0, 1, "PARAMCHECK", str);
     }
     else if (!vk_validate_vkimageviewcreateinfo(pCreateInfo)) {
         sprintf(str, "Parameter pCreateInfo to function CreateImageView contains an invalid value.");
-        layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
+        layerCbMsg(VK_DBG_REPORT_ERROR_BIT, (VkObjectType) 0, NULL, 0, 1, "PARAMCHECK", str);
     }
     VkResult result = nextTable.CreateImageView(device, pCreateInfo, pView);
     return result;
@@ -860,11 +832,11 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateColorAttachmentView(VkDevice device, cons
     char str[1024];
     if (!pCreateInfo) {
         sprintf(str, "Struct ptr parameter pCreateInfo to function CreateColorAttachmentView is NULL.");
-        layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
+        layerCbMsg(VK_DBG_REPORT_INFO_BIT, (VkObjectType) 0, NULL, 0, 1, "PARAMCHECK", str);
     }
     else if (!vk_validate_vkcolorattachmentviewcreateinfo(pCreateInfo)) {
         sprintf(str, "Parameter pCreateInfo to function CreateColorAttachmentView contains an invalid value.");
-        layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
+        layerCbMsg(VK_DBG_REPORT_ERROR_BIT, (VkObjectType) 0, NULL, 0, 1, "PARAMCHECK", str);
     }
     VkResult result = nextTable.CreateColorAttachmentView(device, pCreateInfo, pView);
     return result;
@@ -875,11 +847,11 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateDepthStencilView(VkDevice device, const V
     char str[1024];
     if (!pCreateInfo) {
         sprintf(str, "Struct ptr parameter pCreateInfo to function CreateDepthStencilView is NULL.");
-        layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
+        layerCbMsg(VK_DBG_REPORT_INFO_BIT, (VkObjectType) 0, NULL, 0, 1, "PARAMCHECK", str);
     }
     else if (!vk_validate_vkdepthstencilviewcreateinfo(pCreateInfo)) {
         sprintf(str, "Parameter pCreateInfo to function CreateDepthStencilView contains an invalid value.");
-        layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
+        layerCbMsg(VK_DBG_REPORT_ERROR_BIT, (VkObjectType) 0, NULL, 0, 1, "PARAMCHECK", str);
     }
     VkResult result = nextTable.CreateDepthStencilView(device, pCreateInfo, pView);
     return result;
@@ -890,11 +862,11 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateShader(VkDevice device, const VkShaderCre
     char str[1024];
     if (!pCreateInfo) {
         sprintf(str, "Struct ptr parameter pCreateInfo to function CreateShader is NULL.");
-        layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
+        layerCbMsg(VK_DBG_REPORT_INFO_BIT, (VkObjectType) 0, NULL, 0, 1, "PARAMCHECK", str);
     }
     else if (!vk_validate_vkshadercreateinfo(pCreateInfo)) {
         sprintf(str, "Parameter pCreateInfo to function CreateShader contains an invalid value.");
-        layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
+        layerCbMsg(VK_DBG_REPORT_ERROR_BIT, (VkObjectType) 0, NULL, 0, 1, "PARAMCHECK", str);
     }
     VkResult result = nextTable.CreateShader(device, pCreateInfo, pShader);
     return result;
@@ -905,11 +877,11 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateGraphicsPipeline(VkDevice device, const V
     char str[1024];
     if (!pCreateInfo) {
         sprintf(str, "Struct ptr parameter pCreateInfo to function CreateGraphicsPipeline is NULL.");
-        layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
+        layerCbMsg(VK_DBG_REPORT_INFO_BIT, (VkObjectType) 0, NULL, 0, 1, "PARAMCHECK", str);
     }
     else if (!vk_validate_vkgraphicspipelinecreateinfo(pCreateInfo)) {
         sprintf(str, "Parameter pCreateInfo to function CreateGraphicsPipeline contains an invalid value.");
-        layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
+        layerCbMsg(VK_DBG_REPORT_ERROR_BIT, (VkObjectType) 0, NULL, 0, 1, "PARAMCHECK", str);
     }
     VkResult result = nextTable.CreateGraphicsPipeline(device, pCreateInfo, pPipeline);
     return result;
@@ -920,11 +892,11 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateGraphicsPipelineDerivative(VkDevice devic
     char str[1024];
     if (!pCreateInfo) {
         sprintf(str, "Struct ptr parameter pCreateInfo to function CreateGraphicsPipelineDerivative is NULL.");
-        layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
+        layerCbMsg(VK_DBG_REPORT_INFO_BIT, (VkObjectType) 0, NULL, 0, 1, "PARAMCHECK", str);
     }
     else if (!vk_validate_vkgraphicspipelinecreateinfo(pCreateInfo)) {
         sprintf(str, "Parameter pCreateInfo to function CreateGraphicsPipelineDerivative contains an invalid value.");
-        layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
+        layerCbMsg(VK_DBG_REPORT_ERROR_BIT, (VkObjectType) 0, NULL, 0, 1, "PARAMCHECK", str);
     }
     VkResult result = nextTable.CreateGraphicsPipelineDerivative(device, pCreateInfo, basePipeline, pPipeline);
     return result;
@@ -935,11 +907,11 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateComputePipeline(VkDevice device, const Vk
     char str[1024];
     if (!pCreateInfo) {
         sprintf(str, "Struct ptr parameter pCreateInfo to function CreateComputePipeline is NULL.");
-        layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
+        layerCbMsg(VK_DBG_REPORT_INFO_BIT, (VkObjectType) 0, NULL, 0, 1, "PARAMCHECK", str);
     }
     else if (!vk_validate_vkcomputepipelinecreateinfo(pCreateInfo)) {
         sprintf(str, "Parameter pCreateInfo to function CreateComputePipeline contains an invalid value.");
-        layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
+        layerCbMsg(VK_DBG_REPORT_ERROR_BIT, (VkObjectType) 0, NULL, 0, 1, "PARAMCHECK", str);
     }
     VkResult result = nextTable.CreateComputePipeline(device, pCreateInfo, pPipeline);
     return result;
@@ -971,11 +943,11 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateSampler(VkDevice device, const VkSamplerC
     char str[1024];
     if (!pCreateInfo) {
         sprintf(str, "Struct ptr parameter pCreateInfo to function CreateSampler is NULL.");
-        layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
+        layerCbMsg(VK_DBG_REPORT_INFO_BIT, (VkObjectType) 0, NULL, 0, 1, "PARAMCHECK", str);
     }
     else if (!vk_validate_vksamplercreateinfo(pCreateInfo)) {
         sprintf(str, "Parameter pCreateInfo to function CreateSampler contains an invalid value.");
-        layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
+        layerCbMsg(VK_DBG_REPORT_ERROR_BIT, (VkObjectType) 0, NULL, 0, 1, "PARAMCHECK", str);
     }
     VkResult result = nextTable.CreateSampler(device, pCreateInfo, pSampler);
     return result;
@@ -986,11 +958,11 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateDescriptorSetLayout(VkDevice device, cons
     char str[1024];
     if (!pCreateInfo) {
         sprintf(str, "Struct ptr parameter pCreateInfo to function CreateDescriptorSetLayout is NULL.");
-        layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
+        layerCbMsg(VK_DBG_REPORT_INFO_BIT, (VkObjectType) 0, NULL, 0, 1, "PARAMCHECK", str);
     }
     else if (!vk_validate_vkdescriptorsetlayoutcreateinfo(pCreateInfo)) {
         sprintf(str, "Parameter pCreateInfo to function CreateDescriptorSetLayout contains an invalid value.");
-        layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
+        layerCbMsg(VK_DBG_REPORT_ERROR_BIT, (VkObjectType) 0, NULL, 0, 1, "PARAMCHECK", str);
     }
     VkResult result = nextTable.CreateDescriptorSetLayout(device, pCreateInfo, pSetLayout);
     return result;
@@ -1007,15 +979,15 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateDescriptorPool(VkDevice device, VkDescrip
     char str[1024];
     if (!validate_VkDescriptorPoolUsage(poolUsage)) {
         sprintf(str, "Parameter poolUsage to function CreateDescriptorPool has invalid value of %i.", (int)poolUsage);
-        layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
+        layerCbMsg(VK_DBG_REPORT_ERROR_BIT, (VkObjectType) 0, NULL, 0, 1, "PARAMCHECK", str);
     }
     if (!pCreateInfo) {
         sprintf(str, "Struct ptr parameter pCreateInfo to function CreateDescriptorPool is NULL.");
-        layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
+        layerCbMsg(VK_DBG_REPORT_INFO_BIT, (VkObjectType) 0, NULL, 0, 1, "PARAMCHECK", str);
     }
     else if (!vk_validate_vkdescriptorpoolcreateinfo(pCreateInfo)) {
         sprintf(str, "Parameter pCreateInfo to function CreateDescriptorPool contains an invalid value.");
-        layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
+        layerCbMsg(VK_DBG_REPORT_ERROR_BIT, (VkObjectType) 0, NULL, 0, 1, "PARAMCHECK", str);
     }
     VkResult result = nextTable.CreateDescriptorPool(device, poolUsage, maxSets, pCreateInfo, pDescriptorPool);
     return result;
@@ -1033,7 +1005,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkAllocDescriptorSets(VkDevice device, VkDescript
     char str[1024];
     if (!validate_VkDescriptorSetUsage(setUsage)) {
         sprintf(str, "Parameter setUsage to function AllocDescriptorSets has invalid value of %i.", (int)setUsage);
-        layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
+        layerCbMsg(VK_DBG_REPORT_ERROR_BIT, (VkObjectType) 0, NULL, 0, 1, "PARAMCHECK", str);
     }
     VkResult result = nextTable.AllocDescriptorSets(device, descriptorPool, setUsage, count, pSetLayouts, pDescriptorSets, pCount);
     return result;
@@ -1056,11 +1028,11 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateDynamicViewportState(VkDevice device, con
     char str[1024];
     if (!pCreateInfo) {
         sprintf(str, "Struct ptr parameter pCreateInfo to function CreateDynamicViewportState is NULL.");
-        layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
+        layerCbMsg(VK_DBG_REPORT_INFO_BIT, (VkObjectType) 0, NULL, 0, 1, "PARAMCHECK", str);
     }
     else if (!vk_validate_vkdynamicvpstatecreateinfo(pCreateInfo)) {
         sprintf(str, "Parameter pCreateInfo to function CreateDynamicViewportState contains an invalid value.");
-        layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
+        layerCbMsg(VK_DBG_REPORT_ERROR_BIT, (VkObjectType) 0, NULL, 0, 1, "PARAMCHECK", str);
     }
     VkResult result = nextTable.CreateDynamicViewportState(device, pCreateInfo, pState);
     return result;
@@ -1071,11 +1043,11 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateDynamicRasterState(VkDevice device, const
     char str[1024];
     if (!pCreateInfo) {
         sprintf(str, "Struct ptr parameter pCreateInfo to function CreateDynamicRasterState is NULL.");
-        layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
+        layerCbMsg(VK_DBG_REPORT_INFO_BIT, (VkObjectType) 0, NULL, 0, 1, "PARAMCHECK", str);
     }
     else if (!vk_validate_vkdynamicrsstatecreateinfo(pCreateInfo)) {
         sprintf(str, "Parameter pCreateInfo to function CreateDynamicRasterState contains an invalid value.");
-        layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
+        layerCbMsg(VK_DBG_REPORT_ERROR_BIT, (VkObjectType) 0, NULL, 0, 1, "PARAMCHECK", str);
     }
     VkResult result = nextTable.CreateDynamicRasterState(device, pCreateInfo, pState);
     return result;
@@ -1086,11 +1058,11 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateDynamicColorBlendState(VkDevice device, c
     char str[1024];
     if (!pCreateInfo) {
         sprintf(str, "Struct ptr parameter pCreateInfo to function CreateDynamicColorBlendState is NULL.");
-        layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
+        layerCbMsg(VK_DBG_REPORT_INFO_BIT, (VkObjectType) 0, NULL, 0, 1, "PARAMCHECK", str);
     }
     else if (!vk_validate_vkdynamiccbstatecreateinfo(pCreateInfo)) {
         sprintf(str, "Parameter pCreateInfo to function CreateDynamicColorBlendState contains an invalid value.");
-        layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
+        layerCbMsg(VK_DBG_REPORT_ERROR_BIT, (VkObjectType) 0, NULL, 0, 1, "PARAMCHECK", str);
     }
     VkResult result = nextTable.CreateDynamicColorBlendState(device, pCreateInfo, pState);
     return result;
@@ -1101,11 +1073,11 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateDynamicDepthStencilState(VkDevice device,
     char str[1024];
     if (!pCreateInfo) {
         sprintf(str, "Struct ptr parameter pCreateInfo to function CreateDynamicDepthStencilState is NULL.");
-        layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
+        layerCbMsg(VK_DBG_REPORT_INFO_BIT, (VkObjectType) 0, NULL, 0, 1, "PARAMCHECK", str);
     }
     else if (!vk_validate_vkdynamicdsstatecreateinfo(pCreateInfo)) {
         sprintf(str, "Parameter pCreateInfo to function CreateDynamicDepthStencilState contains an invalid value.");
-        layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
+        layerCbMsg(VK_DBG_REPORT_ERROR_BIT, (VkObjectType) 0, NULL, 0, 1, "PARAMCHECK", str);
     }
     VkResult result = nextTable.CreateDynamicDepthStencilState(device, pCreateInfo, pState);
     return result;
@@ -1117,7 +1089,7 @@ void PreCreateCommandBuffer(VkDevice device, const VkCmdBufferCreateInfo* pCreat
     {
         char const str[] = "vkCreateCommandBuffer parameter, VkDevice device, is "\
             "nullptr (precondition).";
-        layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
+        layerCbMsg(VK_DBG_REPORT_INFO_BIT, (VkObjectType) 0, NULL, 0, 1, "PARAMCHECK", str);
         return;
     }
 
@@ -1125,7 +1097,7 @@ void PreCreateCommandBuffer(VkDevice device, const VkCmdBufferCreateInfo* pCreat
     {
         char const str[] = "vkCreateCommandBuffer parameter, VkCmdBufferCreateInfo* pCreateInfo, is "\
             "nullptr (precondition).";
-        layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
+        layerCbMsg(VK_DBG_REPORT_INFO_BIT, (VkObjectType) 0, NULL, 0, 1, "PARAMCHECK", str);
         return;
     }
 
@@ -1133,7 +1105,7 @@ void PreCreateCommandBuffer(VkDevice device, const VkCmdBufferCreateInfo* pCreat
     {
         char const str[] = "vkCreateCommandBuffer parameter, VK_STRUCTURE_TYPE_CMD_BUFFER_CREATE_INFO "\
             "pCreateInfo->sType, is not VK_STRUCTURE_TYPE_CMD_BUFFER_CREATE_INFO (precondition).";
-        layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
+        layerCbMsg(VK_DBG_REPORT_INFO_BIT, (VkObjectType) 0, NULL, 0, 1, "PARAMCHECK", str);
         return;
     }
 }
@@ -1144,14 +1116,14 @@ void PostCreateCommandBuffer(VkResult result, VkCmdBuffer* pCmdBuffer)
     {
         // TODO: Spit out VkResult value.
         char const str[] = "vkCreateCommandBuffer failed (postcondition).";
-        layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
+        layerCbMsg(VK_DBG_REPORT_INFO_BIT, (VkObjectType) 0, NULL, 0, 1, "PARAMCHECK", str);
         return;
     }
 
     if(pCmdBuffer == nullptr)
     {
         char const str[] = "vkCreateCommandBuffer parameter, VkCmdBuffer* pCmdBuffer, is nullptr (postcondition).";
-        layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
+        layerCbMsg(VK_DBG_REPORT_INFO_BIT, (VkObjectType) 0, NULL, 0, 1, "PARAMCHECK", str);
         return;
     }
 }
@@ -1170,11 +1142,11 @@ VK_LAYER_EXPORT VkResult VKAPI vkBeginCommandBuffer(VkCmdBuffer cmdBuffer, const
     char str[1024];
     if (!pBeginInfo) {
         sprintf(str, "Struct ptr parameter pBeginInfo to function BeginCommandBuffer is NULL.");
-        layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
+        layerCbMsg(VK_DBG_REPORT_INFO_BIT, (VkObjectType) 0, NULL, 0, 1, "PARAMCHECK", str);
     }
     else if (!vk_validate_vkcmdbufferbegininfo(pBeginInfo)) {
         sprintf(str, "Parameter pBeginInfo to function BeginCommandBuffer contains an invalid value.");
-        layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
+        layerCbMsg(VK_DBG_REPORT_ERROR_BIT, (VkObjectType) 0, NULL, 0, 1, "PARAMCHECK", str);
     }
     VkResult result = nextTable.BeginCommandBuffer(cmdBuffer, pBeginInfo);
     return result;
@@ -1199,7 +1171,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdBindPipeline(VkCmdBuffer cmdBuffer, VkPipelineBi
     char str[1024];
     if (!validate_VkPipelineBindPoint(pipelineBindPoint)) {
         sprintf(str, "Parameter pipelineBindPoint to function CmdBindPipeline has invalid value of %i.", (int)pipelineBindPoint);
-        layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
+        layerCbMsg(VK_DBG_REPORT_ERROR_BIT, (VkObjectType) 0, NULL, 0, 1, "PARAMCHECK", str);
     }
     nextTable.CmdBindPipeline(cmdBuffer, pipelineBindPoint, pipeline);
 }
@@ -1209,7 +1181,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdBindDynamicStateObject(VkCmdBuffer cmdBuffer, Vk
     char str[1024];
     if (!validate_VkStateBindPoint(stateBindPoint)) {
         sprintf(str, "Parameter stateBindPoint to function CmdBindDynamicStateObject has invalid value of %i.", (int)stateBindPoint);
-        layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
+        layerCbMsg(VK_DBG_REPORT_ERROR_BIT, (VkObjectType) 0, NULL, 0, 1, "PARAMCHECK", str);
     }
     nextTable.CmdBindDynamicStateObject(cmdBuffer, stateBindPoint, state);
 }
@@ -1219,7 +1191,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdBindDescriptorSets(VkCmdBuffer cmdBuffer, VkPipe
     char str[1024];
     if (!validate_VkPipelineBindPoint(pipelineBindPoint)) {
         sprintf(str, "Parameter pipelineBindPoint to function CmdBindDescriptorSets has invalid value of %i.", (int)pipelineBindPoint);
-        layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
+        layerCbMsg(VK_DBG_REPORT_ERROR_BIT, (VkObjectType) 0, NULL, 0, 1, "PARAMCHECK", str);
     }
     nextTable.CmdBindDescriptorSets(cmdBuffer, pipelineBindPoint, firstSet, setCount, pDescriptorSets, dynamicOffsetCount, pDynamicOffsets);
 }
@@ -1239,7 +1211,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdBindIndexBuffer(VkCmdBuffer cmdBuffer, VkBuffer 
     char str[1024];
     if (!validate_VkIndexType(indexType)) {
         sprintf(str, "Parameter indexType to function CmdBindIndexBuffer has invalid value of %i.", (int)indexType);
-        layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
+        layerCbMsg(VK_DBG_REPORT_ERROR_BIT, (VkObjectType) 0, NULL, 0, 1, "PARAMCHECK", str);
     }
     nextTable.CmdBindIndexBuffer(cmdBuffer, buffer, offset, indexType);
 }
@@ -1287,7 +1259,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdCopyBuffer(VkCmdBuffer cmdBuffer, VkBuffer srcBu
     for (i = 0; i < regionCount; i++) {
         if (!vk_validate_vkbuffercopy(&pRegions[i])) {
             sprintf(str, "Parameter pRegions[%i] to function CmdCopyBuffer contains an invalid value.", i);
-            layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
+            layerCbMsg(VK_DBG_REPORT_ERROR_BIT, (VkObjectType) 0, NULL, 0, 1, "PARAMCHECK", str);
         }
     }
     nextTable.CmdCopyBuffer(cmdBuffer, srcBuffer, destBuffer, regionCount, pRegions);
@@ -1298,17 +1270,17 @@ VK_LAYER_EXPORT void VKAPI vkCmdCopyImage(VkCmdBuffer cmdBuffer, VkImage srcImag
     char str[1024];
     if (!validate_VkImageLayout(srcImageLayout)) {
         sprintf(str, "Parameter srcImageLayout to function CmdCopyImage has invalid value of %i.", (int)srcImageLayout);
-        layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
+        layerCbMsg(VK_DBG_REPORT_ERROR_BIT, (VkObjectType) 0, NULL, 0, 1, "PARAMCHECK", str);
     }
     if (!validate_VkImageLayout(destImageLayout)) {
         sprintf(str, "Parameter destImageLayout to function CmdCopyImage has invalid value of %i.", (int)destImageLayout);
-        layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
+        layerCbMsg(VK_DBG_REPORT_ERROR_BIT, (VkObjectType) 0, NULL, 0, 1, "PARAMCHECK", str);
     }
     uint32_t i;
     for (i = 0; i < regionCount; i++) {
         if (!vk_validate_vkimagecopy(&pRegions[i])) {
             sprintf(str, "Parameter pRegions[%i] to function CmdCopyImage contains an invalid value.", i);
-            layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
+            layerCbMsg(VK_DBG_REPORT_ERROR_BIT, (VkObjectType) 0, NULL, 0, 1, "PARAMCHECK", str);
         }
     }
     nextTable.CmdCopyImage(cmdBuffer, srcImage, srcImageLayout, destImage, destImageLayout, regionCount, pRegions);
@@ -1319,17 +1291,17 @@ VK_LAYER_EXPORT void VKAPI vkCmdBlitImage(VkCmdBuffer cmdBuffer, VkImage srcImag
     char str[1024];
     if (!validate_VkImageLayout(srcImageLayout)) {
         sprintf(str, "Parameter srcImageLayout to function CmdBlitImage has invalid value of %i.", (int)srcImageLayout);
-        layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
+        layerCbMsg(VK_DBG_REPORT_ERROR_BIT, (VkObjectType) 0, NULL, 0, 1, "PARAMCHECK", str);
     }
     if (!validate_VkImageLayout(destImageLayout)) {
         sprintf(str, "Parameter destImageLayout to function CmdBlitImage has invalid value of %i.", (int)destImageLayout);
-        layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
+        layerCbMsg(VK_DBG_REPORT_ERROR_BIT, (VkObjectType) 0, NULL, 0, 1, "PARAMCHECK", str);
     }
     uint32_t i;
     for (i = 0; i < regionCount; i++) {
         if (!vk_validate_vkimageblit(&pRegions[i])) {
             sprintf(str, "Parameter pRegions[%i] to function CmdBlitImage contains an invalid value.", i);
-            layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
+            layerCbMsg(VK_DBG_REPORT_ERROR_BIT, (VkObjectType) 0, NULL, 0, 1, "PARAMCHECK", str);
         }
     }
     //TODO:  Add additional check for limitation from header rev 96.
@@ -1343,13 +1315,13 @@ VK_LAYER_EXPORT void VKAPI vkCmdCopyBufferToImage(VkCmdBuffer cmdBuffer, VkBuffe
     char str[1024];
     if (!validate_VkImageLayout(destImageLayout)) {
         sprintf(str, "Parameter destImageLayout to function CmdCopyBufferToImage has invalid value of %i.", (int)destImageLayout);
-        layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
+        layerCbMsg(VK_DBG_REPORT_ERROR_BIT, (VkObjectType) 0, NULL, 0, 1, "PARAMCHECK", str);
     }
     uint32_t i;
     for (i = 0; i < regionCount; i++) {
         if (!vk_validate_vkbufferimagecopy(&pRegions[i])) {
             sprintf(str, "Parameter pRegions[%i] to function CmdCopyBufferToImage contains an invalid value.", i);
-            layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
+            layerCbMsg(VK_DBG_REPORT_ERROR_BIT, (VkObjectType) 0, NULL, 0, 1, "PARAMCHECK", str);
         }
     }
     nextTable.CmdCopyBufferToImage(cmdBuffer, srcBuffer, destImage, destImageLayout, regionCount, pRegions);
@@ -1360,13 +1332,13 @@ VK_LAYER_EXPORT void VKAPI vkCmdCopyImageToBuffer(VkCmdBuffer cmdBuffer, VkImage
     char str[1024];
     if (!validate_VkImageLayout(srcImageLayout)) {
         sprintf(str, "Parameter srcImageLayout to function CmdCopyImageToBuffer has invalid value of %i.", (int)srcImageLayout);
-        layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
+        layerCbMsg(VK_DBG_REPORT_ERROR_BIT, (VkObjectType) 0, NULL, 0, 1, "PARAMCHECK", str);
     }
     uint32_t i;
     for (i = 0; i < regionCount; i++) {
         if (!vk_validate_vkbufferimagecopy(&pRegions[i])) {
             sprintf(str, "Parameter pRegions[%i] to function CmdCopyImageToBuffer contains an invalid value.", i);
-            layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
+            layerCbMsg(VK_DBG_REPORT_ERROR_BIT, (VkObjectType) 0, NULL, 0, 1, "PARAMCHECK", str);
         }
     }
     nextTable.CmdCopyImageToBuffer(cmdBuffer, srcImage, srcImageLayout, destBuffer, regionCount, pRegions);
@@ -1389,13 +1361,13 @@ VK_LAYER_EXPORT void VKAPI vkCmdClearColorImage(VkCmdBuffer cmdBuffer, VkImage i
     char str[1024];
     if (!validate_VkImageLayout(imageLayout)) {
         sprintf(str, "Parameter imageLayout to function CmdClearColorImage has invalid value of %i.", (int)imageLayout);
-        layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
+        layerCbMsg(VK_DBG_REPORT_ERROR_BIT, (VkObjectType) 0, NULL, 0, 1, "PARAMCHECK", str);
     }
     uint32_t i;
     for (i = 0; i < rangeCount; i++) {
         if (!vk_validate_vkimagesubresourcerange(&pRanges[i])) {
             sprintf(str, "Parameter pRanges[%i] to function CmdClearColorImage contains an invalid value.", i);
-            layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
+            layerCbMsg(VK_DBG_REPORT_ERROR_BIT, (VkObjectType) 0, NULL, 0, 1, "PARAMCHECK", str);
         }
     }
     nextTable.CmdClearColorImage(cmdBuffer, image, imageLayout, pColor, rangeCount, pRanges);
@@ -1406,13 +1378,13 @@ VK_LAYER_EXPORT void VKAPI vkCmdClearDepthStencil(VkCmdBuffer cmdBuffer, VkImage
     char str[1024];
     if (!validate_VkImageLayout(imageLayout)) {
         sprintf(str, "Parameter imageLayout to function CmdClearDepthStencil has invalid value of %i.", (int)imageLayout);
-        layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
+        layerCbMsg(VK_DBG_REPORT_ERROR_BIT, (VkObjectType) 0, NULL, 0, 1, "PARAMCHECK", str);
     }
     uint32_t i;
     for (i = 0; i < rangeCount; i++) {
         if (!vk_validate_vkimagesubresourcerange(&pRanges[i])) {
             sprintf(str, "Parameter pRanges[%i] to function CmdClearDepthStencil contains an invalid value.", i);
-            layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
+            layerCbMsg(VK_DBG_REPORT_ERROR_BIT, (VkObjectType) 0, NULL, 0, 1, "PARAMCHECK", str);
         }
     }
     nextTable.CmdClearDepthStencil(cmdBuffer, image, imageLayout, depth, stencil, rangeCount, pRanges);
@@ -1423,17 +1395,17 @@ VK_LAYER_EXPORT void VKAPI vkCmdResolveImage(VkCmdBuffer cmdBuffer, VkImage srcI
     char str[1024];
     if (!validate_VkImageLayout(srcImageLayout)) {
         sprintf(str, "Parameter srcImageLayout to function CmdResolveImage has invalid value of %i.", (int)srcImageLayout);
-        layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
+        layerCbMsg(VK_DBG_REPORT_ERROR_BIT, (VkObjectType) 0, NULL, 0, 1, "PARAMCHECK", str);
     }
     if (!validate_VkImageLayout(destImageLayout)) {
         sprintf(str, "Parameter destImageLayout to function CmdResolveImage has invalid value of %i.", (int)destImageLayout);
-        layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
+        layerCbMsg(VK_DBG_REPORT_ERROR_BIT, (VkObjectType) 0, NULL, 0, 1, "PARAMCHECK", str);
     }
     uint32_t i;
     for (i = 0; i < regionCount; i++) {
         if (!vk_validate_vkimageresolve(&pRegions[i])) {
             sprintf(str, "Parameter pRects[%i] to function CmdResolveImage contains an invalid value.", i);
-            layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
+            layerCbMsg(VK_DBG_REPORT_ERROR_BIT, (VkObjectType) 0, NULL, 0, 1, "PARAMCHECK", str);
         }
     }
     nextTable.CmdResolveImage(cmdBuffer, srcImage, srcImageLayout, destImage, destImageLayout, regionCount, pRegions);
@@ -1444,7 +1416,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdSetEvent(VkCmdBuffer cmdBuffer, VkEvent event, V
     char str[1024];
     if (!validate_VkPipeEvent(pipeEvent)) {
         sprintf(str, "Parameter pipeEvent to function CmdSetEvent has invalid value of %i.", (int)pipeEvent);
-        layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
+        layerCbMsg(VK_DBG_REPORT_ERROR_BIT, (VkObjectType) 0, NULL, 0, 1, "PARAMCHECK", str);
     }
     nextTable.CmdSetEvent(cmdBuffer, event, pipeEvent);
 }
@@ -1454,7 +1426,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdResetEvent(VkCmdBuffer cmdBuffer, VkEvent event,
     char str[1024];
     if (!validate_VkPipeEvent(pipeEvent)) {
         sprintf(str, "Parameter pipeEvent to function CmdResetEvent has invalid value of %i.", (int)pipeEvent);
-        layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
+        layerCbMsg(VK_DBG_REPORT_ERROR_BIT, (VkObjectType) 0, NULL, 0, 1, "PARAMCHECK", str);
     }
     nextTable.CmdResetEvent(cmdBuffer, event, pipeEvent);
 }
@@ -1492,7 +1464,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdWriteTimestamp(VkCmdBuffer cmdBuffer, VkTimestam
     char str[1024];
     if (!validate_VkTimestampType(timestampType)) {
         sprintf(str, "Parameter timestampType to function CmdWriteTimestamp has invalid value of %i.", (int)timestampType);
-        layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
+        layerCbMsg(VK_DBG_REPORT_ERROR_BIT, (VkObjectType) 0, NULL, 0, 1, "PARAMCHECK", str);
     }
     nextTable.CmdWriteTimestamp(cmdBuffer, timestampType, destBuffer, destOffset);
 }
@@ -1515,7 +1487,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdInitAtomicCounters(VkCmdBuffer cmdBuffer, VkPipe
     char str[1024];
     if (!validate_VkPipelineBindPoint(pipelineBindPoint)) {
         sprintf(str, "Parameter pipelineBindPoint to function CmdInitAtomicCounters has invalid value of %i.", (int)pipelineBindPoint);
-        layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
+        layerCbMsg(VK_DBG_REPORT_ERROR_BIT, (VkObjectType) 0, NULL, 0, 1, "PARAMCHECK", str);
     }
     nextTable.CmdInitAtomicCounters(cmdBuffer, pipelineBindPoint, startCounter, counterCount, pData);
 }
@@ -1525,7 +1497,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdLoadAtomicCounters(VkCmdBuffer cmdBuffer, VkPipe
     char str[1024];
     if (!validate_VkPipelineBindPoint(pipelineBindPoint)) {
         sprintf(str, "Parameter pipelineBindPoint to function CmdLoadAtomicCounters has invalid value of %i.", (int)pipelineBindPoint);
-        layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
+        layerCbMsg(VK_DBG_REPORT_ERROR_BIT, (VkObjectType) 0, NULL, 0, 1, "PARAMCHECK", str);
     }
     nextTable.CmdLoadAtomicCounters(cmdBuffer, pipelineBindPoint, startCounter, counterCount, srcBuffer, srcOffset);
 }
@@ -1535,7 +1507,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdSaveAtomicCounters(VkCmdBuffer cmdBuffer, VkPipe
     char str[1024];
     if (!validate_VkPipelineBindPoint(pipelineBindPoint)) {
         sprintf(str, "Parameter pipelineBindPoint to function CmdSaveAtomicCounters has invalid value of %i.", (int)pipelineBindPoint);
-        layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
+        layerCbMsg(VK_DBG_REPORT_ERROR_BIT, (VkObjectType) 0, NULL, 0, 1, "PARAMCHECK", str);
     }
     nextTable.CmdSaveAtomicCounters(cmdBuffer, pipelineBindPoint, startCounter, counterCount, destBuffer, destOffset);
 }
@@ -1545,11 +1517,11 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateFramebuffer(VkDevice device, const VkFram
     char str[1024];
     if (!pCreateInfo) {
         sprintf(str, "Struct ptr parameter pCreateInfo to function CreateFramebuffer is NULL.");
-        layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
+        layerCbMsg(VK_DBG_REPORT_INFO_BIT, (VkObjectType) 0, NULL, 0, 1, "PARAMCHECK", str);
     }
     else if (!vk_validate_vkframebuffercreateinfo(pCreateInfo)) {
         sprintf(str, "Parameter pCreateInfo to function CreateFramebuffer contains an invalid value.");
-        layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
+        layerCbMsg(VK_DBG_REPORT_ERROR_BIT, (VkObjectType) 0, NULL, 0, 1, "PARAMCHECK", str);
     }
     VkResult result = nextTable.CreateFramebuffer(device, pCreateInfo, pFramebuffer);
     return result;
@@ -1562,7 +1534,7 @@ void PreCreateRenderPass(VkDevice device, const VkRenderPassCreateInfo* pCreateI
     {
         char const str[] = "vkCreateRenderPass parameter, VkRenderPassCreateInfo* pCreateInfo, is "\
             "nullptr (precondition).";
-        layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
+        layerCbMsg(VK_DBG_REPORT_INFO_BIT, (VkObjectType) 0, NULL, 0, 1, "PARAMCHECK", str);
         return;
     }
 
@@ -1570,7 +1542,7 @@ void PreCreateRenderPass(VkDevice device, const VkRenderPassCreateInfo* pCreateI
     {
         char const str[] = "vkCreateRenderPass parameter, VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO "\
             "pCreateInfo->sType, is not VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO (precondition).";
-        layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
+        layerCbMsg(VK_DBG_REPORT_INFO_BIT, (VkObjectType) 0, NULL, 0, 1, "PARAMCHECK", str);
         return;
     }
 
@@ -1578,7 +1550,7 @@ void PreCreateRenderPass(VkDevice device, const VkRenderPassCreateInfo* pCreateI
     {
         char const str[] = "vkCreateRenderPass parameter, VkRect pCreateInfo->renderArea, is invalid "\
             "(precondition).";
-        layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
+        layerCbMsg(VK_DBG_REPORT_ERROR_BIT, (VkObjectType) 0, NULL, 0, 1, "PARAMCHECK", str);
         return;
     }
 
@@ -1586,7 +1558,7 @@ void PreCreateRenderPass(VkDevice device, const VkRenderPassCreateInfo* pCreateI
     {
         char const str[] = "vkCreateRenderPass parameter, VkExtent2D pCreateInfo->extent, is invalid "\
             "(precondition).";
-        layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
+        layerCbMsg(VK_DBG_REPORT_ERROR_BIT, (VkObjectType) 0, NULL, 0, 1, "PARAMCHECK", str);
         return;
     }
 
@@ -1594,7 +1566,7 @@ void PreCreateRenderPass(VkDevice device, const VkRenderPassCreateInfo* pCreateI
     {
         char const str[] = "vkCreateRenderPass parameter, VkFormat* pCreateInfo->pColorFormats, "\
             "is nullptr (precondition).";
-        layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
+        layerCbMsg(VK_DBG_REPORT_ERROR_BIT, (VkObjectType) 0, NULL, 0, 1, "PARAMCHECK", str);
         return;
     }
 
@@ -1605,7 +1577,7 @@ void PreCreateRenderPass(VkDevice device, const VkRenderPassCreateInfo* pCreateI
             std::stringstream ss;
             ss << "vkCreateRenderPass parameter, VkFormat pCreateInfo->pColorFormats[" << i <<
                 "], is unrecognized (precondition).";
-            layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", ss.str().c_str());
+            layerCbMsg(VK_DBG_REPORT_ERROR_BIT, (VkObjectType) 0, NULL, 0, 1, "PARAMCHECK", ss.str().c_str());
             continue;
         }
 
@@ -1618,7 +1590,7 @@ void PreCreateRenderPass(VkDevice device, const VkRenderPassCreateInfo* pCreateI
             std::stringstream ss;
             ss << "vkCreateRenderPass parameter, VkFormat pCreateInfo->pColorFormats[" << i <<
                 "], cannot be validated (precondition).";
-            layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", ss.str().c_str());
+            layerCbMsg(VK_DBG_REPORT_ERROR_BIT, (VkObjectType) 0, NULL, 0, 1, "PARAMCHECK", ss.str().c_str());
             continue;
         }
 
@@ -1627,7 +1599,7 @@ void PreCreateRenderPass(VkDevice device, const VkRenderPassCreateInfo* pCreateI
             std::stringstream ss;
             ss << "vkCreateRenderPass parameter, VkFormat pCreateInfo->pColorFormats[" << i <<
                 "], contains unsupported format (precondition).";
-            layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", ss.str().c_str());
+            layerCbMsg(VK_DBG_REPORT_ERROR_BIT, (VkObjectType) 0, NULL, 0, 1, "PARAMCHECK", ss.str().c_str());
             continue;
         }
 
@@ -1637,7 +1609,7 @@ void PreCreateRenderPass(VkDevice device, const VkRenderPassCreateInfo* pCreateI
     {
         char const str[] = "vkCreateRenderPass parameter, VkImageLayout* pCreateInfo->pColorLayouts, "\
             "is nullptr (precondition).";
-        layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
+        layerCbMsg(VK_DBG_REPORT_ERROR_BIT, (VkObjectType) 0, NULL, 0, 1, "PARAMCHECK", str);
         return;
     }
 
@@ -1648,7 +1620,7 @@ void PreCreateRenderPass(VkDevice device, const VkRenderPassCreateInfo* pCreateI
             std::stringstream ss;
             ss << "vkCreateRenderPass parameter, VkImageLayout pCreateInfo->pColorLayouts[" << i <<
                 "], is unrecognized (precondition).";
-            layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", ss.str().c_str());
+            layerCbMsg(VK_DBG_REPORT_ERROR_BIT, (VkObjectType) 0, NULL, 0, 1, "PARAMCHECK", ss.str().c_str());
             continue;
         }
     }
@@ -1657,7 +1629,7 @@ void PreCreateRenderPass(VkDevice device, const VkRenderPassCreateInfo* pCreateI
     {
         char const str[] = "vkCreateRenderPass parameter, VkAttachmentLoadOp* pCreateInfo->pColorLoadOps, "\
             "is nullptr (precondition).";
-        layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
+        layerCbMsg(VK_DBG_REPORT_ERROR_BIT, (VkObjectType) 0, NULL, 0, 1, "PARAMCHECK", str);
         return;
     }
 
@@ -1668,7 +1640,7 @@ void PreCreateRenderPass(VkDevice device, const VkRenderPassCreateInfo* pCreateI
             std::stringstream ss;
             ss << "vkCreateRenderPass parameter, VkAttachmentLoadOp pCreateInfo->pColorLoadOps[" << i <<
                 "], is unrecognized (precondition).";
-            layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", ss.str().c_str());
+            layerCbMsg(VK_DBG_REPORT_ERROR_BIT, (VkObjectType) 0, NULL, 0, 1, "PARAMCHECK", ss.str().c_str());
             continue;
         }
     }
@@ -1677,7 +1649,7 @@ void PreCreateRenderPass(VkDevice device, const VkRenderPassCreateInfo* pCreateI
     {
         char const str[] = "vkCreateRenderPass parameter, VkAttachmentStoreOp* pCreateInfo->pColorStoreOps, "\
             "is nullptr (precondition).";
-        layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
+        layerCbMsg(VK_DBG_REPORT_ERROR_BIT, (VkObjectType) 0, NULL, 0, 1, "PARAMCHECK", str);
         return;
     }
 
@@ -1688,7 +1660,7 @@ void PreCreateRenderPass(VkDevice device, const VkRenderPassCreateInfo* pCreateI
             std::stringstream ss;
             ss << "vkCreateRenderPass parameter, VkAttachmentStoreOp pCreateInfo->pColorStoreOps[" << i <<
                 "], is unrecognized (precondition).";
-            layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", ss.str().c_str());
+            layerCbMsg(VK_DBG_REPORT_ERROR_BIT, (VkObjectType) 0, NULL, 0, 1, "PARAMCHECK", ss.str().c_str());
             continue;
         }
     }
@@ -1697,7 +1669,7 @@ void PreCreateRenderPass(VkDevice device, const VkRenderPassCreateInfo* pCreateI
     {
         char const str[] = "vkCreateRenderPass parameter, VkClearColor* pCreateInfo->"\
             "pColorLoadClearValues, is nullptr (precondition).";
-        layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
+        layerCbMsg(VK_DBG_REPORT_ERROR_BIT, (VkObjectType) 0, NULL, 0, 1, "PARAMCHECK", str);
         return;
     }
 
@@ -1705,7 +1677,7 @@ void PreCreateRenderPass(VkDevice device, const VkRenderPassCreateInfo* pCreateI
     {
         char const str[] = "vkCreateRenderPass parameter, VK_ATTACHMENT_STORE_OP* pCreateInfo->pColorStoreOps, "\
             "is nullptr (precondition).";
-        layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
+        layerCbMsg(VK_DBG_REPORT_ERROR_BIT, (VkObjectType) 0, NULL, 0, 1, "PARAMCHECK", str);
         return;
     }
 
@@ -1713,7 +1685,7 @@ void PreCreateRenderPass(VkDevice device, const VkRenderPassCreateInfo* pCreateI
     {
         char const str[] = "vkCreateRenderPass parameter, VK_CLEAR_COLOR* pCreateInfo->"\
             "pColorLoadClearValues, is nullptr (precondition).";
-        layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
+        layerCbMsg(VK_DBG_REPORT_ERROR_BIT, (VkObjectType) 0, NULL, 0, 1, "PARAMCHECK", str);
         return;
     }
    
@@ -1724,7 +1696,7 @@ void PreCreateRenderPass(VkDevice device, const VkRenderPassCreateInfo* pCreateI
             std::stringstream ss;
             ss << "vkCreateRenderPass parameter, VkClearColor pCreateInfo->pColorLoadClearValues[" << i <<
                 "], is invalid (precondition).";
-            layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", ss.str().c_str());
+            layerCbMsg(VK_DBG_REPORT_ERROR_BIT, (VkObjectType) 0, NULL, 0, 1, "PARAMCHECK", ss.str().c_str());
             continue;
         }
     }
@@ -1733,7 +1705,7 @@ void PreCreateRenderPass(VkDevice device, const VkRenderPassCreateInfo* pCreateI
     {
         char const str[] = "vkCreateRenderPass parameter, VkFormat pCreateInfo->"\
             "depthStencilFormat, is unrecognized (precondition).";
-        layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
+        layerCbMsg(VK_DBG_REPORT_ERROR_BIT, (VkObjectType) 0, NULL, 0, 1, "PARAMCHECK", str);
         return;
     }
 
@@ -1745,7 +1717,7 @@ void PreCreateRenderPass(VkDevice device, const VkRenderPassCreateInfo* pCreateI
     {
         char const str[] = "vkCreateRenderPass parameter, VkFormat pCreateInfo->"\
             "depthStencilFormat, cannot be validated (precondition).";
-        layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
+        layerCbMsg(VK_DBG_REPORT_ERROR_BIT, (VkObjectType) 0, NULL, 0, 1, "PARAMCHECK", str);
         return;
     }
 
@@ -1753,7 +1725,7 @@ void PreCreateRenderPass(VkDevice device, const VkRenderPassCreateInfo* pCreateI
     {
         char const str[] = "vkCreateRenderPass parameter, VkFormat pCreateInfo->"\
             "depthStencilFormat, contains unsupported format (precondition).";
-        layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
+        layerCbMsg(VK_DBG_REPORT_ERROR_BIT, (VkObjectType) 0, NULL, 0, 1, "PARAMCHECK", str);
         return;
     }
 
@@ -1761,7 +1733,7 @@ void PreCreateRenderPass(VkDevice device, const VkRenderPassCreateInfo* pCreateI
     {
         char const str[] = "vkCreateRenderPass parameter, VkImageLayout pCreateInfo->"\
             "depthStencilLayout, is unrecognized (precondition).";
-        layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
+        layerCbMsg(VK_DBG_REPORT_ERROR_BIT, (VkObjectType) 0, NULL, 0, 1, "PARAMCHECK", str);
         return;
     }
 
@@ -1769,7 +1741,7 @@ void PreCreateRenderPass(VkDevice device, const VkRenderPassCreateInfo* pCreateI
     {
         char const str[] = "vkCreateRenderPass parameter, VkAttachmentLoadOp pCreateInfo->"\
             "depthLoadOp, is unrecognized (precondition).";
-        layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
+        layerCbMsg(VK_DBG_REPORT_ERROR_BIT, (VkObjectType) 0, NULL, 0, 1, "PARAMCHECK", str);
         return;
     }
 
@@ -1777,7 +1749,7 @@ void PreCreateRenderPass(VkDevice device, const VkRenderPassCreateInfo* pCreateI
     {
         char const str[] = "vkCreateRenderPass parameter, VkAttachmentStoreOp pCreateInfo->"\
             "depthStoreOp, is unrecognized (precondition).";
-        layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
+        layerCbMsg(VK_DBG_REPORT_ERROR_BIT, (VkObjectType) 0, NULL, 0, 1, "PARAMCHECK", str);
         return;
     }
 
@@ -1785,7 +1757,7 @@ void PreCreateRenderPass(VkDevice device, const VkRenderPassCreateInfo* pCreateI
     {
         char const str[] = "vkCreateRenderPass parameter, VkAttachmentLoadOp pCreateInfo->"\
             "stencilLoadOp, is unrecognized (precondition).";
-        layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
+        layerCbMsg(VK_DBG_REPORT_ERROR_BIT, (VkObjectType) 0, NULL, 0, 1, "PARAMCHECK", str);
         return;
     }
 
@@ -1793,7 +1765,7 @@ void PreCreateRenderPass(VkDevice device, const VkRenderPassCreateInfo* pCreateI
     {
         char const str[] = "vkCreateRenderPass parameter, VkAttachmentStoreOp pCreateInfo->"\
             "stencilStoreOp, is unrecognized (precondition).";
-        layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
+        layerCbMsg(VK_DBG_REPORT_ERROR_BIT, (VkObjectType) 0, NULL, 0, 1, "PARAMCHECK", str);
         return;
     }
 }
@@ -1804,14 +1776,14 @@ void PostCreateRenderPass(VkResult result, VkRenderPass* pRenderPass)
     {
         // TODO: Spit out VkResult value.
         char const str[] = "vkCreateRenderPass failed (postcondition).";
-        layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
+        layerCbMsg(VK_DBG_REPORT_INFO_BIT, (VkObjectType) 0, NULL, 0, 1, "PARAMCHECK", str);
         return;
     }
 
     if(pRenderPass == nullptr)
     {
         char const str[] = "vkCreateRenderPass parameter, VkRenderPass* pRenderPass, is nullptr (postcondition).";
-        layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
+        layerCbMsg(VK_DBG_REPORT_INFO_BIT, (VkObjectType) 0, NULL, 0, 1, "PARAMCHECK", str);
         return;
     }
 }
@@ -1829,11 +1801,11 @@ VK_LAYER_EXPORT void VKAPI vkCmdBeginRenderPass(VkCmdBuffer cmdBuffer, const VkR
     char str[1024];
     if (!pRenderPassBegin) {
         sprintf(str, "Struct ptr parameter pRenderPassBegin to function CmdBeginRenderPass is NULL.");
-        layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
+        layerCbMsg(VK_DBG_REPORT_INFO_BIT, (VkObjectType) 0, NULL, 0, 1, "PARAMCHECK", str);
     }
     else if (!vk_validate_vkrenderpassbegin(pRenderPassBegin)) {
         sprintf(str, "Parameter pRenderPassBegin to function CmdBeginRenderPass contains an invalid value.");
-        layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, 1, "PARAMCHECK", str);
+        layerCbMsg(VK_DBG_REPORT_ERROR_BIT, (VkObjectType) 0, NULL, 0, 1, "PARAMCHECK", str);
     }
     nextTable.CmdBeginRenderPass(cmdBuffer, pRenderPassBegin);
 }
@@ -1844,82 +1816,14 @@ VK_LAYER_EXPORT void VKAPI vkCmdEndRenderPass(VkCmdBuffer cmdBuffer, VkRenderPas
     nextTable.CmdEndRenderPass(cmdBuffer, renderPass);
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkDbgSetValidationLevel(VkDevice device, VkValidationLevel validationLevel)
+VK_LAYER_EXPORT VkResult VKAPI vkDbgCreateMsgCallback(
+        VkInstance instance,
+        VkFlags msgFlags,
+        const PFN_vkDbgMsgCallback pfnMsgCallback,
+        void* pUserData,
+        VkDbgMsgCallback* pMsgCallback)
 {
-    VkResult result = nextTable.DbgSetValidationLevel(device, validationLevel);
-    return result;
-}
-
-VK_LAYER_EXPORT VkResult VKAPI vkDbgRegisterMsgCallback(VkInstance instance, VK_DBG_MSG_CALLBACK_FUNCTION pfnMsgCallback, void* pUserData)
-{
-    // This layer intercepts callbacks
-    VK_LAYER_DBG_FUNCTION_NODE *pNewDbgFuncNode = (VK_LAYER_DBG_FUNCTION_NODE*)malloc(sizeof(VK_LAYER_DBG_FUNCTION_NODE));
-    if (!pNewDbgFuncNode)
-        return VK_ERROR_OUT_OF_HOST_MEMORY;
-    pNewDbgFuncNode->pfnMsgCallback = pfnMsgCallback;
-    pNewDbgFuncNode->pUserData = pUserData;
-    pNewDbgFuncNode->pNext = g_pDbgFunctionHead;
-    g_pDbgFunctionHead = pNewDbgFuncNode;
-    // force callbacks if DebugAction hasn't been set already other than initial value
-    if (g_actionIsDefault) {
-        g_debugAction = VK_DBG_LAYER_ACTION_CALLBACK;
-    }
-    VkResult result = nextInstanceTable.DbgRegisterMsgCallback(instance, pfnMsgCallback, pUserData);
-    return result;
-}
-
-VK_LAYER_EXPORT VkResult VKAPI vkDbgUnregisterMsgCallback(VkInstance instance, VK_DBG_MSG_CALLBACK_FUNCTION pfnMsgCallback)
-{
-    VK_LAYER_DBG_FUNCTION_NODE *pTrav = g_pDbgFunctionHead;
-    VK_LAYER_DBG_FUNCTION_NODE *pPrev = pTrav;
-    while (pTrav) {
-        if (pTrav->pfnMsgCallback == pfnMsgCallback) {
-            pPrev->pNext = pTrav->pNext;
-            if (g_pDbgFunctionHead == pTrav)
-                g_pDbgFunctionHead = pTrav->pNext;
-            free(pTrav);
-            break;
-        }
-        pPrev = pTrav;
-        pTrav = pTrav->pNext;
-    }
-    if (g_pDbgFunctionHead == NULL)
-    {
-        if (g_actionIsDefault)
-            g_debugAction = VK_DBG_LAYER_ACTION_LOG_MSG;
-        else
-            g_debugAction = (VK_LAYER_DBG_ACTION)(g_debugAction & ~((uint32_t)VK_DBG_LAYER_ACTION_CALLBACK));
-    }
-    VkResult result = nextInstanceTable.DbgUnregisterMsgCallback(instance, pfnMsgCallback);
-    return result;
-}
-
-VK_LAYER_EXPORT VkResult VKAPI vkDbgSetMessageFilter(VkDevice device, int32_t msgCode, VK_DBG_MSG_FILTER filter)
-{
-
-    VkResult result = nextTable.DbgSetMessageFilter(device, msgCode, filter);
-    return result;
-}
-
-VK_LAYER_EXPORT VkResult VKAPI vkDbgSetObjectTag(VkDevice device, VkObject object, size_t tagSize, const void* pTag)
-{
-
-    VkResult result = nextTable.DbgSetObjectTag(device, object, tagSize, pTag);
-    return result;
-}
-
-VK_LAYER_EXPORT VkResult VKAPI vkDbgSetGlobalOption(VkInstance instance, VK_DBG_GLOBAL_OPTION dbgOption, size_t dataSize, const void* pData)
-{
-
-    VkResult result = nextInstanceTable.DbgSetGlobalOption(instance, dbgOption, dataSize, pData);
-    return result;
-}
-
-VK_LAYER_EXPORT VkResult VKAPI vkDbgSetDeviceOption(VkDevice device, VK_DBG_DEVICE_OPTION dbgOption, size_t dataSize, const void* pData)
-{
-
-    VkResult result = nextTable.DbgSetDeviceOption(device, dbgOption, dataSize, pData);
-    return result;
+    return layer_create_msg_callback(instance, &nextInstanceTable, msgFlags, pfnMsgCallback, pUserData, pMsgCallback);
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdDbgMarkerBegin(VkCmdBuffer cmdBuffer, const char* pMarker)
@@ -2170,14 +2074,6 @@ static inline void* layer_intercept_proc(const char *name)
         return (void*) vkCmdBeginRenderPass;
     if (!strcmp(name, "CmdEndRenderPass"))
         return (void*) vkCmdEndRenderPass;
-    if (!strcmp(name, "DbgSetValidationLevel"))
-        return (void*) vkDbgSetValidationLevel;
-    if (!strcmp(name, "DbgSetMessageFilter"))
-        return (void*) vkDbgSetMessageFilter;
-    if (!strcmp(name, "DbgSetObjectTag"))
-        return (void*) vkDbgSetObjectTag;
-    if (!strcmp(name, "DbgSetDeviceOption"))
-        return (void*) vkDbgSetDeviceOption;
     if (!strcmp(name, "CmdDbgMarkerBegin"))
         return (void*) vkCmdDbgMarkerBegin;
     if (!strcmp(name, "CmdDbgMarkerEnd"))
@@ -2216,16 +2112,8 @@ static inline void* layer_intercept_instance_proc(const char *name)
         return (void*) vkGetGlobalExtensionInfo;
     if (!strcmp(name, "GetPhysicalDeviceExtensionInfo"))
         return (void*) vkGetPhysicalDeviceExtensionInfo;
-    if (!strcmp(name, "EnumerateLayers"))
-        return (void*) vkEnumerateLayers;
     if (!strcmp(name, "GetMultiDeviceCompatibility"))
         return (void*) vkGetMultiDeviceCompatibility;
-    if (!strcmp(name, "DbgRegisterMsgCallback"))
-        return (void*) vkDbgRegisterMsgCallback;
-    if (!strcmp(name, "DbgUnregisterMsgCallback"))
-        return (void*) vkDbgUnregisterMsgCallback;
-    if (!strcmp(name, "DbgSetGlobalOption"))
-        return (void*) vkDbgSetGlobalOption;
 
     return NULL;
 }

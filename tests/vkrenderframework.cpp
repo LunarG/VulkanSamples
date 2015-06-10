@@ -61,22 +61,51 @@ VkRenderFramework::~VkRenderFramework()
 
 void VkRenderFramework::InitFramework()
 {
-     const std::vector<const char *> extensions;
-     InitFramework(extensions);
+    std::vector<const char*> instance_extension_names;
+    std::vector<const char*> device_extension_names;
+    InitFramework(instance_extension_names, device_extension_names);
 }
 
-void VkRenderFramework::InitFramework(const std::vector<const char *> &extensions, VK_DBG_MSG_CALLBACK_FUNCTION dbgFunction, void *userData)
+void VkRenderFramework::InitFramework(
+        std::vector<const char *> instance_extension_names,
+        std::vector<const char *> device_extension_names,
+        PFN_vkDbgMsgCallback dbgFunction,
+        void *userData)
 {
-    VkResult err;
     VkInstanceCreateInfo instInfo = {};
+    std::vector<VkExtensionProperties> instance_extensions;
+    std::vector<VkExtensionProperties> device_extensions;
+    uint32_t extCount = 0;
+    size_t extSize = sizeof(extCount);
+    VkResult U_ASSERT_ONLY err;
+    err = vkGetGlobalExtensionInfo(VK_EXTENSION_INFO_TYPE_COUNT, 0, &extSize, &extCount);
+    assert(!err);
+
+    VkExtensionProperties extProp;
+    extSize = sizeof(VkExtensionProperties);
+    bool32_t extFound;
+
+    for (uint32_t i = 0; i < instance_extension_names.size(); i++) {
+        extFound = 0;
+        for (uint32_t j = 0; j < extCount; j++) {
+            err = vkGetGlobalExtensionInfo(VK_EXTENSION_INFO_TYPE_PROPERTIES, j, &extSize, &extProp);
+            assert(!err);
+            if (!strcmp(instance_extension_names[i], extProp.name)) {
+                instance_extensions.push_back(extProp);
+                extFound = 1;
+            }
+        }
+        ASSERT_EQ(extFound, 1) << "ERROR: Cannot find extension named " << instance_extension_names[i] << " which is necessary to pass this test";
+    }
     instInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
     instInfo.pNext = NULL;
     instInfo.pAppInfo = &app_info;
     instInfo.pAllocCb = NULL;
-    instInfo.extensionCount = extensions.size();
-    instInfo.ppEnabledExtensionNames = (extensions.size()) ? &extensions[0] : NULL;;
+    instInfo.extensionCount = instance_extensions.size();
+    instInfo.pEnabledExtensions = (instance_extensions.size()) ? &instance_extensions[0] : NULL;
     err = vkCreateInstance(&instInfo, &this->inst);
     ASSERT_VK_SUCCESS(err);
+
     err = vkEnumeratePhysicalDevices(inst, &this->gpu_count, NULL);
     ASSERT_LE(this->gpu_count, ARRAY_SIZE(objs)) << "Too many gpus";
     ASSERT_VK_SUCCESS(err);
@@ -84,10 +113,42 @@ void VkRenderFramework::InitFramework(const std::vector<const char *> &extension
     ASSERT_VK_SUCCESS(err);
     ASSERT_GE(this->gpu_count, 1) << "No GPU available";
     if (dbgFunction) {
-        err = vkDbgRegisterMsgCallback(this->inst, dbgFunction, userData);
-        ASSERT_VK_SUCCESS(err);
+        m_dbgCreateMsgCallback = (PFN_vkDbgCreateMsgCallback) vkGetInstanceProcAddr(this->inst, "vkDbgCreateMsgCallback");
+        ASSERT_NE(m_dbgCreateMsgCallback, (PFN_vkDbgCreateMsgCallback) NULL) << "Did not get function pointer for DbgCreateMsgCallback";
+        if (m_dbgCreateMsgCallback) {
+            err = m_dbgCreateMsgCallback(this->inst,
+                                         VK_DBG_REPORT_ERROR_BIT | VK_DBG_REPORT_WARN_BIT,
+                                         dbgFunction,
+                                         userData,
+                                         &m_msgCallback);
+            ASSERT_VK_SUCCESS(err);
+        }
     }
-    m_device = new VkDeviceObj(0, objs[0]);
+
+    extSize = sizeof(extCount);
+    err = vkGetPhysicalDeviceExtensionInfo(objs[0], VK_EXTENSION_INFO_TYPE_COUNT, 0, &extSize, &extCount);
+    assert(!err);
+
+    extSize = sizeof(VkExtensionProperties);
+    for (uint32_t i = 0; i < device_extension_names.size(); i++) {
+        extFound = 0;
+        for (uint32_t j = 0; j < extCount; j++) {
+            err = vkGetPhysicalDeviceExtensionInfo(objs[0], VK_EXTENSION_INFO_TYPE_PROPERTIES, j, &extSize, &extProp);
+            assert(!err);
+            if (!strcmp(device_extension_names[i], extProp.name)) {
+                device_extensions.push_back(extProp);
+                extFound = 1;
+            }
+        }
+        ASSERT_EQ(extFound, 1) << "ERROR: Cannot find extension named " << device_extension_names[i] << " which is necessary to pass this test";
+    }
+    /* TODO: Testing unenabled extension */
+
+//    PFN_vkDbgSetObjectName obj_name = (PFN_vkDbgSetObjectName) vkGetInstanceProcAddr(this->inst,
+//                                                                                     "vkDbgSetObjectName");
+//    ASSERT_NE(obj_name, (PFN_vkDbgCreateMsgCallback) NULL) << "Did not get function pointer for DbgCreateMsgCallback";
+//    obj_name()
+    m_device = new VkDeviceObj(0, objs[0], device_extensions);
     m_device->get_device_queue();
 
     m_depthStencil = new VkDepthStencilObj();
@@ -296,6 +357,17 @@ VkDeviceObj::VkDeviceObj(uint32_t id, VkPhysicalDevice obj) :
     vk_testing::Device(obj), id(id)
 {
     init();
+
+    props = gpu().properties();
+    queue_props = &gpu().queue_properties()[0];
+}
+
+VkDeviceObj::VkDeviceObj(uint32_t id,
+        VkPhysicalDevice obj,
+        std::vector<VkExtensionProperties> extensions) :
+    vk_testing::Device(obj), id(id)
+{
+    init(extensions);
 
     props = gpu().properties();
     queue_props = &gpu().queue_properties()[0];

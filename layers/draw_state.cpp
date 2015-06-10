@@ -315,7 +315,8 @@ static void updateCBTracking(VkCmdBuffer cb)
     loader_platform_thread_unlock_mutex(&globalLock);
 }
 // Check object status for selected flag state
-static bool32_t validate_status(VkCmdBuffer cb, CBStatusFlags enable_mask, CBStatusFlags status_mask, CBStatusFlags status_flag, VK_DBG_MSG_TYPE error_level, DRAW_STATE_ERROR error_code, const char* fail_msg) {
+static bool32_t validate_status(VkCmdBuffer cb, CBStatusFlags enable_mask, CBStatusFlags status_mask, CBStatusFlags status_flag, VkFlags msg_flags, DRAW_STATE_ERROR error_code, const char* fail_msg)
+{
     if (cmdBufferMap.find(cb) != cmdBufferMap.end()) {
         GLOBAL_CB_NODE* pNode = cmdBufferMap[cb];
         // If non-zero enable mask is present, check it against status but if enable_mask
@@ -323,8 +324,8 @@ static bool32_t validate_status(VkCmdBuffer cb, CBStatusFlags enable_mask, CBSta
         if ((!enable_mask) || (enable_mask & pNode->status)) {
             if ((pNode->status & status_mask) != status_flag) {
                 char str[1024];
-                sprintf(str, "CB object 0x%" PRIxLEAST64 ": %s", reinterpret_cast<VkUintPtrLeast64>(cb), fail_msg);
-                layerCbMsg(error_level, VK_VALIDATION_LEVEL_0, cb, 0, error_code, "DS", str);
+                sprintf(str, "CB object 0x%" PRIxLEAST64 ": %s", reinterpret_cast<VkUintPtrLeast64>(cb), str);
+                layerCbMsg(msg_flags, VK_OBJECT_TYPE_COMMAND_BUFFER, cb, 0, error_code, "DS", str);
                 return VK_FALSE;
             }
         }
@@ -334,16 +335,16 @@ static bool32_t validate_status(VkCmdBuffer cb, CBStatusFlags enable_mask, CBSta
         // If we do not find it print an error
         char str[1024];
         sprintf(str, "Unable to obtain status for non-existent CB object 0x%" PRIxLEAST64, reinterpret_cast<VkUintPtrLeast64>(cb));
-        layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, cb, 0, DRAWSTATE_INVALID_CMD_BUFFER, "DS", str);
+        layerCbMsg(msg_flags, (VkObjectType) 0, cb, 0, DRAWSTATE_INVALID_CMD_BUFFER, "DS", str);
         return VK_FALSE;
     }
 }
 static bool32_t validate_draw_state_flags(VkCmdBuffer cb) {
     bool32_t result1, result2, result3, result4;
-    result1 = validate_status(cb, CBSTATUS_NONE, CBSTATUS_VIEWPORT_BOUND, CBSTATUS_VIEWPORT_BOUND, VK_DBG_MSG_ERROR, DRAWSTATE_VIEWPORT_NOT_BOUND, "Viewport object not bound to this command buffer");
-    result2 = validate_status(cb, CBSTATUS_NONE, CBSTATUS_RASTER_BOUND,   CBSTATUS_RASTER_BOUND,   VK_DBG_MSG_ERROR, DRAWSTATE_RASTER_NOT_BOUND,   "Raster object not bound to this command buffer");
-    result3 = validate_status(cb, CBSTATUS_COLOR_BLEND_WRITE_ENABLE, CBSTATUS_COLOR_BLEND_BOUND,   CBSTATUS_COLOR_BLEND_BOUND,   VK_DBG_MSG_ERROR,  DRAWSTATE_COLOR_BLEND_NOT_BOUND,   "Color-blend object not bound to this command buffer");
-    result4 = validate_status(cb, CBSTATUS_DEPTH_STENCIL_WRITE_ENABLE, CBSTATUS_DEPTH_STENCIL_BOUND, CBSTATUS_DEPTH_STENCIL_BOUND, VK_DBG_MSG_ERROR,  DRAWSTATE_DEPTH_STENCIL_NOT_BOUND, "Depth-stencil object not bound to this command buffer");
+    result1 = validate_status(cb, CBSTATUS_NONE, CBSTATUS_VIEWPORT_BOUND, CBSTATUS_VIEWPORT_BOUND, VK_DBG_REPORT_ERROR_BIT, DRAWSTATE_VIEWPORT_NOT_BOUND, "Viewport object not bound to this command buffer");
+    result2 = validate_status(cb, CBSTATUS_NONE, CBSTATUS_RASTER_BOUND,   CBSTATUS_RASTER_BOUND,   VK_DBG_REPORT_ERROR_BIT, DRAWSTATE_RASTER_NOT_BOUND,   "Raster object not bound to this command buffer");
+    result3 = validate_status(cb, CBSTATUS_COLOR_BLEND_WRITE_ENABLE, CBSTATUS_COLOR_BLEND_BOUND,   CBSTATUS_COLOR_BLEND_BOUND,   VK_DBG_REPORT_ERROR_BIT,  DRAWSTATE_COLOR_BLEND_NOT_BOUND,   "Color-blend object not bound to this command buffer");
+    result4 = validate_status(cb, CBSTATUS_DEPTH_STENCIL_WRITE_ENABLE, CBSTATUS_DEPTH_STENCIL_BOUND, CBSTATUS_DEPTH_STENCIL_BOUND, VK_DBG_REPORT_ERROR_BIT,  DRAWSTATE_DEPTH_STENCIL_NOT_BOUND, "Depth-stencil object not bound to this command buffer");
     return ((result1 == VK_TRUE) && (result2 == VK_TRUE) && (result3 == VK_TRUE) && (result4 == VK_TRUE));
 }
 // Print the last bound dynamic state
@@ -356,13 +357,12 @@ static void printDynamicState(const VkCmdBuffer cb)
         for (uint32_t i = 0; i < VK_NUM_STATE_BIND_POINT; i++) {
             if (pCB->lastBoundDynamicState[i]) {
                 sprintf(str, "Reporting CreateInfo for currently bound %s object %p", string_VkStateBindPoint((VkStateBindPoint)i), pCB->lastBoundDynamicState[i]->stateObj);
-                layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, pCB->lastBoundDynamicState[i]->stateObj, 0, DRAWSTATE_NONE, "DS", str);
-                layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, pCB->lastBoundDynamicState[i]->stateObj, 0, DRAWSTATE_NONE, "DS", dynamic_display(pCB->lastBoundDynamicState[i]->pCreateInfo, "  ").c_str());
+                layerCbMsg(VK_DBG_REPORT_INFO_BIT, pCB->lastBoundDynamicState[i]->objType, pCB->lastBoundDynamicState[i]->stateObj, 0, DRAWSTATE_NONE, "DS", str);
+                layerCbMsg(VK_DBG_REPORT_INFO_BIT, pCB->lastBoundDynamicState[i]->objType, pCB->lastBoundDynamicState[i]->stateObj, 0, DRAWSTATE_NONE, "DS", dynamic_display(pCB->lastBoundDynamicState[i]->pCreateInfo, "  ").c_str());
                 break;
-            }
-            else {
+            } else {
                 sprintf(str, "No dynamic state of type %s bound", string_VkStateBindPoint((VkStateBindPoint)i));
-                layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, NULL, 0, DRAWSTATE_NONE, "DS", str);
+                layerCbMsg(VK_DBG_REPORT_INFO_BIT, (VkObjectType) 0, NULL, 0, DRAWSTATE_NONE, "DS", str);
             }
         }
         loader_platform_thread_unlock_mutex(&globalLock);
@@ -370,7 +370,7 @@ static void printDynamicState(const VkCmdBuffer cb)
     else {
         char str[1024];
         sprintf(str, "Attempt to use CmdBuffer %p that doesn't exist!", (void*)cb);
-        layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, cb, 0, DRAWSTATE_INVALID_CMD_BUFFER, "DS", str);
+        layerCbMsg(VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, cb, 0, DRAWSTATE_INVALID_CMD_BUFFER, "DS", str);
     }
 }
 // Retrieve pipeline node ptr for given pipeline object
@@ -558,7 +558,7 @@ static void validatePipelineState(const GLOBAL_CB_NODE* pCB, const VkPipelineBin
             if ((psoNumSamples != pFBCI->sampleCount) || (psoNumSamples != pRPCI->sampleCount)) {
                 char str[1024];
                 sprintf(str, "Num samples mismatch! Binding PSO (%p) with %u samples while current RenderPass (%p) w/ %u samples uses FB (%p) with %u samples!", (void*)pipeline, psoNumSamples, (void*)pCB->activeRenderPass, pRPCI->sampleCount, (void*)pCB->framebuffer, pFBCI->sampleCount);
-                layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, pipeline, 0, DRAWSTATE_NUM_SAMPLES_MISMATCH, "DS", str);
+                layerCbMsg(VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_PIPELINE, pipeline, 0, DRAWSTATE_NUM_SAMPLES_MISMATCH, "DS", str);
             }
         } else {
             // TODO : I believe it's an error if we reach this point and don't have an activeRenderPass
@@ -615,7 +615,7 @@ static bool32_t validUpdateStruct(const GENERIC_HEADER* pUpdateStruct)
             return 1;
         default:
             sprintf(str, "Unexpected UPDATE struct of type %s (value %u) in vkUpdateDescriptors() struct tree", string_VkStructureType(pUpdateStruct->sType), pUpdateStruct->sType);
-            layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, DRAWSTATE_INVALID_UPDATE_STRUCT, "DS", str);
+            layerCbMsg(VK_DBG_REPORT_ERROR_BIT, (VkObjectType) 0, VK_NULL_HANDLE, 0, DRAWSTATE_INVALID_UPDATE_STRUCT, "DS", str);
             return 0;
     }
 }
@@ -631,7 +631,7 @@ static uint32_t getUpdateBinding(const GENERIC_HEADER* pUpdateStruct)
             return ((VkCopyDescriptorSet*)pUpdateStruct)->destBinding;
         default:
             sprintf(str, "Unexpected UPDATE struct of type %s (value %u) in vkUpdateDescriptors() struct tree", string_VkStructureType(pUpdateStruct->sType), pUpdateStruct->sType);
-            layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, DRAWSTATE_INVALID_UPDATE_STRUCT, "DS", str);
+            layerCbMsg(VK_DBG_REPORT_ERROR_BIT, (VkObjectType) 0, VK_NULL_HANDLE, 0, DRAWSTATE_INVALID_UPDATE_STRUCT, "DS", str);
             return 0xFFFFFFFF;
     }
 }
@@ -648,7 +648,7 @@ static uint32_t getUpdateArrayIndex(const GENERIC_HEADER* pUpdateStruct)
             return ((VkCopyDescriptorSet*)pUpdateStruct)->destArrayElement;
         default:
             sprintf(str, "Unexpected UPDATE struct of type %s (value %u) in vkUpdateDescriptors() struct tree", string_VkStructureType(pUpdateStruct->sType), pUpdateStruct->sType);
-            layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, DRAWSTATE_INVALID_UPDATE_STRUCT, "DS", str);
+            layerCbMsg(VK_DBG_REPORT_ERROR_BIT, (VkObjectType) 0, VK_NULL_HANDLE, 0, DRAWSTATE_INVALID_UPDATE_STRUCT, "DS", str);
             return 0;
     }
 }
@@ -665,7 +665,7 @@ static uint32_t getUpdateCount(const GENERIC_HEADER* pUpdateStruct)
             return ((VkCopyDescriptorSet*)pUpdateStruct)->count;
         default:
             sprintf(str, "Unexpected UPDATE struct of type %s (value %u) in vkUpdateDescriptors() struct tree", string_VkStructureType(pUpdateStruct->sType), pUpdateStruct->sType);
-            layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, DRAWSTATE_INVALID_UPDATE_STRUCT, "DS", str);
+            layerCbMsg(VK_DBG_REPORT_ERROR_BIT, (VkObjectType) 0, VK_NULL_HANDLE, 0, DRAWSTATE_INVALID_UPDATE_STRUCT, "DS", str);
             return 0;
     }
 }
@@ -715,7 +715,7 @@ static bool32_t validateUpdateType(const LAYOUT_NODE* pLayout, const GENERIC_HEA
             break;
         default:
             sprintf(str, "Unexpected UPDATE struct of type %s (value %u) in vkUpdateDescriptors() struct tree", string_VkStructureType(pUpdateStruct->sType), pUpdateStruct->sType);
-            layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, DRAWSTATE_INVALID_UPDATE_STRUCT, "DS", str);
+            layerCbMsg(VK_DBG_REPORT_ERROR_BIT, (VkObjectType) 0, VK_NULL_HANDLE, 0, DRAWSTATE_INVALID_UPDATE_STRUCT, "DS", str);
             return 0;
     }
     for (i = getUpdateStartIndex(pLayout, pUpdateStruct); i <= getUpdateEndIndex(pLayout, pUpdateStruct); i++) {
@@ -754,7 +754,7 @@ static GENERIC_HEADER* shadowUpdateNode(GENERIC_HEADER* pUpdate)
             break;
         default:
             sprintf(str, "Unexpected UPDATE struct of type %s (value %u) in vkUpdateDescriptors() struct tree", string_VkStructureType(pUpdate->sType), pUpdate->sType);
-            layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, DRAWSTATE_INVALID_UPDATE_STRUCT, "DS", str);
+            layerCbMsg(VK_DBG_REPORT_ERROR_BIT, (VkObjectType) 0, NULL, 0, DRAWSTATE_INVALID_UPDATE_STRUCT, "DS", str);
             return NULL;
     }
     // Make sure that pNext for the end of shadow copy is NULL
@@ -793,7 +793,7 @@ static bool32_t dsUpdate(VkStructureType type, uint32_t updateCount, const void*
         if (pLayout->createInfo.count < getUpdateBinding(pUpdate)) {
             char str[1024];
             sprintf(str, "Descriptor Set %p does not have binding to match update binding %u for update type %s!", ds, getUpdateBinding(pUpdate), string_VkStructureType(pUpdate->sType));
-            layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, ds, 0, DRAWSTATE_INVALID_UPDATE_INDEX, "DS", str);
+            layerCbMsg(VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DESCRIPTOR_SET, ds, 0, DRAWSTATE_INVALID_UPDATE_INDEX, "DS", str);
             result = 0;
         }
         else {
@@ -803,7 +803,7 @@ static bool32_t dsUpdate(VkStructureType type, uint32_t updateCount, const void*
                 pLayoutCI = &pLayout->createInfo;
                 string DSstr = vk_print_vkdescriptorsetlayoutcreateinfo(pLayoutCI, "{DS}    ");
                 sprintf(str, "Descriptor update type of %s is out of bounds for matching binding %u in Layout w/ CI:\n%s!", string_VkStructureType(pUpdate->sType), getUpdateBinding(pUpdate), DSstr.c_str());
-                layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, ds, 0, DRAWSTATE_DESCRIPTOR_UPDATE_OUT_OF_BOUNDS, "DS", str);
+                layerCbMsg(VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DESCRIPTOR_SET, ds, 0, DRAWSTATE_DESCRIPTOR_UPDATE_OUT_OF_BOUNDS, "DS", str);
                 result = 0;
             }
             else { // TODO : should we skip update on a type mismatch or force it?
@@ -811,7 +811,7 @@ static bool32_t dsUpdate(VkStructureType type, uint32_t updateCount, const void*
                 if (!validateUpdateType(pLayout, pUpdate)) {
                     char str[1024];
                     sprintf(str, "Descriptor update type of %s does not match overlapping binding type!", string_VkStructureType(pUpdate->sType));
-                    layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, ds, 0, DRAWSTATE_DESCRIPTOR_TYPE_MISMATCH, "DS", str);
+                    layerCbMsg(VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DESCRIPTOR_SET, ds, 0, DRAWSTATE_DESCRIPTOR_TYPE_MISMATCH, "DS", str);
                     result = 0;
                 }
                 else {
@@ -822,7 +822,7 @@ static bool32_t dsUpdate(VkStructureType type, uint32_t updateCount, const void*
                     if (NULL == pNewNode) {
                         char str[1024];
                         sprintf(str, "Out of memory while attempting to allocate UPDATE struct in vkUpdateDescriptors()");
-                        layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, ds, 0, DRAWSTATE_OUT_OF_MEMORY, "DS", str);
+                        layerCbMsg(VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DESCRIPTOR_SET, ds, 0, DRAWSTATE_OUT_OF_MEMORY, "DS", str);
                         result = 0;
                     }
                     else {
@@ -942,7 +942,7 @@ static void clearDescriptorPool(VkDescriptorPool pool)
     if (!pPool) {
         char str[1024];
         sprintf(str, "Unable to find pool node for pool %p specified in vkResetDescriptorPool() call", (void*)pool);
-        layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, pool, 0, DRAWSTATE_INVALID_POOL, "DS", str);
+        layerCbMsg(VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DESCRIPTOR_POOL, pool, 0, DRAWSTATE_INVALID_POOL, "DS", str);
     }
     else
     {
@@ -993,7 +993,7 @@ static void addCmd(GLOBAL_CB_NODE* pCB, const CMD_TYPE cmd)
     else {
         char str[1024];
         sprintf(str, "Out of memory while attempting to allocate new CMD_NODE for cmdBuffer %p", (void*)pCB->cmdBuffer);
-        layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, pCB->cmdBuffer, 0, DRAWSTATE_OUT_OF_MEMORY, "DS", str);
+        layerCbMsg(VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, pCB->cmdBuffer, 0, DRAWSTATE_OUT_OF_MEMORY, "DS", str);
     }
 }
 static void resetCB(const VkCmdBuffer cb)
@@ -1052,7 +1052,7 @@ static void setLastBoundDynamicState(const VkCmdBuffer cmdBuffer, const VkDynami
         if (dynamicStateMap.find(state) == dynamicStateMap.end()) {
             char str[1024];
             sprintf(str, "Unable to find dynamic state object %p, was it ever created?", (void*)state);
-            layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, state, 0, DRAWSTATE_INVALID_DYNAMIC_STATE_OBJECT, "DS", str);
+            layerCbMsg(VK_DBG_REPORT_ERROR_BIT, (VkObjectType) 0, state, 0, DRAWSTATE_INVALID_DYNAMIC_STATE_OBJECT, "DS", str);
         }
         else {
             pCB->lastBoundDynamicState[sType] = dynamicStateMap[state];
@@ -1063,7 +1063,7 @@ static void setLastBoundDynamicState(const VkCmdBuffer cmdBuffer, const VkDynami
     else {
         char str[1024];
         sprintf(str, "Attempt to use CmdBuffer %p that doesn't exist!", (void*)cmdBuffer);
-        layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, cmdBuffer, 0, DRAWSTATE_INVALID_CMD_BUFFER, "DS", str);
+        layerCbMsg(VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, cmdBuffer, 0, DRAWSTATE_INVALID_CMD_BUFFER, "DS", str);
     }
 }
 // Print the last bound Gfx Pipeline
@@ -1077,7 +1077,7 @@ static void printPipeline(const VkCmdBuffer cb)
         }
         else {
             string pipeStr = vk_print_vkgraphicspipelinecreateinfo(&pPipeTrav->graphicsPipelineCI, "{DS}").c_str();
-            layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, NULL, 0, DRAWSTATE_NONE, "DS", pipeStr.c_str());
+            layerCbMsg(VK_DBG_REPORT_INFO_BIT, (VkObjectType) 0, NULL, 0, DRAWSTATE_NONE, "DS", pipeStr.c_str());
         }
     }
 }
@@ -1320,7 +1320,7 @@ static bool validateBoundPipeline(const VkCmdBuffer cb)
         char str[1024];
         if (!pPipeTrav) {
             sprintf(str, "Can't find last bound Pipeline %p!", (void*)pCB->lastBoundPipeline);
-            layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, DRAWSTATE_NO_PIPELINE_BOUND, "DS", str);
+            layerCbMsg(VK_DBG_REPORT_ERROR_BIT, (VkObjectType) 0, NULL, 0, DRAWSTATE_NO_PIPELINE_BOUND, "DS", str);
             return false;
         }
         else {
@@ -1329,18 +1329,18 @@ static bool validateBoundPipeline(const VkCmdBuffer cb)
                 if (pCB->lastVtxBinding >= pPipeTrav->vtxBindingCount) {
                     if (0 == pPipeTrav->vtxBindingCount) {
                         sprintf(str, "Vtx Buffer Index %u was bound, but no vtx buffers are attached to PSO.", pCB->lastVtxBinding);
-                        layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, DRAWSTATE_VTX_INDEX_OUT_OF_BOUNDS, "DS", str);
+                        layerCbMsg(VK_DBG_REPORT_ERROR_BIT, (VkObjectType) 0, NULL, 0, DRAWSTATE_VTX_INDEX_OUT_OF_BOUNDS, "DS", str);
                         return false;
                     }
                     else {
                         sprintf(str, "Vtx binding Index of %u exceeds PSO pVertexBindingDescriptions max array index of %u.", pCB->lastVtxBinding, (pPipeTrav->vtxBindingCount - 1));
-                        layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, DRAWSTATE_VTX_INDEX_OUT_OF_BOUNDS, "DS", str);
+                        layerCbMsg(VK_DBG_REPORT_ERROR_BIT, (VkObjectType) 0, NULL, 0, DRAWSTATE_VTX_INDEX_OUT_OF_BOUNDS, "DS", str);
                         return false;
                     }
                 }
                 else {
                     string tmpStr = vk_print_vkvertexinputbindingdescription(&pPipeTrav->pVertexBindingDescriptions[pCB->lastVtxBinding], "{DS}INFO : ").c_str();
-                    layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, NULL, 0, DRAWSTATE_NONE, "DS", tmpStr.c_str());
+                    layerCbMsg(VK_DBG_REPORT_INFO_BIT, (VkObjectType) 0, NULL, 0, DRAWSTATE_NONE, "DS", tmpStr.c_str());
                 }
             }
         }
@@ -1359,41 +1359,41 @@ static void printDSConfig(const VkCmdBuffer cb)
         POOL_NODE* pPool = getPoolNode(pSet->pool);
         // Print out pool details
         sprintf(tmp_str, "Details for pool %p.", (void*)pPool->pool);
-        layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, NULL, 0, DRAWSTATE_NONE, "DS", tmp_str);
+        layerCbMsg(VK_DBG_REPORT_INFO_BIT, (VkObjectType) 0, NULL, 0, DRAWSTATE_NONE, "DS", tmp_str);
         string poolStr = vk_print_vkdescriptorpoolcreateinfo(&pPool->createInfo, " ");
         sprintf(ds_config_str, "%s", poolStr.c_str());
-        layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, NULL, 0, DRAWSTATE_NONE, "DS", ds_config_str);
+        layerCbMsg(VK_DBG_REPORT_INFO_BIT, (VkObjectType) 0, NULL, 0, DRAWSTATE_NONE, "DS", ds_config_str);
         // Print out set details
         char prefix[10];
         uint32_t index = 0;
         sprintf(tmp_str, "Details for descriptor set %p.", (void*)pSet->set);
-        layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, NULL, 0, DRAWSTATE_NONE, "DS", tmp_str);
+        layerCbMsg(VK_DBG_REPORT_INFO_BIT, (VkObjectType) 0, NULL, 0, DRAWSTATE_NONE, "DS", tmp_str);
         LAYOUT_NODE* pLayout = pSet->pLayout;
         // Print layout details
         sprintf(tmp_str, "Layout #%u, (object %p) for DS %p.", index+1, (void*)pLayout->layout, (void*)pSet->set);
-        layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, NULL, 0, DRAWSTATE_NONE, "DS", tmp_str);
+        layerCbMsg(VK_DBG_REPORT_INFO_BIT, (VkObjectType) 0, NULL, 0, DRAWSTATE_NONE, "DS", tmp_str);
         sprintf(prefix, "  [L%u] ", index);
         string DSLstr = vk_print_vkdescriptorsetlayoutcreateinfo(&pLayout->createInfo, prefix).c_str();
         sprintf(ds_config_str, "%s", DSLstr.c_str());
-        layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, NULL, 0, DRAWSTATE_NONE, "DS", ds_config_str);
+        layerCbMsg(VK_DBG_REPORT_INFO_BIT, (VkObjectType) 0, NULL, 0, DRAWSTATE_NONE, "DS", ds_config_str);
         index++;
         GENERIC_HEADER* pUpdate = pSet->pUpdateStructs;
         if (pUpdate) {
             sprintf(tmp_str, "Update Chain [UC] for descriptor set %p:", (void*)pSet->set);
-            layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, NULL, 0, DRAWSTATE_NONE, "DS", tmp_str);
+            layerCbMsg(VK_DBG_REPORT_INFO_BIT, (VkObjectType) 0, NULL, 0, DRAWSTATE_NONE, "DS", tmp_str);
             sprintf(prefix, "  [UC] ");
             sprintf(ds_config_str, "%s", dynamic_display(pUpdate, prefix).c_str());
-            layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, NULL, 0, DRAWSTATE_NONE, "DS", ds_config_str);
+            layerCbMsg(VK_DBG_REPORT_INFO_BIT, (VkObjectType) 0, NULL, 0, DRAWSTATE_NONE, "DS", ds_config_str);
             // TODO : If there is a "view" associated with this update, print CI for that view
         }
         else {
             if (0 != pSet->descriptorCount) {
                 sprintf(tmp_str, "No Update Chain for descriptor set %p which has %u descriptors (vkUpdateDescriptors has not been called)", (void*)pSet->set, pSet->descriptorCount);
-                layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, NULL, 0, DRAWSTATE_NONE, "DS", tmp_str);
+                layerCbMsg(VK_DBG_REPORT_INFO_BIT, (VkObjectType) 0, NULL, 0, DRAWSTATE_NONE, "DS", tmp_str);
             }
             else {
                 sprintf(tmp_str, "FYI: No descriptors in descriptor set %p.", (void*)pSet->set);
-                layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, NULL, 0, DRAWSTATE_NONE, "DS", tmp_str);
+                layerCbMsg(VK_DBG_REPORT_INFO_BIT, (VkObjectType) 0, NULL, 0, DRAWSTATE_NONE, "DS", tmp_str);
             }
         }
     }
@@ -1405,11 +1405,11 @@ static void printCB(const VkCmdBuffer cb)
     if (pCB && pCB->pCmds.size() > 0) {
         char str[1024];
         sprintf(str, "Cmds in CB %p", (void*)cb);
-        layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, NULL, 0, DRAWSTATE_NONE, "DS", str);
+        layerCbMsg(VK_DBG_REPORT_INFO_BIT, (VkObjectType) 0, NULL, 0, DRAWSTATE_NONE, "DS", str);
         vector<CMD_NODE*> pCmds = pCB->pCmds;
         for (vector<CMD_NODE*>::iterator ii=pCmds.begin(); ii!=pCmds.end(); ++ii) {
             sprintf(str, "  CMD#%lu: %s", (*ii)->cmdNumber, cmdTypeToString((*ii)->type).c_str());
-            layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, cb, 0, DRAWSTATE_NONE, "DS", str);
+            layerCbMsg(VK_DBG_REPORT_INFO_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, cb, 0, DRAWSTATE_NONE, "DS", str);
         }
     }
     else {
@@ -1487,7 +1487,7 @@ static void initDrawState(void)
 {
     const char *strOpt;
     // initialize DrawState options
-    getLayerOptionEnum("DrawStateReportLevel", (uint32_t *) &g_reportingLevel);
+    getLayerOptionEnum("DrawStateReportLevel", (uint32_t *) &g_reportFlags);
     g_actionIsDefault = getLayerOptionEnum("DrawStateDebugAction", (uint32_t *) &g_debugAction);
 
     if (g_debugAction & VK_DBG_LAYER_ACTION_LOG_MSG)
@@ -1516,7 +1516,7 @@ static void initDrawState(void)
 /* hook DestroyInstance to remove tableInstanceMap entry */
 VK_LAYER_EXPORT VkResult VKAPI vkDestroyInstance(VkInstance instance)
 {
-   VkLayerInstanceDispatchTable *pDisp = *(VkLayerInstanceDispatchTable **) instance;
+    VkLayerInstanceDispatchTable *pDisp = *(VkLayerInstanceDispatchTable **) instance;
     VkLayerInstanceDispatchTable *pTable = tableInstanceMap[pDisp];
     VkResult res = pTable->DestroyInstance(instance);
     tableInstanceMap.erase(pDisp);
@@ -1556,24 +1556,25 @@ struct extProps {
     uint32_t version;
     const char * const name;
 };
-#define DRAW_STATE_LAYER_EXT_ARRAY_SIZE 5
-static const struct extProps dsExts[DRAW_STATE_LAYER_EXT_ARRAY_SIZE] = {
-    // TODO what is the version?
-    0x10, "DrawState",
-    0x10, "Validation",
-    0x10, "drawStateDumpDotFile",
-    0x10, "drawStateDumpCommandBufferDotFile",
-    0x10, "drawStateDumpPngFile"
+#define DRAW_STATE_LAYER_EXT_ARRAY_SIZE 1
+static const VkExtensionProperties dsExts[DRAW_STATE_LAYER_EXT_ARRAY_SIZE] = {
+    {
+        VK_STRUCTURE_TYPE_EXTENSION_PROPERTIES,
+        "DrawState",
+        0x10,
+        "Sample layer: DrawState",
+//        0,
+//        NULL,
+    }
 };
 
 VK_LAYER_EXPORT VkResult VKAPI vkGetGlobalExtensionInfo(
-                                               VkExtensionInfoType infoType,
-                                               uint32_t extensionIndex,
-                                               size_t*  pDataSize,
-                                               void*    pData)
+        VkExtensionInfoType infoType,
+        uint32_t extensionIndex,
+        size_t*  pDataSize,
+        void*    pData)
 {
     /* This entrypoint is NOT going to init it's own dispatch table since loader calls here early */
-    VkExtensionProperties *ext_props;
     uint32_t *count;
 
     if (pDataSize == NULL)
@@ -1593,35 +1594,13 @@ VK_LAYER_EXPORT VkResult VKAPI vkGetGlobalExtensionInfo(
                 return VK_SUCCESS;
             if (extensionIndex >= DRAW_STATE_LAYER_EXT_ARRAY_SIZE)
                 return VK_ERROR_INVALID_VALUE;
-            ext_props = (VkExtensionProperties *) pData;
-            ext_props->version = dsExts[extensionIndex].version;
-            strncpy(ext_props->extName, dsExts[extensionIndex].name,
-                                        VK_MAX_EXTENSION_NAME);
-            ext_props->extName[VK_MAX_EXTENSION_NAME - 1] = '\0';
+            memcpy((VkExtensionProperties *) pData, &dsExts[extensionIndex], sizeof(VkExtensionProperties));
             break;
         default:
             return VK_ERROR_INVALID_VALUE;
     };
 
     return VK_SUCCESS;
-}
-
-VK_LAYER_EXPORT VkResult VKAPI vkEnumerateLayers(VkPhysicalDevice gpu, size_t maxStringSize, size_t* pLayerCount, char* const* pOutLayers, void* pReserved)
-{
-    if (gpu != NULL)
-    {
-        VkLayerInstanceDispatchTable* pTable = initInstanceTable((const VkBaseLayerObject *) gpu);
-
-        VkResult result = pTable->EnumerateLayers(gpu, maxStringSize, pLayerCount, pOutLayers, pReserved);
-        return result;
-    } else {
-        if (pLayerCount == NULL || pOutLayers == NULL || pOutLayers[0] == NULL)
-            return VK_ERROR_INVALID_POINTER;
-        // This layer compatible with all GPUs
-        *pLayerCount = 1;
-        strncpy((char *) pOutLayers[0], "DrawState", maxStringSize);
-        return VK_SUCCESS;
-    }
 }
 
 VK_LAYER_EXPORT VkResult VKAPI vkQueueSubmit(VkQueue queue, uint32_t cmdBufferCount, const VkCmdBuffer* pCmdBuffers, VkFence fence)
@@ -1635,7 +1614,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkQueueSubmit(VkQueue queue, uint32_t cmdBufferCo
             // Flag error for using CB w/o vkEndCommandBuffer() called
             char str[1024];
             sprintf(str, "You must call vkEndCommandBuffer() on CB %p before this call to vkQueueSubmit()!", pCB->cmdBuffer);
-            layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, pCB->cmdBuffer, 0, DRAWSTATE_NO_END_CMD_BUFFER, "DS", str);
+            layerCbMsg(VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, pCB->cmdBuffer, 0, DRAWSTATE_NO_END_CMD_BUFFER, "DS", str);
             loader_platform_thread_unlock_mutex(&globalLock);
             return VK_ERROR_UNKNOWN;
         }
@@ -1708,7 +1687,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateGraphicsPipeline(VkDevice device, const V
     // Create LL HEAD for this Pipeline
     char str[1024];
     sprintf(str, "Created Gfx Pipeline %p", (void*)*pPipeline);
-    layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, *pPipeline, 0, DRAWSTATE_NONE, "DS", str);
+    layerCbMsg(VK_DBG_REPORT_INFO_BIT, VK_OBJECT_TYPE_PIPELINE, *pPipeline, 0, DRAWSTATE_NONE, "DS", str);
 
     track_pipeline(pCreateInfo, pPipeline);
 
@@ -1727,7 +1706,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateGraphicsPipelineDerivative(
     // Create LL HEAD for this Pipeline
     char str[1024];
     sprintf(str, "Created Gfx Pipeline %p (derived from pipeline %p)", (void*)*pPipeline, basePipeline);
-    layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, *pPipeline, 0, DRAWSTATE_NONE, "DS", str);
+    layerCbMsg(VK_DBG_REPORT_INFO_BIT, VK_OBJECT_TYPE_PIPELINE, *pPipeline, 0, DRAWSTATE_NONE, "DS", str);
 
     track_pipeline(pCreateInfo, pPipeline);
 
@@ -1762,7 +1741,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateDescriptorSetLayout(VkDevice device, cons
         if (NULL == pNewNode) {
             char str[1024];
             sprintf(str, "Out of memory while attempting to allocate LAYOUT_NODE in vkCreateDescriptorSetLayout()");
-            layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, *pSetLayout, 0, DRAWSTATE_OUT_OF_MEMORY, "DS", str);
+            layerCbMsg(VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DESCRIPTOR_SET_LAYOUT, *pSetLayout, 0, DRAWSTATE_OUT_OF_MEMORY, "DS", str);
         }
         memset(pNewNode, 0, sizeof(LAYOUT_NODE));
         memcpy((void*)&pNewNode->createInfo, pCreateInfo, sizeof(VkDescriptorSetLayoutCreateInfo));
@@ -1820,13 +1799,13 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateDescriptorPool(VkDevice device, VkDescrip
         // Insert this pool into Global Pool LL at head
         char str[1024];
         sprintf(str, "Created Descriptor Pool %p", (void*)*pDescriptorPool);
-        layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, (VkObject)pDescriptorPool, 0, DRAWSTATE_NONE, "DS", str);
+        layerCbMsg(VK_DBG_REPORT_INFO_BIT, VK_OBJECT_TYPE_DESCRIPTOR_POOL, (VkObject)pDescriptorPool, 0, DRAWSTATE_NONE, "DS", str);
         loader_platform_thread_lock_mutex(&globalLock);
         POOL_NODE* pNewNode = new POOL_NODE;
         if (NULL == pNewNode) {
             char str[1024];
             sprintf(str, "Out of memory while attempting to allocate POOL_NODE in vkCreateDescriptorPool()");
-            layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, (VkObject)*pDescriptorPool, 0, DRAWSTATE_OUT_OF_MEMORY, "DS", str);
+            layerCbMsg(VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DESCRIPTOR_POOL, (VkObject)*pDescriptorPool, 0, DRAWSTATE_OUT_OF_MEMORY, "DS", str);
         }
         else {
             memset(pNewNode, 0, sizeof(POOL_NODE));
@@ -1871,19 +1850,19 @@ VK_LAYER_EXPORT VkResult VKAPI vkAllocDescriptorSets(VkDevice device, VkDescript
         if (!pPoolNode) {
             char str[1024];
             sprintf(str, "Unable to find pool node for pool %p specified in vkAllocDescriptorSets() call", (void*)descriptorPool);
-            layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, descriptorPool, 0, DRAWSTATE_INVALID_POOL, "DS", str);
+            layerCbMsg(VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DESCRIPTOR_POOL, descriptorPool, 0, DRAWSTATE_INVALID_POOL, "DS", str);
         }
         else {
             for (uint32_t i = 0; i < *pCount; i++) {
                 char str[1024];
                 sprintf(str, "Created Descriptor Set %p", (void*)pDescriptorSets[i]);
-                layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, pDescriptorSets[i], 0, DRAWSTATE_NONE, "DS", str);
+                layerCbMsg(VK_DBG_REPORT_INFO_BIT, VK_OBJECT_TYPE_DESCRIPTOR_SET, pDescriptorSets[i], 0, DRAWSTATE_NONE, "DS", str);
                 // Create new set node and add to head of pool nodes
                 SET_NODE* pNewNode = new SET_NODE;
                 if (NULL == pNewNode) {
                     char str[1024];
                     sprintf(str, "Out of memory while attempting to allocate SET_NODE in vkAllocDescriptorSets()");
-                    layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, pDescriptorSets[i], 0, DRAWSTATE_OUT_OF_MEMORY, "DS", str);
+                    layerCbMsg(VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DESCRIPTOR_SET, pDescriptorSets[i], 0, DRAWSTATE_OUT_OF_MEMORY, "DS", str);
                 }
                 else {
                     memset(pNewNode, 0, sizeof(SET_NODE));
@@ -1894,7 +1873,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkAllocDescriptorSets(VkDevice device, VkDescript
                     if (NULL == pLayout) {
                         char str[1024];
                         sprintf(str, "Unable to find set layout node for layout %p specified in vkAllocDescriptorSets() call", (void*)pSetLayouts[i]);
-                        layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, pSetLayouts[i], 0, DRAWSTATE_INVALID_LAYOUT, "DS", str);
+                        layerCbMsg(VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DESCRIPTOR_SET_LAYOUT, pSetLayouts[i], 0, DRAWSTATE_INVALID_LAYOUT, "DS", str);
                     }
                     pNewNode->pLayout = pLayout;
                     pNewNode->pool = descriptorPool;
@@ -2012,7 +1991,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkBeginCommandBuffer(VkCmdBuffer cmdBuffer, const
         else {
             char str[1024];
             sprintf(str, "In vkBeginCommandBuffer() and unable to find CmdBuffer Node for CB %p!", (void*)cmdBuffer);
-            layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, cmdBuffer, 0, DRAWSTATE_INVALID_CMD_BUFFER, "DS", str);
+            layerCbMsg(VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, cmdBuffer, 0, DRAWSTATE_INVALID_CMD_BUFFER, "DS", str);
         }
         updateCBTracking(cmdBuffer);
     }
@@ -2035,7 +2014,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkEndCommandBuffer(VkCmdBuffer cmdBuffer)
         else {
             char str[1024];
             sprintf(str, "In vkEndCommandBuffer() and unable to find CmdBuffer Node for CB %p!", (void*)cmdBuffer);
-            layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, cmdBuffer, 0, DRAWSTATE_INVALID_CMD_BUFFER, "DS", str);
+            layerCbMsg(VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, cmdBuffer, 0, DRAWSTATE_INVALID_CMD_BUFFER, "DS", str);
         }
         updateCBTracking(cmdBuffer);
         //cbDumpDotFile("cb_dump.dot");
@@ -2075,13 +2054,13 @@ VK_LAYER_EXPORT void VKAPI vkCmdBindPipeline(VkCmdBuffer cmdBuffer, VkPipelineBi
         else {
             char str[1024];
             sprintf(str, "Attempt to bind Pipeline %p that doesn't exist!", (void*)pipeline);
-            layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, pipeline, 0, DRAWSTATE_INVALID_PIPELINE, "DS", str);
+            layerCbMsg(VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_PIPELINE, pipeline, 0, DRAWSTATE_INVALID_PIPELINE, "DS", str);
         }
     }
     else {
         char str[1024];
         sprintf(str, "Attempt to use CmdBuffer %p that doesn't exist!", (void*)cmdBuffer);
-        layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, cmdBuffer, 0, DRAWSTATE_INVALID_CMD_BUFFER, "DS", str);
+        layerCbMsg(VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, cmdBuffer, 0, DRAWSTATE_INVALID_CMD_BUFFER, "DS", str);
     }
 }
 
@@ -2109,12 +2088,12 @@ VK_LAYER_EXPORT void VKAPI vkCmdBindDescriptorSets(VkCmdBuffer cmdBuffer, VkPipe
                     loader_platform_thread_unlock_mutex(&globalLock);
                     char str[1024];
                     sprintf(str, "DS %p bound on pipeline %s", (void*)pDescriptorSets[i], string_VkPipelineBindPoint(pipelineBindPoint));
-                    layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, pDescriptorSets[i], 0, DRAWSTATE_NONE, "DS", str);
+                    layerCbMsg(VK_DBG_REPORT_INFO_BIT, VK_OBJECT_TYPE_DESCRIPTOR_SET, pDescriptorSets[i], 0, DRAWSTATE_NONE, "DS", str);
                 }
                 else {
                     char str[1024];
                     sprintf(str, "Attempt to bind DS %p that doesn't exist!", (void*)pDescriptorSets[i]);
-                    layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, pDescriptorSets[i], 0, DRAWSTATE_INVALID_SET, "DS", str);
+                    layerCbMsg(VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DESCRIPTOR_SET, pDescriptorSets[i], 0, DRAWSTATE_INVALID_SET, "DS", str);
                 }
             }
             VkLayerDispatchTable *pDisp =  *(VkLayerDispatchTable **) cmdBuffer;
@@ -2125,7 +2104,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdBindDescriptorSets(VkCmdBuffer cmdBuffer, VkPipe
     else {
         char str[1024];
         sprintf(str, "Attempt to use CmdBuffer %p that doesn't exist!", (void*)cmdBuffer);
-        layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, cmdBuffer, 0, DRAWSTATE_INVALID_CMD_BUFFER, "DS", str);
+        layerCbMsg(VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, cmdBuffer, 0, DRAWSTATE_INVALID_CMD_BUFFER, "DS", str);
     }
 }
 
@@ -2140,7 +2119,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdBindIndexBuffer(VkCmdBuffer cmdBuffer, VkBuffer 
     else {
         char str[1024];
         sprintf(str, "Attempt to use CmdBuffer %p that doesn't exist!", (void*)cmdBuffer);
-        layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, cmdBuffer, 0, DRAWSTATE_INVALID_CMD_BUFFER, "DS", str);
+        layerCbMsg(VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, cmdBuffer, 0, DRAWSTATE_INVALID_CMD_BUFFER, "DS", str);
     }
     VkLayerDispatchTable *pDisp =  *(VkLayerDispatchTable **) cmdBuffer;
     VkLayerDispatchTable *pTable = tableMap[pDisp];
@@ -2168,7 +2147,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdBindVertexBuffers(
     } else {
         char str[1024];
         sprintf(str, "Attempt to use CmdBuffer %p that doesn't exist!", (void*)cmdBuffer);
-        layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, cmdBuffer, 0, DRAWSTATE_INVALID_CMD_BUFFER, "DS", str);
+        layerCbMsg(VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, cmdBuffer, 0, DRAWSTATE_INVALID_CMD_BUFFER, "DS", str);
     }
 }
 
@@ -2185,13 +2164,13 @@ VK_LAYER_EXPORT void VKAPI vkCmdDraw(VkCmdBuffer cmdBuffer, uint32_t firstVertex
         loader_platform_thread_unlock_mutex(&globalLock);
         char str[1024];
         sprintf(str, "vkCmdDraw() call #%lu, reporting DS state:", g_drawCount[DRAW]++);
-        layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, cmdBuffer, 0, DRAWSTATE_NONE, "DS", str);
+        layerCbMsg(VK_DBG_REPORT_INFO_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, cmdBuffer, 0, DRAWSTATE_NONE, "DS", str);
         synchAndPrintDSConfig(cmdBuffer);
     }
     else {
         char str[1024];
         sprintf(str, "Attempt to use CmdBuffer %p that doesn't exist!", (void*)cmdBuffer);
-        layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, cmdBuffer, 0, DRAWSTATE_INVALID_CMD_BUFFER, "DS", str);
+        layerCbMsg(VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, cmdBuffer, 0, DRAWSTATE_INVALID_CMD_BUFFER, "DS", str);
     }
     if (valid) {
         VkLayerDispatchTable *pDisp =  *(VkLayerDispatchTable **) cmdBuffer;
@@ -2213,13 +2192,13 @@ VK_LAYER_EXPORT void VKAPI vkCmdDrawIndexed(VkCmdBuffer cmdBuffer, uint32_t firs
         loader_platform_thread_unlock_mutex(&globalLock);
         char str[1024];
         sprintf(str, "vkCmdDrawIndexed() call #%lu, reporting DS state:", g_drawCount[DRAW_INDEXED]++);
-        layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, cmdBuffer, 0, DRAWSTATE_NONE, "DS", str);
+        layerCbMsg(VK_DBG_REPORT_INFO_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, cmdBuffer, 0, DRAWSTATE_NONE, "DS", str);
         synchAndPrintDSConfig(cmdBuffer);
     }
     else {
         char str[1024];
         sprintf(str, "Attempt to use CmdBuffer %p that doesn't exist!", (void*)cmdBuffer);
-        layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, cmdBuffer, 0, DRAWSTATE_INVALID_CMD_BUFFER, "DS", str);
+        layerCbMsg(VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, cmdBuffer, 0, DRAWSTATE_INVALID_CMD_BUFFER, "DS", str);
     }
     if (valid) {
         VkLayerDispatchTable *pDisp =  *(VkLayerDispatchTable **) cmdBuffer;
@@ -2241,13 +2220,13 @@ VK_LAYER_EXPORT void VKAPI vkCmdDrawIndirect(VkCmdBuffer cmdBuffer, VkBuffer buf
         loader_platform_thread_unlock_mutex(&globalLock);
         char str[1024];
         sprintf(str, "vkCmdDrawIndirect() call #%lu, reporting DS state:", g_drawCount[DRAW_INDIRECT]++);
-        layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, cmdBuffer, 0, DRAWSTATE_NONE, "DS", str);
+        layerCbMsg(VK_DBG_REPORT_INFO_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, cmdBuffer, 0, DRAWSTATE_NONE, "DS", str);
         synchAndPrintDSConfig(cmdBuffer);
     }
     else {
         char str[1024];
         sprintf(str, "Attempt to use CmdBuffer %p that doesn't exist!", (void*)cmdBuffer);
-        layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, cmdBuffer, 0, DRAWSTATE_INVALID_CMD_BUFFER, "DS", str);
+        layerCbMsg(VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, cmdBuffer, 0, DRAWSTATE_INVALID_CMD_BUFFER, "DS", str);
     }
     if (valid) {
         VkLayerDispatchTable *pDisp =  *(VkLayerDispatchTable **) cmdBuffer;
@@ -2269,13 +2248,13 @@ VK_LAYER_EXPORT void VKAPI vkCmdDrawIndexedIndirect(VkCmdBuffer cmdBuffer, VkBuf
         loader_platform_thread_unlock_mutex(&globalLock);
         char str[1024];
         sprintf(str, "vkCmdDrawIndexedIndirect() call #%lu, reporting DS state:", g_drawCount[DRAW_INDEXED_INDIRECT]++);
-        layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, cmdBuffer, 0, DRAWSTATE_NONE, "DS", str);
+        layerCbMsg(VK_DBG_REPORT_INFO_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, cmdBuffer, 0, DRAWSTATE_NONE, "DS", str);
         synchAndPrintDSConfig(cmdBuffer);
     }
     else {
         char str[1024];
         sprintf(str, "Attempt to use CmdBuffer %p that doesn't exist!", (void*)cmdBuffer);
-        layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, cmdBuffer, 0, DRAWSTATE_INVALID_CMD_BUFFER, "DS", str);
+        layerCbMsg(VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, cmdBuffer, 0, DRAWSTATE_INVALID_CMD_BUFFER, "DS", str);
     }
     if (valid) {
         VkLayerDispatchTable *pDisp =  *(VkLayerDispatchTable **) cmdBuffer;
@@ -2294,7 +2273,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdDispatch(VkCmdBuffer cmdBuffer, uint32_t x, uint
     else {
         char str[1024];
         sprintf(str, "Attempt to use CmdBuffer %p that doesn't exist!", (void*)cmdBuffer);
-        layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, cmdBuffer, 0, DRAWSTATE_INVALID_CMD_BUFFER, "DS", str);
+        layerCbMsg(VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, cmdBuffer, 0, DRAWSTATE_INVALID_CMD_BUFFER, "DS", str);
     }
     VkLayerDispatchTable *pDisp =  *(VkLayerDispatchTable **) cmdBuffer;
     VkLayerDispatchTable *pTable = tableMap[pDisp];
@@ -2311,7 +2290,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdDispatchIndirect(VkCmdBuffer cmdBuffer, VkBuffer
     else {
         char str[1024];
         sprintf(str, "Attempt to use CmdBuffer %p that doesn't exist!", (void*)cmdBuffer);
-        layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, cmdBuffer, 0, DRAWSTATE_INVALID_CMD_BUFFER, "DS", str);
+        layerCbMsg(VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, cmdBuffer, 0, DRAWSTATE_INVALID_CMD_BUFFER, "DS", str);
     }
     VkLayerDispatchTable *pDisp =  *(VkLayerDispatchTable **) cmdBuffer;
     VkLayerDispatchTable *pTable = tableMap[pDisp];
@@ -2328,7 +2307,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdCopyBuffer(VkCmdBuffer cmdBuffer, VkBuffer srcBu
     else {
         char str[1024];
         sprintf(str, "Attempt to use CmdBuffer %p that doesn't exist!", (void*)cmdBuffer);
-        layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, cmdBuffer, 0, DRAWSTATE_INVALID_CMD_BUFFER, "DS", str);
+        layerCbMsg(VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, cmdBuffer, 0, DRAWSTATE_INVALID_CMD_BUFFER, "DS", str);
     }
     VkLayerDispatchTable *pDisp =  *(VkLayerDispatchTable **) cmdBuffer;
     VkLayerDispatchTable *pTable = tableMap[pDisp];
@@ -2350,7 +2329,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdCopyImage(VkCmdBuffer cmdBuffer,
     else {
         char str[1024];
         sprintf(str, "Attempt to use CmdBuffer %p that doesn't exist!", (void*)cmdBuffer);
-        layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, cmdBuffer, 0, DRAWSTATE_INVALID_CMD_BUFFER, "DS", str);
+        layerCbMsg(VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, cmdBuffer, 0, DRAWSTATE_INVALID_CMD_BUFFER, "DS", str);
     }
     VkLayerDispatchTable *pDisp =  *(VkLayerDispatchTable **) cmdBuffer;
     VkLayerDispatchTable *pTable = tableMap[pDisp];
@@ -2371,7 +2350,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdBlitImage(VkCmdBuffer cmdBuffer,
     else {
         char str[1024];
         sprintf(str, "Attempt to use CmdBuffer %p that doesn't exist!", (void*)cmdBuffer);
-        layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, cmdBuffer, 0, DRAWSTATE_INVALID_CMD_BUFFER, "DS", str);
+        layerCbMsg(VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, cmdBuffer, 0, DRAWSTATE_INVALID_CMD_BUFFER, "DS", str);
     }
     VkLayerDispatchTable *pDisp =  *(VkLayerDispatchTable **) cmdBuffer;
     VkLayerDispatchTable *pTable = tableMap[pDisp];
@@ -2391,7 +2370,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdCopyBufferToImage(VkCmdBuffer cmdBuffer,
     else {
         char str[1024];
         sprintf(str, "Attempt to use CmdBuffer %p that doesn't exist!", (void*)cmdBuffer);
-        layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, cmdBuffer, 0, DRAWSTATE_INVALID_CMD_BUFFER, "DS", str);
+        layerCbMsg(VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, cmdBuffer, 0, DRAWSTATE_INVALID_CMD_BUFFER, "DS", str);
     }
     VkLayerDispatchTable *pDisp =  *(VkLayerDispatchTable **) cmdBuffer;
     VkLayerDispatchTable *pTable = tableMap[pDisp];
@@ -2411,7 +2390,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdCopyImageToBuffer(VkCmdBuffer cmdBuffer,
     else {
         char str[1024];
         sprintf(str, "Attempt to use CmdBuffer %p that doesn't exist!", (void*)cmdBuffer);
-        layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, cmdBuffer, 0, DRAWSTATE_INVALID_CMD_BUFFER, "DS", str);
+        layerCbMsg(VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, cmdBuffer, 0, DRAWSTATE_INVALID_CMD_BUFFER, "DS", str);
     }
     VkLayerDispatchTable *pDisp =  *(VkLayerDispatchTable **) cmdBuffer;
     VkLayerDispatchTable *pTable = tableMap[pDisp];
@@ -2428,7 +2407,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdUpdateBuffer(VkCmdBuffer cmdBuffer, VkBuffer des
     else {
         char str[1024];
         sprintf(str, "Attempt to use CmdBuffer %p that doesn't exist!", (void*)cmdBuffer);
-        layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, cmdBuffer, 0, DRAWSTATE_INVALID_CMD_BUFFER, "DS", str);
+        layerCbMsg(VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, cmdBuffer, 0, DRAWSTATE_INVALID_CMD_BUFFER, "DS", str);
     }
     VkLayerDispatchTable *pDisp =  *(VkLayerDispatchTable **) cmdBuffer;
     VkLayerDispatchTable *pTable = tableMap[pDisp];
@@ -2445,7 +2424,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdFillBuffer(VkCmdBuffer cmdBuffer, VkBuffer destB
     else {
         char str[1024];
         sprintf(str, "Attempt to use CmdBuffer %p that doesn't exist!", (void*)cmdBuffer);
-        layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, cmdBuffer, 0, DRAWSTATE_INVALID_CMD_BUFFER, "DS", str);
+        layerCbMsg(VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, cmdBuffer, 0, DRAWSTATE_INVALID_CMD_BUFFER, "DS", str);
     }
     VkLayerDispatchTable *pDisp =  *(VkLayerDispatchTable **) cmdBuffer;
     VkLayerDispatchTable *pTable = tableMap[pDisp];
@@ -2466,7 +2445,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdClearColorImage(
     else {
         char str[1024];
         sprintf(str, "Attempt to use CmdBuffer %p that doesn't exist!", (void*)cmdBuffer);
-        layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, cmdBuffer, 0, DRAWSTATE_INVALID_CMD_BUFFER, "DS", str);
+        layerCbMsg(VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, cmdBuffer, 0, DRAWSTATE_INVALID_CMD_BUFFER, "DS", str);
     }
     VkLayerDispatchTable *pDisp =  *(VkLayerDispatchTable **) cmdBuffer;
     VkLayerDispatchTable *pTable = tableMap[pDisp];
@@ -2486,7 +2465,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdClearDepthStencil(VkCmdBuffer cmdBuffer,
     else {
         char str[1024];
         sprintf(str, "Attempt to use CmdBuffer %p that doesn't exist!", (void*)cmdBuffer);
-        layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, cmdBuffer, 0, DRAWSTATE_INVALID_CMD_BUFFER, "DS", str);
+        layerCbMsg(VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, cmdBuffer, 0, DRAWSTATE_INVALID_CMD_BUFFER, "DS", str);
     }
     VkLayerDispatchTable *pDisp =  *(VkLayerDispatchTable **) cmdBuffer;
     VkLayerDispatchTable *pTable = tableMap[pDisp];
@@ -2506,7 +2485,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdResolveImage(VkCmdBuffer cmdBuffer,
     else {
         char str[1024];
         sprintf(str, "Attempt to use CmdBuffer %p that doesn't exist!", (void*)cmdBuffer);
-        layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, cmdBuffer, 0, DRAWSTATE_INVALID_CMD_BUFFER, "DS", str);
+        layerCbMsg(VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, cmdBuffer, 0, DRAWSTATE_INVALID_CMD_BUFFER, "DS", str);
     }
     VkLayerDispatchTable *pDisp =  *(VkLayerDispatchTable **) cmdBuffer;
     VkLayerDispatchTable *pTable = tableMap[pDisp];
@@ -2523,7 +2502,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdSetEvent(VkCmdBuffer cmdBuffer, VkEvent event, V
     else {
         char str[1024];
         sprintf(str, "Attempt to use CmdBuffer %p that doesn't exist!", (void*)cmdBuffer);
-        layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, cmdBuffer, 0, DRAWSTATE_INVALID_CMD_BUFFER, "DS", str);
+        layerCbMsg(VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, cmdBuffer, 0, DRAWSTATE_INVALID_CMD_BUFFER, "DS", str);
     }
     VkLayerDispatchTable *pDisp =  *(VkLayerDispatchTable **) cmdBuffer;
     VkLayerDispatchTable *pTable = tableMap[pDisp];
@@ -2540,7 +2519,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdResetEvent(VkCmdBuffer cmdBuffer, VkEvent event,
     else {
         char str[1024];
         sprintf(str, "Attempt to use CmdBuffer %p that doesn't exist!", (void*)cmdBuffer);
-        layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, cmdBuffer, 0, DRAWSTATE_INVALID_CMD_BUFFER, "DS", str);
+        layerCbMsg(VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, cmdBuffer, 0, DRAWSTATE_INVALID_CMD_BUFFER, "DS", str);
     }
     VkLayerDispatchTable *pDisp =  *(VkLayerDispatchTable **) cmdBuffer;
     VkLayerDispatchTable *pTable = tableMap[pDisp];
@@ -2557,7 +2536,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdWaitEvents(VkCmdBuffer cmdBuffer, VkWaitEvent wa
     else {
         char str[1024];
         sprintf(str, "Attempt to use CmdBuffer %p that doesn't exist!", (void*)cmdBuffer);
-        layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, cmdBuffer, 0, DRAWSTATE_INVALID_CMD_BUFFER, "DS", str);
+        layerCbMsg(VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, cmdBuffer, 0, DRAWSTATE_INVALID_CMD_BUFFER, "DS", str);
     }
     VkLayerDispatchTable *pDisp =  *(VkLayerDispatchTable **) cmdBuffer;
     VkLayerDispatchTable *pTable = tableMap[pDisp];
@@ -2574,7 +2553,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdPipelineBarrier(VkCmdBuffer cmdBuffer, VkWaitEve
     else {
         char str[1024];
         sprintf(str, "Attempt to use CmdBuffer %p that doesn't exist!", (void*)cmdBuffer);
-        layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, cmdBuffer, 0, DRAWSTATE_INVALID_CMD_BUFFER, "DS", str);
+        layerCbMsg(VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, cmdBuffer, 0, DRAWSTATE_INVALID_CMD_BUFFER, "DS", str);
     }
     VkLayerDispatchTable *pDisp =  *(VkLayerDispatchTable **) cmdBuffer;
     VkLayerDispatchTable *pTable = tableMap[pDisp];
@@ -2591,7 +2570,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdBeginQuery(VkCmdBuffer cmdBuffer, VkQueryPool qu
     else {
         char str[1024];
         sprintf(str, "Attempt to use CmdBuffer %p that doesn't exist!", (void*)cmdBuffer);
-        layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, cmdBuffer, 0, DRAWSTATE_INVALID_CMD_BUFFER, "DS", str);
+        layerCbMsg(VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, cmdBuffer, 0, DRAWSTATE_INVALID_CMD_BUFFER, "DS", str);
     }
     VkLayerDispatchTable *pDisp =  *(VkLayerDispatchTable **) cmdBuffer;
     VkLayerDispatchTable *pTable = tableMap[pDisp];
@@ -2608,7 +2587,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdEndQuery(VkCmdBuffer cmdBuffer, VkQueryPool quer
     else {
         char str[1024];
         sprintf(str, "Attempt to use CmdBuffer %p that doesn't exist!", (void*)cmdBuffer);
-        layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, cmdBuffer, 0, DRAWSTATE_INVALID_CMD_BUFFER, "DS", str);
+        layerCbMsg(VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, cmdBuffer, 0, DRAWSTATE_INVALID_CMD_BUFFER, "DS", str);
     }
     VkLayerDispatchTable *pDisp =  *(VkLayerDispatchTable **) cmdBuffer;
     VkLayerDispatchTable *pTable = tableMap[pDisp];
@@ -2625,7 +2604,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdResetQueryPool(VkCmdBuffer cmdBuffer, VkQueryPoo
     else {
         char str[1024];
         sprintf(str, "Attempt to use CmdBuffer %p that doesn't exist!", (void*)cmdBuffer);
-        layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, cmdBuffer, 0, DRAWSTATE_INVALID_CMD_BUFFER, "DS", str);
+        layerCbMsg(VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, cmdBuffer, 0, DRAWSTATE_INVALID_CMD_BUFFER, "DS", str);
     }
     VkLayerDispatchTable *pDisp =  *(VkLayerDispatchTable **) cmdBuffer;
     VkLayerDispatchTable *pTable = tableMap[pDisp];
@@ -2642,7 +2621,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdWriteTimestamp(VkCmdBuffer cmdBuffer, VkTimestam
     else {
         char str[1024];
         sprintf(str, "Attempt to use CmdBuffer %p that doesn't exist!", (void*)cmdBuffer);
-        layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, cmdBuffer, 0, DRAWSTATE_INVALID_CMD_BUFFER, "DS", str);
+        layerCbMsg(VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, cmdBuffer, 0, DRAWSTATE_INVALID_CMD_BUFFER, "DS", str);
     }
     VkLayerDispatchTable *pDisp =  *(VkLayerDispatchTable **) cmdBuffer;
     VkLayerDispatchTable *pTable = tableMap[pDisp];
@@ -2659,7 +2638,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdInitAtomicCounters(VkCmdBuffer cmdBuffer, VkPipe
     else {
         char str[1024];
         sprintf(str, "Attempt to use CmdBuffer %p that doesn't exist!", (void*)cmdBuffer);
-        layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, cmdBuffer, 0, DRAWSTATE_INVALID_CMD_BUFFER, "DS", str);
+        layerCbMsg(VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, cmdBuffer, 0, DRAWSTATE_INVALID_CMD_BUFFER, "DS", str);
     }
     VkLayerDispatchTable *pDisp =  *(VkLayerDispatchTable **) cmdBuffer;
     VkLayerDispatchTable *pTable = tableMap[pDisp];
@@ -2676,7 +2655,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdLoadAtomicCounters(VkCmdBuffer cmdBuffer, VkPipe
     else {
         char str[1024];
         sprintf(str, "Attempt to use CmdBuffer %p that doesn't exist!", (void*)cmdBuffer);
-        layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, cmdBuffer, 0, DRAWSTATE_INVALID_CMD_BUFFER, "DS", str);
+        layerCbMsg(VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, cmdBuffer, 0, DRAWSTATE_INVALID_CMD_BUFFER, "DS", str);
     }
     VkLayerDispatchTable *pDisp =  *(VkLayerDispatchTable **) cmdBuffer;
     VkLayerDispatchTable *pTable = tableMap[pDisp];
@@ -2693,7 +2672,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdSaveAtomicCounters(VkCmdBuffer cmdBuffer, VkPipe
     else {
         char str[1024];
         sprintf(str, "Attempt to use CmdBuffer %p that doesn't exist!", (void*)cmdBuffer);
-        layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, cmdBuffer, 0, DRAWSTATE_INVALID_CMD_BUFFER, "DS", str);
+        layerCbMsg(VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, cmdBuffer, 0, DRAWSTATE_INVALID_CMD_BUFFER, "DS", str);
     }
     VkLayerDispatchTable *pDisp =  *(VkLayerDispatchTable **) cmdBuffer;
     VkLayerDispatchTable *pTable = tableMap[pDisp];
@@ -2760,7 +2739,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdBeginRenderPass(VkCmdBuffer cmdBuffer, const VkR
     } else {
         char str[1024];
         sprintf(str, "Attempt to use CmdBuffer %p that doesn't exist!", (void*)cmdBuffer);
-        layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, cmdBuffer, 0, DRAWSTATE_INVALID_CMD_BUFFER, "DS", str);
+        layerCbMsg(VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, cmdBuffer, 0, DRAWSTATE_INVALID_CMD_BUFFER, "DS", str);
     }
     VkLayerDispatchTable *pDisp =  *(VkLayerDispatchTable **) cmdBuffer;
     VkLayerDispatchTable *pTable = tableMap[pDisp];
@@ -2778,61 +2757,32 @@ VK_LAYER_EXPORT void VKAPI vkCmdEndRenderPass(VkCmdBuffer cmdBuffer, VkRenderPas
     else {
         char str[1024];
         sprintf(str, "Attempt to use CmdBuffer %p that doesn't exist!", (void*)cmdBuffer);
-        layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, cmdBuffer, 0, DRAWSTATE_INVALID_CMD_BUFFER, "DS", str);
+        layerCbMsg(VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, cmdBuffer, 0, DRAWSTATE_INVALID_CMD_BUFFER, "DS", str);
     }
     VkLayerDispatchTable *pDisp =  *(VkLayerDispatchTable **) cmdBuffer;
     VkLayerDispatchTable *pTable = tableMap[pDisp];
     pTable->CmdEndRenderPass(cmdBuffer, renderPass);
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkDbgRegisterMsgCallback(VkInstance instance, VK_DBG_MSG_CALLBACK_FUNCTION pfnMsgCallback, void* pUserData)
+VK_LAYER_EXPORT VkResult VKAPI vkDbgCreateMsgCallback(
+    VkInstance                          instance,
+    VkFlags                             msgFlags,
+    const PFN_vkDbgMsgCallback          pfnMsgCallback,
+    void*                               pUserData,
+    VkDbgMsgCallback*                   pMsgCallback)
 {
-    // This layer intercepts callbacks
-    VK_LAYER_DBG_FUNCTION_NODE* pNewDbgFuncNode = new VK_LAYER_DBG_FUNCTION_NODE;
-    if (!pNewDbgFuncNode)
-        return VK_ERROR_OUT_OF_HOST_MEMORY;
-    pNewDbgFuncNode->pfnMsgCallback = pfnMsgCallback;
-    pNewDbgFuncNode->pUserData = pUserData;
-    pNewDbgFuncNode->pNext = g_pDbgFunctionHead;
-    g_pDbgFunctionHead = pNewDbgFuncNode;
-    // force callbacks if DebugAction hasn't been set already other than initial value
-    if (g_actionIsDefault) {
-        g_debugAction = VK_DBG_LAYER_ACTION_CALLBACK;
-    }
-
-    VkLayerInstanceDispatchTable **ppDisp = (VkLayerInstanceDispatchTable **) instance;
-    VkLayerInstanceDispatchTable* pInstTable = tableInstanceMap[*ppDisp];
-    VkResult result = pInstTable->DbgRegisterMsgCallback(instance, pfnMsgCallback, pUserData);
-    return result;
+    VkLayerInstanceDispatchTable *pDisp = *(VkLayerInstanceDispatchTable **) instance;
+    VkLayerInstanceDispatchTable *pTable = tableInstanceMap[pDisp];
+    return layer_create_msg_callback(instance, pTable, msgFlags, pfnMsgCallback, pUserData, pMsgCallback);
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkDbgUnregisterMsgCallback(VkInstance instance, VK_DBG_MSG_CALLBACK_FUNCTION pfnMsgCallback)
+VK_LAYER_EXPORT VkResult VKAPI vkDbgDestroyMsgCallback(
+    VkInstance                          instance,
+    VkDbgMsgCallback                    msgCallback)
 {
-    VK_LAYER_DBG_FUNCTION_NODE *pTrav = g_pDbgFunctionHead;
-    VK_LAYER_DBG_FUNCTION_NODE *pPrev = pTrav;
-    while (pTrav) {
-        if (pTrav->pfnMsgCallback == pfnMsgCallback) {
-            pPrev->pNext = pTrav->pNext;
-            if (g_pDbgFunctionHead == pTrav)
-                g_pDbgFunctionHead = pTrav->pNext;
-            delete pTrav;
-            break;
-        }
-        pPrev = pTrav;
-        pTrav = pTrav->pNext;
-    }
-    if (g_pDbgFunctionHead == NULL)
-    {
-        if (g_actionIsDefault)
-            g_debugAction = VK_DBG_LAYER_ACTION_LOG_MSG;
-        else
-            g_debugAction = (VK_LAYER_DBG_ACTION)(g_debugAction & ~((uint32_t)VK_DBG_LAYER_ACTION_CALLBACK));
-    }
-
-    VkLayerInstanceDispatchTable **ppDisp = (VkLayerInstanceDispatchTable **) instance;
-    VkLayerInstanceDispatchTable* pInstTable = tableInstanceMap[*ppDisp];
-    VkResult result = pInstTable->DbgUnregisterMsgCallback(instance, pfnMsgCallback);
-    return result;
+    VkLayerInstanceDispatchTable *pDisp = *(VkLayerInstanceDispatchTable **) instance;
+    VkLayerInstanceDispatchTable *pTable = tableInstanceMap[pDisp];
+    return layer_destroy_msg_callback(instance, pTable, msgCallback);
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdDbgMarkerBegin(VkCmdBuffer cmdBuffer, const char* pMarker)
@@ -2845,7 +2795,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdDbgMarkerBegin(VkCmdBuffer cmdBuffer, const char
     else {
         char str[1024];
         sprintf(str, "Attempt to use CmdBuffer %p that doesn't exist!", (void*)cmdBuffer);
-        layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, cmdBuffer, 0, DRAWSTATE_INVALID_CMD_BUFFER, "DS", str);
+        layerCbMsg(VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, cmdBuffer, 0, DRAWSTATE_INVALID_CMD_BUFFER, "DS", str);
     }
     VkLayerDispatchTable *pDisp =  *(VkLayerDispatchTable **) cmdBuffer;
     VkLayerDispatchTable *pTable = tableMap[pDisp];
@@ -2862,7 +2812,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdDbgMarkerEnd(VkCmdBuffer cmdBuffer)
     else {
         char str[1024];
         sprintf(str, "Attempt to use CmdBuffer %p that doesn't exist!", (void*)cmdBuffer);
-        layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, cmdBuffer, 0, DRAWSTATE_INVALID_CMD_BUFFER, "DS", str);
+        layerCbMsg(VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, cmdBuffer, 0, DRAWSTATE_INVALID_CMD_BUFFER, "DS", str);
     }
     VkLayerDispatchTable *pDisp =  *(VkLayerDispatchTable **) cmdBuffer;
     VkLayerDispatchTable *pTable = tableMap[pDisp];
@@ -2888,7 +2838,7 @@ void drawStateDumpPngFile(char* outFileName)
 // FIXME: NEED WINDOWS EQUIVALENT
         char str[1024];
         sprintf(str, "Cannot execute dot program yet on Windows.");
-        layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, DRAWSTATE_MISSING_DOT_PROGRAM, "DS", str);
+        layerCbMsg(VK_DBG_REPORT_ERROR_BIT, (VkObjectType) 0, NULL, 0, DRAWSTATE_MISSING_DOT_PROGRAM, "DS", str);
 #else // WIN32
     char dotExe[32] = "/usr/bin/dot";
     if( access(dotExe, X_OK) != -1) {
@@ -2902,7 +2852,7 @@ void drawStateDumpPngFile(char* outFileName)
     else {
         char str[1024];
         sprintf(str, "Cannot execute dot program at (%s) to dump requested %s file.", dotExe, outFileName);
-        layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, DRAWSTATE_MISSING_DOT_PROGRAM, "DS", str);
+        layerCbMsg(VK_DBG_REPORT_ERROR_BIT, (VkObjectType) 0, NULL, 0, DRAWSTATE_MISSING_DOT_PROGRAM, "DS", str);
     }
 #endif // WIN32
 }
@@ -3035,6 +2985,8 @@ VK_LAYER_EXPORT void* VKAPI vkGetDeviceProcAddr(VkDevice dev, const char* funcNa
         return (void*) vkCmdBeginRenderPass;
     if (!strcmp(funcName, "vkCmdEndRenderPass"))
         return (void*) vkCmdEndRenderPass;
+    if (!strcmp(funcName, "vkDbgCreateMsgCallback"))
+        return (void*) vkDbgCreateMsgCallback;
     if (!strcmp(funcName, "vkCmdDbgMarkerBegin"))
         return (void*) vkCmdDbgMarkerBegin;
     if (!strcmp(funcName, "vkCmdDbgMarkerEnd"))
@@ -3067,12 +3019,6 @@ VK_LAYER_EXPORT void * VKAPI vkGetInstanceProcAddr(VkInstance instance, const ch
         return (void *) vkDestroyInstance;
     if (!strcmp(funcName, "vkCreateDevice"))
         return (void*) vkCreateDevice;
-    if (!strcmp(funcName, "vkEnumerateLayers"))
-        return (void*) vkEnumerateLayers;
-    if (!strcmp(funcName, "vkDbgRegisterMsgCallback"))
-        return (void*) vkDbgRegisterMsgCallback;
-    if (!strcmp(funcName, "vkDbgUnregisterMsgCallback"))
-        return (void*) vkDbgUnregisterMsgCallback;
     else {
         if (instw->pGPA == NULL)
             return NULL;

@@ -34,15 +34,18 @@ VkResult loader_GetDisplayInfoWSI(
         size_t*                                 pDataSize,
         void*                                   pData);
 
-void wsi_lunarg_register_extensions(
-        const VkInstanceCreateInfo*             pCreateInfo);
+void wsi_lunarg_create_instance(
+        struct loader_instance *ptr_instance);
 
 void *wsi_lunarg_GetInstanceProcAddr(
         VkInstance                              instance,
-        const char*                             pName,
-        bool*                                   enabled);
+        const char*                             pName);
 
 void *wsi_lunarg_GetDeviceProcAddr(
         VkDevice                                device,
-        const char*                             pName,
-        bool*                                   enabled);
+        const char*                             pName);
+
+VkResult wsi_lunarg_CreateSwapChainWSI(
+        VkDevice                                device,
+        const VkSwapChainCreateInfoWSI*         pCreateInfo,
+        VkSwapChainWSI*                         pSwapChain);

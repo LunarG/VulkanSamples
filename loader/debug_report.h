@@ -1,7 +1,7 @@
 /*
  * Vulkan
  *
- * Copyright (C) 2014 LunarG, Inc.
+ * Copyright (C) 2015 LunarG, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -22,23 +22,31 @@
  * DEALINGS IN THE SOFTWARE.
  *
  * Authors:
- *    Chia-I Wu <olv@lunarg.com>
+ *   Jon Ashburn <jon@lunarg.com>
+ *   Courtney Goeltzenleuchter <courtney@lunarg.com>
  */
 
-#ifndef ICD_H
-#define ICD_H
+#include "loader_platform.h"
+#include "loader.h"
+#include "vk_debug_report_lunarg.h"
 
-#include <vulkan.h>
-#include <vk_platform.h>
-#include <vk_debug_report_lunarg.h>
-#include <vk_wsi_lunarg.h>
+void debug_report_add_instance_extensions(
+        struct loader_extension_list *ext_list);
 
-#if defined(__GNUC__) && __GNUC__ >= 4
-#  define ICD_EXPORT __attribute__((visibility("default")))
-#elif defined(__SUNPRO_C) && (__SUNPRO_C >= 0x590)
-#  define ICD_EXPORT __attribute__((visibility("default")))
-#else
-#  define ICD_EXPORT
-#endif
+void debug_report_create_instance(
+        struct loader_instance *ptr_instance);
 
-#endif /* ICD_H */
+void *debug_report_instance_gpa(
+        struct loader_instance *ptr_instance,
+        const char* name);
+
+VkResult loader_DbgCreateMsgCallback(
+    VkInstance                          instance,
+    VkFlags                             msgFlags,
+    const PFN_vkDbgMsgCallback          pfnMsgCallback,
+    const void*                         pUserData,
+    VkDbgMsgCallback*                   pMsgCallback);
+
+VkResult loader_DbgDestroyMsgCallback(
+    VkInstance                          instance,
+    VkDbgMsgCallback                    msgCallback);

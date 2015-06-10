@@ -835,18 +835,17 @@ typedef enum VkStructureType_
     VK_STRUCTURE_TYPE_CMD_BUFFER_BEGIN_INFO                 = 38,
     VK_STRUCTURE_TYPE_CMD_BUFFER_GRAPHICS_BEGIN_INFO        = 39,
     VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO               = 40,
-    VK_STRUCTURE_TYPE_LAYER_CREATE_INFO                     = 41,
-    VK_STRUCTURE_TYPE_MEMORY_BARRIER                        = 42,
-    VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER                 = 43,
-    VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER                  = 44,
-    VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO           = 45,
+    VK_STRUCTURE_TYPE_MEMORY_BARRIER                        = 41,
+    VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER                 = 42,
+    VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER                  = 43,
+    VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO           = 44,
     VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET                  = 46,
     VK_STRUCTURE_TYPE_COPY_DESCRIPTOR_SET                   = 47,
     VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO                  = 48,
     VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO           = 49,
-    VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE                   = 50,
+    VK_STRUCTURE_TYPE_EXTENSION_PROPERTIES                  = 50,
 
-    VK_ENUM_RANGE(STRUCTURE_TYPE, APPLICATION_INFO, MAPPED_MEMORY_RANGE)
+    VK_ENUM_RANGE(STRUCTURE_TYPE, APPLICATION_INFO, EXTENSION_PROPERTIES)
 } VkStructureType;
 
 // Object type enumerant
@@ -936,6 +935,7 @@ typedef enum VkResult_
     VK_ERROR_MEMORY_NOT_BOUND                               = -(0x0000001F),
     VK_ERROR_INCOMPATIBLE_QUEUE                             = -(0x00000020),
     VK_ERROR_NOT_SHAREABLE                                  = -(0x00000021),
+    VK_ERROR_MISSING_EXTENSION_DEPENDENCY                   = -(0x00000022),
 
     VK_MAX_ENUM(RESULT)
 } VkResult;
@@ -1279,8 +1279,10 @@ typedef struct VkPhysicalDeviceCompatibilityInfo_
 
 typedef struct VkExtensionProperties_
 {
-    char                                        extName[VK_MAX_EXTENSION_NAME];     // extension name
+    VkStructureType                             sType;                              // Type of structure. Should be VK_STRUCTURE_TYPE_EXTENSION_PROPERTIES
+    char                                        name[VK_MAX_EXTENSION_NAME];        // extension name
     uint32_t                                    version;                            // version of the extension specification
+    char                                        description[VK_MAX_EXTENSION_NAME]; // Name of library implementing this extension
 } VkExtensionProperties;
 
 typedef struct VkApplicationInfo_
@@ -1324,7 +1326,7 @@ typedef struct VkDeviceCreateInfo_
     uint32_t                                    queueRecordCount;
     const VkDeviceQueueCreateInfo*              pRequestedQueues;
     uint32_t                                    extensionCount;
-    const char*const*                           ppEnabledExtensionNames;
+    const VkExtensionProperties*                pEnabledExtensions;         // Indicate extensions to enable by index value
     VkDeviceCreateFlags                         flags;                      // Device creation flags
 } VkDeviceCreateInfo;
 
@@ -1335,17 +1337,8 @@ typedef struct VkInstanceCreateInfo_
     const VkApplicationInfo*                    pAppInfo;
     const VkAllocCallbacks*                     pAllocCb;
     uint32_t                                    extensionCount;
-    const char*const*                           ppEnabledExtensionNames;    // layer or extension name to be enabled
+    const VkExtensionProperties*                pEnabledExtensions;         // Indicate extensions to enable by index value
 } VkInstanceCreateInfo;
-
-// can be added to VkDeviceCreateInfo via pNext
-typedef struct VkLayerCreateInfo_
-{
-    VkStructureType                             sType;                      // Should be VK_STRUCTURE_TYPE_LAYER_CREATE_INFO
-    const void*                                 pNext;                      // Pointer to next structure
-    uint32_t                                    layerCount;
-    const char *const*                          ppActiveLayerNames;         // layer name from the layer's vkEnumerateLayers())
-} VkLayerCreateInfo;
 
 typedef struct VkPhysicalDeviceQueueProperties_
 {
@@ -2093,7 +2086,6 @@ typedef VkResult (VKAPI *PFN_vkCreateDevice)(VkPhysicalDevice physicalDevice, co
 typedef VkResult (VKAPI *PFN_vkDestroyDevice)(VkDevice device);
 typedef VkResult (VKAPI *PFN_vkGetGlobalExtensionInfo)(VkExtensionInfoType infoType, uint32_t extensionIndex, size_t* pDataSize, void* pData);
 typedef VkResult (VKAPI *PFN_vkGetPhysicalDeviceExtensionInfo)(VkPhysicalDevice physicalDevice, VkExtensionInfoType infoType, uint32_t extensionIndex, size_t* pDataSize, void* pData);
-typedef VkResult (VKAPI *PFN_vkEnumerateLayers)(VkPhysicalDevice physicalDevice, size_t maxStringSize, size_t* pLayerCount, char* const* pOutLayers, void* pReserved);
 typedef VkResult (VKAPI *PFN_vkGetDeviceQueue)(VkDevice device, uint32_t queueNodeIndex, uint32_t queueIndex, VkQueue* pQueue);
 typedef VkResult (VKAPI *PFN_vkQueueSubmit)(VkQueue queue, uint32_t cmdBufferCount, const VkCmdBuffer* pCmdBuffers, VkFence fence);
 typedef VkResult (VKAPI *PFN_vkQueueWaitIdle)(VkQueue queue);
@@ -2251,15 +2243,6 @@ VkResult VKAPI vkGetPhysicalDeviceExtensionInfo(
     uint32_t                                    extensionIndex,
     size_t*                                     pDataSize,
     void*                                       pData);
-
-// Layer discovery functions
-
-VkResult VKAPI vkEnumerateLayers(
-    VkPhysicalDevice                            physicalDevice,
-    size_t                                      maxStringSize,
-    size_t*                                     pLayerCount,
-    char* const*                                pOutLayers,
-    void*                                       pReserved);
 
 // Queue functions
 

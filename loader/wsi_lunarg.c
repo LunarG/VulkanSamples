@@ -124,45 +124,34 @@ VkResult loader_GetDisplayInfoWSI(
 
 
 /************ extension enablement ***************/
-static bool wsi_enabled = false;
-
-struct ext_props {
-    uint32_t version;
-    const char * const name;
-};
-
 #define WSI_LUNARG_EXT_ARRAY_SIZE 1
-static const struct ext_props wsi_lunarg_exts[WSI_LUNARG_EXT_ARRAY_SIZE] = {
-    {VK_WSI_LUNARG_REVISION, VK_WSI_LUNARG_EXTENSION_NAME},
+static const struct loader_extension_property wsi_lunarg_extension_info = {
+    .info =  {
+        .sType = VK_STRUCTURE_TYPE_EXTENSION_PROPERTIES,
+        .name = VK_WSI_LUNARG_EXTENSION_NAME,
+        .version = VK_WSI_LUNARG_REVISION,
+        .description = "loader: LunarG WSI extension",
+//        .dependencyCount = 0,
+//        .pDependencyList = NULL,
+        },
+    .origin = VK_EXTENSION_ORIGIN_LOADER,
+    .hosted = true,
 };
 
-void wsi_lunarg_register_extensions(
-        const VkInstanceCreateInfo*             pCreateInfo)
+void wsi_lunarg_create_instance(
+        struct loader_instance *ptr_instance)
 {
-    uint32_t i, ext_idx;
-
-    for (i = 0; i < pCreateInfo->extensionCount; i++) {
-        for (ext_idx = 0; ext_idx < WSI_LUNARG_EXT_ARRAY_SIZE; ext_idx++) {
-            /* TODO: Should we include version number as well as extension name? */
-            if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], wsi_lunarg_exts[ext_idx].name) == 0) {
-                /* Found a matching extension name, mark it enabled */
-                wsi_enabled = true;
-            }
-
-        }
-    }
-
+    ptr_instance->wsi_lunarg_enabled = has_vk_extension_property(
+                                             &wsi_lunarg_extension_info.info,
+                                             &ptr_instance->enabled_instance_extensions);
 }
 
 void *wsi_lunarg_GetInstanceProcAddr(
         VkInstance                              instance,
-        const char*                             pName,
-        bool                                    *enabled)
+        const char*                             pName)
 {
     if (instance == VK_NULL_HANDLE)
         return NULL;
-
-    *enabled = wsi_enabled;
 
     /* since two of these entrypoints must be loader handled will report all */
     if (!strcmp(pName, "vkGetDisplayInfoWSI"))
@@ -181,13 +170,10 @@ void *wsi_lunarg_GetInstanceProcAddr(
 
 void *wsi_lunarg_GetDeviceProcAddr(
         VkDevice                                device,
-        const char*                             name,
-        bool                                    *enabled)
+        const char*                             name)
 {
     if (device == VK_NULL_HANDLE)
         return NULL;
-
-    *enabled = wsi_enabled;
 
     /* only handle device entrypoints that are loader special cases */
     if (!strcmp(name, "vkCreateSwapChainWSI"))

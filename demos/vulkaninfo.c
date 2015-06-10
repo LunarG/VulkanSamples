@@ -370,7 +370,7 @@ static void app_dev_init(struct app_dev *dev, struct app_gpu *gpu)
         .queueRecordCount = 0,
         .pRequestedQueues = NULL,
         .extensionCount = 0,
-        .ppEnabledExtensionNames = NULL,
+        .pEnabledExtensions = NULL,
         .flags = 0,
     };
     VkResult err;
@@ -380,12 +380,13 @@ static void app_dev_init(struct app_dev *dev, struct app_gpu *gpu)
     info.pRequestedQueues = gpu->queue_reqs;
 
     /* enable all extensions */
-    info.extensionCount = gpu->extension_count;
-    info.ppEnabledExtensionNames = (const char*const*) gpu->extensions;
-    dev->gpu = gpu;
-    err = vkCreateDevice(gpu->obj, &info, &dev->obj);
-    if (err)
-        ERR_EXIT(err);
+    /* TODO: Enable extensions here */
+//    info.extensionCount = gpu->extension_count;
+//    info.ppEnabledExtensionNames = (const char*const*) gpu->extensions;
+//    dev->gpu = gpu;
+//    err = vkCreateDevice(gpu->obj, &info, &dev->obj);
+//    if (err)
+//        ERR_EXIT(err);
 
 }
 
@@ -411,7 +412,7 @@ static void app_gpu_init_extensions(struct app_gpu *gpu)
     bool32_t U_ASSERT_ONLY extFound = 0; // TODO : Need to enhance this if/when we enable multiple extensions
     for (uint32_t i = 0; i < extCount; i++) {
         err = vkGetGlobalExtensionInfo(VK_EXTENSION_INFO_TYPE_PROPERTIES, i, &extSize, &extProp);
-        if (!strcmp(known_extensions[0], extProp.extName)) {
+        if (!strcmp(known_extensions[0], extProp.name)) {
             extFound = 1;
             gpu->extension_count++;
         }
@@ -705,7 +706,7 @@ int main(int argc, char **argv)
         .pAppInfo = &app_info,
         .pAllocCb = NULL,
         .extensionCount = 0,
-        .ppEnabledExtensionNames = NULL,
+        .pEnabledExtensions = NULL,
     };
     struct app_gpu gpus[MAX_GPUS];
     VkPhysicalDevice objs[MAX_GPUS];
