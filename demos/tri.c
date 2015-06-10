@@ -120,6 +120,7 @@ struct demo {
 
     VkDisplayPropertiesWSI *display_props;
     int num_displays;
+    PFN_vkGetDisplayInfoWSI fpGetDisplayInfoWSI;
     PFN_vkCreateSwapChainWSI fpCreateSwapChainWSI;
     PFN_vkDestroySwapChainWSI fpDestroySwapChainWSI;
     PFN_vkGetSwapChainInfoWSI fpGetSwapChainInfoWSI;
@@ -1434,6 +1435,10 @@ static void demo_init_vk(struct demo *demo)
                  "vkCreateInstance Failure");
     }
 
+    demo->fpGetDisplayInfoWSI = vkGetInstanceProcAddr(demo->inst, "vkGetDisplayInfoWSI");
+    if (demo->fpGetDisplayInfoWSI == NULL)
+        ERR_EXIT("vkGetInstanceProcAddr failed to find vkGetDisplayInfoWSI",
+                                 "vkGetInstanceProcAddr Failure");
     demo->fpCreateSwapChainWSI = vkGetInstanceProcAddr(demo->inst, "vkCreateSwapChainWSI");
     if (demo->fpCreateSwapChainWSI == NULL)
         ERR_EXIT("vkGetInstanceProcAddr failed to find vkCreateSwapChainWSI",
@@ -1512,11 +1517,11 @@ static void demo_init_vk(struct demo *demo)
     display = demo->display_props[0].display;
 
     // Get a VkFormat to use with the VkDisplayWSI we are using:
-    err = vkGetDisplayInfoWSI(display, VK_DISPLAY_INFO_TYPE_FORMAT_PROPERTIES_WSI,
+    err = demo->fpGetDisplayInfoWSI(display, VK_DISPLAY_INFO_TYPE_FORMAT_PROPERTIES_WSI,
                               &data_size, NULL);
     VkDisplayFormatPropertiesWSI* display_format_props =
         (VkDisplayFormatPropertiesWSI*) malloc(data_size);
-    err = vkGetDisplayInfoWSI(display, VK_DISPLAY_INFO_TYPE_FORMAT_PROPERTIES_WSI,
+    err = demo->fpGetDisplayInfoWSI(display, VK_DISPLAY_INFO_TYPE_FORMAT_PROPERTIES_WSI,
                               &data_size, display_format_props);
     // For now, simply use the first VkFormat (TODO: Enhance this for the
     // future):
