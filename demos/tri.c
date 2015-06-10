@@ -602,8 +602,8 @@ static void demo_prepare_texture_image(struct demo *demo,
 static void demo_destroy_texture_image(struct demo *demo, struct texture_object *tex_obj)
 {
     /* clean up staging resources */
-    vkFreeMemory(demo->device, tex_obj->mem);
     vkDestroyObject(demo->device, VK_OBJECT_TYPE_IMAGE, tex_obj->image);
+    vkFreeMemory(demo->device, tex_obj->mem);
 }
 
 static void demo_prepare_textures(struct demo *demo)
