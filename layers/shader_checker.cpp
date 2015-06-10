@@ -149,8 +149,12 @@ static const VkExtensionProperties shaderCheckerExts[SHADER_CHECKER_LAYER_EXT_AR
         "ShaderChecker",
         0x10,
         "Sample layer: ShaderChecker",
-//        0,
-//        NULL,
+    },
+    {
+        VK_STRUCTURE_TYPE_EXTENSION_PROPERTIES,
+        "Validation",
+        0x10,
+        "Sample layer: ShaderChecker",
     }
 };
 
@@ -189,6 +193,41 @@ VK_LAYER_EXPORT VkResult VKAPI vkGetGlobalExtensionInfo(
     return VK_SUCCESS;
 }
 
+VK_LAYER_EXPORT VkResult VKAPI vkGetPhysicalDeviceExtensionInfo(
+                                               VkPhysicalDevice gpu,
+                                               VkExtensionInfoType infoType,
+                                               uint32_t extensionIndex,
+                                               size_t*  pDataSize,
+                                               void*    pData)
+{
+    /* This entrypoint is NOT going to init it's own dispatch table since loader calls here early */
+    uint32_t *count;
+
+    if (pDataSize == NULL)
+        return VK_ERROR_INVALID_POINTER;
+
+    switch (infoType) {
+        case VK_EXTENSION_INFO_TYPE_COUNT:
+            *pDataSize = sizeof(uint32_t);
+            if (pData == NULL)
+                return VK_SUCCESS;
+            count = (uint32_t *) pData;
+            *count = SHADER_CHECKER_LAYER_EXT_ARRAY_SIZE;
+            break;
+        case VK_EXTENSION_INFO_TYPE_PROPERTIES:
+            *pDataSize = sizeof(VkExtensionProperties);
+            if (pData == NULL)
+                return VK_SUCCESS;
+            if (extensionIndex >= SHADER_CHECKER_LAYER_EXT_ARRAY_SIZE)
+                return VK_ERROR_INVALID_VALUE;
+            memcpy((VkExtensionProperties *) pData, &shaderCheckerExts[extensionIndex], sizeof(VkExtensionProperties));
+            break;
+        default:
+            return VK_ERROR_INVALID_VALUE;
+    };
+
+    return VK_SUCCESS;
+}
 
 static char const *
 storage_class_name(unsigned sc)
@@ -903,7 +942,7 @@ VkResult VKAPI vkCreateInstance(
      * For layers, the pInstance has already been filled out
      * by the loader so that dispatch table is available.
      */
-    VkLayerInstanceDispatchTable *pTable = initInstanceTable((const VkBaseLayerObject *) (*pInstance));
+    VkLayerInstanceDispatchTable *pTable = instance_dispatch_table(*pInstance);
 
     VkResult result = pTable->CreateInstance(pCreateInfo, pInstance);
 
@@ -994,6 +1033,7 @@ VK_LAYER_EXPORT void * VKAPI vkGetInstanceProcAddr(VkInstance inst, const char* 
     ADD_HOOK(vkCreateInstance);
     ADD_HOOK(vkDestroyInstance);
     ADD_HOOK(vkGetGlobalExtensionInfo);
+    ADD_HOOK(vkGetPhysicalDeviceExtensionInfo);
 #undef ADD_HOOK
 
     fptr = msg_callback_get_proc_addr(pName);
