@@ -106,6 +106,7 @@ VkResult loader_GetDisplayInfoWSI(
         void*                                   pData)
 {
     uint32_t gpu_index;
+    /* TODO: need another way to find the icd, display is not a gpu object */
     struct loader_icd *icd = loader_get_icd((const VkBaseLayerObject *) display, &gpu_index);
     VkResult res = VK_ERROR_INITIALIZATION_FAILED;
 
