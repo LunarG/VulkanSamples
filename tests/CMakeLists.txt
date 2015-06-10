@@ -7,7 +7,11 @@ endif()
 
 find_package(ImageMagick COMPONENTS MagickWand)
 if(NOT ImageMagick_FOUND)
-    message(FATAL_ERROR "Missing ImageMagick library: sudo apt-get install libmagickwand-dev\nor http://www.imagemagick.org/script/binary-releases.php for Windows")
+    if(NOT WIN32)
+        message(FATAL_ERROR "Missing ImageMagick library: sudo apt-get install libmagickwand-dev")
+    else()
+        message(FATAL_ERROR "Missing ImageMagick library: Get from http://www.imagemagick.org/script/binary-releases.php.  Be sure to check box to 'Install development headers and libraries'")
+    endif()
 endif()
 
 if(WIN32)

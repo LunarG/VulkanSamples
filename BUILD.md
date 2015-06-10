@@ -155,6 +155,8 @@ Windows 7+ with additional, software:
     - If you don't want to use Cygwin, there are other shells and environments that can be used.
       You can also use a Git package that doesn't come from Cygwin.
   - Git (from http://git-scm.com/download/win).
+  - Image Magick is used by the tests to compare images (from http://www.imagemagick.org/script/binary-releases.php)
+    - Be sure to check box to "Install development headers and libraries"
 
 ## Windows Build
 
