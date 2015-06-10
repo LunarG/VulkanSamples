@@ -1060,14 +1060,6 @@ struct loader_icd * loader_get_icd(const VkPhysicalDevice gpu, uint32_t *gpu_ind
     return NULL;
 }
 
-static bool loader_layers_activated(const struct loader_device *dev)
-{
-    if (dev->activated_layer_list.count)
-        return true;
-    else
-        return false;
-}
-
 static loader_platform_dl_handle loader_add_layer_lib(
         const char *chain_type,
         struct loader_extension_property *ext_prop)
@@ -1405,70 +1397,68 @@ static uint32_t loader_activate_device_layers(
 
     if (!dev)
         return 0;
+
     /* activate any layer libraries */
-    if (!loader_layers_activated(dev)) {
-        VkObject nextObj =  (VkObject) device;
-        VkObject baseObj = nextObj;
-        VkBaseLayerObject *nextGpuObj;
-        PFN_vkGetDeviceProcAddr nextGPA = icd->GetDeviceProcAddr;
-        VkBaseLayerObject *wrappedGpus;
-        /*
-         * Figure out how many actual layers will need to be wrapped.
-         */
-        for (uint32_t i = 0; i < dev->enabled_device_extensions.count; i++) {
-            struct loader_extension_property *ext_prop = &dev->enabled_device_extensions.list[i];
-            if (ext_prop->alias) {
-                ext_prop = ext_prop->alias;
-            }
-            if (ext_prop->origin != VK_EXTENSION_ORIGIN_LAYER) {
-                continue;
-            }
-            loader_add_to_ext_list(&dev->activated_layer_list, 1, ext_prop);
+    VkObject nextObj = (VkObject) device;
+    VkObject baseObj = nextObj;
+    VkBaseLayerObject *nextGpuObj;
+    PFN_vkGetDeviceProcAddr nextGPA = icd->GetDeviceProcAddr;
+    VkBaseLayerObject *wrappedGpus;
+    /*
+     * Figure out how many actual layers will need to be wrapped.
+     */
+    for (uint32_t i = 0; i < dev->enabled_device_extensions.count; i++) {
+        struct loader_extension_property *ext_prop = &dev->enabled_device_extensions.list[i];
+        if (ext_prop->alias) {
+            ext_prop = ext_prop->alias;
         }
-
-        if (!dev->activated_layer_list.count)
-            return 0;
-
-        wrappedGpus = malloc(sizeof(VkBaseLayerObject) * dev->activated_layer_list.count);
-        if (! wrappedGpus) {
-                loader_log(VK_DBG_REPORT_ERROR_BIT, 0, "Failed to malloc Gpu objects for layer");
-                return 0;
+        if (ext_prop->origin != VK_EXTENSION_ORIGIN_LAYER) {
+            continue;
         }
-        for (int32_t i = dev->activated_layer_list.count - 1; i >= 0; i--) {
-
-            struct loader_extension_property *ext_prop = &dev->activated_layer_list.list[i];
-            loader_platform_dl_handle lib_handle;
-
-            assert(ext_prop->origin == VK_EXTENSION_ORIGIN_LAYER);
-
-            nextGpuObj = (wrappedGpus + i);
-            nextGpuObj->pGPA = nextGPA;
-            nextGpuObj->baseObject = baseObj;
-            nextGpuObj->nextObject = nextObj;
-            nextObj = (VkObject) nextGpuObj;
-
-            char funcStr[256];
-            snprintf(funcStr, 256, "%sGetDeviceProcAddr", ext_prop->info.name);
-            lib_handle = loader_add_layer_lib("device", ext_prop);
-            if ((nextGPA = (PFN_vkGetDeviceProcAddr) loader_platform_get_proc_address(lib_handle, funcStr)) == NULL)
-                nextGPA = (PFN_vkGetDeviceProcAddr) loader_platform_get_proc_address(lib_handle, "vkGetDeviceProcAddr");
-            if (!nextGPA) {
-                loader_log(VK_DBG_REPORT_ERROR_BIT, 0, "Failed to find vkGetDeviceProcAddr in layer %s", ext_prop->info.name);
-                continue;
-            }
-
-            loader_log(VK_DBG_REPORT_INFO_BIT, 0,
-                       "Insert device layer library %s for extension: %s",
-                       ext_prop->lib_name, ext_prop->info.name);
-
-        }
-
-        loader_init_device_dispatch_table(&dev->loader_dispatch, nextGPA,
-                           (VkPhysicalDevice) nextObj, (VkPhysicalDevice) baseObj);
-        free(wrappedGpus);
-    } else {
-        // TODO: Check that active layers match requested?
+        loader_add_to_ext_list(&dev->activated_layer_list, 1, ext_prop);
     }
+
+    if (!dev->activated_layer_list.count)
+        return 0;
+
+    wrappedGpus = malloc(sizeof (VkBaseLayerObject) * dev->activated_layer_list.count);
+    if (!wrappedGpus) {
+        loader_log(VK_DBG_REPORT_ERROR_BIT, 0, "Failed to malloc Gpu objects for layer");
+        return 0;
+    }
+    for (int32_t i = dev->activated_layer_list.count - 1; i >= 0; i--) {
+
+        struct loader_extension_property *ext_prop = &dev->activated_layer_list.list[i];
+        loader_platform_dl_handle lib_handle;
+
+        assert(ext_prop->origin == VK_EXTENSION_ORIGIN_LAYER);
+
+        nextGpuObj = (wrappedGpus + i);
+        nextGpuObj->pGPA = nextGPA;
+        nextGpuObj->baseObject = baseObj;
+        nextGpuObj->nextObject = nextObj;
+        nextObj = (VkObject) nextGpuObj;
+
+        char funcStr[256];
+        snprintf(funcStr, 256, "%sGetDeviceProcAddr", ext_prop->info.name);
+        lib_handle = loader_add_layer_lib("device", ext_prop);
+        if ((nextGPA = (PFN_vkGetDeviceProcAddr) loader_platform_get_proc_address(lib_handle, funcStr)) == NULL)
+            nextGPA = (PFN_vkGetDeviceProcAddr) loader_platform_get_proc_address(lib_handle, "vkGetDeviceProcAddr");
+        if (!nextGPA) {
+            loader_log(VK_DBG_REPORT_ERROR_BIT, 0, "Failed to find vkGetDeviceProcAddr in layer %s", ext_prop->info.name);
+            continue;
+        }
+
+        loader_log(VK_DBG_REPORT_INFO_BIT, 0,
+                "Insert device layer library %s for extension: %s",
+                ext_prop->lib_name, ext_prop->info.name);
+
+    }
+
+    loader_init_device_dispatch_table(&dev->loader_dispatch, nextGPA,
+            (VkPhysicalDevice) nextObj, (VkPhysicalDevice) baseObj);
+    free(wrappedGpus);
+
     return dev->activated_layer_list.count;
 }
 
