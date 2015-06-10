@@ -509,12 +509,83 @@ void loader_coalesce_extensions(void)
     wsi_lunarg_add_instance_extensions(&loader.global_extensions);
 }
 
+static struct loader_icd *loader_get_icd_and_device(const VkDevice device,
+                                                    struct loader_device **found_dev)
+{
+    *found_dev = NULL;
+    for (struct loader_instance *inst = loader.instances; inst; inst = inst->next) {
+        for (struct loader_icd *icd = inst->icds; icd; icd = icd->next) {
+            for (struct loader_device *dev = icd->logical_device_list; dev; dev = dev->next)
+                if (dev->device == device) {
+                    *found_dev = dev;
+                    return icd;
+                }
+        }
+    }
+    return NULL;
+}
+
+static void loader_destroy_logical_device(struct loader_device *dev)
+{
+    free(dev->app_extension_props);
+    if (dev->enabled_device_extensions.count)
+        loader_destroy_ext_list(&dev->enabled_device_extensions);
+    if (dev->activated_layer_list.count)
+        loader_destroy_ext_list(&dev->activated_layer_list);
+    free(dev);
+}
+
+static struct loader_device *loader_add_logical_device(const VkDevice dev, struct loader_device **device_list)
+{
+    struct loader_device *new_dev;
+
+    new_dev = malloc(sizeof(struct loader_device));
+    if (!new_dev) {
+        loader_log(VK_DBG_REPORT_ERROR_BIT, 0, "Failed to malloc struct laoder-device");
+        return NULL;
+    }
+
+    memset(new_dev, 0, sizeof(struct loader_device));
+
+    new_dev->next = *device_list;
+    new_dev->device = dev;
+    *device_list = new_dev;
+    return new_dev;
+}
+
+void loader_remove_logical_device(VkDevice device)
+{
+    struct loader_device *found_dev, *dev, *prev_dev;
+    struct loader_icd *icd;
+    icd = loader_get_icd_and_device(device, &found_dev);
+
+    if (!icd || !found_dev)
+        return;
+
+    prev_dev = NULL;
+    dev = icd->logical_device_list;
+    while (dev && dev != found_dev) {
+        prev_dev = dev;
+        dev = dev->next;
+    }
+
+    if (prev_dev)
+        prev_dev->next = found_dev->next;
+    else
+        icd->logical_device_list = found_dev->next;
+    loader_destroy_logical_device(found_dev);
+}
+
+
 static void loader_icd_destroy(
         struct loader_instance *ptr_inst,
         struct loader_icd *icd)
 {
     ptr_inst->total_icd_count--;
     free(icd->gpus);
+    for (struct loader_device *dev = icd->logical_device_list; dev; dev = dev->next)
+        loader_destroy_logical_device(dev);
+
     free(icd);
 }
 
@@ -989,9 +1060,9 @@ struct loader_icd * loader_get_icd(const VkPhysicalDevice gpu, uint32_t *gpu_ind
     return NULL;
 }
 
-static bool loader_layers_activated(const struct loader_icd *icd, const uint32_t gpu_index)
+static bool loader_layers_activated(const struct loader_device *dev)
 {
-    if (icd->layer_count[gpu_index])
+    if (dev->activated_layer_list.count)
         return true;
     else
         return false;
@@ -1155,7 +1226,6 @@ static void loader_add_layer_env(
     return;
 }
 
-
 void loader_deactivate_instance_layers(struct loader_instance *instance)
 {
     if (!instance->layer_count) {
@@ -1170,6 +1240,7 @@ void loader_deactivate_instance_layers(struct loader_instance *instance)
 
         instance->layer_count--;
     }
+    loader_destroy_ext_list(&instance->activated_layer_list);
 
 }
 
@@ -1306,35 +1377,36 @@ void loader_activate_instance_layer_extensions(struct loader_instance *inst)
                                                   (VkInstance) inst);
 }
 
-void loader_enable_device_layers(struct loader_icd *icd, uint32_t gpu_index)
+static void loader_enable_device_layers(struct loader_device *dev)
 {
-    if (icd == NULL)
+    if (dev == NULL)
         return;
 
     /* Add any layers specified in the environment first */
-    loader_add_layer_env(&icd->enabled_device_extensions[gpu_index], &loader.global_extensions);
+    loader_add_layer_env(&dev->enabled_device_extensions, &loader.global_extensions);
 
     /* Add layers / extensions specified by the application */
     loader_add_vk_ext_to_ext_list(
-                &icd->enabled_device_extensions[gpu_index],
-                icd->app_extension_count[gpu_index],
-                icd->app_extension_props[gpu_index],
+                &dev->enabled_device_extensions,
+                dev->app_extension_count,
+                dev->app_extension_props,
                 &loader.global_extensions);
 }
 
-extern uint32_t loader_activate_device_layers(
+static uint32_t loader_activate_device_layers(
             VkDevice device,
+            struct loader_device *dev,
             struct loader_icd *icd,
-            uint32_t gpu_index,
             uint32_t ext_count,
             const VkExtensionProperties *ext_props)
 {
     if (!icd)
         return 0;
-    assert(gpu_index < MAX_GPUS_FOR_LAYER);
 
+    if (!dev)
+        return 0;
     /* activate any layer libraries */
-    if (!loader_layers_activated(icd, gpu_index)) {
+    if (!loader_layers_activated(dev)) {
         VkObject nextObj =  (VkObject) device;
         VkObject baseObj = nextObj;
         VkBaseLayerObject *nextGpuObj;
@@ -1343,30 +1415,28 @@ extern uint32_t loader_activate_device_layers(
         /*
          * Figure out how many actual layers will need to be wrapped.
          */
-        for (uint32_t i = 0; i < icd->enabled_device_extensions[gpu_index].count; i++) {
-            struct loader_extension_property *ext_prop = &icd->enabled_device_extensions[gpu_index].list[i];
+        for (uint32_t i = 0; i < dev->enabled_device_extensions.count; i++) {
+            struct loader_extension_property *ext_prop = &dev->enabled_device_extensions.list[i];
             if (ext_prop->alias) {
                 ext_prop = ext_prop->alias;
             }
             if (ext_prop->origin != VK_EXTENSION_ORIGIN_LAYER) {
                 continue;
             }
-            loader_add_to_ext_list(&icd->activated_layer_list[gpu_index], 1, ext_prop);
+            loader_add_to_ext_list(&dev->activated_layer_list, 1, ext_prop);
         }
 
-        if (!icd->activated_layer_list[gpu_index].count)
+        if (!dev->activated_layer_list.count)
             return 0;
 
-        icd->layer_count[gpu_index] = icd->activated_layer_list[gpu_index].count;
-
-        wrappedGpus = malloc(sizeof(VkBaseLayerObject) * icd->layer_count[gpu_index]);
+        wrappedGpus = malloc(sizeof(VkBaseLayerObject) * dev->activated_layer_list.count);
         if (! wrappedGpus) {
                 loader_log(VK_DBG_REPORT_ERROR_BIT, 0, "Failed to malloc Gpu objects for layer");
                 return 0;
         }
-        for (int32_t i = icd->layer_count[gpu_index] - 1; i >= 0; i--) {
+        for (int32_t i = dev->activated_layer_list.count - 1; i >= 0; i--) {
 
-            struct loader_extension_property *ext_prop = &icd->activated_layer_list[gpu_index].list[i];
+            struct loader_extension_property *ext_prop = &dev->activated_layer_list.list[i];
             loader_platform_dl_handle lib_handle;
 
             assert(ext_prop->origin == VK_EXTENSION_ORIGIN_LAYER);
@@ -1393,13 +1463,13 @@ extern uint32_t loader_activate_device_layers(
 
         }
 
-        loader_init_device_dispatch_table(icd->loader_dispatch + gpu_index, nextGPA,
+        loader_init_device_dispatch_table(&dev->loader_dispatch, nextGPA,
                            (VkPhysicalDevice) nextObj, (VkPhysicalDevice) baseObj);
         free(wrappedGpus);
     } else {
         // TODO: Check that active layers match requested?
     }
-    return icd->layer_count[gpu_index];
+    return dev->activated_layer_list.count;
 }
 
 VkResult loader_CreateInstance(
@@ -1624,6 +1694,7 @@ VkResult loader_CreateDevice(
 {
     uint32_t gpu_index;
     struct loader_icd *icd = loader_get_icd(gpu, &gpu_index);
+    struct loader_device *dev;
     VkResult res = VK_ERROR_INITIALIZATION_FAILED;
 
     if (icd->CreateDevice) {
@@ -1631,29 +1702,31 @@ VkResult loader_CreateDevice(
         if (res != VK_SUCCESS) {
             return res;
         }
+        dev = loader_add_logical_device(*pDevice, &icd->logical_device_list);
+        if (dev == NULL)
+            return VK_ERROR_OUT_OF_HOST_MEMORY;
         PFN_vkGetDeviceProcAddr get_proc_addr = icd->GetDeviceProcAddr;
-        loader_init_device_dispatch_table(icd->loader_dispatch + gpu_index,
-                                          get_proc_addr, icd->gpus[gpu_index], icd->gpus[gpu_index]);
+        loader_init_device_dispatch_table(&dev->loader_dispatch, get_proc_addr,
+                                          icd->gpus[gpu_index], icd->gpus[gpu_index]);
 
-        VkLayerDispatchTable *dev_disp = icd->loader_dispatch + gpu_index;
-        loader_init_dispatch(*pDevice, dev_disp);
+        loader_init_dispatch(*pDevice, &dev->loader_dispatch);
 
-        icd->app_extension_count[gpu_index] = pCreateInfo->extensionCount;
-        icd->app_extension_props[gpu_index] = (VkExtensionProperties *) malloc(sizeof(VkExtensionProperties) * pCreateInfo->extensionCount);
-        if (icd->app_extension_props[gpu_index] == NULL && (icd->app_extension_count[gpu_index] > 0)) {
+        dev->app_extension_count = pCreateInfo->extensionCount;
+        dev->app_extension_props = (VkExtensionProperties *) malloc(sizeof(VkExtensionProperties) * pCreateInfo->extensionCount);
+        if (dev->app_extension_props == NULL && (dev->app_extension_count > 0)) {
             return VK_ERROR_OUT_OF_HOST_MEMORY;
         }
 
         /* Make local copy of extension list */
-        if (icd->app_extension_count[gpu_index] > 0 && icd->app_extension_props[gpu_index] != NULL) {
-            memcpy(icd->app_extension_props[gpu_index], pCreateInfo->pEnabledExtensions, sizeof(VkExtensionProperties) * pCreateInfo->extensionCount);
+        if (dev->app_extension_count > 0 && dev->app_extension_props != NULL) {
+            memcpy(dev->app_extension_props, pCreateInfo->pEnabledExtensions, sizeof(VkExtensionProperties) * pCreateInfo->extensionCount);
         }
 
         /*
          * Put together the complete list of extensions to enable
          * This includes extensions requested via environment variables.
          */
-        loader_enable_device_layers(icd, gpu_index);
+        loader_enable_device_layers(dev);
 
         /*
          * Load the libraries needed by the extensions on the
@@ -1661,9 +1734,9 @@ VkResult loader_CreateDevice(
          * device instance chain terminating with the
          * selected device.
          */
-        loader_activate_device_layers(*pDevice, icd, gpu_index,
-                                      icd->app_extension_count[gpu_index],
-                                      icd->app_extension_props[gpu_index]);
+        loader_activate_device_layers(*pDevice, dev, icd,
+                                      dev->app_extension_count,
+                                      dev->app_extension_props);
     }
 
     return res;

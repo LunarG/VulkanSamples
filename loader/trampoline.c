@@ -124,7 +124,6 @@ LOADER_EXPORT VkResult VKAPI vkDestroyInstance(
     struct loader_instance *ptr_instance = loader_instance(instance);
     loader_deactivate_instance_layers(ptr_instance);
     loader_destroy_ext_list(&ptr_instance->enabled_instance_extensions);
-    loader_destroy_ext_list(&ptr_instance->activated_layer_list);
 
     free(ptr_instance);
 
@@ -201,8 +200,7 @@ LOADER_EXPORT VkResult VKAPI vkDestroyDevice(VkDevice device)
 
     loader_platform_thread_lock_mutex(&loader_lock);
     res =  disp->DestroyDevice(device);
-    // TODO need to keep track of device objs to be able to get icd/gpu to deactivate
-    //loader_deactivate_device_layer(device);
+    loader_remove_logical_device(device);
     loader_platform_thread_unlock_mutex(&loader_lock);
     return res;
 }

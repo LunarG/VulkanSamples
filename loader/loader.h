@@ -45,7 +45,7 @@
 
 #define MAX_EXTENSION_NAME_SIZE 255
 #define MAX_LAYER_LIBRARIES 64
-#define MAX_GPUS_FOR_LAYER 16
+#define MAX_GPUS_PER_ICD 16
 
 enum extension_origin {
     VK_EXTENSION_ORIGIN_ICD,
@@ -91,11 +91,24 @@ struct loader_scanned_layers {
     struct loader_extension_list physical_device_extension_list;
 };
 
+/* per CreateDevice structure */
+struct loader_device {
+    VkLayerDispatchTable loader_dispatch;
+    VkDevice device;       // device object from the icd
+
+    uint32_t  app_extension_count;
+    VkExtensionProperties *app_extension_props;
+
+    struct loader_extension_list enabled_device_extensions;
+    struct loader_extension_list activated_layer_list;
+
+    struct loader_device *next;
+};
+
 struct loader_icd {
     const struct loader_scanned_icds *scanned_icds;
 
-    VkLayerDispatchTable loader_dispatch[MAX_GPUS_FOR_LAYER];
-    uint32_t layer_count[MAX_GPUS_FOR_LAYER];
+    struct loader_device *logical_device_list;
     uint32_t gpu_count;
     VkPhysicalDevice *gpus;
     VkInstance instance;       // instance object from the icd
@@ -109,20 +122,13 @@ struct loader_icd {
     PFN_vkGetDisplayInfoWSI GetDisplayInfoWSI;
     PFN_vkDbgCreateMsgCallback DbgCreateMsgCallback;
     PFN_vkDbgDestroyMsgCallback DbgDestroyMsgCallback;
-    struct loader_icd *next;
-
-    uint32_t  app_extension_count[MAX_GPUS_FOR_LAYER];
-    VkExtensionProperties *app_extension_props[MAX_GPUS_FOR_LAYER];
-
     /*
      * Fill in the cache of available extensions from all layers that
      * operate with this physical device.
      * This cache will be used to satisfy calls to GetPhysicalDeviceExtensionInfo
      */
-    struct loader_extension_list device_extension_cache[MAX_GPUS_FOR_LAYER];
-
-    struct loader_extension_list enabled_device_extensions[MAX_GPUS_FOR_LAYER];
-    struct loader_extension_list activated_layer_list[MAX_GPUS_FOR_LAYER];
+    struct loader_extension_list device_extension_cache[MAX_GPUS_PER_ICD];
+    struct loader_icd *next;
 };
 
 struct loader_instance {
@@ -350,9 +356,6 @@ void loader_add_to_ext_list(
         const struct loader_extension_property *props);
 void loader_destroy_ext_list(struct loader_extension_list *ext_info);
 
-void loader_enable_instance_layers(struct loader_instance *inst);
-void loader_deactivate_instance_layers(struct loader_instance *instance);
-
 bool loader_is_extension_scanned(const VkExtensionProperties *ext_prop);
 void loader_icd_scan(void);
 void layer_lib_scan(void);
@@ -360,6 +363,9 @@ void loader_coalesce_extensions(void);
 
 struct loader_icd * loader_get_icd(const VkPhysicalDevice gpu,
                                    uint32_t *gpu_index);
+void loader_remove_logical_device(VkDevice device);
+void loader_enable_instance_layers(struct loader_instance *inst);
+void loader_deactivate_instance_layers(struct loader_instance *instance);
 uint32_t loader_activate_instance_layers(struct loader_instance *inst);
 void loader_activate_instance_layer_extensions(struct loader_instance *inst);
 #endif /* LOADER_H */
