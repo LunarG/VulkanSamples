@@ -47,6 +47,10 @@ typedef enum _DRAW_STATE_ERROR
     DRAWSTATE_INVALID_UPDATE_STRUCT,            // Struct in DS Update tree is of invalid type
     DRAWSTATE_NUM_SAMPLES_MISMATCH,             // Number of samples in bound PSO does not match number in FB of current RenderPass
     DRAWSTATE_NO_END_CMD_BUFFER,                // Must call vkEndCommandBuffer() before QueueSubmit on that cmdBuffer
+    DRAWSTATE_VIEWPORT_NOT_BOUND,               // Draw submitted with no viewport state object bound
+    DRAWSTATE_RASTER_NOT_BOUND,                 // Draw submitted with no raster state object bound
+    DRAWSTATE_COLOR_BLEND_NOT_BOUND,            // Draw submitted with no color blend state object bound when color write enabled
+    DRAWSTATE_DEPTH_STENCIL_NOT_BOUND,          // Draw submitted with no depth-stencil state object bound when depth write enabled
 } DRAW_STATE_ERROR;
 
 typedef enum _DRAW_TYPE
@@ -212,6 +216,18 @@ typedef enum _CB_STATE
     CB_UPDATE_ACTIVE,  // BeginCB has been called on this CB
     CB_UPDATE_COMPLETE // EndCB has been called on this CB
 } CB_STATE;
+// CB Status -- used to track status of various bindings on cmd buffer objects
+typedef VkFlags CBStatusFlags;
+typedef enum _CBStatusFlagBits
+{
+    CBSTATUS_NONE                              = 0x00000000, // No status is set
+    CBSTATUS_VIEWPORT_BOUND                    = 0x00000001, // Viewport state object has been bound
+    CBSTATUS_RASTER_BOUND                      = 0x00000002, // Raster state object has been bound
+    CBSTATUS_COLOR_BLEND_WRITE_ENABLE          = 0x00000004, // PSO w/ CB Enable set has been bound
+    CBSTATUS_COLOR_BLEND_BOUND                 = 0x00000008, // CB state object has been bound
+    CBSTATUS_DEPTH_STENCIL_WRITE_ENABLE        = 0x00000010, // PSO w/ DS Enable set has been bound
+    CBSTATUS_DEPTH_STENCIL_BOUND               = 0x00000020, // DS state object has been bound
+} CBStatusFlagBits;
 // Cmd Buffer Wrapper Struct
 typedef struct _GLOBAL_CB_NODE {
     VkCmdBuffer                  cmdBuffer;
@@ -220,7 +236,8 @@ typedef struct _GLOBAL_CB_NODE {
     VkFence                      fence;    // fence tracking this cmd buffer
     uint64_t                     numCmds;  // number of cmds in this CB
     uint64_t                     drawCount[NUM_DRAW_TYPES]; // Count of each type of draw in this CB
-    CB_STATE                     state; // Track if cmd buffer update status
+    CB_STATE                     state;  // Track cmd buffer update state
+    CBStatusFlags                status; // Track status of various bindings on cmd buffer
     vector<CMD_NODE*>            pCmds;
     // Currently storing "lastBound" objects on per-CB basis
     //  long-term may want to create caches of "lastBound" states and could have

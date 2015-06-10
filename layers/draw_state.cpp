@@ -312,7 +312,38 @@ static void updateCBTracking(VkCmdBuffer cb)
     g_lastTouchedCBIndex = g_lastTouchedCBIndex % NUM_COMMAND_BUFFERS_TO_DISPLAY;
     loader_platform_thread_unlock_mutex(&globalLock);
 }
-
+// Check object status for selected flag state
+static bool32_t validate_status(VkCmdBuffer cb, CBStatusFlags enable_mask, CBStatusFlags status_mask, CBStatusFlags status_flag, VK_DBG_MSG_TYPE error_level, DRAW_STATE_ERROR error_code, const char* fail_msg) {
+    if (cmdBufferMap.find(cb) != cmdBufferMap.end()) {
+        GLOBAL_CB_NODE* pNode = cmdBufferMap[cb];
+        // If non-zero enable mask is present, check it against status but if enable_mask
+        //  is 0 then no enable required so we should always just check status
+        if ((!enable_mask) || (enable_mask & pNode->status)) {
+            if ((pNode->status & status_mask) != status_flag) {
+                char str[1024];
+                sprintf(str, "CB object 0x%" PRIxLEAST64 ": %s", reinterpret_cast<VkUintPtrLeast64>(cb), fail_msg);
+                layerCbMsg(error_level, VK_VALIDATION_LEVEL_0, cb, 0, error_code, "DS", str);
+                return VK_FALSE;
+            }
+        }
+        return VK_TRUE;
+    }
+    else {
+        // If we do not find it print an error
+        char str[1024];
+        sprintf(str, "Unable to obtain status for non-existent CB object 0x%" PRIxLEAST64, reinterpret_cast<VkUintPtrLeast64>(cb));
+        layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, cb, 0, DRAWSTATE_INVALID_CMD_BUFFER, "DS", str);
+        return VK_FALSE;
+    }
+}
+static bool32_t validate_draw_state_flags(VkCmdBuffer cb) {
+    bool32_t result1, result2, result3, result4;
+    result1 = validate_status(cb, CBSTATUS_NONE, CBSTATUS_VIEWPORT_BOUND, CBSTATUS_VIEWPORT_BOUND, VK_DBG_MSG_ERROR, DRAWSTATE_VIEWPORT_NOT_BOUND, "Viewport object not bound to this command buffer");
+    result2 = validate_status(cb, CBSTATUS_NONE, CBSTATUS_RASTER_BOUND,   CBSTATUS_RASTER_BOUND,   VK_DBG_MSG_ERROR, DRAWSTATE_RASTER_NOT_BOUND,   "Raster object not bound to this command buffer");
+    result3 = validate_status(cb, CBSTATUS_COLOR_BLEND_WRITE_ENABLE, CBSTATUS_COLOR_BLEND_BOUND,   CBSTATUS_COLOR_BLEND_BOUND,   VK_DBG_MSG_ERROR,  DRAWSTATE_COLOR_BLEND_NOT_BOUND,   "Color-blend object not bound to this command buffer");
+    result4 = validate_status(cb, CBSTATUS_DEPTH_STENCIL_WRITE_ENABLE, CBSTATUS_DEPTH_STENCIL_BOUND, CBSTATUS_DEPTH_STENCIL_BOUND, VK_DBG_MSG_ERROR,  DRAWSTATE_DEPTH_STENCIL_NOT_BOUND, "Depth-stencil object not bound to this command buffer");
+    return ((result1 == VK_TRUE) && (result2 == VK_TRUE) && (result3 == VK_TRUE) && (result4 == VK_TRUE));
+}
 // Print the last bound dynamic state
 static void printDynamicState(const VkCmdBuffer cb)
 {
@@ -983,14 +1014,38 @@ static void resetCB(const VkCmdBuffer cb)
         pCB->lastVtxBinding = MAX_BINDING;
     }
 }
+// Set PSO-related status bits for CB
+static void set_cb_pso_status(GLOBAL_CB_NODE* pCB, const PIPELINE_NODE* pPipe)
+{
+    for (uint32_t i = 0; i < pPipe->cbStateCI.attachmentCount; i++) {
+        if (0 != pPipe->pAttachments[i].channelWriteMask) {
+            pCB->status |= CBSTATUS_COLOR_BLEND_WRITE_ENABLE;
+        }
+    }
+    if (pPipe->dsStateCI.depthWriteEnable) {
+        pCB->status |= CBSTATUS_DEPTH_STENCIL_WRITE_ENABLE;
+    }
+}
+// Set dyn-state related status bits for an object node
+static void set_cb_dyn_status(GLOBAL_CB_NODE* pNode, VkStateBindPoint stateBindPoint) {
+    if (stateBindPoint == VK_STATE_BIND_POINT_VIEWPORT) {
+        pNode->status |= CBSTATUS_VIEWPORT_BOUND;
+    } else if (stateBindPoint == VK_STATE_BIND_POINT_RASTER) {
+        pNode->status |= CBSTATUS_RASTER_BOUND;
+    } else if (stateBindPoint == VK_STATE_BIND_POINT_COLOR_BLEND) {
+        pNode->status |= CBSTATUS_COLOR_BLEND_BOUND;
+    } else if (stateBindPoint == VK_STATE_BIND_POINT_DEPTH_STENCIL) {
+        pNode->status |= CBSTATUS_DEPTH_STENCIL_BOUND;
+    }
+}
 // Set the last bound dynamic state of given type
-// TODO : Need to track this per cmdBuffer and correlate cmdBuffer for Draw w/ last bound for that cmdBuffer?
 static void setLastBoundDynamicState(const VkCmdBuffer cmdBuffer, const VkDynamicStateObject state, const VkStateBindPoint sType)
 {
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
         updateCBTracking(cmdBuffer);
         loader_platform_thread_lock_mutex(&globalLock);
+        set_cb_dyn_status(pCB, sType);
         addCmd(pCB, CMD_BINDDYNAMICSTATEOBJECT);
         if (dynamicStateMap.find(state) == dynamicStateMap.end()) {
             char str[1024];
@@ -1872,6 +1927,8 @@ VK_LAYER_EXPORT VkResult VKAPI vkEndCommandBuffer(VkCmdBuffer cmdBuffer)
         GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
         if (pCB) {
             pCB->state = CB_UPDATE_COMPLETE;
+            // Reset CB status flags
+            pCB->status = 0;
             printCB(cmdBuffer);
         }
         else {
@@ -2006,10 +2063,14 @@ VK_LAYER_EXPORT void VKAPI vkCmdBindVertexBuffers(
 VK_LAYER_EXPORT void VKAPI vkCmdDraw(VkCmdBuffer cmdBuffer, uint32_t firstVertex, uint32_t vertexCount, uint32_t firstInstance, uint32_t instanceCount)
 {
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
+    bool32_t valid = VK_FALSE;
     if (pCB) {
         updateCBTracking(cmdBuffer);
         addCmd(pCB, CMD_DRAW);
         pCB->drawCount[DRAW]++;
+        loader_platform_thread_lock_mutex(&globalLock);
+        valid = validate_draw_state_flags(cmdBuffer);
+        loader_platform_thread_unlock_mutex(&globalLock);
         char str[1024];
         sprintf(str, "vkCmdDraw() call #%lu, reporting DS state:", g_drawCount[DRAW]++);
         layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, cmdBuffer, 0, DRAWSTATE_NONE, "DS", str);
@@ -2020,16 +2081,21 @@ VK_LAYER_EXPORT void VKAPI vkCmdDraw(VkCmdBuffer cmdBuffer, uint32_t firstVertex
         sprintf(str, "Attempt to use CmdBuffer %p that doesn't exist!", (void*)cmdBuffer);
         layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, cmdBuffer, 0, DRAWSTATE_INVALID_CMD_BUFFER, "DS", str);
     }
-    nextTable.CmdDraw(cmdBuffer, firstVertex, vertexCount, firstInstance, instanceCount);
+    if (valid)
+        nextTable.CmdDraw(cmdBuffer, firstVertex, vertexCount, firstInstance, instanceCount);
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdDrawIndexed(VkCmdBuffer cmdBuffer, uint32_t firstIndex, uint32_t indexCount, int32_t vertexOffset, uint32_t firstInstance, uint32_t instanceCount)
 {
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
+    bool32_t valid = VK_FALSE;
     if (pCB) {
         updateCBTracking(cmdBuffer);
         addCmd(pCB, CMD_DRAWINDEXED);
         pCB->drawCount[DRAW_INDEXED]++;
+        loader_platform_thread_lock_mutex(&globalLock);
+        valid = validate_draw_state_flags(cmdBuffer);
+        loader_platform_thread_unlock_mutex(&globalLock);
         char str[1024];
         sprintf(str, "vkCmdDrawIndexed() call #%lu, reporting DS state:", g_drawCount[DRAW_INDEXED]++);
         layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, cmdBuffer, 0, DRAWSTATE_NONE, "DS", str);
@@ -2040,16 +2106,21 @@ VK_LAYER_EXPORT void VKAPI vkCmdDrawIndexed(VkCmdBuffer cmdBuffer, uint32_t firs
         sprintf(str, "Attempt to use CmdBuffer %p that doesn't exist!", (void*)cmdBuffer);
         layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, cmdBuffer, 0, DRAWSTATE_INVALID_CMD_BUFFER, "DS", str);
     }
-    nextTable.CmdDrawIndexed(cmdBuffer, firstIndex, indexCount, vertexOffset, firstInstance, instanceCount);
+    if (valid)
+        nextTable.CmdDrawIndexed(cmdBuffer, firstIndex, indexCount, vertexOffset, firstInstance, instanceCount);
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdDrawIndirect(VkCmdBuffer cmdBuffer, VkBuffer buffer, VkDeviceSize offset, uint32_t count, uint32_t stride)
 {
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
+    bool32_t valid = VK_FALSE;
     if (pCB) {
         updateCBTracking(cmdBuffer);
         addCmd(pCB, CMD_DRAWINDIRECT);
         pCB->drawCount[DRAW_INDIRECT]++;
+        loader_platform_thread_lock_mutex(&globalLock);
+        valid = validate_draw_state_flags(cmdBuffer);
+        loader_platform_thread_unlock_mutex(&globalLock);
         char str[1024];
         sprintf(str, "vkCmdDrawIndirect() call #%lu, reporting DS state:", g_drawCount[DRAW_INDIRECT]++);
         layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, cmdBuffer, 0, DRAWSTATE_NONE, "DS", str);
@@ -2060,16 +2131,21 @@ VK_LAYER_EXPORT void VKAPI vkCmdDrawIndirect(VkCmdBuffer cmdBuffer, VkBuffer buf
         sprintf(str, "Attempt to use CmdBuffer %p that doesn't exist!", (void*)cmdBuffer);
         layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, cmdBuffer, 0, DRAWSTATE_INVALID_CMD_BUFFER, "DS", str);
     }
-    nextTable.CmdDrawIndirect(cmdBuffer, buffer, offset, count, stride);
+    if (valid)
+        nextTable.CmdDrawIndirect(cmdBuffer, buffer, offset, count, stride);
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdDrawIndexedIndirect(VkCmdBuffer cmdBuffer, VkBuffer buffer, VkDeviceSize offset, uint32_t count, uint32_t stride)
 {
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
+    bool32_t valid = VK_FALSE;
     if (pCB) {
         updateCBTracking(cmdBuffer);
         addCmd(pCB, CMD_DRAWINDEXEDINDIRECT);
         pCB->drawCount[DRAW_INDEXED_INDIRECT]++;
+        loader_platform_thread_lock_mutex(&globalLock);
+        valid = validate_draw_state_flags(cmdBuffer);
+        loader_platform_thread_unlock_mutex(&globalLock);
         char str[1024];
         sprintf(str, "vkCmdDrawIndexedIndirect() call #%lu, reporting DS state:", g_drawCount[DRAW_INDEXED_INDIRECT]++);
         layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, cmdBuffer, 0, DRAWSTATE_NONE, "DS", str);
@@ -2080,7 +2156,8 @@ VK_LAYER_EXPORT void VKAPI vkCmdDrawIndexedIndirect(VkCmdBuffer cmdBuffer, VkBuf
         sprintf(str, "Attempt to use CmdBuffer %p that doesn't exist!", (void*)cmdBuffer);
         layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, cmdBuffer, 0, DRAWSTATE_INVALID_CMD_BUFFER, "DS", str);
     }
-    nextTable.CmdDrawIndexedIndirect(cmdBuffer, buffer, offset, count, stride);
+    if (valid)
+        nextTable.CmdDrawIndexedIndirect(cmdBuffer, buffer, offset, count, stride);
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdDispatch(VkCmdBuffer cmdBuffer, uint32_t x, uint32_t y, uint32_t z)

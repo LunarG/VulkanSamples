@@ -986,28 +986,6 @@ class ObjectTrackerSubcommand(Subcommand):
         header_txt.append('    }')
         header_txt.append('}')
         header_txt.append('')
-        header_txt.append('// Track selected state for an object node')
-        header_txt.append('static void track_object_status(VkObject vkObj, VkStateBindPoint stateBindPoint) {')
-        header_txt.append('    if (objMap.find(vkObj) != objMap.end()) {')
-        header_txt.append('        OBJTRACK_NODE* pNode = objMap[vkObj];')
-        header_txt.append('        if (stateBindPoint == VK_STATE_BIND_POINT_VIEWPORT) {')
-        header_txt.append('            pNode->status |= OBJSTATUS_VIEWPORT_BOUND;')
-        header_txt.append('        } else if (stateBindPoint == VK_STATE_BIND_POINT_RASTER) {')
-        header_txt.append('            pNode->status |= OBJSTATUS_RASTER_BOUND;')
-        header_txt.append('        } else if (stateBindPoint == VK_STATE_BIND_POINT_COLOR_BLEND) {')
-        header_txt.append('            pNode->status |= OBJSTATUS_COLOR_BLEND_BOUND;')
-        header_txt.append('        } else if (stateBindPoint == VK_STATE_BIND_POINT_DEPTH_STENCIL) {')
-        header_txt.append('            pNode->status |= OBJSTATUS_DEPTH_STENCIL_BOUND;')
-        header_txt.append('        }')
-        header_txt.append('    }')
-        header_txt.append('    else {')
-        header_txt.append('        // If we do not find it print an error')
-        header_txt.append('        char str[1024];')
-        header_txt.append('        sprintf(str, "Unable to track status for non-existent Command Buffer object 0x%" PRIxLEAST64, reinterpret_cast<VkUintPtrLeast64>(vkObj));')
-        header_txt.append('        layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, vkObj, 0, OBJTRACK_UNKNOWN_OBJECT, "OBJTRACK", str);')
-        header_txt.append('    }')
-        header_txt.append('}')
-        header_txt.append('')
         header_txt.append('// Reset selected flag state for an object node')
         header_txt.append('static void reset_status(VkObject vkObj, VkObjectType objType, ObjectStatusFlags status_flag) {')
         header_txt.append('    if (objMap.find(vkObj) != objMap.end()) {')
@@ -1070,15 +1048,6 @@ class ObjectTrackerSubcommand(Subcommand):
         header_txt.append('    }')
         header_txt.append('}')
         header_txt.append('')
-        header_txt.append('static bool32_t validate_draw_state_flags(VkObject vkObj) {')
-        header_txt.append('    bool32_t result1, result2, result3, result4;')
-        header_txt.append('    result1 = validate_status(vkObj, VK_OBJECT_TYPE_COMMAND_BUFFER, OBJSTATUS_VIEWPORT_BOUND,      OBJSTATUS_VIEWPORT_BOUND,      VK_DBG_MSG_ERROR,  OBJTRACK_VIEWPORT_NOT_BOUND,      "Viewport object not bound to this command buffer");')
-        header_txt.append('    result2 = validate_status(vkObj, VK_OBJECT_TYPE_COMMAND_BUFFER, OBJSTATUS_RASTER_BOUND,        OBJSTATUS_RASTER_BOUND,        VK_DBG_MSG_ERROR,  OBJTRACK_RASTER_NOT_BOUND,        "Raster object not bound to this command buffer");')
-        header_txt.append('    result3 = validate_status(vkObj, VK_OBJECT_TYPE_COMMAND_BUFFER, OBJSTATUS_COLOR_BLEND_BOUND,   OBJSTATUS_COLOR_BLEND_BOUND,   VK_DBG_MSG_ERROR,  OBJTRACK_COLOR_BLEND_NOT_BOUND,   "Color-blend object not bound to this command buffer");')
-        header_txt.append('    result4 = validate_status(vkObj, VK_OBJECT_TYPE_COMMAND_BUFFER, OBJSTATUS_DEPTH_STENCIL_BOUND, OBJSTATUS_DEPTH_STENCIL_BOUND, VK_DBG_MSG_ERROR,  OBJTRACK_DEPTH_STENCIL_NOT_BOUND, "Depth-stencil object not bound to this command buffer");')
-        header_txt.append('    return ((result1 == VK_TRUE) && (result2 == VK_TRUE) && (result3 == VK_TRUE) && (result4 == VK_TRUE));')
-        header_txt.append('}')
-        header_txt.append('')
         return "\n".join(header_txt)
 
     def generate_intercept(self, proto, qual):
@@ -1096,7 +1065,6 @@ class ObjectTrackerSubcommand(Subcommand):
 
         decl = proto.c_func(prefix="vk", attr="VKAPI")
         param0_name = proto.params[0].name
-        p0_type = proto.params[0].ty.strip('*').replace('const ', '')
         using_line = ''
         create_line = ''
         destroy_line = ''
@@ -1139,22 +1107,6 @@ class ObjectTrackerSubcommand(Subcommand):
             using_line += '    for (uint32_t i = 0; i < fenceCount; i++) {\n'
             using_line += '        validate_status(pFences[i], VK_OBJECT_TYPE_FENCE, OBJSTATUS_FENCE_IS_SUBMITTED, OBJSTATUS_FENCE_IS_SUBMITTED, VK_DBG_MSG_ERROR, OBJTRACK_INVALID_FENCE, "Waiting for Unsubmitted Fence");\n'
             using_line += '    }\n'
-            mutex_unlock = True
-        elif 'EndCommandBuffer' in proto.name:
-            using_line  = '    loader_platform_thread_lock_mutex(&objLock);\n'
-            using_line += '    reset_status(cmdBuffer, VK_OBJECT_TYPE_COMMAND_BUFFER, (OBJSTATUS_VIEWPORT_BOUND    |\n'
-            using_line += '                                                            OBJSTATUS_RASTER_BOUND      |\n'
-            using_line += '                                                            OBJSTATUS_COLOR_BLEND_BOUND |\n'
-            using_line += '                                                            OBJSTATUS_DEPTH_STENCIL_BOUND));\n'
-            mutex_unlock = True
-        elif 'CmdBindDynamicStateObject' in proto.name:
-            using_line  = '    loader_platform_thread_lock_mutex(&objLock);\n'
-            using_line += '    track_object_status(cmdBuffer, stateBindPoint);\n'
-            mutex_unlock = True
-        elif 'CmdDraw' in proto.name:
-            using_line  = '    bool32_t valid;\n'
-            using_line += '    loader_platform_thread_lock_mutex(&objLock);\n'
-            using_line += '    valid = validate_draw_state_flags(cmdBuffer);\n'
             mutex_unlock = True
         elif 'MapMemory' in proto.name:
             using_line  = '    loader_platform_thread_lock_mutex(&objLock);\n'
@@ -1256,15 +1208,6 @@ class ObjectTrackerSubcommand(Subcommand):
                      '%s'
                      '%s'
                      '}' % (qual, decl, self.layer_name, ret_val, proto.c_call(), create_line, destroy_line, gpu_state, stmt))
-        elif 'CmdDraw' in proto.name:
-            funcs.append('%s%s\n'
-                     '{\n'
-                     '%s'
-                     '    if (valid == VK_TRUE) {\n'
-                     '        nextTable.%s;\n'
-                     '    }\n'
-                     '%s'
-                     '}' % (qual, decl, using_line, proto.c_call(), stmt))
         else:
             funcs.append('%s%s\n'
                      '{\n'
