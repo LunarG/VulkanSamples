@@ -870,7 +870,7 @@ class ObjectTrackerSubcommand(Subcommand):
         header_txt.append('}')
         header_txt.append('')
         header_txt.append('// Validate that object is in the object map')
-        header_txt.append('static bool32_t validate_object(const VkObject object)')
+        header_txt.append('static void validate_object(const VkObject object)')
         header_txt.append('{')
         header_txt.append('    if (objMap.find(object) == objMap.end()) {')
         header_txt.append('        char str[1024];')
