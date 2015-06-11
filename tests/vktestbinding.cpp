@@ -524,11 +524,6 @@ void GpuMemory::init(const Device &dev, VkDeviceMemory mem)
     BaseObject::init(mem, VK_OBJECT_TYPE_DEVICE_MEMORY, false);
 }
 
-void GpuMemory::set_priority(VkMemoryPriority priority)
-{
-    EXPECT(vkSetMemoryPriority(dev_->obj(), obj(), priority) == VK_SUCCESS);
-}
-
 const void *GpuMemory::map(VkFlags flags) const
 {
     void *data;

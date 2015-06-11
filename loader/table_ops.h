@@ -44,7 +44,6 @@ static inline void loader_init_device_dispatch_table(VkLayerDispatchTable *table
     table->DeviceWaitIdle = (PFN_vkDeviceWaitIdle) gpa(dev, "vkDeviceWaitIdle");
     table->AllocMemory = (PFN_vkAllocMemory) gpa(dev, "vkAllocMemory");
     table->FreeMemory = (PFN_vkFreeMemory) gpa(dev, "vkFreeMemory");
-    table->SetMemoryPriority = (PFN_vkSetMemoryPriority) gpa(dev, "vkSetMemoryPriority");
     table->MapMemory = (PFN_vkMapMemory) gpa(dev, "vkMapMemory");
     table->UnmapMemory = (PFN_vkUnmapMemory) gpa(dev, "vkUnmapMemory");
     table->FlushMappedMemoryRanges = (PFN_vkFlushMappedMemoryRanges) gpa(dev, "vkFlushMappedMemoryRanges");
@@ -173,8 +172,6 @@ static inline void *loader_lookup_device_dispatch_table(
         return (void *) table->AllocMemory;
     if (!strcmp(name, "FreeMemory"))
         return (void *) table->FreeMemory;
-    if (!strcmp(name, "SetMemoryPriority"))
-        return (void *) table->SetMemoryPriority;
     if (!strcmp(name, "MapMemory"))
         return (void *) table->MapMemory;
     if (!strcmp(name, "UnmapMemory"))

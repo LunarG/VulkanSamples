@@ -426,7 +426,6 @@ TEST_F(VkLayerTest, MapMemWithoutHostVisibleBit)
         .allocationSize = 0,
         // Introduce failure, do NOT set memProps to VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT
         .memProps       = 0,
-        .memPriority    = VK_MEMORY_PRIORITY_NORMAL,
     };
 
     err = vkCreateImage(m_device->device(), &image_create_info, &image);
@@ -498,7 +497,6 @@ TEST_F(VkLayerTest, BindInvalidMemory)
         .pNext          = NULL,
         .allocationSize = 0,
         .memProps       = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
-        .memPriority    = VK_MEMORY_PRIORITY_NORMAL,
     };
 
     err = vkCreateImage(m_device->device(), &image_create_info, &image);
@@ -570,7 +568,6 @@ TEST_F(VkLayerTest, FreeBoundMemory)
         .pNext          = NULL,
         .allocationSize = 0,
         .memProps       = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
-        .memPriority    = VK_MEMORY_PRIORITY_NORMAL,
     };
 
     err = vkCreateImage(m_device->device(), &image_create_info, &image);
@@ -643,7 +640,6 @@ TEST_F(VkLayerTest, RebindMemory)
         .pNext          = NULL,
         .allocationSize = 0,
         .memProps       = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
-        .memPriority    = VK_MEMORY_PRIORITY_NORMAL,
     };
 
     err = vkCreateImage(m_device->device(), &image_create_info, &image);
@@ -717,7 +713,6 @@ TEST_F(VkLayerTest, BindMemoryToDestroyedObject)
         .pNext          = NULL,
         .allocationSize = 0,
         .memProps       = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
-        .memPriority    = VK_MEMORY_PRIORITY_NORMAL,
     };
 
     err = vkCreateImage(m_device->device(), &image_create_info, &image);
@@ -1746,7 +1741,6 @@ TEST_F(VkLayerTest, ThreadCmdBufferCollision)
     mem_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO;
     mem_info.allocationSize = mem_req.size;
     mem_info.memProps = VK_MEMORY_PROPERTY_SHAREABLE_BIT;
-    mem_info.memPriority = VK_MEMORY_PRIORITY_NORMAL;
     err = vkAllocMemory(device(), &mem_info, &event_mem);
     ASSERT_VK_SUCCESS(err);
 

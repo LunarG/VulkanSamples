@@ -36,7 +36,6 @@ typedef struct VkLayerDispatchTable_
     PFN_vkDeviceWaitIdle DeviceWaitIdle;
     PFN_vkAllocMemory AllocMemory;
     PFN_vkFreeMemory FreeMemory;
-    PFN_vkSetMemoryPriority SetMemoryPriority;
     PFN_vkMapMemory MapMemory;
     PFN_vkUnmapMemory UnmapMemory;
     PFN_vkFlushMappedMemoryRanges FlushMappedMemoryRanges;

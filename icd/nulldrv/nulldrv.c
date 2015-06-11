@@ -1668,15 +1668,6 @@ ICD_EXPORT VkResult VKAPI vkFreeMemory(
     return VK_SUCCESS;
 }
 
-ICD_EXPORT VkResult VKAPI vkSetMemoryPriority(
-    VkDevice                                    device,
-    VkDeviceMemory                              mem_,
-    VkMemoryPriority                            priority)
-{
-    NULLDRV_LOG_FUNC;
-    return VK_SUCCESS;
-}
-
 ICD_EXPORT VkResult VKAPI vkMapMemory(
     VkDevice                                    device,
     VkDeviceMemory                              mem_,

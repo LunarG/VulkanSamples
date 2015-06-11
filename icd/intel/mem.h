@@ -49,9 +49,6 @@ VkResult intel_mem_import_userptr(struct intel_dev *dev,
                                     size_t size,
                                     struct intel_mem **mem_ret);
 
-VkResult intel_mem_set_priority(struct intel_mem *mem,
-                                  VkMemoryPriority priority);
-
 static inline void *intel_mem_map(struct intel_mem *mem, VkFlags flags)
 {
     return intel_bo_map_async(mem->bo);

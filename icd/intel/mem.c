@@ -92,13 +92,6 @@ VkResult intel_mem_import_userptr(struct intel_dev *dev,
     return VK_SUCCESS;
 }
 
-VkResult intel_mem_set_priority(struct intel_mem *mem,
-                                  VkMemoryPriority priority)
-{
-    /* pin the bo when VK_MEMORY_PRIORITY_VERY_HIGH? */
-    return VK_SUCCESS;
-}
-
 ICD_EXPORT VkResult VKAPI vkAllocMemory(
     VkDevice                                device,
     const VkMemoryAllocInfo*                pAllocInfo,
@@ -118,16 +111,6 @@ ICD_EXPORT VkResult VKAPI vkFreeMemory(
     intel_mem_free(mem);
 
     return VK_SUCCESS;
-}
-
-ICD_EXPORT VkResult VKAPI vkSetMemoryPriority(
-    VkDevice                                 device,
-    VkDeviceMemory                           mem_,
-    VkMemoryPriority                         priority)
-{
-    struct intel_mem *mem = intel_mem(mem_);
-
-    return intel_mem_set_priority(mem, priority);
 }
 
 ICD_EXPORT VkResult VKAPI vkMapMemory(

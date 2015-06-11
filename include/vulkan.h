@@ -33,7 +33,7 @@
 #include "vk_platform.h"
 
 // Vulkan API version supported by this file
-#define VK_API_VERSION VK_MAKE_VERSION(0, 98, 0)
+#define VK_API_VERSION VK_MAKE_VERSION(0, 99, 0)
 
 #ifdef __cplusplus
 extern "C"
@@ -134,18 +134,6 @@ VK_DEFINE_NONDISP_SUBCLASS_HANDLE(VkRenderPass, VkNonDispatchable)
 
 // ------------------------------------------------------------------------------------------------
 // Enumerations
-
-typedef enum VkMemoryPriority_
-{
-    VK_MEMORY_PRIORITY_UNUSED                               = 0x00000000,
-    VK_MEMORY_PRIORITY_VERY_LOW                             = 0x00000001,
-    VK_MEMORY_PRIORITY_LOW                                  = 0x00000002,
-    VK_MEMORY_PRIORITY_NORMAL                               = 0x00000003,
-    VK_MEMORY_PRIORITY_HIGH                                 = 0x00000004,
-    VK_MEMORY_PRIORITY_VERY_HIGH                            = 0x00000005,
-
-    VK_ENUM_RANGE(MEMORY_PRIORITY, UNUSED, VERY_HIGH)
-} VkMemoryPriority;
 
 typedef enum VkImageLayout_
 {
@@ -1360,7 +1348,6 @@ typedef struct VkMemoryAllocInfo_
     const void*                                 pNext;                      // Pointer to next structure
     VkDeviceSize                                allocationSize;             // Size of memory allocation
     VkMemoryPropertyFlags                       memProps;                   // Memory property flags
-    VkMemoryPriority                            memPriority;
 } VkMemoryAllocInfo;
 
 typedef struct VkMemoryOpenInfo_
@@ -2092,7 +2079,6 @@ typedef VkResult (VKAPI *PFN_vkQueueWaitIdle)(VkQueue queue);
 typedef VkResult (VKAPI *PFN_vkDeviceWaitIdle)(VkDevice device);
 typedef VkResult (VKAPI *PFN_vkAllocMemory)(VkDevice device, const VkMemoryAllocInfo* pAllocInfo, VkDeviceMemory* pMem);
 typedef VkResult (VKAPI *PFN_vkFreeMemory)(VkDevice device, VkDeviceMemory mem);
-typedef VkResult (VKAPI *PFN_vkSetMemoryPriority)(VkDevice device, VkDeviceMemory mem, VkMemoryPriority priority);
 typedef VkResult (VKAPI *PFN_vkMapMemory)(VkDevice device, VkDeviceMemory mem, VkDeviceSize offset, VkDeviceSize size, VkMemoryMapFlags flags, void** ppData);
 typedef VkResult (VKAPI *PFN_vkUnmapMemory)(VkDevice device, VkDeviceMemory mem);
 typedef VkResult (VKAPI *PFN_vkFlushMappedMemoryRanges)(VkDevice device, uint32_t memRangeCount, const VkMappedMemoryRange* pMemRanges);
@@ -2274,11 +2260,6 @@ VkResult VKAPI vkAllocMemory(
 VkResult VKAPI vkFreeMemory(
     VkDevice                                    device,
     VkDeviceMemory                              mem);
-
-VkResult VKAPI vkSetMemoryPriority(
-    VkDevice                                    device,
-    VkDeviceMemory                              mem,
-    VkMemoryPriority                            priority);
 
 VkResult VKAPI vkMapMemory(
     VkDevice                                    device,

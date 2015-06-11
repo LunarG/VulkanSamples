@@ -63,8 +63,6 @@ static inline void* globalGetProcAddr(const char *name)
         return (void*) vkAllocMemory;
     if (!strcmp(name, "FreeMemory"))
         return (void*) vkFreeMemory;
-    if (!strcmp(name, "SetMemoryPriority"))
-        return (void*) vkSetMemoryPriority;
     if (!strcmp(name, "MapMemory"))
         return (void*) vkMapMemory;
     if (!strcmp(name, "UnmapMemory"))

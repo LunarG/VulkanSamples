@@ -431,17 +431,6 @@ VK_LAYER_EXPORT VkResult VKAPI vkFreeMemory(VkDevice device, VkDeviceMemory mem)
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkSetMemoryPriority(VkDevice device, VkDeviceMemory mem, VkMemoryPriority priority)
-{
-    char str[1024];
-    if (!validate_VkMemoryPriority(priority)) {
-        sprintf(str, "Parameter priority to function SetMemoryPriority has invalid value of %i.", (int)priority);
-        layerCbMsg(VK_DBG_REPORT_ERROR_BIT, (VkObjectType) 0, NULL, 0, 1, "PARAMCHECK", str);
-    }
-    VkResult result = device_dispatch_table(device)->SetMemoryPriority(device, mem, priority);
-    return result;
-}
-
 VK_LAYER_EXPORT VkResult VKAPI vkMapMemory(VkDevice device, VkDeviceMemory mem, VkDeviceSize offset, VkDeviceSize size, VkFlags flags, void** ppData)
 {
 
@@ -1997,8 +1986,6 @@ static inline void* layer_intercept_proc(const char *name)
         return (void*) vkAllocMemory;
     if (!strcmp(name, "FreeMemory"))
         return (void*) vkFreeMemory;
-    if (!strcmp(name, "SetMemoryPriority"))
-        return (void*) vkSetMemoryPriority;
     if (!strcmp(name, "MapMemory"))
         return (void*) vkMapMemory;
     if (!strcmp(name, "UnmapMemory"))

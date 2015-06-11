@@ -291,11 +291,6 @@ core = Extension(
             [Param("VkDevice", "device"),
              Param("VkDeviceMemory", "mem")]),
 
-        Proto("VkResult", "SetMemoryPriority",
-            [Param("VkDevice", "device"),
-             Param("VkDeviceMemory", "mem"),
-             Param("VkMemoryPriority", "priority")]),
-
         Proto("VkResult", "MapMemory",
             [Param("VkDevice", "device"),
              Param("VkDeviceMemory", "mem"),

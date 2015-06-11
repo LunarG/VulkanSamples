@@ -1105,17 +1105,6 @@ VK_LAYER_EXPORT VkResult VKAPI vkFreeMemory(
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkSetMemoryPriority(
-    VkDevice         device,
-    VkDeviceMemory   mem,
-    VkMemoryPriority priority)
-{
-    // TODO : Update tracking for this alloc
-    //  Make sure memory is not pinned, which can't have priority set
-    VkResult result = get_dispatch_table(mem_tracker_device_table_map, device)->SetMemoryPriority(device, mem, priority);
-    return result;
-}
-
 VK_LAYER_EXPORT VkResult VKAPI vkMapMemory(
     VkDevice         device,
     VkDeviceMemory   mem,
@@ -2212,8 +2201,6 @@ VK_LAYER_EXPORT void* VKAPI vkGetDeviceProcAddr(
         return (void*) vkAllocMemory;
     if (!strcmp(funcName, "vkFreeMemory"))
         return (void*) vkFreeMemory;
-    if (!strcmp(funcName, "vkSetMemoryPriority"))
-        return (void*) vkSetMemoryPriority;
     if (!strcmp(funcName, "vkMapMemory"))
         return (void*) vkMapMemory;
     if (!strcmp(funcName, "vkUnmapMemory"))

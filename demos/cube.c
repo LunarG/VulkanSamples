@@ -658,7 +658,6 @@ static void demo_prepare_depth(struct demo *demo)
         .pNext = NULL,
         .allocationSize = 0,
         .memProps = VK_MEMORY_PROPERTY_DEVICE_ONLY,
-        .memPriority = VK_MEMORY_PRIORITY_NORMAL,
     };
     VkDepthStencilViewCreateInfo view = {
         .sType = VK_STRUCTURE_TYPE_DEPTH_STENCIL_VIEW_CREATE_INFO,
@@ -902,7 +901,6 @@ static void demo_prepare_texture_image(struct demo *demo,
         .pNext = NULL,
         .allocationSize = 0,
         .memProps = mem_props,
-        .memPriority = VK_MEMORY_PRIORITY_NORMAL,
     };
 
     VkMemoryRequirements mem_reqs;
@@ -1092,7 +1090,6 @@ void demo_prepare_cube_data_buffer(struct demo *demo)
         .pNext = NULL,
         .allocationSize = 0,
         .memProps = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
-        .memPriority = VK_MEMORY_PRIORITY_NORMAL,
     };
     VkMemoryRequirements mem_reqs;
     size_t mem_reqs_size = sizeof(VkMemoryRequirements);

@@ -42,7 +42,6 @@ EXPORTS
    vkDeviceWaitIdle
    vkAllocMemory
    vkFreeMemory
-   vkSetMemoryPriority
    vkMapMemory
    vkUnmapMemory
    vkFlushMappedMemoryRanges

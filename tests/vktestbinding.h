@@ -309,9 +309,6 @@ public:
 
     void init(const Device &dev, VkDeviceMemory mem);
 
-    // vkSetMemoryPriority()
-    void set_priority(VkMemoryPriority priority);
-
     // vkMapMemory()
     const void *map(VkFlags flags) const;
           void *map(VkFlags flags);
@@ -642,7 +639,6 @@ inline VkMemoryAllocInfo GpuMemory::alloc_info(const VkMemoryRequirements &reqs,
 
     info.allocationSize = reqs.size;
     info.memProps = reqs.memPropsRequired;
-    info.memPriority = VK_MEMORY_PRIORITY_NORMAL;
     return info;
 }
 
