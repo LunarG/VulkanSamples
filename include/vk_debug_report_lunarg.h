@@ -63,6 +63,13 @@ typedef enum VkDbgReportFlags_
     VK_DBG_REPORT_DEBUG_BIT      = VK_BIT(4),
 } VkDbgReportFlags;
 
+// Debug Report ERROR codes
+typedef enum _DEBUG_REPORT_ERROR
+{
+    DEBUG_REPORT_NONE,                  // Used for INFO & other non-error messages
+    DEBUG_REPORT_CALLBACK_REF,          // Callbacks were not destroyed prior to calling DestroyInstance
+} DEBUG_REPORT_ERROR;
+
 #define VK_DEBUG_REPORT_ENUM_EXTEND(type, id)    ((type)(VK_DEBUG_REPORT_EXTENSION_NUMBER * -1000 + (id)))
 
 #define VK_OBJECT_TYPE_MSG_CALLBACK VK_DEBUG_REPORT_ENUM_EXTEND(VkObjectType, 0)
