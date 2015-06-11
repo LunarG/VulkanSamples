@@ -430,6 +430,10 @@ static void reportMemReferencesAndCleanUp(
             /* TODO: Would be nice to return the actual object type */
             log_msg(mdd(pMemObjInfo->object), VK_DBG_REPORT_INFO_BIT, (VkObjectType) 0, (*it), 0, MEMTRACK_NONE, "MEM",
                     "VK Object %p still has a reference to mem obj %p", (*it), pMemObjInfo->mem);
+
+            // Found an object referencing this memory, remove its pointer to this memobj
+            MT_OBJ_INFO *pObjInfo = get_object_info(*it);
+            pObjInfo->pMemObjInfo = NULL;
         }
         // Clear the list of hanging references
         pMemObjInfo->pObjBindings.clear();
