@@ -755,7 +755,7 @@ class StructWrapperGen:
             sh_funcs.append('string %s(const %s* pStruct, const string prefix);' % (self._get_sh_func_name(s), typedef_fwd_dict[s]))
         sh_funcs.append('\n')
         for s in sorted(self.struct_dict):
-            num_non_enum_elems = [is_type(self.struct_dict[s][elem]['type'], 'enum') for elem in self.struct_dict[s]].count(False)
+            num_non_enum_elems = [(is_type(self.struct_dict[s][elem]['type'], 'enum') and not self.struct_dict[s][elem]['ptr']) for elem in self.struct_dict[s]].count(False)
             stp_list = [] # stp == "struct to print" a list of structs for this API call that should be printed as structs
             # This pre-pass flags embedded structs and pNext
             for m in sorted(self.struct_dict[s]):
@@ -770,7 +770,7 @@ class StructWrapperGen:
             if (0 != num_non_enum_elems):
                 sh_funcs.append('%sstringstream ss[%u];' % (indent, num_non_enum_elems))
             num_stps = len(stp_list)
-            # First generate code for any embedded structs
+            # First generate code for any embedded structs or arrays
             if 0 < num_stps:
                 sh_funcs.append('%sstring stp_strs[%u];' % (indent, num_stps))
                 idx_ss_decl = False # Make sure to only decl this once
@@ -797,12 +797,13 @@ class StructWrapperGen:
                         indent += '    '
                         sh_funcs.append('%sindex_ss.str("");' % (indent))
                         sh_funcs.append('%sindex_ss << i;' % (indent))
-                        if not is_type(stp_list[index]['type'], 'struct'):
+                        if is_type(stp_list[index]['type'], 'enum'):
                             #sh_funcs.append('/* AD */');
                             addr_char = ''
-                            sh_funcs.append('%sss[%u] << %spStruct->%s[i];' % (indent, index, addr_char, stp_list[index]['name']))
+                            #value_print = 'string_%s(%spStruct->%s)' % (self.struct_dict[s][m]['type'], deref, self.struct_dict[s][m]['name'])
+                            sh_funcs.append('%sss[%u] << string_%s(pStruct->%s[i]);' % (indent, index, stp_list[index]['type'], stp_list[index]['name']))
                             sh_funcs.append('%sstp_strs[%u] += " " + prefix + "%s[" + index_ss.str() + "] = " + ss[%u].str() + "\\n";' % (indent, index, stp_list[index]['name'], index))
-                        else:
+                        elif is_type(stp_list[index]['type'], 'struct'):
                             #sh_funcs.append('/* AD */');
                             sh_funcs.append('%sss[%u] << %spStruct->%s[i];' % (indent, index, addr_char, stp_list[index]['name']))
                             sh_funcs.append('%stmp_str = %s(%spStruct->%s[i], extra_indent);' % (indent, self._get_sh_func_name(stp_list[index]['type']), addr_char, stp_list[index]['name']))
@@ -812,6 +813,11 @@ class StructWrapperGen:
                             else:
                                 #sh_funcs.append('/* ADB */');
                                 sh_funcs.append('%sstp_strs[%u] += " " + prefix + "%s[" + index_ss.str() + "] (" + ss[%u].str() + ")\\n" + tmp_str;' % (indent, index, stp_list[index]['name'], index))
+                        else:
+                            #sh_funcs.append('/* AD */');
+                            addr_char = ''
+                            sh_funcs.append('%sss[%u] << %spStruct->%s[i];' % (indent, index, addr_char, stp_list[index]['name']))
+                            sh_funcs.append('%sstp_strs[%u] += " " + prefix + "%s[" + index_ss.str() + "] = " + ss[%u].str() + "\\n";' % (indent, index, stp_list[index]['name'], index))
                         sh_funcs.append('%sss[%u].str("");' % (indent, index))
                         indent = indent[4:]
                         sh_funcs.append('%s}' % (indent))
@@ -846,7 +852,7 @@ class StructWrapperGen:
                         else:
                             sh_funcs.append('    stp_strs[%u] = " " + prefix + "%s (" + ss[%u].str() + ")\\n" + tmp_str;' % (index, stp_list[index]['name'], index))
                         sh_funcs.append('    ss[%u].str("");' % index)
-            # Now print non-enum data members
+            # Now print one-line info for all data members
             index = 0
             final_str = ''
             for m in sorted(self.struct_dict[s]):
@@ -875,9 +881,17 @@ class StructWrapperGen:
                     value_print = 'ss[%u].str()' % index
                     index += 1
                 else:
+                    # For an non-empty array of enums just print address w/ note that array will be displayed below
                     if self.struct_dict[s][m]['ptr']:
-                        deref = '*'
-                    value_print = 'string_%s(%spStruct->%s)' % (self.struct_dict[s][m]['type'], deref, self.struct_dict[s][m]['name'])
+                        sh_funcs.append('    if (pStruct->%s)' % (self.struct_dict[s][m]['name']))
+                        sh_funcs.append('        ss[%u] << pStruct->%s << " (See individual array values below)";' % (index, self.struct_dict[s][m]['name']))
+                        sh_funcs.append('    else')
+                        sh_funcs.append('        ss[%u].str("NULL");' % (index))
+                        value_print = 'ss[%u].str()' % index
+                        index += 1
+                    # For single enum just print the string representation
+                    else:
+                        value_print = 'string_%s(pStruct->%s)' % (self.struct_dict[s][m]['type'], self.struct_dict[s][m]['name'])
                 final_str += ' + prefix + "%s = " + %s + "\\n"' % (self.struct_dict[s][m]['name'], value_print)
             final_str = final_str[3:] # strip off the initial ' + '
             if 0 != num_stps: # Append data for any embedded structs
