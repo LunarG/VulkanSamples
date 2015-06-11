@@ -105,13 +105,19 @@ VkResult loader_GetDisplayInfoWSI(
         size_t*                                 pDataSize,
         void*                                   pData)
 {
-    uint32_t gpu_index;
     /* TODO: need another way to find the icd, display is not a gpu object */
-    struct loader_icd *icd = loader_get_icd((const VkBaseLayerObject *) display, &gpu_index);
+//    uint32_t gpu_index;
+//    struct loader_icd *icd = loader_get_icd((VkPhysicalDevice) display, &gpu_index); //TODO fix dispaly -> PhysDev
     VkResult res = VK_ERROR_INITIALIZATION_FAILED;
 
-    if (icd->GetDisplayInfoWSI)
-        res = icd->GetDisplayInfoWSI(display, infoType, pDataSize, pData);
+    for (struct loader_instance *inst = loader.instances; inst; inst = inst->next) {
+        for (struct loader_icd *icd = inst->icds; icd; icd = icd->next) {
+            for (uint32_t i = 0; i < icd->gpu_count; i++) {
+                if (icd->GetDisplayInfoWSI)
+                    res = icd->GetDisplayInfoWSI(display, infoType, pDataSize, pData);
+            }
+        }
+    }
 
     return res;
 }
