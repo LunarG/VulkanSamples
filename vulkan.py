@@ -559,12 +559,6 @@ core = Extension(
              Param("VkDescriptorSet*", "pDescriptorSets"),
              Param("uint32_t*", "pCount")]),
 
-        Proto("void", "ClearDescriptorSets",
-            [Param("VkDevice", "device"),
-             Param("VkDescriptorPool", "descriptorPool"),
-             Param("uint32_t", "count"),
-             Param("const VkDescriptorSet*", "pDescriptorSets")]),
-
         Proto("VkResult", "UpdateDescriptorSets",
             [Param("VkDevice", "device"),
              Param("uint32_t", "writeCount"),

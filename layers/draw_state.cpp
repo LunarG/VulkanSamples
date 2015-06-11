@@ -1943,14 +1943,6 @@ VK_LAYER_EXPORT VkResult VKAPI vkAllocDescriptorSets(VkDevice device, VkDescript
     return result;
 }
 
-VK_LAYER_EXPORT void VKAPI vkClearDescriptorSets(VkDevice device, VkDescriptorPool descriptorPool, uint32_t count, const VkDescriptorSet* pDescriptorSets)
-{
-    for (uint32_t i = 0; i < count; i++) {
-        clearDescriptorSet(pDescriptorSets[i]);
-    }
-    get_dispatch_table(draw_state_device_table_map, device)->ClearDescriptorSets(device, descriptorPool, count, pDescriptorSets);
-}
-
 VK_LAYER_EXPORT VkResult VKAPI vkUpdateDescriptorSets(VkDevice device, uint32_t writeCount, const VkWriteDescriptorSet* pDescriptorWrites, uint32_t copyCount, const VkCopyDescriptorSet* pDescriptorCopies)
 {
     if (dsUpdate(VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET, writeCount, pDescriptorWrites) &&
@@ -2883,8 +2875,6 @@ VK_LAYER_EXPORT void* VKAPI vkGetDeviceProcAddr(VkDevice dev, const char* funcNa
         return (void*) vkResetDescriptorPool;
     if (!strcmp(funcName, "vkAllocDescriptorSets"))
         return (void*) vkAllocDescriptorSets;
-    if (!strcmp(funcName, "vkClearDescriptorSets"))
-        return (void*) vkClearDescriptorSets;
     if (!strcmp(funcName, "vkUpdateDescriptorSets"))
         return (void*) vkUpdateDescriptorSets;
     if (!strcmp(funcName, "vkCreateDynamicViewportState"))

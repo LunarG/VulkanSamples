@@ -2174,15 +2174,6 @@ ICD_EXPORT VkResult VKAPI vkAllocDescriptorSets(
     return ret;
 }
 
-ICD_EXPORT void VKAPI vkClearDescriptorSets(
-    VkDevice                                device,
-    VkDescriptorPool                        descriptorPool,
-    uint32_t                                     count,
-    const VkDescriptorSet*                    pDescriptorSets)
-{
-    NULLDRV_LOG_FUNC;
-}
-
 ICD_EXPORT VkResult VKAPI vkUpdateDescriptorSets(
     VkDevice                                    device,
     uint32_t                                    writeCount,

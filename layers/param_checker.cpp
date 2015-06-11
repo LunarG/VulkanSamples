@@ -1061,12 +1061,6 @@ VK_LAYER_EXPORT VkResult VKAPI vkAllocDescriptorSets(VkDevice device, VkDescript
     return result;
 }
 
-VK_LAYER_EXPORT void VKAPI vkClearDescriptorSets(VkDevice device, VkDescriptorPool descriptorPool, uint32_t count, const VkDescriptorSet* pDescriptorSets)
-{
-
-    device_dispatch_table(device)->ClearDescriptorSets(device, descriptorPool, count, pDescriptorSets);
-}
-
 VK_LAYER_EXPORT VkResult VKAPI vkUpdateDescriptorSets(VkDevice device, uint32_t writeCount, const VkWriteDescriptorSet* pDescriptorWrites, uint32_t copyCount, const VkCopyDescriptorSet* pDescriptorCopies)
 {
 
@@ -2067,8 +2061,6 @@ static inline void* layer_intercept_proc(const char *name)
         return (void*) vkResetDescriptorPool;
     if (!strcmp(name, "AllocDescriptorSets"))
         return (void*) vkAllocDescriptorSets;
-    if (!strcmp(name, "ClearDescriptorSets"))
-        return (void*) vkClearDescriptorSets;
     if (!strcmp(name, "CreateDynamicViewportState"))
         return (void*) vkCreateDynamicViewportState;
     if (!strcmp(name, "CreateDynamicRasterState"))

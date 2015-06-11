@@ -261,31 +261,6 @@ void intel_desc_region_free(struct intel_desc_region *region,
     /* is it ok not to reclaim? */
 }
 
-void intel_desc_region_clear(struct intel_desc_region *region,
-                             const struct intel_desc_offset *begin,
-                             const struct intel_desc_offset *end)
-{
-    uint32_t i;
-
-    desc_region_validate_begin_end(region, begin, end);
-
-    for (i = begin->surface; i < end->surface; i += region->surface_desc_size) {
-        struct intel_desc_surface *desc = (struct intel_desc_surface *)
-            ((char *) region->surfaces + i);
-
-        desc->mem = NULL;
-        desc->type = INTEL_DESC_SURFACE_UNUSED;
-        desc->u.unused = NULL;
-    }
-
-    for (i = begin->sampler; i < end->sampler; i += region->sampler_desc_size) {
-        struct intel_desc_sampler *desc = (struct intel_desc_sampler *)
-            ((char *) region->samplers + i);
-
-        desc->sampler = NULL;
-    }
-}
-
 void intel_desc_region_update(struct intel_desc_region *region,
                               const struct intel_desc_offset *begin,
                               const struct intel_desc_offset *end,
@@ -849,22 +824,6 @@ ICD_EXPORT VkResult VKAPI vkAllocDescriptorSets(
         *pCount = i;
 
     return ret;
-}
-
-ICD_EXPORT void VKAPI vkClearDescriptorSets(
-    VkDevice                                  device,
-    VkDescriptorPool                          descriptorPool,
-    uint32_t                                     count,
-    const VkDescriptorSet*                    pDescriptorSets)
-{
-    uint32_t i;
-
-    for (i = 0; i < count; i++) {
-        struct intel_desc_set *set =
-            intel_desc_set((VkDescriptorSet) pDescriptorSets[i]);
-
-        intel_desc_region_clear(set->region, &set->region_begin, &set->region_end);
-    }
 }
 
 ICD_EXPORT VkResult VKAPI vkUpdateDescriptorSets(

@@ -1142,8 +1142,6 @@ static void demo_prepare_descriptor_set(struct demo *demo)
             &demo->desc_set, &count);
     assert(!err && count == 1);
 
-    vkClearDescriptorSets(demo->device, demo->desc_pool, 1, &demo->desc_set);
-
     memset(&tex_descs, 0, sizeof(tex_descs));
     for (i = 0; i < DEMO_TEXTURE_COUNT; i++) {
         tex_descs[i].sampler = demo->textures[i].sampler;

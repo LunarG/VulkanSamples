@@ -513,7 +513,6 @@ void VkDescriptorSetObj::CreateVKDescriptorSet(VkCommandBufferObj *cmdBuffer)
     }
 
     // do the updates
-    clear_sets(*m_set);
     m_device->update_descriptor_sets(m_writes);
 }
 

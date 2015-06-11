@@ -554,10 +554,6 @@ public:
     std::vector<DescriptorSet *> alloc_sets(const Device &dev, VkDescriptorSetUsage usage, const std::vector<const DescriptorSetLayout *> &layouts);
     std::vector<DescriptorSet *> alloc_sets(const Device &dev, VkDescriptorSetUsage usage, const DescriptorSetLayout &layout, uint32_t count);
     DescriptorSet *alloc_sets(const Device &dev, VkDescriptorSetUsage usage, const DescriptorSetLayout &layout);
-
-    // vkClearDescriptorSets()
-    void clear_sets(const std::vector<DescriptorSet *> &sets);
-    void clear_sets(DescriptorSet &set) { clear_sets(std::vector<DescriptorSet *>(1, &set)); }
 };
 
 class DescriptorSet : public DerivedObject<VkDescriptorSet, Object, VK_OBJECT_TYPE_DESCRIPTOR_SET> {

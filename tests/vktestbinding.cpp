@@ -857,12 +857,6 @@ DescriptorSet *DescriptorPool::alloc_sets(const Device &dev, VkDescriptorSetUsag
     return (set.empty()) ? NULL : set[0];
 }
 
-void DescriptorPool::clear_sets(const std::vector<DescriptorSet *> &sets)
-{
-    const std::vector<VkDescriptorSet> set_objs = make_objects<VkDescriptorSet>(sets);
-    vkClearDescriptorSets(dev_->obj(), obj(), set_objs.size(), &set_objs[0]);
-}
-
 void DynamicVpStateObject::init(const Device &dev, const VkDynamicVpStateCreateInfo &info)
 {
     DERIVED_OBJECT_TYPE_INIT(vkCreateDynamicViewportState, dev, VK_OBJECT_TYPE_DYNAMIC_VP_STATE, &info);

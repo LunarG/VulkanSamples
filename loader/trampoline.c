@@ -716,15 +716,6 @@ LOADER_EXPORT VkResult VKAPI vkAllocDescriptorSets(VkDevice device, VkDescriptor
     return disp->AllocDescriptorSets(device, descriptorPool, setUsage, count, pSetLayouts, pDescriptorSets, pCount);
 }
 
-LOADER_EXPORT void VKAPI vkClearDescriptorSets(VkDevice device, VkDescriptorPool descriptorPool, uint32_t count, const VkDescriptorSet* pDescriptorSets)
-{
-    const VkLayerDispatchTable *disp;
-
-    disp = loader_get_dispatch(device);
-
-    disp->ClearDescriptorSets(device, descriptorPool, count, pDescriptorSets);
-}
-
 LOADER_EXPORT VkResult VKAPI vkUpdateDescriptorSets(VkDevice device, uint32_t writeCount, const VkWriteDescriptorSet* pDescriptorWrites, uint32_t copyCount, const VkCopyDescriptorSet* pDescriptorCopies)
 {
     const VkLayerDispatchTable *disp;
