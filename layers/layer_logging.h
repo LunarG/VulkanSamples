@@ -32,45 +32,19 @@
 #include <stdbool.h>
 #include <unordered_map>
 #include "vkLayer.h"
+#include "layer_data.h"
 #include "layers_table.h"
 
-struct debug_report_data {
+typedef struct debug_report_data {
     VkLayerDbgFunctionNode *g_pDbgFunctionHead;
     bool g_DEBUG_REPORT;
-};
+} data_rec;
 
 static std::unordered_map<void *, struct debug_report_data *> debug_report_data_map;
 
-static struct debug_report_data *get_debug_data_ptr(
-        void *data_key)
-{
-    struct debug_report_data *debug_data;
-    std::unordered_map<void *, struct debug_report_data *>::const_iterator got;
-
-    got = debug_report_data_map.find(data_key);
-
-    if ( got == debug_report_data_map.end() ) {
-        debug_data = new struct debug_report_data;
-        memset(debug_data, 0, sizeof(*debug_data));
-        debug_report_data_map[(void *) data_key] = debug_data;
-    } else {
-        debug_data = got->second;
-    }
-
-    return debug_data;
-}
-
-static struct debug_report_data *get_device_debug_data_ptr(
-        VkLayerDispatchTable *device_dispatch_ptr)
-{
-    return get_debug_data_ptr((void *) device_dispatch_ptr);
-}
-
-static struct debug_report_data *get_instance_debug_data_ptr(
-        VkLayerInstanceDispatchTable *instance_dispatch_ptr)
-{
-    return get_debug_data_ptr((void *) instance_dispatch_ptr);
-}
+template data_rec *get_my_data_ptr<data_rec>(
+        void *data_key,
+        std::unordered_map<void *, struct debug_report_data *> data_map);
 
 static inline void debug_report_init_instance_extension_dispatch_table(
         VkLayerInstanceDispatchTable *table,
@@ -112,7 +86,7 @@ static inline void debug_report_create_instance(
         uint32_t                        extension_count,
         const VkExtensionProperties*    pEnabledExtensions)    // layer or extension name to be enabled
 {
-    struct debug_report_data *debug_data = get_debug_data_ptr(instance_dispatch_ptr);
+    data_rec *debug_data = get_my_data_ptr(instance_dispatch_ptr);
 
     for (uint32_t i = 0; i < extension_count; i++) {
         /* TODO: Check other property fields */

@@ -26,10 +26,15 @@
  *   Courtney Goeltzenleuchter <courtney@lunarg.com>
  */
 
+#include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <inttypes.h>
+#include <alloca.h>
 #include "debug_report.h"
 #include "vkLayer.h"
+
+typedef void (VKAPI *PFN_stringCallback)(char *message);
 
 static const struct loader_extension_property debug_report_extension_info = {
     .info =  {
@@ -225,6 +230,36 @@ VkResult loader_DbgDestroyMsgCallback(
     return res;
 }
 
+static void print_msg_flags(VkFlags msgFlags, char *msg_flags)
+{
+    bool separator = false;
+
+    msg_flags[0] = 0;
+    if (msgFlags & VK_DBG_REPORT_DEBUG_BIT) {
+        strcat(msg_flags, "DEBUG");
+        separator = true;
+    }
+    if (msgFlags & VK_DBG_REPORT_INFO_BIT) {
+        if (separator) strcat(msg_flags, ",");
+        strcat(msg_flags, "INFO");
+        separator = true;
+    }
+    if (msgFlags & VK_DBG_REPORT_WARN_BIT) {
+        if (separator) strcat(msg_flags, ",");
+        strcat(msg_flags, "WARN");
+        separator = true;
+    }
+    if (msgFlags & VK_DBG_REPORT_PERF_WARN_BIT) {
+        if (separator) strcat(msg_flags, ",");
+        strcat(msg_flags, "PERF");
+        separator = true;
+    }
+    if (msgFlags & VK_DBG_REPORT_ERROR_BIT) {
+        if (separator) strcat(msg_flags, ",");
+        strcat(msg_flags, "ERROR");
+    }
+}
+
 // DebugReport utility callback functions
 static void VKAPI StringCallback(
     VkFlags                             msgFlags,
@@ -236,7 +271,26 @@ static void VKAPI StringCallback(
     const char*                         pMsg,
     void*                               pUserData)
 {
+    uint32_t buf_size;
+    char *buf;
+    char msg_flags[30];
+    PFN_stringCallback callback = (PFN_stringCallback) pUserData;
 
+    print_msg_flags(msgFlags, msg_flags);
+
+    buf_size = strlen(msg_flags) + /* ReportFlags: i.e. (DEBUG,INFO,WARN,PERF,ERROR) */
+               20 +  /* objType */
+               20 + /* srcObject */
+               20 + /* location */
+               20 + /* msgCode */
+               strlen(pLayerPrefix) +
+               strlen(pMsg) +
+               50 /* other / whitespace */;
+    buf = alloca(buf_size);
+
+    snprintf(buf, buf_size, "%s (%s): object: 0x%" PRIxLEAST64 " type: %d location: %zu msgCode: %d: %s",
+             pLayerPrefix, msg_flags, srcObject, objType, location, msgCode, pMsg);
+    callback(buf);
 }
 
 static void VKAPI StdioCallback(
@@ -249,7 +303,12 @@ static void VKAPI StdioCallback(
     const char*                         pMsg,
     void*                               pUserData)
 {
+    char msg_flags[30];
 
+    print_msg_flags(msgFlags, msg_flags);
+
+    fprintf((FILE *) pUserData, "%s(%s): object: 0x%" PRIxLEAST64 " type: %d location: %zu msgCode: %d: %s",
+             pLayerPrefix, msg_flags, srcObject, objType, location, msgCode, pMsg);
 }
 
 static void VKAPI BreakCallback(
