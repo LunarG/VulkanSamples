@@ -847,7 +847,7 @@ validate_graphics_pipeline(VkGraphicsPipelineCreateInfo const *pCreateInfo)
         consumer++;
     }
 
-    for (; producer != VK_SHADER_STAGE_FRAGMENT; consumer++) {
+    for (; producer != VK_SHADER_STAGE_FRAGMENT && consumer <= VK_SHADER_STAGE_FRAGMENT; consumer++) {
         assert(shaders[producer]);
         if (shaders[consumer]) {
             if (shaders[producer]->is_spirv && shaders[consumer]->is_spirv) {
