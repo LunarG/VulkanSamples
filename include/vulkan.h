@@ -1891,8 +1891,6 @@ typedef struct VkDynamicRsStateCreateInfo_
     float                                       depthBias;
     float                                       depthBiasClamp;
     float                                       slopeScaledDepthBias;
-    float                                       pointSize;          // optional (GL45) - Size of points
-    float                                       pointFadeThreshold; // optional (GL45) - Size of point fade threshold
     float                                       lineWidth;          // optional (GL45) - Width of lines
 } VkDynamicRsStateCreateInfo;
 

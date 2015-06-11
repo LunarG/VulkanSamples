@@ -1075,7 +1075,6 @@ static void demo_prepare_dynamic_states(struct demo *demo)
 
     memset(&raster, 0, sizeof(raster));
     raster.sType = VK_STRUCTURE_TYPE_DYNAMIC_RS_STATE_CREATE_INFO;
-    raster.pointSize = 1.0;
     raster.lineWidth = 1.0;
 
     memset(&color_blend, 0, sizeof(color_blend));

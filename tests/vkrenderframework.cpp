@@ -212,7 +212,6 @@ void VkRenderFramework::InitState()
     // create a raster state (solid, back-face culling)
     VkDynamicRsStateCreateInfo raster = {};
     raster.sType = VK_STRUCTURE_TYPE_DYNAMIC_RS_STATE_CREATE_INFO;
-    raster.pointSize = 1.0;
 
     err = vkCreateDynamicRasterState( device(), &raster, &m_stateRaster );
     ASSERT_VK_SUCCESS(err);
