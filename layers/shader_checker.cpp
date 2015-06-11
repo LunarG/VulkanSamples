@@ -644,6 +644,33 @@ get_fundamental_type(shader_source const *src, unsigned type)
 
 
 static bool
+validate_vi_consistency(VkPipelineVertexInputCreateInfo const *vi)
+{
+    /* walk the binding descriptions, which describe the step rate and stride of each vertex buffer.
+     * each binding should be specified only once.
+     */
+    std::unordered_map<uint32_t, VkVertexInputBindingDescription const *> bindings;
+    char str[1024];
+    bool pass = true;
+
+    for (unsigned i = 0; i < vi->bindingCount; i++) {
+        auto desc = &vi->pVertexBindingDescriptions[i];
+        auto & binding = bindings[desc->binding];
+        if (binding) {
+            sprintf(str, "Duplicate vertex input binding descriptions for binding %d", desc->binding);
+            layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, NULL, 0, SHADER_CHECKER_INCONSISTENT_VI, "SC", str);
+            pass = false;
+        }
+        else {
+            binding = desc;
+        }
+    }
+
+    return pass;
+}
+
+
+static bool
 validate_vi_against_vs_inputs(VkPipelineVertexInputCreateInfo const *vi, shader_source const *vs)
 {
     std::map<uint32_t, interface_var> inputs;
@@ -832,6 +859,10 @@ validate_graphics_pipeline(VkGraphicsPipelineCreateInfo const *pCreateInfo)
         else if (stage->sType == VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_CREATE_INFO) {
             vi = (VkPipelineVertexInputCreateInfo const *)stage;
         }
+    }
+
+    if (vi) {
+        pass = validate_vi_consistency(vi) && pass;
     }
 
     if (shaders[VK_SHADER_STAGE_VERTEX] && shaders[VK_SHADER_STAGE_VERTEX]->is_spirv) {

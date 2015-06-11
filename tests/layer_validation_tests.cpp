@@ -2136,6 +2136,65 @@ TEST_F(VkLayerTest, CreatePipelineAttribTypeMismatch)
     }
 }
 
+TEST_F(VkLayerTest, CreatePipelineAttribBindingConflict)
+{
+    VK_DBG_MSG_TYPE msgType;
+    std::string msgString;
+    ASSERT_NO_FATAL_FAILURE(InitState());
+    ScopedUseSpv spv(true);
+
+    /* Two binding descriptions for binding 0 */
+    VkVertexInputBindingDescription input_bindings[2];
+    memset(input_bindings, 0, sizeof(input_bindings));
+
+    VkVertexInputAttributeDescription input_attrib;
+    memset(&input_attrib, 0, sizeof(input_attrib));
+    input_attrib.format = VK_FORMAT_R32_SFLOAT;
+
+    char const *vsSource =
+        "#version 140\n"
+        "#extension GL_ARB_separate_shader_objects: require\n"
+        "#extension GL_ARB_shading_language_420pack: require\n"
+        "\n"
+        "layout(location=0) in float x;\n"    /* attrib provided float */
+        "void main(){\n"
+        "   gl_Position = vec4(x);\n"
+        "}\n";
+    char const *fsSource =
+        "#version 140\n"
+        "#extension GL_ARB_separate_shader_objects: require\n"
+        "#extension GL_ARB_shading_language_420pack: require\n"
+        "\n"
+        "layout(location=0) out vec4 color;\n"
+        "void main(){\n"
+        "   color = vec4(1);\n"
+        "}\n";
+
+    VkShaderObj vs(m_device, vsSource, VK_SHADER_STAGE_VERTEX, this);
+    VkShaderObj fs(m_device, fsSource, VK_SHADER_STAGE_FRAGMENT, this);
+
+    VkPipelineObj pipe(m_device);
+    pipe.AddShader(&vs);
+    pipe.AddShader(&fs);
+
+    pipe.AddVertexInputBindings(input_bindings, 2);
+    pipe.AddVertexInputAttribs(&input_attrib, 1);
+
+    VkCommandBufferObj dummyCmd(m_device);
+    VkDescriptorSetObj descriptorSet(m_device);
+    descriptorSet.AppendDummy();
+    descriptorSet.CreateVKDescriptorSet(&dummyCmd);
+
+    m_errorMonitor->ClearState();
+    pipe.CreateVKPipeline(descriptorSet);
+
+    msgType = m_errorMonitor->GetState(&msgString);
+
+    ASSERT_EQ(VK_DBG_MSG_ERROR, msgType);
+    if (!strstr(msgString.c_str(),"Duplicate vertex input binding descriptions for binding 0")) {
+        FAIL() << "Incorrect error: " << msgString;
+    }
+}
 TEST_F(VkLayerTest, CreatePipelineFragmentBroadcastWithInteger)
 {
     VK_DBG_MSG_TYPE msgType;

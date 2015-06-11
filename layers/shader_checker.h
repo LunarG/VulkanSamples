@@ -35,4 +35,5 @@ typedef enum _SHADER_CHECKER_ERROR
     SHADER_CHECKER_NON_SPIRV_SHADER,        /* Shader image is not SPIR-V */
     SHADER_CHECKER_INCONSISTENT_SPIRV,      /* General inconsistency within a SPIR-V module */
     SHADER_CHECKER_UNKNOWN_STAGE,           /* Stage is not supported by analysis */
+    SHADER_CHECKER_INCONSISTENT_VI,         /* VI state contains conflicting binding or attrib descriptions */
 } SHADER_CHECKER_ERROR;
