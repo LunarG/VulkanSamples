@@ -31,6 +31,7 @@ import re
 
 import vulkan
 import vk_helper
+from source_line_info import sourcelineinfo
 
 def proto_is_global(proto):
     if proto.params[0].ty == "VkInstance" or proto.params[0].ty == "VkPhysicalDevice" or proto.name == "CreateInstance" or proto.name == "GetGlobalExtensionInfo" or proto.name == "GetPhysicalDeviceExtensionInfo":
@@ -53,6 +54,7 @@ class Subcommand(object):
         self.protos = vulkan.protos
         self.no_addr = False
         self.layer_name = ""
+        self.lineinfo = sourcelineinfo()
 
     def run(self):
         print(self.generate())
@@ -159,6 +161,7 @@ class Subcommand(object):
 
     def _gen_create_msg_callback(self):
         r_body = []
+        r_body.append('%s' % self.lineinfo.get())
         r_body.append('VK_LAYER_EXPORT VkResult VKAPI vkDbgCreateMsgCallback(VkInstance instance, VkFlags msgFlags, const PFN_vkDbgMsgCallback pfnMsgCallback, void* pUserData, VkDbgMsgCallback* pMsgCallback)')
         r_body.append('{')
         r_body.append('    return layer_create_msg_callback(instance, instance_dispatch_table(instance), msgFlags, pfnMsgCallback, pUserData, pMsgCallback);')
@@ -167,6 +170,7 @@ class Subcommand(object):
 
     def _gen_destroy_msg_callback(self):
         r_body = []
+        r_body.append('%s' % self.lineinfo.get())
         r_body.append('VK_LAYER_EXPORT VkResult VKAPI vkDbgDestroyMsgCallback(VkInstance instance, VkDbgMsgCallback msgCallback)')
         r_body.append('{')
         r_body.append('    return layer_destroy_msg_callback(instance, instance_dispatch_table(instance), msgCallback);')
@@ -176,6 +180,7 @@ class Subcommand(object):
     def _gen_layer_get_global_extension_info(self, layer="Generic"):
         ggei_body = []
         if layer == 'APIDump' or layer == 'Generic':
+            ggei_body.append('%s' % self.lineinfo.get())
             ggei_body.append('#define LAYER_EXT_ARRAY_SIZE 1')
             ggei_body.append('static const VkExtensionProperties layerExts[LAYER_EXT_ARRAY_SIZE] = {')
             ggei_body.append('    {')
@@ -186,6 +191,7 @@ class Subcommand(object):
             ggei_body.append('    }')
             ggei_body.append('};')
         else:
+            ggei_body.append('%s' % self.lineinfo.get())
             ggei_body.append('#define LAYER_EXT_ARRAY_SIZE 2')
             ggei_body.append('static const VkExtensionProperties layerExts[LAYER_EXT_ARRAY_SIZE] = {')
             ggei_body.append('    {')
@@ -202,6 +208,7 @@ class Subcommand(object):
             ggei_body.append('    }')
             ggei_body.append('};')
         ggei_body.append('')
+        ggei_body.append('%s' % self.lineinfo.get())
         ggei_body.append('VK_LAYER_EXPORT VkResult VKAPI vkGetGlobalExtensionInfo(VkExtensionInfoType infoType, uint32_t extensionIndex, size_t* pDataSize, void* pData)')
         ggei_body.append('{')
         ggei_body.append('    uint32_t *count;')
@@ -356,6 +363,7 @@ class Subcommand(object):
 
         # add customized layer_intercept_proc
         body = []
+        body.append('%s' % self.lineinfo.get())
         body.append("static inline void* layer_intercept_proc(const char *name)")
         body.append("{")
         body.append(generate_get_proc_addr_check("name"))
@@ -394,6 +402,7 @@ class Subcommand(object):
         exts = []
         exts.append(self._gen_create_msg_callback())
         exts.append(self._gen_destroy_msg_callback())
+        exts.append('%s' % self.lineinfo.get())
         exts.append('uint64_t objTrackGetObjectsCount(VkObjectType type)')
         exts.append('{')
         exts.append('    return numTotalObjs;')
@@ -423,6 +432,7 @@ class Subcommand(object):
         exts.append('    }')
         exts.append('    return VK_SUCCESS;')
         exts.append('}')
+        exts.append('%s' % self.lineinfo.get())
         exts.append('uint64_t objTrackGetObjectsOfTypeCount(VkObjectType type)')
         exts.append('{')
         exts.append('    return numObjs[type];')
@@ -457,6 +467,7 @@ class Subcommand(object):
 
     def _generate_layer_gpa_function(self, extensions=[], instance_extensions=[]):
         func_body = []
+        func_body.append('%s' % self.lineinfo.get())
         func_body.append("VK_LAYER_EXPORT void* VKAPI vkGetDeviceProcAddr(VkDevice device, const char* funcName)\n"
                          "{\n"
                          "    void* addr;\n"
@@ -489,6 +500,7 @@ class Subcommand(object):
                                  '        return %s%s%s;' % (extra_space, ext_name, cpp_prefix, ext_name, cpp_postfix))
                 if 0 != len(ext_enable):
                     func_body.append('    }')
+        func_body.append('%s' % self.lineinfo.get())
         func_body.append("    {\n"
                          "        if (pDisp->GetDeviceProcAddr == NULL)\n"
                          "            return NULL;\n"
@@ -527,9 +539,11 @@ class Subcommand(object):
 
     def _generate_layer_initialization(self, init_opts=False, prefix='vk', lockname=None, condname=None):
         func_body = ["#include \"vk_dispatch_table_helper.h\""]
+        func_body.append('%s' % self.lineinfo.get())
         func_body.append('static void init%s(void)\n'
                          '{\n' % self.layer_name)
         if init_opts:
+            func_body.append('%s' % self.lineinfo.get())
             func_body.append('    const char *strOpt;')
             func_body.append('    // initialize %s options' % self.layer_name)
             func_body.append('    getLayerOptionEnum("%sReportLevel", (uint32_t *) &g_reportFlags);' % self.layer_name)
@@ -546,8 +560,8 @@ class Subcommand(object):
             func_body.append('            g_logFile = stdout;')
             func_body.append('    }')
             func_body.append('')
-
         if lockname is not None:
+            func_body.append('%s' % self.lineinfo.get())
             func_body.append("    if (!%sLockInitialized)" % lockname)
             func_body.append("    {")
             func_body.append("        // TODO/TBD: Need to delete this mutex sometime.  How???")
@@ -620,6 +634,7 @@ class GenericLayerSubcommand(Subcommand):
         table = ''
         if proto_is_global(proto):
            table = 'Instance'
+        funcs.append('%s' % self.lineinfo.get())
         if proto.ret != "void":
             ret_val = "%s result = " % proto.ret
             stmt = "    return result;\n"
@@ -691,6 +706,7 @@ class GenericLayerSubcommand(Subcommand):
 class APIDumpSubcommand(Subcommand):
     def generate_header(self):
         header_txt = []
+        header_txt.append('%s' % self.lineinfo.get())
         header_txt.append('#include <fstream>')
         header_txt.append('#include <iostream>')
         header_txt.append('#include <string>')
@@ -721,6 +737,7 @@ class APIDumpSubcommand(Subcommand):
         header_txt.append('    }')
         header_txt.append('}')
         header_txt.append('')
+        header_txt.append('%s' % self.lineinfo.get())
         header_txt.append('#include "loader_platform.h"')
         header_txt.append('#include "vkLayer.h"')
         header_txt.append('#include "vk_struct_string_helper_cpp.h"')
@@ -738,6 +755,7 @@ class APIDumpSubcommand(Subcommand):
         header_txt.append('static int printLockInitialized = 0;')
         header_txt.append('static loader_platform_thread_mutex printLock;')
         header_txt.append('')
+        header_txt.append('%s' % self.lineinfo.get())
         header_txt.append('#define MAX_TID 513')
         header_txt.append('static loader_platform_thread_id tidMapping[MAX_TID] = {0};')
         header_txt.append('static uint32_t maxTID = 0;')
@@ -777,6 +795,7 @@ class APIDumpSubcommand(Subcommand):
 
     def generate_init(self):
         func_body = []
+        func_body.append('%s' % self.lineinfo.get())
         func_body.append('#include "vk_dispatch_table_helper.h"')
         func_body.append('#include "layers_config.h"')
         func_body.append('')
@@ -811,6 +830,7 @@ class APIDumpSubcommand(Subcommand):
         func_body.append('        }')
         func_body.append('    }')
         func_body.append('')
+        func_body.append('%s' % self.lineinfo.get())
         func_body.append('    char const*const noAddrStr = getLayerOption("APIDumpNoAddr");')
         func_body.append('    if(noAddrStr != NULL)')
         func_body.append('    {')
@@ -838,6 +858,7 @@ class APIDumpSubcommand(Subcommand):
         func_body.append('        }')
         func_body.append('    }')
         func_body.append('')
+        func_body.append('%s' % self.lineinfo.get())
         func_body.append('    ConfigureOutputStream(writeToFile, flushAfterWrite);')
         func_body.append('')
         func_body.append('    if (!printLockInitialized)')
@@ -867,7 +888,8 @@ class APIDumpSubcommand(Subcommand):
             ret_val = "%s result = " % proto.ret
             stmt = "    return result;\n"
         f_open = 'loader_platform_thread_lock_mutex(&printLock);\n    '
-        log_func = '    if (StreamControl::writeAddress == true) {'
+        log_func = '%s\n' % self.lineinfo.get()
+        log_func += '    if (StreamControl::writeAddress == true) {'
         log_func += '\n        (*outputStream) << "t{" << getTIDIndex() << "} vk%s(' % proto.name
         log_func_no_addr = '\n        (*outputStream) << "t{" << getTIDIndex() << "} vk%s(' % proto.name
         f_close = '\n    loader_platform_thread_unlock_mutex(&printLock);'
@@ -913,12 +935,14 @@ class APIDumpSubcommand(Subcommand):
         log_func += ';'
         log_func_no_addr += ';'
         log_func += '\n    }\n    else {%s;\n    }' % log_func_no_addr;
+        log_func += '\n%s' % self.lineinfo.get()
         #print("Proto %s has param_dict: %s" % (proto.name, sp_param_dict))
         if len(sp_param_dict) > 0:
             indent = '    '
             log_func += '\n%sif (g_APIDumpDetailed) {' % indent
             indent += '    '
             i_decl = False
+            log_func += '\n%s' % self.lineinfo.get()
             log_func += '\n%sstring tmp_str;' % indent
             for sp_index in sp_param_dict:
                 #print("sp_index: %s" % str(sp_index))
@@ -927,6 +951,7 @@ class APIDumpSubcommand(Subcommand):
                     local_name = proto.params[sp_index].name
                     if '*' not in proto.params[sp_index].ty:
                         local_name = '&%s' % proto.params[sp_index].name
+                    log_func += '\n%s' % self.lineinfo.get()
                     log_func += '\n%sif (%s) {' % (indent, local_name)
                     indent += '    '
                     log_func += '\n%stmp_str = %s(%s, "    ");' % (indent, cis_print_func, local_name)
@@ -949,6 +974,7 @@ class APIDumpSubcommand(Subcommand):
                         i_decl = True
                     log_func += '\n%sif (%s) {' % (indent, proto.params[sp_index].name)
                     indent += '    '
+                    log_func += '\n%s' % self.lineinfo.get()
                     log_func += '\n%sfor (i = 0; i < %s; i++) {' % (indent, sp_param_dict[sp_index])
                     indent += '    '
                     log_func += '\n%s%s' % (indent, cis_print_func)
@@ -1033,6 +1059,7 @@ class APIDumpSubcommand(Subcommand):
 class ObjectTrackerSubcommand(Subcommand):
     def generate_header(self):
         header_txt = []
+        header_txt.append('%s' % self.lineinfo.get())
         header_txt.append('#include <stdio.h>\n#include <stdlib.h>\n#include <string.h>\n#include <inttypes.h>\n')
         header_txt.append('#include "loader_platform.h"\n')
         header_txt.append('#include "object_track.h"\n\n')
@@ -1053,6 +1080,7 @@ class ObjectTrackerSubcommand(Subcommand):
         header_txt.append('// Objects stored in a global map w/ struct containing basic info')
         header_txt.append('unordered_map<VkObject, OBJTRACK_NODE*> objMap;')
         header_txt.append('')
+        header_txt.append('%s' % self.lineinfo.get())
         header_txt.append('#define NUM_OBJECT_TYPES (VK_NUM_OBJECT_TYPE + (VK_OBJECT_TYPE_SWAP_CHAIN_WSI - VK_OBJECT_TYPE_DISPLAY_WSI))')
         header_txt.append('')
         header_txt.append('static uint64_t                         numObjs[NUM_OBJECT_TYPES]     = {0};')
@@ -1076,7 +1104,7 @@ class ObjectTrackerSubcommand(Subcommand):
         header_txt.append('    VkQueue                          queue;')
         header_txt.append('    uint32_t                         refCount;')
         header_txt.append('} OT_QUEUE_INFO;')
-        header_txt.append('')
+        header_txt.append('%s' % self.lineinfo.get())
         header_txt.append('// Global list of QueueInfo structures, one per queue')
         header_txt.append('static OT_QUEUE_INFO *g_pQueueInfo = NULL;')
         header_txt.append('')
@@ -1090,7 +1118,7 @@ class ObjectTrackerSubcommand(Subcommand):
         header_txt.append('    }')
         header_txt.append('    return index;')
         header_txt.append('}')
-        header_txt.append('')
+        header_txt.append('%s' % self.lineinfo.get())
         header_txt.append('// Validate that object is in the object map')
         header_txt.append('static void validate_object(const VkObject object)')
         header_txt.append('{')
@@ -1118,7 +1146,7 @@ class ObjectTrackerSubcommand(Subcommand):
         header_txt.append('        }')
         header_txt.append('    }')
         header_txt.append('}')
-        header_txt.append('')
+        header_txt.append('%s' % self.lineinfo.get())
         header_txt.append('// Add new queue to head of global queue list')
         header_txt.append('static void addQueueInfo(uint32_t queueNodeIndex, VkQueue queue)')
         header_txt.append('{')
@@ -1156,7 +1184,7 @@ class ObjectTrackerSubcommand(Subcommand):
         header_txt.append('    }')
         header_txt.append('    g_pQueueInfo = pQueueInfo;')
         header_txt.append('}')
-        header_txt.append('')
+        header_txt.append('%s' % self.lineinfo.get())
         header_txt.append('static void create_obj(VkObject vkObj, VkObjectType objType) {')
         header_txt.append('    char str[1024];')
         header_txt.append('    sprintf(str, "OBJ[%llu] : CREATE %s object 0x%" PRIxLEAST64 , object_track_index++, string_VkObjectType(objType), reinterpret_cast<VkUintPtrLeast64>(vkObj));')
@@ -1208,7 +1236,7 @@ class ObjectTrackerSubcommand(Subcommand):
         header_txt.append('        }')
         header_txt.append('    }')
         header_txt.append('}')
-        header_txt.append('')
+        header_txt.append('%s' % self.lineinfo.get())
         header_txt.append('// Reset selected flag state for an object node')
         header_txt.append('static void reset_status(VkObject vkObj, VkObjectType objType, ObjectStatusFlags status_flag) {')
         header_txt.append('    if (objMap.find(vkObj) != objMap.end()) {')
@@ -1249,7 +1277,7 @@ class ObjectTrackerSubcommand(Subcommand):
         header_txt.append('        }')
         header_txt.append('    }')
         header_txt.append('}')
-        header_txt.append('')
+        header_txt.append('%s' % self.lineinfo.get())
         header_txt.append('// Check object status for selected flag state')
         header_txt.append('static bool32_t validate_status(VkObject vkObj, VkObjectType objType, ObjectStatusFlags status_mask, ObjectStatusFlags status_flag, VkFlags msg_flags, OBJECT_TRACK_ERROR error_code, const char* fail_msg) {')
         header_txt.append('    if (objMap.find(vkObj) != objMap.end()) {')
@@ -1320,6 +1348,7 @@ class ObjectTrackerSubcommand(Subcommand):
         mutex_unlock = False
         if 'QueueSubmit' in proto.name:
             using_line  = '    loader_platform_thread_lock_mutex(&objLock);\n'
+            using_line += '%s\n' % self.lineinfo.get()
             using_line += '    set_status(fence, VK_OBJECT_TYPE_FENCE, OBJSTATUS_FENCE_IS_SUBMITTED);\n'
             using_line += '    // TODO: Fix for updated memory reference mechanism\n'
             using_line += '    // validate_memory_mapping_status(pMemRefs, memRefCount);\n'
@@ -1327,23 +1356,28 @@ class ObjectTrackerSubcommand(Subcommand):
             mutex_unlock = True
         elif 'QueueBindSparse' in proto.name:
             using_line  = '    loader_platform_thread_lock_mutex(&objLock);\n'
+            using_line += '%s\n' % self.lineinfo.get()
             using_line += '    validateQueueFlags(queue, "%s");\n' % (proto.name)
             mutex_unlock = True
         elif 'QueueBindObject' in proto.name:
             using_line  = '    loader_platform_thread_lock_mutex(&objLock);\n'
+            using_line += '%s\n' % self.lineinfo.get()
             using_line += '    validateObjectType("vk%s", objType, object);\n' % (proto.name)
             mutex_unlock = True
         elif 'GetObjectInfo' in proto.name:
             using_line  = '    loader_platform_thread_lock_mutex(&objLock);\n'
+            using_line += '%s\n' % self.lineinfo.get()
             using_line += '    validateObjectType("vk%s", objType, object);\n' % (proto.name)
             mutex_unlock = True
         elif 'GetFenceStatus' in proto.name:
             using_line  = '    loader_platform_thread_lock_mutex(&objLock);\n'
+            using_line += '%s\n' % self.lineinfo.get()
             using_line += '    // Warn if submitted_flag is not set\n'
             using_line += '    validate_status(fence, VK_OBJECT_TYPE_FENCE, OBJSTATUS_FENCE_IS_SUBMITTED, OBJSTATUS_FENCE_IS_SUBMITTED, VK_DBG_REPORT_ERROR_BIT, OBJTRACK_INVALID_FENCE, "Status Requested for Unsubmitted Fence");\n'
             mutex_unlock = True
         elif 'WaitForFences' in proto.name:
             using_line  = '    loader_platform_thread_lock_mutex(&objLock);\n'
+            using_line += '%s\n' % self.lineinfo.get()
             using_line += '    // Warn if waiting on unsubmitted fence\n'
             using_line += '    for (uint32_t i = 0; i < fenceCount; i++) {\n'
             using_line += '        validate_status(pFences[i], VK_OBJECT_TYPE_FENCE, OBJSTATUS_FENCE_IS_SUBMITTED, OBJSTATUS_FENCE_IS_SUBMITTED, VK_DBG_REPORT_ERROR_BIT, OBJTRACK_INVALID_FENCE, "Waiting for Unsubmitted Fence");\n'
@@ -1351,14 +1385,17 @@ class ObjectTrackerSubcommand(Subcommand):
             mutex_unlock = True
         elif 'MapMemory' in proto.name:
             using_line  = '    loader_platform_thread_lock_mutex(&objLock);\n'
+            using_line += '%s\n' % self.lineinfo.get()
             using_line += '    set_status(mem, VK_OBJECT_TYPE_DEVICE_MEMORY, OBJSTATUS_GPU_MEM_MAPPED);\n'
             mutex_unlock = True
         elif 'UnmapMemory' in proto.name:
             using_line =  '    loader_platform_thread_lock_mutex(&objLock);\n'
+            using_line += '%s\n' % self.lineinfo.get()
             using_line += '    reset_status(mem, VK_OBJECT_TYPE_DEVICE_MEMORY, OBJSTATUS_GPU_MEM_MAPPED);\n'
             mutex_unlock = True
         elif 'AllocDescriptor' in proto.name: # Allocates array of DSs
             create_line  = '    loader_platform_thread_lock_mutex(&objLock);\n'
+            create_line += '%s\n' % self.lineinfo.get()
             create_line += '    for (uint32_t i = 0; i < *pCount; i++) {\n'
             create_line += '        create_obj(pDescriptorSets[i], VK_OBJECT_TYPE_DESCRIPTOR_SET);\n'
             create_line += '    }\n'
@@ -1367,9 +1404,11 @@ class ObjectTrackerSubcommand(Subcommand):
             create_line =  '    loader_platform_thread_lock_mutex(&objLock);\n'
             create_line += '    if (result == VK_SUCCESS) {\n'
             if 'CreateDevice' in proto.name:
+                create_line += '%s\n' % self.lineinfo.get()
                 create_line += '        enable_debug_report(pCreateInfo->extensionCount, pCreateInfo->pEnabledExtensions);\n'
                 create_line += '        createDeviceRegisterExtensions(pCreateInfo, *pDevice);\n'
             elif 'CreateInstance' in proto.name:
+                create_line += '%s\n' % self.lineinfo.get()
                 create_line += '        enable_debug_report(pCreateInfo->extensionCount, pCreateInfo->pEnabledExtensions);\n'
                 create_line += '        VkLayerInstanceDispatchTable *pTable = instance_dispatch_table(*pInstance);\n'
                 create_line += '        debug_report_init_instance_extension_dispatch_table(\n'
@@ -1382,10 +1421,12 @@ class ObjectTrackerSubcommand(Subcommand):
 
         if 'GetDeviceQueue' in proto.name:
             destroy_line  = '    loader_platform_thread_lock_mutex(&objLock);\n'
+            destroy_line += '%s\n' % self.lineinfo.get()
             destroy_line += '    addQueueInfo(queueNodeIndex, *pQueue);\n'
             destroy_line += '    loader_platform_thread_unlock_mutex(&objLock);\n'
         elif 'DestroyObject' in proto.name:
             destroy_line =  '    loader_platform_thread_lock_mutex(&objLock);\n'
+            destroy_line += '%s\n' % self.lineinfo.get()
             destroy_line += '    validateObjectType("vk%s", objType, object);\n' % (proto.name)
             destroy_line += '    destroy_obj(%s);\n' % (proto.params[2].name)
             destroy_line += '    loader_platform_thread_unlock_mutex(&objLock);\n'
@@ -1394,6 +1435,7 @@ class ObjectTrackerSubcommand(Subcommand):
             using_line +=  '    VkLayerDispatchTable *pDisp  = device_dispatch_table(device);\n'
             destroy_line  = '    deviceExtMap.erase(pDisp);\n'
             destroy_line += '    loader_platform_thread_lock_mutex(&objLock);\n'
+            destroy_line += '%s\n' % self.lineinfo.get()
             destroy_line += '    destroy_obj(device);\n'
             destroy_line += '    // Report any remaining objects\n'
             destroy_line += '    for (auto it = objMap.begin(); it != objMap.end(); ++it) {\n'
@@ -1428,10 +1470,12 @@ class ObjectTrackerSubcommand(Subcommand):
             destroy_line += '    destroy_instance_dispatch_table(key);\n'
         elif 'Free' in proto.name:
             destroy_line  = '    loader_platform_thread_lock_mutex(&objLock);\n'
+            destroy_line += '%s\n' % self.lineinfo.get()
             destroy_line += '    destroy_obj(%s);\n' % (proto.params[1].name)
             destroy_line += '    loader_platform_thread_unlock_mutex(&objLock);\n'
         elif 'Destroy' in proto.name:
             destroy_line  = '    loader_platform_thread_lock_mutex(&objLock);\n'
+            destroy_line += '%s\n' % self.lineinfo.get()
             destroy_line += '    destroy_obj(%s);\n' % (param0_name)
             destroy_line += '    loader_platform_thread_unlock_mutex(&objLock);\n'
         if len(object_params) > 0:
@@ -1478,6 +1522,7 @@ class ObjectTrackerSubcommand(Subcommand):
                 table_type = "device"
             if 'CreateInstance' in proto.name:
                dispatch_param = '*' + proto.params[1].name
+            funcs.append('%s' % self.lineinfo.get())
             funcs.append('%s%s\n'
                      '{\n'
                      '%s'
@@ -1505,6 +1550,7 @@ class ObjectTrackerSubcommand(Subcommand):
 class ThreadingSubcommand(Subcommand):
     def generate_header(self):
         header_txt = []
+        header_txt.append('%s' % self.lineinfo.get())
         header_txt.append('#include <stdio.h>')
         header_txt.append('#include <stdlib.h>')
         header_txt.append('#include <string.h>')
@@ -1531,7 +1577,7 @@ class ThreadingSubcommand(Subcommand):
         header_txt.append('static loader_platform_thread_cond threadingCond;')
         header_txt.append('static int printLockInitialized = 0;')
         header_txt.append('static loader_platform_thread_mutex printLock;\n')
-        header_txt.append('')
+        header_txt.append('%s' % self.lineinfo.get())
         header_txt.append('static void useObject(VkObject object, const char* type)')
         header_txt.append('{')
         header_txt.append('    loader_platform_thread_id tid = loader_platform_get_thread_id();')
@@ -1556,6 +1602,7 @@ class ThreadingSubcommand(Subcommand):
         header_txt.append('    }')
         header_txt.append('    loader_platform_thread_unlock_mutex(&threadingLock);')
         header_txt.append('}')
+        header_txt.append('%s' % self.lineinfo.get())
         header_txt.append('static void finishUsingObject(VkObject object)')
         header_txt.append('{')
         header_txt.append('    // Object is no longer in use')
@@ -1614,6 +1661,7 @@ class ThreadingSubcommand(Subcommand):
             return None
         # Initialize in early calls
         if proto.params[0].ty == "VkPhysicalDevice":
+            funcs.append('%s' % self.lineinfo.get())
             funcs.append('%s%s\n'
                      '{\n'
                      '    %s%s_dispatch_table(%s)->%s;\n'
@@ -1622,6 +1670,7 @@ class ThreadingSubcommand(Subcommand):
             return "\n".join(funcs)
         # Functions changing command buffers need thread safe use of first parameter
         if proto.params[0].ty == "VkCmdBuffer":
+            funcs.append('%s' % self.lineinfo.get())
             funcs.append('%s%s\n'
                      '{\n'
                      '    useObject((VkObject) %s, "%s");\n'
@@ -1677,6 +1726,7 @@ class ThreadingSubcommand(Subcommand):
         if len(checked_params) == 0:
             return None
         # Surround call with useObject and finishUsingObject for each checked_param
+        funcs.append('%s' % self.lineinfo.get())
         funcs.append('%s%s' % (qual, decl))
         funcs.append('{')
         for param in checked_params:

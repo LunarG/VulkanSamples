@@ -24,14 +24,13 @@
 import argparse
 import os
 import sys
+from source_line_info import sourcelineinfo
 
-# code_gen.py overview
-# This script generates code based on input headers
-# Initially it's intended to support Mantle and VK headers and
-#  generate wrappers functions that can be used to display
+# vk_helper.py overview
+# This script generates code based on vulkan input header
+#  It generate wrappers functions that can be used to display
 #  structs in a human-readable txt format, as well as utility functions
 #  to print enum values as strings
-
 
 def handle_args():
     parser = argparse.ArgumentParser(description='Perform analysis of vogl trace.')
@@ -756,9 +755,12 @@ class StructWrapperGen:
         sh_funcs = []
         # First generate prototypes for every struct
         # XXX - REMOVE this comment
+        lineinfo = sourcelineinfo()
+        sh_funcs.append('%s' % lineinfo.get())
         for s in sorted(self.struct_dict):
             sh_funcs.append('string %s(const %s* pStruct, const string prefix);' % (self._get_sh_func_name(s), typedef_fwd_dict[s]))
         sh_funcs.append('\n')
+        sh_funcs.append('%s' % lineinfo.get())
         for s in sorted(self.struct_dict):
             num_non_enum_elems = [(is_type(self.struct_dict[s][elem]['type'], 'enum') and not self.struct_dict[s][elem]['ptr']) for elem in self.struct_dict[s]].count(False)
             stp_list = [] # stp == "struct to print" a list of structs for this API call that should be printed as structs
@@ -766,7 +768,9 @@ class StructWrapperGen:
             for m in sorted(self.struct_dict[s]):
                 if 'pNext' == self.struct_dict[s][m]['name'] or is_type(self.struct_dict[s][m]['type'], 'struct') or self.struct_dict[s][m]['array']:
                     stp_list.append(self.struct_dict[s][m])
+            sh_funcs.append('%s' % lineinfo.get())
             sh_funcs.append('string %s(const %s* pStruct, const string prefix)\n{' % (self._get_sh_func_name(s), typedef_fwd_dict[s]))
+            sh_funcs.append('%s' % lineinfo.get())
             indent = '    '
             sh_funcs.append('%susing namespace StreamControl;' % (indent))
             sh_funcs.append('%sstring final_str;' % (indent))
@@ -784,16 +788,16 @@ class StructWrapperGen:
                     if 1 < stp_list[index]['full_type'].count('*'):
                         addr_char = ''
                     if (stp_list[index]['array'] and 'char' not in stp_list[index]['type']):
-                        sh_funcs.append('/* A */');
+                        sh_funcs.append('%s' % lineinfo.get())
                         if stp_list[index]['dyn_array']:
-                            sh_funcs.append('/* AA */');
+                            sh_funcs.append('%s' % lineinfo.get())
                             array_count = 'pStruct->%s' % (stp_list[index]['array_size'])
                         else:
-                            sh_funcs.append('/* AB */');
+                            sh_funcs.append('%s' % lineinfo.get())
                             array_count = '%s' % (stp_list[index]['array_size'])
+                        sh_funcs.append('%s' % lineinfo.get())
                         sh_funcs.append('%sstp_strs[%u] = "";' % (indent, index))
                         if not idx_ss_decl:
-                            sh_funcs.append('/* AC */');
                             sh_funcs.append('%sstringstream index_ss;' % (indent))
                             idx_ss_decl = True
                         sh_funcs.append('%sif (pStruct->%s) {' % (indent, stp_list[index]['name']))
@@ -803,81 +807,94 @@ class StructWrapperGen:
                         sh_funcs.append('%sindex_ss.str("");' % (indent))
                         sh_funcs.append('%sindex_ss << i;' % (indent))
                         if is_type(stp_list[index]['type'], 'enum'):
-                            #sh_funcs.append('/* AD */');
+                            sh_funcs.append('%s' % lineinfo.get())
                             addr_char = ''
                             #value_print = 'string_%s(%spStruct->%s)' % (self.struct_dict[s][m]['type'], deref, self.struct_dict[s][m]['name'])
                             sh_funcs.append('%sss[%u] << string_%s(pStruct->%s[i]);' % (indent, index, stp_list[index]['type'], stp_list[index]['name']))
                             sh_funcs.append('%sstp_strs[%u] += " " + prefix + "%s[" + index_ss.str() + "] = " + ss[%u].str() + "\\n";' % (indent, index, stp_list[index]['name'], index))
                         elif is_type(stp_list[index]['type'], 'struct'):
-                            #sh_funcs.append('/* AD */');
+                            sh_funcs.append('%s' % lineinfo.get())
                             sh_funcs.append('%sss[%u] << %spStruct->%s[i];' % (indent, index, addr_char, stp_list[index]['name']))
                             sh_funcs.append('%stmp_str = %s(%spStruct->%s[i], extra_indent);' % (indent, self._get_sh_func_name(stp_list[index]['type']), addr_char, stp_list[index]['name']))
                             if self.no_addr:
-                                sh_funcs.append('/* AEA */');
+                                sh_funcs.append('%s' % lineinfo.get())
                                 sh_funcs.append('%sstp_strs[%u] += " " + prefix + "%s[" + index_ss.str() + "] (addr)\\n" + tmp_str;' % (indent, index, stp_list[index]['name']))
                             else:
-                                sh_funcs.append('/* AEB */');
+                                sh_funcs.append('%s' % lineinfo.get())
                                 sh_funcs.append('%sstp_strs[%u] += " " + prefix + "%s[" + index_ss.str() + "] (" + ss[%u].str() + ")\\n" + tmp_str;' % (indent, index, stp_list[index]['name'], index))
                         else:
-                            #sh_funcs.append('/* AD */');
+                            sh_funcs.append('%s' % lineinfo.get())
                             addr_char = ''
                             sh_funcs.append('%sss[%u] << %spStruct->%s[i];' % (indent, index, addr_char, stp_list[index]['name']))
                             sh_funcs.append('%sstp_strs[%u] += " " + prefix + "%s[" + index_ss.str() + "] = " + ss[%u].str() + "\\n";' % (indent, index, stp_list[index]['name'], index))
+                        sh_funcs.append('%s' % lineinfo.get())
                         sh_funcs.append('%sss[%u].str("");' % (indent, index))
                         indent = indent[4:]
                         sh_funcs.append('%s}' % (indent))
                         indent = indent[4:]
                         sh_funcs.append('%s}' % (indent))
                     elif (stp_list[index]['ptr']):
-                        sh_funcs.append('/* B */');
+                        sh_funcs.append('%s' % lineinfo.get())
                         sh_funcs.append('    if (pStruct->%s) {' % stp_list[index]['name'])
                         if 'pNext' == stp_list[index]['name']:
+                            sh_funcs.append('%s' % lineinfo.get())
                             sh_funcs.append('        tmp_str = dynamic_display((void*)pStruct->pNext, prefix);')
                         else:
                             if stp_list[index]['name'] in ['pImageViews', 'pBufferViews']:
                                 # TODO : This is a quick hack to handle these arrays of ptrs
+                                sh_funcs.append('%s' % lineinfo.get())
                                 sh_funcs.append('        tmp_str = %s(&pStruct->%s[0], extra_indent);' % (self._get_sh_func_name(stp_list[index]['type']), stp_list[index]['name']))
                             else:
+                                sh_funcs.append('%s' % lineinfo.get())
                                 sh_funcs.append('        tmp_str = %s(pStruct->%s, extra_indent);' % (self._get_sh_func_name(stp_list[index]['type']), stp_list[index]['name']))
                         sh_funcs.append('        ss[%u] << %spStruct->%s;' % (index, addr_char, stp_list[index]['name']))
                         if self.no_addr:
+                            sh_funcs.append('%s' % lineinfo.get())
                             sh_funcs.append('        stp_strs[%u] = " " + prefix + "%s (addr)\\n" + tmp_str;' % (index, stp_list[index]['name']))
                         else:
+                            sh_funcs.append('%s' % lineinfo.get())
                             sh_funcs.append('        stp_strs[%u] = " " + prefix + "%s (" + ss[%u].str() + ")\\n" + tmp_str;' % (index, stp_list[index]['name'], index))
                         sh_funcs.append('        ss[%u].str("");' % (index))
                         sh_funcs.append('    }')
                         sh_funcs.append('    else')
                         sh_funcs.append('        stp_strs[%u] = "";' % index)
                     else:
-                        #sh_funcs.append('/* C */');
+                        sh_funcs.append('%s' % lineinfo.get())
                         sh_funcs.append('    tmp_str = %s(&pStruct->%s, extra_indent);' % (self._get_sh_func_name(stp_list[index]['type']), stp_list[index]['name']))
                         sh_funcs.append('    ss[%u] << %spStruct->%s;' % (index, addr_char, stp_list[index]['name']))
                         if self.no_addr:
                             sh_funcs.append('    stp_strs[%u] = " " + prefix + "%s (addr)\\n" + tmp_str;' % (index, stp_list[index]['name']))
+                            sh_funcs.append('%s' % lineinfo.get())
                         else:
                             sh_funcs.append('    stp_strs[%u] = " " + prefix + "%s (" + ss[%u].str() + ")\\n" + tmp_str;' % (index, stp_list[index]['name'], index))
+                            sh_funcs.append('%s' % lineinfo.get())
                         sh_funcs.append('    ss[%u].str("");' % index)
             # Now print one-line info for all data members
             index = 0
             final_str = ''
             for m in sorted(self.struct_dict[s]):
-                deref = ''
                 if not is_type(self.struct_dict[s][m]['type'], 'enum'):
                     if is_type(self.struct_dict[s][m]['type'], 'struct') and not self.struct_dict[s][m]['ptr']:
                         if self.no_addr:
+                            sh_funcs.append('%s' % lineinfo.get())
                             sh_funcs.append('    ss[%u].str("addr");' % (index))
                         else:
+                            sh_funcs.append('%s' % lineinfo.get())
                             sh_funcs.append('    ss[%u] << &pStruct->%s;' % (index, self.struct_dict[s][m]['name']))
                     elif 'bool' in self.struct_dict[s][m]['type'].lower():
+                        sh_funcs.append('%s' % lineinfo.get())
                         sh_funcs.append('    ss[%u].str(pStruct->%s ? "TRUE" : "FALSE");' % (index, self.struct_dict[s][m]['name']))
                     elif 'uint8' in self.struct_dict[s][m]['type'].lower():
+                        sh_funcs.append('%s' % lineinfo.get())
                         sh_funcs.append('    ss[%u] << (uint32_t)pStruct->%s;' % (index, self.struct_dict[s][m]['name']))
                     elif 'void' in self.struct_dict[s][m]['type'].lower() and self.struct_dict[s][m]['ptr']:
+                        sh_funcs.append('%s' % lineinfo.get())
                         sh_funcs.append('    if (StreamControl::writeAddress)')
                         sh_funcs.append('        ss[%u] << pStruct->%s;' % (index, self.struct_dict[s][m]['name']))
                         sh_funcs.append('    else')
                         sh_funcs.append('        ss[%u].str("address");' % (index))
                     else:
+                        sh_funcs.append('%s' % lineinfo.get())
                         (po, pa) = self._get_struct_print_formatted(self.struct_dict[s][m])
                         if "addr" in po: # or self.struct_dict[s][m]['ptr']:
                             sh_funcs.append('    ss[%u].str("addr");' % (index))
@@ -888,6 +905,7 @@ class StructWrapperGen:
                 else:
                     # For an non-empty array of enums just print address w/ note that array will be displayed below
                     if self.struct_dict[s][m]['ptr']:
+                        sh_funcs.append('%s' % lineinfo.get())
                         sh_funcs.append('    if (pStruct->%s)' % (self.struct_dict[s][m]['name']))
                         sh_funcs.append('        ss[%u] << pStruct->%s << " (See individual array values below)";' % (index, self.struct_dict[s][m]['name']))
                         sh_funcs.append('    else')
@@ -901,9 +919,11 @@ class StructWrapperGen:
             final_str = final_str[3:] # strip off the initial ' + '
             if 0 != num_stps: # Append data for any embedded structs
                 final_str += " + %s" % " + ".join(['stp_strs[%u]' % n for n in reversed(range(num_stps))])
+            sh_funcs.append('%s' % lineinfo.get())
             sh_funcs.append('    final_str = %s;' % final_str)
             sh_funcs.append('    return final_str;\n}')
         # Add function to return a string value for input void*
+        sh_funcs.append('%s' % lineinfo.get())
         sh_funcs.append("string string_convert_helper(const void* toString, const string prefix)\n{")
         sh_funcs.append("    using namespace StreamControl;")
         sh_funcs.append("    stringstream ss;")
@@ -911,6 +931,7 @@ class StructWrapperGen:
         sh_funcs.append('    string final_str = prefix + ss.str();')
         sh_funcs.append("    return final_str;")
         sh_funcs.append("}")
+        sh_funcs.append('%s' % lineinfo.get())
         # Add function to return a string value for input uint32_t
         sh_funcs.append("string string_convert_helper(const uint32_t toString, const string prefix)\n{")
         sh_funcs.append("    using namespace StreamControl;")
@@ -919,6 +940,7 @@ class StructWrapperGen:
         sh_funcs.append('    string final_str = prefix + ss.str();')
         sh_funcs.append("    return final_str;")
         sh_funcs.append("}")
+        sh_funcs.append('%s' % lineinfo.get())
         # Add function to dynamically print out unknown struct
         sh_funcs.append("string dynamic_display(const void* pStruct, const string prefix)\n{")
         sh_funcs.append("    // Cast to APP_INFO ptr initially just to pull sType off struct")
@@ -941,6 +963,7 @@ class StructWrapperGen:
                     sh_funcs.append('        break;')
                 sh_funcs.append("        default:")
                 sh_funcs.append("        return NULL;")
+        sh_funcs.append('%s' % lineinfo.get())
         sh_funcs.append("    }")
         sh_funcs.append("}")
         return "\n".join(sh_funcs)
