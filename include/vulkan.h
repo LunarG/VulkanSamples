@@ -33,7 +33,7 @@
 #include "vk_platform.h"
 
 // Vulkan API version supported by this file
-#define VK_API_VERSION VK_MAKE_VERSION(0, 101, 0)
+#define VK_API_VERSION VK_MAKE_VERSION(0, 102, 0)
 
 #ifdef __cplusplus
 extern "C"
@@ -1902,10 +1902,10 @@ typedef struct VkDynamicCbStateCreateInfo_
 
 typedef struct VkDynamicDsStateCreateInfo_
 {
-    VkStructureType                             sType;      // Must be VK_STRUCTURE_TYPE_DYNAMIC_DS_STATE_CREATE_INFO
-    const void*                                 pNext;      // Pointer to next structure
-    float                                       minDepth;               // optional (depth_bounds_test)
-    float                                       maxDepth;               // optional (depth_bounds_test)
+    VkStructureType                             sType;              // Must be VK_STRUCTURE_TYPE_DYNAMIC_DS_STATE_CREATE_INFO
+    const void*                                 pNext;              // Pointer to next structure
+    float                                       minDepthBounds;     // optional (depth_bounds_test)
+    float                                       maxDepthBounds;     // optional (depth_bounds_test)
     uint32_t                                    stencilReadMask;
     uint32_t                                    stencilWriteMask;
     uint32_t                                    stencilFrontRef;

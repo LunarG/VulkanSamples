@@ -1086,8 +1086,8 @@ static void demo_prepare_dynamic_states(struct demo *demo)
 
     memset(&depth_stencil, 0, sizeof(depth_stencil));
     depth_stencil.sType = VK_STRUCTURE_TYPE_DYNAMIC_DS_STATE_CREATE_INFO;
-    depth_stencil.minDepth = 0.0f;
-    depth_stencil.maxDepth = 1.0f;
+    depth_stencil.minDepthBounds = 0.0f;
+    depth_stencil.maxDepthBounds = 1.0f;
     depth_stencil.stencilBackRef = 0;
     depth_stencil.stencilFrontRef = 0;
     depth_stencil.stencilReadMask = 0xff;

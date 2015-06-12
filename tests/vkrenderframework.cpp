@@ -227,8 +227,8 @@ void VkRenderFramework::InitState()
 
     VkDynamicDsStateCreateInfo depthStencil = {};
     depthStencil.sType = VK_STRUCTURE_TYPE_DYNAMIC_DS_STATE_CREATE_INFO;
-    depthStencil.minDepth = 0.f;
-    depthStencil.maxDepth = 1.f;
+    depthStencil.minDepthBounds = 0.f;
+    depthStencil.maxDepthBounds = 1.f;
     depthStencil.stencilFrontRef = 0;
     depthStencil.stencilBackRef = 0;
     depthStencil.stencilReadMask = 0xff;
