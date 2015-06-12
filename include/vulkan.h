@@ -33,7 +33,7 @@
 #include "vk_platform.h"
 
 // Vulkan API version supported by this file
-#define VK_API_VERSION VK_MAKE_VERSION(0, 100, 0)
+#define VK_API_VERSION VK_MAKE_VERSION(0, 101, 0)
 
 #ifdef __cplusplus
 extern "C"
@@ -1768,7 +1768,6 @@ typedef struct VkPipelineRsStateCreateInfo_
     const void*                                 pNext;      // Pointer to next structure
     bool32_t                                    depthClipEnable;
     bool32_t                                    rasterizerDiscardEnable;
-    bool32_t                                    programPointSize;           // optional (GL45)
     VkCoordinateOrigin                          pointOrigin;                // optional (GL45)
     VkProvokingVertex                           provokingVertex;            // optional (GL45)
     VkFillMode                                  fillMode;                   // optional (GL45)

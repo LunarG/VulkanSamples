@@ -1090,7 +1090,6 @@ VkPipelineObj::VkPipelineObj(VkDeviceObj *device)
     m_rs_state.pNext = &m_ia_state;
     m_rs_state.depthClipEnable = VK_FALSE;
     m_rs_state.rasterizerDiscardEnable = VK_FALSE;
-    m_rs_state.programPointSize = VK_FALSE;
     m_rs_state.pointOrigin = VK_COORDINATE_ORIGIN_UPPER_LEFT;
     m_rs_state.provokingVertex = VK_PROVOKING_VERTEX_LAST;
     m_rs_state.fillMode = VK_FILL_MODE_SOLID;

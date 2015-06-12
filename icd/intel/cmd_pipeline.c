@@ -533,16 +533,6 @@ static void gen7_fill_3DSTATE_SF_body(const struct intel_cmd *cmd,
           pipeline->provoking_vertex_trifan << GEN7_SF_DW3_TRIFAN_PROVOKE__SHIFT |
           GEN7_SF_DW3_SUBPIXEL_8BITS;
 
-    if (pipeline->use_rs_point_size) {
-        int point_width;
-
-        /* in U8.3 */
-        point_width = (int) (1.0 * 8.0f + 0.5f);
-        point_width = U_CLAMP(point_width, 1, 2047);
-
-        dw3 |= GEN7_SF_DW3_USE_POINT_WIDTH | point_width;
-    }
-
     body[0] = dw1;
     body[1] = dw2;
     body[2] = dw3;

@@ -209,7 +209,6 @@ struct intel_pipeline {
     // VkPipelineRsStateCreateInfo rs_state;
     bool depthClipEnable;
     bool rasterizerDiscardEnable;
-    bool use_rs_point_size;
 
     VkPipelineTessStateCreateInfo tess_state;
 
