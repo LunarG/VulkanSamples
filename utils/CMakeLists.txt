@@ -1,0 +1,3 @@
+file(GLOB UTILS_SOURCE *.cpp)
+
+add_library(${UTILS_NAME} STATIC ${UTILS_SOURCE})
