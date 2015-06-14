@@ -76,16 +76,15 @@ template layer_data *get_my_data_ptr<layer_data>(
 
 debug_report_data *mdd(VkObject object)
 {
-//    VkLayerDispatchTable *pTable = get_dispatch_table(mem_tracker_device_table_map, object);
-//    layer_data *my_data = get_my_data_ptr(pTable, layer_data_map);
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(object), layer_data_map);
+    assert(my_data->report_data != NULL);
     return my_data->report_data;
 }
 
 debug_report_data *mid(VkInstance object)
 {
-//    VkLayerInstanceDispatchTable *pTable = get_dispatch_table(mem_tracker_instance_table_map, object);
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(object), layer_data_map);
+    assert(my_data->report_data != NULL);
     return my_data->report_data;
 }
 
@@ -249,6 +248,7 @@ static MT_MEM_OBJ_INFO* get_mem_obj_info(
 {
     unordered_map<VkDeviceMemory, MT_MEM_OBJ_INFO>::iterator item = memObjMap.find(mem);
     if (item != memObjMap.end()) {
+        assert((*item).second.object != VK_NULL_HANDLE);
         return &(*item).second;
     } else {
         return NULL;
@@ -500,6 +500,7 @@ static bool32_t freeMemObjInfo(
             // Clear any CB bindings for completed CBs
             //   TODO : Is there a better place to do this?
 
+            assert(pInfo->object != VK_NULL_HANDLE);
             list<VkCmdBuffer>::iterator it = pInfo->pCmdBufferBindings.begin();
             list<VkCmdBuffer>::iterator temp;
             while (pInfo->pCmdBufferBindings.size() > 0 && it != pInfo->pCmdBufferBindings.end()) {
@@ -918,7 +919,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkDestroyDevice(
     dispatch_key key = get_dispatch_key(device);
     VkResult result = get_dispatch_table(mem_tracker_device_table_map, device)->DestroyDevice(device);
     mem_tracker_device_table_map.erase(key);
-    assert(mem_tracker_instance_table_map.size() == 0 && "Should not have any instance mappings hanging around");
+    assert(mem_tracker_device_table_map.size() == 0 && "Should not have any instance mappings hanging around");
     return result;
 }
 
