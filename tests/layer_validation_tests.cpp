@@ -605,7 +605,7 @@ TEST_F(VkLayerTest, FreeBoundMemory)
     ASSERT_VK_SUCCESS(err);
 
     msgFlags = m_errorMonitor->GetState(&msgString);
-    ASSERT_TRUE(msgFlags & VK_DBG_REPORT_WARN_BIT) << "Did not receive an warning while tring to free bound memory";
+    ASSERT_TRUE(msgFlags & VK_DBG_REPORT_ERROR_BIT) << "Did not receive an warning while tring to free bound memory";
     if (!strstr(msgString.c_str(),"Freeing memory object while it still has references")) {
         FAIL() << "Warning received did not match expected message from freeMemObjInfo  in MemTracker";
     }
