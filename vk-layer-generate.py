@@ -564,17 +564,17 @@ class GenericLayerSubcommand(Subcommand):
         elif proto.name == "DestroyDevice":
             funcs.append('%s%s\n'
                          '{\n'
-                         '    VkLayerDispatchTable *pDisp = *(VkLayerDispatchTable **) device;\n'
+                         '    dispatch_key key = get_dispatch_key(device);\n'
                          '    VkResult res = device_dispatch_table(device)->DestroyDevice(device);\n'
-                         '    tableMap.erase(pDisp);\n'
+                         '    destroy_device_dispatch_table(key);\n'
                          '    return res;\n'
                          '}\n' % (qual, decl))
         elif proto.name == "DestroyInstance":
             funcs.append('%s%s\n'
                          '{\n'
-                         '    VkLayerInstanceDispatchTable *pDisp = *(VkLayerInstanceDispatchTable **) instance;\n'
+                         '    dispatch_key key = get_dispatch_key(instance);\n'
                          '    VkResult res = instance_dispatch_table(instance)->DestroyInstance(instance);\n'
-                         '    tableInstanceMap.erase(pDisp);\n'
+                         '    destroy_instance_dispatch_table(key);\n'
                          '    return res;\n'
                          '}\n' % (qual, decl))
         else:
@@ -881,9 +881,9 @@ class APIDumpSubcommand(Subcommand):
             funcs.append('%s%s\n'
                  '{\n'
                  '    using namespace StreamControl;\n'
-                 '    VkLayerDispatchTable *pDisp = *(VkLayerDispatchTable **) device;\n'
+                 '    dispatch_key key = get_dispatch_key(device);\n'
                  '    %s%s_dispatch_table(%s)->%s;\n'
-                 '    tableMap.erase(pDisp);\n'
+                 '    destroy_device_dispatch_table(key);\n'
                  '    %s%s%s\n'
                  '%s'
                  '}' % (qual, decl, ret_val, table_type, dispatch_param, proto.c_call(), f_open, log_func, f_close, stmt))
@@ -891,9 +891,9 @@ class APIDumpSubcommand(Subcommand):
             funcs.append('%s%s\n'
                  '{\n'
                  '    using namespace StreamControl;\n'
-                 '    VkLayerInstanceDispatchTable *pDisp = *(VkLayerInstanceDispatchTable **) instance;\n'
+                 '    dispatch_key key = get_dispatch_key(instance);\n'
                  '    %s%s_dispatch_table(%s)->%s;\n'
-                 '    tableInstanceMap.erase(pDisp);\n'
+                 '    destroy_instance_dispatch_table(key);\n'
                  '    %s%s%s\n'
                  '%s'
                  '}' % (qual, decl, ret_val, table_type, dispatch_param, proto.c_call(), f_open, log_func, f_close, stmt))
@@ -1255,7 +1255,7 @@ class ObjectTrackerSubcommand(Subcommand):
             destroy_line += '    destroy_obj(%s);\n' % (proto.params[2].name)
             destroy_line += '    loader_platform_thread_unlock_mutex(&objLock);\n'
         elif 'DestroyDevice' in proto.name:
-            using_line   =  '    VkLayerDispatchTable *pDisp =  *(VkLayerDispatchTable **) device;\n'
+            using_line   =  '    dispatch_key key =  get_dispatch_key(device);\n'
             destroy_line =  '    loader_platform_thread_lock_mutex(&objLock);\n'
             destroy_line += '    destroy_obj(device);\n'
             destroy_line += '    // Report any remaining objects\n'
@@ -1272,8 +1272,9 @@ class ObjectTrackerSubcommand(Subcommand):
             destroy_line += '    // Clean up Queue\'s MemRef Linked Lists\n'
             destroy_line += '    destroyQueueMemRefLists();\n'
             destroy_line += '    loader_platform_thread_unlock_mutex(&objLock);\n'
+            destroy_line += '    destroy_device_dispatch_table(key);\n'
         elif 'DestroyInstance' in proto.name:
-            using_line   =  '    VkLayerInstanceDispatchTable *pDisp = *(VkLayerInstanceDispatchTable **) instance;\n'
+            using_line   =  '    dispatch_key key = get_dispatch_key(instance);\n'
             destroy_line =  '    loader_platform_thread_lock_mutex(&objLock);\n'
             destroy_line += '    destroy_obj(%s);\n' % (param0_name)
             destroy_line += '    // Report any remaining objects in LL\n'
@@ -1287,6 +1288,7 @@ class ObjectTrackerSubcommand(Subcommand):
             destroy_line += '        }\n'
             destroy_line += '    }\n'
             destroy_line += '    loader_platform_thread_unlock_mutex(&objLock);\n'
+            destroy_line += '    destroy_instance_dispatch_table(key);\n'
         elif 'Free' in proto.name:
             destroy_line  = '    loader_platform_thread_lock_mutex(&objLock);\n'
             destroy_line += '    destroy_obj(%s);\n' % (proto.params[1].name)
@@ -1496,18 +1498,18 @@ class ThreadingSubcommand(Subcommand):
         if proto.name == "DestroyDevice":
             funcs.append('%s%s\n'
                          '{\n'
-                         '    VkLayerDispatchTable *pDisp = *(VkLayerDispatchTable **) device;\n'
+                         '    dispatch_key key = get_dispatch_key(device);\n'
                          '    %s%s_dispatch_table(%s)->%s;\n'
-                         '    tableMap.erase(pDisp);\n'
+                         '    destroy_device_dispatch_table(key);\n'
                          '    return result;\n'
                          '}\n' % (qual, decl, ret_val, table, proto.params[0].name, proto.c_call()))
             return "\n".join(funcs);
         elif proto.name == "DestroyInstance":
             funcs.append('%s%s\n'
                          '{\n'
-                         '    VkLayerInstanceDispatchTable *pDisp = *(VkLayerInstanceDispatchTable **) instance;\n'
+                         '    dispatch_key key = get_dispatch_key(instance);\n'
                          '    %s%s_dispatch_table(%s)->%s;\n'
-                         '    tableInstanceMap.erase(pDisp);\n'
+                         '    destroy_instance_dispatch_table(key);\n'
                          '    return result;\n'
                          '}\n' % (qual, decl, ret_val, table, proto.params[0].name, proto.c_call()))
             return "\n".join(funcs);

@@ -118,18 +118,18 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateDevice(VkPhysicalDevice gpu, const VkDevi
 /* hook DestroyDevice to remove tableMap entry */
 VK_LAYER_EXPORT VkResult VKAPI vkDestroyDevice(VkDevice device)
 {
-    VkLayerDispatchTable *pDisp =  *(VkLayerDispatchTable **) device;
+    dispatch_key key = get_dispatch_key(device);
     VkResult res = device_dispatch_table(device)->DestroyDevice(device);
-    tableMap.erase(pDisp);
+    destroy_device_dispatch_table(key);
     return res;
 }
 
 /* hook DestroyInstance to remove tableInstanceMap entry */
 VK_LAYER_EXPORT VkResult VKAPI vkDestroyInstance(VkInstance instance)
 {
-    VkLayerInstanceDispatchTable *pDisp = *(VkLayerInstanceDispatchTable **) instance;
+    dispatch_key key = get_dispatch_key(instance);
     VkResult res = instance_dispatch_table(instance)->DestroyInstance(instance);
-    tableInstanceMap.erase(pDisp);
+    destroy_instance_dispatch_table(key);
     return res;
 }
 

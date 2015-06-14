@@ -146,9 +146,9 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateInstance(const VkInstanceCreateInfo* pCre
 
 VK_LAYER_EXPORT VkResult VKAPI vkDestroyInstance(VkInstance instance)
 {
-    VkLayerInstanceDispatchTable *pDisp = *(VkLayerInstanceDispatchTable **) instance;
+    dispatch_key key = get_dispatch_key(instance);
     VkResult res = instance_dispatch_table(instance)->DestroyInstance(instance);
-    tableInstanceMap.erase(pDisp);
+    destroy_instance_dispatch_table(key);
     return res;
 }
 
@@ -267,8 +267,9 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateDevice(VkPhysicalDevice gpu, const VkDevi
 VK_LAYER_EXPORT VkResult VKAPI vkDestroyDevice(VkDevice device)
 {
     VkLayerDispatchTable *pDisp  =  *(VkLayerDispatchTable **) device;
+    dispatch_key key = get_dispatch_key(device);
     VkResult result = device_dispatch_table(device)->DestroyDevice(device);
-    tableMap.erase(pDisp);
+    destroy_device_dispatch_table(key);
     tableDebugMarkerMap.erase(pDisp);
     deviceExtMap.erase(pDisp);
     return result;
@@ -1878,8 +1879,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkDbgDestroyMsgCallback(
         VkInstance instance,
         VkDbgMsgCallback msgCallback)
 {
-    VkLayerInstanceDispatchTable *pDisp = *(VkLayerInstanceDispatchTable **) instance;
-    VkLayerInstanceDispatchTable *pTable = tableInstanceMap[pDisp];
+    VkLayerInstanceDispatchTable *pTable = instance_dispatch_table(instance);
     return layer_destroy_msg_callback(instance, pTable, msgCallback);
 }
 
