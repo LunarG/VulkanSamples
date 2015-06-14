@@ -48,6 +48,7 @@ using namespace std;
 typedef struct _layer_data {
     debug_report_data *report_data;
     // TODO: put instance data here
+    VkDbgMsgCallback logging_callback;
 } layer_data;
 
 static std::unordered_map<void *, layer_data *> layer_data_map;
@@ -787,24 +788,28 @@ static void printCBList(
     }
 }
 
-static void initMemTracker(
-    void)
+static void init_mem_tracker(
+    layer_data *my_data)
 {
-    const char *strOpt;
-#if 0
+    uint32_t report_flags = 0;
+    uint32_t debug_action = 0;
+    FILE *log_output = NULL;
+    const char *option_str;
     // initialize MemTracker options
-    getLayerOptionEnum("MemTrackerReportLevel", (uint32_t *) &g_reportFlags);
-    g_actionIsDefault = getLayerOptionEnum("MemTrackerDebugAction", (uint32_t *) &g_debugAction);
+    report_flags = getLayerOptionFlags("MemTrackerReportFlags", 0);
+    getLayerOptionEnum("MemTrackerDebugAction", (uint32_t *) &debug_action);
 
-    if (g_debugAction & VK_DBG_LAYER_ACTION_LOG_MSG)
+    if (debug_action & VK_DBG_LAYER_ACTION_LOG_MSG)
     {
-        strOpt = getLayerOption("MemTrackerLogFilename");
-        if (strOpt) {
-            g_logFile = fopen(strOpt, "w");
+        option_str = getLayerOption("MemTrackerLogFilename");
+        if (option_str) {
+            log_output = fopen(option_str, "w");
         }
-        if (g_logFile == NULL) {
-            g_logFile = stdout;
+        if (log_output == NULL) {
+            log_output = stdout;
         }
+
+        layer_create_msg_callback(my_data->report_data, report_flags, log_callback, (void *) log_output, &my_data->logging_callback);
     }
 
     if (!globalLockInitialized)
@@ -817,7 +822,6 @@ static void initMemTracker(
         loader_platform_thread_create_mutex(&globalLock);
         globalLockInitialized = 1;
     }
-#endif
 }
 
 // hook DestroyInstance to remove tableInstanceMap entry
@@ -826,6 +830,13 @@ VK_LAYER_EXPORT VkResult VKAPI vkDestroyInstance(VkInstance instance)
     dispatch_key key = get_dispatch_key(instance);
     VkLayerInstanceDispatchTable *pTable = get_dispatch_table(mem_tracker_instance_table_map, instance);
     VkResult res = pTable->DestroyInstance(instance);
+
+    // Clean up logging callback, if any
+    layer_data *my_data = get_my_data_ptr(get_dispatch_key(instance), layer_data_map);
+    if (my_data->logging_callback) {
+        layer_destroy_msg_callback(my_data->report_data, my_data->logging_callback);
+    }
+
     layer_debug_report_destroy_instance(mid(instance));
     layer_data_map.erase(pTable);
 
@@ -838,8 +849,6 @@ VkResult VKAPI vkCreateInstance(
     const VkInstanceCreateInfo*                 pCreateInfo,
     VkInstance*                                 pInstance)
 {
-    loader_platform_thread_once(&g_initOnce, initMemTracker);
-
     VkLayerInstanceDispatchTable *pTable = get_dispatch_table(mem_tracker_instance_table_map, *pInstance);
     VkResult result = pTable->CreateInstance(pCreateInfo, pInstance);
 
@@ -850,6 +859,8 @@ VkResult VKAPI vkCreateInstance(
                                    *pInstance,
                                    pCreateInfo->extensionCount,
                                    pCreateInfo->pEnabledExtensions);
+
+        init_mem_tracker(my_data);
     }
     return result;
 }
@@ -2184,8 +2195,6 @@ VK_LAYER_EXPORT void* VKAPI vkGetDeviceProcAddr(
         return NULL;
     }
 
-    loader_platform_thread_once(&g_initOnce, initMemTracker);
-
     /* loader uses this to force layer initialization; device object is wrapped */
     if (!strcmp(funcName, "vkGetDeviceProcAddr")) {
         initDeviceTable(mem_tracker_device_table_map, (const VkBaseLayerObject *) dev);
@@ -2339,8 +2348,6 @@ VK_LAYER_EXPORT void* VKAPI vkGetInstanceProcAddr(
     if (instance == NULL) {
         return NULL;
     }
-
-    loader_platform_thread_once(&g_initOnce, initMemTracker);
 
     /* loader uses this to force layer initialization; instance object is wrapped */
     if (!strcmp(funcName, "vkGetInstanceProcAddr")) {
