@@ -78,6 +78,9 @@ debug_report_data *mdd(VkObject object)
 {
     dispatch_key key = get_dispatch_key(object);
     layer_data *my_data = get_my_data_ptr(key, layer_data_map);
+#if DISPATCH_MAP_DEBUG
+    fprintf(stderr, "MDD: map: %p, object: %p, key: %p, data: %p\n", &layer_data_map, object, key, my_data);
+#endif
     assert(my_data->report_data != NULL);
     return my_data->report_data;
 }
@@ -86,6 +89,9 @@ debug_report_data *mid(VkInstance object)
 {
     dispatch_key key = get_dispatch_key(object);
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(object), layer_data_map);
+#if DISPATCH_MAP_DEBUG
+    fprintf(stderr, "MID: map: %p, object: %p, key: %p, data: %p\n", &layer_data_map, object, key, my_data);
+#endif
     assert(my_data->report_data != NULL);
     return my_data->report_data;
 }
@@ -922,6 +928,9 @@ VK_LAYER_EXPORT VkResult VKAPI vkDestroyDevice(
     loader_platform_thread_unlock_mutex(&globalLock);
 
     dispatch_key key = get_dispatch_key(device);
+#if DISPATCH_MAP_DEBUG
+    fprintf(stderr, "Device: %p, key: %p\n", device, key);
+#endif
     VkResult result = get_dispatch_table(mem_tracker_device_table_map, device)->DestroyDevice(device);
     mem_tracker_device_table_map.erase(key);
     assert(mem_tracker_device_table_map.size() == 0 && "Should not have any instance mappings hanging around");
