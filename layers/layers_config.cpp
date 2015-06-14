@@ -78,6 +78,8 @@ static VkFlags stringToDbgReportFlags(const char *_enum)
         return VK_DBG_REPORT_PERF_WARN_BIT;
     else if (!strcmp(_enum, "VK_DBG_REPORT_ERROR"))
         return VK_DBG_REPORT_ERROR_BIT;
+    else if (!strcmp(_enum, "VK_DBG_REPORT_DEBUG"))
+        return VK_DBG_REPORT_DEBUG_BIT;
     return (VkFlags) 0;
 }
 
@@ -95,6 +97,43 @@ static unsigned int convertStringEnumVal(const char *_enum)
 const char *getLayerOption(const char *_option)
 {
     return g_configFileObj.getOption(_option);
+}
+
+uint32_t getLayerOptionFlags(const char *_option, uint32_t optionDefault)
+{
+    uint32_t flags = optionDefault;
+    const char *option = (g_configFileObj.getOption(_option));
+
+    /* parse comma-separated options */
+    while (option) {
+        const char *p = strchr(option, ',');
+        size_t len;
+
+        if (p)
+            len = p - option;
+        else
+            len = strlen(option);
+
+        if (len > 0) {
+            if (strncmp(option, "warn", len) == 0) {
+                flags |= VK_DBG_REPORT_WARN_BIT;
+            } else if (strncmp(option, "info", len) == 0) {
+                flags |= VK_DBG_REPORT_INFO_BIT;
+            } else if (strncmp(option, "perf", len) == 0) {
+                flags |= VK_DBG_REPORT_PERF_WARN_BIT;
+            } else if (strncmp(option, "error", len) == 0) {
+                flags |= VK_DBG_REPORT_ERROR_BIT;
+            } else if (strncmp(option, "debug", len) == 0) {
+                flags |= VK_DBG_REPORT_DEBUG_BIT;
+            }
+        }
+
+        if (!p)
+            break;
+
+        option = p + 1;
+    }
+    return flags;
 }
 
 bool getLayerOptionEnum(const char *_option, uint32_t *optionDefault)
