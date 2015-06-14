@@ -1012,7 +1012,7 @@ static loader_platform_dl_handle loader_add_layer_lib(
         if (strcmp(loader.loaded_layer_lib_list[i].lib_name, ext_prop->lib_name) == 0) {
             /* Have already loaded this library, just increment ref count */
             loader.loaded_layer_lib_list[i].ref_count++;
-            loader_log(VK_DBG_REPORT_INFO_BIT, 0,
+            loader_log(VK_DBG_REPORT_DEBUG_BIT, 0,
                        "%s Chain: Increment layer reference count for layer library %s",
                        chain_type, ext_prop->lib_name);
             return loader.loaded_layer_lib_list[i].lib_handle;
@@ -1039,7 +1039,7 @@ static loader_platform_dl_handle loader_add_layer_lib(
                    loader_platform_open_library_error(my_lib->lib_name));
         return NULL;
     } else {
-        loader_log(VK_DBG_REPORT_INFO_BIT, 0,
+        loader_log(VK_DBG_REPORT_DEBUG_BIT, 0,
                    "Chain: %s: Loading layer library %s",
                    chain_type, ext_prop->lib_name);
     }
@@ -1074,13 +1074,13 @@ static void loader_remove_layer_lib(
     my_lib->ref_count--;
     inst->layer_count--;
     if (my_lib->ref_count > 0) {
-        loader_log(VK_DBG_REPORT_INFO_BIT, 0,
+        loader_log(VK_DBG_REPORT_DEBUG_BIT, 0,
                    "Decrement reference count for layer library %s", ext_prop->lib_name);
         return;
     }
 
     loader_platform_close_library(my_lib->lib_handle);
-    loader_log(VK_DBG_REPORT_INFO_BIT, 0,
+    loader_log(VK_DBG_REPORT_DEBUG_BIT, 0,
                "Unloading layer library %s", ext_prop->lib_name);
 
     /* Need to remove unused library from list */
