@@ -260,10 +260,7 @@ static void add_mem_obj_info(
     const VkDeviceMemory     mem,
     const VkMemoryAllocInfo *pAllocInfo)
 {
-    MT_MEM_OBJ_INFO* pInfo = new MT_MEM_OBJ_INFO;
-    pInfo->refCount        = 0;
-    pInfo->object          = object;
-    memset(&pInfo->allocInfo, 0, sizeof(VkMemoryAllocInfo));
+    assert(object != NULL);
 
     if (pAllocInfo) {  // MEM alloc created by vkCreateSwapChainWSI() doesn't have alloc info struct
         memcpy(&memObjMap[mem].allocInfo, pAllocInfo, sizeof(VkMemoryAllocInfo));
@@ -272,6 +269,8 @@ static void add_mem_obj_info(
     } else {
         memset(&memObjMap[mem].allocInfo, 0, sizeof(VkMemoryAllocInfo));
     }
+    memObjMap[mem].object = object;
+    memObjMap[mem].refCount = 0;
     memObjMap[mem].mem = mem;
 }
 
