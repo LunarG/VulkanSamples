@@ -568,8 +568,11 @@ static bool32_t clear_object_binding(
 //  IF a previous binding existed, output validation error
 //  Otherwise, add reference from objectInfo to memoryInfo
 //  Add reference off of objInfo
+//  device is required for error logging, need a dispatchable
+//  object for that.
 // Return VK_TRUE if addition is successful, VK_FALSE otherwise
 static bool32_t set_object_binding(
+    VkObject       dispatch_object,
     VkObject       object,
     VkDeviceMemory mem)
 {
@@ -578,27 +581,27 @@ static bool32_t set_object_binding(
     if (mem == VK_NULL_HANDLE) {
         char str[1024];
         sprintf(str, "Attempting to Bind Obj(%p) to NULL", (void*)object);
-        device_log_msg(mdd(object), VK_DBG_REPORT_WARN_BIT, (VkObjectType) 0, object, 0, MEMTRACK_INTERNAL_ERROR, "MEM", str);
+        device_log_msg(mdd(dispatch_object), VK_DBG_REPORT_WARN_BIT, (VkObjectType) 0, object, 0, MEMTRACK_INTERNAL_ERROR, "MEM", str);
         return VK_TRUE;
     } else {
         char str[1024];
         MT_OBJ_INFO* pObjInfo = get_object_info(object);
         if (!pObjInfo) {
             sprintf(str, "Attempting to update Binding of Obj(%p) that's not in global list()", (void*)object);
-            device_log_msg(mdd(object), VK_DBG_REPORT_ERROR_BIT, (VkObjectType) 0, object, 0, MEMTRACK_INTERNAL_ERROR, "MEM", str);
+            device_log_msg(mdd(dispatch_object), VK_DBG_REPORT_ERROR_BIT, (VkObjectType) 0, object, 0, MEMTRACK_INTERNAL_ERROR, "MEM", str);
             return VK_FALSE;
         }
         // non-null case so should have real mem obj
         MT_MEM_OBJ_INFO* pInfo = get_mem_obj_info(mem);
         if (!pInfo) {
             sprintf(str, "While trying to bind mem for obj %p, couldn't find info for mem obj %p", (void*)object, (void*)mem);
-            device_log_msg(mdd(object), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DEVICE_MEMORY, mem, 0, MEMTRACK_INVALID_MEM_OBJ, "MEM", str);
+            device_log_msg(mdd(dispatch_object), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DEVICE_MEMORY, mem, 0, MEMTRACK_INVALID_MEM_OBJ, "MEM", str);
             return VK_FALSE;
         } else {
             if (pObjInfo->pMemObjInfo != NULL) {
                 sprintf(str, "Attempting to bind memory (%p) to object (%p) which has already been bound to mem object %p",
                     (void*)mem, (void*)object, (void*)pObjInfo->pMemObjInfo->mem);
-                device_log_msg(mdd(object), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DEVICE_MEMORY, mem, 0, MEMTRACK_REBIND_OBJECT, "MEM", str);
+                device_log_msg(mdd(dispatch_object), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DEVICE_MEMORY, mem, 0, MEMTRACK_REBIND_OBJECT, "MEM", str);
                 return VK_FALSE;
             }
             else {
@@ -1253,7 +1256,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkBindObjectMemory(
     VkResult result = get_dispatch_table(mem_tracker_device_table_map, device)->BindObjectMemory(device, objType, object, mem, offset);
     loader_platform_thread_lock_mutex(&globalLock);
     // Track objects tied to memory
-    set_object_binding(object, mem);
+    set_object_binding(device, object, mem);
     print_object_list(device);
     print_mem_list(device);
     loader_platform_thread_unlock_mutex(&globalLock);
@@ -2192,7 +2195,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkGetSwapChainInfoWSI(
                     // Add image object, then insert the new Mem Object and then bind it to created image
                     add_object_info(it->image, VK_STRUCTURE_TYPE_MAX_ENUM, &pInfo->createInfo, sizeof(pInfo->createInfo), "persistent_image");
                     add_mem_obj_info(swapChain, it->memory, NULL);
-                    if (VK_FALSE == set_object_binding(it->image, it->memory)) {
+                    if (VK_FALSE == set_object_binding(swapChain, it->image, it->memory)) {
                         char str[1024];
                         sprintf(str, "In vkGetSwapChainInfoWSI(), unable to set image %p binding to mem obj %p", (void*)it->image, (void*)it->memory);
                         device_log_msg(mdd(swapChain), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_IMAGE, it->image, 0, MEMTRACK_MEMORY_BINDING_ERROR, "MEM", str);
