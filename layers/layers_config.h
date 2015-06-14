@@ -34,6 +34,7 @@ bool getLayerOptionEnum(const char *_option, uint32_t *optionDefault);
 
 void setLayerOption(const char *_option, const char *_val);
 void setLayerOptionEnum(const char *_option, const char *_valEnum);
+void print_msg_flags(VkFlags msgFlags, char *msg_flags);
 #ifdef __cplusplus
 }
 #endif
