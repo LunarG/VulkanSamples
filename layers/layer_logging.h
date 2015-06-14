@@ -125,12 +125,14 @@ static inline debug_report_data *layer_debug_report_create_device(
         debug_report_data              *instance_debug_data,
         VkDevice                        device)
 {
-    /* DEBUG_REPORT shared data between Instance and Device */
+    /* DEBUG_REPORT shares data between Instance and Device,
+     * so just return instance's data pointer */
     return instance_debug_data;
 }
 
 static inline void layer_debug_report_destroy_device(VkDevice device)
 {
+    /* Nothing to do since we're using instance data record */
 }
 
 static inline VkResult layer_create_msg_callback(
@@ -239,5 +241,21 @@ static inline void log_msg(
                          pLayerPrefix, str);
 }
 
-#endif // LAYER_LOGGING_H
+static inline void VKAPI log_callback(
+    VkFlags                             msgFlags,
+    VkObjectType                        objType,
+    VkObject                            srcObject,
+    size_t                              location,
+    int32_t                             msgCode,
+    const char*                         pLayerPrefix,
+    const char*                         pMsg,
+    void*                               pUserData)
+{
+    char msg_flags[30];
 
+    print_msg_flags(msgFlags, msg_flags);
+
+    fprintf((FILE *) pUserData, "%s(%s): object: 0x%p type: %d location: %zu msgCode: %d: %s",
+             pLayerPrefix, msg_flags, srcObject, objType, location, msgCode, pMsg);
+}
+#endif // LAYER_LOGGING_H
