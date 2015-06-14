@@ -58,8 +58,6 @@ static VkLayerDbgAction stringToDbgAction(const char *_enum)
     // only handles single enum values
     if (!strcmp(_enum, "VK_DBG_LAYER_ACTION_IGNORE"))
         return VK_DBG_LAYER_ACTION_IGNORE;
-    else if (!strcmp(_enum, "VK_DBG_LAYER_ACTION_CALLBACK"))
-        return VK_DBG_LAYER_ACTION_CALLBACK;
     else if (!strcmp(_enum, "VK_DBG_LAYER_ACTION_LOG_MSG"))
         return VK_DBG_LAYER_ACTION_LOG_MSG;
     else if (!strcmp(_enum, "VK_DBG_LAYER_ACTION_BREAK"))
