@@ -3978,6 +3978,30 @@ TEST_F(VkRenderTest, GSTriStrip)
     RecordImages(m_renderTargets);
 }
 
+TEST_F(VkRenderTest, RenderPassLoadOpClear)
+{
+    ASSERT_NO_FATAL_FAILURE(InitState());
+    ASSERT_NO_FATAL_FAILURE(InitViewport());
+
+    /* clear via load op to full green */
+    m_clear_via_load_op = true;
+    m_clear_color.useRawValue = false;
+    m_clear_color.color.floatColor[0] = 0;
+    m_clear_color.color.floatColor[1] = 1;
+    m_clear_color.color.floatColor[2] = 0;
+    m_clear_color.color.floatColor[3] = 0;
+    ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
+
+    VkCommandBufferObj cmdBuffer(m_device);
+    cmdBuffer.AddRenderTarget(m_renderTargets[0]);
+    ASSERT_VK_SUCCESS(BeginCommandBuffer(cmdBuffer));
+    /* This command buffer contains ONLY the load op! */
+    EndCommandBuffer(cmdBuffer);
+    cmdBuffer.QueueCommandBuffer();
+
+    RecordImages(m_renderTargets);
+}
+
 int main(int argc, char **argv) {
     int result;
 

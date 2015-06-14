@@ -41,6 +41,7 @@ VkRenderFramework::VkRenderFramework() :
     m_height( 256.0 ),                  // default window height
     m_render_target_fmt( VK_FORMAT_R8G8B8A8_UNORM ),
     m_depth_stencil_fmt( VK_FORMAT_UNDEFINED ),
+    m_clear_via_load_op( false ),
     m_depth_clear_color( 1.0 ),
     m_stencil_clear_color( 0 )
 {
@@ -245,7 +246,7 @@ void VkRenderFramework::InitRenderTarget(uint32_t targets, VkDepthStencilBindInf
         m_renderTargets.push_back(img);
         m_colorBindings[i].view  = img->targetView();
         m_colorBindings[i].layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-        load_ops.push_back(VK_ATTACHMENT_LOAD_OP_LOAD);
+        load_ops.push_back(m_clear_via_load_op ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_LOAD);
         store_ops.push_back(VK_ATTACHMENT_STORE_OP_STORE);
         clear_colors.push_back(m_clear_color);
     }

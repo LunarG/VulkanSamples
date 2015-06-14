@@ -118,6 +118,7 @@ protected:
     VkFormat                            m_depth_stencil_fmt;
     VkColorAttachmentBindInfo           m_colorBindings[8];
     VkClearColor                        m_clear_color;
+    bool                                m_clear_via_load_op;
     float                               m_depth_clear_color;
     uint32_t                            m_stencil_clear_color;
     VkDepthStencilObj                  *m_depthStencil;
