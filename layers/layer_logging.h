@@ -29,6 +29,7 @@
 #define LAYER_LOGGING_H
 
 #include <stdio.h>
+#include <stdarg.h>
 #include <stdbool.h>
 #include <unordered_map>
 #include "vkLayer.h"
@@ -37,6 +38,7 @@
 
 typedef struct _debug_report_data {
     VkLayerDbgFunctionNode *g_pDbgFunctionHead;
+    VkFlags active_flags;
     bool g_DEBUG_REPORT;
 } debug_report_data;
 
@@ -120,10 +122,11 @@ static inline void layer_debug_report_destroy_instance(debug_report_data *debug_
 }
 
 static inline debug_report_data *layer_debug_report_create_device(
-        debug_report_data              *debug_data,
+        debug_report_data              *instance_debug_data,
         VkDevice                        device)
 {
-    return debug_data;
+    /* DEBUG_REPORT shared data between Instance and Device */
+    return instance_debug_data;
 }
 
 static inline void layer_debug_report_destroy_device(VkDevice device)
@@ -148,6 +151,7 @@ static inline VkResult layer_create_msg_callback(
     pNewDbgFuncNode->pNext = debug_data->g_pDbgFunctionHead;
 
     debug_data->g_pDbgFunctionHead = pNewDbgFuncNode;
+    debug_data->active_flags |= msgFlags;
 
     debug_report_log_msg(
                 debug_data, VK_DBG_REPORT_DEBUG_BIT,
@@ -165,6 +169,7 @@ static void layer_destroy_msg_callback(
     VkLayerDbgFunctionNode *pTrav = debug_data->g_pDbgFunctionHead;
     VkLayerDbgFunctionNode *pPrev = pTrav;
 
+    debug_data->active_flags = 0;
     while (pTrav) {
         if (pTrav->msgCallback == msg_callback) {
             pPrev->pNext = pTrav->pNext;
@@ -175,11 +180,11 @@ static void layer_destroy_msg_callback(
             debug_report_log_msg(
                         debug_data, VK_DBG_REPORT_DEBUG_BIT,
                         VK_OBJECT_TYPE_MSG_CALLBACK, pTrav->msgCallback,
-                        0, DEBUG_REPORT_CALLBACK_REF,
+                        0, DEBUG_REPORT_NONE,
                         "DebugReport",
                         "Destroyed callback");
-            break;
         }
+        debug_data->active_flags |= pTrav->msgFlags;
         pPrev = pTrav;
         pTrav = pTrav->pNext;
     }
@@ -204,10 +209,11 @@ static void* debug_report_get_instance_proc_addr(
 }
 
 /*
- * Devices, Queue, SwapChain and Command buffers all
- * use the same device dispatch table.
+ * Output log message via DEBUG_REPORT
+ * Takes format and variable arg list so that output string
+ * is only computed if a message needs to be logged
  */
-static void device_log_msg(
+static void log_msg(
     debug_report_data          *debug_data,
     VkFlags                     msgFlags,
     VkObjectType                objectType,
@@ -215,26 +221,22 @@ static void device_log_msg(
     size_t                      location,
     int32_t                     msgCode,
     const char*                 pLayerPrefix,
-    const char*                 pMsg)
+    const char*                 format,
+    ...)
 {
-    debug_report_log_msg(debug_data, msgFlags, objectType,
-                         srcObject, location, msgCode,
-                         pLayerPrefix, pMsg);
-}
+    if (!(debug_data->active_flags & msgFlags)) {
+        /* message is not wanted */
+        return;
+    }
 
-static void instance_log_msg(
-    debug_report_data          *debug_data,
-    VkFlags                     msgFlags,
-    VkObjectType                objectType,
-    VkObject                    srcObject,
-    size_t                      location,
-    int32_t                     msgCode,
-    const char*                 pLayerPrefix,
-    const char*                 pMsg)
-{
+    char str[1024];
+    va_list argptr;
+    va_start(argptr, format);
+    vsnprintf(str, 1024, format, argptr);
+    va_end(argptr);
     debug_report_log_msg(debug_data, msgFlags, objectType,
                          srcObject, location, msgCode,
-                         pLayerPrefix, pMsg);
+                         pLayerPrefix, str);
 }
 
 #endif // LAYER_LOGGING_H
