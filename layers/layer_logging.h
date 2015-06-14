@@ -35,29 +35,18 @@
 #include "layer_data.h"
 #include "layers_table.h"
 
-typedef struct debug_report_data {
+typedef struct _debug_report_data {
     VkLayerDbgFunctionNode *g_pDbgFunctionHead;
     bool g_DEBUG_REPORT;
-} data_rec;
+} debug_report_data;
 
-static std::unordered_map<void *, struct debug_report_data *> debug_report_data_map;
-
-template data_rec *get_my_data_ptr<data_rec>(
+template debug_report_data *get_my_data_ptr<debug_report_data>(
         void *data_key,
-        std::unordered_map<void *, struct debug_report_data *> data_map);
-
-static inline void debug_report_init_instance_extension_dispatch_table(
-        VkLayerInstanceDispatchTable *table,
-        PFN_vkGetInstanceProcAddr gpa,
-        VkInstance inst)
-{
-    table->DbgCreateMsgCallback = (PFN_vkDbgCreateMsgCallback) gpa(inst, "vkDbgCreateMsgCallback");
-    table->DbgDestroyMsgCallback = (PFN_vkDbgDestroyMsgCallback) gpa(inst, "vkDbgDestroyMsgCallback");
-}
+        std::unordered_map<void *, debug_report_data *> &data_map);
 
 // Utility function to handle reporting
 static void debug_report_log_msg(
-    struct debug_report_data   *debug_data,
+    debug_report_data          *debug_data,
     VkFlags                     msgFlags,
     VkObjectType                objectType,
     VkObject                    srcObject,
@@ -81,26 +70,33 @@ static void debug_report_log_msg(
     }
 }
 
-static inline void debug_report_create_instance(
-        VkLayerInstanceDispatchTable   *instance_dispatch_ptr,
+static inline debug_report_data *debug_report_create_instance(
+        VkLayerInstanceDispatchTable   *table,
+        VkInstance                      inst,
         uint32_t                        extension_count,
         const VkExtensionProperties*    pEnabledExtensions)    // layer or extension name to be enabled
 {
-    data_rec *debug_data = get_my_data_ptr(instance_dispatch_ptr);
+    debug_report_data              *debug_data;
+    PFN_vkGetInstanceProcAddr gpa = table->GetInstanceProcAddr;
 
+    table->DbgCreateMsgCallback = (PFN_vkDbgCreateMsgCallback) gpa(inst, "vkDbgCreateMsgCallback");
+    table->DbgDestroyMsgCallback = (PFN_vkDbgDestroyMsgCallback) gpa(inst, "vkDbgDestroyMsgCallback");
+
+    debug_data = (debug_report_data *) malloc(sizeof(debug_report_data));
+    if (!debug_data) return NULL;
+
+    memset(debug_data, 0, sizeof(debug_report_data));
     for (uint32_t i = 0; i < extension_count; i++) {
         /* TODO: Check other property fields */
         if (strcmp(pEnabledExtensions[i].name, DEBUG_REPORT_EXTENSION_NAME) == 0) {
             debug_data->g_DEBUG_REPORT = true;
         }
     }
+    return debug_data;
 }
 
-static inline void layer_debug_report_destroy_instance(VkInstance instance)
+static inline void layer_debug_report_destroy_instance(debug_report_data *debug_data)
 {
-    VkLayerInstanceDispatchTable *instance_key = instance_dispatch_table(instance);
-    struct debug_report_data *debug_data =
-            get_debug_data_ptr(instance_dispatch_table(instance));
     VkLayerDbgFunctionNode *pTrav = debug_data->g_pDbgFunctionHead;
     VkLayerDbgFunctionNode *pTravNext;
 
@@ -110,7 +106,7 @@ static inline void layer_debug_report_destroy_instance(VkInstance instance)
 
         debug_report_log_msg(
                     debug_data, VK_DBG_REPORT_WARN_BIT,
-                    VK_OBJECT_TYPE_INSTANCE, instance,
+                    VK_OBJECT_TYPE_MSG_CALLBACK, pTrav->msgCallback,
                     0, DEBUG_REPORT_CALLBACK_REF,
                     "DebugReport",
                     "Debug Report callbacks not removed before DestroyInstance");
@@ -119,38 +115,23 @@ static inline void layer_debug_report_destroy_instance(VkInstance instance)
         pTrav = pTravNext;
     }
     debug_data->g_pDbgFunctionHead = NULL;
-    debug_report_data_map.erase((void *) instance_key);
-    tableInstanceMap.erase((void *) instance);
+
+    free(debug_data);
 }
 
-static inline void layer_debug_report_create_device(
-        VkLayerInstanceDispatchTable   *instance_dispatch_ptr,
+static inline debug_report_data *layer_debug_report_create_device(
+        debug_report_data              *debug_data,
         VkDevice                        device)
 {
-    std::unordered_map<void *, struct debug_report_data *>::const_iterator got;
-
-    got = debug_report_data_map.find((void *) instance_dispatch_ptr);
-
-    if ( got == debug_report_data_map.end() ) {
-        // If we get here something is wrong
-        // We should always be able to find the instance key
-        assert(true);
-    } else {
-        VkLayerDispatchTable *device_key = device_dispatch_table(device);
-        debug_report_data_map[(void *) device_key ] = got->second;
-    }
+    return debug_data;
 }
 
 static inline void layer_debug_report_destroy_device(VkDevice device)
 {
-    VkLayerDispatchTable *device_key = device_dispatch_table(device);
-    debug_report_data_map.erase((void *) device_key);
-    tableMap.erase((void *) device);
 }
 
 static inline VkResult layer_create_msg_callback(
-        VkInstance                      instance,
-        VkLayerInstanceDispatchTable   *nextTable,
+        debug_report_data              *debug_data,
         VkFlags                         msgFlags,
         const PFN_vkDbgMsgCallback      pfnMsgCallback,
         void                           *pUserData,
@@ -160,43 +141,29 @@ static inline VkResult layer_create_msg_callback(
     if (!pNewDbgFuncNode)
         return VK_ERROR_OUT_OF_HOST_MEMORY;
 
-    VkResult result = nextTable->DbgCreateMsgCallback(instance, msgFlags, pfnMsgCallback, pUserData, pMsgCallback);
+    pNewDbgFuncNode->msgCallback = *pMsgCallback;
+    pNewDbgFuncNode->pfnMsgCallback = pfnMsgCallback;
+    pNewDbgFuncNode->msgFlags = msgFlags;
+    pNewDbgFuncNode->pUserData = pUserData;
+    pNewDbgFuncNode->pNext = debug_data->g_pDbgFunctionHead;
 
-    if (result == VK_SUCCESS) {
-        struct debug_report_data *debug_data =
-                get_debug_data_ptr(instance_dispatch_table(instance));
+    debug_data->g_pDbgFunctionHead = pNewDbgFuncNode;
 
-        pNewDbgFuncNode->msgCallback = *pMsgCallback;
-        pNewDbgFuncNode->pfnMsgCallback = pfnMsgCallback;
-        pNewDbgFuncNode->msgFlags = msgFlags;
-        pNewDbgFuncNode->pUserData = pUserData;
-        pNewDbgFuncNode->pNext = debug_data->g_pDbgFunctionHead;
-
-        debug_data->g_pDbgFunctionHead = pNewDbgFuncNode;
-
-        debug_report_log_msg(
-                    debug_data, VK_DBG_REPORT_DEBUG_BIT,
-                    VK_OBJECT_TYPE_INSTANCE, instance,
-                    0, DEBUG_REPORT_CALLBACK_REF,
-                    "DebugReport",
-                    "Added callback");
-    } else {
-        free(pNewDbgFuncNode);
-    }
-    return result;
+    debug_report_log_msg(
+                debug_data, VK_DBG_REPORT_DEBUG_BIT,
+                VK_OBJECT_TYPE_MSG_CALLBACK, *pMsgCallback,
+                0, DEBUG_REPORT_CALLBACK_REF,
+                "DebugReport",
+                "Added callback");
+    return VK_SUCCESS;
 }
 
-static VkResult layer_destroy_msg_callback(
-        VkInstance                      instance,
-        VkLayerInstanceDispatchTable   *nextTable,
+static void layer_destroy_msg_callback(
+        debug_report_data              *debug_data,
         VkDbgMsgCallback                msg_callback)
 {
-    struct debug_report_data *debug_data =
-            get_debug_data_ptr(instance_dispatch_table(instance));
     VkLayerDbgFunctionNode *pTrav = debug_data->g_pDbgFunctionHead;
     VkLayerDbgFunctionNode *pPrev = pTrav;
-
-    VkResult result = nextTable->DbgDestroyMsgCallback(instance, msg_callback);
 
     while (pTrav) {
         if (pTrav->msgCallback == msg_callback) {
@@ -207,26 +174,22 @@ static VkResult layer_destroy_msg_callback(
             free(pTrav);
             debug_report_log_msg(
                         debug_data, VK_DBG_REPORT_DEBUG_BIT,
-                        VK_OBJECT_TYPE_INSTANCE, instance,
+                        VK_OBJECT_TYPE_MSG_CALLBACK, pTrav->msgCallback,
                         0, DEBUG_REPORT_CALLBACK_REF,
                         "DebugReport",
-                        "Removed callback");
+                        "Destroyed callback");
             break;
         }
         pPrev = pTrav;
         pTrav = pTrav->pNext;
     }
-
-    return result;
 }
 
 static void* debug_report_get_instance_proc_addr(
-        VkInstance                      instance,
+        debug_report_data              *debug_data,
         const char                     *funcName)
 {
-    struct debug_report_data *debug_data =
-            get_debug_data_ptr(instance_dispatch_table(instance));
-    if (!debug_data->g_DEBUG_REPORT) {
+    if (!debug_data || !debug_data->g_DEBUG_REPORT) {
         return NULL;
     }
 
@@ -245,7 +208,7 @@ static void* debug_report_get_instance_proc_addr(
  * use the same device dispatch table.
  */
 static void device_log_msg(
-    VkObject                    object,
+    debug_report_data          *debug_data,
     VkFlags                     msgFlags,
     VkObjectType                objectType,
     VkObject                    srcObject,
@@ -254,15 +217,13 @@ static void device_log_msg(
     const char*                 pLayerPrefix,
     const char*                 pMsg)
 {
-    struct debug_report_data *debug_data;
-    debug_data = get_device_debug_data_ptr(device_dispatch_table(object));
     debug_report_log_msg(debug_data, msgFlags, objectType,
                          srcObject, location, msgCode,
                          pLayerPrefix, pMsg);
 }
 
 static void instance_log_msg(
-    VkInstance                  instance,
+    debug_report_data          *debug_data,
     VkFlags                     msgFlags,
     VkObjectType                objectType,
     VkObject                    srcObject,
@@ -271,9 +232,6 @@ static void instance_log_msg(
     const char*                 pLayerPrefix,
     const char*                 pMsg)
 {
-    struct debug_report_data *debug_data;
-
-    debug_data = get_instance_debug_data_ptr(instance_dispatch_table(instance));
     debug_report_log_msg(debug_data, msgFlags, objectType,
                          srcObject, location, msgCode,
                          pLayerPrefix, pMsg);

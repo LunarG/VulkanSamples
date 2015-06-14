@@ -25,8 +25,9 @@
 #include <unordered_map>
 #include "vk_dispatch_table_helper.h"
 #include "vkLayer.h"
-std::unordered_map<void *, VkLayerDispatchTable *> tableMap;
-std::unordered_map<void *, VkLayerInstanceDispatchTable *> tableInstanceMap;
+#include "layers_table.h"
+device_table_map tableMap;
+instance_table_map tableInstanceMap;
 
 
 /* Various dispatchable objects will use the same underlying dispatch table if they
@@ -36,17 +37,17 @@ std::unordered_map<void *, VkLayerInstanceDispatchTable *> tableInstanceMap;
  *    Device -> CmdBuffer or Queue
  * If use the object themselves as key to map then implies Create entrypoints have to be intercepted
  * and a new key inserted into map */
-VkLayerInstanceDispatchTable * initInstanceTable(const VkBaseLayerObject *instancew)
+VkLayerInstanceDispatchTable * initInstanceTable(instance_table_map &map, const VkBaseLayerObject *instancew)
 {
     VkLayerInstanceDispatchTable *pTable;
     assert(instancew);
     VkLayerInstanceDispatchTable **ppDisp = (VkLayerInstanceDispatchTable **) instancew->baseObject;
 
-    std::unordered_map<void *, VkLayerInstanceDispatchTable *>::const_iterator it = tableInstanceMap.find((void *) *ppDisp);
+    std::unordered_map<void *, VkLayerInstanceDispatchTable *>::const_iterator it = map.find((void *) *ppDisp);
     if (it == tableInstanceMap.end())
     {
         pTable =  new VkLayerInstanceDispatchTable;
-        tableInstanceMap[(void *) *ppDisp] = pTable;
+        map[(void *) *ppDisp] = pTable;
     } else
     {
         return it->second;
@@ -57,23 +58,35 @@ VkLayerInstanceDispatchTable * initInstanceTable(const VkBaseLayerObject *instan
     return pTable;
 }
 
-VkLayerDispatchTable * initDeviceTable(const VkBaseLayerObject *devw)
+VkLayerInstanceDispatchTable * initInstanceTable(const VkBaseLayerObject *instancew)
 {
-    VkLayerDispatchTable *pTable;
+    return initInstanceTable(tableInstanceMap, instancew);
+}
+
+VkLayerDispatchTable * initDeviceTable(device_table_map &map, const VkBaseLayerObject *devw)
+{
+    VkLayerDispatchTable *layer_device_table = NULL;
     assert(devw);
     VkLayerDispatchTable **ppDisp = (VkLayerDispatchTable **) (devw->baseObject);
+    VkLayerDispatchTable *base_device_table = *ppDisp;
 
-    std::unordered_map<void *, VkLayerDispatchTable *>::const_iterator it = tableMap.find((void *) *ppDisp);
+    std::unordered_map<void *, VkLayerDispatchTable *>::const_iterator it = map.find((void *) base_device_table);
     if (it == tableMap.end())
     {
-        pTable =  new VkLayerDispatchTable;
-        tableMap[(void *) *ppDisp] = pTable;
+        layer_device_table =  new VkLayerDispatchTable;
+        map[(void *) base_device_table] = layer_device_table;
+        fprintf(stderr, "initDeviceTable(%p): %p => %p\n", devw, base_device_table, layer_device_table);
     } else
     {
         return it->second;
     }
 
-    layer_initialize_dispatch_table(pTable, devw);
+    layer_initialize_dispatch_table(layer_device_table, devw);
 
-    return pTable;
+    return layer_device_table;
+}
+
+VkLayerDispatchTable * initDeviceTable(const VkBaseLayerObject *devw)
+{
+    return initDeviceTable(tableMap, devw);
 }
