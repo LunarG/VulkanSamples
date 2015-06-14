@@ -76,13 +76,15 @@ template layer_data *get_my_data_ptr<layer_data>(
 
 debug_report_data *mdd(VkObject object)
 {
-    layer_data *my_data = get_my_data_ptr(get_dispatch_key(object), layer_data_map);
+    dispatch_key key = get_dispatch_key(object);
+    layer_data *my_data = get_my_data_ptr(key, layer_data_map);
     assert(my_data->report_data != NULL);
     return my_data->report_data;
 }
 
 debug_report_data *mid(VkInstance object)
 {
+    dispatch_key key = get_dispatch_key(object);
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(object), layer_data_map);
     assert(my_data->report_data != NULL);
     return my_data->report_data;
