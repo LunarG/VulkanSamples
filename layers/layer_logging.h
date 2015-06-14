@@ -47,7 +47,7 @@ template debug_report_data *get_my_data_ptr<debug_report_data>(
         std::unordered_map<void *, debug_report_data *> &data_map);
 
 // Utility function to handle reporting
-static void debug_report_log_msg(
+static inline void debug_report_log_msg(
     debug_report_data          *debug_data,
     VkFlags                     msgFlags,
     VkObjectType                objectType,
@@ -162,7 +162,7 @@ static inline VkResult layer_create_msg_callback(
     return VK_SUCCESS;
 }
 
-static void layer_destroy_msg_callback(
+static inline void layer_destroy_msg_callback(
         debug_report_data              *debug_data,
         VkDbgMsgCallback                msg_callback)
 {
@@ -190,7 +190,7 @@ static void layer_destroy_msg_callback(
     }
 }
 
-static void* debug_report_get_instance_proc_addr(
+static inline void* debug_report_get_instance_proc_addr(
         debug_report_data              *debug_data,
         const char                     *funcName)
 {
@@ -213,7 +213,7 @@ static void* debug_report_get_instance_proc_addr(
  * Takes format and variable arg list so that output string
  * is only computed if a message needs to be logged
  */
-static void log_msg(
+static inline void log_msg(
     debug_report_data          *debug_data,
     VkFlags                     msgFlags,
     VkObjectType                objectType,
