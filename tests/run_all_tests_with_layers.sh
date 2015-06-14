@@ -9,6 +9,7 @@ RESTORE_SETTINGS="false"
 SETTINGS_NAME="vk_layer_settings.txt"
 TMP_SETTINGS_NAME="xls.txt"
 OUTPUT_LEVEL="VK_DBG_LAYER_LEVEL_ERROR"
+OUTPUT_FLAGS="error"
 if [ -f $SETTINGS_NAME ]; then
     echo Saving $SETTINGS_NAME to $TMP_SETTINGS_NAME
     RESTORE_SETTINGS="true"
@@ -17,7 +18,7 @@ else
     echo not copying layer settings
 fi
 # Write out settings file to run tests with
-echo "MemTrackerReportLevel = $OUTPUT_LEVEL" > $SETTINGS_NAME
+echo "MemTrackerReportFlags = $OUTPUT_FLAGS" > $SETTINGS_NAME
 echo "DrawStateReportLevel = $OUTPUT_LEVEL" >> $SETTINGS_NAME
 echo "ObjectTrackerReportLevel = $OUTPUT_LEVEL" >> $SETTINGS_NAME
 echo "ParamCheckerReportLevel = $OUTPUT_LEVEL" >> $SETTINGS_NAME

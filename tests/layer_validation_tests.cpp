@@ -161,13 +161,6 @@ protected:
         device_extension_names.push_back("ObjectTracker");
         device_extension_names.push_back("Threading");
 
-        // Force layer output level to be >= WARNING so that we catch those messages but ignore others
-        setLayerOptionEnum("MemTrackerReportLevel",    "VK_DBG_LAYER_LEVEL_WARNING");
-        setLayerOptionEnum("ObjectTrackerReportLevel", "VK_DBG_LAYER_LEVEL_WARNING");
-        setLayerOptionEnum("ThreadingReportLevel",     "VK_DBG_LAYER_LEVEL_WARNING");
-        setLayerOptionEnum("DrawStateReportLevel",     "VK_DBG_LAYER_LEVEL_WARNING");
-        setLayerOptionEnum("ShaderCheckerReportLevel", "VK_DBG_LAYER_LEVEL_WARNING");
-
         this->app_info.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
         this->app_info.pNext = NULL;
         this->app_info.pAppName = "layer_tests";
