@@ -1193,6 +1193,8 @@ static void demo_create_window(struct demo *demo)
         exit(1);
     }
     // Create window with the registered class:
+    RECT wr = { 0, 0, demo->width, demo->height };
+    AdjustWindowRect(&wr, WS_OVERLAPPEDWINDOW, FALSE);
     demo->window = CreateWindowEx(0,
                                   demo->name,           // class name
                                   demo->name,           // app name
@@ -1200,8 +1202,8 @@ static void demo_create_window(struct demo *demo)
                                   WS_VISIBLE |
                                   WS_SYSMENU,
                                   100,100,              // x/y coords
-                                  demo->width,          // width
-                                  demo->height,         // height
+                                  wr.right-wr.left,     // width
+                                  wr.bottom-wr.top,     // height
                                   NULL,                 // handle to parent
                                   NULL,                 // handle to menu
                                   demo->connection,     // hInstance
