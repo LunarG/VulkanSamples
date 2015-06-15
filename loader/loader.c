@@ -599,8 +599,11 @@ static void loader_icd_destroy(
 {
     ptr_inst->total_icd_count--;
     free(icd->gpus);
-    for (struct loader_device *dev = icd->logical_device_list; dev; dev = dev->next)
+    for (struct loader_device *dev = icd->logical_device_list; dev; ) {
+        struct loader_device *next_dev = dev->next;
         loader_destroy_logical_device(dev);
+        dev = next_dev;
+    }
 
     free(icd);
 }
