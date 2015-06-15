@@ -1385,8 +1385,14 @@ static void printDSConfig(const VkCmdBuffer cb)
             // TODO : If there is a "view" associated with this update, print CI for that view
         }
         else {
-            sprintf(tmp_str, "No Update Chain for descriptor set %p (vkUpdateDescriptors has not been called)", (void*)pSet->set);
-            layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, NULL, 0, DRAWSTATE_NONE, "DS", tmp_str);
+            if (0 != pSet->descriptorCount) {
+                sprintf(tmp_str, "No Update Chain for descriptor set %p which has %u descriptors (vkUpdateDescriptors has not been called)", (void*)pSet->set, pSet->descriptorCount);
+                layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, NULL, 0, DRAWSTATE_NONE, "DS", tmp_str);
+            }
+            else {
+                sprintf(tmp_str, "FYI: No descriptors in descriptor set %p.", (void*)pSet->set);
+                layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, NULL, 0, DRAWSTATE_NONE, "DS", tmp_str);
+            }
         }
     }
 }
