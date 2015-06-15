@@ -29,6 +29,7 @@
 static device_table_map tableMap;
 static instance_table_map tableInstanceMap;
 
+#define DISPATCH_MAP_DEBUG 1
 
 // Map lookup must be thread safe
 VkLayerDispatchTable *device_dispatch_table(VkObject object)
