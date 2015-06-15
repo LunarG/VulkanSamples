@@ -1480,9 +1480,10 @@ MesaGlassTranslator::llvmTypeToHirType(const llvm::Type* type,
          // Check for a top level uniform/input/output MD with an aggregate MD hanging off it
          // TODO: set arrayChild properly
          llvm::StringRef blockName;
+         std::string name;
          MetaType metaType;
          if (mdNode) {
-             std::string name = mdNode->getOperand(2)->getName();
+             name = mdNode->getOperand(2)->getName();
              StripSuffix(name, "_typeProxy");
              StripSuffix(name, "_shadow");
              blockName = name;
