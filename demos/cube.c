@@ -864,7 +864,7 @@ static void demo_prepare_texture_image(struct demo *demo,
                                        VkImageUsageFlags usage,
                                        VkFlags mem_props)
 {
-    const VkFormat tex_format = VK_FORMAT_B8G8R8A8_UNORM;
+    const VkFormat tex_format = VK_FORMAT_R8G8B8A8_UNORM;
     int32_t tex_width;
     int32_t tex_height;
     VkResult U_ASSERT_ONLY err;
@@ -1030,8 +1030,8 @@ static void demo_prepare_textures(struct demo *demo)
 
             demo_destroy_texture_image(demo, &staging_texture);
         } else {
-            /* Can't support VK_FORMAT_B8G8R8A8_UNORM !? */
-            assert(!"No support for tB8G8R8A8_UNORM as texture image format");
+            /* Can't support VK_FORMAT_R8G8B8A8_UNORM !? */
+            assert(!"No support for R8G8B8A8_UNORM as texture image format");
         }
 
         const VkSamplerCreateInfo sampler = {
