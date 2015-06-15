@@ -252,6 +252,7 @@ static void deleteDynamicState()
         }
         delete (*ii).second;
     }
+    dynamicStateMap.clear();
 }
 // Free all sampler nodes
 static void deleteSamplers()
@@ -261,6 +262,7 @@ static void deleteSamplers()
     for (unordered_map<VkSampler, SAMPLER_NODE*>::iterator ii=sampleMap.begin(); ii!=sampleMap.end(); ++ii) {
         delete (*ii).second;
     }
+    sampleMap.clear();
 }
 static VkImageViewCreateInfo* getImageViewCreateInfo(VkImageView view)
 {
@@ -282,6 +284,7 @@ static void deleteImages()
     for (unordered_map<VkImageView, IMAGE_NODE*>::iterator ii=imageMap.begin(); ii!=imageMap.end(); ++ii) {
         delete (*ii).second;
     }
+    imageMap.clear();
 }
 static VkBufferViewCreateInfo* getBufferViewCreateInfo(VkBufferView view)
 {
@@ -303,6 +306,7 @@ static void deleteBuffers()
     for (unordered_map<VkBufferView, BUFFER_NODE*>::iterator ii=bufferMap.begin(); ii!=bufferMap.end(); ++ii) {
         delete (*ii).second;
     }
+    bufferMap.clear();
 }
 static GLOBAL_CB_NODE* getCBNode(VkCmdBuffer cb);
 
@@ -544,6 +548,7 @@ static void deletePipelines()
         }
         delete (*ii).second;
     }
+    pipelineMap.clear();
 }
 // For given pipeline, return number of MSAA samples, or one if MSAA disabled
 static uint32_t getNumSamples(const VkPipeline pipeline)
@@ -908,6 +913,7 @@ static void deletePools()
         }
         delete (*ii).second;
     }
+    poolMap.clear();
 }
 // WARN : Once deleteLayouts() called, any layout ptrs in Pool/Set data structure will be invalid
 // NOTE : Calls to this function should be wrapped in mutex
@@ -929,6 +935,7 @@ static void deleteLayouts()
         }
         delete pLayout;
     }
+    layoutMap.clear();
 }
 // Currently clearing a set is removing all previous updates to that set
 //  TODO : Validate if this is correct clearing behavior
@@ -988,6 +995,7 @@ static void deleteCmdBuffers()
         }
         delete (*ii).second;
     }
+    cmdBufferMap.clear();
 }
 static void addCmd(GLOBAL_CB_NODE* pCB, const CMD_TYPE cmd)
 {
