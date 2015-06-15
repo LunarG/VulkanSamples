@@ -1581,6 +1581,45 @@ static const VkExtensionProperties dsExts[DRAW_STATE_LAYER_EXT_ARRAY_SIZE] = {
 };
 
 //TODO add DEBUG_MARKER to device extension list
+VK_LAYER_EXPORT VkResult VKAPI vkGetPhysicalDeviceExtensionInfo(
+    VkPhysicalDevice     physical_device,
+    VkExtensionInfoType  infoType,
+    uint32_t             extensionIndex,
+    size_t              *pDataSize,
+    void                *pData)
+{
+    uint32_t *count;
+
+    if (pDataSize == NULL) {
+        return VK_ERROR_INVALID_POINTER;
+    }
+
+    switch (infoType) {
+        case VK_EXTENSION_INFO_TYPE_COUNT:
+            *pDataSize = sizeof(uint32_t);
+            if (pData == NULL) {
+                return VK_SUCCESS;
+            }
+            count = (uint32_t *) pData;
+            *count = DRAW_STATE_LAYER_EXT_ARRAY_SIZE;
+            break;
+        case VK_EXTENSION_INFO_TYPE_PROPERTIES:
+            *pDataSize = sizeof(VkExtensionProperties);
+            if (pData == NULL) {
+                return VK_SUCCESS;
+            }
+            if (extensionIndex >= DRAW_STATE_LAYER_EXT_ARRAY_SIZE) {
+                return VK_ERROR_INVALID_VALUE;
+            }
+            memcpy((VkExtensionProperties *) pData, &dsExts[extensionIndex], sizeof(VkExtensionProperties));
+            break;
+        default:
+            return VK_ERROR_INVALID_VALUE;
+    }
+
+    return VK_SUCCESS;
+}
+
 VK_LAYER_EXPORT VkResult VKAPI vkGetGlobalExtensionInfo(
         VkExtensionInfoType infoType,
         uint32_t extensionIndex,

@@ -158,6 +158,7 @@ protected:
         instance_extension_names.push_back("Threading");
 
         device_extension_names.push_back("MemTracker");
+        device_extension_names.push_back("DrawState");
         device_extension_names.push_back("ObjectTracker");
         device_extension_names.push_back("Threading");
 
