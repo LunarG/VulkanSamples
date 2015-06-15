@@ -1254,6 +1254,8 @@ VkResult intel_rt_view_create(struct intel_dev *dev,
 
     view->img = img;
 
+    view->mipLevel = info->mipLevel;
+    view->baseArraySlice = info->baseArraySlice;
     view->array_size = info->arraySize;
 
     if (intel_gpu_gen(dev->gpu) >= INTEL_GEN(7)) {

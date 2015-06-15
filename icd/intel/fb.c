@@ -152,11 +152,29 @@ VkResult intel_render_pass_create(struct intel_dev *dev,
 
     rp->obj.destroy = render_pass_destroy;
 
-    /* TODO add any clear color ops */
-    for (i = 0; i < info->colorAttachmentCount; i++)
-        assert(info->pColorLoadOps[i] != VK_ATTACHMENT_LOAD_OP_CLEAR);
+    rp->colorAttachmentCount = info->colorAttachmentCount;
+    rp->renderArea = info->renderArea;
+    rp->extent = info->extent;
+
+    if (rp->colorAttachmentCount) {
+        memcpy(rp->colorLoadOps, info->pColorLoadOps, rp->colorAttachmentCount * sizeof(rp->colorLoadOps[0]));
+        if (info->pColorLayouts) {
+            memcpy(rp->colorLayouts, info->pColorLayouts, rp->colorAttachmentCount * sizeof(rp->colorLayouts[0]));
+        }
+        if (info->pColorLoadClearValues) {
+            memcpy(rp->colorClearValues, info->pColorLoadClearValues, rp->colorAttachmentCount * sizeof(rp->colorClearValues[0]));
+        }
+    }
+
+    /* TODO: depth/stencil clear load ops */
     assert(info->depthLoadOp != VK_ATTACHMENT_LOAD_OP_CLEAR);
     assert(info->stencilLoadOp != VK_ATTACHMENT_LOAD_OP_CLEAR);
+
+    /* TODO: MSAA resolves if/when we support MSAA. */
+    for (i = 0; i < info->colorAttachmentCount; i++)
+        assert(info->pColorStoreOps[i] != VK_ATTACHMENT_STORE_OP_RESOLVE_MSAA);
+    assert(info->depthStoreOp != VK_ATTACHMENT_STORE_OP_RESOLVE_MSAA);
+    assert(info->stencilStoreOp != VK_ATTACHMENT_STORE_OP_RESOLVE_MSAA);
 
     *rp_ret = rp;
 

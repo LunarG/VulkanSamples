@@ -525,4 +525,12 @@ void cmd_meta_ds_op(struct intel_cmd *cmd,
                     struct intel_img *img,
                     const VkImageSubresourceRange *range);
 
+void cmd_meta_clear_color_image(
+    VkCmdBuffer                         cmdBuffer,
+    VkImage                             image,
+    VkImageLayout                       imageLayout,
+    const VkClearColor                 *pClearColor,
+    uint32_t                            rangeCount,
+    const VkImageSubresourceRange      *pRanges);
+
 #endif /* CMD_PRIV_H */

@@ -46,6 +46,14 @@ struct intel_fb {
 
 struct intel_render_pass {
     struct intel_obj obj;
+
+    uint32_t colorAttachmentCount;
+    VkRect   renderArea;
+    VkExtent2D extent;
+    VkAttachmentLoadOp colorLoadOps[INTEL_MAX_RENDER_TARGETS];
+    VkFormat colorFormats[INTEL_MAX_RENDER_TARGETS];
+    VkImageLayout colorLayouts[INTEL_MAX_RENDER_TARGETS];
+    VkClearColor colorClearValues[INTEL_MAX_RENDER_TARGETS];
 };
 
 static inline struct intel_fb *intel_fb(VkFramebuffer fb)

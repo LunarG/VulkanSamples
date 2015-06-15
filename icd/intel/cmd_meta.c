@@ -880,7 +880,7 @@ void cmd_meta_ds_op(struct intel_cmd *cmd,
     cmd_meta_clear_image(cmd, img, img->layout.format, &meta, range);
 }
 
-ICD_EXPORT void VKAPI vkCmdClearColorImage(
+void cmd_meta_clear_color_image(
     VkCmdBuffer                         cmdBuffer,
     VkImage                             image,
     VkImageLayout                       imageLayout,
@@ -914,6 +914,17 @@ ICD_EXPORT void VKAPI vkCmdClearColorImage(
     for (i = 0; i < rangeCount; i++) {
         cmd_meta_clear_image(cmd, img, format, &meta, &pRanges[i]);
     }
+}
+
+ICD_EXPORT void VKAPI vkCmdClearColorImage(
+    VkCmdBuffer                         cmdBuffer,
+    VkImage                             image,
+    VkImageLayout                       imageLayout,
+    const VkClearColor                 *pClearColor,
+    uint32_t                            rangeCount,
+    const VkImageSubresourceRange      *pRanges)
+{
+    cmd_meta_clear_color_image(cmdBuffer, image, imageLayout, pClearColor, rangeCount, pRanges);
 }
 
 ICD_EXPORT void VKAPI vkCmdClearDepthStencil(

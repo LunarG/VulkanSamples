@@ -3610,8 +3610,33 @@ ICD_EXPORT void VKAPI vkCmdBeginRenderPass(
     const VkRenderPassBegin*                pRenderPassBegin)
 {
    struct intel_cmd *cmd = intel_cmd(cmdBuffer);
+   struct intel_render_pass *rp = (struct intel_render_pass *) pRenderPassBegin->renderPass;
+   struct intel_fb *fb = (struct intel_fb *) pRenderPassBegin->framebuffer;
+   unsigned i;
 
-   cmd_begin_render_pass(cmd, (struct intel_render_pass *) pRenderPassBegin->renderPass, (struct intel_fb *) pRenderPassBegin->framebuffer);
+   cmd_begin_render_pass(cmd, rp, fb);
+
+   /* issue load ops */
+   for (i = 0; i < rp->colorAttachmentCount; i++) {
+       if (rp->colorLoadOps[i] == VK_ATTACHMENT_LOAD_OP_CLEAR) {
+           /* issue clear of this attachment */
+           const struct intel_rt_view *rt = fb->rt[i];
+
+           VkImageSubresourceRange ranges[1] = {{
+               VK_IMAGE_ASPECT_COLOR,
+               rt->mipLevel,
+               1,
+               rt->baseArraySlice,
+               rt->array_size
+           }};
+
+           cmd_meta_clear_color_image(cmdBuffer, (VkImage) rt->img,
+                                      rp->colorLayouts[i],
+                                      &rp->colorClearValues[i],
+                                      1,
+                                      ranges);
+       }
+   }
 }
 
 ICD_EXPORT void VKAPI vkCmdEndRenderPass(
