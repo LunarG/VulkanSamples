@@ -1815,10 +1815,6 @@ static void demo_init_vk(struct demo *demo)
             memcpy(&instance_extensions[instance_extension_count++], &extProp, sizeof(VkExtensionProperties));
             memcpy(&device_extensions[device_extension_count++], &extProp, sizeof(VkExtensionProperties));
         }
-        if (!strcmp("Validation", extProp.name)) {
-            memcpy(&instance_extensions[instance_extension_count++], &extProp, sizeof(VkExtensionProperties));
-            memcpy(&device_extensions[device_extension_count++], &extProp, sizeof(VkExtensionProperties));
-        }
         if (!strcmp(DEBUG_REPORT_EXTENSION_NAME, extProp.name)) {
             memcpy(&instance_extensions[instance_extension_count++], &extProp, sizeof(VkExtensionProperties));
         }
