@@ -2009,7 +2009,6 @@ VK_LAYER_EXPORT void VKAPI vkCmdBindDescriptorSets(VkCmdBuffer cmdBuffer, VkPipe
                     char str[1024];
                     sprintf(str, "DS %p bound on pipeline %s", (void*)pDescriptorSets[i], string_VkPipelineBindPoint(pipelineBindPoint));
                     layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, pDescriptorSets[i], 0, DRAWSTATE_NONE, "DS", str);
-                    synchAndPrintDSConfig(cmdBuffer);
                 }
                 else {
                     char str[1024];
