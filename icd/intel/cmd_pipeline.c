@@ -3454,8 +3454,9 @@ ICD_EXPORT void VKAPI vkCmdBindDynamicStateObject(
 }
 
 ICD_EXPORT void VKAPI vkCmdBindDescriptorSets(
-    VkCmdBuffer                              cmdBuffer,
+    VkCmdBuffer                             cmdBuffer,
     VkPipelineBindPoint                     pipelineBindPoint,
+    VkPipelineLayout                        layout,
     uint32_t                                firstSet,
     uint32_t                                setCount,
     const VkDescriptorSet*                  pDescriptorSets,
@@ -3468,13 +3469,13 @@ ICD_EXPORT void VKAPI vkCmdBindDescriptorSets(
     uint32_t offset_count = 0;
     uint32_t i;
 
+    pipeline_layout = intel_pipeline_layout(layout);
+
     switch (pipelineBindPoint) {
     case VK_PIPELINE_BIND_POINT_COMPUTE:
-        pipeline_layout = cmd->bind.pipeline.compute->pipeline_layout;
         data = &cmd->bind.dset.compute_data;
         break;
     case VK_PIPELINE_BIND_POINT_GRAPHICS:
-        pipeline_layout = cmd->bind.pipeline.graphics->pipeline_layout;
         data = &cmd->bind.dset.graphics_data;
         break;
     default:

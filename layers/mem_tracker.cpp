@@ -1766,6 +1766,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdBindDynamicStateObject(
 VK_LAYER_EXPORT void VKAPI vkCmdBindDescriptorSets(
     VkCmdBuffer            cmdBuffer,
     VkPipelineBindPoint    pipelineBindPoint,
+    VkPipelineLayout       layout,
     uint32_t               firstSet,
     uint32_t               setCount,
     const VkDescriptorSet *pDescriptorSets,
@@ -1774,7 +1775,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdBindDescriptorSets(
 {
     // TODO : Somewhere need to verify that all textures referenced by shaders in DS are in some type of *SHADER_READ* state
     get_dispatch_table(mem_tracker_device_table_map, cmdBuffer)->CmdBindDescriptorSets(
-        cmdBuffer, pipelineBindPoint, firstSet, setCount, pDescriptorSets, dynamicOffsetCount, pDynamicOffsets);
+        cmdBuffer, pipelineBindPoint, layout, firstSet, setCount, pDescriptorSets, dynamicOffsetCount, pDynamicOffsets);
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdBindVertexBuffers(

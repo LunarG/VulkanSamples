@@ -1452,7 +1452,7 @@ void VkCommandBufferObj::BindDescriptorSet(VkDescriptorSetObj &descriptorSet)
     VkDescriptorSet set_obj = descriptorSet.GetDescriptorSetHandle();
 
     // bind pipeline, vertex buffer (descriptor set) and WVP (dynamic buffer view)
-    vkCmdBindDescriptorSets(obj(), VK_PIPELINE_BIND_POINT_GRAPHICS,
+    vkCmdBindDescriptorSets(obj(), VK_PIPELINE_BIND_POINT_GRAPHICS, descriptorSet.GetPipelineLayout(),
            0, 1, &set_obj, 0, NULL );
 }
 

@@ -1076,7 +1076,7 @@ TEST_F(VkLayerTest, NoEndCmdBuffer)
     ASSERT_VK_SUCCESS(err);
 
     vkCmdBindPipeline(cmdBuffer.GetBufferHandle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
-    vkCmdBindDescriptorSets(cmdBuffer.GetBufferHandle(), VK_PIPELINE_BIND_POINT_GRAPHICS, 0, 1, &descriptorSet, 0, NULL);
+    vkCmdBindDescriptorSets(cmdBuffer.GetBufferHandle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout, 0, 1, &descriptorSet, 0, NULL);
 
     VkCmdBuffer localCmdBuffer = cmdBuffer.GetBufferHandle();
     m_device->get_device_queue();

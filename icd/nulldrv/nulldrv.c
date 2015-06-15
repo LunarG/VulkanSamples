@@ -1186,6 +1186,7 @@ ICD_EXPORT void VKAPI vkCmdBindDynamicStateObject(
 ICD_EXPORT void VKAPI vkCmdBindDescriptorSets(
     VkCmdBuffer                              cmdBuffer,
     VkPipelineBindPoint                     pipelineBindPoint,
+    VkPipelineLayout                        layout,
     uint32_t                                firstSet,
     uint32_t                                setCount,
     const VkDescriptorSet*                  pDescriptorSets,
