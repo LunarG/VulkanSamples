@@ -225,6 +225,9 @@ void Object::cleanup()
     if (!initialized())
         return;
 
+    if (own())
+        EXPECT(vkDestroyObject(dev_->obj(), type(), obj()) == VK_SUCCESS);
+
     if (internal_mems_) {
         delete[] internal_mems_;
         internal_mems_ = NULL;
@@ -232,9 +235,6 @@ void Object::cleanup()
     }
 
     mem_alloc_count_ = 0;
-
-    if (own())
-        EXPECT(vkDestroyObject(dev_->obj(), type(), obj()) == VK_SUCCESS);
 }
 
 void Object::bind_memory(const GpuMemory &mem, VkDeviceSize mem_offset)
