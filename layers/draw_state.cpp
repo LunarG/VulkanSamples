@@ -1564,8 +1564,8 @@ struct extProps {
     uint32_t version;
     const char * const name;
 };
-#define DRAW_STATE_LAYER_EXT_ARRAY_SIZE 2
-static const VkExtensionProperties dsExts[DRAW_STATE_LAYER_EXT_ARRAY_SIZE] = {
+#define DRAW_STATE_LAYER_DEV_EXT_ARRAY_SIZE 3
+static const VkExtensionProperties dsDevExts[DRAW_STATE_LAYER_DEV_EXT_ARRAY_SIZE] = {
     {
         VK_STRUCTURE_TYPE_EXTENSION_PROPERTIES,
         "DrawState",
@@ -1575,6 +1575,12 @@ static const VkExtensionProperties dsExts[DRAW_STATE_LAYER_EXT_ARRAY_SIZE] = {
     {
         VK_STRUCTURE_TYPE_EXTENSION_PROPERTIES,
         "Validation",
+        0x10,
+        "Sample layer: DrawState",
+    },
+    {
+        VK_STRUCTURE_TYPE_EXTENSION_PROPERTIES,
+        DEBUG_MARKER_EXTENSION_NAME,
         0x10,
         "Sample layer: DrawState",
     }
@@ -1601,17 +1607,17 @@ VK_LAYER_EXPORT VkResult VKAPI vkGetPhysicalDeviceExtensionInfo(
                 return VK_SUCCESS;
             }
             count = (uint32_t *) pData;
-            *count = DRAW_STATE_LAYER_EXT_ARRAY_SIZE;
+            *count = DRAW_STATE_LAYER_DEV_EXT_ARRAY_SIZE;
             break;
         case VK_EXTENSION_INFO_TYPE_PROPERTIES:
             *pDataSize = sizeof(VkExtensionProperties);
             if (pData == NULL) {
                 return VK_SUCCESS;
             }
-            if (extensionIndex >= DRAW_STATE_LAYER_EXT_ARRAY_SIZE) {
+            if (extensionIndex >= DRAW_STATE_LAYER_DEV_EXT_ARRAY_SIZE) {
                 return VK_ERROR_INVALID_VALUE;
             }
-            memcpy((VkExtensionProperties *) pData, &dsExts[extensionIndex], sizeof(VkExtensionProperties));
+            memcpy((VkExtensionProperties *) pData, &dsDevExts[extensionIndex], sizeof(VkExtensionProperties));
             break;
         default:
             return VK_ERROR_INVALID_VALUE;
@@ -1619,6 +1625,22 @@ VK_LAYER_EXPORT VkResult VKAPI vkGetPhysicalDeviceExtensionInfo(
 
     return VK_SUCCESS;
 }
+
+#define DRAW_STATE_LAYER_EXT_ARRAY_SIZE 2
+static const VkExtensionProperties dsExts[DRAW_STATE_LAYER_EXT_ARRAY_SIZE] = {
+    {
+        VK_STRUCTURE_TYPE_EXTENSION_PROPERTIES,
+        "DrawState",
+        0x10,
+        "Sample layer: DrawState",
+    },
+    {
+        VK_STRUCTURE_TYPE_EXTENSION_PROPERTIES,
+        "Validation",
+        0x10,
+        "Sample layer: DrawState",
+    }
+};
 
 VK_LAYER_EXPORT VkResult VKAPI vkGetGlobalExtensionInfo(
         VkExtensionInfoType infoType,

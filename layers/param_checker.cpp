@@ -326,6 +326,27 @@ VK_LAYER_EXPORT VkResult VKAPI vkGetGlobalExtensionInfo(
     return VK_SUCCESS;
 }
 
+#define PARAM_CHECKER_LAYER_DEV_EXT_ARRAY_SIZE 3
+static const VkExtensionProperties pcDevExts[PARAM_CHECKER_LAYER_DEV_EXT_ARRAY_SIZE] = {
+    {
+        VK_STRUCTURE_TYPE_EXTENSION_PROPERTIES,
+        "ParamChecker",
+        0x10,
+        "Sample layer: ParamChecker",
+    },
+    {
+        VK_STRUCTURE_TYPE_EXTENSION_PROPERTIES,
+        "Validation",
+        0x10,
+        "Sample layer: ParamChecker",
+    },
+    {
+        VK_STRUCTURE_TYPE_EXTENSION_PROPERTIES,
+        DEBUG_MARKER_EXTENSION_NAME,
+        0x10,
+        "Sample layer: ParamChecker",
+    }
+};
 VK_LAYER_EXPORT VkResult VKAPI vkGetPhysicalDeviceExtensionInfo(
                                                VkPhysicalDevice gpu,
                                                VkExtensionInfoType infoType,
@@ -333,7 +354,6 @@ VK_LAYER_EXPORT VkResult VKAPI vkGetPhysicalDeviceExtensionInfo(
                                                size_t*  pDataSize,
                                                void*    pData)
 {
-    //TODO add debug_marker
     /* This entrypoint is NOT going to init it's own dispatch table since loader calls here early */
     uint32_t *count;
 
@@ -346,15 +366,15 @@ VK_LAYER_EXPORT VkResult VKAPI vkGetPhysicalDeviceExtensionInfo(
             if (pData == NULL)
                 return VK_SUCCESS;
             count = (uint32_t *) pData;
-            *count = PARAM_CHECKER_LAYER_EXT_ARRAY_SIZE;
+            *count = PARAM_CHECKER_LAYER_DEV_EXT_ARRAY_SIZE;
             break;
         case VK_EXTENSION_INFO_TYPE_PROPERTIES:
             *pDataSize = sizeof(VkExtensionProperties);
             if (pData == NULL)
                 return VK_SUCCESS;
-            if (extensionIndex >= PARAM_CHECKER_LAYER_EXT_ARRAY_SIZE)
+            if (extensionIndex >= PARAM_CHECKER_LAYER_DEV_EXT_ARRAY_SIZE)
                 return VK_ERROR_INVALID_VALUE;
-            memcpy((VkExtensionProperties *) pData, &pcExts[extensionIndex], sizeof(VkExtensionProperties));
+            memcpy((VkExtensionProperties *) pData, &pcDevExts[extensionIndex], sizeof(VkExtensionProperties));
             break;
         default:
             return VK_ERROR_INVALID_VALUE;
