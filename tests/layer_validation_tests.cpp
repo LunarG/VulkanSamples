@@ -206,7 +206,7 @@ VkResult VkLayerTest::BeginCommandBuffer(VkCommandBufferObj &cmdBuffer)
      * For render test all drawing happens in a single render pass
      * on a single command buffer.
      */
-    if (VK_SUCCESS == result) {
+    if (VK_SUCCESS == result && renderPass()) {
         cmdBuffer.BeginRenderPass(renderPass(), framebuffer());
     }
 
@@ -217,7 +217,9 @@ VkResult VkLayerTest::EndCommandBuffer(VkCommandBufferObj &cmdBuffer)
 {
     VkResult result;
 
-    cmdBuffer.EndRenderPass(renderPass());
+    if (renderPass()) {
+        cmdBuffer.EndRenderPass(renderPass());
+    }
 
     result = cmdBuffer.EndCommandBuffer();
 
