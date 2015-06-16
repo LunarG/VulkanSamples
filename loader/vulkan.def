@@ -46,7 +46,6 @@ EXPORTS
    vkUnmapMemory
    vkFlushMappedMemoryRanges
    vkInvalidateMappedMemoryRanges
-   vkPinSystemMemory
    vkGetMultiDeviceCompatibility
    vkOpenSharedMemory
    vkOpenSharedSemaphore

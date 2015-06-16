@@ -1135,18 +1135,6 @@ VK_LAYER_EXPORT VkResult VKAPI vkUnmapMemory(
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkPinSystemMemory(
-    VkDevice        device,
-    const void     *pSysMem,
-    size_t          memSize,
-    VkDeviceMemory *pMem)
-{
-    // TODO : Track this
-    //  Verify that memory is actually pinnable
-    VkResult result = get_dispatch_table(mem_tracker_device_table_map, device)->PinSystemMemory(device, pSysMem, memSize, pMem);
-    return result;
-}
-
 VK_LAYER_EXPORT VkResult VKAPI vkOpenSharedMemory(
     VkDevice                device,
     const VkMemoryOpenInfo *pOpenInfo,
@@ -2205,8 +2193,6 @@ VK_LAYER_EXPORT void* VKAPI vkGetDeviceProcAddr(
         return (void*) vkMapMemory;
     if (!strcmp(funcName, "vkUnmapMemory"))
         return (void*) vkUnmapMemory;
-    if (!strcmp(funcName, "vkPinSystemMemory"))
-        return (void*) vkPinSystemMemory;
     if (!strcmp(funcName, "vkOpenSharedMemory"))
         return (void*) vkOpenSharedMemory;
     if (!strcmp(funcName, "vkOpenPeerMemory"))

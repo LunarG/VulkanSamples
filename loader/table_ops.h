@@ -48,7 +48,6 @@ static inline void loader_init_device_dispatch_table(VkLayerDispatchTable *table
     table->UnmapMemory = (PFN_vkUnmapMemory) gpa(dev, "vkUnmapMemory");
     table->FlushMappedMemoryRanges = (PFN_vkFlushMappedMemoryRanges) gpa(dev, "vkFlushMappedMemoryRanges");
     table->InvalidateMappedMemoryRanges = (PFN_vkInvalidateMappedMemoryRanges) gpa(dev, "vkInvalidateMappedMemoryRanges");
-    table->PinSystemMemory = (PFN_vkPinSystemMemory) gpa(dev, "vkPinSystemMemory");
     table->OpenSharedMemory = (PFN_vkOpenSharedMemory) gpa(dev, "vkOpenSharedMemory");
     table->OpenSharedSemaphore = (PFN_vkOpenSharedSemaphore) gpa(dev, "vkOpenSharedSemaphore");
     table->OpenPeerMemory = (PFN_vkOpenPeerMemory) gpa(dev, "vkOpenPeerMemory");
@@ -180,8 +179,6 @@ static inline void *loader_lookup_device_dispatch_table(
         return (void *) table->FlushMappedMemoryRanges;
     if (!strcmp(name, "InvalidateMappedMemoryRanges"))
         return (void *) table->InvalidateMappedMemoryRanges;
-    if (!strcmp(name, "PinSystemMemory"))
-        return (void *) table->PinSystemMemory;
     if (!strcmp(name, "OpenSharedMemory"))
         return (void *) table->OpenSharedMemory;
     if (!strcmp(name, "OpenSharedSemaphore"))

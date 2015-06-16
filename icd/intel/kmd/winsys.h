@@ -138,17 +138,6 @@ intel_winsys_alloc_bo(struct intel_winsys *winsys,
                       bool cpu_init);
 
 /**
- * Create a bo from a user memory pointer.  Both \p userptr and \p size must
- * be page aligned.
- */
-struct intel_bo *
-intel_winsys_import_userptr(struct intel_winsys *winsys,
-                            const char *name,
-                            void *userptr,
-                            unsigned long size,
-                            unsigned long flags);
-
-/**
  * Create a bo from a winsys handle.
  */
 struct intel_bo *

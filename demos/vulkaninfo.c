@@ -757,7 +757,6 @@ static void app_gpu_dump_memory_props(const struct app_gpu *gpu)
 
     printf("VkPhysicalDeviceMemoryProperties\n");
     printf("\tsupportsMigration = %u\n",                props->supportsMigration);
-    printf("\tsupportsPinning = %u\n",                  props->supportsPinning);
 }
 
 static void app_gpu_dump(const struct app_gpu *gpu)

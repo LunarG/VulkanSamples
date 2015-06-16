@@ -1711,16 +1711,6 @@ ICD_EXPORT VkResult VKAPI vkInvalidateMappedMemoryRanges(
     return VK_SUCCESS;
 }
 
-ICD_EXPORT VkResult VKAPI vkPinSystemMemory(
-    VkDevice                                  device,
-    const void*                                 pSysMem,
-    size_t                                      memSize,
-    VkDeviceMemory*                             pMem)
-{
-    NULLDRV_LOG_FUNC;
-    return VK_SUCCESS;
-}
-
 ICD_EXPORT VkResult VKAPI vkOpenSharedMemory(
     VkDevice                                  device,
     const VkMemoryOpenInfo*                 pOpenInfo,

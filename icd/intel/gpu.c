@@ -289,7 +289,6 @@ void intel_gpu_get_memory_props(const struct intel_gpu *gpu,
                                 VkPhysicalDeviceMemoryProperties *props)
 {
     props->supportsMigration = false;
-    props->supportsPinning = true;
 }
 
 int intel_gpu_get_max_threads(const struct intel_gpu *gpu,

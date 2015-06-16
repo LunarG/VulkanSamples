@@ -1339,7 +1339,6 @@ typedef struct VkPhysicalDeviceQueueProperties_
 typedef struct VkPhysicalDeviceMemoryProperties_
 {
     bool32_t                                    supportsMigration;
-    bool32_t                                    supportsPinning;
 } VkPhysicalDeviceMemoryProperties;
 
 typedef struct VkMemoryAllocInfo_
@@ -2083,7 +2082,6 @@ typedef VkResult (VKAPI *PFN_vkMapMemory)(VkDevice device, VkDeviceMemory mem, V
 typedef VkResult (VKAPI *PFN_vkUnmapMemory)(VkDevice device, VkDeviceMemory mem);
 typedef VkResult (VKAPI *PFN_vkFlushMappedMemoryRanges)(VkDevice device, uint32_t memRangeCount, const VkMappedMemoryRange* pMemRanges);
 typedef VkResult (VKAPI *PFN_vkInvalidateMappedMemoryRanges)(VkDevice device, uint32_t memRangeCount, const VkMappedMemoryRange* pMemRanges);
-typedef VkResult (VKAPI *PFN_vkPinSystemMemory)(VkDevice device, const void* pSysMem, size_t memSize, VkDeviceMemory* pMem);
 typedef VkResult (VKAPI *PFN_vkGetMultiDeviceCompatibility)(VkPhysicalDevice physicalDevice0, VkPhysicalDevice physicalDevice1, VkPhysicalDeviceCompatibilityInfo* pInfo);
 typedef VkResult (VKAPI *PFN_vkOpenSharedMemory)(VkDevice device, const VkMemoryOpenInfo* pOpenInfo, VkDeviceMemory* pMem);
 typedef VkResult (VKAPI *PFN_vkOpenSharedSemaphore)(VkDevice device, const VkSemaphoreOpenInfo* pOpenInfo, VkSemaphore* pSemaphore);
@@ -2282,12 +2280,6 @@ VkResult VKAPI vkInvalidateMappedMemoryRanges(
     VkDevice                                    device,
     uint32_t                                    memRangeCount,
     const VkMappedMemoryRange*                  pMemRanges);
-
-VkResult VKAPI vkPinSystemMemory(
-    VkDevice                                    device,
-    const void*                                 pSysMem,
-    size_t                                      memSize,
-    VkDeviceMemory*                             pMem);
 
 // Multi-device functions
 

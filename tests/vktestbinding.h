@@ -300,8 +300,6 @@ public:
 
     // vkAllocMemory()
     void init(const Device &dev, const VkMemoryAllocInfo &info);
-    // vkPinSystemMemory()
-    void init(const Device &dev, size_t size, const void *data);
     // vkOpenSharedMemory()
     void init(const Device &dev, const VkMemoryOpenInfo &info);
     // vkOpenPeerMemory()

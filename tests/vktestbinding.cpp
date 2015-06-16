@@ -503,11 +503,6 @@ void GpuMemory::init(const Device &dev, const VkMemoryAllocInfo &info)
     DERIVED_OBJECT_TYPE_INIT(vkAllocMemory, dev, VK_OBJECT_TYPE_DEVICE_MEMORY, &info);
 }
 
-void GpuMemory::init(const Device &dev, size_t size, const void *data)
-{
-    DERIVED_OBJECT_TYPE_INIT(vkPinSystemMemory, dev, VK_OBJECT_TYPE_DEVICE_MEMORY, data, size);
-}
-
 void GpuMemory::init(const Device &dev, const VkMemoryOpenInfo &info)
 {
     DERIVED_OBJECT_TYPE_INIT(vkOpenSharedMemory, dev, VK_OBJECT_TYPE_DEVICE_MEMORY, &info);

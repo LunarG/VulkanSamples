@@ -316,15 +316,6 @@ LOADER_EXPORT VkResult VKAPI vkInvalidateMappedMemoryRanges(VkDevice device, uin
     return disp->InvalidateMappedMemoryRanges(device, memRangeCount, pMemRanges);
 }
 
-LOADER_EXPORT VkResult VKAPI vkPinSystemMemory(VkDevice device, const void* pSysMem, size_t memSize, VkDeviceMemory* pMem)
-{
-    const VkLayerDispatchTable *disp;
-
-    disp = loader_get_dispatch(device);
-
-    return disp->PinSystemMemory(device, pSysMem, memSize, pMem);
-}
-
 LOADER_EXPORT VkResult VKAPI vkGetMultiDeviceCompatibility(VkPhysicalDevice gpu0, VkPhysicalDevice gpu1, VkPhysicalDeviceCompatibilityInfo* pInfo)
 {
     const VkLayerInstanceDispatchTable *disp;

@@ -253,21 +253,6 @@ intel_winsys_alloc_bo(struct intel_winsys *winsys,
 }
 
 struct intel_bo *
-intel_winsys_import_userptr(struct intel_winsys *winsys,
-                            const char *name,
-                            void *userptr,
-                            unsigned long size,
-                            unsigned long flags)
-{
-   drm_intel_bo *bo;
-
-   bo = drm_intel_bo_alloc_userptr(winsys->bufmgr, name, userptr,
-            INTEL_TILING_NONE, 0, size, flags);
-
-   return (struct intel_bo *) bo;
-}
-
-struct intel_bo *
 intel_winsys_import_handle(struct intel_winsys *winsys,
                            const char *name,
                            const struct intel_winsys_handle *handle,

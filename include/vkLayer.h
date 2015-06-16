@@ -40,7 +40,6 @@ typedef struct VkLayerDispatchTable_
     PFN_vkUnmapMemory UnmapMemory;
     PFN_vkFlushMappedMemoryRanges FlushMappedMemoryRanges;
     PFN_vkInvalidateMappedMemoryRanges InvalidateMappedMemoryRanges;
-    PFN_vkPinSystemMemory PinSystemMemory;
     PFN_vkOpenSharedMemory OpenSharedMemory;
     PFN_vkOpenSharedSemaphore OpenSharedSemaphore;
     PFN_vkOpenPeerMemory OpenPeerMemory;

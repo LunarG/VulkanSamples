@@ -62,36 +62,6 @@ void intel_mem_free(struct intel_mem *mem)
     intel_base_destroy(&mem->base);
 }
 
-VkResult intel_mem_import_userptr(struct intel_dev *dev,
-                                    const void *userptr,
-                                    size_t size,
-                                    struct intel_mem **mem_ret)
-{
-    const size_t alignment = 4096;
-    struct intel_mem *mem;
-
-    if ((uintptr_t) userptr % alignment || size % alignment)
-        return VK_ERROR_INVALID_ALIGNMENT;
-
-    mem = (struct intel_mem *) intel_base_create(&dev->base.handle,
-            sizeof(*mem), dev->base.dbg, VK_OBJECT_TYPE_DEVICE_MEMORY, NULL, 0);
-    if (!mem)
-        return VK_ERROR_OUT_OF_HOST_MEMORY;
-
-    mem->bo = intel_winsys_import_userptr(dev->winsys,
-            "vk-gpu-memory-userptr", (void *) userptr, size, 0);
-    if (!mem->bo) {
-        intel_mem_free(mem);
-        return VK_ERROR_UNKNOWN;
-    }
-
-    mem->size = size;
-
-    *mem_ret = mem;
-
-    return VK_SUCCESS;
-}
-
 ICD_EXPORT VkResult VKAPI vkAllocMemory(
     VkDevice                                device,
     const VkMemoryAllocInfo*                pAllocInfo,
@@ -154,18 +124,6 @@ ICD_EXPORT VkResult VKAPI vkInvalidateMappedMemoryRanges(
     const VkMappedMemoryRange*                pMemRanges)
 {
     return VK_SUCCESS;
-}
-
-ICD_EXPORT VkResult VKAPI vkPinSystemMemory(
-    VkDevice                                  device,
-    const void*                                 pSysMem,
-    size_t                                      memSize,
-    VkDeviceMemory*                             pMem)
-{
-    struct intel_dev *dev = intel_dev(device);
-
-    return intel_mem_import_userptr(dev, pSysMem, memSize,
-            (struct intel_mem **) pMem);
 }
 
 ICD_EXPORT VkResult VKAPI vkOpenSharedMemory(

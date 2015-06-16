@@ -313,12 +313,6 @@ core = Extension(
              Param("uint32_t", "memRangeCount"),
              Param("const VkMappedMemoryRange*", "pMemRanges")]),
 
-        Proto("VkResult", "PinSystemMemory",
-            [Param("VkDevice", "device"),
-             Param("const void*", "pSysMem"),
-             Param("size_t", "memSize"),
-             Param("VkDeviceMemory*", "pMem")]),
-
         Proto("VkResult", "GetMultiDeviceCompatibility",
             [Param("VkPhysicalDevice", "gpu0"),
              Param("VkPhysicalDevice", "gpu1"),

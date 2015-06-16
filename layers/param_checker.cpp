@@ -465,13 +465,6 @@ VK_LAYER_EXPORT VkResult VKAPI vkInvalidateMappedMemoryRanges(
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkPinSystemMemory(VkDevice device, const void* pSysMem, size_t memSize, VkDeviceMemory* pMem)
-{
-
-    VkResult result = device_dispatch_table(device)->PinSystemMemory(device, pSysMem, memSize, pMem);
-    return result;
-}
-
 VK_LAYER_EXPORT VkResult VKAPI vkGetMultiDeviceCompatibility(VkPhysicalDevice gpu0, VkPhysicalDevice gpu1, VkPhysicalDeviceCompatibilityInfo* pInfo)
 {
 
@@ -1994,8 +1987,6 @@ static inline void* layer_intercept_proc(const char *name)
         return (void*) vkFlushMappedMemoryRanges;
     if (!strcmp(name, "InvalidateMappedMemoryRanges"))
         return (void*) vkInvalidateMappedMemoryRanges;
-    if (!strcmp(name, "PinSystemMemory"))
-        return (void*) vkPinSystemMemory;
     if (!strcmp(name, "OpenSharedMemory"))
         return (void*) vkOpenSharedMemory;
     if (!strcmp(name, "OpenSharedSemaphore"))

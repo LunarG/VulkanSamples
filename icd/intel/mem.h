@@ -44,11 +44,6 @@ VkResult intel_mem_alloc(struct intel_dev *dev,
                            struct intel_mem **mem_ret);
 void intel_mem_free(struct intel_mem *mem);
 
-VkResult intel_mem_import_userptr(struct intel_dev *dev,
-                                    const void *userptr,
-                                    size_t size,
-                                    struct intel_mem **mem_ret);
-
 static inline void *intel_mem_map(struct intel_mem *mem, VkFlags flags)
 {
     return intel_bo_map_async(mem->bo);
