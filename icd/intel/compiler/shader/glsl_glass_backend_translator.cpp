@@ -3049,8 +3049,10 @@ MesaGlassTranslator::makeIRLoad(const llvm::Instruction* llvmInst, const glsl_ty
    if (got != nameBuiltinMap.end())
        name = got->second;
 
-   if (!mdNode)
-      mdNode = typenameMdMap[name];
+   if (!mdNode) {
+      auto it = typenameMdMap.find(name);
+      mdNode = (it == typenameMdMap.end()) ? 0 : it->second;
+   }
 
    // Look up the ir_variable_mode we remembered during the global declaration
    const ir_variable_mode irMode = ir_variable_mode(globalVarModeMap[name]);
@@ -3959,7 +3961,8 @@ inline void MesaGlassTranslator::FindGepType(const llvm::Instruction* llvmInst,
    while (aggregateType->getTypeID() == llvm::Type::PointerTyID || aggregateType->getTypeID() == llvm::Type::ArrayTyID)
       aggregateType = aggregateType->getContainedType(0);
    
-   mdNode = typeMdAggregateMap[aggregateType];
+   auto it = typeMdAggregateMap.find(aggregateType);
+   mdNode = (it == typeMdAggregateMap.end()) ? 0 : it->second;
 }
 
 
