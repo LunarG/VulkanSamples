@@ -1527,6 +1527,7 @@ VkResult loader_DestroyInstance(
 {
     struct loader_instance *ptr_instance = loader_instance(instance);
     struct loader_icd *icds = ptr_instance->icds;
+    struct loader_icd *next_icd;
     VkResult res;
 
     // Remove this instance from the list of instances:
@@ -1557,9 +1558,11 @@ VkResult loader_DestroyInstance(
                 loader_log(VK_DBG_REPORT_WARN_BIT, 0,
                             "ICD ignored: failed to DestroyInstance on device");
         }
-        loader_icd_destroy(ptr_instance, icds);
+        next_icd = icds->next;
         icds->instance = VK_NULL_HANDLE;
-        icds = icds->next;
+        loader_icd_destroy(ptr_instance, icds);
+
+        icds = next_icd;
     }
 
 
