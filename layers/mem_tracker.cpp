@@ -836,7 +836,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkDestroyInstance(VkInstance instance)
     VkResult res = pTable->DestroyInstance(instance);
 
     // Clean up logging callback, if any
-    layer_data *my_data = get_my_data_ptr(get_dispatch_key(instance), layer_data_map);
+    layer_data *my_data = get_my_data_ptr(key, layer_data_map);
     if (my_data->logging_callback) {
         layer_destroy_msg_callback(my_data->report_data, my_data->logging_callback);
     }
