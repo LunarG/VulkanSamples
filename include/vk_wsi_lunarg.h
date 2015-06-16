@@ -50,7 +50,6 @@ VK_DEFINE_DISP_SUBCLASS_HANDLE(VkSwapChainWSI, VkObject)
 #define VK_WSI_LUNARG_ENUM(type,id)    ((type)(VK_WSI_LUNARG_EXTENSION_NUMBER * -1000 + (id)))
 
 // Extend VkPhysicalDeviceInfoType enum with extension specific constants
-#define VK_PHYSICAL_DEVICE_INFO_TYPE_DISPLAY_PROPERTIES_WSI         VK_WSI_LUNARG_ENUM(VkPhysicalDeviceInfoType, 0)
 #define VK_PHYSICAL_DEVICE_INFO_TYPE_QUEUE_PRESENT_PROPERTIES_WSI   VK_WSI_LUNARG_ENUM(VkPhysicalDeviceInfoType, 1)
 
 // Extend VkStructureType enum with extension specific constants

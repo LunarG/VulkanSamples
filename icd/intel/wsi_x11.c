@@ -607,6 +607,7 @@ static VkResult x11_swap_chain_create(struct intel_dev *dev,
     return VK_SUCCESS;
 }
 
+#if 0
 static void x11_display_init_modes(struct intel_x11_display *dpy,
                                    const drmModeConnectorPtr conn)
 {
@@ -670,6 +671,7 @@ static void x11_display_init_name(struct intel_x11_display *dpy,
     snprintf(dpy->name, sizeof(dpy->name),
             "%s%d", name, conn->connector_type_id);
 }
+#endif
 
 static void x11_display_destroy(struct intel_x11_display *dpy)
 {
@@ -677,6 +679,7 @@ static void x11_display_destroy(struct intel_x11_display *dpy)
     intel_free(dpy, dpy);
 }
 
+#if 0
 static struct intel_x11_display *x11_display_create(struct intel_gpu *gpu,
                                                     int fd,
                                                     uint32_t connector_id)
@@ -740,6 +743,7 @@ static void x11_display_scan(struct intel_gpu *gpu)
     gpu->displays = (struct intel_wsi_display **) displays;
     gpu->display_count = i;
 }
+#endif
 
 VkResult intel_wsi_gpu_get_info(struct intel_gpu *gpu,
                                 VkPhysicalDeviceInfoType type,
@@ -751,35 +755,6 @@ VkResult intel_wsi_gpu_get_info(struct intel_gpu *gpu,
         return VK_ERROR_INVALID_POINTER;
 
     switch ((int) type) {
-    case VK_PHYSICAL_DEVICE_INFO_TYPE_DISPLAY_PROPERTIES_WSI:
-        {
-            VkDisplayPropertiesWSI *dst = data;
-            size_t size_ret;
-            uint32_t i;
-
-            if (!gpu->display_count)
-                x11_display_scan(gpu);
-
-            size_ret = sizeof(*dst) * gpu->display_count;
-
-            if (dst && *size < size_ret)
-                return VK_ERROR_INVALID_VALUE;
-
-            *size = size_ret;
-            if (!dst)
-                return VK_SUCCESS;
-
-            for (i = 0; i < gpu->display_count; i++) {
-                struct intel_x11_display *dpy =
-                    (struct intel_x11_display *) gpu->displays[i];
-
-                dst[i].display = (VkDisplayWSI) dpy;
-#if 0 // Remove this until we support an upstream version of WSI that has this:
-                dst[i].displayName = dpy->name;
-#endif
-            }
-        }
-        break;
     case VK_PHYSICAL_DEVICE_INFO_TYPE_QUEUE_PRESENT_PROPERTIES_WSI:
         {
             VkPhysicalDeviceQueuePresentPropertiesWSI *dst = data;

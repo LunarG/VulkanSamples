@@ -161,15 +161,7 @@ LOADER_EXPORT VkResult VKAPI vkGetPhysicalDeviceInfo(
 
     loader_platform_thread_lock_mutex(&loader_lock);
     res = disp->GetPhysicalDeviceInfo(gpu, infoType, pDataSize, pData);
-    //TODO add check for extension enabled
     loader_platform_thread_unlock_mutex(&loader_lock);
-    if (infoType == VK_PHYSICAL_DEVICE_INFO_TYPE_DISPLAY_PROPERTIES_WSI && pData && res == VK_SUCCESS) {
-        VkDisplayPropertiesWSI *info = pData;
-        size_t count = *pDataSize / sizeof(*info), i;
-        for (i = 0; i < count; i++) {
-            loader_set_dispatch(info[i].display, disp);
-        }
-    }
 
     return res;
 }
