@@ -152,15 +152,22 @@ protected:
         std::vector<const char *> device_extension_names;
 
         instance_extension_names.push_back(DEBUG_REPORT_EXTENSION_NAME);
+        /*
+         * Since CreateDbgMsgCallback is an instance level extension call
+         * any extension / layer that utilizes that feature also needs
+         * to be enabled at create instance time.
+         */
         instance_extension_names.push_back("MemTracker");
         instance_extension_names.push_back("DrawState");
         instance_extension_names.push_back("ObjectTracker");
         instance_extension_names.push_back("Threading");
+        instance_extension_names.push_back("ShaderChecker");
 
         device_extension_names.push_back("MemTracker");
         device_extension_names.push_back("DrawState");
         device_extension_names.push_back("ObjectTracker");
         device_extension_names.push_back("Threading");
+        device_extension_names.push_back("ShaderChecker");
 
         this->app_info.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
         this->app_info.pNext = NULL;
