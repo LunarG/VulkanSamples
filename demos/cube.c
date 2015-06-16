@@ -449,7 +449,7 @@ static void demo_draw_build_cmd(struct demo *demo, VkCmdBuffer cmd_buf)
             VK_CMD_BUFFER_OPTIMIZE_ONE_TIME_SUBMIT_BIT,
     };
     VkResult U_ASSERT_ONLY err;
-    VkAttachmentLoadOp load_op = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+    VkAttachmentLoadOp load_op = VK_ATTACHMENT_LOAD_OP_CLEAR;
     VkAttachmentStoreOp store_op = VK_ATTACHMENT_STORE_OP_DONT_CARE;
     const VkFramebufferCreateInfo fb_info = {
          .sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
@@ -504,17 +504,12 @@ static void demo_draw_build_cmd(struct demo *demo, VkCmdBuffer cmd_buf)
                                      demo->depth_stencil);
 
     vkCmdBeginRenderPass(cmd_buf, &rp_begin);
-    clear_range.aspect = VK_IMAGE_ASPECT_COLOR;
+    clear_range.aspect = VK_IMAGE_ASPECT_DEPTH;
     clear_range.baseMipLevel = 0;
     clear_range.mipLevels = 1;
     clear_range.baseArraySlice = 0;
     clear_range.arraySize = 1;
-    vkCmdClearColorImage(cmd_buf,
-            demo->buffers[demo->current_buffer].image,
-            VK_IMAGE_LAYOUT_CLEAR_OPTIMAL,
-            &clear_color, 1, &clear_range);
 
-    clear_range.aspect = VK_IMAGE_ASPECT_DEPTH;
     vkCmdClearDepthStencil(cmd_buf, demo->depth.image,
             VK_IMAGE_LAYOUT_CLEAR_OPTIMAL,
             clear_depth, 0, 1, &clear_range);
