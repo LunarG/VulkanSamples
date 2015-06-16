@@ -1923,12 +1923,6 @@ VkResult VKAPI vkDbgSetObjectName(VkDevice device, VkObjectType  objType, VkObje
     debug_marker_dispatch_table(device)->DbgSetObjectName(device, objType, object, nameSize, pName);
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkGetDisplayInfoWSI(VkDisplayWSI display, VkDisplayInfoTypeWSI infoType, size_t* pDataSize, void* pData)
-{
-    VkResult result = instance_dispatch_table(display)->GetDisplayInfoWSI(display, infoType, pDataSize, pData);
-    return result;
-}
-
 VK_LAYER_EXPORT VkResult VKAPI vkCreateSwapChainWSI(VkDevice device, const VkSwapChainCreateInfoWSI* pCreateInfo, VkSwapChainWSI* pSwapChain)
 {
     VkResult result = device_dispatch_table(device)->CreateSwapChainWSI(device, pCreateInfo, pSwapChain);
@@ -2151,8 +2145,6 @@ static inline void* layer_intercept_proc(const char *name)
         return (void*) vkCmdBeginRenderPass;
     if (!strcmp(name, "CmdEndRenderPass"))
         return (void*) vkCmdEndRenderPass;
-    if (!strcmp(name, "GetDisplayInfoWSI"))
-        return (void*) vkGetDisplayInfoWSI;
     if (!strcmp(name, "CreateSwapChainWSI"))
         return (void*) vkCreateSwapChainWSI;
     if (!strcmp(name, "DestroySwapChainWSI"))

@@ -151,7 +151,6 @@ typedef struct VkLayerInstanceDispatchTable_
     /* PFN_vkGetGlobalExtensionInfo GetGlobalExtensionInfo; non-dispatchable */
     PFN_vkGetPhysicalDeviceExtensionInfo GetPhysicalDeviceExtensionInfo;
     PFN_vkGetMultiDeviceCompatibility GetMultiDeviceCompatibility;
-    PFN_vkGetDisplayInfoWSI GetDisplayInfoWSI;
     PFN_vkDbgCreateMsgCallback DbgCreateMsgCallback;
     PFN_vkDbgDestroyMsgCallback DbgDestroyMsgCallback;
     PFN_vkDbgStringCallback DbgStringCallback;

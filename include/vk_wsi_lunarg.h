@@ -67,13 +67,6 @@ VK_DEFINE_DISP_SUBCLASS_HANDLE(VkSwapChainWSI, VkObject)
 // ------------------------------------------------------------------------------------------------
 // Enumerations
 
-typedef enum VkDisplayInfoTypeWSI_
-{
-    // Info type for vkGetDisplayInfo()
-    VK_DISPLAY_INFO_TYPE_FORMAT_PROPERTIES_WSI              = 0x00000003,   // Return the VkFormat(s) supported for swap chains with the display
-
-    VK_ENUM_RANGE(DISPLAY_INFO_TYPE, FORMAT_PROPERTIES_WSI, FORMAT_PROPERTIES_WSI)
-} VkDisplayInfoTypeWSI;
 
 typedef enum VkSwapChainInfoTypeWSI_
 {
@@ -154,7 +147,6 @@ typedef struct VkPresentInfoWSI_
 // ------------------------------------------------------------------------------------------------
 // Function types
 
-typedef VkResult (VKAPI *PFN_vkGetDisplayInfoWSI)(VkDisplayWSI display, VkDisplayInfoTypeWSI infoType, size_t* pDataSize, void* pData);
 typedef VkResult (VKAPI *PFN_vkCreateSwapChainWSI)(VkDevice device, const VkSwapChainCreateInfoWSI* pCreateInfo, VkSwapChainWSI* pSwapChain);
 typedef VkResult (VKAPI *PFN_vkDestroySwapChainWSI)(VkSwapChainWSI swapChain);
 typedef VkResult (VKAPI *PFN_vkGetSwapChainInfoWSI)(VkSwapChainWSI swapChain, VkSwapChainInfoTypeWSI infoType, size_t* pDataSize, void* pData);
@@ -165,11 +157,6 @@ typedef VkResult (VKAPI *PFN_vkQueuePresentWSI)(VkQueue queue, const VkPresentIn
 
 #ifdef VK_PROTOTYPES
 
-VkResult VKAPI vkGetDisplayInfoWSI(
-    VkDisplayWSI                            display,
-    VkDisplayInfoTypeWSI                    infoType,
-    size_t*                                 pDataSize,
-    void*                                   pData);
 
 VkResult VKAPI vkCreateSwapChainWSI(
     VkDevice                                device,

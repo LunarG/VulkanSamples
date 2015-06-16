@@ -33,7 +33,7 @@ import vulkan
 import vk_helper
 
 def proto_is_global(proto):
-    if proto.params[0].ty == "VkInstance" or proto.params[0].ty == "VkPhysicalDevice" or proto.name == "CreateInstance" or proto.name == "GetGlobalExtensionInfo" or proto.name == "GetPhysicalDeviceExtensionInfo" or proto.name == "GetDisplayInfoWSI":
+    if proto.params[0].ty == "VkInstance" or proto.params[0].ty == "VkPhysicalDevice" or proto.name == "CreateInstance" or proto.name == "GetGlobalExtensionInfo" or proto.name == "GetPhysicalDeviceExtensionInfo":
        return True
     else:
        return False

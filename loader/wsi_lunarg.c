@@ -33,22 +33,7 @@
 
 /************  Trampoline entrypoints *******************/
 /* since one entrypoint is instance level will make available all entrypoints */
-VkResult VKAPI wsi_lunarg_GetDisplayInfoWSI(
-        VkDisplayWSI                            display,
-        VkDisplayInfoTypeWSI                    infoType,
-        size_t*                                 pDataSize,
-        void*                                   pData)
-{
-    const VkLayerInstanceDispatchTable *disp;
-    VkResult res;
-
-    disp = loader_get_instance_dispatch(display);
-
-    loader_platform_thread_lock_mutex(&loader_lock);
-    res = disp->GetDisplayInfoWSI(display, infoType, pDataSize, pData);
-    loader_platform_thread_unlock_mutex(&loader_lock);
-    return res;
-}
+/* TODO make this a device extension with NO trampoline code */
 
 VkResult wsi_lunarg_CreateSwapChainWSI(
         VkDevice                                device,
@@ -102,31 +87,6 @@ static VkResult wsi_lunarg_QueuePresentWSI(
     return disp->QueuePresentWSI(queue, pPresentInfo);
 }
 
-/************  loader instance chain termination entrypoints ***************/
-VkResult loader_GetDisplayInfoWSI(
-        VkDisplayWSI                            display,
-        VkDisplayInfoTypeWSI                    infoType,
-        size_t*                                 pDataSize,
-        void*                                   pData)
-{
-    /* TODO: need another way to find the icd, display is not a gpu object */
-//    uint32_t gpu_index;
-//    struct loader_icd *icd = loader_get_icd((VkPhysicalDevice) display, &gpu_index); //TODO fix dispaly -> PhysDev
-    VkResult res = VK_ERROR_INITIALIZATION_FAILED;
-
-    for (struct loader_instance *inst = loader.instances; inst; inst = inst->next) {
-        for (struct loader_icd *icd = inst->icds; icd; icd = icd->next) {
-            for (uint32_t i = 0; i < icd->gpu_count; i++) {
-                if (icd->GetDisplayInfoWSI)
-                    res = icd->GetDisplayInfoWSI(display, infoType, pDataSize, pData);
-            }
-        }
-    }
-
-    return res;
-}
-
-
 /************ extension enablement ***************/
 #define WSI_LUNARG_EXT_ARRAY_SIZE 1
 static const struct loader_extension_property wsi_lunarg_extension_info = {
@@ -160,9 +120,7 @@ void *wsi_lunarg_GetInstanceProcAddr(
     if (instance == VK_NULL_HANDLE)
         return NULL;
 
-    /* since two of these entrypoints must be loader handled will report all */
-    if (!strcmp(pName, "vkGetDisplayInfoWSI"))
-        return (void*) wsi_lunarg_GetDisplayInfoWSI;
+    /* since one of these entrypoints must be loader handled will report all */
     if (!strcmp(pName, "vkCreateSwapChainWSI"))
         return (void*) wsi_lunarg_CreateSwapChainWSI;
     if (!strcmp(pName, "vkDestroySwapChainWSI"))

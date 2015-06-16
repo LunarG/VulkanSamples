@@ -28,12 +28,6 @@
 
 #include "vk_wsi_lunarg.h"
 
-VkResult loader_GetDisplayInfoWSI(
-        VkDisplayWSI                            display,
-        VkDisplayInfoTypeWSI                    infoType,
-        size_t*                                 pDataSize,
-        void*                                   pData);
-
 void wsi_lunarg_add_instance_extensions(
         struct loader_extension_list *ext_list);
 

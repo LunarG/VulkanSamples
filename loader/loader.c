@@ -91,7 +91,6 @@ const VkLayerInstanceDispatchTable instance_disp = {
     .CreateDevice = loader_CreateDevice,
     .GetPhysicalDeviceExtensionInfo = loader_GetPhysicalDeviceExtensionInfo,
     .GetMultiDeviceCompatibility = loader_GetMultiDeviceCompatibility,
-    .GetDisplayInfoWSI = loader_GetDisplayInfoWSI,
     .DbgCreateMsgCallback = loader_DbgCreateMsgCallback,
     .DbgDestroyMsgCallback = loader_DbgDestroyMsgCallback,
 };
@@ -724,7 +723,6 @@ static void loader_icd_init_entrys(struct loader_icd *icd,
     LOOKUP(CreateDevice);
     LOOKUP(GetPhysicalDeviceExtensionInfo);
     LOOKUP(GetMultiDeviceCompatibility);
-    LOOKUP(GetDisplayInfoWSI);
     LOOKUP(DbgCreateMsgCallback);
     LOOKUP(DbgDestroyMsgCallback);
 #undef LOOKUP

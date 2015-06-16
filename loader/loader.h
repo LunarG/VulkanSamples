@@ -120,7 +120,6 @@ struct loader_icd {
     PFN_vkCreateDevice CreateDevice;
     PFN_vkGetPhysicalDeviceExtensionInfo GetPhysicalDeviceExtensionInfo;
     PFN_vkGetMultiDeviceCompatibility GetMultiDeviceCompatibility;
-    PFN_vkGetDisplayInfoWSI GetDisplayInfoWSI;
     PFN_vkDbgCreateMsgCallback DbgCreateMsgCallback;
     PFN_vkDbgDestroyMsgCallback DbgDestroyMsgCallback;
     /*

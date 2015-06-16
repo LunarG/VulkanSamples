@@ -867,12 +867,6 @@ wsi_lunarg = Extension(
         "VkDbgMsgCallback",
     ],
     protos=[
-        Proto("VkResult", "GetDisplayInfoWSI",
-            [Param("VkDisplayWSI", "display"),
-             Param("VkDisplayInfoTypeWSI", "infoType"),
-             Param("size_t*", "pDataSize"),
-             Param("void*", "pData")]),
-
         Proto("VkResult", "CreateSwapChainWSI",
             [Param("VkDevice", "device"),
              Param("const VkSwapChainCreateInfoWSI*", "pCreateInfo"),

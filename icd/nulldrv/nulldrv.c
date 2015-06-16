@@ -849,6 +849,7 @@ static const VkFormat nulldrv_presentable_formats[] = {
     VK_FORMAT_B8G8R8A8_UNORM,
 };
 
+#if 0
 ICD_EXPORT VkResult VKAPI vkGetDisplayInfoWSI(
     VkDisplayWSI                            display,
     VkDisplayInfoTypeWSI                    infoType,
@@ -889,6 +890,7 @@ ICD_EXPORT VkResult VKAPI vkGetDisplayInfoWSI(
 
     return ret;
 }
+#endif
 
 ICD_EXPORT VkResult VKAPI vkCreateSwapChainWSI(
     VkDevice                                device,

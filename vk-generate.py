@@ -121,7 +121,7 @@ class DispatchTableOpsSubcommand(Subcommand):
             stmts.append("// GPA has to be first entry inited and uses wrapped object since it triggers init")
             stmts.append("table->GetDeviceProcAddr =(PFN_vkGetDeviceProcAddr)  gpa(device,\"vkGetDeviceProcAddr\");")
             for proto in self.protos:
-                if proto.name == "CreateInstance" or proto.name == "GetGlobalExtensionInfo" or proto.name == "GetDisplayInfoWSI" or proto.params[0].ty == "VkInstance" or proto.params[0].ty == "VkPhysicalDevice":
+                if proto.name == "CreateInstance" or proto.name == "GetGlobalExtensionInfo" or proto.params[0].ty == "VkInstance" or proto.params[0].ty == "VkPhysicalDevice":
                     continue
                 if proto.name != "GetDeviceProcAddr":
                     stmts.append("table->%s = (PFN_vk%s) gpa(baseDevice, \"vk%s\");" %
@@ -138,7 +138,7 @@ class DispatchTableOpsSubcommand(Subcommand):
             stmts.append("// GPA has to be first entry inited and uses wrapped object since it triggers init")
             stmts.append("table->GetInstanceProcAddr =(PFN_vkGetInstanceProcAddr)  gpa(instance,\"vkGetInstanceProcAddr\");")
             for proto in self.protos:
-                if proto.name != "CreateInstance"  and proto.name != "GetDisplayInfoWSI" and proto.params[0].ty != "VkInstance" and proto.params[0].ty != "VkPhysicalDevice":
+                if proto.name != "CreateInstance"  and proto.params[0].ty != "VkInstance" and proto.params[0].ty != "VkPhysicalDevice":
                     continue
                 if proto.name != "GetInstanceProcAddr":
                     stmts.append("table->%s = (PFN_vk%s) gpa(baseInstance, \"vk%s\");" %

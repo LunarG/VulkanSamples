@@ -376,7 +376,6 @@ static inline void loader_init_instance_core_dispatch_table(VkLayerInstanceDispa
     table->CreateDevice = (PFN_vkCreateDevice) gpa(inst, "vkCreateDevice");
     table->GetPhysicalDeviceExtensionInfo = (PFN_vkGetPhysicalDeviceExtensionInfo) gpa(inst, "vkGetPhysicalDeviceExtensionInfo");
     table->GetMultiDeviceCompatibility = (PFN_vkGetMultiDeviceCompatibility) gpa(inst, "vkGetMultiDeviceCompatibility");
-    table->GetDisplayInfoWSI = (PFN_vkGetDisplayInfoWSI) gpa(inst, "vkGetDisplayInfoWSI");
 }
 
 static inline void loader_init_instance_extension_dispatch_table(
@@ -412,8 +411,6 @@ static inline void *loader_lookup_instance_dispatch_table(
         return (void *) table->GetPhysicalDeviceExtensionInfo;
     if (!strcmp(name, "GetMultiDeviceCompatibility"))
         return (void *) table->GetMultiDeviceCompatibility;
-    if (!strcmp(name, "GetDisplayInfoWSI"))
-        return (void *) table->GetDisplayInfoWSI;
     if (!strcmp(name, "DbgCreateMsgCallback"))
         return (void *) table->DbgCreateMsgCallback;
     if (!strcmp(name, "DbgDestroyMsgCallback"))

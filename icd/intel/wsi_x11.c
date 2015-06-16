@@ -896,6 +896,7 @@ VkResult intel_wsi_fence_wait(struct intel_fence *fence,
     return x11_swap_chain_wait(data->swap_chain, data->serial, timeout_ns);
 }
 
+#if 0
 ICD_EXPORT VkResult VKAPI vkGetDisplayInfoWSI(
     VkDisplayWSI                            display,
     VkDisplayInfoTypeWSI                    infoType,
@@ -934,6 +935,7 @@ ICD_EXPORT VkResult VKAPI vkGetDisplayInfoWSI(
 
     return ret;
 }
+#endif
 
 ICD_EXPORT VkResult VKAPI vkCreateSwapChainWSI(
     VkDevice                                device,
