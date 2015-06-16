@@ -47,7 +47,15 @@
 #include "layers_msg.h"
 #include "layers_table.h"
 #include "layers_debug_marker_table.h"
+#include "layer_logging.h"
 
+typedef struct _layer_data {
+    debug_report_data *report_data;
+    // TODO: put instance data here
+    VkDbgMsgCallback logging_callback;
+} layer_data;
+
+static std::unordered_map<void *, layer_data *> layer_data_map;
 static device_table_map draw_state_device_table_map;
 static instance_table_map draw_state_instance_table_map;
 
@@ -2722,7 +2730,12 @@ VK_LAYER_EXPORT VkResult VKAPI vkDbgCreateMsgCallback(
     VkDbgMsgCallback*                   pMsgCallback)
 {
     VkLayerInstanceDispatchTable *pTable = get_dispatch_table(draw_state_instance_table_map, instance);
-    return layer_create_msg_callback(instance, pTable, msgFlags, pfnMsgCallback, pUserData, pMsgCallback);
+    VkResult res = pTable->DbgCreateMsgCallback(instance, msgFlags, pfnMsgCallback, pUserData, pMsgCallback);
+    if (VK_SUCCESS == res) {
+        layer_data *my_data = get_my_data_ptr(get_dispatch_key(instance), layer_data_map);
+        res = layer_create_msg_callback(my_data->report_data, msgFlags, pfnMsgCallback, pUserData, pMsgCallback);
+    }
+    return res;
 }
 
 VK_LAYER_EXPORT VkResult VKAPI vkDbgDestroyMsgCallback(
@@ -2730,7 +2743,10 @@ VK_LAYER_EXPORT VkResult VKAPI vkDbgDestroyMsgCallback(
     VkDbgMsgCallback                    msgCallback)
 {
     VkLayerInstanceDispatchTable *pTable = get_dispatch_table(draw_state_instance_table_map, instance);
-    return layer_destroy_msg_callback(instance, pTable, msgCallback);
+    VkResult res = pTable->DbgDestroyMsgCallback(instance, msgCallback);
+    layer_data *my_data = get_my_data_ptr(get_dispatch_key(instance), layer_data_map);
+    layer_destroy_msg_callback(my_data->report_data, msgCallback);
+    return res;
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdDbgMarkerBegin(VkCmdBuffer cmdBuffer, const char* pMarker)
