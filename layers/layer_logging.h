@@ -255,7 +255,7 @@ static inline void VKAPI log_callback(
 
     print_msg_flags(msgFlags, msg_flags);
 
-    fprintf((FILE *) pUserData, "%s(%s): object: 0x%p type: %d location: %zu msgCode: %d: %s",
+    fprintf((FILE *) pUserData, "%s(%s): object: 0x%p type: %d location: %zu msgCode: %d: %s\n",
              pLayerPrefix, msg_flags, srcObject, objType, location, msgCode, pMsg);
 }
 #endif // LAYER_LOGGING_H
