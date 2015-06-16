@@ -1836,7 +1836,7 @@ TEST_F(VkRenderTest, CubeWithVertexFetchAndMVP)
             "} myBufferVals;\n"
             "layout (location = 0) in vec4 pos;\n"
             "layout (location = 1) in vec4 inColor;\n"
-            "out vec4 outColor;\n"
+            "layout (location = 0) out vec4 outColor;\n"
             "void main() {\n"
             "   outColor = inColor;\n"
             "   gl_Position = myBufferVals.mvp * pos;\n"
@@ -1950,8 +1950,10 @@ TEST_F(VkRenderTest, VSTexture)
     // The expected result from this test is a green and red triangle;
     // one red vertex on the left, two green vertices on the right.
     static const char *vertShaderText =
-            "#version 130\n"
-            "out vec4 texColor;\n"
+            "#version 140\n"
+            "#extension GL_ARB_separate_shader_objects : enable\n"
+            "#extension GL_ARB_shading_language_420pack : enable\n"
+            "layout (location = 0) out vec4 texColor;\n"
             "uniform sampler2D surface;\n"
             "void main() {\n"
             "   vec2 vertices[3];"
