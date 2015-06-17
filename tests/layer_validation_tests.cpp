@@ -157,16 +157,17 @@ protected:
          * any extension / layer that utilizes that feature also needs
          * to be enabled at create instance time.
          */
+	// Use Threading layer first to protect others from ThreadCmdBufferCollision test
+        instance_extension_names.push_back("Threading");
         instance_extension_names.push_back("MemTracker");
         instance_extension_names.push_back("DrawState");
         instance_extension_names.push_back("ObjectTracker");
-        instance_extension_names.push_back("Threading");
         instance_extension_names.push_back("ShaderChecker");
 
+        device_extension_names.push_back("Threading");
         device_extension_names.push_back("MemTracker");
         device_extension_names.push_back("DrawState");
         device_extension_names.push_back("ObjectTracker");
-        device_extension_names.push_back("Threading");
         device_extension_names.push_back("ShaderChecker");
 
         this->app_info.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
@@ -1770,7 +1771,7 @@ TEST_F(VkLayerTest, ThreadCmdBufferCollision)
     EndCommandBuffer(cmdBuffer);
 
     msgFlags = m_errorMonitor->GetState(&msgString);
-    ASSERT_TRUE(msgFlags & VK_DBG_REPORT_INFO_BIT) << "Did not receive an err from using one VkCommandBufferObj in two threads";
+    ASSERT_TRUE(msgFlags & VK_DBG_REPORT_ERROR_BIT) << "Did not receive an err from using one VkCommandBufferObj in two threads";
     if (!strstr(msgString.c_str(),"THREADING ERROR")) {
         FAIL() << "Error received was not 'THREADING ERROR'";
     }
