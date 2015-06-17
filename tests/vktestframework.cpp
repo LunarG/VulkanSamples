@@ -461,6 +461,7 @@ void  TestFrameworkVkPresent::Display()
     }
 
     VkMemoryPropertyFlags flags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
+    flags |= VK_BUFFER_USAGE_TRANSFER_SOURCE_BIT;
     buf.init(m_device, (VkDeviceSize)m_display_image->m_data_size, flags);
     dest_ptr = buf.map();
     memcpy(dest_ptr, m_display_image->m_data, m_display_image->m_data_size);
