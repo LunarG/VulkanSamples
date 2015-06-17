@@ -200,7 +200,8 @@ void VkImageTest::CreateImage(uint32_t w, uint32_t h)
     //    VK_IMAGE_USAGE_DEPTH_STENCIL_BIT                        = 0x00000020,   // Can be used as framebuffer depth/stencil attachment
     //    VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT                 = 0x00000040,   // Image data not needed outside of rendering
     //    } VkImageUsageFlags;
-    imageCreateInfo.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+    imageCreateInfo.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT |
+                            VK_IMAGE_USAGE_SAMPLED_BIT;
 
     //    VkResult VKAPI vkCreateImage(
     //        VkDevice                                  device,

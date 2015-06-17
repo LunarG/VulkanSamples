@@ -416,7 +416,8 @@ void VkTest::CreateImageTest()
     else {
         FAIL() << "Neither Linear nor Optimal allowed for color attachment";
     }
-    imageCreateInfo.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+    imageCreateInfo.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT |
+                            VK_IMAGE_USAGE_SAMPLED_BIT;
 
 //    VkResult VKAPI vkCreateImage(
 //        VkDevice                                  device,
