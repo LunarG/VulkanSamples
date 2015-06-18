@@ -524,6 +524,10 @@ ICD_EXPORT VkResult VKAPI vkGetGlobalExtensionInfo(
             *count = INTEL_EXT_COUNT;
             break;
         case VK_EXTENSION_INFO_TYPE_PROPERTIES:
+            /* check that *pDataSize is big enough*/
+            if (*pDataSize < sizeof(VkExtensionProperties))
+                return VK_ERROR_INVALID_MEMORY_SIZE;
+
             *pDataSize = sizeof(VkExtensionProperties);
             if (pData == NULL)
                 return VK_SUCCESS;
