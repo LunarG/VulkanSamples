@@ -997,6 +997,7 @@ TEST_F(VkCmdCopyBufferToImageTest, Basic)
         img_info.extent.width = 64;
         img_info.extent.height = 64;
         img_info.tiling = it->tiling;
+        img_info.usage = VK_IMAGE_USAGE_TRANSFER_DESTINATION_BIT;
 
         test_copy_memory_to_image(img_info);
     }
@@ -1066,6 +1067,7 @@ TEST_F(VkCmdCopyImageToBufferTest, Basic)
         img_info.extent.width = 64;
         img_info.extent.height = 64;
         img_info.tiling = it->tiling;
+        img_info.usage = VK_IMAGE_USAGE_TRANSFER_SOURCE_BIT;
 
         test_copy_image_to_memory(img_info);
     }
@@ -1152,6 +1154,7 @@ TEST_F(VkCmdCopyImageTest, Basic)
         img_info.extent.width = 64;
         img_info.extent.height = 64;
         img_info.tiling = it->tiling;
+        img_info.usage = VK_IMAGE_USAGE_TRANSFER_SOURCE_BIT | VK_IMAGE_USAGE_TRANSFER_DESTINATION_BIT;
 
         VkImageCopy copy = {};
         copy.srcSubresource = vk_testing::Image::subresource(VK_IMAGE_ASPECT_COLOR, 0, 0);
