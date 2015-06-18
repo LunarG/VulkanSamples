@@ -698,7 +698,7 @@ static void print_object_list(
 
 // For given Object, get 'mem' obj that it's bound to or NULL if no binding
 static VkDeviceMemory get_mem_binding_from_object(
-    const VkObject object)
+    const VkObject dispObj, const VkObject object)
 {
     VkDeviceMemory mem = NULL;
     MT_OBJ_INFO* pObjInfo = get_object_info(object);
@@ -706,12 +706,12 @@ static VkDeviceMemory get_mem_binding_from_object(
         if (pObjInfo->pMemObjInfo) {
             mem = pObjInfo->pMemObjInfo->mem;
         } else {
-            log_msg(mdd(object), VK_DBG_REPORT_ERROR_BIT, (VkObjectType) 0, object, 0, MEMTRACK_MISSING_MEM_BINDINGS, "MEM",
+            log_msg(mdd(dispObj), VK_DBG_REPORT_ERROR_BIT, (VkObjectType) 0, object, 0, MEMTRACK_MISSING_MEM_BINDINGS, "MEM",
                     "Trying to get mem binding for object %p but object has no mem binding", (void*)object);
             print_object_list(object);
         }
     } else {
-        log_msg(mdd(object), VK_DBG_REPORT_ERROR_BIT, (VkObjectType) 0, object, 0, MEMTRACK_INVALID_OBJECT, "MEM",
+        log_msg(mdd(dispObj), VK_DBG_REPORT_ERROR_BIT, (VkObjectType) 0, object, 0, MEMTRACK_INVALID_OBJECT, "MEM",
                 "Trying to get mem binding for object %p but no such object in global list", (void*)object);
         print_object_list(object);
     }
@@ -1781,7 +1781,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdDrawIndirect(
      uint32_t     stride)
 {
     loader_platform_thread_lock_mutex(&globalLock);
-    VkDeviceMemory mem = get_mem_binding_from_object(buffer);
+    VkDeviceMemory mem = get_mem_binding_from_object(cmdBuffer, buffer);
     if (VK_FALSE == update_cmd_buf_and_mem_references(cmdBuffer, mem)) {
         log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, cmdBuffer, 0, MEMTRACK_MEMORY_BINDING_ERROR, "MEM",
                 "In vkCmdDrawIndirect() call unable to update binding of buffer %p to cmdBuffer %p", buffer, cmdBuffer);
@@ -1798,7 +1798,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdDrawIndexedIndirect(
     uint32_t     stride)
 {
     loader_platform_thread_lock_mutex(&globalLock);
-    VkDeviceMemory mem = get_mem_binding_from_object(buffer);
+    VkDeviceMemory mem = get_mem_binding_from_object(cmdBuffer, buffer);
     if (VK_FALSE == update_cmd_buf_and_mem_references(cmdBuffer, mem)) {
         log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, cmdBuffer, 0, MEMTRACK_MEMORY_BINDING_ERROR, "MEM",
                 "In vkCmdDrawIndexedIndirect() call unable to update binding of buffer %p to cmdBuffer %p", buffer, cmdBuffer);
@@ -1813,7 +1813,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdDispatchIndirect(
     VkDeviceSize offset)
 {
     loader_platform_thread_lock_mutex(&globalLock);
-    VkDeviceMemory mem = get_mem_binding_from_object(buffer);
+    VkDeviceMemory mem = get_mem_binding_from_object(cmdBuffer, buffer);
     if (VK_FALSE == update_cmd_buf_and_mem_references(cmdBuffer, mem)) {
         log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, cmdBuffer, 0, MEMTRACK_MEMORY_BINDING_ERROR, "MEM",
                 "In vkCmdDispatchIndirect() call unable to update binding of buffer %p to cmdBuffer %p", buffer, cmdBuffer);
@@ -1830,12 +1830,12 @@ VK_LAYER_EXPORT void VKAPI vkCmdCopyBuffer(
     const VkBufferCopy *pRegions)
 {
     loader_platform_thread_lock_mutex(&globalLock);
-    VkDeviceMemory mem = get_mem_binding_from_object(srcBuffer);
+    VkDeviceMemory mem = get_mem_binding_from_object(cmdBuffer, srcBuffer);
     if (VK_FALSE == update_cmd_buf_and_mem_references(cmdBuffer, mem)) {
         log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, cmdBuffer, 0, MEMTRACK_MEMORY_BINDING_ERROR, "MEM",
                 "In vkCmdCopyBuffer() call unable to update binding of srcBuffer %p to cmdBuffer %p", srcBuffer, cmdBuffer);
     }
-    mem = get_mem_binding_from_object(destBuffer);
+    mem = get_mem_binding_from_object(cmdBuffer, destBuffer);
     if (VK_FALSE == update_cmd_buf_and_mem_references(cmdBuffer, mem)) {
         log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, cmdBuffer, 0, MEMTRACK_MEMORY_BINDING_ERROR, "MEM",
                 "In vkCmdCopyBuffer() call unable to update binding of destBuffer %p to cmdBuffer %p", destBuffer, cmdBuffer);
@@ -1883,13 +1883,13 @@ VK_LAYER_EXPORT void VKAPI vkCmdCopyBufferToImage(
 {
     // TODO : Track this
     loader_platform_thread_lock_mutex(&globalLock);
-    VkDeviceMemory mem = get_mem_binding_from_object(destImage);
+    VkDeviceMemory mem = get_mem_binding_from_object(cmdBuffer, destImage);
     if (VK_FALSE == update_cmd_buf_and_mem_references(cmdBuffer, mem)) {
         log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, cmdBuffer, 0, MEMTRACK_MEMORY_BINDING_ERROR, "MEM",
                 "In vkCmdCopyMemoryToImage() call unable to update binding of destImage buffer %p to cmdBuffer %p", destImage, cmdBuffer);
     }
 
-    mem = get_mem_binding_from_object(srcBuffer);
+    mem = get_mem_binding_from_object(cmdBuffer, srcBuffer);
     if (VK_FALSE == update_cmd_buf_and_mem_references(cmdBuffer, mem)) {
         log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, cmdBuffer, 0, MEMTRACK_MEMORY_BINDING_ERROR, "MEM",
                 "In vkCmdCopyMemoryToImage() call unable to update binding of srcBuffer %p to cmdBuffer %p", srcBuffer, cmdBuffer);
@@ -1909,12 +1909,12 @@ VK_LAYER_EXPORT void VKAPI vkCmdCopyImageToBuffer(
 {
     // TODO : Track this
     loader_platform_thread_lock_mutex(&globalLock);
-    VkDeviceMemory mem = get_mem_binding_from_object(srcImage);
+    VkDeviceMemory mem = get_mem_binding_from_object(cmdBuffer, srcImage);
     if (VK_FALSE == update_cmd_buf_and_mem_references(cmdBuffer, mem)) {
         log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, cmdBuffer, 0, MEMTRACK_MEMORY_BINDING_ERROR, "MEM",
                 "In vkCmdCopyImageToMemory() call unable to update binding of srcImage buffer %p to cmdBuffer %p", srcImage, cmdBuffer);
     }
-    mem = get_mem_binding_from_object(destBuffer);
+    mem = get_mem_binding_from_object(cmdBuffer, destBuffer);
     if (VK_FALSE == update_cmd_buf_and_mem_references(cmdBuffer, mem)) {
         log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, cmdBuffer, 0, MEMTRACK_MEMORY_BINDING_ERROR, "MEM",
                 "In vkCmdCopyImageToMemory() call unable to update binding of destBuffer %p to cmdBuffer %p", destBuffer, cmdBuffer);
@@ -1932,7 +1932,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdUpdateBuffer(
     const uint32_t *pData)
 {
     loader_platform_thread_lock_mutex(&globalLock);
-    VkDeviceMemory mem = get_mem_binding_from_object(destBuffer);
+    VkDeviceMemory mem = get_mem_binding_from_object(cmdBuffer, destBuffer);
     if (VK_FALSE == update_cmd_buf_and_mem_references(cmdBuffer, mem)) {
         log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, cmdBuffer, 0, MEMTRACK_MEMORY_BINDING_ERROR, "MEM",
                 "In vkCmdUpdateMemory() call unable to update binding of destBuffer %p to cmdBuffer %p", destBuffer, cmdBuffer);
@@ -1949,7 +1949,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdFillBuffer(
     uint32_t     data)
 {
     loader_platform_thread_lock_mutex(&globalLock);
-    VkDeviceMemory mem = get_mem_binding_from_object(destBuffer);
+    VkDeviceMemory mem = get_mem_binding_from_object(cmdBuffer, destBuffer);
     if (VK_FALSE == update_cmd_buf_and_mem_references(cmdBuffer, mem)) {
         log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, cmdBuffer, 0, MEMTRACK_MEMORY_BINDING_ERROR, "MEM",
                 "In vkCmdFillMemory() call unable to update binding of destBuffer %p to cmdBuffer %p", destBuffer, cmdBuffer);
@@ -1968,7 +1968,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdClearColorImage(
 {
     // TODO : Verify memory is in VK_IMAGE_STATE_CLEAR state
     loader_platform_thread_lock_mutex(&globalLock);
-    VkDeviceMemory mem = get_mem_binding_from_object(image);
+    VkDeviceMemory mem = get_mem_binding_from_object(cmdBuffer, image);
     if (VK_FALSE == update_cmd_buf_and_mem_references(cmdBuffer, mem)) {
         log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, cmdBuffer, 0, MEMTRACK_MEMORY_BINDING_ERROR, "MEM",
                 "In vkCmdClearColorImage() call unable to update binding of image buffer %p to cmdBuffer %p", image, cmdBuffer);
@@ -1988,7 +1988,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdClearDepthStencil(
 {
     // TODO : Verify memory is in VK_IMAGE_STATE_CLEAR state
     loader_platform_thread_lock_mutex(&globalLock);
-    VkDeviceMemory mem = get_mem_binding_from_object(image);
+    VkDeviceMemory mem = get_mem_binding_from_object(cmdBuffer, image);
     if (VK_FALSE == update_cmd_buf_and_mem_references(cmdBuffer, mem)) {
         log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, cmdBuffer, 0, MEMTRACK_MEMORY_BINDING_ERROR, "MEM",
                 "In vkCmdClearDepthStencil() call unable to update binding of image buffer %p to cmdBuffer %p", image, cmdBuffer);
@@ -2008,12 +2008,12 @@ VK_LAYER_EXPORT void VKAPI vkCmdResolveImage(
     const VkImageResolve *pRegions)
 {
     loader_platform_thread_lock_mutex(&globalLock);
-    VkDeviceMemory mem = get_mem_binding_from_object(srcImage);
+    VkDeviceMemory mem = get_mem_binding_from_object(cmdBuffer, srcImage);
     if (VK_FALSE == update_cmd_buf_and_mem_references(cmdBuffer, mem)) {
         log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, cmdBuffer, 0, MEMTRACK_MEMORY_BINDING_ERROR, "MEM",
                 "In vkCmdResolveImage() call unable to update binding of srcImage buffer %p to cmdBuffer %p", srcImage, cmdBuffer);
     }
-    mem = get_mem_binding_from_object(destImage);
+    mem = get_mem_binding_from_object(cmdBuffer, destImage);
     if (VK_FALSE == update_cmd_buf_and_mem_references(cmdBuffer, mem)) {
         log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, cmdBuffer, 0, MEMTRACK_MEMORY_BINDING_ERROR, "MEM",
                 "In vkCmdResolveImage() call unable to update binding of destImage buffer %p to cmdBuffer %p", destImage, cmdBuffer);
@@ -2030,7 +2030,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdBeginQuery(
     VkFlags     flags)
 {
     loader_platform_thread_lock_mutex(&globalLock);
-    VkDeviceMemory mem = get_mem_binding_from_object(queryPool);
+    VkDeviceMemory mem = get_mem_binding_from_object(cmdBuffer, queryPool);
     if (VK_FALSE == update_cmd_buf_and_mem_references(cmdBuffer, mem)) {
         log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, cmdBuffer, 0, MEMTRACK_MEMORY_BINDING_ERROR, "MEM",
                 "In vkCmdBeginQuery() call unable to update binding of queryPool buffer %p to cmdBuffer %p", queryPool, cmdBuffer);
@@ -2045,7 +2045,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdEndQuery(
     uint32_t    slot)
 {
     loader_platform_thread_lock_mutex(&globalLock);
-    VkDeviceMemory mem = get_mem_binding_from_object(queryPool);
+    VkDeviceMemory mem = get_mem_binding_from_object(cmdBuffer, queryPool);
     if (VK_FALSE == update_cmd_buf_and_mem_references(cmdBuffer, mem)) {
         log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, cmdBuffer, 0, MEMTRACK_MEMORY_BINDING_ERROR, "MEM",
                 "In vkCmdEndQuery() call unable to update binding of queryPool buffer %p to cmdBuffer %p", queryPool, cmdBuffer);
@@ -2061,7 +2061,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdResetQueryPool(
     uint32_t    queryCount)
 {
     loader_platform_thread_lock_mutex(&globalLock);
-    VkDeviceMemory mem = get_mem_binding_from_object(queryPool);
+    VkDeviceMemory mem = get_mem_binding_from_object(cmdBuffer, queryPool);
     if (VK_FALSE == update_cmd_buf_and_mem_references(cmdBuffer, mem)) {
         log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, cmdBuffer, 0, MEMTRACK_MEMORY_BINDING_ERROR, "MEM",
                 "In vkCmdResetQueryPool() call unable to update binding of queryPool buffer %p to cmdBuffer %p", queryPool, cmdBuffer);
