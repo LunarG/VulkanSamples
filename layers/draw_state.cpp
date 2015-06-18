@@ -460,29 +460,35 @@ static void initPipeline(PIPELINE_NODE* pPipeline, const VkGraphicsPipelineCreat
                         pPrev->pNext = &pPipeline->vsCI;
                         pPrev = (GENERIC_HEADER*)&pPipeline->vsCI;
                         memcpy(&pPipeline->vsCI, pTmpPSSCI, sizeof(VkPipelineShaderStageCreateInfo));
+                        pPipeline->active_shaders |= VK_SHADER_STAGE_VERTEX_BIT;
                         break;
                     case VK_SHADER_STAGE_TESS_CONTROL:
                         pPrev->pNext = &pPipeline->tcsCI;
                         pPrev = (GENERIC_HEADER*)&pPipeline->tcsCI;
                         memcpy(&pPipeline->tcsCI, pTmpPSSCI, sizeof(VkPipelineShaderStageCreateInfo));
+                        pPipeline->active_shaders |= VK_SHADER_STAGE_TESS_CONTROL_BIT;
                         break;
                     case VK_SHADER_STAGE_TESS_EVALUATION:
                         pPrev->pNext = &pPipeline->tesCI;
                         pPrev = (GENERIC_HEADER*)&pPipeline->tesCI;
                         memcpy(&pPipeline->tesCI, pTmpPSSCI, sizeof(VkPipelineShaderStageCreateInfo));
+                        pPipeline->active_shaders |= VK_SHADER_STAGE_TESS_EVALUATION_BIT;
                         break;
                     case VK_SHADER_STAGE_GEOMETRY:
                         pPrev->pNext = &pPipeline->gsCI;
                         pPrev = (GENERIC_HEADER*)&pPipeline->gsCI;
                         memcpy(&pPipeline->gsCI, pTmpPSSCI, sizeof(VkPipelineShaderStageCreateInfo));
+                        pPipeline->active_shaders |= VK_SHADER_STAGE_GEOMETRY_BIT;
                         break;
                     case VK_SHADER_STAGE_FRAGMENT:
                         pPrev->pNext = &pPipeline->fsCI;
                         pPrev = (GENERIC_HEADER*)&pPipeline->fsCI;
                         memcpy(&pPipeline->fsCI, pTmpPSSCI, sizeof(VkPipelineShaderStageCreateInfo));
+                        pPipeline->active_shaders |= VK_SHADER_STAGE_FRAGMENT_BIT;
                         break;
                     case VK_SHADER_STAGE_COMPUTE:
                         // TODO : Flag error, CS is specified through VkComputePipelineCreateInfo
+                        pPipeline->active_shaders |= VK_SHADER_STAGE_COMPUTE_BIT;
                         break;
                     default:
                         // TODO : Flag error
@@ -1774,7 +1780,6 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateImageView(VkDevice device, const VkImageV
 
 static void track_pipeline(const VkGraphicsPipelineCreateInfo* pCreateInfo, VkPipeline* pPipeline)
 {
-    // Create LL HEAD for this Pipeline
     loader_platform_thread_lock_mutex(&globalLock);
     PIPELINE_NODE* pPipeNode = new PIPELINE_NODE;
     memset((void*)pPipeNode, 0, sizeof(PIPELINE_NODE));
@@ -1786,7 +1791,6 @@ static void track_pipeline(const VkGraphicsPipelineCreateInfo* pCreateInfo, VkPi
 VK_LAYER_EXPORT VkResult VKAPI vkCreateGraphicsPipeline(VkDevice device, const VkGraphicsPipelineCreateInfo* pCreateInfo, VkPipeline* pPipeline)
 {
     VkResult result = get_dispatch_table(draw_state_device_table_map, device)->CreateGraphicsPipeline(device, pCreateInfo, pPipeline);
-    // Create LL HEAD for this Pipeline
     log_msg(mdd(device), VK_DBG_REPORT_INFO_BIT, VK_OBJECT_TYPE_PIPELINE, *pPipeline, 0, DRAWSTATE_NONE, "DS",
             "Created Gfx Pipeline %p", (void*)*pPipeline);
     track_pipeline(pCreateInfo, pPipeline);

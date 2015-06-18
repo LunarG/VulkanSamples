@@ -93,15 +93,16 @@ typedef struct _PIPELINE_NODE {
     VkPipelineShaderStageCreateInfo gsCI;
     VkPipelineShaderStageCreateInfo fsCI;
     // Compute shader is include in VkComputePipelineCreateInfo
-    VkComputePipelineCreateInfo      computePipelineCI;
-
+    VkComputePipelineCreateInfo     computePipelineCI;
+    // Flag of which shader stages are active for this pipeline
+    uint32_t                        active_shaders;
     VkGraphicsPipelineCreateInfo*      pCreateTree; // Ptr to shadow of data in create tree
     // Vtx input info (if any)
-    uint32_t                                vtxBindingCount;   // number of bindings
+    uint32_t                           vtxBindingCount;   // number of bindings
     VkVertexInputBindingDescription*   pVertexBindingDescriptions;
-    uint32_t                                vtxAttributeCount; // number of attributes
+    uint32_t                           vtxAttributeCount; // number of attributes
     VkVertexInputAttributeDescription* pVertexAttributeDescriptions;
-    uint32_t                                attachmentCount;   // number of CB attachments
+    uint32_t                           attachmentCount;   // number of CB attachments
     VkPipelineCbAttachmentState*       pAttachments;
 } PIPELINE_NODE;
 
