@@ -3,6 +3,10 @@ include_directories(
 	${CMAKE_CURRENT_BINARY_DIR}
 )
 
+add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/vulkan.def
+	COMMAND ${PYTHON_CMD} ${PROJECT_SOURCE_DIR}/loader/vk-loader-generate.py win-def-file vulkan all > ${CMAKE_CURRENT_BINARY_DIR}/vulkan.def
+	DEPENDS ${PROJECT_SOURCE_DIR}/loader/vk-loader-generate.py ${PROJECT_SOURCE_DIR}/vulkan.py)
+
 # DEBUG enables runtime loader ICD verification
 set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -DDEBUG")
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -DDEBUG")
@@ -10,8 +14,8 @@ set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -DDEBUG")
 if (WIN32)
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DVK_PROTOTYPES -D_CRT_SECURE_NO_WARNINGS -DXCB_NVIDIA")
 
-    add_library(vulkan SHARED loader.c loader.h loader_platform.h dirent_on_windows.c trampoline.c  wsi_lunarg.c wsi_lunarg.h debug_report.c debug_report.h table_ops.h gpa_helper.h vulkan.def)
-    set_target_properties(vulkan PROPERTIES LINK_FLAGS "/DEF:${PROJECT_SOURCE_DIR}/loader/vulkan.def")
+    add_library(vulkan SHARED loader.c loader.h loader_platform.h dirent_on_windows.c trampoline.c  wsi_lunarg.c wsi_lunarg.h debug_report.c debug_report.h table_ops.h gpa_helper.h ${CMAKE_CURRENT_BINARY_DIR}/vulkan.def)
+    set_target_properties(vulkan PROPERTIES LINK_FLAGS "/DEF:${CMAKE_CURRENT_BINARY_DIR}/vulkan.def")
     add_library(VKstatic STATIC loader.c loader.h dirent_on_windows.c trampoline.c wsi_lunarg.c wsi_lunarg.h debug_report.c debug_report.h table_ops.h gpa_helper.h)
     set_target_properties(VKstatic PROPERTIES OUTPUT_NAME VKstatic)
     target_link_libraries(vulkan)

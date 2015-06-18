@@ -153,6 +153,7 @@ static inline void loader_platform_thread_cond_broadcast(loader_platform_thread_
 #include <WinSock2.h>
 #include <windows.h>
 #include <assert.h>
+#include <stdio.h>
 #ifdef __cplusplus
 #include <iostream>
 #include <string>

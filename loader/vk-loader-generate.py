@@ -353,6 +353,8 @@ class WinDefFileSubcommand(Subcommand):
         for proto in self.protos:
             if self.exports and proto.name not in self.exports:
                 continue
+            if proto.name.endswith("WSI"):
+                continue
             body.append("   vk" + proto.name)
 
         return "\n".join(body)
