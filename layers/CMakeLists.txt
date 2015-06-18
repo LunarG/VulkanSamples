@@ -100,6 +100,7 @@ add_vk_layer(Multi multi.cpp)
 add_vk_layer(DrawState draw_state.cpp layers_debug_marker_table.cpp layers_table.cpp)
 add_vk_layer(MemTracker mem_tracker.cpp layers_table.cpp)
 add_vk_layer(ShaderChecker shader_checker.cpp layers_table.cpp)
+add_vk_layer(Image image.cpp layers_table.cpp)
 # generated
 add_vk_layer(Generic generic_layer.cpp layers_table.cpp)
 add_vk_layer(APIDump api_dump.cpp layers_table.cpp)
