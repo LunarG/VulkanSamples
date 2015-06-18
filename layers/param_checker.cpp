@@ -550,7 +550,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkWaitForFences(VkDevice device, uint32_t fenceCo
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkResetFences(VkDevice device, uint32_t fenceCount, VkFence* pFences)
+VK_LAYER_EXPORT VkResult VKAPI vkResetFences(VkDevice device, uint32_t fenceCount, const VkFence* pFences)
 {
 
     VkResult result = device_dispatch_table(device)->ResetFences(device, fenceCount, pFences);

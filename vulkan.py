@@ -369,7 +369,7 @@ core = Extension(
         Proto("VkResult", "ResetFences",
             [Param("VkDevice", "device"),
              Param("uint32_t", "fenceCount"),
-             Param("VkFence*", "pFences")]),
+             Param("const VkFence*", "pFences")]),
 
         Proto("VkResult", "GetFenceStatus",
             [Param("VkDevice", "device"),

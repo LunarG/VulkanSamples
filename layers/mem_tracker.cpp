@@ -1291,7 +1291,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateFence(
 VK_LAYER_EXPORT VkResult VKAPI vkResetFences(
     VkDevice  device,
     uint32_t  fenceCount,
-    VkFence  *pFences)
+    const VkFence  *pFences)
 {
     /*
      * TODO: Shouldn't we check for error conditions before passing down the chain?

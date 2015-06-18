@@ -409,7 +409,7 @@ LOADER_EXPORT VkResult VKAPI vkCreateFence(VkDevice device, const VkFenceCreateI
     return disp->CreateFence(device, pCreateInfo, pFence);
 }
 
-LOADER_EXPORT VkResult VKAPI vkResetFences(VkDevice device, uint32_t fenceCount, VkFence* pFences)
+LOADER_EXPORT VkResult VKAPI vkResetFences(VkDevice device, uint32_t fenceCount, const VkFence* pFences)
 {
     const VkLayerDispatchTable *disp;
 

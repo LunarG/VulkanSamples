@@ -1385,9 +1385,9 @@ ICD_EXPORT VkResult VKAPI vkGetFenceStatus(
 }
 
 ICD_EXPORT VkResult VKAPI vkResetFences(
-    VkDevice                                  device,
-    uint32_t                                   fenceCount,
-    VkFence*                                  pFences)
+    VkDevice                    device,
+    uint32_t                    fenceCount,
+    const VkFence*              pFences)
 {
     NULLDRV_LOG_FUNC;
     return VK_SUCCESS;
