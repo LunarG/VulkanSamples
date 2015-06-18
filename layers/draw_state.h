@@ -35,7 +35,8 @@ typedef enum _DRAW_STATE_ERROR
     DRAWSTATE_INVALID_POOL,                     // Invalid DS pool
     DRAWSTATE_INVALID_SET,                      // Invalid DS
     DRAWSTATE_INVALID_LAYOUT,                   // Invalid DS layout
-    DRAWSTATE_INVALID_PIPELINE,                 // Invalid Pipeline referenced
+    DRAWSTATE_INVALID_PIPELINE,                 // Invalid Pipeline handle referenced
+    DRAWSTATE_INVALID_PIPELINE_CREATE_STATE,    // Attempt to create a pipeline with invalid state
     DRAWSTATE_INVALID_CMD_BUFFER,               // Invalid CmdBuffer referenced
     DRAWSTATE_VTX_INDEX_OUT_OF_BOUNDS,          // binding in vkCmdBindVertexData() too large for PSO's pVertexBindingDescriptions array
     DRAWSTATE_INVALID_DYNAMIC_STATE_OBJECT,     // Invalid dyn state object
@@ -51,7 +52,7 @@ typedef enum _DRAW_STATE_ERROR
     DRAWSTATE_RASTER_NOT_BOUND,                 // Draw submitted with no raster state object bound
     DRAWSTATE_COLOR_BLEND_NOT_BOUND,            // Draw submitted with no color blend state object bound when color write enabled
     DRAWSTATE_DEPTH_STENCIL_NOT_BOUND,          // Draw submitted with no depth-stencil state object bound when depth write enabled
-    DRAWSTATE_INVALID_EXTENSION
+    DRAWSTATE_INVALID_EXTENSION,
 } DRAW_STATE_ERROR;
 
 typedef enum _DRAW_TYPE
@@ -77,8 +78,7 @@ typedef struct _GENERIC_HEADER {
 
 typedef struct _PIPELINE_NODE {
     VkPipeline           pipeline;
-
-    VkGraphicsPipelineCreateInfo     graphicsPipelineCI;
+    VkGraphicsPipelineCreateInfo    graphicsPipelineCI;
     VkPipelineVertexInputCreateInfo vertexInputCI;
     VkPipelineIaStateCreateInfo     iaStateCI;
     VkPipelineTessStateCreateInfo   tessStateCI;
@@ -256,7 +256,7 @@ typedef struct _GLOBAL_CB_NODE {
 
 //prototypes for extension functions
 void drawStateDumpDotFile(char* outFileName);
-void drawStateDumpPngFile(char* outFileName);
+void drawStateDumpPngFile(const VkDevice device, char* outFileName);
 void drawStateDumpCommandBufferDotFile(char* outFileName);
 // Func ptr typedefs
 typedef void (*DRAW_STATE_DUMP_DOT_FILE)(char*);

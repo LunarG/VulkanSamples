@@ -437,11 +437,58 @@ static VkSamplerCreateInfo* getSamplerCreateInfo(const VkSampler sampler)
     loader_platform_thread_unlock_mutex(&globalLock);
     return &sampleMap[sampler]->createInfo;
 }
-
+// Verify that create state for a pipeline is valid
+static bool32_t verifyPipelineCreateState(const VkDevice device, const PIPELINE_NODE* pPipeline)
+{
+    // VS is required
+    if (!(pPipeline->active_shaders & VK_SHADER_STAGE_VERTEX_BIT)) {
+        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkObjectType) 0, VK_NULL_HANDLE, 0, DRAWSTATE_INVALID_PIPELINE_CREATE_STATE, "DS",
+                "Invalid Pipeline CreateInfo State: Vtx Shader required");
+        return VK_FALSE;
+    }
+    // Either both or neither TC/TE shaders should be defined
+    if (((pPipeline->active_shaders & VK_SHADER_STAGE_TESS_CONTROL_BIT) == 0) !=
+         ((pPipeline->active_shaders & VK_SHADER_STAGE_TESS_EVALUATION_BIT) == 0) ) {
+        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkObjectType) 0, VK_NULL_HANDLE, 0, DRAWSTATE_INVALID_PIPELINE_CREATE_STATE, "DS",
+                "Invalid Pipeline CreateInfo State: TE and TC shaders must be included or excluded as a pair");
+        return VK_FALSE;
+    }
+    // Compute shaders should be specified independent of Gfx shaders
+    if ((pPipeline->active_shaders & VK_SHADER_STAGE_COMPUTE_BIT) &&
+        (pPipeline->active_shaders & (VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_TESS_CONTROL_BIT |
+                                     VK_SHADER_STAGE_TESS_EVALUATION_BIT | VK_SHADER_STAGE_GEOMETRY_BIT |
+                                     VK_SHADER_STAGE_FRAGMENT_BIT))) {
+        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkObjectType) 0, VK_NULL_HANDLE, 0, DRAWSTATE_INVALID_PIPELINE_CREATE_STATE, "DS",
+                "Invalid Pipeline CreateInfo State: Do not specify Compute Shader for Gfx Pipeline");
+        return VK_FALSE;
+    }
+    // VK_PRIMITIVE_TOPOLOGY_PATCH primitive topology is only valid for tessellation pipelines.
+    // Mismatching primitive topology and tessellation fails graphics pipeline creation.
+    if (pPipeline->active_shaders & (VK_SHADER_STAGE_TESS_CONTROL_BIT | VK_SHADER_STAGE_TESS_EVALUATION_BIT) &&
+        (pPipeline->iaStateCI.topology != VK_PRIMITIVE_TOPOLOGY_PATCH)) {
+        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkObjectType) 0, VK_NULL_HANDLE, 0, DRAWSTATE_INVALID_PIPELINE_CREATE_STATE, "DS",
+                "Invalid Pipeline CreateInfo State: VK_PRIMITIVE_TOPOLOGY_PATCH must be set as IA topology for tessellation pipelines");
+        return VK_FALSE;
+    }
+    if ((pPipeline->iaStateCI.topology == VK_PRIMITIVE_TOPOLOGY_PATCH) &&
+        (~pPipeline->active_shaders & VK_SHADER_STAGE_TESS_CONTROL_BIT)) {
+        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkObjectType) 0, VK_NULL_HANDLE, 0, DRAWSTATE_INVALID_PIPELINE_CREATE_STATE, "DS",
+                "Invalid Pipeline CreateInfo State: VK_PRIMITIVE_TOPOLOGY_PATCH primitive topology is only valid for tessellation pipelines");
+        return VK_FALSE;
+    }
+    return VK_TRUE;
+}
 // Init the pipeline mapping info based on pipeline create info LL tree
 //  Threading note : Calls to this function should wrapped in mutex
-static void initPipeline(PIPELINE_NODE* pPipeline, const VkGraphicsPipelineCreateInfo* pCreateInfo)
+static PIPELINE_NODE* initPipeline(const VkGraphicsPipelineCreateInfo* pCreateInfo, PIPELINE_NODE* pBasePipeline)
 {
+    PIPELINE_NODE* pPipeline = new PIPELINE_NODE;
+    if (pBasePipeline) {
+        memcpy((void*)pPipeline, (void*)pBasePipeline, sizeof(PIPELINE_NODE));
+    }
+    else {
+        memset((void*)pPipeline, 0, sizeof(PIPELINE_NODE));
+    }
     // First init create info, we'll shadow the structs as we go down the tree
     // TODO : Validate that no create info is incorrectly replicated
     memcpy(&pPipeline->graphicsPipelineCI, pCreateInfo, sizeof(VkGraphicsPipelineCreateInfo));
@@ -563,7 +610,7 @@ static void initPipeline(PIPELINE_NODE* pPipeline, const VkGraphicsPipelineCreat
         }
         pTrav = (GENERIC_HEADER*)pTrav->pNext;
     }
-    pipelineMap[pPipeline->pipeline] = pPipeline;
+    return pPipeline;
 }
 // Free the Pipeline nodes
 static void deletePipelines()
@@ -652,7 +699,7 @@ static LAYOUT_NODE* getLayoutNode(const VkDescriptorSetLayout layout) {
     return layoutMap[layout];
 }
 // Return 1 if update struct is of valid type, 0 otherwise
-static bool32_t validUpdateStruct(const GENERIC_HEADER* pUpdateStruct)
+static bool32_t validUpdateStruct(const VkDevice device, const GENERIC_HEADER* pUpdateStruct)
 {
     char str[1024];
     switch (pUpdateStruct->sType)
@@ -661,13 +708,13 @@ static bool32_t validUpdateStruct(const GENERIC_HEADER* pUpdateStruct)
         case VK_STRUCTURE_TYPE_COPY_DESCRIPTOR_SET:
             return 1;
         default:
-            log_msg(NULL, VK_DBG_REPORT_ERROR_BIT, (VkObjectType) 0, VK_NULL_HANDLE, 0, DRAWSTATE_INVALID_UPDATE_STRUCT, "DS",
+            log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkObjectType) 0, VK_NULL_HANDLE, 0, DRAWSTATE_INVALID_UPDATE_STRUCT, "DS",
                     "Unexpected UPDATE struct of type %s (value %u) in vkUpdateDescriptors() struct tree", string_VkStructureType(pUpdateStruct->sType), pUpdateStruct->sType);
             return 0;
     }
 }
 // For given update struct, return binding
-static uint32_t getUpdateBinding(const GENERIC_HEADER* pUpdateStruct)
+static uint32_t getUpdateBinding(const VkDevice device, const GENERIC_HEADER* pUpdateStruct)
 {
     char str[1024];
     switch (pUpdateStruct->sType)
@@ -677,13 +724,13 @@ static uint32_t getUpdateBinding(const GENERIC_HEADER* pUpdateStruct)
         case VK_STRUCTURE_TYPE_COPY_DESCRIPTOR_SET:
             return ((VkCopyDescriptorSet*)pUpdateStruct)->destBinding;
         default:
-            log_msg(NULL, VK_DBG_REPORT_ERROR_BIT, (VkObjectType) 0, VK_NULL_HANDLE, 0, DRAWSTATE_INVALID_UPDATE_STRUCT, "DS",
+            log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkObjectType) 0, VK_NULL_HANDLE, 0, DRAWSTATE_INVALID_UPDATE_STRUCT, "DS",
                     "Unexpected UPDATE struct of type %s (value %u) in vkUpdateDescriptors() struct tree", string_VkStructureType(pUpdateStruct->sType), pUpdateStruct->sType);
             return 0xFFFFFFFF;
     }
 }
 // Return count for given update struct
-static uint32_t getUpdateArrayIndex(const GENERIC_HEADER* pUpdateStruct)
+static uint32_t getUpdateArrayIndex(const VkDevice device, const GENERIC_HEADER* pUpdateStruct)
 {
     char str[1024];
     switch (pUpdateStruct->sType)
@@ -694,13 +741,13 @@ static uint32_t getUpdateArrayIndex(const GENERIC_HEADER* pUpdateStruct)
             // TODO : Need to understand this case better and make sure code is correct
             return ((VkCopyDescriptorSet*)pUpdateStruct)->destArrayElement;
         default:
-            log_msg(NULL, VK_DBG_REPORT_ERROR_BIT, (VkObjectType) 0, VK_NULL_HANDLE, 0, DRAWSTATE_INVALID_UPDATE_STRUCT, "DS",
+            log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkObjectType) 0, VK_NULL_HANDLE, 0, DRAWSTATE_INVALID_UPDATE_STRUCT, "DS",
                     "Unexpected UPDATE struct of type %s (value %u) in vkUpdateDescriptors() struct tree", string_VkStructureType(pUpdateStruct->sType), pUpdateStruct->sType);
             return 0;
     }
 }
 // Return count for given update struct
-static uint32_t getUpdateCount(const GENERIC_HEADER* pUpdateStruct)
+static uint32_t getUpdateCount(const VkDevice device, const GENERIC_HEADER* pUpdateStruct)
 {
     char str[1024];
     switch (pUpdateStruct->sType)
@@ -711,7 +758,7 @@ static uint32_t getUpdateCount(const GENERIC_HEADER* pUpdateStruct)
             // TODO : Need to understand this case better and make sure code is correct
             return ((VkCopyDescriptorSet*)pUpdateStruct)->count;
         default:
-            log_msg(NULL, VK_DBG_REPORT_ERROR_BIT, (VkObjectType) 0, VK_NULL_HANDLE, 0, DRAWSTATE_INVALID_UPDATE_STRUCT, "DS",
+            log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkObjectType) 0, VK_NULL_HANDLE, 0, DRAWSTATE_INVALID_UPDATE_STRUCT, "DS",
                     "Unexpected UPDATE struct of type %s (value %u) in vkUpdateDescriptors() struct tree", string_VkStructureType(pUpdateStruct->sType), pUpdateStruct->sType);
             return 0;
     }
@@ -735,17 +782,17 @@ static uint32_t getBindingEndIndex(const LAYOUT_NODE* pLayout, const uint32_t bi
     return offsetIndex-1;
 }
 // For given layout and update, return the first overall index of the layout that is update
-static uint32_t getUpdateStartIndex(const LAYOUT_NODE* pLayout, const GENERIC_HEADER* pUpdateStruct)
+static uint32_t getUpdateStartIndex(const VkDevice device, const LAYOUT_NODE* pLayout, const GENERIC_HEADER* pUpdateStruct)
 {
-    return (getBindingStartIndex(pLayout, getUpdateBinding(pUpdateStruct))+getUpdateArrayIndex(pUpdateStruct));
+    return (getBindingStartIndex(pLayout, getUpdateBinding(device, pUpdateStruct))+getUpdateArrayIndex(device, pUpdateStruct));
 }
 // For given layout and update, return the last overall index of the layout that is update
-static uint32_t getUpdateEndIndex(const LAYOUT_NODE* pLayout, const GENERIC_HEADER* pUpdateStruct)
+static uint32_t getUpdateEndIndex(const VkDevice device, const LAYOUT_NODE* pLayout, const GENERIC_HEADER* pUpdateStruct)
 {
-    return (getBindingStartIndex(pLayout, getUpdateBinding(pUpdateStruct))+getUpdateArrayIndex(pUpdateStruct)+getUpdateCount(pUpdateStruct)-1);
+    return (getBindingStartIndex(pLayout, getUpdateBinding(device, pUpdateStruct))+getUpdateArrayIndex(device, pUpdateStruct)+getUpdateCount(device, pUpdateStruct)-1);
 }
 // Verify that the descriptor type in the update struct matches what's expected by the layout
-static bool32_t validateUpdateType(const LAYOUT_NODE* pLayout, const GENERIC_HEADER* pUpdateStruct)
+static bool32_t validateUpdateType(const VkDevice device, const LAYOUT_NODE* pLayout, const GENERIC_HEADER* pUpdateStruct)
 {
     // First get actual type of update
     VkDescriptorType actualType;
@@ -761,11 +808,11 @@ static bool32_t validateUpdateType(const LAYOUT_NODE* pLayout, const GENERIC_HEA
             return 1;
             break;
         default:
-            log_msg(NULL, VK_DBG_REPORT_ERROR_BIT, (VkObjectType) 0, VK_NULL_HANDLE, 0, DRAWSTATE_INVALID_UPDATE_STRUCT, "DS",
+            log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkObjectType) 0, VK_NULL_HANDLE, 0, DRAWSTATE_INVALID_UPDATE_STRUCT, "DS",
                     "Unexpected UPDATE struct of type %s (value %u) in vkUpdateDescriptors() struct tree", string_VkStructureType(pUpdateStruct->sType), pUpdateStruct->sType);
             return 0;
     }
-    for (i = getUpdateStartIndex(pLayout, pUpdateStruct); i <= getUpdateEndIndex(pLayout, pUpdateStruct); i++) {
+    for (i = getUpdateStartIndex(device, pLayout, pUpdateStruct); i <= getUpdateEndIndex(device, pLayout, pUpdateStruct); i++) {
         if (pLayout->pTypes[i] != actualType)
             return 0;
     }
@@ -774,7 +821,7 @@ static bool32_t validateUpdateType(const LAYOUT_NODE* pLayout, const GENERIC_HEA
 // Determine the update type, allocate a new struct of that type, shadow the given pUpdate
 //   struct into the new struct and return ptr to shadow struct cast as GENERIC_HEADER
 // NOTE : Calls to this function should be wrapped in mutex
-static GENERIC_HEADER* shadowUpdateNode(GENERIC_HEADER* pUpdate)
+static GENERIC_HEADER* shadowUpdateNode(const VkDevice device, GENERIC_HEADER* pUpdate)
 {
     GENERIC_HEADER* pNewNode = NULL;
     VkWriteDescriptorSet* pWDS = NULL;
@@ -800,7 +847,7 @@ static GENERIC_HEADER* shadowUpdateNode(GENERIC_HEADER* pUpdate)
             memcpy(pCDS, pUpdate, sizeof(VkCopyDescriptorSet));
             break;
         default:
-            log_msg(NULL, VK_DBG_REPORT_ERROR_BIT, (VkObjectType) 0, NULL, 0, DRAWSTATE_INVALID_UPDATE_STRUCT, "DS",
+            log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkObjectType) 0, NULL, 0, DRAWSTATE_INVALID_UPDATE_STRUCT, "DS",
                     "Unexpected UPDATE struct of type %s (value %u) in vkUpdateDescriptors() struct tree", string_VkStructureType(pUpdate->sType), pUpdate->sType);
             return NULL;
     }
@@ -832,29 +879,29 @@ static bool32_t dsUpdate(VkDevice device, VkStructureType type, uint32_t updateC
         GENERIC_HEADER* pUpdate = (pWDS) ? (GENERIC_HEADER*) &pWDS[i] : (GENERIC_HEADER*) &pCDS[i];
         pLayout = pSet->pLayout;
         // First verify valid update struct
-        if (!validUpdateStruct(pUpdate)) {
+        if (!validUpdateStruct(device, pUpdate)) {
             result = 0;
             break;
         }
         // Make sure that binding is within bounds
-        if (pLayout->createInfo.count < getUpdateBinding(pUpdate)) {
+        if (pLayout->createInfo.count < getUpdateBinding(device, pUpdate)) {
             log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DESCRIPTOR_SET, ds, 0, DRAWSTATE_INVALID_UPDATE_INDEX, "DS",
-                    "Descriptor Set %p does not have binding to match update binding %u for update type %s!", ds, getUpdateBinding(pUpdate), string_VkStructureType(pUpdate->sType));
+                    "Descriptor Set %p does not have binding to match update binding %u for update type %s!", ds, getUpdateBinding(device, pUpdate), string_VkStructureType(pUpdate->sType));
             result = 0;
         }
         else {
             // Next verify that update falls within size of given binding
-            if (getBindingEndIndex(pLayout, getUpdateBinding(pUpdate)) < getUpdateEndIndex(pLayout, pUpdate)) {
+            if (getBindingEndIndex(pLayout, getUpdateBinding(device, pUpdate)) < getUpdateEndIndex(device, pLayout, pUpdate)) {
                 char str[48*1024]; // TODO : Keep count of layout CI structs and size this string dynamically based on that count
                 pLayoutCI = &pLayout->createInfo;
                 string DSstr = vk_print_vkdescriptorsetlayoutcreateinfo(pLayoutCI, "{DS}    ");
                 log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DESCRIPTOR_SET, ds, 0, DRAWSTATE_DESCRIPTOR_UPDATE_OUT_OF_BOUNDS, "DS",
-                        "Descriptor update type of %s is out of bounds for matching binding %u in Layout w/ CI:\n%s!", string_VkStructureType(pUpdate->sType), getUpdateBinding(pUpdate), DSstr.c_str());
+                        "Descriptor update type of %s is out of bounds for matching binding %u in Layout w/ CI:\n%s!", string_VkStructureType(pUpdate->sType), getUpdateBinding(device, pUpdate), DSstr.c_str());
                 result = 0;
             }
             else { // TODO : should we skip update on a type mismatch or force it?
                 // Layout bindings match w/ update ok, now verify that update is of the right type
-                if (!validateUpdateType(pLayout, pUpdate)) {
+                if (!validateUpdateType(device, pLayout, pUpdate)) {
                     log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DESCRIPTOR_SET, ds, 0, DRAWSTATE_DESCRIPTOR_TYPE_MISMATCH, "DS",
                             "Descriptor update type of %s does not match overlapping binding type!", string_VkStructureType(pUpdate->sType));
                     result = 0;
@@ -863,7 +910,7 @@ static bool32_t dsUpdate(VkDevice device, VkStructureType type, uint32_t updateC
                     // Save the update info
                     // TODO : Info message that update successful
                     // Create new update struct for this set's shadow copy
-                    GENERIC_HEADER* pNewNode = shadowUpdateNode(pUpdate);
+                    GENERIC_HEADER* pNewNode = shadowUpdateNode(device, pUpdate);
                     if (NULL == pNewNode) {
                         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DESCRIPTOR_SET, ds, 0, DRAWSTATE_OUT_OF_MEMORY, "DS",
                                 "Out of memory while attempting to allocate UPDATE struct in vkUpdateDescriptors()");
@@ -874,7 +921,7 @@ static bool32_t dsUpdate(VkDevice device, VkStructureType type, uint32_t updateC
                         pNewNode->pNext = pSet->pUpdateStructs;
                         pSet->pUpdateStructs = pNewNode;
                         // Now update appropriate descriptor(s) to point to new Update node
-                        for (uint32_t j = getUpdateStartIndex(pLayout, pUpdate); j <= getUpdateEndIndex(pLayout, pUpdate); j++) {
+                        for (uint32_t j = getUpdateStartIndex(device, pLayout, pUpdate); j <= getUpdateEndIndex(device, pLayout, pUpdate); j++) {
                             assert(j<pSet->descriptorCount);
                             pSet->ppDescriptors[j] = pNewNode;
                         }
@@ -1778,23 +1825,35 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateImageView(VkDevice device, const VkImageV
     return result;
 }
 
-static void track_pipeline(const VkGraphicsPipelineCreateInfo* pCreateInfo, VkPipeline* pPipeline)
-{
-    loader_platform_thread_lock_mutex(&globalLock);
-    PIPELINE_NODE* pPipeNode = new PIPELINE_NODE;
-    memset((void*)pPipeNode, 0, sizeof(PIPELINE_NODE));
-    pPipeNode->pipeline = *pPipeline;
-    initPipeline(pPipeNode, pCreateInfo);
-    loader_platform_thread_unlock_mutex(&globalLock);
-}
-
 VK_LAYER_EXPORT VkResult VKAPI vkCreateGraphicsPipeline(VkDevice device, const VkGraphicsPipelineCreateInfo* pCreateInfo, VkPipeline* pPipeline)
 {
-    VkResult result = get_dispatch_table(draw_state_device_table_map, device)->CreateGraphicsPipeline(device, pCreateInfo, pPipeline);
-    log_msg(mdd(device), VK_DBG_REPORT_INFO_BIT, VK_OBJECT_TYPE_PIPELINE, *pPipeline, 0, DRAWSTATE_NONE, "DS",
-            "Created Gfx Pipeline %p", (void*)*pPipeline);
-    track_pipeline(pCreateInfo, pPipeline);
-
+    VkResult result = VK_ERROR_BAD_PIPELINE_DATA;
+    // The order of operations here is a little convoluted but gets the job done
+    //  1. Pipeline create state is first shadowed into PIPELINE_NODE struct
+    //  2. Create state is then validated (which uses flags setup during shadowing)
+    //  3. If everything looks good, we'll then create the pipeline and add NODE to pipelineMap
+    loader_platform_thread_lock_mutex(&globalLock);
+    PIPELINE_NODE* pPipeNode = initPipeline(pCreateInfo, NULL);
+    bool32_t valid = verifyPipelineCreateState(device, pPipeNode);
+    loader_platform_thread_unlock_mutex(&globalLock);
+    if (VK_TRUE == valid) {
+        result = get_dispatch_table(draw_state_device_table_map, device)->CreateGraphicsPipeline(device, pCreateInfo, pPipeline);
+        log_msg(mdd(device), VK_DBG_REPORT_INFO_BIT, VK_OBJECT_TYPE_PIPELINE, *pPipeline, 0, DRAWSTATE_NONE, "DS",
+                "Created Gfx Pipeline %p", (void*)*pPipeline);
+        loader_platform_thread_lock_mutex(&globalLock);
+        pPipeNode->pipeline = *pPipeline;
+        pipelineMap[pPipeNode->pipeline] = pPipeNode;
+        loader_platform_thread_unlock_mutex(&globalLock);
+    }
+    else {
+        if (pPipeNode) {
+            // If we allocated a pipeNode, need to clean it up here
+            delete[] pPipeNode->pVertexBindingDescriptions;
+            delete[] pPipeNode->pVertexAttributeDescriptions;
+            delete[] pPipeNode->pAttachments;
+            delete pPipeNode;
+        }
+    }
     return result;
 }
 
@@ -1804,14 +1863,29 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateGraphicsPipelineDerivative(
         VkPipeline basePipeline,
         VkPipeline* pPipeline)
 {
-    VkResult result = get_dispatch_table(draw_state_device_table_map, device)->CreateGraphicsPipelineDerivative(device, pCreateInfo, basePipeline, pPipeline);
-    // Create LL HEAD for this Pipeline
-    log_msg(mdd(device), VK_DBG_REPORT_INFO_BIT, VK_OBJECT_TYPE_PIPELINE, *pPipeline, 0, DRAWSTATE_NONE, "DS",
-            "Created Gfx Pipeline %p (derived from pipeline %p)", (void*)*pPipeline, basePipeline);
-    track_pipeline(pCreateInfo, pPipeline);
-
+    VkResult result = VK_ERROR_BAD_PIPELINE_DATA;
+    loader_platform_thread_lock_mutex(&globalLock);
+    PIPELINE_NODE* pPipeNode = initPipeline(pCreateInfo, NULL);
+    bool32_t valid = verifyPipelineCreateState(device, pipelineMap[basePipeline]);
     loader_platform_thread_unlock_mutex(&globalLock);
-
+    if (VK_TRUE == valid) {
+        result = get_dispatch_table(draw_state_device_table_map, device)->CreateGraphicsPipelineDerivative(device, pCreateInfo, basePipeline, pPipeline);
+        log_msg(mdd(device), VK_DBG_REPORT_INFO_BIT, VK_OBJECT_TYPE_PIPELINE, *pPipeline, 0, DRAWSTATE_NONE, "DS",
+                "Created Gfx Pipeline %p (derived from pipeline %p)", (void*)*pPipeline, basePipeline);
+        loader_platform_thread_lock_mutex(&globalLock);
+        pPipeNode->pipeline = *pPipeline;
+        pipelineMap[pPipeNode->pipeline] = pPipeNode;
+        loader_platform_thread_unlock_mutex(&globalLock);
+    }
+    else { // Skipped pipeline creation due to bad CreateInfo data
+        if (pPipeNode) {
+            // If we allocated a pipeNode, need to clean it up here
+            delete[] pPipeNode->pVertexBindingDescriptions;
+            delete[] pPipeNode->pVertexAttributeDescriptions;
+            delete[] pPipeNode->pAttachments;
+            delete pPipeNode;
+        }
+    }
     return result;
 }
 
@@ -2667,11 +2741,11 @@ void drawStateDumpCommandBufferDotFile(char* outFileName)
     cbDumpDotFile(outFileName);
 }
 
-void drawStateDumpPngFile(char* outFileName)
+void drawStateDumpPngFile(const VkDevice device, char* outFileName)
 {
 #if defined(_WIN32)
 // FIXME: NEED WINDOWS EQUIVALENT
-        log_msg(NULL, VK_DBG_REPORT_ERROR_BIT, (VkObjectType) 0, NULL, 0, DRAWSTATE_MISSING_DOT_PROGRAM, "DS",
+        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkObjectType) 0, NULL, 0, DRAWSTATE_MISSING_DOT_PROGRAM, "DS",
                 "Cannot execute dot program yet on Windows.");
 #else // WIN32
     char dotExe[32] = "/usr/bin/dot";
@@ -2684,7 +2758,7 @@ void drawStateDumpPngFile(char* outFileName)
         remove("/tmp/tmp.dot");
     }
     else {
-        log_msg(NULL, VK_DBG_REPORT_ERROR_BIT, (VkObjectType) 0, NULL, 0, DRAWSTATE_MISSING_DOT_PROGRAM, "DS",
+        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkObjectType) 0, NULL, 0, DRAWSTATE_MISSING_DOT_PROGRAM, "DS",
                 "Cannot execute dot program at (%s) to dump requested %s file.", dotExe, outFileName);
     }
 #endif // WIN32
