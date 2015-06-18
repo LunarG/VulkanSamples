@@ -113,7 +113,7 @@ else()
     set_target_properties(libpngd PROPERTIES IMPORTED_LOCATION ${PROJECT_SOURCE_DIR}/libs/${LIB_DIR}/libpngd.lib)
     add_library(zlibd STATIC IMPORTED)
     set_target_properties(zlibd PROPERTIES IMPORTED_LOCATION ${PROJECT_SOURCE_DIR}/libs/${LIB_DIR}/zlibd.lib)
-    add_executable(cube WIN32 cube.c)
+    add_executable(cube WIN32 cube.c ${CMAKE_BINARY_DIR}/demos/cube-vert.spv ${CMAKE_BINARY_DIR}/demos/cube-frag.spv)
     target_link_libraries(cube ${LIBRARIES} libpngd zlibd)
 endif()
 
