@@ -234,6 +234,60 @@ class Subcommand(object):
 
     def _gen_layer_get_physical_device_extension_info(self, layer="Generic"):
         ggei_body = []
+        if layer == 'APIDump' or layer == 'Generic':
+            ggei_body.append('#define LAYER_DEV_EXT_ARRAY_SIZE 2')
+            ggei_body.append('static const VkExtensionProperties layerDevExts[LAYER_DEV_EXT_ARRAY_SIZE] = {')
+            ggei_body.append('    {')
+            ggei_body.append('        VK_STRUCTURE_TYPE_EXTENSION_PROPERTIES,')
+            ggei_body.append('        "%s",' % layer)
+            ggei_body.append('        0x10,')
+            ggei_body.append('        "layer: %s",' % layer)
+            ggei_body.append('    },')
+            ggei_body.append('    {')
+            ggei_body.append('        VK_STRUCTURE_TYPE_EXTENSION_PROPERTIES,')
+            ggei_body.append('        VK_WSI_LUNARG_EXTENSION_NAME,')
+            ggei_body.append('        0x10,')
+            ggei_body.append('        "layer: %s",' % layer)
+            ggei_body.append('    }')
+            ggei_body.append('};')
+        elif layer == 'ObjectTracker':
+            ggei_body.append('#define LAYER_DEV_EXT_ARRAY_SIZE 3')
+            ggei_body.append('static const VkExtensionProperties layerDevExts[LAYER_DEV_EXT_ARRAY_SIZE] = {')
+            ggei_body.append('    {')
+            ggei_body.append('        VK_STRUCTURE_TYPE_EXTENSION_PROPERTIES,')
+            ggei_body.append('        "%s",' % layer)
+            ggei_body.append('        0x10,')
+            ggei_body.append('        "layer: %s",' % layer)
+            ggei_body.append('    },')
+            ggei_body.append('    {')
+            ggei_body.append('        VK_STRUCTURE_TYPE_EXTENSION_PROPERTIES,')
+            ggei_body.append('        VK_WSI_LUNARG_EXTENSION_NAME,')
+            ggei_body.append('        0x10,')
+            ggei_body.append('        "layer: %s",' % layer)
+            ggei_body.append('    },')
+            ggei_body.append('    {')
+            ggei_body.append('        VK_STRUCTURE_TYPE_EXTENSION_PROPERTIES,')
+            ggei_body.append('        "Validation",')
+            ggei_body.append('        0x10,')
+            ggei_body.append('        "layer: %s",' % layer)
+            ggei_body.append('    }')
+            ggei_body.append('};')
+        else:
+            ggei_body.append('#define LAYER_DEV_EXT_ARRAY_SIZE 2')
+            ggei_body.append('static const VkExtensionProperties layerDevExts[LAYER_DEV_EXT_ARRAY_SIZE] = {')
+            ggei_body.append('    {')
+            ggei_body.append('        VK_STRUCTURE_TYPE_EXTENSION_PROPERTIES,')
+            ggei_body.append('        "%s",' % layer)
+            ggei_body.append('        0x10,')
+            ggei_body.append('        "layer: %s",' % layer)
+            ggei_body.append('    },')
+            ggei_body.append('    {')
+            ggei_body.append('        VK_STRUCTURE_TYPE_EXTENSION_PROPERTIES,')
+            ggei_body.append('        "Validation",')
+            ggei_body.append('        0x10,')
+            ggei_body.append('        "layer: %s",' % layer)
+            ggei_body.append('    }')
+            ggei_body.append('};')
         ggei_body.append('')
         ggei_body.append('VK_LAYER_EXPORT VkResult VKAPI vkGetPhysicalDeviceExtensionInfo(VkPhysicalDevice physicalDevice, VkExtensionInfoType infoType, uint32_t extensionIndex, size_t* pDataSize, void* pData)')
         ggei_body.append('{')
@@ -248,15 +302,15 @@ class Subcommand(object):
         ggei_body.append('            if (pData == NULL)')
         ggei_body.append('                return VK_SUCCESS;')
         ggei_body.append('            count = (uint32_t *) pData;')
-        ggei_body.append('            *count = LAYER_EXT_ARRAY_SIZE;')
+        ggei_body.append('            *count = LAYER_DEV_EXT_ARRAY_SIZE;')
         ggei_body.append('            break;')
         ggei_body.append('        case VK_EXTENSION_INFO_TYPE_PROPERTIES:')
         ggei_body.append('            *pDataSize = sizeof(VkExtensionProperties);')
         ggei_body.append('            if (pData == NULL)')
         ggei_body.append('                return VK_SUCCESS;')
-        ggei_body.append('            if (extensionIndex >= LAYER_EXT_ARRAY_SIZE)')
+        ggei_body.append('            if (extensionIndex >= LAYER_DEV_EXT_ARRAY_SIZE)')
         ggei_body.append('                return VK_ERROR_INVALID_VALUE;')
-        ggei_body.append('            memcpy((VkExtensionProperties *) pData, &layerExts[extensionIndex], sizeof(VkExtensionProperties));')
+        ggei_body.append('            memcpy((VkExtensionProperties *) pData, &layerDevExts[extensionIndex], sizeof(VkExtensionProperties));')
         ggei_body.append('            break;')
         ggei_body.append('        default:')
         ggei_body.append('            return VK_ERROR_INVALID_VALUE;')
@@ -290,7 +344,8 @@ class Subcommand(object):
                         intercept = self._gen_layer_get_physical_device_extension_info(self.layer_name)
                 if intercept is not None:
                     funcs.append(intercept)
-                    intercepted.append(proto)
+                    if not "WSI" in proto.name:
+                        intercepted.append(proto)
 
         prefix="vk"
         lookups = []
@@ -418,20 +473,26 @@ class Subcommand(object):
                          "    if (addr)\n"
                          "        return addr;" % self.layer_name)
 
+        func_body.append('')
+        func_body.append('    VkLayerDispatchTable *pDisp =  device_dispatch_table(device);')
         if 0 != len(extensions):
-            cpp_prefix = ''
-            cpp_postfix = ''
-            if self.layer_name == 'ObjectTracker':
-                cpp_prefix = "reinterpret_cast<void*>("
-                cpp_postfix = ")"
-            for ext_name in extensions:
-                func_body.append('    else if (!strcmp("%s", funcName))\n'
-                                 '        return %s%s%s;' % (ext_name, cpp_prefix, ext_name, cpp_postfix))
-        func_body.append("    else {\n"
-                         "        VkLayerDispatchTable* pTable = device_dispatch_table(device);\n"
-                         "        if (pTable->GetDeviceProcAddr == NULL)\n"
+            cpp_prefix = "reinterpret_cast<void*>("
+            cpp_postfix = ")"
+            extra_space = ""
+            for (ext_enable, ext_list) in extensions:
+                if 0 != len(ext_enable):
+                    func_body.append('    if (deviceExtMap.size() == 0 || deviceExtMap[pDisp].%s)' % ext_enable)
+                    func_body.append('    {')
+                    extra_space = "    "
+                for ext_name in ext_list:
+                    func_body.append('    %sif (!strcmp("%s", funcName))\n'
+                                 '        return %s%s%s;' % (extra_space, ext_name, cpp_prefix, ext_name, cpp_postfix))
+                if 0 != len(ext_enable):
+                    func_body.append('    }')
+        func_body.append("    {\n"
+                         "        if (pDisp->GetDeviceProcAddr == NULL)\n"
                          "            return NULL;\n"
-                         "        return pTable->GetDeviceProcAddr(device, funcName);\n"
+                         "        return pDisp->GetDeviceProcAddr(device, funcName);\n"
                          "    }\n"
                          "}\n")
         func_body.append("VK_LAYER_EXPORT void* VKAPI vkGetInstanceProcAddr(VkInstance instance, const char* funcName)\n"
@@ -530,6 +591,22 @@ class GenericLayerSubcommand(Subcommand):
         gen_header.append('#include "layers_table.h"')
         gen_header.append('')
         gen_header.append('static LOADER_PLATFORM_THREAD_ONCE_DECLARATION(initOnce);')
+        gen_header.append('struct devExts {')
+        gen_header.append('    bool wsi_lunarg_enabled;')
+        gen_header.append('};')
+        gen_header.append('static std::unordered_map<void *, struct devExts>     deviceExtMap;')
+        gen_header.append('')
+        gen_header.append('static void createDeviceRegisterExtensions(const VkDeviceCreateInfo* pCreateInfo, VkDevice device)')
+        gen_header.append('{')
+        gen_header.append('    uint32_t i, ext_idx;')
+        gen_header.append('    VkLayerDispatchTable *pDisp  = device_dispatch_table(device);')
+        gen_header.append('    deviceExtMap[pDisp].wsi_lunarg_enabled = false;')
+        gen_header.append('    for (i = 0; i < pCreateInfo->extensionCount; i++) {')
+        gen_header.append('        if (strcmp(pCreateInfo->pEnabledExtensions[i].name, VK_WSI_LUNARG_EXTENSION_NAME) == 0)')
+        gen_header.append('            deviceExtMap[pDisp].wsi_lunarg_enabled = true;')
+        gen_header.append('')
+        gen_header.append('    }')
+        gen_header.append('}')
         gen_header.append('')
         return "\n".join(gen_header)
     def generate_intercept(self, proto, qual):
@@ -555,6 +632,7 @@ class GenericLayerSubcommand(Subcommand):
                      '    %sinstance_dispatch_table(gpu)->%s;\n'
                      '    if (result == VK_SUCCESS) {\n'
                      '        enable_debug_report(pCreateInfo->extensionCount, pCreateInfo->pEnabledExtensions);\n'
+                     '        createDeviceRegisterExtensions(pCreateInfo, *pDevice);\n'
                      '    }\n'
                      '    sprintf(str, "Completed layered %s\\n");\n'
                      '    layerCbMsg(VK_DBG_REPORT_INFO_BIT, VK_OBJECT_TYPE_PHYSICAL_DEVICE, gpu, 0, 0, (char *) "GENERIC", (char *) str);\n'
@@ -565,7 +643,9 @@ class GenericLayerSubcommand(Subcommand):
             funcs.append('%s%s\n'
                          '{\n'
                          '    dispatch_key key = get_dispatch_key(device);\n'
-                         '    VkResult res = device_dispatch_table(device)->DestroyDevice(device);\n'
+                         '    VkLayerDispatchTable *pDisp  =  device_dispatch_table(device);\n'
+                         '    VkResult res = pDisp->DestroyDevice(device);\n'
+                         '    deviceExtMap.erase(pDisp);\n'
                          '    destroy_device_dispatch_table(key);\n'
                          '    return res;\n'
                          '}\n' % (qual, decl))
@@ -597,11 +677,14 @@ class GenericLayerSubcommand(Subcommand):
 
     def generate_body(self):
         self.layer_name = "Generic"
+        extensions=[('wsi_lunarg_enabled', 
+                     ['vkCreateSwapChainWSI', 'vkDestroySwapChainWSI',
+                      'vkGetSwapChainInfoWSI', 'vkQueuePresentWSI'])]
         body = [self._generate_layer_initialization(True),
                 self._generate_dispatch_entrypoints("VK_LAYER_EXPORT"),
                 self._gen_create_msg_callback(),
                 self._gen_destroy_msg_callback(),
-                self._generate_layer_gpa_function()]
+                self._generate_layer_gpa_function(extensions)]
 
         return "\n\n".join(body)
 
@@ -611,6 +694,7 @@ class APIDumpSubcommand(Subcommand):
         header_txt.append('#include <fstream>')
         header_txt.append('#include <iostream>')
         header_txt.append('#include <string>')
+        header_txt.append('#include <string.h>')
         header_txt.append('')
         header_txt.append('static std::ofstream fileStream;')
         header_txt.append('static std::string fileName = "vk_apidump.txt";')
@@ -670,6 +754,23 @@ class APIDumpSubcommand(Subcommand):
         header_txt.append('    tidMapping[maxTID++] = tid;')
         header_txt.append('    assert(maxTID < MAX_TID);')
         header_txt.append('    return retVal;')
+        header_txt.append('}')
+        header_txt.append('struct devExts {')
+        header_txt.append('    bool wsi_lunarg_enabled;')
+        header_txt.append('};')
+        header_txt.append('')
+        header_txt.append('static std::unordered_map<void *, struct devExts>     deviceExtMap;')
+        header_txt.append('')
+        header_txt.append('static void createDeviceRegisterExtensions(const VkDeviceCreateInfo* pCreateInfo, VkDevice device)')
+        header_txt.append('{')
+        header_txt.append('    uint32_t i, ext_idx;')
+        header_txt.append('    VkLayerDispatchTable *pDisp  = device_dispatch_table(device);')
+        header_txt.append('    deviceExtMap[pDisp].wsi_lunarg_enabled = false;')
+        header_txt.append('    for (i = 0; i < pCreateInfo->extensionCount; i++) {')
+        header_txt.append('        if (strcmp(pCreateInfo->pEnabledExtensions[i].name, VK_WSI_LUNARG_EXTENSION_NAME) == 0)')
+        header_txt.append('            deviceExtMap[pDisp].wsi_lunarg_enabled = true;')
+        header_txt.append('')
+        header_txt.append('    }')
         header_txt.append('}')
         header_txt.append('')
         return "\n".join(header_txt)
@@ -877,16 +978,28 @@ class APIDumpSubcommand(Subcommand):
         else:
             dispatch_param = proto.params[0].name
 
-        if proto.name == "DestroyDevice":
+        if proto.name == "CreateDevice":
+            funcs.append('%s%s\n'
+                     '{\n'
+                     '    using namespace StreamControl;\n'
+                     '    %s%s_dispatch_table(%s)->%s;\n'
+                     '    if (result == VK_SUCCESS)\n'
+                     '        createDeviceRegisterExtensions(pCreateInfo, *pDevice);\n'
+                     '    %s%s%s\n'
+                     '%s'
+                     '}' % (qual, decl, ret_val, table_type, dispatch_param, proto.c_call(), f_open, log_func, f_close, stmt))
+        elif proto.name == "DestroyDevice":
             funcs.append('%s%s\n'
                  '{\n'
                  '    using namespace StreamControl;\n'
                  '    dispatch_key key = get_dispatch_key(device);\n'
-                 '    %s%s_dispatch_table(%s)->%s;\n'
+                         '    VkLayerDispatchTable *pDisp  = %s_dispatch_table(%s);\n'
+                 '    %spDisp->%s;\n'
+                 '    deviceExtMap.erase(pDisp);\n'
                  '    destroy_device_dispatch_table(key);\n'
                  '    %s%s%s\n'
                  '%s'
-                 '}' % (qual, decl, ret_val, table_type, dispatch_param, proto.c_call(), f_open, log_func, f_close, stmt))
+                 '}' % (qual, decl, table_type, dispatch_param, ret_val, proto.c_call(), f_open, log_func, f_close, stmt))
         elif proto.name == "DestroyInstance":
             funcs.append('%s%s\n'
                  '{\n'
@@ -909,9 +1022,12 @@ class APIDumpSubcommand(Subcommand):
 
     def generate_body(self):
         self.layer_name = "APIDump"
+        extensions=[('wsi_lunarg_enabled',
+                    ['vkCreateSwapChainWSI', 'vkDestroySwapChainWSI',
+                    'vkGetSwapChainInfoWSI', 'vkQueuePresentWSI'])]
         body = [self.generate_init(),
                 self._generate_dispatch_entrypoints("VK_LAYER_EXPORT"),
-                self._generate_layer_gpa_function()]
+                self._generate_layer_gpa_function(extensions)]
         return "\n\n".join(body)
 
 class ObjectTrackerSubcommand(Subcommand):
@@ -1155,6 +1271,24 @@ class ObjectTrackerSubcommand(Subcommand):
         header_txt.append('    }')
         header_txt.append('}')
         header_txt.append('')
+        header_txt.append('struct devExts {')
+        header_txt.append('    bool wsi_lunarg_enabled;')
+        header_txt.append('};')
+        header_txt.append('')
+        header_txt.append('static std::unordered_map<void *, struct devExts>     deviceExtMap;')
+        header_txt.append('')
+        header_txt.append('static void createDeviceRegisterExtensions(const VkDeviceCreateInfo* pCreateInfo, VkDevice device)')
+        header_txt.append('{')
+        header_txt.append('    uint32_t i, ext_idx;')
+        header_txt.append('    VkLayerDispatchTable *pDisp  = device_dispatch_table(device);')
+        header_txt.append('    deviceExtMap[pDisp].wsi_lunarg_enabled = false;')
+        header_txt.append('    for (i = 0; i < pCreateInfo->extensionCount; i++) {')
+        header_txt.append('        if (strcmp(pCreateInfo->pEnabledExtensions[i].name, VK_WSI_LUNARG_EXTENSION_NAME) == 0)')
+        header_txt.append('            deviceExtMap[pDisp].wsi_lunarg_enabled = true;')
+        header_txt.append('')
+        header_txt.append('    }')
+        header_txt.append('}')
+        header_txt.append('')
         return "\n".join(header_txt)
 
     def generate_intercept(self, proto, qual):
@@ -1234,6 +1368,7 @@ class ObjectTrackerSubcommand(Subcommand):
             create_line += '    if (result == VK_SUCCESS) {\n'
             if 'CreateDevice' in proto.name:
                 create_line += '        enable_debug_report(pCreateInfo->extensionCount, pCreateInfo->pEnabledExtensions);\n'
+                create_line += '        createDeviceRegisterExtensions(pCreateInfo, *pDevice);\n'
             elif 'CreateInstance' in proto.name:
                 create_line += '        enable_debug_report(pCreateInfo->extensionCount, pCreateInfo->pEnabledExtensions);\n'
                 create_line += '        VkLayerInstanceDispatchTable *pTable = instance_dispatch_table(*pInstance);\n'
@@ -1255,8 +1390,10 @@ class ObjectTrackerSubcommand(Subcommand):
             destroy_line += '    destroy_obj(%s);\n' % (proto.params[2].name)
             destroy_line += '    loader_platform_thread_unlock_mutex(&objLock);\n'
         elif 'DestroyDevice' in proto.name:
-            using_line   =  '    dispatch_key key =  get_dispatch_key(device);\n'
-            destroy_line =  '    loader_platform_thread_lock_mutex(&objLock);\n'
+            using_line  =  '    dispatch_key key =  get_dispatch_key(device);\n'
+            using_line +=  '    VkLayerDispatchTable *pDisp  = device_dispatch_table(device);\n'
+            destroy_line  = '    deviceExtMap.erase(pDisp);\n'
+            destroy_line += '    loader_platform_thread_lock_mutex(&objLock);\n'
             destroy_line += '    destroy_obj(device);\n'
             destroy_line += '    // Report any remaining objects\n'
             destroy_line += '    for (auto it = objMap.begin(); it != objMap.end(); ++it) {\n'
@@ -1352,10 +1489,16 @@ class ObjectTrackerSubcommand(Subcommand):
 
     def generate_body(self):
         self.layer_name = "ObjectTracker"
+        extensions=[('wsi_lunarg_enabled',
+                    ['vkCreateSwapChainWSI', 'vkDestroySwapChainWSI',
+                     'vkGetSwapChainInfoWSI', 'vkQueuePresentWSI']),
+                    ('',
+                    ['objTrackGetObjectsCount', 'objTrackGetObjects',
+                     'objTrackGetObjectsOfTypeCount', 'objTrackGetObjectsOfType'])]
         body = [self._generate_layer_initialization(True, lockname='obj'),
                 self._generate_dispatch_entrypoints("VK_LAYER_EXPORT"),
                 self._generate_extensions(),
-                self._generate_layer_gpa_function(extensions=['objTrackGetObjectsCount', 'objTrackGetObjects', 'objTrackGetObjectsOfTypeCount', 'objTrackGetObjectsOfType'],
+                self._generate_layer_gpa_function(extensions,
                                                   instance_extensions=['msg_callback_get_proc_addr'])]
         return "\n\n".join(body)
 

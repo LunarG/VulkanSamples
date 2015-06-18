@@ -47,6 +47,7 @@
 static LOADER_PLATFORM_THREAD_ONCE_DECLARATION(initOnce);
 struct devExts {
     bool debug_marker_enabled;
+    bool wsi_lunarg_enabled;
 };
 static std::unordered_map<void *, struct devExts>     deviceExtMap;
 
@@ -222,16 +223,19 @@ void PreCreateDevice(VkPhysicalDevice gpu, const VkDeviceCreateInfo* pCreateInfo
 static void createDeviceRegisterExtensions(const VkDeviceCreateInfo* pCreateInfo, VkDevice device)
 {
     uint32_t i, ext_idx;
-    VkLayerDispatchTable *pDisp  = *(VkLayerDispatchTable **) device;
+    VkLayerDispatchTable *pDisp  = device_dispatch_table(device);
     deviceExtMap[pDisp].debug_marker_enabled = false;
+    deviceExtMap[pDisp].wsi_lunarg_enabled = false;
     for (i = 0; i < pCreateInfo->extensionCount; i++) {
         if (strcmp(pCreateInfo->pEnabledExtensions[i].name, DEBUG_MARKER_EXTENSION_NAME) == 0) {
             /* Found a matching extension name, mark it enabled and init dispatch table*/
             initDebugMarkerTable(device);
             deviceExtMap[pDisp].debug_marker_enabled = true;
 
-        }
 
+        }
+        if (strcmp(pCreateInfo->pEnabledExtensions[i].name, VK_WSI_LUNARG_EXTENSION_NAME) == 0)
+            deviceExtMap[pDisp].wsi_lunarg_enabled = true;
     }
 }
 
@@ -266,12 +270,12 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateDevice(VkPhysicalDevice gpu, const VkDevi
 
 VK_LAYER_EXPORT VkResult VKAPI vkDestroyDevice(VkDevice device)
 {
-    VkLayerDispatchTable *pDisp  =  *(VkLayerDispatchTable **) device;
+    VkLayerDispatchTable *pDisp  = device_dispatch_table(device);
     dispatch_key key = get_dispatch_key(device);
-    VkResult result = device_dispatch_table(device)->DestroyDevice(device);
+    VkResult result = pDisp->DestroyDevice(device);
+    deviceExtMap.erase(pDisp);
     destroy_device_dispatch_table(key);
     tableDebugMarkerMap.erase(pDisp);
-    deviceExtMap.erase(pDisp);
     return result;
 }
 
@@ -326,7 +330,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkGetGlobalExtensionInfo(
     return VK_SUCCESS;
 }
 
-#define PARAM_CHECKER_LAYER_DEV_EXT_ARRAY_SIZE 3
+#define PARAM_CHECKER_LAYER_DEV_EXT_ARRAY_SIZE 4
 static const VkExtensionProperties pcDevExts[PARAM_CHECKER_LAYER_DEV_EXT_ARRAY_SIZE] = {
     {
         VK_STRUCTURE_TYPE_EXTENSION_PROPERTIES,
@@ -343,6 +347,12 @@ static const VkExtensionProperties pcDevExts[PARAM_CHECKER_LAYER_DEV_EXT_ARRAY_S
     {
         VK_STRUCTURE_TYPE_EXTENSION_PROPERTIES,
         DEBUG_MARKER_EXTENSION_NAME,
+        0x10,
+        "Sample layer: ParamChecker",
+    },
+    {
+        VK_STRUCTURE_TYPE_EXTENSION_PROPERTIES,
+        VK_WSI_LUNARG_EXTENSION_NAME,
         0x10,
         "Sample layer: ParamChecker",
     }
@@ -2145,14 +2155,6 @@ static inline void* layer_intercept_proc(const char *name)
         return (void*) vkCmdBeginRenderPass;
     if (!strcmp(name, "CmdEndRenderPass"))
         return (void*) vkCmdEndRenderPass;
-    if (!strcmp(name, "CreateSwapChainWSI"))
-        return (void*) vkCreateSwapChainWSI;
-    if (!strcmp(name, "DestroySwapChainWSI"))
-        return (void*) vkDestroySwapChainWSI;
-    if (!strcmp(name, "GetSwapChainInfoWSI"))
-        return (void*) vkGetSwapChainInfoWSI;
-    if (!strcmp(name, "QueuePresentWSI"))
-        return (void*) vkQueuePresentWSI;
 
     return NULL;
 }
@@ -2201,23 +2203,33 @@ VK_LAYER_EXPORT void* VKAPI vkGetDeviceProcAddr(VkDevice device, const char* fun
         return addr;
     }
 
-    VkLayerDispatchTable *pDisp =  *(VkLayerDispatchTable **) device;
-    if (!deviceExtMap[pDisp].debug_marker_enabled)
+    VkLayerDispatchTable *pDisp =  device_dispatch_table(device);
+    if (deviceExtMap.size() == 0 || deviceExtMap[pDisp].wsi_lunarg_enabled)
     {
-        if (!strcmp(funcName, "CmdDbgMarkerBegin"))
+        if (!strcmp(funcName, "vkCreateSwapChainWSI"))
+            return (void*) vkCreateSwapChainWSI;
+        if (!strcmp(funcName, "vkDestroySwapChainWSI"))
+            return (void*) vkDestroySwapChainWSI;
+        if (!strcmp(funcName, "vkGetSwapChainInfoWSI"))
+            return (void*) vkGetSwapChainInfoWSI;
+        if (!strcmp(funcName, "vkQueuePresentWSI"))
+            return (void*) vkQueuePresentWSI;
+    }
+    if (deviceExtMap.size() == 0 || deviceExtMap[pDisp].debug_marker_enabled)
+    {
+        if (!strcmp(funcName, "vkCmdDbgMarkerBegin"))
             return (void*) vkCmdDbgMarkerBegin;
-        if (!strcmp(funcName, "CmdDbgMarkerEnd"))
+        if (!strcmp(funcName, "vkCmdDbgMarkerEnd"))
             return (void*) vkCmdDbgMarkerEnd;
-        if (!strcmp(funcName, "DbgSetObjectTag"))
+        if (!strcmp(funcName, "vkDbgSetObjectTag"))
             return (void*) vkDbgSetObjectTag;
-        if (!strcmp(funcName, "DbgSetObjectName"))
+        if (!strcmp(funcName, "vkDbgSetObjectName"))
             return (void*) vkDbgSetObjectName;
     }
     {
-        VkLayerDispatchTable* pTable = device_dispatch_table(device);
-        if (pTable->GetDeviceProcAddr == NULL)
+        if (pDisp->GetDeviceProcAddr == NULL)
             return NULL;
-        return pTable->GetDeviceProcAddr(device, funcName);
+        return pDisp->GetDeviceProcAddr(device, funcName);
     }
 }
 

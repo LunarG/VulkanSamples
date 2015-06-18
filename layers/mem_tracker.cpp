@@ -51,6 +51,10 @@ typedef struct _layer_data {
     VkDbgMsgCallback logging_callback;
 } layer_data;
 
+struct devExts {
+    bool wsi_lunarg_enabled;
+};
+static std::unordered_map<void *, struct devExts>     deviceExtMap;
 static std::unordered_map<void *, layer_data *> layer_data_map;
 static device_table_map mem_tracker_device_table_map;
 static instance_table_map mem_tracker_instance_table_map;
@@ -869,6 +873,18 @@ VkResult VKAPI vkCreateInstance(
     return result;
 }
 
+static void createDeviceRegisterExtensions(const VkDeviceCreateInfo* pCreateInfo, VkDevice device)
+{
+    uint32_t i, ext_idx;
+    VkLayerDispatchTable *pDisp  = get_dispatch_table(mem_tracker_device_table_map, device);
+    deviceExtMap[pDisp].wsi_lunarg_enabled = false;
+    for (i = 0; i < pCreateInfo->extensionCount; i++) {
+        if (strcmp(pCreateInfo->pEnabledExtensions[i].name, VK_WSI_LUNARG_EXTENSION_NAME) == 0)
+            deviceExtMap[pDisp].wsi_lunarg_enabled = true;
+
+    }
+}
+
 VK_LAYER_EXPORT VkResult VKAPI vkCreateDevice(
     VkPhysicalDevice          gpu,
     const VkDeviceCreateInfo *pCreateInfo,
@@ -881,6 +897,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateDevice(
         VkLayerDispatchTable *pTable = get_dispatch_table(mem_tracker_device_table_map, *pDevice);
         layer_data *my_device_data = get_my_data_ptr(get_dispatch_key(*pDevice), layer_data_map);
         my_device_data->report_data = layer_debug_report_create_device(my_instance_data->report_data, *pDevice);
+        createDeviceRegisterExtensions(pCreateInfo, *pDevice);
     }
     return result;
 }
@@ -923,9 +940,12 @@ VK_LAYER_EXPORT VkResult VKAPI vkDestroyDevice(
 #if DISPATCH_MAP_DEBUG
     fprintf(stderr, "Device: %p, key: %p\n", device, key);
 #endif
-    VkResult result = get_dispatch_table(mem_tracker_device_table_map, device)->DestroyDevice(device);
+    VkLayerDispatchTable *pDisp  = get_dispatch_table(mem_tracker_device_table_map, device);
+    VkResult result = pDisp->DestroyDevice(device);
+    deviceExtMap.erase(pDisp);
     mem_tracker_device_table_map.erase(key);
     assert(mem_tracker_device_table_map.size() == 0 && "Should not have any instance mappings hanging around");
+
     return result;
 }
 
@@ -2303,17 +2323,22 @@ VK_LAYER_EXPORT void* VKAPI vkGetDeviceProcAddr(
         return (void*) vkCmdResetQueryPool;
     if (!strcmp(funcName, "vkGetDeviceQueue"))
         return (void*) vkGetDeviceQueue;
-    if (!strcmp(funcName, "vkCreateSwapChainWSI"))
-        return (void*) vkCreateSwapChainWSI;
-    if (!strcmp(funcName, "vkDestroySwapChainWSI"))
-        return (void*) vkDestroySwapChainWSI;
-    if (!strcmp(funcName, "vkGetSwapChainInfoWSI"))
-        return (void*) vkGetSwapChainInfoWSI;
+
+    VkLayerDispatchTable *pDisp =  get_dispatch_table(mem_tracker_device_table_map, dev);
+    if (deviceExtMap.size() == 0 || deviceExtMap[pDisp].wsi_lunarg_enabled)
+    {
+        if (!strcmp(funcName, "vkCreateSwapChainWSI"))
+            return (void*) vkCreateSwapChainWSI;
+        if (!strcmp(funcName, "vkDestroySwapChainWSI"))
+            return (void*) vkDestroySwapChainWSI;
+        if (!strcmp(funcName, "vkGetSwapChainInfoWSI"))
+            return (void*) vkGetSwapChainInfoWSI;
+    }
 
     {
-        if (get_dispatch_table(mem_tracker_device_table_map, dev)->GetDeviceProcAddr == NULL)
+        if (pDisp->GetDeviceProcAddr == NULL)
             return NULL;
-        return get_dispatch_table(mem_tracker_device_table_map, dev)->GetDeviceProcAddr(dev, funcName);
+        return pDisp->GetDeviceProcAddr(dev, funcName);
     }
 }
 

@@ -1550,7 +1550,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkDestroyInstance(VkInstance instance)
 static void createDeviceRegisterExtensions(const VkDeviceCreateInfo* pCreateInfo, VkDevice device)
 {
     uint32_t i, ext_idx;
-    VkLayerDispatchTable *pDisp =  *(VkLayerDispatchTable **) device;
+    VkLayerDispatchTable *pDisp =  get_dispatch_table(draw_state_device_table_map, device);
     deviceExtMap[pDisp].debug_marker_enabled = false;
 
     for (i = 0; i < pCreateInfo->extensionCount; i++) {
@@ -1572,6 +1572,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateDevice(VkPhysicalDevice gpu, const VkDevi
         VkLayerDispatchTable *pTable = get_dispatch_table(draw_state_device_table_map, *pDevice);
         layer_data *my_device_data = get_my_data_ptr(get_dispatch_key(*pDevice), layer_data_map);
         my_device_data->report_data = layer_debug_report_create_device(my_instance_data->report_data, *pDevice);
+        createDeviceRegisterExtensions(pCreateInfo, *pDevice);
     }
     return result;
 }
@@ -1590,11 +1591,11 @@ VK_LAYER_EXPORT VkResult VKAPI vkDestroyDevice(VkDevice device)
     deleteLayouts();
     loader_platform_thread_unlock_mutex(&globalLock);
 
-    VkLayerDispatchTable *pDisp =  *(VkLayerDispatchTable **) device;
-    VkResult result = get_dispatch_table(draw_state_device_table_map, device)->DestroyDevice(device);
+    VkLayerDispatchTable *pDisp =  get_dispatch_table(draw_state_device_table_map, device);
+    VkResult result = pDisp->DestroyDevice(device);
+    deviceExtMap.erase(pDisp);
     draw_state_device_table_map.erase(pDisp);
     tableDebugMarkerMap.erase(pDisp);
-    deviceExtMap.erase(pDisp);
     return result;
 }
 
@@ -2816,20 +2817,19 @@ VK_LAYER_EXPORT void* VKAPI vkGetDeviceProcAddr(VkDevice dev, const char* funcNa
     if (!strcmp("drawStateDumpPngFile", funcName))
         return (void*) drawStateDumpPngFile;
 
-    VkLayerDispatchTable *pDisp =  *(VkLayerDispatchTable **) dev;
-    if (!deviceExtMap[pDisp].debug_marker_enabled)
+    VkLayerDispatchTable* pTable = get_dispatch_table(draw_state_device_table_map, dev);
+    if (deviceExtMap.size() == 0 || deviceExtMap[pTable].debug_marker_enabled)
     {
-        if (!strcmp(funcName, "CmdDbgMarkerBegin"))
+        if (!strcmp(funcName, "vkCmdDbgMarkerBegin"))
             return (void*) vkCmdDbgMarkerBegin;
-        if (!strcmp(funcName, "CmdDbgMarkerEnd"))
+        if (!strcmp(funcName, "vkCmdDbgMarkerEnd"))
             return (void*) vkCmdDbgMarkerEnd;
-        if (!strcmp(funcName, "DbgSetObjectTag"))
+        if (!strcmp(funcName, "vkDbgSetObjectTag"))
             return (void*) vkDbgSetObjectTag;
-        if (!strcmp(funcName, "DbgSetObjectName"))
+        if (!strcmp(funcName, "vkDbgSetObjectName"))
             return (void*) vkDbgSetObjectName;
     }
     {
-        VkLayerDispatchTable* pTable = get_dispatch_table(draw_state_device_table_map, dev);
         if (pTable->GetDeviceProcAddr == NULL)
             return NULL;
         return pTable->GetDeviceProcAddr(dev, funcName);
