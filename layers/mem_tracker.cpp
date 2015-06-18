@@ -863,6 +863,25 @@ VK_LAYER_EXPORT VkResult VKAPI vkDestroyInstance(VkInstance instance)
     return res;
 }
 
+VkResult VKAPI vkCreateInstance(
+    const VkInstanceCreateInfo*                 pCreateInfo,
+    VkInstance*                                 pInstance)
+{
+    loader_platform_thread_once(&g_initOnce, initMemTracker);
+    /*
+     * For layers, the pInstance has already been filled out
+     * by the loader so that dispatch table is available.
+     */
+    initInstanceTable((const VkBaseLayerObject *) (*pInstance));
+
+    VkResult result = instance_dispatch_table(*pInstance)->CreateInstance(pCreateInfo, pInstance);
+
+    if (result == VK_SUCCESS) {
+        enable_debug_report(pCreateInfo->extensionCount, pCreateInfo->pEnabledExtensions);
+    }
+    return result;
+}
+
 VK_LAYER_EXPORT VkResult VKAPI vkCreateDevice(
     VkPhysicalDevice          gpu,
     const VkDeviceCreateInfo *pCreateInfo,
@@ -922,13 +941,19 @@ struct extProps {
     uint32_t version;
     const char * const name;
 };
-#define MEM_TRACKER_LAYER_EXT_ARRAY_SIZE 1
+#define MEM_TRACKER_LAYER_EXT_ARRAY_SIZE 2
 static const VkExtensionProperties mtExts[MEM_TRACKER_LAYER_EXT_ARRAY_SIZE] = {
     {
         VK_STRUCTURE_TYPE_EXTENSION_PROPERTIES,
         "MemTracker",
         0x10,
-        "Sample layer: MemTracker",
+        "Validation layer: MemTracker",
+    },
+    {
+        VK_STRUCTURE_TYPE_EXTENSION_PROPERTIES,
+        "Validation",
+        0x10,
+        "Validation layer: MemTracker",
     }
 };
 
@@ -967,6 +992,45 @@ VK_LAYER_EXPORT VkResult VKAPI vkGetGlobalExtensionInfo(
         default:
             return VK_ERROR_INVALID_VALUE;
     };
+
+    return VK_SUCCESS;
+}
+
+VK_LAYER_EXPORT VkResult VKAPI vkGetPhysicalDeviceExtensionInfo(
+    VkPhysicalDevice     physical_device,
+    VkExtensionInfoType  infoType,
+    uint32_t             extensionIndex,
+    size_t              *pDataSize,
+    void                *pData)
+{
+    uint32_t *count;
+
+    if (pDataSize == NULL) {
+        return VK_ERROR_INVALID_POINTER;
+    }
+
+    switch (infoType) {
+        case VK_EXTENSION_INFO_TYPE_COUNT:
+            *pDataSize = sizeof(uint32_t);
+            if (pData == NULL) {
+                return VK_SUCCESS;
+            }
+            count = (uint32_t *) pData;
+            *count = MEM_TRACKER_LAYER_EXT_ARRAY_SIZE;
+            break;
+        case VK_EXTENSION_INFO_TYPE_PROPERTIES:
+            *pDataSize = sizeof(VkExtensionProperties);
+            if (pData == NULL) {
+                return VK_SUCCESS;
+            }
+            if (extensionIndex >= MEM_TRACKER_LAYER_EXT_ARRAY_SIZE) {
+                return VK_ERROR_INVALID_VALUE;
+            }
+            memcpy((VkExtensionProperties *) pData, &mtExts[extensionIndex], sizeof(VkExtensionProperties));
+            break;
+        default:
+            return VK_ERROR_INVALID_VALUE;
+    }
 
     return VK_SUCCESS;
 }
@@ -1252,6 +1316,10 @@ VK_LAYER_EXPORT VkResult VKAPI vkResetFences(
     uint32_t  fenceCount,
     VkFence  *pFences)
 {
+    /*
+     * TODO: Shouldn't we check for error conditions before passing down the chain?
+     * What if reason result is not VK_SUCCESS is something we could report as a validation error?
+     */
     VkResult result = device_dispatch_table(device)->ResetFences(device, fenceCount, pFences);
     if (VK_SUCCESS == result) {
         loader_platform_thread_lock_mutex(&globalLock);
@@ -2151,6 +2219,8 @@ VK_LAYER_EXPORT void* VKAPI vkGetDeviceProcAddr(
     VkDevice         dev,
     const char       *funcName)
 {
+    void *fptr;
+
     if (dev == NULL) {
         return NULL;
     }
@@ -2296,7 +2366,11 @@ VK_LAYER_EXPORT void* VKAPI vkGetDeviceProcAddr(
         return (void*) vkDestroySwapChainWSI;
     if (!strcmp(funcName, "vkGetSwapChainInfoWSI"))
         return (void*) vkGetSwapChainInfoWSI;
-    else
+
+    fptr = msg_callback_get_proc_addr(funcName);
+    if (fptr)
+        return fptr;
+
     {
         VkLayerDispatchTable **ppDisp = (VkLayerDispatchTable **) dev;
         VkLayerDispatchTable* pTable = tableMap[*ppDisp];
@@ -2310,6 +2384,7 @@ VK_LAYER_EXPORT void* VKAPI vkGetInstanceProcAddr(
     VkInstance       instance,
     const char       *funcName)
 {
+    void *fptr;
     if (instance == NULL) {
         return NULL;
     }
@@ -2324,9 +2399,15 @@ VK_LAYER_EXPORT void* VKAPI vkGetInstanceProcAddr(
 
     if (!strcmp(funcName, "vkDestroyInstance"))
         return (void *) vkDestroyInstance;
+    if (!strcmp(funcName, "vkCreateInstance"))
+        return (void*) vkCreateInstance;
     if (!strcmp(funcName, "vkCreateDevice"))
         return (void*) vkCreateDevice;
-    else
+
+    fptr = msg_callback_get_proc_addr(funcName);
+    if (fptr)
+        return fptr;
+
     {
         VkLayerInstanceDispatchTable **ppDisp = (VkLayerInstanceDispatchTable **) instance;
         VkLayerInstanceDispatchTable* pTable = tableInstanceMap[*ppDisp];

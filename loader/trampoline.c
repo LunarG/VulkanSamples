@@ -120,6 +120,14 @@ LOADER_EXPORT VkResult VKAPI vkCreateInstance(
 
     res = ptr_instance->disp->CreateInstance(pCreateInfo, pInstance);
 
+    /*
+     * Finally have the layers in place and everyone has seen
+     * the CreateInstance command go by. This allows the layer's
+     * GetInstanceProcAddr functions to return valid extension functions
+     * if enabled.
+     */
+    loader_activate_instance_layer_extensions(ptr_instance);
+
     return res;
 }
 
@@ -197,31 +205,6 @@ LOADER_EXPORT VkResult VKAPI vkDestroyDevice(VkDevice device)
     // TODO need to keep track of device objs to be able to get icd/gpu to deactivate
     //loader_deactivate_device_layer(device);
     return res;
-}
-
-#if 0 //TODO get working on layer instance chain
-LOADER_EXPORT VkResult VKAPI vkGetGlobalExtensionInfo(
-                                               VkExtensionInfoType infoType,
-                                               uint32_t extensionIndex,
-                                               size_t*  pDataSize,
-                                               void*    pData)
-{
-    return instance_disp.GetGlobalExtensionInfo(infoType, extensionIndex, pDataSize, pData);
-}
-#endif
-
-LOADER_EXPORT VkResult VKAPI vkGetPhysicalDeviceExtensionInfo(
-                                                VkPhysicalDevice gpu,
-                                                VkExtensionInfoType infoType,
-                                                uint32_t extensionIndex,
-                                                size_t* pDataSize,
-                                                void* pData)
-{
-    const VkLayerInstanceDispatchTable *disp;
-
-    disp = loader_get_instance_dispatch(gpu);
-
-    return disp->GetPhysicalDeviceExtensionInfo(gpu, infoType, extensionIndex, pDataSize, pData);
 }
 
 LOADER_EXPORT VkResult VKAPI vkGetDeviceQueue(VkDevice device, uint32_t queueNodeIndex, uint32_t queueIndex, VkQueue* pQueue)

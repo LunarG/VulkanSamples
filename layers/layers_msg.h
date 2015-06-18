@@ -62,6 +62,8 @@ static VkResult layer_create_msg_callback(
         pNewDbgFuncNode->msgFlags = msgFlags;
         pNewDbgFuncNode->pUserData = pUserData;
         pNewDbgFuncNode->pNext = g_pDbgFunctionHead;
+
+        /* TODO: This should be a per-instance resource */
         g_pDbgFunctionHead = pNewDbgFuncNode;
     } else {
         free(pNewDbgFuncNode);
@@ -94,10 +96,27 @@ static VkResult layer_destroy_msg_callback(
     return result;
 }
 
+static void* msg_callback_get_proc_addr(
+        const char      *funcName)
+{
+    if (!g_DEBUG_REPORT) {
+        return NULL;
+    }
+
+    if (!strcmp(funcName, "vkDbgCreateMsgCallback")) {
+        return (void *) vkDbgCreateMsgCallback;
+    }
+    if (!strcmp(funcName, "vkDbgDestroyMsgCallback")) {
+        return (void *) vkDbgDestroyMsgCallback;
+    }
+
+    return NULL;
+}
+
 // Utility function to handle reporting
 //  If callbacks are enabled, use them, otherwise use printf
 static void layerCbMsg(
-    VkFlags    msgFlags,
+    VkFlags             msgFlags,
     VkObjectType        objectType,
     VkObject            srcObject,
     size_t              location,
@@ -122,65 +141,4 @@ static void layerCbMsg(
         }
         pTrav = pTrav->pNext;
     }
-#if 0
-    if (g_debugAction & (VK_DBG_LAYER_ACTION_LOG_MSG | VK_DBG_LAYER_ACTION_CALLBACK)) {
-        if (msgFlags & VK_DBG_REPORT_ERROR_BIT) {
-            if (g_reportFlags <= VK_DBG_LAYER_LEVEL_ERROR) {
-                if (g_debugAction & VK_DBG_LAYER_ACTION_LOG_MSG) {
-                    fprintf(g_logFile, "{%s}ERROR : %s\n", pLayerPrefix, pMsg);
-                    fflush(g_logFile);
-                }
-                if (g_debugAction & VK_DBG_LAYER_ACTION_CALLBACK) {
-                    while (pTrav) {
-                        pTrav->pfnMsgCallback(msgFlags,
-                                              objectType, srcObject,
-                                              location,
-                                              msgCode,
-                                              pLayerPrefix,
-                                              pMsg,
-                                              pTrav->pUserData);
-                        pTrav = pTrav->pNext;
-                    }
-                }
-            }
-        }
-        switch (msgType) {
-            case VK_DBG_REPORT_ERROR_BIT:
-                break;
-            case VK_DBG_MSG_WARNING:
-                if (g_reportFlags <= VK_DBG_LAYER_LEVEL_WARN) {
-                    if (g_debugAction & VK_DBG_LAYER_ACTION_LOG_MSG)
-                        fprintf(g_logFile, "{%s}WARN : %s\n", pLayerPrefix, pMsg);
-                    if (g_debugAction & VK_DBG_LAYER_ACTION_CALLBACK)
-                        while (pTrav) {
-				            pTrav->pfnMsgCallback(msgType, validationLevel, srcObject, location, msgCode, pMsg, pTrav->pUserData);
-                            pTrav = pTrav->pNext;
-                        }
-                }
-                break;
-            case VK_DBG_MSG_PERF_WARNING:
-                if (g_reportFlags <= VK_DBG_LAYER_LEVEL_PERF_WARN) {
-                    if (g_debugAction & VK_DBG_LAYER_ACTION_LOG_MSG)
-                        fprintf(g_logFile, "{%s}PERF_WARN : %s\n", pLayerPrefix, pMsg);
-                    if (g_debugAction & VK_DBG_LAYER_ACTION_CALLBACK)
-                        while (pTrav) {
-				            pTrav->pfnMsgCallback(msgType, validationLevel, srcObject, location, msgCode, pMsg, pTrav->pUserData);
-                            pTrav = pTrav->pNext;
-                        }
-                }
-                break;
-            default:
-                if (g_reportFlags <= VK_DBG_LAYER_LEVEL_INFO) {
-                    if (g_debugAction & VK_DBG_LAYER_ACTION_LOG_MSG)
-                        fprintf(g_logFile, "{%s}INFO : %s\n", pLayerPrefix, pMsg);
-                    if (g_debugAction & VK_DBG_LAYER_ACTION_CALLBACK)
-                        while (pTrav) {
-				            pTrav->pfnMsgCallback(msgType, validationLevel, srcObject, location, msgCode, pMsg, pTrav->pUserData);
-                            pTrav = pTrav->pNext;
-                        }
-                }
-                break;
-        }
-    }
-#endif
 }

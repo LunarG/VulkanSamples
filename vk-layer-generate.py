@@ -33,7 +33,7 @@ import vulkan
 import vk_helper
 
 def proto_is_global(proto):
-    if proto.params[0].ty == "VkInstance" or proto.params[0].ty == "VkPhysicalDevice" or proto.name == "CreateInstance" or proto.name == "GetGlobalExtensionInfo" or proto.name == "GetDisplayInfoWSI":
+    if proto.params[0].ty == "VkInstance" or proto.params[0].ty == "VkPhysicalDevice" or proto.name == "CreateInstance" or proto.name == "GetGlobalExtensionInfo" or proto.name == "GetPhysicalDeviceExtensionInfo" or proto.name == "GetDisplayInfoWSI":
        return True
     else:
        return False
@@ -175,17 +175,67 @@ class Subcommand(object):
 
     def _gen_layer_get_global_extension_info(self, layer="Generic"):
         ggei_body = []
-        ggei_body.append('#define LAYER_EXT_ARRAY_SIZE 1')
-        ggei_body.append('static const VkExtensionProperties layerExts[LAYER_EXT_ARRAY_SIZE] = {')
-        ggei_body.append('    {')
-        ggei_body.append('        VK_STRUCTURE_TYPE_EXTENSION_PROPERTIES,')
-        ggei_body.append('        "%s",' % layer)
-        ggei_body.append('        0x10,')
-        ggei_body.append('        "layer: %s",' % layer)
-        ggei_body.append('    }')
-        ggei_body.append('};')
+        if layer == 'APIDump':
+            ggei_body.append('#define LAYER_EXT_ARRAY_SIZE 1')
+            ggei_body.append('static const VkExtensionProperties layerExts[LAYER_EXT_ARRAY_SIZE] = {')
+            ggei_body.append('    {')
+            ggei_body.append('        VK_STRUCTURE_TYPE_EXTENSION_PROPERTIES,')
+            ggei_body.append('        "%s",' % layer)
+            ggei_body.append('        0x10,')
+            ggei_body.append('        "layer: %s",' % layer)
+            ggei_body.append('    }')
+            ggei_body.append('};')
+        else:
+            ggei_body.append('#define LAYER_EXT_ARRAY_SIZE 2')
+            ggei_body.append('static const VkExtensionProperties layerExts[LAYER_EXT_ARRAY_SIZE] = {')
+            ggei_body.append('    {')
+            ggei_body.append('        VK_STRUCTURE_TYPE_EXTENSION_PROPERTIES,')
+            ggei_body.append('        "%s",' % layer)
+            ggei_body.append('        0x10,')
+            ggei_body.append('        "layer: %s",' % layer)
+            ggei_body.append('    },')
+            ggei_body.append('    {')
+            ggei_body.append('        VK_STRUCTURE_TYPE_EXTENSION_PROPERTIES,')
+            ggei_body.append('        "Validation",')
+            ggei_body.append('        0x10,')
+            ggei_body.append('        "layer: %s",' % layer)
+            ggei_body.append('    }')
+            ggei_body.append('};')
         ggei_body.append('')
         ggei_body.append('VK_LAYER_EXPORT VkResult VKAPI vkGetGlobalExtensionInfo(VkExtensionInfoType infoType, uint32_t extensionIndex, size_t* pDataSize, void* pData)')
+        ggei_body.append('{')
+        ggei_body.append('    uint32_t *count;')
+        ggei_body.append('')
+        ggei_body.append('    if (pDataSize == NULL)')
+        ggei_body.append('        return VK_ERROR_INVALID_POINTER;')
+        ggei_body.append('')
+        ggei_body.append('    switch (infoType) {')
+        ggei_body.append('        case VK_EXTENSION_INFO_TYPE_COUNT:')
+        ggei_body.append('            *pDataSize = sizeof(uint32_t);')
+        ggei_body.append('            if (pData == NULL)')
+        ggei_body.append('                return VK_SUCCESS;')
+        ggei_body.append('            count = (uint32_t *) pData;')
+        ggei_body.append('            *count = LAYER_EXT_ARRAY_SIZE;')
+        ggei_body.append('            break;')
+        ggei_body.append('        case VK_EXTENSION_INFO_TYPE_PROPERTIES:')
+        ggei_body.append('            *pDataSize = sizeof(VkExtensionProperties);')
+        ggei_body.append('            if (pData == NULL)')
+        ggei_body.append('                return VK_SUCCESS;')
+        ggei_body.append('            if (extensionIndex >= LAYER_EXT_ARRAY_SIZE)')
+        ggei_body.append('                return VK_ERROR_INVALID_VALUE;')
+        ggei_body.append('            memcpy((VkExtensionProperties *) pData, &layerExts[extensionIndex], sizeof(VkExtensionProperties));')
+        ggei_body.append('            break;')
+        ggei_body.append('        default:')
+        ggei_body.append('            return VK_ERROR_INVALID_VALUE;')
+        ggei_body.append('    };')
+        ggei_body.append('    return VK_SUCCESS;')
+        ggei_body.append('}')
+        return "\n".join(ggei_body)
+
+    def _gen_layer_get_physical_device_extension_info(self, layer="Generic"):
+        ggei_body = []
+        ggei_body.append('')
+        ggei_body.append('VK_LAYER_EXPORT VkResult VKAPI vkGetPhysicalDeviceExtensionInfo(VkPhysicalDevice physicalDevice, VkExtensionInfoType infoType, uint32_t extensionIndex, size_t* pDataSize, void* pData)')
         ggei_body.append('{')
         ggei_body.append('    uint32_t *count;')
         ggei_body.append('')
@@ -236,6 +286,8 @@ class Subcommand(object):
                         funcs.append('/* CreateDevice HERE */')
                     elif 'GetGlobalExtensionInfo' == proto.name:
                         intercept = self._gen_layer_get_global_extension_info(self.layer_name)
+                    elif 'GetPhysicalDeviceExtensionInfo' == proto.name:
+                        intercept = self._gen_layer_get_physical_device_extension_info(self.layer_name)
                 if intercept is not None:
                     funcs.append(intercept)
                     intercepted.append(proto)
@@ -538,7 +590,7 @@ class GenericLayerSubcommand(Subcommand):
         gen_header.append('}')
         return "\n".join(gen_header)
     def generate_intercept(self, proto, qual):
-        if proto.name in [ 'GetGlobalExtensionInfo' ]:
+        if proto.name in [ 'GetGlobalExtensionInfo', 'GetPhysicalDeviceExtensionInfo' ]:
             # use default version
             return None
         decl = proto.c_func(prefix="vk", attr="VKAPI")
@@ -812,7 +864,7 @@ class APIDumpSubcommand(Subcommand):
         return "\n".join(func_body)
 
     def generate_intercept(self, proto, qual):
-        if proto.name in [ 'GetGlobalExtensionInfo']:
+        if proto.name in [ 'GetGlobalExtensionInfo', 'GetPhysicalDeviceExtensionInfo']:
             return None
         decl = proto.c_func(prefix="vk", attr="VKAPI")
         ret_val = ''
@@ -1250,7 +1302,7 @@ class ObjectTrackerSubcommand(Subcommand):
         return "\n".join(header_txt)
 
     def generate_intercept(self, proto, qual):
-        if proto.name in [ 'DbgCreateMsgCallback', 'GetGlobalExtensionInfo' ]:
+        if proto.name in [ 'DbgCreateMsgCallback', 'GetGlobalExtensionInfo', 'GetPhysicalDeviceExtensionInfo' ]:
             # use default version
             return None
 

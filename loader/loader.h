@@ -69,16 +69,14 @@ struct loader_scanned_layers {
     char *lib_name;
 
     /* cache of global extensions for a specific layer */
-//    uint32_t global_extension_count;
-//    struct loader_extension_property *global_extensions;
     struct loader_extension_list global_extension_list;
 
+    bool physical_device_extensions_supported;
     /*
      * cache of device extensions for a specific layer,
      * filled in at CreateInstance time
      */
-    uint32_t device_ext_count;
-    struct loader_extension_property *device_ext_list;
+    struct loader_extension_list physical_device_extension_list;
 };
 
 struct loader_icd {
@@ -104,6 +102,13 @@ struct loader_icd {
 
     uint32_t  app_extension_count[MAX_GPUS_FOR_LAYER];
     VkExtensionProperties *app_extension_props[MAX_GPUS_FOR_LAYER];
+
+    /*
+     * Fill in the cache of available extensions from all layers that
+     * operate with this physical device.
+     * This cache will be used to satisfy calls to GetPhysicalDeviceExtensionInfo
+     */
+    struct loader_extension_list device_extension_cache[MAX_GPUS_FOR_LAYER];
 
     struct loader_extension_list enabled_device_extensions[MAX_GPUS_FOR_LAYER];
 };
@@ -238,8 +243,7 @@ struct loader_scanned_icds {
      * cache of device extensions for specific ICD,
      * filled in at CreateInstance time
      */
-    uint32_t device_extension_count;
-    struct loader_extension_property *device_extensions;
+    struct loader_extension_list device_extension_list;
 };
 
 static inline void loader_set_dispatch(VkObject obj, const void *data)
@@ -312,7 +316,6 @@ VkResult VKAPI loader_GetGlobalExtensionInfo(
         uint32_t                                extensionIndex,
         size_t*                                 pDataSize,
         void*                                   pData);
-#endif
 
 VkResult loader_GetPhysicalDeviceExtensionInfo(
         VkPhysicalDevice                        gpu,
@@ -320,6 +323,7 @@ VkResult loader_GetPhysicalDeviceExtensionInfo(
         uint32_t                                extensionIndex,
         size_t*                                 pDataSize,
         void*                                   pData);
+#endif
 
 VkResult loader_GetMultiDeviceCompatibility(
         VkPhysicalDevice                        gpu0,
@@ -343,7 +347,15 @@ void loader_icd_scan(void);
 void layer_lib_scan(void);
 void loader_coalesce_extensions(void);
 
+static loader_platform_dl_handle loader_add_layer_lib(
+        const char *chain_type,
+        struct loader_extension_property *ext_prop);
+static void loader_remove_layer_lib(
+        struct loader_instance *inst,
+        struct loader_extension_property *ext_prop);
+
 struct loader_icd * loader_get_icd(const VkBaseLayerObject *gpu,
                                    uint32_t *gpu_index);
 uint32_t loader_activate_instance_layers(struct loader_instance *inst);
+void loader_activate_instance_layer_extensions(struct loader_instance *inst);
 #endif /* LOADER_H */

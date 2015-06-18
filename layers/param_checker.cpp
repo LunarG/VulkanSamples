@@ -193,6 +193,10 @@ void PostCreateInstance(VkResult result, const VkInstanceCreateInfo *pCreateInfo
 
 VK_LAYER_EXPORT VkResult VKAPI vkCreateInstance(const VkInstanceCreateInfo* pCreateInfo, VkInstance* pInstance)
 {
+    /* TODO: shouldn't we have initInstanceDispatch here? */
+    loader_platform_thread_once(&initOnce, initParamChecker);
+    initInstanceTable((const VkBaseLayerObject *) (*pInstance));
+
     PreCreateInstance(pCreateInfo->pAppInfo, pCreateInfo->pAllocCb);
     VkResult result = instance_dispatch_table(*pInstance)->CreateInstance(pCreateInfo, pInstance);
     PostCreateInstance(result, pCreateInfo, pInstance);
@@ -327,11 +331,17 @@ VK_LAYER_EXPORT VkResult VKAPI vkDestroyDevice(VkDevice device)
     return result;
 }
 
-#define PARAM_CHECKER_LAYER_EXT_ARRAY_SIZE 1
+#define PARAM_CHECKER_LAYER_EXT_ARRAY_SIZE 2
 static const VkExtensionProperties pcExts[PARAM_CHECKER_LAYER_EXT_ARRAY_SIZE] = {
     {
         VK_STRUCTURE_TYPE_EXTENSION_PROPERTIES,
         "ParamChecker",
+        0x10,
+        "Sample layer: ParamChecker",
+    },
+    {
+        VK_STRUCTURE_TYPE_EXTENSION_PROPERTIES,
+        "Validation",
         0x10,
         "Sample layer: ParamChecker",
     }
@@ -379,8 +389,33 @@ VK_LAYER_EXPORT VkResult VKAPI vkGetPhysicalDeviceExtensionInfo(
                                                size_t*  pDataSize,
                                                void*    pData)
 {
-    VkResult result = instance_dispatch_table(gpu)->GetPhysicalDeviceExtensionInfo(gpu, infoType, extensionIndex, pDataSize, pData);
-    return result;
+    /* This entrypoint is NOT going to init it's own dispatch table since loader calls here early */
+    uint32_t *count;
+
+    if (pDataSize == NULL)
+        return VK_ERROR_INVALID_POINTER;
+
+    switch (infoType) {
+        case VK_EXTENSION_INFO_TYPE_COUNT:
+            *pDataSize = sizeof(uint32_t);
+            if (pData == NULL)
+                return VK_SUCCESS;
+            count = (uint32_t *) pData;
+            *count = PARAM_CHECKER_LAYER_EXT_ARRAY_SIZE;
+            break;
+        case VK_EXTENSION_INFO_TYPE_PROPERTIES:
+            *pDataSize = sizeof(VkExtensionProperties);
+            if (pData == NULL)
+                return VK_SUCCESS;
+            if (extensionIndex >= PARAM_CHECKER_LAYER_EXT_ARRAY_SIZE)
+                return VK_ERROR_INVALID_VALUE;
+            memcpy((VkExtensionProperties *) pData, &pcExts[extensionIndex], sizeof(VkExtensionProperties));
+            break;
+        default:
+            return VK_ERROR_INVALID_VALUE;
+    };
+
+    return VK_SUCCESS;
 }
 
 VK_LAYER_EXPORT VkResult VKAPI vkGetDeviceQueue(VkDevice device, uint32_t queueNodeIndex, uint32_t queueIndex, VkQueue* pQueue)

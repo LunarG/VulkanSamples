@@ -152,6 +152,13 @@ protected:
         std::vector<const char *> device_extension_names;
 
         instance_extension_names.push_back(DEBUG_REPORT_EXTENSION_NAME);
+        instance_extension_names.push_back("MemTracker");
+        instance_extension_names.push_back("ObjectTracker");
+        instance_extension_names.push_back("Threading");
+
+        device_extension_names.push_back("MemTracker");
+        device_extension_names.push_back("ObjectTracker");
+        device_extension_names.push_back("Threading");
 
         // Force layer output level to be >= WARNING so that we catch those messages but ignore others
         setLayerOptionEnum("MemTrackerReportLevel",    "VK_DBG_LAYER_LEVEL_WARNING");
@@ -806,34 +813,6 @@ TEST_F(VkLayerTest, ResetUnsignaledFence)
 }
 #endif
 #if OBJECT_TRACKER_TESTS
-TEST_F(VkLayerTest, WaitForUnsubmittedFence)
-{
-    vk_testing::Fence testFence;
-    VkFlags msgFlags;
-    std::string msgString;
-    VkFenceCreateInfo fenceInfo = {};
-    fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-    fenceInfo.pNext = NULL;
-
-    ASSERT_NO_FATAL_FAILURE(InitState());
-    testFence.init(*m_device, fenceInfo);
-    m_errorMonitor->ClearState();
-    vkGetFenceStatus(m_device->device(),testFence.obj());
-    msgFlags = m_errorMonitor->GetState(&msgString);
-    ASSERT_TRUE(msgFlags & VK_DBG_REPORT_ERROR_BIT) << "Did not receive an error asking for status of unsubmitted fence";
-    if (!strstr(msgString.c_str(),"Status Requested for Unsubmitted Fence")) {
-        FAIL() << "Error received was not Status Requested for Unsubmitted Fence";
-    }
-
-    VkFence fences[1] = {testFence.obj()};
-    m_errorMonitor->ClearState();
-    vkWaitForFences(m_device->device(), 1, fences, VK_TRUE, 0);
-    msgFlags = m_errorMonitor->GetState(&msgString);
-    ASSERT_TRUE(msgFlags & VK_DBG_REPORT_ERROR_BIT) << "Did not receive an error for waiting for unsubmitted fence";
-    if (!strstr(msgString.c_str(),"Waiting for Unsubmitted Fence")) {
-        FAIL() << "Error received was not 'Waiting for Unsubmitted Fence'";
-    }
-}
 
 TEST_F(VkLayerTest, GetObjectInfoMismatchedType)
 {

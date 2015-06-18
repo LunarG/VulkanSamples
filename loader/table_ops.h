@@ -387,7 +387,13 @@ static inline void loader_init_instance_core_dispatch_table(VkLayerInstanceDispa
     table->GetPhysicalDeviceExtensionInfo = (PFN_vkGetPhysicalDeviceExtensionInfo) gpa(inst, "vkGetPhysicalDeviceExtensionInfo");
     table->GetMultiDeviceCompatibility = (PFN_vkGetMultiDeviceCompatibility) gpa(inst, "vkGetMultiDeviceCompatibility");
     table->GetDisplayInfoWSI = (PFN_vkGetDisplayInfoWSI) gpa(inst, "vkGetDisplayInfoWSI");
+}
 
+static inline void loader_init_instance_extension_dispatch_table(
+        VkLayerInstanceDispatchTable *table,
+        PFN_vkGetInstanceProcAddr gpa,
+        VkInstance inst)
+{
     table->DbgCreateMsgCallback = (PFN_vkDbgCreateMsgCallback) gpa(inst, "vkDbgCreateMsgCallback");
     table->DbgDestroyMsgCallback = (PFN_vkDbgDestroyMsgCallback) gpa(inst, "vkDbgDestroyMsgCallback");
 }

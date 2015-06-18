@@ -120,7 +120,7 @@ void VkRenderFramework::InitFramework(
                                          VK_DBG_REPORT_ERROR_BIT | VK_DBG_REPORT_WARN_BIT,
                                          dbgFunction,
                                          userData,
-                                         &m_msgCallback);
+                                         &m_globalMsgCallback);
             ASSERT_VK_SUCCESS(err);
         }
     }
@@ -149,6 +149,18 @@ void VkRenderFramework::InitFramework(
 //    ASSERT_NE(obj_name, (PFN_vkDbgCreateMsgCallback) NULL) << "Did not get function pointer for DbgCreateMsgCallback";
 //    obj_name()
     m_device = new VkDeviceObj(0, objs[0], device_extensions);
+
+    /* Now register callback on device */
+    if (0) {
+        if (m_dbgCreateMsgCallback) {
+            err = m_dbgCreateMsgCallback(this->inst,
+                                         VK_DBG_REPORT_ERROR_BIT | VK_DBG_REPORT_WARN_BIT,
+                                         dbgFunction,
+                                         userData,
+                                         &m_devMsgCallback);
+            ASSERT_VK_SUCCESS(err);
+        }
+    }
     m_device->get_device_queue();
 
     m_depthStencil = new VkDepthStencilObj();
