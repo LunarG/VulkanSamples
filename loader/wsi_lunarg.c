@@ -33,7 +33,6 @@
 
 /************  Trampoline entrypoints *******************/
 /* since one entrypoint is instance level will make available all entrypoints */
-/* TODO make this a device extension with NO trampoline code */
 
 VkResult wsi_lunarg_CreateSwapChainWSI(
         VkDevice                                device,
@@ -87,31 +86,7 @@ static VkResult wsi_lunarg_QueuePresentWSI(
     return disp->QueuePresentWSI(queue, pPresentInfo);
 }
 
-/************ extension enablement ***************/
-#define WSI_LUNARG_EXT_ARRAY_SIZE 1
-static const struct loader_extension_property wsi_lunarg_extension_info = {
-    .info =  {
-        .sType = VK_STRUCTURE_TYPE_EXTENSION_PROPERTIES,
-        .name = VK_WSI_LUNARG_EXTENSION_NAME,
-        .version = VK_WSI_LUNARG_REVISION,
-        .description = "loader: LunarG WSI extension",
-        },
-    .origin = VK_EXTENSION_ORIGIN_LOADER,
-};
 
-void wsi_lunarg_add_instance_extensions(
-        struct loader_extension_list *ext_list)
-{
-    loader_add_to_ext_list(ext_list, 1, &wsi_lunarg_extension_info);
-}
-
-void wsi_lunarg_create_instance(
-        struct loader_instance *ptr_instance)
-{
-    ptr_instance->wsi_lunarg_enabled = has_vk_extension_property(
-                                             &wsi_lunarg_extension_info.info,
-                                             &ptr_instance->enabled_instance_extensions);
-}
 
 void *wsi_lunarg_GetInstanceProcAddr(
         VkInstance                              instance,
@@ -120,6 +95,7 @@ void *wsi_lunarg_GetInstanceProcAddr(
     if (instance == VK_NULL_HANDLE)
         return NULL;
 
+    // TODO once WSI is pure device extension with no special trampoline code remove this function
     /* since one of these entrypoints must be loader handled will report all */
     if (!strcmp(pName, "vkCreateSwapChainWSI"))
         return (void*) wsi_lunarg_CreateSwapChainWSI;
@@ -140,6 +116,7 @@ void *wsi_lunarg_GetDeviceProcAddr(
     if (device == VK_NULL_HANDLE)
         return NULL;
 
+    // TODO make sure WSI is enabled, but eventually this function goes away
     /* only handle device entrypoints that are loader special cases */
     if (!strcmp(name, "vkCreateSwapChainWSI"))
         return (void*) wsi_lunarg_CreateSwapChainWSI;

@@ -521,7 +521,6 @@ void loader_coalesce_extensions(void)
 
     // Traverse loader's extensions, adding non-duplicate extensions to the list
     debug_report_add_instance_extensions(&loader.global_extensions);
-    wsi_lunarg_add_instance_extensions(&loader.global_extensions);
 }
 
 static struct loader_icd *loader_get_icd_and_device(const VkDevice device,
@@ -1321,7 +1320,7 @@ uint32_t loader_activate_instance_layers(struct loader_instance *inst)
         loader_platform_dl_handle lib_handle;
 
         /*
-         * For global exenstions implemented within the loader (i.e. WSI, DEBUG_REPORT
+         * For global exenstions implemented within the loader (i.e. DEBUG_REPORT
          * the extension must provide two entry points for the loader to use:
          * - "trampoline" entry point - this is the address returned by GetProcAddr
          * and will always do what's necessary to support a global call.
@@ -1767,15 +1766,16 @@ LOADER_EXPORT void * VKAPI vkGetInstanceProcAddr(VkInstance instance, const char
 
     struct loader_instance *ptr_instance = (struct loader_instance *) instance;
 
+    /* return any extension global entrypoints */
     addr = debug_report_instance_gpa(ptr_instance, pName);
     if (addr) {
         return addr;
     }
 
-    /* return any extension global entrypoints */
+    /* TODO Remove this once WSI has no loader special code */
     addr = wsi_lunarg_GetInstanceProcAddr(instance, pName);
     if (addr)
-        return (ptr_instance->wsi_lunarg_enabled) ? addr : NULL;
+        return addr;
 
     /* return the instance dispatch table entrypoint for extensions */
     const VkLayerInstanceDispatchTable *disp_table = * (VkLayerInstanceDispatchTable **) instance;
@@ -1805,6 +1805,7 @@ LOADER_EXPORT void * VKAPI vkGetDeviceProcAddr(VkDevice device, const char * pNa
     }
 
     /* return any extension device entrypoints the loader knows about */
+    /* TODO once WSI has no loader special code remove this */
     addr = wsi_lunarg_GetDeviceProcAddr(device, pName);
     if (addr)
         return addr;

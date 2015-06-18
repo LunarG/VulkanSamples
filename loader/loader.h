@@ -212,7 +212,6 @@ struct loader_instance {
     VkExtensionProperties *app_extension_props;
 
     bool debug_report_enabled;
-    bool wsi_lunarg_enabled;
     VkLayerDbgFunctionNode *DbgFunctionHead;
 };
 

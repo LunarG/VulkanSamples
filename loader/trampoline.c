@@ -26,7 +26,6 @@
 
 #include "loader_platform.h"
 #include "loader.h"
-#include "wsi_lunarg.h"
 #include "debug_report.h"
 
 #if defined(WIN32)
@@ -88,7 +87,6 @@ LOADER_EXPORT VkResult VKAPI vkCreateInstance(
     loader_enable_instance_layers(ptr_instance);
 
     debug_report_create_instance(ptr_instance);
-    wsi_lunarg_create_instance(ptr_instance);
 
     /* enable any layers on instance chain */
     loader_activate_instance_layers(ptr_instance);
