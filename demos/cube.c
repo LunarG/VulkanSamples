@@ -347,6 +347,8 @@ struct demo {
     VkDescriptorSet desc_set;
 
     bool quit;
+    int32_t curFrame;
+    int32_t frameCount;
     bool validate;
     PFN_vkDbgCreateMsgCallback dbgCreateMsgCallback;
     VkDbgMsgCallback msg_callback;
@@ -1592,6 +1594,57 @@ static void demo_prepare(struct demo *demo)
 	demo->prepared = true;
 }
 
+static void demo_cleanup(struct demo *demo)
+{
+    uint32_t i;
+
+    demo->prepared = false;
+
+    vkDestroyObject(demo->device, VK_OBJECT_TYPE_DESCRIPTOR_SET, demo->desc_set);
+    vkDestroyObject(demo->device, VK_OBJECT_TYPE_DESCRIPTOR_POOL, demo->desc_pool);
+
+    vkDestroyObject(demo->device, VK_OBJECT_TYPE_DYNAMIC_VP_STATE, demo->viewport);
+    vkDestroyObject(demo->device, VK_OBJECT_TYPE_DYNAMIC_RS_STATE, demo->raster);
+    vkDestroyObject(demo->device, VK_OBJECT_TYPE_DYNAMIC_CB_STATE, demo->color_blend);
+    vkDestroyObject(demo->device, VK_OBJECT_TYPE_DYNAMIC_DS_STATE, demo->depth_stencil);
+
+    vkDestroyObject(demo->device, VK_OBJECT_TYPE_PIPELINE, demo->pipeline);
+    vkDestroyObject(demo->device, VK_OBJECT_TYPE_PIPELINE_LAYOUT, demo->pipeline_layout);
+    vkDestroyObject(demo->device, VK_OBJECT_TYPE_DESCRIPTOR_SET_LAYOUT, demo->desc_layout);
+
+    for (i = 0; i < DEMO_TEXTURE_COUNT; i++) {
+        vkDestroyObject(demo->device, VK_OBJECT_TYPE_IMAGE_VIEW, demo->textures[i].view);
+        vkDestroyObject(demo->device, VK_OBJECT_TYPE_IMAGE, demo->textures[i].image);
+        vkFreeMemory(demo->device, demo->textures[i].mem);
+        vkDestroyObject(demo->device, VK_OBJECT_TYPE_SAMPLER, demo->textures[i].sampler);
+    }
+    demo->fpDestroySwapChainWSI(demo->swap_chain);
+
+    vkDestroyObject(demo->device, VK_OBJECT_TYPE_DEPTH_STENCIL_VIEW, demo->depth.view);
+    vkDestroyObject(demo->device, VK_OBJECT_TYPE_IMAGE, demo->depth.image);
+    vkFreeMemory(demo->device, demo->depth.mem);
+
+    vkDestroyObject(demo->device, VK_OBJECT_TYPE_BUFFER_VIEW, demo->uniform_data.view);
+    vkDestroyObject(demo->device, VK_OBJECT_TYPE_BUFFER, demo->uniform_data.buf);
+    vkFreeMemory(demo->device, demo->uniform_data.mem);
+
+    for (i = 0; i < DEMO_BUFFER_COUNT; i++) {
+        vkDestroyObject(demo->device, VK_OBJECT_TYPE_COLOR_ATTACHMENT_VIEW, demo->buffers[i].view);
+        vkDestroyObject(demo->device, VK_OBJECT_TYPE_COMMAND_BUFFER, demo->buffers[i].cmd);
+    }
+
+    vkDestroyDevice(demo->device);
+    vkDestroyInstance(demo->inst);
+
+#ifndef _WIN32
+    xcb_destroy_window(demo->connection, demo->window);
+    xcb_disconnect(demo->connection);
+#endif // _WIN32
+}
+
+// On MS-Windows, make this a global, so it's available to WndProc()
+struct demo demo;
+
 #ifdef _WIN32
 static void demo_run(struct demo *demo)
 {
@@ -1605,10 +1658,17 @@ static void demo_run(struct demo *demo)
 
     // Wait for work to finish before updating MVP.
     vkDeviceWaitIdle(demo->device);
-}
 
-// On MS-Windows, make this a global, so it's available to WndProc()
-struct demo demo;
+    demo->curFrame++;
+
+    if (demo->frameCount != INT_MAX && demo->curFrame == demo->frameCount)
+    {
+        demo->quit=true;
+        demo_cleanup(demo);
+        ExitProcess(0);
+    }
+
+}
 
 // MS-Windows event handling function:
 LRESULT CALLBACK WndProc(HWND hWnd,
@@ -1743,6 +1803,10 @@ static void demo_run(struct demo *demo)
 
         // Wait for work to finish before updating MVP.
         vkDeviceWaitIdle(demo->device);
+        demo->curFrame++;
+        if (demo->frameCount != INT_MAX && demo->curFrame == demo->frameCount)
+            demo->quit = true;
+
     }
 }
 
@@ -1779,6 +1843,11 @@ static void demo_create_window(struct demo *demo)
     free(reply);
 
     xcb_map_window(demo->connection, demo->window);
+
+    // Force the x/y coordinates to 100,100 results are identical in consecutive runs
+    const uint32_t coords[] = {100,  100};
+    xcb_configure_window(demo->connection, demo->window,
+                         XCB_CONFIG_WINDOW_X | XCB_CONFIG_WINDOW_Y, coords);
 }
 #endif // _WIN32
 
@@ -1968,6 +2037,8 @@ static void demo_init_vk(struct demo *demo)
     // for now hardcode format till get WSI support
     demo->format = VK_FORMAT_B8G8R8A8_UNORM;
 
+    demo->quit = false;
+    demo->curFrame = 0;
 }
 
 static void demo_init_connection(struct demo *demo)
@@ -2001,6 +2072,7 @@ static void demo_init(struct demo *demo, int argc, char **argv)
     vec3 up = {0.0f, 1.0f, 0.0};
 
     memset(demo, 0, sizeof(*demo));
+    demo->frameCount = INT_MAX;
 
     for (int i = 1; i < argc; i++) {
         if (strcmp(argv[i], "--use_staging") == 0) {
@@ -2015,8 +2087,17 @@ static void demo_init(struct demo *demo, int argc, char **argv)
             demo->validate = true;
             continue;
         }
+        if (strcmp(argv[i], "--c") == 0 &&
+            demo->frameCount == INT_MAX &&
+            i < argc-1 &&
+            sscanf(argv[i+1],"%d", &demo->frameCount) == 1 &&
+            demo->frameCount >= 0)
+        {
+            i++;
+            continue;
+        }
 
-        fprintf(stderr, "Usage:\n  %s [--use_staging] [--validate}\n", APP_SHORT_NAME);
+        fprintf(stderr, "Usage:\n  %s [--use_staging] [--validate] [--c <framecount>]\n", APP_SHORT_NAME);
         fflush(stderr);
         exit(1);
     }
@@ -2036,53 +2117,6 @@ static void demo_init(struct demo *demo, int argc, char **argv)
     mat4x4_identity(demo->model_matrix);
 }
 
-static void demo_cleanup(struct demo *demo)
-{
-    uint32_t i;
-
-    demo->prepared = false;
-
-    vkDestroyObject(demo->device, VK_OBJECT_TYPE_DESCRIPTOR_SET, demo->desc_set);
-    vkDestroyObject(demo->device, VK_OBJECT_TYPE_DESCRIPTOR_POOL, demo->desc_pool);
-
-    vkDestroyObject(demo->device, VK_OBJECT_TYPE_DYNAMIC_VP_STATE, demo->viewport);
-    vkDestroyObject(demo->device, VK_OBJECT_TYPE_DYNAMIC_RS_STATE, demo->raster);
-    vkDestroyObject(demo->device, VK_OBJECT_TYPE_DYNAMIC_CB_STATE, demo->color_blend);
-    vkDestroyObject(demo->device, VK_OBJECT_TYPE_DYNAMIC_DS_STATE, demo->depth_stencil);
-
-    vkDestroyObject(demo->device, VK_OBJECT_TYPE_PIPELINE, demo->pipeline);
-    vkDestroyObject(demo->device, VK_OBJECT_TYPE_PIPELINE_LAYOUT, demo->pipeline_layout);
-    vkDestroyObject(demo->device, VK_OBJECT_TYPE_DESCRIPTOR_SET_LAYOUT, demo->desc_layout);
-
-    for (i = 0; i < DEMO_TEXTURE_COUNT; i++) {
-        vkDestroyObject(demo->device, VK_OBJECT_TYPE_IMAGE_VIEW, demo->textures[i].view);
-        vkDestroyObject(demo->device, VK_OBJECT_TYPE_IMAGE, demo->textures[i].image);
-        vkFreeMemory(demo->device, demo->textures[i].mem);
-        vkDestroyObject(demo->device, VK_OBJECT_TYPE_SAMPLER, demo->textures[i].sampler);
-    }
-    demo->fpDestroySwapChainWSI(demo->swap_chain);
-
-    vkDestroyObject(demo->device, VK_OBJECT_TYPE_DEPTH_STENCIL_VIEW, demo->depth.view);
-    vkDestroyObject(demo->device, VK_OBJECT_TYPE_IMAGE, demo->depth.image);
-    vkFreeMemory(demo->device, demo->depth.mem);
-
-    vkDestroyObject(demo->device, VK_OBJECT_TYPE_BUFFER_VIEW, demo->uniform_data.view);
-    vkDestroyObject(demo->device, VK_OBJECT_TYPE_BUFFER, demo->uniform_data.buf);
-    vkFreeMemory(demo->device, demo->uniform_data.mem);
-
-    for (i = 0; i < DEMO_BUFFER_COUNT; i++) {
-        vkDestroyObject(demo->device, VK_OBJECT_TYPE_COLOR_ATTACHMENT_VIEW, demo->buffers[i].view);
-        vkDestroyObject(demo->device, VK_OBJECT_TYPE_COMMAND_BUFFER, demo->buffers[i].cmd);
-    }
-
-    vkDestroyDevice(demo->device);
-    vkDestroyInstance(demo->inst);
-
-#ifndef _WIN32
-    xcb_destroy_window(demo->connection, demo->window);
-    xcb_disconnect(demo->connection);
-#endif // _WIN32
-}
 
 #ifdef _WIN32
 extern int __getmainargs(
