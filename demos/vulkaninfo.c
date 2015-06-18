@@ -151,7 +151,6 @@ static const char *vk_result_string(VkResult err)
     STR(VK_ERROR_BUILDING_COMMAND_BUFFER);
     STR(VK_ERROR_MEMORY_NOT_BOUND);
     STR(VK_ERROR_INCOMPATIBLE_QUEUE);
-    STR(VK_ERROR_NOT_SHAREABLE);
 #undef STR
     default: return "UNKNOWN_RESULT";
     }
@@ -632,44 +631,6 @@ app_dev_dump(const struct app_dev *dev)
     }
 }
 
-static void app_gpu_dump_multi_compat(const struct app_gpu *gpu, const struct app_gpu *other,
-        const VkPhysicalDeviceCompatibilityInfo *info)
-{
-    printf("VkPhysicalDeviceCompatibilityInfo[GPU%d]\n", other->id);
-
-#define TEST(info, b) printf(#b " = %u\n", (bool) (info->compatibilityFlags & VK_PHYSICAL_DEVICE_COMPATIBILITY_ ##b## _BIT))
-    TEST(info, FEATURES);
-    TEST(info, IQ_MATCH);
-    TEST(info, PEER_TRANSFER);
-    TEST(info, SHARED_MEMORY);
-    TEST(info, SHARED_SYNC);
-    TEST(info, SHARED_DEVICE0_DISPLAY);
-    TEST(info, SHARED_DEVICE1_DISPLAY);
-#undef TEST
-}
-
-static void app_gpu_multi_compat(struct app_gpu *gpus, uint32_t gpu_count)
-{
-        VkResult err;
-        uint32_t i, j;
-
-        for (i = 0; i < gpu_count; i++) {
-                for (j = 0; j < gpu_count; j++) {
-                        VkPhysicalDeviceCompatibilityInfo info;
-
-                        if (i == j)
-                                continue;
-
-                        err = vkGetMultiDeviceCompatibility(gpus[i].obj,
-                                        gpus[j].obj, &info);
-                        if (err)
-                                ERR_EXIT(err);
-
-                        app_gpu_dump_multi_compat(&gpus[i], &gpus[j], &info);
-                }
-        }
-}
-
 #ifdef _WIN32
 #define PRINTF_SIZE_T_SPECIFIER    "%Iu"
 #else
@@ -806,8 +767,6 @@ int main(int argc, char **argv)
         app_gpu_dump(&gpus[i]);
         printf("\n\n");
     }
-
-    app_gpu_multi_compat(gpus, gpu_count);
 
     for (i = 0; i < gpu_count; i++)
         app_gpu_destroy(&gpus[i]);

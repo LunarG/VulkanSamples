@@ -90,7 +90,6 @@ const VkLayerInstanceDispatchTable instance_disp = {
     .GetPhysicalDeviceInfo = loader_GetPhysicalDeviceInfo,
     .CreateDevice = loader_CreateDevice,
     .GetPhysicalDeviceExtensionInfo = loader_GetPhysicalDeviceExtensionInfo,
-    .GetMultiDeviceCompatibility = loader_GetMultiDeviceCompatibility,
     .DbgCreateMsgCallback = loader_DbgCreateMsgCallback,
     .DbgDestroyMsgCallback = loader_DbgDestroyMsgCallback,
 };
@@ -721,7 +720,6 @@ static void loader_icd_init_entrys(struct loader_icd *icd,
     LOOKUP(GetPhysicalDeviceInfo);
     LOOKUP(CreateDevice);
     LOOKUP(GetPhysicalDeviceExtensionInfo);
-    LOOKUP(GetMultiDeviceCompatibility);
     LOOKUP(DbgCreateMsgCallback);
     LOOKUP(DbgDestroyMsgCallback);
 #undef LOOKUP
@@ -1919,19 +1917,4 @@ VkResult loader_GetPhysicalDeviceExtensionInfo(
     };
 
     return VK_SUCCESS;
-}
-
-VkResult loader_GetMultiDeviceCompatibility(
-        VkPhysicalDevice                        gpu0,
-        VkPhysicalDevice                        gpu1,
-        VkPhysicalDeviceCompatibilityInfo*      pInfo)
-{
-    uint32_t gpu_index;
-    struct loader_icd *icd = loader_get_icd(gpu0, &gpu_index);
-    VkResult res = VK_ERROR_INITIALIZATION_FAILED;
-
-    if (icd->GetMultiDeviceCompatibility)
-        res = icd->GetMultiDeviceCompatibility(gpu0, gpu1, pInfo);
-
-    return res;
 }

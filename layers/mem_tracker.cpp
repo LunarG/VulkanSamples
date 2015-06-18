@@ -1177,37 +1177,6 @@ VK_LAYER_EXPORT VkResult VKAPI vkUnmapMemory(
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkOpenSharedMemory(
-    VkDevice                device,
-    const VkMemoryOpenInfo *pOpenInfo,
-    VkDeviceMemory         *pMem)
-{
-    // TODO : Track this
-    VkResult result = get_dispatch_table(mem_tracker_device_table_map, device)->OpenSharedMemory(device, pOpenInfo, pMem);
-    return result;
-}
-
-VK_LAYER_EXPORT VkResult VKAPI vkOpenPeerMemory(
-    VkDevice                    device,
-    const VkPeerMemoryOpenInfo *pOpenInfo,
-    VkDeviceMemory             *pMem)
-{
-    // TODO : Track this
-    VkResult result = get_dispatch_table(mem_tracker_device_table_map, device)->OpenPeerMemory(device, pOpenInfo, pMem);
-    return result;
-}
-
-VK_LAYER_EXPORT VkResult VKAPI vkOpenPeerImage(
-    VkDevice                   device,
-    const VkPeerImageOpenInfo *pOpenInfo,
-    VkImage                   *pImage,
-    VkDeviceMemory            *pMem)
-{
-    // TODO : Track this
-    VkResult result = get_dispatch_table(mem_tracker_device_table_map, device)->OpenPeerImage(device, pOpenInfo, pImage, pMem);
-    return result;
-}
-
 VK_LAYER_EXPORT VkResult VKAPI vkDestroyObject(
     VkDevice     device,
     VkObjectType objType,
@@ -2236,12 +2205,6 @@ VK_LAYER_EXPORT void* VKAPI vkGetDeviceProcAddr(
         return (void*) vkMapMemory;
     if (!strcmp(funcName, "vkUnmapMemory"))
         return (void*) vkUnmapMemory;
-    if (!strcmp(funcName, "vkOpenSharedMemory"))
-        return (void*) vkOpenSharedMemory;
-    if (!strcmp(funcName, "vkOpenPeerMemory"))
-        return (void*) vkOpenPeerMemory;
-    if (!strcmp(funcName, "vkOpenPeerImage"))
-        return (void*) vkOpenPeerImage;
     if (!strcmp(funcName, "vkDestroyObject"))
         return (void*) vkDestroyObject;
     if (!strcmp(funcName, "vkGetObjectInfo"))

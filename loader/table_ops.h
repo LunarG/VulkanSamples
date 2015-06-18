@@ -48,10 +48,6 @@ static inline void loader_init_device_dispatch_table(VkLayerDispatchTable *table
     table->UnmapMemory = (PFN_vkUnmapMemory) gpa(dev, "vkUnmapMemory");
     table->FlushMappedMemoryRanges = (PFN_vkFlushMappedMemoryRanges) gpa(dev, "vkFlushMappedMemoryRanges");
     table->InvalidateMappedMemoryRanges = (PFN_vkInvalidateMappedMemoryRanges) gpa(dev, "vkInvalidateMappedMemoryRanges");
-    table->OpenSharedMemory = (PFN_vkOpenSharedMemory) gpa(dev, "vkOpenSharedMemory");
-    table->OpenSharedSemaphore = (PFN_vkOpenSharedSemaphore) gpa(dev, "vkOpenSharedSemaphore");
-    table->OpenPeerMemory = (PFN_vkOpenPeerMemory) gpa(dev, "vkOpenPeerMemory");
-    table->OpenPeerImage = (PFN_vkOpenPeerImage) gpa(dev, "vkOpenPeerImage");
     table->DestroyObject = (PFN_vkDestroyObject) gpa(dev, "vkDestroyObject");
     table->GetObjectInfo = (PFN_vkGetObjectInfo) gpa(dev, "vkGetObjectInfo");
     table->BindObjectMemory = (PFN_vkBindObjectMemory) gpa(dev, "vkBindObjectMemory");
@@ -178,14 +174,6 @@ static inline void *loader_lookup_device_dispatch_table(
         return (void *) table->FlushMappedMemoryRanges;
     if (!strcmp(name, "InvalidateMappedMemoryRanges"))
         return (void *) table->InvalidateMappedMemoryRanges;
-    if (!strcmp(name, "OpenSharedMemory"))
-        return (void *) table->OpenSharedMemory;
-    if (!strcmp(name, "OpenSharedSemaphore"))
-        return (void *) table->OpenSharedSemaphore;
-    if (!strcmp(name, "OpenPeerMemory"))
-        return (void *) table->OpenPeerMemory;
-    if (!strcmp(name, "OpenPeerImage"))
-        return (void *) table->OpenPeerImage;
     if (!strcmp(name, "DestroyObject"))
         return (void *) table->DestroyObject;
     if (!strcmp(name, "GetObjectInfo"))
@@ -375,7 +363,6 @@ static inline void loader_init_instance_core_dispatch_table(VkLayerInstanceDispa
     table->GetPhysicalDeviceInfo = (PFN_vkGetPhysicalDeviceInfo) gpa(inst, "vkGetPhysicalDeviceInfo");
     table->CreateDevice = (PFN_vkCreateDevice) gpa(inst, "vkCreateDevice");
     table->GetPhysicalDeviceExtensionInfo = (PFN_vkGetPhysicalDeviceExtensionInfo) gpa(inst, "vkGetPhysicalDeviceExtensionInfo");
-    table->GetMultiDeviceCompatibility = (PFN_vkGetMultiDeviceCompatibility) gpa(inst, "vkGetMultiDeviceCompatibility");
 }
 
 static inline void loader_init_instance_extension_dispatch_table(
@@ -409,8 +396,6 @@ static inline void *loader_lookup_instance_dispatch_table(
         return (void *) table->CreateDevice;
     if (!strcmp(name, "GetPhysicalDeviceExtensionInfo"))
         return (void *) table->GetPhysicalDeviceExtensionInfo;
-    if (!strcmp(name, "GetMultiDeviceCompatibility"))
-        return (void *) table->GetMultiDeviceCompatibility;
     if (!strcmp(name, "DbgCreateMsgCallback"))
         return (void *) table->DbgCreateMsgCallback;
     if (!strcmp(name, "DbgDestroyMsgCallback"))

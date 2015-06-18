@@ -378,14 +378,6 @@ ICD_EXPORT VkResult VKAPI vkQueueSubmit(
     return ret;
 }
 
-ICD_EXPORT VkResult VKAPI vkOpenSharedSemaphore(
-    VkDevice                                  device,
-    const VkSemaphoreOpenInfo*              pOpenInfo,
-    VkSemaphore*                              pSemaphore)
-{
-    return VK_ERROR_UNAVAILABLE;
-}
-
 ICD_EXPORT VkResult VKAPI vkCreateSemaphore(
     VkDevice                                  device,
     const VkSemaphoreCreateInfo*            pCreateInfo,

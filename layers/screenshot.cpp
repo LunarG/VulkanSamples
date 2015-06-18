@@ -140,8 +140,7 @@ static void writePPM( const char *filename, VkImage image1)
         (VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
             VK_MEMORY_PROPERTY_HOST_UNCACHED_BIT |
             VK_MEMORY_PROPERTY_HOST_WRITE_COMBINED_BIT |
-            VK_MEMORY_PROPERTY_PREFER_HOST_LOCAL |
-            VK_MEMORY_PROPERTY_SHAREABLE_BIT)
+            VK_MEMORY_PROPERTY_PREFER_HOST_LOCAL)
     };
     const VkCmdBufferCreateInfo createCommandBufferInfo = {
         VK_STRUCTURE_TYPE_CMD_BUFFER_CREATE_INFO,

@@ -514,24 +514,3 @@ ICD_EXPORT VkResult VKAPI vkGetPhysicalDeviceExtensionInfo(
 
     return VK_SUCCESS;
 }
-
-ICD_EXPORT VkResult VKAPI vkGetMultiDeviceCompatibility(
-    VkPhysicalDevice                            gpu0_,
-    VkPhysicalDevice                            gpu1_,
-    VkPhysicalDeviceCompatibilityInfo*                 pInfo)
-{
-    const struct intel_gpu *gpu0 = intel_gpu(gpu0_);
-    const struct intel_gpu *gpu1 = intel_gpu(gpu1_);
-    VkFlags compat = VK_PHYSICAL_DEVICE_COMPATIBILITY_IQ_MATCH_BIT |
-                       VK_PHYSICAL_DEVICE_COMPATIBILITY_PEER_TRANSFER_BIT |
-                       VK_PHYSICAL_DEVICE_COMPATIBILITY_SHARED_MEMORY_BIT |
-                       VK_PHYSICAL_DEVICE_COMPATIBILITY_SHARED_DEVICE0_DISPLAY_BIT |
-                       VK_PHYSICAL_DEVICE_COMPATIBILITY_SHARED_DEVICE1_DISPLAY_BIT;
-
-    if (intel_gpu_gen(gpu0) == intel_gpu_gen(gpu1))
-        compat |= VK_PHYSICAL_DEVICE_COMPATIBILITY_FEATURES_BIT;
-
-    pInfo->compatibilityFlags = compat;
-
-    return VK_SUCCESS;
-}

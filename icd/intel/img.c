@@ -162,15 +162,6 @@ void intel_img_destroy(struct intel_img *img)
     intel_base_destroy(&img->obj.base);
 }
 
-ICD_EXPORT VkResult VKAPI vkOpenPeerImage(
-    VkDevice                                  device,
-    const VkPeerImageOpenInfo*             pOpenInfo,
-    VkImage*                                  pImage,
-    VkDeviceMemory*                             pMem)
-{
-    return VK_ERROR_UNAVAILABLE;
-}
-
 ICD_EXPORT VkResult VKAPI vkCreateImage(
     VkDevice                                  device,
     const VkImageCreateInfo*                pCreateInfo,

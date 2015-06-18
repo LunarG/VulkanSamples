@@ -1569,25 +1569,6 @@ VkResult VKAPI vkGetPhysicalDeviceExtensionInfo(
     return VK_SUCCESS;
 }
 
-ICD_EXPORT VkResult VKAPI vkGetMultiDeviceCompatibility(
-    VkPhysicalDevice                            gpu0_,
-    VkPhysicalDevice                            gpu1_,
-    VkPhysicalDeviceCompatibilityInfo*                 pInfo)
-{
-    NULLDRV_LOG_FUNC;
-    return VK_SUCCESS;
-}
-
-ICD_EXPORT VkResult VKAPI vkOpenPeerImage(
-    VkDevice                                  device,
-    const VkPeerImageOpenInfo*             pOpenInfo,
-    VkImage*                                  pImage,
-    VkDeviceMemory*                             pMem)
-{
-    NULLDRV_LOG_FUNC;
-    return VK_SUCCESS;
-}
-
 ICD_EXPORT VkResult VKAPI vkCreateImage(
     VkDevice                                  device,
     const VkImageCreateInfo*                pCreateInfo,
@@ -1691,24 +1672,6 @@ ICD_EXPORT VkResult VKAPI vkInvalidateMappedMemoryRanges(
     VkDevice                                  device,
     uint32_t                                  memRangeCount,
     const VkMappedMemoryRange*                pMemRanges)
-{
-    NULLDRV_LOG_FUNC;
-    return VK_SUCCESS;
-}
-
-ICD_EXPORT VkResult VKAPI vkOpenSharedMemory(
-    VkDevice                                  device,
-    const VkMemoryOpenInfo*                 pOpenInfo,
-    VkDeviceMemory*                             pMem)
-{
-    NULLDRV_LOG_FUNC;
-    return VK_SUCCESS;
-}
-
-ICD_EXPORT VkResult VKAPI vkOpenPeerMemory(
-    VkDevice                                  device,
-    const VkPeerMemoryOpenInfo*            pOpenInfo,
-    VkDeviceMemory*                             pMem)
 {
     NULLDRV_LOG_FUNC;
     return VK_SUCCESS;
@@ -1925,15 +1888,6 @@ ICD_EXPORT VkResult VKAPI vkQueueSubmit(
 {
     NULLDRV_LOG_FUNC;
    return VK_SUCCESS;
-}
-
-ICD_EXPORT VkResult VKAPI vkOpenSharedSemaphore(
-    VkDevice                                  device,
-    const VkSemaphoreOpenInfo*              pOpenInfo,
-    VkSemaphore*                              pSemaphore)
-{
-    NULLDRV_LOG_FUNC;
-    return VK_SUCCESS;
 }
 
 ICD_EXPORT VkResult VKAPI vkCreateSemaphore(

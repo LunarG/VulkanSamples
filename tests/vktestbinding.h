@@ -83,9 +83,6 @@ public:
     // vkEnumerateLayers()
     std::vector<const char *> layers(std::vector<char> &buf) const;
 
-    // vkGetMultiDeviceCompatibility()
-    VkPhysicalDeviceCompatibilityInfo compatibility(const PhysicalGpu &other) const;
-
 private:
     void add_extension_dependencies(uint32_t dependency_count,
                                     VkExtensionProperties *depencency_props,
@@ -300,11 +297,6 @@ public:
 
     // vkAllocMemory()
     void init(const Device &dev, const VkMemoryAllocInfo &info);
-    // vkOpenSharedMemory()
-    void init(const Device &dev, const VkMemoryOpenInfo &info);
-    // vkOpenPeerMemory()
-    void init(const Device &dev, const VkPeerMemoryOpenInfo &info);
-
     void init(const Device &dev, VkDeviceMemory mem);
 
     // vkMapMemory()
@@ -338,8 +330,6 @@ class Semaphore : public DerivedObject<VkSemaphore, Object, VK_OBJECT_TYPE_SEMAP
 public:
     // vkCreateSemaphore()
     void init(const Device &dev, const VkSemaphoreCreateInfo &info);
-    // vkOpenSharedSemaphore()
-    void init(const Device &dev, const VkSemaphoreOpenInfo &info);
 
     static VkSemaphoreCreateInfo create_info(uint32_t init_count, VkFlags flags);
 };
@@ -420,8 +410,6 @@ public:
     void init(const Device &dev, const VkImageCreateInfo &info);
     void init(const Device &dev, const VkImageCreateInfo &info, VkMemoryPropertyFlags &reqs);
     void init_no_mem(const Device &dev, const VkImageCreateInfo &info);
-    // vkOpenPeerImage()
-    void init(const Device &dev, const VkPeerImageOpenInfo &info, const VkImageCreateInfo &original_info);
 
     // vkQueueBindSparseImageMemory()
     void bind_memory(const Device &dev, const VkImageMemoryBindInfo &info,

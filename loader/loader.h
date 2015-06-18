@@ -119,7 +119,6 @@ struct loader_icd {
     PFN_vkGetPhysicalDeviceInfo GetPhysicalDeviceInfo;
     PFN_vkCreateDevice CreateDevice;
     PFN_vkGetPhysicalDeviceExtensionInfo GetPhysicalDeviceExtensionInfo;
-    PFN_vkGetMultiDeviceCompatibility GetMultiDeviceCompatibility;
     PFN_vkDbgCreateMsgCallback DbgCreateMsgCallback;
     PFN_vkDbgDestroyMsgCallback DbgDestroyMsgCallback;
     /*
@@ -338,11 +337,6 @@ VkResult loader_CreateDevice(
         VkPhysicalDevice                        gpu,
         const VkDeviceCreateInfo*               pCreateInfo,
         VkDevice*                               pDevice);
-
-VkResult loader_GetMultiDeviceCompatibility(
-        VkPhysicalDevice                        gpu0,
-        VkPhysicalDevice                        gpu1,
-        VkPhysicalDeviceCompatibilityInfo*      pInfo);
 
 /* helper function definitions */
 bool has_vk_extension_property(

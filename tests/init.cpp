@@ -146,8 +146,7 @@ TEST_F(VkTest, AllocMemory) {
 
     alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO;
     alloc_info.allocationSize = 1024 * 1024; // 1MB
-    alloc_info.memProps = VK_MEMORY_PROPERTY_SHAREABLE_BIT |
-                          VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
+    alloc_info.memProps = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
 
 
     err = vkAllocMemory(device(), &alloc_info, &gpu_mem);
@@ -202,7 +201,7 @@ TEST_F(VkTest, Event) {
         memset(&mem_info, 0, sizeof(mem_info));
         mem_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO;
         mem_info.allocationSize = mem_req.size;
-        mem_info.memProps = VK_MEMORY_PROPERTY_SHAREABLE_BIT;
+        mem_info.memProps = 0;
         err = vkAllocMemory(device(), &mem_info, &event_mem);
         ASSERT_VK_SUCCESS(err);
 
@@ -294,7 +293,7 @@ TEST_F(VkTest, Query) {
         mem_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO;
         // TODO: Is a simple multiple all that's needed here?
         mem_info.allocationSize = mem_req.size * MAX_QUERY_SLOTS;
-        mem_info.memProps = VK_MEMORY_PROPERTY_SHAREABLE_BIT;
+        mem_info.memProps = 0;
         err = vkAllocMemory(device(), &mem_info, &query_mem);
         ASSERT_VK_SUCCESS(err);
 
@@ -503,7 +502,7 @@ void VkTest::CreateImageTest()
         mem_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO;
         mem_info.pNext = NULL;
         mem_info.allocationSize = mem_req.size;
-        mem_info.memProps = VK_MEMORY_PROPERTY_SHAREABLE_BIT;
+        mem_info.memProps = 0;
         err = vkAllocMemory(device(), &mem_info, &image_mem);
         ASSERT_VK_SUCCESS(err);
 

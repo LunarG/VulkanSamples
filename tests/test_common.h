@@ -57,7 +57,6 @@ static inline const char *vk_result_string(VkResult err)
     STR(VK_ERROR_BUILDING_COMMAND_BUFFER);
     STR(VK_ERROR_MEMORY_NOT_BOUND);
     STR(VK_ERROR_INCOMPATIBLE_QUEUE);
-    STR(VK_ERROR_NOT_SHAREABLE);
 #undef STR
     default: return "UNKNOWN_RESULT";
     }

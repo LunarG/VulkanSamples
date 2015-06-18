@@ -313,32 +313,6 @@ core = Extension(
              Param("uint32_t", "memRangeCount"),
              Param("const VkMappedMemoryRange*", "pMemRanges")]),
 
-        Proto("VkResult", "GetMultiDeviceCompatibility",
-            [Param("VkPhysicalDevice", "gpu0"),
-             Param("VkPhysicalDevice", "gpu1"),
-             Param("VkPhysicalDeviceCompatibilityInfo*", "pInfo")]),
-
-        Proto("VkResult", "OpenSharedMemory",
-            [Param("VkDevice", "device"),
-             Param("const VkMemoryOpenInfo*", "pOpenInfo"),
-             Param("VkDeviceMemory*", "pMem")]),
-
-        Proto("VkResult", "OpenSharedSemaphore",
-            [Param("VkDevice", "device"),
-             Param("const VkSemaphoreOpenInfo*", "pOpenInfo"),
-             Param("VkSemaphore*", "pSemaphore")]),
-
-        Proto("VkResult", "OpenPeerMemory",
-            [Param("VkDevice", "device"),
-             Param("const VkPeerMemoryOpenInfo*", "pOpenInfo"),
-             Param("VkDeviceMemory*", "pMem")]),
-
-        Proto("VkResult", "OpenPeerImage",
-            [Param("VkDevice", "device"),
-             Param("const VkPeerImageOpenInfo*", "pOpenInfo"),
-             Param("VkImage*", "pImage"),
-             Param("VkDeviceMemory*", "pMem")]),
-
         Proto("VkResult", "DestroyObject",
             [Param("VkDevice", "device"),
              Param("VkObjectType", "objType"),

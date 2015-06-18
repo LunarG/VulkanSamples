@@ -40,10 +40,6 @@ typedef struct VkLayerDispatchTable_
     PFN_vkUnmapMemory UnmapMemory;
     PFN_vkFlushMappedMemoryRanges FlushMappedMemoryRanges;
     PFN_vkInvalidateMappedMemoryRanges InvalidateMappedMemoryRanges;
-    PFN_vkOpenSharedMemory OpenSharedMemory;
-    PFN_vkOpenSharedSemaphore OpenSharedSemaphore;
-    PFN_vkOpenPeerMemory OpenPeerMemory;
-    PFN_vkOpenPeerImage OpenPeerImage;
     PFN_vkDestroyObject DestroyObject;
     PFN_vkGetObjectInfo GetObjectInfo;
     PFN_vkBindObjectMemory BindObjectMemory;
@@ -150,7 +146,6 @@ typedef struct VkLayerInstanceDispatchTable_
     PFN_vkCreateDevice CreateDevice;
     /* PFN_vkGetGlobalExtensionInfo GetGlobalExtensionInfo; non-dispatchable */
     PFN_vkGetPhysicalDeviceExtensionInfo GetPhysicalDeviceExtensionInfo;
-    PFN_vkGetMultiDeviceCompatibility GetMultiDeviceCompatibility;
     PFN_vkDbgCreateMsgCallback DbgCreateMsgCallback;
     PFN_vkDbgDestroyMsgCallback DbgDestroyMsgCallback;
     PFN_vkDbgStringCallback DbgStringCallback;

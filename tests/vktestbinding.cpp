@@ -162,15 +162,6 @@ std::vector<VkExtensionProperties> PhysicalGpu::extensions() const
     return exts;
 }
 
-VkPhysicalDeviceCompatibilityInfo PhysicalGpu::compatibility(const PhysicalGpu &other) const
-{
-    VkPhysicalDeviceCompatibilityInfo data;
-    if (!EXPECT(vkGetMultiDeviceCompatibility(gpu_, other.gpu_, &data) == VK_SUCCESS))
-        memset(&data, 0, sizeof(data));
-
-    return data;
-}
-
 void BaseObject::init(VkObject obj, VkObjectType type, bool own)
 {
     EXPECT(!initialized());
@@ -497,16 +488,6 @@ void GpuMemory::init(const Device &dev, const VkMemoryAllocInfo &info)
     DERIVED_OBJECT_TYPE_INIT(vkAllocMemory, dev, VK_OBJECT_TYPE_DEVICE_MEMORY, &info);
 }
 
-void GpuMemory::init(const Device &dev, const VkMemoryOpenInfo &info)
-{
-    DERIVED_OBJECT_TYPE_INIT(vkOpenSharedMemory, dev, VK_OBJECT_TYPE_DEVICE_MEMORY, &info);
-}
-
-void GpuMemory::init(const Device &dev, const VkPeerMemoryOpenInfo &info)
-{
-    DERIVED_OBJECT_TYPE_INIT(vkOpenPeerMemory, dev, VK_OBJECT_TYPE_DEVICE_MEMORY, &info);
-}
-
 void GpuMemory::init(const Device &dev, VkDeviceMemory mem)
 {
     dev_ = &dev;
@@ -546,11 +527,6 @@ void Semaphore::init(const Device &dev, const VkSemaphoreCreateInfo &info)
 {
     DERIVED_OBJECT_TYPE_INIT(vkCreateSemaphore, dev, VK_OBJECT_TYPE_SEMAPHORE, &info);
     alloc_memory();
-}
-
-void Semaphore::init(const Device &dev, const VkSemaphoreOpenInfo &info)
-{
-    DERIVED_OBJECT_TYPE_INIT(vkOpenSharedSemaphore, dev, VK_OBJECT_TYPE_SEMAPHORE, &info);
 }
 
 void Event::init(const Device &dev, const VkEventCreateInfo &info)
@@ -636,18 +612,6 @@ void Image::init_no_mem(const Device &dev, const VkImageCreateInfo &info)
 {
     DERIVED_OBJECT_TYPE_INIT(vkCreateImage, dev, VK_OBJECT_TYPE_IMAGE, &info);
     init_info(dev, info);
-}
-
-void Image::init(const Device &dev, const VkPeerImageOpenInfo &info, const VkImageCreateInfo &original_info)
-{
-    VkImage img;
-    VkDeviceMemory mem;
-    dev_ = &dev;
-    EXPECT(vkOpenPeerImage(dev.obj(), &info, &img, &mem) == VK_SUCCESS);
-    Object::init(img, VK_OBJECT_TYPE_IMAGE);
-
-    init_info(dev, original_info);
-    alloc_memory(std::vector<VkDeviceMemory>(1, mem));
 }
 
 void Image::init_info(const Device &dev, const VkImageCreateInfo &info)

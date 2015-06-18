@@ -33,7 +33,7 @@
 #include "vk_platform.h"
 
 // Vulkan API version supported by this file
-#define VK_API_VERSION VK_MAKE_VERSION(0, 104, 0)
+#define VK_API_VERSION VK_MAKE_VERSION(0, 105, 0)
 
 #ifdef __cplusplus
 extern "C"
@@ -787,53 +787,50 @@ typedef enum VkStructureType_
     VK_STRUCTURE_TYPE_APPLICATION_INFO                      = 0,
     VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO                    = 1,
     VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO                     = 2,
-    VK_STRUCTURE_TYPE_MEMORY_OPEN_INFO                      = 3,
-    VK_STRUCTURE_TYPE_PEER_MEMORY_OPEN_INFO                 = 4,
-//    VK_STRUCTURE_TYPE_BUFFER_VIEW_ATTACH_INFO               = 5,
-//    VK_STRUCTURE_TYPE_IMAGE_VIEW_ATTACH_INFO                = 6,
-    VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO                = 7,
-    VK_STRUCTURE_TYPE_COLOR_ATTACHMENT_VIEW_CREATE_INFO     = 8,
-    VK_STRUCTURE_TYPE_DEPTH_STENCIL_VIEW_CREATE_INFO        = 9,
-    VK_STRUCTURE_TYPE_SHADER_CREATE_INFO                    = 10,
-    VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO          = 11,
-    VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO                   = 12,
-    VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO     = 13,
-    VK_STRUCTURE_TYPE_DYNAMIC_VP_STATE_CREATE_INFO          = 14,
-    VK_STRUCTURE_TYPE_DYNAMIC_RS_STATE_CREATE_INFO          = 15,
-    VK_STRUCTURE_TYPE_DYNAMIC_CB_STATE_CREATE_INFO          = 16,
-    VK_STRUCTURE_TYPE_DYNAMIC_DS_STATE_CREATE_INFO          = 17,
-    VK_STRUCTURE_TYPE_CMD_BUFFER_CREATE_INFO                = 18,
-    VK_STRUCTURE_TYPE_EVENT_CREATE_INFO                     = 19,
-    VK_STRUCTURE_TYPE_FENCE_CREATE_INFO                     = 20,
-    VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO                 = 21,
-    VK_STRUCTURE_TYPE_SEMAPHORE_OPEN_INFO                   = 22,
-    VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO                = 23,
-    VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO     = 24,
-    VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO         = 25,
-    VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO = 26,
-    VK_STRUCTURE_TYPE_PIPELINE_IA_STATE_CREATE_INFO         = 27,
-    VK_STRUCTURE_TYPE_PIPELINE_TESS_STATE_CREATE_INFO       = 28,
-    VK_STRUCTURE_TYPE_PIPELINE_VP_STATE_CREATE_INFO         = 29,
-    VK_STRUCTURE_TYPE_PIPELINE_RS_STATE_CREATE_INFO         = 30,
-    VK_STRUCTURE_TYPE_PIPELINE_MS_STATE_CREATE_INFO         = 31,
-    VK_STRUCTURE_TYPE_PIPELINE_CB_STATE_CREATE_INFO         = 32,
-    VK_STRUCTURE_TYPE_PIPELINE_DS_STATE_CREATE_INFO         = 33,
-    VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO                     = 34,
-    VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO                    = 35,
-    VK_STRUCTURE_TYPE_BUFFER_VIEW_CREATE_INFO               = 36,
-    VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO               = 37,
-    VK_STRUCTURE_TYPE_CMD_BUFFER_BEGIN_INFO                 = 38,
-    VK_STRUCTURE_TYPE_CMD_BUFFER_GRAPHICS_BEGIN_INFO        = 39,
-    VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO               = 40,
-    VK_STRUCTURE_TYPE_MEMORY_BARRIER                        = 41,
-    VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER                 = 42,
-    VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER                  = 43,
-    VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO           = 44,
-    VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET                  = 46,
-    VK_STRUCTURE_TYPE_COPY_DESCRIPTOR_SET                   = 47,
-    VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO                  = 48,
-    VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO           = 49,
-    VK_STRUCTURE_TYPE_EXTENSION_PROPERTIES                  = 50,
+//    VK_STRUCTURE_TYPE_BUFFER_VIEW_ATTACH_INFO               = 3,
+//    VK_STRUCTURE_TYPE_IMAGE_VIEW_ATTACH_INFO                = 4,
+    VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO                = 5,
+    VK_STRUCTURE_TYPE_COLOR_ATTACHMENT_VIEW_CREATE_INFO     = 6,
+    VK_STRUCTURE_TYPE_DEPTH_STENCIL_VIEW_CREATE_INFO        = 7,
+    VK_STRUCTURE_TYPE_SHADER_CREATE_INFO                    = 8,
+    VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO          = 9,
+    VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO                   = 10,
+    VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO     = 11,
+    VK_STRUCTURE_TYPE_DYNAMIC_VP_STATE_CREATE_INFO          = 12,
+    VK_STRUCTURE_TYPE_DYNAMIC_RS_STATE_CREATE_INFO          = 13,
+    VK_STRUCTURE_TYPE_DYNAMIC_CB_STATE_CREATE_INFO          = 14,
+    VK_STRUCTURE_TYPE_DYNAMIC_DS_STATE_CREATE_INFO          = 15,
+    VK_STRUCTURE_TYPE_CMD_BUFFER_CREATE_INFO                = 16,
+    VK_STRUCTURE_TYPE_EVENT_CREATE_INFO                     = 17,
+    VK_STRUCTURE_TYPE_FENCE_CREATE_INFO                     = 18,
+    VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO                 = 19,
+    VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO                = 20,
+    VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO     = 21,
+    VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO         = 22,
+    VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO = 23,
+    VK_STRUCTURE_TYPE_PIPELINE_IA_STATE_CREATE_INFO         = 24,
+    VK_STRUCTURE_TYPE_PIPELINE_TESS_STATE_CREATE_INFO       = 25,
+    VK_STRUCTURE_TYPE_PIPELINE_VP_STATE_CREATE_INFO         = 26,
+    VK_STRUCTURE_TYPE_PIPELINE_RS_STATE_CREATE_INFO         = 27,
+    VK_STRUCTURE_TYPE_PIPELINE_MS_STATE_CREATE_INFO         = 28,
+    VK_STRUCTURE_TYPE_PIPELINE_CB_STATE_CREATE_INFO         = 29,
+    VK_STRUCTURE_TYPE_PIPELINE_DS_STATE_CREATE_INFO         = 30,
+    VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO                     = 31,
+    VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO                    = 32,
+    VK_STRUCTURE_TYPE_BUFFER_VIEW_CREATE_INFO               = 33,
+    VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO               = 34,
+    VK_STRUCTURE_TYPE_CMD_BUFFER_BEGIN_INFO                 = 35,
+    VK_STRUCTURE_TYPE_CMD_BUFFER_GRAPHICS_BEGIN_INFO        = 36,
+    VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO               = 37,
+    VK_STRUCTURE_TYPE_MEMORY_BARRIER                        = 38,
+    VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER                 = 39,
+    VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER                  = 40,
+    VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO           = 41,
+    VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET                  = 42,
+    VK_STRUCTURE_TYPE_COPY_DESCRIPTOR_SET                   = 43,
+    VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO                  = 44,
+    VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO           = 45,
+    VK_STRUCTURE_TYPE_EXTENSION_PROPERTIES                  = 46,
 
     VK_ENUM_RANGE(STRUCTURE_TYPE, APPLICATION_INFO, EXTENSION_PROPERTIES)
 } VkStructureType;
@@ -924,8 +921,7 @@ typedef enum VkResult_
     VK_ERROR_BUILDING_COMMAND_BUFFER                        = -(0x0000001E),
     VK_ERROR_MEMORY_NOT_BOUND                               = -(0x0000001F),
     VK_ERROR_INCOMPATIBLE_QUEUE                             = -(0x00000020),
-    VK_ERROR_NOT_SHAREABLE                                  = -(0x00000021),
-    VK_ERROR_MISSING_EXTENSION_DEPENDENCY                   = -(0x00000022),
+    VK_ERROR_MISSING_EXTENSION_DEPENDENCY                   = -(0x00000021),
 
     VK_MAX_ENUM(RESULT)
 } VkResult;
@@ -935,10 +931,6 @@ typedef enum VkResult_
 
 // Device creation flags
 typedef VkFlags VkDeviceCreateFlags;
-typedef enum VkDeviceCreateFlagBits_
-{
-    VK_DEVICE_CREATE_MULTI_DEVICE_IQ_MATCH_BIT              = VK_BIT(0),
-} VkDeviceCreateFlagBits;
 
 // Queue capabilities
 typedef VkFlags VkQueueFlags;
@@ -962,7 +954,6 @@ typedef enum VkMemoryPropertyFlagBits_
     VK_MEMORY_PROPERTY_HOST_UNCACHED_BIT                    = VK_BIT(2),    // Memory should not be cached by the host
     VK_MEMORY_PROPERTY_HOST_WRITE_COMBINED_BIT              = VK_BIT(3),    // Memory should support host write combining
     VK_MEMORY_PROPERTY_PREFER_HOST_LOCAL                    = VK_BIT(4),    // If set, prefer host access
-    VK_MEMORY_PROPERTY_SHAREABLE_BIT                        = VK_BIT(5),
 } VkMemoryPropertyFlagBits;
 
 // Memory output flags passed to resource transition commands
@@ -1011,8 +1002,7 @@ typedef enum VkBufferUsageFlagBits_
 typedef VkFlags VkBufferCreateFlags;
 typedef enum VkBufferCreateFlagBits_
 {
-    VK_BUFFER_CREATE_SHAREABLE_BIT                          = VK_BIT(0),    // Buffer should be shareable
-    VK_BUFFER_CREATE_SPARSE_BIT                             = VK_BIT(1),    // Buffer should support sparse backing
+    VK_BUFFER_CREATE_SPARSE_BIT                             = VK_BIT(0),    // Buffer should support sparse backing
 } VkBufferCreateFlagBits;
 
 // Shader stage flags
@@ -1048,10 +1038,9 @@ typedef VkFlags VkImageCreateFlags;
 typedef enum VkImageCreateFlagBits_
 {
     VK_IMAGE_CREATE_INVARIANT_DATA_BIT                      = VK_BIT(0),
-    VK_IMAGE_CREATE_SHAREABLE_BIT                           = VK_BIT(1),    // Image should be shareable
-    VK_IMAGE_CREATE_SPARSE_BIT                              = VK_BIT(2),    // Image should support sparse backing
-    VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT                      = VK_BIT(3),    // Allows image views to have different format than the base image
-    VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT                     = VK_BIT(4),    // Allows creating image views with cube type from the created image
+    VK_IMAGE_CREATE_SPARSE_BIT                              = VK_BIT(1),    // Image should support sparse backing
+    VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT                      = VK_BIT(2),    // Allows image views to have different format than the base image
+    VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT                     = VK_BIT(3),    // Allows creating image views with cube type from the created image
 } VkImageCreateFlagBits;
 
 // Depth-stencil view creation flags
@@ -1089,10 +1078,6 @@ typedef enum VkFenceCreateFlagBits_
 
 // Semaphore creation flags
 typedef VkFlags VkSemaphoreCreateFlags;
-typedef enum VkSemaphoreCreateFlagBits_
-{
-    VK_SEMAPHORE_CREATE_SHAREABLE_BIT                       = VK_BIT(0),
-} VkSemaphoreCreateFlagBits;
 
 // Format capability flags
 typedef VkFlags VkFormatFeatureFlags;
@@ -1128,19 +1113,6 @@ typedef enum VkQueryResultFlagBits_
     VK_QUERY_RESULT_WITH_AVAILABILITY_BIT                   = VK_BIT(2),   // Besides the results of the query, the availability of the results is also written
     VK_QUERY_RESULT_PARTIAL_BIT                             = VK_BIT(3),   // Copy the partial results of the query even if the final results aren't available
 } VkQueryResultFlagBits;
-
-// Physical device compatibility flags
-typedef VkFlags VkPhysicalDeviceCompatibilityFlags;
-typedef enum VkPhysicalDeviceCompatibilityFlagBits_
-{
-    VK_PHYSICAL_DEVICE_COMPATIBILITY_FEATURES_BIT           = VK_BIT(0),
-    VK_PHYSICAL_DEVICE_COMPATIBILITY_IQ_MATCH_BIT           = VK_BIT(1),
-    VK_PHYSICAL_DEVICE_COMPATIBILITY_PEER_TRANSFER_BIT      = VK_BIT(2),
-    VK_PHYSICAL_DEVICE_COMPATIBILITY_SHARED_MEMORY_BIT      = VK_BIT(3),
-    VK_PHYSICAL_DEVICE_COMPATIBILITY_SHARED_SYNC_BIT        = VK_BIT(4),
-    VK_PHYSICAL_DEVICE_COMPATIBILITY_SHARED_DEVICE0_DISPLAY_BIT = VK_BIT(5),
-    VK_PHYSICAL_DEVICE_COMPATIBILITY_SHARED_DEVICE1_DISPLAY_BIT = VK_BIT(6),
-} VkPhysicalDeviceCompatibilityFlagBits;
 
 // Shader creation flags
 typedef VkFlags VkShaderCreateFlags;
@@ -1260,11 +1232,6 @@ typedef struct VkPhysicalDevicePerformance_
     float                                       pixelsPerClock;
 } VkPhysicalDevicePerformance;
 
-typedef struct VkPhysicalDeviceCompatibilityInfo_
-{
-    VkPhysicalDeviceCompatibilityFlags          compatibilityFlags;
-} VkPhysicalDeviceCompatibilityInfo;
-
 typedef struct VkExtensionProperties_
 {
     VkStructureType                             sType;                              // Type of structure. Should be VK_STRUCTURE_TYPE_EXTENSION_PROPERTIES
@@ -1348,20 +1315,6 @@ typedef struct VkMemoryAllocInfo_
     VkDeviceSize                                allocationSize;             // Size of memory allocation
     VkMemoryPropertyFlags                       memProps;                   // Memory property flags
 } VkMemoryAllocInfo;
-
-typedef struct VkMemoryOpenInfo_
-{
-    VkStructureType                             sType;                      // Must be VK_STRUCTURE_TYPE_MEMORY_OPEN_INFO
-    const void*                                 pNext;                      // Pointer to next structure
-    VkDeviceMemory                              sharedMem;
-} VkMemoryOpenInfo;
-
-typedef struct VkPeerMemoryOpenInfo_
-{
-    VkStructureType                             sType;                      // Must be VK_STRUCTURE_TYPE_PEER_MEMORY_OPEN_INFO
-    const void*                                 pNext;                      // Pointer to next structure
-    VkDeviceMemory                              originalMem;
-} VkPeerMemoryOpenInfo;
 
 typedef struct VkMemoryRequirements_
 {
@@ -1515,11 +1468,6 @@ typedef struct VkImageCreateInfo_
     VkImageUsageFlags                           usage;                      // Image usage flags
     VkImageCreateFlags                          flags;                      // Image creation flags
 } VkImageCreateInfo;
-
-typedef struct VkPeerImageOpenInfo_
-{
-    VkImage                                     originalImage;
-} VkPeerImageOpenInfo;
 
 typedef struct VkSubresourceLayout_
 {
@@ -2007,13 +1955,6 @@ typedef struct VkSemaphoreCreateInfo_
     VkSemaphoreCreateFlags                      flags;      // Semaphore creation flags
 } VkSemaphoreCreateInfo;
 
-typedef struct VkSemaphoreOpenInfo_
-{
-    VkStructureType                             sType;      // Must be VK_STRUCTURE_TYPE_SEMAPHORE_OPEN_INFO
-    const void*                                 pNext;      // Pointer to next structure
-    VkSemaphore                                 sharedSemaphore;
-} VkSemaphoreOpenInfo;
-
 typedef struct VkQueryPoolCreateInfo_
 {
     VkStructureType                             sType;              // Must be VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO
@@ -2084,11 +2025,6 @@ typedef VkResult (VKAPI *PFN_vkMapMemory)(VkDevice device, VkDeviceMemory mem, V
 typedef VkResult (VKAPI *PFN_vkUnmapMemory)(VkDevice device, VkDeviceMemory mem);
 typedef VkResult (VKAPI *PFN_vkFlushMappedMemoryRanges)(VkDevice device, uint32_t memRangeCount, const VkMappedMemoryRange* pMemRanges);
 typedef VkResult (VKAPI *PFN_vkInvalidateMappedMemoryRanges)(VkDevice device, uint32_t memRangeCount, const VkMappedMemoryRange* pMemRanges);
-typedef VkResult (VKAPI *PFN_vkGetMultiDeviceCompatibility)(VkPhysicalDevice physicalDevice0, VkPhysicalDevice physicalDevice1, VkPhysicalDeviceCompatibilityInfo* pInfo);
-typedef VkResult (VKAPI *PFN_vkOpenSharedMemory)(VkDevice device, const VkMemoryOpenInfo* pOpenInfo, VkDeviceMemory* pMem);
-typedef VkResult (VKAPI *PFN_vkOpenSharedSemaphore)(VkDevice device, const VkSemaphoreOpenInfo* pOpenInfo, VkSemaphore* pSemaphore);
-typedef VkResult (VKAPI *PFN_vkOpenPeerMemory)(VkDevice device, const VkPeerMemoryOpenInfo* pOpenInfo, VkDeviceMemory* pMem);
-typedef VkResult (VKAPI *PFN_vkOpenPeerImage)(VkDevice device, const VkPeerImageOpenInfo* pOpenInfo, VkImage* pImage, VkDeviceMemory* pMem);
 typedef VkResult (VKAPI *PFN_vkDestroyObject)(VkDevice device, VkObjectType objType, VkObject object);
 typedef VkResult (VKAPI *PFN_vkGetObjectInfo)(VkDevice device, VkObjectType objType, VkObject object, VkObjectInfoType infoType, size_t* pDataSize, void* pData);
 typedef VkResult (VKAPI *PFN_vkBindObjectMemory)(VkDevice device, VkObjectType objType, VkObject object, VkDeviceMemory mem, VkDeviceSize offset);
@@ -2281,34 +2217,6 @@ VkResult VKAPI vkInvalidateMappedMemoryRanges(
     VkDevice                                    device,
     uint32_t                                    memRangeCount,
     const VkMappedMemoryRange*                  pMemRanges);
-
-// Multi-device functions
-
-VkResult VKAPI vkGetMultiDeviceCompatibility(
-    VkPhysicalDevice                            physicalDevice0,
-    VkPhysicalDevice                            physicalDevice1,
-    VkPhysicalDeviceCompatibilityInfo*          pInfo);
-
-VkResult VKAPI vkOpenSharedMemory(
-    VkDevice                                    device,
-    const VkMemoryOpenInfo*                     pOpenInfo,
-    VkDeviceMemory*                             pMem);
-
-VkResult VKAPI vkOpenSharedSemaphore(
-    VkDevice                                    device,
-    const VkSemaphoreOpenInfo*                  pOpenInfo,
-    VkSemaphore*                                pSemaphore);
-
-VkResult VKAPI vkOpenPeerMemory(
-    VkDevice                                    device,
-    const VkPeerMemoryOpenInfo*                 pOpenInfo,
-    VkDeviceMemory*                             pMem);
-
-VkResult VKAPI vkOpenPeerImage(
-    VkDevice                                    device,
-    const VkPeerImageOpenInfo*                  pOpenInfo,
-    VkImage*                                    pImage,
-    VkDeviceMemory*                             pMem);
 
 // Generic API object functions
 

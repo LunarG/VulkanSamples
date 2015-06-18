@@ -125,19 +125,3 @@ ICD_EXPORT VkResult VKAPI vkInvalidateMappedMemoryRanges(
 {
     return VK_SUCCESS;
 }
-
-ICD_EXPORT VkResult VKAPI vkOpenSharedMemory(
-    VkDevice                                  device,
-    const VkMemoryOpenInfo*                 pOpenInfo,
-    VkDeviceMemory*                             pMem)
-{
-    return VK_ERROR_UNAVAILABLE;
-}
-
-ICD_EXPORT VkResult VKAPI vkOpenPeerMemory(
-    VkDevice                                  device,
-    const VkPeerMemoryOpenInfo*            pOpenInfo,
-    VkDeviceMemory*                             pMem)
-{
-    return VK_ERROR_UNAVAILABLE;
-}

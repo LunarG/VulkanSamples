@@ -1769,7 +1769,7 @@ TEST_F(VkLayerTest, ThreadCmdBufferCollision)
     memset(&mem_info, 0, sizeof(mem_info));
     mem_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO;
     mem_info.allocationSize = mem_req.size;
-    mem_info.memProps = VK_MEMORY_PROPERTY_SHAREABLE_BIT;
+    mem_info.memProps = 0;
     err = vkAllocMemory(device(), &mem_info, &event_mem);
     ASSERT_VK_SUCCESS(err);
 

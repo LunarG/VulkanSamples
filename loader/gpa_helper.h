@@ -71,16 +71,6 @@ static inline void* globalGetProcAddr(const char *name)
         return (void*) vkFlushMappedMemoryRanges;
     if (!strcmp(name, "InvalidateMappedMemoryRanges"))
         return (void*) vkInvalidateMappedMemoryRanges;
-    if (!strcmp(name, "GetMultiDeviceCompatibility"))
-        return (void*) vkGetMultiDeviceCompatibility;
-    if (!strcmp(name, "OpenSharedMemory"))
-        return (void*) vkOpenSharedMemory;
-    if (!strcmp(name, "OpenSharedSemaphore"))
-        return (void*) vkOpenSharedSemaphore;
-    if (!strcmp(name, "OpenPeerMemory"))
-        return (void*) vkOpenPeerMemory;
-    if (!strcmp(name, "OpenPeerImage"))
-        return (void*) vkOpenPeerImage;
     if (!strcmp(name, "DestroyObject"))
         return (void*) vkDestroyObject;
     if (!strcmp(name, "GetObjectInfo"))

@@ -475,73 +475,6 @@ VK_LAYER_EXPORT VkResult VKAPI vkInvalidateMappedMemoryRanges(
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkGetMultiDeviceCompatibility(VkPhysicalDevice gpu0, VkPhysicalDevice gpu1, VkPhysicalDeviceCompatibilityInfo* pInfo)
-{
-
-    VkResult result = instance_dispatch_table(gpu0)->GetMultiDeviceCompatibility(gpu0, gpu1, pInfo);
-    return result;
-}
-
-VK_LAYER_EXPORT VkResult VKAPI vkOpenSharedMemory(VkDevice device, const VkMemoryOpenInfo* pOpenInfo, VkDeviceMemory* pMem)
-{
-    char str[1024];
-    if (!pOpenInfo) {
-        sprintf(str, "Struct ptr parameter pOpenInfo to function OpenSharedMemory is NULL.");
-        layerCbMsg(VK_DBG_REPORT_INFO_BIT, (VkObjectType) 0, NULL, 0, 1, "PARAMCHECK", str);
-    }
-    else if (!vk_validate_vkmemoryopeninfo(pOpenInfo)) {
-        sprintf(str, "Parameter pOpenInfo to function OpenSharedMemory contains an invalid value.");
-        layerCbMsg(VK_DBG_REPORT_ERROR_BIT, (VkObjectType) 0, NULL, 0, 1, "PARAMCHECK", str);
-    }
-    VkResult result = device_dispatch_table(device)->OpenSharedMemory(device, pOpenInfo, pMem);
-    return result;
-}
-
-VK_LAYER_EXPORT VkResult VKAPI vkOpenSharedSemaphore(VkDevice device, const VkSemaphoreOpenInfo* pOpenInfo, VkSemaphore* pSemaphore)
-{
-    char str[1024];
-    if (!pOpenInfo) {
-        sprintf(str, "Struct ptr parameter pOpenInfo to function OpenSharedSemaphore is NULL.");
-        layerCbMsg(VK_DBG_REPORT_INFO_BIT, (VkObjectType) 0, NULL, 0, 1, "PARAMCHECK", str);
-    }
-    else if (!vk_validate_vksemaphoreopeninfo(pOpenInfo)) {
-        sprintf(str, "Parameter pOpenInfo to function OpenSharedSemaphore contains an invalid value.");
-        layerCbMsg(VK_DBG_REPORT_ERROR_BIT, (VkObjectType) 0, NULL, 0, 1, "PARAMCHECK", str);
-    }
-    VkResult result = device_dispatch_table(device)->OpenSharedSemaphore(device, pOpenInfo, pSemaphore);
-    return result;
-}
-
-VK_LAYER_EXPORT VkResult VKAPI vkOpenPeerMemory(VkDevice device, const VkPeerMemoryOpenInfo* pOpenInfo, VkDeviceMemory* pMem)
-{
-    char str[1024];
-    if (!pOpenInfo) {
-        sprintf(str, "Struct ptr parameter pOpenInfo to function OpenPeerMemory is NULL.");
-        layerCbMsg(VK_DBG_REPORT_INFO_BIT, (VkObjectType) 0, NULL, 0, 1, "PARAMCHECK", str);
-    }
-    else if (!vk_validate_vkpeermemoryopeninfo(pOpenInfo)) {
-        sprintf(str, "Parameter pOpenInfo to function OpenPeerMemory contains an invalid value.");
-        layerCbMsg(VK_DBG_REPORT_ERROR_BIT, (VkObjectType) 0, NULL, 0, 1, "PARAMCHECK", str);
-    }
-    VkResult result = device_dispatch_table(device)->OpenPeerMemory(device, pOpenInfo, pMem);
-    return result;
-}
-
-VK_LAYER_EXPORT VkResult VKAPI vkOpenPeerImage(VkDevice device, const VkPeerImageOpenInfo* pOpenInfo, VkImage* pImage, VkDeviceMemory* pMem)
-{
-    char str[1024];
-    if (!pOpenInfo) {
-        sprintf(str, "Struct ptr parameter pOpenInfo to function OpenPeerImage is NULL.");
-        layerCbMsg(VK_DBG_REPORT_INFO_BIT, (VkObjectType) 0, NULL, 0, 1, "PARAMCHECK", str);
-    }
-    else if (!vk_validate_vkpeerimageopeninfo(pOpenInfo)) {
-        sprintf(str, "Parameter pOpenInfo to function OpenPeerImage contains an invalid value.");
-        layerCbMsg(VK_DBG_REPORT_ERROR_BIT, (VkObjectType) 0, NULL, 0, 1, "PARAMCHECK", str);
-    }
-    VkResult result = device_dispatch_table(device)->OpenPeerImage(device, pOpenInfo, pImage, pMem);
-    return result;
-}
-
 VK_LAYER_EXPORT VkResult VKAPI vkDestroyObject(VkDevice device, VkObjectType objType, VkObject object)
 {
     VkResult result = device_dispatch_table(device)->DestroyObject(device, objType, object);
@@ -1985,14 +1918,6 @@ static inline void* layer_intercept_proc(const char *name)
         return (void*) vkFlushMappedMemoryRanges;
     if (!strcmp(name, "InvalidateMappedMemoryRanges"))
         return (void*) vkInvalidateMappedMemoryRanges;
-    if (!strcmp(name, "OpenSharedMemory"))
-        return (void*) vkOpenSharedMemory;
-    if (!strcmp(name, "OpenSharedSemaphore"))
-        return (void*) vkOpenSharedSemaphore;
-    if (!strcmp(name, "OpenPeerMemory"))
-        return (void*) vkOpenPeerMemory;
-    if (!strcmp(name, "OpenPeerImage"))
-        return (void*) vkOpenPeerImage;
     if (!strcmp(name, "DestroyObject"))
         return (void*) vkDestroyObject;
     if (!strcmp(name, "GetObjectInfo"))
@@ -2177,8 +2102,6 @@ static inline void* layer_intercept_instance_proc(const char *name)
         return (void*) vkGetGlobalExtensionInfo;
     if (!strcmp(name, "GetPhysicalDeviceExtensionInfo"))
         return (void*) vkGetPhysicalDeviceExtensionInfo;
-    if (!strcmp(name, "GetMultiDeviceCompatibility"))
-        return (void*) vkGetMultiDeviceCompatibility;
 
     return NULL;
 }
