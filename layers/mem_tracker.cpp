@@ -835,6 +835,7 @@ static void init_mem_tracker(
 // hook DestroyInstance to remove tableInstanceMap entry
 VK_LAYER_EXPORT VkResult VKAPI vkDestroyInstance(VkInstance instance)
 {
+    // Grab the key before the instance is destroyed.
     dispatch_key key = get_dispatch_key(instance);
     VkLayerInstanceDispatchTable *pTable = get_dispatch_table(mem_tracker_instance_table_map, instance);
     VkResult res = pTable->DestroyInstance(instance);
