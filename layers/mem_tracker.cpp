@@ -1008,6 +1008,28 @@ VK_LAYER_EXPORT VkResult VKAPI vkGetGlobalExtensionInfo(
     return VK_SUCCESS;
 }
 
+#define MEM_TRACKER_LAYER_DEV_EXT_ARRAY_SIZE 3
+static const VkExtensionProperties mtDevExts[MEM_TRACKER_LAYER_DEV_EXT_ARRAY_SIZE] = {
+    {
+        VK_STRUCTURE_TYPE_EXTENSION_PROPERTIES,
+        "MemTracker",
+        0x10,
+        "Validation layer: MemTracker",
+    },
+    {
+        VK_STRUCTURE_TYPE_EXTENSION_PROPERTIES,
+        "Validation",
+        0x10,
+        "Validation layer: MemTracker",
+    },
+    {
+        VK_STRUCTURE_TYPE_EXTENSION_PROPERTIES,
+        VK_WSI_LUNARG_EXTENSION_NAME,
+        0x10,
+        "Validation layer: MemTracker",
+    }
+};
+
 VK_LAYER_EXPORT VkResult VKAPI vkGetPhysicalDeviceExtensionInfo(
     VkPhysicalDevice     physical_device,
     VkExtensionInfoType  infoType,
@@ -1028,17 +1050,17 @@ VK_LAYER_EXPORT VkResult VKAPI vkGetPhysicalDeviceExtensionInfo(
                 return VK_SUCCESS;
             }
             count = (uint32_t *) pData;
-            *count = MEM_TRACKER_LAYER_EXT_ARRAY_SIZE;
+            *count = MEM_TRACKER_LAYER_DEV_EXT_ARRAY_SIZE;
             break;
         case VK_EXTENSION_INFO_TYPE_PROPERTIES:
             *pDataSize = sizeof(VkExtensionProperties);
             if (pData == NULL) {
                 return VK_SUCCESS;
             }
-            if (extensionIndex >= MEM_TRACKER_LAYER_EXT_ARRAY_SIZE) {
+            if (extensionIndex >= MEM_TRACKER_LAYER_DEV_EXT_ARRAY_SIZE) {
                 return VK_ERROR_INVALID_VALUE;
             }
-            memcpy((VkExtensionProperties *) pData, &mtExts[extensionIndex], sizeof(VkExtensionProperties));
+            memcpy((VkExtensionProperties *) pData, &mtDevExts[extensionIndex], sizeof(VkExtensionProperties));
             break;
         default:
             return VK_ERROR_INVALID_VALUE;
