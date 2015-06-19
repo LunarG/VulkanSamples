@@ -48,6 +48,7 @@ typedef enum _DRAW_STATE_ERROR
     DRAWSTATE_INVALID_UPDATE_STRUCT,            // Struct in DS Update tree is of invalid type
     DRAWSTATE_NUM_SAMPLES_MISMATCH,             // Number of samples in bound PSO does not match number in FB of current RenderPass
     DRAWSTATE_NO_END_CMD_BUFFER,                // Must call vkEndCommandBuffer() before QueueSubmit on that cmdBuffer
+    DRAWSTATE_NO_BEGIN_CMD_BUFFER,              // Binding cmds or calling End on CB that never had vkBeginCommandBuffer() called on it
     DRAWSTATE_VIEWPORT_NOT_BOUND,               // Draw submitted with no viewport state object bound
     DRAWSTATE_RASTER_NOT_BOUND,                 // Draw submitted with no raster state object bound
     DRAWSTATE_COLOR_BLEND_NOT_BOUND,            // Draw submitted with no color blend state object bound when color write enabled
