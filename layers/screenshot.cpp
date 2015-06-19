@@ -46,6 +46,11 @@ using namespace std;
 #include "loader_platform.h"
 #include "layers_table.h"
 
+
+struct devExts {
+    bool wsi_lunarg_enabled;
+};
+static std::unordered_map<void *, struct devExts>     deviceExtMap;
 static device_table_map screenshot_device_table_map;
 static instance_table_map screenshot_instance_table_map;
 
@@ -87,11 +92,6 @@ static bool screenshotEnvQueried = false;
 
 static void init_screenshot()
 {
-    uint32_t report_flags = 0;
-    uint32_t debug_action = 0;
-    FILE *log_output = NULL;
-    const char *option_str;
-
     if (!globalLockInitialized)
     {
         // TODO/TBD: Need to delete this mutex sometime.  How???  One
@@ -289,14 +289,28 @@ VkResult VKAPI vkCreateInstance(
     return result;
 }
 
+static void createDeviceRegisterExtensions(const VkDeviceCreateInfo* pCreateInfo, VkDevice device)
+{
+    uint32_t i, ext_idx;
+    VkLayerDispatchTable *pDisp  = get_dispatch_table(screenshot_device_table_map, device);
+    deviceExtMap[pDisp].wsi_lunarg_enabled = false;
+    for (i = 0; i < pCreateInfo->extensionCount; i++) {
+        if (strcmp(pCreateInfo->pEnabledExtensions[i].name, VK_WSI_LUNARG_EXTENSION_NAME) == 0)
+            deviceExtMap[pDisp].wsi_lunarg_enabled = true;
+    }
+}
+
 VK_LAYER_EXPORT VkResult VKAPI vkCreateDevice(
     VkPhysicalDevice          gpu,
     const VkDeviceCreateInfo *pCreateInfo,
     VkDevice                 *pDevice)
 {
-    
     VkLayerInstanceDispatchTable *pInstanceTable = get_dispatch_table(screenshot_instance_table_map, gpu);
     VkResult result = pInstanceTable->CreateDevice(gpu, pCreateInfo, pDevice);
+
+    if (result == VK_SUCCESS) {
+        createDeviceRegisterExtensions(pCreateInfo, *pDevice);
+    }
 
     if (screenshotEnvQueried && screenshotFrames.empty())
         // We are all done taking screenshots, so don't do anything else
@@ -310,18 +324,21 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateDevice(
     return result;
 }
 
-struct extProps {
-    uint32_t version;
-    const char * const name;
-};
-#define SCREENSHOT_LAYER_EXT_ARRAY_SIZE 1
-static const VkExtensionProperties mtExts[SCREENSHOT_LAYER_EXT_ARRAY_SIZE] = {
+#define SCREENSHOT_LAYER_EXT_ARRAY_SIZE 2
+static const VkExtensionProperties ssExts[SCREENSHOT_LAYER_EXT_ARRAY_SIZE] = {
     {
         VK_STRUCTURE_TYPE_EXTENSION_PROPERTIES,
         "ScreenShot",
         0x10,
         "Layer: ScreenShot",
     },
+    {
+        VK_STRUCTURE_TYPE_EXTENSION_PROPERTIES,
+        VK_WSI_LUNARG_EXTENSION_NAME,
+        0x10,
+        "Layer: Screenshot",
+    }
+
 };
 
 VK_LAYER_EXPORT VkResult VKAPI vkGetGlobalExtensionInfo(
@@ -354,7 +371,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkGetGlobalExtensionInfo(
             if (extensionIndex >= SCREENSHOT_LAYER_EXT_ARRAY_SIZE) {
                 return VK_ERROR_INVALID_VALUE;
             }
-            memcpy((VkExtensionProperties *) pData, &mtExts[extensionIndex], sizeof(VkExtensionProperties));
+            memcpy((VkExtensionProperties *) pData, &ssExts[extensionIndex], sizeof(VkExtensionProperties));
             break;
         default:
             return VK_ERROR_INVALID_VALUE;
@@ -393,7 +410,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkGetPhysicalDeviceExtensionInfo(
             if (extensionIndex >= SCREENSHOT_LAYER_EXT_ARRAY_SIZE) {
                 return VK_ERROR_INVALID_VALUE;
             }
-            memcpy((VkExtensionProperties *) pData, &mtExts[extensionIndex], sizeof(VkExtensionProperties));
+            memcpy((VkExtensionProperties *) pData, &ssExts[extensionIndex], sizeof(VkExtensionProperties));
             break;
         default:
             return VK_ERROR_INVALID_VALUE;
@@ -593,16 +610,21 @@ VK_LAYER_EXPORT void* VKAPI vkGetDeviceProcAddr(
     }
     if (!strcmp(funcName, "vkGetDeviceQueue"))
         return (void*) vkGetDeviceQueue;
-    if (!strcmp(funcName, "vkCreateSwapChainWSI"))
-        return (void*) vkCreateSwapChainWSI;
-    if (!strcmp(funcName, "vkGetSwapChainInfoWSI"))
-        return (void*) vkGetSwapChainInfoWSI;
-    if (!strcmp(funcName, "vkQueuePresentWSI"))
-        return (void*) vkQueuePresentWSI;
 
-    if (get_dispatch_table(screenshot_device_table_map, dev)->GetDeviceProcAddr == NULL)
+    VkLayerDispatchTable *pDisp =  get_dispatch_table(screenshot_device_table_map, dev);
+    if (deviceExtMap.size() == 0 || deviceExtMap[pDisp].wsi_lunarg_enabled)
+    {
+        if (!strcmp(funcName, "vkCreateSwapChainWSI"))
+            return (void*) vkCreateSwapChainWSI;
+        if (!strcmp(funcName, "vkGetSwapChainInfoWSI"))
+            return (void*) vkGetSwapChainInfoWSI;
+        if (!strcmp(funcName, "vkQueuePresentWSI"))
+            return (void*) vkQueuePresentWSI;
+    }
+
+    if (pDisp->GetDeviceProcAddr == NULL)
         return NULL;
-    return get_dispatch_table(screenshot_device_table_map, dev)->GetDeviceProcAddr(dev, funcName);
+    return pDisp->GetDeviceProcAddr(dev, funcName);
 }
 
 VK_LAYER_EXPORT void* VKAPI vkGetInstanceProcAddr(
