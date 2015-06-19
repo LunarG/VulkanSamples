@@ -1644,10 +1644,11 @@ VK_LAYER_EXPORT VkResult VKAPI vkDestroyDevice(VkDevice device)
     deleteLayouts();
     loader_platform_thread_unlock_mutex(&globalLock);
 
+    dispatch_key key = get_dispatch_key(device);
     VkLayerDispatchTable *pDisp =  get_dispatch_table(draw_state_device_table_map, device);
     VkResult result = pDisp->DestroyDevice(device);
     deviceExtMap.erase(pDisp);
-    draw_state_device_table_map.erase(pDisp);
+    draw_state_device_table_map.erase(key);
     tableDebugMarkerMap.erase(pDisp);
     return result;
 }
