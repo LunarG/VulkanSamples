@@ -141,7 +141,7 @@ VkLayerInstanceDispatchTable * initInstanceTable(instance_table_map &map, const 
     VkLayerInstanceDispatchTable **ppDisp = (VkLayerInstanceDispatchTable **) instancew->baseObject;
 
     std::unordered_map<void *, VkLayerInstanceDispatchTable *>::const_iterator it = map.find((void *) *ppDisp);
-    if (it == tableInstanceMap.end())
+    if (it == map.end())
     {
         pTable =  new VkLayerInstanceDispatchTable;
         map[(void *) *ppDisp] = pTable;
@@ -175,7 +175,7 @@ VkLayerDispatchTable * initDeviceTable(device_table_map &map, const VkBaseLayerO
     VkLayerDispatchTable *base_device_table = *ppDisp;
 
     std::unordered_map<void *, VkLayerDispatchTable *>::const_iterator it = map.find((void *) base_device_table);
-    if (it == tableMap.end())
+    if (it == map.end())
     {
         layer_device_table =  new VkLayerDispatchTable;
         map[(void *) base_device_table] = layer_device_table;
