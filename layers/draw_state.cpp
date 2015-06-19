@@ -382,13 +382,15 @@ static bool32_t validate_status(VkCmdBuffer cb, CBStatusFlags enable_mask, CBSta
         return VK_FALSE;
     }
 }
-static bool32_t validate_draw_state_flags(VkCmdBuffer cb) {
-    bool32_t result1, result2, result3, result4;
-    result1 = validate_status(cb, CBSTATUS_NONE, CBSTATUS_VIEWPORT_BOUND, CBSTATUS_VIEWPORT_BOUND, VK_DBG_REPORT_ERROR_BIT, DRAWSTATE_VIEWPORT_NOT_BOUND, "Viewport object not bound to this command buffer");
-    result2 = validate_status(cb, CBSTATUS_NONE, CBSTATUS_RASTER_BOUND,   CBSTATUS_RASTER_BOUND,   VK_DBG_REPORT_ERROR_BIT, DRAWSTATE_RASTER_NOT_BOUND,   "Raster object not bound to this command buffer");
-    result3 = validate_status(cb, CBSTATUS_COLOR_BLEND_WRITE_ENABLE, CBSTATUS_COLOR_BLEND_BOUND,   CBSTATUS_COLOR_BLEND_BOUND,   VK_DBG_REPORT_ERROR_BIT,  DRAWSTATE_COLOR_BLEND_NOT_BOUND,   "Color-blend object not bound to this command buffer");
-    result4 = validate_status(cb, CBSTATUS_DEPTH_STENCIL_WRITE_ENABLE, CBSTATUS_DEPTH_STENCIL_BOUND, CBSTATUS_DEPTH_STENCIL_BOUND, VK_DBG_REPORT_ERROR_BIT,  DRAWSTATE_DEPTH_STENCIL_NOT_BOUND, "Depth-stencil object not bound to this command buffer");
-    return ((result1 == VK_TRUE) && (result2 == VK_TRUE) && (result3 == VK_TRUE) && (result4 == VK_TRUE));
+static bool32_t validate_draw_state_flags(VkCmdBuffer cb, bool32_t indexedDraw) {
+    bool32_t result;
+    result = validate_status(cb, CBSTATUS_NONE, CBSTATUS_VIEWPORT_BOUND, CBSTATUS_VIEWPORT_BOUND, VK_DBG_REPORT_ERROR_BIT, DRAWSTATE_VIEWPORT_NOT_BOUND, "Viewport object not bound to this command buffer");
+    result &= validate_status(cb, CBSTATUS_NONE, CBSTATUS_RASTER_BOUND,   CBSTATUS_RASTER_BOUND,   VK_DBG_REPORT_ERROR_BIT, DRAWSTATE_RASTER_NOT_BOUND,   "Raster object not bound to this command buffer");
+    result &= validate_status(cb, CBSTATUS_COLOR_BLEND_WRITE_ENABLE, CBSTATUS_COLOR_BLEND_BOUND,   CBSTATUS_COLOR_BLEND_BOUND,   VK_DBG_REPORT_ERROR_BIT,  DRAWSTATE_COLOR_BLEND_NOT_BOUND,   "Color-blend object not bound to this command buffer");
+    result &= validate_status(cb, CBSTATUS_DEPTH_STENCIL_WRITE_ENABLE, CBSTATUS_DEPTH_STENCIL_BOUND, CBSTATUS_DEPTH_STENCIL_BOUND, VK_DBG_REPORT_ERROR_BIT,  DRAWSTATE_DEPTH_STENCIL_NOT_BOUND, "Depth-stencil object not bound to this command buffer");
+    if (indexedDraw)
+        result &= validate_status(cb, CBSTATUS_NONE, CBSTATUS_INDEX_BUFFER_BOUND, CBSTATUS_INDEX_BUFFER_BOUND, VK_DBG_REPORT_ERROR_BIT, DRAWSTATE_INDEX_BUFFER_NOT_BOUND, "Index buffer object not bound to this command buffer when Index Draw attempted");
+    return result;
 }
 // Print the last bound dynamic state
 static void printDynamicState(const VkCmdBuffer cb)
@@ -1013,8 +1015,7 @@ static void clearDescriptorSet(VkDescriptorSet set)
     SET_NODE* pSet = getSetNode(set);
     if (!pSet) {
         // TODO : Return error
-    }
-    else {
+    } else {
         loader_platform_thread_lock_mutex(&globalLock);
         freeShadowUpdateTree(pSet);
         loader_platform_thread_unlock_mutex(&globalLock);
@@ -1027,9 +1028,7 @@ static void clearDescriptorPool(VkDevice device, VkDescriptorPool pool)
     if (!pPool) {
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DESCRIPTOR_POOL, pool, 0, DRAWSTATE_INVALID_POOL, "DS",
                 "Unable to find pool node for pool %p specified in vkResetDescriptorPool() call", (void*)pool);
-    }
-    else
-    {
+    } else {
         // For every set off of this pool, clear it
         SET_NODE* pSet = pPool->pSets;
         while (pSet) {
@@ -1081,8 +1080,7 @@ static void addCmd(GLOBAL_CB_NODE* pCB, const CMD_TYPE cmd)
         pCmd->cmdNumber = ++pCB->numCmds;
         pCmd->type = cmd;
         pCB->pCmds.push_back(pCmd);
-    }
-    else {
+    } else {
         log_msg(mdd(pCB->cmdBuffer), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, pCB->cmdBuffer, 0, DRAWSTATE_OUT_OF_MEMORY, "DS",
                 "Out of memory while attempting to allocate new CMD_NODE for cmdBuffer %p", (void*)pCB->cmdBuffer);
     }
@@ -1139,8 +1137,7 @@ static void printPipeline(const VkCmdBuffer cb)
         PIPELINE_NODE *pPipeTrav = getPipeline(pCB->lastBoundPipeline);
         if (!pPipeTrav) {
             // nothing to print
-        }
-        else {
+        } else {
             log_msg(mdd(cb), VK_DBG_REPORT_INFO_BIT, (VkObjectType) 0, NULL, 0, DRAWSTATE_NONE, "DS",
                     vk_print_vkgraphicspipelinecreateinfo(&pPipeTrav->graphicsPipelineCI, "{DS}").c_str());
         }
@@ -1303,8 +1300,7 @@ static void cbDumpDotFile(string outFileName)
                 }
                 if (pCB == g_lastGlobalCB) {
                     fprintf(pOutFile, "\"CB%pCMD%u\" [\nlabel=<<TABLE BGCOLOR=\"#00FF00\" BORDER=\"0\" CELLBORDER=\"1\" CELLSPACING=\"0\"> <TR><TD>CMD#</TD><TD>%u</TD></TR><TR><TD>CMD Type</TD><TD>%s</TD></TR></TABLE>>\n];\n", (void*)pCB->cmdBuffer, instNum, instNum, cmdTypeToString((*ii)->type).c_str());
-                }
-                else {
+                } else {
                     fprintf(pOutFile, "\"CB%pCMD%u\" [\nlabel=<<TABLE BORDER=\"0\" CELLBORDER=\"1\" CELLSPACING=\"0\"> <TR><TD>CMD#</TD><TD>%u</TD></TR><TR><TD>CMD Type</TD><TD>%s</TD></TR></TABLE>>\n];\n", (void*)pCB->cmdBuffer, instNum, instNum, cmdTypeToString((*ii)->type).c_str());
                 }
                 ++instNum;
@@ -1387,8 +1383,7 @@ static bool validateBoundPipeline(const VkCmdBuffer cb)
             log_msg(mdd(cb), VK_DBG_REPORT_ERROR_BIT, (VkObjectType) 0, NULL, 0, DRAWSTATE_NO_PIPELINE_BOUND, "DS",
                     "Can't find last bound Pipeline %p!", (void*)pCB->lastBoundPipeline);
             return false;
-        }
-        else {
+        } else {
             // Verify Vtx binding
             if (MAX_BINDING != pCB->lastVtxBinding) {
                 if (pCB->lastVtxBinding >= pPipeTrav->vtxBindingCount) {
@@ -1450,13 +1445,11 @@ static void printDSConfig(const VkCmdBuffer cb)
             log_msg(mdd(cb), VK_DBG_REPORT_INFO_BIT, (VkObjectType) 0, NULL, 0, DRAWSTATE_NONE, "DS",
                     dynamic_display(pUpdate, prefix).c_str());
             // TODO : If there is a "view" associated with this update, print CI for that view
-        }
-        else {
+        } else {
             if (0 != pSet->descriptorCount) {
                 log_msg(mdd(cb), VK_DBG_REPORT_INFO_BIT, (VkObjectType) 0, NULL, 0, DRAWSTATE_NONE, "DS",
                         "No Update Chain for descriptor set %p which has %u descriptors (vkUpdateDescriptors has not been called)", (void*)pSet->set, pSet->descriptorCount);
-            }
-            else {
+            } else {
                 log_msg(mdd(cb), VK_DBG_REPORT_INFO_BIT, (VkObjectType) 0, NULL, 0, DRAWSTATE_NONE, "DS",
                         "FYI: No descriptors in descriptor set %p.", (void*)pSet->set);
             }
@@ -1475,8 +1468,7 @@ static void printCB(const VkCmdBuffer cb)
             log_msg(mdd(cb), VK_DBG_REPORT_INFO_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, cb, 0, DRAWSTATE_NONE, "DS",
                 "  CMD#%lu: %s", (*ii)->cmdNumber, cmdTypeToString((*ii)->type).c_str());
         }
-    }
-    else {
+    } else {
         // Nothing to print
     }
 }
@@ -1822,8 +1814,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateGraphicsPipeline(VkDevice device, const V
         pPipeNode->pipeline = *pPipeline;
         pipelineMap[pPipeNode->pipeline] = pPipeNode;
         loader_platform_thread_unlock_mutex(&globalLock);
-    }
-    else {
+    } else {
         if (pPipeNode) {
             // If we allocated a pipeNode, need to clean it up here
             delete[] pPipeNode->pVertexBindingDescriptions;
@@ -1947,8 +1938,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateDescriptorPool(VkDevice device, VkDescrip
         if (NULL == pNewNode) {
             log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DESCRIPTOR_POOL, (VkObject)*pDescriptorPool, 0, DRAWSTATE_OUT_OF_MEMORY, "DS",
                     "Out of memory while attempting to allocate POOL_NODE in vkCreateDescriptorPool()");
-        }
-        else {
+        } else {
             memset(pNewNode, 0, sizeof(POOL_NODE));
             VkDescriptorPoolCreateInfo* pCI = (VkDescriptorPoolCreateInfo*)&pNewNode->createInfo;
             memcpy((void*)pCI, pCreateInfo, sizeof(VkDescriptorPoolCreateInfo));
@@ -1963,8 +1953,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateDescriptorPool(VkDevice device, VkDescrip
             poolMap[*pDescriptorPool] = pNewNode;
         }
         loader_platform_thread_unlock_mutex(&globalLock);
-    }
-    else {
+    } else {
         // Need to do anything if pool create fails?
     }
     return result;
@@ -1987,8 +1976,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkAllocDescriptorSets(VkDevice device, VkDescript
         if (!pPoolNode) {
             log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DESCRIPTOR_POOL, descriptorPool, 0, DRAWSTATE_INVALID_POOL, "DS",
                     "Unable to find pool node for pool %p specified in vkAllocDescriptorSets() call", (void*)descriptorPool);
-        }
-        else {
+        } else {
             for (uint32_t i = 0; i < *pCount; i++) {
                 log_msg(mdd(device), VK_DBG_REPORT_INFO_BIT, VK_OBJECT_TYPE_DESCRIPTOR_SET, pDescriptorSets[i], 0, DRAWSTATE_NONE, "DS",
                         "Created Descriptor Set %p", (void*)pDescriptorSets[i]);
@@ -1997,8 +1985,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkAllocDescriptorSets(VkDevice device, VkDescript
                 if (NULL == pNewNode) {
                     log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DESCRIPTOR_SET, pDescriptorSets[i], 0, DRAWSTATE_OUT_OF_MEMORY, "DS",
                             "Out of memory while attempting to allocate SET_NODE in vkAllocDescriptorSets()");
-                }
-                else {
+                } else {
                     memset(pNewNode, 0, sizeof(SET_NODE));
                     // Insert set at head of Set LL for this pool
                     pNewNode->pNext = pPoolNode->pSets;
@@ -2096,8 +2083,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkBeginCommandBuffer(VkCmdBuffer cmdBuffer, const
                     pCB->activeRenderPass = pCbGfxBI->renderPassContinue.renderPass;
                 }
             }
-        }
-        else {
+        } else {
             log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, cmdBuffer, 0, DRAWSTATE_INVALID_CMD_BUFFER, "DS",
                     "In vkBeginCommandBuffer() and unable to find CmdBuffer Node for CB %p!", (void*)cmdBuffer);
         }
@@ -2120,8 +2106,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkEndCommandBuffer(VkCmdBuffer cmdBuffer)
                 pCB->status = 0;
                 printCB(cmdBuffer);
             }
-        }
-        else {
+        } else {
             report_error_no_cb_begin(cmdBuffer, "vkEndCommandBuffer()");
         }
     }
@@ -2153,13 +2138,11 @@ VK_LAYER_EXPORT void VKAPI vkCmdBindPipeline(VkCmdBuffer cmdBuffer, VkPipelineBi
                 loader_platform_thread_unlock_mutex(&globalLock);
                 validatePipelineState(pCB, pipelineBindPoint, pipeline);
                 get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdBindPipeline(cmdBuffer, pipelineBindPoint, pipeline);
-            }
-            else {
+            } else {
                 log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_PIPELINE, pipeline, 0, DRAWSTATE_INVALID_PIPELINE, "DS",
                         "Attempt to bind Pipeline %p that doesn't exist!", (void*)pipeline);
             }
-        }
-        else {
+        } else {
             report_error_no_cb_begin(cmdBuffer, "vkCmdBindPipeline()");
         }
     }
@@ -2226,12 +2209,12 @@ VK_LAYER_EXPORT void VKAPI vkCmdBindIndexBuffer(VkCmdBuffer cmdBuffer, VkBuffer 
         if (pCB->state == CB_UPDATE_ACTIVE) {
             updateCBTracking(cmdBuffer);
             addCmd(pCB, CMD_BINDINDEXBUFFER);
+            // TODO : Can be more exact in tracking/validating details for Idx buffer, for now just make sure *something* was bound
+            pCB->status |= CBSTATUS_INDEX_BUFFER_BOUND;
             get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdBindIndexBuffer(cmdBuffer, buffer, offset, indexType);
-        }
-        else {
+        } else {
             report_error_no_cb_begin(cmdBuffer, "vkCmdBindIndexBuffer()");
         }
-        // TODO : Track idxBuffer binding
     }
 }
 
@@ -2252,8 +2235,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdBindVertexBuffers(
             if (validateBoundPipeline(cmdBuffer)) {
                 get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdBindVertexBuffers(cmdBuffer, startBinding, bindingCount, pBuffers, pOffsets);
             }
-        }
-        else {
+        } else {
             report_error_no_cb_begin(cmdBuffer, "vkCmdBindIndexBuffer()");
         }
     }
@@ -2269,7 +2251,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdDraw(VkCmdBuffer cmdBuffer, uint32_t firstVertex
             addCmd(pCB, CMD_DRAW);
             pCB->drawCount[DRAW]++;
             loader_platform_thread_lock_mutex(&globalLock);
-            valid = validate_draw_state_flags(cmdBuffer);
+            valid = validate_draw_state_flags(cmdBuffer, VK_FALSE);
             loader_platform_thread_unlock_mutex(&globalLock);
             log_msg(mdd(cmdBuffer), VK_DBG_REPORT_INFO_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, cmdBuffer, 0, DRAWSTATE_NONE, "DS",
                     "vkCmdDraw() call #%lu, reporting DS state:", g_drawCount[DRAW]++);
@@ -2277,8 +2259,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdDraw(VkCmdBuffer cmdBuffer, uint32_t firstVertex
             if (valid) {
                get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdDraw(cmdBuffer, firstVertex, vertexCount, firstInstance, instanceCount);
             }
-        }
-        else {
+        } else {
             report_error_no_cb_begin(cmdBuffer, "vkCmdBindIndexBuffer()");
         }
     }
@@ -2294,7 +2275,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdDrawIndexed(VkCmdBuffer cmdBuffer, uint32_t firs
             addCmd(pCB, CMD_DRAWINDEXED);
             pCB->drawCount[DRAW_INDEXED]++;
             loader_platform_thread_lock_mutex(&globalLock);
-            valid = validate_draw_state_flags(cmdBuffer);
+            valid = validate_draw_state_flags(cmdBuffer, VK_TRUE);
             loader_platform_thread_unlock_mutex(&globalLock);
             log_msg(mdd(cmdBuffer), VK_DBG_REPORT_INFO_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, cmdBuffer, 0, DRAWSTATE_NONE, "DS",
                     "vkCmdDrawIndexed() call #%lu, reporting DS state:", g_drawCount[DRAW_INDEXED]++);
@@ -2302,8 +2283,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdDrawIndexed(VkCmdBuffer cmdBuffer, uint32_t firs
             if (valid) {
                 get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdDrawIndexed(cmdBuffer, firstIndex, indexCount, vertexOffset, firstInstance, instanceCount);
             }
-        }
-        else {
+        } else {
             report_error_no_cb_begin(cmdBuffer, "vkCmdBindIndexBuffer()");
         }
     }
@@ -2319,7 +2299,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdDrawIndirect(VkCmdBuffer cmdBuffer, VkBuffer buf
             addCmd(pCB, CMD_DRAWINDIRECT);
             pCB->drawCount[DRAW_INDIRECT]++;
             loader_platform_thread_lock_mutex(&globalLock);
-            valid = validate_draw_state_flags(cmdBuffer);
+            valid = validate_draw_state_flags(cmdBuffer, VK_FALSE);
             loader_platform_thread_unlock_mutex(&globalLock);
             log_msg(mdd(cmdBuffer), VK_DBG_REPORT_INFO_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, cmdBuffer, 0, DRAWSTATE_NONE, "DS",
                     "vkCmdDrawIndirect() call #%lu, reporting DS state:", g_drawCount[DRAW_INDIRECT]++);
@@ -2327,8 +2307,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdDrawIndirect(VkCmdBuffer cmdBuffer, VkBuffer buf
             if (valid) {
                 get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdDrawIndirect(cmdBuffer, buffer, offset, count, stride);
             }
-        }
-        else {
+        } else {
             report_error_no_cb_begin(cmdBuffer, "vkCmdBindIndexBuffer()");
         }
     }
@@ -2344,7 +2323,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdDrawIndexedIndirect(VkCmdBuffer cmdBuffer, VkBuf
             addCmd(pCB, CMD_DRAWINDEXEDINDIRECT);
             pCB->drawCount[DRAW_INDEXED_INDIRECT]++;
             loader_platform_thread_lock_mutex(&globalLock);
-            valid = validate_draw_state_flags(cmdBuffer);
+            valid = validate_draw_state_flags(cmdBuffer, VK_TRUE);
             loader_platform_thread_unlock_mutex(&globalLock);
             log_msg(mdd(cmdBuffer), VK_DBG_REPORT_INFO_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, cmdBuffer, 0, DRAWSTATE_NONE, "DS",
                     "vkCmdDrawIndexedIndirect() call #%lu, reporting DS state:", g_drawCount[DRAW_INDEXED_INDIRECT]++);
@@ -2352,8 +2331,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdDrawIndexedIndirect(VkCmdBuffer cmdBuffer, VkBuf
             if (valid) {
                get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdDrawIndexedIndirect(cmdBuffer, buffer, offset, count, stride);
             }
-        }
-        else {
+        } else {
             report_error_no_cb_begin(cmdBuffer, "vkCmdBindIndexBuffer()");
         }
     }
@@ -2367,8 +2345,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdDispatch(VkCmdBuffer cmdBuffer, uint32_t x, uint
             updateCBTracking(cmdBuffer);
             addCmd(pCB, CMD_DISPATCH);
             get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdDispatch(cmdBuffer, x, y, z);
-        }
-        else {
+        } else {
             report_error_no_cb_begin(cmdBuffer, "vkCmdBindIndexBuffer()");
         }
     }
@@ -2382,8 +2359,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdDispatchIndirect(VkCmdBuffer cmdBuffer, VkBuffer
             updateCBTracking(cmdBuffer);
             addCmd(pCB, CMD_DISPATCHINDIRECT);
             get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdDispatchIndirect(cmdBuffer, buffer, offset);
-        }
-        else {
+        } else {
             report_error_no_cb_begin(cmdBuffer, "vkCmdBindIndexBuffer()");
         }
     }
@@ -2397,8 +2373,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdCopyBuffer(VkCmdBuffer cmdBuffer, VkBuffer srcBu
             updateCBTracking(cmdBuffer);
             addCmd(pCB, CMD_COPYBUFFER);
             get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdCopyBuffer(cmdBuffer, srcBuffer, destBuffer, regionCount, pRegions);
-        }
-        else {
+        } else {
             report_error_no_cb_begin(cmdBuffer, "vkCmdBindIndexBuffer()");
         }
     }
@@ -2417,8 +2392,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdCopyImage(VkCmdBuffer cmdBuffer,
             updateCBTracking(cmdBuffer);
             addCmd(pCB, CMD_COPYIMAGE);
             get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdCopyImage(cmdBuffer, srcImage, srcImageLayout, destImage, destImageLayout, regionCount, pRegions);
-        }
-        else {
+        } else {
             report_error_no_cb_begin(cmdBuffer, "vkCmdBindIndexBuffer()");
         }
     }
@@ -2436,8 +2410,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdBlitImage(VkCmdBuffer cmdBuffer,
             updateCBTracking(cmdBuffer);
             addCmd(pCB, CMD_BLITIMAGE);
             get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdBlitImage(cmdBuffer, srcImage, srcImageLayout, destImage, destImageLayout, regionCount, pRegions, filter);
-        }
-        else {
+        } else {
             report_error_no_cb_begin(cmdBuffer, "vkCmdBindIndexBuffer()");
         }
     }
@@ -2454,8 +2427,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdCopyBufferToImage(VkCmdBuffer cmdBuffer,
             updateCBTracking(cmdBuffer);
             addCmd(pCB, CMD_COPYBUFFERTOIMAGE);
             get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdCopyBufferToImage(cmdBuffer, srcBuffer, destImage, destImageLayout, regionCount, pRegions);
-        }
-        else {
+        } else {
             report_error_no_cb_begin(cmdBuffer, "vkCmdBindIndexBuffer()");
         }
     }
@@ -2472,8 +2444,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdCopyImageToBuffer(VkCmdBuffer cmdBuffer,
             updateCBTracking(cmdBuffer);
             addCmd(pCB, CMD_COPYIMAGETOBUFFER);
             get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdCopyImageToBuffer(cmdBuffer, srcImage, srcImageLayout, destBuffer, regionCount, pRegions);
-        }
-        else {
+        } else {
             report_error_no_cb_begin(cmdBuffer, "vkCmdBindIndexBuffer()");
         }
     }
@@ -2487,8 +2458,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdUpdateBuffer(VkCmdBuffer cmdBuffer, VkBuffer des
             updateCBTracking(cmdBuffer);
             addCmd(pCB, CMD_UPDATEBUFFER);
             get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdUpdateBuffer(cmdBuffer, destBuffer, destOffset, dataSize, pData);
-        }
-        else {
+        } else {
             report_error_no_cb_begin(cmdBuffer, "vkCmdBindIndexBuffer()");
         }
     }
@@ -2502,8 +2472,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdFillBuffer(VkCmdBuffer cmdBuffer, VkBuffer destB
             updateCBTracking(cmdBuffer);
             addCmd(pCB, CMD_FILLBUFFER);
             get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdFillBuffer(cmdBuffer, destBuffer, destOffset, fillSize, data);
-        }
-        else {
+        } else {
             report_error_no_cb_begin(cmdBuffer, "vkCmdBindIndexBuffer()");
         }
     }
@@ -2521,8 +2490,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdClearColorImage(
             updateCBTracking(cmdBuffer);
             addCmd(pCB, CMD_CLEARCOLORIMAGE);
             get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdClearColorImage(cmdBuffer, image, imageLayout, pColor, rangeCount, pRanges);
-        }
-        else {
+        } else {
             report_error_no_cb_begin(cmdBuffer, "vkCmdBindIndexBuffer()");
         }
     }
@@ -2539,8 +2507,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdClearDepthStencil(VkCmdBuffer cmdBuffer,
             updateCBTracking(cmdBuffer);
             addCmd(pCB, CMD_CLEARDEPTHSTENCIL);
             get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdClearDepthStencil(cmdBuffer, image, imageLayout, depth, stencil, rangeCount, pRanges);
-        }
-        else {
+        } else {
             report_error_no_cb_begin(cmdBuffer, "vkCmdBindIndexBuffer()");
         }
     }
@@ -2557,8 +2524,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdResolveImage(VkCmdBuffer cmdBuffer,
             updateCBTracking(cmdBuffer);
             addCmd(pCB, CMD_RESOLVEIMAGE);
             get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdResolveImage(cmdBuffer, srcImage, srcImageLayout, destImage, destImageLayout, regionCount, pRegions);
-        }
-        else {
+        } else {
             report_error_no_cb_begin(cmdBuffer, "vkCmdBindIndexBuffer()");
         }
     }
@@ -2572,8 +2538,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdSetEvent(VkCmdBuffer cmdBuffer, VkEvent event, V
             updateCBTracking(cmdBuffer);
             addCmd(pCB, CMD_SETEVENT);
             get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdSetEvent(cmdBuffer, event, pipeEvent);
-        }
-        else {
+        } else {
             report_error_no_cb_begin(cmdBuffer, "vkCmdBindIndexBuffer()");
         }
     }
@@ -2587,8 +2552,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdResetEvent(VkCmdBuffer cmdBuffer, VkEvent event,
             updateCBTracking(cmdBuffer);
             addCmd(pCB, CMD_RESETEVENT);
             get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdResetEvent(cmdBuffer, event, pipeEvent);
-        }
-        else {
+        } else {
             report_error_no_cb_begin(cmdBuffer, "vkCmdBindIndexBuffer()");
         }
     }
@@ -2602,8 +2566,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdWaitEvents(VkCmdBuffer cmdBuffer, VkWaitEvent wa
             updateCBTracking(cmdBuffer);
             addCmd(pCB, CMD_WAITEVENTS);
             get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdWaitEvents(cmdBuffer, waitEvent, eventCount, pEvents, memBarrierCount, ppMemBarriers);
-        }
-        else {
+        } else {
             report_error_no_cb_begin(cmdBuffer, "vkCmdBindIndexBuffer()");
         }
     }
@@ -2617,8 +2580,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdPipelineBarrier(VkCmdBuffer cmdBuffer, VkWaitEve
             updateCBTracking(cmdBuffer);
             addCmd(pCB, CMD_PIPELINEBARRIER);
             get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdPipelineBarrier(cmdBuffer, waitEvent, pipeEventCount, pPipeEvents, memBarrierCount, ppMemBarriers);
-        }
-        else {
+        } else {
             report_error_no_cb_begin(cmdBuffer, "vkCmdPipelineBarrier()");
         }
     }
@@ -2632,8 +2594,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdBeginQuery(VkCmdBuffer cmdBuffer, VkQueryPool qu
             updateCBTracking(cmdBuffer);
             addCmd(pCB, CMD_BEGINQUERY);
             get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdBeginQuery(cmdBuffer, queryPool, slot, flags);
-        }
-        else {
+        } else {
             report_error_no_cb_begin(cmdBuffer, "vkCmdBeginQuery()");
         }
     }
@@ -2647,8 +2608,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdEndQuery(VkCmdBuffer cmdBuffer, VkQueryPool quer
             updateCBTracking(cmdBuffer);
             addCmd(pCB, CMD_ENDQUERY);
             get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdEndQuery(cmdBuffer, queryPool, slot);
-        }
-        else {
+        } else {
             report_error_no_cb_begin(cmdBuffer, "vkCmdEndQuery()");
         }
     }
@@ -2662,8 +2622,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdResetQueryPool(VkCmdBuffer cmdBuffer, VkQueryPoo
             updateCBTracking(cmdBuffer);
             addCmd(pCB, CMD_RESETQUERYPOOL);
             get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdResetQueryPool(cmdBuffer, queryPool, startQuery, queryCount);
-        }
-        else {
+        } else {
             report_error_no_cb_begin(cmdBuffer, "vkCmdResetQueryPool()");
         }
     }
@@ -2677,8 +2636,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdWriteTimestamp(VkCmdBuffer cmdBuffer, VkTimestam
             updateCBTracking(cmdBuffer);
             addCmd(pCB, CMD_WRITETIMESTAMP);
             get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdWriteTimestamp(cmdBuffer, timestampType, destBuffer, destOffset);
-        }
-        else {
+        } else {
             report_error_no_cb_begin(cmdBuffer, "vkCmdWriteTimestamp()");
         }
     }
@@ -2692,8 +2650,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdInitAtomicCounters(VkCmdBuffer cmdBuffer, VkPipe
             updateCBTracking(cmdBuffer);
             addCmd(pCB, CMD_INITATOMICCOUNTERS);
             get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdInitAtomicCounters(cmdBuffer, pipelineBindPoint, startCounter, counterCount, pData);
-        }
-        else {
+        } else {
             report_error_no_cb_begin(cmdBuffer, "vkCmdInitAtomicCounters()");
         }
     }
@@ -2707,8 +2664,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdLoadAtomicCounters(VkCmdBuffer cmdBuffer, VkPipe
             updateCBTracking(cmdBuffer);
             addCmd(pCB, CMD_LOADATOMICCOUNTERS);
             get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdLoadAtomicCounters(cmdBuffer, pipelineBindPoint, startCounter, counterCount, srcBuffer, srcOffset);
-        }
-        else {
+        } else {
             report_error_no_cb_begin(cmdBuffer, "vkCmdLoadAtomicCounters()");
         }
     }
@@ -2722,8 +2678,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdSaveAtomicCounters(VkCmdBuffer cmdBuffer, VkPipe
             updateCBTracking(cmdBuffer);
             addCmd(pCB, CMD_SAVEATOMICCOUNTERS);
             get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdSaveAtomicCounters(cmdBuffer, pipelineBindPoint, startCounter, counterCount, destBuffer, destOffset);
-        }
-        else {
+        } else {
             report_error_no_cb_begin(cmdBuffer, "vkCmdSaveAtomicCounters()");
         }
     }
@@ -2832,8 +2787,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdDbgMarkerBegin(VkCmdBuffer cmdBuffer, const char
         log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, cmdBuffer, 0, DRAWSTATE_INVALID_EXTENSION, "DS",
                 "Attempt to use CmdDbgMarkerBegin but extension disabled!");
         return;
-    }
-    else if (pCB) {
+    } else if (pCB) {
         updateCBTracking(cmdBuffer);
         addCmd(pCB, CMD_DBGMARKERBEGIN);
     }
@@ -2848,8 +2802,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdDbgMarkerEnd(VkCmdBuffer cmdBuffer)
         log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, cmdBuffer, 0, DRAWSTATE_INVALID_EXTENSION, "DS",
                 "Attempt to use CmdDbgMarkerEnd but extension disabled!");
         return;
-    }
-    else if (pCB) {
+    } else if (pCB) {
         updateCBTracking(cmdBuffer);
         addCmd(pCB, CMD_DBGMARKEREND);
     }
@@ -2906,8 +2859,7 @@ void drawStateDumpPngFile(const VkDevice device, char* outFileName)
         int retval = system(dotCmd);
         assert(retval != -1);
         remove("/tmp/tmp.dot");
-    }
-    else {
+    } else {
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkObjectType) 0, NULL, 0, DRAWSTATE_MISSING_DOT_PROGRAM, "DS",
                 "Cannot execute dot program at (%s) to dump requested %s file.", dotExe, outFileName);
     }

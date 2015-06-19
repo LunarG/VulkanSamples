@@ -53,6 +53,7 @@ typedef enum _DRAW_STATE_ERROR
     DRAWSTATE_RASTER_NOT_BOUND,                 // Draw submitted with no raster state object bound
     DRAWSTATE_COLOR_BLEND_NOT_BOUND,            // Draw submitted with no color blend state object bound when color write enabled
     DRAWSTATE_DEPTH_STENCIL_NOT_BOUND,          // Draw submitted with no depth-stencil state object bound when depth write enabled
+    DRAWSTATE_INDEX_BUFFER_NOT_BOUND,           // Draw submitted with no depth-stencil state object bound when depth write enabled
     DRAWSTATE_INVALID_EXTENSION,
 } DRAW_STATE_ERROR;
 
@@ -108,26 +109,26 @@ typedef struct _PIPELINE_NODE {
 } PIPELINE_NODE;
 
 typedef struct _SAMPLER_NODE {
-    VkSampler              sampler;
-    VkSamplerCreateInfo  createInfo;
+    VkSampler           sampler;
+    VkSamplerCreateInfo createInfo;
 } SAMPLER_NODE;
 
 typedef struct _IMAGE_NODE {
-    VkImageView             image;
+    VkImageView           image;
     VkImageViewCreateInfo createInfo;
-    VkDescriptorInfo descriptorInfo;
+    VkDescriptorInfo      descriptorInfo;
 } IMAGE_NODE;
 
 typedef struct _BUFFER_NODE {
-    VkBufferView             buffer;
+    VkBufferView           buffer;
     VkBufferViewCreateInfo createInfo;
-    VkDescriptorInfo descriptorInfo;
+    VkDescriptorInfo       descriptorInfo;
 } BUFFER_NODE;
 
 typedef struct _DYNAMIC_STATE_NODE {
-    VkObjectType                objType;
-    VkDynamicStateObject        stateObj;
-    GENERIC_HEADER*             pCreateInfo;
+    VkObjectType         objType;
+    VkDynamicStateObject stateObj;
+    GENERIC_HEADER*      pCreateInfo;
     union {
         VkDynamicVpStateCreateInfo vpci;
         VkDynamicRsStateCreateInfo rsci;
@@ -138,31 +139,31 @@ typedef struct _DYNAMIC_STATE_NODE {
 // Descriptor Data structures
 // Layout Node has the core layout data
 typedef struct _LAYOUT_NODE {
-    VkDescriptorSetLayout                    layout;
-    VkDescriptorType*                         pTypes; // Dynamic array that will be created to verify descriptor types
-    VkDescriptorSetLayoutCreateInfo        createInfo;
-    uint32_t                                     startIndex; // 1st index of this layout
-    uint32_t                                     endIndex; // last index of this layout
+    VkDescriptorSetLayout           layout;
+    VkDescriptorType*               pTypes; // Dynamic array that will be created to verify descriptor types
+    VkDescriptorSetLayoutCreateInfo createInfo;
+    uint32_t                        startIndex; // 1st index of this layout
+    uint32_t                        endIndex; // last index of this layout
 } LAYOUT_NODE;
 typedef struct _SET_NODE {
-    VkDescriptorSet                           set;
-    VkDescriptorPool                          pool;
-    VkDescriptorSetUsage                     setUsage;
+    VkDescriptorSet      set;
+    VkDescriptorPool     pool;
+    VkDescriptorSetUsage setUsage;
     // Head of LL of all Update structs for this set
-    GENERIC_HEADER*                              pUpdateStructs;
+    GENERIC_HEADER*      pUpdateStructs;
     // Total num of descriptors in this set (count of its layout plus all prior layouts)
-    uint32_t                                     descriptorCount;
-    GENERIC_HEADER**                             ppDescriptors; // Array where each index points to update node for its slot
-    LAYOUT_NODE*                                 pLayout; // Layout for this set
-    struct _SET_NODE*                            pNext;
+    uint32_t             descriptorCount;
+    GENERIC_HEADER**     ppDescriptors; // Array where each index points to update node for its slot
+    LAYOUT_NODE*         pLayout; // Layout for this set
+    struct _SET_NODE*    pNext;
 } SET_NODE;
 
 typedef struct _POOL_NODE {
-    VkDescriptorPool                          pool;
-    VkDescriptorPoolUsage                    poolUsage;
-    uint32_t                                     maxSets;
-    VkDescriptorPoolCreateInfo              createInfo;
-    SET_NODE*                                    pSets; // Head of LL of sets for this Pool
+    VkDescriptorPool           pool;
+    VkDescriptorPoolUsage      poolUsage;
+    uint32_t                   maxSets;
+    VkDescriptorPoolCreateInfo createInfo;
+    SET_NODE*                  pSets; // Head of LL of sets for this Pool
 } POOL_NODE;
 
 // Cmd Buffer Tracking
@@ -231,6 +232,7 @@ typedef enum _CBStatusFlagBits
     CBSTATUS_COLOR_BLEND_BOUND                 = 0x00000008, // CB state object has been bound
     CBSTATUS_DEPTH_STENCIL_WRITE_ENABLE        = 0x00000010, // PSO w/ DS Enable set has been bound
     CBSTATUS_DEPTH_STENCIL_BOUND               = 0x00000020, // DS state object has been bound
+    CBSTATUS_INDEX_BUFFER_BOUND                = 0x00000040, // Index buffer has been bound
 } CBStatusFlagBits;
 // Cmd Buffer Wrapper Struct
 typedef struct _GLOBAL_CB_NODE {
