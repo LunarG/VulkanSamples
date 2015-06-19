@@ -1044,6 +1044,8 @@ TEST_F(VkLayerTest, NoEndCmdBuffer)
     const VkShaderCreateInfo vs_ci = {
         .sType = VK_STRUCTURE_TYPE_SHADER_CREATE_INFO,
         .pNext = NULL,
+        .module = VK_NULL_HANDLE,
+        .name = "main",
         .codeSize = codeSize,
         .pCode = pCode,
         .flags = 0,
@@ -1174,6 +1176,8 @@ TEST_F(VkLayerTest, VtxBufferBadIndex)
     const VkShaderCreateInfo vs_ci = {
         .sType = VK_STRUCTURE_TYPE_SHADER_CREATE_INFO,
         .pNext = NULL,
+        .module = VK_NULL_HANDLE,
+        .name = "main",
         .codeSize = codeSize,
         .pCode = pCode,
         .flags = 0,
@@ -1657,6 +1661,8 @@ TEST_F(VkLayerTest, NumSamplesMismatch)
     const VkShaderCreateInfo vs_ci = {
         .sType = VK_STRUCTURE_TYPE_SHADER_CREATE_INFO,
         .pNext = NULL,
+        .module = VK_NULL_HANDLE,
+        .name = "main",
         .codeSize = codeSize,
         .pCode = pCode,
         .flags = 0,

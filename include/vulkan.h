@@ -33,7 +33,7 @@
 #include "vk_platform.h"
 
 // Vulkan API version supported by this file
-#define VK_API_VERSION VK_MAKE_VERSION(0, 106, 0)
+#define VK_API_VERSION VK_MAKE_VERSION(0, 107, 0)
 
 #ifdef __cplusplus
 extern "C"
@@ -79,6 +79,7 @@ VK_DEFINE_NONDISP_SUBCLASS_HANDLE(VkImage, VkNonDispatchable)
 VK_DEFINE_NONDISP_SUBCLASS_HANDLE(VkImageView, VkNonDispatchable)
 VK_DEFINE_NONDISP_SUBCLASS_HANDLE(VkColorAttachmentView, VkNonDispatchable)
 VK_DEFINE_NONDISP_SUBCLASS_HANDLE(VkDepthStencilView, VkNonDispatchable)
+VK_DEFINE_NONDISP_SUBCLASS_HANDLE(VkShaderModule, VkNonDispatchable)
 VK_DEFINE_NONDISP_SUBCLASS_HANDLE(VkShader, VkNonDispatchable)
 VK_DEFINE_NONDISP_SUBCLASS_HANDLE(VkPipeline, VkNonDispatchable)
 VK_DEFINE_NONDISP_SUBCLASS_HANDLE(VkPipelineLayout, VkNonDispatchable)
@@ -784,45 +785,46 @@ typedef enum VkStructureType_
     VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO                = 5,
     VK_STRUCTURE_TYPE_COLOR_ATTACHMENT_VIEW_CREATE_INFO     = 6,
     VK_STRUCTURE_TYPE_DEPTH_STENCIL_VIEW_CREATE_INFO        = 7,
-    VK_STRUCTURE_TYPE_SHADER_CREATE_INFO                    = 8,
-    VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO          = 9,
-    VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO                   = 10,
-    VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO     = 11,
-    VK_STRUCTURE_TYPE_DYNAMIC_VP_STATE_CREATE_INFO          = 12,
-    VK_STRUCTURE_TYPE_DYNAMIC_RS_STATE_CREATE_INFO          = 13,
-    VK_STRUCTURE_TYPE_DYNAMIC_CB_STATE_CREATE_INFO          = 14,
-    VK_STRUCTURE_TYPE_DYNAMIC_DS_STATE_CREATE_INFO          = 15,
-    VK_STRUCTURE_TYPE_CMD_BUFFER_CREATE_INFO                = 16,
-    VK_STRUCTURE_TYPE_EVENT_CREATE_INFO                     = 17,
-    VK_STRUCTURE_TYPE_FENCE_CREATE_INFO                     = 18,
-    VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO                 = 19,
-    VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO                = 20,
-    VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO     = 21,
-    VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO         = 22,
-    VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO = 23,
-    VK_STRUCTURE_TYPE_PIPELINE_IA_STATE_CREATE_INFO         = 24,
-    VK_STRUCTURE_TYPE_PIPELINE_TESS_STATE_CREATE_INFO       = 25,
-    VK_STRUCTURE_TYPE_PIPELINE_VP_STATE_CREATE_INFO         = 26,
-    VK_STRUCTURE_TYPE_PIPELINE_RS_STATE_CREATE_INFO         = 27,
-    VK_STRUCTURE_TYPE_PIPELINE_MS_STATE_CREATE_INFO         = 28,
-    VK_STRUCTURE_TYPE_PIPELINE_CB_STATE_CREATE_INFO         = 29,
-    VK_STRUCTURE_TYPE_PIPELINE_DS_STATE_CREATE_INFO         = 30,
-    VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO                     = 31,
-    VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO                    = 32,
-    VK_STRUCTURE_TYPE_BUFFER_VIEW_CREATE_INFO               = 33,
-    VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO               = 34,
-    VK_STRUCTURE_TYPE_CMD_BUFFER_BEGIN_INFO                 = 35,
-    VK_STRUCTURE_TYPE_CMD_BUFFER_GRAPHICS_BEGIN_INFO        = 36,
-    VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO               = 37,
-    VK_STRUCTURE_TYPE_MEMORY_BARRIER                        = 38,
-    VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER                 = 39,
-    VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER                  = 40,
-    VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO           = 41,
-    VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET                  = 42,
-    VK_STRUCTURE_TYPE_COPY_DESCRIPTOR_SET                   = 43,
-    VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO                  = 44,
-    VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO           = 45,
-    VK_STRUCTURE_TYPE_EXTENSION_PROPERTIES                  = 46,
+    VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO             = 8,
+    VK_STRUCTURE_TYPE_SHADER_CREATE_INFO                    = 9,
+    VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO          = 10,
+    VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO                   = 11,
+    VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO     = 12,
+    VK_STRUCTURE_TYPE_DYNAMIC_VP_STATE_CREATE_INFO          = 13,
+    VK_STRUCTURE_TYPE_DYNAMIC_RS_STATE_CREATE_INFO          = 14,
+    VK_STRUCTURE_TYPE_DYNAMIC_CB_STATE_CREATE_INFO          = 15,
+    VK_STRUCTURE_TYPE_DYNAMIC_DS_STATE_CREATE_INFO          = 16,
+    VK_STRUCTURE_TYPE_CMD_BUFFER_CREATE_INFO                = 17,
+    VK_STRUCTURE_TYPE_EVENT_CREATE_INFO                     = 18,
+    VK_STRUCTURE_TYPE_FENCE_CREATE_INFO                     = 19,
+    VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO                 = 20,
+    VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO                = 21,
+    VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO     = 22,
+    VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO         = 23,
+    VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO = 24,
+    VK_STRUCTURE_TYPE_PIPELINE_IA_STATE_CREATE_INFO         = 25,
+    VK_STRUCTURE_TYPE_PIPELINE_TESS_STATE_CREATE_INFO       = 26,
+    VK_STRUCTURE_TYPE_PIPELINE_VP_STATE_CREATE_INFO         = 27,
+    VK_STRUCTURE_TYPE_PIPELINE_RS_STATE_CREATE_INFO         = 28,
+    VK_STRUCTURE_TYPE_PIPELINE_MS_STATE_CREATE_INFO         = 29,
+    VK_STRUCTURE_TYPE_PIPELINE_CB_STATE_CREATE_INFO         = 30,
+    VK_STRUCTURE_TYPE_PIPELINE_DS_STATE_CREATE_INFO         = 31,
+    VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO                     = 32,
+    VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO                    = 33,
+    VK_STRUCTURE_TYPE_BUFFER_VIEW_CREATE_INFO               = 34,
+    VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO               = 35,
+    VK_STRUCTURE_TYPE_CMD_BUFFER_BEGIN_INFO                 = 36,
+    VK_STRUCTURE_TYPE_CMD_BUFFER_GRAPHICS_BEGIN_INFO        = 37,
+    VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO               = 38,
+    VK_STRUCTURE_TYPE_MEMORY_BARRIER                        = 39,
+    VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER                 = 40,
+    VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER                  = 41,
+    VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO           = 42,
+    VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET                  = 43,
+    VK_STRUCTURE_TYPE_COPY_DESCRIPTOR_SET                   = 44,
+    VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO                  = 45,
+    VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO           = 46,
+    VK_STRUCTURE_TYPE_EXTENSION_PROPERTIES                  = 47,
 
     VK_ENUM_RANGE(STRUCTURE_TYPE, APPLICATION_INFO, EXTENSION_PROPERTIES)
 } VkStructureType;
@@ -842,23 +844,24 @@ typedef enum VkObjectType_
     VK_OBJECT_TYPE_IMAGE_VIEW                               = 9,
     VK_OBJECT_TYPE_COLOR_ATTACHMENT_VIEW                    = 10,
     VK_OBJECT_TYPE_DEPTH_STENCIL_VIEW                       = 11,
-    VK_OBJECT_TYPE_SHADER                                   = 12,
-    VK_OBJECT_TYPE_PIPELINE                                 = 13,
-    VK_OBJECT_TYPE_PIPELINE_LAYOUT                          = 14,
-    VK_OBJECT_TYPE_SAMPLER                                  = 15,
-    VK_OBJECT_TYPE_DESCRIPTOR_SET                           = 16,
-    VK_OBJECT_TYPE_DESCRIPTOR_SET_LAYOUT                    = 17,
-    VK_OBJECT_TYPE_DESCRIPTOR_POOL                          = 18,
-    VK_OBJECT_TYPE_DYNAMIC_VP_STATE                         = 19,
-    VK_OBJECT_TYPE_DYNAMIC_RS_STATE                         = 20,
-    VK_OBJECT_TYPE_DYNAMIC_CB_STATE                         = 21,
-    VK_OBJECT_TYPE_DYNAMIC_DS_STATE                         = 22,
-    VK_OBJECT_TYPE_FENCE                                    = 23,
-    VK_OBJECT_TYPE_SEMAPHORE                                = 24,
-    VK_OBJECT_TYPE_EVENT                                    = 25,
-    VK_OBJECT_TYPE_QUERY_POOL                               = 26,
-    VK_OBJECT_TYPE_FRAMEBUFFER                              = 27,
-    VK_OBJECT_TYPE_RENDER_PASS                              = 28,
+    VK_OBJECT_TYPE_SHADER_MODULE                            = 12,
+    VK_OBJECT_TYPE_SHADER                                   = 13,
+    VK_OBJECT_TYPE_PIPELINE                                 = 14,
+    VK_OBJECT_TYPE_PIPELINE_LAYOUT                          = 15,
+    VK_OBJECT_TYPE_SAMPLER                                  = 16,
+    VK_OBJECT_TYPE_DESCRIPTOR_SET                           = 17,
+    VK_OBJECT_TYPE_DESCRIPTOR_SET_LAYOUT                    = 18,
+    VK_OBJECT_TYPE_DESCRIPTOR_POOL                          = 19,
+    VK_OBJECT_TYPE_DYNAMIC_VP_STATE                         = 20,
+    VK_OBJECT_TYPE_DYNAMIC_RS_STATE                         = 21,
+    VK_OBJECT_TYPE_DYNAMIC_CB_STATE                         = 22,
+    VK_OBJECT_TYPE_DYNAMIC_DS_STATE                         = 23,
+    VK_OBJECT_TYPE_FENCE                                    = 24,
+    VK_OBJECT_TYPE_SEMAPHORE                                = 25,
+    VK_OBJECT_TYPE_EVENT                                    = 26,
+    VK_OBJECT_TYPE_QUERY_POOL                               = 27,
+    VK_OBJECT_TYPE_FRAMEBUFFER                              = 28,
+    VK_OBJECT_TYPE_RENDER_PASS                              = 29,
 
     // Valid ranges for core Vulkan:
     VK_OBJECT_TYPE_BEGIN_RANGE                              = VK_OBJECT_TYPE_INSTANCE,
@@ -1104,6 +1107,9 @@ typedef enum VkQueryResultFlagBits_
     VK_QUERY_RESULT_WITH_AVAILABILITY_BIT                   = VK_BIT(2),   // Besides the results of the query, the availability of the results is also written
     VK_QUERY_RESULT_PARTIAL_BIT                             = VK_BIT(3),   // Copy the partial results of the query even if the final results aren't available
 } VkQueryResultFlagBits;
+
+// Shader module creation flags
+typedef VkFlags VkShaderModuleCreateFlags;
 
 // Shader creation flags
 typedef VkFlags VkShaderCreateFlags;
@@ -1612,10 +1618,21 @@ typedef struct VkImageResolve_
     VkExtent3D                                  extent;
 } VkImageResolve;
 
+typedef struct VkShaderModuleCreateInfo_
+{
+    VkStructureType                             sType;              // Must be VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO
+    const void*                                 pNext;              // Pointer to next structure
+    size_t                                      codeSize;           // Specified in bytes
+    const void*                                 pCode;              // Binary code of size codeSize
+    VkShaderModuleCreateFlags                   flags;              // Reserved
+} VkShaderModuleCreateInfo;
+
 typedef struct VkShaderCreateInfo_
 {
     VkStructureType                             sType;              // Must be VK_STRUCTURE_TYPE_SHADER_CREATE_INFO
     const void*                                 pNext;              // Pointer to next structure
+    VkShaderModule                              module;             // Module containing entry point
+    const char*                                 name;               // Null-terminate entry point name
     size_t                                      codeSize;           // Specified in bytes
     const void*                                 pCode;
     VkShaderCreateFlags                         flags;              // Reserved
@@ -2088,6 +2105,7 @@ typedef VkResult (VKAPI *PFN_vkGetImageSubresourceInfo)(VkDevice device, VkImage
 typedef VkResult (VKAPI *PFN_vkCreateImageView)(VkDevice device, const VkImageViewCreateInfo* pCreateInfo, VkImageView* pView);
 typedef VkResult (VKAPI *PFN_vkCreateColorAttachmentView)(VkDevice device, const VkColorAttachmentViewCreateInfo* pCreateInfo, VkColorAttachmentView* pView);
 typedef VkResult (VKAPI *PFN_vkCreateDepthStencilView)(VkDevice device, const VkDepthStencilViewCreateInfo* pCreateInfo, VkDepthStencilView* pView);
+typedef VkResult (VKAPI *PFN_vkCreateShaderModule)(VkDevice device, const VkShaderModuleCreateInfo* pCreateInfo, VkShaderModule* pShaderModule);
 typedef VkResult (VKAPI *PFN_vkCreateShader)(VkDevice device, const VkShaderCreateInfo* pCreateInfo, VkShader* pShader);
 typedef VkResult (VKAPI *PFN_vkCreateGraphicsPipeline)(VkDevice device, const VkGraphicsPipelineCreateInfo* pCreateInfo, VkPipeline* pPipeline);
 typedef VkResult (VKAPI *PFN_vkCreateGraphicsPipelineDerivative)(VkDevice device, const VkGraphicsPipelineCreateInfo* pCreateInfo, VkPipeline basePipeline, VkPipeline* pPipeline);
@@ -2428,6 +2446,11 @@ VkResult VKAPI vkCreateDepthStencilView(
     VkDepthStencilView*                         pView);
 
 // Shader functions
+
+VkResult VKAPI vkCreateShaderModule(
+    VkDevice                                    device,
+    const VkShaderModuleCreateInfo*             pCreateInfo,
+    VkShaderModule*                             pShaderModule);
 
 VkResult VKAPI vkCreateShader(
     VkDevice                                    device,
