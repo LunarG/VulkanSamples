@@ -1332,10 +1332,6 @@ ICD_EXPORT VkResult VKAPI vkGetPhysicalDeviceProperties(
     pProperties->deviceId = 0;
     pProperties->deviceType = VK_PHYSICAL_DEVICE_TYPE_OTHER;
     strncpy(pProperties->deviceName, "nulldrv", strlen("nulldrv"));
-    pProperties->maxBoundDescriptorSets = 0;
-    pProperties->maxThreadGroupSize = 0;
-    pProperties->timestampFrequency = 0;
-    pProperties->multiColorAttachmentClears = false;
 
     return ret;
 }

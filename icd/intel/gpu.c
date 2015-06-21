@@ -236,22 +236,6 @@ void intel_gpu_get_props(const struct intel_gpu *gpu,
         name_len = sizeof(props->deviceName) - 1;
     memcpy(props->deviceName, name, name_len);
     props->deviceName[name_len] = '\0';
-
-    props->maxBoundDescriptorSets = 1;
-    props->maxThreadGroupSize = 512;
-
-    /* incremented every 80ns */
-    props->timestampFrequency = 1000 * 1000 * 1000 / 80;
-
-    props->multiColorAttachmentClears = false;
-
-    /* hardware is limited to 16 viewports */
-    props->maxViewports = INTEL_MAX_VIEWPORTS;
-
-    props->maxColorAttachments = INTEL_MAX_RENDER_TARGETS;
-
-    /* ? */
-    props->maxDescriptorSets = 2;
 }
 
 void intel_gpu_get_perf(const struct intel_gpu *gpu,
@@ -496,6 +480,22 @@ ICD_EXPORT VkResult VKAPI vkGetPhysicalDeviceLimits(
 
     /* TODO: fill out limits */
     memset(pLimits, 0, sizeof(*pLimits));
+
+    /* no size limit, but no bounded buffer could exceed 2GB */
+    pLimits->maxInlineMemoryUpdateSize = 2u << 30;
+    pLimits->maxBoundDescriptorSets = 1;
+    pLimits->maxComputeWorkGroupInvocations = 512;
+
+    /* incremented every 80ns */
+    pLimits->timestampFrequency = 1000 * 1000 * 1000 / 80;
+
+    /* hardware is limited to 16 viewports */
+    pLimits->maxViewports = INTEL_MAX_VIEWPORTS;
+
+    pLimits->maxColorAttachments = INTEL_MAX_RENDER_TARGETS;
+
+    /* ? */
+    pLimits->maxDescriptorSets = 2;
 
     return ret;
 }

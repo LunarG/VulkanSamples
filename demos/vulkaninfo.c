@@ -102,6 +102,8 @@ struct app_gpu {
     VkDeviceQueueCreateInfo *queue_reqs;
 
     VkPhysicalDeviceMemoryProperties memory_props;
+    VkPhysicalDeviceFeatures features;
+    VkPhysicalDeviceLimits limits;
 
     uint32_t device_extension_count;
     VkExtensionProperties *device_extensions;
@@ -547,6 +549,14 @@ static void app_gpu_init(struct app_gpu *gpu, uint32_t id, VkPhysicalDevice obj)
     if (err)
         ERR_EXIT(err);
 
+    err = vkGetPhysicalDeviceFeatures(gpu->obj, &gpu->features);
+    if (err)
+        ERR_EXIT(err);
+
+    err = vkGetPhysicalDeviceLimits(gpu->obj, &gpu->limits);
+    if (err)
+        ERR_EXIT(err);
+
     app_dev_init(&gpu->dev, gpu);
     app_dev_init_formats(&gpu->dev);
 }
@@ -628,10 +638,27 @@ static void app_gpu_dump_props(const struct app_gpu *gpu)
     printf("\tdeviceId = 0x%04x\n",                 props->deviceId);
     printf("\tdeviceType = %s\n",                   vk_physical_device_type_string(props->deviceType));
     printf("\tdeviceName = %s\n",                   props->deviceName);
-    printf("\tmaxBoundDescriptorSets = %u\n",       props->maxBoundDescriptorSets);
-    printf("\tmaxThreadGroupSize = %u\n",           props->maxThreadGroupSize);
-    printf("\ttimestampFrequency = %lu\n",          props->timestampFrequency);
-    printf("\tmultiColorAttachmentClears = %u\n",   props->multiColorAttachmentClears);
+}
+
+static void app_gpu_dump_features(const struct app_gpu *gpu)
+{
+    const VkPhysicalDeviceFeatures *features = &gpu->features;
+
+    printf("VkPhysicalDeviceFeatures\n");
+    /* TODO: add interesting features */
+    printf("\tgeometryShader = %u\n",               features->geometryShader);
+}
+
+static void app_gpu_dump_limits(const struct app_gpu *gpu)
+{
+    const VkPhysicalDeviceLimits *limits = &gpu->limits;
+
+    printf("VkPhysicalDeviceLimits\n");
+    /* TODO: add interesting limits */
+    printf("\tmaxInlineMemoryUpdateSize = " PRINTF_SIZE_T_SPECIFIER "\n",   limits->maxInlineMemoryUpdateSize);
+    printf("\tmaxBoundDescriptorSets = %u\n",                               limits->maxBoundDescriptorSets);
+    printf("\tmaxComputeWorkGroupInvocations = %u\n",                       limits->maxComputeWorkGroupInvocations);
+    printf("\ttimestampFrequency = %lu\n",                                  limits->timestampFrequency);
 }
 
 static void app_gpu_dump_perf(const struct app_gpu *gpu)
@@ -724,6 +751,10 @@ static void app_gpu_dump(const struct app_gpu *gpu)
         printf("\n");
     }
     app_gpu_dump_memory_props(gpu);
+    printf("\n");
+    app_gpu_dump_features(gpu);
+    printf("\n");
+    app_gpu_dump_limits(gpu);
     printf("\n");
     app_dev_dump(&gpu->dev);
 }
