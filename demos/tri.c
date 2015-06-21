@@ -620,16 +620,13 @@ static void demo_prepare_textures(struct demo *demo)
 {
     const VkFormat tex_format = VK_FORMAT_B8G8R8A8_UNORM;
     VkFormatProperties props;
-    size_t size = sizeof(props);
     const uint32_t tex_colors[DEMO_TEXTURE_COUNT][2] = {
         { 0xffff0000, 0xff00ff00 },
     };
     VkResult U_ASSERT_ONLY err;
     uint32_t i;
 
-    err = vkGetFormatInfo(demo->device, tex_format,
-                           VK_FORMAT_INFO_TYPE_PROPERTIES,
-                           &size, &props);
+    err = vkGetPhysicalDeviceFormatInfo(demo->gpu, tex_format, &props);
     assert(!err);
 
     for (i = 0; i < DEMO_TEXTURE_COUNT; i++) {

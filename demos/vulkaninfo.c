@@ -352,17 +352,11 @@ static void app_dev_init_formats(struct app_dev *dev)
     for (f = 0; f < VK_NUM_FORMAT; f++) {
         const VkFormat fmt = f;
         VkResult err;
-        size_t size = sizeof(dev->format_props[f]);
 
-        err = vkGetFormatInfo(dev->obj, fmt,
-                               VK_FORMAT_INFO_TYPE_PROPERTIES,
-                               &size, &dev->format_props[f]);
+        err = vkGetPhysicalDeviceFormatInfo(dev->gpu->obj, fmt, &dev->format_props[f]);
         if (err) {
             memset(&dev->format_props[f], 0,
                    sizeof(dev->format_props[f]));
-        }
-        else if (size != sizeof(dev->format_props[f])) {
-            ERR_EXIT(VK_ERROR_UNKNOWN);
         }
     }
 }

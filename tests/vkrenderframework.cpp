@@ -306,12 +306,9 @@ void VkRenderFramework::InitRenderTarget(uint32_t targets, VkDepthStencilBindInf
         VkImageObj *img = new VkImageObj(m_device);
 
         VkFormatProperties props;
-        size_t size = sizeof(props);
         VkResult err;
 
-        err = vkGetFormatInfo(m_device->obj(), m_render_target_fmt,
-            VK_FORMAT_INFO_TYPE_PROPERTIES,
-            &size, &props);
+        err = vkGetPhysicalDeviceFormatInfo(m_device->gpu().obj(), m_render_target_fmt, &props);
         ASSERT_VK_SUCCESS(err);
 
         if (props.linearTilingFeatures & VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT) {
@@ -651,7 +648,6 @@ void VkImageObj::init(uint32_t w, uint32_t h,
     VkFormatProperties image_fmt;
     VkImageTiling tiling;
     VkResult err;
-    size_t size;
 
     mipCount = 0;
 
@@ -664,10 +660,7 @@ void VkImageObj::init(uint32_t w, uint32_t h,
         mipCount++;
     }
 
-    size = sizeof(image_fmt);
-    err = vkGetFormatInfo(m_device->obj(), fmt,
-        VK_FORMAT_INFO_TYPE_PROPERTIES,
-        &size, &image_fmt);
+    err = vkGetPhysicalDeviceFormatInfo(m_device->gpu().obj(), fmt, &image_fmt);
     ASSERT_VK_SUCCESS(err);
 
     if (requested_tiling == VK_IMAGE_TILING_LINEAR) {

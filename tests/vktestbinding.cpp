@@ -417,10 +417,8 @@ void Device::init_formats()
 
 VkFormatProperties Device::format_properties(VkFormat format)
 {
-    const VkFormatInfoType type = VK_FORMAT_INFO_TYPE_PROPERTIES;
     VkFormatProperties data;
-    size_t size = sizeof(data);
-    if (!EXPECT(vkGetFormatInfo(obj(), format, type, &size, &data) == VK_SUCCESS && size == sizeof(data)))
+    if (!EXPECT(vkGetPhysicalDeviceFormatInfo(gpu().obj(), format, &data) == VK_SUCCESS))
         memset(&data, 0, sizeof(data));
 
     return data;

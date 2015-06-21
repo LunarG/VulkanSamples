@@ -470,6 +470,30 @@ ICD_EXPORT VkResult VKAPI vkGetPhysicalDeviceInfo(
     return ret;
 }
 
+ICD_EXPORT VkResult VKAPI vkGetPhysicalDeviceFeatures(
+                                               VkPhysicalDevice physicalDevice,
+                                               VkPhysicalDeviceFeatures* pFeatures)
+{
+    VkResult ret = VK_SUCCESS;
+
+    /* TODO: fill out features */
+    memset(pFeatures, 0, sizeof(*pFeatures));
+
+    return ret;
+}
+
+ICD_EXPORT VkResult VKAPI vkGetPhysicalDeviceLimits(
+                                               VkPhysicalDevice physicalDevice,
+                                               VkPhysicalDeviceLimits* pLimits)
+{
+    VkResult ret = VK_SUCCESS;
+
+    /* TODO: fill out limits */
+    memset(pLimits, 0, sizeof(*pLimits));
+
+    return ret;
+}
+
 ICD_EXPORT VkResult VKAPI vkGetPhysicalDeviceExtensionInfo(
                                                VkPhysicalDevice gpu,
                                                VkExtensionInfoType infoType,

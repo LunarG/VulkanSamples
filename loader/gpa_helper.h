@@ -107,8 +107,6 @@ static inline void* globalGetProcAddr(const char *name)
         return (void*) vkCreateQueryPool;
     if (!strcmp(name, "GetQueryPoolResults"))
         return (void*) vkGetQueryPoolResults;
-    if (!strcmp(name, "GetFormatInfo"))
-        return (void*) vkGetFormatInfo;
     if (!strcmp(name, "CreateBuffer"))
         return (void*) vkCreateBuffer;
     if (!strcmp(name, "CreateBufferView"))
@@ -263,6 +261,12 @@ static inline void *loader_non_passthrough_gpa(const char *name)
         return (void*) vkEnumeratePhysicalDevices;
     if (!strcmp(name, "GetPhysicalDeviceInfo"))
         return (void*) vkGetPhysicalDeviceInfo;
+    if (!strcmp(name, "GetPhysicalDeviceFeatures"))
+        return (void*) vkGetPhysicalDeviceFeatures;
+    if (!strcmp(name, "GetPhysicalDeviceFormatInfo"))
+        return (void*) vkGetPhysicalDeviceFormatInfo;
+    if (!strcmp(name, "GetPhysicalDeviceLimits"))
+        return (void*) vkGetPhysicalDeviceLimits;
     if (!strcmp(name, "GetInstanceProcAddr"))
         return (void*) vkGetInstanceProcAddr;
     if (!strcmp(name, "GetDeviceProcAddr"))

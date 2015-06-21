@@ -1337,13 +1337,11 @@ TEST_F(VkCmdClearColorImageTest, Basic)
          it != test_formats_.end(); it++) {
         const float color[4] = { 0.0f, 1.0f, 0.0f, 1.0f };
         VkFormatProperties props;
-        size_t size = sizeof(props);
         VkResult err;
 
-        err = vkGetFormatInfo(dev_.obj(), it->format,
-                               VK_FORMAT_INFO_TYPE_PROPERTIES,
-                               &size, &props);
+        err = vkGetPhysicalDeviceFormatInfo(dev_.gpu().obj(), it->format, &props);
         ASSERT_EQ(err, VK_SUCCESS);
+
         if (it->tiling == VK_IMAGE_TILING_LINEAR && !(props.linearTilingFeatures & VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT))
             continue;
 
@@ -1387,13 +1385,11 @@ TEST_F(VkCmdClearColorImageRawTest, Basic)
          it != test_formats_.end(); it++) {
         const uint32_t color[4] = { 0x11111111, 0x22222222, 0x33333333, 0x44444444 };
         VkFormatProperties props;
-        size_t size = sizeof(props);
         VkResult err;
 
-        err = vkGetFormatInfo(dev_.obj(), it->format,
-                               VK_FORMAT_INFO_TYPE_PROPERTIES,
-                               &size, &props);
+        err = vkGetPhysicalDeviceFormatInfo(dev_.gpu().obj(), it->format, &props);
         ASSERT_EQ(err, VK_SUCCESS);
+
         if (it->tiling == VK_IMAGE_TILING_LINEAR && !(props.linearTilingFeatures & VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT))
             continue;
 
@@ -1571,13 +1567,11 @@ TEST_F(VkCmdClearDepthStencilTest, Basic)
     for (std::vector<vk_testing::Device::Format>::const_iterator it = test_formats_.begin();
          it != test_formats_.end(); it++) {
         VkFormatProperties props;
-        size_t size = sizeof(props);
         VkResult err;
 
-        err = vkGetFormatInfo(dev_.obj(), it->format,
-                               VK_FORMAT_INFO_TYPE_PROPERTIES,
-                               &size, &props);
+        err = vkGetPhysicalDeviceFormatInfo(dev_.gpu().obj(), it->format, &props);
         ASSERT_EQ(err, VK_SUCCESS);
+
         if (it->tiling == VK_IMAGE_TILING_LINEAR && !(props.linearTilingFeatures & VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT))
             continue;
 

@@ -562,10 +562,10 @@ int intel_format_translate_color(const struct intel_gpu *gpu,
     return fmt;
 }
 
-static VkFlags intel_format_get_color_features(const struct intel_dev *dev,
+static VkFlags intel_format_get_color_features(const struct intel_gpu *gpu,
                                                  VkFormat format)
 {
-    const int fmt = intel_format_translate_color(dev->gpu, format);
+    const int fmt = intel_format_translate_color(gpu, format);
     const struct intel_vf_cap *vf;
     const struct intel_sampler_cap *sampler;
     const struct intel_dp_cap *dp;
@@ -581,25 +581,25 @@ static VkFlags intel_format_get_color_features(const struct intel_dev *dev,
 
     features = VK_FORMAT_FEATURE_STORAGE_IMAGE_BIT;
 
-#define TEST(dev, func, cap) ((func) && (func)->cap && \
-        intel_gpu_gen((dev)->gpu) >= (func)->cap)
-    if (TEST(dev, vf, vertex_element)) {
+#define TEST(gpu, func, cap) ((func) && (func)->cap && \
+        intel_gpu_gen(gpu) >= (func)->cap)
+    if (TEST(gpu, vf, vertex_element)) {
         /* no feature bit to set */
     }
 
-    if (TEST(dev, sampler, sampling)) {
+    if (TEST(gpu, sampler, sampling)) {
         if (icd_format_is_int(format) ||
-            TEST(dev, sampler, filtering))
+            TEST(gpu, sampler, filtering))
             features |= VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT;
     }
 
-    if (TEST(dev, dp, typed_write))
+    if (TEST(gpu, dp, typed_write))
         features |= VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT;
 
-    if (TEST(dev, dp, rt_write)) {
+    if (TEST(gpu, dp, rt_write)) {
         features |= VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT;
 
-        if (TEST(dev, dp, rt_write_blending))
+        if (TEST(gpu, dp, rt_write_blending))
             features |= VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BLEND_BIT;
 
         if (features & VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT) {
@@ -612,7 +612,7 @@ static VkFlags intel_format_get_color_features(const struct intel_dev *dev,
     return features;
 }
 
-static VkFlags intel_format_get_ds_features(const struct intel_dev *dev,
+static VkFlags intel_format_get_ds_features(const struct intel_gpu *gpu,
                                               VkFormat format)
 {
     VkFlags features;
@@ -642,56 +642,44 @@ static VkFlags intel_format_get_ds_features(const struct intel_dev *dev,
     return features;
 }
 
-static VkFlags intel_format_get_raw_features(const struct intel_dev *dev,
+static VkFlags intel_format_get_raw_features(const struct intel_gpu *gpu,
                                                VkFormat format)
 {
     return (format == VK_FORMAT_UNDEFINED) ?
         VK_FORMAT_FEATURE_STORAGE_IMAGE_BIT : 0;
 }
 
-static void intel_format_get_props(const struct intel_dev *dev,
+static void intel_format_get_props(const struct intel_gpu *gpu,
                                    VkFormat format,
                                    VkFormatProperties *props)
 {
     if (icd_format_is_undef(format)) {
         props->linearTilingFeatures =
-            intel_format_get_raw_features(dev, format);
+            intel_format_get_raw_features(gpu, format);
         props->optimalTilingFeatures = 0;
     } else if(icd_format_is_color(format)) {
         props->linearTilingFeatures =
-            intel_format_get_color_features(dev, format);
+            intel_format_get_color_features(gpu, format);
         props->optimalTilingFeatures = props->linearTilingFeatures;
     } else if(icd_format_is_ds(format)) {
         props->linearTilingFeatures = 0;
         props->optimalTilingFeatures =
-            intel_format_get_ds_features(dev, format);
+            intel_format_get_ds_features(gpu, format);
     } else {
         props->linearTilingFeatures = 0;
         props->optimalTilingFeatures = 0;
     }
 }
 
-ICD_EXPORT VkResult VKAPI vkGetFormatInfo(
-    VkDevice                                  device,
+ICD_EXPORT VkResult VKAPI vkGetPhysicalDeviceFormatInfo(
+    VkPhysicalDevice                          physicalDevice,
     VkFormat                                  format,
-    VkFormatInfoType                        infoType,
-    size_t*                                     pDataSize,
-    void*                                       pData)
+    VkFormatProperties*                       pFormatInfo)
 {
-    const struct intel_dev *dev = intel_dev(device);
+    const struct intel_gpu *gpu = intel_gpu(physicalDevice);
     VkResult ret = VK_SUCCESS;
 
-    switch (infoType) {
-    case VK_FORMAT_INFO_TYPE_PROPERTIES:
-        *pDataSize = sizeof(VkFormatProperties);
-        if (pData == NULL)
-            return ret;
-        intel_format_get_props(dev, format, pData);
-        break;
-    default:
-        ret = VK_ERROR_INVALID_VALUE;
-        break;
-    }
+    intel_format_get_props(gpu, format, pFormatInfo);
 
     return ret;
 }

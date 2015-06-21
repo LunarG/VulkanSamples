@@ -235,6 +235,19 @@ core = Extension(
              Param("size_t*", "pDataSize"),
              Param("void*", "pData")]),
 
+        Proto("VkResult", "GetPhysicalDeviceFeatures",
+            [Param("VkPhysicalDevice", "physicalDevice"),
+             Param("VkPhysicalDeviceFeatures*", "pFeatures")]),
+
+        Proto("VkResult", "GetPhysicalDeviceFormatInfo",
+            [Param("VkPhysicalDevice", "physicalDevice"),
+             Param("VkFormat", "format"),
+             Param("VkFormatProperties*", "pFormatInfo")]),
+
+        Proto("VkResult", "GetPhysicalDeviceLimits",
+            [Param("VkPhysicalDevice", "physicalDevice"),
+             Param("VkPhysicalDeviceLimits*", "pLimits")]),
+
         Proto("void*", "GetInstanceProcAddr",
             [Param("VkInstance", "instance"),
              Param("const char*", "pName")]),
@@ -412,13 +425,6 @@ core = Extension(
              Param("size_t*", "pDataSize"),
              Param("void*", "pData"),
              Param("VkQueryResultFlags", "flags")]),
-
-        Proto("VkResult", "GetFormatInfo",
-            [Param("VkDevice", "device"),
-             Param("VkFormat", "format"),
-             Param("VkFormatInfoType", "infoType"),
-             Param("size_t*", "pDataSize"),
-             Param("void*", "pData")]),
 
         Proto("VkResult", "CreateBuffer",
             [Param("VkDevice", "device"),

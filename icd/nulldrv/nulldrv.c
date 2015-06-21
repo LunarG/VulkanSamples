@@ -1404,33 +1404,6 @@ ICD_EXPORT VkResult VKAPI vkWaitForFences(
     return VK_SUCCESS;
 }
 
-ICD_EXPORT VkResult VKAPI vkGetFormatInfo(
-    VkDevice                                  device,
-    VkFormat                                  format,
-    VkFormatInfoType                        infoType,
-    size_t*                                     pDataSize,
-    void*                                       pData)
-{
-    NULLDRV_LOG_FUNC;
-    VkFormatProperties *fmt = (VkFormatProperties *) pData;
-    VkResult ret = VK_SUCCESS;
-
-    switch (infoType) {
-    case VK_FORMAT_INFO_TYPE_PROPERTIES:
-        *pDataSize = sizeof(VkFormatProperties);
-        if (pData == NULL)
-            return ret;
-        fmt->linearTilingFeatures = VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT;
-        fmt->optimalTilingFeatures = fmt->linearTilingFeatures;
-        break;
-    default:
-        ret = VK_ERROR_INVALID_VALUE;
-        break;
-    }
-
-    return ret;
-}
-
 ICD_EXPORT VkResult VKAPI vkGetPhysicalDeviceInfo(
     VkPhysicalDevice                            gpu_,
     VkPhysicalDeviceInfoType                  infoType,
@@ -1495,6 +1468,46 @@ ICD_EXPORT VkResult VKAPI vkGetPhysicalDeviceInfo(
 /* FIXME: WRITE THE REAL CODE*/return ret;
         break;
     }
+
+    return ret;
+}
+
+ICD_EXPORT VkResult VKAPI vkGetPhysicalDeviceFeatures(
+    VkPhysicalDevice                          physicalDevice,
+    VkPhysicalDeviceFeatures*                 pFeatures)
+{
+    NULLDRV_LOG_FUNC;
+    VkResult ret = VK_SUCCESS;
+
+    /* TODO: fill out features */
+    memset(pFeatures, 0, sizeof(*pFeatures));
+
+    return ret;
+}
+
+ICD_EXPORT VkResult VKAPI vkGetPhysicalDeviceFormatInfo(
+    VkPhysicalDevice                          physicalDevice,
+    VkFormat                                  format,
+    VkFormatProperties*                       pFormatInfo)
+{
+    NULLDRV_LOG_FUNC;
+    VkResult ret = VK_SUCCESS;
+
+    pFormatInfo->linearTilingFeatures = VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT;
+    pFormatInfo->optimalTilingFeatures = pFormatInfo->linearTilingFeatures;
+
+    return ret;
+}
+
+ICD_EXPORT VkResult VKAPI vkGetPhysicalDeviceLimits(
+    VkPhysicalDevice                          physicalDevice,
+    VkPhysicalDeviceLimits*                   pLimits)
+{
+    NULLDRV_LOG_FUNC;
+    VkResult ret = VK_SUCCESS;
+
+    /* TODO: fill out limits */
+    memset(pLimits, 0, sizeof(*pLimits));
 
     return ret;
 }

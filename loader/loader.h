@@ -117,6 +117,9 @@ struct loader_icd {
     PFN_vkDestroyInstance DestroyInstance;
     PFN_vkEnumeratePhysicalDevices EnumeratePhysicalDevices;
     PFN_vkGetPhysicalDeviceInfo GetPhysicalDeviceInfo;
+    PFN_vkGetPhysicalDeviceFeatures GetPhysicalDeviceFeatures;
+    PFN_vkGetPhysicalDeviceFormatInfo GetPhysicalDeviceFormatInfo;
+    PFN_vkGetPhysicalDeviceLimits GetPhysicalDeviceLimits;
     PFN_vkCreateDevice CreateDevice;
     PFN_vkGetPhysicalDeviceExtensionInfo GetPhysicalDeviceExtensionInfo;
     PFN_vkDbgCreateMsgCallback DbgCreateMsgCallback;
@@ -320,11 +323,25 @@ VkResult loader_EnumeratePhysicalDevices(
         VkInstance                              instance,
         uint32_t*                               pPhysicalDeviceCount,
         VkPhysicalDevice*                       pPhysicalDevices);
+
 VkResult loader_GetPhysicalDeviceInfo(
         VkPhysicalDevice                        gpu,
         VkPhysicalDeviceInfoType                infoType,
         size_t*                                 pDataSize,
         void*                                   pData);
+
+VkResult loader_GetPhysicalDeviceFeatures(
+        VkPhysicalDevice                        physicalDevice,
+        VkPhysicalDeviceFeatures*               pFeatures);
+
+VkResult loader_GetPhysicalDeviceFormatInfo(
+        VkPhysicalDevice                        physicalDevice,
+        VkFormat                                format,
+        VkFormatProperties*                     pFormatInfo);
+
+VkResult loader_GetPhysicalDeviceLimits(
+        VkPhysicalDevice                        physicalDevice,
+        VkPhysicalDeviceLimits*                 pLimits);
 
 VkResult loader_GetPhysicalDeviceExtensionInfo(
         VkPhysicalDevice                        gpu,

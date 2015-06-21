@@ -66,7 +66,6 @@ static inline void loader_init_device_dispatch_table(VkLayerDispatchTable *table
     table->ResetEvent = (PFN_vkResetEvent) gpa(dev, "vkResetEvent");
     table->CreateQueryPool = (PFN_vkCreateQueryPool) gpa(dev, "vkCreateQueryPool");
     table->GetQueryPoolResults = (PFN_vkGetQueryPoolResults) gpa(dev, "vkGetQueryPoolResults");
-    table->GetFormatInfo = (PFN_vkGetFormatInfo) gpa(dev, "vkGetFormatInfo");
     table->CreateBuffer = (PFN_vkCreateBuffer) gpa(dev, "vkCreateBuffer");
     table->CreateBufferView = (PFN_vkCreateBufferView) gpa(dev, "vkCreateBufferView");
     table->CreateImage = (PFN_vkCreateImage) gpa(dev, "vkCreateImage");
@@ -210,8 +209,6 @@ static inline void *loader_lookup_device_dispatch_table(
         return (void *) table->CreateQueryPool;
     if (!strcmp(name, "GetQueryPoolResults"))
         return (void *) table->GetQueryPoolResults;
-    if (!strcmp(name, "GetFormatInfo"))
-        return (void *) table->GetFormatInfo;
     if (!strcmp(name, "CreateBuffer"))
         return (void *) table->CreateBuffer;
     if (!strcmp(name, "CreateBufferView"))
@@ -361,6 +358,9 @@ static inline void loader_init_instance_core_dispatch_table(VkLayerInstanceDispa
     table->DestroyInstance = (PFN_vkDestroyInstance) gpa(inst, "vkDestroyInstance");
     table->EnumeratePhysicalDevices = (PFN_vkEnumeratePhysicalDevices) gpa(inst, "vkEnumeratePhysicalDevices");
     table->GetPhysicalDeviceInfo = (PFN_vkGetPhysicalDeviceInfo) gpa(inst, "vkGetPhysicalDeviceInfo");
+    table->GetPhysicalDeviceFeatures = (PFN_vkGetPhysicalDeviceFeatures) gpa(inst, "vkGetPhysicalDeviceFeatures");
+    table->GetPhysicalDeviceFormatInfo = (PFN_vkGetPhysicalDeviceFormatInfo) gpa(inst, "vkGetPhysicalDeviceFormatInfo");
+    table->GetPhysicalDeviceLimits = (PFN_vkGetPhysicalDeviceLimits) gpa(inst, "vkGetPhysicalDeviceLimits");
     table->CreateDevice = (PFN_vkCreateDevice) gpa(inst, "vkCreateDevice");
     table->GetPhysicalDeviceExtensionInfo = (PFN_vkGetPhysicalDeviceExtensionInfo) gpa(inst, "vkGetPhysicalDeviceExtensionInfo");
 }
@@ -390,6 +390,12 @@ static inline void *loader_lookup_instance_dispatch_table(
         return (void *) table->EnumeratePhysicalDevices;
     if (!strcmp(name, "GetPhysicalDeviceInfo"))
         return (void *) table->GetPhysicalDeviceInfo;
+    if (!strcmp(name, "GetPhysicalDeviceFeatures"))
+        return (void *) table->GetPhysicalDeviceFeatures;
+    if (!strcmp(name, "GetPhysicalDeviceFormatInfo"))
+        return (void *) table->GetPhysicalDeviceFormatInfo;
+    if (!strcmp(name, "GetPhysicalDeviceLimits"))
+        return (void *) table->GetPhysicalDeviceLimits;
     if (!strcmp(name, "GetInstanceProcAddr"))
         return (void *) table->GetInstanceProcAddr;
     if (!strcmp(name, "CreateDevice"))

@@ -58,7 +58,6 @@ typedef struct VkLayerDispatchTable_
     PFN_vkResetEvent ResetEvent;
     PFN_vkCreateQueryPool CreateQueryPool;
     PFN_vkGetQueryPoolResults GetQueryPoolResults;
-    PFN_vkGetFormatInfo GetFormatInfo;
     PFN_vkCreateBuffer CreateBuffer;
     PFN_vkCreateBufferView CreateBufferView;
     PFN_vkCreateImage CreateImage;
@@ -143,6 +142,9 @@ typedef struct VkLayerInstanceDispatchTable_
     PFN_vkDestroyInstance DestroyInstance;
     PFN_vkEnumeratePhysicalDevices EnumeratePhysicalDevices;
     PFN_vkGetPhysicalDeviceInfo GetPhysicalDeviceInfo;
+    PFN_vkGetPhysicalDeviceFeatures GetPhysicalDeviceFeatures;
+    PFN_vkGetPhysicalDeviceFormatInfo GetPhysicalDeviceFormatInfo;
+    PFN_vkGetPhysicalDeviceLimits GetPhysicalDeviceLimits;
     PFN_vkCreateDevice CreateDevice;
     /* PFN_vkGetGlobalExtensionInfo GetGlobalExtensionInfo; non-dispatchable */
     PFN_vkGetPhysicalDeviceExtensionInfo GetPhysicalDeviceExtensionInfo;

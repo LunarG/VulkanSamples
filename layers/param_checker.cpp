@@ -644,18 +644,14 @@ VK_LAYER_EXPORT VkResult VKAPI vkGetQueryPoolResults(VkDevice device, VkQueryPoo
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkGetFormatInfo(VkDevice device, VkFormat format, VkFormatInfoType infoType, size_t* pDataSize, void* pData)
+VK_LAYER_EXPORT VkResult VKAPI vkGetPhysicalDeviceFormatInfo(VkPhysicalDevice physicalDevice, VkFormat format, VkFormatProperties *pFormatInfo)
 {
     char str[1024];
     if (!validate_VkFormat(format)) {
-        sprintf(str, "Parameter format to function GetFormatInfo has invalid value of %i.", (int)format);
+        sprintf(str, "Parameter format to function GetPhysicalDeviceFormatInfo has invalid value of %i.", (int)format);
         layerCbMsg(VK_DBG_REPORT_ERROR_BIT, (VkObjectType) 0, NULL, 0, 1, "PARAMCHECK", str);
     }
-    if (!validate_VkFormatInfoType(infoType)) {
-        sprintf(str, "Parameter infoType to function GetFormatInfo has invalid value of %i.", (int)infoType);
-        layerCbMsg(VK_DBG_REPORT_ERROR_BIT, (VkObjectType) 0, NULL, 0, 1, "PARAMCHECK", str);
-    }
-    VkResult result = device_dispatch_table(device)->GetFormatInfo(device, format, infoType, pDataSize, pData);
+    VkResult result = instance_dispatch_table(physicalDevice)->GetPhysicalDeviceFormatInfo(physicalDevice, format, pFormatInfo);
     return result;
 }
 
@@ -723,6 +719,7 @@ void PreCreateImage(VkDevice device, const VkImageCreateInfo* pCreateInfo)
         return;
     }
 
+	/*
     VkFormatProperties properties;
     size_t size = sizeof(properties);
     VkResult result = device_dispatch_table(device)->GetFormatInfo(device, pCreateInfo->format,
@@ -742,6 +739,7 @@ void PreCreateImage(VkDevice device, const VkImageCreateInfo* pCreateInfo)
         layerCbMsg(VK_DBG_REPORT_ERROR_BIT, (VkObjectType) 0, NULL, 0, 1, "PARAMCHECK", str);
         return;
     }
+	*/
 
     // TODO: Can we check device-specific limits?
     if (!vk_validate_vkextent3d(&pCreateInfo->extent))
@@ -1568,6 +1566,7 @@ void PreCreateRenderPass(VkDevice device, const VkRenderPassCreateInfo* pCreateI
             continue;
         }
 
+		/*
         VkFormatProperties properties;
         size_t size = sizeof(properties);
         VkResult result = device_dispatch_table(device)->GetFormatInfo(device, pCreateInfo->pColorFormats[i],
@@ -1589,6 +1588,7 @@ void PreCreateRenderPass(VkDevice device, const VkRenderPassCreateInfo* pCreateI
             layerCbMsg(VK_DBG_REPORT_ERROR_BIT, (VkObjectType) 0, NULL, 0, 1, "PARAMCHECK", ss.str().c_str());
             continue;
         }
+		*/
 
     }
 
@@ -1696,6 +1696,7 @@ void PreCreateRenderPass(VkDevice device, const VkRenderPassCreateInfo* pCreateI
         return;
     }
 
+	/*
     VkFormatProperties properties;
     size_t size = sizeof(properties);
     VkResult result = device_dispatch_table(device)->GetFormatInfo(device, pCreateInfo->depthStencilFormat,
@@ -1715,6 +1716,7 @@ void PreCreateRenderPass(VkDevice device, const VkRenderPassCreateInfo* pCreateI
         layerCbMsg(VK_DBG_REPORT_ERROR_BIT, (VkObjectType) 0, NULL, 0, 1, "PARAMCHECK", str);
         return;
     }
+	*/
 
     if(!validate_VkImageLayout(pCreateInfo->depthStencilLayout))
     {
@@ -1948,8 +1950,6 @@ static inline void* layer_intercept_proc(const char *name)
         return (void*) vkCreateQueryPool;
     if (!strcmp(name, "GetQueryPoolResults"))
         return (void*) vkGetQueryPoolResults;
-    if (!strcmp(name, "GetFormatInfo"))
-        return (void*) vkGetFormatInfo;
     if (!strcmp(name, "CreateBuffer"))
         return (void*) vkCreateBuffer;
     if (!strcmp(name, "CreateBufferView"))
@@ -2102,6 +2102,8 @@ static inline void* layer_intercept_instance_proc(const char *name)
         return (void*) vkGetGlobalExtensionInfo;
     if (!strcmp(name, "GetPhysicalDeviceExtensionInfo"))
         return (void*) vkGetPhysicalDeviceExtensionInfo;
+    if (!strcmp(name, "GetPhysicalDeviceFormatInfo"))
+        return (void*) vkGetPhysicalDeviceFormatInfo;
 
     return NULL;
 }

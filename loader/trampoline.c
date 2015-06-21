@@ -164,6 +164,55 @@ LOADER_EXPORT VkResult VKAPI vkGetPhysicalDeviceInfo(
     return res;
 }
 
+LOADER_EXPORT VkResult VKAPI vkGetPhysicalDeviceFeatures(
+                                            VkPhysicalDevice gpu,
+                                            VkPhysicalDeviceFeatures *pFeatures)
+{
+    const VkLayerInstanceDispatchTable *disp;
+    VkResult res;
+
+    disp = loader_get_instance_dispatch(gpu);
+
+    loader_platform_thread_lock_mutex(&loader_lock);
+    res = disp->GetPhysicalDeviceFeatures(gpu, pFeatures);
+    loader_platform_thread_unlock_mutex(&loader_lock);
+
+    return res;
+}
+
+LOADER_EXPORT VkResult VKAPI vkGetPhysicalDeviceFormatInfo(
+                                            VkPhysicalDevice gpu,
+                                            VkFormat format,
+                                            VkFormatProperties *pFormatInfo)
+{
+    const VkLayerInstanceDispatchTable *disp;
+    VkResult res;
+
+    disp = loader_get_instance_dispatch(gpu);
+
+    loader_platform_thread_lock_mutex(&loader_lock);
+    res = disp->GetPhysicalDeviceFormatInfo(gpu, format, pFormatInfo);
+    loader_platform_thread_unlock_mutex(&loader_lock);
+
+    return res;
+}
+
+LOADER_EXPORT VkResult VKAPI vkGetPhysicalDeviceLimits(
+                                            VkPhysicalDevice gpu,
+                                            VkPhysicalDeviceLimits *pLimits)
+{
+    const VkLayerInstanceDispatchTable *disp;
+    VkResult res;
+
+    disp = loader_get_instance_dispatch(gpu);
+
+    loader_platform_thread_lock_mutex(&loader_lock);
+    res = disp->GetPhysicalDeviceLimits(gpu, pLimits);
+    loader_platform_thread_unlock_mutex(&loader_lock);
+
+    return res;
+}
+
 LOADER_EXPORT VkResult VKAPI vkCreateDevice(
                                         VkPhysicalDevice gpu,
                                         const VkDeviceCreateInfo* pCreateInfo,
@@ -466,15 +515,6 @@ LOADER_EXPORT VkResult VKAPI vkGetQueryPoolResults(VkDevice device, VkQueryPool 
     disp = loader_get_dispatch(device);
 
     return disp->GetQueryPoolResults(device, queryPool, startQuery, queryCount, pDataSize, pData, flags);
-}
-
-LOADER_EXPORT VkResult VKAPI vkGetFormatInfo(VkDevice device, VkFormat format, VkFormatInfoType infoType, size_t* pDataSize, void* pData)
-{
-    const VkLayerDispatchTable *disp;
-
-    disp = loader_get_dispatch(device);
-
-    return disp->GetFormatInfo(device, format, infoType, pDataSize, pData);
 }
 
 LOADER_EXPORT VkResult VKAPI vkCreateBuffer(VkDevice device, const VkBufferCreateInfo* pCreateInfo, VkBuffer* pBuffer)

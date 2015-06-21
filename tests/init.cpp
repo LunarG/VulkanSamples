@@ -350,7 +350,6 @@ void VkTest::CreateImageTest()
     VkResult err;
     VkImage image;
     uint32_t w, h, mipCount;
-    size_t size;
     VkFormat fmt;
     VkFormatProperties image_fmt;
     size_t data_size;
@@ -379,10 +378,7 @@ void VkTest::CreateImageTest()
      * fixed structure.
      */
 
-    size = sizeof(image_fmt);
-    err = vkGetFormatInfo(device(), fmt,
-                           VK_FORMAT_INFO_TYPE_PROPERTIES,
-                           &size, &image_fmt);
+    err = vkGetPhysicalDeviceFormatInfo(objs[m_device_id], fmt, &image_fmt);
     ASSERT_VK_SUCCESS(err);
 
 //    typedef struct VkImageCreateInfo_

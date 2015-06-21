@@ -46,6 +46,7 @@
 typedef struct _layer_data {
     debug_report_data *report_data;
     VkDbgMsgCallback logging_callback;
+    VkPhysicalDevice physicalDevice;
 } layer_data;
 
 static std::unordered_map<void*, layer_data*> layer_data_map;
@@ -177,6 +178,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateDevice(VkPhysicalDevice physicalDevice, c
         layer_data *instance_data = get_my_data_ptr(get_dispatch_key(physicalDevice), layer_data_map);
         layer_data *device_data = get_my_data_ptr(get_dispatch_key(*pDevice), layer_data_map);
         device_data->report_data = layer_debug_report_create_device(instance_data->report_data, *pDevice);
+        device_data->physicalDevice = physicalDevice;
     }
 
     return result;
@@ -293,10 +295,10 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateImage(VkDevice device, const VkImageCreat
 {
     if(pCreateInfo->format != VK_FORMAT_UNDEFINED)
     {
+        layer_data *device_data = (layer_data *) mdd(device);
         VkFormatProperties properties;
-        size_t size = sizeof(properties);
-        VkResult result = get_dispatch_table(image_device_table_map, device)->GetFormatInfo(device, pCreateInfo->format,
-            VK_FORMAT_INFO_TYPE_PROPERTIES, &size, &properties);
+        VkResult result = get_dispatch_table(image_instance_table_map, device_data->physicalDevice)->GetPhysicalDeviceFormatInfo(
+                device_data->physicalDevice, pCreateInfo->format, &properties);
         if(result != VK_SUCCESS)
         {
             char const str[] = "vkCreateImage parameter, VkFormat pCreateInfo->format, cannot be validated";
@@ -321,10 +323,10 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateRenderPass(VkDevice device, const VkRende
     {
         if(pCreateInfo->pColorFormats[i] != VK_FORMAT_UNDEFINED)
         {
+            layer_data *device_data = (layer_data *) mdd(device);
             VkFormatProperties properties;
-            size_t size = sizeof(properties);
-            VkResult result = get_dispatch_table(image_device_table_map, device)->GetFormatInfo(device, pCreateInfo->pColorFormats[i],
-                VK_FORMAT_INFO_TYPE_PROPERTIES, &size, &properties);
+            VkResult result = get_dispatch_table(image_instance_table_map, device_data->physicalDevice)->GetPhysicalDeviceFormatInfo(
+                    device_data->physicalDevice, pCreateInfo->pColorFormats[i], &properties);
             if(result != VK_SUCCESS)
             {
                 std::stringstream ss;
@@ -384,10 +386,10 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateRenderPass(VkDevice device, const VkRende
 
     if(pCreateInfo->depthStencilFormat != VK_FORMAT_UNDEFINED)
     {
+        layer_data *device_data = (layer_data *) mdd(device);
         VkFormatProperties properties;
-        size_t size = sizeof(properties);
-        VkResult result = get_dispatch_table(image_device_table_map, device)->GetFormatInfo(device, pCreateInfo->depthStencilFormat,
-            VK_FORMAT_INFO_TYPE_PROPERTIES, &size, &properties);
+        VkResult result = get_dispatch_table(image_instance_table_map, device_data->physicalDevice)->GetPhysicalDeviceFormatInfo(
+                device_data->physicalDevice, pCreateInfo->depthStencilFormat, &properties);
         if(result != VK_SUCCESS)
         {
             char const str[] = "vkCreateRenderPass parameter, VkFormat pCreateInfo->depthStencilFormat, cannot be validated";

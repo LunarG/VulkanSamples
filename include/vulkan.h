@@ -554,14 +554,6 @@ typedef enum VkExtensionInfoType_
     VK_ENUM_RANGE(EXTENSION_INFO_TYPE, COUNT, PROPERTIES)
 } VkExtensionInfoType;
 
-typedef enum VkFormatInfoType_
-{
-    // Info type for vkGetFormatInfo()
-    VK_FORMAT_INFO_TYPE_PROPERTIES                          = 0x00000000,
-
-    VK_ENUM_RANGE(FORMAT_INFO_TYPE, PROPERTIES, PROPERTIES)
-} VkFormatInfoType;
-
 typedef enum VkSubresourceInfoType_
 {
     // Info type for vkGetImageSubresourceInfo()
@@ -1223,6 +1215,49 @@ typedef struct VkPhysicalDeviceProperties_
     uint32_t                                    maxColorAttachments;            // at least 8?
 } VkPhysicalDeviceProperties;
 
+typedef struct VkPhysicalDeviceFeatures_
+{
+    // GFL_32 features
+    bool32_t                                    supportsGeometryShader;
+    bool32_t                                    supportsTessellationShader;
+    bool32_t                                    supportsSampleRateShading;
+    bool32_t                                    supportsFragmentSideEffects;
+    bool32_t                                    supportsConstantStorageBufferArrayIdexing;
+    bool32_t                                    supportsConstantStorageImageArrayIndexing;
+    bool32_t                                    supportsConstantUniformBufferArrayIndexing;
+    bool32_t                                    supportsDynamicSampledImageArrayIndexing;
+    // GFL_45 features
+    bool32_t                                    supportsBlendSrc1;
+    bool32_t                                    supportsClipAndCullDistance;
+    bool32_t                                    supportsLogicOp;
+    bool32_t                                    supportsInstancedDrawIndirect;
+    bool32_t                                    supportsDepthClip;
+    bool32_t                                    supportsFillMode;
+    bool32_t                                    supportsStorageImageExtendedFormats;
+    bool32_t                                    supportsStorageImageMultisample;
+    bool32_t                                    supportsPipelineStatisticsQuery;
+    bool32_t                                    supportsVTGSideEffects;
+    bool32_t                                    supportsDynamicUniformBufferArrayIndexing;
+    // optional features
+    bool32_t                                    supportsDynamicStorageBufferArrayIndexing;
+    bool32_t                                    supportsDynamicStorageImageArrayIndexing;
+    bool32_t                                    supportsShaderFloat64;
+    bool32_t                                    supportsDepthBounds;
+    bool32_t                                    supportsWideLines;
+    bool32_t                                    supportsTextureCompressionETC2;
+    bool32_t                                    supportsTextureCompressionASTC_LDR;
+    bool32_t                                    supportsTextureCompressionBC;
+} VkPhysicalDeviceFeatures;
+
+typedef struct VkPhysicalDeviceLimits_
+{
+    uint32_t           maxImageDimensions;
+    uint32_t           maxImageDepth;
+    uint32_t           maxImageArrayLayers;
+    // <lots more>
+} VkPhysicalDeviceLimits;
+
+
 typedef struct VkPhysicalDevicePerformance_
 {
     float                                       maxDeviceClock;
@@ -1282,6 +1317,7 @@ typedef struct VkDeviceCreateInfo_
     const VkDeviceQueueCreateInfo*              pRequestedQueues;
     uint32_t                                    extensionCount;
     const VkExtensionProperties*                pEnabledExtensions;         // Indicate extensions to enable by index value
+    const VkPhysicalDeviceFeatures*             pEnabledFeatures;
     VkDeviceCreateFlags                         flags;                      // Device creation flags
 } VkDeviceCreateInfo;
 
@@ -2009,6 +2045,9 @@ typedef VkResult (VKAPI *PFN_vkCreateInstance)(const VkInstanceCreateInfo* pCrea
 typedef VkResult (VKAPI *PFN_vkDestroyInstance)(VkInstance instance);
 typedef VkResult (VKAPI *PFN_vkEnumeratePhysicalDevices)(VkInstance instance, uint32_t* pPhysicalDeviceCount, VkPhysicalDevice* pPhysicalDevices);
 typedef VkResult (VKAPI *PFN_vkGetPhysicalDeviceInfo)(VkPhysicalDevice physicalDevice, VkPhysicalDeviceInfoType infoType, size_t* pDataSize, void* pData);
+typedef VkResult (VKAPI *PFN_vkGetPhysicalDeviceFeatures)(VkPhysicalDevice physicalDevice, VkPhysicalDeviceFeatures* pFeatures);
+typedef VkResult (VKAPI *PFN_vkGetPhysicalDeviceFormatInfo)(VkPhysicalDevice physicalDevice, VkFormat format, VkFormatProperties *pFormatInfo);
+typedef VkResult (VKAPI *PFN_vkGetPhysicalDeviceLimits)(VkPhysicalDevice physicalDevice, VkPhysicalDeviceLimits* pLimits);
 typedef void *   (VKAPI *PFN_vkGetInstanceProcAddr)(VkInstance instance, const char * pName);
 typedef void *   (VKAPI *PFN_vkGetDeviceProcAddr)(VkDevice device, const char * pName);
 typedef VkResult (VKAPI *PFN_vkCreateDevice)(VkPhysicalDevice physicalDevice, const VkDeviceCreateInfo* pCreateInfo, VkDevice* pDevice);
@@ -2043,7 +2082,6 @@ typedef VkResult (VKAPI *PFN_vkSetEvent)(VkDevice device, VkEvent event);
 typedef VkResult (VKAPI *PFN_vkResetEvent)(VkDevice device, VkEvent event);
 typedef VkResult (VKAPI *PFN_vkCreateQueryPool)(VkDevice device, const VkQueryPoolCreateInfo* pCreateInfo, VkQueryPool* pQueryPool);
 typedef VkResult (VKAPI *PFN_vkGetQueryPoolResults)(VkDevice device, VkQueryPool queryPool, uint32_t startQuery, uint32_t queryCount, size_t* pDataSize, void* pData, VkQueryResultFlags flags);
-typedef VkResult (VKAPI *PFN_vkGetFormatInfo)(VkDevice device, VkFormat format, VkFormatInfoType infoType, size_t* pDataSize, void* pData);
 typedef VkResult (VKAPI *PFN_vkCreateBuffer)(VkDevice device, const VkBufferCreateInfo* pCreateInfo, VkBuffer* pBuffer);
 typedef VkResult (VKAPI *PFN_vkCreateBufferView)(VkDevice device, const VkBufferViewCreateInfo* pCreateInfo, VkBufferView* pView);
 typedef VkResult (VKAPI *PFN_vkCreateImage)(VkDevice device, const VkImageCreateInfo* pCreateInfo, VkImage* pImage);
@@ -2132,6 +2170,20 @@ VkResult VKAPI vkGetPhysicalDeviceInfo(
     VkPhysicalDeviceInfoType                    infoType,
     size_t*                                     pDataSize,
     void*                                       pData);
+
+VkResult VKAPI vkGetPhysicalDeviceFeatures(
+    VkPhysicalDevice                            physicalDevice,
+    VkPhysicalDeviceFeatures*                   pFeatures);
+
+VkResult VKAPI vkGetPhysicalDeviceFormatInfo(
+    VkPhysicalDevice                            physicalDevice,
+    VkFormat                                    format,
+    VkFormatProperties*                         pFormatInfo);
+
+VkResult VKAPI vkGetPhysicalDeviceLimits(
+    VkPhysicalDevice                            physicalDevice,
+    VkPhysicalDeviceLimits*                     pLimits);
+
 
 void * VKAPI vkGetInstanceProcAddr(
     VkInstance                                  instance,
@@ -2329,15 +2381,6 @@ VkResult VKAPI vkGetQueryPoolResults(
     size_t*                                     pDataSize,
     void*                                       pData,
     VkQueryResultFlags                          flags);
-
-// Format capabilities
-
-VkResult VKAPI vkGetFormatInfo(
-    VkDevice                                    device,
-    VkFormat                                    format,
-    VkFormatInfoType                            infoType,
-    size_t*                                     pDataSize,
-    void*                                       pData);
 
 // Buffer functions
 

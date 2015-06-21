@@ -88,6 +88,9 @@ const VkLayerInstanceDispatchTable instance_disp = {
     .DestroyInstance = loader_DestroyInstance,
     .EnumeratePhysicalDevices = loader_EnumeratePhysicalDevices,
     .GetPhysicalDeviceInfo = loader_GetPhysicalDeviceInfo,
+    .GetPhysicalDeviceFeatures = loader_GetPhysicalDeviceFeatures,
+    .GetPhysicalDeviceFormatInfo = loader_GetPhysicalDeviceFormatInfo,
+    .GetPhysicalDeviceLimits = loader_GetPhysicalDeviceLimits,
     .CreateDevice = loader_CreateDevice,
     .GetPhysicalDeviceExtensionInfo = loader_GetPhysicalDeviceExtensionInfo,
     .DbgCreateMsgCallback = loader_DbgCreateMsgCallback,
@@ -718,6 +721,9 @@ static void loader_icd_init_entrys(struct loader_icd *icd,
     LOOKUP(DestroyInstance);
     LOOKUP(EnumeratePhysicalDevices);
     LOOKUP(GetPhysicalDeviceInfo);
+    LOOKUP(GetPhysicalDeviceFeatures);
+    LOOKUP(GetPhysicalDeviceFormatInfo);
+    LOOKUP(GetPhysicalDeviceLimits);
     LOOKUP(CreateDevice);
     LOOKUP(GetPhysicalDeviceExtensionInfo);
     LOOKUP(DbgCreateMsgCallback);
@@ -1695,6 +1701,49 @@ VkResult loader_GetPhysicalDeviceInfo(
 
     if (icd->GetPhysicalDeviceInfo)
         res = icd->GetPhysicalDeviceInfo(gpu, infoType, pDataSize, pData);
+
+    return res;
+}
+
+VkResult loader_GetPhysicalDeviceFeatures(
+        VkPhysicalDevice                        physicalDevice,
+        VkPhysicalDeviceFeatures*               pFeatures)
+{
+    uint32_t gpu_index;
+    struct loader_icd *icd = loader_get_icd(physicalDevice, &gpu_index);
+    VkResult res = VK_ERROR_INITIALIZATION_FAILED;
+
+    if (icd->GetPhysicalDeviceFeatures)
+        res = icd->GetPhysicalDeviceFeatures(physicalDevice, pFeatures);
+
+    return res;
+}
+
+VkResult loader_GetPhysicalDeviceFormatInfo(
+        VkPhysicalDevice                        physicalDevice,
+        VkFormat                                format,
+        VkFormatProperties*                     pFormatInfo)
+{
+    uint32_t gpu_index;
+    struct loader_icd *icd = loader_get_icd(physicalDevice, &gpu_index);
+    VkResult res = VK_ERROR_INITIALIZATION_FAILED;
+
+    if (icd->GetPhysicalDeviceFormatInfo)
+        res = icd->GetPhysicalDeviceFormatInfo(physicalDevice, format, pFormatInfo);
+
+    return res;
+}
+
+VkResult loader_GetPhysicalDeviceLimits(
+        VkPhysicalDevice                        physicalDevice,
+        VkPhysicalDeviceLimits*                 pLimits)
+{
+    uint32_t gpu_index;
+    struct loader_icd *icd = loader_get_icd(physicalDevice, &gpu_index);
+    VkResult res = VK_ERROR_INITIALIZATION_FAILED;
+
+    if (icd->GetPhysicalDeviceLimits)
+        res = icd->GetPhysicalDeviceLimits(physicalDevice, pLimits);
 
     return res;
 }
