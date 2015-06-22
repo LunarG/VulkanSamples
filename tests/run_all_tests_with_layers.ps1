@@ -11,6 +11,7 @@ echo $dPath
 Set-Item -path env:Path -value ($env:Path + ";..\loader\$dPath")
 Set-Item -path env:Path -value ($env:Path + ";gtest-1.7.0\$dPath")
 $env:VK_LAYER_NAMES = "Validation"
+$env:VK_LAYERS_PATH = "..\layers\$dPath"
 
 $SETTINGS_NAME="vk_layer_settings.txt"
 $OUTPUT_LEVEL="VK_DBG_LAYER_LEVEL_ERROR"
