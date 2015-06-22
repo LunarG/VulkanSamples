@@ -913,7 +913,6 @@ typedef enum VkResult_
     VK_ERROR_BUILDING_COMMAND_BUFFER                        = -(0x0000001E),
     VK_ERROR_MEMORY_NOT_BOUND                               = -(0x0000001F),
     VK_ERROR_INCOMPATIBLE_QUEUE                             = -(0x00000020),
-    VK_ERROR_MISSING_EXTENSION_DEPENDENCY                   = -(0x00000021),
 
     VK_MAX_ENUM(RESULT)
 } VkResult;
