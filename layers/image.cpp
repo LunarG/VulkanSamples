@@ -69,7 +69,7 @@ debug_report_data *mdd(VkObject object)
 debug_report_data *mid(VkInstance object)
 {
     dispatch_key key = get_dispatch_key(object);
-    layer_data *data = get_my_data_ptr(get_dispatch_key(object), layer_data_map);
+    layer_data *data = get_my_data_ptr(key, layer_data_map);
 #if DISPATCH_MAP_DEBUG
     fprintf(stderr, "MID: map: %p, object: %p, key: %p, data: %p\n", &layer_data_map, object, key, data);
 #endif
@@ -295,7 +295,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateImage(VkDevice device, const VkImageCreat
 {
     if(pCreateInfo->format != VK_FORMAT_UNDEFINED)
     {
-        layer_data *device_data = (layer_data *) mdd(device);
+        layer_data *device_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
         VkFormatProperties properties;
         VkResult result = get_dispatch_table(image_instance_table_map, device_data->physicalDevice)->GetPhysicalDeviceFormatInfo(
                 device_data->physicalDevice, pCreateInfo->format, &properties);
@@ -323,7 +323,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateRenderPass(VkDevice device, const VkRende
     {
         if(pCreateInfo->pColorFormats[i] != VK_FORMAT_UNDEFINED)
         {
-            layer_data *device_data = (layer_data *) mdd(device);
+            layer_data *device_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
             VkFormatProperties properties;
             VkResult result = get_dispatch_table(image_instance_table_map, device_data->physicalDevice)->GetPhysicalDeviceFormatInfo(
                     device_data->physicalDevice, pCreateInfo->pColorFormats[i], &properties);
@@ -386,7 +386,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateRenderPass(VkDevice device, const VkRende
 
     if(pCreateInfo->depthStencilFormat != VK_FORMAT_UNDEFINED)
     {
-        layer_data *device_data = (layer_data *) mdd(device);
+        layer_data *device_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
         VkFormatProperties properties;
         VkResult result = get_dispatch_table(image_instance_table_map, device_data->physicalDevice)->GetPhysicalDeviceFormatInfo(
                 device_data->physicalDevice, pCreateInfo->depthStencilFormat, &properties);
