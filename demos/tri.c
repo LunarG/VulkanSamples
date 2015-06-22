@@ -79,6 +79,15 @@
    } while (0)
 #endif // _WIN32
 
+#define GET_DEVICE_PROC_ADDR(dev, entrypoint)                           \
+{                                                                       \
+    demo->fp##entrypoint = vkGetDeviceProcAddr(dev, "vk"#entrypoint);   \
+    if (demo->fp##entrypoint == NULL) {                                 \
+        ERR_EXIT("vkGetDeviceProcAddr failed to find vk"#entrypoint,    \
+                 "vkGetDeviceProcAddr Failure");                        \
+    }                                                                   \
+}
+
 struct texture_object {
     VkSampler sampler;
 
@@ -1430,29 +1439,18 @@ static void demo_init_vk(struct demo *demo)
                  "vkCreateInstance Failure");
     }
 
-    demo->fpCreateSwapChainWSI = vkGetDeviceProcAddr(demo->device, "vkCreateSwapChainWSI");
-    if (demo->fpCreateSwapChainWSI == NULL)
-        ERR_EXIT("vkGetDeviceProcAddr failed to find vkCreateSwapChainWSI",
-                                 "vkGetDeviceProcAddr Failure");
-    demo->fpDestroySwapChainWSI = vkGetDeviceProcAddr(demo->device, "vkDestroySwapChainWSI");
-    if (demo->fpDestroySwapChainWSI == NULL)
-        ERR_EXIT("vkGetDeviceProcAddr failed to find vkDestroySwapChainWSI",
-                                 "vkGetDeviceProcAddr Failure");
-    demo->fpGetSwapChainInfoWSI = vkGetDeviceProcAddr(demo->device, "vkGetSwapChainInfoWSI");
-    if (demo->fpGetSwapChainInfoWSI == NULL)
-        ERR_EXIT("vkGetDeviceProcAddr failed to find vkGetSwapChainInfoWSI",
-                                 "vkGetDeviceProcAddr Failure");
-    demo->fpQueuePresentWSI = vkGetDeviceProcAddr(demo->device, "vkQueuePresentWSI");
-    if (demo->fpQueuePresentWSI == NULL)
-        ERR_EXIT("vkGetDeviceProcAddr failed to find vkQueuePresentWSI",
-                                 "vkGetDeviceProcAddr Failure");
-
     gpu_count = 1;
     err = vkEnumeratePhysicalDevices(demo->inst, &gpu_count, &demo->gpu);
     assert(!err && gpu_count == 1);
 
     err = vkCreateDevice(demo->gpu, &device, &demo->device);
     assert(!err);
+
+    GET_DEVICE_PROC_ADDR(demo->device, CreateSwapChainWSI);
+    GET_DEVICE_PROC_ADDR(demo->device, CreateSwapChainWSI);
+    GET_DEVICE_PROC_ADDR(demo->device, DestroySwapChainWSI);
+    GET_DEVICE_PROC_ADDR(demo->device, GetSwapChainInfoWSI);
+    GET_DEVICE_PROC_ADDR(demo->device, QueuePresentWSI);
 
     err = vkGetPhysicalDeviceInfo(demo->gpu, VK_PHYSICAL_DEVICE_INFO_TYPE_PROPERTIES,
                         &data_size, NULL);
