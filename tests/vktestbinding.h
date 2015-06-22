@@ -374,7 +374,9 @@ public:
     // vkCreateBuffer()
     void init(const Device &dev, const VkBufferCreateInfo &info);
     void init(const Device &dev, VkDeviceSize size) { init(dev, create_info(size, 0)); }
-    void init(const Device &dev, VkDeviceSize size, VkMemoryPropertyFlags &reqs) { init(dev, create_info(size, VK_BUFFER_USAGE_TRANSFER_SOURCE_BIT), reqs); }
+    void init_as_src(const Device &dev, VkDeviceSize size, VkMemoryPropertyFlags &reqs) { init(dev, create_info(size, VK_BUFFER_USAGE_TRANSFER_SOURCE_BIT), reqs); }
+    void init_as_dst(const Device &dev, VkDeviceSize size, VkMemoryPropertyFlags &reqs) { init(dev, create_info(size, VK_BUFFER_USAGE_TRANSFER_DESTINATION_BIT), reqs); }
+    void init_as_src_and_dst(const Device &dev, VkDeviceSize size, VkMemoryPropertyFlags &reqs) { init(dev, create_info(size, VK_BUFFER_USAGE_TRANSFER_SOURCE_BIT | VK_BUFFER_USAGE_TRANSFER_DESTINATION_BIT), reqs); }
     void init(const Device &dev, const VkBufferCreateInfo &info, VkMemoryPropertyFlags &reqs);
     void init_no_mem(const Device &dev, const VkBufferCreateInfo &info);
 

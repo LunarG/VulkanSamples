@@ -861,7 +861,7 @@ VkConstantBufferObj::VkConstantBufferObj(VkDeviceObj *device, int constantCount,
 
     VkMemoryPropertyFlags reqs = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
     const size_t allocationSize = constantCount * constantSize;
-    init(*m_device, allocationSize, reqs);
+    init_as_src_and_dst(*m_device, allocationSize, reqs);
 
     void *pData = map();
     memcpy(pData, data, allocationSize);
@@ -976,7 +976,7 @@ void VkIndexBufferObj::CreateAndInitBuffer(int numIndexes, VkIndexType indexType
 
     const size_t allocationSize = numIndexes * m_stride;
     VkMemoryPropertyFlags reqs = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
-    init(*m_device, allocationSize, reqs);
+    init_as_src_and_dst(*m_device, allocationSize, reqs);
 
     void *pData = map();
     memcpy(pData, data, allocationSize);

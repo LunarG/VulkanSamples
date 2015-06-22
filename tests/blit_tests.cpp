@@ -545,7 +545,7 @@ TEST_F(VkCmdFillBufferTest, Basic)
     vk_testing::Buffer buf;
     VkMemoryPropertyFlags reqs = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
 
-    buf.init(dev_, 20, reqs);
+    buf.init_as_dst(dev_, 20, reqs);
 
     cmd_.begin();
     vkCmdFillBuffer(cmd_.obj(), buf.obj(), 0, 4, 0x11111111);
@@ -569,7 +569,7 @@ TEST_F(VkCmdFillBufferTest, Large)
     vk_testing::Buffer buf;
     VkMemoryPropertyFlags reqs = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
 
-    buf.init(dev_, size, reqs);
+    buf.init_as_dst(dev_, size, reqs);
 
     cmd_.begin();
     vkCmdFillBuffer(cmd_.obj(), buf.obj(), 0, size / 2, 0x11111111);
@@ -592,7 +592,7 @@ TEST_F(VkCmdFillBufferTest, Overlap)
     vk_testing::Buffer buf;
     VkMemoryPropertyFlags reqs = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
 
-    buf.init(dev_, 64, reqs);
+    buf.init_as_dst(dev_, 64, reqs);
 
     cmd_.begin();
     vkCmdFillBuffer(cmd_.obj(), buf.obj(), 0, 48, 0x11111111);
@@ -618,7 +618,8 @@ TEST_F(VkCmdFillBufferTest, MultiAlignments)
 
     cmd_.begin();
     for (int i = 0; i < ARRAY_SIZE(bufs); i++) {
-        bufs[i].init(dev_, size, reqs);
+
+        bufs[i].init_as_dst(dev_, size, reqs);
         vkCmdFillBuffer(cmd_.obj(), bufs[i].obj(), 0, size, 0x11111111);
         size <<= 1;
     }
@@ -646,12 +647,12 @@ TEST_F(VkCmdCopyBufferTest, Basic)
     vk_testing::Buffer src, dst;
     VkMemoryPropertyFlags reqs = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
 
-    src.init(dev_, 4, reqs);
+    src.init_as_src(dev_, 4, reqs);
     uint32_t *data = static_cast<uint32_t *>(src.map());
     data[0] = 0x11111111;
     src.unmap();
 
-    dst.init(dev_, 4, reqs);
+    dst.init_as_dst(dev_, 4, reqs);
 
     cmd_.begin();
     VkBufferCopy region = {};
@@ -672,14 +673,14 @@ TEST_F(VkCmdCopyBufferTest, Large)
     vk_testing::Buffer src, dst;
     VkMemoryPropertyFlags reqs = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
 
-    src.init(dev_, size, reqs);
+    src.init_as_src(dev_, size, reqs);
     uint32_t *data = static_cast<uint32_t *>(src.map());
     VkDeviceSize offset;
     for (offset = 0; offset < size; offset += 4)
         data[offset / 4] = offset;
     src.unmap();
 
-    dst.init(dev_, size, reqs);
+    dst.init_as_dst(dev_, size, reqs);
 
     cmd_.begin();
     VkBufferCopy region = {};
@@ -716,13 +717,13 @@ TEST_F(VkCmdCopyBufferTest, MultiAlignments)
     vk_testing::Buffer src, dst;
     VkMemoryPropertyFlags reqs = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
 
-    src.init(dev_, 256, reqs);
+    src.init_as_src(dev_, 256, reqs);
     uint8_t *data = static_cast<uint8_t *>(src.map());
     for (int i = 0; i < 256; i++)
         data[i] = i;
     src.unmap();
 
-    dst.init(dev_, 1024, reqs);
+    dst.init_as_dst(dev_, 1024, reqs);
 
     cmd_.begin();
     vkCmdCopyBuffer(cmd_.obj(), src.obj(), dst.obj(), ARRAY_SIZE(regions), regions);
@@ -790,7 +791,7 @@ TEST_F(VkCmdCopyBufferTest, RAWHazard)
     ASSERT_VK_SUCCESS(err);
 
     for (int i = 0; i < ARRAY_SIZE(bufs); i++) {
-        bufs[i].init(dev_, 4, reqs);
+        bufs[i].init_as_src_and_dst(dev_, 4, reqs);
 
         uint32_t *data = static_cast<uint32_t *>(bufs[i].map());
         data[0] = 0x22222222 * (i + 1);
@@ -889,7 +890,7 @@ protected:
         vk_testing::Buffer in_buf;
         VkMemoryPropertyFlags reqs = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
 
-        in_buf.init(dev_, checker.buffer_size(), reqs);
+        in_buf.init_as_src(dev_, checker.buffer_size(), reqs);
         checker.fill(in_buf);
 
         // copy in and tile
@@ -913,7 +914,7 @@ protected:
 
         vk_testing::Buffer out_buf;
         VkMemoryPropertyFlags reqs = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
-        out_buf.init(dev_, checker.buffer_size(), reqs);
+        out_buf.init_as_dst(dev_, checker.buffer_size(), reqs);
 
         // copy out and linearize
         cmd_.begin();
@@ -950,7 +951,7 @@ protected:
         VkMemoryPropertyFlags image_reqs =
             (img_info.tiling == VK_IMAGE_TILING_LINEAR)?VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT:0;
 
-        buf.init(dev_, checker.buffer_size(), buffer_reqs);
+        buf.init_as_src(dev_, checker.buffer_size(), buffer_reqs);
         checker.fill(buf);
 
         img.init(dev_, img_info, image_reqs);
@@ -1023,7 +1024,7 @@ protected:
         img.init(dev_, img_info, image_reqs);
         fill_src(img, checker);
 
-        buf.init(dev_, checker.buffer_size(), buffer_reqs);
+        buf.init_as_dst(dev_, checker.buffer_size(), buffer_reqs);
 
         cmd_.begin();
         vkCmdCopyImageToBuffer(cmd_.obj(),
