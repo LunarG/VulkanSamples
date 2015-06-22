@@ -291,7 +291,6 @@ static void demo_draw_build_cmd(struct demo *demo)
         .useRawValue = false,
     };
     const float clear_depth = 0.9f;
-    VkImageSubresourceRange clear_range;
     VkCmdBufferBeginInfo cmd_buf_info = {
         .sType = VK_STRUCTURE_TYPE_CMD_BUFFER_BEGIN_INFO,
         .pNext = NULL,
@@ -299,7 +298,7 @@ static void demo_draw_build_cmd(struct demo *demo)
             VK_CMD_BUFFER_OPTIMIZE_ONE_TIME_SUBMIT_BIT,
     };
     VkResult U_ASSERT_ONLY err;
-    VkAttachmentLoadOp load_op = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+    VkAttachmentLoadOp load_op = VK_ATTACHMENT_LOAD_OP_CLEAR;
     VkAttachmentStoreOp store_op = VK_ATTACHMENT_STORE_OP_DONT_CARE;
     const VkFramebufferCreateInfo fb_info = {
          .sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
@@ -331,7 +330,7 @@ static void demo_draw_build_cmd(struct demo *demo)
     rp_info.pColorLoadClearValues = &clear_color;
     rp_info.depthStencilFormat = VK_FORMAT_D16_UNORM;
     rp_info.depthStencilLayout = depth_stencil.layout;
-    rp_info.depthLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+    rp_info.depthLoadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
     rp_info.depthLoadClearValue = clear_depth;
     rp_info.depthStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
     rp_info.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
@@ -359,20 +358,7 @@ static void demo_draw_build_cmd(struct demo *demo)
     VkDeviceSize offsets[1] = {0};
     vkCmdBindVertexBuffers(demo->draw_cmd, VERTEX_BUFFER_BIND_ID, 1, &demo->vertices.buf, offsets);
 
-    clear_range.aspect = VK_IMAGE_ASPECT_COLOR;
-    clear_range.baseMipLevel = 0;
-    clear_range.mipLevels = 1;
-    clear_range.baseArraySlice = 0;
-    clear_range.arraySize = 1;
-    vkCmdClearColorImage(demo->draw_cmd,
-            demo->buffers[demo->current_buffer].image,
-            VK_IMAGE_LAYOUT_TRANSFER_DESTINATION_OPTIMAL,
-            &clear_color, 1, &clear_range);
-
-    clear_range.aspect = VK_IMAGE_ASPECT_DEPTH;
-    vkCmdClearDepthStencilImage(demo->draw_cmd,
-            demo->depth.image, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
-            clear_depth, 0, 1, &clear_range);
+    vkCmdBeginRenderPass(demo->draw_cmd, &rp_begin);
 
     vkCmdDraw(demo->draw_cmd, 0, 3, 0, 1);
     vkCmdEndRenderPass(demo->draw_cmd);
