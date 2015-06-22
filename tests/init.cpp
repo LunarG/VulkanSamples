@@ -223,13 +223,13 @@ TEST_F(VkTest, Event) {
     // TODO: Test actual synchronization with command buffer event.
 
     // All done with event memory, clean up
+    err = vkDestroyObject(device(), VK_OBJECT_TYPE_EVENT, event);
+    ASSERT_VK_SUCCESS(err);
+
     if (mem_req.size) {
         err = vkFreeMemory(device(), event_mem);
         ASSERT_VK_SUCCESS(err);
     }
-
-    err = vkDestroyObject(device(), VK_OBJECT_TYPE_EVENT, event);
-    ASSERT_VK_SUCCESS(err);
 }
 
 #define MAX_QUERY_SLOTS 10
@@ -321,14 +321,14 @@ TEST_F(VkTest, Query) {
 
     }
 
+    err = vkDestroyObject(device(), VK_OBJECT_TYPE_QUERY_POOL, query_pool);
+    ASSERT_VK_SUCCESS(err);
+
     if (mem_req.size) {
         // All done with QueryPool memory, clean up
         err = vkFreeMemory(device(), query_mem);
         ASSERT_VK_SUCCESS(err);
     }
-
-    err = vkDestroyObject(device(), VK_OBJECT_TYPE_QUERY_POOL, query_pool);
-    ASSERT_VK_SUCCESS(err);
 }
 
 void getQueue(vk_testing::Device *device, uint32_t queue_node_index, const char *qname)
@@ -546,12 +546,12 @@ void VkTest::CreateImageTest()
     // TODO: Test image memory.
 
     // All done with image memory, clean up
+    ASSERT_VK_SUCCESS(vkDestroyObject(device(), VK_OBJECT_TYPE_IMAGE_VIEW, view));
+    ASSERT_VK_SUCCESS(vkDestroyObject(device(), VK_OBJECT_TYPE_IMAGE, image));
+
     if (mem_req.size) {
         ASSERT_VK_SUCCESS(vkFreeMemory(device(), image_mem));
     }
-
-    ASSERT_VK_SUCCESS(vkDestroyObject(device(), VK_OBJECT_TYPE_IMAGE_VIEW, view));
-    ASSERT_VK_SUCCESS(vkDestroyObject(device(), VK_OBJECT_TYPE_IMAGE, image));
 }
 
 TEST_F(VkTest, CreateImage) {
