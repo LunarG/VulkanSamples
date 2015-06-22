@@ -1430,22 +1430,22 @@ static void demo_init_vk(struct demo *demo)
                  "vkCreateInstance Failure");
     }
 
-    demo->fpCreateSwapChainWSI = vkGetInstanceProcAddr(demo->inst, "vkCreateSwapChainWSI");
+    demo->fpCreateSwapChainWSI = vkGetDeviceProcAddr(demo->device, "vkCreateSwapChainWSI");
     if (demo->fpCreateSwapChainWSI == NULL)
-        ERR_EXIT("vkGetInstanceProcAddr failed to find vkCreateSwapChainWSI",
-                                 "vkGetInstanceProcAddr Failure");
-    demo->fpDestroySwapChainWSI = vkGetInstanceProcAddr(demo->inst, "vkDestroySwapChainWSI");
+        ERR_EXIT("vkGetDeviceProcAddr failed to find vkCreateSwapChainWSI",
+                                 "vkGetDeviceProcAddr Failure");
+    demo->fpDestroySwapChainWSI = vkGetDeviceProcAddr(demo->device, "vkDestroySwapChainWSI");
     if (demo->fpDestroySwapChainWSI == NULL)
-        ERR_EXIT("vkGetInstanceProcAddr failed to find vkDestroySwapChainWSI",
-                                 "vkGetInstanceProcAddr Failure");
-    demo->fpGetSwapChainInfoWSI = vkGetInstanceProcAddr(demo->inst, "vkGetSwapChainInfoWSI");
+        ERR_EXIT("vkGetDeviceProcAddr failed to find vkDestroySwapChainWSI",
+                                 "vkGetDeviceProcAddr Failure");
+    demo->fpGetSwapChainInfoWSI = vkGetDeviceProcAddr(demo->device, "vkGetSwapChainInfoWSI");
     if (demo->fpGetSwapChainInfoWSI == NULL)
-        ERR_EXIT("vkGetInstanceProcAddr failed to find vkGetSwapChainInfoWSI",
-                                 "vkGetInstanceProcAddr Failure");
-    demo->fpQueuePresentWSI = vkGetInstanceProcAddr(demo->inst, "vkQueuePresentWSI");
+        ERR_EXIT("vkGetDeviceProcAddr failed to find vkGetSwapChainInfoWSI",
+                                 "vkGetDeviceProcAddr Failure");
+    demo->fpQueuePresentWSI = vkGetDeviceProcAddr(demo->device, "vkQueuePresentWSI");
     if (demo->fpQueuePresentWSI == NULL)
-        ERR_EXIT("vkGetInstanceProcAddr failed to find vkQueuePresentWSI",
-                                 "vkGetInstanceProcAddr Failure");
+        ERR_EXIT("vkGetDeviceProcAddr failed to find vkQueuePresentWSI",
+                                 "vkGetDeviceProcAddr Failure");
 
     gpu_count = 1;
     err = vkEnumeratePhysicalDevices(demo->inst, &gpu_count, &demo->gpu);
