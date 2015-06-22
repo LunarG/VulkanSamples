@@ -484,7 +484,6 @@ static void demo_draw_build_cmd(struct demo *demo, VkCmdBuffer cmd_buf)
         .useRawValue = false,
     };
     const float clear_depth = 1.0f;
-    VkImageSubresourceRange clear_range;
     VkCmdBufferBeginInfo cmd_buf_info = {
         .sType = VK_STRUCTURE_TYPE_CMD_BUFFER_BEGIN_INFO,
         .pNext = NULL,
@@ -524,7 +523,7 @@ static void demo_draw_build_cmd(struct demo *demo, VkCmdBuffer cmd_buf)
     rp_info.pColorLoadClearValues = &clear_color;
     rp_info.depthStencilFormat = VK_FORMAT_D16_UNORM;
     rp_info.depthStencilLayout = depth_stencil.layout;
-    rp_info.depthLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+    rp_info.depthLoadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
     rp_info.depthLoadClearValue = clear_depth;
     rp_info.depthStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
     rp_info.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
@@ -550,15 +549,7 @@ static void demo_draw_build_cmd(struct demo *demo, VkCmdBuffer cmd_buf)
     vkCmdBindDynamicStateObject(cmd_buf, VK_STATE_BIND_POINT_DEPTH_STENCIL,
                                      demo->depth_stencil);
 
-    clear_range.aspect = VK_IMAGE_ASPECT_DEPTH;
-    clear_range.baseMipLevel = 0;
-    clear_range.mipLevels = 1;
-    clear_range.baseArraySlice = 0;
-    clear_range.arraySize = 1;
-
-    vkCmdClearDepthStencilImage(cmd_buf, demo->depth.image,
-            VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
-            clear_depth, 0, 1, &clear_range);
+    vkCmdBeginRenderPass(cmd_buf, &rp_begin);
 
     vkCmdDraw(cmd_buf, 0, 12 * 3, 0, 1);
     vkCmdEndRenderPass(cmd_buf);
