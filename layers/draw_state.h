@@ -56,8 +56,8 @@ typedef enum _DRAW_STATE_ERROR
     DRAWSTATE_INDEX_BUFFER_NOT_BOUND,           // Draw submitted with no depth-stencil state object bound when depth write enabled
     DRAWSTATE_PIPELINE_LAYOUT_MISMATCH,         // Draw submitted PSO Pipeline layout that doesn't match layout from BindDescriptorSets
     DRAWSTATE_INVALID_RENDERPASS_CMD,           // Invalid cmd submitted while a RenderPass is active
-    DRAWSTATE_RENDER_CMD_WITHOUT_RENDERPASS,    // Rendering cmd submitted without an active RenderPass
     DRAWSTATE_INVALID_RENDERPASS,               // Use of a NULL or otherwise invalid RenderPass object
+    DRAWSTATE_PIPELINE_LAYOUT_MISMATCH,         // Draw submitted PSO Pipeline layout that doesn't match layout from BindDescriptorSets
     DRAWSTATE_INVALID_EXTENSION,
 } DRAW_STATE_ERROR;
 
