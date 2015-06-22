@@ -54,6 +54,7 @@ typedef enum _DRAW_STATE_ERROR
     DRAWSTATE_COLOR_BLEND_NOT_BOUND,            // Draw submitted with no color blend state object bound when color write enabled
     DRAWSTATE_DEPTH_STENCIL_NOT_BOUND,          // Draw submitted with no depth-stencil state object bound when depth write enabled
     DRAWSTATE_INDEX_BUFFER_NOT_BOUND,           // Draw submitted with no depth-stencil state object bound when depth write enabled
+    DRAWSTATE_PIPELINE_LAYOUT_MISMATCH,         // Draw submitted PSO Pipeline layout that doesn't match layout from BindDescriptorSets
     DRAWSTATE_INVALID_EXTENSION,
 } DRAW_STATE_ERROR;
 
@@ -252,6 +253,7 @@ typedef struct _GLOBAL_CB_NODE {
     uint32_t                     lastVtxBinding;
     DYNAMIC_STATE_NODE*          lastBoundDynamicState[VK_NUM_STATE_BIND_POINT];
     VkDescriptorSet              lastBoundDescriptorSet;
+    VkPipelineLayout             lastBoundPipelineLayout;
     VkRenderPass                 activeRenderPass;
     VkFramebuffer                framebuffer;
     vector<VkDescriptorSet>      boundDescriptorSets;

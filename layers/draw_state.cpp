@@ -361,36 +361,18 @@ static void updateCBTracking(VkCmdBuffer cb)
     loader_platform_thread_unlock_mutex(&globalLock);
 }
 // Check object status for selected flag state
-static bool32_t validate_status(VkCmdBuffer cb, CBStatusFlags enable_mask, CBStatusFlags status_mask, CBStatusFlags status_flag, VkFlags msg_flags, DRAW_STATE_ERROR error_code, const char* fail_msg)
+static bool32_t validate_status(GLOBAL_CB_NODE* pNode, CBStatusFlags enable_mask, CBStatusFlags status_mask, CBStatusFlags status_flag, VkFlags msg_flags, DRAW_STATE_ERROR error_code, const char* fail_msg)
 {
-    if (cmdBufferMap.find(cb) != cmdBufferMap.end()) {
-        GLOBAL_CB_NODE* pNode = cmdBufferMap[cb];
-        // If non-zero enable mask is present, check it against status but if enable_mask
-        //  is 0 then no enable required so we should always just check status
-        if ((!enable_mask) || (enable_mask & pNode->status)) {
-            if ((pNode->status & status_mask) != status_flag) {
-                log_msg(mdd(cb), msg_flags, VK_OBJECT_TYPE_COMMAND_BUFFER, cb, 0, error_code, "DS",
-                        "CB object 0x%" PRIxLEAST64 ": %s", reinterpret_cast<VkUintPtrLeast64>(cb), fail_msg);
-                return VK_FALSE;
-            }
+    // If non-zero enable mask is present, check it against status but if enable_mask
+    //  is 0 then no enable required so we should always just check status
+    if ((!enable_mask) || (enable_mask & pNode->status)) {
+        if ((pNode->status & status_mask) != status_flag) {
+            log_msg(mdd(pNode->cmdBuffer), msg_flags, VK_OBJECT_TYPE_COMMAND_BUFFER, pNode->cmdBuffer, 0, error_code, "DS",
+                    "CB object 0x%" PRIxLEAST64 ": %s", reinterpret_cast<VkUintPtrLeast64>(pNode->cmdBuffer), fail_msg);
+            return VK_FALSE;
         }
-        return VK_TRUE;
-    } else {
-        // If we do not find it print an error
-        log_msg(mdd(cb), msg_flags, (VkObjectType) 0, cb, 0, DRAWSTATE_INVALID_CMD_BUFFER, "DS",
-                "Unable to obtain status for non-existent CB object 0x%" PRIxLEAST64, reinterpret_cast<VkUintPtrLeast64>(cb));
-        return VK_FALSE;
     }
-}
-static bool32_t validate_draw_state_flags(VkCmdBuffer cb, bool32_t indexedDraw) {
-    bool32_t result;
-    result = validate_status(cb, CBSTATUS_NONE, CBSTATUS_VIEWPORT_BOUND, CBSTATUS_VIEWPORT_BOUND, VK_DBG_REPORT_ERROR_BIT, DRAWSTATE_VIEWPORT_NOT_BOUND, "Viewport object not bound to this command buffer");
-    result &= validate_status(cb, CBSTATUS_NONE, CBSTATUS_RASTER_BOUND,   CBSTATUS_RASTER_BOUND,   VK_DBG_REPORT_ERROR_BIT, DRAWSTATE_RASTER_NOT_BOUND,   "Raster object not bound to this command buffer");
-    result &= validate_status(cb, CBSTATUS_COLOR_BLEND_WRITE_ENABLE, CBSTATUS_COLOR_BLEND_BOUND,   CBSTATUS_COLOR_BLEND_BOUND,   VK_DBG_REPORT_ERROR_BIT,  DRAWSTATE_COLOR_BLEND_NOT_BOUND,   "Color-blend object not bound to this command buffer");
-    result &= validate_status(cb, CBSTATUS_DEPTH_STENCIL_WRITE_ENABLE, CBSTATUS_DEPTH_STENCIL_BOUND, CBSTATUS_DEPTH_STENCIL_BOUND, VK_DBG_REPORT_ERROR_BIT,  DRAWSTATE_DEPTH_STENCIL_NOT_BOUND, "Depth-stencil object not bound to this command buffer");
-    if (indexedDraw)
-        result &= validate_status(cb, CBSTATUS_NONE, CBSTATUS_INDEX_BUFFER_BOUND, CBSTATUS_INDEX_BUFFER_BOUND, VK_DBG_REPORT_ERROR_BIT, DRAWSTATE_INDEX_BUFFER_NOT_BOUND, "Index buffer object not bound to this command buffer when Index Draw attempted");
-    return result;
+    return VK_TRUE;
 }
 // Print the last bound dynamic state
 static void printDynamicState(const VkCmdBuffer cb)
@@ -424,7 +406,30 @@ static PIPELINE_NODE* getPipeline(VkPipeline pipeline)
     loader_platform_thread_unlock_mutex(&globalLock);
     return pipelineMap[pipeline];
 }
-
+// Validate state stored as flags at time of draw call
+static bool32_t validate_draw_state_flags(GLOBAL_CB_NODE* pCB, bool32_t indexedDraw) {
+    bool32_t result;
+    result = validate_status(pCB, CBSTATUS_NONE, CBSTATUS_VIEWPORT_BOUND, CBSTATUS_VIEWPORT_BOUND, VK_DBG_REPORT_ERROR_BIT, DRAWSTATE_VIEWPORT_NOT_BOUND, "Viewport object not bound to this command buffer");
+    result &= validate_status(pCB, CBSTATUS_NONE, CBSTATUS_RASTER_BOUND,   CBSTATUS_RASTER_BOUND,   VK_DBG_REPORT_ERROR_BIT, DRAWSTATE_RASTER_NOT_BOUND,   "Raster object not bound to this command buffer");
+    result &= validate_status(pCB, CBSTATUS_COLOR_BLEND_WRITE_ENABLE, CBSTATUS_COLOR_BLEND_BOUND,   CBSTATUS_COLOR_BLEND_BOUND,   VK_DBG_REPORT_ERROR_BIT,  DRAWSTATE_COLOR_BLEND_NOT_BOUND,   "Color-blend object not bound to this command buffer");
+    result &= validate_status(pCB, CBSTATUS_DEPTH_STENCIL_WRITE_ENABLE, CBSTATUS_DEPTH_STENCIL_BOUND, CBSTATUS_DEPTH_STENCIL_BOUND, VK_DBG_REPORT_ERROR_BIT,  DRAWSTATE_DEPTH_STENCIL_NOT_BOUND, "Depth-stencil object not bound to this command buffer");
+    if (indexedDraw)
+        result &= validate_status(pCB, CBSTATUS_NONE, CBSTATUS_INDEX_BUFFER_BOUND, CBSTATUS_INDEX_BUFFER_BOUND, VK_DBG_REPORT_ERROR_BIT, DRAWSTATE_INDEX_BUFFER_NOT_BOUND, "Index buffer object not bound to this command buffer when Index Draw attempted");
+    return result;
+}
+// Validate overall state at the time of a draw call
+static bool32_t validate_draw_state(GLOBAL_CB_NODE* pCB, bool32_t indexedDraw) {
+    // First check flag states
+    bool32_t result = validate_draw_state_flags(pCB, indexedDraw);
+    PIPELINE_NODE* pPipe = getPipeline(pCB->lastBoundPipeline);
+    // Now complete other state checks
+    if (pCB->lastBoundPipelineLayout != pPipe->graphicsPipelineCI.layout) {
+        result = VK_FALSE;
+        log_msg(mdd(pCB->cmdBuffer), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_PIPELINE_LAYOUT, pCB->lastBoundPipelineLayout, 0, DRAWSTATE_PIPELINE_LAYOUT_MISMATCH, "DS",
+                "Pipeline layout from last vkCmdBindDescriptorSets() (%s) does not match PSO Pipeline layout (%s)", pCB->lastBoundPipelineLayout, pPipe->graphicsPipelineCI.layout);
+    }
+    return result;
+}
 // For given sampler, return a ptr to its Create Info struct, or NULL if sampler not found
 static VkSamplerCreateInfo* getSamplerCreateInfo(const VkSampler sampler)
 {
@@ -2121,6 +2126,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdBindPipeline(VkCmdBuffer cmdBuffer, VkPipelineBi
             if (pPN) {
                 pCB->lastBoundPipeline = pipeline;
                 loader_platform_thread_lock_mutex(&globalLock);
+                set_cb_pso_status(pCB, pPN);
                 g_lastBoundPipeline = pPN;
                 loader_platform_thread_unlock_mutex(&globalLock);
                 validatePipelineState(pCB, pipelineBindPoint, pipeline);
@@ -2171,6 +2177,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdBindDescriptorSets(VkCmdBuffer cmdBuffer, VkPipe
                     if (getSetNode(pDescriptorSets[i])) {
                         loader_platform_thread_lock_mutex(&globalLock);
                         pCB->lastBoundDescriptorSet = pDescriptorSets[i];
+                        pCB->lastBoundPipelineLayout = layout;
                         pCB->boundDescriptorSets.push_back(pDescriptorSets[i]);
                         g_lastBoundDescriptorSet = pDescriptorSets[i];
                         loader_platform_thread_unlock_mutex(&globalLock);
@@ -2237,9 +2244,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdDraw(VkCmdBuffer cmdBuffer, uint32_t firstVertex
             updateCBTracking(cmdBuffer);
             addCmd(pCB, CMD_DRAW);
             pCB->drawCount[DRAW]++;
-            loader_platform_thread_lock_mutex(&globalLock);
-            valid = validate_draw_state_flags(cmdBuffer, VK_FALSE);
-            loader_platform_thread_unlock_mutex(&globalLock);
+            valid = validate_draw_state(pCB, VK_FALSE);
             log_msg(mdd(cmdBuffer), VK_DBG_REPORT_INFO_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, cmdBuffer, 0, DRAWSTATE_NONE, "DS",
                     "vkCmdDraw() call #%lu, reporting DS state:", g_drawCount[DRAW]++);
             synchAndPrintDSConfig(cmdBuffer);
@@ -2261,9 +2266,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdDrawIndexed(VkCmdBuffer cmdBuffer, uint32_t firs
             updateCBTracking(cmdBuffer);
             addCmd(pCB, CMD_DRAWINDEXED);
             pCB->drawCount[DRAW_INDEXED]++;
-            loader_platform_thread_lock_mutex(&globalLock);
-            valid = validate_draw_state_flags(cmdBuffer, VK_TRUE);
-            loader_platform_thread_unlock_mutex(&globalLock);
+            valid = validate_draw_state(pCB, VK_TRUE);
             log_msg(mdd(cmdBuffer), VK_DBG_REPORT_INFO_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, cmdBuffer, 0, DRAWSTATE_NONE, "DS",
                     "vkCmdDrawIndexed() call #%lu, reporting DS state:", g_drawCount[DRAW_INDEXED]++);
             synchAndPrintDSConfig(cmdBuffer);
@@ -2285,9 +2288,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdDrawIndirect(VkCmdBuffer cmdBuffer, VkBuffer buf
             updateCBTracking(cmdBuffer);
             addCmd(pCB, CMD_DRAWINDIRECT);
             pCB->drawCount[DRAW_INDIRECT]++;
-            loader_platform_thread_lock_mutex(&globalLock);
-            valid = validate_draw_state_flags(cmdBuffer, VK_FALSE);
-            loader_platform_thread_unlock_mutex(&globalLock);
+            valid = validate_draw_state(pCB, VK_FALSE);
             log_msg(mdd(cmdBuffer), VK_DBG_REPORT_INFO_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, cmdBuffer, 0, DRAWSTATE_NONE, "DS",
                     "vkCmdDrawIndirect() call #%lu, reporting DS state:", g_drawCount[DRAW_INDIRECT]++);
             synchAndPrintDSConfig(cmdBuffer);
@@ -2309,9 +2310,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdDrawIndexedIndirect(VkCmdBuffer cmdBuffer, VkBuf
             updateCBTracking(cmdBuffer);
             addCmd(pCB, CMD_DRAWINDEXEDINDIRECT);
             pCB->drawCount[DRAW_INDEXED_INDIRECT]++;
-            loader_platform_thread_lock_mutex(&globalLock);
-            valid = validate_draw_state_flags(cmdBuffer, VK_TRUE);
-            loader_platform_thread_unlock_mutex(&globalLock);
+            valid = validate_draw_state(pCB, VK_TRUE);
             log_msg(mdd(cmdBuffer), VK_DBG_REPORT_INFO_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, cmdBuffer, 0, DRAWSTATE_NONE, "DS",
                     "vkCmdDrawIndexedIndirect() call #%lu, reporting DS state:", g_drawCount[DRAW_INDEXED_INDIRECT]++);
             synchAndPrintDSConfig(cmdBuffer);
