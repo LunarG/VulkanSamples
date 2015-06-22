@@ -3646,6 +3646,44 @@ ICD_EXPORT void VKAPI vkCmdBeginRenderPass(
                                       ranges);
        }
    }
+
+   if (rp->depthLoadOp == VK_ATTACHMENT_LOAD_OP_CLEAR) {
+       const struct intel_ds_view *ds = fb->ds;
+
+       VkImageSubresourceRange ranges[1] = {{
+           VK_IMAGE_ASPECT_DEPTH,
+           0, /* ds->mipLevel, */
+           1,
+           0, /* ds->baseArraySlice, */
+           ds->array_size
+       }};
+
+       cmd_meta_clear_depth_stencil_image(cmdBuffer, (VkImage)ds->img,
+                                          rp->depthStencilLayout,
+                                          rp->depthLoadClearValue,
+                                          0,
+                                          1,
+                                          ranges);
+   }
+
+   if (rp->stencilLoadOp == VK_ATTACHMENT_LOAD_OP_CLEAR) {
+       const struct intel_ds_view *ds = fb->ds;
+
+       VkImageSubresourceRange ranges[1] = {{
+           VK_IMAGE_ASPECT_STENCIL,
+           0, /* ds->mipLevel, */
+           1,
+           0, /* ds->baseArraySlice, */
+           ds->array_size
+       }};
+
+       cmd_meta_clear_depth_stencil_image(cmdBuffer, (VkImage)ds->img,
+                                          rp->depthStencilLayout,
+                                          0.0f,
+                                          rp->stencilLoadClearValue,
+                                          1,
+                                          ranges);
+   }
 }
 
 ICD_EXPORT void VKAPI vkCmdEndRenderPass(

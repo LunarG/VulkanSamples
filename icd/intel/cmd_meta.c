@@ -940,7 +940,7 @@ ICD_EXPORT void VKAPI vkCmdClearColorImage(
     cmd_meta_clear_color_image(cmdBuffer, image, imageLayout, pClearColor, rangeCount, pRanges);
 }
 
-ICD_EXPORT void VKAPI vkCmdClearDepthStencilImage(
+void cmd_meta_clear_depth_stencil_image(
     VkCmdBuffer                              cmdBuffer,
     VkImage                                   image,
     VkImageLayout                            imageLayout,
@@ -974,6 +974,18 @@ ICD_EXPORT void VKAPI vkCmdClearDepthStencilImage(
         cmd_meta_clear_image(cmd, img, img->layout.format,
                 &meta, range);
     }
+}
+
+ICD_EXPORT void VKAPI vkCmdClearDepthStencilImage(
+    VkCmdBuffer                              cmdBuffer,
+    VkImage                                   image,
+    VkImageLayout                            imageLayout,
+    float                                       depth,
+    uint32_t                                    stencil,
+    uint32_t                                    rangeCount,
+    const VkImageSubresourceRange*          pRanges)
+{
+    cmd_meta_clear_depth_stencil_image(cmdBuffer, image, imageLayout, depth, stencil, rangeCount, pRanges);
 }
 
 ICD_EXPORT void VKAPI vkCmdClearColorAttachment(

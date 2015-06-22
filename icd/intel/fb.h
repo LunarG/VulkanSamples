@@ -47,13 +47,21 @@ struct intel_fb {
 struct intel_render_pass {
     struct intel_obj obj;
 
-    uint32_t colorAttachmentCount;
     VkRect2D renderArea;
     VkExtent2D extent;
+
+    uint32_t colorAttachmentCount;
     VkAttachmentLoadOp colorLoadOps[INTEL_MAX_RENDER_TARGETS];
     VkFormat colorFormats[INTEL_MAX_RENDER_TARGETS];
     VkImageLayout colorLayouts[INTEL_MAX_RENDER_TARGETS];
     VkClearColor colorClearValues[INTEL_MAX_RENDER_TARGETS];
+
+    VkAttachmentLoadOp depthLoadOp;
+    float depthLoadClearValue;
+    VkAttachmentLoadOp stencilLoadOp;
+    uint32_t stencilLoadClearValue;
+    VkImageLayout depthStencilLayout;
+    VkFormat depthStencilFormat;
 };
 
 static inline struct intel_fb *intel_fb(VkFramebuffer fb)

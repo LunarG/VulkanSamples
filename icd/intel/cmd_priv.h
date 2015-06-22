@@ -534,4 +534,13 @@ void cmd_meta_clear_color_image(
     uint32_t                            rangeCount,
     const VkImageSubresourceRange      *pRanges);
 
+void cmd_meta_clear_depth_stencil_image(
+    VkCmdBuffer                              cmdBuffer,
+    VkImage                                   image,
+    VkImageLayout                            imageLayout,
+    float                                       depth,
+    uint32_t                                    stencil,
+    uint32_t                                    rangeCount,
+    const VkImageSubresourceRange*          pRanges);
+
 #endif /* CMD_PRIV_H */

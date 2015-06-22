@@ -166,9 +166,12 @@ VkResult intel_render_pass_create(struct intel_dev *dev,
         }
     }
 
-    /* TODO: depth/stencil clear load ops */
-    assert(info->depthLoadOp != VK_ATTACHMENT_LOAD_OP_CLEAR);
-    assert(info->stencilLoadOp != VK_ATTACHMENT_LOAD_OP_CLEAR);
+    rp->depthLoadOp = info->depthLoadOp;
+    rp->depthLoadClearValue = info->depthLoadClearValue;
+    rp->stencilLoadOp = info->stencilLoadOp;
+    rp->stencilLoadClearValue = info->stencilLoadClearValue;
+    rp->depthStencilLayout = info->depthStencilLayout;
+    rp->depthStencilFormat = info->depthStencilFormat;
 
     /* TODO: MSAA resolves if/when we support MSAA. */
     for (i = 0; i < info->colorAttachmentCount; i++)
