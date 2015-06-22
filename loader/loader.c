@@ -66,6 +66,8 @@ static void loader_remove_layer_lib(
 
 struct loader_struct loader = {0};
 
+static void * VKAPI loader_GetInstanceProcAddr(VkInstance instance, const char * pName);
+
 enum loader_debug {
     LOADER_INFO_BIT       = VK_BIT(0),
     LOADER_WARN_BIT       = VK_BIT(1),
@@ -83,7 +85,7 @@ uint32_t g_loader_log_msgs = 0;
 loader_platform_thread_mutex loader_lock;
 
 const VkLayerInstanceDispatchTable instance_disp = {
-    .GetInstanceProcAddr = vkGetInstanceProcAddr,
+    .GetInstanceProcAddr = loader_GetInstanceProcAddr,
     .CreateInstance = loader_CreateInstance,
     .DestroyInstance = loader_DestroyInstance,
     .EnumeratePhysicalDevices = loader_EnumeratePhysicalDevices,
@@ -1803,7 +1805,7 @@ VkResult loader_CreateDevice(
     return res;
 }
 
-LOADER_EXPORT void * VKAPI vkGetInstanceProcAddr(VkInstance instance, const char * pName)
+static void * VKAPI loader_GetInstanceProcAddr(VkInstance instance, const char * pName)
 {
     if (instance == VK_NULL_HANDLE)
         return NULL;
@@ -1840,7 +1842,12 @@ LOADER_EXPORT void * VKAPI vkGetInstanceProcAddr(VkInstance instance, const char
     return NULL;
 }
 
-LOADER_EXPORT void * VKAPI vkGetDeviceProcAddr(VkDevice device, const char * pName)
+LOADER_EXPORT void * VKAPI vkGetInstanceProcAddr(VkInstance instance, const char * pName)
+{
+    return loader_GetInstanceProcAddr(instance, pName);
+}
+
+static void * VKAPI loader_GetDeviceProcAddr(VkDevice device, const char * pName)
 {
     if (device == VK_NULL_HANDLE) {
         return NULL;
@@ -1875,6 +1882,11 @@ LOADER_EXPORT void * VKAPI vkGetDeviceProcAddr(VkDevice device, const char * pNa
             return NULL;
         return disp_table->GetDeviceProcAddr(device, pName);
     }
+}
+
+LOADER_EXPORT void * VKAPI vkGetDeviceProcAddr(VkDevice device, const char * pName)
+{
+    return loader_GetDeviceProcAddr(device, pName);
 }
 
 LOADER_EXPORT VkResult VKAPI vkGetGlobalExtensionInfo(
