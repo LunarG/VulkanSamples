@@ -521,13 +521,13 @@ static VkResult pipeline_validate(struct intel_pipeline *pipeline)
      */
     if (pipeline->active_shaders & (SHADER_TESS_CONTROL_FLAG | SHADER_TESS_EVAL_FLAG) &&
         (pipeline->topology != VK_PRIMITIVE_TOPOLOGY_PATCH)) {
-        // TODO: Log debug message: Invalid topology used with tessalation shader.
+        // TODO: Log debug message: Invalid topology used with tessellation shader.
         return VK_ERROR_BAD_PIPELINE_DATA;
     }
 
     if ((pipeline->topology == VK_PRIMITIVE_TOPOLOGY_PATCH) &&
-            (pipeline->active_shaders & ~(SHADER_TESS_CONTROL_FLAG | SHADER_TESS_EVAL_FLAG))) {
-        // TODO: Log debug message: Cannot use TOPOLOGY_PATCH on non-tessalation shader.
+        (~pipeline->active_shaders & (SHADER_TESS_CONTROL_FLAG | SHADER_TESS_EVAL_FLAG))) {
+        // TODO: Log debug message: Cannot use TOPOLOGY_PATCH on non-tessellation shader.
         return VK_ERROR_BAD_PIPELINE_DATA;
     }
 
