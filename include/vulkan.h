@@ -1073,6 +1073,15 @@ typedef enum {
 
 typedef VkFlags VkPipelineStageFlags;
 
+// Image aspect flags
+typedef VkFlags VkImageAspectFlags;
+typedef enum VkImageAspectFlagBits_
+{
+    VK_IMAGE_ASPECT_COLOR_BIT                               = VK_BIT(0),
+    VK_IMAGE_ASPECT_DEPTH_BIT                               = VK_BIT(1),
+    VK_IMAGE_ASPECT_STENCIL_BIT                             = VK_BIT(2),
+} VkImageAspectFlagBits;
+
 // Query control flags
 typedef VkFlags VkQueryControlFlags;
 typedef enum VkQueryControlFlagBits_
@@ -1179,11 +1188,17 @@ typedef struct VkViewport_
     float                                       maxDepth;
 } VkViewport;
 
-typedef struct VkRect_
+typedef struct VkRect2D_
 {
     VkOffset2D                                  offset;
     VkExtent2D                                  extent;
-} VkRect;
+} VkRect2D;
+
+typedef struct VkRect3D_
+{
+    VkOffset3D                                  offset;
+    VkExtent3D                                  extent;
+} VkRect3D;
 
 typedef struct VkChannelMapping_
 {
@@ -1975,7 +1990,7 @@ typedef struct VkDynamicVpStateCreateInfo_
     const void*                                 pNext;      // Pointer to next structure
     uint32_t                                    viewportAndScissorCount;  // number of entries in pViewports and pScissors
     const VkViewport*                           pViewports;
-    const VkRect*                               pScissors;
+    const VkRect2D*                             pScissors;
 } VkDynamicVpStateCreateInfo;
 
 typedef struct VkDynamicRsStateCreateInfo_
@@ -2052,7 +2067,7 @@ typedef struct VkRenderPassCreateInfo_
     VkStructureType                             sType;      // Must be VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO
     const void*                                 pNext;      // Pointer to next structure
 
-    VkRect                                      renderArea;
+    VkRect2D                                    renderArea;
     uint32_t                                    colorAttachmentCount;
     VkExtent2D                                  extent;
     uint32_t                                    sampleCount;
@@ -2239,7 +2254,9 @@ typedef void     (VKAPI *PFN_vkCmdCopyImageToBuffer)(VkCmdBuffer cmdBuffer, VkIm
 typedef void     (VKAPI *PFN_vkCmdUpdateBuffer)(VkCmdBuffer cmdBuffer, VkBuffer destBuffer, VkDeviceSize destOffset, VkDeviceSize dataSize, const uint32_t* pData);
 typedef void     (VKAPI *PFN_vkCmdFillBuffer)(VkCmdBuffer cmdBuffer, VkBuffer destBuffer, VkDeviceSize destOffset, VkDeviceSize fillSize, uint32_t data);
 typedef void     (VKAPI *PFN_vkCmdClearColorImage)(VkCmdBuffer cmdBuffer, VkImage image, VkImageLayout imageLayout, const VkClearColor* pColor, uint32_t rangeCount, const VkImageSubresourceRange* pRanges);
-typedef void     (VKAPI *PFN_vkCmdClearDepthStencil)(VkCmdBuffer cmdBuffer, VkImage image, VkImageLayout imageLayout, float depth, uint32_t stencil, uint32_t rangeCount, const VkImageSubresourceRange* pRanges);
+typedef void     (VKAPI *PFN_vkCmdClearDepthStencilImage)(VkCmdBuffer cmdBuffer, VkImage image, VkImageLayout imageLayout, float depth, uint32_t stencil, uint32_t rangeCount, const VkImageSubresourceRange* pRanges);
+typedef void     (VKAPI *PFN_vkCmdClearColorAttachment)(VkCmdBuffer cmdBuffer, uint32_t colorAttachment, VkImageLayout imageLayout, const VkClearColor* pColor, uint32_t rectCount, const VkRect3D* pRects);
+typedef void     (VKAPI *PFN_vkCmdClearDepthStencilAttachment)(VkCmdBuffer cmdBuffer, VkImageAspectFlags imageAspectMask, VkImageLayout imageLayout, float depth, uint32_t stencil, uint32_t rectCount, const VkRect3D* pRects);
 typedef void     (VKAPI *PFN_vkCmdResolveImage)(VkCmdBuffer cmdBuffer, VkImage srcImage, VkImageLayout srcImageLayout, VkImage destImage, VkImageLayout destImageLayout, uint32_t regionCount, const VkImageResolve* pRegions);
 typedef void     (VKAPI *PFN_vkCmdSetEvent)(VkCmdBuffer cmdBuffer, VkEvent event, VkPipelineStageFlags stageMask);
 typedef void     (VKAPI *PFN_vkCmdResetEvent)(VkCmdBuffer cmdBuffer, VkEvent event, VkPipelineStageFlags stageMask);
@@ -2823,7 +2840,7 @@ void VKAPI vkCmdClearColorImage(
     uint32_t                                    rangeCount,
     const VkImageSubresourceRange*              pRanges);
 
-void VKAPI vkCmdClearDepthStencil(
+void VKAPI vkCmdClearDepthStencilImage(
     VkCmdBuffer                                 cmdBuffer,
     VkImage                                     image,
     VkImageLayout                               imageLayout,
@@ -2831,6 +2848,23 @@ void VKAPI vkCmdClearDepthStencil(
     uint32_t                                    stencil,
     uint32_t                                    rangeCount,
     const VkImageSubresourceRange*              pRanges);
+
+void VKAPI vkCmdClearColorAttachment(
+    VkCmdBuffer                                 cmdBuffer,
+    uint32_t                                    colorAttachment,
+    VkImageLayout                               imageLayout,
+    const VkClearColor*                         pColor,
+    uint32_t                                    rectCount,
+    const VkRect3D*                             pRects);
+
+void VKAPI vkCmdClearDepthStencilAttachment(
+    VkCmdBuffer                                 cmdBuffer,
+    VkImageAspectFlags                          imageAspectMask,
+    VkImageLayout                               imageLayout,
+    float                                       depth,
+    uint32_t                                    stencil,
+    uint32_t                                    rectCount,
+    const VkRect3D*                             pRects);
 
 void VKAPI vkCmdResolveImage(
     VkCmdBuffer                                 cmdBuffer,

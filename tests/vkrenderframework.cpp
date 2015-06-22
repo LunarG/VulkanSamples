@@ -247,7 +247,7 @@ void VkRenderFramework::InitViewport(float width, float height)
     VkResult err;
 
     VkViewport viewport;
-    VkRect scissor;
+    VkRect2D scissor;
 
     VkDynamicVpStateCreateInfo viewportCreate = {};
     viewportCreate.sType = VK_STRUCTURE_TYPE_DYNAMIC_VP_STATE_CREATE_INFO;
@@ -1334,10 +1334,10 @@ void VkCommandBufferObj::ClearAllBuffers(VkClearColor clear_color, float depth_c
 
         vkCmdPipelineBarrier( obj(), src_stages, dest_stages, false, 1, (const void **)&pmemory_barrier);
 
-        vkCmdClearDepthStencil(obj(),
-                                depthStencilObj->obj(), VK_IMAGE_LAYOUT_GENERAL,
-                                depth_clear_color,  stencil_clear_color,
-                                1, &dsRange);
+        vkCmdClearDepthStencilImage(obj(),
+                                    depthStencilObj->obj(), VK_IMAGE_LAYOUT_GENERAL,
+                                    depth_clear_color,  stencil_clear_color,
+                                    1, &dsRange);
 
         // prepare depth buffer for rendering
         memory_barrier.image = depthStencilObj->obj();

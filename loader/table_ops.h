@@ -116,7 +116,9 @@ static inline void loader_init_device_dispatch_table(VkLayerDispatchTable *table
     table->CmdUpdateBuffer = (PFN_vkCmdUpdateBuffer) gpa(dev, "vkCmdUpdateBuffer");
     table->CmdFillBuffer = (PFN_vkCmdFillBuffer) gpa(dev, "vkCmdFillBuffer");
     table->CmdClearColorImage = (PFN_vkCmdClearColorImage) gpa(dev, "vkCmdClearColorImage");
-    table->CmdClearDepthStencil = (PFN_vkCmdClearDepthStencil) gpa(dev, "vkCmdClearDepthStencil");
+    table->CmdClearDepthStencilImage = (PFN_vkCmdClearDepthStencilImage) gpa(dev, "vkCmdClearDepthStencilImage");
+    table->CmdClearColorAttachment = (PFN_vkCmdClearColorAttachment) gpa(dev, "vkCmdClearColorAttachment");
+    table->CmdClearDepthStencilAttachment = (PFN_vkCmdClearDepthStencilAttachment) gpa(dev, "vkCmdClearDepthStencilAttachment");
     table->CmdResolveImage = (PFN_vkCmdResolveImage) gpa(dev, "vkCmdResolveImage");
     table->CmdSetEvent = (PFN_vkCmdSetEvent) gpa(dev, "vkCmdSetEvent");
     table->CmdResetEvent = (PFN_vkCmdResetEvent) gpa(dev, "vkCmdResetEvent");
@@ -309,8 +311,12 @@ static inline void *loader_lookup_device_dispatch_table(
         return (void *) table->CmdFillBuffer;
     if (!strcmp(name, "CmdClearColorImage"))
         return (void *) table->CmdClearColorImage;
-    if (!strcmp(name, "CmdClearDepthStencil"))
-        return (void *) table->CmdClearDepthStencil;
+    if (!strcmp(name, "CmdClearDepthStencilImage"))
+        return (void *) table->CmdClearDepthStencilImage;
+    if (!strcmp(name, "CmdClearColorAttachment"))
+        return (void *) table->CmdClearColorAttachment;
+    if (!strcmp(name, "CmdClearDepthStencilAttachment"))
+        return (void *) table->CmdClearDepthStencilAttachment;
     if (!strcmp(name, "CmdResolveImage"))
         return (void *) table->CmdResolveImage;
     if (!strcmp(name, "CmdSetEvent"))

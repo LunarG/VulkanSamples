@@ -1538,10 +1538,10 @@ protected:
         VkPipelineStageFlags dest_stages = VK_PIPELINE_STAGE_ALL_GPU_COMMANDS;
         vkCmdPipelineBarrier(cmd_.obj(), src_stages, dest_stages, false, to_clear.size(), (const void **)&p_to_clear[0]);
 
-        vkCmdClearDepthStencil(cmd_.obj(),
-                                img.obj(), VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
-                                depth, stencil,
-                                ranges.size(), &ranges[0]);
+        vkCmdClearDepthStencilImage(cmd_.obj(),
+                                    img.obj(), VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
+                                    depth, stencil,
+                                    ranges.size(), &ranges[0]);
 
         vkCmdPipelineBarrier(cmd_.obj(), src_stages, dest_stages, false, to_xfer.size(), (const void **)&p_to_xfer[0]);
 

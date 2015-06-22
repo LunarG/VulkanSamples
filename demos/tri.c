@@ -370,7 +370,7 @@ static void demo_draw_build_cmd(struct demo *demo)
             &clear_color, 1, &clear_range);
 
     clear_range.aspect = VK_IMAGE_ASPECT_DEPTH;
-    vkCmdClearDepthStencil(demo->draw_cmd,
+    vkCmdClearDepthStencilImage(demo->draw_cmd,
             demo->depth.image, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
             clear_depth, 0, 1, &clear_range);
 
@@ -1107,7 +1107,7 @@ static void demo_prepare_dynamic_states(struct demo *demo)
     viewport.minDepth = (float) 0.0f;
     viewport.maxDepth = (float) 1.0f;
     viewport_create.pViewports = &viewport;
-    VkRect scissor;
+    VkRect2D scissor;
     memset(&scissor, 0, sizeof(scissor));
     scissor.extent.width = demo->width;
     scissor.extent.height = demo->height;

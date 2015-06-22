@@ -1938,7 +1938,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdClearColorImage(
     get_dispatch_table(mem_tracker_device_table_map, cmdBuffer)->CmdClearColorImage(cmdBuffer, image, imageLayout, pColor, rangeCount, pRanges);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdClearDepthStencil(
+VK_LAYER_EXPORT void VKAPI vkCmdClearDepthStencilImage(
     VkCmdBuffer                    cmdBuffer,
     VkImage                        image,
     VkImageLayout                  imageLayout,
@@ -1952,10 +1952,10 @@ VK_LAYER_EXPORT void VKAPI vkCmdClearDepthStencil(
     VkDeviceMemory mem = get_mem_binding_from_object(cmdBuffer, image);
     if (VK_FALSE == update_cmd_buf_and_mem_references(cmdBuffer, mem)) {
         log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, cmdBuffer, 0, MEMTRACK_MEMORY_BINDING_ERROR, "MEM",
-                "In vkCmdClearDepthStencil() call unable to update binding of image buffer %p to cmdBuffer %p", image, cmdBuffer);
+                "In vkCmdClearDepthStencilImage() call unable to update binding of image buffer %p to cmdBuffer %p", image, cmdBuffer);
     }
     loader_platform_thread_unlock_mutex(&globalLock);
-    get_dispatch_table(mem_tracker_device_table_map, cmdBuffer)->CmdClearDepthStencil(
+    get_dispatch_table(mem_tracker_device_table_map, cmdBuffer)->CmdClearDepthStencilImage(
         cmdBuffer, image, imageLayout, depth, stencil, rangeCount, pRanges);
 }
 
@@ -2267,8 +2267,8 @@ VK_LAYER_EXPORT void* VKAPI vkGetDeviceProcAddr(
         return (void*) vkCmdFillBuffer;
     if (!strcmp(funcName, "vkCmdClearColorImage"))
         return (void*) vkCmdClearColorImage;
-    if (!strcmp(funcName, "vkCmdClearDepthStencil"))
-        return (void*) vkCmdClearDepthStencil;
+    if (!strcmp(funcName, "vkCmdClearDepthStencilImage"))
+        return (void*) vkCmdClearDepthStencilImage;
     if (!strcmp(funcName, "vkCmdResolveImage"))
         return (void*) vkCmdResolveImage;
     if (!strcmp(funcName, "vkCmdBeginQuery"))

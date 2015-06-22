@@ -738,7 +738,7 @@ core = Extension(
              Param("uint32_t", "rangeCount"),
              Param("const VkImageSubresourceRange*", "pRanges")]),
 
-        Proto("void", "CmdClearDepthStencil",
+        Proto("void", "CmdClearDepthStencilImage",
             [Param("VkCmdBuffer", "cmdBuffer"),
              Param("VkImage", "image"),
              Param("VkImageLayout", "imageLayout"),
@@ -746,6 +746,23 @@ core = Extension(
              Param("uint32_t", "stencil"),
              Param("uint32_t", "rangeCount"),
              Param("const VkImageSubresourceRange*", "pRanges")]),
+
+        Proto("void", "CmdClearColorAttachment",
+            [Param("VkCmdBuffer", "cmdBuffer"),
+             Param("uint32_t", "colorAttachment"),
+             Param("VkImageLayout", "imageLayout"),
+             Param("const VkClearColor*", "pColor"),
+             Param("uint32_t", "rectCount"),
+             Param("const VkRect3D*", "pRects")]),
+
+        Proto("void", "CmdClearDepthStencilAttachment",
+            [Param("VkCmdBuffer", "cmdBuffer"),
+             Param("VkImageAspectFlags", "imageAspectMask"),
+             Param("VkImageLayout", "imageLayout"),
+             Param("float", "depth"),
+             Param("uint32_t", "stencil"),
+             Param("uint32_t", "rectCount"),
+             Param("const VkRect3D*", "pRects")]),
 
         Proto("void", "CmdResolveImage",
             [Param("VkCmdBuffer", "cmdBuffer"),

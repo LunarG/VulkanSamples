@@ -107,7 +107,9 @@ typedef struct VkLayerDispatchTable_
     PFN_vkCmdUpdateBuffer CmdUpdateBuffer;
     PFN_vkCmdFillBuffer CmdFillBuffer;
     PFN_vkCmdClearColorImage CmdClearColorImage;
-    PFN_vkCmdClearDepthStencil CmdClearDepthStencil;
+    PFN_vkCmdClearDepthStencilImage CmdClearDepthStencilImage;
+    PFN_vkCmdClearColorAttachment CmdClearColorAttachment;
+    PFN_vkCmdClearDepthStencilAttachment CmdClearDepthStencilAttachment;
     PFN_vkCmdResolveImage CmdResolveImage;
     PFN_vkCmdSetEvent CmdSetEvent;
     PFN_vkCmdResetEvent CmdResetEvent;

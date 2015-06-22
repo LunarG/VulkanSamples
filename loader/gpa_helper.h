@@ -223,8 +223,12 @@ static inline void* globalGetProcAddr(const char *name)
         return (void*) vkCmdFillBuffer;
     if (!strcmp(name, "CmdClearColorImage"))
         return (void*) vkCmdClearColorImage;
-    if (!strcmp(name, "CmdClearDepthStencil"))
-        return (void*) vkCmdClearDepthStencil;
+    if (!strcmp(name, "CmdClearDepthStencilImage"))
+        return (void*) vkCmdClearDepthStencilImage;
+    if (!strcmp(name, "CmdClearColorAttachment"))
+        return (void*) vkCmdClearColorAttachment;
+    if (!strcmp(name, "CmdClearDepthStencilAttachment"))
+        return (void*) vkCmdClearDepthStencilAttachment;
     if (!strcmp(name, "CmdResolveImage"))
         return (void*) vkCmdResolveImage;
     if (!strcmp(name, "CmdSetEvent"))

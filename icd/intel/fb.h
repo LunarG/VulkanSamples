@@ -48,7 +48,7 @@ struct intel_render_pass {
     struct intel_obj obj;
 
     uint32_t colorAttachmentCount;
-    VkRect   renderArea;
+    VkRect2D renderArea;
     VkExtent2D extent;
     VkAttachmentLoadOp colorLoadOps[INTEL_MAX_RENDER_TARGETS];
     VkFormat colorFormats[INTEL_MAX_RENDER_TARGETS];

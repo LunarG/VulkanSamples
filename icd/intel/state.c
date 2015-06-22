@@ -191,7 +191,7 @@ viewport_state_init(struct intel_dynamic_vp *state,
     }
 
     for (i = 0; i < info->viewportAndScissorCount; i++) {
-        const VkRect *scissor = &info->pScissors[i];
+        const VkRect2D *scissor = &info->pScissors[i];
         /* SCISSOR_RECT */
         int16_t max_x, max_y;
         uint32_t *dw = NULL;

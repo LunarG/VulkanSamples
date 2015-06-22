@@ -940,7 +940,7 @@ ICD_EXPORT void VKAPI vkCmdClearColorImage(
     cmd_meta_clear_color_image(cmdBuffer, image, imageLayout, pClearColor, rangeCount, pRanges);
 }
 
-ICD_EXPORT void VKAPI vkCmdClearDepthStencil(
+ICD_EXPORT void VKAPI vkCmdClearDepthStencilImage(
     VkCmdBuffer                              cmdBuffer,
     VkImage                                   image,
     VkImageLayout                            imageLayout,
@@ -974,6 +974,33 @@ ICD_EXPORT void VKAPI vkCmdClearDepthStencil(
         cmd_meta_clear_image(cmd, img, img->layout.format,
                 &meta, range);
     }
+}
+
+ICD_EXPORT void VKAPI vkCmdClearColorAttachment(
+    VkCmdBuffer                             cmdBuffer,
+    uint32_t                                colorAttachment,
+    VkImageLayout                           imageLayout,
+    const VkClearColor                     *pColor,
+    uint32_t                                rectCount,
+    const VkRect3D                         *pRects)
+{
+    struct intel_cmd *cmd = intel_cmd(cmdBuffer);
+    assert(!"CmdClearColorAttachment not implemented");
+    cmd_fail(cmd, VK_ERROR_UNKNOWN);
+}
+
+ICD_EXPORT void VKAPI vkCmdClearDepthStencilAttachment(
+    VkCmdBuffer                             cmdBuffer,
+    VkImageAspectFlags                      imageAspectMask,
+    VkImageLayout                           imageLayout,
+    float                                   depth,
+    uint32_t                                stencil,
+    uint32_t                                rectCount,
+    const VkRect3D                         *pRects)
+{
+    struct intel_cmd *cmd = intel_cmd(cmdBuffer);
+    assert(!"CmdClearDepthStencilAttachment not implemented");
+    cmd_fail(cmd, VK_ERROR_UNKNOWN);
 }
 
 ICD_EXPORT void VKAPI vkCmdResolveImage(

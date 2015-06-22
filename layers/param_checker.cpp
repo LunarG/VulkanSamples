@@ -8491,7 +8491,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdClearColorImage(
     PostCmdClearColorImage(cmdBuffer, image, imageLayout, rangeCount);
 }
 
-void PreCmdClearDepthStencil(
+void PreCmdClearDepthStencilImage(
     VkCmdBuffer cmdBuffer,
     const VkImageSubresourceRange* pRanges)
 {
@@ -8517,7 +8517,7 @@ void PreCmdClearDepthStencil(
     }
 }
 
-void PostCmdClearDepthStencil(
+void PostCmdClearDepthStencilImage(
     VkCmdBuffer cmdBuffer,
     VkImage image,
     VkImageLayout imageLayout,
@@ -8551,7 +8551,7 @@ void PostCmdClearDepthStencil(
 
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdClearDepthStencil(
+VK_LAYER_EXPORT void VKAPI vkCmdClearDepthStencilImage(
     VkCmdBuffer cmdBuffer,
     VkImage image,
     VkImageLayout imageLayout,
@@ -8560,10 +8560,10 @@ VK_LAYER_EXPORT void VKAPI vkCmdClearDepthStencil(
     uint32_t rangeCount,
     const VkImageSubresourceRange* pRanges)
 {
-    PreCmdClearDepthStencil(cmdBuffer, pRanges);
-    get_dispatch_table(pc_device_table_map, cmdBuffer)->CmdClearDepthStencil(cmdBuffer, image, imageLayout, depth, stencil, rangeCount, pRanges);
+    PreCmdClearDepthStencilImage(cmdBuffer, pRanges);
+    get_dispatch_table(pc_device_table_map, cmdBuffer)->CmdClearDepthStencilImage(cmdBuffer, image, imageLayout, depth, stencil, rangeCount, pRanges);
 
-    PostCmdClearDepthStencil(cmdBuffer, image, imageLayout, depth, stencil, rangeCount);
+    PostCmdClearDepthStencilImage(cmdBuffer, image, imageLayout, depth, stencil, rangeCount);
 }
 
 void PreCmdResolveImage(
@@ -8991,8 +8991,6 @@ void PostCmdResetQueryPool(
         "vkCmdResetQueryPool parameter, VkQueryPool queryPool, is null pointer");
         return;
     }
-
-
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdResetQueryPool(
@@ -9688,8 +9686,8 @@ VK_LAYER_EXPORT void* VKAPI vkGetDeviceProcAddr(VkDevice device, const char* fun
         return (void*) vkCmdFillBuffer;
     if (!strcmp(funcName, "vkCmdClearColorImage"))
         return (void*) vkCmdClearColorImage;
-    if (!strcmp(funcName, "vkCmdClearDepthStencil"))
-        return (void*) vkCmdClearDepthStencil;
+    if (!strcmp(funcName, "vkCmdClearDepthStencilImage"))
+        return (void*) vkCmdClearDepthStencilImage;
     if (!strcmp(funcName, "vkCmdResolveImage"))
         return (void*) vkCmdResolveImage;
     if (!strcmp(funcName, "vkCmdSetEvent"))
