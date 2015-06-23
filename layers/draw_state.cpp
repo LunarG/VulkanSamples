@@ -2155,7 +2155,24 @@ VK_LAYER_EXPORT void VKAPI vkCmdBindDynamicStateObject(VkCmdBuffer cmdBuffer, Vk
             set_cb_dyn_status(pCB, stateBindPoint);
             addCmd(pCB, CMD_BINDDYNAMICSTATEOBJECT);
             if (dynamicStateMap.find(state) == dynamicStateMap.end()) {
-                log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, (VkObjectType) 0, state, 0, DRAWSTATE_INVALID_DYNAMIC_STATE_OBJECT, "DS",
+                VkObjectType stateType;
+                switch (stateBindPoint) {
+                    case VK_STATE_BIND_POINT_VIEWPORT:
+                        stateType = VK_OBJECT_TYPE_DYNAMIC_VP_STATE;
+                        break;
+                    case VK_STATE_BIND_POINT_RASTER:
+                        stateType = VK_OBJECT_TYPE_DYNAMIC_RS_STATE;
+                        break;
+                    case VK_STATE_BIND_POINT_COLOR_BLEND:
+                        stateType = VK_OBJECT_TYPE_DYNAMIC_CB_STATE;
+                        break;
+                    case VK_STATE_BIND_POINT_DEPTH_STENCIL:
+                        stateType = VK_OBJECT_TYPE_DYNAMIC_DS_STATE;
+                        break;
+                    default:
+                        stateType = (VkObjectType) 0;
+                }
+                log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, stateType, state, 0, DRAWSTATE_INVALID_DYNAMIC_STATE_OBJECT, "DS",
                         "Unable to find dynamic state object %p, was it ever created?", (void*)state);
             } else {
                 pCB->lastBoundDynamicState[stateBindPoint] = dynamicStateMap[state];
