@@ -2037,7 +2037,11 @@ VK_LAYER_EXPORT VkResult VKAPI vkBeginCommandBuffer(VkCmdBuffer cmdBuffer, const
             if (pBeginInfo->pNext) {
                 VkCmdBufferGraphicsBeginInfo* pCbGfxBI = (VkCmdBufferGraphicsBeginInfo*)pBeginInfo->pNext;
                 if (VK_STRUCTURE_TYPE_CMD_BUFFER_GRAPHICS_BEGIN_INFO == pCbGfxBI->sType) {
-                    pCB->activeRenderPass = pCbGfxBI->renderPassContinue.renderPass;
+                    if (pCbGfxBI->renderPassContinue.renderPass)
+                        pCB->activeRenderPass = pCbGfxBI->renderPassContinue.renderPass;
+                    else
+                        log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, (VkObjectType) 0, NULL, 0, DRAWSTATE_INVALID_RENDERPASS, "DS",
+                                "You cannot use a NULL RenderPass object in vkCmdBeginCommandBuffer()");
                 }
             }
         } else {
@@ -2706,12 +2710,18 @@ VK_LAYER_EXPORT void VKAPI vkCmdBeginRenderPass(VkCmdBuffer cmdBuffer, const VkR
 {
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
-        updateCBTracking(cmdBuffer);
-        addCmd(pCB, CMD_BEGINRENDERPASS);
-        pCB->activeRenderPass = pRenderPassBegin->renderPass;
-        pCB->framebuffer = pRenderPassBegin->framebuffer;
-        if (pCB->lastBoundPipeline) {
-            validatePipelineState(pCB, VK_PIPELINE_BIND_POINT_GRAPHICS, pCB->lastBoundPipeline);
+        if (pRenderPassBegin && pRenderPassBegin->renderPass) {
+            updateCBTracking(cmdBuffer);
+            addCmd(pCB, CMD_BEGINRENDERPASS);
+            pCB->activeRenderPass = pRenderPassBegin->renderPass;
+            pCB->framebuffer = pRenderPassBegin->framebuffer;
+            if (pCB->lastBoundPipeline) {
+                validatePipelineState(pCB, VK_PIPELINE_BIND_POINT_GRAPHICS, pCB->lastBoundPipeline);
+            }
+        }
+        else {
+            log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, (VkObjectType) 0, NULL, 0, DRAWSTATE_INVALID_RENDERPASS, "DS",
+                    "You cannot use a NULL RenderPass object in vkCmdBeginRenderPass()");
         }
     }
     get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdBeginRenderPass(cmdBuffer, pRenderPassBegin);
@@ -2721,9 +2731,15 @@ VK_LAYER_EXPORT void VKAPI vkCmdEndRenderPass(VkCmdBuffer cmdBuffer, VkRenderPas
 {
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
-        updateCBTracking(cmdBuffer);
-        addCmd(pCB, CMD_ENDRENDERPASS);
-        pCB->activeRenderPass = 0;
+        if (renderPass) {
+            updateCBTracking(cmdBuffer);
+            addCmd(pCB, CMD_ENDRENDERPASS);
+            pCB->activeRenderPass = 0;
+        }
+        else {
+            log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, (VkObjectType) 0, NULL, 0, DRAWSTATE_INVALID_RENDERPASS, "DS",
+                    "You cannot use a NULL RenderPass object in vkCmdEndRenderPass()");
+        }
     }
     get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdEndRenderPass(cmdBuffer, renderPass);
 }
