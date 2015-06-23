@@ -288,6 +288,18 @@ VkResult VKAPI vkCreateInstance(
     return result;
 }
 
+// hook DestroyInstance to remove tableInstanceMap entry
+VK_LAYER_EXPORT VkResult VKAPI vkDestroyInstance(VkInstance instance)
+{
+    // Grab the key before the instance is destroyed.
+    dispatch_key key = get_dispatch_key(instance);
+    VkLayerInstanceDispatchTable *pTable = get_dispatch_table(screenshot_instance_table_map, instance);
+    VkResult res = pTable->DestroyInstance(instance);
+
+    screenshot_instance_table_map.erase(key);
+    return res;
+}
+
 static void createDeviceRegisterExtensions(const VkDeviceCreateInfo* pCreateInfo, VkDevice device)
 {
     uint32_t i, ext_idx;
