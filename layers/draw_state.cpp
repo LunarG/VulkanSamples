@@ -2194,7 +2194,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdBindDescriptorSets(VkCmdBuffer cmdBuffer, VkPipe
                                 "Attempt to bind DS %p that doesn't exist!", (void*)pDescriptorSets[i]);
                     }
                 }
-                get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdBindDescriptorSets(cmdBuffer, pipelineBindPoint, firstSet, setCount, pDescriptorSets, dynamicOffsetCount, pDynamicOffsets);
+                get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdBindDescriptorSets(cmdBuffer, pipelineBindPoint, layout, firstSet, setCount, pDescriptorSets, dynamicOffsetCount, pDynamicOffsets);
             }
         } else {
             report_error_no_cb_begin(cmdBuffer, "vkCmdBindDescriptorSets()");
