@@ -428,6 +428,10 @@ static bool32_t validate_draw_state(GLOBAL_CB_NODE* pCB, bool32_t indexedDraw) {
         log_msg(mdd(pCB->cmdBuffer), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_PIPELINE_LAYOUT, pCB->lastBoundPipelineLayout, 0, DRAWSTATE_PIPELINE_LAYOUT_MISMATCH, "DS",
                 "Pipeline layout from last vkCmdBindDescriptorSets() (%s) does not match PSO Pipeline layout (%s)", pCB->lastBoundPipelineLayout, pPipe->graphicsPipelineCI.layout);
     }
+    if (!pCB->activeRenderPass) {
+        log_msg(mdd(pCB->cmdBuffer), VK_DBG_REPORT_ERROR_BIT, (VkObjectType) 0, NULL, 0, DRAWSTATE_NO_ACTIVE_RENDERPASS, "DS",
+                "Draw cmd issued without an active RenderPass. vkCmdDraw*() must only be called within a RenderPass.");
+    }
     return result;
 }
 // For given sampler, return a ptr to its Create Info struct, or NULL if sampler not found
