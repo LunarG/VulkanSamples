@@ -489,14 +489,13 @@ void VkRenderTest::VKTriangleTest(const char *vertShaderText, const char *fragSh
         RotateTriangleVSUniform(Projection, View, Model, &constantBuffer, &cmdBuffer);
 
 #ifdef PRINT_OBJECTS
-    //uint64_t objTrackGetObjectCount(VkObjectType type)
     OBJ_TRACK_GET_OBJECTS_COUNT pObjTrackGetObjectsCount = (OBJ_TRACK_GET_OBJECTS_COUNT)vkGetProcAddr(gpu(), (char*)"objTrackGetObjectsCount");
-    uint64_t numObjects = pObjTrackGetObjectsCount();
+    uint64_t numObjects = pObjTrackGetObjectsCount(m_device);
     //OBJ_TRACK_GET_OBJECTS pGetObjsFunc = vkGetProcAddr(gpu(), (char*)"objTrackGetObjects");
     printf("DEBUG : Number of Objects : %lu\n", numObjects);
     OBJ_TRACK_GET_OBJECTS pObjTrackGetObjs = (OBJ_TRACK_GET_OBJECTS)vkGetProcAddr(gpu(), (char*)"objTrackGetObjects");
     OBJTRACK_NODE* pObjNodeArray = (OBJTRACK_NODE*)malloc(sizeof(OBJTRACK_NODE)*numObjects);
-    pObjTrackGetObjs(numObjects, pObjNodeArray);
+    pObjTrackGetObjs(m_device, numObjects, pObjNodeArray);
     for (i=0; i < numObjects; i++) {
         printf("Object %i of type %s has objID (%p) and %lu uses\n", i, string_VkObjectType(pObjNodeArray[i].objType), pObjNodeArray[i].pObj, pObjNodeArray[i].numUses);
     }
