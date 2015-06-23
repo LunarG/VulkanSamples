@@ -15,6 +15,7 @@ Environment::Environment() :
     app_.pEngineName = "vk_testing";
     app_.engineVersion = 1;
     app_.apiVersion = VK_API_VERSION;
+    app_.pNext = NULL;
 }
 
 bool Environment::parse_args(int argc, char **argv)
