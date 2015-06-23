@@ -2399,6 +2399,10 @@ VK_LAYER_EXPORT void VKAPI vkCmdBlitImage(VkCmdBuffer cmdBuffer,
         if (pCB->state == CB_UPDATE_ACTIVE) {
             updateCBTracking(cmdBuffer);
             addCmd(pCB, CMD_BLITIMAGE);
+            if (pCB->activeRenderPass) {
+                log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, (VkObjectType) 0, NULL, 0, DRAWSTATE_INVALID_RENDERPASS_CMD, "DS",
+                        "Incorrectly issuing CmdBlitImage during active RenderPass (%p)", (void*)pCB->activeRenderPass);
+            }
             get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdBlitImage(cmdBuffer, srcImage, srcImageLayout, destImage, destImageLayout, regionCount, pRegions, filter);
         } else {
             report_error_no_cb_begin(cmdBuffer, "vkCmdBindIndexBuffer()");
