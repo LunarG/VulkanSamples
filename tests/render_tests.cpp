@@ -580,7 +580,7 @@ TEST_F(VkRenderTest, VKTriangle_OutputLocation)
 
     VKTriangleTest(vertShaderText, fragShaderText, true);
 }
-#ifndef _WIN32 // Implicit (for now at least) in WIN32 is that we are using the Nvidia driver and it won't consume SPIRV yet
+
 TEST_F(VkRenderTest, SPV_VKTriangle)
 {
     static const char *vertShaderText =
@@ -620,33 +620,7 @@ TEST_F(VkRenderTest, SPV_VKTriangle)
     ScopedUseGlsl useGlsl(false);
     VKTriangleTest(vertShaderText, fragShaderText, true);
 }
-#endif
-TEST_F(VkRenderTest, GreenTriangle)
-{
-    static const char *vertShaderText =
-            "#version 130\n"
-            "vec2 vertices[3];\n"
-            "void main() {\n"
-            "      vertices[0] = vec2(-1.0, -1.0);\n"
-            "      vertices[1] = vec2( 1.0, -1.0);\n"
-            "      vertices[2] = vec2( 0.0,  1.0);\n"
-            "   gl_Position = vec4(vertices[gl_VertexID % 3], 0.0, 1.0);\n"
-            "}\n";
 
-    static const char *fragShaderText =
-       "#version 140\n"
-       "#extension GL_ARB_separate_shader_objects : enable\n"
-       "#extension GL_ARB_shading_language_420pack : enable\n"
-       "layout (location = 0) out vec4 outColor;\n"
-       "void main() {\n"
-       "   outColor = vec4(0,1,0,1);\n"
-       "}\n";
-
-    TEST_DESCRIPTION("Basic shader that renders a fixed Green triangle coded as part of the vertex shader.");
-
-    VKTriangleTest(vertShaderText, fragShaderText, false);
-}
-#ifndef _WIN32 // Implicit (for now at least) in WIN32 is that we are using the Nvidia driver and it won't consume SPIRV yet
 TEST_F(VkRenderTest, SPV_GreenTriangle)
 {
     static const char *vertShaderText =
@@ -674,7 +648,7 @@ TEST_F(VkRenderTest, SPV_GreenTriangle)
 
     VKTriangleTest(vertShaderText, fragShaderText, false);
 }
-#endif
+
 TEST_F(VkRenderTest, YellowTriangle)
 {
     static const char *vertShaderText =
