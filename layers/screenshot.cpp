@@ -652,6 +652,8 @@ VK_LAYER_EXPORT void* VKAPI vkGetInstanceProcAddr(
         return (void *) vkGetInstanceProcAddr;
     }
 
+    if (!strcmp(funcName, "vkDestroyInstance"))
+        return (void *) vkDestroyInstance;
     if (!strcmp(funcName, "vkCreateInstance"))
         return (void*) vkCreateInstance;
     if (!strcmp(funcName, "vkCreateDevice"))
