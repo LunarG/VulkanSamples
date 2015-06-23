@@ -33,7 +33,7 @@
 #include "vk_platform.h"
 
 // Vulkan API version supported by this file
-#define VK_API_VERSION VK_MAKE_VERSION(0, 103, 0)
+#define VK_API_VERSION VK_MAKE_VERSION(0, 104, 0)
 
 #ifdef __cplusplus
 extern "C"
@@ -810,7 +810,7 @@ typedef enum VkStructureType_
     VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO                = 23,
     VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO     = 24,
     VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO         = 25,
-    VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_CREATE_INFO     = 26,
+    VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO = 26,
     VK_STRUCTURE_TYPE_PIPELINE_IA_STATE_CREATE_INFO         = 27,
     VK_STRUCTURE_TYPE_PIPELINE_TESS_STATE_CREATE_INFO       = 28,
     VK_STRUCTURE_TYPE_PIPELINE_VP_STATE_CREATE_INFO         = 29,
@@ -1688,20 +1688,22 @@ typedef struct VkSpecializationInfo_
     const void*                                 pData;
 } VkSpecializationInfo;
 
-typedef struct VkPipelineShader_
+typedef struct VkPipelineShaderStageCreateInfo_
 {
+    VkStructureType                             sType;          // Must be VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO
+    const void*                                 pNext;          // Pointer to next structure
     VkShaderStage                               stage;
     VkShader                                    shader;
     uint32_t                                    linkConstBufferCount;
     const VkLinkConstBuffer*                    pLinkConstBufferInfo;
     const VkSpecializationInfo*                 pSpecializationInfo;
-} VkPipelineShader;
+} VkPipelineShaderStageCreateInfo;
 
 typedef struct VkComputePipelineCreateInfo_
 {
     VkStructureType                             sType;          // Must be VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO
     const void*                                 pNext;          // Pointer to next structure
-    VkPipelineShader                            cs;
+    VkPipelineShaderStageCreateInfo             cs;
     VkPipelineCreateFlags                       flags;          // Pipeline creation flags
     VkPipelineLayout                            layout;         // Interface layout of the pipeline
 } VkComputePipelineCreateInfo;
@@ -1724,9 +1726,9 @@ typedef struct VkVertexInputAttributeDescription_
     uint32_t                                    offsetInBytes;  // Offset of first element in bytes from base of vertex
 } VkVertexInputAttributeDescription;
 
-typedef struct VkPipelineVertexInputCreateInfo_
+typedef struct VkPipelineVertexInputStateCreateInfo_
 {
-    VkStructureType                             sType;          // Should be VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_CREATE_INFO
+    VkStructureType                             sType;          // Should be VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO
     const void*                                 pNext;          // Pointer to next structure
 
     uint32_t                                    bindingCount;   // number of bindings
@@ -1734,7 +1736,7 @@ typedef struct VkPipelineVertexInputCreateInfo_
 
     uint32_t                                    attributeCount; // number of attributes
     const VkVertexInputAttributeDescription*    pVertexAttributeDescriptions;
-} VkPipelineVertexInputCreateInfo;
+} VkPipelineVertexInputStateCreateInfo;
 
 typedef struct VkPipelineIaStateCreateInfo_
 {
@@ -1832,17 +1834,20 @@ typedef struct VkPipelineDsStateCreateInfo_
     VkStencilOpState                            back;
 } VkPipelineDsStateCreateInfo;
 
-typedef struct VkPipelineShaderStageCreateInfo_
-{
-    VkStructureType                             sType;      // Must be VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO
-    const void*                                 pNext;      // Pointer to next structure
-    VkPipelineShader                            shader;
-} VkPipelineShaderStageCreateInfo;
-
 typedef struct VkGraphicsPipelineCreateInfo_
 {
     VkStructureType                             sType;      // Must be VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO
     const void*                                 pNext;      // Pointer to next structure
+    uint32_t                                    stageCount;
+    const VkPipelineShaderStageCreateInfo*      pStages;    // One entry for each active shader stage
+    const VkPipelineVertexInputStateCreateInfo* pVertexInputState;
+    const VkPipelineIaStateCreateInfo*          pIaState;
+    const VkPipelineTessStateCreateInfo*        pTessState;
+    const VkPipelineVpStateCreateInfo*          pVpState;
+    const VkPipelineRsStateCreateInfo*          pRsState;
+    const VkPipelineMsStateCreateInfo*          pMsState;
+    const VkPipelineDsStateCreateInfo*          pDsState;
+    const VkPipelineCbStateCreateInfo*          pCbState;
     VkPipelineCreateFlags                       flags;      // Pipeline creation flags
     VkPipelineLayout                            layout;     // Interface layout of the pipeline
 } VkGraphicsPipelineCreateInfo;

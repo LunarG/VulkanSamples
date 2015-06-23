@@ -1052,23 +1052,30 @@ TEST_F(VkLayerTest, NoEndCmdBuffer)
     err = vkCreateShader(m_device->device(), &vs_ci, &vs);
     ASSERT_VK_SUCCESS(err);
 
-    const VkPipelineShader vs_pipe_shader = {
+    const VkPipelineShaderStageCreateInfo pipe_vs_ci = {
+        .sType                = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
+        .pNext                = NULL,
         .stage                = VK_SHADER_STAGE_VERTEX,
         .shader               = vs,
         .linkConstBufferCount = 0,
         .pLinkConstBufferInfo = NULL,
         .pSpecializationInfo  = NULL,
     };
-    const VkPipelineShaderStageCreateInfo pipe_vs_ci = {
-        .sType  = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
-        .pNext  = NULL,
-        .shader = vs_pipe_shader,
-    };
     const VkGraphicsPipelineCreateInfo gp_ci = {
-        .sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
-        .pNext = &pipe_vs_ci,
-        .flags = VK_PIPELINE_CREATE_DISABLE_OPTIMIZATION_BIT,
-        .layout = pipeline_layout,
+        .sType             = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
+        .pNext             = NULL,
+        .stageCount        = 1,
+        .pStages           = &pipe_vs_ci,
+        .pVertexInputState = NULL,
+        .pIaState          = NULL,
+        .pTessState        = NULL,
+        .pVpState          = NULL,
+        .pRsState          = NULL,
+        .pMsState          = NULL,
+        .pDsState          = NULL,
+        .pCbState          = NULL,
+        .flags             = VK_PIPELINE_CREATE_DISABLE_OPTIMIZATION_BIT,
+        .layout            = pipeline_layout,
     };
 
     VkPipeline pipeline;
@@ -1174,23 +1181,30 @@ TEST_F(VkLayerTest, VtxBufferBadIndex)
     VkShader vs;
     err = vkCreateShader(m_device->device(), &vs_ci, &vs);
 
-    const VkPipelineShader vs_pipe_shader = {
+    const VkPipelineShaderStageCreateInfo pipe_vs_ci = {
+        .sType  = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
+        .pNext  = NULL,
         .stage                = VK_SHADER_STAGE_VERTEX,
         .shader               = vs,
         .linkConstBufferCount = 0,
         .pLinkConstBufferInfo = NULL,
         .pSpecializationInfo  = NULL,
     };
-    const VkPipelineShaderStageCreateInfo pipe_vs_ci = {
-        .sType  = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
-        .pNext  = NULL,
-        .shader = vs_pipe_shader,
-    };
     const VkGraphicsPipelineCreateInfo gp_ci = {
-        .sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
-        .pNext = &pipe_vs_ci,
-        .flags = VK_PIPELINE_CREATE_DISABLE_OPTIMIZATION_BIT,
-        .layout = pipeline_layout,
+        .sType             = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
+        .pNext             = NULL,
+        .stageCount        = 1,
+        .pStages           = &pipe_vs_ci,
+        .pVertexInputState = NULL,
+        .pIaState          = NULL,
+        .pTessState        = NULL,
+        .pVpState          = NULL,
+        .pRsState          = NULL,
+        .pMsState          = NULL,
+        .pDsState          = NULL,
+        .pCbState          = NULL,
+        .flags             = VK_PIPELINE_CREATE_DISABLE_OPTIMIZATION_BIT,
+        .layout            = pipeline_layout,
     };
 
     VkPipeline pipeline;
@@ -1651,23 +1665,30 @@ TEST_F(VkLayerTest, NumSamplesMismatch)
     err = vkCreateShader(m_device->device(), &vs_ci, &vs);
     ASSERT_VK_SUCCESS(err);
 
-    const VkPipelineShader vs_pipe_shader = {
+    const VkPipelineShaderStageCreateInfo pipe_vs_ci = {
+        .sType                = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
+        .pNext                = NULL,
         .stage                = VK_SHADER_STAGE_VERTEX,
         .shader               = vs,
         .linkConstBufferCount = 0,
         .pLinkConstBufferInfo = NULL,
         .pSpecializationInfo  = NULL,
     };
-    const VkPipelineShaderStageCreateInfo pipe_vs_ci = {
-        .sType  = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
-        .pNext  = &pipe_ms_state_ci,
-        .shader = vs_pipe_shader,
-    };
     const VkGraphicsPipelineCreateInfo gp_ci = {
-        .sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
-        .pNext = &pipe_vs_ci,
-        .flags = VK_PIPELINE_CREATE_DISABLE_OPTIMIZATION_BIT,
-        .layout = pipeline_layout,
+        .sType             = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
+        .pNext             = NULL,
+        .stageCount        = 1,
+        .pStages           = &pipe_vs_ci,
+        .pVertexInputState = NULL,
+        .pIaState          = NULL,
+        .pTessState        = NULL,
+        .pVpState          = NULL,
+        .pRsState          = NULL,
+        .pMsState          = &pipe_ms_state_ci,
+        .pDsState          = NULL,
+        .pCbState          = NULL,
+        .flags             = VK_PIPELINE_CREATE_DISABLE_OPTIMIZATION_BIT,
+        .layout            = pipeline_layout,
     };
 
     VkPipeline pipeline;

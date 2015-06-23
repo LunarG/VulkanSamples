@@ -153,7 +153,7 @@ struct demo {
         VkBuffer buf;
         VkDeviceMemory mem;
 
-        VkPipelineVertexInputCreateInfo vi;
+        VkPipelineVertexInputStateCreateInfo vi;
         VkVertexInputBindingDescription vi_bindings[1];
         VkVertexInputAttributeDescription vi_attrs[2];
     } vertices;
@@ -782,7 +782,7 @@ static void demo_prepare_vertices(struct demo *demo)
             demo->vertices.mem, 0);
     assert(!err);
 
-    demo->vertices.vi.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_CREATE_INFO;
+    demo->vertices.vi.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
     demo->vertices.vi.pNext = NULL;
     demo->vertices.vi.bindingCount = 1;
     demo->vertices.vi.pVertexBindingDescriptions = demo->vertices.vi_bindings;
@@ -962,15 +962,15 @@ static VkShader demo_prepare_fs(struct demo *demo)
 static void demo_prepare_pipeline(struct demo *demo)
 {
     VkGraphicsPipelineCreateInfo pipeline;
-    VkPipelineVertexInputCreateInfo vi;
+
+    VkPipelineVertexInputStateCreateInfo vi;
     VkPipelineIaStateCreateInfo ia;
     VkPipelineRsStateCreateInfo rs;
     VkPipelineCbStateCreateInfo cb;
     VkPipelineDsStateCreateInfo ds;
-    VkPipelineShaderStageCreateInfo vs;
-    VkPipelineShaderStageCreateInfo fs;
     VkPipelineVpStateCreateInfo vp;
     VkPipelineMsStateCreateInfo ms;
+
     VkResult U_ASSERT_ONLY err;
 
     memset(&pipeline, 0, sizeof(pipeline));
@@ -1000,7 +1000,6 @@ static void demo_prepare_pipeline(struct demo *demo)
     cb.attachmentCount = 1;
     cb.pAttachments = att_state;
 
-
     memset(&vp, 0, sizeof(vp));
     vp.sType = VK_STRUCTURE_TYPE_PIPELINE_VP_STATE_CREATE_INFO;
     vp.viewportCount = 1;
@@ -1019,38 +1018,41 @@ static void demo_prepare_pipeline(struct demo *demo)
     ds.stencilTestEnable = VK_FALSE;
     ds.front = ds.back;
 
-    memset(&vs, 0, sizeof(vs));
-    vs.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-    vs.shader.stage = VK_SHADER_STAGE_VERTEX;
-    vs.shader.shader = demo_prepare_vs(demo);
-    vs.shader.linkConstBufferCount = 0;
-
-    memset(&fs, 0, sizeof(fs));
-    fs.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-    fs.shader.stage = VK_SHADER_STAGE_FRAGMENT;
-    fs.shader.shader = demo_prepare_fs(demo);
-
     memset(&ms, 0, sizeof(ms));
     ms.sType = VK_STRUCTURE_TYPE_PIPELINE_MS_STATE_CREATE_INFO;
     ms.sampleMask = 1;
     ms.multisampleEnable = VK_FALSE;
     ms.samples = 1;
 
-    pipeline.pNext = (const void *) &vi;
-    vi.pNext = (void *) &ia;
-    ia.pNext = (const void *) &rs;
-    rs.pNext = (const void *) &cb;
-    cb.pNext = (const void *) &ms;
-    ms.pNext = (const void *) &vp;
-    vp.pNext = (const void *) &ds;
-    ds.pNext = (const void *) &vs;
-    vs.pNext = (const void *) &fs;
+    // Two stages: vs and fs
+    pipeline.stageCount = 2;
+    VkPipelineShaderStageCreateInfo shaderStages[2];
+    memset(&shaderStages, 0, 2 * sizeof(VkPipelineShaderStageCreateInfo));
+
+    shaderStages[0].sType                = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+    shaderStages[0].stage                = VK_SHADER_STAGE_VERTEX;
+    shaderStages[0].shader               = demo_prepare_vs(demo);
+    shaderStages[0].linkConstBufferCount = 0;
+
+    shaderStages[1].sType  = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+    shaderStages[1].stage  = VK_SHADER_STAGE_FRAGMENT;
+    shaderStages[1].shader = demo_prepare_fs(demo);
+
+    pipeline.pVertexInputState = &vi;
+    pipeline.pIaState = &ia;
+    pipeline.pRsState = &rs;
+    pipeline.pCbState = &cb;
+    pipeline.pMsState = &ms;
+    pipeline.pVpState = &vp;
+    pipeline.pDsState = &ds;
+    pipeline.pStages  = shaderStages;
 
     err = vkCreateGraphicsPipeline(demo->device, &pipeline, &demo->pipeline);
     assert(!err);
 
-    vkDestroyObject(demo->device, VK_OBJECT_TYPE_SHADER, vs.shader.shader);
-    vkDestroyObject(demo->device, VK_OBJECT_TYPE_SHADER, fs.shader.shader);
+    for (uint32_t i = 0; i < pipeline.stageCount; i++) {
+        vkDestroyObject(demo->device, VK_OBJECT_TYPE_SHADER, shaderStages[i].shader);
+    }
 }
 
 static void demo_prepare_dynamic_states(struct demo *demo)

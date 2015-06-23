@@ -487,135 +487,122 @@ static PIPELINE_NODE* initPipeline(const VkGraphicsPipelineCreateInfo* pCreateIn
     } else {
         memset((void*)pPipeline, 0, sizeof(PIPELINE_NODE));
     }
-    // First init create info, we'll shadow the structs as we go down the tree
+    // First init create info
     // TODO : Validate that no create info is incorrectly replicated
     memcpy(&pPipeline->graphicsPipelineCI, pCreateInfo, sizeof(VkGraphicsPipelineCreateInfo));
-    GENERIC_HEADER* pTrav = (GENERIC_HEADER*)pCreateInfo->pNext;
-    GENERIC_HEADER* pPrev = (GENERIC_HEADER*)&pPipeline->graphicsPipelineCI; // Hold prev ptr to tie chain of structs together
+
     size_t bufferSize = 0;
-    VkPipelineVertexInputCreateInfo* pVICI = NULL;
-    VkPipelineCbStateCreateInfo*     pCBCI = NULL;
-    VkPipelineShaderStageCreateInfo* pTmpPSSCI = NULL;
-    while (pTrav) {
-        switch (pTrav->sType) {
-            case VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO:
-                pTmpPSSCI = (VkPipelineShaderStageCreateInfo*)pTrav;
-                switch (pTmpPSSCI->shader.stage) {
-                    case VK_SHADER_STAGE_VERTEX:
-                        pPrev->pNext = &pPipeline->vsCI;
-                        pPrev = (GENERIC_HEADER*)&pPipeline->vsCI;
-                        memcpy(&pPipeline->vsCI, pTmpPSSCI, sizeof(VkPipelineShaderStageCreateInfo));
-                        pPipeline->active_shaders |= VK_SHADER_STAGE_VERTEX_BIT;
-                        break;
-                    case VK_SHADER_STAGE_TESS_CONTROL:
-                        pPrev->pNext = &pPipeline->tcsCI;
-                        pPrev = (GENERIC_HEADER*)&pPipeline->tcsCI;
-                        memcpy(&pPipeline->tcsCI, pTmpPSSCI, sizeof(VkPipelineShaderStageCreateInfo));
-                        pPipeline->active_shaders |= VK_SHADER_STAGE_TESS_CONTROL_BIT;
-                        break;
-                    case VK_SHADER_STAGE_TESS_EVALUATION:
-                        pPrev->pNext = &pPipeline->tesCI;
-                        pPrev = (GENERIC_HEADER*)&pPipeline->tesCI;
-                        memcpy(&pPipeline->tesCI, pTmpPSSCI, sizeof(VkPipelineShaderStageCreateInfo));
-                        pPipeline->active_shaders |= VK_SHADER_STAGE_TESS_EVALUATION_BIT;
-                        break;
-                    case VK_SHADER_STAGE_GEOMETRY:
-                        pPrev->pNext = &pPipeline->gsCI;
-                        pPrev = (GENERIC_HEADER*)&pPipeline->gsCI;
-                        memcpy(&pPipeline->gsCI, pTmpPSSCI, sizeof(VkPipelineShaderStageCreateInfo));
-                        pPipeline->active_shaders |= VK_SHADER_STAGE_GEOMETRY_BIT;
-                        break;
-                    case VK_SHADER_STAGE_FRAGMENT:
-                        pPrev->pNext = &pPipeline->fsCI;
-                        pPrev = (GENERIC_HEADER*)&pPipeline->fsCI;
-                        memcpy(&pPipeline->fsCI, pTmpPSSCI, sizeof(VkPipelineShaderStageCreateInfo));
-                        pPipeline->active_shaders |= VK_SHADER_STAGE_FRAGMENT_BIT;
-                        break;
-                    case VK_SHADER_STAGE_COMPUTE:
-                        // TODO : Flag error, CS is specified through VkComputePipelineCreateInfo
-                        pPipeline->active_shaders |= VK_SHADER_STAGE_COMPUTE_BIT;
-                        break;
-                    default:
-                        // TODO : Flag error
-                        break;
-                }
+    const VkPipelineVertexInputStateCreateInfo* pVICI = NULL;
+    const VkPipelineCbStateCreateInfo*          pCBCI = NULL;
+
+    for (uint32_t i = 0; i < pCreateInfo->stageCount; i++) {
+        const VkPipelineShaderStageCreateInfo *pPSSCI = &pCreateInfo->pStages[i];
+
+        switch (pPSSCI->stage) {
+            case VK_SHADER_STAGE_VERTEX:
+                memcpy(&pPipeline->vsCI, pPSSCI, sizeof(VkPipelineShaderStageCreateInfo));
+                pPipeline->active_shaders |= VK_SHADER_STAGE_VERTEX_BIT;
                 break;
-            case VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_CREATE_INFO:
-                pPrev->pNext = &pPipeline->vertexInputCI;
-                pPrev = (GENERIC_HEADER*)&pPipeline->vertexInputCI;
-                memcpy((void*)&pPipeline->vertexInputCI, pTrav, sizeof(VkPipelineVertexInputCreateInfo));
-                // Copy embedded ptrs
-                pVICI = (VkPipelineVertexInputCreateInfo*)pTrav;
-                pPipeline->vtxBindingCount = pVICI->bindingCount;
-                if (pPipeline->vtxBindingCount) {
-                    pPipeline->pVertexBindingDescriptions = new VkVertexInputBindingDescription[pPipeline->vtxBindingCount];
-                    bufferSize = pPipeline->vtxBindingCount * sizeof(VkVertexInputBindingDescription);
-                    memcpy((void*)pPipeline->pVertexBindingDescriptions, ((VkPipelineVertexInputCreateInfo*)pTrav)->pVertexBindingDescriptions, bufferSize);
-                }
-                pPipeline->vtxAttributeCount = pVICI->attributeCount;
-                if (pPipeline->vtxAttributeCount) {
-                    pPipeline->pVertexAttributeDescriptions = new VkVertexInputAttributeDescription[pPipeline->vtxAttributeCount];
-                    bufferSize = pPipeline->vtxAttributeCount * sizeof(VkVertexInputAttributeDescription);
-                    memcpy((void*)pPipeline->pVertexAttributeDescriptions, ((VkPipelineVertexInputCreateInfo*)pTrav)->pVertexAttributeDescriptions, bufferSize);
-                }
+            case VK_SHADER_STAGE_TESS_CONTROL:
+                memcpy(&pPipeline->tcsCI, pPSSCI, sizeof(VkPipelineShaderStageCreateInfo));
+                pPipeline->active_shaders |= VK_SHADER_STAGE_TESS_CONTROL_BIT;
                 break;
-            case VK_STRUCTURE_TYPE_PIPELINE_IA_STATE_CREATE_INFO:
-                pPrev->pNext = &pPipeline->iaStateCI;
-                pPrev = (GENERIC_HEADER*)&pPipeline->iaStateCI;
-                memcpy((void*)&pPipeline->iaStateCI, pTrav, sizeof(VkPipelineIaStateCreateInfo));
+            case VK_SHADER_STAGE_TESS_EVALUATION:
+                memcpy(&pPipeline->tesCI, pPSSCI, sizeof(VkPipelineShaderStageCreateInfo));
+                pPipeline->active_shaders |= VK_SHADER_STAGE_TESS_EVALUATION_BIT;
                 break;
-            case VK_STRUCTURE_TYPE_PIPELINE_TESS_STATE_CREATE_INFO:
-                pPrev->pNext = &pPipeline->tessStateCI;
-                pPrev = (GENERIC_HEADER*)&pPipeline->tessStateCI;
-                memcpy((void*)&pPipeline->tessStateCI, pTrav, sizeof(VkPipelineTessStateCreateInfo));
+            case VK_SHADER_STAGE_GEOMETRY:
+                memcpy(&pPipeline->gsCI, pPSSCI, sizeof(VkPipelineShaderStageCreateInfo));
+                pPipeline->active_shaders |= VK_SHADER_STAGE_GEOMETRY_BIT;
                 break;
-            case VK_STRUCTURE_TYPE_PIPELINE_VP_STATE_CREATE_INFO:
-                pPrev->pNext = &pPipeline->vpStateCI;
-                pPrev = (GENERIC_HEADER*)&pPipeline->vpStateCI;
-                memcpy((void*)&pPipeline->vpStateCI, pTrav, sizeof(VkPipelineVpStateCreateInfo));
+            case VK_SHADER_STAGE_FRAGMENT:
+                memcpy(&pPipeline->fsCI, pPSSCI, sizeof(VkPipelineShaderStageCreateInfo));
+                pPipeline->active_shaders |= VK_SHADER_STAGE_FRAGMENT_BIT;
                 break;
-            case VK_STRUCTURE_TYPE_PIPELINE_RS_STATE_CREATE_INFO:
-                pPrev->pNext = &pPipeline->rsStateCI;
-                pPrev = (GENERIC_HEADER*)&pPipeline->rsStateCI;
-                memcpy((void*)&pPipeline->rsStateCI, pTrav, sizeof(VkPipelineRsStateCreateInfo));
-                break;
-            case VK_STRUCTURE_TYPE_PIPELINE_MS_STATE_CREATE_INFO:
-                pPrev->pNext = &pPipeline->msStateCI;
-                pPrev = (GENERIC_HEADER*)&pPipeline->msStateCI;
-                memcpy((void*)&pPipeline->msStateCI, pTrav, sizeof(VkPipelineMsStateCreateInfo));
-                break;
-            case VK_STRUCTURE_TYPE_PIPELINE_CB_STATE_CREATE_INFO:
-                pPrev->pNext = &pPipeline->cbStateCI;
-                pPrev = (GENERIC_HEADER*)&pPipeline->cbStateCI;
-                memcpy((void*)&pPipeline->cbStateCI, pTrav, sizeof(VkPipelineCbStateCreateInfo));
-                // Copy embedded ptrs
-                pCBCI = (VkPipelineCbStateCreateInfo*)pTrav;
-                pPipeline->attachmentCount = pCBCI->attachmentCount;
-                if (pPipeline->attachmentCount) {
-                    pPipeline->pAttachments = new VkPipelineCbAttachmentState[pPipeline->attachmentCount];
-                    bufferSize = pPipeline->attachmentCount * sizeof(VkPipelineCbAttachmentState);
-                    memcpy((void*)pPipeline->pAttachments, ((VkPipelineCbStateCreateInfo*)pTrav)->pAttachments, bufferSize);
-                }
-                break;
-            case VK_STRUCTURE_TYPE_PIPELINE_DS_STATE_CREATE_INFO:
-                pPrev->pNext = &pPipeline->dsStateCI;
-                pPrev = (GENERIC_HEADER*)&pPipeline->dsStateCI;
-                memcpy((void*)&pPipeline->dsStateCI, pTrav, sizeof(VkPipelineDsStateCreateInfo));
+            case VK_SHADER_STAGE_COMPUTE:
+                // TODO : Flag error, CS is specified through VkComputePipelineCreateInfo
+                pPipeline->active_shaders |= VK_SHADER_STAGE_COMPUTE_BIT;
                 break;
             default:
-                assert(0);
+                // TODO : Flag error
                 break;
         }
-        pTrav = (GENERIC_HEADER*)pTrav->pNext;
     }
+
+    if (pCreateInfo->pVertexInputState != NULL) {
+        memcpy((void*)&pPipeline->vertexInputCI, pCreateInfo->pVertexInputState , sizeof(VkPipelineVertexInputStateCreateInfo));
+        // Copy embedded ptrs
+        pVICI = pCreateInfo->pVertexInputState;
+        pPipeline->vtxBindingCount = pVICI->bindingCount;
+        if (pPipeline->vtxBindingCount) {
+            pPipeline->pVertexBindingDescriptions = new VkVertexInputBindingDescription[pPipeline->vtxBindingCount];
+            bufferSize = pPipeline->vtxBindingCount * sizeof(VkVertexInputBindingDescription);
+            memcpy((void*)pPipeline->pVertexBindingDescriptions, pVICI->pVertexBindingDescriptions, bufferSize);
+        }
+        pPipeline->vtxAttributeCount = pVICI->attributeCount;
+        if (pPipeline->vtxAttributeCount) {
+            pPipeline->pVertexAttributeDescriptions = new VkVertexInputAttributeDescription[pPipeline->vtxAttributeCount];
+            bufferSize = pPipeline->vtxAttributeCount * sizeof(VkVertexInputAttributeDescription);
+            memcpy((void*)pPipeline->pVertexAttributeDescriptions, pVICI->pVertexAttributeDescriptions, bufferSize);
+        }
+        pPipeline->graphicsPipelineCI.pVertexInputState = &pPipeline->vertexInputCI;
+    }
+    if (pCreateInfo->pIaState != NULL) {
+        memcpy((void*)&pPipeline->iaStateCI, pCreateInfo->pIaState, sizeof(VkPipelineIaStateCreateInfo));
+        pPipeline->graphicsPipelineCI.pIaState = &pPipeline->iaStateCI;
+    }
+    if (pCreateInfo->pTessState != NULL) {
+        memcpy((void*)&pPipeline->tessStateCI, pCreateInfo->pTessState, sizeof(VkPipelineTessStateCreateInfo));
+        pPipeline->graphicsPipelineCI.pTessState = &pPipeline->tessStateCI;
+    }
+    if (pCreateInfo->pVpState != NULL) {
+        memcpy((void*)&pPipeline->vpStateCI, pCreateInfo->pVpState, sizeof(VkPipelineVpStateCreateInfo));
+        pPipeline->graphicsPipelineCI.pVpState = &pPipeline->vpStateCI;
+    }
+    if (pCreateInfo->pRsState != NULL) {
+        memcpy((void*)&pPipeline->rsStateCI, pCreateInfo->pRsState, sizeof(VkPipelineRsStateCreateInfo));
+        pPipeline->graphicsPipelineCI.pRsState = &pPipeline->rsStateCI;
+    }
+    if (pCreateInfo->pMsState != NULL) {
+        memcpy((void*)&pPipeline->msStateCI, pCreateInfo->pMsState, sizeof(VkPipelineMsStateCreateInfo));
+        pPipeline->graphicsPipelineCI.pMsState = &pPipeline->msStateCI;
+    }
+    if (pCreateInfo->pCbState != NULL) {
+        memcpy((void*)&pPipeline->cbStateCI, pCreateInfo->pCbState, sizeof(VkPipelineCbStateCreateInfo));
+        // Copy embedded ptrs
+        pCBCI = pCreateInfo->pCbState;
+        pPipeline->attachmentCount = pCBCI->attachmentCount;
+        if (pPipeline->attachmentCount) {
+            pPipeline->pAttachments = new VkPipelineCbAttachmentState[pPipeline->attachmentCount];
+            bufferSize = pPipeline->attachmentCount * sizeof(VkPipelineCbAttachmentState);
+            memcpy((void*)pPipeline->pAttachments, pCBCI->pAttachments, bufferSize);
+        }
+        pPipeline->graphicsPipelineCI.pCbState = &pPipeline->cbStateCI;
+    }
+    if (pCreateInfo->pDsState != NULL) {
+        memcpy((void*)&pPipeline->dsStateCI, pCreateInfo->pDsState, sizeof(VkPipelineDsStateCreateInfo));
+        pPipeline->graphicsPipelineCI.pDsState = &pPipeline->dsStateCI;
+    }
+
+    // Copy over GraphicsPipelineCreateInfo structure embedded pointers
+    if (pCreateInfo->stageCount != 0) {
+        pPipeline->graphicsPipelineCI.pStages = new VkPipelineShaderStageCreateInfo[pCreateInfo->stageCount];
+        bufferSize =  pCreateInfo->stageCount * sizeof(VkPipelineShaderStageCreateInfo);
+        memcpy((void*)pPipeline->graphicsPipelineCI.pStages, pCreateInfo->pStages, bufferSize); 
+    }
+
     return pPipeline;
 }
+
 // Free the Pipeline nodes
 static void deletePipelines()
 {
     if (pipelineMap.size() <= 0)
         return;
     for (unordered_map<VkPipeline, PIPELINE_NODE*>::iterator ii=pipelineMap.begin(); ii!=pipelineMap.end(); ++ii) {
+        if ((*ii).second->graphicsPipelineCI.stageCount != 0) {
+            delete[] (*ii).second->graphicsPipelineCI.pStages;
+        }
         if ((*ii).second->pVertexBindingDescriptions) {
             delete[] (*ii).second->pVertexBindingDescriptions;
         }

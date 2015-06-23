@@ -613,7 +613,7 @@ static VkResult build_binding_table(const struct intel_gpu *gpu,
 VkResult intel_pipeline_shader_compile(struct intel_pipeline_shader *pipe_shader,
                                          const struct intel_gpu *gpu,
                                          const struct intel_pipeline_layout *pipeline_layout,
-                                         const VkPipelineShader *info,
+                                         const VkPipelineShaderStageCreateInfo *info,
                                          const struct intel_ir* ir)
 {
     /* XXX how about constness? */

@@ -410,20 +410,19 @@ public:
     VkResult CreateVKPipeline(VkDescriptorSetObj &descriptorSet);
 
 protected:
-    VkPipelineVertexInputCreateInfo     m_vi_state;
-    VkPipelineIaStateCreateInfo         m_ia_state;
-    VkPipelineRsStateCreateInfo         m_rs_state;
-    VkPipelineCbStateCreateInfo         m_cb_state;
-    VkPipelineDsStateCreateInfo         m_ds_state;
-    VkPipelineVpStateCreateInfo         m_vp_state;
-    VkPipelineMsStateCreateInfo         m_ms_state;
-    VkDeviceObj                        *m_device;
-    vector<VkShaderObj*>                m_shaderObjs;
-    vector<VkConstantBufferObj*>        m_vertexBufferObjs;
-    vector<int>                         m_vertexBufferBindings;
-    vector<VkPipelineCbAttachmentState> m_colorAttachments;
-    int                                 m_vertexBufferCount;
-
+    VkPipelineVertexInputStateCreateInfo m_vi_state;
+    VkPipelineIaStateCreateInfo          m_ia_state;
+    VkPipelineRsStateCreateInfo          m_rs_state;
+    VkPipelineCbStateCreateInfo          m_cb_state;
+    VkPipelineDsStateCreateInfo          m_ds_state;
+    VkPipelineVpStateCreateInfo          m_vp_state;
+    VkPipelineMsStateCreateInfo          m_ms_state;
+    VkDeviceObj                         *m_device;
+    vector<VkShaderObj*>                 m_shaderObjs;
+    vector<VkConstantBufferObj*>         m_vertexBufferObjs;
+    vector<int>                          m_vertexBufferBindings;
+    vector<VkPipelineCbAttachmentState>  m_colorAttachments;
+    int                                  m_vertexBufferCount;
 };
 
 #endif // VKRENDERFRAMEWORK_H

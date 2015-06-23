@@ -110,22 +110,23 @@ static int translate_stencil_op(VkStencilOp op)
 }
 
 struct intel_pipeline_create_info {
-    VkGraphicsPipelineCreateInfo   graphics;
-    VkPipelineVertexInputCreateInfo vi;
-    VkPipelineIaStateCreateInfo   ia;
-    VkPipelineDsStateCreateInfo   db;
-    VkPipelineCbStateCreateInfo   cb;
-    VkPipelineRsStateCreateInfo   rs;
-    VkPipelineTessStateCreateInfo tess;
-    VkPipelineMsStateCreateInfo   ms;
-    VkPipelineVpStateCreateInfo   vp;
-    VkPipelineShader                 vs;
-    VkPipelineShader                 tcs;
-    VkPipelineShader                 tes;
-    VkPipelineShader                 gs;
-    VkPipelineShader                 fs;
+    VkGraphicsPipelineCreateInfo         graphics;
+    VkPipelineVertexInputStateCreateInfo vi;
+    VkPipelineIaStateCreateInfo          ia;
+    VkPipelineDsStateCreateInfo          db;
+    VkPipelineCbStateCreateInfo          cb;
+    VkPipelineRsStateCreateInfo          rs;
+    VkPipelineTessStateCreateInfo        tess;
+    VkPipelineMsStateCreateInfo          ms;
+    VkPipelineVpStateCreateInfo          vp;
 
-    VkComputePipelineCreateInfo    compute;
+    VkComputePipelineCreateInfo          compute;
+
+    VkPipelineShaderStageCreateInfo      vs;
+    VkPipelineShaderStageCreateInfo      tcs;
+    VkPipelineShaderStageCreateInfo      tes;
+    VkPipelineShaderStageCreateInfo      gs;
+    VkPipelineShaderStageCreateInfo      fs;
 };
 
 /* in S1.3 */
@@ -239,7 +240,7 @@ void intel_pipeline_shader_destroy(struct intel_dev *dev,
 }
 
 static VkResult pipeline_build_shader(struct intel_pipeline *pipeline,
-                                        const VkPipelineShader *sh_info,
+                                        const VkPipelineShaderStageCreateInfo *sh_info,
                                         struct intel_pipeline_shader *sh)
 {
     VkResult ret;
@@ -1222,122 +1223,90 @@ static VkResult pipeline_build_all(struct intel_pipeline *pipeline,
     return ret;
 }
 
-struct intel_pipeline_create_info_header {
-    VkStructureType struct_type;
-    const struct intel_pipeline_create_info_header *next;
-};
-
-static VkResult pipeline_create_info_init(struct intel_pipeline_create_info *info,
-                                            const struct intel_pipeline_create_info_header *header)
+static VkResult pipeline_create_info_init(struct intel_pipeline_create_info  *info,
+                                          const VkGraphicsPipelineCreateInfo *vkinfo)
 {
     memset(info, 0, sizeof(*info));
-
 
     /*
      * Do we need to set safe defaults in case the app doesn't provide all of
      * the necessary create infos?
      */
-    info->ms.samples = 1;
+    info->ms.samples    = 1;
     info->ms.sampleMask = 1;
 
-    while (header) {
-        const void *src = (const void *) header;
-        size_t size;
-        void *dst;
+    memcpy(&info->graphics, vkinfo, sizeof (info->graphics));
 
-        switch (header->struct_type) {
-        case VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO:
-            size = sizeof(info->graphics);
-            dst = &info->graphics;
-            break;
-        case VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_CREATE_INFO:
-            size = sizeof(info->vi);
-            dst = &info->vi;
-            break;
-        case VK_STRUCTURE_TYPE_PIPELINE_IA_STATE_CREATE_INFO:
-            size = sizeof(info->ia);
-            dst = &info->ia;
-            break;
-        case VK_STRUCTURE_TYPE_PIPELINE_DS_STATE_CREATE_INFO:
-            size = sizeof(info->db);
-            dst = &info->db;
-            break;
-        case VK_STRUCTURE_TYPE_PIPELINE_CB_STATE_CREATE_INFO:
-            size = sizeof(info->cb);
-            dst = &info->cb;
-            break;
-        case VK_STRUCTURE_TYPE_PIPELINE_RS_STATE_CREATE_INFO:
-            size = sizeof(info->rs);
-            dst = &info->rs;
-            break;
-        case VK_STRUCTURE_TYPE_PIPELINE_TESS_STATE_CREATE_INFO:
-            size = sizeof(info->tess);
-            dst = &info->tess;
-            break;
-        case VK_STRUCTURE_TYPE_PIPELINE_MS_STATE_CREATE_INFO:
-            size = sizeof(info->ms);
-            dst = &info->ms;
-            break;
-        case VK_STRUCTURE_TYPE_PIPELINE_VP_STATE_CREATE_INFO:
-            size = sizeof(info->vp);
-            dst = &info->vp;
-            break;
-        case VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO:
-            {
-                const VkPipelineShader *shader =
-                    (const VkPipelineShader *) (header + 1);
-
-                src = (const void *) shader;
-                size = sizeof(*shader);
-
-                switch (shader->stage) {
-                case VK_SHADER_STAGE_VERTEX:
-                    dst = &info->vs;
-                    break;
-                case VK_SHADER_STAGE_TESS_CONTROL:
-                    dst = &info->tcs;
-                    break;
-                case VK_SHADER_STAGE_TESS_EVALUATION:
-                    dst = &info->tes;
-                    break;
-                case VK_SHADER_STAGE_GEOMETRY:
-                    dst = &info->gs;
-                    break;
-                case VK_SHADER_STAGE_FRAGMENT:
-                    dst = &info->fs;
-                    break;
-                default:
-                    return VK_ERROR_BAD_PIPELINE_DATA;
-                    break;
-                }
-            }
-            break;
-        case VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO:
-            size = sizeof(info->compute);
-            dst = &info->compute;
-            break;
-        default:
-            return VK_ERROR_BAD_PIPELINE_DATA;
-            break;
+    void *dst;
+    for (uint32_t i = 0; i < vkinfo->stageCount; i++) {
+        const VkPipelineShaderStageCreateInfo *thisStage = &vkinfo->pStages[i];
+        switch (thisStage->stage) {
+            case VK_SHADER_STAGE_VERTEX:
+                dst = &info->vs;
+                break;
+            case VK_SHADER_STAGE_TESS_CONTROL:
+                dst = &info->tcs;
+                break;
+            case VK_SHADER_STAGE_TESS_EVALUATION:
+                dst = &info->tes;
+                break;
+            case VK_SHADER_STAGE_GEOMETRY:
+                dst = &info->gs;
+                break;
+            case VK_SHADER_STAGE_FRAGMENT:
+                dst = &info->fs;
+                break;
+            case VK_SHADER_STAGE_COMPUTE:
+                dst = &info->compute;
+                break;
+            default:
+                return VK_ERROR_BAD_PIPELINE_DATA;
+                break;
         }
+        memcpy(dst, thisStage, sizeof(VkPipelineShaderStageCreateInfo));
+    }
 
-        memcpy(dst, src, size);
-        header = header->next;
+    if (vkinfo->pVertexInputState != NULL) {
+        memcpy(&info->vi, vkinfo->pVertexInputState, sizeof (info->vi));
+    }
+    if (vkinfo->pIaState != NULL) {
+        memcpy(&info->ia, vkinfo->pIaState, sizeof (info->ia));
+    }
+    if (vkinfo->pDsState != NULL) {
+        memcpy(&info->db, vkinfo->pDsState, sizeof (info->db));
+    }
+    if (vkinfo->pCbState != NULL) {
+        memcpy(&info->cb, vkinfo->pCbState, sizeof (info->cb));
+    }
+    if (vkinfo->pRsState != NULL) {
+        memcpy(&info->rs, vkinfo->pRsState, sizeof (info->rs));
+    }
+    if (vkinfo->pTessState != NULL) {
+        memcpy(&info->tess, vkinfo->pTessState, sizeof (info->tess));
+    }
+    if (vkinfo->pMsState != NULL) {
+        memcpy(&info->ms, vkinfo->pMsState, sizeof (info->ms));
+    }
+    if (vkinfo->pVpState != NULL) {
+        memcpy(&info->vp, vkinfo->pVpState, sizeof (info->vp));
+    }
+    if (vkinfo->pVpState != NULL) {
+        memcpy(&info->vp, vkinfo->pVpState, sizeof (info->vp));
     }
 
     return VK_SUCCESS;
 }
 
 static VkResult graphics_pipeline_create(struct intel_dev *dev,
-                                           const VkGraphicsPipelineCreateInfo *info_,
-                                           struct intel_pipeline **pipeline_ret)
+                                         const VkGraphicsPipelineCreateInfo *info_,
+                                         struct intel_pipeline **pipeline_ret)
 {
     struct intel_pipeline_create_info info;
     struct intel_pipeline *pipeline;
     VkResult ret;
 
-    ret = pipeline_create_info_init(&info,
-            (const struct intel_pipeline_create_info_header *) info_);
+    ret = pipeline_create_info_init(&info, info_);
+
     if (ret != VK_SUCCESS)
         return ret;
 

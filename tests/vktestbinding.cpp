@@ -186,18 +186,12 @@ void BaseObject::reinit(VkObject obj, VkObjectType type, bool own)
 
 uint32_t Object::memory_allocation_count() const
 {
-    /// LUGMAL return get_info<uint32_t>(dev_->obj(), type(), obj(), VK_OBJECT_INFO_TYPE_MEMORY_ALLOCATION_COUNT, 1)[0];
     return 1;
 }
 
 std::vector<VkMemoryRequirements> Object::memory_requirements() const
 {
-    //// VkResult err;
     uint32_t num_allocations = 1;
-    //// size_t num_alloc_size = sizeof(num_allocations);
-    //// err = vkGetObjectInfo(dev_->obj(), type(), obj(), VK_OBJECT_INFO_TYPE_MEMORY_ALLOCATION_COUNT,
-    ////                        &num_alloc_size, &num_allocations);
-    //// EXPECT(err == VK_SUCCESS && num_alloc_size == sizeof(num_allocations));
     std::vector<VkMemoryRequirements> info =
         get_info<VkMemoryRequirements>(dev_->obj(), type(), obj(), VK_OBJECT_INFO_TYPE_MEMORY_REQUIREMENTS, 0);
     EXPECT(info.size() == num_allocations);

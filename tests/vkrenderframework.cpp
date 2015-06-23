@@ -304,7 +304,7 @@ void VkRenderFramework::InitRenderTarget(uint32_t targets, VkDepthStencilBindInf
 
     for (i = 0; i < targets; i++) {
         VkImageObj *img = new VkImageObj(m_device);
- 
+
         VkFormatProperties props;
         size_t size = sizeof(props);
         VkResult err;
@@ -325,7 +325,7 @@ void VkRenderFramework::InitRenderTarget(uint32_t targets, VkDepthStencilBindInf
         else {
             FAIL() << "Neither Linear nor Optimal allowed for render target";
         }
-        
+
         m_renderTargets.push_back(img);
         m_colorBindings[i].view  = img->targetView();
         m_colorBindings[i].layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
@@ -1024,11 +1024,11 @@ VkIndexType VkIndexBufferObj::GetIndexType()
 VkPipelineShaderStageCreateInfo* VkShaderObj::GetStageCreateInfo()
 {
     VkPipelineShaderStageCreateInfo *stageInfo = (VkPipelineShaderStageCreateInfo*) calloc( 1,sizeof(VkPipelineShaderStageCreateInfo) );
-    stageInfo->sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-    stageInfo->shader.stage = m_stage;
-    stageInfo->shader.shader = obj();
-    stageInfo->shader.linkConstBufferCount = 0;
-    stageInfo->shader.pLinkConstBufferInfo = VK_NULL_HANDLE;
+    stageInfo->sType                = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+    stageInfo->stage                = m_stage;
+    stageInfo->shader               = obj();
+    stageInfo->linkConstBufferCount = 0;
+    stageInfo->pLinkConstBufferInfo = VK_NULL_HANDLE;
 
     return stageInfo;
 }
@@ -1076,7 +1076,13 @@ VkShaderObj::VkShaderObj(VkDeviceObj *device, const char * shader_code, VkShader
 VkPipelineObj::VkPipelineObj(VkDeviceObj *device)
 {
     m_device = device;
-    m_vi_state.attributeCount = m_vi_state.bindingCount = 0;
+
+    m_vi_state.pNext                        = VK_NULL_HANDLE;
+    m_vi_state.bindingCount                 = 0;
+    m_vi_state.pVertexBindingDescriptions   = VK_NULL_HANDLE;
+    m_vi_state.attributeCount               = 0;
+    m_vi_state.pVertexAttributeDescriptions = VK_NULL_HANDLE;
+
     m_vertexBufferCount = 0;
 
     m_ia_state.sType = VK_STRUCTURE_TYPE_PIPELINE_IA_STATE_CREATE_INFO;
@@ -1087,7 +1093,7 @@ VkPipelineObj::VkPipelineObj(VkDeviceObj *device)
     m_ia_state.primitiveRestartIndex = 0;
 
     m_rs_state.sType = VK_STRUCTURE_TYPE_PIPELINE_RS_STATE_CREATE_INFO;
-    m_rs_state.pNext = &m_ia_state;
+    m_rs_state.pNext = VK_NULL_HANDLE;
     m_rs_state.depthClipEnable = VK_FALSE;
     m_rs_state.rasterizerDiscardEnable = VK_FALSE;
     m_rs_state.pointOrigin = VK_COORDINATE_ORIGIN_UPPER_LEFT;
@@ -1098,11 +1104,11 @@ VkPipelineObj::VkPipelineObj(VkDeviceObj *device)
 
     memset(&m_cb_state,0,sizeof(m_cb_state));
     m_cb_state.sType = VK_STRUCTURE_TYPE_PIPELINE_CB_STATE_CREATE_INFO;
-    m_cb_state.pNext = &m_rs_state;
+    m_cb_state.pNext = VK_NULL_HANDLE;
     m_cb_state.alphaToCoverageEnable = VK_FALSE;
     m_cb_state.logicOp = VK_LOGIC_OP_COPY;
 
-    m_ms_state.pNext = &m_cb_state;
+    m_ms_state.pNext = VK_NULL_HANDLE;
     m_ms_state.sType = VK_STRUCTURE_TYPE_PIPELINE_MS_STATE_CREATE_INFO;
     m_ms_state.multisampleEnable = VK_FALSE;
     m_ms_state.sampleMask = 1;                // Do we have to specify MSAA even just to disable it?
@@ -1111,13 +1117,13 @@ VkPipelineObj::VkPipelineObj(VkDeviceObj *device)
     m_ms_state.sampleShadingEnable = 0;
 
     m_vp_state.sType = VK_STRUCTURE_TYPE_PIPELINE_VP_STATE_CREATE_INFO;
-    m_vp_state.pNext = &m_ms_state;
+    m_vp_state.pNext = VK_NULL_HANDLE;
     m_vp_state.viewportCount = 1;
     m_vp_state.depthMode = VK_DEPTH_MODE_ZERO_TO_ONE;
     m_vp_state.clipOrigin = VK_COORDINATE_ORIGIN_UPPER_LEFT;
 
     m_ds_state.sType = VK_STRUCTURE_TYPE_PIPELINE_DS_STATE_CREATE_INFO;
-    m_ds_state.pNext = &m_vp_state,
+    m_ds_state.pNext = VK_NULL_HANDLE,
     m_ds_state.format = VK_FORMAT_D32_SFLOAT;
     m_ds_state.depthTestEnable      = VK_FALSE;
     m_ds_state.depthWriteEnable     = VK_FALSE;
@@ -1185,32 +1191,40 @@ void VkPipelineObj::SetDepthStencil(VkPipelineDsStateCreateInfo *ds_state)
 
 VkResult VkPipelineObj::CreateVKPipeline(VkDescriptorSetObj &descriptorSet)
 {
-    void* head_ptr = &m_ds_state;
     VkGraphicsPipelineCreateInfo info = {};
 
     VkPipelineShaderStageCreateInfo* shaderCreateInfo;
 
+    info.stageCount = m_shaderObjs.size();
+    info.pStages = new VkPipelineShaderStageCreateInfo[info.stageCount];
+
     for (int i=0; i<m_shaderObjs.size(); i++)
     {
         shaderCreateInfo = m_shaderObjs[i]->GetStageCreateInfo();
-        shaderCreateInfo->pNext = head_ptr;
-        head_ptr = shaderCreateInfo;
+        memcpy((void*)&info.pStages[i], shaderCreateInfo, sizeof(VkPipelineShaderStageCreateInfo));
     }
 
     if (m_vi_state.attributeCount && m_vi_state.bindingCount)
     {
-        m_vi_state.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_CREATE_INFO;
-        m_vi_state.pNext = head_ptr;
-        head_ptr = &m_vi_state;
+        m_vi_state.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
     }
 
     info.sType  = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
-    info.pNext  = head_ptr;
+    info.pNext  = NULL;
     info.flags  = 0;
     info.layout = descriptorSet.GetPipelineLayout();
 
     m_cb_state.attachmentCount = m_colorAttachments.size();
     m_cb_state.pAttachments = &m_colorAttachments[0];
+
+    info.pTessState        = NULL;
+    info.pVertexInputState = &m_vi_state;
+    info.pIaState          = &m_ia_state;
+    info.pVpState          = &m_vp_state;
+    info.pRsState          = &m_rs_state;
+    info.pMsState          = &m_ms_state;
+    info.pDsState          = &m_ds_state;
+    info.pCbState          = &m_cb_state;
 
     return init_try(*m_device, info);
 }

@@ -628,7 +628,7 @@ get_fundamental_type(shader_source const *src, unsigned type)
 
 
 static bool
-validate_vi_consistency(VkPipelineVertexInputCreateInfo const *vi)
+validate_vi_consistency(VkPipelineVertexInputStateCreateInfo const *vi)
 {
     /* walk the binding descriptions, which describe the step rate and stride of each vertex buffer.
      * each binding should be specified only once.
@@ -655,7 +655,7 @@ validate_vi_consistency(VkPipelineVertexInputCreateInfo const *vi)
 
 
 static bool
-validate_vi_against_vs_inputs(VkPipelineVertexInputCreateInfo const *vi, shader_source const *vs)
+validate_vi_against_vs_inputs(VkPipelineVertexInputStateCreateInfo const *vi, shader_source const *vs)
 {
     std::map<uint32_t, interface_var> inputs;
     /* we collect builtin inputs, but they will never appear in the VI state --
@@ -819,31 +819,28 @@ validate_graphics_pipeline(VkGraphicsPipelineCreateInfo const *pCreateInfo)
     shader_source const *shaders[VK_SHADER_STAGE_FRAGMENT + 1];  /* exclude CS */
     memset(shaders, 0, sizeof(shaders));
     VkPipelineCbStateCreateInfo const *cb = 0;
-    VkPipelineVertexInputCreateInfo const *vi = 0;
+    VkPipelineVertexInputStateCreateInfo const *vi = 0;
     char str[1024];
     bool pass = true;
 
     loader_platform_thread_lock_mutex(&globalLock);
 
-    for (auto stage = pCreateInfo; stage; stage = (decltype(stage))stage->pNext) {
-        if (stage->sType == VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO) {
-            auto shader_stage = (VkPipelineShaderStageCreateInfo const *)stage;
+    for (auto i = 0; i < pCreateInfo->stageCount; i++) {
+        VkPipelineShaderStageCreateInfo const *pStage = &pCreateInfo->pStages[i];
+        if (pStage->sType == VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO) {
 
-            if (shader_stage->shader.stage < VK_SHADER_STAGE_VERTEX || shader_stage->shader.stage > VK_SHADER_STAGE_FRAGMENT) {
-                sprintf(str, "Unknown shader stage %d\n", shader_stage->shader.stage);
+            if (pStage->stage < VK_SHADER_STAGE_VERTEX || pStage->stage > VK_SHADER_STAGE_FRAGMENT) {
+                sprintf(str, "Unknown shader stage %d\n", pStage->stage);
                 layerCbMsg(VK_DBG_REPORT_WARN_BIT, (VkObjectType) 0, NULL, 0, SHADER_CHECKER_UNKNOWN_STAGE, "SC", str);
             }
             else {
-                shaders[shader_stage->shader.stage] = shader_map[(void *)(shader_stage->shader.shader)];
+                shaders[pStage->stage] = shader_map[(void *)(pStage->shader)];
             }
         }
-        else if (stage->sType == VK_STRUCTURE_TYPE_PIPELINE_CB_STATE_CREATE_INFO) {
-            cb = (VkPipelineCbStateCreateInfo const *)stage;
-        }
-        else if (stage->sType == VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_CREATE_INFO) {
-            vi = (VkPipelineVertexInputCreateInfo const *)stage;
-        }
     }
+
+    cb = pCreateInfo->pCbState;
+    vi = pCreateInfo->pVertexInputState;
 
     if (vi) {
         pass = validate_vi_consistency(vi) && pass;
