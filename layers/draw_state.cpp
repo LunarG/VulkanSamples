@@ -2122,6 +2122,10 @@ VK_LAYER_EXPORT void VKAPI vkCmdBindPipeline(VkCmdBuffer cmdBuffer, VkPipelineBi
         if (pCB->state == CB_UPDATE_ACTIVE) {
             updateCBTracking(cmdBuffer);
             addCmd(pCB, CMD_BINDPIPELINE);
+            if ((VK_PIPELINE_BIND_POINT_COMPUTE == pipelineBindPoint) && (pCB->activeRenderPass)) {
+                log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_PIPELINE, pipeline, 0, DRAWSTATE_INVALID_RENDERPASS_CMD, "DS",
+                        "Incorrectly binding compute pipeline (%p) during active RenderPass (%p)", (void*)pipeline, (void*)pCB->activeRenderPass);
+            }
             PIPELINE_NODE* pPN = getPipeline(pipeline);
             if (pPN) {
                 pCB->lastBoundPipeline = pipeline;
