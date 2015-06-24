@@ -29,5 +29,7 @@ if (WIN32)
     # Add in the DLL "map" file for vkGetProcAddr()
     set_target_properties(VK_nulldrv PROPERTIES
         LINK_FLAGS "/DEF:${PROJECT_SOURCE_DIR}/icd/nulldrv/VK_nulldrv.def")
+else()
+    set_target_properties(VK_nulldrv PROPERTIES
+	LINK_FLAGS "-Wl,-Bsymbolic")
 endif()
-
