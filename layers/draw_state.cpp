@@ -2182,7 +2182,8 @@ VK_LAYER_EXPORT void VKAPI vkCmdBindDescriptorSets(VkCmdBuffer cmdBuffer, VkPipe
                         "Incorrectly binding graphics DescriptorSets without an active RenderPass");
             } else if (validateBoundPipeline(cmdBuffer)) {
                 for (uint32_t i=0; i<setCount; i++) {
-                    if (getSetNode(pDescriptorSets[i])) {
+                    SET_NODE* pSet = getSetNode(pDescriptorSets[i]);
+                    if (pSet) {
                         loader_platform_thread_lock_mutex(&globalLock);
                         pCB->lastBoundDescriptorSet = pDescriptorSets[i];
                         pCB->lastBoundPipelineLayout = layout;
@@ -2191,6 +2192,9 @@ VK_LAYER_EXPORT void VKAPI vkCmdBindDescriptorSets(VkCmdBuffer cmdBuffer, VkPipe
                         loader_platform_thread_unlock_mutex(&globalLock);
                         log_msg(mdd(cmdBuffer), VK_DBG_REPORT_INFO_BIT, VK_OBJECT_TYPE_DESCRIPTOR_SET, pDescriptorSets[i], 0, DRAWSTATE_NONE, "DS",
                                 "DS %p bound on pipeline %s", (void*)pDescriptorSets[i], string_VkPipelineBindPoint(pipelineBindPoint));
+                        if (!pSet->pUpdateStructs)
+                            log_msg(mdd(cmdBuffer), VK_DBG_REPORT_WARN_BIT, VK_OBJECT_TYPE_DESCRIPTOR_SET, pDescriptorSets[i], 0, DRAWSTATE_DESCRIPTOR_SET_NOT_UPDATED, "DS",
+                                    "DS %p bound but it was never updated. You may want to either update it or not bind it.", (void*)pDescriptorSets[i]);
                     } else {
                         log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DESCRIPTOR_SET, pDescriptorSets[i], 0, DRAWSTATE_INVALID_SET, "DS",
                                 "Attempt to bind DS %p that doesn't exist!", (void*)pDescriptorSets[i]);
