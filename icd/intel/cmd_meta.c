@@ -898,7 +898,7 @@ void cmd_meta_clear_color_image(
     VkCmdBuffer                         cmdBuffer,
     VkImage                             image,
     VkImageLayout                       imageLayout,
-    const VkClearColor                 *pClearColor,
+    const VkClearColorValue            *pClearColor,
     uint32_t                            rangeCount,
     const VkImageSubresourceRange      *pRanges)
 {
@@ -914,16 +914,11 @@ void cmd_meta_clear_color_image(
     meta.shader_id = INTEL_DEV_META_FS_CLEAR_COLOR;
     meta.samples = img->samples;
 
-    if (pClearColor->useRawValue) {
-        icd_format_get_raw_value(img->layout.format, pClearColor->color.rawColor, meta.clear_val);
-        format = cmd_meta_img_raw_format(cmd, img->layout.format);
-    } else {
-        meta.clear_val[0] = u_fui(pClearColor->color.floatColor[0]);
-        meta.clear_val[1] = u_fui(pClearColor->color.floatColor[1]);
-        meta.clear_val[2] = u_fui(pClearColor->color.floatColor[2]);
-        meta.clear_val[3] = u_fui(pClearColor->color.floatColor[3]);
-        format = img->layout.format;
-    }
+    meta.clear_val[0] = pClearColor->u32[0];
+    meta.clear_val[1] = pClearColor->u32[1];
+    meta.clear_val[2] = pClearColor->u32[2];
+    meta.clear_val[3] = pClearColor->u32[3];
+    format = img->layout.format;
 
     for (i = 0; i < rangeCount; i++) {
         cmd_meta_clear_image(cmd, img, format, &meta, &pRanges[i]);
@@ -934,7 +929,7 @@ ICD_EXPORT void VKAPI vkCmdClearColorImage(
     VkCmdBuffer                         cmdBuffer,
     VkImage                             image,
     VkImageLayout                       imageLayout,
-    const VkClearColor                 *pClearColor,
+    const VkClearColorValue            *pClearColor,
     uint32_t                            rangeCount,
     const VkImageSubresourceRange      *pRanges)
 {
@@ -993,7 +988,7 @@ ICD_EXPORT void VKAPI vkCmdClearColorAttachment(
     VkCmdBuffer                             cmdBuffer,
     uint32_t                                colorAttachment,
     VkImageLayout                           imageLayout,
-    const VkClearColor                     *pColor,
+    const VkClearColorValue                *pColor,
     uint32_t                                rectCount,
     const VkRect3D                         *pRects)
 {

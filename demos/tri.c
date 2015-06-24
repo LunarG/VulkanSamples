@@ -286,9 +286,8 @@ static void demo_draw_build_cmd(struct demo *demo)
         .view = demo->depth.view,
         .layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
     };
-    const VkClearColor clear_color = {
-        .color.floatColor = { 0.2f, 0.2f, 0.2f, 0.2f },
-        .useRawValue = false,
+    const VkClearColorValue clear_color = {
+        .f32 = { 0.2f, 0.2f, 0.2f, 0.2f },
     };
     const float clear_depth = 0.9f;
     VkCmdBufferBeginInfo cmd_buf_info = {

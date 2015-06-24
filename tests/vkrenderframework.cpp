@@ -52,11 +52,10 @@ VkRenderFramework::VkRenderFramework() :
 {
 
     // clear the back buffer to dark grey
-    m_clear_color.color.rawColor[0] = 64;
-    m_clear_color.color.rawColor[1] = 64;
-    m_clear_color.color.rawColor[2] = 64;
-    m_clear_color.color.rawColor[3] = 0;
-    m_clear_color.useRawValue = true;
+    m_clear_color.f32[0] = 0.25f;
+    m_clear_color.f32[1] = 0.25f;
+    m_clear_color.f32[2] = 0.25f;
+    m_clear_color.f32[3] = 0.0f;
 }
 
 VkRenderFramework::~VkRenderFramework()
@@ -294,7 +293,7 @@ void VkRenderFramework::InitRenderTarget(uint32_t targets, VkDepthStencilBindInf
 {
     std::vector<VkAttachmentLoadOp> load_ops;
     std::vector<VkAttachmentStoreOp> store_ops;
-    std::vector<VkClearColor> clear_colors;
+    std::vector<VkClearColorValue> clear_colors;
 
     uint32_t i;
 
@@ -1273,7 +1272,7 @@ void VkCommandBufferObj::PipelineBarrier(VkPipelineStageFlags src_stages,  VkPip
     vkCmdPipelineBarrier(obj(), src_stages, dest_stages, byRegion, memBarrierCount, ppMemBarriers);
 }
 
-void VkCommandBufferObj::ClearAllBuffers(VkClearColor clear_color, float depth_clear_color, uint32_t stencil_clear_color,
+void VkCommandBufferObj::ClearAllBuffers(VkClearColorValue clear_color, float depth_clear_color, uint32_t stencil_clear_color,
                                           VkDepthStencilObj *depthStencilObj)
 {
     uint32_t i;

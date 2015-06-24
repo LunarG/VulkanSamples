@@ -8415,7 +8415,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdFillBuffer(
 
 void PreCmdClearColorImage(
     VkCmdBuffer cmdBuffer,
-    const VkClearColor* pColor,
+    const VkClearColorValue* pColor,
     const VkImageSubresourceRange* pRanges)
 {
     if(cmdBuffer == nullptr)
@@ -8481,7 +8481,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdClearColorImage(
     VkCmdBuffer cmdBuffer,
     VkImage image,
     VkImageLayout imageLayout,
-    const VkClearColor* pColor,
+    const VkClearColorValue* pColor,
     uint32_t rangeCount,
     const VkImageSubresourceRange* pRanges)
 {

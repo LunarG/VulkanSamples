@@ -1164,17 +1164,13 @@ TEST_F(VkCmdCopyImageTest, Basic)
 
 class VkCmdClearColorImageTest : public VkCmdBlitImageTest {
 protected:
-    VkCmdClearColorImageTest() : test_raw_(false) {}
-    VkCmdClearColorImageTest(bool test_raw) : test_raw_(test_raw) {}
+    VkCmdClearColorImageTest() {}
 
     virtual void SetUp()
     {
         VkCmdBlitTest::SetUp();
 
-        if (test_raw_)
-            init_test_formats();
-        else
-            init_test_formats(VK_FORMAT_FEATURE_CONVERSION_BIT);
+        init_test_formats(VK_FORMAT_FEATURE_CONVERSION_BIT);
 
         ASSERT_NE(true, test_formats_.empty());
     }
@@ -1184,68 +1180,33 @@ protected:
         uint32_t raw[4];
     };
 
-    bool test_raw_;
-
-    std::vector<uint8_t> color_to_raw(VkFormat format, const float color[4])
+    std::vector<uint8_t> color_to_raw(VkFormat format, const VkClearColorValue &color)
     {
         std::vector<uint8_t> raw;
 
         // TODO support all formats
         switch (format) {
         case VK_FORMAT_R8G8B8A8_UNORM:
-            raw.push_back((uint8_t)(color[0] * 255.0f));
-            raw.push_back((uint8_t)(color[1] * 255.0f));
-            raw.push_back((uint8_t)(color[2] * 255.0f));
-            raw.push_back((uint8_t)(color[3] * 255.0f));
+            raw.push_back((uint8_t)(color.f32[0] * 255.0f));
+            raw.push_back((uint8_t)(color.f32[1] * 255.0f));
+            raw.push_back((uint8_t)(color.f32[2] * 255.0f));
+            raw.push_back((uint8_t)(color.f32[3] * 255.0f));
             break;
         case VK_FORMAT_B8G8R8A8_UNORM:
-            raw.push_back((uint8_t)(color[2] * 255.0f));
-            raw.push_back((uint8_t)(color[1] * 255.0f));
-            raw.push_back((uint8_t)(color[0] * 255.0f));
-            raw.push_back((uint8_t)(color[3] * 255.0f));
+            raw.push_back((uint8_t)(color.f32[2] * 255.0f));
+            raw.push_back((uint8_t)(color.f32[1] * 255.0f));
+            raw.push_back((uint8_t)(color.f32[0] * 255.0f));
+            raw.push_back((uint8_t)(color.f32[3] * 255.0f));
             break;
         default:
             break;
         }
 
         return raw;
-    }
-
-    std::vector<uint8_t> color_to_raw(VkFormat format, const uint32_t color[4])
-    {
-        std::vector<uint8_t> raw;
-
-        // TODO support all formats
-        switch (format) {
-        case VK_FORMAT_R8G8B8A8_UNORM:
-            raw.push_back(static_cast<uint8_t>(color[0]));
-            raw.push_back(static_cast<uint8_t>(color[1]));
-            raw.push_back(static_cast<uint8_t>(color[2]));
-            raw.push_back(static_cast<uint8_t>(color[3]));
-            break;
-        case VK_FORMAT_B8G8R8A8_UNORM:
-            raw.push_back(static_cast<uint8_t>(color[2]));
-            raw.push_back(static_cast<uint8_t>(color[1]));
-            raw.push_back(static_cast<uint8_t>(color[0]));
-            raw.push_back(static_cast<uint8_t>(color[3]));
-            break;
-        default:
-            break;
-        }
-
-        return raw;
-    }
-
-    std::vector<uint8_t> color_to_raw(VkFormat format, const VkClearColor &color)
-    {
-        if (color.useRawValue)
-            return color_to_raw(format, color.color.rawColor);
-        else
-            return color_to_raw(format, color.color.floatColor);
     }
 
     void test_clear_color_image(const VkImageCreateInfo &img_info,
-                                const VkClearColor &clear_color,
+                                const VkClearColorValue &clear_color,
                                 const std::vector<VkImageSubresourceRange> &ranges)
     {
         vk_testing::Image img;
@@ -1322,8 +1283,8 @@ protected:
                                 const float color[4],
                                 const std::vector<VkImageSubresourceRange> &ranges)
     {
-        VkClearColor c = {};
-        memcpy(c.color.floatColor, color, sizeof(c.color.floatColor));
+        VkClearColorValue c = {};
+        memcpy(c.f32, color, sizeof(c.f32));
         test_clear_color_image(img_info, c, ranges);
     }
 };
@@ -1358,70 +1319,6 @@ TEST_F(VkCmdClearColorImageTest, Basic)
         std::vector<VkImageSubresourceRange> ranges(&range, &range + 1);
 
         test_clear_color_image(img_info, color, ranges);
-    }
-}
-
-class VkCmdClearColorImageRawTest : public VkCmdClearColorImageTest {
-protected:
-    VkCmdClearColorImageRawTest() : VkCmdClearColorImageTest(true) {}
-
-    void test_clear_color_image_raw(const VkImageCreateInfo &img_info,
-                                    const uint32_t color[4],
-                                    const std::vector<VkImageSubresourceRange> &ranges)
-    {
-        VkClearColor c = {};
-        c.useRawValue = true;
-        memcpy(c.color.rawColor, color, sizeof(c.color.rawColor));
-        test_clear_color_image(img_info, c, ranges);
-    }
-};
-
-TEST_F(VkCmdClearColorImageRawTest, Basic)
-{
-    for (std::vector<vk_testing::Device::Format>::const_iterator it = test_formats_.begin();
-         it != test_formats_.end(); it++) {
-        const uint32_t color[4] = { 0x11111111, 0x22222222, 0x33333333, 0x44444444 };
-        VkFormatProperties props;
-        VkResult err;
-
-        err = vkGetPhysicalDeviceFormatInfo(dev_.gpu().obj(), it->format, &props);
-        ASSERT_EQ(err, VK_SUCCESS);
-
-        if (it->tiling == VK_IMAGE_TILING_LINEAR && !(props.linearTilingFeatures & VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT))
-            continue;
-
-        if (it->tiling == VK_IMAGE_TILING_OPTIMAL && !(props.optimalTilingFeatures & VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT))
-            continue;
-
-        // not sure what to do here
-        if (it->format == VK_FORMAT_UNDEFINED ||
-            (it->format >= VK_FORMAT_R8G8B8_UNORM &&
-             it->format <= VK_FORMAT_R8G8B8_SRGB) ||
-            (it->format >= VK_FORMAT_B8G8R8_UNORM &&
-             it->format <= VK_FORMAT_B8G8R8_SRGB) ||
-            (it->format >= VK_FORMAT_R16G16B16_UNORM &&
-             it->format <= VK_FORMAT_R16G16B16_SFLOAT) ||
-            (it->format >= VK_FORMAT_R32G32B32_UINT &&
-             it->format <= VK_FORMAT_R32G32B32_SFLOAT) ||
-            it->format == VK_FORMAT_R64G64B64_SFLOAT ||
-            it->format == VK_FORMAT_R64G64B64A64_SFLOAT ||
-            (it->format >= VK_FORMAT_D16_UNORM &&
-             it->format <= VK_FORMAT_D32_SFLOAT_S8_UINT))
-            continue;
-
-        VkImageCreateInfo img_info = vk_testing::Image::create_info();
-        img_info.imageType = VK_IMAGE_TYPE_2D;
-        img_info.format = it->format;
-        img_info.extent.width = 64;
-        img_info.extent.height = 64;
-        img_info.tiling = it->tiling;
-        img_info.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
-
-        const VkImageSubresourceRange range =
-            vk_testing::Image::subresource_range(img_info, VK_IMAGE_ASPECT_COLOR);
-        std::vector<VkImageSubresourceRange> ranges(&range, &range + 1);
-
-        test_clear_color_image_raw(img_info, color, ranges);
     }
 }
 

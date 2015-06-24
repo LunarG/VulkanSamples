@@ -4151,11 +4151,10 @@ TEST_F(VkRenderTest, RenderPassLoadOpClear)
 
     /* clear via load op to full green */
     m_clear_via_load_op = true;
-    m_clear_color.useRawValue = false;
-    m_clear_color.color.floatColor[0] = 0;
-    m_clear_color.color.floatColor[1] = 1;
-    m_clear_color.color.floatColor[2] = 0;
-    m_clear_color.color.floatColor[3] = 0;
+    m_clear_color.f32[0] = 0;
+    m_clear_color.f32[1] = 1;
+    m_clear_color.f32[2] = 0;
+    m_clear_color.f32[3] = 0;
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
 
     VkCommandBufferObj cmdBuffer(m_device);
@@ -4175,11 +4174,10 @@ TEST_F(VkRenderTest, RenderPassAttachmentClear)
 
     /* clear via load op to full red */
     m_clear_via_load_op = true;
-    m_clear_color.useRawValue = false;
-    m_clear_color.color.floatColor[0] = 1;
-    m_clear_color.color.floatColor[1] = 0;
-    m_clear_color.color.floatColor[2] = 0;
-    m_clear_color.color.floatColor[3] = 0;
+    m_clear_color.f32[0] = 1;
+    m_clear_color.f32[1] = 0;
+    m_clear_color.f32[2] = 0;
+    m_clear_color.f32[3] = 0;
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
 
     VkCommandBufferObj cmdBuffer(m_device);
@@ -4193,12 +4191,11 @@ TEST_F(VkRenderTest, RenderPassAttachmentClear)
     /* Now, partway through this renderpass we want to clear the color
      * attachment again, this time to green.
      */
-    VkClearColor clear_color;
-    clear_color.useRawValue = false;
-    clear_color.color.floatColor[0] = 0;
-    clear_color.color.floatColor[1] = 1;
-    clear_color.color.floatColor[2] = 0;
-    clear_color.color.floatColor[3] = 0;
+    VkClearColorValue clear_color;
+    clear_color.f32[0] = 0;
+    clear_color.f32[1] = 1;
+    clear_color.f32[2] = 0;
+    clear_color.f32[3] = 0;
     VkRect3D clear_rect = { { 0, 0, 0 }, { (int)m_width, (int)m_height, 1 } };
     vkCmdClearColorAttachment(cmdBuffer.obj(), 0,
                               VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,

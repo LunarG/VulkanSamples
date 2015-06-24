@@ -340,10 +340,10 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateRenderPass(VkDevice device, const VkRende
 
     for(uint32_t i = 0; i < pCreateInfo->colorAttachmentCount; ++i)
     {
-        if(!vk_validate_vkclearcolor(&(pCreateInfo->pColorLoadClearValues[i])))
+        if(!vk_validate_vkclearcolorvalue(&(pCreateInfo->pColorLoadClearValues[i])))
         {
             std::stringstream ss;
-            ss << "vkCreateRenderPass parameter, VkClearColor pCreateInfo->pColorLoadClearValues[" << i << "], is invalid";
+            ss << "vkCreateRenderPass parameter, VkClearColorValue pCreateInfo->pColorLoadClearValues[" << i << "], is invalid";
             log_msg(mdd(device), VK_DBG_REPORT_WARN_BIT, (VkObjectType)0, NULL, 0, 1, "IMAGE", ss.str().c_str());
         }
     }

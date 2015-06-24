@@ -54,7 +54,7 @@ struct intel_render_pass {
     VkAttachmentLoadOp colorLoadOps[INTEL_MAX_RENDER_TARGETS];
     VkFormat colorFormats[INTEL_MAX_RENDER_TARGETS];
     VkImageLayout colorLayouts[INTEL_MAX_RENDER_TARGETS];
-    VkClearColor colorClearValues[INTEL_MAX_RENDER_TARGETS];
+    VkClearColorValue colorClearValues[INTEL_MAX_RENDER_TARGETS];
 
     VkAttachmentLoadOp depthLoadOp;
     float depthLoadClearValue;

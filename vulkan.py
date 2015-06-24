@@ -734,7 +734,7 @@ core = Extension(
             [Param("VkCmdBuffer", "cmdBuffer"),
              Param("VkImage", "image"),
              Param("VkImageLayout", "imageLayout"),
-             Param("const VkClearColor*", "pColor"),
+             Param("const VkClearColorValue*", "pColor"),
              Param("uint32_t", "rangeCount"),
              Param("const VkImageSubresourceRange*", "pRanges")]),
 
@@ -751,7 +751,7 @@ core = Extension(
             [Param("VkCmdBuffer", "cmdBuffer"),
              Param("uint32_t", "colorAttachment"),
              Param("VkImageLayout", "imageLayout"),
-             Param("const VkClearColor*", "pColor"),
+             Param("const VkClearColorValue*", "pColor"),
              Param("uint32_t", "rectCount"),
              Param("const VkRect3D*", "pRects")]),
 

@@ -986,7 +986,7 @@ ICD_EXPORT void VKAPI vkCmdClearColorImage(
     VkCmdBuffer                         cmdBuffer,
     VkImage                             image,
     VkImageLayout                       imageLayout,
-    const VkClearColor                 *pColor,
+    const VkClearColorValue            *pColor,
     uint32_t                            rangeCount,
     const VkImageSubresourceRange*      pRanges)
 {

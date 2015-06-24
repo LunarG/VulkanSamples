@@ -530,7 +530,7 @@ void cmd_meta_clear_color_image(
     VkCmdBuffer                         cmdBuffer,
     VkImage                             image,
     VkImageLayout                       imageLayout,
-    const VkClearColor                 *pClearColor,
+    const VkClearColorValue            *pClearColor,
     uint32_t                            rangeCount,
     const VkImageSubresourceRange      *pRanges);
 

@@ -2482,7 +2482,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdFillBuffer(VkCmdBuffer cmdBuffer, VkBuffer destB
 VK_LAYER_EXPORT void VKAPI vkCmdClearColorImage(
         VkCmdBuffer cmdBuffer,
         VkImage image, VkImageLayout imageLayout,
-        const VkClearColor *pColor,
+        const VkClearColorValue *pColor,
         uint32_t rangeCount, const VkImageSubresourceRange* pRanges)
 {
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
@@ -2682,8 +2682,8 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateRenderPass(VkDevice device, const VkRende
             memcpy((void*)localRPCI->pColorStoreOps, pCreateInfo->pColorStoreOps, localRPCI->colorAttachmentCount*sizeof(VkAttachmentStoreOp));
         }
         if (pCreateInfo->pColorLoadClearValues) {
-            localRPCI->pColorLoadClearValues = new VkClearColor[localRPCI->colorAttachmentCount];
-            memcpy((void*)localRPCI->pColorLoadClearValues, pCreateInfo->pColorLoadClearValues, localRPCI->colorAttachmentCount*sizeof(VkClearColor));
+            localRPCI->pColorLoadClearValues = new VkClearColorValue[localRPCI->colorAttachmentCount];
+            memcpy((void*)localRPCI->pColorLoadClearValues, pCreateInfo->pColorLoadClearValues, localRPCI->colorAttachmentCount*sizeof(VkClearColorValue));
         }
         renderPassMap[*pRenderPass] = localRPCI;
     }

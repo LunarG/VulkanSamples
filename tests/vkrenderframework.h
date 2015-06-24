@@ -122,7 +122,7 @@ protected:
     VkFormat                            m_render_target_fmt;
     VkFormat                            m_depth_stencil_fmt;
     VkColorAttachmentBindInfo           m_colorBindings[8];
-    VkClearColor                        m_clear_color;
+    VkClearColorValue                   m_clear_color;
     bool                                m_clear_via_load_op;
     float                               m_depth_clear_color;
     uint32_t                            m_stencil_clear_color;
@@ -171,7 +171,7 @@ public:
     void PipelineBarrier(VkPipelineStageFlags src_stages, VkPipelineStageFlags dest_stages, bool32_t byRegion, uint32_t memBarrierCount, const void** ppMemBarriers);
     void AddRenderTarget(VkImageObj *renderTarget);
     void AddDepthStencil();
-    void ClearAllBuffers(VkClearColor clear_color, float depth_clear_color, uint32_t stencil_clear_color, VkDepthStencilObj *depthStencilObj);
+    void ClearAllBuffers(VkClearColorValue clear_color, float depth_clear_color, uint32_t stencil_clear_color, VkDepthStencilObj *depthStencilObj);
     void PrepareAttachments();
     void AddMemoryRefs(vk_testing::Object &vkObject);
     void AddMemoryRefs(uint32_t ref_count, const VkDeviceMemory *mem);
