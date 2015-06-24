@@ -1,6 +1,13 @@
 #include "test_common.h"
 #include "vktestbinding.h"
 #include "test_environment.h"
+#include "vk_wsi_lunarg.h"
+
+#if defined(NDEBUG) && defined(__GNUC__)
+#define U_ASSERT_ONLY __attribute__((unused))
+#else
+#define U_ASSERT_ONLY
+#endif
 
 #define ARRAY_SIZE(a) (sizeof(a) / sizeof(a[0]))
 
@@ -51,14 +58,44 @@ void Environment::SetUp()
 {
 
     uint32_t count;
-    VkResult err;
+    VkResult U_ASSERT_ONLY err;
     VkInstanceCreateInfo inst_info = {};
+    std::vector<VkExtensionProperties> instance_extensions;
+    std::vector<VkExtensionProperties> device_extensions;
+
+    std::vector<const char*> instance_extension_names;
+    std::vector<const char *> device_extension_names;
+
+    instance_extension_names.push_back(VK_WSI_LUNARG_EXTENSION_NAME);
+    device_extension_names.push_back(VK_WSI_LUNARG_EXTENSION_NAME);
+
+    uint32_t extCount = 0;
+    size_t extSize = sizeof(extCount);
+    err = vkGetGlobalExtensionInfo(VK_EXTENSION_INFO_TYPE_COUNT, 0, &extSize, &extCount);
+    assert(!err);
+
+    VkExtensionProperties extProp;
+    extSize = sizeof(VkExtensionProperties);
+    bool32_t extFound;
+
+    for (uint32_t i = 0; i < instance_extension_names.size(); i++) {
+        extFound = 0;
+        for (uint32_t j = 0; j < extCount; j++) {
+            err = vkGetGlobalExtensionInfo(VK_EXTENSION_INFO_TYPE_PROPERTIES, j, &extSize, &extProp);
+            assert(!err);
+            if (!strcmp(instance_extension_names[i], extProp.name)) {
+                instance_extensions.push_back(extProp);
+                extFound = 1;
+            }
+        }
+        ASSERT_EQ(extFound, 1) << "ERROR: Cannot find extension named " << instance_extension_names[i] << " which is necessary to pass this test";
+    }
     inst_info.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
     inst_info.pNext = NULL;
     inst_info.pAppInfo = &app_;
     inst_info.pAllocCb = NULL;
-    inst_info.extensionCount = 0;
-    inst_info.pEnabledExtensions = NULL;
+    inst_info.extensionCount = instance_extensions.size();
+    inst_info.pEnabledExtensions = (instance_extensions.size()) ? &instance_extensions[0] : NULL;
     err = vkCreateInstance(&inst_info, &inst);
     ASSERT_EQ(VK_SUCCESS, err);
     err = vkEnumeratePhysicalDevices(inst, &count, NULL);
@@ -68,11 +105,29 @@ void Environment::SetUp()
     ASSERT_EQ(VK_SUCCESS, err);
     ASSERT_GT(count, default_dev_);
 
+    extSize = sizeof(extCount);
+    err = vkGetPhysicalDeviceExtensionInfo(gpus[0], VK_EXTENSION_INFO_TYPE_COUNT, 0, &extSize, &extCount);
+    assert(!err);
+
+    extSize = sizeof(VkExtensionProperties);
+    for (uint32_t i = 0; i < device_extension_names.size(); i++) {
+        extFound = 0;
+        for (uint32_t j = 0; j < extCount; j++) {
+            err = vkGetPhysicalDeviceExtensionInfo(gpus[0], VK_EXTENSION_INFO_TYPE_PROPERTIES, j, &extSize, &extProp);
+            assert(!err);
+            if (!strcmp(device_extension_names[i], extProp.name)) {
+                device_extensions.push_back(extProp);
+                extFound = 1;
+            }
+        }
+        ASSERT_EQ(extFound, 1) << "ERROR: Cannot find extension named " << device_extension_names[i] << " which is necessary to pass this test";
+    }
+
     devs_.reserve(count);
     for (uint32_t i = 0; i < count; i++) {
         devs_.push_back(new Device(gpus[i]));
         if (i == default_dev_) {
-            devs_[i]->init();
+            devs_[i]->init(device_extensions);
             ASSERT_NE(true, devs_[i]->graphics_queues().empty());
         }
     }
