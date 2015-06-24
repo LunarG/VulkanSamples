@@ -861,7 +861,7 @@ TEST_F(VkLayerTest, DepthStencilStateNotBound)
 }
 #endif
 #if DRAW_STATE_TESTS
-TEST_F(VkLayerTest, PipelineNotBound)
+TEST_F(VkLayerTest, BindPipelineNoRenderPass)
 {
     // Initiate Draw w/o a PSO bound
     VkFlags         msgFlags;
@@ -874,9 +874,9 @@ TEST_F(VkLayerTest, PipelineNotBound)
     VkPipeline badPipeline = (VkPipeline)0xbaadb1be;
     vkCmdBindPipeline(cmdBuffer.GetBufferHandle(), VK_PIPELINE_BIND_POINT_GRAPHICS, badPipeline);
     msgFlags = m_errorMonitor->GetState(&msgString);
-    ASSERT_TRUE(msgFlags & VK_DBG_REPORT_ERROR_BIT) << "Did not receive error after binding invalid pipeline to CmdBuffer";
-    if (!strstr(msgString.c_str(),"Attempt to bind Pipeline ")) {
-        FAIL() << "Error received was not 'Attempt to bind Pipeline 0xbaadb1be that doesn't exist!'";
+    ASSERT_TRUE(msgFlags & VK_DBG_REPORT_ERROR_BIT) << "Did not receive error after binding pipeline to CmdBuffer w/o active RenderPass";
+    if (!strstr(msgString.c_str(),"Incorrectly binding graphics pipeline ")) {
+        FAIL() << "Error received was not 'Incorrectly binding graphics pipeline (0xbaadb1be) without an active RenderPass'";
     }
 }
 
@@ -917,20 +917,20 @@ TEST_F(VkLayerTest, InvalidPipeline)
     //   The DS check for this is after driver has been called to validate DS internal data struct
     // Create a valid cmd buffer
     // call vkCmdBindPipeline w/ false Pipeline
-    VkFlags         msgFlags;
-    std::string     msgString;
-
-    ASSERT_NO_FATAL_FAILURE(InitState());
-    m_errorMonitor->ClearState();
-    VkCommandBufferObj cmdBuffer(m_device);
-    BeginCommandBuffer(cmdBuffer);
-    VkPipeline badPipeline = (VkPipeline)0xbaadb1be;
-    vkCmdBindPipeline(cmdBuffer.GetBufferHandle(), VK_PIPELINE_BIND_POINT_GRAPHICS, badPipeline);
-    msgFlags = m_errorMonitor->GetState(&msgString);
-    ASSERT_TRUE(msgFlags & VK_DBG_REPORT_ERROR_BIT) << "Did not receive error after binding invalid pipeline to CmdBuffer";
-    if (!strstr(msgString.c_str(),"Attempt to bind Pipeline ")) {
-        FAIL() << "Error received was not 'Attempt to bind Pipeline 0xbaadb1be that doesn't exist!'";
-    }
+//    VkFlags         msgFlags;
+//    std::string     msgString;
+//
+//    ASSERT_NO_FATAL_FAILURE(InitState());
+//    m_errorMonitor->ClearState();
+//    VkCommandBufferObj cmdBuffer(m_device);
+//    BeginCommandBuffer(cmdBuffer);
+//    VkPipeline badPipeline = (VkPipeline)0xbaadb1be;
+//    vkCmdBindPipeline(cmdBuffer.GetBufferHandle(), VK_PIPELINE_BIND_POINT_GRAPHICS, badPipeline);
+//    msgFlags = m_errorMonitor->GetState(&msgString);
+//    ASSERT_TRUE(msgFlags & VK_DBG_REPORT_ERROR_BIT) << "Did not receive error after binding invalid pipeline to CmdBuffer";
+//    if (!strstr(msgString.c_str(),"Attempt to bind Pipeline ")) {
+//        FAIL() << "Error received was not 'Attempt to bind Pipeline 0xbaadb1be that doesn't exist!'";
+//    }
 }
 
 TEST_F(VkLayerTest, NoEndCmdBuffer)
@@ -1065,7 +1065,7 @@ TEST_F(VkLayerTest, InvalidDynamicStateObject)
     //   The DS check for this is after driver has been called to validate DS internal data struct
 }
 
-TEST_F(VkLayerTest, VtxBufferBadIndex)
+TEST_F(VkLayerTest, VtxBufferNoRenderPass)
 {
     // Bind VBO out-of-bounds for given PSO
     VkFlags         msgFlags;
@@ -1181,9 +1181,9 @@ TEST_F(VkLayerTest, VtxBufferBadIndex)
     vkCmdBindVertexBuffers(cmdBuffer.GetBufferHandle(), 0, 1, NULL, NULL);
 
     msgFlags = m_errorMonitor->GetState(&msgString);
-    ASSERT_TRUE(msgFlags & VK_DBG_REPORT_ERROR_BIT) << "Did not receive error after vkCmdBindVertexBuffers() w/o any Vtx Inputs in PSO.";
-    if (!strstr(msgString.c_str(),"Vtx Buffer Index 0 was bound, but no vtx buffers are attached to PSO.")) {
-        FAIL() << "Error received was not 'Vtx Buffer Index 0 was bound, but no vtx buffers are attached to PSO.'";
+    ASSERT_TRUE(msgFlags & VK_DBG_REPORT_ERROR_BIT) << "Did not receive error after vkCmdBindVertexBuffers() w/o active RenderPass.";
+    if (!strstr(msgString.c_str(),"Incorrect call to vkCmdBindVertexBuffers() without an active RenderPass.")) {
+        FAIL() << "Error received was not 'Incorrect call to vkCmdBindVertexBuffers() without an active RenderPass.'";
     }
 }
 
@@ -1268,7 +1268,6 @@ TEST_F(VkLayerTest, DSTypeMismatch)
     vkUpdateDescriptorSets(m_device->device(), 1, &descriptor_write, 0, NULL);
 
     msgFlags = m_errorMonitor->GetState(&msgString);
-    std::cout << msgString << "\n";
     ASSERT_TRUE(msgFlags & VK_DBG_REPORT_ERROR_BIT) << "Did not receive error after updating BUFFER Descriptor w/ incorrect type of SAMPLER.";
     if (!strstr(msgString.c_str(),"Descriptor update type of VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET does not match ")) {
         FAIL() << "Error received was not 'Descriptor update type of VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET does not match overlapping binding type!'";
@@ -1668,6 +1667,233 @@ TEST_F(VkLayerTest, NumSamplesMismatch)
     ASSERT_TRUE(msgFlags & VK_DBG_REPORT_ERROR_BIT) << "Did not receive error after binding RenderPass w/ mismatched MSAA from PSO.";
     if (!strstr(msgString.c_str(),"Num samples mismatch! ")) {
         FAIL() << "Error received was not 'Num samples mismatch!...'";
+    }
+}
+TEST_F(VkLayerTest, PipelineNotBound)
+{
+    VkFlags         msgFlags;
+    std::string     msgString;
+    VkResult        err;
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+    ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
+    m_errorMonitor->ClearState();
+    VkCommandBufferObj cmdBuffer(m_device);
+    const VkDescriptorTypeCount ds_type_count = {
+        .type       = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+        .count      = 1,
+    };
+    const VkDescriptorPoolCreateInfo ds_pool_ci = {
+        .sType      = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
+        .pNext      = NULL,
+        .count      = 1,
+        .pTypeCount = &ds_type_count,
+    };
+    VkDescriptorPool ds_pool;
+    err = vkCreateDescriptorPool(m_device->device(), VK_DESCRIPTOR_POOL_USAGE_ONE_SHOT, 1, &ds_pool_ci, &ds_pool);
+    ASSERT_VK_SUCCESS(err);
+
+    const VkDescriptorSetLayoutBinding dsl_binding = {
+        .descriptorType     = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+        .arraySize          = 1,
+        .stageFlags         = VK_SHADER_STAGE_ALL,
+        .pImmutableSamplers = NULL,
+    };
+
+    const VkDescriptorSetLayoutCreateInfo ds_layout_ci = {
+        .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
+        .pNext = NULL,
+        .count = 1,
+        .pBinding = &dsl_binding,
+    };
+    VkDescriptorSetLayout ds_layout;
+    err = vkCreateDescriptorSetLayout(m_device->device(), &ds_layout_ci, &ds_layout);
+    ASSERT_VK_SUCCESS(err);
+
+    VkDescriptorSet descriptorSet;
+    uint32_t ds_count = 0;
+    err = vkAllocDescriptorSets(m_device->device(), ds_pool, VK_DESCRIPTOR_SET_USAGE_ONE_SHOT, 1, &ds_layout, &descriptorSet, &ds_count);
+    ASSERT_VK_SUCCESS(err);
+
+    const VkPipelineLayoutCreateInfo pipeline_layout_ci = {
+        .sType              = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
+        .pNext              = NULL,
+        .descriptorSetCount = 1,
+        .pSetLayouts        = &ds_layout,
+    };
+
+    VkPipelineLayout pipeline_layout;
+    err = vkCreatePipelineLayout(m_device->device(), &pipeline_layout_ci, &pipeline_layout);
+    ASSERT_VK_SUCCESS(err);
+
+    size_t shader_len = strlen(bindStateVertShaderText);
+    size_t codeSize = 3 * sizeof(uint32_t) + shader_len + 1;
+    void* pCode = malloc(codeSize);
+
+    /* try version 0 first: VkShaderStage followed by GLSL */
+    ((uint32_t *) pCode)[0] = ICD_SPV_MAGIC;
+    ((uint32_t *) pCode)[1] = 0;
+    ((uint32_t *) pCode)[2] = VK_SHADER_STAGE_VERTEX;
+    memcpy(((uint32_t *) pCode + 3), bindStateVertShaderText, shader_len + 1);
+
+    const VkShaderCreateInfo vs_ci = {
+        .sType = VK_STRUCTURE_TYPE_SHADER_CREATE_INFO,
+        .pNext = NULL,
+        .module = VK_NULL_HANDLE,
+        .name = "main",
+        .codeSize = codeSize,
+        .pCode = pCode,
+        .flags = 0,
+    };
+    VkShader vs;
+    err = vkCreateShader(m_device->device(), &vs_ci, &vs);
+    ASSERT_VK_SUCCESS(err);
+
+    VkPipeline badPipeline = (VkPipeline)0xbaadb1be;
+    //err = vkCreateGraphicsPipeline(m_device->device(), &gp_ci, &pipeline);
+    ASSERT_VK_SUCCESS(err);
+
+    cmdBuffer.AddRenderTarget(m_renderTargets[0]);
+    BeginCommandBuffer(cmdBuffer);
+    vkCmdBindPipeline(cmdBuffer.GetBufferHandle(), VK_PIPELINE_BIND_POINT_GRAPHICS, badPipeline);
+
+    msgFlags = m_errorMonitor->GetState(&msgString);
+    ASSERT_TRUE(msgFlags & VK_DBG_REPORT_ERROR_BIT) << "Did not receive error after binding invalid pipeline to CmdBuffer";
+    if (!strstr(msgString.c_str(),"Attempt to bind Pipeline ")) {
+        FAIL() << "Error received was not 'Attempt to bind Pipeline 0xbaadb1be that doesn't exist!'";
+    }
+}
+TEST_F(VkLayerTest, VtxBufferBadIndex)
+{
+    // Create CmdBuffer where MSAA samples doesn't match RenderPass sampleCount
+    VkFlags         msgFlags;
+    std::string     msgString;
+    VkResult        err;
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+    ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
+    m_errorMonitor->ClearState();
+    VkCommandBufferObj cmdBuffer(m_device);
+    const VkDescriptorTypeCount ds_type_count = {
+        .type       = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+        .count      = 1,
+    };
+    const VkDescriptorPoolCreateInfo ds_pool_ci = {
+        .sType      = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
+        .pNext      = NULL,
+        .count      = 1,
+        .pTypeCount = &ds_type_count,
+    };
+    VkDescriptorPool ds_pool;
+    err = vkCreateDescriptorPool(m_device->device(), VK_DESCRIPTOR_POOL_USAGE_ONE_SHOT, 1, &ds_pool_ci, &ds_pool);
+    ASSERT_VK_SUCCESS(err);
+
+    const VkDescriptorSetLayoutBinding dsl_binding = {
+        .descriptorType     = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+        .arraySize          = 1,
+        .stageFlags         = VK_SHADER_STAGE_ALL,
+        .pImmutableSamplers = NULL,
+    };
+
+    const VkDescriptorSetLayoutCreateInfo ds_layout_ci = {
+        .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
+        .pNext = NULL,
+        .count = 1,
+        .pBinding = &dsl_binding,
+    };
+    VkDescriptorSetLayout ds_layout;
+    err = vkCreateDescriptorSetLayout(m_device->device(), &ds_layout_ci, &ds_layout);
+    ASSERT_VK_SUCCESS(err);
+
+    VkDescriptorSet descriptorSet;
+    uint32_t ds_count = 0;
+    err = vkAllocDescriptorSets(m_device->device(), ds_pool, VK_DESCRIPTOR_SET_USAGE_ONE_SHOT, 1, &ds_layout, &descriptorSet, &ds_count);
+    ASSERT_VK_SUCCESS(err);
+
+    const VkPipelineMsStateCreateInfo pipe_ms_state_ci = {
+        .sType               = VK_STRUCTURE_TYPE_PIPELINE_MS_STATE_CREATE_INFO,
+        .pNext               = NULL,
+        .samples             = 1,
+        .multisampleEnable   = 1,
+        .sampleShadingEnable = 0,
+        .minSampleShading    = 1.0,
+        .sampleMask          = 15,
+    };
+
+    const VkPipelineLayoutCreateInfo pipeline_layout_ci = {
+        .sType              = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
+        .pNext              = NULL,
+        .descriptorSetCount = 1,
+        .pSetLayouts        = &ds_layout,
+    };
+
+    VkPipelineLayout pipeline_layout;
+    err = vkCreatePipelineLayout(m_device->device(), &pipeline_layout_ci, &pipeline_layout);
+    ASSERT_VK_SUCCESS(err);
+
+    size_t shader_len = strlen(bindStateVertShaderText);
+    size_t codeSize = 3 * sizeof(uint32_t) + shader_len + 1;
+    void* pCode = malloc(codeSize);
+
+    /* try version 0 first: VkShaderStage followed by GLSL */
+    ((uint32_t *) pCode)[0] = ICD_SPV_MAGIC;
+    ((uint32_t *) pCode)[1] = 0;
+    ((uint32_t *) pCode)[2] = VK_SHADER_STAGE_VERTEX;
+    memcpy(((uint32_t *) pCode + 3), bindStateVertShaderText, shader_len + 1);
+
+    const VkShaderCreateInfo vs_ci = {
+        .sType = VK_STRUCTURE_TYPE_SHADER_CREATE_INFO,
+        .pNext = NULL,
+        .module = VK_NULL_HANDLE,
+        .name = "main",
+        .codeSize = codeSize,
+        .pCode = pCode,
+        .flags = 0,
+    };
+    VkShader vs;
+    err = vkCreateShader(m_device->device(), &vs_ci, &vs);
+    ASSERT_VK_SUCCESS(err);
+
+    const VkPipelineShaderStageCreateInfo pipe_vs_ci = {
+        .sType                = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
+        .pNext                = NULL,
+        .stage                = VK_SHADER_STAGE_VERTEX,
+        .shader               = vs,
+        .linkConstBufferCount = 0,
+        .pLinkConstBufferInfo = NULL,
+        .pSpecializationInfo  = NULL,
+    };
+    const VkGraphicsPipelineCreateInfo gp_ci = {
+        .sType             = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
+        .pNext             = NULL,
+        .stageCount        = 1,
+        .pStages           = &pipe_vs_ci,
+        .pVertexInputState = NULL,
+        .pIaState          = NULL,
+        .pTessState        = NULL,
+        .pVpState          = NULL,
+        .pRsState          = NULL,
+        .pMsState          = &pipe_ms_state_ci,
+        .pDsState          = NULL,
+        .pCbState          = NULL,
+        .flags             = VK_PIPELINE_CREATE_DISABLE_OPTIMIZATION_BIT,
+        .layout            = pipeline_layout,
+    };
+
+    VkPipeline pipeline;
+    err = vkCreateGraphicsPipeline(m_device->device(), &gp_ci, &pipeline);
+    ASSERT_VK_SUCCESS(err);
+
+    cmdBuffer.AddRenderTarget(m_renderTargets[0]);
+    BeginCommandBuffer(cmdBuffer);
+    vkCmdBindPipeline(cmdBuffer.GetBufferHandle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
+    // Should error before calling to driver so don't care about actual data
+    vkCmdBindVertexBuffers(cmdBuffer.GetBufferHandle(), 0, 1, NULL, NULL);
+
+    msgFlags = m_errorMonitor->GetState(&msgString);
+    ASSERT_TRUE(msgFlags & VK_DBG_REPORT_ERROR_BIT) << "Did not receive error after binding Vtx Buffer w/o VBO attached to PSO.";
+    if (!strstr(msgString.c_str(),"Vtx Buffer Index 0 was bound, but no vtx buffers are attached to PSO.")) {
+        FAIL() << "Error received was not 'Vtx Buffer Index 0 was bound, but no vtx buffers are attached to PSO.'";
     }
 }
 #endif

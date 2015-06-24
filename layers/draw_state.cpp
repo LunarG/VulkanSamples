@@ -423,7 +423,7 @@ static bool32_t validate_draw_state(GLOBAL_CB_NODE* pCB, bool32_t indexedDraw) {
     bool32_t result = validate_draw_state_flags(pCB, indexedDraw);
     PIPELINE_NODE* pPipe = getPipeline(pCB->lastBoundPipeline);
     // Now complete other state checks
-    if (pCB->lastBoundPipelineLayout != pPipe->graphicsPipelineCI.layout) {
+    if (pPipe && (pCB->lastBoundPipelineLayout != pPipe->graphicsPipelineCI.layout)) {
         result = VK_FALSE;
         log_msg(mdd(pCB->cmdBuffer), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_PIPELINE_LAYOUT, pCB->lastBoundPipelineLayout, 0, DRAWSTATE_PIPELINE_LAYOUT_MISMATCH, "DS",
                 "Pipeline layout from last vkCmdBindDescriptorSets() (%s) does not match PSO Pipeline layout (%s)", pCB->lastBoundPipelineLayout, pPipe->graphicsPipelineCI.layout);
@@ -2098,19 +2098,23 @@ VK_LAYER_EXPORT void VKAPI vkCmdBindPipeline(VkCmdBuffer cmdBuffer, VkPipelineBi
             if ((VK_PIPELINE_BIND_POINT_COMPUTE == pipelineBindPoint) && (pCB->activeRenderPass)) {
                 log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_PIPELINE, pipeline, 0, DRAWSTATE_INVALID_RENDERPASS_CMD, "DS",
                         "Incorrectly binding compute pipeline (%p) during active RenderPass (%p)", (void*)pipeline, (void*)pCB->activeRenderPass);
-            }
-            PIPELINE_NODE* pPN = getPipeline(pipeline);
-            if (pPN) {
-                pCB->lastBoundPipeline = pipeline;
-                loader_platform_thread_lock_mutex(&globalLock);
-                set_cb_pso_status(pCB, pPN);
-                g_lastBoundPipeline = pPN;
-                loader_platform_thread_unlock_mutex(&globalLock);
-                validatePipelineState(pCB, pipelineBindPoint, pipeline);
-                get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdBindPipeline(cmdBuffer, pipelineBindPoint, pipeline);
+            } else if ((VK_PIPELINE_BIND_POINT_GRAPHICS == pipelineBindPoint) && (!pCB->activeRenderPass)) {
+                log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_PIPELINE, pipeline, 0, DRAWSTATE_NO_ACTIVE_RENDERPASS, "DS",
+                        "Incorrectly binding graphics pipeline (%p) without an active RenderPass", (void*)pipeline);
             } else {
-                log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_PIPELINE, pipeline, 0, DRAWSTATE_INVALID_PIPELINE, "DS",
-                        "Attempt to bind Pipeline %p that doesn't exist!", (void*)pipeline);
+                PIPELINE_NODE* pPN = getPipeline(pipeline);
+                if (pPN) {
+                    pCB->lastBoundPipeline = pipeline;
+                    loader_platform_thread_lock_mutex(&globalLock);
+                    set_cb_pso_status(pCB, pPN);
+                    g_lastBoundPipeline = pPN;
+                    loader_platform_thread_unlock_mutex(&globalLock);
+                    validatePipelineState(pCB, pipelineBindPoint, pipeline);
+                    get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdBindPipeline(cmdBuffer, pipelineBindPoint, pipeline);
+                } else {
+                    log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_PIPELINE, pipeline, 0, DRAWSTATE_INVALID_PIPELINE, "DS",
+                            "Attempt to bind Pipeline %p that doesn't exist!", (void*)pipeline);
+                }
             }
         } else {
             report_error_no_cb_begin(cmdBuffer, "vkCmdBindPipeline()");
@@ -2124,9 +2128,13 @@ VK_LAYER_EXPORT void VKAPI vkCmdBindDynamicStateObject(VkCmdBuffer cmdBuffer, Vk
     if (pCB) {
         if (pCB->state == CB_UPDATE_ACTIVE) {
             updateCBTracking(cmdBuffer);
+            addCmd(pCB, CMD_BINDDYNAMICSTATEOBJECT);
+            if (!pCB->activeRenderPass) {
+                log_msg(mdd(pCB->cmdBuffer), VK_DBG_REPORT_ERROR_BIT, (VkObjectType) 0, NULL, 0, DRAWSTATE_NO_ACTIVE_RENDERPASS, "DS",
+                        "Incorrect call to vkCmdBindDynamicStateObject() without an active RenderPass.");
+            }
             loader_platform_thread_lock_mutex(&globalLock);
             set_cb_dyn_status(pCB, stateBindPoint);
-            addCmd(pCB, CMD_BINDDYNAMICSTATEOBJECT);
             if (dynamicStateMap.find(state) == dynamicStateMap.end()) {
                 VkObjectType stateType;
                 switch (stateBindPoint) {
@@ -2166,7 +2174,13 @@ VK_LAYER_EXPORT void VKAPI vkCmdBindDescriptorSets(VkCmdBuffer cmdBuffer, VkPipe
         if (pCB->state == CB_UPDATE_ACTIVE) {
             updateCBTracking(cmdBuffer);
             addCmd(pCB, CMD_BINDDESCRIPTORSETS);
-            if (validateBoundPipeline(cmdBuffer)) {
+            if ((VK_PIPELINE_BIND_POINT_COMPUTE == pipelineBindPoint) && (pCB->activeRenderPass)) {
+                log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, (VkObjectType) 0, NULL, 0, DRAWSTATE_INVALID_RENDERPASS_CMD, "DS",
+                        "Incorrectly binding compute DescriptorSets during active RenderPass (%p)", (void*)pCB->activeRenderPass);
+            } else if ((VK_PIPELINE_BIND_POINT_GRAPHICS == pipelineBindPoint) && (!pCB->activeRenderPass)) {
+                log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, (VkObjectType) 0, NULL, 0, DRAWSTATE_NO_ACTIVE_RENDERPASS, "DS",
+                        "Incorrectly binding graphics DescriptorSets without an active RenderPass");
+            } else if (validateBoundPipeline(cmdBuffer)) {
                 for (uint32_t i=0; i<setCount; i++) {
                     if (getSetNode(pDescriptorSets[i])) {
                         loader_platform_thread_lock_mutex(&globalLock);
@@ -2197,9 +2211,14 @@ VK_LAYER_EXPORT void VKAPI vkCmdBindIndexBuffer(VkCmdBuffer cmdBuffer, VkBuffer 
         if (pCB->state == CB_UPDATE_ACTIVE) {
             updateCBTracking(cmdBuffer);
             addCmd(pCB, CMD_BINDINDEXBUFFER);
-            // TODO : Can be more exact in tracking/validating details for Idx buffer, for now just make sure *something* was bound
-            pCB->status |= CBSTATUS_INDEX_BUFFER_BOUND;
-            get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdBindIndexBuffer(cmdBuffer, buffer, offset, indexType);
+            if (!pCB->activeRenderPass) {
+                log_msg(mdd(pCB->cmdBuffer), VK_DBG_REPORT_ERROR_BIT, (VkObjectType) 0, NULL, 0, DRAWSTATE_NO_ACTIVE_RENDERPASS, "DS",
+                        "Incorrect call to vkCmdBindIndexBuffer() without an active RenderPass.");
+            } else {
+                // TODO : Can be more exact in tracking/validating details for Idx buffer, for now just make sure *something* was bound
+                pCB->status |= CBSTATUS_INDEX_BUFFER_BOUND;
+                get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdBindIndexBuffer(cmdBuffer, buffer, offset, indexType);
+            }
         } else {
             report_error_no_cb_begin(cmdBuffer, "vkCmdBindIndexBuffer()");
         }
@@ -2219,9 +2238,14 @@ VK_LAYER_EXPORT void VKAPI vkCmdBindVertexBuffers(
             /* TODO: Need to track all the vertex buffers, not just last one */
             updateCBTracking(cmdBuffer);
             addCmd(pCB, CMD_BINDVERTEXBUFFER);
-            pCB->lastVtxBinding = startBinding + bindingCount -1;
-            if (validateBoundPipeline(cmdBuffer)) {
-                get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdBindVertexBuffers(cmdBuffer, startBinding, bindingCount, pBuffers, pOffsets);
+            if (!pCB->activeRenderPass) {
+                log_msg(mdd(pCB->cmdBuffer), VK_DBG_REPORT_ERROR_BIT, (VkObjectType) 0, NULL, 0, DRAWSTATE_NO_ACTIVE_RENDERPASS, "DS",
+                        "Incorrect call to vkCmdBindVertexBuffers() without an active RenderPass.");
+            } else {
+                pCB->lastVtxBinding = startBinding + bindingCount -1;
+                if (validateBoundPipeline(cmdBuffer)) {
+                    get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdBindVertexBuffers(cmdBuffer, startBinding, bindingCount, pBuffers, pOffsets);
+                }
             }
         } else {
             report_error_no_cb_begin(cmdBuffer, "vkCmdBindIndexBuffer()");
@@ -2393,7 +2417,8 @@ VK_LAYER_EXPORT void VKAPI vkCmdBlitImage(VkCmdBuffer cmdBuffer,
                 log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, (VkObjectType) 0, NULL, 0, DRAWSTATE_INVALID_RENDERPASS_CMD, "DS",
                         "Incorrectly issuing CmdBlitImage during active RenderPass (%p)", (void*)pCB->activeRenderPass);
             }
-            get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdBlitImage(cmdBuffer, srcImage, srcImageLayout, destImage, destImageLayout, regionCount, pRegions, filter);
+            else
+                get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdBlitImage(cmdBuffer, srcImage, srcImageLayout, destImage, destImageLayout, regionCount, pRegions, filter);
         } else {
             report_error_no_cb_begin(cmdBuffer, "vkCmdBindIndexBuffer()");
         }
@@ -2507,7 +2532,12 @@ VK_LAYER_EXPORT void VKAPI vkCmdResolveImage(VkCmdBuffer cmdBuffer,
         if (pCB->state == CB_UPDATE_ACTIVE) {
             updateCBTracking(cmdBuffer);
             addCmd(pCB, CMD_RESOLVEIMAGE);
-            get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdResolveImage(cmdBuffer, srcImage, srcImageLayout, destImage, destImageLayout, regionCount, pRegions);
+            if (pCB->activeRenderPass) {
+                log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, (VkObjectType) 0, NULL, 0, DRAWSTATE_INVALID_RENDERPASS_CMD, "DS",
+                        "Cannot call vkCmdResolveImage() during an active RenderPass (%p).", (void*)pCB->activeRenderPass);
+            }
+            else
+                get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdResolveImage(cmdBuffer, srcImage, srcImageLayout, destImage, destImageLayout, regionCount, pRegions);
         } else {
             report_error_no_cb_begin(cmdBuffer, "vkCmdBindIndexBuffer()");
         }
@@ -2715,20 +2745,24 @@ VK_LAYER_EXPORT void VKAPI vkCmdBeginRenderPass(VkCmdBuffer cmdBuffer, const VkR
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
         if (pRenderPassBegin && pRenderPassBegin->renderPass) {
-            updateCBTracking(cmdBuffer);
-            addCmd(pCB, CMD_BEGINRENDERPASS);
-            pCB->activeRenderPass = pRenderPassBegin->renderPass;
-            pCB->framebuffer = pRenderPassBegin->framebuffer;
-            if (pCB->lastBoundPipeline) {
-                validatePipelineState(pCB, VK_PIPELINE_BIND_POINT_GRAPHICS, pCB->lastBoundPipeline);
+            if (pCB->activeRenderPass) {
+                log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, (VkObjectType) 0, NULL, 0, DRAWSTATE_INVALID_RENDERPASS_CMD, "DS",
+                        "Cannot call vkCmdBeginRenderPass() during an active RenderPass (%p). You must first call vkCmdEndRenderPass().", (void*)pCB->activeRenderPass);
+            } else {
+                updateCBTracking(cmdBuffer);
+                addCmd(pCB, CMD_BEGINRENDERPASS);
+                pCB->activeRenderPass = pRenderPassBegin->renderPass;
+                pCB->framebuffer = pRenderPassBegin->framebuffer;
+                if (pCB->lastBoundPipeline) {
+                    validatePipelineState(pCB, VK_PIPELINE_BIND_POINT_GRAPHICS, pCB->lastBoundPipeline);
+                }
+                get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdBeginRenderPass(cmdBuffer, pRenderPassBegin);
             }
-        }
-        else {
+        } else {
             log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, (VkObjectType) 0, NULL, 0, DRAWSTATE_INVALID_RENDERPASS, "DS",
                     "You cannot use a NULL RenderPass object in vkCmdBeginRenderPass()");
         }
     }
-    get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdBeginRenderPass(cmdBuffer, pRenderPassBegin);
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdEndRenderPass(VkCmdBuffer cmdBuffer, VkRenderPass renderPass)
@@ -2736,16 +2770,21 @@ VK_LAYER_EXPORT void VKAPI vkCmdEndRenderPass(VkCmdBuffer cmdBuffer, VkRenderPas
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
         if (renderPass) {
-            updateCBTracking(cmdBuffer);
-            addCmd(pCB, CMD_ENDRENDERPASS);
-            pCB->activeRenderPass = 0;
+            if (!pCB->activeRenderPass) {
+                log_msg(mdd(pCB->cmdBuffer), VK_DBG_REPORT_ERROR_BIT, (VkObjectType) 0, NULL, 0, DRAWSTATE_NO_ACTIVE_RENDERPASS, "DS",
+                        "Incorrect call to vkCmdEndRenderPass() without an active RenderPass.");
+            } else {
+                updateCBTracking(cmdBuffer);
+                addCmd(pCB, CMD_ENDRENDERPASS);
+                pCB->activeRenderPass = 0;
+                get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdEndRenderPass(cmdBuffer, renderPass);
+            }
         }
         else {
             log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, (VkObjectType) 0, NULL, 0, DRAWSTATE_INVALID_RENDERPASS, "DS",
                     "You cannot use a NULL RenderPass object in vkCmdEndRenderPass()");
         }
     }
-    get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdEndRenderPass(cmdBuffer, renderPass);
 }
 
 VK_LAYER_EXPORT VkResult VKAPI vkDbgCreateMsgCallback(

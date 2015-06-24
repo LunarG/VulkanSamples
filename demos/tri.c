@@ -320,6 +320,7 @@ static void demo_draw_build_cmd(struct demo *demo)
     err = vkBeginCommandBuffer(demo->draw_cmd, &cmd_buf_info);
     assert(!err);
 
+    vkCmdBeginRenderPass(demo->draw_cmd, &rp_begin);
     vkCmdBindPipeline(demo->draw_cmd, VK_PIPELINE_BIND_POINT_GRAPHICS,
                                   demo->pipeline);
     vkCmdBindDescriptorSets(demo->draw_cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, demo->pipeline_layout,
@@ -335,7 +336,6 @@ static void demo_draw_build_cmd(struct demo *demo)
     VkDeviceSize offsets[1] = {0};
     vkCmdBindVertexBuffers(demo->draw_cmd, VERTEX_BUFFER_BIND_ID, 1, &demo->vertices.buf, offsets);
 
-    vkCmdBeginRenderPass(demo->draw_cmd, &rp_begin);
     clear_range.aspect = VK_IMAGE_ASPECT_COLOR;
     clear_range.baseMipLevel = 0;
     clear_range.mipLevels = 1;

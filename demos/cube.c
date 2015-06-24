@@ -509,6 +509,7 @@ static void demo_draw_build_cmd(struct demo *demo, VkCmdBuffer cmd_buf)
     err = vkBeginCommandBuffer(cmd_buf, &cmd_buf_info);
     assert(!err);
 
+    vkCmdBeginRenderPass(cmd_buf, &rp_begin);
     vkCmdBindPipeline(cmd_buf, VK_PIPELINE_BIND_POINT_GRAPHICS,
                                   demo->pipeline);
     vkCmdBindDescriptorSets(cmd_buf, VK_PIPELINE_BIND_POINT_GRAPHICS, demo->pipeline_layout,
@@ -521,7 +522,6 @@ static void demo_draw_build_cmd(struct demo *demo, VkCmdBuffer cmd_buf)
     vkCmdBindDynamicStateObject(cmd_buf, VK_STATE_BIND_POINT_DEPTH_STENCIL,
                                      demo->depth_stencil);
 
-    vkCmdBeginRenderPass(cmd_buf, &rp_begin);
     clear_range.aspect = VK_IMAGE_ASPECT_DEPTH;
     clear_range.baseMipLevel = 0;
     clear_range.mipLevels = 1;
