@@ -1277,8 +1277,9 @@ uint32_t loader_activate_instance_layers(struct loader_instance *inst)
     uint32_t layer_idx;
     VkBaseLayerObject *wrappedInstance;
 
-    if (inst == NULL)
+    if (inst == NULL) {
         return 0;
+    }
 
     // NOTE inst is unwrapped at this point in time
     VkObject baseObj = (VkObject) inst;
@@ -1415,8 +1416,9 @@ static uint32_t loader_activate_device_layers(
     if (!icd)
         return 0;
 
-    if (!dev)
+    if (!dev) {
         return 0;
+    }
 
     /* activate any layer libraries */
     VkObject nextObj = (VkObject) device;
@@ -1715,8 +1717,9 @@ VkResult loader_CreateDevice(
             return res;
         }
         dev = loader_add_logical_device(*pDevice, &icd->logical_device_list);
-        if (dev == NULL)
+        if (dev == NULL) {
             return VK_ERROR_OUT_OF_HOST_MEMORY;
+        }
         PFN_vkGetDeviceProcAddr get_proc_addr = icd->GetDeviceProcAddr;
         loader_init_device_dispatch_table(&dev->loader_dispatch, get_proc_addr,
                                           icd->gpus[gpu_index], icd->gpus[gpu_index]);
@@ -1774,8 +1777,9 @@ LOADER_EXPORT void * VKAPI vkGetInstanceProcAddr(VkInstance instance, const char
 
     /* TODO Remove this once WSI has no loader special code */
     addr = wsi_lunarg_GetInstanceProcAddr(instance, pName);
-    if (addr)
+    if (addr) {
         return addr;
+    }
 
     /* return the instance dispatch table entrypoint for extensions */
     const VkLayerInstanceDispatchTable *disp_table = * (VkLayerInstanceDispatchTable **) instance;
@@ -1807,8 +1811,9 @@ LOADER_EXPORT void * VKAPI vkGetDeviceProcAddr(VkDevice device, const char * pNa
     /* return any extension device entrypoints the loader knows about */
     /* TODO once WSI has no loader special code remove this */
     addr = wsi_lunarg_GetDeviceProcAddr(device, pName);
-    if (addr)
+    if (addr) {
         return addr;
+    }
 
     /* return the dispatch table entrypoint for the fastest case */
     const VkLayerDispatchTable *disp_table = * (VkLayerDispatchTable **) device;
