@@ -36,46 +36,30 @@ static void buf_destroy(struct intel_obj *obj)
     intel_buf_destroy(buf);
 }
 
-static VkResult buf_get_info(struct intel_base *base, int type,
-                               size_t *size, void *data)
+static VkResult buf_get_memory_requirements(struct intel_base *base,
+                               VkMemoryRequirements *pRequirements)
 {
     struct intel_buf *buf = intel_buf_from_base(base);
-    VkResult ret = VK_SUCCESS;
 
-    switch (type) {
-    case VK_OBJECT_INFO_TYPE_MEMORY_REQUIREMENTS:
-        {
-            VkMemoryRequirements *mem_req = data;
-
-            *size = sizeof(VkMemoryRequirements);
-            if (data == NULL)
-                return ret;
-
-            /*
-             * From the Sandy Bridge PRM, volume 1 part 1, page 118:
-             *
-             *     "For buffers, which have no inherent "height," padding
-             *      requirements are different. A buffer must be padded to the
-             *      next multiple of 256 array elements, with an additional 16
-             *      bytes added beyond that to account for the L1 cache line."
-             */
-            mem_req->size = buf->size;
-            if (buf->usage & (VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT |
-                             VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT)) {
-                mem_req->size = u_align(mem_req->size, 256) + 16;
-            }
-
-            mem_req->alignment = 4096;
-
-            mem_req->memPropsAllowed = INTEL_MEMORY_PROPERTY_ALL;
-        }
-        break;
-    default:
-        ret = intel_base_get_info(base, type, size, data);
-        break;
+    /*
+     * From the Sandy Bridge PRM, volume 1 part 1, page 118:
+     *
+     *     "For buffers, which have no inherent "height," padding
+     *      requirements are different. A buffer must be padded to the
+     *      next multiple of 256 array elements, with an additional 16
+     *      bytes added beyond that to account for the L1 cache line."
+    */
+    pRequirements->size = buf->size;
+    if (buf->usage & (VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT |
+                      VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT)) {
+        pRequirements->size = u_align(pRequirements->size, 256) + 16;
     }
 
-    return ret;
+    pRequirements->alignment = 4096;
+
+    pRequirements->memPropsAllowed = INTEL_MEMORY_PROPERTY_ALL;
+
+    return VK_SUCCESS;
 }
 
 VkResult intel_buf_create(struct intel_dev *dev,
@@ -93,7 +77,7 @@ VkResult intel_buf_create(struct intel_dev *dev,
     buf->usage = info->usage;
 
     buf->obj.destroy = buf_destroy;
-    buf->obj.base.get_info = buf_get_info;
+    buf->obj.base.get_memory_requirements = buf_get_memory_requirements;
 
     *buf_ret = buf;
 

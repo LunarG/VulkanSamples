@@ -34,9 +34,8 @@ struct intel_fence;
 struct intel_gpu;
 struct intel_img;
 
-VkResult intel_wsi_gpu_get_info(struct intel_gpu *gpu,
-                                  VkPhysicalDeviceInfoType type,
-                                  size_t *size, void *data);
+VkResult intel_wsi_gpu_get_properties(struct intel_gpu *gpu,
+                                  VkPhysicalDeviceProperties *pProperties);
 void intel_wsi_gpu_cleanup(struct intel_gpu *gpu);
 
 VkResult intel_wsi_img_init(struct intel_img *img);

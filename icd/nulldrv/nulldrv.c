@@ -56,30 +56,6 @@ static struct nulldrv_base *nulldrv_base(VkObject base)
     return (struct nulldrv_base *) base;
 }
 
-static VkResult nulldrv_base_get_info(struct nulldrv_base *base, int type,
-                               size_t *size, void *data)
-{
-    VkResult ret = VK_SUCCESS;
-    size_t s;
-
-    switch (type) {
-    case VK_OBJECT_INFO_TYPE_MEMORY_REQUIREMENTS:
-        {
-            s = sizeof(VkMemoryRequirements);
-            *size = s;
-            if (data == NULL)
-                return ret;
-            memset(data, 0, s);
-            break;
-        }
-    default:
-        ret = VK_ERROR_INVALID_VALUE;
-        break;
-    }
-
-    return ret;
-}
-
 static struct nulldrv_base *nulldrv_base_create(
         struct nulldrv_dev *dev,
         size_t obj_size,
@@ -110,7 +86,7 @@ static struct nulldrv_base *nulldrv_base_create(
     }
 
 
-    base->get_info = NULL;
+    base->get_memory_requirements = NULL;
 
     return base;
 }
@@ -303,28 +279,14 @@ static struct nulldrv_img *nulldrv_img_from_base(struct nulldrv_base *base)
 }
 
 
-static VkResult img_get_info(struct nulldrv_base *base, int type,
-                               size_t *size, void *data)
+static VkResult img_get_memory_requirements(struct nulldrv_base *base,
+                               VkMemoryRequirements *pRequirements)
 {
     struct nulldrv_img *img = nulldrv_img_from_base(base);
     VkResult ret = VK_SUCCESS;
 
-    switch (type) {
-    case VK_OBJECT_INFO_TYPE_MEMORY_REQUIREMENTS:
-        {
-            VkMemoryRequirements *mem_req = data;
-
-            *size = sizeof(VkMemoryRequirements);
-            if (data == NULL)
-                return ret;
-            mem_req->size = img->total_size;
-            mem_req->alignment = 4096;
-        }
-        break;
-    default:
-        ret = nulldrv_base_get_info(base, type, size, data);
-        break;
-    }
+    pRequirements->size = img->total_size;
+    pRequirements->alignment = 4096;
 
     return ret;
 }
@@ -348,7 +310,7 @@ static VkResult nulldrv_img_create(struct nulldrv_dev *dev,
     img->usage = info->usage;
     img->samples = info->samples;
 
-    img->obj.base.get_info = img_get_info;
+    img->obj.base.get_memory_requirements = img_get_memory_requirements;
 
     *img_ret = img;
 
@@ -457,32 +419,18 @@ static struct nulldrv_buf *nulldrv_buf_from_base(struct nulldrv_base *base)
     return (struct nulldrv_buf *) base;
 }
 
-static VkResult buf_get_info(struct nulldrv_base *base, int type,
-                               size_t *size, void *data)
+static VkResult buf_get_memory_requirements(struct nulldrv_base *base,
+                                VkMemoryRequirements* pMemoryRequirements)
 {
     struct nulldrv_buf *buf = nulldrv_buf_from_base(base);
-    VkResult ret = VK_SUCCESS;
 
-    switch (type) {
-    case VK_OBJECT_INFO_TYPE_MEMORY_REQUIREMENTS:
-        {
-            VkMemoryRequirements *mem_req = data;
+    if (pMemoryRequirements == NULL)
+        return VK_SUCCESS;
 
-            *size = sizeof(VkMemoryRequirements);
-            if (data == NULL)
-                return ret;
+    pMemoryRequirements->size = buf->size;
+    pMemoryRequirements->alignment = 4096;
 
-            mem_req->size = buf->size;
-            mem_req->alignment = 4096;
-
-        }
-        break;
-    default:
-        ret = nulldrv_base_get_info(base, type, size, data);
-        break;
-    }
-
-    return ret;
+    return VK_SUCCESS;
 }
 
 static VkResult nulldrv_buf_create(struct nulldrv_dev *dev,
@@ -499,7 +447,7 @@ static VkResult nulldrv_buf_create(struct nulldrv_dev *dev,
     buf->size = info->size;
     buf->usage = info->usage;
 
-    buf->obj.base.get_info = buf_get_info;
+    buf->obj.base.get_memory_requirements = buf_get_memory_requirements;
 
     *buf_ret = buf;
 
@@ -1404,70 +1352,24 @@ ICD_EXPORT VkResult VKAPI vkWaitForFences(
     return VK_SUCCESS;
 }
 
-ICD_EXPORT VkResult VKAPI vkGetPhysicalDeviceInfo(
-    VkPhysicalDevice                            gpu_,
-    VkPhysicalDeviceInfoType                  infoType,
-    size_t*                                     pDataSize,
-    void*                                       pData)
+ICD_EXPORT VkResult VKAPI vkGetPhysicalDeviceProperties(
+    VkPhysicalDevice                             gpu_,
+    VkPhysicalDeviceProperties*                  pProperties)
 {
     NULLDRV_LOG_FUNC;
     VkResult ret = VK_SUCCESS;
 
-    switch (infoType) {
-    case VK_PHYSICAL_DEVICE_INFO_TYPE_PROPERTIES:
-      {
-        VkPhysicalDeviceProperties *props =
-            (VkPhysicalDeviceProperties *) pData;
-        *pDataSize = sizeof(VkPhysicalDeviceProperties);
-        if (pData == NULL) {
-            return ret;
-        }
-        props->apiVersion = VK_API_VERSION;
-        props->driverVersion = 0; // Appropriate that the nulldrv have 0's
-        props->vendorId = 0;
-        props->deviceId = 0;
-        props->deviceType = VK_PHYSICAL_DEVICE_TYPE_OTHER;
-        strncpy(props->deviceName, "nulldrv", strlen("nulldrv"));
-        props->maxInlineMemoryUpdateSize = 0;
-        props->maxBoundDescriptorSets = 0;
-        props->maxThreadGroupSize = 0;
-        props->timestampFrequency = 0;
-        props->multiColorAttachmentClears = false;
-        break;
-      }
-    case VK_PHYSICAL_DEVICE_INFO_TYPE_PERFORMANCE:
-      {
-        VkPhysicalDevicePerformance *perf =
-            (VkPhysicalDevicePerformance *) pData;
-        *pDataSize = sizeof(VkPhysicalDevicePerformance);
-        if (pData == NULL) {
-            return ret;
-        }
-        perf->maxDeviceClock = 1.0f;
-        perf->aluPerClock = 1.0f;
-        perf->texPerClock = 1.0f;
-        perf->primsPerClock = 1.0f;
-        perf->pixelsPerClock = 1.0f;
-        break;
-      }
-    case VK_PHYSICAL_DEVICE_INFO_TYPE_QUEUE_PROPERTIES:
-      {
-        VkPhysicalDeviceQueueProperties *props =
-            (VkPhysicalDeviceQueueProperties *) pData;
-        *pDataSize = sizeof(VkPhysicalDeviceQueueProperties);
-        if (pData == NULL) {
-            return ret;
-        }
-        props->queueFlags = VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_SPARSE_MEMMGR_BIT;
-        props->queueCount = 1;
-        props->maxAtomicCounters = 1;
-        props->supportsTimestamps = false;
-        break;
-      }
-    default:
-/* FIXME: WRITE THE REAL CODE*/return ret;
-        break;
-    }
+    pProperties->apiVersion = VK_API_VERSION;
+    pProperties->driverVersion = 0; // Appropriate that the nulldrv have 0's
+    pProperties->vendorId = 0;
+    pProperties->deviceId = 0;
+    pProperties->deviceType = VK_PHYSICAL_DEVICE_TYPE_OTHER;
+    strncpy(pProperties->deviceName, "nulldrv", strlen("nulldrv"));
+    pProperties->maxInlineMemoryUpdateSize = 0;
+    pProperties->maxBoundDescriptorSets = 0;
+    pProperties->maxThreadGroupSize = 0;
+    pProperties->timestampFrequency = 0;
+    pProperties->multiColorAttachmentClears = false;
 
     return ret;
 }
@@ -1512,73 +1414,71 @@ ICD_EXPORT VkResult VKAPI vkGetPhysicalDeviceLimits(
     return ret;
 }
 
-ICD_EXPORT VkResult VKAPI vkGetGlobalExtensionInfo(
-                                               VkExtensionInfoType infoType,
-                                               uint32_t extensionIndex,
-                                               size_t*  pDataSize,
-                                               void*    pData)
+ICD_EXPORT VkResult VKAPI vkGetPhysicalDevicePerformance(
+    VkPhysicalDevice                             gpu_,
+    VkPhysicalDevicePerformance*                  pPerformance)
 {
-    uint32_t *count;
-
-    if (pDataSize == NULL)
-        return VK_ERROR_INVALID_POINTER;
-
-    switch (infoType) {
-        case VK_EXTENSION_INFO_TYPE_COUNT:
-            *pDataSize = sizeof(uint32_t);
-            if (pData == NULL)
-                return VK_SUCCESS;
-            count = (uint32_t *) pData;
-            *count = NULLDRV_EXT_COUNT;
-            break;
-        case VK_EXTENSION_INFO_TYPE_PROPERTIES:
-            *pDataSize = sizeof(VkExtensionProperties);
-            if (pData == NULL)
-                return VK_SUCCESS;
-            else {
-                if (extensionIndex >= NULLDRV_EXT_COUNT)
-                    return VK_ERROR_INVALID_VALUE;
-
-                memcpy((VkExtensionProperties *) pData, &intel_gpu_exts[extensionIndex], sizeof(VkExtensionProperties));
-                return VK_SUCCESS;
-            }
-            break;
-        default:
-            return VK_ERROR_INVALID_VALUE;
-    };
+    pPerformance->maxDeviceClock = 1.0f;
+    pPerformance->aluPerClock = 1.0f;
+    pPerformance->texPerClock = 1.0f;
+    pPerformance->primsPerClock = 1.0f;
+    pPerformance->pixelsPerClock = 1.0f;
 
     return VK_SUCCESS;
 }
 
-VkResult VKAPI vkGetPhysicalDeviceExtensionInfo(
-                                               VkPhysicalDevice gpu,
-                                               VkExtensionInfoType infoType,
-                                               uint32_t extensionIndex,
-                                               size_t*  pDataSize,
-                                               void*    pData)
+ICD_EXPORT VkResult VKAPI vkGetPhysicalDeviceQueueCount(
+    VkPhysicalDevice                             gpu_,
+    uint32_t*                                    pCount)
 {
-    uint32_t *count;
+    *pCount = 1;
+    return VK_SUCCESS;
+}
 
-    if (pDataSize == NULL)
-        return VK_ERROR_INVALID_POINTER;
+ICD_EXPORT VkResult VKAPI vkGetPhysicalDeviceQueueProperties(
+    VkPhysicalDevice                             gpu_,
+    uint32_t                                     count,
+    VkPhysicalDeviceQueueProperties*             pProperties)
+ {
+    pProperties->queueFlags = VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_SPARSE_MEMMGR_BIT;
+    pProperties->queueCount = 1;
+    pProperties->maxAtomicCounters = 1;
+    pProperties->supportsTimestamps = false;
 
-    switch (infoType) {
-        case VK_EXTENSION_INFO_TYPE_COUNT:
-            *pDataSize = sizeof(uint32_t);
-            if (pData == NULL)
-                return VK_SUCCESS;
-            count = (uint32_t *) pData;
-            *count = 0;
-            break;
-        case VK_EXTENSION_INFO_TYPE_PROPERTIES:
-            *pDataSize = 0;
-            if (pData == NULL)
-                return VK_SUCCESS;
-            return VK_ERROR_INVALID_EXTENSION;
-            break;
-        default:
-            return VK_ERROR_INVALID_VALUE;
-    };
+    return VK_SUCCESS;
+}
+
+ICD_EXPORT VkResult VKAPI vkGetGlobalExtensionProperties(
+                                               uint32_t                  extensionIndex,
+                                               VkExtensionProperties*    pProperties)
+{
+    if (extensionIndex >= NULLDRV_EXT_COUNT)
+        return VK_ERROR_INVALID_VALUE;
+
+    memcpy(pProperties, &intel_gpu_exts[extensionIndex], sizeof(VkExtensionProperties));
+    return VK_SUCCESS;
+}
+
+ICD_EXPORT VkResult VKAPI vkGetGlobalExtensionCount(uint32_t *pCount)
+{
+    *pCount = NULLDRV_EXT_COUNT;
+
+    return VK_SUCCESS;
+}
+
+VkResult VKAPI vkGetPhysicalDeviceExtensionProperties(
+                                               VkPhysicalDevice gpu,
+                                               uint32_t  extesnionIndex,
+                                               VkExtensionProperties* pProperties)
+{
+    return VK_ERROR_INVALID_EXTENSION;
+}
+
+VkResult VKAPI vkGetPhysicalDeviceExtensionCount(
+                                               VkPhysicalDevice gpu,
+                                               uint32_t* pCount)
+{
+    *pCount = 0;
     return VK_SUCCESS;
 }
 
@@ -1594,38 +1494,20 @@ ICD_EXPORT VkResult VKAPI vkCreateImage(
             (struct nulldrv_img **) pImage);
 }
 
-ICD_EXPORT VkResult VKAPI vkGetImageSubresourceInfo(
+ICD_EXPORT VkResult VKAPI vkGetImageSubresourceLayout(
     VkDevice                                    device,
     VkImage                                     image,
     const VkImageSubresource*                   pSubresource,
-    VkSubresourceInfoType                       infoType,
-    size_t*                                     pDataSize,
-    void*                                       pData)
+    VkSubresourceLayout*                         pLayout)
 {
     NULLDRV_LOG_FUNC;
-    VkResult ret = VK_SUCCESS;
 
-    switch (infoType) {
-    case VK_SUBRESOURCE_INFO_TYPE_LAYOUT:
-        {
-            VkSubresourceLayout *layout = (VkSubresourceLayout *) pData;
+    pLayout->offset = 0;
+    pLayout->size = 1;
+    pLayout->rowPitch = 4;
+    pLayout->depthPitch = 4;
 
-            *pDataSize = sizeof(VkSubresourceLayout);
-
-            if (pData == NULL)
-                return ret;
-            layout->offset = 0;
-            layout->size = 1;
-            layout->rowPitch = 4;
-            layout->depthPitch = 4;
-        }
-        break;
-    default:
-        ret = VK_ERROR_INVALID_VALUE;
-        break;
-    }
-
-    return ret;
+    return VK_SUCCESS;
 }
 
 ICD_EXPORT VkResult VKAPI vkAllocMemory(
@@ -1702,7 +1584,7 @@ ICD_EXPORT VkResult VKAPI vkCreateInstance(
     if (!inst)
         return VK_ERROR_OUT_OF_HOST_MEMORY;
 
-    inst->obj.base.get_info = NULL;
+    inst->obj.base.get_memory_requirements = NULL;
 
     *pInstance = (VkInstance) inst;
 
@@ -1751,18 +1633,16 @@ ICD_EXPORT VkResult VKAPI vkDestroyObject(
     return VK_SUCCESS;
 }
 
-ICD_EXPORT VkResult VKAPI vkGetObjectInfo(
+ICD_EXPORT VkResult VKAPI vkGetObjectMemoryRequirements(
     VkDevice                                    device,
     VkObjectType                                objType,
     VkObject                                    object,
-    VkObjectInfoType                            infoType,
-    size_t*                                     pDataSize,
-    void*                                       pData)
+    VkMemoryRequirements*                       pMemoryRequirements)
 {
     NULLDRV_LOG_FUNC;
     struct nulldrv_base *base = nulldrv_base(object);
 
-    return base->get_info(base, infoType, pDataSize, pData);
+    return base->get_memory_requirements(base, pMemoryRequirements);
 }
 
 ICD_EXPORT VkResult VKAPI vkBindObjectMemory(

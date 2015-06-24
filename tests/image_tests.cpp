@@ -210,18 +210,15 @@ void VkImageTest::CreateImage(uint32_t w, uint32_t h)
     ASSERT_VK_SUCCESS(err);
 
     VkMemoryRequirements mem_req;
-    size_t mem_reqs_size = sizeof(VkMemoryRequirements);
 
     VkMemoryAllocInfo mem_info = {};
     mem_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO;
     mem_info.pNext = NULL;
 
-    err = vkGetObjectInfo(device(), VK_OBJECT_TYPE_IMAGE, m_image,
-                    VK_OBJECT_INFO_TYPE_MEMORY_REQUIREMENTS,
-                    &mem_reqs_size, &mem_req);
+    err = vkGetObjectMemoryRequirements(device(), VK_OBJECT_TYPE_IMAGE, m_image, &mem_req);
     ASSERT_VK_SUCCESS(err);
 
-    ASSERT_NE(0, mem_req.size) << "vkGetObjectInfo (Image): Failed - expect images to require memory";
+    ASSERT_NE(0, mem_req.size) << "vkGetObjectMemoryRequirements (Image): Failed - expect images to require memory";
     mem_info.allocationSize = mem_req.size;
     mem_info.memProps       = 0;
 

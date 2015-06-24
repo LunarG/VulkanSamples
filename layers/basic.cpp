@@ -61,38 +61,23 @@ static const VkExtensionProperties basicExts[BASIC_LAYER_EXT_ARRAY_SIZE] = {
     }
 };
 
-VK_LAYER_EXPORT VkResult VKAPI vkGetGlobalExtensionInfo(
-                                               VkExtensionInfoType infoType,
+VK_LAYER_EXPORT VkResult VKAPI vkGetGlobalExtensionProperties(
                                                uint32_t extensionIndex,
-                                               size_t*  pDataSize,
-                                               void*    pData)
+                                               VkExtensionProperties*    pData)
 {
     /* This entrypoint is NOT going to init it's own dispatch table since loader calls here early */
     uint32_t *count;
 
-    if (pDataSize == NULL)
-        return VK_ERROR_INVALID_POINTER;
+    if (extensionIndex >= BASIC_LAYER_EXT_ARRAY_SIZE)
+        return VK_ERROR_INVALID_VALUE;
+    memcpy((VkExtensionProperties *) pData, &basicExts[extensionIndex], sizeof(VkExtensionProperties));
 
-    switch (infoType) {
-        case VK_EXTENSION_INFO_TYPE_COUNT:
-            *pDataSize = sizeof(uint32_t);
-            if (pData == NULL)
-                return VK_SUCCESS;
-            count = (uint32_t *) pData;
-            *count = BASIC_LAYER_EXT_ARRAY_SIZE;
-            break;
-        case VK_EXTENSION_INFO_TYPE_PROPERTIES:
-            *pDataSize = sizeof(VkExtensionProperties);
-            if (pData == NULL)
-                return VK_SUCCESS;
-            if (extensionIndex >= BASIC_LAYER_EXT_ARRAY_SIZE)
-                return VK_ERROR_INVALID_VALUE;
-            memcpy((VkExtensionProperties *) pData, &basicExts[extensionIndex], sizeof(VkExtensionProperties));
-            break;
-        default:
-            return VK_ERROR_INVALID_VALUE;
-    };
+    return VK_SUCCESS;
+}
 
+VK_LAYER_EXPORT VkResult VKAPI vkGetGlobalExtensionCount(uint32_t* pCount)
+{
+    *pCount = BASIC_LAYER_EXT_ARRAY_SIZE;
     return VK_SUCCESS;
 }
 
@@ -181,8 +166,10 @@ VK_LAYER_EXPORT void * VKAPI vkGetInstanceProcAddr(VkInstance instance, const ch
         return (void *) vkDestroyInstance;
     if (!strcmp("vkEnumeratePhysicalDevices", pName))
         return (void*) vkEnumeratePhysicalDevices;
-    if (!strcmp("vkGetGlobalExtensionInfo", pName))
-        return (void*) vkGetGlobalExtensionInfo;
+    if (!strcmp("vkGetGlobalExtensionCount", pName))
+        return (void*) vkGetGlobalExtensionCount;
+    if (!strcmp("vkGetGlobalExtensionProperties", pName))
+        return (void*) vkGetGlobalExtensionProperties;
     if (!strcmp("vkCreateDevice", pName))
         return (void *) vkCreateDevice;
     else

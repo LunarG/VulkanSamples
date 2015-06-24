@@ -169,7 +169,6 @@ TEST_F(VkTest, Event) {
     VkEventCreateInfo event_info;
     VkEvent event;
     VkMemoryRequirements mem_req;
-    size_t data_size;
     VkDeviceMemory event_mem;
     VkResult err;
 
@@ -185,9 +184,7 @@ TEST_F(VkTest, Event) {
     err = vkCreateEvent(device(), &event_info, &event);
     ASSERT_VK_SUCCESS(err);
 
-    data_size = sizeof(mem_req);
-    err = vkGetObjectInfo(device(), VK_OBJECT_TYPE_EVENT, event, VK_OBJECT_INFO_TYPE_MEMORY_REQUIREMENTS,
-        &data_size, &mem_req);
+    err = vkGetObjectMemoryRequirements(device(), VK_OBJECT_TYPE_EVENT, event, &mem_req);
     ASSERT_VK_SUCCESS(err);
 
     if (mem_req.size) {
@@ -237,7 +234,6 @@ TEST_F(VkTest, Event) {
 TEST_F(VkTest, Query) {
     VkQueryPoolCreateInfo query_info;
     VkQueryPool query_pool;
-    size_t data_size;
     VkMemoryRequirements mem_req;
     size_t query_result_size;
     uint32_t *query_result_data;
@@ -276,9 +272,7 @@ TEST_F(VkTest, Query) {
     err = vkCreateQueryPool(device(), &query_info, &query_pool);
     ASSERT_VK_SUCCESS(err);
 
-    data_size = sizeof(mem_req);
-    err = vkGetObjectInfo(device(), VK_OBJECT_TYPE_QUERY_POOL, query_pool, VK_OBJECT_INFO_TYPE_MEMORY_REQUIREMENTS,
-        &data_size, &mem_req);
+    err = vkGetObjectMemoryRequirements(device(), VK_OBJECT_TYPE_QUERY_POOL, query_pool, &mem_req);
     ASSERT_VK_SUCCESS(err);
 
     if (mem_req.size) {
@@ -352,7 +346,6 @@ void VkTest::CreateImageTest()
     uint32_t w, h, mipCount;
     VkFormat fmt;
     VkFormatProperties image_fmt;
-    size_t data_size;
 
     w =512;
     h = 256;
@@ -426,12 +419,10 @@ void VkTest::CreateImageTest()
     ASSERT_VK_SUCCESS(err);
 
     // Verify image resources
-//    VkResult VKAPI vkGetImageSubresourceInfo(
+//    VkResult VKAPI vkGetImageSubresourceLayout(
 //        VkImage                                   image,
 //        const VkImageSubresource*                pSubresource,
-//        VkSubresourceInfoType                   infoType,
-//        size_t*                                     pDataSize,
-//        void*                                       pData);
+//        VkSubresourceLayout*                     pLayout);
 //    typedef struct VkSubresourceLayout_
 //    {
 //        VkDeviceSize                            offset;                 // Specified in bytes
@@ -446,13 +437,7 @@ void VkTest::CreateImageTest()
 //        uint32_t                                mipLevel;
 //        uint32_t                                arraySlice;
 //    } VkImageSubresource;
-//    typedef enum VkSubresourceInfoType_
-//    {
-//        // Info type for vkGetImageSubresourceInfo()
-//        VK_SUBRESOURCE_INFO_TYPE_LAYOUT                        = 0x00000000,
 
-//        VK_MAX_ENUM(VkSubresourceInfoType_)
-//    } VkSubresourceInfoType;
 
     if (image_fmt.linearTilingFeatures & VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT) {
         VkImageSubresource subresource = {};
@@ -464,11 +449,8 @@ void VkTest::CreateImageTest()
         while ((_w > 0) || (_h > 0))
         {
             VkSubresourceLayout layout = {};
-            data_size = sizeof(layout);
-            err = vkGetImageSubresourceInfo(device(), image, &subresource, VK_SUBRESOURCE_INFO_TYPE_LAYOUT,
-                &data_size, &layout);
+            err = vkGetImageSubresourceLayout(device(), image, &subresource, &layout);
             ASSERT_VK_SUCCESS(err);
-            ASSERT_EQ(sizeof(VkSubresourceLayout), data_size) << "Invalid structure (VkSubresourceLayout) size";
 
             // TODO: 4 should be replaced with pixel size for given format
             EXPECT_LE(_w * 4, layout.rowPitch) << "Pitch does not match expected image pitch";
@@ -482,9 +464,7 @@ void VkTest::CreateImageTest()
     VkMemoryRequirements mem_req;
     VkDeviceMemory image_mem;
 
-    data_size = sizeof(mem_req);
-    err = vkGetObjectInfo(device(), VK_OBJECT_TYPE_IMAGE, image, VK_OBJECT_INFO_TYPE_MEMORY_REQUIREMENTS,
-        &data_size, &mem_req);
+    err = vkGetObjectMemoryRequirements(device(), VK_OBJECT_TYPE_IMAGE, image, &mem_req);
     ASSERT_VK_SUCCESS(err);
 
     if (mem_req.size) {

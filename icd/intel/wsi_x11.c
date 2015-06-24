@@ -744,7 +744,7 @@ static void x11_display_scan(struct intel_gpu *gpu)
     gpu->display_count = i;
 }
 #endif
-
+#if 0    // TODO To be replace with new WSI
 VkResult intel_wsi_gpu_get_info(struct intel_gpu *gpu,
                                 VkPhysicalDeviceInfoType type,
                                 size_t *size, void *data)
@@ -781,7 +781,7 @@ VkResult intel_wsi_gpu_get_info(struct intel_gpu *gpu,
 
     return ret;
 }
-
+#endif
 void intel_wsi_gpu_cleanup(struct intel_gpu *gpu)
 {
     if (gpu->displays) {

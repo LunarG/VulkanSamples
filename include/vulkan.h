@@ -33,7 +33,7 @@
 #include "vk_platform.h"
 
 // Vulkan API version supported by this file
-#define VK_API_VERSION VK_MAKE_VERSION(0, 107, 0)
+#define VK_API_VERSION VK_MAKE_VERSION(0, 108, 0)
 
 #ifdef __cplusplus
 extern "C"
@@ -534,42 +534,6 @@ typedef enum VkPhysicalDeviceType_
 
     VK_ENUM_RANGE(PHYSICAL_DEVICE_TYPE, OTHER, CPU)
 } VkPhysicalDeviceType;
-
-typedef enum VkPhysicalDeviceInfoType_
-{
-    // Info type for vkGetPhysicalDeviceInfo()
-    VK_PHYSICAL_DEVICE_INFO_TYPE_PROPERTIES                 = 0x00000000,
-    VK_PHYSICAL_DEVICE_INFO_TYPE_PERFORMANCE                = 0x00000001,
-    VK_PHYSICAL_DEVICE_INFO_TYPE_QUEUE_PROPERTIES           = 0x00000002,
-    VK_PHYSICAL_DEVICE_INFO_TYPE_MEMORY_PROPERTIES          = 0x00000003,
-
-    VK_ENUM_RANGE(PHYSICAL_DEVICE_INFO_TYPE, PROPERTIES, MEMORY_PROPERTIES)
-} VkPhysicalDeviceInfoType;
-
-typedef enum VkExtensionInfoType_
-{
-    // Info type for vkGetGlobalExtensionInfo() and vkGetPhysicalDeviceExtensionInfo()
-    VK_EXTENSION_INFO_TYPE_COUNT                            = 0x00000000,
-    VK_EXTENSION_INFO_TYPE_PROPERTIES                       = 0x00000001,
-
-    VK_ENUM_RANGE(EXTENSION_INFO_TYPE, COUNT, PROPERTIES)
-} VkExtensionInfoType;
-
-typedef enum VkSubresourceInfoType_
-{
-    // Info type for vkGetImageSubresourceInfo()
-    VK_SUBRESOURCE_INFO_TYPE_LAYOUT                         = 0x00000000,
-
-    VK_ENUM_RANGE(SUBRESOURCE_INFO_TYPE, LAYOUT, LAYOUT)
-} VkSubresourceInfoType;
-
-typedef enum VkObjectInfoType_
-{
-    // Info type for vkGetObjectInfo()
-    VK_OBJECT_INFO_TYPE_MEMORY_REQUIREMENTS                 = 0x00000000,
-
-    VK_ENUM_RANGE(OBJECT_INFO_TYPE, MEMORY_REQUIREMENTS, MEMORY_REQUIREMENTS)
-} VkObjectInfoType;
 
 typedef enum VkVertexInputStepRate_
 {
@@ -2060,7 +2024,6 @@ typedef struct VkDispatchIndirectCmd_
 typedef VkResult (VKAPI *PFN_vkCreateInstance)(const VkInstanceCreateInfo* pCreateInfo, VkInstance* pInstance);
 typedef VkResult (VKAPI *PFN_vkDestroyInstance)(VkInstance instance);
 typedef VkResult (VKAPI *PFN_vkEnumeratePhysicalDevices)(VkInstance instance, uint32_t* pPhysicalDeviceCount, VkPhysicalDevice* pPhysicalDevices);
-typedef VkResult (VKAPI *PFN_vkGetPhysicalDeviceInfo)(VkPhysicalDevice physicalDevice, VkPhysicalDeviceInfoType infoType, size_t* pDataSize, void* pData);
 typedef VkResult (VKAPI *PFN_vkGetPhysicalDeviceFeatures)(VkPhysicalDevice physicalDevice, VkPhysicalDeviceFeatures* pFeatures);
 typedef VkResult (VKAPI *PFN_vkGetPhysicalDeviceFormatInfo)(VkPhysicalDevice physicalDevice, VkFormat format, VkFormatProperties *pFormatInfo);
 typedef VkResult (VKAPI *PFN_vkGetPhysicalDeviceLimits)(VkPhysicalDevice physicalDevice, VkPhysicalDeviceLimits* pLimits);
@@ -2068,8 +2031,15 @@ typedef void *   (VKAPI *PFN_vkGetInstanceProcAddr)(VkInstance instance, const c
 typedef void *   (VKAPI *PFN_vkGetDeviceProcAddr)(VkDevice device, const char * pName);
 typedef VkResult (VKAPI *PFN_vkCreateDevice)(VkPhysicalDevice physicalDevice, const VkDeviceCreateInfo* pCreateInfo, VkDevice* pDevice);
 typedef VkResult (VKAPI *PFN_vkDestroyDevice)(VkDevice device);
-typedef VkResult (VKAPI *PFN_vkGetGlobalExtensionInfo)(VkExtensionInfoType infoType, uint32_t extensionIndex, size_t* pDataSize, void* pData);
-typedef VkResult (VKAPI *PFN_vkGetPhysicalDeviceExtensionInfo)(VkPhysicalDevice physicalDevice, VkExtensionInfoType infoType, uint32_t extensionIndex, size_t* pDataSize, void* pData);
+typedef VkResult (VKAPI *PFN_vkGetPhysicalDeviceProperties)(VkPhysicalDevice physicalDevice, VkPhysicalDeviceProperties* pProperties);
+typedef VkResult (VKAPI *PFN_vkGetPhysicalDevicePerformance)(VkPhysicalDevice physicalDevice, VkPhysicalDevicePerformance* pPerformance);
+typedef VkResult (VKAPI *PFN_vkGetPhysicalDeviceQueueCount)(VkPhysicalDevice physicalDevice, uint32_t* pCount);
+typedef VkResult (VKAPI *PFN_vkGetPhysicalDeviceQueueProperties)(VkPhysicalDevice physicalDevice, uint32_t count, VkPhysicalDeviceQueueProperties* pQueueProperties);
+typedef VkResult (VKAPI *PFN_vkGetPhysicalDeviceMemoryProperties)(VkPhysicalDevice physicalDevice, VkPhysicalDeviceMemoryProperties* pMemoryProperies);
+typedef VkResult (VKAPI *PFN_vkGetGlobalExtensionCount)(uint32_t* pCount);
+typedef VkResult (VKAPI *PFN_vkGetGlobalExtensionProperties)(uint32_t extensionIndex, VkExtensionProperties* pProperties);
+typedef VkResult (VKAPI *PFN_vkGetPhysicalDeviceExtensionCount)(VkPhysicalDevice physicalDevice, uint32_t* pCount);
+typedef VkResult (VKAPI *PFN_vkGetPhysicalDeviceExtensionProperties)(VkPhysicalDevice physicalDevice, uint32_t extensionIndex, VkExtensionProperties* pProperties);
 typedef VkResult (VKAPI *PFN_vkGetDeviceQueue)(VkDevice device, uint32_t queueNodeIndex, uint32_t queueIndex, VkQueue* pQueue);
 typedef VkResult (VKAPI *PFN_vkQueueSubmit)(VkQueue queue, uint32_t cmdBufferCount, const VkCmdBuffer* pCmdBuffers, VkFence fence);
 typedef VkResult (VKAPI *PFN_vkQueueWaitIdle)(VkQueue queue);
@@ -2081,7 +2051,7 @@ typedef VkResult (VKAPI *PFN_vkUnmapMemory)(VkDevice device, VkDeviceMemory mem)
 typedef VkResult (VKAPI *PFN_vkFlushMappedMemoryRanges)(VkDevice device, uint32_t memRangeCount, const VkMappedMemoryRange* pMemRanges);
 typedef VkResult (VKAPI *PFN_vkInvalidateMappedMemoryRanges)(VkDevice device, uint32_t memRangeCount, const VkMappedMemoryRange* pMemRanges);
 typedef VkResult (VKAPI *PFN_vkDestroyObject)(VkDevice device, VkObjectType objType, VkObject object);
-typedef VkResult (VKAPI *PFN_vkGetObjectInfo)(VkDevice device, VkObjectType objType, VkObject object, VkObjectInfoType infoType, size_t* pDataSize, void* pData);
+typedef VkResult (VKAPI *PFN_vkGetObjectMemoryRequirements)(VkDevice device, VkObjectType objType, VkObject object, VkMemoryRequirements* pMemoryRequirements);
 typedef VkResult (VKAPI *PFN_vkBindObjectMemory)(VkDevice device, VkObjectType objType, VkObject object, VkDeviceMemory mem, VkDeviceSize offset);
 typedef VkResult (VKAPI *PFN_vkQueueBindSparseBufferMemory)(VkQueue queue, VkBuffer buffer, VkDeviceSize rangeOffset, VkDeviceSize rangeSize, VkDeviceMemory mem, VkDeviceSize memOffset);
 typedef VkResult (VKAPI *PFN_vkQueueBindSparseImageMemory)(VkQueue queue, VkImage image, const VkImageMemoryBindInfo* pBindInfo, VkDeviceMemory mem, VkDeviceSize memOffset);
@@ -2101,7 +2071,7 @@ typedef VkResult (VKAPI *PFN_vkGetQueryPoolResults)(VkDevice device, VkQueryPool
 typedef VkResult (VKAPI *PFN_vkCreateBuffer)(VkDevice device, const VkBufferCreateInfo* pCreateInfo, VkBuffer* pBuffer);
 typedef VkResult (VKAPI *PFN_vkCreateBufferView)(VkDevice device, const VkBufferViewCreateInfo* pCreateInfo, VkBufferView* pView);
 typedef VkResult (VKAPI *PFN_vkCreateImage)(VkDevice device, const VkImageCreateInfo* pCreateInfo, VkImage* pImage);
-typedef VkResult (VKAPI *PFN_vkGetImageSubresourceInfo)(VkDevice device, VkImage image, const VkImageSubresource* pSubresource, VkSubresourceInfoType infoType, size_t* pDataSize, void* pData);
+typedef VkResult (VKAPI *PFN_vkGetImageSubresourceLayout)(VkDevice device, VkImage image, const VkImageSubresource* pSubresource, VkSubresourceLayout* pLayout);
 typedef VkResult (VKAPI *PFN_vkCreateImageView)(VkDevice device, const VkImageViewCreateInfo* pCreateInfo, VkImageView* pView);
 typedef VkResult (VKAPI *PFN_vkCreateColorAttachmentView)(VkDevice device, const VkColorAttachmentViewCreateInfo* pCreateInfo, VkColorAttachmentView* pView);
 typedef VkResult (VKAPI *PFN_vkCreateDepthStencilView)(VkDevice device, const VkDepthStencilViewCreateInfo* pCreateInfo, VkDepthStencilView* pView);
@@ -2182,12 +2152,6 @@ VkResult VKAPI vkEnumeratePhysicalDevices(
     uint32_t*                                   pPhysicalDeviceCount,
     VkPhysicalDevice*                           pPhysicalDevices);
 
-VkResult VKAPI vkGetPhysicalDeviceInfo(
-    VkPhysicalDevice                            physicalDevice,
-    VkPhysicalDeviceInfoType                    infoType,
-    size_t*                                     pDataSize,
-    void*                                       pData);
-
 VkResult VKAPI vkGetPhysicalDeviceFeatures(
     VkPhysicalDevice                            physicalDevice,
     VkPhysicalDeviceFeatures*                   pFeatures);
@@ -2200,7 +2164,6 @@ VkResult VKAPI vkGetPhysicalDeviceFormatInfo(
 VkResult VKAPI vkGetPhysicalDeviceLimits(
     VkPhysicalDevice                            physicalDevice,
     VkPhysicalDeviceLimits*                     pLimits);
-
 
 void * VKAPI vkGetInstanceProcAddr(
     VkInstance                                  instance,
@@ -2219,20 +2182,44 @@ VkResult VKAPI vkCreateDevice(
 VkResult VKAPI vkDestroyDevice(
     VkDevice                                    device);
 
+VkResult VKAPI vkGetPhysicalDeviceProperties(
+    VkPhysicalDevice                            physicalDevice,
+    VkPhysicalDeviceProperties*                 pProperties);
+
+VkResult VKAPI vkGetPhysicalDevicePerformance(
+    VkPhysicalDevice                            physicalDevice,
+    VkPhysicalDevicePerformance*                pPerformance);
+
+VkResult VKAPI vkGetPhysicalDeviceQueueCount(
+    VkPhysicalDevice                            physicalDevice,
+    uint32_t*                                   pCount);
+
+VkResult VKAPI vkGetPhysicalDeviceQueueProperties(
+    VkPhysicalDevice                            physicalDevice,
+    uint32_t                                    count,
+    VkPhysicalDeviceQueueProperties*            pQueueProperties);
+
+VkResult VKAPI vkGetPhysicalDeviceMemoryProperties(
+    VkPhysicalDevice                            physicalDevice,
+    VkPhysicalDeviceMemoryProperties*           pMemoryProperies);
+
 // Extension discovery functions
 
-VkResult VKAPI vkGetGlobalExtensionInfo(
-    VkExtensionInfoType                         infoType,
-    uint32_t                                    extensionIndex,
-    size_t*                                     pDataSize,
-    void*                                       pData);
+VkResult VKAPI vkGetGlobalExtensionCount(
+    uint32_t*                                   pCount);
 
-VkResult VKAPI vkGetPhysicalDeviceExtensionInfo(
-    VkPhysicalDevice                            physicalDevice,
-    VkExtensionInfoType                         infoType,
+VkResult VKAPI vkGetGlobalExtensionProperties(
     uint32_t                                    extensionIndex,
-    size_t*                                     pDataSize,
-    void*                                       pData);
+    VkExtensionProperties*                      pProperties);
+
+VkResult VKAPI vkGetPhysicalDeviceExtensionCount(
+    VkPhysicalDevice                            physicalDevice,
+    uint32_t*                                   pCount);
+
+VkResult VKAPI vkGetPhysicalDeviceExtensionProperties(
+    VkPhysicalDevice                            physicalDevice,
+    uint32_t                                    extensionIndex,
+    VkExtensionProperties*                      pProperties);
 
 // Queue functions
 
@@ -2294,14 +2281,6 @@ VkResult VKAPI vkDestroyObject(
     VkObjectType                                objType,
     VkObject                                    object);
 
-VkResult VKAPI vkGetObjectInfo(
-    VkDevice                                    device,
-    VkObjectType                                objType,
-    VkObject                                    object,
-    VkObjectInfoType                            infoType,
-    size_t*                                     pDataSize,
-    void*                                       pData);
-
 // Memory management API functions
 
 VkResult VKAPI vkBindObjectMemory(
@@ -2310,6 +2289,12 @@ VkResult VKAPI vkBindObjectMemory(
     VkObject                                    object,
     VkDeviceMemory                              mem,
     VkDeviceSize                                memOffset);
+
+VkResult VKAPI vkGetObjectMemoryRequirements(
+    VkDevice                                    device,
+    VkObjectType                                objType,
+    VkObject                                    object,
+    VkMemoryRequirements*                       pMemoryRequirements);
 
 VkResult VKAPI vkQueueBindSparseBufferMemory(
     VkQueue                                     queue,
@@ -2420,13 +2405,11 @@ VkResult VKAPI vkCreateImage(
     const VkImageCreateInfo*                    pCreateInfo,
     VkImage*                                    pImage);
 
-VkResult VKAPI vkGetImageSubresourceInfo(
+VkResult VKAPI vkGetImageSubresourceLayout(
     VkDevice                                    device,
     VkImage                                     image,
     const VkImageSubresource*                   pSubresource,
-    VkSubresourceInfoType                       infoType,
-    size_t*                                     pDataSize,
-    void*                                       pData);
+    VkSubresourceLayout*                        pLayout);
 
 // Image view functions
 

@@ -37,8 +37,22 @@ static inline void* globalGetProcAddr(const char *name)
         return (void*) vkDestroyInstance;
     if (!strcmp(name, "EnumeratePhysicalDevices"))
         return (void*) vkEnumeratePhysicalDevices;
-    if (!strcmp(name, "GetPhysicalDeviceInfo"))
-        return (void*) vkGetPhysicalDeviceInfo;
+    if (!strcmp(name, "GetPhysicalDeviceProperties"))
+        return (void*) vkGetPhysicalDeviceProperties;
+    if (!strcmp(name, "GetPhysicalDevicePerformance"))
+        return (void*) vkGetPhysicalDevicePerformance;
+    if (!strcmp(name, "GetPhysicalDeviceQueueCount"))
+        return (void*) vkGetPhysicalDeviceQueueCount;
+    if (!strcmp(name, "GetPhysicalDeviceQueueProperties"))
+        return (void*) vkGetPhysicalDeviceQueueProperties;
+    if (!strcmp(name, "GetPhysicalDeviceMemoryProperties"))
+        return (void*) vkGetPhysicalDeviceMemoryProperties;
+    if (!strcmp(name, "GetPhysicalDeviceFeatures"))
+        return (void*) vkGetPhysicalDeviceFeatures;
+    if (!strcmp(name, "GetPhysicalDeviceFormatInfo"))
+        return (void*) vkGetPhysicalDeviceFormatInfo;
+    if (!strcmp(name, "GetPhysicalDeviceLimits"))
+        return (void*) vkGetPhysicalDeviceLimits;
     if (!strcmp(name, "GetInstanceProcAddr"))
         return (void*) vkGetInstanceProcAddr;
     if (!strcmp(name, "GetDeviceProcAddr"))
@@ -47,10 +61,14 @@ static inline void* globalGetProcAddr(const char *name)
         return (void*) vkCreateDevice;
     if (!strcmp(name, "DestroyDevice"))
         return (void*) vkDestroyDevice;
-    if (!strcmp(name, "GetGlobalExtensionInfo"))
-        return (void*) vkGetGlobalExtensionInfo;
-    if (!strcmp(name, "GetPhysicalDeviceExtensionInfo"))
-        return (void*) vkGetPhysicalDeviceExtensionInfo;
+    if (!strcmp(name, "GetGlobalExtensionProperties"))
+        return (void*) vkGetGlobalExtensionProperties;
+    if (!strcmp(name, "GetGlobalExtensionCount"))
+        return (void*) vkGetGlobalExtensionCount;
+    if (!strcmp(name, "GetPhysicalDeviceExtensionProperties"))
+        return (void*) vkGetPhysicalDeviceExtensionProperties;
+    if (!strcmp(name, "GetPhysicalDeviceExtensionCount"))
+        return (void*) vkGetPhysicalDeviceExtensionCount;
     if (!strcmp(name, "GetDeviceQueue"))
         return (void*) vkGetDeviceQueue;
     if (!strcmp(name, "QueueSubmit"))
@@ -73,8 +91,8 @@ static inline void* globalGetProcAddr(const char *name)
         return (void*) vkInvalidateMappedMemoryRanges;
     if (!strcmp(name, "DestroyObject"))
         return (void*) vkDestroyObject;
-    if (!strcmp(name, "GetObjectInfo"))
-        return (void*) vkGetObjectInfo;
+    if (!strcmp(name, "GetObjectMemoryRequirements"))
+        return (void*) vkGetObjectMemoryRequirements;
     if (!strcmp(name, "BindObjectMemory"))
         return (void*) vkBindObjectMemory;
     if (!strcmp(name, "QueueBindSparseBufferMemory"))
@@ -113,8 +131,8 @@ static inline void* globalGetProcAddr(const char *name)
         return (void*) vkCreateBufferView;
     if (!strcmp(name, "CreateImage"))
         return (void*) vkCreateImage;
-    if (!strcmp(name, "GetImageSubresourceInfo"))
-        return (void*) vkGetImageSubresourceInfo;
+    if (!strcmp(name, "GetImageSubresourceLayout"))
+        return (void*) vkGetImageSubresourceLayout;
     if (!strcmp(name, "CreateImageView"))
         return (void*) vkCreateImageView;
     if (!strcmp(name, "CreateColorAttachmentView"))
@@ -259,22 +277,30 @@ static inline void *loader_non_passthrough_gpa(const char *name)
         return (void*) vkDestroyInstance;
     if (!strcmp(name, "EnumeratePhysicalDevices"))
         return (void*) vkEnumeratePhysicalDevices;
-    if (!strcmp(name, "GetPhysicalDeviceInfo"))
-        return (void*) vkGetPhysicalDeviceInfo;
     if (!strcmp(name, "GetPhysicalDeviceFeatures"))
         return (void*) vkGetPhysicalDeviceFeatures;
     if (!strcmp(name, "GetPhysicalDeviceFormatInfo"))
         return (void*) vkGetPhysicalDeviceFormatInfo;
     if (!strcmp(name, "GetPhysicalDeviceLimits"))
         return (void*) vkGetPhysicalDeviceLimits;
+    if (!strcmp(name, "GetPhysicalDevicePerformance"))
+        return (void*) vkGetPhysicalDevicePerformance;
+    if (!strcmp(name, "GetPhysicalDeviceQueueCount"))
+        return (void*) vkGetPhysicalDeviceQueueCount;
+    if (!strcmp(name, "GetPhysicalDeviceQueueProperties"))
+        return (void*) vkGetPhysicalDeviceQueueProperties;
+    if (!strcmp(name, "GetPhysicalDeviceMemoryProperties"))
+        return (void*) vkGetPhysicalDeviceMemoryProperties;
+    if (!strcmp(name, "GetPhysicalDeviceProperties"))
+        return (void*) vkGetPhysicalDeviceProperties;
     if (!strcmp(name, "GetInstanceProcAddr"))
         return (void*) vkGetInstanceProcAddr;
     if (!strcmp(name, "GetDeviceProcAddr"))
         return (void*) vkGetDeviceProcAddr;
     if (!strcmp(name, "CreateDevice"))
         return (void*) vkCreateDevice;
-    if (!strcmp(name, "GetGlobalExtensionInfo"))
-        return (void*) vkGetGlobalExtensionInfo;
+    if (!strcmp(name, "GetPhysicalDeviceExtensionProperties"))
+        return (void*) vkGetPhysicalDeviceExtensionProperties;
     if (!strcmp(name, "GetDeviceQueue"))
         return (void*) vkGetDeviceQueue;
     if (!strcmp(name, "CreateCommandBuffer"))

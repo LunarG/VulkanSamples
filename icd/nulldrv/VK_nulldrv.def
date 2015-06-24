@@ -30,7 +30,8 @@ EXPORTS
    vkCreateInstance
    vkDestroyInstance
    vkEnumeratePhysicalDevices
-   vkGetGlobalExtensionInfo
+   vkGetGlobalExtensionProperties
+   vkGetGlobalExtensionCount
    xcbCreateWindow
    xcbDestroyWindow
    xcbGetMessage

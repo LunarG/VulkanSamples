@@ -41,7 +41,7 @@ typedef struct VkLayerDispatchTable_
     PFN_vkFlushMappedMemoryRanges FlushMappedMemoryRanges;
     PFN_vkInvalidateMappedMemoryRanges InvalidateMappedMemoryRanges;
     PFN_vkDestroyObject DestroyObject;
-    PFN_vkGetObjectInfo GetObjectInfo;
+    PFN_vkGetObjectMemoryRequirements GetObjectMemoryRequirements;
     PFN_vkBindObjectMemory BindObjectMemory;
     PFN_vkQueueBindSparseBufferMemory QueueBindSparseBufferMemory;
     PFN_vkQueueBindSparseImageMemory QueueBindSparseImageMemory;
@@ -61,7 +61,7 @@ typedef struct VkLayerDispatchTable_
     PFN_vkCreateBuffer CreateBuffer;
     PFN_vkCreateBufferView CreateBufferView;
     PFN_vkCreateImage CreateImage;
-    PFN_vkGetImageSubresourceInfo GetImageSubresourceInfo;
+    PFN_vkGetImageSubresourceLayout GetImageSubresourceLayout;
     PFN_vkCreateImageView CreateImageView;
     PFN_vkCreateColorAttachmentView CreateColorAttachmentView;
     PFN_vkCreateDepthStencilView CreateDepthStencilView;
@@ -141,13 +141,17 @@ typedef struct VkLayerInstanceDispatchTable_
     PFN_vkCreateInstance CreateInstance;
     PFN_vkDestroyInstance DestroyInstance;
     PFN_vkEnumeratePhysicalDevices EnumeratePhysicalDevices;
-    PFN_vkGetPhysicalDeviceInfo GetPhysicalDeviceInfo;
     PFN_vkGetPhysicalDeviceFeatures GetPhysicalDeviceFeatures;
     PFN_vkGetPhysicalDeviceFormatInfo GetPhysicalDeviceFormatInfo;
     PFN_vkGetPhysicalDeviceLimits GetPhysicalDeviceLimits;
     PFN_vkCreateDevice CreateDevice;
-    /* PFN_vkGetGlobalExtensionInfo GetGlobalExtensionInfo; non-dispatchable */
-    PFN_vkGetPhysicalDeviceExtensionInfo GetPhysicalDeviceExtensionInfo;
+    PFN_vkGetPhysicalDeviceProperties GetPhysicalDeviceProperties;
+    PFN_vkGetPhysicalDevicePerformance GetPhysicalDevicePerformance;
+    PFN_vkGetPhysicalDeviceQueueCount GetPhysicalDeviceQueueCount;
+    PFN_vkGetPhysicalDeviceQueueProperties GetPhysicalDeviceQueueProperties;
+    PFN_vkGetPhysicalDeviceMemoryProperties GetPhysicalDeviceMemoryProperties;
+    PFN_vkGetPhysicalDeviceExtensionCount GetPhysicalDeviceExtensionCount;
+    PFN_vkGetPhysicalDeviceExtensionProperties GetPhysicalDeviceExtensionProperties;
     PFN_vkDbgCreateMsgCallback DbgCreateMsgCallback;
     PFN_vkDbgDestroyMsgCallback DbgDestroyMsgCallback;
     PFN_vkDbgStringCallback DbgStringCallback;

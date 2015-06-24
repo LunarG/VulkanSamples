@@ -153,17 +153,6 @@ VK_LAYER_EXPORT VkResult VKAPI vkDestroyInstance(VkInstance instance)
     return res;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkGetPhysicalDeviceInfo(VkPhysicalDevice gpu, VkPhysicalDeviceInfoType infoType, size_t* pDataSize, void* pData)
-{
-    char str[1024];
-    if (!validate_VkPhysicalDeviceInfoType(infoType)) {
-        sprintf(str, "Parameter infoType to function GetPhysicalDeviceInfo has invalid value of %i.", (int)infoType);
-        layerCbMsg(VK_DBG_REPORT_ERROR_BIT, (VkObjectType) 0, NULL, 0, 1, "PARAMCHECK", str);
-    }
-    VkResult result = instance_dispatch_table(gpu)->GetPhysicalDeviceInfo(gpu, infoType, pDataSize, pData);
-    return result;
-}
-
 void PreCreateDevice(VkPhysicalDevice gpu, const VkDeviceCreateInfo* pCreateInfo)
 {
     if(gpu == nullptr)
@@ -295,37 +284,22 @@ static const VkExtensionProperties pcExts[PARAM_CHECKER_LAYER_EXT_ARRAY_SIZE] = 
     }
 };
 
-VK_LAYER_EXPORT VkResult VKAPI vkGetGlobalExtensionInfo(
-        VkExtensionInfoType infoType,
-        uint32_t extensionIndex,
-        size_t*  pDataSize,
-        void*    pData)
+VK_LAYER_EXPORT VkResult VKAPI vkGetGlobalExtensionCount(
+                                               uint32_t* pCount)
+{
+    *pCount = PARAM_CHECKER_LAYER_EXT_ARRAY_SIZE;
+    return VK_SUCCESS;
+}
+
+VK_LAYER_EXPORT VkResult VKAPI vkGetGlobalExtensionProperties(
+                                               uint32_t extensionIndex,
+                                               VkExtensionProperties* pProperties)
 {
     /* This entrypoint is NOT going to init it's own dispatch table since loader calls here early */
-    uint32_t *count;
 
-    if (pDataSize == NULL)
-        return VK_ERROR_INVALID_POINTER;
-
-    switch (infoType) {
-        case VK_EXTENSION_INFO_TYPE_COUNT:
-            *pDataSize = sizeof(uint32_t);
-            if (pData == NULL)
-                return VK_SUCCESS;
-            count = (uint32_t *) pData;
-            *count = PARAM_CHECKER_LAYER_EXT_ARRAY_SIZE;
-            break;
-        case VK_EXTENSION_INFO_TYPE_PROPERTIES:
-            *pDataSize = sizeof(VkExtensionProperties);
-            if (pData == NULL)
-                return VK_SUCCESS;
-            if (extensionIndex >= PARAM_CHECKER_LAYER_EXT_ARRAY_SIZE)
-                return VK_ERROR_INVALID_VALUE;
-            memcpy((VkExtensionProperties *) pData, &pcExts[extensionIndex], sizeof(VkExtensionProperties));
-            break;
-        default:
-            return VK_ERROR_INVALID_VALUE;
-    };
+    if (extensionIndex >= PARAM_CHECKER_LAYER_EXT_ARRAY_SIZE)
+        return VK_ERROR_INVALID_VALUE;
+    memcpy(pProperties, &pcExts[extensionIndex], sizeof(VkExtensionProperties));
 
     return VK_SUCCESS;
 }
@@ -357,38 +331,25 @@ static const VkExtensionProperties pcDevExts[PARAM_CHECKER_LAYER_DEV_EXT_ARRAY_S
         "Sample layer: ParamChecker",
     }
 };
-VK_LAYER_EXPORT VkResult VKAPI vkGetPhysicalDeviceExtensionInfo(
+
+VK_LAYER_EXPORT VkResult VKAPI vkGetPhysicalDeviceExtensionCount(
                                                VkPhysicalDevice gpu,
-                                               VkExtensionInfoType infoType,
+                                               uint32_t* pCount)
+{
+    *pCount = PARAM_CHECKER_LAYER_DEV_EXT_ARRAY_SIZE;
+    return VK_SUCCESS;
+}
+
+VK_LAYER_EXPORT VkResult VKAPI vkGetPhysicalDeviceExtensionProperties(
+                                               VkPhysicalDevice gpu,
                                                uint32_t extensionIndex,
-                                               size_t*  pDataSize,
-                                               void*    pData)
+                                               VkExtensionProperties* pProperties)
 {
     /* This entrypoint is NOT going to init it's own dispatch table since loader calls here early */
-    uint32_t *count;
 
-    if (pDataSize == NULL)
-        return VK_ERROR_INVALID_POINTER;
-
-    switch (infoType) {
-        case VK_EXTENSION_INFO_TYPE_COUNT:
-            *pDataSize = sizeof(uint32_t);
-            if (pData == NULL)
-                return VK_SUCCESS;
-            count = (uint32_t *) pData;
-            *count = PARAM_CHECKER_LAYER_DEV_EXT_ARRAY_SIZE;
-            break;
-        case VK_EXTENSION_INFO_TYPE_PROPERTIES:
-            *pDataSize = sizeof(VkExtensionProperties);
-            if (pData == NULL)
-                return VK_SUCCESS;
-            if (extensionIndex >= PARAM_CHECKER_LAYER_DEV_EXT_ARRAY_SIZE)
-                return VK_ERROR_INVALID_VALUE;
-            memcpy((VkExtensionProperties *) pData, &pcDevExts[extensionIndex], sizeof(VkExtensionProperties));
-            break;
-        default:
-            return VK_ERROR_INVALID_VALUE;
-    };
+    if (extensionIndex >= PARAM_CHECKER_LAYER_DEV_EXT_ARRAY_SIZE)
+        return VK_ERROR_INVALID_VALUE;
+    memcpy(pProperties, &pcDevExts[extensionIndex], sizeof(VkExtensionProperties));
 
     return VK_SUCCESS;
 }
@@ -481,14 +442,9 @@ VK_LAYER_EXPORT VkResult VKAPI vkDestroyObject(VkDevice device, VkObjectType obj
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkGetObjectInfo(VkDevice device, VkObjectType objType, VkObject object, VkObjectInfoType infoType, size_t* pDataSize, void* pData)
+VK_LAYER_EXPORT VkResult VKAPI vkGetObjectMemoryRequirements(VkDevice device, VkObjectType objType, VkObject object, VkMemoryRequirements* pData)
 {
-    char str[1024];
-    if (!validate_VkObjectInfoType(infoType)) {
-        sprintf(str, "Parameter infoType to function GetObjectInfo has invalid value of %i.", (int)infoType);
-        layerCbMsg(VK_DBG_REPORT_ERROR_BIT, (VkObjectType) 0, NULL, 0, 1, "PARAMCHECK", str);
-    }
-    VkResult result = device_dispatch_table(device)->GetObjectInfo(device, objType, object, infoType, pDataSize, pData);
+    VkResult result = device_dispatch_table(device)->GetObjectMemoryRequirements(device, objType, object, pData);
     return result;
 }
 
@@ -785,21 +741,18 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateImage(VkDevice device, const VkImageCreat
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkGetImageSubresourceInfo(VkDevice device, VkImage image, const VkImageSubresource* pSubresource, VkSubresourceInfoType infoType, size_t* pDataSize, void* pData)
+VK_LAYER_EXPORT VkResult VKAPI vkGetImageSubresourceLayout(VkDevice device, VkImage image, const VkImageSubresource* pSubresource, VkSubresourceLayout* pLayout)
 {
     char str[1024];
     if (!pSubresource) {
-        sprintf(str, "Struct ptr parameter pSubresource to function GetImageSubresourceInfo is NULL.");
+        sprintf(str, "Struct ptr parameter pSubresource to function GetImageSubresourceLayout is NULL.");
         layerCbMsg(VK_DBG_REPORT_INFO_BIT, (VkObjectType) 0, NULL, 0, 1, "PARAMCHECK", str);
     } else if (!vk_validate_vkimagesubresource(pSubresource)) {
-        sprintf(str, "Parameter pSubresource to function GetImageSubresourceInfo contains an invalid value.");
+        sprintf(str, "Parameter pSubresource to function GetImageSubresourceLayout contains an invalid value.");
         layerCbMsg(VK_DBG_REPORT_ERROR_BIT, (VkObjectType) 0, NULL, 0, 1, "PARAMCHECK", str);
     }
-    if (!validate_VkSubresourceInfoType(infoType)) {
-        sprintf(str, "Parameter infoType to function GetImageSubresourceInfo has invalid value of %i.", (int)infoType);
-        layerCbMsg(VK_DBG_REPORT_ERROR_BIT, (VkObjectType) 0, NULL, 0, 1, "PARAMCHECK", str);
-    }
-    VkResult result = device_dispatch_table(device)->GetImageSubresourceInfo(device, image, pSubresource, infoType, pDataSize, pData);
+
+    VkResult result = device_dispatch_table(device)->GetImageSubresourceLayout(device, image, pSubresource, pLayout);
     return result;
 }
 
@@ -1922,8 +1875,8 @@ static inline void* layer_intercept_proc(const char *name)
         return (void*) vkInvalidateMappedMemoryRanges;
     if (!strcmp(name, "DestroyObject"))
         return (void*) vkDestroyObject;
-    if (!strcmp(name, "GetObjectInfo"))
-        return (void*) vkGetObjectInfo;
+    if (!strcmp(name, "GetObjectMemoryRequirements"))
+        return (void*) vkGetObjectMemoryRequirements;
     if (!strcmp(name, "CreateFence"))
         return (void*) vkCreateFence;
     if (!strcmp(name, "ResetFences"))
@@ -1956,8 +1909,8 @@ static inline void* layer_intercept_proc(const char *name)
         return (void*) vkCreateBufferView;
     if (!strcmp(name, "CreateImage"))
         return (void*) vkCreateImage;
-    if (!strcmp(name, "GetImageSubresourceInfo"))
-        return (void*) vkGetImageSubresourceInfo;
+    if (!strcmp(name, "GetImageSubresourceLayout"))
+        return (void*) vkGetImageSubresourceLayout;
     if (!strcmp(name, "CreateImageView"))
         return (void*) vkCreateImageView;
     if (!strcmp(name, "CreateColorAttachmentView"))
@@ -2006,6 +1959,10 @@ static inline void* layer_intercept_proc(const char *name)
         return (void*) vkEndCommandBuffer;
     if (!strcmp(name, "ResetCommandBuffer"))
         return (void*) vkResetCommandBuffer;
+    if (!strcmp(name, "GetGlobalExtensionProperties"))
+        return (void*) vkGetGlobalExtensionProperties;
+    if (!strcmp(name, "GetGlobalExtensionCount"))
+        return (void*) vkGetGlobalExtensionCount;
     if (!strcmp(name, "CmdBindPipeline"))
         return (void*) vkCmdBindPipeline;
     if (!strcmp(name, "CmdBindDynamicStateObject"))
@@ -2094,16 +2051,14 @@ static inline void* layer_intercept_instance_proc(const char *name)
         return (void*) vkCreateInstance;
     if (!strcmp(name, "DestroyInstance"))
         return (void*) vkDestroyInstance;
-    if (!strcmp(name, "GetPhysicalDeviceInfo"))
-        return (void*) vkGetPhysicalDeviceInfo;
     if (!strcmp(name, "CreateDevice"))
         return (void*) vkCreateDevice;
-    if (!strcmp(name, "GetGlobalExtensionInfo"))
-        return (void*) vkGetGlobalExtensionInfo;
-    if (!strcmp(name, "GetPhysicalDeviceExtensionInfo"))
-        return (void*) vkGetPhysicalDeviceExtensionInfo;
     if (!strcmp(name, "GetPhysicalDeviceFormatInfo"))
         return (void*) vkGetPhysicalDeviceFormatInfo;
+    if (!strcmp(name, "GetPhysicalDeviceExtensionProperties"))
+        return (void*) vkGetPhysicalDeviceExtensionProperties;
+    if (!strcmp(name, "GetPhysicalDeviceExtensionCount"))
+        return (void*) vkGetPhysicalDeviceExtensionCount;
 
     return NULL;
 }

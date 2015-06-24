@@ -119,7 +119,6 @@ static void writePPM( const char *filename, VkImage image1)
     VkFormat format = imageMap[image1]->format;
     const VkImageSubresource sr = {VK_IMAGE_ASPECT_COLOR, 0, 0};
     VkSubresourceLayout sr_layout;
-    size_t data_size = sizeof(sr_layout);
     const VkImageCreateInfo imgCreateInfo = {
         VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
         NULL,
@@ -162,7 +161,6 @@ static void writePPM( const char *filename, VkImage image1)
         {width, height, 1}
     };
     VkMemoryRequirements memRequirements;
-    size_t memRequirementsSize = sizeof(memRequirements);
     uint32_t num_allocations = 0;
     size_t num_alloc_size = sizeof(num_allocations);
     VkLayerDispatchTable* pTableDevice = screenshot_device_table_map[device];
@@ -183,10 +181,9 @@ static void writePPM( const char *filename, VkImage image1)
     err = pTableDevice->CreateImage(device, &imgCreateInfo, &image2);
     assert(!err);
 
-    err = pTableDevice->GetObjectInfo(device,
+    err = pTableDevice->GetObjectMemoryRequirements(device,
                           VK_OBJECT_TYPE_IMAGE, image2,
-                          VK_OBJECT_INFO_TYPE_MEMORY_REQUIREMENTS,
-                          &memRequirementsSize, &memRequirements);
+                          &memRequirements);
     assert(!err);
 
     memAllocInfo.allocationSize = memRequirements.size;
@@ -220,9 +217,7 @@ static void writePPM( const char *filename, VkImage image1)
     err =  pTableDevice->DeviceWaitIdle(device);
     assert(!err);
 
-    err =  pTableDevice->GetImageSubresourceInfo(device, image2, &sr,
-                                     VK_SUBRESOURCE_INFO_TYPE_LAYOUT,
-                                     &data_size, &sr_layout);
+    err =  pTableDevice->GetImageSubresourceLayout(device, image2, &sr, &sr_layout);
     assert(!err);
 
     err = pTableDevice->MapMemory(device, mem2, 0, 0, 0, (void **) &ptr );
@@ -342,81 +337,43 @@ static const VkExtensionProperties ssExts[SCREENSHOT_LAYER_EXT_ARRAY_SIZE] = {
     }
 
 };
-
-VK_LAYER_EXPORT VkResult VKAPI vkGetGlobalExtensionInfo(
-    VkExtensionInfoType  infoType,
-    uint32_t             extensionIndex,
-    size_t              *pDataSize,
-    void                *pData)
+VK_LAYER_EXPORT VkResult VKAPI vkGetGlobalExtensionCount(
+        uint32_t*    pCount)
 {
-    // This entrypoint is NOT going to init its own dispatch table since loader calls here early
-    uint32_t *count;
-
-    if (pDataSize == NULL) {
-        return VK_ERROR_INVALID_POINTER;
-    }
-
-    switch (infoType) {
-        case VK_EXTENSION_INFO_TYPE_COUNT:
-            *pDataSize = sizeof(uint32_t);
-            if (pData == NULL) {
-                return VK_SUCCESS;
-            }
-            count = (uint32_t *) pData;
-            *count = SCREENSHOT_LAYER_EXT_ARRAY_SIZE;
-            break;
-        case VK_EXTENSION_INFO_TYPE_PROPERTIES:
-            *pDataSize = sizeof(VkExtensionProperties);
-            if (pData == NULL) {
-                return VK_SUCCESS;
-            }
-            if (extensionIndex >= SCREENSHOT_LAYER_EXT_ARRAY_SIZE) {
-                return VK_ERROR_INVALID_VALUE;
-            }
-            memcpy((VkExtensionProperties *) pData, &ssExts[extensionIndex], sizeof(VkExtensionProperties));
-            break;
-        default:
-            return VK_ERROR_INVALID_VALUE;
-    };
-
+    *pCount = SCREENSHOT_LAYER_EXT_ARRAY_SIZE;
     return VK_SUCCESS;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkGetPhysicalDeviceExtensionInfo(
-    VkPhysicalDevice     physical_device,
-    VkExtensionInfoType  infoType,
-    uint32_t             extensionIndex,
-    size_t              *pDataSize,
-    void                *pData)
+VK_LAYER_EXPORT VkResult VKAPI vkGetGlobalExtensionProperties(
+        uint32_t extensionIndex,
+        VkExtensionProperties*    pProperties)
 {
-    uint32_t *count;
+    /* This entrypoint is NOT going to init it's own dispatch table since loader calls here early */
+    if (extensionIndex >= SCREENSHOT_LAYER_EXT_ARRAY_SIZE)
+        return VK_ERROR_INVALID_VALUE;
 
-    if (pDataSize == NULL) {
-        return VK_ERROR_INVALID_POINTER;
-    }
+    memcpy(pProperties, &ssExts[extensionIndex], sizeof(VkExtensionProperties));
 
-    switch (infoType) {
-        case VK_EXTENSION_INFO_TYPE_COUNT:
-            *pDataSize = sizeof(uint32_t);
-            if (pData == NULL) {
-                return VK_SUCCESS;
-            }
-            count = (uint32_t *) pData;
-            *count = SCREENSHOT_LAYER_EXT_ARRAY_SIZE;
-            break;
-        case VK_EXTENSION_INFO_TYPE_PROPERTIES:
-            *pDataSize = sizeof(VkExtensionProperties);
-            if (pData == NULL) {
-                return VK_SUCCESS;
-            }
-            if (extensionIndex >= SCREENSHOT_LAYER_EXT_ARRAY_SIZE) {
-                return VK_ERROR_INVALID_VALUE;
-            }
-            memcpy((VkExtensionProperties *) pData, &ssExts[extensionIndex], sizeof(VkExtensionProperties));
-            break;
-        default:
-            return VK_ERROR_INVALID_VALUE;
-    }
+    return VK_SUCCESS;
+}
+VK_LAYER_EXPORT VkResult VKAPI vkGetPhysicalDeviceExtensionCount(
+                                               VkPhysicalDevice gpu,
+                                               uint32_t* pCount)
+{
+    *pCount = SCREENSHOT_LAYER_EXT_ARRAY_SIZE;
+    return VK_SUCCESS;
+}
+
+VK_LAYER_EXPORT VkResult VKAPI vkGetPhysicalDeviceExtensionProperties(
+                                               VkPhysicalDevice gpu,
+                                               uint32_t extensionIndex,
+                                               VkExtensionProperties* pProperties)
+{
+    /* This entrypoint is NOT going to init it's own dispatch table since loader calls here early */
+
+    if (extensionIndex >= SCREENSHOT_LAYER_EXT_ARRAY_SIZE)
+        return VK_ERROR_INVALID_VALUE;
+    memcpy(pProperties, &ssExts[extensionIndex], sizeof(VkExtensionProperties));
 
     return VK_SUCCESS;
 }
@@ -612,6 +569,18 @@ VK_LAYER_EXPORT void* VKAPI vkGetDeviceProcAddr(
     }
     if (!strcmp(funcName, "vkGetDeviceQueue"))
         return (void*) vkGetDeviceQueue;
+
+    if (!strcmp(funcName, "vkGetGlobalExtensionCount"))
+        return (void*) vkGetGlobalExtensionCount;
+
+    if (!strcmp(funcName, "vkGetPhysicalDeviceExtensionCount"))
+        return (void*) vkGetPhysicalDeviceExtensionCount;
+
+    if (!strcmp(funcName, "vkGetGlobalExtensionProperties"))
+        return (void*) vkGetGlobalExtensionProperties;
+
+    if (!strcmp(funcName, "vkGetPhysicalDeviceExtensionProperties"))
+        return (void*) vkGetPhysicalDeviceExtensionProperties;
 
     VkLayerDispatchTable *pDisp =  get_dispatch_table(screenshot_device_table_map, dev);
     if (deviceExtMap.size() == 0 || deviceExtMap[pDisp].wsi_lunarg_enabled)

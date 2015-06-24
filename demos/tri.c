@@ -119,7 +119,7 @@ struct demo {
     VkPhysicalDevice gpu;
     VkDevice device;
     VkQueue queue;
-    VkPhysicalDeviceProperties *gpu_props;
+    VkPhysicalDeviceProperties gpu_props;
     VkPhysicalDeviceQueueProperties *queue_props;
     uint32_t graphics_queue_node_index;
 
@@ -476,7 +476,6 @@ static void demo_prepare_depth(struct demo *demo)
     };
 
     VkMemoryRequirements mem_reqs;
-    size_t mem_reqs_size = sizeof(VkMemoryRequirements);
     VkResult U_ASSERT_ONLY err;
 
     demo->depth.format = depth_format;
@@ -486,10 +485,8 @@ static void demo_prepare_depth(struct demo *demo)
             &demo->depth.image);
     assert(!err);
 
-    err = vkGetObjectInfo(demo->device,
-                    VK_OBJECT_TYPE_IMAGE, demo->depth.image,
-                    VK_OBJECT_INFO_TYPE_MEMORY_REQUIREMENTS,
-                    &mem_reqs_size, &mem_reqs);
+    err = vkGetObjectMemoryRequirements(demo->device,
+                    VK_OBJECT_TYPE_IMAGE, demo->depth.image, &mem_reqs);
     mem_alloc.allocationSize = mem_reqs.size;
 
     /* allocate memory */
@@ -550,16 +547,13 @@ static void demo_prepare_texture_image(struct demo *demo,
     };
 
     VkMemoryRequirements mem_reqs;
-    size_t mem_reqs_size = sizeof(VkMemoryRequirements);
 
     err = vkCreateImage(demo->device, &image_create_info,
             &tex_obj->image);
     assert(!err);
 
-    err = vkGetObjectInfo(demo->device,
-                VK_OBJECT_TYPE_IMAGE, tex_obj->image,
-                VK_OBJECT_INFO_TYPE_MEMORY_REQUIREMENTS,
-                &mem_reqs_size, &mem_reqs);
+    err = vkGetObjectMemoryRequirements(demo->device,
+                VK_OBJECT_TYPE_IMAGE, tex_obj->image, &mem_reqs);
     mem_alloc.allocationSize = mem_reqs.size;
 
     /* allocate memory */
@@ -579,14 +573,11 @@ static void demo_prepare_texture_image(struct demo *demo,
             .arraySlice = 0,
         };
         VkSubresourceLayout layout;
-        size_t layout_size = sizeof(VkSubresourceLayout);
         void *data;
         int32_t x, y;
 
-        err = vkGetImageSubresourceInfo(demo->device, tex_obj->image, &subres,
-                                         VK_SUBRESOURCE_INFO_TYPE_LAYOUT,
-                                         &layout_size, &layout);
-        assert(!err && layout_size == sizeof(layout));
+        err = vkGetImageSubresourceLayout(demo->device, tex_obj->image, &subres, &layout);
+        assert(!err);
 
         err = vkMapMemory(demo->device, tex_obj->mem, 0, 0, 0, &data);
         assert(!err);
@@ -747,7 +738,6 @@ static void demo_prepare_vertices(struct demo *demo)
         .memProps = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
     };
     VkMemoryRequirements mem_reqs;
-    size_t mem_reqs_size = sizeof(VkMemoryRequirements);
     VkResult U_ASSERT_ONLY err;
     void *data;
 
@@ -756,10 +746,8 @@ static void demo_prepare_vertices(struct demo *demo)
     err = vkCreateBuffer(demo->device, &buf_info, &demo->vertices.buf);
     assert(!err);
 
-    err = vkGetObjectInfo(demo->device,
-            VK_OBJECT_TYPE_BUFFER, demo->vertices.buf,
-            VK_OBJECT_INFO_TYPE_MEMORY_REQUIREMENTS,
-            &mem_reqs_size, &mem_reqs);
+    err = vkGetObjectMemoryRequirements(demo->device,
+            VK_OBJECT_TYPE_BUFFER, demo->vertices.buf, &mem_reqs);
 
     mem_alloc.allocationSize = mem_reqs.size;
 
@@ -1364,18 +1352,16 @@ static void demo_init_vk(struct demo *demo)
     uint32_t instance_extension_count = 0;
     VkExtensionProperties *device_extensions;
     uint32_t device_extension_count = 0;
-    size_t extSize = sizeof(uint32_t);
     uint32_t total_extension_count = 0;
-    err = vkGetGlobalExtensionInfo(VK_EXTENSION_INFO_TYPE_COUNT, 0, &extSize, &total_extension_count);
+    err = vkGetGlobalExtensionCount(&total_extension_count);
     assert(!err);
 
     VkExtensionProperties extProp;
-    extSize = sizeof(VkExtensionProperties);
     bool32_t WSIextFound = 0;
     instance_extensions = malloc(sizeof(VkExtensionProperties) * total_extension_count);
     device_extensions = malloc(sizeof(VkExtensionProperties) * total_extension_count);
     for (uint32_t i = 0; i < total_extension_count; i++) {
-        err = vkGetGlobalExtensionInfo(VK_EXTENSION_INFO_TYPE_PROPERTIES, i, &extSize, &extProp);
+        err = vkGetGlobalExtensionProperties(i, &extProp);
         if (!strcmp("VK_WSI_LunarG", extProp.name)) {
             WSIextFound = 1;
             memcpy(&instance_extensions[instance_extension_count++], &extProp, sizeof(VkExtensionProperties));
@@ -1383,7 +1369,7 @@ static void demo_init_vk(struct demo *demo)
         }
     }
     if (!WSIextFound) {
-        ERR_EXIT("vkGetGlobalExtensionInfo failed to find the "
+        ERR_EXIT("vkGetGlobalExtensionProperties failed to find the "
                  "\"VK_WSI_LunarG\" extension.\n\nDo you have a compatible "
                  "Vulkan installable client driver (ICD) installed?\nPlease "
                  "look at the Getting Started guide for additional "
@@ -1422,7 +1408,6 @@ static void demo_init_vk(struct demo *demo)
     };
     uint32_t gpu_count;
     uint32_t i;
-    size_t data_size;
     uint32_t queue_count;
 
     err = vkCreateInstance(&inst_info, &demo->inst);
@@ -1451,24 +1436,15 @@ static void demo_init_vk(struct demo *demo)
     GET_DEVICE_PROC_ADDR(demo->device, GetSwapChainInfoWSI);
     GET_DEVICE_PROC_ADDR(demo->device, QueuePresentWSI);
 
-    err = vkGetPhysicalDeviceInfo(demo->gpu, VK_PHYSICAL_DEVICE_INFO_TYPE_PROPERTIES,
-                        &data_size, NULL);
+    err = vkGetPhysicalDeviceProperties(demo->gpu, &demo->gpu_props);
     assert(!err);
 
-    demo->gpu_props = (VkPhysicalDeviceProperties *) malloc(data_size);
-    err = vkGetPhysicalDeviceInfo(demo->gpu, VK_PHYSICAL_DEVICE_INFO_TYPE_PROPERTIES,
-                        &data_size, demo->gpu_props);
+    err = vkGetPhysicalDeviceQueueCount(demo->gpu, &queue_count);
     assert(!err);
 
-    err = vkGetPhysicalDeviceInfo(demo->gpu, VK_PHYSICAL_DEVICE_INFO_TYPE_QUEUE_PROPERTIES,
-                        &data_size, NULL);
+    demo->queue_props = (VkPhysicalDeviceQueueProperties *) malloc(queue_count * sizeof(VkPhysicalDeviceQueueProperties));
+    err = vkGetPhysicalDeviceQueueProperties(demo->gpu, queue_count, demo->queue_props);
     assert(!err);
-
-    demo->queue_props = (VkPhysicalDeviceQueueProperties *) malloc(data_size);
-    err = vkGetPhysicalDeviceInfo(demo->gpu, VK_PHYSICAL_DEVICE_INFO_TYPE_QUEUE_PROPERTIES,
-                        &data_size, demo->queue_props);
-    assert(!err);
-    queue_count = (uint32_t) (data_size / sizeof(VkPhysicalDeviceQueueProperties));
     assert(queue_count >= 1);
 
     for (i = 0; i < queue_count; i++) {

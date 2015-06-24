@@ -31,30 +31,12 @@
 #include "obj.h"
 #include "vk_debug_marker_lunarg.h"
 
-VkResult intel_base_get_info(struct intel_base *base, int type,
-                               size_t *size, void *data)
+VkResult intel_base_get_memory_requirements(struct intel_base *base, VkMemoryRequirements* pRequirements)
 {
-    VkResult ret = VK_SUCCESS;
-    size_t s;
+    memset(pRequirements, 0, sizeof(VkMemoryRequirements));
+    pRequirements->memPropsAllowed = INTEL_MEMORY_PROPERTY_ALL;
 
-    switch (type) {
-    case VK_OBJECT_INFO_TYPE_MEMORY_REQUIREMENTS:
-        {
-            s = sizeof(VkMemoryRequirements);
-            *size = s;
-            if (data == NULL)
-                return ret;
-            memset(data, 0, s);
-            VkMemoryRequirements *mem_req = data;
-            mem_req->memPropsAllowed = INTEL_MEMORY_PROPERTY_ALL;
-            break;
-        }
-    default:
-        ret = VK_ERROR_INVALID_VALUE;
-        break;
-    }
-
-    return ret;
+    return VK_SUCCESS;
 }
 
 static bool base_dbg_copy_create_info(const struct intel_handle *handle,
@@ -315,7 +297,7 @@ struct intel_base *intel_base_create(const struct intel_handle *handle,
         }
     }
 
-    base->get_info = intel_base_get_info;
+    base->get_memory_requirements = intel_base_get_memory_requirements;
 
     return base;
 }
@@ -339,17 +321,15 @@ ICD_EXPORT VkResult VKAPI vkDestroyObject(
     return VK_SUCCESS;
 }
 
-ICD_EXPORT VkResult VKAPI vkGetObjectInfo(
+ICD_EXPORT VkResult VKAPI vkGetObjectMemoryRequirements(
     VkDevice                                    device,
     VkObjectType                                objType,
     VkObject                                    object,
-    VkObjectInfoType                            infoType,
-    size_t*                                     pDataSize,
-    void*                                       pData)
+    VkMemoryRequirements*                       pRequirements)
 {
     struct intel_base *base = intel_base(object);
 
-    return base->get_info(base, infoType, pDataSize, pData);
+    return base->get_memory_requirements(base, pRequirements);
 }
 
 ICD_EXPORT VkResult VKAPI vkBindObjectMemory(

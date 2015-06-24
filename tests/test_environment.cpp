@@ -70,18 +70,16 @@ void Environment::SetUp()
     device_extension_names.push_back(VK_WSI_LUNARG_EXTENSION_NAME);
 
     uint32_t extCount = 0;
-    size_t extSize = sizeof(extCount);
-    err = vkGetGlobalExtensionInfo(VK_EXTENSION_INFO_TYPE_COUNT, 0, &extSize, &extCount);
+    err = vkGetGlobalExtensionCount(&extCount);
     assert(!err);
 
     VkExtensionProperties extProp;
-    extSize = sizeof(VkExtensionProperties);
     bool32_t extFound;
 
     for (uint32_t i = 0; i < instance_extension_names.size(); i++) {
         extFound = 0;
         for (uint32_t j = 0; j < extCount; j++) {
-            err = vkGetGlobalExtensionInfo(VK_EXTENSION_INFO_TYPE_PROPERTIES, j, &extSize, &extProp);
+            err = vkGetGlobalExtensionProperties(j, &extProp);
             assert(!err);
             if (!strcmp(instance_extension_names[i], extProp.name)) {
                 instance_extensions.push_back(extProp);
@@ -105,15 +103,13 @@ void Environment::SetUp()
     ASSERT_EQ(VK_SUCCESS, err);
     ASSERT_GT(count, default_dev_);
 
-    extSize = sizeof(extCount);
-    err = vkGetPhysicalDeviceExtensionInfo(gpus[0], VK_EXTENSION_INFO_TYPE_COUNT, 0, &extSize, &extCount);
+    err = vkGetPhysicalDeviceExtensionCount(gpus[0], &extCount);
     assert(!err);
 
-    extSize = sizeof(VkExtensionProperties);
     for (uint32_t i = 0; i < device_extension_names.size(); i++) {
         extFound = 0;
         for (uint32_t j = 0; j < extCount; j++) {
-            err = vkGetPhysicalDeviceExtensionInfo(gpus[0], VK_EXTENSION_INFO_TYPE_PROPERTIES, j, &extSize, &extProp);
+            err = vkGetPhysicalDeviceExtensionProperties(gpus[0], j, &extProp);
             assert(!err);
             if (!strcmp(device_extension_names[i], extProp.name)) {
                 device_extensions.push_back(extProp);

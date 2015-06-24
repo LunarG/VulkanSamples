@@ -89,12 +89,17 @@ const VkLayerInstanceDispatchTable instance_disp = {
     .CreateInstance = loader_CreateInstance,
     .DestroyInstance = loader_DestroyInstance,
     .EnumeratePhysicalDevices = loader_EnumeratePhysicalDevices,
-    .GetPhysicalDeviceInfo = loader_GetPhysicalDeviceInfo,
     .GetPhysicalDeviceFeatures = loader_GetPhysicalDeviceFeatures,
     .GetPhysicalDeviceFormatInfo = loader_GetPhysicalDeviceFormatInfo,
     .GetPhysicalDeviceLimits = loader_GetPhysicalDeviceLimits,
     .CreateDevice = loader_CreateDevice,
-    .GetPhysicalDeviceExtensionInfo = loader_GetPhysicalDeviceExtensionInfo,
+    .GetPhysicalDeviceProperties = loader_GetPhysicalDeviceProperties,
+    .GetPhysicalDevicePerformance = loader_GetPhysicalDevicePerformance,
+    .GetPhysicalDeviceQueueCount = loader_GetPhysicalDeviceQueueCount,
+    .GetPhysicalDeviceQueueProperties = loader_GetPhysicalDeviceQueueProperties,
+    .GetPhysicalDeviceMemoryProperties = loader_GetPhysicalDeviceMemoryProperties,
+    .GetPhysicalDeviceExtensionCount = loader_GetPhysicalDeviceExtensionCount,
+    .GetPhysicalDeviceExtensionProperties = loader_GetPhysicalDeviceExtensionProperties,
     .DbgCreateMsgCallback = loader_DbgCreateMsgCallback,
     .DbgDestroyMsgCallback = loader_DbgDestroyMsgCallback,
 };
@@ -266,7 +271,8 @@ static struct loader_extension_property *get_extension_property_from_vkext(
 }
 
 static void loader_get_global_extensions(
-        const PFN_vkGetGlobalExtensionInfo fp_get,
+        const PFN_vkGetGlobalExtensionCount fp_get_count,
+        const PFN_vkGetGlobalExtensionProperties fp_get_props,
         const PFN_vkGPA get_proc_addr,
         const char *lib_name,
         const loader_platform_dl_handle lib_handle,
@@ -274,13 +280,12 @@ static void loader_get_global_extensions(
         struct loader_extension_list *ext_list)
 {
     uint32_t i, count;
-    size_t siz = sizeof(count);
     struct loader_extension_property ext_props;
     VkResult res;
     PFN_vkGPA ext_get_proc_addr;
     PFN_vkGetInstanceProcAddr get_instance_proc_addr;
 
-    res = fp_get(VK_EXTENSION_INFO_TYPE_COUNT, 0, &siz, &count);
+    res = fp_get_count(&count);
     if (res != VK_SUCCESS) {
         loader_log(VK_DBG_REPORT_WARN_BIT, 0, "Error getting global extension count from ICD");
         return;
@@ -288,10 +293,10 @@ static void loader_get_global_extensions(
 
     if (get_proc_addr == NULL)
         get_instance_proc_addr = (PFN_vkGetInstanceProcAddr) loader_platform_get_proc_address(lib_handle, "vkGetInstanceProcAddr");
-    siz = sizeof(VkExtensionProperties);
+
     for (i = 0; i < count; i++) {
         memset(&ext_props, 0, sizeof(ext_props));
-        res = fp_get(VK_EXTENSION_INFO_TYPE_PROPERTIES, i, &siz, &ext_props.info);
+        res = fp_get_props(i, &ext_props.info);
         if (res == VK_SUCCESS) {
             //TODO eventually get this from the layer config file
             if (get_proc_addr == NULL) {
@@ -318,10 +323,10 @@ static void loader_get_physical_device_layer_extensions(
         struct loader_extension_list *ext_list)
 {
     uint32_t i, count;
-    size_t siz = sizeof(count);
     VkResult res;
     loader_platform_dl_handle lib_handle;
-    PFN_vkGetPhysicalDeviceExtensionInfo get_phys_dev_ext_info;
+    PFN_vkGetPhysicalDeviceExtensionProperties get_phys_dev_ext_props;
+    PFN_vkGetPhysicalDeviceExtensionCount get_phys_dev_ext_count;
     struct loader_extension_property ext_props;
     PFN_vkGPA ext_get_proc_addr;
     PFN_vkGetDeviceProcAddr get_device_proc_addr;
@@ -336,15 +341,15 @@ static void loader_get_physical_device_layer_extensions(
 
     lib_handle = loader_add_layer_lib("device", &ext_props);
 
-    get_phys_dev_ext_info = (PFN_vkGetPhysicalDeviceExtensionInfo) loader_platform_get_proc_address(lib_handle, "vkGetPhysicalDeviceExtensionInfo");
+    get_phys_dev_ext_props = (PFN_vkGetPhysicalDeviceExtensionProperties) loader_platform_get_proc_address(lib_handle, "vkGetPhysicalDeviceExtensionProperties");
+    get_phys_dev_ext_count = (PFN_vkGetPhysicalDeviceExtensionCount) loader_platform_get_proc_address(lib_handle, "vkGetPhysicalDeviceExtensionCount");
     get_device_proc_addr = (PFN_vkGetDeviceProcAddr) loader_platform_get_proc_address(lib_handle, "vkGetDeviceProcAddr");
-    if (get_phys_dev_ext_info) {
-        res = get_phys_dev_ext_info(physical_device, VK_EXTENSION_INFO_TYPE_COUNT, 0, &siz, &count);
+    if (get_phys_dev_ext_count) {
+        res = get_phys_dev_ext_count(physical_device, &count);
         if (res == VK_SUCCESS) {
-            siz = sizeof(VkExtensionProperties);
             for (i = 0; i < count; i++) {
                 memset(&ext_props, 0, sizeof(ext_props));
-                res = get_phys_dev_ext_info(physical_device, VK_EXTENSION_INFO_TYPE_PROPERTIES, i, &siz, &ext_props.info);
+                res = get_phys_dev_ext_props(physical_device, i, &ext_props.info);
                 if (res == VK_SUCCESS && (ext_props.info.sType == VK_STRUCTURE_TYPE_EXTENSION_PROPERTIES)) {
                     ext_props.origin = VK_EXTENSION_ORIGIN_LAYER;
                     //TODO eventually get this from the layer config file
@@ -647,8 +652,10 @@ static void loader_scanned_icd_add(const char *filename)
 {
     loader_platform_dl_handle handle;
     void *fp_create_inst;
-    void *fp_get_global_ext_info;
-    void *fp_get_device_ext_info;
+    void *fp_get_global_ext_props;
+    void *fp_get_global_ext_count;
+    void *fp_get_device_ext_props;
+    void *fp_get_device_ext_count;
     PFN_vkGPA fp_get_proc_addr;
     struct loader_scanned_icds *new_node;
 
@@ -668,8 +675,10 @@ static void loader_scanned_icd_add(const char *filename)
 } while (0)
 
     LOOKUP(fp_create_inst, CreateInstance);
-    LOOKUP(fp_get_global_ext_info, GetGlobalExtensionInfo);
-    LOOKUP(fp_get_device_ext_info, GetPhysicalDeviceExtensionInfo);
+    LOOKUP(fp_get_global_ext_props, GetGlobalExtensionProperties);
+    LOOKUP(fp_get_global_ext_count, GetGlobalExtensionCount);
+    LOOKUP(fp_get_device_ext_props, GetPhysicalDeviceExtensionProperties);
+    LOOKUP(fp_get_device_ext_count, GetPhysicalDeviceExtensionCount);
     LOOKUP(fp_get_proc_addr, GetDeviceProcAddr);
 #undef LOOKUP
 
@@ -682,7 +691,8 @@ static void loader_scanned_icd_add(const char *filename)
 
     new_node->handle = handle;
     new_node->CreateInstance = fp_create_inst;
-    new_node->GetGlobalExtensionInfo = fp_get_global_ext_info;
+    new_node->GetGlobalExtensionProperties = fp_get_global_ext_props;
+    new_node->GetGlobalExtensionCount = fp_get_global_ext_count;
     loader_init_ext_list(&new_node->global_extension_list);
     loader_init_ext_list(&new_node->device_extension_list);
     new_node->next = loader.scanned_icd_list;
@@ -697,7 +707,8 @@ static void loader_scanned_icd_add(const char *filename)
     loader.scanned_icd_list = new_node;
 
     loader_get_global_extensions(
-                (PFN_vkGetGlobalExtensionInfo) fp_get_global_ext_info,
+                (PFN_vkGetGlobalExtensionCount) fp_get_global_ext_count,
+                (PFN_vkGetGlobalExtensionProperties) fp_get_global_ext_props,
                 fp_get_proc_addr,
                 new_node->lib_name,
                 handle,
@@ -722,12 +733,17 @@ static void loader_icd_init_entrys(struct loader_icd *icd,
     LOOKUP(GetDeviceProcAddr);
     LOOKUP(DestroyInstance);
     LOOKUP(EnumeratePhysicalDevices);
-    LOOKUP(GetPhysicalDeviceInfo);
     LOOKUP(GetPhysicalDeviceFeatures);
     LOOKUP(GetPhysicalDeviceFormatInfo);
     LOOKUP(GetPhysicalDeviceLimits);
     LOOKUP(CreateDevice);
-    LOOKUP(GetPhysicalDeviceExtensionInfo);
+    LOOKUP(GetPhysicalDeviceProperties);
+    LOOKUP(GetPhysicalDeviceMemoryProperties);
+    LOOKUP(GetPhysicalDevicePerformance);
+    LOOKUP(GetPhysicalDeviceQueueCount);
+    LOOKUP(GetPhysicalDeviceQueueProperties);
+    LOOKUP(GetPhysicalDeviceExtensionProperties);
+    LOOKUP(GetPhysicalDeviceExtensionCount);
     LOOKUP(DbgCreateMsgCallback);
     LOOKUP(DbgDestroyMsgCallback);
 #undef LOOKUP
@@ -889,7 +905,8 @@ void layer_lib_scan(void)
     size_t len, i;
     char temp_str[1024];
     uint32_t count;
-    PFN_vkGetGlobalExtensionInfo fp_get_ext;
+    PFN_vkGetGlobalExtensionProperties fp_get_props;
+    PFN_vkGetGlobalExtensionCount fp_get_count;
 
 #if defined(WIN32)
     bool must_free_libPaths;
@@ -994,10 +1011,11 @@ void layer_lib_scan(void)
                             break;
                         }
 
-                        fp_get_ext = loader_platform_get_proc_address(handle, "vkGetGlobalExtensionInfo");
-                        if (!fp_get_ext) {
+                        fp_get_count = loader_platform_get_proc_address(handle, "vkGetGlobalExtensionCount");
+                        fp_get_props = loader_platform_get_proc_address(handle, "vkGetGlobalExtensionProperties");
+                        if (!fp_get_props || !fp_get_count) {
                             loader_log(VK_DBG_REPORT_WARN_BIT, 0,
-                                       "Couldn't dlsym vkGetGlobalExtensionInfo from library %s",
+                                       "Couldn't dlsym vkGetGlobalExtensionCount and/or vkGetGlobalExtensionProperties from library %s",
                                        temp_str);
                             dent = readdir(curdir);
                             loader_platform_close_library(handle);
@@ -1015,16 +1033,19 @@ void layer_lib_scan(void)
 
                         loader_log(VK_DBG_REPORT_DEBUG_BIT, 0, "Collecting global extensions for %s", temp_str);
                         loader_get_global_extensions(
-                                    fp_get_ext,
+                                    fp_get_count,
+                                    fp_get_props,
                                     NULL,
                                     loader.scanned_layers[count].lib_name,
                                     handle,
                                     VK_EXTENSION_ORIGIN_LAYER,
                                     &loader.scanned_layers[count].global_extension_list);
 
-                        fp_get_ext = loader_platform_get_proc_address(handle,
-                                                                      "vkGetPhysicalDeviceExtensionInfo");
-                        if (fp_get_ext) {
+                        fp_get_count = loader_platform_get_proc_address(handle,
+                                                                      "vkGetPhysicalDeviceExtensionCount");
+                        fp_get_props = loader_platform_get_proc_address(handle,
+                                                                      "vkGetPhysicalDeviceExtensionProperties");
+                        if (fp_get_props && fp_get_count) {
                             loader.scanned_layers[count].physical_device_extensions_supported = true;
                         }
 
@@ -1616,21 +1637,18 @@ VkResult loader_init_physical_device_info(
                     /* TODO: Add cleanup code here */
                     res = VK_ERROR_OUT_OF_HOST_MEMORY;
                 }
-                if (res == VK_SUCCESS && icd->GetPhysicalDeviceExtensionInfo) {
-                    size_t data_size;
+                if (res == VK_SUCCESS && icd->GetPhysicalDeviceExtensionProperties && icd->GetPhysicalDeviceExtensionCount) {
                     uint32_t extension_count;
 
-                    data_size = sizeof(extension_count);
-                    res = icd->GetPhysicalDeviceExtensionInfo(icd->gpus[i], VK_EXTENSION_INFO_TYPE_COUNT, 0, &data_size, &extension_count);
-                    if (data_size == sizeof(extension_count) && res == VK_SUCCESS) {
+                    res = icd->GetPhysicalDeviceExtensionCount(icd->gpus[i], &extension_count);
+                    if (res == VK_SUCCESS) {
                         struct loader_extension_property ext_props;
 
                         /* Gather all the ICD extensions */
                         for (uint32_t extension_id = 0; extension_id < extension_count; extension_id++) {
-                            data_size = sizeof(VkExtensionProperties);
-                            res = icd->GetPhysicalDeviceExtensionInfo(icd->gpus[i], VK_EXTENSION_INFO_TYPE_PROPERTIES,
-                                                                      extension_id, &data_size, &ext_props.info);
-                            if (data_size == sizeof(VkExtensionProperties) && res == VK_SUCCESS) {
+                            res = icd->GetPhysicalDeviceExtensionProperties(icd->gpus[i],
+                                                                      extension_id, &ext_props.info);
+                            if (res == VK_SUCCESS) {
                                 ext_props.origin = VK_EXTENSION_ORIGIN_ICD;
                                 ext_props.lib_name = icd->scanned_icds->lib_name;
                                 ext_props.get_proc_addr = icd->GetDeviceProcAddr;
@@ -1691,18 +1709,73 @@ VkResult loader_EnumeratePhysicalDevices(
     return VK_SUCCESS;
 }
 
-VkResult loader_GetPhysicalDeviceInfo(
+VkResult loader_GetPhysicalDeviceProperties(
         VkPhysicalDevice                        gpu,
-        VkPhysicalDeviceInfoType                infoType,
-        size_t*                                 pDataSize,
-        void*                                   pData)
+        VkPhysicalDeviceProperties*             pProperties)
 {
     uint32_t gpu_index;
     struct loader_icd *icd = loader_get_icd(gpu, &gpu_index);
     VkResult res = VK_ERROR_INITIALIZATION_FAILED;
 
-    if (icd->GetPhysicalDeviceInfo)
-        res = icd->GetPhysicalDeviceInfo(gpu, infoType, pDataSize, pData);
+    if (icd->GetPhysicalDeviceProperties)
+        res = icd->GetPhysicalDeviceProperties(gpu, pProperties);
+
+    return res;
+}
+
+VkResult loader_GetPhysicalDevicePerformance(
+        VkPhysicalDevice                        gpu,
+        VkPhysicalDevicePerformance*            pPerformance)
+{
+    uint32_t gpu_index;
+    struct loader_icd *icd = loader_get_icd(gpu, &gpu_index);
+    VkResult res = VK_ERROR_INITIALIZATION_FAILED;
+
+    if (icd->GetPhysicalDevicePerformance)
+        res = icd->GetPhysicalDevicePerformance(gpu, pPerformance);
+
+    return res;
+}
+
+VkResult loader_GetPhysicalDeviceQueueCount(
+        VkPhysicalDevice                        gpu,
+        uint32_t*                               pCount)
+{
+    uint32_t gpu_index;
+    struct loader_icd *icd = loader_get_icd(gpu, &gpu_index);
+    VkResult res = VK_ERROR_INITIALIZATION_FAILED;
+
+    if (icd->GetPhysicalDeviceQueueCount)
+        res = icd->GetPhysicalDeviceQueueCount(gpu, pCount);
+
+    return res;
+}
+
+VkResult loader_GetPhysicalDeviceQueueProperties (
+        VkPhysicalDevice gpu,
+        uint32_t count,
+        VkPhysicalDeviceQueueProperties * pProperties)
+{
+    uint32_t gpu_index;
+    struct loader_icd *icd = loader_get_icd(gpu, &gpu_index);
+    VkResult res = VK_ERROR_INITIALIZATION_FAILED;
+
+    if (icd->GetPhysicalDeviceQueueProperties)
+        res = icd->GetPhysicalDeviceQueueProperties(gpu, count, pProperties);
+
+    return res;
+}
+
+VkResult loader_GetPhysicalDeviceMemoryProperties (
+        VkPhysicalDevice gpu,
+        VkPhysicalDeviceMemoryProperties* pProperties)
+{
+    uint32_t gpu_index;
+    struct loader_icd *icd = loader_get_icd(gpu, &gpu_index);
+    VkResult res = VK_ERROR_INITIALIZATION_FAILED;
+
+    if (icd->GetPhysicalDeviceMemoryProperties)
+        res = icd->GetPhysicalDeviceMemoryProperties(gpu, pProperties);
 
     return res;
 }
@@ -1889,14 +1962,28 @@ LOADER_EXPORT void * VKAPI vkGetDeviceProcAddr(VkDevice device, const char * pNa
     return loader_GetDeviceProcAddr(device, pName);
 }
 
-LOADER_EXPORT VkResult VKAPI vkGetGlobalExtensionInfo(
-                                               VkExtensionInfoType infoType,
-                                               uint32_t extensionIndex,
-                                               size_t*  pDataSize,
-                                               void*    pData)
+LOADER_EXPORT VkResult VKAPI vkGetGlobalExtensionCount(
+                                               uint32_t* pCount)
 {
-    uint32_t *count;
-    VkResult res = VK_SUCCESS;
+    /* Scan/discover all ICD libraries in a single-threaded manner */
+    loader_platform_thread_once(&once_icd, loader_icd_scan);
+
+    /* get layer libraries in a single-threaded manner */
+    loader_platform_thread_once(&once_layer, layer_lib_scan);
+
+    /* merge any duplicate extensions */
+    loader_platform_thread_once(&once_exts, loader_coalesce_extensions);
+
+    loader_platform_thread_lock_mutex(&loader_lock);
+    *pCount = loader.global_extensions.count;
+    loader_platform_thread_unlock_mutex(&loader_lock);
+    return VK_SUCCESS;
+}
+
+LOADER_EXPORT VkResult VKAPI vkGetGlobalExtensionProperties(
+                                              uint32_t extensionIndex,
+                                              VkExtensionProperties* pProperties)
+{
 
     /* Scan/discover all ICD libraries in a single-threaded manner */
     loader_platform_thread_once(&once_icd, loader_icd_scan);
@@ -1907,75 +1994,43 @@ LOADER_EXPORT VkResult VKAPI vkGetGlobalExtensionInfo(
     /* merge any duplicate extensions */
     loader_platform_thread_once(&once_exts, loader_coalesce_extensions);
 
-    if (pDataSize == NULL)
-        return VK_ERROR_INVALID_POINTER;
+    if (extensionIndex >= loader.global_extensions.count)
+        return VK_ERROR_INVALID_VALUE;
 
     loader_platform_thread_lock_mutex(&loader_lock);
-    switch (infoType) {
-        case VK_EXTENSION_INFO_TYPE_COUNT:
-            *pDataSize = sizeof(uint32_t);
-            if (pData == NULL) {
-                loader_platform_thread_unlock_mutex(&loader_lock);
-                return VK_SUCCESS;
-            }
-            count = (uint32_t *) pData;
-            *count = loader.global_extensions.count;
-            break;
-        case VK_EXTENSION_INFO_TYPE_PROPERTIES:
-            *pDataSize = sizeof(VkExtensionProperties);
-            if (pData == NULL) {
-                loader_platform_thread_unlock_mutex(&loader_lock);
-                return VK_SUCCESS;
-            }
-            if (extensionIndex >= loader.global_extensions.count)
-                return VK_ERROR_INVALID_VALUE;
-            memcpy((VkExtensionProperties *) pData,
-                   &loader.global_extensions.list[extensionIndex],
-                   sizeof(VkExtensionProperties));
-            break;
-        default:
-            loader_log(VK_DBG_REPORT_WARN_BIT, 0, "Invalid infoType in vkGetGlobalExtensionInfo");
-            res = VK_ERROR_INVALID_VALUE;
-    };
+    memcpy(pProperties,
+               &loader.global_extensions.list[extensionIndex],
+               sizeof(VkExtensionProperties));
+
     loader_platform_thread_unlock_mutex(&loader_lock);
-    return res;
+    return VK_SUCCESS;
 }
 
-VkResult loader_GetPhysicalDeviceExtensionInfo(
+VkResult loader_GetPhysicalDeviceExtensionCount(
         VkPhysicalDevice                        gpu,
-        VkExtensionInfoType                     infoType,
-        uint32_t                                extensionIndex,
-        size_t*                                 pDataSize,
-        void*                                   pData)
+        uint32_t*                               pCount)
 {
     uint32_t gpu_index;
-    uint32_t *count;
+    struct loader_icd *icd = loader_get_icd(gpu, &gpu_index);
+    *pCount = icd->device_extension_cache[gpu_index].count;
+
+    return VK_SUCCESS;
+}
+
+VkResult loader_GetPhysicalDeviceExtensionProperties(
+        VkPhysicalDevice                        gpu,
+        uint32_t                                extensionIndex,
+        VkExtensionProperties*                  pProperties)
+{
+    uint32_t gpu_index;
     struct loader_icd *icd = loader_get_icd(gpu, &gpu_index);
 
-    if (pDataSize == NULL)
-        return VK_ERROR_INVALID_POINTER;
+    if (extensionIndex >= icd->device_extension_cache[gpu_index].count)
+        return VK_ERROR_INVALID_VALUE;
 
-    switch (infoType) {
-        case VK_EXTENSION_INFO_TYPE_COUNT:
-            *pDataSize = sizeof(uint32_t);
-            if (pData == NULL)
-                return VK_SUCCESS;
-            count = (uint32_t *) pData;
-            *count = icd->device_extension_cache[gpu_index].count;
-            break;
-        case VK_EXTENSION_INFO_TYPE_PROPERTIES:
-            *pDataSize = sizeof(VkExtensionProperties);
-            if (pData == NULL)
-                return VK_SUCCESS;
-            if (extensionIndex >= icd->device_extension_cache[gpu_index].count)
-                return VK_ERROR_INVALID_VALUE;
-            memcpy((VkExtensionProperties *) pData,
-                   &icd->device_extension_cache[gpu_index].list[extensionIndex],
-                   sizeof(VkExtensionProperties));
-            break;
-        default:
-            return VK_ERROR_INVALID_VALUE;
-    };
+    memcpy( pProperties,
+           &icd->device_extension_cache[gpu_index].list[extensionIndex],
+           sizeof(VkExtensionProperties));
 
     return VK_SUCCESS;
 }

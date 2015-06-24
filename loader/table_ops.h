@@ -49,7 +49,7 @@ static inline void loader_init_device_dispatch_table(VkLayerDispatchTable *table
     table->FlushMappedMemoryRanges = (PFN_vkFlushMappedMemoryRanges) gpa(dev, "vkFlushMappedMemoryRanges");
     table->InvalidateMappedMemoryRanges = (PFN_vkInvalidateMappedMemoryRanges) gpa(dev, "vkInvalidateMappedMemoryRanges");
     table->DestroyObject = (PFN_vkDestroyObject) gpa(dev, "vkDestroyObject");
-    table->GetObjectInfo = (PFN_vkGetObjectInfo) gpa(dev, "vkGetObjectInfo");
+    table->GetObjectMemoryRequirements = (PFN_vkGetObjectMemoryRequirements) gpa(dev, "vkGetObjectMemoryRequirements");
     table->BindObjectMemory = (PFN_vkBindObjectMemory) gpa(dev, "vkBindObjectMemory");
     table->QueueBindSparseBufferMemory = (PFN_vkQueueBindSparseBufferMemory) gpa(dev, "vkQueueBindSparseBufferMemory");
     table->QueueBindSparseImageMemory = (PFN_vkQueueBindSparseImageMemory) gpa(dev, "vkQueueBindSparseImageMemory");
@@ -69,7 +69,7 @@ static inline void loader_init_device_dispatch_table(VkLayerDispatchTable *table
     table->CreateBuffer = (PFN_vkCreateBuffer) gpa(dev, "vkCreateBuffer");
     table->CreateBufferView = (PFN_vkCreateBufferView) gpa(dev, "vkCreateBufferView");
     table->CreateImage = (PFN_vkCreateImage) gpa(dev, "vkCreateImage");
-    table->GetImageSubresourceInfo = (PFN_vkGetImageSubresourceInfo) gpa(dev, "vkGetImageSubresourceInfo");
+    table->GetImageSubresourceLayout = (PFN_vkGetImageSubresourceLayout) gpa(dev, "vkGetImageSubresourceLayout");
     table->CreateImageView = (PFN_vkCreateImageView) gpa(dev, "vkCreateImageView");
     table->CreateColorAttachmentView = (PFN_vkCreateColorAttachmentView) gpa(dev, "vkCreateColorAttachmentView");
     table->CreateDepthStencilView = (PFN_vkCreateDepthStencilView) gpa(dev, "vkCreateDepthStencilView");
@@ -175,8 +175,8 @@ static inline void *loader_lookup_device_dispatch_table(
         return (void *) table->InvalidateMappedMemoryRanges;
     if (!strcmp(name, "DestroyObject"))
         return (void *) table->DestroyObject;
-    if (!strcmp(name, "GetObjectInfo"))
-        return (void *) table->GetObjectInfo;
+    if (!strcmp(name, "GetObjectMemoryRequirements"))
+        return (void *) table->GetObjectMemoryRequirements;
     if (!strcmp(name, "BindObjectMemory"))
         return (void *) table->BindObjectMemory;
     if (!strcmp(name, "QueueBindSparseBufferMemory"))
@@ -215,8 +215,8 @@ static inline void *loader_lookup_device_dispatch_table(
         return (void *) table->CreateBufferView;
     if (!strcmp(name, "CreateImage"))
         return (void *) table->CreateImage;
-    if (!strcmp(name, "GetImageSubresourceInfo"))
-        return (void *) table->GetImageSubresourceInfo;
+    if (!strcmp(name, "GetImageSubresourceLayout"))
+        return (void *) table->GetImageSubresourceLayout;
     if (!strcmp(name, "CreateImageView"))
         return (void *) table->CreateImageView;
     if (!strcmp(name, "CreateColorAttachmentView"))
@@ -357,12 +357,17 @@ static inline void loader_init_instance_core_dispatch_table(VkLayerInstanceDispa
     table->CreateInstance = (PFN_vkCreateInstance) gpa(inst, "vkCreateInstance");
     table->DestroyInstance = (PFN_vkDestroyInstance) gpa(inst, "vkDestroyInstance");
     table->EnumeratePhysicalDevices = (PFN_vkEnumeratePhysicalDevices) gpa(inst, "vkEnumeratePhysicalDevices");
-    table->GetPhysicalDeviceInfo = (PFN_vkGetPhysicalDeviceInfo) gpa(inst, "vkGetPhysicalDeviceInfo");
     table->GetPhysicalDeviceFeatures = (PFN_vkGetPhysicalDeviceFeatures) gpa(inst, "vkGetPhysicalDeviceFeatures");
     table->GetPhysicalDeviceFormatInfo = (PFN_vkGetPhysicalDeviceFormatInfo) gpa(inst, "vkGetPhysicalDeviceFormatInfo");
     table->GetPhysicalDeviceLimits = (PFN_vkGetPhysicalDeviceLimits) gpa(inst, "vkGetPhysicalDeviceLimits");
     table->CreateDevice = (PFN_vkCreateDevice) gpa(inst, "vkCreateDevice");
-    table->GetPhysicalDeviceExtensionInfo = (PFN_vkGetPhysicalDeviceExtensionInfo) gpa(inst, "vkGetPhysicalDeviceExtensionInfo");
+    table->GetPhysicalDeviceProperties = (PFN_vkGetPhysicalDeviceProperties) gpa(inst, "vkGetPhysicalDeviceProperties");
+    table->GetPhysicalDevicePerformance = (PFN_vkGetPhysicalDevicePerformance) gpa(inst, "vkGetPhysicalDevicePerformance");
+    table->GetPhysicalDeviceQueueCount = (PFN_vkGetPhysicalDeviceQueueCount) gpa(inst, "vkGetPhysicalDeviceQueueCount");
+    table->GetPhysicalDeviceQueueProperties = (PFN_vkGetPhysicalDeviceQueueProperties) gpa(inst, "vkGetPhysicalDeviceQueueProperties");
+    table->GetPhysicalDeviceMemoryProperties = (PFN_vkGetPhysicalDeviceMemoryProperties) gpa(inst, "vkGetPhysicalDeviceMemoryProperties");
+    table->GetPhysicalDeviceExtensionProperties = (PFN_vkGetPhysicalDeviceExtensionProperties) gpa(inst, "vkGetPhysicalDeviceExtensionProperties");
+    table->GetPhysicalDeviceExtensionCount = (PFN_vkGetPhysicalDeviceExtensionCount) gpa(inst, "vkGetPhysicalDeviceExtensionCount");
 }
 
 static inline void loader_init_instance_extension_dispatch_table(
@@ -388,20 +393,30 @@ static inline void *loader_lookup_instance_dispatch_table(
         return (void *) table->DestroyInstance;
     if (!strcmp(name, "EnumeratePhysicalDevices"))
         return (void *) table->EnumeratePhysicalDevices;
-    if (!strcmp(name, "GetPhysicalDeviceInfo"))
-        return (void *) table->GetPhysicalDeviceInfo;
     if (!strcmp(name, "GetPhysicalDeviceFeatures"))
         return (void *) table->GetPhysicalDeviceFeatures;
     if (!strcmp(name, "GetPhysicalDeviceFormatInfo"))
         return (void *) table->GetPhysicalDeviceFormatInfo;
     if (!strcmp(name, "GetPhysicalDeviceLimits"))
         return (void *) table->GetPhysicalDeviceLimits;
+    if (!strcmp(name, "GetPhysicalDeviceProperties"))
+        return (void *) table->GetPhysicalDeviceProperties;
+    if (!strcmp(name, "GetPhysicalDevicePerformance"))
+        return (void *) table->GetPhysicalDevicePerformance;
+    if (!strcmp(name, "GetPhysicalDeviceQueueCount"))
+        return (void *) table->GetPhysicalDeviceQueueCount;
+    if (!strcmp(name, "GetPhysicalDeviceQueueProperties"))
+        return (void *) table->GetPhysicalDeviceQueueProperties;
+    if (!strcmp(name, "GetPhysicalDeviceMemoryProperties"))
+        return (void *) table->GetPhysicalDeviceMemoryProperties;
     if (!strcmp(name, "GetInstanceProcAddr"))
         return (void *) table->GetInstanceProcAddr;
     if (!strcmp(name, "CreateDevice"))
         return (void *) table->CreateDevice;
-    if (!strcmp(name, "GetPhysicalDeviceExtensionInfo"))
-        return (void *) table->GetPhysicalDeviceExtensionInfo;
+    if (!strcmp(name, "GetPhysicalDeviceExtensionCount"))
+        return (void *) table->GetPhysicalDeviceExtensionCount;
+    if (!strcmp(name, "GetPhysicalDeviceExtensionProperties"))
+        return (void *) table->GetPhysicalDeviceExtensionProperties;
     if (!strcmp(name, "DbgCreateMsgCallback"))
         return (void *) table->DbgCreateMsgCallback;
     if (!strcmp(name, "DbgDestroyMsgCallback"))

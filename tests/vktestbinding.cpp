@@ -64,39 +64,19 @@ std::vector<T> make_objects(const std::vector<S> &v)
 }
 
 template<typename T>
-std::vector<T> get_info(VkPhysicalDevice gpu, VkPhysicalDeviceInfoType type, size_t min_elems)
+std::vector<T> get_memory_reqs(VkDevice device, VkObjectType obj_type, VkObject obj, size_t min_elems)
 {
     std::vector<T> info;
-    size_t size;
-    if (EXPECT(vkGetPhysicalDeviceInfo(gpu, type, &size, NULL) == VK_SUCCESS && size % sizeof(T) == 0)) {
-        info.resize(size / sizeof(T));
-        if (!EXPECT(vkGetPhysicalDeviceInfo(gpu, type, &size, &info[0]) == VK_SUCCESS && size == info.size() * sizeof(T)))
-            info.clear();
-    }
+
+    info.resize((min_elems > 0)?min_elems:1);
+    if (!EXPECT(vkGetObjectMemoryRequirements(device, obj_type, obj, &info[0]) == VK_SUCCESS))
+        info.clear();
 
     if (info.size() < min_elems)
         info.resize(min_elems);
 
     return info;
 }
-
-template<typename T>
-std::vector<T> get_info(VkDevice device, VkObjectType object_type, VkObject obj, VkObjectInfoType type, size_t min_elems)
-{
-    std::vector<T> info;
-    size_t size;
-    if (EXPECT(vkGetObjectInfo(device, object_type, obj, type, &size, NULL) == VK_SUCCESS && size % sizeof(T) == 0)) {
-        info.resize(size / sizeof(T));
-        if (!EXPECT(vkGetObjectInfo(device, object_type, obj, type, &size, &info[0]) == VK_SUCCESS && size == info.size() * sizeof(T)))
-            info.clear();
-    }
-
-    if (info.size() < min_elems)
-        info.resize(min_elems);
-
-    return info;
-}
-
 } // namespace
 
 namespace vk_testing {
@@ -108,22 +88,43 @@ void set_error_callback(ErrorCallback callback)
 
 VkPhysicalDeviceProperties PhysicalGpu::properties() const
 {
-    return get_info<VkPhysicalDeviceProperties>(gpu_, VK_PHYSICAL_DEVICE_INFO_TYPE_PROPERTIES, 1)[0];
+    VkPhysicalDeviceProperties info;
+
+    EXPECT(vkGetPhysicalDeviceProperties(gpu_, &info) == VK_SUCCESS);
+
+    return info;
 }
 
 VkPhysicalDevicePerformance PhysicalGpu::performance() const
 {
-    return get_info<VkPhysicalDevicePerformance>(gpu_, VK_PHYSICAL_DEVICE_INFO_TYPE_PERFORMANCE, 1)[0];
+    VkPhysicalDevicePerformance info;
+
+    EXPECT(vkGetPhysicalDevicePerformance(gpu_, &info) == VK_SUCCESS);
+
+    return info;
 }
 
 std::vector<VkPhysicalDeviceQueueProperties> PhysicalGpu::queue_properties() const
 {
-    return get_info<VkPhysicalDeviceQueueProperties>(gpu_, VK_PHYSICAL_DEVICE_INFO_TYPE_QUEUE_PROPERTIES, 0);
+    std::vector<VkPhysicalDeviceQueueProperties> info;
+    uint32_t count;
+
+    if (EXPECT(vkGetPhysicalDeviceQueueCount(gpu_, &count) == VK_SUCCESS)) {
+        info.resize(count);
+        if (!EXPECT(vkGetPhysicalDeviceQueueProperties(gpu_, count, &info[0]) == VK_SUCCESS))
+            info.clear();
+    }
+
+    return info;
 }
 
 VkPhysicalDeviceMemoryProperties PhysicalGpu::memory_properties() const
 {
-    return get_info<VkPhysicalDeviceMemoryProperties>(gpu_, VK_PHYSICAL_DEVICE_INFO_TYPE_MEMORY_PROPERTIES, 1)[0];
+    VkPhysicalDeviceMemoryProperties info;
+
+    EXPECT(vkGetPhysicalDeviceMemoryProperties(gpu_, &info) == VK_SUCCESS);
+
+    return info;
 }
 
 void PhysicalGpu::add_extension_dependencies(
@@ -143,16 +144,14 @@ std::vector<VkExtensionProperties> PhysicalGpu::extensions() const
         "VK_WSI_LunarG",
     };
     std::vector<VkExtensionProperties> exts;
-    size_t extSize = sizeof(uint32_t);
     uint32_t extCount = 0;
-    if (!EXPECT(vkGetGlobalExtensionInfo(VK_EXTENSION_INFO_TYPE_COUNT, 0, &extSize, &extCount) == VK_SUCCESS))
+    if (!EXPECT(vkGetGlobalExtensionCount(&extCount) == VK_SUCCESS))
         return exts;
 
     VkExtensionProperties extProp;
-    extSize = sizeof(VkExtensionProperties);
     // TODO : Need to update this if/when we have more than 1 extension to enable
     for (uint32_t i = 0; i < extCount; i++) {
-        if (!EXPECT(vkGetGlobalExtensionInfo(VK_EXTENSION_INFO_TYPE_PROPERTIES, i, &extSize, &extProp) == VK_SUCCESS))
+        if (!EXPECT(vkGetGlobalExtensionProperties(i, &extProp) == VK_SUCCESS))
             return exts;
 
         if (!strcmp(known_exts[0], extProp.name))
@@ -184,7 +183,7 @@ std::vector<VkMemoryRequirements> Object::memory_requirements() const
 {
     uint32_t num_allocations = 1;
     std::vector<VkMemoryRequirements> info =
-        get_info<VkMemoryRequirements>(dev_->obj(), type(), obj(), VK_OBJECT_INFO_TYPE_MEMORY_REQUIREMENTS, 0);
+        get_memory_reqs<VkMemoryRequirements>(dev_->obj(), type(), obj(), 0);
     EXPECT(info.size() == num_allocations);
     if (info.size() == 1 && !info[0].size)
         info.clear();
@@ -352,20 +351,15 @@ void Device::init(const VkDeviceCreateInfo &info)
 void Device::init_queues()
 {
     VkResult err;
-    size_t data_size;
     uint32_t queue_node_count;
 
-    err = vkGetPhysicalDeviceInfo(gpu_.obj(), VK_PHYSICAL_DEVICE_INFO_TYPE_QUEUE_PROPERTIES,
-                        &data_size, NULL);
+    err = vkGetPhysicalDeviceQueueCount(gpu_.obj(), &queue_node_count);
     EXPECT(err == VK_SUCCESS);
-
-    queue_node_count = data_size / sizeof(VkPhysicalDeviceQueueProperties);
     EXPECT(queue_node_count >= 1);
 
     VkPhysicalDeviceQueueProperties* queue_props = new VkPhysicalDeviceQueueProperties[queue_node_count];
 
-    err = vkGetPhysicalDeviceInfo(gpu_.obj(), VK_PHYSICAL_DEVICE_INFO_TYPE_QUEUE_PROPERTIES,
-                        &data_size, queue_props);
+    err = vkGetPhysicalDeviceQueueProperties(gpu_.obj(), queue_node_count, queue_props);
     EXPECT(err == VK_SUCCESS);
 
     for (uint32_t i = 0; i < queue_node_count; i++) {
@@ -633,10 +627,9 @@ void Image::bind_memory(const Device &dev, const VkImageMemoryBindInfo &info,
 
 VkSubresourceLayout Image::subresource_layout(const VkImageSubresource &subres) const
 {
-    const VkSubresourceInfoType type = VK_SUBRESOURCE_INFO_TYPE_LAYOUT;
     VkSubresourceLayout data;
     size_t size = sizeof(data);
-    if (!EXPECT(vkGetImageSubresourceInfo(dev_->obj(), obj(), &subres, type, &size, &data) == VK_SUCCESS && size == sizeof(data)))
+    if (!EXPECT(vkGetImageSubresourceLayout(dev_->obj(), obj(), &subres, &data) == VK_SUCCESS && size == sizeof(data)))
         memset(&data, 0, sizeof(data));
 
     return data;

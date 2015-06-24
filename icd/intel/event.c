@@ -90,31 +90,15 @@ static void event_destroy(struct intel_obj *obj)
     intel_event_destroy(event);
 }
 
-static VkResult event_get_info(struct intel_base *base, int type,
-                                 size_t *size, void *data)
+static VkResult event_get_memory_requirements(struct intel_base *base,
+                                 VkMemoryRequirements *pRequirements)
 {
-    VkResult ret = VK_SUCCESS;
+    /* use dword aligned to 64-byte boundaries */
+    pRequirements->size = 4;
+    pRequirements->alignment = 64;
+    pRequirements->memPropsAllowed = INTEL_MEMORY_PROPERTY_ALL;
 
-    switch (type) {
-    case VK_OBJECT_INFO_TYPE_MEMORY_REQUIREMENTS:
-        {
-            VkMemoryRequirements *mem_req = data;
-
-            *size = sizeof(VkMemoryRequirements);
-            if (data == NULL)
-                return ret;
-            /* use dword aligned to 64-byte boundaries */
-            mem_req->size = 4;
-            mem_req->alignment = 64;
-            mem_req->memPropsAllowed = INTEL_MEMORY_PROPERTY_ALL;
-        }
-        break;
-    default:
-        ret = intel_base_get_info(base, type, size, data);
-        break;
-    }
-
-    return ret;
+    return VK_SUCCESS;
 }
 
 VkResult intel_event_create(struct intel_dev *dev,
@@ -128,7 +112,7 @@ VkResult intel_event_create(struct intel_dev *dev,
     if (!event)
         return VK_ERROR_OUT_OF_HOST_MEMORY;
 
-    event->obj.base.get_info = event_get_info;
+    event->obj.base.get_memory_requirements = event_get_memory_requirements;
     event->obj.destroy = event_destroy;
 
     *event_ret = event;

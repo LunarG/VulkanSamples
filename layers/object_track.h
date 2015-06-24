@@ -350,13 +350,13 @@ reset_status(
 
 static void
 setGpuQueueInfoState(
-    size_t *pDataSize,
-    void   *pData)
+    uint32_t  count,
+    void     *pData)
 {
-    queueCount = ((uint32_t)*pDataSize / sizeof(VkPhysicalDeviceQueueProperties));
-    queueInfo  = (VkPhysicalDeviceQueueProperties*)realloc((void*)queueInfo, *pDataSize);
+    queueCount = count;
+    queueInfo  = (VkPhysicalDeviceQueueProperties*)realloc((void*)queueInfo, count * sizeof(VkPhysicalDeviceQueueProperties));
     if (queueInfo != NULL) {
-        memcpy(queueInfo, pData, *pDataSize);
+        memcpy(queueInfo, pData, count * sizeof(VkPhysicalDeviceQueueProperties));
     }
 }
 
@@ -519,20 +519,16 @@ explicit_DestroyInstance(
 }
 
 VkResult
-explicit_GetPhysicalDeviceInfo(
-    VkPhysicalDevice          gpu,
-    VkPhysicalDeviceInfoType  infoType,
-    size_t                   *pDataSize,
-    void                     *pData)
+explicit_GetPhysicalDeviceQueueProperties(
+    VkPhysicalDevice                 gpu,
+    uint32_t                         count,
+    VkPhysicalDeviceQueueProperties* pProperties)
 {
-    VkResult result = get_dispatch_table(ObjectTracker_instance_table_map, gpu)->GetPhysicalDeviceInfo(gpu, infoType, pDataSize, pData);
-    if (infoType == VK_PHYSICAL_DEVICE_INFO_TYPE_QUEUE_PROPERTIES) {
-        if (pData != NULL) {
-            loader_platform_thread_lock_mutex(&objLock);
-            setGpuQueueInfoState(pDataSize, pData);
-            loader_platform_thread_unlock_mutex(&objLock);
-        }
-    }
+    VkResult result = get_dispatch_table(ObjectTracker_instance_table_map, gpu)->GetPhysicalDeviceQueueProperties(gpu, count, pProperties);
+
+    loader_platform_thread_lock_mutex(&objLock);
+    setGpuQueueInfoState(count, pProperties);
+    loader_platform_thread_unlock_mutex(&objLock);
     return result;
 }
 
@@ -685,21 +681,19 @@ explicit_DestroyObject(
 }
 
 VkResult
-explicit_GetObjectInfo(
-    VkDevice          device,
-    VkObjectType      objType,
-    VkObject          object,
-    VkObjectInfoType  infoType,
-    size_t           *pDataSize,
-    void             *pData)
+explicit_GetObjectMemoryRequirements(
+    VkDevice               device,
+    VkObjectType           objType,
+    VkObject               object,
+    VkMemoryRequirements*  pMemoryRequirements)
 {
     loader_platform_thread_lock_mutex(&objLock);
-    validateObjectType(device, "vkGetObjectInfo", objType, object);
+    validateObjectType(device, "vkGetObjectMemoryRequirements", objType, object);
     validate_object(device, device);
     validate_object(device, object);
     loader_platform_thread_unlock_mutex(&objLock);
 
-    VkResult result = get_dispatch_table(ObjectTracker_device_table_map, device)->GetObjectInfo(device, objType, object, infoType, pDataSize, pData);
+    VkResult result = get_dispatch_table(ObjectTracker_device_table_map, device)->GetObjectMemoryRequirements(device, objType, object, pMemoryRequirements);
 
     return result;
 }

@@ -378,9 +378,9 @@ static void app_dev_init(struct app_dev *dev, struct app_gpu *gpu)
     static char *known_extensions[] = {
         "Validation",
     };
-    size_t extSize = sizeof(uint32_t);
-    uint32_t extCount = 0;
-    err = vkGetPhysicalDeviceExtensionInfo(gpu->obj, VK_EXTENSION_INFO_TYPE_COUNT, 0, &extSize, &extCount);
+
+    uint32_t extCount;
+    err = vkGetPhysicalDeviceExtensionCount(gpu->obj, &extCount);
     assert(!err);
 
     enable_extension_list = malloc(sizeof(VkExtensionProperties) * extCount);
@@ -389,15 +389,12 @@ static void app_dev_init(struct app_dev *dev, struct app_gpu *gpu)
     }
 
     VkExtensionProperties extProp;
-    extSize = sizeof(VkExtensionProperties);
     gpu->device_extension_count = 0;
     bool32_t U_ASSERT_ONLY extFound = 0; // TODO : Need to enhance this if/when we enable multiple extensions
     for (uint32_t i = 0; i < ARRAY_SIZE(known_extensions); i++) {
         for (uint32_t j = 0; j < extCount; j++) {
-            err = vkGetPhysicalDeviceExtensionInfo(
-                      gpu->obj, VK_EXTENSION_INFO_TYPE_PROPERTIES,
-                      j, &extSize,
-                      &extProp);
+            err = vkGetPhysicalDeviceExtensionProperties(
+                      gpu->obj, j, &extProp);
             if (!strcmp(known_extensions[i], extProp.name)) {
                 extFound = 1;
                 memcpy(&enable_extension_list[gpu->device_extension_count], &extProp, sizeof(extProp));
@@ -451,13 +448,13 @@ static void app_create_instance(struct app_instance *inst)
     static char *known_extensions[] = {
         "VK_WSI_LunarG",
     };
-    size_t extSize = sizeof(uint32_t);
+
     uint32_t extCount = 0;
     VkExtensionProperties extProp;
     VkExtensionProperties *enable_extension_list;
     uint32_t global_extension_count = 0;
 
-    err = vkGetGlobalExtensionInfo(VK_EXTENSION_INFO_TYPE_COUNT, 0, &extSize, &extCount);
+    err = vkGetGlobalExtensionCount(&extCount);
     assert(!err);
 
     enable_extension_list = malloc(sizeof(VkExtensionProperties) * extCount);
@@ -465,11 +462,10 @@ static void app_create_instance(struct app_instance *inst)
         ERR_EXIT(VK_ERROR_OUT_OF_HOST_MEMORY);
     }
 
-    extSize = sizeof(VkExtensionProperties);
     bool32_t U_ASSERT_ONLY extFound = 0; // TODO : Need to enhance this if/when we enable multiple extensions
     for (uint32_t i = 0; i < ARRAY_SIZE(known_extensions); i++) {
         for (uint32_t j = 0; j < extCount; j++) {
-            err = vkGetGlobalExtensionInfo(VK_EXTENSION_INFO_TYPE_PROPERTIES, j, &extSize, &extProp);
+            err = vkGetGlobalExtensionProperties(j, &extProp);
             if (!strcmp(known_extensions[i], extProp.name)) {
                 extFound = 1;
                 memcpy(&enable_extension_list[global_extension_count], &extProp, sizeof(extProp));
@@ -503,7 +499,6 @@ static void app_destroy_instance(struct app_instance *inst)
 
 static void app_gpu_init(struct app_gpu *gpu, uint32_t id, VkPhysicalDevice obj)
 {
-    size_t size;
     VkResult err;
     uint32_t i;
 
@@ -511,41 +506,30 @@ static void app_gpu_init(struct app_gpu *gpu, uint32_t id, VkPhysicalDevice obj)
 
     gpu->id = id;
     gpu->obj = obj;
-    size = sizeof(gpu->props);
-    err = vkGetPhysicalDeviceInfo(gpu->obj,
-                        VK_PHYSICAL_DEVICE_INFO_TYPE_PROPERTIES,
-                        &size, &gpu->props);
-    if (err || size != sizeof(gpu->props))
+
+    err = vkGetPhysicalDeviceProperties(gpu->obj, &gpu->props);
+    if (err)
         ERR_EXIT(err);
 
-    size = sizeof(gpu->perf);
-    err = vkGetPhysicalDeviceInfo(gpu->obj,
-                        VK_PHYSICAL_DEVICE_INFO_TYPE_PERFORMANCE,
-                        &size, &gpu->perf);
-    if (err || size != sizeof(gpu->perf))
+    err = vkGetPhysicalDevicePerformance(gpu->obj, &gpu->perf);
+    if (err)
         ERR_EXIT(err);
 
     /* get queue count */
-    err = vkGetPhysicalDeviceInfo(gpu->obj,
-                        VK_PHYSICAL_DEVICE_INFO_TYPE_QUEUE_PROPERTIES,
-                        &size, NULL);
-    if (err || size % sizeof(gpu->queue_props[0]))
+    err = vkGetPhysicalDeviceQueueCount(gpu->obj, &gpu->queue_count);
+    if (err)
         ERR_EXIT(err);
-    gpu->queue_count = (uint32_t) (size / sizeof(gpu->queue_props[0]));
 
     gpu->queue_props =
             malloc(sizeof(gpu->queue_props[0]) * gpu->queue_count);
-    size = sizeof(gpu->queue_props[0]) * gpu->queue_count;
+
     if (!gpu->queue_props)
         ERR_EXIT(VK_ERROR_OUT_OF_HOST_MEMORY);
-    err = vkGetPhysicalDeviceInfo(gpu->obj,
-                        VK_PHYSICAL_DEVICE_INFO_TYPE_QUEUE_PROPERTIES,
-                        &size, gpu->queue_props);
-    if (err || size != sizeof(gpu->queue_props[0]) * gpu->queue_count)
+    err = vkGetPhysicalDeviceQueueProperties(gpu->obj, gpu->queue_count, gpu->queue_props);
+    if (err)
         ERR_EXIT(err);
 
     /* set up queue requests */
-    size = sizeof(*gpu->queue_reqs) * gpu->queue_count;
     gpu->queue_reqs = malloc(sizeof(*gpu->queue_reqs) * gpu->queue_count);
     if (!gpu->queue_reqs)
         ERR_EXIT(VK_ERROR_OUT_OF_HOST_MEMORY);
@@ -554,11 +538,8 @@ static void app_gpu_init(struct app_gpu *gpu, uint32_t id, VkPhysicalDevice obj)
         gpu->queue_reqs[i].queueCount = gpu->queue_props[i].queueCount;
     }
 
-    size = sizeof(gpu->memory_props);
-    err = vkGetPhysicalDeviceInfo(gpu->obj,
-                        VK_PHYSICAL_DEVICE_INFO_TYPE_MEMORY_PROPERTIES,
-                        &size, &gpu->memory_props);
-    if (err || size != sizeof(gpu->memory_props))
+    err = vkGetPhysicalDeviceMemoryProperties(gpu->obj, &gpu->memory_props);
+    if (err)
         ERR_EXIT(err);
 
     app_dev_init(&gpu->dev, gpu);

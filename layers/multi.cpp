@@ -199,8 +199,10 @@ VK_LAYER_EXPORT void * VKAPI multi1GetInstanceProcAddr(VkInstance inst, const ch
     }
     if (!strcmp("vkDestroyInstance", pName))
         return (void *) multi1DestroyInstance;
-    if (!strcmp("GetGlobalExtensionInfo", pName))
-        return (void*) vkGetGlobalExtensionInfo;
+    if (!strcmp("GetGlobalExtensionProperties", pName))
+        return (void*) vkGetGlobalExtensionProperties;
+    if (!strcmp("GetGlobalExtensionCount", pName))
+        return (void*) vkGetGlobalExtensionCount;
     else {
         VkLayerInstanceDispatchTable **ppDisp = (VkLayerInstanceDispatchTable **) inst;
         VkLayerInstanceDispatchTable* pTable = instance_dispatch_table1(inst);
@@ -376,8 +378,10 @@ VK_LAYER_EXPORT void * VKAPI multi2GetInstanceProcAddr(VkInstance inst, const ch
         return (void *) multi2DestroyInstance;
     if (!strcmp("vkCreateDevice", pName))
         return (void *) multi2CreateDevice;
-    else if (!strcmp("GetGlobalExtensionInfo", pName))
-        return (void*) vkGetGlobalExtensionInfo;
+    else if (!strcmp("GetGlobalExtensionProperties", pName))
+        return (void*) vkGetGlobalExtensionProperties;
+    else if (!strcmp("GetGlobalExtensionCount", pName))
+        return (void*) vkGetGlobalExtensionCount;
     else {
         VkLayerInstanceDispatchTable **ppDisp = (VkLayerInstanceDispatchTable **) inst;
         VkLayerInstanceDispatchTable* pTable = instance_dispatch_table2(inst);
@@ -414,37 +418,22 @@ static const VkExtensionProperties multiExts[MULTI_LAYER_EXT_ARRAY_SIZE] = {
     }
 };
 
-VK_LAYER_EXPORT VkResult VKAPI vkGetGlobalExtensionInfo(
-        VkExtensionInfoType infoType,
+VK_LAYER_EXPORT VkResult VKAPI vkGetGlobalExtensionCount(
+        uint32_t*    pCount)
+{
+    *pCount = MULTI_LAYER_EXT_ARRAY_SIZE;
+    return VK_SUCCESS;
+}
+
+VK_LAYER_EXPORT VkResult VKAPI vkGetGlobalExtensionProperties(
         uint32_t extensionIndex,
-        size_t*  pDataSize,
-        void*    pData)
+        VkExtensionProperties*    pProperties)
 {
     /* This entrypoint is NOT going to init it's own dispatch table since loader calls here early */
-    uint32_t *count;
+    if (extensionIndex >= MULTI_LAYER_EXT_ARRAY_SIZE)
+        return VK_ERROR_INVALID_VALUE;
 
-    if (pDataSize == NULL)
-        return VK_ERROR_INVALID_POINTER;
-
-    switch (infoType) {
-        case VK_EXTENSION_INFO_TYPE_COUNT:
-            *pDataSize = sizeof(uint32_t);
-            if (pData == NULL)
-                return VK_SUCCESS;
-            count = (uint32_t *) pData;
-            *count = MULTI_LAYER_EXT_ARRAY_SIZE;
-            break;
-        case VK_EXTENSION_INFO_TYPE_PROPERTIES:
-            *pDataSize = sizeof(VkExtensionProperties);
-            if (pData == NULL)
-                return VK_SUCCESS;
-            if (extensionIndex >= MULTI_LAYER_EXT_ARRAY_SIZE)
-                return VK_ERROR_INVALID_VALUE;
-            memcpy((VkExtensionProperties *) pData, &multiExts[extensionIndex], sizeof(VkExtensionProperties));
-            break;
-        default:
-            return VK_ERROR_INVALID_VALUE;
-    };
+    memcpy(pProperties, &multiExts[extensionIndex], sizeof(VkExtensionProperties));
 
     return VK_SUCCESS;
 }

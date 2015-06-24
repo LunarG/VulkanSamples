@@ -43,8 +43,7 @@
 struct nulldrv_base {
     void *loader_data;
     uint32_t magic;
-    VkResult (*get_info)(struct nulldrv_base *base, int type1,
-                           size_t *size, void *data);
+    VkResult (*get_memory_requirements)(struct nulldrv_base *base, VkMemoryRequirements *pMemoryRequirements);
 };
 
 struct nulldrv_obj {

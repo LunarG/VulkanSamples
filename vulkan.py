@@ -229,11 +229,26 @@ core = Extension(
              Param("uint32_t*", "pPhysicalDeviceCount"),
              Param("VkPhysicalDevice*", "pPhysicalDevices")]),
 
-        Proto("VkResult", "GetPhysicalDeviceInfo",
+        Proto("VkResult", "GetPhysicalDeviceProperties",
             [Param("VkPhysicalDevice", "gpu"),
-             Param("VkPhysicalDeviceInfoType", "infoType"),
-             Param("size_t*", "pDataSize"),
-             Param("void*", "pData")]),
+             Param("VkPhysicalDeviceProperties*", "pProperties")]),
+
+        Proto("VkResult", "GetPhysicalDevicePerformance",
+            [Param("VkPhysicalDevice", "gpu"),
+             Param("VkPhysicalDevicePerformance*", "pPerformance")]),
+
+        Proto("VkResult", "GetPhysicalDeviceQueueCount",
+            [Param("VkPhysicalDevice", "gpu"),
+             Param("uint32_t*", "pCount")]),
+
+        Proto("VkResult", "GetPhysicalDeviceQueueProperties",
+            [Param("VkPhysicalDevice", "gpu"),
+             Param("uint32_t", "count"),
+             Param("VkPhysicalDeviceQueueProperties*", "pProperties")]),
+
+        Proto("VkResult", "GetPhysicalDeviceMemoryProperties",
+            [Param("VkPhysicalDevice", "gpu"),
+             Param("VkPhysicalDeviceMemoryProperties*", "pProperties")]),
 
         Proto("VkResult", "GetPhysicalDeviceFeatures",
             [Param("VkPhysicalDevice", "physicalDevice"),
@@ -264,18 +279,21 @@ core = Extension(
         Proto("VkResult", "DestroyDevice",
             [Param("VkDevice", "device")]),
 
-        Proto("VkResult", "GetGlobalExtensionInfo",
-            [Param("VkExtensionInfoType", "infoType"),
-             Param("uint32_t", "extensionIndex"),
-             Param("size_t*", "pDataSize"),
-             Param("void*", "pData")]),
-
-        Proto("VkResult", "GetPhysicalDeviceExtensionInfo",
+        Proto("VkResult", "GetPhysicalDeviceExtensionProperties",
             [Param("VkPhysicalDevice", "gpu"),
-             Param("VkExtensionInfoType", "infoType"),
              Param("uint32_t", "extensionIndex"),
-             Param("size_t*", "pDataSize"),
-             Param("void*", "pData")]),
+             Param("VkExtensionProperties*", "pProperties")]),
+
+        Proto("VkResult", "GetPhysicalDeviceExtensionCount",
+            [Param("VkPhysicalDevice", "gpu"),
+             Param("uint32_t*", "pCount")]),
+
+        Proto("VkResult", "GetGlobalExtensionProperties",
+            [Param("uint32_t", "extensionIndex"),
+             Param("VkExtensionProperties*", "pProperties")]),
+
+        Proto("VkResult", "GetGlobalExtensionCount",
+            [Param("uint32_t*", "pCount")]),
 
         Proto("VkResult", "GetDeviceQueue",
             [Param("VkDevice", "device"),
@@ -331,13 +349,11 @@ core = Extension(
              Param("VkObjectType", "objType"),
              Param("VkObject", "object")]),
 
-        Proto("VkResult", "GetObjectInfo",
+        Proto("VkResult", "GetObjectMemoryRequirements",
             [Param("VkDevice", "device"),
              Param("VkObjectType", "objType"),
              Param("VkObject", "object"),
-             Param("VkObjectInfoType", "infoType"),
-             Param("size_t*", "pDataSize"),
-             Param("void*", "pData")]),
+             Param("VkMemoryRequirements*", "pMemoryRequirements")]),
 
         Proto("VkResult", "BindObjectMemory",
             [Param("VkDevice", "device"),
@@ -441,13 +457,11 @@ core = Extension(
              Param("const VkImageCreateInfo*", "pCreateInfo"),
              Param("VkImage*", "pImage")]),
 
-        Proto("VkResult", "GetImageSubresourceInfo",
+        Proto("VkResult", "GetImageSubresourceLayout",
             [Param("VkDevice", "device"),
              Param("VkImage", "image"),
              Param("const VkImageSubresource*", "pSubresource"),
-             Param("VkSubresourceInfoType", "infoType"),
-             Param("size_t*", "pDataSize"),
-             Param("void*", "pData")]),
+             Param("VkSubresourceLayout*", "pLayout")]),
 
         Proto("VkResult", "CreateImageView",
             [Param("VkDevice", "device"),

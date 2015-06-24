@@ -224,39 +224,20 @@ ICD_EXPORT VkResult VKAPI vkDestroyInstance(
     return VK_SUCCESS;
 }
 
-ICD_EXPORT VkResult VKAPI vkGetGlobalExtensionInfo(
-        VkExtensionInfoType infoType,
-        uint32_t extensionIndex,
-        size_t*  pDataSize,
-        void*    pData)
+ICD_EXPORT VkResult VKAPI vkGetGlobalExtensionCount(
+    uint32_t*                                  pCount)
 {
-    uint32_t *count;
+    *pCount = INTEL_GLOBAL_EXT_COUNT;
+    return VK_SUCCESS;
+}
 
-    if (pDataSize == NULL)
-        return VK_ERROR_INVALID_POINTER;
-
-    switch (infoType) {
-        case VK_EXTENSION_INFO_TYPE_COUNT:
-            *pDataSize = sizeof(uint32_t);
-            if (pData == NULL)
-                return VK_SUCCESS;
-            count = (uint32_t *) pData;
-            *count = INTEL_GLOBAL_EXT_COUNT;
-            break;
-        case VK_EXTENSION_INFO_TYPE_PROPERTIES:
-            if (*pDataSize < sizeof(VkExtensionProperties))
-                return VK_ERROR_INVALID_MEMORY_SIZE;
-
-            *pDataSize = sizeof(VkExtensionProperties);
-            if (pData == NULL)
-                return VK_SUCCESS;
-            if (extensionIndex >= INTEL_GLOBAL_EXT_COUNT)
-                return VK_ERROR_INVALID_VALUE;
-            memcpy((VkExtensionProperties *) pData, &intel_global_exts[extensionIndex], sizeof(VkExtensionProperties));
-            break;
-        default:
-            return VK_ERROR_INVALID_VALUE;
-    };
+ICD_EXPORT VkResult VKAPI vkGetGlobalExtensionProperties(
+        uint32_t extensionIndex,
+        VkExtensionProperties*    pProperties)
+{
+    if (extensionIndex >= INTEL_GLOBAL_EXT_COUNT)
+        return VK_ERROR_INVALID_VALUE;
+    memcpy(pProperties, &intel_global_exts[extensionIndex], sizeof(VkExtensionProperties));
 
     return VK_SUCCESS;
 }

@@ -37,31 +37,16 @@ static void query_destroy(struct intel_obj *obj)
     intel_query_destroy(query);
 }
 
-static VkResult query_get_info(struct intel_base *base, int type,
-                                 size_t *size, void *data)
+static VkResult query_get_memory_requirements(struct intel_base *base,
+                                 VkMemoryRequirements* pRequirements)
 {
     struct intel_query *query = intel_query_from_base(base);
-    VkResult ret = VK_SUCCESS;
 
-    switch (type) {
-    case VK_OBJECT_INFO_TYPE_MEMORY_REQUIREMENTS:
-        {
-            VkMemoryRequirements *mem_req = data;
+    pRequirements->size = query->slot_stride * query->slot_count;
+    pRequirements->alignment = 64;
+    pRequirements->memPropsAllowed = INTEL_MEMORY_PROPERTY_ALL;
 
-            *size = sizeof(VkMemoryRequirements);
-            if (data == NULL)
-                return ret;
-            mem_req->size = query->slot_stride * query->slot_count;
-            mem_req->alignment = 64;
-            mem_req->memPropsAllowed = INTEL_MEMORY_PROPERTY_ALL;
-        }
-        break;
-    default:
-        ret = intel_base_get_info(base, type, size, data);
-        break;
-    }
-
-    return ret;
+    return VK_SUCCESS;
 }
 
 static void query_init_pipeline_statistics(
@@ -139,7 +124,7 @@ VkResult intel_query_create(struct intel_dev *dev,
         return VK_ERROR_INVALID_VALUE;
     }
 
-    query->obj.base.get_info = query_get_info;
+    query->obj.base.get_memory_requirements = query_get_memory_requirements;
     query->obj.destroy = query_destroy;
 
     *query_ret = query;

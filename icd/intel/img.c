@@ -47,31 +47,15 @@ static void img_destroy(struct intel_obj *obj)
     intel_img_destroy(img);
 }
 
-static VkResult img_get_info(struct intel_base *base, int type,
-                               size_t *size, void *data)
+static VkResult img_get_memory_requirements(struct intel_base *base, VkMemoryRequirements *pRequirements)
 {
     struct intel_img *img = intel_img_from_base(base);
-    VkResult ret = VK_SUCCESS;
 
-    switch (type) {
-    case VK_OBJECT_INFO_TYPE_MEMORY_REQUIREMENTS:
-        {
-            VkMemoryRequirements *mem_req = data;
+    pRequirements->size = img->total_size;
+    pRequirements->alignment = 4096;
+    pRequirements->memPropsAllowed = INTEL_MEMORY_PROPERTY_ALL;
 
-            *size = sizeof(VkMemoryRequirements);
-            if (data == NULL)
-                return ret;
-            mem_req->size = img->total_size;
-            mem_req->alignment = 4096;
-            mem_req->memPropsAllowed = INTEL_MEMORY_PROPERTY_ALL;
-        }
-        break;
-    default:
-        ret = intel_base_get_info(base, type, size, data);
-        break;
-    }
-
-    return ret;
+    return VK_SUCCESS;
 }
 
 VkResult intel_img_create(struct intel_dev *dev,
@@ -144,7 +128,7 @@ VkResult intel_img_create(struct intel_dev *dev,
     }
 
     img->obj.destroy = img_destroy;
-    img->obj.base.get_info = img_get_info;
+    img->obj.base.get_memory_requirements = img_get_memory_requirements;
 
     *img_ret = img;
 
@@ -173,43 +157,24 @@ ICD_EXPORT VkResult VKAPI vkCreateImage(
             (struct intel_img **) pImage);
 }
 
-ICD_EXPORT VkResult VKAPI vkGetImageSubresourceInfo(
+ICD_EXPORT VkResult VKAPI vkGetImageSubresourceLayout(
     VkDevice                                    device,
     VkImage                                     image,
     const VkImageSubresource*                   pSubresource,
-    VkSubresourceInfoType                       infoType,
-    size_t*                                     pDataSize,
-    void*                                       pData)
+    VkSubresourceLayout*                        pLayout)
 {
     const struct intel_img *img = intel_img(image);
-    VkResult ret = VK_SUCCESS;
+    unsigned x, y;
 
-    switch (infoType) {
-    case VK_SUBRESOURCE_INFO_TYPE_LAYOUT:
-        {
-            VkSubresourceLayout *layout = (VkSubresourceLayout *) pData;
-            unsigned x, y;
+    intel_layout_get_slice_pos(&img->layout, pSubresource->mipLevel,
+                               pSubresource->arraySlice, &x, &y);
+    intel_layout_pos_to_mem(&img->layout, x, y, &x, &y);
 
-            intel_layout_get_slice_pos(&img->layout, pSubresource->mipLevel,
-                    pSubresource->arraySlice, &x, &y);
-            intel_layout_pos_to_mem(&img->layout, x, y, &x, &y);
-
-            *pDataSize = sizeof(VkSubresourceLayout);
-
-            if (pData == NULL)
-                return ret;
-            layout->offset = intel_layout_mem_to_linear(&img->layout, x, y);
-            layout->size = intel_layout_get_slice_size(&img->layout,
-                    pSubresource->mipLevel);
-            layout->rowPitch = img->layout.bo_stride;
-            layout->depthPitch = intel_layout_get_slice_stride(&img->layout,
-                    pSubresource->mipLevel);
-        }
-        break;
-    default:
-        ret = VK_ERROR_INVALID_VALUE;
-        break;
-    }
-
-    return ret;
+    pLayout->offset = intel_layout_mem_to_linear(&img->layout, x, y);
+    pLayout->size = intel_layout_get_slice_size(&img->layout,
+                                               pSubresource->mipLevel);
+    pLayout->rowPitch = img->layout.bo_stride;
+    pLayout->depthPitch = intel_layout_get_slice_stride(&img->layout,
+                                                       pSubresource->mipLevel);
+    return VK_SUCCESS;
 }

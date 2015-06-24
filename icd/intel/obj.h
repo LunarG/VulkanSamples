@@ -48,8 +48,8 @@ struct intel_base {
 
     struct intel_base_dbg *dbg;
 
-    VkResult (*get_info)(struct intel_base *base, int type,
-                         size_t *size, void *data);
+    VkResult (*get_memory_requirements)(struct intel_base *base,
+                         VkMemoryRequirements *data);
 };
 
 struct intel_obj {
@@ -80,8 +80,7 @@ static inline void intel_obj_bind_mem(struct intel_obj *obj,
     obj->offset = offset;
 }
 
-VkResult intel_base_get_info(struct intel_base *base, int type,
-                               size_t *size, void *data);
+VkResult intel_base_get_memory_requirements(struct intel_base *base, VkMemoryRequirements *data);
 
 struct intel_base_dbg *intel_base_dbg_create(const struct intel_handle *handle,
                                              VkObjectType type,

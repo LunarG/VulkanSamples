@@ -749,7 +749,6 @@ TEST_F(VkCmdCopyBufferTest, RAWHazard)
     VkEventCreateInfo event_info;
     VkEvent event;
     VkMemoryRequirements mem_req;
-    size_t data_size = sizeof(mem_req);
     VkResult err;
     VkMemoryPropertyFlags reqs = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
     VkMemoryAllocInfo mem_info;
@@ -767,9 +766,7 @@ TEST_F(VkCmdCopyBufferTest, RAWHazard)
     err = vkCreateEvent(dev_.obj(), &event_info, &event);
     ASSERT_VK_SUCCESS(err);
 
-    data_size = sizeof(mem_req);
-    err = vkGetObjectInfo(dev_.obj(), VK_OBJECT_TYPE_EVENT, event, VK_OBJECT_INFO_TYPE_MEMORY_REQUIREMENTS,
-        &data_size, &mem_req);
+    err = vkGetObjectMemoryRequirements(dev_.obj(), VK_OBJECT_TYPE_EVENT, event, &mem_req);
     ASSERT_VK_SUCCESS(err);
 
     if (mem_req.size) {
@@ -778,8 +775,6 @@ TEST_F(VkCmdCopyBufferTest, RAWHazard)
         //            VkDevice                                  device,
         //            const VkMemoryAllocInfo*                pAllocInfo,
         //            VkDeviceMemory*                             pMem);
-
-        ASSERT_NE(0, mem_req.size) << "vkGetObjectInfo (Event): Failed - expect events to require memory";
 
         memset(&mem_info, 0, sizeof(mem_info));
         mem_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO;

@@ -146,11 +146,9 @@ LOADER_EXPORT VkResult VKAPI vkEnumeratePhysicalDevices(
     return res;
 }
 
-LOADER_EXPORT VkResult VKAPI vkGetPhysicalDeviceInfo(
+LOADER_EXPORT VkResult VKAPI vkGetPhysicalDeviceProperties(
                                             VkPhysicalDevice gpu,
-                                            VkPhysicalDeviceInfoType infoType,
-                                            size_t* pDataSize,
-                                            void* pData)
+                                            VkPhysicalDeviceProperties* pProperties)
 {
     const VkLayerInstanceDispatchTable *disp;
     VkResult res;
@@ -158,7 +156,72 @@ LOADER_EXPORT VkResult VKAPI vkGetPhysicalDeviceInfo(
     disp = loader_get_instance_dispatch(gpu);
 
     loader_platform_thread_lock_mutex(&loader_lock);
-    res = disp->GetPhysicalDeviceInfo(gpu, infoType, pDataSize, pData);
+    res = disp->GetPhysicalDeviceProperties(gpu, pProperties);
+    loader_platform_thread_unlock_mutex(&loader_lock);
+
+    return res;
+}
+
+LOADER_EXPORT VkResult VKAPI vkGetPhysicalDevicePerformance(
+                                            VkPhysicalDevice gpu,
+                                            VkPhysicalDevicePerformance* pPerformance)
+{
+    const VkLayerInstanceDispatchTable *disp;
+    VkResult res;
+
+    disp = loader_get_instance_dispatch(gpu);
+
+    loader_platform_thread_lock_mutex(&loader_lock);
+    res = disp->GetPhysicalDevicePerformance(gpu, pPerformance);
+    loader_platform_thread_unlock_mutex(&loader_lock);
+
+    return res;
+}
+
+LOADER_EXPORT VkResult VKAPI vkGetPhysicalDeviceQueueCount(
+                                            VkPhysicalDevice gpu,
+                                            uint32_t* pCount)
+{
+   const VkLayerInstanceDispatchTable *disp;
+   VkResult res;
+
+   disp = loader_get_instance_dispatch(gpu);
+
+   loader_platform_thread_lock_mutex(&loader_lock);
+   res = disp->GetPhysicalDeviceQueueCount(gpu, pCount);
+   loader_platform_thread_unlock_mutex(&loader_lock);
+
+   return res;
+}
+
+LOADER_EXPORT VkResult VKAPI vkGetPhysicalDeviceQueueProperties(
+                                            VkPhysicalDevice gpu,
+                                            uint32_t count,
+                                            VkPhysicalDeviceQueueProperties* pQueueProperties)
+{
+    const VkLayerInstanceDispatchTable *disp;
+    VkResult res;
+
+    disp = loader_get_instance_dispatch(gpu);
+
+    loader_platform_thread_lock_mutex(&loader_lock);
+    res = disp->GetPhysicalDeviceQueueProperties(gpu, count, pQueueProperties);
+    loader_platform_thread_unlock_mutex(&loader_lock);
+
+    return res;
+}
+
+LOADER_EXPORT VkResult VKAPI vkGetPhysicalDeviceMemoryProperties(
+                                            VkPhysicalDevice gpu,
+                                            VkPhysicalDeviceMemoryProperties* pMemoryProperties)
+{
+    const VkLayerInstanceDispatchTable *disp;
+    VkResult res;
+
+    disp = loader_get_instance_dispatch(gpu);
+
+    loader_platform_thread_lock_mutex(&loader_lock);
+    res = disp->GetPhysicalDeviceMemoryProperties(gpu, pMemoryProperties);
     loader_platform_thread_unlock_mutex(&loader_lock);
 
     return res;
@@ -244,17 +307,27 @@ LOADER_EXPORT VkResult VKAPI vkDestroyDevice(VkDevice device)
     return res;
 }
 
-LOADER_EXPORT VkResult VKAPI vkGetPhysicalDeviceExtensionInfo(
+LOADER_EXPORT VkResult VKAPI vkGetPhysicalDeviceExtensionProperties(
                                                 VkPhysicalDevice gpu,
-                                                VkExtensionInfoType infoType,
                                                 uint32_t extensionIndex,
-                                                size_t* pDataSize,
-                                                void* pData)
+                                                VkExtensionProperties* pProperties)
 {
     VkResult res;
 
     loader_platform_thread_lock_mutex(&loader_lock);
-    res = loader_GetPhysicalDeviceExtensionInfo(gpu, infoType, extensionIndex, pDataSize, pData);
+    res = loader_GetPhysicalDeviceExtensionProperties(gpu, extensionIndex, pProperties);
+    loader_platform_thread_unlock_mutex(&loader_lock);
+    return res;
+}
+
+LOADER_EXPORT VkResult VKAPI vkGetPhysicalDeviceExtensionCount(
+                                                VkPhysicalDevice gpu,
+                                                uint32_t* pCount)
+{
+    VkResult res;
+
+    loader_platform_thread_lock_mutex(&loader_lock);
+    res = loader_GetPhysicalDeviceExtensionCount(gpu, pCount);
     loader_platform_thread_unlock_mutex(&loader_lock);
     return res;
 }
@@ -364,13 +437,13 @@ LOADER_EXPORT VkResult VKAPI vkDestroyObject(VkDevice device, VkObjectType objTy
     return disp->DestroyObject(device, objType, object);
 }
 
-LOADER_EXPORT VkResult VKAPI vkGetObjectInfo(VkDevice device, VkObjectType objType, VkObject object, VkObjectInfoType infoType, size_t* pDataSize, void* pData)
+LOADER_EXPORT VkResult VKAPI vkGetObjectMemoryRequirements(VkDevice device, VkObjectType objType, VkObject object, VkMemoryRequirements* pMemoryRequirements)
 {
     const VkLayerDispatchTable *disp;
 
     disp = loader_get_dispatch(device);
 
-    return disp->GetObjectInfo(device, objType, object, infoType, pDataSize, pData);
+    return disp->GetObjectMemoryRequirements(device, objType, object, pMemoryRequirements);
 }
 
 LOADER_EXPORT VkResult VKAPI vkBindObjectMemory(VkDevice device, VkObjectType objType, VkObject object, VkDeviceMemory mem, VkDeviceSize offset)
@@ -544,13 +617,13 @@ LOADER_EXPORT VkResult VKAPI vkCreateImage(VkDevice device, const VkImageCreateI
     return disp->CreateImage(device, pCreateInfo, pImage);
 }
 
-LOADER_EXPORT VkResult VKAPI vkGetImageSubresourceInfo(VkDevice device, VkImage image, const VkImageSubresource* pSubresource, VkSubresourceInfoType infoType, size_t* pDataSize, void* pData)
+LOADER_EXPORT VkResult VKAPI vkGetImageSubresourceLayout(VkDevice device, VkImage image, const VkImageSubresource* pSubresource, VkSubresourceLayout* pLayout)
 {
     const VkLayerDispatchTable *disp;
 
     disp = loader_get_dispatch(device);
 
-    return disp->GetImageSubresourceInfo(device, image, pSubresource, infoType, pDataSize, pData);
+    return disp->GetImageSubresourceLayout(device, image, pSubresource, pLayout);
 }
 
 LOADER_EXPORT VkResult VKAPI vkCreateImageView(VkDevice device, const VkImageViewCreateInfo* pCreateInfo, VkImageView* pView)

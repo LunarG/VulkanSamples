@@ -460,31 +460,16 @@ static void pipeline_destroy(struct intel_obj *obj)
     intel_base_destroy(&pipeline->obj.base);
 }
 
-static VkResult pipeline_get_info(struct intel_base *base, int type,
-                                    size_t *size, void *data)
+static VkResult pipeline_get_memory_requirements(struct intel_base *base,
+                                    VkMemoryRequirements* pRequirements)
 {
     struct intel_pipeline *pipeline = intel_pipeline_from_base(base);
-    VkResult ret = VK_SUCCESS;
 
-    switch (type) {
-    case VK_OBJECT_INFO_TYPE_MEMORY_REQUIREMENTS:
-        {
-            VkMemoryRequirements *mem_req = data;
+    pRequirements->size = pipeline->scratch_size;
+    pRequirements->alignment = 1024;
+    pRequirements->memPropsAllowed = INTEL_MEMORY_PROPERTY_ALL;
 
-            *size = sizeof(VkMemoryRequirements);
-            if (data) {
-                mem_req->size = pipeline->scratch_size;
-                mem_req->alignment = 1024;
-                mem_req->memPropsAllowed = INTEL_MEMORY_PROPERTY_ALL;
-            }
-        }
-        break;
-    default:
-        ret = intel_base_get_info(base, type, size, data);
-        break;
-    }
-
-    return ret;
+    return VK_SUCCESS;
 }
 
 static VkResult pipeline_validate(struct intel_pipeline *pipeline)
@@ -1320,7 +1305,7 @@ static VkResult graphics_pipeline_create(struct intel_dev *dev,
     pipeline->pipeline_layout =
         intel_pipeline_layout(info.graphics.layout);
 
-    pipeline->obj.base.get_info = pipeline_get_info;
+    pipeline->obj.base.get_memory_requirements = pipeline_get_memory_requirements;
     pipeline->obj.destroy = pipeline_destroy;
 
     ret = pipeline_build_all(pipeline, &info);

@@ -969,41 +969,22 @@ static const VkExtensionProperties mtExts[MEM_TRACKER_LAYER_EXT_ARRAY_SIZE] = {
     }
 };
 
-VK_LAYER_EXPORT VkResult VKAPI vkGetGlobalExtensionInfo(
-    VkExtensionInfoType  infoType,
-    uint32_t             extensionIndex,
-    size_t              *pDataSize,
-    void                *pData)
+VK_LAYER_EXPORT VkResult VKAPI vkGetGlobalExtensionProperties(
+                                               uint32_t extensionIndex,
+                                               VkExtensionProperties*    pData)
 {
-    // This entrypoint is NOT going to init its own dispatch table since loader calls here early
-    uint32_t *count;
+    /* This entrypoint is NOT going to init it's own dispatch table since loader calls here early */
 
-    if (pDataSize == NULL) {
-        return VK_ERROR_INVALID_POINTER;
-    }
+    if (extensionIndex >= MEM_TRACKER_LAYER_EXT_ARRAY_SIZE)
+        return VK_ERROR_INVALID_VALUE;
+    memcpy((VkExtensionProperties *) pData, &mtExts[extensionIndex], sizeof(VkExtensionProperties));
 
-    switch (infoType) {
-        case VK_EXTENSION_INFO_TYPE_COUNT:
-            *pDataSize = sizeof(uint32_t);
-            if (pData == NULL) {
-                return VK_SUCCESS;
-            }
-            count = (uint32_t *) pData;
-            *count = MEM_TRACKER_LAYER_EXT_ARRAY_SIZE;
-            break;
-        case VK_EXTENSION_INFO_TYPE_PROPERTIES:
-            *pDataSize = sizeof(VkExtensionProperties);
-            if (pData == NULL) {
-                return VK_SUCCESS;
-            }
-            if (extensionIndex >= MEM_TRACKER_LAYER_EXT_ARRAY_SIZE) {
-                return VK_ERROR_INVALID_VALUE;
-            }
-            memcpy((VkExtensionProperties *) pData, &mtExts[extensionIndex], sizeof(VkExtensionProperties));
-            break;
-        default:
-            return VK_ERROR_INVALID_VALUE;
-    };
+    return VK_SUCCESS;
+}
+
+VK_LAYER_EXPORT VkResult VKAPI vkGetGlobalExtensionCount(uint32_t* pCount)
+{
+    *pCount = MEM_TRACKER_LAYER_EXT_ARRAY_SIZE;
 
     return VK_SUCCESS;
 }
@@ -1030,41 +1011,23 @@ static const VkExtensionProperties mtDevExts[MEM_TRACKER_LAYER_DEV_EXT_ARRAY_SIZ
     }
 };
 
-VK_LAYER_EXPORT VkResult VKAPI vkGetPhysicalDeviceExtensionInfo(
-    VkPhysicalDevice     physical_device,
-    VkExtensionInfoType  infoType,
-    uint32_t             extensionIndex,
-    size_t              *pDataSize,
-    void                *pData)
+
+VK_LAYER_EXPORT VkResult VKAPI vkGetPhysicalDeviceExtensionCount(
+                                               VkPhysicalDevice gpu,
+                                               uint32_t* pCount)
 {
-    uint32_t *count;
+    *pCount = MEM_TRACKER_LAYER_DEV_EXT_ARRAY_SIZE;
+    return VK_SUCCESS;
+}
 
-    if (pDataSize == NULL) {
-        return VK_ERROR_INVALID_POINTER;
-    }
-
-    switch (infoType) {
-        case VK_EXTENSION_INFO_TYPE_COUNT:
-            *pDataSize = sizeof(uint32_t);
-            if (pData == NULL) {
-                return VK_SUCCESS;
-            }
-            count = (uint32_t *) pData;
-            *count = MEM_TRACKER_LAYER_DEV_EXT_ARRAY_SIZE;
-            break;
-        case VK_EXTENSION_INFO_TYPE_PROPERTIES:
-            *pDataSize = sizeof(VkExtensionProperties);
-            if (pData == NULL) {
-                return VK_SUCCESS;
-            }
-            if (extensionIndex >= MEM_TRACKER_LAYER_DEV_EXT_ARRAY_SIZE) {
-                return VK_ERROR_INVALID_VALUE;
-            }
-            memcpy((VkExtensionProperties *) pData, &mtDevExts[extensionIndex], sizeof(VkExtensionProperties));
-            break;
-        default:
-            return VK_ERROR_INVALID_VALUE;
-    }
+VK_LAYER_EXPORT VkResult VKAPI vkGetPhysicalDeviceExtensionProperties(
+                                               VkPhysicalDevice gpu,
+                                               uint32_t extensionIndex,
+                                               VkExtensionProperties* pProperties)
+{
+    if (extensionIndex >= MEM_TRACKER_LAYER_DEV_EXT_ARRAY_SIZE)
+        return VK_ERROR_INVALID_VALUE;
+    memcpy(pProperties, &mtDevExts[extensionIndex], sizeof(VkExtensionProperties));
 
     return VK_SUCCESS;
 }
@@ -1219,19 +1182,17 @@ VK_LAYER_EXPORT VkResult VKAPI vkDestroyObject(
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkGetObjectInfo(
-    VkDevice          device,
-    VkObjectType      objType,
-    VkObject          object,
-    VkObjectInfoType  infoType,
-    size_t           *pDataSize,
-    void             *pData)
+VK_LAYER_EXPORT VkResult VKAPI vkGetObjectMemoryRequirements(
+    VkDevice                          device,
+    VkObjectType                      objType,
+    VkObject                          object,
+    VkMemoryRequirements*             pRequirements)
 {
     // TODO : What to track here?
     //   Could potentially save returned mem requirements and validate values passed into BindObjectMemory for this object
     // From spec : The only objects that are guaranteed to have no external memory requirements are devices, queues,
     //             command buffers, shaders and memory objects.
-    VkResult result = get_dispatch_table(mem_tracker_device_table_map, device)->GetObjectInfo(device, objType, object, infoType, pDataSize, pData);
+    VkResult result = get_dispatch_table(mem_tracker_device_table_map, device)->GetObjectMemoryRequirements(device, objType, object, pRequirements);
     return result;
 }
 
@@ -2207,8 +2168,8 @@ VK_LAYER_EXPORT void* VKAPI vkGetDeviceProcAddr(
         return (void*) vkUnmapMemory;
     if (!strcmp(funcName, "vkDestroyObject"))
         return (void*) vkDestroyObject;
-    if (!strcmp(funcName, "vkGetObjectInfo"))
-        return (void*) vkGetObjectInfo;
+    if (!strcmp(funcName, "vkGetObjectMemoryRequirements"))
+        return (void*) vkGetObjectMemoryRequirements;
     if (!strcmp(funcName, "vkBindObjectMemory"))
         return (void*) vkBindObjectMemory;
     if (!strcmp(funcName, "vkQueueBindSparseBufferMemory"))
@@ -2309,6 +2270,10 @@ VK_LAYER_EXPORT void* VKAPI vkGetDeviceProcAddr(
         return (void*) vkCmdResetQueryPool;
     if (!strcmp(funcName, "vkGetDeviceQueue"))
         return (void*) vkGetDeviceQueue;
+    if (!strcmp(funcName, "vkGetGlobalExtensionCount"))
+        return (void*) vkGetGlobalExtensionCount;
+    if (!strcmp(funcName, "vkGetGlobalExtensionProperties"))
+        return (void*) vkGetGlobalExtensionProperties;
 
     VkLayerDispatchTable *pDisp =  get_dispatch_table(mem_tracker_device_table_map, dev);
     if (deviceExtMap.size() == 0 || deviceExtMap[pDisp].wsi_lunarg_enabled)
@@ -2349,6 +2314,10 @@ VK_LAYER_EXPORT void* VKAPI vkGetInstanceProcAddr(
         return (void*) vkCreateInstance;
     if (!strcmp(funcName, "vkCreateDevice"))
         return (void*) vkCreateDevice;
+    if (!strcmp(funcName, "vkGetPhysicalDeviceExtensionCount"))
+        return (void*) vkGetGlobalExtensionCount;
+    if (!strcmp(funcName, "vkGetPhysicalDeviceExtensionProperties"))
+        return (void*) vkGetGlobalExtensionProperties;
 
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(instance), layer_data_map);
     fptr = debug_report_get_instance_proc_addr(my_data->report_data, funcName);

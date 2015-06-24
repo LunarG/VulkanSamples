@@ -407,67 +407,62 @@ enum intel_phy_dev_ext_type intel_gpu_lookup_phy_dev_extension(
     return type;
 }
 
-ICD_EXPORT VkResult VKAPI vkGetPhysicalDeviceInfo(
-    VkPhysicalDevice                            gpu_,
-    VkPhysicalDeviceInfoType                  infoType,
-    size_t*                                     pDataSize,
-    void*                                       pData)
+ICD_EXPORT VkResult VKAPI vkGetPhysicalDeviceProperties(
+    VkPhysicalDevice gpu_,
+    VkPhysicalDeviceProperties* pProperties)
 {
     struct intel_gpu *gpu = intel_gpu(gpu_);
-    VkResult ret = VK_SUCCESS;
 
-    switch (infoType) {
-    case VK_PHYSICAL_DEVICE_INFO_TYPE_PROPERTIES:
-        *pDataSize = sizeof(VkPhysicalDeviceProperties);
-        if (pData == NULL) {
-            return ret;
-        }
-        intel_gpu_get_props(gpu, pData);
-        break;
+    intel_gpu_get_props(gpu, pProperties);
+    return VK_SUCCESS;
+}
 
-    case VK_PHYSICAL_DEVICE_INFO_TYPE_PERFORMANCE:
-        *pDataSize = sizeof(VkPhysicalDevicePerformance);
-        if (pData == NULL) {
-            return ret;
-        }
-        intel_gpu_get_perf(gpu, pData);
-        break;
+ICD_EXPORT VkResult VKAPI vkGetPhysicalDevicePerformance(
+    VkPhysicalDevice gpu_,
+    VkPhysicalDevicePerformance* pPerformance)
+{
+    struct intel_gpu *gpu = intel_gpu(gpu_);
 
-    case VK_PHYSICAL_DEVICE_INFO_TYPE_QUEUE_PROPERTIES:
-        /*
-         * Vulkan Programmers guide, page 33:
-         * to determine the data size an application calls
-         * vkGetPhysicalDeviceInfo() with a NULL data pointer. The
-         * expected data size for all queue property structures
-         * is returned in pDataSize
-         */
-        *pDataSize = sizeof(VkPhysicalDeviceQueueProperties) *
-            INTEL_GPU_ENGINE_COUNT;
-        if (pData != NULL) {
-            VkPhysicalDeviceQueueProperties *dst = pData;
-            int engine;
+    intel_gpu_get_perf(gpu, pPerformance);
 
-            for (engine = 0; engine < INTEL_GPU_ENGINE_COUNT; engine++) {
-                intel_gpu_get_queue_props(gpu, engine, dst);
-                dst++;
-            }
-        }
-        break;
+    return VK_SUCCESS;
+}
 
-    case VK_PHYSICAL_DEVICE_INFO_TYPE_MEMORY_PROPERTIES:
-        *pDataSize = sizeof(VkPhysicalDeviceMemoryProperties);
-        if (pData == NULL) {
-            return ret;
-        }
-        intel_gpu_get_memory_props(gpu, pData);
-        break;
+ICD_EXPORT VkResult VKAPI vkGetPhysicalDeviceQueueCount(
+    VkPhysicalDevice gpu_,
+    uint32_t* pCount)
+{
+    *pCount = INTEL_GPU_ENGINE_COUNT;
 
-    default:
-        ret = intel_wsi_gpu_get_info(gpu, infoType, pDataSize, pData);
-        break;
-    }
+    return VK_SUCCESS;
+}
 
-    return ret;
+ICD_EXPORT VkResult VKAPI vkGetPhysicalDeviceQueueProperties(
+    VkPhysicalDevice gpu_,
+    uint32_t count,
+    VkPhysicalDeviceQueueProperties* pProperties)
+{
+   struct intel_gpu *gpu = intel_gpu(gpu_);
+   int engine;
+
+   if (count > INTEL_GPU_ENGINE_COUNT)
+       return VK_ERROR_INVALID_VALUE;
+
+   for (engine = 0; engine < count; engine++) {
+       intel_gpu_get_queue_props(gpu, engine, pProperties);
+       pProperties++;
+   }
+   return VK_SUCCESS;
+}
+
+ICD_EXPORT VkResult VKAPI vkGetPhysicalDeviceMemoryProperties(
+    VkPhysicalDevice gpu_,
+    VkPhysicalDeviceMemoryProperties* pProperties)
+{
+   struct intel_gpu *gpu = intel_gpu(gpu_);
+
+   intel_gpu_get_memory_props(gpu, pProperties);
+   return VK_SUCCESS;
 }
 
 ICD_EXPORT VkResult VKAPI vkGetPhysicalDeviceFeatures(
@@ -494,47 +489,22 @@ ICD_EXPORT VkResult VKAPI vkGetPhysicalDeviceLimits(
     return ret;
 }
 
-ICD_EXPORT VkResult VKAPI vkGetPhysicalDeviceExtensionInfo(
+ICD_EXPORT VkResult VKAPI vkGetPhysicalDeviceExtensionCount(
                                                VkPhysicalDevice gpu,
-                                               VkExtensionInfoType infoType,
-                                               uint32_t extensionIndex,
-                                               size_t*  pDataSize,
-                                               void*    pData)
+                                               uint32_t* pCount)
 {
-    /*
-     * If/when we have device-specific extensions, should retrieve them
-     * based on the passed-in physical device
-     *
-     *VkExtensionProperties *ext_props;
-     */
-    uint32_t *count;
+    *pCount =  INTEL_PHY_DEV_EXT_COUNT;
+    return VK_SUCCESS;
+}
 
-    if (pDataSize == NULL)
-        return VK_ERROR_INVALID_POINTER;
+ICD_EXPORT VkResult VKAPI vkGetPhysicalDeviceExtensionProperties(
+                                               VkPhysicalDevice gpu,
+                                               uint32_t extensionIndex,
+                                               VkExtensionProperties* pProperties)
+{
+    if (extensionIndex >= INTEL_PHY_DEV_EXT_COUNT)
+        return VK_ERROR_INVALID_VALUE;
 
-    switch (infoType) {
-        case VK_EXTENSION_INFO_TYPE_COUNT:
-            *pDataSize = sizeof(uint32_t);
-            if (pData == NULL)
-                return VK_SUCCESS;
-            count = (uint32_t *) pData;
-            *count = INTEL_PHY_DEV_EXT_COUNT;
-            break;
-        case VK_EXTENSION_INFO_TYPE_PROPERTIES:
-            *pDataSize = sizeof(VkExtensionProperties);
-            if (pData == NULL)
-                return VK_SUCCESS;
-
-            *pDataSize = sizeof(VkExtensionProperties);
-            if (pData == NULL)
-                return VK_SUCCESS;
-            if (extensionIndex >= INTEL_PHY_DEV_EXT_COUNT)
-                return VK_ERROR_INVALID_VALUE;
-            memcpy((VkExtensionProperties *) pData, &intel_phy_dev_gpu_exts[extensionIndex], sizeof(VkExtensionProperties));
-            break;
-        default:
-            return VK_ERROR_INVALID_VALUE;
-    };
-
+    memcpy(pProperties, &intel_phy_dev_gpu_exts[extensionIndex], sizeof(VkExtensionProperties));
     return VK_SUCCESS;
 }

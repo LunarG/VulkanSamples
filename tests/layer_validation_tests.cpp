@@ -413,7 +413,6 @@ TEST_F(VkLayerTest, MapMemWithoutHostVisibleBit)
     const VkFormat tex_format      = VK_FORMAT_B8G8R8A8_UNORM;
     const int32_t  tex_width       = 32;
     const int32_t  tex_height      = 32;
-    size_t         mem_reqs_size   = sizeof(VkMemoryRequirements);
 
     const VkImageCreateInfo image_create_info = {
         .sType          = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
@@ -439,11 +438,9 @@ TEST_F(VkLayerTest, MapMemWithoutHostVisibleBit)
     err = vkCreateImage(m_device->device(), &image_create_info, &image);
     ASSERT_VK_SUCCESS(err);
 
-    err = vkGetObjectInfo(m_device->device(),
+    err = vkGetObjectMemoryRequirements(m_device->device(),
                           VK_OBJECT_TYPE_IMAGE,
                           image,
-                          VK_OBJECT_INFO_TYPE_MEMORY_REQUIREMENTS,
-                          &mem_reqs_size,
                           &mem_reqs);
     ASSERT_VK_SUCCESS(err);
 
@@ -485,7 +482,6 @@ TEST_F(VkLayerTest, BindInvalidMemory)
     const VkFormat tex_format      = VK_FORMAT_B8G8R8A8_UNORM;
     const int32_t  tex_width       = 32;
     const int32_t  tex_height      = 32;
-    size_t         mem_reqs_size   = sizeof(VkMemoryRequirements);
 
     const VkImageCreateInfo image_create_info = {
         .sType          = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
@@ -510,11 +506,9 @@ TEST_F(VkLayerTest, BindInvalidMemory)
     err = vkCreateImage(m_device->device(), &image_create_info, &image);
     ASSERT_VK_SUCCESS(err);
 
-    err = vkGetObjectInfo(m_device->device(),
+    err = vkGetObjectMemoryRequirements(m_device->device(),
                           VK_OBJECT_TYPE_IMAGE,
                           image,
-                          VK_OBJECT_INFO_TYPE_MEMORY_REQUIREMENTS,
-                          &mem_reqs_size,
                           &mem_reqs);
     ASSERT_VK_SUCCESS(err);
 
@@ -556,7 +550,6 @@ TEST_F(VkLayerTest, FreeBoundMemory)
     const VkFormat tex_format      = VK_FORMAT_B8G8R8A8_UNORM;
     const int32_t  tex_width       = 32;
     const int32_t  tex_height      = 32;
-    size_t         mem_reqs_size   = sizeof(VkMemoryRequirements);
 
     const VkImageCreateInfo image_create_info = {
         .sType          = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
@@ -581,11 +574,9 @@ TEST_F(VkLayerTest, FreeBoundMemory)
     err = vkCreateImage(m_device->device(), &image_create_info, &image);
     ASSERT_VK_SUCCESS(err);
 
-    err = vkGetObjectInfo(m_device->device(),
+    err = vkGetObjectMemoryRequirements(m_device->device(),
                           VK_OBJECT_TYPE_IMAGE,
                           image,
-                          VK_OBJECT_INFO_TYPE_MEMORY_REQUIREMENTS,
-                          &mem_reqs_size,
                           &mem_reqs);
     ASSERT_VK_SUCCESS(err);
 
@@ -628,7 +619,6 @@ TEST_F(VkLayerTest, RebindMemory)
     const VkFormat tex_format      = VK_FORMAT_B8G8R8A8_UNORM;
     const int32_t  tex_width       = 32;
     const int32_t  tex_height      = 32;
-    size_t         mem_reqs_size   = sizeof(VkMemoryRequirements);
 
     const VkImageCreateInfo image_create_info = {
         .sType          = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
@@ -653,11 +643,9 @@ TEST_F(VkLayerTest, RebindMemory)
     err = vkCreateImage(m_device->device(), &image_create_info, &image);
     ASSERT_VK_SUCCESS(err);
 
-    err = vkGetObjectInfo(m_device->device(),
+    err = vkGetObjectMemoryRequirements(m_device->device(),
                           VK_OBJECT_TYPE_IMAGE,
                           image,
-                          VK_OBJECT_INFO_TYPE_MEMORY_REQUIREMENTS,
-                          &mem_reqs_size,
                           &mem_reqs);
     ASSERT_VK_SUCCESS(err);
 
@@ -701,7 +689,6 @@ TEST_F(VkLayerTest, BindMemoryToDestroyedObject)
     const VkFormat tex_format      = VK_FORMAT_B8G8R8A8_UNORM;
     const int32_t  tex_width       = 32;
     const int32_t  tex_height      = 32;
-    size_t         mem_reqs_size   = sizeof(VkMemoryRequirements);
 
     const VkImageCreateInfo image_create_info = {
         .sType          = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
@@ -726,11 +713,9 @@ TEST_F(VkLayerTest, BindMemoryToDestroyedObject)
     err = vkCreateImage(m_device->device(), &image_create_info, &image);
     ASSERT_VK_SUCCESS(err);
 
-    err = vkGetObjectInfo(m_device->device(),
+    err = vkGetObjectMemoryRequirements(m_device->device(),
                           VK_OBJECT_TYPE_IMAGE,
                           image,
-                          VK_OBJECT_INFO_TYPE_MEMORY_REQUIREMENTS,
-                          &mem_reqs_size,
                           &mem_reqs);
     ASSERT_VK_SUCCESS(err);
 
@@ -811,32 +796,6 @@ TEST_F(VkLayerTest, ResetUnsignaledFence)
 }
 #endif
 #if OBJECT_TRACKER_TESTS
-
-TEST_F(VkLayerTest, GetObjectInfoMismatchedType)
-{
-    VkEventCreateInfo event_info;
-    VkEvent event;
-    VkMemoryRequirements mem_req;
-    size_t data_size = sizeof(mem_req);
-    VkFlags msgFlags;
-    std::string msgString;
-    VkResult err;
-
-    ASSERT_NO_FATAL_FAILURE(InitState());
-    memset(&event_info, 0, sizeof(event_info));
-    event_info.sType = VK_STRUCTURE_TYPE_EVENT_CREATE_INFO;
-
-    err = vkCreateEvent(device(), &event_info, &event);
-    ASSERT_VK_SUCCESS(err);
-    m_errorMonitor->ClearState();
-    err = vkGetObjectInfo(device(), VK_OBJECT_TYPE_IMAGE, event, VK_OBJECT_INFO_TYPE_MEMORY_REQUIREMENTS,
-                           &data_size, &mem_req);
-    msgFlags = m_errorMonitor->GetState(&msgString);
-    ASSERT_TRUE(msgFlags & VK_DBG_REPORT_ERROR_BIT) << "Did not receive an error from mismatched types in vkGetObjectInfo";
-    if (!strstr(msgString.c_str(),"does not match designated type")) {
-        FAIL() << "Error received was not 'does not match designated type'";
-    }
-}
 
 TEST_F(VkLayerTest, RasterStateNotBound)
 {
@@ -1754,7 +1713,6 @@ TEST_F(VkLayerTest, ThreadCmdBufferCollision)
     VkEventCreateInfo event_info;
     VkEvent event;
     VkMemoryRequirements mem_req;
-    size_t data_size = sizeof(mem_req);
     VkResult err;
 
     memset(&event_info, 0, sizeof(event_info));
@@ -1763,14 +1721,11 @@ TEST_F(VkLayerTest, ThreadCmdBufferCollision)
     err = vkCreateEvent(device(), &event_info, &event);
     ASSERT_VK_SUCCESS(err);
 
-    err = vkGetObjectInfo(device(), VK_OBJECT_TYPE_EVENT, event, VK_OBJECT_INFO_TYPE_MEMORY_REQUIREMENTS,
-                           &data_size, &mem_req);
+    err = vkGetObjectMemoryRequirements(device(), VK_OBJECT_TYPE_EVENT, event, &mem_req);
     ASSERT_VK_SUCCESS(err);
 
     VkMemoryAllocInfo mem_info;
     VkDeviceMemory event_mem;
-
-    ASSERT_NE(0, mem_req.size) << "vkGetObjectInfo (Event): Failed - expect events to require memory";
 
     memset(&mem_info, 0, sizeof(mem_info));
     mem_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO;

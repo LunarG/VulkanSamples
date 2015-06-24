@@ -1,3 +1,5 @@
+# Be sure to run "Set-ExecutionPolicy RemoteSigned" before running powershell scripts
+
 Param([switch]$Debug)
 
 if ($Debug) {

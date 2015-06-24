@@ -70,14 +70,13 @@ public:
 
     const VkPhysicalDevice &obj() const { return gpu_; }
 
-    // vkGetPhysicalDeviceInfo()
     VkPhysicalDeviceProperties properties() const;
     VkPhysicalDevicePerformance performance() const;
     VkPhysicalDeviceMemoryProperties memory_properties() const;
     std::vector<VkPhysicalDeviceQueueProperties> queue_properties() const;
 
 
-    // vkGetGlobalExtensionInfo()
+    // vkGetGlobalExtensionProperties()
     std::vector<VkExtensionProperties> extensions() const;
 
     // vkEnumerateLayers()
@@ -124,7 +123,7 @@ class Object : public BaseObject {
 public:
     const VkObject &obj() const { return reinterpret_cast<const VkObject &>(BaseObject::obj()); }
 
-    // vkGetObjectInfo()
+    // vkGetObjectMemoryRequirements()
     uint32_t memory_allocation_count() const;
     std::vector<VkMemoryRequirements> memory_requirements() const;
 
@@ -415,7 +414,7 @@ public:
     void bind_memory(const Device &dev, const VkImageMemoryBindInfo &info,
                      const GpuMemory &mem, VkDeviceSize mem_offset);
 
-    // vkGetImageSubresourceInfo()
+    // vkGetImageSubresourceLayout()
     VkSubresourceLayout subresource_layout(const VkImageSubresource &subres) const;
 
     bool transparent() const;
