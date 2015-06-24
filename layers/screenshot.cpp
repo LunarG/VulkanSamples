@@ -323,15 +323,6 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateDevice(
         createDeviceRegisterExtensions(pCreateInfo, *pDevice);
     }
 
-    if (screenshotEnvQueried && screenshotFrames.empty())
-        // We are all done taking screenshots, so don't do anything else
-        return result;
-
-    if (result == VK_SUCCESS) {
-        VkLayerDispatchTable *pTable = get_dispatch_table(screenshot_device_table_map, *pDevice);
-        screenshot_device_table_map.emplace(*pDevice, pTable);
-    }
-
     return result;
 }
 
