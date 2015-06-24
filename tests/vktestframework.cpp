@@ -697,7 +697,7 @@ void TestFrameworkVkPresent::CreateSwapChain()
     assert(!err);
 
     VkSwapChainImageInfoWSI infos[2];
-    size_t size = sizeof(VkSwapChainImageInfoWSI) * m_images.size();
+    size_t size = sizeof(VkSwapChainImageInfoWSI) * m_images.size() * 2;
     std::vector<VkSwapChainImageInfoWSI> persistent_images;
     persistent_images.resize(m_images.size());
     err = m_fpGetSwapChainInfoWSI(m_swap_chain,
