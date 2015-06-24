@@ -30,6 +30,7 @@
 #include "mem.h"
 #include "state.h"
 #include "cmd_priv.h"
+#include "fb.h"
 
 static VkResult cmd_meta_create_buf_view(struct intel_cmd *cmd,
                                            VkBuffer buf,
@@ -997,8 +998,30 @@ ICD_EXPORT void VKAPI vkCmdClearColorAttachment(
     const VkRect3D                         *pRects)
 {
     struct intel_cmd *cmd = intel_cmd(cmdBuffer);
-    assert(!"CmdClearColorAttachment not implemented");
-    cmd_fail(cmd, VK_ERROR_UNKNOWN);
+    struct intel_fb const *fb = cmd->bind.fb;
+
+    /* Convert each rect3d to clear into a subresource clear.
+     * TODO: this currently only supports full layer clears --
+     * cmd_meta_clear_color_image does not provide a means to
+     * specify the xy bounds.
+     */
+    for (uint32_t i = 0; i < rectCount; i++) {
+           const struct intel_rt_view *rt = fb->rt[colorAttachment];
+
+           VkImageSubresourceRange range = {
+               VK_IMAGE_ASPECT_COLOR,
+               rt->mipLevel,
+               1,
+               pRects[i].offset.z,
+               pRects[i].extent.depth
+           };
+
+           cmd_meta_clear_color_image(cmdBuffer, (VkImage) rt->img,
+                                      imageLayout,
+                                      pColor,
+                                      1,
+                                      &range);
+    }
 }
 
 ICD_EXPORT void VKAPI vkCmdClearDepthStencilAttachment(
@@ -1011,8 +1034,40 @@ ICD_EXPORT void VKAPI vkCmdClearDepthStencilAttachment(
     const VkRect3D                         *pRects)
 {
     struct intel_cmd *cmd = intel_cmd(cmdBuffer);
-    assert(!"CmdClearDepthStencilAttachment not implemented");
-    cmd_fail(cmd, VK_ERROR_UNKNOWN);
+    struct intel_fb const *fb = cmd->bind.fb;
+
+    /* Convert each rect3d to clear into a subresource clear.
+     * TODO: this currently only supports full layer clears --
+     * cmd_meta_clear_depth_stencil_image does not provide a means to
+     * specify the xy bounds.
+     */
+    for (uint32_t i = 0; i < rectCount; i++) {
+           const struct intel_ds_view *ds = fb->ds;
+
+           VkImageSubresourceRange range = {
+               VK_IMAGE_ASPECT_DEPTH,
+               0, /* ds->mipLevel, */
+               1,
+               pRects[i].offset.z,
+               pRects[i].extent.depth
+           };
+
+           if (imageAspectMask & VK_IMAGE_ASPECT_DEPTH_BIT) {
+               cmd_meta_clear_depth_stencil_image(cmdBuffer, (VkImage) ds->img,
+                                                  imageLayout,
+                                                  depth, stencil,
+                                                  1,
+                                                  &range);
+           }
+           if (imageAspectMask & VK_IMAGE_ASPECT_STENCIL_BIT) {
+               range.aspect = VK_IMAGE_ASPECT_STENCIL;
+               cmd_meta_clear_depth_stencil_image(cmdBuffer, (VkImage) ds->img,
+                                                  imageLayout,
+                                                  depth, stencil,
+                                                  1,
+                                                  &range);
+           }
+    }
 }
 
 ICD_EXPORT void VKAPI vkCmdResolveImage(
