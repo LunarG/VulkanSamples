@@ -1422,7 +1422,9 @@ void loader_activate_instance_layer_extensions(struct loader_instance *inst)
                                                   (VkInstance) inst);
 }
 
-static void loader_enable_device_layers(struct loader_device *dev)
+static void loader_enable_device_layers(
+        struct loader_device *dev,
+        struct loader_extension_list *ext_list)
 {
     if (dev == NULL)
         return;
@@ -1435,7 +1437,7 @@ static void loader_enable_device_layers(struct loader_device *dev)
                 &dev->enabled_device_extensions,
                 dev->app_extension_count,
                 dev->app_extension_props,
-                &loader.global_extensions);
+                ext_list);
 }
 
 static uint32_t loader_activate_device_layers(
@@ -1868,7 +1870,7 @@ VkResult loader_CreateDevice(
          * Put together the complete list of extensions to enable
          * This includes extensions requested via environment variables.
          */
-        loader_enable_device_layers(dev);
+        loader_enable_device_layers(dev, &icd->device_extension_cache[gpu_index]);
 
         /*
          * Load the libraries needed by the extensions on the
