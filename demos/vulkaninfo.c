@@ -376,6 +376,7 @@ static void app_dev_init(struct app_dev *dev, struct app_gpu *gpu)
     // Extensions to enable
     VkExtensionProperties *enable_extension_list;
     static char *known_extensions[] = {
+        "VK_WSI_LunarG",
         "Validation",
     };
 
