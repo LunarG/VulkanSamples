@@ -789,7 +789,6 @@ VkTextureObj::VkTextureObj(VkDeviceObj *device, uint32_t *colors)
     view.subresourceRange.mipLevels = 1;
     view.subresourceRange.baseArraySlice = 0;
     view.subresourceRange.arraySize = 1;
-    view.minLod = 0.0f;
 
     /* create image */
     init(16, 16, tex_format, VK_IMAGE_USAGE_SAMPLED_BIT, VK_IMAGE_TILING_OPTIMAL);

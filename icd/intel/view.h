@@ -58,7 +58,6 @@ struct intel_img_view {
 
     struct intel_img *img;
 
-    float min_lod;
     VkChannelMapping shader_swizzles;
 
     /* SURFACE_STATE */

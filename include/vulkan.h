@@ -33,7 +33,7 @@
 #include "vk_platform.h"
 
 // Vulkan API version supported by this file
-#define VK_API_VERSION VK_MAKE_VERSION(0, 108, 0)
+#define VK_API_VERSION VK_MAKE_VERSION(0, 109, 0)
 
 #ifdef __cplusplus
 extern "C"
@@ -1491,7 +1491,6 @@ typedef struct VkImageViewCreateInfo_
     VkFormat                                    format;
     VkChannelMapping                            channels;
     VkImageSubresourceRange                     subresourceRange;
-    float                                       minLod;
 } VkImageViewCreateInfo;
 
 typedef struct VkColorAttachmentViewCreateInfo_

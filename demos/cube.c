@@ -1061,7 +1061,6 @@ static void demo_prepare_textures(struct demo *demo)
                           VK_CHANNEL_SWIZZLE_B,
                           VK_CHANNEL_SWIZZLE_A, },
             .subresourceRange = { VK_IMAGE_ASPECT_COLOR, 0, 1, 0, 1 },
-            .minLod = 0.0f,
         };
 
         /* create sampler */

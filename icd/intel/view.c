@@ -1174,7 +1174,6 @@ VkResult intel_img_view_create(struct intel_dev *dev,
     view->obj.destroy = img_view_destroy;
 
     view->img = img;
-    view->min_lod = info->minLod;
 
     if (intel_gpu_gen(dev->gpu) >= INTEL_GEN(7.5)) {
         state_swizzles = info->channels;

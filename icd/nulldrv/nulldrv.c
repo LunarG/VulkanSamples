@@ -395,7 +395,6 @@ static VkResult nulldrv_img_view_create(struct nulldrv_dev *dev,
         return VK_ERROR_OUT_OF_HOST_MEMORY;
 
     view->img = img;
-    view->min_lod = info->minLod;
 
     view->cmd_len = 8;
 
