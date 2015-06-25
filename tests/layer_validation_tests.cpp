@@ -1422,7 +1422,7 @@ TEST_F(VkLayerTest, DSTypeMismatch)
         .compareOp    = VK_COMPARE_OP_NEVER,
         .minLod       = 1.0,
         .maxLod       = 1.0,
-        .borderColor  = VK_BORDER_COLOR_OPAQUE_WHITE,
+        .borderColor  = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE,
     };
     VkSampler sampler;
     err = vkCreateSampler(m_device->device(), &sampler_ci, &sampler);
@@ -1509,7 +1509,7 @@ TEST_F(VkLayerTest, DSUpdateOutOfBounds)
         .compareOp    = VK_COMPARE_OP_NEVER,
         .minLod       = 1.0,
         .maxLod       = 1.0,
-        .borderColor  = VK_BORDER_COLOR_OPAQUE_WHITE,
+        .borderColor  = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE,
     };
     VkSampler sampler;
     err = vkCreateSampler(m_device->device(), &sampler_ci, &sampler);
@@ -1597,7 +1597,7 @@ TEST_F(VkLayerTest, InvalidDSUpdateIndex)
         .compareOp    = VK_COMPARE_OP_NEVER,
         .minLod       = 1.0,
         .maxLod       = 1.0,
-        .borderColor  = VK_BORDER_COLOR_OPAQUE_WHITE,
+        .borderColor  = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE,
     };
     VkSampler sampler;
     err = vkCreateSampler(m_device->device(), &sampler_ci, &sampler);
@@ -1685,7 +1685,7 @@ TEST_F(VkLayerTest, InvalidDSUpdateStruct)
         .compareOp    = VK_COMPARE_OP_NEVER,
         .minLod       = 1.0,
         .maxLod       = 1.0,
-        .borderColor  = VK_BORDER_COLOR_OPAQUE_WHITE,
+        .borderColor  = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE,
     };
     VkSampler sampler;
     err = vkCreateSampler(m_device->device(), &sampler_ci, &sampler);

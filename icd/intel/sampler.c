@@ -89,20 +89,23 @@ static int translate_compare_func(VkCompareOp func)
 static void translate_border_color(VkBorderColor type, float rgba[4])
 {
     switch (type) {
-    case VK_BORDER_COLOR_OPAQUE_WHITE:
+    case VK_BORDER_COLOR_INT_OPAQUE_WHITE:
+    case VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE:
         rgba[0] = 1.0;
         rgba[1] = 1.0;
         rgba[2] = 1.0;
         rgba[3] = 1.0;
         break;
-    case VK_BORDER_COLOR_TRANSPARENT_BLACK:
+    case VK_BORDER_COLOR_INT_TRANSPARENT_BLACK:
+    case VK_BORDER_COLOR_FLOAT_TRANSPARENT_BLACK:
     default:
         rgba[0] = 0.0;
         rgba[1] = 0.0;
         rgba[2] = 0.0;
         rgba[3] = 0.0;
         break;
-    case VK_BORDER_COLOR_OPAQUE_BLACK:
+    case VK_BORDER_COLOR_INT_OPAQUE_BLACK:
+    case VK_BORDER_COLOR_FLOAT_OPAQUE_BLACK:
         rgba[0] = 0.0;
         rgba[1] = 0.0;
         rgba[2] = 0.0;

@@ -827,7 +827,7 @@ VkSamplerObj::VkSamplerObj(VkDeviceObj *device)
     samplerCreateInfo.compareOp = VK_COMPARE_OP_NEVER;
     samplerCreateInfo.minLod = 0.0;
     samplerCreateInfo.maxLod = 0.0;
-    samplerCreateInfo.borderColor = VK_BORDER_COLOR_OPAQUE_WHITE;
+    samplerCreateInfo.borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE;
 
     init(*m_device, samplerCreateInfo);
 }

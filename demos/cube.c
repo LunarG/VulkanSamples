@@ -1047,7 +1047,7 @@ static void demo_prepare_textures(struct demo *demo)
             .compareOp = VK_COMPARE_OP_NEVER,
             .minLod = 0.0f,
             .maxLod = 0.0f,
-            .borderColor = VK_BORDER_COLOR_OPAQUE_WHITE,
+            .borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE,
         };
 
         VkImageViewCreateInfo view = {

@@ -297,11 +297,14 @@ typedef enum VkTimestampType_
 
 typedef enum VkBorderColor_
 {
-    VK_BORDER_COLOR_OPAQUE_WHITE                            = 0x00000000,
-    VK_BORDER_COLOR_TRANSPARENT_BLACK                       = 0x00000001,
-    VK_BORDER_COLOR_OPAQUE_BLACK                            = 0x00000002,
+    VK_BORDER_COLOR_FLOAT_TRANSPARENT_BLACK                 = 0x00000000,
+    VK_BORDER_COLOR_INT_TRANSPARENT_BLACK                   = 0x00000001,
+    VK_BORDER_COLOR_FLOAT_OPAQUE_BLACK                      = 0x00000002,
+    VK_BORDER_COLOR_INT_OPAQUE_BLACK                        = 0x00000003,
+    VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE                      = 0x00000004,
+    VK_BORDER_COLOR_INT_OPAQUE_WHITE                        = 0x00000005,
 
-    VK_ENUM_RANGE(BORDER_COLOR, OPAQUE_WHITE, OPAQUE_BLACK)
+    VK_ENUM_RANGE(BORDER_COLOR, FLOAT_TRANSPARENT_BLACK, INT_OPAQUE_WHITE)
 } VkBorderColor;
 
 typedef enum VkPipelineBindPoint_
