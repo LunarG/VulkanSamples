@@ -139,6 +139,8 @@ static inline void* globalGetProcAddr(const char *name)
         return (void*) vkCreateColorAttachmentView;
     if (!strcmp(name, "CreateDepthStencilView"))
         return (void*) vkCreateDepthStencilView;
+    if (!strcmp(name, "CreateShaderModule"))
+        return (void*) vkCreateShaderModule;
     if (!strcmp(name, "CreateShader"))
         return (void*) vkCreateShader;
     if (!strcmp(name, "CreateGraphicsPipeline"))

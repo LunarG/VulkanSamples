@@ -1204,41 +1204,52 @@ static VkShader demo_prepare_shader(struct demo *demo,
                                       const void *code,
                                       size_t size)
 {
-    VkShaderCreateInfo createInfo;
+    VkShaderModuleCreateInfo moduleCreateInfo;
+    VkShaderCreateInfo shaderCreateInfo;
+    VkShaderModule shaderModule;
     VkShader shader;
     VkResult err;
 
 
-    createInfo.sType = VK_STRUCTURE_TYPE_SHADER_CREATE_INFO;
-    createInfo.pNext = NULL;
+    moduleCreateInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+    moduleCreateInfo.pNext = NULL;
+
+    shaderCreateInfo.sType = VK_STRUCTURE_TYPE_SHADER_CREATE_INFO;
+    shaderCreateInfo.pNext = NULL;
 
     if (!demo->use_glsl) {
-        createInfo.codeSize = size;
-        createInfo.pCode = code;
-        createInfo.flags = 0;
-
-        err = vkCreateShader(demo->device, &createInfo, &shader);
+        moduleCreateInfo.codeSize = size;
+        moduleCreateInfo.pCode = code;
+        moduleCreateInfo.flags = 0;
+        err = vkCreateShaderModule(demo->device, &moduleCreateInfo, &shaderModule);
         if (err) {
-            free((void *) createInfo.pCode);
+            free((void *) moduleCreateInfo.pCode);
         }
+
+        shaderCreateInfo.flags = 0;
+        shaderCreateInfo.module = shaderModule;
+        err = vkCreateShader(demo->device, &shaderCreateInfo, &shader);
     } else {
         // Create fake SPV structure to feed GLSL
         // to the driver "under the covers"
-        createInfo.codeSize = 3 * sizeof(uint32_t) + size + 1;
-        createInfo.pCode = malloc(createInfo.codeSize);
-        createInfo.flags = 0;
+        moduleCreateInfo.codeSize = 3 * sizeof(uint32_t) + size + 1;
+        moduleCreateInfo.pCode = malloc(moduleCreateInfo.codeSize);
+        moduleCreateInfo.flags = 0;
 
         /* try version 0 first: VkShaderStage followed by GLSL */
-        ((uint32_t *) createInfo.pCode)[0] = ICD_SPV_MAGIC;
-        ((uint32_t *) createInfo.pCode)[1] = 0;
-        ((uint32_t *) createInfo.pCode)[2] = stage;
-        memcpy(((uint32_t *) createInfo.pCode + 3), code, size + 1);
+        ((uint32_t *) moduleCreateInfo.pCode)[0] = ICD_SPV_MAGIC;
+        ((uint32_t *) moduleCreateInfo.pCode)[1] = 0;
+        ((uint32_t *) moduleCreateInfo.pCode)[2] = stage;
+        memcpy(((uint32_t *) moduleCreateInfo.pCode + 3), code, size + 1);
 
-        err = vkCreateShader(demo->device, &createInfo, &shader);
+        err = vkCreateShaderModule(demo->device, &moduleCreateInfo, &shaderModule);
         if (err) {
-            free((void *) createInfo.pCode);
-            return (VkShader) VK_NULL_HANDLE;
+            free((void *) moduleCreateInfo.pCode);
         }
+
+        shaderCreateInfo.flags = 0;
+        shaderCreateInfo.module = shaderModule;
+        err = vkCreateShader(demo->device, &shaderCreateInfo, &shader);
     }
     return shader;
 }

@@ -74,6 +74,7 @@ static inline void loader_init_device_dispatch_table(VkLayerDispatchTable *table
     table->CreateImageView = (PFN_vkCreateImageView) gpa(dev, "vkCreateImageView");
     table->CreateColorAttachmentView = (PFN_vkCreateColorAttachmentView) gpa(dev, "vkCreateColorAttachmentView");
     table->CreateDepthStencilView = (PFN_vkCreateDepthStencilView) gpa(dev, "vkCreateDepthStencilView");
+    table->CreateShaderModule = (PFN_vkCreateShaderModule) gpa(dev, "vkCreateShaderModule");
     table->CreateShader = (PFN_vkCreateShader) gpa(dev, "vkCreateShader");
     table->CreateGraphicsPipeline = (PFN_vkCreateGraphicsPipeline) gpa(dev, "vkCreateGraphicsPipeline");
     table->CreateGraphicsPipelineDerivative = (PFN_vkCreateGraphicsPipelineDerivative) gpa(dev, "vkCreateGraphicsPipelineDerivative");
@@ -226,6 +227,8 @@ static inline void *loader_lookup_device_dispatch_table(
         return (void *) table->CreateColorAttachmentView;
     if (!strcmp(name, "CreateDepthStencilView"))
         return (void *) table->CreateDepthStencilView;
+    if (!strcmp(name, "CreateShaderModule"))
+        return (void *) table->CreateShaderModule;
     if (!strcmp(name, "CreateShader"))
         return (void *) table->CreateShader;
     if (!strcmp(name, "CreateGraphicsPipeline"))

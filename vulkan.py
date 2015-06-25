@@ -478,6 +478,11 @@ core = Extension(
              Param("const VkDepthStencilViewCreateInfo*", "pCreateInfo"),
              Param("VkDepthStencilView*", "pView")]),
 
+        Proto("VkResult", "CreateShaderModule",
+            [Param("VkDevice", "device"),
+             Param("const VkShaderModuleCreateInfo*", "pCreateInfo"),
+             Param("VkShaderModule*", "pShaderModule")]),
+
         Proto("VkResult", "CreateShader",
             [Param("VkDevice", "device"),
              Param("const VkShaderCreateInfo*", "pCreateInfo"),

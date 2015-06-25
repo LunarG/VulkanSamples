@@ -615,6 +615,15 @@ LOADER_EXPORT VkResult VKAPI vkCreateDepthStencilView(VkDevice device, const VkD
     return disp->CreateDepthStencilView(device, pCreateInfo, pView);
 }
 
+LOADER_EXPORT VkResult VKAPI vkCreateShaderModule(VkDevice device, const VkShaderModuleCreateInfo* pCreateInfo, VkShaderModule* pShader)
+{
+    const VkLayerDispatchTable *disp;
+
+    disp = loader_get_dispatch(device);
+
+    return disp->CreateShaderModule(device, pCreateInfo, pShader);
+}
+
 LOADER_EXPORT VkResult VKAPI vkCreateShader(VkDevice device, const VkShaderCreateInfo* pCreateInfo, VkShader* pShader)
 {
     const VkLayerDispatchTable *disp;

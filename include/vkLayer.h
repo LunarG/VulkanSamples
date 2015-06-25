@@ -17,7 +17,6 @@
 #  define VK_LAYER_EXPORT
 #endif
 
-
 typedef void * (*PFN_vkGPA)(VkObject obj, const char * pName);
 typedef struct VkBaseLayerObject_
 {
@@ -66,6 +65,7 @@ typedef struct VkLayerDispatchTable_
     PFN_vkCreateImageView CreateImageView;
     PFN_vkCreateColorAttachmentView CreateColorAttachmentView;
     PFN_vkCreateDepthStencilView CreateDepthStencilView;
+    PFN_vkCreateShaderModule CreateShaderModule;
     PFN_vkCreateShader CreateShader;
     PFN_vkCreateGraphicsPipeline CreateGraphicsPipeline;
     PFN_vkCreateGraphicsPipelineDerivative CreateGraphicsPipelineDerivative;
