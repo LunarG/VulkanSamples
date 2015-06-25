@@ -159,15 +159,15 @@ protected:
          */
 	// Use Threading layer first to protect others from ThreadCmdBufferCollision test
         instance_extension_names.push_back("Threading");
+        instance_extension_names.push_back("ObjectTracker");
         instance_extension_names.push_back("MemTracker");
         instance_extension_names.push_back("DrawState");
-        instance_extension_names.push_back("ObjectTracker");
         instance_extension_names.push_back("ShaderChecker");
 
         device_extension_names.push_back("Threading");
+        device_extension_names.push_back("ObjectTracker");
         device_extension_names.push_back("MemTracker");
         device_extension_names.push_back("DrawState");
-        device_extension_names.push_back("ObjectTracker");
         device_extension_names.push_back("ShaderChecker");
 
         this->app_info.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
@@ -305,6 +305,26 @@ void VkLayerTest::GenericDrawPreparation(VkCommandBufferObj *cmdBuffer, VkPipeli
     if ((failMask & BsoFailDepthStencil) != BsoFailDepthStencil) {
         cmdBuffer->BindStateObject(VK_STATE_BIND_POINT_DEPTH_STENCIL, m_stateDepthStencil);
     }
+    // Make sure depthWriteEnable is set so that DepthStencil fail test will work correctly
+    VkStencilOpState stencil = {
+        .stencilFailOp = VK_STENCIL_OP_KEEP,
+        .stencilPassOp = VK_STENCIL_OP_KEEP,
+        .stencilDepthFailOp = VK_STENCIL_OP_KEEP,
+        .stencilCompareOp = VK_COMPARE_OP_NEVER
+    };
+    VkPipelineDsStateCreateInfo ds_ci = {
+        .sType = VK_STRUCTURE_TYPE_PIPELINE_DS_STATE_CREATE_INFO,
+        .pNext = NULL,
+        .format = VK_FORMAT_D24_UNORM_S8_UINT,
+        .depthTestEnable = VK_FALSE,
+        .depthWriteEnable = VK_TRUE,
+        .depthCompareOp = VK_COMPARE_OP_NEVER,
+        .depthBoundsEnable = VK_FALSE,
+        .stencilTestEnable = VK_FALSE,
+        .front = stencil,
+        .back = stencil
+    };
+    pipelineobj.SetDepthStencil(&ds_ci);
     descriptorSet.CreateVKDescriptorSet(cmdBuffer);
     pipelineobj.CreateVKPipeline(descriptorSet);
     cmdBuffer->BindPipeline(pipelineobj);
@@ -795,7 +815,7 @@ TEST_F(VkLayerTest, ResetUnsignaledFence)
 
 }
 #endif
-#if OBJECT_TRACKER_TESTS
+#if OBJ_TRACKER_TESTS
 
 TEST_F(VkLayerTest, RasterStateNotBound)
 {
@@ -807,7 +827,7 @@ TEST_F(VkLayerTest, RasterStateNotBound)
     VKTriangleTest(bindStateVertShaderText, bindStateFragShaderText, BsoFailRaster);
 
     msgFlags = m_errorMonitor->GetState(&msgString);
-    ASSERT_EQ(msgFlags, VK_DBG_MSG_ERROR) << "Did not receive an error from Not Binding a Raster State Object";
+    ASSERT_TRUE(msgFlags & VK_DBG_REPORT_ERROR_BIT) << "Did not receive an error from Not Binding a Raster State Object";
     if (!strstr(msgString.c_str(),"Raster object not bound to this command buffer")) {
         FAIL() << "Error received was not 'Raster object not bound to this command buffer'";
     }
@@ -822,7 +842,7 @@ TEST_F(VkLayerTest, ViewportStateNotBound)
     VKTriangleTest(bindStateVertShaderText, bindStateFragShaderText, BsoFailViewport);
 
     msgFlags = m_errorMonitor->GetState(&msgString);
-    ASSERT_EQ(msgFlags, VK_DBG_MSG_ERROR) << "Did not receive an error from Not Binding a Viewport State Object";
+    ASSERT_TRUE(msgFlags & VK_DBG_REPORT_ERROR_BIT) << "Did not receive an error from Not Binding a Viewport State Object";
     if (!strstr(msgString.c_str(),"Viewport object not bound to this command buffer")) {
         FAIL() << "Error received was not 'Viewport object not bound to this command buffer'";
     }
@@ -838,7 +858,7 @@ TEST_F(VkLayerTest, ColorBlendStateNotBound)
     VKTriangleTest(bindStateVertShaderText, bindStateFragShaderText, BsoFailColorBlend);
 
     msgFlags = m_errorMonitor->GetState(&msgString);
-    ASSERT_EQ(msgFlags, VK_DBG_MSG_ERROR) << "Did not receive an error from Not Binding a ColorBlend State Object";
+    ASSERT_TRUE(msgFlags & VK_DBG_REPORT_ERROR_BIT) << "Did not receive an error from Not Binding a ColorBlend State Object";
     if (!strstr(msgString.c_str(),"Color-blend object not bound to this command buffer")) {
         FAIL() << "Error received was not 'Color-blend object not bound to this command buffer'";
     }
@@ -854,7 +874,7 @@ TEST_F(VkLayerTest, DepthStencilStateNotBound)
     VKTriangleTest(bindStateVertShaderText, bindStateFragShaderText, BsoFailDepthStencil);
 
     msgFlags = m_errorMonitor->GetState(&msgString);
-    ASSERT_EQ(msgFlags, VK_DBG_MSG_ERROR) << "Did not receive an error from Not Binding a DepthStencil State Object";
+    ASSERT_TRUE(msgFlags & VK_DBG_REPORT_ERROR_BIT) << "Did not receive an error from Not Binding a DepthStencil State Object";
     if (!strstr(msgString.c_str(),"Depth-stencil object not bound to this command buffer")) {
         FAIL() << "Error received was not 'Depth-stencil object not bound to this command buffer'";
     }
@@ -891,7 +911,7 @@ TEST_F(VkLayerTest, InvalidDescriptorPool)
     vkResetDescriptorPool(device(), badPool);
 
     msgFlags = m_errorMonitor->GetState(&msgString);
-    ASSERT_EQ(msgFlags, VK_DBG_MSG_ERROR) << "Did not receive an error from Resetting an invalid DescriptorPool Object";
+    ASSERT_TRUE(msgFlags & VK_DBG_REPORT_ERROR_BIT) << "Did not receive an error from Resetting an invalid DescriptorPool Object";
     if (!strstr(msgString.c_str(),"Unable to find pool node for pool 0xbaad6001 specified in vkResetDescriptorPool() call")) {
         FAIL() << "Error received was note 'Unable to find pool node for pool 0xbaad6001 specified in vkResetDescriptorPool() call'";
     }*/
