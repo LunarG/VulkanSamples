@@ -821,7 +821,8 @@ TEST_F(VkLayerTest, RasterStateNotBound)
 {
     VkFlags msgFlags;
     std::string msgString;
-
+    ASSERT_NO_FATAL_FAILURE(InitState());
+    m_errorMonitor->ClearState();
     TEST_DESCRIPTION("Simple Draw Call that validates failure when a raster state object is not bound beforehand");
 
     VKTriangleTest(bindStateVertShaderText, bindStateFragShaderText, BsoFailRaster);
@@ -837,6 +838,8 @@ TEST_F(VkLayerTest, ViewportStateNotBound)
 {
     VkFlags msgFlags;
     std::string msgString;
+    ASSERT_NO_FATAL_FAILURE(InitState());
+    m_errorMonitor->ClearState();
     TEST_DESCRIPTION("Simple Draw Call that validates failure when a viewport state object is not bound beforehand");
 
     VKTriangleTest(bindStateVertShaderText, bindStateFragShaderText, BsoFailViewport);
@@ -852,7 +855,8 @@ TEST_F(VkLayerTest, ColorBlendStateNotBound)
 {
     VkFlags msgFlags;
     std::string msgString;
-
+    ASSERT_NO_FATAL_FAILURE(InitState());
+    m_errorMonitor->ClearState();
     TEST_DESCRIPTION("Simple Draw Call that validates failure when a color-blend state object is not bound beforehand");
 
     VKTriangleTest(bindStateVertShaderText, bindStateFragShaderText, BsoFailColorBlend);
@@ -868,7 +872,8 @@ TEST_F(VkLayerTest, DepthStencilStateNotBound)
 {
     VkFlags msgFlags;
     std::string msgString;
-
+    ASSERT_NO_FATAL_FAILURE(InitState());
+    m_errorMonitor->ClearState();
     TEST_DESCRIPTION("Simple Draw Call that validates failure when a depth-stencil state object is not bound beforehand");
 
     VKTriangleTest(bindStateVertShaderText, bindStateFragShaderText, BsoFailDepthStencil);
@@ -953,7 +958,7 @@ TEST_F(VkLayerTest, InvalidPipeline)
 //    }
 }
 
-TEST_F(VkLayerTest, NoEndCmdBuffer)
+TEST_F(VkLayerTest, DescriptorSetNotUpdated)
 {
     // Create and update CmdBuffer then call QueueSubmit w/o calling End on CmdBuffer
     VkFlags         msgFlags;
@@ -1062,18 +1067,143 @@ TEST_F(VkLayerTest, NoEndCmdBuffer)
     VkPipeline pipeline;
     err = vkCreateGraphicsPipeline(m_device->device(), &gp_ci, &pipeline);
     ASSERT_VK_SUCCESS(err);
-
+    ASSERT_NO_FATAL_FAILURE(InitState());
+    ASSERT_NO_FATAL_FAILURE(InitViewport());
+    ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
+    cmdBuffer.AddRenderTarget(m_renderTargets[0]);
+    BeginCommandBuffer(cmdBuffer);
     vkCmdBindPipeline(cmdBuffer.GetBufferHandle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
     vkCmdBindDescriptorSets(cmdBuffer.GetBufferHandle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout, 0, 1, &descriptorSet, 0, NULL);
 
-    VkCmdBuffer localCmdBuffer = cmdBuffer.GetBufferHandle();
-    m_device->get_device_queue();
-    vkQueueSubmit(m_device->m_queue, 1, &localCmdBuffer, NULL);
+    msgFlags = m_errorMonitor->GetState(&msgString);
+    ASSERT_TRUE(msgFlags & VK_DBG_REPORT_WARN_BIT) << "Did not warn after binding a DescriptorSet that was never updated.";
+    if (!strstr(msgString.c_str()," bound but it was never updated. ")) {
+        FAIL() << "Error received was not 'DS <blah> bound but it was never updated. You may want to either update it or not bind it.'";
+    }
+}
+
+TEST_F(VkLayerTest, NoBeginCmdBuffer)
+{
+    VkFlags         msgFlags;
+    std::string     msgString;
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+    m_errorMonitor->ClearState();
+    VkCommandBufferObj cmdBuffer(m_device);
+    // Call EndCommandBuffer() w/o calling BeginCommandBuffer()
+    vkEndCommandBuffer(cmdBuffer.GetBufferHandle());
+    msgFlags = m_errorMonitor->GetState(&msgString);
+    ASSERT_TRUE(msgFlags & VK_DBG_REPORT_ERROR_BIT) << "Did not receive error after ending a CmdBuffer w/o calling BeginCommandBuffer()";
+    if (!strstr(msgString.c_str(),"You must call vkBeginCommandBuffer() before this call to ")) {
+        FAIL() << "Error received was not 'You must call vkBeginCommandBuffer() before this call to vkEndCommandBuffer()'";
+    }
+}
+
+TEST_F(VkLayerTest, InvalidPipelineCreateState)
+{
+    // Attempt to Create Gfx Pipeline w/o a VS
+    VkFlags         msgFlags;
+    std::string     msgString;
+    VkResult        err;
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+    m_errorMonitor->ClearState();
+    VkCommandBufferObj cmdBuffer(m_device);
+    const VkDescriptorTypeCount ds_type_count = {
+        .type       = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+        .count      = 1,
+    };
+    const VkDescriptorPoolCreateInfo ds_pool_ci = {
+        .sType      = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
+        .pNext      = NULL,
+        .count      = 1,
+        .pTypeCount = &ds_type_count,
+    };
+    VkDescriptorPool ds_pool;
+    err = vkCreateDescriptorPool(m_device->device(), VK_DESCRIPTOR_POOL_USAGE_ONE_SHOT, 1, &ds_pool_ci, &ds_pool);
+    ASSERT_VK_SUCCESS(err);
+
+    const VkDescriptorSetLayoutBinding dsl_binding = {
+        .descriptorType     = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+        .arraySize          = 1,
+        .stageFlags         = VK_SHADER_STAGE_ALL,
+        .pImmutableSamplers = NULL,
+    };
+
+    const VkDescriptorSetLayoutCreateInfo ds_layout_ci = {
+        .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
+        .pNext = NULL,
+        .count = 1,
+        .pBinding = &dsl_binding,
+    };
+    VkDescriptorSetLayout ds_layout;
+    err = vkCreateDescriptorSetLayout(m_device->device(), &ds_layout_ci, &ds_layout);
+    ASSERT_VK_SUCCESS(err);
+
+    VkDescriptorSet descriptorSet;
+    uint32_t ds_count = 0;
+    err = vkAllocDescriptorSets(m_device->device(), ds_pool, VK_DESCRIPTOR_SET_USAGE_ONE_SHOT, 1, &ds_layout, &descriptorSet, &ds_count);
+    ASSERT_VK_SUCCESS(err);
+
+    const VkPipelineLayoutCreateInfo pipeline_layout_ci = {
+        .sType              = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
+        .pNext               = NULL,
+        .descriptorSetCount = 1,
+        .pSetLayouts        = &ds_layout,
+    };
+
+    VkPipelineLayout pipeline_layout;
+    err = vkCreatePipelineLayout(m_device->device(), &pipeline_layout_ci, &pipeline_layout);
+    ASSERT_VK_SUCCESS(err);
+
+    const VkGraphicsPipelineCreateInfo gp_ci = {
+        .sType             = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
+        .pNext             = NULL,
+        .stageCount        = 0,
+        .pStages           = NULL, // Creating Gfx Pipeline w/o VS is a violation
+        .pVertexInputState = NULL,
+        .pIaState          = NULL,
+        .pTessState        = NULL,
+        .pVpState          = NULL,
+        .pRsState          = NULL,
+        .pMsState          = NULL,
+        .pDsState          = NULL,
+        .pCbState          = NULL,
+        .flags             = VK_PIPELINE_CREATE_DISABLE_OPTIMIZATION_BIT,
+        .layout            = pipeline_layout,
+    };
+
+    VkPipeline pipeline;
+    err = vkCreateGraphicsPipeline(m_device->device(), &gp_ci, &pipeline);
 
     msgFlags = m_errorMonitor->GetState(&msgString);
-    ASSERT_TRUE(msgFlags & VK_DBG_REPORT_ERROR_BIT) << "Did not receive error after vkEndDescriptorPoolUpdate() w/o first calling vkBeginDescriptorPoolUpdate().";
-    if (!strstr(msgString.c_str(),"You must call vkEndCommandBuffer() on CB ")) {
-        FAIL() << "Error received was not 'You must call vkEndCommandBuffer() on CB <0xblah> before this call to vkQueueSubmit()!'";
+    ASSERT_TRUE(msgFlags & VK_DBG_REPORT_ERROR_BIT) << "Did not receive error after creating Gfx Pipeline w/o VS.";
+    if (!strstr(msgString.c_str(),"Invalid Pipeline CreateInfo State: Vtx Shader required")) {
+        FAIL() << "Error received was not 'Invalid Pipeline CreateInfo State: Vtx Shader required'";
+    }
+}
+
+TEST_F(VkLayerTest, RenderPassWithinRenderPass)
+{
+    // Bind a BeginRenderPass within an active RenderPass
+    VkFlags         msgFlags;
+    std::string     msgString;
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+    ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
+    m_errorMonitor->ClearState();
+    VkCommandBufferObj cmdBuffer(m_device);
+
+    cmdBuffer.AddRenderTarget(m_renderTargets[0]);
+    BeginCommandBuffer(cmdBuffer);
+    // Don't care about RenderPass handle b/c error should be flagged before that
+    vkCmdBeginRenderPass(cmdBuffer.GetBufferHandle(), NULL);
+    //vkCmdBindPipeline(cmdBuffer.GetBufferHandle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
+
+    msgFlags = m_errorMonitor->GetState(&msgString);
+    ASSERT_TRUE(msgFlags & VK_DBG_REPORT_ERROR_BIT) << "Did not receive error after binding RenderPass w/i an active RenderPass.";
+    if (!strstr(msgString.c_str(),"Cannot call vkCmdBeginRenderPass() during an active RenderPass ")) {
+        FAIL() << "Error received was not 'Cannot call vkCmdBeginRenderPass() during an active RenderPass...'";
     }
 }
 
