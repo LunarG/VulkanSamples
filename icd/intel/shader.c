@@ -30,6 +30,58 @@
 #include "shader.h"
 #include "compiler/shader/compiler_interface.h"
 
+static void shader_module_destroy(struct intel_obj *obj)
+{
+    struct intel_shader_module *sm = intel_shader_module_from_obj(obj);
+
+    free(sm->code);
+    sm->code = 0;
+    intel_base_destroy(&sm->obj.base);
+}
+
+static VkResult shader_module_create(struct intel_dev *dev,
+                                     const VkShaderModuleCreateInfo *info,
+                                     struct intel_shader_module **sm_ret)
+{
+    const struct icd_spv_header *spv =
+        (const struct icd_spv_header *) info->pCode;
+    struct intel_shader_module *sm;
+
+    sm = (struct intel_shader_module *) intel_base_create(&dev->base.handle,
+            sizeof(*sm), dev->base.dbg, VK_OBJECT_TYPE_SHADER_MODULE, info, 0);
+    if (!sm)
+        return VK_ERROR_OUT_OF_HOST_MEMORY;
+
+    if (info->codeSize < sizeof(*spv))
+        return VK_ERROR_INVALID_MEMORY_SIZE;
+    if (spv->magic != ICD_SPV_MAGIC)
+        return VK_ERROR_BAD_SHADER_CODE;
+
+    sm->code_size = info->codeSize;
+    sm->code = malloc(info->codeSize);
+    if (!sm->code) {
+        shader_module_destroy(&sm->obj);
+        return VK_ERROR_OUT_OF_HOST_MEMORY;
+    }
+
+    memcpy(sm->code, info->pCode, info->codeSize);
+    sm->obj.destroy = shader_module_destroy;
+
+    *sm_ret = sm;
+
+    return VK_SUCCESS;
+}
+
+ICD_EXPORT VkResult VKAPI vkCreateShaderModule(
+    VkDevice                                    device,
+    const VkShaderModuleCreateInfo*             pCreateInfo,
+    VkShaderModule*                             pShaderModule)
+{
+    struct intel_dev *dev = intel_dev(device);
+
+    return shader_module_create(dev, pCreateInfo, (struct intel_shader_module **) pShaderModule);
+}
+
 static void shader_destroy(struct intel_obj *obj)
 {
     struct intel_shader *sh = intel_shader_from_obj(obj);
@@ -43,8 +95,6 @@ static VkResult shader_create(struct intel_dev *dev,
                                 const VkShaderCreateInfo *info,
                                 struct intel_shader **sh_ret)
 {
-    const struct icd_spv_header *spv =
-        (const struct icd_spv_header *) info->pCode;
     struct intel_shader *sh;
 
     sh = (struct intel_shader *) intel_base_create(&dev->base.handle,
@@ -52,12 +102,9 @@ static VkResult shader_create(struct intel_dev *dev,
     if (!sh)
         return VK_ERROR_OUT_OF_HOST_MEMORY;
 
-    if (info->codeSize < sizeof(*spv))
-        return VK_ERROR_INVALID_MEMORY_SIZE;
-    if (spv->magic != ICD_SPV_MAGIC)
-        return VK_ERROR_BAD_SHADER_CODE;
+    struct intel_shader_module *sm = intel_shader_module(info->module);
 
-    sh->ir = shader_create_ir(dev->gpu, info->pCode, info->codeSize);
+    sh->ir = shader_create_ir(dev->gpu, sm->code, sm->code_size);
     if (!sh->ir) {
         shader_destroy(&sh->obj);
         return VK_ERROR_BAD_SHADER_CODE;

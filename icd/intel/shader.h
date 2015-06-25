@@ -50,4 +50,22 @@ static inline struct intel_shader *intel_shader_from_obj(struct intel_obj *obj)
     return (struct intel_shader *) obj;
 }
 
+struct intel_shader_module {
+    struct intel_obj obj;
+
+    /* content is just a copy of the SPIRV image */
+    uint32_t code_size;
+    void *code;
+};
+
+static inline struct intel_shader_module *intel_shader_module(VkShaderModule shaderModule)
+{
+    return (struct intel_shader_module *) shaderModule;
+}
+
+static inline struct intel_shader_module *intel_shader_module_from_obj(struct intel_obj *obj)
+{
+    return (struct intel_shader_module *)obj;
+}
+
 #endif /* SHADER_H */
