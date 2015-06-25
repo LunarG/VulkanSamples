@@ -1183,6 +1183,29 @@ TEST_F(VkLayerTest, InvalidPipelineCreateState)
     }
 }
 
+TEST_F(VkLayerTest, NullRenderPass)
+{
+    // Bind a NULL RenderPass
+    VkFlags         msgFlags;
+    std::string     msgString;
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+    ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
+    m_errorMonitor->ClearState();
+    VkCommandBufferObj cmdBuffer(m_device);
+
+    cmdBuffer.AddRenderTarget(m_renderTargets[0]);
+    BeginCommandBuffer(cmdBuffer);
+    // Don't care about RenderPass handle b/c error should be flagged before that
+    vkCmdBeginRenderPass(cmdBuffer.GetBufferHandle(), NULL);
+
+    msgFlags = m_errorMonitor->GetState(&msgString);
+    ASSERT_TRUE(msgFlags & VK_DBG_REPORT_ERROR_BIT) << "Did not receive error after binding NULL RenderPass.";
+    if (!strstr(msgString.c_str(),"You cannot use a NULL RenderPass object in vkCmdBeginRenderPass()")) {
+        FAIL() << "Error received was not 'You cannot use a NULL RenderPass object in vkCmdBeginRenderPass()'";
+    }
+}
+
 TEST_F(VkLayerTest, RenderPassWithinRenderPass)
 {
     // Bind a BeginRenderPass within an active RenderPass
@@ -1196,9 +1219,12 @@ TEST_F(VkLayerTest, RenderPassWithinRenderPass)
 
     cmdBuffer.AddRenderTarget(m_renderTargets[0]);
     BeginCommandBuffer(cmdBuffer);
-    // Don't care about RenderPass handle b/c error should be flagged before that
-    vkCmdBeginRenderPass(cmdBuffer.GetBufferHandle(), NULL);
-    //vkCmdBindPipeline(cmdBuffer.GetBufferHandle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
+    // Just create a dummy Renderpass that's non-NULL so we can get to the proper error
+    const VkRenderPassBegin rp_begin = {
+        .renderPass = (VkRenderPass) 0xc001d00d,
+        .framebuffer = NULL
+    };
+    vkCmdBeginRenderPass(cmdBuffer.GetBufferHandle(), &rp_begin);
 
     msgFlags = m_errorMonitor->GetState(&msgString);
     ASSERT_TRUE(msgFlags & VK_DBG_REPORT_ERROR_BIT) << "Did not receive error after binding RenderPass w/i an active RenderPass.";
