@@ -209,7 +209,6 @@ static char *loader_get_registry_and_env(const char *env_var,
 }
 #endif // WIN32
 
-
 static void loader_log(VkFlags msg_type, int32_t msg_code,
                        const char *format, ...)
 {
@@ -264,7 +263,8 @@ static struct loader_extension_property *get_extension_property_from_vkext(
         const struct loader_extension_list *ext_list)
 {
     for (uint32_t i = 0; i < ext_list->count; i++) {
-        if (compare_vk_extension_properties(&ext_list->list[i].info, vk_ext_prop))
+        const VkExtensionProperties *item = &ext_list->list[i].info;
+        if (compare_vk_extension_properties(item, vk_ext_prop))
             return &ext_list->list[i];
     }
     return NULL;
@@ -308,6 +308,8 @@ static void loader_get_global_extensions(
             }
             ext_props.origin = origin;
             ext_props.lib_name = lib_name;
+            loader_log(VK_DBG_REPORT_DEBUG_BIT, 0,
+                       "Global Extension: %s: %s", ext_props.info.name, ext_props.info.description);
             ext_props.get_proc_addr = (get_proc_addr == NULL) ? ext_get_proc_addr : get_proc_addr;
             loader_add_to_ext_list(ext_list, 1, &ext_props);
         }
@@ -359,6 +361,8 @@ static void loader_get_physical_device_layer_extensions(
                         ext_get_proc_addr = get_device_proc_addr;
                     ext_props.get_proc_addr = ext_get_proc_addr;
                     ext_props.lib_name = loader.scanned_layers[layer_index].lib_name;
+                    loader_log(VK_DBG_REPORT_DEBUG_BIT, 0,
+                               "PhysicalDevice Extension: %s: %s", ext_props.info.name, ext_props.info.description);
                     loader_add_to_ext_list(ext_list, 1, &ext_props);
                 }
             }
@@ -399,14 +403,15 @@ static void loader_add_vk_ext_to_ext_list(
     struct loader_extension_property *ext_prop;
 
     for (uint32_t i = 0; i < prop_list_count; i++) {
+        const VkExtensionProperties *search_target = &props[i];
         // look for duplicates
-        if (has_vk_extension_property(&props[i], ext_list)) {
+        if (has_vk_extension_property(search_target, ext_list)) {
             continue;
         }
 
-        ext_prop = get_extension_property_from_vkext(&props[i], search_list);
+        ext_prop = get_extension_property_from_vkext(search_target, search_list);
         if (!ext_prop) {
-            loader_log(VK_DBG_REPORT_WARN_BIT, 0, "Unable to find extension %s", props[i].name);
+            loader_log(VK_DBG_REPORT_WARN_BIT, 0, "Unable to find extension %s", search_target->name);
             continue;
         }
 
