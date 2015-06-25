@@ -32,18 +32,10 @@ typedef enum _OBJECT_TRACK_ERROR
     OBJTRACK_UNKNOWN_OBJECT,                    // Updating uses of object that's not in global object list
     OBJTRACK_INTERNAL_ERROR,                    // Bug with data tracking within the layer
     OBJTRACK_DESTROY_OBJECT_FAILED,             // Couldn't find object to be destroyed
-    OBJTRACK_MISSING_OBJECT,                    // Attempted look-up on object that isn't in global object list
     OBJTRACK_OBJECT_TYPE_MISMATCH,              // Object did not match corresponding Object Type
     OBJTRACK_OBJECT_LEAK,                       // OBJECT was not correctly freed/destroyed
     OBJTRACK_OBJCOUNT_MAX_EXCEEDED,             // Request for Object data in excess of max obj count
     OBJTRACK_INVALID_FENCE,                     // Requested status of unsubmitted fence object
-    OBJTRACK_VIEWPORT_NOT_BOUND,                // Draw submitted with no viewport state object bound
-    OBJTRACK_RASTER_NOT_BOUND,                  // Draw submitted with no raster state object bound
-    OBJTRACK_COLOR_BLEND_NOT_BOUND,             // Draw submitted with no color blend state object bound
-    OBJTRACK_DEPTH_STENCIL_NOT_BOUND,           // Draw submitted with no depth-stencil state object bound
-    OBJTRACK_GPU_MEM_MAPPED,                    // Mem object ref'd in cmd buff is still mapped
-    OBJTRACK_GETGPUINFO_NOT_CALLED,             // Gpu Information has not been requested before drawing
-    OBJTRACK_MEMREFCOUNT_MAX_EXCEEDED,          // Number of QueueSubmit memory references exceeds GPU maximum
     OBJTRACK_INVALID_OBJECT,                    // Object used that has never been created
 } OBJECT_TRACK_ERROR;
 
@@ -191,7 +183,7 @@ validate_object(
     const VkObject object)
 {
     if (objMap.find(object) == objMap.end()) {
-        log_msg(mdd(dispatchable_object), VK_DBG_REPORT_ERROR_BIT, (VkObjectType) 0, object, 0, OBJTRACK_OBJECT_TYPE_MISMATCH, "OBJTRACK",
+        log_msg(mdd(dispatchable_object), VK_DBG_REPORT_ERROR_BIT, (VkObjectType) 0, object, 0, OBJTRACK_INVALID_OBJECT, "OBJTRACK",
             "Invalid Object %p", object);
     }
 }
