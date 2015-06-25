@@ -389,6 +389,8 @@ static void app_dev_init(struct app_dev *dev, struct app_gpu *gpu)
         ERR_EXIT(VK_ERROR_OUT_OF_HOST_MEMORY);
     }
 
+    fflush(stdout);
+
     VkExtensionProperties extProp;
     gpu->device_extension_count = 0;
     bool32_t U_ASSERT_ONLY extFound = 0; // TODO : Need to enhance this if/when we enable multiple extensions
@@ -400,6 +402,8 @@ static void app_dev_init(struct app_dev *dev, struct app_gpu *gpu)
                 extFound = 1;
                 memcpy(&enable_extension_list[gpu->device_extension_count], &extProp, sizeof(extProp));
                 gpu->device_extension_count++;
+                printf("%s: %s\n", extProp.name, extProp.description);
+                fflush(stdout);
             }
         }
     }
