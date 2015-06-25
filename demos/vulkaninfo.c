@@ -415,7 +415,7 @@ static void app_dev_init(struct app_dev *dev, struct app_gpu *gpu)
     info.queueRecordCount = gpu->queue_count;
     info.pRequestedQueues = gpu->queue_reqs;
 
-    info.extensionCount = extCount;
+    info.extensionCount = gpu->device_extension_count;
     info.pEnabledExtensions = enable_extension_list;
     dev->gpu = gpu;
     err = vkCreateDevice(gpu->obj, &info, &dev->obj);
