@@ -167,7 +167,6 @@ public:
     VkCmdBuffer GetBufferHandle();
     VkResult BeginCommandBuffer();
     VkResult BeginCommandBuffer(VkCmdBufferBeginInfo *pInfo);
-    VkResult BeginCommandBuffer(VkRenderPass renderpass_obj, VkFramebuffer framebuffer_obj);
     VkResult EndCommandBuffer();
     void PipelineBarrier(VkPipelineStageFlags src_stages, VkPipelineStageFlags dest_stages, bool32_t byRegion, uint32_t memBarrierCount, const void** ppMemBarriers);
     void AddRenderTarget(VkImageObj *renderTarget);
@@ -183,7 +182,7 @@ public:
     void BindIndexBuffer(VkIndexBufferObj *indexBuffer, uint32_t offset);
     void BindStateObject(VkStateBindPoint stateBindPoint, VkDynamicStateObject stateObject);
     void BeginRenderPass(VkRenderPass renderpass, VkFramebuffer framebuffer);
-    void EndRenderPass(VkRenderPass renderpass);
+    void EndRenderPass();
     void Draw(uint32_t firstVertex, uint32_t vertexCount, uint32_t firstInstance, uint32_t instanceCount);
     void DrawIndexed(uint32_t firstIndex, uint32_t indexCount, int32_t vertexOffset, uint32_t firstInstance, uint32_t instanceCount);
     void QueueCommandBuffer();

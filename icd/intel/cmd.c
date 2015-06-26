@@ -312,33 +312,13 @@ void intel_cmd_destroy(struct intel_cmd *cmd)
 
 VkResult intel_cmd_begin(struct intel_cmd *cmd, const VkCmdBufferBeginInfo *info)
 {
-    const VkCmdBufferGraphicsBeginInfo *ginfo;
     VkResult ret;
     uint32_t i;
-    VkFlags flags = 0;
 
     cmd_reset(cmd);
 
-    while (info != NULL) {
-        switch (info->sType) {
-        case VK_STRUCTURE_TYPE_CMD_BUFFER_BEGIN_INFO:
-            flags = info->flags;
-            break;
-        case VK_STRUCTURE_TYPE_CMD_BUFFER_GRAPHICS_BEGIN_INFO:
-            ginfo = (const VkCmdBufferGraphicsBeginInfo *) info;
-            cmd_begin_render_pass(cmd, intel_render_pass(ginfo->renderPassContinue.renderPass),
-                                  intel_fb(ginfo->renderPassContinue.framebuffer));
-            break;
-        default:
-            return VK_ERROR_INVALID_VALUE;
-            break;
-        }
-
-        info = (const VkCmdBufferBeginInfo*) info->pNext;
-    }
-
-    if (cmd->flags != flags) {
-        cmd->flags = flags;
+    if (cmd->flags != info->flags) {
+        cmd->flags = info->flags;
         cmd->writers[INTEL_CMD_WRITER_BATCH].size = 0;
     }
 
@@ -346,7 +326,7 @@ VkResult intel_cmd_begin(struct intel_cmd *cmd, const VkCmdBufferBeginInfo *info
         const uint32_t size = cmd->dev->gpu->max_batch_buffer_size / 2;
         uint32_t divider = 1;
 
-        if (flags & VK_CMD_BUFFER_OPTIMIZE_SMALL_BATCH_BIT)
+        if (info->flags & VK_CMD_BUFFER_OPTIMIZE_SMALL_BATCH_BIT)
             divider *= 4;
 
         cmd->writers[INTEL_CMD_WRITER_BATCH].size = size / divider;

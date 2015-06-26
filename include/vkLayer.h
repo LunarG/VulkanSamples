@@ -122,6 +122,7 @@ typedef struct VkLayerDispatchTable_
     PFN_vkCreateRenderPass CreateRenderPass;
     PFN_vkCmdBeginRenderPass CmdBeginRenderPass;
     PFN_vkCmdEndRenderPass CmdEndRenderPass;
+    PFN_vkCmdExecuteCommands CmdExecuteCommands;
     PFN_vkCreateSwapChainWSI CreateSwapChainWSI;
     PFN_vkDestroySwapChainWSI DestroySwapChainWSI;
     PFN_vkGetSwapChainInfoWSI GetSwapChainInfoWSI;

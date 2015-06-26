@@ -144,6 +144,7 @@ static void writePPM( const char *filename, VkImage image1)
         VK_STRUCTURE_TYPE_CMD_BUFFER_CREATE_INFO,
         NULL,
         deviceMap[device]->queueNodeIndex,
+        VK_CMD_BUFFER_LEVEL_PRIMARY,
         0
     };
     const VkCmdBufferBeginInfo cmdBufferBeginInfo = {

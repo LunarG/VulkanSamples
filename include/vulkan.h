@@ -33,7 +33,7 @@
 #include "vk_platform.h"
 
 // Vulkan API version supported by this file
-#define VK_API_VERSION VK_MAKE_VERSION(0, 120, 0)
+#define VK_API_VERSION VK_MAKE_VERSION(0, 121, 0)
 
 #ifdef __cplusplus
 extern "C"
@@ -277,6 +277,14 @@ typedef enum VkTimestampType_
     VK_ENUM_RANGE(TIMESTAMP_TYPE, TOP, BOTTOM)
 } VkTimestampType;
 
+typedef enum VkRenderPassContents_
+{
+    VK_RENDER_PASS_CONTENTS_INLINE                          = 0x00000000,
+    VK_RENDER_PASS_CONTENTS_SECONDARY_CMD_BUFFERS           = 0x00000001,
+
+    VK_ENUM_RANGE(RENDER_PASS_CONTENTS, INLINE, SECONDARY_CMD_BUFFERS)
+} VkRenderPassContents;
+
 typedef enum VkBorderColor_
 {
     VK_BORDER_COLOR_FLOAT_TRANSPARENT_BLACK                 = 0x00000000,
@@ -323,6 +331,14 @@ typedef enum VkPrimitiveTopology_
 
     VK_ENUM_RANGE(PRIMITIVE_TOPOLOGY, POINT_LIST, PATCH)
 } VkPrimitiveTopology;
+
+typedef enum VkCmdBufferLevel_
+{
+    VK_CMD_BUFFER_LEVEL_PRIMARY                             = 0x00000000,
+    VK_CMD_BUFFER_LEVEL_SECONDARY                           = 0x00000001,
+
+    VK_ENUM_RANGE(CMD_BUFFER_LEVEL, PRIMARY, SECONDARY)
+} VkCmdBufferLevel;
 
 typedef enum VkIndexType_
 {
@@ -760,7 +776,7 @@ typedef enum VkStructureType_
     VK_STRUCTURE_TYPE_BUFFER_VIEW_CREATE_INFO                 = 32,
     VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO                 = 33,
     VK_STRUCTURE_TYPE_CMD_BUFFER_BEGIN_INFO                   = 34,
-    VK_STRUCTURE_TYPE_CMD_BUFFER_GRAPHICS_BEGIN_INFO          = 35,
+
     VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO                 = 36,
     VK_STRUCTURE_TYPE_MEMORY_BARRIER                          = 37,
     VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER                   = 38,
@@ -1095,6 +1111,7 @@ typedef enum VkCmdBufferOptimizeFlagBits_
     VK_CMD_BUFFER_OPTIMIZE_PIPELINE_SWITCH_BIT              = VK_BIT(1),
     VK_CMD_BUFFER_OPTIMIZE_ONE_TIME_SUBMIT_BIT              = VK_BIT(2),
     VK_CMD_BUFFER_OPTIMIZE_DESCRIPTOR_SET_SWITCH_BIT        = VK_BIT(3),
+    VK_CMD_BUFFER_OPTIMIZE_NO_SIMULTANEOUS_USE_BIT = 0x00000010,
 } VkCmdBufferOptimizeFlagBits;
 
 // Pipeline statistics flags
@@ -1903,6 +1920,7 @@ typedef struct VkCmdBufferCreateInfo_
     VkStructureType                             sType;      // Must be VK_STRUCTURE_TYPE_CMD_BUFFER_CREATE_INFO
     const void*                                 pNext;      // Pointer to next structure
     uint32_t                                    queueNodeIndex;
+    VkCmdBufferLevel                            level;
     VkCmdBufferCreateFlags                      flags;      // Command buffer creation flags
 } VkCmdBufferCreateInfo;
 
@@ -1912,21 +1930,17 @@ typedef struct VkCmdBufferBeginInfo_
     const void*                                 pNext;      // Pointer to next structure
 
     VkCmdBufferOptimizeFlags                    flags;      // Command buffer optimization flags
+
+    VkRenderPass                                renderPass;
+    VkFramebuffer                               framebuffer;
 } VkCmdBufferBeginInfo;
 
 typedef struct VkRenderPassBegin_
 {
     VkRenderPass                                renderPass;
     VkFramebuffer                               framebuffer;
+    VkRenderPassContents                        contents;
 } VkRenderPassBegin;
-
-typedef struct VkCmdBufferGraphicsBeginInfo_
-{
-    VkStructureType                             sType;      // Must be VK_STRUCTURE_TYPE_CMD_BUFFER_GRAPHICS_BEGIN_INFO
-    const void*                                 pNext;      // Pointer to next structure
-
-    VkRenderPassBegin                           renderPassContinue;  // Only needed when a render pass is split across two command buffers
-} VkCmdBufferGraphicsBeginInfo;
 
 // Union allowing specification of floating point or raw color data. Actual value selected is based on image being cleared.
 typedef union VkClearColorValue_
@@ -2147,7 +2161,8 @@ typedef void     (VKAPI *PFN_vkCmdCopyQueryPoolResults)(VkCmdBuffer cmdBuffer, V
 typedef VkResult (VKAPI *PFN_vkCreateFramebuffer)(VkDevice device, const VkFramebufferCreateInfo* pCreateInfo, VkFramebuffer* pFramebuffer);
 typedef VkResult (VKAPI *PFN_vkCreateRenderPass)(VkDevice device, const VkRenderPassCreateInfo* pCreateInfo, VkRenderPass* pRenderPass);
 typedef void     (VKAPI *PFN_vkCmdBeginRenderPass)(VkCmdBuffer cmdBuffer, const VkRenderPassBegin* pRenderPassBegin);
-typedef void     (VKAPI *PFN_vkCmdEndRenderPass)(VkCmdBuffer cmdBuffer, VkRenderPass renderPass);
+typedef void     (VKAPI *PFN_vkCmdEndRenderPass)(VkCmdBuffer cmdBuffer);
+typedef void     (VKAPI *PFN_vkCmdExecuteCommands)(VkCmdBuffer cmdBuffer, uint32_t cmdBuffersCount, const VkCmdBuffer* pCmdBuffers);
 
 #ifdef VK_PROTOTYPES
 
@@ -2809,8 +2824,12 @@ void VKAPI vkCmdBeginRenderPass(
     const VkRenderPassBegin*                    pRenderPassBegin);
 
 void VKAPI vkCmdEndRenderPass(
+    VkCmdBuffer                                 cmdBuffer);
+
+void VKAPI vkCmdExecuteCommands(
     VkCmdBuffer                                 cmdBuffer,
-    VkRenderPass                                renderPass);
+    uint32_t                                    cmdBuffersCount,
+    const VkCmdBuffer*                          pCmdBuffers);
 
 #endif // VK_PROTOTYPES
 

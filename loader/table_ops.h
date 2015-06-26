@@ -131,6 +131,7 @@ static inline void loader_init_device_dispatch_table(VkLayerDispatchTable *table
     table->CreateRenderPass = (PFN_vkCreateRenderPass) gpa(dev, "vkCreateRenderPass");
     table->CmdBeginRenderPass = (PFN_vkCmdBeginRenderPass) gpa(dev, "vkCmdBeginRenderPass");
     table->CmdEndRenderPass = (PFN_vkCmdEndRenderPass) gpa(dev, "vkCmdEndRenderPass");
+    table->CmdExecuteCommands = (PFN_vkCmdExecuteCommands) gpa(dev, "vkCmdExecuteCommands");
 //TODO move into it's own table
 //TODO also consider dropping trampoline code for these device level extensions entirely
 // then don't need loader to know about these at all but then not queryable via GIPA

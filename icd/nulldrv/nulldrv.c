@@ -2013,8 +2013,15 @@ ICD_EXPORT void VKAPI vkCmdBeginRenderPass(
 }
 
 ICD_EXPORT void VKAPI vkCmdEndRenderPass(
-    VkCmdBuffer                              cmdBuffer,
-    VkRenderPass                             renderPass)
+    VkCmdBuffer                              cmdBuffer)
+{
+    NULLDRV_LOG_FUNC;
+}
+
+ICD_EXPORT void VKAPI vkCmdExecuteCommands(
+    VkCmdBuffer                                 cmdBuffer,
+    uint32_t                                    cmdBuffersCount,
+    const VkCmdBuffer*                          pCmdBuffers)
 {
     NULLDRV_LOG_FUNC;
 }

@@ -9476,8 +9476,7 @@ void PreCmdEndRenderPass(
 }
 
 void PostCmdEndRenderPass(
-    VkCmdBuffer cmdBuffer,
-    VkRenderPass renderPass)
+    VkCmdBuffer cmdBuffer)
 {
     if(cmdBuffer == nullptr)
     {
@@ -9485,23 +9484,48 @@ void PostCmdEndRenderPass(
         "vkCmdEndRenderPass parameter, VkCmdBuffer cmdBuffer, is null pointer");
         return;
     }
+}
 
-    if(renderPass == nullptr)
+void PreCmdExecuteCommands(
+    VkCmdBuffer cmdBuffer)
+{
+    if(cmdBuffer == nullptr)
     {
         log_msg(mdd(cmdBuffer), VK_DBG_REPORT_WARN_BIT, (VkObjectType)0, NULL, 0, 1, "PARAMCHECK",
-        "vkCmdEndRenderPass parameter, VkRenderPass renderPass, is null pointer");
+        "vkCmdExecuteCommands parameter, VkCmdBuffer cmdBuffer, is null pointer");
+        return;
+    }
+}
+
+void PostCmdExecuteCommands(
+    VkCmdBuffer cmdBuffer)
+{
+    if(cmdBuffer == nullptr)
+    {
+        log_msg(mdd(cmdBuffer), VK_DBG_REPORT_WARN_BIT, (VkObjectType)0, NULL, 0, 1, "PARAMCHECK",
+        "vkCmdExecuteCommands parameter, VkCmdBuffer cmdBuffer, is null pointer");
         return;
     }
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdEndRenderPass(
-    VkCmdBuffer cmdBuffer,
-    VkRenderPass renderPass)
+    VkCmdBuffer cmdBuffer)
 {
     PreCmdEndRenderPass(cmdBuffer);
-    get_dispatch_table(pc_device_table_map, cmdBuffer)->CmdEndRenderPass(cmdBuffer, renderPass);
+    get_dispatch_table(pc_device_table_map, cmdBuffer)->CmdEndRenderPass(cmdBuffer);
 
-    PostCmdEndRenderPass(cmdBuffer, renderPass);
+    PostCmdEndRenderPass(cmdBuffer);
+}
+
+VK_LAYER_EXPORT void VKAPI vkCmdExecuteCommands(
+    VkCmdBuffer                                 cmdBuffer,
+    uint32_t                                    cmdBuffersCount,
+    const VkCmdBuffer*                          pCmdBuffers)
+{
+    PreCmdExecuteCommands(cmdBuffer);
+    get_dispatch_table(pc_device_table_map, cmdBuffer)->CmdExecuteCommands(cmdBuffer, cmdBuffersCount, pCmdBuffers);
+
+    PostCmdExecuteCommands(cmdBuffer);
 }
 
 VK_LAYER_EXPORT void* VKAPI vkGetDeviceProcAddr(VkDevice device, const char* funcName)
@@ -9694,6 +9718,8 @@ VK_LAYER_EXPORT void* VKAPI vkGetDeviceProcAddr(VkDevice device, const char* fun
         return (void*) vkCmdBeginRenderPass;
     if (!strcmp(funcName, "vkCmdEndRenderPass"))
         return (void*) vkCmdEndRenderPass;
+    if (!strcmp(funcName, "vkCmdExecuteCommands"))
+        return (void*) vkCmdExecuteCommands;
     if (!strcmp(funcName, "vkGetGlobalExtensionCount"))
         return (void*) vkGetGlobalExtensionCount;
     if (!strcmp(funcName, "vkGetGlobalExtensionProperties"))

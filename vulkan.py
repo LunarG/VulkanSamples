@@ -831,8 +831,12 @@ core = Extension(
              Param("const VkRenderPassBegin*", "pRenderPassBegin")]),
 
         Proto("void", "CmdEndRenderPass",
+            [Param("VkCmdBuffer", "cmdBuffer")]),
+
+        Proto("void", "CmdExecuteCommands",
             [Param("VkCmdBuffer", "cmdBuffer"),
-             Param("VkRenderPass", "renderPass")]),
+             Param("uint32_t", "cmdBuffersCount"),
+             Param("const VkCmdBuffer*", "pCmdBuffers")]),
     ],
 )
 

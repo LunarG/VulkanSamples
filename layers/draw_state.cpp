@@ -2036,16 +2036,6 @@ VK_LAYER_EXPORT VkResult VKAPI vkBeginCommandBuffer(VkCmdBuffer cmdBuffer, const
             if (CB_NEW != pCB->state)
                 resetCB(cmdBuffer);
             pCB->state = CB_UPDATE_ACTIVE;
-            if (pBeginInfo->pNext) {
-                VkCmdBufferGraphicsBeginInfo* pCbGfxBI = (VkCmdBufferGraphicsBeginInfo*)pBeginInfo->pNext;
-                if (VK_STRUCTURE_TYPE_CMD_BUFFER_GRAPHICS_BEGIN_INFO == pCbGfxBI->sType) {
-                    if (pCbGfxBI->renderPassContinue.renderPass)
-                        pCB->activeRenderPass = pCbGfxBI->renderPassContinue.renderPass;
-                    else
-                        log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, (VkObjectType) 0, NULL, 0, DRAWSTATE_INVALID_RENDERPASS, "DS",
-                                "You cannot use a NULL RenderPass object in vkCmdBeginCommandBuffer()");
-                }
-            }
         } else {
             log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, cmdBuffer, 0, DRAWSTATE_INVALID_CMD_BUFFER, "DS",
                     "In vkBeginCommandBuffer() and unable to find CmdBuffer Node for CB %p!", (void*)cmdBuffer);
@@ -2725,23 +2715,33 @@ VK_LAYER_EXPORT void VKAPI vkCmdBeginRenderPass(VkCmdBuffer cmdBuffer, const VkR
     }
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdEndRenderPass(VkCmdBuffer cmdBuffer, VkRenderPass renderPass)
+VK_LAYER_EXPORT void VKAPI vkCmdEndRenderPass(VkCmdBuffer cmdBuffer)
 {
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
-        if (renderPass) {
-            if (!pCB->activeRenderPass) {
-                log_msg(mdd(pCB->cmdBuffer), VK_DBG_REPORT_ERROR_BIT, (VkObjectType) 0, NULL, 0, DRAWSTATE_NO_ACTIVE_RENDERPASS, "DS",
-                        "Incorrect call to vkCmdEndRenderPass() without an active RenderPass.");
-            } else {
-                updateCBTracking(cmdBuffer);
-                addCmd(pCB, CMD_ENDRENDERPASS);
-                pCB->activeRenderPass = 0;
-                get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdEndRenderPass(cmdBuffer, renderPass);
-            }
+        if (!pCB->activeRenderPass) {
+            log_msg(mdd(pCB->cmdBuffer), VK_DBG_REPORT_ERROR_BIT, (VkObjectType) 0, NULL, 0, DRAWSTATE_NO_ACTIVE_RENDERPASS, "DS",
+                    "Incorrect call to vkCmdEndRenderPass() without an active RenderPass.");
         } else {
-            log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, (VkObjectType) 0, NULL, 0, DRAWSTATE_INVALID_RENDERPASS, "DS",
-                    "You cannot use a NULL RenderPass object in vkCmdEndRenderPass()");
+            updateCBTracking(cmdBuffer);
+            addCmd(pCB, CMD_ENDRENDERPASS);
+            pCB->activeRenderPass = 0;
+            get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdEndRenderPass(cmdBuffer);
+        }
+    }
+}
+
+VK_LAYER_EXPORT void VKAPI vkCmdExecuteCommands(VkCmdBuffer cmdBuffer, uint32_t cmdBuffersCount, const VkCmdBuffer* pCmdBuffers)
+{
+    GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
+    if (pCB) {
+        if (!pCB->activeRenderPass) {
+            log_msg(mdd(pCB->cmdBuffer), VK_DBG_REPORT_ERROR_BIT, (VkObjectType) 0, NULL, 0, DRAWSTATE_NO_ACTIVE_RENDERPASS, "DS",
+                    "Incorrect call to vkCmdExecuteCommands() without an active RenderPass.");
+        } else {
+            updateCBTracking(cmdBuffer);
+            addCmd(pCB, CMD_EXECUTECOMMANDS);
+            get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdExecuteCommands(cmdBuffer, cmdBuffersCount, pCmdBuffers);
         }
     }
 }
@@ -2984,6 +2984,8 @@ VK_LAYER_EXPORT void* VKAPI vkGetDeviceProcAddr(VkDevice dev, const char* funcNa
         return (void*) vkCmdBeginRenderPass;
     if (!strcmp(funcName, "vkCmdEndRenderPass"))
         return (void*) vkCmdEndRenderPass;
+    if (!strcmp(funcName, "vkCmdExecuteCommands"))
+        return (void*) vkCmdExecuteCommands;
     if (!strcmp("drawStateDumpDotFile", funcName))
         return (void*) drawStateDumpDotFile;
     if (!strcmp("drawStateDumpCommandBufferDotFile", funcName))

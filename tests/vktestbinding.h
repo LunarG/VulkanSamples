@@ -598,7 +598,6 @@ public:
 
     // vkBeginCommandBuffer()
     void begin(const VkCmdBufferBeginInfo *info);
-    void begin(VkRenderPass renderpass_obj, VkFramebuffer framebuffer_obj);
     void begin();
 
     // vkEndCommandBuffer()

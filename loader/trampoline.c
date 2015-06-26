@@ -1125,11 +1125,20 @@ LOADER_EXPORT void VKAPI vkCmdBeginRenderPass(VkCmdBuffer cmdBuffer, const VkRen
     disp->CmdBeginRenderPass(cmdBuffer, pRenderPassBegin);
 }
 
-LOADER_EXPORT void VKAPI vkCmdEndRenderPass(VkCmdBuffer cmdBuffer, VkRenderPass renderPass)
+LOADER_EXPORT void VKAPI vkCmdEndRenderPass(VkCmdBuffer cmdBuffer)
 {
     const VkLayerDispatchTable *disp;
 
     disp = loader_get_dispatch(cmdBuffer);
 
-    disp->CmdEndRenderPass(cmdBuffer, renderPass);
+    disp->CmdEndRenderPass(cmdBuffer);
+}
+
+LOADER_EXPORT void VKAPI vkCmdExecuteCommands(VkCmdBuffer cmdBuffer, uint32_t cmdBuffersCount, const VkCmdBuffer* pCmdBuffers)
+{
+    const VkLayerDispatchTable *disp;
+
+    disp = loader_get_dispatch(cmdBuffer);
+
+    disp->CmdExecuteCommands(cmdBuffer, cmdBuffersCount, pCmdBuffers);
 }

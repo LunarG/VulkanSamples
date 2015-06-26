@@ -231,6 +231,7 @@ static void demo_set_image_layout(
             .sType = VK_STRUCTURE_TYPE_CMD_BUFFER_CREATE_INFO,
             .pNext = NULL,
             .queueNodeIndex = demo->graphics_queue_node_index,
+            .level = VK_CMD_BUFFER_LEVEL_PRIMARY,
             .flags = 0,
         };
 
@@ -314,6 +315,8 @@ static void demo_draw_build_cmd(struct demo *demo)
     VkRenderPassCreateInfo rp_info;
     VkRenderPassBegin rp_begin;
 
+    rp_begin.contents = VK_RENDER_PASS_CONTENTS_INLINE;
+
     memset(&rp_info, 0 , sizeof(rp_info));
     err = vkCreateFramebuffer(demo->device, &fb_info, &rp_begin.framebuffer);
     assert(!err);
@@ -372,7 +375,7 @@ static void demo_draw_build_cmd(struct demo *demo)
             clear_depth, 0, 1, &clear_range);
 
     vkCmdDraw(demo->draw_cmd, 0, 3, 0, 1);
-    vkCmdEndRenderPass(demo->draw_cmd, rp_begin.renderPass);
+    vkCmdEndRenderPass(demo->draw_cmd);
 
     err = vkEndCommandBuffer(demo->draw_cmd);
     assert(!err);
@@ -1205,6 +1208,7 @@ static void demo_prepare(struct demo *demo)
         .sType = VK_STRUCTURE_TYPE_CMD_BUFFER_CREATE_INFO,
         .pNext = NULL,
         .queueNodeIndex = demo->graphics_queue_node_index,
+        .level = VK_CMD_BUFFER_LEVEL_PRIMARY,
         .flags = 0,
     };
     VkResult U_ASSERT_ONLY err;

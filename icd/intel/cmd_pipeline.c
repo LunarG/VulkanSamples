@@ -3624,10 +3624,19 @@ ICD_EXPORT void VKAPI vkCmdBeginRenderPass(
 }
 
 ICD_EXPORT void VKAPI vkCmdEndRenderPass(
-    VkCmdBuffer                              cmdBuffer,
-    VkRenderPass                             renderPass)
+    VkCmdBuffer                              cmdBuffer)
 {
    struct intel_cmd *cmd = intel_cmd(cmdBuffer);
 
-   cmd_end_render_pass(cmd, (struct intel_render_pass *) renderPass);
+   cmd_end_render_pass(cmd);
+}
+
+ICD_EXPORT void VKAPI vkCmdExecuteCommands(
+    VkCmdBuffer                                 cmdBuffer,
+    uint32_t                                    cmdBuffersCount,
+    const VkCmdBuffer*                          pCmdBuffers)
+{
+   struct intel_cmd *cmd = intel_cmd(cmdBuffer);
+
+   cmd->result = VK_ERROR_UNKNOWN;
 }

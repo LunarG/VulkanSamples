@@ -1256,12 +1256,6 @@ VkResult VkCommandBufferObj::BeginCommandBuffer(VkCmdBufferBeginInfo *pInfo)
     return VK_SUCCESS;
 }
 
-VkResult VkCommandBufferObj::BeginCommandBuffer(VkRenderPass renderpass_obj, VkFramebuffer framebuffer_obj)
-{
-    begin(renderpass_obj, framebuffer_obj);
-    return VK_SUCCESS;
-}
-
 VkResult VkCommandBufferObj::BeginCommandBuffer()
 {
     begin();
@@ -1411,9 +1405,9 @@ void VkCommandBufferObj::BeginRenderPass(VkRenderPass renderpass, VkFramebuffer 
     vkCmdBeginRenderPass( obj(), &rp_begin);
 }
 
-void VkCommandBufferObj::EndRenderPass(VkRenderPass renderpass)
+void VkCommandBufferObj::EndRenderPass()
 {
-    vkCmdEndRenderPass( obj(), renderpass);
+    vkCmdEndRenderPass(obj());
 }
 
 void VkCommandBufferObj::BindStateObject(VkStateBindPoint stateBindPoint, VkDynamicStateObject stateObject)

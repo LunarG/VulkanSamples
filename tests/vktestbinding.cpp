@@ -880,23 +880,6 @@ void CmdBuffer::begin(const VkCmdBufferBeginInfo *info)
     EXPECT(vkBeginCommandBuffer(obj(), info) == VK_SUCCESS);
 }
 
-void CmdBuffer::begin(VkRenderPass renderpass_obj, VkFramebuffer framebuffer_obj)
-{
-    VkCmdBufferBeginInfo info = {};
-    VkCmdBufferGraphicsBeginInfo graphics_cmd_buf_info = {};
-    graphics_cmd_buf_info.sType = VK_STRUCTURE_TYPE_CMD_BUFFER_GRAPHICS_BEGIN_INFO;
-    graphics_cmd_buf_info.pNext = NULL;
-    graphics_cmd_buf_info.renderPassContinue.renderPass = renderpass_obj;
-    graphics_cmd_buf_info.renderPassContinue.framebuffer = framebuffer_obj;
-
-    info.flags = VK_CMD_BUFFER_OPTIMIZE_SMALL_BATCH_BIT |
-          VK_CMD_BUFFER_OPTIMIZE_ONE_TIME_SUBMIT_BIT;
-    info.sType = VK_STRUCTURE_TYPE_CMD_BUFFER_BEGIN_INFO;
-    info.pNext = &graphics_cmd_buf_info;
-
-    begin(&info);
-}
-
 void CmdBuffer::begin()
 {
     VkCmdBufferBeginInfo info = {};

@@ -211,7 +211,7 @@ VkResult VkLayerTest::EndCommandBuffer(VkCommandBufferObj &cmdBuffer)
     VkResult result;
 
     if (renderPass()) {
-        cmdBuffer.EndRenderPass(renderPass());
+        cmdBuffer.EndRenderPass();
     }
 
     result = cmdBuffer.EndCommandBuffer();
