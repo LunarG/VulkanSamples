@@ -1085,7 +1085,7 @@ static void pipeline_build_cb(struct intel_pipeline *pipeline,
             pipeline->dual_source_blend_enable = icd_pipeline_cb_att_needs_dual_source_blending(att);
         }
 
-        if (info->cb.logicOp != VK_LOGIC_OP_COPY) {
+        if (info->cb.logicOpEnable && info->cb.logicOp != VK_LOGIC_OP_COPY) {
             int logicop;
 
             switch (info->cb.logicOp) {
