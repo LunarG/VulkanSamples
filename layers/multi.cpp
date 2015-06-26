@@ -306,9 +306,8 @@ VK_LAYER_EXPORT VkResult VKAPI multi2DestroyInstance(VkInstance instance)
 VK_LAYER_EXPORT VkResult VKAPI multi2CreateDevice(VkPhysicalDevice gpu, const VkDeviceCreateInfo* pCreateInfo,
                                                       VkDevice* pDevice)
 {
-    VkLayerInstanceDispatchTable **ppDisp = (VkLayerInstanceDispatchTable **) gpu;
     printf("At start of multi2 vkCreateDevice()\n");
-    VkResult result = instance_dispatch_table2(gpu)->CreateDevice(gpu, pCreateInfo, pDevice);
+    VkResult result = device_dispatch_table2(*pDevice)->CreateDevice(gpu, pCreateInfo, pDevice);
     printf("Completed multi2 layer vkCreateDevice()\n");
     return result;
 }
@@ -346,6 +345,8 @@ VK_LAYER_EXPORT void * VKAPI multi2GetDeviceProcAddr(VkDevice device, const char
         getLayer2Table(devw);
         return (void *) multi2GetDeviceProcAddr;
     }
+    if (!strcmp("vkCreateDevice", pName))
+        return (void *) multi2CreateDevice;
     if (!strcmp("vkDestroyDevice", pName))
         return (void *) multi2DestroyDevice;
     if (!strcmp("vkCreateCommandBuffer", pName))
@@ -376,8 +377,6 @@ VK_LAYER_EXPORT void * VKAPI multi2GetInstanceProcAddr(VkInstance inst, const ch
         return (void *) multi2EnumeratePhysicalDevices;
     if (!strcmp("vkDestroyInstance", pName))
         return (void *) multi2DestroyInstance;
-    if (!strcmp("vkCreateDevice", pName))
-        return (void *) multi2CreateDevice;
     else if (!strcmp("GetGlobalExtensionProperties", pName))
         return (void*) vkGetGlobalExtensionProperties;
     else if (!strcmp("GetGlobalExtensionCount", pName))

@@ -889,8 +889,8 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateDevice(
     const VkDeviceCreateInfo *pCreateInfo,
     VkDevice                 *pDevice)
 {
-    VkLayerInstanceDispatchTable *pInstanceTable = get_dispatch_table(mem_tracker_instance_table_map, gpu);
-    VkResult result = pInstanceTable->CreateDevice(gpu, pCreateInfo, pDevice);
+    VkLayerDispatchTable *pDeviceTable = get_dispatch_table(mem_tracker_device_table_map, *pDevice);
+    VkResult result = pDeviceTable->CreateDevice(gpu, pCreateInfo, pDevice);
     if (result == VK_SUCCESS) {
         layer_data *my_instance_data = get_my_data_ptr(get_dispatch_key(gpu), layer_data_map);
         layer_data *my_device_data = get_my_data_ptr(get_dispatch_key(*pDevice), layer_data_map);
@@ -2146,6 +2146,8 @@ VK_LAYER_EXPORT void* VKAPI vkGetDeviceProcAddr(
         initDeviceTable(mem_tracker_device_table_map, (const VkBaseLayerObject *) dev);
         return (void *) vkGetDeviceProcAddr;
     }
+    if (!strcmp(funcName, "vkCreateDevice"))
+        return (void*) vkCreateDevice;
     if (!strcmp(funcName, "vkDestroyDevice"))
         return (void*) vkDestroyDevice;
     if (!strcmp(funcName, "vkQueueSubmit"))
@@ -2304,8 +2306,6 @@ VK_LAYER_EXPORT void* VKAPI vkGetInstanceProcAddr(
         return (void *) vkDestroyInstance;
     if (!strcmp(funcName, "vkCreateInstance"))
         return (void*) vkCreateInstance;
-    if (!strcmp(funcName, "vkCreateDevice"))
-        return (void*) vkCreateDevice;
     if (!strcmp(funcName, "vkGetPhysicalDeviceExtensionCount"))
         return (void*) vkGetGlobalExtensionCount;
     if (!strcmp(funcName, "vkGetPhysicalDeviceExtensionProperties"))

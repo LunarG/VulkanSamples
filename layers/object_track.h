@@ -528,14 +528,15 @@ explicit_CreateDevice(
     VkDevice                 *pDevice)
 {
     loader_platform_thread_lock_mutex(&objLock);
-    VkLayerInstanceDispatchTable *pInstanceTable = get_dispatch_table(ObjectTracker_instance_table_map, gpu);
-    VkResult result = pInstanceTable->CreateDevice(gpu, pCreateInfo, pDevice);
+//    VkLayerInstanceDispatchTable *pInstanceTable = get_dispatch_table(ObjectTracker_instance_table_map, gpu);
+    VkLayerDispatchTable *pDeviceTable = get_dispatch_table(ObjectTracker_device_table_map, *pDevice);
+    VkResult result = pDeviceTable->CreateDevice(gpu, pCreateInfo, pDevice);
     if (result == VK_SUCCESS) {
         layer_data *my_instance_data = get_my_data_ptr(get_dispatch_key(gpu), layer_data_map);
         //// VkLayerDispatchTable *pTable = get_dispatch_table(ObjectTracker_device_table_map, *pDevice);
         layer_data *my_device_data = get_my_data_ptr(get_dispatch_key(*pDevice), layer_data_map);
         my_device_data->report_data = layer_debug_report_create_device(my_instance_data->report_data, *pDevice);
-        create_obj(gpu, *pDevice, VK_OBJECT_TYPE_DEVICE);
+        create_obj(*pDevice, *pDevice, VK_OBJECT_TYPE_DEVICE);
     }
 
     loader_platform_thread_unlock_mutex(&objLock);

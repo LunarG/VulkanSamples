@@ -169,7 +169,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkDestroyInstance(VkInstance instance)
 
 VK_LAYER_EXPORT VkResult VKAPI vkCreateDevice(VkPhysicalDevice physicalDevice, const VkDeviceCreateInfo* pCreateInfo, VkDevice* pDevice)
 {
-    VkLayerInstanceDispatchTable *pTable = get_dispatch_table(image_instance_table_map, physicalDevice);
+    VkLayerDispatchTable *pTable = get_dispatch_table(image_device_table_map, *pDevice);
     VkResult result = pTable->CreateDevice(physicalDevice, pCreateInfo, pDevice);
     if(result == VK_SUCCESS)
     {
@@ -384,6 +384,8 @@ VK_LAYER_EXPORT void* VKAPI vkGetDeviceProcAddr(VkDevice device, const char* fun
         return (void*) vkGetDeviceProcAddr;
     }
 
+    if (!strcmp(funcName, "vkCreateDevice"))
+        return (void*) vkCreateDevice;
     if (!strcmp(funcName, "vkDestroyDevice"))
         return (void*) vkDestroyDevice;
     if (!strcmp(funcName, "vkCreateImage"))
@@ -418,8 +420,6 @@ VK_LAYER_EXPORT void* VKAPI vkGetInstanceProcAddr(VkInstance instance, const cha
         return (void*) vkCreateInstance;
     if (!strcmp(funcName, "vkDestroyInstance"))
         return (void *) vkDestroyInstance;
-    if (!strcmp(funcName, "vkCreateDevice"))
-        return (void*) vkCreateDevice;
     if (!strcmp(funcName, "vkGetPhysicalDeviceExtensionProperties"))
         return (void*) vkGetPhysicalDeviceExtensionProperties;
     if (!strcmp(funcName, "vkGetPhysicalDeviceExtensionCount"))

@@ -29,6 +29,7 @@ typedef struct VkBaseLayerObject_
 typedef struct VkLayerDispatchTable_
 {
     PFN_vkGetDeviceProcAddr GetDeviceProcAddr;
+    PFN_vkCreateDevice CreateDevice;
     PFN_vkDestroyDevice DestroyDevice;
     PFN_vkGetDeviceQueue GetDeviceQueue;
     PFN_vkQueueSubmit QueueSubmit;
@@ -144,7 +145,6 @@ typedef struct VkLayerInstanceDispatchTable_
     PFN_vkGetPhysicalDeviceFeatures GetPhysicalDeviceFeatures;
     PFN_vkGetPhysicalDeviceFormatInfo GetPhysicalDeviceFormatInfo;
     PFN_vkGetPhysicalDeviceLimits GetPhysicalDeviceLimits;
-    PFN_vkCreateDevice CreateDevice;
     PFN_vkGetPhysicalDeviceProperties GetPhysicalDeviceProperties;
     PFN_vkGetPhysicalDevicePerformance GetPhysicalDevicePerformance;
     PFN_vkGetPhysicalDeviceQueueCount GetPhysicalDeviceQueueCount;

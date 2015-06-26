@@ -37,6 +37,7 @@ static inline void loader_init_device_dispatch_table(VkLayerDispatchTable *table
     //then use the gpa in their dispatch for subsequent layers in the chain
     table->GetDeviceProcAddr = (PFN_vkGetDeviceProcAddr) gpa(dev_next, "vkGetDeviceProcAddr");
 
+    table->CreateDevice = (PFN_vkCreateDevice) gpa(dev, "vkCreateDevice");
     table->DestroyDevice = (PFN_vkDestroyDevice) gpa(dev, "vkDestroyDevice");
     table->GetDeviceQueue = (PFN_vkGetDeviceQueue) gpa(dev, "vkGetDeviceQueue");
     table->QueueSubmit = (PFN_vkQueueSubmit) gpa(dev, "vkQueueSubmit");
@@ -151,6 +152,8 @@ static inline void *loader_lookup_device_dispatch_table(
     name += 2;
     if (!strcmp(name, "GetDeviceProcAddr"))
         return (void *) table->GetDeviceProcAddr;
+    if (!strcmp(name, "CreateDevice"))
+        return (void *) table->CreateDevice;
     if (!strcmp(name, "DestroyDevice"))
         return (void *) table->DestroyDevice;
     if (!strcmp(name, "GetDeviceQueue"))
@@ -360,7 +363,6 @@ static inline void loader_init_instance_core_dispatch_table(VkLayerInstanceDispa
     table->GetPhysicalDeviceFeatures = (PFN_vkGetPhysicalDeviceFeatures) gpa(inst, "vkGetPhysicalDeviceFeatures");
     table->GetPhysicalDeviceFormatInfo = (PFN_vkGetPhysicalDeviceFormatInfo) gpa(inst, "vkGetPhysicalDeviceFormatInfo");
     table->GetPhysicalDeviceLimits = (PFN_vkGetPhysicalDeviceLimits) gpa(inst, "vkGetPhysicalDeviceLimits");
-    table->CreateDevice = (PFN_vkCreateDevice) gpa(inst, "vkCreateDevice");
     table->GetPhysicalDeviceProperties = (PFN_vkGetPhysicalDeviceProperties) gpa(inst, "vkGetPhysicalDeviceProperties");
     table->GetPhysicalDevicePerformance = (PFN_vkGetPhysicalDevicePerformance) gpa(inst, "vkGetPhysicalDevicePerformance");
     table->GetPhysicalDeviceQueueCount = (PFN_vkGetPhysicalDeviceQueueCount) gpa(inst, "vkGetPhysicalDeviceQueueCount");
@@ -411,8 +413,6 @@ static inline void *loader_lookup_instance_dispatch_table(
         return (void *) table->GetPhysicalDeviceMemoryProperties;
     if (!strcmp(name, "GetInstanceProcAddr"))
         return (void *) table->GetInstanceProcAddr;
-    if (!strcmp(name, "CreateDevice"))
-        return (void *) table->CreateDevice;
     if (!strcmp(name, "GetPhysicalDeviceExtensionCount"))
         return (void *) table->GetPhysicalDeviceExtensionCount;
     if (!strcmp(name, "GetPhysicalDeviceExtensionProperties"))

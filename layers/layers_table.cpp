@@ -34,7 +34,6 @@ static instance_table_map tableInstanceMap;
 // Map lookup must be thread safe
 VkLayerDispatchTable *device_dispatch_table(VkObject object)
 {
-//    VkLayerDispatchTable *pDisp  = *(VkLayerDispatchTable **) object;
     dispatch_key key = get_dispatch_key(object);
     device_table_map::const_iterator it = tableMap.find((void *) key);
     assert(it != tableMap.end() && "Not able to find device dispatch entry");
@@ -43,7 +42,6 @@ VkLayerDispatchTable *device_dispatch_table(VkObject object)
 
 VkLayerInstanceDispatchTable *instance_dispatch_table(VkObject object)
 {
-//    VkLayerInstanceDispatchTable *pDisp = *(VkLayerInstanceDispatchTable **) object;
     dispatch_key key = get_dispatch_key(object);
     instance_table_map::const_iterator it = tableInstanceMap.find((void *) key);
 #if DISPATCH_MAP_DEBUG

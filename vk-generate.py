@@ -122,7 +122,7 @@ class DispatchTableOpsSubcommand(Subcommand):
             stmts.append("memset(table, 0, sizeof(*table));")
             stmts.append("table->GetDeviceProcAddr =(PFN_vkGetDeviceProcAddr)  gpa(device,\"vkGetDeviceProcAddr\");")
             for proto in self.protos:
-                if proto.name == "CreateInstance" or proto.name == "GetGlobalExtensionProperties" or proto.name == "GetGlobalExtensionCount" or proto.params[0].ty == "VkInstance" or proto.params[0].ty == "VkPhysicalDevice":
+                if proto.name == "CreateInstance" or proto.name == "GetGlobalExtensionProperties" or proto.name == "GetGlobalExtensionCount" or proto.params[0].ty == "VkInstance" or (proto.params[0].ty == "VkPhysicalDevice" and proto.name != "CreateDevice"):
                     continue
                 if proto.name != "GetDeviceProcAddr":
                     stmts.append("table->%s = (PFN_vk%s) gpa(baseDevice, \"vk%s\");" %
@@ -140,6 +140,8 @@ class DispatchTableOpsSubcommand(Subcommand):
             stmts.append("table->GetInstanceProcAddr =(PFN_vkGetInstanceProcAddr)  gpa(instance,\"vkGetInstanceProcAddr\");")
             for proto in self.protos:
                 if proto.name != "CreateInstance"  and proto.params[0].ty != "VkInstance" and proto.params[0].ty != "VkPhysicalDevice":
+                    continue
+                if proto.name == "CreateDevice":
                     continue
                 if proto.name != "GetInstanceProcAddr":
                     stmts.append("table->%s = (PFN_vk%s) gpa(baseInstance, \"vk%s\");" %

@@ -311,8 +311,8 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateDevice(
     const VkDeviceCreateInfo *pCreateInfo,
     VkDevice                 *pDevice)
 {
-    VkLayerInstanceDispatchTable *pInstanceTable = get_dispatch_table(screenshot_instance_table_map, gpu);
-    VkResult result = pInstanceTable->CreateDevice(gpu, pCreateInfo, pDevice);
+    VkLayerDispatchTable *pDisp  = get_dispatch_table(screenshot_device_table_map, *pDevice);
+    VkResult result = pDisp->CreateDevice(gpu, pCreateInfo, pDevice);
 
     if (result == VK_SUCCESS) {
         createDeviceRegisterExtensions(pCreateInfo, *pDevice);
@@ -320,6 +320,8 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateDevice(
 
     return result;
 }
+
+/* TODO: Probably need a DestroyDevice as well */
 
 #define SCREENSHOT_LAYER_EXT_ARRAY_SIZE 2
 static const VkExtensionProperties ssExts[SCREENSHOT_LAYER_EXT_ARRAY_SIZE] = {
@@ -561,6 +563,9 @@ VK_LAYER_EXPORT void* VKAPI vkGetDeviceProcAddr(
         initDeviceTable(screenshot_device_table_map, (const VkBaseLayerObject *) dev);
         return (void *) vkGetDeviceProcAddr;
     }
+    if (!strcmp(funcName, "vkCreateDevice"))
+        return (void*) vkCreateDevice;
+
     if (!strcmp(funcName, "vkGetDeviceQueue"))
         return (void*) vkGetDeviceQueue;
 
@@ -610,8 +615,6 @@ VK_LAYER_EXPORT void* VKAPI vkGetInstanceProcAddr(
         return (void *) vkDestroyInstance;
     if (!strcmp(funcName, "vkCreateInstance"))
         return (void*) vkCreateInstance;
-    if (!strcmp(funcName, "vkCreateDevice"))
-        return (void*) vkCreateDevice;
 
     if (get_dispatch_table(screenshot_instance_table_map, instance)->GetInstanceProcAddr == NULL)
         return NULL;

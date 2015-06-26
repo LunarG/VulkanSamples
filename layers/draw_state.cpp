@@ -1581,8 +1581,8 @@ static void createDeviceRegisterExtensions(const VkDeviceCreateInfo* pCreateInfo
 
 VK_LAYER_EXPORT VkResult VKAPI vkCreateDevice(VkPhysicalDevice gpu, const VkDeviceCreateInfo* pCreateInfo, VkDevice* pDevice)
 {
-    VkLayerInstanceDispatchTable *pInstanceTable = get_dispatch_table(draw_state_instance_table_map, gpu);
-    VkResult result = pInstanceTable->CreateDevice(gpu, pCreateInfo, pDevice);
+    VkLayerDispatchTable *pDeviceTable = get_dispatch_table(draw_state_device_table_map, *pDevice);
+    VkResult result = pDeviceTable->CreateDevice(gpu, pCreateInfo, pDevice);
     if (result == VK_SUCCESS) {
         layer_data *my_instance_data = get_my_data_ptr(get_dispatch_key(gpu), layer_data_map);
         VkLayerDispatchTable *pTable = get_dispatch_table(draw_state_device_table_map, *pDevice);
@@ -2912,6 +2912,8 @@ VK_LAYER_EXPORT void* VKAPI vkGetDeviceProcAddr(VkDevice dev, const char* funcNa
         initDeviceTable(draw_state_device_table_map, (const VkBaseLayerObject *) dev);
         return (void *) vkGetDeviceProcAddr;
     }
+    if (!strcmp(funcName, "vkCreateDevice"))
+        return (void*) vkCreateDevice;
     if (!strcmp(funcName, "vkDestroyDevice"))
         return (void*) vkDestroyDevice;
     if (!strcmp(funcName, "vkQueueSubmit"))
@@ -3071,8 +3073,6 @@ VK_LAYER_EXPORT void * VKAPI vkGetInstanceProcAddr(VkInstance instance, const ch
         return (void *) vkCreateInstance;
     if (!strcmp(funcName, "vkDestroyInstance"))
         return (void *) vkDestroyInstance;
-    if (!strcmp(funcName, "vkCreateDevice"))
-        return (void*) vkCreateDevice;
     if (!strcmp(funcName, "vkGetPhysicalDeviceExtensionCount"))
         return (void*) vkGetPhysicalDeviceExtensionCount;
     if (!strcmp(funcName, "vkGetPhysicalDeviceExtensionProperties"))

@@ -92,7 +92,6 @@ const VkLayerInstanceDispatchTable instance_disp = {
     .GetPhysicalDeviceFeatures = loader_GetPhysicalDeviceFeatures,
     .GetPhysicalDeviceFormatInfo = loader_GetPhysicalDeviceFormatInfo,
     .GetPhysicalDeviceLimits = loader_GetPhysicalDeviceLimits,
-    .CreateDevice = loader_CreateDevice,
     .GetPhysicalDeviceProperties = loader_GetPhysicalDeviceProperties,
     .GetPhysicalDevicePerformance = loader_GetPhysicalDevicePerformance,
     .GetPhysicalDeviceQueueCount = loader_GetPhysicalDeviceQueueCount,
@@ -1440,12 +1439,37 @@ static void loader_enable_device_layers(
                 ext_list);
 }
 
+static VkResult scratch_vkCreateDevice(
+    VkPhysicalDevice          gpu,
+    const VkDeviceCreateInfo *pCreateInfo,
+    VkDevice                 *pDevice)
+{
+    return VK_SUCCESS;
+}
+
+static void * VKAPI loader_GetDeviceChainProcAddr(VkDevice device, const char * name)
+{
+    const VkLayerDispatchTable *disp_table = * (VkLayerDispatchTable **) device;
+
+    /* CreateDevice workaround: Make the terminator be a scratch function
+     * that does nothing since we have already called the ICD's create device.
+     * We can then call down the device chain and have all the layers get set up.
+     */
+    if (!strcmp(name, "vkGetDeviceProcAddr"))
+        return (void *) loader_GetDeviceChainProcAddr;
+    if (!strcmp(name, "vkCreateDevice"))
+        return (void *) scratch_vkCreateDevice;
+
+    return disp_table->GetDeviceProcAddr(device, name);
+}
+
 static uint32_t loader_activate_device_layers(
-            VkDevice device,
-            struct loader_device *dev,
-            struct loader_icd *icd,
-            uint32_t ext_count,
-            const VkExtensionProperties *ext_props)
+        VkPhysicalDevice gpu,
+        VkDevice device,
+        struct loader_device *dev,
+        struct loader_icd *icd,
+        uint32_t ext_count,
+        const VkExtensionProperties *ext_props)
 {
     if (!icd)
         return 0;
@@ -1458,8 +1482,9 @@ static uint32_t loader_activate_device_layers(
     VkObject nextObj = (VkObject) device;
     VkObject baseObj = nextObj;
     VkBaseLayerObject *nextGpuObj;
-    PFN_vkGetDeviceProcAddr nextGPA = icd->GetDeviceProcAddr;
+    PFN_vkGetDeviceProcAddr nextGPA = loader_GetDeviceChainProcAddr;
     VkBaseLayerObject *wrappedGpus;
+
     /*
      * Figure out how many actual layers will need to be wrapped.
      */
@@ -1482,6 +1507,7 @@ static uint32_t loader_activate_device_layers(
         loader_log(VK_DBG_REPORT_ERROR_BIT, 0, "Failed to malloc Gpu objects for layer");
         return 0;
     }
+
     for (int32_t i = dev->activated_layer_list.count - 1; i >= 0; i--) {
 
         struct loader_extension_property *ext_prop = &dev->activated_layer_list.list[i];
@@ -1838,49 +1864,57 @@ VkResult loader_CreateDevice(
     uint32_t gpu_index;
     struct loader_icd *icd = loader_get_icd(gpu, &gpu_index);
     struct loader_device *dev;
-    VkResult res = VK_ERROR_INITIALIZATION_FAILED;
+    VkResult res;
 
-    if (icd->CreateDevice) {
-        res = icd->CreateDevice(gpu, pCreateInfo, pDevice);
-        if (res != VK_SUCCESS) {
-            return res;
-        }
-        dev = loader_add_logical_device(*pDevice, &icd->logical_device_list);
-        if (dev == NULL) {
-            return VK_ERROR_OUT_OF_HOST_MEMORY;
-        }
-        PFN_vkGetDeviceProcAddr get_proc_addr = icd->GetDeviceProcAddr;
-        loader_init_device_dispatch_table(&dev->loader_dispatch, get_proc_addr,
-                                          icd->gpus[gpu_index], icd->gpus[gpu_index]);
-
-        loader_init_dispatch(*pDevice, &dev->loader_dispatch);
-
-        dev->app_extension_count = pCreateInfo->extensionCount;
-        dev->app_extension_props = (VkExtensionProperties *) malloc(sizeof(VkExtensionProperties) * pCreateInfo->extensionCount);
-        if (dev->app_extension_props == NULL && (dev->app_extension_count > 0)) {
-            return VK_ERROR_OUT_OF_HOST_MEMORY;
-        }
-
-        /* Make local copy of extension list */
-        if (dev->app_extension_count > 0 && dev->app_extension_props != NULL) {
-            memcpy(dev->app_extension_props, pCreateInfo->pEnabledExtensions, sizeof(VkExtensionProperties) * pCreateInfo->extensionCount);
-        }
-
-        /*
-         * Put together the complete list of extensions to enable
-         * This includes extensions requested via environment variables.
-         */
-        loader_enable_device_layers(dev, &icd->device_extension_cache[gpu_index]);
-
-        /*
-         * Load the libraries needed by the extensions on the
-         * enabled extension list. This will build the device chain
-         * terminating with the selected device.
-         */
-        loader_activate_device_layers(*pDevice, dev, icd,
-                                      dev->app_extension_count,
-                                      dev->app_extension_props);
+    if (!icd->CreateDevice) {
+        return VK_ERROR_INITIALIZATION_FAILED;
     }
+
+    res = icd->CreateDevice(gpu, pCreateInfo, pDevice);
+    if (res != VK_SUCCESS) {
+        return res;
+    }
+
+    dev = loader_add_logical_device(*pDevice, &icd->logical_device_list);
+    if (dev == NULL) {
+        return VK_ERROR_OUT_OF_HOST_MEMORY;
+    }
+    PFN_vkGetDeviceProcAddr get_proc_addr = icd->GetDeviceProcAddr;
+    loader_init_device_dispatch_table(&dev->loader_dispatch, get_proc_addr,
+                                      icd->gpus[gpu_index], icd->gpus[gpu_index]);
+
+    dev->loader_dispatch.CreateDevice = scratch_vkCreateDevice;
+    loader_init_dispatch(*pDevice, &dev->loader_dispatch);
+
+    dev->app_extension_count = pCreateInfo->extensionCount;
+    dev->app_extension_props = (VkExtensionProperties *) malloc(sizeof(VkExtensionProperties) * pCreateInfo->extensionCount);
+    if (dev->app_extension_props == NULL && (dev->app_extension_count > 0)) {
+        return VK_ERROR_OUT_OF_HOST_MEMORY;
+    }
+
+    /* Make local copy of extension list */
+    if (dev->app_extension_count > 0 && dev->app_extension_props != NULL) {
+        memcpy(dev->app_extension_props, pCreateInfo->pEnabledExtensions, sizeof(VkExtensionProperties) * pCreateInfo->extensionCount);
+    }
+
+    /*
+     * Put together the complete list of extensions to enable
+     * This includes extensions requested via environment variables.
+     */
+    loader_enable_device_layers(dev, &icd->device_extension_cache[gpu_index]);
+
+    /*
+     * Load the libraries needed by the extensions on the
+     * enabled extension list. This will build the device chain
+     * terminating with the selected device.
+     */
+    loader_activate_device_layers(gpu, *pDevice, dev, icd,
+                                  dev->app_extension_count,
+                                  dev->app_extension_props);
+
+    res = dev->loader_dispatch.CreateDevice(gpu, pCreateInfo, pDevice);
+
+    dev->loader_dispatch.CreateDevice = icd->CreateDevice;
 
     return res;
 }

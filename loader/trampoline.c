@@ -277,18 +277,16 @@ LOADER_EXPORT VkResult VKAPI vkGetPhysicalDeviceLimits(
 }
 
 LOADER_EXPORT VkResult VKAPI vkCreateDevice(
-                                        VkPhysicalDevice gpu,
-                                        const VkDeviceCreateInfo* pCreateInfo,
-                                        VkDevice* pDevice)
+        VkPhysicalDevice gpu,
+        const VkDeviceCreateInfo* pCreateInfo,
+        VkDevice* pDevice)
 {
-    const VkLayerInstanceDispatchTable *disp;
     VkResult res;
 
-    disp = loader_get_instance_dispatch(gpu);
-
     loader_platform_thread_lock_mutex(&loader_lock);
-    // CreateDevice is dispatched on the instance chain
-    res = disp->CreateDevice(gpu, pCreateInfo, pDevice);
+
+    res = loader_CreateDevice(gpu, pCreateInfo, pDevice);
+
     loader_platform_thread_unlock_mutex(&loader_lock);
     return res;
 }

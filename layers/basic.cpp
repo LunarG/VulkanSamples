@@ -95,7 +95,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkEnumeratePhysicalDevices(
 VK_LAYER_EXPORT VkResult VKAPI vkCreateDevice(VkPhysicalDevice gpu, const VkDeviceCreateInfo* pCreateInfo, VkDevice* pDevice)
 {
     printf("At start of wrapped vkCreateDevice() call w/ gpu: %p\n", (void*)gpu);
-    VkResult result = instance_dispatch_table(gpu)->CreateDevice(gpu, pCreateInfo, pDevice);
+    VkResult result = device_dispatch_table(*pDevice)->CreateDevice(gpu, pCreateInfo, pDevice);
     printf("Completed wrapped vkCreateDevice() call w/ pDevice, Device %p: %p\n", (void*)pDevice, (void *) *pDevice);
     return result;
 }
@@ -137,6 +137,8 @@ VK_LAYER_EXPORT void * VKAPI vkGetDeviceProcAddr(VkDevice device, const char* pN
         return (void *) vkGetDeviceProcAddr;
     }
 
+    if (!strcmp("vkCreateDevice", pName))
+        return (void *) vkCreateDevice;
     if (!strcmp("vkDestroyDevice", pName))
         return (void *) vkDestroyDevice;
     if (!strcmp("vkLayerExtension1", pName))
@@ -170,8 +172,6 @@ VK_LAYER_EXPORT void * VKAPI vkGetInstanceProcAddr(VkInstance instance, const ch
         return (void*) vkGetGlobalExtensionCount;
     if (!strcmp("vkGetGlobalExtensionProperties", pName))
         return (void*) vkGetGlobalExtensionProperties;
-    if (!strcmp("vkCreateDevice", pName))
-        return (void *) vkCreateDevice;
     else
     {
         if (instance_dispatch_table(instance)->GetInstanceProcAddr == NULL)

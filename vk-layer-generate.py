@@ -375,6 +375,8 @@ class Subcommand(object):
 
             if not proto in intercepted:
                 continue
+            if proto.name == "CreateDevice":
+                continue
             lookups.append("if (!strcmp(name, \"%s\"))" % proto.name)
             lookups.append("    return (void*) %s%s;" % (prefix, proto.name))
 
@@ -642,7 +644,7 @@ class GenericLayerSubcommand(Subcommand):
                      '    char str[1024];\n'
                      '    sprintf(str, "At start of layered %s\\n");\n'
                      '    layerCbMsg(VK_DBG_REPORT_INFO_BIT,VK_OBJECT_TYPE_PHYSICAL_DEVICE, gpu, 0, 0, (char *) "GENERIC", (char *) str);\n'
-                     '    %sinstance_dispatch_table(gpu)->%s;\n'
+                     '    %sdevice_dispatch_table(*pDevice)->%s;\n'
                      '    if (result == VK_SUCCESS) {\n'
                      '        enable_debug_report(pCreateInfo->extensionCount, pCreateInfo->pEnabledExtensions);\n'
                      '        createDeviceRegisterExtensions(pCreateInfo, *pDevice);\n'
@@ -1010,12 +1012,12 @@ class APIDumpSubcommand(Subcommand):
             funcs.append('%s%s\n'
                      '{\n'
                      '    using namespace StreamControl;\n'
-                     '    %s%s_dispatch_table(%s)->%s;\n'
+                     '    %sdevice_dispatch_table(*pDevice)->%s;\n'
                      '    if (result == VK_SUCCESS)\n'
                      '        createDeviceRegisterExtensions(pCreateInfo, *pDevice);\n'
                      '    %s%s%s\n'
                      '%s'
-                     '}' % (qual, decl, ret_val, table_type, dispatch_param, proto.c_call(), f_open, log_func, f_close, stmt))
+                     '}' % (qual, decl, ret_val, proto.c_call(), f_open, log_func, f_close, stmt))
         elif proto.name == "DestroyDevice":
             funcs.append('%s%s\n'
                  '{\n'
@@ -1308,7 +1310,15 @@ class ThreadingSubcommand(Subcommand):
         if 'WSI' in proto.name:
             return None
         # Initialize in early calls
-        if proto.params[0].ty == "VkPhysicalDevice":
+        if proto.name == "CreateDevice":
+            funcs.append('%s' % self.lineinfo.get())
+            funcs.append('%s%s\n'
+                     '{\n'
+                     '    %sdevice_dispatch_table(*pDevice)->%s;\n'
+                     '%s'
+                     '}' % (qual, decl, ret_val, proto.c_call(), stmt))
+            return "\n".join(funcs)
+        elif proto.params[0].ty == "VkPhysicalDevice":
             funcs.append('%s' % self.lineinfo.get())
             funcs.append('%s%s\n'
                      '{\n'
