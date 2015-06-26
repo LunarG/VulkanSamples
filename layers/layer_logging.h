@@ -226,7 +226,7 @@ static inline void log_msg(
     const char*                 format,
     ...)
 {
-    if (!(debug_data->active_flags & msgFlags)) {
+    if (!debug_data || !(debug_data->active_flags & msgFlags)) {
         /* message is not wanted */
         return;
     }
