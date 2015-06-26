@@ -67,7 +67,6 @@ void Environment::SetUp()
     std::vector<const char *> device_extension_names;
 
     instance_extension_names.push_back(VK_WSI_LUNARG_EXTENSION_NAME);
-    device_extension_names.push_back(VK_WSI_LUNARG_EXTENSION_NAME);
 
     uint32_t extCount = 0;
     err = vkGetGlobalExtensionCount(&extCount);
