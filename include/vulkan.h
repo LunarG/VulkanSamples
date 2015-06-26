@@ -33,7 +33,7 @@
 #include "vk_platform.h"
 
 // Vulkan API version supported by this file
-#define VK_API_VERSION VK_MAKE_VERSION(0, 109, 0)
+#define VK_API_VERSION VK_MAKE_VERSION(0, 111, 0)
 
 #ifdef __cplusplus
 extern "C"
@@ -1514,8 +1514,6 @@ typedef struct VkDepthStencilViewCreateInfo_
     uint32_t                                    mipLevel;
     uint32_t                                    baseArraySlice;
     uint32_t                                    arraySize;
-    VkImage                                     msaaResolveImage;
-    VkImageSubresourceRange                     msaaResolveSubResource;
     VkDepthStencilViewCreateFlags               flags;                  // Depth stencil attachment view flags
 } VkDepthStencilViewCreateInfo;
 
