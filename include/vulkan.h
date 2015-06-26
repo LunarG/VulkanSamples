@@ -1742,7 +1742,7 @@ typedef struct VkPipelineMsStateCreateInfo_
 {
     VkStructureType                             sType;      // Must be VK_STRUCTURE_TYPE_PIPELINE_MS_STATE_CREATE_INFO
     const void*                                 pNext;      // Pointer to next structure
-    uint32_t                                    samples;
+    uint32_t                                    rasterSamples;
     bool32_t                                    multisampleEnable;          // optional (GL45)
     bool32_t                                    sampleShadingEnable;        // optional (GL45)
     float                                       minSampleShading;           // optional (GL45)

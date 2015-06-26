@@ -631,7 +631,7 @@ static uint32_t getNumSamples(const VkPipeline pipeline)
     PIPELINE_NODE* pPipe = pipelineMap[pipeline];
     if (VK_STRUCTURE_TYPE_PIPELINE_MS_STATE_CREATE_INFO == pPipe->msStateCI.sType) {
         if (pPipe->msStateCI.multisampleEnable)
-            return pPipe->msStateCI.samples;
+            return pPipe->msStateCI.rasterSamples;
     }
     return 1;
 }

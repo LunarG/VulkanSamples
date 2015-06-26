@@ -1389,7 +1389,7 @@ static void demo_prepare_pipeline(struct demo *demo)
     ms.sType = VK_STRUCTURE_TYPE_PIPELINE_MS_STATE_CREATE_INFO;
     ms.sampleMask = 1;
     ms.multisampleEnable = VK_FALSE;
-    ms.samples = 1;
+    ms.rasterSamples = 1;
 
     // Two stages: vs and fs
     pipeline.stageCount = 2;

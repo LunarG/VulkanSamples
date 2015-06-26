@@ -1035,7 +1035,7 @@ static void pipeline_build_msaa(struct intel_pipeline *pipeline,
 
     INTEL_GPU_ASSERT(pipeline->dev->gpu, 6, 7.5);
 
-    pipeline->sample_count = (info->ms.samples <= 1) ? 1 : info->ms.samples;
+    pipeline->sample_count = (info->ms.rasterSamples <= 1) ? 1 : info->ms.rasterSamples;
 
     /* 3DSTATE_SAMPLE_MASK */
     cmd = GEN6_RENDER_CMD(3D, 3DSTATE_SAMPLE_MASK);
@@ -1217,7 +1217,7 @@ static VkResult pipeline_create_info_init(struct intel_pipeline_create_info  *in
      * Do we need to set safe defaults in case the app doesn't provide all of
      * the necessary create infos?
      */
-    info->ms.samples    = 1;
+    info->ms.rasterSamples    = 1;
     info->ms.sampleMask = 1;
 
     memcpy(&info->graphics, vkinfo, sizeof (info->graphics));
