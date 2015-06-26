@@ -237,9 +237,6 @@ void intel_gpu_get_props(const struct intel_gpu *gpu,
     memcpy(props->deviceName, name, name_len);
     props->deviceName[name_len] = '\0';
 
-
-    /* no size limit, but no bounded buffer could exceed 2GB */
-    props->maxInlineMemoryUpdateSize = 2u << 30;
     props->maxBoundDescriptorSets = 1;
     props->maxThreadGroupSize = 512;
 

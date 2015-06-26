@@ -623,7 +623,6 @@ static void app_gpu_dump_props(const struct app_gpu *gpu)
     printf("\tdeviceId = 0x%04x\n",                 props->deviceId);
     printf("\tdeviceType = %s\n",                   vk_physical_device_type_string(props->deviceType));
     printf("\tdeviceName = %s\n",                   props->deviceName);
-    printf("\tmaxInlineMemoryUpdateSize = " PRINTF_SIZE_T_SPECIFIER "\n",   props->maxInlineMemoryUpdateSize);
     printf("\tmaxBoundDescriptorSets = %u\n",       props->maxBoundDescriptorSets);
     printf("\tmaxThreadGroupSize = %u\n",           props->maxThreadGroupSize);
     printf("\ttimestampFrequency = %lu\n",          props->timestampFrequency);

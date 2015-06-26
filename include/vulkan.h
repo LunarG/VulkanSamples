@@ -1174,7 +1174,6 @@ typedef struct VkPhysicalDeviceProperties_
     uint32_t                                    deviceId;
     VkPhysicalDeviceType                        deviceType;
     char                                        deviceName[VK_MAX_PHYSICAL_DEVICE_NAME];
-    VkDeviceSize                                maxInlineMemoryUpdateSize;
     uint32_t                                    maxBoundDescriptorSets;
     uint32_t                                    maxThreadGroupSize;
     uint64_t                                    timestampFrequency;
