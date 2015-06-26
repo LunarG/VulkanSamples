@@ -1000,12 +1000,6 @@ static const VkExtensionProperties mtDevExts[MEM_TRACKER_LAYER_DEV_EXT_ARRAY_SIZ
         "Validation",
         0x10,
         "Validation layer: MemTracker",
-    },
-    {
-        VK_STRUCTURE_TYPE_EXTENSION_PROPERTIES,
-        VK_WSI_LUNARG_EXTENSION_NAME,
-        0x10,
-        "Validation layer: MemTracker",
     }
 };
 

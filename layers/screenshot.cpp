@@ -328,12 +328,6 @@ static const VkExtensionProperties ssExts[SCREENSHOT_LAYER_EXT_ARRAY_SIZE] = {
         "ScreenShot",
         0x10,
         "Layer: ScreenShot",
-    },
-    {
-        VK_STRUCTURE_TYPE_EXTENSION_PROPERTIES,
-        VK_WSI_LUNARG_EXTENSION_NAME,
-        0x10,
-        "Layer: Screenshot",
     }
 
 };
