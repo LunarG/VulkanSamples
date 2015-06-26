@@ -493,10 +493,10 @@ typedef enum VkStencilOp_
 
 typedef enum VkLogicOp_
 {
-    VK_LOGIC_OP_COPY                                        = 0x00000000,
-    VK_LOGIC_OP_CLEAR                                       = 0x00000001,
-    VK_LOGIC_OP_AND                                         = 0x00000002,
-    VK_LOGIC_OP_AND_REVERSE                                 = 0x00000003,
+    VK_LOGIC_OP_CLEAR                                       = 0x00000000,
+    VK_LOGIC_OP_AND                                         = 0x00000001,
+    VK_LOGIC_OP_AND_REVERSE                                 = 0x00000002,
+    VK_LOGIC_OP_COPY                                        = 0x00000003,
     VK_LOGIC_OP_AND_INVERTED                                = 0x00000004,
     VK_LOGIC_OP_NOOP                                        = 0x00000005,
     VK_LOGIC_OP_XOR                                         = 0x00000006,
@@ -510,7 +510,7 @@ typedef enum VkLogicOp_
     VK_LOGIC_OP_NAND                                        = 0x0000000e,
     VK_LOGIC_OP_SET                                         = 0x0000000f,
 
-    VK_ENUM_RANGE(LOGIC_OP, COPY, SET)
+    VK_ENUM_RANGE(LOGIC_OP, CLEAR, SET)
 } VkLogicOp;
 
 typedef enum VkSystemAllocType_
