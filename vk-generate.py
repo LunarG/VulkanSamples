@@ -119,6 +119,7 @@ class DispatchTableOpsSubcommand(Subcommand):
             stmts.append("PFN_vkGetDeviceProcAddr gpa = (PFN_vkGetDeviceProcAddr) devw->pGPA;")
             stmts.append("VkDevice baseDevice = (VkDevice) devw->baseObject;")
             stmts.append("// GPA has to be first entry inited and uses wrapped object since it triggers init")
+            stmts.append("memset(table, 0, sizeof(*table));")
             stmts.append("table->GetDeviceProcAddr =(PFN_vkGetDeviceProcAddr)  gpa(device,\"vkGetDeviceProcAddr\");")
             for proto in self.protos:
                 if proto.name == "CreateInstance" or proto.name == "GetGlobalExtensionProperties" or proto.name == "GetGlobalExtensionCount" or proto.params[0].ty == "VkInstance" or proto.params[0].ty == "VkPhysicalDevice":
