@@ -330,7 +330,7 @@ public:
     // vkCreateSemaphore()
     void init(const Device &dev, const VkSemaphoreCreateInfo &info);
 
-    static VkSemaphoreCreateInfo create_info(uint32_t init_count, VkFlags flags);
+    static VkSemaphoreCreateInfo create_info(VkFlags flags);
 };
 
 class Event : public DerivedObject<VkEvent, Object, VK_OBJECT_TYPE_EVENT> {
@@ -647,11 +647,10 @@ inline VkFenceCreateInfo Fence::create_info()
     return info;
 }
 
-inline VkSemaphoreCreateInfo Semaphore::create_info(uint32_t init_count, VkFlags flags)
+inline VkSemaphoreCreateInfo Semaphore::create_info(VkFlags flags)
 {
     VkSemaphoreCreateInfo info = {};
     info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
-    info.initialCount = init_count;
     info.flags = flags;
     return info;
 }

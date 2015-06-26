@@ -1964,7 +1964,6 @@ typedef struct VkSemaphoreCreateInfo_
 {
     VkStructureType                             sType;      // Must be VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO
     const void*                                 pNext;      // Pointer to next structure
-    uint32_t                                    initialCount;
     VkSemaphoreCreateFlags                      flags;      // Semaphore creation flags
 } VkSemaphoreCreateInfo;
 
