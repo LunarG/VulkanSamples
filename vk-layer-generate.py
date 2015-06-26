@@ -643,11 +643,12 @@ class GenericLayerSubcommand(Subcommand):
         table = ''
         if proto_is_global(proto):
            table = 'Instance'
-        funcs.append('%s' % self.lineinfo.get())
         if proto.ret != "void":
+            funcs.append('%s' % self.lineinfo.get())
             ret_val = "%s result = " % proto.ret
             stmt = "    return result;\n"
         if proto.name == "CreateDevice":
+            funcs.append('%s' % self.lineinfo.get())
             funcs.append('%s%s\n'
                      '{\n'
                      '    char str[1024];\n'
@@ -664,6 +665,7 @@ class GenericLayerSubcommand(Subcommand):
                      '    %s'
                      '}' % (qual, decl, proto.name, ret_val, proto.c_call(), proto.name, stmt))
         elif proto.name == "DestroyDevice":
+            funcs.append('%s' % self.lineinfo.get())
             funcs.append('%s%s\n'
                          '{\n'
                          '    dispatch_key key = get_dispatch_key(device);\n'
@@ -674,6 +676,7 @@ class GenericLayerSubcommand(Subcommand):
                          '    return res;\n'
                          '}\n' % (qual, decl))
         elif proto.name == "DestroyInstance":
+            funcs.append('%s' % self.lineinfo.get())
             funcs.append('%s%s\n'
                          '{\n'
                          '    dispatch_key key = get_dispatch_key(instance);\n'
@@ -682,6 +685,7 @@ class GenericLayerSubcommand(Subcommand):
                          '    return res;\n'
                          '}\n' % (qual, decl))
         else:
+            funcs.append('%s' % self.lineinfo.get())
             # CreateInstance needs to use the second parm instead of the first to set the correct dispatch table
             dispatch_param = proto.params[0].name
             # Must use 'instance' table for these APIs, 'device' table otherwise
@@ -1014,6 +1018,7 @@ class APIDumpSubcommand(Subcommand):
             dispatch_param = proto.params[0].name
 
         if proto.name == "CreateDevice":
+            funcs.append('%s\n' % self.lineinfo.get())
             funcs.append('%s%s\n'
                      '{\n'
                      '    using namespace StreamControl;\n'
