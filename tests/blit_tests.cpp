@@ -840,13 +840,14 @@ TEST_F(VkCmdCopyBufferTest, RAWHazard)
     EXPECT_EQ(0x11111111, data[0]);
     bufs[2].unmap();
 
+    err = vkDestroyObject(dev_.obj(), VK_OBJECT_TYPE_EVENT, event);
+    ASSERT_VK_SUCCESS(err);
+
     if (mem_req.size) {
         // All done with event memory, clean up
         err = vkFreeMemory(dev_.obj(), event_mem);
         ASSERT_VK_SUCCESS(err);
     }
-    err = vkDestroyObject(dev_.obj(), VK_OBJECT_TYPE_EVENT, event);
-    ASSERT_VK_SUCCESS(err);
 }
 
 class VkCmdBlitImageTest : public VkCmdBlitTest {
