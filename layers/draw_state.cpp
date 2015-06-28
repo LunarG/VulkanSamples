@@ -1556,7 +1556,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkDestroyInstance(VkInstance instance)
         layer_destroy_msg_callback(my_data->report_data, my_data->logging_callback);
     }
 
-    layer_debug_report_destroy_instance(mid(instance));
+    layer_debug_report_destroy_instance(my_data->report_data);
     layer_data_map.erase(pTable);
 
     draw_state_instance_table_map.erase(key);

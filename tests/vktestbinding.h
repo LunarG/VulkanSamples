@@ -481,13 +481,22 @@ public:
     void init(const Device &dev, const VkDepthStencilViewCreateInfo &info);
 };
 
+class ShaderModule : public DerivedObject<VkShaderModule, Object, VK_OBJECT_TYPE_SHADER_MODULE> {
+public:
+    // vkCreateShaderModule()
+    void init(const Device &dev, const VkShaderModuleCreateInfo &info);
+    VkResult init_try(const Device &dev, const VkShaderModuleCreateInfo &info);
+
+    static VkShaderModuleCreateInfo create_info(size_t code_size, const void *code, VkFlags flags);
+};
+
 class Shader : public DerivedObject<VkShader, Object, VK_OBJECT_TYPE_SHADER> {
 public:
     // vkCreateShader()
     void init(const Device &dev, const VkShaderCreateInfo &info);
     VkResult init_try(const Device &dev, const VkShaderCreateInfo &info);
 
-    static VkShaderCreateInfo create_info(size_t code_size, const void *code, VkFlags flags);
+    static VkShaderCreateInfo create_info(VkShaderModule module, const char *pName, VkFlags flags);
 };
 
 class Pipeline : public DerivedObject<VkPipeline, Object, VK_OBJECT_TYPE_PIPELINE> {
@@ -758,12 +767,22 @@ inline VkExtent3D Image::extent(const VkExtent3D &extent, uint32_t mip_level)
     return Image::extent(width, height, depth);
 }
 
-inline VkShaderCreateInfo Shader::create_info(size_t code_size, const void *code, VkFlags flags)
+inline VkShaderModuleCreateInfo ShaderModule::create_info(size_t code_size, const void *code, VkFlags flags)
+{
+    VkShaderModuleCreateInfo info = {};
+    info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+    info.codeSize = code_size;
+    info.pCode = code;
+    info.flags = flags;
+    return info;
+}
+
+inline VkShaderCreateInfo Shader::create_info(VkShaderModule module, const char *pName, VkFlags flags)
 {
     VkShaderCreateInfo info = {};
     info.sType = VK_STRUCTURE_TYPE_SHADER_CREATE_INFO;
-    info.codeSize = code_size;
-    info.pCode = code;
+    info.module = module;
+    info.pName = pName;
     info.flags = flags;
     return info;
 }

@@ -1102,6 +1102,7 @@ class ObjectTrackerSubcommand(Subcommand):
             obj_type_mapping[objectName] = ucc_to_U_C_C(objectTypeEnum);
         # Command Buffer Object doesn't follow the rule.
         obj_type_mapping['VkCmdBuffer'] = "VK_OBJECT_TYPE_COMMAND_BUFFER"
+        obj_type_mapping['VkShaderModule'] = "VK_OBJECT_TYPE_SHADER_MODULE"
 
         explicit_object_tracker_functions = [
             "CreateInstance",

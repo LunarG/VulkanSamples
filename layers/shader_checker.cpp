@@ -28,6 +28,7 @@
 #include <unordered_map>
 #include <map>
 #include <vector>
+#include <string>
 #include "loader_platform.h"
 #include "vk_dispatch_table_helper.h"
 #include "vkLayer.h"
@@ -92,7 +93,7 @@ build_type_def_index(std::vector<unsigned> const &words, std::unordered_map<unsi
     }
 }
 
-struct shader_source {
+struct shader_module {
     /* the spirv image itself */
     std::vector<uint32_t> words;
     /* a mapping of <id> to the first word of its def. this is useful because walking type
@@ -101,7 +102,7 @@ struct shader_source {
     std::unordered_map<unsigned, unsigned> type_def_index;
     bool is_spirv;
 
-    shader_source(VkShaderCreateInfo const *pCreateInfo) :
+    shader_module(VkShaderModuleCreateInfo const *pCreateInfo) :
         words((uint32_t *)pCreateInfo->pCode, (uint32_t *)pCreateInfo->pCode + pCreateInfo->codeSize / sizeof(uint32_t)),
         type_def_index(),
         is_spirv(true) {
@@ -119,7 +120,19 @@ struct shader_source {
 };
 
 
-static std::unordered_map<void *, shader_source *> shader_map;
+static std::unordered_map<void *, shader_module *> shader_module_map;
+
+struct shader_object {
+    std::string name;
+    struct shader_module *module;
+
+    shader_object(VkShaderCreateInfo const *pCreateInfo)
+    {
+        module = shader_module_map[pCreateInfo->module];
+        name = pCreateInfo->pName;
+    }
+};
+static std::unordered_map<void *, shader_object *> shader_object_map;
 
 
 static void
@@ -221,7 +234,7 @@ storage_class_name(unsigned sc)
 
 /* returns ptr to null terminator */
 static char *
-describe_type(char *dst, shader_source const *src, unsigned type)
+describe_type(char *dst, shader_module const *src, unsigned type)
 {
     auto type_def_it = src->type_def_index.find(type);
 
@@ -267,7 +280,7 @@ describe_type(char *dst, shader_source const *src, unsigned type)
 
 
 static bool
-types_match(shader_source const *a, shader_source const *b, unsigned a_type, unsigned b_type, bool b_arrayed)
+types_match(shader_module const *a, shader_module const *b, unsigned a_type, unsigned b_type, bool b_arrayed)
 {
     auto a_type_def_it = a->type_def_index.find(a_type);
     auto b_type_def_it = b->type_def_index.find(b_type);
@@ -368,7 +381,7 @@ struct interface_var {
 
 
 static void
-collect_interface_by_location(shader_source const *src, spv::StorageClass sinterface,
+collect_interface_by_location(shader_module const *src, spv::StorageClass sinterface,
                               std::map<uint32_t, interface_var> &out,
                               std::map<uint32_t, interface_var> &builtins_out)
 {
@@ -436,21 +449,35 @@ collect_interface_by_location(shader_source const *src, spv::StorageClass sinter
 }
 
 
-VK_LAYER_EXPORT VkResult VKAPI vkCreateShader(VkDevice device, const VkShaderCreateInfo *pCreateInfo,
-                                                   VkShader *pShader)
+VK_LAYER_EXPORT VkResult VKAPI vkCreateShaderModule(
+        VkDevice device,
+        const VkShaderModuleCreateInfo *pCreateInfo,
+        VkShaderModule *pShaderModule)
 {
     loader_platform_thread_lock_mutex(&globalLock);
-    VkResult res = device_dispatch_table(device)->CreateShader(device, pCreateInfo, pShader);
+    VkResult res = device_dispatch_table(device)->CreateShaderModule(device, pCreateInfo, pShaderModule);
 
-    shader_map[(VkBaseLayerObject *) *pShader] = new shader_source(pCreateInfo);
+    shader_module_map[(VkBaseLayerObject *) *pShaderModule] = new shader_module(pCreateInfo);
     loader_platform_thread_unlock_mutex(&globalLock);
     return res;
 }
 
+VK_LAYER_EXPORT VkResult VKAPI vkCreateShader(
+        VkDevice device,
+        const VkShaderCreateInfo *pCreateInfo,
+        VkShader *pShader)
+{
+    loader_platform_thread_lock_mutex(&globalLock);
+    VkResult res = device_dispatch_table(device)->CreateShader(device, pCreateInfo, pShader);
+
+    shader_object_map[(VkBaseLayerObject *) *pShader] = new shader_object(pCreateInfo);
+    loader_platform_thread_unlock_mutex(&globalLock);
+    return res;
+}
 
 static bool
-validate_interface_between_stages(shader_source const *producer, char const *producer_name,
-                                  shader_source const *consumer, char const *consumer_name,
+validate_interface_between_stages(shader_module const *producer, char const *producer_name,
+                                  shader_module const *consumer, char const *consumer_name,
                                   bool consumer_arrayed_input)
 {
     std::map<uint32_t, interface_var> outputs;
@@ -568,7 +595,7 @@ get_format_type(VkFormat fmt) {
 /* characterizes a SPIR-V type appearing in an interface to a FF stage,
  * for comparison to a VkFormat's characterization above. */
 static unsigned
-get_fundamental_type(shader_source const *src, unsigned type)
+get_fundamental_type(shader_module const *src, unsigned type)
 {
     auto type_def_it = src->type_def_index.find(type);
 
@@ -625,7 +652,7 @@ validate_vi_consistency(VkPipelineVertexInputStateCreateInfo const *vi)
 
 
 static bool
-validate_vi_against_vs_inputs(VkPipelineVertexInputStateCreateInfo const *vi, shader_source const *vs)
+validate_vi_against_vs_inputs(VkPipelineVertexInputStateCreateInfo const *vi, shader_module const *vs)
 {
     std::map<uint32_t, interface_var> inputs;
     /* we collect builtin inputs, but they will never appear in the VI state --
@@ -688,7 +715,7 @@ validate_vi_against_vs_inputs(VkPipelineVertexInputStateCreateInfo const *vi, sh
 
 
 static bool
-validate_fs_outputs_against_cb(shader_source const *fs, VkPipelineCbStateCreateInfo const *cb)
+validate_fs_outputs_against_cb(shader_module const *fs, VkPipelineCbStateCreateInfo const *cb)
 {
     std::map<uint32_t, interface_var> outputs;
     std::map<uint32_t, interface_var> builtin_outputs;
@@ -786,7 +813,7 @@ validate_graphics_pipeline(VkGraphicsPipelineCreateInfo const *pCreateInfo)
     /* We seem to allow pipeline stages to be specified out of order, so collect and identify them
      * before trying to do anything more: */
 
-    shader_source const *shaders[VK_SHADER_STAGE_FRAGMENT + 1];  /* exclude CS */
+    shader_module const *shaders[VK_SHADER_STAGE_FRAGMENT + 1];  /* exclude CS */
     memset(shaders, 0, sizeof(shaders));
     VkPipelineCbStateCreateInfo const *cb = 0;
     VkPipelineVertexInputStateCreateInfo const *vi = 0;
@@ -804,7 +831,8 @@ validate_graphics_pipeline(VkGraphicsPipelineCreateInfo const *pCreateInfo)
                 layerCbMsg(VK_DBG_REPORT_WARN_BIT, (VkObjectType) 0, NULL, 0, SHADER_CHECKER_UNKNOWN_STAGE, "SC", str);
             }
             else {
-                shaders[pStage->stage] = shader_map[(void *)(pStage->shader)];
+                struct shader_object *shader = shader_object_map[(void *) pStage->shader];
+                shaders[pStage->stage] = shader->module;
             }
         }
     }
@@ -969,6 +997,7 @@ VK_LAYER_EXPORT void * VKAPI vkGetDeviceProcAddr(VkDevice device, const char* pN
     if (!strncmp(#fn, pName, sizeof(#fn))) \
         return (void *) fn
 
+    ADD_HOOK(vkCreateShaderModule);
     ADD_HOOK(vkCreateShader);
     ADD_HOOK(vkDestroyDevice);
     ADD_HOOK(vkCreateGraphicsPipeline);

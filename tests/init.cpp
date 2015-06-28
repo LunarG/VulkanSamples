@@ -582,24 +582,28 @@ void VkTest::CreateShader(VkShader *pshader)
     pSPV->magic = ICD_SPV_MAGIC;
     pSPV->version = ICD_SPV_VERSION;
 
-//    typedef struct VkShaderCreateInfo_
-//    {
-//        VkStructureType                      sType;              // Must be VK_STRUCTURE_TYPE_SHADER_CREATE_INFO
-//        const void*                             pNext;              // Pointer to next structure
-//        size_t                                  codeSize;           // Specified in bytes
-//        const void*                             pCode;
-//        VkFlags                               flags;              // Reserved
-//    } VkShaderCreateInfo;
-
+    VkShaderModuleCreateInfo moduleCreateInfo;
+    VkShaderModule module;
     VkShaderCreateInfo createInfo;
     VkShader shader;
 
+    moduleCreateInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+    moduleCreateInfo.pNext = NULL;
+    moduleCreateInfo.pCode = code;
+    moduleCreateInfo.codeSize = codeSize;
+    moduleCreateInfo.flags = 0;
+    err = vkCreateShaderModule(device(), &moduleCreateInfo, &module);
+    ASSERT_VK_SUCCESS(err);
+
     createInfo.sType = VK_STRUCTURE_TYPE_SHADER_CREATE_INFO;
     createInfo.pNext = NULL;
-    createInfo.pCode = code;
-    createInfo.codeSize = codeSize;
+    createInfo.module = module;
+    createInfo.pName = "main";
     createInfo.flags = 0;
     err = vkCreateShader(device(), &createInfo, &shader);
+    ASSERT_VK_SUCCESS(err);
+
+    err = vkDestroyObject(device(), VK_OBJECT_TYPE_SHADER_MODULE, module);
     ASSERT_VK_SUCCESS(err);
 
     *pshader = shader;

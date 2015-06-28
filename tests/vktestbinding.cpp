@@ -661,6 +661,26 @@ void DepthStencilView::init(const Device &dev, const VkDepthStencilViewCreateInf
     alloc_memory();
 }
 
+void ShaderModule::init(const Device &dev, const VkShaderModuleCreateInfo &info)
+{
+    DERIVED_OBJECT_TYPE_INIT(vkCreateShaderModule, dev, VK_OBJECT_TYPE_SHADER_MODULE, &info);
+}
+
+VkResult ShaderModule::init_try(const Device &dev, const VkShaderModuleCreateInfo &info)
+{
+    /*
+     * Note: Cannot use DERIVED_OBJECT_TYPE_INIT as we need the
+     * return code.
+     */
+    VkShaderModule sh;
+    dev_ = &dev;
+    VkResult err = vkCreateShaderModule(dev.obj(), &info, &sh);
+    if (err == VK_SUCCESS)
+        Object::init(sh, VK_OBJECT_TYPE_SHADER_MODULE);
+
+    return err;
+}
+
 void Shader::init(const Device &dev, const VkShaderCreateInfo &info)
 {
     DERIVED_OBJECT_TYPE_INIT(vkCreateShader, dev, VK_OBJECT_TYPE_SHADER, &info);

@@ -1593,9 +1593,7 @@ typedef struct VkShaderCreateInfo_
     VkStructureType                             sType;              // Must be VK_STRUCTURE_TYPE_SHADER_CREATE_INFO
     const void*                                 pNext;              // Pointer to next structure
     VkShaderModule                              module;             // Module containing entry point
-    const char*                                 name;               // Null-terminate entry point name
-    size_t                                      codeSize;           // Specified in bytes
-    const void*                                 pCode;
+    const char*                                 pName;              // Null-terminate entry point name
     VkShaderCreateFlags                         flags;              // Reserved
 } VkShaderCreateInfo;
 

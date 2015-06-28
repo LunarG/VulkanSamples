@@ -95,7 +95,6 @@ void destroy_instance_dispatch_table(dispatch_key key)
 
 VkLayerDispatchTable *get_dispatch_table(device_table_map &map, VkObject object)
 {
-//    VkLayerDispatchTable *pDisp  = *(VkLayerDispatchTable **) object;
     dispatch_key key = get_dispatch_key(object);
     device_table_map::const_iterator it = map.find((void *) key);
 #if DISPATCH_MAP_DEBUG

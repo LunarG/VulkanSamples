@@ -1015,34 +1015,13 @@ TEST_F(VkLayerTest, DescriptorSetNotUpdated)
     err = vkCreatePipelineLayout(m_device->device(), &pipeline_layout_ci, &pipeline_layout);
     ASSERT_VK_SUCCESS(err);
 
-    size_t shader_len = strlen(bindStateVertShaderText);
-    size_t codeSize = 3 * sizeof(uint32_t) + shader_len + 1;
-    void* pCode = malloc(codeSize);
-
-    /* try version 0 first: VkShaderStage followed by GLSL */
-    ((uint32_t *) pCode)[0] = ICD_SPV_MAGIC;
-    ((uint32_t *) pCode)[1] = 0;
-    ((uint32_t *) pCode)[2] = VK_SHADER_STAGE_VERTEX;
-    memcpy(((uint32_t *) pCode + 3), bindStateVertShaderText, shader_len + 1);
-
-    const VkShaderCreateInfo vs_ci = {
-        .sType = VK_STRUCTURE_TYPE_SHADER_CREATE_INFO,
-        .pNext = NULL,
-        .module = VK_NULL_HANDLE,
-        .name = "main",
-        .codeSize = codeSize,
-        .pCode = pCode,
-        .flags = 0,
-    };
-    VkShader vs;
-    err = vkCreateShader(m_device->device(), &vs_ci, &vs);
-    ASSERT_VK_SUCCESS(err);
+    VkShaderObj vs(m_device, bindStateVertShaderText, VK_SHADER_STAGE_VERTEX, this);
 
     const VkPipelineShaderStageCreateInfo pipe_vs_ci = {
         .sType                = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
         .pNext                = NULL,
         .stage                = VK_SHADER_STAGE_VERTEX,
-        .shader               = vs,
+        .shader               = vs.obj(),
         .linkConstBufferCount = 0,
         .pLinkConstBufferInfo = NULL,
         .pSpecializationInfo  = NULL,
@@ -1298,33 +1277,13 @@ TEST_F(VkLayerTest, VtxBufferNoRenderPass)
     err = vkCreatePipelineLayout(m_device->device(), &pipeline_layout_ci, &pipeline_layout);
     ASSERT_VK_SUCCESS(err);
 
-    size_t shader_len = strlen(bindStateVertShaderText);
-    size_t codeSize = 3 * sizeof(uint32_t) + shader_len + 1;
-    void* pCode = malloc(codeSize);
-
-    /* try version 0 first: VkShaderStage followed by GLSL */
-    ((uint32_t *) pCode)[0] = ICD_SPV_MAGIC;
-    ((uint32_t *) pCode)[1] = 0;
-    ((uint32_t *) pCode)[2] = VK_SHADER_STAGE_VERTEX;
-    memcpy(((uint32_t *) pCode + 3), bindStateVertShaderText, shader_len + 1);
-
-    const VkShaderCreateInfo vs_ci = {
-        .sType = VK_STRUCTURE_TYPE_SHADER_CREATE_INFO,
-        .pNext = NULL,
-        .module = VK_NULL_HANDLE,
-        .name = "main",
-        .codeSize = codeSize,
-        .pCode = pCode,
-        .flags = 0,
-    };
-    VkShader vs;
-    err = vkCreateShader(m_device->device(), &vs_ci, &vs);
+    VkShaderObj vs(m_device, bindStateVertShaderText, VK_SHADER_STAGE_VERTEX, this);
 
     const VkPipelineShaderStageCreateInfo pipe_vs_ci = {
         .sType  = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
         .pNext  = NULL,
         .stage                = VK_SHADER_STAGE_VERTEX,
-        .shader               = vs,
+        .shader               = vs.obj(),
         .linkConstBufferCount = 0,
         .pLinkConstBufferInfo = NULL,
         .pSpecializationInfo  = NULL,
@@ -1782,34 +1741,13 @@ TEST_F(VkLayerTest, NumSamplesMismatch)
     err = vkCreatePipelineLayout(m_device->device(), &pipeline_layout_ci, &pipeline_layout);
     ASSERT_VK_SUCCESS(err);
 
-    size_t shader_len = strlen(bindStateVertShaderText);
-    size_t codeSize = 3 * sizeof(uint32_t) + shader_len + 1;
-    void* pCode = malloc(codeSize);
-
-    /* try version 0 first: VkShaderStage followed by GLSL */
-    ((uint32_t *) pCode)[0] = ICD_SPV_MAGIC;
-    ((uint32_t *) pCode)[1] = 0;
-    ((uint32_t *) pCode)[2] = VK_SHADER_STAGE_VERTEX;
-    memcpy(((uint32_t *) pCode + 3), bindStateVertShaderText, shader_len + 1);
-
-    const VkShaderCreateInfo vs_ci = {
-        .sType = VK_STRUCTURE_TYPE_SHADER_CREATE_INFO,
-        .pNext = NULL,
-        .module = VK_NULL_HANDLE,
-        .name = "main",
-        .codeSize = codeSize,
-        .pCode = pCode,
-        .flags = 0,
-    };
-    VkShader vs;
-    err = vkCreateShader(m_device->device(), &vs_ci, &vs);
-    ASSERT_VK_SUCCESS(err);
+    VkShaderObj vs(m_device, bindStateVertShaderText, VK_SHADER_STAGE_VERTEX, this);
 
     const VkPipelineShaderStageCreateInfo pipe_vs_ci = {
         .sType                = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
         .pNext                = NULL,
         .stage                = VK_SHADER_STAGE_VERTEX,
-        .shader               = vs,
+        .shader               = vs.obj(),
         .linkConstBufferCount = 0,
         .pLinkConstBufferInfo = NULL,
         .pSpecializationInfo  = NULL,
@@ -1902,29 +1840,6 @@ TEST_F(VkLayerTest, PipelineNotBound)
     err = vkCreatePipelineLayout(m_device->device(), &pipeline_layout_ci, &pipeline_layout);
     ASSERT_VK_SUCCESS(err);
 
-    size_t shader_len = strlen(bindStateVertShaderText);
-    size_t codeSize = 3 * sizeof(uint32_t) + shader_len + 1;
-    void* pCode = malloc(codeSize);
-
-    /* try version 0 first: VkShaderStage followed by GLSL */
-    ((uint32_t *) pCode)[0] = ICD_SPV_MAGIC;
-    ((uint32_t *) pCode)[1] = 0;
-    ((uint32_t *) pCode)[2] = VK_SHADER_STAGE_VERTEX;
-    memcpy(((uint32_t *) pCode + 3), bindStateVertShaderText, shader_len + 1);
-
-    const VkShaderCreateInfo vs_ci = {
-        .sType = VK_STRUCTURE_TYPE_SHADER_CREATE_INFO,
-        .pNext = NULL,
-        .module = VK_NULL_HANDLE,
-        .name = "main",
-        .codeSize = codeSize,
-        .pCode = pCode,
-        .flags = 0,
-    };
-    VkShader vs;
-    err = vkCreateShader(m_device->device(), &vs_ci, &vs);
-    ASSERT_VK_SUCCESS(err);
-
     VkPipeline badPipeline = (VkPipeline)0xbaadb1be;
     //err = vkCreateGraphicsPipeline(m_device->device(), &gp_ci, &pipeline);
     ASSERT_VK_SUCCESS(err);
@@ -2007,34 +1922,13 @@ TEST_F(VkLayerTest, VtxBufferBadIndex)
     err = vkCreatePipelineLayout(m_device->device(), &pipeline_layout_ci, &pipeline_layout);
     ASSERT_VK_SUCCESS(err);
 
-    size_t shader_len = strlen(bindStateVertShaderText);
-    size_t codeSize = 3 * sizeof(uint32_t) + shader_len + 1;
-    void* pCode = malloc(codeSize);
-
-    /* try version 0 first: VkShaderStage followed by GLSL */
-    ((uint32_t *) pCode)[0] = ICD_SPV_MAGIC;
-    ((uint32_t *) pCode)[1] = 0;
-    ((uint32_t *) pCode)[2] = VK_SHADER_STAGE_VERTEX;
-    memcpy(((uint32_t *) pCode + 3), bindStateVertShaderText, shader_len + 1);
-
-    const VkShaderCreateInfo vs_ci = {
-        .sType = VK_STRUCTURE_TYPE_SHADER_CREATE_INFO,
-        .pNext = NULL,
-        .module = VK_NULL_HANDLE,
-        .name = "main",
-        .codeSize = codeSize,
-        .pCode = pCode,
-        .flags = 0,
-    };
-    VkShader vs;
-    err = vkCreateShader(m_device->device(), &vs_ci, &vs);
-    ASSERT_VK_SUCCESS(err);
+    VkShaderObj vs(m_device, bindStateVertShaderText, VK_SHADER_STAGE_VERTEX, this);
 
     const VkPipelineShaderStageCreateInfo pipe_vs_ci = {
         .sType                = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
         .pNext                = NULL,
         .stage                = VK_SHADER_STAGE_VERTEX,
-        .shader               = vs,
+        .shader               = vs.obj(),
         .linkConstBufferCount = 0,
         .pLinkConstBufferInfo = NULL,
         .pSpecializationInfo  = NULL,

@@ -362,7 +362,6 @@ static inline void loader_init_instance_core_dispatch_table(VkLayerInstanceDispa
 
     table->CreateInstance = (PFN_vkCreateInstance) gpa(inst, "vkCreateInstance");
     table->DestroyInstance = (PFN_vkDestroyInstance) gpa(inst, "vkDestroyInstance");
-    table->CreateDevice = (PFN_vkCreateDevice) gpa(inst, "vkCreateDevice");
     table->EnumeratePhysicalDevices = (PFN_vkEnumeratePhysicalDevices) gpa(inst, "vkEnumeratePhysicalDevices");
     table->GetPhysicalDeviceFeatures = (PFN_vkGetPhysicalDeviceFeatures) gpa(inst, "vkGetPhysicalDeviceFeatures");
     table->GetPhysicalDeviceFormatInfo = (PFN_vkGetPhysicalDeviceFormatInfo) gpa(inst, "vkGetPhysicalDeviceFormatInfo");

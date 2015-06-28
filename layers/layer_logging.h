@@ -99,9 +99,14 @@ static inline debug_report_data *debug_report_create_instance(
 
 static inline void layer_debug_report_destroy_instance(debug_report_data *debug_data)
 {
-    VkLayerDbgFunctionNode *pTrav = debug_data->g_pDbgFunctionHead;
+    VkLayerDbgFunctionNode *pTrav;
     VkLayerDbgFunctionNode *pTravNext;
 
+    if (!debug_data) {
+        return;
+    }
+
+    pTrav = debug_data->g_pDbgFunctionHead;
     /* Clear out any leftover callbacks */
     while (pTrav) {
         pTravNext = pTrav->pNext;

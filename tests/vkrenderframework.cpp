@@ -1028,10 +1028,15 @@ VkShaderObj::VkShaderObj(VkDeviceObj *device, const char * shader_code, VkShader
     VkResult err = VK_SUCCESS;
     std::vector<unsigned int> spv;
     VkShaderCreateInfo createInfo;
+    VkShaderModuleCreateInfo moduleCreateInfo;
+    vk_testing::ShaderModule module;
     size_t shader_len;
 
     m_stage = stage;
     m_device = device;
+
+    moduleCreateInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+    moduleCreateInfo.pNext = NULL;
 
     createInfo.sType = VK_STRUCTURE_TYPE_SHADER_CREATE_INFO;
     createInfo.pNext = NULL;
@@ -1039,27 +1044,35 @@ VkShaderObj::VkShaderObj(VkDeviceObj *device, const char * shader_code, VkShader
     if (framework->m_use_glsl) {
 
         shader_len = strlen(shader_code);
-        createInfo.codeSize = 3 * sizeof(uint32_t) + shader_len + 1;
-        createInfo.pCode = malloc(createInfo.codeSize);
-        createInfo.flags = 0;
+        moduleCreateInfo.codeSize = 3 * sizeof(uint32_t) + shader_len + 1;
+        moduleCreateInfo.pCode = malloc(moduleCreateInfo.codeSize);
+        moduleCreateInfo.flags = 0;
 
         /* try version 0 first: VkShaderStage followed by GLSL */
-        ((uint32_t *) createInfo.pCode)[0] = ICD_SPV_MAGIC;
-        ((uint32_t *) createInfo.pCode)[1] = 0;
-        ((uint32_t *) createInfo.pCode)[2] = stage;
-        memcpy(((uint32_t *) createInfo.pCode + 3), shader_code, shader_len + 1);
+        ((uint32_t *) moduleCreateInfo.pCode)[0] = ICD_SPV_MAGIC;
+        ((uint32_t *) moduleCreateInfo.pCode)[1] = 0;
+        ((uint32_t *) moduleCreateInfo.pCode)[2] = stage;
+        memcpy(((uint32_t *) moduleCreateInfo.pCode + 3), shader_code, shader_len + 1);
 
     } else {
 
         // Use Reference GLSL to SPV compiler
         framework->GLSLtoSPV(stage, shader_code, spv);
-        createInfo.pCode = spv.data();
-        createInfo.codeSize = spv.size() * sizeof(unsigned int);
-        createInfo.flags = 0;
+        moduleCreateInfo.pCode = spv.data();
+        moduleCreateInfo.codeSize = spv.size() * sizeof(unsigned int);
+        moduleCreateInfo.flags = 0;
     }
 
-    err = init_try(*m_device, createInfo);
+    err = module.init_try(*m_device, moduleCreateInfo);
+    assert(VK_SUCCESS == err);
 
+    createInfo.sType = VK_STRUCTURE_TYPE_SHADER_CREATE_INFO;
+    createInfo.pNext = NULL;
+    createInfo.module = module.obj();
+    createInfo.pName = "main";
+    createInfo.flags = 0;
+
+    err = init_try(*m_device, createInfo);
     assert(VK_SUCCESS == err);
 }
 

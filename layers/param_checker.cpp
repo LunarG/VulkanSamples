@@ -4538,6 +4538,90 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateDepthStencilView(
     return result;
 }
 
+void PreCreateShaderModule(
+    VkDevice device,
+    const VkShaderModuleCreateInfo* pCreateInfo)
+{
+    if(device == nullptr)
+    {
+        log_msg(mdd(device), VK_DBG_REPORT_WARN_BIT, (VkObjectType)0, NULL, 0, 1, "PARAMCHECK",
+        "vkCreateShaderModule parameter, VkDevice device, is null pointer");
+        return;
+    }
+
+    if(pCreateInfo == nullptr)
+    {
+        log_msg(mdd(device), VK_DBG_REPORT_WARN_BIT, (VkObjectType)0, NULL, 0, 1, "PARAMCHECK",
+        "vkCreateShaderModule parameter, const VkShaderCreateInfo* pCreateInfo, is null pointer");
+        return;
+    }
+    if(pCreateInfo->sType < VK_STRUCTURE_TYPE_BEGIN_RANGE ||
+        pCreateInfo->sType > VK_STRUCTURE_TYPE_END_RANGE)
+    {
+        log_msg(mdd(device), VK_DBG_REPORT_WARN_BIT, (VkObjectType)0, NULL, 0, 1, "PARAMCHECK",
+        "vkCreateShaderModule parameter, VkStructureType pCreateInfo->sType, is unrecognized enumerator");
+        return;
+    }
+    if(pCreateInfo->pCode == nullptr)
+    {
+        log_msg(mdd(device), VK_DBG_REPORT_WARN_BIT, (VkObjectType)0, NULL, 0, 1, "PARAMCHECK",
+        "vkCreateShaderModule parameter, const void* pCreateInfo->pCode, is null pointer");
+        return;
+    }
+    if(pCreateInfo->codeSize == 0)
+    {
+        log_msg(mdd(device), VK_DBG_REPORT_WARN_BIT, (VkObjectType)0, NULL, 0, 1, "PARAMCHECK",
+        "vkCreateShaderModule parameter, size_t pCreateInfo->codeSize, is zero");
+        return;
+    }
+}
+
+void PostCreateShaderModule(
+    VkDevice device,
+    VkShaderModule* pShaderModule,
+    VkResult result)
+{
+    if(device == nullptr)
+    {
+        log_msg(mdd(device), VK_DBG_REPORT_WARN_BIT, (VkObjectType)0, NULL, 0, 1, "PARAMCHECK",
+        "vkCreateShaderModule parameter, VkDevice device, is null pointer");
+        return;
+    }
+
+    if(pShaderModule == nullptr)
+    {
+        log_msg(mdd(device), VK_DBG_REPORT_WARN_BIT, (VkObjectType)0, NULL, 0, 1, "PARAMCHECK",
+        "vkCreateShaderModule parameter, VkShader* pShader, is null pointer");
+        return;
+    }
+    if((*pShaderModule) == nullptr)
+    {
+        log_msg(mdd(device), VK_DBG_REPORT_WARN_BIT, (VkObjectType)0, NULL, 0, 1, "PARAMCHECK",
+        "vkCreateShaderModule parameter, VkShader* pShader, is null pointer");
+        return;
+    }
+
+    if(result != VK_SUCCESS)
+    {
+        std::string reason = "vkCreateShaderModule parameter, VkResult result, is " + EnumeratorString(result);
+        log_msg(mdd(device), VK_DBG_REPORT_WARN_BIT, (VkObjectType)0, NULL, 0, 1, "PARAMCHECK", reason.c_str());
+        return;
+    }
+}
+
+VK_LAYER_EXPORT VkResult VKAPI vkCreateShaderModule(
+    VkDevice device,
+    const VkShaderModuleCreateInfo* pCreateInfo,
+    VkShaderModule* pShaderModule)
+{
+    PreCreateShaderModule(device, pCreateInfo);
+    VkResult result = get_dispatch_table(pc_device_table_map, device)->CreateShaderModule(device, pCreateInfo, pShaderModule);
+
+    PostCreateShaderModule(device, pShaderModule, result);
+
+    return result;
+}
+
 void PreCreateShader(
     VkDevice device,
     const VkShaderCreateInfo* pCreateInfo)
@@ -4568,16 +4652,10 @@ void PreCreateShader(
         "vkCreateShader parameter, VkShaderModule pCreateInfo->module, is null pointer");
         return;
     }
-    if(pCreateInfo->name == nullptr)
+    if(pCreateInfo->pName == nullptr)
     {
         log_msg(mdd(device), VK_DBG_REPORT_WARN_BIT, (VkObjectType)0, NULL, 0, 1, "PARAMCHECK",
         "vkCreateShader parameter, const char* pCreateInfo->name, is null pointer");
-        return;
-    }
-    if(pCreateInfo->pCode == nullptr)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_WARN_BIT, (VkObjectType)0, NULL, 0, 1, "PARAMCHECK",
-        "vkCreateShader parameter, const void* pCreateInfo->pCode, is null pointer");
         return;
     }
 }
