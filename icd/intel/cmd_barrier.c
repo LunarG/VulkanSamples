@@ -274,16 +274,17 @@ static void cmd_memory_barriers(struct intel_cmd *cmd,
 
 ICD_EXPORT void VKAPI vkCmdWaitEvents(
     VkCmdBuffer                                 cmdBuffer,
-    VkWaitEvent                                 waitEvent,
     uint32_t                                    eventCount,
     const VkEvent*                              pEvents,
+    VkPipelineStageFlags                        sourceStageMask,
+    VkPipelineStageFlags                        destStageMask,
     uint32_t                                    memBarrierCount,
     const void**                                ppMemBarriers)
 {
     struct intel_cmd *cmd = intel_cmd(cmdBuffer);
 
-    /* This hardware will always wait at VK_WAIT_EVENT_TOP_OF_PIPE.
-     * Passing a pWaitInfo->waitEvent of VK_WAIT_EVENT_BEFORE_FRAGMENT_PROCESSING
+    /* This hardware will always wait at VK_PIPELINE_STAGE_TOP_OF_PIPE.
+     * Passing a stageMask specifying other stages
      * does not change that.
      */
 
@@ -301,18 +302,17 @@ ICD_EXPORT void VKAPI vkCmdWaitEvents(
 
 ICD_EXPORT void VKAPI vkCmdPipelineBarrier(
         VkCmdBuffer                                 cmdBuffer,
-        VkWaitEvent                                 waitEvent,
-        uint32_t                                    pipeEventCount,
-        const VkPipeEvent*                          pPipeEvents,
+        VkPipelineStageFlags                        sourceStageMask,
+        VkPipelineStageFlags                        destStageMask,
+        bool32_t                                    byRegion,
         uint32_t                                    memBarrierCount,
         const void**                                ppMemBarriers)
 {
     struct intel_cmd *cmd = intel_cmd(cmdBuffer);
     uint32_t pipe_control_flags = 0;
-    uint32_t i;
 
     /* This hardware will always wait at VK_WAIT_EVENT_TOP_OF_PIPE.
-     * Passing a pBarrier->waitEvent of VK_WAIT_EVENT_BEFORE_FRAGMENT_PROCESSING
+     * Passing a stageMask specifying other stages
      * does not change that.
      */
 
@@ -320,25 +320,10 @@ ICD_EXPORT void VKAPI vkCmdPipelineBarrier(
      * With no GEN6_PIPE_CONTROL_CS_STALL flag set, it behaves as VK_PIPE_EVENT_TOP_OF_PIPE.
      * All other pEvents values will behave as VK_PIPE_EVENT_COMMANDS_COMPLETE.
      */
-    for (i = 0; i < pipeEventCount; i++) {
-        switch(pPipeEvents[i])
-        {
-        case VK_PIPE_EVENT_TOP_OF_PIPE:
-            break;
-        case VK_PIPE_EVENT_VERTEX_PROCESSING_COMPLETE:
-        case VK_PIPE_EVENT_LOCAL_FRAGMENT_PROCESSING_COMPLETE:
-        case VK_PIPE_EVENT_FRAGMENT_PROCESSING_COMPLETE:
-        case VK_PIPE_EVENT_GRAPHICS_PIPELINE_COMPLETE:
-        case VK_PIPE_EVENT_COMPUTE_PIPELINE_COMPLETE:
-        case VK_PIPE_EVENT_TRANSFER_COMPLETE:
-        case VK_PIPE_EVENT_COMMANDS_COMPLETE:
-            pipe_control_flags |= GEN6_PIPE_CONTROL_CS_STALL;
-            break;
-        default:
-            cmd_fail(cmd, VK_ERROR_UNKNOWN);
-            return;
-            break;
-        }
+
+    if ((sourceStageMask & VK_PIPELINE_STAGE_ALL_GRAPHICS) ||
+            (destStageMask & VK_PIPELINE_STAGE_ALL_GRAPHICS)){
+        pipe_control_flags = GEN6_PIPE_CONTROL_CS_STALL;
     }
 
     /* cmd_memory_barriers can wait for GEN6_PIPE_CONTROL_CS_STALL and perform

@@ -8619,7 +8619,7 @@ void PreCmdSetEvent(
 void PostCmdSetEvent(
     VkCmdBuffer cmdBuffer,
     VkEvent event,
-    VkPipeEvent pipeEvent)
+    VkPipelineStageFlags stageMask)
 {
     if(cmdBuffer == nullptr)
     {
@@ -8635,24 +8635,17 @@ void PostCmdSetEvent(
         return;
     }
 
-    if(pipeEvent < VK_PIPE_EVENT_BEGIN_RANGE ||
-        pipeEvent > VK_PIPE_EVENT_END_RANGE)
-    {
-        log_msg(mdd(cmdBuffer), VK_DBG_REPORT_WARN_BIT, (VkObjectType)0, NULL, 0, 1, "PARAMCHECK",
-        "vkCmdSetEvent parameter, VkPipeEvent pipeEvent, is unrecognized enumerator");
-        return;
-    }
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdSetEvent(
     VkCmdBuffer cmdBuffer,
     VkEvent event,
-    VkPipeEvent pipeEvent)
+    VkPipelineStageFlags stageMask)
 {
     PreCmdSetEvent(cmdBuffer);
-    get_dispatch_table(pc_device_table_map, cmdBuffer)->CmdSetEvent(cmdBuffer, event, pipeEvent);
+    get_dispatch_table(pc_device_table_map, cmdBuffer)->CmdSetEvent(cmdBuffer, event, stageMask);
 
-    PostCmdSetEvent(cmdBuffer, event, pipeEvent);
+    PostCmdSetEvent(cmdBuffer, event, stageMask);
 }
 
 void PreCmdResetEvent(
@@ -8669,7 +8662,7 @@ void PreCmdResetEvent(
 void PostCmdResetEvent(
     VkCmdBuffer cmdBuffer,
     VkEvent event,
-    VkPipeEvent pipeEvent)
+    VkPipelineStageFlags stageMask)
 {
     if(cmdBuffer == nullptr)
     {
@@ -8685,24 +8678,17 @@ void PostCmdResetEvent(
         return;
     }
 
-    if(pipeEvent < VK_PIPE_EVENT_BEGIN_RANGE ||
-        pipeEvent > VK_PIPE_EVENT_END_RANGE)
-    {
-        log_msg(mdd(cmdBuffer), VK_DBG_REPORT_WARN_BIT, (VkObjectType)0, NULL, 0, 1, "PARAMCHECK",
-        "vkCmdResetEvent parameter, VkPipeEvent pipeEvent, is unrecognized enumerator");
-        return;
-    }
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdResetEvent(
     VkCmdBuffer cmdBuffer,
     VkEvent event,
-    VkPipeEvent pipeEvent)
+    VkPipelineStageFlags stageMask)
 {
     PreCmdResetEvent(cmdBuffer);
-    get_dispatch_table(pc_device_table_map, cmdBuffer)->CmdResetEvent(cmdBuffer, event, pipeEvent);
+    get_dispatch_table(pc_device_table_map, cmdBuffer)->CmdResetEvent(cmdBuffer, event, stageMask);
 
-    PostCmdResetEvent(cmdBuffer, event, pipeEvent);
+    PostCmdResetEvent(cmdBuffer, event, stageMask);
 }
 
 void PreCmdWaitEvents(
@@ -8740,8 +8726,9 @@ void PreCmdWaitEvents(
 
 void PostCmdWaitEvents(
     VkCmdBuffer cmdBuffer,
-    VkWaitEvent waitEvent,
     uint32_t eventCount,
+    VkPipelineStageFlags sourceStageMask,
+    VkPipelineStageFlags destStageMask,
     uint32_t memBarrierCount)
 {
     if(cmdBuffer == nullptr)
@@ -8751,54 +8738,34 @@ void PostCmdWaitEvents(
         return;
     }
 
-    if(waitEvent < VK_WAIT_EVENT_BEGIN_RANGE ||
-        waitEvent > VK_WAIT_EVENT_END_RANGE)
-    {
-        log_msg(mdd(cmdBuffer), VK_DBG_REPORT_WARN_BIT, (VkObjectType)0, NULL, 0, 1, "PARAMCHECK",
-        "vkCmdWaitEvents parameter, VkWaitEvent waitEvent, is unrecognized enumerator");
-        return;
-    }
+
 
 
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdWaitEvents(
     VkCmdBuffer cmdBuffer,
-    VkWaitEvent waitEvent,
     uint32_t eventCount,
     const VkEvent* pEvents,
+    VkPipelineStageFlags sourceStageMask,
+    VkPipelineStageFlags destStageMask,
     uint32_t memBarrierCount,
     const void** ppMemBarriers)
 {
     PreCmdWaitEvents(cmdBuffer, pEvents, ppMemBarriers);
-    get_dispatch_table(pc_device_table_map, cmdBuffer)->CmdWaitEvents(cmdBuffer, waitEvent, eventCount, pEvents, memBarrierCount, ppMemBarriers);
+    get_dispatch_table(pc_device_table_map, cmdBuffer)->CmdWaitEvents(cmdBuffer, eventCount, pEvents, sourceStageMask, destStageMask, memBarrierCount, ppMemBarriers);
 
-    PostCmdWaitEvents(cmdBuffer, waitEvent, eventCount, memBarrierCount);
+    PostCmdWaitEvents(cmdBuffer, eventCount, sourceStageMask, destStageMask, memBarrierCount);
 }
 
 void PreCmdPipelineBarrier(
     VkCmdBuffer cmdBuffer,
-    const VkPipeEvent* pPipeEvents,
     const void** ppMemBarriers)
 {
     if(cmdBuffer == nullptr)
     {
         log_msg(mdd(cmdBuffer), VK_DBG_REPORT_WARN_BIT, (VkObjectType)0, NULL, 0, 1, "PARAMCHECK",
         "vkCmdPipelineBarrier parameter, VkCmdBuffer cmdBuffer, is null pointer");
-        return;
-    }
-
-    if(pPipeEvents == nullptr)
-    {
-        log_msg(mdd(cmdBuffer), VK_DBG_REPORT_WARN_BIT, (VkObjectType)0, NULL, 0, 1, "PARAMCHECK",
-        "vkCmdPipelineBarrier parameter, const VkPipeEvent* pPipeEvents, is null pointer");
-        return;
-    }
-    if((*pPipeEvents) < VK_PIPE_EVENT_BEGIN_RANGE ||
-        (*pPipeEvents) > VK_PIPE_EVENT_END_RANGE)
-    {
-        log_msg(mdd(cmdBuffer), VK_DBG_REPORT_WARN_BIT, (VkObjectType)0, NULL, 0, 1, "PARAMCHECK",
-        "vkCmdPipelineBarrier parameter, const VkPipeEvent* pPipeEvents, is unrecognized enumerator");
         return;
     }
 
@@ -8812,8 +8779,9 @@ void PreCmdPipelineBarrier(
 
 void PostCmdPipelineBarrier(
     VkCmdBuffer cmdBuffer,
-    VkWaitEvent waitEvent,
-    uint32_t pipeEventCount,
+    VkPipelineStageFlags sourceStageMask,
+    VkPipelineStageFlags destStageMask,
+    bool32_t byRegion,
     uint32_t memBarrierCount)
 {
     if(cmdBuffer == nullptr)
@@ -8823,29 +8791,23 @@ void PostCmdPipelineBarrier(
         return;
     }
 
-    if(waitEvent < VK_WAIT_EVENT_BEGIN_RANGE ||
-        waitEvent > VK_WAIT_EVENT_END_RANGE)
-    {
-        log_msg(mdd(cmdBuffer), VK_DBG_REPORT_WARN_BIT, (VkObjectType)0, NULL, 0, 1, "PARAMCHECK",
-        "vkCmdPipelineBarrier parameter, VkWaitEvent waitEvent, is unrecognized enumerator");
-        return;
-    }
+
 
 
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdPipelineBarrier(
     VkCmdBuffer cmdBuffer,
-    VkWaitEvent waitEvent,
-    uint32_t pipeEventCount,
-    const VkPipeEvent* pPipeEvents,
+    VkPipelineStageFlags sourceStageMask,
+    VkPipelineStageFlags destStageMask,
+    bool32_t byRegion,
     uint32_t memBarrierCount,
     const void** ppMemBarriers)
 {
-    PreCmdPipelineBarrier(cmdBuffer, pPipeEvents, ppMemBarriers);
-    get_dispatch_table(pc_device_table_map, cmdBuffer)->CmdPipelineBarrier(cmdBuffer, waitEvent, pipeEventCount, pPipeEvents, memBarrierCount, ppMemBarriers);
+    PreCmdPipelineBarrier(cmdBuffer, ppMemBarriers);
+    get_dispatch_table(pc_device_table_map, cmdBuffer)->CmdPipelineBarrier(cmdBuffer, sourceStageMask, destStageMask, byRegion, memBarrierCount, ppMemBarriers);
 
-    PostCmdPipelineBarrier(cmdBuffer, waitEvent, pipeEventCount, memBarrierCount);
+    PostCmdPipelineBarrier(cmdBuffer, sourceStageMask, destStageMask, byRegion, memBarrierCount);
 }
 
 void PreCmdBeginQuery(

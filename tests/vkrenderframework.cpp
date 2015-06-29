@@ -544,10 +544,11 @@ void VkImageObj::ImageMemoryBarrier(
 
     VkImageMemoryBarrier *pmemory_barrier = &barrier;
 
-    VkPipeEvent pipe_events[] = { VK_PIPE_EVENT_COMMANDS_COMPLETE };
+    VkPipelineStageFlags src_stages = VK_PIPELINE_STAGE_ALL_GPU_COMMANDS;
+    VkPipelineStageFlags dest_stages = VK_PIPELINE_STAGE_ALL_GPU_COMMANDS;
 
     // write barrier to the command buffer
-    vkCmdPipelineBarrier(cmd_buf->obj(), VK_WAIT_EVENT_TOP_OF_PIPE, 1, pipe_events, 1, (const void **)&pmemory_barrier);
+    vkCmdPipelineBarrier(cmd_buf->obj(), src_stages, dest_stages, false, 1, (const void **)&pmemory_barrier);
 }
 
 void VkImageObj::SetLayout(VkCommandBufferObj *cmd_buf,
@@ -930,10 +931,11 @@ void VkConstantBufferObj::BufferMemoryBarrier(
         buffer_memory_barrier(outputMask, inputMask, 0, m_numVertices * m_stride);
     VkBufferMemoryBarrier *pmemory_barrier = &memory_barrier;
 
-    VkPipeEvent set_events[] = { VK_PIPE_EVENT_COMMANDS_COMPLETE };
+    VkPipelineStageFlags src_stages = VK_PIPELINE_STAGE_ALL_GPU_COMMANDS;
+    VkPipelineStageFlags dest_stages = VK_PIPELINE_STAGE_ALL_GPU_COMMANDS;
 
     // write barrier to the command buffer
-    m_commandBuffer->PipelineBarrier(VK_WAIT_EVENT_TOP_OF_PIPE, 1, set_events, 1, (const void **)&pmemory_barrier);
+    m_commandBuffer->PipelineBarrier(src_stages, dest_stages, false, 1, (const void **)&pmemory_barrier);
 
     // finish recording the command buffer
     err = m_commandBuffer->EndCommandBuffer();
@@ -1264,9 +1266,9 @@ VkResult VkCommandBufferObj::EndCommandBuffer()
     return VK_SUCCESS;
 }
 
-void VkCommandBufferObj::PipelineBarrier(VkWaitEvent waitEvent, uint32_t pipeEventCount, const VkPipeEvent* pPipeEvents, uint32_t memBarrierCount, const void** ppMemBarriers)
+void VkCommandBufferObj::PipelineBarrier(VkPipelineStageFlags src_stages,  VkPipelineStageFlags dest_stages, bool32_t byRegion, uint32_t memBarrierCount, const void** ppMemBarriers)
 {
-    vkCmdPipelineBarrier(obj(), waitEvent, pipeEventCount, pPipeEvents, memBarrierCount, ppMemBarriers);
+    vkCmdPipelineBarrier(obj(), src_stages, dest_stages, byRegion, memBarrierCount, ppMemBarriers);
 }
 
 void VkCommandBufferObj::ClearAllBuffers(VkClearColor clear_color, float depth_clear_color, uint32_t stencil_clear_color,
@@ -1297,12 +1299,13 @@ void VkCommandBufferObj::ClearAllBuffers(VkClearColor clear_color, float depth_c
     memory_barrier.subresourceRange = srRange;
     VkImageMemoryBarrier *pmemory_barrier = &memory_barrier;
 
-    VkPipeEvent set_events[] = { VK_PIPE_EVENT_COMMANDS_COMPLETE };
+    VkPipelineStageFlags src_stages = VK_PIPELINE_STAGE_ALL_GPU_COMMANDS;
+    VkPipelineStageFlags dest_stages = VK_PIPELINE_STAGE_ALL_GPU_COMMANDS;
 
     for (i = 0; i < m_renderTargets.size(); i++) {
         memory_barrier.image = m_renderTargets[i]->image();
         memory_barrier.oldLayout = m_renderTargets[i]->layout();
-        vkCmdPipelineBarrier( obj(), VK_WAIT_EVENT_TOP_OF_PIPE, 1, set_events, 1, (const void **)&pmemory_barrier);
+        vkCmdPipelineBarrier( obj(), src_stages, dest_stages, false, 1, (const void **)&pmemory_barrier);
         m_renderTargets[i]->layout(memory_barrier.newLayout);
 
         vkCmdClearColorImage(obj(),
@@ -1327,7 +1330,7 @@ void VkCommandBufferObj::ClearAllBuffers(VkClearColor clear_color, float depth_c
         memory_barrier.image = depthStencilObj->obj();
         memory_barrier.subresourceRange = dsRange;
 
-        vkCmdPipelineBarrier( obj(), VK_WAIT_EVENT_TOP_OF_PIPE, 1, set_events, 1, (const void **)&pmemory_barrier);
+        vkCmdPipelineBarrier( obj(), src_stages, dest_stages, false, 1, (const void **)&pmemory_barrier);
 
         vkCmdClearDepthStencil(obj(),
                                 depthStencilObj->obj(), VK_IMAGE_LAYOUT_CLEAR_OPTIMAL,
@@ -1339,7 +1342,7 @@ void VkCommandBufferObj::ClearAllBuffers(VkClearColor clear_color, float depth_c
         memory_barrier.oldLayout = VK_IMAGE_LAYOUT_CLEAR_OPTIMAL;
         memory_barrier.newLayout = depthStencilObj->BindInfo()->layout;
         memory_barrier.subresourceRange = dsRange;
-        vkCmdPipelineBarrier( obj(), VK_WAIT_EVENT_TOP_OF_PIPE, 1, set_events, 1, (const void **)&pmemory_barrier);
+        vkCmdPipelineBarrier( obj(), src_stages, dest_stages, false, 1, (const void **)&pmemory_barrier);
     }
 }
 
@@ -1378,13 +1381,14 @@ void VkCommandBufferObj::PrepareAttachments()
     memory_barrier.subresourceRange = srRange;
     VkImageMemoryBarrier *pmemory_barrier = &memory_barrier;
 
-    VkPipeEvent set_events[] = { VK_PIPE_EVENT_COMMANDS_COMPLETE };
+    VkPipelineStageFlags src_stages = VK_PIPELINE_STAGE_ALL_GPU_COMMANDS;
+    VkPipelineStageFlags dest_stages = VK_PIPELINE_STAGE_ALL_GPU_COMMANDS;
 
     for(i=0; i<m_renderTargets.size(); i++)
     {
         memory_barrier.image = m_renderTargets[i]->image();
         memory_barrier.oldLayout = m_renderTargets[i]->layout();
-        vkCmdPipelineBarrier( obj(), VK_WAIT_EVENT_TOP_OF_PIPE, 1, set_events, 1, (const void **)&pmemory_barrier);
+        vkCmdPipelineBarrier( obj(), src_stages, dest_stages, false, 1, (const void **)&pmemory_barrier);
         m_renderTargets[i]->layout(memory_barrier.newLayout);
     }
 }

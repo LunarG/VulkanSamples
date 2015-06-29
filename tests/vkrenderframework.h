@@ -169,7 +169,7 @@ public:
     VkResult BeginCommandBuffer(VkCmdBufferBeginInfo *pInfo);
     VkResult BeginCommandBuffer(VkRenderPass renderpass_obj, VkFramebuffer framebuffer_obj);
     VkResult EndCommandBuffer();
-    void PipelineBarrier(VkWaitEvent waitEvent, uint32_t pipeEventCount, const VkPipeEvent* pPipeEvents, uint32_t memBarrierCount, const void** ppMemBarriers);
+    void PipelineBarrier(VkPipelineStageFlags src_stages, VkPipelineStageFlags dest_stages, bool32_t byRegion, uint32_t memBarrierCount, const void** ppMemBarriers);
     void AddRenderTarget(VkImageObj *renderTarget);
     void AddDepthStencil();
     void ClearAllBuffers(VkClearColor clear_color, float depth_clear_color, uint32_t stencil_clear_color, VkDepthStencilObj *depthStencilObj);

@@ -2087,7 +2087,7 @@ extern "C" void *AddToCommandBuffer(void *arg)
     std::string msgString;
 
     for (int i = 0; i<10000; i++) {
-        vkCmdSetEvent(data->cmdBuffer, data->event, VK_PIPE_EVENT_COMMANDS_COMPLETE);
+        vkCmdSetEvent(data->cmdBuffer, data->event, VK_PIPELINE_STAGE_ALL_GPU_COMMANDS);
         if (data->bailout) {
             break;
         }

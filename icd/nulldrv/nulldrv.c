@@ -1078,16 +1078,16 @@ ICD_EXPORT void VKAPI vkCmdResetQueryPool(
 
 ICD_EXPORT void VKAPI vkCmdSetEvent(
     VkCmdBuffer                              cmdBuffer,
-    VkEvent                                   event_,
-    VkPipeEvent                              pipeEvent)
+    VkEvent                                  event_,
+    VkPipelineStageFlags                     stageMask)
 {
     NULLDRV_LOG_FUNC;
 }
 
 ICD_EXPORT void VKAPI vkCmdResetEvent(
     VkCmdBuffer                              cmdBuffer,
-    VkEvent                                   event_,
-    VkPipeEvent                              pipeEvent)
+    VkEvent                                  event_,
+    VkPipelineStageFlags                     stageMask)
 {
     NULLDRV_LOG_FUNC;
 }
@@ -1222,9 +1222,10 @@ ICD_EXPORT void VKAPI vkCmdDispatchIndirect(
 
 void VKAPI vkCmdWaitEvents(
     VkCmdBuffer                                 cmdBuffer,
-    VkWaitEvent                                 waitEvent,
     uint32_t                                    eventCount,
     const VkEvent*                              pEvents,
+    VkPipelineStageFlags                        sourceStageMask,
+    VkPipelineStageFlags                        destStageMask,
     uint32_t                                    memBarrierCount,
     const void**                                ppMemBarriers)
 {
@@ -1233,9 +1234,9 @@ void VKAPI vkCmdWaitEvents(
 
 void VKAPI vkCmdPipelineBarrier(
     VkCmdBuffer                                 cmdBuffer,
-    VkWaitEvent                                 waitEvent,
-    uint32_t                                    pipeEventCount,
-    const VkPipeEvent*                          pPipeEvents,
+    VkPipelineStageFlags                        sourceStageMask,
+    VkPipelineStageFlags                        destStageMask,
+    bool32_t                                    byRegion,
     uint32_t                                    memBarrierCount,
     const void**                                ppMemBarriers)
 {

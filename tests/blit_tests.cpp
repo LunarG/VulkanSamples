@@ -806,8 +806,9 @@ TEST_F(VkCmdCopyBufferTest, RAWHazard)
             VK_MEMORY_OUTPUT_TRANSFER_BIT, VK_MEMORY_INPUT_TRANSFER_BIT, 0, 4);
     VkBufferMemoryBarrier *pmemory_barrier = &memory_barrier;
 
-    VkPipeEvent set_events[] = { VK_PIPE_EVENT_TRANSFER_COMPLETE };
-    vkCmdPipelineBarrier(cmd_.obj(), VK_WAIT_EVENT_TOP_OF_PIPE, 1, set_events, 1, (const void **)&pmemory_barrier);
+    VkPipelineStageFlags src_stages = VK_PIPELINE_STAGE_TRANSFER_BIT | VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+    VkPipelineStageFlags dest_stages = VK_PIPELINE_STAGE_TRANSFER_BIT | VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+    vkCmdPipelineBarrier(cmd_.obj(), src_stages, dest_stages, false, 1, (const void **)&pmemory_barrier);
 
     VkBufferCopy region = {};
     region.copySize = 4;
@@ -816,21 +817,21 @@ TEST_F(VkCmdCopyBufferTest, RAWHazard)
     memory_barrier = bufs[1].buffer_memory_barrier(
             VK_MEMORY_OUTPUT_TRANSFER_BIT, VK_MEMORY_INPUT_TRANSFER_BIT, 0, 4);
     pmemory_barrier = &memory_barrier;
-    vkCmdPipelineBarrier(cmd_.obj(), VK_WAIT_EVENT_TOP_OF_PIPE, 1, set_events, 1, (const void **)&pmemory_barrier);
+    vkCmdPipelineBarrier(cmd_.obj(), src_stages, dest_stages, false, 1, (const void **)&pmemory_barrier);
 
     vkCmdCopyBuffer(cmd_.obj(), bufs[1].obj(), bufs[2].obj(), 1, &region);
 
     /* Use vkCmdSetEvent and vkCmdWaitEvents to test them.
      * This could be vkCmdPipelineBarrier.
      */
-    vkCmdSetEvent(cmd_.obj(), event, VK_PIPE_EVENT_TRANSFER_COMPLETE);
+    vkCmdSetEvent(cmd_.obj(), event, VK_PIPELINE_STAGE_TRANSFER_BIT);
 
     // Additional commands could go into the buffer here before the wait.
 
     memory_barrier = bufs[1].buffer_memory_barrier(
             VK_MEMORY_OUTPUT_TRANSFER_BIT, VK_MEMORY_INPUT_HOST_READ_BIT, 0, 4);
     pmemory_barrier = &memory_barrier;
-    vkCmdWaitEvents(cmd_.obj(), VK_WAIT_EVENT_TOP_OF_PIPE, 1, &event, 1, (const void **)&pmemory_barrier);
+    vkCmdWaitEvents(cmd_.obj(), 1, &event, src_stages, dest_stages, 1, (const void **)&pmemory_barrier);
 
     cmd_.end();
 
@@ -1290,14 +1291,15 @@ protected:
 
         cmd_.begin();
 
-        VkPipeEvent set_events[] = { VK_PIPE_EVENT_COMMANDS_COMPLETE };
-        vkCmdPipelineBarrier(cmd_.obj(), VK_WAIT_EVENT_TOP_OF_PIPE, 1, set_events, 1, (const void **)&p_to_clear[0]);
+        VkPipelineStageFlags src_stages = VK_PIPELINE_STAGE_ALL_GPU_COMMANDS;
+        VkPipelineStageFlags dest_stages = VK_PIPELINE_STAGE_ALL_GPU_COMMANDS;
+        vkCmdPipelineBarrier(cmd_.obj(), src_stages, dest_stages, false, 1, (const void **)&p_to_clear[0]);
 
         vkCmdClearColorImage(cmd_.obj(),
                               img.obj(), VK_IMAGE_LAYOUT_CLEAR_OPTIMAL,
                               &clear_color, ranges.size(), &ranges[0]);
 
-        vkCmdPipelineBarrier(cmd_.obj(), VK_WAIT_EVENT_TOP_OF_PIPE, 1, set_events, 1, (const void **)&p_to_xfer[0]);
+        vkCmdPipelineBarrier(cmd_.obj(), src_stages, dest_stages, false, 1, (const void **)&p_to_xfer[0]);
 
         cmd_.end();
 
@@ -1533,15 +1535,16 @@ protected:
 
         cmd_.begin();
 
-        VkPipeEvent set_events[] = { VK_PIPE_EVENT_COMMANDS_COMPLETE };
-        vkCmdPipelineBarrier(cmd_.obj(), VK_WAIT_EVENT_TOP_OF_PIPE, 1, set_events, to_clear.size(), (const void **)&p_to_clear[0]);
+        VkPipelineStageFlags src_stages = VK_PIPELINE_STAGE_ALL_GPU_COMMANDS;
+        VkPipelineStageFlags dest_stages = VK_PIPELINE_STAGE_ALL_GPU_COMMANDS;
+        vkCmdPipelineBarrier(cmd_.obj(), src_stages, dest_stages, false, to_clear.size(), (const void **)&p_to_clear[0]);
 
         vkCmdClearDepthStencil(cmd_.obj(),
                                 img.obj(), VK_IMAGE_LAYOUT_CLEAR_OPTIMAL,
                                 depth, stencil,
                                 ranges.size(), &ranges[0]);
 
-        vkCmdPipelineBarrier(cmd_.obj(), VK_WAIT_EVENT_TOP_OF_PIPE, 1, set_events, to_xfer.size(), (const void **)&p_to_xfer[0]);
+        vkCmdPipelineBarrier(cmd_.obj(), src_stages, dest_stages, false, to_xfer.size(), (const void **)&p_to_xfer[0]);
 
         cmd_.end();
 

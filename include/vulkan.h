@@ -151,28 +151,6 @@ typedef enum VkImageLayout_
     VK_ENUM_RANGE(IMAGE_LAYOUT, UNDEFINED, TRANSFER_DESTINATION_OPTIMAL)
 } VkImageLayout;
 
-typedef enum VkPipeEvent_
-{
-    VK_PIPE_EVENT_TOP_OF_PIPE                               = 0x00000001,   // Set event before the device starts processing subsequent command
-    VK_PIPE_EVENT_VERTEX_PROCESSING_COMPLETE                = 0x00000002,   // Set event when all pending vertex processing is complete
-    VK_PIPE_EVENT_LOCAL_FRAGMENT_PROCESSING_COMPLETE        = 0x00000003,   // Set event when all pending fragment shader executions are complete, within each fragment location
-    VK_PIPE_EVENT_FRAGMENT_PROCESSING_COMPLETE              = 0x00000004,   // Set event when all pending fragment shader executions are complete
-    VK_PIPE_EVENT_GRAPHICS_PIPELINE_COMPLETE                = 0x00000005,   // Set event when all pending graphics operations are complete
-    VK_PIPE_EVENT_COMPUTE_PIPELINE_COMPLETE                 = 0x00000006,   // Set event when all pending compute operations are complete
-    VK_PIPE_EVENT_TRANSFER_COMPLETE                         = 0x00000007,   // Set event when all pending transfer operations are complete
-    VK_PIPE_EVENT_COMMANDS_COMPLETE                         = 0x00000008,   // Set event when all pending work is complete
-
-    VK_ENUM_RANGE(PIPE_EVENT, TOP_OF_PIPE, COMMANDS_COMPLETE)
-} VkPipeEvent;
-
-typedef enum VkWaitEvent_
-{
-    VK_WAIT_EVENT_TOP_OF_PIPE                               = 0x00000001,   // Wait event before the device starts processing subsequent commands
-    VK_WAIT_EVENT_BEFORE_RASTERIZATION                      = 0x00000002,   // Wait event before rasterizing subsequent primitives
-
-    VK_ENUM_RANGE(WAIT_EVENT, TOP_OF_PIPE, BEFORE_RASTERIZATION)
-} VkWaitEvent;
-
 typedef enum VkAttachmentLoadOp_
 {
     VK_ATTACHMENT_LOAD_OP_LOAD                              = 0x00000000,
@@ -1054,6 +1032,28 @@ typedef enum VkFormatFeatureFlagBits_
     VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT          = VK_BIT(9),    // Format can be used for depth/stencil attachment images
     VK_FORMAT_FEATURE_CONVERSION_BIT                        = VK_BIT(10),   // Format can be used as the source or destination of format converting blits
 } VkFormatFeatureFlagBits;
+
+// Pipeline stage flags
+typedef enum {
+    VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT                       = VK_BIT(0),
+    VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT                     = VK_BIT(1),
+    VK_PIPELINE_STAGE_VERTEX_INPUT_BIT                      = VK_BIT(2),
+    VK_PIPELINE_STAGE_VERTEX_SHADER_BIT                     = VK_BIT(3),
+    VK_PIPELINE_STAGE_TESS_CONTROL_SHADER_BIT               = VK_BIT(4),
+    VK_PIPELINE_STAGE_TESS_EVALUATION_SHADER_BIT            = VK_BIT(5),
+    VK_PIPELINE_STAGE_GEOMETRY_SHADER_BIT                   = VK_BIT(6),
+    VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT                   = VK_BIT(7),
+    VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT              = VK_BIT(8),
+    VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT               = VK_BIT(9),
+    VK_PIPELINE_STAGE_ATTACHMENT_OUTPUT_BIT                 = VK_BIT(10),
+    VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT                    = VK_BIT(11),
+    VK_PIPELINE_STAGE_TRANSFER_BIT                          = VK_BIT(12),
+    VK_PIPELINE_STAGE_HOST_BIT                              = VK_BIT(13),
+    VK_PIPELINE_STAGE_ALL_GRAPHICS                          = 0x000007FF,
+    VK_PIPELINE_STAGE_ALL_GPU_COMMANDS                      = 0x00001FFF,
+} VkPipelineStageFlagBits;
+
+typedef VkFlags VkPipelineStageFlags;
 
 // Query control flags
 typedef VkFlags VkQueryControlFlags;
@@ -2115,10 +2115,10 @@ typedef void     (VKAPI *PFN_vkCmdFillBuffer)(VkCmdBuffer cmdBuffer, VkBuffer de
 typedef void     (VKAPI *PFN_vkCmdClearColorImage)(VkCmdBuffer cmdBuffer, VkImage image, VkImageLayout imageLayout, const VkClearColor* pColor, uint32_t rangeCount, const VkImageSubresourceRange* pRanges);
 typedef void     (VKAPI *PFN_vkCmdClearDepthStencil)(VkCmdBuffer cmdBuffer, VkImage image, VkImageLayout imageLayout, float depth, uint32_t stencil, uint32_t rangeCount, const VkImageSubresourceRange* pRanges);
 typedef void     (VKAPI *PFN_vkCmdResolveImage)(VkCmdBuffer cmdBuffer, VkImage srcImage, VkImageLayout srcImageLayout, VkImage destImage, VkImageLayout destImageLayout, uint32_t regionCount, const VkImageResolve* pRegions);
-typedef void     (VKAPI *PFN_vkCmdSetEvent)(VkCmdBuffer cmdBuffer, VkEvent event, VkPipeEvent pipeEvent);
-typedef void     (VKAPI *PFN_vkCmdResetEvent)(VkCmdBuffer cmdBuffer, VkEvent event, VkPipeEvent pipeEvent);
-typedef void     (VKAPI *PFN_vkCmdWaitEvents)(VkCmdBuffer cmdBuffer, VkWaitEvent waitEvent, uint32_t eventCount, const VkEvent* pEvents, uint32_t memBarrierCount, const void** ppMemBarriers);
-typedef void     (VKAPI *PFN_vkCmdPipelineBarrier)(VkCmdBuffer cmdBuffer, VkWaitEvent waitEvent, uint32_t pipeEventCount, const VkPipeEvent* pPipeEvents, uint32_t memBarrierCount, const void** ppMemBarriers);
+typedef void     (VKAPI *PFN_vkCmdSetEvent)(VkCmdBuffer cmdBuffer, VkEvent event, VkPipelineStageFlags stageMask);
+typedef void     (VKAPI *PFN_vkCmdResetEvent)(VkCmdBuffer cmdBuffer, VkEvent event, VkPipelineStageFlags stageMask);
+typedef void     (VKAPI *PFN_vkCmdWaitEvents)(VkCmdBuffer cmdBuffer, uint32_t eventCount, const VkEvent* pEvents, VkPipelineStageFlags sourceStageMask, VkPipelineStageFlags destStageMask, uint32_t memBarrierCount, const void** ppMemBarriers);
+typedef void     (VKAPI *PFN_vkCmdPipelineBarrier)(VkCmdBuffer cmdBuffer, VkPipelineStageFlags sourceStageMask, VkPipelineStageFlags destStageMask, bool32_t byRegion, uint32_t memBarrierCount, const void** ppMemBarriers);
 typedef void     (VKAPI *PFN_vkCmdBeginQuery)(VkCmdBuffer cmdBuffer, VkQueryPool queryPool, uint32_t slot, VkQueryControlFlags flags);
 typedef void     (VKAPI *PFN_vkCmdEndQuery)(VkCmdBuffer cmdBuffer, VkQueryPool queryPool, uint32_t slot);
 typedef void     (VKAPI *PFN_vkCmdResetQueryPool)(VkCmdBuffer cmdBuffer, VkQueryPool queryPool, uint32_t startQuery, uint32_t queryCount);
@@ -2720,26 +2720,27 @@ void VKAPI vkCmdResolveImage(
 void VKAPI vkCmdSetEvent(
     VkCmdBuffer                                 cmdBuffer,
     VkEvent                                     event,
-    VkPipeEvent                                 pipeEvent);
+    VkPipelineStageFlags                        stageMask);
 
 void VKAPI vkCmdResetEvent(
     VkCmdBuffer                                 cmdBuffer,
     VkEvent                                     event,
-    VkPipeEvent                                 pipeEvent);
+    VkPipelineStageFlags                        stageMask);
 
 void VKAPI vkCmdWaitEvents(
     VkCmdBuffer                                 cmdBuffer,
-    VkWaitEvent                                 waitEvent,
     uint32_t                                    eventCount,
     const VkEvent*                              pEvents,
+    VkPipelineStageFlags                        sourceStageMask,
+    VkPipelineStageFlags                        destStageMask,
     uint32_t                                    memBarrierCount,
     const void**                                ppMemBarriers);
 
 void VKAPI vkCmdPipelineBarrier(
     VkCmdBuffer                                 cmdBuffer,
-    VkWaitEvent                                 waitEvent,
-    uint32_t                                    pipeEventCount,
-    const VkPipeEvent*                          pPipeEvents,
+    VkPipelineStageFlags                        sourceStageMask,
+    VkPipelineStageFlags                        destStageMask,
+    bool32_t                                    byRegion,
     uint32_t                                    memBarrierCount,
     const void**                                ppMemBarriers);
 

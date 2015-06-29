@@ -165,56 +165,41 @@ ICD_EXPORT void VKAPI vkCmdResetQueryPool(
 }
 
 static void cmd_write_event_value(struct intel_cmd *cmd, struct intel_event *event,
-                            VkPipeEvent pipeEvent, uint32_t value)
+                            VkPipelineStageFlags stageMask, uint32_t value)
 {
-    uint32_t pipe_control_flags;
+    uint32_t pipe_control_flags = 0;
 
     /* Event setting is done with PIPE_CONTROL post-sync write immediate.
      * With no other PIPE_CONTROL flags set, it behaves as VK_PIPE_EVENT_TOP_OF_PIPE.
      * All other pipeEvent values will behave as VK_PIPE_EVENT_COMMANDS_COMPLETE.
      */
-    switch(pipeEvent)
-    {
-    case VK_PIPE_EVENT_TOP_OF_PIPE:
-        pipe_control_flags = 0;
-        break;
-    case VK_PIPE_EVENT_VERTEX_PROCESSING_COMPLETE:
-    case VK_PIPE_EVENT_LOCAL_FRAGMENT_PROCESSING_COMPLETE:
-    case VK_PIPE_EVENT_FRAGMENT_PROCESSING_COMPLETE:
-    case VK_PIPE_EVENT_GRAPHICS_PIPELINE_COMPLETE:
-    case VK_PIPE_EVENT_COMPUTE_PIPELINE_COMPLETE:
-    case VK_PIPE_EVENT_TRANSFER_COMPLETE:
-    case VK_PIPE_EVENT_COMMANDS_COMPLETE:
+    if (stageMask & VK_PIPELINE_STAGE_ALL_GRAPHICS) {
         pipe_control_flags = GEN6_PIPE_CONTROL_CS_STALL;
-        break;
-    default:
-        cmd_fail(cmd, VK_ERROR_UNKNOWN);
-        return;
-        break;
     }
+
     cmd_batch_immediate(cmd, pipe_control_flags, event->obj.mem->bo, 0, value);
 }
 
 ICD_EXPORT void VKAPI vkCmdSetEvent(
     VkCmdBuffer                              cmdBuffer,
-    VkEvent                                   event_,
-    VkPipeEvent                              pipeEvent)
+    VkEvent                                  event_,
+    VkPipelineStageFlags                     stageMask)
 {
     struct intel_cmd *cmd = intel_cmd(cmdBuffer);
     struct intel_event *event = intel_event(event_);
 
-    cmd_write_event_value(cmd, event, pipeEvent, 1);
+    cmd_write_event_value(cmd, event, stageMask, 1);
 }
 
 ICD_EXPORT void VKAPI vkCmdResetEvent(
     VkCmdBuffer                              cmdBuffer,
-    VkEvent                                   event_,
-    VkPipeEvent                              pipeEvent)
+    VkEvent                                  event_,
+    VkPipelineStageFlags                     stageMask)
 {
     struct intel_cmd *cmd = intel_cmd(cmdBuffer);
     struct intel_event *event = intel_event(event_);
 
-    cmd_write_event_value(cmd, event, pipeEvent, 0);
+    cmd_write_event_value(cmd, event, stageMask, 0);
 }
 
 ICD_EXPORT void VKAPI vkCmdCopyQueryPoolResults(
