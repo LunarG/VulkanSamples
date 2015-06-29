@@ -99,8 +99,10 @@ protected:
         inst_info.pNext = NULL;
         inst_info.pAppInfo = &app_info;
         inst_info.pAllocCb = NULL;
+        inst_info.layerCount = 0;
+        inst_info.ppEnabledLayerNames = NULL;
         inst_info.extensionCount = 0;
-        inst_info.pEnabledExtensions = NULL;
+        inst_info.ppEnabledExtensionNames = NULL;
         err = vkCreateInstance(&inst_info, &this->inst);
         ASSERT_VK_SUCCESS(err);
         err = vkEnumeratePhysicalDevices(this->inst, &this->gpu_count, NULL);

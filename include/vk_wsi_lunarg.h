@@ -29,7 +29,7 @@
 
 #include "vulkan.h"
 
-#define VK_WSI_LUNARG_REVISION             3
+#define VK_WSI_LUNARG_REVISION             VK_MAKE_VERSION(0, 3, 0)
 #define VK_WSI_LUNARG_EXTENSION_NUMBER     1
 #define VK_WSI_LUNARG_EXTENSION_NAME       "VK_WSI_LunarG"
 

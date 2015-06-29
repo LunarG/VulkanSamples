@@ -79,32 +79,16 @@ void VkRenderFramework::InitFramework(
     VkInstanceCreateInfo instInfo = {};
     std::vector<VkExtensionProperties> instance_extensions;
     std::vector<VkExtensionProperties> device_extensions;
-    uint32_t extCount = 0;
     VkResult U_ASSERT_ONLY err;
-    err = vkGetGlobalExtensionCount(&extCount);
-    assert(!err);
 
-    VkExtensionProperties extProp;
-    bool32_t extFound;
+    /* TODO: Verify requested extensions are available */
 
-    for (uint32_t i = 0; i < instance_extension_names.size(); i++) {
-        extFound = 0;
-        for (uint32_t j = 0; j < extCount; j++) {
-            err = vkGetGlobalExtensionProperties(j, &extProp);
-            assert(!err);
-            if (!strcmp(instance_extension_names[i], extProp.name)) {
-                instance_extensions.push_back(extProp);
-                extFound = 1;
-            }
-        }
-        ASSERT_EQ(extFound, 1) << "ERROR: Cannot find extension named " << instance_extension_names[i] << " which is necessary to pass this test";
-    }
     instInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
     instInfo.pNext = NULL;
     instInfo.pAppInfo = &app_info;
     instInfo.pAllocCb = NULL;
-    instInfo.extensionCount = instance_extensions.size();
-    instInfo.pEnabledExtensions = (instance_extensions.size()) ? &instance_extensions[0] : NULL;
+    instInfo.extensionCount = instance_extension_names.size();
+    instInfo.ppEnabledExtensionNames = (instance_extension_names.size()) ? &instance_extension_names[0] : NULL;
     err = vkCreateInstance(&instInfo, &this->inst);
     ASSERT_VK_SUCCESS(err);
 
@@ -130,28 +114,8 @@ void VkRenderFramework::InitFramework(
         }
     }
 
-    err = vkGetPhysicalDeviceExtensionCount(objs[0], &extCount);
-    assert(!err);
-
-    for (uint32_t i = 0; i < device_extension_names.size(); i++) {
-        extFound = 0;
-        for (uint32_t j = 0; j < extCount; j++) {
-            err = vkGetPhysicalDeviceExtensionProperties(objs[0], j, &extProp);
-            assert(!err);
-            if (!strcmp(device_extension_names[i], extProp.name)) {
-                device_extensions.push_back(extProp);
-                extFound = 1;
-            }
-        }
-        ASSERT_EQ(extFound, 1) << "ERROR: Cannot find extension named " << device_extension_names[i] << " which is necessary to pass this test";
-    }
-    /* TODO: Testing unenabled extension */
-
-//    PFN_vkDbgSetObjectName obj_name = (PFN_vkDbgSetObjectName) vkGetInstanceProcAddr(this->inst,
-//                                                                                     "vkDbgSetObjectName");
-//    ASSERT_NE(obj_name, (PFN_vkDbgCreateMsgCallback) NULL) << "Did not get function pointer for DbgCreateMsgCallback";
-//    obj_name()
-    m_device = new VkDeviceObj(0, objs[0], device_extensions);
+    /* TODO: Verify requested physical device extensions are available */
+    m_device = new VkDeviceObj(0, objs[0], device_extension_names);
 
     /* Now register callback on device */
     if (0) {
@@ -378,7 +342,7 @@ VkDeviceObj::VkDeviceObj(uint32_t id, VkPhysicalDevice obj) :
 
 VkDeviceObj::VkDeviceObj(uint32_t id,
         VkPhysicalDevice obj,
-        std::vector<VkExtensionProperties> extensions) :
+        std::vector<const char *> &extensions) :
     vk_testing::Device(obj), id(id)
 {
     init(extensions);

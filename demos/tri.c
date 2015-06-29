@@ -43,6 +43,7 @@
 
 #include <vulkan.h>
 #include <vk_wsi_lunarg.h>
+#include "vk_debug_report_lunarg.h"
 
 #include "icd-spv.h"
 
@@ -98,6 +99,37 @@ struct texture_object {
     VkImageView view;
     int32_t tex_width, tex_height;
 };
+
+void dbgFunc(
+    VkFlags                    msgFlags,
+    VkObjectType                        objType,
+    VkObject                            srcObject,
+    size_t                              location,
+    int32_t                             msgCode,
+    const char*                         pLayerPrefix,
+    const char*                         pMsg,
+    void*                               pUserData)
+{
+    char *message = (char *) malloc(strlen(pMsg)+100);
+
+    assert (message);
+
+    if (msgFlags & VK_DBG_REPORT_ERROR_BIT) {
+        sprintf(message,"ERROR: [%s] Code %d : %s", pLayerPrefix, msgCode, pMsg);
+    } else if (msgFlags & VK_DBG_REPORT_WARN_BIT) {
+        sprintf(message,"WARNING: [%s] Code %d : %s", pLayerPrefix, msgCode, pMsg);
+    } else {
+        return;
+    }
+
+#ifdef _WIN32
+    MessageBox(NULL, message, "Alert", MB_OK);
+#else
+    printf("%s\n",message);
+    fflush(stdout);
+#endif
+    free(message);
+}
 
 struct demo {
 #ifdef _WIN32
@@ -173,6 +205,10 @@ struct demo {
     VkDescriptorSet desc_set;
 
     VkPhysicalDeviceMemoryProperties memory_properties;
+
+    bool validate;
+    PFN_vkDbgCreateMsgCallback dbgCreateMsgCallback;
+    VkDbgMsgCallback msg_callback;
 
     bool quit;
     uint32_t current_buffer;
@@ -1383,25 +1419,59 @@ static void demo_create_window(struct demo *demo)
 static void demo_init_vk(struct demo *demo)
 {
     VkResult err;
+    char *extension_names[64];
+    char *layer_names[64];
     VkExtensionProperties *instance_extensions;
+    VkLayerProperties *instance_layers;
+    VkLayerProperties *device_layers;
     uint32_t instance_extension_count = 0;
-    VkExtensionProperties *device_extensions;
-    uint32_t device_extension_count = 0;
-    uint32_t total_extension_count = 0;
-    err = vkGetGlobalExtensionCount(&total_extension_count);
+    uint32_t instance_layer_count = 0;
+    uint32_t enabled_extension_count = 0;
+    uint32_t enabled_layer_count = 0;
+
+    /* Look for validation layers */
+    bool32_t validation_found = 0;
+    err = vkGetGlobalLayerProperties(&instance_layer_count, NULL);
     assert(!err);
 
-    VkExtensionProperties extProp;
-    bool32_t WSIextFound = 0;
-    instance_extensions = malloc(sizeof(VkExtensionProperties) * total_extension_count);
-    device_extensions = malloc(sizeof(VkExtensionProperties) * total_extension_count);
-    for (uint32_t i = 0; i < total_extension_count; i++) {
-        err = vkGetGlobalExtensionProperties(i, &extProp);
-        if (!strcmp("VK_WSI_LunarG", extProp.name)) {
-            WSIextFound = 1;
-            memcpy(&instance_extensions[instance_extension_count++], &extProp, sizeof(VkExtensionProperties));
-            memcpy(&device_extensions[device_extension_count++], &extProp, sizeof(VkExtensionProperties));
+    memset(layer_names, 0, sizeof(layer_names));
+    instance_layers = malloc(sizeof(VkLayerProperties) * instance_layer_count);
+    err = vkGetGlobalLayerProperties(&instance_layer_count, instance_layers);
+    assert(!err);
+    for (uint32_t i = 0; i < instance_layer_count; i++) {
+        if (!validation_found && demo->validate && !strcmp("Validation", instance_layers[i].layerName)) {
+            layer_names[enabled_layer_count++] = "Validation";
+            validation_found = 1;
         }
+        assert(enabled_layer_count < 64);
+    }
+    if (demo->validate && !validation_found) {
+        ERR_EXIT("vkGetGlobalLayerProperties failed to find any "
+                 "\"Validation\" layers.\n\n"
+                 "Please look at the Getting Started guide for additional "
+                 "information.\n",
+                 "vkCreateInstance Failure");
+    }
+
+    err = vkGetGlobalExtensionProperties(NULL, &instance_extension_count, NULL);
+    assert(!err);
+
+    bool32_t WSIextFound = 0;
+    memset(extension_names, 0, sizeof(extension_names));
+    instance_extensions = malloc(sizeof(VkExtensionProperties) * instance_extension_count);
+    err = vkGetGlobalExtensionProperties(NULL, &instance_extension_count, instance_extensions);
+    assert(!err);
+    for (uint32_t i = 0; i < instance_extension_count; i++) {
+        if (!strcmp(VK_WSI_LUNARG_EXTENSION_NAME, instance_extensions[i].extName)) {
+            WSIextFound = 1;
+            extension_names[enabled_extension_count++] = VK_WSI_LUNARG_EXTENSION_NAME;
+        }
+        if (!strcmp(DEBUG_REPORT_EXTENSION_NAME, instance_extensions[i].extName)) {
+            if (demo->validate) {
+                extension_names[enabled_extension_count++] = DEBUG_REPORT_EXTENSION_NAME;
+            }
+        }
+        assert(enabled_extension_count < 64);
     }
     if (!WSIextFound) {
         ERR_EXIT("vkGetGlobalExtensionProperties failed to find the "
@@ -1420,27 +1490,21 @@ static void demo_init_vk(struct demo *demo)
         .engineVersion = 0,
         .apiVersion = VK_API_VERSION,
     };
-    const VkInstanceCreateInfo inst_info = {
+    VkInstanceCreateInfo inst_info = {
         .sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
         .pNext = NULL,
         .pAppInfo = &app,
         .pAllocCb = NULL,
-        .extensionCount = instance_extension_count,
-        .pEnabledExtensions = instance_extensions,
+        .layerCount = enabled_layer_count,
+        .ppEnabledLayerNames = (const char *const*) layer_names,
+        .extensionCount = enabled_extension_count,
+        .ppEnabledExtensionNames = (const char *const*) extension_names,
     };
     const VkDeviceQueueCreateInfo queue = {
         .queueNodeIndex = 0,
         .queueCount = 1,
     };
-    const VkDeviceCreateInfo device = {
-        .sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
-        .pNext = NULL,
-        .queueRecordCount = 1,
-        .pRequestedQueues = &queue,
-        .extensionCount = device_extension_count,
-        .pEnabledExtensions = device_extensions,
-        .flags = 0,
-    };
+
     uint32_t gpu_count;
     uint32_t i;
     uint32_t queue_count;
@@ -1451,6 +1515,10 @@ static void demo_init_vk(struct demo *demo)
                  "(ICD).\n\nPlease look at the Getting Started guide for "
                  "additional information.\n",
                  "vkCreateInstance Failure");
+    } else if (err == VK_ERROR_INVALID_EXTENSION) {
+        ERR_EXIT("Cannot find a specified extension library"
+                 ".\nMake sure your layers path is set appropriately\n",
+                 "vkCreateInstance Failure");
     } else if (err) {
         ERR_EXIT("vkCreateInstance failed.\n\nDo you have a compatible Vulkan "
                  "installable client driver (ICD) installed?\nPlease look at "
@@ -1458,12 +1526,88 @@ static void demo_init_vk(struct demo *demo)
                  "vkCreateInstance Failure");
     }
 
+    free(instance_layers);
+    free(instance_extensions);
+
     gpu_count = 1;
     err = vkEnumeratePhysicalDevices(demo->inst, &gpu_count, &demo->gpu);
     assert(!err && gpu_count == 1);
 
+    /* Look for validation layers */
+    validation_found = 0;
+    enabled_layer_count = 0;
+    uint32_t device_layer_count = 0;
+    err = vkGetPhysicalDeviceLayerProperties(demo->gpu, &device_layer_count, NULL);
+    assert(!err);
+
+    memset(layer_names, 0, sizeof(layer_names));
+    device_layers = malloc(sizeof(VkLayerProperties) * device_layer_count);
+    err = vkGetPhysicalDeviceLayerProperties(demo->gpu, &device_layer_count, device_layers);
+    assert(!err);
+    for (uint32_t i = 0; i < device_layer_count; i++) {
+        if (!validation_found && demo->validate &&
+            !strcmp("Validation", device_layers[i].layerName)) {
+            layer_names[enabled_layer_count++] = "Validation";
+            validation_found = 1;
+        }
+        assert(enabled_layer_count < 64);
+    }
+    if (demo->validate && !validation_found) {
+        ERR_EXIT("vkGetGlobalLayerProperties failed to find any "
+                 "\"Validation\" layers.\n\n"
+                 "Please look at the Getting Started guide for additional "
+                 "information.\n",
+                 "vkCreateInstance Failure");
+    }
+
+    /* Don't need any device extensions */
+    /* TODO: WSI device extension will go here eventually */
+
+    VkDeviceCreateInfo device = {
+        .sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
+        .pNext = NULL,
+        .queueRecordCount = 1,
+        .pRequestedQueues = &queue,
+        .layerCount = enabled_layer_count,
+        .ppEnabledLayerNames = (const char*const*) layer_names,
+        .extensionCount = 0,
+        .ppEnabledExtensionNames = NULL,
+        .flags = 0,
+    };
+
+    if (demo->validate) {
+        demo->dbgCreateMsgCallback = vkGetInstanceProcAddr((VkPhysicalDevice) NULL, "vkDbgCreateMsgCallback");
+        if (!demo->dbgCreateMsgCallback) {
+            ERR_EXIT("GetProcAddr: Unable to find vkDbgCreateMsgCallback\n",
+                     "vkGetProcAddr Failure");
+        }
+        err = demo->dbgCreateMsgCallback(
+                  demo->inst,
+                  VK_DBG_REPORT_ERROR_BIT | VK_DBG_REPORT_WARN_BIT,
+                  dbgFunc, NULL,
+                  &demo->msg_callback);
+        switch (err) {
+        case VK_SUCCESS:
+            break;
+        case VK_ERROR_INVALID_POINTER:
+            ERR_EXIT("dbgCreateMsgCallback: Invalid pointer\n",
+                     "dbgCreateMsgCallback Failure");
+            break;
+        case VK_ERROR_OUT_OF_HOST_MEMORY:
+            ERR_EXIT("dbgCreateMsgCallback: out of host memory\n",
+                     "dbgCreateMsgCallback Failure");
+            break;
+        default:
+            ERR_EXIT("dbgCreateMsgCallback: unknown failure\n",
+                     "dbgCreateMsgCallback Failure");
+            break;
+        }
+    }
+
     err = vkCreateDevice(demo->gpu, &device, &demo->device);
     assert(!err);
+
+    free(device_layers);
 
     GET_DEVICE_PROC_ADDR(demo->device, CreateSwapChainWSI);
     GET_DEVICE_PROC_ADDR(demo->device, CreateSwapChainWSI);
@@ -1482,6 +1626,9 @@ static void demo_init_vk(struct demo *demo)
     assert(!err);
     assert(queue_count >= 1);
 
+    // Graphics queue and MemMgr queue can be separate.
+    // TODO: Add support for separate queues, including synchronization,
+    //       and appropriate tracking for QueueSubmit
     for (i = 0; i < queue_count; i++) {
         if (demo->queue_props[i].queueFlags & VK_QUEUE_GRAPHICS_BIT)
             break;

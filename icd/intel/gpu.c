@@ -388,7 +388,7 @@ void intel_gpu_cleanup_winsys(struct intel_gpu *gpu)
 
 enum intel_phy_dev_ext_type intel_gpu_lookup_phy_dev_extension(
         const struct intel_gpu *gpu,
-        const VkExtensionProperties *ext)
+        const char *ext)
 {
     enum intel_phy_dev_ext_type type;
 
@@ -500,22 +500,44 @@ ICD_EXPORT VkResult VKAPI vkGetPhysicalDeviceLimits(
     return ret;
 }
 
-ICD_EXPORT VkResult VKAPI vkGetPhysicalDeviceExtensionCount(
-                                               VkPhysicalDevice gpu,
-                                               uint32_t* pCount)
+ICD_EXPORT VkResult VKAPI vkGetPhysicalDeviceExtensionProperties(
+        VkPhysicalDevice                            physicalDevice,
+        const char*                                 pLayerName,
+        uint32_t*                                   pCount,
+        VkExtensionProperties*                      pProperties)
 {
-    *pCount =  INTEL_PHY_DEV_EXT_COUNT;
+    uint32_t copy_size;
+
+    /* TODO: Do we want to check that pLayerName is null? */
+
+    if (pCount == NULL) {
+        return VK_ERROR_INVALID_POINTER;
+    }
+
+    if (pProperties == NULL) {
+        *pCount = INTEL_PHY_DEV_EXT_COUNT;
+        return VK_SUCCESS;
+    }
+
+    copy_size = *pCount < INTEL_PHY_DEV_EXT_COUNT ? *pCount : INTEL_PHY_DEV_EXT_COUNT;
+    memcpy(pProperties, intel_phy_dev_gpu_exts, copy_size * sizeof(VkExtensionProperties));
+    *pCount = copy_size;
+    if (copy_size < INTEL_PHY_DEV_EXT_COUNT) {
+        return VK_INCOMPLETE;
+    }
+
     return VK_SUCCESS;
 }
 
-ICD_EXPORT VkResult VKAPI vkGetPhysicalDeviceExtensionProperties(
-                                               VkPhysicalDevice gpu,
-                                               uint32_t extensionIndex,
-                                               VkExtensionProperties* pProperties)
+ICD_EXPORT VkResult VKAPI vkGetPhysicalDeviceLayerProperties(
+        VkPhysicalDevice                            physicalDevice,
+        uint32_t*                                   pCount,
+        VkLayerProperties*                          pProperties)
 {
-    if (extensionIndex >= INTEL_PHY_DEV_EXT_COUNT)
-        return VK_ERROR_INVALID_VALUE;
+    if (pCount == NULL) {
+        return VK_ERROR_INVALID_POINTER;
+    }
 
-    memcpy(pProperties, &intel_phy_dev_gpu_exts[extensionIndex], sizeof(VkExtensionProperties));
+    *pCount = 0;
     return VK_SUCCESS;
 }

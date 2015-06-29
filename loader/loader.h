@@ -43,9 +43,12 @@
 #  define LOADER_EXPORT
 #endif
 
-#define MAX_EXTENSION_NAME_SIZE 255
+#define MAX_EXTENSION_NAME_SIZE (VK_MAX_EXTENSION_NAME-1)
 #define MAX_GPUS_PER_ICD 16
 
+#define VK_MAJOR(version) (version >> 22)
+#define VK_MINOR(version) ((version >> 12) & 0x3ff)
+#define VK_PATCH(version) (version & 0xfff)
 enum extension_origin {
     VK_EXTENSION_ORIGIN_ICD,
     VK_EXTENSION_ORIGIN_LAYER,
@@ -65,18 +68,6 @@ struct loader_extension_property {
     VkExtensionProperties info;
     const char *lib_name;
     enum extension_origin origin;
-    // An extension library can export the same extension
-    // under different names. Handy to provide a "grouping"
-    // such as Validation. However, the loader requires
-    // that a layer be included only once in a chain.
-    // During layer scanning the loader will check if
-    // the vkGetInstanceProcAddr is the same as an existing extension
-    // If so, it will link them together via the alias pointer.
-    // At initialization time we'll follow the alias pointer
-    // to the "base" extension and then use that extension
-    // internally to ensure we reject duplicates
-    PFN_vkGPA get_proc_addr;
-    struct loader_extension_property *alias;
 };
 
 struct loader_extension_list {
@@ -102,12 +93,9 @@ struct loader_layer_functions {
 };
 
 struct loader_layer_properties {
-    char *name;
+    VkLayerProperties info;
     enum layer_type type;
     struct loader_lib_info lib_info;
-    char *abi_versions;
-    char *impl_version;
-    char *description;
     struct loader_layer_functions functions;
     struct loader_extension_list instance_extension_list;
     struct loader_extension_list device_extension_list;
@@ -129,7 +117,7 @@ struct loader_device {
     uint32_t  app_extension_count;
     VkExtensionProperties *app_extension_props;
 
-    struct loader_extension_list activated_layer_list;
+    struct loader_layer_list activated_layer_list;
 
     struct loader_device *next;
 };
@@ -154,14 +142,22 @@ struct loader_icd {
     PFN_vkGetPhysicalDeviceQueueCount GetPhysicalDeviceQueueCount;
     PFN_vkGetPhysicalDeviceQueueProperties GetPhysicalDeviceQueueProperties;
     PFN_vkGetPhysicalDeviceMemoryProperties GetPhysicalDeviceMemoryProperties;
-    PFN_vkGetPhysicalDeviceExtensionCount GetPhysicalDeviceExtensionCount;
     PFN_vkGetPhysicalDeviceExtensionProperties GetPhysicalDeviceExtensionProperties;
+    PFN_vkGetPhysicalDeviceLayerProperties GetPhysicalDeviceLayerProperties;
     PFN_vkDbgCreateMsgCallback DbgCreateMsgCallback;
     PFN_vkDbgDestroyMsgCallback DbgDestroyMsgCallback;
+
     /*
-     * Fill in the cache of available extensions from all layers that
-     * operate with this physical device.
-     * This cache will be used to satisfy calls to GetPhysicalDeviceExtensionProperties
+     * Fill in the cache of available layers that operate
+     * with this physical device. This cache will be used to satisfy
+     * calls to GetPhysicalDeviceLayerProperties
+     */
+    struct loader_layer_list layer_properties_cache;
+
+    /*
+     * Fill in the cache of available global extensions that operate
+     * with this physical device. This cache will be used to satisfy
+     * calls to GetPhysicalDeviceExtensionProperties
      */
     struct loader_extension_list device_extension_cache[MAX_GPUS_PER_ICD];
     struct loader_icd *next;
@@ -240,10 +236,7 @@ struct loader_instance {
      */
     struct loader_msg_callback_map_entry *icd_msg_callback_map;
 
-    struct loader_extension_list activated_layer_list;
-
-    uint32_t  app_extension_count;
-    VkExtensionProperties *app_extension_props;
+    struct loader_layer_list activated_layer_list;
 
     bool debug_report_enabled;
     VkLayerDbgFunctionNode *DbgFunctionHead;
@@ -271,10 +264,9 @@ struct loader_scanned_icds {
     PFN_vkCreateInstance CreateInstance;
     PFN_vkDestroyInstance DestroyInstance;
     PFN_vkEnumeratePhysicalDevices EnumeratePhysicalDevices;
-    PFN_vkGetGlobalExtensionCount GetGlobalExtensionCount;
     PFN_vkGetGlobalExtensionProperties GetGlobalExtensionProperties;
-    PFN_vkGetPhysicalDeviceExtensionCount GetPhysicalDeviceExtensionCount;
-    PFN_vkGetPhysicalDeviceExtensionProperties GetPhysicalDeviceExtensionProperties;
+    PFN_vkGetGlobalLayerProperties GetGlobalLayerProperties;
+    PFN_vkGetPhysicalDeviceLayerProperties GetPhysicalDeviceLayerProperties;
     VkInstance instance;
     struct loader_scanned_icds *next;
 
@@ -369,14 +361,13 @@ VkResult loader_GetPhysicalDevicePerformance (
         VkPhysicalDevice physicalDevice,
         VkPhysicalDevicePerformance* pPerformance);
 
-VkResult loader_GetPhysicalDeviceExtensionProperties (
-        VkPhysicalDevice physicalDevice,
-        uint32_t extensionIndex,
+VkResult loader_GetPhysicalDeviceExtensionProperties (VkPhysicalDevice physicalDevice,
+        const char *pLayerName, uint32_t *pCount,
         VkExtensionProperties* pProperties);
 
-VkResult loader_GetPhysicalDeviceExtensionCount (
-        VkPhysicalDevice physicalDevice,
-        uint32_t* pCount);
+VkResult loader_GetPhysicalDeviceLayerProperties (VkPhysicalDevice physicalDevice,
+        uint32_t *pCount,
+        VkLayerProperties* pProperties);
 
 VkResult loader_GetPhysicalDeviceQueueCount (
         VkPhysicalDevice physicalDevice,
@@ -411,6 +402,10 @@ void loader_add_to_ext_list(
         const struct loader_extension_property *props);
 void loader_destroy_ext_list(struct loader_extension_list *ext_info);
 
+void loader_add_to_layer_list(
+        struct loader_layer_list *list,
+        uint32_t prop_list_count,
+        const struct loader_layer_properties *props);
 bool loader_is_extension_scanned(const VkExtensionProperties *ext_prop);
 void loader_icd_scan(void);
 void loader_layer_scan(void);
@@ -419,7 +414,7 @@ void loader_coalesce_extensions(void);
 struct loader_icd * loader_get_icd(const VkPhysicalDevice gpu,
                                    uint32_t *gpu_index);
 void loader_remove_logical_device(VkDevice device);
-void loader_enable_instance_layers(struct loader_instance *inst);
+void loader_enable_instance_layers(struct loader_instance *inst, const VkInstanceCreateInfo *pCreateInfo);
 void loader_deactivate_instance_layers(struct loader_instance *instance);
 uint32_t loader_activate_instance_layers(struct loader_instance *inst);
 void loader_activate_instance_layer_extensions(struct loader_instance *inst);

@@ -47,5 +47,5 @@ static inline struct intel_instance *intel_instance(VkInstance instance)
     return (struct intel_instance *) instance;
 }
 
-enum intel_global_ext_type intel_gpu_lookup_global_extension(const VkExtensionProperties *ext);
+enum intel_global_ext_type intel_gpu_lookup_global_extension(const char *extName);
 #endif /* INSTANCE_H */

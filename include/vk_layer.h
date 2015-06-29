@@ -150,8 +150,8 @@ typedef struct VkLayerInstanceDispatchTable_
     PFN_vkGetPhysicalDeviceQueueCount GetPhysicalDeviceQueueCount;
     PFN_vkGetPhysicalDeviceQueueProperties GetPhysicalDeviceQueueProperties;
     PFN_vkGetPhysicalDeviceMemoryProperties GetPhysicalDeviceMemoryProperties;
-    PFN_vkGetPhysicalDeviceExtensionCount GetPhysicalDeviceExtensionCount;
     PFN_vkGetPhysicalDeviceExtensionProperties GetPhysicalDeviceExtensionProperties;
+    PFN_vkGetPhysicalDeviceLayerProperties GetPhysicalDeviceLayerProperties;
     PFN_vkDbgCreateMsgCallback DbgCreateMsgCallback;
     PFN_vkDbgDestroyMsgCallback DbgDestroyMsgCallback;
     PFN_vkDbgStringCallback DbgStringCallback;

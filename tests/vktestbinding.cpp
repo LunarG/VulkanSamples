@@ -128,36 +128,98 @@ VkPhysicalDeviceMemoryProperties PhysicalGpu::memory_properties() const
     return info;
 }
 
-void PhysicalGpu::add_extension_dependencies(
-        uint32_t dependency_count,
-        VkExtensionProperties *depencency_props,
-        std::vector<VkExtensionProperties> &ext_list)
+/*
+ * Return list of Global layers available
+ */
+std::vector<VkLayerProperties> GetGlobalLayers()
 {
-    for (uint32_t i = 0; i < dependency_count; i++) {
+    VkResult err;
 
+    std::vector<VkLayerProperties> layers;
+    uint32_t layerCount = 0;
+    err = vkGetGlobalLayerProperties(&layerCount, NULL);
+    while (err == VK_INCOMPLETE) {
+        layerCount = 0;
+        err = vkGetGlobalLayerProperties(&layerCount, NULL);
     }
+    assert(err == VK_SUCCESS);
+    if (err != VK_SUCCESS) {
+        return layers;
+    }
+
+    layers.reserve(layerCount);
+    err = vkGetGlobalLayerProperties(&layerCount, &layers[0]);
+    assert(err == VK_SUCCESS);
+
+    return layers;
 }
 
-std::vector<VkExtensionProperties> PhysicalGpu::extensions() const
+/*
+ * Return list of Global extensions provided by the ICD / Loader
+ */
+std::vector<VkExtensionProperties> GetGlobalExtensions()
 {
-    // Extensions to enable
-    static const char *known_exts[] = {
-        "VK_WSI_LunarG",
-    };
+    return GetGlobalExtensions(NULL);
+}
+
+/*
+ * Return list of Global extensions provided by the specified layer
+ * If pLayerName is NULL, will return extensions implemented by the loader / ICDs
+ */
+std::vector<VkExtensionProperties> GetGlobalExtensions(const char *pLayerName)
+{
+    VkResult err;
+
     std::vector<VkExtensionProperties> exts;
     uint32_t extCount = 0;
-    if (!EXPECT(vkGetGlobalExtensionCount(&extCount) == VK_SUCCESS))
-        return exts;
-
-    VkExtensionProperties extProp;
-    // TODO : Need to update this if/when we have more than 1 extension to enable
-    for (uint32_t i = 0; i < extCount; i++) {
-        if (!EXPECT(vkGetGlobalExtensionProperties(i, &extProp) == VK_SUCCESS))
-            return exts;
-
-        if (!strcmp(known_exts[0], extProp.name))
-            exts.push_back(extProp);
+    err = vkGetGlobalExtensionProperties(pLayerName, &extCount, NULL);
+    while (err == VK_INCOMPLETE) {
+        extCount = 0;
+        err = vkGetGlobalExtensionProperties(pLayerName, &extCount, NULL);
     }
+    assert(err == VK_SUCCESS);
+    if (err != VK_SUCCESS) {
+        return exts;
+    }
+
+    exts.reserve(extCount);
+    err = vkGetGlobalExtensionProperties(pLayerName, &extCount, &exts[0]);
+    assert(err == VK_SUCCESS);
+
+    return exts;
+}
+
+/*
+ * Return list of PhysicalDevice extensions provided by the ICD / Loader
+ */
+std::vector<VkExtensionProperties> PhysicalGpu::extensions() const
+{
+    return extensions(NULL);
+}
+
+/*
+ * Return list of PhysicalDevice extensions provided by the specified layer
+ * If pLayerName is NULL, will return extensions for ICD / loader.
+ */
+std::vector<VkExtensionProperties> PhysicalGpu::extensions(const char *pLayerName) const
+{
+    VkResult err;
+
+    std::vector<VkExtensionProperties> exts;
+    uint32_t extCount = 0;
+    err = vkGetPhysicalDeviceExtensionProperties(obj(), pLayerName, &extCount, NULL);
+    while (err == VK_INCOMPLETE) {
+        extCount = 0;
+        err = vkGetPhysicalDeviceExtensionProperties(obj(), pLayerName, &extCount, NULL);
+    }
+    assert(err == VK_SUCCESS);
+    if (err != VK_SUCCESS) {
+        return exts;
+    }
+
+    exts.reserve(extCount);
+    err = vkGetPhysicalDeviceExtensionProperties(obj(), pLayerName, &extCount, &exts[0]);
+    assert(err == VK_SUCCESS);
 
     return exts;
 }
@@ -329,7 +391,7 @@ Device::~Device()
     EXPECT(vkDestroyDevice(obj()) == VK_SUCCESS);
 }
 
-void Device::init(std::vector<VkExtensionProperties> extensions)
+void Device::init(std::vector<const char *> &extensions)
 {
     // request all queues
     const std::vector<VkPhysicalDeviceQueueProperties> queue_props = gpu_.queue_properties();
@@ -351,7 +413,7 @@ void Device::init(std::vector<VkExtensionProperties> extensions)
     dev_info.queueRecordCount = queue_info.size();
     dev_info.pRequestedQueues = &queue_info[0];
     dev_info.extensionCount = extensions.size();
-    dev_info.pEnabledExtensions = &extensions[0];
+    dev_info.ppEnabledExtensionNames = &extensions[0];
     dev_info.flags = 0;
 
     init(dev_info);

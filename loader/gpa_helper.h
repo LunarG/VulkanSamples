@@ -63,12 +63,12 @@ static inline void* globalGetProcAddr(const char *name)
         return (void*) vkDestroyDevice;
     if (!strcmp(name, "GetGlobalExtensionProperties"))
         return (void*) vkGetGlobalExtensionProperties;
-    if (!strcmp(name, "GetGlobalExtensionCount"))
-        return (void*) vkGetGlobalExtensionCount;
     if (!strcmp(name, "GetPhysicalDeviceExtensionProperties"))
         return (void*) vkGetPhysicalDeviceExtensionProperties;
-    if (!strcmp(name, "GetPhysicalDeviceExtensionCount"))
-        return (void*) vkGetPhysicalDeviceExtensionCount;
+    if (!strcmp(name, "GetGlobalLayerProperties"))
+        return (void*) vkGetGlobalLayerProperties;
+    if (!strcmp(name, "GetPhysicalDeviceLayerProperties"))
+        return (void*) vkGetPhysicalDeviceLayerProperties;
     if (!strcmp(name, "GetDeviceQueue"))
         return (void*) vkGetDeviceQueue;
     if (!strcmp(name, "QueueSubmit"))

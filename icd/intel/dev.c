@@ -118,7 +118,7 @@ VkResult intel_dev_create(struct intel_gpu *gpu,
 
     for (i = 0; i < info->extensionCount; i++) {
         const enum intel_phy_dev_ext_type ext = intel_gpu_lookup_phy_dev_extension(gpu,
-                &info->pEnabledExtensions[i]);
+                info->ppEnabledExtensionNames[i]);
 
         if (ext != INTEL_PHY_DEV_EXT_INVALID)
             dev->phy_dev_exts[ext] = true;

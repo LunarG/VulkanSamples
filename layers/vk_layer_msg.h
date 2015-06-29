@@ -33,12 +33,12 @@ static bool g_DEBUG_REPORT = false;
 static FILE *g_logFile = NULL;
 
 static void enable_debug_report(
-        uint32_t                        extension_count,
-        const VkExtensionProperties*    pEnabledExtensions)    // layer or extension name to be enabled
+        uint32_t                extension_count,
+        const char * const *    ppEnabledExtensionNames)    // extension name to be enabled
 {
     for (uint32_t i = 0; i < extension_count; i++) {
         /* TODO: Check other property fields */
-        if (strcmp(pEnabledExtensions[i].name, DEBUG_REPORT_EXTENSION_NAME) == 0) {
+        if (strcmp(ppEnabledExtensionNames[i], DEBUG_REPORT_EXTENSION_NAME) == 0) {
             g_DEBUG_REPORT = true;
         }
     }

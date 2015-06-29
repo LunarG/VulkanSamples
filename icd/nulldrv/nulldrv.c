@@ -44,10 +44,9 @@ static const char * const nulldrv_gpu_exts[NULLDRV_EXT_COUNT] = {
 };
 static const VkExtensionProperties intel_gpu_exts[NULLDRV_EXT_COUNT] = {
     {
-        .sType = VK_STRUCTURE_TYPE_EXTENSION_PROPERTIES,
-        .name = VK_WSI_LUNARG_EXTENSION_NAME,
+        .extName = VK_WSI_LUNARG_EXTENSION_NAME,
         .version = VK_WSI_LUNARG_REVISION,
-        .description = "Null driver",
+        .specVersion = VK_API_VERSION,
     }
 };
 
@@ -158,12 +157,12 @@ static VkResult dev_create_queues(struct nulldrv_dev *dev,
 
 static enum nulldrv_ext_type nulldrv_gpu_lookup_extension(
         const struct nulldrv_gpu *gpu,
-        const VkExtensionProperties *ext)
+        const char* extName)
 {
     enum nulldrv_ext_type type;
 
     for (type = 0; type < ARRAY_SIZE(nulldrv_gpu_exts); type++) {
-        if (memcmp(&nulldrv_gpu_exts[type], ext, sizeof(VkExtensionProperties)) == 0)
+        if (strcmp(nulldrv_gpu_exts[type], extName) == 0)
             break;
     }
 
@@ -207,7 +206,7 @@ static VkResult nulldrv_dev_create(struct nulldrv_gpu *gpu,
     for (i = 0; i < info->extensionCount; i++) {
         const enum nulldrv_ext_type ext = nulldrv_gpu_lookup_extension(
                     gpu,
-                    &info->pEnabledExtensions[i]);
+                    info->ppEnabledExtensionNames[i]);
 
         if (ext == NULLDRV_EXT_INVALID)
             return VK_ERROR_INVALID_EXTENSION;
@@ -1410,36 +1409,43 @@ ICD_EXPORT VkResult VKAPI vkGetPhysicalDeviceQueueProperties(
 }
 
 ICD_EXPORT VkResult VKAPI vkGetGlobalExtensionProperties(
-                                               uint32_t                  extensionIndex,
-                                               VkExtensionProperties*    pProperties)
+    const char*                                 pLayerName,
+    uint32_t*                                   pCount,
+    VkExtensionProperties*                      pProperties)
 {
-    if (extensionIndex >= NULLDRV_EXT_COUNT)
-        return VK_ERROR_INVALID_VALUE;
+    uint32_t copy_size;
 
-    memcpy(pProperties, &intel_gpu_exts[extensionIndex], sizeof(VkExtensionProperties));
-    return VK_SUCCESS;
-}
+    if (pCount == NULL) {
+        return VK_ERROR_INVALID_POINTER;
+    }
 
-ICD_EXPORT VkResult VKAPI vkGetGlobalExtensionCount(uint32_t *pCount)
-{
-    *pCount = NULLDRV_EXT_COUNT;
+    if (pProperties == NULL) {
+        *pCount = NULLDRV_EXT_COUNT;
+        return VK_SUCCESS;
+    }
 
+    copy_size = *pCount < NULLDRV_EXT_COUNT ? *pCount : NULLDRV_EXT_COUNT;
+    memcpy(pProperties, intel_gpu_exts, copy_size * sizeof(VkExtensionProperties));
+    *pCount = copy_size;
+    if (copy_size < NULLDRV_EXT_COUNT) {
+        return VK_INCOMPLETE;
+    }
     return VK_SUCCESS;
 }
 
 VkResult VKAPI vkGetPhysicalDeviceExtensionProperties(
-                                               VkPhysicalDevice gpu,
-                                               uint32_t  extesnionIndex,
-                                               VkExtensionProperties* pProperties)
+    VkPhysicalDevice                            physicalDevice,
+    const char*                                 pLayerName,
+    uint32_t*                                   pCount,
+    VkExtensionProperties*                      pProperties)
 {
-    return VK_ERROR_INVALID_EXTENSION;
-}
 
-VkResult VKAPI vkGetPhysicalDeviceExtensionCount(
-                                               VkPhysicalDevice gpu,
-                                               uint32_t* pCount)
-{
+    if (pCount == NULL) {
+        return VK_ERROR_INVALID_POINTER;
+    }
+
     *pCount = 0;
+
     return VK_SUCCESS;
 }
 

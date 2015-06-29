@@ -40,10 +40,9 @@ typedef void (VKAPI *PFN_stringCallback)(char *message);
 
 static const struct loader_extension_property debug_report_extension_info = {
     .info =  {
-        .sType = VK_STRUCTURE_TYPE_EXTENSION_PROPERTIES,
-        .name = DEBUG_REPORT_EXTENSION_NAME,
+        .extName = DEBUG_REPORT_EXTENSION_NAME,
         .version = VK_DEBUG_REPORT_EXTENSION_VERSION,
-        .description = "loader: debug report extension",
+        .specVersion = VK_API_VERSION,
         },
     .origin = VK_EXTENSION_ORIGIN_LOADER,
 };
@@ -55,12 +54,17 @@ void debug_report_add_instance_extensions(
 }
 
 void debug_report_create_instance(
-        struct loader_instance *ptr_instance)
+        struct loader_instance *ptr_instance,
+        const VkInstanceCreateInfo *pCreateInfo)
 {
-    ptr_instance->debug_report_enabled = has_vk_extension_property_array(
-                                            &debug_report_extension_info.info,
-                                            ptr_instance->app_extension_count,
-                                            ptr_instance->app_extension_props);
+    ptr_instance->debug_report_enabled = false;
+
+    for (uint32_t i = 0; i < pCreateInfo->extensionCount; i++) {
+        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], DEBUG_REPORT_EXTENSION_NAME) == 0) {
+            ptr_instance->debug_report_enabled = true;
+            return;
+        }
+    }
 }
 
 static VkResult debug_report_DbgCreateMsgCallback(

@@ -58,22 +58,6 @@ LOADER_EXPORT VkResult VKAPI vkCreateInstance(
     }
     loader_platform_thread_lock_mutex(&loader_lock);
     memset(ptr_instance, 0, sizeof(struct loader_instance));
-    ptr_instance->app_extension_count = pCreateInfo->extensionCount;
-    ptr_instance->app_extension_props = (ptr_instance->app_extension_count > 0) ?
-                malloc(sizeof (VkExtensionProperties) * ptr_instance->app_extension_count) : NULL;
-    if (ptr_instance->app_extension_props == NULL && (ptr_instance->app_extension_count > 0)) {
-        loader_platform_thread_unlock_mutex(&loader_lock);
-        return VK_ERROR_OUT_OF_HOST_MEMORY;
-    }
-
-    /*
-     * Make local copy of extension properties indicated by application.
-     */
-    if (ptr_instance->app_extension_props) {
-        memcpy(ptr_instance->app_extension_props,
-               pCreateInfo->pEnabledExtensions,
-               sizeof(VkExtensionProperties) * ptr_instance->app_extension_count);
-    }
 
     ptr_instance->disp = malloc(sizeof(VkLayerInstanceDispatchTable));
     if (ptr_instance->disp == NULL) {
@@ -84,9 +68,9 @@ LOADER_EXPORT VkResult VKAPI vkCreateInstance(
     ptr_instance->next = loader.instances;
     loader.instances = ptr_instance;
 
-    loader_enable_instance_layers(ptr_instance);
+    loader_enable_instance_layers(ptr_instance, pCreateInfo);
 
-    debug_report_create_instance(ptr_instance);
+    debug_report_create_instance(ptr_instance, pCreateInfo);
 
     /* enable any layers on instance chain */
     loader_activate_instance_layers(ptr_instance);
@@ -273,23 +257,29 @@ LOADER_EXPORT VkResult VKAPI vkDestroyDevice(VkDevice device)
 }
 
 LOADER_EXPORT VkResult VKAPI vkGetPhysicalDeviceExtensionProperties(
-                                                VkPhysicalDevice gpu,
-                                                uint32_t extensionIndex,
-                                                VkExtensionProperties* pProperties)
+    VkPhysicalDevice                            physicalDevice,
+    const char*                                 pLayerName,
+    uint32_t*                                   pCount,
+    VkExtensionProperties*                      pProperties)
 {
     VkResult res;
 
-    res = loader_GetPhysicalDeviceExtensionProperties(gpu, extensionIndex, pProperties);
+    loader_platform_thread_lock_mutex(&loader_lock);
+    res = loader_GetPhysicalDeviceExtensionProperties(physicalDevice, pLayerName, pCount, pProperties);
+    loader_platform_thread_unlock_mutex(&loader_lock);
     return res;
 }
 
-LOADER_EXPORT VkResult VKAPI vkGetPhysicalDeviceExtensionCount(
-                                                VkPhysicalDevice gpu,
-                                                uint32_t* pCount)
+LOADER_EXPORT VkResult VKAPI vkGetPhysicalDeviceLayerProperties(
+    VkPhysicalDevice                            physicalDevice,
+    uint32_t*                                   pCount,
+    VkLayerProperties*                          pProperties)
 {
     VkResult res;
 
-    res = loader_GetPhysicalDeviceExtensionCount(gpu, pCount);
+    loader_platform_thread_lock_mutex(&loader_lock);
+    res = loader_GetPhysicalDeviceLayerProperties(physicalDevice, pCount, pProperties);
+    loader_platform_thread_unlock_mutex(&loader_lock);
     return res;
 }
 

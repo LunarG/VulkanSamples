@@ -34,7 +34,7 @@ import vk_helper
 from source_line_info import sourcelineinfo
 
 def proto_is_global(proto):
-    if proto.params[0].ty == "VkInstance" or proto.params[0].ty == "VkPhysicalDevice" or proto.name == "CreateInstance" or proto.name == "GetGlobalExtensionCount" or proto.name == "GetGlobalExtensionProperties" or proto.name == "GetPhysicalDeviceExtensionCount" or proto.name == "GetPhysicalDeviceExtensionProperties":
+    if proto.params[0].ty == "VkInstance" or proto.params[0].ty == "VkPhysicalDevice" or proto.name == "CreateInstance" or proto.name == "GetGlobalLayerProperties" or proto.name == "GetGlobalExtensionProperties" or proto.name == "GetPhysicalDeviceLayerProperties" or proto.name == "GetPhysicalDeviceExtensionProperties":
        return True
     else:
        return False
@@ -199,31 +199,29 @@ class Subcommand(object):
 
     def _gen_layer_get_global_extension_props(self, layer="Generic"):
         ggep_body = []
-        if layer == 'APIDump' or layer == 'Generic':
+        # generated layers do not provide any global extensions
+        ggep_body.append('%s' % self.lineinfo.get())
+
+        ggep_body.append('')
+        ggep_body.append('VK_LAYER_EXPORT VkResult VKAPI vkGetGlobalExtensionProperties(const char *pLayerName, uint32_t *pCount,  VkExtensionProperties* pProperties)')
+        ggep_body.append('{')
+        ggep_body.append('    return util_GetExtensionProperties(0, NULL, pCount, pProperties);')
+        ggep_body.append('}')
+        return "\n".join(ggep_body)
+
+    def _gen_layer_get_global_layer_props(self, layer="Generic"):
+        ggep_body = []
+        if layer == 'Generic':
+            # Do nothing, extension definition part of generic.h
             ggep_body.append('%s' % self.lineinfo.get())
-            ggep_body.append('#define LAYER_EXT_ARRAY_SIZE 1')
-            ggep_body.append('static const VkExtensionProperties layerExts[LAYER_EXT_ARRAY_SIZE] = {')
-            ggep_body.append('    {')
-            ggep_body.append('        VK_STRUCTURE_TYPE_EXTENSION_PROPERTIES,')
-            ggep_body.append('        "%s",' % layer)
-            ggep_body.append('        0x10,')
-            ggep_body.append('        "layer: %s",' % layer)
-            ggep_body.append('    }')
-            ggep_body.append('};')
         else:
             ggep_body.append('%s' % self.lineinfo.get())
-            ggep_body.append('#define LAYER_EXT_ARRAY_SIZE 2')
-            ggep_body.append('static const VkExtensionProperties layerExts[LAYER_EXT_ARRAY_SIZE] = {')
+            ggep_body.append('#define LAYER_DEVICE_PROPS_ARRAY_SIZE 1')
+            ggep_body.append('static const VkLayerProperties deviceLayerProps[LAYER_DEVICE_PROPS_ARRAY_SIZE] = {')
             ggep_body.append('    {')
-            ggep_body.append('        VK_STRUCTURE_TYPE_EXTENSION_PROPERTIES,')
             ggep_body.append('        "%s",' % layer)
-            ggep_body.append('        0x10,')
-            ggep_body.append('        "layer: %s",' % layer)
-            ggep_body.append('    },')
-            ggep_body.append('    {')
-            ggep_body.append('        VK_STRUCTURE_TYPE_EXTENSION_PROPERTIES,')
-            ggep_body.append('        "Validation",')
-            ggep_body.append('        0x10,')
+            ggep_body.append('        VK_API_VERSION, // specVersion')
+            ggep_body.append('        VK_MAKE_VERSION(0, 1, 0), // implVersion')
             ggep_body.append('        "layer: %s",' % layer)
             ggep_body.append('    }')
             ggep_body.append('};')
@@ -231,88 +229,33 @@ class Subcommand(object):
         ggep_body.append('%s' % self.lineinfo.get())
 
         ggep_body.append('')
-        ggep_body.append('VK_LAYER_EXPORT VkResult VKAPI vkGetGlobalExtensionProperties(uint32_t extensionIndex,  VkExtensionProperties* pProperties)')
+        ggep_body.append('VK_LAYER_EXPORT VkResult VKAPI vkGetGlobalLayerProperties(uint32_t *pCount,  VkLayerProperties* pProperties)')
         ggep_body.append('{')
-        ggep_body.append('    if (extensionIndex >= LAYER_EXT_ARRAY_SIZE)')
-        ggep_body.append('        return VK_ERROR_INVALID_VALUE;')
-        ggep_body.append('    memcpy(pProperties, &layerExts[extensionIndex], sizeof(VkExtensionProperties));')
-        ggep_body.append('    return VK_SUCCESS;')
+        ggep_body.append('    return util_GetLayerProperties(LAYER_DEVICE_PROPS_ARRAY_SIZE, deviceLayerProps, pCount, pProperties);')
         ggep_body.append('}')
         return "\n".join(ggep_body)
 
-    def _gen_layer_get_global_extension_count(self, layer="Generic"):
-        ggec_body = []
-        ggec_body.append('VK_LAYER_EXPORT VkResult VKAPI vkGetGlobalExtensionCount(uint32_t* pCount)')
-        ggec_body.append('{')
-        ggec_body.append('    *pCount = LAYER_EXT_ARRAY_SIZE;')
-        ggec_body.append('     return VK_SUCCESS;')
-        ggec_body.append('}')
-        return "\n".join(ggec_body)
-
-    def _gen_layer_get_physical_device_extension_props(self, layer="Generic"):
+    def _gen_layer_get_physical_device_layer_props(self, layer="Generic"):
         gpdep_body = []
-        if layer == 'APIDump' or layer == 'Generic':
-            gpdep_body.append('#define LAYER_DEV_EXT_ARRAY_SIZE 1')
-            gpdep_body.append('static const VkExtensionProperties layerDevExts[LAYER_DEV_EXT_ARRAY_SIZE] = {')
-            gpdep_body.append('    {')
-            gpdep_body.append('        VK_STRUCTURE_TYPE_EXTENSION_PROPERTIES,')
-            gpdep_body.append('        "%s",' % layer)
-            gpdep_body.append('        0x10,')
-            gpdep_body.append('        "layer: %s",' % layer)
-            gpdep_body.append('    }')
-            gpdep_body.append('};')
-        elif layer == 'ObjectTracker':
-            gpdep_body.append('#define LAYER_DEV_EXT_ARRAY_SIZE 2')
-            gpdep_body.append('static const VkExtensionProperties layerDevExts[LAYER_DEV_EXT_ARRAY_SIZE] = {')
-            gpdep_body.append('    {')
-            gpdep_body.append('        VK_STRUCTURE_TYPE_EXTENSION_PROPERTIES,')
-            gpdep_body.append('        "%s",' % layer)
-            gpdep_body.append('        0x10,')
-            gpdep_body.append('        "layer: %s",' % layer)
-            gpdep_body.append('    },')
-            gpdep_body.append('    {')
-            gpdep_body.append('        VK_STRUCTURE_TYPE_EXTENSION_PROPERTIES,')
-            gpdep_body.append('        "Validation",')
-            gpdep_body.append('        0x10,')
-            gpdep_body.append('        "layer: %s",' % layer)
-            gpdep_body.append('    }')
-            gpdep_body.append('};')
+        if layer == 'Generic':
+            # Do nothing, extension definition part of generic.h
+            ggep_body.append('%s' % self.lineinfo.get())
         else:
-            gpdep_body.append('#define LAYER_DEV_EXT_ARRAY_SIZE 2')
-            gpdep_body.append('static const VkExtensionProperties layerDevExts[LAYER_DEV_EXT_ARRAY_SIZE] = {')
+            gpdep_body.append('#define LAYER_DEV_EXT_ARRAY_SIZE 1')
+            gpdep_body.append('static const VkLayerProperties layerDevProps[LAYER_DEV_EXT_ARRAY_SIZE] = {')
             gpdep_body.append('    {')
-            gpdep_body.append('        VK_STRUCTURE_TYPE_EXTENSION_PROPERTIES,')
             gpdep_body.append('        "%s",' % layer)
-            gpdep_body.append('        0x10,')
-            gpdep_body.append('        "layer: %s",' % layer)
-            gpdep_body.append('    },')
-            gpdep_body.append('    {')
-            gpdep_body.append('        VK_STRUCTURE_TYPE_EXTENSION_PROPERTIES,')
-            gpdep_body.append('        "Validation",')
-            gpdep_body.append('        0x10,')
+            gpdep_body.append('        VK_API_VERSION,')
+            gpdep_body.append('        VK_MAKE_VERSION(0, 1, 0),')
             gpdep_body.append('        "layer: %s",' % layer)
             gpdep_body.append('    }')
             gpdep_body.append('};')
-        gpdep_body.append('VK_LAYER_EXPORT VkResult VKAPI vkGetPhysicalDeviceExtensionProperties(VkPhysicalDevice physicalDevice, uint32_t extensionIndex,  VkExtensionProperties* pProperties)')
+        gpdep_body.append('VK_LAYER_EXPORT VkResult VKAPI vkGetPhysicalDeviceLayerProperties(VkPhysicalDevice physicalDevice, uint32_t *pCount, VkLayerProperties* pProperties)')
         gpdep_body.append('{')
-        gpdep_body.append('    if (extensionIndex >= LAYER_DEV_EXT_ARRAY_SIZE)')
-        gpdep_body.append('        return VK_ERROR_INVALID_VALUE;')
-        gpdep_body.append('    memcpy(pProperties, &layerDevExts[extensionIndex], sizeof(VkExtensionProperties));')
-        gpdep_body.append('    return VK_SUCCESS;')
+        gpdep_body.append('    return util_GetLayerProperties(LAYER_DEV_EXT_ARRAY_SIZE, layerDevProps, pCount, pProperties);')
         gpdep_body.append('}')
         gpdep_body.append('')
         return "\n".join(gpdep_body)
-
-    def _gen_layer_get_physical_device_extension_count(self, layer="Generic"):
-        gpdec_body = []
-        gpdec_body.append('VK_LAYER_EXPORT VkResult VKAPI vkGetPhysicalDeviceExtensionCount(VkPhysicalDevice physicalDevice, uint32_t* pCount)')
-        gpdec_body.append('{')
-        gpdec_body.append('    *pCount = LAYER_DEV_EXT_ARRAY_SIZE;')
-        gpdec_body.append('     return VK_SUCCESS;')
-        gpdec_body.append('}')
-        gpdec_body.append('')
-        return "\n".join(gpdec_body)
-
 
     def _generate_dispatch_entrypoints(self, qual=""):
         if qual:
@@ -335,12 +278,10 @@ class Subcommand(object):
                         funcs.append('/* CreateDevice HERE */')
                     elif 'GetGlobalExtensionProperties' == proto.name:
                         intercept = self._gen_layer_get_global_extension_props(self.layer_name)
-                    elif 'GetGlobalExtensionCount' == proto.name:
-                        intercept = self._gen_layer_get_global_extension_count(self.layer_name)
-                    elif 'GetPhysicalDeviceExtensionProperties' == proto.name:
-                        intercept = self._gen_layer_get_physical_device_extension_props(self.layer_name)
-                    elif 'GetPhysicalDeviceExtensionCount' == proto.name:
-                        intercept = self._gen_layer_get_physical_device_extension_count(self.layer_name)
+                    elif 'GetGlobalLayerProperties' == proto.name:
+                        intercept = self._gen_layer_get_global_layer_props(self.layer_name)
+                    elif 'GetPhysicalDeviceLayerProperties' == proto.name:
+                        intercept = self._gen_layer_get_physical_device_layer_props(self.layer_name)
 
 
                 if intercept is not None:
@@ -590,6 +531,7 @@ class LayerDispatchSubcommand(Subcommand):
 class GenericLayerSubcommand(Subcommand):
     def generate_header(self):
         gen_header = []
+        func_body.append('%s' % self.lineinfo.get())
         gen_header.append('#include <stdio.h>')
         gen_header.append('#include <stdlib.h>')
         gen_header.append('#include <string.h>')
@@ -603,6 +545,8 @@ class GenericLayerSubcommand(Subcommand):
         gen_header.append('#include "vk_layer_msg.h"')
         gen_header.append('#include "vk_layer_table.h"')
         gen_header.append('')
+        gen_header.append('#include "generic.h')
+        gen_header.append('')
         gen_header.append('static LOADER_PLATFORM_THREAD_ONCE_DECLARATION(initOnce);')
         gen_header.append('struct devExts {')
         gen_header.append('    bool wsi_lunarg_enabled;')
@@ -615,7 +559,7 @@ class GenericLayerSubcommand(Subcommand):
         gen_header.append('    VkLayerDispatchTable *pDisp  = device_dispatch_table(device);')
         gen_header.append('    deviceExtMap[pDisp].wsi_lunarg_enabled = false;')
         gen_header.append('    for (i = 0; i < pCreateInfo->extensionCount; i++) {')
-        gen_header.append('        if (strcmp(pCreateInfo->pEnabledExtensions[i].name, VK_WSI_LUNARG_EXTENSION_NAME) == 0)')
+        gen_header.append('        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_WSI_LUNARG_EXTENSION_NAME) == 0)')
         gen_header.append('            deviceExtMap[pDisp].wsi_lunarg_enabled = true;')
         gen_header.append('')
         gen_header.append('    }')
@@ -623,7 +567,7 @@ class GenericLayerSubcommand(Subcommand):
         gen_header.append('')
         return "\n".join(gen_header)
     def generate_intercept(self, proto, qual):
-        if proto.name in [ 'GetGlobalExtensionCount', 'GetGlobalExtensionProperties', 'GetPhysicalDeviceExtensionCount', 'GetPhysicalDeviceExtensionProperties' ]:
+        if proto.name in [ 'GetGlobalLayerProperties', 'GetGlobalExtensionProperties', 'GetPhysicalDeviceLayerProperties', 'GetPhysicalDeviceExtensionProperties' ]:
             # use default version
             return None
         decl = proto.c_func(prefix="vk", attr="VKAPI")
@@ -646,7 +590,7 @@ class GenericLayerSubcommand(Subcommand):
                      '    layerCbMsg(VK_DBG_REPORT_INFO_BIT,VK_OBJECT_TYPE_PHYSICAL_DEVICE, gpu, 0, 0, (char *) "GENERIC", (char *) str);\n'
                      '    %sdevice_dispatch_table(*pDevice)->%s;\n'
                      '    if (result == VK_SUCCESS) {\n'
-                     '        enable_debug_report(pCreateInfo->extensionCount, pCreateInfo->pEnabledExtensions);\n'
+                     '        enable_debug_report(pCreateInfo->extensionCount, pCreateInfo->ppEnabledExtensionNames);\n'
                      '        createDeviceRegisterExtensions(pCreateInfo, *pDevice);\n'
                      '    }\n'
                      '    sprintf(str, "Completed layered %s\\n");\n'
@@ -745,6 +689,7 @@ class APIDumpSubcommand(Subcommand):
         header_txt.append('#include "vk_layer.h"')
         header_txt.append('#include "vk_struct_string_helper_cpp.h"')
         header_txt.append('#include "vk_layer_table.h"')
+        header_txt.append('#include "vk_layer_extension_utils.h"')
         header_txt.append('#include <unordered_map>')
         header_txt.append('')
         header_txt.append('// The following is #included again to catch certain OS-specific functions being used:')
@@ -788,7 +733,7 @@ class APIDumpSubcommand(Subcommand):
         header_txt.append('    VkLayerDispatchTable *pDisp  = device_dispatch_table(device);')
         header_txt.append('    deviceExtMap[pDisp].wsi_lunarg_enabled = false;')
         header_txt.append('    for (i = 0; i < pCreateInfo->extensionCount; i++) {')
-        header_txt.append('        if (strcmp(pCreateInfo->pEnabledExtensions[i].name, VK_WSI_LUNARG_EXTENSION_NAME) == 0)')
+        header_txt.append('        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_WSI_LUNARG_EXTENSION_NAME) == 0)')
         header_txt.append('            deviceExtMap[pDisp].wsi_lunarg_enabled = true;')
         header_txt.append('')
         header_txt.append('    }')
@@ -875,7 +820,7 @@ class APIDumpSubcommand(Subcommand):
         return "\n".join(func_body)
 
     def generate_intercept(self, proto, qual):
-        if proto.name in [ 'GetGlobalExtensionCount','GetGlobalExtensionProperties','GetPhysicalDeviceExtensionCount','GetPhysicalDeviceExtensionProperties']:
+        if proto.name in [ 'GetGlobalLayerProperties','GetGlobalExtensionProperties','GetPhysicalDeviceLayerProperties','GetPhysicalDeviceExtensionProperties']:
             return None
         decl = proto.c_func(prefix="vk", attr="VKAPI")
         ret_val = ''
@@ -1091,7 +1036,7 @@ class ObjectTrackerSubcommand(Subcommand):
         return "\n".join(header_txt)
 
     def generate_intercept(self, proto, qual):
-        if proto.name in [ 'DbgCreateMsgCallback', 'GetGlobalExtensionCount', 'GetGlobalExtensionProperties','GetPhysicalDeviceExtensionCount', 'GetPhysicalDeviceExtensionProperties' ]:
+        if proto.name in [ 'DbgCreateMsgCallback', 'GetGlobalLayerProperties', 'GetGlobalExtensionProperties','GetPhysicalDeviceLayerProperties', 'GetPhysicalDeviceExtensionProperties' ]:
             # use default version
             return None
 
@@ -1391,7 +1336,7 @@ class ThreadingSubcommand(Subcommand):
                          '    %s %s_dispatch_table(*pInstance)->CreateInstance(pCreateInfo, pInstance);\n'
                          '\n'
                          '    if (result == VK_SUCCESS) {\n'
-                         '        enable_debug_report(pCreateInfo->extensionCount, pCreateInfo->pEnabledExtensions);\n'
+                         '        enable_debug_report(pCreateInfo->extensionCount, pCreateInfo->ppEnabledExtensionNames);\n'
                          '        VkLayerInstanceDispatchTable *pTable = instance_dispatch_table(*pInstance);\n'
                          '        debug_report_init_instance_extension_dispatch_table(\n'
                          '                    pTable,\n'

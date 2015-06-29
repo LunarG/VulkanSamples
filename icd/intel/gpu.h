@@ -114,8 +114,7 @@ int intel_gpu_get_primary_fd(struct intel_gpu *gpu);
 VkResult intel_gpu_init_winsys(struct intel_gpu *gpu);
 void intel_gpu_cleanup_winsys(struct intel_gpu *gpu);
 
-enum intel_phy_dev_ext_type intel_gpu_lookup_phy_dev_extension(
-        const struct intel_gpu *gpu,
-        const VkExtensionProperties *ext);
+enum intel_phy_dev_ext_type intel_gpu_lookup_phy_dev_extension(const struct intel_gpu *gpu,
+        const char *extName);
 
 #endif /* GPU_H */

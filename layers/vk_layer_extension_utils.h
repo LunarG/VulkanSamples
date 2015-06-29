@@ -1,7 +1,7 @@
 /*
  * Vulkan
  *
- * Copyright (C) 2015 LunarG, Inc.
+ * Copyright (C) 2014 LunarG, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -25,33 +25,28 @@
  *   Courtney Goeltzenleuchter <courtney@lunarg.com>
  */
 
-#include "extension_info.h"
-#include "vk_debug_marker_layer.h"
+#include "vk_layer.h"
 
-const VkExtensionProperties intel_global_exts[INTEL_GLOBAL_EXT_COUNT] = {
-    {
-        .extName = DEBUG_REPORT_EXTENSION_NAME,
-        .version = VK_DEBUG_REPORT_EXTENSION_VERSION,
-        .specVersion = VK_API_VERSION,
-    },
-    {
-        .extName = VK_WSI_LUNARG_EXTENSION_NAME,
-        .version = VK_WSI_LUNARG_REVISION,
-        .specVersion = VK_API_VERSION,
-    }
-};
+#ifndef LAYER_EXTENSION_UTILS_H
+#define LAYER_EXTENSION_UTILS_H
 
-const VkExtensionProperties intel_phy_dev_gpu_exts[INTEL_PHY_DEV_EXT_COUNT] = {
-    {
-        .extName = DEBUG_MARKER_EXTENSION_NAME,
-        .version = VK_DEBUG_MARKER_EXTENSION_VERSION,
-        .specVersion = VK_API_VERSION,
-    }
-};
+/*
+ * This file contains static functions for the generated layers
+ */
+extern "C" {
 
-bool compare_vk_extension_properties(
-        const VkExtensionProperties *op1,
-        const char *extName)
-{
-    return strcmp(op1->extName, extName) == 0 ? true : false;
-}
+VkResult util_GetExtensionProperties(
+        const uint32_t count,
+        const VkExtensionProperties *layer_extensions,
+        uint32_t* pCount,
+        VkExtensionProperties* pProperties);
+
+VkResult util_GetLayerProperties(
+        const uint32_t count,
+        const VkLayerProperties *layer_properties,
+        uint32_t* pCount,
+        VkLayerProperties* pProperties);
+
+} // extern "C"
+#endif // LAYER_EXTENSION_UTILS_H
+

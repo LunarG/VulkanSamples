@@ -76,7 +76,7 @@ static inline debug_report_data *debug_report_create_instance(
         VkLayerInstanceDispatchTable   *table,
         VkInstance                      inst,
         uint32_t                        extension_count,
-        const VkExtensionProperties*    pEnabledExtensions)    // layer or extension name to be enabled
+        const char*const*               ppEnabledExtensions)    // layer or extension name to be enabled
 {
     debug_report_data              *debug_data;
     PFN_vkGetInstanceProcAddr gpa = table->GetInstanceProcAddr;
@@ -90,7 +90,7 @@ static inline debug_report_data *debug_report_create_instance(
     memset(debug_data, 0, sizeof(debug_report_data));
     for (uint32_t i = 0; i < extension_count; i++) {
         /* TODO: Check other property fields */
-        if (strcmp(pEnabledExtensions[i].name, DEBUG_REPORT_EXTENSION_NAME) == 0) {
+        if (strcmp(ppEnabledExtensions[i], DEBUG_REPORT_EXTENSION_NAME) == 0) {
             debug_data->g_DEBUG_REPORT = true;
         }
     }

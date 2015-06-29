@@ -169,7 +169,7 @@ static struct intel_instance *intel_instance_create(const VkInstanceCreateInfo* 
     instance->icd = icd;
 
     for (i = 0; i < info->extensionCount; i++) {
-        const enum intel_global_ext_type ext = intel_gpu_lookup_global_extension(&info->pEnabledExtensions[i]);
+        const enum intel_global_ext_type ext = intel_gpu_lookup_global_extension(info->ppEnabledExtensionNames[i]);
 
         if (ext != INTEL_GLOBAL_EXT_INVALID) {
             instance->global_exts[ext] = true;
@@ -185,12 +185,12 @@ static struct intel_instance *intel_instance_create(const VkInstanceCreateInfo* 
 }
 
 enum intel_global_ext_type intel_gpu_lookup_global_extension(
-        const VkExtensionProperties *ext)
+        const char *extName)
 {
     enum intel_global_ext_type type;
 
     for (type = 0; type < ARRAY_SIZE(intel_global_exts); type++) {
-        if (compare_vk_extension_properties(&intel_global_exts[type], ext))
+        if (compare_vk_extension_properties(&intel_global_exts[type], extName))
             break;
     }
 
@@ -224,28 +224,48 @@ ICD_EXPORT VkResult VKAPI vkDestroyInstance(
     return VK_SUCCESS;
 }
 
-ICD_EXPORT VkResult VKAPI vkGetGlobalExtensionCount(
-    uint32_t*                                  pCount)
+ICD_EXPORT VkResult VKAPI vkGetGlobalExtensionProperties(
+        const char*                                 pLayerName,
+        uint32_t*                                   pCount,
+        VkExtensionProperties*                      pProperties)
 {
-    *pCount = INTEL_GLOBAL_EXT_COUNT;
+    uint32_t copy_size;
+
+    if (pCount == NULL) {
+        return VK_ERROR_INVALID_POINTER;
+    }
+
+    if (pProperties == NULL) {
+        *pCount = INTEL_GLOBAL_EXT_COUNT;
+        return VK_SUCCESS;
+    }
+
+    copy_size = *pCount < INTEL_GLOBAL_EXT_COUNT ? *pCount : INTEL_GLOBAL_EXT_COUNT;
+    memcpy(pProperties, intel_global_exts, copy_size * sizeof(VkExtensionProperties));
+    *pCount = copy_size;
+    if (copy_size < INTEL_GLOBAL_EXT_COUNT) {
+        return VK_INCOMPLETE;
+    }
+
     return VK_SUCCESS;
 }
 
-ICD_EXPORT VkResult VKAPI vkGetGlobalExtensionProperties(
-        uint32_t extensionIndex,
-        VkExtensionProperties*    pProperties)
+ICD_EXPORT VkResult VKAPI vkGetGlobalLayerProperties(
+        uint32_t*                                   pCount,
+        VkLayerProperties*                          pProperties)
 {
-    if (extensionIndex >= INTEL_GLOBAL_EXT_COUNT)
-        return VK_ERROR_INVALID_VALUE;
-    memcpy(pProperties, &intel_global_exts[extensionIndex], sizeof(VkExtensionProperties));
+    if (pCount == NULL) {
+        return VK_ERROR_INVALID_POINTER;
+    }
 
+    *pCount = 0;
     return VK_SUCCESS;
 }
 
 ICD_EXPORT VkResult VKAPI vkEnumeratePhysicalDevices(
-    VkInstance                                instance_,
-    uint32_t*                                 pPhysicalDeviceCount,
-    VkPhysicalDevice*                            pPhysicalDevices)
+    VkInstance                  instance_,
+    uint32_t*                   pPhysicalDeviceCount,
+    VkPhysicalDevice*           pPhysicalDevices)
 {
     struct intel_instance *instance = intel_instance(instance_);
     struct icd_drm_device *devices, *dev;

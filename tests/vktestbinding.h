@@ -64,6 +64,10 @@ class DynamicCbStateObject;
 class DynamicDsStateObject;
 class CmdBuffer;
 
+std::vector<VkLayerProperties> GetGlobalLayers();
+std::vector<VkExtensionProperties> GetGlobalExtensions();
+std::vector<VkExtensionProperties> GetGlobalExtensions(const char *pLayerName);
+
 class PhysicalGpu {
 public:
     explicit PhysicalGpu(VkPhysicalDevice gpu) : gpu_(gpu)
@@ -80,8 +84,9 @@ public:
 
     VkResult set_memory_type(const uint32_t type_bits, VkMemoryAllocInfo *info, const VkMemoryPropertyFlags properties) const;
 
-    // vkGetGlobalExtensionProperties()
+    // vkGetPhysicalDeviceExtensionProperties()
     std::vector<VkExtensionProperties> extensions() const;
+    std::vector<VkExtensionProperties> extensions(const char * pLayerName) const;
 
     // vkEnumerateLayers()
     std::vector<const char *> layers(std::vector<char> &buf) const;
@@ -209,8 +214,8 @@ public:
 
     // vkCreateDevice()
     void init(const VkDeviceCreateInfo &info);
-    void init(std::vector<VkExtensionProperties> extensions); // all queues, all extensions, etc
-    void init() { std::vector<VkExtensionProperties> extensions; init(extensions); };
+    void init(std::vector<const char *> &extensions); // all queues, all extensions, etc
+    void init() { std::vector<const char *> extensions; init(extensions); };
 
     const PhysicalGpu &gpu() const { return gpu_; }
 

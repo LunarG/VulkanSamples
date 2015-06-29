@@ -370,7 +370,7 @@ static inline void loader_init_instance_core_dispatch_table(VkLayerInstanceDispa
     table->GetPhysicalDeviceQueueProperties = (PFN_vkGetPhysicalDeviceQueueProperties) gpa(inst, "vkGetPhysicalDeviceQueueProperties");
     table->GetPhysicalDeviceMemoryProperties = (PFN_vkGetPhysicalDeviceMemoryProperties) gpa(inst, "vkGetPhysicalDeviceMemoryProperties");
     table->GetPhysicalDeviceExtensionProperties = (PFN_vkGetPhysicalDeviceExtensionProperties) gpa(inst, "vkGetPhysicalDeviceExtensionProperties");
-    table->GetPhysicalDeviceExtensionCount = (PFN_vkGetPhysicalDeviceExtensionCount) gpa(inst, "vkGetPhysicalDeviceExtensionCount");
+    table->GetPhysicalDeviceLayerProperties = (PFN_vkGetPhysicalDeviceLayerProperties) gpa(inst, "vkGetPhysicalDeviceLayerProperties");
 }
 
 static inline void loader_init_instance_extension_dispatch_table(
@@ -414,10 +414,10 @@ static inline void *loader_lookup_instance_dispatch_table(
         return (void *) table->GetPhysicalDeviceMemoryProperties;
     if (!strcmp(name, "GetInstanceProcAddr"))
         return (void *) table->GetInstanceProcAddr;
-    if (!strcmp(name, "GetPhysicalDeviceExtensionCount"))
-        return (void *) table->GetPhysicalDeviceExtensionCount;
     if (!strcmp(name, "GetPhysicalDeviceExtensionProperties"))
         return (void *) table->GetPhysicalDeviceExtensionProperties;
+    if (!strcmp(name, "GetPhysicalDeviceLayerProperties"))
+        return (void *) table->GetPhysicalDeviceLayerProperties;
     if (!strcmp(name, "DbgCreateMsgCallback"))
         return (void *) table->DbgCreateMsgCallback;
     if (!strcmp(name, "DbgDestroyMsgCallback"))

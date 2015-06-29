@@ -192,7 +192,10 @@ static bool base_dbg_copy_create_info(const struct intel_handle *handle,
         dbg->create_info_size = size;
 
         size += sizeof(src->pRequestedQueues[0]) * src->queueRecordCount;
-        size += sizeof(src->pEnabledExtensions[0]) * src->extensionCount;
+        size += sizeof(src->ppEnabledExtensionNames[0]) * src->extensionCount;
+        for (uint32_t i = 0; i < src->extensionCount; i++) {
+            size += strlen(src->ppEnabledExtensionNames[i]) + 1;
+        }
 
         dst = intel_alloc(handle, size, 0, VK_SYSTEM_ALLOC_TYPE_DEBUG);
         if (!dst)
@@ -208,9 +211,16 @@ static bool base_dbg_copy_create_info(const struct intel_handle *handle,
         dst->pRequestedQueues = (const VkDeviceQueueCreateInfo *) d;
         d += size;
 
-        size = sizeof(src->pEnabledExtensions[0]) * src->extensionCount;
-        dst->pEnabledExtensions = (const VkExtensionProperties *) d;
-        memcpy(d, src->pEnabledExtensions, size);
+        size = sizeof(src->ppEnabledExtensionNames[0]) * src->extensionCount;
+        dst->ppEnabledExtensionNames = (const char **) d;
+        memcpy(d, src->ppEnabledExtensionNames, size);
+        d += size;
+        for (uint32_t i = 0; i < src->extensionCount; i++) {
+            char **ptr = (char **) &dst->ppEnabledExtensionNames[i];
+            strcpy((char *) d, src->ppEnabledExtensionNames[i]);
+            *ptr = (char *) d;
+            d += strlen(src->ppEnabledExtensionNames[i]) + 1;
+        }
 
         dbg->create_info = dst;
     } else if (info.header->struct_type == VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO) {

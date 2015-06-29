@@ -35,7 +35,7 @@
 #include "vulkan.h"
 
 #define VK_DEBUG_REPORT_EXTENSION_NUMBER 2
-#define VK_DEBUG_REPORT_EXTENSION_VERSION 0x10
+#define VK_DEBUG_REPORT_EXTENSION_VERSION VK_MAKE_VERSION(0, 1, 0)
 #ifdef __cplusplus
 extern "C"
 {

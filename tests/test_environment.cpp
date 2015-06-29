@@ -68,20 +68,14 @@ void Environment::SetUp()
 
     instance_extension_names.push_back(VK_WSI_LUNARG_EXTENSION_NAME);
 
-    uint32_t extCount = 0;
-    err = vkGetGlobalExtensionCount(&extCount);
-    assert(!err);
-
-    VkExtensionProperties extProp;
     bool32_t extFound;
+
+    instance_extensions = vk_testing::GetGlobalExtensions();
 
     for (uint32_t i = 0; i < instance_extension_names.size(); i++) {
         extFound = 0;
-        for (uint32_t j = 0; j < extCount; j++) {
-            err = vkGetGlobalExtensionProperties(j, &extProp);
-            assert(!err);
-            if (!strcmp(instance_extension_names[i], extProp.name)) {
-                instance_extensions.push_back(extProp);
+        for (uint32_t j = 0; j < instance_extensions.size(); j++) {
+            if (!strcmp(instance_extension_names[i], instance_extensions[i].extName)) {
                 extFound = 1;
             }
         }
@@ -91,8 +85,10 @@ void Environment::SetUp()
     inst_info.pNext = NULL;
     inst_info.pAppInfo = &app_;
     inst_info.pAllocCb = NULL;
-    inst_info.extensionCount = instance_extensions.size();
-    inst_info.pEnabledExtensions = (instance_extensions.size()) ? &instance_extensions[0] : NULL;
+    inst_info.extensionCount = instance_extension_names.size();
+    inst_info.ppEnabledExtensionNames = (instance_extension_names.size()) ? &instance_extension_names[0] : NULL;
+    inst_info.layerCount = 0;
+    inst_info.ppEnabledLayerNames = NULL;
     err = vkCreateInstance(&inst_info, &inst);
     ASSERT_EQ(VK_SUCCESS, err);
     err = vkEnumeratePhysicalDevices(inst, &count, NULL);
@@ -102,16 +98,13 @@ void Environment::SetUp()
     ASSERT_EQ(VK_SUCCESS, err);
     ASSERT_GT(count, default_dev_);
 
-    err = vkGetPhysicalDeviceExtensionCount(gpus[0], &extCount);
-    assert(!err);
+    vk_testing::PhysicalGpu phys_dev(gpus[0]);
+    device_extensions = phys_dev.extensions();
 
     for (uint32_t i = 0; i < device_extension_names.size(); i++) {
         extFound = 0;
-        for (uint32_t j = 0; j < extCount; j++) {
-            err = vkGetPhysicalDeviceExtensionProperties(gpus[0], j, &extProp);
-            assert(!err);
-            if (!strcmp(device_extension_names[i], extProp.name)) {
-                device_extensions.push_back(extProp);
+        for (uint32_t j = 0; j < device_extensions.size(); j++) {
+            if (!strcmp(device_extension_names[i], device_extensions[i].extName)) {
                 extFound = 1;
             }
         }
@@ -122,7 +115,7 @@ void Environment::SetUp()
     for (uint32_t i = 0; i < count; i++) {
         devs_.push_back(new Device(gpus[i]));
         if (i == default_dev_) {
-            devs_[i]->init(device_extensions);
+            devs_[i]->init(device_extension_names);
             ASSERT_NE(true, devs_[i]->graphics_queues().empty());
         }
     }

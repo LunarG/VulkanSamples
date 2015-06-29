@@ -281,19 +281,24 @@ core = Extension(
 
         Proto("VkResult", "GetPhysicalDeviceExtensionProperties",
             [Param("VkPhysicalDevice", "gpu"),
-             Param("uint32_t", "extensionIndex"),
+             Param("const char*", "pLayerName"),
+             Param("uint32_t*", "pCount"),
              Param("VkExtensionProperties*", "pProperties")]),
 
-        Proto("VkResult", "GetPhysicalDeviceExtensionCount",
+        Proto("VkResult", "GetPhysicalDeviceLayerProperties",
             [Param("VkPhysicalDevice", "gpu"),
-             Param("uint32_t*", "pCount")]),
+             Param("const char*", "pLayerName"),
+             Param("uint32_t*", "pCount"),
+             Param("VkLayerProperties*", "pProperties")]),
 
         Proto("VkResult", "GetGlobalExtensionProperties",
-            [Param("uint32_t", "extensionIndex"),
+            [Param("const char*", "pLayerName"),
+             Param("uint32_t*", "pCount"),
              Param("VkExtensionProperties*", "pProperties")]),
 
-        Proto("VkResult", "GetGlobalExtensionCount",
-            [Param("uint32_t*", "pCount")]),
+        Proto("VkResult", "GetGlobalLayerProperties",
+            [Param("uint32_t*", "pCount"),
+             Param("VkExtensionProperties*", "pProperties")]),
 
         Proto("VkResult", "GetDeviceQueue",
             [Param("VkDevice", "device"),
