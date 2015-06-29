@@ -166,8 +166,6 @@ VK_LAYER_EXPORT void * VKAPI vkGetInstanceProcAddr(VkInstance instance, const ch
 
     if (!strcmp("vkDestroyInstance", pName))
         return (void *) vkDestroyInstance;
-    if (!strcmp("vkCreateDevice", pName))
-        return (void *) vkCreateDevice;
     if (!strcmp("vkEnumeratePhysicalDevices", pName))
         return (void*) vkEnumeratePhysicalDevices;
     if (!strcmp("vkGetGlobalExtensionCount", pName))
