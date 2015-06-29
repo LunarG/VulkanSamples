@@ -24,6 +24,7 @@
  * DEALINGS IN THE SOFTWARE.
  *
  * Authors:
+ *   Jon Ashburn <jon@luanrg.com>
  *   Ian Elliott <ian@lunarg.com>
  */
 
@@ -41,24 +42,21 @@
 #include <dlfcn.h>
 #include <pthread.h>
 #include <assert.h>
+#include <stdbool.h>
 
 // VK Library Filenames, Paths, etc.:
 #define PATH_SEPERATOR ':'
-#define DIRECTORY_SYMBOL "/"
-#define DRIVER_PATH_ENV "LIBVK_DRIVERS_PATH"
+#define DIRECTORY_SYMBOL '/'
+
+// TODO: Need to handle different Linux distros
+#define DEFAULT_VK_DRIVERS_INFO "/usr/share/vulkan/icd.d:/etc/vulkan/icd.d"
+#define DEFAULT_VK_DRIVERS_PATH "/usr/lib/i386-linux-gnu/vulkan/icd:/usr/lib/x86_64-linux-gnu/vulkan/icd"
 #define LAYERS_PATH_ENV "LIBVK_LAYERS_PATH"
 #define LAYER_NAMES_ENV "LIBVK_LAYER_NAMES"
-#ifndef DEFAULT_VK_DRIVERS_PATH
-// TODO: Is this a good default location?
-// Need to search for both 32bit and 64bit ICDs
-#define DEFAULT_VK_DRIVERS_PATH "/usr/lib/i386-linux-gnu/vk:/usr/lib/x86_64-linux-gnu/vk"
-#define VK_DRIVER_LIBRARY_PREFIX "libVK_"
-#define VK_DRIVER_LIBRARY_PREFIX_LEN 6
 #define VK_LAYER_LIBRARY_PREFIX "libVKLayer"
 #define VK_LAYER_LIBRARY_PREFIX_LEN 10
 #define VK_LIBRARY_SUFFIX ".so"
 #define VK_LIBRARY_SUFFIX_LEN 3
-#endif //  DEFAULT_VK_DRIVERS_PATH
 #ifndef DEFAULT_VK_LAYERS_PATH
 // TODO: Are these good default locations?
 #define DEFAULT_VK_LAYERS_PATH ".:/usr/lib/i386-linux-gnu/vk:/usr/lib/x86_64-linux-gnu/vk"
@@ -67,7 +65,16 @@
 // C99:
 #define PRINTF_SIZE_T_SPECIFIER    "%zu"
 
-// Dynamic Loading:
+// File IO
+static inline bool loader_platform_file_exists(const char *path)
+{
+    if (access(path, F_OK))
+        return false;
+    else
+        return true;
+}
+
+// Dynamic Loading of libraries:
 typedef void * loader_platform_dl_handle;
 static inline loader_platform_dl_handle loader_platform_open_library(const char* libPath)
 {
@@ -162,29 +169,23 @@ using namespace std;
 
 // VK Library Filenames, Paths, etc.:
 #define PATH_SEPERATOR ';'
-#define DIRECTORY_SYMBOL "\\"
-#define DRIVER_PATH_REGISTRY_VALUE "VK_DRIVERS_PATH"
-#define LAYERS_PATH_REGISTRY_VALUE "VK_LAYERS_PATH"
-#define LAYER_NAMES_REGISTRY_VALUE "VK_LAYER_NAMES"
-#define DRIVER_PATH_ENV "VK_DRIVERS_PATH"
-#define LAYERS_PATH_ENV "VK_LAYERS_PATH"
-#define LAYER_NAMES_ENV "VK_LAYER_NAMES"
-#ifndef DEFAULT_VK_DRIVERS_PATH
-// TODO: Is this a good default location?
-// Need to search for both 32bit and 64bit ICDs
+#define DIRECTORY_SYMBOL '\\'
+#define DEFAULT_VK_DRIVERS_INFO "HKEY_LOCAL_MACHINE\SOFTWARE\Khronos\Vulkan\Drivers"
+// TODO: Are these the correct paths
 #define DEFAULT_VK_DRIVERS_PATH "C:\\Windows\\System32;C:\\Windows\\SysWow64"
 // TODO/TBD: Is this an appropriate prefix for Windows?
-#define VK_DRIVER_LIBRARY_PREFIX "VK_"
-#define VK_DRIVER_LIBRARY_PREFIX_LEN 3
+#define LAYERS_PATH_REGISTRY_VALUE "VK_LAYERS_PATH"
+#define LAYER_NAMES_REGISTRY_VALUE "VK_LAYER_NAMES"
+#define LAYERS_PATH_ENV "VK_LAYERS_PATH"
+#define LAYER_NAMES_ENV "VK_LAYER_NAMES"
 // TODO/TBD: Is this an appropriate suffix for Windows?
 #define VK_LAYER_LIBRARY_PREFIX "VKLayer"
 #define VK_LAYER_LIBRARY_PREFIX_LEN 7
 #define VK_LIBRARY_SUFFIX ".dll"
 #define VK_LIBRARY_SUFFIX_LEN 4
-#endif //  DEFAULT_VK_DRIVERS_PATH
 #ifndef DEFAULT_VK_LAYERS_PATH
 // TODO: Is this a good default location?
-#define DEFAULT_VK_LAYERS_PATH "C:\\Windows\\System32"
+#define DEFAULT_VK_LAYERS_PATH "C:\\Windows\\System32;C:\\Windows\\SysWow64"
 #endif //  DEFAULT_VK_LAYERS_PATH
 
 // C99:
@@ -218,6 +219,15 @@ static char *basename(char *pathname)
     }
     // We shouldn't get to here, but this makes the compiler happy:
     return current;
+}
+
+// File IO
+static inline bool loader_platform_file_exists(const char *path)
+{
+    if (_access(path, 0))
+        return false;
+    else
+        return true;
 }
 
 // Dynamic Loading:

@@ -47,9 +47,7 @@
 #include "table_ops.h"
 #include "debug_report.h"
 #include "vkIcd.h"
-// The following is #included again to catch certain OS-specific functions
-// being used:
-#include "loader_platform.h"
+#include "cJSON.h"
 
 void loader_add_to_ext_list(
         struct loader_extension_list *ext_list,
@@ -81,7 +79,7 @@ uint32_t g_loader_log_msgs = 0;
 
 //thread safety lock for accessing global data structures such as "loader"
 // all entrypoints on the instance chain need to be locked except GPA
-// additionally DestroyDevice needs to be locked
+// additionally CreateDevice and DestroyDevice needs to be locked
 loader_platform_thread_mutex loader_lock;
 
 const VkLayerInstanceDispatchTable instance_disp = {
@@ -801,29 +799,262 @@ static void loader_debug_init(void)
     }
 }
 
+struct loader_manifest_files {
+    uint32_t count;
+    char **filename_list;
+};
+
 /**
- * Try to \c loader_icd_scan VK driver(s).
- *
- * This function scans the default system path or path
- * specified by the \c LIBVK_DRIVERS_PATH environment variable in
- * order to find loadable VK ICDs with the name of libVK_*.
+ * Get next file or dirname given a string list or registry key path
  *
  * \returns
- * void; but side effect is to set loader_icd_scanned to true
+ * A pointer to first char in the next path.
+ * The next path (or NULL) in the list is returned in next_path.
+ * Note: input string is modified in some cases. PASS IN A COPY!
+ */
+//TODO registry keys
+static char *loader_get_next_path(char *path)
+{
+    uint32_t len;
+    char *next;
+
+    if (path == NULL)
+        return NULL;
+    next = strchr(path, PATH_SEPERATOR);
+    if (next == NULL) {
+        len = (uint32_t) strlen(path);
+        next = path + len;
+    }
+    else {
+        *next = '\0';
+        next++;
+    }
+
+    return next;
+}
+
+/**
+ * Given a filename (file)  and a list of paths (dir), try to find an existing
+ * file in the paths.  If filename already is a path then no
+ * searching in the given paths.
+ *
+ * \returns
+ * A string in out_fullpath of either the full path or file.
+ * Side effect is that dir string maybe modified.
+ */
+static void loader_get_fullpath(const char *file,
+                                char *dir,
+                                size_t out_size,
+                                char *out_fullpath)
+{
+    char *next_dir;
+    if (strchr(file,DIRECTORY_SYMBOL) == NULL) {
+        //find file exists with prepending given path
+        while (*dir) {
+            next_dir = loader_get_next_path(dir);
+            snprintf(out_fullpath, out_size, "%s%c%s",
+                     dir, DIRECTORY_SYMBOL, file);
+            if (loader_platform_file_exists(out_fullpath)) {
+                return;
+            }
+            dir = next_dir;
+        }
+    }
+    snprintf(out_fullpath, out_size, "%s", file);
+}
+
+/**
+ * Read a JSON file into a buffer.
+ *
+ * \returns
+ * A pointer to a cJSON object representing the JSON parse tree.
+ * This returned buffer should be freed by caller.
+ */
+static cJSON *loader_get_json(const char *filename)
+{
+    FILE *file;
+    char *json_buf;
+    cJSON *json;
+    uint64_t len;
+    file = fopen(filename,"rb");
+    fseek(file, 0, SEEK_END);
+    len = ftell(file);
+    fseek(file, 0, SEEK_SET);
+    json_buf = (char*) alloca(len+1);
+    if (json_buf == NULL) {
+        loader_log(VK_DBG_REPORT_ERROR_BIT, 0, "Out of memory can't get JSON file");
+        fclose(file);
+        return NULL;
+    }
+    if (fread(json_buf, sizeof(char), len, file) != len) {
+        loader_log(VK_DBG_REPORT_ERROR_BIT, 0, "fread failed can't get JSON file");
+        fclose(file);
+        return NULL;
+    }
+    fclose(file);
+    json_buf[len] = '\0';
+
+    //parse text from file
+    json = cJSON_Parse(json_buf);
+    if (json == NULL)
+        loader_log(VK_DBG_REPORT_ERROR_BIT, 0, "Can't parse JSON file %s", filename);
+    return json;
+}
+
+/**
+ * Find the Vulkan library manifest files.
+ *
+ * This function scans the location or env_override directories/files
+ * for a list of JSON manifest files.  If env_override is non-NULL
+ * and has a valid value. Then the location is ignored.  Otherwise
+ * location is used to look for manifest files. The location
+ * is interpreted as  Registry path on Windows and a directory path(s)
+ * on Linux.
+ *
+ * \returns
+ * A string list of manifest files to be opened in out_files param.
+ * List has a pointer to string for each manifest filename.
+ * When done using the list in out_files, pointers should be freed.
+ */
+static void loader_get_manifest_files(const char *env_override,
+                                       bool override_is_dir,
+                                       const char *location,
+                                       struct loader_manifest_files *out_files
+                                       )
+{
+    char *override = NULL;
+    char *loc;
+    char *file, *next_file, *name;
+    size_t alloced_count = 64;
+    char full_path[2048];
+    DIR *sysdir = NULL;
+    struct dirent *dent;
+
+    out_files->count = 0;
+    out_files->filename_list = NULL;
+
+    //TODO handle registry locations
+    if (env_override != NULL && (override = getenv(env_override))) {
+#if defined(__linux__)
+        if (geteuid() != getuid()) {
+           /* Don't allow setuid apps to use the env var: */
+            override = NULL;
+        }
+#endif
+    }
+
+    if (location == NULL) {
+        loader_log(VK_DBG_REPORT_ERROR_BIT, 0,
+                "Can't get manifest files with NULL location, env_override=%s",
+                env_override);
+        return;
+    }
+
+    // Make a copy of the input we are using so it is not modified
+    if (override == NULL)
+        loc = alloca(strlen(location) + 1);
+    else
+        loc = alloca(strlen(override) + 1);
+    if (loc == NULL) {
+        loader_log(VK_DBG_REPORT_ERROR_BIT, 0, "Out of memory can't get manifest files");
+        return;
+    }
+    strcpy(loc, (override == NULL) ? location : override);
+
+    file = loc;
+    while (*file) {
+        next_file = loader_get_next_path(file);
+        if (override == NULL || override_is_dir) {
+            sysdir = opendir(file);
+            name = NULL;
+            if (sysdir) {
+                dent = readdir(sysdir);
+                if (dent == NULL)
+                    break;
+                name = &(dent->d_name[0]);
+                loader_get_fullpath(name, file, sizeof(full_path), full_path);
+                name = full_path;
+            }
+        }
+        else {
+            char *dir;
+            // make a copy of location so it isn't modified
+            dir = alloca(strlen(location) + 1);
+            if (dir == NULL) {
+                loader_log(VK_DBG_REPORT_ERROR_BIT, 0, "Out of memory can't get manifest files");
+                return;
+            }
+            strcpy(dir, location);
+
+            loader_get_fullpath(file, dir, sizeof(full_path), full_path);
+
+            name = full_path;
+        }
+        while (name) {
+                /* Look for files ending with ".json" suffix */
+                uint32_t nlen = (uint32_t) strlen(name);
+                const char *suf = name + nlen - 5;
+                if ((nlen > 5) && !strncmp(suf, ".json", 5)) {
+                    if (out_files->count == 0) {
+                        out_files->filename_list = malloc(alloced_count * sizeof(char *));
+                    }
+                    else if (out_files->count == alloced_count) {
+                        out_files->filename_list = realloc(out_files->filename_list,
+                                        alloced_count * sizeof(char *) * 2);
+                        alloced_count *= 2;
+                    }
+                    if (out_files->filename_list == NULL) {
+                        loader_log(VK_DBG_REPORT_ERROR_BIT, 0, "Out of memory can't alloc manifest file list");
+                        return;
+                    }
+                    out_files->filename_list[out_files->count] = malloc(strlen(name) + 1);
+                    if (out_files->filename_list[out_files->count] == NULL) {
+                        loader_log(VK_DBG_REPORT_ERROR_BIT, 0, "Out of memory can't get manifest files");
+                        return;
+                    }
+                    strcpy(out_files->filename_list[out_files->count], name);
+                    out_files->count++;
+                }
+                if (override == NULL || override_is_dir) {
+                    dent = readdir(sysdir);
+                    if (dent == NULL)
+                        break;
+                    name = &(dent->d_name[0]);
+                    loader_get_fullpath(name, file, sizeof(full_path), full_path);
+                    name = full_path;
+                }
+                else {
+                    break;
+                }
+        }
+        if (sysdir)
+            closedir(sysdir);
+        file = next_file;
+    }
+    return;
+}
+
+/**
+ * Try to find the Vulkan ICD driver(s).
+ *
+ * This function scans the default system loader path(s) or path
+ * specified by the \c VK_ICD_FILENAMES environment variable in
+ * order to find loadable VK ICDs manifest files. From these
+ * manifest files it finds the ICD libraries.
+ *
+ * \returns
+ * void; but side effect is to set loader_icds_scanned to true
  */
 void loader_icd_scan(void)
 {
-    const char *p, *next;
-    char *libPaths = NULL;
-    DIR *sysdir;
-    struct dirent *dent;
-    char icd_library[1024];
-    char path[1024];
-    uint32_t len;
+    char *file_str;
+    struct loader_manifest_files manifest_files;
+
 
     // convenient place to initialize a mutex
     loader_platform_thread_create_mutex(&loader_lock);
 
+#if 0  //TODO
 #if defined(WIN32)
     bool must_free_libPaths;
     libPaths = loader_get_registry_and_env(DRIVER_PATH_ENV,
@@ -834,69 +1065,56 @@ void loader_icd_scan(void)
         must_free_libPaths = false;
         libPaths = DEFAULT_VK_DRIVERS_PATH;
     }
-#else  // WIN32
-    if (geteuid() == getuid()) {
-        /* Don't allow setuid apps to use the DRIVER_PATH_ENV env var: */
-        libPaths = getenv(DRIVER_PATH_ENV);
-    }
-    if (libPaths == NULL) {
-        libPaths = DEFAULT_VK_DRIVERS_PATH;
-    }
 #endif // WIN32
+#endif
 
+    // convenient place to initialize logging
     loader_debug_init();
-
-    for (p = libPaths; *p; p = next) {
-       next = strchr(p, PATH_SEPERATOR);
-       if (next == NULL) {
-          len = (uint32_t) strlen(p);
-          next = p + len;
-       }
-       else {
-          len = (uint32_t) (next - p);
-          sprintf(path, "%.*s", (len > sizeof(path) - 1) ? (int) sizeof(path) - 1 : len, p);
-          p = path;
-          next++;
-       }
-
-       // TODO/TBD: Do we want to do this on Windows, or just let Windows take
-       // care of its own search path (which it apparently has)?
-       sysdir = opendir(p);
-       if (sysdir) {
-          dent = readdir(sysdir);
-          while (dent) {
-             /* Look for ICDs starting with VK_DRIVER_LIBRARY_PREFIX and
-              * ending with VK_LIBRARY_SUFFIX
-              */
-              if (!strncmp(dent->d_name,
-                          VK_DRIVER_LIBRARY_PREFIX,
-                          VK_DRIVER_LIBRARY_PREFIX_LEN)) {
-                 uint32_t nlen = (uint32_t) strlen(dent->d_name);
-                 const char *suf = dent->d_name + nlen - VK_LIBRARY_SUFFIX_LEN;
-                 if ((nlen > VK_LIBRARY_SUFFIX_LEN) &&
-                     !strncmp(suf,
-                              VK_LIBRARY_SUFFIX,
-                              VK_LIBRARY_SUFFIX_LEN)) {
-                    snprintf(icd_library, 1024, "%s" DIRECTORY_SYMBOL "%s", p,dent->d_name);
-                    loader_scanned_icd_add(icd_library);
-                 }
-              }
-
-             dent = readdir(sysdir);
-          }
-          closedir(sysdir);
-       }
-    }
-
-#if defined(WIN32)
-    // Free any allocated memory:
-    if (must_free_libPaths) {
-        free(libPaths);
-    }
-#endif // WIN32
 
     // Note that we've scanned for ICDs:
     loader.icds_scanned = true;
+
+    // Get a list of manifest files for ICDs
+    loader_get_manifest_files("VK_ICD_FILENAMES", false, DEFAULT_VK_DRIVERS_INFO,
+                              &manifest_files);
+    for (uint32_t i = 0; i < manifest_files.count; i++) {
+        file_str = manifest_files.filename_list[i];
+        if (file_str == NULL)
+            continue;
+
+        cJSON *json, *icd_json;
+        json = loader_get_json(file_str);
+        icd_json = cJSON_GetObjectItem(json, "ICD");
+        if (icd_json != NULL) {
+            icd_json = cJSON_GetObjectItem(icd_json, "library_path");
+            if (icd_json != NULL) {
+                char *icd_filename = cJSON_PrintUnformatted(icd_json);
+                char *icd_file = icd_filename;
+                if (icd_filename != NULL) {
+                    char full_path[2048];
+                    char def_dir[] = DEFAULT_VK_DRIVERS_PATH;
+                    char *dir = def_dir;
+                    // strip off extra quotes
+                    if (icd_filename[strlen(icd_filename)  - 1] == '"')
+                        icd_filename[strlen(icd_filename) - 1] = '\0';
+                    if (icd_filename[0] == '"')
+                        icd_filename++;
+                    loader_get_fullpath(icd_filename, dir, sizeof(full_path), full_path);
+                    loader_scanned_icd_add(full_path);
+                    free(icd_file);
+                }
+            }
+            else
+                loader_log(VK_DBG_REPORT_WARN_BIT, 0, "Can't find \"library_path\" in ICD JSON file %s, skipping", file_str);
+        }
+        else
+            loader_log(VK_DBG_REPORT_WARN_BIT, 0, "Can't find \"ICD\" object in ICD JSON file %s, skipping", file_str);
+
+        free(file_str);
+        cJSON_Delete(json);
+    }
+    free(manifest_files.filename_list);
+
 }
 
 
@@ -924,7 +1142,7 @@ void layer_lib_scan(void)
     }
 #else  // WIN32
     if (geteuid() == getuid()) {
-        /* Don't allow setuid apps to use the DRIVER_PATH_ENV env var: */
+        /* Don't allow setuid apps to use the LAYERS_PATH_ENV env var: */
         libPaths = getenv(LAYERS_PATH_ENV);
     }
     if (libPaths == NULL) {
@@ -995,7 +1213,7 @@ void layer_lib_scan(void)
                                      VK_LIBRARY_SUFFIX_LEN)) {
                         loader_platform_dl_handle handle;
                         snprintf(temp_str, sizeof(temp_str),
-                                 "%s" DIRECTORY_SYMBOL "%s",p,dent->d_name);
+                                 "%s%c%s",p, DIRECTORY_SYMBOL, dent->d_name);
                         // Used to call: dlopen(temp_str, RTLD_LAZY)
                         loader_log(VK_DBG_REPORT_DEBUG_BIT, 0,
                                    "Attempt to open library: %s", temp_str);
