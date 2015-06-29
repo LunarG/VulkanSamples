@@ -40,5 +40,5 @@ if (NOT WIN32)
 
     add_library(vulkan SHARED ${LOADER_SRCS})
     set_target_properties(vulkan PROPERTIES SOVERSION 0)
-    target_link_libraries(vulkan -ldl -lpthread)
+    target_link_libraries(vulkan -ldl -lpthread -lm)
 endif()
