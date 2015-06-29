@@ -1449,8 +1449,6 @@ static VkResult scratch_vkCreateDevice(
 
 static void * VKAPI loader_GetDeviceChainProcAddr(VkDevice device, const char * name)
 {
-    const VkLayerDispatchTable *disp_table = * (VkLayerDispatchTable **) device;
-
     /* CreateDevice workaround: Make the terminator be a scratch function
      * that does nothing since we have already called the ICD's create device.
      * We can then call down the device chain and have all the layers get set up.
@@ -1460,7 +1458,9 @@ static void * VKAPI loader_GetDeviceChainProcAddr(VkDevice device, const char * 
     if (!strcmp(name, "vkCreateDevice"))
         return (void *) scratch_vkCreateDevice;
 
-    return disp_table->GetDeviceProcAddr(device, name);
+    struct loader_device *found_dev;
+    struct loader_icd *icd = loader_get_icd_and_device(device, &found_dev);
+    return icd->GetDeviceProcAddr(device, name);
 }
 
 static uint32_t loader_activate_device_layers(
