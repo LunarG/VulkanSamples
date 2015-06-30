@@ -1128,13 +1128,25 @@ class ObjectTrackerSubcommand(Subcommand):
         param0_name = proto.params[0].name
         using_line = ''
         create_line = ''
-        object_params = []
+        object_params = {} # dict of parameters that are VkObject types mapping to the size of array types or '0' if not array
         # TODO : Should also check through struct params & add any objects embedded in struct chains
         # TODO : A few of the skipped types are just "hard" cases that need some more work to support
         #   Need to handle NULL fences on queue submit, binding null memory, and WSI Image objects
         for p in proto.params:
             if p.ty in vulkan.core.objects and p.ty not in ['VkPhysicalDevice', 'VkQueue', 'VkFence', 'VkImage', 'VkDeviceMemory']:
-                object_params.append(p.name)
+                object_params[p.name] = 0
+            elif vk_helper.is_type(p.ty.replace('const ', '').strip('*'), 'struct'):
+                struct_type = p.ty.replace('const ', '').strip('*')
+                if vk_helper.typedef_rev_dict[struct_type] in vk_helper.struct_dict:
+                    struct_type = vk_helper.typedef_rev_dict[struct_type]
+                for m in sorted(vk_helper.struct_dict[struct_type]):
+                    if vk_helper.struct_dict[struct_type][m]['type'] in vulkan.core.objects and vk_helper.struct_dict[struct_type][m]['type'] not in ['VkPhysicalDevice', 'VkQueue', 'VkFence', 'VkImage', 'VkDeviceMemory']:
+                        param_name = '%s->%s' % (p.name, vk_helper.struct_dict[struct_type][m]['name'])
+                        object_params[param_name] = {}
+                        if vk_helper.struct_dict[struct_type][m]['dyn_array']:
+                            object_params[param_name] = '%s->%s' % (p.name, vk_helper.struct_dict[struct_type][m]['array_size'])
+                        else:
+                            object_params[param_name] = 0
         funcs = []
         mutex_unlock = False
         if proto.name in explicit_object_tracker_functions:
@@ -1155,12 +1167,19 @@ class ObjectTrackerSubcommand(Subcommand):
                     using_line += '    loader_platform_thread_lock_mutex(&objLock);\n'
                     mutex_unlock = True
                 for opn in object_params:
-                    using_line += '    validate_object(%s, %s);\n' % (param0_name, opn)
+                    if 0 != object_params[opn]:
+                        using_line += '    for (uint32_t i=0; i<%s; i++)\n' % object_params[opn]
+                        using_line += '        validate_object(%s, %s[i]);\n' % (param0_name, opn)
+                    else:
+                        if '->' in opn:
+                            using_line += '    if (%s)\n' % (opn.split('-')[0])
+                            using_line += '        validate_object(%s, %s);\n' % (param0_name, opn)
+                        else:
+                            using_line += '    validate_object(%s, %s);\n' % (param0_name, opn)
             if mutex_unlock:
                 using_line += '    loader_platform_thread_unlock_mutex(&objLock);\n'
             ret_val = ''
             stmt = ''
-            table = ''
             if proto.ret != "void":
                 ret_val = "%s result = " % proto.ret
                 stmt = "    return result;\n"
