@@ -163,8 +163,8 @@ static void writePPM( const char *filename, VkImage image1)
     VkMemoryRequirements memRequirements;
     uint32_t num_allocations = 0;
     size_t num_alloc_size = sizeof(num_allocations);
-    VkLayerDispatchTable* pTableDevice = screenshot_device_table_map[device];
-    VkLayerDispatchTable* pTableQueue = screenshot_device_table_map[queue];
+    VkLayerDispatchTable* pTableDevice = get_dispatch_table(screenshot_device_table_map, device);
+    VkLayerDispatchTable* pTableQueue = get_dispatch_table(screenshot_device_table_map, queue);
     VkLayerDispatchTable* pTableCmdBuffer;
 
     if (imageMap.empty() || imageMap.find(image1) == imageMap.end())
