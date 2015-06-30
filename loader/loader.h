@@ -234,9 +234,7 @@ struct loader_lib_info {
 
 struct loader_struct {
     struct loader_instance *instances;
-    bool icds_scanned;
     struct loader_scanned_icds *scanned_icd_list;
-    bool layers_scanned;
 
     unsigned int loaded_layer_lib_count;
     struct loader_lib_info *loaded_layer_lib_list;

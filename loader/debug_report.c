@@ -138,8 +138,6 @@ VkResult loader_DbgCreateMsgCallback(
     if (instance == VK_NULL_HANDLE)
         return VK_ERROR_INVALID_HANDLE;
 
-    assert(loader.icds_scanned);
-
     for (inst = loader.instances; inst; inst = inst->next) {
         if ((VkInstance) inst == instance)
             break;
@@ -208,8 +206,6 @@ VkResult loader_DbgDestroyMsgCallback(
 
     if (instance == VK_NULL_HANDLE)
         return VK_ERROR_INVALID_HANDLE;
-
-    assert(loader.icds_scanned);
 
     for (inst = loader.instances; inst; inst = inst->next) {
         if ((VkInstance) inst == instance)

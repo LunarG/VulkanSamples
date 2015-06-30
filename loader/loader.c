@@ -1138,7 +1138,7 @@ static void loader_get_manifest_files(const char *env_override,
  * manifest files it finds the ICD libraries.
  *
  * \returns
- * void; but side effect is to set loader_icds_scanned to true
+ * void
  */
 void loader_icd_scan(void)
 {
@@ -1151,9 +1151,6 @@ void loader_icd_scan(void)
 
     // convenient place to initialize logging
     loader_debug_init();
-
-    // Note that we've scanned for ICDs:
-    loader.icds_scanned = true;
 
     // Get a list of manifest files for ICDs
     loader_get_manifest_files("VK_ICD_FILENAMES", false, DEFAULT_VK_DRIVERS_INFO,
@@ -1370,7 +1367,6 @@ void layer_lib_scan(void)
     } // for (libpaths)
 
     loader.scanned_layer_count = count;
-    loader.layers_scanned = true;
 }
 
 static void* VKAPI loader_gpa_instance_internal(VkInstance inst, const char * pName)
