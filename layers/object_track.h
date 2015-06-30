@@ -463,6 +463,7 @@ explicit_CreateInstance(
             pCreateInfo->pEnabledExtensions);
 
         initObjectTracker(my_data);
+        create_obj(*pInstance, *pInstance, VK_OBJECT_TYPE_INSTANCE);
     }
     loader_platform_thread_unlock_mutex(&objLock);
     return result;
