@@ -787,7 +787,7 @@ class StructWrapperGen:
                     addr_char = '&'
                     if 1 < stp_list[index]['full_type'].count('*'):
                         addr_char = ''
-                    if (stp_list[index]['array'] and 'char' not in stp_list[index]['type']):
+                    if stp_list[index]['array']:
                         sh_funcs.append('%s' % lineinfo.get())
                         if stp_list[index]['dyn_array']:
                             sh_funcs.append('%s' % lineinfo.get())
@@ -835,7 +835,8 @@ class StructWrapperGen:
                         sh_funcs.append('%s}' % (indent))
                     elif (stp_list[index]['ptr']):
                         sh_funcs.append('%s' % lineinfo.get())
-                        sh_funcs.append('    if (pStruct->%s) {' % stp_list[index]['name'])
+                        sh_funcs.append('%sif (pStruct->%s) {' % (indent, stp_list[index]['name']))
+                        indent += '    '
                         if 'pNext' == stp_list[index]['name']:
                             sh_funcs.append('%s' % lineinfo.get())
                             sh_funcs.append('        tmp_str = dynamic_display((void*)pStruct->pNext, prefix);')
