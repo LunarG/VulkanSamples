@@ -1332,7 +1332,6 @@ static void demo_prepare_pipeline(struct demo *demo)
 {
     VkGraphicsPipelineCreateInfo pipeline;
 
-    VkPipelineVertexInputStateCreateInfo vi;
     VkPipelineIaStateCreateInfo ia;
     VkPipelineRsStateCreateInfo rs;
     VkPipelineCbStateCreateInfo cb;
@@ -1340,8 +1339,6 @@ static void demo_prepare_pipeline(struct demo *demo)
     VkPipelineVpStateCreateInfo vp;
     VkPipelineMsStateCreateInfo ms;
     VkResult U_ASSERT_ONLY err;
-
-    memset(&vi, 0, sizeof(vi));
 
     memset(&pipeline, 0, sizeof(pipeline));
     pipeline.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
@@ -1404,7 +1401,7 @@ static void demo_prepare_pipeline(struct demo *demo)
     shaderStages[1].stage  = VK_SHADER_STAGE_FRAGMENT;
     shaderStages[1].shader = demo_prepare_fs(demo);
 
-    pipeline.pVertexInputState = &vi;
+    pipeline.pVertexInputState = NULL;
     pipeline.pIaState = &ia;
     pipeline.pRsState = &rs;
     pipeline.pCbState = &cb;
