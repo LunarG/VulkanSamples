@@ -262,6 +262,10 @@ void dbgFunc(
     if (msgFlags & VK_DBG_REPORT_ERROR_BIT) {
         sprintf(message,"ERROR: [%s] Code %d : %s", pLayerPrefix, msgCode, pMsg);
     } else if (msgFlags & VK_DBG_REPORT_WARN_BIT) {
+        // We know that we're submitting queues without fences, ignore this warning
+        if (strstr(pMsg, "vkQueueSubmit parameter, VkFence fence, is null pointer")){
+            return;
+        }
         sprintf(message,"WARNING: [%s] Code %d : %s", pLayerPrefix, msgCode, pMsg);
     } else {
         return;
@@ -360,6 +364,7 @@ struct demo {
     int32_t frameCount;
     bool validate;
     PFN_vkDbgCreateMsgCallback dbgCreateMsgCallback;
+    PFN_vkDbgDestroyMsgCallback dbgDestroyMsgCallback;
     VkDbgMsgCallback msg_callback;
 
     uint32_t current_buffer;
@@ -503,6 +508,7 @@ static void demo_draw_build_cmd(struct demo *demo, VkCmdBuffer cmd_buf)
     rp_info.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
     rp_info.stencilLoadClearValue = 0;
     rp_info.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+    rp_info.sampleCount = 1;
     err = vkCreateRenderPass(demo->device, &rp_info, &rp_begin.renderPass);
     assert(!err);
 
@@ -1628,6 +1634,9 @@ static void demo_cleanup(struct demo *demo)
     }
 
     vkDestroyDevice(demo->device);
+    if (demo->validate) {
+        demo->dbgDestroyMsgCallback(demo->inst, demo->msg_callback);
+    }
     vkDestroyInstance(demo->inst);
 
 #ifndef _WIN32
@@ -1870,6 +1879,10 @@ static void demo_init_vk(struct demo *demo)
         if (!strcmp(DEBUG_REPORT_EXTENSION_NAME, extProp.name)) {
             memcpy(&instance_extensions[instance_extension_count++], &extProp, sizeof(VkExtensionProperties));
         }
+        if (demo->validate && !strcmp("Validation",extProp.name)) {
+            memcpy(&instance_extensions[instance_extension_count++], &extProp, sizeof(VkExtensionProperties));
+            memcpy(&device_extensions[device_extension_count++], &extProp, sizeof(VkExtensionProperties));
+        }
     }
     if (!WSIextFound) {
         ERR_EXIT("vkGetGlobalExtensionProperties failed to find the "
@@ -1914,11 +1927,6 @@ static void demo_init_vk(struct demo *demo)
     uint32_t i;
     uint32_t queue_count;
 
-    if (demo->validate) {
-        inst_info.extensionCount = 3;
-        device.extensionCount = 3;
-    }
-
     err = vkCreateInstance(&inst_info, &demo->inst);
     if (err == VK_ERROR_INCOMPATIBLE_DRIVER) {
         ERR_EXIT("Cannot find a compatible Vulkan installable client driver "
@@ -1943,9 +1951,14 @@ static void demo_init_vk(struct demo *demo)
 
 
     if (demo->validate) {
-        demo->dbgCreateMsgCallback = vkGetInstanceProcAddr((VkPhysicalDevice) NULL, "vkDbgCreateMsgCallback");
+        demo->dbgCreateMsgCallback = vkGetInstanceProcAddr(demo->inst, "vkDbgCreateMsgCallback");
+        demo->dbgDestroyMsgCallback = vkGetInstanceProcAddr(demo->inst, "vkDbgDestroyMsgCallback");
         if (!demo->dbgCreateMsgCallback) {
             ERR_EXIT("GetProcAddr: Unable to find vkDbgCreateMsgCallback\n",
+                     "vkGetProcAddr Failure");
+        }
+        if (!demo->dbgDestroyMsgCallback) {
+            ERR_EXIT("GetProcAddr: Unable to find vkDbgDestroyMsgCallback\n",
                      "vkGetProcAddr Failure");
         }
         err = demo->dbgCreateMsgCallback(
