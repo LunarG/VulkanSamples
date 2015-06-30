@@ -161,6 +161,8 @@ static inline void loader_platform_thread_cond_broadcast(loader_platform_thread_
 #include <windows.h>
 #include <assert.h>
 #include <stdio.h>
+#include <io.h>
+#include <stdbool.h>
 #ifdef __cplusplus
 #include <iostream>
 #include <string>
@@ -170,7 +172,8 @@ using namespace std;
 // VK Library Filenames, Paths, etc.:
 #define PATH_SEPERATOR ';'
 #define DIRECTORY_SYMBOL '\\'
-#define DEFAULT_VK_DRIVERS_INFO "HKEY_LOCAL_MACHINE\SOFTWARE\Khronos\Vulkan\Drivers"
+#define DEFAULT_VK_REGISTRY_HIVE HKEY_LOCAL_MACHINE
+#define DEFAULT_VK_DRIVERS_INFO "SOFTWARE\\Khronos\\Vulkan\\Drivers"
 // TODO: Are these the correct paths
 #define DEFAULT_VK_DRIVERS_PATH "C:\\Windows\\System32;C:\\Windows\\SysWow64"
 // TODO/TBD: Is this an appropriate prefix for Windows?
@@ -222,9 +225,9 @@ static char *basename(char *pathname)
 }
 
 // File IO
-static inline bool loader_platform_file_exists(const char *path)
+static bool loader_platform_file_exists(const char *path)
 {
-    if (_access(path, 0))
+    if ((_access(path, 0)) == -1)
         return false;
     else
         return true;

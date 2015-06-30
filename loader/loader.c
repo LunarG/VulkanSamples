@@ -105,7 +105,95 @@ LOADER_PLATFORM_THREAD_ONCE_DECLARATION(once_icd);
 LOADER_PLATFORM_THREAD_ONCE_DECLARATION(once_layer);
 LOADER_PLATFORM_THREAD_ONCE_DECLARATION(once_exts);
 
+static void loader_log(VkFlags msg_type, int32_t msg_code,
+    const char *format, ...)
+{
+    char msg[256];
+    va_list ap;
+    int ret;
+
+    if (!(msg_type & g_loader_log_msgs)) {
+        return;
+    }
+
+    va_start(ap, format);
+    ret = vsnprintf(msg, sizeof(msg), format, ap);
+    if ((ret >= (int) sizeof(msg)) || ret < 0) {
+        msg[sizeof(msg)-1] = '\0';
+    }
+    va_end(ap);
+
 #if defined(WIN32)
+    OutputDebugString(msg);
+#endif
+    fputs(msg, stderr);
+    fputc('\n', stderr);
+}
+
+#if defined(WIN32)
+/**
+* Find the list of registry files (names within a key) in key "location".
+*
+* This function looks in the registry (hive = DEFAULT_VK_REGISTRY_HIVE) key as given in "location"
+* for a list or name/values which are added to a returned list (function return value).
+* The DWORD values within the key must be 0 or they are skipped.
+* Function return is a string with a ';'  seperated list of filenames.
+* Function return is NULL if no valid name/value pairs  are found in the key,
+* or the key is not found.
+*
+* \returns
+* A string list of filenames as pointer.
+* When done using the returned string list, pointer should be freed.
+*/
+static char *loader_get_registry_files(const char *location)
+{
+    LONG rtn_value;
+    HKEY hive, key;
+    DWORD access_flags = KEY_QUERY_VALUE;
+    char name[2048];
+    char *out = NULL;
+
+    hive = DEFAULT_VK_REGISTRY_HIVE;
+    rtn_value = RegOpenKeyEx(hive, location, 0, access_flags, &key);
+    if (rtn_value != ERROR_SUCCESS) {
+        // We didn't find the key.  Try the 32-bit hive (where we've seen the
+        // key end up on some people's systems):
+        access_flags |= KEY_WOW64_32KEY;
+        rtn_value = RegOpenKeyEx(hive, location, 0, access_flags, &key);
+        if (rtn_value != ERROR_SUCCESS) {
+            // We still couldn't find the key, so give up:
+            return NULL;
+        }
+    }
+
+    DWORD idx = 0;
+    DWORD name_size = sizeof(name);
+    DWORD value;
+    DWORD total_size = 4096;
+    DWORD value_size = sizeof(value);
+    while((rtn_value = RegEnumValue(key, idx++, name, &name_size, NULL, NULL, (LPBYTE) &value, &value_size)) == ERROR_SUCCESS) {
+        if (value_size == sizeof(value) && value == 0) {
+            if (out == NULL) {
+                out = malloc(total_size);
+                out[0] = '\0';
+            }
+            else if (strlen(out) + name_size + 1 > total_size) {
+                out = realloc(out, total_size * 2);
+                total_size *= 2;
+            }
+            if (out == NULL) {
+                loader_log(VK_DBG_REPORT_ERROR_BIT, 0, "Out of memory, failed loader_get_registry_files");
+                return NULL;
+            }
+            if (strlen(out) == 0)
+                snprintf(out, name_size + 1, "%s", name);
+            else
+                snprintf(out + strlen(out), name_size + 1, "%c%s", PATH_SEPERATOR, name);
+        }
+    }
+    return out;
+}
+
 char *loader_get_registry_string(const HKEY hive,
                                  const LPCTSTR sub_key,
                                  const char *value)
@@ -113,7 +201,7 @@ char *loader_get_registry_string(const HKEY hive,
     DWORD access_flags = KEY_QUERY_VALUE;
     DWORD value_type;
     HKEY key;
-    VkResult  rtn_value;
+    LONG rtn_value;
     char *rtn_str = NULL;
     DWORD rtn_len = 0;
     size_t allocated_len = 0;
@@ -205,31 +293,6 @@ static char *loader_get_registry_and_env(const char *env_var,
     return(rtn_str);
 }
 #endif // WIN32
-
-static void loader_log(VkFlags msg_type, int32_t msg_code,
-                       const char *format, ...)
-{
-    char msg[256];
-    va_list ap;
-    int ret;
-
-    if (!(msg_type & g_loader_log_msgs)) {
-        return;
-    }
-
-    va_start(ap, format);
-    ret = vsnprintf(msg, sizeof(msg), format, ap);
-    if ((ret >= (int) sizeof(msg)) || ret < 0) {
-        msg[sizeof(msg) - 1] = '\0';
-    }
-    va_end(ap);
-
-#if defined(WIN32)
-        OutputDebugString(msg);
-#endif
-    fputs(msg, stderr);
-    fputc('\n', stderr);
-}
 
 bool compare_vk_extension_properties(const VkExtensionProperties *op1, const VkExtensionProperties *op2)
 {
@@ -915,12 +978,18 @@ static cJSON *loader_get_json(const char *filename)
  * A string list of manifest files to be opened in out_files param.
  * List has a pointer to string for each manifest filename.
  * When done using the list in out_files, pointers should be freed.
+ * Location or override  string lists can be either files or directories as follows:
+ *            | location | override
+ * --------------------------------
+ * Win ICD    | files    | files
+ * Win Layer  | files    | dirs
+ * Linux ICD  | dirs     | files
+ * Linux Layer| dirs     | dirs
  */
 static void loader_get_manifest_files(const char *env_override,
-                                       bool override_is_dir,
-                                       const char *location,
-                                       struct loader_manifest_files *out_files
-                                       )
+                                      bool is_layer,
+                                      const char *location,
+                                      struct loader_manifest_files *out_files)
 {
     char *override = NULL;
     char *loc;
@@ -928,16 +997,16 @@ static void loader_get_manifest_files(const char *env_override,
     size_t alloced_count = 64;
     char full_path[2048];
     DIR *sysdir = NULL;
+    bool list_is_dirs = false;
     struct dirent *dent;
 
     out_files->count = 0;
     out_files->filename_list = NULL;
 
-    //TODO handle registry locations
     if (env_override != NULL && (override = getenv(env_override))) {
 #if defined(__linux__)
         if (geteuid() != getuid()) {
-           /* Don't allow setuid apps to use the env var: */
+            /* Don't allow setuid apps to use the env var: */
             override = NULL;
         }
 #endif
@@ -945,26 +1014,47 @@ static void loader_get_manifest_files(const char *env_override,
 
     if (location == NULL) {
         loader_log(VK_DBG_REPORT_ERROR_BIT, 0,
-                "Can't get manifest files with NULL location, env_override=%s",
-                env_override);
+            "Can't get manifest files with NULL location, env_override=%s",
+            env_override);
         return;
     }
 
+#if defined(__linux__)
+    list_is_dirs = (override == NULL || is_layer) ? true : false;
+#else //WIN32
+    list_is_dirs = (is_layer && override != NULL) ? true : false;
+#endif
     // Make a copy of the input we are using so it is not modified
-    if (override == NULL)
+    // Also handle getting the location(s) from registry on Windows
+    if (override == NULL) {
+#if defined (_WIN32)
+        loc = loader_get_registry_files(location);
+        if (loc == NULL) {
+            loader_log(VK_DBG_REPORT_ERROR_BIT, 0, "Registry lookup failed can't get manifest files");
+            return;
+        }
+#else
         loc = alloca(strlen(location) + 1);
-    else
-        loc = alloca(strlen(override) + 1);
-    if (loc == NULL) {
-        loader_log(VK_DBG_REPORT_ERROR_BIT, 0, "Out of memory can't get manifest files");
-        return;
+        if (loc == NULL) {
+            loader_log(VK_DBG_REPORT_ERROR_BIT, 0, "Out of memory can't get manifest files");
+            return;
+        }
+        strcpy(loc, location);
+#endif
     }
-    strcpy(loc, (override == NULL) ? location : override);
+    else {
+        loc = alloca(strlen(override) + 1);
+        if (loc == NULL) {
+            loader_log(VK_DBG_REPORT_ERROR_BIT, 0, "Out of memory can't get manifest files");
+            return;
+        }
+        strcpy(loc, override);
+    }
 
     file = loc;
     while (*file) {
         next_file = loader_get_next_path(file);
-        if (override == NULL || override_is_dir) {
+        if (list_is_dirs) {
             sysdir = opendir(file);
             name = NULL;
             if (sysdir) {
@@ -977,6 +1067,8 @@ static void loader_get_manifest_files(const char *env_override,
             }
         }
         else {
+#if defined(__linux__)
+            // only Linux has relative paths
             char *dir;
             // make a copy of location so it isn't modified
             dir = alloca(strlen(location) + 1);
@@ -989,6 +1081,9 @@ static void loader_get_manifest_files(const char *env_override,
             loader_get_fullpath(file, dir, sizeof(full_path), full_path);
 
             name = full_path;
+#else  // WIN32
+            name = file;
+#endif
         }
         while (name) {
                 /* Look for files ending with ".json" suffix */
@@ -1015,7 +1110,7 @@ static void loader_get_manifest_files(const char *env_override,
                     strcpy(out_files->filename_list[out_files->count], name);
                     out_files->count++;
                 }
-                if (override == NULL || override_is_dir) {
+                if (list_is_dirs) {
                     dent = readdir(sysdir);
                     if (dent == NULL)
                         break;
@@ -1054,20 +1149,6 @@ void loader_icd_scan(void)
     // convenient place to initialize a mutex
     loader_platform_thread_create_mutex(&loader_lock);
 
-#if 0  //TODO
-#if defined(WIN32)
-    bool must_free_libPaths;
-    libPaths = loader_get_registry_and_env(DRIVER_PATH_ENV,
-                                           DRIVER_PATH_REGISTRY_VALUE);
-    if (libPaths != NULL) {
-        must_free_libPaths = true;
-    } else {
-        must_free_libPaths = false;
-        libPaths = DEFAULT_VK_DRIVERS_PATH;
-    }
-#endif // WIN32
-#endif
-
     // convenient place to initialize logging
     loader_debug_init();
 
@@ -1091,7 +1172,6 @@ void loader_icd_scan(void)
                 char *icd_filename = cJSON_PrintUnformatted(icd_json);
                 char *icd_file = icd_filename;
                 if (icd_filename != NULL) {
-                    char full_path[2048];
                     char def_dir[] = DEFAULT_VK_DRIVERS_PATH;
                     char *dir = def_dir;
                     // strip off extra quotes
@@ -1099,8 +1179,13 @@ void loader_icd_scan(void)
                         icd_filename[strlen(icd_filename) - 1] = '\0';
                     if (icd_filename[0] == '"')
                         icd_filename++;
+#if defined(__linux__)
+                    char full_path[2048];
                     loader_get_fullpath(icd_filename, dir, sizeof(full_path), full_path);
                     loader_scanned_icd_add(full_path);
+#else // WIN32
+                    loader_scanned_icd_add(icd_filename);
+#endif
                     free(icd_file);
                 }
             }
