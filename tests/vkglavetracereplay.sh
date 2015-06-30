@@ -12,10 +12,8 @@ fi
 
 printf "$GREEN[ RUN      ]$NC $0\n"
 
-D=`pwd`
-D=`dirname $D`
-D=`basename $D`
-GDIR=../../Glave/$D/
+D=`dirname \`pwd\``
+GDIR=../../../Glave/`basename $D`/
 
 # Create a temp directory to run the test in
 rm -rf vktracereplay_tmp
