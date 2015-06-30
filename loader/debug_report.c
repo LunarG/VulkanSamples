@@ -273,7 +273,7 @@ static void VKAPI StringCallback(
     const char*                         pMsg,
     void*                               pUserData)
 {
-    uint32_t buf_size;
+    size_t buf_size;
     char *buf;
     char msg_flags[30];
     PFN_stringCallback callback = (PFN_stringCallback) pUserData;
