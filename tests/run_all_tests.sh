@@ -24,3 +24,6 @@ set -e
 # catch the errors that they are supposed to by intentionally doing things
 # that are wrong
 ./vk_layer_validation_tests
+
+# vkglavetracereplay.sh tests glave trace and replay
+./vkglavetracereplay.sh

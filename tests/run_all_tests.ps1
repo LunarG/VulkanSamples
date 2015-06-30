@@ -17,4 +17,4 @@ $env:VK_LAYERS_PATH = "..\layers\$dPath"
 & $dPath\vk_image_tests
 & $dPath\vk_render_tests --compare-images
 & $dPath\vk_layer_validation_tests
-
+.\vkglavetracereplay.ps1 "-$dPath"

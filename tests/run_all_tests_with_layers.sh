@@ -46,3 +46,11 @@ if [ "$RESTORE_SETTINGS" = "true" ]; then
     mv $TMP_SETTINGS_NAME $SETTINGS_NAME
 fi
 
+# vkglavetracereplay.sh tests glave trace and replay
+./vkglavetracereplay.sh
+
+if [ "$RESTORE_SETTINGS" = "true" ]; then
+    echo Restore $SETTINGS_NAME from $TMP_SETTINGS_NAME
+    mv $TMP_SETTINGS_NAME $SETTINGS_NAME
+fi
+
