@@ -154,11 +154,7 @@ LOADER_EXPORT VkResult VKAPI vkGetPhysicalDeviceProperties(
     VkResult res;
 
     disp = loader_get_instance_dispatch(gpu);
-
-    loader_platform_thread_lock_mutex(&loader_lock);
     res = disp->GetPhysicalDeviceProperties(gpu, pProperties);
-    loader_platform_thread_unlock_mutex(&loader_lock);
-
     return res;
 }
 
@@ -170,11 +166,7 @@ LOADER_EXPORT VkResult VKAPI vkGetPhysicalDevicePerformance(
     VkResult res;
 
     disp = loader_get_instance_dispatch(gpu);
-
-    loader_platform_thread_lock_mutex(&loader_lock);
     res = disp->GetPhysicalDevicePerformance(gpu, pPerformance);
-    loader_platform_thread_unlock_mutex(&loader_lock);
-
     return res;
 }
 
@@ -186,11 +178,7 @@ LOADER_EXPORT VkResult VKAPI vkGetPhysicalDeviceQueueCount(
    VkResult res;
 
    disp = loader_get_instance_dispatch(gpu);
-
-   loader_platform_thread_lock_mutex(&loader_lock);
    res = disp->GetPhysicalDeviceQueueCount(gpu, pCount);
-   loader_platform_thread_unlock_mutex(&loader_lock);
-
    return res;
 }
 
@@ -203,11 +191,7 @@ LOADER_EXPORT VkResult VKAPI vkGetPhysicalDeviceQueueProperties(
     VkResult res;
 
     disp = loader_get_instance_dispatch(gpu);
-
-    loader_platform_thread_lock_mutex(&loader_lock);
     res = disp->GetPhysicalDeviceQueueProperties(gpu, count, pQueueProperties);
-    loader_platform_thread_unlock_mutex(&loader_lock);
-
     return res;
 }
 
@@ -219,11 +203,7 @@ LOADER_EXPORT VkResult VKAPI vkGetPhysicalDeviceMemoryProperties(
     VkResult res;
 
     disp = loader_get_instance_dispatch(gpu);
-
-    loader_platform_thread_lock_mutex(&loader_lock);
     res = disp->GetPhysicalDeviceMemoryProperties(gpu, pMemoryProperties);
-    loader_platform_thread_unlock_mutex(&loader_lock);
-
     return res;
 }
 
@@ -235,11 +215,7 @@ LOADER_EXPORT VkResult VKAPI vkGetPhysicalDeviceFeatures(
     VkResult res;
 
     disp = loader_get_instance_dispatch(gpu);
-
-    loader_platform_thread_lock_mutex(&loader_lock);
     res = disp->GetPhysicalDeviceFeatures(gpu, pFeatures);
-    loader_platform_thread_unlock_mutex(&loader_lock);
-
     return res;
 }
 
@@ -252,11 +228,7 @@ LOADER_EXPORT VkResult VKAPI vkGetPhysicalDeviceFormatInfo(
     VkResult res;
 
     disp = loader_get_instance_dispatch(gpu);
-
-    loader_platform_thread_lock_mutex(&loader_lock);
     res = disp->GetPhysicalDeviceFormatInfo(gpu, format, pFormatInfo);
-    loader_platform_thread_unlock_mutex(&loader_lock);
-
     return res;
 }
 
@@ -268,11 +240,7 @@ LOADER_EXPORT VkResult VKAPI vkGetPhysicalDeviceLimits(
     VkResult res;
 
     disp = loader_get_instance_dispatch(gpu);
-
-    loader_platform_thread_lock_mutex(&loader_lock);
     res = disp->GetPhysicalDeviceLimits(gpu, pLimits);
-    loader_platform_thread_unlock_mutex(&loader_lock);
-
     return res;
 }
 
@@ -312,9 +280,7 @@ LOADER_EXPORT VkResult VKAPI vkGetPhysicalDeviceExtensionProperties(
 {
     VkResult res;
 
-    loader_platform_thread_lock_mutex(&loader_lock);
     res = loader_GetPhysicalDeviceExtensionProperties(gpu, extensionIndex, pProperties);
-    loader_platform_thread_unlock_mutex(&loader_lock);
     return res;
 }
 
@@ -324,9 +290,7 @@ LOADER_EXPORT VkResult VKAPI vkGetPhysicalDeviceExtensionCount(
 {
     VkResult res;
 
-    loader_platform_thread_lock_mutex(&loader_lock);
     res = loader_GetPhysicalDeviceExtensionCount(gpu, pCount);
-    loader_platform_thread_unlock_mutex(&loader_lock);
     return res;
 }
 
