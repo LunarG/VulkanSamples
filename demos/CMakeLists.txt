@@ -42,6 +42,9 @@ if(WIN32)
        COMMAND move frag.spv ${CMAKE_BINARY_DIR}/demos/cube-frag.spv
        DEPENDS cube.frag ${GLSLANG_PREFIX}/build/install/bin/glslangValidator
        )
+   file(COPY cube.vcxproj.user DESTINATION ${CMAKE_BINARY_DIR}/demos)
+   file(COPY tri.vcxproj.user DESTINATION ${CMAKE_BINARY_DIR}/demos)
+   file(COPY vulkaninfo.vcxproj.user DESTINATION ${CMAKE_BINARY_DIR}/demos)
 endif()
 if(NOT WIN32)
     add_custom_command(OUTPUT ${CMAKE_BINARY_DIR}/demos/tri-vert.spv
@@ -115,13 +118,4 @@ else()
     set_target_properties(zlibd PROPERTIES IMPORTED_LOCATION ${PROJECT_SOURCE_DIR}/libs/${LIB_DIR}/zlibd.lib)
     add_executable(cube WIN32 cube.c ${CMAKE_BINARY_DIR}/demos/cube-vert.spv ${CMAKE_BINARY_DIR}/demos/cube-frag.spv)
     target_link_libraries(cube ${LIBRARIES} libpngd zlibd)
-endif()
-
-
-if (${CMAKE_SYSTEM_NAME} MATCHES "Windows")
-    set(PATH_TO_WIN_VK ${CMAKE_CURRENT_BINARY_DIR}/../loader/${CMAKE_CFG_INTDIR})
-    add_custom_command(TARGET tri
-        POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy_if_different "${PATH_TO_WIN_VK}/vulkan.dll" $<TARGET_FILE_DIR:tri>
-    )
 endif()
