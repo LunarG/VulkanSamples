@@ -282,6 +282,7 @@ VkResult intel_cmd_create(struct intel_dev *dev,
 
     cmd->dev = dev;
     cmd->scratch_bo = dev->cmd_scratch_bo;
+    cmd->primary = (info->level == VK_CMD_BUFFER_LEVEL_PRIMARY);
     cmd->pipeline_select = pipeline_select;
 
     /*
@@ -316,6 +317,19 @@ VkResult intel_cmd_begin(struct intel_cmd *cmd, const VkCmdBufferBeginInfo *info
     uint32_t i;
 
     cmd_reset(cmd);
+
+    if (cmd->primary) {
+        if (info->renderPass || info->framebuffer)
+            return VK_ERROR_INVALID_VALUE;
+    } else {
+        if (!info->renderPass || !info->framebuffer)
+            return VK_ERROR_INVALID_VALUE;
+
+        cmd_begin_render_pass(cmd,
+                intel_render_pass(info->renderPass),
+                intel_fb(info->framebuffer),
+                VK_RENDER_PASS_CONTENTS_INLINE);
+    }
 
     if (cmd->flags != info->flags) {
         cmd->flags = info->flags;

@@ -486,11 +486,13 @@ static inline void cmd_batch_end(struct intel_cmd *cmd)
 
 static inline void cmd_begin_render_pass(struct intel_cmd *cmd,
                                          const struct intel_render_pass *rp,
-                                         const struct intel_fb *fb)
+                                         const struct intel_fb *fb,
+                                         VkRenderPassContents contents)
 {
     cmd->bind.render_pass = rp;
     cmd->bind.render_pass_changed = true;
     cmd->bind.fb = fb;
+    cmd->bind.render_pass_contents = contents;
 }
 
 static inline void cmd_end_render_pass(struct intel_cmd *cmd)

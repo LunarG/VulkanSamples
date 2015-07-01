@@ -189,6 +189,7 @@ struct intel_cmd_bind {
     bool render_pass_changed;
     const struct intel_render_pass *render_pass;
     const struct intel_fb *fb;
+    VkRenderPassContents render_pass_contents;
 
     uint32_t draw_count;
     uint32_t wa_flags;
@@ -214,6 +215,7 @@ struct intel_cmd {
 
     struct intel_dev *dev;
     struct intel_bo *scratch_bo;
+    bool primary;
     int pipeline_select;
 
     struct intel_cmd_reloc *relocs;

@@ -3396,6 +3396,26 @@ void cmd_draw_meta(struct intel_cmd *cmd, const struct intel_cmd_meta *meta)
         cmd_batch_flush_all(cmd);
 }
 
+static void cmd_exec(struct intel_cmd *cmd, struct intel_bo *bo)
+{
+   const uint8_t cmd_len = 2;
+   uint32_t *dw;
+   uint32_t pos;
+
+   if (cmd_gen(cmd) < INTEL_GEN(7.5)) {
+       cmd->result = VK_ERROR_UNKNOWN;
+       return;
+   }
+
+   pos = cmd_batch_pointer(cmd, cmd_len, &dw);
+   dw[0] = GEN6_MI_CMD(MI_BATCH_BUFFER_START) | (cmd_len - 2) |
+           GEN75_MI_BATCH_BUFFER_START_DW0_SECOND_LEVEL |
+           GEN75_MI_BATCH_BUFFER_START_DW0_NON_PRIVILEGED |
+           GEN6_MI_BATCH_BUFFER_START_DW0_USE_PPGTT;
+
+   cmd_batch_reloc(cmd, pos + 1, bo, 0, 0);
+}
+
 ICD_EXPORT void VKAPI vkCmdBindPipeline(
     VkCmdBuffer                              cmdBuffer,
     VkPipelineBindPoint                     pipelineBindPoint,
@@ -3598,7 +3618,12 @@ ICD_EXPORT void VKAPI vkCmdBeginRenderPass(
    struct intel_fb *fb = (struct intel_fb *) pRenderPassBegin->framebuffer;
    unsigned i;
 
-   cmd_begin_render_pass(cmd, rp, fb);
+   if (!cmd->primary) {
+       cmd_fail(cmd, VK_ERROR_UNKNOWN);
+       return;
+   }
+
+   cmd_begin_render_pass(cmd, rp, fb, pRenderPassBegin->contents);
 
    /* issue load ops */
    for (i = 0; i < rp->colorAttachmentCount; i++) {
@@ -3637,6 +3662,25 @@ ICD_EXPORT void VKAPI vkCmdExecuteCommands(
     const VkCmdBuffer*                          pCmdBuffers)
 {
    struct intel_cmd *cmd = intel_cmd(cmdBuffer);
+   uint32_t i;
 
-   cmd->result = VK_ERROR_UNKNOWN;
+   if (!cmd->bind.render_pass || cmd->bind.render_pass_contents !=
+           VK_RENDER_PASS_CONTENTS_SECONDARY_CMD_BUFFERS) {
+       cmd_fail(cmd, VK_ERROR_UNKNOWN);
+       return;
+   }
+
+   for (i = 0; i < cmdBuffersCount; i++) {
+       const struct intel_cmd *secondary = intel_cmd(pCmdBuffers[i]);
+
+       if (secondary->primary) {
+           cmd->result = VK_ERROR_INVALID_VALUE;
+           break;
+       }
+
+       cmd_exec(cmd, intel_cmd_get_batch(secondary, NULL));
+   }
+
+   if (i)
+       cmd_batch_state_base_address(cmd);
 }

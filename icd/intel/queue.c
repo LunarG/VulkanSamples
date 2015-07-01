@@ -188,11 +188,11 @@ static VkResult queue_init_hw_and_atomic_bo(struct intel_queue *queue)
 static VkResult queue_submit_cmd_prepare(struct intel_queue *queue,
                                            struct intel_cmd *cmd)
 {
-    if (unlikely(cmd->result != VK_SUCCESS)) {
+    if (unlikely(cmd->result != VK_SUCCESS || !cmd->primary)) {
         intel_dev_log(cmd->dev, VK_DBG_REPORT_ERROR_BIT,
                       &cmd->obj.base, 0, 0,
                       "invalid command buffer submitted");
-        return cmd->result;
+        return (cmd->primary) ? cmd->result : VK_ERROR_UNKNOWN;
     }
 
     return queue_select_pipeline(queue, cmd->pipeline_select);
