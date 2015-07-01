@@ -245,12 +245,6 @@ static inline void* globalGetProcAddr(const char *name)
         return (void*) vkCmdWriteTimestamp;
     if (!strcmp(name, "CmdCopyQueryPoolResults"))
         return (void*) vkCmdCopyQueryPoolResults;
-    if (!strcmp(name, "CmdInitAtomicCounters"))
-        return (void*) vkCmdInitAtomicCounters;
-    if (!strcmp(name, "CmdLoadAtomicCounters"))
-        return (void*) vkCmdLoadAtomicCounters;
-    if (!strcmp(name, "CmdSaveAtomicCounters"))
-        return (void*) vkCmdSaveAtomicCounters;
     if (!strcmp(name, "CreateFramebuffer"))
         return (void*) vkCreateFramebuffer;
     if (!strcmp(name, "CreateRenderPass"))

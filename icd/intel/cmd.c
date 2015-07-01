@@ -480,32 +480,3 @@ ICD_EXPORT VkResult VKAPI vkResetCommandBuffer(
 
     return VK_SUCCESS;
 }
-
-ICD_EXPORT void VKAPI vkCmdInitAtomicCounters(
-    VkCmdBuffer                              cmdBuffer,
-    VkPipelineBindPoint                     pipelineBindPoint,
-    uint32_t                                    startCounter,
-    uint32_t                                    counterCount,
-    const uint32_t*                             pData)
-{
-}
-
-ICD_EXPORT void VKAPI vkCmdLoadAtomicCounters(
-    VkCmdBuffer                              cmdBuffer,
-    VkPipelineBindPoint                     pipelineBindPoint,
-    uint32_t                                    startCounter,
-    uint32_t                                    counterCount,
-    VkBuffer                                  srcBuffer,
-    VkDeviceSize                                srcOffset)
-{
-}
-
-ICD_EXPORT void VKAPI vkCmdSaveAtomicCounters(
-    VkCmdBuffer                              cmdBuffer,
-    VkPipelineBindPoint                     pipelineBindPoint,
-    uint32_t                                    startCounter,
-    uint32_t                                    counterCount,
-    VkBuffer                                  destBuffer,
-    VkDeviceSize                                destOffset)
-{
-}

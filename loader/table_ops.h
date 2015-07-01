@@ -127,9 +127,6 @@ static inline void loader_init_device_dispatch_table(VkLayerDispatchTable *table
     table->CmdResetQueryPool = (PFN_vkCmdResetQueryPool) gpa(dev, "vkCmdResetQueryPool");
     table->CmdWriteTimestamp = (PFN_vkCmdWriteTimestamp) gpa(dev, "vkCmdWriteTimestamp");
     table->CmdCopyQueryPoolResults = (PFN_vkCmdCopyQueryPoolResults) gpa(dev, "vkCmdCopyQueryPoolResults");
-    table->CmdInitAtomicCounters = (PFN_vkCmdInitAtomicCounters) gpa(dev, "vkCmdInitAtomicCounters");
-    table->CmdLoadAtomicCounters = (PFN_vkCmdLoadAtomicCounters) gpa(dev, "vkCmdLoadAtomicCounters");
-    table->CmdSaveAtomicCounters = (PFN_vkCmdSaveAtomicCounters) gpa(dev, "vkCmdSaveAtomicCounters");
     table->CreateFramebuffer = (PFN_vkCreateFramebuffer) gpa(dev, "vkCreateFramebuffer");
     table->CreateRenderPass = (PFN_vkCreateRenderPass) gpa(dev, "vkCreateRenderPass");
     table->CmdBeginRenderPass = (PFN_vkCmdBeginRenderPass) gpa(dev, "vkCmdBeginRenderPass");
@@ -333,12 +330,6 @@ static inline void *loader_lookup_device_dispatch_table(
         return (void *) table->CmdWriteTimestamp;
     if (!strcmp(name, "CmdCopyQueryPoolResults"))
         return (void *) table->CmdCopyQueryPoolResults;
-    if (!strcmp(name, "CmdInitAtomicCounters"))
-        return (void *) table->CmdInitAtomicCounters;
-    if (!strcmp(name, "CmdLoadAtomicCounters"))
-        return (void *) table->CmdLoadAtomicCounters;
-    if (!strcmp(name, "CmdSaveAtomicCounters"))
-        return (void *) table->CmdSaveAtomicCounters;
     if (!strcmp(name, "CreateFramebuffer"))
         return (void *) table->CreateFramebuffer;
     if (!strcmp(name, "CreateRenderPass"))

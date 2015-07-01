@@ -2658,48 +2658,6 @@ VK_LAYER_EXPORT void VKAPI vkCmdWriteTimestamp(VkCmdBuffer cmdBuffer, VkTimestam
     }
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdInitAtomicCounters(VkCmdBuffer cmdBuffer, VkPipelineBindPoint pipelineBindPoint, uint32_t startCounter, uint32_t counterCount, const uint32_t* pData)
-{
-    GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
-    if (pCB) {
-        if (pCB->state == CB_UPDATE_ACTIVE) {
-            updateCBTracking(cmdBuffer);
-            addCmd(pCB, CMD_INITATOMICCOUNTERS);
-            get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdInitAtomicCounters(cmdBuffer, pipelineBindPoint, startCounter, counterCount, pData);
-        } else {
-            report_error_no_cb_begin(cmdBuffer, "vkCmdInitAtomicCounters()");
-        }
-    }
-}
-
-VK_LAYER_EXPORT void VKAPI vkCmdLoadAtomicCounters(VkCmdBuffer cmdBuffer, VkPipelineBindPoint pipelineBindPoint, uint32_t startCounter, uint32_t counterCount, VkBuffer srcBuffer, VkDeviceSize srcOffset)
-{
-    GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
-    if (pCB) {
-        if (pCB->state == CB_UPDATE_ACTIVE) {
-            updateCBTracking(cmdBuffer);
-            addCmd(pCB, CMD_LOADATOMICCOUNTERS);
-            get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdLoadAtomicCounters(cmdBuffer, pipelineBindPoint, startCounter, counterCount, srcBuffer, srcOffset);
-        } else {
-            report_error_no_cb_begin(cmdBuffer, "vkCmdLoadAtomicCounters()");
-        }
-    }
-}
-
-VK_LAYER_EXPORT void VKAPI vkCmdSaveAtomicCounters(VkCmdBuffer cmdBuffer, VkPipelineBindPoint pipelineBindPoint, uint32_t startCounter, uint32_t counterCount, VkBuffer destBuffer, VkDeviceSize destOffset)
-{
-    GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
-    if (pCB) {
-        if (pCB->state == CB_UPDATE_ACTIVE) {
-            updateCBTracking(cmdBuffer);
-            addCmd(pCB, CMD_SAVEATOMICCOUNTERS);
-            get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdSaveAtomicCounters(cmdBuffer, pipelineBindPoint, startCounter, counterCount, destBuffer, destOffset);
-        } else {
-            report_error_no_cb_begin(cmdBuffer, "vkCmdSaveAtomicCounters()");
-        }
-    }
-}
-
 VK_LAYER_EXPORT VkResult VKAPI vkCreateFramebuffer(VkDevice device, const VkFramebufferCreateInfo* pCreateInfo, VkFramebuffer* pFramebuffer)
 {
     VkResult result = get_dispatch_table(draw_state_device_table_map, device)->CreateFramebuffer(device, pCreateInfo, pFramebuffer);
@@ -3018,12 +2976,6 @@ VK_LAYER_EXPORT void* VKAPI vkGetDeviceProcAddr(VkDevice dev, const char* funcNa
         return (void*) vkCmdResetQueryPool;
     if (!strcmp(funcName, "vkCmdWriteTimestamp"))
         return (void*) vkCmdWriteTimestamp;
-    if (!strcmp(funcName, "vkCmdInitAtomicCounters"))
-        return (void*) vkCmdInitAtomicCounters;
-    if (!strcmp(funcName, "vkCmdLoadAtomicCounters"))
-        return (void*) vkCmdLoadAtomicCounters;
-    if (!strcmp(funcName, "vkCmdSaveAtomicCounters"))
-        return (void*) vkCmdSaveAtomicCounters;
     if (!strcmp(funcName, "vkCreateFramebuffer"))
         return (void*) vkCreateFramebuffer;
     if (!strcmp(funcName, "vkCreateRenderPass"))

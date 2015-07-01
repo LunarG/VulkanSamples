@@ -118,9 +118,6 @@ typedef struct VkLayerDispatchTable_
     PFN_vkCmdResetQueryPool CmdResetQueryPool;
     PFN_vkCmdWriteTimestamp CmdWriteTimestamp;
     PFN_vkCmdCopyQueryPoolResults CmdCopyQueryPoolResults;
-    PFN_vkCmdInitAtomicCounters CmdInitAtomicCounters;
-    PFN_vkCmdLoadAtomicCounters CmdLoadAtomicCounters;
-    PFN_vkCmdSaveAtomicCounters CmdSaveAtomicCounters;
     PFN_vkCreateFramebuffer CreateFramebuffer;
     PFN_vkCreateRenderPass CreateRenderPass;
     PFN_vkCmdBeginRenderPass CmdBeginRenderPass;

@@ -759,39 +759,6 @@ ICD_EXPORT VkResult VKAPI vkResetCommandBuffer(
     return VK_SUCCESS;
 }
 
-ICD_EXPORT void VKAPI vkCmdInitAtomicCounters(
-    VkCmdBuffer                              cmdBuffer,
-    VkPipelineBindPoint                     pipelineBindPoint,
-    uint32_t                                    startCounter,
-    uint32_t                                    counterCount,
-    const uint32_t*                             pData)
-{
-    NULLDRV_LOG_FUNC;
-}
-
-ICD_EXPORT void VKAPI vkCmdLoadAtomicCounters(
-    VkCmdBuffer                              cmdBuffer,
-    VkPipelineBindPoint                     pipelineBindPoint,
-    uint32_t                                    startCounter,
-    uint32_t                                    counterCount,
-    VkBuffer                                  srcBuffer,
-    VkDeviceSize                                srcOffset)
-{
-    NULLDRV_LOG_FUNC;
-}
-
-ICD_EXPORT void VKAPI vkCmdSaveAtomicCounters(
-    VkCmdBuffer                              cmdBuffer,
-    VkPipelineBindPoint                     pipelineBindPoint,
-    uint32_t                                    startCounter,
-    uint32_t                                    counterCount,
-    VkBuffer                                  destBuffer,
-    VkDeviceSize                                destOffset)
-{
-    NULLDRV_LOG_FUNC;
-}
-
-
 static const VkFormat nulldrv_presentable_formats[] = {
     VK_FORMAT_B8G8R8A8_UNORM,
 };
@@ -1441,7 +1408,6 @@ ICD_EXPORT VkResult VKAPI vkGetPhysicalDeviceQueueProperties(
  {
     pProperties->queueFlags = VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_SPARSE_MEMMGR_BIT;
     pProperties->queueCount = 1;
-    pProperties->maxAtomicCounters = 1;
     pProperties->supportsTimestamps = false;
 
     return VK_SUCCESS;
