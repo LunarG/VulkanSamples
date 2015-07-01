@@ -62,7 +62,7 @@ static device_table_map draw_state_device_table_map;
 static instance_table_map draw_state_instance_table_map;
 
 unordered_map<VkSampler, SAMPLER_NODE*> sampleMap;
-unordered_map<VkImageView, IMAGE_NODE*> imageMap;
+unordered_map<VkNonDispatchable, IMAGE_NODE*> viewCreateInfoMap;
 unordered_map<VkBufferView, BUFFER_NODE*> bufferMap;
 unordered_map<VkDynamicStateObject, DYNAMIC_STATE_NODE*> dynamicStateMap;
 unordered_map<VkPipeline, PIPELINE_NODE*> pipelineMap;
@@ -173,10 +173,12 @@ static string cmdTypeToString(CMD_TYPE cmd)
             return "CMD_FILLBUFFER";
         case CMD_CLEARCOLORIMAGE:
             return "CMD_CLEARCOLORIMAGE";
-        case CMD_CLEARCOLORIMAGERAW:
-            return "CMD_CLEARCOLORIMAGERAW";
-        case CMD_CLEARDEPTHSTENCIL:
-            return "CMD_CLEARDEPTHSTENCIL";
+        case CMD_CLEARCOLORATTACHMENT:
+            return "CMD_CLEARCOLORATTACHMENT";
+        case CMD_CLEARDEPTHSTENCILIMAGE:
+            return "CMD_CLEARDEPTHSTENCILIMAGE";
+        case CMD_CLEARDEPTHSTENCILATTACHMENT:
+            return "CMD_CLEARDEPTHSTENCILATTACHMENT";
         case CMD_RESOLVEIMAGE:
             return "CMD_RESOLVEIMAGE";
         case CMD_SETEVENT:
@@ -301,23 +303,23 @@ static void deleteSamplers()
 static VkImageViewCreateInfo* getImageViewCreateInfo(VkImageView view)
 {
     loader_platform_thread_lock_mutex(&globalLock);
-    if (imageMap.find(view) == imageMap.end()) {
+    if (viewCreateInfoMap.find(view) == viewCreateInfoMap.end()) {
         loader_platform_thread_unlock_mutex(&globalLock);
         return NULL;
     } else {
         loader_platform_thread_unlock_mutex(&globalLock);
-        return &imageMap[view]->createInfo;
+        return &viewCreateInfoMap[view]->createInfo.ivci;
     }
 }
 // Free all image nodes
 static void deleteImages()
 {
-    if (imageMap.size() <= 0)
+    if (viewCreateInfoMap.size() <= 0)
         return;
-    for (unordered_map<VkImageView, IMAGE_NODE*>::iterator ii=imageMap.begin(); ii!=imageMap.end(); ++ii) {
+    for (auto ii=viewCreateInfoMap.begin(); ii!=viewCreateInfoMap.end(); ++ii) {
         delete (*ii).second;
     }
-    imageMap.clear();
+    viewCreateInfoMap.clear();
 }
 static VkBufferViewCreateInfo* getBufferViewCreateInfo(VkBufferView view)
 {
@@ -341,7 +343,7 @@ static void deleteBuffers()
     bufferMap.clear();
 }
 static GLOBAL_CB_NODE* getCBNode(VkCmdBuffer cb);
-
+// Update global ptrs to reflect that specified cmdBuffer has been used
 static void updateCBTracking(VkCmdBuffer cb)
 {
     g_lastCmdBuffer[getTIDIndex()] = cb;
@@ -358,6 +360,14 @@ static void updateCBTracking(VkCmdBuffer cb)
     g_pLastTouchedCB[g_lastTouchedCBIndex++] = pCB;
     g_lastTouchedCBIndex = g_lastTouchedCBIndex % NUM_COMMAND_BUFFERS_TO_DISPLAY;
     loader_platform_thread_unlock_mutex(&globalLock);
+}
+static bool32_t hasDrawCmd(GLOBAL_CB_NODE* pCB)
+{
+    for (uint32_t i=0; i<NUM_DRAW_TYPES; i++) {
+        if (pCB->drawCount[i])
+            return VK_TRUE;
+    }
+    return VK_FALSE;
 }
 // Check object status for selected flag state
 static bool32_t validate_status(GLOBAL_CB_NODE* pNode, CBStatusFlags enable_mask, CBStatusFlags status_mask, CBStatusFlags status_flag, VkFlags msg_flags, DRAW_STATE_ERROR error_code, const char* fail_msg)
@@ -1489,9 +1499,34 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateImageView(VkDevice device, const VkImageV
     if (VK_SUCCESS == result) {
         loader_platform_thread_lock_mutex(&globalLock);
         IMAGE_NODE *pNewNode = new IMAGE_NODE;
-        pNewNode->image = *pView;
-        pNewNode->createInfo = *pCreateInfo;
-        imageMap[*pView] = pNewNode;
+        pNewNode->createInfo.ivci = *pCreateInfo;
+        viewCreateInfoMap[*pView] = pNewNode;
+        loader_platform_thread_unlock_mutex(&globalLock);
+    }
+    return result;
+}
+
+VK_LAYER_EXPORT VkResult VKAPI vkCreateColorAttachmentView(VkDevice device, const VkColorAttachmentViewCreateInfo* pCreateInfo, VkColorAttachmentView* pView)
+{
+    VkResult result = get_dispatch_table(draw_state_device_table_map, device)->CreateColorAttachmentView(device, pCreateInfo, pView);
+    if (VK_SUCCESS == result) {
+        loader_platform_thread_lock_mutex(&globalLock);
+        IMAGE_NODE *pNewNode = new IMAGE_NODE;
+        pNewNode->createInfo.cvci = *pCreateInfo;
+        viewCreateInfoMap[*pView] = pNewNode;
+        loader_platform_thread_unlock_mutex(&globalLock);
+    }
+    return result;
+}
+
+VK_LAYER_EXPORT VkResult VKAPI vkCreateDepthStencilView(VkDevice device, const VkDepthStencilViewCreateInfo* pCreateInfo, VkDepthStencilView* pView)
+{
+    VkResult result = get_dispatch_table(draw_state_device_table_map, device)->CreateDepthStencilView(device, pCreateInfo, pView);
+    if (VK_SUCCESS == result) {
+        loader_platform_thread_lock_mutex(&globalLock);
+        IMAGE_NODE *pNewNode = new IMAGE_NODE;
+        pNewNode->createInfo.dsvci = *pCreateInfo;
+        viewCreateInfoMap[*pView] = pNewNode;
         loader_platform_thread_unlock_mutex(&globalLock);
     }
     return result;
@@ -2222,6 +2257,59 @@ VK_LAYER_EXPORT void VKAPI vkCmdFillBuffer(VkCmdBuffer cmdBuffer, VkBuffer destB
     }
 }
 
+VK_LAYER_EXPORT void VKAPI vkCmdClearColorAttachment(
+    VkCmdBuffer                                 cmdBuffer,
+    uint32_t                                    colorAttachment,
+    VkImageLayout                               imageLayout,
+    const VkClearColorValue*                    pColor,
+    uint32_t                                    rectCount,
+    const VkRect3D*                             pRects)
+{
+    GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
+    if (pCB) {
+        if (pCB->state == CB_UPDATE_ACTIVE) {
+            // Warn if this is issued prior to Draw Cmd
+            if (!hasDrawCmd(pCB)) {
+                log_msg(mdd(cmdBuffer), VK_DBG_REPORT_WARN_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, cmdBuffer, 0, DRAWSTATE_CLEAR_CMD_BEFORE_DRAW, "DS",
+                        "vkCmdClearColorAttachment() issued on CB object 0x%" PRIxLEAST64 " prior to any Draw Cmds."
+                        " It is recommended you use RenderPass LOAD_OP_CLEAR on Color Attachments prior to any Draw.", reinterpret_cast<VkUintPtrLeast64>(cmdBuffer));
+            }
+            updateCBTracking(cmdBuffer);
+            addCmd(pCB, CMD_CLEARCOLORATTACHMENT);
+            get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdClearColorAttachment(cmdBuffer, colorAttachment, imageLayout, pColor, rectCount, pRects);
+        } else {
+            report_error_no_cb_begin(cmdBuffer, "vkCmdBindIndexBuffer()");
+        }
+    }
+}
+
+VK_LAYER_EXPORT void VKAPI vkCmdClearDepthStencilAttachment(
+    VkCmdBuffer                                 cmdBuffer,
+    VkImageAspectFlags                          imageAspectMask,
+    VkImageLayout                               imageLayout,
+    float                                       depth,
+    uint32_t                                    stencil,
+    uint32_t                                    rectCount,
+    const VkRect3D*                             pRects)
+{
+    GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
+    if (pCB) {
+        if (pCB->state == CB_UPDATE_ACTIVE) {
+            // Warn if this is issued prior to Draw Cmd
+            if (!hasDrawCmd(pCB)) {
+                log_msg(mdd(cmdBuffer), VK_DBG_REPORT_WARN_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, cmdBuffer, 0, DRAWSTATE_CLEAR_CMD_BEFORE_DRAW, "DS",
+                        "vkCmdClearDepthStencilAttachment() issued on CB object 0x%" PRIxLEAST64 " prior to any Draw Cmds."
+                        " It is recommended you use RenderPass LOAD_OP_CLEAR on DS Attachment prior to any Draw.", reinterpret_cast<VkUintPtrLeast64>(cmdBuffer));
+            }
+            updateCBTracking(cmdBuffer);
+            addCmd(pCB, CMD_CLEARDEPTHSTENCILATTACHMENT);
+            get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdClearDepthStencilAttachment(cmdBuffer, imageAspectMask, imageLayout, depth, stencil, rectCount, pRects);
+        } else {
+            report_error_no_cb_begin(cmdBuffer, "vkCmdBindIndexBuffer()");
+        }
+    }
+}
+
 VK_LAYER_EXPORT void VKAPI vkCmdClearColorImage(
         VkCmdBuffer cmdBuffer,
         VkImage image, VkImageLayout imageLayout,
@@ -2249,7 +2337,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdClearDepthStencilImage(VkCmdBuffer cmdBuffer,
     if (pCB) {
         if (pCB->state == CB_UPDATE_ACTIVE) {
             updateCBTracking(cmdBuffer);
-            addCmd(pCB, CMD_CLEARDEPTHSTENCIL);
+            addCmd(pCB, CMD_CLEARDEPTHSTENCILIMAGE);
             get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdClearDepthStencilImage(cmdBuffer, image, imageLayout, depth, stencil, rangeCount, pRanges);
         } else {
             report_error_no_cb_begin(cmdBuffer, "vkCmdBindIndexBuffer()");
@@ -2590,6 +2678,10 @@ VK_LAYER_EXPORT void* VKAPI vkGetDeviceProcAddr(VkDevice dev, const char* funcNa
         return (void*) vkCreateBufferView;
     if (!strcmp(funcName, "vkCreateImageView"))
         return (void*) vkCreateImageView;
+    if (!strcmp(funcName, "vkCreateColorAttachmentView"))
+        return (void*) vkCreateColorAttachmentView;
+    if (!strcmp(funcName, "vkCreateDepthStencilView"))
+        return (void*) vkCreateDepthStencilView;
     if (!strcmp(funcName, "vkCreateGraphicsPipeline"))
         return (void*) vkCreateGraphicsPipeline;
     if (!strcmp(funcName, "vkCreateGraphicsPipelineDerivative"))
@@ -2662,6 +2754,10 @@ VK_LAYER_EXPORT void* VKAPI vkGetDeviceProcAddr(VkDevice dev, const char* funcNa
         return (void*) vkCmdClearColorImage;
     if (!strcmp(funcName, "vkCmdClearDepthStencilImage"))
         return (void*) vkCmdClearDepthStencilImage;
+    if (!strcmp(funcName, "vkCmdClearColorAttachment"))
+        return (void*) vkCmdClearColorAttachment;
+    if (!strcmp(funcName, "vkCmdClearDepthStencilAttachment"))
+        return (void*) vkCmdClearDepthStencilAttachment;
     if (!strcmp(funcName, "vkCmdResolveImage"))
         return (void*) vkCmdResolveImage;
     if (!strcmp(funcName, "vkCmdSetEvent"))

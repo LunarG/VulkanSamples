@@ -1846,6 +1846,7 @@ TEST_F(VkLayerTest, NumSamplesMismatch)
         FAIL() << "Error received was not 'Num samples mismatch!...'";
     }
 }
+
 TEST_F(VkLayerTest, PipelineNotBound)
 {
     VkFlags         msgFlags;
@@ -1917,6 +1918,156 @@ TEST_F(VkLayerTest, PipelineNotBound)
         FAIL() << "Error received was not 'Attempt to bind Pipeline 0xbaadb1be that doesn't exist!'";
     }
 }
+
+TEST_F(VkLayerTest, ClearCmdNoDraw)
+{
+    // Create CmdBuffer where we add ClearCmd for FB Color attachment prior to issuing a Draw
+    VkFlags         msgFlags;
+    std::string     msgString;
+    VkResult        err;
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+    ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
+    m_errorMonitor->ClearState();
+    VkCommandBufferObj cmdBuffer(m_device);
+    const VkDescriptorTypeCount ds_type_count = {
+        .type       = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+        .count      = 1,
+    };
+    const VkDescriptorPoolCreateInfo ds_pool_ci = {
+        .sType      = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
+        .pNext      = NULL,
+        .count      = 1,
+        .pTypeCount = &ds_type_count,
+    };
+    VkDescriptorPool ds_pool;
+    err = vkCreateDescriptorPool(m_device->device(), VK_DESCRIPTOR_POOL_USAGE_ONE_SHOT, 1, &ds_pool_ci, &ds_pool);
+    ASSERT_VK_SUCCESS(err);
+
+    const VkDescriptorSetLayoutBinding dsl_binding = {
+        .descriptorType     = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+        .arraySize          = 1,
+        .stageFlags         = VK_SHADER_STAGE_ALL,
+        .pImmutableSamplers = NULL,
+    };
+
+    const VkDescriptorSetLayoutCreateInfo ds_layout_ci = {
+        .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
+        .pNext = NULL,
+        .count = 1,
+        .pBinding = &dsl_binding,
+    };
+    VkDescriptorSetLayout ds_layout;
+    err = vkCreateDescriptorSetLayout(m_device->device(), &ds_layout_ci, &ds_layout);
+    ASSERT_VK_SUCCESS(err);
+
+    VkDescriptorSet descriptorSet;
+    uint32_t ds_count = 0;
+    err = vkAllocDescriptorSets(m_device->device(), ds_pool, VK_DESCRIPTOR_SET_USAGE_ONE_SHOT, 1, &ds_layout, &descriptorSet, &ds_count);
+    ASSERT_VK_SUCCESS(err);
+
+    const VkPipelineMsStateCreateInfo pipe_ms_state_ci = {
+        .sType               = VK_STRUCTURE_TYPE_PIPELINE_MS_STATE_CREATE_INFO,
+        .pNext               = NULL,
+        .rasterSamples       = 4,
+        .multisampleEnable   = 1,
+        .sampleShadingEnable = 0,
+        .minSampleShading    = 1.0,
+        .sampleMask          = 15,
+    };
+
+    const VkPipelineLayoutCreateInfo pipeline_layout_ci = {
+        .sType              = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
+        .pNext              = NULL,
+        .descriptorSetCount = 1,
+        .pSetLayouts        = &ds_layout,
+    };
+
+    VkPipelineLayout pipeline_layout;
+    err = vkCreatePipelineLayout(m_device->device(), &pipeline_layout_ci, &pipeline_layout);
+    ASSERT_VK_SUCCESS(err);
+
+    size_t shader_len = strlen(bindStateVertShaderText);
+    size_t codeSize = 3 * sizeof(uint32_t) + shader_len + 1;
+    void* pCode = malloc(codeSize);
+
+    /* try version 0 first: VkShaderStage followed by GLSL */
+    ((uint32_t *) pCode)[0] = ICD_SPV_MAGIC;
+    ((uint32_t *) pCode)[1] = 0;
+    ((uint32_t *) pCode)[2] = VK_SHADER_STAGE_VERTEX;
+    memcpy(((uint32_t *) pCode + 3), bindStateVertShaderText, shader_len + 1);
+
+    const VkShaderModuleCreateInfo smci = {
+        .sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
+        .pNext = NULL,
+        .codeSize = codeSize,
+        .pCode = pCode,
+        .flags = 0,
+    };
+    VkShaderModule vksm;
+    err = vkCreateShaderModule(m_device->device(), &smci, &vksm);
+    ASSERT_VK_SUCCESS(err);
+    const VkShaderCreateInfo vs_ci = {
+        .sType = VK_STRUCTURE_TYPE_SHADER_CREATE_INFO,
+        .pNext = NULL,
+        .module = vksm,
+        .pName = "main",
+        .flags = 0,
+    };
+    VkShader vs;
+    err = vkCreateShader(m_device->device(), &vs_ci, &vs);
+    ASSERT_VK_SUCCESS(err);
+
+    const VkPipelineShaderStageCreateInfo pipe_vs_ci = {
+        .sType                = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
+        .pNext                = NULL,
+        .stage                = VK_SHADER_STAGE_VERTEX,
+        .shader               = vs,
+        .linkConstBufferCount = 0,
+        .pLinkConstBufferInfo = NULL,
+        .pSpecializationInfo  = NULL,
+    };
+    const VkGraphicsPipelineCreateInfo gp_ci = {
+        .sType             = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
+        .pNext             = NULL,
+        .stageCount        = 1,
+        .pStages           = &pipe_vs_ci,
+        .pVertexInputState = NULL,
+        .pIaState          = NULL,
+        .pTessState        = NULL,
+        .pVpState          = NULL,
+        .pRsState          = NULL,
+        .pMsState          = &pipe_ms_state_ci,
+        .pDsState          = NULL,
+        .pCbState          = NULL,
+        .flags             = VK_PIPELINE_CREATE_DISABLE_OPTIMIZATION_BIT,
+        .layout            = pipeline_layout,
+    };
+
+    VkPipeline pipeline;
+    err = vkCreateGraphicsPipeline(m_device->device(), &gp_ci, &pipeline);
+    ASSERT_VK_SUCCESS(err);
+
+    cmdBuffer.AddRenderTarget(m_renderTargets[0]);
+    BeginCommandBuffer(cmdBuffer);
+
+    m_errorMonitor->ClearState();
+    // Main thing we care about for this test is that the VkImage obj we're clearing matches Color Attachment of FB
+    //  Also pass down other dummy params to keep driver and paramchecker happy
+    VkClearColorValue cCV;
+    cCV.f32[0] = 1.0;
+    cCV.f32[1] = 1.0;
+    cCV.f32[2] = 1.0;
+    cCV.f32[3] = 1.0;
+
+    vkCmdClearColorAttachment(cmdBuffer.GetBufferHandle(), 0, (VkImageLayout)NULL, &cCV, 0, NULL);
+    msgFlags = m_errorMonitor->GetState(&msgString);
+    ASSERT_TRUE(msgFlags & VK_DBG_REPORT_WARN_BIT) << "Did not receive error after issuing Clear Cmd on FB color attachment prior to Draw Cmd.";
+    if (!strstr(msgString.c_str(),"vkCmdClearColorAttachment() issued on CB object ")) {
+        FAIL() << "Error received was not 'vkCmdClearColorAttachment() issued on CB object...'";
+    }
+}
+
 TEST_F(VkLayerTest, VtxBufferBadIndex)
 {
     // Create CmdBuffer where MSAA samples doesn't match RenderPass sampleCount

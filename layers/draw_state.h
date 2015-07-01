@@ -59,6 +59,7 @@ typedef enum _DRAW_STATE_ERROR
     DRAWSTATE_INVALID_RENDERPASS_CMD,           // Invalid cmd submitted while a RenderPass is active
     DRAWSTATE_NO_ACTIVE_RENDERPASS,             // Rendering cmd submitted without an active RenderPass
     DRAWSTATE_DESCRIPTOR_SET_NOT_UPDATED,       // DescriptorSet bound but it was never updated. This is a warning code.
+    DRAWSTATE_CLEAR_CMD_BEFORE_DRAW,            // Clear cmd issued before any Draw in CmdBuffer, should use RenderPass Ops instead
     DRAWSTATE_INVALID_EXTENSION,
 } DRAW_STATE_ERROR;
 
@@ -119,9 +120,11 @@ typedef struct _SAMPLER_NODE {
 } SAMPLER_NODE;
 
 typedef struct _IMAGE_NODE {
-    VkImageView           image;
-    VkImageViewCreateInfo createInfo;
-    VkDescriptorInfo      descriptorInfo;
+    union {
+        VkImageViewCreateInfo ivci;
+        VkColorAttachmentViewCreateInfo cvci;
+        VkDepthStencilViewCreateInfo dsvci;
+    } createInfo;
 } IMAGE_NODE;
 
 typedef struct _BUFFER_NODE {
@@ -195,8 +198,9 @@ typedef enum _CMD_TYPE
     CMD_UPDATEBUFFER,
     CMD_FILLBUFFER,
     CMD_CLEARCOLORIMAGE,
-    CMD_CLEARCOLORIMAGERAW,
-    CMD_CLEARDEPTHSTENCIL,
+    CMD_CLEARCOLORATTACHMENT,
+    CMD_CLEARDEPTHSTENCILIMAGE,
+    CMD_CLEARDEPTHSTENCILATTACHMENT,
     CMD_RESOLVEIMAGE,
     CMD_SETEVENT,
     CMD_RESETEVENT,
