@@ -1279,11 +1279,11 @@ protected:
              it != ranges.end(); it++) {
             to_clear.push_back(img.image_memory_barrier(all_cache_outputs, all_cache_inputs,
                     VK_IMAGE_LAYOUT_GENERAL,
-                    VK_IMAGE_LAYOUT_CLEAR_OPTIMAL,
+                    VK_IMAGE_LAYOUT_GENERAL,
                     *it));
             p_to_clear.push_back(&to_clear.back());
             to_xfer.push_back(img.image_memory_barrier(all_cache_outputs, all_cache_inputs,
-                    VK_IMAGE_LAYOUT_CLEAR_OPTIMAL,
+                    VK_IMAGE_LAYOUT_GENERAL,
                     VK_IMAGE_LAYOUT_TRANSFER_SOURCE_OPTIMAL, *it));
             p_to_xfer.push_back(&to_xfer.back());
         }
@@ -1295,7 +1295,7 @@ protected:
         vkCmdPipelineBarrier(cmd_.obj(), src_stages, dest_stages, false, 1, (const void **)&p_to_clear[0]);
 
         vkCmdClearColorImage(cmd_.obj(),
-                              img.obj(), VK_IMAGE_LAYOUT_CLEAR_OPTIMAL,
+                              img.obj(), VK_IMAGE_LAYOUT_GENERAL,
                               &clear_color, ranges.size(), &ranges[0]);
 
         vkCmdPipelineBarrier(cmd_.obj(), src_stages, dest_stages, false, 1, (const void **)&p_to_xfer[0]);
@@ -1523,11 +1523,11 @@ protected:
              it != ranges.end(); it++) {
             to_clear.push_back(img.image_memory_barrier(all_cache_outputs, all_cache_inputs,
                     VK_IMAGE_LAYOUT_GENERAL,
-                    VK_IMAGE_LAYOUT_CLEAR_OPTIMAL,
+                    VK_IMAGE_LAYOUT_GENERAL,
                     *it));
             p_to_clear.push_back(&to_clear.back());
             to_xfer.push_back(img.image_memory_barrier(all_cache_outputs, all_cache_inputs,
-                    VK_IMAGE_LAYOUT_CLEAR_OPTIMAL,
+                    VK_IMAGE_LAYOUT_GENERAL,
                     VK_IMAGE_LAYOUT_TRANSFER_SOURCE_OPTIMAL, *it));
             p_to_xfer.push_back(&to_xfer.back());
         }
@@ -1539,7 +1539,7 @@ protected:
         vkCmdPipelineBarrier(cmd_.obj(), src_stages, dest_stages, false, to_clear.size(), (const void **)&p_to_clear[0]);
 
         vkCmdClearDepthStencil(cmd_.obj(),
-                                img.obj(), VK_IMAGE_LAYOUT_CLEAR_OPTIMAL,
+                                img.obj(), VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
                                 depth, stencil,
                                 ranges.size(), &ranges[0]);
 

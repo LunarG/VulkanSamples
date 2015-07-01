@@ -950,8 +950,7 @@ ICD_EXPORT void VKAPI vkCmdClearDepthStencil(
     meta.clear_val[0] = u_fui(depth);
     meta.clear_val[1] = stencil;
 
-    if (imageLayout == VK_IMAGE_LAYOUT_CLEAR_OPTIMAL ||
-        imageLayout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL ||
+    if (imageLayout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL ||
         imageLayout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL) {
         meta.ds.optimal = true;
     }

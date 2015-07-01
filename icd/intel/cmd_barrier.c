@@ -66,9 +66,6 @@ static uint32_t img_get_layout_ops(const struct intel_img *img,
     case VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL:
         ops = READ_OP;
         break;
-    case VK_IMAGE_LAYOUT_CLEAR_OPTIMAL:
-        ops = WRITE_OP | HIZ_OP;
-        break;
     case VK_IMAGE_LAYOUT_TRANSFER_SOURCE_OPTIMAL:
         ops = READ_OP;
         break;
@@ -110,10 +107,6 @@ static uint32_t img_get_layout_caches(const struct intel_img *img,
     case VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL:
         // Optimal layout when image is used for read only shader access
         caches = DATA_READ_CACHE | SAMPLER_CACHE;
-        break;
-    case VK_IMAGE_LAYOUT_CLEAR_OPTIMAL:
-        // Optimal layout when image is used only for clear operations
-        caches = RENDER_CACHE;
         break;
     case VK_IMAGE_LAYOUT_TRANSFER_SOURCE_OPTIMAL:
         // Optimal layout when image is used only as source of transfer operations

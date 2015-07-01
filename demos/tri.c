@@ -363,12 +363,12 @@ static void demo_draw_build_cmd(struct demo *demo)
     clear_range.arraySize = 1;
     vkCmdClearColorImage(demo->draw_cmd,
             demo->buffers[demo->current_buffer].image,
-            VK_IMAGE_LAYOUT_CLEAR_OPTIMAL,
+            VK_IMAGE_LAYOUT_TRANSFER_DESTINATION_OPTIMAL,
             &clear_color, 1, &clear_range);
 
     clear_range.aspect = VK_IMAGE_ASPECT_DEPTH;
     vkCmdClearDepthStencil(demo->draw_cmd,
-            demo->depth.image, VK_IMAGE_LAYOUT_CLEAR_OPTIMAL,
+            demo->depth.image, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
             clear_depth, 0, 1, &clear_range);
 
     vkCmdDraw(demo->draw_cmd, 0, 3, 0, 1);

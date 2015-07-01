@@ -593,7 +593,6 @@ void VkImageObj::SetLayout(VkCommandBufferObj *cmd_buf,
         input_mask = VK_MEMORY_INPUT_SHADER_READ_BIT | VK_MEMORY_INPUT_TRANSFER_BIT;
         break;
 
-    case VK_IMAGE_LAYOUT_CLEAR_OPTIMAL:
     default:
         output_mask =  all_cache_outputs;
         input_mask = all_cache_inputs;
@@ -1308,7 +1307,7 @@ void VkCommandBufferObj::ClearAllBuffers(VkClearColor clear_color, float depth_c
     memory_barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
     memory_barrier.outputMask = output_mask;
     memory_barrier.inputMask = input_mask;
-    memory_barrier.newLayout = VK_IMAGE_LAYOUT_CLEAR_OPTIMAL;
+    memory_barrier.newLayout = VK_IMAGE_LAYOUT_GENERAL;
     memory_barrier.subresourceRange = srRange;
     VkImageMemoryBarrier *pmemory_barrier = &memory_barrier;
 
@@ -1322,7 +1321,7 @@ void VkCommandBufferObj::ClearAllBuffers(VkClearColor clear_color, float depth_c
         m_renderTargets[i]->layout(memory_barrier.newLayout);
 
         vkCmdClearColorImage(obj(),
-               m_renderTargets[i]->image(), VK_IMAGE_LAYOUT_CLEAR_OPTIMAL,
+               m_renderTargets[i]->image(), VK_IMAGE_LAYOUT_GENERAL,
                &clear_color, 1, &srRange );
 
     }
@@ -1339,20 +1338,20 @@ void VkCommandBufferObj::ClearAllBuffers(VkClearColor clear_color, float depth_c
         // prepare the depth buffer for clear
 
         memory_barrier.oldLayout = depthStencilObj->BindInfo()->layout;
-        memory_barrier.newLayout = VK_IMAGE_LAYOUT_CLEAR_OPTIMAL;
+        memory_barrier.newLayout = VK_IMAGE_LAYOUT_GENERAL;
         memory_barrier.image = depthStencilObj->obj();
         memory_barrier.subresourceRange = dsRange;
 
         vkCmdPipelineBarrier( obj(), src_stages, dest_stages, false, 1, (const void **)&pmemory_barrier);
 
         vkCmdClearDepthStencil(obj(),
-                                depthStencilObj->obj(), VK_IMAGE_LAYOUT_CLEAR_OPTIMAL,
+                                depthStencilObj->obj(), VK_IMAGE_LAYOUT_GENERAL,
                                 depth_clear_color,  stencil_clear_color,
                                 1, &dsRange);
 
         // prepare depth buffer for rendering
         memory_barrier.image = depthStencilObj->obj();
-        memory_barrier.oldLayout = VK_IMAGE_LAYOUT_CLEAR_OPTIMAL;
+        memory_barrier.oldLayout = VK_IMAGE_LAYOUT_GENERAL;
         memory_barrier.newLayout = depthStencilObj->BindInfo()->layout;
         memory_barrier.subresourceRange = dsRange;
         vkCmdPipelineBarrier( obj(), src_stages, dest_stages, false, 1, (const void **)&pmemory_barrier);

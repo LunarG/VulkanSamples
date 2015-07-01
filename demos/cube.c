@@ -554,7 +554,7 @@ static void demo_draw_build_cmd(struct demo *demo, VkCmdBuffer cmd_buf)
     clear_range.arraySize = 1;
 
     vkCmdClearDepthStencil(cmd_buf, demo->depth.image,
-            VK_IMAGE_LAYOUT_CLEAR_OPTIMAL,
+            VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
             clear_depth, 0, 1, &clear_range);
 
     vkCmdDraw(cmd_buf, 0, 12 * 3, 0, 1);
