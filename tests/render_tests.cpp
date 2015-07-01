@@ -2596,6 +2596,126 @@ TEST_F(VkRenderTest, TriangleFSAnonymousUniformBlockBinding)
     RecordImages(m_renderTargets);
 }
 
+TEST_F(VkRenderTest, TriangleFSAnonymousUniformBlockBindingWithStruct)
+{
+    // This test is the same as TriangleFSUniformBlockBinding, but
+    // it does not provide an instance name.
+    // The expected result from this test is a purple triangle
+
+    static const char *vertShaderText =
+            "#version 140\n"
+            "#extension GL_ARB_separate_shader_objects : enable\n"
+            "#extension GL_ARB_shading_language_420pack : enable\n"
+            "void main() {\n"
+            "   vec2 vertices[3];"
+            "      vertices[0] = vec2(-0.5, -0.5);\n"
+            "      vertices[1] = vec2( 0.5, -0.5);\n"
+            "      vertices[2] = vec2( 0.5,  0.5);\n"
+            "   gl_Position = vec4(vertices[gl_VertexID % 3], 0.0, 1.0);\n"
+            "}\n";
+
+    static const char *fragShaderText =
+            "#version 430\n"
+            "#extension GL_ARB_separate_shader_objects : enable\n"
+            "#extension GL_ARB_shading_language_420pack : enable\n"
+            "\n"
+            "    struct PS_INPUT {\n"
+            "        vec2 member0;\n"
+            "        vec4 member1;\n"
+            "        vec4 member2;\n"
+            "        vec4 member3;\n"
+            "        vec4 member4;\n"
+            "        vec4 member5;\n"
+            "        vec4 member6;\n"
+            "        vec4 member7;\n"
+            "        vec4 member8;\n"
+            "        vec4 member9;\n"
+            "    };\n"
+            "\n"
+            "layout (std140, binding = 0) uniform redVal   { vec4 red; };"
+            "layout (std140, binding = 1) uniform greenVal { vec4 green; };"
+            "layout (std140, binding = 2) uniform blueVal  { vec4 blue; };"
+            "layout (std140, binding = 3) uniform whiteVal { vec4 white; };"
+            "layout (location = 0) out vec4 outColor;\n"
+            "PS_INPUT MainFs()\n"
+            "{\n"
+            "    PS_INPUT o;\n"
+            "    o.member9 = red;\n"
+            "    return o;\n"
+            "}\n"
+            "\n"
+            "void main()\n"
+            "{\n"
+            "    PS_INPUT o;\n"
+            "    o = MainFs();\n"
+            "    outColor = blue;"
+            "    outColor += o.member9;\n"
+            "}\n";;
+    ASSERT_NO_FATAL_FAILURE(InitState());
+    ASSERT_NO_FATAL_FAILURE(InitViewport());
+
+    VkShaderObj vs(m_device,vertShaderText,VK_SHADER_STAGE_VERTEX, this);
+    VkShaderObj ps(m_device,fragShaderText, VK_SHADER_STAGE_FRAGMENT, this);
+
+    // We're going to create a number of uniform buffers, and then allow
+    // the shader to select which it wants to read from with a binding
+
+    // Let's populate the buffers with a single color each:
+    //    layout (std140, binding = 0) uniform bufferVals { vec4 red;   } myRedVal;
+    //    layout (std140, binding = 1) uniform bufferVals { vec4 green; } myGreenVal;
+    //    layout (std140, binding = 2) uniform bufferVals { vec4 blue;  } myBlueVal;
+    //    layout (std140, binding = 3) uniform bufferVals { vec4 white; } myWhiteVal;
+
+    const float redVals[4]   = { 1.0, 0.0, 0.0, 1.0 };
+    const float greenVals[4] = { 0.0, 1.0, 0.0, 1.0 };
+    const float blueVals[4]  = { 0.0, 0.0, 1.0, 1.0 };
+    const float whiteVals[4] = { 1.0, 1.0, 1.0, 1.0 };
+
+    const int redCount   = sizeof(redVals)   / sizeof(float);
+    const int greenCount = sizeof(greenVals) / sizeof(float);
+    const int blueCount  = sizeof(blueVals)  / sizeof(float);
+    const int whiteCount = sizeof(whiteVals) / sizeof(float);
+
+    VkConstantBufferObj redBuffer(m_device, redCount, sizeof(redVals[0]), (const void*) redVals);
+
+    VkConstantBufferObj greenBuffer(m_device, greenCount, sizeof(greenVals[0]), (const void*) greenVals);
+
+    VkConstantBufferObj blueBuffer(m_device, blueCount, sizeof(blueVals[0]), (const void*) blueVals);
+
+    VkConstantBufferObj whiteBuffer(m_device, whiteCount, sizeof(whiteVals[0]), (const void*) whiteVals);
+
+    VkPipelineObj pipelineobj(m_device);
+    pipelineobj.AddShader(&vs);
+    pipelineobj.AddShader(&ps);
+
+    VkDescriptorSetObj descriptorSet(m_device);
+    descriptorSet.AppendBuffer(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, redBuffer);
+    descriptorSet.AppendBuffer(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, greenBuffer);
+    descriptorSet.AppendBuffer(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, blueBuffer);
+    descriptorSet.AppendBuffer(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, whiteBuffer);
+
+    ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
+    VkCommandBufferObj cmdBuffer(m_device);
+    cmdBuffer.AddRenderTarget(m_renderTargets[0]);
+
+    ASSERT_VK_SUCCESS(BeginCommandBuffer(cmdBuffer));
+
+    GenericDrawPreparation(&cmdBuffer, pipelineobj, descriptorSet);
+
+#ifdef DUMP_STATE_DOT
+    DRAW_STATE_DUMP_DOT_FILE pDSDumpDot = (DRAW_STATE_DUMP_DOT_FILE)vkGetProcAddr(gpu(), (char*)"drawStateDumpDotFile");
+    pDSDumpDot((char*)"triTest2.dot");
+#endif
+    // render triangle
+    cmdBuffer.Draw(0, 3, 0, 1);
+
+    // finalize recording of the command buffer
+    EndCommandBuffer(cmdBuffer);
+    cmdBuffer.QueueCommandBuffer();
+
+    RecordImages(m_renderTargets);
+}
+
 TEST_F(VkRenderTest, CubeWithVertexFetchAndMVPAndTexture)
 {
     static const char *vertShaderText =
