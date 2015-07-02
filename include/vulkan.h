@@ -33,7 +33,7 @@
 #include "vk_platform.h"
 
 // Vulkan API version supported by this file
-#define VK_API_VERSION VK_MAKE_VERSION(0, 119, 0)
+#define VK_API_VERSION VK_MAKE_VERSION(0, 120, 0)
 
 #ifdef __cplusplus
 extern "C"
@@ -892,7 +892,6 @@ typedef enum VkMemoryPropertyFlagBits_
                                                                             // vkInvalidateMappedMemoryRanges must be used flush/invalidate host cache
     VK_MEMORY_PROPERTY_HOST_UNCACHED_BIT                    = VK_BIT(2),    // Memory should not be cached by the host
     VK_MEMORY_PROPERTY_HOST_WRITE_COMBINED_BIT              = VK_BIT(3),    // Memory should support host write combining
-    VK_MEMORY_PROPERTY_PREFER_HOST_LOCAL                    = VK_BIT(4),    // If set, prefer host access
 } VkMemoryPropertyFlagBits;
 
 // Memory output flags passed to resource transition commands
@@ -1116,6 +1115,13 @@ typedef enum VkQueryPipelineStatisticFlagBits_ {
 // Memory mapping flags
 typedef VkFlags VkMemoryMapFlags;
 
+// Memory heap flags
+typedef VkFlags VkMemoryHeapFlags;
+typedef enum VkMemoryHeapFlagBits_ {
+    VK_MEMORY_HEAP_HOST_LOCAL                               = VK_BIT(0),   // If set, heap represents host memory
+} VkMemoryHeapFlagBits;
+
+
 // ------------------------------------------------------------------------------------------------
 // Vulkan structures
 
@@ -1318,6 +1324,7 @@ typedef struct VkMemoryType_
 typedef struct VkMemoryHeap_
 {
     VkDeviceSize                                size;                       // Available memory in the heap
+    VkMemoryHeapFlags                           flags;                      // Flags for the heap
 } VkMemoryHeap;
 
 typedef struct VkPhysicalDeviceMemoryProperties_

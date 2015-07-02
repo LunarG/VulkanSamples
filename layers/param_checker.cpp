@@ -456,7 +456,7 @@ std::string EnumeratorString(VkQueueFlagBits const& enumerator)
 static
 bool ValidateEnumerator(VkMemoryPropertyFlagBits const& enumerator)
 {
-    VkMemoryPropertyFlagBits allFlags = (VkMemoryPropertyFlagBits)(VK_MEMORY_PROPERTY_PREFER_HOST_LOCAL |
+    VkMemoryPropertyFlagBits allFlags = (VkMemoryPropertyFlagBits)(
         VK_MEMORY_PROPERTY_HOST_WRITE_COMBINED_BIT |
         VK_MEMORY_PROPERTY_HOST_NON_COHERENT_BIT |
         VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
@@ -479,10 +479,6 @@ std::string EnumeratorString(VkMemoryPropertyFlagBits const& enumerator)
     }
 
     std::vector<std::string> strings;
-    if(enumerator & VK_MEMORY_PROPERTY_PREFER_HOST_LOCAL)
-    {
-        strings.push_back("VK_MEMORY_PROPERTY_PREFER_HOST_LOCAL");
-    }
     if(enumerator & VK_MEMORY_PROPERTY_HOST_WRITE_COMBINED_BIT)
     {
         strings.push_back("VK_MEMORY_PROPERTY_HOST_WRITE_COMBINED_BIT");
