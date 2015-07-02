@@ -960,10 +960,6 @@ void VkIndexBufferObj::CreateAndInitBuffer(int numIndexes, VkIndexType indexType
     m_numVertices = numIndexes;
     m_indexType = indexType;
     switch (indexType) {
-    case VK_INDEX_TYPE_UINT8:
-        m_stride = 1;
-        viewFormat = VK_FORMAT_R8_UINT;
-        break;
     case VK_INDEX_TYPE_UINT16:
         m_stride = 2;
         viewFormat = VK_FORMAT_R16_UINT;

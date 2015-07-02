@@ -218,9 +218,6 @@ static bool gen6_can_primitive_restart(const struct intel_cmd *cmd)
         return false;
 
     switch (cmd->bind.index.type) {
-    case VK_INDEX_TYPE_UINT8:
-        supported = (p->primitive_restart_index != 0xffu);
-        break;
     case VK_INDEX_TYPE_UINT16:
         supported = (p->primitive_restart_index != 0xffffu);
         break;
@@ -257,10 +254,6 @@ static void gen6_3DSTATE_INDEX_BUFFER(struct intel_cmd *cmd,
         dw0 |= GEN6_IB_DW0_CUT_INDEX_ENABLE;
 
     switch (type) {
-    case VK_INDEX_TYPE_UINT8:
-        dw0 |= GEN6_IB_DW0_FORMAT_BYTE;
-        offset_align = 1;
-        break;
     case VK_INDEX_TYPE_UINT16:
         dw0 |= GEN6_IB_DW0_FORMAT_WORD;
         offset_align = 2;

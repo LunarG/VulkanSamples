@@ -33,7 +33,7 @@
 #include "vk_platform.h"
 
 // Vulkan API version supported by this file
-#define VK_API_VERSION VK_MAKE_VERSION(0, 118, 0)
+#define VK_API_VERSION VK_MAKE_VERSION(0, 119, 0)
 
 #ifdef __cplusplus
 extern "C"
@@ -325,11 +325,10 @@ typedef enum VkPrimitiveTopology_
 
 typedef enum VkIndexType_
 {
-    VK_INDEX_TYPE_UINT8                                     = 0x00000000,
-    VK_INDEX_TYPE_UINT16                                    = 0x00000001,
-    VK_INDEX_TYPE_UINT32                                    = 0x00000002,
+    VK_INDEX_TYPE_UINT16                                    = 0x00000000,
+    VK_INDEX_TYPE_UINT32                                    = 0x00000001,
 
-    VK_ENUM_RANGE(INDEX_TYPE, UINT8, UINT32)
+    VK_ENUM_RANGE(INDEX_TYPE, UINT16, UINT32)
 } VkIndexType;
 
 typedef enum VkTexFilter_
