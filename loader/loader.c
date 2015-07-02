@@ -1570,6 +1570,56 @@ static void loader_remove_layer_lib(
     loader.loaded_layer_lib_list = new_layer_lib_list;
 }
 
+/**
+ * Initialize ext_prop from layer_prop.
+ */
+static void loader_init_ext_prop_from_layer_prop(
+                struct loader_extension_property *ext_prop,
+                const struct loader_layer_properties *layer_prop)
+{
+    memset(ext_prop, 0, sizeof(*ext_prop));
+    ext_prop->info.sType = VK_STRUCTURE_TYPE_EXTENSION_PROPERTIES;
+    strncpy(ext_prop->info.name, layer_prop->name, sizeof(ext_prop->info.name));
+    ext_prop->info.name[sizeof(ext_prop->info.name) - 1] = '\0';
+
+    //TODO from list of string versions to an int, for now just use build version
+    ext_prop->info.version = VK_API_VERSION;
+
+    strncpy(ext_prop->info.description, layer_prop->description, sizeof(ext_prop->info.description));
+    ext_prop->info.description[sizeof(ext_prop->info.name) - 1] = '\0';
+    ext_prop->lib_name = layer_prop->lib_info.lib_name;
+    ext_prop->origin = VK_EXTENSION_ORIGIN_LAYER;
+    ext_prop->alias = NULL;
+    ext_prop->get_proc_addr = layer_prop->functions.get_instance_proc_addr;
+}
+
+/**
+ * Go through the search_list and find any layers which match type. If layer
+ * type match is found in then add it to ext_list.
+ */
+static void loader_add_layer_implicit(
+                const enum layer_type type,
+                struct loader_extension_list *ext_list,
+                const uint32_t count,
+                const struct loader_layer_properties *search_list)
+{
+    uint32_t i;
+    for (i = 0; i < count; i++) {
+        const struct loader_layer_properties *prop = &search_list[i];
+        struct loader_extension_property ext_prop;
+        if (prop->type & type) {
+            loader_init_ext_prop_from_layer_prop(&ext_prop, prop);
+            /* Found an extension with the same type, add to ext_list */
+            loader_add_to_ext_list(ext_list, 1, &ext_prop);
+        }
+    }
+
+}
+
+/**
+ * Get the layer name(s) from the env_name environment variable. If layer
+ * is found in search_list then add it to ext_list.
+ */
 static void loader_add_layer_env(
                 const char *env_name,
                 struct loader_extension_list *ext_list,
@@ -1626,6 +1676,13 @@ void loader_enable_instance_layers(struct loader_instance *inst)
         loader_log(VK_DBG_REPORT_ERROR_BIT, 0, "Failed to malloc Instance activated layer list");
         return;
     }
+
+    /* Add any implicit layers first */
+    loader_add_layer_implicit(
+                                VK_LAYER_TYPE_INSTANCE_IMPLICIT,
+                                &inst->activated_layer_list,
+                                loader.scanned_layers.count,
+                                loader.scanned_layers.list);
 
     /* Add any layers specified via environment variable first */
     loader_add_layer_env(
@@ -1744,7 +1801,14 @@ static void loader_enable_device_layers(
         return;
     }
 
-    /* Add any layers specified via environment variable first */
+    /* Add any implicit layers first */
+    loader_add_layer_implicit(
+                                VK_LAYER_TYPE_DEVICE_IMPLICIT,
+                                &dev->activated_layer_list,
+                                loader.scanned_layers.count,
+                                loader.scanned_layers.list);
+
+    /* Add any layers specified via environment variable next */
     loader_add_layer_env(
                         "VK_DEVICE_LAYERS",
                         &dev->activated_layer_list,

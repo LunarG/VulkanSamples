@@ -53,12 +53,12 @@ enum extension_origin {
 };
 
 enum layer_type {
-    VK_LAYER_TYPE_DEVICE_EXPLICIT,
-    VK_LAYER_TYPE_INSTANCE_EXPLICIT,
-    VK_LAYER_TYPE_GLOBAL_EXPLICIT,   // both instance and device layer
-    VK_LAYER_TYPE_DEVICE_IMPLICIT,
-    VK_LAYER_TYPE_INSTANCE_IMPLICIT,
-    VK_LAYER_TYPE_GLOBAL_IMPLICIT,   // both instance and device layer
+    VK_LAYER_TYPE_DEVICE_EXPLICIT = 0x1,
+    VK_LAYER_TYPE_INSTANCE_EXPLICIT = 0x2,
+    VK_LAYER_TYPE_GLOBAL_EXPLICIT = 0x3, // both instance and device layer, bitwise
+    VK_LAYER_TYPE_DEVICE_IMPLICIT = 0x4,
+    VK_LAYER_TYPE_INSTANCE_IMPLICIT = 0x8,
+    VK_LAYER_TYPE_GLOBAL_IMPLICIT = 0xc,   // both instance and device layer, bitwise
 };
 
 struct loader_extension_property {
