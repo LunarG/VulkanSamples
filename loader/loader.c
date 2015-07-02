@@ -1109,6 +1109,8 @@ static void loader_get_manifest_files(const char *env_override,
                     }
                     strcpy(out_files->filename_list[out_files->count], name);
                     out_files->count++;
+                } else if (!list_is_dirs) {
+                    loader_log(VK_DBG_REPORT_WARN_BIT, 0, "Skipping manifest file %s, file name must end in .json", name);
                 }
                 if (list_is_dirs) {
                     dent = readdir(sysdir);
