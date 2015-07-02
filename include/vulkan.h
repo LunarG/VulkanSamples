@@ -33,7 +33,7 @@
 #include "vk_platform.h"
 
 // Vulkan API version supported by this file
-#define VK_API_VERSION VK_MAKE_VERSION(0, 116, 0)
+#define VK_API_VERSION VK_MAKE_VERSION(0, 118, 0)
 
 #ifdef __cplusplus
 extern "C"
@@ -192,8 +192,11 @@ typedef enum VkImageViewType_
     VK_IMAGE_VIEW_TYPE_2D                                   = 0x00000001,
     VK_IMAGE_VIEW_TYPE_3D                                   = 0x00000002,
     VK_IMAGE_VIEW_TYPE_CUBE                                 = 0x00000003,
+    VK_IMAGE_VIEW_TYPE_1D_ARRAY                             = 0x00000004,
+    VK_IMAGE_VIEW_TYPE_2D_ARRAY                             = 0x00000005,
+    VK_IMAGE_VIEW_TYPE_CUBE_ARRAY                           = 0x00000006,
 
-    VK_ENUM_RANGE(IMAGE_VIEW_TYPE, 1D, CUBE)
+    VK_ENUM_RANGE(IMAGE_VIEW_TYPE, 1D, CUBE_ARRAY)
 } VkImageViewType;
 
 typedef enum VkImageAspect_

@@ -128,18 +128,31 @@ static void cmd_meta_set_src_for_img(struct intel_cmd *cmd,
     info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
     info.image = (VkImage) img;
 
-    switch (img->type) {
-    case VK_IMAGE_TYPE_1D:
-        info.viewType = VK_IMAGE_VIEW_TYPE_1D;
-        break;
-    case VK_IMAGE_TYPE_2D:
-        info.viewType = VK_IMAGE_VIEW_TYPE_2D;
-        break;
-    case VK_IMAGE_TYPE_3D:
-        info.viewType = VK_IMAGE_VIEW_TYPE_3D;
-        break;
-    default:
-        break;
+    if (img->array_size == 1) {
+        switch (img->type) {
+        case VK_IMAGE_TYPE_1D:
+            info.viewType = VK_IMAGE_VIEW_TYPE_1D;
+            break;
+        case VK_IMAGE_TYPE_2D:
+            info.viewType = VK_IMAGE_VIEW_TYPE_2D;
+            break;
+        default:
+            break;
+        }
+    } else {
+        switch (img->type) {
+        case VK_IMAGE_TYPE_1D:
+            info.viewType = VK_IMAGE_VIEW_TYPE_1D_ARRAY;
+            break;
+        case VK_IMAGE_TYPE_2D:
+            info.viewType = VK_IMAGE_VIEW_TYPE_2D_ARRAY;
+            break;
+        case VK_IMAGE_TYPE_3D:
+            info.viewType = VK_IMAGE_VIEW_TYPE_3D;
+            break;
+        default:
+            break;
+        }
     }
 
     info.format = format;

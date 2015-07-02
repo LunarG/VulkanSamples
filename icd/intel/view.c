@@ -200,23 +200,34 @@ static void surface_state_buf_gen7(const struct intel_gpu *gpu,
    }
 }
 
-static int img_type_to_view_type(VkImageType type)
+static int img_type_to_view_type(VkImageType type, unsigned first_layer, unsigned num_layers)
 {
-    switch (type) {
-    case VK_IMAGE_TYPE_1D:   return VK_IMAGE_VIEW_TYPE_1D;
-    case VK_IMAGE_TYPE_2D:   return VK_IMAGE_VIEW_TYPE_2D;
-    case VK_IMAGE_TYPE_3D:   return VK_IMAGE_VIEW_TYPE_3D;
-    default: assert(!"unknown img type"); return VK_IMAGE_VIEW_TYPE_1D;
+    if (first_layer == 0 && num_layers == 1) {
+        switch (type) {
+        case VK_IMAGE_TYPE_1D:   return VK_IMAGE_VIEW_TYPE_1D;
+        case VK_IMAGE_TYPE_2D:   return VK_IMAGE_VIEW_TYPE_2D;
+        default: assert(!"unknown img type"); return VK_IMAGE_VIEW_TYPE_1D;
+        }
+    } else {
+        switch (type) {
+        case VK_IMAGE_TYPE_1D:   return VK_IMAGE_VIEW_TYPE_1D_ARRAY;
+        case VK_IMAGE_TYPE_2D:   return VK_IMAGE_VIEW_TYPE_2D_ARRAY;
+        case VK_IMAGE_TYPE_3D:   return VK_IMAGE_VIEW_TYPE_3D;
+        default: assert(!"unknown img type"); return VK_IMAGE_VIEW_TYPE_1D_ARRAY;
+        }
     }
 }
 
 static int view_type_to_surface_type(VkImageViewType type)
 {
     switch (type) {
-    case VK_IMAGE_VIEW_TYPE_1D:   return GEN6_SURFTYPE_1D;
-    case VK_IMAGE_VIEW_TYPE_2D:   return GEN6_SURFTYPE_2D;
-    case VK_IMAGE_VIEW_TYPE_3D:   return GEN6_SURFTYPE_3D;
-    case VK_IMAGE_VIEW_TYPE_CUBE: return GEN6_SURFTYPE_CUBE;
+    case VK_IMAGE_VIEW_TYPE_1D:         return GEN6_SURFTYPE_1D;
+    case VK_IMAGE_VIEW_TYPE_1D_ARRAY:   return GEN6_SURFTYPE_1D;
+    case VK_IMAGE_VIEW_TYPE_2D:         return GEN6_SURFTYPE_2D;
+    case VK_IMAGE_VIEW_TYPE_2D_ARRAY:   return GEN6_SURFTYPE_2D;
+    case VK_IMAGE_VIEW_TYPE_3D:         return GEN6_SURFTYPE_3D;
+    case VK_IMAGE_VIEW_TYPE_CUBE:       return GEN6_SURFTYPE_CUBE;
+    case VK_IMAGE_VIEW_TYPE_CUBE_ARRAY: return GEN6_SURFTYPE_CUBE;
     default: assert(!"unknown view type"); return GEN6_SURFTYPE_NULL;
     }
 }
@@ -765,7 +776,7 @@ ds_init_info(const struct intel_gpu *gpu,
    memset(info, 0, sizeof(*info));
 
    info->surface_type =
-       view_type_to_surface_type(img_type_to_view_type(img->type));
+       view_type_to_surface_type(img_type_to_view_type(img->type, first_layer, num_layers));
 
    if (info->surface_type == GEN6_SURFTYPE_CUBE) {
       /*
@@ -1259,14 +1270,14 @@ VkResult intel_rt_view_create(struct intel_dev *dev,
 
     if (intel_gpu_gen(dev->gpu) >= INTEL_GEN(7)) {
         surface_state_tex_gen7(dev->gpu, img,
-                img_type_to_view_type(img->type),
+                img_type_to_view_type(img->type, info->baseArraySlice, info->arraySize),
                 info->format, info->mipLevel, 1,
                 info->baseArraySlice, info->arraySize,
                 identity_channel_mapping, true, view->cmd);
         view->cmd_len = 8;
     } else {
         surface_state_tex_gen6(dev->gpu, img,
-                img_type_to_view_type(img->type),
+                img_type_to_view_type(img->type, info->baseArraySlice, info->arraySize),
                 info->format, info->mipLevel, 1,
                 info->baseArraySlice, info->arraySize,
                 true, view->cmd);
