@@ -1322,7 +1322,7 @@ MesaGlassTranslator::convertStructType(const llvm::StructType* structType,
                 char anonFieldName[20]; // enough for "anon_" + digits to hold maxint
                 snprintf(anonFieldName, sizeof(anonFieldName), "%s%s%d", blockName.str().c_str(), "_gg_", index);
                 subName.assign(anonFieldName);
-                name = subName;
+                name = blockName;
              }
          }
       } else {
@@ -3025,7 +3025,7 @@ MesaGlassTranslator::makeIRLoad(const llvm::Instruction* llvmInst, const glsl_ty
    if (got != nameBuiltinMap.end())
        name = got->second;
 
-   if (!mdNode) {
+   if (!mdNode && !name.empty()) {
       auto it = typenameMdMap.find(name);
       mdNode = (it == typenameMdMap.end()) ? 0 : it->second;
    }
@@ -3742,7 +3742,7 @@ inline void MesaGlassTranslator::emitIRStore(const llvm::Instruction* llvmInst)
    if (got != nameBuiltinMap.end())
        name = got->second;
 
-   mdNode = typenameMdMap[name];
+   mdNode = name.empty() ? 0 : typenameMdMap[name];
 
    assert(llvm::isa<llvm::PointerType>(dst->getType()));
 
