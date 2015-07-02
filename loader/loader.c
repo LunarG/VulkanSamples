@@ -918,7 +918,6 @@ struct loader_manifest_files {
  * The next path (or NULL) in the list is returned in next_path.
  * Note: input string is modified in some cases. PASS IN A COPY!
  */
-//TODO registry keys
 static char *loader_get_next_path(char *path)
 {
     uint32_t len;
@@ -1572,51 +1571,29 @@ static void loader_remove_layer_lib(
 }
 
 static void loader_add_layer_env(
-        struct loader_extension_list *ext_list,
-        const struct loader_extension_list *search_list)
+                const char *env_name,
+                struct loader_extension_list *ext_list,
+                const struct loader_extension_list *search_list)
 {
     char *layerEnv;
-    uint32_t len;
-    char *p, *pOrig, *next, *name;
+    char *next, *name;
 
-#if defined(WIN32)
-    layerEnv = loader_get_registry_and_env(LAYER_NAMES_ENV,
-                                           LAYER_NAMES_REGISTRY_VALUE);
-#else  // WIN32
-    layerEnv = getenv(LAYER_NAMES_ENV);
-#endif // WIN32
+    layerEnv = getenv(env_name);
     if (layerEnv == NULL) {
         return;
     }
-    p = malloc(strlen(layerEnv) + 1);
-    if (p == NULL) {
-#if defined(WIN32)
-        free(layerEnv);
-#endif // WIN32
+    name = alloca(strlen(layerEnv) + 1);
+    if (name == NULL) {
         return;
     }
-    strcpy(p, layerEnv);
-#if defined(WIN32)
-    free(layerEnv);
-#endif // WIN32
-    pOrig = p;
+    strcpy(name, layerEnv);
 
-    while (p && *p ) {
-        next = strchr(p, PATH_SEPERATOR);
-        if (next == NULL) {
-            len = (uint32_t) strlen(p);
-            next = p + len;
-        } else {
-            len = (uint32_t) (next - p);
-            *(char *) next = '\0';
-            next++;
-        }
-        name = basename(p);
+    while (name && *name ) {
+        next = loader_get_next_path(name);
         loader_find_layer_name_add_list(name, search_list, ext_list);
-        p = next;
+        name = next;
     }
 
-    free(pOrig);
     return;
 }
 
@@ -1651,7 +1628,10 @@ void loader_enable_instance_layers(struct loader_instance *inst)
     }
 
     /* Add any layers specified via environment variable first */
-    loader_add_layer_env(&inst->activated_layer_list, &loader.global_extensions);
+    loader_add_layer_env(
+                            "VK_INSTANCE_LAYERS",
+                            &inst->activated_layer_list,
+                            &loader.global_extensions);
 
     /* Add layers specified by the application */
     loader_add_layer_ext_to_ext_list(
@@ -1765,7 +1745,10 @@ static void loader_enable_device_layers(
     }
 
     /* Add any layers specified via environment variable first */
-    loader_add_layer_env(&dev->activated_layer_list, &loader.global_extensions);
+    loader_add_layer_env(
+                        "VK_DEVICE_LAYERS",
+                        &dev->activated_layer_list,
+                        &loader.global_extensions);
 
     /* Add layers specified by the application */
     loader_add_layer_ext_to_ext_list(

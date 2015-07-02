@@ -52,7 +52,6 @@
 #define DEFAULT_VK_DRIVERS_INFO "/usr/share/vulkan/icd.d:/etc/vulkan/icd.d"
 #define DEFAULT_VK_DRIVERS_PATH "/usr/lib/i386-linux-gnu/vulkan/icd:/usr/lib/x86_64-linux-gnu/vulkan/icd"
 #define LAYERS_PATH_ENV "LIBVK_LAYERS_PATH"
-#define LAYER_NAMES_ENV "LIBVK_LAYER_NAMES"
 #define VK_LAYER_LIBRARY_PREFIX "libVKLayer"
 #define VK_LAYER_LIBRARY_PREFIX_LEN 10
 #define VK_LIBRARY_SUFFIX ".so"
@@ -180,7 +179,6 @@ using namespace std;
 #define LAYERS_PATH_REGISTRY_VALUE "VK_LAYERS_PATH"
 #define LAYER_NAMES_REGISTRY_VALUE "VK_LAYER_NAMES"
 #define LAYERS_PATH_ENV "VK_LAYERS_PATH"
-#define LAYER_NAMES_ENV "VK_LAYER_NAMES"
 // TODO/TBD: Is this an appropriate suffix for Windows?
 #define VK_LAYER_LIBRARY_PREFIX "VKLayer"
 #define VK_LAYER_LIBRARY_PREFIX_LEN 7
