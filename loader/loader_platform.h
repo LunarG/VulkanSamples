@@ -198,6 +198,10 @@ using namespace std;
 // "CMakeLists.txt" file).
 #define snprintf _snprintf
 #define PRINTF_SIZE_T_SPECIFIER    "%Iu"
+
+// Microsoft doesn't implement alloca, instead we have _alloca
+#define alloca _alloca
+
 // Microsoft also doesn't have basename().  Paths are different on Windows, and
 // so this is just a temporary solution in order to get us compiling, so that we
 // can test some scenarios, and develop the correct solution for Windows.
