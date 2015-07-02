@@ -129,7 +129,6 @@ struct loader_device {
     uint32_t  app_extension_count;
     VkExtensionProperties *app_extension_props;
 
-    struct loader_extension_list enabled_device_extensions;
     struct loader_extension_list activated_layer_list;
 
     struct loader_device *next;
@@ -172,7 +171,6 @@ struct loader_icd {
 struct loader_instance {
     VkLayerInstanceDispatchTable *disp; // must be first entry in structure
 
-    uint32_t layer_count;
     uint32_t total_gpu_count;
     uint32_t total_icd_count;
     struct loader_icd *icds;
@@ -242,7 +240,6 @@ struct loader_instance {
      */
     struct loader_msg_callback_map_entry *icd_msg_callback_map;
 
-    struct loader_extension_list enabled_instance_extensions;
     struct loader_extension_list activated_layer_list;
 
     uint32_t  app_extension_count;
@@ -400,6 +397,10 @@ VkResult loader_CreateDevice(
         VkDevice*                               pDevice);
 
 /* helper function definitions */
+bool has_vk_extension_property_array(
+        const VkExtensionProperties *vk_ext_prop,
+        const uint32_t count,
+        const VkExtensionProperties *ext_array);
 bool has_vk_extension_property(
         const VkExtensionProperties *vk_ext_prop,
         const struct loader_extension_list *ext_list);

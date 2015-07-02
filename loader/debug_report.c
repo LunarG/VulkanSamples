@@ -57,9 +57,10 @@ void debug_report_add_instance_extensions(
 void debug_report_create_instance(
         struct loader_instance *ptr_instance)
 {
-    ptr_instance->debug_report_enabled = has_vk_extension_property(
-                                             &debug_report_extension_info.info,
-                                             &ptr_instance->enabled_instance_extensions);
+    ptr_instance->debug_report_enabled = has_vk_extension_property_array(
+                                            &debug_report_extension_info.info,
+                                            ptr_instance->app_extension_count,
+                                            ptr_instance->app_extension_props);
 }
 
 static VkResult debug_report_DbgCreateMsgCallback(

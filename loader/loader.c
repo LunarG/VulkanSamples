@@ -300,6 +300,22 @@ bool compare_vk_extension_properties(const VkExtensionProperties *op1, const VkE
 }
 
 /*
+ * Search the given ext_array for an extension
+ * matching the given vk_ext_prop
+ */
+bool has_vk_extension_property_array(
+        const VkExtensionProperties *vk_ext_prop,
+        const uint32_t count,
+        const VkExtensionProperties *ext_array)
+{
+    for (uint32_t i = 0; i < count; i++) {
+        if (compare_vk_extension_properties(vk_ext_prop, &ext_array[i]))
+            return true;
+    }
+    return false;
+}
+
+/*
  * Search the given ext_list for an extension
  * matching the given vk_ext_prop
  */
@@ -454,8 +470,14 @@ void loader_destroy_ext_list(struct loader_extension_list *ext_info)
     ext_info->capacity = 0;
 }
 
-static void loader_add_vk_ext_to_ext_list(
-        struct loader_extension_list *ext_list,
+/**
+ * Search the given search_list for an any layer extensions in the props list.
+ * Add these to the output ext_list.  Don't add duplicates to the output ext_list.
+ * Search is limited to extensions having the origin of layer libraries.
+ * Appending to output list handles  layer aliases
+ */
+static void loader_add_layer_ext_to_ext_list(
+        struct loader_extension_list *out_ext_list,
         uint32_t prop_list_count,
         const VkExtensionProperties *props,
         const struct loader_extension_list *search_list)
@@ -465,7 +487,7 @@ static void loader_add_vk_ext_to_ext_list(
     for (uint32_t i = 0; i < prop_list_count; i++) {
         const VkExtensionProperties *search_target = &props[i];
         // look for duplicates
-        if (has_vk_extension_property(search_target, ext_list)) {
+        if (has_vk_extension_property(search_target, out_ext_list)) {
             continue;
         }
 
@@ -475,7 +497,11 @@ static void loader_add_vk_ext_to_ext_list(
             continue;
         }
 
-        loader_add_to_ext_list(ext_list, 1, ext_prop);
+        if (ext_prop->origin != VK_EXTENSION_ORIGIN_LAYER)
+            continue;
+        if (ext_prop->alias)
+            ext_prop = ext_prop->alias;
+        loader_add_to_ext_list(out_ext_list, 1, ext_prop);
     }
 }
 
@@ -545,19 +571,21 @@ void loader_add_to_ext_list(
  * a name that matches the given ext_name.
  * Add all matching extensions to the found_list
  * Do not add if found VkExtensionProperties is already
- * on the found_list
+ * on the found_list.  Add the aliased layer if needed.
  */
-static void loader_search_ext_list_for_name(
-        const char *ext_name,
+static void loader_find_layer_name_add_list(
+        const char *name,
         const struct loader_extension_list *search_list,
         struct loader_extension_list *found_list)
 {
     for (uint32_t i = 0; i < search_list->count; i++) {
         struct loader_extension_property *ext_prop = &search_list->list[i];
         if (ext_prop->origin == VK_EXTENSION_ORIGIN_LAYER &&
-            0 == strcmp(ext_prop->info.name, ext_name)) {
+            0 == strcmp(ext_prop->info.name, name)) {
+            if (ext_prop->alias)
+                ext_prop = ext_prop->alias;
             /* Found an extension with the same name, add to found_list */
-            loader_add_to_ext_list(found_list, 1, &search_list->list[i]);
+            loader_add_to_ext_list(found_list, 1, ext_prop);
         }
     }
 }
@@ -573,6 +601,23 @@ bool loader_is_extension_scanned(const VkExtensionProperties *ext_prop)
     return false;
 }
 
+/*
+ * For global exenstions implemented within the loader (i.e. DEBUG_REPORT
+ * the extension must provide two entry points for the loader to use:
+ * - "trampoline" entry point - this is the address returned by GetProcAddr
+ * and will always do what's necessary to support a global call.
+ * - "terminator" function - this function will be put at the end of the
+ * instance chain and will contain the necessary logica to call / process
+ * the extension for the appropriate ICDs that are available.
+ * There is no generic mechanism for including these functions, the references
+ * must be placed into the appropriate loader entry points.
+ * GetInstanceProcAddr: call extension GetInstanceProcAddr to check for GetProcAddr requests
+ * loader_coalesce_extensions(void) - add extension records to the list of global
+ * extension available to the app.
+ * instance_disp - add function pointer for terminator function to this array.
+ * The extension itself should be in a separate file that will be
+ * linked directly with the loader.
+ */
 void loader_coalesce_extensions(void)
 {
     uint32_t i;
@@ -616,8 +661,6 @@ static struct loader_icd *loader_get_icd_and_device(const VkDevice device,
 static void loader_destroy_logical_device(struct loader_device *dev)
 {
     free(dev->app_extension_props);
-    if (dev->enabled_device_extensions.count)
-        loader_destroy_ext_list(&dev->enabled_device_extensions);
     if (dev->activated_layer_list.count)
         loader_destroy_ext_list(&dev->activated_layer_list);
     free(dev);
@@ -1495,7 +1538,6 @@ static void loader_remove_layer_lib(
     }
 
     my_lib->ref_count--;
-    inst->layer_count--;
     if (my_lib->ref_count > 0) {
         loader_log(VK_DBG_REPORT_DEBUG_BIT, 0,
                    "Decrement reference count for layer library %s", ext_prop->lib_name);
@@ -1570,7 +1612,7 @@ static void loader_add_layer_env(
             next++;
         }
         name = basename(p);
-        loader_search_ext_list_for_name(name, search_list, ext_list);
+        loader_find_layer_name_add_list(name, search_list, ext_list);
         p = next;
     }
 
@@ -1580,7 +1622,7 @@ static void loader_add_layer_env(
 
 void loader_deactivate_instance_layers(struct loader_instance *instance)
 {
-    if (!instance->layer_count) {
+    if (!instance->activated_layer_list.count) {
         return;
     }
 
@@ -1589,11 +1631,9 @@ void loader_deactivate_instance_layers(struct loader_instance *instance)
         struct loader_extension_property *ext_prop = &instance->activated_layer_list.list[i];
 
         loader_remove_layer_lib(instance, ext_prop);
-
-        instance->layer_count--;
     }
     loader_destroy_ext_list(&instance->activated_layer_list);
-
+    instance->activated_layer_list.count = 0;
 }
 
 void loader_enable_instance_layers(struct loader_instance *inst)
@@ -1601,15 +1641,24 @@ void loader_enable_instance_layers(struct loader_instance *inst)
     if (inst == NULL)
         return;
 
-    /* Add any layers specified in the environment first */
-    loader_add_layer_env(&inst->enabled_instance_extensions, &loader.global_extensions);
+    if (inst->activated_layer_list.list == NULL || inst->activated_layer_list.capacity == 0) {
+        loader_init_ext_list(&inst->activated_layer_list);
+    }
 
-    /* Add layers / extensions specified by the application */
-    loader_add_vk_ext_to_ext_list(
-                &inst->enabled_instance_extensions,
-                inst->app_extension_count,
-                inst->app_extension_props,
-                &loader.global_extensions);
+    if (inst->activated_layer_list.list == NULL) {
+        loader_log(VK_DBG_REPORT_ERROR_BIT, 0, "Failed to malloc Instance activated layer list");
+        return;
+    }
+
+    /* Add any layers specified via environment variable first */
+    loader_add_layer_env(&inst->activated_layer_list, &loader.global_extensions);
+
+    /* Add layers specified by the application */
+    loader_add_layer_ext_to_ext_list(
+                                &inst->activated_layer_list,
+                                inst->app_extension_count,
+                                inst->app_extension_props,
+                                &loader.global_extensions);
 }
 
 uint32_t loader_activate_instance_layers(struct loader_instance *inst)
@@ -1627,55 +1676,24 @@ uint32_t loader_activate_instance_layers(struct loader_instance *inst)
     VkBaseLayerObject *nextInstObj;
     PFN_vkGetInstanceProcAddr nextGPA = loader_gpa_instance_internal;
 
-    /*
-     * Figure out how many actual layers will need to be wrapped.
-     */
-    for (uint32_t i = 0; i < inst->enabled_instance_extensions.count; i++) {
-        struct loader_extension_property *ext_prop = &inst->enabled_instance_extensions.list[i];
-        if (ext_prop->alias) {
-            ext_prop = ext_prop->alias;
-        }
-        if (ext_prop->origin != VK_EXTENSION_ORIGIN_LAYER) {
-            continue;
-        }
-        loader_add_to_ext_list(&inst->activated_layer_list, 1, ext_prop);
-    }
-
-    inst->layer_count = inst->activated_layer_list.count;
-
-    if (!inst->layer_count) {
+    if (!inst->activated_layer_list.count) {
         return 0;
     }
 
     wrappedInstance = malloc(sizeof(VkBaseLayerObject)
-                                   * inst->layer_count);
+                                   * inst->activated_layer_list.count);
     if (!wrappedInstance) {
         loader_log(VK_DBG_REPORT_ERROR_BIT, 0, "Failed to malloc Instance objects for layer");
         return 0;
     }
 
     /* Create instance chain of enabled layers */
-    layer_idx = inst->layer_count - 1;
+    layer_idx = inst->activated_layer_list.count - 1;
     for (int32_t i = inst->activated_layer_list.count - 1; i >= 0; i--) {
         struct loader_extension_property *ext_prop = &inst->activated_layer_list.list[i];
         loader_platform_dl_handle lib_handle;
 
-        /*
-         * For global exenstions implemented within the loader (i.e. DEBUG_REPORT
-         * the extension must provide two entry points for the loader to use:
-         * - "trampoline" entry point - this is the address returned by GetProcAddr
-         * and will always do what's necessary to support a global call.
-         * - "terminator" function - this function will be put at the end of the
-         * instance chain and will contain the necessary logica to call / process
-         * the extension for the appropriate ICDs that are available.
-         * There is no generic mechanism for including these functions, the references
-         * must be placed into the appropriate loader entry points.
-         * GetInstanceProcAddr: call extension GetInstanceProcAddr to check for GetProcAddr requests
-         * loader_coalesce_extensions(void) - add extension records to the list of global
-         * extension available to the app.
-         * instance_disp - add function pointer for terminator function to this array.
-         * The extension itself should be in a separate file that will be
-         * linked directly with the loader.
+         /*
          * Note: An extension's Get*ProcAddr should not return a function pointer for
          * any extension entry points until the extension has been enabled.
          * To do this requires a different behavior from Get*ProcAddr functions implemented
@@ -1719,7 +1737,7 @@ uint32_t loader_activate_instance_layers(struct loader_instance *inst)
     loader_init_instance_core_dispatch_table(inst->disp, nextGPA, (VkInstance) nextObj, (VkInstance) baseObj);
 
     free(wrappedInstance);
-    return inst->layer_count;
+    return inst->activated_layer_list.count;
 }
 
 void loader_activate_instance_layer_extensions(struct loader_instance *inst)
@@ -1731,21 +1749,30 @@ void loader_activate_instance_layer_extensions(struct loader_instance *inst)
 }
 
 static void loader_enable_device_layers(
-        struct loader_device *dev,
-        struct loader_extension_list *ext_list)
+            struct loader_device *dev,
+            struct loader_extension_list *ext_list)
 {
     if (dev == NULL)
         return;
 
-    /* Add any layers specified in the environment first */
-    loader_add_layer_env(&dev->enabled_device_extensions, &loader.global_extensions);
+    if (dev->activated_layer_list.list == NULL || dev->activated_layer_list.capacity == 0) {
+        loader_init_ext_list(&dev->activated_layer_list);
+    }
 
-    /* Add layers / extensions specified by the application */
-    loader_add_vk_ext_to_ext_list(
-                &dev->enabled_device_extensions,
-                dev->app_extension_count,
-                dev->app_extension_props,
-                ext_list);
+    if (dev->activated_layer_list.list == NULL) {
+        loader_log(VK_DBG_REPORT_ERROR_BIT, 0, "Failed to malloc device activated layer list");
+        return;
+    }
+
+    /* Add any layers specified via environment variable first */
+    loader_add_layer_env(&dev->activated_layer_list, &loader.global_extensions);
+
+    /* Add layers specified by the application */
+    loader_add_layer_ext_to_ext_list(
+                                &dev->activated_layer_list,
+                                dev->app_extension_count,
+                                dev->app_extension_props,
+                                ext_list);
 }
 
 static VkResult scratch_vkCreateDevice(
@@ -1794,19 +1821,6 @@ static uint32_t loader_activate_device_layers(
     PFN_vkGetDeviceProcAddr nextGPA = loader_GetDeviceChainProcAddr;
     VkBaseLayerObject *wrappedGpus;
 
-    /*
-     * Figure out how many actual layers will need to be wrapped.
-     */
-    for (uint32_t i = 0; i < dev->enabled_device_extensions.count; i++) {
-        struct loader_extension_property *ext_prop = &dev->enabled_device_extensions.list[i];
-        if (ext_prop->alias) {
-            ext_prop = ext_prop->alias;
-        }
-        if (ext_prop->origin != VK_EXTENSION_ORIGIN_LAYER) {
-            continue;
-        }
-        loader_add_to_ext_list(&dev->activated_layer_list, 1, ext_prop);
-    }
 
     if (!dev->activated_layer_list.count)
         return 0;

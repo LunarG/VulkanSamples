@@ -121,7 +121,6 @@ LOADER_EXPORT VkResult VKAPI vkDestroyInstance(
 
     struct loader_instance *ptr_instance = loader_instance(instance);
     loader_deactivate_instance_layers(ptr_instance);
-    loader_destroy_ext_list(&ptr_instance->enabled_instance_extensions);
 
     free(ptr_instance);
 
