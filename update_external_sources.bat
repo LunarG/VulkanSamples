@@ -26,8 +26,8 @@ REM // ======== Parameter parsing ======== //
    set sync-LunarGLASS=0
    set build-glslang=0
    set build-LunarGLASS=0
-   set check-fetch-dependencies=0
    set check-glslang-build-dependencies=0
+   set check-LunarGLASS-fetch-dependencies=0
    set check-LunarGLASS-build-dependencies=0
 
    :parameterLoop
@@ -42,7 +42,7 @@ REM // ======== Parameter parsing ======== //
 
       if "%1" == "--sync-LunarGLASS" (
          set sync-LunarGLASS=1
-         set check-fetch-dependencies=1
+         set check-LunarGLASS-fetch-dependencies=1
          shift
          goto:parameterLoop
       )
@@ -57,7 +57,7 @@ REM // ======== Parameter parsing ======== //
 
       if "%1" == "--build-LunarGLASS" (
          set sync-LunarGLASS=1
-         set check-fetch-dependencies=1
+         set check-LunarGLASS-fetch-dependencies=1
          set check-LunarGLASS-build-dependencies=1
          set build-LunarGLASS=1
          shift
@@ -69,7 +69,7 @@ REM // ======== Parameter parsing ======== //
          set sync-LunarGLASS=1
          set build-glslang=1
          set build-LunarGLASS=1
-         set check-fetch-dependencies=1
+         set check-LunarGLASS-fetch-dependencies=1
          set check-glslang-build-dependencies=1
          set check-LunarGLASS-build-dependencies=1
          shift
@@ -85,17 +85,25 @@ REM // ======== end Parameter parsing ======== //
 
 
 REM // ======== Dependency checking ======== //
-
-   for %%X in (svn.exe) do (set FOUND=%%~$PATH:X)
+   for %%X in (git.exe) do (set FOUND=%%~$PATH:X)
    if not defined FOUND (
       echo Dependency check failed:
-      echo   svn.exe not found
-      echo   Get Subversion for Windows here:  http://sourceforge.net/projects/win32svn/
-      echo   Install and ensure the svn.exe makes it into your PATH, default is "C:\Program Files (x86)\Subversion\bin"
+      echo   git.exe not found
+      echo   Install and ensure git.exe makes it into your PATH
+
       set errorCode=1
    )
 
-   if %check-fetch-dependencies% equ 1 (
+   if %check-LunarGLASS-fetch-dependencies% equ 1 (
+      for %%X in (svn.exe) do (set FOUND=%%~$PATH:X)
+      if not defined FOUND (
+         echo Dependency check failed:
+         echo   svn.exe not found
+         echo   Get Subversion for Windows here:  http://sourceforge.net/projects/win32svn/
+         echo   Install and ensure svn.exe makes it into your PATH, default is "C:\Program Files (x86)\Subversion\bin"
+         set errorCode=1
+      )
+
       for %%X in (wget.exe) do (set FOUND=%%~$PATH:X)
       if not defined FOUND (
          echo Dependency check failed:
@@ -242,7 +250,8 @@ REM // ======== Functions ======== //
    echo Creating local glslang repository %GLSLANG_DIR%)
    mkdir %GLSLANG_DIR%
    cd %GLSLANG_DIR%
-   svn checkout https://cvs.khronos.org/svn/repos/ogl/trunk/ecosystem/public/sdk/tools/glslang@%GLSLANG_REVISION% .
+   git clone https://github.com/KhronosGroup/glslang.git .
+   git checkout %GLSLANG_REVISION%
    if not exist %GLSLANG_DIR%\SPIRV (
       echo glslang source download failed!
       set errorCode=1
@@ -253,9 +262,7 @@ goto:eof
    echo.
    echo Updating %GLSLANG_DIR%
    cd %GLSLANG_DIR%
-   svn update -r %GLSLANG_REVISION%
-   REM Just in case we are moving backward, do a revert
-   svn revert -R .
+   git checkout %GLSLANG_REVISION%
 goto:eof
 
 :create_LunarGLASS

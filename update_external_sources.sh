@@ -16,13 +16,14 @@ function create_glslang () {
    echo "Creating local glslang repository ($BASEDIR/glslang)."
    mkdir -p $BASEDIR/glslang
    cd $BASEDIR/glslang
-   svn checkout https://cvs.khronos.org/svn/repos/ogl/trunk/ecosystem/public/sdk/tools/glslang .
+   git clone https://github.com/KhronosGroup/glslang.git .
+   git checkout $GLSLANG_REVISION
 }
 
 function update_glslang () {
    echo "Updating $BASEDIR/glslang"
    cd $BASEDIR/glslang
-   svn update -r "$GLSLANG_REVISION"
+   git checkout $GLSLANG_REVISION
 }
 
 function create_LunarGLASS () {
