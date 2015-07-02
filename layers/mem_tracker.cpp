@@ -1276,7 +1276,6 @@ VK_LAYER_EXPORT VkResult VKAPI vkResetFences(
                 if (!(pObjectInfo->create_info.fence_create_info.flags & VK_FENCE_CREATE_SIGNALED_BIT)) {
                     log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_FENCE, pFences[i], 0, MEMTRACK_INVALID_FENCE_STATE, "MEM",
                             "Fence %p submitted to VkResetFences in UNSIGNALED STATE", pFences[i]);
-                    result = VK_ERROR_INVALID_VALUE;
                 }
                 else {
                     pObjectInfo->create_info.fence_create_info.flags =

@@ -2206,14 +2206,6 @@ void PostQueueSubmit(
         return;
     }
 
-
-    if(fence == nullptr)
-    {
-        log_msg(mdd(queue), VK_DBG_REPORT_WARN_BIT, (VkObjectType)0, NULL, 0, 1, "PARAMCHECK",
-        "vkQueueSubmit parameter, VkFence fence, is null pointer");
-        return;
-    }
-
     if(result != VK_SUCCESS)
     {
         std::string reason = "vkQueueSubmit parameter, VkResult result, is " + EnumeratorString(result);
@@ -7447,13 +7439,6 @@ void PreCmdBindDescriptorSets(
     {
         log_msg(mdd(cmdBuffer), VK_DBG_REPORT_WARN_BIT, (VkObjectType)0, NULL, 0, 1, "PARAMCHECK",
         "vkCmdBindDescriptorSets parameter, const VkDescriptorSet* pDescriptorSets, is null pointer");
-        return;
-    }
-
-    if(pDynamicOffsets == nullptr)
-    {
-        log_msg(mdd(cmdBuffer), VK_DBG_REPORT_WARN_BIT, (VkObjectType)0, NULL, 0, 1, "PARAMCHECK",
-        "vkCmdBindDescriptorSets parameter, const uint32_t* pDynamicOffsets, is null pointer");
         return;
     }
 }

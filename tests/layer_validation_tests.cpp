@@ -826,7 +826,6 @@ TEST_F(VkLayerTest, ResetUnsignaledFence)
 }
 #endif
 #if OBJ_TRACKER_TESTS
-
 TEST_F(VkLayerTest, RasterStateNotBound)
 {
     VkFlags msgFlags;
@@ -2071,7 +2070,6 @@ TEST_F(VkLayerTest, ThreadCmdBufferCollision)
 }
 #endif
 #endif
-
 #if SHADER_CHECKER_TESTS
 TEST_F(VkLayerTest, CreatePipelineVertexOutputNotConsumed)
 {
