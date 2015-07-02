@@ -220,7 +220,10 @@ void VkImageTest::CreateImage(uint32_t w, uint32_t h)
 
     ASSERT_NE(0, mem_req.size) << "vkGetObjectMemoryRequirements (Image): Failed - expect images to require memory";
     mem_info.allocationSize = mem_req.size;
-    mem_info.memProps       = 0;
+    mem_info.memoryTypeIndex = 0;
+
+    err = m_device->gpu().set_memory_type(mem_req.memoryTypeBits, &mem_info, 0);
+    ASSERT_VK_SUCCESS(err);
 
     /* allocate memory */
     err = vkAllocMemory(device(), &mem_info, &m_image_mem);

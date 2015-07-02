@@ -33,7 +33,7 @@
 #include "vk_platform.h"
 
 // Vulkan API version supported by this file
-#define VK_API_VERSION VK_MAKE_VERSION(0, 111, 0)
+#define VK_API_VERSION VK_MAKE_VERSION(0, 115, 0)
 
 #ifdef __cplusplus
 extern "C"
@@ -101,10 +101,11 @@ VK_DEFINE_NONDISP_SUBCLASS_HANDLE(VkRenderPass, VkNonDispatchable)
 
 #define VK_MAX_PHYSICAL_DEVICE_NAME 256
 #define VK_MAX_EXTENSION_NAME       256
-
-#define VK_LOD_CLAMP_NONE       MAX_FLOAT
-#define VK_LAST_MIP_LEVEL       UINT32_MAX
-#define VK_LAST_ARRAY_SLICE     UINT32_MAX
+#define VK_MAX_MEMORY_TYPES         32
+#define VK_MAX_MEMORY_HEAPS         16
+#define VK_LOD_CLAMP_NONE           MAX_FLOAT
+#define VK_LAST_MIP_LEVEL           UINT32_MAX
+#define VK_LAST_ARRAY_SLICE         UINT32_MAX
 
 
 #define VK_WHOLE_SIZE           UINT64_MAX
@@ -1308,9 +1309,23 @@ typedef struct VkPhysicalDeviceQueueProperties_
     bool32_t                                    supportsTimestamps;
 } VkPhysicalDeviceQueueProperties;
 
+typedef struct VkMemoryType_
+{
+    VkMemoryPropertyFlags                       propertyFlags;              // Memory properties of this memory type
+    uint32_t                                    heapIndex;                  // Index of the memory heap allocations of this memory type are taken from
+} VkMemoryType;
+
+typedef struct VkMemoryHeap_
+{
+    VkDeviceSize                                size;                       // Available memory in the heap
+} VkMemoryHeap;
+
 typedef struct VkPhysicalDeviceMemoryProperties_
 {
-    bool32_t                                    supportsMigration;
+    uint32_t                                    memoryTypeCount;
+    VkMemoryType                                memoryTypes[VK_MAX_MEMORY_TYPES];
+    uint32_t                                    memoryHeapCount;
+    VkMemoryHeap                                memoryHeaps[VK_MAX_MEMORY_HEAPS];
 } VkPhysicalDeviceMemoryProperties;
 
 typedef struct VkMemoryAllocInfo_
@@ -1318,17 +1333,8 @@ typedef struct VkMemoryAllocInfo_
     VkStructureType                             sType;                      // Must be VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO
     const void*                                 pNext;                      // Pointer to next structure
     VkDeviceSize                                allocationSize;             // Size of memory allocation
-    VkMemoryPropertyFlags                       memProps;                   // Memory property flags
+    uint32_t                                    memoryTypeIndex;            // Index of the memory type to allocate from
 } VkMemoryAllocInfo;
-
-typedef struct VkMemoryRequirements_
-{
-    VkDeviceSize                                size;                       // Specified in bytes
-    VkDeviceSize                                alignment;                  // Specified in bytes
-    VkDeviceSize                                granularity;                // Granularity at which memory can be bound to resource sub-ranges specified in bytes (usually the page size)
-    VkMemoryPropertyFlags                       memPropsAllowed;            // Allowed memory property flags
-    VkMemoryPropertyFlags                       memPropsRequired;           // Required memory property flags
-} VkMemoryRequirements;
 
 typedef struct VkMappedMemoryRange_
 {
@@ -1338,6 +1344,14 @@ typedef struct VkMappedMemoryRange_
     VkDeviceSize                                offset;                     // Offset within the mapped memory the range starts from
     VkDeviceSize                                size;                       // Size of the range within the mapped memory
 } VkMappedMemoryRange;
+
+typedef struct VkMemoryRequirements_
+{
+    VkDeviceSize                                size;                       // Specified in bytes
+    VkDeviceSize                                alignment;                  // Specified in bytes
+    VkDeviceSize                                granularity;                // Granularity at which memory can be bound to resource sub-ranges specified in bytes (usually the page size)
+    uint32_t                                    memoryTypeBits;             // Bitfield of the allowed memory type indices into memoryTypes[] for this object
+} VkMemoryRequirements;
 
 typedef struct VkFormatProperties_
 {

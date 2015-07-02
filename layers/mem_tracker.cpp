@@ -58,6 +58,7 @@ static std::unordered_map<void *, struct devExts>     deviceExtMap;
 static std::unordered_map<void *, layer_data *> layer_data_map;
 static device_table_map mem_tracker_device_table_map;
 static instance_table_map mem_tracker_instance_table_map;
+static VkPhysicalDeviceMemoryProperties memProps;
 
 // TODO : This can be much smarter, using separate locks for separate global data
 static int globalLockInitialized = 0;
@@ -828,6 +829,9 @@ static void init_mem_tracker(
         loader_platform_thread_create_mutex(&globalLock);
         globalLockInitialized = 1;
     }
+
+    // Zero out memory property data
+    memset(&memProps, 0, sizeof(VkPhysicalDeviceMemoryProperties));
 }
 
 // hook DestroyInstance to remove tableInstanceMap entry
@@ -947,10 +951,20 @@ VK_LAYER_EXPORT VkResult VKAPI vkDestroyDevice(
     return result;
 }
 
-struct extProps {
-    uint32_t version;
-    const char * const name;
-};
+VK_LAYER_EXPORT VkResult VKAPI vkGetPhysicalDeviceMemoryProperties(
+    VkPhysicalDevice                  physicalDevice,
+    VkPhysicalDeviceMemoryProperties *pMemoryProperties)
+{
+    VkLayerInstanceDispatchTable *pInstanceTable = get_dispatch_table(mem_tracker_instance_table_map, physicalDevice);
+    VkResult result = pInstanceTable->GetPhysicalDeviceMemoryProperties(physicalDevice, pMemoryProperties);
+    if (result == VK_SUCCESS) {
+        // copy mem props to local var...
+        memcpy(&memProps, pMemoryProperties, sizeof(VkPhysicalDeviceMemoryProperties));
+    }
+    return result;
+}
+
+
 #define MEM_TRACKER_LAYER_EXT_ARRAY_SIZE 2
 static const VkExtensionProperties mtExts[MEM_TRACKER_LAYER_EXT_ARRAY_SIZE] = {
     {
@@ -1113,7 +1127,8 @@ VK_LAYER_EXPORT VkResult VKAPI vkMapMemory(
     // TODO : Track when memory is mapped
     loader_platform_thread_lock_mutex(&globalLock);
     MT_MEM_OBJ_INFO *pMemObj = get_mem_obj_info(mem);
-    if ((pMemObj->allocInfo.memProps & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT) == 0) {
+    if ((memProps.memoryTypes[pMemObj->allocInfo.memoryTypeIndex].propertyFlags &
+         VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT) == 0) {
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DEVICE_MEMORY, mem, 0, MEMTRACK_INVALID_STATE, "MEM",
                 "Mapping Memory without VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT set: mem obj %p", (void*)mem);
     }
@@ -2306,6 +2321,8 @@ VK_LAYER_EXPORT void* VKAPI vkGetInstanceProcAddr(
         return (void *) vkDestroyInstance;
     if (!strcmp(funcName, "vkCreateInstance"))
         return (void*) vkCreateInstance;
+    if (!strcmp(funcName, "vkGetPhysicalDeviceMemoryProperties"))
+        return (void*) vkGetPhysicalDeviceMemoryProperties;
     if (!strcmp(funcName, "vkGetPhysicalDeviceExtensionCount"))
         return (void*) vkGetGlobalExtensionCount;
     if (!strcmp(funcName, "vkGetPhysicalDeviceExtensionProperties"))

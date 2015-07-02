@@ -34,7 +34,7 @@
 VkResult intel_base_get_memory_requirements(struct intel_base *base, VkMemoryRequirements* pRequirements)
 {
     memset(pRequirements, 0, sizeof(VkMemoryRequirements));
-    pRequirements->memPropsAllowed = INTEL_MEMORY_PROPERTY_ALL;
+    pRequirements->memoryTypeBits = (1<< INTEL_MEMORY_TYPE_COUNT) - 1;
 
     return VK_SUCCESS;
 }

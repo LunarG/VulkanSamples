@@ -2346,12 +2346,6 @@ void PreAllocMemory(
         "vkAllocMemory parameter, VkStructureType pAllocInfo->sType, is unrecognized enumerator");
         return;
     }
-    if(!ValidateEnumerator((VkMemoryPropertyFlagBits)pAllocInfo->memProps))
-    {
-        std::string reason = "vkAllocMemory parameter, VkMemoryPropertyFlags pAllocInfo->memProps, is " + EnumeratorString((VkMemoryPropertyFlagBits)pAllocInfo->memProps);
-        log_msg(mdd(device), VK_DBG_REPORT_WARN_BIT, (VkObjectType)0, NULL, 0, 1, "PARAMCHECK", reason.c_str());
-        return;
-    }
 }
 
 void PostAllocMemory(
@@ -2876,18 +2870,6 @@ void PostGetObjectMemoryRequirements(
     {
         log_msg(mdd(device), VK_DBG_REPORT_WARN_BIT, (VkObjectType)0, NULL, 0, 1, "PARAMCHECK",
         "vkGetObjectMemoryRequirements parameter, VkMemoryRequirements* pMemoryRequirements, is null pointer");
-        return;
-    }
-    if(!ValidateEnumerator((VkMemoryPropertyFlagBits)pMemoryRequirements->memPropsAllowed))
-    {
-        std::string reason = "vkGetObjectMemoryRequirements parameter, VkMemoryPropertyFlags pMemoryRequirements->memPropsAllowed, is " + EnumeratorString((VkMemoryPropertyFlagBits)pMemoryRequirements->memPropsAllowed);
-        log_msg(mdd(device), VK_DBG_REPORT_WARN_BIT, (VkObjectType)0, NULL, 0, 1, "PARAMCHECK", reason.c_str());
-        return;
-    }
-    if(!ValidateEnumerator((VkMemoryPropertyFlagBits)pMemoryRequirements->memPropsRequired))
-    {
-        std::string reason = "vkGetObjectMemoryRequirements parameter, VkMemoryPropertyFlags pMemoryRequirements->memPropsRequired, is " + EnumeratorString((VkMemoryPropertyFlagBits)pMemoryRequirements->memPropsRequired);
-        log_msg(mdd(device), VK_DBG_REPORT_WARN_BIT, (VkObjectType)0, NULL, 0, 1, "PARAMCHECK", reason.c_str());
         return;
     }
 

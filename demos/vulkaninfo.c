@@ -696,7 +696,17 @@ static void app_gpu_dump_memory_props(const struct app_gpu *gpu)
     const VkPhysicalDeviceMemoryProperties *props = &gpu->memory_props;
 
     printf("VkPhysicalDeviceMemoryProperties\n");
-    printf("\tsupportsMigration = %u\n",                props->supportsMigration);
+    printf("\tmemoryTypeCount = %u\n",                props->memoryTypeCount);
+    for (uint32_t i = 0; i < props->memoryTypeCount; i++) {
+        printf("\tmemoryTypes[%u] : \n", i);
+        printf("\t\tpropertyFlags = %u\n", props->memoryTypes[i].propertyFlags);
+        printf("\t\theapIndex     = %u\n", props->memoryTypes[i].heapIndex);
+    }
+    printf("\tmemoryHeapCount = %u\n",                props->memoryHeapCount);
+    for (uint32_t i = 0; i < props->memoryHeapCount; i++) {
+        printf("\tmemoryHeaps[%u] : \n", i);
+        printf("\t\tsize = " PRINTF_SIZE_T_SPECIFIER "\n", props->memoryHeaps[i].size);
+    }
 }
 
 static void app_gpu_dump(const struct app_gpu *gpu)

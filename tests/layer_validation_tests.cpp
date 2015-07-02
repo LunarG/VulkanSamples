@@ -452,7 +452,7 @@ TEST_F(VkLayerTest, MapMemWithoutHostVisibleBit)
         .pNext          = NULL,
         .allocationSize = 0,
         // Introduce failure, do NOT set memProps to VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT
-        .memProps       = 0,
+        .memoryTypeIndex = 1,
     };
 
     err = vkCreateImage(m_device->device(), &image_create_info, &image);
@@ -504,23 +504,23 @@ TEST_F(VkLayerTest, BindInvalidMemory)
     const int32_t  tex_height      = 32;
 
     const VkImageCreateInfo image_create_info = {
-        .sType          = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
-        .pNext          = NULL,
-        .imageType      = VK_IMAGE_TYPE_2D,
-        .format         = tex_format,
-        .extent         = { tex_width, tex_height, 1 },
-        .mipLevels      = 1,
-        .arraySize      = 1,
-        .samples        = 1,
-        .tiling         = VK_IMAGE_TILING_LINEAR,
-        .usage          = VK_IMAGE_USAGE_SAMPLED_BIT,
-        .flags          = 0,
+        .sType           = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
+        .pNext           = NULL,
+        .imageType       = VK_IMAGE_TYPE_2D,
+        .format          = tex_format,
+        .extent          = { tex_width, tex_height, 1 },
+        .mipLevels       = 1,
+        .arraySize       = 1,
+        .samples         = 1,
+        .tiling          = VK_IMAGE_TILING_LINEAR,
+        .usage           = VK_IMAGE_USAGE_SAMPLED_BIT,
+        .flags           = 0,
     };
     VkMemoryAllocInfo mem_alloc = {
-        .sType          = VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO,
-        .pNext          = NULL,
-        .allocationSize = 0,
-        .memProps       = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
+        .sType           = VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO,
+        .pNext           = NULL,
+        .allocationSize  = 0,
+        .memoryTypeIndex = 0,
     };
 
     err = vkCreateImage(m_device->device(), &image_create_info, &image);
@@ -533,6 +533,9 @@ TEST_F(VkLayerTest, BindInvalidMemory)
     ASSERT_VK_SUCCESS(err);
 
     mem_alloc.allocationSize = mem_reqs.size;
+
+    err = m_device->gpu().set_memory_type(mem_reqs.memoryTypeBits, &mem_alloc, 0);
+    ASSERT_VK_SUCCESS(err);
 
     // allocate memory
     err = vkAllocMemory(m_device->device(), &mem_alloc, &mem);
@@ -572,23 +575,23 @@ TEST_F(VkLayerTest, FreeBoundMemory)
     const int32_t  tex_height      = 32;
 
     const VkImageCreateInfo image_create_info = {
-        .sType          = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
-        .pNext          = NULL,
-        .imageType      = VK_IMAGE_TYPE_2D,
-        .format         = tex_format,
-        .extent         = { tex_width, tex_height, 1 },
-        .mipLevels      = 1,
-        .arraySize      = 1,
-        .samples        = 1,
-        .tiling         = VK_IMAGE_TILING_LINEAR,
-        .usage          = VK_IMAGE_USAGE_SAMPLED_BIT,
-        .flags          = 0,
+        .sType           = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
+        .pNext           = NULL,
+        .imageType       = VK_IMAGE_TYPE_2D,
+        .format          = tex_format,
+        .extent          = { tex_width, tex_height, 1 },
+        .mipLevels       = 1,
+        .arraySize       = 1,
+        .samples         = 1,
+        .tiling          = VK_IMAGE_TILING_LINEAR,
+        .usage           = VK_IMAGE_USAGE_SAMPLED_BIT,
+        .flags           = 0,
     };
     VkMemoryAllocInfo mem_alloc = {
-        .sType          = VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO,
-        .pNext          = NULL,
-        .allocationSize = 0,
-        .memProps       = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
+        .sType           = VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO,
+        .pNext           = NULL,
+        .allocationSize  = 0,
+        .memoryTypeIndex = 0,
     };
 
     err = vkCreateImage(m_device->device(), &image_create_info, &image);
@@ -601,6 +604,9 @@ TEST_F(VkLayerTest, FreeBoundMemory)
     ASSERT_VK_SUCCESS(err);
 
     mem_alloc.allocationSize = mem_reqs.size;
+
+    err = m_device->gpu().set_memory_type(mem_reqs.memoryTypeBits, &mem_alloc, 0);
+    ASSERT_VK_SUCCESS(err);
 
     // allocate memory
     err = vkAllocMemory(m_device->device(), &mem_alloc, &mem);
@@ -641,23 +647,23 @@ TEST_F(VkLayerTest, RebindMemory)
     const int32_t  tex_height      = 32;
 
     const VkImageCreateInfo image_create_info = {
-        .sType          = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
-        .pNext          = NULL,
-        .imageType      = VK_IMAGE_TYPE_2D,
-        .format         = tex_format,
-        .extent         = { tex_width, tex_height, 1 },
-        .mipLevels      = 1,
-        .arraySize      = 1,
-        .samples        = 1,
-        .tiling         = VK_IMAGE_TILING_LINEAR,
-        .usage          = VK_IMAGE_USAGE_SAMPLED_BIT,
-        .flags          = 0,
+        .sType           = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
+        .pNext           = NULL,
+        .imageType       = VK_IMAGE_TYPE_2D,
+        .format          = tex_format,
+        .extent          = { tex_width, tex_height, 1 },
+        .mipLevels       = 1,
+        .arraySize       = 1,
+        .samples         = 1,
+        .tiling          = VK_IMAGE_TILING_LINEAR,
+        .usage           = VK_IMAGE_USAGE_SAMPLED_BIT,
+        .flags           = 0,
     };
     VkMemoryAllocInfo mem_alloc = {
-        .sType          = VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO,
-        .pNext          = NULL,
-        .allocationSize = 0,
-        .memProps       = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
+        .sType           = VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO,
+        .pNext           = NULL,
+        .allocationSize  = 0,
+        .memoryTypeIndex = 0,
     };
 
     err = vkCreateImage(m_device->device(), &image_create_info, &image);
@@ -670,6 +676,8 @@ TEST_F(VkLayerTest, RebindMemory)
     ASSERT_VK_SUCCESS(err);
 
     mem_alloc.allocationSize = mem_reqs.size;
+    err = m_device->gpu().set_memory_type(mem_reqs.memoryTypeBits, &mem_alloc, 0);
+    ASSERT_VK_SUCCESS(err);
 
     // allocate 2 memory objects
     err = vkAllocMemory(m_device->device(), &mem_alloc, &mem1);
@@ -711,23 +719,23 @@ TEST_F(VkLayerTest, BindMemoryToDestroyedObject)
     const int32_t  tex_height      = 32;
 
     const VkImageCreateInfo image_create_info = {
-        .sType          = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
-        .pNext          = NULL,
-        .imageType      = VK_IMAGE_TYPE_2D,
-        .format         = tex_format,
-        .extent         = { tex_width, tex_height, 1 },
-        .mipLevels      = 1,
-        .arraySize      = 1,
-        .samples        = 1,
-        .tiling         = VK_IMAGE_TILING_LINEAR,
-        .usage          = VK_IMAGE_USAGE_SAMPLED_BIT,
-        .flags          = 0,
+        .sType           = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
+        .pNext           = NULL,
+        .imageType       = VK_IMAGE_TYPE_2D,
+        .format          = tex_format,
+        .extent          = { tex_width, tex_height, 1 },
+        .mipLevels       = 1,
+        .arraySize       = 1,
+        .samples         = 1,
+        .tiling          = VK_IMAGE_TILING_LINEAR,
+        .usage           = VK_IMAGE_USAGE_SAMPLED_BIT,
+        .flags           = 0,
     };
     VkMemoryAllocInfo mem_alloc = {
-        .sType          = VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO,
-        .pNext          = NULL,
-        .allocationSize = 0,
-        .memProps       = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
+        .sType           = VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO,
+        .pNext           = NULL,
+        .allocationSize  = 0,
+        .memoryTypeIndex = 0,
     };
 
     err = vkCreateImage(m_device->device(), &image_create_info, &image);
@@ -740,6 +748,8 @@ TEST_F(VkLayerTest, BindMemoryToDestroyedObject)
     ASSERT_VK_SUCCESS(err);
 
     mem_alloc.allocationSize = mem_reqs.size;
+    err = m_device->gpu().set_memory_type(mem_reqs.memoryTypeBits, &mem_alloc, 0);
+    ASSERT_VK_SUCCESS(err);
 
     // Allocate memory
     err = vkAllocMemory(m_device->device(), &mem_alloc, &mem);
@@ -2026,7 +2036,11 @@ TEST_F(VkLayerTest, ThreadCmdBufferCollision)
     memset(&mem_info, 0, sizeof(mem_info));
     mem_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO;
     mem_info.allocationSize = mem_req.size;
-    mem_info.memProps = 0;
+    mem_info.memoryTypeIndex = 0;
+
+    err = m_device->gpu().set_memory_type(mem_req.memoryTypeBits, &mem_info, 0);
+    ASSERT_VK_SUCCESS(err);
+
     err = vkAllocMemory(device(), &mem_info, &event_mem);
     ASSERT_VK_SUCCESS(err);
 

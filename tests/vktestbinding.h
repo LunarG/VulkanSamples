@@ -66,7 +66,10 @@ class CmdBuffer;
 
 class PhysicalGpu {
 public:
-    explicit PhysicalGpu(VkPhysicalDevice gpu) : gpu_(gpu) {}
+    explicit PhysicalGpu(VkPhysicalDevice gpu) : gpu_(gpu)
+    {
+        memory_properties_ = memory_properties();
+    }
 
     const VkPhysicalDevice &obj() const { return gpu_; }
 
@@ -75,6 +78,7 @@ public:
     VkPhysicalDeviceMemoryProperties memory_properties() const;
     std::vector<VkPhysicalDeviceQueueProperties> queue_properties() const;
 
+    VkResult set_memory_type(const uint32_t type_bits, VkMemoryAllocInfo *info, const VkMemoryPropertyFlags properties) const;
 
     // vkGetGlobalExtensionProperties()
     std::vector<VkExtensionProperties> extensions() const;
@@ -86,6 +90,7 @@ private:
     void add_extension_dependencies(uint32_t dependency_count,
                                     VkExtensionProperties *depencency_props,
                                     std::vector<VkExtensionProperties> &ext_list);
+    VkPhysicalDeviceMemoryProperties memory_properties_;
     VkPhysicalDevice gpu_;
 };
 
@@ -307,8 +312,9 @@ public:
     // vkUnmapMemory()
     void unmap() const;
 
-    static VkMemoryAllocInfo alloc_info(const VkMemoryRequirements &reqs,
-                  const VkMemoryAllocInfo *next_info);
+    static VkMemoryAllocInfo alloc_info(const VkMemoryRequirements  &reqs,
+                                        const VkMemoryAllocInfo     *next_info);
+
 private:
     const Device* dev_;
 };
@@ -619,16 +625,17 @@ inline void Object::unmap() const
         primary_mem_->unmap();
 }
 
-inline VkMemoryAllocInfo GpuMemory::alloc_info(const VkMemoryRequirements &reqs,
-                                const VkMemoryAllocInfo *next_info)
+inline VkMemoryAllocInfo GpuMemory::alloc_info(const VkMemoryRequirements  &reqs,
+                                               const VkMemoryAllocInfo     *next_info)
 {
     VkMemoryAllocInfo info = {};
     info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO;
     if (next_info != NULL)
         info.pNext = (void *) next_info;
 
-    info.allocationSize = reqs.size;
-    info.memProps = reqs.memPropsRequired;
+    info.allocationSize  = reqs.size;
+    info.memoryTypeIndex = 0;
+
     return info;
 }
 

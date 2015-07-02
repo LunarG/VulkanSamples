@@ -757,8 +757,8 @@ TEST_F(VkCmdCopyBufferTest, RAWHazard)
     //        typedef struct VkEventCreateInfo_
     //        {
     //            VkStructureType                      sType;      // Must be VK_STRUCTURE_TYPE_EVENT_CREATE_INFO
-    //            const void*                             pNext;      // Pointer to next structure
-    //            VkFlags                               flags;      // Reserved
+    //            const void*                          pNext;      // Pointer to next structure
+    //            VkFlags                              flags;      // Reserved
     //        } VkEventCreateInfo;
     memset(&event_info, 0, sizeof(event_info));
     event_info.sType = VK_STRUCTURE_TYPE_EVENT_CREATE_INFO;
@@ -771,15 +771,14 @@ TEST_F(VkCmdCopyBufferTest, RAWHazard)
 
     if (mem_req.size) {
 
-        //        VkResult VKAPI vkAllocMemory(
-        //            VkDevice                                  device,
-        //            const VkMemoryAllocInfo*                pAllocInfo,
-        //            VkDeviceMemory*                             pMem);
-
         memset(&mem_info, 0, sizeof(mem_info));
         mem_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO;
         mem_info.allocationSize = mem_req.size;
-        mem_info.memProps = 0;
+        mem_info.memoryTypeIndex = 0;
+
+        err = dev_.gpu().set_memory_type(mem_req.memoryTypeBits, &mem_info, 0);
+        ASSERT_VK_SUCCESS(err);
+
         err = vkAllocMemory(dev_.obj(), &mem_info, &event_mem);
         ASSERT_VK_SUCCESS(err);
 

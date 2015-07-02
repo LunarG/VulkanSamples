@@ -53,7 +53,7 @@ static VkResult img_get_memory_requirements(struct intel_base *base, VkMemoryReq
 
     pRequirements->size = img->total_size;
     pRequirements->alignment = 4096;
-    pRequirements->memPropsAllowed = INTEL_MEMORY_PROPERTY_ALL;
+    pRequirements->memoryTypeBits = (1 << INTEL_MEMORY_TYPE_COUNT) - 1;
 
     return VK_SUCCESS;
 }

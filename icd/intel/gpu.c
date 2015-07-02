@@ -285,7 +285,22 @@ void intel_gpu_get_queue_props(const struct intel_gpu *gpu,
 void intel_gpu_get_memory_props(const struct intel_gpu *gpu,
                                 VkPhysicalDeviceMemoryProperties *props)
 {
-    props->supportsMigration = false;
+    memset(props, 0, sizeof(VkPhysicalDeviceMemoryProperties));
+    props->memoryTypeCount = INTEL_MEMORY_TYPE_COUNT;
+    props->memoryHeapCount = INTEL_MEMORY_HEAP_COUNT;
+
+    // For now, Intel will support one memory type
+    for (uint32_t i = 0; i < props->memoryTypeCount; i++) {
+        assert(props->memoryTypeCount == 1);
+        props->memoryTypes[i].propertyFlags = INTEL_MEMORY_PROPERTY_ALL;
+        props->memoryTypes[i].heapIndex     = i;
+    }
+
+    // For now, Intel will support a single heap with all available memory
+    for (uint32_t i = 0; i < props->memoryHeapCount; i++) {
+        assert(props->memoryHeapCount == 1);
+        props->memoryHeaps[0].size = INTEL_MEMORY_HEAP_SIZE;
+    }
 }
 
 int intel_gpu_get_max_threads(const struct intel_gpu *gpu,

@@ -346,7 +346,7 @@ static struct intel_img *x11_swap_chain_create_persistent_image(struct intel_x11
     memset(&mem_info, 0, sizeof(mem_info));
     mem_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO;
     mem_info.allocationSize = img->total_size;
-    mem_info.memProps =  0;
+    mem_info.memoryTypeIndex = 0;
 
     ret = intel_mem_alloc(dev, &mem_info, &mem);
     if (ret != VK_SUCCESS) {

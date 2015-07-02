@@ -94,9 +94,9 @@ static VkResult event_get_memory_requirements(struct intel_base *base,
                                  VkMemoryRequirements *pRequirements)
 {
     /* use dword aligned to 64-byte boundaries */
-    pRequirements->size = 4;
-    pRequirements->alignment = 64;
-    pRequirements->memPropsAllowed = INTEL_MEMORY_PROPERTY_ALL;
+    pRequirements->size           = 4;
+    pRequirements->alignment      = 64;
+    pRequirements->memoryTypeBits = (1 << INTEL_MEMORY_TYPE_COUNT) - 1;
 
     return VK_SUCCESS;
 }

@@ -124,6 +124,7 @@ VkPhysicalDeviceMemoryProperties PhysicalGpu::memory_properties() const
 
     EXPECT(vkGetPhysicalDeviceMemoryProperties(gpu_, &info) == VK_SUCCESS);
 
+
     return info;
 }
 
@@ -159,6 +160,24 @@ std::vector<VkExtensionProperties> PhysicalGpu::extensions() const
     }
 
     return exts;
+}
+
+VkResult PhysicalGpu::set_memory_type(const uint32_t type_bits, VkMemoryAllocInfo *info, const VkFlags properties) const
+{
+     uint32_t type_mask = type_bits;
+     // Search memtypes to find first index with those properties
+     for (uint32_t i = 0; i < 32; i++) {
+         if ((type_mask & 1) == 1) {
+             // Type is available, does it match user properties?
+             if ((memory_properties_.memoryTypes[i].propertyFlags & properties) == properties) {
+                 info->memoryTypeIndex = i;
+                 return VK_SUCCESS;
+             }
+         }
+         type_mask >>= 1;
+     }
+     // No memory types matched, return failure
+     return VK_UNSUPPORTED;
 }
 
 void BaseObject::init(VkObject obj, VkObjectType type, bool own)
@@ -239,6 +258,7 @@ void Object::alloc_memory()
 
     for (int i = 0; i < mem_reqs.size(); i++) {
         info = GpuMemory::alloc_info(mem_reqs[i], next_info);
+        dev_->gpu().set_memory_type(mem_reqs[i].memoryTypeBits, &info, 0);
         primary_mem_ = &internal_mems_[i];
         internal_mems_[i].init(*dev_, info);
         bind_memory(internal_mems_[i], 0);
@@ -256,8 +276,8 @@ void Object::alloc_memory(VkMemoryPropertyFlags &reqs)
     VkMemoryAllocInfo info, *next_info = NULL;
 
     for (int i = 0; i < mem_reqs.size(); i++) {
-        mem_reqs[i].memPropsRequired |= reqs;
         info = GpuMemory::alloc_info(mem_reqs[i], next_info);
+        dev_->gpu().set_memory_type(mem_reqs[i].memoryTypeBits, &info, reqs);
         primary_mem_ = &internal_mems_[i];
         internal_mems_[i].init(*dev_, info);
         bind_memory(internal_mems_[i], 0);

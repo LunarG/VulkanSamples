@@ -303,6 +303,7 @@ struct demo {
     uint32_t graphics_queue_node_index;
     VkPhysicalDeviceProperties gpu_props;
     VkPhysicalDeviceQueueProperties *queue_props;
+    VkPhysicalDeviceMemoryProperties memory_properties;
 
     VkFramebuffer framebuffer;
     int width, height;
@@ -369,6 +370,23 @@ struct demo {
 
     uint32_t current_buffer;
 };
+
+static VkResult memory_type_from_properties(struct demo *demo, uint32_t typeBits, VkFlags properties, uint32_t *typeIndex)
+{
+     // Search memtypes to find first index with those properties
+     for (uint32_t i = 0; i < 32; i++) {
+         if ((typeBits & 1) == 1) {
+             // Type is available, does it match user properties?
+             if ((demo->memory_properties.memoryTypes[i].propertyFlags & properties) == properties) {
+                 *typeIndex = i;
+                 return VK_SUCCESS;
+             }
+         }
+         typeBits >>= 1;
+     }
+     // No memory types matched, return failure
+     return VK_UNSUPPORTED;
+}
 
 static void demo_flush_init_cmd(struct demo *demo)
 {
@@ -672,7 +690,7 @@ static void demo_prepare_depth(struct demo *demo)
         .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO,
         .pNext = NULL,
         .allocationSize = 0,
-        .memProps = VK_MEMORY_PROPERTY_DEVICE_ONLY,
+        .memoryTypeIndex = 0,
     };
     VkDepthStencilViewCreateInfo view = {
         .sType = VK_STRUCTURE_TYPE_DEPTH_STENCIL_VIEW_CREATE_INFO,
@@ -696,7 +714,13 @@ static void demo_prepare_depth(struct demo *demo)
 
     err = vkGetObjectMemoryRequirements(demo->device,
                     VK_OBJECT_TYPE_IMAGE, demo->depth.image, &mem_reqs);
-      mem_alloc.allocationSize = mem_reqs.size;
+
+    mem_alloc.allocationSize = mem_reqs.size;
+    err = memory_type_from_properties(demo,
+                                      mem_reqs.memoryTypeBits,
+                                      VK_MEMORY_PROPERTY_DEVICE_ONLY,
+                                      &mem_alloc.memoryTypeIndex);
+    assert(!err);
 
     /* allocate memory */
     err = vkAllocMemory(demo->device, &mem_alloc, &demo->depth.mem);
@@ -912,7 +936,7 @@ static void demo_prepare_texture_image(struct demo *demo,
         .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO,
         .pNext = NULL,
         .allocationSize = 0,
-        .memProps = mem_props,
+        .memoryTypeIndex = 0,
     };
 
     VkMemoryRequirements mem_reqs;
@@ -926,6 +950,9 @@ static void demo_prepare_texture_image(struct demo *demo,
     assert(!err);
 
     mem_alloc.allocationSize = mem_reqs.size;
+
+    err = memory_type_from_properties(demo, mem_reqs.memoryTypeBits, mem_props, &mem_alloc.memoryTypeIndex);
+    assert(!err);
 
     /* allocate memory */
     err = vkAllocMemory(demo->device, &mem_alloc,
@@ -1091,7 +1118,7 @@ void demo_prepare_cube_data_buffer(struct demo *demo)
         .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO,
         .pNext = NULL,
         .allocationSize = 0,
-        .memProps = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
+        .memoryTypeIndex = 0,
     };
     VkMemoryRequirements mem_reqs;
     size_t mem_reqs_size = sizeof(VkMemoryRequirements);
@@ -1128,6 +1155,11 @@ void demo_prepare_cube_data_buffer(struct demo *demo)
     assert(!err && mem_reqs_size == sizeof(mem_reqs));
 
     alloc_info.allocationSize = mem_reqs.size;
+    err = memory_type_from_properties(demo,
+                                      mem_reqs.memoryTypeBits,
+                                      VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
+                                      &alloc_info.memoryTypeIndex);
+    assert(!err);
 
     err = vkAllocMemory(demo->device, &alloc_info, &(demo->uniform_data.mem));
     assert(!err);
@@ -2036,6 +2068,10 @@ static void demo_init_vk(struct demo *demo)
 
     demo->quit = false;
     demo->curFrame = 0;
+
+    // Get Memory information and properties
+    err = vkGetPhysicalDeviceMemoryProperties(demo->gpu, &demo->memory_properties);
+    assert(!err);
 }
 
 static void demo_init_connection(struct demo *demo)

@@ -42,9 +42,9 @@ static VkResult query_get_memory_requirements(struct intel_base *base,
 {
     struct intel_query *query = intel_query_from_base(base);
 
-    pRequirements->size = query->slot_stride * query->slot_count;
-    pRequirements->alignment = 64;
-    pRequirements->memPropsAllowed = INTEL_MEMORY_PROPERTY_ALL;
+    pRequirements->size           = query->slot_stride * query->slot_count;
+    pRequirements->alignment      = 64;
+    pRequirements->memoryTypeBits = (1 << INTEL_MEMORY_TYPE_COUNT) - 1;
 
     return VK_SUCCESS;
 }

@@ -465,9 +465,9 @@ static VkResult pipeline_get_memory_requirements(struct intel_base *base,
 {
     struct intel_pipeline *pipeline = intel_pipeline_from_base(base);
 
-    pRequirements->size = pipeline->scratch_size;
-    pRequirements->alignment = 1024;
-    pRequirements->memPropsAllowed = INTEL_MEMORY_PROPERTY_ALL;
+    pRequirements->size           = pipeline->scratch_size;
+    pRequirements->alignment      = 1024;
+    pRequirements->memoryTypeBits = (1 << INTEL_MEMORY_TYPE_COUNT) - 1;
 
     return VK_SUCCESS;
 }
