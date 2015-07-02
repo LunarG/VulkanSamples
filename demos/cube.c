@@ -1199,9 +1199,9 @@ static void demo_prepare_descriptor_layout(struct demo *demo)
     assert(!err);
 }
 
-static VkShader demo_prepare_shader(struct demo *demo,
+static VkShader demo_prepare_shader(struct demo* demo,
                                       VkShaderStage stage,
-                                      const void *code,
+                                      const void* code,
                                       size_t size)
 {
     VkShaderModuleCreateInfo moduleCreateInfo;
@@ -1216,6 +1216,7 @@ static VkShader demo_prepare_shader(struct demo *demo,
 
     shaderCreateInfo.sType = VK_STRUCTURE_TYPE_SHADER_CREATE_INFO;
     shaderCreateInfo.pNext = NULL;
+    shaderCreateInfo.pName = "main";
 
     if (!demo->use_glsl) {
         moduleCreateInfo.codeSize = size;
