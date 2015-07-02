@@ -44,13 +44,21 @@
 #endif
 
 #define MAX_EXTENSION_NAME_SIZE 255
-#define MAX_LAYER_LIBRARIES 64
 #define MAX_GPUS_PER_ICD 16
 
 enum extension_origin {
     VK_EXTENSION_ORIGIN_ICD,
     VK_EXTENSION_ORIGIN_LAYER,
     VK_EXTENSION_ORIGIN_LOADER
+};
+
+enum layer_type {
+    VK_LAYER_TYPE_DEVICE_EXPLICIT,
+    VK_LAYER_TYPE_INSTANCE_EXPLICIT,
+    VK_LAYER_TYPE_GLOBAL_EXPLICIT,   // both instance and device layer
+    VK_LAYER_TYPE_DEVICE_IMPLICIT,
+    VK_LAYER_TYPE_INSTANCE_IMPLICIT,
+    VK_LAYER_TYPE_GLOBAL_IMPLICIT,   // both instance and device layer
 };
 
 struct loader_extension_property {
@@ -77,18 +85,40 @@ struct loader_extension_list {
     struct loader_extension_property *list;
 };
 
-struct loader_scanned_layers {
+struct loader_name_value {
+    char *name;
+    char *value;
+};
+
+struct loader_lib_info {
     char *lib_name;
+    uint32_t ref_count;
+    loader_platform_dl_handle lib_handle;
+};
 
-    /* cache of global extensions for a specific layer */
-    struct loader_extension_list global_extension_list;
+struct loader_layer_functions {
+    PFN_vkGetInstanceProcAddr get_instance_proc_addr;
+    PFN_vkGetDeviceProcAddr get_device_proc_addr;
+};
 
-    bool physical_device_extensions_supported;
-    /*
-     * cache of device extensions for a specific layer,
-     * filled in at CreateInstance time
-     */
-    struct loader_extension_list physical_device_extension_list;
+struct loader_layer_properties {
+    char *name;
+    enum layer_type type;
+    struct loader_lib_info lib_info;
+    char *abi_versions;
+    char *impl_version;
+    char *description;
+    struct loader_layer_functions functions;
+    struct loader_extension_list instance_extension_list;
+    struct loader_extension_list device_extension_list;
+    struct loader_name_value disable_env_var;
+    struct loader_name_value enable_env_var;
+};
+
+struct loader_layer_list {
+    size_t capacity;
+    uint32_t count;
+    struct loader_layer_properties *list;
 };
 
 /* per CreateDevice structure */
@@ -222,16 +252,6 @@ struct loader_instance {
     VkLayerDbgFunctionNode *DbgFunctionHead;
 };
 
-static inline struct loader_instance *loader_instance(VkInstance instance) {
-    return (struct loader_instance *) instance;
-}
-
-struct loader_lib_info {
-    const char *lib_name;
-    uint32_t ref_count;
-    loader_platform_dl_handle lib_handle;
-};
-
 struct loader_struct {
     struct loader_instance *instances;
     struct loader_scanned_icds *scanned_icd_list;
@@ -241,10 +261,7 @@ struct loader_struct {
 
     char *layer_dirs;
 
-    /* TODO: eliminate fixed limit */
-    unsigned int scanned_layer_count;   // indicate number of scanned layers
-    size_t scanned_ext_list_capacity;
-    struct loader_scanned_layers scanned_layers[MAX_LAYER_LIBRARIES];
+    struct loader_layer_list scanned_layers;
 
     /* Keep track of all the extensions available via GetGlobalExtensionProperties */
     struct loader_extension_list global_extensions;
@@ -273,6 +290,10 @@ struct loader_scanned_icds {
      */
     struct loader_extension_list device_extension_list;
 };
+
+static inline struct loader_instance *loader_instance(VkInstance instance) {
+    return (struct loader_instance *) instance;
+}
 
 static inline void loader_set_dispatch(VkObject obj, const void *data)
 {
@@ -391,7 +412,7 @@ void loader_destroy_ext_list(struct loader_extension_list *ext_info);
 
 bool loader_is_extension_scanned(const VkExtensionProperties *ext_prop);
 void loader_icd_scan(void);
-void layer_lib_scan(void);
+void loader_layer_scan(void);
 void loader_coalesce_extensions(void);
 
 struct loader_icd * loader_get_icd(const VkPhysicalDevice gpu,

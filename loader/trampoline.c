@@ -47,7 +47,7 @@ LOADER_EXPORT VkResult VKAPI vkCreateInstance(
     loader_platform_thread_once(&once_icd, loader_icd_scan);
 
     /* get layer libraries in a single-threaded manner */
-    loader_platform_thread_once(&once_layer, layer_lib_scan);
+    loader_platform_thread_once(&once_layer, loader_layer_scan);
 
     /* merge any duplicate extensions */
     loader_platform_thread_once(&once_exts, loader_coalesce_extensions);

@@ -381,7 +381,7 @@ static void loader_get_global_extensions(
 static void loader_get_physical_device_layer_extensions(
         struct loader_instance *ptr_instance,
         VkPhysicalDevice physical_device,
-        const uint32_t layer_index,
+        const struct loader_layer_properties *layer_props,
         struct loader_extension_list *ext_list)
 {
     uint32_t i, count;
@@ -393,12 +393,12 @@ static void loader_get_physical_device_layer_extensions(
     PFN_vkGPA ext_get_proc_addr;
     PFN_vkGetDeviceProcAddr get_device_proc_addr;
 
-    if (!loader.scanned_layers[layer_index].physical_device_extensions_supported) {
+    if (layer_props->device_extension_list.count == 0) {
         return;
     }
 
     ext_props.origin = VK_EXTENSION_ORIGIN_LAYER;
-    ext_props.lib_name = loader.scanned_layers[layer_index].lib_name;
+    ext_props.lib_name = layer_props->lib_info.lib_name;
     char funcStr[MAX_EXTENSION_NAME_SIZE+1];  // add one character for 0 termination
 
     lib_handle = loader_add_layer_lib("device", &ext_props);
@@ -420,7 +420,7 @@ static void loader_get_physical_device_layer_extensions(
                     if ((ext_get_proc_addr = (PFN_vkGPA) loader_platform_get_proc_address(lib_handle, funcStr)) == NULL)
                         ext_get_proc_addr = get_device_proc_addr;
                     ext_props.get_proc_addr = ext_get_proc_addr;
-                    ext_props.lib_name = loader.scanned_layers[layer_index].lib_name;
+                    ext_props.lib_name = layer_props->lib_info.lib_name;
                     loader_log(VK_DBG_REPORT_DEBUG_BIT, 0,
                                "PhysicalDevice Extension: %s: %s", ext_props.info.name, ext_props.info.description);
                     loader_add_to_ext_list(ext_list, 1, &ext_props);
@@ -587,10 +587,10 @@ void loader_coalesce_extensions(void)
     };
 
     //Traverse layers list adding non-duplicate extensions to the list
-    for (i = 0; i < loader.scanned_layer_count; i++) {
+    for (i = 0; i < loader.scanned_layers.count; i++) {
         loader_add_to_ext_list(&loader.global_extensions,
-                               loader.scanned_layers[i].global_extension_list.count,
-                               loader.scanned_layers[i].global_extension_list.list);
+                               loader.scanned_layers.list[i].instance_extension_list.count,
+                               loader.scanned_layers.list[i].instance_extension_list.list);
     }
 
     // Traverse loader's extensions, adding non-duplicate extensions to the list
@@ -1200,7 +1200,7 @@ void loader_icd_scan(void)
 }
 
 
-void layer_lib_scan(void)
+void loader_layer_scan(void)
 {
     const char *p, *next;
     char *libPaths = NULL;
@@ -1255,14 +1255,28 @@ void layer_lib_scan(void)
 #endif // WIN32
     libPaths = loader.layer_dirs;
 
-    /* cleanup any previously scanned libraries */
-    for (i = 0; i < loader.scanned_layer_count; i++) {
-        if (loader.scanned_layers[i].lib_name != NULL)
-            free(loader.scanned_layers[i].lib_name);
-        loader_destroy_ext_list(&loader.scanned_layers[i].global_extension_list);
-        loader.scanned_layers[i].lib_name = NULL;
+    if (loader.scanned_layers.capacity == 0) {
+        loader.scanned_layers.list = malloc(sizeof(struct loader_layer_properties) * 64);
+        if (loader.scanned_layers.list == NULL) {
+            //TODO ERR log
+            return;
+        }
+        memset(loader.scanned_layers.list, 0, sizeof(struct loader_layer_properties) * 64);
+        loader.scanned_layers.capacity = sizeof(struct loader_layer_properties) * 64;
     }
-    loader.scanned_layer_count = 0;
+    else {
+        /* cleanup any previously scanned libraries */
+        //TODO make sure everything is cleaned up properly
+        for (i = 0; i < loader.scanned_layers.count; i++) {
+            if (loader.scanned_layers.list[i].lib_info.lib_name != NULL)
+                free(loader.scanned_layers.list[i].lib_info.lib_name);
+            free(loader.scanned_layers.list[i].name);
+            loader_destroy_ext_list(&loader.scanned_layers.list[i].instance_extension_list);
+            loader_destroy_ext_list(&loader.scanned_layers.list[i].device_extension_list);
+            loader.scanned_layers.list[i].lib_info.lib_name = NULL;
+        }
+        loader.scanned_layers.count = 0;
+    }
     count = 0;
 
     for (p = libPaths; *p; p = next) {
@@ -1307,12 +1321,15 @@ void layer_lib_scan(void)
                         loader_log(VK_DBG_REPORT_DEBUG_BIT, 0,
                                    "Opened library: %s", temp_str);
 
-                        /* TODO: Remove fixed count */
-                        if (count == MAX_LAYER_LIBRARIES) {
-                            loader_log(VK_DBG_REPORT_ERROR_BIT, 0,
-                                       "%s ignored: max layer libraries exceed",
-                                       temp_str);
-                            break;
+                        if (count * sizeof(struct loader_layer_properties) >= loader.scanned_layers.capacity) {
+                            loader.scanned_layers.list = realloc(loader.scanned_layers.list,
+                                        loader.scanned_layers.capacity * 2);
+                            if (loader.scanned_layers.list == NULL) {
+                                loader_log(VK_DBG_REPORT_ERROR_BIT, 0,
+                                       "realloc failed for scanned layers");
+                                break;
+                            }
+                            loader.scanned_layers.capacity *= 2;
                         }
 
                         fp_get_count = loader_platform_get_proc_address(handle, "vkGetGlobalExtensionCount");
@@ -1326,32 +1343,25 @@ void layer_lib_scan(void)
                             continue;
                         }
 
-                        loader.scanned_layers[count].lib_name =
+                        loader.scanned_layers.list[count].lib_info.lib_name =
                                 malloc(strlen(temp_str) + 1);
-                        if (loader.scanned_layers[count].lib_name == NULL) {
+                        if (loader.scanned_layers.list[count].lib_info.lib_name == NULL) {
                             loader_log(VK_DBG_REPORT_ERROR_BIT, 0, "%s ignored: out of memory", temp_str);
                             break;
                         }
 
-                        strcpy(loader.scanned_layers[count].lib_name, temp_str);
+                        strcpy(loader.scanned_layers.list[count].lib_info.lib_name, temp_str);
 
                         loader_log(VK_DBG_REPORT_DEBUG_BIT, 0, "Collecting global extensions for %s", temp_str);
                         loader_get_global_extensions(
                                     fp_get_count,
                                     fp_get_props,
                                     NULL,
-                                    loader.scanned_layers[count].lib_name,
+                                    loader.scanned_layers.list[count].lib_info.lib_name,
                                     handle,
                                     VK_EXTENSION_ORIGIN_LAYER,
-                                    &loader.scanned_layers[count].global_extension_list);
+                                    &loader.scanned_layers.list[count].instance_extension_list);
 
-                        fp_get_count = loader_platform_get_proc_address(handle,
-                                                                      "vkGetPhysicalDeviceExtensionCount");
-                        fp_get_props = loader_platform_get_proc_address(handle,
-                                                                      "vkGetPhysicalDeviceExtensionProperties");
-                        if (fp_get_props && fp_get_count) {
-                            loader.scanned_layers[count].physical_device_extensions_supported = true;
-                        }
 
                         count++;
                         loader_platform_close_library(handle);
@@ -1360,13 +1370,11 @@ void layer_lib_scan(void)
 
                 dent = readdir(curdir);
             } // while (dir_entry)
-            if (count == MAX_LAYER_LIBRARIES)
-                break;
             closedir(curdir);
         } // if (curdir))
     } // for (libpaths)
 
-    loader.scanned_layer_count = count;
+    loader.scanned_layers.count = count;
 }
 
 static void* VKAPI loader_gpa_instance_internal(VkInstance inst, const char * pName)
@@ -1443,7 +1451,7 @@ static loader_platform_dl_handle loader_add_layer_lib(
     my_lib = &new_layer_lib_list[loader.loaded_layer_lib_count];
 
     /* NOTE: We require that the extension property be immutable */
-    my_lib->lib_name = ext_prop->lib_name;
+    my_lib->lib_name = (char *) ext_prop->lib_name;
     my_lib->ref_count = 0;
     my_lib->lib_handle = NULL;
 
@@ -1989,8 +1997,12 @@ VkResult loader_init_physical_device_info(
                         }
 
                         // Traverse layers list adding non-duplicate extensions to the list
-                        for (uint32_t l = 0; l < loader.scanned_layer_count; l++) {
-                            loader_get_physical_device_layer_extensions(ptr_instance, icd->gpus[i], l, &icd->device_extension_cache[i]);
+                        for (uint32_t l = 0; l < loader.scanned_layers.count; l++) {
+                            loader_get_physical_device_layer_extensions(
+                                                ptr_instance,
+                                                icd->gpus[i],
+                                                &loader.scanned_layers.list[i],
+                                                &icd->device_extension_cache[i]);
                         }
                     }
                 }
@@ -2309,7 +2321,7 @@ LOADER_EXPORT VkResult VKAPI vkGetGlobalExtensionCount(
     loader_platform_thread_once(&once_icd, loader_icd_scan);
 
     /* get layer libraries in a single-threaded manner */
-    loader_platform_thread_once(&once_layer, layer_lib_scan);
+    loader_platform_thread_once(&once_layer, loader_layer_scan);
 
     /* merge any duplicate extensions */
     loader_platform_thread_once(&once_exts, loader_coalesce_extensions);
@@ -2329,7 +2341,7 @@ LOADER_EXPORT VkResult VKAPI vkGetGlobalExtensionProperties(
     loader_platform_thread_once(&once_icd, loader_icd_scan);
 
     /* get layer libraries in a single-threaded manner */
-    loader_platform_thread_once(&once_layer, layer_lib_scan);
+    loader_platform_thread_once(&once_layer, loader_layer_scan);
 
     /* merge any duplicate extensions */
     loader_platform_thread_once(&once_exts, loader_coalesce_extensions);
