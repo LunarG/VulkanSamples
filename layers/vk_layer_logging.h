@@ -33,8 +33,8 @@
 #include <stdbool.h>
 #include <unordered_map>
 #include "vk_layer.h"
-#include "layer_data.h"
-#include "layers_table.h"
+#include "vk_layer_data.h"
+#include "vk_layer_table.h"
 
 typedef struct _debug_report_data {
     VkLayerDbgFunctionNode *g_pDbgFunctionHead;

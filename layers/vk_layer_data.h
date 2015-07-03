@@ -29,7 +29,7 @@
 #define LAYER_DATA_H
 
 #include <unordered_map>
-#include "layers_table.h"
+#include "vk_layer_table.h"
 
 template<typename DATA_T>
 DATA_T *get_my_data_ptr(void *data_key,

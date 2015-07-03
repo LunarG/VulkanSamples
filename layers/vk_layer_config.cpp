@@ -28,7 +28,7 @@
 #include <string.h>
 #include <vk_layer.h>
 #include "loader_platform.h"
-#include "layers_config.h"
+#include "vk_layer_config.h"
 // The following is #included again to catch certain OS-specific functions
 // being used:
 #include "loader_platform.h"

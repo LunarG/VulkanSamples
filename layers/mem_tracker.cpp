@@ -36,13 +36,13 @@ using namespace std;
 #include "vk_dispatch_table_helper.h"
 #include "vk_struct_string_helper_cpp.h"
 #include "mem_tracker.h"
-#include "layers_config.h"
+#include "vk_layer_config.h"
 // The following is #included again to catch certain OS-specific functions
 // being used:
 #include "loader_platform.h"
-#include "layers_table.h"
-#include "layer_data.h"
-#include "layer_logging.h"
+#include "vk_layer_table.h"
+#include "vk_layer_data.h"
+#include "vk_layer_logging.h"
  static LOADER_PLATFORM_THREAD_ONCE_DECLARATION(g_initOnce);
 
 typedef struct _layer_data {

@@ -32,9 +32,9 @@
 #include "loader_platform.h"
 #include "vk_dispatch_table_helper.h"
 #include "vk_layer.h"
-#include "layers_config.h"
-#include "layers_msg.h"
-#include "layers_table.h"
+#include "vk_layer_config.h"
+#include "vk_layer_msg.h"
+#include "vk_layer_table.h"
 #include "vk_enum_string_helper.h"
 #include "shader_checker.h"
 // The following is #included again to catch certain OS-specific functions

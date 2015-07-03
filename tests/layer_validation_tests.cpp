@@ -2,7 +2,7 @@
 #include "vk_debug_report_lunarg.h"
 #include "gtest-1.7.0/include/gtest/gtest.h"
 #include "vkrenderframework.h"
-#include "layers_config.h"
+#include "vk_layer_config.h"
 
 #define GLM_FORCE_RADIANS
 #include "glm/glm.hpp"

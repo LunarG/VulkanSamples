@@ -40,11 +40,11 @@ using namespace std;
 #include "loader_platform.h"
 #include "vk_dispatch_table_helper.h"
 #include "vk_struct_string_helper_cpp.h"
-#include "layers_config.h"
+#include "vk_layer_config.h"
 // The following is #included again to catch certain OS-specific functions
 // being used:
 #include "loader_platform.h"
-#include "layers_table.h"
+#include "vk_layer_table.h"
 
 
 struct devExts {

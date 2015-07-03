@@ -39,16 +39,16 @@
 #endif
 #include "vk_struct_size_helper.h"
 #include "draw_state.h"
-#include "layers_config.h"
+#include "vk_layer_config.h"
 #include "vk_debug_marker_layer.h"
 // The following is #included again to catch certain OS-specific functions
 // being used:
 #include "loader_platform.h"
-#include "layers_msg.h"
-#include "layers_table.h"
-#include "layers_debug_marker_table.h"
-#include "layer_data.h"
-#include "layer_logging.h"
+#include "vk_layer_msg.h"
+#include "vk_layer_table.h"
+#include "vk_layer_debug_marker_table.h"
+#include "vk_layer_data.h"
+#include "vk_layer_logging.h"
 
 typedef struct _layer_data {
     debug_report_data *report_data;
