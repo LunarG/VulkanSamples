@@ -47,6 +47,7 @@ typedef enum _MEM_TRACK_ERROR
     MEMTRACK_RESET_CB_WHILE_IN_FLIGHT,      // vkResetCommandBuffer() called on a CB that hasn't completed
     MEMTRACK_INVALID_FENCE_STATE,           // Invalid Fence State signaled or used
     MEMTRACK_REBIND_OBJECT,                 // Non-sparse object bindings are immutable
+    MEMTRACK_INVALID_USAGE_FLAG,            // Usage flags specified at image/buffer create conflict w/ use of object
 } MEM_TRACK_ERROR;
 
 /*
@@ -107,6 +108,7 @@ struct MT_OBJ_INFO {
         VkSamplerCreateInfo                sampler_create_info;
         VkFenceCreateInfo                  fence_create_info;
         VkSwapChainCreateInfoWSI           swap_chain_create_info;
+        VkBufferCreateInfo                 buffer_create_info;
     } create_info;
     char object_name[64];
 };

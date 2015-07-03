@@ -828,6 +828,56 @@ TEST_F(VkLayerTest, ResetUnsignaledFence)
     }
 
 }
+
+TEST_F(VkLayerTest, InvalidUsageBits)
+{
+    // Initiate Draw w/o a PSO bound
+    VkFlags         msgFlags;
+    std::string     msgString;
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+    m_errorMonitor->ClearState();
+    VkCommandBufferObj cmdBuffer(m_device);
+    BeginCommandBuffer(cmdBuffer);
+
+    const VkExtent3D e3d = {
+        .width = 128,
+        .height = 128,
+        .depth = 1,
+    };
+    const VkImageCreateInfo ici = {
+        .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
+        .pNext = NULL,
+        .imageType = VK_IMAGE_TYPE_2D,
+        .format = VK_FORMAT_D32_SFLOAT_S8_UINT,
+        .extent = e3d,
+        .mipLevels = 1,
+        .arraySize = 1,
+        .samples = 1,
+        .tiling = VK_IMAGE_TILING_LINEAR,
+        .usage = 0, // Not setting VK_IMAGE_USAGE_DEPTH_STENCIL_BIT
+        .flags = 0,
+    };
+
+    VkImage dsi;
+    vkCreateImage(m_device->device(), &ici, &dsi);
+    VkDepthStencilView dsv;
+    const VkDepthStencilViewCreateInfo dsvci = {
+        .sType = VK_STRUCTURE_TYPE_DEPTH_STENCIL_VIEW_CREATE_INFO,
+        .pNext = NULL,
+        .image = dsi,
+        .mipLevel = 0,
+        .baseArraySlice = 0,
+        .arraySize = 1,
+        .flags = 0,
+    };
+    vkCreateDepthStencilView(m_device->device(), &dsvci, &dsv);
+    msgFlags = m_errorMonitor->GetState(&msgString);
+    ASSERT_TRUE(msgFlags & VK_DBG_REPORT_ERROR_BIT) << "Did not receive error after attempting to create DSView w/ image lacking USAGE_DS_BIT flag";
+    if (!strstr(msgString.c_str(),"Invalid usage flag for image ")) {
+        FAIL() << "Error received was not 'Invalid usage flag for image...'";
+    }
+}
 #endif
 #if OBJ_TRACKER_TESTS
 TEST_F(VkLayerTest, RasterStateNotBound)

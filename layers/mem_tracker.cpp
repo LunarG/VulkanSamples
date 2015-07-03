@@ -114,9 +114,10 @@ static void delete_queue_info_list(
 }
 
 static void add_swap_chain_info(
-    const VkSwapChainWSI swapChain)
+    const VkSwapChainWSI swapChain, const VkSwapChainCreateInfoWSI* pCI)
 {
     MT_SWAP_CHAIN_INFO* pInfo = new MT_SWAP_CHAIN_INFO;
+    memcpy(&pInfo->createInfo, pCI, sizeof(VkSwapChainCreateInfoWSI));
     swapChainMap[swapChain] = pInfo;
 }
 
@@ -249,7 +250,49 @@ static void retire_device_fences(
         pQueueInfo->lastRetiredId = pQueueInfo->lastSubmittedId;
     }
 }
-
+// Helper function to validate correct usage bits set for buffers or images
+//  Verify that (actual & desired) flags != 0 or,
+//   if strict is true, verify that (actual & desired) flags == desired
+//  In case of error, report it via dbg callbacks
+static bool32_t validate_usage_flags(void* disp_obj, VkFlags actual, VkFlags desired,
+                                     bool32_t strict, VkObject obj, VkObjectType obj_type,
+                                     char const* ty_str, char const* func_name, char const* usage_str)
+{
+    bool32_t correct_usage = VK_FALSE;
+    if (strict)
+        correct_usage = ((actual & desired) == desired);
+    else
+        correct_usage = ((actual & desired) != 0);
+    if (!correct_usage) {
+        log_msg(mdd((VkObject)disp_obj), VK_DBG_REPORT_ERROR_BIT, obj_type, obj, 0, MEMTRACK_INVALID_USAGE_FLAG, "MEM",
+                "Invalid usage flag for %s %p used by %s. In this case, %s should have %s set during creation.",
+                ty_str, obj, func_name, ty_str, usage_str);
+    }
+}
+// Helper function to validate usage flags for images
+// Pulls image info and then sends actual vs. desired usage off to helper above where
+//  an error will be flagged if usage is not correct
+static bool32_t validate_image_usage_flags(void* disp_obj, VkImage image, VkFlags desired, bool32_t strict,
+                                           char const* func_name, char const* usage_string)
+{
+    MT_OBJ_INFO* pInfo = get_object_info(image);
+    if (pInfo) {
+        validate_usage_flags(disp_obj, pInfo->create_info.image_create_info.usage, desired, strict,
+                             image, VK_OBJECT_TYPE_IMAGE, "image", func_name, usage_string);
+    }
+}
+// Helper function to validate usage flags for buffers
+// Pulls buffer info and then sends actual vs. desired usage off to helper above where
+//  an error will be flagged if usage is not correct
+static bool32_t validate_buffer_usage_flags(void* disp_obj, VkBuffer buffer, VkFlags desired, bool32_t strict,
+                                            char const* func_name, char const* usage_string)
+{
+    MT_OBJ_INFO* pInfo = get_object_info(buffer);
+    if (pInfo) {
+        validate_usage_flags(disp_obj, pInfo->create_info.buffer_create_info.usage, desired, strict,
+                             buffer, VK_OBJECT_TYPE_BUFFER, "buffer", func_name, usage_string);
+    }
+}
 // Return ptr to info in map container containing mem, or NULL if not found
 //  Calls to this function should be wrapped in mutex
 static MT_MEM_OBJ_INFO* get_mem_obj_info(
@@ -1404,6 +1447,9 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateImageView(
     if (result == VK_SUCCESS) {
         loader_platform_thread_lock_mutex(&globalLock);
         add_object_info(*pView, pCreateInfo->sType, pCreateInfo, sizeof(VkImageViewCreateInfo), "image_view");
+        // Validate that img has correct usage flags set
+        validate_image_usage_flags(device, pCreateInfo->image, VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT,
+                                   false, "vkCreateImageView()", "VK_IMAGE_USAGE_[SAMPLED|STORAGE]_BIT");
         loader_platform_thread_unlock_mutex(&globalLock);
     }
     return result;
@@ -1418,6 +1464,18 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateColorAttachmentView(
     if (result == VK_SUCCESS) {
         loader_platform_thread_lock_mutex(&globalLock);
         add_object_info(*pView, pCreateInfo->sType, pCreateInfo, sizeof(VkColorAttachmentViewCreateInfo), "color_attachment_view");
+        // Validate that img has correct usage flags set
+        //  We don't use the image helper function here as it's a special case that checks struct type
+        MT_OBJ_INFO* pInfo = get_object_info(pCreateInfo->image);
+        if (pInfo) {
+            if (VK_STRUCTURE_TYPE_SWAP_CHAIN_CREATE_INFO_WSI == pInfo->sType) {
+                validate_usage_flags(device, pInfo->create_info.swap_chain_create_info.imageUsageFlags, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT, true,
+                                     pCreateInfo->image, VK_OBJECT_TYPE_IMAGE, "image", "vkCreateColorAttachmentView()", "VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT");
+            } else if (VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO == pInfo->sType) {
+                validate_usage_flags(device, pInfo->create_info.image_create_info.usage, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT, true,
+                                     pCreateInfo->image, VK_OBJECT_TYPE_IMAGE, "image", "vkCreateColorAttachmentView()", "VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT");
+            }
+        }
         loader_platform_thread_unlock_mutex(&globalLock);
     }
     return result;
@@ -1432,6 +1490,9 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateDepthStencilView(
     if (result == VK_SUCCESS) {
         loader_platform_thread_lock_mutex(&globalLock);
         add_object_info(*pView, pCreateInfo->sType, pCreateInfo, sizeof(VkDepthStencilViewCreateInfo), "ds_view");
+        // Validate that img has correct usage flags set
+        validate_image_usage_flags(device, pCreateInfo->image, VK_IMAGE_USAGE_DEPTH_STENCIL_BIT,
+                                   true, "vkCreateDepthStencilView()", "VK_IMAGE_USAGE_DEPTH_STENCIL_BIT");
         loader_platform_thread_unlock_mutex(&globalLock);
     }
     return result;
@@ -1768,6 +1829,9 @@ VK_LAYER_EXPORT void VKAPI vkCmdCopyBuffer(
         log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, cmdBuffer, 0, MEMTRACK_MEMORY_BINDING_ERROR, "MEM",
                 "In vkCmdCopyBuffer() call unable to update binding of destBuffer %p to cmdBuffer %p", destBuffer, cmdBuffer);
     }
+    // Validate that SRC & DST buffers have correct usage flags set
+    validate_buffer_usage_flags(cmdBuffer, srcBuffer, VK_BUFFER_USAGE_TRANSFER_SOURCE_BIT, true, "vkCmdCopyBuffer()", "VK_BUFFER_USAGE_TRANSFER_SOURCE_BIT");
+    validate_buffer_usage_flags(cmdBuffer, destBuffer, VK_BUFFER_USAGE_TRANSFER_DESTINATION_BIT, true, "vkCmdCopyBuffer()", "VK_BUFFER_USAGE_TRANSFER_DESTINATION_BIT");
     loader_platform_thread_unlock_mutex(&globalLock);
     get_dispatch_table(mem_tracker_device_table_map, cmdBuffer)->CmdCopyBuffer(cmdBuffer, srcBuffer, destBuffer, regionCount, pRegions);
 }
@@ -1781,7 +1845,12 @@ VK_LAYER_EXPORT void VKAPI vkCmdCopyImage(
     uint32_t           regionCount,
     const VkImageCopy *pRegions)
 {
+    loader_platform_thread_lock_mutex(&globalLock);
     // TODO : Each image will have mem mapping so track them
+    // Validate that src & dst images have correct usage flags set
+    validate_image_usage_flags(cmdBuffer, srcImage, VK_IMAGE_USAGE_TRANSFER_SOURCE_BIT, true, "vkCmdCopyImage()", "VK_IMAGE_USAGE_TRANSFER_SOURCE_BIT");
+    validate_image_usage_flags(cmdBuffer, destImage, VK_IMAGE_USAGE_TRANSFER_DESTINATION_BIT, true, "vkCmdCopyImage()", "VK_IMAGE_USAGE_TRANSFER_DESTINATION_BIT");
+    loader_platform_thread_unlock_mutex(&globalLock);
     get_dispatch_table(mem_tracker_device_table_map, cmdBuffer)->CmdCopyImage(
         cmdBuffer, srcImage, srcImageLayout, destImage, destImageLayout, regionCount, pRegions);
 }
@@ -1796,7 +1865,12 @@ VK_LAYER_EXPORT void VKAPI vkCmdBlitImage(
     const VkImageBlit *pRegions,
     VkTexFilter        filter)
 {
+    loader_platform_thread_lock_mutex(&globalLock);
     // TODO : Each image will have mem mapping so track them
+    // Validate that src & dst images have correct usage flags set
+    validate_image_usage_flags(cmdBuffer, srcImage, VK_IMAGE_USAGE_TRANSFER_SOURCE_BIT, true, "vkCmdBlitImage()", "VK_IMAGE_USAGE_TRANSFER_SOURCE_BIT");
+    validate_image_usage_flags(cmdBuffer, destImage, VK_IMAGE_USAGE_TRANSFER_DESTINATION_BIT, true, "vkCmdBlitImage()", "VK_IMAGE_USAGE_TRANSFER_DESTINATION_BIT");
+    loader_platform_thread_unlock_mutex(&globalLock);
     get_dispatch_table(mem_tracker_device_table_map, cmdBuffer)->CmdBlitImage(
         cmdBuffer, srcImage, srcImageLayout, destImage, destImageLayout, regionCount, pRegions, filter);
 }
@@ -1816,12 +1890,14 @@ VK_LAYER_EXPORT void VKAPI vkCmdCopyBufferToImage(
         log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, cmdBuffer, 0, MEMTRACK_MEMORY_BINDING_ERROR, "MEM",
                 "In vkCmdCopyMemoryToImage() call unable to update binding of destImage buffer %p to cmdBuffer %p", destImage, cmdBuffer);
     }
-
     mem = get_mem_binding_from_object(cmdBuffer, srcBuffer);
     if (VK_FALSE == update_cmd_buf_and_mem_references(cmdBuffer, mem)) {
         log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, cmdBuffer, 0, MEMTRACK_MEMORY_BINDING_ERROR, "MEM",
                 "In vkCmdCopyMemoryToImage() call unable to update binding of srcBuffer %p to cmdBuffer %p", srcBuffer, cmdBuffer);
     }
+    // Validate that src buff & dst image have correct usage flags set
+    validate_buffer_usage_flags(cmdBuffer, srcBuffer, VK_BUFFER_USAGE_TRANSFER_SOURCE_BIT, true, "vkCmdCopyBufferToImage()", "VK_BUFFER_USAGE_TRANSFER_SOURCE_BIT");
+    validate_image_usage_flags(cmdBuffer, destImage, VK_IMAGE_USAGE_TRANSFER_DESTINATION_BIT, true, "vkCmdCopyBufferToImage()", "VK_IMAGE_USAGE_TRANSFER_DESTINATION_BIT");
     loader_platform_thread_unlock_mutex(&globalLock);
     get_dispatch_table(mem_tracker_device_table_map, cmdBuffer)->CmdCopyBufferToImage(
         cmdBuffer, srcBuffer, destImage, destImageLayout, regionCount, pRegions);
@@ -1847,6 +1923,9 @@ VK_LAYER_EXPORT void VKAPI vkCmdCopyImageToBuffer(
         log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, cmdBuffer, 0, MEMTRACK_MEMORY_BINDING_ERROR, "MEM",
                 "In vkCmdCopyImageToMemory() call unable to update binding of destBuffer %p to cmdBuffer %p", destBuffer, cmdBuffer);
     }
+    // Validate that dst buff & src image have correct usage flags set
+    validate_image_usage_flags(cmdBuffer, srcImage, VK_IMAGE_USAGE_TRANSFER_SOURCE_BIT, true, "vkCmdCopyImageToBuffer()", "VK_IMAGE_USAGE_TRANSFER_SOURCE_BIT");
+    validate_buffer_usage_flags(cmdBuffer, destBuffer, VK_BUFFER_USAGE_TRANSFER_DESTINATION_BIT, true, "vkCmdCopyImageToBuffer()", "VK_BUFFER_USAGE_TRANSFER_DESTINATION_BIT");
     loader_platform_thread_unlock_mutex(&globalLock);
     get_dispatch_table(mem_tracker_device_table_map, cmdBuffer)->CmdCopyImageToBuffer(
         cmdBuffer, srcImage, srcImageLayout, destBuffer, regionCount, pRegions);
@@ -1865,6 +1944,8 @@ VK_LAYER_EXPORT void VKAPI vkCmdUpdateBuffer(
         log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, cmdBuffer, 0, MEMTRACK_MEMORY_BINDING_ERROR, "MEM",
                 "In vkCmdUpdateMemory() call unable to update binding of destBuffer %p to cmdBuffer %p", destBuffer, cmdBuffer);
     }
+    // Validate that dst buff has correct usage flags set
+    validate_buffer_usage_flags(cmdBuffer, destBuffer, VK_BUFFER_USAGE_TRANSFER_DESTINATION_BIT, true, "vkCmdUpdateBuffer()", "VK_BUFFER_USAGE_TRANSFER_DESTINATION_BIT");
     loader_platform_thread_unlock_mutex(&globalLock);
     get_dispatch_table(mem_tracker_device_table_map, cmdBuffer)->CmdUpdateBuffer(cmdBuffer, destBuffer, destOffset, dataSize, pData);
 }
@@ -1882,6 +1963,8 @@ VK_LAYER_EXPORT void VKAPI vkCmdFillBuffer(
         log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, cmdBuffer, 0, MEMTRACK_MEMORY_BINDING_ERROR, "MEM",
                 "In vkCmdFillMemory() call unable to update binding of destBuffer %p to cmdBuffer %p", destBuffer, cmdBuffer);
     }
+    // Validate that dst buff has correct usage flags set
+    validate_buffer_usage_flags(cmdBuffer, destBuffer, VK_BUFFER_USAGE_TRANSFER_DESTINATION_BIT, true, "vkCmdFillBuffer()", "VK_BUFFER_USAGE_TRANSFER_DESTINATION_BIT");
     loader_platform_thread_unlock_mutex(&globalLock);
     get_dispatch_table(mem_tracker_device_table_map, cmdBuffer)->CmdFillBuffer(cmdBuffer, destBuffer, destOffset, fillSize, data);
 }
@@ -2037,7 +2120,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateSwapChainWSI(
 
     if (VK_SUCCESS == result) {
         loader_platform_thread_lock_mutex(&globalLock);
-        add_swap_chain_info(*pSwapChain);
+        add_swap_chain_info(*pSwapChain, pCreateInfo);
         loader_platform_thread_unlock_mutex(&globalLock);
     }
 
@@ -2091,7 +2174,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkGetSwapChainInfoWSI(
                 for (std::vector<VkSwapChainImageInfoWSI>::const_iterator it = pInfo->images.begin();
                      it != pInfo->images.end(); it++) {
                     // Add image object, then insert the new Mem Object and then bind it to created image
-                    add_object_info(it->image, VK_STRUCTURE_TYPE_MAX_ENUM, &pInfo->createInfo, sizeof(pInfo->createInfo), "persistent_image");
+                    add_object_info(it->image, VK_STRUCTURE_TYPE_SWAP_CHAIN_CREATE_INFO_WSI, &pInfo->createInfo, sizeof(pInfo->createInfo), "persistent_image");
                     add_mem_obj_info(swapChain, it->memory, NULL);
                     if (VK_FALSE == set_object_binding(swapChain, it->image, it->memory)) {
                         log_msg(mdd(swapChain), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_IMAGE, it->image, 0, MEMTRACK_MEMORY_BINDING_ERROR, "MEM",
