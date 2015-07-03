@@ -321,19 +321,14 @@ private:
     std::vector<Format> formats_;
 };
 
-class Queue : public DerivedObject<VkQueue, BaseObject, VK_OBJECT_TYPE_QUEUE> {
+class Queue : public internal::Handle<VkQueue> {
 public:
-    explicit Queue(VkQueue queue) : DerivedObject(queue) {}
+    explicit Queue(VkQueue queue) : Handle(queue) {}
 
     // vkQueueSubmit()
     void submit(const std::vector<const CmdBuffer *> &cmds, Fence &fence);
     void submit(const CmdBuffer &cmd, Fence &fence);
     void submit(const CmdBuffer &cmd);
-
-    // vkQueueAddMemReferences()
-    // vkQueueRemoveMemReferences()
-    void add_mem_references(const std::vector<VkDeviceMemory> &mem_refs);
-    void remove_mem_references(const std::vector<VkDeviceMemory> &mem_refs);
 
     // vkQueueWaitIdle()
     void wait();

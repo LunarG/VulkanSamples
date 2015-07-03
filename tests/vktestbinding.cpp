@@ -540,7 +540,7 @@ VkResult Device::update_descriptor_sets(const std::vector<VkWriteDescriptorSet> 
 void Queue::submit(const std::vector<const CmdBuffer *> &cmds, Fence &fence)
 {
     const std::vector<VkCmdBuffer> cmd_objs = make_objects<VkCmdBuffer>(cmds);
-    EXPECT(vkQueueSubmit(obj(), cmd_objs.size(), &cmd_objs[0], fence.obj()) == VK_SUCCESS);
+    EXPECT(vkQueueSubmit(handle(), cmd_objs.size(), &cmd_objs[0], fence.obj()) == VK_SUCCESS);
 }
 
 void Queue::submit(const CmdBuffer &cmd, Fence &fence)
@@ -556,17 +556,17 @@ void Queue::submit(const CmdBuffer &cmd)
 
 void Queue::wait()
 {
-    EXPECT(vkQueueWaitIdle(obj()) == VK_SUCCESS);
+    EXPECT(vkQueueWaitIdle(handle()) == VK_SUCCESS);
 }
 
 void Queue::signal_semaphore(Semaphore &sem)
 {
-    EXPECT(vkQueueSignalSemaphore(obj(), sem.obj()) == VK_SUCCESS);
+    EXPECT(vkQueueSignalSemaphore(handle(), sem.obj()) == VK_SUCCESS);
 }
 
 void Queue::wait_semaphore(Semaphore &sem)
 {
-    EXPECT(vkQueueWaitSemaphore(obj(), sem.obj()) == VK_SUCCESS);
+    EXPECT(vkQueueWaitSemaphore(handle(), sem.obj()) == VK_SUCCESS);
 }
 
 GpuMemory::~GpuMemory()
@@ -678,7 +678,7 @@ void Buffer::init_no_mem(const Device &dev, const VkBufferCreateInfo &info)
 void Buffer::bind_memory(VkDeviceSize offset, VkDeviceSize size,
                          const GpuMemory &mem, VkDeviceSize mem_offset)
 {
-    VkQueue queue = dev_->graphics_queues()[0]->obj();
+    VkQueue queue = dev_->graphics_queues()[0]->handle();
     VkSparseMemoryBindInfo bindInfo;
     memset(&bindInfo, 0, sizeof(VkSparseMemoryBindInfo));
     bindInfo.offset    = offset;
@@ -726,7 +726,7 @@ void Image::init_info(const Device &dev, const VkImageCreateInfo &info)
 void Image::bind_memory(const Device &dev, const VkSparseImageMemoryBindInfo &info,
                         const GpuMemory &mem, VkDeviceSize mem_offset)
 {
-    VkQueue queue = dev.graphics_queues()[0]->obj();
+    VkQueue queue = dev.graphics_queues()[0]->handle();
     EXPECT(vkQueueBindSparseImageMemory(queue, obj(), 1, &info) == VK_SUCCESS);
 }
 

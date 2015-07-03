@@ -420,7 +420,7 @@ VkDeviceObj::VkDeviceObj(uint32_t id,
 void VkDeviceObj::get_device_queue()
 {
     ASSERT_NE(true, graphics_queues().empty());
-    m_queue = graphics_queues()[0]->obj();
+    m_queue = graphics_queues()[0]->handle();
 }
 
 VkDescriptorSetObj::VkDescriptorSetObj(VkDeviceObj *device) :

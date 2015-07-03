@@ -483,7 +483,7 @@ void  TestFrameworkVkPresent::Display()
     VkCmdBuffer cmdBufs[1];
     cmdBufs[0] = m_cmdbuf.obj();
 
-    vkQueueSubmit(m_queue.obj(), 1, cmdBufs, NULL);
+    vkQueueSubmit(m_queue.handle(), 1, cmdBufs, NULL);
     m_queue.wait();
 
     VkPresentInfoWSI present = {};
@@ -502,7 +502,7 @@ void  TestFrameworkVkPresent::Display()
                          m_display_image->m_title.c_str());
 #endif
 
-    err = m_fpQueuePresentWSI(m_queue.obj(), &present);
+    err = m_fpQueuePresentWSI(m_queue.handle(), &present);
     assert(!err);
 
     m_queue.wait();
