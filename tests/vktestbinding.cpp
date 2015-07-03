@@ -854,8 +854,8 @@ NON_DISPATCHABLE_HANDLE_DTOR(PipelineLayout, vkDestroyObject, VK_OBJECT_TYPE_PIP
 
 void PipelineLayout::init(const Device &dev, VkPipelineLayoutCreateInfo &info, const std::vector<const DescriptorSetLayout *> &layouts)
 {
-    const std::vector<VkDescriptorSetLayout> layout_objs = make_objects<VkDescriptorSetLayout>(layouts);
-    info.pSetLayouts = &layout_objs[0];
+    const std::vector<VkDescriptorSetLayout> layout_handles = make_handles<VkDescriptorSetLayout>(layouts);
+    info.pSetLayouts = &layout_handles[0];
 
     NON_DISPATCHABLE_HANDLE_INIT(vkCreatePipelineLayout, dev, &info);
 }
@@ -867,40 +867,42 @@ void Sampler::init(const Device &dev, const VkSamplerCreateInfo &info)
     NON_DISPATCHABLE_HANDLE_INIT(vkCreateSampler, dev, &info);
 }
 
+NON_DISPATCHABLE_HANDLE_DTOR(DescriptorSetLayout, vkDestroyObject, VK_OBJECT_TYPE_DESCRIPTOR_SET_LAYOUT)
+
 void DescriptorSetLayout::init(const Device &dev, const VkDescriptorSetLayoutCreateInfo &info)
 {
-    DERIVED_OBJECT_TYPE_INIT(vkCreateDescriptorSetLayout, dev, VK_OBJECT_TYPE_DESCRIPTOR_SET_LAYOUT, &info);
-    alloc_memory();
+    NON_DISPATCHABLE_HANDLE_INIT(vkCreateDescriptorSetLayout, dev, &info);
 }
+
+NON_DISPATCHABLE_HANDLE_DTOR(DescriptorPool, vkDestroyObject, VK_OBJECT_TYPE_DESCRIPTOR_POOL)
 
 void DescriptorPool::init(const Device &dev, VkDescriptorPoolUsage usage,
                           uint32_t max_sets, const VkDescriptorPoolCreateInfo &info)
 {
-    DERIVED_OBJECT_TYPE_INIT(vkCreateDescriptorPool, dev, VK_OBJECT_TYPE_DESCRIPTOR_POOL, usage, max_sets, &info);
-    alloc_memory();
+    NON_DISPATCHABLE_HANDLE_INIT(vkCreateDescriptorPool, dev, usage, max_sets, &info);
 }
 
 void DescriptorPool::reset()
 {
-    EXPECT(vkResetDescriptorPool(dev_->handle(), obj()) == VK_SUCCESS);
+    EXPECT(vkResetDescriptorPool(device(), handle()) == VK_SUCCESS);
 }
 
 std::vector<DescriptorSet *> DescriptorPool::alloc_sets(const Device &dev, VkDescriptorSetUsage usage, const std::vector<const DescriptorSetLayout *> &layouts)
 {
-    const std::vector<VkDescriptorSetLayout> layout_objs = make_objects<VkDescriptorSetLayout>(layouts);
+    const std::vector<VkDescriptorSetLayout> layout_handles = make_handles<VkDescriptorSetLayout>(layouts);
 
-    std::vector<VkDescriptorSet> set_objs;
-    set_objs.resize(layout_objs.size());
+    std::vector<VkDescriptorSet> set_handles;
+    set_handles.resize(layout_handles.size());
 
     uint32_t set_count;
-    VkResult err = vkAllocDescriptorSets(dev_->handle(), obj(), usage, layout_objs.size(), &layout_objs[0], &set_objs[0], &set_count);
+    VkResult err = vkAllocDescriptorSets(device(), handle(), usage, layout_handles.size(), &layout_handles[0], &set_handles[0], &set_count);
     if (err == VK_SUCCESS)
-        EXPECT(set_count == set_objs.size());
-    set_objs.resize(set_count);
+        EXPECT(set_count == set_handles.size());
+    set_handles.resize(set_count);
 
     std::vector<DescriptorSet *> sets;
     sets.reserve(set_count);
-    for (std::vector<VkDescriptorSet>::const_iterator it = set_objs.begin(); it != set_objs.end(); it++) {
+    for (std::vector<VkDescriptorSet>::const_iterator it = set_handles.begin(); it != set_handles.end(); it++) {
         // do descriptor sets need memories bound?
         DescriptorSet *descriptorSet = new DescriptorSet(dev, *it);
         sets.push_back(descriptorSet);
@@ -918,6 +920,8 @@ DescriptorSet *DescriptorPool::alloc_sets(const Device &dev, VkDescriptorSetUsag
     std::vector<DescriptorSet *> set = alloc_sets(dev, usage, layout, 1);
     return (set.empty()) ? NULL : set[0];
 }
+
+NON_DISPATCHABLE_HANDLE_DTOR(DescriptorSet, vkDestroyObject, VK_OBJECT_TYPE_DESCRIPTOR_SET)
 
 void DynamicVpStateObject::init(const Device &dev, const VkDynamicVpStateCreateInfo &info)
 {

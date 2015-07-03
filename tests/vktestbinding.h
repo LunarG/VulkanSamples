@@ -596,14 +596,18 @@ public:
     void init(const Device &dev, const VkSamplerCreateInfo &info);
 };
 
-class DescriptorSetLayout : public DerivedObject<VkDescriptorSetLayout, Object, VK_OBJECT_TYPE_DESCRIPTOR_SET_LAYOUT> {
+class DescriptorSetLayout : public internal::NonDispHandle<VkDescriptorSetLayout> {
 public:
+    ~DescriptorSetLayout();
+
     // vkCreateDescriptorSetLayout()
     void init(const Device &dev, const VkDescriptorSetLayoutCreateInfo &info);
 };
 
-class DescriptorPool : public DerivedObject<VkDescriptorPool, Object, VK_OBJECT_TYPE_DESCRIPTOR_POOL> {
+class DescriptorPool : public internal::NonDispHandle<VkDescriptorPool> {
 public:
+    ~DescriptorPool();
+
     // vkCreateDescriptorPool()
     void init(const Device &dev, VkDescriptorPoolUsage usage,
               uint32_t max_sets, const VkDescriptorPoolCreateInfo &info);
@@ -617,10 +621,12 @@ public:
     DescriptorSet *alloc_sets(const Device &dev, VkDescriptorSetUsage usage, const DescriptorSetLayout &layout);
 };
 
-class DescriptorSet : public DerivedObject<VkDescriptorSet, Object, VK_OBJECT_TYPE_DESCRIPTOR_SET> {
+class DescriptorSet : public internal::NonDispHandle<VkDescriptorSet> {
 public:
-    explicit DescriptorSet() : DerivedObject() {}
-    explicit DescriptorSet(const Device &dev, VkDescriptorSet set) : DerivedObject(dev, set) {}
+    ~DescriptorSet();
+
+    explicit DescriptorSet() : NonDispHandle() {}
+    explicit DescriptorSet(const Device &dev, VkDescriptorSet set) : NonDispHandle(dev.handle(), set) {}
 };
 
 class DynamicVpStateObject : public DerivedObject<VkDynamicVpState, DynamicStateObject, VK_OBJECT_TYPE_DYNAMIC_VP_STATE> {
@@ -852,7 +858,7 @@ inline VkWriteDescriptorSet Device::write_descriptor_set(const DescriptorSet &se
 {
     VkWriteDescriptorSet write = {};
     write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-    write.destSet = set.obj();
+    write.destSet = set.handle();
     write.destBinding = binding;
     write.destArrayElement = array_element;
     write.count = count;
@@ -873,10 +879,10 @@ inline VkCopyDescriptorSet Device::copy_descriptor_set(const DescriptorSet &src_
 {
     VkCopyDescriptorSet copy = {};
     copy.sType = VK_STRUCTURE_TYPE_COPY_DESCRIPTOR_SET;
-    copy.srcSet = src_set.obj();
+    copy.srcSet = src_set.handle();
     copy.srcBinding = src_binding;
     copy.srcArrayElement = src_array_element;
-    copy.destSet = dst_set.obj();
+    copy.destSet = dst_set.handle();
     copy.destBinding = dst_binding;
     copy.destArrayElement = dst_array_element;
     copy.count = count;

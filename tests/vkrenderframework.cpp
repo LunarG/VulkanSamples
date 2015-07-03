@@ -482,7 +482,7 @@ VkPipelineLayout VkDescriptorSetObj::GetPipelineLayout() const
 
 VkDescriptorSet VkDescriptorSetObj::GetDescriptorSetHandle() const
 {
-    return m_set->obj();
+    return m_set->handle();
 }
 
 void VkDescriptorSetObj::CreateVKDescriptorSet(VkCommandBufferObj *cmdBuffer)
@@ -529,7 +529,7 @@ void VkDescriptorSetObj::CreateVKDescriptorSet(VkCommandBufferObj *cmdBuffer)
     size_t imageSamplerCount = 0;
     for (std::vector<VkWriteDescriptorSet>::iterator it = m_writes.begin();
          it != m_writes.end(); it++) {
-        it->destSet = m_set->obj();
+        it->destSet = m_set->handle();
         if (it->descriptorType == VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER)
             it->pDescriptors = &m_imageSamplerDescriptors[imageSamplerCount++];
     }
