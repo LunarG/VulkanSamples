@@ -46,10 +46,47 @@ extern "C"
 *   DebugReport Vulkan Extension API
 ***************************************************************************************************
 */
+typedef enum {
+    VK_OBJECT_TYPE_INSTANCE = 0,
+    VK_OBJECT_TYPE_PHYSICAL_DEVICE = 1,
+    VK_OBJECT_TYPE_DEVICE = 2,
+    VK_OBJECT_TYPE_QUEUE = 3,
+    VK_OBJECT_TYPE_COMMAND_BUFFER = 4,
+    VK_OBJECT_TYPE_DEVICE_MEMORY = 5,
+    VK_OBJECT_TYPE_BUFFER = 6,
+    VK_OBJECT_TYPE_BUFFER_VIEW = 7,
+    VK_OBJECT_TYPE_IMAGE = 8,
+    VK_OBJECT_TYPE_IMAGE_VIEW = 9,
+    VK_OBJECT_TYPE_ATTACHMENT_VIEW = 10,
+    VK_OBJECT_TYPE_SHADER_MODULE = 12,
+    VK_OBJECT_TYPE_SHADER = 13,
+    VK_OBJECT_TYPE_PIPELINE = 14,
+    VK_OBJECT_TYPE_PIPELINE_LAYOUT = 15,
+    VK_OBJECT_TYPE_SAMPLER = 16,
+    VK_OBJECT_TYPE_DESCRIPTOR_SET = 17,
+    VK_OBJECT_TYPE_DESCRIPTOR_SET_LAYOUT = 18,
+    VK_OBJECT_TYPE_DESCRIPTOR_POOL = 19,
+    VK_OBJECT_TYPE_DYNAMIC_VP_STATE = 20,
+    VK_OBJECT_TYPE_DYNAMIC_RS_STATE = 21,
+    VK_OBJECT_TYPE_DYNAMIC_CB_STATE = 22,
+    VK_OBJECT_TYPE_DYNAMIC_DS_STATE = 23,
+    VK_OBJECT_TYPE_FENCE = 24,
+    VK_OBJECT_TYPE_SEMAPHORE = 25,
+    VK_OBJECT_TYPE_EVENT = 26,
+    VK_OBJECT_TYPE_QUERY_POOL = 27,
+    VK_OBJECT_TYPE_FRAMEBUFFER = 28,
+    VK_OBJECT_TYPE_RENDER_PASS = 29,
+    VK_OBJECT_TYPE_PIPELINE_CACHE = 30,
+    VK_OBJECT_TYPE_SWAP_CHAIN_WSI = 31,
+    VK_OBJECT_TYPE_BEGIN_RANGE = VK_OBJECT_TYPE_INSTANCE,
+    VK_OBJECT_TYPE_END_RANGE = VK_OBJECT_TYPE_SWAP_CHAIN_WSI,
+    VK_OBJECT_TYPE_NUM = (VK_OBJECT_TYPE_SWAP_CHAIN_WSI - VK_OBJECT_TYPE_INSTANCE + 1),
+    VK_OBJECT_TYPE_MAX_ENUM = 0x7FFFFFFF
+} VkDbgObjectType;
 
 #define DEBUG_REPORT_EXTENSION_NAME "DEBUG_REPORT"
 
-VK_DEFINE_NONDISP_SUBCLASS_HANDLE(VkDbgMsgCallback, VkObject)
+VK_DEFINE_NONDISP_HANDLE(VkDbgMsgCallback)
 
 // ------------------------------------------------------------------------------------------------
 // Enumerations
@@ -72,14 +109,14 @@ typedef enum _DEBUG_REPORT_ERROR
 
 #define VK_DEBUG_REPORT_ENUM_EXTEND(type, id)    ((type)(VK_DEBUG_REPORT_EXTENSION_NUMBER * -1000 + (id)))
 
-#define VK_OBJECT_TYPE_MSG_CALLBACK VK_DEBUG_REPORT_ENUM_EXTEND(VkObjectType, 0)
+#define VK_OBJECT_TYPE_MSG_CALLBACK VK_DEBUG_REPORT_ENUM_EXTEND(VkDbgObjectType, 0)
 // ------------------------------------------------------------------------------------------------
 // Vulkan function pointers
 
 typedef void (*PFN_vkDbgMsgCallback)(
     VkFlags                             msgFlags,
-    VkObjectType                        objType,
-    VkObject                            srcObject,
+    VkDbgObjectType                     objType,
+    uint64_t                            srcObject,
     size_t                              location,
     int32_t                             msgCode,
     const char*                         pLayerPrefix,
@@ -91,9 +128,9 @@ typedef void (*PFN_vkDbgMsgCallback)(
 
 typedef VkResult (VKAPI *PFN_vkDbgCreateMsgCallback)(VkInstance instance, VkFlags msgFlags, const PFN_vkDbgMsgCallback pfnMsgCallback, const void* pUserData, VkDbgMsgCallback* pMsgCallback);
 typedef VkResult (VKAPI *PFN_vkDbgDestroyMsgCallback)(VkInstance instance, VkDbgMsgCallback msgCallback);
-typedef void (VKAPI *PFN_vkDbgStringCallback)(VkFlags msgFlags, VkObjectType objType, VkObject srcObject, size_t location, int32_t msgCode, const char* pLayerPrefix, const char* pMsg, void* pUserData);
-typedef void (VKAPI *PFN_vkDbgStdioCallback)(VkFlags msgFlags, VkObjectType objType, VkObject srcObject, size_t location, int32_t msgCode, const char* pLayerPrefix, const char* pMsg, void* pUserData);
-typedef void (VKAPI *PFN_vkDbgBreakCallback)(VkFlags msgFlags, VkObjectType objType, VkObject srcObject, size_t location, int32_t msgCode, const char* pLayerPrefix, const char* pMsg, void* pUserData);
+typedef void (VKAPI *PFN_vkDbgStringCallback)(VkFlags msgFlags, VkDbgObjectType objType, uint64_t srcObject, size_t location, int32_t msgCode, const char* pLayerPrefix, const char* pMsg, void* pUserData);
+typedef void (VKAPI *PFN_vkDbgStdioCallback)(VkFlags msgFlags, VkDbgObjectType objType, uint64_t srcObject, size_t location, int32_t msgCode, const char* pLayerPrefix, const char* pMsg, void* pUserData);
+typedef void (VKAPI *PFN_vkDbgBreakCallback)(VkFlags msgFlags, VkDbgObjectType objType, uint64_t srcObject, size_t location, int32_t msgCode, const char* pLayerPrefix, const char* pMsg, void* pUserData);
 
 #ifdef VK_PROTOTYPES
 
@@ -112,8 +149,8 @@ VkResult VKAPI vkDbgDestroyMsgCallback(
 // DebugReport utility callback functions
 void VKAPI vkDbgStringCallback(
     VkFlags                             msgFlags,
-    VkObjectType                        objType,
-    VkObject                            srcObject,
+    VkDbgObjectType                     objType,
+    uint64_t                            srcObject,
     size_t                              location,
     int32_t                             msgCode,
     const char*                         pLayerPrefix,
@@ -122,8 +159,8 @@ void VKAPI vkDbgStringCallback(
 
 void VKAPI vkDbgStdioCallback(
     VkFlags                             msgFlags,
-    VkObjectType                        objType,
-    VkObject                            srcObject,
+    VkDbgObjectType                     objType,
+    uint64_t                            srcObject,
     size_t                              location,
     int32_t                             msgCode,
     const char*                         pLayerPrefix,
@@ -132,8 +169,8 @@ void VKAPI vkDbgStdioCallback(
 
 void VKAPI vkDbgBreakCallback(
     VkFlags                             msgFlags,
-    VkObjectType                        objType,
-    VkObject                            srcObject,
+    VkDbgObjectType                     objType,
+    uint64_t                            srcObject,
     size_t                              location,
     int32_t                             msgCode,
     const char*                         pLayerPrefix,

@@ -39,7 +39,7 @@ struct intel_event {
 
 static inline struct intel_event *intel_event(VkEvent event)
 {
-    return (struct intel_event *) event;
+    return *(struct intel_event **) &event;
 }
 
 static inline struct intel_event *intel_event_from_obj(struct intel_obj *obj)

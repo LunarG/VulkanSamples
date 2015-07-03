@@ -556,7 +556,7 @@ static VkResult build_binding_table(const struct intel_gpu *gpu,
     if (bt->ubo_count != sh->NumUniformBlocks) {
         // If there is no UBO data to pull from, the shader is using a default uniform, which
         // will not work in VK.  We need a binding slot to pull from.
-        intel_log(gpu, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_PHYSICAL_DEVICE, (VkObject) gpu, 0, 0,
+        intel_log(gpu, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_PHYSICAL_DEVICE, reinterpret_cast<VkUintPtrLeast64>(gpu), 0, 0,
                 "compile error: UBO mismatch, %s shader may read from global, non-block uniform", shader_stage_to_string(stage));
 
         assert(0);

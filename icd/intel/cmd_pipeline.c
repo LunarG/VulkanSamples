@@ -479,7 +479,7 @@ static void gen7_fill_3DSTATE_SF_body(const struct intel_cmd *cmd,
     const struct intel_render_pass *rp = cmd->bind.render_pass;
     const struct intel_render_pass_subpass *subpass =
         cmd->bind.render_pass_subpass;
-    const struct intel_dynamic_rs *raster = cmd->bind.state.raster;
+    const struct intel_dynamic_raster *raster = cmd->bind.state.raster;
     uint32_t dw1, dw2, dw3;
 
     CMD_ASSERT(cmd, 6, 7.5);
@@ -533,9 +533,9 @@ static void gen7_fill_3DSTATE_SF_body(const struct intel_cmd *cmd,
     body[0] = dw1;
     body[1] = dw2;
     body[2] = dw3;
-    body[3] = u_fui((float) raster->rs_info.depthBias * 2.0f);
-    body[4] = u_fui(raster->rs_info.slopeScaledDepthBias);
-    body[5] = u_fui(raster->rs_info.depthBiasClamp);
+    body[3] = u_fui((float) raster->raster_info.depthBias * 2.0f);
+    body[4] = u_fui(raster->raster_info.slopeScaledDepthBias);
+    body[5] = u_fui(raster->raster_info.depthBiasClamp);
 }
 
 static void gen6_3DSTATE_SF(struct intel_cmd *cmd)
@@ -579,7 +579,7 @@ static void gen6_3DSTATE_CLIP(struct intel_cmd *cmd)
     const struct intel_pipeline *pipeline = cmd->bind.pipeline.graphics;
     const struct intel_pipeline_shader *vs = &pipeline->vs;
     const struct intel_pipeline_shader *fs = &pipeline->fs;
-    const struct intel_dynamic_vp *viewport = cmd->bind.state.viewport;
+    const struct intel_dynamic_viewport *viewport = cmd->bind.state.viewport;
     uint32_t dw1, dw2, dw3, *dw;
 
     CMD_ASSERT(cmd, 6, 7.5);
@@ -1095,7 +1095,7 @@ static uint32_t gen6_BLEND_STATE(struct intel_cmd *cmd)
 }
 
 static uint32_t gen6_DEPTH_STENCIL_STATE(struct intel_cmd *cmd,
-                                         const struct intel_dynamic_ds *state)
+                                         const struct intel_dynamic_depth_stencil *state)
 {
     const struct intel_pipeline *pipeline = cmd->bind.pipeline.graphics;
     const uint8_t cmd_align = GEN6_ALIGNMENT_DEPTH_STENCIL_STATE;
@@ -1104,15 +1104,15 @@ static uint32_t gen6_DEPTH_STENCIL_STATE(struct intel_cmd *cmd,
 
     dw[0] = pipeline->cmd_depth_stencil;
     /* same read and write masks for both front and back faces */
-    dw[1] = (state->ds_info.stencilReadMask & 0xff) << 24 |
-            (state->ds_info.stencilWriteMask & 0xff) << 16 |
-            (state->ds_info.stencilReadMask & 0xff) << 8 |
-            (state->ds_info.stencilWriteMask & 0xff);
+    dw[1] = (state->depth_stencil_info.stencilReadMask & 0xff) << 24 |
+            (state->depth_stencil_info.stencilWriteMask & 0xff) << 16 |
+            (state->depth_stencil_info.stencilReadMask & 0xff) << 8 |
+            (state->depth_stencil_info.stencilWriteMask & 0xff);
     dw[2] = pipeline->cmd_depth_test;
 
     CMD_ASSERT(cmd, 6, 7.5);
 
-    if (state->ds_info.stencilWriteMask && pipeline->stencilTestEnable)
+    if (state->depth_stencil_info.stencilWriteMask && pipeline->stencilTestEnable)
        dw[0] |= 1 << 18;
 
     return cmd_state_write(cmd, INTEL_CMD_ITEM_DEPTH_STENCIL,
@@ -1460,8 +1460,8 @@ void cmd_batch_immediate(struct intel_cmd *cmd,
 
 static void gen6_cc_states(struct intel_cmd *cmd)
 {
-    const struct intel_dynamic_cb *blend = cmd->bind.state.blend;
-    const struct intel_dynamic_ds *ds = cmd->bind.state.ds;
+    const struct intel_dynamic_color_blend *blend = cmd->bind.state.blend;
+    const struct intel_dynamic_depth_stencil *ds = cmd->bind.state.depth;
     uint32_t blend_offset, ds_offset, cc_offset;
     uint32_t stencil_ref;
     uint32_t blend_color[4];
@@ -1471,14 +1471,14 @@ static void gen6_cc_states(struct intel_cmd *cmd)
     blend_offset = gen6_BLEND_STATE(cmd);
 
     if (blend)
-        memcpy(blend_color, blend->cb_info.blendConst, sizeof(blend_color));
+        memcpy(blend_color, blend->color_blend_info.blendConst, sizeof(blend_color));
     else
         memset(blend_color, 0, sizeof(blend_color));
 
     if (ds) {
         ds_offset = gen6_DEPTH_STENCIL_STATE(cmd, ds);
-        stencil_ref = (ds->ds_info.stencilFrontRef & 0xff) << 24 |
-                      (ds->ds_info.stencilBackRef & 0xff) << 16;
+        stencil_ref = (ds->depth_stencil_info.stencilFrontRef & 0xff) << 24 |
+                      (ds->depth_stencil_info.stencilBackRef & 0xff) << 16;
     } else {
         ds_offset = 0;
         stencil_ref = 0;
@@ -1491,7 +1491,7 @@ static void gen6_cc_states(struct intel_cmd *cmd)
 
 static void gen6_viewport_states(struct intel_cmd *cmd)
 {
-    const struct intel_dynamic_vp *viewport = cmd->bind.state.viewport;
+    const struct intel_dynamic_viewport *viewport = cmd->bind.state.viewport;
     uint32_t sf_offset, clip_offset, cc_offset, scissor_offset;
 
     if (!viewport)
@@ -1524,8 +1524,8 @@ static void gen6_viewport_states(struct intel_cmd *cmd)
 
 static void gen7_cc_states(struct intel_cmd *cmd)
 {
-    const struct intel_dynamic_cb *blend = cmd->bind.state.blend;
-    const struct intel_dynamic_ds *ds = cmd->bind.state.ds;
+    const struct intel_dynamic_color_blend *blend = cmd->bind.state.blend;
+    const struct intel_dynamic_depth_stencil *ds = cmd->bind.state.depth;
     uint32_t stencil_ref;
     uint32_t blend_color[4];
     uint32_t offset;
@@ -1540,19 +1540,19 @@ static void gen7_cc_states(struct intel_cmd *cmd)
             GEN7_RENDER_OPCODE_3DSTATE_BLEND_STATE_POINTERS, offset);
 
     if (blend)
-        memcpy(blend_color, blend->cb_info.blendConst, sizeof(blend_color));
+        memcpy(blend_color, blend->color_blend_info.blendConst, sizeof(blend_color));
     else
         memset(blend_color, 0, sizeof(blend_color));
 
     if (ds) {
         offset = gen6_DEPTH_STENCIL_STATE(cmd, ds);
-        stencil_ref = (ds->ds_info.stencilFrontRef & 0xff) << 24 |
-                      (ds->ds_info.stencilBackRef & 0xff) << 16;
+        stencil_ref = (ds->depth_stencil_info.stencilFrontRef & 0xff) << 24 |
+                      (ds->depth_stencil_info.stencilBackRef & 0xff) << 16;
         gen7_3dstate_pointer(cmd,
                 GEN7_RENDER_OPCODE_3DSTATE_DEPTH_STENCIL_STATE_POINTERS,
                 offset);
-        stencil_ref = (ds->ds_info.stencilFrontRef & 0xff) << 24 |
-                      (ds->ds_info.stencilBackRef & 0xff) << 16;
+        stencil_ref = (ds->depth_stencil_info.stencilFrontRef & 0xff) << 24 |
+                      (ds->depth_stencil_info.stencilBackRef & 0xff) << 16;
     } else {
         stencil_ref = 0;
     }
@@ -1564,7 +1564,7 @@ static void gen7_cc_states(struct intel_cmd *cmd)
 
 static void gen7_viewport_states(struct intel_cmd *cmd)
 {
-    const struct intel_dynamic_vp *viewport = cmd->bind.state.viewport;
+    const struct intel_dynamic_viewport *viewport = cmd->bind.state.viewport;
     uint32_t offset;
 
     if (!viewport)
@@ -3203,25 +3203,25 @@ static void cmd_bind_index_data(struct intel_cmd *cmd,
 }
 
 static void cmd_bind_viewport_state(struct intel_cmd *cmd,
-                                    const struct intel_dynamic_vp *state)
+                                    const struct intel_dynamic_viewport *state)
 {
     cmd->bind.state.viewport = state;
 }
 
 static void cmd_bind_raster_state(struct intel_cmd *cmd,
-                                  const struct intel_dynamic_rs *state)
+                                  const struct intel_dynamic_raster *state)
 {
     cmd->bind.state.raster = state;
 }
 
-static void cmd_bind_ds_state(struct intel_cmd *cmd,
-                              const struct intel_dynamic_ds *state)
+static void cmd_bind_depth_stencil_state(struct intel_cmd *cmd,
+                              const struct intel_dynamic_depth_stencil *state)
 {
-    cmd->bind.state.ds = state;
+    cmd->bind.state.depth = state;
 }
 
 static void cmd_bind_blend_state(struct intel_cmd *cmd,
-                                 const struct intel_dynamic_cb *state)
+                                 const struct intel_dynamic_color_blend *state)
 {
     cmd->bind.state.blend = state;
 }
@@ -3446,34 +3446,44 @@ ICD_EXPORT void VKAPI vkCmdBindPipeline(
     }
 }
 
-ICD_EXPORT void VKAPI vkCmdBindDynamicStateObject(
+ICD_EXPORT void VKAPI vkCmdBindDynamicViewportState(
     VkCmdBuffer                              cmdBuffer,
-    VkStateBindPoint                        stateBindPoint,
-    VkDynamicStateObject                    state)
+    VkDynamicViewportState                   state)
 {
     struct intel_cmd *cmd = intel_cmd(cmdBuffer);
 
-    switch (stateBindPoint) {
-    case VK_STATE_BIND_POINT_VIEWPORT:
-        cmd_bind_viewport_state(cmd,
-                intel_dynamic_vp((VkDynamicVpState) state));
-        break;
-    case VK_STATE_BIND_POINT_RASTER:
-        cmd_bind_raster_state(cmd,
-                intel_dynamic_rs((VkDynamicRsState) state));
-        break;
-    case VK_STATE_BIND_POINT_DEPTH_STENCIL:
-        cmd_bind_ds_state(cmd,
-                intel_dynamic_ds((VkDynamicDsState) state));
-        break;
-    case VK_STATE_BIND_POINT_COLOR_BLEND:
-        cmd_bind_blend_state(cmd,
-                intel_dynamic_cb((VkDynamicCbState) state));
-        break;
-    default:
-        cmd_fail(cmd, VK_ERROR_INVALID_VALUE);
-        break;
-    }
+    cmd_bind_viewport_state(cmd,
+            intel_dynamic_viewport(state));
+}
+
+ICD_EXPORT void VKAPI vkCmdBindDynamicRasterState(
+    VkCmdBuffer                              cmdBuffer,
+    VkDynamicRasterState                    state)
+{
+    struct intel_cmd *cmd = intel_cmd(cmdBuffer);
+
+    cmd_bind_raster_state(cmd,
+            intel_dynamic_raster(state));
+}
+
+ICD_EXPORT void VKAPI vkCmdBindDynamicColorBlendState(
+    VkCmdBuffer                              cmdBuffer,
+    VkDynamicColorBlendState                   state)
+{
+    struct intel_cmd *cmd = intel_cmd(cmdBuffer);
+
+    cmd_bind_blend_state(cmd,
+            intel_dynamic_color_blend(state));
+}
+
+ICD_EXPORT void VKAPI vkCmdBindDynamicDepthStencilState(
+    VkCmdBuffer                              cmdBuffer,
+    VkDynamicDepthStencilState                   state)
+{
+    struct intel_cmd *cmd = intel_cmd(cmdBuffer);
+
+    cmd_bind_depth_stencil_state(cmd,
+            intel_dynamic_depth_stencil(state));
 }
 
 ICD_EXPORT void VKAPI vkCmdBindDescriptorSets(
@@ -3656,13 +3666,13 @@ ICD_EXPORT void VKAPI vkCmdBeginRenderPass(
         if (view->is_rt) {
             range.aspect = VK_IMAGE_ASPECT_COLOR;
 
-            cmd_meta_clear_color_image(cmdBuffer, (VkImage) view->img,
+            cmd_meta_clear_color_image(cmdBuffer, view->img,
                     att->initial_layout, &clear_val->color, 1, &range);
         } else {
             range.aspect = VK_IMAGE_ASPECT_DEPTH;
 
             cmd_meta_clear_depth_stencil_image(cmdBuffer,
-                    (VkImage) view->img, att->initial_layout,
+                    view->img, att->initial_layout,
                     clear_val->ds.depth, clear_val->ds.stencil,
                     1, &range);
 
@@ -3670,7 +3680,7 @@ ICD_EXPORT void VKAPI vkCmdBeginRenderPass(
                 range.aspect = VK_IMAGE_ASPECT_STENCIL;
 
                 cmd_meta_clear_depth_stencil_image(cmdBuffer,
-                        (VkImage) view->img, att->initial_layout,
+                        view->img, att->initial_layout,
                         clear_val->ds.depth, clear_val->ds.stencil,
                         1, &range);
             }

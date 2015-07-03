@@ -102,20 +102,20 @@ static bool base_dbg_copy_create_info(const struct intel_handle *handle,
         /* no create info */
         break;
     case VK_OBJECT_TYPE_DYNAMIC_VP_STATE:
-        assert(info.header->struct_type == VK_STRUCTURE_TYPE_DYNAMIC_VP_STATE_CREATE_INFO);
-        shallow_copy = sizeof(VkDynamicVpStateCreateInfo);
+        assert(info.header->struct_type == VK_STRUCTURE_TYPE_DYNAMIC_VIEWPORT_STATE_CREATE_INFO);
+        shallow_copy = sizeof(VkDynamicViewportStateCreateInfo);
         break;
     case VK_OBJECT_TYPE_DYNAMIC_RS_STATE:
-        assert(info.header->struct_type == VK_STRUCTURE_TYPE_DYNAMIC_RS_STATE_CREATE_INFO);
-        shallow_copy = sizeof(VkDynamicRsStateCreateInfo);
+        assert(info.header->struct_type == VK_STRUCTURE_TYPE_DYNAMIC_RASTER_STATE_CREATE_INFO);
+        shallow_copy = sizeof(VkDynamicRasterStateCreateInfo);
         break;
     case VK_OBJECT_TYPE_DYNAMIC_CB_STATE:
-        assert(info.header->struct_type == VK_STRUCTURE_TYPE_DYNAMIC_CB_STATE_CREATE_INFO);
-        shallow_copy = sizeof(VkDynamicCbStateCreateInfo);
+        assert(info.header->struct_type == VK_STRUCTURE_TYPE_DYNAMIC_COLOR_BLEND_STATE_CREATE_INFO);
+        shallow_copy = sizeof(VkDynamicColorBlendStateCreateInfo);
         break;
     case VK_OBJECT_TYPE_DYNAMIC_DS_STATE:
-        assert(info.header->struct_type == VK_STRUCTURE_TYPE_DYNAMIC_DS_STATE_CREATE_INFO);
-        shallow_copy = sizeof(VkDynamicDsStateCreateInfo);
+        assert(info.header->struct_type == VK_STRUCTURE_TYPE_DYNAMIC_DEPTH_STENCIL_STATE_CREATE_INFO);
+        shallow_copy = sizeof(VkDynamicDepthStencilStateCreateInfo);
         break;
     case VK_OBJECT_TYPE_COMMAND_BUFFER:
         assert(info.header->struct_type == VK_STRUCTURE_TYPE_CMD_BUFFER_CREATE_INFO);
@@ -231,7 +231,7 @@ static bool base_dbg_copy_create_info(const struct intel_handle *handle,
  * size is allocated and zeroed.
  */
 struct intel_base_dbg *intel_base_dbg_create(const struct intel_handle *handle,
-                                             VkObjectType type,
+                                             VkDbgObjectType type,
                                              const void *create_info,
                                              size_t dbg_size)
 {
@@ -276,7 +276,7 @@ void intel_base_dbg_destroy(const struct intel_handle *handle,
  */
 struct intel_base *intel_base_create(const struct intel_handle *handle,
                                      size_t obj_size, bool debug,
-                                     VkObjectType type,
+                                     VkDbgObjectType type,
                                      const void *create_info,
                                      size_t dbg_size)
 {
@@ -315,37 +315,47 @@ void intel_base_destroy(struct intel_base *base)
     intel_free(base, base);
 }
 
-ICD_EXPORT VkResult VKAPI vkDestroyObject(
-    VkDevice                                  device,
-    VkObjectType                              objType,
-    VkObject                                  object)
-{
-    struct intel_obj *obj = intel_obj(object);
-
-    obj->destroy(obj);
-
-    return VK_SUCCESS;
-}
-
-ICD_EXPORT VkResult VKAPI vkGetObjectMemoryRequirements(
+ICD_EXPORT VkResult VKAPI vkGetBufferMemoryRequirements(
     VkDevice                                    device,
-    VkObjectType                                objType,
-    VkObject                                    object,
+    VkBuffer                                    buffer,
     VkMemoryRequirements*                       pRequirements)
 {
-    struct intel_base *base = intel_base(object);
+    struct intel_base *base = intel_base(buffer.handle);
 
     return base->get_memory_requirements(base, pRequirements);
 }
 
-ICD_EXPORT VkResult VKAPI vkBindObjectMemory(
+ICD_EXPORT VkResult VKAPI vkGetImageMemoryRequirements(
     VkDevice                                    device,
-    VkObjectType                                objType,
-    VkObject                                    object,
+    VkImage                                     image,
+    VkMemoryRequirements*                       pRequirements)
+{
+    struct intel_base *base = intel_base(image.handle);
+
+    return base->get_memory_requirements(base, pRequirements);
+}
+
+ICD_EXPORT VkResult VKAPI vkBindBufferMemory(
+    VkDevice                                    device,
+    VkBuffer                                    buffer,
     VkDeviceMemory                              mem_,
     VkDeviceSize                                memOffset)
 {
-    struct intel_obj *obj = intel_obj(object);
+    struct intel_obj *obj = intel_obj(buffer.handle);
+    struct intel_mem *mem = intel_mem(mem_);
+
+    intel_obj_bind_mem(obj, mem, memOffset);
+
+    return VK_SUCCESS;
+}
+
+ICD_EXPORT VkResult VKAPI vkBindImageMemory(
+    VkDevice                                    device,
+    VkImage                                     image,
+    VkDeviceMemory                              mem_,
+    VkDeviceSize                                memOffset)
+{
+    struct intel_obj *obj = intel_obj(image.handle);
     struct intel_mem *mem = intel_mem(mem_);
 
     intel_obj_bind_mem(obj, mem, memOffset);

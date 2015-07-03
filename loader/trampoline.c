@@ -420,31 +420,40 @@ LOADER_EXPORT VkResult VKAPI vkInvalidateMappedMemoryRanges(VkDevice device, uin
     return disp->InvalidateMappedMemoryRanges(device, memRangeCount, pMemRanges);
 }
 
-LOADER_EXPORT VkResult VKAPI vkDestroyObject(VkDevice device, VkObjectType objType, VkObject object)
+LOADER_EXPORT VkResult VKAPI vkGetBufferMemoryRequirements(VkDevice device, VkBuffer buffer, VkMemoryRequirements* pMemoryRequirements)
 {
     const VkLayerDispatchTable *disp;
 
     disp = loader_get_dispatch(device);
 
-    return disp->DestroyObject(device, objType, object);
+    return disp->GetBufferMemoryRequirements(device, buffer, pMemoryRequirements);
 }
 
-LOADER_EXPORT VkResult VKAPI vkGetObjectMemoryRequirements(VkDevice device, VkObjectType objType, VkObject object, VkMemoryRequirements* pMemoryRequirements)
+LOADER_EXPORT VkResult VKAPI vkGetImageMemoryRequirements(VkDevice device, VkImage image, VkMemoryRequirements* pMemoryRequirements)
 {
     const VkLayerDispatchTable *disp;
 
     disp = loader_get_dispatch(device);
 
-    return disp->GetObjectMemoryRequirements(device, objType, object, pMemoryRequirements);
+    return disp->GetImageMemoryRequirements(device, image, pMemoryRequirements);
 }
 
-LOADER_EXPORT VkResult VKAPI vkBindObjectMemory(VkDevice device, VkObjectType objType, VkObject object, VkDeviceMemory mem, VkDeviceSize offset)
+LOADER_EXPORT VkResult VKAPI vkBindBufferMemory(VkDevice device, VkBuffer buffer, VkDeviceMemory mem, VkDeviceSize offset)
 {
     const VkLayerDispatchTable *disp;
 
     disp = loader_get_dispatch(device);
 
-    return disp->BindObjectMemory(device, objType, object, mem, offset);
+    return disp->BindBufferMemory(device, buffer, mem, offset);
+}
+
+LOADER_EXPORT VkResult VKAPI vkBindImageMemory(VkDevice device, VkImage image, VkDeviceMemory mem, VkDeviceSize offset)
+{
+    const VkLayerDispatchTable *disp;
+
+    disp = loader_get_dispatch(device);
+
+    return disp->BindImageMemory(device, image, mem, offset);
 }
 
 LOADER_EXPORT VkResult VKAPI vkGetImageSparseMemoryRequirements(VkDevice device, VkImage image, uint32_t* pNumRequirements, VkSparseImageMemoryRequirements* pSparseMemoryRequirements)
@@ -501,6 +510,15 @@ LOADER_EXPORT VkResult VKAPI vkCreateFence(VkDevice device, const VkFenceCreateI
     return disp->CreateFence(device, pCreateInfo, pFence);
 }
 
+LOADER_EXPORT VkResult VKAPI vkDestroyFence(VkDevice device, VkFence fence)
+{
+    const VkLayerDispatchTable *disp;
+
+    disp = loader_get_dispatch(device);
+
+    return disp->DestroyFence(device, fence);
+}
+
 LOADER_EXPORT VkResult VKAPI vkResetFences(VkDevice device, uint32_t fenceCount, const VkFence* pFences)
 {
     const VkLayerDispatchTable *disp;
@@ -537,6 +555,15 @@ LOADER_EXPORT VkResult VKAPI vkCreateSemaphore(VkDevice device, const VkSemaphor
     return disp->CreateSemaphore(device, pCreateInfo, pSemaphore);
 }
 
+LOADER_EXPORT VkResult VKAPI vkDestroySemaphore(VkDevice device, VkSemaphore semaphore)
+{
+    const VkLayerDispatchTable *disp;
+
+    disp = loader_get_dispatch(device);
+
+    return disp->DestroySemaphore(device, semaphore);
+}
+
 LOADER_EXPORT VkResult VKAPI vkQueueSignalSemaphore(VkQueue queue, VkSemaphore semaphore)
 {
     const VkLayerDispatchTable *disp;
@@ -562,6 +589,15 @@ LOADER_EXPORT VkResult VKAPI vkCreateEvent(VkDevice device, const VkEventCreateI
     disp = loader_get_dispatch(device);
 
     return disp->CreateEvent(device, pCreateInfo, pEvent);
+}
+
+LOADER_EXPORT VkResult VKAPI vkDestroyEvent(VkDevice device, VkEvent event)
+{
+    const VkLayerDispatchTable *disp;
+
+    disp = loader_get_dispatch(device);
+
+    return disp->DestroyEvent(device, event);
 }
 
 LOADER_EXPORT VkResult VKAPI vkGetEventStatus(VkDevice device, VkEvent event)
@@ -600,6 +636,15 @@ LOADER_EXPORT VkResult VKAPI vkCreateQueryPool(VkDevice device, const VkQueryPoo
     return disp->CreateQueryPool(device, pCreateInfo, pQueryPool);
 }
 
+LOADER_EXPORT VkResult VKAPI vkDestroyQueryPool(VkDevice device, VkQueryPool queryPool)
+{
+    const VkLayerDispatchTable *disp;
+
+    disp = loader_get_dispatch(device);
+
+    return disp->DestroyQueryPool(device, queryPool);
+}
+
 LOADER_EXPORT VkResult VKAPI vkGetQueryPoolResults(VkDevice device, VkQueryPool queryPool, uint32_t startQuery, uint32_t queryCount, size_t* pDataSize, void* pData, VkQueryResultFlags flags)
 {
     const VkLayerDispatchTable *disp;
@@ -618,6 +663,15 @@ LOADER_EXPORT VkResult VKAPI vkCreateBuffer(VkDevice device, const VkBufferCreat
     return disp->CreateBuffer(device, pCreateInfo, pBuffer);
 }
 
+LOADER_EXPORT VkResult VKAPI vkDestroyBuffer(VkDevice device, VkBuffer buffer)
+{
+    const VkLayerDispatchTable *disp;
+
+    disp = loader_get_dispatch(device);
+
+    return disp->DestroyBuffer(device, buffer);
+}
+
 LOADER_EXPORT VkResult VKAPI vkCreateBufferView(VkDevice device, const VkBufferViewCreateInfo* pCreateInfo, VkBufferView* pView)
 {
     const VkLayerDispatchTable *disp;
@@ -627,6 +681,15 @@ LOADER_EXPORT VkResult VKAPI vkCreateBufferView(VkDevice device, const VkBufferV
     return disp->CreateBufferView(device, pCreateInfo, pView);
 }
 
+LOADER_EXPORT VkResult VKAPI vkDestroyBufferView(VkDevice device, VkBufferView bufferView)
+{
+    const VkLayerDispatchTable *disp;
+
+    disp = loader_get_dispatch(device);
+
+    return disp->DestroyBufferView(device, bufferView);
+}
+
 LOADER_EXPORT VkResult VKAPI vkCreateImage(VkDevice device, const VkImageCreateInfo* pCreateInfo, VkImage* pImage)
 {
     const VkLayerDispatchTable *disp;
@@ -634,6 +697,15 @@ LOADER_EXPORT VkResult VKAPI vkCreateImage(VkDevice device, const VkImageCreateI
     disp = loader_get_dispatch(device);
 
     return disp->CreateImage(device, pCreateInfo, pImage);
+}
+
+LOADER_EXPORT VkResult VKAPI vkDestroyImage(VkDevice device, VkImage image)
+{
+    const VkLayerDispatchTable *disp;
+
+    disp = loader_get_dispatch(device);
+
+    return disp->DestroyImage(device, image);
 }
 
 LOADER_EXPORT VkResult VKAPI vkGetImageSubresourceLayout(VkDevice device, VkImage image, const VkImageSubresource* pSubresource, VkSubresourceLayout* pLayout)
@@ -654,6 +726,15 @@ LOADER_EXPORT VkResult VKAPI vkCreateImageView(VkDevice device, const VkImageVie
     return disp->CreateImageView(device, pCreateInfo, pView);
 }
 
+LOADER_EXPORT VkResult VKAPI vkDestroyImageView(VkDevice device, VkImageView imageView)
+{
+    const VkLayerDispatchTable *disp;
+
+    disp = loader_get_dispatch(device);
+
+    return disp->DestroyImageView(device, imageView);
+}
+
 LOADER_EXPORT VkResult VKAPI vkCreateAttachmentView(VkDevice device, const VkAttachmentViewCreateInfo* pCreateInfo, VkAttachmentView* pView)
 {
     const VkLayerDispatchTable *disp;
@@ -661,6 +742,15 @@ LOADER_EXPORT VkResult VKAPI vkCreateAttachmentView(VkDevice device, const VkAtt
     disp = loader_get_dispatch(device);
 
     return disp->CreateAttachmentView(device, pCreateInfo, pView);
+}
+
+LOADER_EXPORT VkResult VKAPI vkDestroyAttachmentView(VkDevice device, VkAttachmentView attachmentView)
+{
+    const VkLayerDispatchTable *disp;
+
+    disp = loader_get_dispatch(device);
+
+    return disp->DestroyAttachmentView(device, attachmentView);
 }
 
 LOADER_EXPORT VkResult VKAPI vkCreateShaderModule(VkDevice device, const VkShaderModuleCreateInfo* pCreateInfo, VkShaderModule* pShader)
@@ -672,6 +762,15 @@ LOADER_EXPORT VkResult VKAPI vkCreateShaderModule(VkDevice device, const VkShade
     return disp->CreateShaderModule(device, pCreateInfo, pShader);
 }
 
+LOADER_EXPORT VkResult VKAPI vkDestroyShaderModule(VkDevice device, VkShaderModule shaderModule)
+{
+    const VkLayerDispatchTable *disp;
+
+    disp = loader_get_dispatch(device);
+
+    return disp->DestroyShaderModule(device, shaderModule);
+}
+
 LOADER_EXPORT VkResult VKAPI vkCreateShader(VkDevice device, const VkShaderCreateInfo* pCreateInfo, VkShader* pShader)
 {
     const VkLayerDispatchTable *disp;
@@ -679,6 +778,15 @@ LOADER_EXPORT VkResult VKAPI vkCreateShader(VkDevice device, const VkShaderCreat
     disp = loader_get_dispatch(device);
 
     return disp->CreateShader(device, pCreateInfo, pShader);
+}
+
+LOADER_EXPORT VkResult VKAPI vkDestroyShader(VkDevice device, VkShader shader)
+{
+    const VkLayerDispatchTable *disp;
+
+    disp = loader_get_dispatch(device);
+
+    return disp->DestroyShader(device, shader);
 }
 
 LOADER_EXPORT VkResult VKAPI vkCreatePipelineCache(VkDevice device, const VkPipelineCacheCreateInfo* pCreateInfo, VkPipelineCache* pPipelineCache)
@@ -744,6 +852,15 @@ LOADER_EXPORT VkResult VKAPI vkCreateComputePipelines(VkDevice device, VkPipelin
     return disp->CreateComputePipelines(device, pipelineCache, count, pCreateInfos, pPipelines);
 }
 
+LOADER_EXPORT VkResult VKAPI vkDestroyPipeline(VkDevice device, VkPipeline pipeline)
+{
+    const VkLayerDispatchTable *disp;
+
+    disp = loader_get_dispatch(device);
+
+    return disp->DestroyPipeline(device, pipeline);
+}
+
 LOADER_EXPORT VkResult VKAPI vkCreatePipelineLayout(VkDevice device, const VkPipelineLayoutCreateInfo* pCreateInfo, VkPipelineLayout* pPipelineLayout)
 {
     const VkLayerDispatchTable *disp;
@@ -751,6 +868,15 @@ LOADER_EXPORT VkResult VKAPI vkCreatePipelineLayout(VkDevice device, const VkPip
     disp = loader_get_dispatch(device);
 
     return disp->CreatePipelineLayout(device, pCreateInfo, pPipelineLayout);
+}
+
+LOADER_EXPORT VkResult VKAPI vkDestroyPipelineLayout(VkDevice device, VkPipelineLayout pipelineLayout)
+{
+    const VkLayerDispatchTable *disp;
+
+    disp = loader_get_dispatch(device);
+
+    return disp->DestroyPipelineLayout(device, pipelineLayout);
 }
 
 LOADER_EXPORT VkResult VKAPI vkCreateSampler(VkDevice device, const VkSamplerCreateInfo* pCreateInfo, VkSampler* pSampler)
@@ -762,6 +888,16 @@ LOADER_EXPORT VkResult VKAPI vkCreateSampler(VkDevice device, const VkSamplerCre
     return disp->CreateSampler(device, pCreateInfo, pSampler);
 }
 
+LOADER_EXPORT VkResult VKAPI vkDestroySampler(VkDevice device, VkSampler sampler)
+{
+    const VkLayerDispatchTable *disp;
+
+    disp = loader_get_dispatch(device);
+
+    return disp->DestroySampler(device, sampler);
+}
+
+
 LOADER_EXPORT VkResult VKAPI vkCreateDescriptorSetLayout(VkDevice device, const VkDescriptorSetLayoutCreateInfo* pCreateInfo, VkDescriptorSetLayout* pSetLayout)
 {
     const VkLayerDispatchTable *disp;
@@ -769,6 +905,15 @@ LOADER_EXPORT VkResult VKAPI vkCreateDescriptorSetLayout(VkDevice device, const 
     disp = loader_get_dispatch(device);
 
     return disp->CreateDescriptorSetLayout(device, pCreateInfo, pSetLayout);
+}
+
+LOADER_EXPORT VkResult VKAPI vkDestroyDescriptorSetLayout(VkDevice device, VkDescriptorSetLayout descriptorSetLayout)
+{
+    const VkLayerDispatchTable *disp;
+
+    disp = loader_get_dispatch(device);
+
+    return disp->DestroyDescriptorSetLayout(device, descriptorSetLayout);
 }
 
 LOADER_EXPORT VkResult VKAPI vkCreateDescriptorPool(VkDevice device, VkDescriptorPoolUsage poolUsage, uint32_t maxSets, const VkDescriptorPoolCreateInfo* pCreateInfo, VkDescriptorPool* pDescriptorPool)
@@ -779,6 +924,16 @@ LOADER_EXPORT VkResult VKAPI vkCreateDescriptorPool(VkDevice device, VkDescripto
 
     return disp->CreateDescriptorPool(device, poolUsage, maxSets, pCreateInfo, pDescriptorPool);
 }
+
+LOADER_EXPORT VkResult VKAPI vkDestroyDescriptorPool(VkDevice device, VkDescriptorPool descriptorPool)
+{
+    const VkLayerDispatchTable *disp;
+
+    disp = loader_get_dispatch(device);
+
+    return disp->DestroyDescriptorPool(device, descriptorPool);
+}
+
 
 LOADER_EXPORT VkResult VKAPI vkResetDescriptorPool(VkDevice device, VkDescriptorPool descriptorPool)
 {
@@ -807,7 +962,7 @@ LOADER_EXPORT VkResult VKAPI vkUpdateDescriptorSets(VkDevice device, uint32_t wr
     return disp->UpdateDescriptorSets(device, writeCount, pDescriptorWrites, copyCount, pDescriptorCopies);
 }
 
-LOADER_EXPORT VkResult VKAPI vkCreateDynamicViewportState(VkDevice device, const VkDynamicVpStateCreateInfo* pCreateInfo, VkDynamicVpState* pState)
+LOADER_EXPORT VkResult VKAPI vkCreateDynamicViewportState(VkDevice device, const VkDynamicViewportStateCreateInfo* pCreateInfo, VkDynamicViewportState* pState)
 {
     const VkLayerDispatchTable *disp;
 
@@ -816,7 +971,16 @@ LOADER_EXPORT VkResult VKAPI vkCreateDynamicViewportState(VkDevice device, const
     return disp->CreateDynamicViewportState(device, pCreateInfo, pState);
 }
 
-LOADER_EXPORT VkResult VKAPI vkCreateDynamicRasterState(VkDevice device, const VkDynamicRsStateCreateInfo* pCreateInfo, VkDynamicRsState* pState)
+LOADER_EXPORT VkResult VKAPI vkDestroyDynamicViewportState(VkDevice device, VkDynamicViewportState dynamicViewportState)
+{
+    const VkLayerDispatchTable *disp;
+
+    disp = loader_get_dispatch(device);
+
+    return disp->DestroyDynamicViewportState(device, dynamicViewportState);
+}
+
+LOADER_EXPORT VkResult VKAPI vkCreateDynamicRasterState(VkDevice device, const VkDynamicRasterStateCreateInfo* pCreateInfo, VkDynamicRasterState* pState)
 {
     const VkLayerDispatchTable *disp;
 
@@ -825,7 +989,16 @@ LOADER_EXPORT VkResult VKAPI vkCreateDynamicRasterState(VkDevice device, const V
     return disp->CreateDynamicRasterState(device, pCreateInfo, pState);
 }
 
-LOADER_EXPORT VkResult VKAPI vkCreateDynamicColorBlendState(VkDevice device, const VkDynamicCbStateCreateInfo* pCreateInfo, VkDynamicCbState* pState)
+LOADER_EXPORT VkResult VKAPI vkDestroyDynamicRasterState(VkDevice device, VkDynamicRasterState dynamicRasterState)
+{
+    const VkLayerDispatchTable *disp;
+
+    disp = loader_get_dispatch(device);
+
+    return disp->DestroyDynamicRasterState(device, dynamicRasterState);
+}
+
+LOADER_EXPORT VkResult VKAPI vkCreateDynamicColorBlendState(VkDevice device, const VkDynamicColorBlendStateCreateInfo* pCreateInfo, VkDynamicColorBlendState* pState)
 {
     const VkLayerDispatchTable *disp;
 
@@ -834,13 +1007,31 @@ LOADER_EXPORT VkResult VKAPI vkCreateDynamicColorBlendState(VkDevice device, con
     return disp->CreateDynamicColorBlendState(device, pCreateInfo, pState);
 }
 
-LOADER_EXPORT VkResult VKAPI vkCreateDynamicDepthStencilState(VkDevice device, const VkDynamicDsStateCreateInfo* pCreateInfo, VkDynamicDsState* pState)
+LOADER_EXPORT VkResult VKAPI vkDestroyDynamicColorBlendState(VkDevice device, VkDynamicColorBlendState dynamicColorBlendState)
+{
+    const VkLayerDispatchTable *disp;
+
+    disp = loader_get_dispatch(device);
+
+    return disp->DestroyDynamicColorBlendState(device, dynamicColorBlendState);
+}
+
+LOADER_EXPORT VkResult VKAPI vkCreateDynamicDepthStencilState(VkDevice device, const VkDynamicDepthStencilStateCreateInfo* pCreateInfo, VkDynamicDepthStencilState* pState)
 {
     const VkLayerDispatchTable *disp;
 
     disp = loader_get_dispatch(device);
 
     return disp->CreateDynamicDepthStencilState(device, pCreateInfo, pState);
+}
+
+LOADER_EXPORT VkResult VKAPI vkDestroyDynamicDepthStencilState(VkDevice device, VkDynamicDepthStencilState dynamicDepthStencilState)
+{
+    const VkLayerDispatchTable *disp;
+
+    disp = loader_get_dispatch(device);
+
+    return disp->DestroyDynamicDepthStencilState(device, dynamicDepthStencilState);
 }
 
 LOADER_EXPORT VkResult VKAPI vkCreateCommandBuffer(VkDevice device, const VkCmdBufferCreateInfo* pCreateInfo, VkCmdBuffer* pCmdBuffer)
@@ -856,6 +1047,15 @@ LOADER_EXPORT VkResult VKAPI vkCreateCommandBuffer(VkDevice device, const VkCmdB
     }
 
     return res;
+}
+
+LOADER_EXPORT VkResult VKAPI vkDestroyCommandBuffer(VkDevice device, VkCmdBuffer cmdBuffer)
+{
+    const VkLayerDispatchTable *disp;
+
+    disp = loader_get_dispatch(device);
+
+    return disp->DestroyCommandBuffer(device, cmdBuffer);
 }
 
 LOADER_EXPORT VkResult VKAPI vkBeginCommandBuffer(VkCmdBuffer cmdBuffer, const VkCmdBufferBeginInfo* pBeginInfo)
@@ -894,13 +1094,40 @@ LOADER_EXPORT void VKAPI vkCmdBindPipeline(VkCmdBuffer cmdBuffer, VkPipelineBind
     disp->CmdBindPipeline(cmdBuffer, pipelineBindPoint, pipeline);
 }
 
-LOADER_EXPORT void VKAPI vkCmdBindDynamicStateObject(VkCmdBuffer cmdBuffer, VkStateBindPoint stateBindPoint, VkDynamicStateObject state)
+LOADER_EXPORT void VKAPI vkCmdBindDynamicViewportState(VkCmdBuffer cmdBuffer, VkDynamicViewportState state)
 {
     const VkLayerDispatchTable *disp;
 
     disp = loader_get_dispatch(cmdBuffer);
 
-    disp->CmdBindDynamicStateObject(cmdBuffer, stateBindPoint, state);
+    disp->CmdBindDynamicViewportState(cmdBuffer, state);
+}
+
+LOADER_EXPORT void VKAPI vkCmdBindDynamicRasterState(VkCmdBuffer cmdBuffer, VkDynamicRasterState state)
+{
+    const VkLayerDispatchTable *disp;
+
+    disp = loader_get_dispatch(cmdBuffer);
+
+    disp->CmdBindDynamicRasterState(cmdBuffer, state);
+}
+
+LOADER_EXPORT void VKAPI vkCmdBindDynamicColorBlendState(VkCmdBuffer cmdBuffer, VkDynamicColorBlendState state)
+{
+    const VkLayerDispatchTable *disp;
+
+    disp = loader_get_dispatch(cmdBuffer);
+
+    disp->CmdBindDynamicColorBlendState(cmdBuffer, state);
+}
+
+LOADER_EXPORT void VKAPI vkCmdBindDynamicDepthStencilState(VkCmdBuffer cmdBuffer, VkDynamicDepthStencilState state)
+{
+    const VkLayerDispatchTable *disp;
+
+    disp = loader_get_dispatch(cmdBuffer);
+
+    disp->CmdBindDynamicDepthStencilState(cmdBuffer, state);
 }
 
 LOADER_EXPORT void VKAPI vkCmdBindDescriptorSets(VkCmdBuffer cmdBuffer, VkPipelineBindPoint pipelineBindPoint, VkPipelineLayout layout, uint32_t firstSet, uint32_t setCount, const VkDescriptorSet* pDescriptorSets, uint32_t dynamicOffsetCount, const uint32_t* pDynamicOffsets)
@@ -1182,6 +1409,15 @@ LOADER_EXPORT VkResult VKAPI vkCreateFramebuffer(VkDevice device, const VkFrameb
     return disp->CreateFramebuffer(device, pCreateInfo, pFramebuffer);
 }
 
+LOADER_EXPORT VkResult VKAPI vkDestroyFramebuffer(VkDevice device, VkFramebuffer framebuffer)
+{
+    const VkLayerDispatchTable *disp;
+
+    disp = loader_get_dispatch(device);
+
+    return disp->DestroyFramebuffer(device, framebuffer);
+}
+
 LOADER_EXPORT VkResult VKAPI vkCreateRenderPass(VkDevice device, const VkRenderPassCreateInfo* pCreateInfo, VkRenderPass* pRenderPass)
 {
     const VkLayerDispatchTable *disp;
@@ -1189,6 +1425,15 @@ LOADER_EXPORT VkResult VKAPI vkCreateRenderPass(VkDevice device, const VkRenderP
     disp = loader_get_dispatch(device);
 
     return disp->CreateRenderPass(device, pCreateInfo, pRenderPass);
+}
+
+LOADER_EXPORT VkResult VKAPI vkDestroyRenderPass(VkDevice device, VkRenderPass renderPass)
+{
+    const VkLayerDispatchTable *disp;
+
+    disp = loader_get_dispatch(device);
+
+    return disp->DestroyRenderPass(device, renderPass);
 }
 
 LOADER_EXPORT void VKAPI vkCmdBeginRenderPass(VkCmdBuffer cmdBuffer, const VkRenderPassBeginInfo* pRenderPassBegin, VkRenderPassContents contents)

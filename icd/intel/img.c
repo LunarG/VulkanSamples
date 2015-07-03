@@ -157,6 +157,17 @@ ICD_EXPORT VkResult VKAPI vkCreateImage(
             (struct intel_img **) pImage);
 }
 
+ICD_EXPORT VkResult VKAPI vkDestroyImage(
+    VkDevice                                device,
+    VkImage                                 image)
+
+ {
+    struct intel_obj *obj = intel_obj(image.handle);
+
+    obj->destroy(obj);
+    return VK_SUCCESS;
+ }
+
 ICD_EXPORT VkResult VKAPI vkGetImageSubresourceLayout(
     VkDevice                                    device,
     VkImage                                     image,

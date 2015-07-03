@@ -1356,6 +1356,17 @@ ICD_EXPORT VkResult VKAPI vkCreateBufferView(
             (struct intel_buf_view **) pView);
 }
 
+ICD_EXPORT VkResult VKAPI vkDestroyBufferView(
+    VkDevice                                device,
+    VkBufferView                            bufferView)
+
+ {
+    struct intel_obj *obj = intel_obj(bufferView.handle);
+
+    obj->destroy(obj);
+    return VK_SUCCESS;
+ }
+
 ICD_EXPORT VkResult VKAPI vkCreateImageView(
     VkDevice                                  device,
     const VkImageViewCreateInfo*           pCreateInfo,
@@ -1367,6 +1378,17 @@ ICD_EXPORT VkResult VKAPI vkCreateImageView(
             (struct intel_img_view **) pView);
 }
 
+ICD_EXPORT VkResult VKAPI vkDestroyImageView(
+    VkDevice                                device,
+    VkImageView                             imageView)
+
+ {
+    struct intel_obj *obj = intel_obj(imageView.handle);
+
+    obj->destroy(obj);
+    return VK_SUCCESS;
+ }
+
 ICD_EXPORT VkResult VKAPI vkCreateAttachmentView(
     VkDevice                                    device,
     const VkAttachmentViewCreateInfo*           pCreateInfo,
@@ -1377,3 +1399,15 @@ ICD_EXPORT VkResult VKAPI vkCreateAttachmentView(
     return intel_att_view_create(dev, pCreateInfo,
             (struct intel_att_view **) pView);
 }
+
+ICD_EXPORT VkResult VKAPI vkDestroyAttachmentView(
+    VkDevice                                device,
+    VkAttachmentView                        attachmentView)
+
+ {
+    struct intel_obj *obj = intel_obj(attachmentView.handle);
+
+    obj->destroy(obj);
+    return VK_SUCCESS;
+ }
+

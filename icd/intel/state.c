@@ -90,9 +90,9 @@ viewport_get_guardband(const struct intel_gpu *gpu,
 }
 
 static VkResult
-viewport_state_alloc_cmd(struct intel_dynamic_vp *state,
+viewport_state_alloc_cmd(struct intel_dynamic_viewport *state,
                          const struct intel_gpu *gpu,
-                         const VkDynamicVpStateCreateInfo *info)
+                         const VkDynamicViewportStateCreateInfo *info)
 {
     INTEL_GPU_ASSERT(gpu, 6, 7.5);
 
@@ -126,9 +126,9 @@ viewport_state_alloc_cmd(struct intel_dynamic_vp *state,
 }
 
 static VkResult
-viewport_state_init(struct intel_dynamic_vp *state,
+viewport_state_init(struct intel_dynamic_viewport *state,
                     const struct intel_gpu *gpu,
-                    const VkDynamicVpStateCreateInfo *info)
+                    const VkDynamicViewportStateCreateInfo *info)
 {
     const uint32_t sf_stride = (intel_gpu_gen(gpu) >= INTEL_GEN(7)) ? 16 : 8;
     const uint32_t clip_stride = (intel_gpu_gen(gpu) >= INTEL_GEN(7)) ? 16 : 4;
@@ -216,19 +216,19 @@ viewport_state_init(struct intel_dynamic_vp *state,
 
 static void viewport_state_destroy(struct intel_obj *obj)
 {
-    struct intel_dynamic_vp *state = intel_viewport_state_from_obj(obj);
+    struct intel_dynamic_viewport *state = intel_viewport_state_from_obj(obj);
 
     intel_viewport_state_destroy(state);
 }
 
 VkResult intel_viewport_state_create(struct intel_dev *dev,
-                                       const VkDynamicVpStateCreateInfo *info,
-                                       struct intel_dynamic_vp **state_ret)
+                                       const VkDynamicViewportStateCreateInfo *info,
+                                       struct intel_dynamic_viewport **state_ret)
 {
-    struct intel_dynamic_vp *state;
+    struct intel_dynamic_viewport *state;
     VkResult ret;
 
-    state = (struct intel_dynamic_vp *) intel_base_create(&dev->base.handle,
+    state = (struct intel_dynamic_viewport *) intel_base_create(&dev->base.handle,
             sizeof(*state), dev->base.dbg, VK_OBJECT_TYPE_DYNAMIC_VP_STATE,
             info, 0);
     if (!state)
@@ -247,7 +247,7 @@ VkResult intel_viewport_state_create(struct intel_dev *dev,
     return VK_SUCCESS;
 }
 
-void intel_viewport_state_destroy(struct intel_dynamic_vp *state)
+void intel_viewport_state_destroy(struct intel_dynamic_viewport *state)
 {
     intel_free(state, state->cmd);
     intel_base_destroy(&state->obj.base);
@@ -255,88 +255,88 @@ void intel_viewport_state_destroy(struct intel_dynamic_vp *state)
 
 static void raster_state_destroy(struct intel_obj *obj)
 {
-    struct intel_dynamic_rs *state = intel_raster_state_from_obj(obj);
+    struct intel_dynamic_raster *state = intel_raster_state_from_obj(obj);
 
     intel_raster_state_destroy(state);
 }
 
 VkResult intel_raster_state_create(struct intel_dev *dev,
-                                     const VkDynamicRsStateCreateInfo *info,
-                                     struct intel_dynamic_rs **state_ret)
+                                     const VkDynamicRasterStateCreateInfo *info,
+                                     struct intel_dynamic_raster **state_ret)
 {
-    struct intel_dynamic_rs *state;
+    struct intel_dynamic_raster *state;
 
-    state = (struct intel_dynamic_rs *) intel_base_create(&dev->base.handle,
+    state = (struct intel_dynamic_raster *) intel_base_create(&dev->base.handle,
             sizeof(*state), dev->base.dbg, VK_OBJECT_TYPE_DYNAMIC_RS_STATE,
             info, 0);
     if (!state)
         return VK_ERROR_OUT_OF_HOST_MEMORY;
 
     state->obj.destroy = raster_state_destroy;
-    state->rs_info = *info;
+    state->raster_info = *info;
 
     *state_ret = state;
 
     return VK_SUCCESS;
 }
 
-void intel_raster_state_destroy(struct intel_dynamic_rs *state)
+void intel_raster_state_destroy(struct intel_dynamic_raster *state)
 {
     intel_base_destroy(&state->obj.base);
 }
 
 static void blend_state_destroy(struct intel_obj *obj)
 {
-    struct intel_dynamic_cb *state = intel_blend_state_from_obj(obj);
+    struct intel_dynamic_color_blend *state = intel_blend_state_from_obj(obj);
 
     intel_blend_state_destroy(state);
 }
 
 VkResult intel_blend_state_create(struct intel_dev *dev,
-                                    const VkDynamicCbStateCreateInfo *info,
-                                    struct intel_dynamic_cb **state_ret)
+                                    const VkDynamicColorBlendStateCreateInfo *info,
+                                    struct intel_dynamic_color_blend **state_ret)
 {
-    struct intel_dynamic_cb *state;
+    struct intel_dynamic_color_blend *state;
 
-    state = (struct intel_dynamic_cb *) intel_base_create(&dev->base.handle,
+    state = (struct intel_dynamic_color_blend *) intel_base_create(&dev->base.handle,
             sizeof(*state), dev->base.dbg, VK_OBJECT_TYPE_DYNAMIC_CB_STATE,
             info, 0);
     if (!state)
         return VK_ERROR_OUT_OF_HOST_MEMORY;
 
     state->obj.destroy = blend_state_destroy;
-    state->cb_info = *info;
+    state->color_blend_info = *info;
 
     *state_ret = state;
 
     return VK_SUCCESS;
 }
 
-void intel_blend_state_destroy(struct intel_dynamic_cb *state)
+void intel_blend_state_destroy(struct intel_dynamic_color_blend *state)
 {
     intel_base_destroy(&state->obj.base);
 }
 
-static void ds_state_destroy(struct intel_obj *obj)
+static void depth_stencil_state_destroy(struct intel_obj *obj)
 {
-    struct intel_dynamic_ds *state = intel_ds_state_from_obj(obj);
+    struct intel_dynamic_depth_stencil *state = intel_depth_stencil_state_from_obj(obj);
 
-    intel_ds_state_destroy(state);
+    intel_depth_stencil_state_destroy(state);
 }
 
-VkResult intel_ds_state_create(struct intel_dev *dev,
-                                 const VkDynamicDsStateCreateInfo *info,
-                                 struct intel_dynamic_ds **state_ret)
+VkResult intel_depth_stencil_state_create(struct intel_dev *dev,
+                                 const VkDynamicDepthStencilStateCreateInfo *info,
+                                 struct intel_dynamic_depth_stencil **state_ret)
 {
-    struct intel_dynamic_ds *state;
+    struct intel_dynamic_depth_stencil *state;
 
-    state = (struct intel_dynamic_ds *) intel_base_create(&dev->base.handle,
+    state = (struct intel_dynamic_depth_stencil *) intel_base_create(&dev->base.handle,
             sizeof(*state), dev->base.dbg, VK_OBJECT_TYPE_DYNAMIC_DS_STATE,
             info, 0);
     if (!state)
         return VK_ERROR_OUT_OF_HOST_MEMORY;
 
-    state->obj.destroy = ds_state_destroy;
+    state->obj.destroy = depth_stencil_state_destroy;
 
     /*
      * From the Sandy Bridge PRM, volume 2 part 1, page 359:
@@ -353,58 +353,102 @@ VkResult intel_ds_state_create(struct intel_dev *dev,
      * TODO We do not check these yet.
      */
 
-    state->ds_info = *info;
+    state->depth_stencil_info = *info;
 
     *state_ret = state;
 
     return VK_SUCCESS;
 }
 
-void intel_ds_state_destroy(struct intel_dynamic_ds *state)
+void intel_depth_stencil_state_destroy(struct intel_dynamic_depth_stencil *state)
 {
     intel_base_destroy(&state->obj.base);
 }
 
 ICD_EXPORT VkResult VKAPI vkCreateDynamicViewportState(
-    VkDevice                                  device,
-    const VkDynamicVpStateCreateInfo*     pCreateInfo,
-    VkDynamicVpState*                pState)
+    VkDevice                                    device,
+    const VkDynamicViewportStateCreateInfo*     pCreateInfo,
+    VkDynamicViewportState*                     pState)
 {
     struct intel_dev *dev = intel_dev(device);
 
     return intel_viewport_state_create(dev, pCreateInfo,
-            (struct intel_dynamic_vp **) pState);
+            (struct intel_dynamic_viewport **) pState);
+}
+
+ICD_EXPORT VkResult VKAPI vkDestroyDynamicViewportState(
+    VkDevice                                device,
+    VkDynamicViewportState                  dynamicViewportState)
+
+{
+    struct intel_obj *obj = intel_obj(dynamicViewportState.handle);
+
+    obj->destroy(obj);
+    return VK_SUCCESS;
 }
 
 ICD_EXPORT VkResult VKAPI vkCreateDynamicRasterState(
     VkDevice                                  device,
-    const VkDynamicRsStateCreateInfo*     pCreateInfo,
-    VkDynamicRsState*                pState)
+    const VkDynamicRasterStateCreateInfo*     pCreateInfo,
+    VkDynamicRasterState*                     pState)
 {
     struct intel_dev *dev = intel_dev(device);
 
     return intel_raster_state_create(dev, pCreateInfo,
-            (struct intel_dynamic_rs **) pState);
+            (struct intel_dynamic_raster **) pState);
+}
+
+ICD_EXPORT VkResult VKAPI vkDestroyDynamicRasterState(
+    VkDevice                                device,
+    VkDynamicRasterState                    dynamicRasterState)
+
+{
+    struct intel_obj *obj = intel_obj(dynamicRasterState.handle);
+
+    obj->destroy(obj);
+    return VK_SUCCESS;
 }
 
 ICD_EXPORT VkResult VKAPI vkCreateDynamicColorBlendState(
-    VkDevice                                  device,
-    const VkDynamicCbStateCreateInfo*     pCreateInfo,
-    VkDynamicCbState*                pState)
+    VkDevice                                      device,
+    const VkDynamicColorBlendStateCreateInfo*     pCreateInfo,
+    VkDynamicColorBlendState*                     pState)
 {
     struct intel_dev *dev = intel_dev(device);
 
     return intel_blend_state_create(dev, pCreateInfo,
-            (struct intel_dynamic_cb **) pState);
+            (struct intel_dynamic_color_blend **) pState);
+}
+
+ICD_EXPORT VkResult VKAPI vkDestroyDynamicColorBlendState(
+    VkDevice                                device,
+    VkDynamicColorBlendState                dynamicColorBlendState)
+
+{
+    struct intel_obj *obj = intel_obj(dynamicColorBlendState.handle);
+
+    obj->destroy(obj);
+    return VK_SUCCESS;
 }
 
 ICD_EXPORT VkResult VKAPI vkCreateDynamicDepthStencilState(
-    VkDevice                                  device,
-    const VkDynamicDsStateCreateInfo*     pCreateInfo,
-    VkDynamicDsState*                pState)
+    VkDevice                                        device,
+    const VkDynamicDepthStencilStateCreateInfo*     pCreateInfo,
+    VkDynamicDepthStencilState*                     pState)
 {
     struct intel_dev *dev = intel_dev(device);
 
-    return intel_ds_state_create(dev, pCreateInfo,
-            (struct intel_dynamic_ds **) pState);
+    return intel_depth_stencil_state_create(dev, pCreateInfo,
+            (struct intel_dynamic_depth_stencil **) pState);
+}
+
+ICD_EXPORT VkResult VKAPI vkDestroyDynamicDepthStencilState(
+    VkDevice                                device,
+    VkDynamicDepthStencilState              dynamicDepthStencilState)
+
+{
+    struct intel_obj *obj = intel_obj(dynamicDepthStencilState.handle);
+
+    obj->destroy(obj);
+    return VK_SUCCESS;
 }

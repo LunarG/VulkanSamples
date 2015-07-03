@@ -363,7 +363,7 @@ ICD_EXPORT VkResult VKAPI vkQueueSubmit(
         intel_fence_set_seqno(queue->fence,
                 intel_cmd_get_batch(last_cmd, NULL));
 
-        if (fence_ != VK_NULL_HANDLE) {
+        if (fence_.handle != VK_NULL_HANDLE) {
             struct intel_fence *fence = intel_fence(fence_);
             intel_fence_copy(fence, queue->fence);
         }
@@ -393,6 +393,14 @@ ICD_EXPORT VkResult VKAPI vkCreateSemaphore(
      */
     return VK_ERROR_UNAVAILABLE;
 }
+
+ICD_EXPORT VkResult VKAPI vkDestroySemaphore(
+    VkDevice                                    device,
+    VkSemaphore                                 semaphore)
+
+ {
+    return VK_SUCCESS;
+ }
 
 ICD_EXPORT VkResult VKAPI vkQueueSignalSemaphore(
     VkQueue                                   queue,

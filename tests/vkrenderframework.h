@@ -106,12 +106,19 @@ protected:
     VkCmdBuffer                         m_cmdBuffer;
     VkRenderPass                        m_renderPass;
     VkFramebuffer                       m_framebuffer;
+<<<<<<< HEAD
     std::vector<VkClearValue>           m_renderPassClearValues;
     VkRenderPassBeginInfo               m_renderPassBeginInfo;
     VkDynamicRsState                    m_stateRaster;
     VkDynamicCbState                    m_colorBlend;
     VkDynamicVpState                    m_stateViewport;
     VkDynamicDsState                    m_stateDepthStencil;
+=======
+    VkDynamicRasterState                m_stateRaster;
+    VkDynamicColorBlendState            m_colorBlend;
+    VkDynamicViewportState              m_stateViewport;
+    VkDynamicDepthStencilState          m_stateDepthStencil;
+>>>>>>> Bug 14084 - Improve type safety and remove polymorphism
     vector<VkImageObj*>                 m_renderTargets;
     float                               m_width, m_height;
     VkFormat                            m_render_target_fmt;

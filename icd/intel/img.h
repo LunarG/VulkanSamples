@@ -56,7 +56,7 @@ struct intel_img {
 
 static inline struct intel_img *intel_img(VkImage image)
 {
-    return (struct intel_img *) image;
+    return *(struct intel_img **) &image;
 }
 
 static inline struct intel_img *intel_img_from_base(struct intel_base *base)

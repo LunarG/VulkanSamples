@@ -53,16 +53,16 @@ extern "C"
 
 #define VK_DEBUG_MARKER_ENUM_EXTEND(type, id)    ((type)(VK_DEBUG_MARKER_EXTENSION_NUMBER * -1000 + (id)))
 
-#define VK_OBJECT_INFO_TYPE_DBG_OBJECT_TAG VK_DEBUG_MARKER_ENUM_EXTEND(VkObjectInfoType, 0)
-#define VK_OBJECT_INFO_TYPE_DBG_OBJECT_NAME VK_DEBUG_MARKER_ENUM_EXTEND(VkObjectInfoType, 1)
+#define VK_OBJECT_INFO_TYPE_DBG_OBJECT_TAG VK_DEBUG_MARKER_ENUM_EXTEND(VkDbgObjectInfoType, 0)
+#define VK_OBJECT_INFO_TYPE_DBG_OBJECT_NAME VK_DEBUG_MARKER_ENUM_EXTEND(VkDbgObjectInfoType, 1)
 
 // ------------------------------------------------------------------------------------------------
 // API functions
 
 typedef void (VKAPI *PFN_vkCmdDbgMarkerBegin)(VkCmdBuffer cmdBuffer, const char* pMarker);
 typedef void (VKAPI *PFN_vkCmdDbgMarkerEnd)(VkCmdBuffer cmdBuffer);
-typedef VkResult (VKAPI *PFN_vkDbgSetObjectTag)(VkDevice device, VkObjectType objType, VkObject object, size_t tagSize, const void* pTag);
-typedef VkResult (VKAPI *PFN_vkDbgSetObjectName)(VkDevice device, VkObjectType objType, VkObject object, size_t nameSize, const char* pName);
+typedef VkResult (VKAPI *PFN_vkDbgSetObjectTag)(VkDevice device, VkDbgObjectType objType, uint64_t object, size_t tagSize, const void* pTag);
+typedef VkResult (VKAPI *PFN_vkDbgSetObjectName)(VkDevice device, VkDbgObjectType objType, uint64_t object, size_t nameSize, const char* pName);
 
 #ifdef VK_PROTOTYPES
 
@@ -76,15 +76,15 @@ void VKAPI vkCmdDbgMarkerEnd(
 
 VkResult VKAPI vkDbgSetObjectTag(
     VkDevice                            device,
-    VkObjectType                        objType,
-    VkObject                            object,
+    VkDbgObjectType                     objType,
+    uint64_t                            object,
     size_t                              tagSize,
     const void*                         pTag);
 
 VkResult VKAPI vkDbgSetObjectName(
     VkDevice                            device,
-    VkObjectType                        objType,
-    VkObject                            object,
+    VkDbgObjectType                     objType,
+    uint64_t                            object,
     size_t                              nameSize,
     const char*                         pName);
 

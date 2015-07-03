@@ -127,6 +127,17 @@ ICD_EXPORT VkResult VKAPI vkCreateFence(
             (struct intel_fence **) pFence);
 }
 
+ICD_EXPORT VkResult VKAPI vkDestroyFence(
+    VkDevice                                device,
+    VkFence                                 fence)
+
+ {
+    struct intel_obj *obj = intel_obj(fence.handle);
+
+    obj->destroy(obj);
+    return VK_SUCCESS;
+ }
+
 ICD_EXPORT VkResult VKAPI vkGetFenceStatus(
     VkDevice                                  device,
     VkFence                                   fence_)

@@ -951,10 +951,10 @@ static struct loader_icd *loader_icd_add(
 static void loader_scanned_icd_add(const char *filename)
 {
     loader_platform_dl_handle handle;
-    void *fp_create_inst;
-    void *fp_get_global_ext_props;
-    void *fp_get_device_ext_props;
-    PFN_vkGPA fp_get_proc_addr;
+    PFN_vkCreateInstance fp_create_inst;
+    PFN_vkGetGlobalExtensionProperties fp_get_global_ext_props;
+    PFN_vkGetPhysicalDeviceExtensionProperties fp_get_device_ext_props;
+    PFN_vkGetDeviceProcAddr fp_get_proc_addr;
     struct loader_scanned_icds *new_node;
 
     // Used to call: dlopen(filename, RTLD_LAZY);
@@ -2060,8 +2060,8 @@ uint32_t loader_activate_instance_layers(struct loader_instance *inst)
     }
 
     // NOTE inst is unwrapped at this point in time
-    VkObject baseObj = (VkObject) inst;
-    VkObject nextObj = (VkObject) inst;
+    void* baseObj = (void*) inst;
+    void* nextObj = (void*) inst;
     VkBaseLayerObject *nextInstObj;
     PFN_vkGetInstanceProcAddr nextGPA = loader_gpa_instance_internal;
 
@@ -2097,10 +2097,10 @@ uint32_t loader_activate_instance_layers(struct loader_instance *inst)
          * the given baseObject.
          */
         nextInstObj = (wrappedInstance + layer_idx);
-        nextInstObj->pGPA = nextGPA;
+        nextInstObj->pGPA = (PFN_vkGPA) nextGPA;
         nextInstObj->baseObject = baseObj;
         nextInstObj->nextObject = nextObj;
-        nextObj = (VkObject) nextInstObj;
+        nextObj = (void*) nextInstObj;
 
         char funcStr[256];
         snprintf(funcStr, 256, "%sGetInstanceProcAddr", layer_prop->info.layerName);
@@ -2217,8 +2217,8 @@ static uint32_t loader_activate_device_layers(
     }
 
     /* activate any layer libraries */
-    VkObject nextObj = (VkObject) device;
-    VkObject baseObj = nextObj;
+    void* nextObj = (void*) device;
+    void* baseObj = nextObj;
     VkBaseLayerObject *nextGpuObj;
     PFN_vkGetDeviceProcAddr nextGPA = loader_GetDeviceChainProcAddr;
     VkBaseLayerObject *wrappedGpus;
@@ -2238,10 +2238,10 @@ static uint32_t loader_activate_device_layers(
         loader_platform_dl_handle lib_handle;
 
         nextGpuObj = (wrappedGpus + i);
-        nextGpuObj->pGPA = nextGPA;
+        nextGpuObj->pGPA = (PFN_vkGPA)nextGPA;
         nextGpuObj->baseObject = baseObj;
         nextGpuObj->nextObject = nextObj;
-        nextObj = (VkObject) nextGpuObj;
+        nextObj = (void*) nextGpuObj;
 
         char funcStr[256];
         snprintf(funcStr, 256, "%sGetDeviceProcAddr", layer_prop->info.layerName);
@@ -2261,7 +2261,7 @@ static uint32_t loader_activate_device_layers(
     }
 
     loader_init_device_dispatch_table(&dev->loader_dispatch, nextGPA,
-            (VkPhysicalDevice) nextObj, (VkPhysicalDevice) baseObj);
+            (VkDevice) nextObj, (VkDevice) baseObj);
     free(wrappedGpus);
 
     return dev->activated_layer_list.count;
@@ -2824,7 +2824,7 @@ VkResult loader_CreateDevice(
     }
     PFN_vkGetDeviceProcAddr get_proc_addr = icd->GetDeviceProcAddr;
     loader_init_device_dispatch_table(&dev->loader_dispatch, get_proc_addr,
-                                      icd->gpus[gpu_index], icd->gpus[gpu_index]);
+                                      (VkDevice) icd->gpus[gpu_index], (VkDevice) icd->gpus[gpu_index]);
 
     dev->loader_dispatch.CreateDevice = scratch_vkCreateDevice;
     loader_init_dispatch(*pDevice, &dev->loader_dispatch);

@@ -790,14 +790,14 @@ NON_DISPATCHABLE_HANDLE_DTOR(DescriptorSet, vkDestroyObject, VK_OBJECT_TYPE_DESC
 
 NON_DISPATCHABLE_HANDLE_DTOR(DynamicViewportState, vkDestroyObject, VK_OBJECT_TYPE_DYNAMIC_VP_STATE)
 
-void DynamicViewportState::init(const Device &dev, const VkDynamicVpStateCreateInfo &info)
+void DynamicViewportState::init(const Device &dev, const VkDynamicViewportStateCreateInfo &info)
 {
     NON_DISPATCHABLE_HANDLE_INIT(vkCreateDynamicViewportState, dev, &info);
 }
 
 NON_DISPATCHABLE_HANDLE_DTOR(DynamicRasterState, vkDestroyObject, VK_OBJECT_TYPE_DYNAMIC_RS_STATE)
 
-void DynamicRasterState::init(const Device &dev, const VkDynamicRsStateCreateInfo &info)
+void DynamicRasterState::init(const Device &dev, const VkDynamicRasterStateCreateInfo &info)
 {
     NON_DISPATCHABLE_HANDLE_INIT(vkCreateDynamicRasterState, dev, &info);
 }
@@ -811,7 +811,7 @@ void DynamicColorBlendState::init(const Device &dev, const VkDynamicCbStateCreat
 
 NON_DISPATCHABLE_HANDLE_DTOR(DynamicDepthStencilState, vkDestroyObject, VK_OBJECT_TYPE_DYNAMIC_DS_STATE)
 
-void DynamicDepthStencilState::init(const Device &dev, const VkDynamicDsStateCreateInfo &info)
+void DynamicDepthStencilState::init(const Device &dev, const VkDynamicDepthStencilStateCreateInfo &info)
 {
     NON_DISPATCHABLE_HANDLE_INIT(vkCreateDynamicDepthStencilState, dev, &info);
 }

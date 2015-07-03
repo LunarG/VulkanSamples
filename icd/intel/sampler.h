@@ -43,7 +43,7 @@ struct intel_sampler {
 
 static inline struct intel_sampler *intel_sampler(VkSampler sampler)
 {
-    return (struct intel_sampler *) sampler;
+    return *(struct intel_sampler **) &sampler;
 }
 
 static inline struct intel_sampler *intel_sampler_from_obj(struct intel_obj *obj)

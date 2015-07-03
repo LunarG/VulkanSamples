@@ -34,7 +34,7 @@ struct intel_dev;
 struct intel_mem;
 
 struct intel_base_dbg {
-    VkObjectType type;
+    VkDbgObjectType type;
 
     void *create_info;
     size_t create_info_size;
@@ -62,12 +62,12 @@ struct intel_obj {
     size_t offset;
 };
 
-static inline struct intel_base *intel_base(VkObject base)
+static inline struct intel_base *intel_base(uint64_t base)
 {
     return (struct intel_base *) base;
 }
 
-static inline struct intel_obj *intel_obj(VkObject obj)
+static inline struct intel_obj *intel_obj(uint64_t obj)
 {
     return (struct intel_obj *) obj;
 }
@@ -83,7 +83,7 @@ static inline void intel_obj_bind_mem(struct intel_obj *obj,
 VkResult intel_base_get_memory_requirements(struct intel_base *base, VkMemoryRequirements *data);
 
 struct intel_base_dbg *intel_base_dbg_create(const struct intel_handle *handle,
-                                             VkObjectType type,
+                                             VkDbgObjectType type,
                                              const void *create_info,
                                              size_t dbg_size);
 void intel_base_dbg_destroy(const struct intel_handle *handle,
@@ -91,7 +91,7 @@ void intel_base_dbg_destroy(const struct intel_handle *handle,
 
 struct intel_base *intel_base_create(const struct intel_handle *handle,
                                      size_t obj_size, bool debug,
-                                     VkObjectType type,
+                                     VkDbgObjectType type,
                                      const void *create_info,
                                      size_t dbg_size);
 void intel_base_destroy(struct intel_base *base);

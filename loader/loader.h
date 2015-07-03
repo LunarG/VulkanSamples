@@ -298,22 +298,22 @@ static inline struct loader_instance *loader_instance(VkInstance instance) {
     return (struct loader_instance *) instance;
 }
 
-static inline void loader_set_dispatch(VkObject obj, const void *data)
+static inline void loader_set_dispatch(void* obj, const void *data)
 {
     *((const void **) obj) = data;
 }
 
-static inline VkLayerDispatchTable *loader_get_dispatch(const VkObject obj)
+static inline VkLayerDispatchTable *loader_get_dispatch(const void* obj)
 {
     return *((VkLayerDispatchTable **) obj);
 }
 
-static inline VkLayerInstanceDispatchTable *loader_get_instance_dispatch(const VkObject obj)
+static inline VkLayerInstanceDispatchTable *loader_get_instance_dispatch(const void* obj)
 {
     return *((VkLayerInstanceDispatchTable **) obj);
 }
 
-static inline void loader_init_dispatch(VkObject obj, const void *data)
+static inline void loader_init_dispatch(void* obj, const void *data)
 {
 #ifdef DEBUG
     assert(valid_loader_magic_value(obj) &&

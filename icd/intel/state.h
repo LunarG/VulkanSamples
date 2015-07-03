@@ -33,7 +33,7 @@
 
 /* Should we add intel_state back, as the base class for dynamic states? */
 
-struct intel_dynamic_vp {
+struct intel_dynamic_viewport {
     struct intel_obj obj;
 
     uint32_t viewport_count;
@@ -45,79 +45,79 @@ struct intel_dynamic_vp {
     uint32_t cmd_scissor_rect_pos;
 };
 
-struct intel_dynamic_rs {
+struct intel_dynamic_raster {
     struct intel_obj obj;
-    VkDynamicRsStateCreateInfo rs_info;
+    VkDynamicRasterStateCreateInfo raster_info;
 };
 
-struct intel_dynamic_cb {
+struct intel_dynamic_color_blend {
     struct intel_obj obj;
-    VkDynamicCbStateCreateInfo cb_info;
+    VkDynamicColorBlendStateCreateInfo color_blend_info;
 };
 
-struct intel_dynamic_ds {
+struct intel_dynamic_depth_stencil {
     struct intel_obj obj;
-    VkDynamicDsStateCreateInfo ds_info;
+    VkDynamicDepthStencilStateCreateInfo depth_stencil_info;
 };
 
-static inline struct intel_dynamic_vp *intel_dynamic_vp(VkDynamicVpState state)
+static inline struct intel_dynamic_viewport *intel_dynamic_viewport(VkDynamicViewportState state)
 {
-    return (struct intel_dynamic_vp *) state;
+    return *(struct intel_dynamic_viewport **) &state;
 }
 
-static inline struct intel_dynamic_vp *intel_viewport_state_from_obj(struct intel_obj *obj)
+static inline struct intel_dynamic_viewport *intel_viewport_state_from_obj(struct intel_obj *obj)
 {
-    return (struct intel_dynamic_vp *) obj;
+    return (struct intel_dynamic_viewport *) obj;
 }
 
-static inline struct intel_dynamic_rs *intel_dynamic_rs(VkDynamicRsState state)
+static inline struct intel_dynamic_raster *intel_dynamic_raster(VkDynamicRasterState state)
 {
-    return (struct intel_dynamic_rs *) state;
+    return *(struct intel_dynamic_raster **) &state;
 }
 
-static inline struct intel_dynamic_rs *intel_raster_state_from_obj(struct intel_obj *obj)
+static inline struct intel_dynamic_raster *intel_raster_state_from_obj(struct intel_obj *obj)
 {
-    return (struct intel_dynamic_rs *) obj;
+    return (struct intel_dynamic_raster *) obj;
 }
 
-static inline struct intel_dynamic_cb *intel_dynamic_cb(VkDynamicCbState state)
+static inline struct intel_dynamic_color_blend *intel_dynamic_color_blend(VkDynamicColorBlendState state)
 {
-    return (struct intel_dynamic_cb *) state;
+    return *(struct intel_dynamic_color_blend **) &state;
 }
 
-static inline struct intel_dynamic_cb *intel_blend_state_from_obj(struct intel_obj *obj)
+static inline struct intel_dynamic_color_blend *intel_blend_state_from_obj(struct intel_obj *obj)
 {
-    return (struct intel_dynamic_cb *) obj;
+    return (struct intel_dynamic_color_blend *) obj;
 }
 
-static inline struct intel_dynamic_ds *intel_dynamic_ds(VkDynamicDsState state)
+static inline struct intel_dynamic_depth_stencil *intel_dynamic_depth_stencil(VkDynamicDepthStencilState state)
 {
-    return (struct intel_dynamic_ds *) state;
+    return *(struct intel_dynamic_depth_stencil **) &state;
 }
 
-static inline struct intel_dynamic_ds *intel_ds_state_from_obj(struct intel_obj *obj)
+static inline struct intel_dynamic_depth_stencil *intel_depth_stencil_state_from_obj(struct intel_obj *obj)
 {
-    return (struct intel_dynamic_ds *) obj;
+    return (struct intel_dynamic_depth_stencil *) obj;
 }
 
 VkResult intel_viewport_state_create(struct intel_dev *dev,
-                                       const VkDynamicVpStateCreateInfo *info,
-                                       struct intel_dynamic_vp **state_ret);
-void intel_viewport_state_destroy(struct intel_dynamic_vp *state);
+                                       const VkDynamicViewportStateCreateInfo *info,
+                                       struct intel_dynamic_viewport **state_ret);
+void intel_viewport_state_destroy(struct intel_dynamic_viewport *state);
 
 VkResult intel_raster_state_create(struct intel_dev *dev,
-                                     const VkDynamicRsStateCreateInfo *info,
-                                     struct intel_dynamic_rs **state_ret);
-void intel_raster_state_destroy(struct intel_dynamic_rs *state);
+                                     const VkDynamicRasterStateCreateInfo *info,
+                                     struct intel_dynamic_raster **state_ret);
+void intel_raster_state_destroy(struct intel_dynamic_raster *state);
 
 VkResult intel_blend_state_create(struct intel_dev *dev,
-                                    const VkDynamicCbStateCreateInfo *info,
-                                    struct intel_dynamic_cb **state_ret);
-void intel_blend_state_destroy(struct intel_dynamic_cb *state);
+                                    const VkDynamicColorBlendStateCreateInfo *info,
+                                    struct intel_dynamic_color_blend **state_ret);
+void intel_blend_state_destroy(struct intel_dynamic_color_blend *state);
 
-VkResult intel_ds_state_create(struct intel_dev *dev,
-                                 const VkDynamicDsStateCreateInfo *info,
-                                 struct intel_dynamic_ds **state_ret);
-void intel_ds_state_destroy(struct intel_dynamic_ds *state);
+VkResult intel_depth_stencil_state_create(struct intel_dev *dev,
+                                 const VkDynamicDepthStencilStateCreateInfo *info,
+                                 struct intel_dynamic_depth_stencil **state_ret);
+void intel_depth_stencil_state_destroy(struct intel_dynamic_depth_stencil *state);
 
 #endif /* STATE_H */

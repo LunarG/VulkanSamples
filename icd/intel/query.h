@@ -43,7 +43,7 @@ struct intel_query {
 
 static inline struct intel_query *intel_query(VkQueryPool pool)
 {
-    return (struct intel_query *) pool;
+    return *(struct intel_query **) &pool;
 }
 
 static inline struct intel_query *intel_query_from_base(struct intel_base *base)

@@ -18,12 +18,12 @@ typedef union _VK_LOADER_DATA {
   void *loaderData;
 } VK_LOADER_DATA;
 
-static inline void set_loader_magic_value(VkObject pNewObject) {
+static inline void set_loader_magic_value(void* pNewObject) {
     VK_LOADER_DATA *loader_info = (VK_LOADER_DATA *) pNewObject;
     loader_info->loaderMagic = ICD_LOADER_MAGIC;
 }
 
-static inline bool valid_loader_magic_value(VkObject pNewObject) {
+static inline bool valid_loader_magic_value(void* pNewObject) {
     const VK_LOADER_DATA *loader_info = (VK_LOADER_DATA *) pNewObject;
     return loader_info->loaderMagic == ICD_LOADER_MAGIC;
 }

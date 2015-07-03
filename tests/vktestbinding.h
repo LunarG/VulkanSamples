@@ -542,36 +542,36 @@ public:
     explicit DescriptorSet(const Device &dev, VkDescriptorSet set) : NonDispHandle(dev.handle(), set) {}
 };
 
-class DynamicViewportState : public internal::NonDispHandle<VkDynamicVpState> {
+class DynamicViewportState : public internal::NonDispHandle<VkDynamicViewportState> {
 public:
     ~DynamicViewportState();
 
     // vkCreateDynamicViewportState()
-    void init(const Device &dev, const VkDynamicVpStateCreateInfo &info);
+    void init(const Device &dev, const VkDynamicViewportStateCreateInfo &info);
 };
 
-class DynamicRasterState : public internal::NonDispHandle<VkDynamicRsState> {
+class DynamicRasterState : public internal::NonDispHandle<VkDynamicRasterState> {
 public:
     ~DynamicRasterState();
 
     // vkCreateDynamicRasterState()
-    void init(const Device &dev, const VkDynamicRsStateCreateInfo &info);
+    void init(const Device &dev, const VkDynamicRasterStateCreateInfo &info);
 };
 
-class DynamicColorBlendState : public internal::NonDispHandle<VkDynamicCbState> {
+class DynamicColorBlendState : public internal::NonDispHandle<VkDynamicColorBlendState> {
 public:
     ~DynamicColorBlendState();
 
     // vkCreateDynamicColorBlendState()
-    void init(const Device &dev, const VkDynamicCbStateCreateInfo &info);
+    void init(const Device &dev, const VkDynamicColorBlendStateCreateInfo &info);
 };
 
-class DynamicDepthStencilState : public internal::NonDispHandle<VkDynamicDsState> {
+class DynamicDepthStencilState : public internal::NonDispHandle<VkDynamicDepthStencilState> {
 public:
     ~DynamicDepthStencilState();
 
     // vkCreateDynamicDepthStencilState()
-    void init(const Device &dev, const VkDynamicDsStateCreateInfo &info);
+    void init(const Device &dev, const VkDynamicDepthStencilStateCreateInfo &info);
 };
 
 class CmdBuffer : public internal::Handle<VkCmdBuffer> {

@@ -189,7 +189,6 @@ core = Extension(
         "VkDevice",
         "VkQueue",
         "VkDeviceMemory",
-        "VkObject",
         "VkBuffer",
         "VkBufferView",
         "VkImage",
@@ -203,11 +202,10 @@ core = Extension(
         "VkDescriptorSetLayout",
         "VkPipelineLayout",
         "VkDescriptorPool",
-        "VkDynamicStateObject",
-        "VkDynamicVpState",
-        "VkDynamicRsState",
-        "VkDynamicCbState",
-        "VkDynamicDsState",
+        "VkDynamicViewportState",
+        "VkDynamicRasterState",
+        "VkDynamicColorBlendState",
+        "VkDynamicDepthStencilState",
         "VkCmdBuffer",
         "VkFence",
         "VkSemaphore",
@@ -349,21 +347,25 @@ core = Extension(
              Param("uint32_t", "memRangeCount"),
              Param("const VkMappedMemoryRange*", "pMemRanges")]),
 
-        Proto("VkResult", "DestroyObject",
+        Proto("VkResult", "GetBufferMemoryRequirements",
             [Param("VkDevice", "device"),
-             Param("VkObjectType", "objType"),
-             Param("VkObject", "object")]),
-
-        Proto("VkResult", "GetObjectMemoryRequirements",
-            [Param("VkDevice", "device"),
-             Param("VkObjectType", "objType"),
-             Param("VkObject", "object"),
+             Param("VkBuffer", "buffer"),
              Param("VkMemoryRequirements*", "pMemoryRequirements")]),
 
-        Proto("VkResult", "BindObjectMemory",
+        Proto("VkResult", "GetImageMemoryRequirements",
             [Param("VkDevice", "device"),
-             Param("VkObjectType", "objType"),
-             Param("VkObject", "object"),
+             Param("VkImage", "image"),
+             Param("VkMemoryRequirements*", "pMemoryRequirements")]),
+
+        Proto("VkResult", "BindBufferMemory",
+            [Param("VkDevice", "device"),
+             Param("VkBuffer", "buffer"),
+             Param("VkDeviceMemory", "mem"),
+             Param("VkDeviceSize", "offset")]),
+
+        Proto("VkResult", "BindImageMemory",
+            [Param("VkDevice", "device"),
+             Param("VkImage", "image"),
              Param("VkDeviceMemory", "mem"),
              Param("VkDeviceSize", "offset")]),
 
@@ -406,6 +408,10 @@ core = Extension(
              Param("const VkFenceCreateInfo*", "pCreateInfo"),
              Param("VkFence*", "pFence")]),
 
+        Proto("VkResult", "DestroyFence",
+            [Param("VkDevice", "device"),
+             Param("VkFence", "fence")]),
+
         Proto("VkResult", "ResetFences",
             [Param("VkDevice", "device"),
              Param("uint32_t", "fenceCount"),
@@ -427,6 +433,10 @@ core = Extension(
              Param("const VkSemaphoreCreateInfo*", "pCreateInfo"),
              Param("VkSemaphore*", "pSemaphore")]),
 
+        Proto("VkResult", "DestroySemaphore",
+            [Param("VkDevice", "device"),
+             Param("VkSemaphore", "semaphore")]),
+
         Proto("VkResult", "QueueSignalSemaphore",
             [Param("VkQueue", "queue"),
              Param("VkSemaphore", "semaphore")]),
@@ -439,6 +449,10 @@ core = Extension(
             [Param("VkDevice", "device"),
              Param("const VkEventCreateInfo*", "pCreateInfo"),
              Param("VkEvent*", "pEvent")]),
+
+        Proto("VkResult", "DestroyEvent",
+            [Param("VkDevice", "device"),
+             Param("VkEvent", "event")]),
 
         Proto("VkResult", "GetEventStatus",
             [Param("VkDevice", "device"),
@@ -457,6 +471,10 @@ core = Extension(
              Param("const VkQueryPoolCreateInfo*", "pCreateInfo"),
              Param("VkQueryPool*", "pQueryPool")]),
 
+        Proto("VkResult", "DestroyQueryPool",
+            [Param("VkDevice", "device"),
+             Param("VkQueryPool", "queryPool")]),
+
         Proto("VkResult", "GetQueryPoolResults",
             [Param("VkDevice", "device"),
              Param("VkQueryPool", "queryPool"),
@@ -471,15 +489,27 @@ core = Extension(
              Param("const VkBufferCreateInfo*", "pCreateInfo"),
              Param("VkBuffer*", "pBuffer")]),
 
+        Proto("VkResult", "DestroyBuffer",
+            [Param("VkDevice", "device"),
+             Param("VkBuffer", "buffer")]),
+
         Proto("VkResult", "CreateBufferView",
             [Param("VkDevice", "device"),
              Param("const VkBufferViewCreateInfo*", "pCreateInfo"),
              Param("VkBufferView*", "pView")]),
 
+        Proto("VkResult", "DestroyBufferView",
+            [Param("VkDevice", "device"),
+             Param("VkBufferView", "bufferView")]),
+
         Proto("VkResult", "CreateImage",
             [Param("VkDevice", "device"),
              Param("const VkImageCreateInfo*", "pCreateInfo"),
              Param("VkImage*", "pImage")]),
+
+        Proto("VkResult", "DestroyImage",
+            [Param("VkDevice", "device"),
+             Param("VkImage", "image")]),
 
         Proto("VkResult", "GetImageSubresourceLayout",
             [Param("VkDevice", "device"),
@@ -492,20 +522,36 @@ core = Extension(
              Param("const VkImageViewCreateInfo*", "pCreateInfo"),
              Param("VkImageView*", "pView")]),
 
+        Proto("VkResult", "DestroyImageView",
+            [Param("VkDevice", "device"),
+             Param("VkImageView", "imageView")]),
+
         Proto("VkResult", "CreateAttachmentView",
             [Param("VkDevice", "device"),
              Param("const VkAttachmentViewCreateInfo*", "pCreateInfo"),
              Param("VkAttachmentView*", "pView")]),
+
+        Proto("VkResult", "DestroyAttachmentView",
+            [Param("VkDevice", "device"),
+             Param("VkAttachmentView", "attachmentView")]),
 
         Proto("VkResult", "CreateShaderModule",
             [Param("VkDevice", "device"),
              Param("const VkShaderModuleCreateInfo*", "pCreateInfo"),
              Param("VkShaderModule*", "pShaderModule")]),
 
+        Proto("VkResult", "DestroyShaderModule",
+            [Param("VkDevice", "device"),
+             Param("VkShaderModule", "shaderModule")]),
+
         Proto("VkResult", "CreateShader",
             [Param("VkDevice", "device"),
              Param("const VkShaderCreateInfo*", "pCreateInfo"),
              Param("VkShader*", "pShader")]),
+
+        Proto("VkResult", "DestroyShader",
+            [Param("VkDevice", "device"),
+             Param("VkShader", "shader")]),
 
         Proto("VkResult", "CreatePipelineCache",
             [Param("VkDevice", "device"),
@@ -545,20 +591,36 @@ core = Extension(
              Param("const VkComputePipelineCreateInfo*", "pCreateInfos"),
              Param("VkPipeline*", "pPipelines")]),
 
+        Proto("VkResult", "DestroyPipeline",
+            [Param("VkDevice", "device"),
+             Param("VkPipeline", "pipeline")]),
+
         Proto("VkResult", "CreatePipelineLayout",
             [Param("VkDevice", "device"),
              Param("const VkPipelineLayoutCreateInfo*", "pCreateInfo"),
              Param("VkPipelineLayout*", "pPipelineLayout")]),
+
+        Proto("VkResult", "DestroyPipelineLayout",
+            [Param("VkDevice", "device"),
+             Param("VkPipelineLayout", "pipelineLayout")]),
 
         Proto("VkResult", "CreateSampler",
             [Param("VkDevice", "device"),
              Param("const VkSamplerCreateInfo*", "pCreateInfo"),
              Param("VkSampler*", "pSampler")]),
 
+        Proto("VkResult", "DestroySampler",
+            [Param("VkDevice", "device"),
+             Param("VkSampler", "sampler")]),
+
         Proto("VkResult", "CreateDescriptorSetLayout",
             [Param("VkDevice", "device"),
              Param("const VkDescriptorSetLayoutCreateInfo*", "pCreateInfo"),
              Param("VkDescriptorSetLayout*", "pSetLayout")]),
+
+        Proto("VkResult", "DestroyDescriptorSetLayout",
+            [Param("VkDevice", "device"),
+             Param("VkDescriptorSetLayout", "descriptorSetLayout")]),
 
         Proto("VkResult", "CreateDescriptorPool",
             [Param("VkDevice", "device"),
@@ -566,6 +628,10 @@ core = Extension(
              Param("uint32_t", "maxSets"),
              Param("const VkDescriptorPoolCreateInfo*", "pCreateInfo"),
              Param("VkDescriptorPool*", "pDescriptorPool")]),
+
+        Proto("VkResult", "DestroyDescriptorPool",
+            [Param("VkDevice", "device"),
+             Param("VkDescriptorPool", "descriptorPool")]),
 
         Proto("VkResult", "ResetDescriptorPool",
             [Param("VkDevice", "device"),
@@ -589,28 +655,48 @@ core = Extension(
 
         Proto("VkResult", "CreateDynamicViewportState",
             [Param("VkDevice", "device"),
-             Param("const VkDynamicVpStateCreateInfo*", "pCreateInfo"),
-             Param("VkDynamicVpState*", "pState")]),
+             Param("const VkDynamicViewportStateCreateInfo*", "pCreateInfo"),
+             Param("VkDynamicViewportState*", "pState")]),
+
+        Proto("VkResult", "DestroyDynamicViewportState",
+            [Param("VkDevice", "device"),
+             Param("VkDynamicViewportState", "dynamicViewportState")]),
 
         Proto("VkResult", "CreateDynamicRasterState",
             [Param("VkDevice", "device"),
-             Param("const VkDynamicRsStateCreateInfo*", "pCreateInfo"),
-             Param("VkDynamicRsState*", "pState")]),
+             Param("const VkDynamicRasterStateCreateInfo*", "pCreateInfo"),
+             Param("VkDynamicRasterState*", "pState")]),
+
+        Proto("VkResult", "DestroyDynamicRasterState",
+            [Param("VkDevice", "device"),
+             Param("VkDynamicRasterState", "dynamicRasterState")]),
 
         Proto("VkResult", "CreateDynamicColorBlendState",
             [Param("VkDevice", "device"),
-             Param("const VkDynamicCbStateCreateInfo*", "pCreateInfo"),
-             Param("VkDynamicCbState*", "pState")]),
+             Param("const VkDynamicColorBlendStateCreateInfo*", "pCreateInfo"),
+             Param("VkDynamicColorBlendState*", "pState")]),
+
+        Proto("VkResult", "DestroyDynamicColorBlendState",
+            [Param("VkDevice", "device"),
+             Param("VkDynamicColorBlendState", "dynamicColorBlendState")]),
 
         Proto("VkResult", "CreateDynamicDepthStencilState",
             [Param("VkDevice", "device"),
-             Param("const VkDynamicDsStateCreateInfo*", "pCreateInfo"),
-             Param("VkDynamicDsState*", "pState")]),
+             Param("const VkDynamicDepthStencilStateCreateInfo*", "pCreateInfo"),
+             Param("VkDynamicDepthStencilState*", "pState")]),
+
+        Proto("VkResult", "DestroyDynamicDepthStencilState",
+            [Param("VkDevice", "device"),
+             Param("VkDynamicDepthStencilState", "dynamicDepthStencilState")]),
 
         Proto("VkResult", "CreateCommandBuffer",
             [Param("VkDevice", "device"),
              Param("const VkCmdBufferCreateInfo*", "pCreateInfo"),
              Param("VkCmdBuffer*", "pCmdBuffer")]),
+
+        Proto("VkResult", "DestroyCommandBuffer",
+            [Param("VkDevice", "device"),
+             Param("VkCmdBuffer", "cmdBuffer")]),
 
         Proto("VkResult", "BeginCommandBuffer",
             [Param("VkCmdBuffer", "cmdBuffer"),
@@ -627,10 +713,21 @@ core = Extension(
              Param("VkPipelineBindPoint", "pipelineBindPoint"),
              Param("VkPipeline", "pipeline")]),
 
-        Proto("void", "CmdBindDynamicStateObject",
+        Proto("void", "CmdBindDynamicViewportState",
             [Param("VkCmdBuffer", "cmdBuffer"),
-             Param("VkStateBindPoint", "stateBindPoint"),
-             Param("VkDynamicStateObject", "state")]),
+             Param("VkDynamicViewportState", "dynamicViewportState")]),
+
+        Proto("void", "CmdBindDynamicRasterState",
+            [Param("VkCmdBuffer", "cmdBuffer"),
+             Param("VkDynamicRasterState", "dynamicRasterState")]),
+
+        Proto("void", "CmdBindDynamicColorBlendState",
+            [Param("VkCmdBuffer", "cmdBuffer"),
+             Param("VkDynamicColorBlendState", "dynamicColorBlendState")]),
+
+        Proto("void", "CmdBindDynamicDepthStencilState",
+             [Param("VkCmdBuffer", "cmdBuffer"),
+              Param("VkDynamicDepthStencilState", "dynamicDepthStencilState")]),
 
         Proto("void", "CmdBindDescriptorSets",
             [Param("VkCmdBuffer", "cmdBuffer"),
@@ -648,7 +745,6 @@ core = Extension(
              Param("uint32_t", "bindingCount"),
              Param("const VkBuffer*", "pBuffers"),
              Param("const VkDeviceSize*", "pOffsets")]),
-
 
         Proto("void", "CmdBindIndexBuffer",
             [Param("VkCmdBuffer", "cmdBuffer"),
@@ -860,10 +956,18 @@ core = Extension(
              Param("const VkFramebufferCreateInfo*", "pCreateInfo"),
              Param("VkFramebuffer*", "pFramebuffer")]),
 
+        Proto("VkResult", "DestroyFramebuffer",
+            [Param("VkDevice", "device"),
+             Param("VkFramebuffer", "framebuffer")]),
+
         Proto("VkResult", "CreateRenderPass",
             [Param("VkDevice", "device"),
              Param("const VkRenderPassCreateInfo*", "pCreateInfo"),
              Param("VkRenderPass*", "pRenderPass")]),
+
+        Proto("VkResult", "DestroyRenderPass",
+            [Param("VkDevice", "device"),
+             Param("VkRenderPass", "renderPass")]),
 
         Proto("void", "CmdBeginRenderPass",
             [Param("VkCmdBuffer", "cmdBuffer"),
@@ -933,7 +1037,6 @@ object_base_list = [
     "VkDevice",
     "VkQueue",
     "VkDeviceMemory",
-    "VkObject"
 ]
 
 object_list = [
@@ -961,15 +1064,13 @@ object_list = [
 ]
 
 object_dynamic_state_list = [
-    "VkDynamicVpState",
-    "VkDynamicRsState",
-    "VkDynamicCbState",
-    "VkDynamicDsState"
+    "VkDynamicViewportState",
+    "VkDynamicRasterState",
+    "VkDynamicColorBlendState",
+    "VkDynamicDepthStencilState"
 ]
 
 object_type_list = object_root_list + object_base_list + object_list + object_dynamic_state_list
-
-object_parent_list = ["VkObject", "VkDynamicStateObject"]
 
 headers = []
 objects = []

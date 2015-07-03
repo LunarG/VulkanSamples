@@ -17,12 +17,13 @@
 #  define VK_LAYER_EXPORT
 #endif
 
-typedef void * (*PFN_vkGPA)(VkObject obj, const char * pName);
+typedef void * (*PFN_vkGPA)(void* obj, const char * pName);
+
 typedef struct VkBaseLayerObject_
 {
     PFN_vkGPA pGPA;
-    VkObject nextObject;
-    VkObject baseObject;
+    void* nextObject;
+    void* baseObject;
 } VkBaseLayerObject;
 
 typedef struct VkLayerDispatchTable_
@@ -40,34 +41,46 @@ typedef struct VkLayerDispatchTable_
     PFN_vkUnmapMemory UnmapMemory;
     PFN_vkFlushMappedMemoryRanges FlushMappedMemoryRanges;
     PFN_vkInvalidateMappedMemoryRanges InvalidateMappedMemoryRanges;
-    PFN_vkDestroyObject DestroyObject;
-    PFN_vkGetObjectMemoryRequirements GetObjectMemoryRequirements;
-    PFN_vkBindObjectMemory BindObjectMemory;
     PFN_vkGetImageSparseMemoryRequirements GetImageSparseMemoryRequirements;
+    PFN_vkGetImageMemoryRequirements GetImageMemoryRequirements;
+    PFN_vkGetBufferMemoryRequirements GetBufferMemoryRequirements;
+    PFN_vkBindImageMemory BindImageMemory;
+    PFN_vkBindBufferMemory BindBufferMemory;
     PFN_vkQueueBindSparseBufferMemory QueueBindSparseBufferMemory;
     PFN_vkQueueBindSparseImageOpaqueMemory QueueBindSparseImageOpaqueMemory;
     PFN_vkQueueBindSparseImageMemory QueueBindSparseImageMemory;
     PFN_vkCreateFence CreateFence;
+    PFN_vkDestroyFence DestroyFence;
     PFN_vkGetFenceStatus GetFenceStatus;
     PFN_vkResetFences ResetFences;
     PFN_vkWaitForFences WaitForFences;
     PFN_vkCreateSemaphore CreateSemaphore;
+    PFN_vkDestroySemaphore DestroySemaphore;
     PFN_vkQueueSignalSemaphore QueueSignalSemaphore;
     PFN_vkQueueWaitSemaphore QueueWaitSemaphore;
     PFN_vkCreateEvent CreateEvent;
+    PFN_vkDestroyEvent DestroyEvent;
     PFN_vkGetEventStatus GetEventStatus;
     PFN_vkSetEvent SetEvent;
     PFN_vkResetEvent ResetEvent;
     PFN_vkCreateQueryPool CreateQueryPool;
+    PFN_vkDestroyQueryPool DestroyQueryPool;
     PFN_vkGetQueryPoolResults GetQueryPoolResults;
     PFN_vkCreateBuffer CreateBuffer;
+    PFN_vkDestroyBuffer DestroyBuffer;
     PFN_vkCreateBufferView CreateBufferView;
+    PFN_vkDestroyBufferView DestroyBufferView;
     PFN_vkCreateImage CreateImage;
+    PFN_vkDestroyImage DestroyImage;
     PFN_vkGetImageSubresourceLayout GetImageSubresourceLayout;
     PFN_vkCreateImageView CreateImageView;
+    PFN_vkDestroyImageView DestroyImageView;
     PFN_vkCreateAttachmentView CreateAttachmentView;
+    PFN_vkDestroyAttachmentView DestroyAttachmentView;
     PFN_vkCreateShaderModule CreateShaderModule;
+    PFN_vkDestroyShaderModule DestroyShaderModule;
     PFN_vkCreateShader CreateShader;
+    PFN_vkDestroyShader DestroyShader;
     PFN_vkCreatePipelineCache CreatePipelineCache;
     PFN_vkDestroyPipelineCache DestroyPipelineCache;
     PFN_vkGetPipelineCacheSize GetPipelineCacheSize;
@@ -75,23 +88,36 @@ typedef struct VkLayerDispatchTable_
     PFN_vkMergePipelineCaches MergePipelineCaches;
     PFN_vkCreateGraphicsPipelines CreateGraphicsPipelines;
     PFN_vkCreateComputePipelines CreateComputePipelines;
+    PFN_vkDestroyPipeline DestroyPipeline;
     PFN_vkCreatePipelineLayout CreatePipelineLayout;
+    PFN_vkDestroyPipelineLayout DestroyPipelineLayout;
     PFN_vkCreateSampler CreateSampler;
+    PFN_vkDestroySampler DestroySampler;
     PFN_vkCreateDescriptorSetLayout CreateDescriptorSetLayout;
+    PFN_vkDestroyDescriptorSetLayout DestroyDescriptorSetLayout;
     PFN_vkCreateDescriptorPool CreateDescriptorPool;
+    PFN_vkDestroyDescriptorPool DestroyDescriptorPool;
     PFN_vkResetDescriptorPool ResetDescriptorPool;
     PFN_vkAllocDescriptorSets AllocDescriptorSets;
     PFN_vkUpdateDescriptorSets UpdateDescriptorSets;
     PFN_vkCreateDynamicViewportState CreateDynamicViewportState;
+    PFN_vkDestroyDynamicViewportState DestroyDynamicViewportState;
     PFN_vkCreateDynamicRasterState CreateDynamicRasterState;
+    PFN_vkDestroyDynamicRasterState DestroyDynamicRasterState;
     PFN_vkCreateDynamicColorBlendState CreateDynamicColorBlendState;
+    PFN_vkDestroyDynamicColorBlendState DestroyDynamicColorBlendState;
     PFN_vkCreateDynamicDepthStencilState CreateDynamicDepthStencilState;
+    PFN_vkDestroyDynamicDepthStencilState DestroyDynamicDepthStencilState;
     PFN_vkCreateCommandBuffer CreateCommandBuffer;
+    PFN_vkDestroyCommandBuffer DestroyCommandBuffer;
     PFN_vkBeginCommandBuffer BeginCommandBuffer;
     PFN_vkEndCommandBuffer EndCommandBuffer;
     PFN_vkResetCommandBuffer ResetCommandBuffer;
     PFN_vkCmdBindPipeline CmdBindPipeline;
-    PFN_vkCmdBindDynamicStateObject CmdBindDynamicStateObject;
+    PFN_vkCmdBindDynamicViewportState CmdBindDynamicViewportState;
+    PFN_vkCmdBindDynamicRasterState CmdBindDynamicRasterState;
+    PFN_vkCmdBindDynamicColorBlendState CmdBindDynamicColorBlendState;
+    PFN_vkCmdBindDynamicDepthStencilState CmdBindDynamicDepthStencilState;
     PFN_vkCmdBindDescriptorSets CmdBindDescriptorSets;
     PFN_vkCmdBindVertexBuffers CmdBindVertexBuffers;
     PFN_vkCmdBindIndexBuffer CmdBindIndexBuffer;
@@ -123,7 +149,9 @@ typedef struct VkLayerDispatchTable_
     PFN_vkCmdWriteTimestamp CmdWriteTimestamp;
     PFN_vkCmdCopyQueryPoolResults CmdCopyQueryPoolResults;
     PFN_vkCreateFramebuffer CreateFramebuffer;
+    PFN_vkDestroyFramebuffer DestroyFramebuffer;
     PFN_vkCreateRenderPass CreateRenderPass;
+    PFN_vkDestroyRenderPass DestroyRenderPass;
     PFN_vkCmdBeginRenderPass CmdBeginRenderPass;
     PFN_vkCmdNextSubpass CmdNextSubpass;
     PFN_vkCmdEndRenderPass CmdEndRenderPass;

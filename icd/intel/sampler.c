@@ -399,3 +399,14 @@ ICD_EXPORT VkResult VKAPI vkCreateSampler(
     return intel_sampler_create(dev, pCreateInfo,
             (struct intel_sampler **) pSampler);
 }
+
+ICD_EXPORT VkResult VKAPI vkDestroySampler(
+    VkDevice                                device,
+    VkSampler                                 sampler)
+
+ {
+    struct intel_obj *obj = intel_obj(sampler.handle);
+
+    obj->destroy(obj);
+    return VK_SUCCESS;
+ }

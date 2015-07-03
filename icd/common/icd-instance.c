@@ -139,7 +139,7 @@ VkResult icd_instance_create_logger(
 
     logger->user_data = (void *) user_data;
 
-    *msg_obj = (VkDbgMsgCallback) logger;
+    *( struct icd_instance_logger **)msg_obj = logger;
 
     return VK_SUCCESS;
 }
@@ -149,10 +149,11 @@ VkResult icd_instance_destroy_logger(
         const VkDbgMsgCallback msg_obj)
 {
     struct icd_instance_logger *logger, *prev;
+    VkDbgMsgCallback local_msg_obj = msg_obj;
 
     for (prev = NULL, logger = instance->loggers; logger;
          prev = logger, logger = logger->next) {
-        if (logger == (struct icd_instance_logger *) msg_obj)
+        if (logger == *(struct icd_instance_logger **) &local_msg_obj)
             break;
     }
 
@@ -171,8 +172,8 @@ VkResult icd_instance_destroy_logger(
 
 void icd_instance_log(const struct icd_instance *instance,
                       VkFlags msg_flags,
-                      VkObjectType obj_type,
-                      VkObject src_object,
+                      VkDbgObjectType obj_type,
+                      uint64_t src_object,
                       size_t location, int32_t msg_code,
                       const char *msg)
 {

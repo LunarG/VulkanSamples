@@ -218,6 +218,17 @@ ICD_EXPORT VkResult VKAPI vkCreateQueryPool(
             (struct intel_query **) pQueryPool);
 }
 
+ICD_EXPORT VkResult VKAPI vkDestroyQueryPool(
+    VkDevice                                    device,
+    VkQueryPool                                 queryPool)
+
+ {
+    struct intel_obj *obj = intel_obj(queryPool.handle);
+
+    obj->destroy(obj);
+    return VK_SUCCESS;
+ }
+
 ICD_EXPORT VkResult VKAPI vkGetQueryPoolResults(
     VkDevice                                    device,
     VkQueryPool                                 queryPool,

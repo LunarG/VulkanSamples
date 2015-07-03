@@ -82,6 +82,18 @@ ICD_EXPORT VkResult VKAPI vkCreateShaderModule(
     return shader_module_create(dev, pCreateInfo, (struct intel_shader_module **) pShaderModule);
 }
 
+ICD_EXPORT VkResult VKAPI vkDestroyShaderModule(
+    VkDevice                                device,
+    VkShaderModule                          shaderModule)
+
+ {
+    struct intel_obj *obj = intel_obj(shaderModule.handle);
+
+    obj->destroy(obj);
+    return VK_SUCCESS;
+ }
+
+
 static void shader_destroy(struct intel_obj *obj)
 {
     struct intel_shader *sh = intel_shader_from_obj(obj);
@@ -126,3 +138,14 @@ ICD_EXPORT VkResult VKAPI vkCreateShader(
 
     return shader_create(dev, pCreateInfo, (struct intel_shader **) pShader);
 }
+
+ICD_EXPORT VkResult VKAPI vkDestroyShader(
+    VkDevice                                device,
+    VkShader                                shader)
+
+ {
+    struct intel_obj *obj = intel_obj(shader.handle);
+
+    obj->destroy(obj);
+    return VK_SUCCESS;
+ }

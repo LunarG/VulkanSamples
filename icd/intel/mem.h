@@ -66,7 +66,7 @@ static inline bool intel_mem_is_busy(struct intel_mem *mem)
 
 static inline struct intel_mem *intel_mem(VkDeviceMemory mem)
 {
-    return (struct intel_mem *) mem;
+    return *(struct intel_mem **) &mem;
 }
 
 #endif /* MEM_H */

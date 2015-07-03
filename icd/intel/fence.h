@@ -45,7 +45,7 @@ struct intel_fence {
 
 static inline struct intel_fence *intel_fence(VkFence fence)
 {
-    return (struct intel_fence *) fence;
+    return *(struct intel_fence **) &fence;
 }
 
 static inline struct intel_fence *intel_fence_from_obj(struct intel_obj *obj)

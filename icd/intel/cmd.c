@@ -319,10 +319,10 @@ VkResult intel_cmd_begin(struct intel_cmd *cmd, const VkCmdBufferBeginInfo *info
     cmd_reset(cmd);
 
     if (cmd->primary) {
-        if (info->renderPass || info->framebuffer)
+        if (info->renderPass.handle || info->framebuffer.handle)
             return VK_ERROR_INVALID_VALUE;
     } else {
-        if (!info->renderPass || !info->framebuffer)
+        if (!info->renderPass.handle || !info->framebuffer.handle)
             return VK_ERROR_INVALID_VALUE;
 
         cmd_begin_render_pass(cmd,
@@ -446,6 +446,16 @@ ICD_EXPORT VkResult VKAPI vkCreateCommandBuffer(
 
     return intel_cmd_create(dev, pCreateInfo,
             (struct intel_cmd **) pCmdBuffer);
+}
+
+ICD_EXPORT VkResult VKAPI vkDestroyCommandBuffer(
+    VkDevice                                device,
+    VkCmdBuffer                             cmdBuffer)
+{
+    struct intel_obj *obj = intel_obj((uint64_t)cmdBuffer);
+
+    obj->destroy(obj);
+    return VK_SUCCESS;
 }
 
 ICD_EXPORT VkResult VKAPI vkBeginCommandBuffer(

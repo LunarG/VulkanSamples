@@ -49,34 +49,46 @@ static inline void loader_init_device_dispatch_table(VkLayerDispatchTable *table
     table->UnmapMemory = (PFN_vkUnmapMemory) gpa(dev, "vkUnmapMemory");
     table->FlushMappedMemoryRanges = (PFN_vkFlushMappedMemoryRanges) gpa(dev, "vkFlushMappedMemoryRanges");
     table->InvalidateMappedMemoryRanges = (PFN_vkInvalidateMappedMemoryRanges) gpa(dev, "vkInvalidateMappedMemoryRanges");
-    table->DestroyObject = (PFN_vkDestroyObject) gpa(dev, "vkDestroyObject");
-    table->GetObjectMemoryRequirements = (PFN_vkGetObjectMemoryRequirements) gpa(dev, "vkGetObjectMemoryRequirements");
-    table->BindObjectMemory = (PFN_vkBindObjectMemory) gpa(dev, "vkBindObjectMemory");
+    table->GetBufferMemoryRequirements = (PFN_vkGetBufferMemoryRequirements) gpa(dev, "vkGetBufferMemoryRequirements");
+    table->GetImageMemoryRequirements = (PFN_vkGetImageMemoryRequirements) gpa(dev, "vkGetImageMemoryRequirements");
+    table->BindBufferMemory = (PFN_vkBindBufferMemory) gpa(dev, "vkBindBufferMemory");
+    table->BindImageMemory = (PFN_vkBindImageMemory) gpa(dev, "vkBindImageMemory");
     table->QueueBindSparseBufferMemory = (PFN_vkQueueBindSparseBufferMemory) gpa(dev, "vkQueueBindSparseBufferMemory");
     table->QueueBindSparseImageMemory = (PFN_vkQueueBindSparseImageMemory) gpa(dev, "vkQueueBindSparseImageMemory");
     table->QueueBindSparseImageOpaqueMemory = (PFN_vkQueueBindSparseImageOpaqueMemory) gpa(dev, "vkQueueBindSparseImageOpaqueMemory");
     table->GetImageSparseMemoryRequirements = (PFN_vkGetImageSparseMemoryRequirements) gpa(dev, "vkGetImageSparseMemoryRequirements");
     table->CreateFence = (PFN_vkCreateFence) gpa(dev, "vkCreateFence");
+    table->DestroyFence = (PFN_vkDestroyFence) gpa(dev, "vkDestroyFence");
     table->ResetFences = (PFN_vkResetFences) gpa(dev, "vkResetFences");
     table->GetFenceStatus = (PFN_vkGetFenceStatus) gpa(dev, "vkGetFenceStatus");
     table->WaitForFences = (PFN_vkWaitForFences) gpa(dev, "vkWaitForFences");
     table->CreateSemaphore = (PFN_vkCreateSemaphore) gpa(dev, "vkCreateSemaphore");
+    table->DestroySemaphore = (PFN_vkDestroySemaphore) gpa(dev, "vkDestroySemaphore");
     table->QueueSignalSemaphore = (PFN_vkQueueSignalSemaphore) gpa(dev, "vkQueueSignalSemaphore");
     table->QueueWaitSemaphore = (PFN_vkQueueWaitSemaphore) gpa(dev, "vkQueueWaitSemaphore");
     table->CreateEvent = (PFN_vkCreateEvent) gpa(dev, "vkCreateEvent");
+    table->DestroyEvent = (PFN_vkDestroyEvent) gpa(dev, "vkDestroyEvent");
     table->GetEventStatus = (PFN_vkGetEventStatus) gpa(dev, "vkGetEventStatus");
     table->SetEvent = (PFN_vkSetEvent) gpa(dev, "vkSetEvent");
     table->ResetEvent = (PFN_vkResetEvent) gpa(dev, "vkResetEvent");
     table->CreateQueryPool = (PFN_vkCreateQueryPool) gpa(dev, "vkCreateQueryPool");
+    table->DestroyQueryPool = (PFN_vkDestroyQueryPool) gpa(dev, "vkDestroyQueryPool");
     table->GetQueryPoolResults = (PFN_vkGetQueryPoolResults) gpa(dev, "vkGetQueryPoolResults");
     table->CreateBuffer = (PFN_vkCreateBuffer) gpa(dev, "vkCreateBuffer");
+    table->DestroyBuffer = (PFN_vkDestroyBuffer) gpa(dev, "vkDestroyBuffer");
     table->CreateBufferView = (PFN_vkCreateBufferView) gpa(dev, "vkCreateBufferView");
+    table->DestroyBufferView = (PFN_vkDestroyBufferView) gpa(dev, "vkDestroyBufferView");
     table->CreateImage = (PFN_vkCreateImage) gpa(dev, "vkCreateImage");
+    table->DestroyImage = (PFN_vkDestroyImage) gpa(dev, "vkDestroyImage");
     table->GetImageSubresourceLayout = (PFN_vkGetImageSubresourceLayout) gpa(dev, "vkGetImageSubresourceLayout");
     table->CreateImageView = (PFN_vkCreateImageView) gpa(dev, "vkCreateImageView");
+    table->DestroyImageView = (PFN_vkDestroyImageView) gpa(dev, "vkDestroyImageView");
     table->CreateAttachmentView = (PFN_vkCreateAttachmentView) gpa(dev, "vkCreateAttachmentView");
+    table->DestroyAttachmentView = (PFN_vkDestroyAttachmentView) gpa(dev, "vkDestroyAttachmentView");
     table->CreateShaderModule = (PFN_vkCreateShaderModule) gpa(dev, "vkCreateShaderModule");
+    table->DestroyShaderModule = (PFN_vkDestroyShaderModule) gpa(dev, "vkDestroyShaderModule");
     table->CreateShader = (PFN_vkCreateShader) gpa(dev, "vkCreateShader");
+    table->DestroyShader = (PFN_vkDestroyShader) gpa(dev, "vkDestroyShader");
     table->CreatePipelineCache = (PFN_vkCreatePipelineCache) gpa(dev, "vkCreatePipelineCache");
     table->DestroyPipelineCache = (PFN_vkDestroyPipelineCache) gpa(dev, "vkDestroyPipelineCache");
     table->GetPipelineCacheSize = (PFN_vkGetPipelineCacheSize) gpa(dev, "vkGetPipelineCacheSize");
@@ -84,23 +96,36 @@ static inline void loader_init_device_dispatch_table(VkLayerDispatchTable *table
     table->MergePipelineCaches = (PFN_vkMergePipelineCaches) gpa(dev, "vkMergePipelineCaches");
     table->CreateGraphicsPipelines = (PFN_vkCreateGraphicsPipelines) gpa(dev, "vkCreateGraphicsPipelines");
     table->CreateComputePipelines = (PFN_vkCreateComputePipelines) gpa(dev, "vkCreateComputePipelines");
+    table->DestroyPipeline = (PFN_vkDestroyPipeline) gpa(dev, "vkDestroyPipeline");
     table->CreatePipelineLayout = (PFN_vkCreatePipelineLayout) gpa(dev, "vkCreatePipelineLayout");
+    table->DestroyPipelineLayout = (PFN_vkDestroyPipelineLayout) gpa(dev, "vkDestroyPipelineLayout");
     table->CreateSampler = (PFN_vkCreateSampler) gpa(dev, "vkCreateSampler");
+    table->DestroySampler = (PFN_vkDestroySampler) gpa(dev, "vkDestroySampler");
     table->CreateDescriptorSetLayout = (PFN_vkCreateDescriptorSetLayout) gpa(dev, "vkCreateDescriptorSetLayout");
+    table->DestroyDescriptorSetLayout = (PFN_vkDestroyDescriptorSetLayout) gpa(dev, "vkDestroyDescriptorSetLayout");
     table->CreateDescriptorPool = (PFN_vkCreateDescriptorPool) gpa(dev, "vkCreateDescriptorPool");
+    table->DestroyDescriptorPool = (PFN_vkDestroyDescriptorPool) gpa(dev, "vkDestroyDescriptorPool");
     table->ResetDescriptorPool = (PFN_vkResetDescriptorPool) gpa(dev, "vkResetDescriptorPool");
     table->AllocDescriptorSets = (PFN_vkAllocDescriptorSets) gpa(dev, "vkAllocDescriptorSets");
     table->UpdateDescriptorSets = (PFN_vkUpdateDescriptorSets) gpa(dev, "vkUpdateDescriptorSets");
     table->CreateDynamicViewportState = (PFN_vkCreateDynamicViewportState) gpa(dev, "vkCreateDynamicViewportState");
+    table->DestroyDynamicViewportState = (PFN_vkDestroyDynamicViewportState) gpa(dev, "vkDestroyDynamicViewportState");
     table->CreateDynamicRasterState = (PFN_vkCreateDynamicRasterState) gpa(dev, "vkCreateDynamicRasterState");
+    table->DestroyDynamicRasterState = (PFN_vkDestroyDynamicRasterState) gpa(dev, "vkDestroyDynamicRasterState");
     table->CreateDynamicColorBlendState = (PFN_vkCreateDynamicColorBlendState) gpa(dev, "vkCreateDynamicColorBlendState");
+    table->DestroyDynamicColorBlendState = (PFN_vkDestroyDynamicColorBlendState) gpa(dev, "vkDestroyDynamicColorBlendState");
     table->CreateDynamicDepthStencilState = (PFN_vkCreateDynamicDepthStencilState) gpa(dev, "vkCreateDynamicDepthStencilState");
+    table->DestroyDynamicDepthStencilState = (PFN_vkDestroyDynamicDepthStencilState) gpa(dev, "vkDestroyDynamicDepthStencilState");
     table->CreateCommandBuffer = (PFN_vkCreateCommandBuffer) gpa(dev, "vkCreateCommandBuffer");
+    table->DestroyCommandBuffer = (PFN_vkDestroyCommandBuffer) gpa(dev, "vkDestroyCommandBuffer");
     table->BeginCommandBuffer = (PFN_vkBeginCommandBuffer) gpa(dev, "vkBeginCommandBuffer");
     table->EndCommandBuffer = (PFN_vkEndCommandBuffer) gpa(dev, "vkEndCommandBuffer");
     table->ResetCommandBuffer = (PFN_vkResetCommandBuffer) gpa(dev, "vkResetCommandBuffer");
     table->CmdBindPipeline = (PFN_vkCmdBindPipeline) gpa(dev, "vkCmdBindPipeline");
-    table->CmdBindDynamicStateObject = (PFN_vkCmdBindDynamicStateObject) gpa(dev, "vkCmdBindDynamicStateObject");
+    table->CmdBindDynamicViewportState = (PFN_vkCmdBindDynamicViewportState) gpa(dev, "vkCmdBindDynamicViewportState");
+    table->CmdBindDynamicRasterState = (PFN_vkCmdBindDynamicRasterState) gpa(dev, "vkCmdBindDynamicRasterState");
+    table->CmdBindDynamicColorBlendState = (PFN_vkCmdBindDynamicColorBlendState) gpa(dev, "vkCmdBindDynamicColorBlendState");
+    table->CmdBindDynamicDepthStencilState = (PFN_vkCmdBindDynamicDepthStencilState) gpa(dev, "vkCmdBindDynamicDepthStencilState");
     table->CmdBindDescriptorSets = (PFN_vkCmdBindDescriptorSets) gpa(dev, "vkCmdBindDescriptorSets");
     table->CmdBindVertexBuffers = (PFN_vkCmdBindVertexBuffers) gpa(dev, "vkCmdBindVertexBuffers");
     table->CmdBindIndexBuffer = (PFN_vkCmdBindIndexBuffer) gpa(dev, "vkCmdBindIndexBuffer");
@@ -132,7 +157,9 @@ static inline void loader_init_device_dispatch_table(VkLayerDispatchTable *table
     table->CmdWriteTimestamp = (PFN_vkCmdWriteTimestamp) gpa(dev, "vkCmdWriteTimestamp");
     table->CmdCopyQueryPoolResults = (PFN_vkCmdCopyQueryPoolResults) gpa(dev, "vkCmdCopyQueryPoolResults");
     table->CreateFramebuffer = (PFN_vkCreateFramebuffer) gpa(dev, "vkCreateFramebuffer");
+    table->DestroyFramebuffer = (PFN_vkDestroyFramebuffer) gpa(dev, "vkDestroyFramebuffer");
     table->CreateRenderPass = (PFN_vkCreateRenderPass) gpa(dev, "vkCreateRenderPass");
+    table->DestroyRenderPass = (PFN_vkDestroyRenderPass) gpa(dev, "vkDestroyRenderPass");
     table->CmdBeginRenderPass = (PFN_vkCmdBeginRenderPass) gpa(dev, "vkCmdBeginRenderPass");
     table->CmdNextSubpass = (PFN_vkCmdNextSubpass) gpa(dev, "vkCmdNextSubpass");
     table->CmdEndRenderPass = (PFN_vkCmdEndRenderPass) gpa(dev, "vkCmdEndRenderPass");
@@ -180,12 +207,14 @@ static inline void *loader_lookup_device_dispatch_table(
         return (void *) table->FlushMappedMemoryRanges;
     if (!strcmp(name, "InvalidateMappedMemoryRanges"))
         return (void *) table->InvalidateMappedMemoryRanges;
-    if (!strcmp(name, "DestroyObject"))
-        return (void *) table->DestroyObject;
-    if (!strcmp(name, "GetObjectMemoryRequirements"))
-        return (void *) table->GetObjectMemoryRequirements;
-    if (!strcmp(name, "BindObjectMemory"))
-        return (void *) table->BindObjectMemory;
+    if (!strcmp(name, "GetBufferMemoryRequirements"))
+        return (void *) table->GetBufferMemoryRequirements;
+    if (!strcmp(name, "GetImageMemoryRequirements"))
+        return (void *) table->GetImageMemoryRequirements;
+    if (!strcmp(name, "BindBufferMemory"))
+        return (void *) table->BindBufferMemory;
+    if (!strcmp(name, "BindImageMemory"))
+        return (void *) table->BindImageMemory;
     if (!strcmp(name, "QueueBindSparseBufferMemory"))
         return (void *) table->QueueBindSparseBufferMemory;
     if (!strcmp(name, "QueueBindSparseImageMemory"))
@@ -196,6 +225,8 @@ static inline void *loader_lookup_device_dispatch_table(
         return (void *) table->GetImageSparseMemoryRequirements;
     if (!strcmp(name, "CreateFence"))
         return (void *) table->CreateFence;
+    if (!strcmp(name, "DestroyFence"))
+        return (void *) table->DestroyFence;
     if (!strcmp(name, "ResetFences"))
         return (void *) table->ResetFences;
     if (!strcmp(name, "GetFenceStatus"))
@@ -204,12 +235,16 @@ static inline void *loader_lookup_device_dispatch_table(
         return (void *) table->WaitForFences;
     if (!strcmp(name, "CreateSemaphore"))
         return (void *) table->CreateSemaphore;
+    if (!strcmp(name, "DestroySemaphore"))
+        return (void *) table->DestroySemaphore;
     if (!strcmp(name, "QueueSignalSemaphore"))
         return (void *) table->QueueSignalSemaphore;
     if (!strcmp(name, "QueueWaitSemaphore"))
         return (void *) table->QueueWaitSemaphore;
     if (!strcmp(name, "CreateEvent"))
         return (void *) table->CreateEvent;
+    if (!strcmp(name, "DestroyEvent"))
+        return (void *) table->DestroyEvent;
     if (!strcmp(name, "GetEventStatus"))
         return (void *) table->GetEventStatus;
     if (!strcmp(name, "SetEvent"))
@@ -218,24 +253,40 @@ static inline void *loader_lookup_device_dispatch_table(
         return (void *) table->ResetEvent;
     if (!strcmp(name, "CreateQueryPool"))
         return (void *) table->CreateQueryPool;
+    if (!strcmp(name, "DestroyQueryPool"))
+        return (void *) table->DestroyQueryPool;
     if (!strcmp(name, "GetQueryPoolResults"))
         return (void *) table->GetQueryPoolResults;
     if (!strcmp(name, "CreateBuffer"))
         return (void *) table->CreateBuffer;
+    if (!strcmp(name, "DestroyBuffer"))
+        return (void *) table->DestroyBuffer;
     if (!strcmp(name, "CreateBufferView"))
         return (void *) table->CreateBufferView;
+    if (!strcmp(name, "DestroyBufferView"))
+        return (void *) table->DestroyBufferView;
     if (!strcmp(name, "CreateImage"))
         return (void *) table->CreateImage;
+    if (!strcmp(name, "DestroyImage"))
+        return (void *) table->DestroyImage;
     if (!strcmp(name, "GetImageSubresourceLayout"))
         return (void *) table->GetImageSubresourceLayout;
     if (!strcmp(name, "CreateImageView"))
         return (void *) table->CreateImageView;
+    if (!strcmp(name, "DestroyImageView"))
+        return (void *) table->DestroyImageView;
     if (!strcmp(name, "CreateAttachmentView"))
         return (void *) table->CreateAttachmentView;
+    if (!strcmp(name, "DestroyAttachmentView"))
+        return (void *) table->DestroyAttachmentView;
     if (!strcmp(name, "CreateShaderModule"))
         return (void *) table->CreateShaderModule;
+    if (!strcmp(name, "DestroyShaderModule"))
+        return (void *) table->DestroyShaderModule;
     if (!strcmp(name, "CreateShader"))
         return (void *) table->CreateShader;
+    if (!strcmp(name, "DestroyShader"))
+        return (void *) table->DestroyShader;
     if (!strcmp(name, "CreatePipelineCache"))
         return (void*) vkCreatePipelineCache;
     if (!strcmp(name, "DestroyPipelineCache"))
@@ -250,14 +301,24 @@ static inline void *loader_lookup_device_dispatch_table(
         return (void*) vkCreateGraphicsPipelines;
     if (!strcmp(name, "CreateComputePipelines"))
         return (void*) vkCreateComputePipelines;
+    if (!strcmp(name, "DestroyPipeline"))
+        return (void *) table->DestroyPipeline;
     if (!strcmp(name, "CreatePipelineLayout"))
         return (void *) table->CreatePipelineLayout;
+    if (!strcmp(name, "DestroyPipelineLayout"))
+        return (void *) table->DestroyPipelineLayout;
     if (!strcmp(name, "CreateSampler"))
         return (void *) table->CreateSampler;
+    if (!strcmp(name, "DestroySampler"))
+        return (void *) table->DestroySampler;
     if (!strcmp(name, "CreateDescriptorSetLayout"))
         return (void *) table->CreateDescriptorSetLayout;
+    if (!strcmp(name, "DestroyDescriptorSetLayout"))
+        return (void *) table->DestroyDescriptorSetLayout;
     if (!strcmp(name, "CreateDescriptorPool"))
         return (void *) table->CreateDescriptorPool;
+    if (!strcmp(name, "DestroyDescriptorPool"))
+        return (void *) table->DestroyDescriptorPool;
     if (!strcmp(name, "ResetDescriptorPool"))
         return (void *) table->ResetDescriptorPool;
     if (!strcmp(name, "AllocDescriptorSets"))
@@ -266,14 +327,24 @@ static inline void *loader_lookup_device_dispatch_table(
         return (void *) table->UpdateDescriptorSets;
     if (!strcmp(name, "CreateDynamicViewportState"))
         return (void *) table->CreateDynamicViewportState;
+    if (!strcmp(name, "DestroyDynamicViewportState"))
+        return (void *) table->DestroyDynamicViewportState;
     if (!strcmp(name, "CreateDynamicRasterState"))
         return (void *) table->CreateDynamicRasterState;
+    if (!strcmp(name, "DestroyDynamicRasterState"))
+        return (void *) table->DestroyDynamicRasterState;
     if (!strcmp(name, "CreateDynamicColorBlendState"))
         return (void *) table->CreateDynamicColorBlendState;
+    if (!strcmp(name, "DestroyDynamicColorBlendState"))
+        return (void *) table->DestroyDynamicColorBlendState;
     if (!strcmp(name, "CreateDynamicDepthStencilState"))
         return (void *) table->CreateDynamicDepthStencilState;
+    if (!strcmp(name, "DestroyDynamicDepthStencilState"))
+        return (void *) table->DestroyDynamicDepthStencilState;
     if (!strcmp(name, "CreateCommandBuffer"))
         return (void *) table->CreateCommandBuffer;
+    if (!strcmp(name, "DestroyCommandBuffer"))
+        return (void *) table->DestroyCommandBuffer;
     if (!strcmp(name, "BeginCommandBuffer"))
         return (void *) table->BeginCommandBuffer;
     if (!strcmp(name, "EndCommandBuffer"))
@@ -282,8 +353,14 @@ static inline void *loader_lookup_device_dispatch_table(
         return (void *) table->ResetCommandBuffer;
     if (!strcmp(name, "CmdBindPipeline"))
         return (void *) table->CmdBindPipeline;
-    if (!strcmp(name, "CmdBindDynamicStateObject"))
-        return (void *) table->CmdBindDynamicStateObject;
+    if (!strcmp(name, "CmdBindDynamicViewportState"))
+        return (void *) table->CmdBindDynamicViewportState;
+    if (!strcmp(name, "CmdBindDynamicRasterState"))
+        return (void *) table->CmdBindDynamicRasterState;
+    if (!strcmp(name, "CmdBindDynamicColorBlendState"))
+        return (void *) table->CmdBindDynamicColorBlendState;
+    if (!strcmp(name, "CmdBindDynamicDepthStencilState"))
+        return (void *) table->CmdBindDynamicDepthStencilState;
     if (!strcmp(name, "CmdBindDescriptorSets"))
         return (void *) table->CmdBindDescriptorSets;
     if (!strcmp(name, "CmdBindVertexBuffers"))
@@ -346,8 +423,12 @@ static inline void *loader_lookup_device_dispatch_table(
         return (void *) table->CmdCopyQueryPoolResults;
     if (!strcmp(name, "CreateFramebuffer"))
         return (void *) table->CreateFramebuffer;
+    if (!strcmp(name, "DestroyFramebuffer"))
+        return (void *) table->DestroyFramebuffer;
     if (!strcmp(name, "CreateRenderPass"))
         return (void *) table->CreateRenderPass;
+    if (!strcmp(name, "DestroyRenderPass"))
+        return (void *) table->DestroyRenderPass;
     if (!strcmp(name, "CmdBeginRenderPass"))
         return (void *) table->CmdBeginRenderPass;
     if (!strcmp(name, "CmdNextSubpass"))

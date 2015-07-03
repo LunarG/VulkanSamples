@@ -158,6 +158,17 @@ ICD_EXPORT VkResult VKAPI vkCreateEvent(
             (struct intel_event **) pEvent);
 }
 
+ICD_EXPORT VkResult VKAPI vkDestroyEvent(
+    VkDevice                                device,
+    VkEvent                                 event)
+
+ {
+    struct intel_obj *obj = intel_obj(event.handle);
+
+    obj->destroy(obj);
+    return VK_SUCCESS;
+ }
+
 ICD_EXPORT VkResult VKAPI vkGetEventStatus(
     VkDevice                                  device,
     VkEvent                                   event_)

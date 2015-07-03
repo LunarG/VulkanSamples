@@ -961,9 +961,9 @@ ICD_EXPORT VkResult VKAPI vkGetSwapChainInfoWSI(
 
             images = (VkSwapChainImageInfoWSI *) pData;
             for (i = 0; i < sc->persistent_image_count; i++) {
-                images[i].image = (VkImage) sc->persistent_images[i];
-                images[i].memory =
-                    (VkDeviceMemory) sc->persistent_images[i]->obj.mem;
+                images[i].image.handle = (uint64_t) sc->persistent_images[i];
+                images[i].memory.handle =
+                    (uint64_t) sc->persistent_images[i]->obj.mem;
             }
         }
         break;

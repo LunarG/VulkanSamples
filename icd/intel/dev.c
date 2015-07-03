@@ -205,8 +205,8 @@ void intel_dev_log(struct intel_dev *dev,
 
     va_start(ap, format);
     intel_logv(dev, msg_flags,
-               (src_object->dbg ? src_object->dbg->type : (VkObjectType) 0),
-               (VkObject) src_object,
+               (src_object->dbg ? src_object->dbg->type : 0),
+               (uint64_t) src_object,
                location, msg_code,
                format, ap);
     va_end(ap);

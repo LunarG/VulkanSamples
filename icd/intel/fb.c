@@ -216,6 +216,17 @@ ICD_EXPORT VkResult VKAPI vkCreateFramebuffer(
             (struct intel_fb **) pFramebuffer);
 }
 
+ICD_EXPORT VkResult VKAPI vkDestroyFramebuffer(
+    VkDevice                                device,
+    VkFramebuffer                           framebuffer)
+
+{
+    struct intel_obj *obj = intel_obj(framebuffer.handle);
+
+    obj->destroy(obj);
+    return VK_SUCCESS;
+}
+
 ICD_EXPORT VkResult VKAPI vkCreateRenderPass(
     VkDevice                                  device,
     const VkRenderPassCreateInfo*          pCreateInfo,
@@ -225,4 +236,15 @@ ICD_EXPORT VkResult VKAPI vkCreateRenderPass(
 
     return intel_render_pass_create(dev, pCreateInfo,
             (struct intel_render_pass **) pRenderPass);
+}
+
+ICD_EXPORT VkResult VKAPI vkDestroyRenderPass(
+    VkDevice                                device,
+    VkRenderPass                           renderPass)
+
+{
+    struct intel_obj *obj = intel_obj(renderPass.handle);
+
+    obj->destroy(obj);
+    return VK_SUCCESS;
 }

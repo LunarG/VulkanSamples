@@ -34,18 +34,18 @@ VkLayerInstanceDispatchTable * initInstanceTable(instance_table_map &map, const 
 
 typedef void *dispatch_key;
 
-static inline dispatch_key get_dispatch_key(VkObject object)
+static inline dispatch_key get_dispatch_key(void* object)
 {
     return (dispatch_key) *(VkLayerDispatchTable **) object;
 }
 
-VkLayerDispatchTable *device_dispatch_table(VkObject object);
+VkLayerDispatchTable *device_dispatch_table(void* object);
 
-VkLayerInstanceDispatchTable *instance_dispatch_table(VkObject object);
+VkLayerInstanceDispatchTable *instance_dispatch_table(void* object);
 
-VkLayerDispatchTable *get_dispatch_table(device_table_map &map, VkObject object);
+VkLayerDispatchTable *get_dispatch_table(device_table_map &map, void* object);
 
-VkLayerInstanceDispatchTable *get_dispatch_table(instance_table_map &map, VkObject object);
+VkLayerInstanceDispatchTable *get_dispatch_table(instance_table_map &map, void* object);
 
 void destroy_device_dispatch_table(dispatch_key key);
 void destroy_instance_dispatch_table(dispatch_key key);

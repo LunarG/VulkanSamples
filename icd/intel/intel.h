@@ -38,6 +38,7 @@
 
 #include <vulkan.h>
 #include <vk_icd.h>
+#include <vk_debug_report_lunarg.h>
 
 #include "icd.h"
 #include "icd-spv.h"
@@ -86,10 +87,10 @@ extern int intel_debug;
 static const uint32_t intel_handle_magic = 0x494e544c;
 
 static inline void intel_handle_init(struct intel_handle *handle,
-                                     VkObjectType type,
+                                     VkDbgObjectType type,
                                      const struct intel_instance *instance)
 {
-    set_loader_magic_value((VkObject) handle);
+    set_loader_magic_value((void *)handle);
 
     handle->magic = intel_handle_magic + type;
     handle->instance = instance;
@@ -116,7 +117,7 @@ static inline bool intel_handle_validate(const void *handle)
  * \see intel_handle_validate().
  */
 static inline bool intel_handle_validate_type(const void *handle,
-                                              VkObjectType type)
+                                              VkDbgObjectType type)
 {
     const uint32_t handle_type =
         ((const struct intel_handle *) handle)->magic - intel_handle_magic;
@@ -132,13 +133,13 @@ void intel_free(const void *handle, void *ptr);
 
 void intel_logv(const void *handle,
                 VkFlags msg_flags,
-                VkObjectType obj_type, VkObject src_object,
+                VkDbgObjectType obj_type, uint64_t src_object,
                 size_t location, int32_t msg_code,
                 const char *format, va_list ap);
 
 static inline void intel_log(const void *handle,
                              VkFlags msg_flags,
-                             VkObjectType obj_type, VkObject src_object,
+                             VkDbgObjectType obj_type, uint64_t src_object,
                              size_t location, int32_t msg_code,
                              const char *format, ...)
 {

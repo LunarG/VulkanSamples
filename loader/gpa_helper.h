@@ -91,12 +91,14 @@ static inline void* globalGetProcAddr(const char *name)
         return (void*) vkFlushMappedMemoryRanges;
     if (!strcmp(name, "InvalidateMappedMemoryRanges"))
         return (void*) vkInvalidateMappedMemoryRanges;
-    if (!strcmp(name, "DestroyObject"))
-        return (void*) vkDestroyObject;
-    if (!strcmp(name, "GetObjectMemoryRequirements"))
-        return (void*) vkGetObjectMemoryRequirements;
-    if (!strcmp(name, "BindObjectMemory"))
-        return (void*) vkBindObjectMemory;
+    if (!strcmp(name, "GetImageMemoryRequirements"))
+        return (void*) vkGetImageMemoryRequirements;
+    if (!strcmp(name, "GetBufferMemoryRequirements"))
+        return (void*) vkGetBufferMemoryRequirements;
+    if (!strcmp(name, "BindImageMemory"))
+        return (void*) vkBindImageMemory;
+    if (!strcmp(name, "BindBufferMemory"))
+        return (void*) vkBindBufferMemory;
     if (!strcmp(name, "QueueBindSparseBufferMemory"))
         return (void*) vkQueueBindSparseBufferMemory;
     if (!strcmp(name, "QueueBindSparseImageMemory"))
@@ -107,6 +109,8 @@ static inline void* globalGetProcAddr(const char *name)
         return (void*) vkGetImageSparseMemoryRequirements;
     if (!strcmp(name, "CreateFence"))
         return (void*) vkCreateFence;
+    if (!strcmp(name, "DestroyFence"))
+        return (void*) vkDestroyFence;
     if (!strcmp(name, "ResetFences"))
         return (void*) vkResetFences;
     if (!strcmp(name, "GetFenceStatus"))
@@ -115,12 +119,16 @@ static inline void* globalGetProcAddr(const char *name)
         return (void*) vkWaitForFences;
     if (!strcmp(name, "CreateSemaphore"))
         return (void*) vkCreateSemaphore;
+    if (!strcmp(name, "DestroySemaphore"))
+        return (void*) vkDestroySemaphore;
     if (!strcmp(name, "QueueSignalSemaphore"))
         return (void*) vkQueueSignalSemaphore;
     if (!strcmp(name, "QueueWaitSemaphore"))
         return (void*) vkQueueWaitSemaphore;
     if (!strcmp(name, "CreateEvent"))
         return (void*) vkCreateEvent;
+    if (!strcmp(name, "DestroyEvent"))
+        return (void*) vkDestroyEvent;
     if (!strcmp(name, "GetEventStatus"))
         return (void*) vkGetEventStatus;
     if (!strcmp(name, "SetEvent"))
@@ -129,24 +137,40 @@ static inline void* globalGetProcAddr(const char *name)
         return (void*) vkResetEvent;
     if (!strcmp(name, "CreateQueryPool"))
         return (void*) vkCreateQueryPool;
+    if (!strcmp(name, "DestroyQueryPool"))
+        return (void*) vkDestroyQueryPool;
     if (!strcmp(name, "GetQueryPoolResults"))
         return (void*) vkGetQueryPoolResults;
     if (!strcmp(name, "CreateBuffer"))
         return (void*) vkCreateBuffer;
+    if (!strcmp(name, "DestroyBuffer"))
+        return (void*) vkDestroyBuffer;
     if (!strcmp(name, "CreateBufferView"))
         return (void*) vkCreateBufferView;
+    if (!strcmp(name, "DestroyBufferView"))
+        return (void*) vkDestroyBufferView;
     if (!strcmp(name, "CreateImage"))
         return (void*) vkCreateImage;
+    if (!strcmp(name, "DestroyImage"))
+        return (void*) vkDestroyImage;
     if (!strcmp(name, "GetImageSubresourceLayout"))
         return (void*) vkGetImageSubresourceLayout;
     if (!strcmp(name, "CreateImageView"))
         return (void*) vkCreateImageView;
+    if (!strcmp(name, "DestroyImageView"))
+        return (void*) vkDestroyImageView;
     if (!strcmp(name, "CreateAttachmentView"))
         return (void*) vkCreateAttachmentView;
+    if (!strcmp(name, "DestroyAttachmentView"))
+        return (void*) vkDestroyAttachmentView;
     if (!strcmp(name, "CreateShaderModule"))
         return (void*) vkCreateShaderModule;
+    if (!strcmp(name, "DestroyShaderModule"))
+        return (void*) vkDestroyShaderModule;
     if (!strcmp(name, "CreateShader"))
         return (void*) vkCreateShader;
+    if (!strcmp(name, "DestroyShader"))
+        return (void*) vkDestroyShader;
     if (!strcmp(name, "CreatePipelineCache"))
         return (void*) vkCreatePipelineCache;
     if (!strcmp(name, "DestroyPipelineCache"))
@@ -161,14 +185,24 @@ static inline void* globalGetProcAddr(const char *name)
         return (void*) vkCreateGraphicsPipelines;
     if (!strcmp(name, "CreateComputePipelines"))
         return (void*) vkCreateComputePipelines;
+    if (!strcmp(name, "DestroyPipeline"))
+        return (void*) vkDestroyPipeline;
     if (!strcmp(name, "CreatePipelineLayout"))
         return (void*) vkCreatePipelineLayout;
+    if (!strcmp(name, "DestroyPipelineLayout"))
+        return (void*) vkDestroyPipelineLayout;
     if (!strcmp(name, "CreateSampler"))
         return (void*) vkCreateSampler;
+    if (!strcmp(name, "DestroySampler"))
+        return (void*) vkDestroySampler;
     if (!strcmp(name, "CreateDescriptorSetLayout"))
         return (void*) vkCreateDescriptorSetLayout;
+    if (!strcmp(name, "DestroyDescriptorSetLayout"))
+        return (void*) vkDestroyDescriptorSetLayout;
     if (!strcmp(name, "CreateDescriptorPool"))
         return (void*) vkCreateDescriptorPool;
+    if (!strcmp(name, "DestroyDescriptorPool"))
+        return (void*) vkDestroyDescriptorPool;
     if (!strcmp(name, "ResetDescriptorPool"))
         return (void*) vkResetDescriptorPool;
     if (!strcmp(name, "AllocDescriptorSets"))
@@ -177,14 +211,24 @@ static inline void* globalGetProcAddr(const char *name)
         return (void*) vkUpdateDescriptorSets;
     if (!strcmp(name, "CreateDynamicViewportState"))
         return (void*) vkCreateDynamicViewportState;
+    if (!strcmp(name, "DestroyDynamicViewportState"))
+        return (void*) vkDestroyDynamicViewportState;
     if (!strcmp(name, "CreateDynamicRasterState"))
         return (void*) vkCreateDynamicRasterState;
+    if (!strcmp(name, "DestroyDynamicRasterState"))
+        return (void*) vkDestroyDynamicRasterState;
     if (!strcmp(name, "CreateDynamicColorBlendState"))
         return (void*) vkCreateDynamicColorBlendState;
+    if (!strcmp(name, "DestroyDynamicColorBlendState"))
+        return (void*) vkDestroyDynamicColorBlendState;
     if (!strcmp(name, "CreateDynamicDepthStencilState"))
         return (void*) vkCreateDynamicDepthStencilState;
+    if (!strcmp(name, "DestroyDynamicDepthStencilState"))
+        return (void*) vkDestroyDynamicDepthStencilState;
     if (!strcmp(name, "CreateCommandBuffer"))
         return (void*) vkCreateCommandBuffer;
+    if (!strcmp(name, "DestroyCommandBuffer"))
+        return (void*) vkDestroyCommandBuffer;
     if (!strcmp(name, "BeginCommandBuffer"))
         return (void*) vkBeginCommandBuffer;
     if (!strcmp(name, "EndCommandBuffer"))
@@ -193,8 +237,14 @@ static inline void* globalGetProcAddr(const char *name)
         return (void*) vkResetCommandBuffer;
     if (!strcmp(name, "CmdBindPipeline"))
         return (void*) vkCmdBindPipeline;
-    if (!strcmp(name, "CmdBindDynamicStateObject"))
-        return (void*) vkCmdBindDynamicStateObject;
+    if (!strcmp(name, "CmdBindDynamicViewportState"))
+        return (void*) vkCmdBindDynamicViewportState;
+    if (!strcmp(name, "CmdBindDynamicRasterState"))
+        return (void*) vkCmdBindDynamicRasterState;
+    if (!strcmp(name, "CmdBindDynamicColorBlendState"))
+        return (void*) vkCmdBindDynamicColorBlendState;
+    if (!strcmp(name, "CmdBindDynamicDepthStencilState"))
+        return (void*) vkCmdBindDynamicDepthStencilState;
     if (!strcmp(name, "CmdBindDescriptorSets"))
         return (void*) vkCmdBindDescriptorSets;
     if (!strcmp(name, "CmdBindVertexBuffers"))
@@ -257,8 +307,12 @@ static inline void* globalGetProcAddr(const char *name)
         return (void*) vkCmdCopyQueryPoolResults;
     if (!strcmp(name, "CreateFramebuffer"))
         return (void*) vkCreateFramebuffer;
+    if (!strcmp(name, "DestroyFramebuffer"))
+        return (void*) vkDestroyFramebuffer;
     if (!strcmp(name, "CreateRenderPass"))
         return (void*) vkCreateRenderPass;
+    if (!strcmp(name, "DestroyRenderPass"))
+        return (void*) vkDestroyRenderPass;
     if (!strcmp(name, "CmdBeginRenderPass"))
         return (void*) vkCmdBeginRenderPass;
     if (!strcmp(name, "CmdNextSubpass"))

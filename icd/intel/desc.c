@@ -607,7 +607,7 @@ static VkResult desc_layout_init_bindings(struct intel_desc_layout *layout,
             uint32_t j;
 
             for (j = 1; j < lb->arraySize; j++) {
-                if (lb->pImmutableSamplers[j] != lb->pImmutableSamplers[0]) {
+                if (lb->pImmutableSamplers[j].handle != lb->pImmutableSamplers[0].handle) {
                     shared = false;
                     break;
                 }
@@ -760,6 +760,17 @@ ICD_EXPORT VkResult VKAPI vkCreateDescriptorSetLayout(
             (struct intel_desc_layout **) pSetLayout);
 }
 
+ICD_EXPORT VkResult VKAPI vkDestroyDescriptorSetLayout(
+    VkDevice                                device,
+    VkDescriptorSetLayout                   descriptorSetLayout)
+
+{
+    struct intel_obj *obj = intel_obj(descriptorSetLayout.handle);
+
+    obj->destroy(obj);
+    return VK_SUCCESS;
+}
+
 ICD_EXPORT VkResult VKAPI vkCreatePipelineLayout(
     VkDevice                                device,
     const VkPipelineLayoutCreateInfo*       pCreateInfo,
@@ -770,6 +781,17 @@ ICD_EXPORT VkResult VKAPI vkCreatePipelineLayout(
     return intel_pipeline_layout_create(dev,
                                         pCreateInfo,
                                         (struct intel_pipeline_layout **) pPipelineLayout);
+}
+
+ICD_EXPORT VkResult VKAPI vkDestroyPipelineLayout(
+    VkDevice                                device,
+    VkPipelineLayout                        pipelineLayout)
+
+{
+    struct intel_obj *obj = intel_obj(pipelineLayout.handle);
+
+    obj->destroy(obj);
+    return VK_SUCCESS;
 }
 
 ICD_EXPORT VkResult VKAPI vkCreateDescriptorPool(
@@ -783,6 +805,17 @@ ICD_EXPORT VkResult VKAPI vkCreateDescriptorPool(
 
     return intel_desc_pool_create(dev, poolUsage, maxSets, pCreateInfo,
             (struct intel_desc_pool **) pDescriptorPool);
+}
+
+ICD_EXPORT VkResult VKAPI vkDestroyDescriptorPool(
+    VkDevice                                device,
+    VkDescriptorPool                        descriptorPool)
+
+{
+    struct intel_obj *obj = intel_obj(descriptorPool.handle);
+
+    obj->destroy(obj);
+    return VK_SUCCESS;
 }
 
 ICD_EXPORT VkResult VKAPI vkResetDescriptorPool(

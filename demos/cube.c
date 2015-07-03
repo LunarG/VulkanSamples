@@ -248,9 +248,9 @@ void dumpVec4(const char *note, vec4 vector)
 }
 
 void dbgFunc(
-    VkFlags                    msgFlags,
-    VkObjectType                        objType,
-    VkObject                            srcObject,
+    VkFlags                             msgFlags,
+    VkDbgObjectType                     objType,
+    uint64_t                            srcObject,
     size_t                              location,
     int32_t                             msgCode,
     const char*                         pLayerPrefix,
@@ -348,10 +348,10 @@ struct demo {
     VkRenderPass render_pass;
     VkPipeline pipeline;
 
-    VkDynamicVpState viewport;
-    VkDynamicRsState raster;
-    VkDynamicCbState color_blend;
-    VkDynamicDsState depth_stencil;
+    VkDynamicViewportState viewport;
+    VkDynamicRasterState raster;
+    VkDynamicColorBlendState color_blend;
+    VkDynamicDepthStencilState depth_stencil;
 
     mat4x4 projection_matrix;
     mat4x4 view_matrix;
@@ -405,14 +405,15 @@ static void demo_flush_init_cmd(struct demo *demo)
     assert(!err);
 
     const VkCmdBuffer cmd_bufs[] = { demo->cmd };
+    VkFence nullFence = { VK_NULL_HANDLE };
 
-    err = vkQueueSubmit(demo->queue, 1, cmd_bufs, VK_NULL_HANDLE);
+    err = vkQueueSubmit(demo->queue, 1, cmd_bufs, nullFence);
     assert(!err);
 
     err = vkQueueWaitIdle(demo->queue);
     assert(!err);
 
-    vkDestroyObject(demo->device, VK_OBJECT_TYPE_COMMAND_BUFFER, demo->cmd);
+    vkDestroyCommandBuffer(demo->device, demo->cmd);
     demo->cmd = VK_NULL_HANDLE;
 }
 
@@ -511,12 +512,10 @@ static void demo_draw_build_cmd(struct demo *demo, VkCmdBuffer cmd_buf)
     vkCmdBindDescriptorSets(cmd_buf, VK_PIPELINE_BIND_POINT_GRAPHICS, demo->pipeline_layout,
             0, 1, &demo->desc_set, 0, NULL);
 
-    vkCmdBindDynamicStateObject(cmd_buf, VK_STATE_BIND_POINT_VIEWPORT, demo->viewport);
-    vkCmdBindDynamicStateObject(cmd_buf, VK_STATE_BIND_POINT_RASTER, demo->raster);
-    vkCmdBindDynamicStateObject(cmd_buf, VK_STATE_BIND_POINT_COLOR_BLEND,
-                                     demo->color_blend);
-    vkCmdBindDynamicStateObject(cmd_buf, VK_STATE_BIND_POINT_DEPTH_STENCIL,
-                                     demo->depth_stencil);
+    vkCmdBindDynamicViewportState(cmd_buf, demo->viewport);
+    vkCmdBindDynamicRasterState(cmd_buf,  demo->raster);
+    vkCmdBindDynamicColorBlendState(cmd_buf, demo->color_blend);
+    vkCmdBindDynamicDepthStencilState(cmd_buf, demo->depth_stencil);
 
     vkCmdDraw(cmd_buf, 0, 12 * 3, 0, 1);
     vkCmdEndRenderPass(cmd_buf);
@@ -558,9 +557,10 @@ static void demo_draw(struct demo *demo)
         .flipInterval = 0,
     };
     VkResult U_ASSERT_ONLY err;
+    VkFence nullFence = { VK_NULL_HANDLE };
 
     err = vkQueueSubmit(demo->queue, 1, &demo->buffers[demo->current_buffer].cmd,
-            VK_NULL_HANDLE);
+            nullFence);
     assert(!err);
 
     err = demo->fpQueuePresentWSI(demo->queue, &present);
@@ -653,7 +653,7 @@ static void demo_prepare_depth(struct demo *demo)
     VkAttachmentViewCreateInfo view = {
         .sType = VK_STRUCTURE_TYPE_ATTACHMENT_VIEW_CREATE_INFO,
         .pNext = NULL,
-        .image = VK_NULL_HANDLE,
+        .image.handle = VK_NULL_HANDLE,
         .mipLevel = 0,
         .baseArraySlice = 0,
         .arraySize = 1,
@@ -670,8 +670,8 @@ static void demo_prepare_depth(struct demo *demo)
             &demo->depth.image);
     assert(!err);
 
-    err = vkGetObjectMemoryRequirements(demo->device,
-                    VK_OBJECT_TYPE_IMAGE, demo->depth.image, &mem_reqs);
+    err = vkGetImageMemoryRequirements(demo->device,
+                    demo->depth.image, &mem_reqs);
 
     mem_alloc.allocationSize = mem_reqs.size;
     err = memory_type_from_properties(demo,
@@ -685,8 +685,7 @@ static void demo_prepare_depth(struct demo *demo)
     assert(!err);
 
     /* bind memory */
-    err = vkBindObjectMemory(demo->device,
-            VK_OBJECT_TYPE_IMAGE, demo->depth.image,
+    err = vkBindImageMemory(demo->device, demo->depth.image,
             demo->depth.mem, 0);
     assert(!err);
 
@@ -902,8 +901,7 @@ static void demo_prepare_texture_image(struct demo *demo,
             &tex_obj->image);
     assert(!err);
 
-    err = vkGetObjectMemoryRequirements(demo->device,
-                VK_OBJECT_TYPE_IMAGE, tex_obj->image, &mem_reqs);
+    err = vkGetImageMemoryRequirements(demo->device, tex_obj->image, &mem_reqs);
     assert(!err);
 
     mem_alloc.allocationSize = mem_reqs.size;
@@ -917,8 +915,7 @@ static void demo_prepare_texture_image(struct demo *demo,
     assert(!err);
 
     /* bind memory */
-    err = vkBindObjectMemory(demo->device,
-            VK_OBJECT_TYPE_IMAGE, tex_obj->image,
+    err = vkBindImageMemory(demo->device, tex_obj->image,
             tex_obj->mem, 0);
     assert(!err);
 
@@ -957,7 +954,7 @@ static void demo_destroy_texture_image(struct demo *demo, struct texture_object 
 {
     /* clean up staging resources */
     vkFreeMemory(demo->device, tex_objs->mem);
-    vkDestroyObject(demo->device, VK_OBJECT_TYPE_IMAGE, tex_objs->image);
+    vkDestroyImage(demo->device, tex_objs->image);
 }
 
 static void demo_prepare_textures(struct demo *demo)
@@ -1044,7 +1041,7 @@ static void demo_prepare_textures(struct demo *demo)
         VkImageViewCreateInfo view = {
             .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
             .pNext = NULL,
-            .image = VK_NULL_HANDLE,
+            .image.handle = VK_NULL_HANDLE,
             .viewType = VK_IMAGE_VIEW_TYPE_2D,
             .format = tex_format,
             .channels = { VK_CHANNEL_SWIZZLE_R,
@@ -1107,8 +1104,7 @@ void demo_prepare_cube_data_buffer(struct demo *demo)
     err = vkCreateBuffer(demo->device, &buf_info, &demo->uniform_data.buf);
     assert(!err);
 
-    err = vkGetObjectMemoryRequirements(demo->device,
-            VK_OBJECT_TYPE_BUFFER, demo->uniform_data.buf, &mem_reqs);
+    err = vkGetBufferMemoryRequirements(demo->device, demo->uniform_data.buf, &mem_reqs);
     assert(!err && mem_reqs_size == sizeof(mem_reqs));
 
     alloc_info.allocationSize = mem_reqs.size;
@@ -1129,8 +1125,8 @@ void demo_prepare_cube_data_buffer(struct demo *demo)
     err = vkUnmapMemory(demo->device, demo->uniform_data.mem);
     assert(!err);
 
-    err = vkBindObjectMemory(demo->device,
-            VK_OBJECT_TYPE_BUFFER, demo->uniform_data.buf,
+    err = vkBindBufferMemory(demo->device,
+            demo->uniform_data.buf,
             demo->uniform_data.mem, 0);
     assert(!err);
 
@@ -1492,20 +1488,20 @@ static void demo_prepare_pipeline(struct demo *demo)
     assert(!err);
 
     for (uint32_t i = 0; i < pipeline.stageCount; i++) {
-        vkDestroyObject(demo->device, VK_OBJECT_TYPE_SHADER, shaderStages[i].shader);
+        vkDestroyShader(demo->device, shaderStages[i].shader);
     }
 }
 
 static void demo_prepare_dynamic_states(struct demo *demo)
 {
-    VkDynamicVpStateCreateInfo viewport_create;
-    VkDynamicRsStateCreateInfo raster;
-    VkDynamicCbStateCreateInfo color_blend;
-    VkDynamicDsStateCreateInfo depth_stencil;
+    VkDynamicViewportStateCreateInfo viewport_create;
+    VkDynamicRasterStateCreateInfo raster;
+    VkDynamicColorBlendStateCreateInfo color_blend;
+    VkDynamicDepthStencilStateCreateInfo depth_stencil;
     VkResult U_ASSERT_ONLY err;
 
     memset(&viewport_create, 0, sizeof(viewport_create));
-    viewport_create.sType = VK_STRUCTURE_TYPE_DYNAMIC_VP_STATE_CREATE_INFO;
+    viewport_create.sType = VK_STRUCTURE_TYPE_DYNAMIC_VIEWPORT_STATE_CREATE_INFO;
     viewport_create.viewportAndScissorCount = 1;
     VkViewport viewport;
     memset(&viewport, 0, sizeof(viewport));
@@ -1523,18 +1519,18 @@ static void demo_prepare_dynamic_states(struct demo *demo)
     viewport_create.pScissors = &scissor;
 
     memset(&raster, 0, sizeof(raster));
-    raster.sType = VK_STRUCTURE_TYPE_DYNAMIC_RS_STATE_CREATE_INFO;
+    raster.sType = VK_STRUCTURE_TYPE_DYNAMIC_RASTER_STATE_CREATE_INFO;
     raster.lineWidth = 1.0;
 
     memset(&color_blend, 0, sizeof(color_blend));
-    color_blend.sType = VK_STRUCTURE_TYPE_DYNAMIC_CB_STATE_CREATE_INFO;
+    color_blend.sType = VK_STRUCTURE_TYPE_DYNAMIC_COLOR_BLEND_STATE_CREATE_INFO;
     color_blend.blendConst[0] = 1.0f;
     color_blend.blendConst[1] = 1.0f;
     color_blend.blendConst[2] = 1.0f;
     color_blend.blendConst[3] = 1.0f;
 
     memset(&depth_stencil, 0, sizeof(depth_stencil));
-    depth_stencil.sType = VK_STRUCTURE_TYPE_DYNAMIC_DS_STATE_CREATE_INFO;
+    depth_stencil.sType = VK_STRUCTURE_TYPE_DYNAMIC_DEPTH_STENCIL_STATE_CREATE_INFO;
     depth_stencil.minDepthBounds = 0.0f;
     depth_stencil.maxDepthBounds = 1.0f;
     depth_stencil.stencilBackRef = 0;
@@ -1707,42 +1703,42 @@ static void demo_cleanup(struct demo *demo)
 
     demo->prepared = false;
 
-    for (i = 0; i < DEMO_BUFFER_COUNT; i++)
-        vkDestroyObject(demo->device, VK_OBJECT_TYPE_FRAMEBUFFER, demo->framebuffers[i]);
+    for (i = 0; i < DEMO_BUFFER_COUNT; i++) {
+        vkDestroyFramebuffer(demo->device, demo->framebuffers[i]);
+    }
+//    vkDestroyDescriptorSet(demo->device, demo->desc_set);
+    vkDestroyDescriptorPool(demo->device, demo->desc_pool);
 
-    vkDestroyObject(demo->device, VK_OBJECT_TYPE_DESCRIPTOR_SET, demo->desc_set);
-    vkDestroyObject(demo->device, VK_OBJECT_TYPE_DESCRIPTOR_POOL, demo->desc_pool);
+    vkDestroyDynamicViewportState(demo->device, demo->viewport);
+    vkDestroyDynamicRasterState(demo->device, demo->raster);
+    vkDestroyDynamicColorBlendState(demo->device, demo->color_blend);
+    vkDestroyDynamicDepthStencilState(demo->device, demo->depth_stencil);
 
-    vkDestroyObject(demo->device, VK_OBJECT_TYPE_DYNAMIC_VP_STATE, demo->viewport);
-    vkDestroyObject(demo->device, VK_OBJECT_TYPE_DYNAMIC_RS_STATE, demo->raster);
-    vkDestroyObject(demo->device, VK_OBJECT_TYPE_DYNAMIC_CB_STATE, demo->color_blend);
-    vkDestroyObject(demo->device, VK_OBJECT_TYPE_DYNAMIC_DS_STATE, demo->depth_stencil);
-
-    vkDestroyObject(demo->device, VK_OBJECT_TYPE_PIPELINE, demo->pipeline);
+    vkDestroyPipeline(demo->device, demo->pipeline);
     vkDestroyPipelineCache(demo->device, demo->pipelineCache);
-    vkDestroyObject(demo->device, VK_OBJECT_TYPE_RENDER_PASS, demo->render_pass);
-    vkDestroyObject(demo->device, VK_OBJECT_TYPE_PIPELINE_LAYOUT, demo->pipeline_layout);
-    vkDestroyObject(demo->device, VK_OBJECT_TYPE_DESCRIPTOR_SET_LAYOUT, demo->desc_layout);
+    vkDestroyRenderPass(demo->device, demo->render_pass);
+    vkDestroyPipelineLayout(demo->device, demo->pipeline_layout);
+    vkDestroyDescriptorSetLayout(demo->device, demo->desc_layout);
 
     for (i = 0; i < DEMO_TEXTURE_COUNT; i++) {
-        vkDestroyObject(demo->device, VK_OBJECT_TYPE_IMAGE_VIEW, demo->textures[i].view);
-        vkDestroyObject(demo->device, VK_OBJECT_TYPE_IMAGE, demo->textures[i].image);
+        vkDestroyImageView(demo->device, demo->textures[i].view);
+        vkDestroyImage(demo->device, demo->textures[i].image);
         vkFreeMemory(demo->device, demo->textures[i].mem);
-        vkDestroyObject(demo->device, VK_OBJECT_TYPE_SAMPLER, demo->textures[i].sampler);
+        vkDestroySampler(demo->device, demo->textures[i].sampler);
     }
     demo->fpDestroySwapChainWSI(demo->swap_chain);
 
-    vkDestroyObject(demo->device, VK_OBJECT_TYPE_ATTACHMENT_VIEW, demo->depth.view);
-    vkDestroyObject(demo->device, VK_OBJECT_TYPE_IMAGE, demo->depth.image);
+    vkDestroyAttachmentView(demo->device, demo->depth.view);
+    vkDestroyImage(demo->device, demo->depth.image);
     vkFreeMemory(demo->device, demo->depth.mem);
 
-    vkDestroyObject(demo->device, VK_OBJECT_TYPE_BUFFER_VIEW, demo->uniform_data.view);
-    vkDestroyObject(demo->device, VK_OBJECT_TYPE_BUFFER, demo->uniform_data.buf);
+    vkDestroyBufferView(demo->device, demo->uniform_data.view);
+    vkDestroyBuffer(demo->device, demo->uniform_data.buf);
     vkFreeMemory(demo->device, demo->uniform_data.mem);
 
     for (i = 0; i < DEMO_BUFFER_COUNT; i++) {
-        vkDestroyObject(demo->device, VK_OBJECT_TYPE_ATTACHMENT_VIEW, demo->buffers[i].view);
-        vkDestroyObject(demo->device, VK_OBJECT_TYPE_COMMAND_BUFFER, demo->buffers[i].cmd);
+        vkDestroyAttachmentView(demo->device, demo->buffers[i].view);
+        vkDestroyCommandBuffer(demo->device, demo->buffers[i].cmd);
     }
 
     vkDestroyDevice(demo->device);

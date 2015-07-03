@@ -108,7 +108,7 @@ static VkResult debug_report_DbgDestroyMsgCallback(
     VkResult result = inst->disp->DbgDestroyMsgCallback(instance, msg_callback);
 
     while (pTrav) {
-        if (pTrav->msgCallback == msg_callback) {
+        if (pTrav->msgCallback.handle == msg_callback.handle) {
             pPrev->pNext = pTrav->pNext;
             if (inst->DbgFunctionHead == pTrav)
                 inst->DbgFunctionHead = pTrav->pNext;
@@ -128,6 +128,7 @@ static VkResult debug_report_DbgDestroyMsgCallback(
  * This is the instance chain terminator function
  * for DbgCreateMsgCallback
  */
+
 VkResult loader_DbgCreateMsgCallback(
         VkInstance                          instance,
         VkFlags                             msgFlags,
@@ -180,7 +181,7 @@ VkResult loader_DbgCreateMsgCallback(
     if (icd) {
         storage_idx = 0;
         for (icd = inst->icds; icd; icd = icd->next) {
-            if (icd_info[storage_idx]) {
+            if (icd_info[storage_idx].handle) {
                 icd->DbgDestroyMsgCallback(
                       icd->instance,
                       icd_info[storage_idx]);
@@ -191,7 +192,7 @@ VkResult loader_DbgCreateMsgCallback(
         return res;
     }
 
-    *pMsgCallback = (VkDbgMsgCallback) icd_info;
+    *(VkDbgMsgCallback **)pMsgCallback = icd_info;
 
     return VK_SUCCESS;
 }
@@ -221,10 +222,10 @@ VkResult loader_DbgDestroyMsgCallback(
     if (inst == VK_NULL_HANDLE)
         return VK_ERROR_INVALID_HANDLE;
 
-    icd_info = (VkDbgMsgCallback *) msgCallback;
+    icd_info = *(VkDbgMsgCallback **) &msgCallback;
     storage_idx = 0;
     for (icd = inst->icds; icd; icd = icd->next) {
-        if (icd_info[storage_idx]) {
+        if (icd_info[storage_idx].handle) {
             icd->DbgDestroyMsgCallback(
                   icd->instance,
                   icd_info[storage_idx]);
@@ -267,8 +268,8 @@ static void print_msg_flags(VkFlags msgFlags, char *msg_flags)
 // DebugReport utility callback functions
 static void VKAPI StringCallback(
     VkFlags                             msgFlags,
-    VkObjectType                        objType,
-    VkObject                            srcObject,
+    VkDbgObjectType                     objType,
+    uint64_t                            srcObject,
     size_t                              location,
     int32_t                             msgCode,
     const char*                         pLayerPrefix,
@@ -302,8 +303,8 @@ static void VKAPI StringCallback(
 
 static void VKAPI StdioCallback(
     VkFlags                             msgFlags,
-    VkObjectType                        objType,
-    VkObject                            srcObject,
+    VkDbgObjectType                     objType,
+    uint64_t                            srcObject,
     size_t                              location,
     int32_t                             msgCode,
     const char*                         pLayerPrefix,
@@ -320,8 +321,8 @@ static void VKAPI StdioCallback(
 
 static void VKAPI BreakCallback(
     VkFlags                             msgFlags,
-    VkObjectType                        objType,
-    VkObject                            srcObject,
+    VkDbgObjectType                     objType,
+    uint64_t                            srcObject,
     size_t                              location,
     int32_t                             msgCode,
     const char*                         pLayerPrefix,

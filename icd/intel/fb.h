@@ -77,7 +77,7 @@ struct intel_render_pass {
 
 static inline struct intel_fb *intel_fb(VkFramebuffer fb)
 {
-    return (struct intel_fb *) fb;
+    return *(struct intel_fb **) &fb;
 }
 
 static inline struct intel_fb *intel_fb_from_obj(struct intel_obj *obj)
@@ -87,7 +87,7 @@ static inline struct intel_fb *intel_fb_from_obj(struct intel_obj *obj)
 
 static inline struct intel_render_pass *intel_render_pass(VkRenderPass rp)
 {
-    return (struct intel_render_pass *) rp;
+    return *(struct intel_render_pass **) &rp;
 }
 
 static inline struct intel_render_pass *intel_render_pass_from_obj(struct intel_obj *obj)

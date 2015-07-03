@@ -42,7 +42,7 @@ struct intel_shader {
 
 static inline struct intel_shader *intel_shader(VkShader shader)
 {
-    return (struct intel_shader *) shader;
+    return *(struct intel_shader **) &shader;
 }
 
 static inline struct intel_shader *intel_shader_from_obj(struct intel_obj *obj)
@@ -60,7 +60,7 @@ struct intel_shader_module {
 
 static inline struct intel_shader_module *intel_shader_module(VkShaderModule shaderModule)
 {
-    return (struct intel_shader_module *) shaderModule;
+    return *(struct intel_shader_module **) &shaderModule;
 }
 
 static inline struct intel_shader_module *intel_shader_module_from_obj(struct intel_obj *obj)

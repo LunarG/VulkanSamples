@@ -244,7 +244,7 @@ struct intel_pipeline {
 
 static inline struct intel_pipeline *intel_pipeline(VkPipeline pipeline)
 {
-    return (struct intel_pipeline *) pipeline;
+    return *(struct intel_pipeline **) &pipeline;
 }
 
 static inline struct intel_pipeline *intel_pipeline_from_base(struct intel_base *base)

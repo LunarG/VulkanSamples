@@ -136,7 +136,7 @@ struct intel_pipeline_layout {
 
 static inline struct intel_desc_pool *intel_desc_pool(VkDescriptorPool pool)
 {
-    return (struct intel_desc_pool *) pool;
+    return *(struct intel_desc_pool **) &pool;
 }
 
 static inline struct intel_desc_pool *intel_desc_pool_from_obj(struct intel_obj *obj)
@@ -146,7 +146,7 @@ static inline struct intel_desc_pool *intel_desc_pool_from_obj(struct intel_obj 
 
 static inline struct intel_desc_set *intel_desc_set(VkDescriptorSet set)
 {
-    return (struct intel_desc_set *) set;
+    return *(struct intel_desc_set **) &set;
 }
 
 static inline struct intel_desc_set *intel_desc_set_from_obj(struct intel_obj *obj)
@@ -156,7 +156,7 @@ static inline struct intel_desc_set *intel_desc_set_from_obj(struct intel_obj *o
 
 static inline struct intel_desc_layout *intel_desc_layout(VkDescriptorSetLayout layout)
 {
-    return (struct intel_desc_layout *) layout;
+    return *(struct intel_desc_layout **) &layout;
 }
 
 static inline struct intel_desc_layout *intel_desc_layout_from_obj(struct intel_obj *obj)
@@ -166,7 +166,7 @@ static inline struct intel_desc_layout *intel_desc_layout_from_obj(struct intel_
 
 static inline struct intel_pipeline_layout *intel_pipeline_layout(VkPipelineLayout pipeline_layout)
 {
-    return (struct intel_pipeline_layout *) pipeline_layout;
+    return *(struct intel_pipeline_layout **) &pipeline_layout;
 }
 
 static inline struct intel_pipeline_layout *intel_pipeline_layout_from_obj(struct intel_obj *obj)

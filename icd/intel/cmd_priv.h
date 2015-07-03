@@ -530,7 +530,7 @@ void cmd_meta_ds_op(struct intel_cmd *cmd,
 
 void cmd_meta_clear_color_image(
     VkCmdBuffer                         cmdBuffer,
-    VkImage                             image,
+    struct intel_img                   *img,
     VkImageLayout                       imageLayout,
     const VkClearColorValue            *pClearColor,
     uint32_t                            rangeCount,
@@ -538,7 +538,7 @@ void cmd_meta_clear_color_image(
 
 void cmd_meta_clear_depth_stencil_image(
     VkCmdBuffer                              cmdBuffer,
-    VkImage                                   image,
+    struct intel_img*                        img,
     VkImageLayout                            imageLayout,
     float                                       depth,
     uint32_t                                    stencil,

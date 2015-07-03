@@ -93,7 +93,7 @@ struct intel_att_view {
 
 static inline struct intel_buf_view *intel_buf_view(VkBufferView view)
 {
-    return (struct intel_buf_view *) view;
+    return *(struct intel_buf_view **) &view;
 }
 
 static inline struct intel_buf_view *intel_buf_view_from_obj(struct intel_obj *obj)
@@ -103,7 +103,7 @@ static inline struct intel_buf_view *intel_buf_view_from_obj(struct intel_obj *o
 
 static inline struct intel_img_view *intel_img_view(VkImageView view)
 {
-    return (struct intel_img_view *) view;
+    return *(struct intel_img_view **) &view;
 }
 
 static inline struct intel_img_view *intel_img_view_from_obj(struct intel_obj *obj)
@@ -113,7 +113,7 @@ static inline struct intel_img_view *intel_img_view_from_obj(struct intel_obj *o
 
 static inline struct intel_att_view *intel_att_view(VkAttachmentView view)
 {
-    return (struct intel_att_view *) view;
+    return *(struct intel_att_view **) &view;
 }
 
 static inline struct intel_att_view *intel_att_view_from_obj(struct intel_obj *obj)

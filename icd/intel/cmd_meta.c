@@ -66,8 +66,10 @@ static void cmd_meta_set_src_for_buf(struct intel_cmd *cmd,
 {
     struct intel_buf_view *view;
     VkResult res;
+    VkBuffer localbuf;
+    localbuf.handle = (uint64_t) buf;
 
-    res = cmd_meta_create_buf_view(cmd, (VkBuffer) buf,
+    res = cmd_meta_create_buf_view(cmd, localbuf,
             buf->size, format, &view);
     if (res != VK_SUCCESS) {
         cmd_fail(cmd, res);
@@ -94,8 +96,10 @@ static void cmd_meta_set_dst_for_buf(struct intel_cmd *cmd,
 {
     struct intel_buf_view *view;
     VkResult res;
+    VkBuffer localbuf;
+    localbuf.handle = (uint64_t) buf;
 
-    res = cmd_meta_create_buf_view(cmd, (VkBuffer) buf,
+    res = cmd_meta_create_buf_view(cmd, localbuf,
             buf->size, format, &view);
     if (res != VK_SUCCESS) {
         cmd_fail(cmd, res);
@@ -127,7 +131,7 @@ static void cmd_meta_set_src_for_img(struct intel_cmd *cmd,
 
     memset(&info, 0, sizeof(info));
     info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-    info.image = (VkImage) img;
+    info.image.handle = (uint64_t) img;
 
     if (img->array_size == 1) {
         switch (img->type) {
@@ -260,7 +264,7 @@ static void cmd_meta_set_dst_for_img(struct intel_cmd *cmd,
 
     memset(&info, 0, sizeof(info));
     info.sType = VK_STRUCTURE_TYPE_ATTACHMENT_VIEW_CREATE_INFO;
-    info.image = (VkImage) img;
+    info.image.handle = (uint64_t) img;
     info.format = format;
     info.mipLevel = lod;
     info.baseArraySlice = layer;
@@ -296,8 +300,10 @@ static void cmd_meta_set_src_for_writer(struct intel_cmd *cmd,
 {
     struct intel_buf_view *view;
     VkResult res;
+    VkBuffer localbuf;
+    localbuf.handle = 0;
 
-    res = cmd_meta_create_buf_view(cmd, (VkBuffer) VK_NULL_HANDLE,
+    res = cmd_meta_create_buf_view(cmd, localbuf,
             size, format, &view);
     if (res != VK_SUCCESS) {
         cmd_fail(cmd, res);
@@ -328,7 +334,7 @@ static void cmd_meta_set_ds_view(struct intel_cmd *cmd,
 
     memset(&info, 0, sizeof(info));
     info.sType = VK_STRUCTURE_TYPE_ATTACHMENT_VIEW_CREATE_INFO;
-    info.image = (VkImage) img;
+    info.image.handle = (uint64_t)img;
     info.mipLevel = lod;
     info.baseArraySlice = layer;
     info.arraySize = 1;
@@ -897,14 +903,13 @@ void cmd_meta_ds_op(struct intel_cmd *cmd,
 
 void cmd_meta_clear_color_image(
     VkCmdBuffer                         cmdBuffer,
-    VkImage                             image,
+    struct intel_img                   *img,
     VkImageLayout                       imageLayout,
     const VkClearColorValue            *pClearColor,
     uint32_t                            rangeCount,
     const VkImageSubresourceRange      *pRanges)
 {
     struct intel_cmd *cmd = intel_cmd(cmdBuffer);
-    struct intel_img *img = intel_img(image);
     struct intel_cmd_meta meta;
     VkFormat format;
     uint32_t i;
@@ -934,12 +939,13 @@ ICD_EXPORT void VKAPI vkCmdClearColorImage(
     uint32_t                            rangeCount,
     const VkImageSubresourceRange      *pRanges)
 {
-    cmd_meta_clear_color_image(cmdBuffer, image, imageLayout, pClearColor, rangeCount, pRanges);
+    struct intel_img *img = intel_img(image);
+    cmd_meta_clear_color_image(cmdBuffer, img, imageLayout, pClearColor, rangeCount, pRanges);
 }
 
 void cmd_meta_clear_depth_stencil_image(
     VkCmdBuffer                              cmdBuffer,
-    VkImage                                   image,
+    struct intel_img*                        img,
     VkImageLayout                            imageLayout,
     float                                       depth,
     uint32_t                                    stencil,
@@ -947,7 +953,6 @@ void cmd_meta_clear_depth_stencil_image(
     const VkImageSubresourceRange*          pRanges)
 {
     struct intel_cmd *cmd = intel_cmd(cmdBuffer);
-    struct intel_img *img = intel_img(image);
     struct intel_cmd_meta meta;
     uint32_t i;
 
@@ -982,7 +987,8 @@ ICD_EXPORT void VKAPI vkCmdClearDepthStencilImage(
     uint32_t                                    rangeCount,
     const VkImageSubresourceRange*          pRanges)
 {
-    cmd_meta_clear_depth_stencil_image(cmdBuffer, image, imageLayout, depth, stencil, rangeCount, pRanges);
+    struct intel_img *img = intel_img(image);
+    cmd_meta_clear_depth_stencil_image(cmdBuffer, img, imageLayout, depth, stencil, rangeCount, pRanges);
 }
 
 ICD_EXPORT void VKAPI vkCmdClearColorAttachment(
@@ -1014,7 +1020,7 @@ ICD_EXPORT void VKAPI vkCmdClearColorAttachment(
                pRects[i].extent.depth
            };
 
-           cmd_meta_clear_color_image(cmdBuffer, (VkImage) view->img,
+           cmd_meta_clear_color_image(cmdBuffer, view->img,
                                       imageLayout,
                                       pColor,
                                       1,
@@ -1053,13 +1059,13 @@ ICD_EXPORT void VKAPI vkCmdClearDepthStencilAttachment(
 
            if (imageAspectMask & VK_IMAGE_ASPECT_DEPTH_BIT) {
                cmd_meta_clear_depth_stencil_image(cmdBuffer,
-                       (VkImage) view->img, imageLayout,
+                       view->img, imageLayout,
                        depth, stencil, 1, &range);
            }
            if (imageAspectMask & VK_IMAGE_ASPECT_STENCIL_BIT) {
                range.aspect = VK_IMAGE_ASPECT_STENCIL;
                cmd_meta_clear_depth_stencil_image(cmdBuffer,
-                       (VkImage) view->img, imageLayout,
+                       view->img, imageLayout,
                        depth, stencil, 1, &range);
            }
     }

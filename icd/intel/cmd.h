@@ -163,10 +163,10 @@ struct intel_cmd_bind {
     } pipeline;
 
     struct {
-        const struct intel_dynamic_vp *viewport;
-        const struct intel_dynamic_rs *raster;
-        const struct intel_dynamic_cb *blend;
-        const struct intel_dynamic_ds *ds;
+        const struct intel_dynamic_viewport *viewport;
+        const struct intel_dynamic_raster *raster;
+        const struct intel_dynamic_color_blend *blend;
+        const struct intel_dynamic_depth_stencil *depth;
     } state;
 
     struct {

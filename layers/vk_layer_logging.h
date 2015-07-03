@@ -223,8 +223,8 @@ static inline void* debug_report_get_instance_proc_addr(
 static inline void log_msg(
     debug_report_data          *debug_data,
     VkFlags                     msgFlags,
-    VkObjectType                objectType,
-    VkObject                    srcObject,
+    VkDbgObjectType             objectType,
+    uint64_t                    srcObject,
     size_t                      location,
     int32_t                     msgCode,
     const char*                 pLayerPrefix,
@@ -248,8 +248,8 @@ static inline void log_msg(
 
 static inline void VKAPI log_callback(
     VkFlags                             msgFlags,
-    VkObjectType                        objType,
-    VkObject                            srcObject,
+    VkDbgObjectType                     objType,
+    uint64_t                            srcObject,
     size_t                              location,
     int32_t                             msgCode,
     const char*                         pLayerPrefix,

@@ -40,7 +40,7 @@ struct intel_buf {
 
 static inline struct intel_buf *intel_buf(VkBuffer buf)
 {
-    return (struct intel_buf *) buf;
+    return *(struct intel_buf **) &buf;
 }
 
 static inline struct intel_buf *intel_buf_from_base(struct intel_base *base)
