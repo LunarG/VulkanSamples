@@ -265,7 +265,7 @@ void VkTestFramework::WritePPM( const char *basename, VkImageObj *image )
     ASSERT_VK_SUCCESS( err );
 
     char *ptr;
-    ptr = (char *) displayImage.map();
+    ptr = (char *) displayImage.MapMemory();
     ptr += sr_layout.offset;
     ofstream file (filename.c_str(), ios::binary);
     ASSERT_TRUE(file.is_open()) << "Unable to open file: " << filename;
@@ -303,7 +303,7 @@ void VkTestFramework::WritePPM( const char *basename, VkImageObj *image )
     }
 
     file.close();
-    displayImage.unmap();
+    displayImage.UnmapMemory();
 }
 
 void VkTestFramework::Compare(const char *basename, VkImageObj *image )
@@ -379,7 +379,7 @@ void VkTestFramework::Show(const char *comment, VkImageObj *image)
     err = vkGetImageSubresourceLayout(displayImage.device()->device(), displayImage.image(), &sr, &sr_layout);
     ASSERT_VK_SUCCESS( err );
 
-    err = displayImage.MapMemory( (void **) &ptr );
+    ptr = (char *) displayImage.MapMemory();
     ASSERT_VK_SUCCESS( err );
 
     ptr += sr_layout.offset;
@@ -394,8 +394,7 @@ void VkTestFramework::Show(const char *comment, VkImageObj *image)
     m_images.push_back(record);
     m_display_image = --m_images.end();
 
-    err = displayImage.UnmapMemory();
-    ASSERT_VK_SUCCESS( err );
+    displayImage.UnmapMemory();
 }
 
 void VkTestFramework::RecordImages(vector<VkImageObj *> images)
@@ -463,9 +462,9 @@ void  TestFrameworkVkPresent::Display()
 
     VkMemoryPropertyFlags flags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
     buf.init_as_src(m_device, (VkDeviceSize)m_display_image->m_data_size, flags);
-    dest_ptr = buf.map();
+    dest_ptr = buf.memory().map();
     memcpy(dest_ptr, m_display_image->m_data, m_display_image->m_data_size);
-    buf.unmap();
+    buf.memory().unmap();
 
     m_cmdbuf.begin();
 
@@ -475,7 +474,7 @@ void  TestFrameworkVkPresent::Display()
     region.imageExtent.depth = 1;
 
     vkCmdCopyBufferToImage(m_cmdbuf.handle(),
-        buf.obj(),
+        buf.handle(),
         m_persistent_images[m_current_buffer].image, VK_IMAGE_LAYOUT_TRANSFER_DESTINATION_OPTIMAL,
         1, &region);
     m_cmdbuf.end();

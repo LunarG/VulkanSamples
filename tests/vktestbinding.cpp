@@ -41,14 +41,6 @@ namespace {
             EXPECT(destroy_func(device(), __VA_ARGS__, handle()) == VK_SUCCESS);    \
     }
 
-#define DERIVED_OBJECT_TYPE_INIT(create_func, dev, vk_object_type, ...)         \
-    do {                                                                        \
-        obj_type obj;                                                           \
-        dev_ = &dev;                                                        \
-        if (EXPECT(create_func(dev.handle(), __VA_ARGS__, &obj) == VK_SUCCESS)) \
-            base_type::init(obj, vk_object_type);                               \
-    } while (0)
-
 #define STRINGIFY(x) #x
 #define EXPECT(expr) ((expr) ? true : expect_failure(STRINGIFY(expr), __FILE__, __LINE__, __FUNCTION__))
 
@@ -77,20 +69,14 @@ std::vector<T> make_handles(const std::vector<S> &v)
     return handles;
 }
 
-template<typename T>
-std::vector<T> get_memory_reqs(VkDevice device, VkObjectType obj_type, VkObject obj, size_t min_elems)
+VkMemoryAllocInfo get_resource_alloc_info(const vk_testing::Device &dev, const VkMemoryRequirements &reqs, VkMemoryPropertyFlags mem_props)
 {
-    std::vector<T> info;
-
-    info.resize((min_elems > 0)?min_elems:1);
-    if (!EXPECT(vkGetObjectMemoryRequirements(device, obj_type, obj, &info[0]) == VK_SUCCESS))
-        info.clear();
-
-    if (info.size() < min_elems)
-        info.resize(min_elems);
+    VkMemoryAllocInfo info = vk_testing::DeviceMemory::alloc_info(reqs.size, 0);
+    dev.phy().set_memory_type(reqs.memoryTypeBits, &info, mem_props);
 
     return info;
 }
+
 } // namespace
 
 namespace vk_testing {
@@ -270,122 +256,6 @@ std::vector<VkLayerProperties> PhysicalDevice::layers() const
     assert(err == VK_SUCCESS);
 
     return layer_props;
-}
-
-void BaseObject::init(VkObject obj, VkObjectType type, bool own)
-{
-    EXPECT(!initialized());
-    reinit(obj, type, own);
-}
-
-void BaseObject::reinit(VkObject obj, VkObjectType type, bool own)
-{
-    obj_ = obj;
-    object_type_ = type;
-    own_obj_ = own;
-}
-
-uint32_t Object::memory_allocation_count() const
-{
-    return 1;
-}
-
-std::vector<VkMemoryRequirements> Object::memory_requirements() const
-{
-    uint32_t num_allocations = 1;
-    std::vector<VkMemoryRequirements> info =
-        get_memory_reqs<VkMemoryRequirements>(dev_->handle(), type(), obj(), 0);
-    EXPECT(info.size() == num_allocations);
-    if (info.size() == 1 && !info[0].size)
-        info.clear();
-
-    return info;
-}
-
-void Object::init(VkObject obj, VkObjectType object_type, bool own)
-{
-    BaseObject::init(obj, object_type, own);
-    mem_alloc_count_ = memory_allocation_count();
-}
-
-void Object::reinit(VkObject obj, VkObjectType object_type, bool own)
-{
-    cleanup();
-    BaseObject::reinit(obj, object_type, own);
-    mem_alloc_count_ = memory_allocation_count();
-}
-
-void Object::cleanup()
-{
-    if (!initialized())
-        return;
-
-    if (own())
-        EXPECT(vkDestroyObject(dev_->handle(), type(), obj()) == VK_SUCCESS);
-
-    if (internal_mems_) {
-        delete[] internal_mems_;
-        internal_mems_ = NULL;
-        primary_mem_ = NULL;
-    }
-
-    mem_alloc_count_ = 0;
-}
-
-void Object::bind_memory(const DeviceMemory &mem, VkDeviceSize mem_offset)
-{
-    bound = true;
-    EXPECT(vkBindObjectMemory(dev_->handle(), type(), obj(), mem.handle(), mem_offset) == VK_SUCCESS);
-}
-
-void Object::alloc_memory()
-{
-    if (!EXPECT(!internal_mems_) || !mem_alloc_count_)
-        return;
-
-    internal_mems_ = new DeviceMemory[mem_alloc_count_];
-
-    const std::vector<VkMemoryRequirements> mem_reqs = memory_requirements();
-    VkMemoryAllocInfo info;
-
-    for (int i = 0; i < mem_reqs.size(); i++) {
-        info = DeviceMemory::alloc_info(mem_reqs[i].size, 0);
-        dev_->phy().set_memory_type(mem_reqs[i].memoryTypeBits, &info, 0);
-        primary_mem_ = &internal_mems_[i];
-        internal_mems_[i].init(*dev_, info);
-        bind_memory(internal_mems_[i], 0);
-    }
-}
-
-void Object::alloc_memory(VkMemoryPropertyFlags &reqs)
-{
-    if (!EXPECT(!internal_mems_) || !mem_alloc_count_)
-        return;
-
-    internal_mems_ = new DeviceMemory[mem_alloc_count_];
-
-    std::vector<VkMemoryRequirements> mem_reqs = memory_requirements();
-    VkMemoryAllocInfo info;
-
-    for (int i = 0; i < mem_reqs.size(); i++) {
-        info = DeviceMemory::alloc_info(mem_reqs[i].size, 0);
-        dev_->phy().set_memory_type(mem_reqs[i].memoryTypeBits, &info, reqs);
-        primary_mem_ = &internal_mems_[i];
-        internal_mems_[i].init(*dev_, info);
-        bind_memory(internal_mems_[i], 0);
-    }
-}
-
-std::vector<VkDeviceMemory> Object::memories() const
-{
-    std::vector<VkDeviceMemory> mems;
-    if (internal_mems_) {
-        mems.reserve(mem_alloc_count_);
-        for (uint32_t i = 0; i < mem_alloc_count_; i++)
-            mems.push_back(internal_mems_[i].handle());
-    }
-
-    return mems;
 }
 
 Device::~Device()
@@ -650,34 +520,34 @@ VkResult QueryPool::results(uint32_t start, uint32_t count, size_t size, void *d
     return err;
 }
 
-void Buffer::init(const Device &dev, const VkBufferCreateInfo &info)
-{
-    init_no_mem(dev, info);
-    alloc_memory();
-}
+NON_DISPATCHABLE_HANDLE_DTOR(Buffer, vkDestroyObject, VK_OBJECT_TYPE_BUFFER)
 
-void Buffer::init(const Device &dev, const VkBufferCreateInfo &info, VkMemoryPropertyFlags &reqs)
+void Buffer::init(const Device &dev, const VkBufferCreateInfo &info, VkMemoryPropertyFlags mem_props)
 {
     init_no_mem(dev, info);
-    alloc_memory(reqs);
+
+    internal_mem_.init(dev, get_resource_alloc_info(dev, memory_requirements(), mem_props));
+    bind_memory(internal_mem_, 0);
 }
 
 void Buffer::init_no_mem(const Device &dev, const VkBufferCreateInfo &info)
 {
-    DERIVED_OBJECT_TYPE_INIT(vkCreateBuffer, dev, VK_OBJECT_TYPE_BUFFER, &info);
+    NON_DISPATCHABLE_HANDLE_INIT(vkCreateBuffer, dev, &info);
     create_info_ = info;
 }
 
-void Buffer::bind_memory(VkDeviceSize offset, VkDeviceSize size,
-                         const DeviceMemory &mem, VkDeviceSize mem_offset)
+VkMemoryRequirements Buffer::memory_requirements() const
 {
-    VkQueue queue = dev_->graphics_queues()[0]->handle();
-    VkSparseMemoryBindInfo bindInfo;
-    memset(&bindInfo, 0, sizeof(VkSparseMemoryBindInfo));
-    bindInfo.offset    = offset;
-    bindInfo.memOffset = mem_offset;
-    bindInfo.mem       = mem.handle();
-    EXPECT(vkQueueBindSparseBufferMemory(queue, obj(), 1, &bindInfo) == VK_SUCCESS);
+    VkMemoryRequirements reqs;
+
+    EXPECT(vkGetObjectMemoryRequirements(device(), VK_OBJECT_TYPE_BUFFER, handle(), &reqs) == VK_SUCCESS);
+
+    return reqs;
+}
+
+void Buffer::bind_memory(const DeviceMemory &mem, VkDeviceSize mem_offset)
+{
+    EXPECT(vkBindObjectMemory(device(), VK_OBJECT_TYPE_BUFFER, handle(), mem.handle(), mem_offset) == VK_SUCCESS);
 }
 
 NON_DISPATCHABLE_HANDLE_DTOR(BufferView, vkDestroyObject, VK_OBJECT_TYPE_BUFFER_VIEW)
@@ -687,21 +557,19 @@ void BufferView::init(const Device &dev, const VkBufferViewCreateInfo &info)
     NON_DISPATCHABLE_HANDLE_INIT(vkCreateBufferView, dev, &info);
 }
 
-void Image::init(const Device &dev, const VkImageCreateInfo &info)
-{
-    init_no_mem(dev, info);
-    alloc_memory();
-}
+NON_DISPATCHABLE_HANDLE_DTOR(Image, vkDestroyObject, VK_OBJECT_TYPE_IMAGE)
 
-void Image::init(const Device &dev, const VkImageCreateInfo &info, VkMemoryPropertyFlags &reqs)
+void Image::init(const Device &dev, const VkImageCreateInfo &info, VkMemoryPropertyFlags mem_props)
 {
     init_no_mem(dev, info);
-    alloc_memory(reqs);
+
+    internal_mem_.init(dev, get_resource_alloc_info(dev, memory_requirements(), mem_props));
+    bind_memory(internal_mem_, 0);
 }
 
 void Image::init_no_mem(const Device &dev, const VkImageCreateInfo &info)
 {
-    DERIVED_OBJECT_TYPE_INIT(vkCreateImage, dev, VK_OBJECT_TYPE_IMAGE, &info);
+    NON_DISPATCHABLE_HANDLE_INIT(vkCreateImage, dev, &info);
     init_info(dev, info);
 }
 
@@ -717,18 +585,25 @@ void Image::init_info(const Device &dev, const VkImageCreateInfo &info)
     }
 }
 
-void Image::bind_memory(const Device &dev, const VkSparseImageMemoryBindInfo &info,
-                        const DeviceMemory &mem, VkDeviceSize mem_offset)
+VkMemoryRequirements Image::memory_requirements() const
 {
-    VkQueue queue = dev.graphics_queues()[0]->handle();
-    EXPECT(vkQueueBindSparseImageMemory(queue, obj(), 1, &info) == VK_SUCCESS);
+    VkMemoryRequirements reqs;
+
+    EXPECT(vkGetObjectMemoryRequirements(device(), VK_OBJECT_TYPE_IMAGE, handle(), &reqs) == VK_SUCCESS);
+
+    return reqs;
+}
+
+void Image::bind_memory(const DeviceMemory &mem, VkDeviceSize mem_offset)
+{
+    EXPECT(vkBindObjectMemory(device(), VK_OBJECT_TYPE_IMAGE, handle(), mem.handle(), mem_offset) == VK_SUCCESS);
 }
 
 VkSubresourceLayout Image::subresource_layout(const VkImageSubresource &subres) const
 {
     VkSubresourceLayout data;
     size_t size = sizeof(data);
-    if (!EXPECT(vkGetImageSubresourceLayout(dev_->handle(), obj(), &subres, &data) == VK_SUCCESS && size == sizeof(data)))
+    if (!EXPECT(vkGetImageSubresourceLayout(device(), handle(), &subres, &data) == VK_SUCCESS && size == sizeof(data)))
         memset(&data, 0, sizeof(data));
 
     return data;

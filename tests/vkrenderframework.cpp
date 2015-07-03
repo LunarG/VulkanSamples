@@ -723,18 +723,6 @@ void VkImageObj::init(uint32_t w, uint32_t h,
     }
 }
 
-VkResult VkImageObj::MapMemory(void** ptr)
-{
-    *ptr = map();
-    return (*ptr) ? VK_SUCCESS : VK_ERROR_UNKNOWN;
-}
-
-VkResult VkImageObj::UnmapMemory()
-{
-    unmap();
-    return VK_SUCCESS;
-}
-
 VkResult VkImageObj::CopyImage(VkImageObj &src_image)
 {
     VkResult U_ASSERT_ONLY err;
@@ -768,8 +756,8 @@ VkResult VkImageObj::CopyImage(VkImageObj &src_image)
     copy_region.extent = src_image.extent();
 
     vkCmdCopyImage(cmd_buf.handle(),
-                    src_image.obj(), src_image.layout(),
-                    obj(), layout(),
+                    src_image.handle(), src_image.layout(),
+                    handle(), layout(),
                     1, &copy_region);
 
     src_image.SetLayout(&cmd_buf, VK_IMAGE_ASPECT_COLOR, src_image_layout);
@@ -823,18 +811,18 @@ VkTextureObj::VkTextureObj(VkDeviceObj *device, uint32_t *colors)
     init(16, 16, tex_format, VK_IMAGE_USAGE_SAMPLED_BIT, VK_IMAGE_TILING_OPTIMAL);
 
     /* create image view */
-    view.image = obj();
+    view.image = handle();
     m_textureView.init(*m_device, view);
     m_descriptorInfo.imageView = m_textureView.handle();
 
-    data = stagingImage.map();
+    data = stagingImage.MapMemory();
 
     for (y = 0; y < extent().height; y++) {
         uint32_t *row = (uint32_t *) ((char *) data + layout.rowPitch * y);
         for (x = 0; x < extent().width; x++)
             row[x] = colors[(x & 1) ^ (y & 1)];
     }
-    stagingImage.unmap();
+    stagingImage.UnmapMemory();
     VkImageObj::CopyImage(stagingImage);
 }
 
@@ -893,14 +881,14 @@ VkConstantBufferObj::VkConstantBufferObj(VkDeviceObj *device, int constantCount,
     const size_t allocationSize = constantCount * constantSize;
     init_as_src_and_dst(*m_device, allocationSize, reqs);
 
-    void *pData = map();
+    void *pData = memory().map();
     memcpy(pData, data, allocationSize);
-    unmap();
+    memory().unmap();
 
     // set up the buffer view for the constant buffer
     VkBufferViewCreateInfo view_info = {};
     view_info.sType = VK_STRUCTURE_TYPE_BUFFER_VIEW_CREATE_INFO;
-    view_info.buffer = obj();
+    view_info.buffer = handle();
     view_info.viewType = VK_BUFFER_VIEW_TYPE_RAW;
     view_info.offset = 0;
     view_info.range  = allocationSize;
@@ -911,7 +899,7 @@ VkConstantBufferObj::VkConstantBufferObj(VkDeviceObj *device, int constantCount,
 
 void VkConstantBufferObj::Bind(VkCmdBuffer cmdBuffer, VkDeviceSize offset, uint32_t binding)
 {
-    vkCmdBindVertexBuffers(cmdBuffer, binding, 1, &obj(), &offset);
+    vkCmdBindVertexBuffers(cmdBuffer, binding, 1, &handle(), &offset);
 }
 
 
@@ -1008,14 +996,14 @@ void VkIndexBufferObj::CreateAndInitBuffer(int numIndexes, VkIndexType indexType
     VkMemoryPropertyFlags reqs = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
     init_as_src_and_dst(*m_device, allocationSize, reqs);
 
-    void *pData = map();
+    void *pData = memory().map();
     memcpy(pData, data, allocationSize);
-    unmap();
+    memory().unmap();
 
     // set up the buffer view for the constant buffer
     VkBufferViewCreateInfo view_info = {};
     view_info.sType = VK_STRUCTURE_TYPE_BUFFER_VIEW_CREATE_INFO;
-    view_info.buffer = obj();
+    view_info.buffer = handle();
     view_info.viewType = VK_BUFFER_VIEW_TYPE_FORMATTED;
     view_info.format = viewFormat;
     view_info.offset = 0;
@@ -1027,7 +1015,7 @@ void VkIndexBufferObj::CreateAndInitBuffer(int numIndexes, VkIndexType indexType
 
 void VkIndexBufferObj::Bind(VkCmdBuffer cmdBuffer, VkDeviceSize offset)
 {
-    vkCmdBindIndexBuffer(cmdBuffer, obj(), offset, m_indexType);
+    vkCmdBindIndexBuffer(cmdBuffer, handle(), offset, m_indexType);
 }
 
 VkIndexType VkIndexBufferObj::GetIndexType()
@@ -1249,18 +1237,6 @@ VkResult VkPipelineObj::CreateVKPipeline(VkDescriptorSetObj &descriptorSet, VkRe
     return init_try(*m_device, info);
 }
 
-vector<VkDeviceMemory> VkMemoryRefManager::mem_refs() const
-{
-    std::vector<VkDeviceMemory> mems;
-    if (this->mem_refs_.size()) {
-        mems.reserve(this->mem_refs_.size());
-        for (uint32_t i = 0; i < this->mem_refs_.size(); i++)
-            mems.push_back(this->mem_refs_[i]);
-    }
-
-    return mems;
-}
-
 VkCommandBufferObj::VkCommandBufferObj(VkDeviceObj *device)
     : vk_testing::CmdBuffer(*device, vk_testing::CmdBuffer::create_info(device->graphics_queue_node_index_))
 {
@@ -1351,18 +1327,18 @@ void VkCommandBufferObj::ClearAllBuffers(VkClearColorValue clear_color, float de
 
         memory_barrier.oldLayout = depthStencilObj->BindInfo()->layout;
         memory_barrier.newLayout = VK_IMAGE_LAYOUT_GENERAL;
-        memory_barrier.image = depthStencilObj->obj();
+        memory_barrier.image = depthStencilObj->handle();
         memory_barrier.subresourceRange = dsRange;
 
         vkCmdPipelineBarrier( handle(), src_stages, dest_stages, false, 1, (const void **)&pmemory_barrier);
 
         vkCmdClearDepthStencilImage(handle(),
-                                    depthStencilObj->obj(), VK_IMAGE_LAYOUT_GENERAL,
+                                    depthStencilObj->handle(), VK_IMAGE_LAYOUT_GENERAL,
                                     depth_clear_color,  stencil_clear_color,
                                     1, &dsRange);
 
         // prepare depth buffer for rendering
-        memory_barrier.image = depthStencilObj->obj();
+        memory_barrier.image = depthStencilObj->handle();
         memory_barrier.oldLayout = VK_IMAGE_LAYOUT_GENERAL;
         memory_barrier.newLayout = depthStencilObj->BindInfo()->layout;
         memory_barrier.subresourceRange = dsRange;
@@ -1483,12 +1459,12 @@ void VkCommandBufferObj::BindDescriptorSet(VkDescriptorSetObj &descriptorSet)
 
 void VkCommandBufferObj::BindIndexBuffer(VkIndexBufferObj *indexBuffer, uint32_t offset)
 {
-    vkCmdBindIndexBuffer(handle(), indexBuffer->obj(), offset, indexBuffer->GetIndexType());
+    vkCmdBindIndexBuffer(handle(), indexBuffer->handle(), offset, indexBuffer->GetIndexType());
 }
 
 void VkCommandBufferObj::BindVertexBuffer(VkConstantBufferObj *vertexBuffer, VkDeviceSize offset, uint32_t binding)
 {
-    vkCmdBindVertexBuffers(handle(), binding, 1, &vertexBuffer->obj(), &offset);
+    vkCmdBindVertexBuffers(handle(), binding, 1, &vertexBuffer->handle(), &offset);
 }
 
 VkDepthStencilObj::VkDepthStencilObj()
@@ -1536,7 +1512,7 @@ void VkDepthStencilObj::Init(VkDeviceObj *device, int32_t width, int32_t height,
     view_info.baseArraySlice = 0;
     view_info.arraySize = 1;
     view_info.flags = 0;
-    view_info.image = obj();
+    view_info.image = handle();
     m_attachmentView.init(*m_device, view_info);
 
     m_attachmentBindInfo.view = m_attachmentView.handle();

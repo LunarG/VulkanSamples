@@ -34,8 +34,6 @@ typedef void (*ErrorCallback)(const char *expr, const char *file, unsigned int l
 void set_error_callback(ErrorCallback callback);
 
 class PhysicalDevice;
-class BaseObject;
-class Object;
 class Device;
 class Queue;
 class DeviceMemory;
@@ -144,103 +142,6 @@ private:
                                     std::vector<VkExtensionProperties> &ext_list);
 
     VkPhysicalDeviceMemoryProperties memory_properties_;
-};
-
-class BaseObject {
-public:
-    const VkObject &obj() const { return obj_; }
-    VkObjectType type() const { return object_type_; }
-    bool initialized() const { return (obj_ != VK_NULL_HANDLE); }
-
-protected:
-    explicit BaseObject() :
-        object_type_((VkObjectType) 0), obj_(VK_NULL_HANDLE), own_obj_(false){}
-    explicit BaseObject(VkObject obj, VkObjectType object_type) :
-        object_type_(object_type), obj_(obj), own_obj_(false){}
-
-    void init(VkObject obj, VkObjectType object_type, bool own);
-    void init(VkObject obj, VkObjectType object_type) { init(obj, object_type, true); }
-
-    void reinit(VkObject obj, VkObjectType object_type, bool own);
-    void reinit(VkObject obj, VkObjectType object_type) { reinit(obj, object_type, true); }
-
-    bool own() const { return own_obj_; }
-
-private:
-    // base objects are non-copyable
-    BaseObject(const BaseObject &);
-    BaseObject &operator=(const BaseObject &);
-
-    VkObjectType object_type_;
-    VkObject obj_;
-    bool own_obj_;
-};
-
-class Object : public BaseObject {
-public:
-    const VkObject &obj() const { return reinterpret_cast<const VkObject &>(BaseObject::obj()); }
-
-    // vkGetObjectMemoryRequirements()
-    uint32_t memory_allocation_count() const;
-    std::vector<VkMemoryRequirements> memory_requirements() const;
-
-    // vkBindObjectMemory()
-    void bind_memory(const DeviceMemory &mem, VkDeviceSize mem_offset);
-
-    // Unless an object is initialized with init_no_mem(), memories are
-    // automatically allocated and bound.  These methods can be used to
-    // map/unmap the primary memory.
-    std::vector<VkDeviceMemory> memories() const;
-
-    const void *map(VkFlags flags) const;
-          void *map(VkFlags flags);
-    const void *map() const { return map(0); }
-          void *map()       { return map(0); }
-
-    void unmap() const;
-    const Device* dev_;
-
-protected:
-    explicit Object() :
-        mem_alloc_count_(0), internal_mems_(NULL),
-        primary_mem_(NULL), bound(false) {}
-    explicit Object(const Device &dev, VkObject obj, VkObjectType object_type) :
-        dev_(&dev),
-        mem_alloc_count_(0), internal_mems_(NULL),
-        primary_mem_(NULL), bound(false) { init(obj, object_type); }
-    ~Object() { cleanup(); }
-
-    void init(VkObject obj, VkObjectType object_type, bool own);
-    void init(VkObject obj, VkObjectType object_type) { init(obj, object_type, true); }
-
-    void reinit(VkObject obj, VkObjectType object_type, bool own);
-    void reinit(VkObject obj, VkObjectType object_type) { init(obj, object_type, true); }
-
-    // allocate and bind internal memories
-    void alloc_memory();
-    void alloc_memory(VkMemoryPropertyFlags &reqs);
-
-private:
-    void cleanup();
-
-    uint32_t mem_alloc_count_;
-    DeviceMemory *internal_mems_;
-    DeviceMemory *primary_mem_;
-    bool bound;
-};
-
-template<typename T, class C, VkObjectType V>
-class DerivedObject : public C {
-public:
-    const T &obj() const { return reinterpret_cast<const T &>(C::obj()); }
-
-protected:
-    typedef T obj_type;
-    typedef C base_type;
-
-    explicit DerivedObject() {}
-    explicit DerivedObject(T obj) : C(obj, V) {}
-    explicit DerivedObject(const Device &dev, T obj) : C(dev, obj, V) {}
 };
 
 class Device : public internal::Handle<VkDevice> {
@@ -401,24 +302,33 @@ public:
     static VkQueryPoolCreateInfo create_info(VkQueryType type, uint32_t slot_count);
 };
 
-class Buffer : public DerivedObject<VkBuffer, Object, VK_OBJECT_TYPE_BUFFER> {
+class Buffer : public internal::NonDispHandle<VkBuffer> {
 public:
-    explicit Buffer() {}
+    explicit Buffer() : NonDispHandle() {}
     explicit Buffer(const Device &dev, const VkBufferCreateInfo &info) { init(dev, info); }
     explicit Buffer(const Device &dev, VkDeviceSize size) { init(dev, size); }
 
+    ~Buffer();
+
     // vkCreateBuffer()
-    void init(const Device &dev, const VkBufferCreateInfo &info);
-    void init(const Device &dev, VkDeviceSize size) { init(dev, create_info(size, 0)); }
+    void init(const Device &dev, const VkBufferCreateInfo &info, VkMemoryPropertyFlags mem_props);
+    void init(const Device &dev, const VkBufferCreateInfo &info) { init(dev, info, 0); }
+    void init(const Device &dev, VkDeviceSize size, VkMemoryPropertyFlags mem_props) { init(dev, create_info(size, 0), mem_props); }
+    void init(const Device &dev, VkDeviceSize size) { init(dev, size, 0); }
     void init_as_src(const Device &dev, VkDeviceSize size, VkMemoryPropertyFlags &reqs) { init(dev, create_info(size, VK_BUFFER_USAGE_TRANSFER_SOURCE_BIT), reqs); }
     void init_as_dst(const Device &dev, VkDeviceSize size, VkMemoryPropertyFlags &reqs) { init(dev, create_info(size, VK_BUFFER_USAGE_TRANSFER_DESTINATION_BIT), reqs); }
     void init_as_src_and_dst(const Device &dev, VkDeviceSize size, VkMemoryPropertyFlags &reqs) { init(dev, create_info(size, VK_BUFFER_USAGE_TRANSFER_SOURCE_BIT | VK_BUFFER_USAGE_TRANSFER_DESTINATION_BIT), reqs); }
-    void init(const Device &dev, const VkBufferCreateInfo &info, VkMemoryPropertyFlags &reqs);
     void init_no_mem(const Device &dev, const VkBufferCreateInfo &info);
 
-    // vkQueueBindSparseBufferMemory()
-    void bind_memory(VkDeviceSize offset, VkDeviceSize size,
-                     const DeviceMemory &mem, VkDeviceSize mem_offset);
+    // get the internal memory
+    const DeviceMemory &memory() const { return internal_mem_; }
+          DeviceMemory &memory()       { return internal_mem_; }
+
+    // vkGetObjectMemoryRequirements()
+    VkMemoryRequirements memory_requirements() const;
+
+    // vkBindObjectMemory()
+    void bind_memory(const DeviceMemory &mem, VkDeviceSize mem_offset);
 
     static VkBufferCreateInfo create_info(VkDeviceSize size, VkFlags usage);
 
@@ -427,15 +337,18 @@ public:
     {
         VkBufferMemoryBarrier barrier = {};
         barrier.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
-        barrier.buffer = obj();
+        barrier.buffer = handle();
         barrier.outputMask = output_mask;
         barrier.inputMask = input_mask;
         barrier.offset = offset;
         barrier.size = size;
         return barrier;
     }
+
 private:
     VkBufferCreateInfo create_info_;
+
+    DeviceMemory internal_mem_;
 };
 
 class BufferView : public internal::NonDispHandle<VkBufferView> {
@@ -446,19 +359,27 @@ public:
     void init(const Device &dev, const VkBufferViewCreateInfo &info);
 };
 
-class Image : public DerivedObject<VkImage, Object, VK_OBJECT_TYPE_IMAGE> {
+class Image : public internal::NonDispHandle<VkImage> {
 public:
-    explicit Image() : format_features_(0) {}
+    explicit Image() : NonDispHandle(), format_features_(0) {}
     explicit Image(const Device &dev, const VkImageCreateInfo &info) : format_features_(0) { init(dev, info); }
 
+    ~Image();
+
     // vkCreateImage()
-    void init(const Device &dev, const VkImageCreateInfo &info);
-    void init(const Device &dev, const VkImageCreateInfo &info, VkMemoryPropertyFlags &reqs);
+    void init(const Device &dev, const VkImageCreateInfo &info, VkMemoryPropertyFlags mem_props);
+    void init(const Device &dev, const VkImageCreateInfo &info) { init(dev, info, 0); }
     void init_no_mem(const Device &dev, const VkImageCreateInfo &info);
 
-    // vkQueueBindSparseImageMemory()
-    void bind_memory(const Device &dev, const VkSparseImageMemoryBindInfo &info,
-                     const DeviceMemory &mem, VkDeviceSize mem_offset);
+    // get the internal memory
+    const DeviceMemory &memory() const { return internal_mem_; }
+          DeviceMemory &memory()       { return internal_mem_; }
+
+    // vkGetObjectMemoryRequirements()
+    VkMemoryRequirements memory_requirements() const;
+
+    // vkBindObjectMemory()
+    void bind_memory(const DeviceMemory &mem, VkDeviceSize mem_offset);
 
     // vkGetImageSubresourceLayout()
     VkSubresourceLayout subresource_layout(const VkImageSubresource &subres) const;
@@ -482,7 +403,7 @@ public:
         barrier.inputMask = input_mask;
         barrier.oldLayout = old_layout;
         barrier.newLayout = new_layout;
-        barrier.image = obj();
+        barrier.image = handle();
         barrier.subresourceRange = range;
         return barrier;
     }
@@ -507,6 +428,8 @@ private:
 
     VkImageCreateInfo create_info_;
     VkFlags format_features_;
+
+    DeviceMemory internal_mem_;
 };
 
 class ImageView : public internal::NonDispHandle<VkImageView> {
@@ -675,22 +598,6 @@ public:
 private:
     VkDevice dev_handle_;
 };
-
-inline const void *Object::map(VkFlags flags) const
-{
-    return (primary_mem_) ? primary_mem_->map(flags) : NULL;
-}
-
-inline void *Object::map(VkFlags flags)
-{
-    return (primary_mem_) ? primary_mem_->map(flags) : NULL;
-}
-
-inline void Object::unmap() const
-{
-    if (primary_mem_)
-        primary_mem_->unmap();
-}
 
 inline VkMemoryAllocInfo DeviceMemory::alloc_info(VkDeviceSize size, uint32_t memory_type_index)
 {

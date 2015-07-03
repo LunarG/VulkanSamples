@@ -236,7 +236,7 @@ bool ImageChecker::walk_region(Action action, const VkBufferImageCopy &region,
 
 bool ImageChecker::walk(Action action, Buffer &buf) const
 {
-    void *data = buf.map();
+    void *data = buf.memory().map();
     if (!data)
         return false;
 
@@ -246,14 +246,14 @@ bool ImageChecker::walk(Action action, Buffer &buf) const
             break;
     }
 
-    buf.unmap();
+    buf.memory().unmap();
 
     return (it == regions_.end());
 }
 
 bool ImageChecker::walk(Action action, Image &img) const
 {
-    void *data = img.map();
+    void *data = img.memory().map();
     if (!data)
         return false;
 
@@ -263,7 +263,7 @@ bool ImageChecker::walk(Action action, Image &img) const
             break;
     }
 
-    img.unmap();
+    img.memory().unmap();
 
     return (it == regions_.end());
 }
@@ -548,19 +548,19 @@ TEST_F(VkCmdFillBufferTest, Basic)
     buf.init_as_dst(dev_, 20, reqs);
 
     cmd_.begin();
-    vkCmdFillBuffer(cmd_.handle(), buf.obj(), 0, 4, 0x11111111);
-    vkCmdFillBuffer(cmd_.handle(), buf.obj(), 4, 16, 0x22222222);
+    vkCmdFillBuffer(cmd_.handle(), buf.handle(), 0, 4, 0x11111111);
+    vkCmdFillBuffer(cmd_.handle(), buf.handle(), 4, 16, 0x22222222);
     cmd_.end();
 
     submit_and_done();
 
-    const uint32_t *data = static_cast<const uint32_t *>(buf.map());
+    const uint32_t *data = static_cast<const uint32_t *>(buf.memory().map());
     EXPECT_EQ(0x11111111, data[0]);
     EXPECT_EQ(0x22222222, data[1]);
     EXPECT_EQ(0x22222222, data[2]);
     EXPECT_EQ(0x22222222, data[3]);
     EXPECT_EQ(0x22222222, data[4]);
-    buf.unmap();
+    buf.memory().unmap();
 }
 
 TEST_F(VkCmdFillBufferTest, Large)
@@ -572,19 +572,19 @@ TEST_F(VkCmdFillBufferTest, Large)
     buf.init_as_dst(dev_, size, reqs);
 
     cmd_.begin();
-    vkCmdFillBuffer(cmd_.handle(), buf.obj(), 0, size / 2, 0x11111111);
-    vkCmdFillBuffer(cmd_.handle(), buf.obj(), size / 2, size / 2, 0x22222222);
+    vkCmdFillBuffer(cmd_.handle(), buf.handle(), 0, size / 2, 0x11111111);
+    vkCmdFillBuffer(cmd_.handle(), buf.handle(), size / 2, size / 2, 0x22222222);
     cmd_.end();
 
     submit_and_done();
 
-    const uint32_t *data = static_cast<const uint32_t *>(buf.map());
+    const uint32_t *data = static_cast<const uint32_t *>(buf.memory().map());
     VkDeviceSize offset;
     for (offset = 0; offset < size / 2; offset += 4)
         EXPECT_EQ(0x11111111, data[offset / 4]) << "Offset is: " << offset;
     for (; offset < size; offset += 4)
         EXPECT_EQ(0x22222222, data[offset / 4]) << "Offset is: " << offset;
-    buf.unmap();
+    buf.memory().unmap();
 }
 
 TEST_F(VkCmdFillBufferTest, Overlap)
@@ -595,19 +595,19 @@ TEST_F(VkCmdFillBufferTest, Overlap)
     buf.init_as_dst(dev_, 64, reqs);
 
     cmd_.begin();
-    vkCmdFillBuffer(cmd_.handle(), buf.obj(), 0, 48, 0x11111111);
-    vkCmdFillBuffer(cmd_.handle(), buf.obj(), 32, 32, 0x22222222);
+    vkCmdFillBuffer(cmd_.handle(), buf.handle(), 0, 48, 0x11111111);
+    vkCmdFillBuffer(cmd_.handle(), buf.handle(), 32, 32, 0x22222222);
     cmd_.end();
 
     submit_and_done();
 
-    const uint32_t *data = static_cast<const uint32_t *>(buf.map());
+    const uint32_t *data = static_cast<const uint32_t *>(buf.memory().map());
     VkDeviceSize offset;
     for (offset = 0; offset < 32; offset += 4)
         EXPECT_EQ(0x11111111, data[offset / 4]) << "Offset is: " << offset;
     for (; offset < 64; offset += 4)
         EXPECT_EQ(0x22222222, data[offset / 4]) << "Offset is: " << offset;
-    buf.unmap();
+    buf.memory().unmap();
 }
 
 TEST_F(VkCmdFillBufferTest, MultiAlignments)
@@ -619,7 +619,7 @@ TEST_F(VkCmdFillBufferTest, MultiAlignments)
     cmd_.begin();
     for (int i = 0; i < ARRAY_SIZE(bufs); i++) {
         bufs[i].init_as_dst(dev_, size, reqs);
-        vkCmdFillBuffer(cmd_.handle(), bufs[i].obj(), 0, size, 0x11111111);
+        vkCmdFillBuffer(cmd_.handle(), bufs[i].handle(), 0, size, 0x11111111);
         size <<= 1;
     }
     cmd_.end();
@@ -628,12 +628,12 @@ TEST_F(VkCmdFillBufferTest, MultiAlignments)
 
     size = 4;
     for (int i = 0; i < ARRAY_SIZE(bufs); i++) {
-        const uint32_t *data = static_cast<const uint32_t *>(bufs[i].map());
+        const uint32_t *data = static_cast<const uint32_t *>(bufs[i].memory().map());
         VkDeviceSize offset;
         for (offset = 0; offset < size; offset += 4)
             EXPECT_EQ(0x11111111, data[offset / 4]) << "Buffser is: " << i << "\n" <<
                                                        "Offset is: " << offset;
-        bufs[i].unmap();
+        bufs[i].memory().unmap();
 
         size <<= 1;
     }
@@ -647,23 +647,23 @@ TEST_F(VkCmdCopyBufferTest, Basic)
     VkMemoryPropertyFlags reqs = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
 
     src.init_as_src(dev_, 4, reqs);
-    uint32_t *data = static_cast<uint32_t *>(src.map());
+    uint32_t *data = static_cast<uint32_t *>(src.memory().map());
     data[0] = 0x11111111;
-    src.unmap();
+    src.memory().unmap();
 
     dst.init_as_dst(dev_, 4, reqs);
 
     cmd_.begin();
     VkBufferCopy region = {};
     region.copySize = 4;
-    vkCmdCopyBuffer(cmd_.handle(), src.obj(), dst.obj(), 1, &region);
+    vkCmdCopyBuffer(cmd_.handle(), src.handle(), dst.handle(), 1, &region);
     cmd_.end();
 
     submit_and_done();
 
-    data = static_cast<uint32_t *>(dst.map());
+    data = static_cast<uint32_t *>(dst.memory().map());
     EXPECT_EQ(0x11111111, data[0]);
-    dst.unmap();
+    dst.memory().unmap();
 }
 
 TEST_F(VkCmdCopyBufferTest, Large)
@@ -673,26 +673,26 @@ TEST_F(VkCmdCopyBufferTest, Large)
     VkMemoryPropertyFlags reqs = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
 
     src.init_as_src(dev_, size, reqs);
-    uint32_t *data = static_cast<uint32_t *>(src.map());
+    uint32_t *data = static_cast<uint32_t *>(src.memory().map());
     VkDeviceSize offset;
     for (offset = 0; offset < size; offset += 4)
         data[offset / 4] = offset;
-    src.unmap();
+    src.memory().unmap();
 
     dst.init_as_dst(dev_, size, reqs);
 
     cmd_.begin();
     VkBufferCopy region = {};
     region.copySize = size;
-    vkCmdCopyBuffer(cmd_.handle(), src.obj(), dst.obj(), 1, &region);
+    vkCmdCopyBuffer(cmd_.handle(), src.handle(), dst.handle(), 1, &region);
     cmd_.end();
 
     submit_and_done();
 
-    data = static_cast<uint32_t *>(dst.map());
+    data = static_cast<uint32_t *>(dst.memory().map());
     for (offset = 0; offset < size; offset += 4)
         EXPECT_EQ(offset, data[offset / 4]);
-    dst.unmap();
+    dst.memory().unmap();
 }
 
 TEST_F(VkCmdCopyBufferTest, MultiAlignments)
@@ -717,20 +717,20 @@ TEST_F(VkCmdCopyBufferTest, MultiAlignments)
     VkMemoryPropertyFlags reqs = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
 
     src.init_as_src(dev_, 256, reqs);
-    uint8_t *data = static_cast<uint8_t *>(src.map());
+    uint8_t *data = static_cast<uint8_t *>(src.memory().map());
     for (int i = 0; i < 256; i++)
         data[i] = i;
-    src.unmap();
+    src.memory().unmap();
 
     dst.init_as_dst(dev_, 1024, reqs);
 
     cmd_.begin();
-    vkCmdCopyBuffer(cmd_.handle(), src.obj(), dst.obj(), ARRAY_SIZE(regions), regions);
+    vkCmdCopyBuffer(cmd_.handle(), src.handle(), dst.handle(), ARRAY_SIZE(regions), regions);
     cmd_.end();
 
     submit_and_done();
 
-    data = static_cast<uint8_t *>(dst.map());
+    data = static_cast<uint8_t *>(dst.memory().map());
     for (int i = 0; i < ARRAY_SIZE(regions); i++) {
         const VkBufferCopy &r = regions[i];
 
@@ -740,7 +740,7 @@ TEST_F(VkCmdCopyBufferTest, MultiAlignments)
                 "Offset is: " << r.destOffset + j;
         }
     }
-    dst.unmap();
+    dst.memory().unmap();
 }
 
 TEST_F(VkCmdCopyBufferTest, RAWHazard)
@@ -792,14 +792,14 @@ TEST_F(VkCmdCopyBufferTest, RAWHazard)
     for (int i = 0; i < ARRAY_SIZE(bufs); i++) {
         bufs[i].init_as_src_and_dst(dev_, 4, reqs);
 
-        uint32_t *data = static_cast<uint32_t *>(bufs[i].map());
+        uint32_t *data = static_cast<uint32_t *>(bufs[i].memory().map());
         data[0] = 0x22222222 * (i + 1);
-        bufs[i].unmap();
+        bufs[i].memory().unmap();
     }
 
     cmd_.begin();
 
-    vkCmdFillBuffer(cmd_.handle(), bufs[0].obj(), 0, 4, 0x11111111);
+    vkCmdFillBuffer(cmd_.handle(), bufs[0].handle(), 0, 4, 0x11111111);
     // is this necessary?
     VkBufferMemoryBarrier memory_barrier = bufs[0].buffer_memory_barrier(
             VK_MEMORY_OUTPUT_TRANSFER_BIT, VK_MEMORY_INPUT_TRANSFER_BIT, 0, 4);
@@ -811,14 +811,14 @@ TEST_F(VkCmdCopyBufferTest, RAWHazard)
 
     VkBufferCopy region = {};
     region.copySize = 4;
-    vkCmdCopyBuffer(cmd_.handle(), bufs[0].obj(), bufs[1].obj(), 1, &region);
+    vkCmdCopyBuffer(cmd_.handle(), bufs[0].handle(), bufs[1].handle(), 1, &region);
 
     memory_barrier = bufs[1].buffer_memory_barrier(
             VK_MEMORY_OUTPUT_TRANSFER_BIT, VK_MEMORY_INPUT_TRANSFER_BIT, 0, 4);
     pmemory_barrier = &memory_barrier;
     vkCmdPipelineBarrier(cmd_.handle(), src_stages, dest_stages, false, 1, (const void **)&pmemory_barrier);
 
-    vkCmdCopyBuffer(cmd_.handle(), bufs[1].obj(), bufs[2].obj(), 1, &region);
+    vkCmdCopyBuffer(cmd_.handle(), bufs[1].handle(), bufs[2].handle(), 1, &region);
 
     /* Use vkCmdSetEvent and vkCmdWaitEvents to test them.
      * This could be vkCmdPipelineBarrier.
@@ -836,9 +836,9 @@ TEST_F(VkCmdCopyBufferTest, RAWHazard)
 
     submit_and_done();
 
-    const uint32_t *data = static_cast<const uint32_t *>(bufs[2].map());
+    const uint32_t *data = static_cast<const uint32_t *>(bufs[2].memory().map());
     EXPECT_EQ(0x11111111, data[0]);
-    bufs[2].unmap();
+    bufs[2].memory().unmap();
 
     err = vkDestroyObject(dev_.handle(), VK_OBJECT_TYPE_EVENT, event);
     ASSERT_VK_SUCCESS(err);
@@ -894,8 +894,8 @@ protected:
 
         // copy in and tile
         cmd_.begin();
-        vkCmdCopyBufferToImage(cmd_.handle(), in_buf.obj(),
-                img.obj(), VK_IMAGE_LAYOUT_TRANSFER_DESTINATION_OPTIMAL,
+        vkCmdCopyBufferToImage(cmd_.handle(), in_buf.handle(),
+                img.handle(), VK_IMAGE_LAYOUT_TRANSFER_DESTINATION_OPTIMAL,
                 checker.regions().size(), &checker.regions()[0]);
         cmd_.end();
 
@@ -918,8 +918,8 @@ protected:
         // copy out and linearize
         cmd_.begin();
         vkCmdCopyImageToBuffer(cmd_.handle(),
-                img.obj(), VK_IMAGE_LAYOUT_TRANSFER_SOURCE_OPTIMAL,
-                out_buf.obj(),
+                img.handle(), VK_IMAGE_LAYOUT_TRANSFER_SOURCE_OPTIMAL,
+                out_buf.handle(),
                 checker.regions().size(), &checker.regions()[0]);
         cmd_.end();
 
@@ -957,8 +957,8 @@ protected:
 
         cmd_.begin();
         vkCmdCopyBufferToImage(cmd_.handle(),
-                buf.obj(),
-                img.obj(), VK_IMAGE_LAYOUT_TRANSFER_DESTINATION_OPTIMAL,
+                buf.handle(),
+                img.handle(), VK_IMAGE_LAYOUT_TRANSFER_DESTINATION_OPTIMAL,
                 checker.regions().size(), &checker.regions()[0]);
         cmd_.end();
 
@@ -1027,8 +1027,8 @@ protected:
 
         cmd_.begin();
         vkCmdCopyImageToBuffer(cmd_.handle(),
-                img.obj(), VK_IMAGE_LAYOUT_TRANSFER_SOURCE_OPTIMAL,
-                buf.obj(),
+                img.handle(), VK_IMAGE_LAYOUT_TRANSFER_SOURCE_OPTIMAL,
+                buf.handle(),
                 checker.regions().size(), &checker.regions()[0]);
         cmd_.end();
 
@@ -1126,8 +1126,8 @@ protected:
 
         cmd_.begin();
         vkCmdCopyImage(cmd_.handle(),
-                        src.obj(), VK_IMAGE_LAYOUT_TRANSFER_SOURCE_OPTIMAL,
-                        dst.obj(), VK_IMAGE_LAYOUT_TRANSFER_DESTINATION_OPTIMAL,
+                        src.handle(), VK_IMAGE_LAYOUT_TRANSFER_SOURCE_OPTIMAL,
+                        dst.handle(), VK_IMAGE_LAYOUT_TRANSFER_DESTINATION_OPTIMAL,
                         copies.size(), &copies[0]);
         cmd_.end();
 
@@ -1259,7 +1259,7 @@ protected:
         vkCmdPipelineBarrier(cmd_.handle(), src_stages, dest_stages, false, 1, (const void **)&p_to_clear[0]);
 
         vkCmdClearColorImage(cmd_.handle(),
-                              img.obj(), VK_IMAGE_LAYOUT_GENERAL,
+                              img.handle(), VK_IMAGE_LAYOUT_GENERAL,
                               &clear_color, ranges.size(), &ranges[0]);
 
         vkCmdPipelineBarrier(cmd_.handle(), src_stages, dest_stages, false, 1, (const void **)&p_to_xfer[0]);
@@ -1439,7 +1439,7 @@ protected:
         vkCmdPipelineBarrier(cmd_.handle(), src_stages, dest_stages, false, to_clear.size(), (const void **)&p_to_clear[0]);
 
         vkCmdClearDepthStencilImage(cmd_.handle(),
-                                    img.obj(), VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
+                                    img.handle(), VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
                                     depth, stencil,
                                     ranges.size(), &ranges[0]);
 

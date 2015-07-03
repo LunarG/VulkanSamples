@@ -144,7 +144,6 @@ public:
     void GenericDrawPreparation(VkCommandBufferObj *cmdBuffer, VkPipelineObj &pipelineobj, VkDescriptorSetObj &descriptorSet, BsoFailSelect failMask);
 
 protected:
-        VkMemoryRefManager         m_memoryRefManager;
         ErrorMonitor               *m_errorMonitor;
 
     virtual void SetUp() {

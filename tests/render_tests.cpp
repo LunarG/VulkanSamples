@@ -364,13 +364,13 @@ void VkRenderTest::RotateTriangleVSUniform(glm::mat4 Projection, glm::mat4 View,
 
     /* Only do 3 positions to avoid back face cull */
     for (i = 0; i < 3; i++) {
-        void *pData = constantBuffer->map();
+        void *pData = constantBuffer->memory().map();
 
         Model = glm::rotate(Model, glm::radians(22.5f), glm::vec3(0.0f, 1.0f, 0.0f));
         MVP = Projection * View * Model;
         memcpy(pData, (const void*) &MVP[0][0], matrixSize);
 
-        constantBuffer->unmap();
+        constantBuffer->memory().unmap();
 
         // submit the command buffer to the universal queue
         cmdBuffer->QueueCommandBuffer();

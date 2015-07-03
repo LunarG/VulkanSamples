@@ -51,20 +51,6 @@ public:
     VkQueue m_queue;
 };
 
-class VkMemoryRefManager
-{
-public:
-    void AddMemoryRefs(vk_testing::Object &vkObject);
-    void AddMemoryRefs(vector<VkDeviceMemory> mem);
-    void EmitAddMemoryRefs(VkQueue queue);
-    void EmitRemoveMemoryRefs(VkQueue queue);
-    vector<VkDeviceMemory> mem_refs() const;
-
-protected:
-    vector<VkDeviceMemory>              mem_refs_;
-
-};
-
 class VkDepthStencilObj : public vk_testing::Image
 {
 public:
@@ -135,7 +121,6 @@ protected:
     float                               m_depth_clear_color;
     uint32_t                            m_stencil_clear_color;
     VkDepthStencilObj                  *m_depthStencil;
-    VkMemoryRefManager                  m_mem_ref_mgr;
     PFN_vkDbgCreateMsgCallback          m_dbgCreateMsgCallback;
     PFN_vkDbgDestroyMsgCallback         m_dbgDestroyMsgCallback;
     VkDbgMsgCallback                    m_globalMsgCallback;
@@ -181,9 +166,6 @@ public:
     void AddDepthStencil();
     void ClearAllBuffers(VkClearColorValue clear_color, float depth_clear_color, uint32_t stencil_clear_color, VkDepthStencilObj *depthStencilObj);
     void PrepareAttachments();
-    void AddMemoryRefs(vk_testing::Object &vkObject);
-    void AddMemoryRefs(uint32_t ref_count, const VkDeviceMemory *mem);
-    void AddMemoryRefs(vector<vk_testing::Object *> images);
     void BindPipeline(VkPipelineObj &pipeline);
     void BindDescriptorSet(VkDescriptorSetObj &descriptorSet);
     void BindVertexBuffer(VkConstantBufferObj *vertexBuffer, VkDeviceSize offset, uint32_t binding);
@@ -195,8 +177,6 @@ public:
     void DrawIndexed(uint32_t firstIndex, uint32_t indexCount, int32_t vertexOffset, uint32_t firstInstance, uint32_t instanceCount);
     void QueueCommandBuffer();
     void QueueCommandBuffer(VkFence fence);
-
-    VkMemoryRefManager                  mem_ref_mgr;
 
 protected:
     VkDeviceObj                        *m_device;
@@ -273,8 +253,17 @@ public:
 
     VkDeviceMemory memory() const
     {
-        const std::vector<VkDeviceMemory> mems = memories();
-        return mems.empty() ? VK_NULL_HANDLE : mems[0];
+        return Image::memory().handle();
+    }
+
+    void *MapMemory()
+    {
+        return Image::memory().map();
+    }
+
+    void UnmapMemory()
+    {
+        Image::memory().unmap();
     }
 
     void ImageMemoryBarrier(VkCommandBufferObj *cmd,
@@ -287,7 +276,7 @@ public:
 
     VkImage image() const
     {
-        return obj();
+        return handle();
     }
 
     VkAttachmentView targetView()
@@ -297,7 +286,7 @@ public:
             VkAttachmentViewCreateInfo createView = {
                 VK_STRUCTURE_TYPE_ATTACHMENT_VIEW_CREATE_INFO,
                 VK_NULL_HANDLE,
-                obj(),
+                handle(),
                 VK_FORMAT_B8G8R8A8_UNORM,
                 0,
                 0,
@@ -327,9 +316,6 @@ public:
     {
         return m_device;
     }
-
-    VkResult MapMemory(void** ptr);
-    VkResult UnmapMemory();
 
 protected:
     VkDeviceObj                        *m_device;
@@ -374,8 +360,6 @@ public:
 
     VkDescriptorSet GetDescriptorSetHandle() const;
     VkPipelineLayout GetPipelineLayout() const;
-
-    VkMemoryRefManager                  mem_ref_mgr;
 
 protected:
     VkDeviceObj                        *m_device;
