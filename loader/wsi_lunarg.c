@@ -27,7 +27,7 @@
  */
 
 #include <string.h>
-#include "loader_platform.h"
+#include "vk_loader_platform.h"
 #include "loader.h"
 #include "wsi_lunarg.h"
 

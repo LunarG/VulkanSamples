@@ -29,7 +29,7 @@
 #include <map>
 #include <vector>
 #include <string>
-#include "loader_platform.h"
+#include "vk_loader_platform.h"
 #include "vk_dispatch_table_helper.h"
 #include "vk_layer.h"
 #include "vk_layer_config.h"
@@ -39,7 +39,7 @@
 #include "shader_checker.h"
 // The following is #included again to catch certain OS-specific functions
 // being used:
-#include "loader_platform.h"
+#include "vk_loader_platform.h"
 
 #include "spirv/spirv.h"
 

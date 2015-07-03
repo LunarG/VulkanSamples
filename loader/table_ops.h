@@ -26,7 +26,7 @@
 #include <vk_layer.h>
 #include <string.h>
 #include "loader.h"
-#include "loader_platform.h"
+#include "vk_loader_platform.h"
 
 static inline void loader_init_device_dispatch_table(VkLayerDispatchTable *table,
                                                     PFN_vkGetDeviceProcAddr gpa,

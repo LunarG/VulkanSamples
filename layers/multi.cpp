@@ -27,12 +27,12 @@
 #include <stdlib.h>
 #include <assert.h>
 #include <unordered_map>
-#include "loader_platform.h"
+#include "vk_loader_platform.h"
 #include "vk_dispatch_table_helper.h"
 #include "vk_layer.h"
 // The following is #included again to catch certain OS-specific functions
 // being used:
-#include "loader_platform.h"
+#include "vk_loader_platform.h"
 
 static void initLayerTable(const VkBaseLayerObject *devw, VkLayerDispatchTable *pTable, const unsigned int layerNum);
 static void initLayerInstanceTable(const VkBaseLayerObject *instw, VkLayerInstanceDispatchTable *pTable, const unsigned int layerNum);

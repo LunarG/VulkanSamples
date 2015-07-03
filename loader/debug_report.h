@@ -26,7 +26,7 @@
  *   Courtney Goeltzenleuchter <courtney@lunarg.com>
  */
 
-#include "loader_platform.h"
+#include "vk_loader_platform.h"
 #include "loader.h"
 #include "vk_debug_report_lunarg.h"
 

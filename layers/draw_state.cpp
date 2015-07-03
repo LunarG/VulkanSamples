@@ -27,7 +27,7 @@
 #include <string.h>
 #include <unordered_map>
 
-#include "loader_platform.h"
+#include "vk_loader_platform.h"
 #include "vk_dispatch_table_helper.h"
 #include "vk_struct_string_helper_cpp.h"
 #if defined(__GNUC__)
@@ -43,7 +43,7 @@
 #include "vk_debug_marker_layer.h"
 // The following is #included again to catch certain OS-specific functions
 // being used:
-#include "loader_platform.h"
+#include "vk_loader_platform.h"
 #include "vk_layer_msg.h"
 #include "vk_layer_table.h"
 #include "vk_layer_debug_marker_table.h"

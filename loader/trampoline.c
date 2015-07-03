@@ -24,7 +24,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "loader_platform.h"
+#include "vk_loader_platform.h"
 #include "loader.h"
 #include "debug_report.h"
 

@@ -24,13 +24,13 @@
 #include <string.h>
 #include <stdlib.h>
 #include <assert.h>
-#include "loader_platform.h"
+#include "vk_loader_platform.h"
 #include "vk_dispatch_table_helper.h"
 #include "vk_layer.h"
 #include "vk_layer_table.h"
 // The following is #included again to catch certain OS-specific functions
 // being used:
-#include "loader_platform.h"
+#include "vk_loader_platform.h"
 
 
 VK_LAYER_EXPORT VkResult VKAPI vkLayerExtension1(VkDevice device)

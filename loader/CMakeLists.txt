@@ -14,7 +14,7 @@ set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -DDEBUG")
 set(LOADER_SRCS
     loader.c
     loader.h
-    loader_platform.h
+    vk_loader_platform.h
     trampoline.c
     wsi_lunarg.c
     wsi_lunarg.h

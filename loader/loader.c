@@ -40,7 +40,7 @@
 #else // WIN32
 #include <dirent.h>
 #endif // WIN32
-#include "loader_platform.h"
+#include "vk_loader_platform.h"
 #include "loader.h"
 #include "wsi_lunarg.h"
 #include "gpa_helper.h"
