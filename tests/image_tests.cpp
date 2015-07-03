@@ -73,7 +73,7 @@ public:
     void CreateImageView(VkImageViewCreateInfo* pCreateInfo,
                          VkImageView* pView);
     void DestroyImageView(VkImageView imageView);
-    VkDevice device() {return m_device->obj();}
+    VkDevice device() {return m_device->handle();}
 
 protected:
     vk_testing::Device *m_device;

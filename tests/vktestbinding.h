@@ -254,12 +254,10 @@ protected:
     explicit DerivedObject(const Device &dev, T obj) : C(dev, obj, V) {}
 };
 
-class Device : public DerivedObject<VkDevice, BaseObject, VK_OBJECT_TYPE_DEVICE> {
+class Device : public internal::Handle<VkDevice> {
 public:
     explicit Device(VkPhysicalDevice phy) : phy_(phy) {}
     ~Device();
-
-    VkDevice device() const { return obj(); }
 
     // vkCreateDevice()
     void init(const VkDeviceCreateInfo &info);
@@ -269,7 +267,7 @@ public:
     const PhysicalDevice &phy() const { return phy_; }
 
     // vkGetDeviceProcAddr()
-    void *get_proc(const char *name) const { return vkGetDeviceProcAddr(obj(), name); }
+    void *get_proc(const char *name) const { return vkGetDeviceProcAddr(handle(), name); }
 
     // vkGetDeviceQueue()
     const std::vector<Queue *> &graphics_queues() const { return queues_[GRAPHICS]; }
@@ -379,7 +377,7 @@ public:
     void init(const Device &dev, const VkFenceCreateInfo &info);
 
     // vkGetFenceStatus()
-    VkResult status() const { return vkGetFenceStatus(dev_->obj(), obj()); }
+    VkResult status() const { return vkGetFenceStatus(dev_->handle(), obj()); }
 
     static VkFenceCreateInfo create_info(VkFenceCreateFlags flags);
     static VkFenceCreateInfo create_info();
@@ -401,7 +399,7 @@ public:
     // vkGetEventStatus()
     // vkSetEvent()
     // vkResetEvent()
-    VkResult status() const { return vkGetEventStatus(dev_->obj(), obj()); }
+    VkResult status() const { return vkGetEventStatus(dev_->handle(), obj()); }
     void set();
     void reset();
 

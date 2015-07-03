@@ -75,7 +75,7 @@ public:
     void CreateShaderTest();
     void CreateShader(VkShader *pshader);
 
-    VkDevice device() {return m_device->obj();}
+    VkDevice device() {return m_device->handle();}
 
 protected:
     VkApplicationInfo app_info;
@@ -343,7 +343,7 @@ void getQueue(vk_testing::Device *device, uint32_t queue_node_index, const char 
     const VkPhysicalDeviceQueueProperties props = device->phy().queue_properties()[queue_node_index];
     for (que_idx = 0; que_idx < props.queueCount; que_idx++) {
         // TODO: Need to add support for separate MEMMGR and work queues, including synchronization
-        err = vkGetDeviceQueue(device->obj(), queue_node_index, que_idx, &queue);
+        err = vkGetDeviceQueue(device->handle(), queue_node_index, que_idx, &queue);
         ASSERT_EQ(VK_SUCCESS, err) << "vkGetDeviceQueue: " << qname << " queue #" << que_idx << ": Failed with error: " << vk_result_string(err);
     }
 }

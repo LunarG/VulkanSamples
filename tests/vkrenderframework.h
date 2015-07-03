@@ -41,7 +41,7 @@ public:
                 std::vector<const char *> &layers,
                 std::vector<const char *> &extension_names);
 
-    VkDevice device() { return obj(); }
+    VkDevice device() { return handle(); }
     void get_device_queue();
 
     uint32_t                               id;

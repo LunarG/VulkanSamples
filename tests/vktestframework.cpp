@@ -681,7 +681,7 @@ void TestFrameworkVkPresent::CreateSwapChain()
     swap_chain.swapModeFlags = VK_SWAP_MODE_FLIP_BIT_WSI |
                                VK_SWAP_MODE_BLIT_BIT_WSI;
 
-    err = m_fpCreateSwapChainWSI(m_device.obj(), &swap_chain, &m_swap_chain);
+    err = m_fpCreateSwapChainWSI(m_device.handle(), &swap_chain, &m_swap_chain);
     assert(!err);
 
     VkSwapChainImageInfoWSI infos[2];

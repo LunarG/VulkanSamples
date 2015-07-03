@@ -764,10 +764,10 @@ TEST_F(VkCmdCopyBufferTest, RAWHazard)
     memset(&event_info, 0, sizeof(event_info));
     event_info.sType = VK_STRUCTURE_TYPE_EVENT_CREATE_INFO;
 
-    err = vkCreateEvent(dev_.obj(), &event_info, &event);
+    err = vkCreateEvent(dev_.handle(), &event_info, &event);
     ASSERT_VK_SUCCESS(err);
 
-    err = vkGetObjectMemoryRequirements(dev_.obj(), VK_OBJECT_TYPE_EVENT, event, &mem_req);
+    err = vkGetObjectMemoryRequirements(dev_.handle(), VK_OBJECT_TYPE_EVENT, event, &mem_req);
     ASSERT_VK_SUCCESS(err);
 
     if (mem_req.size) {
@@ -780,14 +780,14 @@ TEST_F(VkCmdCopyBufferTest, RAWHazard)
         err = dev_.phy().set_memory_type(mem_req.memoryTypeBits, &mem_info, 0);
         ASSERT_VK_SUCCESS(err);
 
-        err = vkAllocMemory(dev_.obj(), &mem_info, &event_mem);
+        err = vkAllocMemory(dev_.handle(), &mem_info, &event_mem);
         ASSERT_VK_SUCCESS(err);
 
-        err = vkBindObjectMemory(dev_.obj(), VK_OBJECT_TYPE_EVENT, event, event_mem, 0);
+        err = vkBindObjectMemory(dev_.handle(), VK_OBJECT_TYPE_EVENT, event, event_mem, 0);
         ASSERT_VK_SUCCESS(err);
     }
 
-    err = vkResetEvent(dev_.obj(), event);
+    err = vkResetEvent(dev_.handle(), event);
     ASSERT_VK_SUCCESS(err);
 
     for (int i = 0; i < ARRAY_SIZE(bufs); i++) {
@@ -841,12 +841,12 @@ TEST_F(VkCmdCopyBufferTest, RAWHazard)
     EXPECT_EQ(0x11111111, data[0]);
     bufs[2].unmap();
 
-    err = vkDestroyObject(dev_.obj(), VK_OBJECT_TYPE_EVENT, event);
+    err = vkDestroyObject(dev_.handle(), VK_OBJECT_TYPE_EVENT, event);
     ASSERT_VK_SUCCESS(err);
 
     if (mem_req.size) {
         // All done with event memory, clean up
-        err = vkFreeMemory(dev_.obj(), event_mem);
+        err = vkFreeMemory(dev_.handle(), event_mem);
         ASSERT_VK_SUCCESS(err);
     }
 }
