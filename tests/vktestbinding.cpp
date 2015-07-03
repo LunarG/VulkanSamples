@@ -802,6 +802,8 @@ VkResult Shader::init_try(const Device &dev, const VkShaderCreateInfo &info)
     return err;
 }
 
+NON_DISPATCHABLE_HANDLE_DTOR(Pipeline, vkDestroyObject, VK_OBJECT_TYPE_PIPELINE)
+
 void Pipeline::init(const Device &dev, const VkGraphicsPipelineCreateInfo &info)
 {
     VkPipelineCache cache;
@@ -810,8 +812,7 @@ void Pipeline::init(const Device &dev, const VkGraphicsPipelineCreateInfo &info)
     ci.sType = VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO;
     VkResult err = vkCreatePipelineCache(dev.handle(), &ci, &cache);
     if (err == VK_SUCCESS) {
-        DERIVED_OBJECT_TYPE_INIT(vkCreateGraphicsPipelines, dev, VK_OBJECT_TYPE_PIPELINE, cache, 1, &info);
-        alloc_memory();
+        NON_DISPATCHABLE_HANDLE_INIT(vkCreateGraphicsPipelines, dev, cache, 1, &info);
         vkDestroyPipelineCache(dev.handle(), cache);
     }
 }
@@ -821,7 +822,6 @@ VkResult Pipeline::init_try(const Device &dev, const VkGraphicsPipelineCreateInf
     VkPipeline pipe;
     VkPipelineCache cache;
     VkPipelineCacheCreateInfo ci;
-    dev_ = &dev;
     memset((void *) &ci, 0, sizeof(VkPipelineCacheCreateInfo));
     ci.sType = VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO;
     VkResult err = vkCreatePipelineCache(dev.handle(), &ci, &cache);
@@ -829,15 +829,13 @@ VkResult Pipeline::init_try(const Device &dev, const VkGraphicsPipelineCreateInf
     if (err == VK_SUCCESS) {
         err = vkCreateGraphicsPipelines(dev.handle(), cache, 1, &info, &pipe);
         if (err == VK_SUCCESS) {
-            Object::init(pipe, VK_OBJECT_TYPE_PIPELINE);
-            alloc_memory();
+            NonDispHandle::init(dev.handle(), pipe);
             vkDestroyPipelineCache(dev.handle(), cache);
         }
     }
 
     return err;
 }
-
 
 void Pipeline::init(const Device &dev, const VkComputePipelineCreateInfo &info)
 {
@@ -847,8 +845,7 @@ void Pipeline::init(const Device &dev, const VkComputePipelineCreateInfo &info)
     ci.sType = VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO;
     VkResult err = vkCreatePipelineCache(dev.handle(), &ci, &cache);
     if (err == VK_SUCCESS) {
-        DERIVED_OBJECT_TYPE_INIT(vkCreateComputePipelines, dev, VK_OBJECT_TYPE_PIPELINE, cache, 1, &info);
-        alloc_memory();
+        NON_DISPATCHABLE_HANDLE_INIT(vkCreateComputePipelines, dev, cache, 1, &info);
         vkDestroyPipelineCache(dev.handle(), cache);
     }
 }

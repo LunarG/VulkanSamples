@@ -1469,7 +1469,7 @@ void VkCommandBufferObj::QueueCommandBuffer(VkFence fence)
 
 void VkCommandBufferObj::BindPipeline(VkPipelineObj &pipeline)
 {
-    vkCmdBindPipeline( obj(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline.obj() );
+    vkCmdBindPipeline( obj(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline.handle() );
 }
 
 void VkCommandBufferObj::BindDescriptorSet(VkDescriptorSetObj &descriptorSet)

@@ -558,8 +558,10 @@ public:
     static VkShaderCreateInfo create_info(VkShaderModule module, const char *pName, VkFlags flags);
 };
 
-class Pipeline : public DerivedObject<VkPipeline, Object, VK_OBJECT_TYPE_PIPELINE> {
+class Pipeline : public internal::NonDispHandle<VkPipeline> {
 public:
+    ~Pipeline();
+
     // vkCreateGraphicsPipeline()
     void init(const Device &dev, const VkGraphicsPipelineCreateInfo &info);
     // vkCreateGraphicsPipelineDerivative()
