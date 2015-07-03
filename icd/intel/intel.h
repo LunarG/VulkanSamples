@@ -37,7 +37,7 @@
 #include <assert.h>
 
 #include <vulkan.h>
-#include <vkIcd.h>
+#include <vk_icd.h>
 
 #include "icd.h"
 #include "icd-spv.h"

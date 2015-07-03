@@ -26,7 +26,7 @@
 #include <assert.h>
 #include "loader_platform.h"
 #include "vk_dispatch_table_helper.h"
-#include "vkLayer.h"
+#include "vk_layer.h"
 #include "layers_table.h"
 // The following is #included again to catch certain OS-specific functions
 // being used:

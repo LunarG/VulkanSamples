@@ -32,7 +32,7 @@
 #include <stdarg.h>
 #include <stdbool.h>
 #include <unordered_map>
-#include "vkLayer.h"
+#include "vk_layer.h"
 #include "layer_data.h"
 #include "layers_table.h"
 

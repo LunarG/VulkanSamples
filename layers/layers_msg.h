@@ -23,7 +23,7 @@
  */
 #include <stdio.h>
 #include <stdbool.h>
-#include "vkLayer.h"
+#include "vk_layer.h"
 
 static VkLayerDbgFunctionNode *g_pDbgFunctionHead = NULL;
 static VkFlags g_reportFlags = (VkFlags) 0;

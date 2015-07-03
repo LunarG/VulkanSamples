@@ -33,7 +33,7 @@
 #include <vector>
 
 #include "loader_platform.h"
-#include "vkLayer.h"
+#include "vk_layer.h"
 #include "layers_config.h"
 #include "vk_enum_validate_helper.h"
 #include "vk_struct_validate_helper.h"

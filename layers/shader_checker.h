@@ -21,7 +21,7 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
-#include "vkLayer.h"
+#include "vk_layer.h"
 #include "vk_debug_report_lunarg.h"
 
 

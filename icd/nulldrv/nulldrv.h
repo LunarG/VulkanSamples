@@ -32,7 +32,7 @@
 
 #include <vulkan.h>
 #include <vk_debug_report_lunarg.h>
-#include <vkIcd.h>
+#include <vk_icd.h>
 #include <vk_wsi_lunarg.h>
 
 #include "icd.h"

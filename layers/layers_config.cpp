@@ -26,7 +26,7 @@
 #include <string>
 #include <map>
 #include <string.h>
-#include <vkLayer.h>
+#include <vk_layer.h>
 #include "loader_platform.h"
 #include "layers_config.h"
 // The following is #included again to catch certain OS-specific functions

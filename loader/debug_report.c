@@ -34,7 +34,7 @@
 #include <alloca.h>
 #endif
 #include "debug_report.h"
-#include "vkLayer.h"
+#include "vk_layer.h"
 
 typedef void (VKAPI *PFN_stringCallback)(char *message);
 

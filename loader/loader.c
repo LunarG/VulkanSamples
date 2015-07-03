@@ -46,7 +46,7 @@
 #include "gpa_helper.h"
 #include "table_ops.h"
 #include "debug_report.h"
-#include "vkIcd.h"
+#include "vk_icd.h"
 #include "cJSON.h"
 
 void loader_add_to_ext_list(

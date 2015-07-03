@@ -575,7 +575,7 @@ class Subcommand(object):
 
 class LayerFuncsSubcommand(Subcommand):
     def generate_header(self):
-        return '#include <vkLayer.h>\n#include "loader.h"'
+        return '#include <vk_layer.h>\n#include "loader.h"'
 
     def generate_body(self):
         return self._generate_dispatch_entrypoints("static")
@@ -595,7 +595,7 @@ class GenericLayerSubcommand(Subcommand):
         gen_header.append('#include <string.h>')
         gen_header.append('#include <unordered_map>')
         gen_header.append('#include "loader_platform.h"')
-        gen_header.append('#include "vkLayer.h"')
+        gen_header.append('#include "vk_layer.h"')
         gen_header.append('//The following is #included again to catch certain OS-specific functions being used:')
         gen_header.append('')
         gen_header.append('#include "loader_platform.h"')
@@ -742,7 +742,7 @@ class APIDumpSubcommand(Subcommand):
         header_txt.append('')
         header_txt.append('%s' % self.lineinfo.get())
         header_txt.append('#include "loader_platform.h"')
-        header_txt.append('#include "vkLayer.h"')
+        header_txt.append('#include "vk_layer.h"')
         header_txt.append('#include "vk_struct_string_helper_cpp.h"')
         header_txt.append('#include "layers_table.h"')
         header_txt.append('#include <unordered_map>')
@@ -1226,7 +1226,7 @@ class ThreadingSubcommand(Subcommand):
         header_txt.append('#include <string.h>')
         header_txt.append('#include <unordered_map>')
         header_txt.append('#include "loader_platform.h"')
-        header_txt.append('#include "vkLayer.h"')
+        header_txt.append('#include "vk_layer.h"')
         header_txt.append('#include "threading.h"')
         header_txt.append('#include "layers_config.h"')
         header_txt.append('#include "vk_enum_validate_helper.h"')

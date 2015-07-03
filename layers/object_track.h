@@ -22,7 +22,7 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#include "vkLayer.h"
+#include "vk_layer.h"
 #include "vk_enum_string_helper.h"
 
 // Object Tracker ERROR codes

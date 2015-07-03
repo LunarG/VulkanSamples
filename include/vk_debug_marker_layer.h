@@ -32,7 +32,7 @@
 
 #include "vulkan.h"
 #include "vk_debug_marker_lunarg.h"
-#include "vkLayer.h"
+#include "vk_layer.h"
 
 
 typedef struct VkLayerDebugMarkerDispatchTable_

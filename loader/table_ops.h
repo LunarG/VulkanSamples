@@ -23,7 +23,7 @@
  */
 
 #include <vulkan.h>
-#include <vkLayer.h>
+#include <vk_layer.h>
 #include <string.h>
 #include "loader.h"
 #include "loader_platform.h"

@@ -23,7 +23,7 @@
  */
 #pragma once
 #include <vector>
-#include "vkLayer.h"
+#include "vk_layer.h"
 
 #ifdef __cplusplus
 extern "C" {
