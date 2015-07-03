@@ -853,6 +853,16 @@ void Pipeline::init(const Device &dev, const VkComputePipelineCreateInfo &info)
     }
 }
 
+NON_DISPATCHABLE_HANDLE_DTOR(PipelineLayout, vkDestroyObject, VK_OBJECT_TYPE_PIPELINE_LAYOUT)
+
+void PipelineLayout::init(const Device &dev, VkPipelineLayoutCreateInfo &info, const std::vector<const DescriptorSetLayout *> &layouts)
+{
+    const std::vector<VkDescriptorSetLayout> layout_objs = make_objects<VkDescriptorSetLayout>(layouts);
+    info.pSetLayouts = &layout_objs[0];
+
+    NON_DISPATCHABLE_HANDLE_INIT(vkCreatePipelineLayout, dev, &info);
+}
+
 void Sampler::init(const Device &dev, const VkSamplerCreateInfo &info)
 {
     DERIVED_OBJECT_TYPE_INIT(vkCreateSampler, dev, VK_OBJECT_TYPE_SAMPLER, &info);
@@ -862,15 +872,6 @@ void Sampler::init(const Device &dev, const VkSamplerCreateInfo &info)
 void DescriptorSetLayout::init(const Device &dev, const VkDescriptorSetLayoutCreateInfo &info)
 {
     DERIVED_OBJECT_TYPE_INIT(vkCreateDescriptorSetLayout, dev, VK_OBJECT_TYPE_DESCRIPTOR_SET_LAYOUT, &info);
-    alloc_memory();
-}
-
-void PipelineLayout::init(const Device &dev, VkPipelineLayoutCreateInfo &info, const std::vector<const DescriptorSetLayout *> &layouts)
-{
-    const std::vector<VkDescriptorSetLayout> layout_objs = make_objects<VkDescriptorSetLayout>(layouts);
-    info.pSetLayouts = &layout_objs[0];
-
-    DERIVED_OBJECT_TYPE_INIT(vkCreatePipelineLayout, dev, VK_OBJECT_TYPE_PIPELINE_LAYOUT, &info);
     alloc_memory();
 }
 

@@ -578,6 +578,14 @@ public:
     size_t store(size_t size, void *data);
 };
 
+class PipelineLayout : public internal::NonDispHandle<VkPipelineLayout> {
+public:
+    ~PipelineLayout();
+
+    // vCreatePipelineLayout()
+    void init(const Device &dev, VkPipelineLayoutCreateInfo &info, const std::vector<const DescriptorSetLayout *> &layouts);
+};
+
 class Sampler : public DerivedObject<VkSampler, Object, VK_OBJECT_TYPE_SAMPLER> {
 public:
     // vkCreateSampler()
@@ -588,12 +596,6 @@ class DescriptorSetLayout : public DerivedObject<VkDescriptorSetLayout, Object, 
 public:
     // vkCreateDescriptorSetLayout()
     void init(const Device &dev, const VkDescriptorSetLayoutCreateInfo &info);
-};
-
-class PipelineLayout : public DerivedObject<VkPipelineLayout, Object, VK_OBJECT_TYPE_PIPELINE_LAYOUT> {
-public:
-    // vCreatePipelineLayout()
-    void init(const Device &dev, VkPipelineLayoutCreateInfo &info, const std::vector<const DescriptorSetLayout *> &layouts);
 };
 
 class DescriptorPool : public DerivedObject<VkDescriptorPool, Object, VK_OBJECT_TYPE_DESCRIPTOR_POOL> {
