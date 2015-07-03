@@ -381,15 +381,17 @@ public:
     static VkSemaphoreCreateInfo create_info(VkFlags flags);
 };
 
-class Event : public DerivedObject<VkEvent, Object, VK_OBJECT_TYPE_EVENT> {
+class Event : public internal::NonDispHandle<VkEvent> {
 public:
+    ~Event();
+
     // vkCreateEvent()
     void init(const Device &dev, const VkEventCreateInfo &info);
 
     // vkGetEventStatus()
     // vkSetEvent()
     // vkResetEvent()
-    VkResult status() const { return vkGetEventStatus(dev_->handle(), obj()); }
+    VkResult status() const { return vkGetEventStatus(device(), handle()); }
     void set();
     void reset();
 

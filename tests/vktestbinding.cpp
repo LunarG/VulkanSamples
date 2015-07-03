@@ -622,20 +622,21 @@ void Semaphore::init(const Device &dev, const VkSemaphoreCreateInfo &info)
     NON_DISPATCHABLE_HANDLE_INIT(vkCreateSemaphore, dev, &info);
 }
 
+NON_DISPATCHABLE_HANDLE_DTOR(Event, vkDestroyObject, VK_OBJECT_TYPE_EVENT)
+
 void Event::init(const Device &dev, const VkEventCreateInfo &info)
 {
-    DERIVED_OBJECT_TYPE_INIT(vkCreateEvent, dev, VK_OBJECT_TYPE_EVENT, &info);
-    alloc_memory();
+    NON_DISPATCHABLE_HANDLE_INIT(vkCreateEvent, dev, &info);
 }
 
 void Event::set()
 {
-    EXPECT(vkSetEvent(dev_->handle(), obj()) == VK_SUCCESS);
+    EXPECT(vkSetEvent(device(), handle()) == VK_SUCCESS);
 }
 
 void Event::reset()
 {
-    EXPECT(vkResetEvent(dev_->handle(), obj()) == VK_SUCCESS);
+    EXPECT(vkResetEvent(device(), handle()) == VK_SUCCESS);
 }
 
 void QueryPool::init(const Device &dev, const VkQueryPoolCreateInfo &info)
