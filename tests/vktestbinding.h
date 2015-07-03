@@ -39,7 +39,7 @@ class Object;
 class DynamicStateObject;
 class Device;
 class Queue;
-class GpuMemory;
+class DeviceMemory;
 class Fence;
 class Semaphore;
 class Event;
@@ -187,7 +187,7 @@ public:
     std::vector<VkMemoryRequirements> memory_requirements() const;
 
     // vkBindObjectMemory()
-    void bind_memory(const GpuMemory &mem, VkDeviceSize mem_offset);
+    void bind_memory(const DeviceMemory &mem, VkDeviceSize mem_offset);
 
     // Unless an object is initialized with init_no_mem(), memories are
     // automatically allocated and bound.  These methods can be used to
@@ -221,14 +221,13 @@ protected:
     // allocate and bind internal memories
     void alloc_memory();
     void alloc_memory(VkMemoryPropertyFlags &reqs);
-    void alloc_memory(const std::vector<VkDeviceMemory> &mems);
 
 private:
     void cleanup();
 
     uint32_t mem_alloc_count_;
-    GpuMemory *internal_mems_;
-    GpuMemory *primary_mem_;
+    DeviceMemory *internal_mems_;
+    DeviceMemory *primary_mem_;
     bool bound;
 };
 
@@ -339,16 +338,12 @@ public:
     void wait_semaphore(Semaphore &sem);
 };
 
-/* Note: This needs to be BaseObject so that we don't try to destroy
- * the object when the object is device memory.
- */
-class GpuMemory : public DerivedObject<VkDeviceMemory, BaseObject, VK_OBJECT_TYPE_DEVICE_MEMORY> {
+class DeviceMemory : public internal::NonDispHandle<VkDeviceMemory> {
 public:
-    ~GpuMemory();
+    ~DeviceMemory();
 
     // vkAllocMemory()
     void init(const Device &dev, const VkMemoryAllocInfo &info);
-    void init(const Device &dev, VkDeviceMemory mem);
 
     // vkMapMemory()
     const void *map(VkFlags flags) const;
@@ -359,11 +354,7 @@ public:
     // vkUnmapMemory()
     void unmap() const;
 
-    static VkMemoryAllocInfo alloc_info(const VkMemoryRequirements  &reqs,
-                                        const VkMemoryAllocInfo     *next_info);
-
-private:
-    const Device* dev_;
+    static VkMemoryAllocInfo alloc_info(VkDeviceSize size, uint32_t memory_type_index);
 };
 
 class Fence : public DerivedObject<VkFence, Object, VK_OBJECT_TYPE_FENCE> {
@@ -429,7 +420,7 @@ public:
 
     // vkQueueBindSparseBufferMemory()
     void bind_memory(VkDeviceSize offset, VkDeviceSize size,
-                     const GpuMemory &mem, VkDeviceSize mem_offset);
+                     const DeviceMemory &mem, VkDeviceSize mem_offset);
 
     static VkBufferCreateInfo create_info(VkDeviceSize size, VkFlags usage);
 
@@ -467,7 +458,7 @@ public:
 
     // vkQueueBindSparseImageMemory()
     void bind_memory(const Device &dev, const VkSparseImageMemoryBindInfo &info,
-                     const GpuMemory &mem, VkDeviceSize mem_offset);
+                     const DeviceMemory &mem, VkDeviceSize mem_offset);
 
     // vkGetImageSubresourceLayout()
     VkSubresourceLayout subresource_layout(const VkImageSubresource &subres) const;
@@ -667,17 +658,12 @@ inline void Object::unmap() const
         primary_mem_->unmap();
 }
 
-inline VkMemoryAllocInfo GpuMemory::alloc_info(const VkMemoryRequirements  &reqs,
-                                               const VkMemoryAllocInfo     *next_info)
+inline VkMemoryAllocInfo DeviceMemory::alloc_info(VkDeviceSize size, uint32_t memory_type_index)
 {
     VkMemoryAllocInfo info = {};
     info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO;
-    if (next_info != NULL)
-        info.pNext = (void *) next_info;
-
-    info.allocationSize  = reqs.size;
-    info.memoryTypeIndex = 0;
-
+    info.allocationSize = size;
+    info.memoryTypeIndex = memory_type_index;
     return info;
 }
 

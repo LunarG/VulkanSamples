@@ -27,6 +27,13 @@
 
 namespace {
 
+#define NON_DISPATCHABLE_HANDLE_INIT(create_func, dev, ...)                         \
+    do {                                                                            \
+        handle_type handle;                                                         \
+        if (EXPECT(create_func(dev.handle(), __VA_ARGS__, &handle) == VK_SUCCESS))  \
+            NonDispHandle::init(dev.handle(), handle);                              \
+    } while (0)
+
 #define DERIVED_OBJECT_TYPE_INIT(create_func, dev, vk_object_type, ...)         \
     do {                                                                        \
         obj_type obj;                                                           \
@@ -318,10 +325,10 @@ void Object::cleanup()
     mem_alloc_count_ = 0;
 }
 
-void Object::bind_memory(const GpuMemory &mem, VkDeviceSize mem_offset)
+void Object::bind_memory(const DeviceMemory &mem, VkDeviceSize mem_offset)
 {
     bound = true;
-    EXPECT(vkBindObjectMemory(dev_->handle(), type(), obj(), mem.obj(), mem_offset) == VK_SUCCESS);
+    EXPECT(vkBindObjectMemory(dev_->handle(), type(), obj(), mem.handle(), mem_offset) == VK_SUCCESS);
 }
 
 void Object::alloc_memory()
@@ -329,13 +336,13 @@ void Object::alloc_memory()
     if (!EXPECT(!internal_mems_) || !mem_alloc_count_)
         return;
 
-    internal_mems_ = new GpuMemory[mem_alloc_count_];
+    internal_mems_ = new DeviceMemory[mem_alloc_count_];
 
     const std::vector<VkMemoryRequirements> mem_reqs = memory_requirements();
-    VkMemoryAllocInfo info, *next_info = NULL;
+    VkMemoryAllocInfo info;
 
     for (int i = 0; i < mem_reqs.size(); i++) {
-        info = GpuMemory::alloc_info(mem_reqs[i], next_info);
+        info = DeviceMemory::alloc_info(mem_reqs[i].size, 0);
         dev_->phy().set_memory_type(mem_reqs[i].memoryTypeBits, &info, 0);
         primary_mem_ = &internal_mems_[i];
         internal_mems_[i].init(*dev_, info);
@@ -348,35 +355,16 @@ void Object::alloc_memory(VkMemoryPropertyFlags &reqs)
     if (!EXPECT(!internal_mems_) || !mem_alloc_count_)
         return;
 
-    internal_mems_ = new GpuMemory[mem_alloc_count_];
+    internal_mems_ = new DeviceMemory[mem_alloc_count_];
 
     std::vector<VkMemoryRequirements> mem_reqs = memory_requirements();
-    VkMemoryAllocInfo info, *next_info = NULL;
+    VkMemoryAllocInfo info;
 
     for (int i = 0; i < mem_reqs.size(); i++) {
-        info = GpuMemory::alloc_info(mem_reqs[i], next_info);
+        info = DeviceMemory::alloc_info(mem_reqs[i].size, 0);
         dev_->phy().set_memory_type(mem_reqs[i].memoryTypeBits, &info, reqs);
         primary_mem_ = &internal_mems_[i];
         internal_mems_[i].init(*dev_, info);
-        bind_memory(internal_mems_[i], 0);
-    }
-}
-
-void Object::alloc_memory(const std::vector<VkDeviceMemory> &mems)
-{
-    if (!EXPECT(!internal_mems_) || !mem_alloc_count_)
-        return;
-
-    internal_mems_ = new GpuMemory[mem_alloc_count_];
-
-    const std::vector<VkMemoryRequirements> mem_reqs = memory_requirements();
-    if (!EXPECT(mem_reqs.size() == mems.size()))
-        return;
-
-    for (int i = 0; i < mem_reqs.size(); i++) {
-        primary_mem_ = &internal_mems_[i];
-
-        internal_mems_[i].init(*dev_, mems[i]);
         bind_memory(internal_mems_[i], 0);
     }
 }
@@ -387,7 +375,7 @@ std::vector<VkDeviceMemory> Object::memories() const
     if (internal_mems_) {
         mems.reserve(mem_alloc_count_);
         for (uint32_t i = 0; i < mem_alloc_count_; i++)
-            mems.push_back(internal_mems_[i].obj());
+            mems.push_back(internal_mems_[i].handle());
     }
 
     return mems;
@@ -569,44 +557,38 @@ void Queue::wait_semaphore(Semaphore &sem)
     EXPECT(vkQueueWaitSemaphore(handle(), sem.obj()) == VK_SUCCESS);
 }
 
-GpuMemory::~GpuMemory()
+DeviceMemory::~DeviceMemory()
 {
-    if (initialized() && own())
-        EXPECT(vkFreeMemory(dev_->handle(), obj()) == VK_SUCCESS);
+    if (initialized())
+        EXPECT(vkFreeMemory(device(), handle()) == VK_SUCCESS);
 }
 
-void GpuMemory::init(const Device &dev, const VkMemoryAllocInfo &info)
+void DeviceMemory::init(const Device &dev, const VkMemoryAllocInfo &info)
 {
-    DERIVED_OBJECT_TYPE_INIT(vkAllocMemory, dev, VK_OBJECT_TYPE_DEVICE_MEMORY, &info);
+    NON_DISPATCHABLE_HANDLE_INIT(vkAllocMemory, dev, &info);
 }
 
-void GpuMemory::init(const Device &dev, VkDeviceMemory mem)
-{
-    dev_ = &dev;
-    BaseObject::init(mem, VK_OBJECT_TYPE_DEVICE_MEMORY, false);
-}
-
-const void *GpuMemory::map(VkFlags flags) const
+const void *DeviceMemory::map(VkFlags flags) const
 {
     void *data;
-    if (!EXPECT(vkMapMemory(dev_->handle(), obj(), 0 ,0, flags, &data) == VK_SUCCESS))
+    if (!EXPECT(vkMapMemory(device(), handle(), 0 ,0, flags, &data) == VK_SUCCESS))
         data = NULL;
 
     return data;
 }
 
-void *GpuMemory::map(VkFlags flags)
+void *DeviceMemory::map(VkFlags flags)
 {
     void *data;
-    if (!EXPECT(vkMapMemory(dev_->handle(), obj(), 0, 0, flags, &data) == VK_SUCCESS))
+    if (!EXPECT(vkMapMemory(device(), handle(), 0, 0, flags, &data) == VK_SUCCESS))
         data = NULL;
 
     return data;
 }
 
-void GpuMemory::unmap() const
+void DeviceMemory::unmap() const
 {
-    EXPECT(vkUnmapMemory(dev_->handle(), obj()) == VK_SUCCESS);
+    EXPECT(vkUnmapMemory(device(), handle()) == VK_SUCCESS);
 }
 
 void Fence::init(const Device &dev, const VkFenceCreateInfo &info)
@@ -676,14 +658,14 @@ void Buffer::init_no_mem(const Device &dev, const VkBufferCreateInfo &info)
 }
 
 void Buffer::bind_memory(VkDeviceSize offset, VkDeviceSize size,
-                         const GpuMemory &mem, VkDeviceSize mem_offset)
+                         const DeviceMemory &mem, VkDeviceSize mem_offset)
 {
     VkQueue queue = dev_->graphics_queues()[0]->handle();
     VkSparseMemoryBindInfo bindInfo;
     memset(&bindInfo, 0, sizeof(VkSparseMemoryBindInfo));
     bindInfo.offset    = offset;
     bindInfo.memOffset = mem_offset;
-    bindInfo.mem       = mem.obj();
+    bindInfo.mem       = mem.handle();
     EXPECT(vkQueueBindSparseBufferMemory(queue, obj(), 1, &bindInfo) == VK_SUCCESS);
 }
 
@@ -724,7 +706,7 @@ void Image::init_info(const Device &dev, const VkImageCreateInfo &info)
 }
 
 void Image::bind_memory(const Device &dev, const VkSparseImageMemoryBindInfo &info,
-                        const GpuMemory &mem, VkDeviceSize mem_offset)
+                        const DeviceMemory &mem, VkDeviceSize mem_offset)
 {
     VkQueue queue = dev.graphics_queues()[0]->handle();
     EXPECT(vkQueueBindSparseImageMemory(queue, obj(), 1, &info) == VK_SUCCESS);
