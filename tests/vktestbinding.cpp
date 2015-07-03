@@ -639,16 +639,17 @@ void Event::reset()
     EXPECT(vkResetEvent(device(), handle()) == VK_SUCCESS);
 }
 
+NON_DISPATCHABLE_HANDLE_DTOR(QueryPool, vkDestroyObject, VK_OBJECT_TYPE_QUERY_POOL)
+
 void QueryPool::init(const Device &dev, const VkQueryPoolCreateInfo &info)
 {
-    DERIVED_OBJECT_TYPE_INIT(vkCreateQueryPool, dev, VK_OBJECT_TYPE_QUERY_POOL, &info);
-    alloc_memory();
+    NON_DISPATCHABLE_HANDLE_INIT(vkCreateQueryPool, dev, &info);
 }
 
 VkResult QueryPool::results(uint32_t start, uint32_t count, size_t size, void *data)
 {
     size_t tmp = size;
-    VkResult err = vkGetQueryPoolResults(dev_->handle(), obj(), start, count, &tmp, data, 0);
+    VkResult err = vkGetQueryPoolResults(device(), handle(), start, count, &tmp, data, 0);
     if (err == VK_SUCCESS) {
         if (!EXPECT(tmp == size))
             memset(data, 0, size);

@@ -398,8 +398,10 @@ public:
     static VkEventCreateInfo create_info(VkFlags flags);
 };
 
-class QueryPool : public DerivedObject<VkQueryPool, Object, VK_OBJECT_TYPE_QUERY_POOL> {
+class QueryPool : public internal::NonDispHandle<VkQueryPool> {
 public:
+    ~QueryPool();
+
     // vkCreateQueryPool()
     void init(const Device &dev, const VkQueryPoolCreateInfo &info);
 
