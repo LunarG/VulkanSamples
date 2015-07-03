@@ -154,6 +154,7 @@ struct loader_icd {
     PFN_vkGetPhysicalDeviceMemoryProperties GetPhysicalDeviceMemoryProperties;
     PFN_vkGetPhysicalDeviceExtensionProperties GetPhysicalDeviceExtensionProperties;
     PFN_vkGetPhysicalDeviceLayerProperties GetPhysicalDeviceLayerProperties;
+    PFN_vkGetPhysicalDeviceSparseImageFormatProperties GetPhysicalDeviceSparseImageFormatProperties;
     PFN_vkDbgCreateMsgCallback DbgCreateMsgCallback;
     PFN_vkDbgDestroyMsgCallback DbgDestroyMsgCallback;
 
@@ -370,6 +371,15 @@ VkResult loader_GetPhysicalDeviceLimits(
         VkPhysicalDevice                        physicalDevice,
         VkPhysicalDeviceLimits*                 pLimits);
 
+VkResult loader_GetPhysicalDeviceSparseImageFormatProperties(
+        VkPhysicalDevice                        physicalDevice,
+        VkFormat                                format,
+        VkImageType                             type,
+        uint32_t                                samples,
+        VkImageUsageFlags                       usage,
+        VkImageTiling                           tiling,
+        uint32_t*                               pNumProperties,
+        VkSparseImageFormatProperties*          pProperties);
 
 VkResult loader_GetPhysicalDeviceProperties (
         VkPhysicalDevice physicalDevice,

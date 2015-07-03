@@ -360,20 +360,27 @@ ICD_EXPORT VkResult VKAPI vkBindObjectMemory(
 ICD_EXPORT VkResult VKAPI vkQueueBindSparseBufferMemory(
     VkQueue                                     queue,
     VkBuffer                                    buffer,
-    VkDeviceSize                                rangeOffset,
-    VkDeviceSize                                rangeSize,
-    VkDeviceMemory                              mem,
-    VkDeviceSize                                memOffset)
+    uint32_t                                    numBindings,
+    const VkSparseMemoryBindInfo*               pBindInfo)
 {
     return VK_ERROR_UNKNOWN;
 }
 
+ICD_EXPORT VkResult VKAPI vkQueueBindSparseImageOpaqueMemory(
+    VkQueue                                     queue,
+    VkImage                                     image,
+    uint32_t                                    numBindings,
+    const VkSparseMemoryBindInfo*               pBindInfo)
+{
+    return VK_ERROR_UNKNOWN;
+}
+
+
 ICD_EXPORT VkResult VKAPI vkQueueBindSparseImageMemory(
     VkQueue                                     queue,
     VkImage                                     image,
-    const VkImageMemoryBindInfo*                pBindInfo,
-    VkDeviceMemory                              mem,
-    VkDeviceSize                                memOffset)
+    uint32_t                                    numBindings,
+    const VkSparseImageMemoryBindInfo*          pBindInfo)
 {
     return VK_ERROR_UNKNOWN;
 }

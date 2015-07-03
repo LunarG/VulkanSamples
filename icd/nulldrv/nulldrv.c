@@ -1682,24 +1682,55 @@ ICD_EXPORT VkResult VKAPI vkBindObjectMemory(
     return VK_SUCCESS;
 }
 
+ICD_EXPORT VkResult VKAPI vkGetImageSparseMemoryRequirements(
+    VkDevice                                    device,
+    VkImage                                     image,
+    uint32_t*                                   pNumRequirements,
+    VkSparseImageMemoryRequirements*            pSparseMemoryRequirements)
+{
+    NULLDRV_LOG_FUNC;
+    return VK_SUCCESS;
+}
+
+ICD_EXPORT VkResult VKAPI vkGetPhysicalDeviceSparseImageFormatProperties(
+    VkPhysicalDevice                            physicalDevice,
+    VkFormat                                    format,
+    VkImageType                                 type,
+    uint32_t                                    samples,
+    VkImageUsageFlags                           usage,
+    VkImageTiling                               tiling,
+    uint32_t*                                   pNumProperties,
+    VkSparseImageFormatProperties*              pProperties)
+{
+    NULLDRV_LOG_FUNC;
+    return VK_SUCCESS;
+}
+
 ICD_EXPORT VkResult VKAPI vkQueueBindSparseBufferMemory(
     VkQueue                                     queue,
     VkBuffer                                    buffer,
-    VkDeviceSize                                rangeOffset,
-    VkDeviceSize                                rangeSize,
-    VkDeviceMemory                              mem,
-    VkDeviceSize                                memOffset)
+    uint32_t                                    numBindings,
+    const VkSparseMemoryBindInfo*               pBindInfo)
+{
+    NULLDRV_LOG_FUNC;
+    return VK_SUCCESS;
+}
+
+ICD_EXPORT VkResult VKAPI vkQueueBindSparseImageOpaqueMemory(
+    VkQueue                                     queue,
+    VkImage                                     image,
+    uint32_t                                    numBindings,
+    const VkSparseMemoryBindInfo*               pBindInfo)
 {
     NULLDRV_LOG_FUNC;
     return VK_SUCCESS;
 }
 
 ICD_EXPORT VkResult VKAPI vkQueueBindSparseImageMemory(
-    VkQueue                                   queue,
-    VkImage                                   image,
-    const VkImageMemoryBindInfo*              pBindInfo,
-    VkDeviceMemory                            mem,
-    VkDeviceSize                              memOffset)
+    VkQueue                                     queue,
+    VkImage                                     image,
+    uint32_t                                    numBindings,
+    const VkSparseImageMemoryBindInfo*          pBindInfo)
 {
     NULLDRV_LOG_FUNC;
     return VK_SUCCESS;

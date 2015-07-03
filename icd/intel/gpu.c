@@ -541,3 +541,18 @@ ICD_EXPORT VkResult VKAPI vkGetPhysicalDeviceLayerProperties(
     *pCount = 0;
     return VK_SUCCESS;
 }
+
+ICD_EXPORT VkResult VKAPI vkGetPhysicalDeviceSparseImageFormatProperties(
+    VkPhysicalDevice                            physicalDevice,
+    VkFormat                                    format,
+    VkImageType                                 type,
+    uint32_t                                    samples,
+    VkImageUsageFlags                           usage,
+    VkImageTiling                               tiling,
+    uint32_t*                                   pNumProperties,
+    VkSparseImageFormatProperties*              pProperties)
+{
+    *pNumProperties = 0;
+    return VK_SUCCESS;
+}
+

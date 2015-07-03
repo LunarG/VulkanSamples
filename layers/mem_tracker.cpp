@@ -1191,20 +1191,18 @@ VK_LAYER_EXPORT VkResult VKAPI vkBindObjectMemory(
 }
 
 VK_LAYER_EXPORT VkResult VKAPI vkQueueBindSparseBufferMemory(
-    VkQueue        queue,
-    VkBuffer       buffer,
-    VkDeviceSize   rangeOffset,
-    VkDeviceSize   rangeSize,
-    VkDeviceMemory mem,
-    VkDeviceSize   memOffset)
+    VkQueue                       queue,
+    VkBuffer                      buffer,
+    uint32_t                      numBindings,
+    const VkSparseMemoryBindInfo* pBindInfo)
 {
     VkResult result = get_dispatch_table(mem_tracker_device_table_map, queue)->QueueBindSparseBufferMemory(
-        queue, buffer, rangeOffset, rangeSize, mem, memOffset);
+        queue, buffer, numBindings, pBindInfo);
     loader_platform_thread_lock_mutex(&globalLock);
     // Track objects tied to memory
-    if (VK_FALSE == set_sparse_buffer_binding(buffer, mem)) {
+    if (VK_FALSE == set_sparse_buffer_binding(buffer, pBindInfo->mem)) {
         log_msg(mdd(queue), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_BUFFER, buffer, 0, MEMTRACK_MEMORY_BINDING_ERROR, "MEM",
-                "Unable to set object %p binding to mem obj %p", (void*)buffer, (void*)mem);
+                "Unable to set object %p binding to mem obj %p", (void*)buffer, (void*)pBindInfo->mem);
     }
     print_object_list(queue);
     print_mem_list(queue);

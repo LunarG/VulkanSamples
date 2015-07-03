@@ -69,6 +69,8 @@ static inline void* globalGetProcAddr(const char *name)
         return (void*) vkGetGlobalLayerProperties;
     if (!strcmp(name, "GetPhysicalDeviceLayerProperties"))
         return (void*) vkGetPhysicalDeviceLayerProperties;
+    if (!strcmp(name, "GetPhysicalDeviceSparseImageFormatProperties"))
+        return (void*) vkGetPhysicalDeviceSparseImageFormatProperties;
     if (!strcmp(name, "GetDeviceQueue"))
         return (void*) vkGetDeviceQueue;
     if (!strcmp(name, "QueueSubmit"))
@@ -99,6 +101,10 @@ static inline void* globalGetProcAddr(const char *name)
         return (void*) vkQueueBindSparseBufferMemory;
     if (!strcmp(name, "QueueBindSparseImageMemory"))
         return (void*) vkQueueBindSparseImageMemory;
+    if (!strcmp(name, "QueueBindSparseImageOpaqueMemory"))
+        return (void*) vkQueueBindSparseImageOpaqueMemory;
+    if (!strcmp(name, "GetImageSparseMemoryRequirements"))
+        return (void*) vkGetImageSparseMemoryRequirements;
     if (!strcmp(name, "CreateFence"))
         return (void*) vkCreateFence;
     if (!strcmp(name, "ResetFences"))
@@ -293,6 +299,8 @@ static inline void *loader_non_passthrough_gpa(const char *name)
         return (void*) vkGetPhysicalDeviceMemoryProperties;
     if (!strcmp(name, "GetPhysicalDeviceProperties"))
         return (void*) vkGetPhysicalDeviceProperties;
+    if (!strcmp(name, "GetPhysicalDeviceSparseImageFormatProperties"))
+        return (void*) vkGetPhysicalDeviceSparseImageFormatProperties;
     if (!strcmp(name, "GetInstanceProcAddr"))
         return (void*) vkGetInstanceProcAddr;
     if (!strcmp(name, "GetDeviceProcAddr"))

@@ -54,6 +54,8 @@ static inline void loader_init_device_dispatch_table(VkLayerDispatchTable *table
     table->BindObjectMemory = (PFN_vkBindObjectMemory) gpa(dev, "vkBindObjectMemory");
     table->QueueBindSparseBufferMemory = (PFN_vkQueueBindSparseBufferMemory) gpa(dev, "vkQueueBindSparseBufferMemory");
     table->QueueBindSparseImageMemory = (PFN_vkQueueBindSparseImageMemory) gpa(dev, "vkQueueBindSparseImageMemory");
+    table->QueueBindSparseImageOpaqueMemory = (PFN_vkQueueBindSparseImageOpaqueMemory) gpa(dev, "vkQueueBindSparseImageOpaqueMemory");
+    table->GetImageSparseMemoryRequirements = (PFN_vkGetImageSparseMemoryRequirements) gpa(dev, "vkGetImageSparseMemoryRequirements");
     table->CreateFence = (PFN_vkCreateFence) gpa(dev, "vkCreateFence");
     table->ResetFences = (PFN_vkResetFences) gpa(dev, "vkResetFences");
     table->GetFenceStatus = (PFN_vkGetFenceStatus) gpa(dev, "vkGetFenceStatus");
@@ -187,6 +189,10 @@ static inline void *loader_lookup_device_dispatch_table(
         return (void *) table->QueueBindSparseBufferMemory;
     if (!strcmp(name, "QueueBindSparseImageMemory"))
         return (void *) table->QueueBindSparseImageMemory;
+    if (!strcmp(name, "QueueBindSparseImageOpaqueMemory"))
+        return (void *) table->QueueBindSparseImageOpaqueMemory;
+    if (!strcmp(name, "GetImageSparseMemoryRequirements"))
+        return (void *) table->GetImageSparseMemoryRequirements;
     if (!strcmp(name, "CreateFence"))
         return (void *) table->CreateFence;
     if (!strcmp(name, "ResetFences"))
@@ -371,6 +377,7 @@ static inline void loader_init_instance_core_dispatch_table(VkLayerInstanceDispa
     table->GetPhysicalDeviceMemoryProperties = (PFN_vkGetPhysicalDeviceMemoryProperties) gpa(inst, "vkGetPhysicalDeviceMemoryProperties");
     table->GetPhysicalDeviceExtensionProperties = (PFN_vkGetPhysicalDeviceExtensionProperties) gpa(inst, "vkGetPhysicalDeviceExtensionProperties");
     table->GetPhysicalDeviceLayerProperties = (PFN_vkGetPhysicalDeviceLayerProperties) gpa(inst, "vkGetPhysicalDeviceLayerProperties");
+    table->GetPhysicalDeviceSparseImageFormatProperties = (PFN_vkGetPhysicalDeviceSparseImageFormatProperties) gpa(inst, "vkGetPhysicalDeviceSparseImageFormatProperties");
 }
 
 static inline void loader_init_instance_extension_dispatch_table(
@@ -402,6 +409,8 @@ static inline void *loader_lookup_instance_dispatch_table(
         return (void *) table->GetPhysicalDeviceFormatInfo;
     if (!strcmp(name, "GetPhysicalDeviceLimits"))
         return (void *) table->GetPhysicalDeviceLimits;
+    if (!strcmp(name, "GetPhysicalDeviceSparseImageFormatProperties"))
+        return (void *) table->GetPhysicalDeviceSparseImageFormatProperties;
     if (!strcmp(name, "GetPhysicalDeviceProperties"))
         return (void *) table->GetPhysicalDeviceProperties;
     if (!strcmp(name, "GetPhysicalDevicePerformance"))

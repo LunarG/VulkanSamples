@@ -33,7 +33,7 @@
 #include "vk_platform.h"
 
 // Vulkan API version supported by this file
-#define VK_API_VERSION VK_MAKE_VERSION(0, 121, 0)
+#define VK_API_VERSION VK_MAKE_VERSION(0, 136, 0)
 
 #ifdef __cplusplus
 extern "C"
@@ -205,8 +205,9 @@ typedef enum VkImageAspect_
     VK_IMAGE_ASPECT_COLOR                                   = 0x00000000,
     VK_IMAGE_ASPECT_DEPTH                                   = 0x00000001,
     VK_IMAGE_ASPECT_STENCIL                                 = 0x00000002,
+    VK_IMAGE_ASPECT_METADATA                                = 0x00000003,
 
-    VK_ENUM_RANGE(IMAGE_ASPECT, COLOR, STENCIL)
+    VK_ENUM_RANGE(IMAGE_ASPECT, COLOR, METADATA)
 } VkImageAspect;
 
 typedef enum VkBufferViewType_
@@ -960,6 +961,8 @@ typedef VkFlags VkBufferCreateFlags;
 typedef enum VkBufferCreateFlagBits_
 {
     VK_BUFFER_CREATE_SPARSE_BIT                             = VK_BIT(0),    // Buffer should support sparse backing
+    VK_BUFFER_CREATE_SPARSE_RESIDENCY_BIT                   = VK_BIT(1),    // Buffer should support sparse backing with partial residency
+    VK_BUFFER_CREATE_SPARSE_ALIASED_BIT                     = VK_BIT(2),    // Buffer should support consistent data access to physical memoryblocks mapped into multiple locations of sparse buffers
 } VkBufferCreateFlagBits;
 
 // Shader stage flags
@@ -994,10 +997,12 @@ typedef enum VkImageUsageFlagBits_
 typedef VkFlags VkImageCreateFlags;
 typedef enum VkImageCreateFlagBits_
 {
-    VK_IMAGE_CREATE_INVARIANT_DATA_BIT                      = VK_BIT(0),
-    VK_IMAGE_CREATE_SPARSE_BIT                              = VK_BIT(1),    // Image should support sparse backing
-    VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT                      = VK_BIT(2),    // Allows image views to have different format than the base image
-    VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT                     = VK_BIT(3),    // Allows creating image views with cube type from the created image
+    VK_IMAGE_CREATE_SPARSE_BIT                              = VK_BIT(0),    // Image should support sparse backing
+    VK_IMAGE_CREATE_SPARSE_RESIDENCY_BIT                    = VK_BIT(1),    // Image should support sparse backing with partial residency
+    VK_IMAGE_CREATE_SPARSE_ALIASED_BIT                      = VK_BIT(2),    // Image should support constant data access to physical memoryblocks mapped into multiple locations fo sparse images
+    VK_IMAGE_CREATE_INVARIANT_DATA_BIT                      = VK_BIT(3),
+    VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT                      = VK_BIT(4),    // Allows image views to have different format than the base image
+    VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT                     = VK_BIT(5),    // Allows creating image views with cube type from the created image
 } VkImageCreateFlagBits;
 
 // Depth-stencil view creation flags
@@ -1032,6 +1037,22 @@ typedef enum VkFenceCreateFlagBits_
 {
     VK_FENCE_CREATE_SIGNALED_BIT                            = VK_BIT(0),
 } VkFenceCreateFlagBits;
+
+// Sparse image format flags
+typedef VkFlags VkSparseImageFormatFlags;
+typedef enum VkSparseImageFormatFlagBits_
+{
+    VK_SPARSE_IMAGE_FMT_SINGLE_MIPTAIL_BIT                  = VK_BIT(0),
+    VK_SPARSE_IMAGE_FMT_ALIGNED_MIP_SIZE_BIT                = VK_BIT(1),
+    VK_SPARSE_IMAGE_FMT_NONSTD_BLOCK_SIZE_BIT               = VK_BIT(2),
+} VkSparseImageFormatFlagBits;
+
+// Sparse memory bind flags
+typedef VkFlags VkSparseMemoryBindFlags;
+typedef enum VkSparseMemoryBindFlagBits_
+{
+    VK_SPARSE_MEMORY_BIND_REPLICATE_64KIB_BLOCK_BIT         = VK_BIT(0),
+} VkSparseMemoryBindFlagBits;
 
 // Semaphore creation flags
 typedef VkFlags VkSemaphoreCreateFlags;
@@ -1263,6 +1284,23 @@ typedef struct VkPhysicalDeviceFeatures_
     bool32_t                                    shaderInt64;
     bool32_t                                    shaderFloat16;
     bool32_t                                    shaderInt16;
+    bool32_t                                    shaderResourceResidency;
+    bool32_t                                    shaderResourceMinLOD;
+    bool32_t                                    sparse;
+    bool32_t                                    sparseResidencyBuffer;
+    bool32_t                                    sparseResidencyImage2D;
+    bool32_t                                    sparseResidencyImage3D;
+    bool32_t                                    sparseResidency2Samples;
+    bool32_t                                    sparseResidency4Samples;
+    bool32_t                                    sparseResidency8Samples;
+    bool32_t                                    sparseResidency16Samples;
+    bool32_t                                    sparseResidencyStandard2DBlockShape;
+    bool32_t                                    sparseResidencyStandard2DMSBlockShape;
+    bool32_t                                    sparseResidencyStandard3DBlockShape;
+    bool32_t                                    sparseResidencyAlignedMipSize;
+    bool32_t                                    sparseResidencyNonResident;
+    bool32_t                                    sparseResidencyNonResidentStrict;
+    bool32_t                                    sparseResidencyAliased;
 } VkPhysicalDeviceFeatures;
 
 typedef struct VkPhysicalDeviceLimits_
@@ -1498,6 +1536,37 @@ typedef struct VkMemoryRequirements_
     uint32_t                                    memoryTypeBits;             // Bitfield of the allowed memory type indices into memoryTypes[] for this object
 } VkMemoryRequirements;
 
+typedef struct VkSparseImageFormatProperties_
+{
+    VkImageAspect                               aspect;
+    VkExtent3D                                  imageGranularity;
+    VkSparseImageFormatFlags                    flags;
+} VkSparseImageFormatProperties;
+
+typedef struct VkSparseImageMemoryRequirements_
+{
+    VkSparseImageFormatProperties               formatProps;
+    uint32_t                                    imageMipTailStartLOD;
+    VkDeviceSize                                imageMipTailSize;
+    VkDeviceSize                                imageMipTailOffset;
+    VkDeviceSize                                imageMipTailStride;
+} VkSparseImageMemoryRequirements;
+
+typedef struct VkImageSubresource_
+{
+    VkImageAspect                               aspect;
+    uint32_t                                    mipLevel;
+    uint32_t                                    arraySlice;
+} VkImageSubresource;
+
+typedef struct VkSparseMemoryBindInfo
+{
+    VkDeviceSize                                offset;
+    VkDeviceSize                                memOffset;
+    VkDeviceMemory                              mem;
+    VkSparseMemoryBindFlags                     flags;
+} VkSparseMemoryBindInfo;
+
 typedef struct VkFormatProperties_
 {
     VkFormatFeatureFlags                        linearTilingFeatures;       // Format features in case of linear tiling
@@ -1562,13 +1631,6 @@ typedef struct VkBufferViewCreateInfo_
     VkDeviceSize                                offset;                     // Specified in bytes
     VkDeviceSize                                range;                      // View size specified in bytes
 } VkBufferViewCreateInfo;
-
-typedef struct VkImageSubresource_
-{
-    VkImageAspect                               aspect;
-    uint32_t                                    mipLevel;
-    uint32_t                                    arraySlice;
-} VkImageSubresource;
 
 typedef struct VkImageSubresourceRange_
 {
@@ -1695,12 +1757,15 @@ typedef struct VkBufferCopy_
     VkDeviceSize                                copySize;               // Specified in bytes
 } VkBufferCopy;
 
-typedef struct VkImageMemoryBindInfo_
+typedef struct VkSparseImageMemoryBindInfo_
 {
     VkImageSubresource                          subresource;
     VkOffset3D                                  offset;
     VkExtent3D                                  extent;
-} VkImageMemoryBindInfo;
+    VkDeviceSize                                memOffset;
+    VkDeviceMemory                              mem;
+    VkSparseMemoryBindFlags                     flags;
+} VkSparseImageMemoryBindInfo;
 
 typedef struct VkImageCopy_
 {
@@ -2180,7 +2245,7 @@ typedef VkResult (VKAPI *PFN_vkGetPhysicalDeviceProperties)(VkPhysicalDevice phy
 typedef VkResult (VKAPI *PFN_vkGetPhysicalDevicePerformance)(VkPhysicalDevice physicalDevice, VkPhysicalDevicePerformance* pPerformance);
 typedef VkResult (VKAPI *PFN_vkGetPhysicalDeviceQueueCount)(VkPhysicalDevice physicalDevice, uint32_t* pCount);
 typedef VkResult (VKAPI *PFN_vkGetPhysicalDeviceQueueProperties)(VkPhysicalDevice physicalDevice, uint32_t count, VkPhysicalDeviceQueueProperties* pQueueProperties);
-typedef VkResult (VKAPI *PFN_vkGetPhysicalDeviceMemoryProperties)(VkPhysicalDevice physicalDevice, VkPhysicalDeviceMemoryProperties* pMemoryProperies);
+typedef VkResult (VKAPI *PFN_vkGetPhysicalDeviceMemoryProperties)(VkPhysicalDevice physicalDevice, VkPhysicalDeviceMemoryProperties* pMemoryProperties);
 typedef VkResult (VKAPI *PFN_vkGetGlobalExtensionProperties)(const char * pLayerName, uint32_t* pCount, VkExtensionProperties* pProperties);
 typedef VkResult (VKAPI *PFN_vkGetPhysicalDeviceExtensionProperties)(VkPhysicalDevice physicalDevice, const char* pLayerName, uint32_t *pCount, VkExtensionProperties* pProperties);
 typedef VkResult (VKAPI *PFN_vkGetGlobalLayerProperties)(uint32_t* pCount, VkLayerProperties* pProperties);
@@ -2198,8 +2263,11 @@ typedef VkResult (VKAPI *PFN_vkInvalidateMappedMemoryRanges)(VkDevice device, ui
 typedef VkResult (VKAPI *PFN_vkDestroyObject)(VkDevice device, VkObjectType objType, VkObject object);
 typedef VkResult (VKAPI *PFN_vkGetObjectMemoryRequirements)(VkDevice device, VkObjectType objType, VkObject object, VkMemoryRequirements* pMemoryRequirements);
 typedef VkResult (VKAPI *PFN_vkBindObjectMemory)(VkDevice device, VkObjectType objType, VkObject object, VkDeviceMemory mem, VkDeviceSize offset);
-typedef VkResult (VKAPI *PFN_vkQueueBindSparseBufferMemory)(VkQueue queue, VkBuffer buffer, VkDeviceSize rangeOffset, VkDeviceSize rangeSize, VkDeviceMemory mem, VkDeviceSize memOffset);
-typedef VkResult (VKAPI *PFN_vkQueueBindSparseImageMemory)(VkQueue queue, VkImage image, const VkImageMemoryBindInfo* pBindInfo, VkDeviceMemory mem, VkDeviceSize memOffset);
+typedef VkResult (VKAPI *PFN_vkGetImageSparseMemoryRequirements)(VkDevice device, VkImage image, uint32_t* pNumRequirements, VkSparseImageMemoryRequirements* pSparseMemoryRequirements);
+typedef VkResult (VKAPI *PFN_vkGetPhysicalDeviceSparseImageFormatProperties)(VkPhysicalDevice physicalDevice, VkFormat format, VkImageType type, uint32_t samples, VkImageUsageFlags usage, VkImageTiling tiling, uint32_t* pNumProperties, VkSparseImageFormatProperties* pProperties);
+typedef VkResult (VKAPI *PFN_vkQueueBindSparseBufferMemory)(VkQueue queue, VkBuffer buffer, uint32_t numBindings, const VkSparseMemoryBindInfo* pBindInfo);
+typedef VkResult (VKAPI *PFN_vkQueueBindSparseImageOpaqueMemory)(VkQueue queue, VkImage image, uint32_t numBindings, const VkSparseMemoryBindInfo* pBindInfo);
+typedef VkResult (VKAPI *PFN_vkQueueBindSparseImageMemory)(VkQueue queue, VkImage image, uint32_t numBindings, const VkSparseImageMemoryBindInfo* pBindInfo);
 typedef VkResult (VKAPI *PFN_vkCreateFence)(VkDevice device, const VkFenceCreateInfo* pCreateInfo, VkFence* pFence);
 typedef VkResult (VKAPI *PFN_vkResetFences)(VkDevice device, uint32_t fenceCount, const VkFence* pFences);
 typedef VkResult (VKAPI *PFN_vkGetFenceStatus)(VkDevice device, VkFence fence);
@@ -2445,20 +2513,39 @@ VkResult VKAPI vkGetObjectMemoryRequirements(
     VkObject                                    object,
     VkMemoryRequirements*                       pMemoryRequirements);
 
+VkResult VKAPI vkGetImageSparseMemoryRequirements(
+    VkDevice                                    device,
+    VkImage                                     image,
+    uint32_t*                                   pNumRequirements,
+    VkSparseImageMemoryRequirements*            pSparseMemoryRequirements);
+
+VkResult VKAPI vkGetPhysicalDeviceSparseImageFormatProperties(
+    VkPhysicalDevice                            physicalDevice,
+    VkFormat                                    format,
+    VkImageType                                 type,
+    uint32_t                                    samples,
+    VkImageUsageFlags                           usage,
+    VkImageTiling                               tiling,
+    uint32_t*                                   pNumProperties,
+    VkSparseImageFormatProperties*              pProperties);
+
 VkResult VKAPI vkQueueBindSparseBufferMemory(
     VkQueue                                     queue,
     VkBuffer                                    buffer,
-    VkDeviceSize                                rangeOffset,
-    VkDeviceSize                                rangeSize,
-    VkDeviceMemory                              mem,
-    VkDeviceSize                                memOffset);
+    uint32_t                                    numBindings,
+    const VkSparseMemoryBindInfo*               pBindInfo);
+
+VkResult VKAPI vkQueueBindSparseImageOpaqueMemory(
+    VkQueue                                     queue,
+    VkImage                                     image,
+    uint32_t                                    numBindings,
+    const VkSparseMemoryBindInfo*               pBindInfo);
 
 VkResult VKAPI vkQueueBindSparseImageMemory(
     VkQueue                                     queue,
     VkImage                                     image,
-    const VkImageMemoryBindInfo*                pBindInfo,
-    VkDeviceMemory                              mem,
-    VkDeviceSize                                memOffset);
+    uint32_t                                    numBindings,
+    const VkSparseImageMemoryBindInfo*          pBindInfo);
 
 // Fence functions
 

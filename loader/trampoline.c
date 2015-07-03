@@ -447,22 +447,49 @@ LOADER_EXPORT VkResult VKAPI vkBindObjectMemory(VkDevice device, VkObjectType ob
     return disp->BindObjectMemory(device, objType, object, mem, offset);
 }
 
-LOADER_EXPORT VkResult VKAPI vkQueueBindSparseBufferMemory(VkQueue queue, VkBuffer buffer, VkDeviceSize rangeOffset, VkDeviceSize rangeSize, VkDeviceMemory mem, VkDeviceSize memOffset)
+LOADER_EXPORT VkResult VKAPI vkGetImageSparseMemoryRequirements(VkDevice device, VkImage image, uint32_t* pNumRequirements, VkSparseImageMemoryRequirements* pSparseMemoryRequirements)
 {
     const VkLayerDispatchTable *disp;
 
-    disp = loader_get_dispatch(queue);
+    disp = loader_get_dispatch(device);
 
-    return disp->QueueBindSparseBufferMemory(queue, buffer, rangeOffset, rangeSize, mem, memOffset);
+    return disp->GetImageSparseMemoryRequirements(device, image, pNumRequirements, pSparseMemoryRequirements);
 }
 
-LOADER_EXPORT VkResult VKAPI vkQueueBindSparseImageMemory(VkQueue queue, VkImage image, const VkImageMemoryBindInfo* pBindInfo, VkDeviceMemory mem, VkDeviceSize memOffset)
+LOADER_EXPORT VkResult VKAPI vkGetPhysicalDeviceSparseImageFormatProperties(VkPhysicalDevice physicalDevice, VkFormat format, VkImageType type, uint32_t samples, VkImageUsageFlags usage, VkImageTiling tiling, uint32_t* pNumProperties, VkSparseImageFormatProperties* pProperties)
+{
+    const VkLayerInstanceDispatchTable *disp;
+
+    disp = loader_get_instance_dispatch(physicalDevice);
+
+    return disp->GetPhysicalDeviceSparseImageFormatProperties(physicalDevice, format, type, samples, usage, tiling, pNumProperties, pProperties);
+}
+
+LOADER_EXPORT VkResult VKAPI vkQueueBindSparseImageOpaqueMemory(VkQueue queue, VkImage image, uint32_t numBindings, const VkSparseMemoryBindInfo* pBindInfo)
 {
     const VkLayerDispatchTable *disp;
 
     disp = loader_get_dispatch(queue);
 
-    return disp->QueueBindSparseImageMemory(queue, image, pBindInfo, mem, memOffset);
+    return disp->QueueBindSparseImageOpaqueMemory(queue, image, numBindings, pBindInfo);
+}
+
+LOADER_EXPORT VkResult VKAPI vkQueueBindSparseBufferMemory(VkQueue queue, VkBuffer buffer, uint32_t numBindings, const VkSparseMemoryBindInfo* pBindInfo)
+{
+    const VkLayerDispatchTable *disp;
+
+    disp = loader_get_dispatch(queue);
+
+    return disp->QueueBindSparseBufferMemory(queue, buffer, numBindings, pBindInfo);
+}
+
+LOADER_EXPORT VkResult VKAPI vkQueueBindSparseImageMemory(VkQueue queue, VkImage image, uint32_t numBindings, const VkSparseImageMemoryBindInfo* pBindInfo)
+{
+    const VkLayerDispatchTable *disp;
+
+    disp = loader_get_dispatch(queue);
+
+    return disp->QueueBindSparseImageMemory(queue, image, numBindings, pBindInfo);
 }
 
 LOADER_EXPORT VkResult VKAPI vkCreateFence(VkDevice device, const VkFenceCreateInfo* pCreateInfo, VkFence* pFence)

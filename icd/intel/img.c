@@ -178,3 +178,13 @@ ICD_EXPORT VkResult VKAPI vkGetImageSubresourceLayout(
                                                        pSubresource->mipLevel);
     return VK_SUCCESS;
 }
+
+VkResult VKAPI vkGetImageSparseMemoryRequirements(
+    VkDevice                                    device,
+    VkImage                                     image,
+    uint32_t*                                   pNumRequirements,
+    VkSparseImageMemoryRequirements*            pSparseMemoryRequirements)
+{
+    *pNumRequirements = 0;
+    return VK_SUCCESS;
+}

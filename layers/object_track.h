@@ -688,38 +688,49 @@ explicit_GetObjectMemoryRequirements(
 
 VkResult
 explicit_QueueBindSparseBufferMemory(
-    VkQueue        queue,
-    VkBuffer       buffer,
-    VkDeviceSize   rangeOffset,
-    VkDeviceSize   rangeSize,
-    VkDeviceMemory mem,
-    VkDeviceSize   memOffset)
+    VkQueue                       queue,
+    VkBuffer                      buffer,
+    uint32_t                      numBindings,
+    const VkSparseMemoryBindInfo* pBindInfo)
 {
     loader_platform_thread_lock_mutex(&objLock);
     validateQueueFlags(queue, "QueueBindSparseBufferMemory");
     validate_object(queue, buffer);
     loader_platform_thread_unlock_mutex(&objLock);
 
-    VkResult result = get_dispatch_table(ObjectTracker_device_table_map, queue)->QueueBindSparseBufferMemory(queue, buffer, rangeOffset, rangeSize, mem, memOffset);
+    VkResult result = get_dispatch_table(ObjectTracker_device_table_map, queue)->QueueBindSparseBufferMemory(queue, buffer, numBindings, pBindInfo);
     return result;
 }
 
 VkResult
 explicit_QueueBindSparseImageMemory(
-    VkQueue                      queue,
-    VkImage                      image,
-    const VkImageMemoryBindInfo *pBindInfo,
-    VkDeviceMemory               mem,
-    VkDeviceSize                 memOffset)
+    VkQueue                            queue,
+    VkImage                            image,
+    uint32_t                           numBindings,
+    const VkSparseImageMemoryBindInfo* pBindInfo)
 {
     loader_platform_thread_lock_mutex(&objLock);
     validateQueueFlags(queue, "QueueBindSparseImageMemory");
     loader_platform_thread_unlock_mutex(&objLock);
 
-    VkResult result = get_dispatch_table(ObjectTracker_device_table_map, queue)->QueueBindSparseImageMemory(queue, image, pBindInfo, mem, memOffset);
+    VkResult result = get_dispatch_table(ObjectTracker_device_table_map, queue)->QueueBindSparseImageMemory(queue, image, numBindings, pBindInfo);
     return result;
 }
 
+VkResult
+explicit_QueueBindSparseImageOpaqueMemory(
+    VkQueue                            queue,
+    VkImage                            image,
+    uint32_t                           numBindings,
+    const VkSparseMemoryBindInfo* pBindInfo)
+{
+    loader_platform_thread_lock_mutex(&objLock);
+    validateQueueFlags(queue, "QueueBindSparseImageOpaqueMemory");
+    loader_platform_thread_unlock_mutex(&objLock);
+
+    VkResult result = get_dispatch_table(ObjectTracker_device_table_map, queue)->QueueBindSparseImageOpaqueMemory(queue, image, numBindings, pBindInfo);
+    return result;
+}
 
 VkResult
 explicit_GetFenceStatus(

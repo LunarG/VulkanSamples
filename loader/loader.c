@@ -98,6 +98,7 @@ const VkLayerInstanceDispatchTable instance_disp = {
     .GetPhysicalDeviceMemoryProperties = loader_GetPhysicalDeviceMemoryProperties,
     .GetPhysicalDeviceExtensionProperties = loader_GetPhysicalDeviceExtensionProperties,
     .GetPhysicalDeviceLayerProperties = loader_GetPhysicalDeviceLayerProperties,
+    .GetPhysicalDeviceSparseImageFormatProperties = loader_GetPhysicalDeviceSparseImageFormatProperties,
     .DbgCreateMsgCallback = loader_DbgCreateMsgCallback,
     .DbgDestroyMsgCallback = loader_DbgDestroyMsgCallback,
 };
@@ -1086,6 +1087,7 @@ static void loader_icd_init_entrys(struct loader_icd *icd,
     LOOKUP(GetPhysicalDeviceQueueCount);
     LOOKUP(GetPhysicalDeviceQueueProperties);
     LOOKUP(GetPhysicalDeviceExtensionProperties);
+    LOOKUP(GetPhysicalDeviceSparseImageFormatProperties);
     LOOKUP(DbgCreateMsgCallback);
     LOOKUP(DbgDestroyMsgCallback);
 #undef LOOKUP
@@ -2723,6 +2725,26 @@ VkResult loader_GetPhysicalDeviceLimits(
 
     if (icd->GetPhysicalDeviceLimits)
         res = icd->GetPhysicalDeviceLimits(physicalDevice, pLimits);
+
+    return res;
+}
+
+VkResult loader_GetPhysicalDeviceSparseImageFormatProperties(
+        VkPhysicalDevice                        physicalDevice,
+        VkFormat                                format,
+        VkImageType                             type,
+        uint32_t                                samples,
+        VkImageUsageFlags                       usage,
+        VkImageTiling                           tiling,
+        uint32_t*                               pNumProperties,
+        VkSparseImageFormatProperties*          pProperties)
+{
+    uint32_t gpu_index;
+    struct loader_icd *icd = loader_get_icd(physicalDevice, &gpu_index);
+    VkResult res = VK_ERROR_INITIALIZATION_FAILED;
+
+    if (icd->GetPhysicalDeviceSparseImageFormatProperties)
+        res = icd->GetPhysicalDeviceSparseImageFormatProperties(physicalDevice, format, type, samples, usage, tiling, pNumProperties, pProperties);
 
     return res;
 }

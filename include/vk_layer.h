@@ -43,7 +43,9 @@ typedef struct VkLayerDispatchTable_
     PFN_vkDestroyObject DestroyObject;
     PFN_vkGetObjectMemoryRequirements GetObjectMemoryRequirements;
     PFN_vkBindObjectMemory BindObjectMemory;
+    PFN_vkGetImageSparseMemoryRequirements GetImageSparseMemoryRequirements;
     PFN_vkQueueBindSparseBufferMemory QueueBindSparseBufferMemory;
+    PFN_vkQueueBindSparseImageOpaqueMemory QueueBindSparseImageOpaqueMemory;
     PFN_vkQueueBindSparseImageMemory QueueBindSparseImageMemory;
     PFN_vkCreateFence CreateFence;
     PFN_vkGetFenceStatus GetFenceStatus;
@@ -145,6 +147,7 @@ typedef struct VkLayerInstanceDispatchTable_
     PFN_vkGetPhysicalDeviceFeatures GetPhysicalDeviceFeatures;
     PFN_vkGetPhysicalDeviceFormatInfo GetPhysicalDeviceFormatInfo;
     PFN_vkGetPhysicalDeviceLimits GetPhysicalDeviceLimits;
+    PFN_vkGetPhysicalDeviceSparseImageFormatProperties GetPhysicalDeviceSparseImageFormatProperties;
     PFN_vkGetPhysicalDeviceProperties GetPhysicalDeviceProperties;
     PFN_vkGetPhysicalDevicePerformance GetPhysicalDevicePerformance;
     PFN_vkGetPhysicalDeviceQueueCount GetPhysicalDeviceQueueCount;

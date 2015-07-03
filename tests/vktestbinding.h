@@ -424,7 +424,7 @@ public:
     void init_no_mem(const Device &dev, const VkImageCreateInfo &info);
 
     // vkQueueBindSparseImageMemory()
-    void bind_memory(const Device &dev, const VkImageMemoryBindInfo &info,
+    void bind_memory(const Device &dev, const VkSparseImageMemoryBindInfo &info,
                      const GpuMemory &mem, VkDeviceSize mem_offset);
 
     // vkGetImageSubresourceLayout()

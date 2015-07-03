@@ -679,7 +679,12 @@ void Buffer::bind_memory(VkDeviceSize offset, VkDeviceSize size,
                          const GpuMemory &mem, VkDeviceSize mem_offset)
 {
     VkQueue queue = dev_->graphics_queues()[0]->obj();
-    EXPECT(vkQueueBindSparseBufferMemory(queue, obj(), offset, size, mem.obj(), mem_offset) == VK_SUCCESS);
+    VkSparseMemoryBindInfo bindInfo;
+    memset(&bindInfo, 0, sizeof(VkSparseMemoryBindInfo));
+    bindInfo.offset    = offset;
+    bindInfo.memOffset = mem_offset;
+    bindInfo.mem       = mem.obj();
+    EXPECT(vkQueueBindSparseBufferMemory(queue, obj(), 1, &bindInfo) == VK_SUCCESS);
 }
 
 void BufferView::init(const Device &dev, const VkBufferViewCreateInfo &info)
@@ -718,11 +723,11 @@ void Image::init_info(const Device &dev, const VkImageCreateInfo &info)
     }
 }
 
-void Image::bind_memory(const Device &dev, const VkImageMemoryBindInfo &info,
+void Image::bind_memory(const Device &dev, const VkSparseImageMemoryBindInfo &info,
                         const GpuMemory &mem, VkDeviceSize mem_offset)
 {
     VkQueue queue = dev.graphics_queues()[0]->obj();
-    EXPECT(vkQueueBindSparseImageMemory(queue, obj(), &info, mem.obj(), mem_offset) == VK_SUCCESS);
+    EXPECT(vkQueueBindSparseImageMemory(queue, obj(), 1, &info) == VK_SUCCESS);
 }
 
 VkSubresourceLayout Image::subresource_layout(const VkImageSubresource &subres) const
