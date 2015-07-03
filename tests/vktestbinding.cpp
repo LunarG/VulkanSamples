@@ -86,43 +86,43 @@ void set_error_callback(ErrorCallback callback)
     error_callback = callback;
 }
 
-VkPhysicalDeviceProperties PhysicalGpu::properties() const
+VkPhysicalDeviceProperties PhysicalDevice::properties() const
 {
     VkPhysicalDeviceProperties info;
 
-    EXPECT(vkGetPhysicalDeviceProperties(gpu_, &info) == VK_SUCCESS);
+    EXPECT(vkGetPhysicalDeviceProperties(handle(), &info) == VK_SUCCESS);
 
     return info;
 }
 
-VkPhysicalDevicePerformance PhysicalGpu::performance() const
+VkPhysicalDevicePerformance PhysicalDevice::performance() const
 {
     VkPhysicalDevicePerformance info;
 
-    EXPECT(vkGetPhysicalDevicePerformance(gpu_, &info) == VK_SUCCESS);
+    EXPECT(vkGetPhysicalDevicePerformance(handle(), &info) == VK_SUCCESS);
 
     return info;
 }
 
-std::vector<VkPhysicalDeviceQueueProperties> PhysicalGpu::queue_properties() const
+std::vector<VkPhysicalDeviceQueueProperties> PhysicalDevice::queue_properties() const
 {
     std::vector<VkPhysicalDeviceQueueProperties> info;
     uint32_t count;
 
-    if (EXPECT(vkGetPhysicalDeviceQueueCount(gpu_, &count) == VK_SUCCESS)) {
+    if (EXPECT(vkGetPhysicalDeviceQueueCount(handle(), &count) == VK_SUCCESS)) {
         info.resize(count);
-        if (!EXPECT(vkGetPhysicalDeviceQueueProperties(gpu_, count, &info[0]) == VK_SUCCESS))
+        if (!EXPECT(vkGetPhysicalDeviceQueueProperties(handle(), count, &info[0]) == VK_SUCCESS))
             info.clear();
     }
 
     return info;
 }
 
-VkPhysicalDeviceMemoryProperties PhysicalGpu::memory_properties() const
+VkPhysicalDeviceMemoryProperties PhysicalDevice::memory_properties() const
 {
     VkPhysicalDeviceMemoryProperties info;
 
-    EXPECT(vkGetPhysicalDeviceMemoryProperties(gpu_, &info) == VK_SUCCESS);
+    EXPECT(vkGetPhysicalDeviceMemoryProperties(handle(), &info) == VK_SUCCESS);
 
 
     return info;
@@ -188,7 +188,7 @@ std::vector<VkExtensionProperties> GetGlobalExtensions(const char *pLayerName)
 /*
  * Return list of PhysicalDevice extensions provided by the ICD / Loader
  */
-std::vector<VkExtensionProperties> PhysicalGpu::extensions() const
+std::vector<VkExtensionProperties> PhysicalDevice::extensions() const
 {
     return extensions(NULL);
 }
@@ -197,18 +197,18 @@ std::vector<VkExtensionProperties> PhysicalGpu::extensions() const
  * Return list of PhysicalDevice extensions provided by the specified layer
  * If pLayerName is NULL, will return extensions for ICD / loader.
  */
-std::vector<VkExtensionProperties> PhysicalGpu::extensions(const char *pLayerName) const
+std::vector<VkExtensionProperties> PhysicalDevice::extensions(const char *pLayerName) const
 {
     std::vector<VkExtensionProperties> exts;
     VkResult err;
 
     do {
         uint32_t extCount = 0;
-        err = vkGetPhysicalDeviceExtensionProperties(obj(), pLayerName, &extCount, NULL);
+        err = vkGetPhysicalDeviceExtensionProperties(handle(), pLayerName, &extCount, NULL);
 
         if (err == VK_SUCCESS) {
             exts.reserve(extCount);
-            err = vkGetPhysicalDeviceExtensionProperties(obj(), pLayerName, &extCount, &exts[0]);
+            err = vkGetPhysicalDeviceExtensionProperties(handle(), pLayerName, &extCount, &exts[0]);
         }
     } while (err == VK_INCOMPLETE);
 
@@ -217,7 +217,7 @@ std::vector<VkExtensionProperties> PhysicalGpu::extensions(const char *pLayerNam
     return exts;
 }
 
-VkResult PhysicalGpu::set_memory_type(const uint32_t type_bits, VkMemoryAllocInfo *info, const VkFlags properties) const
+VkResult PhysicalDevice::set_memory_type(const uint32_t type_bits, VkMemoryAllocInfo *info, const VkFlags properties) const
 {
      uint32_t type_mask = type_bits;
      // Search memtypes to find first index with those properties
@@ -238,18 +238,18 @@ VkResult PhysicalGpu::set_memory_type(const uint32_t type_bits, VkMemoryAllocInf
 /*
  * Return list of PhysicalDevice layers
  */
-std::vector<VkLayerProperties> PhysicalGpu::layers() const
+std::vector<VkLayerProperties> PhysicalDevice::layers() const
 {
     std::vector<VkLayerProperties> layer_props;
     VkResult err;
 
     do {
         uint32_t layer_count = 0;
-        err = vkGetPhysicalDeviceLayerProperties(obj(), &layer_count, NULL);
+        err = vkGetPhysicalDeviceLayerProperties(handle(), &layer_count, NULL);
 
         if (err == VK_SUCCESS) {
             layer_props.reserve(layer_count);
-            err = vkGetPhysicalDeviceLayerProperties(obj(), &layer_count, &layer_props[0]);
+            err = vkGetPhysicalDeviceLayerProperties(handle(), &layer_count, &layer_props[0]);
         }
     } while (err == VK_INCOMPLETE);
 
@@ -336,7 +336,7 @@ void Object::alloc_memory()
 
     for (int i = 0; i < mem_reqs.size(); i++) {
         info = GpuMemory::alloc_info(mem_reqs[i], next_info);
-        dev_->gpu().set_memory_type(mem_reqs[i].memoryTypeBits, &info, 0);
+        dev_->phy().set_memory_type(mem_reqs[i].memoryTypeBits, &info, 0);
         primary_mem_ = &internal_mems_[i];
         internal_mems_[i].init(*dev_, info);
         bind_memory(internal_mems_[i], 0);
@@ -355,7 +355,7 @@ void Object::alloc_memory(VkMemoryPropertyFlags &reqs)
 
     for (int i = 0; i < mem_reqs.size(); i++) {
         info = GpuMemory::alloc_info(mem_reqs[i], next_info);
-        dev_->gpu().set_memory_type(mem_reqs[i].memoryTypeBits, &info, reqs);
+        dev_->phy().set_memory_type(mem_reqs[i].memoryTypeBits, &info, reqs);
         primary_mem_ = &internal_mems_[i];
         internal_mems_[i].init(*dev_, info);
         bind_memory(internal_mems_[i], 0);
@@ -410,7 +410,7 @@ Device::~Device()
 void Device::init(std::vector<const char *> &layers, std::vector<const char *> &extensions)
 {
     // request all queues
-    const std::vector<VkPhysicalDeviceQueueProperties> queue_props = gpu_.queue_properties();
+    const std::vector<VkPhysicalDeviceQueueProperties> queue_props = phy_.queue_properties();
     std::vector<VkDeviceQueueCreateInfo> queue_info;
     queue_info.reserve(queue_props.size());
     for (int i = 0; i < queue_props.size(); i++) {
@@ -440,7 +440,7 @@ void Device::init(std::vector<const char *> &layers, std::vector<const char *> &
 void Device::init(const VkDeviceCreateInfo &info)
 {
     VkDevice obj;
-    if (EXPECT(vkCreateDevice(gpu_.obj(), &info, &obj) == VK_SUCCESS)) {
+    if (EXPECT(vkCreateDevice(phy_.handle(), &info, &obj) == VK_SUCCESS)) {
         base_type::init(obj, VK_OBJECT_TYPE_DEVICE);
     }
 
@@ -453,13 +453,13 @@ void Device::init_queues()
     VkResult err;
     uint32_t queue_node_count;
 
-    err = vkGetPhysicalDeviceQueueCount(gpu_.obj(), &queue_node_count);
+    err = vkGetPhysicalDeviceQueueCount(phy_.handle(), &queue_node_count);
     EXPECT(err == VK_SUCCESS);
     EXPECT(queue_node_count >= 1);
 
     VkPhysicalDeviceQueueProperties* queue_props = new VkPhysicalDeviceQueueProperties[queue_node_count];
 
-    err = vkGetPhysicalDeviceQueueProperties(gpu_.obj(), queue_node_count, queue_props);
+    err = vkGetPhysicalDeviceQueueProperties(phy_.handle(), queue_node_count, queue_props);
     EXPECT(err == VK_SUCCESS);
 
     for (uint32_t i = 0; i < queue_node_count; i++) {
@@ -512,7 +512,7 @@ void Device::init_formats()
 VkFormatProperties Device::format_properties(VkFormat format)
 {
     VkFormatProperties data;
-    if (!EXPECT(vkGetPhysicalDeviceFormatInfo(gpu().obj(), format, &data) == VK_SUCCESS))
+    if (!EXPECT(vkGetPhysicalDeviceFormatInfo(phy().handle(), format, &data) == VK_SUCCESS))
         memset(&data, 0, sizeof(data));
 
     return data;

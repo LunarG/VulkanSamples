@@ -538,7 +538,7 @@ TEST_F(VkLayerTest, BindInvalidMemory)
 
     mem_alloc.allocationSize = mem_reqs.size;
 
-    err = m_device->gpu().set_memory_type(mem_reqs.memoryTypeBits, &mem_alloc, 0);
+    err = m_device->phy().set_memory_type(mem_reqs.memoryTypeBits, &mem_alloc, 0);
     ASSERT_VK_SUCCESS(err);
 
     // allocate memory
@@ -609,7 +609,7 @@ TEST_F(VkLayerTest, FreeBoundMemory)
 
     mem_alloc.allocationSize = mem_reqs.size;
 
-    err = m_device->gpu().set_memory_type(mem_reqs.memoryTypeBits, &mem_alloc, 0);
+    err = m_device->phy().set_memory_type(mem_reqs.memoryTypeBits, &mem_alloc, 0);
     ASSERT_VK_SUCCESS(err);
 
     // allocate memory
@@ -680,7 +680,7 @@ TEST_F(VkLayerTest, RebindMemory)
     ASSERT_VK_SUCCESS(err);
 
     mem_alloc.allocationSize = mem_reqs.size;
-    err = m_device->gpu().set_memory_type(mem_reqs.memoryTypeBits, &mem_alloc, 0);
+    err = m_device->phy().set_memory_type(mem_reqs.memoryTypeBits, &mem_alloc, 0);
     ASSERT_VK_SUCCESS(err);
 
     // allocate 2 memory objects
@@ -752,7 +752,7 @@ TEST_F(VkLayerTest, BindMemoryToDestroyedObject)
     ASSERT_VK_SUCCESS(err);
 
     mem_alloc.allocationSize = mem_reqs.size;
-    err = m_device->gpu().set_memory_type(mem_reqs.memoryTypeBits, &mem_alloc, 0);
+    err = m_device->phy().set_memory_type(mem_reqs.memoryTypeBits, &mem_alloc, 0);
     ASSERT_VK_SUCCESS(err);
 
     // Allocate memory
@@ -2309,7 +2309,7 @@ TEST_F(VkLayerTest, ThreadCmdBufferCollision)
     mem_info.allocationSize = mem_req.size;
     mem_info.memoryTypeIndex = 0;
 
-    err = m_device->gpu().set_memory_type(mem_req.memoryTypeBits, &mem_info, 0);
+    err = m_device->phy().set_memory_type(mem_req.memoryTypeBits, &mem_info, 0);
     ASSERT_VK_SUCCESS(err);
 
     err = vkAllocMemory(device(), &mem_info, &event_mem);

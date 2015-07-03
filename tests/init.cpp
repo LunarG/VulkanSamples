@@ -122,9 +122,9 @@ protected:
         this->m_device = new vk_testing::Device(objs[m_device_id]);
         this->m_device->init();
 
-        props = m_device->gpu().properties();
+        props = m_device->phy().properties();
 
-        queue_props = this->m_device->gpu().queue_properties();
+        queue_props = this->m_device->phy().queue_properties();
         for (i = 0; i < queue_props.size(); i++) {
             if (queue_props[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) {
                 graphics_queue_node_index = i;
@@ -201,7 +201,7 @@ TEST_F(VkTest, Event) {
         mem_info.allocationSize = mem_req.size;
         mem_info.memoryTypeIndex = 0;
 
-        err = m_device->gpu().set_memory_type(mem_req.memoryTypeBits, &mem_info, 0);
+        err = m_device->phy().set_memory_type(mem_req.memoryTypeBits, &mem_info, 0);
         ASSERT_VK_SUCCESS(err);
 
         err = vkAllocMemory(device(), &mem_info, &event_mem);
@@ -294,7 +294,7 @@ TEST_F(VkTest, Query) {
         mem_info.allocationSize = mem_req.size * MAX_QUERY_SLOTS;
         mem_info.memoryTypeIndex = 0;
 
-        err = m_device->gpu().set_memory_type(mem_req.memoryTypeBits, &mem_info, 0);
+        err = m_device->phy().set_memory_type(mem_req.memoryTypeBits, &mem_info, 0);
         ASSERT_VK_SUCCESS(err);
 
         err = vkAllocMemory(device(), &mem_info, &query_mem);
@@ -340,7 +340,7 @@ void getQueue(vk_testing::Device *device, uint32_t queue_node_index, const char 
     VkResult err;
     VkQueue queue;
 
-    const VkPhysicalDeviceQueueProperties props = device->gpu().queue_properties()[queue_node_index];
+    const VkPhysicalDeviceQueueProperties props = device->phy().queue_properties()[queue_node_index];
     for (que_idx = 0; que_idx < props.queueCount; que_idx++) {
         // TODO: Need to add support for separate MEMMGR and work queues, including synchronization
         err = vkGetDeviceQueue(device->obj(), queue_node_index, que_idx, &queue);
@@ -490,7 +490,7 @@ void VkTest::CreateImageTest()
         mem_info.allocationSize = mem_req.size;
         mem_info.memoryTypeIndex = 0;
 
-        err = m_device->gpu().set_memory_type(mem_req.memoryTypeBits, &mem_info, 0);
+        err = m_device->phy().set_memory_type(mem_req.memoryTypeBits, &mem_info, 0);
         ASSERT_VK_SUCCESS(err);
 
         err = vkAllocMemory(device(), &mem_info, &image_mem);

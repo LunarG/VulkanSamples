@@ -308,7 +308,7 @@ void VkRenderFramework::InitRenderTarget(uint32_t targets, VkAttachmentBindInfo 
         VkFormatProperties props;
         VkResult err;
 
-        err = vkGetPhysicalDeviceFormatInfo(m_device->gpu().obj(), m_render_target_fmt, &props);
+        err = vkGetPhysicalDeviceFormatInfo(m_device->phy().handle(), m_render_target_fmt, &props);
         ASSERT_VK_SUCCESS(err);
 
         if (props.linearTilingFeatures & VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT) {
@@ -402,8 +402,8 @@ VkDeviceObj::VkDeviceObj(uint32_t id, VkPhysicalDevice obj) :
 {
     init();
 
-    props = gpu().properties();
-    queue_props = &gpu().queue_properties()[0];
+    props = phy().properties();
+    queue_props = &phy().queue_properties()[0];
 }
 
 VkDeviceObj::VkDeviceObj(uint32_t id,
@@ -413,8 +413,8 @@ VkDeviceObj::VkDeviceObj(uint32_t id,
 {
     init(layer_names, extension_names);
 
-    props = gpu().properties();
-    queue_props = &gpu().queue_properties()[0];
+    props = phy().properties();
+    queue_props = &phy().queue_properties()[0];
 }
 
 void VkDeviceObj::get_device_queue()
@@ -685,7 +685,7 @@ void VkImageObj::init(uint32_t w, uint32_t h,
         mipCount++;
     }
 
-    err = vkGetPhysicalDeviceFormatInfo(m_device->gpu().obj(), fmt, &image_fmt);
+    err = vkGetPhysicalDeviceFormatInfo(m_device->phy().handle(), fmt, &image_fmt);
     ASSERT_VK_SUCCESS(err);
 
     if (requested_tiling == VK_IMAGE_TILING_LINEAR) {

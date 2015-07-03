@@ -99,7 +99,7 @@ void Environment::SetUp()
     ASSERT_EQ(VK_SUCCESS, err);
     ASSERT_GT(count, default_dev_);
 
-    vk_testing::PhysicalGpu phys_dev(gpus[0]);
+    vk_testing::PhysicalDevice phys_dev(gpus[0]);
     device_extensions = phys_dev.extensions();
 
     for (uint32_t i = 0; i < device_extension_names.size(); i++) {

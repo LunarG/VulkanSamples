@@ -225,7 +225,7 @@ void VkImageTest::CreateImage(uint32_t w, uint32_t h)
     mem_info.allocationSize = mem_req.size;
     mem_info.memoryTypeIndex = 0;
 
-    err = m_device->gpu().set_memory_type(mem_req.memoryTypeBits, &mem_info, 0);
+    err = m_device->phy().set_memory_type(mem_req.memoryTypeBits, &mem_info, 0);
     ASSERT_VK_SUCCESS(err);
 
     /* allocate memory */

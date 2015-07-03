@@ -33,7 +33,7 @@ namespace vk_testing {
 typedef void (*ErrorCallback)(const char *expr, const char *file, unsigned int line, const char *function);
 void set_error_callback(ErrorCallback callback);
 
-class PhysicalGpu;
+class PhysicalDevice;
 class BaseObject;
 class Object;
 class DynamicStateObject;
@@ -119,14 +119,12 @@ private:
 
 } // namespace internal
 
-class PhysicalGpu {
+class PhysicalDevice : public internal::Handle<VkPhysicalDevice> {
 public:
-    explicit PhysicalGpu(VkPhysicalDevice gpu) : gpu_(gpu)
+    explicit PhysicalDevice(VkPhysicalDevice phy) : Handle(phy)
     {
         memory_properties_ = memory_properties();
     }
-
-    const VkPhysicalDevice &obj() const { return gpu_; }
 
     VkPhysicalDeviceProperties properties() const;
     VkPhysicalDevicePerformance performance() const;
@@ -146,8 +144,8 @@ private:
     void add_extension_dependencies(uint32_t dependency_count,
                                     VkExtensionProperties *depencency_props,
                                     std::vector<VkExtensionProperties> &ext_list);
+
     VkPhysicalDeviceMemoryProperties memory_properties_;
-    VkPhysicalDevice gpu_;
 };
 
 class BaseObject {
@@ -258,7 +256,7 @@ protected:
 
 class Device : public DerivedObject<VkDevice, BaseObject, VK_OBJECT_TYPE_DEVICE> {
 public:
-    explicit Device(VkPhysicalDevice gpu) : gpu_(gpu) {}
+    explicit Device(VkPhysicalDevice phy) : phy_(phy) {}
     ~Device();
 
     VkDevice device() const { return obj(); }
@@ -268,7 +266,7 @@ public:
     void init(std::vector<const char*> &layers, std::vector<const char *> &extensions); // all queues, all extensions, etc
     void init() { std::vector<const char *> layers; std::vector<const char *> extensions; init(layers, extensions); };
 
-    const PhysicalGpu &gpu() const { return gpu_; }
+    const PhysicalDevice &phy() const { return phy_; }
 
     // vkGetDeviceProcAddr()
     void *get_proc(const char *name) const { return vkGetDeviceProcAddr(obj(), name); }
@@ -319,7 +317,7 @@ private:
     void init_queues();
     void init_formats();
 
-    PhysicalGpu gpu_;
+    PhysicalDevice phy_;
 
     std::vector<Queue *> queues_[QUEUE_COUNT];
     std::vector<Format> formats_;
