@@ -566,12 +566,12 @@ void Queue::wait()
 
 void Queue::signal_semaphore(Semaphore &sem)
 {
-    EXPECT(vkQueueSignalSemaphore(handle(), sem.obj()) == VK_SUCCESS);
+    EXPECT(vkQueueSignalSemaphore(handle(), sem.handle()) == VK_SUCCESS);
 }
 
 void Queue::wait_semaphore(Semaphore &sem)
 {
-    EXPECT(vkQueueWaitSemaphore(handle(), sem.obj()) == VK_SUCCESS);
+    EXPECT(vkQueueWaitSemaphore(handle(), sem.handle()) == VK_SUCCESS);
 }
 
 DeviceMemory::~DeviceMemory()
@@ -615,10 +615,11 @@ void Fence::init(const Device &dev, const VkFenceCreateInfo &info)
     NON_DISPATCHABLE_HANDLE_INIT(vkCreateFence, dev, &info);
 }
 
+NON_DISPATCHABLE_HANDLE_DTOR(Semaphore, vkDestroyObject, VK_OBJECT_TYPE_SEMAPHORE)
+
 void Semaphore::init(const Device &dev, const VkSemaphoreCreateInfo &info)
 {
-    DERIVED_OBJECT_TYPE_INIT(vkCreateSemaphore, dev, VK_OBJECT_TYPE_SEMAPHORE, &info);
-    alloc_memory();
+    NON_DISPATCHABLE_HANDLE_INIT(vkCreateSemaphore, dev, &info);
 }
 
 void Event::init(const Device &dev, const VkEventCreateInfo &info)

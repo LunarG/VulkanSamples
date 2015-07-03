@@ -371,8 +371,10 @@ public:
     static VkFenceCreateInfo create_info();
 };
 
-class Semaphore : public DerivedObject<VkSemaphore, Object, VK_OBJECT_TYPE_SEMAPHORE> {
+class Semaphore : public internal::NonDispHandle<VkSemaphore> {
 public:
+    ~Semaphore();
+
     // vkCreateSemaphore()
     void init(const Device &dev, const VkSemaphoreCreateInfo &info);
 
