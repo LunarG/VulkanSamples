@@ -588,8 +588,10 @@ public:
     void init(const Device &dev, VkPipelineLayoutCreateInfo &info, const std::vector<const DescriptorSetLayout *> &layouts);
 };
 
-class Sampler : public DerivedObject<VkSampler, Object, VK_OBJECT_TYPE_SAMPLER> {
+class Sampler : public internal::NonDispHandle<VkSampler> {
 public:
+    ~Sampler();
+
     // vkCreateSampler()
     void init(const Device &dev, const VkSamplerCreateInfo &info);
 };

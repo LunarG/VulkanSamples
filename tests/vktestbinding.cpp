@@ -860,10 +860,11 @@ void PipelineLayout::init(const Device &dev, VkPipelineLayoutCreateInfo &info, c
     NON_DISPATCHABLE_HANDLE_INIT(vkCreatePipelineLayout, dev, &info);
 }
 
+NON_DISPATCHABLE_HANDLE_DTOR(Sampler, vkDestroyObject, VK_OBJECT_TYPE_SAMPLER)
+
 void Sampler::init(const Device &dev, const VkSamplerCreateInfo &info)
 {
-    DERIVED_OBJECT_TYPE_INIT(vkCreateSampler, dev, VK_OBJECT_TYPE_SAMPLER, &info);
-    alloc_memory();
+    NON_DISPATCHABLE_HANDLE_INIT(vkCreateSampler, dev, &info);
 }
 
 void DescriptorSetLayout::init(const Device &dev, const VkDescriptorSetLayoutCreateInfo &info)

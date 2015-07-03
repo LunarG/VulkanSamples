@@ -466,7 +466,7 @@ int VkDescriptorSetObj::AppendSamplerTexture( VkSamplerObj* sampler, VkTextureOb
     m_type_counts.push_back(tc);
 
     VkDescriptorInfo tmp = texture->m_descriptorInfo;
-    tmp.sampler = sampler->obj();
+    tmp.sampler = sampler->handle();
     m_imageSamplerDescriptors.push_back(tmp);
 
     m_writes.push_back(vk_testing::Device::write_descriptor_set(vk_testing::DescriptorSet(),
