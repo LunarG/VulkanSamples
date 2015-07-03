@@ -36,7 +36,6 @@ void set_error_callback(ErrorCallback callback);
 class PhysicalDevice;
 class BaseObject;
 class Object;
-class DynamicStateObject;
 class Device;
 class Queue;
 class DeviceMemory;
@@ -58,11 +57,10 @@ class DescriptorSetLayout;
 class PipelineLayout;
 class DescriptorSetPool;
 class DescriptorSet;
-class DynamicVpStateObject;
-class DynamicRsStateObject;
-class DynamicMsaaStateObject;
-class DynamicCbStateObject;
-class DynamicDsStateObject;
+class DynamicViewportState;
+class DynamicRasterState;
+class DynamicColorBlendState;
+class DynamicDepthStencilState;
 class CmdBuffer;
 
 std::vector<VkLayerProperties> GetGlobalLayers();
@@ -229,14 +227,6 @@ private:
     DeviceMemory *internal_mems_;
     DeviceMemory *primary_mem_;
     bool bound;
-};
-
-class DynamicStateObject : public Object {
-public:
-    const VkDynamicStateObject &obj() const { return reinterpret_cast<const VkDynamicStateObject &>(Object::obj()); }
-
-protected:
-    explicit DynamicStateObject() : Object() {}
 };
 
 template<typename T, class C, VkObjectType V>
@@ -629,26 +619,34 @@ public:
     explicit DescriptorSet(const Device &dev, VkDescriptorSet set) : NonDispHandle(dev.handle(), set) {}
 };
 
-class DynamicVpStateObject : public DerivedObject<VkDynamicVpState, DynamicStateObject, VK_OBJECT_TYPE_DYNAMIC_VP_STATE> {
+class DynamicViewportState : public internal::NonDispHandle<VkDynamicVpState> {
 public:
+    ~DynamicViewportState();
+
     // vkCreateDynamicViewportState()
     void init(const Device &dev, const VkDynamicVpStateCreateInfo &info);
 };
 
-class DynamicRsStateObject : public DerivedObject<VkDynamicRsState, DynamicStateObject, VK_OBJECT_TYPE_DYNAMIC_RS_STATE> {
+class DynamicRasterState : public internal::NonDispHandle<VkDynamicRsState> {
 public:
+    ~DynamicRasterState();
+
     // vkCreateDynamicRasterState()
     void init(const Device &dev, const VkDynamicRsStateCreateInfo &info);
 };
 
-class DynamicCbStateObject : public DerivedObject<VkDynamicCbState, DynamicStateObject, VK_OBJECT_TYPE_DYNAMIC_CB_STATE> {
+class DynamicColorBlendState : public internal::NonDispHandle<VkDynamicCbState> {
 public:
+    ~DynamicColorBlendState();
+
     // vkCreateDynamicColorBlendState()
     void init(const Device &dev, const VkDynamicCbStateCreateInfo &info);
 };
 
-class DynamicDsStateObject : public DerivedObject<VkDynamicDsState, DynamicStateObject, VK_OBJECT_TYPE_DYNAMIC_DS_STATE> {
+class DynamicDepthStencilState : public internal::NonDispHandle<VkDynamicDsState> {
 public:
+    ~DynamicDepthStencilState();
+
     // vkCreateDynamicDepthStencilState()
     void init(const Device &dev, const VkDynamicDsStateCreateInfo &info);
 };

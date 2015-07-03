@@ -923,28 +923,32 @@ DescriptorSet *DescriptorPool::alloc_sets(const Device &dev, VkDescriptorSetUsag
 
 NON_DISPATCHABLE_HANDLE_DTOR(DescriptorSet, vkDestroyObject, VK_OBJECT_TYPE_DESCRIPTOR_SET)
 
-void DynamicVpStateObject::init(const Device &dev, const VkDynamicVpStateCreateInfo &info)
+NON_DISPATCHABLE_HANDLE_DTOR(DynamicViewportState, vkDestroyObject, VK_OBJECT_TYPE_DYNAMIC_VP_STATE)
+
+void DynamicViewportState::init(const Device &dev, const VkDynamicVpStateCreateInfo &info)
 {
-    DERIVED_OBJECT_TYPE_INIT(vkCreateDynamicViewportState, dev, VK_OBJECT_TYPE_DYNAMIC_VP_STATE, &info);
-    alloc_memory();
+    NON_DISPATCHABLE_HANDLE_INIT(vkCreateDynamicViewportState, dev, &info);
 }
 
-void DynamicRsStateObject::init(const Device &dev, const VkDynamicRsStateCreateInfo &info)
+NON_DISPATCHABLE_HANDLE_DTOR(DynamicRasterState, vkDestroyObject, VK_OBJECT_TYPE_DYNAMIC_RS_STATE)
+
+void DynamicRasterState::init(const Device &dev, const VkDynamicRsStateCreateInfo &info)
 {
-    DERIVED_OBJECT_TYPE_INIT(vkCreateDynamicRasterState, dev, VK_OBJECT_TYPE_DYNAMIC_RS_STATE, &info);
-    alloc_memory();
+    NON_DISPATCHABLE_HANDLE_INIT(vkCreateDynamicRasterState, dev, &info);
 }
 
-void DynamicCbStateObject::init(const Device &dev, const VkDynamicCbStateCreateInfo &info)
+NON_DISPATCHABLE_HANDLE_DTOR(DynamicColorBlendState, vkDestroyObject, VK_OBJECT_TYPE_DYNAMIC_CB_STATE)
+
+void DynamicColorBlendState::init(const Device &dev, const VkDynamicCbStateCreateInfo &info)
 {
-    DERIVED_OBJECT_TYPE_INIT(vkCreateDynamicColorBlendState, dev, VK_OBJECT_TYPE_DYNAMIC_CB_STATE, &info);
-    alloc_memory();
+    NON_DISPATCHABLE_HANDLE_INIT(vkCreateDynamicColorBlendState, dev, &info);
 }
 
-void DynamicDsStateObject::init(const Device &dev, const VkDynamicDsStateCreateInfo &info)
+NON_DISPATCHABLE_HANDLE_DTOR(DynamicDepthStencilState, vkDestroyObject, VK_OBJECT_TYPE_DYNAMIC_DS_STATE)
+
+void DynamicDepthStencilState::init(const Device &dev, const VkDynamicDsStateCreateInfo &info)
 {
-    DERIVED_OBJECT_TYPE_INIT(vkCreateDynamicDepthStencilState, dev, VK_OBJECT_TYPE_DYNAMIC_DS_STATE, &info);
-    alloc_memory();
+    NON_DISPATCHABLE_HANDLE_INIT(vkCreateDynamicDepthStencilState, dev, &info);
 }
 
 void CmdBuffer::init(const Device &dev, const VkCmdBufferCreateInfo &info)
