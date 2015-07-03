@@ -24,6 +24,7 @@
 #define VKTESTBINDING_H
 
 #include <vector>
+#include <assert.h>
 
 #include "vulkan.h"
 
@@ -67,6 +68,56 @@ class CmdBuffer;
 std::vector<VkLayerProperties> GetGlobalLayers();
 std::vector<VkExtensionProperties> GetGlobalExtensions();
 std::vector<VkExtensionProperties> GetGlobalExtensions(const char *pLayerName);
+
+namespace internal {
+
+template<typename T>
+class Handle {
+public:
+    const T &handle() const { return handle_; }
+    bool initialized() const { return (handle_ != VK_NULL_HANDLE); }
+
+protected:
+    typedef T handle_type;
+
+    explicit Handle() : handle_(VK_NULL_HANDLE) {}
+    explicit Handle(T handle) : handle_(handle) {}
+
+    void init(T handle)
+    {
+        assert(!initialized());
+        handle_ = handle;
+    }
+
+private:
+    // handles are non-copyable
+    Handle(const Handle &);
+    Handle &operator=(const Handle &);
+
+    T handle_;
+};
+
+
+template<typename T>
+class NonDispHandle : public Handle<T> {
+protected:
+    explicit NonDispHandle() : Handle<T>(), dev_handle_(VK_NULL_HANDLE) {}
+    explicit NonDispHandle(VkDevice dev, T handle) : Handle<T>(handle), dev_handle_(dev) {}
+
+    const VkDevice &device() const { return dev_handle_; }
+
+    void init(VkDevice dev, T handle)
+    {
+        assert(!Handle<T>::initialized() && dev_handle_ == VK_NULL_HANDLE);
+        Handle<T>::init(handle);
+        dev_handle_ = dev;
+    }
+
+private:
+    VkDevice dev_handle_;
+};
+
+} // namespace internal
 
 class PhysicalGpu {
 public:
