@@ -825,7 +825,7 @@ VkTextureObj::VkTextureObj(VkDeviceObj *device, uint32_t *colors)
     /* create image view */
     view.image = obj();
     m_textureView.init(*m_device, view);
-    m_descriptorInfo.imageView = m_textureView.obj();
+    m_descriptorInfo.imageView = m_textureView.handle();
 
     data = stagingImage.map();
 
@@ -906,7 +906,7 @@ VkConstantBufferObj::VkConstantBufferObj(VkDeviceObj *device, int constantCount,
     view_info.range  = allocationSize;
     m_bufferView.init(*m_device, view_info);
 
-    this->m_descriptorInfo.bufferView = m_bufferView.obj();
+    this->m_descriptorInfo.bufferView = m_bufferView.handle();
 }
 
 void VkConstantBufferObj::Bind(VkCmdBuffer cmdBuffer, VkDeviceSize offset, uint32_t binding)
@@ -1022,7 +1022,7 @@ void VkIndexBufferObj::CreateAndInitBuffer(int numIndexes, VkIndexType indexType
     view_info.range  = allocationSize;
     m_bufferView.init(*m_device, view_info);
 
-    this->m_descriptorInfo.bufferView = m_bufferView.obj();
+    this->m_descriptorInfo.bufferView = m_bufferView.handle();
 }
 
 void VkIndexBufferObj::Bind(VkCmdBuffer cmdBuffer, VkDeviceSize offset)
@@ -1539,6 +1539,6 @@ void VkDepthStencilObj::Init(VkDeviceObj *device, int32_t width, int32_t height,
     view_info.image = obj();
     m_attachmentView.init(*m_device, view_info);
 
-    m_attachmentBindInfo.view = m_attachmentView.obj();
+    m_attachmentBindInfo.view = m_attachmentView.handle();
     m_attachmentBindInfo.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 }

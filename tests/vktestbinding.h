@@ -448,8 +448,10 @@ private:
     VkBufferCreateInfo create_info_;
 };
 
-class BufferView : public DerivedObject<VkBufferView, Object, VK_OBJECT_TYPE_BUFFER_VIEW> {
+class BufferView : public internal::NonDispHandle<VkBufferView> {
 public:
+    ~BufferView();
+
     // vkCreateBufferView()
     void init(const Device &dev, const VkBufferViewCreateInfo &info);
 };
@@ -517,14 +519,19 @@ private:
     VkFlags format_features_;
 };
 
-class ImageView : public DerivedObject<VkImageView, Object, VK_OBJECT_TYPE_IMAGE_VIEW> {
+class ImageView : public internal::NonDispHandle<VkImageView> {
 public:
+    ~ImageView();
+
     // vkCreateImageView()
     void init(const Device &dev, const VkImageViewCreateInfo &info);
 };
 
-class AttachmentView : public DerivedObject<VkAttachmentView, Object, VK_OBJECT_TYPE_ATTACHMENT_VIEW> {
+//class AttachmentView : public DerivedObject<VkAttachmentView, Object, VK_OBJECT_TYPE_ATTACHMENT_VIEW> {
+class AttachmentView : public internal::NonDispHandle<VkAttachmentView> {
 public:
+    ~AttachmentView();
+
     // vkCreateAttachmentView()
     void init(const Device &dev, const VkAttachmentViewCreateInfo &info);
 };

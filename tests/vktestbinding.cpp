@@ -690,10 +690,11 @@ void Buffer::bind_memory(VkDeviceSize offset, VkDeviceSize size,
     EXPECT(vkQueueBindSparseBufferMemory(queue, obj(), 1, &bindInfo) == VK_SUCCESS);
 }
 
+NON_DISPATCHABLE_HANDLE_DTOR(BufferView, vkDestroyObject, VK_OBJECT_TYPE_BUFFER_VIEW)
+
 void BufferView::init(const Device &dev, const VkBufferViewCreateInfo &info)
 {
-    DERIVED_OBJECT_TYPE_INIT(vkCreateBufferView, dev, VK_OBJECT_TYPE_BUFFER_VIEW, &info);
-    alloc_memory();
+    NON_DISPATCHABLE_HANDLE_INIT(vkCreateBufferView, dev, &info);
 }
 
 void Image::init(const Device &dev, const VkImageCreateInfo &info)
@@ -751,16 +752,18 @@ bool Image::transparent() const
                                     VK_IMAGE_USAGE_DEPTH_STENCIL_BIT)));
 }
 
+NON_DISPATCHABLE_HANDLE_DTOR(ImageView, vkDestroyObject, VK_OBJECT_TYPE_IMAGE_VIEW)
+
 void ImageView::init(const Device &dev, const VkImageViewCreateInfo &info)
 {
-    DERIVED_OBJECT_TYPE_INIT(vkCreateImageView, dev, VK_OBJECT_TYPE_IMAGE_VIEW, &info);
-    alloc_memory();
+    NON_DISPATCHABLE_HANDLE_INIT(vkCreateImageView, dev, &info);
 }
+
+NON_DISPATCHABLE_HANDLE_DTOR(AttachmentView, vkDestroyObject, VK_OBJECT_TYPE_ATTACHMENT_VIEW)
 
 void AttachmentView::init(const Device &dev, const VkAttachmentViewCreateInfo &info)
 {
-    DERIVED_OBJECT_TYPE_INIT(vkCreateAttachmentView, dev, VK_OBJECT_TYPE_ATTACHMENT_VIEW, &info);
-    alloc_memory();
+    NON_DISPATCHABLE_HANDLE_INIT(vkCreateAttachmentView, dev, &info);
 }
 
 void ShaderModule::init(const Device &dev, const VkShaderModuleCreateInfo &info)

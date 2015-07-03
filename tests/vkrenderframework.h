@@ -305,7 +305,7 @@ public:
             };
             m_targetView.init(*m_device, createView);
         }
-        return m_targetView.obj();
+        return m_targetView.handle();
     }
 
     void SetLayout(VkCommandBufferObj *cmd_buf, VkImageAspect aspect, VkImageLayout image_layout);
