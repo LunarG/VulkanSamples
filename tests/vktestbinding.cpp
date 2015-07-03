@@ -766,42 +766,38 @@ void AttachmentView::init(const Device &dev, const VkAttachmentViewCreateInfo &i
     NON_DISPATCHABLE_HANDLE_INIT(vkCreateAttachmentView, dev, &info);
 }
 
+NON_DISPATCHABLE_HANDLE_DTOR(ShaderModule, vkDestroyObject, VK_OBJECT_TYPE_SHADER_MODULE)
+
 void ShaderModule::init(const Device &dev, const VkShaderModuleCreateInfo &info)
 {
-    DERIVED_OBJECT_TYPE_INIT(vkCreateShaderModule, dev, VK_OBJECT_TYPE_SHADER_MODULE, &info);
+    NON_DISPATCHABLE_HANDLE_INIT(vkCreateShaderModule, dev, &info);
 }
 
 VkResult ShaderModule::init_try(const Device &dev, const VkShaderModuleCreateInfo &info)
 {
-    /*
-     * Note: Cannot use DERIVED_OBJECT_TYPE_INIT as we need the
-     * return code.
-     */
-    VkShaderModule sh;
-    dev_ = &dev;
-    VkResult err = vkCreateShaderModule(dev.handle(), &info, &sh);
+    VkShaderModule mod;
+
+    VkResult err = vkCreateShaderModule(dev.handle(), &info, &mod);
     if (err == VK_SUCCESS)
-        Object::init(sh, VK_OBJECT_TYPE_SHADER_MODULE);
+        NonDispHandle::init(dev.handle(), mod);
 
     return err;
 }
 
+NON_DISPATCHABLE_HANDLE_DTOR(Shader, vkDestroyObject, VK_OBJECT_TYPE_SHADER)
+
 void Shader::init(const Device &dev, const VkShaderCreateInfo &info)
 {
-    DERIVED_OBJECT_TYPE_INIT(vkCreateShader, dev, VK_OBJECT_TYPE_SHADER, &info);
+    NON_DISPATCHABLE_HANDLE_INIT(vkCreateShader, dev, &info);
 }
 
 VkResult Shader::init_try(const Device &dev, const VkShaderCreateInfo &info)
 {
-    /*
-     * Note: Cannot use DERIVED_OBJECT_TYPE_INIT as we need the
-     * return code.
-     */
     VkShader sh;
-    dev_ = &dev;
+
     VkResult err = vkCreateShader(dev.handle(), &info, &sh);
     if (err == VK_SUCCESS)
-        Object::init(sh, VK_OBJECT_TYPE_SHADER);
+        NonDispHandle::init(dev.handle(), sh);
 
     return err;
 }

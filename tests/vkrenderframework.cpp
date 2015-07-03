@@ -1040,7 +1040,7 @@ VkPipelineShaderStageCreateInfo* VkShaderObj::GetStageCreateInfo()
     VkPipelineShaderStageCreateInfo *stageInfo = (VkPipelineShaderStageCreateInfo*) calloc( 1,sizeof(VkPipelineShaderStageCreateInfo) );
     stageInfo->sType                = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
     stageInfo->stage                = m_stage;
-    stageInfo->shader               = obj();
+    stageInfo->shader               = handle();
     stageInfo->linkConstBufferCount = 0;
     stageInfo->pLinkConstBufferInfo = VK_NULL_HANDLE;
 
@@ -1092,7 +1092,7 @@ VkShaderObj::VkShaderObj(VkDeviceObj *device, const char * shader_code, VkShader
 
     createInfo.sType = VK_STRUCTURE_TYPE_SHADER_CREATE_INFO;
     createInfo.pNext = NULL;
-    createInfo.module = module.obj();
+    createInfo.module = module.handle();
     createInfo.pName = "main";
     createInfo.flags = 0;
 

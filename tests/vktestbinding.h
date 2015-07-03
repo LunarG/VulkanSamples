@@ -536,8 +536,10 @@ public:
     void init(const Device &dev, const VkAttachmentViewCreateInfo &info);
 };
 
-class ShaderModule : public DerivedObject<VkShaderModule, Object, VK_OBJECT_TYPE_SHADER_MODULE> {
+class ShaderModule : public internal::NonDispHandle<VkShaderModule> {
 public:
+    ~ShaderModule();
+
     // vkCreateShaderModule()
     void init(const Device &dev, const VkShaderModuleCreateInfo &info);
     VkResult init_try(const Device &dev, const VkShaderModuleCreateInfo &info);
@@ -545,8 +547,10 @@ public:
     static VkShaderModuleCreateInfo create_info(size_t code_size, const void *code, VkFlags flags);
 };
 
-class Shader : public DerivedObject<VkShader, Object, VK_OBJECT_TYPE_SHADER> {
+class Shader : public internal::NonDispHandle<VkShader> {
 public:
+    ~Shader();
+
     // vkCreateShader()
     void init(const Device &dev, const VkShaderCreateInfo &info);
     VkResult init_try(const Device &dev, const VkShaderCreateInfo &info);
