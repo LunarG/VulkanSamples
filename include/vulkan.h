@@ -101,6 +101,7 @@ VK_DEFINE_NONDISP_SUBCLASS_HANDLE(VkRenderPass, VkNonDispatchable)
 
 #define VK_MAX_PHYSICAL_DEVICE_NAME 256
 #define VK_MAX_EXTENSION_NAME       256
+#define VK_MAX_DESCRIPTION          256
 #define VK_MAX_MEMORY_TYPES         32
 #define VK_MAX_MEMORY_HEAPS         16
 #define VK_LOD_CLAMP_NONE           MAX_FLOAT
