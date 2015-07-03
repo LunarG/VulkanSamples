@@ -972,7 +972,7 @@ void VkConstantBufferObj::BufferMemoryBarrier(
     // submit the command buffer to the universal queue
     VkCmdBuffer bufferArray[1];
     bufferArray[0] = m_commandBuffer->GetBufferHandle();
-    err = vkQueueSubmit( m_device->m_queue, 1, bufferArray, m_fence.obj() );
+    err = vkQueueSubmit( m_device->m_queue, 1, bufferArray, m_fence.handle() );
     ASSERT_VK_SUCCESS(err);
 }
 

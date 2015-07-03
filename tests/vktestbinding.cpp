@@ -34,6 +34,13 @@ namespace {
             NonDispHandle::init(dev.handle(), handle);                              \
     } while (0)
 
+#define NON_DISPATCHABLE_HANDLE_DTOR(cls, destroy_func, ...)                        \
+    cls::~cls()                                                                     \
+    {                                                                               \
+        if (initialized())                                                          \
+            EXPECT(destroy_func(device(), __VA_ARGS__, handle()) == VK_SUCCESS);    \
+    }
+
 #define DERIVED_OBJECT_TYPE_INIT(create_func, dev, vk_object_type, ...)         \
     do {                                                                        \
         obj_type obj;                                                           \
@@ -58,6 +65,16 @@ bool expect_failure(const char *expr, const char *file, unsigned int line, const
     }
 
     return false;
+}
+
+template<class T, class S>
+std::vector<T> make_handles(const std::vector<S> &v)
+{
+    std::vector<T> handles;
+    handles.reserve(v.size());
+    for (typename std::vector<S>::const_iterator it = v.begin(); it != v.end(); it++)
+        handles.push_back((*it)->handle());
+    return handles;
 }
 
 template<class T, class S>
@@ -513,8 +530,8 @@ void Device::wait()
 
 VkResult Device::wait(const std::vector<const Fence *> &fences, bool wait_all, uint64_t timeout)
 {
-    const std::vector<VkFence> fence_objs = make_objects<VkFence>(fences);
-    VkResult err = vkWaitForFences(handle(), fence_objs.size(), &fence_objs[0], wait_all, timeout);
+    const std::vector<VkFence> fence_handles = make_handles<VkFence>(fences);
+    VkResult err = vkWaitForFences(handle(), fence_handles.size(), &fence_handles[0], wait_all, timeout);
     EXPECT(err == VK_SUCCESS || err == VK_TIMEOUT);
 
     return err;
@@ -528,7 +545,7 @@ VkResult Device::update_descriptor_sets(const std::vector<VkWriteDescriptorSet> 
 void Queue::submit(const std::vector<const CmdBuffer *> &cmds, Fence &fence)
 {
     const std::vector<VkCmdBuffer> cmd_objs = make_objects<VkCmdBuffer>(cmds);
-    EXPECT(vkQueueSubmit(handle(), cmd_objs.size(), &cmd_objs[0], fence.obj()) == VK_SUCCESS);
+    EXPECT(vkQueueSubmit(handle(), cmd_objs.size(), &cmd_objs[0], fence.handle()) == VK_SUCCESS);
 }
 
 void Queue::submit(const CmdBuffer &cmd, Fence &fence)
@@ -591,10 +608,11 @@ void DeviceMemory::unmap() const
     EXPECT(vkUnmapMemory(device(), handle()) == VK_SUCCESS);
 }
 
+NON_DISPATCHABLE_HANDLE_DTOR(Fence, vkDestroyObject, VK_OBJECT_TYPE_FENCE)
+
 void Fence::init(const Device &dev, const VkFenceCreateInfo &info)
 {
-    DERIVED_OBJECT_TYPE_INIT(vkCreateFence, dev, VK_OBJECT_TYPE_FENCE, &info);
-    alloc_memory();
+    NON_DISPATCHABLE_HANDLE_INIT(vkCreateFence, dev, &info);
 }
 
 void Semaphore::init(const Device &dev, const VkSemaphoreCreateInfo &info)

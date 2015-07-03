@@ -366,7 +366,7 @@ TEST_F(VkLayerTest, CallResetCmdBufferBeforeCompletion)
 
     // Bypass framework since it does the waits automatically
     VkResult err = VK_SUCCESS;
-    err = vkQueueSubmit( m_device->m_queue, 1, &cmdBuffer.obj(), testFence.obj());
+    err = vkQueueSubmit( m_device->m_queue, 1, &cmdBuffer.obj(), testFence.handle());
     ASSERT_VK_SUCCESS( err );
 
     m_errorMonitor->ClearState();
@@ -406,7 +406,7 @@ TEST_F(VkLayerTest, CallBeginCmdBufferBeforeCompletion)
 
     // Bypass framework since it does the waits automatically
     VkResult err = VK_SUCCESS;
-    err = vkQueueSubmit( m_device->m_queue, 1, &cmdBuffer.obj(), testFence.obj());
+    err = vkQueueSubmit( m_device->m_queue, 1, &cmdBuffer.obj(), testFence.handle());
     ASSERT_VK_SUCCESS( err );
 
     m_errorMonitor->ClearState();
@@ -798,7 +798,7 @@ TEST_F(VkLayerTest, SubmitSignaledFence)
 
     testFence.init(*m_device, fenceInfo);
     m_errorMonitor->ClearState();
-    cmdBuffer.QueueCommandBuffer(testFence.obj());
+    cmdBuffer.QueueCommandBuffer(testFence.handle());
     msgFlags = m_errorMonitor->GetState(&msgString);
     ASSERT_TRUE(msgFlags & VK_DBG_REPORT_ERROR_BIT) << "Did not receive an err from using a fence in SIGNALED state in call to vkQueueSubmit";
     if (!strstr(msgString.c_str(),"submitted in SIGNALED state.  Fences must be reset before being submitted")) {
@@ -819,7 +819,7 @@ TEST_F(VkLayerTest, ResetUnsignaledFence)
     ASSERT_NO_FATAL_FAILURE(InitState());
     testFence.init(*m_device, fenceInfo);
     m_errorMonitor->ClearState();
-    VkFence fences[1] = {testFence.obj()};
+    VkFence fences[1] = {testFence.handle()};
     vkResetFences(m_device->device(), 1, fences);
     msgFlags = m_errorMonitor->GetState(&msgString);
     ASSERT_TRUE(msgFlags & VK_DBG_REPORT_ERROR_BIT) << "Did not receive an error from submitting fence with UNSIGNALED state to vkResetFences";

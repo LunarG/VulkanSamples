@@ -357,13 +357,15 @@ public:
     static VkMemoryAllocInfo alloc_info(VkDeviceSize size, uint32_t memory_type_index);
 };
 
-class Fence : public DerivedObject<VkFence, Object, VK_OBJECT_TYPE_FENCE> {
+class Fence : public internal::NonDispHandle<VkFence> {
 public:
+    ~Fence();
+
     // vkCreateFence()
     void init(const Device &dev, const VkFenceCreateInfo &info);
 
     // vkGetFenceStatus()
-    VkResult status() const { return vkGetFenceStatus(dev_->handle(), obj()); }
+    VkResult status() const { return vkGetFenceStatus(device(), handle()); }
 
     static VkFenceCreateInfo create_info(VkFenceCreateFlags flags);
     static VkFenceCreateInfo create_info();
