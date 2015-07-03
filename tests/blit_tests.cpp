@@ -548,8 +548,8 @@ TEST_F(VkCmdFillBufferTest, Basic)
     buf.init_as_dst(dev_, 20, reqs);
 
     cmd_.begin();
-    vkCmdFillBuffer(cmd_.obj(), buf.obj(), 0, 4, 0x11111111);
-    vkCmdFillBuffer(cmd_.obj(), buf.obj(), 4, 16, 0x22222222);
+    vkCmdFillBuffer(cmd_.handle(), buf.obj(), 0, 4, 0x11111111);
+    vkCmdFillBuffer(cmd_.handle(), buf.obj(), 4, 16, 0x22222222);
     cmd_.end();
 
     submit_and_done();
@@ -572,8 +572,8 @@ TEST_F(VkCmdFillBufferTest, Large)
     buf.init_as_dst(dev_, size, reqs);
 
     cmd_.begin();
-    vkCmdFillBuffer(cmd_.obj(), buf.obj(), 0, size / 2, 0x11111111);
-    vkCmdFillBuffer(cmd_.obj(), buf.obj(), size / 2, size / 2, 0x22222222);
+    vkCmdFillBuffer(cmd_.handle(), buf.obj(), 0, size / 2, 0x11111111);
+    vkCmdFillBuffer(cmd_.handle(), buf.obj(), size / 2, size / 2, 0x22222222);
     cmd_.end();
 
     submit_and_done();
@@ -595,8 +595,8 @@ TEST_F(VkCmdFillBufferTest, Overlap)
     buf.init_as_dst(dev_, 64, reqs);
 
     cmd_.begin();
-    vkCmdFillBuffer(cmd_.obj(), buf.obj(), 0, 48, 0x11111111);
-    vkCmdFillBuffer(cmd_.obj(), buf.obj(), 32, 32, 0x22222222);
+    vkCmdFillBuffer(cmd_.handle(), buf.obj(), 0, 48, 0x11111111);
+    vkCmdFillBuffer(cmd_.handle(), buf.obj(), 32, 32, 0x22222222);
     cmd_.end();
 
     submit_and_done();
@@ -618,9 +618,8 @@ TEST_F(VkCmdFillBufferTest, MultiAlignments)
 
     cmd_.begin();
     for (int i = 0; i < ARRAY_SIZE(bufs); i++) {
-
         bufs[i].init_as_dst(dev_, size, reqs);
-        vkCmdFillBuffer(cmd_.obj(), bufs[i].obj(), 0, size, 0x11111111);
+        vkCmdFillBuffer(cmd_.handle(), bufs[i].obj(), 0, size, 0x11111111);
         size <<= 1;
     }
     cmd_.end();
@@ -657,7 +656,7 @@ TEST_F(VkCmdCopyBufferTest, Basic)
     cmd_.begin();
     VkBufferCopy region = {};
     region.copySize = 4;
-    vkCmdCopyBuffer(cmd_.obj(), src.obj(), dst.obj(), 1, &region);
+    vkCmdCopyBuffer(cmd_.handle(), src.obj(), dst.obj(), 1, &region);
     cmd_.end();
 
     submit_and_done();
@@ -685,7 +684,7 @@ TEST_F(VkCmdCopyBufferTest, Large)
     cmd_.begin();
     VkBufferCopy region = {};
     region.copySize = size;
-    vkCmdCopyBuffer(cmd_.obj(), src.obj(), dst.obj(), 1, &region);
+    vkCmdCopyBuffer(cmd_.handle(), src.obj(), dst.obj(), 1, &region);
     cmd_.end();
 
     submit_and_done();
@@ -726,7 +725,7 @@ TEST_F(VkCmdCopyBufferTest, MultiAlignments)
     dst.init_as_dst(dev_, 1024, reqs);
 
     cmd_.begin();
-    vkCmdCopyBuffer(cmd_.obj(), src.obj(), dst.obj(), ARRAY_SIZE(regions), regions);
+    vkCmdCopyBuffer(cmd_.handle(), src.obj(), dst.obj(), ARRAY_SIZE(regions), regions);
     cmd_.end();
 
     submit_and_done();
@@ -800,7 +799,7 @@ TEST_F(VkCmdCopyBufferTest, RAWHazard)
 
     cmd_.begin();
 
-    vkCmdFillBuffer(cmd_.obj(), bufs[0].obj(), 0, 4, 0x11111111);
+    vkCmdFillBuffer(cmd_.handle(), bufs[0].obj(), 0, 4, 0x11111111);
     // is this necessary?
     VkBufferMemoryBarrier memory_barrier = bufs[0].buffer_memory_barrier(
             VK_MEMORY_OUTPUT_TRANSFER_BIT, VK_MEMORY_INPUT_TRANSFER_BIT, 0, 4);
@@ -808,30 +807,30 @@ TEST_F(VkCmdCopyBufferTest, RAWHazard)
 
     VkPipelineStageFlags src_stages = VK_PIPELINE_STAGE_TRANSFER_BIT | VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
     VkPipelineStageFlags dest_stages = VK_PIPELINE_STAGE_TRANSFER_BIT | VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
-    vkCmdPipelineBarrier(cmd_.obj(), src_stages, dest_stages, false, 1, (const void **)&pmemory_barrier);
+    vkCmdPipelineBarrier(cmd_.handle(), src_stages, dest_stages, false, 1, (const void **)&pmemory_barrier);
 
     VkBufferCopy region = {};
     region.copySize = 4;
-    vkCmdCopyBuffer(cmd_.obj(), bufs[0].obj(), bufs[1].obj(), 1, &region);
+    vkCmdCopyBuffer(cmd_.handle(), bufs[0].obj(), bufs[1].obj(), 1, &region);
 
     memory_barrier = bufs[1].buffer_memory_barrier(
             VK_MEMORY_OUTPUT_TRANSFER_BIT, VK_MEMORY_INPUT_TRANSFER_BIT, 0, 4);
     pmemory_barrier = &memory_barrier;
-    vkCmdPipelineBarrier(cmd_.obj(), src_stages, dest_stages, false, 1, (const void **)&pmemory_barrier);
+    vkCmdPipelineBarrier(cmd_.handle(), src_stages, dest_stages, false, 1, (const void **)&pmemory_barrier);
 
-    vkCmdCopyBuffer(cmd_.obj(), bufs[1].obj(), bufs[2].obj(), 1, &region);
+    vkCmdCopyBuffer(cmd_.handle(), bufs[1].obj(), bufs[2].obj(), 1, &region);
 
     /* Use vkCmdSetEvent and vkCmdWaitEvents to test them.
      * This could be vkCmdPipelineBarrier.
      */
-    vkCmdSetEvent(cmd_.obj(), event, VK_PIPELINE_STAGE_TRANSFER_BIT);
+    vkCmdSetEvent(cmd_.handle(), event, VK_PIPELINE_STAGE_TRANSFER_BIT);
 
     // Additional commands could go into the buffer here before the wait.
 
     memory_barrier = bufs[1].buffer_memory_barrier(
             VK_MEMORY_OUTPUT_TRANSFER_BIT, VK_MEMORY_INPUT_HOST_READ_BIT, 0, 4);
     pmemory_barrier = &memory_barrier;
-    vkCmdWaitEvents(cmd_.obj(), 1, &event, src_stages, dest_stages, 1, (const void **)&pmemory_barrier);
+    vkCmdWaitEvents(cmd_.handle(), 1, &event, src_stages, dest_stages, 1, (const void **)&pmemory_barrier);
 
     cmd_.end();
 
@@ -895,7 +894,7 @@ protected:
 
         // copy in and tile
         cmd_.begin();
-        vkCmdCopyBufferToImage(cmd_.obj(), in_buf.obj(),
+        vkCmdCopyBufferToImage(cmd_.handle(), in_buf.obj(),
                 img.obj(), VK_IMAGE_LAYOUT_TRANSFER_DESTINATION_OPTIMAL,
                 checker.regions().size(), &checker.regions()[0]);
         cmd_.end();
@@ -918,7 +917,7 @@ protected:
 
         // copy out and linearize
         cmd_.begin();
-        vkCmdCopyImageToBuffer(cmd_.obj(),
+        vkCmdCopyImageToBuffer(cmd_.handle(),
                 img.obj(), VK_IMAGE_LAYOUT_TRANSFER_SOURCE_OPTIMAL,
                 out_buf.obj(),
                 checker.regions().size(), &checker.regions()[0]);
@@ -957,7 +956,7 @@ protected:
         img.init(dev_, img_info, image_reqs);
 
         cmd_.begin();
-        vkCmdCopyBufferToImage(cmd_.obj(),
+        vkCmdCopyBufferToImage(cmd_.handle(),
                 buf.obj(),
                 img.obj(), VK_IMAGE_LAYOUT_TRANSFER_DESTINATION_OPTIMAL,
                 checker.regions().size(), &checker.regions()[0]);
@@ -1027,7 +1026,7 @@ protected:
         buf.init_as_dst(dev_, checker.buffer_size(), buffer_reqs);
 
         cmd_.begin();
-        vkCmdCopyImageToBuffer(cmd_.obj(),
+        vkCmdCopyImageToBuffer(cmd_.handle(),
                 img.obj(), VK_IMAGE_LAYOUT_TRANSFER_SOURCE_OPTIMAL,
                 buf.obj(),
                 checker.regions().size(), &checker.regions()[0]);
@@ -1126,7 +1125,7 @@ protected:
         dst.init(dev_, dst_info, dst_reqs);
 
         cmd_.begin();
-        vkCmdCopyImage(cmd_.obj(),
+        vkCmdCopyImage(cmd_.handle(),
                         src.obj(), VK_IMAGE_LAYOUT_TRANSFER_SOURCE_OPTIMAL,
                         dst.obj(), VK_IMAGE_LAYOUT_TRANSFER_DESTINATION_OPTIMAL,
                         copies.size(), &copies[0]);
@@ -1257,13 +1256,13 @@ protected:
 
         VkPipelineStageFlags src_stages = VK_PIPELINE_STAGE_ALL_GPU_COMMANDS;
         VkPipelineStageFlags dest_stages = VK_PIPELINE_STAGE_ALL_GPU_COMMANDS;
-        vkCmdPipelineBarrier(cmd_.obj(), src_stages, dest_stages, false, 1, (const void **)&p_to_clear[0]);
+        vkCmdPipelineBarrier(cmd_.handle(), src_stages, dest_stages, false, 1, (const void **)&p_to_clear[0]);
 
-        vkCmdClearColorImage(cmd_.obj(),
+        vkCmdClearColorImage(cmd_.handle(),
                               img.obj(), VK_IMAGE_LAYOUT_GENERAL,
                               &clear_color, ranges.size(), &ranges[0]);
 
-        vkCmdPipelineBarrier(cmd_.obj(), src_stages, dest_stages, false, 1, (const void **)&p_to_xfer[0]);
+        vkCmdPipelineBarrier(cmd_.handle(), src_stages, dest_stages, false, 1, (const void **)&p_to_xfer[0]);
 
         cmd_.end();
 
@@ -1437,14 +1436,14 @@ protected:
 
         VkPipelineStageFlags src_stages = VK_PIPELINE_STAGE_ALL_GPU_COMMANDS;
         VkPipelineStageFlags dest_stages = VK_PIPELINE_STAGE_ALL_GPU_COMMANDS;
-        vkCmdPipelineBarrier(cmd_.obj(), src_stages, dest_stages, false, to_clear.size(), (const void **)&p_to_clear[0]);
+        vkCmdPipelineBarrier(cmd_.handle(), src_stages, dest_stages, false, to_clear.size(), (const void **)&p_to_clear[0]);
 
-        vkCmdClearDepthStencilImage(cmd_.obj(),
+        vkCmdClearDepthStencilImage(cmd_.handle(),
                                     img.obj(), VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
                                     depth, stencil,
                                     ranges.size(), &ranges[0]);
 
-        vkCmdPipelineBarrier(cmd_.obj(), src_stages, dest_stages, false, to_xfer.size(), (const void **)&p_to_xfer[0]);
+        vkCmdPipelineBarrier(cmd_.handle(), src_stages, dest_stages, false, to_xfer.size(), (const void **)&p_to_xfer[0]);
 
         cmd_.end();
 

@@ -77,16 +77,6 @@ std::vector<T> make_handles(const std::vector<S> &v)
     return handles;
 }
 
-template<class T, class S>
-std::vector<T> make_objects(const std::vector<S> &v)
-{
-    std::vector<T> objs;
-    objs.reserve(v.size());
-    for (typename std::vector<S>::const_iterator it = v.begin(); it != v.end(); it++)
-        objs.push_back((*it)->obj());
-    return objs;
-}
-
 template<typename T>
 std::vector<T> get_memory_reqs(VkDevice device, VkObjectType obj_type, VkObject obj, size_t min_elems)
 {
@@ -544,8 +534,8 @@ VkResult Device::update_descriptor_sets(const std::vector<VkWriteDescriptorSet> 
 
 void Queue::submit(const std::vector<const CmdBuffer *> &cmds, Fence &fence)
 {
-    const std::vector<VkCmdBuffer> cmd_objs = make_objects<VkCmdBuffer>(cmds);
-    EXPECT(vkQueueSubmit(handle(), cmd_objs.size(), &cmd_objs[0], fence.handle()) == VK_SUCCESS);
+    const std::vector<VkCmdBuffer> cmd_handles = make_handles<VkCmdBuffer>(cmds);
+    EXPECT(vkQueueSubmit(handle(), cmd_handles.size(), &cmd_handles[0], fence.handle()) == VK_SUCCESS);
 }
 
 void Queue::submit(const CmdBuffer &cmd, Fence &fence)
@@ -951,14 +941,25 @@ void DynamicDepthStencilState::init(const Device &dev, const VkDynamicDsStateCre
     NON_DISPATCHABLE_HANDLE_INIT(vkCreateDynamicDepthStencilState, dev, &info);
 }
 
+CmdBuffer::~CmdBuffer()
+{
+    if (initialized())
+        EXPECT(vkDestroyObject(dev_handle_, VK_OBJECT_TYPE_COMMAND_BUFFER, handle()) == VK_SUCCESS);
+}
+
 void CmdBuffer::init(const Device &dev, const VkCmdBufferCreateInfo &info)
 {
-    DERIVED_OBJECT_TYPE_INIT(vkCreateCommandBuffer, dev, VK_OBJECT_TYPE_COMMAND_BUFFER, &info);
+    VkCmdBuffer cmd;
+
+    if (EXPECT(vkCreateCommandBuffer(dev.handle(), &info, &cmd) == VK_SUCCESS)) {
+        Handle::init(cmd);
+        dev_handle_ = dev.handle();
+    }
 }
 
 void CmdBuffer::begin(const VkCmdBufferBeginInfo *info)
 {
-    EXPECT(vkBeginCommandBuffer(obj(), info) == VK_SUCCESS);
+    EXPECT(vkBeginCommandBuffer(handle(), info) == VK_SUCCESS);
 }
 
 void CmdBuffer::begin()
@@ -973,12 +974,12 @@ void CmdBuffer::begin()
 
 void CmdBuffer::end()
 {
-    EXPECT(vkEndCommandBuffer(obj()) == VK_SUCCESS);
+    EXPECT(vkEndCommandBuffer(handle()) == VK_SUCCESS);
 }
 
 void CmdBuffer::reset()
 {
-    EXPECT(vkResetCommandBuffer(obj()) == VK_SUCCESS);
+    EXPECT(vkResetCommandBuffer(handle()) == VK_SUCCESS);
 }
 
 }; // namespace vk_testing

@@ -4202,7 +4202,7 @@ TEST_F(VkRenderTest, RenderPassAttachmentClear)
     clear_color.f32[2] = 0;
     clear_color.f32[3] = 0;
     VkRect3D clear_rect = { { 0, 0, 0 }, { (int)m_width, (int)m_height, 1 } };
-    vkCmdClearColorAttachment(cmdBuffer.obj(), 0,
+    vkCmdClearColorAttachment(cmdBuffer.handle(), 0,
                               VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
                               &clear_color, 1, &clear_rect);
 

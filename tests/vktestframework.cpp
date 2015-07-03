@@ -474,14 +474,14 @@ void  TestFrameworkVkPresent::Display()
     region.imageExtent.width = m_display_image->m_width;
     region.imageExtent.depth = 1;
 
-    vkCmdCopyBufferToImage(m_cmdbuf.obj(),
+    vkCmdCopyBufferToImage(m_cmdbuf.handle(),
         buf.obj(),
         m_persistent_images[m_current_buffer].image, VK_IMAGE_LAYOUT_TRANSFER_DESTINATION_OPTIMAL,
         1, &region);
     m_cmdbuf.end();
 
     VkCmdBuffer cmdBufs[1];
-    cmdBufs[0] = m_cmdbuf.obj();
+    cmdBufs[0] = m_cmdbuf.handle();
 
     vkQueueSubmit(m_queue.handle(), 1, cmdBufs, NULL);
     m_queue.wait();

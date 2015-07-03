@@ -577,7 +577,7 @@ void VkImageObj::ImageMemoryBarrier(
     VkPipelineStageFlags dest_stages = VK_PIPELINE_STAGE_ALL_GPU_COMMANDS;
 
     // write barrier to the command buffer
-    vkCmdPipelineBarrier(cmd_buf->obj(), src_stages, dest_stages, false, 1, (const void **)&pmemory_barrier);
+    vkCmdPipelineBarrier(cmd_buf->handle(), src_stages, dest_stages, false, 1, (const void **)&pmemory_barrier);
 }
 
 void VkImageObj::SetLayout(VkCommandBufferObj *cmd_buf,
@@ -767,7 +767,7 @@ VkResult VkImageObj::CopyImage(VkImageObj &src_image)
     copy_region.destOffset.z = 0;
     copy_region.extent = src_image.extent();
 
-    vkCmdCopyImage(cmd_buf.obj(),
+    vkCmdCopyImage(cmd_buf.handle(),
                     src_image.obj(), src_image.layout(),
                     obj(), layout(),
                     1, &copy_region);
@@ -1269,7 +1269,7 @@ VkCommandBufferObj::VkCommandBufferObj(VkDeviceObj *device)
 
 VkCmdBuffer VkCommandBufferObj::GetBufferHandle()
 {
-    return obj();
+    return handle();
 }
 
 VkResult VkCommandBufferObj::BeginCommandBuffer(VkCmdBufferBeginInfo *pInfo)
@@ -1292,7 +1292,7 @@ VkResult VkCommandBufferObj::EndCommandBuffer()
 
 void VkCommandBufferObj::PipelineBarrier(VkPipelineStageFlags src_stages,  VkPipelineStageFlags dest_stages, VkBool32 byRegion, uint32_t memBarrierCount, const void** ppMemBarriers)
 {
-    vkCmdPipelineBarrier(obj(), src_stages, dest_stages, byRegion, memBarrierCount, ppMemBarriers);
+    vkCmdPipelineBarrier(handle(), src_stages, dest_stages, byRegion, memBarrierCount, ppMemBarriers);
 }
 
 void VkCommandBufferObj::ClearAllBuffers(VkClearColorValue clear_color, float depth_clear_color, uint32_t stencil_clear_color,
@@ -1329,10 +1329,10 @@ void VkCommandBufferObj::ClearAllBuffers(VkClearColorValue clear_color, float de
     for (i = 0; i < m_renderTargets.size(); i++) {
         memory_barrier.image = m_renderTargets[i]->image();
         memory_barrier.oldLayout = m_renderTargets[i]->layout();
-        vkCmdPipelineBarrier( obj(), src_stages, dest_stages, false, 1, (const void **)&pmemory_barrier);
+        vkCmdPipelineBarrier( handle(), src_stages, dest_stages, false, 1, (const void **)&pmemory_barrier);
         m_renderTargets[i]->layout(memory_barrier.newLayout);
 
-        vkCmdClearColorImage(obj(),
+        vkCmdClearColorImage(handle(),
                m_renderTargets[i]->image(), VK_IMAGE_LAYOUT_GENERAL,
                &clear_color, 1, &srRange );
 
@@ -1354,9 +1354,9 @@ void VkCommandBufferObj::ClearAllBuffers(VkClearColorValue clear_color, float de
         memory_barrier.image = depthStencilObj->obj();
         memory_barrier.subresourceRange = dsRange;
 
-        vkCmdPipelineBarrier( obj(), src_stages, dest_stages, false, 1, (const void **)&pmemory_barrier);
+        vkCmdPipelineBarrier( handle(), src_stages, dest_stages, false, 1, (const void **)&pmemory_barrier);
 
-        vkCmdClearDepthStencilImage(obj(),
+        vkCmdClearDepthStencilImage(handle(),
                                     depthStencilObj->obj(), VK_IMAGE_LAYOUT_GENERAL,
                                     depth_clear_color,  stencil_clear_color,
                                     1, &dsRange);
@@ -1366,7 +1366,7 @@ void VkCommandBufferObj::ClearAllBuffers(VkClearColorValue clear_color, float de
         memory_barrier.oldLayout = VK_IMAGE_LAYOUT_GENERAL;
         memory_barrier.newLayout = depthStencilObj->BindInfo()->layout;
         memory_barrier.subresourceRange = dsRange;
-        vkCmdPipelineBarrier( obj(), src_stages, dest_stages, false, 1, (const void **)&pmemory_barrier);
+        vkCmdPipelineBarrier( handle(), src_stages, dest_stages, false, 1, (const void **)&pmemory_barrier);
     }
 }
 
@@ -1412,24 +1412,24 @@ void VkCommandBufferObj::PrepareAttachments()
     {
         memory_barrier.image = m_renderTargets[i]->image();
         memory_barrier.oldLayout = m_renderTargets[i]->layout();
-        vkCmdPipelineBarrier( obj(), src_stages, dest_stages, false, 1, (const void **)&pmemory_barrier);
+        vkCmdPipelineBarrier( handle(), src_stages, dest_stages, false, 1, (const void **)&pmemory_barrier);
         m_renderTargets[i]->layout(memory_barrier.newLayout);
     }
 }
 
 void VkCommandBufferObj::BeginRenderPass(const VkRenderPassBeginInfo &info)
 {
-    vkCmdBeginRenderPass( obj(), &info, VK_RENDER_PASS_CONTENTS_INLINE);
+    vkCmdBeginRenderPass( handle(), &info, VK_RENDER_PASS_CONTENTS_INLINE);
 }
 
 void VkCommandBufferObj::EndRenderPass()
 {
-    vkCmdEndRenderPass(obj());
+    vkCmdEndRenderPass(handle());
 }
 
 void VkCommandBufferObj::BindStateObject(VkStateBindPoint stateBindPoint, VkDynamicStateObject stateObject)
 {
-    vkCmdBindDynamicStateObject( obj(), stateBindPoint, stateObject);
+    vkCmdBindDynamicStateObject( handle(), stateBindPoint, stateObject);
 }
 
 void VkCommandBufferObj::AddRenderTarget(VkImageObj *renderTarget)
@@ -1439,12 +1439,12 @@ void VkCommandBufferObj::AddRenderTarget(VkImageObj *renderTarget)
 
 void VkCommandBufferObj::DrawIndexed(uint32_t firstIndex, uint32_t indexCount, int32_t vertexOffset, uint32_t firstInstance, uint32_t instanceCount)
 {
-    vkCmdDrawIndexed(obj(), firstIndex, indexCount, vertexOffset, firstInstance, instanceCount);
+    vkCmdDrawIndexed(handle(), firstIndex, indexCount, vertexOffset, firstInstance, instanceCount);
 }
 
 void VkCommandBufferObj::Draw(uint32_t firstVertex, uint32_t vertexCount, uint32_t firstInstance, uint32_t instanceCount)
 {
-    vkCmdDraw(obj(), firstVertex, vertexCount, firstInstance, instanceCount);
+    vkCmdDraw(handle(), firstVertex, vertexCount, firstInstance, instanceCount);
 }
 
 void VkCommandBufferObj::QueueCommandBuffer()
@@ -1457,7 +1457,7 @@ void VkCommandBufferObj::QueueCommandBuffer(VkFence fence)
     VkResult err = VK_SUCCESS;
 
     // submit the command buffer to the universal queue
-    err = vkQueueSubmit( m_device->m_queue, 1, &obj(), fence );
+    err = vkQueueSubmit( m_device->m_queue, 1, &handle(), fence );
     ASSERT_VK_SUCCESS( err );
 
     err = vkQueueWaitIdle( m_device->m_queue );
@@ -1469,7 +1469,7 @@ void VkCommandBufferObj::QueueCommandBuffer(VkFence fence)
 
 void VkCommandBufferObj::BindPipeline(VkPipelineObj &pipeline)
 {
-    vkCmdBindPipeline( obj(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline.handle() );
+    vkCmdBindPipeline( handle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline.handle() );
 }
 
 void VkCommandBufferObj::BindDescriptorSet(VkDescriptorSetObj &descriptorSet)
@@ -1477,18 +1477,18 @@ void VkCommandBufferObj::BindDescriptorSet(VkDescriptorSetObj &descriptorSet)
     VkDescriptorSet set_obj = descriptorSet.GetDescriptorSetHandle();
 
     // bind pipeline, vertex buffer (descriptor set) and WVP (dynamic buffer view)
-    vkCmdBindDescriptorSets(obj(), VK_PIPELINE_BIND_POINT_GRAPHICS, descriptorSet.GetPipelineLayout(),
+    vkCmdBindDescriptorSets(handle(), VK_PIPELINE_BIND_POINT_GRAPHICS, descriptorSet.GetPipelineLayout(),
            0, 1, &set_obj, 0, NULL );
 }
 
 void VkCommandBufferObj::BindIndexBuffer(VkIndexBufferObj *indexBuffer, uint32_t offset)
 {
-    vkCmdBindIndexBuffer(obj(), indexBuffer->obj(), offset, indexBuffer->GetIndexType());
+    vkCmdBindIndexBuffer(handle(), indexBuffer->obj(), offset, indexBuffer->GetIndexType());
 }
 
 void VkCommandBufferObj::BindVertexBuffer(VkConstantBufferObj *vertexBuffer, VkDeviceSize offset, uint32_t binding)
 {
-    vkCmdBindVertexBuffers(obj(), binding, 1, &vertexBuffer->obj(), &offset);
+    vkCmdBindVertexBuffers(handle(), binding, 1, &vertexBuffer->obj(), &offset);
 }
 
 VkDepthStencilObj::VkDepthStencilObj()

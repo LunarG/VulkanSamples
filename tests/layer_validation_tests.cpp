@@ -366,12 +366,12 @@ TEST_F(VkLayerTest, CallResetCmdBufferBeforeCompletion)
 
     // Bypass framework since it does the waits automatically
     VkResult err = VK_SUCCESS;
-    err = vkQueueSubmit( m_device->m_queue, 1, &cmdBuffer.obj(), testFence.handle());
+    err = vkQueueSubmit( m_device->m_queue, 1, &cmdBuffer.handle(), testFence.handle());
     ASSERT_VK_SUCCESS( err );
 
     m_errorMonitor->ClearState();
     // Introduce failure by calling begin again before checking fence
-    vkResetCommandBuffer(cmdBuffer.obj());
+    vkResetCommandBuffer(cmdBuffer.handle());
 
     msgFlags = m_errorMonitor->GetState(&msgString);
     ASSERT_TRUE(msgFlags & VK_DBG_REPORT_ERROR_BIT) << "Did not receive an err after calling ResetCommandBuffer on an active Command Buffer";
@@ -406,7 +406,7 @@ TEST_F(VkLayerTest, CallBeginCmdBufferBeforeCompletion)
 
     // Bypass framework since it does the waits automatically
     VkResult err = VK_SUCCESS;
-    err = vkQueueSubmit( m_device->m_queue, 1, &cmdBuffer.obj(), testFence.handle());
+    err = vkQueueSubmit( m_device->m_queue, 1, &cmdBuffer.handle(), testFence.handle());
     ASSERT_VK_SUCCESS( err );
 
     m_errorMonitor->ClearState();
@@ -2322,7 +2322,7 @@ TEST_F(VkLayerTest, ThreadCmdBufferCollision)
     ASSERT_VK_SUCCESS(err);
 
     struct thread_data_struct data;
-    data.cmdBuffer = cmdBuffer.obj();
+    data.cmdBuffer = cmdBuffer.handle();
     data.event = event;
     data.bailout = false;
     m_errorMonitor->SetBailout(&data.bailout);

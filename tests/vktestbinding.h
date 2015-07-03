@@ -651,9 +651,11 @@ public:
     void init(const Device &dev, const VkDynamicDsStateCreateInfo &info);
 };
 
-class CmdBuffer : public DerivedObject<VkCmdBuffer, Object, VK_OBJECT_TYPE_COMMAND_BUFFER> {
+class CmdBuffer : public internal::Handle<VkCmdBuffer> {
 public:
-    explicit CmdBuffer() {}
+    ~CmdBuffer();
+
+    explicit CmdBuffer() : Handle() {}
     explicit CmdBuffer(const Device &dev, const VkCmdBufferCreateInfo &info) { init(dev, info); }
 
     // vkCreateCommandBuffer()
@@ -669,6 +671,9 @@ public:
     void reset();
 
     static VkCmdBufferCreateInfo create_info(uint32_t queueNodeIndex);
+
+private:
+    VkDevice dev_handle_;
 };
 
 inline const void *Object::map(VkFlags flags) const
