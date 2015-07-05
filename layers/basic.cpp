@@ -28,6 +28,7 @@
 #include "vk_dispatch_table_helper.h"
 #include "vk_layer.h"
 #include "vk_layer_table.h"
+#include "vk_layer_extension_utils.h"
 // The following is #included again to catch certain OS-specific functions
 // being used:
 #include "vk_loader_platform.h"
@@ -40,48 +41,45 @@ VK_LAYER_EXPORT VkResult VKAPI vkLayerExtension1(VkDevice device)
     return VK_SUCCESS;
 }
 
-#define BASIC_LAYER_EXT_ARRAY_SIZE 2
-
-static const VkExtensionProperties basicExts[BASIC_LAYER_EXT_ARRAY_SIZE] = {
+static const VkLayerProperties basic_physicaldevice_layers[] = {
     {
-        VK_STRUCTURE_TYPE_EXTENSION_PROPERTIES,
         "Basic",
-        0x10,
-        "Sample layer: Basic ",
-//        0,
-//        NULL,
-    },
-    {
-        VK_STRUCTURE_TYPE_EXTENSION_PROPERTIES,
-        "vkLayerExtension1",
-        0x10,
-        "Sample layer: Basic",
-//        0,
-//        NULL,
+        VK_API_VERSION,
+        VK_MAKE_VERSION(0, 1, 0),
+        "Sample layer: Basic, implements vkLayerExtension1",
     }
 };
 
-VK_LAYER_EXPORT VkResult VKAPI vkGetGlobalExtensionProperties(
-                                               uint32_t extensionIndex,
-                                               VkExtensionProperties*    pData)
+/* Must use Vulkan name so that loader finds it */
+VK_LAYER_EXPORT VkResult VKAPI vkGetPhysicalDeviceLayerProperties(
+        VkPhysicalDevice                            physicalDevice,
+        uint32_t*                                   pCount,
+        VkLayerProperties*                          pProperties)
 {
-    /* This entrypoint is NOT going to init it's own dispatch table since loader calls here early */
-    uint32_t *count;
-
-    if (extensionIndex >= BASIC_LAYER_EXT_ARRAY_SIZE)
-        return VK_ERROR_INVALID_VALUE;
-    memcpy((VkExtensionProperties *) pData, &basicExts[extensionIndex], sizeof(VkExtensionProperties));
-
-    return VK_SUCCESS;
+    /* Mem tracker's physical device layers are the same as global */
+    return util_GetLayerProperties(ARRAY_SIZE(basic_physicaldevice_layers), basic_physicaldevice_layers,
+                                   pCount, pProperties);
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkGetGlobalExtensionCount(uint32_t* pCount)
+static const VkExtensionProperties basic_physicaldevice_extensions[] = {
+    {
+        "vkLayerExtension1",
+        VK_MAKE_VERSION(0, 1, 0),
+        VK_API_VERSION
+    }
+};
+
+VK_LAYER_EXPORT VkResult VKAPI vkGetPhysicalDeviceExtensionProperties(
+        VkPhysicalDevice        physicalDevice,
+        const char             *pLayerName,
+        uint32_t               *pCount,
+        VkExtensionProperties  *pProperties)
 {
-    *pCount = BASIC_LAYER_EXT_ARRAY_SIZE;
-    return VK_SUCCESS;
+    return util_GetExtensionProperties(ARRAY_SIZE(basic_physicaldevice_extensions), basic_physicaldevice_extensions,
+                                       pCount, pProperties);
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkEnumeratePhysicalDevices(
+VK_LAYER_EXPORT VkResult VKAPI basic_EnumeratePhysicalDevices(
                                             VkInstance instance,
                                             uint32_t* pPhysicalDeviceCount,
                                             VkPhysicalDevice* pPhysicalDevices)
@@ -92,7 +90,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkEnumeratePhysicalDevices(
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkCreateDevice(VkPhysicalDevice gpu, const VkDeviceCreateInfo* pCreateInfo, VkDevice* pDevice)
+VK_LAYER_EXPORT VkResult VKAPI basic_CreateDevice(VkPhysicalDevice gpu, const VkDeviceCreateInfo* pCreateInfo, VkDevice* pDevice)
 {
     printf("At start of wrapped vkCreateDevice() call w/ gpu: %p\n", (void*)gpu);
     VkResult result = device_dispatch_table(*pDevice)->CreateDevice(gpu, pCreateInfo, pDevice);
@@ -101,7 +99,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateDevice(VkPhysicalDevice gpu, const VkDevi
 }
 
 /* hook DestroyDevice to remove tableMap entry */
-VK_LAYER_EXPORT VkResult VKAPI vkDestroyDevice(VkDevice device)
+VK_LAYER_EXPORT VkResult VKAPI basic_DestroyDevice(VkDevice device)
 {
     dispatch_key key = get_dispatch_key(device);
     VkResult res = device_dispatch_table(device)->DestroyDevice(device);
@@ -110,7 +108,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkDestroyDevice(VkDevice device)
 }
 
 /* hook DestroyInstance to remove tableInstanceMap entry */
-VK_LAYER_EXPORT VkResult VKAPI vkDestroyInstance(VkInstance instance)
+VK_LAYER_EXPORT VkResult VKAPI basic_DestroyInstance(VkInstance instance)
 {
     dispatch_key key = get_dispatch_key(instance);
     VkResult res = instance_dispatch_table(instance)->DestroyInstance(instance);
@@ -118,7 +116,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkDestroyInstance(VkInstance instance)
     return res;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkGetPhysicalDeviceFormatInfo(VkPhysicalDevice gpu, VkFormat format, VkFormatProperties *pFormatInfo)
+VK_LAYER_EXPORT VkResult VKAPI basic_GetPhysicalDeviceFormatInfo(VkPhysicalDevice gpu, VkFormat format, VkFormatProperties *pFormatInfo)
 {
     printf("At start of wrapped vkGetPhysicalDeviceFormatInfo() call w/ gpu: %p\n", (void*)gpu);
     VkResult result = instance_dispatch_table(gpu)->GetPhysicalDeviceFormatInfo(gpu, format, pFormatInfo);
@@ -138,9 +136,9 @@ VK_LAYER_EXPORT void * VKAPI vkGetDeviceProcAddr(VkDevice device, const char* pN
     }
 
     if (!strcmp("vkCreateDevice", pName))
-        return (void *) vkCreateDevice;
+        return (void *) basic_CreateDevice;
     if (!strcmp("vkDestroyDevice", pName))
-        return (void *) vkDestroyDevice;
+        return (void *) basic_DestroyDevice;
     if (!strcmp("vkLayerExtension1", pName))
         return (void *) vkLayerExtension1;
     else
@@ -161,22 +159,19 @@ VK_LAYER_EXPORT void * VKAPI vkGetInstanceProcAddr(VkInstance instance, const ch
         initInstanceTable((const VkBaseLayerObject *) instance);
         return (void *) vkGetInstanceProcAddr;
     }
+
+    if (!strcmp("vkGetPhysicalDeviceLayerProperties", pName))
+        return (void *) vkGetPhysicalDeviceLayerProperties;
+    if (!strcmp("vkGetPhysicalDeviceExtensionProperties", pName))
+        return (void *) vkGetPhysicalDeviceExtensionProperties;
     if (!strcmp("vkGetPhysicalDeviceFormatInfo", pName))
-        return (void *) vkGetPhysicalDeviceFormatInfo;
-
+        return (void *) basic_GetPhysicalDeviceFormatInfo;
     if (!strcmp("vkDestroyInstance", pName))
-        return (void *) vkDestroyInstance;
+        return (void *) basic_DestroyInstance;
     if (!strcmp("vkEnumeratePhysicalDevices", pName))
-        return (void*) vkEnumeratePhysicalDevices;
-    if (!strcmp("vkGetGlobalExtensionCount", pName))
-        return (void*) vkGetGlobalExtensionCount;
-    if (!strcmp("vkGetGlobalExtensionProperties", pName))
-        return (void*) vkGetGlobalExtensionProperties;
-    else
-    {
-        if (instance_dispatch_table(instance)->GetInstanceProcAddr == NULL)
-            return NULL;
-        return instance_dispatch_table(instance)->GetInstanceProcAddr(instance, pName);
-    }
+        return (void*) basic_EnumeratePhysicalDevices;
 
+    if (instance_dispatch_table(instance)->GetInstanceProcAddr == NULL)
+        return NULL;
+    return instance_dispatch_table(instance)->GetInstanceProcAddr(instance, pName);
 }
