@@ -38,6 +38,7 @@ DATA_T *get_my_data_ptr(void *data_key,
     DATA_T *debug_data;
     typename std::unordered_map<void *, DATA_T *>::const_iterator got;
 
+    /* TODO: We probably should lock here, or have caller lock */
     got = layer_data_map.find(data_key);
 
     if ( got == layer_data_map.end() ) {
