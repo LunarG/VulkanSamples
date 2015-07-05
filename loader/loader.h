@@ -109,6 +109,12 @@ struct loader_layer_list {
     struct loader_layer_properties *list;
 };
 
+struct loader_layer_library_list {
+    size_t capacity;
+    uint32_t count;
+    struct loader_lib_info *list;
+};
+
 /* per CreateDevice structure */
 struct loader_device {
     VkLayerDispatchTable loader_dispatch;
@@ -253,7 +259,8 @@ struct loader_struct {
 
     char *layer_dirs;
 
-    struct loader_layer_list scanned_layers;
+    struct loader_layer_library_list scanned_layer_libraries;
+    struct loader_layer_list global_layer_list;
 
     /* Keep track of all the extensions available via GetGlobalExtensionProperties */
     struct loader_extension_list global_extensions;

@@ -446,20 +446,25 @@ static void loader_add_global_layer_properties(
     PFN_vkGetGlobalLayerProperties fp_get_layer_props;
     VkResult res;
 
-    fp_get_ext_props = loader_platform_get_proc_address(lib_handle, "vkGetGlobalExtensionProperties");
-    if (!fp_get_ext_props) {
-        loader_log(VK_DBG_REPORT_WARN_BIT, 0,
-                   "Couldn't dlsym vkGetGlobalExtensionProperties from library %s",
-                   lib_name);
-        return;
-    }
-
+    /*
+     * A layer must export GetGlobalLayerProperties if it has any global extensions.
+     * If a layer does not export a vkGetGlobalLayerProperties then it may
+     * only support vkGetPhysicalDeviceLayerProperties and nothing needs to
+     * be done here.
+     */
     fp_get_layer_props = loader_platform_get_proc_address(lib_handle, "vkGetGlobalLayerProperties");
     if (!fp_get_layer_props) {
         loader_log(VK_DBG_REPORT_WARN_BIT, 0,
                    "Couldn't dlsym vkGetGlobalLayerProperties from library %s",
                    lib_name);
         return;
+    }
+
+    fp_get_ext_props = loader_platform_get_proc_address(lib_handle, "vkGetGlobalExtensionProperties");
+    if (!fp_get_ext_props) {
+        loader_log(VK_DBG_REPORT_WARN_BIT, 0,
+                   "Couldn't dlsym vkGetGlobalExtensionProperties from library %s",
+                   lib_name);
     }
 
     res = fp_get_layer_props(&count, NULL);
@@ -469,6 +474,10 @@ static void loader_add_global_layer_properties(
     }
 
     if (count == 0) {
+        /*
+         * Layer exported vkGetGlobalLayerProperties but didn't have any to report,
+         * nothing to do here.
+         */
         return;
     }
 
@@ -476,34 +485,38 @@ static void loader_add_global_layer_properties(
 
     res = fp_get_layer_props(&count, layer_properties);
     if (res != VK_SUCCESS) {
-        loader_log(VK_DBG_REPORT_WARN_BIT, 0, "Error getting %d global layer properties from %s",
-                   count, lib_name);
+        loader_log(VK_DBG_REPORT_ERROR_BIT, 0, "Error getting %d global layer properties from %s. %s line %d",
+                   count, lib_name, __FILE__, __LINE__);
         return;
     }
 
     for (i = 0; i < count; i++) {
-        struct loader_layer_properties *layer = &layer_list->list[layer_list->count];
-        layer->lib_info.lib_name = malloc(strlen(lib_name) + 1);
-        if (layer->lib_info.lib_name == NULL) {
-            loader_log(VK_DBG_REPORT_ERROR_BIT, 0, "layer library %s ignored: out of memory", lib_name);
+        struct loader_layer_properties layer;
+
+        memset(&layer, 0, sizeof(layer));
+
+        layer.lib_info.lib_name = malloc(strlen(lib_name) + 1);
+        if (layer.lib_info.lib_name == NULL) {
+            loader_log(VK_DBG_REPORT_ERROR_BIT, 0, "out of memory: layer library %s: %s line %d",
+                       lib_name, __FILE__, __LINE__);
             return;
         }
 
-        strcpy(layer->lib_info.lib_name, lib_name);
-        memcpy(&layer->info, &layer_properties[i], sizeof(VkLayerProperties));
-        loader_init_ext_list(&layer->instance_extension_list);
-        loader_init_ext_list(&layer->device_extension_list);
+        strcpy(layer.lib_info.lib_name, lib_name);
+        memcpy(&layer.info, &layer_properties[i], sizeof(VkLayerProperties));
+        loader_init_ext_list(&layer.instance_extension_list);
+        loader_init_ext_list(&layer.device_extension_list);
         loader_log(VK_DBG_REPORT_DEBUG_BIT, 0, "Collecting global extensions for layer %s (%s)",
-                   layer->info.layerName, layer->info.description);
-
-        loader_add_to_layer_list(layer_list, 1, layer);
+                   layer.info.layerName, layer.info.description);
 
         loader_add_global_extensions(
                     fp_get_ext_props,
                     lib_name,
                     lib_handle,
                     VK_EXTENSION_ORIGIN_LAYER,
-                    &layer->instance_extension_list);
+                    &layer.instance_extension_list);
+
+        loader_add_to_layer_list(layer_list, 1, &layer);
     }
 
     return;
@@ -612,20 +625,26 @@ static void loader_add_physical_device_layer_properties(
 
     for (i = 0; i < count; i++) {
         struct loader_layer_properties layer;
+
         memset(&layer, 0, sizeof(struct loader_layer_properties));
+
         layer.lib_info.lib_name = lib_name;
         memcpy(&layer.info, &layer_properties[i], sizeof(VkLayerProperties));
+
         loader_init_ext_list(&layer.instance_extension_list);
         loader_init_ext_list(&layer.device_extension_list);
+
         loader_log(VK_DBG_REPORT_DEBUG_BIT, 0, "Collecting PhysicalDevice extensions for layer %s (%s)",
                    layer.info.layerName, layer.info.description);
-        loader_add_to_layer_list(&icd->layer_properties_cache, 1, &layer);
+
         loader_add_physical_device_extensions(
                     fp_get_ext_props,
                     icd->gpus[i],
                     VK_EXTENSION_ORIGIN_LAYER,
                     lib_name,
                     &layer.device_extension_list);
+
+        loader_add_to_layer_list(&icd->layer_properties_cache, 1, &layer);
     }
     return;
 }
@@ -737,6 +756,110 @@ void loader_destroy_layer_list(struct loader_layer_list *layer_list)
     free(layer_list->list);
     layer_list->count = 0;
     layer_list->capacity = 0;
+}
+
+/*
+ * Manage list of layer libraries (loader_lib_info)
+ */
+static bool loader_init_layer_library_list(struct loader_layer_library_list *list)
+{
+    list->capacity = 32 * sizeof(struct loader_lib_info);
+    /* TODO: Need to use loader_stack_alloc or loader_heap_alloc */
+    list->list = malloc(list->capacity);
+    if (list->list == NULL) {
+        return false;
+    }
+    memset(list->list, 0, list->capacity);
+    list->count = 0;
+    return true;
+}
+
+void loader_destroy_layer_library_list(struct loader_layer_library_list *list)
+{
+    for (uint32_t i = 0; i < list->count; i++) {
+        free(list->list[i].lib_name);
+    }
+    free(list->list);
+    list->count = 0;
+    list->capacity = 0;
+}
+
+void loader_add_to_layer_library_list(
+        struct loader_layer_library_list *list,
+        uint32_t item_count,
+        const struct loader_lib_info *new_items)
+{
+    uint32_t i;
+    struct loader_lib_info *item;
+
+    if (list->list == NULL || list->capacity == 0) {
+        loader_init_layer_library_list(list);
+    }
+
+    if (list->list == NULL)
+        return;
+
+    for (i = 0; i < item_count; i++) {
+        item = (struct loader_lib_info *) &new_items[i];
+
+        // look for duplicates
+        for (uint32_t j = 0; j < list->count; j++) {
+            if (strcmp(list->list[i].lib_name, new_items->lib_name) == 0) {
+                continue;
+            }
+        }
+
+        // add to list at end
+        // check for enough capacity
+        if (list->count * sizeof(struct loader_lib_info)
+                        >= list->capacity) {
+            // double capacity
+            list->capacity *= 2;
+            /* TODO: Need to use loader_stack_alloc or loader_heap_alloc */
+            list->list = realloc(list->list, list->capacity);
+        }
+
+        memcpy(&list->list[list->count], item, sizeof(struct loader_lib_info));
+        list->count++;
+    }
+}
+
+/*
+ * Add's library indicated by lib_name to list if it
+ * implements vkGetGlobalLayerProperties or
+ * vkGetPhysicalDeviceLayerProperties.
+ */
+static void loader_add_layer_library(
+        struct loader_instance *instance,
+        const char *lib_name,
+        const loader_platform_dl_handle lib_handle,
+        struct loader_layer_library_list *list)
+{
+    struct loader_lib_info *library_info;
+    PFN_vkGetPhysicalDeviceLayerProperties fp_get_phydev_props;
+    PFN_vkGetGlobalLayerProperties fp_get_layer_props;
+
+    fp_get_layer_props = loader_platform_get_proc_address(lib_handle, "vkGetGlobalLayerProperties");
+    fp_get_phydev_props = loader_platform_get_proc_address(lib_handle, "vkGetPhysicalDeviceLayerProperties");
+
+    if (!fp_get_layer_props && !fp_get_phydev_props)
+        return;
+
+    /*
+     * Allocate enough space for the library name to
+     * immediately follow the loader_lib_info structure
+     */
+    library_info = loader_heap_alloc(instance, sizeof(struct loader_lib_info) + strlen(lib_name) + 1, VK_SYSTEM_ALLOC_TYPE_INTERNAL);
+    if (!library_info) {
+        loader_log(VK_DBG_REPORT_ERROR_BIT, 0,
+                   "Malloc for layer library list failed: %s line: %d", __FILE__, __LINE__);
+        return;
+    }
+    memset(library_info, 0, sizeof(struct loader_lib_info));
+    library_info->lib_name = (char *) &library_info[1];
+    strcpy(library_info->lib_name, lib_name);
+
+    loader_add_to_layer_library_list(list, 1, library_info);
 }
 
 /*
@@ -861,7 +984,6 @@ bool loader_is_extension_scanned(const VkExtensionProperties *ext_prop)
  */
 void loader_coalesce_extensions(void)
 {
-    uint32_t i;
     struct loader_scanned_icds *icd_list = loader.scanned_icd_list;
 
     // traverse scanned icd list adding non-duplicate extensions to the list
@@ -871,13 +993,6 @@ void loader_coalesce_extensions(void)
                                icd_list->global_extension_list.list);
         icd_list = icd_list->next;
     };
-
-    //Traverse layers list adding non-duplicate extensions to the list
-    for (i = 0; i < loader.scanned_layers.count; i++) {
-        loader_add_to_ext_list(&loader.global_extensions,
-                               loader.scanned_layers.list[i].instance_extension_list.count,
-                               loader.scanned_layers.list[i].instance_extension_list.list);
-    }
 
     // Traverse loader's extensions, adding non-duplicate extensions to the list
     debug_report_add_instance_extensions(&loader.global_extensions);
@@ -1064,9 +1179,9 @@ static struct loader_extension_list *loader_global_extensions(const char *pLayer
         return &loader.global_extensions;
     }
 
-    /* TODO: Add code to query global extensions from layer */
-    for (uint32_t i = 0; i < loader.scanned_layers.count; i++) {
-        struct loader_layer_properties *work_layer = &loader.scanned_layers.list[i];
+    /* Find and return global extension list for given layer */
+    for (uint32_t i = 0; i < loader.global_layer_list.count; i++) {
+        struct loader_layer_properties *work_layer = &loader.global_layer_list.list[i];
         if (strcmp(work_layer->info.layerName, pLayerName) == 0) {
             return &work_layer->instance_extension_list;
         }
@@ -1077,7 +1192,7 @@ static struct loader_extension_list *loader_global_extensions(const char *pLayer
 
 static struct loader_layer_list *loader_global_layers()
 {
-    return &loader.scanned_layers;
+    return &loader.global_layer_list;
 }
 
 static void loader_physical_device_layers(
@@ -1530,11 +1645,11 @@ void loader_icd_scan(void)
 
 void loader_layer_scan(void)
 {
+    uint32_t len;
     const char *p, *next;
     char *libPaths = NULL;
     DIR *curdir;
     struct dirent *dent;
-    size_t len, i;
     char temp_str[1024];
 
 #if defined(WIN32)
@@ -1580,26 +1695,16 @@ void loader_layer_scan(void)
 #endif // WIN32
     libPaths = loader.layer_dirs;
 
-    if (loader.scanned_layers.capacity == 0) {
-        loader.scanned_layers.list = malloc(sizeof(struct loader_layer_properties) * 64);
-        if (loader.scanned_layers.list == NULL) {
-            //TODO ERR log
-            return;
-        }
-        memset(loader.scanned_layers.list, 0, sizeof(struct loader_layer_properties) * 64);
-        loader.scanned_layers.capacity = sizeof(struct loader_layer_properties) * 64;
-    }
-    else {
-        /* cleanup any previously scanned libraries */
-        //TODO make sure everything is cleaned up properly
-        for (i = 0; i < loader.scanned_layers.count; i++) {
-            if (loader.scanned_layers.list[i].lib_info.lib_name != NULL)
-                free(loader.scanned_layers.list[i].lib_info.lib_name);
-            loader_destroy_ext_list(&loader.scanned_layers.list[i].instance_extension_list);
-            loader_destroy_ext_list(&loader.scanned_layers.list[i].device_extension_list);
-            loader.scanned_layers.list[i].lib_info.lib_name = NULL;
-        }
-        loader.scanned_layers.count = 0;
+    /*
+     * We need a list of the layer libraries, not just a list of
+     * the layer properties (a layer library could expose more than
+     * one layer property). This list of scanned layers would be
+     * used to check for global and physicaldevice layer properties.
+     */
+    if (!loader_init_layer_library_list(&loader.scanned_layer_libraries)) {
+        loader_log(VK_DBG_REPORT_ERROR_BIT, 0,
+                   "Malloc for layer list failed: %s line: %d", __FILE__, __LINE__);
+        return;
     }
 
     for (p = libPaths; *p; p = next) {
@@ -1646,7 +1751,10 @@ void loader_layer_scan(void)
 
                         loader_log(VK_DBG_REPORT_DEBUG_BIT, 0, "Collecting global extensions for %s", temp_str);
 
-                        loader_add_global_layer_properties(temp_str, handle, &loader.scanned_layers);
+                        /* TODO: Need instance pointer here */
+                        loader_add_layer_library(NULL, temp_str, handle, &loader.scanned_layer_libraries);
+
+                        loader_add_global_layer_properties(temp_str, handle, &loader.global_layer_list);
 
                         loader_platform_close_library(handle);
                     }
@@ -1706,6 +1814,10 @@ static loader_platform_dl_handle loader_add_layer_lib(
 {
     struct loader_lib_info *new_layer_lib_list, *my_lib;
 
+    /*
+     * TODO: We can now track this information in the
+     * scanned_layer_libraries list.
+     */
     for (uint32_t i = 0; i < loader.loaded_layer_lib_count; i++) {
         if (strcmp(loader.loaded_layer_lib_list[i].lib_name, layer_prop->lib_info.lib_name) == 0) {
             /* Have already loaded this library, just increment ref count */
@@ -1876,20 +1988,20 @@ void loader_enable_instance_layers(
     loader_add_layer_implicit(
                                 VK_LAYER_TYPE_INSTANCE_IMPLICIT,
                                 &inst->activated_layer_list,
-                                &loader.scanned_layers);
+                                &loader.global_layer_list);
 
     /* Add any layers specified via environment variable first */
     loader_add_layer_env(
                             "VK_INSTANCE_LAYERS",
                             &inst->activated_layer_list,
-                            &loader.scanned_layers);
+                            &loader.global_layer_list);
 
     /* Add layers specified by the application */
     loader_add_layer_names_to_list(
                 &inst->activated_layer_list,
                 pCreateInfo->layerCount,
                 pCreateInfo->ppEnabledLayerNames,
-                &loader.scanned_layers);
+                &loader.global_layer_list);
 }
 
 uint32_t loader_activate_instance_layers(struct loader_instance *inst)
@@ -1979,6 +2091,7 @@ void loader_activate_instance_layer_extensions(struct loader_instance *inst)
 }
 
 static void loader_enable_device_layers(
+        struct loader_icd *icd,
         struct loader_device *dev,
         const VkDeviceCreateInfo *pCreateInfo)
 {
@@ -1998,20 +2111,20 @@ static void loader_enable_device_layers(
     loader_add_layer_implicit(
                 VK_LAYER_TYPE_DEVICE_IMPLICIT,
                 &dev->activated_layer_list,
-                &loader.scanned_layers);
+                &icd->layer_properties_cache);
 
     /* Add any layers specified via environment variable next */
     loader_add_layer_env(
                 "VK_DEVICE_LAYERS",
                 &dev->activated_layer_list,
-                &loader.scanned_layers);
+                &icd->layer_properties_cache);
 
     /* Add layers specified by the application */
     loader_add_layer_names_to_list(
                 &dev->activated_layer_list,
                 pCreateInfo->layerCount,
                 pCreateInfo->ppEnabledLayerNames,
-                &loader.scanned_layers);
+                &icd->layer_properties_cache);
 }
 
 /*
@@ -2042,10 +2155,9 @@ static void * VKAPI loader_GetDeviceChainProcAddr(VkDevice device, const char * 
 }
 
 static uint32_t loader_activate_device_layers(
-        VkPhysicalDevice gpu,
-        VkDevice device,
+        struct loader_icd *icd,
         struct loader_device *dev,
-        struct loader_icd *icd)
+        VkDevice device)
 {
     if (!icd)
         return 0;
@@ -2239,9 +2351,9 @@ VkResult loader_init_physical_device_info(
                                 icd->scanned_icds->lib_name,
                                 &icd->device_extension_cache[i]);
 
-                    for (uint32_t l = 0; l < loader.scanned_layers.count; l++) {
+                    for (uint32_t l = 0; l < loader.scanned_layer_libraries.count; l++) {
                         loader_platform_dl_handle lib_handle;
-                        char *lib_name = loader.scanned_layers.list[i].lib_info.lib_name;
+                        char *lib_name = loader.scanned_layer_libraries.list[l].lib_name;
 
                         lib_handle = loader_platform_open_library(lib_name);
                         if (lib_handle == NULL) {
@@ -2461,13 +2573,13 @@ VkResult loader_CreateDevice(
      * Put together the complete list of extensions to enable
      * This includes extensions requested via environment variables.
      */
-    loader_enable_device_layers(dev, pCreateInfo);
+    loader_enable_device_layers(icd, dev, pCreateInfo);
 
     /*
      * Load the libraries and build the device chain
      * terminating with the selected device.
      */
-    loader_activate_device_layers(gpu, *pDevice, dev, icd);
+    loader_activate_device_layers(icd, dev, *pDevice);
 
     res = dev->loader_dispatch.CreateDevice(gpu, pCreateInfo, pDevice);
 
