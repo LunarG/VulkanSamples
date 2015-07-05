@@ -2131,8 +2131,6 @@ VK_LAYER_EXPORT void* VKAPI vkGetDeviceProcAddr(
     VkDevice         dev,
     const char       *funcName)
 {
-    void *fptr;
-
     if (dev == NULL) {
         return NULL;
     }
