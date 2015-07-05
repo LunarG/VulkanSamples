@@ -44,18 +44,15 @@ using namespace std;
 #include "vk_layer_table.h"
 #include "vk_layer_data.h"
 #include "vk_layer_logging.h"
- static LOADER_PLATFORM_THREAD_ONCE_DECLARATION(g_initOnce);
+static LOADER_PLATFORM_THREAD_ONCE_DECLARATION(g_initOnce);
 
 typedef struct _layer_data {
     debug_report_data *report_data;
     // TODO: put instance data here
     VkDbgMsgCallback logging_callback;
+    bool wsi_lunarg_enabled;
 } layer_data;
 
-struct devExts {
-    bool wsi_lunarg_enabled;
-};
-static std::unordered_map<void *, struct devExts>     deviceExtMap;
 static std::unordered_map<void *, layer_data *> layer_data_map;
 static device_table_map mem_tracker_device_table_map;
 static instance_table_map mem_tracker_instance_table_map;
@@ -879,12 +876,12 @@ VkResult VKAPI vkCreateInstance(
 
 static void createDeviceRegisterExtensions(const VkDeviceCreateInfo* pCreateInfo, VkDevice device)
 {
-    uint32_t i, ext_idx;
-    VkLayerDispatchTable *pDisp  = get_dispatch_table(mem_tracker_device_table_map, device);
-    deviceExtMap[pDisp].wsi_lunarg_enabled = false;
-    for (i = 0; i < pCreateInfo->extensionCount; i++) {
+    uint32_t i;
+    layer_data *my_device_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+    my_device_data->wsi_lunarg_enabled = false;
+    for (uint32_t i = 0; i < pCreateInfo->extensionCount; i++) {
         if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_WSI_LUNARG_EXTENSION_NAME) == 0)
-            deviceExtMap[pDisp].wsi_lunarg_enabled = true;
+            my_device_data->wsi_lunarg_enabled = true;
 
     }
 }
@@ -945,7 +942,6 @@ VK_LAYER_EXPORT VkResult VKAPI vkDestroyDevice(
 #endif
     VkLayerDispatchTable *pDisp  = get_dispatch_table(mem_tracker_device_table_map, device);
     VkResult result = pDisp->DestroyDevice(device);
-    deviceExtMap.erase(pDisp);
     mem_tracker_device_table_map.erase(key);
     assert(mem_tracker_device_table_map.size() == 0 && "Should not have any instance mappings hanging around");
 
@@ -2265,8 +2261,8 @@ VK_LAYER_EXPORT void* VKAPI vkGetDeviceProcAddr(
     if (!strcmp(funcName, "vkGetDeviceQueue"))
         return (void*) vkGetDeviceQueue;
 
-    VkLayerDispatchTable *pDisp =  get_dispatch_table(mem_tracker_device_table_map, dev);
-    if (deviceExtMap.size() == 0 || deviceExtMap[pDisp].wsi_lunarg_enabled)
+    layer_data *my_device_data = get_my_data_ptr(get_dispatch_key(dev), layer_data_map);
+    if (my_device_data->wsi_lunarg_enabled)
     {
         if (!strcmp(funcName, "vkCreateSwapChainWSI"))
             return (void*) vkCreateSwapChainWSI;
@@ -2276,11 +2272,10 @@ VK_LAYER_EXPORT void* VKAPI vkGetDeviceProcAddr(
             return (void*) vkGetSwapChainInfoWSI;
     }
 
-    {
-        if (pDisp->GetDeviceProcAddr == NULL)
-            return NULL;
-        return pDisp->GetDeviceProcAddr(dev, funcName);
-    }
+    VkLayerDispatchTable *pDisp  = get_dispatch_table(mem_tracker_device_table_map, dev);
+    if (pDisp->GetDeviceProcAddr == NULL)
+        return NULL;
+    return pDisp->GetDeviceProcAddr(dev, funcName);
 }
 
 VK_LAYER_EXPORT void* VKAPI vkGetInstanceProcAddr(
