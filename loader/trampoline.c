@@ -21,6 +21,7 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
+#define _GNU_SOURCE
 #include <stdlib.h>
 #include <string.h>
 
@@ -67,6 +68,14 @@ LOADER_EXPORT VkResult VKAPI vkCreateInstance(
     memcpy(ptr_instance->disp, &instance_disp, sizeof(instance_disp));
     ptr_instance->next = loader.instances;
     loader.instances = ptr_instance;
+
+    if (pCreateInfo->pAllocCb
+            && pCreateInfo->pAllocCb->pfnAlloc
+            && pCreateInfo->pAllocCb->pfnFree) {
+        ptr_instance->alloc_callbacks.pUserData = pCreateInfo->pAllocCb->pUserData;
+        ptr_instance->alloc_callbacks.pfnAlloc = pCreateInfo->pAllocCb->pfnAlloc;
+        ptr_instance->alloc_callbacks.pfnFree = pCreateInfo->pAllocCb->pfnFree;
+    }
 
     loader_enable_instance_layers(ptr_instance, pCreateInfo);
 

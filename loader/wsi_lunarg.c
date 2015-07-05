@@ -26,6 +26,9 @@
  *   Courtney Goeltzenleuchter <courtney@lunarg.com>
  */
 
+#define _GNU_SOURCE
+#include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include "vk_loader_platform.h"
 #include "loader.h"

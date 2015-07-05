@@ -106,6 +106,40 @@ LOADER_PLATFORM_THREAD_ONCE_DECLARATION(once_icd);
 LOADER_PLATFORM_THREAD_ONCE_DECLARATION(once_layer);
 LOADER_PLATFORM_THREAD_ONCE_DECLARATION(once_exts);
 
+void* loader_heap_alloc(
+    struct loader_instance     *instance,
+    size_t                      size,
+    VkSystemAllocType           alloc_type)
+{
+    if (instance && instance->alloc_callbacks.pfnAlloc) {
+        /* TODO: What should default alignment be? 1, 4, 8, other? */
+        return instance->alloc_callbacks.pfnAlloc(instance->alloc_callbacks.pUserData, size, 4, alloc_type);
+    }
+    return malloc(size);
+}
+
+void* loader_aligned_heap_alloc(
+    struct loader_instance     *instance,
+    size_t                      size,
+    size_t                      alignment,
+    VkSystemAllocType           alloc_type)
+{
+    if (!instance && instance->alloc_callbacks.pfnAlloc) {
+        return instance->alloc_callbacks.pfnAlloc(instance->alloc_callbacks.pUserData, size, alignment, alloc_type);
+    }
+    return aligned_alloc(size, alignment);
+}
+
+void loader_heap_free(
+    struct loader_instance     *instance,
+    void                       *pMem)
+{
+    if (!instance && instance->alloc_callbacks.pfnFree) {
+        return instance->alloc_callbacks.pfnFree(instance->alloc_callbacks.pUserData, pMem);
+    }
+    return free(pMem);
+}
+
 static void loader_log(VkFlags msg_type, int32_t msg_code,
     const char *format, ...)
 {
@@ -365,11 +399,7 @@ static void loader_add_global_extensions(
         return;
     }
 
-#ifdef WIN32
-    extension_properties = _alloca(count * sizeof(VkExtensionProperties));
-#else
-    extension_properties = alloca(count * sizeof(VkExtensionProperties));
-#endif
+    extension_properties = loader_stack_alloc(count * sizeof(VkExtensionProperties));
 
     res = fp_get_props(NULL, &count, extension_properties);
     if (res != VK_SUCCESS) {
@@ -404,6 +434,7 @@ static void loader_add_global_extensions(
     return;
 }
 
+/* TODO: Need to use loader_heap_alloc or loader_stack_alloc */
 static void loader_add_global_layer_properties(
         const char *lib_name,
         const loader_platform_dl_handle lib_handle,
@@ -441,11 +472,7 @@ static void loader_add_global_layer_properties(
         return;
     }
 
-#ifdef WIN32
-    layer_properties = _alloca(count * sizeof(VkLayerProperties));
-#else
-    layer_properties = alloca(count * sizeof(VkLayerProperties));
-#endif
+    layer_properties = loader_stack_alloc(count * sizeof(VkLayerProperties));
 
     res = fp_get_layer_props(&count, layer_properties);
     if (res != VK_SUCCESS) {
@@ -501,11 +528,9 @@ static void loader_add_physical_device_extensions(
     if (get_phys_dev_ext_props) {
         res = get_phys_dev_ext_props(physical_device, NULL, &count, NULL);
         if (res == VK_SUCCESS && count > 0) {
-#ifdef WIN32
-            extension_properties = _alloca(count * sizeof(VkExtensionProperties));
-#else
-            extension_properties = alloca(count * sizeof(VkExtensionProperties));
-#endif
+
+            extension_properties = loader_stack_alloc(count * sizeof(VkExtensionProperties));
+
             res = get_phys_dev_ext_props(physical_device, NULL, &count, extension_properties);
             for (i = 0; i < count; i++) {
                 char spec_version[64], version[64];
@@ -576,11 +601,7 @@ static void loader_add_physical_device_layer_properties(
         return;
     }
 
-#ifdef WIN32
-    layer_properties = _alloca(count * sizeof(VkLayerProperties));
-#else
-    layer_properties = alloca(count * sizeof(VkLayerProperties));
-#endif
+    layer_properties = loader_stack_alloc(count * sizeof(VkLayerProperties));
 
     res = fp_get_layer_props(gpu, &count, layer_properties);
     if (res != VK_SUCCESS) {
@@ -612,6 +633,7 @@ static void loader_add_physical_device_layer_properties(
 static bool loader_init_ext_list(struct loader_extension_list *ext_info)
 {
     ext_info->capacity = 32 * sizeof(struct loader_extension_property);
+    /* TODO: Need to use loader_stack_alloc or loader_heap_alloc */
     ext_info->list = malloc(ext_info->capacity);
     if (ext_info->list == NULL) {
         return false;
@@ -685,6 +707,7 @@ void loader_add_to_ext_list(
                         >= ext_list->capacity) {
             // double capacity
             ext_list->capacity *= 2;
+            /* TODO: Need to use loader_stack_alloc or loader_heap_alloc */
             ext_list->list = realloc(ext_list->list, ext_list->capacity);
         }
 
@@ -693,9 +716,13 @@ void loader_add_to_ext_list(
     }
 }
 
+/*
+ * Manage lists of VkLayerProperties
+ */
 static bool loader_init_layer_list(struct loader_layer_list *list)
 {
     list->capacity = 32 * sizeof(struct loader_layer_properties);
+    /* TODO: Need to use loader_stack_alloc or loader_heap_alloc */
     list->list = malloc(list->capacity);
     if (list->list == NULL) {
         return false;
@@ -1242,7 +1269,7 @@ static cJSON *loader_get_json(const char *filename)
     fseek(file, 0, SEEK_END);
     len = ftell(file);
     fseek(file, 0, SEEK_SET);
-    json_buf = (char*) alloca(len+1);
+    json_buf = (char*) loader_stack_alloc(len+1);
     if (json_buf == NULL) {
         loader_log(VK_DBG_REPORT_ERROR_BIT, 0, "Out of memory can't get JSON file");
         fclose(file);
@@ -1342,7 +1369,7 @@ static void loader_get_manifest_files(const char *env_override,
 #endif
     }
     else {
-        loc = alloca(strlen(override) + 1);
+        loc = loader_stack_alloc(strlen(override) + 1);
         if (loc == NULL) {
             loader_log(VK_DBG_REPORT_ERROR_BIT, 0, "Out of memory can't get manifest files");
             return;
@@ -1803,7 +1830,7 @@ static void loader_add_layer_env(
     if (layerEnv == NULL) {
         return;
     }
-    name = alloca(strlen(layerEnv) + 1);
+    name = loader_stack_alloc(strlen(layerEnv) + 1);
     if (name == NULL) {
         return;
     }

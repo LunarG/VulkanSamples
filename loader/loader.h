@@ -240,6 +240,8 @@ struct loader_instance {
 
     bool debug_report_enabled;
     VkLayerDbgFunctionNode *DbgFunctionHead;
+
+    VkAllocCallbacks alloc_callbacks;
 };
 
 struct loader_struct {
@@ -418,4 +420,19 @@ void loader_enable_instance_layers(struct loader_instance *inst, const VkInstanc
 void loader_deactivate_instance_layers(struct loader_instance *instance);
 uint32_t loader_activate_instance_layers(struct loader_instance *inst);
 void loader_activate_instance_layer_extensions(struct loader_instance *inst);
+
+void* loader_heap_alloc(
+    struct loader_instance      *instance,
+    size_t                       size,
+    VkSystemAllocType            allocType);
+
+void* loader_aligned_heap_alloc(
+    struct loader_instance      *instance,
+    size_t                       size,
+    size_t                       alignment,
+    VkSystemAllocType            allocType);
+
+void loader_heap_free(
+    struct loader_instance      *instance,
+    void                        *pMem);
 #endif /* LOADER_H */

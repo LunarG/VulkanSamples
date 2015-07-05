@@ -151,6 +151,8 @@ static inline void loader_platform_thread_cond_broadcast(loader_platform_thread_
     pthread_cond_broadcast(pCond);
 }
 
+#define loader_stack_alloc(size) alloca(size)
+static inline void *loader_aligned_alloc(size_t alignment, size_t size) { return aligned_alloc(alignment, size); }
 
 #elif defined(_WIN32) // defined(__linux__)
 /* Windows-specific common code: */
@@ -387,6 +389,8 @@ char *loader_get_registry_string(const HKEY hive,
 #define LeaveCriticalSection PLEASE USE THE loader_platform_thread_unlock_mutex() FUNCTION
 #define DeleteCriticalSection PLEASE USE THE loader_platform_thread_delete_mutex() FUNCTION
 
+#define loader_stack_alloc(size) _alloca(size)
+static inline void *loader_aligned_alloc(size_t alignment, size_t size) { return _aligned_alloc(alignment, size); }
 
 #endif // defined(_WIN32)
 #endif /* LOADER_PLATFORM_H_TEMP */
