@@ -958,15 +958,16 @@ static void loader_find_layer_name_add_list(
     }
 }
 
-bool loader_is_extension_scanned(const VkExtensionProperties *ext_prop)
+static struct loader_extension_property *get_extension_property(
+        const char *name,
+        const struct loader_extension_list *list)
 {
-    uint32_t i;
-
-    for (i = 0; i < loader.global_extensions.count; i++) {
-        if (compare_vk_extension_properties(&loader.global_extensions.list[i].info, ext_prop))
-            return true;
+    for (uint32_t i = 0; i < list->count; i++) {
+        const VkExtensionProperties *item = &list->list[i].info;
+        if (strcmp(name, item->extName) == 0)
+            return &list->list[i];
     }
-    return false;
+    return NULL;
 }
 
 /*
@@ -2233,20 +2234,47 @@ VkResult loader_CreateInstance(
     struct loader_instance *ptr_instance = *(struct loader_instance **) pInstance;
     struct loader_scanned_icds *scanned_icds;
     struct loader_icd *icd;
+    struct loader_extension_property *prop;
+    char **filtered_extension_names = NULL;
+    VkInstanceCreateInfo icd_create_info;
     VkResult res = VK_SUCCESS;
+
+    icd_create_info.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
+    icd_create_info.layerCount = 0;
+    icd_create_info.ppEnabledLayerNames = NULL;
+    icd_create_info.pAllocCb = pCreateInfo->pAllocCb;
+    icd_create_info.pAppInfo = pCreateInfo->pAppInfo;
+    icd_create_info.pNext = pCreateInfo->pNext;
+
+    /*
+     * NOTE: Need to filter the extensions to only those
+     * supported by the ICD are in the pCreateInfo structure.
+     * No ICD will advertise support for layers. An ICD
+     * library could support a layer, but it would be
+     * independent of the actual ICD, just in the same library.
+     */
+    filtered_extension_names = loader_stack_alloc(pCreateInfo->extensionCount * sizeof(char *));
+    if (!filtered_extension_names) {
+        return VK_ERROR_OUT_OF_HOST_MEMORY;
+    }
+    icd_create_info.ppEnabledExtensionNames = (const char * const *) filtered_extension_names;
 
     scanned_icds = loader.scanned_icd_list;
     while (scanned_icds) {
         icd = loader_icd_add(ptr_instance, scanned_icds);
         if (icd) {
-            /*
-             * NOTE: Need to filter the extensions to only those
-             * supported by the ICD are in the pCreateInfo structure.
-             * No ICD will advertise support for layers. An ICD
-             * library could support a layer, but it would be
-             * indenpendent of the actual ICD, just in the same library.
-             */
-            res = scanned_icds->CreateInstance(pCreateInfo,
+
+            icd_create_info.extensionCount = 0;
+            for (uint32_t i = 0; i < pCreateInfo->extensionCount; i++) {
+                prop = get_extension_property(pCreateInfo->ppEnabledExtensionNames[i],
+                                              &scanned_icds->global_extension_list);
+                if (prop) {
+                    filtered_extension_names[icd_create_info.extensionCount] = (char *) pCreateInfo->ppEnabledExtensionNames[i];
+                    icd_create_info.extensionCount++;
+                }
+            }
+
+            res = scanned_icds->CreateInstance(&icd_create_info,
                                            &(icd->instance));
             if (res != VK_SUCCESS)
             {
