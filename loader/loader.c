@@ -2021,7 +2021,7 @@ uint32_t loader_activate_instance_layers(struct loader_instance *inst)
         return 0;
     }
 
-    wrappedInstance = malloc(sizeof(VkBaseLayerObject)
+    wrappedInstance = loader_stack_alloc(sizeof(VkBaseLayerObject)
                                    * inst->activated_layer_list.count);
     if (!wrappedInstance) {
         loader_log(VK_DBG_REPORT_ERROR_BIT, 0, "Failed to malloc Instance objects for layer");
@@ -2076,7 +2076,6 @@ uint32_t loader_activate_instance_layers(struct loader_instance *inst)
 
     loader_init_instance_core_dispatch_table(inst->disp, nextGPA, (VkInstance) nextObj, (VkInstance) baseObj);
 
-    free(wrappedInstance);
     return inst->activated_layer_list.count;
 }
 
