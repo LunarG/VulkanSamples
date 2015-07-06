@@ -2239,6 +2239,13 @@ VkResult loader_CreateInstance(
     while (scanned_icds) {
         icd = loader_icd_add(ptr_instance, scanned_icds);
         if (icd) {
+            /*
+             * NOTE: Need to filter the extensions to only those
+             * supported by the ICD are in the pCreateInfo structure.
+             * No ICD will advertise support for layers. An ICD
+             * library could support a layer, but it would be
+             * indenpendent of the actual ICD, just in the same library.
+             */
             res = scanned_icds->CreateInstance(pCreateInfo,
                                            &(icd->instance));
             if (res != VK_SUCCESS)
