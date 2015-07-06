@@ -1749,8 +1749,6 @@ void loader_layer_scan(void)
                         loader_log(VK_DBG_REPORT_DEBUG_BIT, 0,
                                    "Opened library: %s", temp_str);
 
-                        loader_log(VK_DBG_REPORT_DEBUG_BIT, 0, "Collecting global extensions for %s", temp_str);
-
                         /* TODO: Need instance pointer here */
                         loader_add_layer_library(NULL, temp_str, handle, &loader.scanned_layer_libraries);
 
