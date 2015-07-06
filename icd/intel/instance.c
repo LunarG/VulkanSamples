@@ -144,7 +144,9 @@ static void intel_instance_destroy(struct intel_instance *instance)
     icd_instance_destroy(icd);
 }
 
-static struct intel_instance *intel_instance_create(const VkInstanceCreateInfo* info)
+static VkResult intel_instance_create(
+        const VkInstanceCreateInfo* info,
+        struct intel_instance **pInstance)
 {
     struct intel_instance *instance;
     struct icd_instance *icd;
@@ -154,13 +156,13 @@ static struct intel_instance *intel_instance_create(const VkInstanceCreateInfo* 
 
     icd = icd_instance_create(info->pAppInfo, info->pAllocCb);
     if (!icd)
-        return NULL;
+        return VK_ERROR_OUT_OF_HOST_MEMORY;
 
     instance = icd_instance_alloc(icd, sizeof(*instance), 0,
             VK_SYSTEM_ALLOC_TYPE_API_OBJECT);
     if (!instance) {
         icd_instance_destroy(icd);
-        return NULL;
+        return VK_ERROR_OUT_OF_HOST_MEMORY;
     }
 
     memset(instance, 0, sizeof(*instance));
@@ -174,14 +176,28 @@ static struct intel_instance *intel_instance_create(const VkInstanceCreateInfo* 
         if (ext != INTEL_GLOBAL_EXT_INVALID) {
             instance->global_exts[ext] = true;
         } else {
-            /* TODO: ICD should fail create if extensions are specified that
-             * ICD cannot satisfy. Except this messes with chaining!
-             * Seems that a chain needs to consume the enables it
-             * uses leaving only the ICD ones here.
+            /* Fail create if extensions are specified that
+             * ICD cannot satisfy. Loader will filter out extensions / layers
+             * not meant by the ICD.
              */
+            icd_instance_destroy(icd);
+            intel_instance_destroy(instance);
+            return VK_ERROR_INVALID_EXTENSION;
         }
     }
-    return instance;
+
+    /*
+     * This ICD does not support any layers.
+     */
+    if (info->layerCount > 0) {
+        icd_instance_destroy(icd);
+        intel_instance_destroy(instance);
+        return VK_ERROR_INVALID_LAYER;
+    }
+
+    *pInstance = instance;
+
+    return VK_SUCCESS;
 }
 
 enum intel_global_ext_type intel_gpu_lookup_global_extension(
@@ -201,17 +217,9 @@ enum intel_global_ext_type intel_gpu_lookup_global_extension(
 
 ICD_EXPORT VkResult VKAPI vkCreateInstance(
     const VkInstanceCreateInfo*             pCreateInfo,
-    VkInstance*                               pInstance)
+    VkInstance*                             pInstance)
 {
-    struct intel_instance *instance;
-
-    instance = intel_instance_create(pCreateInfo);
-    if (!instance)
-        return VK_ERROR_OUT_OF_HOST_MEMORY;
-
-    *pInstance = (VkInstance) instance;
-
-    return VK_SUCCESS;
+    return intel_instance_create(pCreateInfo, (struct intel_instance **) pInstance);
 }
 
 ICD_EXPORT VkResult VKAPI vkDestroyInstance(
