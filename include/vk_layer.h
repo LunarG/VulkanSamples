@@ -7,8 +7,8 @@
 #include "vulkan.h"
 #include "vk_debug_report_lunarg.h"
 #include "vk_debug_marker_lunarg.h"
-#include "vk_wsi_lunarg.h"
-#include "vk_wsi_lunarg.h"
+#include "vk_wsi_swapchain.h"
+#include "vk_wsi_device_swapchain.h"
 #if defined(__GNUC__) && __GNUC__ >= 4
 #  define VK_LAYER_EXPORT __attribute__((visibility("default")))
 #elif defined(__SUNPRO_C) && (__SUNPRO_C >= 0x590)
@@ -161,9 +161,11 @@ typedef struct VkLayerDispatchTable_
     PFN_vkCmdNextSubpass CmdNextSubpass;
     PFN_vkCmdEndRenderPass CmdEndRenderPass;
     PFN_vkCmdExecuteCommands CmdExecuteCommands;
+    PFN_vkGetSurfaceInfoWSI GetSurfaceInfoWSI;
     PFN_vkCreateSwapChainWSI CreateSwapChainWSI;
     PFN_vkDestroySwapChainWSI DestroySwapChainWSI;
     PFN_vkGetSwapChainInfoWSI GetSwapChainInfoWSI;
+    PFN_vkAcquireNextImageWSI AcquireNextImageWSI;
     PFN_vkQueuePresentWSI QueuePresentWSI;
     PFN_vkDbgCreateMsgCallback DbgCreateMsgCallback;
     PFN_vkDbgDestroyMsgCallback DbgDestroyMsgCallback;
@@ -188,6 +190,7 @@ typedef struct VkLayerInstanceDispatchTable_
     PFN_vkGetPhysicalDeviceMemoryProperties GetPhysicalDeviceMemoryProperties;
     PFN_vkGetPhysicalDeviceExtensionProperties GetPhysicalDeviceExtensionProperties;
     PFN_vkGetPhysicalDeviceLayerProperties GetPhysicalDeviceLayerProperties;
+    PFN_vkGetPhysicalDeviceSurfaceSupportWSI GetPhysicalDeviceSurfaceSupportWSI;
     PFN_vkDbgCreateMsgCallback DbgCreateMsgCallback;
     PFN_vkDbgDestroyMsgCallback DbgDestroyMsgCallback;
     PFN_vkDbgStringCallback DbgStringCallback;

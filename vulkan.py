@@ -1010,43 +1010,65 @@ core = Extension(
     ],
 )
 
-wsi_lunarg = Extension(
-    name="VK_WSI_LunarG",
-    headers=["vk_wsi_lunarg.h"],
+wsi_swapchain = Extension(
+    name="VK_WSI_swapchain",
+    headers=["vk_wsi_swapchain.h"],
     objects=[
-        "VkDisplayWSI",
-        "VkSwapChainWSI",
         "VkDbgMsgCallback",
     ],
     protos=[
+        Proto("VkResult", "GetPhysicalDeviceSurfaceSupportWSI",
+            [Param("VkPhysicalDevice", "physicalDevice"),
+             Param("uint32_t", "queueNodeIndex"),
+	     Param("VkSurfaceDescriptionWSI*", "pSurfaceDescription"),
+             Param("VkBool32*", "pSupported")]),
+    ],
+)
+
+wsi_device_swapchain = Extension(
+    name="VK_WSI_device_swapchain",
+    headers=["vk_wsi_device_swapchain.h"],
+    objects=[
+        "VkDbgMsgCallback",
+    ],
+    protos=[
+        Proto("VkResult", "GetSurfaceInfoWSI",
+            [Param("VkDevice", "device"),
+	     Param("VkSurfaceDescriptionWSI*", "pSurfaceDescription"),
+             Param("VkSurfaceInfoTypeWSI", "infoType"),
+             Param("size_t*", "pDataSize"),
+             Param("void*", "pData")]),
+
         Proto("VkResult", "CreateSwapChainWSI",
             [Param("VkDevice", "device"),
              Param("const VkSwapChainCreateInfoWSI*", "pCreateInfo"),
              Param("VkSwapChainWSI*", "pSwapChain")]),
 
         Proto("VkResult", "DestroySwapChainWSI",
-            [Param("VkSwapChainWSI", "swapChain")]),
+            [Param("VkDevice", "device"),
+	     Param("VkSwapChainWSI", "swapChain")]),
 
         Proto("VkResult", "GetSwapChainInfoWSI",
-            [Param("VkSwapChainWSI", "swapChain"),
+            [Param("VkDevice", "device"),
+	     Param("VkSwapChainWSI", "swapChain"),
              Param("VkSwapChainInfoTypeWSI", "infoType"),
              Param("size_t*", "pDataSize"),
              Param("void*", "pData")]),
 
+        Proto("VkResult", "AcquireNextImageWSI",
+            [Param("VkDevice", "device"),
+	     Param("VkSwapChainWSI", "swapChain"),
+             Param("uint64_t", "timeout"),
+             Param("VkSemaphore", "semaphore"),
+             Param("uint32_t*", "pImageIndex")]),
+
         Proto("VkResult", "QueuePresentWSI",
             [Param("VkQueue", "queue"),
-             Param("const VkPresentInfoWSI*", "pPresentInfo")]),
-
-#        Proto("VkResult", "DbgCreateMsgCallback",
-#            [Param("VkInstance", "instance"),
-#             Param("VkFlags", "msgFlags"),
-#             Param("PFN_vkDbgMsgCallback", "pfnMsgCallback"),
-#             Param("void*", "pUserData"),
-#             Param("VkDbgMsgCallback*", "pMsgCallback")]),
+             Param("VkPresentInfoWSI*", "pPresentInfo")]),
     ],
 )
 
-extensions = [core, wsi_lunarg]
+extensions = [core, wsi_swapchain, wsi_device_swapchain]
 
 object_dispatch_list = [
     "VkInstance",

@@ -49,7 +49,7 @@ using namespace std;
 
 
 struct devExts {
-    bool wsi_lunarg_enabled;
+    bool wsi_enabled;
 };
 static std::unordered_map<void *, struct devExts>     deviceExtMap;
 static device_table_map screenshot_device_table_map;
@@ -274,10 +274,10 @@ static void createDeviceRegisterExtensions(const VkDeviceCreateInfo* pCreateInfo
 {
     uint32_t i, ext_idx;
     VkLayerDispatchTable *pDisp  = get_dispatch_table(screenshot_device_table_map, device);
-    deviceExtMap[pDisp].wsi_lunarg_enabled = false;
+    deviceExtMap[pDisp].wsi_enabled = false;
     for (i = 0; i < pCreateInfo->extensionCount; i++) {
-        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_WSI_LUNARG_EXTENSION_NAME) == 0)
-            deviceExtMap[pDisp].wsi_lunarg_enabled = true;
+        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_WSI_DEVICE_SWAPCHAIN_EXTENSION_NAME) == 0)
+            deviceExtMap[pDisp].wsi_enabled = true;
     }
 }
 
@@ -409,12 +409,13 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateSwapChainWSI(
 }
 
 VK_LAYER_EXPORT VkResult VKAPI vkGetSwapChainInfoWSI(
+    VkDevice                device,
     VkSwapChainWSI          swapChain,
     VkSwapChainInfoTypeWSI  infoType,
     size_t                 *pDataSize,
     void                   *pData)
 {
-    VkResult result = get_dispatch_table(screenshot_device_table_map, swapChain)->GetSwapChainInfoWSI(swapChain, infoType, pDataSize, pData);
+    VkResult result = get_dispatch_table(screenshot_device_table_map, swapChain)->GetSwapChainInfoWSI(device, swapChain, infoType, pDataSize, pData);
 
     loader_platform_thread_lock_mutex(&globalLock);
     if (screenshotEnvQueried && screenshotFrames.empty()) {
@@ -426,8 +427,8 @@ VK_LAYER_EXPORT VkResult VKAPI vkGetSwapChainInfoWSI(
     if (result == VK_SUCCESS &&
         !swapchainMap.empty() && swapchainMap.find(swapChain) != swapchainMap.end())
     {   
-        VkSwapChainImageInfoWSI *swapChainImageInfo = (VkSwapChainImageInfoWSI *)pData;
-        for (int i=0; i<*pDataSize/sizeof(VkSwapChainImageInfoWSI); i++,swapChainImageInfo++)
+        VkSwapChainImagePropertiesWSI *swapChainImageInfo = (VkSwapChainImagePropertiesWSI *)pData;
+        for (int i=0; i<*pDataSize/sizeof(VkSwapChainImagePropertiesWSI); i++,swapChainImageInfo++)
         {
             // Create a mapping for an image to a device, image extent, and format
             ImageMapStruct *imageMapElem = new ImageMapStruct;
@@ -441,7 +442,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkGetSwapChainInfoWSI(
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkQueuePresentWSI(VkQueue queue, const VkPresentInfoWSI* pPresentInfo)
+VK_LAYER_EXPORT VkResult VKAPI vkQueuePresentWSI(VkQueue queue, VkPresentInfoWSI* pPresentInfo)
 {
     static int frameNumber = 0;
     VkResult result = get_dispatch_table(screenshot_device_table_map, queue)->QueuePresentWSI(queue, pPresentInfo);
@@ -488,7 +489,12 @@ VK_LAYER_EXPORT VkResult VKAPI vkQueuePresentWSI(VkQueue queue, const VkPresentI
         {
             string fileName;
             fileName = to_string(frameNumber) + ".ppm";
+#if 0
+            // FIXME/TBD: WRITE THE REAL CODE, GIVEN THE NEW DATA STRUCTURE
+            //  THAT ALLOWS MULTIPLE IMAGES TO BE PRESENTED DURING THE SAME
+            //  CALL (AND ARE REFERENCED BY INDEX, NOT BY HANDLE).
             writePPM(fileName.c_str(), pPresentInfo->image);
+#endif
             screenshotFrames.erase(it);
 
             if (screenshotFrames.empty())
@@ -540,7 +546,7 @@ VK_LAYER_EXPORT PFN_vkVoidFunction VKAPI vkGetDeviceProcAddr(
         return (void*) vkGetDeviceQueue;
 
     VkLayerDispatchTable *pDisp =  get_dispatch_table(screenshot_device_table_map, dev);
-    if (deviceExtMap.size() == 0 || deviceExtMap[pDisp].wsi_lunarg_enabled)
+    if (deviceExtMap.size() == 0 || deviceExtMap[pDisp].wsi_enabled)
     {
         if (!strcmp(funcName, "vkCreateSwapChainWSI"))
             return (void*) vkCreateSwapChainWSI;

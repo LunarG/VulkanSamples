@@ -71,7 +71,7 @@ typedef struct _layer_data {
     debug_report_data *report_data;
     //TODO: put instance data here
     VkDbgMsgCallback   logging_callback;
-    bool wsi_lunarg_enabled;
+    bool wsi_enabled;
     bool objtrack_extensions_enabled;
 } layer_data;
 
@@ -103,10 +103,10 @@ template layer_data *get_my_data_ptr<layer_data>(
 static void createDeviceRegisterExtensions(const VkDeviceCreateInfo* pCreateInfo, VkDevice device)
 {
     layer_data *my_device_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
-    my_device_data->wsi_lunarg_enabled = false;
+    my_device_data->wsi_enabled = false;
     for (uint32_t i = 0; i < pCreateInfo->extensionCount; i++) {
-        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_WSI_LUNARG_EXTENSION_NAME) == 0)
-            my_device_data->wsi_lunarg_enabled = true;
+        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_WSI_SWAPCHAIN_EXTENSION_NAME) == 0)
+            my_device_data->wsi_enabled = true;
 
         if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], "OBJTRACK_EXTENSIONS") == 0)
             my_device_data->objtrack_extensions_enabled = true;
@@ -161,8 +161,8 @@ objTypeToIndex(
 {
     uint32_t index = objType;
     if (objType > VK_OBJECT_TYPE_END_RANGE) {
-        // These come from vk_wsi_lunarg.h, rebase
-        index = (index -(VK_WSI_LUNARG_EXTENSION_NUMBER * -1000)) + VK_OBJECT_TYPE_END_RANGE;
+        // These come from vk_wsi_swapchain.h, rebase
+        index = (index -(VK_WSI_DEVICE_SWAPCHAIN_EXTENSION_NUMBER * -1000)) + VK_OBJECT_TYPE_END_RANGE;
     }
     return index;
 }
@@ -397,38 +397,38 @@ static void create_obj(VkDevice dispatchable_object, VkCmdBuffer vkObj, VkDbgObj
 }
 static void create_obj(VkDevice dispatchable_object, VkSwapChainWSI vkObj, VkDbgObjectType objType)
 {
-    log_msg(mdd(dispatchable_object), VK_DBG_REPORT_INFO_BIT, objType, reinterpret_cast<VkUintPtrLeast64>(vkObj), 0, OBJTRACK_NONE, "OBJTRACK",
+    log_msg(mdd(dispatchable_object), VK_DBG_REPORT_INFO_BIT, objType, reinterpret_cast<VkUintPtrLeast64>(vkObj.handle), 0, OBJTRACK_NONE, "OBJTRACK",
         "OBJ[%llu] : CREATE %s object 0x%" PRIxLEAST64 , object_track_index++, string_VkDbgObjectType(objType),
-        reinterpret_cast<VkUintPtrLeast64>(vkObj));
+        reinterpret_cast<VkUintPtrLeast64>(vkObj.handle));
 
     OBJTRACK_NODE* pNewObjNode = new OBJTRACK_NODE;
     pNewObjNode->objType = objType;
     pNewObjNode->status  = OBJSTATUS_NONE;
-    pNewObjNode->vkObj  = reinterpret_cast<VkUintPtrLeast64>(vkObj);
-    VkSwapChainWSIMap[vkObj] = pNewObjNode;
+    pNewObjNode->vkObj  = reinterpret_cast<VkUintPtrLeast64>(vkObj.handle);
+    VkSwapChainWSIMap[(void*) vkObj.handle] = pNewObjNode;
     uint32_t objIndex = objTypeToIndex(objType);
     numObjs[objIndex]++;
     numTotalObjs++;
 }
-static void destroy_obj(VkSwapChainWSI dispatchable_object, VkSwapChainWSI object)
+static void destroy_obj(VkDevice dispatchable_object, VkSwapChainWSI object)
 {
-    if (VkSwapChainWSIMap.find(object) != VkSwapChainWSIMap.end()) {
-        OBJTRACK_NODE* pNode = VkSwapChainWSIMap[object];
+    if (VkSwapChainWSIMap.find((void*) object.handle) != VkSwapChainWSIMap.end()) {
+        OBJTRACK_NODE* pNode = VkSwapChainWSIMap[(void*) object.handle];
         uint32_t objIndex = objTypeToIndex(pNode->objType);
         assert(numTotalObjs > 0);
         numTotalObjs--;
         assert(numObjs[objIndex] > 0);
         numObjs[objIndex]--;
-        log_msg(mdd(dispatchable_object), VK_DBG_REPORT_INFO_BIT, pNode->objType, reinterpret_cast<VkUintPtrLeast64>(object), 0, OBJTRACK_NONE, "OBJTRACK",
+        log_msg(mdd(dispatchable_object), VK_DBG_REPORT_INFO_BIT, pNode->objType, reinterpret_cast<VkUintPtrLeast64>(object.handle), 0, OBJTRACK_NONE, "OBJTRACK",
            "OBJ_STAT Destroy %s obj 0x%" PRIxLEAST64 " (%lu total objs remain & %lu %s objs).",
-            string_VkDbgObjectType(pNode->objType), reinterpret_cast<VkUintPtrLeast64>(object), numTotalObjs, numObjs[objIndex],
+            string_VkDbgObjectType(pNode->objType), reinterpret_cast<VkUintPtrLeast64>(object.handle), numTotalObjs, numObjs[objIndex],
             string_VkDbgObjectType(pNode->objType));
         delete pNode;
-        VkSwapChainWSIMap.erase(object);
+        VkSwapChainWSIMap.erase((void*) object.handle);
     } else {
-        log_msg(mdd(dispatchable_object), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, reinterpret_cast<VkUintPtrLeast64>(object), 0, OBJTRACK_NONE, "OBJTRACK",
+        log_msg(mdd(dispatchable_object), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, reinterpret_cast<VkUintPtrLeast64>(object.handle), 0, OBJTRACK_NONE, "OBJTRACK",
             "Unable to remove obj 0x%" PRIxLEAST64 ". Was it created? Has it already been destroyed?",
-           reinterpret_cast<VkUintPtrLeast64>(object));
+           reinterpret_cast<VkUintPtrLeast64>(object.handle));
     }
 }
 //
@@ -685,14 +685,15 @@ explicit_AllocDescriptorSets(
 
 VkResult
 explicit_DestroySwapChainWSI(
+    VkDevice                        device,
     VkSwapChainWSI swapChain)
 {
 
     loader_platform_thread_lock_mutex(&objLock);
-    destroy_obj(swapChain, swapChain);
+    destroy_obj(device, swapChain);
     loader_platform_thread_unlock_mutex(&objLock);
 
-    VkResult result = get_dispatch_table(ObjectTracker_device_table_map, swapChain)->DestroySwapChainWSI(swapChain);
+    VkResult result = get_dispatch_table(ObjectTracker_device_table_map, device)->DestroySwapChainWSI(device, swapChain);
 
     return result;
 }

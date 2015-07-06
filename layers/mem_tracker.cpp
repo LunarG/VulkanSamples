@@ -50,7 +50,7 @@ typedef struct _layer_data {
     debug_report_data *report_data;
     // TODO: put instance data here
     VkDbgMsgCallback logging_callback;
-    bool wsi_lunarg_enabled;
+    bool wsi_enabled;
 } layer_data;
 
 static unordered_map<void *, layer_data *> layer_data_map;
@@ -70,7 +70,7 @@ unordered_map<VkCmdBuffer,    MT_CB_INFO>           cbMap;
 unordered_map<uint64_t,       MT_MEM_OBJ_INFO>      memObjMap;
 unordered_map<uint64_t,       MT_FENCE_INFO>        fenceMap;    // Map fence to fence info
 unordered_map<VkQueue,        MT_QUEUE_INFO>        queueMap;
-unordered_map<VkSwapChainWSI, MT_SWAP_CHAIN_INFO*>  swapChainMap;
+unordered_map<uint64_t,       MT_SWAP_CHAIN_INFO*>  swapChainMap;
 
 // Images and Buffers are 2 objects that can have memory bound to them so they get special treatment
 unordered_map<uint64_t, MT_OBJ_BINDING_INFO> imageMap;
@@ -337,7 +337,7 @@ static void add_swap_chain_info(
 {
     MT_SWAP_CHAIN_INFO* pInfo = new MT_SWAP_CHAIN_INFO;
     memcpy(&pInfo->createInfo, pCI, sizeof(VkSwapChainCreateInfoWSI));
-    swapChainMap[swapChain] = pInfo;
+    swapChainMap[swapChain.handle] = pInfo;
 }
 
 // Add new CBInfo for this cb to map container
@@ -675,13 +675,9 @@ static void add_mem_obj_info(
 {
     assert(object != NULL);
 
-    if (pAllocInfo) {  // MEM alloc created by vkCreateSwapChainWSI() doesn't have alloc info struct
-        memcpy(&memObjMap[mem.handle].allocInfo, pAllocInfo, sizeof(VkMemoryAllocInfo));
-        // TODO:  Update for real hardware, actually process allocation info structures
-        memObjMap[mem.handle].allocInfo.pNext = NULL;
-    } else {
-        memset(&memObjMap[mem.handle].allocInfo, 0, sizeof(VkMemoryAllocInfo));
-    }
+    memcpy(&memObjMap[mem.handle].allocInfo, pAllocInfo, sizeof(VkMemoryAllocInfo));
+    // TODO:  Update for real hardware, actually process allocation info structures
+    memObjMap[mem.handle].allocInfo.pNext = NULL;
     memObjMap[mem.handle].object = object;
     memObjMap[mem.handle].refCount = 0;
     memObjMap[mem.handle].mem = mem;
@@ -1302,11 +1298,10 @@ static void createDeviceRegisterExtensions(const VkDeviceCreateInfo* pCreateInfo
 {
     uint32_t i;
     layer_data *my_device_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
-    my_device_data->wsi_lunarg_enabled = false;
+    my_device_data->wsi_enabled = false;
     for (uint32_t i = 0; i < pCreateInfo->extensionCount; i++) {
-        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_WSI_LUNARG_EXTENSION_NAME) == 0)
-            my_device_data->wsi_lunarg_enabled = true;
-
+        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_WSI_DEVICE_SWAPCHAIN_EXTENSION_NAME) == 0)
+            my_device_data->wsi_enabled = true;
     }
 }
 
@@ -2887,7 +2882,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateSwapChainWSI(
 
     if (VK_SUCCESS == result) {
         loader_platform_thread_lock_mutex(&globalLock);
-        swapChainMap[*pSwapChain]->createInfo = *pCreateInfo;
+        swapChainMap[pSwapChain->handle]->createInfo = *pCreateInfo;
         loader_platform_thread_unlock_mutex(&globalLock);
     }
 
@@ -2895,64 +2890,61 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateSwapChainWSI(
 }
 
 VK_LAYER_EXPORT VkResult VKAPI vkDestroySwapChainWSI(
+    VkDevice                        device,
     VkSwapChainWSI swapChain)
 {
     loader_platform_thread_lock_mutex(&globalLock);
-    if (swapChainMap.find(swapChain) != swapChainMap.end()) {
-        MT_SWAP_CHAIN_INFO* pInfo = swapChainMap[swapChain];
+    if (swapChainMap.find(swapChain.handle) != swapChainMap.end()) {
+        MT_SWAP_CHAIN_INFO* pInfo = swapChainMap[swapChain.handle];
 
         if (pInfo->images.size() > 0) {
             for (auto it = pInfo->images.begin(); it != pInfo->images.end(); it++) {
-                clear_object_binding(swapChain, it->image.handle, VK_OBJECT_TYPE_SWAP_CHAIN_WSI);
-                freeMemObjInfo(swapChain, it->memory, true);
+                clear_object_binding((void*) swapChain.handle, it->image.handle, VK_OBJECT_TYPE_SWAP_CHAIN_WSI);
                 auto image_item = imageMap.find(it->image.handle);
                 if (image_item != imageMap.end())
                     imageMap.erase(image_item);
             }
         }
         delete pInfo;
-        swapChainMap.erase(swapChain);
+        swapChainMap.erase(swapChain.handle);
     }
     loader_platform_thread_unlock_mutex(&globalLock);
-    return get_dispatch_table(mem_tracker_device_table_map, swapChain)->DestroySwapChainWSI(swapChain);
+    return get_dispatch_table(mem_tracker_device_table_map, (void*) swapChain.handle)->DestroySwapChainWSI(device, swapChain);
 }
 
 VK_LAYER_EXPORT VkResult VKAPI vkGetSwapChainInfoWSI(
+    VkDevice                device,
     VkSwapChainWSI          swapChain,
     VkSwapChainInfoTypeWSI  infoType,
     size_t                 *pDataSize,
     void                   *pData)
 {
-    VkResult result = get_dispatch_table(mem_tracker_device_table_map, swapChain)->GetSwapChainInfoWSI(swapChain, infoType, pDataSize, pData);
+    VkResult result = get_dispatch_table(mem_tracker_device_table_map, (void*) swapChain.handle)->GetSwapChainInfoWSI(device, swapChain, infoType, pDataSize, pData);
 
-    if (infoType == VK_SWAP_CHAIN_INFO_TYPE_PERSISTENT_IMAGES_WSI && result == VK_SUCCESS) {
-        const size_t count = *pDataSize / sizeof(VkSwapChainImageInfoWSI);
-        MT_SWAP_CHAIN_INFO *pInfo = swapChainMap[swapChain];
+    if (infoType == VK_SWAP_CHAIN_INFO_TYPE_IMAGES_WSI && result == VK_SUCCESS) {
+        const size_t count = *pDataSize / sizeof(VkSwapChainImagePropertiesWSI);
+        MT_SWAP_CHAIN_INFO *pInfo = swapChainMap[swapChain.handle];
 
         if (pInfo->images.empty()) {
             pInfo->images.resize(count);
             memcpy(&pInfo->images[0], pData, sizeof(pInfo->images[0]) * count);
 
             if (pInfo->images.size() > 0) {
-                for (std::vector<VkSwapChainImageInfoWSI>::const_iterator it = pInfo->images.begin();
+                for (std::vector<VkSwapChainImagePropertiesWSI>::const_iterator it = pInfo->images.begin();
                      it != pInfo->images.end(); it++) {
                     // Add image object binding, then insert the new Mem Object and then bind it to created image
                     add_object_create_info(it->image.handle, VK_OBJECT_TYPE_SWAP_CHAIN_WSI, &pInfo->createInfo);
-                    add_object_binding_info(it->image.handle, VK_OBJECT_TYPE_IMAGE, it->memory);
-                    add_mem_obj_info(swapChain, it->memory, NULL);
-                    if (VK_FALSE == set_mem_binding(swapChain, it->memory, it->image.handle, VK_OBJECT_TYPE_IMAGE)) {
-                        log_msg(mdd(swapChain), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_IMAGE, it->image.handle, 0, MEMTRACK_MEMORY_BINDING_ERROR, "MEM",
-                                "In vkGetSwapChainInfoWSI(), unable to set image %#" PRIxLEAST64 " binding to mem obj %#" PRIxLEAST64, it->image.handle, it->memory.handle);
-                    }
                 }
             }
         } else {
+            const size_t count = *pDataSize / sizeof(VkSwapChainImagePropertiesWSI);
+            MT_SWAP_CHAIN_INFO *pInfo = swapChainMap[swapChain.handle];
             const bool mismatch = (pInfo->images.size() != count ||
                     memcmp(&pInfo->images[0], pData, sizeof(pInfo->images[0]) * count));
 
             if (mismatch) {
                 // TODO : Want swapChain to be srcObj here
-                log_msg(mdd(swapChain), VK_DBG_REPORT_WARN_BIT, VK_OBJECT_TYPE_SWAP_CHAIN_WSI, 0, 0, MEMTRACK_NONE, "SWAP_CHAIN",
+                log_msg(mdd((void*) swapChain.handle), VK_DBG_REPORT_WARN_BIT, VK_OBJECT_TYPE_SWAP_CHAIN_WSI, 0, 0, MEMTRACK_NONE, "SWAP_CHAIN",
                         "vkGetSwapChainInfoWSI(%p, VK_SWAP_CHAIN_INFO_TYPE_PERSISTENT_IMAGES_WSI) returned mismatching data", swapChain);
             }
         }
@@ -3145,14 +3137,20 @@ VK_LAYER_EXPORT PFN_vkVoidFunction VKAPI vkGetDeviceProcAddr(
         return (PFN_vkVoidFunction) vkGetDeviceQueue;
 
     layer_data *my_device_data = get_my_data_ptr(get_dispatch_key(dev), layer_data_map);
-    if (my_device_data->wsi_lunarg_enabled)
+    if (my_device_data->wsi_enabled)
     {
+        if (!strcmp(funcName, "vkGetSurfaceInfoWSI"))
+            return (PFN_vkVoidFunction) vkGetSurfaceInfoWSI;
         if (!strcmp(funcName, "vkCreateSwapChainWSI"))
             return (PFN_vkVoidFunction) vkCreateSwapChainWSI;
         if (!strcmp(funcName, "vkDestroySwapChainWSI"))
             return (PFN_vkVoidFunction) vkDestroySwapChainWSI;
         if (!strcmp(funcName, "vkGetSwapChainInfoWSI"))
             return (PFN_vkVoidFunction) vkGetSwapChainInfoWSI;
+        if (!strcmp(funcName, "vkAcquireNextImageWSI"))
+            return (PFN_vkVoidFunction) vkAcquireNextImageWSI;
+        if (!strcmp(funcName, "vkQueuePresentWSI"))
+            return (PFN_vkVoidFunction) vkQueuePresentWSI;
     }
 
     VkLayerDispatchTable *pDisp  = get_dispatch_table(mem_tracker_device_table_map, dev);

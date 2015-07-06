@@ -555,7 +555,7 @@ class GenericLayerSubcommand(Subcommand):
         gen_header.append('#define LAYER_DEV_EXT_ARRAY_SIZE 1')
         gen_header.append('static LOADER_PLATFORM_THREAD_ONCE_DECLARATION(initOnce);')
         gen_header.append('struct devExts {')
-        gen_header.append('    bool wsi_lunarg_enabled;')
+        gen_header.append('    bool wsi_enabled;')
         gen_header.append('};')
         gen_header.append('static std::unordered_map<void *, struct devExts>     deviceExtMap;')
         gen_header.append('')
@@ -563,10 +563,10 @@ class GenericLayerSubcommand(Subcommand):
         gen_header.append('{')
         gen_header.append('    uint32_t i, ext_idx;')
         gen_header.append('    VkLayerDispatchTable *pDisp  = device_dispatch_table(device);')
-        gen_header.append('    deviceExtMap[pDisp].wsi_lunarg_enabled = false;')
+        gen_header.append('    deviceExtMap[pDisp].wsi_enabled = false;')
         gen_header.append('    for (i = 0; i < pCreateInfo->extensionCount; i++) {')
-        gen_header.append('        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_WSI_LUNARG_EXTENSION_NAME) == 0)')
-        gen_header.append('            deviceExtMap[pDisp].wsi_lunarg_enabled = true;')
+        gen_header.append('        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_WSI_SWAPCHAIN_EXTENSION_NAME) == 0)')
+        gen_header.append('            deviceExtMap[pDisp].wsi_enabled = true;')
         gen_header.append('')
         gen_header.append('    }')
         gen_header.append('}')
@@ -646,7 +646,7 @@ class GenericLayerSubcommand(Subcommand):
 
     def generate_body(self):
         self.layer_name = "Generic"
-        extensions=[('wsi_lunarg_enabled', 
+        extensions=[('wsi_enabled', 
                      ['vkCreateSwapChainWSI', 'vkDestroySwapChainWSI',
                       'vkGetSwapChainInfoWSI', 'vkQueuePresentWSI'])]
         body = [self._generate_layer_initialization(True),
@@ -731,7 +731,7 @@ class APIDumpSubcommand(Subcommand):
         header_txt.append('    return retVal;')
         header_txt.append('}')
         header_txt.append('struct devExts {')
-        header_txt.append('    bool wsi_lunarg_enabled;')
+        header_txt.append('    bool wsi_enabled;')
         header_txt.append('};')
         header_txt.append('')
         header_txt.append('static std::unordered_map<void *, struct devExts>     deviceExtMap;')
@@ -740,10 +740,10 @@ class APIDumpSubcommand(Subcommand):
         header_txt.append('{')
         header_txt.append('    uint32_t i, ext_idx;')
         header_txt.append('    VkLayerDispatchTable *pDisp  = device_dispatch_table(device);')
-        header_txt.append('    deviceExtMap[pDisp].wsi_lunarg_enabled = false;')
+        header_txt.append('    deviceExtMap[pDisp].wsi_enabled = false;')
         header_txt.append('    for (i = 0; i < pCreateInfo->extensionCount; i++) {')
-        header_txt.append('        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_WSI_LUNARG_EXTENSION_NAME) == 0)')
-        header_txt.append('            deviceExtMap[pDisp].wsi_lunarg_enabled = true;')
+        header_txt.append('        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_WSI_SWAPCHAIN_EXTENSION_NAME) == 0)')
+        header_txt.append('            deviceExtMap[pDisp].wsi_enabled = true;')
         header_txt.append('')
         header_txt.append('    }')
         header_txt.append('}')
@@ -860,7 +860,12 @@ class APIDumpSubcommand(Subcommand):
                     if p.name == proto.params[y].name:
                         cp = True
             (pft, pfi) = self._get_printf_params(p.ty, p.name, cp, cpp=True)
-            log_func += '%s = " << %s << ", ' % (p.name, pfi)
+            if p.name == "pSwapChain":
+                log_func += '%s = " << %s->handle << ", ' % (p.name, p.name)
+            elif p.name == "swapChain":
+                log_func += '%s = " << %s.handle << ", ' % (p.name, p.name)
+            else:
+                log_func += '%s = " << %s << ", ' % (p.name, pfi)
             if "%p" == pft:
                 log_func_no_addr += '%s = address, ' % (p.name)
             else:
@@ -1009,7 +1014,7 @@ class APIDumpSubcommand(Subcommand):
 
     def generate_body(self):
         self.layer_name = "APIDump"
-        extensions=[('wsi_lunarg_enabled',
+        extensions=[('wsi_enabled',
                     ['vkCreateSwapChainWSI', 'vkDestroySwapChainWSI',
                     'vkGetSwapChainInfoWSI', 'vkQueuePresentWSI'])]
         body = [self.generate_init(),
@@ -1463,7 +1468,7 @@ class ObjectTrackerSubcommand(Subcommand):
 
     def generate_body(self):
         self.layer_name = "ObjectTracker"
-        extensions=[('wsi_lunarg_enabled',
+        extensions=[('wsi_enabled',
                     ['vkCreateSwapChainWSI', 'vkDestroySwapChainWSI',
                      'vkGetSwapChainInfoWSI', 'vkQueuePresentWSI'])]
         body = [self.generate_maps(),
