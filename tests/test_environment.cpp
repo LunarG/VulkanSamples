@@ -128,6 +128,7 @@ void Environment::TearDown()
         delete *it;
     devs_.clear();
 
-    vkDestroyInstance(inst);
+    if (inst)
+        vkDestroyInstance(inst);
 }
 } // vk_testing namespace
