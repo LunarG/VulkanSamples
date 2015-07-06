@@ -2050,6 +2050,8 @@ static void demo_init_vk(struct demo *demo)
     err = vkGetPhysicalDeviceExtensionProperties(
               demo->gpu, NULL, &device_extension_count, device_extensions);
     assert(!err);
+#if 0
+    /* Will need this check in future */
     for (uint32_t i = 0; i < device_extension_count; i++) {
         if (!strcmp(VK_WSI_LUNARG_EXTENSION_NAME, device_extensions[i].extName)) {
             WSIextFound = 1;
@@ -2065,6 +2067,7 @@ static void demo_init_vk(struct demo *demo)
                  "information.\n",
                  "vkCreateInstance Failure");
     }
+#endif
 
     VkDeviceCreateInfo device = {
         .sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
