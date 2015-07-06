@@ -50,6 +50,8 @@
 #define APP_SHORT_NAME "cube"
 #define APP_LONG_NAME "The Vulkan Cube Demo Program"
 
+#define ARRAY_SIZE(a) (sizeof(a) / sizeof(a[0]))
+
 #if defined(NDEBUG) && defined(__GNUC__)
 #define U_ASSERT_ONLY __attribute__((unused))
 #else
@@ -1893,11 +1895,32 @@ static void demo_create_window(struct demo *demo)
 }
 #endif // _WIN32
 
+/*
+ * Return 1 (true) if all layer names specified in check_names
+ * can be found in given layer properties.
+ */
+static bool32_t demo_check_layers(uint32_t check_count, char **check_names,
+                              uint32_t layer_count, VkLayerProperties *layers)
+{
+    for (uint32_t i = 0; i < check_count; i++) {
+        bool32_t found = 0;
+        for (uint32_t j = 0; j < layer_count; j++) {
+            if (!strcmp(check_names[i], layers[j].layerName)) {
+                found = 1;
+            }
+        }
+        if (!found) {
+            fprintf(stderr, "Cannot find layer: %s\n", check_names[i]);
+            return 0;
+        }
+    }
+    return 1;
+}
+
 static void demo_init_vk(struct demo *demo)
 {
     VkResult err;
     char *extension_names[64];
-    char *layer_names[64];
     VkExtensionProperties *instance_extensions;
     VkLayerProperties *instance_layers;
     VkLayerProperties *device_layers;
@@ -1906,28 +1929,34 @@ static void demo_init_vk(struct demo *demo)
     uint32_t enabled_extension_count = 0;
     uint32_t enabled_layer_count = 0;
 
+    char *instance_validation_layers[] = {
+        "MemTracker",
+    };
+
+    char *device_validation_layers[] = {
+        "MemTracker",
+    };
+
     /* Look for validation layers */
     bool32_t validation_found = 0;
     err = vkGetGlobalLayerProperties(&instance_layer_count, NULL);
     assert(!err);
 
-    memset(layer_names, 0, sizeof(layer_names));
     instance_layers = malloc(sizeof(VkLayerProperties) * instance_layer_count);
     err = vkGetGlobalLayerProperties(&instance_layer_count, instance_layers);
     assert(!err);
-    for (uint32_t i = 0; i < instance_layer_count; i++) {
-        if (!validation_found && demo->validate && !strcmp("Validation", instance_layers[i].layerName)) {
-            layer_names[enabled_layer_count++] = "Validation";
-            validation_found = 1;
+
+    if (demo->validate) {
+        validation_found = demo_check_layers(ARRAY_SIZE(instance_validation_layers), instance_validation_layers,
+                                             instance_layer_count, instance_layers);
+        if (!validation_found) {
+            ERR_EXIT("vkGetGlobalLayerProperties failed to find"
+                     "required validation layer.\n\n"
+                     "Please look at the Getting Started guide for additional "
+                     "information.\n",
+                     "vkCreateInstance Failure");
         }
-        assert(enabled_layer_count < 64);
-    }
-    if (demo->validate && !validation_found) {
-        ERR_EXIT("vkGetGlobalLayerProperties failed to find any "
-                 "\"Validation\" layers.\n\n"
-                 "Please look at the Getting Started guide for additional "
-                 "information.\n",
-                 "vkCreateInstance Failure");
+        enabled_layer_count = ARRAY_SIZE(instance_validation_layers);
     }
 
     err = vkGetGlobalExtensionProperties(NULL, &instance_extension_count, NULL);
@@ -1973,7 +2002,7 @@ static void demo_init_vk(struct demo *demo)
         .pAppInfo = &app,
         .pAllocCb = NULL,
         .layerCount = enabled_layer_count,
-        .ppEnabledLayerNames = (const char *const*) layer_names,
+        .ppEnabledLayerNames = (const char *const*) ((demo->validate) ? instance_validation_layers : NULL),
         .extensionCount = enabled_extension_count,
         .ppEnabledExtensionNames = (const char *const*) extension_names,
     };
@@ -2017,24 +2046,21 @@ static void demo_init_vk(struct demo *demo)
     err = vkGetPhysicalDeviceLayerProperties(demo->gpu, &device_layer_count, NULL);
     assert(!err);
 
-    memset(layer_names, 0, sizeof(layer_names));
     device_layers = malloc(sizeof(VkLayerProperties) * device_layer_count);
     err = vkGetPhysicalDeviceLayerProperties(demo->gpu, &device_layer_count, device_layers);
     assert(!err);
-    for (uint32_t i = 0; i < device_layer_count; i++) {
-        if (!validation_found && demo->validate &&
-            !strcmp("Validation", device_layers[i].layerName)) {
-            layer_names[enabled_layer_count++] = "Validation";
-            validation_found = 1;
+
+    if (demo->validate) {
+        validation_found = demo_check_layers(ARRAY_SIZE(device_validation_layers), device_validation_layers,
+                                             device_layer_count, device_layers);
+        if (!validation_found) {
+            ERR_EXIT("vkGetPhysicalDeviceLayerProperties failed to find"
+                     "a required validation layer.\n\n"
+                     "Please look at the Getting Started guide for additional "
+                     "information.\n",
+                     "vkCreateDevice Failure");
         }
-        assert(enabled_layer_count < 64);
-    }
-    if (demo->validate && !validation_found) {
-        ERR_EXIT("vkGetGlobalLayerProperties failed to find any "
-                 "\"Validation\" layers.\n\n"
-                 "Please look at the Getting Started guide for additional "
-                 "information.\n",
-                 "vkCreateInstance Failure");
+        enabled_layer_count = ARRAY_SIZE(device_validation_layers);
     }
 
     uint32_t device_extension_count = 0;
@@ -2075,7 +2101,7 @@ static void demo_init_vk(struct demo *demo)
         .queueRecordCount = 1,
         .pRequestedQueues = &queue,
         .layerCount = enabled_layer_count,
-        .ppEnabledLayerNames = (const char*const*) layer_names,
+        .ppEnabledLayerNames = (const char *const*) ((demo->validate) ? device_validation_layers : NULL),
         .extensionCount = enabled_extension_count,
         .ppEnabledExtensionNames = (const char *const*) extension_names,
         .flags = 0,
