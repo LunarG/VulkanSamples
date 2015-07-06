@@ -673,24 +673,28 @@ void loader_destroy_ext_list(struct loader_extension_list *ext_info)
  * Search the given search_list for any layers in the props list.
  * Add these to the output layer_list.  Don't add duplicates to the output layer_list.
  */
-static void loader_add_layer_names_to_list(
+static VkResult loader_add_layer_names_to_list(
         struct loader_layer_list *output_list,
         uint32_t name_count,
         const char * const *names,
         const struct loader_layer_list *search_list)
 {
     struct loader_layer_properties *layer_prop;
+    VkResult err = VK_SUCCESS;
 
     for (uint32_t i = 0; i < name_count; i++) {
         const char *search_target = names[i];
         layer_prop = get_layer_property(search_target, search_list);
         if (!layer_prop) {
-            loader_log(VK_DBG_REPORT_WARN_BIT, 0, "Unable to find extension %s", search_target);
+            loader_log(VK_DBG_REPORT_ERROR_BIT, 0, "Unable to find layer %s", search_target);
+            err = VK_ERROR_INVALID_LAYER;
             continue;
         }
 
         loader_add_to_layer_list(output_list, 1, layer_prop);
     }
+
+    return err;
 }
 
 /*
@@ -1970,16 +1974,18 @@ void loader_deactivate_instance_layers(struct loader_instance *instance)
     loader_destroy_layer_list(&instance->activated_layer_list);
 }
 
-void loader_enable_instance_layers(
+VkResult loader_enable_instance_layers(
         struct loader_instance *inst,
         const VkInstanceCreateInfo *pCreateInfo)
 {
+    VkResult err;
+
     if (inst == NULL)
-        return;
+        return VK_ERROR_UNKNOWN;
 
     if (!loader_init_layer_list(&inst->activated_layer_list)) {
         loader_log(VK_DBG_REPORT_ERROR_BIT, 0, "Failed to malloc Instance activated layer list");
-        return;
+        return VK_ERROR_OUT_OF_HOST_MEMORY;
     }
 
     /* Add any implicit layers first */
@@ -1995,11 +2001,13 @@ void loader_enable_instance_layers(
                             &loader.global_layer_list);
 
     /* Add layers specified by the application */
-    loader_add_layer_names_to_list(
+    err = loader_add_layer_names_to_list(
                 &inst->activated_layer_list,
                 pCreateInfo->layerCount,
                 pCreateInfo->ppEnabledLayerNames,
                 &loader.global_layer_list);
+
+    return err;
 }
 
 uint32_t loader_activate_instance_layers(struct loader_instance *inst)
@@ -2087,13 +2095,15 @@ void loader_activate_instance_layer_extensions(struct loader_instance *inst)
                                                   (VkInstance) inst);
 }
 
-static void loader_enable_device_layers(
+static VkResult loader_enable_device_layers(
         struct loader_icd *icd,
         struct loader_device *dev,
         const VkDeviceCreateInfo *pCreateInfo)
 {
+    VkResult err;
+
     if (dev == NULL)
-        return;
+        return VK_ERROR_UNKNOWN;
 
     if (dev->activated_layer_list.list == NULL || dev->activated_layer_list.capacity == 0) {
         loader_init_layer_list(&dev->activated_layer_list);
@@ -2101,7 +2111,7 @@ static void loader_enable_device_layers(
 
     if (dev->activated_layer_list.list == NULL) {
         loader_log(VK_DBG_REPORT_ERROR_BIT, 0, "Failed to malloc device activated layer list");
-        return;
+        return VK_ERROR_OUT_OF_HOST_MEMORY;
     }
 
     /* Add any implicit layers first */
@@ -2117,11 +2127,13 @@ static void loader_enable_device_layers(
                 &icd->layer_properties_cache);
 
     /* Add layers specified by the application */
-    loader_add_layer_names_to_list(
+    err = loader_add_layer_names_to_list(
                 &dev->activated_layer_list,
                 pCreateInfo->layerCount,
                 pCreateInfo->ppEnabledLayerNames,
                 &icd->layer_properties_cache);
+
+    return err;
 }
 
 /*
@@ -2221,7 +2233,7 @@ VkResult loader_CreateInstance(
     struct loader_instance *ptr_instance = *(struct loader_instance **) pInstance;
     struct loader_scanned_icds *scanned_icds;
     struct loader_icd *icd;
-    VkResult res;
+    VkResult res = VK_SUCCESS;
 
     scanned_icds = loader.scanned_icd_list;
     while (scanned_icds) {
@@ -2244,11 +2256,20 @@ VkResult loader_CreateInstance(
         scanned_icds = scanned_icds->next;
     }
 
+    /*
+     * If no ICDs were added to instance list and res is unchanged
+     * from it's initial value, the loader was unable to find
+     * a suitable ICD.
+     */
     if (ptr_instance->icds == NULL) {
-        return VK_ERROR_INCOMPATIBLE_DRIVER;
+        if (res == VK_SUCCESS) {
+            return VK_ERROR_INCOMPATIBLE_DRIVER;
+        } else {
+            return res;
+        }
     }
 
-    return res;
+    return VK_SUCCESS;
 }
 
 VkResult loader_DestroyInstance(

@@ -423,7 +423,7 @@ void loader_coalesce_extensions(void);
 struct loader_icd * loader_get_icd(const VkPhysicalDevice gpu,
                                    uint32_t *gpu_index);
 void loader_remove_logical_device(VkDevice device);
-void loader_enable_instance_layers(struct loader_instance *inst, const VkInstanceCreateInfo *pCreateInfo);
+VkResult loader_enable_instance_layers(struct loader_instance *inst, const VkInstanceCreateInfo *pCreateInfo);
 void loader_deactivate_instance_layers(struct loader_instance *instance);
 uint32_t loader_activate_instance_layers(struct loader_instance *inst);
 void loader_activate_instance_layer_extensions(struct loader_instance *inst);
