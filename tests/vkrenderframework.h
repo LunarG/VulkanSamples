@@ -96,10 +96,14 @@ public:
     void InitRenderTarget(VkDepthStencilBindInfo *dsBinding);
     void InitRenderTarget(uint32_t targets, VkDepthStencilBindInfo *dsBinding);
     void InitFramework();
-    void InitFramework(std::vector<const char *> instance_extension_names,
-                       std::vector<const char *> device_extension_names,
-                       PFN_vkDbgMsgCallback=NULL,
-                       void *userData=NULL);
+    void InitFramework(
+            std::vector<const char *> instance_layer_names,
+            std::vector<const char *> device_layer_names,
+            std::vector<const char *> instance_extension_names,
+            std::vector<const char *> device_extension_names,
+            PFN_vkDbgMsgCallback=NULL,
+            void *userData=NULL);
+
     void ShutdownFramework();
     void InitState();
 

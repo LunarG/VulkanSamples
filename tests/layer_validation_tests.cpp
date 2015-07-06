@@ -148,6 +148,8 @@ protected:
         ErrorMonitor               *m_errorMonitor;
 
     virtual void SetUp() {
+        std::vector<const char *> instance_layer_names;
+        std::vector<const char *> device_layer_names;
         std::vector<const char *> instance_extension_names;
         std::vector<const char *> device_extension_names;
 
@@ -158,17 +160,17 @@ protected:
          * to be enabled at create instance time.
          */
 	// Use Threading layer first to protect others from ThreadCmdBufferCollision test
-        instance_extension_names.push_back("Threading");
-        instance_extension_names.push_back("ObjectTracker");
-        instance_extension_names.push_back("MemTracker");
-        instance_extension_names.push_back("DrawState");
-        instance_extension_names.push_back("ShaderChecker");
+        instance_layer_names.push_back("Threading");
+        instance_layer_names.push_back("ObjectTracker");
+        instance_layer_names.push_back("MemTracker");
+        instance_layer_names.push_back("DrawState");
+        instance_layer_names.push_back("ShaderChecker");
 
-        device_extension_names.push_back("Threading");
-        device_extension_names.push_back("ObjectTracker");
-        device_extension_names.push_back("MemTracker");
-        device_extension_names.push_back("DrawState");
-        device_extension_names.push_back("ShaderChecker");
+        device_layer_names.push_back("Threading");
+        device_layer_names.push_back("ObjectTracker");
+        device_layer_names.push_back("MemTracker");
+        device_layer_names.push_back("DrawState");
+        device_layer_names.push_back("ShaderChecker");
 
         this->app_info.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
         this->app_info.pNext = NULL;
@@ -179,7 +181,9 @@ protected:
         this->app_info.apiVersion = VK_API_VERSION;
 
         m_errorMonitor = new ErrorMonitor;
-        InitFramework(instance_extension_names, device_extension_names, myDbgFunc, m_errorMonitor);
+        InitFramework(instance_layer_names, device_layer_names,
+                      instance_extension_names, device_extension_names,
+                      myDbgFunc, m_errorMonitor);
     }
 
     virtual void TearDown() {

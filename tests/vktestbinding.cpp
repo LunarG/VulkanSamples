@@ -134,21 +134,19 @@ VkPhysicalDeviceMemoryProperties PhysicalGpu::memory_properties() const
 std::vector<VkLayerProperties> GetGlobalLayers()
 {
     VkResult err;
-
     std::vector<VkLayerProperties> layers;
-    uint32_t layerCount = 0;
-    err = vkGetGlobalLayerProperties(&layerCount, NULL);
-    while (err == VK_INCOMPLETE) {
-        layerCount = 0;
-        err = vkGetGlobalLayerProperties(&layerCount, NULL);
-    }
-    assert(err == VK_SUCCESS);
-    if (err != VK_SUCCESS) {
-        return layers;
-    }
+    uint32_t layer_count;
 
-    layers.reserve(layerCount);
-    err = vkGetGlobalLayerProperties(&layerCount, &layers[0]);
+    do {
+        layer_count = 0;
+        err = vkGetGlobalLayerProperties(&layer_count, NULL);
+
+        if (err == VK_SUCCESS) {
+            layers.reserve(layer_count);
+            err = vkGetGlobalLayerProperties(&layer_count, &layers[0]);
+        }
+    } while (err == VK_INCOMPLETE);
+
     assert(err == VK_SUCCESS);
 
     return layers;
@@ -168,22 +166,20 @@ std::vector<VkExtensionProperties> GetGlobalExtensions()
  */
 std::vector<VkExtensionProperties> GetGlobalExtensions(const char *pLayerName)
 {
+    std::vector<VkExtensionProperties> exts;
+    uint32_t ext_count;
     VkResult err;
 
-    std::vector<VkExtensionProperties> exts;
-    uint32_t extCount = 0;
-    err = vkGetGlobalExtensionProperties(pLayerName, &extCount, NULL);
-    while (err == VK_INCOMPLETE) {
-        extCount = 0;
-        err = vkGetGlobalExtensionProperties(pLayerName, &extCount, NULL);
-    }
-    assert(err == VK_SUCCESS);
-    if (err != VK_SUCCESS) {
-        return exts;
-    }
+    do {
+        ext_count = 0;
+        err = vkGetGlobalExtensionProperties(pLayerName, &ext_count, NULL);
 
-    exts.reserve(extCount);
-    err = vkGetGlobalExtensionProperties(pLayerName, &extCount, &exts[0]);
+        if (err == VK_SUCCESS) {
+            exts.reserve(ext_count);
+            err = vkGetGlobalExtensionProperties(pLayerName, &ext_count, &exts[0]);
+        }
+    } while (err == VK_INCOMPLETE);
+
     assert(err == VK_SUCCESS);
 
     return exts;
@@ -203,22 +199,19 @@ std::vector<VkExtensionProperties> PhysicalGpu::extensions() const
  */
 std::vector<VkExtensionProperties> PhysicalGpu::extensions(const char *pLayerName) const
 {
+    std::vector<VkExtensionProperties> exts;
     VkResult err;
 
-    std::vector<VkExtensionProperties> exts;
-    uint32_t extCount = 0;
-    err = vkGetPhysicalDeviceExtensionProperties(obj(), pLayerName, &extCount, NULL);
-    while (err == VK_INCOMPLETE) {
-        extCount = 0;
+    do {
+        uint32_t extCount = 0;
         err = vkGetPhysicalDeviceExtensionProperties(obj(), pLayerName, &extCount, NULL);
-    }
-    assert(err == VK_SUCCESS);
-    if (err != VK_SUCCESS) {
-        return exts;
-    }
 
-    exts.reserve(extCount);
-    err = vkGetPhysicalDeviceExtensionProperties(obj(), pLayerName, &extCount, &exts[0]);
+        if (err == VK_SUCCESS) {
+            exts.reserve(extCount);
+            err = vkGetPhysicalDeviceExtensionProperties(obj(), pLayerName, &extCount, &exts[0]);
+        }
+    } while (err == VK_INCOMPLETE);
+
     assert(err == VK_SUCCESS);
 
     return exts;
@@ -240,6 +233,29 @@ VkResult PhysicalGpu::set_memory_type(const uint32_t type_bits, VkMemoryAllocInf
      }
      // No memory types matched, return failure
      return VK_UNSUPPORTED;
+}
+
+/*
+ * Return list of PhysicalDevice layers
+ */
+std::vector<VkLayerProperties> PhysicalGpu::layers() const
+{
+    std::vector<VkLayerProperties> layer_props;
+    VkResult err;
+
+    do {
+        uint32_t layer_count = 0;
+        err = vkGetPhysicalDeviceLayerProperties(obj(), &layer_count, NULL);
+
+        if (err == VK_SUCCESS) {
+            layer_props.reserve(layer_count);
+            err = vkGetPhysicalDeviceLayerProperties(obj(), &layer_count, &layer_props[0]);
+        }
+    } while (err == VK_INCOMPLETE);
+
+    assert(err == VK_SUCCESS);
+
+    return layer_props;
 }
 
 void BaseObject::init(VkObject obj, VkObjectType type, bool own)

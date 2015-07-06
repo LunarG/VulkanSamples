@@ -65,12 +65,18 @@ VkRenderFramework::~VkRenderFramework()
 
 void VkRenderFramework::InitFramework()
 {
+    std::vector<const char*> instance_layer_names;
+    std::vector<const char*> device_layer_names;
     std::vector<const char*> instance_extension_names;
     std::vector<const char*> device_extension_names;
-    InitFramework(instance_extension_names, device_extension_names);
+    InitFramework(
+                instance_layer_names, device_layer_names,
+                instance_extension_names, device_extension_names);
 }
 
 void VkRenderFramework::InitFramework(
+        std::vector<const char *> instance_layer_names,
+        std::vector<const char *> device_layer_names,
         std::vector<const char *> instance_extension_names,
         std::vector<const char *> device_extension_names,
         PFN_vkDbgMsgCallback dbgFunction,
@@ -87,6 +93,8 @@ void VkRenderFramework::InitFramework(
     instInfo.pNext = NULL;
     instInfo.pAppInfo = &app_info;
     instInfo.pAllocCb = NULL;
+    instInfo.layerCount = instance_layer_names.size();
+    instInfo.ppEnabledLayerNames =(instance_layer_names.size()) ? &instance_layer_names[0] : NULL;
     instInfo.extensionCount = instance_extension_names.size();
     instInfo.ppEnabledExtensionNames = (instance_extension_names.size()) ? &instance_extension_names[0] : NULL;
     err = vkCreateInstance(&instInfo, &this->inst);

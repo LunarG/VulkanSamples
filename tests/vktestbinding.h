@@ -89,7 +89,7 @@ public:
     std::vector<VkExtensionProperties> extensions(const char * pLayerName) const;
 
     // vkEnumerateLayers()
-    std::vector<const char *> layers(std::vector<char> &buf) const;
+    std::vector<VkLayerProperties> layers() const;
 
 private:
     void add_extension_dependencies(uint32_t dependency_count,
