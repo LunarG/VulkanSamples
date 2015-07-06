@@ -52,7 +52,6 @@ struct devExts {
 };
 static std::unordered_map<void *, struct devExts>     deviceExtMap;
 static device_table_map screenshot_device_table_map;
-static instance_table_map screenshot_instance_table_map;
 
 static int globalLockInitialized = 0;
 static loader_platform_thread_mutex globalLock;
@@ -270,31 +269,6 @@ static void writePPM( const char *filename, VkImage image1)
 }
 
 
-VkResult VKAPI vkCreateInstance(
-    const VkInstanceCreateInfo*                 pCreateInfo,
-    VkInstance*                                 pInstance)
-{
-    VkLayerInstanceDispatchTable *pTable = get_dispatch_table(screenshot_instance_table_map, *pInstance);
-    VkResult result = pTable->CreateInstance(pCreateInfo, pInstance);
-
-    if (result == VK_SUCCESS) {
-        init_screenshot();
-    }
-    return result;
-}
-
-// hook DestroyInstance to remove tableInstanceMap entry
-VK_LAYER_EXPORT VkResult VKAPI vkDestroyInstance(VkInstance instance)
-{
-    // Grab the key before the instance is destroyed.
-    dispatch_key key = get_dispatch_key(instance);
-    VkLayerInstanceDispatchTable *pTable = get_dispatch_table(screenshot_instance_table_map, instance);
-    VkResult res = pTable->DestroyInstance(instance);
-
-    screenshot_instance_table_map.erase(key);
-    return res;
-}
-
 static void createDeviceRegisterExtensions(const VkDeviceCreateInfo* pCreateInfo, VkDevice device)
 {
     uint32_t i, ext_idx;
@@ -315,6 +289,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateDevice(
     VkResult result = pDisp->CreateDevice(gpu, pCreateInfo, pDevice);
 
     if (result == VK_SUCCESS) {
+        init_screenshot();
         createDeviceRegisterExtensions(pCreateInfo, *pDevice);
     }
 
@@ -597,26 +572,3 @@ VK_LAYER_EXPORT void* VKAPI vkGetDeviceProcAddr(
     return pDisp->GetDeviceProcAddr(dev, funcName);
 }
 
-VK_LAYER_EXPORT void* VKAPI vkGetInstanceProcAddr(
-    VkInstance       instance,
-    const char       *funcName)
-{
-    if (instance == NULL) {
-        return NULL;
-    }
-
-    /* loader uses this to force layer initialization; instance object is wrapped */
-    if (!strcmp(funcName, "vkGetInstanceProcAddr")) {
-        initInstanceTable(screenshot_instance_table_map, (const VkBaseLayerObject *) instance);
-        return (void *) vkGetInstanceProcAddr;
-    }
-
-    if (!strcmp(funcName, "vkDestroyInstance"))
-        return (void *) vkDestroyInstance;
-    if (!strcmp(funcName, "vkCreateInstance"))
-        return (void*) vkCreateInstance;
-
-    if (get_dispatch_table(screenshot_instance_table_map, instance)->GetInstanceProcAddr == NULL)
-        return NULL;
-    return get_dispatch_table(screenshot_instance_table_map, instance)->GetInstanceProcAddr(instance, funcName);
-}
