@@ -28,7 +28,8 @@
 #include <math.h>
 #include <wand/MagickWand.h>
 #include <xcb/xcb.h>
-#include <vk_wsi_lunarg.h>
+#include "vk_wsi_swapchain.h"
+#include "vk_wsi_device_swapchain.h"
 
 #if defined(PATH_MAX) && !defined(MAX_PATH)
 #define MAX_PATH PATH_MAX
@@ -91,7 +92,7 @@ private:
     PFN_vkQueuePresentWSI                   m_fpQueuePresentWSI;
 
     VkSwapChainWSI                          m_swap_chain;
-    std::vector<VkSwapChainImageInfoWSI>    m_persistent_images;
+    std::vector<VkSwapChainImagePropertiesWSI> m_persistent_images;
     int                                     m_current_buffer;
 
     bool                                    m_quit;
@@ -487,9 +488,11 @@ void  TestFrameworkVkPresent::Display()
     m_queue.wait();
 
     VkPresentInfoWSI present = {};
-    present.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_WSI;
-    present.image = m_persistent_images[m_current_buffer].image;
-    present.flipInterval = 1;
+    // FIXME: WRITE THE REAL CODE!!!
+    // FIXME: WRITE THE REAL CODE!!!
+    // FIXME: WRITE THE REAL CODE!!!
+    // FIXME: WRITE THE REAL CODE!!!
+    present.sType = VK_STRUCTURE_TYPE_QUEUE_PRESENT_INFO_WSI;
 
 #ifndef _WIN32
     xcb_change_property (m_connection,
@@ -666,11 +669,34 @@ void TestFrameworkVkPresent::CreateSwapChain()
     m_display_image = m_images.begin();
     m_current_buffer = 0;
 
+    // FIXME: WRITE THE REAL CODE!!!
+    // FIXME: WRITE THE REAL CODE!!!
+    // FIXME: WRITE THE REAL CODE!!!
+    // FIXME: WRITE THE REAL CODE!!!
+    VkSurfaceDescriptionWindowWSI surface_description;
+    VkPlatformHandleXcbWSI platform_handle_xcb;
+    surface_description.sType = VK_STRUCTURE_TYPE_SURFACE_DESCRIPTION_WINDOW_WSI;
+    surface_description.pNext = NULL;
+#ifdef _WIN32
+    surface_description.platform = VK_PLATFORM_WIN32_WSI;
+    surface_description.pPlatformHandle = m_connection;
+#else  // _WIN32
+    platform_handle_xcb.connection = m_connection;
+    platform_handle_xcb.root = m_screen->root;
+    surface_description.platform = VK_PLATFORM_XCB_WSI;
+    surface_description.pPlatformHandle = &platform_handle_xcb;
+#endif // _WIN32
+    surface_description.pPlatformWindow = (void *) (intptr_t) m_window;
+
     VkSwapChainCreateInfoWSI swap_chain = {};
     swap_chain.sType = VK_STRUCTURE_TYPE_SWAP_CHAIN_CREATE_INFO_WSI;
-    swap_chain.pNativeWindowSystemHandle = (void *) m_connection;
-    swap_chain.pNativeWindowHandle = (void *) (intptr_t) m_window;
-    swap_chain.imageCount = 2;
+    swap_chain.pNext = NULL;
+    // FIXME: WRITE THE REAL CODE!!!
+    // FIXME: WRITE THE REAL CODE!!!
+    // FIXME: WRITE THE REAL CODE!!!
+    // FIXME: WRITE THE REAL CODE!!!
+    swap_chain.pSurfaceDescription =
+        (VkSurfaceDescriptionWSI*) &surface_description;
     swap_chain.imageFormat = VK_FORMAT_B8G8R8A8_UNORM;
     swap_chain.imageExtent.width = m_width;
     swap_chain.imageExtent.height = m_height;
@@ -678,20 +704,18 @@ void TestFrameworkVkPresent::CreateSwapChain()
     // Note: Addition of color attachment is a workaround needed for some implementations
     swap_chain.imageUsageFlags = VK_IMAGE_USAGE_TRANSFER_DESTINATION_BIT |
                                  VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
-    swap_chain.swapModeFlags = VK_SWAP_MODE_FLIP_BIT_WSI |
-                               VK_SWAP_MODE_BLIT_BIT_WSI;
 
     err = m_fpCreateSwapChainWSI(m_device.handle(), &swap_chain, &m_swap_chain);
     assert(!err);
 
-    VkSwapChainImageInfoWSI infos[2];
-    size_t size = sizeof(VkSwapChainImageInfoWSI) * m_images.size() * 2;
-    std::vector<VkSwapChainImageInfoWSI> persistent_images;
+    VkSwapChainImagePropertiesWSI infos[2];
+    size_t size = sizeof(VkSwapChainImagePropertiesWSI) * m_images.size() * 2;
+    std::vector<VkSwapChainImagePropertiesWSI> persistent_images;
     persistent_images.resize(m_images.size());
-    err = m_fpGetSwapChainInfoWSI(m_swap_chain,
-            VK_SWAP_CHAIN_INFO_TYPE_PERSISTENT_IMAGES_WSI,
+    err = m_fpGetSwapChainInfoWSI(m_device.handle(), m_swap_chain,
+            VK_SWAP_CHAIN_INFO_TYPE_IMAGES_WSI,
             &size, &infos);
-    assert(!err && size == sizeof(VkSwapChainImageInfoWSI) * 2);
+    assert(!err && size == sizeof(VkSwapChainImagePropertiesWSI) * 2);
     m_persistent_images.push_back(infos[0]);
     m_persistent_images.push_back(infos[1]);
 }
@@ -834,7 +858,7 @@ void  TestFrameworkVkPresent::CreateMyWindow()
 
 void TestFrameworkVkPresent::TearDown()
 {
-    m_fpDestroySwapChainWSI(m_swap_chain);
+    m_fpDestroySwapChainWSI(m_device.handle(), m_swap_chain);
 #ifndef _WIN32
     xcb_destroy_window(m_connection, m_window);
     xcb_disconnect(m_connection);

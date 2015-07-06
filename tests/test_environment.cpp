@@ -1,7 +1,8 @@
 #include "test_common.h"
 #include "vktestbinding.h"
 #include "test_environment.h"
-#include "vk_wsi_lunarg.h"
+#include "vk_wsi_swapchain.h"
+#include "vk_wsi_device_swapchain.h"
 
 #if defined(NDEBUG) && defined(__GNUC__)
 #define U_ASSERT_ONLY __attribute__((unused))
@@ -67,7 +68,8 @@ void Environment::SetUp()
     std::vector<const char *> device_extension_names;
     std::vector<const char *> device_layer_names;
 
-    instance_extension_names.push_back(VK_WSI_LUNARG_EXTENSION_NAME);
+    instance_extension_names.push_back(VK_WSI_SWAPCHAIN_EXTENSION_NAME);
+    device_extension_names.push_back(VK_WSI_DEVICE_SWAPCHAIN_EXTENSION_NAME);
 
     VkBool32 extFound;
 
@@ -105,7 +107,7 @@ void Environment::SetUp()
     for (uint32_t i = 0; i < device_extension_names.size(); i++) {
         extFound = 0;
         for (uint32_t j = 0; j < device_extensions.size(); j++) {
-            if (!strcmp(device_extension_names[i], device_extensions[i].extName)) {
+            if (!strcmp(device_extension_names[i], device_extensions[j].extName)) {
                 extFound = 1;
             }
         }

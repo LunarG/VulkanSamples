@@ -199,7 +199,7 @@ std::vector<VkExtensionProperties> PhysicalDevice::extensions(const char *pLayer
         err = vkGetPhysicalDeviceExtensionProperties(handle(), pLayerName, &extCount, NULL);
 
         if (err == VK_SUCCESS) {
-            exts.reserve(extCount);
+            exts.resize(extCount);
             err = vkGetPhysicalDeviceExtensionProperties(handle(), pLayerName, &extCount, &exts[0]);
         }
     } while (err == VK_INCOMPLETE);
