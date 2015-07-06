@@ -23,6 +23,7 @@
  */
 
 #include "vk_layer.h"
+#include "vk_layer_extension_utils.h"
 #include "vk_enum_string_helper.h"
 
 // Object Tracker ERROR codes
@@ -74,6 +75,8 @@ typedef struct _layer_data {
     debug_report_data *report_data;
     //TODO: put instance data here
     VkDbgMsgCallback   logging_callback;
+    bool wsi_lunarg_enabled;
+    bool objtrack_extensions_enabled;
 } layer_data;
 
 static std::unordered_map<void*, layer_data *> layer_data_map;
@@ -101,21 +104,16 @@ template layer_data *get_my_data_ptr<layer_data>(
 // Internal Object Tracker Functions
 //
 
-struct devExts {
-    bool wsi_lunarg_enabled;
-};
-
-static std::unordered_map<void *, struct devExts> deviceExtMap;
-
 static void createDeviceRegisterExtensions(const VkDeviceCreateInfo* pCreateInfo, VkDevice device)
 {
-    uint32_t i, ext_idx;
-    VkLayerDispatchTable *pDisp  = device_dispatch_table(device);
-    deviceExtMap[pDisp].wsi_lunarg_enabled = false;
-    for (i = 0; i < pCreateInfo->extensionCount; i++) {
-        if (strcmp(pCreateInfo->pEnabledExtensions[i].name, VK_WSI_LUNARG_EXTENSION_NAME) == 0)
-            deviceExtMap[pDisp].wsi_lunarg_enabled = true;
+    layer_data *my_device_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+    my_device_data->wsi_lunarg_enabled = false;
+    for (uint32_t i = 0; i < pCreateInfo->extensionCount; i++) {
+        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_WSI_LUNARG_EXTENSION_NAME) == 0)
+            my_device_data->wsi_lunarg_enabled = true;
 
+        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], "OBJTRACK_EXTENSIONS") == 0)
+            my_device_data->objtrack_extensions_enabled = true;
     }
 }
 
@@ -457,10 +455,10 @@ explicit_CreateInstance(
     if (result == VK_SUCCESS) {
         layer_data *my_data = get_my_data_ptr(get_dispatch_key(*pInstance), layer_data_map);
         my_data->report_data = debug_report_create_instance(
-            pInstanceTable,
-            *pInstance, 
-            pCreateInfo->extensionCount, 
-            pCreateInfo->pEnabledExtensions);
+                                   pInstanceTable,
+                                   *pInstance,
+                                   pCreateInfo->extensionCount,
+                                   pCreateInfo->ppEnabledExtensionNames);
 
         initObjectTracker(my_data);
         create_obj(*pInstance, *pInstance, VK_OBJECT_TYPE_INSTANCE);
@@ -570,7 +568,6 @@ explicit_DestroyDevice(
     dispatch_key key = get_dispatch_key(device);
     VkLayerDispatchTable *pDisp = get_dispatch_table(ObjectTracker_device_table_map, device);
     VkResult result = pDisp->DestroyDevice(device);
-    deviceExtMap.erase(pDisp);
     ObjectTracker_device_table_map.erase(key);
     assert(ObjectTracker_device_table_map.size() == 0 && "Should not have any instance mappings hanging around");
 
