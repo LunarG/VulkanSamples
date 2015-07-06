@@ -37,7 +37,8 @@
 #endif // _WIN32
 
 #include <vulkan.h>
-#include <vk_wsi_lunarg.h>
+#include <vk_wsi_swapchain.h>
+#include <vk_wsi_device_swapchain.h>
 #include "vk_debug_report_lunarg.h"
 
 #include "icd-spv.h"
@@ -79,6 +80,15 @@
         exit(1);                                        \
    } while (0)
 #endif // _WIN32
+
+#define GET_INSTANCE_PROC_ADDR(inst, entrypoint)                        \
+{                                                                       \
+    demo->fp##entrypoint = (PFN_vk##entrypoint) vkGetInstanceProcAddr(inst, "vk"#entrypoint); \
+    if (demo->fp##entrypoint == NULL) {                                 \
+        ERR_EXIT("vkGetInstanceProcAddr failed to find vk"#entrypoint,  \
+                 "vkGetInstanceProcAddr Failure");                      \
+    }                                                                   \
+}
 
 #define GET_DEVICE_PROC_ADDR(dev, entrypoint)                           \
 {                                                                       \
@@ -282,6 +292,12 @@ void dbgFunc(
     free(message);
 }
 
+typedef struct _SwapChainBuffers {
+    VkImage image;
+    VkCmdBuffer cmd;
+    VkAttachmentView view;
+} SwapChainBuffers;
+
 struct demo {
 #ifdef _WIN32
 #define APP_NAME_STR_LEN 80
@@ -294,6 +310,7 @@ struct demo {
     xcb_window_t window;
     xcb_intern_atom_reply_t *atom_wm_delete_window;
 #endif // _WIN32
+    VkPlatformHandleXcbWSI platform_handle_xcb;
     bool prepared;
     bool use_staging_buffer;
     bool use_glsl;
@@ -311,19 +328,19 @@ struct demo {
     int width, height;
     VkFormat format;
 
+    PFN_vkGetPhysicalDeviceSurfaceSupportWSI fpGetPhysicalDeviceSurfaceSupportWSI;
+    PFN_vkGetSurfaceInfoWSI fpGetSurfaceInfoWSI;
     PFN_vkCreateSwapChainWSI fpCreateSwapChainWSI;
     PFN_vkDestroySwapChainWSI fpDestroySwapChainWSI;
     PFN_vkGetSwapChainInfoWSI fpGetSwapChainInfoWSI;
+    PFN_vkAcquireNextImageWSI fpAcquireNextImageWSI;
     PFN_vkQueuePresentWSI fpQueuePresentWSI;
+    VkSurfaceDescriptionWindowWSI surface_description;
+    size_t swapChainImageCount;
     VkSwapChainWSI swap_chain;
-    VkCmdPool cmd_pool;
-    struct {
-        VkImage image;
-        VkDeviceMemory mem;
-        VkCmdBuffer cmd;
+    SwapChainBuffers *buffers;
 
-        VkAttachmentView view;
-    } buffers[DEMO_BUFFER_COUNT];
+    VkCmdPool cmd_pool;
 
     struct {
         VkFormat format;
@@ -551,23 +568,57 @@ void demo_update_data_buffer(struct demo *demo)
 
 static void demo_draw(struct demo *demo)
 {
-    const VkPresentInfoWSI present = {
-        .sType = VK_STRUCTURE_TYPE_PRESENT_INFO_WSI,
-        .pNext = NULL,
-        .image = demo->buffers[demo->current_buffer].image,
-        .flipInterval = 0,
-    };
     VkResult U_ASSERT_ONLY err;
+    VkSemaphore presentCompleteSemaphore;
+    VkSemaphoreCreateInfo presentCompleteSemaphoreCreateInfo = {
+        .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
+        .pNext = NULL,
+        .flags = VK_FENCE_CREATE_SIGNALED_BIT,
+    };
     VkFence nullFence = { VK_NULL_HANDLE };
 
+    err = vkCreateSemaphore(demo->device,
+                            &presentCompleteSemaphoreCreateInfo,
+                            &presentCompleteSemaphore);
+    assert(!err);
+
+    // Get the index of the next available swapchain image:
+    err = demo->fpAcquireNextImageWSI(demo->device, demo->swap_chain,
+                                      UINT64_MAX,
+                                      presentCompleteSemaphore,
+                                      &demo->current_buffer);
+    // TODO: Deal with the VK_SUBOPTIMAL_WSI and VK_ERROR_OUT_OF_DATE_WSI
+    // return codes
+    assert(!err);
+
+    // Wait for the present complete semaphore to be signaled to ensure
+    // that the image won't be rendered to until the presentation
+    // engine has fully released ownership to the application, and it is
+    // okay to render to the image.
+    vkQueueWaitSemaphore(demo->queue, presentCompleteSemaphore);
+
+// FIXME/TODO: DEAL WITH VK_IMAGE_LAYOUT_PRESENT_SOURCE_WSI
     err = vkQueueSubmit(demo->queue, 1, &demo->buffers[demo->current_buffer].cmd,
             nullFence);
     assert(!err);
 
+    VkPresentInfoWSI present = {
+        .sType = VK_STRUCTURE_TYPE_QUEUE_PRESENT_INFO_WSI,
+        .pNext = NULL,
+        .swapChainCount = 1,
+        .swapChains = &demo->swap_chain,
+        .imageIndices = &demo->current_buffer,
+    };
+
+// TBD/TODO: SHOULD THE "present" PARAMETER BE "const" IN THE HEADER?
     err = demo->fpQueuePresentWSI(demo->queue, &present);
+    // TODO: Deal with the VK_SUBOPTIMAL_WSI and VK_ERROR_OUT_OF_DATE_WSI
+    // return codes
     assert(!err);
 
-    demo->current_buffer = (demo->current_buffer + 1) % DEMO_BUFFER_COUNT;
+// FIXME: UNCOMMENT THE FOLLOWING LINE ONCE WE HAVE A NEW-ENOUGH "vulkan.h" HEADER:
+//    err = vkDestroySemaphore(demo->device, presentCompleteSemaphore);
+    assert(!err);
 
     err = vkQueueWaitIdle(demo->queue);
     assert(err == VK_SUCCESS);
@@ -575,35 +626,120 @@ static void demo_draw(struct demo *demo)
 
 static void demo_prepare_buffers(struct demo *demo)
 {
+    VkResult U_ASSERT_ONLY err;
+
+    // Check the surface properties and formats
+    size_t capsSize;
+    size_t presentModesSize;
+    err = demo->fpGetSurfaceInfoWSI(demo->device,
+        (const VkSurfaceDescriptionWSI *)&demo->surface_description,
+        VK_SURFACE_INFO_TYPE_PROPERTIES_WSI, &capsSize, NULL);
+    assert(!err);
+    err = demo->fpGetSurfaceInfoWSI(demo->device,
+        (const VkSurfaceDescriptionWSI *)&demo->surface_description,
+        VK_SURFACE_INFO_TYPE_PRESENT_MODES_WSI, &presentModesSize, NULL);
+    assert(!err);
+
+    VkSurfacePropertiesWSI *surfProperties =
+        (VkSurfacePropertiesWSI *)malloc(capsSize);
+    VkSurfacePresentModePropertiesWSI *presentModes =
+        (VkSurfacePresentModePropertiesWSI *)malloc(presentModesSize);
+
+    err = demo->fpGetSurfaceInfoWSI(demo->device,
+        (const VkSurfaceDescriptionWSI *)&demo->surface_description,
+        VK_SURFACE_INFO_TYPE_PROPERTIES_WSI, &capsSize, surfProperties);
+    assert(!err);
+    err = demo->fpGetSurfaceInfoWSI(demo->device,
+        (const VkSurfaceDescriptionWSI *)&demo->surface_description,
+        VK_SURFACE_INFO_TYPE_PRESENT_MODES_WSI, &presentModesSize, presentModes);
+    assert(!err);
+
+    VkExtent2D swapChainExtent;
+    // width and height are either both -1, or both not -1.
+    if (surfProperties->currentExtent.width == -1)
+    {
+        // If the surface size is undefined, the size is set to
+        // the size of the images requested.
+        swapChainExtent.width = demo->width;
+        swapChainExtent.height = demo->height;
+    }
+    else
+    {
+        // If the surface size is defined, the swap chain size must match
+        swapChainExtent = surfProperties->currentExtent;
+    }
+
+    // If mailbox mode is available, use it, as is the lowest-latency non-
+    // tearing mode.  If not, fall back to IMMEDIATE which should always be
+    // available.    
+    VkPresentModeWSI swapChainPresentMode = VK_PRESENT_MODE_IMMEDIATE_WSI;
+    size_t presentModeCount = presentModesSize / sizeof(VkSurfacePresentModePropertiesWSI);
+    for (size_t i = 0; i < presentModeCount; i++) {
+        if (presentModes[i].presentMode == VK_PRESENT_MODE_MAILBOX_WSI) {
+            swapChainPresentMode = VK_PRESENT_MODE_MAILBOX_WSI;
+            break;
+        }
+    }
+
+    // Determine the number of VkImage's to use in the swap chain (we desire to
+    // own only 1 image at a time, besides the images being displayed and
+    // queued for display):
+    uint32_t desiredNumberOfSwapChainImages = surfProperties->minImageCount + 1;
+    if ((surfProperties->maxImageCount > 0) &&
+        (desiredNumberOfSwapChainImages > surfProperties->maxImageCount))
+    {
+        // Application must settle for fewer images than desired:
+        desiredNumberOfSwapChainImages = surfProperties->maxImageCount;
+    }
+
+    VkSurfaceTransformFlagBitsWSI preTransform;
+    if (surfProperties->supportedTransforms & VK_SURFACE_TRANSFORM_NONE_BIT_WSI) {
+        preTransform = VK_SURFACE_TRANSFORM_NONE_WSI;
+    } else {
+        preTransform = surfProperties->currentTransform;
+    }
+
     const VkSwapChainCreateInfoWSI swap_chain = {
         .sType = VK_STRUCTURE_TYPE_SWAP_CHAIN_CREATE_INFO_WSI,
         .pNext = NULL,
-        .pNativeWindowSystemHandle = demo->connection,
-        .pNativeWindowHandle = (void *) (intptr_t) demo->window,
-        .displayCount = 1,
-        .imageCount = DEMO_BUFFER_COUNT,
+        .pSurfaceDescription = (const VkSurfaceDescriptionWSI *)&demo->surface_description,
+        .minImageCount = desiredNumberOfSwapChainImages,
         .imageFormat = demo->format,
         .imageExtent = {
-            .width = demo->width,
-            .height = demo->height,
+            .width = swapChainExtent.width,
+            .height = swapChainExtent.height,
         },
+        .preTransform = preTransform,
         .imageArraySize = 1,
-        .imageUsageFlags = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
+        .presentMode = swapChainPresentMode,
+        .oldSwapChain.handle = 0,
+        .clipped = true,
     };
-    VkSwapChainImageInfoWSI images[DEMO_BUFFER_COUNT];
-    size_t images_size = sizeof(images);
-    VkResult U_ASSERT_ONLY err;
     uint32_t i;
 
     err = demo->fpCreateSwapChainWSI(demo->device, &swap_chain, &demo->swap_chain);
     assert(!err);
 
-    err = demo->fpGetSwapChainInfoWSI(demo->swap_chain,
-            VK_SWAP_CHAIN_INFO_TYPE_PERSISTENT_IMAGES_WSI,
-            &images_size, images);
-    assert(!err && images_size == sizeof(images));
+    size_t swapChainImagesSize;
+    err = demo->fpGetSwapChainInfoWSI(demo->device, demo->swap_chain,
+                                      VK_SWAP_CHAIN_INFO_TYPE_IMAGES_WSI,
+                                      &swapChainImagesSize, NULL);
+    assert(!err);
 
-    for (i = 0; i < DEMO_BUFFER_COUNT; i++) {
+    VkSwapChainImagePropertiesWSI* swapChainImages = (VkSwapChainImagePropertiesWSI*)malloc(swapChainImagesSize);
+    assert(swapChainImages);
+    err = demo->fpGetSwapChainInfoWSI(demo->device, demo->swap_chain,
+                                      VK_SWAP_CHAIN_INFO_TYPE_IMAGES_WSI,
+                                      &swapChainImagesSize, swapChainImages);
+    assert(!err);
+
+    // The number of images within the swap chain is determined based on the size of the info returned
+    demo->swapChainImageCount = swapChainImagesSize / sizeof(VkSwapChainImagePropertiesWSI);
+
+    demo->buffers = (SwapChainBuffers*)malloc(sizeof(SwapChainBuffers)*demo->swapChainImageCount);
+    assert(demo->buffers);
+
+    for (i = 0; i < demo->swapChainImageCount; i++) {
         VkAttachmentViewCreateInfo color_attachment_view = {
             .sType = VK_STRUCTURE_TYPE_ATTACHMENT_VIEW_CREATE_INFO,
             .pNext = NULL,
@@ -613,8 +749,7 @@ static void demo_prepare_buffers(struct demo *demo)
             .arraySize = 1,
         };
 
-        demo->buffers[i].image = images[i].image;
-        demo->buffers[i].mem = images[i].memory;
+        demo->buffers[i].image = swapChainImages[i].image;
 
         demo_set_image_layout(demo, demo->buffers[i].image,
                                VK_IMAGE_ASPECT_COLOR,
@@ -1681,7 +1816,7 @@ static void demo_prepare(struct demo *demo)
     demo_prepare_pipeline(demo);
     demo_prepare_dynamic_states(demo);
 
-    for (int i = 0; i < DEMO_BUFFER_COUNT; i++) {
+    for (uint32_t i = 0; i < demo->swapChainImageCount; i++) {
         err = vkCreateCommandBuffer(demo->device, &cmd, &demo->buffers[i].cmd);
         assert(!err);
     }
@@ -1691,7 +1826,7 @@ static void demo_prepare(struct demo *demo)
 
     demo_prepare_framebuffers(demo);
 
-    for (int i = 0; i < DEMO_BUFFER_COUNT; i++) {
+    for (uint32_t i = 0; i < demo->swapChainImageCount; i++) {
         demo->current_buffer = i;
         demo_draw_build_cmd(demo, demo->buffers[i].cmd);
     }
@@ -1735,7 +1870,7 @@ static void demo_cleanup(struct demo *demo)
         vkFreeMemory(demo->device, demo->textures[i].mem);
         vkDestroySampler(demo->device, demo->textures[i].sampler);
     }
-    demo->fpDestroySwapChainWSI(demo->swap_chain);
+    demo->fpDestroySwapChainWSI(demo->device, demo->swap_chain);
 
     vkDestroyAttachmentView(demo->device, demo->depth.view);
     vkDestroyImage(demo->device, demo->depth.image);
@@ -1745,10 +1880,11 @@ static void demo_cleanup(struct demo *demo)
     vkDestroyBuffer(demo->device, demo->uniform_data.buf);
     vkFreeMemory(demo->device, demo->uniform_data.mem);
 
-    for (i = 0; i < DEMO_BUFFER_COUNT; i++) {
+    for (i = 0; i < demo->swapChainImageCount; i++) {
         vkDestroyAttachmentView(demo->device, demo->buffers[i].view);
         vkDestroyCommandBuffer(demo->device, demo->buffers[i].cmd);
     }
+    free(demo->buffers);
 
     vkDestroyCommandPool(demo->device, demo->cmd_pool);
     vkDestroyDevice(demo->device);
@@ -1799,10 +1935,10 @@ LRESULT CALLBACK WndProc(HWND hWnd,
 {
     switch(uMsg)
     {
-    case WM_CLOSE: 
+    case WM_CLOSE:
         PostQuitMessage(0);
         break;
-    case WM_PAINT: 
+    case WM_PAINT:
         demo_run(&demo);
         return 0;
     default:
@@ -2045,9 +2181,9 @@ static void demo_init_vk(struct demo *demo)
     err = vkGetGlobalExtensionProperties(NULL, &instance_extension_count, instance_extensions);
     assert(!err);
     for (uint32_t i = 0; i < instance_extension_count; i++) {
-        if (!strcmp(VK_WSI_LUNARG_EXTENSION_NAME, instance_extensions[i].extName)) {
+        if (!strcmp("VK_WSI_swapchain", instance_extensions[i].extName)) {
             WSIextFound = 1;
-            extension_names[enabled_extension_count++] = VK_WSI_LUNARG_EXTENSION_NAME;
+            extension_names[enabled_extension_count++] = "VK_WSI_swapchain";
         }
         if (!strcmp(DEBUG_REPORT_EXTENSION_NAME, instance_extensions[i].extName)) {
             if (demo->validate) {
@@ -2058,7 +2194,7 @@ static void demo_init_vk(struct demo *demo)
     }
     if (!WSIextFound) {
         ERR_EXIT("vkGetGlobalExtensionProperties failed to find the "
-                 "\"VK_WSI_LunarG\" extension.\n\nDo you have a compatible "
+                 "\"VK_WSI_swapchain\" extension.\n\nDo you have a compatible "
                  "Vulkan installable client driver (ICD) installed?\nPlease "
                  "look at the Getting Started guide for additional "
                  "information.\n",
@@ -2153,24 +2289,22 @@ static void demo_init_vk(struct demo *demo)
     err = vkGetPhysicalDeviceExtensionProperties(
               demo->gpu, NULL, &device_extension_count, device_extensions);
     assert(!err);
-#if 0
-    /* Will need this check in future */
+
     for (uint32_t i = 0; i < device_extension_count; i++) {
-        if (!strcmp(VK_WSI_LUNARG_EXTENSION_NAME, device_extensions[i].extName)) {
+        if (!strcmp("VK_WSI_device_swapchain", device_extensions[i].extName)) {
             WSIextFound = 1;
-            extension_names[enabled_extension_count++] = VK_WSI_LUNARG_EXTENSION_NAME;
+            extension_names[enabled_extension_count++] = "VK_WSI_device_swapchain";
         }
         assert(enabled_extension_count < 64);
     }
     if (!WSIextFound) {
-        ERR_EXIT("vkGetGlobalExtensionProperties failed to find the "
-                 "\"VK_WSI_LunarG\" extension.\n\nDo you have a compatible "
+        ERR_EXIT("vkGetPhysicalDeviceExtensionProperties failed to find the "
+                 "\"VK_WSI_device_swapchain\" extension.\n\nDo you have a compatible "
                  "Vulkan installable client driver (ICD) installed?\nPlease "
                  "look at the Getting Started guide for additional "
                  "information.\n",
                  "vkCreateInstance Failure");
     }
-#endif
 
     VkDeviceCreateInfo device = {
         .sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
@@ -2223,10 +2357,13 @@ static void demo_init_vk(struct demo *demo)
 
     free(device_layers);
 
+    GET_INSTANCE_PROC_ADDR(demo->inst, GetPhysicalDeviceSurfaceSupportWSI);
+    GET_DEVICE_PROC_ADDR(demo->device, GetSurfaceInfoWSI);
     GET_DEVICE_PROC_ADDR(demo->device, CreateSwapChainWSI);
     GET_DEVICE_PROC_ADDR(demo->device, CreateSwapChainWSI);
     GET_DEVICE_PROC_ADDR(demo->device, DestroySwapChainWSI);
     GET_DEVICE_PROC_ADDR(demo->device, GetSwapChainInfoWSI);
+    GET_DEVICE_PROC_ADDR(demo->device, AcquireNextImageWSI);
     GET_DEVICE_PROC_ADDR(demo->device, QueuePresentWSI);
 
     err = vkGetPhysicalDeviceProperties(demo->gpu, &demo->gpu_props);
@@ -2240,22 +2377,105 @@ static void demo_init_vk(struct demo *demo)
     assert(!err);
     assert(queue_count >= 1);
 
-    // Graphics queue and MemMgr queue can be separate.
-    // TODO: Add support for separate queues, including synchronization,
-    //       and appropriate tracking for QueueSubmit
+    // Construct the WSI surface description:
+    demo->surface_description.sType = VK_STRUCTURE_TYPE_SURFACE_DESCRIPTION_WINDOW_WSI;
+    demo->surface_description.pNext = NULL;
+#ifdef _WIN32
+    demo->surface_description.platform = VK_PLATFORM_WIN32_WSI;
+    demo->surface_description.pPlatformHandle = demo->connection;
+    demo->surface_description.pPlatformWindow = demo->window;
+#else  // _WIN32
+    demo->platform_handle_xcb.connection = demo->connection;
+    demo->platform_handle_xcb.root = demo->screen->root;
+    demo->surface_description.platform = VK_PLATFORM_XCB_WSI;
+    demo->surface_description.pPlatformHandle = &demo->platform_handle_xcb;
+    demo->surface_description.pPlatformWindow = &demo->window;
+#endif // _WIN32
+
+    // Iterate over each queue to learn whether it supports presenting to WSI:
+    VkBool32* supportsPresent = (VkBool32 *)malloc(queue_count * sizeof(VkBool32));
     for (i = 0; i < queue_count; i++) {
-        if (demo->queue_props[i].queueFlags & VK_QUEUE_GRAPHICS_BIT)
-            break;
+        demo->fpGetPhysicalDeviceSurfaceSupportWSI(demo->gpu, i,
+                                                   (VkSurfaceDescriptionWSI *) &demo->surface_description,
+                                                   &supportsPresent[i]);
     }
-    assert(i < queue_count);
-    demo->graphics_queue_node_index = i;
+
+    // Search for a graphics and a present queue in the array of queue
+    // families, try to find one that supports both
+    uint32_t graphicsQueueNodeIndex = UINT32_MAX;
+    uint32_t presentQueueNodeIndex  = UINT32_MAX;
+    for (i = 0; i < queue_count; i++) {
+        if ((demo->queue_props[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) != 0) {
+            if (graphicsQueueNodeIndex == UINT32_MAX) {
+                graphicsQueueNodeIndex = i;
+            }
+            
+            if (supportsPresent[i] == VK_TRUE) {
+                graphicsQueueNodeIndex = i;
+                presentQueueNodeIndex = i;
+                break;
+            }
+        }
+    }
+    if (presentQueueNodeIndex == UINT32_MAX) {
+        // If didn't find a queue that supports both graphics and present, then
+        // find a separate present queue.
+        for (size_t i = 0; i < queue_count; ++i) {
+            if (supportsPresent[i] == VK_TRUE) {
+                presentQueueNodeIndex = i;
+                break;
+            }
+        }
+    }
+    free(supportsPresent);
+
+    // Generate error if could not find both a graphics and a present queue
+    if (graphicsQueueNodeIndex == UINT32_MAX || presentQueueNodeIndex == UINT32_MAX) {
+        ERR_EXIT("Could not find a graphics and a present queue\n",
+                 "WSI Initialization Failure");
+    }
+
+    // TODO: Add support for separate queues, including presentation,
+    //       synchronization, and appropriate tracking for QueueSubmit
+    // While it is possible for an application to use a separate graphics and a
+    // present queues, this demo program assumes it is only using one:
+    if (graphicsQueueNodeIndex != presentQueueNodeIndex) {
+        ERR_EXIT("Could not find a common graphics and a present queue\n",
+                 "WSI Initialization Failure");
+    }
+
+    demo->graphics_queue_node_index = graphicsQueueNodeIndex;
 
     err = vkGetDeviceQueue(demo->device, demo->graphics_queue_node_index,
             0, &demo->queue);
     assert(!err);
 
-    // for now hardcode format till get WSI support
-    demo->format = VK_FORMAT_B8G8R8A8_UNORM;
+    // Get the list of VkFormat's that are supported:
+    size_t formatsSize;
+    err = demo->fpGetSurfaceInfoWSI(demo->device,
+                                    (VkSurfaceDescriptionWSI *) &demo->surface_description,
+                                    VK_SURFACE_INFO_TYPE_FORMATS_WSI,
+                                    &formatsSize, NULL);
+    assert(!err);
+    VkSurfaceFormatPropertiesWSI *surfFormats = (VkSurfaceFormatPropertiesWSI *)malloc(formatsSize);
+    err = demo->fpGetSurfaceInfoWSI(demo->device,
+                                    (VkSurfaceDescriptionWSI *) &demo->surface_description,
+                                    VK_SURFACE_INFO_TYPE_FORMATS_WSI,
+                                    &formatsSize, surfFormats);
+    assert(!err);
+    // If the format list includes just one entry of VK_FORMAT_UNDEFINED,
+    // the surface has no preferred format.  Otherwise, at least one
+    // supported format will be returned.
+    size_t formatCount = formatsSize / sizeof(VkSurfaceFormatPropertiesWSI);
+    if (formatCount == 1 && surfFormats[0].format == VK_FORMAT_UNDEFINED)
+    {
+        demo->format = VK_FORMAT_B8G8R8A8_UNORM;
+    }
+    else
+    {
+        assert(formatCount >= 1);
+        demo->format = surfFormats[0].format;
+    }
 
     demo->quit = false;
     demo->curFrame = 0;

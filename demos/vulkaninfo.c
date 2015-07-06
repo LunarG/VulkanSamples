@@ -33,6 +33,9 @@
 #include <io.h>
 #endif
 
+#include "vk_wsi_swapchain.h"
+#include "vk_wsi_device_swapchain.h"
+
 #include <vulkan.h>
 
 #define ERR(err) printf("%s:%d: failed with %s\n", \
@@ -424,8 +427,7 @@ static void app_dev_init(struct app_dev *dev, struct app_gpu *gpu)
     VkResult U_ASSERT_ONLY err;
     // Extensions to enable
     static const char *known_extensions[] = {
-        //TODO add WSI device extension WSI swapchain, WSI_LUNARG is a global extension
-        ""
+        VK_WSI_DEVICE_SWAPCHAIN_EXTENSION_NAME,
     };
 
     uint32_t count = 0;
@@ -568,7 +570,7 @@ static void app_create_instance(struct app_instance *inst)
     VkResult U_ASSERT_ONLY err;
     // Global Extensions to enable
     static char *known_extensions[] = {
-        "VK_WSI_LunarG",
+        "VK_WSI_swapchain",
     };
 
     uint32_t global_extension_count = 0;
