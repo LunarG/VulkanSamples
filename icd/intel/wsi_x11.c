@@ -23,6 +23,7 @@
  *
  * Authors:
  *   Chia-I Wu <olv@lunarg.com>
+ *   Ian Elliott <ian@lunarg.com>
  */
 
 #include <sys/types.h>
@@ -57,12 +58,21 @@ struct intel_x11_display {
     uint32_t mode_count;
 };
 
+typedef enum intel_x11_swap_chain_image_state_
+{
+    INTEL_SC_STATE_UNUSED = 0,
+    INTEL_SC_STATE_APP_OWNED = 1,
+    INTEL_SC_STATE_QUEUED_FOR_PRESENT = 2,
+    INTEL_SC_STATE_DISPLAYED = 3,
+} intel_x11_swap_chain_image_state;
+
 struct intel_x11_swap_chain {
     struct intel_handle handle;
 
     xcb_connection_t *c;
     xcb_window_t window;
     bool force_copy;
+    VkPresentModeWSI present_mode;
 
     int dri3_major, dri3_minor;
     int present_major, present_minor;
@@ -72,6 +82,9 @@ struct intel_x11_swap_chain {
 
     struct intel_img **persistent_images;
     uint32_t persistent_image_count;
+    intel_x11_swap_chain_image_state *image_state;
+    uint32_t *present_queue;
+    uint32_t present_queue_length;
 
     struct {
         uint32_t serial;
@@ -102,14 +115,9 @@ static const VkFormat x11_presentable_formats[] = {
     VK_FORMAT_B5G6R5_UNORM,
 };
 
-static inline struct intel_x11_display *x11_display(VkDisplayWSI dpy)
-{
-    return (struct intel_x11_display *) dpy;
-}
-
 static inline struct intel_x11_swap_chain *x11_swap_chain(VkSwapChainWSI sc)
 {
-    return (struct intel_x11_swap_chain *) sc;
+    return (struct intel_x11_swap_chain *) sc.handle;
 }
 
 static bool x11_is_format_presentable(const struct intel_dev *dev,
@@ -201,6 +209,53 @@ static int x11_get_drawable_depth(xcb_connection_t *c,
     }
 
     return depth;
+}
+
+static VkResult x11_get_surface_properties(
+    const VkSurfaceDescriptionWSI *pSurfaceDescription,
+    VkSurfacePropertiesWSI *pSurfaceProperties)
+{
+    const VkSurfaceDescriptionWindowWSI* pSurfaceDescriptionWindow =
+        (VkSurfaceDescriptionWindowWSI*) pSurfaceDescription;
+    VkPlatformHandleXcbWSI *pPlatformHandleXcb = (VkPlatformHandleXcbWSI *)
+        pSurfaceDescriptionWindow->pPlatformHandle;
+    xcb_connection_t *c = (xcb_connection_t *)
+        pPlatformHandleXcb->connection;
+    xcb_window_t window = *((xcb_window_t *)
+                            pSurfaceDescriptionWindow->pPlatformWindow);
+    xcb_get_geometry_cookie_t cookie;
+    xcb_get_geometry_reply_t *reply;
+
+    cookie = xcb_get_geometry(c, window);
+    reply = xcb_get_geometry_reply(c, cookie, NULL);
+
+    if (reply) {
+        pSurfaceProperties->currentExtent.width = reply->width;
+        pSurfaceProperties->currentExtent.height = reply->height;
+        free(reply);
+    } else {
+        pSurfaceProperties->currentExtent.width = 0;
+        pSurfaceProperties->currentExtent.height = 0;
+    }
+
+    pSurfaceProperties->minImageCount = 2;
+    pSurfaceProperties->maxImageCount = 0;
+
+    pSurfaceProperties->minImageExtent.width =
+        pSurfaceProperties->currentExtent.width;
+    pSurfaceProperties->minImageExtent.height =
+        pSurfaceProperties->currentExtent.height;
+    pSurfaceProperties->maxImageExtent.width =
+        pSurfaceProperties->currentExtent.width;
+    pSurfaceProperties->maxImageExtent.height =
+        pSurfaceProperties->currentExtent.height;
+    pSurfaceProperties->supportedTransforms = VK_SURFACE_TRANSFORM_NONE_BIT_WSI;
+    pSurfaceProperties->currentTransform = VK_SURFACE_TRANSFORM_NONE_WSI;
+    pSurfaceProperties->maxImageArraySize = 0;
+    pSurfaceProperties->supportedUsageFlags =
+        VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+
+    return VK_SUCCESS;
 }
 
 /**
@@ -381,13 +436,36 @@ static bool x11_swap_chain_create_persistent_images(struct intel_x11_swap_chain 
                                                     const VkSwapChainCreateInfoWSI *info)
 {
     struct intel_img **images;
+    intel_x11_swap_chain_image_state *image_state;
+    uint32_t *present_queue;
     VkImageCreateInfo img_info;
     uint32_t i;
 
-    images = intel_alloc(sc, sizeof(*images) * info->imageCount,
+    images = intel_alloc(sc, sizeof(*images) * info->minImageCount,
             0, VK_SYSTEM_ALLOC_TYPE_INTERNAL);
     if (!images)
         return false;
+    image_state = intel_alloc(
+            sc, sizeof(intel_x11_swap_chain_image_state) * info->minImageCount,
+            0, VK_SYSTEM_ALLOC_TYPE_INTERNAL);
+    if (!image_state) {
+        for (i = 0; i < info->minImageCount; i++) {
+            intel_img_destroy(images[i]);
+        }
+        intel_free(sc, images);
+        return false;
+    }
+    present_queue = intel_alloc(
+            sc, sizeof(uint32_t) * info->minImageCount,
+            0, VK_SYSTEM_ALLOC_TYPE_INTERNAL);
+    if (!present_queue) {
+        for (i = 0; i < info->minImageCount; i++) {
+            intel_img_destroy(images[i]);
+        }
+        intel_free(sc, images);
+        intel_free(sc, image_state);
+        return false;
+    }
 
     memset(&img_info, 0, sizeof(img_info));
     img_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
@@ -403,25 +481,37 @@ static bool x11_swap_chain_create_persistent_images(struct intel_x11_swap_chain 
     img_info.usage = info->imageUsageFlags;
     img_info.flags = 0;
 
-    for (i = 0; i < info->imageCount; i++) {
+    for (i = 0; i < info->minImageCount; i++) {
         images[i] = x11_swap_chain_create_persistent_image(sc,
                 dev, &img_info);
         if (!images[i])
             break;
+        image_state[i] = INTEL_SC_STATE_UNUSED;
     }
 
-    if (i < info->imageCount) {
+    if (i < info->minImageCount) {
         uint32_t j;
         for (j = 0; j < i; j++)
-            intel_img_destroy(images[i]);
+            intel_img_destroy(images[j]);
 
         intel_free(sc, images);
+
+        if (image_state) {
+            intel_free(sc, image_state);
+        }
+
+        if (present_queue) {
+            intel_free(sc, present_queue);
+        }
 
         return false;
     }
 
     sc->persistent_images = images;
-    sc->persistent_image_count = info->imageCount;
+    sc->persistent_image_count = info->minImageCount;
+    sc->image_state = image_state;
+    sc->present_queue = present_queue;
+    sc->present_queue_length = 0;
 
     return true;
 }
@@ -430,9 +520,8 @@ static bool x11_swap_chain_create_persistent_images(struct intel_x11_swap_chain 
  * Send a PresentPixmap.
  */
 static VkResult x11_swap_chain_present_pixmap(struct intel_x11_swap_chain *sc,
-                                              const VkPresentInfoWSI *info)
+                                              struct intel_img *img)
 {
-    struct intel_img *img = intel_img(info->image);
     struct intel_x11_img_data *data =
         (struct intel_x11_img_data *) img->wsi_data;
     uint32_t options = XCB_PRESENT_OPTION_NONE;
@@ -441,10 +530,11 @@ static VkResult x11_swap_chain_present_pixmap(struct intel_x11_swap_chain *sc,
     xcb_generic_error_t *err;
 
     target_msc = 0;
-    divisor = info->flipInterval;
+    divisor = 1;
     remainder = 0;
-    if (!info->flipInterval)
+    if (sc->present_mode == VK_PRESENT_MODE_IMMEDIATE_WSI) {
         options |= XCB_PRESENT_OPTION_ASYNC;
+    }
 
     if (sc->force_copy)
         options |= XCB_PRESENT_OPTION_COPY;
@@ -490,6 +580,18 @@ static void x11_swap_chain_present_event(struct intel_x11_swap_chain *sc,
     case XCB_PRESENT_COMPLETE_NOTIFY:
         sc->remote.serial = u.complete->serial;
         sc->remote.msc = u.complete->msc;
+        assert(sc->present_queue_length > 0);
+        if (sc->image_state[sc->present_queue[0]] == INTEL_SC_STATE_DISPLAYED) {
+            // Remove the previously-displayed image from the present queue:
+            sc->image_state[sc->present_queue[0]] = INTEL_SC_STATE_UNUSED;
+            sc->present_queue_length--;
+            for (int j = 0; j < sc->present_queue_length; j++) {
+                sc->present_queue[j] = sc->present_queue[j+1];
+            }
+        }
+        assert(sc->present_queue_length > 0);
+        assert(sc->image_state[sc->present_queue[0]] == INTEL_SC_STATE_QUEUED_FOR_PRESENT);
+        sc->image_state[sc->present_queue[0]] = INTEL_SC_STATE_DISPLAYED;
         break;
     default:
         break;
@@ -546,6 +648,14 @@ static void x11_swap_chain_destroy(struct intel_x11_swap_chain *sc)
         intel_free(sc, sc->persistent_images);
     }
 
+    if (sc->image_state) {
+        intel_free(sc, sc->image_state);
+    }
+
+    if (sc->present_queue) {
+        intel_free(sc, sc->present_queue);
+    }
+
     if (sc->present_special_event)
         xcb_unregister_for_special_event(sc->c, sc->present_special_event);
 
@@ -557,10 +667,14 @@ static VkResult x11_swap_chain_create(struct intel_dev *dev,
                                       struct intel_x11_swap_chain **sc_ret)
 {
     const xcb_randr_provider_t provider = 0;
+    const VkSurfaceDescriptionWindowWSI* pSurfaceDescriptionWindow =
+        (VkSurfaceDescriptionWindowWSI*) info->pSurfaceDescription;
+    VkPlatformHandleXcbWSI *pPlatformHandleXcb = (VkPlatformHandleXcbWSI *)
+        pSurfaceDescriptionWindow->pPlatformHandle;
     xcb_connection_t *c = (xcb_connection_t *)
-        info->pNativeWindowSystemHandle;
-    xcb_window_t window = (xcb_window_t)
-        ((intptr_t) info->pNativeWindowHandle);
+        pPlatformHandleXcb->connection;
+    xcb_window_t window = *((xcb_window_t *)
+                            pSurfaceDescriptionWindow->pPlatformWindow);
     struct intel_x11_swap_chain *sc;
     int fd;
 
@@ -593,7 +707,8 @@ static VkResult x11_swap_chain_create(struct intel_dev *dev,
     sc->window = window;
 
     /* always copy unless flip bit is set */
-    sc->force_copy = !(info->swapModeFlags & VK_SWAP_MODE_FLIP_BIT_WSI);
+    sc->present_mode = info->presentMode;
+    sc->force_copy = true;
 
     if (!x11_swap_chain_dri3_and_present_query_version(sc) ||
         !x11_swap_chain_present_select_input(sc) ||
@@ -607,181 +722,12 @@ static VkResult x11_swap_chain_create(struct intel_dev *dev,
     return VK_SUCCESS;
 }
 
-#if 0
-static void x11_display_init_modes(struct intel_x11_display *dpy,
-                                   const drmModeConnectorPtr conn)
-{
-    int i;
-
-    if (!conn->count_modes)
-        return;
-
-    dpy->modes = intel_alloc(dpy, sizeof(dpy->modes[0]) * conn->count_modes,
-            0, VK_SYSTEM_ALLOC_TYPE_INTERNAL);
-    if (!dpy->modes)
-        return;
-
-    for (i = 0; i < conn->count_modes; i++) {
-        dpy->modes[i] = conn->modes[i];
-
-        if (dpy->physical_resolution.width  < conn->modes[i].hdisplay &&
-            dpy->physical_resolution.height < conn->modes[i].vdisplay) {
-            dpy->physical_resolution.width  = conn->modes[i].hdisplay;
-            dpy->physical_resolution.height = conn->modes[i].vdisplay;
-        }
-    }
-
-    dpy->mode_count = conn->count_modes;
-
-#if 0 // Remove this until we support an upstream version of WSI that has this:
-    dpy->physical_dimension.width = conn->mmWidth;
-    dpy->physical_dimension.height = conn->mmHeight;
-#endif
-}
-
-static void x11_display_init_name(struct intel_x11_display *dpy,
-                                  const drmModeConnectorPtr conn)
-{
-    static const char *connector_names[] = {
-        [DRM_MODE_CONNECTOR_Unknown]        = "Unknown",
-        [DRM_MODE_CONNECTOR_VGA]            = "VGA",
-        [DRM_MODE_CONNECTOR_DVII]           = "DVII",
-        [DRM_MODE_CONNECTOR_DVID]           = "DVID",
-        [DRM_MODE_CONNECTOR_DVIA]           = "DVIA",
-        [DRM_MODE_CONNECTOR_Composite]      = "Composite",
-        [DRM_MODE_CONNECTOR_SVIDEO]         = "SVIDEO",
-        [DRM_MODE_CONNECTOR_LVDS]           = "LVDS",
-        [DRM_MODE_CONNECTOR_Component]      = "COMPONENT",
-        [DRM_MODE_CONNECTOR_9PinDIN]        = "9PinDIN",
-        [DRM_MODE_CONNECTOR_DisplayPort]    = "DisplayPort",
-        [DRM_MODE_CONNECTOR_HDMIA]          = "HDMIA",
-        [DRM_MODE_CONNECTOR_HDMIB]          = "HDMIB",
-        [DRM_MODE_CONNECTOR_TV]             = "TV",
-        [DRM_MODE_CONNECTOR_eDP]            = "eDP",
-        [DRM_MODE_CONNECTOR_VIRTUAL]        = "VIRTUAL",
-        [DRM_MODE_CONNECTOR_DSI]            = "DSI",
-    };
-    const char *name;
-
-    name = (conn->connector_type < ARRAY_SIZE(connector_names)) ?
-        connector_names[conn->connector_type] : NULL;
-    if (!name)
-        name = connector_names[DRM_MODE_CONNECTOR_Unknown];
-
-    snprintf(dpy->name, sizeof(dpy->name),
-            "%s%d", name, conn->connector_type_id);
-}
-#endif
-
 static void x11_display_destroy(struct intel_x11_display *dpy)
 {
     intel_free(dpy, dpy->modes);
     intel_free(dpy, dpy);
 }
 
-#if 0
-static struct intel_x11_display *x11_display_create(struct intel_gpu *gpu,
-                                                    int fd,
-                                                    uint32_t connector_id)
-{
-    struct intel_x11_display *dpy;
-    drmModeConnectorPtr conn;
-
-    dpy = intel_alloc(gpu, sizeof(*dpy), 0, VK_SYSTEM_ALLOC_TYPE_API_OBJECT);
-    if (!dpy)
-        return NULL;
-
-    memset(dpy, 0, sizeof(*dpy));
-    intel_handle_init(&dpy->handle, VK_OBJECT_TYPE_DISPLAY_WSI, gpu->handle.instance);
-
-    dpy->fd = fd;
-    dpy->connector_id = connector_id;
-
-    conn = drmModeGetConnector(fd, connector_id);
-    if (!conn) {
-        x11_display_destroy(dpy);
-        return NULL;
-    }
-
-    x11_display_init_name(dpy, conn);
-    x11_display_init_modes(dpy, conn);
-
-    drmModeFreeConnector(conn);
-
-    return dpy;
-}
-
-static void x11_display_scan(struct intel_gpu *gpu)
-{
-    struct intel_x11_display **displays;
-    drmModeResPtr res;
-    int fd, i;
-
-    fd = intel_gpu_get_primary_fd(gpu);
-    if (fd < 0)
-        return;
-
-    res = drmModeGetResources(fd);
-    if (!res)
-        return;
-
-    displays = intel_alloc(gpu, sizeof(*displays) * res->count_connectors,
-            0, VK_SYSTEM_ALLOC_TYPE_INTERNAL);
-    if (!displays) {
-        drmModeFreeResources(res);
-        return;
-    }
-
-    for (i = 0; i < res->count_connectors; i++) {
-        displays[i] = x11_display_create(gpu, fd, res->connectors[i]);
-        if (!displays[i])
-            break;
-    }
-
-    drmModeFreeResources(res);
-
-    gpu->displays = (struct intel_wsi_display **) displays;
-    gpu->display_count = i;
-}
-#endif
-#if 0    // TODO To be replace with new WSI
-VkResult intel_wsi_gpu_get_info(struct intel_gpu *gpu,
-                                VkPhysicalDeviceInfoType type,
-                                size_t *size, void *data)
-{
-    VkResult ret = VK_SUCCESS;
-
-    if (!size)
-        return VK_ERROR_INVALID_POINTER;
-
-    switch ((int) type) {
-    case VK_PHYSICAL_DEVICE_INFO_TYPE_QUEUE_PRESENT_PROPERTIES_WSI:
-        {
-            VkPhysicalDeviceQueuePresentPropertiesWSI *dst = data;
-            size_t size_ret;
-            uint32_t i;
-
-            size_ret = sizeof(*dst) * INTEL_GPU_ENGINE_COUNT;
-
-            if (dst && *size < size_ret)
-                return VK_ERROR_INVALID_VALUE;
-
-            *size = size_ret;
-            if (!dst)
-                return VK_SUCCESS;
-
-            for (i = 0; i < INTEL_GPU_ENGINE_COUNT; i++)
-                dst[i].supportsPresent = true;
-        }
-        break;
-    default:
-        ret = VK_ERROR_INVALID_VALUE;
-        break;
-    }
-
-    return ret;
-}
-#endif
 void intel_wsi_gpu_cleanup(struct intel_gpu *gpu)
 {
     if (gpu->displays) {
@@ -871,36 +817,76 @@ VkResult intel_wsi_fence_wait(struct intel_fence *fence,
     return x11_swap_chain_wait(data->swap_chain, data->serial, timeout_ns);
 }
 
-#if 0
-ICD_EXPORT VkResult VKAPI vkGetDisplayInfoWSI(
-    VkDisplayWSI                            display,
-    VkDisplayInfoTypeWSI                    infoType,
-    size_t*                                 pDataSize,
-    void*                                   pData)
+ICD_EXPORT VkResult VKAPI vkGetPhysicalDeviceSurfaceSupportWSI(
+    VkPhysicalDevice                        physicalDevice,
+    uint32_t                                queueNodeIndex,
+    const VkSurfaceDescriptionWSI*          pSurfaceDescription,
+    VkBool32*                               pSupported)
+{
+    VkResult ret = VK_SUCCESS;
+    const VkSurfaceDescriptionWindowWSI* pSurfaceDescriptionWindow =
+        (VkSurfaceDescriptionWindowWSI*) pSurfaceDescription;
+
+    *pSupported = false;
+
+    // TODO: Move this check to a validation layer (i.e. the driver should
+    // assume the correct data type, and not check):
+    if (pSurfaceDescriptionWindow->sType != VK_STRUCTURE_TYPE_SURFACE_DESCRIPTION_WINDOW_WSI) {
+        return VK_ERROR_INVALID_VALUE;
+    }
+
+    // TODO: NEED TO ALSO CHECK:
+    // - queueNodeIndex
+    // - pSurfaceDescriptionWindow->pPlatformHandle (can try to use it)
+    // - pSurfaceDescriptionWindow->pPlatformWindow (can try to use it)
+    if (pSurfaceDescriptionWindow->platform == VK_PLATFORM_XCB_WSI) {
+        *pSupported = true;
+    }
+
+    return ret;
+}
+
+VkResult VKAPI vkGetSurfaceInfoWSI(
+    VkDevice                                 device,
+    const VkSurfaceDescriptionWSI*           pSurfaceDescription,
+    VkSurfaceInfoTypeWSI                     infoType,
+    size_t*                                  pDataSize,
+    void*                                    pData)
 {
     VkResult ret = VK_SUCCESS;
 
-    if (!pDataSize)
+    // TODO: Move this check to a validation layer (i.e. the driver should
+    // assume the correct data type, and not check):
+    if (!pDataSize) {
         return VK_ERROR_INVALID_POINTER;
+    }
 
     switch (infoType) {
-    case VK_DISPLAY_INFO_TYPE_FORMAT_PROPERTIES_WSI:
-       {
-            VkDisplayFormatPropertiesWSI *dst = pData;
-            size_t size_ret;
+    case VK_SURFACE_INFO_TYPE_PROPERTIES_WSI:
+        *pDataSize = sizeof(VkSurfacePropertiesWSI);
+        if (pData) {
+            ret = x11_get_surface_properties(pSurfaceDescription, pData);
+        }
+        break;
+    case VK_SURFACE_INFO_TYPE_FORMATS_WSI:
+        *pDataSize = (sizeof(VkSurfaceFormatPropertiesWSI) *
+                      ARRAY_SIZE(x11_presentable_formats));
+        if (pData) {
+            VkSurfaceFormatPropertiesWSI *dst = pData;
             uint32_t i;
-
-            size_ret = sizeof(*dst) * ARRAY_SIZE(x11_presentable_formats);
-
-            if (dst && *pDataSize < size_ret)
-                return VK_ERROR_INVALID_VALUE;
-
-            *pDataSize = size_ret;
-            if (!dst)
-                return VK_SUCCESS;
-
-            for (i = 0; i < ARRAY_SIZE(x11_presentable_formats); i++)
-                dst[i].swapChainFormat = x11_presentable_formats[i];
+            uint32_t num_formats = ARRAY_SIZE(x11_presentable_formats);
+            for (i = 0; i < num_formats; i++) {
+                dst[i].format = x11_presentable_formats[i];
+            }
+        }
+        break;
+    case VK_SURFACE_INFO_TYPE_PRESENT_MODES_WSI:
+        *pDataSize = sizeof(VkSurfacePresentModePropertiesWSI) * 2;
+        if (pData) {
+            VkSurfacePresentModePropertiesWSI *dst = pData;
+            dst[0].presentMode = VK_PRESENT_MODE_IMMEDIATE_WSI;
+            dst[1].presentMode = VK_PRESENT_MODE_FIFO_WSI;
+            // TODO: Consider adding VK_PRESENT_MODE_MAILBOX_WSI sometime
         }
         break;
     default:
@@ -910,7 +896,6 @@ ICD_EXPORT VkResult VKAPI vkGetDisplayInfoWSI(
 
     return ret;
 }
-#endif
 
 ICD_EXPORT VkResult VKAPI vkCreateSwapChainWSI(
     VkDevice                                device,
@@ -919,12 +904,22 @@ ICD_EXPORT VkResult VKAPI vkCreateSwapChainWSI(
 {
     struct intel_dev *dev = intel_dev(device);
 
+    if (pCreateInfo->oldSwapChain.handle) {
+        // TODO: Eventually, do more than simply up-front destroy the
+        // oldSwapChain (but just do that for now):
+        struct intel_x11_swap_chain *sc =
+            x11_swap_chain(pCreateInfo->oldSwapChain);
+
+        x11_swap_chain_destroy(sc);
+    }
+
     return x11_swap_chain_create(dev, pCreateInfo,
             (struct intel_x11_swap_chain **) pSwapChain);
 }
 
 ICD_EXPORT VkResult VKAPI vkDestroySwapChainWSI(
-    VkSwapChainWSI                          swapChain)
+    VkDevice                                 device,
+    VkSwapChainWSI                           swapChain)
 {
     struct intel_x11_swap_chain *sc = x11_swap_chain(swapChain);
 
@@ -934,36 +929,32 @@ ICD_EXPORT VkResult VKAPI vkDestroySwapChainWSI(
 }
 
 ICD_EXPORT VkResult VKAPI vkGetSwapChainInfoWSI(
-    VkSwapChainWSI                          swapChain,
-    VkSwapChainInfoTypeWSI                  infoType,
-    size_t*                                 pDataSize,
-    void*                                   pData)
+    VkDevice                                 device,
+    VkSwapChainWSI                           swapChain,
+    VkSwapChainInfoTypeWSI                   infoType,
+    size_t*                                  pDataSize,
+    void*                                    pData)
 {
     struct intel_x11_swap_chain *sc = x11_swap_chain(swapChain);
     VkResult ret = VK_SUCCESS;
 
-    if (!pDataSize)
+    // TODO: Move this check to a validation layer (i.e. the driver should
+    // assume the correct data type, and not check):
+    if (!pDataSize) {
         return VK_ERROR_INVALID_POINTER;
+    }
 
     switch (infoType) {
-    case VK_SWAP_CHAIN_INFO_TYPE_PERSISTENT_IMAGES_WSI:
-        {
-            VkSwapChainImageInfoWSI *images;
-            const size_t size = sizeof(*images) * sc->persistent_image_count;
+    case VK_SWAP_CHAIN_INFO_TYPE_IMAGES_WSI:
+        *pDataSize = (sizeof(VkSwapChainImagePropertiesWSI) *
+                      sc->persistent_image_count);
+        if (pData) {
+            VkSwapChainImagePropertiesWSI *images =
+                (VkSwapChainImagePropertiesWSI *) pData;
             uint32_t i;
 
-            if (pData && *pDataSize < size)
-                return VK_ERROR_INVALID_VALUE;
-
-            *pDataSize = size;
-            if (!pData)
-                return VK_SUCCESS;
-
-            images = (VkSwapChainImageInfoWSI *) pData;
             for (i = 0; i < sc->persistent_image_count; i++) {
                 images[i].image.handle = (uint64_t) sc->persistent_images[i];
-                images[i].memory.handle =
-                    (uint64_t) sc->persistent_images[i]->obj.mem;
             }
         }
         break;
@@ -975,25 +966,69 @@ ICD_EXPORT VkResult VKAPI vkGetSwapChainInfoWSI(
     return ret;
 }
 
+ICD_EXPORT VkResult VKAPI vkAcquireNextImageWSI(
+    VkDevice                                 device,
+    VkSwapChainWSI                           swapChain,
+    uint64_t                                 timeout,
+    VkSemaphore                              semaphore,
+    uint32_t*                                pImageIndex)
+{
+    struct intel_x11_swap_chain *sc = x11_swap_chain(swapChain);
+    VkResult ret = VK_SUCCESS;
+
+// TODO: IMPLEMENT SUPPORT FOR "timeout".  MEAN TIME, ASSUME WE'LL ALWAYS HAVE
+// AN IMAGE TO RETURN (OR RETURN IMAGE 0).
+
+    // Find an unused image to return:
+    for (int i = 0; i < sc->persistent_image_count; i++) {
+        if (sc->image_state[i] == INTEL_SC_STATE_UNUSED) {
+            sc->image_state[i] = INTEL_SC_STATE_APP_OWNED;
+            *pImageIndex = i;
+            return ret;
+        }
+    }
+
+// NOTE: Should never get here, but in case we do, do something:
+    assert(0);
+    *pImageIndex = 0;
+
+    return ret;
+}
+
+
 ICD_EXPORT VkResult VKAPI vkQueuePresentWSI(
-    VkQueue                                 queue_,
-    const VkPresentInfoWSI*                 pPresentInfo)
+    VkQueue                                  queue_,
+    VkPresentInfoWSI*                        pPresentInfo)
 {
     struct intel_queue *queue = intel_queue(queue_);
-    struct intel_img *img = intel_img(pPresentInfo->image);
-    struct intel_x11_swap_chain *sc =
-        ((struct intel_x11_img_data *) img->wsi_data)->swap_chain;
-    struct intel_x11_fence_data *data =
-        (struct intel_x11_fence_data *) queue->fence->wsi_data;
-    VkResult ret;
+    uint32_t i;
+    uint32_t num_swapchains = pPresentInfo->swapChainCount;
 
-    ret = x11_swap_chain_present_pixmap(sc, pPresentInfo);
-    if (ret != VK_SUCCESS)
-        return ret;
+    for (i = 0; i < num_swapchains; i++) {
+        struct intel_x11_swap_chain *sc =
+            x11_swap_chain(pPresentInfo->swapChains[i]);
+        struct intel_img *img = 
+            sc->persistent_images[pPresentInfo->imageIndices[i]];
+        struct intel_x11_fence_data *data =
+            (struct intel_x11_fence_data *) queue->fence->wsi_data;
+        VkResult ret;
 
-    data->swap_chain = sc;
-    data->serial = sc->local.serial;
-    intel_fence_set_seqno(queue->fence, img->obj.mem->bo);
+        ret = x11_swap_chain_present_pixmap(sc, img);
+        if (ret != VK_SUCCESS) {
+            return ret;
+        }
+
+        // Record the state change for this image, and add this image to the
+        // present queue for the swap chain:
+        sc->image_state[pPresentInfo->imageIndices[i]] =
+            INTEL_SC_STATE_QUEUED_FOR_PRESENT;
+        sc->present_queue[sc->present_queue_length++] =
+            pPresentInfo->imageIndices[i];
+
+        data->swap_chain = sc;
+        data->serial = sc->local.serial;
+        intel_fence_set_seqno(queue->fence, img->obj.mem->bo);
+    }
 
     return VK_SUCCESS;
 }

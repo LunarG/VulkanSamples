@@ -66,36 +66,3 @@ VkResult intel_wsi_fence_wait(struct intel_fence *fence,
 {
     return VK_SUCCESS;
 }
-
-ICD_EXPORT VkResult VKAPI vkWsiX11AssociateConnection(
-    VkPhysicalGpu                               gpu_,
-    const VK_WSI_X11_CONNECTION_INFO*           pConnectionInfo)
-{
-    return VK_ERROR_UNKNOWN;
-}
-
-ICD_EXPORT VkResult VKAPI vkWsiX11GetMSC(
-    VkDevice                                    device,
-    xcb_window_t                                window,
-    xcb_randr_crtc_t                            crtc,
-    uint64_t  *                                 pMsc)
-{
-    return VK_ERROR_UNKNOWN;
-}
-
-ICD_EXPORT VkResult VKAPI vkWsiX11CreatePresentableImage(
-    VkDevice                                    device,
-    const VK_WSI_X11_PRESENTABLE_IMAGE_CREATE_INFO* pCreateInfo,
-    VkImage*                                    pImage,
-    VkGpuMemory*                                pMem)
-{
-    return VK_ERROR_UNKNOWN;
-}
-
-ICD_EXPORT VkResult VKAPI vkWsiX11QueuePresent(
-    VkQueue                                     queue_,
-    const VK_WSI_X11_PRESENT_INFO*              pPresentInfo,
-    VkFence                                     fence_)
-{
-    return VK_ERROR_UNKNOWN;
-}

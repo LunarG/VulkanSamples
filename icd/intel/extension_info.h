@@ -30,10 +30,8 @@
 
 #include "intel.h"
 
-/*
- * No device-specific extensions at this point, so this enum is a placeholder
- */
 enum intel_phy_dev_ext_type {
+    INTEL_PHY_DEV_EXT_WSI_DEVICE_SWAPCHAIN,
 
     INTEL_PHY_DEV_EXT_COUNT,
     INTEL_PHY_DEV_EXT_INVALID = INTEL_PHY_DEV_EXT_COUNT,
@@ -41,7 +39,7 @@ enum intel_phy_dev_ext_type {
 
 enum intel_global_ext_type {
     INTEL_PHY_DEV_EXT_DEBUG_REPORT,
-    INTEL_GLOBAL_EXT_WSI_LUNARG,
+    INTEL_GLOBAL_EXT_WSI_SWAPCHAIN,
 
     INTEL_GLOBAL_EXT_COUNT,
     INTEL_GLOBAL_EXT_INVALID = INTEL_GLOBAL_EXT_COUNT,

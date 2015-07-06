@@ -383,6 +383,9 @@ ICD_EXPORT VkResult VKAPI vkCreateSemaphore(
     const VkSemaphoreCreateInfo*            pCreateInfo,
     VkSemaphore*                              pSemaphore)
 {
+    // TODO: fully support semaphores (mean time, simply fake it):
+    pSemaphore->handle = 1;
+
     /*
      * We want to find an unused semaphore register and initialize it.  Signal
      * will increment the register.  Wait will atomically decrement it and
@@ -391,7 +394,7 @@ ICD_EXPORT VkResult VKAPI vkCreateSemaphore(
      *
      * XXX However, MI_SEMAPHORE_MBOX does not seem to have the flexibility.
      */
-    return VK_ERROR_UNAVAILABLE;
+    return VK_SUCCESS;
 }
 
 ICD_EXPORT VkResult VKAPI vkDestroySemaphore(
@@ -406,12 +409,12 @@ ICD_EXPORT VkResult VKAPI vkQueueSignalSemaphore(
     VkQueue                                   queue,
     VkSemaphore                               semaphore)
 {
-    return VK_ERROR_UNAVAILABLE;
+    return VK_SUCCESS;
 }
 
 ICD_EXPORT VkResult VKAPI vkQueueWaitSemaphore(
     VkQueue                                   queue,
     VkSemaphore                               semaphore)
 {
-    return VK_ERROR_UNAVAILABLE;
+    return VK_SUCCESS;
 }
