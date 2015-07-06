@@ -196,7 +196,7 @@ void VkRenderFramework::ShutdownFramework()
 
     // reset the driver
     delete m_device;
-    vkDestroyInstance(this->inst);
+    if (this->inst) vkDestroyInstance(this->inst);
 }
 
 void VkRenderFramework::InitState()
