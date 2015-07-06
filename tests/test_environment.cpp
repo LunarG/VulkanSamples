@@ -75,7 +75,7 @@ void Environment::SetUp()
     for (uint32_t i = 0; i < instance_extension_names.size(); i++) {
         extFound = 0;
         for (uint32_t j = 0; j < instance_extensions.size(); j++) {
-            if (!strcmp(instance_extension_names[i], instance_extensions[i].extName)) {
+            if (!strcmp(instance_extension_names[i], instance_extensions[j].extName)) {
                 extFound = 1;
             }
         }

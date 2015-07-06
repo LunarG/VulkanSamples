@@ -175,7 +175,7 @@ std::vector<VkExtensionProperties> GetGlobalExtensions(const char *pLayerName)
         err = vkGetGlobalExtensionProperties(pLayerName, &ext_count, NULL);
 
         if (err == VK_SUCCESS) {
-            exts.reserve(ext_count);
+            exts.resize(ext_count);
             err = vkGetGlobalExtensionProperties(pLayerName, &ext_count, &exts[0]);
         }
     } while (err == VK_INCOMPLETE);
