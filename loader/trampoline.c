@@ -53,21 +53,24 @@ LOADER_EXPORT VkResult VKAPI vkCreateInstance(
     /* merge any duplicate extensions */
     loader_platform_thread_once(&once_exts, loader_coalesce_extensions);
 
-    ptr_instance = (struct loader_instance*) malloc(sizeof(struct loader_instance));
+    if (pCreateInfo->pAllocCb
+            && pCreateInfo->pAllocCb->pfnAlloc
+            && pCreateInfo->pAllocCb->pfnFree) {
+        ptr_instance = (struct loader_instance *) pCreateInfo->pAllocCb->pfnAlloc(
+                           pCreateInfo->pAllocCb->pUserData,
+                           sizeof(struct loader_instance),
+                           sizeof(VkInstance),
+                           VK_SYSTEM_ALLOC_TYPE_API_OBJECT);
+    } else {
+        ptr_instance = (struct loader_instance *) malloc(sizeof(struct loader_instance));
+    }
     if (ptr_instance == NULL) {
         return VK_ERROR_OUT_OF_HOST_MEMORY;
     }
-    loader_platform_thread_lock_mutex(&loader_lock);
+
     memset(ptr_instance, 0, sizeof(struct loader_instance));
 
-    ptr_instance->disp = malloc(sizeof(VkLayerInstanceDispatchTable));
-    if (ptr_instance->disp == NULL) {
-        loader_platform_thread_unlock_mutex(&loader_lock);
-        return VK_ERROR_OUT_OF_HOST_MEMORY;
-    }
-    memcpy(ptr_instance->disp, &instance_disp, sizeof(instance_disp));
-    ptr_instance->next = loader.instances;
-    loader.instances = ptr_instance;
+    loader_platform_thread_lock_mutex(&loader_lock);
 
     if (pCreateInfo->pAllocCb
             && pCreateInfo->pAllocCb->pfnAlloc
@@ -77,7 +80,24 @@ LOADER_EXPORT VkResult VKAPI vkCreateInstance(
         ptr_instance->alloc_callbacks.pfnFree = pCreateInfo->pAllocCb->pfnFree;
     }
 
-    loader_enable_instance_layers(ptr_instance, pCreateInfo);
+    ptr_instance->disp = loader_heap_alloc(
+                             ptr_instance,
+                             sizeof(VkLayerInstanceDispatchTable),
+                             VK_SYSTEM_ALLOC_TYPE_INTERNAL);
+    if (ptr_instance->disp == NULL) {
+        loader_platform_thread_unlock_mutex(&loader_lock);
+        return VK_ERROR_OUT_OF_HOST_MEMORY;
+    }
+    memcpy(ptr_instance->disp, &instance_disp, sizeof(instance_disp));
+    ptr_instance->next = loader.instances;
+    loader.instances = ptr_instance;
+
+    res = loader_enable_instance_layers(ptr_instance, pCreateInfo);
+    if (res != VK_SUCCESS) {
+        loader_heap_free(ptr_instance, ptr_instance->disp);
+        loader_heap_free(ptr_instance, ptr_instance);
+        return res;
+    }
 
     debug_report_create_instance(ptr_instance, pCreateInfo);
 
