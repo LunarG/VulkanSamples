@@ -53,6 +53,16 @@ LOADER_EXPORT VkResult VKAPI vkCreateInstance(
     /* merge any duplicate extensions */
     loader_platform_thread_once(&once_exts, loader_coalesce_extensions);
 
+    res = loader_validate_instance_layers(pCreateInfo);
+    if (res != VK_SUCCESS) {
+        return res;
+    }
+
+    res = loader_validate_instance_extensions(pCreateInfo);
+    if (res != VK_SUCCESS) {
+        return res;
+    }
+
     if (pCreateInfo->pAllocCb
             && pCreateInfo->pAllocCb->pfnAlloc
             && pCreateInfo->pAllocCb->pfnFree) {

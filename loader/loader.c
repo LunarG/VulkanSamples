@@ -2227,6 +2227,28 @@ static uint32_t loader_activate_device_layers(
     return dev->activated_layer_list.count;
 }
 
+VkResult loader_validate_instance_layers(
+        const VkInstanceCreateInfo*     pCreateInfo)
+{
+    struct loader_layer_properties *prop;
+
+    for (uint32_t i = 0; i < pCreateInfo->layerCount; i++) {
+        prop = get_layer_property(pCreateInfo->ppEnabledLayerNames[i],
+                                  &loader.global_layer_list);
+        if (!prop) {
+            return VK_ERROR_INVALID_LAYER;
+        }
+    }
+
+    return VK_SUCCESS;
+}
+
+VkResult loader_validate_instance_extensions(
+        const VkInstanceCreateInfo*     pCreateInfo)
+{
+    return VK_SUCCESS;
+}
+
 VkResult loader_CreateInstance(
         const VkInstanceCreateInfo*     pCreateInfo,
         VkInstance*                     pInstance)

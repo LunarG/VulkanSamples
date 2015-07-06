@@ -335,6 +335,12 @@ bool compare_vk_extension_properties(
         const VkExtensionProperties*            op1,
         const VkExtensionProperties*            op2);
 
+VkResult loader_validate_instance_layers(
+        const VkInstanceCreateInfo*             pCreateInfo);
+
+VkResult loader_validate_instance_extensions(
+        const VkInstanceCreateInfo*             pCreateInfo);
+
 /* instance layer chain termination entrypoint definitions */
 VkResult loader_CreateInstance(
         const VkInstanceCreateInfo*             pCreateInfo,
@@ -415,7 +421,6 @@ void loader_add_to_layer_list(
         struct loader_layer_list *list,
         uint32_t prop_list_count,
         const struct loader_layer_properties *props);
-bool loader_is_extension_scanned(const VkExtensionProperties *ext_prop);
 void loader_icd_scan(void);
 void loader_layer_scan(void);
 void loader_coalesce_extensions(void);
