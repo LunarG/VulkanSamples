@@ -23,7 +23,7 @@
  */
 
 #include <string.h>
-#include "wsi_lunarg.h"
+#include "wsi_swapchain.h"
 
 static inline void* globalGetProcAddr(const char *name)
 {
@@ -373,8 +373,6 @@ static inline void *loader_non_passthrough_gpa(const char *name)
         return (void*) vkGetDeviceQueue;
     if (!strcmp(name, "CreateCommandBuffer"))
         return (void*) vkCreateCommandBuffer;
-    if (!strcmp(name, "CreateSwapChainWSI"))
-        return (void*) wsi_lunarg_CreateSwapChainWSI;
 
     return NULL;
 }

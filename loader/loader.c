@@ -42,7 +42,6 @@
 #endif // WIN32
 #include "vk_loader_platform.h"
 #include "loader.h"
-#include "wsi_lunarg.h"
 #include "gpa_helper.h"
 #include "table_ops.h"
 #include "debug_report.h"
@@ -83,6 +82,9 @@ uint32_t g_loader_log_msgs = 0;
 // additionally CreateDevice and DestroyDevice needs to be locked
 loader_platform_thread_mutex loader_lock;
 
+// This table contains the loader's instance dispatch table, which contains
+// default functions if no instance layers are activated.  This contains
+// pointers to "terminator functions".
 const VkLayerInstanceDispatchTable instance_disp = {
     .GetInstanceProcAddr = loader_GetInstanceProcAddr,
     .CreateInstance = loader_CreateInstance,
@@ -98,6 +100,7 @@ const VkLayerInstanceDispatchTable instance_disp = {
     .GetPhysicalDeviceExtensionProperties = loader_GetPhysicalDeviceExtensionProperties,
     .GetPhysicalDeviceLayerProperties = loader_GetPhysicalDeviceLayerProperties,
     .GetPhysicalDeviceSparseImageFormatProperties = loader_GetPhysicalDeviceSparseImageFormatProperties,
+    .GetPhysicalDeviceSurfaceSupportWSI = loader_GetPhysicalDeviceSurfaceSupportWSI,
     .DbgCreateMsgCallback = loader_DbgCreateMsgCallback,
     .DbgDestroyMsgCallback = loader_DbgDestroyMsgCallback,
 };
@@ -822,6 +825,7 @@ void loader_coalesce_extensions(void)
     };
 
     // Traverse loader's extensions, adding non-duplicate extensions to the list
+    wsi_swapchain_add_instance_extensions(&loader.global_extensions);
     debug_report_add_instance_extensions(&loader.global_extensions);
 }
 
@@ -1082,6 +1086,10 @@ static void loader_icd_init_entrys(struct loader_icd *icd,
     LOOKUP(DbgCreateMsgCallback);
     LOOKUP(DbgDestroyMsgCallback);
 #undef LOOKUP
+
+    icd->GetPhysicalDeviceSurfaceSupportWSI =
+        (PFN_vkGetPhysicalDeviceSurfaceSupportWSI) loader_platform_get_proc_address(scanned_icds->handle,
+                                                                                    "vkGetPhysicalDeviceSurfaceSupportWSI");
 
     return;
 }
@@ -2843,8 +2851,7 @@ static PFN_vkVoidFunction VKAPI loader_GetInstanceProcAddr(VkInstance instance, 
         return addr;
     }
 
-    /* TODO Remove this once WSI has no loader special code */
-    addr = wsi_lunarg_GetInstanceProcAddr(instance, pName);
+    addr = wsi_swapchain_GetInstanceProcAddr(ptr_instance, pName);
     if (addr) {
         return addr;
     }
@@ -2877,13 +2884,6 @@ static PFN_vkVoidFunction VKAPI loader_GetDeviceProcAddr(VkDevice device, const 
     /* for entrypoints that loader must handle (ie non-dispatchable or create object)
        make sure the loader entrypoint is returned */
     addr = loader_non_passthrough_gpa(pName);
-    if (addr) {
-        return addr;
-    }
-
-    /* return any extension device entrypoints the loader knows about */
-    /* TODO once WSI has no loader special code remove this */
-    addr = wsi_lunarg_GetDeviceProcAddr(device, pName);
     if (addr) {
         return addr;
     }

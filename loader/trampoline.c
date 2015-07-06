@@ -28,6 +28,7 @@
 #include "vk_loader_platform.h"
 #include "loader.h"
 #include "debug_report.h"
+#include "wsi_swapchain.h"
 
 #if defined(WIN32)
 // On Windows need to disable global optimization for function entrypoints or
@@ -111,6 +112,7 @@ LOADER_EXPORT VkResult VKAPI vkCreateInstance(
         return res;
     }
 
+    wsi_swapchain_create_instance(ptr_instance, pCreateInfo);
     debug_report_create_instance(ptr_instance, pCreateInfo);
 
     /* enable any layers on instance chain */

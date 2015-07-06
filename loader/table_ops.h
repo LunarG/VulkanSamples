@@ -523,6 +523,8 @@ static inline void *loader_lookup_instance_dispatch_table(
         return (void *) table->GetPhysicalDeviceExtensionProperties;
     if (!strcmp(name, "GetPhysicalDeviceLayerProperties"))
         return (void *) table->GetPhysicalDeviceLayerProperties;
+    if (!strcmp(name, "GetPhysicalDeviceSurfaceSupportWSI"))
+        return (void *) table->GetPhysicalDeviceSurfaceSupportWSI;
     if (!strcmp(name, "DbgCreateMsgCallback"))
         return (void *) table->DbgCreateMsgCallback;
     if (!strcmp(name, "DbgDestroyMsgCallback"))

@@ -30,7 +30,7 @@
 
 #include <vulkan.h>
 #include <vk_debug_report_lunarg.h>
-#include <vk_wsi_lunarg.h>
+#include <vk_wsi_swapchain.h>
 #include <vk_layer.h>
 #include <vk_icd.h>
 #include <assert.h>
@@ -154,6 +154,7 @@ struct loader_icd {
     PFN_vkGetPhysicalDeviceExtensionProperties GetPhysicalDeviceExtensionProperties;
     PFN_vkGetPhysicalDeviceLayerProperties GetPhysicalDeviceLayerProperties;
     PFN_vkGetPhysicalDeviceSparseImageFormatProperties GetPhysicalDeviceSparseImageFormatProperties;
+    PFN_vkGetPhysicalDeviceSurfaceSupportWSI GetPhysicalDeviceSurfaceSupportWSI;
     PFN_vkDbgCreateMsgCallback DbgCreateMsgCallback;
     PFN_vkDbgDestroyMsgCallback DbgDestroyMsgCallback;
 
@@ -252,6 +253,8 @@ struct loader_instance {
     VkLayerDbgFunctionNode *DbgFunctionHead;
 
     VkAllocCallbacks alloc_callbacks;
+
+    bool wsi_swapchain_enabled;
 };
 
 struct loader_struct {

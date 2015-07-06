@@ -18,8 +18,8 @@ set(LOADER_SRCS
     loader.h
     vk_loader_platform.h
     trampoline.c
-    wsi_lunarg.c
-    wsi_lunarg.h
+    wsi_swapchain.c
+    wsi_swapchain.h
     debug_report.c
     debug_report.h
     table_ops.h
@@ -27,6 +27,7 @@ set(LOADER_SRCS
     cJSON.c
     cJSON.h
 )
+
 
 if (WIN32)
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DVK_PROTOTYPES -D_CRT_SECURE_NO_WARNINGS")
