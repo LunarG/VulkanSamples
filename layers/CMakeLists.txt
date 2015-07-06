@@ -101,10 +101,10 @@ add_vk_layer(DrawState draw_state.cpp vk_layer_debug_marker_table.cpp vk_layer_t
 add_vk_layer(MemTracker mem_tracker.cpp vk_layer_table.cpp)
 add_vk_layer(ShaderChecker shader_checker.cpp vk_layer_table.cpp)
 #add_vk_layer(Image image.cpp vk_layer_table.cpp)
+#add_vk_layer(ParamChecker param_checker.cpp vk_layer_debug_marker_table.cpp vk_layer_table.cpp)
+#add_vk_layer(ScreenShot screenshot.cpp vk_layer_table.cpp)
 # generated
 #add_vk_layer(Generic generic_layer.cpp vk_layer_table.cpp)
 add_vk_layer(APIDump api_dump.cpp vk_layer_table.cpp)
 add_vk_layer(ObjectTracker object_track.cpp vk_layer_table.cpp)
-#add_vk_layer(ParamChecker param_checker.cpp vk_layer_debug_marker_table.cpp vk_layer_table.cpp)
 add_vk_layer(Threading threading.cpp vk_layer_table.cpp)
-#add_vk_layer(ScreenShot screenshot.cpp vk_layer_table.cpp)

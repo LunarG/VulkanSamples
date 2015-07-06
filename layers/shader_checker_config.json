@@ -1,0 +1,11 @@
+{
+    "file_format_version" : "0.9.0",
+    "layer" : {
+        "name": "ShaderChecker",
+        "type": "GLOBAL",
+        "library_path": "/home/jon/vk/vk/dbuild/layers/libVKLayerShaderChecker.so",
+        "abi_versions": "1.0.0",
+        "implementation_version": "1.0.0",
+        "description": "LunarG Validation Layer"
+    }
+}

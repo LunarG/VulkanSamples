@@ -229,104 +229,6 @@ static char *loader_get_registry_files(const char *location)
     return out;
 }
 
-char *loader_get_registry_string(const HKEY hive,
-                                 const LPCTSTR sub_key,
-                                 const char *value)
-{
-    DWORD access_flags = KEY_QUERY_VALUE;
-    DWORD value_type;
-    HKEY key;
-    LONG rtn_value;
-    char *rtn_str = NULL;
-    DWORD rtn_len = 0;
-    size_t allocated_len = 0;
-
-    rtn_value = RegOpenKeyEx(hive, sub_key, 0, access_flags, &key);
-    if (rtn_value != ERROR_SUCCESS) {
-        // We didn't find the key.  Try the 32-bit hive (where we've seen the
-        // key end up on some people's systems):
-        access_flags |= KEY_WOW64_32KEY;
-        rtn_value = RegOpenKeyEx(hive, sub_key, 0, access_flags, &key);
-        if (rtn_value != ERROR_SUCCESS) {
-            // We still couldn't find the key, so give up:
-            return NULL;
-        }
-    }
-
-    rtn_value = RegQueryValueEx(key, value, NULL, &value_type,
-                                (PVOID) rtn_str, (LPDWORD) &rtn_len);
-    if (rtn_value == ERROR_SUCCESS) {
-        // If we get to here, we found the key, and need to allocate memory
-        // large enough for rtn_str, and query again:
-        allocated_len = rtn_len + 4;
-        rtn_str = malloc(allocated_len);
-        rtn_value = RegQueryValueEx(key, value, NULL, &value_type,
-                                    (PVOID) rtn_str, (LPDWORD) &rtn_len);
-        if (rtn_value == ERROR_SUCCESS) {
-            // We added 4 extra bytes to rtn_str, so that we can ensure that
-            // the string is NULL-terminated (albeit, in a brute-force manner):
-            rtn_str[allocated_len-1] = '\0';
-        } else {
-            // This should never occur, but in case it does, clean up:
-            free(rtn_str);
-            rtn_str = NULL;
-        }
-    } // else - shouldn't happen, but if it does, return rtn_str, which is NULL
-
-    // Close the registry key that was opened:
-    RegCloseKey(key);
-
-    return rtn_str;
-}
-
-
-// For ICD developers, look in the registry, and look for an environment
-// variable for a path(s) where to find the ICD(s):
-static char *loader_get_registry_and_env(const char *env_var,
-                                         const char *registry_value)
-{
-    char *env_str = getenv(env_var);
-    size_t env_len = (env_str == NULL) ? 0 : strlen(env_str);
-    char *registry_str = NULL;
-    size_t registry_len = 0;
-    char *rtn_str = NULL;
-    size_t rtn_len;
-
-    registry_str = loader_get_registry_string(HKEY_LOCAL_MACHINE,
-                                              "Software\\Vulkan",
-                                              registry_value);
-    registry_len = (registry_str) ? (DWORD) strlen(registry_str) : 0;
-
-    rtn_len = env_len + registry_len + 1;
-    if (rtn_len <= 2) {
-        // We found neither the desired registry value, nor the environment
-        // variable; return NULL:
-        return NULL;
-    } else {
-        // We found something, and so we need to allocate memory for the string
-        // to return:
-        rtn_str = malloc(rtn_len);
-    }
-
-    if (registry_len == 0) {
-        // We didn't find the desired registry value, and so we must have found
-        // only the environment variable:
-        _snprintf(rtn_str, rtn_len, "%s", env_str);
-    } else if (env_str != NULL) {
-        // We found both the desired registry value and the environment
-        // variable, so concatenate them both:
-        _snprintf(rtn_str, rtn_len, "%s;%s", registry_str, env_str);
-    } else {
-        // We must have only found the desired registry value:
-        _snprintf(rtn_str, rtn_len, "%s", registry_str);
-    }
-
-    if (registry_str) {
-      free(registry_str);
-    }
-
-    return(rtn_str);
-}
 #endif // WIN32
 
 bool compare_vk_extension_properties(const VkExtensionProperties *op1, const VkExtensionProperties *op2)
@@ -334,7 +236,7 @@ bool compare_vk_extension_properties(const VkExtensionProperties *op1, const VkE
     return strcmp(op1->extName, op2->extName) == 0 ? true : false;
 }
 
-/*
+/**
  * Search the given ext_array for an extension
  * matching the given vk_ext_prop
  */
@@ -350,7 +252,7 @@ bool has_vk_extension_property_array(
     return false;
 }
 
-/*
+/**
  * Search the given ext_list for an extension
  * matching the given vk_ext_prop
  */
@@ -366,8 +268,7 @@ bool has_vk_extension_property(
 }
 
 /*
- * Search the given layer list for a layer
- * matching the given layer name
+ * Search the given layer list for a layer matching the given layer name
  */
 static struct loader_layer_properties *get_layer_property(
         const char *name,
@@ -439,94 +340,6 @@ static void loader_add_global_extensions(
                    "Global Extension: %s (%s) version %s, Vulkan version %s",
                    ext_props.info.extName, lib_name, version, spec_version);
         loader_add_to_ext_list(ext_list, 1, &ext_props);
-    }
-
-    return;
-}
-
-/* TODO: Need to use loader_heap_alloc or loader_stack_alloc */
-static void loader_add_global_layer_properties(
-        const char *lib_name,
-        const loader_platform_dl_handle lib_handle,
-        struct loader_layer_list *layer_list)
-{
-    uint32_t i, count;
-    VkLayerProperties *layer_properties;
-    PFN_vkGetGlobalExtensionProperties fp_get_ext_props;
-    PFN_vkGetGlobalLayerProperties fp_get_layer_props;
-    VkResult res;
-
-    /*
-     * A layer must export GetGlobalLayerProperties if it has any global extensions.
-     * If a layer does not export a vkGetGlobalLayerProperties then it may
-     * only support vkGetPhysicalDeviceLayerProperties and nothing needs to
-     * be done here.
-     */
-    fp_get_layer_props = loader_platform_get_proc_address(lib_handle, "vkGetGlobalLayerProperties");
-    if (!fp_get_layer_props) {
-        loader_log(VK_DBG_REPORT_WARN_BIT, 0,
-                   "Couldn't dlsym vkGetGlobalLayerProperties from library %s",
-                   lib_name);
-        return;
-    }
-
-    fp_get_ext_props = loader_platform_get_proc_address(lib_handle, "vkGetGlobalExtensionProperties");
-    if (!fp_get_ext_props) {
-        loader_log(VK_DBG_REPORT_WARN_BIT, 0,
-                   "Couldn't dlsym vkGetGlobalExtensionProperties from library %s",
-                   lib_name);
-    }
-
-    res = fp_get_layer_props(&count, NULL);
-    if (res != VK_SUCCESS) {
-        loader_log(VK_DBG_REPORT_WARN_BIT, 0, "Error getting global layer count from %s", lib_name);
-        return;
-    }
-
-    if (count == 0) {
-        /*
-         * Layer exported vkGetGlobalLayerProperties but didn't have any to report,
-         * nothing to do here.
-         */
-        return;
-    }
-
-    layer_properties = loader_stack_alloc(count * sizeof(VkLayerProperties));
-
-    res = fp_get_layer_props(&count, layer_properties);
-    if (res != VK_SUCCESS) {
-        loader_log(VK_DBG_REPORT_ERROR_BIT, 0, "Error getting %d global layer properties from %s. %s line %d",
-                   count, lib_name, __FILE__, __LINE__);
-        return;
-    }
-
-    for (i = 0; i < count; i++) {
-        struct loader_layer_properties layer;
-
-        memset(&layer, 0, sizeof(layer));
-
-        layer.lib_info.lib_name = malloc(strlen(lib_name) + 1);
-        if (layer.lib_info.lib_name == NULL) {
-            loader_log(VK_DBG_REPORT_ERROR_BIT, 0, "out of memory: layer library %s: %s line %d",
-                       lib_name, __FILE__, __LINE__);
-            return;
-        }
-
-        strcpy(layer.lib_info.lib_name, lib_name);
-        memcpy(&layer.info, &layer_properties[i], sizeof(VkLayerProperties));
-        loader_init_ext_list(&layer.instance_extension_list);
-        loader_init_ext_list(&layer.device_extension_list);
-        loader_log(VK_DBG_REPORT_DEBUG_BIT, 0, "Collecting global extensions for layer %s (%s)",
-                   layer.info.layerName, layer.info.description);
-
-        loader_add_global_extensions(
-                    fp_get_ext_props,
-                    lib_name,
-                    lib_handle,
-                    VK_EXTENSION_ORIGIN_LAYER,
-                    &layer.instance_extension_list);
-
-        loader_add_to_layer_list(layer_list, 1, &layer);
     }
 
     return;
@@ -632,6 +445,7 @@ static void loader_add_physical_device_layer_properties(
         return;
     }
 
+    //TODO get layer properties from manifest file
     for (i = 0; i < count; i++) {
         struct loader_layer_properties layer;
 
@@ -707,8 +521,8 @@ static VkResult loader_add_layer_names_to_list(
 }
 
 /*
- * Append non-duplicate extension properties defined in prop_list
- * to the given ext_info list
+ * Append non-duplicate extension properties defined in props
+ * to the given ext_list.
  */
 void loader_add_to_ext_list(
         struct loader_extension_list *ext_list,
@@ -837,6 +651,7 @@ void loader_add_to_layer_library_list(
     }
 }
 
+#if 0
 /*
  * Add's library indicated by lib_name to list if it
  * implements vkGetGlobalLayerProperties or
@@ -874,7 +689,7 @@ static void loader_add_layer_library(
 
     loader_add_to_layer_library_list(list, 1, library_info);
 }
-
+#endif
 /*
  * Search the given layer list for a list
  * matching the given VkLayerProperties
@@ -948,7 +763,7 @@ void loader_add_to_layer_list(
 
 /*
  * Search the search_list for any layer with
- * a name that matches the given layer_name.
+ * a name that matches the given name.
  * Add all matching layers to the found_list
  * Do not add if found VkLayerProperties is already
  * on the found_list.
@@ -1194,8 +1009,8 @@ static struct loader_extension_list *loader_global_extensions(const char *pLayer
     }
 
     /* Find and return global extension list for given layer */
-    for (uint32_t i = 0; i < loader.global_layer_list.count; i++) {
-        struct loader_layer_properties *work_layer = &loader.global_layer_list.list[i];
+    for (uint32_t i = 0; i < loader.scanned_layers.count; i++) {
+        struct loader_layer_properties *work_layer = &loader.scanned_layers.list[i];
         if (strcmp(work_layer->info.layerName, pLayerName) == 0) {
             return &work_layer->instance_extension_list;
         }
@@ -1204,9 +1019,9 @@ static struct loader_extension_list *loader_global_extensions(const char *pLayer
     return NULL;
 }
 
-static struct loader_layer_list *loader_global_layers()
+static struct loader_layer_list *loader_scanned_layers()
 {
-    return &loader.global_layer_list;
+    return &loader.scanned_layers;
 }
 
 static void loader_physical_device_layers(
@@ -1420,6 +1235,182 @@ static cJSON *loader_get_json(const char *filename)
 }
 
 /**
+ * Given a cJSON struct (json) of the top level JSON object from layer manifest
+ * file, add entry to the layer_list.
+ * Fill out the layer_properties in this list entry from the input cHJSON object.
+ *
+ * \returns
+ * void
+ * layer_list has a new entry and initialized accordingly.
+ * If the json input object does not have all the required fields no entry
+ * is added to the list.
+ */
+static void loader_add_layer_properties(struct loader_layer_list *layer_list,
+                                        cJSON *json,
+                                        bool is_implicit,
+                                        char *filename)
+{
+    /* Fields in layer manifest file that are required:
+     * (required) “file_format_version”
+     * following are required in the "layer" object:
+     * (required) "name"
+     * (required) "type"
+     * (required) “library_path”
+     * (required) “abi_versions”
+     * (required) “implementation_version”
+     * (required) “description”
+     * (required for implicit layers) “disable_environment”
+     *
+     * First get all required items and if any missing abort
+     */
+
+    cJSON *item, *layer_node, *ext_item;
+    char *temp;
+    char *name, *type, *library_path, *abi_versions;
+    char *implementation_version, *description;
+    cJSON *disable_environment;
+    int i;
+    struct loader_extension_property ext_prop;
+    item = cJSON_GetObjectItem(json, "file_format_version");
+    if (item == NULL) {
+        return;
+    }
+    char *file_vers = cJSON_PrintUnformatted(item);
+    loader_log(VK_DBG_REPORT_INFO_BIT, 0, "Found manifest file %s, version %s",
+               filename, file_vers);
+    if (strcmp(file_vers, "\"0.9.0\"") != 0)
+        loader_log(VK_DBG_REPORT_WARN_BIT, 0, "Unexpected manifest file version (expected 1.0.0), may cause errors");
+    free(file_vers);
+
+    //TODO handle multiple layer nodes in the file
+    //TODO handle scanned libraries not one per layer property
+    layer_node = cJSON_GetObjectItem(json, "layer");
+    if (layer_node == NULL) {
+        loader_log(VK_DBG_REPORT_WARN_BIT, 0, "Can't find \"layer\" object in manifest JSON file, skipping");
+        return;
+    }
+#define GET_JSON_OBJECT(node, var) {                  \
+        var = cJSON_GetObjectItem(node, #var);        \
+        if (var == NULL)                              \
+            return;                                   \
+        }
+#define GET_JSON_ITEM(node, var) {                    \
+        item = cJSON_GetObjectItem(node, #var);       \
+        if (item == NULL)                             \
+            return;                                   \
+        temp = cJSON_Print(item);                     \
+        temp[strlen(temp) - 1] = '\0';                \
+        var = malloc(strlen(temp) + 1);               \
+        strcpy(var, &temp[1]);                        \
+        free(temp);                                   \
+        }
+    GET_JSON_ITEM(layer_node, name)
+    GET_JSON_ITEM(layer_node, type)
+    GET_JSON_ITEM(layer_node, library_path)
+    GET_JSON_ITEM(layer_node, abi_versions)
+    GET_JSON_ITEM(layer_node, implementation_version)
+    GET_JSON_ITEM(layer_node, description)
+    if (is_implicit) {
+        GET_JSON_OBJECT(layer_node, disable_environment)
+    }
+#undef GET_JSON_ITEM
+#undef GET_JSON_OBJECT
+
+    // add list entry
+    assert((layer_list->count + 1) * sizeof(struct loader_layer_properties) <= layer_list->capacity);
+    struct loader_layer_properties *props = &(layer_list->list[layer_list->count]);
+    strcpy(props->info.layerName, name);
+    //TODO string overflow
+    free(name);
+    if (!strcmp(type, "\"DEVICE\""))
+        props->type = (is_implicit) ? VK_LAYER_TYPE_DEVICE_IMPLICIT : VK_LAYER_TYPE_DEVICE_EXPLICIT;
+    if (!strcmp(type, "\"INSTANCE\""))
+        props->type = (is_implicit) ? VK_LAYER_TYPE_INSTANCE_IMPLICIT : VK_LAYER_TYPE_INSTANCE_EXPLICIT;
+    if (!strcmp(type, "\"GLOBAL\""))
+        props->type = (is_implicit) ? VK_LAYER_TYPE_GLOBAL_IMPLICIT : VK_LAYER_TYPE_GLOBAL_EXPLICIT;
+    free(type);
+    //TODO handle relative paths  and filenames in addition to absolute path
+    props->lib_info.lib_name = library_path;
+    //TODO merge the info with the versions
+    props->abi_version = abi_versions;
+    props->impl_version = implementation_version;
+    //TODO string overflow
+    strcpy(props->info.description,description);
+    free(description);
+    if (is_implicit) {
+        props->disable_env_var.name = disable_environment->child->string;
+        props->disable_env_var.value = disable_environment->child->valuestring;
+    }
+    layer_list->count++;
+
+    /**
+     * Now get all optional items and objects and put in list:
+     * functions
+     * instance_extensions
+     * device_extensions
+     * enable_environment (implicit layers only)
+     */
+#define GET_JSON_OBJECT(node, var) {                  \
+        var = cJSON_GetObjectItem(node, #var);        \
+        }
+#define GET_JSON_ITEM(node, var) {                    \
+        item = cJSON_GetObjectItem(node, #var);       \
+        if (item != NULL)                             \
+            temp = cJSON_Print(item);                 \
+        temp[strlen(temp) - 1] = '\0';                \
+        var = malloc(strlen(temp) + 1);               \
+        strcpy(var, &temp[1]);                        \
+        free(temp);                                   \
+        }
+
+    cJSON *instance_extensions, *device_extensions, *functions, *enable_environment;
+    char *vkGetInstanceProcAddr, *vkGetDeviceProcAddr, *version;
+    GET_JSON_OBJECT(layer_node, functions)
+    if (functions != NULL) {
+        GET_JSON_ITEM(functions, vkGetInstanceProcAddr)
+        GET_JSON_ITEM(functions, vkGetDeviceProcAddr)
+        props->functions.str_gipa = vkGetInstanceProcAddr;
+        props->functions.str_gdpa = vkGetDeviceProcAddr;
+    }
+    GET_JSON_OBJECT(layer_node, instance_extensions)
+    if (instance_extensions != NULL) {
+        int count = cJSON_GetArraySize(instance_extensions);
+        for (i = 0; i < count; i++) {
+            ext_item = cJSON_GetArrayItem(instance_extensions, i);
+            GET_JSON_ITEM(ext_item, name)
+            GET_JSON_ITEM(ext_item, version)
+            ext_prop.origin = VK_EXTENSION_ORIGIN_LAYER;
+            ext_prop.lib_name = library_path;
+            strcpy(ext_prop.info.extName, name);
+            //TODO convert from string to int ext_prop.info.version = version;
+            loader_add_to_ext_list(&props->instance_extension_list, 1, &ext_prop);
+        }
+    }
+    GET_JSON_OBJECT(layer_node, device_extensions)
+    if (device_extensions != NULL) {
+        int count = cJSON_GetArraySize(device_extensions);
+        for (i = 0; i < count; i++) {
+            ext_item = cJSON_GetArrayItem(device_extensions, i);
+            GET_JSON_ITEM(ext_item, name);
+            GET_JSON_ITEM(ext_item, version);
+            ext_prop.origin = VK_EXTENSION_ORIGIN_LAYER;
+            ext_prop.lib_name = library_path;
+            strcpy(ext_prop.info.extName, name);
+            //TODO convert from string to int ext_prop.info.version = version;
+            loader_add_to_ext_list(&props->device_extension_list, 1, &ext_prop);
+        }
+    }
+    if (is_implicit) {
+        GET_JSON_OBJECT(layer_node, enable_environment)
+        props->enable_env_var.name = enable_environment->child->string;
+        props->enable_env_var.value = enable_environment->child->valuestring;
+    }
+#undef GET_JSON_ITEM
+#undef GET_JSON_OBJECT
+
+}
+
+/**
  * Find the Vulkan library manifest files.
  *
  * This function scans the location or env_override directories/files
@@ -1612,18 +1603,30 @@ void loader_icd_scan(void)
     // Get a list of manifest files for ICDs
     loader_get_manifest_files("VK_ICD_FILENAMES", false, DEFAULT_VK_DRIVERS_INFO,
                               &manifest_files);
+    if (manifest_files.count == 0)
+        return;
     for (uint32_t i = 0; i < manifest_files.count; i++) {
         file_str = manifest_files.filename_list[i];
         if (file_str == NULL)
             continue;
 
-        cJSON *json, *icd_json;
+        cJSON *json;
         json = loader_get_json(file_str);
-        icd_json = cJSON_GetObjectItem(json, "ICD");
-        if (icd_json != NULL) {
-            icd_json = cJSON_GetObjectItem(icd_json, "library_path");
-            if (icd_json != NULL) {
-                char *icd_filename = cJSON_PrintUnformatted(icd_json);
+        cJSON *item;
+        item = cJSON_GetObjectItem(json, "file_format_version");
+        if (item == NULL)
+            return;
+        char *file_vers = cJSON_Print(item);
+        loader_log(VK_DBG_REPORT_INFO_BIT, 0, "Found manifest file %s, version %s",
+                   file_str, file_vers);
+        if (strcmp(file_vers, "\"1.0.0\"") != 0)
+            loader_log(VK_DBG_REPORT_WARN_BIT, 0, "Unexpected manifest file version (expected 1.0.0), may cause errors");
+        free(file_vers);
+        item = cJSON_GetObjectItem(json, "ICD");
+        if (item != NULL) {
+            item = cJSON_GetObjectItem(item, "library_path");
+            if (item != NULL) {
+                char *icd_filename = cJSON_PrintUnformatted(item);
                 char *icd_file = icd_filename;
                 if (icd_filename != NULL) {
                     char def_dir[] = DEFAULT_VK_DRIVERS_PATH;
@@ -1659,57 +1662,19 @@ void loader_icd_scan(void)
 
 void loader_layer_scan(void)
 {
-    uint32_t len;
-    const char *p, *next;
-    char *libPaths = NULL;
-    DIR *curdir;
-    struct dirent *dent;
-    char temp_str[1024];
+    char *file_str;
+    struct loader_manifest_files manifest_files;
+    cJSON *json;
+    uint32_t i;
 
-#if defined(WIN32)
-    bool must_free_libPaths;
-    libPaths = loader_get_registry_and_env(LAYERS_PATH_ENV,
-                                           LAYERS_PATH_REGISTRY_VALUE);
-    if (libPaths != NULL) {
-        must_free_libPaths = true;
-    } else {
-        must_free_libPaths = false;
-        libPaths = DEFAULT_VK_LAYERS_PATH;
-    }
-#else  // WIN32
-    if (geteuid() == getuid()) {
-        /* Don't allow setuid apps to use the LAYERS_PATH_ENV env var: */
-        libPaths = getenv(LAYERS_PATH_ENV);
-    }
-    if (libPaths == NULL) {
-        libPaths = DEFAULT_VK_LAYERS_PATH;
-    }
-#endif // WIN32
-
-    if (libPaths == NULL) {
-        // Have no paths to search:
+    // Get a list of manifest files for layers
+    loader_get_manifest_files(LAYERS_PATH_ENV, true, DEFAULT_VK_LAYERS_INFO,
+                              &manifest_files);
+    if (manifest_files.count == 0)
         return;
-    }
-    len = strlen(libPaths);
-    loader.layer_dirs = malloc(len+1);
-    if (loader.layer_dirs == NULL) {
-        loader_log(VK_DBG_REPORT_WARN_BIT, 0, "Out of memory can't add layer directories");
 
-        free(libPaths);
-        return;
-    }
-    // Alloc passed, so we know there is enough space to hold the string
-    strcpy(loader.layer_dirs, libPaths);
-#if defined(WIN32)
-    // Free any allocated memory:
-    if (must_free_libPaths) {
-        free(libPaths);
-        must_free_libPaths = false;
-    }
-#endif // WIN32
-    libPaths = loader.layer_dirs;
-
-    /*
+#if 0
+    /**
      * We need a list of the layer libraries, not just a list of
      * the layer properties (a layer library could expose more than
      * one layer property). This list of scanned layers would be
@@ -1720,63 +1685,61 @@ void loader_layer_scan(void)
                    "Malloc for layer list failed: %s line: %d", __FILE__, __LINE__);
         return;
     }
+#endif
 
-    for (p = libPaths; *p; p = next) {
-        next = strchr(p, PATH_SEPERATOR);
-        if (next == NULL) {
-            len = (uint32_t) strlen(p);
-            next = p + len;
+    // TODO use global_layer add and delete functions instead
+    if (loader.scanned_layers.capacity == 0) {
+        loader.scanned_layers.list = malloc(sizeof(struct loader_layer_properties) * 64);
+        if (loader.scanned_layers.list == NULL) {
+            loader_log(VK_DBG_REPORT_ERROR_BIT, 0, "Out of memory can'add any layer properties to list");
+            return;
         }
-        else {
-            len = (uint32_t) (next - p);
-            *(char *) next = '\0';
-            next++;
+        memset(loader.scanned_layers.list, 0, sizeof(struct loader_layer_properties) * 64);
+        loader.scanned_layers.capacity = sizeof(struct loader_layer_properties) * 64;
+    }
+    else {
+        /* cleanup any previously scanned libraries */
+        //TODO make sure everything is cleaned up properly
+        for (i = 0; i < loader.scanned_layers.count; i++) {
+            if (loader.scanned_layers.list[i].lib_info.lib_name != NULL)
+                free(loader.scanned_layers.list[i].lib_info.lib_name);
+            loader_destroy_ext_list(&loader.scanned_layers.list[i].instance_extension_list);
+            loader_destroy_ext_list(&loader.scanned_layers.list[i].device_extension_list);
+            loader.scanned_layers.list[i].lib_info.lib_name = NULL;
         }
+        loader.scanned_layers.count = 0;
+    }
 
-        curdir = opendir(p);
-        if (curdir) {
-            dent = readdir(curdir);
-            while (dent) {
-                /* Look for layers starting with VK_LAYER_LIBRARY_PREFIX and
-                 * ending with VK_LIBRARY_SUFFIX
-                 */
-                if (!strncmp(dent->d_name,
-                             VK_LAYER_LIBRARY_PREFIX,
-                             VK_LAYER_LIBRARY_PREFIX_LEN)) {
-                    uint32_t nlen = (uint32_t) strlen(dent->d_name);
-                    const char *suf = dent->d_name + nlen - VK_LIBRARY_SUFFIX_LEN;
-                    if ((nlen > VK_LIBRARY_SUFFIX_LEN) &&
-                            !strncmp(suf,
-                                     VK_LIBRARY_SUFFIX,
-                                     VK_LIBRARY_SUFFIX_LEN)) {
-                        loader_platform_dl_handle handle;
-                        snprintf(temp_str, sizeof(temp_str),
-                                 "%s%c%s",p, DIRECTORY_SYMBOL, dent->d_name);
-                        // Used to call: dlopen(temp_str, RTLD_LAZY)
-                        loader_log(VK_DBG_REPORT_DEBUG_BIT, 0,
-                                   "Attempt to open library: %s", temp_str);
-                        if ((handle = loader_platform_open_library(temp_str)) == NULL) {
-                            loader_log(VK_DBG_REPORT_DEBUG_BIT, 0, "open library failed");
-                            dent = readdir(curdir);
-                            continue;
-                        }
-                        loader_log(VK_DBG_REPORT_DEBUG_BIT, 0,
-                                   "Opened library: %s", temp_str);
+    for (i = 0; i < manifest_files.count; i++) {
+        file_str = manifest_files.filename_list[i];
+        if (file_str == NULL)
+            continue;
 
-                        /* TODO: Need instance pointer here */
-                        loader_add_layer_library(NULL, temp_str, handle, &loader.scanned_layer_libraries);
+        // parse file into JSON struct
+        json = loader_get_json(file_str);
+        if (!json) {
+            continue;
+        }
+        // ensure enough room to add an entry
+        if ((loader.scanned_layers.count + 1) * sizeof (struct loader_layer_properties)
+                > loader.scanned_layers.capacity) {
+            loader.scanned_layers.list = realloc(loader.scanned_layers.list,
+                    loader.scanned_layers.capacity * 2);
+            if (loader.scanned_layers.list == NULL) {
+                loader_log(VK_DBG_REPORT_ERROR_BIT, 0,
+                        "realloc failed for scanned layers");
+                break;
+            }
+            loader.scanned_layers.capacity *= 2;
+        }
+        //TODO pass in implicit versus explicit bool
+        loader_add_layer_properties(&loader.scanned_layers, json, false, file_str);
 
-                        loader_add_global_layer_properties(temp_str, handle, &loader.global_layer_list);
+        free(file_str);
+        cJSON_Delete(json);
+    }
+    free(manifest_files.filename_list);
 
-                        loader_platform_close_library(handle);
-                    }
-                }
-
-                dent = readdir(curdir);
-            } // while (dir_entry)
-            closedir(curdir);
-        } // if (curdir))
-    } // for (libpaths)
 }
 
 static void* VKAPI loader_gpa_instance_internal(VkInstance inst, const char * pName)
@@ -1922,6 +1885,12 @@ static void loader_remove_layer_lib(
     loader.loaded_layer_lib_list = new_layer_lib_list;
 }
 
+
+/**
+ * Go through the search_list and find any layers which match type. If layer
+ * type match is found in then add it to ext_list.
+ */
+//TODO need to handle implict layer enable env var and disable env var
 static void loader_add_layer_implicit(
                 const enum layer_type type,
                 struct loader_layer_list *list,
@@ -2002,20 +1971,20 @@ VkResult loader_enable_instance_layers(
     loader_add_layer_implicit(
                                 VK_LAYER_TYPE_INSTANCE_IMPLICIT,
                                 &inst->activated_layer_list,
-                                &loader.global_layer_list);
+                                &loader.scanned_layers);
 
-    /* Add any layers specified via environment variable first */
+    /* Add any layers specified via environment variable next */
     loader_add_layer_env(
                             "VK_INSTANCE_LAYERS",
                             &inst->activated_layer_list,
-                            &loader.global_layer_list);
+                            &loader.scanned_layers);
 
     /* Add layers specified by the application */
     err = loader_add_layer_names_to_list(
                 &inst->activated_layer_list,
                 pCreateInfo->layerCount,
                 pCreateInfo->ppEnabledLayerNames,
-                &loader.global_layer_list);
+                &loader.scanned_layers);
 
     return err;
 }
@@ -2273,7 +2242,7 @@ VkResult loader_validate_instance_extensions(
         /* Not in global list, search layer extension lists */
         for (uint32_t j = 0; j < pCreateInfo->layerCount; j++) {
             layer_prop = get_layer_property(pCreateInfo->ppEnabledLayerNames[i],
-                                  &loader.global_layer_list);
+                                  &loader.scanned_layers);
 
             if (!layer_prop) {
                 /* Should NOT get here, loader_validate_layers
@@ -2520,9 +2489,9 @@ VkResult loader_init_physical_device_info(
                                 icd->scanned_icds->lib_name,
                                 &icd->device_extension_cache[i]);
 
-                    for (uint32_t l = 0; l < loader.scanned_layer_libraries.count; l++) {
+                    for (uint32_t l = 0; l < loader.scanned_layers.count; l++) {
                         loader_platform_dl_handle lib_handle;
-                        char *lib_name = loader.scanned_layer_libraries.list[l].lib_name;
+                        char *lib_name = loader.scanned_layers.list[l].lib_info.lib_name;
 
                         lib_handle = loader_platform_open_library(lib_name);
                         if (lib_handle == NULL) {
@@ -2717,12 +2686,6 @@ VkResult loader_CreateDevice(
         return VK_ERROR_INITIALIZATION_FAILED;
     }
 
-    /*
-     * TODO: Must filter CreateInfo extension list to only
-     * those extensions supported by the ICD.
-     * TODO: Probably should verify that every extension is
-     * covered by either the ICD or some layer.
-     */
     res = loader_validate_layers(pCreateInfo->layerCount,
                            pCreateInfo->ppEnabledLayerNames,
                            &icd->layer_properties_cache);
@@ -2963,7 +2926,7 @@ LOADER_EXPORT VkResult VKAPI vkGetGlobalLayerProperties(
     loader_platform_thread_lock_mutex(&loader_lock);
 
     struct loader_layer_list *layer_list;
-    layer_list = loader_global_layers();
+    layer_list = loader_scanned_layers();
 
     if (pProperties == NULL) {
         *pCount = layer_list->count;

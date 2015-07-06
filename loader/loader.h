@@ -88,6 +88,8 @@ struct loader_lib_info {
 };
 
 struct loader_layer_functions {
+    char *str_gipa;
+    char *str_gdpa;
     PFN_vkGetInstanceProcAddr get_instance_proc_addr;
     PFN_vkGetDeviceProcAddr get_device_proc_addr;
 };
@@ -95,6 +97,8 @@ struct loader_layer_functions {
 struct loader_layer_properties {
     VkLayerProperties info;
     enum layer_type type;
+    char *abi_version;
+    char *impl_version;
     struct loader_lib_info lib_info;
     struct loader_layer_functions functions;
     struct loader_extension_list instance_extension_list;
@@ -259,8 +263,8 @@ struct loader_struct {
 
     char *layer_dirs;
 
-    struct loader_layer_library_list scanned_layer_libraries;
-    struct loader_layer_list global_layer_list;
+    // TODO use this struct loader_layer_library_list scanned_layer_libraries;
+    struct loader_layer_list scanned_layers;
 
     /* Keep track of all the extensions available via GetGlobalExtensionProperties */
     struct loader_extension_list global_extensions;

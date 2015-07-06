@@ -55,7 +55,7 @@ LOADER_EXPORT VkResult VKAPI vkCreateInstance(
 
     res = loader_validate_layers(pCreateInfo->layerCount,
                                  pCreateInfo->ppEnabledLayerNames,
-                                 &loader.global_layer_list);
+                                 &loader.scanned_layers);
     if (res != VK_SUCCESS) {
         return res;
     }

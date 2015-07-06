@@ -51,15 +51,8 @@
 // TODO: Need to handle different Linux distros
 #define DEFAULT_VK_DRIVERS_INFO "/usr/share/vulkan/icd.d:/etc/vulkan/icd.d"
 #define DEFAULT_VK_DRIVERS_PATH "/usr/lib/i386-linux-gnu/vulkan/icd:/usr/lib/x86_64-linux-gnu/vulkan/icd"
-#define LAYERS_PATH_ENV "LIBVK_LAYERS_PATH"
-#define VK_LAYER_LIBRARY_PREFIX "libVKLayer"
-#define VK_LAYER_LIBRARY_PREFIX_LEN 10
-#define VK_LIBRARY_SUFFIX ".so"
-#define VK_LIBRARY_SUFFIX_LEN 3
-#ifndef DEFAULT_VK_LAYERS_PATH
-// TODO: Are these good default locations?
-#define DEFAULT_VK_LAYERS_PATH ".:/usr/lib/i386-linux-gnu/vk:/usr/lib/x86_64-linux-gnu/vk"
-#endif
+#define DEFAULT_VK_LAYERS_INFO "/usr/share/vulkan/explicit_layer.d:/usr/share/vulkan/implicit_layer.d:/etc/vulkan/explicit_layer.d:/etc/vulkan/implicit_layer.d"
+#define LAYERS_PATH_ENV "VK_LAYER_DIRS"
 
 // C99:
 #define PRINTF_SIZE_T_SPECIFIER    "%zu"
@@ -177,19 +170,8 @@ using namespace std;
 #define DEFAULT_VK_DRIVERS_INFO "SOFTWARE\\Khronos\\Vulkan\\Drivers"
 // TODO: Are these the correct paths
 #define DEFAULT_VK_DRIVERS_PATH "C:\\Windows\\System32;C:\\Windows\\SysWow64"
-// TODO/TBD: Is this an appropriate prefix for Windows?
-#define LAYERS_PATH_REGISTRY_VALUE "VK_LAYERS_PATH"
-#define LAYER_NAMES_REGISTRY_VALUE "VK_LAYER_NAMES"
-#define LAYERS_PATH_ENV "VK_LAYERS_PATH"
-// TODO/TBD: Is this an appropriate suffix for Windows?
-#define VK_LAYER_LIBRARY_PREFIX "VKLayer"
-#define VK_LAYER_LIBRARY_PREFIX_LEN 7
-#define VK_LIBRARY_SUFFIX ".dll"
-#define VK_LIBRARY_SUFFIX_LEN 4
-#ifndef DEFAULT_VK_LAYERS_PATH
-// TODO: Is this a good default location?
-#define DEFAULT_VK_LAYERS_PATH "C:\\Windows\\System32;C:\\Windows\\SysWow64"
-#endif //  DEFAULT_VK_LAYERS_PATH
+#define DEFAULT_VK_LAYERS_INFO "SOFTWARE\\Khronos\\Vulkan\\ExplicitLayers;SOFTWARE\\Khronos\\Vulkan\\ImplicitLayers"
+#define LAYERS_PATH_ENV "VK_LAYERS_FOLDERS"
 
 // C99:
 // Microsoft didn't implement C99 in Visual Studio; but started adding it with
