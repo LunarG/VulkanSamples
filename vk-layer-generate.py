@@ -124,6 +124,10 @@ class Subcommand(object):
             if '*' in vk_type:
                 return ("%lu", "*%s" % name)
             return ("%lu", name)
+        if vk_type.strip('*') in vulkan.object_non_dispatch_list:
+            if '*' in vk_type:
+                return ("%lu", "%s->handle" % name)
+            return ("%lu", "%s.handle" % name)
         if "size" in vk_type:
             if '*' in vk_type:
                 return ("%zu", "*%s" % name)
@@ -226,7 +230,6 @@ class Subcommand(object):
             ggep_body.append('};')
         ggep_body.append('')
         ggep_body.append('%s' % self.lineinfo.get())
-
         ggep_body.append('')
         ggep_body.append('VK_LAYER_EXPORT VkResult VKAPI vkGetGlobalLayerProperties(uint32_t *pCount,  VkLayerProperties* pProperties)')
         ggep_body.append('{')
@@ -547,6 +550,9 @@ class GenericLayerSubcommand(Subcommand):
         gen_header.append('')
         gen_header.append('#include "generic.h"')
         gen_header.append('')
+        gen_header.append('%s' % self.lineinfo.get())
+        gen_header.append('#define LAYER_EXT_ARRAY_SIZE 1')
+        gen_header.append('#define LAYER_DEV_EXT_ARRAY_SIZE 1')
         gen_header.append('static LOADER_PLATFORM_THREAD_ONCE_DECLARATION(initOnce);')
         gen_header.append('struct devExts {')
         gen_header.append('    bool wsi_lunarg_enabled;')
@@ -704,6 +710,8 @@ class APIDumpSubcommand(Subcommand):
         header_txt.append('static loader_platform_thread_mutex printLock;')
         header_txt.append('')
         header_txt.append('%s' % self.lineinfo.get())
+        header_txt.append('#define LAYER_EXT_ARRAY_SIZE 1')
+        header_txt.append('#define LAYER_DEV_EXT_ARRAY_SIZE 1')
         header_txt.append('#define MAX_TID 513')
         header_txt.append('static loader_platform_thread_id tidMapping[MAX_TID] = {0};')
         header_txt.append('static uint32_t maxTID = 0;')
@@ -882,7 +890,7 @@ class APIDumpSubcommand(Subcommand):
             log_func_no_addr += ')\\n"'
         log_func += ';'
         log_func_no_addr += ';'
-        log_func += '\n    }\n    else {%s;\n    }' % log_func_no_addr;
+        log_func += '\n    }\n    else {%s\n    }' % log_func_no_addr;
         log_func += '\n%s' % self.lineinfo.get()
         #print("Proto %s has param_dict: %s" % (proto.name, sp_param_dict))
         if len(sp_param_dict) > 0:
@@ -916,7 +924,10 @@ class APIDumpSubcommand(Subcommand):
                         print_cast = ''
                         print_func = 'string_convert_helper'
                         #cis_print_func = 'tmp_str = string_convert_helper((void*)%s[i], "    ");' % proto.params[sp_index].name
-                    cis_print_func = 'tmp_str = %s(%s%s[i], "    ");' % (print_func, print_cast, proto.params[sp_index].name)
+                    if proto.params[sp_index].ty.strip('*').replace('const ', '') in vulkan.object_non_dispatch_list:
+                        cis_print_func = 'tmp_str = %s(%s%s[i].handle, "    ");' % (print_func, print_cast, proto.params[sp_index].name)
+                    else:
+                        cis_print_func = 'tmp_str = %s(%s%s[i], "    ");' % (print_func, print_cast, proto.params[sp_index].name)
                     if not i_decl:
                         log_func += '\n%suint32_t i;' % (indent)
                         i_decl = True

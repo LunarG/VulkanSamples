@@ -182,37 +182,39 @@ class Extension(object):
 core = Extension(
     name="VK_CORE",
     headers=["vulkan.h", "vk_debug_report_lunarg.h"],
-
     objects=[
         "VkInstance",
         "VkPhysicalDevice",
         "VkDevice",
         "VkQueue",
+        "VkCmdBuffer",
+        "VkFence",
         "VkDeviceMemory",
         "VkBuffer",
-        "VkBufferView",
         "VkImage",
+        "VkSemaphore",
+        "VkEvent",
+        "VkQueryPool",
+        "VkBufferView",
         "VkImageView",
         "VkAttachmentView",
+        "VkShaderModule",
         "VkShader",
+        "VkPipelineLayout",
         "VkPipeline",
         "VkPipelineCache",
         "VkSampler",
         "VkDescriptorSet",
         "VkDescriptorSetLayout",
-        "VkPipelineLayout",
+        "VkSampler",
         "VkDescriptorPool",
+        "VkDescriptorSet",
         "VkDynamicViewportState",
         "VkDynamicRasterState",
         "VkDynamicColorBlendState",
         "VkDynamicDepthStencilState",
-        "VkCmdBuffer",
-        "VkFence",
-        "VkSemaphore",
-        "VkEvent",
-        "VkQueryPool",
-        "VkFramebuffer",
         "VkRenderPass",
+        "VkFramebuffer",
     ],
     protos=[
         Proto("VkResult", "CreateInstance",
@@ -226,27 +228,6 @@ core = Extension(
             [Param("VkInstance", "instance"),
              Param("uint32_t*", "pPhysicalDeviceCount"),
              Param("VkPhysicalDevice*", "pPhysicalDevices")]),
-
-        Proto("VkResult", "GetPhysicalDeviceProperties",
-            [Param("VkPhysicalDevice", "gpu"),
-             Param("VkPhysicalDeviceProperties*", "pProperties")]),
-
-        Proto("VkResult", "GetPhysicalDevicePerformance",
-            [Param("VkPhysicalDevice", "gpu"),
-             Param("VkPhysicalDevicePerformance*", "pPerformance")]),
-
-        Proto("VkResult", "GetPhysicalDeviceQueueCount",
-            [Param("VkPhysicalDevice", "gpu"),
-             Param("uint32_t*", "pCount")]),
-
-        Proto("VkResult", "GetPhysicalDeviceQueueProperties",
-            [Param("VkPhysicalDevice", "gpu"),
-             Param("uint32_t", "count"),
-             Param("VkPhysicalDeviceQueueProperties*", "pProperties")]),
-
-        Proto("VkResult", "GetPhysicalDeviceMemoryProperties",
-            [Param("VkPhysicalDevice", "gpu"),
-             Param("VkPhysicalDeviceMemoryProperties*", "pProperties")]),
 
         Proto("VkResult", "GetPhysicalDeviceFeatures",
             [Param("VkPhysicalDevice", "physicalDevice"),
@@ -270,33 +251,53 @@ core = Extension(
              Param("const char*", "pName")]),
 
         Proto("VkResult", "CreateDevice",
-            [Param("VkPhysicalDevice", "gpu"),
+            [Param("VkPhysicalDevice", "physicalDevice"),
              Param("const VkDeviceCreateInfo*", "pCreateInfo"),
              Param("VkDevice*", "pDevice")]),
 
         Proto("VkResult", "DestroyDevice",
             [Param("VkDevice", "device")]),
 
-        Proto("VkResult", "GetPhysicalDeviceExtensionProperties",
-            [Param("VkPhysicalDevice", "gpu"),
-             Param("const char*", "pLayerName"),
-             Param("uint32_t*", "pCount"),
-             Param("VkExtensionProperties*", "pProperties")]),
+        Proto("VkResult", "GetPhysicalDeviceProperties",
+            [Param("VkPhysicalDevice", "physicalDevice"),
+             Param("VkPhysicalDeviceProperties*", "pProperties")]),
 
-        Proto("VkResult", "GetPhysicalDeviceLayerProperties",
-            [Param("VkPhysicalDevice", "gpu"),
-             Param("const char*", "pLayerName"),
-             Param("uint32_t*", "pCount"),
-             Param("VkLayerProperties*", "pProperties")]),
+        Proto("VkResult", "GetPhysicalDevicePerformance",
+            [Param("VkPhysicalDevice", "physicalDevice"),
+             Param("VkPhysicalDevicePerformance*", "pPerformance")]),
+
+        Proto("VkResult", "GetPhysicalDeviceQueueCount",
+            [Param("VkPhysicalDevice", "physicalDevice"),
+             Param("uint32_t*", "pCount")]),
+
+        Proto("VkResult", "GetPhysicalDeviceQueueProperties",
+            [Param("VkPhysicalDevice", "physicalDevice"),
+             Param("uint32_t", "count"),
+             Param("VkPhysicalDeviceQueueProperties*", "pQueueProperties")]),
+
+        Proto("VkResult", "GetPhysicalDeviceMemoryProperties",
+            [Param("VkPhysicalDevice", "physicalDevice"),
+             Param("VkPhysicalDeviceMemoryProperties*", "pMemoryProperties")]),
 
         Proto("VkResult", "GetGlobalExtensionProperties",
             [Param("const char*", "pLayerName"),
              Param("uint32_t*", "pCount"),
              Param("VkExtensionProperties*", "pProperties")]),
 
+        Proto("VkResult", "GetPhysicalDeviceExtensionProperties",
+            [Param("VkPhysicalDevice", "physicalDevice"),
+             Param("const char*", "pLayerName"),
+             Param("uint32_t", "*pCount"),
+             Param("VkExtensionProperties*", "pProperties")]),
+
         Proto("VkResult", "GetGlobalLayerProperties",
             [Param("uint32_t*", "pCount"),
-             Param("VkExtensionProperties*", "pProperties")]),
+             Param("VkLayerProperties*", "pProperties")]),
+
+        Proto("VkResult", "GetPhysicalDeviceLayerProperties",
+            [Param("VkPhysicalDevice", "physicalDevice"),
+             Param("uint32_t", "*pCount"),
+             Param("VkLayerProperties*", "pProperties")]),
 
         Proto("VkResult", "GetDeviceQueue",
             [Param("VkDevice", "device"),
@@ -330,7 +331,7 @@ core = Extension(
              Param("VkDeviceMemory", "mem"),
              Param("VkDeviceSize", "offset"),
              Param("VkDeviceSize", "size"),
-             Param("VkFlags", "flags"),
+             Param("VkMemoryMapFlags", "flags"),
              Param("void**", "ppData")]),
 
         Proto("VkResult", "UnmapMemory",
@@ -347,6 +348,18 @@ core = Extension(
              Param("uint32_t", "memRangeCount"),
              Param("const VkMappedMemoryRange*", "pMemRanges")]),
 
+        Proto("VkResult", "BindBufferMemory",
+            [Param("VkDevice", "device"),
+             Param("VkBuffer", "buffer"),
+             Param("VkDeviceMemory", "mem"),
+             Param("VkDeviceSize", "memOffset")]),
+
+        Proto("VkResult", "BindImageMemory",
+            [Param("VkDevice", "device"),
+             Param("VkImage", "image"),
+             Param("VkDeviceMemory", "mem"),
+             Param("VkDeviceSize", "memOffset")]),
+
         Proto("VkResult", "GetBufferMemoryRequirements",
             [Param("VkDevice", "device"),
              Param("VkBuffer", "buffer"),
@@ -357,23 +370,11 @@ core = Extension(
              Param("VkImage", "image"),
              Param("VkMemoryRequirements*", "pMemoryRequirements")]),
 
-        Proto("VkResult", "BindBufferMemory",
-            [Param("VkDevice", "device"),
-             Param("VkBuffer", "buffer"),
-             Param("VkDeviceMemory", "mem"),
-             Param("VkDeviceSize", "offset")]),
-
-        Proto("VkResult", "BindImageMemory",
-            [Param("VkDevice", "device"),
-             Param("VkImage", "image"),
-             Param("VkDeviceMemory", "mem"),
-             Param("VkDeviceSize", "offset")]),
-
         Proto("VkResult", "GetImageSparseMemoryRequirements",
             [Param("VkDevice", "device"),
              Param("VkImage", "image"),
              Param("uint32_t*", "pNumRequirements"),
-             Param("VkSparseImageMemoryRequirements*", "pSparseMemoryRequirements"),]),
+             Param("VkSparseImageMemoryRequirements*", "pSparseMemoryRequirements")]),
 
         Proto("VkResult", "GetPhysicalDeviceSparseImageFormatProperties",
             [Param("VkPhysicalDevice", "physicalDevice"),
@@ -383,25 +384,25 @@ core = Extension(
              Param("VkImageUsageFlags", "usage"),
              Param("VkImageTiling", "tiling"),
              Param("uint32_t*", "pNumProperties"),
-             Param("VkSparseImageFormatProperties*", "pProperties"),]),
+             Param("VkSparseImageFormatProperties*", "pProperties")]),
 
         Proto("VkResult", "QueueBindSparseBufferMemory",
             [Param("VkQueue", "queue"),
              Param("VkBuffer", "buffer"),
              Param("uint32_t", "numBindings"),
-             Param("const VkSparseMemoryBindInfo*", "pBindInfo"),]),
+             Param("const VkSparseMemoryBindInfo*", "pBindInfo")]),
 
         Proto("VkResult", "QueueBindSparseImageOpaqueMemory",
             [Param("VkQueue", "queue"),
              Param("VkImage", "image"),
              Param("uint32_t", "numBindings"),
-             Param("const VkSparseMemoryBindInfo*", "pBindInfo"),]),
+             Param("const VkSparseMemoryBindInfo*", "pBindInfo")]),
 
         Proto("VkResult", "QueueBindSparseImageMemory",
             [Param("VkQueue", "queue"),
              Param("VkImage", "image"),
              Param("uint32_t", "numBindings"),
-             Param("const VkSparseImageMemoryBindInfo*", "pBindInfo"),]),
+             Param("const VkSparseImageMemoryBindInfo*", "pBindInfo")]),
 
         Proto("VkResult", "CreateFence",
             [Param("VkDevice", "device"),
@@ -696,7 +697,7 @@ core = Extension(
 
         Proto("VkResult", "DestroyCommandBuffer",
             [Param("VkDevice", "device"),
-             Param("VkCmdBuffer", "cmdBuffer")]),
+             Param("VkCmdBuffer", "commandBuffer")]),
 
         Proto("VkResult", "BeginCommandBuffer",
             [Param("VkCmdBuffer", "cmdBuffer"),
@@ -726,8 +727,8 @@ core = Extension(
              Param("VkDynamicColorBlendState", "dynamicColorBlendState")]),
 
         Proto("void", "CmdBindDynamicDepthStencilState",
-             [Param("VkCmdBuffer", "cmdBuffer"),
-              Param("VkDynamicDepthStencilState", "dynamicDepthStencilState")]),
+            [Param("VkCmdBuffer", "cmdBuffer"),
+             Param("VkDynamicDepthStencilState", "dynamicDepthStencilState")]),
 
         Proto("void", "CmdBindDescriptorSets",
             [Param("VkCmdBuffer", "cmdBuffer"),
@@ -739,18 +740,18 @@ core = Extension(
              Param("uint32_t", "dynamicOffsetCount"),
              Param("const uint32_t*", "pDynamicOffsets")]),
 
+        Proto("void", "CmdBindIndexBuffer",
+            [Param("VkCmdBuffer", "cmdBuffer"),
+             Param("VkBuffer", "buffer"),
+             Param("VkDeviceSize", "offset"),
+             Param("VkIndexType", "indexType")]),
+
         Proto("void", "CmdBindVertexBuffers",
             [Param("VkCmdBuffer", "cmdBuffer"),
              Param("uint32_t", "startBinding"),
              Param("uint32_t", "bindingCount"),
              Param("const VkBuffer*", "pBuffers"),
              Param("const VkDeviceSize*", "pOffsets")]),
-
-        Proto("void", "CmdBindIndexBuffer",
-            [Param("VkCmdBuffer", "cmdBuffer"),
-             Param("VkBuffer", "buffer"),
-             Param("VkDeviceSize", "offset"),
-             Param("VkIndexType", "indexType")]),
 
         Proto("void", "CmdDraw",
             [Param("VkCmdBuffer", "cmdBuffer"),
@@ -922,7 +923,7 @@ core = Extension(
             [Param("VkCmdBuffer", "cmdBuffer"),
              Param("VkQueryPool", "queryPool"),
              Param("uint32_t", "slot"),
-             Param("VkFlags", "flags")]),
+             Param("VkQueryControlFlags", "flags")]),
 
         Proto("void", "CmdEndQuery",
             [Param("VkCmdBuffer", "cmdBuffer"),
@@ -949,7 +950,7 @@ core = Extension(
              Param("VkBuffer", "destBuffer"),
              Param("VkDeviceSize", "destOffset"),
              Param("VkDeviceSize", "destStride"),
-             Param("VkFlags", "flags")]),
+             Param("VkQueryResultFlags", "flags")]),
 
         Proto("VkResult", "CreateFramebuffer",
             [Param("VkDevice", "device"),
@@ -1026,51 +1027,45 @@ wsi_lunarg = Extension(
 
 extensions = [core, wsi_lunarg]
 
-object_root_list = [
+object_dispatch_list = [
     "VkInstance",
     "VkPhysicalDevice",
+    "VkDevice",
+    "VkQueue",
+    "VkCmdBuffer",
     "VkDisplayWSI",
     "VkSwapChainWSI",
 ]
 
-object_base_list = [
-    "VkDevice",
-    "VkQueue",
-    "VkDeviceMemory",
-]
-
-object_list = [
-    "VkBuffer",
-    "VkBufferView",
-    "VkImage",
-    "VkImageView",
-    "VkAttachmentView",
-    "VkShader",
-    "VkPipeline",
-    "VkPipelineCache",
-    "VkPipelineLayout",
-    "VkSampler",
-    "VkDescriptorSet",
-    "VkDescriptorSetLayout",
-    "VkDescriptorPool",
-    "VkDynamicStateObject",
-    "VkCmdBuffer",
+object_non_dispatch_list = [
     "VkFence",
+    "VkDeviceMemory",
+    "VkBuffer",
+    "VkImage",
     "VkSemaphore",
     "VkEvent",
     "VkQueryPool",
-    "VkFramebuffer",
-    "VkRenderPass"
-]
-
-object_dynamic_state_list = [
+    "VkBufferView",
+    "VkImageView",
+    "VkAttachmentView",
+    "VkShaderModule",
+    "VkShader",
+    "VkPipelineCache",
+    "VkPipelineLayout",
+    "VkPipeline",
+    "VkDescriptorSetLayout",
+    "VkSampler",
+    "VkDescriptorPool",
+    "VkDescriptorSet",
     "VkDynamicViewportState",
     "VkDynamicRasterState",
     "VkDynamicColorBlendState",
-    "VkDynamicDepthStencilState"
+    "VkDynamicDepthStencilState",
+    "VkRenderPass",
+    "VkFramebuffer",
 ]
 
-object_type_list = object_root_list + object_base_list + object_list + object_dynamic_state_list
+object_type_list = object_dispatch_list + object_non_dispatch_list
 
 headers = []
 objects = []

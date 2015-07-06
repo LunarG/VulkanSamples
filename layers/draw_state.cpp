@@ -33,7 +33,6 @@
 #if defined(__GNUC__)
 #pragma GCC diagnostic ignored "-Wwrite-strings"
 #endif
-#include "vk_struct_graphviz_helper.h"
 #if defined(__GNUC__)
 #pragma GCC diagnostic warning "-Wwrite-strings"
 #endif

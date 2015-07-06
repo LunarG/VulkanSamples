@@ -1623,7 +1623,7 @@ static void demo_prepare_framebuffers(struct demo *demo)
 {
     VkAttachmentBindInfo attachments[2] = {
         [0] = {
-            .view = VK_NULL_HANDLE,
+            .view.handle = VK_NULL_HANDLE,
             .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
         },
         [1] = {

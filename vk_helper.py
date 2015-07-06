@@ -24,6 +24,7 @@
 import argparse
 import os
 import sys
+import vulkan
 from source_line_info import sourcelineinfo
 
 # vk_helper.py overview
@@ -854,8 +855,12 @@ class StructWrapperGen:
                         else:
                             sh_funcs.append('%s' % lineinfo.get())
                             addr_char = ''
-                            sh_funcs.append('%sss[%u] << %spStruct->%s[i];' % (indent, index, addr_char, stp_list[index]['name']))
-                            sh_funcs.append('%sstp_strs[%u] += " " + prefix + "%s[" + index_ss.str() + "] = " + ss[%u].str() + "\\n";' % (indent, index, stp_list[index]['name'], index))
+                            if stp_list[index]['type'] in vulkan.core.objects:
+                                sh_funcs.append('%sss[%u] << %spStruct->%s[i].handle;' % (indent, index, addr_char, stp_list[index]['name']))
+                                sh_funcs.append('%sstp_strs[%u] += " " + prefix + "%s[" + index_ss.str() + "].handle = " + ss[%u].str() + "\\n";' % (indent, index, stp_list[index]['name'], index))
+                            else:
+                                sh_funcs.append('%sss[%u] << %spStruct->%s[i];' % (indent, index, addr_char, stp_list[index]['name']))
+                                sh_funcs.append('%sstp_strs[%u] += " " + prefix + "%s[" + index_ss.str() + "] = " + ss[%u].str() + "\\n";' % (indent, index, stp_list[index]['name'], index))
                         sh_funcs.append('%s' % lineinfo.get())
                         sh_funcs.append('%sss[%u].str("");' % (indent, index))
                         indent = indent[4:]
@@ -931,6 +936,8 @@ class StructWrapperGen:
                         (po, pa) = self._get_struct_print_formatted(self.struct_dict[s][m])
                         if "addr" in po: # or self.struct_dict[s][m]['ptr']:
                             sh_funcs.append('    ss[%u].str("addr");' % (index))
+                        elif not self.struct_dict[s][m]['ptr'] and self.struct_dict[s][m]['type'] in vulkan.core.objects:
+                            sh_funcs.append('    ss[%u] << pStruct->%s.handle;' % (index, self.struct_dict[s][m]['name']))
                         else:
                             sh_funcs.append('    ss[%u] << pStruct->%s;' % (index, self.struct_dict[s][m]['name']))
                     value_print = 'ss[%u].str()' % index

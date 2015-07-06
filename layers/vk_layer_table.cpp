@@ -32,7 +32,7 @@ static instance_table_map tableInstanceMap;
 #define DISPATCH_MAP_DEBUG 0
 
 // Map lookup must be thread safe
-VkLayerDispatchTable *device_dispatch_table(VkObject object)
+VkLayerDispatchTable *device_dispatch_table(void* object)
 {
     dispatch_key key = get_dispatch_key(object);
     device_table_map::const_iterator it = tableMap.find((void *) key);
@@ -40,7 +40,7 @@ VkLayerDispatchTable *device_dispatch_table(VkObject object)
     return it->second;
 }
 
-VkLayerInstanceDispatchTable *instance_dispatch_table(VkObject object)
+VkLayerInstanceDispatchTable *instance_dispatch_table(void* object)
 {
     dispatch_key key = get_dispatch_key(object);
     instance_table_map::const_iterator it = tableInstanceMap.find((void *) key);
@@ -93,7 +93,7 @@ void destroy_instance_dispatch_table(dispatch_key key)
     destroy_dispatch_table(tableInstanceMap, key);
 }
 
-VkLayerDispatchTable *get_dispatch_table(device_table_map &map, VkObject object)
+VkLayerDispatchTable *get_dispatch_table(device_table_map &map, void* object)
 {
     dispatch_key key = get_dispatch_key(object);
     device_table_map::const_iterator it = map.find((void *) key);
@@ -108,7 +108,7 @@ VkLayerDispatchTable *get_dispatch_table(device_table_map &map, VkObject object)
     return it->second;
 }
 
-VkLayerInstanceDispatchTable *get_dispatch_table(instance_table_map &map, VkObject object)
+VkLayerInstanceDispatchTable *get_dispatch_table(instance_table_map &map, void* object)
 {
 //    VkLayerInstanceDispatchTable *pDisp = *(VkLayerInstanceDispatchTable **) object;
     dispatch_key key = get_dispatch_key(object);
