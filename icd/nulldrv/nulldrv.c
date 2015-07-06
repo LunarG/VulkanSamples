@@ -40,12 +40,12 @@
 
 // The null driver supports all WSI extenstions ... for now ...
 static const char * const nulldrv_gpu_exts[NULLDRV_EXT_COUNT] = {
-	[NULLDRV_EXT_WSI_LUNARG] = VK_WSI_LUNARG_EXTENSION_NAME,
+	[NULLDRV_EXT_WSI_SWAPCHAIN] = VK_WSI_SWAPCHAIN_EXTENSION_NAME,
 };
 static const VkExtensionProperties intel_gpu_exts[NULLDRV_EXT_COUNT] = {
     {
-        .extName = VK_WSI_LUNARG_EXTENSION_NAME,
-        .specVersion = ,VK_WSI_LUNARG_REVISION,
+        .extName = VK_WSI_SWAPCHAIN_EXTENSION_NAME,
+        .specVersion = VK_WSI_SWAPCHAIN_REVISION,
     }
 };
 
@@ -848,6 +848,7 @@ ICD_EXPORT VkResult VKAPI vkCreateSwapChainWSI(
 }
 
 ICD_EXPORT VkResult VKAPI vkDestroySwapChainWSI(
+    VkDevice                                device,
     VkSwapChainWSI                          swapChain)
 {
     NULLDRV_LOG_FUNC;
@@ -859,6 +860,7 @@ ICD_EXPORT VkResult VKAPI vkDestroySwapChainWSI(
 }
 
 ICD_EXPORT VkResult VKAPI vkGetSwapChainInfoWSI(
+    VkDevice                                device,
     VkSwapChainWSI                          swapChain,
     VkSwapChainInfoTypeWSI                  infoType,
     size_t*                                 pDataSize,
@@ -873,38 +875,22 @@ ICD_EXPORT VkResult VKAPI vkGetSwapChainInfoWSI(
         return VK_ERROR_INVALID_POINTER;
 
     switch (infoType) {
-    case VK_SWAP_CHAIN_INFO_TYPE_PERSISTENT_IMAGES_WSI:
-        {
-            VkSwapChainImageInfoWSI *images;
-            const size_t size = sizeof(*images) * 2;
+    case VK_SWAP_CHAIN_INFO_TYPE_IMAGES_WSI:
+        *pDataSize = (sizeof(VkSwapChainImagePropertiesWSI) * 2);
+        if (pData) {
+            VkSwapChainImagePropertiesWSI *images =
+                (VkSwapChainImagePropertiesWSI *) pData;
             uint32_t i;
 
-            if (pData && *pDataSize < size)
-                return VK_ERROR_INVALID_VALUE;
-
-            *pDataSize = size;
-            if (!pData)
-                return VK_SUCCESS;
-
-            images = (VkSwapChainImageInfoWSI *) pData;
             for (i = 0; i < 2; i++) {
                 struct nulldrv_img *img;
-                struct nulldrv_mem *mem;
 
                 img = (struct nulldrv_img *) nulldrv_base_create(dev,
                         sizeof(*img),
                         VK_OBJECT_TYPE_IMAGE);
                 if (!img)
                     return VK_ERROR_OUT_OF_HOST_MEMORY;
-
-                mem = (struct nulldrv_mem *) nulldrv_base_create(dev,
-                        sizeof(*mem),
-                        VK_OBJECT_TYPE_DEVICE_MEMORY);
-                if (!mem)
-                    return VK_ERROR_OUT_OF_HOST_MEMORY;
-
-                images[i].image.handle = (uint64_t) img;
-                images[i].memory.handle = (uint64_t) mem;
+                images[i].image = (VkImage) img;
             }
         }
         break;
@@ -917,8 +903,8 @@ ICD_EXPORT VkResult VKAPI vkGetSwapChainInfoWSI(
 }
 
 ICD_EXPORT VkResult VKAPI vkQueuePresentWSI(
-    VkQueue                                 queue_,
-    const VkPresentInfoWSI*                 pPresentInfo)
+    VkQueue                                  queue_,
+    VkPresentInfoWSI*                        pPresentInfo)
 {
     NULLDRV_LOG_FUNC;
 
