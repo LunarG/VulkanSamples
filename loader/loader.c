@@ -589,7 +589,6 @@ static void loader_add_physical_device_layer_properties(
         loader_log(VK_DBG_REPORT_INFO_BIT, 0,
                    "Couldn't dlsym vkGetPhysicalDeviceExtensionProperties from library %s",
                    lib_name);
-        return;
     }
 
     fp_get_layer_props = loader_platform_get_proc_address(lib_handle, "vkGetPhysicalDeviceLayerProperties");
