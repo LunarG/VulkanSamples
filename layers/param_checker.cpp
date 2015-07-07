@@ -43,6 +43,7 @@
 #include "vk_layer_table.h"
 #include "vk_layer_data.h"
 #include "vk_layer_logging.h"
+#include "vk_layer_extension_utils.h"
 
 typedef struct _layer_data {
     debug_report_data *report_data;
@@ -52,22 +53,6 @@ typedef struct _layer_data {
 static std::unordered_map<void*, layer_data*> layer_data_map;
 static device_table_map pc_device_table_map;
 static instance_table_map pc_instance_table_map;
-
-#define PC_LAYER_EXT_ARRAY_SIZE 2
-static const VkExtensionProperties pcExts[PC_LAYER_EXT_ARRAY_SIZE] = {
-    {
-        VK_STRUCTURE_TYPE_EXTENSION_PROPERTIES,
-        "ParamChecker",
-        0x10,
-        "Sample layer: ParamChecker",
-    },
-    {
-        VK_STRUCTURE_TYPE_EXTENSION_PROPERTIES,
-        "Validation",
-        0x10,
-        "Sample layer: ParamChecker",
-    }
-};
 
 // "my instance data"
 debug_report_data *mid(VkInstance object)
@@ -149,46 +134,52 @@ VK_LAYER_EXPORT VkResult VKAPI vkDbgDestroyMsgCallback(
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkGetGlobalExtensionCount(uint32_t* pCount)
-{
-    *pCount = PC_LAYER_EXT_ARRAY_SIZE;
-    return VK_SUCCESS;
-}
+static const VkLayerProperties pc_global_layers[] = {
+    {
+        "ParamChecker",
+        VK_API_VERSION,
+        VK_MAKE_VERSION(0, 1, 0),
+        "Validation layer: ParamChecker",
+    }
+};
 
 VK_LAYER_EXPORT VkResult VKAPI vkGetGlobalExtensionProperties(
-    uint32_t extensionIndex,
-    VkExtensionProperties* pProperties)
+        const char *pLayerName,
+        uint32_t *pCount,
+        VkExtensionProperties* pProperties)
 {
-    /* This entrypoint is NOT going to init it's own dispatch table since loader calls here early */
-    if (extensionIndex >= PC_LAYER_EXT_ARRAY_SIZE)
-        return VK_ERROR_INVALID_VALUE;
-    memcpy(pProperties, &pcExts[extensionIndex], sizeof(VkExtensionProperties));
-
-    return VK_SUCCESS;
+    /* ParamChecker does not have any global extensions */
+    return util_GetExtensionProperties(0, NULL, pCount, pProperties);
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkGetPhysicalDeviceExtensionCount(
-    VkPhysicalDevice gpu,
-    uint32_t* pCount)
+VK_LAYER_EXPORT VkResult VKAPI vkGetGlobalLayerProperties(
+        uint32_t *pCount,
+        VkLayerProperties*    pProperties)
 {
-    *pCount = PC_LAYER_EXT_ARRAY_SIZE;
-    return VK_SUCCESS;
+    return util_GetLayerProperties(ARRAY_SIZE(pc_global_layers),
+                                   pc_global_layers,
+                                   pCount, pProperties);
 }
 
 VK_LAYER_EXPORT VkResult VKAPI vkGetPhysicalDeviceExtensionProperties(
-    VkPhysicalDevice gpu,
-    uint32_t extensionIndex,
-    VkExtensionProperties* pProperties)
+        VkPhysicalDevice                            physicalDevice,
+        const char*                                 pLayerName,
+        uint32_t*                                   pCount,
+        VkExtensionProperties*                      pProperties)
 {
-    /* This entrypoint is NOT going to init it's own dispatch table since loader calls here early */
-    if (extensionIndex >= PC_LAYER_EXT_ARRAY_SIZE)
-        return VK_ERROR_INVALID_VALUE;
-    memcpy(pProperties, &pcExts[extensionIndex], sizeof(VkExtensionProperties));
-
-    return VK_SUCCESS;
+    /* ParamChecker does not have any physical device extensions */
+    return util_GetExtensionProperties(0, NULL, pCount, pProperties);
 }
 
-// Version: 0.111.0
+VK_LAYER_EXPORT VkResult VKAPI vkGetPhysicalDeviceLayerProperties(
+        VkPhysicalDevice                            physicalDevice,
+        uint32_t*                                   pCount,
+        VkLayerProperties*                          pProperties)
+{
+    /* ParamChecker's physical device layers are the same as global */
+    return util_GetLayerProperties(ARRAY_SIZE(pc_global_layers), pc_global_layers,
+                                   pCount, pProperties);
+}
 
 static
 std::string EnumeratorString(VkResult const& enumerator)
@@ -1509,7 +1500,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateInstance(
     if (result == VK_SUCCESS) {
         layer_data *data = get_my_data_ptr(get_dispatch_key(*pInstance), layer_data_map);
         data->report_data = debug_report_create_instance(pTable, *pInstance, pCreateInfo->extensionCount,
-            pCreateInfo->pEnabledExtensions);
+            pCreateInfo->ppEnabledExtensionNames);
 
         InitParamChecker(data);
     }
@@ -9701,12 +9692,6 @@ VK_LAYER_EXPORT void* VKAPI vkGetDeviceProcAddr(VkDevice device, const char* fun
         return (void*) vkCmdBeginRenderPass;
     if (!strcmp(funcName, "vkCmdEndRenderPass"))
         return (void*) vkCmdEndRenderPass;
-    if (!strcmp(funcName, "vkCmdExecuteCommands"))
-        return (void*) vkCmdExecuteCommands;
-    if (!strcmp(funcName, "vkGetGlobalExtensionCount"))
-        return (void*) vkGetGlobalExtensionCount;
-    if (!strcmp(funcName, "vkGetGlobalExtensionProperties"))
-        return (void*) vkGetGlobalExtensionProperties;
 
     {
         if (get_dispatch_table(pc_device_table_map, device)->GetDeviceProcAddr == NULL)
@@ -9733,10 +9718,6 @@ VK_LAYER_EXPORT void* VKAPI vkGetInstanceProcAddr(VkInstance instance, const cha
         return (void*) vkDestroyInstance;
     if (!strcmp(funcName, "vkEnumeratePhysicalDevices"))
         return (void*) vkEnumeratePhysicalDevices;
-    if (!strcmp(funcName, "vkGetPhysicalDeviceExtensionCount"))
-        return (void*) vkGetPhysicalDeviceExtensionCount;
-    if (!strcmp(funcName, "vkGetPhysicalDeviceExtensionProperties"))
-        return (void*) vkGetPhysicalDeviceExtensionProperties;
     if (!strcmp(funcName, "vkGetPhysicalDeviceProperties"))
         return (void*) vkGetPhysicalDeviceProperties;
     if (!strcmp(funcName, "vkGetPhysicalDeviceFeatures"))
@@ -9745,6 +9726,14 @@ VK_LAYER_EXPORT void* VKAPI vkGetInstanceProcAddr(VkInstance instance, const cha
         return (void*) vkGetPhysicalDeviceFormatInfo;
     if (!strcmp(funcName, "vkGetPhysicalDeviceLimits"))
         return (void*) vkGetPhysicalDeviceLimits;
+    if (!strcmp(funcName, "vkGetGlobalLayerProperties"))
+        return (void*) vkGetGlobalLayerProperties;
+    if (!strcmp(funcName, "vkGetGlobalExtensionProperties"))
+        return (void*) vkGetGlobalExtensionProperties;
+    if (!strcmp(funcName, "vkGetPhysicalDeviceLayerProperties"))
+        return (void*) vkGetPhysicalDeviceLayerProperties;
+    if (!strcmp(funcName, "vkGetPhysicalDeviceExtensionProperties"))
+        return (void*) vkGetPhysicalDeviceExtensionProperties;
 
     layer_data *data = get_my_data_ptr(get_dispatch_key(instance), layer_data_map);
     void* fptr = debug_report_get_instance_proc_addr(data->report_data, funcName);
