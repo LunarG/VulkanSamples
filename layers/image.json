@@ -3,7 +3,7 @@
     "layer" : {
         "name": "Image",
         "type": "GLOBAL",
-        "library_path": "/home/jon/vk/vk/dbuild/layers/libVKLayerImage.so",
+        "library_path": "./libVKLayerImage.so",
         "abi_versions": "1.0.0",
         "implementation_version": "1.0.0",
         "description": "LunarG Validation Layer"

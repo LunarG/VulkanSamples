@@ -3,7 +3,7 @@
     "layer" : {
         "name": "ScreenShot",
         "type": "DEVICE",
-        "library_path": "/home/jon/vk/vk/dbuild/layers/libVKLayerScreenShot.so",
+        "library_path": "./libVKLayerScreenShot.so",
         "abi_versions": "1.0.0",
         "implementation_version": "1.0.0",
         "description": "LunarG image capture layer"
