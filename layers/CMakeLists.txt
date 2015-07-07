@@ -15,18 +15,18 @@ macro(run_vk_layer_generate subcmd output)
 endmacro()
 
 set(LAYER_JSON_FILES
-    api_dump_config
-    basic_config
-    draw_state_config
-    generic_config
-    image_config
-    mem_tracker_config
-    multi_config
-    object_tracker_config
-    param_checker_config
-    screenshot_config
-    shader_checker_config
-    threading_config
+    api_dump
+    basic
+    draw_state
+    generic
+    image
+    mem_tracker
+    multi
+    object_tracker
+    param_checker
+    screenshot
+    shader_checker
+    threading
     )
 
 if (NOT WIN32)
