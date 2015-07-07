@@ -237,21 +237,6 @@ class Subcommand(object):
 
     def _gen_layer_get_physical_device_extension_props(self, layer="Generic"):
         gpdep_body = []
-        if layer == 'ObjectTracker':
-            gpdep_body.append('%s' % self.lineinfo.get())
-            gpdep_body.append('#define DEVICE_EXTENSION_ARRAY_SIZE 1')
-            gpdep_body.append('static const VkExtensionProperties deviceExtensionProps[DEVICE_EXTENSION_ARRAY_SIZE] = {')
-            gpdep_body.append('    {')
-            gpdep_body.append('        "OBJTRACK_EXTENSIONS",' )
-            gpdep_body.append('        VK_MAKE_VERSION(0, 1, 0),')
-            gpdep_body.append('        VK_API_VERSION,')
-            gpdep_body.append('    }')
-            gpdep_body.append('};')
-            gpdep_body.append('VK_LAYER_EXPORT VkResult VKAPI vkGetPhysicalDeviceExtensionProperties(VkPhysicalDevice physicalDevice, const char *pLayerName, uint32_t *pCount, VkExtensionProperties* pProperties)')
-            gpdep_body.append('{')
-            gpdep_body.append('    return util_GetExtensionProperties(DEVICE_EXTENSION_ARRAY_SIZE, deviceExtensionProps, pCount, pProperties);')
-            gpdep_body.append('}')
-            gpdep_body.append('')
         return "\n".join(gpdep_body)
 
     def _gen_layer_get_physical_device_layer_props(self, layer="Generic"):
@@ -1176,10 +1161,7 @@ class ObjectTrackerSubcommand(Subcommand):
         self.layer_name = "ObjectTracker"
         extensions=[('wsi_lunarg_enabled',
                     ['vkCreateSwapChainWSI', 'vkDestroySwapChainWSI',
-                     'vkGetSwapChainInfoWSI', 'vkQueuePresentWSI']),
-                    ('objtrack_extensions_enabled',
-                    ['objTrackGetObjectsCount', 'objTrackGetObjects',
-                     'objTrackGetObjectsOfTypeCount', 'objTrackGetObjectsOfType'])]
+                     'vkGetSwapChainInfoWSI', 'vkQueuePresentWSI'])]
         body = [self._generate_dispatch_entrypoints("VK_LAYER_EXPORT"),
                 self._generate_extensions(),
                 self._generate_layer_gpa_function(extensions,
