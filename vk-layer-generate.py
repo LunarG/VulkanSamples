@@ -216,8 +216,7 @@ class Subcommand(object):
             ggep_body.append('%s' % self.lineinfo.get())
         else:
             ggep_body.append('%s' % self.lineinfo.get())
-            ggep_body.append('#define LAYER_GLOBAL_PROPS_ARRAY_SIZE 1')
-            ggep_body.append('static const VkLayerProperties globalLayerProps[LAYER_GLOBAL_PROPS_ARRAY_SIZE] = {')
+            ggep_body.append('static const VkLayerProperties globalLayerProps[] = {')
             ggep_body.append('    {')
             ggep_body.append('        "%s",' % layer)
             ggep_body.append('        VK_API_VERSION, // specVersion')
@@ -231,7 +230,7 @@ class Subcommand(object):
         ggep_body.append('')
         ggep_body.append('VK_LAYER_EXPORT VkResult VKAPI vkGetGlobalLayerProperties(uint32_t *pCount,  VkLayerProperties* pProperties)')
         ggep_body.append('{')
-        ggep_body.append('    return util_GetLayerProperties(LAYER_GLOBAL_PROPS_ARRAY_SIZE, globalLayerProps, pCount, pProperties);')
+        ggep_body.append('    return util_GetLayerProperties(ARRAY_SIZE(globalLayerProps), globalLayerProps, pCount, pProperties);')
         ggep_body.append('}')
         return "\n".join(ggep_body)
 
@@ -246,8 +245,7 @@ class Subcommand(object):
             gpdlp_body.append('%s' % self.lineinfo.get())
         else:
             gpdlp_body.append('%s' % self.lineinfo.get())
-            gpdlp_body.append('#define LAYER_DEVICE_ARRAY_SIZE 1')
-            gpdlp_body.append('static const VkLayerProperties deviceLayerProps[LAYER_DEVICE_ARRAY_SIZE] = {')
+            gpdlp_body.append('static const VkLayerProperties deviceLayerProps[] = {')
             gpdlp_body.append('    {')
             gpdlp_body.append('        "%s",' % layer)
             gpdlp_body.append('        VK_API_VERSION,')
@@ -257,7 +255,7 @@ class Subcommand(object):
             gpdlp_body.append('};')
         gpdlp_body.append('VK_LAYER_EXPORT VkResult VKAPI vkGetPhysicalDeviceLayerProperties(VkPhysicalDevice physicalDevice, uint32_t *pCount, VkLayerProperties* pProperties)')
         gpdlp_body.append('{')
-        gpdlp_body.append('    return util_GetLayerProperties(LAYER_DEVICE_ARRAY_SIZE, deviceLayerProps, pCount, pProperties);')
+        gpdlp_body.append('    return util_GetLayerProperties(ARRAY_SIZE(deviceLayerProps), deviceLayerProps, pCount, pProperties);')
         gpdlp_body.append('}')
         gpdlp_body.append('')
         return "\n".join(gpdlp_body)
@@ -539,7 +537,7 @@ class LayerDispatchSubcommand(Subcommand):
 class GenericLayerSubcommand(Subcommand):
     def generate_header(self):
         gen_header = []
-        func_body.append('%s' % self.lineinfo.get())
+        gen_header.append('%s' % self.lineinfo.get())
         gen_header.append('#include <stdio.h>')
         gen_header.append('#include <stdlib.h>')
         gen_header.append('#include <string.h>')
@@ -554,7 +552,7 @@ class GenericLayerSubcommand(Subcommand):
         gen_header.append('#include "vk_layer_table.h"')
         gen_header.append('#include "vk_layer_extension_utils.h"')
         gen_header.append('')
-        gen_header.append('#include "generic.h')
+        gen_header.append('#include "generic.h"')
         gen_header.append('')
         gen_header.append('static LOADER_PLATFORM_THREAD_ONCE_DECLARATION(initOnce);')
         gen_header.append('struct devExts {')

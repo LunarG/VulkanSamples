@@ -83,7 +83,7 @@ add_custom_target(generate_vk_layer_helpers DEPENDS
 	vk_struct_graphviz_helper.h
 )
 
-#run_vk_layer_generate(Generic generic_layer.cpp)
+run_vk_layer_generate(Generic generic_layer.cpp)
 run_vk_layer_generate(APIDump api_dump.cpp)
 run_vk_layer_generate(ObjectTracker object_track.cpp)
 run_vk_layer_generate(Threading threading.cpp)
@@ -104,7 +104,7 @@ add_vk_layer(Image image.cpp vk_layer_table.cpp)
 add_vk_layer(ParamChecker param_checker.cpp vk_layer_debug_marker_table.cpp vk_layer_table.cpp)
 add_vk_layer(ScreenShot screenshot.cpp vk_layer_table.cpp)
 # generated
-#add_vk_layer(Generic generic_layer.cpp vk_layer_table.cpp)
+add_vk_layer(Generic generic_layer.cpp vk_layer_table.cpp)
 add_vk_layer(APIDump api_dump.cpp vk_layer_table.cpp)
 add_vk_layer(ObjectTracker object_track.cpp vk_layer_table.cpp)
 add_vk_layer(Threading threading.cpp vk_layer_table.cpp)

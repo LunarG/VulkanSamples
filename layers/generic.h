@@ -27,14 +27,13 @@
 
 #ifndef GENERIC_H
 #define GENERIC_H
-#include "vkLayer.h"
+#include "vk_layer.h"
 
 /*
  * This file contains static functions for the generated layer Generic
  */
 
-#define LAYER_PROPS_ARRAY_SIZE 1
-static const VkLayerProperties layerProps[LAYER_PROPS_ARRAY_SIZE] = {
+static const VkLayerProperties globalLayerProps[] = {
     {
         "Generic",
         VK_API_VERSION,                 // specVersion
@@ -43,8 +42,7 @@ static const VkLayerProperties layerProps[LAYER_PROPS_ARRAY_SIZE] = {
     }
 };
 
-#define LAYER_DEV_PROPS_ARRAY_SIZE 1
-static const VkLayerProperties layerDevProps[LAYER_DEV_PROPS_ARRAY_SIZE] = {
+static const VkLayerProperties deviceLayerProps[] = {
     {
         "Generic",
         VK_API_VERSION,                 // specVersion
