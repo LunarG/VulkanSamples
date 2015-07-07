@@ -407,7 +407,7 @@ Device::~Device()
     EXPECT(vkDestroyDevice(obj()) == VK_SUCCESS);
 }
 
-void Device::init(std::vector<const char *> &extensions)
+void Device::init(std::vector<const char *> &layers, std::vector<const char *> &extensions)
 {
     // request all queues
     const std::vector<VkPhysicalDeviceQueueProperties> queue_props = gpu_.queue_properties();
@@ -428,6 +428,8 @@ void Device::init(std::vector<const char *> &extensions)
     dev_info.pNext = NULL;
     dev_info.queueRecordCount = queue_info.size();
     dev_info.pRequestedQueues = &queue_info[0];
+    dev_info.layerCount = layers.size();
+    dev_info.ppEnabledLayerNames = &layers[0];
     dev_info.extensionCount = extensions.size();
     dev_info.ppEnabledExtensionNames = &extensions[0];
     dev_info.flags = 0;

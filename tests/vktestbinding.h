@@ -214,8 +214,8 @@ public:
 
     // vkCreateDevice()
     void init(const VkDeviceCreateInfo &info);
-    void init(std::vector<const char *> &extensions); // all queues, all extensions, etc
-    void init() { std::vector<const char *> extensions; init(extensions); };
+    void init(std::vector<const char*> &layers, std::vector<const char *> &extensions); // all queues, all extensions, etc
+    void init() { std::vector<const char *> layers; std::vector<const char *> extensions; init(layers, extensions); };
 
     const PhysicalGpu &gpu() const { return gpu_; }
 

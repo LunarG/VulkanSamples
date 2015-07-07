@@ -123,7 +123,7 @@ void VkRenderFramework::InitFramework(
     }
 
     /* TODO: Verify requested physical device extensions are available */
-    m_device = new VkDeviceObj(0, objs[0], device_extension_names);
+    m_device = new VkDeviceObj(0, objs[0], device_layer_names, device_extension_names);
 
     /* Now register callback on device */
     if (0) {
@@ -349,11 +349,11 @@ VkDeviceObj::VkDeviceObj(uint32_t id, VkPhysicalDevice obj) :
 }
 
 VkDeviceObj::VkDeviceObj(uint32_t id,
-        VkPhysicalDevice obj,
-        std::vector<const char *> &extensions) :
+        VkPhysicalDevice obj, std::vector<const char *> &layer_names,
+        std::vector<const char *> &extension_names) :
     vk_testing::Device(obj), id(id)
 {
-    init(extensions);
+    init(layer_names, extension_names);
 
     props = gpu().properties();
     queue_props = &gpu().queue_properties()[0];
