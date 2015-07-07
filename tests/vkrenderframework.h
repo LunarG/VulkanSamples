@@ -69,16 +69,16 @@ class VkDepthStencilObj : public vk_testing::Image
 {
 public:
     VkDepthStencilObj();
-    void Init(VkDeviceObj *device, int32_t width, int32_t height);
+    void Init(VkDeviceObj *device, int32_t width, int32_t height, VkFormat format);
     bool Initialized();
-    VkDepthStencilBindInfo* BindInfo();
+    VkAttachmentBindInfo* BindInfo();
 
 protected:
     VkDeviceObj                        *m_device;
     bool                                m_initialized;
-    vk_testing::DepthStencilView        m_depthStencilView;
+    vk_testing::AttachmentView          m_attachmentView;
     VkFormat                            m_depth_stencil_fmt;
-    VkDepthStencilBindInfo              m_depthStencilBindInfo;
+    VkAttachmentBindInfo                m_attachmentBindInfo;
 };
 
 class VkRenderFramework : public VkTestFramework
@@ -95,8 +95,8 @@ public:
     void InitViewport();
     void InitRenderTarget();
     void InitRenderTarget(uint32_t targets);
-    void InitRenderTarget(VkDepthStencilBindInfo *dsBinding);
-    void InitRenderTarget(uint32_t targets, VkDepthStencilBindInfo *dsBinding);
+    void InitRenderTarget(VkAttachmentBindInfo *dsBinding);
+    void InitRenderTarget(uint32_t targets, VkAttachmentBindInfo *dsBinding);
     void InitFramework();
     void InitFramework(
             std::vector<const char *> instance_layer_names,
@@ -109,6 +109,7 @@ public:
     void ShutdownFramework();
     void InitState();
 
+    const VkRenderPassBeginInfo &renderPassBeginInfo() const { return m_renderPassBeginInfo; }
 
 protected:
     VkApplicationInfo                   app_info;
@@ -119,6 +120,8 @@ protected:
     VkCmdBuffer                         m_cmdBuffer;
     VkRenderPass                        m_renderPass;
     VkFramebuffer                       m_framebuffer;
+    std::vector<VkClearValue>           m_renderPassClearValues;
+    VkRenderPassBeginInfo               m_renderPassBeginInfo;
     VkDynamicRsState                    m_stateRaster;
     VkDynamicCbState                    m_colorBlend;
     VkDynamicVpState                    m_stateViewport;
@@ -127,7 +130,6 @@ protected:
     float                               m_width, m_height;
     VkFormat                            m_render_target_fmt;
     VkFormat                            m_depth_stencil_fmt;
-    VkColorAttachmentBindInfo           m_colorBindings[8];
     VkClearColorValue                   m_clear_color;
     bool                                m_clear_via_load_op;
     float                               m_depth_clear_color;
@@ -187,7 +189,7 @@ public:
     void BindVertexBuffer(VkConstantBufferObj *vertexBuffer, VkDeviceSize offset, uint32_t binding);
     void BindIndexBuffer(VkIndexBufferObj *indexBuffer, uint32_t offset);
     void BindStateObject(VkStateBindPoint stateBindPoint, VkDynamicStateObject stateObject);
-    void BeginRenderPass(VkRenderPass renderpass, VkFramebuffer framebuffer);
+    void BeginRenderPass(const VkRenderPassBeginInfo &info);
     void EndRenderPass();
     void Draw(uint32_t firstVertex, uint32_t vertexCount, uint32_t firstInstance, uint32_t instanceCount);
     void DrawIndexed(uint32_t firstIndex, uint32_t indexCount, int32_t vertexOffset, uint32_t firstInstance, uint32_t instanceCount);
@@ -288,12 +290,12 @@ public:
         return obj();
     }
 
-    VkColorAttachmentView targetView()
+    VkAttachmentView targetView()
     {
         if (!m_targetView.initialized())
         {
-            VkColorAttachmentViewCreateInfo createView = {
-                VK_STRUCTURE_TYPE_COLOR_ATTACHMENT_VIEW_CREATE_INFO,
+            VkAttachmentViewCreateInfo createView = {
+                VK_STRUCTURE_TYPE_ATTACHMENT_VIEW_CREATE_INFO,
                 VK_NULL_HANDLE,
                 obj(),
                 VK_FORMAT_B8G8R8A8_UNORM,
@@ -332,7 +334,7 @@ public:
 protected:
     VkDeviceObj                        *m_device;
 
-    vk_testing::ColorAttachmentView     m_targetView;
+    vk_testing::AttachmentView          m_targetView;
     VkDescriptorInfo                    m_descriptorInfo;
 };
 
@@ -411,8 +413,17 @@ public:
     void AddVertexInputBindings(VkVertexInputBindingDescription* vi_binding, int count);
     void AddVertexDataBuffer(VkConstantBufferObj* vertexDataBuffer, int binding);
     void AddColorAttachment(uint32_t binding, const VkPipelineCbAttachmentState *att);
+
+    void AddColorAttachment()
+    {
+        VkPipelineCbAttachmentState att = {};
+        att.blendEnable = VK_FALSE;
+        att.channelWriteMask = 0xf;
+        AddColorAttachment(0, &att);
+    }
+
     void SetDepthStencil(VkPipelineDsStateCreateInfo *);
-    VkResult CreateVKPipeline(VkDescriptorSetObj &descriptorSet);
+    VkResult CreateVKPipeline(VkDescriptorSetObj &descriptorSet, VkRenderPass render_pass);
 
 protected:
     VkPipelineVertexInputStateCreateInfo m_vi_state;

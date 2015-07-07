@@ -315,7 +315,7 @@ VkResult VkRenderTest::BeginCommandBuffer(VkCommandBufferObj &cmdBuffer)
      * on a single command buffer.
      */
     if (VK_SUCCESS == result && renderPass()) {
-        cmdBuffer.BeginRenderPass(renderPass(), framebuffer());
+        cmdBuffer.BeginRenderPass(renderPassBeginInfo());
     }
 
     return result;
@@ -349,7 +349,7 @@ void VkRenderTest::GenericDrawPreparation(VkCommandBufferObj *cmdBuffer, VkPipel
     cmdBuffer->BindStateObject(VK_STATE_BIND_POINT_COLOR_BLEND, m_colorBlend);
     cmdBuffer->BindStateObject(VK_STATE_BIND_POINT_DEPTH_STENCIL, m_stateDepthStencil);
     descriptorSet.CreateVKDescriptorSet(cmdBuffer);
-    pipelineobj.CreateVKPipeline(descriptorSet);
+    pipelineobj.CreateVKPipeline(descriptorSet, renderPass());
     cmdBuffer->BindPipeline(pipelineobj);
     cmdBuffer->BindDescriptorSet(descriptorSet);
 }
@@ -457,6 +457,7 @@ void VkRenderTest::VKTriangleTest(const char *vertShaderText, const char *fragSh
     VkShaderObj ps(m_device,fragShaderText, VK_SHADER_STAGE_FRAGMENT, this);
 
     VkPipelineObj pipelineobj(m_device);
+    pipelineobj.AddColorAttachment();
     pipelineobj.AddShader(&vs);
     pipelineobj.AddShader(&ps);
 
@@ -716,6 +717,7 @@ TEST_F(VkRenderTest, QuadWithVertexFetch)
     VkShaderObj ps(m_device,fragShaderText, VK_SHADER_STAGE_FRAGMENT, this);
 
     VkPipelineObj pipelineobj(m_device);
+    pipelineobj.AddColorAttachment();
     pipelineobj.AddShader(&vs);
     pipelineobj.AddShader(&ps);
 
@@ -801,6 +803,7 @@ TEST_F(VkRenderTest, TriangleMRT)
     VkShaderObj ps(m_device,fragShaderText, VK_SHADER_STAGE_FRAGMENT, this);
 
     VkPipelineObj pipelineobj(m_device);
+    pipelineobj.AddColorAttachment();
     pipelineobj.AddShader(&vs);
     pipelineobj.AddShader(&ps);
 
@@ -828,7 +831,6 @@ TEST_F(VkRenderTest, TriangleMRT)
 
     VkPipelineCbAttachmentState att = {};
     att.blendEnable = VK_FALSE;
-    att.format = m_render_target_fmt;
     att.channelWriteMask = 0xf;
     pipelineobj.AddColorAttachment(1, &att);
 
@@ -914,6 +916,7 @@ TEST_F(VkRenderTest, QuadWithIndexedVertexFetch)
     VkShaderObj ps(m_device,fragShaderText, VK_SHADER_STAGE_FRAGMENT, this);
 
     VkPipelineObj pipelineobj(m_device);
+    pipelineobj.AddColorAttachment();
     pipelineobj.AddShader(&vs);
     pipelineobj.AddShader(&ps);
 
@@ -1011,6 +1014,7 @@ TEST_F(VkRenderTest, GreyandRedCirclesonBlue)
     VkShaderObj ps(m_device,fragShaderText, VK_SHADER_STAGE_FRAGMENT, this);
 
     VkPipelineObj pipelineobj(m_device);
+    pipelineobj.AddColorAttachment();
     pipelineobj.AddShader(&vs);
     pipelineobj.AddShader(&ps);
 
@@ -1102,6 +1106,7 @@ TEST_F(VkRenderTest, RedCirclesonBlue)
     VkShaderObj ps(m_device,fragShaderText, VK_SHADER_STAGE_FRAGMENT, this);
 
     VkPipelineObj pipelineobj(m_device);
+    pipelineobj.AddColorAttachment();
     pipelineobj.AddShader(&vs);
     pipelineobj.AddShader(&ps);
 
@@ -1204,6 +1209,7 @@ TEST_F(VkRenderTest, GreyCirclesonBlueFade)
     VkShaderObj ps(m_device,fragShaderText, VK_SHADER_STAGE_FRAGMENT, this);
 
     VkPipelineObj pipelineobj(m_device);
+    pipelineobj.AddColorAttachment();
     pipelineobj.AddShader(&vs);
     pipelineobj.AddShader(&ps);
 
@@ -1296,6 +1302,7 @@ TEST_F(VkRenderTest, GreyCirclesonBlueDiscard)
     VkShaderObj ps(m_device,fragShaderText, VK_SHADER_STAGE_FRAGMENT, this);
 
     VkPipelineObj pipelineobj(m_device);
+    pipelineobj.AddColorAttachment();
     pipelineobj.AddShader(&vs);
     pipelineobj.AddShader(&ps);
 
@@ -1386,6 +1393,7 @@ TEST_F(VkRenderTest, TriangleVSUniform)
     VkShaderObj ps(m_device,fragShaderText, VK_SHADER_STAGE_FRAGMENT, this);
 
     VkPipelineObj pipelineobj(m_device);
+    pipelineobj.AddColorAttachment();
     pipelineobj.AddShader(&vs);
     pipelineobj.AddShader(&ps);
 
@@ -1465,6 +1473,7 @@ TEST_F(VkRenderTest, MixTriangle)
     VkShaderObj ps(m_device,fragShaderText, VK_SHADER_STAGE_FRAGMENT, this);
 
     VkPipelineObj pipelineobj(m_device);
+    pipelineobj.AddColorAttachment();
     pipelineobj.AddShader(&vs);
     pipelineobj.AddShader(&ps);
 
@@ -1535,6 +1544,7 @@ TEST_F(VkRenderTest, QuadVertFetchAndVertID)
     VkShaderObj ps(m_device,fragShaderText, VK_SHADER_STAGE_FRAGMENT, this);
 
     VkPipelineObj pipelineobj(m_device);
+    pipelineobj.AddColorAttachment();
     pipelineobj.AddShader(&vs);
     pipelineobj.AddShader(&ps);
 
@@ -1641,6 +1651,7 @@ TEST_F(VkRenderTest, QuadSparseVertFetch)
     VkShaderObj ps(m_device,fragShaderText, VK_SHADER_STAGE_FRAGMENT, this);
 
     VkPipelineObj pipelineobj(m_device);
+    pipelineobj.AddColorAttachment();
     pipelineobj.AddShader(&vs);
     pipelineobj.AddShader(&ps);
 
@@ -1737,6 +1748,7 @@ TEST_F(VkRenderTest, TriVertFetchDeadAttr)
     VkShaderObj ps(m_device,fragShaderText, VK_SHADER_STAGE_FRAGMENT, this);
 
     VkPipelineObj pipelineobj(m_device);
+    pipelineobj.AddColorAttachment();
     pipelineobj.AddShader(&vs);
     pipelineobj.AddShader(&ps);
 
@@ -1831,7 +1843,7 @@ TEST_F(VkRenderTest, CubeWithVertexFetchAndMVP)
     ASSERT_NO_FATAL_FAILURE(InitState());
     ASSERT_NO_FATAL_FAILURE(InitViewport());
     m_depth_stencil_fmt = VK_FORMAT_D16_UNORM;
-    m_depthStencil->Init(m_device, (int32_t)m_width, (int32_t)m_height);
+    m_depthStencil->Init(m_device, (int32_t)m_width, (int32_t)m_height, m_depth_stencil_fmt);
 
     VkConstantBufferObj meshBuffer(m_device,sizeof(g_vb_solid_face_colors_Data)/sizeof(g_vb_solid_face_colors_Data[0]),
             sizeof(g_vb_solid_face_colors_Data[0]), g_vb_solid_face_colors_Data);
@@ -1843,6 +1855,7 @@ TEST_F(VkRenderTest, CubeWithVertexFetchAndMVP)
     VkShaderObj ps(m_device,fragShaderText, VK_SHADER_STAGE_FRAGMENT, this);
 
     VkPipelineObj pipelineobj(m_device);
+    pipelineobj.AddColorAttachment();
     pipelineobj.AddShader(&vs);
     pipelineobj.AddShader(&ps);
 
@@ -1856,7 +1869,6 @@ TEST_F(VkRenderTest, CubeWithVertexFetchAndMVP)
     ds_state.back.stencilFailOp = VK_STENCIL_OP_KEEP;
     ds_state.back.stencilPassOp = VK_STENCIL_OP_KEEP;
     ds_state.back.stencilCompareOp = VK_COMPARE_OP_ALWAYS;
-    ds_state.format = VK_FORMAT_D32_SFLOAT;
     ds_state.front = ds_state.back;
     pipelineobj.SetDepthStencil(&ds_state);
 
@@ -1952,6 +1964,7 @@ TEST_F(VkRenderTest, VSTexture)
     VkTextureObj texture(m_device);
 
     VkPipelineObj pipelineobj(m_device);
+    pipelineobj.AddColorAttachment();
     pipelineobj.AddShader(&vs);
     pipelineobj.AddShader(&ps);
 
@@ -2025,6 +2038,7 @@ TEST_F(VkRenderTest, TexturedTriangle)
     VkTextureObj texture(m_device);
 
     VkPipelineObj pipelineobj(m_device);
+    pipelineobj.AddColorAttachment();
     pipelineobj.AddShader(&vs);
     pipelineobj.AddShader(&ps);
 
@@ -2105,6 +2119,7 @@ TEST_F(VkRenderTest, TexturedTriangleClip)
     VkTextureObj texture(m_device);
 
     VkPipelineObj pipelineobj(m_device);
+    pipelineobj.AddColorAttachment();
     pipelineobj.AddShader(&vs);
     pipelineobj.AddShader(&ps);
 
@@ -2175,6 +2190,7 @@ TEST_F(VkRenderTest, FSTriangle)
     VkTextureObj texture(m_device);
 
     VkPipelineObj pipelineobj(m_device);
+    pipelineobj.AddColorAttachment();
     pipelineobj.AddShader(&vs);
     pipelineobj.AddShader(&ps);
 
@@ -2260,6 +2276,7 @@ TEST_F(VkRenderTest, SamplerBindingsTriangle)
     VkTextureObj texture3(m_device, tex_colors); // Blue
 
     VkPipelineObj pipelineobj(m_device);
+    pipelineobj.AddColorAttachment();
     pipelineobj.AddShader(&vs);
     pipelineobj.AddShader(&ps);
 
@@ -2346,6 +2363,7 @@ TEST_F(VkRenderTest, TriangleVSUniformBlock)
     VkConstantBufferObj colorBuffer(m_device, valCount, sizeof(bufferVals[0]), (const void*) bufferVals);
 
     VkPipelineObj pipelineobj(m_device);
+    pipelineobj.AddColorAttachment();
     pipelineobj.AddShader(&vs);
     pipelineobj.AddShader(&ps);
 
@@ -2444,6 +2462,7 @@ TEST_F(VkRenderTest, TriangleFSUniformBlockBinding)
     VkConstantBufferObj whiteBuffer(m_device, whiteCount, sizeof(whiteVals[0]), (const void*) whiteVals);
 
     VkPipelineObj pipelineobj(m_device);
+    pipelineobj.AddColorAttachment();
     pipelineobj.AddShader(&vs);
     pipelineobj.AddShader(&ps);
 
@@ -2540,6 +2559,7 @@ TEST_F(VkRenderTest, TriangleFSAnonymousUniformBlockBinding)
     VkConstantBufferObj whiteBuffer(m_device, whiteCount, sizeof(whiteVals[0]), (const void*) whiteVals);
 
     VkPipelineObj pipelineobj(m_device);
+    pipelineobj.AddColorAttachment();
     pipelineobj.AddShader(&vs);
     pipelineobj.AddShader(&ps);
 
@@ -2660,6 +2680,7 @@ TEST_F(VkRenderTest, TriangleFSAnonymousUniformBlockBindingWithStruct)
     VkConstantBufferObj whiteBuffer(m_device, whiteCount, sizeof(whiteVals[0]), (const void*) whiteVals);
 
     VkPipelineObj pipelineobj(m_device);
+    pipelineobj.AddColorAttachment();
     pipelineobj.AddShader(&vs);
     pipelineobj.AddShader(&ps);
 
@@ -2737,7 +2758,7 @@ TEST_F(VkRenderTest, CubeWithVertexFetchAndMVPAndTexture)
     ASSERT_NO_FATAL_FAILURE(InitState());
     ASSERT_NO_FATAL_FAILURE(InitViewport());
     m_depth_stencil_fmt = VK_FORMAT_D16_UNORM;
-    m_depthStencil->Init(m_device, (int32_t)m_width, (int32_t)m_height);
+    m_depthStencil->Init(m_device, (int32_t)m_width, (int32_t)m_height, m_depth_stencil_fmt);
 
     VkConstantBufferObj meshBuffer(m_device, num_verts,
             sizeof(g_vb_texture_Data[0]), g_vb_texture_Data);
@@ -2752,6 +2773,7 @@ TEST_F(VkRenderTest, CubeWithVertexFetchAndMVPAndTexture)
     VkTextureObj texture(m_device);
 
     VkPipelineObj pipelineobj(m_device);
+    pipelineobj.AddColorAttachment();
     pipelineobj.AddShader(&vs);
     pipelineobj.AddShader(&ps);
 
@@ -2790,7 +2812,6 @@ TEST_F(VkRenderTest, CubeWithVertexFetchAndMVPAndTexture)
     ds_state.back.stencilFailOp = VK_STENCIL_OP_KEEP;
     ds_state.back.stencilPassOp = VK_STENCIL_OP_KEEP;
     ds_state.back.stencilCompareOp = VK_COMPARE_OP_ALWAYS;
-    ds_state.format = VK_FORMAT_D32_SFLOAT;
     ds_state.front = ds_state.back;
     pipelineobj.SetDepthStencil(&ds_state);
 
@@ -2896,6 +2917,7 @@ TEST_F(VkRenderTest, TriangleMixedSamplerUniformBlockBinding)
     VkTextureObj texture7(m_device, tex_colors); // Red and Blue
 
     VkPipelineObj pipelineobj(m_device);
+    pipelineobj.AddColorAttachment();
     pipelineobj.AddShader(&vs);
     pipelineobj.AddShader(&ps);
 
@@ -3005,6 +3027,7 @@ TEST_F(VkRenderTest, TriangleMatchingSamplerUniformBlockBinding)
     VkTextureObj texture7(m_device, tex_colors); // Red and Blue
 
     VkPipelineObj pipelineobj(m_device);
+    pipelineobj.AddColorAttachment();
     pipelineobj.AddShader(&vs);
     pipelineobj.AddShader(&ps);
 
@@ -3263,6 +3286,7 @@ TEST_F(VkRenderTest, TriangleUniformBufferLayout)
     VkConstantBufferObj mixedBuffer(m_device, constCount, sizeof(mixedVals[0]), (const void*) mixedVals);
 
     VkPipelineObj pipelineobj(m_device);
+    pipelineobj.AddColorAttachment();
     pipelineobj.AddShader(&vs);
     pipelineobj.AddShader(&ps);
 
@@ -3370,6 +3394,7 @@ TEST_F(VkRenderTest, TextureGather)
     VkTextureObj texture3(m_device, tex_colors); // Red and Blue
 
     VkPipelineObj pipelineobj(m_device);
+    pipelineobj.AddColorAttachment();
     pipelineobj.AddShader(&vs);
     pipelineobj.AddShader(&ps);
 
@@ -3479,6 +3504,7 @@ TEST_F(VkRenderTest, GeometryShaderHelloWorld)
     VkShaderObj ps(m_device, fragShaderText, VK_SHADER_STAGE_FRAGMENT, this);
 
     VkPipelineObj pipelineobj(m_device);
+    pipelineobj.AddColorAttachment();
     pipelineobj.AddShader(&vs);
     pipelineobj.AddShader(&gs);
     pipelineobj.AddShader(&ps);
@@ -3831,6 +3857,7 @@ TEST_F(VkRenderTest, GSUniformBufferLayout)
     VkConstantBufferObj mixedBuffer(m_device, constCount, sizeof(mixedVals[0]), (const void*) mixedVals);
 
     VkPipelineObj pipelineobj(m_device);
+    pipelineobj.AddColorAttachment();
     pipelineobj.AddShader(&vs);
     pipelineobj.AddShader(&gs);
     pipelineobj.AddShader(&ps);
@@ -3959,6 +3986,7 @@ TEST_F(VkRenderTest, GSPositions)
     VkShaderObj ps(m_device, fragShaderText, VK_SHADER_STAGE_FRAGMENT, this);
 
     VkPipelineObj pipelineobj(m_device);
+    pipelineobj.AddColorAttachment();
     pipelineobj.AddShader(&vs);
     pipelineobj.AddShader(&gs);
     pipelineobj.AddShader(&ps);
@@ -4091,6 +4119,7 @@ TEST_F(VkRenderTest, GSTriStrip)
     VkShaderObj ps(m_device, fragShaderText, VK_SHADER_STAGE_FRAGMENT, this);
 
     VkPipelineObj pipelineobj(m_device);
+    pipelineobj.AddColorAttachment();
     pipelineobj.AddShader(&vs);
     pipelineobj.AddShader(&gs);
     pipelineobj.AddShader(&ps);

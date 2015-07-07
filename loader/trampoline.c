@@ -654,22 +654,13 @@ LOADER_EXPORT VkResult VKAPI vkCreateImageView(VkDevice device, const VkImageVie
     return disp->CreateImageView(device, pCreateInfo, pView);
 }
 
-LOADER_EXPORT VkResult VKAPI vkCreateColorAttachmentView(VkDevice device, const VkColorAttachmentViewCreateInfo* pCreateInfo, VkColorAttachmentView* pView)
+LOADER_EXPORT VkResult VKAPI vkCreateAttachmentView(VkDevice device, const VkAttachmentViewCreateInfo* pCreateInfo, VkAttachmentView* pView)
 {
     const VkLayerDispatchTable *disp;
 
     disp = loader_get_dispatch(device);
 
-    return disp->CreateColorAttachmentView(device, pCreateInfo, pView);
-}
-
-LOADER_EXPORT VkResult VKAPI vkCreateDepthStencilView(VkDevice device, const VkDepthStencilViewCreateInfo* pCreateInfo, VkDepthStencilView* pView)
-{
-    const VkLayerDispatchTable *disp;
-
-    disp = loader_get_dispatch(device);
-
-    return disp->CreateDepthStencilView(device, pCreateInfo, pView);
+    return disp->CreateAttachmentView(device, pCreateInfo, pView);
 }
 
 LOADER_EXPORT VkResult VKAPI vkCreateShaderModule(VkDevice device, const VkShaderModuleCreateInfo* pCreateInfo, VkShaderModule* pShader)
@@ -1200,13 +1191,22 @@ LOADER_EXPORT VkResult VKAPI vkCreateRenderPass(VkDevice device, const VkRenderP
     return disp->CreateRenderPass(device, pCreateInfo, pRenderPass);
 }
 
-LOADER_EXPORT void VKAPI vkCmdBeginRenderPass(VkCmdBuffer cmdBuffer, const VkRenderPassBegin* pRenderPassBegin)
+LOADER_EXPORT void VKAPI vkCmdBeginRenderPass(VkCmdBuffer cmdBuffer, const VkRenderPassBeginInfo* pRenderPassBegin, VkRenderPassContents contents)
 {
     const VkLayerDispatchTable *disp;
 
     disp = loader_get_dispatch(cmdBuffer);
 
-    disp->CmdBeginRenderPass(cmdBuffer, pRenderPassBegin);
+    disp->CmdBeginRenderPass(cmdBuffer, pRenderPassBegin, contents);
+}
+
+LOADER_EXPORT void VKAPI vkCmdNextSubpass(VkCmdBuffer cmdBuffer, VkRenderPassContents contents)
+{
+    const VkLayerDispatchTable *disp;
+
+    disp = loader_get_dispatch(cmdBuffer);
+
+    disp->CmdNextSubpass(cmdBuffer, contents);
 }
 
 LOADER_EXPORT void VKAPI vkCmdEndRenderPass(VkCmdBuffer cmdBuffer)

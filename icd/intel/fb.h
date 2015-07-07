@@ -35,7 +35,6 @@ struct intel_fb {
     const struct intel_att_view **views;
     uint32_t view_count;
 
-    uint32_t sample_count;
     uint32_t width;
     uint32_t height;
     uint32_t array_size;
@@ -53,14 +52,6 @@ struct intel_render_pass_attachment {
 
     bool stencil_clear_on_load;
     bool stencil_disable_store;
-
-    union {
-        VkClearColorValue color;
-        struct {
-            float depth;
-            uint32_t stencil;
-        } ds;
-    } clear_val;
 };
 
 struct intel_render_pass_subpass {

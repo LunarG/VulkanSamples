@@ -194,8 +194,7 @@ core = Extension(
         "VkBufferView",
         "VkImage",
         "VkImageView",
-        "VkColorAttachmentView",
-        "VkDepthStencilView",
+        "VkAttachmentView",
         "VkShader",
         "VkPipeline",
         "VkPipelineCache",
@@ -493,15 +492,10 @@ core = Extension(
              Param("const VkImageViewCreateInfo*", "pCreateInfo"),
              Param("VkImageView*", "pView")]),
 
-        Proto("VkResult", "CreateColorAttachmentView",
+        Proto("VkResult", "CreateAttachmentView",
             [Param("VkDevice", "device"),
-             Param("const VkColorAttachmentViewCreateInfo*", "pCreateInfo"),
-             Param("VkColorAttachmentView*", "pView")]),
-
-        Proto("VkResult", "CreateDepthStencilView",
-            [Param("VkDevice", "device"),
-             Param("const VkDepthStencilViewCreateInfo*", "pCreateInfo"),
-             Param("VkDepthStencilView*", "pView")]),
+             Param("const VkAttachmentViewCreateInfo*", "pCreateInfo"),
+             Param("VkAttachmentView*", "pView")]),
 
         Proto("VkResult", "CreateShaderModule",
             [Param("VkDevice", "device"),
@@ -873,7 +867,12 @@ core = Extension(
 
         Proto("void", "CmdBeginRenderPass",
             [Param("VkCmdBuffer", "cmdBuffer"),
-             Param("const VkRenderPassBegin*", "pRenderPassBegin")]),
+             Param("const VkRenderPassBeginInfo*", "pRenderPassBegin"),
+             Param("VkRenderPassContents", "contents")]),
+
+        Proto("void", "CmdNextSubpass",
+            [Param("VkCmdBuffer", "cmdBuffer"),
+             Param("VkRenderPassContents", "contents")]),
 
         Proto("void", "CmdEndRenderPass",
             [Param("VkCmdBuffer", "cmdBuffer")]),
@@ -942,8 +941,7 @@ object_list = [
     "VkBufferView",
     "VkImage",
     "VkImageView",
-    "VkColorAttachmentView",
-    "VkDepthStencilView",
+    "VkAttachmentView",
     "VkShader",
     "VkPipeline",
     "VkPipelineCache",

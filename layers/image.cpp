@@ -274,18 +274,18 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateImage(VkDevice device, const VkImageCreat
 
 VK_LAYER_EXPORT VkResult VKAPI vkCreateRenderPass(VkDevice device, const VkRenderPassCreateInfo* pCreateInfo, VkRenderPass* pRenderPass)
 {
-    for(uint32_t i = 0; i < pCreateInfo->colorAttachmentCount; ++i)
+    for(uint32_t i = 0; i < pCreateInfo->attachmentCount; ++i)
     {
-        if(pCreateInfo->pColorFormats[i] != VK_FORMAT_UNDEFINED)
+        if(pCreateInfo->pAttachments[i].format != VK_FORMAT_UNDEFINED)
         {
             layer_data *device_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
             VkFormatProperties properties;
             VkResult result = get_dispatch_table(image_instance_table_map, device_data->physicalDevice)->GetPhysicalDeviceFormatInfo(
-                    device_data->physicalDevice, pCreateInfo->pColorFormats[i], &properties);
+                    device_data->physicalDevice, pCreateInfo->pAttachments[i].format, &properties);
             if(result != VK_SUCCESS)
             {
                 std::stringstream ss;
-                ss << "vkCreateRenderPass parameter, VkFormat pCreateInfo->pColorFormats[" << i << "], cannot be validated";
+                ss << "vkCreateRenderPass parameter, VkFormat in pCreateInfo->pAttachments[" << i << "], cannot be validated";
                 log_msg(mdd(device), VK_DBG_REPORT_WARN_BIT, (VkObjectType)0, NULL, 0, 1, "IMAGE", ss.str().c_str());
                 continue;
             }
@@ -293,68 +293,40 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateRenderPass(VkDevice device, const VkRende
             if((properties.linearTilingFeatures) == 0 && (properties.optimalTilingFeatures == 0))
             {
                 std::stringstream ss;
-                ss << "vkCreateRenderPass parameter, VkFormat pCreateInfo->pColorFormats[" << i << "], contains unsupported format";
+                ss << "vkCreateRenderPass parameter, VkFormat in pCreateInfo->pAttachments[" << i << "], contains unsupported format";
                 log_msg(mdd(device), VK_DBG_REPORT_WARN_BIT, (VkObjectType)0, NULL, 0, 1, "IMAGE", ss.str().c_str());
             }
         }
     }
 
-    for(uint32_t i = 0; i < pCreateInfo->colorAttachmentCount; ++i)
+    for(uint32_t i = 0; i < pCreateInfo->attachmentCount; ++i)
     {
-        if(!validate_VkImageLayout(pCreateInfo->pColorLayouts[i]))
+        if(!validate_VkImageLayout(pCreateInfo->pAttachments[i].initialLayout) ||
+           !validate_VkImageLayout(pCreateInfo->pAttachments[i].finalLayout))
         {
             std::stringstream ss;
-            ss << "vkCreateRenderPass parameter, VkImageLayout pCreateInfo->pColorLayouts[" << i << "], is unrecognized";
+            ss << "vkCreateRenderPass parameter, VkImageLayout in pCreateInfo->pAttachments[" << i << "], is unrecognized";
             log_msg(mdd(device), VK_DBG_REPORT_WARN_BIT, (VkObjectType)0, NULL, 0, 1, "IMAGE", ss.str().c_str());
         }
     }
 
-    for(uint32_t i = 0; i < pCreateInfo->colorAttachmentCount; ++i)
+    for(uint32_t i = 0; i < pCreateInfo->attachmentCount; ++i)
     {
-        if(!validate_VkAttachmentLoadOp(pCreateInfo->pColorLoadOps[i]))
+        if(!validate_VkAttachmentLoadOp(pCreateInfo->pAttachments[i].loadOp))
         {
             std::stringstream ss;
-            ss << "vkCreateRenderPass parameter, VkAttachmentLoadOp pCreateInfo->pColorLoadOps[" << i << "], is unrecognized";
+            ss << "vkCreateRenderPass parameter, VkAttachmentLoadOp in pCreateInfo->pAttachments[" << i << "], is unrecognized";
             log_msg(mdd(device), VK_DBG_REPORT_WARN_BIT, (VkObjectType)0, NULL, 0, 1, "IMAGE", ss.str().c_str());
         }
     }
 
-    for(uint32_t i = 0; i < pCreateInfo->colorAttachmentCount; ++i)
+    for(uint32_t i = 0; i < pCreateInfo->attachmentCount; ++i)
     {
-        if(!validate_VkAttachmentStoreOp(pCreateInfo->pColorStoreOps[i]))
+        if(!validate_VkAttachmentStoreOp(pCreateInfo->pAttachments[i].storeOp))
         {
             std::stringstream ss;
-            ss << "vkCreateRenderPass parameter, VkAttachmentStoreOp pCreateInfo->pColorStoreOps[" << i << "], is unrecognized";
+            ss << "vkCreateRenderPass parameter, VkAttachmentStoreOp in pCreateInfo->pAttachments[" << i << "], is unrecognized";
             log_msg(mdd(device), VK_DBG_REPORT_WARN_BIT, (VkObjectType)0, NULL, 0, 1, "IMAGE", ss.str().c_str());
-        }
-    }
-
-    for(uint32_t i = 0; i < pCreateInfo->colorAttachmentCount; ++i)
-    {
-        if(!vk_validate_vkclearcolorvalue(&(pCreateInfo->pColorLoadClearValues[i])))
-        {
-            std::stringstream ss;
-            ss << "vkCreateRenderPass parameter, VkClearColorValue pCreateInfo->pColorLoadClearValues[" << i << "], is invalid";
-            log_msg(mdd(device), VK_DBG_REPORT_WARN_BIT, (VkObjectType)0, NULL, 0, 1, "IMAGE", ss.str().c_str());
-        }
-    }
-
-    if(pCreateInfo->depthStencilFormat != VK_FORMAT_UNDEFINED)
-    {
-        layer_data *device_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
-        VkFormatProperties properties;
-        VkResult result = get_dispatch_table(image_instance_table_map, device_data->physicalDevice)->GetPhysicalDeviceFormatInfo(
-                device_data->physicalDevice, pCreateInfo->depthStencilFormat, &properties);
-        if(result != VK_SUCCESS)
-        {
-            char const str[] = "vkCreateRenderPass parameter, VkFormat pCreateInfo->depthStencilFormat, cannot be validated";
-            log_msg(mdd(device), VK_DBG_REPORT_WARN_BIT, (VkObjectType)0, NULL, 0, 1, "IMAGE", str);
-        }
-
-        if((properties.linearTilingFeatures) == 0 && (properties.optimalTilingFeatures == 0))
-        {
-            char const str[] = "vkCreateRenderPass parameter, VkFormat pCreateInfo->depthStencilFormat, contains unsupported format";
-            log_msg(mdd(device), VK_DBG_REPORT_WARN_BIT, (VkObjectType)0, NULL, 0, 1, "IMAGE", str);
         }
     }
 

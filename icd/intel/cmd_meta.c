@@ -254,19 +254,19 @@ static void cmd_meta_set_dst_for_img(struct intel_cmd *cmd,
                                      uint32_t lod, uint32_t layer,
                                      struct intel_cmd_meta *meta)
 {
-    VkColorAttachmentViewCreateInfo info;
+    VkAttachmentViewCreateInfo info;
     struct intel_att_view *view;
     VkResult ret;
 
     memset(&info, 0, sizeof(info));
-    info.sType = VK_STRUCTURE_TYPE_COLOR_ATTACHMENT_VIEW_CREATE_INFO;
+    info.sType = VK_STRUCTURE_TYPE_ATTACHMENT_VIEW_CREATE_INFO;
     info.image = (VkImage) img;
     info.format = format;
     info.mipLevel = lod;
     info.baseArraySlice = layer;
     info.arraySize = 1;
 
-    ret = intel_att_view_create_for_color(cmd->dev, &info, &view);
+    ret = intel_att_view_create(cmd->dev, &info, &view);
     if (ret != VK_SUCCESS) {
         cmd_fail(cmd, ret);
         return;
@@ -322,18 +322,18 @@ static void cmd_meta_set_ds_view(struct intel_cmd *cmd,
                                  uint32_t lod, uint32_t layer,
                                  struct intel_cmd_meta *meta)
 {
-    VkDepthStencilViewCreateInfo info;
+    VkAttachmentViewCreateInfo info;
     struct intel_att_view *view;
     VkResult ret;
 
     memset(&info, 0, sizeof(info));
-    info.sType = VK_STRUCTURE_TYPE_DEPTH_STENCIL_VIEW_CREATE_INFO;
+    info.sType = VK_STRUCTURE_TYPE_ATTACHMENT_VIEW_CREATE_INFO;
     info.image = (VkImage) img;
     info.mipLevel = lod;
     info.baseArraySlice = layer;
     info.arraySize = 1;
 
-    ret = intel_att_view_create_for_ds(cmd->dev, &info, &view);
+    ret = intel_att_view_create(cmd->dev, &info, &view);
     if (ret != VK_SUCCESS) {
         cmd_fail(cmd, ret);
         return;

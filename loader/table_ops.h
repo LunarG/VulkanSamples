@@ -74,8 +74,7 @@ static inline void loader_init_device_dispatch_table(VkLayerDispatchTable *table
     table->CreateImage = (PFN_vkCreateImage) gpa(dev, "vkCreateImage");
     table->GetImageSubresourceLayout = (PFN_vkGetImageSubresourceLayout) gpa(dev, "vkGetImageSubresourceLayout");
     table->CreateImageView = (PFN_vkCreateImageView) gpa(dev, "vkCreateImageView");
-    table->CreateColorAttachmentView = (PFN_vkCreateColorAttachmentView) gpa(dev, "vkCreateColorAttachmentView");
-    table->CreateDepthStencilView = (PFN_vkCreateDepthStencilView) gpa(dev, "vkCreateDepthStencilView");
+    table->CreateAttachmentView = (PFN_vkCreateAttachmentView) gpa(dev, "vkCreateAttachmentView");
     table->CreateShaderModule = (PFN_vkCreateShaderModule) gpa(dev, "vkCreateShaderModule");
     table->CreateShader = (PFN_vkCreateShader) gpa(dev, "vkCreateShader");
     table->CreatePipelineCache = (PFN_vkCreatePipelineCache) gpa(dev, "vkCreatePipelineCache");
@@ -135,6 +134,7 @@ static inline void loader_init_device_dispatch_table(VkLayerDispatchTable *table
     table->CreateFramebuffer = (PFN_vkCreateFramebuffer) gpa(dev, "vkCreateFramebuffer");
     table->CreateRenderPass = (PFN_vkCreateRenderPass) gpa(dev, "vkCreateRenderPass");
     table->CmdBeginRenderPass = (PFN_vkCmdBeginRenderPass) gpa(dev, "vkCmdBeginRenderPass");
+    table->CmdNextSubpass = (PFN_vkCmdNextSubpass) gpa(dev, "vkCmdNextSubpass");
     table->CmdEndRenderPass = (PFN_vkCmdEndRenderPass) gpa(dev, "vkCmdEndRenderPass");
     table->CmdExecuteCommands = (PFN_vkCmdExecuteCommands) gpa(dev, "vkCmdExecuteCommands");
 //TODO move into it's own table
@@ -230,10 +230,8 @@ static inline void *loader_lookup_device_dispatch_table(
         return (void *) table->GetImageSubresourceLayout;
     if (!strcmp(name, "CreateImageView"))
         return (void *) table->CreateImageView;
-    if (!strcmp(name, "CreateColorAttachmentView"))
-        return (void *) table->CreateColorAttachmentView;
-    if (!strcmp(name, "CreateDepthStencilView"))
-        return (void *) table->CreateDepthStencilView;
+    if (!strcmp(name, "CreateAttachmentView"))
+        return (void *) table->CreateAttachmentView;
     if (!strcmp(name, "CreateShaderModule"))
         return (void *) table->CreateShaderModule;
     if (!strcmp(name, "CreateShader"))
@@ -352,6 +350,8 @@ static inline void *loader_lookup_device_dispatch_table(
         return (void *) table->CreateRenderPass;
     if (!strcmp(name, "CmdBeginRenderPass"))
         return (void *) table->CmdBeginRenderPass;
+    if (!strcmp(name, "CmdNextSubpass"))
+        return (void *) table->CmdNextSubpass;
     if (!strcmp(name, "CmdEndRenderPass"))
         return (void *) table->CmdEndRenderPass;
 

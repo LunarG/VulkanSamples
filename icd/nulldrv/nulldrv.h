@@ -108,12 +108,6 @@ struct nulldrv_mem {
     VkDeviceSize size;
 };
 
-struct nulldrv_ds_view {
-    struct nulldrv_obj obj;
-    struct nulldrv_img *img;
-    uint32_t array_size;
-};
-
 struct nulldrv_sampler {
     struct nulldrv_obj obj;
 };

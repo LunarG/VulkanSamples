@@ -651,11 +651,36 @@ static void validatePipelineState(const GLOBAL_CB_NODE* pCB, const VkPipelineBin
         // Verify that any MSAA request in PSO matches sample# in bound FB
         uint32_t psoNumSamples = getNumSamples(pipeline);
         if (pCB->activeRenderPass) {
-            VkRenderPassCreateInfo* pRPCI = renderPassMap[pCB->activeRenderPass];
-            VkFramebufferCreateInfo* pFBCI = frameBufferMap[pCB->framebuffer];
-            if ((psoNumSamples != pFBCI->sampleCount) || (psoNumSamples != pRPCI->sampleCount)) {
+            const VkRenderPassCreateInfo* pRPCI = renderPassMap[pCB->activeRenderPass];
+            const VkSubpassDescription* pSD = &pRPCI->pSubpasses[pCB->activeSubpass];
+            int subpassNumSamples = 0;
+            uint32_t i;
+
+            for (i = 0; i < pSD->colorCount; i++) {
+                uint32_t samples;
+
+                if (pSD->colorAttachments[i].attachment == VK_ATTACHMENT_UNUSED)
+                    continue;
+
+                samples = pRPCI->pAttachments[pSD->colorAttachments[i].attachment].samples;
+                if (subpassNumSamples == 0) {
+                    subpassNumSamples = samples;
+                } else if (subpassNumSamples != samples) {
+                    subpassNumSamples = -1;
+                    break;
+                }
+            }
+            if (pSD->depthStencilAttachment.attachment != VK_ATTACHMENT_UNUSED) {
+                const uint32_t samples = pRPCI->pAttachments[pSD->depthStencilAttachment.attachment].samples;
+                if (subpassNumSamples == 0)
+                    subpassNumSamples = samples;
+                else if (subpassNumSamples != samples)
+                    subpassNumSamples = -1;
+            }
+
+            if (psoNumSamples != subpassNumSamples) {
                 log_msg(mdd(pCB->cmdBuffer), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_PIPELINE, pipeline, 0, DRAWSTATE_NUM_SAMPLES_MISMATCH, "DS",
-                        "Num samples mismatch! Binding PSO (%p) with %u samples while current RenderPass (%p) w/ %u samples uses FB (%p) with %u samples!", (void*)pipeline, psoNumSamples, (void*)pCB->activeRenderPass, pRPCI->sampleCount, (void*)pCB->framebuffer, pFBCI->sampleCount);
+                        "Num samples mismatch! Binding PSO (%p) with %u samples while current RenderPass (%p) w/ %u samples!", (void*)pipeline, psoNumSamples, (void*)pCB->activeRenderPass, subpassNumSamples);
             }
         } else {
             // TODO : I believe it's an error if we reach this point and don't have an activeRenderPass
@@ -2523,13 +2548,9 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateFramebuffer(VkDevice device, const VkFram
     if (VK_SUCCESS == result) {
         // Shadow create info and store in map
         VkFramebufferCreateInfo* localFBCI = new VkFramebufferCreateInfo(*pCreateInfo);
-        if (pCreateInfo->pColorAttachments) {
-            localFBCI->pColorAttachments = new VkColorAttachmentBindInfo[localFBCI->colorAttachmentCount];
-            memcpy((void*)localFBCI->pColorAttachments, pCreateInfo->pColorAttachments, localFBCI->colorAttachmentCount*sizeof(VkColorAttachmentBindInfo));
-        }
-        if (pCreateInfo->pDepthStencilAttachment) {
-            localFBCI->pDepthStencilAttachment = new VkDepthStencilBindInfo[localFBCI->colorAttachmentCount];
-            memcpy((void*)localFBCI->pDepthStencilAttachment, pCreateInfo->pDepthStencilAttachment, localFBCI->colorAttachmentCount*sizeof(VkDepthStencilBindInfo));
+        if (pCreateInfo->pAttachments) {
+            localFBCI->pAttachments = new VkAttachmentBindInfo[localFBCI->attachmentCount];
+            memcpy((void*)localFBCI->pAttachments, pCreateInfo->pAttachments, localFBCI->attachmentCount*sizeof(VkAttachmentBindInfo));
         }
         frameBufferMap[*pFramebuffer] = localFBCI;
     }
@@ -2542,24 +2563,53 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateRenderPass(VkDevice device, const VkRende
     if (VK_SUCCESS == result) {
         // Shadow create info and store in map
         VkRenderPassCreateInfo* localRPCI = new VkRenderPassCreateInfo(*pCreateInfo);
-        if (pCreateInfo->pColorLoadOps) {
-            localRPCI->pColorLoadOps = new VkAttachmentLoadOp[localRPCI->colorAttachmentCount];
-            memcpy((void*)localRPCI->pColorLoadOps, pCreateInfo->pColorLoadOps, localRPCI->colorAttachmentCount*sizeof(VkAttachmentLoadOp));
+        if (pCreateInfo->pAttachments) {
+            localRPCI->pAttachments = new VkAttachmentDescription[localRPCI->attachmentCount];
+            memcpy((void*)localRPCI->pAttachments, pCreateInfo->pAttachments, localRPCI->attachmentCount*sizeof(VkAttachmentDescription));
         }
-        if (pCreateInfo->pColorStoreOps) {
-            localRPCI->pColorStoreOps = new VkAttachmentStoreOp[localRPCI->colorAttachmentCount];
-            memcpy((void*)localRPCI->pColorStoreOps, pCreateInfo->pColorStoreOps, localRPCI->colorAttachmentCount*sizeof(VkAttachmentStoreOp));
+        if (pCreateInfo->pSubpasses) {
+            localRPCI->pSubpasses = new VkSubpassDescription[localRPCI->subpassCount];
+            memcpy((void*)localRPCI->pSubpasses, pCreateInfo->pSubpasses, localRPCI->subpassCount*sizeof(VkSubpassDescription));
+
+            for (uint32_t i = 0; i < localRPCI->subpassCount; i++) {
+                VkSubpassDescription *subpass = (VkSubpassDescription *) &localRPCI->pSubpasses[i];
+                const uint32_t attachmentCount = subpass->inputCount +
+                    subpass->colorCount * (1 + (bool) subpass->resolveAttachments) +
+                    subpass->preserveCount;
+                VkAttachmentReference *attachments = new VkAttachmentReference[attachmentCount];
+
+                memcpy(attachments, subpass->inputAttachments,
+                        sizeof(attachments[0]) * subpass->inputCount);
+                subpass->inputAttachments = attachments;
+                attachments += subpass->inputCount;
+
+                memcpy(attachments, subpass->colorAttachments,
+                        sizeof(attachments[0]) * subpass->colorCount);
+                subpass->colorAttachments = attachments;
+                attachments += subpass->colorCount;
+
+                if (subpass->resolveAttachments) {
+                    memcpy(attachments, subpass->resolveAttachments,
+                            sizeof(attachments[0]) * subpass->colorCount);
+                    subpass->resolveAttachments = attachments;
+                    attachments += subpass->colorCount;
+                }
+
+                memcpy(attachments, subpass->preserveAttachments,
+                        sizeof(attachments[0]) * subpass->preserveCount);
+                subpass->preserveAttachments = attachments;
+            }
         }
-        if (pCreateInfo->pColorLoadClearValues) {
-            localRPCI->pColorLoadClearValues = new VkClearColorValue[localRPCI->colorAttachmentCount];
-            memcpy((void*)localRPCI->pColorLoadClearValues, pCreateInfo->pColorLoadClearValues, localRPCI->colorAttachmentCount*sizeof(VkClearColorValue));
+        if (pCreateInfo->pDependencies) {
+            localRPCI->pDependencies = new VkSubpassDependency[localRPCI->dependencyCount];
+            memcpy((void*)localRPCI->pDependencies, pCreateInfo->pDependencies, localRPCI->dependencyCount*sizeof(VkSubpassDependency));
         }
         renderPassMap[*pRenderPass] = localRPCI;
     }
     return result;
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdBeginRenderPass(VkCmdBuffer cmdBuffer, const VkRenderPassBegin *pRenderPassBegin)
+VK_LAYER_EXPORT void VKAPI vkCmdBeginRenderPass(VkCmdBuffer cmdBuffer, const VkRenderPassBeginInfo *pRenderPassBegin, VkRenderPassContents contents)
 {
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
@@ -2571,15 +2621,35 @@ VK_LAYER_EXPORT void VKAPI vkCmdBeginRenderPass(VkCmdBuffer cmdBuffer, const VkR
                 updateCBTracking(cmdBuffer);
                 addCmd(pCB, CMD_BEGINRENDERPASS);
                 pCB->activeRenderPass = pRenderPassBegin->renderPass;
+                pCB->activeSubpass = 0;
                 pCB->framebuffer = pRenderPassBegin->framebuffer;
                 if (pCB->lastBoundPipeline) {
                     validatePipelineState(pCB, VK_PIPELINE_BIND_POINT_GRAPHICS, pCB->lastBoundPipeline);
                 }
-                get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdBeginRenderPass(cmdBuffer, pRenderPassBegin);
+                get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdBeginRenderPass(cmdBuffer, pRenderPassBegin, contents);
             }
         } else {
             log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, (VkObjectType) 0, NULL, 0, DRAWSTATE_INVALID_RENDERPASS, "DS",
                     "You cannot use a NULL RenderPass object in vkCmdBeginRenderPass()");
+        }
+    }
+}
+
+VK_LAYER_EXPORT void VKAPI vkCmdNextSubpass(VkCmdBuffer cmdBuffer, VkRenderPassContents contents)
+{
+    GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
+    if (pCB) {
+        if (!pCB->activeRenderPass) {
+            log_msg(mdd(pCB->cmdBuffer), VK_DBG_REPORT_ERROR_BIT, (VkObjectType) 0, NULL, 0, DRAWSTATE_NO_ACTIVE_RENDERPASS, "DS",
+                    "Incorrect call to vkCmdNextSubpass() without an active RenderPass.");
+        } else {
+            updateCBTracking(cmdBuffer);
+            addCmd(pCB, CMD_NEXTSUBPASS);
+            pCB->activeSubpass++;
+            if (pCB->lastBoundPipeline) {
+                validatePipelineState(pCB, VK_PIPELINE_BIND_POINT_GRAPHICS, pCB->lastBoundPipeline);
+            }
+            get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdNextSubpass(cmdBuffer, contents);
         }
     }
 }
@@ -2595,6 +2665,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdEndRenderPass(VkCmdBuffer cmdBuffer)
             updateCBTracking(cmdBuffer);
             addCmd(pCB, CMD_ENDRENDERPASS);
             pCB->activeRenderPass = 0;
+            pCB->activeSubpass = 0;
             get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdEndRenderPass(cmdBuffer);
         }
     }
@@ -2828,6 +2899,8 @@ VK_LAYER_EXPORT void* VKAPI vkGetDeviceProcAddr(VkDevice dev, const char* funcNa
         return (void*) vkCreateRenderPass;
     if (!strcmp(funcName, "vkCmdBeginRenderPass"))
         return (void*) vkCmdBeginRenderPass;
+    if (!strcmp(funcName, "vkCmdNextSubpass"))
+        return (void*) vkCmdNextSubpass;
     if (!strcmp(funcName, "vkCmdEndRenderPass"))
         return (void*) vkCmdEndRenderPass;
 

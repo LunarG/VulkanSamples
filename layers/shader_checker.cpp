@@ -171,6 +171,33 @@ struct shader_object {
 };
 static std::unordered_map<void *, shader_object *> shader_object_map;
 
+struct render_pass {
+    std::vector<std::vector<VkFormat>> subpass_color_formats;
+
+    render_pass(VkRenderPassCreateInfo const *pCreateInfo)
+    {
+        uint32_t i;
+
+        subpass_color_formats.reserve(pCreateInfo->subpassCount);
+        for (i = 0; i < pCreateInfo->subpassCount; i++) {
+            const VkSubpassDescription *subpass = &pCreateInfo->pSubpasses[i];
+            std::vector<VkFormat> color_formats;
+            uint32_t j;
+
+            color_formats.reserve(subpass->colorCount);
+            for (j = 0; j < subpass->colorCount; j++) {
+                const uint32_t att = subpass->colorAttachments[j].attachment;
+                const VkFormat format = pCreateInfo->pAttachments[att].format;
+
+                color_formats.push_back(pCreateInfo->pAttachments[att].format);
+            }
+
+            subpass_color_formats.push_back(color_formats);
+        }
+    }
+};
+static std::unordered_map<void *, render_pass *> render_pass_map;
+
 
 static void
 init_shader_checker(layer_data *my_data)
@@ -519,6 +546,19 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateShader(
     return res;
 }
 
+VK_LAYER_EXPORT VkResult VKAPI vkCreateRenderPass(
+        VkDevice device,
+        const VkRenderPassCreateInfo *pCreateInfo,
+        VkRenderPass *pRenderPass)
+{
+    loader_platform_thread_lock_mutex(&globalLock);
+    VkResult res = get_dispatch_table(shader_checker_device_table_map, device)->CreateRenderPass(device, pCreateInfo, pRenderPass);
+
+    render_pass_map[(VkBaseLayerObject *) *pRenderPass] = new render_pass(pCreateInfo);
+    loader_platform_thread_unlock_mutex(&globalLock);
+    return res;
+}
+
 static bool
 validate_interface_between_stages(VkDevice dev,
                                   shader_module const *producer, char const *producer_name,
@@ -755,8 +795,9 @@ validate_vi_against_vs_inputs(VkDevice dev, VkPipelineVertexInputStateCreateInfo
 
 
 static bool
-validate_fs_outputs_against_cb(VkDevice dev, shader_module const *fs, VkPipelineCbStateCreateInfo const *cb)
+validate_fs_outputs_against_render_pass(VkDevice dev, shader_module const *fs, render_pass const *rp, uint32_t subpass)
 {
+    const std::vector<VkFormat> &color_formats = rp->subpass_color_formats[subpass];
     std::map<uint32_t, interface_var> outputs;
     std::map<uint32_t, interface_var> builtin_outputs;
     bool pass = true;
@@ -775,8 +816,8 @@ validate_fs_outputs_against_cb(VkDevice dev, shader_module const *fs, VkPipeline
             pass = false;
         }
 
-        for (unsigned i = 0; i < cb->attachmentCount; i++) {
-            unsigned attachmentType = get_format_type(cb->pAttachments[i].format);
+        for (unsigned i = 0; i < color_formats.size(); i++) {
+            unsigned attachmentType = get_format_type(color_formats[i]);
             if (attachmentType == FORMAT_TYPE_SINT || attachmentType == FORMAT_TYPE_UINT) {
                 log_msg(mdd(dev), VK_DBG_REPORT_ERROR_BIT, (VkObjectType) 0, NULL, 0, SHADER_CHECKER_INTERFACE_TYPE_MISMATCH, "SC",
                         "CB format should not be SINT or UINT when using broadcast");
@@ -794,8 +835,8 @@ validate_fs_outputs_against_cb(VkDevice dev, shader_module const *fs, VkPipeline
      * are currently dense, but the parallel with matching between shader stages is nice.
      */
 
-    while ((outputs.size() > 0 && it != outputs.end()) || attachment < cb->attachmentCount) {
-        if (attachment == cb->attachmentCount || ( it != outputs.end() && it->first < attachment)) {
+    while ((outputs.size() > 0 && it != outputs.end()) || attachment < color_formats.size()) {
+        if (attachment == color_formats.size() || ( it != outputs.end() && it->first < attachment)) {
             log_msg(mdd(dev), VK_DBG_REPORT_WARN_BIT, (VkObjectType) 0, NULL, 0, SHADER_CHECKER_OUTPUT_NOT_CONSUMED, "SC",
                     "FS writes to output location %d with no matching attachment", it->first);
             it++;
@@ -808,7 +849,7 @@ validate_fs_outputs_against_cb(VkDevice dev, shader_module const *fs, VkPipeline
         }
         else {
             unsigned output_type = get_fundamental_type(fs, it->second.type_id);
-            unsigned att_type = get_format_type(cb->pAttachments[attachment].format);
+            unsigned att_type = get_format_type(color_formats[attachment]);
 
             /* type checking */
             if (att_type != FORMAT_TYPE_UNDEFINED && output_type != FORMAT_TYPE_UNDEFINED && att_type != output_type) {
@@ -816,7 +857,7 @@ validate_fs_outputs_against_cb(VkDevice dev, shader_module const *fs, VkPipeline
                 describe_type(fs_type, fs, it->second.type_id);
                 log_msg(mdd(dev), VK_DBG_REPORT_ERROR_BIT, (VkObjectType) 0, NULL, 0, SHADER_CHECKER_INTERFACE_TYPE_MISMATCH, "SC",
                         "Attachment %d of type `%s` does not match FS output type of `%s`",
-                        attachment, string_VkFormat(cb->pAttachments[attachment].format), fs_type);
+                        attachment, string_VkFormat(color_formats[attachment]), fs_type);
                 pass = false;
             }
 
@@ -855,7 +896,7 @@ validate_graphics_pipeline(VkDevice dev, uint32_t count, VkGraphicsPipelineCreat
 
     shader_module const *shaders[VK_SHADER_STAGE_FRAGMENT + 1];  /* exclude CS */
     memset(shaders, 0, sizeof(shaders));
-    VkPipelineCbStateCreateInfo const *cb = 0;
+    render_pass const *rp = 0;
     VkPipelineVertexInputStateCreateInfo const *vi = 0;
     bool pass = true;
 
@@ -876,7 +917,9 @@ validate_graphics_pipeline(VkDevice dev, uint32_t count, VkGraphicsPipelineCreat
         }
     }
 
-    cb = pCreateInfo->pCbState;
+    if (pCreateInfo->renderPass != VK_NULL_HANDLE)
+        rp = render_pass_map[(void *) pCreateInfo->renderPass];
+
     vi = pCreateInfo->pVertexInputState;
 
     if (vi) {
@@ -910,8 +953,8 @@ validate_graphics_pipeline(VkDevice dev, uint32_t count, VkGraphicsPipelineCreat
         }
     }
 
-    if (shaders[VK_SHADER_STAGE_FRAGMENT] && shaders[VK_SHADER_STAGE_FRAGMENT]->is_spirv && cb) {
-        pass = validate_fs_outputs_against_cb(dev, shaders[VK_SHADER_STAGE_FRAGMENT], cb) && pass;
+    if (shaders[VK_SHADER_STAGE_FRAGMENT] && shaders[VK_SHADER_STAGE_FRAGMENT]->is_spirv && rp) {
+        pass = validate_fs_outputs_against_render_pass(dev, shaders[VK_SHADER_STAGE_FRAGMENT], rp, pCreateInfo->subpass) && pass;
     }
 
     loader_platform_thread_unlock_mutex(&globalLock);
@@ -1048,6 +1091,7 @@ VK_LAYER_EXPORT void * VKAPI vkGetDeviceProcAddr(VkDevice dev, const char* funcN
     ADD_HOOK(vkCreateDevice);
     ADD_HOOK(vkCreateShaderModule);
     ADD_HOOK(vkCreateShader);
+    ADD_HOOK(vkCreateRenderPass);
     ADD_HOOK(vkDestroyDevice);
     ADD_HOOK(vkCreateGraphicsPipelines);
 #undef ADD_HOOK

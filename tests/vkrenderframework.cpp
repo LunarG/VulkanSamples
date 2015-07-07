@@ -51,6 +51,9 @@ VkRenderFramework::VkRenderFramework() :
     m_devMsgCallback( VK_NULL_HANDLE )
 {
 
+    memset(&m_renderPassBeginInfo, 0, sizeof(m_renderPassBeginInfo));
+    m_renderPassBeginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+
     // clear the back buffer to dark grey
     m_clear_color.f32[0] = 0.25f;
     m_clear_color.f32[1] = 0.25f;
@@ -157,7 +160,7 @@ void VkRenderFramework::ShutdownFramework()
         vkDestroyObject(device(), VK_OBJECT_TYPE_DYNAMIC_VP_STATE, m_stateViewport);
     }
     while (!m_renderTargets.empty()) {
-        vkDestroyObject(device(), VK_OBJECT_TYPE_COLOR_ATTACHMENT_VIEW, m_renderTargets.back()->targetView());
+        vkDestroyObject(device(), VK_OBJECT_TYPE_ATTACHMENT_VIEW, m_renderTargets.back()->targetView());
         vkDestroyObject(device(), VK_OBJECT_TYPE_IMAGE, m_renderTargets.back()->image());
         vkFreeMemory(device(), m_renderTargets.back()->memory());
         m_renderTargets.pop_back();
@@ -256,20 +259,50 @@ void VkRenderFramework::InitRenderTarget(uint32_t targets)
     InitRenderTarget(targets, NULL);
 }
 
-void VkRenderFramework::InitRenderTarget(VkDepthStencilBindInfo *dsBinding)
+void VkRenderFramework::InitRenderTarget(VkAttachmentBindInfo *dsBinding)
 {
     InitRenderTarget(1, dsBinding);
 }
 
-void VkRenderFramework::InitRenderTarget(uint32_t targets, VkDepthStencilBindInfo *dsBinding)
+void VkRenderFramework::InitRenderTarget(uint32_t targets, VkAttachmentBindInfo *dsBinding)
 {
-    std::vector<VkAttachmentLoadOp> load_ops;
-    std::vector<VkAttachmentStoreOp> store_ops;
-    std::vector<VkClearColorValue> clear_colors;
+    std::vector<VkAttachmentDescription> attachments;
+    std::vector<VkAttachmentReference> color_references;
+    std::vector<VkAttachmentBindInfo> bindings;
+    attachments.reserve(targets + (bool) dsBinding);
+    color_references.reserve(targets);
+    bindings.reserve(targets + (bool) dsBinding);
 
-    uint32_t i;
+    VkAttachmentDescription att = {};
+    att.sType = VK_STRUCTURE_TYPE_ATTACHMENT_DESCRIPTION;
+    att.pNext = NULL;
+    att.format = m_render_target_fmt;
+    att.samples = 1;
+    att.loadOp = (m_clear_via_load_op) ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_LOAD;
+    att.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+    att.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+    att.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+    att.initialLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+    att.finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
-    for (i = 0; i < targets; i++) {
+    VkAttachmentReference ref = {};
+    ref.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+    m_renderPassClearValues.clear();
+    VkClearValue clear = {};
+    clear.color = m_clear_color;
+
+    VkAttachmentBindInfo bind = {};
+    bind.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+    for (uint32_t i = 0; i < targets; i++) {
+        attachments.push_back(att);
+
+        ref.attachment = i;
+        color_references.push_back(ref);
+
+        m_renderPassClearValues.push_back(clear);
+
         VkImageObj *img = new VkImageObj(m_device);
 
         VkFormatProperties props;
@@ -291,50 +324,75 @@ void VkRenderFramework::InitRenderTarget(uint32_t targets, VkDepthStencilBindInf
         }
 
         m_renderTargets.push_back(img);
-        m_colorBindings[i].view  = img->targetView();
-        m_colorBindings[i].layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-        load_ops.push_back(m_clear_via_load_op ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_LOAD);
-        store_ops.push_back(VK_ATTACHMENT_STORE_OP_STORE);
-        clear_colors.push_back(m_clear_color);
+        bind.view  = img->targetView();
+
+        bindings.push_back(bind);
     }
 
-      // Create Framebuffer and RenderPass with color attachments and any depth/stencil attachment
+    VkSubpassDescription subpass = {};
+    subpass.sType = VK_STRUCTURE_TYPE_SUBPASS_DESCRIPTION;
+    subpass.pNext = NULL;
+    subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+    subpass.flags = 0;
+    subpass.inputCount = 0;
+    subpass.inputAttachments = NULL;
+    subpass.colorCount = targets;
+    subpass.colorAttachments = &color_references[0];
+    subpass.resolveAttachments = NULL;
+
+    if (dsBinding) {
+        att.format = m_depth_stencil_fmt;
+        att.loadOp =  VK_ATTACHMENT_LOAD_OP_LOAD;
+        att.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+        att.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
+        att.stencilStoreOp = VK_ATTACHMENT_STORE_OP_STORE;
+        att.initialLayout = dsBinding->layout;
+        att.finalLayout = dsBinding->layout;
+        attachments.push_back(att);
+
+        clear.ds.depth = m_depth_clear_color;
+        clear.ds.stencil = m_stencil_clear_color;
+        m_renderPassClearValues.push_back(clear);
+
+        bindings.push_back(*dsBinding);
+
+        subpass.depthStencilAttachment.attachment = targets;
+        subpass.depthStencilAttachment.layout = dsBinding->layout;
+    } else {
+        subpass.depthStencilAttachment.attachment = VK_ATTACHMENT_UNUSED;
+    }
+
+    subpass.preserveCount = 0;
+    subpass.preserveAttachments = NULL;
+
+    VkRenderPassCreateInfo rp_info = {};
+    rp_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+    rp_info.attachmentCount = attachments.size();
+    rp_info.pAttachments = &attachments[0];
+    rp_info.subpassCount = 1;
+    rp_info.pSubpasses = &subpass;
+
+    vkCreateRenderPass(device(), &rp_info, &m_renderPass);
+
+    // Create Framebuffer and RenderPass with color attachments and any depth/stencil attachment
     VkFramebufferCreateInfo fb_info = {};
     fb_info.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
     fb_info.pNext = NULL;
-    fb_info.colorAttachmentCount = m_renderTargets.size();
-    fb_info.pColorAttachments = m_colorBindings;
-    fb_info.pDepthStencilAttachment = dsBinding;
-    fb_info.sampleCount = 1;
+    fb_info.renderPass = m_renderPass;
+    fb_info.attachmentCount = bindings.size();
+    fb_info.pAttachments = &bindings[0];
     fb_info.width = (uint32_t)m_width;
     fb_info.height = (uint32_t)m_height;
     fb_info.layers = 1;
 
     vkCreateFramebuffer(device(), &fb_info, &m_framebuffer);
 
-    VkRenderPassCreateInfo rp_info = {};
-    rp_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-    rp_info.renderArea.extent.width = (uint32_t) m_width;
-    rp_info.renderArea.extent.height = (uint32_t) m_height;
-
-    rp_info.colorAttachmentCount = m_renderTargets.size();
-    rp_info.pColorFormats = &m_render_target_fmt;
-    rp_info.pColorLayouts = &m_colorBindings[0].layout;
-    rp_info.pColorLoadOps = &load_ops[0];
-    rp_info.pColorStoreOps = &store_ops[0];
-    rp_info.pColorLoadClearValues = &clear_colors[0];
-    rp_info.depthStencilFormat = m_depth_stencil_fmt;
-    if (dsBinding) {
-        rp_info.depthStencilLayout = dsBinding->layout;
-    }
-    rp_info.depthLoadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
-    rp_info.depthLoadClearValue = m_depth_clear_color;
-    rp_info.depthStoreOp = VK_ATTACHMENT_STORE_OP_STORE;
-    rp_info.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
-    rp_info.stencilLoadClearValue = m_stencil_clear_color;
-    rp_info.stencilStoreOp = VK_ATTACHMENT_STORE_OP_STORE;
-    rp_info.sampleCount = 1;
-    vkCreateRenderPass(device(), &rp_info, &m_renderPass);
+    m_renderPassBeginInfo.renderPass = m_renderPass;
+    m_renderPassBeginInfo.framebuffer = m_framebuffer;
+    m_renderPassBeginInfo.renderArea.extent.width = m_width;
+    m_renderPassBeginInfo.renderArea.extent.height = m_height;
+    m_renderPassBeginInfo.attachmentCount = m_renderPassClearValues.size();
+    m_renderPassBeginInfo.pAttachmentClearValues = &m_renderPassClearValues[0];
 }
 
 
@@ -1093,7 +1151,6 @@ VkPipelineObj::VkPipelineObj(VkDeviceObj *device)
 
     m_ds_state.sType = VK_STRUCTURE_TYPE_PIPELINE_DS_STATE_CREATE_INFO;
     m_ds_state.pNext = VK_NULL_HANDLE,
-    m_ds_state.format = VK_FORMAT_D32_SFLOAT;
     m_ds_state.depthTestEnable      = VK_FALSE;
     m_ds_state.depthWriteEnable     = VK_FALSE;
     m_ds_state.depthBoundsEnable    = VK_FALSE;
@@ -1104,13 +1161,6 @@ VkPipelineObj::VkPipelineObj(VkDeviceObj *device)
     m_ds_state.back.stencilCompareOp = VK_COMPARE_OP_ALWAYS;
     m_ds_state.stencilTestEnable = VK_FALSE;
     m_ds_state.front = m_ds_state.back;
-
-    VkPipelineCbAttachmentState att = {};
-    att.blendEnable = VK_FALSE;
-    att.format = VK_FORMAT_B8G8R8A8_UNORM;
-    att.channelWriteMask = 0xf;
-    AddColorAttachment(0, &att);
-
 };
 
 void VkPipelineObj::AddShader(VkShaderObj* shader)
@@ -1148,7 +1198,6 @@ void VkPipelineObj::AddColorAttachment(uint32_t binding, const VkPipelineCbAttac
 
 void VkPipelineObj::SetDepthStencil(VkPipelineDsStateCreateInfo *ds_state)
 {
-    m_ds_state.format = ds_state->format;
     m_ds_state.depthTestEnable = ds_state->depthTestEnable;
     m_ds_state.depthWriteEnable = ds_state->depthWriteEnable;
     m_ds_state.depthBoundsEnable = ds_state->depthBoundsEnable;
@@ -1158,7 +1207,7 @@ void VkPipelineObj::SetDepthStencil(VkPipelineDsStateCreateInfo *ds_state)
     m_ds_state.front = ds_state->front;
 }
 
-VkResult VkPipelineObj::CreateVKPipeline(VkDescriptorSetObj &descriptorSet)
+VkResult VkPipelineObj::CreateVKPipeline(VkDescriptorSetObj &descriptorSet, VkRenderPass render_pass)
 {
     VkGraphicsPipelineCreateInfo info = {};
 
@@ -1194,6 +1243,8 @@ VkResult VkPipelineObj::CreateVKPipeline(VkDescriptorSetObj &descriptorSet)
     info.pMsState          = &m_ms_state;
     info.pDsState          = &m_ds_state;
     info.pCbState          = &m_cb_state;
+    info.renderPass        = render_pass;
+    info.subpass           = 0;
 
     return init_try(*m_device, info);
 }
@@ -1366,14 +1417,9 @@ void VkCommandBufferObj::PrepareAttachments()
     }
 }
 
-void VkCommandBufferObj::BeginRenderPass(VkRenderPass renderpass, VkFramebuffer framebuffer)
+void VkCommandBufferObj::BeginRenderPass(const VkRenderPassBeginInfo &info)
 {
-    VkRenderPassBegin rp_begin = {
-        renderpass,
-        framebuffer,
-    };
-
-    vkCmdBeginRenderPass( obj(), &rp_begin);
+    vkCmdBeginRenderPass( obj(), &info, VK_RENDER_PASS_CONTENTS_INLINE);
 }
 
 void VkCommandBufferObj::EndRenderPass()
@@ -1454,19 +1500,19 @@ bool VkDepthStencilObj::Initialized()
     return m_initialized;
 }
 
-VkDepthStencilBindInfo* VkDepthStencilObj::BindInfo()
+VkAttachmentBindInfo* VkDepthStencilObj::BindInfo()
 {
-    return &m_depthStencilBindInfo;
+    return &m_attachmentBindInfo;
 }
 
-void VkDepthStencilObj::Init(VkDeviceObj *device, int32_t width, int32_t height)
+void VkDepthStencilObj::Init(VkDeviceObj *device, int32_t width, int32_t height, VkFormat format)
 {
     VkImageCreateInfo image_info;
-    VkDepthStencilViewCreateInfo view_info;
+    VkAttachmentViewCreateInfo view_info;
 
     m_device = device;
     m_initialized = true;
-    m_depth_stencil_fmt = VK_FORMAT_D16_UNORM;
+    m_depth_stencil_fmt = format;
 
     image_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
     image_info.pNext = NULL;
@@ -1483,7 +1529,7 @@ void VkDepthStencilObj::Init(VkDeviceObj *device, int32_t width, int32_t height)
     image_info.flags = 0;
     init(*m_device, image_info);
 
-    view_info.sType = VK_STRUCTURE_TYPE_DEPTH_STENCIL_VIEW_CREATE_INFO;
+    view_info.sType = VK_STRUCTURE_TYPE_ATTACHMENT_VIEW_CREATE_INFO;
     view_info.pNext = NULL;
     view_info.image = VK_NULL_HANDLE;
     view_info.mipLevel = 0;
@@ -1491,8 +1537,8 @@ void VkDepthStencilObj::Init(VkDeviceObj *device, int32_t width, int32_t height)
     view_info.arraySize = 1;
     view_info.flags = 0;
     view_info.image = obj();
-    m_depthStencilView.init(*m_device, view_info);
+    m_attachmentView.init(*m_device, view_info);
 
-    m_depthStencilBindInfo.view = m_depthStencilView.obj();
-    m_depthStencilBindInfo.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+    m_attachmentBindInfo.view = m_attachmentView.obj();
+    m_attachmentBindInfo.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 }

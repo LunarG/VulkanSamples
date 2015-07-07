@@ -236,13 +236,13 @@ static struct nulldrv_gpu *nulldrv_gpu(VkPhysicalDevice gpu)
 }
 
 static VkResult nulldrv_rt_view_create(struct nulldrv_dev *dev,
-                                const VkColorAttachmentViewCreateInfo *info,
+                                const VkAttachmentViewCreateInfo *info,
                                 struct nulldrv_rt_view **view_ret)
 {
     struct nulldrv_rt_view *view;
 
     view = (struct nulldrv_rt_view *) nulldrv_base_create(dev, sizeof(*view),
-            VK_OBJECT_TYPE_COLOR_ATTACHMENT_VIEW);
+            VK_OBJECT_TYPE_ATTACHMENT_VIEW);
     if (!view)
         return VK_ERROR_OUT_OF_HOST_MEMORY;
 
@@ -340,27 +340,6 @@ static VkResult nulldrv_mem_alloc(struct nulldrv_dev *dev,
     mem->size = info->allocationSize;
 
     *mem_ret = mem;
-
-    return VK_SUCCESS;
-}
-
-static VkResult nulldrv_ds_view_create(struct nulldrv_dev *dev,
-                                const VkDepthStencilViewCreateInfo *info,
-                                struct nulldrv_ds_view **view_ret)
-{
-    struct nulldrv_img *img = nulldrv_img(info->image);
-    struct nulldrv_ds_view *view;
-
-    view = (struct nulldrv_ds_view *) nulldrv_base_create(dev, sizeof(*view),
-            VK_OBJECT_TYPE_DEPTH_STENCIL_VIEW);
-    if (!view)
-        return VK_ERROR_OUT_OF_HOST_MEMORY;
-
-    view->img = img;
-
-    view->array_size = info->arraySize;
-
-    *view_ret = view;
 
     return VK_SUCCESS;
 }
@@ -1978,29 +1957,16 @@ ICD_EXPORT VkResult VKAPI vkCreateImageView(
             (struct nulldrv_img_view **) pView);
 }
 
-ICD_EXPORT VkResult VKAPI vkCreateColorAttachmentView(
+ICD_EXPORT VkResult VKAPI vkCreateAttachmentView(
     VkDevice                                  device,
-    const VkColorAttachmentViewCreateInfo* pCreateInfo,
-    VkColorAttachmentView*                  pView)
+    const VkAttachmentViewCreateInfo* pCreateInfo,
+    VkAttachmentView*                  pView)
 {
     NULLDRV_LOG_FUNC;
     struct nulldrv_dev *dev = nulldrv_dev(device);
 
     return nulldrv_rt_view_create(dev, pCreateInfo,
             (struct nulldrv_rt_view **) pView);
-}
-
-ICD_EXPORT VkResult VKAPI vkCreateDepthStencilView(
-    VkDevice                                  device,
-    const VkDepthStencilViewCreateInfo*   pCreateInfo,
-    VkDepthStencilView*                     pView)
-{
-    NULLDRV_LOG_FUNC;
-    struct nulldrv_dev *dev = nulldrv_dev(device);
-
-    return nulldrv_ds_view_create(dev, pCreateInfo,
-            (struct nulldrv_ds_view **) pView);
-
 }
 
 ICD_EXPORT VkResult VKAPI vkCreateDescriptorSetLayout(
@@ -2116,8 +2082,16 @@ ICD_EXPORT VkResult VKAPI vkCreateRenderPass(
 }
 
 ICD_EXPORT void VKAPI vkCmdBeginRenderPass(
-    VkCmdBuffer                              cmdBuffer,
-    const VkRenderPassBegin*                pRenderPassBegin)
+    VkCmdBuffer                                 cmdBuffer,
+    const VkRenderPassBeginInfo*                pRenderPassBegin,
+    VkRenderPassContents                        contents)
+{
+    NULLDRV_LOG_FUNC;
+}
+
+ICD_EXPORT void VKAPI vkCmdNextSubpass(
+    VkCmdBuffer                                 cmdBuffer,
+    VkRenderPassContents                        contents)
 {
     NULLDRV_LOG_FUNC;
 }

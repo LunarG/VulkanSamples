@@ -122,8 +122,8 @@ typedef struct _SAMPLER_NODE {
 typedef struct _IMAGE_NODE {
     union {
         VkImageViewCreateInfo ivci;
-        VkColorAttachmentViewCreateInfo cvci;
-        VkDepthStencilViewCreateInfo dsvci;
+        VkAttachmentViewCreateInfo cvci;
+        VkAttachmentViewCreateInfo dsvci;
     } createInfo;
 } IMAGE_NODE;
 
@@ -214,6 +214,7 @@ typedef enum _CMD_TYPE
     CMD_LOADATOMICCOUNTERS,
     CMD_SAVEATOMICCOUNTERS,
     CMD_BEGINRENDERPASS,
+    CMD_NEXTSUBPASS,
     CMD_ENDRENDERPASS,
     CMD_EXECUTECOMMANDS,
     CMD_DBGMARKERBEGIN,
@@ -264,6 +265,7 @@ typedef struct _GLOBAL_CB_NODE {
     VkDescriptorSet              lastBoundDescriptorSet;
     VkPipelineLayout             lastBoundPipelineLayout;
     VkRenderPass                 activeRenderPass;
+    uint32_t                     activeSubpass;
     VkFramebuffer                framebuffer;
     vector<VkDescriptorSet>      boundDescriptorSets;
 } GLOBAL_CB_NODE;

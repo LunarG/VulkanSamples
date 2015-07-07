@@ -482,16 +482,10 @@ public:
     void init(const Device &dev, const VkImageViewCreateInfo &info);
 };
 
-class ColorAttachmentView : public DerivedObject<VkColorAttachmentView, Object, VK_OBJECT_TYPE_COLOR_ATTACHMENT_VIEW> {
+class AttachmentView : public DerivedObject<VkAttachmentView, Object, VK_OBJECT_TYPE_ATTACHMENT_VIEW> {
 public:
-    // vkCreateColorAttachmentView()
-    void init(const Device &dev, const VkColorAttachmentViewCreateInfo &info);
-};
-
-class DepthStencilView : public DerivedObject<VkDepthStencilView, Object, VK_OBJECT_TYPE_DEPTH_STENCIL_VIEW> {
-public:
-    // vkCreateDepthStencilView()
-    void init(const Device &dev, const VkDepthStencilViewCreateInfo &info);
+    // vkCreateAttachmentView()
+    void init(const Device &dev, const VkAttachmentViewCreateInfo &info);
 };
 
 class ShaderModule : public DerivedObject<VkShaderModule, Object, VK_OBJECT_TYPE_SHADER_MODULE> {

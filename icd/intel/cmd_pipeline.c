@@ -2017,16 +2017,13 @@ static void emit_shader_resources(struct intel_cmd *cmd)
 
 static void emit_msaa(struct intel_cmd *cmd)
 {
-    const struct intel_fb *fb = cmd->bind.fb;
+    const struct intel_pipeline *pipeline = cmd->bind.pipeline.graphics;
 
     if (!cmd->bind.render_pass_changed)
         return;
 
-    if (fb->sample_count != cmd->bind.pipeline.graphics->sample_count)
-        cmd->result = VK_ERROR_UNKNOWN;
-
     cmd_wa_gen6_pre_multisample_depth_flush(cmd);
-    gen6_3DSTATE_MULTISAMPLE(cmd, fb->sample_count);
+    gen6_3DSTATE_MULTISAMPLE(cmd, pipeline->sample_count);
 }
 
 static void emit_rt(struct intel_cmd *cmd)
@@ -3623,8 +3620,9 @@ ICD_EXPORT void VKAPI vkCmdDispatchIndirect(
 }
 
 ICD_EXPORT void VKAPI vkCmdBeginRenderPass(
-    VkCmdBuffer                              cmdBuffer,
-    const VkRenderPassBegin*                pRenderPassBegin)
+    VkCmdBuffer                                 cmdBuffer,
+    const VkRenderPassBeginInfo*                pRenderPassBegin,
+    VkRenderPassContents                        contents)
 {
     struct intel_cmd *cmd = intel_cmd(cmdBuffer);
     const struct intel_render_pass *rp =
@@ -3638,10 +3636,12 @@ ICD_EXPORT void VKAPI vkCmdBeginRenderPass(
         return;
     }
 
-    cmd_begin_render_pass(cmd, rp, fb, pRenderPassBegin->contents);
+    cmd_begin_render_pass(cmd, rp, fb, contents);
 
     for (i = 0; i < rp->attachment_count; i++) {
         const struct intel_render_pass_attachment *att = &rp->attachments[i];
+        const VkClearValue *clear_val =
+            &pRenderPassBegin->pAttachmentClearValues[i];
         VkImageSubresourceRange range;
 
         if (!att->clear_on_load)
@@ -3657,13 +3657,13 @@ ICD_EXPORT void VKAPI vkCmdBeginRenderPass(
             range.aspect = VK_IMAGE_ASPECT_COLOR;
 
             cmd_meta_clear_color_image(cmdBuffer, (VkImage) view->img,
-                    att->initial_layout, &att->clear_val.color, 1, &range);
+                    att->initial_layout, &clear_val->color, 1, &range);
         } else {
             range.aspect = VK_IMAGE_ASPECT_DEPTH;
 
             cmd_meta_clear_depth_stencil_image(cmdBuffer,
                     (VkImage) view->img, att->initial_layout,
-                    att->clear_val.ds.depth, att->clear_val.ds.stencil,
+                    clear_val->ds.depth, clear_val->ds.stencil,
                     1, &range);
 
             if (att->stencil_clear_on_load) {
@@ -3671,11 +3671,29 @@ ICD_EXPORT void VKAPI vkCmdBeginRenderPass(
 
                 cmd_meta_clear_depth_stencil_image(cmdBuffer,
                         (VkImage) view->img, att->initial_layout,
-                        att->clear_val.ds.depth, att->clear_val.ds.stencil,
+                        clear_val->ds.depth, clear_val->ds.stencil,
                         1, &range);
             }
         }
     }
+}
+
+ICD_EXPORT void VKAPI vkCmdNextSubpass(
+    VkCmdBuffer                                 cmdBuffer,
+    VkRenderPassContents                        contents)
+{
+    struct intel_cmd *cmd = intel_cmd(cmdBuffer);
+    const struct intel_render_pass *rp = cmd->bind.render_pass;
+
+   if (cmd->bind.render_pass_subpass >= rp->subpasses +
+           rp->subpass_count - 1) {
+       cmd->result = VK_ERROR_UNKNOWN;
+       return;
+   }
+
+   cmd->bind.render_pass_changed = true;
+   cmd->bind.render_pass_subpass++;
+   cmd->bind.render_pass_contents = contents;
 }
 
 ICD_EXPORT void VKAPI vkCmdEndRenderPass(

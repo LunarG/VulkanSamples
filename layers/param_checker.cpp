@@ -971,10 +971,10 @@ std::string EnumeratorString(VkImageCreateFlagBits const& enumerator)
 }
 
 static
-bool ValidateEnumerator(VkDepthStencilViewCreateFlagBits const& enumerator)
+bool ValidateEnumerator(VkAttachmentViewCreateFlagBits const& enumerator)
 {
-    VkDepthStencilViewCreateFlagBits allFlags = (VkDepthStencilViewCreateFlagBits)(VK_DEPTH_STENCIL_VIEW_CREATE_READ_ONLY_STENCIL_BIT |
-        VK_DEPTH_STENCIL_VIEW_CREATE_READ_ONLY_DEPTH_BIT);
+    VkAttachmentViewCreateFlagBits allFlags = (VkAttachmentViewCreateFlagBits)(VK_ATTACHMENT_VIEW_CREATE_READ_ONLY_STENCIL_BIT |
+        VK_ATTACHMENT_VIEW_CREATE_READ_ONLY_DEPTH_BIT);
     if(enumerator & (~allFlags))
     {
         return false;
@@ -984,7 +984,7 @@ bool ValidateEnumerator(VkDepthStencilViewCreateFlagBits const& enumerator)
 }
 
 static
-std::string EnumeratorString(VkDepthStencilViewCreateFlagBits const& enumerator)
+std::string EnumeratorString(VkAttachmentViewCreateFlagBits const& enumerator)
 {
     if(!ValidateEnumerator(enumerator))
     {
@@ -992,13 +992,13 @@ std::string EnumeratorString(VkDepthStencilViewCreateFlagBits const& enumerator)
     }
 
     std::vector<std::string> strings;
-    if(enumerator & VK_DEPTH_STENCIL_VIEW_CREATE_READ_ONLY_STENCIL_BIT)
+    if(enumerator & VK_ATTACHMENT_VIEW_CREATE_READ_ONLY_STENCIL_BIT)
     {
-        strings.push_back("VK_DEPTH_STENCIL_VIEW_CREATE_READ_ONLY_STENCIL_BIT");
+        strings.push_back("VK_ATTACHMENT_VIEW_CREATE_READ_ONLY_STENCIL_BIT");
     }
-    if(enumerator & VK_DEPTH_STENCIL_VIEW_CREATE_READ_ONLY_DEPTH_BIT)
+    if(enumerator & VK_ATTACHMENT_VIEW_CREATE_READ_ONLY_DEPTH_BIT)
     {
-        strings.push_back("VK_DEPTH_STENCIL_VIEW_CREATE_READ_ONLY_DEPTH_BIT");
+        strings.push_back("VK_ATTACHMENT_VIEW_CREATE_READ_ONLY_DEPTH_BIT");
     }
 
     std::string enumeratorString;
@@ -4295,184 +4295,93 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateImageView(
     return result;
 }
 
-void PreCreateColorAttachmentView(
+void PreCreateAttachmentView(
     VkDevice device,
-    const VkColorAttachmentViewCreateInfo* pCreateInfo)
+    const VkAttachmentViewCreateInfo* pCreateInfo)
 {
     if(device == nullptr)
     {
         log_msg(mdd(device), VK_DBG_REPORT_WARN_BIT, (VkObjectType)0, NULL, 0, 1, "PARAMCHECK",
-        "vkCreateColorAttachmentView parameter, VkDevice device, is null pointer");
+        "vkCreateAttachmentView parameter, VkDevice device, is null pointer");
         return;
     }
 
     if(pCreateInfo == nullptr)
     {
         log_msg(mdd(device), VK_DBG_REPORT_WARN_BIT, (VkObjectType)0, NULL, 0, 1, "PARAMCHECK",
-        "vkCreateColorAttachmentView parameter, const VkColorAttachmentViewCreateInfo* pCreateInfo, is null pointer");
+        "vkCreateAttachmentView parameter, const VkAttachmentViewCreateInfo* pCreateInfo, is null pointer");
         return;
     }
     if(pCreateInfo->sType < VK_STRUCTURE_TYPE_BEGIN_RANGE ||
         pCreateInfo->sType > VK_STRUCTURE_TYPE_END_RANGE)
     {
         log_msg(mdd(device), VK_DBG_REPORT_WARN_BIT, (VkObjectType)0, NULL, 0, 1, "PARAMCHECK",
-        "vkCreateColorAttachmentView parameter, VkStructureType pCreateInfo->sType, is unrecognized enumerator");
+        "vkCreateAttachmentView parameter, VkStructureType pCreateInfo->sType, is unrecognized enumerator");
         return;
     }
     if(pCreateInfo->image == nullptr)
     {
         log_msg(mdd(device), VK_DBG_REPORT_WARN_BIT, (VkObjectType)0, NULL, 0, 1, "PARAMCHECK",
-        "vkCreateColorAttachmentView parameter, VkImage pCreateInfo->image, is null pointer");
+        "vkCreateAttachmentView parameter, VkImage pCreateInfo->image, is null pointer");
         return;
     }
     if(pCreateInfo->format < VK_FORMAT_BEGIN_RANGE ||
         pCreateInfo->format > VK_FORMAT_END_RANGE)
     {
         log_msg(mdd(device), VK_DBG_REPORT_WARN_BIT, (VkObjectType)0, NULL, 0, 1, "PARAMCHECK",
-        "vkCreateColorAttachmentView parameter, VkFormat pCreateInfo->format, is unrecognized enumerator");
+        "vkCreateAttachmentView parameter, VkFormat pCreateInfo->format, is unrecognized enumerator");
         return;
     }
-    if(pCreateInfo->msaaResolveImage == nullptr)
+    if(!ValidateEnumerator((VkAttachmentViewCreateFlagBits)pCreateInfo->flags))
     {
-        log_msg(mdd(device), VK_DBG_REPORT_WARN_BIT, (VkObjectType)0, NULL, 0, 1, "PARAMCHECK",
-        "vkCreateColorAttachmentView parameter, VkImage pCreateInfo->msaaResolveImage, is null pointer");
-        return;
-    }
-    if(pCreateInfo->msaaResolveSubResource.aspect < VK_IMAGE_ASPECT_BEGIN_RANGE ||
-        pCreateInfo->msaaResolveSubResource.aspect > VK_IMAGE_ASPECT_END_RANGE)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_WARN_BIT, (VkObjectType)0, NULL, 0, 1, "PARAMCHECK",
-        "vkCreateColorAttachmentView parameter, VkImageAspect pCreateInfo->msaaResolveSubResource.aspect, is unrecognized enumerator");
+        std::string reason = "vkCreateAttachmentView parameter, VkAttachmentViewCreateFlags pCreateInfo->flags, is " + EnumeratorString((VkAttachmentViewCreateFlagBits)pCreateInfo->flags);
+        log_msg(mdd(device), VK_DBG_REPORT_WARN_BIT, (VkObjectType)0, NULL, 0, 1, "PARAMCHECK", reason.c_str());
         return;
     }
 }
 
-void PostCreateColorAttachmentView(
+void PostCreateAttachmentView(
     VkDevice device,
-    VkColorAttachmentView* pView,
+    VkAttachmentView* pView,
     VkResult result)
 {
     if(device == nullptr)
     {
         log_msg(mdd(device), VK_DBG_REPORT_WARN_BIT, (VkObjectType)0, NULL, 0, 1, "PARAMCHECK",
-        "vkCreateColorAttachmentView parameter, VkDevice device, is null pointer");
+        "vkCreateAttachmentView parameter, VkDevice device, is null pointer");
         return;
     }
 
     if(pView == nullptr)
     {
         log_msg(mdd(device), VK_DBG_REPORT_WARN_BIT, (VkObjectType)0, NULL, 0, 1, "PARAMCHECK",
-        "vkCreateColorAttachmentView parameter, VkColorAttachmentView* pView, is null pointer");
+        "vkCreateAttachmentView parameter, VkAttachmentView* pView, is null pointer");
         return;
     }
     if((*pView) == nullptr)
     {
         log_msg(mdd(device), VK_DBG_REPORT_WARN_BIT, (VkObjectType)0, NULL, 0, 1, "PARAMCHECK",
-        "vkCreateColorAttachmentView parameter, VkColorAttachmentView* pView, is null pointer");
+        "vkCreateAttachmentView parameter, VkAttachmentView* pView, is null pointer");
         return;
     }
 
     if(result != VK_SUCCESS)
     {
-        std::string reason = "vkCreateColorAttachmentView parameter, VkResult result, is " + EnumeratorString(result);
+        std::string reason = "vkCreateAttachmentView parameter, VkResult result, is " + EnumeratorString(result);
         log_msg(mdd(device), VK_DBG_REPORT_WARN_BIT, (VkObjectType)0, NULL, 0, 1, "PARAMCHECK", reason.c_str());
         return;
     }
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkCreateColorAttachmentView(
+VK_LAYER_EXPORT VkResult VKAPI vkCreateAttachmentView(
     VkDevice device,
-    const VkColorAttachmentViewCreateInfo* pCreateInfo,
-    VkColorAttachmentView* pView)
+    const VkAttachmentViewCreateInfo* pCreateInfo,
+    VkAttachmentView* pView)
 {
-    PreCreateColorAttachmentView(device, pCreateInfo);
-    VkResult result = get_dispatch_table(pc_device_table_map, device)->CreateColorAttachmentView(device, pCreateInfo, pView);
+    PreCreateAttachmentView(device, pCreateInfo);
+    VkResult result = get_dispatch_table(pc_device_table_map, device)->CreateAttachmentView(device, pCreateInfo, pView);
 
-    PostCreateColorAttachmentView(device, pView, result);
-
-    return result;
-}
-
-void PreCreateDepthStencilView(
-    VkDevice device,
-    const VkDepthStencilViewCreateInfo* pCreateInfo)
-{
-    if(device == nullptr)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_WARN_BIT, (VkObjectType)0, NULL, 0, 1, "PARAMCHECK",
-        "vkCreateDepthStencilView parameter, VkDevice device, is null pointer");
-        return;
-    }
-
-    if(pCreateInfo == nullptr)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_WARN_BIT, (VkObjectType)0, NULL, 0, 1, "PARAMCHECK",
-        "vkCreateDepthStencilView parameter, const VkDepthStencilViewCreateInfo* pCreateInfo, is null pointer");
-        return;
-    }
-    if(pCreateInfo->sType < VK_STRUCTURE_TYPE_BEGIN_RANGE ||
-        pCreateInfo->sType > VK_STRUCTURE_TYPE_END_RANGE)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_WARN_BIT, (VkObjectType)0, NULL, 0, 1, "PARAMCHECK",
-        "vkCreateDepthStencilView parameter, VkStructureType pCreateInfo->sType, is unrecognized enumerator");
-        return;
-    }
-    if(pCreateInfo->image == nullptr)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_WARN_BIT, (VkObjectType)0, NULL, 0, 1, "PARAMCHECK",
-        "vkCreateDepthStencilView parameter, VkImage pCreateInfo->image, is null pointer");
-        return;
-    }
-    if(!ValidateEnumerator((VkDepthStencilViewCreateFlagBits)pCreateInfo->flags))
-    {
-        std::string reason = "vkCreateDepthStencilView parameter, VkDepthStencilViewCreateFlags pCreateInfo->flags, is " + EnumeratorString((VkDepthStencilViewCreateFlagBits)pCreateInfo->flags);
-        log_msg(mdd(device), VK_DBG_REPORT_WARN_BIT, (VkObjectType)0, NULL, 0, 1, "PARAMCHECK", reason.c_str());
-        return;
-    }
-}
-
-void PostCreateDepthStencilView(
-    VkDevice device,
-    VkDepthStencilView* pView,
-    VkResult result)
-{
-    if(device == nullptr)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_WARN_BIT, (VkObjectType)0, NULL, 0, 1, "PARAMCHECK",
-        "vkCreateDepthStencilView parameter, VkDevice device, is null pointer");
-        return;
-    }
-
-    if(pView == nullptr)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_WARN_BIT, (VkObjectType)0, NULL, 0, 1, "PARAMCHECK",
-        "vkCreateDepthStencilView parameter, VkDepthStencilView* pView, is null pointer");
-        return;
-    }
-    if((*pView) == nullptr)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_WARN_BIT, (VkObjectType)0, NULL, 0, 1, "PARAMCHECK",
-        "vkCreateDepthStencilView parameter, VkDepthStencilView* pView, is null pointer");
-        return;
-    }
-
-    if(result != VK_SUCCESS)
-    {
-        std::string reason = "vkCreateDepthStencilView parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(device), VK_DBG_REPORT_WARN_BIT, (VkObjectType)0, NULL, 0, 1, "PARAMCHECK", reason.c_str());
-        return;
-    }
-}
-
-VK_LAYER_EXPORT VkResult VKAPI vkCreateDepthStencilView(
-    VkDevice device,
-    const VkDepthStencilViewCreateInfo* pCreateInfo,
-    VkDepthStencilView* pView)
-{
-    PreCreateDepthStencilView(device, pCreateInfo);
-    VkResult result = get_dispatch_table(pc_device_table_map, device)->CreateDepthStencilView(device, pCreateInfo, pView);
-
-    PostCreateDepthStencilView(device, pView, result);
+    PostCreateAttachmentView(device, pView, result);
 
     return result;
 }
@@ -4948,13 +4857,6 @@ void PreCreateGraphicsPipeline(
         "vkCreateGraphicsPipeline parameter, const void* pCreateInfo->pDsState->pNext, is null pointer");
         return;
     }
-    if(pCreateInfo->pDsState->format < VK_FORMAT_BEGIN_RANGE ||
-        pCreateInfo->pDsState->format > VK_FORMAT_END_RANGE)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_WARN_BIT, (VkObjectType)0, NULL, 0, 1, "PARAMCHECK",
-        "vkCreateGraphicsPipeline parameter, VkFormat pCreateInfo->pDsState->format, is unrecognized enumerator");
-        return;
-    }
     if(pCreateInfo->pDsState->depthCompareOp < VK_COMPARE_OP_BEGIN_RANGE ||
         pCreateInfo->pDsState->depthCompareOp > VK_COMPARE_OP_END_RANGE)
     {
@@ -5048,13 +4950,6 @@ void PreCreateGraphicsPipeline(
     {
         log_msg(mdd(device), VK_DBG_REPORT_WARN_BIT, (VkObjectType)0, NULL, 0, 1, "PARAMCHECK",
         "vkCreateGraphicsPipeline parameter, const VkPipelineCbAttachmentState* pCreateInfo->pCbState->pAttachments, is null pointer");
-        return;
-    }
-    if(pCreateInfo->pCbState->pAttachments->format < VK_FORMAT_BEGIN_RANGE ||
-        pCreateInfo->pCbState->pAttachments->format > VK_FORMAT_END_RANGE)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_WARN_BIT, (VkObjectType)0, NULL, 0, 1, "PARAMCHECK",
-        "vkCreateGraphicsPipeline parameter, VkFormat pCreateInfo->pCbState->pAttachments->format, is unrecognized enumerator");
         return;
     }
     if(pCreateInfo->pCbState->pAttachments->srcBlendColor < VK_BLEND_BEGIN_RANGE ||
@@ -8379,42 +8274,23 @@ void PreCreateFramebuffer(
         "vkCreateFramebuffer parameter, VkStructureType pCreateInfo->sType, is unrecognized enumerator");
         return;
     }
-    if(pCreateInfo->pColorAttachments == nullptr)
+    if(pCreateInfo->pAttachments == nullptr)
     {
         log_msg(mdd(device), VK_DBG_REPORT_WARN_BIT, (VkObjectType)0, NULL, 0, 1, "PARAMCHECK",
-        "vkCreateFramebuffer parameter, const VkColorAttachmentBindInfo* pCreateInfo->pColorAttachments, is null pointer");
+        "vkCreateFramebuffer parameter, const VkAttachmentBindInfo* pCreateInfo->pAttachments, is null pointer");
         return;
     }
-    if(pCreateInfo->pColorAttachments->view == nullptr)
+    if(pCreateInfo->pAttachments->view == nullptr)
     {
         log_msg(mdd(device), VK_DBG_REPORT_WARN_BIT, (VkObjectType)0, NULL, 0, 1, "PARAMCHECK",
-        "vkCreateFramebuffer parameter, VkColorAttachmentView pCreateInfo->pColorAttachments->view, is null pointer");
+        "vkCreateFramebuffer parameter, VkAttachmentView pCreateInfo->pAttachments->view, is null pointer");
         return;
     }
-    if(pCreateInfo->pColorAttachments->layout < VK_IMAGE_LAYOUT_BEGIN_RANGE ||
-        pCreateInfo->pColorAttachments->layout > VK_IMAGE_LAYOUT_END_RANGE)
+    if(pCreateInfo->pAttachments->layout < VK_IMAGE_LAYOUT_BEGIN_RANGE ||
+        pCreateInfo->pAttachments->layout > VK_IMAGE_LAYOUT_END_RANGE)
     {
         log_msg(mdd(device), VK_DBG_REPORT_WARN_BIT, (VkObjectType)0, NULL, 0, 1, "PARAMCHECK",
-        "vkCreateFramebuffer parameter, VkImageLayout pCreateInfo->pColorAttachments->layout, is unrecognized enumerator");
-        return;
-    }
-    if(pCreateInfo->pDepthStencilAttachment == nullptr)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_WARN_BIT, (VkObjectType)0, NULL, 0, 1, "PARAMCHECK",
-        "vkCreateFramebuffer parameter, const VkDepthStencilBindInfo* pCreateInfo->pDepthStencilAttachment, is null pointer");
-        return;
-    }
-    if(pCreateInfo->pDepthStencilAttachment->view == nullptr)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_WARN_BIT, (VkObjectType)0, NULL, 0, 1, "PARAMCHECK",
-        "vkCreateFramebuffer parameter, VkDepthStencilView pCreateInfo->pDepthStencilAttachment->view, is null pointer");
-        return;
-    }
-    if(pCreateInfo->pDepthStencilAttachment->layout < VK_IMAGE_LAYOUT_BEGIN_RANGE ||
-        pCreateInfo->pDepthStencilAttachment->layout > VK_IMAGE_LAYOUT_END_RANGE)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_WARN_BIT, (VkObjectType)0, NULL, 0, 1, "PARAMCHECK",
-        "vkCreateFramebuffer parameter, VkImageLayout pCreateInfo->pDepthStencilAttachment->layout, is unrecognized enumerator");
+        "vkCreateFramebuffer parameter, VkImageLayout pCreateInfo->pAttachments->layout, is unrecognized enumerator");
         return;
     }
 }
@@ -8469,6 +8345,8 @@ void PreCreateRenderPass(
     VkDevice device,
     const VkRenderPassCreateInfo* pCreateInfo)
 {
+    uint32_t i;
+
     if(device == nullptr)
     {
         log_msg(mdd(device), VK_DBG_REPORT_WARN_BIT, (VkObjectType)0, NULL, 0, 1, "PARAMCHECK",
@@ -8489,105 +8367,48 @@ void PreCreateRenderPass(
         "vkCreateRenderPass parameter, VkStructureType pCreateInfo->sType, is unrecognized enumerator");
         return;
     }
-    if(pCreateInfo->pColorFormats == nullptr)
+
+    for (i = 0; i < pCreateInfo->attachmentCount; i++)
     {
-        log_msg(mdd(device), VK_DBG_REPORT_WARN_BIT, (VkObjectType)0, NULL, 0, 1, "PARAMCHECK",
-        "vkCreateRenderPass parameter, const VkFormat* pCreateInfo->pColorFormats, is null pointer");
-        return;
-    }
-    if((*pCreateInfo->pColorFormats) < VK_FORMAT_BEGIN_RANGE ||
-        (*pCreateInfo->pColorFormats) > VK_FORMAT_END_RANGE)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_WARN_BIT, (VkObjectType)0, NULL, 0, 1, "PARAMCHECK",
-        "vkCreateRenderPass parameter, const VkFormat* pCreateInfo->pColorFormats, is unrecognized enumerator");
-        return;
-    }
-    if(pCreateInfo->pColorLayouts == nullptr)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_WARN_BIT, (VkObjectType)0, NULL, 0, 1, "PARAMCHECK",
-        "vkCreateRenderPass parameter, const VkImageLayout* pCreateInfo->pColorLayouts, is null pointer");
-        return;
-    }
-    if((*pCreateInfo->pColorLayouts) < VK_IMAGE_LAYOUT_BEGIN_RANGE ||
-        (*pCreateInfo->pColorLayouts) > VK_IMAGE_LAYOUT_END_RANGE)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_WARN_BIT, (VkObjectType)0, NULL, 0, 1, "PARAMCHECK",
-        "vkCreateRenderPass parameter, const VkImageLayout* pCreateInfo->pColorLayouts, is unrecognized enumerator");
-        return;
-    }
-    if(pCreateInfo->pColorLoadOps == nullptr)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_WARN_BIT, (VkObjectType)0, NULL, 0, 1, "PARAMCHECK",
-        "vkCreateRenderPass parameter, const VkAttachmentLoadOp* pCreateInfo->pColorLoadOps, is null pointer");
-        return;
-    }
-    if((*pCreateInfo->pColorLoadOps) < VK_ATTACHMENT_LOAD_OP_BEGIN_RANGE ||
-        (*pCreateInfo->pColorLoadOps) > VK_ATTACHMENT_LOAD_OP_END_RANGE)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_WARN_BIT, (VkObjectType)0, NULL, 0, 1, "PARAMCHECK",
-        "vkCreateRenderPass parameter, const VkAttachmentLoadOp* pCreateInfo->pColorLoadOps, is unrecognized enumerator");
-        return;
-    }
-    if(pCreateInfo->pColorStoreOps == nullptr)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_WARN_BIT, (VkObjectType)0, NULL, 0, 1, "PARAMCHECK",
-        "vkCreateRenderPass parameter, const VkAttachmentStoreOp* pCreateInfo->pColorStoreOps, is null pointer");
-        return;
-    }
-    if((*pCreateInfo->pColorStoreOps) < VK_ATTACHMENT_STORE_OP_BEGIN_RANGE ||
-        (*pCreateInfo->pColorStoreOps) > VK_ATTACHMENT_STORE_OP_END_RANGE)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_WARN_BIT, (VkObjectType)0, NULL, 0, 1, "PARAMCHECK",
-        "vkCreateRenderPass parameter, const VkAttachmentStoreOp* pCreateInfo->pColorStoreOps, is unrecognized enumerator");
-        return;
-    }
-    if(pCreateInfo->pColorLoadClearValues == nullptr)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_WARN_BIT, (VkObjectType)0, NULL, 0, 1, "PARAMCHECK",
-        "vkCreateRenderPass parameter, const VkClearColor* pCreateInfo->pColorLoadClearValues, is null pointer");
-        return;
-    }
-    if(pCreateInfo->depthStencilFormat < VK_FORMAT_BEGIN_RANGE ||
-        pCreateInfo->depthStencilFormat > VK_FORMAT_END_RANGE)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_WARN_BIT, (VkObjectType)0, NULL, 0, 1, "PARAMCHECK",
-        "vkCreateRenderPass parameter, VkFormat pCreateInfo->depthStencilFormat, is unrecognized enumerator");
-        return;
-    }
-    if(pCreateInfo->depthStencilLayout < VK_IMAGE_LAYOUT_BEGIN_RANGE ||
-        pCreateInfo->depthStencilLayout > VK_IMAGE_LAYOUT_END_RANGE)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_WARN_BIT, (VkObjectType)0, NULL, 0, 1, "PARAMCHECK",
-        "vkCreateRenderPass parameter, VkImageLayout pCreateInfo->depthStencilLayout, is unrecognized enumerator");
-        return;
-    }
-    if(pCreateInfo->depthLoadOp < VK_ATTACHMENT_LOAD_OP_BEGIN_RANGE ||
-        pCreateInfo->depthLoadOp > VK_ATTACHMENT_LOAD_OP_END_RANGE)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_WARN_BIT, (VkObjectType)0, NULL, 0, 1, "PARAMCHECK",
-        "vkCreateRenderPass parameter, VkAttachmentLoadOp pCreateInfo->depthLoadOp, is unrecognized enumerator");
-        return;
-    }
-    if(pCreateInfo->depthStoreOp < VK_ATTACHMENT_STORE_OP_BEGIN_RANGE ||
-        pCreateInfo->depthStoreOp > VK_ATTACHMENT_STORE_OP_END_RANGE)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_WARN_BIT, (VkObjectType)0, NULL, 0, 1, "PARAMCHECK",
-        "vkCreateRenderPass parameter, VkAttachmentStoreOp pCreateInfo->depthStoreOp, is unrecognized enumerator");
-        return;
-    }
-    if(pCreateInfo->stencilLoadOp < VK_ATTACHMENT_LOAD_OP_BEGIN_RANGE ||
-        pCreateInfo->stencilLoadOp > VK_ATTACHMENT_LOAD_OP_END_RANGE)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_WARN_BIT, (VkObjectType)0, NULL, 0, 1, "PARAMCHECK",
-        "vkCreateRenderPass parameter, VkAttachmentLoadOp pCreateInfo->stencilLoadOp, is unrecognized enumerator");
-        return;
-    }
-    if(pCreateInfo->stencilStoreOp < VK_ATTACHMENT_STORE_OP_BEGIN_RANGE ||
-        pCreateInfo->stencilStoreOp > VK_ATTACHMENT_STORE_OP_END_RANGE)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_WARN_BIT, (VkObjectType)0, NULL, 0, 1, "PARAMCHECK",
-        "vkCreateRenderPass parameter, VkAttachmentStoreOp pCreateInfo->stencilStoreOp, is unrecognized enumerator");
-        return;
+        const VkAttachmentDescription *att = &pCreateInfo->pAttachments[i];
+
+        if(att->format < VK_FORMAT_BEGIN_RANGE || att->format > VK_FORMAT_END_RANGE)
+        {
+            log_msg(mdd(device), VK_DBG_REPORT_WARN_BIT, (VkObjectType)0, NULL, 0, 1, "PARAMCHECK",
+            "vkCreateRenderPass parameter, VkFormat in pCreateInfo->pAttachments, is unrecognized enumerator");
+            return;
+        }
+        if(att->initialLayout < VK_IMAGE_LAYOUT_BEGIN_RANGE || att->initialLayout > VK_IMAGE_LAYOUT_END_RANGE ||
+           att->finalLayout < VK_IMAGE_LAYOUT_BEGIN_RANGE || att->finalLayout > VK_IMAGE_LAYOUT_END_RANGE)
+        {
+            log_msg(mdd(device), VK_DBG_REPORT_WARN_BIT, (VkObjectType)0, NULL, 0, 1, "PARAMCHECK",
+            "vkCreateRenderPass parameter, VkImageLayout in pCreateInfo->pAttachments, is unrecognized enumerator");
+            return;
+        }
+        if(att->loadOp < VK_ATTACHMENT_LOAD_OP_BEGIN_RANGE || att->loadOp > VK_ATTACHMENT_LOAD_OP_END_RANGE)
+        {
+            log_msg(mdd(device), VK_DBG_REPORT_WARN_BIT, (VkObjectType)0, NULL, 0, 1, "PARAMCHECK",
+            "vkCreateRenderPass parameter, VkAttachmentLoadOp in pCreateInfo->pAttachments, is unrecognized enumerator");
+            return;
+        }
+        if(att->storeOp < VK_ATTACHMENT_STORE_OP_BEGIN_RANGE || att->storeOp > VK_ATTACHMENT_STORE_OP_END_RANGE)
+        {
+            log_msg(mdd(device), VK_DBG_REPORT_WARN_BIT, (VkObjectType)0, NULL, 0, 1, "PARAMCHECK",
+            "vkCreateRenderPass parameter, VkAttachmentStoreOp in pCreateInfo->pAttachments, is unrecognized enumerator");
+            return;
+        }
+        if(att->stencilLoadOp < VK_ATTACHMENT_LOAD_OP_BEGIN_RANGE || att->stencilLoadOp > VK_ATTACHMENT_LOAD_OP_END_RANGE)
+        {
+            log_msg(mdd(device), VK_DBG_REPORT_WARN_BIT, (VkObjectType)0, NULL, 0, 1, "PARAMCHECK",
+            "vkCreateRenderPass parameter, VkAttachmentLoadOp in pCreateInfo->pAttachments, is unrecognized enumerator");
+            return;
+        }
+        if(att->stencilStoreOp < VK_ATTACHMENT_STORE_OP_BEGIN_RANGE || att->stencilStoreOp > VK_ATTACHMENT_STORE_OP_END_RANGE)
+        {
+            log_msg(mdd(device), VK_DBG_REPORT_WARN_BIT, (VkObjectType)0, NULL, 0, 1, "PARAMCHECK",
+            "vkCreateRenderPass parameter, VkAttachmentStoreOp in pCreateInfo->pAttachments, is unrecognized enumerator");
+            return;
+        }
     }
 }
 
@@ -8639,7 +8460,8 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateRenderPass(
 
 void PreCmdBeginRenderPass(
     VkCmdBuffer cmdBuffer,
-    const VkRenderPassBegin* pRenderPassBegin)
+    const VkRenderPassBeginInfo* pRenderPassBegin,
+    VkRenderPassContents contents)
 {
     if(cmdBuffer == nullptr)
     {
@@ -8681,12 +8503,46 @@ void PostCmdBeginRenderPass(
 
 VK_LAYER_EXPORT void VKAPI vkCmdBeginRenderPass(
     VkCmdBuffer cmdBuffer,
-    const VkRenderPassBegin* pRenderPassBegin)
+    const VkRenderPassBeginInfo* pRenderPassBegin,
+    VkRenderPassContents contents)
 {
-    PreCmdBeginRenderPass(cmdBuffer, pRenderPassBegin);
-    get_dispatch_table(pc_device_table_map, cmdBuffer)->CmdBeginRenderPass(cmdBuffer, pRenderPassBegin);
+    PreCmdBeginRenderPass(cmdBuffer, pRenderPassBegin, contents);
+    get_dispatch_table(pc_device_table_map, cmdBuffer)->CmdBeginRenderPass(cmdBuffer, pRenderPassBegin, contents);
 
     PostCmdBeginRenderPass(cmdBuffer);
+}
+
+void PreCmdNextSubpass(
+    VkCmdBuffer cmdBuffer,
+    VkRenderPassContents contents)
+{
+    if(cmdBuffer == nullptr)
+    {
+        log_msg(mdd(cmdBuffer), VK_DBG_REPORT_WARN_BIT, (VkObjectType)0, NULL, 0, 1, "PARAMCHECK",
+        "vkCmdNextSubpass parameter, VkCmdBuffer cmdBuffer, is null pointer");
+        return;
+    }
+}
+
+void PostCmdNextSubpass(
+    VkCmdBuffer cmdBuffer)
+{
+    if(cmdBuffer == nullptr)
+    {
+        log_msg(mdd(cmdBuffer), VK_DBG_REPORT_WARN_BIT, (VkObjectType)0, NULL, 0, 1, "PARAMCHECK",
+        "vkCmdNextSubpass parameter, VkCmdBuffer cmdBuffer, is null pointer");
+        return;
+    }
+}
+
+VK_LAYER_EXPORT void VKAPI vkCmdNextSubpass(
+    VkCmdBuffer cmdBuffer,
+    VkRenderPassContents contents)
+{
+    PreCmdNextSubpass(cmdBuffer, contents);
+    get_dispatch_table(pc_device_table_map, cmdBuffer)->CmdNextSubpass(cmdBuffer, contents);
+
+    PostCmdNextSubpass(cmdBuffer);
 }
 
 void PreCmdEndRenderPass(
@@ -8711,6 +8567,15 @@ void PostCmdEndRenderPass(
     }
 }
 
+VK_LAYER_EXPORT void VKAPI vkCmdEndRenderPass(
+    VkCmdBuffer cmdBuffer)
+{
+    PreCmdEndRenderPass(cmdBuffer);
+    get_dispatch_table(pc_device_table_map, cmdBuffer)->CmdEndRenderPass(cmdBuffer);
+
+    PostCmdEndRenderPass(cmdBuffer);
+}
+
 void PreCmdExecuteCommands(
     VkCmdBuffer cmdBuffer)
 {
@@ -8731,15 +8596,6 @@ void PostCmdExecuteCommands(
         "vkCmdExecuteCommands parameter, VkCmdBuffer cmdBuffer, is null pointer");
         return;
     }
-}
-
-VK_LAYER_EXPORT void VKAPI vkCmdEndRenderPass(
-    VkCmdBuffer cmdBuffer)
-{
-    PreCmdEndRenderPass(cmdBuffer);
-    get_dispatch_table(pc_device_table_map, cmdBuffer)->CmdEndRenderPass(cmdBuffer);
-
-    PostCmdEndRenderPass(cmdBuffer);
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdExecuteCommands(
@@ -8829,10 +8685,8 @@ VK_LAYER_EXPORT void* VKAPI vkGetDeviceProcAddr(VkDevice device, const char* fun
         return (void*) vkGetImageSubresourceLayout;
     if (!strcmp(funcName, "vkCreateImageView"))
         return (void*) vkCreateImageView;
-    if (!strcmp(funcName, "vkCreateColorAttachmentView"))
-        return (void*) vkCreateColorAttachmentView;
-    if (!strcmp(funcName, "vkCreateDepthStencilView"))
-        return (void*) vkCreateDepthStencilView;
+    if (!strcmp(funcName, "vkCreateAttachmentView"))
+        return (void*) vkCreateAttachmentView;
     if (!strcmp(funcName, "vkCreateShader"))
         return (void*) vkCreateShader;
     if (!strcmp(funcName, "vkCreateGraphicsPipelines"))
@@ -8933,6 +8787,8 @@ VK_LAYER_EXPORT void* VKAPI vkGetDeviceProcAddr(VkDevice device, const char* fun
         return (void*) vkCreateRenderPass;
     if (!strcmp(funcName, "vkCmdBeginRenderPass"))
         return (void*) vkCmdBeginRenderPass;
+    if (!strcmp(funcName, "vkCmdNextSubpass"))
+        return (void*) vkCmdNextSubpass;
     if (!strcmp(funcName, "vkCmdEndRenderPass"))
         return (void*) vkCmdEndRenderPass;
 

@@ -754,15 +754,9 @@ void ImageView::init(const Device &dev, const VkImageViewCreateInfo &info)
     alloc_memory();
 }
 
-void ColorAttachmentView::init(const Device &dev, const VkColorAttachmentViewCreateInfo &info)
+void AttachmentView::init(const Device &dev, const VkAttachmentViewCreateInfo &info)
 {
-    DERIVED_OBJECT_TYPE_INIT(vkCreateColorAttachmentView, dev, VK_OBJECT_TYPE_COLOR_ATTACHMENT_VIEW, &info);
-    alloc_memory();
-}
-
-void DepthStencilView::init(const Device &dev, const VkDepthStencilViewCreateInfo &info)
-{
-    DERIVED_OBJECT_TYPE_INIT(vkCreateDepthStencilView, dev, VK_OBJECT_TYPE_DEPTH_STENCIL_VIEW, &info);
+    DERIVED_OBJECT_TYPE_INIT(vkCreateAttachmentView, dev, VK_OBJECT_TYPE_ATTACHMENT_VIEW, &info);
     alloc_memory();
 }
 

@@ -65,8 +65,7 @@ typedef struct VkLayerDispatchTable_
     PFN_vkCreateImage CreateImage;
     PFN_vkGetImageSubresourceLayout GetImageSubresourceLayout;
     PFN_vkCreateImageView CreateImageView;
-    PFN_vkCreateColorAttachmentView CreateColorAttachmentView;
-    PFN_vkCreateDepthStencilView CreateDepthStencilView;
+    PFN_vkCreateAttachmentView CreateAttachmentView;
     PFN_vkCreateShaderModule CreateShaderModule;
     PFN_vkCreateShader CreateShader;
     PFN_vkCreatePipelineCache CreatePipelineCache;
@@ -126,6 +125,7 @@ typedef struct VkLayerDispatchTable_
     PFN_vkCreateFramebuffer CreateFramebuffer;
     PFN_vkCreateRenderPass CreateRenderPass;
     PFN_vkCmdBeginRenderPass CmdBeginRenderPass;
+    PFN_vkCmdNextSubpass CmdNextSubpass;
     PFN_vkCmdEndRenderPass CmdEndRenderPass;
     PFN_vkCmdExecuteCommands CmdExecuteCommands;
     PFN_vkCreateSwapChainWSI CreateSwapChainWSI;

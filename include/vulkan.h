@@ -77,10 +77,10 @@ VK_DEFINE_NONDISP_SUBCLASS_HANDLE(VkBuffer, VkNonDispatchable)
 VK_DEFINE_NONDISP_SUBCLASS_HANDLE(VkBufferView, VkNonDispatchable)
 VK_DEFINE_NONDISP_SUBCLASS_HANDLE(VkImage, VkNonDispatchable)
 VK_DEFINE_NONDISP_SUBCLASS_HANDLE(VkImageView, VkNonDispatchable)
-VK_DEFINE_NONDISP_SUBCLASS_HANDLE(VkColorAttachmentView, VkNonDispatchable)
-VK_DEFINE_NONDISP_SUBCLASS_HANDLE(VkDepthStencilView, VkNonDispatchable)
+VK_DEFINE_NONDISP_SUBCLASS_HANDLE(VkAttachmentView, VkNonDispatchable)
 VK_DEFINE_NONDISP_SUBCLASS_HANDLE(VkShaderModule, VkNonDispatchable)
 VK_DEFINE_NONDISP_SUBCLASS_HANDLE(VkShader, VkNonDispatchable)
+VK_DEFINE_NONDISP_SUBCLASS_HANDLE(VkRenderPass, VkNonDispatchable)
 VK_DEFINE_NONDISP_SUBCLASS_HANDLE(VkPipeline, VkNonDispatchable)
 VK_DEFINE_NONDISP_SUBCLASS_HANDLE(VkPipelineCache, VkNonDispatchable)
 VK_DEFINE_NONDISP_SUBCLASS_HANDLE(VkPipelineLayout, VkNonDispatchable)
@@ -98,7 +98,6 @@ VK_DEFINE_NONDISP_SUBCLASS_HANDLE(VkSemaphore, VkNonDispatchable)
 VK_DEFINE_NONDISP_SUBCLASS_HANDLE(VkEvent, VkNonDispatchable)
 VK_DEFINE_NONDISP_SUBCLASS_HANDLE(VkQueryPool, VkNonDispatchable)
 VK_DEFINE_NONDISP_SUBCLASS_HANDLE(VkFramebuffer, VkNonDispatchable)
-VK_DEFINE_NONDISP_SUBCLASS_HANDLE(VkRenderPass, VkNonDispatchable)
 
 #define VK_MAX_PHYSICAL_DEVICE_NAME 256
 #define VK_MAX_EXTENSION_NAME       256
@@ -112,6 +111,7 @@ VK_DEFINE_NONDISP_SUBCLASS_HANDLE(VkRenderPass, VkNonDispatchable)
 
 
 #define VK_WHOLE_SIZE           UINT64_MAX
+#define VK_ATTACHMENT_UNUSED    UINT32_MAX
 
 #define VK_TRUE  1
 #define VK_FALSE 0
@@ -166,8 +166,7 @@ typedef enum VkAttachmentLoadOp_
 typedef enum VkAttachmentStoreOp_
 {
     VK_ATTACHMENT_STORE_OP_STORE                            = 0x00000000,
-    VK_ATTACHMENT_STORE_OP_RESOLVE_MSAA                     = 0x00000001,
-    VK_ATTACHMENT_STORE_OP_DONT_CARE                        = 0x00000002,
+    VK_ATTACHMENT_STORE_OP_DONT_CARE                        = 0x00000001,
 
     VK_ENUM_RANGE(ATTACHMENT_STORE_OP, STORE, DONT_CARE)
 } VkAttachmentStoreOp;
@@ -748,8 +747,8 @@ typedef enum VkStructureType_
     VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO                      = 1,
     VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO                       = 2,
     VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO                  = 3,
-    VK_STRUCTURE_TYPE_COLOR_ATTACHMENT_VIEW_CREATE_INFO       = 4,
-    VK_STRUCTURE_TYPE_DEPTH_STENCIL_VIEW_CREATE_INFO          = 5,
+    VK_STRUCTURE_TYPE_ATTACHMENT_VIEW_CREATE_INFO             = 4,
+
     VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO               = 6,
     VK_STRUCTURE_TYPE_SHADER_CREATE_INFO                      = 7,
     VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO            = 8,
@@ -792,7 +791,12 @@ typedef enum VkStructureType_
     VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO              = 45,
     VK_STRUCTURE_TYPE_EXTENSION_PROPERTIES                    = 46,
 
-    VK_ENUM_RANGE(STRUCTURE_TYPE, APPLICATION_INFO, EXTENSION_PROPERTIES)
+    VK_STRUCTURE_TYPE_ATTACHMENT_DESCRIPTION                  = 47,
+    VK_STRUCTURE_TYPE_SUBPASS_DESCRIPTION                     = 48,
+    VK_STRUCTURE_TYPE_SUBPASS_DEPENDENCY                      = 49,
+    VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO                  = 50,
+
+    VK_ENUM_RANGE(STRUCTURE_TYPE, APPLICATION_INFO, RENDER_PASS_BEGIN_INFO)
 } VkStructureType;
 
 // Object type enumerant
@@ -808,8 +812,8 @@ typedef enum VkObjectType_
     VK_OBJECT_TYPE_BUFFER_VIEW                              = 7,
     VK_OBJECT_TYPE_IMAGE                                    = 8,
     VK_OBJECT_TYPE_IMAGE_VIEW                               = 9,
-    VK_OBJECT_TYPE_COLOR_ATTACHMENT_VIEW                    = 10,
-    VK_OBJECT_TYPE_DEPTH_STENCIL_VIEW                       = 11,
+    VK_OBJECT_TYPE_ATTACHMENT_VIEW                          = 10,
+
     VK_OBJECT_TYPE_SHADER_MODULE                            = 12,
     VK_OBJECT_TYPE_SHADER                                   = 13,
     VK_OBJECT_TYPE_PIPELINE                                 = 14,
@@ -941,7 +945,8 @@ typedef enum VkMemoryInputFlagBits_
     VK_MEMORY_INPUT_SHADER_READ_BIT                         = VK_BIT(5),    // Controls input coherency of generic shader reads
     VK_MEMORY_INPUT_COLOR_ATTACHMENT_BIT                    = VK_BIT(6),    // Controls input coherency of color attachment reads
     VK_MEMORY_INPUT_DEPTH_STENCIL_ATTACHMENT_BIT            = VK_BIT(7),    // Controls input coherency of depth/stencil attachment reads
-    VK_MEMORY_INPUT_TRANSFER_BIT                            = VK_BIT(8),    // Controls input coherency of transfer operations
+    VK_MEMORY_INPUT_ATTACHMENT_BIT                          = VK_BIT(8),
+    VK_MEMORY_INPUT_TRANSFER_BIT                            = VK_BIT(9),    // Controls input coherency of transfer operations
 } VkMemoryInputFlagBits;
 
 // Buffer usage flags
@@ -995,6 +1000,7 @@ typedef enum VkImageUsageFlagBits_
     VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT                     = VK_BIT(4),    // Can be used as framebuffer color attachment
     VK_IMAGE_USAGE_DEPTH_STENCIL_BIT                        = VK_BIT(5),    // Can be used as framebuffer depth/stencil attachment
     VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT                 = VK_BIT(6),    // Image data not needed outside of rendering
+    VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT                     = VK_BIT(7),
 } VkImageUsageFlagBits;
 
 // Image creation flags
@@ -1010,12 +1016,12 @@ typedef enum VkImageCreateFlagBits_
 } VkImageCreateFlagBits;
 
 // Depth-stencil view creation flags
-typedef VkFlags VkDepthStencilViewCreateFlags;
-typedef enum VkDepthStencilViewCreateFlagBits_
+typedef VkFlags VkAttachmentViewCreateFlags;
+typedef enum VkAttachmentViewCreateFlagBits_
 {
-    VK_DEPTH_STENCIL_VIEW_CREATE_READ_ONLY_DEPTH_BIT        = VK_BIT(0),
-    VK_DEPTH_STENCIL_VIEW_CREATE_READ_ONLY_STENCIL_BIT      = VK_BIT(1),
-} VkDepthStencilViewCreateFlagBits;
+    VK_ATTACHMENT_VIEW_CREATE_READ_ONLY_DEPTH_BIT           = VK_BIT(0),
+    VK_ATTACHMENT_VIEW_CREATE_READ_ONLY_STENCIL_BIT         = VK_BIT(1),
+} VkAttachmentViewCreateFlagBits;
 
 // Pipeline creation flags
 typedef VkFlags VkPipelineCreateFlags;
@@ -1078,6 +1084,12 @@ typedef enum VkFormatFeatureFlagBits_
     VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT          = VK_BIT(9),    // Format can be used for depth/stencil attachment images
     VK_FORMAT_FEATURE_CONVERSION_BIT                        = VK_BIT(10),   // Format can be used as the source or destination of format converting blits
 } VkFormatFeatureFlagBits;
+
+typedef VkFlags VkSubpassDescriptionFlags;
+typedef enum VkSubpassDescriptionFlagBits_
+{
+    VK_SUBPASS_DESCRIPTION_NO_OVERDRAW_BIT                  = 0x00000001,
+} VkSubpassDescriptionFlagBits;
 
 // Pipeline stage flags
 typedef enum {
@@ -1584,6 +1596,7 @@ typedef struct VkDescriptorInfo_
     VkBufferView                                bufferView;                 // Buffer view to write to the descriptor (in case it's a buffer descriptor, otherwise should be VK_NULL_HANDLE)
     VkSampler                                   sampler;                    // Sampler to write to the descriptor (in case it's a SAMPLER or COMBINED_IMAGE_SAMPLER descriptor, otherwise should be VK_NULL_HANDLE)
     VkImageView                                 imageView;                  // Image view to write to the descriptor (in case it's a SAMPLED_IMAGE, STORAGE_IMAGE, or COMBINED_IMAGE_SAMPLER descriptor, otherwise should be VK_NULL_HANDLE)
+    VkAttachmentView                            attachmentView;
     VkImageLayout                               imageLayout;                // Layout the image is expected to be in when accessed using this descriptor (only used if <imageView> is not VK_NULL_HANDLE)
 } VkDescriptorInfo;
 
@@ -1720,7 +1733,7 @@ typedef struct VkImageViewCreateInfo_
     VkImageSubresourceRange                     subresourceRange;
 } VkImageViewCreateInfo;
 
-typedef struct VkColorAttachmentViewCreateInfo_
+typedef struct VkAttachmentViewCreateInfo_
 {
     VkStructureType                             sType;                  // Must be VK_STRUCTURE_TYPE_COLOR_ATTACHMENT_VIEW_CREATE_INFO
     const void*                                 pNext;                  // Pointer to next structure
@@ -1729,32 +1742,8 @@ typedef struct VkColorAttachmentViewCreateInfo_
     uint32_t                                    mipLevel;
     uint32_t                                    baseArraySlice;
     uint32_t                                    arraySize;
-    VkImage                                     msaaResolveImage;
-    VkImageSubresourceRange                     msaaResolveSubResource;
-} VkColorAttachmentViewCreateInfo;
-
-typedef struct VkDepthStencilViewCreateInfo_
-{
-    VkStructureType                             sType;                  // Must be VK_STRUCTURE_TYPE_DEPTH_STENCIL_VIEW_CREATE_INFO
-    const void*                                 pNext;                  // Pointer to next structure
-    VkImage                                     image;
-    uint32_t                                    mipLevel;
-    uint32_t                                    baseArraySlice;
-    uint32_t                                    arraySize;
-    VkDepthStencilViewCreateFlags               flags;                  // Depth stencil attachment view flags
-} VkDepthStencilViewCreateInfo;
-
-typedef struct VkColorAttachmentBindInfo_
-{
-    VkColorAttachmentView                       view;
-    VkImageLayout                               layout;
-} VkColorAttachmentBindInfo;
-
-typedef struct VkDepthStencilBindInfo_
-{
-    VkDepthStencilView                          view;
-    VkImageLayout                               layout;
-} VkDepthStencilBindInfo;
+    VkAttachmentViewCreateFlags                 flags;                  // attachment view flags
+} VkAttachmentViewCreateInfo;
 
 typedef struct VkBufferCopy_
 {
@@ -2024,7 +2013,6 @@ typedef struct VkPipelineDsStateCreateInfo_
 {
     VkStructureType                             sType;      // Must be VK_STRUCTURE_TYPE_PIPELINE_DS_STATE_CREATE_INFO
     const void*                                 pNext;      // Pointer to next structure
-    VkFormat                                    format;
     VkBool32                                    depthTestEnable;
     VkBool32                                    depthWriteEnable;
     VkCompareOp                                 depthCompareOp;
@@ -2050,6 +2038,8 @@ typedef struct VkGraphicsPipelineCreateInfo_
     const VkPipelineCbStateCreateInfo*          pCbState;
     VkPipelineCreateFlags                       flags;      // Pipeline creation flags
     VkPipelineLayout                            layout;     // Interface layout of the pipeline
+    VkRenderPass                                renderPass;
+    uint32_t                                    subpass;
     VkPipeline                                  basePipelineHandle;
     int32_t                                     basePipelineIndex;
 } VkGraphicsPipelineCreateInfo;
@@ -2139,13 +2129,6 @@ typedef struct VkCmdBufferBeginInfo_
     VkFramebuffer                               framebuffer;
 } VkCmdBufferBeginInfo;
 
-typedef struct VkRenderPassBegin_
-{
-    VkRenderPass                                renderPass;
-    VkFramebuffer                               framebuffer;
-    VkRenderPassContents                        contents;
-} VkRenderPassBegin;
-
 // Union allowing specification of floating point, integer, or unsigned integer color data. Actual value selected is based on format.
 typedef union VkClearColorValue_
 {
@@ -2154,29 +2137,88 @@ typedef union VkClearColorValue_
     uint32_t                                    u32[4];
 } VkClearColorValue;
 
+typedef struct VkAttachmentBindInfo_
+{
+    VkAttachmentView                            view;
+    VkImageLayout                               layout;
+} VkAttachmentBindInfo;
+
+typedef struct VkFramebufferCreateInfo_
+{
+    VkStructureType                             sType;  // Must be VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO
+    const void*                                 pNext;  // Pointer to next structure
+
+    VkRenderPass                                renderPass;
+    uint32_t                                    attachmentCount;
+    const VkAttachmentBindInfo*                 pAttachments;
+
+    uint32_t                                    width;
+    uint32_t                                    height;
+    uint32_t                                    layers;
+} VkFramebufferCreateInfo;
+
+typedef struct VkAttachmentDescription_
+{
+    VkStructureType                             sType;      // Must be VK_STRUCTURE_TYPE_ATTACHMENT_DESCRIPTION
+    const void*                                 pNext;      // Pointer to next structure
+
+    VkFormat                                    format;
+    uint32_t                                    samples;
+    VkAttachmentLoadOp                          loadOp;
+    VkAttachmentStoreOp                         storeOp;
+    VkAttachmentLoadOp                          stencilLoadOp;
+    VkAttachmentStoreOp                         stencilStoreOp;
+    VkImageLayout                               initialLayout;
+    VkImageLayout                               finalLayout;
+} VkAttachmentDescription;
+
+typedef struct VkAttachmentReference_
+{
+    uint32_t                                    attachment;
+    VkImageLayout                               layout;
+} VkAttachmentReference;
+
+typedef struct VkSubpassDescription_
+{
+    VkStructureType                             sType;      // Must be VK_STRUCTURE_TYPE_SUBPASS_DESCRIPTION
+    const void*                                 pNext;
+
+    VkPipelineBindPoint                         pipelineBindPoint;
+    VkSubpassDescriptionFlags                   flags;
+    uint32_t                                    inputCount;
+    const VkAttachmentReference*                inputAttachments;
+    uint32_t                                    colorCount;
+    const VkAttachmentReference*                colorAttachments;
+    const VkAttachmentReference*                resolveAttachments;
+    VkAttachmentReference                       depthStencilAttachment;
+    uint32_t                                    preserveCount;
+    const VkAttachmentReference*                preserveAttachments;
+} VkSubpassDescription;
+
+typedef struct VkSubpassDependency_
+{
+    VkStructureType                             sType;      // Must be VK_STRUCTURE_TYPE_SUBPASS_DEPENDENCY
+    const void*                                 pNext;
+    uint32_t                                    srcSubpass;
+    uint32_t                                    destSubpass;
+    VkPipelineStageFlags                        srcStageMask;
+    VkPipelineStageFlags                        destStageMask;
+    VkMemoryOutputFlags                         outputMask;
+    VkMemoryInputFlags                          inputMask;
+    VkBool32                                    byRegion;
+} VkSubpassDependency;
+
 typedef struct VkRenderPassCreateInfo_
 {
     VkStructureType                             sType;      // Must be VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO
     const void*                                 pNext;      // Pointer to next structure
 
-    VkRect2D                                    renderArea;
-    uint32_t                                    colorAttachmentCount;
-    VkExtent2D                                  extent;
-    uint32_t                                    sampleCount;
-    uint32_t                                    layers;
-    const VkFormat*                             pColorFormats;
-    const VkImageLayout*                        pColorLayouts;
-    const VkAttachmentLoadOp*                   pColorLoadOps;
-    const VkAttachmentStoreOp*                  pColorStoreOps;
-    const VkClearColorValue*                    pColorLoadClearValues;
-    VkFormat                                    depthStencilFormat;
-    VkImageLayout                               depthStencilLayout;
-    VkAttachmentLoadOp                          depthLoadOp;
-    float                                       depthLoadClearValue;
-    VkAttachmentStoreOp                         depthStoreOp;
-    VkAttachmentLoadOp                          stencilLoadOp;
-    uint32_t                                    stencilLoadClearValue;
-    VkAttachmentStoreOp                         stencilStoreOp;
+    uint32_t                                    attachmentCount;
+    const VkAttachmentDescription*              pAttachments;
+    uint32_t                                    subpassCount;
+    const VkSubpassDescription*                 pSubpasses;
+    uint32_t                                    dependencyCount;
+    const VkSubpassDependency*                  pDependencies;
 } VkRenderPassCreateInfo;
 
 typedef struct VkEventCreateInfo_
@@ -2209,20 +2251,29 @@ typedef struct VkQueryPoolCreateInfo_
     VkQueryPipelineStatisticFlags               pipelineStatistics; // Optional
 } VkQueryPoolCreateInfo;
 
-typedef struct VkFramebufferCreateInfo_
+typedef struct VkClearDepthStencilValue_
 {
-    VkStructureType                             sType;  // Must be VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO
-    const void*                                 pNext;  // Pointer to next structure
+    float                                       depth;
+    uint32_t                                    stencil;
+} VkClearDepthStencilValue;
 
-    uint32_t                                    colorAttachmentCount;
-    const VkColorAttachmentBindInfo*            pColorAttachments;
-    const VkDepthStencilBindInfo*               pDepthStencilAttachment;
+typedef union VkClearValue_
+{
+    VkClearColorValue                           color;
+    VkClearDepthStencilValue                    ds;
+} VkClearValue;
 
-    uint32_t                                    sampleCount;
-    uint32_t                                    width;
-    uint32_t                                    height;
-    uint32_t                                    layers;
-} VkFramebufferCreateInfo;
+typedef struct VkRenderPassBeginInfo_
+{
+    VkStructureType                             sType;      // Must be VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO
+    const void*                                 pNext;      // Pointer to next structure
+
+    VkRenderPass                                renderPass;
+    VkFramebuffer                               framebuffer;
+    VkRect2D                                    renderArea;
+    uint32_t                                    attachmentCount;
+    const VkClearValue*                         pAttachmentClearValues;
+} VkRenderPassBeginInfo;
 
 typedef struct VkDrawIndirectCmd_
 {
@@ -2305,8 +2356,7 @@ typedef VkResult (VKAPI *PFN_vkCreateBufferView)(VkDevice device, const VkBuffer
 typedef VkResult (VKAPI *PFN_vkCreateImage)(VkDevice device, const VkImageCreateInfo* pCreateInfo, VkImage* pImage);
 typedef VkResult (VKAPI *PFN_vkGetImageSubresourceLayout)(VkDevice device, VkImage image, const VkImageSubresource* pSubresource, VkSubresourceLayout* pLayout);
 typedef VkResult (VKAPI *PFN_vkCreateImageView)(VkDevice device, const VkImageViewCreateInfo* pCreateInfo, VkImageView* pView);
-typedef VkResult (VKAPI *PFN_vkCreateColorAttachmentView)(VkDevice device, const VkColorAttachmentViewCreateInfo* pCreateInfo, VkColorAttachmentView* pView);
-typedef VkResult (VKAPI *PFN_vkCreateDepthStencilView)(VkDevice device, const VkDepthStencilViewCreateInfo* pCreateInfo, VkDepthStencilView* pView);
+typedef VkResult (VKAPI *PFN_vkCreateAttachmentView)(VkDevice device, const VkAttachmentViewCreateInfo* pCreateInfo, VkAttachmentView* pView);
 typedef VkResult (VKAPI *PFN_vkCreateShaderModule)(VkDevice device, const VkShaderModuleCreateInfo* pCreateInfo, VkShaderModule* pShaderModule);
 typedef VkResult (VKAPI *PFN_vkCreateShader)(VkDevice device, const VkShaderCreateInfo* pCreateInfo, VkShader* pShader);
 typedef VkResult (VKAPI *PFN_vkCreatePipelineCache)(VkDevice device, const VkPipelineCacheCreateInfo* pCreateInfo, VkPipelineCache* pPipelineCache);
@@ -2365,7 +2415,8 @@ typedef void     (VKAPI *PFN_vkCmdWriteTimestamp)(VkCmdBuffer cmdBuffer, VkTimes
 typedef void     (VKAPI *PFN_vkCmdCopyQueryPoolResults)(VkCmdBuffer cmdBuffer, VkQueryPool queryPool, uint32_t startQuery, uint32_t queryCount, VkBuffer destBuffer, VkDeviceSize destOffset, VkDeviceSize destStride, VkQueryResultFlags flags);
 typedef VkResult (VKAPI *PFN_vkCreateFramebuffer)(VkDevice device, const VkFramebufferCreateInfo* pCreateInfo, VkFramebuffer* pFramebuffer);
 typedef VkResult (VKAPI *PFN_vkCreateRenderPass)(VkDevice device, const VkRenderPassCreateInfo* pCreateInfo, VkRenderPass* pRenderPass);
-typedef void     (VKAPI *PFN_vkCmdBeginRenderPass)(VkCmdBuffer cmdBuffer, const VkRenderPassBegin* pRenderPassBegin);
+typedef void     (VKAPI *PFN_vkCmdBeginRenderPass)(VkCmdBuffer cmdBuffer, const VkRenderPassBeginInfo* pRenderPassBegin, VkRenderPassContents contents);
+typedef void     (VKAPI *PFN_vkCmdNextSubpass)(VkCmdBuffer cmdBuffer, VkRenderPassContents contents);
 typedef void     (VKAPI *PFN_vkCmdEndRenderPass)(VkCmdBuffer cmdBuffer);
 typedef void     (VKAPI *PFN_vkCmdExecuteCommands)(VkCmdBuffer cmdBuffer, uint32_t cmdBuffersCount, const VkCmdBuffer* pCmdBuffers);
 
@@ -2674,15 +2725,10 @@ VkResult VKAPI vkCreateImageView(
     const VkImageViewCreateInfo*                pCreateInfo,
     VkImageView*                                pView);
 
-VkResult VKAPI vkCreateColorAttachmentView(
+VkResult VKAPI vkCreateAttachmentView(
     VkDevice                                    device,
-    const VkColorAttachmentViewCreateInfo*      pCreateInfo,
-    VkColorAttachmentView*                      pView);
-
-VkResult VKAPI vkCreateDepthStencilView(
-    VkDevice                                    device,
-    const VkDepthStencilViewCreateInfo*         pCreateInfo,
-    VkDepthStencilView*                         pView);
+    const VkAttachmentViewCreateInfo*           pCreateInfo,
+    VkAttachmentView*                           pView);
 
 // Shader functions
 
@@ -3068,7 +3114,12 @@ VkResult VKAPI vkCreateRenderPass(
 
 void VKAPI vkCmdBeginRenderPass(
     VkCmdBuffer                                 cmdBuffer,
-    const VkRenderPassBegin*                    pRenderPassBegin);
+    const VkRenderPassBeginInfo*                pRenderPassBegin,
+    VkRenderPassContents                        contents);
+
+void VKAPI vkCmdNextSubpass(
+    VkCmdBuffer                                 cmdBuffer,
+    VkRenderPassContents                        contents);
 
 void VKAPI vkCmdEndRenderPass(
     VkCmdBuffer                                 cmdBuffer);

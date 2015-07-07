@@ -37,24 +37,18 @@ static void fb_destroy(struct intel_obj *obj)
 }
 
 VkResult intel_fb_create(struct intel_dev *dev,
-                           const VkFramebufferCreateInfo *info,
-                           struct intel_fb **fb_ret)
+                         const VkFramebufferCreateInfo *info,
+                         struct intel_fb **fb_ret)
 {
     struct intel_fb *fb;
     uint32_t width, height, array_size, i;
-
-    if (info->colorAttachmentCount > INTEL_MAX_RENDER_TARGETS)
-        return VK_ERROR_INVALID_VALUE;
 
     fb = (struct intel_fb *) intel_base_create(&dev->base.handle,
             sizeof(*fb), dev->base.dbg, VK_OBJECT_TYPE_FRAMEBUFFER, info, 0);
     if (!fb)
         return VK_ERROR_OUT_OF_HOST_MEMORY;
 
-    fb->view_count = info->colorAttachmentCount;
-    if (info->pDepthStencilAttachment)
-        fb->view_count++;
-
+    fb->view_count = info->attachmentCount;
     fb->views = intel_alloc(fb, sizeof(fb->views[0]) * fb->view_count, 0,
             VK_SYSTEM_ALLOC_TYPE_INTERNAL);
     if (!fb->views) {
@@ -66,10 +60,9 @@ VkResult intel_fb_create(struct intel_dev *dev,
     height = info->height;
     array_size = info->layers;
 
-    for (i = 0; i < info->colorAttachmentCount; i++) {
-        const VkColorAttachmentBindInfo *att = &info->pColorAttachments[i];
-        const struct intel_att_view *view =
-            intel_att_view_from_color(att->view);
+    for (i = 0; i < info->attachmentCount; i++) {
+        const VkAttachmentBindInfo *att = &info->pAttachments[i];
+        const struct intel_att_view *view = intel_att_view(att->view);
         const struct intel_layout *layout = &view->img->layout;
 
         if (width > layout->width0)
@@ -78,41 +71,13 @@ VkResult intel_fb_create(struct intel_dev *dev,
             height = layout->height0;
         if (array_size > view->array_size)
             array_size = view->array_size;
-
-        if (view->img->samples != info->sampleCount) {
-            intel_fb_destroy(fb);
-            return VK_ERROR_INVALID_VALUE;
-        }
 
         fb->views[i] = view;
-    }
-
-    if (info->pDepthStencilAttachment) {
-        const VkDepthStencilBindInfo *att = info->pDepthStencilAttachment;
-        const struct intel_att_view *view = intel_att_view_from_ds(att->view);
-        const struct intel_layout *layout = &view->img->layout;
-
-        if (width > layout->width0)
-            width = layout->width0;
-        if (height > layout->height0)
-            height = layout->height0;
-        if (array_size > view->array_size)
-            array_size = view->array_size;
-
-        if (view->img->samples != info->sampleCount) {
-            intel_fb_destroy(fb);
-            return VK_ERROR_INVALID_VALUE;
-        }
-
-        fb->views[info->colorAttachmentCount] = view;
     }
 
     fb->width = width;
     fb->height = height;
     fb->array_size = array_size;
-
-    /* This information must match pipeline state */
-    fb->sample_count = info->sampleCount;
 
     fb->obj.destroy = fb_destroy;
 
@@ -142,16 +107,17 @@ VkResult intel_render_pass_create(struct intel_dev *dev,
     struct intel_render_pass *rp;
     uint32_t i;
 
+    /* TODO */
+    if (info->dependencyCount)
+	    return VK_ERROR_UNKNOWN;
+
     rp = (struct intel_render_pass *) intel_base_create(&dev->base.handle,
             sizeof(*rp), dev->base.dbg, VK_OBJECT_TYPE_RENDER_PASS, info, 0);
     if (!rp)
         return VK_ERROR_OUT_OF_HOST_MEMORY;
 
-    rp->attachment_count = info->colorAttachmentCount;
-    if (info->depthStencilFormat != VK_FORMAT_UNDEFINED)
-        rp->attachment_count++;
-
-    rp->subpass_count = 1;
+    rp->attachment_count = info->attachmentCount;
+    rp->subpass_count = info->subpassCount;
 
     rp->attachments = intel_alloc(rp,
             sizeof(rp->attachments[0]) * rp->attachment_count +
@@ -167,66 +133,55 @@ VkResult intel_render_pass_create(struct intel_dev *dev,
 
     rp->obj.destroy = render_pass_destroy;
 
-    for (i = 0; i < info->colorAttachmentCount; i++) {
+    for (i = 0; i < info->attachmentCount; i++) {
         struct intel_render_pass_attachment *att = &rp->attachments[i];
 
-        att->format = info->pColorFormats[i];
-        att->sample_count = info->sampleCount;
-        att->initial_layout = info->pColorLayouts[i];
-        att->final_layout = info->pColorLayouts[i];
+        att->format = info->pAttachments[i].format;
+        att->sample_count = info->pAttachments[i].samples;
+        att->initial_layout = info->pAttachments[i].initialLayout;
+        att->final_layout = info->pAttachments[i].finalLayout;
 
-        att->clear_on_load =
-            (info->pColorLoadOps[i] == VK_ATTACHMENT_LOAD_OP_CLEAR);
-        att->disable_store =
-            (info->pColorStoreOps[i] == VK_ATTACHMENT_STORE_OP_DONT_CARE);
+        att->clear_on_load = (info->pAttachments[i].loadOp ==
+                VK_ATTACHMENT_LOAD_OP_CLEAR);
+        att->disable_store = (info->pAttachments[i].storeOp ==
+                VK_ATTACHMENT_STORE_OP_DONT_CARE);
 
-        att->stencil_clear_on_load = false;
-        att->stencil_disable_store = true;
-
-        att->clear_val.color = info->pColorLoadClearValues[i];
-    }
-
-    if (info->depthStencilFormat != VK_FORMAT_UNDEFINED) {
-        struct intel_render_pass_attachment *att =
-            &rp->attachments[info->colorAttachmentCount];
-
-        att->format = info->depthStencilFormat;
-        att->sample_count = info->sampleCount;
-        att->initial_layout = info->depthStencilLayout;
-        att->final_layout = info->depthStencilLayout;
-
-        att->clear_on_load =
-            (info->depthLoadOp == VK_ATTACHMENT_LOAD_OP_CLEAR);
-        att->disable_store =
-            (info->depthStoreOp == VK_ATTACHMENT_STORE_OP_DONT_CARE);
-
-        att->stencil_clear_on_load =
-            (info->stencilLoadOp == VK_ATTACHMENT_LOAD_OP_CLEAR);
-        att->stencil_disable_store =
-            (info->stencilStoreOp == VK_ATTACHMENT_STORE_OP_DONT_CARE);
-
-        att->clear_val.ds.depth = info->depthLoadClearValue;
-        att->clear_val.ds.stencil = info->stencilLoadClearValue;
+        att->stencil_clear_on_load = (info->pAttachments[i].stencilLoadOp ==
+                VK_ATTACHMENT_LOAD_OP_CLEAR);
+        att->stencil_disable_store = (info->pAttachments[i].stencilStoreOp ==
+                VK_ATTACHMENT_STORE_OP_DONT_CARE);
     }
 
     for (i = 0; i < rp->subpass_count; i++) {
+        const VkSubpassDescription *subpass_info = &info->pSubpasses[i];
         struct intel_render_pass_subpass *subpass = &rp->subpasses[i];
         uint32_t j;
 
-        for (j = 0; j < info->colorAttachmentCount; j++) {
-            subpass->color_indices[j] = j;
-            subpass->resolve_indices[j] = 0xffffffffu;
-            subpass->color_layouts[j] = info->pColorLayouts[j];
+	/* missing SPIR support? */
+	if (subpass_info->inputCount) {
+		intel_render_pass_destroy(rp);
+		return VK_ERROR_UNKNOWN;
+	}
+
+        for (j = 0; j < subpass_info->colorCount; j++) {
+            const VkAttachmentReference *color_ref =
+                &subpass_info->colorAttachments[j];
+            const VkAttachmentReference *resolve_ref =
+                (subpass_info->resolveAttachments) ?
+                &subpass_info->resolveAttachments[j] : NULL;
+
+            subpass->color_indices[j] = color_ref->attachment;
+            subpass->resolve_indices[j] = (resolve_ref) ?
+                resolve_ref->attachment : VK_ATTACHMENT_UNUSED;
+            subpass->color_layouts[j] = color_ref->layout;
         }
 
-        subpass->color_count = info->colorAttachmentCount;
+        subpass->color_count = subpass_info->colorCount;
 
-        subpass->ds_index =
-            (info->depthStencilFormat != VK_FORMAT_UNDEFINED) ?
-            info->colorAttachmentCount : 0xffffffffu;
-        subpass->ds_layout = info->depthStencilLayout;
+        subpass->ds_index = subpass_info->depthStencilAttachment.attachment;
+        subpass->ds_layout = subpass_info->depthStencilAttachment.layout;
 
-        switch (info->depthStencilLayout) {
+        switch (subpass->ds_layout) {
         case VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL:
         case VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL:
             subpass->ds_optimal = true;

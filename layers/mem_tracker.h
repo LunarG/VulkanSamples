@@ -99,8 +99,7 @@ struct MT_OBJ_INFO {
     // The only objects that are guaranteed to have no external memory
     // requirements are devices, queues, command buffers, shaders and memory objects.
     union {
-        VkColorAttachmentViewCreateInfo    color_attachment_view_create_info;
-        VkDepthStencilViewCreateInfo       ds_view_create_info;
+        VkAttachmentViewCreateInfo         attachment_view_create_info;
         VkImageViewCreateInfo              image_view_create_info;
         VkImageCreateInfo                  image_create_info;
         VkGraphicsPipelineCreateInfo       graphics_pipeline_create_info;
@@ -118,8 +117,7 @@ struct MT_CB_INFO {
     VkCmdBufferCreateInfo       createInfo;
     MT_OBJ_INFO*                pDynamicState[VK_NUM_STATE_BIND_POINT];
     VkPipeline                  pipelines[VK_NUM_PIPELINE_BIND_POINT];
-    uint32_t                    colorAttachmentCount;
-    VkDepthStencilBindInfo      dsBindInfo;
+    uint32_t                    attachmentCount;
     VkCmdBuffer                 cmdBuffer;
     uint64_t                    fenceId;
     VkFence                     lastSubmittedFence;

@@ -111,12 +111,7 @@ static inline struct intel_img_view *intel_img_view_from_obj(struct intel_obj *o
     return (struct intel_img_view *) obj;
 }
 
-static inline struct intel_att_view *intel_att_view_from_color(VkColorAttachmentView view)
-{
-    return (struct intel_att_view *) view;
-}
-
-static inline struct intel_att_view *intel_att_view_from_ds(VkDepthStencilView view)
+static inline struct intel_att_view *intel_att_view(VkAttachmentView view)
 {
     return (struct intel_att_view *) view;
 }
@@ -140,12 +135,9 @@ VkResult intel_img_view_create(struct intel_dev *dev,
                                  struct intel_img_view **view_ret);
 void intel_img_view_destroy(struct intel_img_view *view);
 
-VkResult intel_att_view_create_for_color(struct intel_dev *dev,
-                                         const VkColorAttachmentViewCreateInfo *info,
-                                         struct intel_att_view **view_ret);
-VkResult intel_att_view_create_for_ds(struct intel_dev *dev,
-                                      const VkDepthStencilViewCreateInfo *info,
-                                      struct intel_att_view **view_ret);
+VkResult intel_att_view_create(struct intel_dev *dev,
+                               const VkAttachmentViewCreateInfo *info,
+                               struct intel_att_view **view_ret);
 void intel_att_view_destroy(struct intel_att_view *view);
 
 #endif /* VIEW_H */

@@ -1299,16 +1299,16 @@ static void att_view_destroy(struct intel_obj *obj)
     intel_att_view_destroy(view);
 }
 
-VkResult intel_att_view_create_for_color(struct intel_dev *dev,
-                                         const VkColorAttachmentViewCreateInfo *info,
-                                         struct intel_att_view **view_ret)
+VkResult intel_att_view_create(struct intel_dev *dev,
+                               const VkAttachmentViewCreateInfo *info,
+                               struct intel_att_view **view_ret)
 {
     struct intel_img *img = intel_img(info->image);
     struct intel_att_view *view;
     VkImageViewType view_type;
 
     view = (struct intel_att_view *) intel_base_create(&dev->base.handle,
-            sizeof(*view), dev->base.dbg, VK_OBJECT_TYPE_COLOR_ATTACHMENT_VIEW,
+            sizeof(*view), dev->base.dbg, VK_OBJECT_TYPE_ATTACHMENT_VIEW,
             info, 0);
     if (!view)
         return VK_ERROR_OUT_OF_HOST_MEMORY;
@@ -1326,8 +1326,14 @@ VkResult intel_att_view_create_for_color(struct intel_dev *dev,
 
     att_view_init_for_input(view, dev->gpu, img, view_type, info->format,
             info->mipLevel, info->baseArraySlice, info->arraySize);
-    att_view_init_for_rt(view, dev->gpu, img, view_type, info->format,
-            info->mipLevel, info->baseArraySlice, info->arraySize);
+
+    if (img->usage & VK_IMAGE_USAGE_DEPTH_STENCIL_BIT) {
+        att_view_init_for_ds(view, dev->gpu, img, view_type, img->layout.format,
+                info->mipLevel, info->baseArraySlice, info->arraySize);
+    } else {
+        att_view_init_for_rt(view, dev->gpu, img, view_type, info->format,
+                info->mipLevel, info->baseArraySlice, info->arraySize);
+    }
 
     *view_ret = view;
 
@@ -1337,43 +1343,6 @@ VkResult intel_att_view_create_for_color(struct intel_dev *dev,
 void intel_att_view_destroy(struct intel_att_view *view)
 {
     intel_base_destroy(&view->obj.base);
-}
-
-VkResult intel_att_view_create_for_ds(struct intel_dev *dev,
-                                      const VkDepthStencilViewCreateInfo *info,
-                                      struct intel_att_view **view_ret)
-{
-    struct intel_img *img = intel_img(info->image);
-    struct intel_att_view *view;
-    VkImageViewType view_type;
-
-    view = (struct intel_att_view *) intel_base_create(&dev->base.handle,
-            sizeof(*view), dev->base.dbg, VK_OBJECT_TYPE_DEPTH_STENCIL_VIEW,
-            info, 0);
-    if (!view)
-        return VK_ERROR_OUT_OF_HOST_MEMORY;
-
-    view->obj.destroy = att_view_destroy;
-
-    view->img = img;
-
-    view->mipLevel = info->mipLevel;
-    view->baseArraySlice = info->baseArraySlice;
-    view->array_size = info->arraySize;
-
-    view_type = img_type_to_view_type(img->type,
-            info->baseArraySlice, info->arraySize);
-
-    /* translate D/S formats to R/G? ones? */
-    att_view_init_for_input(view, dev->gpu, img, view_type, img->layout.format,
-            info->mipLevel, info->baseArraySlice, info->arraySize);
-
-    att_view_init_for_ds(view, dev->gpu, img, view_type, img->layout.format,
-            info->mipLevel, info->baseArraySlice, info->arraySize);
-
-    *view_ret = view;
-
-    return VK_SUCCESS;
 }
 
 ICD_EXPORT VkResult VKAPI vkCreateBufferView(
@@ -1398,24 +1367,13 @@ ICD_EXPORT VkResult VKAPI vkCreateImageView(
             (struct intel_img_view **) pView);
 }
 
-ICD_EXPORT VkResult VKAPI vkCreateColorAttachmentView(
-    VkDevice                                  device,
-    const VkColorAttachmentViewCreateInfo* pCreateInfo,
-    VkColorAttachmentView*                  pView)
+ICD_EXPORT VkResult VKAPI vkCreateAttachmentView(
+    VkDevice                                    device,
+    const VkAttachmentViewCreateInfo*           pCreateInfo,
+    VkAttachmentView*                           pView)
 {
     struct intel_dev *dev = intel_dev(device);
 
-    return intel_att_view_create_for_color(dev, pCreateInfo,
-            (struct intel_att_view **) pView);
-}
-
-ICD_EXPORT VkResult VKAPI vkCreateDepthStencilView(
-    VkDevice                                  device,
-    const VkDepthStencilViewCreateInfo*   pCreateInfo,
-    VkDepthStencilView*                     pView)
-{
-    struct intel_dev *dev = intel_dev(device);
-
-    return intel_att_view_create_for_ds(dev, pCreateInfo,
+    return intel_att_view_create(dev, pCreateInfo,
             (struct intel_att_view **) pView);
 }

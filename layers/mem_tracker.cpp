@@ -1455,15 +1455,15 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateImageView(
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkCreateColorAttachmentView(
+VK_LAYER_EXPORT VkResult VKAPI vkCreateAttachmentView(
     VkDevice                               device,
-    const VkColorAttachmentViewCreateInfo *pCreateInfo,
-    VkColorAttachmentView                 *pView)
+    const VkAttachmentViewCreateInfo *pCreateInfo,
+    VkAttachmentView                 *pView)
 {
-    VkResult result = get_dispatch_table(mem_tracker_device_table_map, device)->CreateColorAttachmentView(device, pCreateInfo, pView);
+    VkResult result = get_dispatch_table(mem_tracker_device_table_map, device)->CreateAttachmentView(device, pCreateInfo, pView);
     if (result == VK_SUCCESS) {
         loader_platform_thread_lock_mutex(&globalLock);
-        add_object_info(*pView, pCreateInfo->sType, pCreateInfo, sizeof(VkColorAttachmentViewCreateInfo), "color_attachment_view");
+        add_object_info(*pView, pCreateInfo->sType, pCreateInfo, sizeof(VkAttachmentViewCreateInfo), "attachment_view");
         // Validate that img has correct usage flags set
         //  We don't use the image helper function here as it's a special case that checks struct type
         MT_OBJ_INFO* pInfo = get_object_info(pCreateInfo->image);
@@ -1476,23 +1476,6 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateColorAttachmentView(
                                      pCreateInfo->image, VK_OBJECT_TYPE_IMAGE, "image", "vkCreateColorAttachmentView()", "VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT");
             }
         }
-        loader_platform_thread_unlock_mutex(&globalLock);
-    }
-    return result;
-}
-
-VK_LAYER_EXPORT VkResult VKAPI vkCreateDepthStencilView(
-    VkDevice                            device,
-    const VkDepthStencilViewCreateInfo *pCreateInfo,
-    VkDepthStencilView                 *pView)
-{
-    VkResult result = get_dispatch_table(mem_tracker_device_table_map, device)->CreateDepthStencilView(device, pCreateInfo, pView);
-    if (result == VK_SUCCESS) {
-        loader_platform_thread_lock_mutex(&globalLock);
-        add_object_info(*pView, pCreateInfo->sType, pCreateInfo, sizeof(VkDepthStencilViewCreateInfo), "ds_view");
-        // Validate that img has correct usage flags set
-        validate_image_usage_flags(device, pCreateInfo->image, VK_IMAGE_USAGE_DEPTH_STENCIL_BIT,
-                                   true, "vkCreateDepthStencilView()", "VK_IMAGE_USAGE_DEPTH_STENCIL_BIT");
         loader_platform_thread_unlock_mutex(&globalLock);
     }
     return result;
@@ -2244,10 +2227,8 @@ VK_LAYER_EXPORT void* VKAPI vkGetDeviceProcAddr(
         return (void*) vkCreateImage;
     if (!strcmp(funcName, "vkCreateImageView"))
         return (void*) vkCreateImageView;
-    if (!strcmp(funcName, "vkCreateColorAttachmentView"))
-        return (void*) vkCreateColorAttachmentView;
-    if (!strcmp(funcName, "vkCreateDepthStencilView"))
-        return (void*) vkCreateDepthStencilView;
+    if (!strcmp(funcName, "vkCreateAttachmentView"))
+        return (void*) vkCreateAttachmentView;
     if (!strcmp(funcName, "vkCreateShader"))
         return (void*) vkCreateShader;
     if (!strcmp(funcName, "vkCreateGraphicsPipelines"))

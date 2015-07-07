@@ -141,10 +141,8 @@ static inline void* globalGetProcAddr(const char *name)
         return (void*) vkGetImageSubresourceLayout;
     if (!strcmp(name, "CreateImageView"))
         return (void*) vkCreateImageView;
-    if (!strcmp(name, "CreateColorAttachmentView"))
-        return (void*) vkCreateColorAttachmentView;
-    if (!strcmp(name, "CreateDepthStencilView"))
-        return (void*) vkCreateDepthStencilView;
+    if (!strcmp(name, "CreateAttachmentView"))
+        return (void*) vkCreateAttachmentView;
     if (!strcmp(name, "CreateShaderModule"))
         return (void*) vkCreateShaderModule;
     if (!strcmp(name, "CreateShader"))
@@ -263,6 +261,8 @@ static inline void* globalGetProcAddr(const char *name)
         return (void*) vkCreateRenderPass;
     if (!strcmp(name, "CmdBeginRenderPass"))
         return (void*) vkCmdBeginRenderPass;
+    if (!strcmp(name, "CmdNextSubpass"))
+        return (void*) vkCmdNextSubpass;
     if (!strcmp(name, "CmdEndRenderPass"))
         return (void*) vkCmdEndRenderPass;
 
