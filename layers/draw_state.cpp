@@ -49,6 +49,7 @@
 #include "vk_layer_debug_marker_table.h"
 #include "vk_layer_data.h"
 #include "vk_layer_logging.h"
+#include "vk_layer_extension_utils.h"
 
 typedef struct _layer_data {
     debug_report_data *report_data;
@@ -1536,7 +1537,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateInstance(const VkInstanceCreateInfo* pCre
                                    pTable,
                                    *pInstance,
                                    pCreateInfo->extensionCount,
-                                   pCreateInfo->pEnabledExtensions);
+                                   pCreateInfo->ppEnabledExtensionNames);
 
         init_draw_state(my_data);
     }
@@ -1570,7 +1571,7 @@ static void createDeviceRegisterExtensions(const VkDeviceCreateInfo* pCreateInfo
     deviceExtMap[pDisp].debug_marker_enabled = false;
 
     for (i = 0; i < pCreateInfo->extensionCount; i++) {
-        if (strcmp(pCreateInfo->pEnabledExtensions[i].name, DEBUG_MARKER_EXTENSION_NAME) == 0) {
+        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], DEBUG_MARKER_EXTENSION_NAME) == 0) {
             /* Found a matching extension name, mark it enabled and init dispatch table*/
             initDebugMarkerTable(device);
             deviceExtMap[pDisp].debug_marker_enabled = true;
@@ -1616,86 +1617,69 @@ VK_LAYER_EXPORT VkResult VKAPI vkDestroyDevice(VkDevice device)
     return result;
 }
 
-struct extProps {
-    uint32_t version;
-    const char * const name;
-};
-#define DRAW_STATE_LAYER_DEV_EXT_ARRAY_SIZE 3
-static const VkExtensionProperties dsDevExts[DRAW_STATE_LAYER_DEV_EXT_ARRAY_SIZE] = {
+static const VkLayerProperties ds_global_layers[] = {
     {
-        VK_STRUCTURE_TYPE_EXTENSION_PROPERTIES,
         "DrawState",
-        0x10,
-        "Sample layer: DrawState",
-    },
-    {
-        VK_STRUCTURE_TYPE_EXTENSION_PROPERTIES,
-        "Validation",
-        0x10,
-        "Sample layer: DrawState",
-    },
-    {
-        VK_STRUCTURE_TYPE_EXTENSION_PROPERTIES,
-        DEBUG_MARKER_EXTENSION_NAME,
-        0x10,
-        "Sample layer: DrawState",
+        VK_API_VERSION,
+        VK_MAKE_VERSION(0, 1, 0),
+        "Validation layer: DrawState",
     }
 };
-
-//TODO add DEBUG_MARKER to device extension list
-VK_LAYER_EXPORT VkResult VKAPI vkGetPhysicalDeviceExtensionCount(
-                                               VkPhysicalDevice gpu,
-                                               uint32_t* pCount)
-{
-    *pCount = DRAW_STATE_LAYER_DEV_EXT_ARRAY_SIZE;
-    return VK_SUCCESS;
-}
-
-VK_LAYER_EXPORT VkResult VKAPI vkGetPhysicalDeviceExtensionProperties(
-                                               VkPhysicalDevice gpu,
-                                               uint32_t extensionIndex,
-                                               VkExtensionProperties* pProperties)
-{
-    if (extensionIndex >= DRAW_STATE_LAYER_DEV_EXT_ARRAY_SIZE)
-        return VK_ERROR_INVALID_VALUE;
-    memcpy(pProperties, &dsDevExts[extensionIndex], sizeof(VkExtensionProperties));
-
-    return VK_SUCCESS;
-}
-
-#define DRAW_STATE_LAYER_EXT_ARRAY_SIZE 2
-static const VkExtensionProperties dsExts[DRAW_STATE_LAYER_EXT_ARRAY_SIZE] = {
-    {
-        VK_STRUCTURE_TYPE_EXTENSION_PROPERTIES,
-        "DrawState",
-        0x10,
-        "Sample layer: DrawState",
-    },
-    {
-        VK_STRUCTURE_TYPE_EXTENSION_PROPERTIES,
-        "Validation",
-        0x10,
-        "Sample layer: DrawState",
-    }
-};
-VK_LAYER_EXPORT VkResult VKAPI vkGetGlobalExtensionCount(
-        uint32_t*    pCount)
-{
-    *pCount = DRAW_STATE_LAYER_EXT_ARRAY_SIZE;
-    return VK_SUCCESS;
-}
 
 VK_LAYER_EXPORT VkResult VKAPI vkGetGlobalExtensionProperties(
-        uint32_t extensionIndex,
-        VkExtensionProperties*    pProperties)
+        const char *pLayerName,
+        uint32_t *pCount,
+        VkExtensionProperties* pProperties)
 {
-    /* This entrypoint is NOT going to init it's own dispatch table since loader calls here early */
-    if (extensionIndex >= DRAW_STATE_LAYER_EXT_ARRAY_SIZE)
-        return VK_ERROR_INVALID_VALUE;
+    /* DrawState does not have any global extensions */
+    return util_GetExtensionProperties(0, NULL, pCount, pProperties);
+}
 
-    memcpy(pProperties, &dsExts[extensionIndex], sizeof(VkExtensionProperties));
+VK_LAYER_EXPORT VkResult VKAPI vkGetGlobalLayerProperties(
+        uint32_t *pCount,
+        VkLayerProperties*    pProperties)
+{
+    return util_GetLayerProperties(ARRAY_SIZE(ds_global_layers),
+                                   ds_global_layers,
+                                   pCount, pProperties);
+}
 
-    return VK_SUCCESS;
+static const VkExtensionProperties ds_device_extensions[] = {
+    {
+        DEBUG_MARKER_EXTENSION_NAME,
+        VK_MAKE_VERSION(0, 1, 0),
+        VK_API_VERSION
+    }
+};
+
+static const VkLayerProperties ds_device_layers[] = {
+    {
+        "DrawState",
+        VK_API_VERSION,
+        VK_MAKE_VERSION(0, 1, 0),
+        "Validation layer: DrawState",
+    }
+};
+
+VK_LAYER_EXPORT VkResult VKAPI vkGetPhysicalDeviceExtensionProperties(
+        VkPhysicalDevice                            physicalDevice,
+        const char*                                 pLayerName,
+        uint32_t*                                   pCount,
+        VkExtensionProperties*                      pProperties)
+{
+    /* Mem tracker does not have any physical device extensions */
+    return util_GetExtensionProperties(ARRAY_SIZE(ds_device_extensions), ds_device_extensions,
+                                       pCount, pProperties);
+}
+
+VK_LAYER_EXPORT VkResult VKAPI vkGetPhysicalDeviceLayerProperties(
+        VkPhysicalDevice                            physicalDevice,
+        uint32_t*                                   pCount,
+        VkLayerProperties*                          pProperties)
+{
+    /* Mem tracker's physical device layers are the same as global */
+    return util_GetLayerProperties(ARRAY_SIZE(ds_device_layers), ds_device_layers,
+                                   pCount, pProperties);
 }
 
 VK_LAYER_EXPORT VkResult VKAPI vkQueueSubmit(VkQueue queue, uint32_t cmdBufferCount, const VkCmdBuffer* pCmdBuffers, VkFence fence)
@@ -2916,10 +2900,6 @@ VK_LAYER_EXPORT void* VKAPI vkGetDeviceProcAddr(VkDevice dev, const char* funcNa
         return (void*) vkEndCommandBuffer;
     if (!strcmp(funcName, "vkResetCommandBuffer"))
         return (void*) vkResetCommandBuffer;
-    if (!strcmp(funcName, "vkGetGlobalExtensionCount"))
-        return (void*) vkGetGlobalExtensionCount;
-    if (!strcmp(funcName, "vkGetGlobalExtensionProperties"))
-        return (void*) vkGetGlobalExtensionProperties;
     if (!strcmp(funcName, "vkCmdBindPipeline"))
         return (void*) vkCmdBindPipeline;
     if (!strcmp(funcName, "vkCmdBindDynamicStateObject"))
@@ -3027,8 +3007,12 @@ VK_LAYER_EXPORT void * VKAPI vkGetInstanceProcAddr(VkInstance instance, const ch
         return (void *) vkCreateInstance;
     if (!strcmp(funcName, "vkDestroyInstance"))
         return (void *) vkDestroyInstance;
-    if (!strcmp(funcName, "vkGetPhysicalDeviceExtensionCount"))
-        return (void*) vkGetPhysicalDeviceExtensionCount;
+    if (!strcmp(funcName, "vkGetGlobalLayerProperties"))
+        return (void*) vkGetGlobalLayerProperties;
+    if (!strcmp(funcName, "vkGetGlobalExtensionProperties"))
+        return (void*) vkGetGlobalExtensionProperties;
+    if (!strcmp(funcName, "vkGetPhysicalDeviceLayerProperties"))
+        return (void*) vkGetPhysicalDeviceLayerProperties;
     if (!strcmp(funcName, "vkGetPhysicalDeviceExtensionProperties"))
         return (void*) vkGetPhysicalDeviceExtensionProperties;
 
