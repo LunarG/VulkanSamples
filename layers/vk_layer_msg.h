@@ -126,8 +126,8 @@ static void* msg_callback_get_proc_addr(
 //  If callbacks are enabled, use them, otherwise use printf
 static void layerCbMsg(
     VkFlags             msgFlags,
-    VkObjectType        objectType,
-    VkObject            srcObject,
+    VkDbgObjectType     objectType,
+    uint64_t            srcObject,
     size_t              location,
     int32_t             msgCode,
     const char*         pLayerPrefix,

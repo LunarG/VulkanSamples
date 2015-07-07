@@ -32,6 +32,7 @@
 #include <stdarg.h>
 #include <stdbool.h>
 #include <unordered_map>
+#include <inttypes.h>
 #include "vk_layer.h"
 #include "vk_layer_data.h"
 #include "vk_layer_table.h"
@@ -50,8 +51,8 @@ template debug_report_data *get_my_data_ptr<debug_report_data>(
 static inline void debug_report_log_msg(
     debug_report_data          *debug_data,
     VkFlags                     msgFlags,
-    VkObjectType                objectType,
-    VkObject                    srcObject,
+    VkDbgObjectType             objectType,
+    uint64_t                    srcObject,
     size_t                      location,
     int32_t                     msgCode,
     const char*                 pLayerPrefix,
@@ -113,7 +114,7 @@ static inline void layer_debug_report_destroy_instance(debug_report_data *debug_
 
         debug_report_log_msg(
                     debug_data, VK_DBG_REPORT_WARN_BIT,
-                    VK_OBJECT_TYPE_MSG_CALLBACK, pTrav->msgCallback,
+                    VK_OBJECT_TYPE_MSG_CALLBACK, pTrav->msgCallback.handle,
                     0, DEBUG_REPORT_CALLBACK_REF,
                     "DebugReport",
                     "Debug Report callbacks not removed before DestroyInstance");
@@ -162,7 +163,7 @@ static inline VkResult layer_create_msg_callback(
 
     debug_report_log_msg(
                 debug_data, VK_DBG_REPORT_DEBUG_BIT,
-                VK_OBJECT_TYPE_MSG_CALLBACK, *pMsgCallback,
+                VK_OBJECT_TYPE_MSG_CALLBACK, (*pMsgCallback).handle,
                 0, DEBUG_REPORT_CALLBACK_REF,
                 "DebugReport",
                 "Added callback");
@@ -186,7 +187,7 @@ static inline void layer_destroy_msg_callback(
             free(pTrav);
             debug_report_log_msg(
                         debug_data, VK_DBG_REPORT_DEBUG_BIT,
-                        VK_OBJECT_TYPE_MSG_CALLBACK, pTrav->msgCallback,
+                        VK_OBJECT_TYPE_MSG_CALLBACK, pTrav->msgCallback.handle,
                         0, DEBUG_REPORT_NONE,
                         "DebugReport",
                         "Destroyed callback");
@@ -260,7 +261,7 @@ static inline void VKAPI log_callback(
 
     print_msg_flags(msgFlags, msg_flags);
 
-    fprintf((FILE *) pUserData, "%s(%s): object: 0x%p type: %d location: %zu msgCode: %d: %s\n",
+    fprintf((FILE *) pUserData, "%s(%s): object: %#" PRIx64 " type: %d location: %zu msgCode: %d: %s\n",
              pLayerPrefix, msg_flags, srcObject, objType, location, msgCode, pMsg);
 }
 #endif // LAYER_LOGGING_H

@@ -2029,7 +2029,7 @@ typedef struct VkSamplerCreateInfo_
 
 typedef struct VkDynamicViewportStateCreateInfo_
 {
-    VkStructureType                             sType;      // Must be VK_STRUCTURE_TYPE_DYNAMIC_VP_STATE_CREATE_INFO
+    VkStructureType                             sType;      // Must be VK_STRUCTURE_TYPE_DYNAMIC_VIEWPORT_STATE_CREATE_INFO
     const void*                                 pNext;      // Pointer to next structure
     uint32_t                                    viewportAndScissorCount;  // number of entries in pViewports and pScissors
     const VkViewport*                           pViewports;
@@ -2038,7 +2038,7 @@ typedef struct VkDynamicViewportStateCreateInfo_
 
 typedef struct VkDynamicRasterStateCreateInfo_
 {
-    VkStructureType                             sType;      // Must be VK_STRUCTURE_TYPE_DYNAMIC_RS_STATE_CREATE_INFO
+    VkStructureType                             sType;      // Must be VK_STRUCTURE_TYPE_DYNAMIC_RASTER_STATE_CREATE_INFO
     const void*                                 pNext;      // Pointer to next structure
     float                                       depthBias;
     float                                       depthBiasClamp;
@@ -2048,14 +2048,14 @@ typedef struct VkDynamicRasterStateCreateInfo_
 
 typedef struct VkDynamicColorBlendStateCreateInfo_
 {
-    VkStructureType                             sType;      // Must be VK_STRUCTURE_TYPE_DYNAMIC_CB_STATE_CREATE_INFO
+    VkStructureType                             sType;      // Must be VK_STRUCTURE_TYPE_DYNAMIC_COLOR_BLEND_STATE_CREATE_INFO
     const void*                                 pNext;      // Pointer to next structure
     float                                       blendConst[4];
 } VkDynamicColorBlendStateCreateInfo;
 
 typedef struct VkDynamicDepthStencilStateCreateInfo_
 {
-    VkStructureType                             sType;              // Must be VK_STRUCTURE_TYPE_DYNAMIC_DS_STATE_CREATE_INFO
+    VkStructureType                             sType;              // Must be VK_STRUCTURE_TYPE_DYNAMIC_DEPTH_STENCIL_STATE_CREATE_INFO
     const void*                                 pNext;              // Pointer to next structure
     float                                       minDepthBounds;     // optional (depth_bounds_test)
     float                                       maxDepthBounds;     // optional (depth_bounds_test)

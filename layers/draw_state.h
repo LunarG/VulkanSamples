@@ -74,6 +74,49 @@ typedef enum _DRAW_TYPE
     NUM_DRAW_TYPES        = (DRAW_END_RANGE - DRAW_BEGIN_RANGE + 1),
 } DRAW_TYPE;
 
+typedef enum _DYNAMIC_STATE_BIND_POINT
+{
+    VK_STATE_BIND_POINT_VIEWPORT,
+    VK_STATE_BIND_POINT_RASTER,
+    VK_STATE_BIND_POINT_COLOR_BLEND,
+    VK_STATE_BIND_POINT_DEPTH_STENCIL,
+    VK_NUM_STATE_BIND_POINT // Used for array sizing
+} DYNAMIC_STATE_BIND_POINT;
+
+static string string_DYNAMIC_STATE_BIND_POINT(DYNAMIC_STATE_BIND_POINT sbp)
+{
+    switch (sbp)
+    {
+        case VK_STATE_BIND_POINT_VIEWPORT:
+            return "VIEWPORT";
+        case VK_STATE_BIND_POINT_RASTER:
+            return "RASTER";
+        case VK_STATE_BIND_POINT_COLOR_BLEND:
+            return "COLOR_BLEND";
+        case VK_STATE_BIND_POINT_DEPTH_STENCIL:
+            return "DEPTH_STENCIL";
+        default:
+            return "UNKNOWN_DYNAMIC_STATE_BIND_POINT";
+    }
+}
+
+static VkDbgObjectType dynamicStateBindPointToObjType(DYNAMIC_STATE_BIND_POINT sbp)
+{
+    switch (sbp)
+    {
+        case VK_STATE_BIND_POINT_VIEWPORT:
+            return VK_OBJECT_TYPE_DYNAMIC_VP_STATE;
+        case VK_STATE_BIND_POINT_RASTER:
+            return VK_OBJECT_TYPE_DYNAMIC_RS_STATE;
+        case VK_STATE_BIND_POINT_COLOR_BLEND:
+            return VK_OBJECT_TYPE_DYNAMIC_CB_STATE;
+        case VK_STATE_BIND_POINT_DEPTH_STENCIL:
+            return VK_OBJECT_TYPE_DYNAMIC_DS_STATE;
+        default:
+            return VK_OBJECT_TYPE_MAX_ENUM;
+    }
+}
+
 typedef struct _SHADER_DS_MAPPING {
     uint32_t slotCount;
     VkDescriptorSetLayoutCreateInfo* pShaderMappingSlot;
@@ -119,30 +162,12 @@ typedef struct _SAMPLER_NODE {
     VkSamplerCreateInfo createInfo;
 } SAMPLER_NODE;
 
-typedef struct _IMAGE_NODE {
-    union {
-        VkImageViewCreateInfo ivci;
-        VkAttachmentViewCreateInfo avci;
-    } createInfo;
-} IMAGE_NODE;
-
 typedef struct _BUFFER_NODE {
     VkBufferView           buffer;
     VkBufferViewCreateInfo createInfo;
     VkDescriptorInfo       descriptorInfo;
 } BUFFER_NODE;
 
-typedef struct _DYNAMIC_STATE_NODE {
-    VkObjectType         objType;
-    VkDynamicStateObject stateObj;
-    GENERIC_HEADER*      pCreateInfo;
-    union {
-        VkDynamicVpStateCreateInfo vpci;
-        VkDynamicRsStateCreateInfo rsci;
-        VkDynamicCbStateCreateInfo cbci;
-        VkDynamicDsStateCreateInfo dsci;
-    } create_info;
-} DYNAMIC_STATE_NODE;
 // Descriptor Data structures
 // Layout Node has the core layout data
 typedef struct _LAYOUT_NODE {
@@ -178,7 +203,10 @@ typedef enum _CMD_TYPE
 {
     CMD_BINDPIPELINE,
     CMD_BINDPIPELINEDELTA,
-    CMD_BINDDYNAMICSTATEOBJECT,
+    CMD_BINDDYNAMICVIEWPORTSTATE,
+    CMD_BINDDYNAMICRASTERSTATE,
+    CMD_BINDDYNAMICCOLORBLENDSTATE,
+    CMD_BINDDYNAMICDEPTHSTENCILSTATE,
     CMD_BINDDESCRIPTORSETS,
     CMD_BINDINDEXBUFFER,
     CMD_BINDVERTEXBUFFER,
@@ -244,6 +272,7 @@ typedef enum _CBStatusFlagBits
     CBSTATUS_DEPTH_STENCIL_BOUND               = 0x00000020, // DS state object has been bound
     CBSTATUS_INDEX_BUFFER_BOUND                = 0x00000040, // Index buffer has been bound
 } CBStatusFlagBits;
+
 // Cmd Buffer Wrapper Struct
 typedef struct _GLOBAL_CB_NODE {
     VkCmdBuffer                  cmdBuffer;
@@ -260,7 +289,7 @@ typedef struct _GLOBAL_CB_NODE {
     //  each individual CMD_NODE referencing its own "lastBound" state
     VkPipeline                   lastBoundPipeline;
     uint32_t                     lastVtxBinding;
-    DYNAMIC_STATE_NODE*          lastBoundDynamicState[VK_NUM_STATE_BIND_POINT];
+    uint64_t                     lastBoundDynamicState[VK_NUM_STATE_BIND_POINT];
     VkDescriptorSet              lastBoundDescriptorSet;
     VkPipelineLayout             lastBoundPipelineLayout;
     VkRenderPass                 activeRenderPass;
@@ -268,12 +297,3 @@ typedef struct _GLOBAL_CB_NODE {
     VkFramebuffer                framebuffer;
     vector<VkDescriptorSet>      boundDescriptorSets;
 } GLOBAL_CB_NODE;
-
-//prototypes for extension functions
-void drawStateDumpDotFile(char* outFileName);
-void drawStateDumpPngFile(const VkDevice device, char* outFileName);
-void drawStateDumpCommandBufferDotFile(char* outFileName);
-// Func ptr typedefs
-typedef void (*DRAW_STATE_DUMP_DOT_FILE)(char*);
-typedef void (*DRAW_STATE_DUMP_PNG_FILE)(char*);
-typedef void (*DRAW_STATE_DUMP_COMMAND_BUFFER_DOT_FILE)(char*);
