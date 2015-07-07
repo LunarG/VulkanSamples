@@ -2267,7 +2267,7 @@ VkResult loader_validate_instance_extensions(
                                   &loader.global_layer_list);
 
             if (!layer_prop) {
-                /* Should NOT get here, loader_validate_instance_layers
+                /* Should NOT get here, loader_validate_layers
                  * should have already filtered this case out.
                  */
                 continue;
@@ -2700,6 +2700,8 @@ VkResult loader_CreateDevice(
     uint32_t gpu_index;
     struct loader_icd *icd = loader_get_icd(gpu, &gpu_index);
     struct loader_device *dev;
+    VkDeviceCreateInfo device_create_info;
+    char **filtered_extension_names = NULL;
     VkResult res;
 
     if (!icd->CreateDevice) {
@@ -2722,6 +2724,38 @@ VkResult loader_CreateDevice(
     res = loader_validate_device_extensions(icd, pCreateInfo);
     if (res != VK_SUCCESS) {
         return res;
+    }
+
+    /*
+     * NOTE: Need to filter the extensions to only those
+     * supported by the ICD.
+     * No ICD will advertise support for layers. An ICD
+     * library could support a layer, but it would be
+     * independent of the actual ICD, just in the same library.
+     */
+    filtered_extension_names = loader_stack_alloc(pCreateInfo->extensionCount * sizeof(char *));
+    if (!filtered_extension_names) {
+        return VK_ERROR_OUT_OF_HOST_MEMORY;
+    }
+
+    /* Copy user's data */
+    memcpy(&device_create_info, pCreateInfo, sizeof(VkDeviceCreateInfo));
+
+    /* ICD's do not use layers */
+    device_create_info.layerCount = 0;
+    device_create_info.ppEnabledLayerNames = NULL;
+
+    device_create_info.extensionCount = 0;
+    device_create_info.ppEnabledExtensionNames = (const char * const *) filtered_extension_names;
+
+    for (uint32_t i = 0; i < pCreateInfo->extensionCount; i++) {
+        const char *extension_name = pCreateInfo->ppEnabledExtensionNames[i];
+        struct loader_extension_property *prop = get_extension_property(extension_name,
+                                      &icd->device_extension_cache[gpu_index]);
+        if (prop) {
+            filtered_extension_names[device_create_info.extensionCount] = (char *) extension_name;
+            device_create_info.extensionCount++;
+        }
     }
 
     res = icd->CreateDevice(gpu, pCreateInfo, pDevice);
