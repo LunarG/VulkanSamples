@@ -572,6 +572,7 @@ class GenericLayerSubcommand(Subcommand):
         gen_header.append('}')
         gen_header.append('')
         return "\n".join(gen_header)
+
     def generate_intercept(self, proto, qual):
         if proto.name in [ 'GetGlobalLayerProperties', 'GetGlobalExtensionProperties', 'GetPhysicalDeviceLayerProperties', 'GetPhysicalDeviceExtensionProperties' ]:
             # use default version
