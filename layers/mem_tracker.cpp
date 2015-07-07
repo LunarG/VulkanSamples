@@ -961,15 +961,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkGetPhysicalDeviceMemoryProperties(
     return result;
 }
 
-
-struct extProps {
-    uint32_t version;
-    const char * const name;
-};
-#define MEM_TRACKER_EXT_ARRAY_SIZE 0
-
-#define MEM_TRACKER_LAYER_ARRAY_SIZE 1
-static const VkLayerProperties mtGlobalLayers[MEM_TRACKER_LAYER_ARRAY_SIZE] = {
+static const VkLayerProperties mtGlobalLayers[] = {
     {
         "MemTracker",
         VK_API_VERSION,
@@ -984,20 +976,17 @@ VK_LAYER_EXPORT VkResult VKAPI vkGetGlobalExtensionProperties(
         VkExtensionProperties* pProperties)
 {
     /* Mem tracker does not have any global extensions */
-    return util_GetExtensionProperties(MEM_TRACKER_EXT_ARRAY_SIZE, NULL,
-                                       pCount, pProperties);
+    return util_GetExtensionProperties(0, NULL, pCount, pProperties);
 }
 
 VK_LAYER_EXPORT VkResult VKAPI vkGetGlobalLayerProperties(
         uint32_t *pCount,
         VkLayerProperties*    pProperties)
 {
-    return util_GetLayerProperties(MEM_TRACKER_LAYER_ARRAY_SIZE,
-                                   (VkLayerProperties *) mtGlobalLayers,
+    return util_GetLayerProperties(ARRAY_SIZE(mtGlobalLayers),
+                                   mtGlobalLayers,
                                    pCount, pProperties);
 }
-
-#define MEM_TRACKER_DEV_EXT_ARRAY_SIZE 0
 
 VK_LAYER_EXPORT VkResult VKAPI vkGetPhysicalDeviceExtensionProperties(
         VkPhysicalDevice                            physicalDevice,
@@ -1006,8 +995,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkGetPhysicalDeviceExtensionProperties(
         VkExtensionProperties*                      pProperties)
 {
     /* Mem tracker does not have any physical device extensions */
-    return util_GetExtensionProperties(MEM_TRACKER_DEV_EXT_ARRAY_SIZE, NULL,
-                                       pCount, pProperties);
+    return util_GetExtensionProperties(0, NULL, pCount, pProperties);
 }
 
 VK_LAYER_EXPORT VkResult VKAPI vkGetPhysicalDeviceLayerProperties(
@@ -1016,7 +1004,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkGetPhysicalDeviceLayerProperties(
         VkLayerProperties*                          pProperties)
 {
     /* Mem tracker's physical device layers are the same as global */
-    return util_GetLayerProperties(MEM_TRACKER_LAYER_ARRAY_SIZE, mtGlobalLayers,
+    return util_GetLayerProperties(ARRAY_SIZE(mtGlobalLayers), mtGlobalLayers,
                                    pCount, pProperties);
 }
 
