@@ -393,9 +393,19 @@ static void loader_add_global_extensions(
     VkExtensionProperties *extension_properties;
     VkResult res;
 
+    if (!fp_get_props) {
+        /* No GetGlobalExtensionProperties defined */
+        return;
+    }
+
     res = fp_get_props(NULL, &count, NULL);
     if (res != VK_SUCCESS) {
         loader_log(VK_DBG_REPORT_WARN_BIT, 0, "Error getting global extension count from %s", lib_name);
+        return;
+    }
+
+    if (count == 0) {
+        /* No ExtensionProperties to report */
         return;
     }
 
