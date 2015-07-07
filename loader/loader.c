@@ -1169,6 +1169,34 @@ static char *loader_get_next_path(char *path)
 }
 
 /**
+ * Given a path which is absolute or relative. Expand the path if relative otherwise
+ * leave the path unmodified if absolute. The path which is relative from is
+ * given in rel_base and should include trailing directory seperator '/'
+ *
+ * \returns
+ * A string in out_fullpath of the full absolute path
+ * Side effect is that dir string maybe modified.
+ */
+static void loader_expand_path(const char *path,
+                               const char *rel_base,
+                               size_t out_size,
+                               char *out_fullpath)
+{
+    if (loader_platform_is_path_absolute(path)) {
+        strncpy(out_fullpath, path, out_size);
+        out_fullpath[out_size - 1] = '\0';
+    }
+    else {
+        // convert relative to absolute path based on rel_base
+        size_t len = strlen(path);
+        strncpy(out_fullpath, rel_base, out_size);
+        out_fullpath[out_size - 1] = '\0';
+        assert(out_size >= strlen(out_fullpath) + len + 1);
+        strncat(out_fullpath, path, len);
+    }
+}
+
+/**
  * Given a filename (file)  and a list of paths (dir), try to find an existing
  * file in the paths.  If filename already is a path then no
  * searching in the given paths.
@@ -1321,9 +1349,10 @@ static void loader_add_layer_properties(struct loader_layer_list *layer_list,
     // add list entry
     assert((layer_list->count + 1) * sizeof(struct loader_layer_properties) <= layer_list->capacity);
     struct loader_layer_properties *props = &(layer_list->list[layer_list->count]);
-    strcpy(props->info.layerName, name);
-    //TODO string overflow
+    strncpy(props->info.layerName, name, sizeof(props->info.layerName));
+    props->info.layerName[sizeof(props->info.layerName) - 1] = '\0';
     free(name);
+
     if (!strcmp(type, "DEVICE"))
         props->type = (is_implicit) ? VK_LAYER_TYPE_DEVICE_IMPLICIT : VK_LAYER_TYPE_DEVICE_EXPLICIT;
     if (!strcmp(type, "INSTANCE"))
@@ -1331,13 +1360,31 @@ static void loader_add_layer_properties(struct loader_layer_list *layer_list,
     if (!strcmp(type, "GLOBAL"))
         props->type = (is_implicit) ? VK_LAYER_TYPE_GLOBAL_IMPLICIT : VK_LAYER_TYPE_GLOBAL_EXPLICIT;
     free(type);
-    //TODO handle relative paths  and filenames in addition to absolute path
-    props->lib_info.lib_name = library_path;
-    //TODO merge the info with the versions
+
+    char *fullpath = malloc(2048);
+    char *rel_base;
+    if (strchr(library_path, DIRECTORY_SYMBOL) == NULL) {
+        // a filename which is assumed in the system directory
+        loader_get_fullpath(library_path, DEFAULT_VK_LAYERS_PATH, 2048, fullpath);
+    }
+    else {
+        // a relative or absolute path
+        char *name_copy = loader_stack_alloc(strlen(filename) + 2);
+        size_t len;
+        strcpy(name_copy, filename);
+        rel_base = loader_platform_dirname(name_copy);
+        len = strlen(rel_base);
+        rel_base[len] =  DIRECTORY_SYMBOL;
+        rel_base[len + 1] = '\0';
+        loader_expand_path(library_path, rel_base, 2048, fullpath);
+    }
+    props->lib_info.lib_name = fullpath;
+    free(library_path);
+    //TODO merge the info with the versions and convert string to int
     props->abi_version = abi_versions;
     props->impl_version = implementation_version;
-    //TODO string overflow
-    strcpy(props->info.description,description);
+    strncpy(props->info.description, description, sizeof(props->info.description));
+    props->info.description[sizeof(props->info.description) - 1] = '\0';
     free(description);
     if (is_implicit) {
         props->disable_env_var.name = disable_environment->child->string;

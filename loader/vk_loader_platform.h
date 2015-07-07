@@ -43,6 +43,7 @@
 #include <pthread.h>
 #include <assert.h>
 #include <stdbool.h>
+#include <libgen.h>
 
 // VK Library Filenames, Paths, etc.:
 #define PATH_SEPERATOR ':'
@@ -52,6 +53,7 @@
 #define DEFAULT_VK_DRIVERS_INFO "/usr/share/vulkan/icd.d:/etc/vulkan/icd.d"
 #define DEFAULT_VK_DRIVERS_PATH "/usr/lib/i386-linux-gnu/vulkan/icd:/usr/lib/x86_64-linux-gnu/vulkan/icd"
 #define DEFAULT_VK_LAYERS_INFO "/usr/share/vulkan/explicit_layer.d:/usr/share/vulkan/implicit_layer.d:/etc/vulkan/explicit_layer.d:/etc/vulkan/implicit_layer.d"
+#define DEFAULT_VK_LAYERS_PATH "/usr/lib/i386-linux-gnu/vulkan/layer:/usr/lib/x86_64-linux-gnu/vulkan/layer"
 #define LAYERS_PATH_ENV "VK_LAYER_DIRS"
 
 // C99:
@@ -64,6 +66,19 @@ static inline bool loader_platform_file_exists(const char *path)
         return false;
     else
         return true;
+}
+
+static inline bool loader_platform_is_path_absolute(const char *path)
+{
+    if (path[0] == '/')
+        return true;
+    else
+        return false;
+}
+
+static inline char *loader_platform_dirname(char *path)
+{
+    return dirname(path);
 }
 
 // Dynamic Loading of libraries:
@@ -171,6 +186,7 @@ using namespace std;
 // TODO: Are these the correct paths
 #define DEFAULT_VK_DRIVERS_PATH "C:\\Windows\\System32;C:\\Windows\\SysWow64"
 #define DEFAULT_VK_LAYERS_INFO "SOFTWARE\\Khronos\\Vulkan\\ExplicitLayers;SOFTWARE\\Khronos\\Vulkan\\ImplicitLayers"
+#define DEFAULT_VK_LAYERS_PATH "C:\\Windows\\System32;C:\\Windows\\SysWow64"
 #define LAYERS_PATH_ENV "VK_LAYERS_FOLDERS"
 
 // C99:
@@ -179,36 +195,11 @@ using namespace std;
 // work-around (Note: The _CRT_SECURE_NO_WARNINGS macro must be set in the
 // "CMakeLists.txt" file).
 #define snprintf _snprintf
+#define strdup _strdup
 #define PRINTF_SIZE_T_SPECIFIER    "%Iu"
 
 // Microsoft doesn't implement alloca, instead we have _alloca
 #define alloca _alloca
-
-// Microsoft also doesn't have basename().  Paths are different on Windows, and
-// so this is just a temporary solution in order to get us compiling, so that we
-// can test some scenarios, and develop the correct solution for Windows.
-  // TODO: Develop a better, permanent solution for Windows, to replace this
-  // temporary code:
-static char *basename(char *pathname)
-{
-    char *current, *next;
-
-// TODO/TBD: Do we need to deal with the Windows's ":" character?
-
-#define DIRECTORY_SYMBOL_CHAR '\\'
-    for (current = pathname; *current != '\0'; current = next) {
-        next = strchr(current, DIRECTORY_SYMBOL_CHAR);
-        if (next == NULL) {
-            // No more DIRECTORY_SYMBOL_CHAR's so return p:
-            return current;
-        } else {
-            // Point one character past the DIRECTORY_SYMBOL_CHAR:
-            next++;
-        }
-    }
-    // We shouldn't get to here, but this makes the compiler happy:
-    return current;
-}
 
 // File IO
 static bool loader_platform_file_exists(const char *path)
@@ -217,6 +208,58 @@ static bool loader_platform_file_exists(const char *path)
         return false;
     else
         return true;
+}
+
+static bool loader_is_path_absolute(const char *path)
+{
+    return !PathIsRelative(path);
+}
+
+// WIN32 runtime doesn't have dirname().
+static inline char *loader_platform_dirname(char *path)
+{
+    char *current, *next;
+
+    // TODO/TBD: Do we need to deal with the Windows's ":" character?
+
+    for (current = path; *current != '\0'; current = next) {
+        next = strchr(current, DIRECTORY_SYMBOL);
+        if (next == NULL) {
+            if (current != path)
+                *(current - 1) = '\0';
+            return path;
+        } else {
+            // Point one character past the DIRECTORY_SYMBOL:
+            next++;
+        }
+    }
+    return path;
+}
+
+// WIN32 runtime doesn't have basename().
+// Microsoft also doesn't have basename().  Paths are different on Windows, and
+// so this is just a temporary solution in order to get us compiling, so that we
+// can test some scenarios, and develop the correct solution for Windows.
+  // TODO: Develop a better, permanent solution for Windows, to replace this
+  // temporary code:
+static char *loader_platform_basename(char *pathname)
+{
+    char *current, *next;
+
+// TODO/TBD: Do we need to deal with the Windows's ":" character?
+
+    for (current = pathname; *current != '\0'; current = next) {
+        next = strchr(current, DIRECTORY_SYMBOL);
+        if (next == NULL) {
+            // No more DIRECTORY_SYMBOL's so return p:
+            return current;
+        } else {
+            // Point one character past the DIRECTORY_SYMBOL:
+            next++;
+        }
+    }
+    // We shouldn't get to here, but this makes the compiler happy:
+    return current;
 }
 
 // Dynamic Loading:
