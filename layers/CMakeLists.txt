@@ -14,6 +14,43 @@ macro(run_vk_layer_generate subcmd output)
 	)
 endmacro()
 
+set(LAYER_JSON_FILES
+    api_dump_config
+    basic_config
+    draw_state_config
+    generic_config
+    image_config
+    mem_tracker_config
+    multi_config
+    object_tracker_config
+    param_checker_config
+    screenshot_config
+    shader_checker_config
+    threading_config
+    )
+
+if (NOT WIN32)
+    # extra setup for out-of-tree builds
+    if (NOT (CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_CURRENT_BINARY_DIR))
+        foreach (config_file ${LAYER_JSON_FILES})
+            add_custom_target(${config_file}-json ALL
+                COMMAND ln -sf ${CMAKE_CURRENT_SOURCE_DIR}/${config_file}.json
+                VERBATIM
+                )
+        endforeach(config_file)
+    endif()
+else()
+    if (NOT (CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_CURRENT_BINARY_DIR))
+        foreach (config_file ${LAYER_JSON_FILES})
+            FILE(TO_NATIVE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/${config_file}.json ${config_file}-JSON)
+            add_custom_target(binary-dir-symlinks ALL
+                COMMAND copy ${config_file}-JSON ${config_file}.json
+                VERBATIM
+                )
+        endforeach(config_file)
+    endif()
+endif()
+
 if (WIN32)
     macro(add_vk_layer target)
 	add_custom_command(OUTPUT VKLayer${target}.def
