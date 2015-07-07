@@ -40,6 +40,7 @@
 // The following is #included again to catch certain OS-specific functions
 // being used:
 #include "vk_loader_platform.h"
+#include "vk_layer_extension_utils.h"
 
 #include "spirv/spirv.h"
 
@@ -155,61 +156,52 @@ initLayer()
     }
 }
 
-#define SHADER_CHECKER_LAYER_EXT_ARRAY_SIZE 2
-static const VkExtensionProperties shaderCheckerExts[SHADER_CHECKER_LAYER_EXT_ARRAY_SIZE] = {
+static const VkLayerProperties shader_checker_global_layers[] = {
     {
-        VK_STRUCTURE_TYPE_EXTENSION_PROPERTIES,
         "ShaderChecker",
-        0x10,
-        "Sample layer: ShaderChecker",
-    },
-    {
-        VK_STRUCTURE_TYPE_EXTENSION_PROPERTIES,
-        "Validation",
-        0x10,
-        "Sample layer: ShaderChecker",
+        VK_API_VERSION,
+        VK_MAKE_VERSION(0, 1, 0),
+        "Validation layer: ShaderChecker",
     }
 };
-VK_LAYER_EXPORT VkResult VKAPI vkGetGlobalExtensionCount(
-        uint32_t* pCount)
-{
-    *pCount = SHADER_CHECKER_LAYER_EXT_ARRAY_SIZE;
-    return VK_SUCCESS;
-}
 
 VK_LAYER_EXPORT VkResult VKAPI vkGetGlobalExtensionProperties(
-        uint32_t extensionIndex,
-        VkExtensionProperties*    pProperties)
+        const char *pLayerName,
+        uint32_t *pCount,
+        VkExtensionProperties* pProperties)
 {
-    /* This entrypoint is NOT going to init it's own dispatch table since loader calls here early */
-
-    if (extensionIndex >= SHADER_CHECKER_LAYER_EXT_ARRAY_SIZE)
-        return VK_ERROR_INVALID_VALUE;
-    memcpy(pProperties, &shaderCheckerExts[extensionIndex], sizeof(VkExtensionProperties));
-
-    return VK_SUCCESS;
+    /* shader checker does not have any global extensions */
+    return util_GetExtensionProperties(0, NULL, pCount, pProperties);
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkGetPhysicalDeviceExtensionCount(
-                                               VkPhysicalDevice gpu,
-                                               uint32_t* pCount)
+VK_LAYER_EXPORT VkResult VKAPI vkGetGlobalLayerProperties(
+        uint32_t *pCount,
+        VkLayerProperties*    pProperties)
 {
-    *pCount = SHADER_CHECKER_LAYER_EXT_ARRAY_SIZE;
-    return VK_SUCCESS;
+    return util_GetLayerProperties(ARRAY_SIZE(shader_checker_global_layers),
+                                   shader_checker_global_layers,
+                                   pCount, pProperties);
 }
 
 VK_LAYER_EXPORT VkResult VKAPI vkGetPhysicalDeviceExtensionProperties(
-                                               VkPhysicalDevice gpu,
-                                               uint32_t extensionIndex,
-                                               VkExtensionProperties* pProperties)
+        VkPhysicalDevice                            physicalDevice,
+        const char*                                 pLayerName,
+        uint32_t*                                   pCount,
+        VkExtensionProperties*                      pProperties)
 {
-    /* This entrypoint is NOT going to init it's own dispatch table since loader calls here early */
+    /* Shader checker does not have any physical device extensions */
+    return util_GetExtensionProperties(0, NULL, pCount, pProperties);
+}
 
-    if (extensionIndex >= SHADER_CHECKER_LAYER_EXT_ARRAY_SIZE)
-        return VK_ERROR_INVALID_VALUE;
-    memcpy(pProperties, &shaderCheckerExts[extensionIndex], sizeof(VkExtensionProperties));
-
-    return VK_SUCCESS;
+VK_LAYER_EXPORT VkResult VKAPI vkGetPhysicalDeviceLayerProperties(
+        VkPhysicalDevice                            physicalDevice,
+        uint32_t*                                   pCount,
+        VkLayerProperties*                          pProperties)
+{
+    /* Shader checker physical device layers are the same as global */
+    return util_GetLayerProperties(ARRAY_SIZE(shader_checker_global_layers),
+                                   shader_checker_global_layers,
+                                   pCount, pProperties);
 }
 
 static char const *
@@ -942,7 +934,7 @@ VkResult VKAPI vkCreateInstance(
     VkResult result = pTable->CreateInstance(pCreateInfo, pInstance);
 
     if (result == VK_SUCCESS) {
-        enable_debug_report(pCreateInfo->extensionCount, pCreateInfo->pEnabledExtensions);
+        enable_debug_report(pCreateInfo->extensionCount, pCreateInfo->ppEnabledExtensionNames);
 
         debug_report_init_instance_extension_dispatch_table(
                     pTable,
@@ -1029,9 +1021,9 @@ VK_LAYER_EXPORT void * VKAPI vkGetInstanceProcAddr(VkInstance inst, const char* 
     ADD_HOOK(vkCreateInstance);
     ADD_HOOK(vkDestroyInstance);
     ADD_HOOK(vkGetGlobalExtensionProperties);
-    ADD_HOOK(vkGetGlobalExtensionCount);
     ADD_HOOK(vkGetPhysicalDeviceExtensionProperties);
-    ADD_HOOK(vkGetPhysicalDeviceExtensionCount);
+    ADD_HOOK(vkGetGlobalLayerProperties);
+    ADD_HOOK(vkGetPhysicalDeviceLayerProperties);
 #undef ADD_HOOK
 
     fptr = msg_callback_get_proc_addr(pName);
