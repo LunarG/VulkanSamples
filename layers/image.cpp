@@ -42,6 +42,7 @@
 #include "vk_layer_table.h"
 #include "vk_layer_data.h"
 #include "vk_layer_logging.h"
+#include "vk_layer_extension_utils.h"
 
 typedef struct _layer_data {
     debug_report_data *report_data;
@@ -136,7 +137,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateInstance(const VkInstanceCreateInfo* pCre
     if (result == VK_SUCCESS) {
         layer_data *data = get_my_data_ptr(get_dispatch_key(*pInstance), layer_data_map);
         data->report_data = debug_report_create_instance(pTable, *pInstance, pCreateInfo->extensionCount,
-            pCreateInfo->pEnabledExtensions);
+            pCreateInfo->ppEnabledExtensionNames);
 
         InitImage(data);
     }
@@ -198,61 +199,51 @@ VK_LAYER_EXPORT VkResult VKAPI vkDestroyDevice(VkDevice device)
     return result;
 }
 
-#define IMAGE_LAYER_EXT_ARRAY_SIZE 2
-static const VkExtensionProperties pcExts[IMAGE_LAYER_EXT_ARRAY_SIZE] = {
+static const VkLayerProperties pc_global_layers[] = {
     {
-        VK_STRUCTURE_TYPE_EXTENSION_PROPERTIES,
         "Image",
-        0x10,
-        "Sample layer: Image",
-    },
-    {
-        VK_STRUCTURE_TYPE_EXTENSION_PROPERTIES,
-        "Validation",
-        0x10,
-        "Sample layer: Image",
+        VK_API_VERSION,
+        VK_MAKE_VERSION(0, 1, 0),
+        "Validation layer: Image ParamChecker",
     }
 };
-VK_LAYER_EXPORT VkResult VKAPI vkGetGlobalExtensionCount(
-        uint32_t* pCount)
-{
-    *pCount = IMAGE_LAYER_EXT_ARRAY_SIZE;
-    return VK_SUCCESS;
-}
 
 VK_LAYER_EXPORT VkResult VKAPI vkGetGlobalExtensionProperties(
-        uint32_t extensionIndex,
-        VkExtensionProperties*    pProperties)
+        const char *pLayerName,
+        uint32_t *pCount,
+        VkExtensionProperties* pProperties)
 {
-    /* This entrypoint is NOT going to init it's own dispatch table since loader calls here early */
-
-    if (extensionIndex >= IMAGE_LAYER_EXT_ARRAY_SIZE)
-        return VK_ERROR_INVALID_VALUE;
-    memcpy(pProperties, &pcExts[extensionIndex], sizeof(VkExtensionProperties));
-
-    return VK_SUCCESS;
+    /* ParamChecker does not have any global extensions */
+    return util_GetExtensionProperties(0, NULL, pCount, pProperties);
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkGetPhysicalDeviceExtensionCount(
-                                               VkPhysicalDevice gpu,
-                                               uint32_t* pCount)
+VK_LAYER_EXPORT VkResult VKAPI vkGetGlobalLayerProperties(
+        uint32_t *pCount,
+        VkLayerProperties*    pProperties)
 {
-    *pCount = IMAGE_LAYER_EXT_ARRAY_SIZE;
-    return VK_SUCCESS;
+    return util_GetLayerProperties(ARRAY_SIZE(pc_global_layers),
+                                   pc_global_layers,
+                                   pCount, pProperties);
 }
 
 VK_LAYER_EXPORT VkResult VKAPI vkGetPhysicalDeviceExtensionProperties(
-                                               VkPhysicalDevice gpu,
-                                               uint32_t extensionIndex,
-                                               VkExtensionProperties* pProperties)
+        VkPhysicalDevice                            physicalDevice,
+        const char*                                 pLayerName,
+        uint32_t*                                   pCount,
+        VkExtensionProperties*                      pProperties)
 {
-    /* This entrypoint is NOT going to init it's own dispatch table since loader calls here early */
+    /* ParamChecker does not have any physical device extensions */
+    return util_GetExtensionProperties(0, NULL, pCount, pProperties);
+}
 
-    if (extensionIndex >= IMAGE_LAYER_EXT_ARRAY_SIZE)
-        return VK_ERROR_INVALID_VALUE;
-    memcpy(pProperties, &pcExts[extensionIndex], sizeof(VkExtensionProperties));
-
-    return VK_SUCCESS;
+VK_LAYER_EXPORT VkResult VKAPI vkGetPhysicalDeviceLayerProperties(
+        VkPhysicalDevice                            physicalDevice,
+        uint32_t*                                   pCount,
+        VkLayerProperties*                          pProperties)
+{
+    /* ParamChecker's physical device layers are the same as global */
+    return util_GetLayerProperties(ARRAY_SIZE(pc_global_layers), pc_global_layers,
+                                   pCount, pProperties);
 }
 
 VK_LAYER_EXPORT VkResult VKAPI vkCreateImage(VkDevice device, const VkImageCreateInfo* pCreateInfo, VkImage* pImage)
@@ -392,10 +383,6 @@ VK_LAYER_EXPORT void* VKAPI vkGetDeviceProcAddr(VkDevice device, const char* fun
         return (void*) vkCreateImage;
     if (!strcmp(funcName, "vkCreateRenderPass"))
         return (void*) vkCreateRenderPass;
-    if (!strcmp(funcName, "vkGetGlobalExtensionProperties"))
-        return (void*) vkGetGlobalExtensionProperties;
-    if (!strcmp(funcName, "vkGetGlobalExtensionCount"))
-        return (void*) vkGetGlobalExtensionCount;
 
     {
         if (get_dispatch_table(image_device_table_map, device)->GetDeviceProcAddr == NULL)
@@ -420,10 +407,14 @@ VK_LAYER_EXPORT void* VKAPI vkGetInstanceProcAddr(VkInstance instance, const cha
         return (void*) vkCreateInstance;
     if (!strcmp(funcName, "vkDestroyInstance"))
         return (void *) vkDestroyInstance;
+    if (!strcmp(funcName, "vkGetGlobalLayerProperties"))
+        return (void*) vkGetGlobalLayerProperties;
+    if (!strcmp(funcName, "vkGetGlobalExtensionProperties"))
+        return (void*) vkGetGlobalExtensionProperties;
+    if (!strcmp(funcName, "vkGetPhysicalDeviceLayerProperties"))
+        return (void*) vkGetPhysicalDeviceLayerProperties;
     if (!strcmp(funcName, "vkGetPhysicalDeviceExtensionProperties"))
         return (void*) vkGetPhysicalDeviceExtensionProperties;
-    if (!strcmp(funcName, "vkGetPhysicalDeviceExtensionCount"))
-        return (void*) vkGetPhysicalDeviceExtensionCount;
 
     layer_data *data = get_my_data_ptr(get_dispatch_key(instance), layer_data_map);
     void* fptr = debug_report_get_instance_proc_addr(data->report_data, funcName);
