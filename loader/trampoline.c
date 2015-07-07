@@ -53,7 +53,9 @@ LOADER_EXPORT VkResult VKAPI vkCreateInstance(
     /* merge any duplicate extensions */
     loader_platform_thread_once(&once_exts, loader_coalesce_extensions);
 
-    res = loader_validate_instance_layers(pCreateInfo);
+    res = loader_validate_layers(pCreateInfo->layerCount,
+                                 pCreateInfo->ppEnabledLayerNames,
+                                 &loader.global_layer_list);
     if (res != VK_SUCCESS) {
         return res;
     }

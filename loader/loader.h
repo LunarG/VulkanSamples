@@ -335,8 +335,7 @@ bool compare_vk_extension_properties(
         const VkExtensionProperties*            op1,
         const VkExtensionProperties*            op2);
 
-VkResult loader_validate_instance_layers(
-        const VkInstanceCreateInfo*             pCreateInfo);
+VkResult loader_validate_layers(const uint32_t layer_count, const char * const *ppEnabledLayerNames, struct loader_layer_list *list);
 
 VkResult loader_validate_instance_extensions(
         const VkInstanceCreateInfo*             pCreateInfo);

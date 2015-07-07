@@ -2227,14 +2227,16 @@ static uint32_t loader_activate_device_layers(
     return dev->activated_layer_list.count;
 }
 
-VkResult loader_validate_instance_layers(
-        const VkInstanceCreateInfo*     pCreateInfo)
+VkResult loader_validate_layers(
+        const uint32_t                  layer_count,
+        const char * const             *ppEnabledLayerNames,
+        struct loader_layer_list       *list)
 {
     struct loader_layer_properties *prop;
 
-    for (uint32_t i = 0; i < pCreateInfo->layerCount; i++) {
-        prop = get_layer_property(pCreateInfo->ppEnabledLayerNames[i],
-                                  &loader.global_layer_list);
+    for (uint32_t i = 0; i < layer_count; i++) {
+        prop = get_layer_property(ppEnabledLayerNames[i],
+                                  list);
         if (!prop) {
             return VK_ERROR_INVALID_LAYER;
         }
@@ -2244,8 +2246,91 @@ VkResult loader_validate_instance_layers(
 }
 
 VkResult loader_validate_instance_extensions(
-        const VkInstanceCreateInfo*     pCreateInfo)
+        const VkInstanceCreateInfo     *pCreateInfo)
 {
+    struct loader_extension_property *extension_prop;
+    struct loader_layer_properties *layer_prop;
+
+    for (uint32_t i = 0; i < pCreateInfo->extensionCount; i++) {
+        extension_prop = get_extension_property(pCreateInfo->ppEnabledExtensionNames[i],
+                                                &loader.global_extensions);
+
+        if (extension_prop) {
+            continue;
+        }
+
+        extension_prop = NULL;
+
+        /* Not in global list, search layer extension lists */
+        for (uint32_t j = 0; j < pCreateInfo->layerCount; j++) {
+            layer_prop = get_layer_property(pCreateInfo->ppEnabledLayerNames[i],
+                                  &loader.global_layer_list);
+
+            if (!layer_prop) {
+                /* Should NOT get here, loader_validate_instance_layers
+                 * should have already filtered this case out.
+                 */
+                continue;
+            }
+
+            extension_prop = get_extension_property(pCreateInfo->ppEnabledExtensionNames[i],
+                                          &layer_prop->instance_extension_list);
+            if (extension_prop) {
+                /* Found the extension in one of the layers enabled by the app. */
+                break;
+            }
+        }
+
+        if (!extension_prop) {
+            /* Didn't find extension name in any of the global layers, error out */
+            return VK_ERROR_INVALID_EXTENSION;
+        }
+    }
+    return VK_SUCCESS;
+}
+
+VkResult loader_validate_device_extensions(
+        struct loader_icd              *icd,
+        const VkDeviceCreateInfo       *pCreateInfo)
+{
+    struct loader_extension_property *extension_prop;
+    struct loader_layer_properties *layer_prop;
+
+    for (uint32_t i = 0; i < pCreateInfo->extensionCount; i++) {
+        const char *extension_name = pCreateInfo->ppEnabledExtensionNames[i];
+        extension_prop = get_extension_property(extension_name,
+                                                &loader.global_extensions);
+
+        if (extension_prop) {
+            continue;
+        }
+
+        /* Not in global list, search layer extension lists */
+        for (uint32_t j = 0; j < pCreateInfo->layerCount; j++) {
+            const char *layer_name = pCreateInfo->ppEnabledLayerNames[j];
+            layer_prop = get_layer_property(layer_name,
+                                  &icd->layer_properties_cache);
+
+            if (!layer_prop) {
+                /* Should NOT get here, loader_validate_instance_layers
+                 * should have already filtered this case out.
+                 */
+                continue;
+            }
+
+            extension_prop = get_extension_property(extension_name,
+                                          &layer_prop->device_extension_list);
+            if (extension_prop) {
+                /* Found the extension in one of the layers enabled by the app. */
+                break;
+            }
+        }
+
+        if (!extension_prop) {
+            /* Didn't find extension name in any of the device layers, error out */
+            return VK_ERROR_INVALID_EXTENSION;
+        }
+    }
     return VK_SUCCESS;
 }
 
@@ -2270,7 +2355,7 @@ VkResult loader_CreateInstance(
 
     /*
      * NOTE: Need to filter the extensions to only those
-     * supported by the ICD are in the pCreateInfo structure.
+     * supported by the ICD.
      * No ICD will advertise support for layers. An ICD
      * library could support a layer, but it would be
      * independent of the actual ICD, just in the same library.
@@ -2627,6 +2712,17 @@ VkResult loader_CreateDevice(
      * TODO: Probably should verify that every extension is
      * covered by either the ICD or some layer.
      */
+    res = loader_validate_layers(pCreateInfo->layerCount,
+                           pCreateInfo->ppEnabledLayerNames,
+                           &icd->layer_properties_cache);
+    if (res != VK_SUCCESS) {
+        return res;
+    }
+
+    res = loader_validate_device_extensions(icd, pCreateInfo);
+    if (res != VK_SUCCESS) {
+        return res;
+    }
 
     res = icd->CreateDevice(gpu, pCreateInfo, pDevice);
     if (res != VK_SUCCESS) {
