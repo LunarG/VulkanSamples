@@ -33,6 +33,7 @@
 // The following is #included again to catch certain OS-specific functions
 // being used:
 #include "vk_loader_platform.h"
+#include "vk_layer_extension_utils.h"
 
 static void initLayerTable(const VkBaseLayerObject *devw, VkLayerDispatchTable *pTable, const unsigned int layerNum);
 static void initLayerInstanceTable(const VkBaseLayerObject *instw, VkLayerInstanceDispatchTable *pTable, const unsigned int layerNum);
@@ -105,7 +106,7 @@ static VkLayerInstanceDispatchTable *getLayer1InstanceTable(const VkBaseLayerObj
 extern "C" {
 #endif
 
-/* hook DextroyDevice to remove tableMap entry */
+/* hook DestroyDevice to remove tableMap entry */
 VK_LAYER_EXPORT VkResult VKAPI multi1DestroyDevice(VkDevice device)
 {
     VkLayerDispatchTable *pDisp = *(VkLayerDispatchTable **) device;
@@ -201,8 +202,12 @@ VK_LAYER_EXPORT void * VKAPI multi1GetInstanceProcAddr(VkInstance inst, const ch
         return (void *) multi1DestroyInstance;
     if (!strcmp("GetGlobalExtensionProperties", pName))
         return (void*) vkGetGlobalExtensionProperties;
-    if (!strcmp("GetGlobalExtensionCount", pName))
-        return (void*) vkGetGlobalExtensionCount;
+    if (!strcmp("GetGlobalLayerProperties", pName))
+        return (void*) vkGetGlobalLayerProperties;
+    if (!strcmp("GetPhysicalDeviceExtensionProperties", pName))
+        return (void*) vkGetPhysicalDeviceExtensionProperties;
+    if (!strcmp("GetPhysicalDeviceLayerProperties", pName))
+        return (void*) vkGetPhysicalDeviceLayerProperties;
     else {
         VkLayerInstanceDispatchTable **ppDisp = (VkLayerInstanceDispatchTable **) inst;
         VkLayerInstanceDispatchTable* pTable = instance_dispatch_table1(inst);
@@ -377,10 +382,14 @@ VK_LAYER_EXPORT void * VKAPI multi2GetInstanceProcAddr(VkInstance inst, const ch
         return (void *) multi2EnumeratePhysicalDevices;
     if (!strcmp("vkDestroyInstance", pName))
         return (void *) multi2DestroyInstance;
-    else if (!strcmp("GetGlobalExtensionProperties", pName))
+    if (!strcmp("GetGlobalExtensionProperties", pName))
         return (void*) vkGetGlobalExtensionProperties;
-    else if (!strcmp("GetGlobalExtensionCount", pName))
-        return (void*) vkGetGlobalExtensionCount;
+    if (!strcmp("GetGlobalLayerProperties", pName))
+        return (void*) vkGetGlobalLayerProperties;
+    if (!strcmp("GetPhysicalDeviceExtensionProperties", pName))
+        return (void*) vkGetPhysicalDeviceExtensionProperties;
+    if (!strcmp("GetPhysicalDeviceLayerProperties", pName))
+        return (void*) vkGetPhysicalDeviceLayerProperties;
     else {
         VkLayerInstanceDispatchTable **ppDisp = (VkLayerInstanceDispatchTable **) inst;
         VkLayerInstanceDispatchTable* pTable = instance_dispatch_table2(inst);
@@ -397,44 +406,50 @@ struct extProps {
     const char * const name;
 };
 
-#define MULTI_LAYER_EXT_ARRAY_SIZE 2
-static const VkExtensionProperties multiExts[MULTI_LAYER_EXT_ARRAY_SIZE] = {
+VK_LAYER_EXPORT VkResult VKAPI vkGetGlobalExtensionProperties(
+        const char *pLayerName,
+        uint32_t *pCount,
+        VkExtensionProperties* pProperties)
+{
+    /* multi does not have any global extensions */
+    return util_GetExtensionProperties(0, NULL, pCount, pProperties);
+}
+
+VK_LAYER_EXPORT VkResult VKAPI vkGetGlobalLayerProperties(
+        uint32_t *pCount,
+        VkLayerProperties*    pProperties)
+{
+    /* multi does not have any global layers */
+    return util_GetLayerProperties(0, NULL, pCount, pProperties);
+}
+
+#define MULTI_LAYER_ARRAY_SIZE 1
+static const VkLayerProperties multi_device_layers[MULTI_LAYER_ARRAY_SIZE] = {
     {
-        VK_STRUCTURE_TYPE_EXTENSION_PROPERTIES,
-        "multi1",
-        0x10,
+        "Multi1",
+        VK_API_VERSION,
+        VK_MAKE_VERSION(0, 1, 0),
         "Sample layer: multi",
-//        0,
-//        NULL,
-    },
-    {
-        VK_STRUCTURE_TYPE_EXTENSION_PROPERTIES,
-        "multi2",
-        0x10,
-        "Sample layer: multi",
-//        0,
-//        NULL,
     }
 };
 
-VK_LAYER_EXPORT VkResult VKAPI vkGetGlobalExtensionCount(
-        uint32_t*    pCount)
+VK_LAYER_EXPORT VkResult VKAPI vkGetPhysicalDeviceExtensionProperties(
+        VkPhysicalDevice                            physicalDevice,
+        const char*                                 pLayerName,
+        uint32_t*                                   pCount,
+        VkExtensionProperties*                      pProperties)
 {
-    *pCount = MULTI_LAYER_EXT_ARRAY_SIZE;
-    return VK_SUCCESS;
+    /* Multi does not have any physical device extensions */
+    return util_GetExtensionProperties(0, NULL, pCount, pProperties);
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkGetGlobalExtensionProperties(
-        uint32_t extensionIndex,
-        VkExtensionProperties*    pProperties)
+VK_LAYER_EXPORT VkResult VKAPI vkGetPhysicalDeviceLayerProperties(
+        VkPhysicalDevice                            physicalDevice,
+        uint32_t*                                   pCount,
+        VkLayerProperties*                          pProperties)
 {
-    /* This entrypoint is NOT going to init it's own dispatch table since loader calls here early */
-    if (extensionIndex >= MULTI_LAYER_EXT_ARRAY_SIZE)
-        return VK_ERROR_INVALID_VALUE;
-
-    memcpy(pProperties, &multiExts[extensionIndex], sizeof(VkExtensionProperties));
-
-    return VK_SUCCESS;
+    return util_GetLayerProperties(MULTI_LAYER_ARRAY_SIZE, multi_device_layers,
+                                   pCount, pProperties);
 }
 
 VK_LAYER_EXPORT void * VKAPI vkGetDeviceProcAddr(VkDevice device, const char* pName)

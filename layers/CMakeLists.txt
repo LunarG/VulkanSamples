@@ -96,7 +96,7 @@ if (WIN32)
 endif()
 
 add_vk_layer(Basic basic.cpp vk_layer_table.cpp)
-#add_vk_layer(Multi multi.cpp)
+add_vk_layer(Multi multi.cpp)
 #add_vk_layer(DrawState draw_state.cpp vk_layer_debug_marker_table.cpp vk_layer_table.cpp)
 add_vk_layer(MemTracker mem_tracker.cpp vk_layer_table.cpp)
 #add_vk_layer(ShaderChecker shader_checker.cpp vk_layer_table.cpp)
