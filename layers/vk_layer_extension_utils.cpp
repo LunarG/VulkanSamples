@@ -28,6 +28,8 @@
 #include "string.h"
 #include "vk_layer_extension_utils.h"
 
+#define ARRAY_SIZE(a) (sizeof(a) / sizeof(a[0]))
+
 /*
  * This file contains utility functions for layers
  */

@@ -30,6 +30,8 @@
 #ifndef LAYER_EXTENSION_UTILS_H
 #define LAYER_EXTENSION_UTILS_H
 
+#define ARRAY_SIZE(a) (sizeof(a) / sizeof(a[0]))
+
 /*
  * This file contains static functions for the generated layers
  */
