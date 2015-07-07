@@ -45,6 +45,7 @@ using namespace std;
 // being used:
 #include "vk_loader_platform.h"
 #include "vk_layer_table.h"
+#include "vk_layer_extension_utils.h"
 
 
 struct devExts {
@@ -275,7 +276,7 @@ static void createDeviceRegisterExtensions(const VkDeviceCreateInfo* pCreateInfo
     VkLayerDispatchTable *pDisp  = get_dispatch_table(screenshot_device_table_map, device);
     deviceExtMap[pDisp].wsi_lunarg_enabled = false;
     for (i = 0; i < pCreateInfo->extensionCount; i++) {
-        if (strcmp(pCreateInfo->pEnabledExtensions[i].name, VK_WSI_LUNARG_EXTENSION_NAME) == 0)
+        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_WSI_LUNARG_EXTENSION_NAME) == 0)
             deviceExtMap[pDisp].wsi_lunarg_enabled = true;
     }
 }
@@ -298,55 +299,51 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateDevice(
 
 /* TODO: Probably need a DestroyDevice as well */
 
-#define SCREENSHOT_LAYER_EXT_ARRAY_SIZE 2
-static const VkExtensionProperties ssExts[SCREENSHOT_LAYER_EXT_ARRAY_SIZE] = {
+static const VkLayerProperties ss_device_layers[] = {
     {
-        VK_STRUCTURE_TYPE_EXTENSION_PROPERTIES,
         "ScreenShot",
-        0x10,
+        VK_API_VERSION,
+        VK_MAKE_VERSION(0, 1, 0),
         "Layer: ScreenShot",
     }
-
 };
-VK_LAYER_EXPORT VkResult VKAPI vkGetGlobalExtensionCount(
-        uint32_t*    pCount)
-{
-    *pCount = SCREENSHOT_LAYER_EXT_ARRAY_SIZE;
-    return VK_SUCCESS;
-}
 
 VK_LAYER_EXPORT VkResult VKAPI vkGetGlobalExtensionProperties(
-        uint32_t extensionIndex,
-        VkExtensionProperties*    pProperties)
+        const char *pLayerName,
+        uint32_t *pCount,
+        VkExtensionProperties* pProperties)
 {
-    /* This entrypoint is NOT going to init it's own dispatch table since loader calls here early */
-    if (extensionIndex >= SCREENSHOT_LAYER_EXT_ARRAY_SIZE)
-        return VK_ERROR_INVALID_VALUE;
-
-    memcpy(pProperties, &ssExts[extensionIndex], sizeof(VkExtensionProperties));
-
-    return VK_SUCCESS;
+    /* ScreenShot does not have any global extensions */
+    return util_GetExtensionProperties(0, NULL, pCount, pProperties);
 }
-VK_LAYER_EXPORT VkResult VKAPI vkGetPhysicalDeviceExtensionCount(
-                                               VkPhysicalDevice gpu,
-                                               uint32_t* pCount)
+
+VK_LAYER_EXPORT VkResult VKAPI vkGetGlobalLayerProperties(
+        uint32_t *pCount,
+        VkLayerProperties*    pProperties)
 {
-    *pCount = SCREENSHOT_LAYER_EXT_ARRAY_SIZE;
-    return VK_SUCCESS;
+    /* ScreenShot does not have any global layers */
+    return util_GetLayerProperties(0, NULL,
+                                   pCount, pProperties);
 }
 
 VK_LAYER_EXPORT VkResult VKAPI vkGetPhysicalDeviceExtensionProperties(
-                                               VkPhysicalDevice gpu,
-                                               uint32_t extensionIndex,
-                                               VkExtensionProperties* pProperties)
+        VkPhysicalDevice                            physicalDevice,
+        const char*                                 pLayerName,
+        uint32_t*                                   pCount,
+        VkExtensionProperties*                      pProperties)
 {
-    /* This entrypoint is NOT going to init it's own dispatch table since loader calls here early */
+    /* ScreenShot does not have any physical device extensions */
+    return util_GetExtensionProperties(0, NULL, pCount, pProperties);
+}
 
-    if (extensionIndex >= SCREENSHOT_LAYER_EXT_ARRAY_SIZE)
-        return VK_ERROR_INVALID_VALUE;
-    memcpy(pProperties, &ssExts[extensionIndex], sizeof(VkExtensionProperties));
-
-    return VK_SUCCESS;
+VK_LAYER_EXPORT VkResult VKAPI vkGetPhysicalDeviceLayerProperties(
+        VkPhysicalDevice                            physicalDevice,
+        uint32_t*                                   pCount,
+        VkLayerProperties*                          pProperties)
+{
+    return util_GetLayerProperties(ARRAY_SIZE(ss_device_layers),
+                                   ss_device_layers,
+                                   pCount, pProperties);
 }
 
 VK_LAYER_EXPORT VkResult VKAPI vkGetDeviceQueue(
@@ -527,8 +524,6 @@ VK_LAYER_EXPORT void* VKAPI vkGetDeviceProcAddr(
     VkDevice         dev,
     const char       *funcName)
 {
-    void *fptr;
-
     if (dev == NULL) {
         return NULL;
     }
@@ -543,18 +538,6 @@ VK_LAYER_EXPORT void* VKAPI vkGetDeviceProcAddr(
 
     if (!strcmp(funcName, "vkGetDeviceQueue"))
         return (void*) vkGetDeviceQueue;
-
-    if (!strcmp(funcName, "vkGetGlobalExtensionCount"))
-        return (void*) vkGetGlobalExtensionCount;
-
-    if (!strcmp(funcName, "vkGetPhysicalDeviceExtensionCount"))
-        return (void*) vkGetPhysicalDeviceExtensionCount;
-
-    if (!strcmp(funcName, "vkGetGlobalExtensionProperties"))
-        return (void*) vkGetGlobalExtensionProperties;
-
-    if (!strcmp(funcName, "vkGetPhysicalDeviceExtensionProperties"))
-        return (void*) vkGetPhysicalDeviceExtensionProperties;
 
     VkLayerDispatchTable *pDisp =  get_dispatch_table(screenshot_device_table_map, dev);
     if (deviceExtMap.size() == 0 || deviceExtMap[pDisp].wsi_lunarg_enabled)
@@ -571,4 +554,3 @@ VK_LAYER_EXPORT void* VKAPI vkGetDeviceProcAddr(
         return NULL;
     return pDisp->GetDeviceProcAddr(dev, funcName);
 }
-
