@@ -761,21 +761,23 @@ void loader_add_to_layer_list(
     }
 }
 
-/*
- * Search the search_list for any layer with
- * a name that matches the given name.
+/**
+ * Search the search_list for any layer with a name
+ * that matches the given name and a type that matches the given type
  * Add all matching layers to the found_list
- * Do not add if found VkLayerProperties is already
+ * Do not add if found loader_layer_properties is already
  * on the found_list.
  */
 static void loader_find_layer_name_add_list(
         const char *name,
+        const enum layer_type type,
         const struct loader_layer_list *search_list,
         struct loader_layer_list *found_list)
 {
     for (uint32_t i = 0; i < search_list->count; i++) {
         struct loader_layer_properties *layer_prop = &search_list->list[i];
-        if (0 == strcmp(layer_prop->info.layerName, name)) {
+        if (0 == strcmp(layer_prop->info.layerName, name) &&
+                (layer_prop->type & type)) {
             /* Found a layer with the same name, add to found_list */
             loader_add_to_layer_list(found_list, 1, layer_prop);
         }
@@ -1322,11 +1324,11 @@ static void loader_add_layer_properties(struct loader_layer_list *layer_list,
     strcpy(props->info.layerName, name);
     //TODO string overflow
     free(name);
-    if (!strcmp(type, "\"DEVICE\""))
+    if (!strcmp(type, "DEVICE"))
         props->type = (is_implicit) ? VK_LAYER_TYPE_DEVICE_IMPLICIT : VK_LAYER_TYPE_DEVICE_EXPLICIT;
-    if (!strcmp(type, "\"INSTANCE\""))
+    if (!strcmp(type, "INSTANCE"))
         props->type = (is_implicit) ? VK_LAYER_TYPE_INSTANCE_IMPLICIT : VK_LAYER_TYPE_INSTANCE_EXPLICIT;
-    if (!strcmp(type, "\"GLOBAL\""))
+    if (!strcmp(type, "GLOBAL"))
         props->type = (is_implicit) ? VK_LAYER_TYPE_GLOBAL_IMPLICIT : VK_LAYER_TYPE_GLOBAL_EXPLICIT;
     free(type);
     //TODO handle relative paths  and filenames in addition to absolute path
@@ -1909,9 +1911,11 @@ static void loader_add_layer_implicit(
 
 /**
  * Get the layer name(s) from the env_name environment variable. If layer
- * is found in search_list then add it to layer_list.
+ * is found in search_list then add it to layer_list.  But only add it to
+ * layer_list if type matches.
  */
 static void loader_add_layer_env(
+                const enum layer_type type,
                 const char *env_name,
                 struct loader_layer_list *layer_list,
                 const struct loader_layer_list *search_list)
@@ -1931,7 +1935,7 @@ static void loader_add_layer_env(
 
     while (name && *name ) {
         next = loader_get_next_path(name);
-        loader_find_layer_name_add_list(name, search_list, layer_list);
+        loader_find_layer_name_add_list(name, type, search_list, layer_list);
         name = next;
     }
 
@@ -1975,6 +1979,7 @@ VkResult loader_enable_instance_layers(
 
     /* Add any layers specified via environment variable next */
     loader_add_layer_env(
+                            VK_LAYER_TYPE_INSTANCE_EXPLICIT,
                             "VK_INSTANCE_LAYERS",
                             &inst->activated_layer_list,
                             &loader.scanned_layers);
@@ -2097,20 +2102,21 @@ static VkResult loader_enable_device_layers(
     loader_add_layer_implicit(
                 VK_LAYER_TYPE_DEVICE_IMPLICIT,
                 &dev->activated_layer_list,
-                &icd->layer_properties_cache);
+                &loader.scanned_layers);
 
     /* Add any layers specified via environment variable next */
     loader_add_layer_env(
+                VK_LAYER_TYPE_DEVICE_EXPLICIT,
                 "VK_DEVICE_LAYERS",
                 &dev->activated_layer_list,
-                &icd->layer_properties_cache);
+                &loader.scanned_layers);
 
     /* Add layers specified by the application */
     err = loader_add_layer_names_to_list(
                 &dev->activated_layer_list,
                 pCreateInfo->layerCount,
                 pCreateInfo->ppEnabledLayerNames,
-                &icd->layer_properties_cache);
+                &loader.scanned_layers);
 
     return err;
 }
