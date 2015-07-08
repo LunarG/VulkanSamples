@@ -134,7 +134,7 @@ EOF
 
 ## Windows System Requirements
 
-Windows 7+ with additional, software:
+Windows 7+ with additional required software packages:
 
 - Microsoft Visual Studio 2013 Professional.  Note: it is possible that lesser/older versions may work, but that has not been tested.
 - CMake (from http://www.cmake.org/download/).  Notes:
@@ -154,25 +154,27 @@ Windows 7+ with additional, software:
   - A windows batch file has been included that will pull and build the correct version.  Run it from Developer Command Prompt for VS2013 like so:
     - update_external_sources.bat --build-glslang
 
-- Optional Packages:
-  - Qt 5.3 (from http://www.qt.io/download/).  Notes:
-    - Qt 5.3 is required in order to build the Glave debugger (GUI).  The Glave trace and replay tools can be built without Qt, but the debugger/GUI is built on top of Qt 5.3.  Various dependencies, from the Qt package are copied to the directory where the Glave debugger and its libraries are built.  In order to copy and run the debugger in another directory, these libraries must also be copied.  Other notes:
-    - While there are commercial licenses, you can also use the "Community" (free) license.
-    - By default, the installer will select the latest version (e.g. Qt 5.4) as well as some other components.  You must select "Qt 5.3"!  You can have multiple versions installed (e.g. Qt 5.2.1, 5.3, and 5.4).
-    - Installing Qt takes a long time.
-  - Cygwin (from https://www.cygwin.com/).  Notes:
-    - Cygwin provides some Linux-like tools, which are valuable for obtaining the source code, and running CMake.
-      Especially valuable are the BASH shell and git packages.
-    - If you don't want to use Cygwin, there are other shells and environments that can be used.
-      You can also use a Git package that doesn't come from Cygwin.
+Optional software packages:
+
+- Qt 5.3 (from http://www.qt.io/download/).  Notes:
+  - Qt 5.3 is required in order to build the Glave debugger (GUI).  The Glave trace and replay tools can be built without Qt, but the debugger/GUI is built on top of Qt 5.3.  Various dependencies, from the Qt package are copied to the directory where the Glave debugger and its libraries are built.  In order to copy and run the debugger in another directory, these libraries must also be copied.  Other notes:
+  - While there are commercial licenses, you can also use the "Community" (free) license.
+  - By default, the installer will select the latest version (e.g. Qt 5.4) as well as some other components.  You must select "Qt 5.3"!  You can have multiple versions installed (e.g. Qt 5.2.1, 5.3, and 5.4).
+  - Installing Qt takes a long time.
+- Cygwin (from https://www.cygwin.com/).  Notes:
+  - Cygwin provides some Linux-like tools, which are valuable for obtaining the source code, and running CMake.
+    Especially valuable are the BASH shell and git packages.
+  - If you don't want to use Cygwin, there are other shells and environments that can be used.
+    You can also use a Git package that doesn't come from Cygwin.
 
 ## Windows Build
 
 Cygwin is used in order to obtain a local copy of the Git repository, and to run the CMake command that creates Visual Studio files.  Visual Studio is used to build the software, and will re-run CMake as appropriate.
 
-Example debug build:
+Example debug build (e.g. in a "Developer Command Prompt for VS2013" window):
 ```
-cd GL-Next  # cd to the root of the vk git repository
+cd LoaderAndTools  # cd to the root of the Vulkan git repository
+update_external_sources.bat --build-glslang
 mkdir _out64
 cd _out64
 cmake -G "Visual Studio 12 Win64" -DCMAKE_BUILD_TYPE=Debug ..
