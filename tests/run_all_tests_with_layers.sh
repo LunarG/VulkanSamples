@@ -47,7 +47,13 @@ if [ "$RESTORE_SETTINGS" = "true" ]; then
 fi
 
 # vkglavetracereplay.sh tests glave trace and replay
-./vkglavetracereplay.sh
+D=`dirname \`pwd\``
+GDIR=../../../Glave/`basename $D`/
+if [ ! -d "$GDIR" ]; then
+   printf "Glave unavailable, skipping vkglavetracereplay.sh\n"
+else
+   ./vkglavetracereplay.sh
+fi
 
 if [ "$RESTORE_SETTINGS" = "true" ]; then
     echo Restore $SETTINGS_NAME from $TMP_SETTINGS_NAME

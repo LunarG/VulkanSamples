@@ -15,11 +15,6 @@ printf "$GREEN[ RUN      ]$NC $0\n"
 D=`dirname \`pwd\``
 GDIR=../../../Glave/`basename $D`/
 
-if [ ! -d "$GDIR" ]; then
-   printf "$RED[  FAILED  ]$NC Glave unavailable\n"
-   exit 1
-fi
-
 # Create a temp directory to run the test in
 rm -rf vktracereplay_tmp
 mkdir vktracereplay_tmp

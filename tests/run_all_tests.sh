@@ -26,4 +26,10 @@ set -e
 ./vk_layer_validation_tests
 
 # vkglavetracereplay.sh tests glave trace and replay
-./vkglavetracereplay.sh
+D=`dirname \`pwd\``
+GDIR=../../../Glave/`basename $D`/
+if [ ! -d "$GDIR" ]; then
+   printf "Glave unavailable, skipping vkglavetracereplay.sh\n"
+else
+   ./vkglavetracereplay.sh
+fi
