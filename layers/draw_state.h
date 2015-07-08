@@ -23,6 +23,7 @@
  */
 #include "vk_layer.h"
 #include <vector>
+#include "layer_common.h"
 
 using namespace std;
 
@@ -73,49 +74,6 @@ typedef enum _DRAW_TYPE
     DRAW_END_RANGE        = DRAW_INDEXED_INDIRECT,
     NUM_DRAW_TYPES        = (DRAW_END_RANGE - DRAW_BEGIN_RANGE + 1),
 } DRAW_TYPE;
-
-typedef enum _DYNAMIC_STATE_BIND_POINT
-{
-    VK_STATE_BIND_POINT_VIEWPORT,
-    VK_STATE_BIND_POINT_RASTER,
-    VK_STATE_BIND_POINT_COLOR_BLEND,
-    VK_STATE_BIND_POINT_DEPTH_STENCIL,
-    VK_NUM_STATE_BIND_POINT // Used for array sizing
-} DYNAMIC_STATE_BIND_POINT;
-
-static string string_DYNAMIC_STATE_BIND_POINT(DYNAMIC_STATE_BIND_POINT sbp)
-{
-    switch (sbp)
-    {
-        case VK_STATE_BIND_POINT_VIEWPORT:
-            return "VIEWPORT";
-        case VK_STATE_BIND_POINT_RASTER:
-            return "RASTER";
-        case VK_STATE_BIND_POINT_COLOR_BLEND:
-            return "COLOR_BLEND";
-        case VK_STATE_BIND_POINT_DEPTH_STENCIL:
-            return "DEPTH_STENCIL";
-        default:
-            return "UNKNOWN_DYNAMIC_STATE_BIND_POINT";
-    }
-}
-
-static VkDbgObjectType dynamicStateBindPointToObjType(DYNAMIC_STATE_BIND_POINT sbp)
-{
-    switch (sbp)
-    {
-        case VK_STATE_BIND_POINT_VIEWPORT:
-            return VK_OBJECT_TYPE_DYNAMIC_VIEWPORT_STATE;
-        case VK_STATE_BIND_POINT_RASTER:
-            return VK_OBJECT_TYPE_DYNAMIC_RASTER_STATE;
-        case VK_STATE_BIND_POINT_COLOR_BLEND:
-            return VK_OBJECT_TYPE_DYNAMIC_COLOR_BLEND_STATE;
-        case VK_STATE_BIND_POINT_DEPTH_STENCIL:
-            return VK_OBJECT_TYPE_DYNAMIC_DEPTH_STENCIL_STATE;
-        default:
-            return VK_OBJECT_TYPE_MAX_ENUM;
-    }
-}
 
 typedef struct _SHADER_DS_MAPPING {
     uint32_t slotCount;

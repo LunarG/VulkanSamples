@@ -24,6 +24,7 @@
 #pragma once
 #include <vector>
 #include "vk_layer.h"
+#include "layer_common.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -80,42 +81,36 @@ typedef enum _MEM_TRACK_ERROR
 // TODO : Is there a way to track when Cmd Buffer finishes & remove mem references at that point?
 // TODO : Could potentially store a list of freed mem allocs to flag when they're incorrectly used
 
+// Simple struct to hold handle and type of object so they can be uniquely identified and looked up in appropriate map
+struct MT_OBJ_HANDLE_TYPE {
+    uint64_t        handle;
+    VkDbgObjectType type;
+};
+
 // Data struct for tracking memory object
 struct MT_MEM_OBJ_INFO {
-    VkObject                    object;             // Dispatchable object used to create this memory (device of swapchain)
+    void*                       object;       // Dispatchable object used to create this memory (device of swapchain)
     uint32_t                    refCount;           // Count of references (obj bindings or CB use)
     VkDeviceMemory              mem;
     VkMemoryAllocInfo           allocInfo;
-    list<VkObject>              pObjBindings;       // list container of objects bound to this memory
+    list<MT_OBJ_HANDLE_TYPE>    pObjBindings;       // list container of objects bound to this memory
     list<VkCmdBuffer>           pCmdBufferBindings; // list container of cmd buffers that reference this mem object
 };
 
-struct MT_OBJ_INFO {
-    MT_MEM_OBJ_INFO*                       pMemObjInfo;
-    VkObject                               object;
-    VkStructureType                        sType;
-    uint32_t                               ref_count;
-    // Capture all object types that may have memory bound. From prog guide:
-    // The only objects that are guaranteed to have no external memory
-    // requirements are devices, queues, command buffers, shaders and memory objects.
+// This only applies to Buffers and Images, which can have memory bound to them
+struct MT_OBJ_BINDING_INFO {
+    VkDeviceMemory mem;
     union {
-        VkAttachmentViewCreateInfo         attachment_view_create_info;
-        VkImageViewCreateInfo              image_view_create_info;
-        VkImageCreateInfo                  image_create_info;
-        VkGraphicsPipelineCreateInfo       graphics_pipeline_create_info;
-        VkComputePipelineCreateInfo        compute_pipeline_create_info;
-        VkSamplerCreateInfo                sampler_create_info;
-        VkFenceCreateInfo                  fence_create_info;
-        VkSwapChainCreateInfoWSI           swap_chain_create_info;
-        VkBufferCreateInfo                 buffer_create_info;
+        VkImageCreateInfo  image;
+        VkBufferCreateInfo buffer;
+        VkSwapChainCreateInfoWSI swapchain;
     } create_info;
-    char object_name[64];
 };
 
 // Track all command buffers
 struct MT_CB_INFO {
     VkCmdBufferCreateInfo       createInfo;
-    MT_OBJ_INFO*                pDynamicState[VK_NUM_STATE_BIND_POINT];
+    uint64_t                    pLastBoundDynamicState[VK_NUM_STATE_BIND_POINT];
     VkPipeline                  pipelines[VK_NUM_PIPELINE_BIND_POINT];
     uint32_t                    attachmentCount;
     VkCmdBuffer                 cmdBuffer;
@@ -130,6 +125,7 @@ struct MT_CB_INFO {
 struct MT_FENCE_INFO {
     uint64_t  fenceId;          // Sequence number for fence at last submit
     VkQueue   queue;            // Queue that this fence is submitted against or NULL
+    VkFenceCreateInfo createInfo;
 };
 
 // Track Queue information
