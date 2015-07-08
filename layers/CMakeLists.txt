@@ -43,7 +43,7 @@ else()
     if (NOT (CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_CURRENT_BINARY_DIR))
         foreach (config_file ${LAYER_JSON_FILES})
             FILE(TO_NATIVE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/${config_file}.json ${config_file}-JSON)
-            add_custom_target(binary-dir-symlinks ALL
+            add_custom_target(${config_file}-json ALL
                 COMMAND copy ${config_file}-JSON ${config_file}.json
                 VERBATIM
                 )
