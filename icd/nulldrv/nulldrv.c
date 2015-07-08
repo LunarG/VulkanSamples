@@ -981,6 +981,41 @@ ICD_EXPORT void VKAPI vkCmdFillBuffer(
     NULLDRV_LOG_FUNC;
 }
 
+ICD_EXPORT void VKAPI vkCmdClearDepthStencilImage(
+    VkCmdBuffer                              cmdBuffer,
+    VkImage                                   image,
+    VkImageLayout                            imageLayout,
+    float                                       depth,
+    uint32_t                                    stencil,
+    uint32_t                                    rangeCount,
+    const VkImageSubresourceRange*          pRanges)
+{
+    NULLDRV_LOG_FUNC;
+}
+
+ICD_EXPORT void VKAPI vkCmdClearColorAttachment(
+    VkCmdBuffer                             cmdBuffer,
+    uint32_t                                colorAttachment,
+    VkImageLayout                           imageLayout,
+    const VkClearColorValue                *pColor,
+    uint32_t                                rectCount,
+    const VkRect3D                         *pRects)
+{
+    NULLDRV_LOG_FUNC;
+}
+
+ICD_EXPORT void VKAPI vkCmdClearDepthStencilAttachment(
+    VkCmdBuffer                             cmdBuffer,
+    VkImageAspectFlags                      imageAspectMask,
+    VkImageLayout                           imageLayout,
+    float                                   depth,
+    uint32_t                                stencil,
+    uint32_t                                rectCount,
+    const VkRect3D                         *pRects)
+{
+    NULLDRV_LOG_FUNC;
+}
+
 ICD_EXPORT void VKAPI vkCmdClearColorImage(
     VkCmdBuffer                         cmdBuffer,
     VkImage                             image,
@@ -1408,6 +1443,23 @@ ICD_EXPORT VkResult VKAPI vkGetPhysicalDeviceQueueProperties(
     return VK_SUCCESS;
 }
 
+ICD_EXPORT VkResult VKAPI vkGetPhysicalDeviceMemoryProperties(
+    VkPhysicalDevice gpu_,
+    VkPhysicalDeviceMemoryProperties* pProperties)
+{
+    // TODO: Fill in with real data
+    return VK_SUCCESS;
+}
+
+ICD_EXPORT VkResult VKAPI vkGetPhysicalDeviceLayerProperties(
+        VkPhysicalDevice                            physicalDevice,
+        uint32_t*                                   pCount,
+        VkLayerProperties*                          pProperties)
+{
+    // TODO: Fill in with real data
+    return VK_SUCCESS;
+}
+
 ICD_EXPORT VkResult VKAPI vkGetGlobalExtensionProperties(
     const char*                                 pLayerName,
     uint32_t*                                   pCount,
@@ -1430,6 +1482,13 @@ ICD_EXPORT VkResult VKAPI vkGetGlobalExtensionProperties(
     if (copy_size < NULLDRV_EXT_COUNT) {
         return VK_INCOMPLETE;
     }
+    return VK_SUCCESS;
+}
+ICD_EXPORT VkResult VKAPI vkGetGlobalLayerProperties(
+        uint32_t*                                   pCount,
+        VkLayerProperties*                          pProperties)
+{
+    // TODO: Fill in with real data
     return VK_SUCCESS;
 }
 
@@ -1785,6 +1844,15 @@ ICD_EXPORT VkResult VKAPI vkCreateSampler(
 
     return nulldrv_sampler_create(dev, pCreateInfo,
             (struct nulldrv_sampler **) pSampler);
+}
+
+ICD_EXPORT VkResult VKAPI vkCreateShaderModule(
+    VkDevice                                    device,
+    const VkShaderModuleCreateInfo*             pCreateInfo,
+    VkShaderModule*                             pShaderModule)
+{
+    // TODO: Fill in with real data
+    return VK_SUCCESS;
 }
 
 ICD_EXPORT VkResult VKAPI vkCreateShader(

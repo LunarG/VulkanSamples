@@ -26,12 +26,10 @@
 
 LIBRARY VK_nulldrv
 EXPORTS
-   vkGetProcAddr
    vkCreateInstance
    vkDestroyInstance
    vkEnumeratePhysicalDevices
    vkGetGlobalExtensionProperties
-   vkGetGlobalExtensionCount
    xcbCreateWindow
    xcbDestroyWindow
    xcbGetMessage
