@@ -23,6 +23,7 @@ function create_glslang () {
 function update_glslang () {
    echo "Updating $BASEDIR/glslang"
    cd $BASEDIR/glslang
+   git fetch --all
    git checkout $GLSLANG_REVISION
 }
 

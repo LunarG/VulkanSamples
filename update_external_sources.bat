@@ -262,6 +262,7 @@ goto:eof
    echo.
    echo Updating %GLSLANG_DIR%
    cd %GLSLANG_DIR%
+   git fetch --all
    git checkout %GLSLANG_REVISION%
 goto:eof
 
