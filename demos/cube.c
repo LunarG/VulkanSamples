@@ -1186,7 +1186,7 @@ static void demo_prepare_render_pass(struct demo *demo)
     VkResult U_ASSERT_ONLY err;
     const VkImageLayout color_layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
     const VkAttachmentLoadOp color_load_op = VK_ATTACHMENT_LOAD_OP_CLEAR;
-    const VkAttachmentStoreOp color_store_op = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+    const VkAttachmentStoreOp color_store_op = VK_ATTACHMENT_STORE_OP_STORE;
     const VkRenderPassCreateInfo rp_info = {
         .sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO,
         .pNext = NULL,
