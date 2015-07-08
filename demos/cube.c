@@ -345,6 +345,7 @@ struct demo {
     VkPipelineLayout pipeline_layout;
     VkDescriptorSetLayout desc_layout;
     VkPipelineCache pipelineCache;
+    VkRenderPass render_pass;
     VkPipeline pipeline;
 
     VkDynamicVpState viewport;
@@ -362,6 +363,8 @@ struct demo {
 
     VkDescriptorPool desc_pool;
     VkDescriptorSet desc_set;
+
+    VkFramebuffer framebuffers[DEMO_BUFFER_COUNT];
 
     bool quit;
     int32_t curFrame;
@@ -474,66 +477,18 @@ static void demo_set_image_layout(
 
 static void demo_draw_build_cmd(struct demo *demo, VkCmdBuffer cmd_buf)
 {
-    const VkColorAttachmentBindInfo color_attachment = {
-        .view = demo->buffers[demo->current_buffer].view,
-        .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-    };
-    const VkDepthStencilBindInfo depth_stencil = {
-        .view = demo->depth.view,
-        .layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
-    };
-    const VkClearColorValue clear_color = {
-        .f32 = { 0.2f, 0.2f, 0.2f, 0.2f },
-    };
-    const float clear_depth = 1.0f;
-    VkCmdBufferBeginInfo cmd_buf_info = {
+    const VkCmdBufferBeginInfo cmd_buf_info = {
         .sType = VK_STRUCTURE_TYPE_CMD_BUFFER_BEGIN_INFO,
         .pNext = NULL,
         .flags = VK_CMD_BUFFER_OPTIMIZE_SMALL_BATCH_BIT |
             VK_CMD_BUFFER_OPTIMIZE_ONE_TIME_SUBMIT_BIT,
     };
-    VkResult U_ASSERT_ONLY err;
-    VkAttachmentLoadOp load_op = VK_ATTACHMENT_LOAD_OP_CLEAR;
-    VkAttachmentStoreOp store_op = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-    const VkFramebufferCreateInfo fb_info = {
-         .sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
-         .pNext = NULL,
-         .colorAttachmentCount = 1,
-         .pColorAttachments = (VkColorAttachmentBindInfo*) &color_attachment,
-         .pDepthStencilAttachment = (VkDepthStencilBindInfo*) &depth_stencil,
-         .sampleCount = 1,
-         .width  = demo->width,
-         .height = demo->height,
-         .layers = 1,
+    const VkRenderPassBegin rp_begin = {
+        .renderPass = demo->render_pass,
+        .framebuffer = demo->framebuffers[demo->current_buffer],
+        .contents = VK_RENDER_PASS_CONTENTS_INLINE,
     };
-    VkRenderPassCreateInfo rp_info;
-    VkRenderPassBegin rp_begin;
-
-    rp_begin.contents = VK_RENDER_PASS_CONTENTS_INLINE;
-
-    memset(&rp_info, 0 , sizeof(rp_info));
-    err = vkCreateFramebuffer(demo->device, &fb_info, &rp_begin.framebuffer);
-    assert(!err);
-    rp_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-    rp_info.renderArea.extent.width = demo->width;
-    rp_info.renderArea.extent.height = demo->height;
-    rp_info.colorAttachmentCount = fb_info.colorAttachmentCount;
-    rp_info.pColorFormats = &demo->format;
-    rp_info.pColorLayouts = &color_attachment.layout;
-    rp_info.pColorLoadOps = &load_op;
-    rp_info.pColorStoreOps = &store_op;
-    rp_info.pColorLoadClearValues = &clear_color;
-    rp_info.depthStencilFormat = VK_FORMAT_D16_UNORM;
-    rp_info.depthStencilLayout = depth_stencil.layout;
-    rp_info.depthLoadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-    rp_info.depthLoadClearValue = clear_depth;
-    rp_info.depthStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-    rp_info.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-    rp_info.stencilLoadClearValue = 0;
-    rp_info.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-    rp_info.sampleCount = 1;
-    err = vkCreateRenderPass(demo->device, &rp_info, &rp_begin.renderPass);
-    assert(!err);
+    VkResult U_ASSERT_ONLY err;
 
     err = vkBeginCommandBuffer(cmd_buf, &cmd_buf_info);
     assert(!err);
@@ -556,9 +511,6 @@ static void demo_draw_build_cmd(struct demo *demo, VkCmdBuffer cmd_buf)
 
     err = vkEndCommandBuffer(cmd_buf);
     assert(!err);
-
-    vkDestroyObject(demo->device, VK_OBJECT_TYPE_RENDER_PASS, rp_begin.renderPass);
-    vkDestroyObject(demo->device, VK_OBJECT_TYPE_FRAMEBUFFER, rp_begin.framebuffer);
 }
 
 
@@ -1225,6 +1177,47 @@ static void demo_prepare_descriptor_layout(struct demo *demo)
     assert(!err);
 }
 
+static void demo_prepare_render_pass(struct demo *demo)
+{
+    const VkClearColorValue clear_color = {
+        .f32 = { 0.2f, 0.2f, 0.2f, 0.2f },
+    };
+    const float clear_depth = 1.0f;
+    VkResult U_ASSERT_ONLY err;
+    const VkImageLayout color_layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+    const VkAttachmentLoadOp color_load_op = VK_ATTACHMENT_LOAD_OP_CLEAR;
+    const VkAttachmentStoreOp color_store_op = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+    const VkRenderPassCreateInfo rp_info = {
+        .sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO,
+        .pNext = NULL,
+        .renderArea.offset.x = 0,
+        .renderArea.offset.y = 0,
+        .renderArea.extent.width = demo->width,
+        .renderArea.extent.height = demo->height,
+        .colorAttachmentCount = 1,
+        .extent.width = demo->width,
+        .extent.height = demo->height,
+        .sampleCount = 1,
+        .layers = 1,
+        .pColorFormats = &demo->format,
+        .pColorLayouts = &color_layout,
+        .pColorLoadOps = &color_load_op,
+        .pColorStoreOps = &color_store_op,
+        .pColorLoadClearValues = &clear_color,
+        .depthStencilFormat = demo->depth.format,
+        .depthStencilLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
+        .depthLoadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
+        .depthLoadClearValue = clear_depth,
+        .depthStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
+        .stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+        .stencilLoadClearValue = 0,
+        .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
+    };
+
+    err = vkCreateRenderPass(demo->device, &rp_info, &demo->render_pass);
+    assert(!err);
+}
+
 static VkShader demo_prepare_shader(struct demo* demo,
                                       VkShaderStage stage,
                                       const void* code,
@@ -1594,6 +1587,37 @@ static void demo_prepare_descriptor_set(struct demo *demo)
     assert(!err);
 }
 
+static void demo_prepare_framebuffers(struct demo *demo)
+{
+    VkColorAttachmentBindInfo color_attachment = {
+        .view = VK_NULL_HANDLE,
+        .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+    };
+    const VkDepthStencilBindInfo depth_stencil = {
+        .view = demo->depth.view,
+        .layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
+    };
+    const VkFramebufferCreateInfo fb_info = {
+         .sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
+         .pNext = NULL,
+         .colorAttachmentCount = 1,
+         .pColorAttachments = &color_attachment,
+         .pDepthStencilAttachment = &depth_stencil,
+         .sampleCount = 1,
+         .width  = demo->width,
+         .height = demo->height,
+         .layers = 1,
+    };
+    VkResult U_ASSERT_ONLY err;
+    uint32_t i;
+
+    for (i = 0; i < DEMO_BUFFER_COUNT; i++) {
+        color_attachment.view = demo->buffers[i].view;
+        err = vkCreateFramebuffer(demo->device, &fb_info, &demo->framebuffers[i]);
+        assert(!err);
+    }
+}
+
 static void demo_prepare(struct demo *demo)
 {
     const VkCmdBufferCreateInfo cmd = {
@@ -1611,6 +1635,7 @@ static void demo_prepare(struct demo *demo)
     demo_prepare_cube_data_buffer(demo);
 
     demo_prepare_descriptor_layout(demo);
+    demo_prepare_render_pass(demo);
     demo_prepare_pipeline(demo);
     demo_prepare_dynamic_states(demo);
 
@@ -1622,6 +1647,7 @@ static void demo_prepare(struct demo *demo)
     demo_prepare_descriptor_pool(demo);
     demo_prepare_descriptor_set(demo);
 
+    demo_prepare_framebuffers(demo);
 
     for (int i = 0; i < DEMO_BUFFER_COUNT; i++) {
         demo->current_buffer = i;
@@ -1644,6 +1670,9 @@ static void demo_cleanup(struct demo *demo)
 
     demo->prepared = false;
 
+    for (i = 0; i < DEMO_BUFFER_COUNT; i++)
+        vkDestroyObject(demo->device, VK_OBJECT_TYPE_FRAMEBUFFER, demo->framebuffers[i]);
+
     vkDestroyObject(demo->device, VK_OBJECT_TYPE_DESCRIPTOR_SET, demo->desc_set);
     vkDestroyObject(demo->device, VK_OBJECT_TYPE_DESCRIPTOR_POOL, demo->desc_pool);
 
@@ -1654,6 +1683,7 @@ static void demo_cleanup(struct demo *demo)
 
     vkDestroyObject(demo->device, VK_OBJECT_TYPE_PIPELINE, demo->pipeline);
     vkDestroyPipelineCache(demo->device, demo->pipelineCache);
+    vkDestroyObject(demo->device, VK_OBJECT_TYPE_RENDER_PASS, demo->render_pass);
     vkDestroyObject(demo->device, VK_OBJECT_TYPE_PIPELINE_LAYOUT, demo->pipeline_layout);
     vkDestroyObject(demo->device, VK_OBJECT_TYPE_DESCRIPTOR_SET_LAYOUT, demo->desc_layout);
 
