@@ -31,6 +31,8 @@
 #ifndef LOADER_PLATFORM_H
 #define LOADER_PLATFORM_H
 
+#include "vk_platform.h"
+
 #if defined(__linux__)
 /* Linux-specific common code: */
 
@@ -172,6 +174,7 @@ static inline void *loader_aligned_alloc(size_t alignment, size_t size) { return
 #include <stdio.h>
 #include <io.h>
 #include <stdbool.h>
+#include <shlwapi.h>
 #ifdef __cplusplus
 #include <iostream>
 #include <string>
@@ -210,7 +213,7 @@ static bool loader_platform_file_exists(const char *path)
         return true;
 }
 
-static bool loader_is_path_absolute(const char *path)
+static bool loader_platform_is_path_absolute(const char *path)
 {
     return !PathIsRelative(path);
 }
@@ -415,7 +418,7 @@ char *loader_get_registry_string(const HKEY hive,
 #define DeleteCriticalSection PLEASE USE THE loader_platform_thread_delete_mutex() FUNCTION
 
 #define loader_stack_alloc(size) _alloca(size)
-static inline void *loader_aligned_alloc(size_t alignment, size_t size) { return _aligned_alloc(alignment, size); }
+static inline void *loader_aligned_alloc(size_t alignment, size_t size) { return _aligned_malloc(alignment, size); }
 
 #endif // defined(_WIN32)
 #endif /* LOADER_PLATFORM_H_TEMP */

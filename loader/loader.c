@@ -127,7 +127,11 @@ void* loader_aligned_heap_alloc(
     if (!instance && instance->alloc_callbacks.pfnAlloc) {
         return instance->alloc_callbacks.pfnAlloc(instance->alloc_callbacks.pUserData, size, alignment, alloc_type);
     }
-    return aligned_alloc(size, alignment);
+#if defined(_WIN32)
+    return _aligned_malloc(alignment, size);
+#else
+    return aligned_alloc(alignment, size);
+#endif
 }
 
 void loader_heap_free(
