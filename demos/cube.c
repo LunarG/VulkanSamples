@@ -551,8 +551,6 @@ static void demo_draw_build_cmd(struct demo *demo, VkCmdBuffer cmd_buf)
     vkCmdBindDynamicStateObject(cmd_buf, VK_STATE_BIND_POINT_DEPTH_STENCIL,
                                      demo->depth_stencil);
 
-    vkCmdBeginRenderPass(cmd_buf, &rp_begin);
-
     vkCmdDraw(cmd_buf, 0, 12 * 3, 0, 1);
     vkCmdEndRenderPass(cmd_buf);
 
