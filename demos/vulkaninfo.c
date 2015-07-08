@@ -40,6 +40,8 @@
 
 #ifdef _WIN32
 
+#define snprintf _snprintf
+
 bool consoleCreated = false;
 
 #define WAIT_FOR_CONSOLE_DESTROY \
@@ -424,7 +426,7 @@ static void app_dev_init(struct app_dev *dev, struct app_gpu *gpu)
     VkResult U_ASSERT_ONLY err;
     // Extensions to enable
     static const char *known_extensions[] = {
-//        "VK_WSI_LunarG",
+        "VK_WSI_LunarG",
     };
 
     uint32_t count = 0;
