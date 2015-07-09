@@ -32,6 +32,7 @@
 #include "format.h"
 #include "shader.h"
 #include "pipeline.h"
+#include "mem.h"
 
 static int translate_blend_func(VkBlendOp func)
 {
@@ -458,18 +459,6 @@ static void pipeline_destroy(struct intel_obj *obj)
     }
 
     intel_base_destroy(&pipeline->obj.base);
-}
-
-static VkResult pipeline_get_memory_requirements(struct intel_base *base,
-                                    VkMemoryRequirements* pRequirements)
-{
-    struct intel_pipeline *pipeline = intel_pipeline_from_base(base);
-
-    pRequirements->size           = pipeline->scratch_size;
-    pRequirements->alignment      = 1024;
-    pRequirements->memoryTypeBits = (1 << INTEL_MEMORY_TYPE_COUNT) - 1;
-
-    return VK_SUCCESS;
 }
 
 static VkResult pipeline_validate(struct intel_pipeline *pipeline)
@@ -1303,7 +1292,6 @@ static VkResult graphics_pipeline_create(struct intel_dev *dev,
     pipeline->dev = dev;
     pipeline->pipeline_layout = intel_pipeline_layout(info.graphics.layout);
 
-    pipeline->obj.base.get_memory_requirements = pipeline_get_memory_requirements;
     pipeline->obj.destroy = pipeline_destroy;
 
     ret = pipeline_build_all(pipeline, &info);
@@ -1313,6 +1301,13 @@ static VkResult graphics_pipeline_create(struct intel_dev *dev,
         pipeline_destroy(&pipeline->obj);
         return ret;
     }
+
+    VkMemoryAllocInfo mem_reqs;
+    mem_reqs.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO;
+    mem_reqs.allocationSize = pipeline->scratch_size;
+    mem_reqs.pNext = NULL;
+    mem_reqs.memoryTypeIndex = 0;
+    intel_mem_alloc(dev, &mem_reqs, &pipeline->obj.mem);
 
     *pipeline_ret = pipeline;
     return VK_SUCCESS;
@@ -1405,6 +1400,7 @@ ICD_EXPORT VkResult VKAPI vkDestroyPipeline(
  {
     struct intel_obj *obj = intel_obj(pipeline.handle);
 
+    intel_mem_free(obj->mem);
     obj->destroy(obj);
     return VK_SUCCESS;
  }

@@ -34,19 +34,8 @@ static void query_destroy(struct intel_obj *obj)
 {
     struct intel_query *query = intel_query_from_obj(obj);
 
+    intel_mem_free(obj->mem);
     intel_query_destroy(query);
-}
-
-static VkResult query_get_memory_requirements(struct intel_base *base,
-                                 VkMemoryRequirements* pRequirements)
-{
-    struct intel_query *query = intel_query_from_base(base);
-
-    pRequirements->size           = query->slot_stride * query->slot_count;
-    pRequirements->alignment      = 64;
-    pRequirements->memoryTypeBits = (1 << INTEL_MEMORY_TYPE_COUNT) - 1;
-
-    return VK_SUCCESS;
 }
 
 static void query_init_pipeline_statistics(
@@ -124,7 +113,13 @@ VkResult intel_query_create(struct intel_dev *dev,
         return VK_ERROR_INVALID_VALUE;
     }
 
-    query->obj.base.get_memory_requirements = query_get_memory_requirements;
+    VkMemoryAllocInfo mem_reqs;
+    mem_reqs.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO;
+    mem_reqs.allocationSize = query->slot_stride * query->slot_count;
+    mem_reqs.pNext = NULL;
+    mem_reqs.memoryTypeIndex = 0;
+    intel_mem_alloc(dev, &mem_reqs, &query->obj.mem);
+
     query->obj.destroy = query_destroy;
 
     *query_ret = query;
@@ -177,9 +172,6 @@ VkResult intel_query_get_results(struct intel_query *query,
                                  void *results)
 {
     const uint8_t *ptr;
-
-    if (!query->obj.mem)
-        return VK_ERROR_MEMORY_NOT_BOUND;
 
     if (intel_mem_is_busy(query->obj.mem))
         return VK_NOT_READY;

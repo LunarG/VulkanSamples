@@ -33,9 +33,6 @@ static VkResult event_map(struct intel_event *event, uint32_t **ptr_ret)
 {
     void *ptr;
 
-    if (!event->obj.mem)
-        return VK_ERROR_MEMORY_NOT_BOUND;
-
     /*
      * This is an unsynchronous mapping.  It doesn't look like we want a
      * synchronous mapping.  But it is also unclear what would happen when GPU
@@ -90,29 +87,24 @@ static void event_destroy(struct intel_obj *obj)
     intel_event_destroy(event);
 }
 
-static VkResult event_get_memory_requirements(struct intel_base *base,
-                                 VkMemoryRequirements *pRequirements)
-{
-    /* use dword aligned to 64-byte boundaries */
-    pRequirements->size           = 4;
-    pRequirements->alignment      = 64;
-    pRequirements->memoryTypeBits = (1 << INTEL_MEMORY_TYPE_COUNT) - 1;
-
-    return VK_SUCCESS;
-}
-
 VkResult intel_event_create(struct intel_dev *dev,
                               const VkEventCreateInfo *info,
                               struct intel_event **event_ret)
 {
     struct intel_event *event;
+    VkMemoryAllocInfo mem_reqs;
 
     event = (struct intel_event *) intel_base_create(&dev->base.handle,
             sizeof(*event), dev->base.dbg, VK_OBJECT_TYPE_EVENT, info, 0);
     if (!event)
         return VK_ERROR_OUT_OF_HOST_MEMORY;
 
-    event->obj.base.get_memory_requirements = event_get_memory_requirements;
+    mem_reqs.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO;
+    mem_reqs.allocationSize = 4; // We know allocation is page alignned
+    mem_reqs.pNext = NULL;
+    mem_reqs.memoryTypeIndex = 0;
+    intel_mem_alloc(dev, &mem_reqs, &event->obj.mem);
+
     event->obj.destroy = event_destroy;
 
     *event_ret = event;
@@ -165,6 +157,7 @@ ICD_EXPORT VkResult VKAPI vkDestroyEvent(
  {
     struct intel_obj *obj = intel_obj(event.handle);
 
+    intel_mem_free(obj->mem);
     obj->destroy(obj);
     return VK_SUCCESS;
  }
