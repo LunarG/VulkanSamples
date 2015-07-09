@@ -7,10 +7,6 @@ if (WIN32)
     add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/vulkan.${MAJOR}.def
 	    COMMAND ${PYTHON_CMD} ${PROJECT_SOURCE_DIR}/loader/vk-loader-generate.py win-def-file vulkan.${MAJOR}.dll all > ${CMAKE_CURRENT_BINARY_DIR}/vulkan.${MAJOR}.def
 	    DEPENDS ${PROJECT_SOURCE_DIR}/loader/vk-loader-generate.py ${PROJECT_SOURCE_DIR}/vulkan.py)
-else()
-    add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/vulkan.def
-	    COMMAND ${PYTHON_CMD} ${PROJECT_SOURCE_DIR}/loader/vk-loader-generate.py win-def-file vulkan.dll all > ${CMAKE_CURRENT_BINARY_DIR}/vulkan.def
-	    DEPENDS ${PROJECT_SOURCE_DIR}/loader/vk-loader-generate.py ${PROJECT_SOURCE_DIR}/vulkan.py)
 endif()
 
 # DEBUG enables runtime loader ICD verification

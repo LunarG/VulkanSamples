@@ -254,7 +254,7 @@ static void retire_device_fences(
 //  Verify that (actual & desired) flags != 0 or,
 //   if strict is true, verify that (actual & desired) flags == desired
 //  In case of error, report it via dbg callbacks
-static bool32_t validate_usage_flags(void* disp_obj, VkFlags actual, VkFlags desired,
+static void validate_usage_flags(void* disp_obj, VkFlags actual, VkFlags desired,
                                      bool32_t strict, VkObject obj, VkObjectType obj_type,
                                      char const* ty_str, char const* func_name, char const* usage_str)
 {
@@ -272,7 +272,7 @@ static bool32_t validate_usage_flags(void* disp_obj, VkFlags actual, VkFlags des
 // Helper function to validate usage flags for images
 // Pulls image info and then sends actual vs. desired usage off to helper above where
 //  an error will be flagged if usage is not correct
-static bool32_t validate_image_usage_flags(void* disp_obj, VkImage image, VkFlags desired, bool32_t strict,
+static void validate_image_usage_flags(void* disp_obj, VkImage image, VkFlags desired, bool32_t strict,
                                            char const* func_name, char const* usage_string)
 {
     MT_OBJ_INFO* pInfo = get_object_info(image);
@@ -284,7 +284,7 @@ static bool32_t validate_image_usage_flags(void* disp_obj, VkImage image, VkFlag
 // Helper function to validate usage flags for buffers
 // Pulls buffer info and then sends actual vs. desired usage off to helper above where
 //  an error will be flagged if usage is not correct
-static bool32_t validate_buffer_usage_flags(void* disp_obj, VkBuffer buffer, VkFlags desired, bool32_t strict,
+static void validate_buffer_usage_flags(void* disp_obj, VkBuffer buffer, VkFlags desired, bool32_t strict,
                                             char const* func_name, char const* usage_string)
 {
     MT_OBJ_INFO* pInfo = get_object_info(buffer);

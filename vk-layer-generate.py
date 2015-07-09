@@ -234,10 +234,6 @@ class Subcommand(object):
         ggep_body.append('}')
         return "\n".join(ggep_body)
 
-    def _gen_layer_get_physical_device_extension_props(self, layer="Generic"):
-        gpdep_body = []
-        return "\n".join(gpdep_body)
-
     def _gen_layer_get_physical_device_layer_props(self, layer="Generic"):
         gpdlp_body = []
         if layer == 'Generic':
@@ -285,9 +281,6 @@ class Subcommand(object):
                         intercept = self._gen_layer_get_global_layer_props(self.layer_name)
                     elif 'GetPhysicalDeviceLayerProperties' == proto.name:
                         intercept = self._gen_layer_get_physical_device_layer_props(self.layer_name)
-                    elif 'GetPhysicalDeviceExtensionProperties' == proto.name:
-                        intercept = self._gen_layer_get_physical_device_extension_props(self.layer_name)
-
 
                 if intercept is not None:
                     funcs.append(intercept)

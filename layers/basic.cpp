@@ -33,6 +33,15 @@
 // being used:
 #include "vk_loader_platform.h"
 
+static const VkLayerProperties globalLayerProps[] = {
+    {
+        "Basic",
+        VK_API_VERSION,                 // specVersion
+        VK_MAKE_VERSION(0, 1, 0),       // implVersion
+        "layer: Basic",
+    }
+};
+
 
 VK_LAYER_EXPORT VkResult VKAPI vkLayerExtension1(VkDevice device)
 {
@@ -174,4 +183,14 @@ VK_LAYER_EXPORT void * VKAPI vkGetInstanceProcAddr(VkInstance instance, const ch
     if (instance_dispatch_table(instance)->GetInstanceProcAddr == NULL)
         return NULL;
     return instance_dispatch_table(instance)->GetInstanceProcAddr(instance, pName);
+}
+
+VK_LAYER_EXPORT VkResult VKAPI vkGetGlobalExtensionProperties(const char *pLayerName, uint32_t *pCount,  VkExtensionProperties* pProperties)
+{
+    return util_GetExtensionProperties(0, NULL, pCount, pProperties);
+}
+
+VK_LAYER_EXPORT VkResult VKAPI vkGetGlobalLayerProperties(uint32_t *pCount,  VkLayerProperties* pProperties)
+{
+    return util_GetLayerProperties(ARRAY_SIZE(globalLayerProps), globalLayerProps, pCount, pProperties);
 }

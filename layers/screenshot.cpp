@@ -554,3 +554,25 @@ VK_LAYER_EXPORT void* VKAPI vkGetDeviceProcAddr(
         return NULL;
     return pDisp->GetDeviceProcAddr(dev, funcName);
 }
+
+
+VK_LAYER_EXPORT void* VKAPI vkGetInstanceProcAddr(VkInstance instance, const char* funcName)
+{
+    return NULL;
+#if 0
+    if (instance == VK_NULL_HANDLE) {
+        return NULL;
+    }
+
+    /* loader uses this to force layer initialization; instance object is wrapped */
+    if (!strcmp("vkGetInstanceProcAddr", funcName)) {
+        initInstanceTable((const VkBaseLayerObject *) instance);
+        return (void *) vkGetInstanceProcAddr;
+    }
+
+    VkLayerInstanceDispatchTable* pTable = instance_dispatch_table(instance);
+    if (pTable->GetInstanceProcAddr == NULL)
+        return NULL;
+    return pTable->GetInstanceProcAddr(instance, funcName);
+#endif
+}
