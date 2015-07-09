@@ -1051,8 +1051,8 @@ class ObjectTrackerSubcommand(Subcommand):
             # use default version
             return None
 
-        # Create map of object names to object type enums of the form VkName : VkObjectTypeName
-        obj_type_mapping = {base_t : base_t.replace("Vk", "VkObjectType") for base_t in vulkan.object_type_list}
+        # Create map of object names to object type enums of the form VkName : VkDbgObjectTypeName
+        obj_type_mapping = {base_t : base_t.replace("Vk", "VkDbgObjectType") for base_t in vulkan.object_type_list}
         # Convert object type enum names from UpperCamelCase to UPPER_CASE_WITH_UNDERSCORES
         for objectName, objectTypeEnum in obj_type_mapping.items():
             obj_type_mapping[objectName] = ucc_to_U_C_C(objectTypeEnum);
@@ -1173,6 +1173,58 @@ class ObjectTrackerSubcommand(Subcommand):
         return "\n\n".join(body)
 
 class ThreadingSubcommand(Subcommand):
+    thread_check_dispatchable_objects = [
+        "VkQueue",
+        "VkCmdBuffer",
+    ]
+    thread_check_nondispatchable_objects = [
+        "VkDeviceMemory",
+        "VkBuffer",
+        "VkImage",
+        "VkDescriptorSet",
+        "VkDescriptorPool",
+        "VkSemaphore"
+    ]
+    def generate_useObject(self, ty, key):
+        header_txt = []
+        header_txt.append('%s' % self.lineinfo.get())
+        header_txt.append('static void useObject(%s object, const char* type)' % ty)
+        header_txt.append('{')
+        header_txt.append('    loader_platform_thread_id tid = loader_platform_get_thread_id();')
+        header_txt.append('    loader_platform_thread_lock_mutex(&threadingLock);')
+        header_txt.append('    if (%sObjectsInUse.find(%s) == %sObjectsInUse.end()) {' % (ty, key, ty))
+        header_txt.append('        %sObjectsInUse[%s] = tid;' % (ty, key))
+        header_txt.append('    } else {')
+        header_txt.append('        if (%sObjectsInUse[%s] != tid) {' % (ty, key))
+        header_txt.append('            char str[1024];')
+        header_txt.append('            sprintf(str, "THREADING ERROR : object of type %%s is simultaneously used in thread %%ld and thread %%ld", type, %sObjectsInUse[%s], tid);' % (ty, key))
+        header_txt.append('            layerCbMsg(VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, 0, 0, THREADING_CHECKER_MULTIPLE_THREADS, "THREADING", str);')
+        header_txt.append('            // Wait for thread-safe access to object')
+        header_txt.append('            while (%sObjectsInUse.find(%s) != %sObjectsInUse.end()) {' % (ty, key, ty))
+        header_txt.append('                loader_platform_thread_cond_wait(&threadingCond, &threadingLock);')
+        header_txt.append('            }')
+        header_txt.append('            %sObjectsInUse[%s] = tid;' % (ty, key))
+        header_txt.append('        } else {')
+        header_txt.append('            char str[1024];')
+        header_txt.append('            sprintf(str, "THREADING ERROR : object of type %s is recursively used in thread %ld", type, tid);')
+        header_txt.append('            layerCbMsg(VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, 0, 0, THREADING_CHECKER_SINGLE_THREAD_REUSE, "THREADING", str);')
+        header_txt.append('        }')
+        header_txt.append('    }')
+        header_txt.append('    loader_platform_thread_unlock_mutex(&threadingLock);')
+        header_txt.append('}')
+        return "\n".join(header_txt)
+    def generate_finishUsingObject(self, ty, key):
+        header_txt = []
+        header_txt.append('%s' % self.lineinfo.get())
+        header_txt.append('static void finishUsingObject(%s object)' % ty)
+        header_txt.append('{')
+        header_txt.append('    // Object is no longer in use')
+        header_txt.append('    loader_platform_thread_lock_mutex(&threadingLock);')
+        header_txt.append('    %sObjectsInUse.erase(%s);' % (ty, key))
+        header_txt.append('    loader_platform_thread_cond_broadcast(&threadingCond);')
+        header_txt.append('    loader_platform_thread_unlock_mutex(&threadingLock);')
+        header_txt.append('}')
+        return "\n".join(header_txt)
     def generate_header(self):
         header_txt = []
         header_txt.append('%s' % self.lineinfo.get())
@@ -1196,47 +1248,24 @@ class ThreadingSubcommand(Subcommand):
         header_txt.append('static LOADER_PLATFORM_THREAD_ONCE_DECLARATION(initOnce);')
         header_txt.append('')
         header_txt.append('using namespace std;')
-        header_txt.append('static unordered_map<int, void*> proxy_objectsInUse;\n')
-        header_txt.append('static unordered_map<VkObject, loader_platform_thread_id> objectsInUse;\n')
+        for ty in self.thread_check_dispatchable_objects:
+            header_txt.append('static unordered_map<%s, loader_platform_thread_id> %sObjectsInUse;' % (ty, ty))
+        for ty in self.thread_check_nondispatchable_objects:
+            header_txt.append('static unordered_map<uint64_t, loader_platform_thread_id> %sObjectsInUse;' % ty)
         header_txt.append('static int threadingLockInitialized = 0;')
         header_txt.append('static loader_platform_thread_mutex threadingLock;')
         header_txt.append('static loader_platform_thread_cond threadingCond;')
         header_txt.append('static int printLockInitialized = 0;')
         header_txt.append('static loader_platform_thread_mutex printLock;\n')
         header_txt.append('%s' % self.lineinfo.get())
-        header_txt.append('static void useObject(VkObject object, const char* type)')
-        header_txt.append('{')
-        header_txt.append('    loader_platform_thread_id tid = loader_platform_get_thread_id();')
-        header_txt.append('    loader_platform_thread_lock_mutex(&threadingLock);')
-        header_txt.append('    if (objectsInUse.find(object) == objectsInUse.end()) {')
-        header_txt.append('        objectsInUse[object] = tid;')
-        header_txt.append('    } else {')
-        header_txt.append('        if (objectsInUse[object] != tid) {')
-        header_txt.append('            char str[1024];')
-        header_txt.append('            sprintf(str, "THREADING ERROR : object of type %s is simultaneously used in thread %ld and thread %ld", type, objectsInUse[object], tid);')
-        header_txt.append('            layerCbMsg(VK_DBG_REPORT_ERROR_BIT, (VkObjectType) 0, 0, 0, THREADING_CHECKER_MULTIPLE_THREADS, "THREADING", str);')
-        header_txt.append('            // Wait for thread-safe access to object')
-        header_txt.append('            while (objectsInUse.find(object) != objectsInUse.end()) {')
-        header_txt.append('                loader_platform_thread_cond_wait(&threadingCond, &threadingLock);')
-        header_txt.append('            }')
-        header_txt.append('            objectsInUse[object] = tid;')
-        header_txt.append('        } else {')
-        header_txt.append('            char str[1024];')
-        header_txt.append('            sprintf(str, "THREADING ERROR : object of type %s is recursively used in thread %ld", type, tid);')
-        header_txt.append('            layerCbMsg(VK_DBG_REPORT_ERROR_BIT, (VkObjectType) 0, 0, 0, THREADING_CHECKER_SINGLE_THREAD_REUSE, "THREADING", str);')
-        header_txt.append('        }')
-        header_txt.append('    }')
-        header_txt.append('    loader_platform_thread_unlock_mutex(&threadingLock);')
-        header_txt.append('}')
+        for ty in self.thread_check_dispatchable_objects:
+            header_txt.append(self.generate_useObject(ty, "object"))
+            header_txt.append(self.generate_finishUsingObject(ty, "object"))
         header_txt.append('%s' % self.lineinfo.get())
-        header_txt.append('static void finishUsingObject(VkObject object)')
-        header_txt.append('{')
-        header_txt.append('    // Object is no longer in use')
-        header_txt.append('    loader_platform_thread_lock_mutex(&threadingLock);')
-        header_txt.append('    objectsInUse.erase(object);')
-        header_txt.append('    loader_platform_thread_cond_broadcast(&threadingCond);')
-        header_txt.append('    loader_platform_thread_unlock_mutex(&threadingLock);')
-        header_txt.append('}')
+        for ty in self.thread_check_nondispatchable_objects:
+            header_txt.append(self.generate_useObject(ty, "object.handle"))
+            header_txt.append(self.generate_finishUsingObject(ty, "object.handle"))
+        header_txt.append('%s' % self.lineinfo.get())
         return "\n".join(header_txt)
 
     def generate_intercept(self, proto, qual):
@@ -1244,17 +1273,6 @@ class ThreadingSubcommand(Subcommand):
             # use default version
             return None
         decl = proto.c_func(prefix="vk", attr="VKAPI")
-        thread_check_objects = [
-            "VkQueue",
-            "VkDeviceMemory",
-            "VkObject",
-            "VkBuffer",
-            "VkImage",
-            "VkDescriptorSet",
-            "VkDescriptorPool",
-            "VkCmdBuffer",
-            "VkSemaphore"
-        ]
         ret_val = ''
         stmt = ''
         funcs = []
@@ -1270,11 +1288,11 @@ class ThreadingSubcommand(Subcommand):
             funcs.append('%s%s\n'
                      '{\n'
                      '    for (int i=0; i<memRangeCount; i++) {\n'
-                     '        useObject((VkObject) pMemRanges[i].mem, "VkDeviceMemory");\n'
+                     '        useObject(pMemRanges[i].mem, "VkDeviceMemory");\n'
                      '    }\n'
                      '    %s%s_dispatch_table(%s)->%s;\n'
                      '    for (int i=0; i<memRangeCount; i++) {\n'
-                     '        finishUsingObject((VkObject) pMemRanges[i].mem);\n'
+                     '        finishUsingObject(pMemRanges[i].mem);\n'
                      '    }\n'
                      '%s'
                      '}' % (qual, decl, ret_val, table, proto.params[0].name, proto.c_call(), stmt))
@@ -1307,9 +1325,9 @@ class ThreadingSubcommand(Subcommand):
             funcs.append('%s' % self.lineinfo.get())
             funcs.append('%s%s\n'
                      '{\n'
-                     '    useObject((VkObject) %s, "%s");\n'
+                     '    useObject(%s, "%s");\n'
                      '    %s%s_dispatch_table(%s)->%s;\n'
-                     '    finishUsingObject((VkObject) %s);\n'
+                     '    finishUsingObject(%s);\n'
                      '%s'
                      '}' % (qual, decl, proto.params[0].name, proto.params[0].ty, ret_val, table, proto.params[0].name, proto.c_call(), proto.params[0].name, stmt))
             return "\n".join(funcs)
@@ -1319,7 +1337,7 @@ class ThreadingSubcommand(Subcommand):
         # Watch use of certain types of objects passed as any parameter
         checked_params = []
         for param in proto.params:
-            if param.ty in thread_check_objects:
+            if param.ty in self.thread_check_dispatchable_objects or param.ty in self.thread_check_nondispatchable_objects:
                 checked_params.append(param)
         if proto.name == "DestroyDevice":
             funcs.append('%s%s\n'
@@ -1364,10 +1382,10 @@ class ThreadingSubcommand(Subcommand):
         funcs.append('%s%s' % (qual, decl))
         funcs.append('{')
         for param in checked_params:
-            funcs.append('    useObject((VkObject) %s, "%s");' % (param.name, param.ty))
+            funcs.append('    useObject(%s, "%s");' % (param.name, param.ty))
         funcs.append('    %s%s_dispatch_table(%s)->%s;' % (ret_val, table, proto.params[0].name, proto.c_call()))
         for param in checked_params:
-            funcs.append('    finishUsingObject((VkObject) %s);' % param.name)
+            funcs.append('    finishUsingObject(%s);' % param.name)
         funcs.append('%s'
                  '}' % stmt)
         return "\n".join(funcs)

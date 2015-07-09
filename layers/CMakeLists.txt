@@ -122,7 +122,7 @@ add_custom_target(generate_vk_layer_helpers DEPENDS
 #run_vk_layer_generate(Generic generic_layer.cpp)
 run_vk_layer_generate(APIDump api_dump.cpp)
 #run_vk_layer_generate(ObjectTracker object_track.cpp)
-#run_vk_layer_generate(Threading threading.cpp)
+run_vk_layer_generate(Threading threading.cpp)
 
 add_library(layer_utils SHARED vk_layer_config.cpp vk_layer_extension_utils.cpp)
 if (WIN32)
@@ -143,4 +143,4 @@ add_vk_layer(ParamChecker param_checker.cpp vk_layer_debug_marker_table.cpp vk_l
 #add_vk_layer(Generic generic_layer.cpp vk_layer_table.cpp)
 add_vk_layer(APIDump api_dump.cpp vk_layer_table.cpp)
 #add_vk_layer(ObjectTracker object_track.cpp vk_layer_table.cpp)
-#add_vk_layer(Threading threading.cpp vk_layer_table.cpp)
+add_vk_layer(Threading threading.cpp vk_layer_table.cpp)
