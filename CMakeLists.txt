@@ -46,16 +46,19 @@ else()
     set(PYTHON_CMD "py")
 endif()
 
-#option(BUILD_TESTS "Build tests" ON)
+option(BUILD_TESTS "Build tests" ON)
 
 # loader: Generic VULKAN ICD loader
 # icd: Device dependent (DD) VULKAN components
 # tests: VULKAN tests
 add_subdirectory(loader)
 add_subdirectory(icd)
-#if(BUILD_TESTS)
-#    add_subdirectory(tests)
-#endif()
+if(NOT WIN32)
+    # TODO: Tests don't build on Windows 
+    if(BUILD_TESTS)
+        add_subdirectory(tests)
+    endif()
+endif()
 add_subdirectory(layers)
 add_subdirectory(demos)
 #add_subdirectory(tools/glave)
