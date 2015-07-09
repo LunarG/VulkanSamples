@@ -2330,6 +2330,7 @@ VkResult loader_validate_instance_extensions(
 
 VkResult loader_validate_device_extensions(
         struct loader_icd              *icd,
+        u_int32_t                       gpu_index,
         const VkDeviceCreateInfo       *pCreateInfo)
 {
     struct loader_extension_property *extension_prop;
@@ -2338,7 +2339,7 @@ VkResult loader_validate_device_extensions(
     for (uint32_t i = 0; i < pCreateInfo->extensionCount; i++) {
         const char *extension_name = pCreateInfo->ppEnabledExtensionNames[i];
         extension_prop = get_extension_property(extension_name,
-                                                &loader.global_extensions);
+                                                &icd->device_extension_cache[gpu_index]);
 
         if (extension_prop) {
             continue;
@@ -2774,7 +2775,7 @@ VkResult loader_CreateDevice(
         return res;
     }
 
-    res = loader_validate_device_extensions(icd, pCreateInfo);
+    res = loader_validate_device_extensions(icd, gpu_index, pCreateInfo);
     if (res != VK_SUCCESS) {
         return res;
     }
