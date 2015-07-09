@@ -1296,14 +1296,13 @@ static VkResult graphics_pipeline_create(struct intel_dev *dev,
         return ret;
 
     pipeline = (struct intel_pipeline *) intel_base_create(&dev->base.handle,
-            sizeof(*pipeline), dev->base.dbg,
-            VK_OBJECT_TYPE_PIPELINE, info_, 0);
+                        sizeof (*pipeline), dev->base.dbg,
+                        VK_OBJECT_TYPE_PIPELINE, info_, 0);
     if (!pipeline)
         return VK_ERROR_OUT_OF_HOST_MEMORY;
 
     pipeline->dev = dev;
-    pipeline->pipeline_layout =
-        intel_pipeline_layout(info.graphics.layout);
+    pipeline->pipeline_layout = intel_pipeline_layout(info.graphics.layout);
 
     pipeline->obj.base.get_memory_requirements = pipeline_get_memory_requirements;
     pipeline->obj.destroy = pipeline_destroy;
@@ -1317,67 +1316,85 @@ static VkResult graphics_pipeline_create(struct intel_dev *dev,
     }
 
     *pipeline_ret = pipeline;
-
     return VK_SUCCESS;
 }
 
-ICD_EXPORT VkResult VKAPI vkCreateGraphicsPipeline(
-    VkDevice                                  device,
-    const VkGraphicsPipelineCreateInfo*    pCreateInfo,
-    VkPipeline*                               pPipeline)
+ICD_EXPORT VkResult VKAPI vkCreatePipelineCache(
+    VkDevice                                    device,
+    const VkPipelineCacheCreateInfo*            pCreateInfo,
+    VkPipelineCache*                            pPipelineCache)
 {
-    struct intel_dev *dev = intel_dev(device);
 
-    return graphics_pipeline_create(dev, pCreateInfo,
-            (struct intel_pipeline **) pPipeline);
+    // non-dispatchable objects only need to be 64 bits currently
+    *((uint64_t *)pPipelineCache) = 1;
+    return VK_SUCCESS;
 }
 
-ICD_EXPORT VkResult VKAPI vkCreateGraphicsPipelineDerivative(
-    VkDevice                                  device,
-    const VkGraphicsPipelineCreateInfo*    pCreateInfo,
-    VkPipeline                                basePipeline,
-    VkPipeline*                               pPipeline)
+VkResult VKAPI vkDestroyPipelineCache(
+    VkDevice                                    device,
+    VkPipelineCache                             pipelineCache)
 {
-    struct intel_dev *dev = intel_dev(device);
-
-    /* TODO: Use basePipeline to optimize creation of derivative */
-
-    return graphics_pipeline_create(dev, pCreateInfo,
-            (struct intel_pipeline **) pPipeline);
+    return VK_SUCCESS;
 }
 
-ICD_EXPORT VkResult VKAPI vkCreateComputePipeline(
-    VkDevice                                  device,
-    const VkComputePipelineCreateInfo*     pCreateInfo,
-    VkPipeline*                               pPipeline)
+ICD_EXPORT size_t VKAPI vkGetPipelineCacheSize(
+    VkDevice                                    device,
+    VkPipelineCache                             pipelineCache)
 {
     return VK_ERROR_UNAVAILABLE;
 }
 
-ICD_EXPORT VkResult VKAPI vkStorePipeline(
-    VkDevice                                  device,
-    VkPipeline                                pipeline,
-    size_t*                                     pDataSize,
+ICD_EXPORT VkResult VKAPI vkGetPipelineCacheData(
+    VkDevice                                    device,
+    VkPipelineCache                             pipelineCache,
     void*                                       pData)
 {
     return VK_ERROR_UNAVAILABLE;
 }
 
-ICD_EXPORT VkResult VKAPI vkLoadPipeline(
-    VkDevice                                  device,
-    size_t                                    dataSize,
-    const void*                                 pData,
-    VkPipeline*                               pPipeline)
+ICD_EXPORT VkResult VKAPI vkMergePipelineCaches(
+    VkDevice                                    device,
+    VkPipelineCache                             destCache,
+    uint32_t                                    srcCacheCount,
+    const VkPipelineCache*                      pSrcCaches)
 {
     return VK_ERROR_UNAVAILABLE;
 }
 
-ICD_EXPORT VkResult VKAPI vkLoadPipelineDerivative(
+ICD_EXPORT VkResult VKAPI vkCreateGraphicsPipelines(
     VkDevice                                  device,
-    size_t                                      dataSize,
-    const void*                                 pData,
-    VkPipeline                                basePipeline,
-    VkPipeline*                               pPipeline)
+    VkPipelineCache                           pipelineCache,
+    uint32_t                                  count,
+    const VkGraphicsPipelineCreateInfo*       pCreateInfos,
+    VkPipeline*                               pPipelines)
+{
+    struct intel_dev *dev = intel_dev(device);
+    uint32_t i;
+    VkResult res;
+    bool one_succeeded = false;
+
+    for (i = 0; i < count; i++) {
+        res =  graphics_pipeline_create(dev, &(pCreateInfos[i]),
+            (struct intel_pipeline **) &(pPipelines[i]));
+        //return NULL handle for unsuccessful creates
+        if (res != VK_SUCCESS)
+            pPipelines[i] = 0;
+        else
+            one_succeeded = true;
+    }
+    //return VK_SUCCESS if any of count creates succeeded
+    if (one_succeeded)
+        return VK_SUCCESS;
+    else
+        return res;
+}
+
+ICD_EXPORT VkResult VKAPI vkCreateComputePipelines(
+    VkDevice                                  device,
+    VkPipelineCache                           pipelineCache,
+    uint32_t                                  count,
+    const VkComputePipelineCreateInfo*        pCreateInfos,
+    VkPipeline*                               pPipelines)
 {
     return VK_ERROR_UNAVAILABLE;
 }

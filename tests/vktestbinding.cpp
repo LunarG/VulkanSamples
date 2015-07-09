@@ -808,61 +808,54 @@ VkResult Shader::init_try(const Device &dev, const VkShaderCreateInfo &info)
 
 void Pipeline::init(const Device &dev, const VkGraphicsPipelineCreateInfo &info)
 {
-    DERIVED_OBJECT_TYPE_INIT(vkCreateGraphicsPipeline, dev, VK_OBJECT_TYPE_PIPELINE, &info);
-    alloc_memory();
+    VkPipelineCache cache;
+    VkPipelineCacheCreateInfo ci;
+    memset((void *) &ci, 0, sizeof(VkPipelineCacheCreateInfo));
+    ci.sType = VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO;
+    VkResult err = vkCreatePipelineCache(dev.obj(), &ci, &cache);
+    if (err == VK_SUCCESS) {
+        DERIVED_OBJECT_TYPE_INIT(vkCreateGraphicsPipelines, dev, VK_OBJECT_TYPE_PIPELINE, cache, 1, &info);
+        alloc_memory();
+        vkDestroyPipelineCache(dev.obj(), cache);
+    }
 }
 
 VkResult Pipeline::init_try(const Device &dev, const VkGraphicsPipelineCreateInfo &info)
 {
     VkPipeline pipe;
+    VkPipelineCache cache;
+    VkPipelineCacheCreateInfo ci;
     dev_ = &dev;
-    VkResult err = vkCreateGraphicsPipeline(dev.obj(), &info, &pipe);
+    memset((void *) &ci, 0, sizeof(VkPipelineCacheCreateInfo));
+    ci.sType = VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO;
+    VkResult err = vkCreatePipelineCache(dev.obj(), &ci, &cache);
     if (err == VK_SUCCESS) {
-        Object::init(pipe, VK_OBJECT_TYPE_PIPELINE);
-        alloc_memory();
+        err = vkCreateGraphicsPipelines(dev.obj(), cache, 1, &info, &pipe);
+        if (err == VK_SUCCESS) {
+            Object::init(pipe, VK_OBJECT_TYPE_PIPELINE);
+            alloc_memory();
+            vkDestroyPipelineCache(dev.obj(), cache);
+        }
     }
 
     return err;
 }
 
-void Pipeline::init(
-        const Device &dev,
-        const VkGraphicsPipelineCreateInfo &info,
-        const VkPipeline basePipeline)
-{
-    DERIVED_OBJECT_TYPE_INIT(vkCreateGraphicsPipelineDerivative, dev, VK_OBJECT_TYPE_PIPELINE, &info, basePipeline);
-    alloc_memory();
-}
 
 void Pipeline::init(const Device &dev, const VkComputePipelineCreateInfo &info)
 {
-    DERIVED_OBJECT_TYPE_INIT(vkCreateComputePipeline, dev, VK_OBJECT_TYPE_PIPELINE, &info);
-    alloc_memory();
+    VkPipelineCache cache;
+    VkPipelineCacheCreateInfo ci;
+    memset((void *) &ci, 0, sizeof(VkPipelineCacheCreateInfo));
+    ci.sType = VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO;
+    VkResult err = vkCreatePipelineCache(dev.obj(), &ci, &cache);
+    if (err == VK_SUCCESS) {
+        DERIVED_OBJECT_TYPE_INIT(vkCreateComputePipelines, dev, VK_OBJECT_TYPE_PIPELINE, cache, 1, &info);
+        alloc_memory();
+        vkDestroyPipelineCache(dev.obj(), cache);
+    }
 }
 
-void Pipeline::init(const Device&dev, size_t size, const void *data)
-{
-    DERIVED_OBJECT_TYPE_INIT(vkLoadPipeline, dev, VK_OBJECT_TYPE_PIPELINE, size, data);
-    alloc_memory();
-}
-
-void Pipeline::init(
-        const Device&dev,
-        size_t size,
-        const void *data,
-        const VkPipeline basePipeline)
-{
-    DERIVED_OBJECT_TYPE_INIT(vkLoadPipelineDerivative, dev, VK_OBJECT_TYPE_PIPELINE, size, data, basePipeline);
-    alloc_memory();
-}
-
-size_t Pipeline::store(size_t size, void *data)
-{
-    if (!EXPECT(vkStorePipeline(dev_->obj(), obj(), &size, data) == VK_SUCCESS))
-        size = 0;
-
-    return size;
-}
 
 void Sampler::init(const Device &dev, const VkSamplerCreateInfo &info)
 {

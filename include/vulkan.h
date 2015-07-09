@@ -82,6 +82,7 @@ VK_DEFINE_NONDISP_SUBCLASS_HANDLE(VkDepthStencilView, VkNonDispatchable)
 VK_DEFINE_NONDISP_SUBCLASS_HANDLE(VkShaderModule, VkNonDispatchable)
 VK_DEFINE_NONDISP_SUBCLASS_HANDLE(VkShader, VkNonDispatchable)
 VK_DEFINE_NONDISP_SUBCLASS_HANDLE(VkPipeline, VkNonDispatchable)
+VK_DEFINE_NONDISP_SUBCLASS_HANDLE(VkPipelineCache, VkNonDispatchable)
 VK_DEFINE_NONDISP_SUBCLASS_HANDLE(VkPipelineLayout, VkNonDispatchable)
 VK_DEFINE_NONDISP_SUBCLASS_HANDLE(VkSampler, VkNonDispatchable)
 VK_DEFINE_NONDISP_SUBCLASS_HANDLE(VkDescriptorSet, VkNonDispatchable)
@@ -104,6 +105,7 @@ VK_DEFINE_NONDISP_SUBCLASS_HANDLE(VkRenderPass, VkNonDispatchable)
 #define VK_MAX_DESCRIPTION          256
 #define VK_MAX_MEMORY_TYPES         32
 #define VK_MAX_MEMORY_HEAPS         16
+#define VK_UUID_LENGTH              16
 #define VK_LOD_CLAMP_NONE           MAX_FLOAT
 #define VK_LAST_MIP_LEVEL           UINT32_MAX
 #define VK_LAST_ARRAY_SLICE         UINT32_MAX
@@ -787,7 +789,8 @@ typedef enum VkStructureType_
     VK_STRUCTURE_TYPE_COPY_DESCRIPTOR_SET                     = 42,
     VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO                    = 43,
     VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO             = 44,
-    VK_STRUCTURE_TYPE_EXTENSION_PROPERTIES                    = 45,
+    VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO              = 45,
+    VK_STRUCTURE_TYPE_EXTENSION_PROPERTIES                    = 46,
 
     VK_ENUM_RANGE(STRUCTURE_TYPE, APPLICATION_INFO, EXTENSION_PROPERTIES)
 } VkStructureType;
@@ -824,7 +827,8 @@ typedef enum VkObjectType_
     VK_OBJECT_TYPE_EVENT                                    = 26,
     VK_OBJECT_TYPE_QUERY_POOL                               = 27,
     VK_OBJECT_TYPE_FRAMEBUFFER                              = 28,
-    VK_OBJECT_TYPE_RENDER_PASS                              = 29,
+    VK_OBJECT_TYPE_PIPELINE_CACHE                           = 29,
+    VK_OBJECT_TYPE_RENDER_PASS                              = 30,
 
     // Valid ranges for core Vulkan:
     VK_OBJECT_TYPE_BEGIN_RANGE                              = VK_OBJECT_TYPE_INSTANCE,
@@ -1019,6 +1023,7 @@ typedef enum VkPipelineCreateFlagBits_
 {
     VK_PIPELINE_CREATE_DISABLE_OPTIMIZATION_BIT             = VK_BIT(0),
     VK_PIPELINE_CREATE_ALLOW_DERIVATIVES_BIT                = VK_BIT(1),
+    VK_PIPELINE_CREATE_DERIVATIVE_BIT                       = VK_BIT(2),
 } VkPipelineCreateFlagBits;
 
 // Channel flags
@@ -1239,6 +1244,7 @@ typedef struct VkPhysicalDeviceProperties_
     uint32_t                                    deviceId;
     VkPhysicalDeviceType                        deviceType;
     char                                        deviceName[VK_MAX_PHYSICAL_DEVICE_NAME];
+    uint8_t                                     pipelineCacheUUID[VK_UUID_LENGTH];
 } VkPhysicalDeviceProperties;
 
 typedef struct VkPhysicalDeviceFeatures_
@@ -1821,6 +1827,15 @@ typedef struct VkShaderCreateInfo_
     VkShaderCreateFlags                         flags;              // Reserved
 } VkShaderCreateInfo;
 
+typedef struct VkPipelineCacheCreateInfo_
+{
+    VkStructureType                             sType;
+    const void*                                 pNext;
+    size_t                                      initialSize;
+    const void*                                 initialData;
+    size_t                                      maxSize;
+} VkPipelineCacheCreateInfo;
+
 typedef struct VkDescriptorSetLayoutBinding_
 {
     VkDescriptorType                            descriptorType;     // Type of the descriptors in this binding
@@ -1889,6 +1904,8 @@ typedef struct VkComputePipelineCreateInfo_
     VkPipelineShaderStageCreateInfo             cs;
     VkPipelineCreateFlags                       flags;          // Pipeline creation flags
     VkPipelineLayout                            layout;         // Interface layout of the pipeline
+    VkPipeline                                  basePipelineHandle;
+    int32_t                                     basePipelineIndex;
 } VkComputePipelineCreateInfo;
 
 typedef struct VkVertexInputBindingDescription_
@@ -2033,6 +2050,8 @@ typedef struct VkGraphicsPipelineCreateInfo_
     const VkPipelineCbStateCreateInfo*          pCbState;
     VkPipelineCreateFlags                       flags;      // Pipeline creation flags
     VkPipelineLayout                            layout;     // Interface layout of the pipeline
+    VkPipeline                                  basePipelineHandle;
+    int32_t                                     basePipelineIndex;
 } VkGraphicsPipelineCreateInfo;
 
 typedef struct VkPipelineLayoutCreateInfo_
@@ -2290,12 +2309,13 @@ typedef VkResult (VKAPI *PFN_vkCreateColorAttachmentView)(VkDevice device, const
 typedef VkResult (VKAPI *PFN_vkCreateDepthStencilView)(VkDevice device, const VkDepthStencilViewCreateInfo* pCreateInfo, VkDepthStencilView* pView);
 typedef VkResult (VKAPI *PFN_vkCreateShaderModule)(VkDevice device, const VkShaderModuleCreateInfo* pCreateInfo, VkShaderModule* pShaderModule);
 typedef VkResult (VKAPI *PFN_vkCreateShader)(VkDevice device, const VkShaderCreateInfo* pCreateInfo, VkShader* pShader);
-typedef VkResult (VKAPI *PFN_vkCreateGraphicsPipeline)(VkDevice device, const VkGraphicsPipelineCreateInfo* pCreateInfo, VkPipeline* pPipeline);
-typedef VkResult (VKAPI *PFN_vkCreateGraphicsPipelineDerivative)(VkDevice device, const VkGraphicsPipelineCreateInfo* pCreateInfo, VkPipeline basePipeline, VkPipeline* pPipeline);
-typedef VkResult (VKAPI *PFN_vkCreateComputePipeline)(VkDevice device, const VkComputePipelineCreateInfo* pCreateInfo, VkPipeline* pPipeline);
-typedef VkResult (VKAPI *PFN_vkStorePipeline)(VkDevice device, VkPipeline pipeline, size_t* pDataSize, void* pData);
-typedef VkResult (VKAPI *PFN_vkLoadPipeline)(VkDevice device, size_t dataSize, const void* pData, VkPipeline* pPipeline);
-typedef VkResult (VKAPI *PFN_vkLoadPipelineDerivative)(VkDevice device, size_t dataSize, const void* pData, VkPipeline basePipeline, VkPipeline* pPipeline);
+typedef VkResult (VKAPI *PFN_vkCreatePipelineCache)(VkDevice device, const VkPipelineCacheCreateInfo* pCreateInfo, VkPipelineCache* pPipelineCache);
+typedef VkResult (VKAPI *PFN_vkDestroyPipelineCache)(VkDevice device, VkPipelineCache pipelineCache);
+typedef size_t (VKAPI *PFN_vkGetPipelineCacheSize)(VkDevice device, VkPipelineCache pipelineCache);
+typedef VkResult (VKAPI *PFN_vkGetPipelineCacheData)(VkDevice device, VkPipelineCache pipelineCache, void* pData);
+typedef VkResult (VKAPI *PFN_vkMergePipelineCaches)(VkDevice device, VkPipelineCache destCache, uint32_t srcCacheCount, const VkPipelineCache* pSrcCaches);
+typedef VkResult (VKAPI *PFN_vkCreateGraphicsPipelines)(VkDevice device, VkPipelineCache pipelineCache, uint32_t count, const VkGraphicsPipelineCreateInfo* pCreateInfos, VkPipeline* pPipelines);
+typedef VkResult (VKAPI *PFN_vkCreateComputePipelines)(VkDevice device, VkPipelineCache pipelineCache, uint32_t count, const VkComputePipelineCreateInfo* pCreateInfos, VkPipeline* pPipelines);
 typedef VkResult (VKAPI *PFN_vkCreatePipelineLayout)(VkDevice device, const VkPipelineLayoutCreateInfo* pCreateInfo, VkPipelineLayout* pPipelineLayout);
 typedef VkResult (VKAPI *PFN_vkCreateSampler)(VkDevice device, const VkSamplerCreateInfo* pCreateInfo, VkSampler* pSampler);
 typedef VkResult (VKAPI *PFN_vkCreateDescriptorSetLayout)(VkDevice device, const VkDescriptorSetLayoutCreateInfo* pCreateInfo, VkDescriptorSetLayout* pSetLayout);
@@ -2677,41 +2697,43 @@ VkResult VKAPI vkCreateShader(
     VkShader*                                   pShader);
 
 // Pipeline functions
-
-VkResult VKAPI vkCreateGraphicsPipeline(
+VkResult VKAPI vkCreatePipelineCache(
     VkDevice                                    device,
-    const VkGraphicsPipelineCreateInfo*         pCreateInfo,
-    VkPipeline*                                 pPipeline);
+    const VkPipelineCacheCreateInfo*            pCreateInfo,
+    VkPipelineCache*                            pPipelineCache);
 
-VkResult VKAPI vkCreateGraphicsPipelineDerivative(
+VkResult VKAPI vkDestroyPipelineCache(
     VkDevice                                    device,
-    const VkGraphicsPipelineCreateInfo*         pCreateInfo,
-    VkPipeline                                  basePipeline,
-    VkPipeline*                                 pPipeline);
+    VkPipelineCache                             pipelineCache);
 
-VkResult VKAPI vkCreateComputePipeline(
+size_t VKAPI vkGetPipelineCacheSize(
     VkDevice                                    device,
-    const VkComputePipelineCreateInfo*          pCreateInfo,
-    VkPipeline*                                 pPipeline);
+    VkPipelineCache                             pipelineCache);
 
-VkResult VKAPI vkStorePipeline(
+VkResult VKAPI vkGetPipelineCacheData(
     VkDevice                                    device,
-    VkPipeline                                  pipeline,
-    size_t*                                     pDataSize,
+    VkPipelineCache                             pipelineCache,
     void*                                       pData);
 
-VkResult VKAPI vkLoadPipeline(
+VkResult VKAPI vkMergePipelineCaches(
     VkDevice                                    device,
-    size_t                                      dataSize,
-    const void*                                 pData,
-    VkPipeline*                                 pPipeline);
+    VkPipelineCache                             destCache,
+    uint32_t                                    srcCacheCount,
+    const VkPipelineCache*                      pSrcCaches);
 
-VkResult VKAPI vkLoadPipelineDerivative(
+VkResult VKAPI vkCreateGraphicsPipelines(
     VkDevice                                    device,
-    size_t                                      dataSize,
-    const void*                                 pData,
-    VkPipeline                                  basePipeline,
-    VkPipeline*                                 pPipeline);
+    VkPipelineCache                             pipelineCache,
+    uint32_t                                    count,
+    const VkGraphicsPipelineCreateInfo*         pCreateInfos,
+    VkPipeline*                                 pPipelines);
+
+VkResult VKAPI vkCreateComputePipelines(
+    VkDevice                                    device,
+    VkPipelineCache                             pipelineCache,
+    uint32_t                                    count,
+    const VkComputePipelineCreateInfo*          pCreateInfos,
+    VkPipeline*                                 pPipelines);
 
 // Pipeline layout functions
 

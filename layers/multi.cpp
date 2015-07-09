@@ -134,24 +134,18 @@ VK_LAYER_EXPORT VkResult VKAPI multi1CreateSampler(VkDevice device, const VkSamp
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI multi1CreateGraphicsPipeline(VkDevice device, const VkGraphicsPipelineCreateInfo* pCreateInfo,
-                                                                VkPipeline* pPipeline)
+VK_LAYER_EXPORT VkResult VKAPI multi1CreateGraphicsPipelines(
+                                VkDevice device,
+                                VkPipelineCache pipelineCache,
+                                uint32_t count,
+                                const VkGraphicsPipelineCreateInfo* pCreateInfos,
+                                VkPipeline* pPipelines)
 {
     VkLayerDispatchTable **ppDisp = (VkLayerDispatchTable **) device;
 
     printf("At start of multi1 layer vkCreateGraphicsPipeline()\n");
-    VkResult result = device_dispatch_table1(device)->CreateGraphicsPipeline(device, pCreateInfo, pPipeline);
+    VkResult result = device_dispatch_table1(device)->CreateGraphicsPipelines(device, pipelineCache, count, pCreateInfos, pPipelines);
     printf("Completed multi1 layer vkCreateGraphicsPipeline()\n");
-    return result;
-}
-
-VK_LAYER_EXPORT VkResult VKAPI multi1StorePipeline(VkDevice device, VkPipeline pipeline, size_t* pDataSize, void* pData)
-{
-    VkLayerDispatchTable **ppDisp = (VkLayerDispatchTable **) device;
-
-    printf("At start of multi1 layer vkStorePipeline()\n");
-    VkResult result = device_dispatch_table1(device)->StorePipeline(device, pipeline, pDataSize, pData);
-    printf("Completed multi1 layer vkStorePipeline()\n");
     return result;
 }
 
@@ -172,10 +166,8 @@ VK_LAYER_EXPORT void * VKAPI multi1GetDeviceProcAddr(VkDevice device, const char
         return (void *) multi1DestroyDevice;
     if (!strcmp("vkCreateSampler", pName))
         return (void *) multi1CreateSampler;
-    if (!strcmp("vkCreateGraphicsPipeline", pName))
-        return (void *) multi1CreateGraphicsPipeline;
-    if (!strcmp("vkStorePipeline", pName))
-        return (void *) multi1StorePipeline;
+    if (!strcmp("vkCreateGraphicsPipelines", pName))
+        return (void *) multi1CreateGraphicsPipelines;
     else {
         VkLayerDispatchTable **ppDisp = (VkLayerDispatchTable **) device;
         VkLayerDispatchTable* pTable = device_dispatch_table1(device);

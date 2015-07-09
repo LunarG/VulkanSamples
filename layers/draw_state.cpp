@@ -1532,58 +1532,72 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateDepthStencilView(VkDevice device, const V
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkCreateGraphicsPipeline(VkDevice device, const VkGraphicsPipelineCreateInfo* pCreateInfo, VkPipeline* pPipeline)
+//TODO handle pipeline caches
+VkResult VKAPI vkCreatePipelineCache(
+    VkDevice                                    device,
+    const VkPipelineCacheCreateInfo*            pCreateInfo,
+    VkPipelineCache*                            pPipelineCache)
+{
+    VkResult result = get_dispatch_table(draw_state_device_table_map, device)->CreatePipelineCache(device, pCreateInfo, pPipelineCache);
+    return result;
+}
+
+VkResult VKAPI vkDestroyPipelineCache(
+    VkDevice                                    device,
+    VkPipelineCache                             pipelineCache)
+{
+    VkResult result = get_dispatch_table(draw_state_device_table_map, device)->DestroyPipelineCache(device, pipelineCache);
+    return result;
+}
+
+size_t VKAPI vkGetPipelineCacheSize(
+    VkDevice                                    device,
+    VkPipelineCache                             pipelineCache)
+{
+    size_t size = get_dispatch_table(draw_state_device_table_map, device)->GetPipelineCacheSize(device, pipelineCache);
+    return size;
+}
+
+VkResult VKAPI vkGetPipelineCacheData(
+    VkDevice                                    device,
+    VkPipelineCache                             pipelineCache,
+    void*                                       pData)
+{
+    VkResult result = get_dispatch_table(draw_state_device_table_map, device)->GetPipelineCacheData(device, pipelineCache, pData);
+    return result;
+}
+
+VkResult VKAPI vkMergePipelineCaches(
+    VkDevice                                    device,
+    VkPipelineCache                             destCache,
+    uint32_t                                    srcCacheCount,
+    const VkPipelineCache*                      pSrcCaches)
+{
+    VkResult result = get_dispatch_table(draw_state_device_table_map, device)->MergePipelineCaches(device, destCache, srcCacheCount, pSrcCaches);
+    return result;
+}
+
+VK_LAYER_EXPORT VkResult VKAPI vkCreateGraphicsPipelines(VkDevice device, VkPipelineCache pipelineCache, uint32_t count, const VkGraphicsPipelineCreateInfo* pCreateInfos, VkPipeline* pPipelines)
 {
     VkResult result = VK_ERROR_BAD_PIPELINE_DATA;
+    //TODO handle count > 1  and handle pipelineCache
     // The order of operations here is a little convoluted but gets the job done
     //  1. Pipeline create state is first shadowed into PIPELINE_NODE struct
     //  2. Create state is then validated (which uses flags setup during shadowing)
     //  3. If everything looks good, we'll then create the pipeline and add NODE to pipelineMap
     loader_platform_thread_lock_mutex(&globalLock);
-    PIPELINE_NODE* pPipeNode = initPipeline(pCreateInfo, NULL);
+    PIPELINE_NODE* pPipeNode = initPipeline(pCreateInfos, NULL);
     bool32_t valid = verifyPipelineCreateState(device, pPipeNode);
     loader_platform_thread_unlock_mutex(&globalLock);
     if (VK_TRUE == valid) {
-        result = get_dispatch_table(draw_state_device_table_map, device)->CreateGraphicsPipeline(device, pCreateInfo, pPipeline);
-        log_msg(mdd(device), VK_DBG_REPORT_INFO_BIT, VK_OBJECT_TYPE_PIPELINE, *pPipeline, 0, DRAWSTATE_NONE, "DS",
-                "Created Gfx Pipeline %p", (void*)*pPipeline);
+        result = get_dispatch_table(draw_state_device_table_map, device)->CreateGraphicsPipelines(device, pipelineCache, count, pCreateInfos, pPipelines);
+        log_msg(mdd(device), VK_DBG_REPORT_INFO_BIT, VK_OBJECT_TYPE_PIPELINE, *pPipelines, 0, DRAWSTATE_NONE, "DS",
+                "Created Gfx Pipeline %p", (void*)*pPipelines);
         loader_platform_thread_lock_mutex(&globalLock);
-        pPipeNode->pipeline = *pPipeline;
+        pPipeNode->pipeline = *pPipelines;
         pipelineMap[pPipeNode->pipeline] = pPipeNode;
         loader_platform_thread_unlock_mutex(&globalLock);
     } else {
-        if (pPipeNode) {
-            // If we allocated a pipeNode, need to clean it up here
-            delete[] pPipeNode->pVertexBindingDescriptions;
-            delete[] pPipeNode->pVertexAttributeDescriptions;
-            delete[] pPipeNode->pAttachments;
-            delete pPipeNode;
-        }
-    }
-    return result;
-}
-
-VK_LAYER_EXPORT VkResult VKAPI vkCreateGraphicsPipelineDerivative(
-        VkDevice device,
-        const VkGraphicsPipelineCreateInfo* pCreateInfo,
-        VkPipeline basePipeline,
-        VkPipeline* pPipeline)
-{
-    VkResult result = VK_ERROR_BAD_PIPELINE_DATA;
-    loader_platform_thread_lock_mutex(&globalLock);
-    PIPELINE_NODE* pPipeNode = initPipeline(pCreateInfo, NULL);
-    bool32_t valid = verifyPipelineCreateState(device, pipelineMap[basePipeline]);
-    loader_platform_thread_unlock_mutex(&globalLock);
-    if (VK_TRUE == valid) {
-        result = get_dispatch_table(draw_state_device_table_map, device)->CreateGraphicsPipelineDerivative(device, pCreateInfo, basePipeline, pPipeline);
-        log_msg(mdd(device), VK_DBG_REPORT_INFO_BIT, VK_OBJECT_TYPE_PIPELINE, *pPipeline, 0, DRAWSTATE_NONE, "DS",
-                "Created Gfx Pipeline %p (derived from pipeline %p)", (void*)*pPipeline, basePipeline);
-        loader_platform_thread_lock_mutex(&globalLock);
-        pPipeNode->pipeline = *pPipeline;
-        pipelineMap[pPipeNode->pipeline] = pPipeNode;
-        loader_platform_thread_unlock_mutex(&globalLock);
-    }
-    else { // Skipped pipeline creation due to bad CreateInfo data
         if (pPipeNode) {
             // If we allocated a pipeNode, need to clean it up here
             delete[] pPipeNode->pVertexBindingDescriptions;
@@ -2706,10 +2720,18 @@ VK_LAYER_EXPORT void* VKAPI vkGetDeviceProcAddr(VkDevice dev, const char* funcNa
         return (void*) vkCreateColorAttachmentView;
     if (!strcmp(funcName, "vkCreateDepthStencilView"))
         return (void*) vkCreateDepthStencilView;
-    if (!strcmp(funcName, "vkCreateGraphicsPipeline"))
-        return (void*) vkCreateGraphicsPipeline;
-    if (!strcmp(funcName, "vkCreateGraphicsPipelineDerivative"))
-        return (void*) vkCreateGraphicsPipelineDerivative;
+    if (!strcmp(funcName, "CreatePipelineCache"))
+        return (void*) vkCreatePipelineCache;
+    if (!strcmp(funcName, "DestroyPipelineCache"))
+        return (void*) vkDestroyPipelineCache;
+    if (!strcmp(funcName, "GetPipelineCacheSize"))
+        return (void*) vkGetPipelineCacheSize;
+    if (!strcmp(funcName, "GetPipelineCacheData"))
+        return (void*) vkGetPipelineCacheData;
+    if (!strcmp(funcName, "MergePipelineCaches"))
+        return (void*) vkMergePipelineCaches;
+    if (!strcmp(funcName, "vkCreateGraphicsPipelines"))
+        return (void*) vkCreateGraphicsPipelines;
     if (!strcmp(funcName, "vkCreateSampler"))
         return (void*) vkCreateSampler;
     if (!strcmp(funcName, "vkCreateDescriptorSetLayout"))

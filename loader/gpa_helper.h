@@ -149,18 +149,20 @@ static inline void* globalGetProcAddr(const char *name)
         return (void*) vkCreateShaderModule;
     if (!strcmp(name, "CreateShader"))
         return (void*) vkCreateShader;
-    if (!strcmp(name, "CreateGraphicsPipeline"))
-        return (void*) vkCreateGraphicsPipeline;
-    if (!strcmp(name, "CreateGraphicsPipelineDerivative"))
-        return (void*) vkCreateGraphicsPipelineDerivative;
-    if (!strcmp(name, "CreateComputePipeline"))
-        return (void*) vkCreateComputePipeline;
-    if (!strcmp(name, "StorePipeline"))
-        return (void*) vkStorePipeline;
-    if (!strcmp(name, "LoadPipeline"))
-        return (void*) vkLoadPipeline;
-    if (!strcmp(name, "LoadPipelineDerivative"))
-        return (void*) vkLoadPipelineDerivative;
+    if (!strcmp(name, "CreatePipelineCache"))
+        return (void*) vkCreatePipelineCache;
+    if (!strcmp(name, "DestroyPipelineCache"))
+        return (void*) vkDestroyPipelineCache;
+    if (!strcmp(name, "GetPipelineCacheSize"))
+        return (void*) vkGetPipelineCacheSize;
+    if (!strcmp(name, "GetPipelineCacheData"))
+        return (void*) vkGetPipelineCacheData;
+    if (!strcmp(name, "MergePipelineCaches"))
+        return (void*) vkMergePipelineCaches;
+    if (!strcmp(name, "CreateGraphicsPipelines"))
+        return (void*) vkCreateGraphicsPipelines;
+    if (!strcmp(name, "CreateComputePipelines"))
+        return (void*) vkCreateComputePipelines;
     if (!strcmp(name, "CreatePipelineLayout"))
         return (void*) vkCreatePipelineLayout;
     if (!strcmp(name, "CreateSampler"))

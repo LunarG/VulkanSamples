@@ -344,6 +344,7 @@ struct demo {
     VkCmdBuffer cmd;  // Buffer for initialization commands
     VkPipelineLayout pipeline_layout;
     VkDescriptorSetLayout desc_layout;
+    VkPipelineCache pipelineCache;
     VkPipeline pipeline;
 
     VkDynamicVpState viewport;
@@ -1377,7 +1378,7 @@ static VkShader demo_prepare_fs(struct demo *demo)
 static void demo_prepare_pipeline(struct demo *demo)
 {
     VkGraphicsPipelineCreateInfo pipeline;
-
+    VkPipelineCacheCreateInfo pipelineCache;
     VkPipelineIaStateCreateInfo ia;
     VkPipelineRsStateCreateInfo rs;
     VkPipelineCbStateCreateInfo cb;
@@ -1455,8 +1456,12 @@ static void demo_prepare_pipeline(struct demo *demo)
     pipeline.pVpState = &vp;
     pipeline.pDsState = &ds;
     pipeline.pStages  = shaderStages;
+    memset(&pipelineCache, 0, sizeof(pipelineCache));
+    pipelineCache.sType = VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO;
 
-    err = vkCreateGraphicsPipeline(demo->device, &pipeline, &demo->pipeline);
+    err = vkCreatePipelineCache(demo->device, &pipelineCache, &demo->pipelineCache);
+    assert(!err);
+    err = vkCreateGraphicsPipelines(demo->device, demo->pipelineCache, 1, &pipeline, &demo->pipeline);
     assert(!err);
 
     for (uint32_t i = 0; i < pipeline.stageCount; i++) {
@@ -1650,6 +1655,7 @@ static void demo_cleanup(struct demo *demo)
     vkDestroyObject(demo->device, VK_OBJECT_TYPE_DYNAMIC_DS_STATE, demo->depth_stencil);
 
     vkDestroyObject(demo->device, VK_OBJECT_TYPE_PIPELINE, demo->pipeline);
+    vkDestroyPipelineCache(demo->device, demo->pipelineCache);
     vkDestroyObject(demo->device, VK_OBJECT_TYPE_PIPELINE_LAYOUT, demo->pipeline_layout);
     vkDestroyObject(demo->device, VK_OBJECT_TYPE_DESCRIPTOR_SET_LAYOUT, demo->desc_layout);
 

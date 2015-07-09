@@ -1507,45 +1507,34 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateShader(
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkCreateGraphicsPipeline(
+//TODO do we need to intercept pipelineCache functions to track objects?
+VK_LAYER_EXPORT VkResult VKAPI vkCreateGraphicsPipelines(
     VkDevice                            device,
-    const VkGraphicsPipelineCreateInfo *pCreateInfo,
-    VkPipeline                         *pPipeline)
+    VkPipelineCache                     pipelineCache,
+    uint32_t                            count,
+    const VkGraphicsPipelineCreateInfo *pCreateInfos,
+    VkPipeline                         *pPipelines)
 {
-    VkResult result = get_dispatch_table(mem_tracker_device_table_map, device)->CreateGraphicsPipeline(device, pCreateInfo, pPipeline);
+    VkResult result = get_dispatch_table(mem_tracker_device_table_map, device)->CreateGraphicsPipelines(device, pipelineCache, count, pCreateInfos, pPipelines);
     if (result == VK_SUCCESS) {
         loader_platform_thread_lock_mutex(&globalLock);
-        add_object_info(*pPipeline, pCreateInfo->sType, pCreateInfo, sizeof(VkGraphicsPipelineCreateInfo), "graphics_pipeline");
+        add_object_info(*pPipelines, pCreateInfos->sType, pCreateInfos, sizeof(VkGraphicsPipelineCreateInfo), "graphics_pipeline");
         loader_platform_thread_unlock_mutex(&globalLock);
     }
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkCreateGraphicsPipelineDerivative(
-    VkDevice                            device,
-    const VkGraphicsPipelineCreateInfo *pCreateInfo,
-    VkPipeline                          basePipeline,
-    VkPipeline                         *pPipeline)
-{
-    VkResult result = get_dispatch_table(mem_tracker_device_table_map, device)->CreateGraphicsPipelineDerivative(
-        device, pCreateInfo, basePipeline, pPipeline);
-    if (result == VK_SUCCESS) {
-        loader_platform_thread_lock_mutex(&globalLock);
-        add_object_info(*pPipeline, pCreateInfo->sType, pCreateInfo, sizeof(VkGraphicsPipelineCreateInfo), "graphics_pipeline");
-        loader_platform_thread_unlock_mutex(&globalLock);
-    }
-    return result;
-}
-
-VK_LAYER_EXPORT VkResult VKAPI vkCreateComputePipeline(
+VK_LAYER_EXPORT VkResult VKAPI vkCreateComputePipelines(
     VkDevice                           device,
-    const VkComputePipelineCreateInfo *pCreateInfo,
-    VkPipeline                        *pPipeline)
+    VkPipelineCache                    pipelineCache,
+    uint32_t                           count,
+    const VkComputePipelineCreateInfo *pCreateInfos,
+    VkPipeline                        *pPipelines)
 {
-    VkResult result = get_dispatch_table(mem_tracker_device_table_map, device)->CreateComputePipeline(device, pCreateInfo, pPipeline);
+    VkResult result = get_dispatch_table(mem_tracker_device_table_map, device)->CreateComputePipelines(device, pipelineCache, count, pCreateInfos, pPipelines);
     if (result == VK_SUCCESS) {
         loader_platform_thread_lock_mutex(&globalLock);
-        add_object_info(*pPipeline, pCreateInfo->sType, pCreateInfo, sizeof(VkComputePipelineCreateInfo), "compute_pipeline");
+        add_object_info(*pPipelines, pCreateInfos->sType, pCreateInfos, sizeof(VkComputePipelineCreateInfo), "compute_pipeline");
         loader_platform_thread_unlock_mutex(&globalLock);
     }
     return result;
@@ -2261,12 +2250,10 @@ VK_LAYER_EXPORT void* VKAPI vkGetDeviceProcAddr(
         return (void*) vkCreateDepthStencilView;
     if (!strcmp(funcName, "vkCreateShader"))
         return (void*) vkCreateShader;
-    if (!strcmp(funcName, "vkCreateGraphicsPipeline"))
-        return (void*) vkCreateGraphicsPipeline;
-    if (!strcmp(funcName, "vkCreateGraphicsPipelineDerivative"))
-        return (void*) vkCreateGraphicsPipelineDerivative;
-    if (!strcmp(funcName, "vkCreateComputePipeline"))
-        return (void*) vkCreateComputePipeline;
+    if (!strcmp(funcName, "vkCreateGraphicsPipelines"))
+        return (void*) vkCreateGraphicsPipelines;
+    if (!strcmp(funcName, "vkCreateComputePipelines"))
+        return (void*) vkCreateComputePipelines;
     if (!strcmp(funcName, "vkCreateSampler"))
         return (void*) vkCreateSampler;
     if (!strcmp(funcName, "vkCreateDynamicViewportState"))

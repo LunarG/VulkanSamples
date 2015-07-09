@@ -78,12 +78,13 @@ static inline void loader_init_device_dispatch_table(VkLayerDispatchTable *table
     table->CreateDepthStencilView = (PFN_vkCreateDepthStencilView) gpa(dev, "vkCreateDepthStencilView");
     table->CreateShaderModule = (PFN_vkCreateShaderModule) gpa(dev, "vkCreateShaderModule");
     table->CreateShader = (PFN_vkCreateShader) gpa(dev, "vkCreateShader");
-    table->CreateGraphicsPipeline = (PFN_vkCreateGraphicsPipeline) gpa(dev, "vkCreateGraphicsPipeline");
-    table->CreateGraphicsPipelineDerivative = (PFN_vkCreateGraphicsPipelineDerivative) gpa(dev, "vkCreateGraphicsPipelineDerivative");
-    table->CreateComputePipeline = (PFN_vkCreateComputePipeline) gpa(dev, "vkCreateComputePipeline");
-    table->StorePipeline = (PFN_vkStorePipeline) gpa(dev, "vkStorePipeline");
-    table->LoadPipeline = (PFN_vkLoadPipeline) gpa(dev, "vkLoadPipeline");
-    table->LoadPipelineDerivative = (PFN_vkLoadPipelineDerivative) gpa(dev, "vkLoadPipelineDerivative");
+    table->CreatePipelineCache = (PFN_vkCreatePipelineCache) gpa(dev, "vkCreatePipelineCache");
+    table->DestroyPipelineCache = (PFN_vkDestroyPipelineCache) gpa(dev, "vkDestroyPipelineCache");
+    table->GetPipelineCacheSize = (PFN_vkGetPipelineCacheSize) gpa(dev, "vkGetPipelineCacheSize");
+    table->GetPipelineCacheData = (PFN_vkGetPipelineCacheData) gpa(dev, "vkGetPipelineCacheData");
+    table->MergePipelineCaches = (PFN_vkMergePipelineCaches) gpa(dev, "vkMergePipelineCaches");
+    table->CreateGraphicsPipelines = (PFN_vkCreateGraphicsPipelines) gpa(dev, "vkCreateGraphicsPipelines");
+    table->CreateComputePipelines = (PFN_vkCreateComputePipelines) gpa(dev, "vkCreateComputePipelines");
     table->CreatePipelineLayout = (PFN_vkCreatePipelineLayout) gpa(dev, "vkCreatePipelineLayout");
     table->CreateSampler = (PFN_vkCreateSampler) gpa(dev, "vkCreateSampler");
     table->CreateDescriptorSetLayout = (PFN_vkCreateDescriptorSetLayout) gpa(dev, "vkCreateDescriptorSetLayout");
@@ -237,18 +238,20 @@ static inline void *loader_lookup_device_dispatch_table(
         return (void *) table->CreateShaderModule;
     if (!strcmp(name, "CreateShader"))
         return (void *) table->CreateShader;
-    if (!strcmp(name, "CreateGraphicsPipeline"))
-        return (void *) table->CreateGraphicsPipeline;
-    if (!strcmp(name, "CreateGraphicsPipelineDerivative"))
-        return (void *) table->CreateGraphicsPipelineDerivative;
-    if (!strcmp(name, "CreateComputePipeline"))
-        return (void *) table->CreateComputePipeline;
-    if (!strcmp(name, "StorePipeline"))
-        return (void *) table->StorePipeline;
-    if (!strcmp(name, "LoadPipeline"))
-        return (void *) table->LoadPipeline;
-    if (!strcmp(name, "LoadPipelineDerivative"))
-        return (void *) table->LoadPipelineDerivative;
+    if (!strcmp(name, "CreatePipelineCache"))
+        return (void*) vkCreatePipelineCache;
+    if (!strcmp(name, "DestroyPipelineCache"))
+        return (void*) vkDestroyPipelineCache;
+    if (!strcmp(name, "GetPipelineCacheSize"))
+        return (void*) vkGetPipelineCacheSize;
+    if (!strcmp(name, "GetPipelineCacheData"))
+        return (void*) vkGetPipelineCacheData;
+    if (!strcmp(name, "MergePipelineCaches"))
+        return (void*) vkMergePipelineCaches;
+    if (!strcmp(name, "CreateGraphicsPipelines"))
+        return (void*) vkCreateGraphicsPipelines;
+    if (!strcmp(name, "CreateComputePipelines"))
+        return (void*) vkCreateComputePipelines;
     if (!strcmp(name, "CreatePipelineLayout"))
         return (void *) table->CreatePipelineLayout;
     if (!strcmp(name, "CreateSampler"))

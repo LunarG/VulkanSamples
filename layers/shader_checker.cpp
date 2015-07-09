@@ -846,8 +846,9 @@ shader_stage_attribs[VK_SHADER_STAGE_FRAGMENT + 1] = {
 };
 
 
+//TODO handle count > 1
 static bool
-validate_graphics_pipeline(VkDevice dev, VkGraphicsPipelineCreateInfo const *pCreateInfo)
+validate_graphics_pipeline(VkDevice dev, uint32_t count, VkGraphicsPipelineCreateInfo const *pCreateInfo)
 {
     /* We seem to allow pipeline stages to be specified out of order, so collect and identify them
      * before trying to do anything more: */
@@ -917,44 +918,27 @@ validate_graphics_pipeline(VkDevice dev, VkGraphicsPipelineCreateInfo const *pCr
     return pass;
 }
 
-
+//TODO handle pipelineCache entry points
 VK_LAYER_EXPORT VkResult VKAPI
-vkCreateGraphicsPipeline(VkDevice device,
-                         const VkGraphicsPipelineCreateInfo *pCreateInfo,
-                         VkPipeline *pPipeline)
+vkCreateGraphicsPipelines(VkDevice device,
+                         VkPipelineCache pipelineCache,
+                         uint32_t count,
+                         const VkGraphicsPipelineCreateInfo *pCreateInfos,
+                         VkPipeline *pPipelines)
 {
-    bool pass = validate_graphics_pipeline(device, pCreateInfo);
+    bool pass = validate_graphics_pipeline(device, count, pCreateInfos);
 
     if (pass) {
         /* The driver is allowed to crash if passed junk. Only actually create the
          * pipeline if we didn't run into any showstoppers above.
          */
-        return get_dispatch_table(shader_checker_device_table_map, device)->CreateGraphicsPipeline(device, pCreateInfo, pPipeline);
+        return get_dispatch_table(shader_checker_device_table_map, device)->CreateGraphicsPipelines(device, pipelineCache, count, pCreateInfos, pPipelines);
     }
     else {
         return VK_ERROR_UNKNOWN;
     }
 }
 
-
-VK_LAYER_EXPORT VkResult VKAPI
-vkCreateGraphicsPipelineDerivative(VkDevice device,
-                                   const VkGraphicsPipelineCreateInfo *pCreateInfo,
-                                   VkPipeline basePipeline,
-                                   VkPipeline *pPipeline)
-{
-    bool pass = validate_graphics_pipeline(device, pCreateInfo);
-
-    if (pass) {
-        /* The driver is allowed to crash if passed junk. Only actually create the
-         * pipeline if we didn't run into any showstoppers above.
-         */
-        return get_dispatch_table(shader_checker_device_table_map, device)->CreateGraphicsPipelineDerivative(device, pCreateInfo, basePipeline, pPipeline);
-    }
-    else {
-        return VK_ERROR_UNKNOWN;
-    }
-}
 
 VK_LAYER_EXPORT VkResult VKAPI vkCreateDevice(VkPhysicalDevice gpu, const VkDeviceCreateInfo* pCreateInfo, VkDevice* pDevice)
 {
@@ -1065,8 +1049,7 @@ VK_LAYER_EXPORT void * VKAPI vkGetDeviceProcAddr(VkDevice dev, const char* funcN
     ADD_HOOK(vkCreateShaderModule);
     ADD_HOOK(vkCreateShader);
     ADD_HOOK(vkDestroyDevice);
-    ADD_HOOK(vkCreateGraphicsPipeline);
-    ADD_HOOK(vkCreateGraphicsPipelineDerivative);
+    ADD_HOOK(vkCreateGraphicsPipelines);
 #undef ADD_HOOK
 
     VkLayerDispatchTable* pTable = get_dispatch_table(shader_checker_device_table_map, dev);

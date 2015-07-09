@@ -1105,9 +1105,20 @@ TEST_F(VkLayerTest, DescriptorSetNotUpdated)
         .flags             = VK_PIPELINE_CREATE_DISABLE_OPTIMIZATION_BIT,
         .layout            = pipeline_layout,
     };
+    const VkPipelineCacheCreateInfo pc_ci = {
+        .sType             = VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO,
+        .pNext             = NULL,
+        .initialSize       = 0,
+        .initialData       = 0,
+        .maxSize           = 0,
+    };
 
     VkPipeline pipeline;
-    err = vkCreateGraphicsPipeline(m_device->device(), &gp_ci, &pipeline);
+    VkPipelineCache pipelineCache;
+
+    err = vkCreatePipelineCache(m_device->device(), &pc_ci, &pipelineCache);
+    ASSERT_VK_SUCCESS(err);
+    err = vkCreateGraphicsPipelines(m_device->device(), pipelineCache, 1, &gp_ci, &pipeline);
     ASSERT_VK_SUCCESS(err);
     ASSERT_NO_FATAL_FAILURE(InitState());
     ASSERT_NO_FATAL_FAILURE(InitViewport());
@@ -1214,9 +1225,20 @@ TEST_F(VkLayerTest, InvalidPipelineCreateState)
         .flags             = VK_PIPELINE_CREATE_DISABLE_OPTIMIZATION_BIT,
         .layout            = pipeline_layout,
     };
+    const VkPipelineCacheCreateInfo pc_ci = {
+        .sType             = VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO,
+        .pNext             = NULL,
+        .initialSize       = 0,
+        .initialData       = 0,
+        .maxSize           = 0,
+    };
 
     VkPipeline pipeline;
-    err = vkCreateGraphicsPipeline(m_device->device(), &gp_ci, &pipeline);
+    VkPipelineCache pipelineCache;
+
+    err = vkCreatePipelineCache(m_device->device(), &pc_ci, &pipelineCache);
+    ASSERT_VK_SUCCESS(err);
+    err = vkCreateGraphicsPipelines(m_device->device(), pipelineCache, 1, &gp_ci, &pipeline);
 
     msgFlags = m_errorMonitor->GetState(&msgString);
     ASSERT_TRUE(msgFlags & VK_DBG_REPORT_ERROR_BIT) << "Did not receive error after creating Gfx Pipeline w/o VS.";
@@ -1367,9 +1389,20 @@ TEST_F(VkLayerTest, VtxBufferNoRenderPass)
         .flags             = VK_PIPELINE_CREATE_DISABLE_OPTIMIZATION_BIT,
         .layout            = pipeline_layout,
     };
+    const VkPipelineCacheCreateInfo pc_ci = {
+        .sType             = VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO,
+        .pNext             = NULL,
+        .initialSize       = 0,
+        .initialData       = 0,
+        .maxSize           = 0,
+    };
 
     VkPipeline pipeline;
-    err = vkCreateGraphicsPipeline(m_device->device(), &gp_ci, &pipeline);
+    VkPipelineCache pipelineCache;
+
+    err = vkCreatePipelineCache(m_device->device(), &pc_ci, &pipelineCache);
+    ASSERT_VK_SUCCESS(err);
+    err = vkCreateGraphicsPipelines(m_device->device(), pipelineCache, 1, &gp_ci, &pipeline);
     ASSERT_VK_SUCCESS(err);
 
     err= cmdBuffer.BeginCommandBuffer();
@@ -1831,9 +1864,20 @@ TEST_F(VkLayerTest, NumSamplesMismatch)
         .flags             = VK_PIPELINE_CREATE_DISABLE_OPTIMIZATION_BIT,
         .layout            = pipeline_layout,
     };
+    const VkPipelineCacheCreateInfo pc_ci = {
+        .sType             = VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO,
+        .pNext             = NULL,
+        .initialSize       = 0,
+        .initialData       = 0,
+        .maxSize           = 0,
+    };
 
     VkPipeline pipeline;
-    err = vkCreateGraphicsPipeline(m_device->device(), &gp_ci, &pipeline);
+    VkPipelineCache pipelineCache;
+
+    err = vkCreatePipelineCache(m_device->device(), &pc_ci, &pipelineCache);
+    ASSERT_VK_SUCCESS(err);
+    err = vkCreateGraphicsPipelines(m_device->device(), pipelineCache, 1, &gp_ci, &pipeline);
     ASSERT_VK_SUCCESS(err);
 
     cmdBuffer.AddRenderTarget(m_renderTargets[0]);
@@ -2043,9 +2087,20 @@ TEST_F(VkLayerTest, ClearCmdNoDraw)
         .flags             = VK_PIPELINE_CREATE_DISABLE_OPTIMIZATION_BIT,
         .layout            = pipeline_layout,
     };
+    const VkPipelineCacheCreateInfo pc_ci = {
+        .sType             = VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO,
+        .pNext             = NULL,
+        .initialSize       = 0,
+        .initialData       = 0,
+        .maxSize           = 0,
+    };
 
     VkPipeline pipeline;
-    err = vkCreateGraphicsPipeline(m_device->device(), &gp_ci, &pipeline);
+    VkPipelineCache pipelineCache;
+
+    err = vkCreatePipelineCache(m_device->device(), &pc_ci, &pipelineCache);
+    ASSERT_VK_SUCCESS(err);
+    err = vkCreateGraphicsPipelines(m_device->device(), pipelineCache, 1, &gp_ci, &pipeline);
     ASSERT_VK_SUCCESS(err);
 
     cmdBuffer.AddRenderTarget(m_renderTargets[0]);

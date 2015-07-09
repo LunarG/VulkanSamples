@@ -690,58 +690,67 @@ LOADER_EXPORT VkResult VKAPI vkCreateShader(VkDevice device, const VkShaderCreat
     return disp->CreateShader(device, pCreateInfo, pShader);
 }
 
-LOADER_EXPORT VkResult VKAPI vkCreateGraphicsPipeline(VkDevice device, const VkGraphicsPipelineCreateInfo* pCreateInfo, VkPipeline* pPipeline)
+LOADER_EXPORT VkResult VKAPI vkCreatePipelineCache(VkDevice device, const VkPipelineCacheCreateInfo* pCreateInfo, VkPipelineCache* pPipelineCache)
 {
     const VkLayerDispatchTable *disp;
 
     disp = loader_get_dispatch(device);
 
-    return disp->CreateGraphicsPipeline(device, pCreateInfo, pPipeline);
+    return disp->CreatePipelineCache(device, pCreateInfo, pPipelineCache);
 }
 
-LOADER_EXPORT VkResult VKAPI vkCreateGraphicsPipelineDerivative(VkDevice device, const VkGraphicsPipelineCreateInfo* pCreateInfo, VkPipeline basePipeline, VkPipeline* pPipeline)
+LOADER_EXPORT VkResult VKAPI vkDestroyPipelineCache(VkDevice device, VkPipelineCache pipelineCache)
 {
     const VkLayerDispatchTable *disp;
 
     disp = loader_get_dispatch(device);
 
-    return disp->CreateGraphicsPipelineDerivative(device, pCreateInfo, basePipeline, pPipeline);
+    return disp->DestroyPipelineCache(device, pipelineCache);
 }
 
-LOADER_EXPORT VkResult VKAPI vkCreateComputePipeline(VkDevice device, const VkComputePipelineCreateInfo* pCreateInfo, VkPipeline* pPipeline)
+LOADER_EXPORT size_t VKAPI vkGetPipelineCacheSize(VkDevice device, VkPipelineCache pipelineCache)
 {
     const VkLayerDispatchTable *disp;
 
     disp = loader_get_dispatch(device);
 
-    return disp->CreateComputePipeline(device, pCreateInfo, pPipeline);
+    return disp->GetPipelineCacheSize(device, pipelineCache);
 }
 
-LOADER_EXPORT VkResult VKAPI vkStorePipeline(VkDevice device, VkPipeline pipeline, size_t* pDataSize, void* pData)
+LOADER_EXPORT VkResult VKAPI vkGetPipelineCacheData(VkDevice device, VkPipelineCache pipelineCache, void* pData)
 {
     const VkLayerDispatchTable *disp;
 
     disp = loader_get_dispatch(device);
 
-    return disp->StorePipeline(device, pipeline, pDataSize, pData);
+    return disp->GetPipelineCacheData(device, pipelineCache, pData);
 }
 
-LOADER_EXPORT VkResult VKAPI vkLoadPipeline(VkDevice device, size_t dataSize, const void* pData, VkPipeline* pPipeline)
+LOADER_EXPORT VkResult VKAPI vkMergePipelineCaches(VkDevice device, VkPipelineCache destCache, uint32_t srcCacheCount, const VkPipelineCache* pSrcCaches)
 {
     const VkLayerDispatchTable *disp;
 
     disp = loader_get_dispatch(device);
 
-    return disp->LoadPipeline(device, dataSize, pData, pPipeline);
+    return disp->MergePipelineCaches(device, destCache, srcCacheCount, pSrcCaches);
 }
 
-LOADER_EXPORT VkResult VKAPI vkLoadPipelineDerivative(VkDevice device, size_t dataSize, const void* pData, VkPipeline basePipeline, VkPipeline* pPipeline)
+LOADER_EXPORT VkResult VKAPI vkCreateGraphicsPipelines(VkDevice device, VkPipelineCache pipelineCache, uint32_t count, const VkGraphicsPipelineCreateInfo* pCreateInfos, VkPipeline* pPipelines)
 {
     const VkLayerDispatchTable *disp;
 
     disp = loader_get_dispatch(device);
 
-    return disp->LoadPipelineDerivative(device, dataSize, pData, basePipeline, pPipeline);
+    return disp->CreateGraphicsPipelines(device, pipelineCache, count, pCreateInfos, pPipelines);
+}
+
+LOADER_EXPORT VkResult VKAPI vkCreateComputePipelines(VkDevice device, VkPipelineCache pipelineCache, uint32_t count, const VkComputePipelineCreateInfo* pCreateInfos, VkPipeline* pPipelines)
+{
+    const VkLayerDispatchTable *disp;
+
+    disp = loader_get_dispatch(device);
+
+    return disp->CreateComputePipelines(device, pipelineCache, count, pCreateInfos, pPipelines);
 }
 
 LOADER_EXPORT VkResult VKAPI vkCreatePipelineLayout(VkDevice device, const VkPipelineLayoutCreateInfo* pCreateInfo, VkPipelineLayout* pPipelineLayout)

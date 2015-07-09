@@ -194,6 +194,7 @@ struct demo {
     VkCmdBuffer draw_cmd;  // Command Buffer for drawing commands
     VkPipelineLayout pipeline_layout;
     VkDescriptorSetLayout desc_layout;
+    VkPipelineCache pipelineCache;
     VkPipeline pipeline;
 
     VkDynamicVpState viewport;
@@ -1017,6 +1018,7 @@ static VkShader demo_prepare_fs(struct demo *demo)
 static void demo_prepare_pipeline(struct demo *demo)
 {
     VkGraphicsPipelineCreateInfo pipeline;
+    VkPipelineCacheCreateInfo pipelineCache;
 
     VkPipelineVertexInputStateCreateInfo vi;
     VkPipelineIaStateCreateInfo ia;
@@ -1102,7 +1104,12 @@ static void demo_prepare_pipeline(struct demo *demo)
     pipeline.pDsState = &ds;
     pipeline.pStages  = shaderStages;
 
-    err = vkCreateGraphicsPipeline(demo->device, &pipeline, &demo->pipeline);
+    memset(&pipelineCache, 0, sizeof(pipelineCache));
+    pipelineCache.sType = VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO;
+
+    err = vkCreatePipelineCache(demo->device, &pipelineCache, &demo->pipelineCache);
+    assert(!err);
+    err = vkCreateGraphicsPipelines(demo->device, demo->pipelineCache, 1, &pipeline, &demo->pipeline);
     assert(!err);
 
     for (uint32_t i = 0; i < pipeline.stageCount; i++) {
