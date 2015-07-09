@@ -1199,7 +1199,6 @@ static VkResult pipeline_build_all(struct intel_pipeline *pipeline,
         ret = pipeline_build_rs_state(pipeline, info);
 
     if (ret == VK_SUCCESS) {
-        pipeline->db_format = info->db.format;
         pipeline_build_cb(pipeline, info);
         pipeline->cb_state = info->cb;
         pipeline->tess_state = info->tess;

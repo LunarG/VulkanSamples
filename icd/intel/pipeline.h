@@ -200,10 +200,6 @@ struct intel_pipeline {
     int provoking_vertex_trifan;
     int provoking_vertex_line;
 
-    // TODO: This should probably be Intel HW state, not VK state.
-    /* Depth Buffer format */
-    VkFormat db_format;
-
     VkPipelineCbStateCreateInfo cb_state;
 
     // VkPipelineRsStateCreateInfo rs_state;

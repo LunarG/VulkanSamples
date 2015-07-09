@@ -476,6 +476,7 @@ static void gen7_fill_3DSTATE_SF_body(const struct intel_cmd *cmd,
                                       uint32_t body[6])
 {
     const struct intel_pipeline *pipeline = cmd->bind.pipeline.graphics;
+    const struct intel_render_pass *rp = cmd->bind.render_pass;
     const struct intel_dynamic_rs *raster = cmd->bind.state.raster;
     uint32_t dw1, dw2, dw3;
 
@@ -491,7 +492,7 @@ static void gen7_fill_3DSTATE_SF_body(const struct intel_cmd *cmd,
     if (cmd_gen(cmd) >= INTEL_GEN(7)) {
         int format;
 
-        switch (pipeline->db_format) {
+        switch (rp->depthStencilFormat) {
         case VK_FORMAT_D16_UNORM:
             format = GEN6_ZFORMAT_D16_UNORM;
             break;
