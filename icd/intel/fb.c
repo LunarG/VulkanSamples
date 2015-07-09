@@ -97,19 +97,8 @@ VkResult intel_fb_create(struct intel_dev *dev,
         }
 
         fb->ds = ds;
-
-        switch (att->layout) {
-        case VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL:
-        case VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL:
-            fb->optimal_ds = true;
-            break;
-        default:
-            fb->optimal_ds = false;
-            break;
-        }
     } else {
         fb->ds = NULL;
-        fb->optimal_ds = false;
     }
 
     fb->width = width;
@@ -172,6 +161,16 @@ VkResult intel_render_pass_create(struct intel_dev *dev,
     rp->stencilLoadClearValue = info->stencilLoadClearValue;
     rp->depthStencilLayout = info->depthStencilLayout;
     rp->depthStencilFormat = info->depthStencilFormat;
+
+    switch (info->depthStencilLayout) {
+    case VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL:
+    case VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL:
+        rp->optimal_ds = true;
+        break;
+    default:
+        rp->optimal_ds = false;
+        break;
+    }
 
     /* TODO: MSAA resolves if/when we support MSAA. */
     for (i = 0; i < info->colorAttachmentCount; i++)

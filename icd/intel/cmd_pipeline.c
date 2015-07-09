@@ -2036,6 +2036,7 @@ static void emit_rt(struct intel_cmd *cmd)
 
 static void emit_ds(struct intel_cmd *cmd)
 {
+    const struct intel_render_pass *rp = cmd->bind.render_pass;
     const struct intel_fb *fb = cmd->bind.fb;
     const struct intel_ds_view *ds = fb->ds;
 
@@ -2049,9 +2050,9 @@ static void emit_ds(struct intel_cmd *cmd)
     }
 
     cmd_wa_gen6_pre_ds_flush(cmd);
-    gen6_3DSTATE_DEPTH_BUFFER(cmd, ds, fb->optimal_ds);
-    gen6_3DSTATE_STENCIL_BUFFER(cmd, ds, fb->optimal_ds);
-    gen6_3DSTATE_HIER_DEPTH_BUFFER(cmd, ds, fb->optimal_ds);
+    gen6_3DSTATE_DEPTH_BUFFER(cmd, ds, rp->optimal_ds);
+    gen6_3DSTATE_STENCIL_BUFFER(cmd, ds, rp->optimal_ds);
+    gen6_3DSTATE_HIER_DEPTH_BUFFER(cmd, ds, rp->optimal_ds);
 
     if (cmd_gen(cmd) >= INTEL_GEN(7))
         gen7_3DSTATE_CLEAR_PARAMS(cmd, 0);

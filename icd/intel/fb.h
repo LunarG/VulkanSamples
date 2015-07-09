@@ -36,7 +36,6 @@ struct intel_fb {
     uint32_t rt_count;
 
     const struct intel_ds_view *ds;
-    bool optimal_ds;
 
     uint32_t sample_count;
     uint32_t width;
@@ -62,6 +61,7 @@ struct intel_render_pass {
     uint32_t stencilLoadClearValue;
     VkImageLayout depthStencilLayout;
     VkFormat depthStencilFormat;
+    bool optimal_ds;
 };
 
 static inline struct intel_fb *intel_fb(VkFramebuffer fb)
