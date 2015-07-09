@@ -301,7 +301,7 @@ size_t get_format_size(VkFormat format)
 {
     static bool format_table_unverified = true;
     static const struct format_info {
-        VkFormat_ format;
+        VkFormat format;
         size_t size;
         uint32_t channel_count;
     } format_table[VK_NUM_FORMAT] = {

@@ -160,11 +160,11 @@ VK_DEFINE_NONDISP_HANDLE(VkDbgMsgCallback)
 
 typedef enum VkDbgReportFlags_
 {
-    VK_DBG_REPORT_INFO_BIT       = VK_BIT(0),
-    VK_DBG_REPORT_WARN_BIT       = VK_BIT(1),
-    VK_DBG_REPORT_PERF_WARN_BIT  = VK_BIT(2),
-    VK_DBG_REPORT_ERROR_BIT      = VK_BIT(3),
-    VK_DBG_REPORT_DEBUG_BIT      = VK_BIT(4),
+    VK_DBG_REPORT_INFO_BIT       = 0x0001,
+    VK_DBG_REPORT_WARN_BIT       = 0x0002,
+    VK_DBG_REPORT_PERF_WARN_BIT  = 0x0004,
+    VK_DBG_REPORT_ERROR_BIT      = 0x0008,
+    VK_DBG_REPORT_DEBUG_BIT      = 0x0010,
 } VkDbgReportFlags;
 
 // Debug Report ERROR codes

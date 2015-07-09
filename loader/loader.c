@@ -68,11 +68,11 @@ static void * VKAPI loader_GetInstanceProcAddr(VkInstance instance, const char *
 static bool loader_init_ext_list(struct loader_extension_list *ext_info);
 
 enum loader_debug {
-    LOADER_INFO_BIT       = VK_BIT(0),
-    LOADER_WARN_BIT       = VK_BIT(1),
-    LOADER_PERF_BIT       = VK_BIT(2),
-    LOADER_ERROR_BIT      = VK_BIT(3),
-    LOADER_DEBUG_BIT      = VK_BIT(4),
+    LOADER_INFO_BIT       = 0x01,
+    LOADER_WARN_BIT       = 0x02,
+    LOADER_PERF_BIT       = 0x04,
+    LOADER_ERROR_BIT      = 0x08,
+    LOADER_DEBUG_BIT      = 0x10,
 };
 
 uint32_t g_loader_debug = 0;

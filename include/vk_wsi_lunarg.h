@@ -64,7 +64,6 @@ typedef enum VkSwapChainInfoTypeWSI_
     // Info type for vkGetSwapChainInfo()
     VK_SWAP_CHAIN_INFO_TYPE_PERSISTENT_IMAGES_WSI           = 0x00000000,   // Return information about the persistent images of the swapchain
 
-    VK_ENUM_RANGE(SWAP_CHAIN_INFO_TYPE, PERSISTENT_IMAGES_WSI, PERSISTENT_IMAGES_WSI)
 } VkSwapChainInfoTypeWSI;
 
 // ------------------------------------------------------------------------------------------------
@@ -73,8 +72,8 @@ typedef enum VkSwapChainInfoTypeWSI_
 typedef VkFlags VkSwapModeFlagsWSI;
 typedef enum VkSwapModeFlagBitsWSI_
 {
-    VK_SWAP_MODE_FLIP_BIT_WSI                               = VK_BIT(0),
-    VK_SWAP_MODE_BLIT_BIT_WSI                               = VK_BIT(1),
+    VK_SWAP_MODE_FLIP_BIT_WSI                               = 0x1,
+    VK_SWAP_MODE_BLIT_BIT_WSI                               = 0x2
 } VkSwapModeFlagBitsWSI;
 
 // ------------------------------------------------------------------------------------------------
