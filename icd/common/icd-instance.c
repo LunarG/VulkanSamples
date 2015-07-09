@@ -187,7 +187,7 @@ void icd_instance_log(const struct icd_instance *instance,
 
     for (logger = instance->loggers; logger; logger = logger->next) {
         if (msg_flags & logger->flags) {
-            logger->func(msg_flags, obj_type, src_object, location,
+            logger->func(msg_flags, obj_type, (uint64_t)src_object, location,
                          msg_code, instance->name, msg, logger->user_data);
         }
     }

@@ -34,7 +34,7 @@ VkLayerInstanceDispatchTable * initInstanceTable(instance_table_map &map, const 
 
 typedef void *dispatch_key;
 
-static inline dispatch_key get_dispatch_key(void* object)
+static inline dispatch_key get_dispatch_key(const void* object)
 {
     return (dispatch_key) *(VkLayerDispatchTable **) object;
 }

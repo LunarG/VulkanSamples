@@ -593,14 +593,14 @@ class GenericLayerSubcommand(Subcommand):
                      '{\n'
                      '    char str[1024];\n'
                      '    sprintf(str, "At start of layered %s\\n");\n'
-                     '    layerCbMsg(VK_DBG_REPORT_INFO_BIT,VK_OBJECT_TYPE_PHYSICAL_DEVICE, gpu, 0, 0, (char *) "GENERIC", (char *) str);\n'
+                     '    layerCbMsg(VK_DBG_REPORT_INFO_BIT,VK_OBJECT_TYPE_PHYSICAL_DEVICE, (uint64_t)physicalDevice, 0, 0, (char *) "GENERIC", (char *) str);\n'
                      '    %sdevice_dispatch_table(*pDevice)->%s;\n'
                      '    if (result == VK_SUCCESS) {\n'
                      '        enable_debug_report(pCreateInfo->extensionCount, pCreateInfo->ppEnabledExtensionNames);\n'
                      '        createDeviceRegisterExtensions(pCreateInfo, *pDevice);\n'
                      '    }\n'
                      '    sprintf(str, "Completed layered %s\\n");\n'
-                     '    layerCbMsg(VK_DBG_REPORT_INFO_BIT, VK_OBJECT_TYPE_PHYSICAL_DEVICE, gpu, 0, 0, (char *) "GENERIC", (char *) str);\n'
+                     '    layerCbMsg(VK_DBG_REPORT_INFO_BIT, VK_OBJECT_TYPE_PHYSICAL_DEVICE, (uint64_t)physicalDevice, 0, 0, (char *) "GENERIC", (char *) str);\n'
                      '    fflush(stdout);\n'
                      '    %s'
                      '}' % (qual, decl, proto.name, ret_val, proto.c_call(), proto.name, stmt))
@@ -1046,13 +1046,313 @@ class ObjectTrackerSubcommand(Subcommand):
         header_txt.append('')
         return "\n".join(header_txt)
 
+    def generate_maps(self):
+        maps_txt = []
+        for o in vulkan.core.objects:
+            maps_txt.append('unordered_map<const void*, OBJTRACK_NODE*> %sMap;' % (o))
+        maps_txt.append('unordered_map<const void*, OBJTRACK_NODE*> VkSwapChainWSIMap;')
+        return "\n".join(maps_txt)
+
+    def generate_procs(self):
+        procs_txt = []
+        for o in vulkan.core.objects:
+            procs_txt.append('%s' % self.lineinfo.get())
+            if o in [ 'VkInstance', 'VkPhysicalDevice', 'VkDevice', 'VkQueue', 'VkCmdBuffer']:
+                procs_txt.append('static void create_obj(%s dispatchable_object, %s vkObj, VkDbgObjectType objType)' % (o, o))
+                procs_txt.append('{')
+                procs_txt.append('    log_msg(mdd(dispatchable_object), VK_DBG_REPORT_INFO_BIT, objType, reinterpret_cast<VkUintPtrLeast64>(vkObj), 0, OBJTRACK_NONE, "OBJTRACK",')
+                procs_txt.append('        "OBJ[%llu] : CREATE %s object 0x%" PRIxLEAST64 , object_track_index++, string_VkDbgObjectType(objType),')
+                procs_txt.append('        reinterpret_cast<VkUintPtrLeast64>(vkObj));')
+            else:
+                procs_txt.append('static void create_obj(VkDevice dispatchable_object, %s vkObj, VkDbgObjectType objType)' % (o))
+                procs_txt.append('{')
+                procs_txt.append('    log_msg(mdd(dispatchable_object), VK_DBG_REPORT_INFO_BIT, objType, vkObj.handle, 0, OBJTRACK_NONE, "OBJTRACK",')
+                procs_txt.append('        "OBJ[%llu] : CREATE %s object 0x%" PRIxLEAST64 , object_track_index++, string_VkDbgObjectType(objType),')
+                procs_txt.append('        reinterpret_cast<VkUintPtrLeast64>(vkObj.handle));')
+            procs_txt.append('')
+            procs_txt.append('    OBJTRACK_NODE* pNewObjNode = new OBJTRACK_NODE;')
+            procs_txt.append('    pNewObjNode->objType = objType;')
+            procs_txt.append('    pNewObjNode->status  = OBJSTATUS_NONE;')
+            if o in [ 'VkInstance', 'VkPhysicalDevice', 'VkDevice', 'VkQueue', 'VkCmdBuffer']:
+                procs_txt.append('    pNewObjNode->vkObj  = reinterpret_cast<VkUintPtrLeast64>(vkObj);')
+                procs_txt.append('    %sMap[vkObj] = pNewObjNode;' % (o))
+            else:
+                procs_txt.append('    pNewObjNode->vkObj  = reinterpret_cast<VkUintPtrLeast64>(vkObj.handle);')
+                procs_txt.append('    %sMap[(void*)vkObj.handle] = pNewObjNode;' % (o))
+            procs_txt.append('    uint32_t objIndex = objTypeToIndex(objType);')
+            procs_txt.append('    numObjs[objIndex]++;')
+            procs_txt.append('    numTotalObjs++;')
+            procs_txt.append('}')
+            procs_txt.append('')
+            procs_txt.append('%s' % self.lineinfo.get())
+            if o in [ 'VkInstance', 'VkPhysicalDevice', 'VkDevice', 'VkQueue', 'VkCmdBuffer']:
+                procs_txt.append('static void validate_object(%s dispatchable_object, %s object)' % (o, o))
+            else:
+                procs_txt.append('static void validate_object(VkDevice dispatchable_object, %s object)' % (o))
+            procs_txt.append('{')
+            if o in [ 'VkInstance', 'VkPhysicalDevice', 'VkDevice', 'VkQueue', 'VkCmdBuffer']:
+                procs_txt.append('    if (%sMap.find(object) == %sMap.end()) {' % (o, o))
+                procs_txt.append('        log_msg(mdd(dispatchable_object), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, reinterpret_cast<VkUintPtrLeast64>(object), 0, OBJTRACK_INVALID_OBJECT, "OBJTRACK",')
+                procs_txt.append('            "Invalid Object %p",reinterpret_cast<VkUintPtrLeast64>(object));')
+            else:
+                procs_txt.append('    if (%sMap.find((void*)object.handle) == %sMap.end()) {' % (o, o))
+                procs_txt.append('        log_msg(mdd(dispatchable_object), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, object.handle, 0, OBJTRACK_INVALID_OBJECT, "OBJTRACK",')
+                procs_txt.append('            "Invalid Object %p",reinterpret_cast<VkUintPtrLeast64>(object.handle));')
+            procs_txt.append('    }')
+            procs_txt.append('}')
+            procs_txt.append('')
+            procs_txt.append('')
+            procs_txt.append('%s' % self.lineinfo.get())
+            if o in [ 'VkInstance', 'VkPhysicalDevice', 'VkDevice', 'VkQueue', 'VkCmdBuffer']:
+                procs_txt.append('static void destroy_obj(%s dispatchable_object, %s object)' % (o, o))
+            else:
+                procs_txt.append('static void destroy_obj(VkDevice dispatchable_object, %s object)' % (o))
+            procs_txt.append('{')
+            if o in [ 'VkInstance', 'VkPhysicalDevice', 'VkDevice', 'VkQueue', 'VkCmdBuffer']:
+                procs_txt.append('    if (%sMap.find(object) != %sMap.end()) {' % (o, o))
+                procs_txt.append('        OBJTRACK_NODE* pNode = %sMap[object];' % (o))
+            else:
+                procs_txt.append('    if (%sMap.find((void*)object.handle) != %sMap.end()) {' % (o, o))
+                procs_txt.append('        OBJTRACK_NODE* pNode = %sMap[(void*)object.handle];' % (o))
+            procs_txt.append('        uint32_t objIndex = objTypeToIndex(pNode->objType);')
+            procs_txt.append('        assert(numTotalObjs > 0);')
+            procs_txt.append('        numTotalObjs--;')
+            procs_txt.append('        assert(numObjs[objIndex] > 0);')
+            procs_txt.append('        numObjs[objIndex]--;')
+            if o in [ 'VkInstance', 'VkPhysicalDevice', 'VkDevice', 'VkQueue', 'VkCmdBuffer']:
+                procs_txt.append('        log_msg(mdd(dispatchable_object), VK_DBG_REPORT_INFO_BIT, pNode->objType, reinterpret_cast<VkUintPtrLeast64>(object), 0, OBJTRACK_NONE, "OBJTRACK",')
+                procs_txt.append('           "OBJ_STAT Destroy %s obj 0x%" PRIxLEAST64 " (%lu total objs remain & %lu %s objs).",')
+                procs_txt.append('            string_VkDbgObjectType(pNode->objType), reinterpret_cast<VkUintPtrLeast64>(object), numTotalObjs, numObjs[objIndex],')
+            else:
+                procs_txt.append('        log_msg(mdd(dispatchable_object), VK_DBG_REPORT_INFO_BIT, pNode->objType, object.handle, 0, OBJTRACK_NONE, "OBJTRACK",')
+                procs_txt.append('           "OBJ_STAT Destroy %s obj 0x%" PRIxLEAST64 " (%lu total objs remain & %lu %s objs).",')
+                procs_txt.append('            string_VkDbgObjectType(pNode->objType), reinterpret_cast<VkUintPtrLeast64>(object.handle), numTotalObjs, numObjs[objIndex],')
+            procs_txt.append('            string_VkDbgObjectType(pNode->objType));')
+            procs_txt.append('        delete pNode;')
+            if o in [ 'VkInstance', 'VkPhysicalDevice', 'VkDevice', 'VkQueue', 'VkCmdBuffer']:
+                procs_txt.append('        %sMap.erase(object);' % (o))
+                procs_txt.append('    } else {')
+                procs_txt.append('        log_msg(mdd(dispatchable_object), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, reinterpret_cast<VkUintPtrLeast64>(object), 0, OBJTRACK_NONE, "OBJTRACK",')
+                procs_txt.append('            "Unable to remove obj 0x%" PRIxLEAST64 ". Was it created? Has it already been destroyed?",')
+                procs_txt.append('           reinterpret_cast<VkUintPtrLeast64>(object));')
+                procs_txt.append('    }')
+            else:
+                procs_txt.append('        %sMap.erase((void*)object.handle);' % (o))
+                procs_txt.append('    } else {')
+                procs_txt.append('        log_msg(mdd(dispatchable_object), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, object.handle, 0, OBJTRACK_NONE, "OBJTRACK",')
+                procs_txt.append('            "Unable to remove obj 0x%" PRIxLEAST64 ". Was it created? Has it already been destroyed?",')
+                procs_txt.append('           reinterpret_cast<VkUintPtrLeast64>(object.handle));')
+                procs_txt.append('    }')
+            procs_txt.append('}')
+            procs_txt.append('')
+            procs_txt.append('%s' % self.lineinfo.get())
+            if o in [ 'VkInstance', 'VkPhysicalDevice', 'VkDevice', 'VkQueue', 'VkCmdBuffer']:
+                procs_txt.append('static void set_status(%s dispatchable_object, %s object, VkDbgObjectType objType, ObjectStatusFlags status_flag)' % (o, o))
+                procs_txt.append('{')
+                procs_txt.append('    if (object != VK_NULL_HANDLE) {')
+                procs_txt.append('        if (%sMap.find(object) != %sMap.end()) {' % (o, o))
+                procs_txt.append('            OBJTRACK_NODE* pNode = %sMap[object];' % (o))
+            else:
+                procs_txt.append('static void set_status(VkDevice dispatchable_object, %s object, VkDbgObjectType objType, ObjectStatusFlags status_flag)' % (o))
+                procs_txt.append('{')
+                procs_txt.append('    if (object.handle != VK_NULL_HANDLE) {')
+                procs_txt.append('        if (%sMap.find((void*)object.handle) != %sMap.end()) {' % (o, o))
+                procs_txt.append('            OBJTRACK_NODE* pNode = %sMap[(void*)object.handle];' % (o))
+            procs_txt.append('           pNode->status |= status_flag;')
+            procs_txt.append('            return;')
+            procs_txt.append('        }')
+            procs_txt.append('        else {')
+            procs_txt.append('            // If we do not find it print an error')
+            if o in [ 'VkInstance', 'VkPhysicalDevice', 'VkDevice', 'VkQueue', 'VkCmdBuffer']:
+                procs_txt.append('            log_msg(mdd(dispatchable_object), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, reinterpret_cast<VkUintPtrLeast64>(object), 0, OBJTRACK_NONE, "OBJTRACK",')
+                procs_txt.append('                "Unable to set status for non-existent object 0x%" PRIxLEAST64 " of %s type",')
+                procs_txt.append('                reinterpret_cast<VkUintPtrLeast64>(object), string_VkDbgObjectType(objType));')
+            else:
+                procs_txt.append('            log_msg(mdd(dispatchable_object), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, object.handle, 0, OBJTRACK_NONE, "OBJTRACK",')
+                procs_txt.append('                "Unable to set status for non-existent object 0x%" PRIxLEAST64 " of %s type",')
+                procs_txt.append('                reinterpret_cast<VkUintPtrLeast64>(object.handle), string_VkDbgObjectType(objType));')
+            procs_txt.append('        }')
+            procs_txt.append('    }')
+            procs_txt.append('}')
+            procs_txt.append('')
+            procs_txt.append('%s' % self.lineinfo.get())
+            procs_txt.append('static VkBool32 validate_status(')
+            if o in [ 'VkInstance', 'VkPhysicalDevice', 'VkDevice', 'VkQueue', 'VkCmdBuffer']:
+                procs_txt.append('%s dispatchable_object, %s object,' % (o, o))
+            else:
+                procs_txt.append('VkDevice dispatchable_object, %s object,' % (o))
+            procs_txt.append('    VkDbgObjectType     objType,')
+            procs_txt.append('    ObjectStatusFlags   status_mask,')
+            procs_txt.append('    ObjectStatusFlags   status_flag,')
+            procs_txt.append('    VkFlags             msg_flags,')
+            procs_txt.append('    OBJECT_TRACK_ERROR  error_code,')
+            procs_txt.append('    const char         *fail_msg)')
+            procs_txt.append('{')
+            if o in [ 'VkInstance', 'VkPhysicalDevice', 'VkDevice', 'VkQueue', 'VkCmdBuffer']:
+                procs_txt.append('    if (%sMap.find(object) != %sMap.end()) {' % (o, o))
+                procs_txt.append('        OBJTRACK_NODE* pNode = %sMap[object];' % (o))
+            else:
+                procs_txt.append('    if (%sMap.find((void*)object.handle) != %sMap.end()) {' % (o, o))
+                procs_txt.append('        OBJTRACK_NODE* pNode = %sMap[(void*)object.handle];' % (o))
+            procs_txt.append('        if ((pNode->status & status_mask) != status_flag) {')
+            procs_txt.append('           char str[1024];')
+            if o in [ 'VkInstance', 'VkPhysicalDevice', 'VkDevice', 'VkQueue', 'VkCmdBuffer']:
+                procs_txt.append('            log_msg(mdd(dispatchable_object), msg_flags, pNode->objType, reinterpret_cast<VkUintPtrLeast64>(object), 0, OBJTRACK_UNKNOWN_OBJECT, "OBJTRACK",')
+                procs_txt.append('                "OBJECT VALIDATION WARNING: %s object 0x%" PRIxLEAST64 ": %s", string_VkDbgObjectType(objType),')
+                procs_txt.append('                 reinterpret_cast<VkUintPtrLeast64>(object), fail_msg);')
+            else:
+                procs_txt.append('            log_msg(mdd(dispatchable_object), msg_flags, pNode->objType, object.handle, 0, OBJTRACK_UNKNOWN_OBJECT, "OBJTRACK",')
+                procs_txt.append('                "OBJECT VALIDATION WARNING: %s object 0x%" PRIxLEAST64 ": %s", string_VkDbgObjectType(objType),')
+                procs_txt.append('                 reinterpret_cast<VkUintPtrLeast64>(object.handle), fail_msg);')
+            procs_txt.append('            return VK_FALSE;')
+            procs_txt.append('        }')
+            procs_txt.append('        return VK_TRUE;')
+            procs_txt.append('    }')
+            procs_txt.append('    else {')
+            procs_txt.append('        // If we do not find it print an error')
+            if o in [ 'VkInstance', 'VkPhysicalDevice', 'VkDevice', 'VkQueue', 'VkCmdBuffer']:
+                procs_txt.append('        log_msg(mdd(dispatchable_object), msg_flags, (VkDbgObjectType) 0, reinterpret_cast<VkUintPtrLeast64>(object), 0, OBJTRACK_UNKNOWN_OBJECT, "OBJTRACK",')
+                procs_txt.append('            "Unable to obtain status for non-existent object 0x%" PRIxLEAST64 " of %s type",')
+                procs_txt.append('            reinterpret_cast<VkUintPtrLeast64>(object), string_VkDbgObjectType(objType));')
+            else:
+                procs_txt.append('        log_msg(mdd(dispatchable_object), msg_flags, (VkDbgObjectType) 0, object.handle, 0, OBJTRACK_UNKNOWN_OBJECT, "OBJTRACK",')
+                procs_txt.append('            "Unable to obtain status for non-existent object 0x%" PRIxLEAST64 " of %s type",')
+                procs_txt.append('            reinterpret_cast<VkUintPtrLeast64>(object.handle), string_VkDbgObjectType(objType));')
+            procs_txt.append('        return VK_FALSE;')
+            procs_txt.append('    }')
+            procs_txt.append('}')
+            procs_txt.append('')
+            procs_txt.append('%s' % self.lineinfo.get())
+            if o in [ 'VkInstance', 'VkPhysicalDevice', 'VkDevice', 'VkQueue', 'VkCmdBuffer']:
+                procs_txt.append('static void reset_status(%s dispatchable_object, %s object, VkDbgObjectType objType, ObjectStatusFlags status_flag)' % (o, o))
+                procs_txt.append('{')
+                procs_txt.append('    if (%sMap.find(object) != %sMap.end()) {' % (o, o))
+                procs_txt.append('        OBJTRACK_NODE* pNode = %sMap[object];' % (o))
+            else:
+                procs_txt.append('static void reset_status(VkDevice dispatchable_object, %s object, VkDbgObjectType objType, ObjectStatusFlags status_flag)' % (o))
+                procs_txt.append('{')
+                procs_txt.append('    if (%sMap.find((void*)object.handle) != %sMap.end()) {' % (o, o))
+                procs_txt.append('        OBJTRACK_NODE* pNode = %sMap[(void*)object.handle];' % (o))
+            procs_txt.append('        pNode->status &= ~status_flag;')
+            procs_txt.append('        return;')
+            procs_txt.append('    }')
+            procs_txt.append('    else {')
+            procs_txt.append('        // If we do not find it print an error')
+            if o in [ 'VkInstance', 'VkPhysicalDevice', 'VkDevice', 'VkQueue', 'VkCmdBuffer']:
+                procs_txt.append('        log_msg(mdd(dispatchable_object), VK_DBG_REPORT_ERROR_BIT, objType, reinterpret_cast<VkUintPtrLeast64>(object), 0, OBJTRACK_UNKNOWN_OBJECT, "OBJTRACK",')
+                procs_txt.append('            "Unable to reset status for non-existent object 0x%" PRIxLEAST64 " of %s type",')
+                procs_txt.append('            reinterpret_cast<VkUintPtrLeast64>(object), string_VkDbgObjectType(objType));')
+            else:
+                procs_txt.append('        log_msg(mdd(dispatchable_object), VK_DBG_REPORT_ERROR_BIT, objType, object.handle, 0, OBJTRACK_UNKNOWN_OBJECT, "OBJTRACK",')
+                procs_txt.append('            "Unable to reset status for non-existent object 0x%" PRIxLEAST64 " of %s type",')
+                procs_txt.append('            reinterpret_cast<VkUintPtrLeast64>(object.handle), string_VkDbgObjectType(objType));')
+            procs_txt.append('    }')
+            procs_txt.append('}')
+            procs_txt.append('')
+        return "\n".join(procs_txt)
+
+    def generate_explicit_destroy_instance(self):
+        gedi_txt = []
+        gedi_txt.append('%s' % self.lineinfo.get())
+        gedi_txt.append('VkResult explicit_DestroyInstance(')
+        gedi_txt.append('VkInstance instance)')
+        gedi_txt.append('{')
+        gedi_txt.append('    loader_platform_thread_lock_mutex(&objLock);')
+        gedi_txt.append('    validate_object(instance, instance);')
+        gedi_txt.append('')
+        gedi_txt.append('    destroy_obj(instance, instance);')
+        gedi_txt.append('    // Report any remaining objects in LL')
+        for o in vulkan.core.objects:
+            if o in ['VkPhysicalDevice', 'VkQueue']:
+                continue
+            gedi_txt.append('    for (auto it = %sMap.begin(); it != %sMap.end(); ++it) {' % (o, o))
+            gedi_txt.append('        OBJTRACK_NODE* pNode = it->second;')
+            gedi_txt.append('        log_msg(mid(instance), VK_DBG_REPORT_ERROR_BIT, pNode->objType, pNode->vkObj, 0, OBJTRACK_OBJECT_LEAK, "OBJTRACK",')
+            gedi_txt.append('                "OBJ ERROR : %s object 0x%" PRIxLEAST64 " has not been destroyed.", string_VkDbgObjectType(pNode->objType),')
+            gedi_txt.append('                reinterpret_cast<VkUintPtrLeast64>(pNode->vkObj));')
+            gedi_txt.append('    }')
+            gedi_txt.append('')
+        gedi_txt.append('    dispatch_key key = get_dispatch_key(instance);')
+        gedi_txt.append('    VkLayerInstanceDispatchTable *pInstanceTable = get_dispatch_table(ObjectTracker_instance_table_map, instance);')
+        gedi_txt.append('    VkResult result = pInstanceTable->DestroyInstance(instance);')
+        gedi_txt.append('')
+        gedi_txt.append('    // Clean up logging callback, if any')
+        gedi_txt.append('    layer_data *my_data = get_my_data_ptr(key, layer_data_map);')
+        gedi_txt.append('    if (my_data->logging_callback) {')
+        gedi_txt.append('        layer_destroy_msg_callback(my_data->report_data, my_data->logging_callback);')
+        gedi_txt.append('    }')
+        gedi_txt.append('')
+        gedi_txt.append('    layer_debug_report_destroy_instance(mid(instance));')
+        gedi_txt.append('    layer_data_map.erase(pInstanceTable);')
+        gedi_txt.append('')
+        gedi_txt.append('    ObjectTracker_instance_table_map.erase(key);')
+        gedi_txt.append('    assert(ObjectTracker_instance_table_map.size() == 0 && "Should not have any instance mappings hanging around");')
+        gedi_txt.append('')
+        gedi_txt.append('    loader_platform_thread_unlock_mutex(&objLock);')
+        gedi_txt.append('    return result;')
+        gedi_txt.append('}')
+        gedi_txt.append('')
+        return "\n".join(gedi_txt)
+
+    def generate_explicit_destroy_device(self):
+        gedd_txt = []
+        gedd_txt.append('%s' % self.lineinfo.get())
+        gedd_txt.append('VkResult explicit_DestroyDevice(')
+        gedd_txt.append('VkDevice device)')
+        gedd_txt.append('{')
+        gedd_txt.append('    loader_platform_thread_lock_mutex(&objLock);')
+        gedd_txt.append('    validate_object(device, device);')
+        gedd_txt.append('')
+        gedd_txt.append('    destroy_obj(device, device);')
+        gedd_txt.append('    // Report any remaining objects in LL')
+        for o in vulkan.core.objects:
+            if o in ['VkPhysicalDevice', 'VkQueue']:
+                continue
+            gedd_txt.append('    for (auto it = %sMap.begin(); it != %sMap.end(); ++it) {' % (o, o))
+            gedd_txt.append('        OBJTRACK_NODE* pNode = it->second;')
+            gedd_txt.append('        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, pNode->objType, pNode->vkObj, 0, OBJTRACK_OBJECT_LEAK, "OBJTRACK",')
+            gedd_txt.append('                "OBJ ERROR : %s object 0x%" PRIxLEAST64 " has not been destroyed.", string_VkDbgObjectType(pNode->objType),')
+            gedd_txt.append('                reinterpret_cast<VkUintPtrLeast64>(pNode->vkObj));')
+            gedd_txt.append('    }')
+            gedd_txt.append('')
+        gedd_txt.append("    // Clean up Queue's MemRef Linked Lists")
+        gedd_txt.append('    destroyQueueMemRefLists();')
+        gedd_txt.append('')
+        gedd_txt.append('    loader_platform_thread_unlock_mutex(&objLock);')
+        gedd_txt.append('')
+        gedd_txt.append('    dispatch_key key = get_dispatch_key(device);')
+        gedd_txt.append('    VkLayerDispatchTable *pDisp = get_dispatch_table(ObjectTracker_device_table_map, device);')
+        gedd_txt.append('    VkResult result = pDisp->DestroyDevice(device);')
+        gedd_txt.append('    ObjectTracker_device_table_map.erase(key);')
+        gedd_txt.append('    assert(ObjectTracker_device_table_map.size() == 0 && "Should not have any instance mappings hanging around");')
+        gedd_txt.append('')
+        gedd_txt.append('    return result;')
+        gedd_txt.append('}')
+        gedd_txt.append('')
+        return "\n".join(gedd_txt)
+
+    def generate_command_buffer_validates(self):
+        cbv_txt = []
+        cbv_txt.append('%s' % self.lineinfo.get())
+        for o in ['VkPipeline', 'VkDynamicViewportState', 'VkDynamicRasterState', 'VkDynamicColorBlendState', 'VkDynamicDepthStencilState',
+                  'VkPipelineLayout', 'VkBuffer', 'VkEvent', 'VkQueryPool', 'VkRenderPass', 'VkFramebuffer']:
+            cbv_txt.append('static void validate_object(VkCmdBuffer dispatchable_object, %s object)' % (o))
+            cbv_txt.append('{')
+            cbv_txt.append('    if (%sMap.find((void*)object.handle) == %sMap.end()) {' % (o, o))
+            cbv_txt.append('        log_msg(mdd(dispatchable_object), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, object.handle, 0, OBJTRACK_INVALID_OBJECT, "OBJTRACK",')
+            cbv_txt.append('            "Invalid Object %p",reinterpret_cast<VkUintPtrLeast64>(object.handle));')
+            cbv_txt.append('    }')
+            cbv_txt.append('}')
+            cbv_txt.append('')
+        return "\n".join(cbv_txt)
+
     def generate_intercept(self, proto, qual):
         if proto.name in [ 'DbgCreateMsgCallback', 'GetGlobalLayerProperties', 'GetGlobalExtensionProperties','GetPhysicalDeviceLayerProperties', 'GetPhysicalDeviceExtensionProperties' ]:
             # use default version
             return None
 
-        # Create map of object names to object type enums of the form VkName : VkDbgObjectTypeName
-        obj_type_mapping = {base_t : base_t.replace("Vk", "VkDbgObjectType") for base_t in vulkan.object_type_list}
+        # Create map of object names to object type enums of the form VkName : VkObjectTypeName
+        obj_type_mapping = {base_t : base_t.replace("Vk", "VkObjectType") for base_t in vulkan.object_type_list}
         # Convert object type enum names from UpperCamelCase to UPPER_CASE_WITH_UNDERSCORES
         for objectName, objectTypeEnum in obj_type_mapping.items():
             obj_type_mapping[objectName] = ucc_to_U_C_C(objectTypeEnum);
@@ -1068,8 +1368,6 @@ class ObjectTrackerSubcommand(Subcommand):
             "DestroyDevice",
             "GetDeviceQueue",
             "QueueSubmit",
-            "DestroyObject",
-            "GetObjectMemoryRequirements",
             "QueueBindSparseImageMemory",
             "QueueBindSparseBufferMemory",
             "GetFenceStatus",
@@ -1166,7 +1464,12 @@ class ObjectTrackerSubcommand(Subcommand):
         extensions=[('wsi_lunarg_enabled',
                     ['vkCreateSwapChainWSI', 'vkDestroySwapChainWSI',
                      'vkGetSwapChainInfoWSI', 'vkQueuePresentWSI'])]
-        body = [self._generate_dispatch_entrypoints("VK_LAYER_EXPORT"),
+        body = [self.generate_maps(),
+                self.generate_procs(),
+                self.generate_explicit_destroy_instance(),
+                self.generate_explicit_destroy_device(),
+                self.generate_command_buffer_validates(),
+                self._generate_dispatch_entrypoints("VK_LAYER_EXPORT"),
                 self._generate_extensions(),
                 self._generate_layer_gpa_function(extensions,
                                                   instance_extensions=['msg_callback_get_proc_addr'])]

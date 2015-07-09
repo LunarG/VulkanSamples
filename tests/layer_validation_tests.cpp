@@ -1290,7 +1290,7 @@ TEST_F(VkLayerTest, RenderPassWithinRenderPass)
         .sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
         .pNext = NULL,
         .renderPass = (VkRenderPass) 0xc001d00d,
-        .framebuffer = NULL
+        .framebuffer = 0
     };
     vkCmdBeginRenderPass(cmdBuffer.GetBufferHandle(), &rp_begin, VK_RENDER_PASS_CONTENTS_INLINE);
 

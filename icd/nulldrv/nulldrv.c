@@ -510,7 +510,7 @@ static VkResult nulldrv_viewport_state_create(struct nulldrv_dev *dev,
     struct nulldrv_dynamic_vp *state;
 
     state = (struct nulldrv_dynamic_vp *) nulldrv_base_create(dev,
-            sizeof(*state), VK_OBJECT_TYPE_DYNAMIC_VP_STATE);
+            sizeof(*state), VK_OBJECT_TYPE_DYNAMIC_VIEWPORT_STATE);
     if (!state)
         return VK_ERROR_OUT_OF_HOST_MEMORY;
 
@@ -526,7 +526,7 @@ static VkResult nulldrv_raster_state_create(struct nulldrv_dev *dev,
     struct nulldrv_dynamic_rs *state;
 
     state = (struct nulldrv_dynamic_rs *) nulldrv_base_create(dev,
-            sizeof(*state), VK_OBJECT_TYPE_DYNAMIC_RS_STATE);
+            sizeof(*state), VK_OBJECT_TYPE_DYNAMIC_RASTER_STATE);
     if (!state)
         return VK_ERROR_OUT_OF_HOST_MEMORY;
 
@@ -542,7 +542,7 @@ static VkResult nulldrv_blend_state_create(struct nulldrv_dev *dev,
     struct nulldrv_dynamic_cb *state;
 
     state = (struct nulldrv_dynamic_cb *) nulldrv_base_create(dev,
-            sizeof(*state), VK_OBJECT_TYPE_DYNAMIC_CB_STATE);
+            sizeof(*state), VK_OBJECT_TYPE_DYNAMIC_COLOR_BLEND_STATE);
     if (!state)
         return VK_ERROR_OUT_OF_HOST_MEMORY;
 
@@ -558,7 +558,7 @@ static VkResult nulldrv_ds_state_create(struct nulldrv_dev *dev,
     struct nulldrv_dynamic_ds *state;
 
     state = (struct nulldrv_dynamic_ds *) nulldrv_base_create(dev,
-            sizeof(*state), VK_OBJECT_TYPE_DYNAMIC_DS_STATE);
+            sizeof(*state), VK_OBJECT_TYPE_DYNAMIC_DEPTH_STENCIL_STATE);
     if (!state)
         return VK_ERROR_OUT_OF_HOST_MEMORY;
 

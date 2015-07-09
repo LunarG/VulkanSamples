@@ -101,19 +101,19 @@ static bool base_dbg_copy_create_info(const struct intel_handle *handle,
     case VK_OBJECT_TYPE_DESCRIPTOR_SET:
         /* no create info */
         break;
-    case VK_OBJECT_TYPE_DYNAMIC_VP_STATE:
+    case VK_OBJECT_TYPE_DYNAMIC_VIEWPORT_STATE:
         assert(info.header->struct_type == VK_STRUCTURE_TYPE_DYNAMIC_VIEWPORT_STATE_CREATE_INFO);
         shallow_copy = sizeof(VkDynamicViewportStateCreateInfo);
         break;
-    case VK_OBJECT_TYPE_DYNAMIC_RS_STATE:
+    case VK_OBJECT_TYPE_DYNAMIC_RASTER_STATE:
         assert(info.header->struct_type == VK_STRUCTURE_TYPE_DYNAMIC_RASTER_STATE_CREATE_INFO);
         shallow_copy = sizeof(VkDynamicRasterStateCreateInfo);
         break;
-    case VK_OBJECT_TYPE_DYNAMIC_CB_STATE:
+    case VK_OBJECT_TYPE_DYNAMIC_COLOR_BLEND_STATE:
         assert(info.header->struct_type == VK_STRUCTURE_TYPE_DYNAMIC_COLOR_BLEND_STATE_CREATE_INFO);
         shallow_copy = sizeof(VkDynamicColorBlendStateCreateInfo);
         break;
-    case VK_OBJECT_TYPE_DYNAMIC_DS_STATE:
+    case VK_OBJECT_TYPE_DYNAMIC_DEPTH_STENCIL_STATE:
         assert(info.header->struct_type == VK_STRUCTURE_TYPE_DYNAMIC_DEPTH_STENCIL_STATE_CREATE_INFO);
         shallow_copy = sizeof(VkDynamicDepthStencilStateCreateInfo);
         break;

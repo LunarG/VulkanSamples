@@ -105,13 +105,13 @@ static VkDbgObjectType dynamicStateBindPointToObjType(DYNAMIC_STATE_BIND_POINT s
     switch (sbp)
     {
         case VK_STATE_BIND_POINT_VIEWPORT:
-            return VK_OBJECT_TYPE_DYNAMIC_VP_STATE;
+            return VK_OBJECT_TYPE_DYNAMIC_VIEWPORT_STATE;
         case VK_STATE_BIND_POINT_RASTER:
-            return VK_OBJECT_TYPE_DYNAMIC_RS_STATE;
+            return VK_OBJECT_TYPE_DYNAMIC_RASTER_STATE;
         case VK_STATE_BIND_POINT_COLOR_BLEND:
-            return VK_OBJECT_TYPE_DYNAMIC_CB_STATE;
+            return VK_OBJECT_TYPE_DYNAMIC_COLOR_BLEND_STATE;
         case VK_STATE_BIND_POINT_DEPTH_STENCIL:
-            return VK_OBJECT_TYPE_DYNAMIC_DS_STATE;
+            return VK_OBJECT_TYPE_DYNAMIC_DEPTH_STENCIL_STATE;
         default:
             return VK_OBJECT_TYPE_MAX_ENUM;
     }

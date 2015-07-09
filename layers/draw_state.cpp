@@ -2086,7 +2086,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdBindDynamicViewportState(VkCmdBuffer cmdBuffer, 
             loader_platform_thread_lock_mutex(&globalLock);
             pCB->status |= CBSTATUS_VIEWPORT_BOUND;
             if (dynamicVpStateMap.find(dynamicViewportState.handle) == dynamicVpStateMap.end()) {
-                log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DYNAMIC_VP_STATE, dynamicViewportState.handle, 0, DRAWSTATE_INVALID_DYNAMIC_STATE_OBJECT, "DS",
+                log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DYNAMIC_VIEWPORT_STATE, dynamicViewportState.handle, 0, DRAWSTATE_INVALID_DYNAMIC_STATE_OBJECT, "DS",
                         "Unable to find VkDynamicViewportState object %#" PRIxLEAST64 ", was it ever created?", dynamicViewportState.handle);
             } else {
                 pCB->lastBoundDynamicState[VK_STATE_BIND_POINT_VIEWPORT] = dynamicViewportState.handle;
@@ -2113,7 +2113,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdBindDynamicRasterState(VkCmdBuffer cmdBuffer, Vk
             loader_platform_thread_lock_mutex(&globalLock);
             pCB->status |= CBSTATUS_RASTER_BOUND;
             if (dynamicRsStateMap.find(dynamicRasterState.handle) == dynamicRsStateMap.end()) {
-                log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DYNAMIC_RS_STATE, dynamicRasterState.handle, 0, DRAWSTATE_INVALID_DYNAMIC_STATE_OBJECT, "DS",
+                log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DYNAMIC_RASTER_STATE, dynamicRasterState.handle, 0, DRAWSTATE_INVALID_DYNAMIC_STATE_OBJECT, "DS",
                         "Unable to find VkDynamicRasterState object %#" PRIxLEAST64 ", was it ever created?", dynamicRasterState.handle);
             } else {
                 pCB->lastBoundDynamicState[VK_STATE_BIND_POINT_RASTER] = dynamicRasterState.handle;
@@ -2140,7 +2140,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdBindDynamicColorBlendState(VkCmdBuffer cmdBuffer
             loader_platform_thread_lock_mutex(&globalLock);
             pCB->status |= CBSTATUS_COLOR_BLEND_BOUND;
             if (dynamicCbStateMap.find(dynamicColorBlendState.handle) == dynamicCbStateMap.end()) {
-                log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DYNAMIC_CB_STATE, dynamicColorBlendState.handle, 0, DRAWSTATE_INVALID_DYNAMIC_STATE_OBJECT, "DS",
+                log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DYNAMIC_COLOR_BLEND_STATE, dynamicColorBlendState.handle, 0, DRAWSTATE_INVALID_DYNAMIC_STATE_OBJECT, "DS",
                         "Unable to find VkDynamicColorBlendState object %#" PRIxLEAST64 ", was it ever created?", dynamicColorBlendState.handle);
             } else {
                 pCB->lastBoundDynamicState[VK_STATE_BIND_POINT_COLOR_BLEND] = dynamicColorBlendState.handle;
@@ -2167,7 +2167,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdBindDynamicDepthStencilState(VkCmdBuffer cmdBuff
             loader_platform_thread_lock_mutex(&globalLock);
             pCB->status |= CBSTATUS_DEPTH_STENCIL_BOUND;
             if (dynamicDsStateMap.find(dynamicDepthStencilState.handle) == dynamicDsStateMap.end()) {
-                log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DYNAMIC_DS_STATE, dynamicDepthStencilState.handle, 0, DRAWSTATE_INVALID_DYNAMIC_STATE_OBJECT, "DS",
+                log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DYNAMIC_DEPTH_STENCIL_STATE, dynamicDepthStencilState.handle, 0, DRAWSTATE_INVALID_DYNAMIC_STATE_OBJECT, "DS",
                         "Unable to find VkDynamicDepthStencilState object %#" PRIxLEAST64 ", was it ever created?", dynamicDepthStencilState.handle);
             } else {
                 pCB->lastBoundDynamicState[VK_STATE_BIND_POINT_DEPTH_STENCIL] = dynamicDepthStencilState.handle;
