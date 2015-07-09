@@ -1239,7 +1239,7 @@ VkResult VkCommandBufferObj::EndCommandBuffer()
     return VK_SUCCESS;
 }
 
-void VkCommandBufferObj::PipelineBarrier(VkPipelineStageFlags src_stages,  VkPipelineStageFlags dest_stages, bool32_t byRegion, uint32_t memBarrierCount, const void** ppMemBarriers)
+void VkCommandBufferObj::PipelineBarrier(VkPipelineStageFlags src_stages,  VkPipelineStageFlags dest_stages, VkBool32 byRegion, uint32_t memBarrierCount, const void** ppMemBarriers)
 {
     vkCmdPipelineBarrier(obj(), src_stages, dest_stages, byRegion, memBarrierCount, ppMemBarriers);
 }

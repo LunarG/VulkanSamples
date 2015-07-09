@@ -1249,64 +1249,64 @@ typedef struct VkPhysicalDeviceProperties_
 
 typedef struct VkPhysicalDeviceFeatures_
 {
-    bool32_t                                    robustBufferAccess;
-    bool32_t                                    fullDrawIndexUint32;
-    bool32_t                                    imageCubeArray;
-    bool32_t                                    independentBlend;
-    bool32_t                                    geometryShader;
-    bool32_t                                    tessellationShader;
-    bool32_t                                    sampleRateShading;
-    bool32_t                                    dualSourceBlend;
-    bool32_t                                    logicOp;
-    bool32_t                                    instancedDrawIndirect;
-    bool32_t                                    depthClip;
-    bool32_t                                    depthBiasClamp;
-    bool32_t                                    fillModeNonSolid;
-    bool32_t                                    depthBounds;
-    bool32_t                                    wideLines;
-    bool32_t                                    largePoints;
-    bool32_t                                    textureCompressionETC2;
-    bool32_t                                    textureCompressionASTC_LDR;
-    bool32_t                                    textureCompressionBC;
-    bool32_t                                    pipelineStatisticsQuery;
-    bool32_t                                    vertexSideEffects;
-    bool32_t                                    tessellationSideEffects;
-    bool32_t                                    geometrySideEffects;
-    bool32_t                                    fragmentSideEffects;
-    bool32_t                                    shaderTessellationPointSize;
-    bool32_t                                    shaderGeometryPointSize;
-    bool32_t                                    shaderTextureGatherExtended;
-    bool32_t                                    shaderStorageImageExtendedFormats;
-    bool32_t                                    shaderStorageImageMultisample;
-    bool32_t                                    shaderStorageBufferArrayConstantIndexing;
-    bool32_t                                    shaderStorageImageArrayConstantIndexing;
-    bool32_t                                    shaderUniformBufferArrayDynamicIndexing;
-    bool32_t                                    shaderSampledImageArrayDynamicIndexing;
-    bool32_t                                    shaderStorageBufferArrayDynamicIndexing;
-    bool32_t                                    shaderStorageImageArrayDynamicIndexing;
-    bool32_t                                    shaderClipDistance;
-    bool32_t                                    shaderCullDistance;
-    bool32_t                                    shaderFloat64;
-    bool32_t                                    shaderInt64;
-    bool32_t                                    shaderFloat16;
-    bool32_t                                    shaderInt16;
-    bool32_t                                    shaderResourceResidency;
-    bool32_t                                    shaderResourceMinLOD;
-    bool32_t                                    sparse;
-    bool32_t                                    sparseResidencyBuffer;
-    bool32_t                                    sparseResidencyImage2D;
-    bool32_t                                    sparseResidencyImage3D;
-    bool32_t                                    sparseResidency2Samples;
-    bool32_t                                    sparseResidency4Samples;
-    bool32_t                                    sparseResidency8Samples;
-    bool32_t                                    sparseResidency16Samples;
-    bool32_t                                    sparseResidencyStandard2DBlockShape;
-    bool32_t                                    sparseResidencyStandard2DMSBlockShape;
-    bool32_t                                    sparseResidencyStandard3DBlockShape;
-    bool32_t                                    sparseResidencyAlignedMipSize;
-    bool32_t                                    sparseResidencyNonResident;
-    bool32_t                                    sparseResidencyNonResidentStrict;
-    bool32_t                                    sparseResidencyAliased;
+    VkBool32                                    robustBufferAccess;
+    VkBool32                                    fullDrawIndexUint32;
+    VkBool32                                    imageCubeArray;
+    VkBool32                                    independentBlend;
+    VkBool32                                    geometryShader;
+    VkBool32                                    tessellationShader;
+    VkBool32                                    sampleRateShading;
+    VkBool32                                    dualSourceBlend;
+    VkBool32                                    logicOp;
+    VkBool32                                    instancedDrawIndirect;
+    VkBool32                                    depthClip;
+    VkBool32                                    depthBiasClamp;
+    VkBool32                                    fillModeNonSolid;
+    VkBool32                                    depthBounds;
+    VkBool32                                    wideLines;
+    VkBool32                                    largePoints;
+    VkBool32                                    textureCompressionETC2;
+    VkBool32                                    textureCompressionASTC_LDR;
+    VkBool32                                    textureCompressionBC;
+    VkBool32                                    pipelineStatisticsQuery;
+    VkBool32                                    vertexSideEffects;
+    VkBool32                                    tessellationSideEffects;
+    VkBool32                                    geometrySideEffects;
+    VkBool32                                    fragmentSideEffects;
+    VkBool32                                    shaderTessellationPointSize;
+    VkBool32                                    shaderGeometryPointSize;
+    VkBool32                                    shaderTextureGatherExtended;
+    VkBool32                                    shaderStorageImageExtendedFormats;
+    VkBool32                                    shaderStorageImageMultisample;
+    VkBool32                                    shaderStorageBufferArrayConstantIndexing;
+    VkBool32                                    shaderStorageImageArrayConstantIndexing;
+    VkBool32                                    shaderUniformBufferArrayDynamicIndexing;
+    VkBool32                                    shaderSampledImageArrayDynamicIndexing;
+    VkBool32                                    shaderStorageBufferArrayDynamicIndexing;
+    VkBool32                                    shaderStorageImageArrayDynamicIndexing;
+    VkBool32                                    shaderClipDistance;
+    VkBool32                                    shaderCullDistance;
+    VkBool32                                    shaderFloat64;
+    VkBool32                                    shaderInt64;
+    VkBool32                                    shaderFloat16;
+    VkBool32                                    shaderInt16;
+    VkBool32                                    shaderResourceResidency;
+    VkBool32                                    shaderResourceMinLOD;
+    VkBool32                                    sparse;
+    VkBool32                                    sparseResidencyBuffer;
+    VkBool32                                    sparseResidencyImage2D;
+    VkBool32                                    sparseResidencyImage3D;
+    VkBool32                                    sparseResidency2Samples;
+    VkBool32                                    sparseResidency4Samples;
+    VkBool32                                    sparseResidency8Samples;
+    VkBool32                                    sparseResidency16Samples;
+    VkBool32                                    sparseResidencyStandard2DBlockShape;
+    VkBool32                                    sparseResidencyStandard2DMSBlockShape;
+    VkBool32                                    sparseResidencyStandard3DBlockShape;
+    VkBool32                                    sparseResidencyAlignedMipSize;
+    VkBool32                                    sparseResidencyNonResident;
+    VkBool32                                    sparseResidencyNonResidentStrict;
+    VkBool32                                    sparseResidencyAliased;
 } VkPhysicalDeviceFeatures;
 
 typedef struct VkPhysicalDeviceLimits_
@@ -1364,7 +1364,7 @@ typedef struct VkPhysicalDeviceLimits_
     uint32_t                                    mipmapPrecisionBits;
     uint32_t                                    maxDrawIndexedIndexValue;
     uint32_t                                    maxDrawIndirectInstanceCount;
-    bool32_t                                    primitiveRestartForPatches;
+    VkBool32                                    primitiveRestartForPatches;
     float                                       maxSamplerLodBias;
     uint32_t                                    maxSamplerAnisotropy;
     uint32_t                                    maxViewports;
@@ -1494,7 +1494,7 @@ typedef struct VkPhysicalDeviceQueueProperties_
 {
     VkQueueFlags                                queueFlags;                 // Queue flags
     uint32_t                                    queueCount;
-    bool32_t                                    supportsTimestamps;
+    VkBool32                                    supportsTimestamps;
 } VkPhysicalDeviceQueueProperties;
 
 typedef struct VkMemoryType_
@@ -1943,8 +1943,8 @@ typedef struct VkPipelineIaStateCreateInfo_
     VkStructureType                             sType;      // Must be VK_STRUCTURE_TYPE_PIPELINE_IA_STATE_CREATE_INFO
     const void*                                 pNext;      // Pointer to next structure
     VkPrimitiveTopology                         topology;
-    bool32_t                                    disableVertexReuse;         // optional
-    bool32_t                                    primitiveRestartEnable;
+    VkBool32                                    disableVertexReuse;         // optional
+    VkBool32                                    primitiveRestartEnable;
     uint32_t                                    primitiveRestartIndex;      // optional (GL45)
 } VkPipelineIaStateCreateInfo;
 
@@ -1968,8 +1968,8 @@ typedef struct VkPipelineRsStateCreateInfo_
 {
     VkStructureType                             sType;      // Must be VK_STRUCTURE_TYPE_PIPELINE_RS_STATE_CREATE_INFO
     const void*                                 pNext;      // Pointer to next structure
-    bool32_t                                    depthClipEnable;
-    bool32_t                                    rasterizerDiscardEnable;
+    VkBool32                                    depthClipEnable;
+    VkBool32                                    rasterizerDiscardEnable;
     VkCoordinateOrigin                          pointOrigin;                // optional (GL45)
     VkProvokingVertex                           provokingVertex;            // optional (GL45)
     VkFillMode                                  fillMode;                   // optional (GL45)
@@ -1982,15 +1982,15 @@ typedef struct VkPipelineMsStateCreateInfo_
     VkStructureType                             sType;      // Must be VK_STRUCTURE_TYPE_PIPELINE_MS_STATE_CREATE_INFO
     const void*                                 pNext;      // Pointer to next structure
     uint32_t                                    rasterSamples;
-    bool32_t                                    multisampleEnable;          // optional (GL45)
-    bool32_t                                    sampleShadingEnable;        // optional (GL45)
+    VkBool32                                    multisampleEnable;          // optional (GL45)
+    VkBool32                                    sampleShadingEnable;        // optional (GL45)
     float                                       minSampleShading;           // optional (GL45)
     VkSampleMask                                sampleMask;
 } VkPipelineMsStateCreateInfo;
 
 typedef struct VkPipelineCbAttachmentState_
 {
-    bool32_t                                    blendEnable;
+    VkBool32                                    blendEnable;
     VkFormat                                    format;
     VkBlend                                     srcBlendColor;
     VkBlend                                     destBlendColor;
@@ -2005,8 +2005,8 @@ typedef struct VkPipelineCbStateCreateInfo_
 {
     VkStructureType                             sType;      // Must be VK_STRUCTURE_TYPE_PIPELINE_CB_STATE_CREATE_INFO
     const void*                                 pNext;      // Pointer to next structure
-    bool32_t                                    alphaToCoverageEnable;
-    bool32_t                                    logicOpEnable;
+    VkBool32                                    alphaToCoverageEnable;
+    VkBool32                                    logicOpEnable;
     VkLogicOp                                   logicOp;
     uint32_t                                    attachmentCount;    // # of pAttachments
     const VkPipelineCbAttachmentState*          pAttachments;
@@ -2025,11 +2025,11 @@ typedef struct VkPipelineDsStateCreateInfo_
     VkStructureType                             sType;      // Must be VK_STRUCTURE_TYPE_PIPELINE_DS_STATE_CREATE_INFO
     const void*                                 pNext;      // Pointer to next structure
     VkFormat                                    format;
-    bool32_t                                    depthTestEnable;
-    bool32_t                                    depthWriteEnable;
+    VkBool32                                    depthTestEnable;
+    VkBool32                                    depthWriteEnable;
     VkCompareOp                                 depthCompareOp;
-    bool32_t                                    depthBoundsEnable;          // optional (depth_bounds_test)
-    bool32_t                                    stencilTestEnable;
+    VkBool32                                    depthBoundsEnable;          // optional (depth_bounds_test)
+    VkBool32                                    stencilTestEnable;
     VkStencilOpState                            front;
     VkStencilOpState                            back;
 } VkPipelineDsStateCreateInfo;
@@ -2290,7 +2290,7 @@ typedef VkResult (VKAPI *PFN_vkQueueBindSparseImageMemory)(VkQueue queue, VkImag
 typedef VkResult (VKAPI *PFN_vkCreateFence)(VkDevice device, const VkFenceCreateInfo* pCreateInfo, VkFence* pFence);
 typedef VkResult (VKAPI *PFN_vkResetFences)(VkDevice device, uint32_t fenceCount, const VkFence* pFences);
 typedef VkResult (VKAPI *PFN_vkGetFenceStatus)(VkDevice device, VkFence fence);
-typedef VkResult (VKAPI *PFN_vkWaitForFences)(VkDevice device, uint32_t fenceCount, const VkFence* pFences, bool32_t waitAll, uint64_t timeout);
+typedef VkResult (VKAPI *PFN_vkWaitForFences)(VkDevice device, uint32_t fenceCount, const VkFence* pFences, VkBool32 waitAll, uint64_t timeout);
 typedef VkResult (VKAPI *PFN_vkCreateSemaphore)(VkDevice device, const VkSemaphoreCreateInfo* pCreateInfo, VkSemaphore* pSemaphore);
 typedef VkResult (VKAPI *PFN_vkQueueSignalSemaphore)(VkQueue queue, VkSemaphore semaphore);
 typedef VkResult (VKAPI *PFN_vkQueueWaitSemaphore)(VkQueue queue, VkSemaphore semaphore);
@@ -2357,7 +2357,7 @@ typedef void     (VKAPI *PFN_vkCmdResolveImage)(VkCmdBuffer cmdBuffer, VkImage s
 typedef void     (VKAPI *PFN_vkCmdSetEvent)(VkCmdBuffer cmdBuffer, VkEvent event, VkPipelineStageFlags stageMask);
 typedef void     (VKAPI *PFN_vkCmdResetEvent)(VkCmdBuffer cmdBuffer, VkEvent event, VkPipelineStageFlags stageMask);
 typedef void     (VKAPI *PFN_vkCmdWaitEvents)(VkCmdBuffer cmdBuffer, uint32_t eventCount, const VkEvent* pEvents, VkPipelineStageFlags sourceStageMask, VkPipelineStageFlags destStageMask, uint32_t memBarrierCount, const void** ppMemBarriers);
-typedef void     (VKAPI *PFN_vkCmdPipelineBarrier)(VkCmdBuffer cmdBuffer, VkPipelineStageFlags sourceStageMask, VkPipelineStageFlags destStageMask, bool32_t byRegion, uint32_t memBarrierCount, const void** ppMemBarriers);
+typedef void     (VKAPI *PFN_vkCmdPipelineBarrier)(VkCmdBuffer cmdBuffer, VkPipelineStageFlags sourceStageMask, VkPipelineStageFlags destStageMask, VkBool32 byRegion, uint32_t memBarrierCount, const void** ppMemBarriers);
 typedef void     (VKAPI *PFN_vkCmdBeginQuery)(VkCmdBuffer cmdBuffer, VkQueryPool queryPool, uint32_t slot, VkQueryControlFlags flags);
 typedef void     (VKAPI *PFN_vkCmdEndQuery)(VkCmdBuffer cmdBuffer, VkQueryPool queryPool, uint32_t slot);
 typedef void     (VKAPI *PFN_vkCmdResetQueryPool)(VkCmdBuffer cmdBuffer, VkQueryPool queryPool, uint32_t startQuery, uint32_t queryCount);
@@ -2587,7 +2587,7 @@ VkResult VKAPI vkWaitForFences(
     VkDevice                                    device,
     uint32_t                                    fenceCount,
     const VkFence*                              pFences,
-    bool32_t                                    waitAll,
+    VkBool32                                    waitAll,
     uint64_t                                    timeout); // timeout in nanoseconds
 
 // Queue semaphore functions
@@ -3019,7 +3019,7 @@ void VKAPI vkCmdPipelineBarrier(
     VkCmdBuffer                                 cmdBuffer,
     VkPipelineStageFlags                        sourceStageMask,
     VkPipelineStageFlags                        destStageMask,
-    bool32_t                                    byRegion,
+    VkBool32                                    byRegion,
     uint32_t                                    memBarrierCount,
     const void**                                ppMemBarriers);
 

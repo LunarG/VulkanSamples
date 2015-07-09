@@ -132,7 +132,7 @@ typedef struct VkSwapChainImageInfoWSI_
 
 typedef struct VkPhysicalDeviceQueuePresentPropertiesWSI_
 {
-    bool32_t                                supportsPresent;    // Tells whether the queue supports presenting
+    VkBool32                                supportsPresent;    // Tells whether the queue supports presenting
 } VkPhysicalDeviceQueuePresentPropertiesWSI;
 
 typedef struct VkPresentInfoWSI_

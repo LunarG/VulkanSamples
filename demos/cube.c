@@ -1905,11 +1905,11 @@ static void demo_create_window(struct demo *demo)
  * Return 1 (true) if all layer names specified in check_names
  * can be found in given layer properties.
  */
-static bool32_t demo_check_layers(uint32_t check_count, char **check_names,
+static VkBool32 demo_check_layers(uint32_t check_count, char **check_names,
                               uint32_t layer_count, VkLayerProperties *layers)
 {
     for (uint32_t i = 0; i < check_count; i++) {
-        bool32_t found = 0;
+        VkBool32 found = 0;
         for (uint32_t j = 0; j < layer_count; j++) {
             if (!strcmp(check_names[i], layers[j].layerName)) {
                 found = 1;
@@ -1944,7 +1944,7 @@ static void demo_init_vk(struct demo *demo)
     };
 
     /* Look for validation layers */
-    bool32_t validation_found = 0;
+    VkBool32 validation_found = 0;
     err = vkGetGlobalLayerProperties(&instance_layer_count, NULL);
     assert(!err);
 
@@ -1968,7 +1968,7 @@ static void demo_init_vk(struct demo *demo)
     err = vkGetGlobalExtensionProperties(NULL, &instance_extension_count, NULL);
     assert(!err);
 
-    bool32_t WSIextFound = 0;
+    VkBool32 WSIextFound = 0;
     memset(extension_names, 0, sizeof(extension_names));
     instance_extensions = malloc(sizeof(VkExtensionProperties) * instance_extension_count);
     err = vkGetGlobalExtensionProperties(NULL, &instance_extension_count, instance_extensions);

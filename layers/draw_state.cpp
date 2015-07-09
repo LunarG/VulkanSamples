@@ -361,7 +361,7 @@ static void updateCBTracking(VkCmdBuffer cb)
     g_lastTouchedCBIndex = g_lastTouchedCBIndex % NUM_COMMAND_BUFFERS_TO_DISPLAY;
     loader_platform_thread_unlock_mutex(&globalLock);
 }
-static bool32_t hasDrawCmd(GLOBAL_CB_NODE* pCB)
+static VkBool32 hasDrawCmd(GLOBAL_CB_NODE* pCB)
 {
     for (uint32_t i=0; i<NUM_DRAW_TYPES; i++) {
         if (pCB->drawCount[i])
@@ -370,7 +370,7 @@ static bool32_t hasDrawCmd(GLOBAL_CB_NODE* pCB)
     return VK_FALSE;
 }
 // Check object status for selected flag state
-static bool32_t validate_status(GLOBAL_CB_NODE* pNode, CBStatusFlags enable_mask, CBStatusFlags status_mask, CBStatusFlags status_flag, VkFlags msg_flags, DRAW_STATE_ERROR error_code, const char* fail_msg)
+static VkBool32 validate_status(GLOBAL_CB_NODE* pNode, CBStatusFlags enable_mask, CBStatusFlags status_mask, CBStatusFlags status_flag, VkFlags msg_flags, DRAW_STATE_ERROR error_code, const char* fail_msg)
 {
     // If non-zero enable mask is present, check it against status but if enable_mask
     //  is 0 then no enable required so we should always just check status
@@ -416,8 +416,8 @@ static PIPELINE_NODE* getPipeline(VkPipeline pipeline)
     return pipelineMap[pipeline];
 }
 // Validate state stored as flags at time of draw call
-static bool32_t validate_draw_state_flags(GLOBAL_CB_NODE* pCB, bool32_t indexedDraw) {
-    bool32_t result;
+static VkBool32 validate_draw_state_flags(GLOBAL_CB_NODE* pCB, VkBool32 indexedDraw) {
+    VkBool32 result;
     result = validate_status(pCB, CBSTATUS_NONE, CBSTATUS_VIEWPORT_BOUND, CBSTATUS_VIEWPORT_BOUND, VK_DBG_REPORT_ERROR_BIT, DRAWSTATE_VIEWPORT_NOT_BOUND, "Viewport object not bound to this command buffer");
     result &= validate_status(pCB, CBSTATUS_NONE, CBSTATUS_RASTER_BOUND,   CBSTATUS_RASTER_BOUND,   VK_DBG_REPORT_ERROR_BIT, DRAWSTATE_RASTER_NOT_BOUND,   "Raster object not bound to this command buffer");
     result &= validate_status(pCB, CBSTATUS_COLOR_BLEND_WRITE_ENABLE, CBSTATUS_COLOR_BLEND_BOUND,   CBSTATUS_COLOR_BLEND_BOUND,   VK_DBG_REPORT_ERROR_BIT,  DRAWSTATE_COLOR_BLEND_NOT_BOUND,   "Color-blend object not bound to this command buffer");
@@ -427,9 +427,9 @@ static bool32_t validate_draw_state_flags(GLOBAL_CB_NODE* pCB, bool32_t indexedD
     return result;
 }
 // Validate overall state at the time of a draw call
-static bool32_t validate_draw_state(GLOBAL_CB_NODE* pCB, bool32_t indexedDraw) {
+static VkBool32 validate_draw_state(GLOBAL_CB_NODE* pCB, VkBool32 indexedDraw) {
     // First check flag states
-    bool32_t result = validate_draw_state_flags(pCB, indexedDraw);
+    VkBool32 result = validate_draw_state_flags(pCB, indexedDraw);
     PIPELINE_NODE* pPipe = getPipeline(pCB->lastBoundPipeline);
     // Now complete other state checks
     if (pPipe && (pCB->lastBoundPipelineLayout != pPipe->graphicsPipelineCI.layout)) {
@@ -455,7 +455,7 @@ static VkSamplerCreateInfo* getSamplerCreateInfo(const VkSampler sampler)
     return &sampleMap[sampler]->createInfo;
 }
 // Verify that create state for a pipeline is valid
-static bool32_t verifyPipelineCreateState(const VkDevice device, const PIPELINE_NODE* pPipeline)
+static VkBool32 verifyPipelineCreateState(const VkDevice device, const PIPELINE_NODE* pPipeline)
 {
     // VS is required
     if (!(pPipeline->active_shaders & VK_SHADER_STAGE_VERTEX_BIT)) {
@@ -702,7 +702,7 @@ static LAYOUT_NODE* getLayoutNode(const VkDescriptorSetLayout layout) {
     return layoutMap[layout];
 }
 // Return 1 if update struct is of valid type, 0 otherwise
-static bool32_t validUpdateStruct(const VkDevice device, const GENERIC_HEADER* pUpdateStruct)
+static VkBool32 validUpdateStruct(const VkDevice device, const GENERIC_HEADER* pUpdateStruct)
 {
     char str[1024];
     switch (pUpdateStruct->sType)
@@ -795,7 +795,7 @@ static uint32_t getUpdateEndIndex(const VkDevice device, const LAYOUT_NODE* pLay
     return (getBindingStartIndex(pLayout, getUpdateBinding(device, pUpdateStruct))+getUpdateArrayIndex(device, pUpdateStruct)+getUpdateCount(device, pUpdateStruct)-1);
 }
 // Verify that the descriptor type in the update struct matches what's expected by the layout
-static bool32_t validateUpdateType(const VkDevice device, const LAYOUT_NODE* pLayout, const GENERIC_HEADER* pUpdateStruct)
+static VkBool32 validateUpdateType(const VkDevice device, const LAYOUT_NODE* pLayout, const GENERIC_HEADER* pUpdateStruct)
 {
     // First get actual type of update
     VkDescriptorType actualType;
@@ -859,11 +859,11 @@ static GENERIC_HEADER* shadowUpdateNode(const VkDevice device, GENERIC_HEADER* p
     return pNewNode;
 }
 // update DS mappings based on ppUpdateArray
-static bool32_t dsUpdate(VkDevice device, VkStructureType type, uint32_t updateCount, const void* pUpdateArray)
+static VkBool32 dsUpdate(VkDevice device, VkStructureType type, uint32_t updateCount, const void* pUpdateArray)
 {
     const VkWriteDescriptorSet *pWDS = NULL;
     const VkCopyDescriptorSet *pCDS = NULL;
-    bool32_t result = 1;
+    VkBool32 result = 1;
 
     if (type == VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET)
         pWDS = (const VkWriteDescriptorSet *) pUpdateArray;
@@ -1587,7 +1587,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateGraphicsPipelines(VkDevice device, VkPipe
     //  3. If everything looks good, we'll then create the pipeline and add NODE to pipelineMap
     loader_platform_thread_lock_mutex(&globalLock);
     PIPELINE_NODE* pPipeNode = initPipeline(pCreateInfos, NULL);
-    bool32_t valid = verifyPipelineCreateState(device, pPipeNode);
+    VkBool32 valid = verifyPipelineCreateState(device, pPipeNode);
     loader_platform_thread_unlock_mutex(&globalLock);
     if (VK_TRUE == valid) {
         result = get_dispatch_table(draw_state_device_table_map, device)->CreateGraphicsPipelines(device, pipelineCache, count, pCreateInfos, pPipelines);
@@ -2040,7 +2040,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdBindVertexBuffers(
 VK_LAYER_EXPORT void VKAPI vkCmdDraw(VkCmdBuffer cmdBuffer, uint32_t firstVertex, uint32_t vertexCount, uint32_t firstInstance, uint32_t instanceCount)
 {
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
-    bool32_t valid = VK_FALSE;
+    VkBool32 valid = VK_FALSE;
     if (pCB) {
         if (pCB->state == CB_UPDATE_ACTIVE) {
             updateCBTracking(cmdBuffer);
@@ -2062,7 +2062,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdDraw(VkCmdBuffer cmdBuffer, uint32_t firstVertex
 VK_LAYER_EXPORT void VKAPI vkCmdDrawIndexed(VkCmdBuffer cmdBuffer, uint32_t firstIndex, uint32_t indexCount, int32_t vertexOffset, uint32_t firstInstance, uint32_t instanceCount)
 {
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
-    bool32_t valid = VK_FALSE;
+    VkBool32 valid = VK_FALSE;
     if (pCB) {
         if (pCB->state == CB_UPDATE_ACTIVE) {
             updateCBTracking(cmdBuffer);
@@ -2084,7 +2084,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdDrawIndexed(VkCmdBuffer cmdBuffer, uint32_t firs
 VK_LAYER_EXPORT void VKAPI vkCmdDrawIndirect(VkCmdBuffer cmdBuffer, VkBuffer buffer, VkDeviceSize offset, uint32_t count, uint32_t stride)
 {
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
-    bool32_t valid = VK_FALSE;
+    VkBool32 valid = VK_FALSE;
     if (pCB) {
         if (pCB->state == CB_UPDATE_ACTIVE) {
             updateCBTracking(cmdBuffer);
@@ -2106,7 +2106,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdDrawIndirect(VkCmdBuffer cmdBuffer, VkBuffer buf
 VK_LAYER_EXPORT void VKAPI vkCmdDrawIndexedIndirect(VkCmdBuffer cmdBuffer, VkBuffer buffer, VkDeviceSize offset, uint32_t count, uint32_t stride)
 {
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
-    bool32_t valid = VK_FALSE;
+    VkBool32 valid = VK_FALSE;
     if (pCB) {
         if (pCB->state == CB_UPDATE_ACTIVE) {
             updateCBTracking(cmdBuffer);
@@ -2447,7 +2447,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdWaitEvents(VkCmdBuffer cmdBuffer, uint32_t event
     }
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdPipelineBarrier(VkCmdBuffer cmdBuffer, VkPipelineStageFlags sourceStageMask, VkPipelineStageFlags destStageMask, bool32_t byRegion, uint32_t memBarrierCount, const void** ppMemBarriers)
+VK_LAYER_EXPORT void VKAPI vkCmdPipelineBarrier(VkCmdBuffer cmdBuffer, VkPipelineStageFlags sourceStageMask, VkPipelineStageFlags destStageMask, VkBool32 byRegion, uint32_t memBarrierCount, const void** ppMemBarriers)
 {
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {

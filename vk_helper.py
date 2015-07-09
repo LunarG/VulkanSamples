@@ -591,7 +591,7 @@ class StructWrapperGen:
             cast_type = "(void*)"
             if not struct_member['ptr']:
                 cast_type = "(void*)&"
-        elif 'bool' in struct_member['type']:
+        elif 'bool' in struct_member['type'].lower():
             print_type = "s"
             member_post = ' ? "TRUE" : "FALSE"'
         elif 'float' in struct_member['type']:
@@ -1475,7 +1475,7 @@ class GraphVizGen:
             cast_type = "(void*)"
             if not struct_member['ptr']:
                 cast_type = "(void*)&"
-        elif 'bool' in struct_member['type']:
+        elif 'bool' in struct_member['type'].lower():
             print_type = "s"
             member_post = ' ? "TRUE" : "FALSE"'
         elif 'float' in struct_member['type']:

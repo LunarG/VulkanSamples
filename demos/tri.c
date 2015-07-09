@@ -1437,7 +1437,7 @@ static void demo_init_vk(struct demo *demo)
     uint32_t enabled_layer_count = 0;
 
     /* Look for validation layers */
-    bool32_t validation_found = 0;
+    VkBool32 validation_found = 0;
     err = vkGetGlobalLayerProperties(&instance_layer_count, NULL);
     assert(!err);
 
@@ -1463,7 +1463,7 @@ static void demo_init_vk(struct demo *demo)
     err = vkGetGlobalExtensionProperties(NULL, &instance_extension_count, NULL);
     assert(!err);
 
-    bool32_t WSIextFound = 0;
+    VkBool32 WSIextFound = 0;
     memset(extension_names, 0, sizeof(extension_names));
     instance_extensions = malloc(sizeof(VkExtensionProperties) * instance_extension_count);
     err = vkGetGlobalExtensionProperties(NULL, &instance_extension_count, instance_extensions);

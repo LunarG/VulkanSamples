@@ -134,7 +134,7 @@ class Subcommand(object):
                     return ("[%i, %i, %i, %i]", '"[" << %s[0] << "," << %s[1] << "," << %s[2] << "," << %s[3] << "]"' % (name, name, name, name))
                 return ("[%f, %f, %f, %f]", "%s[0], %s[1], %s[2], %s[3]" % (name, name, name, name))
             return ("%f", name)
-        if "bool" in vk_type or 'xcb_randr_crtc_t' in vk_type:
+        if "bool" in vk_type.lower() or 'xcb_randr_crtc_t' in vk_type:
             return ("%u", name)
         if True in [t in vk_type.lower() for t in ["int", "flags", "mask", "xcb_window_t"]]:
             if '[' in vk_type: # handle array, current hard-coded to 4 (TODO: Make this dynamic)

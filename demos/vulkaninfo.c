@@ -483,7 +483,7 @@ static void app_dev_init(struct app_dev *dev, struct app_gpu *gpu)
     uint32_t enabled_extension_count = 0;
 
     for (uint32_t i = 0; i < ARRAY_SIZE(known_extensions); i++) {
-        bool32_t extension_found = 0;
+        VkBool32 extension_found = 0;
         for (uint32_t j = 0; j < gpu->device_extension_count; j++) {
             VkExtensionProperties *ext_prop = &gpu->device_extensions[j];
             if (!strcmp(known_extensions[i], ext_prop->extName)) {
@@ -622,7 +622,7 @@ static void app_create_instance(struct app_instance *inst)
                 &inst->global_extensions);
 
     for (uint32_t i = 0; i < ARRAY_SIZE(known_extensions); i++) {
-        bool32_t extension_found = 0;
+        VkBool32 extension_found = 0;
         for (uint32_t j = 0; j < inst->global_extension_count; j++) {
             VkExtensionProperties *extension_prop = &inst->global_extensions[j];
             if (!strcmp(known_extensions[i], extension_prop->extName)) {

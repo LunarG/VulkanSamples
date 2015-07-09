@@ -3213,7 +3213,7 @@ void PreWaitForFences(
 void PostWaitForFences(
     VkDevice device,
     uint32_t fenceCount,
-    bool32_t waitAll,
+    VkBool32 waitAll,
     uint64_t timeout,
     VkResult result)
 {
@@ -3239,7 +3239,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkWaitForFences(
     VkDevice device,
     uint32_t fenceCount,
     const VkFence* pFences,
-    bool32_t waitAll,
+    VkBool32 waitAll,
     uint64_t timeout)
 {
     PreWaitForFences(device, pFences);
@@ -8064,7 +8064,7 @@ void PostCmdPipelineBarrier(
     VkCmdBuffer cmdBuffer,
     VkPipelineStageFlags sourceStageMask,
     VkPipelineStageFlags destStageMask,
-    bool32_t byRegion,
+    VkBool32 byRegion,
     uint32_t memBarrierCount)
 {
     if(cmdBuffer == nullptr)
@@ -8083,7 +8083,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdPipelineBarrier(
     VkCmdBuffer cmdBuffer,
     VkPipelineStageFlags sourceStageMask,
     VkPipelineStageFlags destStageMask,
-    bool32_t byRegion,
+    VkBool32 byRegion,
     uint32_t memBarrierCount,
     const void** ppMemBarriers)
 {

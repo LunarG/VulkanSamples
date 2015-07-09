@@ -420,7 +420,7 @@ core = Extension(
             [Param("VkDevice", "device"),
              Param("uint32_t", "fenceCount"),
              Param("const VkFence*", "pFences"),
-             Param("bool32_t", "waitAll"),
+             Param("VkBool32", "waitAll"),
              Param("uint64_t", "timeout")]),
 
         Proto("VkResult", "CreateSemaphore",
@@ -824,7 +824,7 @@ core = Extension(
             [Param("VkCmdBuffer", "cmdBuffer"),
              Param("VkPipelineStageFlags", "sourceStageMask"),
              Param("VkPipelineStageFlags", "destStageMask"),
-             Param("bool32_t", "byRegion"),
+             Param("VkBool32", "byRegion"),
              Param("uint32_t", "memBarrierCount"),
              Param("const void**", "ppMemBarriers")]),
 

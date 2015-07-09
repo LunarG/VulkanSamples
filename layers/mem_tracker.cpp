@@ -255,10 +255,10 @@ static void retire_device_fences(
 //   if strict is true, verify that (actual & desired) flags == desired
 //  In case of error, report it via dbg callbacks
 static void validate_usage_flags(void* disp_obj, VkFlags actual, VkFlags desired,
-                                     bool32_t strict, VkObject obj, VkObjectType obj_type,
+                                     VkBool32 strict, VkObject obj, VkObjectType obj_type,
                                      char const* ty_str, char const* func_name, char const* usage_str)
 {
-    bool32_t correct_usage = VK_FALSE;
+    VkBool32 correct_usage = VK_FALSE;
     if (strict)
         correct_usage = ((actual & desired) == desired);
     else
@@ -272,7 +272,7 @@ static void validate_usage_flags(void* disp_obj, VkFlags actual, VkFlags desired
 // Helper function to validate usage flags for images
 // Pulls image info and then sends actual vs. desired usage off to helper above where
 //  an error will be flagged if usage is not correct
-static void validate_image_usage_flags(void* disp_obj, VkImage image, VkFlags desired, bool32_t strict,
+static void validate_image_usage_flags(void* disp_obj, VkImage image, VkFlags desired, VkBool32 strict,
                                            char const* func_name, char const* usage_string)
 {
     MT_OBJ_INFO* pInfo = get_object_info(image);
@@ -284,7 +284,7 @@ static void validate_image_usage_flags(void* disp_obj, VkImage image, VkFlags de
 // Helper function to validate usage flags for buffers
 // Pulls buffer info and then sends actual vs. desired usage off to helper above where
 //  an error will be flagged if usage is not correct
-static void validate_buffer_usage_flags(void* disp_obj, VkBuffer buffer, VkFlags desired, bool32_t strict,
+static void validate_buffer_usage_flags(void* disp_obj, VkBuffer buffer, VkFlags desired, VkBool32 strict,
                                             char const* func_name, char const* usage_string)
 {
     MT_OBJ_INFO* pInfo = get_object_info(buffer);
@@ -328,11 +328,11 @@ static void add_mem_obj_info(
 
 // Find CB Info and add mem reference to list container
 // Find Mem Obj Info and add CB reference to list container
-static bool32_t update_cmd_buf_and_mem_references(
+static VkBool32 update_cmd_buf_and_mem_references(
     const VkCmdBuffer    cb,
     const VkDeviceMemory mem)
 {
-    bool32_t result = VK_TRUE;
+    VkBool32 result = VK_TRUE;
     // First update CB binding in MemObj mini CB list
     MT_MEM_OBJ_INFO* pMemInfo = get_mem_obj_info(mem);
     if (!pMemInfo) {
@@ -342,7 +342,7 @@ static bool32_t update_cmd_buf_and_mem_references(
         result = VK_FALSE;
     } else {
         // Search for cmd buffer object in memory object's binding list
-        bool32_t found  = VK_FALSE;
+        VkBool32 found  = VK_FALSE;
         if (pMemInfo->pCmdBufferBindings.size() > 0) {
             for (list<VkCmdBuffer>::iterator it = pMemInfo->pCmdBufferBindings.begin(); it != pMemInfo->pCmdBufferBindings.end(); ++it) {
                 if ((*it) == cb) {
@@ -366,7 +366,7 @@ static bool32_t update_cmd_buf_and_mem_references(
             result = VK_FALSE;
         } else {
             // Search for memory object in cmd buffer's reference list
-            bool32_t found  = VK_FALSE;
+            VkBool32 found  = VK_FALSE;
             if (pCBInfo->pMemObjList.size() > 0) {
                 for (list<VkDeviceMemory>::iterator it = pCBInfo->pMemObjList.begin(); it != pCBInfo->pMemObjList.end(); ++it) {
                     if ((*it) == mem) {
@@ -401,10 +401,10 @@ static void remove_cmd_buf_and_mem_reference(
 }
 
 // Free bindings related to CB
-static bool32_t clear_cmd_buf_and_mem_references(
+static VkBool32 clear_cmd_buf_and_mem_references(
     const VkCmdBuffer cb)
 {
-    bool32_t result = VK_TRUE;
+    VkBool32 result = VK_TRUE;
     MT_CB_INFO* pCBInfo = get_cmd_buf_info(cb);
     if (!pCBInfo) {
         log_msg(mdd(cb), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, cb, 0, MEMTRACK_INVALID_CB, "MEM",
@@ -424,10 +424,10 @@ static bool32_t clear_cmd_buf_and_mem_references(
 
 // Delete CBInfo from list along with all of it's mini MemObjInfo
 //   and also clear mem references to CB
-static bool32_t delete_cmd_buf_info(
+static VkBool32 delete_cmd_buf_info(
     const VkCmdBuffer cb)
 {
-    bool32_t result = VK_TRUE;
+    VkBool32 result = VK_TRUE;
     result = clear_cmd_buf_and_mem_references(cb);
     // Delete the CBInfo info
     if (result == VK_TRUE) {
@@ -437,7 +437,7 @@ static bool32_t delete_cmd_buf_info(
 }
 
 // Delete the entire CB list
-static bool32_t delete_cmd_buf_info_list(
+static VkBool32 delete_cmd_buf_info_list(
     void)
 {
     for (unordered_map<VkCmdBuffer, MT_CB_INFO>::iterator ii=cbMap.begin(); ii!=cbMap.end(); ++ii) {
@@ -500,10 +500,10 @@ static void deleteMemObjInfo(
 }
 
 // Check if fence for given CB is completed
-static bool32_t checkCBCompleted(
+static VkBool32 checkCBCompleted(
     const VkCmdBuffer cb)
 {
-    bool32_t result = VK_TRUE;
+    VkBool32 result = VK_TRUE;
     MT_CB_INFO* pCBInfo = get_cmd_buf_info(cb);
     if (!pCBInfo) {
         log_msg(mdd(cb), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, cb, 0, MEMTRACK_INVALID_CB, "MEM",
@@ -522,12 +522,12 @@ static bool32_t checkCBCompleted(
     return result;
 }
 
-static bool32_t freeMemObjInfo(
+static VkBool32 freeMemObjInfo(
     VkObject       object,
     VkDeviceMemory mem,
     bool           internal)
 {
-    bool32_t result = VK_TRUE;
+    VkBool32 result = VK_TRUE;
     // Parse global list to find info w/ mem
     MT_MEM_OBJ_INFO* pInfo = get_mem_obj_info(mem);
     if (!pInfo) {
@@ -575,10 +575,10 @@ static bool32_t freeMemObjInfo(
 // 1. Remove ObjectInfo from MemObjInfo list container of obj bindings & free it
 // 2. Decrement refCount for MemObjInfo
 // 3. Clear MemObjInfo ptr from ObjectInfo
-static bool32_t clear_object_binding(
+static VkBool32 clear_object_binding(
     VkObject object)
 {
-    bool32_t result = VK_FALSE;
+    VkBool32 result = VK_FALSE;
     MT_OBJ_INFO* pObjInfo = get_object_info(object);
     if (pObjInfo) {
         if (!pObjInfo->pMemObjInfo || pObjInfo->pMemObjInfo->pObjBindings.size() <= 0) {
@@ -614,12 +614,12 @@ static bool32_t clear_object_binding(
 //  device is required for error logging, need a dispatchable
 //  object for that.
 // Return VK_TRUE if addition is successful, VK_FALSE otherwise
-static bool32_t set_object_binding(
+static VkBool32 set_object_binding(
     VkObject       dispatch_object,
     VkObject       object,
     VkDeviceMemory mem)
 {
-    bool32_t result = VK_FALSE;
+    VkBool32 result = VK_FALSE;
     // Handle NULL case separately, just clear previous binding & decrement reference
     if (mem == VK_NULL_HANDLE) {
         log_msg(mdd(dispatch_object), VK_DBG_REPORT_WARN_BIT, (VkObjectType) 0, object, 0, MEMTRACK_INTERNAL_ERROR, "MEM",
@@ -670,11 +670,11 @@ static bool32_t set_object_binding(
 //  Add reference from objectInfo to memoryInfo
 //  Add reference off of objInfo
 // Return VK_TRUE if addition is successful, VK_FALSE otherwise
-static bool32_t set_sparse_buffer_binding(
+static VkBool32 set_sparse_buffer_binding(
     VkObject       object,
     VkDeviceMemory mem)
 {
-    bool32_t result = VK_FALSE;
+    VkBool32 result = VK_FALSE;
     // Handle NULL case separately, just clear previous binding & decrement reference
     if (mem == VK_NULL_HANDLE) {
         clear_object_binding(object);
@@ -694,7 +694,7 @@ static bool32_t set_sparse_buffer_binding(
             return VK_FALSE;
         } else {
             // Search for object in memory object's binding list
-            bool32_t found  = VK_FALSE;
+            VkBool32 found  = VK_FALSE;
             if (pInfo->pObjBindings.size() > 0) {
                 for (list<VkObject>::iterator it = pInfo->pObjBindings.begin(); it != pInfo->pObjBindings.end(); ++it) {
                     if ((*it) == object) {
@@ -1115,7 +1115,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkFreeMemory(
      * all API objects referencing it and that it is not referenced by any queued command buffers
      */
     loader_platform_thread_lock_mutex(&globalLock);
-    bool32_t noerror = freeMemObjInfo(device, mem, false);
+    VkBool32 noerror = freeMemObjInfo(device, mem, false);
     print_mem_list(device);
     print_object_list(device);
     printCBList(device);
@@ -1316,7 +1316,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkWaitForFences(
     VkDevice       device,
     uint32_t       fenceCount,
     const VkFence *pFences,
-    bool32_t       waitAll,
+    VkBool32       waitAll,
     uint64_t       timeout)
 {
     // Verify fence status of submitted fences

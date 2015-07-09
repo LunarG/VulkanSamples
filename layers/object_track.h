@@ -369,7 +369,7 @@ validateQueueFlags(
 }
 
 // Check object status for selected flag state
-static bool32_t
+static VkBool32
 validate_status(
     VkObject            dispatchable_object,
     VkObject            vkObj,
@@ -754,7 +754,7 @@ explicit_WaitForFences(
     VkDevice       device,
     uint32_t       fenceCount,
     const VkFence *pFences,
-    bool32_t       waitAll,
+    VkBool32       waitAll,
     uint64_t       timeout)
 {
     loader_platform_thread_lock_mutex(&objLock);

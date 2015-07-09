@@ -174,7 +174,7 @@ public:
     VkResult BeginCommandBuffer();
     VkResult BeginCommandBuffer(VkCmdBufferBeginInfo *pInfo);
     VkResult EndCommandBuffer();
-    void PipelineBarrier(VkPipelineStageFlags src_stages, VkPipelineStageFlags dest_stages, bool32_t byRegion, uint32_t memBarrierCount, const void** ppMemBarriers);
+    void PipelineBarrier(VkPipelineStageFlags src_stages, VkPipelineStageFlags dest_stages, VkBool32 byRegion, uint32_t memBarrierCount, const void** ppMemBarriers);
     void AddRenderTarget(VkImageObj *renderTarget);
     void AddDepthStencil();
     void ClearAllBuffers(VkClearColorValue clear_color, float depth_clear_color, uint32_t stencil_clear_color, VkDepthStencilObj *depthStencilObj);

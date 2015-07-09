@@ -116,8 +116,8 @@ struct intel_pipeline_shader {
     uint32_t outputs_offset;
     uint32_t generic_input_start;
 
-    bool32_t enable_user_clip;
-    bool32_t reads_user_clip;
+    VkBool32 enable_user_clip;
+    VkBool32 reads_user_clip;
 
     uint32_t in_count;
     uint32_t out_count;
@@ -132,10 +132,10 @@ struct intel_pipeline_shader {
     uint32_t output_topology;
     uint32_t control_data_header_size_hwords;
     uint32_t control_data_format;
-    bool32_t include_primitive_id;
+    VkBool32 include_primitive_id;
     int32_t  invocations;
-    bool32_t dual_instanced_dispatch;
-    bool32_t discard_adj;
+    VkBool32 dual_instanced_dispatch;
+    VkBool32 discard_adj;
 
     uint32_t urb_grf_start;
     uint32_t urb_grf_start_16;

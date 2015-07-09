@@ -1237,7 +1237,7 @@ void VKAPI vkCmdPipelineBarrier(
     VkCmdBuffer                                 cmdBuffer,
     VkPipelineStageFlags                        sourceStageMask,
     VkPipelineStageFlags                        destStageMask,
-    bool32_t                                    byRegion,
+    VkBool32                                    byRegion,
     uint32_t                                    memBarrierCount,
     const void**                                ppMemBarriers)
 {
@@ -1346,7 +1346,7 @@ ICD_EXPORT VkResult VKAPI vkWaitForFences(
     VkDevice                                  device,
     uint32_t                                    fenceCount,
     const VkFence*                            pFences,
-    bool32_t                                    waitAll,
+    VkBool32                                    waitAll,
     uint64_t                                    timeout)
 {
     NULLDRV_LOG_FUNC;

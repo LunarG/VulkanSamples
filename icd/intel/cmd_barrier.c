@@ -297,7 +297,7 @@ ICD_EXPORT void VKAPI vkCmdPipelineBarrier(
         VkCmdBuffer                                 cmdBuffer,
         VkPipelineStageFlags                        sourceStageMask,
         VkPipelineStageFlags                        destStageMask,
-        bool32_t                                    byRegion,
+        VkBool32                                    byRegion,
         uint32_t                                    memBarrierCount,
         const void**                                ppMemBarriers)
 {

@@ -69,7 +69,7 @@ void Environment::SetUp()
 
     instance_extension_names.push_back(VK_WSI_LUNARG_EXTENSION_NAME);
 
-    bool32_t extFound;
+    VkBool32 extFound;
 
     instance_extensions = vk_testing::GetGlobalExtensions();
 
