@@ -41,11 +41,6 @@ echo "ShaderCheckerReportLevel = $OUTPUT_LEVEL" >> $SETTINGS_NAME
 # a saved "golden" image and will report an error if there is any difference
 ./vk_render_tests --compare-images
 
-if [ "$RESTORE_SETTINGS" = "true" ]; then
-    echo Restore $SETTINGS_NAME from $TMP_SETTINGS_NAME
-    mv $TMP_SETTINGS_NAME $SETTINGS_NAME
-fi
-
 # vkglavetracereplay.sh tests glave trace and replay
 D=`dirname \`pwd\``
 GDIR=../../../Glave/`basename $D`/
