@@ -501,8 +501,8 @@ static void gen7_fill_3DSTATE_SF_body(const struct intel_cmd *cmd,
             format = GEN6_ZFORMAT_D32_FLOAT;
             break;
         default:
-            assert(!cmd->bind.fb->ds); // Must have valid format if ds attached
-            format = 0;
+            assert(rp->depthStencilFormat == VK_FORMAT_UNDEFINED);
+            format = GEN6_ZFORMAT_D32_FLOAT;
             break;
         }
 
@@ -833,7 +833,7 @@ static void gen6_3DSTATE_MULTISAMPLE(struct intel_cmd *cmd,
 }
 
 static void gen6_3DSTATE_DEPTH_BUFFER(struct intel_cmd *cmd,
-                                      const struct intel_ds_view *view,
+                                      const struct intel_att_view *view,
                                       bool optimal_ds)
 {
     const uint8_t cmd_len = 7;
@@ -850,26 +850,26 @@ static void gen6_3DSTATE_DEPTH_BUFFER(struct intel_cmd *cmd,
     pos = cmd_batch_pointer(cmd, cmd_len, &dw);
     dw[0] = dw0;
 
-    dw[1] = view->cmd[0];
+    dw[1] = view->att_cmd[0];
     /* note that we only enable HiZ on Gen7+ */
     if (!optimal_ds)
         dw[1] &= ~GEN7_DEPTH_DW1_HIZ_ENABLE;
 
     dw[2] = 0;
-    dw[3] = view->cmd[2];
-    dw[4] = view->cmd[3];
-    dw[5] = view->cmd[4];
-    dw[6] = view->cmd[5];
+    dw[3] = view->att_cmd[2];
+    dw[4] = view->att_cmd[3];
+    dw[5] = view->att_cmd[4];
+    dw[6] = view->att_cmd[5];
 
     if (view->img) {
         cmd_reserve_reloc(cmd, 1);
         cmd_batch_reloc(cmd, pos + 2, view->img->obj.mem->bo,
-                view->cmd[1], INTEL_RELOC_WRITE);
+                view->att_cmd[1], INTEL_RELOC_WRITE);
     }
 }
 
 static void gen6_3DSTATE_STENCIL_BUFFER(struct intel_cmd *cmd,
-                                        const struct intel_ds_view *view,
+                                        const struct intel_att_view *view,
                                         bool optimal_ds)
 {
     const uint8_t cmd_len = 3;
@@ -887,11 +887,11 @@ static void gen6_3DSTATE_STENCIL_BUFFER(struct intel_cmd *cmd,
     dw[0] = dw0;
 
     if (view->has_stencil) {
-        dw[1] = view->cmd[6];
+        dw[1] = view->att_cmd[6];
 
         cmd_reserve_reloc(cmd, 1);
         cmd_batch_reloc(cmd, pos + 2, view->img->obj.mem->bo,
-                view->cmd[7], INTEL_RELOC_WRITE);
+                view->att_cmd[7], INTEL_RELOC_WRITE);
     } else {
         dw[1] = 0;
         dw[2] = 0;
@@ -899,7 +899,7 @@ static void gen6_3DSTATE_STENCIL_BUFFER(struct intel_cmd *cmd,
 }
 
 static void gen6_3DSTATE_HIER_DEPTH_BUFFER(struct intel_cmd *cmd,
-                                           const struct intel_ds_view *view,
+                                           const struct intel_att_view *view,
                                            bool optimal_ds)
 {
     const uint8_t cmd_len = 3;
@@ -917,11 +917,11 @@ static void gen6_3DSTATE_HIER_DEPTH_BUFFER(struct intel_cmd *cmd,
     dw[0] = dw0;
 
     if (view->has_hiz && optimal_ds) {
-        dw[1] = view->cmd[8];
+        dw[1] = view->att_cmd[8];
 
         cmd_reserve_reloc(cmd, 1);
         cmd_batch_reloc(cmd, pos + 2, view->img->obj.mem->bo,
-                view->cmd[9], INTEL_RELOC_WRITE);
+                view->att_cmd[9], INTEL_RELOC_WRITE);
     } else {
         dw[1] = 0;
         dw[2] = 0;
@@ -1732,18 +1732,20 @@ static uint32_t emit_binding_table(struct intel_cmd *cmd,
         switch (slot->type) {
         case INTEL_PIPELINE_RMAP_RT:
             {
-                const struct intel_rt_view *view =
-                    (slot->index < cmd->bind.fb->rt_count) ?
-                    cmd->bind.fb->rt[slot->index] : NULL;
+                const struct intel_render_pass *rp = cmd->bind.render_pass;
+                const struct intel_fb *fb = cmd->bind.fb;
+                const struct intel_att_view *view =
+                    (slot->index < rp->colorAttachmentCount) ?
+                    fb->views[slot->index] : NULL;
 
                 if (view) {
                     offset = cmd_surface_write(cmd, INTEL_CMD_ITEM_SURFACE,
                             GEN6_ALIGNMENT_SURFACE_STATE,
-                            view->cmd_len, view->cmd);
+                            view->cmd_len, view->att_cmd);
 
                     cmd_reserve_reloc(cmd, 1);
                     cmd_surface_reloc(cmd, offset, 1, view->img->obj.mem->bo,
-                            view->cmd[1], INTEL_RELOC_WRITE);
+                            view->att_cmd[1], INTEL_RELOC_WRITE);
                 } else {
                     need_null_view = true;
                 }
@@ -2038,21 +2040,23 @@ static void emit_ds(struct intel_cmd *cmd)
 {
     const struct intel_render_pass *rp = cmd->bind.render_pass;
     const struct intel_fb *fb = cmd->bind.fb;
-    const struct intel_ds_view *ds = fb->ds;
+    const struct intel_att_view *view =
+        (rp->depthStencilFormat != VK_FORMAT_UNDEFINED) ?
+        fb->views[rp->colorAttachmentCount] : NULL;
 
     if (!cmd->bind.render_pass_changed)
         return;
 
-    if (!ds) {
+    if (!view) {
         /* all zeros */
-        static const struct intel_ds_view null_ds;
-        ds = &null_ds;
+        static const struct intel_att_view null_view;
+        view = &null_view;
     }
 
     cmd_wa_gen6_pre_ds_flush(cmd);
-    gen6_3DSTATE_DEPTH_BUFFER(cmd, ds, rp->optimal_ds);
-    gen6_3DSTATE_STENCIL_BUFFER(cmd, ds, rp->optimal_ds);
-    gen6_3DSTATE_HIER_DEPTH_BUFFER(cmd, ds, rp->optimal_ds);
+    gen6_3DSTATE_DEPTH_BUFFER(cmd, view, rp->optimal_ds);
+    gen6_3DSTATE_STENCIL_BUFFER(cmd, view, rp->optimal_ds);
+    gen6_3DSTATE_HIER_DEPTH_BUFFER(cmd, view, rp->optimal_ds);
 
     if (cmd_gen(cmd) >= INTEL_GEN(7))
         gen7_3DSTATE_CLEAR_PARAMS(cmd, 0);
@@ -3072,20 +3076,20 @@ static void gen7_meta_ps(struct intel_cmd *cmd)
 static void gen6_meta_depth_buffer(struct intel_cmd *cmd)
 {
     const struct intel_cmd_meta *meta = cmd->bind.meta;
-    const struct intel_ds_view *ds = meta->ds.view;
+    const struct intel_att_view *view = meta->ds.view;
 
     CMD_ASSERT(cmd, 6, 7.5);
 
-    if (!ds) {
+    if (!view) {
         /* all zeros */
-        static const struct intel_ds_view null_ds;
-        ds = &null_ds;
+        static const struct intel_att_view null_view;
+        view = &null_view;
     }
 
     cmd_wa_gen6_pre_ds_flush(cmd);
-    gen6_3DSTATE_DEPTH_BUFFER(cmd, ds, meta->ds.optimal);
-    gen6_3DSTATE_STENCIL_BUFFER(cmd, ds, meta->ds.optimal);
-    gen6_3DSTATE_HIER_DEPTH_BUFFER(cmd, ds, meta->ds.optimal);
+    gen6_3DSTATE_DEPTH_BUFFER(cmd, view, meta->ds.optimal);
+    gen6_3DSTATE_STENCIL_BUFFER(cmd, view, meta->ds.optimal);
+    gen6_3DSTATE_HIER_DEPTH_BUFFER(cmd, view, meta->ds.optimal);
 
     if (cmd_gen(cmd) >= INTEL_GEN(7))
         gen7_3DSTATE_CLEAR_PARAMS(cmd, 0);
@@ -3616,9 +3620,11 @@ ICD_EXPORT void VKAPI vkCmdBeginRenderPass(
     const VkRenderPassBegin*                pRenderPassBegin)
 {
    struct intel_cmd *cmd = intel_cmd(cmdBuffer);
-   struct intel_render_pass *rp = (struct intel_render_pass *) pRenderPassBegin->renderPass;
-   struct intel_fb *fb = (struct intel_fb *) pRenderPassBegin->framebuffer;
-   unsigned i;
+   const struct intel_render_pass *rp =
+       intel_render_pass(pRenderPassBegin->renderPass);
+   const struct intel_fb *fb = intel_fb(pRenderPassBegin->framebuffer);
+   const struct intel_att_view *view;
+   uint32_t i;
 
    if (!cmd->primary) {
        cmd_fail(cmd, VK_ERROR_UNKNOWN);
@@ -3631,17 +3637,17 @@ ICD_EXPORT void VKAPI vkCmdBeginRenderPass(
    for (i = 0; i < rp->colorAttachmentCount; i++) {
        if (rp->colorLoadOps[i] == VK_ATTACHMENT_LOAD_OP_CLEAR) {
            /* issue clear of this attachment */
-           const struct intel_rt_view *rt = fb->rt[i];
+           view = fb->views[i];
 
            VkImageSubresourceRange ranges[1] = {{
                VK_IMAGE_ASPECT_COLOR,
-               rt->mipLevel,
+               view->mipLevel,
                1,
-               rt->baseArraySlice,
-               rt->array_size
+               view->baseArraySlice,
+               view->array_size
            }};
 
-           cmd_meta_clear_color_image(cmdBuffer, (VkImage) rt->img,
+           cmd_meta_clear_color_image(cmdBuffer, (VkImage) view->img,
                                       rp->colorLayouts[i],
                                       &rp->colorClearValues[i],
                                       1,
@@ -3650,17 +3656,17 @@ ICD_EXPORT void VKAPI vkCmdBeginRenderPass(
    }
 
    if (rp->depthLoadOp == VK_ATTACHMENT_LOAD_OP_CLEAR) {
-       const struct intel_ds_view *ds = fb->ds;
+       view = fb->views[rp->colorAttachmentCount];
 
        VkImageSubresourceRange ranges[1] = {{
            VK_IMAGE_ASPECT_DEPTH,
-           0, /* ds->mipLevel, */
+           0, /* view->mipLevel, */
            1,
-           0, /* ds->baseArraySlice, */
-           ds->array_size
+           0, /* view->baseArraySlice, */
+           view->array_size
        }};
 
-       cmd_meta_clear_depth_stencil_image(cmdBuffer, (VkImage)ds->img,
+       cmd_meta_clear_depth_stencil_image(cmdBuffer, (VkImage) view->img,
                                           rp->depthStencilLayout,
                                           rp->depthLoadClearValue,
                                           0,
@@ -3669,17 +3675,17 @@ ICD_EXPORT void VKAPI vkCmdBeginRenderPass(
    }
 
    if (rp->stencilLoadOp == VK_ATTACHMENT_LOAD_OP_CLEAR) {
-       const struct intel_ds_view *ds = fb->ds;
+       view = fb->views[rp->colorAttachmentCount];
 
        VkImageSubresourceRange ranges[1] = {{
            VK_IMAGE_ASPECT_STENCIL,
-           0, /* ds->mipLevel, */
+           0, /* view->mipLevel, */
            1,
-           0, /* ds->baseArraySlice, */
-           ds->array_size
+           0, /* view->baseArraySlice, */
+           view->array_size
        }};
 
-       cmd_meta_clear_depth_stencil_image(cmdBuffer, (VkImage)ds->img,
+       cmd_meta_clear_depth_stencil_image(cmdBuffer, (VkImage) view->img,
                                           rp->depthStencilLayout,
                                           0.0f,
                                           rp->stencilLoadClearValue,

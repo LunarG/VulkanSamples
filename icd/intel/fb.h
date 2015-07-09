@@ -32,10 +32,8 @@
 struct intel_fb {
     struct intel_obj obj;
 
-    const struct intel_rt_view *rt[INTEL_MAX_RENDER_TARGETS];
-    uint32_t rt_count;
-
-    const struct intel_ds_view *ds;
+    const struct intel_att_view **views;
+    uint32_t view_count;
 
     uint32_t sample_count;
     uint32_t width;

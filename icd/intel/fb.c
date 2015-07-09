@@ -51,54 +51,60 @@ VkResult intel_fb_create(struct intel_dev *dev,
     if (!fb)
         return VK_ERROR_OUT_OF_HOST_MEMORY;
 
+    fb->view_count = info->colorAttachmentCount;
+    if (info->pDepthStencilAttachment)
+        fb->view_count++;
+
+    fb->views = intel_alloc(fb, sizeof(fb->views[0]) * fb->view_count, 0,
+            VK_SYSTEM_ALLOC_TYPE_INTERNAL);
+    if (!fb->views) {
+        intel_fb_destroy(fb);
+        return VK_ERROR_OUT_OF_HOST_MEMORY;
+    }
+
     width = info->width;
     height = info->height;
     array_size = info->layers;
 
     for (i = 0; i < info->colorAttachmentCount; i++) {
-        const VkColorAttachmentBindInfo *att =
-            &info->pColorAttachments[i];
-        const struct intel_rt_view *rt = intel_rt_view(att->view);
-        const struct intel_layout *layout = &rt->img->layout;
+        const VkColorAttachmentBindInfo *att = &info->pColorAttachments[i];
+        const struct intel_att_view *view =
+            intel_att_view_from_color(att->view);
+        const struct intel_layout *layout = &view->img->layout;
 
         if (width > layout->width0)
             width = layout->width0;
         if (height > layout->height0)
             height = layout->height0;
-        if (array_size > rt->array_size)
-            array_size = rt->array_size;
+        if (array_size > view->array_size)
+            array_size = view->array_size;
 
-        if (rt->img->samples != info->sampleCount) {
+        if (view->img->samples != info->sampleCount) {
             intel_fb_destroy(fb);
             return VK_ERROR_INVALID_VALUE;
         }
 
-        fb->rt[i] = rt;
+        fb->views[i] = view;
     }
 
-    fb->rt_count = info->colorAttachmentCount;
-
     if (info->pDepthStencilAttachment) {
-        const VkDepthStencilBindInfo *att =
-            info->pDepthStencilAttachment;
-        const struct intel_ds_view *ds = intel_ds_view(att->view);
-        const struct intel_layout *layout = &ds->img->layout;
+        const VkDepthStencilBindInfo *att = info->pDepthStencilAttachment;
+        const struct intel_att_view *view = intel_att_view_from_ds(att->view);
+        const struct intel_layout *layout = &view->img->layout;
 
         if (width > layout->width0)
             width = layout->width0;
         if (height > layout->height0)
             height = layout->height0;
-        if (array_size > ds->array_size)
-            array_size = ds->array_size;
+        if (array_size > view->array_size)
+            array_size = view->array_size;
 
-        if (ds->img->samples != info->sampleCount) {
+        if (view->img->samples != info->sampleCount) {
             intel_fb_destroy(fb);
             return VK_ERROR_INVALID_VALUE;
         }
 
-        fb->ds = ds;
-    } else {
-        fb->ds = NULL;
+        fb->views[info->colorAttachmentCount] = view;
     }
 
     fb->width = width;
@@ -117,6 +123,8 @@ VkResult intel_fb_create(struct intel_dev *dev,
 
 void intel_fb_destroy(struct intel_fb *fb)
 {
+    if (fb->views)
+        intel_free(fb, fb->views);
     intel_base_destroy(&fb->obj.base);
 }
 

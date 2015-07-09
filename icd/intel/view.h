@@ -65,7 +65,7 @@ struct intel_img_view {
     uint32_t cmd_len;
 };
 
-struct intel_rt_view {
+struct intel_att_view {
     struct intel_obj obj;
 
     struct intel_img *img;
@@ -74,24 +74,19 @@ struct intel_rt_view {
     uint32_t baseArraySlice;
     uint32_t array_size;
 
-    /* SURFACE_STATE */
+    /* SURFACE_STATE for readback */
     uint32_t cmd[8];
     uint32_t cmd_len;
-};
-
-struct intel_ds_view {
-    struct intel_obj obj;
-
-    struct intel_img *img;
-
-    uint32_t array_size;
 
     /*
+     * SURFACE_STATE when is_rt is true.  Otherwise,
+     *
      * 3DSTATE_DEPTH_BUFFER
      * 3DSTATE_STENCIL_BUFFER
      * 3DSTATE_HIER_DEPTH_BUFFER
      */
-    uint32_t cmd[10];
+    uint32_t att_cmd[10];
+    bool is_rt;
     bool has_stencil;
     bool has_hiz;
 };
@@ -116,24 +111,19 @@ static inline struct intel_img_view *intel_img_view_from_obj(struct intel_obj *o
     return (struct intel_img_view *) obj;
 }
 
-static inline struct intel_rt_view *intel_rt_view(VkColorAttachmentView view)
+static inline struct intel_att_view *intel_att_view_from_color(VkColorAttachmentView view)
 {
-    return (struct intel_rt_view *) view;
+    return (struct intel_att_view *) view;
 }
 
-static inline struct intel_rt_view *intel_rt_view_from_obj(struct intel_obj *obj)
+static inline struct intel_att_view *intel_att_view_from_ds(VkDepthStencilView view)
 {
-    return (struct intel_rt_view *) obj;
+    return (struct intel_att_view *) view;
 }
 
-static inline struct intel_ds_view *intel_ds_view(VkDepthStencilView view)
+static inline struct intel_att_view *intel_att_view_from_obj(struct intel_obj *obj)
 {
-    return (struct intel_ds_view *) view;
-}
-
-static inline struct intel_ds_view *intel_ds_view_from_obj(struct intel_obj *obj)
-{
-    return (struct intel_ds_view *) obj;
+    return (struct intel_att_view *) obj;
 }
 
 void intel_null_view_init(struct intel_null_view *view,
@@ -150,14 +140,12 @@ VkResult intel_img_view_create(struct intel_dev *dev,
                                  struct intel_img_view **view_ret);
 void intel_img_view_destroy(struct intel_img_view *view);
 
-VkResult intel_rt_view_create(struct intel_dev *dev,
-                                const VkColorAttachmentViewCreateInfo *info,
-                                struct intel_rt_view **view_ret);
-void intel_rt_view_destroy(struct intel_rt_view *view);
-
-VkResult intel_ds_view_create(struct intel_dev *dev,
-                                const VkDepthStencilViewCreateInfo *info,
-                                struct intel_ds_view **view_ret);
-void intel_ds_view_destroy(struct intel_ds_view *view);
+VkResult intel_att_view_create_for_color(struct intel_dev *dev,
+                                         const VkColorAttachmentViewCreateInfo *info,
+                                         struct intel_att_view **view_ret);
+VkResult intel_att_view_create_for_ds(struct intel_dev *dev,
+                                      const VkDepthStencilViewCreateInfo *info,
+                                      struct intel_att_view **view_ret);
+void intel_att_view_destroy(struct intel_att_view *view);
 
 #endif /* VIEW_H */

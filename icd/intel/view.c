@@ -765,6 +765,7 @@ ds_init_info_null(const struct intel_gpu *gpu,
 static void
 ds_init_info(const struct intel_gpu *gpu,
              const struct intel_img *img,
+             VkImageViewType view_type,
              VkFormat format, unsigned level,
              unsigned first_layer, unsigned num_layers,
              struct ds_surface_info *info)
@@ -775,8 +776,7 @@ ds_init_info(const struct intel_gpu *gpu,
 
    memset(info, 0, sizeof(*info));
 
-   info->surface_type =
-       view_type_to_surface_type(img_type_to_view_type(img->type, first_layer, num_layers));
+   info->surface_type = view_type_to_surface_type(view_type);
 
    if (info->surface_type == GEN6_SURFTYPE_CUBE) {
       /*
@@ -899,11 +899,12 @@ ds_init_info(const struct intel_gpu *gpu,
    info->num_layers = num_layers;
 }
 
-static void ds_view_init(struct intel_ds_view *view,
-                         const struct intel_gpu *gpu,
-                         const struct intel_img *img,
-                         VkFormat format, unsigned level,
-                         unsigned first_layer, unsigned num_layers)
+static void att_view_init_for_ds(struct intel_att_view *view,
+                                 const struct intel_gpu *gpu,
+                                 const struct intel_img *img,
+                                 VkImageViewType view_type,
+                                 VkFormat format, unsigned level,
+                                 unsigned first_layer, unsigned num_layers)
 {
    const int max_2d_size U_ASSERT_ONLY =
        (intel_gpu_gen(gpu) >= INTEL_GEN(7)) ? 16384 : 8192;
@@ -916,7 +917,8 @@ static void ds_view_init(struct intel_ds_view *view,
    INTEL_GPU_ASSERT(gpu, 6, 7.5);
 
    if (img) {
-      ds_init_info(gpu, img, format, level, first_layer, num_layers, &info);
+      ds_init_info(gpu, img, view_type, format, level,
+              first_layer, num_layers, &info);
    }
    else {
       ds_init_info_null(gpu, &info);
@@ -1012,8 +1014,8 @@ static void ds_view_init(struct intel_ds_view *view,
       dw6 = 0;
    }
 
-   STATIC_ASSERT(ARRAY_SIZE(view->cmd) >= 10);
-   dw = view->cmd;
+   STATIC_ASSERT(ARRAY_SIZE(view->att_cmd) >= 10);
+   dw = view->att_cmd;
 
    dw[0] = dw1;
    dw[1] = dw2;
@@ -1055,6 +1057,62 @@ static void ds_view_init(struct intel_ds_view *view,
 
    view->has_stencil = info.stencil.stride;
    view->has_hiz = info.hiz.stride;
+}
+
+static const VkChannelMapping identity_channel_mapping = {
+    .r = VK_CHANNEL_SWIZZLE_R,
+    .g = VK_CHANNEL_SWIZZLE_G,
+    .b = VK_CHANNEL_SWIZZLE_B,
+    .a = VK_CHANNEL_SWIZZLE_A,
+};
+
+static void att_view_init_for_rt(struct intel_att_view *view,
+                                 const struct intel_gpu *gpu,
+                                 const struct intel_img *img,
+                                 VkImageViewType view_type,
+                                 VkFormat format, unsigned level,
+                                 unsigned first_layer, unsigned num_layers)
+{
+    if (intel_gpu_gen(gpu) >= INTEL_GEN(7)) {
+        surface_state_tex_gen7(gpu, img, view_type, format,
+                level, 1, first_layer, num_layers,
+                identity_channel_mapping, true, view->att_cmd);
+    } else {
+        surface_state_tex_gen6(gpu, img, view_type, format,
+                level, 1, first_layer, num_layers,
+                true, view->att_cmd);
+    }
+
+    view->is_rt = true;
+}
+
+static void att_view_init_for_input(struct intel_att_view *view,
+                                    const struct intel_gpu *gpu,
+                                    const struct intel_img *img,
+                                    VkImageViewType view_type,
+                                    VkFormat format, unsigned level,
+                                    unsigned first_layer, unsigned num_layers)
+{
+    if (intel_gpu_gen(gpu) >= INTEL_GEN(7)) {
+        if (false) {
+            surface_state_tex_gen7(gpu, img, view_type, format,
+                    level, 1, first_layer, num_layers,
+                    identity_channel_mapping, false, view->cmd);
+        } else {
+            surface_state_null_gen7(gpu, view->cmd);
+        }
+
+        view->cmd_len = 8;
+    } else {
+        if (false) {
+            surface_state_tex_gen6(gpu, img, view_type, format,
+                    level, 1, first_layer, num_layers, false, view->cmd);
+        } else {
+            surface_state_null_gen6(gpu, view->cmd);
+        }
+
+        view->cmd_len = 6;
+    }
 }
 
 void intel_null_view_init(struct intel_null_view *view,
@@ -1234,33 +1292,28 @@ void intel_img_view_destroy(struct intel_img_view *view)
     intel_base_destroy(&view->obj.base);
 }
 
-static void rt_view_destroy(struct intel_obj *obj)
+static void att_view_destroy(struct intel_obj *obj)
 {
-    struct intel_rt_view *view = intel_rt_view_from_obj(obj);
+    struct intel_att_view *view = intel_att_view_from_obj(obj);
 
-    intel_rt_view_destroy(view);
+    intel_att_view_destroy(view);
 }
 
-VkResult intel_rt_view_create(struct intel_dev *dev,
-                                const VkColorAttachmentViewCreateInfo *info,
-                                struct intel_rt_view **view_ret)
+VkResult intel_att_view_create_for_color(struct intel_dev *dev,
+                                         const VkColorAttachmentViewCreateInfo *info,
+                                         struct intel_att_view **view_ret)
 {
-    static const VkChannelMapping identity_channel_mapping = {
-        .r = VK_CHANNEL_SWIZZLE_R,
-        .g = VK_CHANNEL_SWIZZLE_G,
-        .b = VK_CHANNEL_SWIZZLE_B,
-        .a = VK_CHANNEL_SWIZZLE_A,
-    };
     struct intel_img *img = intel_img(info->image);
-    struct intel_rt_view *view;
+    struct intel_att_view *view;
+    VkImageViewType view_type;
 
-    view = (struct intel_rt_view *) intel_base_create(&dev->base.handle,
+    view = (struct intel_att_view *) intel_base_create(&dev->base.handle,
             sizeof(*view), dev->base.dbg, VK_OBJECT_TYPE_COLOR_ATTACHMENT_VIEW,
             info, 0);
     if (!view)
         return VK_ERROR_OUT_OF_HOST_MEMORY;
 
-    view->obj.destroy = rt_view_destroy;
+    view->obj.destroy = att_view_destroy;
 
     view->img = img;
 
@@ -1268,69 +1321,59 @@ VkResult intel_rt_view_create(struct intel_dev *dev,
     view->baseArraySlice = info->baseArraySlice;
     view->array_size = info->arraySize;
 
-    if (intel_gpu_gen(dev->gpu) >= INTEL_GEN(7)) {
-        surface_state_tex_gen7(dev->gpu, img,
-                img_type_to_view_type(img->type, info->baseArraySlice, info->arraySize),
-                info->format, info->mipLevel, 1,
-                info->baseArraySlice, info->arraySize,
-                identity_channel_mapping, true, view->cmd);
-        view->cmd_len = 8;
-    } else {
-        surface_state_tex_gen6(dev->gpu, img,
-                img_type_to_view_type(img->type, info->baseArraySlice, info->arraySize),
-                info->format, info->mipLevel, 1,
-                info->baseArraySlice, info->arraySize,
-                true, view->cmd);
-        view->cmd_len = 6;
-    }
+    view_type = img_type_to_view_type(img->type,
+            info->baseArraySlice, info->arraySize);
+
+    att_view_init_for_input(view, dev->gpu, img, view_type, info->format,
+            info->mipLevel, info->baseArraySlice, info->arraySize);
+    att_view_init_for_rt(view, dev->gpu, img, view_type, info->format,
+            info->mipLevel, info->baseArraySlice, info->arraySize);
 
     *view_ret = view;
 
     return VK_SUCCESS;
 }
 
-void intel_rt_view_destroy(struct intel_rt_view *view)
+void intel_att_view_destroy(struct intel_att_view *view)
 {
     intel_base_destroy(&view->obj.base);
 }
 
-static void ds_view_destroy(struct intel_obj *obj)
-{
-    struct intel_ds_view *view = intel_ds_view_from_obj(obj);
-
-    intel_ds_view_destroy(view);
-}
-
-VkResult intel_ds_view_create(struct intel_dev *dev,
-                                const VkDepthStencilViewCreateInfo *info,
-                                struct intel_ds_view **view_ret)
+VkResult intel_att_view_create_for_ds(struct intel_dev *dev,
+                                      const VkDepthStencilViewCreateInfo *info,
+                                      struct intel_att_view **view_ret)
 {
     struct intel_img *img = intel_img(info->image);
-    struct intel_ds_view *view;
+    struct intel_att_view *view;
+    VkImageViewType view_type;
 
-    view = (struct intel_ds_view *) intel_base_create(&dev->base.handle,
+    view = (struct intel_att_view *) intel_base_create(&dev->base.handle,
             sizeof(*view), dev->base.dbg, VK_OBJECT_TYPE_DEPTH_STENCIL_VIEW,
             info, 0);
     if (!view)
         return VK_ERROR_OUT_OF_HOST_MEMORY;
 
-    view->obj.destroy = ds_view_destroy;
+    view->obj.destroy = att_view_destroy;
 
     view->img = img;
 
+    view->mipLevel = info->mipLevel;
+    view->baseArraySlice = info->baseArraySlice;
     view->array_size = info->arraySize;
 
-    ds_view_init(view, dev->gpu, img, img->layout.format, info->mipLevel,
+    view_type = img_type_to_view_type(img->type,
             info->baseArraySlice, info->arraySize);
+
+    /* translate D/S formats to R/G? ones? */
+    att_view_init_for_input(view, dev->gpu, img, view_type, img->layout.format,
+            info->mipLevel, info->baseArraySlice, info->arraySize);
+
+    att_view_init_for_ds(view, dev->gpu, img, view_type, img->layout.format,
+            info->mipLevel, info->baseArraySlice, info->arraySize);
 
     *view_ret = view;
 
     return VK_SUCCESS;
-}
-
-void intel_ds_view_destroy(struct intel_ds_view *view)
-{
-    intel_base_destroy(&view->obj.base);
 }
 
 ICD_EXPORT VkResult VKAPI vkCreateBufferView(
@@ -1362,8 +1405,8 @@ ICD_EXPORT VkResult VKAPI vkCreateColorAttachmentView(
 {
     struct intel_dev *dev = intel_dev(device);
 
-    return intel_rt_view_create(dev, pCreateInfo,
-            (struct intel_rt_view **) pView);
+    return intel_att_view_create_for_color(dev, pCreateInfo,
+            (struct intel_att_view **) pView);
 }
 
 ICD_EXPORT VkResult VKAPI vkCreateDepthStencilView(
@@ -1373,6 +1416,6 @@ ICD_EXPORT VkResult VKAPI vkCreateDepthStencilView(
 {
     struct intel_dev *dev = intel_dev(device);
 
-    return intel_ds_view_create(dev, pCreateInfo,
-            (struct intel_ds_view **) pView);
+    return intel_att_view_create_for_ds(dev, pCreateInfo,
+            (struct intel_att_view **) pView);
 }

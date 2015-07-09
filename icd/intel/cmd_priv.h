@@ -75,7 +75,7 @@ struct intel_cmd_reloc {
     uint32_t flags;
 };
 
-struct intel_ds_view;
+struct intel_att_view;
 
 enum intel_cmd_meta_mode {
     /*
@@ -123,7 +123,7 @@ struct intel_cmd_meta {
     } src, dst;
 
     struct {
-        struct intel_ds_view *view;
+        struct intel_att_view *view;
         uint32_t stencil_ref;
         VkImageAspect aspect;
 

@@ -255,7 +255,7 @@ static void cmd_meta_set_dst_for_img(struct intel_cmd *cmd,
                                      struct intel_cmd_meta *meta)
 {
     VkColorAttachmentViewCreateInfo info;
-    struct intel_rt_view *rt;
+    struct intel_att_view *view;
     VkResult ret;
 
     memset(&info, 0, sizeof(info));
@@ -266,7 +266,7 @@ static void cmd_meta_set_dst_for_img(struct intel_cmd *cmd,
     info.baseArraySlice = layer;
     info.arraySize = 1;
 
-    ret = intel_rt_view_create(cmd->dev, &info, &rt);
+    ret = intel_att_view_create_for_color(cmd->dev, &info, &view);
     if (ret != VK_SUCCESS) {
         cmd_fail(cmd, ret);
         return;
@@ -274,8 +274,9 @@ static void cmd_meta_set_dst_for_img(struct intel_cmd *cmd,
 
     meta->dst.valid = true;
 
-    memcpy(meta->dst.surface, rt->cmd, sizeof(rt->cmd[0]) * rt->cmd_len);
-    meta->dst.surface_len = rt->cmd_len;
+    memcpy(meta->dst.surface, view->att_cmd,
+            sizeof(view->att_cmd[0]) * view->cmd_len);
+    meta->dst.surface_len = view->cmd_len;
 
     meta->dst.reloc_target = (intptr_t) img->obj.mem->bo;
     meta->dst.reloc_offset = 0;
@@ -284,7 +285,7 @@ static void cmd_meta_set_dst_for_img(struct intel_cmd *cmd,
     if (icd_format_is_compressed(img->layout.format))
         cmd_meta_adjust_compressed_dst(cmd, img, meta);
 
-    intel_rt_view_destroy(rt);
+    intel_att_view_destroy(view);
 }
 
 static void cmd_meta_set_src_for_writer(struct intel_cmd *cmd,
@@ -322,7 +323,7 @@ static void cmd_meta_set_ds_view(struct intel_cmd *cmd,
                                  struct intel_cmd_meta *meta)
 {
     VkDepthStencilViewCreateInfo info;
-    struct intel_ds_view *ds;
+    struct intel_att_view *view;
     VkResult ret;
 
     memset(&info, 0, sizeof(info));
@@ -332,13 +333,13 @@ static void cmd_meta_set_ds_view(struct intel_cmd *cmd,
     info.baseArraySlice = layer;
     info.arraySize = 1;
 
-    ret = intel_ds_view_create(cmd->dev, &info, &ds);
+    ret = intel_att_view_create_for_ds(cmd->dev, &info, &view);
     if (ret != VK_SUCCESS) {
         cmd_fail(cmd, ret);
         return;
     }
 
-    meta->ds.view = ds;
+    meta->ds.view = view;
 }
 
 static void cmd_meta_set_ds_state(struct intel_cmd *cmd,
@@ -863,7 +864,7 @@ static void cmd_meta_clear_image(struct intel_cmd *cmd,
 
                 cmd_draw_meta(cmd, meta);
 
-                intel_ds_view_destroy(meta->ds.view);
+                intel_att_view_destroy(meta->ds.view);
             }
 
             meta->dst.layer++;
@@ -993,7 +994,8 @@ ICD_EXPORT void VKAPI vkCmdClearColorAttachment(
     const VkRect3D                         *pRects)
 {
     struct intel_cmd *cmd = intel_cmd(cmdBuffer);
-    struct intel_fb const *fb = cmd->bind.fb;
+    const struct intel_fb *fb = cmd->bind.fb;
+    const struct intel_att_view *view = fb->views[colorAttachment];
 
     /* Convert each rect3d to clear into a subresource clear.
      * TODO: this currently only supports full layer clears --
@@ -1001,17 +1003,15 @@ ICD_EXPORT void VKAPI vkCmdClearColorAttachment(
      * specify the xy bounds.
      */
     for (uint32_t i = 0; i < rectCount; i++) {
-           const struct intel_rt_view *rt = fb->rt[colorAttachment];
-
            VkImageSubresourceRange range = {
                VK_IMAGE_ASPECT_COLOR,
-               rt->mipLevel,
+               view->mipLevel,
                1,
                pRects[i].offset.z,
                pRects[i].extent.depth
            };
 
-           cmd_meta_clear_color_image(cmdBuffer, (VkImage) rt->img,
+           cmd_meta_clear_color_image(cmdBuffer, (VkImage) view->img,
                                       imageLayout,
                                       pColor,
                                       1,
@@ -1029,7 +1029,9 @@ ICD_EXPORT void VKAPI vkCmdClearDepthStencilAttachment(
     const VkRect3D                         *pRects)
 {
     struct intel_cmd *cmd = intel_cmd(cmdBuffer);
-    struct intel_fb const *fb = cmd->bind.fb;
+    const struct intel_render_pass *rp = cmd->bind.render_pass;
+    const struct intel_fb *fb = cmd->bind.fb;
+    const struct intel_att_view *view = fb->views[rp->colorAttachmentCount];
 
     /* Convert each rect3d to clear into a subresource clear.
      * TODO: this currently only supports full layer clears --
@@ -1037,8 +1039,6 @@ ICD_EXPORT void VKAPI vkCmdClearDepthStencilAttachment(
      * specify the xy bounds.
      */
     for (uint32_t i = 0; i < rectCount; i++) {
-           const struct intel_ds_view *ds = fb->ds;
-
            VkImageSubresourceRange range = {
                VK_IMAGE_ASPECT_DEPTH,
                0, /* ds->mipLevel, */
@@ -1048,19 +1048,15 @@ ICD_EXPORT void VKAPI vkCmdClearDepthStencilAttachment(
            };
 
            if (imageAspectMask & VK_IMAGE_ASPECT_DEPTH_BIT) {
-               cmd_meta_clear_depth_stencil_image(cmdBuffer, (VkImage) ds->img,
-                                                  imageLayout,
-                                                  depth, stencil,
-                                                  1,
-                                                  &range);
+               cmd_meta_clear_depth_stencil_image(cmdBuffer,
+                       (VkImage) view->img, imageLayout,
+                       depth, stencil, 1, &range);
            }
            if (imageAspectMask & VK_IMAGE_ASPECT_STENCIL_BIT) {
                range.aspect = VK_IMAGE_ASPECT_STENCIL;
-               cmd_meta_clear_depth_stencil_image(cmdBuffer, (VkImage) ds->img,
-                                                  imageLayout,
-                                                  depth, stencil,
-                                                  1,
-                                                  &range);
+               cmd_meta_clear_depth_stencil_image(cmdBuffer,
+                       (VkImage) view->img, imageLayout,
+                       depth, stencil, 1, &range);
            }
     }
 }
