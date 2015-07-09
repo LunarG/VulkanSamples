@@ -5,6 +5,10 @@ cmake_minimum_required(VERSION 2.8.11)
 project (VULKAN)
 # set (CMAKE_VERBOSE_MAKEFILE 1)
 
+# The MAJOR number of the version we're building, used in naming
+# vulkan.<major>.dll (and other files).
+set(MAJOR "0")
+
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake")
 
 # Header file for CMake settings
@@ -42,16 +46,16 @@ else()
     set(PYTHON_CMD "py")
 endif()
 
-option(BUILD_TESTS "Build tests" ON)
+#option(BUILD_TESTS "Build tests" ON)
 
 # loader: Generic VULKAN ICD loader
 # icd: Device dependent (DD) VULKAN components
 # tests: VULKAN tests
 add_subdirectory(loader)
 add_subdirectory(icd)
-if(BUILD_TESTS)
-    add_subdirectory(tests)
-endif()
+#if(BUILD_TESTS)
+#    add_subdirectory(tests)
+#endif()
 add_subdirectory(layers)
 add_subdirectory(demos)
 #add_subdirectory(tools/glave)

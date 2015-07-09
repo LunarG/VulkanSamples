@@ -13,7 +13,7 @@ else()
 endif()
 
 add_subdirectory(common)
-add_subdirectory(nulldrv)
+#add_subdirectory(nulldrv)
 if (NOT WIN32)
     add_subdirectory(intel)
 endif()

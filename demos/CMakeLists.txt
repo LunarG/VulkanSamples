@@ -19,7 +19,11 @@ file(COPY ${TEXTURES} DESTINATION ${CMAKE_BINARY_DIR}/demos)
 set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DVK_PROTOTYPES")
 set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DVK_PROTOTYPES")
 
-set (LIBRARIES "vulkan")
+if(WIN32)
+    set (LIBRARIES "vulkan.${MAJOR}")
+else ()
+    set (LIBRARIES "vulkan")
+endif()
 
 if(WIN32)
     add_custom_command(OUTPUT ${CMAKE_BINARY_DIR}/demos/tri-vert.spv

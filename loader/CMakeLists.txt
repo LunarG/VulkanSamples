@@ -3,9 +3,15 @@ include_directories(
 	${CMAKE_CURRENT_BINARY_DIR}
 )
 
-add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/vulkan.def
-	COMMAND ${PYTHON_CMD} ${PROJECT_SOURCE_DIR}/loader/vk-loader-generate.py win-def-file vulkan all > ${CMAKE_CURRENT_BINARY_DIR}/vulkan.def
-	DEPENDS ${PROJECT_SOURCE_DIR}/loader/vk-loader-generate.py ${PROJECT_SOURCE_DIR}/vulkan.py)
+if (WIN32)
+    add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/vulkan.${MAJOR}.def
+	    COMMAND ${PYTHON_CMD} ${PROJECT_SOURCE_DIR}/loader/vk-loader-generate.py win-def-file vulkan.${MAJOR}.dll all > ${CMAKE_CURRENT_BINARY_DIR}/vulkan.${MAJOR}.def
+	    DEPENDS ${PROJECT_SOURCE_DIR}/loader/vk-loader-generate.py ${PROJECT_SOURCE_DIR}/vulkan.py)
+else()
+    add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/vulkan.def
+	    COMMAND ${PYTHON_CMD} ${PROJECT_SOURCE_DIR}/loader/vk-loader-generate.py win-def-file vulkan.dll all > ${CMAKE_CURRENT_BINARY_DIR}/vulkan.def
+	    DEPENDS ${PROJECT_SOURCE_DIR}/loader/vk-loader-generate.py ${PROJECT_SOURCE_DIR}/vulkan.py)
+endif()
 
 # DEBUG enables runtime loader ICD verification
 set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -DDEBUG")
@@ -29,11 +35,11 @@ set(LOADER_SRCS
 if (WIN32)
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DVK_PROTOTYPES -D_CRT_SECURE_NO_WARNINGS")
 
-    add_library(vulkan SHARED ${LOADER_SRCS} dirent_on_windows.c ${CMAKE_CURRENT_BINARY_DIR}/vulkan.def)
-    set_target_properties(vulkan PROPERTIES LINK_FLAGS "/DEF:${CMAKE_CURRENT_BINARY_DIR}/vulkan.def")
-    add_library(VKstatic STATIC ${LOADER_SRCS} dirent_on_windows.c)
-    set_target_properties(VKstatic PROPERTIES OUTPUT_NAME VKstatic)
-    target_link_libraries(vulkan shlwapi)
+    add_library(vulkan.${MAJOR} SHARED ${LOADER_SRCS} dirent_on_windows.c ${CMAKE_CURRENT_BINARY_DIR}/vulkan.${MAJOR}.def)
+    set_target_properties(vulkan.${MAJOR} PROPERTIES LINK_FLAGS "/DEF:${CMAKE_CURRENT_BINARY_DIR}/vulkan.${MAJOR}.def")
+    add_library(VKstatic.${MAJOR} STATIC ${LOADER_SRCS} dirent_on_windows.c)
+    set_target_properties(VKstatic.${MAJOR} PROPERTIES OUTPUT_NAME VKstatic.${MAJOR})
+    target_link_libraries(vulkan.${MAJOR} shlwapi)
 endif()
 if (NOT WIN32)
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DVK_PROTOTYPES -Wpointer-arith")
