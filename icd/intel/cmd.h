@@ -188,6 +188,7 @@ struct intel_cmd_bind {
 
     bool render_pass_changed;
     const struct intel_render_pass *render_pass;
+    const struct intel_render_pass_subpass *render_pass_subpass;
     const struct intel_fb *fb;
     VkRenderPassContents render_pass_contents;
 

@@ -994,8 +994,11 @@ ICD_EXPORT void VKAPI vkCmdClearColorAttachment(
     const VkRect3D                         *pRects)
 {
     struct intel_cmd *cmd = intel_cmd(cmdBuffer);
+    const struct intel_render_pass_subpass *subpass =
+        cmd->bind.render_pass_subpass;
     const struct intel_fb *fb = cmd->bind.fb;
-    const struct intel_att_view *view = fb->views[colorAttachment];
+    const struct intel_att_view *view =
+        fb->views[subpass->color_indices[colorAttachment]];
 
     /* Convert each rect3d to clear into a subresource clear.
      * TODO: this currently only supports full layer clears --
@@ -1029,9 +1032,10 @@ ICD_EXPORT void VKAPI vkCmdClearDepthStencilAttachment(
     const VkRect3D                         *pRects)
 {
     struct intel_cmd *cmd = intel_cmd(cmdBuffer);
-    const struct intel_render_pass *rp = cmd->bind.render_pass;
+    const struct intel_render_pass_subpass *subpass =
+        cmd->bind.render_pass_subpass;
     const struct intel_fb *fb = cmd->bind.fb;
-    const struct intel_att_view *view = fb->views[rp->colorAttachmentCount];
+    const struct intel_att_view *view = fb->views[subpass->ds_index];
 
     /* Convert each rect3d to clear into a subresource clear.
      * TODO: this currently only supports full layer clears --

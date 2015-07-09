@@ -136,8 +136,8 @@ static void render_pass_destroy(struct intel_obj *obj)
 }
 
 VkResult intel_render_pass_create(struct intel_dev *dev,
-                                    const VkRenderPassCreateInfo *info,
-                                    struct intel_render_pass **rp_ret)
+                                  const VkRenderPassCreateInfo *info,
+                                  struct intel_render_pass **rp_ret)
 {
     struct intel_render_pass *rp;
     uint32_t i;
@@ -147,44 +147,95 @@ VkResult intel_render_pass_create(struct intel_dev *dev,
     if (!rp)
         return VK_ERROR_OUT_OF_HOST_MEMORY;
 
+    rp->attachment_count = info->colorAttachmentCount;
+    if (info->depthStencilFormat != VK_FORMAT_UNDEFINED)
+        rp->attachment_count++;
+
+    rp->subpass_count = 1;
+
+    rp->attachments = intel_alloc(rp,
+            sizeof(rp->attachments[0]) * rp->attachment_count +
+            sizeof(rp->subpasses[0]) * rp->subpass_count, 0,
+            VK_SYSTEM_ALLOC_TYPE_INTERNAL);
+    if (!rp->attachments) {
+        intel_render_pass_destroy(rp);
+        return VK_ERROR_OUT_OF_HOST_MEMORY;
+    }
+
+    rp->subpasses = (struct intel_render_pass_subpass *)
+        (rp->attachments + rp->attachment_count);
+
     rp->obj.destroy = render_pass_destroy;
 
-    rp->colorAttachmentCount = info->colorAttachmentCount;
-    rp->renderArea = info->renderArea;
-    rp->extent = info->extent;
+    for (i = 0; i < info->colorAttachmentCount; i++) {
+        struct intel_render_pass_attachment *att = &rp->attachments[i];
 
-    if (rp->colorAttachmentCount) {
-        memcpy(rp->colorLoadOps, info->pColorLoadOps, rp->colorAttachmentCount * sizeof(rp->colorLoadOps[0]));
-        if (info->pColorLayouts) {
-            memcpy(rp->colorLayouts, info->pColorLayouts, rp->colorAttachmentCount * sizeof(rp->colorLayouts[0]));
-        }
-        if (info->pColorLoadClearValues) {
-            memcpy(rp->colorClearValues, info->pColorLoadClearValues, rp->colorAttachmentCount * sizeof(rp->colorClearValues[0]));
-        }
+        att->format = info->pColorFormats[i];
+        att->sample_count = info->sampleCount;
+        att->initial_layout = info->pColorLayouts[i];
+        att->final_layout = info->pColorLayouts[i];
+
+        att->clear_on_load =
+            (info->pColorLoadOps[i] == VK_ATTACHMENT_LOAD_OP_CLEAR);
+        att->disable_store =
+            (info->pColorStoreOps[i] == VK_ATTACHMENT_STORE_OP_DONT_CARE);
+
+        att->stencil_clear_on_load = false;
+        att->stencil_disable_store = true;
+
+        att->clear_val.color = info->pColorLoadClearValues[i];
     }
 
-    rp->depthLoadOp = info->depthLoadOp;
-    rp->depthLoadClearValue = info->depthLoadClearValue;
-    rp->stencilLoadOp = info->stencilLoadOp;
-    rp->stencilLoadClearValue = info->stencilLoadClearValue;
-    rp->depthStencilLayout = info->depthStencilLayout;
-    rp->depthStencilFormat = info->depthStencilFormat;
+    if (info->depthStencilFormat != VK_FORMAT_UNDEFINED) {
+        struct intel_render_pass_attachment *att =
+            &rp->attachments[info->colorAttachmentCount];
 
-    switch (info->depthStencilLayout) {
-    case VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL:
-    case VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL:
-        rp->optimal_ds = true;
-        break;
-    default:
-        rp->optimal_ds = false;
-        break;
+        att->format = info->depthStencilFormat;
+        att->sample_count = info->sampleCount;
+        att->initial_layout = info->depthStencilLayout;
+        att->final_layout = info->depthStencilLayout;
+
+        att->clear_on_load =
+            (info->depthLoadOp == VK_ATTACHMENT_LOAD_OP_CLEAR);
+        att->disable_store =
+            (info->depthStoreOp == VK_ATTACHMENT_STORE_OP_DONT_CARE);
+
+        att->stencil_clear_on_load =
+            (info->stencilLoadOp == VK_ATTACHMENT_LOAD_OP_CLEAR);
+        att->stencil_disable_store =
+            (info->stencilStoreOp == VK_ATTACHMENT_STORE_OP_DONT_CARE);
+
+        att->clear_val.ds.depth = info->depthLoadClearValue;
+        att->clear_val.ds.stencil = info->stencilLoadClearValue;
     }
 
-    /* TODO: MSAA resolves if/when we support MSAA. */
-    for (i = 0; i < info->colorAttachmentCount; i++)
-        assert(info->pColorStoreOps[i] != VK_ATTACHMENT_STORE_OP_RESOLVE_MSAA);
-    assert(info->depthStoreOp != VK_ATTACHMENT_STORE_OP_RESOLVE_MSAA);
-    assert(info->stencilStoreOp != VK_ATTACHMENT_STORE_OP_RESOLVE_MSAA);
+    for (i = 0; i < rp->subpass_count; i++) {
+        struct intel_render_pass_subpass *subpass = &rp->subpasses[i];
+        uint32_t j;
+
+        for (j = 0; j < info->colorAttachmentCount; j++) {
+            subpass->color_indices[j] = j;
+            subpass->resolve_indices[j] = 0xffffffffu;
+            subpass->color_layouts[j] = info->pColorLayouts[j];
+        }
+
+        subpass->color_count = info->colorAttachmentCount;
+
+        subpass->ds_index =
+            (info->depthStencilFormat != VK_FORMAT_UNDEFINED) ?
+            info->colorAttachmentCount : 0xffffffffu;
+        subpass->ds_layout = info->depthStencilLayout;
+
+        switch (info->depthStencilLayout) {
+        case VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL:
+        case VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL:
+            subpass->ds_optimal = true;
+            break;
+        default:
+            subpass->ds_optimal = false;
+            break;
+        }
+    }
 
     *rp_ret = rp;
 
@@ -193,6 +244,9 @@ VkResult intel_render_pass_create(struct intel_dev *dev,
 
 void intel_render_pass_destroy(struct intel_render_pass *rp)
 {
+    if (rp->attachments)
+        intel_free(rp, rp->attachments);
+
     intel_base_destroy(&rp->obj.base);
 }
 

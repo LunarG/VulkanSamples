@@ -477,6 +477,8 @@ static void gen7_fill_3DSTATE_SF_body(const struct intel_cmd *cmd,
 {
     const struct intel_pipeline *pipeline = cmd->bind.pipeline.graphics;
     const struct intel_render_pass *rp = cmd->bind.render_pass;
+    const struct intel_render_pass_subpass *subpass =
+        cmd->bind.render_pass_subpass;
     const struct intel_dynamic_rs *raster = cmd->bind.state.raster;
     uint32_t dw1, dw2, dw3;
 
@@ -490,20 +492,21 @@ static void gen7_fill_3DSTATE_SF_body(const struct intel_cmd *cmd,
           pipeline->cmd_sf_fill;
 
     if (cmd_gen(cmd) >= INTEL_GEN(7)) {
-        int format;
+        int format = GEN6_ZFORMAT_D32_FLOAT;
 
-        switch (rp->depthStencilFormat) {
-        case VK_FORMAT_D16_UNORM:
-            format = GEN6_ZFORMAT_D16_UNORM;
-            break;
-        case VK_FORMAT_D32_SFLOAT:
-        case VK_FORMAT_D32_SFLOAT_S8_UINT:
-            format = GEN6_ZFORMAT_D32_FLOAT;
-            break;
-        default:
-            assert(rp->depthStencilFormat == VK_FORMAT_UNDEFINED);
-            format = GEN6_ZFORMAT_D32_FLOAT;
-            break;
+        if (subpass->ds_index < rp->attachment_count) {
+            switch (rp->attachments[subpass->ds_index].format) {
+            case VK_FORMAT_D16_UNORM:
+                format = GEN6_ZFORMAT_D16_UNORM;
+                break;
+            case VK_FORMAT_D32_SFLOAT:
+            case VK_FORMAT_D32_SFLOAT_S8_UINT:
+                format = GEN6_ZFORMAT_D32_FLOAT;
+                break;
+            default:
+                assert(!"unsupported depth/stencil format");
+                break;
+            }
         }
 
         dw1 |= format << GEN7_SF_DW1_DEPTH_FORMAT__SHIFT;
@@ -1732,11 +1735,13 @@ static uint32_t emit_binding_table(struct intel_cmd *cmd,
         switch (slot->type) {
         case INTEL_PIPELINE_RMAP_RT:
             {
-                const struct intel_render_pass *rp = cmd->bind.render_pass;
+                const struct intel_render_pass_subpass *subpass =
+                    cmd->bind.render_pass_subpass;
                 const struct intel_fb *fb = cmd->bind.fb;
                 const struct intel_att_view *view =
-                    (slot->index < rp->colorAttachmentCount) ?
-                    fb->views[slot->index] : NULL;
+                    (slot->index < subpass->color_count &&
+                     subpass->color_indices[slot->index] < fb->view_count) ?
+                    fb->views[subpass->color_indices[slot->index]] : NULL;
 
                 if (view) {
                     offset = cmd_surface_write(cmd, INTEL_CMD_ITEM_SURFACE,
@@ -2039,10 +2044,12 @@ static void emit_rt(struct intel_cmd *cmd)
 static void emit_ds(struct intel_cmd *cmd)
 {
     const struct intel_render_pass *rp = cmd->bind.render_pass;
+    const struct intel_render_pass_subpass *subpass =
+        cmd->bind.render_pass_subpass;
     const struct intel_fb *fb = cmd->bind.fb;
     const struct intel_att_view *view =
-        (rp->depthStencilFormat != VK_FORMAT_UNDEFINED) ?
-        fb->views[rp->colorAttachmentCount] : NULL;
+        (subpass->ds_index < rp->attachment_count) ?
+        fb->views[subpass->ds_index] : NULL;
 
     if (!cmd->bind.render_pass_changed)
         return;
@@ -2054,9 +2061,9 @@ static void emit_ds(struct intel_cmd *cmd)
     }
 
     cmd_wa_gen6_pre_ds_flush(cmd);
-    gen6_3DSTATE_DEPTH_BUFFER(cmd, view, rp->optimal_ds);
-    gen6_3DSTATE_STENCIL_BUFFER(cmd, view, rp->optimal_ds);
-    gen6_3DSTATE_HIER_DEPTH_BUFFER(cmd, view, rp->optimal_ds);
+    gen6_3DSTATE_DEPTH_BUFFER(cmd, view, subpass->ds_optimal);
+    gen6_3DSTATE_STENCIL_BUFFER(cmd, view, subpass->ds_optimal);
+    gen6_3DSTATE_HIER_DEPTH_BUFFER(cmd, view, subpass->ds_optimal);
 
     if (cmd_gen(cmd) >= INTEL_GEN(7))
         gen7_3DSTATE_CLEAR_PARAMS(cmd, 0);
@@ -3619,79 +3626,56 @@ ICD_EXPORT void VKAPI vkCmdBeginRenderPass(
     VkCmdBuffer                              cmdBuffer,
     const VkRenderPassBegin*                pRenderPassBegin)
 {
-   struct intel_cmd *cmd = intel_cmd(cmdBuffer);
-   const struct intel_render_pass *rp =
-       intel_render_pass(pRenderPassBegin->renderPass);
-   const struct intel_fb *fb = intel_fb(pRenderPassBegin->framebuffer);
-   const struct intel_att_view *view;
-   uint32_t i;
+    struct intel_cmd *cmd = intel_cmd(cmdBuffer);
+    const struct intel_render_pass *rp =
+        intel_render_pass(pRenderPassBegin->renderPass);
+    const struct intel_fb *fb = intel_fb(pRenderPassBegin->framebuffer);
+    const struct intel_att_view *view;
+    uint32_t i;
 
-   if (!cmd->primary) {
-       cmd_fail(cmd, VK_ERROR_UNKNOWN);
-       return;
-   }
+    if (!cmd->primary || rp->attachment_count != fb->view_count) {
+        cmd_fail(cmd, VK_ERROR_UNKNOWN);
+        return;
+    }
 
-   cmd_begin_render_pass(cmd, rp, fb, pRenderPassBegin->contents);
+    cmd_begin_render_pass(cmd, rp, fb, pRenderPassBegin->contents);
 
-   /* issue load ops */
-   for (i = 0; i < rp->colorAttachmentCount; i++) {
-       if (rp->colorLoadOps[i] == VK_ATTACHMENT_LOAD_OP_CLEAR) {
-           /* issue clear of this attachment */
-           view = fb->views[i];
+    for (i = 0; i < rp->attachment_count; i++) {
+        const struct intel_render_pass_attachment *att = &rp->attachments[i];
+        VkImageSubresourceRange range;
 
-           VkImageSubresourceRange ranges[1] = {{
-               VK_IMAGE_ASPECT_COLOR,
-               view->mipLevel,
-               1,
-               view->baseArraySlice,
-               view->array_size
-           }};
+        if (!att->clear_on_load)
+            continue;
 
-           cmd_meta_clear_color_image(cmdBuffer, (VkImage) view->img,
-                                      rp->colorLayouts[i],
-                                      &rp->colorClearValues[i],
-                                      1,
-                                      ranges);
-       }
-   }
+        view = fb->views[i];
+        range.baseMipLevel = view->mipLevel;
+        range.mipLevels = 1;
+        range.baseArraySlice = view->baseArraySlice;
+        range.arraySize = view->array_size;
 
-   if (rp->depthLoadOp == VK_ATTACHMENT_LOAD_OP_CLEAR) {
-       view = fb->views[rp->colorAttachmentCount];
+        if (view->is_rt) {
+            range.aspect = VK_IMAGE_ASPECT_COLOR;
 
-       VkImageSubresourceRange ranges[1] = {{
-           VK_IMAGE_ASPECT_DEPTH,
-           0, /* view->mipLevel, */
-           1,
-           0, /* view->baseArraySlice, */
-           view->array_size
-       }};
+            cmd_meta_clear_color_image(cmdBuffer, (VkImage) view->img,
+                    att->initial_layout, &att->clear_val.color, 1, &range);
+        } else {
+            range.aspect = VK_IMAGE_ASPECT_DEPTH;
 
-       cmd_meta_clear_depth_stencil_image(cmdBuffer, (VkImage) view->img,
-                                          rp->depthStencilLayout,
-                                          rp->depthLoadClearValue,
-                                          0,
-                                          1,
-                                          ranges);
-   }
+            cmd_meta_clear_depth_stencil_image(cmdBuffer,
+                    (VkImage) view->img, att->initial_layout,
+                    att->clear_val.ds.depth, att->clear_val.ds.stencil,
+                    1, &range);
 
-   if (rp->stencilLoadOp == VK_ATTACHMENT_LOAD_OP_CLEAR) {
-       view = fb->views[rp->colorAttachmentCount];
+            if (att->stencil_clear_on_load) {
+                range.aspect = VK_IMAGE_ASPECT_STENCIL;
 
-       VkImageSubresourceRange ranges[1] = {{
-           VK_IMAGE_ASPECT_STENCIL,
-           0, /* view->mipLevel, */
-           1,
-           0, /* view->baseArraySlice, */
-           view->array_size
-       }};
-
-       cmd_meta_clear_depth_stencil_image(cmdBuffer, (VkImage) view->img,
-                                          rp->depthStencilLayout,
-                                          0.0f,
-                                          rp->stencilLoadClearValue,
-                                          1,
-                                          ranges);
-   }
+                cmd_meta_clear_depth_stencil_image(cmdBuffer,
+                        (VkImage) view->img, att->initial_layout,
+                        att->clear_val.ds.depth, att->clear_val.ds.stencil,
+                        1, &range);
+            }
+        }
+    }
 }
 
 ICD_EXPORT void VKAPI vkCmdEndRenderPass(

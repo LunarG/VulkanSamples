@@ -41,25 +41,47 @@ struct intel_fb {
     uint32_t array_size;
 };
 
+struct intel_render_pass_attachment {
+    VkFormat format;
+    uint32_t sample_count;
+
+    VkImageLayout initial_layout;
+    VkImageLayout final_layout;
+
+    bool clear_on_load;
+    bool disable_store;
+
+    bool stencil_clear_on_load;
+    bool stencil_disable_store;
+
+    union {
+        VkClearColorValue color;
+        struct {
+            float depth;
+            uint32_t stencil;
+        } ds;
+    } clear_val;
+};
+
+struct intel_render_pass_subpass {
+    uint32_t color_indices[INTEL_MAX_RENDER_TARGETS];
+    uint32_t resolve_indices[INTEL_MAX_RENDER_TARGETS];
+    VkImageLayout color_layouts[INTEL_MAX_RENDER_TARGETS];
+    uint32_t color_count;
+
+    uint32_t ds_index;
+    VkImageLayout ds_layout;
+    bool ds_optimal;
+};
+
 struct intel_render_pass {
     struct intel_obj obj;
 
-    VkRect2D renderArea;
-    VkExtent2D extent;
+    struct intel_render_pass_attachment *attachments;
+    uint32_t attachment_count;
 
-    uint32_t colorAttachmentCount;
-    VkAttachmentLoadOp colorLoadOps[INTEL_MAX_RENDER_TARGETS];
-    VkFormat colorFormats[INTEL_MAX_RENDER_TARGETS];
-    VkImageLayout colorLayouts[INTEL_MAX_RENDER_TARGETS];
-    VkClearColorValue colorClearValues[INTEL_MAX_RENDER_TARGETS];
-
-    VkAttachmentLoadOp depthLoadOp;
-    float depthLoadClearValue;
-    VkAttachmentLoadOp stencilLoadOp;
-    uint32_t stencilLoadClearValue;
-    VkImageLayout depthStencilLayout;
-    VkFormat depthStencilFormat;
-    bool optimal_ds;
+    struct intel_render_pass_subpass *subpasses;
+    uint32_t subpass_count;
 };
 
 static inline struct intel_fb *intel_fb(VkFramebuffer fb)
