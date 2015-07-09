@@ -1371,7 +1371,9 @@ static void loader_add_layer_properties(struct loader_layer_list *layer_list,
     char *rel_base;
     if (strchr(library_path, DIRECTORY_SYMBOL) == NULL) {
         // a filename which is assumed in the system directory
-        loader_get_fullpath(library_path, DEFAULT_VK_LAYERS_PATH, 2048, fullpath);
+        char *def_path = loader_stack_alloc(strlen(DEFAULT_VK_LAYERS_PATH) + 1);
+        strcpy(def_path, DEFAULT_VK_LAYERS_PATH);
+        loader_get_fullpath(library_path, def_path, 2048, fullpath);
     }
     else {
         // a relative or absolute path

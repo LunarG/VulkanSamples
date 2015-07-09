@@ -201,8 +201,6 @@ using namespace std;
 #define strdup _strdup
 #define PRINTF_SIZE_T_SPECIFIER    "%Iu"
 
-// Microsoft doesn't implement alloca, instead we have _alloca
-#define alloca _alloca
 
 // File IO
 static bool loader_platform_file_exists(const char *path)
