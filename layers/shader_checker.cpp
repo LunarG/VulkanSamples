@@ -836,9 +836,8 @@ validate_fs_outputs_against_render_pass(VkDevice dev, shader_module const *fs, r
      */
 
     /* TODO: Figure out compile error with cb->attachmentCount */
-#if 0
-    while ((outputs.size() > 0 && it != outputs.end()) || attachment < cb->attachmentCount) {
-        if (attachment == cb->attachmentCount || ( it != outputs.end() && it->first < attachment)) {
+    while ((outputs.size() > 0 && it != outputs.end()) || attachment < color_formats.size()) {
+        if (attachment == color_formats.size() || ( it != outputs.end() && it->first < attachment)) {
             log_msg(mdd(dev), VK_DBG_REPORT_WARN_BIT, VK_OBJECT_TYPE_DEVICE, /*dev*/0, 0, SHADER_CHECKER_OUTPUT_NOT_CONSUMED, "SC",
                     "FS writes to output location %d with no matching attachment", it->first);
             it++;
@@ -868,7 +867,6 @@ validate_fs_outputs_against_render_pass(VkDevice dev, shader_module const *fs, r
             attachment++;
         }
     }
-#endif
 
     return pass;
 }
