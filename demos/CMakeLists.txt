@@ -52,20 +52,44 @@ if(WIN32)
 endif()
 if(NOT WIN32)
     add_custom_command(OUTPUT ${CMAKE_BINARY_DIR}/demos/tri-vert.spv
-       COMMAND ${GLSLANG_PREFIX}/build/install/bin/glslangValidator -s -V ${PROJECT_SOURCE_DIR}/demos/tri.vert && mv vert.spv ${CMAKE_BINARY_DIR}/demos/tri-vert.spv
+       COMMAND rm -rf tri-vert-dir
+       COMMAND mkdir tri-vert-dir
+       COMMAND cd tri-vert-dir
+       COMMAND ${GLSLANG_PREFIX}/build/install/bin/glslangValidator -s -V ${PROJECT_SOURCE_DIR}/demos/tri.vert
+       COMMAND mv vert.spv ${CMAKE_BINARY_DIR}/demos/tri-vert.spv
+       COMMAND cd ..
+       COMMAND rm -rf tri-vert-dir
        DEPENDS tri.vert ${GLSLANG_PREFIX}/build/install/bin/glslangValidator
        )
     add_custom_command(OUTPUT ${CMAKE_BINARY_DIR}/demos/tri-frag.spv
-       COMMAND ${GLSLANG_PREFIX}/build/install/bin/glslangValidator -s -V ${PROJECT_SOURCE_DIR}/demos/tri.frag && mv frag.spv ${CMAKE_BINARY_DIR}/demos/tri-frag.spv
+       COMMAND rm -rf tri-frag-dir
+       COMMAND mkdir tri-frag-dir
+       COMMAND cd tri-frag-dir
+       COMMAND ${GLSLANG_PREFIX}/build/install/bin/glslangValidator -s -V ${PROJECT_SOURCE_DIR}/demos/tri.frag
+       COMMAND mv frag.spv ${CMAKE_BINARY_DIR}/demos/tri-frag.spv
+       COMMAND cd ..
+       COMMAND rm -rf tri-frag-dir
        DEPENDS tri.frag ${GLSLANG_PREFIX}/build/install/bin/glslangValidator
        )
     add_custom_command(OUTPUT ${CMAKE_BINARY_DIR}/demos/cube-vert.spv
-       COMMAND ${GLSLANG_PREFIX}/build/install/bin/glslangValidator -s -V ${PROJECT_SOURCE_DIR}/demos/cube.vert && mv vert.spv ${CMAKE_BINARY_DIR}/demos/cube-vert.spv
+       COMMAND rm -rf cube-vert-dir
+       COMMAND mkdir cube-vert-dir
+       COMMAND cd cube-vert-dir
+       COMMAND ${GLSLANG_PREFIX}/build/install/bin/glslangValidator -s -V ${PROJECT_SOURCE_DIR}/demos/cube.vert
+       COMMAND mv vert.spv ${CMAKE_BINARY_DIR}/demos/cube-vert.spv
+       COMMAND cd ..
+       COMMAND rm -rf cube-vert-dir
        DEPENDS cube.vert ${GLSLANG_PREFIX}/build/install/bin/glslangValidator
        )
 
     add_custom_command(OUTPUT ${CMAKE_BINARY_DIR}/demos/cube-frag.spv
-       COMMAND ${GLSLANG_PREFIX}/build/install/bin/glslangValidator -s -V ${PROJECT_SOURCE_DIR}/demos/cube.frag && mv frag.spv ${CMAKE_BINARY_DIR}/demos/cube-frag.spv
+       COMMAND rm -rf cube-frag-dir
+       COMMAND mkdir cube-frag-dir
+       COMMAND cd cube-frag-dir
+       COMMAND ${GLSLANG_PREFIX}/build/install/bin/glslangValidator -s -V ${PROJECT_SOURCE_DIR}/demos/cube.frag
+       COMMAND mv frag.spv ${CMAKE_BINARY_DIR}/demos/cube-frag.spv
+       COMMAND cd ..
+       COMMAND rm -rf cube-frag-dir
        DEPENDS cube.frag ${GLSLANG_PREFIX}/build/install/bin/glslangValidator
        )
 endif()
