@@ -427,6 +427,7 @@ static void app_dev_init(struct app_dev *dev, struct app_gpu *gpu)
     // Extensions to enable
     static const char *known_extensions[] = {
         //TODO add WSI device extension WSI swapchain, WSI_LUNARG is a global extension
+        ""
     };
 
     uint32_t count = 0;
