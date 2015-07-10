@@ -1074,24 +1074,26 @@ class ObjectTrackerSubcommand(Subcommand):
         using_line = ''
         create_line = ''
         object_params = {} # dict of parameters that are VkObject types mapping to the size of array types or '0' if not array
-        # TODO : Should also check through struct params & add any objects embedded in struct chains
+        valid_null_object_names = ['basePipelineHandle']
         # TODO : A few of the skipped types are just "hard" cases that need some more work to support
         #   Need to handle NULL fences on queue submit, binding null memory, and WSI Image objects
         for p in proto.params:
             if p.ty in vulkan.core.objects and p.ty not in ['VkPhysicalDevice', 'VkQueue', 'VkFence', 'VkImage', 'VkDeviceMemory']:
-                object_params[p.name] = 0
+                if p.name not in valid_null_object_names:
+                    object_params[p.name] = 0
             elif vk_helper.is_type(p.ty.replace('const ', '').strip('*'), 'struct'):
                 struct_type = p.ty.replace('const ', '').strip('*')
                 if vk_helper.typedef_rev_dict[struct_type] in vk_helper.struct_dict:
                     struct_type = vk_helper.typedef_rev_dict[struct_type]
                 for m in sorted(vk_helper.struct_dict[struct_type]):
                     if vk_helper.struct_dict[struct_type][m]['type'] in vulkan.core.objects and vk_helper.struct_dict[struct_type][m]['type'] not in ['VkPhysicalDevice', 'VkQueue', 'VkFence', 'VkImage', 'VkDeviceMemory']:
-                        param_name = '%s->%s' % (p.name, vk_helper.struct_dict[struct_type][m]['name'])
-                        object_params[param_name] = {}
-                        if vk_helper.struct_dict[struct_type][m]['dyn_array']:
-                            object_params[param_name] = '%s->%s' % (p.name, vk_helper.struct_dict[struct_type][m]['array_size'])
-                        else:
-                            object_params[param_name] = 0
+                        if vk_helper.struct_dict[struct_type][m]['name'] not in valid_null_object_names:
+                            param_name = '%s->%s' % (p.name, vk_helper.struct_dict[struct_type][m]['name'])
+                            object_params[param_name] = {}
+                            if vk_helper.struct_dict[struct_type][m]['dyn_array']:
+                                object_params[param_name] = '%s->%s' % (p.name, vk_helper.struct_dict[struct_type][m]['array_size'])
+                            else:
+                                object_params[param_name] = 0
         funcs = []
         mutex_unlock = False
         if proto.name in explicit_object_tracker_functions:
