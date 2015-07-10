@@ -86,21 +86,21 @@ typedef struct _GENERIC_HEADER {
 } GENERIC_HEADER;
 
 typedef struct _PIPELINE_NODE {
-    VkPipeline                           pipeline;
-    VkGraphicsPipelineCreateInfo         graphicsPipelineCI;
-    VkPipelineVertexInputStateCreateInfo vertexInputCI;
-    VkPipelineIaStateCreateInfo          iaStateCI;
-    VkPipelineTessStateCreateInfo        tessStateCI;
-    VkPipelineVpStateCreateInfo          vpStateCI;
-    VkPipelineRsStateCreateInfo          rsStateCI;
-    VkPipelineMsStateCreateInfo          msStateCI;
-    VkPipelineCbStateCreateInfo          cbStateCI;
-    VkPipelineDsStateCreateInfo          dsStateCI;
-    VkPipelineShaderStageCreateInfo      vsCI;
-    VkPipelineShaderStageCreateInfo      tcsCI;
-    VkPipelineShaderStageCreateInfo      tesCI;
-    VkPipelineShaderStageCreateInfo      gsCI;
-    VkPipelineShaderStageCreateInfo      fsCI;
+    VkPipeline                              pipeline;
+    VkGraphicsPipelineCreateInfo            graphicsPipelineCI;
+    VkPipelineVertexInputStateCreateInfo    vertexInputCI;
+    VkPipelineInputAssemblyStateCreateInfo  iaStateCI;
+    VkPipelineTessellationStateCreateInfo   tessStateCI;
+    VkPipelineViewportStateCreateInfo       vpStateCI;
+    VkPipelineRasterStateCreateInfo         rsStateCI;
+    VkPipelineMultisampleStateCreateInfo    msStateCI;
+    VkPipelineColorBlendStateCreateInfo     cbStateCI;
+    VkPipelineDepthStencilStateCreateInfo   dsStateCI;
+    VkPipelineShaderStageCreateInfo         vsCI;
+    VkPipelineShaderStageCreateInfo         tcsCI;
+    VkPipelineShaderStageCreateInfo         tesCI;
+    VkPipelineShaderStageCreateInfo         gsCI;
+    VkPipelineShaderStageCreateInfo         fsCI;
     // Compute shader is include in VkComputePipelineCreateInfo
     VkComputePipelineCreateInfo          computePipelineCI;
     // Flag of which shader stages are active for this pipeline
@@ -112,7 +112,7 @@ typedef struct _PIPELINE_NODE {
     uint32_t                             vtxAttributeCount; // number of attributes
     VkVertexInputAttributeDescription*   pVertexAttributeDescriptions;
     uint32_t                             attachmentCount;   // number of CB attachments
-    VkPipelineCbAttachmentState*         pAttachments;
+    VkPipelineColorBlendAttachmentState* pAttachments;
 } PIPELINE_NODE;
 
 typedef struct _SAMPLER_NODE {

@@ -316,8 +316,8 @@ void VkLayerTest::GenericDrawPreparation(VkCommandBufferObj *cmdBuffer, VkPipeli
         .stencilDepthFailOp = VK_STENCIL_OP_KEEP,
         .stencilCompareOp = VK_COMPARE_OP_NEVER
     };
-    VkPipelineDsStateCreateInfo ds_ci = {
-        .sType = VK_STRUCTURE_TYPE_PIPELINE_DS_STATE_CREATE_INFO,
+    VkPipelineDepthStencilStateCreateInfo ds_ci = {
+        .sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO,
         .pNext = NULL,
         .depthTestEnable = VK_FALSE,
         .depthWriteEnable = VK_TRUE,
@@ -1087,20 +1087,20 @@ TEST_F(VkLayerTest, DescriptorSetNotUpdated)
         .pSpecializationInfo  = NULL,
     };
     const VkGraphicsPipelineCreateInfo gp_ci = {
-        .sType             = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
-        .pNext             = NULL,
-        .stageCount        = 1,
-        .pStages           = &pipe_vs_ci,
-        .pVertexInputState = NULL,
-        .pIaState          = NULL,
-        .pTessState        = NULL,
-        .pVpState          = NULL,
-        .pRsState          = NULL,
-        .pMsState          = NULL,
-        .pDsState          = NULL,
-        .pCbState          = NULL,
-        .flags             = VK_PIPELINE_CREATE_DISABLE_OPTIMIZATION_BIT,
-        .layout            = pipeline_layout,
+        .sType                 = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
+        .pNext                 = NULL,
+        .stageCount            = 1,
+        .pStages               = &pipe_vs_ci,
+        .pVertexInputState     = NULL,
+        .pInputAssemblyState   = NULL,
+        .pTessellationState    = NULL,
+        .pViewportState        = NULL,
+        .pRasterState          = NULL,
+        .pMultisampleState     = NULL,
+        .pDepthStencilState    = NULL,
+        .pColorBlendState      = NULL,
+        .flags                 = VK_PIPELINE_CREATE_DISABLE_OPTIMIZATION_BIT,
+        .layout                = pipeline_layout,
     };
     const VkPipelineCacheCreateInfo pc_ci = {
         .sType             = VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO,
@@ -1207,20 +1207,20 @@ TEST_F(VkLayerTest, InvalidPipelineCreateState)
     ASSERT_VK_SUCCESS(err);
 
     const VkGraphicsPipelineCreateInfo gp_ci = {
-        .sType             = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
-        .pNext             = NULL,
-        .stageCount        = 0,
-        .pStages           = NULL, // Creating Gfx Pipeline w/o VS is a violation
-        .pVertexInputState = NULL,
-        .pIaState          = NULL,
-        .pTessState        = NULL,
-        .pVpState          = NULL,
-        .pRsState          = NULL,
-        .pMsState          = NULL,
-        .pDsState          = NULL,
-        .pCbState          = NULL,
-        .flags             = VK_PIPELINE_CREATE_DISABLE_OPTIMIZATION_BIT,
-        .layout            = pipeline_layout,
+        .sType                 = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
+        .pNext                 = NULL,
+        .stageCount            = 0,
+        .pStages               = NULL, // Creating Gfx Pipeline w/o VS is a violation
+        .pVertexInputState     = NULL,
+        .pInputAssemblyState   = NULL,
+        .pTessellationState    = NULL,
+        .pViewportState        = NULL,
+        .pRasterState          = NULL,
+        .pMultisampleState     = NULL,
+        .pDepthStencilState    = NULL,
+        .pColorBlendState      = NULL,
+        .flags                 = VK_PIPELINE_CREATE_DISABLE_OPTIMIZATION_BIT,
+        .layout                = pipeline_layout,
     };
     const VkPipelineCacheCreateInfo pc_ci = {
         .sType             = VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO,
@@ -1373,20 +1373,20 @@ TEST_F(VkLayerTest, VtxBufferNoRenderPass)
         .pSpecializationInfo  = NULL,
     };
     const VkGraphicsPipelineCreateInfo gp_ci = {
-        .sType             = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
-        .pNext             = NULL,
-        .stageCount        = 1,
-        .pStages           = &pipe_vs_ci,
-        .pVertexInputState = NULL,
-        .pIaState          = NULL,
-        .pTessState        = NULL,
-        .pVpState          = NULL,
-        .pRsState          = NULL,
-        .pMsState          = NULL,
-        .pDsState          = NULL,
-        .pCbState          = NULL,
-        .flags             = VK_PIPELINE_CREATE_DISABLE_OPTIMIZATION_BIT,
-        .layout            = pipeline_layout,
+        .sType                 = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
+        .pNext                 = NULL,
+        .stageCount            = 0,
+        .pStages               = &pipe_vs_ci,
+        .pVertexInputState     = NULL,
+        .pInputAssemblyState   = NULL,
+        .pTessellationState    = NULL,
+        .pViewportState        = NULL,
+        .pRasterState          = NULL,
+        .pMultisampleState     = NULL,
+        .pDepthStencilState    = NULL,
+        .pColorBlendState      = NULL,
+        .flags                 = VK_PIPELINE_CREATE_DISABLE_OPTIMIZATION_BIT,
+        .layout                = pipeline_layout,
     };
     const VkPipelineCacheCreateInfo pc_ci = {
         .sType             = VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO,
@@ -1815,8 +1815,8 @@ TEST_F(VkLayerTest, NumSamplesMismatch)
     err = vkAllocDescriptorSets(m_device->device(), ds_pool, VK_DESCRIPTOR_SET_USAGE_ONE_SHOT, 1, &ds_layout, &descriptorSet, &ds_count);
     ASSERT_VK_SUCCESS(err);
 
-    const VkPipelineMsStateCreateInfo pipe_ms_state_ci = {
-        .sType               = VK_STRUCTURE_TYPE_PIPELINE_MS_STATE_CREATE_INFO,
+    const VkPipelineMultisampleStateCreateInfo pipe_ms_state_ci = {
+        .sType               = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO,
         .pNext               = NULL,
         .rasterSamples       = 4,
         .multisampleEnable   = 1,
@@ -1848,20 +1848,20 @@ TEST_F(VkLayerTest, NumSamplesMismatch)
         .pSpecializationInfo  = NULL,
     };
     const VkGraphicsPipelineCreateInfo gp_ci = {
-        .sType             = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
-        .pNext             = NULL,
-        .stageCount        = 1,
-        .pStages           = &pipe_vs_ci,
-        .pVertexInputState = NULL,
-        .pIaState          = NULL,
-        .pTessState        = NULL,
-        .pVpState          = NULL,
-        .pRsState          = NULL,
-        .pMsState          = &pipe_ms_state_ci,
-        .pDsState          = NULL,
-        .pCbState          = NULL,
-        .flags             = VK_PIPELINE_CREATE_DISABLE_OPTIMIZATION_BIT,
-        .layout            = pipeline_layout,
+        .sType                 = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
+        .pNext                 = NULL,
+        .stageCount            = 0,
+        .pStages               = &pipe_vs_ci,
+        .pVertexInputState     = NULL,
+        .pInputAssemblyState   = NULL,
+        .pTessellationState    = NULL,
+        .pViewportState        = NULL,
+        .pRasterState          = NULL,
+        .pMultisampleState     = &pipe_ms_state_ci,
+        .pDepthStencilState    = NULL,
+        .pColorBlendState      = NULL,
+        .flags                 = VK_PIPELINE_CREATE_DISABLE_OPTIMIZATION_BIT,
+        .layout                = pipeline_layout,
     };
     const VkPipelineCacheCreateInfo pc_ci = {
         .sType             = VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO,
@@ -2009,8 +2009,8 @@ TEST_F(VkLayerTest, ClearCmdNoDraw)
     err = vkAllocDescriptorSets(m_device->device(), ds_pool, VK_DESCRIPTOR_SET_USAGE_ONE_SHOT, 1, &ds_layout, &descriptorSet, &ds_count);
     ASSERT_VK_SUCCESS(err);
 
-    const VkPipelineMsStateCreateInfo pipe_ms_state_ci = {
-        .sType               = VK_STRUCTURE_TYPE_PIPELINE_MS_STATE_CREATE_INFO,
+    const VkPipelineMultisampleStateCreateInfo pipe_ms_state_ci = {
+        .sType               = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO,
         .pNext               = NULL,
         .rasterSamples       = 4,
         .multisampleEnable   = 1,
@@ -2071,20 +2071,20 @@ TEST_F(VkLayerTest, ClearCmdNoDraw)
         .pSpecializationInfo  = NULL,
     };
     const VkGraphicsPipelineCreateInfo gp_ci = {
-        .sType             = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
-        .pNext             = NULL,
-        .stageCount        = 1,
-        .pStages           = &pipe_vs_ci,
-        .pVertexInputState = NULL,
-        .pIaState          = NULL,
-        .pTessState        = NULL,
-        .pVpState          = NULL,
-        .pRsState          = NULL,
-        .pMsState          = &pipe_ms_state_ci,
-        .pDsState          = NULL,
-        .pCbState          = NULL,
-        .flags             = VK_PIPELINE_CREATE_DISABLE_OPTIMIZATION_BIT,
-        .layout            = pipeline_layout,
+        .sType                 = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
+        .pNext                 = NULL,
+        .stageCount            = 0,
+        .pStages               = &pipe_vs_ci,
+        .pVertexInputState     = NULL,
+        .pInputAssemblyState   = NULL,
+        .pTessellationState    = NULL,
+        .pViewportState        = NULL,
+        .pRasterState          = NULL,
+        .pMultisampleState     = &pipe_ms_state_ci,
+        .pDepthStencilState    = NULL,
+        .pColorBlendState      = NULL,
+        .flags                 = VK_PIPELINE_CREATE_DISABLE_OPTIMIZATION_BIT,
+        .layout                = pipeline_layout,
     };
     const VkPipelineCacheCreateInfo pc_ci = {
         .sType             = VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO,
@@ -2169,8 +2169,8 @@ TEST_F(VkLayerTest, VtxBufferBadIndex)
     err = vkAllocDescriptorSets(m_device->device(), ds_pool, VK_DESCRIPTOR_SET_USAGE_ONE_SHOT, 1, &ds_layout, &descriptorSet, &ds_count);
     ASSERT_VK_SUCCESS(err);
 
-    const VkPipelineMsStateCreateInfo pipe_ms_state_ci = {
-        .sType               = VK_STRUCTURE_TYPE_PIPELINE_MS_STATE_CREATE_INFO,
+    const VkPipelineMultisampleStateCreateInfo pipe_ms_state_ci = {
+        .sType               = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO,
         .pNext               = NULL,
         .rasterSamples       = 1,
         .multisampleEnable   = 1,
@@ -2202,20 +2202,20 @@ TEST_F(VkLayerTest, VtxBufferBadIndex)
         .pSpecializationInfo  = NULL,
     };
     const VkGraphicsPipelineCreateInfo gp_ci = {
-        .sType             = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
-        .pNext             = NULL,
-        .stageCount        = 1,
-        .pStages           = &pipe_vs_ci,
-        .pVertexInputState = NULL,
-        .pIaState          = NULL,
-        .pTessState        = NULL,
-        .pVpState          = NULL,
-        .pRsState          = NULL,
-        .pMsState          = &pipe_ms_state_ci,
-        .pDsState          = NULL,
-        .pCbState          = NULL,
-        .flags             = VK_PIPELINE_CREATE_DISABLE_OPTIMIZATION_BIT,
-        .layout            = pipeline_layout,
+        .sType                 = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
+        .pNext                 = NULL,
+        .stageCount            = 0,
+        .pStages               = &pipe_vs_ci,
+        .pVertexInputState     = NULL,
+        .pInputAssemblyState   = NULL,
+        .pTessellationState    = NULL,
+        .pViewportState        = NULL,
+        .pRasterState          = NULL,
+        .pMultisampleState     = &pipe_ms_state_ci,
+        .pDepthStencilState    = NULL,
+        .pColorBlendState      = NULL,
+        .flags                 = VK_PIPELINE_CREATE_DISABLE_OPTIMIZATION_BIT,
+        .layout                = pipeline_layout,
     };
 
     VkPipelineCacheCreateInfo pipelineCache;

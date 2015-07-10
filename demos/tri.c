@@ -1042,13 +1042,13 @@ static void demo_prepare_pipeline(struct demo *demo)
     VkGraphicsPipelineCreateInfo pipeline;
     VkPipelineCacheCreateInfo pipelineCache;
 
-    VkPipelineVertexInputStateCreateInfo vi;
-    VkPipelineIaStateCreateInfo ia;
-    VkPipelineRsStateCreateInfo rs;
-    VkPipelineCbStateCreateInfo cb;
-    VkPipelineDsStateCreateInfo ds;
-    VkPipelineVpStateCreateInfo vp;
-    VkPipelineMsStateCreateInfo ms;
+    VkPipelineVertexInputStateCreateInfo   vi;
+    VkPipelineInputAssemblyStateCreateInfo ia;
+    VkPipelineRasterStateCreateInfo        rs;
+    VkPipelineColorBlendStateCreateInfo    cb;
+    VkPipelineDepthStencilStateCreateInfo  ds;
+    VkPipelineViewportStateCreateInfo      vp;
+    VkPipelineMultisampleStateCreateInfo   ms;
 
     VkResult U_ASSERT_ONLY err;
 
@@ -1059,19 +1059,19 @@ static void demo_prepare_pipeline(struct demo *demo)
     vi = demo->vertices.vi;
 
     memset(&ia, 0, sizeof(ia));
-    ia.sType = VK_STRUCTURE_TYPE_PIPELINE_IA_STATE_CREATE_INFO;
+    ia.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
     ia.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
 
     memset(&rs, 0, sizeof(rs));
-    rs.sType = VK_STRUCTURE_TYPE_PIPELINE_RS_STATE_CREATE_INFO;
+    rs.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTER_STATE_CREATE_INFO;
     rs.fillMode = VK_FILL_MODE_SOLID;
     rs.cullMode = VK_CULL_MODE_BACK;
     rs.frontFace = VK_FRONT_FACE_CW;
     rs.depthClipEnable = VK_TRUE;
 
     memset(&cb, 0, sizeof(cb));
-    cb.sType = VK_STRUCTURE_TYPE_PIPELINE_CB_STATE_CREATE_INFO;
-    VkPipelineCbAttachmentState att_state[1];
+    cb.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
+    VkPipelineColorBlendAttachmentState att_state[1];
     memset(att_state, 0, sizeof(att_state));
     att_state[0].channelWriteMask = 0xf;
     att_state[0].blendEnable = VK_FALSE;
@@ -1079,12 +1079,12 @@ static void demo_prepare_pipeline(struct demo *demo)
     cb.pAttachments = att_state;
 
     memset(&vp, 0, sizeof(vp));
-    vp.sType = VK_STRUCTURE_TYPE_PIPELINE_VP_STATE_CREATE_INFO;
+    vp.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
     vp.viewportCount = 1;
     vp.clipOrigin = VK_COORDINATE_ORIGIN_UPPER_LEFT;
 
     memset(&ds, 0, sizeof(ds));
-    ds.sType = VK_STRUCTURE_TYPE_PIPELINE_DS_STATE_CREATE_INFO;
+    ds.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
     ds.depthTestEnable = VK_TRUE;
     ds.depthWriteEnable = VK_TRUE;
     ds.depthCompareOp = VK_COMPARE_OP_LESS_EQUAL;
@@ -1096,7 +1096,7 @@ static void demo_prepare_pipeline(struct demo *demo)
     ds.front = ds.back;
 
     memset(&ms, 0, sizeof(ms));
-    ms.sType = VK_STRUCTURE_TYPE_PIPELINE_MS_STATE_CREATE_INFO;
+    ms.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
     ms.sampleMask = 1;
     ms.multisampleEnable = VK_FALSE;
     ms.rasterSamples = 1;
@@ -1115,16 +1115,14 @@ static void demo_prepare_pipeline(struct demo *demo)
     shaderStages[1].stage  = VK_SHADER_STAGE_FRAGMENT;
     shaderStages[1].shader = demo_prepare_fs(demo);
 
-    pipeline.pVertexInputState = &vi;
-    pipeline.pIaState = &ia;
-    pipeline.pRsState = &rs;
-    pipeline.pCbState = &cb;
-    pipeline.pMsState = &ms;
-    pipeline.pVpState = &vp;
-    pipeline.pDsState = &ds;
-    pipeline.pStages  = shaderStages;
-    pipeline.renderPass = demo->render_pass;
-    pipeline.subpass = 0;
+    pipeline.pVertexInputState   = &vi;
+    pipeline.pInputAssemblyState = &ia;
+    pipeline.pRasterState        = &rs;
+    pipeline.pColorBlendState    = &cb;
+    pipeline.pMultisampleState   = &ms;
+    pipeline.pViewportState      = &vp;
+    pipeline.pDepthStencilState  = &ds;
+    pipeline.pStages             = shaderStages;
 
     memset(&pipelineCache, 0, sizeof(pipelineCache));
     pipelineCache.sType = VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO;

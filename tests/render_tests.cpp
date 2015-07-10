@@ -829,7 +829,7 @@ TEST_F(VkRenderTest, TriangleMRT)
 
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget(2));
 
-    VkPipelineCbAttachmentState att = {};
+    VkPipelineColorBlendAttachmentState att = {};
     att.blendEnable = VK_FALSE;
     att.channelWriteMask = 0xf;
     pipelineobj.AddColorAttachment(1, &att);
@@ -1859,7 +1859,7 @@ TEST_F(VkRenderTest, CubeWithVertexFetchAndMVP)
     pipelineobj.AddShader(&vs);
     pipelineobj.AddShader(&ps);
 
-    VkPipelineDsStateCreateInfo ds_state;
+    VkPipelineDepthStencilStateCreateInfo ds_state;
     ds_state.depthTestEnable = VK_TRUE;
     ds_state.depthWriteEnable = VK_TRUE;
     ds_state.depthCompareOp = VK_COMPARE_OP_LESS_EQUAL;
@@ -2802,7 +2802,7 @@ TEST_F(VkRenderTest, CubeWithVertexFetchAndMVPAndTexture)
     pipelineobj.AddVertexInputBindings(&vi_binding,1);
     pipelineobj.AddVertexDataBuffer(&meshBuffer, MESH_BIND_ID);
 
-    VkPipelineDsStateCreateInfo ds_state;
+    VkPipelineDepthStencilStateCreateInfo ds_state;
     ds_state.depthTestEnable = VK_TRUE;
     ds_state.depthWriteEnable = VK_TRUE;
     ds_state.depthCompareOp = VK_COMPARE_OP_LESS_EQUAL;

@@ -399,33 +399,33 @@ public:
     void AddVertexInputAttribs(VkVertexInputAttributeDescription* vi_attrib, int count);
     void AddVertexInputBindings(VkVertexInputBindingDescription* vi_binding, int count);
     void AddVertexDataBuffer(VkConstantBufferObj* vertexDataBuffer, int binding);
-    void AddColorAttachment(uint32_t binding, const VkPipelineCbAttachmentState *att);
+    void AddColorAttachment(uint32_t binding, const VkPipelineColorBlendAttachmentState *att);
 
     void AddColorAttachment()
     {
-        VkPipelineCbAttachmentState att = {};
+        VkPipelineColorBlendAttachmentState att = {};
         att.blendEnable = VK_FALSE;
         att.channelWriteMask = 0xf;
         AddColorAttachment(0, &att);
     }
 
-    void SetDepthStencil(VkPipelineDsStateCreateInfo *);
+    void SetDepthStencil(VkPipelineDepthStencilStateCreateInfo *);
     VkResult CreateVKPipeline(VkDescriptorSetObj &descriptorSet, VkRenderPass render_pass);
 
 protected:
-    VkPipelineVertexInputStateCreateInfo m_vi_state;
-    VkPipelineIaStateCreateInfo          m_ia_state;
-    VkPipelineRsStateCreateInfo          m_rs_state;
-    VkPipelineCbStateCreateInfo          m_cb_state;
-    VkPipelineDsStateCreateInfo          m_ds_state;
-    VkPipelineVpStateCreateInfo          m_vp_state;
-    VkPipelineMsStateCreateInfo          m_ms_state;
-    VkDeviceObj                         *m_device;
-    vector<VkShaderObj*>                 m_shaderObjs;
-    vector<VkConstantBufferObj*>         m_vertexBufferObjs;
-    vector<int>                          m_vertexBufferBindings;
-    vector<VkPipelineCbAttachmentState>  m_colorAttachments;
-    int                                  m_vertexBufferCount;
+    VkPipelineVertexInputStateCreateInfo          m_vi_state;
+    VkPipelineInputAssemblyStateCreateInfo        m_ia_state;
+    VkPipelineRasterStateCreateInfo               m_rs_state;
+    VkPipelineColorBlendStateCreateInfo           m_cb_state;
+    VkPipelineDepthStencilStateCreateInfo         m_ds_state;
+    VkPipelineViewportStateCreateInfo             m_vp_state;
+    VkPipelineMultisampleStateCreateInfo          m_ms_state;
+    VkDeviceObj                                  *m_device;
+    vector<VkShaderObj*>                          m_shaderObjs;
+    vector<VkConstantBufferObj*>                  m_vertexBufferObjs;
+    vector<int>                                   m_vertexBufferBindings;
+    vector<VkPipelineColorBlendAttachmentState>   m_colorAttachments;
+    int                                           m_vertexBufferCount;
 };
 
 #endif // VKRENDERFRAMEWORK_H

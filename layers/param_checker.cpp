@@ -4521,291 +4521,885 @@ bool PreCreateGraphicsPipeline(
         "vkCreateGraphicsPipeline parameter, VkFormat pCreateInfo->pVertexInputState->pVertexAttributeDescriptions->format, is unrecognized enumerator");
         return false;
     }
-    if(pCreateInfo->pIaState == nullptr)
+    if(pCreateInfo->pInputAssemblyState == nullptr)
     {
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
         "vkCreateGraphicsPipeline parameter, const VkPipelineIaStateCreateInfo* pCreateInfo->pIaState, is null pointer");
         return false;
     }
-    if(pCreateInfo->pIaState->sType < VK_STRUCTURE_TYPE_BEGIN_RANGE ||
-        pCreateInfo->pIaState->sType > VK_STRUCTURE_TYPE_END_RANGE)
+    if(pCreateInfo->pInputAssemblyState->sType < VK_STRUCTURE_TYPE_BEGIN_RANGE ||
+        pCreateInfo->pInputAssemblyState->sType > VK_STRUCTURE_TYPE_END_RANGE)
     {
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
         "vkCreateGraphicsPipeline parameter, VkStructureType pCreateInfo->pIaState->sType, is unrecognized enumerator");
         return false;
     }
-    if(pCreateInfo->pIaState->topology < VK_PRIMITIVE_TOPOLOGY_BEGIN_RANGE ||
-        pCreateInfo->pIaState->topology > VK_PRIMITIVE_TOPOLOGY_END_RANGE)
+    if(pCreateInfo->pInputAssemblyState->topology < VK_PRIMITIVE_TOPOLOGY_BEGIN_RANGE ||
+        pCreateInfo->pInputAssemblyState->topology > VK_PRIMITIVE_TOPOLOGY_END_RANGE)
     {
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
         "vkCreateGraphicsPipeline parameter, VkPrimitiveTopology pCreateInfo->pIaState->topology, is unrecognized enumerator");
         return false;
     }
-    if(pCreateInfo->pTessState == nullptr)
+    if(pCreateInfo->pTessellationState == nullptr)
     {
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
         "vkCreateGraphicsPipeline parameter, const VkPipelineTessStateCreateInfo* pCreateInfo->pTessState, is null pointer");
         return false;
     }
-    if(pCreateInfo->pTessState->sType < VK_STRUCTURE_TYPE_BEGIN_RANGE ||
-        pCreateInfo->pTessState->sType > VK_STRUCTURE_TYPE_END_RANGE)
+    if(pCreateInfo->pTessellationState->sType < VK_STRUCTURE_TYPE_BEGIN_RANGE ||
+        pCreateInfo->pTessellationState->sType > VK_STRUCTURE_TYPE_END_RANGE)
     {
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
         "vkCreateGraphicsPipeline parameter, VkStructureType pCreateInfo->pTessState->sType, is unrecognized enumerator");
         return false;
     }
-    if(pCreateInfo->pVpState == nullptr)
+    if(pCreateInfo->pViewportState == nullptr)
     {
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
         "vkCreateGraphicsPipeline parameter, const VkPipelineVpStateCreateInfo* pCreateInfo->pVpState, is null pointer");
         return false;
     }
-    if(pCreateInfo->pVpState->sType < VK_STRUCTURE_TYPE_BEGIN_RANGE ||
-        pCreateInfo->pVpState->sType > VK_STRUCTURE_TYPE_END_RANGE)
+    if(pCreateInfo->pViewportState->sType < VK_STRUCTURE_TYPE_BEGIN_RANGE ||
+        pCreateInfo->pViewportState->sType > VK_STRUCTURE_TYPE_END_RANGE)
     {
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
         "vkCreateGraphicsPipeline parameter, VkStructureType pCreateInfo->pVpState->sType, is unrecognized enumerator");
         return false;
     }
-    if(pCreateInfo->pVpState->clipOrigin < VK_COORDINATE_ORIGIN_BEGIN_RANGE ||
-        pCreateInfo->pVpState->clipOrigin > VK_COORDINATE_ORIGIN_END_RANGE)
+    if(pCreateInfo->pViewportState->clipOrigin < VK_COORDINATE_ORIGIN_BEGIN_RANGE ||
+        pCreateInfo->pViewportState->clipOrigin > VK_COORDINATE_ORIGIN_END_RANGE)
     {
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
         "vkCreateGraphicsPipeline parameter, VkCoordinateOrigin pCreateInfo->pVpState->clipOrigin, is unrecognized enumerator");
         return false;
     }
-    if(pCreateInfo->pVpState->depthMode < VK_DEPTH_MODE_BEGIN_RANGE ||
-        pCreateInfo->pVpState->depthMode > VK_DEPTH_MODE_END_RANGE)
+    if(pCreateInfo->pViewportState->depthMode < VK_DEPTH_MODE_BEGIN_RANGE ||
+        pCreateInfo->pViewportState->depthMode > VK_DEPTH_MODE_END_RANGE)
     {
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
         "vkCreateGraphicsPipeline parameter, VkDepthMode pCreateInfo->pVpState->depthMode, is unrecognized enumerator");
         return false;
     }
-    if(pCreateInfo->pRsState == nullptr)
+    if(pCreateInfo->pRasterState == nullptr)
     {
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
         "vkCreateGraphicsPipeline parameter, const VkPipelineRsStateCreateInfo* pCreateInfo->pRsState, is null pointer");
         return false;
     }
-    if(pCreateInfo->pRsState->sType < VK_STRUCTURE_TYPE_BEGIN_RANGE ||
-        pCreateInfo->pRsState->sType > VK_STRUCTURE_TYPE_END_RANGE)
+    if(pCreateInfo->pRasterState->sType < VK_STRUCTURE_TYPE_BEGIN_RANGE ||
+        pCreateInfo->pRasterState->sType > VK_STRUCTURE_TYPE_END_RANGE)
     {
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
         "vkCreateGraphicsPipeline parameter, VkStructureType pCreateInfo->pRsState->sType, is unrecognized enumerator");
         return false;
     }
-    if(pCreateInfo->pRsState->pointOrigin < VK_COORDINATE_ORIGIN_BEGIN_RANGE ||
-        pCreateInfo->pRsState->pointOrigin > VK_COORDINATE_ORIGIN_END_RANGE)
+    if(pCreateInfo->pRasterState->pointOrigin < VK_COORDINATE_ORIGIN_BEGIN_RANGE ||
+        pCreateInfo->pRasterState->pointOrigin > VK_COORDINATE_ORIGIN_END_RANGE)
     {
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
         "vkCreateGraphicsPipeline parameter, VkCoordinateOrigin pCreateInfo->pRsState->pointOrigin, is unrecognized enumerator");
         return false;
     }
-    if(pCreateInfo->pRsState->provokingVertex < VK_PROVOKING_VERTEX_BEGIN_RANGE ||
-        pCreateInfo->pRsState->provokingVertex > VK_PROVOKING_VERTEX_END_RANGE)
+    if(pCreateInfo->pRasterState->provokingVertex < VK_PROVOKING_VERTEX_BEGIN_RANGE ||
+        pCreateInfo->pRasterState->provokingVertex > VK_PROVOKING_VERTEX_END_RANGE)
     {
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
         "vkCreateGraphicsPipeline parameter, VkProvokingVertex pCreateInfo->pRsState->provokingVertex, is unrecognized enumerator");
         return false;
     }
-    if(pCreateInfo->pRsState->fillMode < VK_FILL_MODE_BEGIN_RANGE ||
-        pCreateInfo->pRsState->fillMode > VK_FILL_MODE_END_RANGE)
+    if(pCreateInfo->pRasterState->fillMode < VK_FILL_MODE_BEGIN_RANGE ||
+        pCreateInfo->pRasterState->fillMode > VK_FILL_MODE_END_RANGE)
     {
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
         "vkCreateGraphicsPipeline parameter, VkFillMode pCreateInfo->pRsState->fillMode, is unrecognized enumerator");
         return false;
     }
-    if(pCreateInfo->pRsState->cullMode < VK_CULL_MODE_BEGIN_RANGE ||
-        pCreateInfo->pRsState->cullMode > VK_CULL_MODE_END_RANGE)
+    if(pCreateInfo->pRasterState->cullMode < VK_CULL_MODE_BEGIN_RANGE ||
+        pCreateInfo->pRasterState->cullMode > VK_CULL_MODE_END_RANGE)
     {
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
         "vkCreateGraphicsPipeline parameter, VkCullMode pCreateInfo->pRsState->cullMode, is unrecognized enumerator");
         return false;
     }
-    if(pCreateInfo->pRsState->frontFace < VK_FRONT_FACE_BEGIN_RANGE ||
-        pCreateInfo->pRsState->frontFace > VK_FRONT_FACE_END_RANGE)
+    if(pCreateInfo->pRasterState->frontFace < VK_FRONT_FACE_BEGIN_RANGE ||
+        pCreateInfo->pRasterState->frontFace > VK_FRONT_FACE_END_RANGE)
     {
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
         "vkCreateGraphicsPipeline parameter, VkFrontFace pCreateInfo->pRsState->frontFace, is unrecognized enumerator");
         return false;
     }
-    if(pCreateInfo->pMsState == nullptr)
+    if(pCreateInfo->pMultisampleState == nullptr)
     {
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
         "vkCreateGraphicsPipeline parameter, const VkPipelineMsStateCreateInfo* pCreateInfo->pMsState, is null pointer");
         return false;
     }
-    if(pCreateInfo->pMsState->sType < VK_STRUCTURE_TYPE_BEGIN_RANGE ||
-        pCreateInfo->pMsState->sType > VK_STRUCTURE_TYPE_END_RANGE)
+    if(pCreateInfo->pMultisampleState->sType < VK_STRUCTURE_TYPE_BEGIN_RANGE ||
+        pCreateInfo->pMultisampleState->sType > VK_STRUCTURE_TYPE_END_RANGE)
     {
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
         "vkCreateGraphicsPipeline parameter, VkStructureType pCreateInfo->pMsState->sType, is unrecognized enumerator");
         return false;
     }
-    if(pCreateInfo->pDsState == nullptr)
+    if(pCreateInfo->pDepthStencilState == nullptr)
     {
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
         "vkCreateGraphicsPipeline parameter, const VkPipelineDsStateCreateInfo* pCreateInfo->pDsState, is null pointer");
         return false;
     }
-    if(pCreateInfo->pDsState->sType < VK_STRUCTURE_TYPE_BEGIN_RANGE ||
-        pCreateInfo->pDsState->sType > VK_STRUCTURE_TYPE_END_RANGE)
+    if(pCreateInfo->pDepthStencilState->sType < VK_STRUCTURE_TYPE_BEGIN_RANGE ||
+        pCreateInfo->pDepthStencilState->sType > VK_STRUCTURE_TYPE_END_RANGE)
     {
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
         "vkCreateGraphicsPipeline parameter, VkStructureType pCreateInfo->pDsState->sType, is unrecognized enumerator");
         return false;
     }
+<<<<<<< HEAD
     if(pCreateInfo->pDsState->depthCompareOp < VK_COMPARE_OP_BEGIN_RANGE ||
         pCreateInfo->pDsState->depthCompareOp > VK_COMPARE_OP_END_RANGE)
+=======
+    if(pCreateInfo->pDepthStencilState->format < VK_FORMAT_BEGIN_RANGE ||
+        pCreateInfo->pDepthStencilState->format > VK_FORMAT_END_RANGE)
+    {
+        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        "vkCreateGraphicsPipeline parameter, VkFormat pCreateInfo->pDsState->format, is unrecognized enumerator");
+        return false;
+    }
+    if(pCreateInfo->pDepthStencilState->depthCompareOp < VK_COMPARE_OP_BEGIN_RANGE ||
+        pCreateInfo->pDepthStencilState->depthCompareOp > VK_COMPARE_OP_END_RANGE)
+>>>>>>> fd61c93... Bug 14224: Remove abbreviations on some API symbols
     {
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
         "vkCreateGraphicsPipeline parameter, VkCompareOp pCreateInfo->pDsState->depthCompareOp, is unrecognized enumerator");
         return false;
     }
-    if(pCreateInfo->pDsState->front.stencilFailOp < VK_STENCIL_OP_BEGIN_RANGE ||
-        pCreateInfo->pDsState->front.stencilFailOp > VK_STENCIL_OP_END_RANGE)
+    if(pCreateInfo->pDepthStencilState->front.stencilFailOp < VK_STENCIL_OP_BEGIN_RANGE ||
+        pCreateInfo->pDepthStencilState->front.stencilFailOp > VK_STENCIL_OP_END_RANGE)
     {
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
         "vkCreateGraphicsPipeline parameter, VkStencilOp pCreateInfo->pDsState->front.stencilFailOp, is unrecognized enumerator");
         return false;
     }
-    if(pCreateInfo->pDsState->front.stencilPassOp < VK_STENCIL_OP_BEGIN_RANGE ||
-        pCreateInfo->pDsState->front.stencilPassOp > VK_STENCIL_OP_END_RANGE)
+    if(pCreateInfo->pDepthStencilState->front.stencilPassOp < VK_STENCIL_OP_BEGIN_RANGE ||
+        pCreateInfo->pDepthStencilState->front.stencilPassOp > VK_STENCIL_OP_END_RANGE)
     {
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
         "vkCreateGraphicsPipeline parameter, VkStencilOp pCreateInfo->pDsState->front.stencilPassOp, is unrecognized enumerator");
         return false;
     }
-    if(pCreateInfo->pDsState->front.stencilDepthFailOp < VK_STENCIL_OP_BEGIN_RANGE ||
-        pCreateInfo->pDsState->front.stencilDepthFailOp > VK_STENCIL_OP_END_RANGE)
+    if(pCreateInfo->pDepthStencilState->front.stencilDepthFailOp < VK_STENCIL_OP_BEGIN_RANGE ||
+        pCreateInfo->pDepthStencilState->front.stencilDepthFailOp > VK_STENCIL_OP_END_RANGE)
     {
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
         "vkCreateGraphicsPipeline parameter, VkStencilOp pCreateInfo->pDsState->front.stencilDepthFailOp, is unrecognized enumerator");
         return false;
     }
-    if(pCreateInfo->pDsState->front.stencilCompareOp < VK_COMPARE_OP_BEGIN_RANGE ||
-        pCreateInfo->pDsState->front.stencilCompareOp > VK_COMPARE_OP_END_RANGE)
+    if(pCreateInfo->pDepthStencilState->front.stencilCompareOp < VK_COMPARE_OP_BEGIN_RANGE ||
+        pCreateInfo->pDepthStencilState->front.stencilCompareOp > VK_COMPARE_OP_END_RANGE)
     {
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
         "vkCreateGraphicsPipeline parameter, VkCompareOp pCreateInfo->pDsState->front.stencilCompareOp, is unrecognized enumerator");
         return false;
     }
-    if(pCreateInfo->pDsState->back.stencilFailOp < VK_STENCIL_OP_BEGIN_RANGE ||
-        pCreateInfo->pDsState->back.stencilFailOp > VK_STENCIL_OP_END_RANGE)
+    if(pCreateInfo->pDepthStencilState->back.stencilFailOp < VK_STENCIL_OP_BEGIN_RANGE ||
+        pCreateInfo->pDepthStencilState->back.stencilFailOp > VK_STENCIL_OP_END_RANGE)
     {
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
         "vkCreateGraphicsPipeline parameter, VkStencilOp pCreateInfo->pDsState->back.stencilFailOp, is unrecognized enumerator");
         return false;
     }
-    if(pCreateInfo->pDsState->back.stencilPassOp < VK_STENCIL_OP_BEGIN_RANGE ||
-        pCreateInfo->pDsState->back.stencilPassOp > VK_STENCIL_OP_END_RANGE)
+    if(pCreateInfo->pDepthStencilState->back.stencilPassOp < VK_STENCIL_OP_BEGIN_RANGE ||
+        pCreateInfo->pDepthStencilState->back.stencilPassOp > VK_STENCIL_OP_END_RANGE)
     {
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
         "vkCreateGraphicsPipeline parameter, VkStencilOp pCreateInfo->pDsState->back.stencilPassOp, is unrecognized enumerator");
         return false;
     }
-    if(pCreateInfo->pDsState->back.stencilDepthFailOp < VK_STENCIL_OP_BEGIN_RANGE ||
-        pCreateInfo->pDsState->back.stencilDepthFailOp > VK_STENCIL_OP_END_RANGE)
+    if(pCreateInfo->pDepthStencilState->back.stencilDepthFailOp < VK_STENCIL_OP_BEGIN_RANGE ||
+        pCreateInfo->pDepthStencilState->back.stencilDepthFailOp > VK_STENCIL_OP_END_RANGE)
     {
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
         "vkCreateGraphicsPipeline parameter, VkStencilOp pCreateInfo->pDsState->back.stencilDepthFailOp, is unrecognized enumerator");
         return false;
     }
-    if(pCreateInfo->pDsState->back.stencilCompareOp < VK_COMPARE_OP_BEGIN_RANGE ||
-        pCreateInfo->pDsState->back.stencilCompareOp > VK_COMPARE_OP_END_RANGE)
+    if(pCreateInfo->pDepthStencilState->back.stencilCompareOp < VK_COMPARE_OP_BEGIN_RANGE ||
+        pCreateInfo->pDepthStencilState->back.stencilCompareOp > VK_COMPARE_OP_END_RANGE)
     {
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
         "vkCreateGraphicsPipeline parameter, VkCompareOp pCreateInfo->pDsState->back.stencilCompareOp, is unrecognized enumerator");
         return false;
     }
-    if(pCreateInfo->pCbState == nullptr)
+    if(pCreateInfo->pColorBlendState == nullptr)
     {
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
         "vkCreateGraphicsPipeline parameter, const VkPipelineCbStateCreateInfo* pCreateInfo->pCbState, is null pointer");
         return false;
     }
-    if(pCreateInfo->pCbState->sType < VK_STRUCTURE_TYPE_BEGIN_RANGE ||
-        pCreateInfo->pCbState->sType > VK_STRUCTURE_TYPE_END_RANGE)
+    if(pCreateInfo->pColorBlendState->sType < VK_STRUCTURE_TYPE_BEGIN_RANGE ||
+        pCreateInfo->pColorBlendState->sType > VK_STRUCTURE_TYPE_END_RANGE)
     {
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
         "vkCreateGraphicsPipeline parameter, VkStructureType pCreateInfo->pCbState->sType, is unrecognized enumerator");
         return false;
     }
-    if(pCreateInfo->pCbState->logicOp < VK_LOGIC_OP_BEGIN_RANGE ||
-        pCreateInfo->pCbState->logicOp > VK_LOGIC_OP_END_RANGE)
+    if(pCreateInfo->pColorBlendState->logicOp < VK_LOGIC_OP_BEGIN_RANGE ||
+        pCreateInfo->pColorBlendState->logicOp > VK_LOGIC_OP_END_RANGE)
     {
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
         "vkCreateGraphicsPipeline parameter, VkLogicOp pCreateInfo->pCbState->logicOp, is unrecognized enumerator");
         return false;
     }
-    if(pCreateInfo->pCbState->pAttachments == nullptr)
+    if(pCreateInfo->pColorBlendState->pAttachments == nullptr)
     {
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
         "vkCreateGraphicsPipeline parameter, const VkPipelineCbAttachmentState* pCreateInfo->pCbState->pAttachments, is null pointer");
         return false;
     }
-    if(pCreateInfo->pCbState->pAttachments->format < VK_FORMAT_BEGIN_RANGE ||
-        pCreateInfo->pCbState->pAttachments->format > VK_FORMAT_END_RANGE)
+    if(pCreateInfo->pColorBlendState->pAttachments->format < VK_FORMAT_BEGIN_RANGE ||
+        pCreateInfo->pColorBlendState->pAttachments->format > VK_FORMAT_END_RANGE)
     {
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
         "vkCreateGraphicsPipeline parameter, VkFormat pCreateInfo->pCbState->pAttachments->format, is unrecognized enumerator");
         return false;
     }
-    if(pCreateInfo->pCbState->pAttachments->srcBlendColor < VK_BLEND_BEGIN_RANGE ||
-        pCreateInfo->pCbState->pAttachments->srcBlendColor > VK_BLEND_END_RANGE)
+    if(pCreateInfo->pColorBlendState->pAttachments->srcBlendColor < VK_BLEND_BEGIN_RANGE ||
+        pCreateInfo->pColorBlendState->pAttachments->srcBlendColor > VK_BLEND_END_RANGE)
     {
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
         "vkCreateGraphicsPipeline parameter, VkBlend pCreateInfo->pCbState->pAttachments->srcBlendColor, is unrecognized enumerator");
         return false;
     }
-    if(pCreateInfo->pCbState->pAttachments->destBlendColor < VK_BLEND_BEGIN_RANGE ||
-        pCreateInfo->pCbState->pAttachments->destBlendColor > VK_BLEND_END_RANGE)
+    if(pCreateInfo->pColorBlendState->pAttachments->destBlendColor < VK_BLEND_BEGIN_RANGE ||
+        pCreateInfo->pColorBlendState->pAttachments->destBlendColor > VK_BLEND_END_RANGE)
     {
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
         "vkCreateGraphicsPipeline parameter, VkBlend pCreateInfo->pCbState->pAttachments->destBlendColor, is unrecognized enumerator");
         return false;
     }
-    if(pCreateInfo->pCbState->pAttachments->blendOpColor < VK_BLEND_OP_BEGIN_RANGE ||
-        pCreateInfo->pCbState->pAttachments->blendOpColor > VK_BLEND_OP_END_RANGE)
+    if(pCreateInfo->pColorBlendState->pAttachments->blendOpColor < VK_BLEND_OP_BEGIN_RANGE ||
+        pCreateInfo->pColorBlendState->pAttachments->blendOpColor > VK_BLEND_OP_END_RANGE)
     {
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
         "vkCreateGraphicsPipeline parameter, VkBlendOp pCreateInfo->pCbState->pAttachments->blendOpColor, is unrecognized enumerator");
         return false;
     }
-    if(pCreateInfo->pCbState->pAttachments->srcBlendAlpha < VK_BLEND_BEGIN_RANGE ||
-        pCreateInfo->pCbState->pAttachments->srcBlendAlpha > VK_BLEND_END_RANGE)
+    if(pCreateInfo->pColorBlendState->pAttachments->srcBlendAlpha < VK_BLEND_BEGIN_RANGE ||
+        pCreateInfo->pColorBlendState->pAttachments->srcBlendAlpha > VK_BLEND_END_RANGE)
     {
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
         "vkCreateGraphicsPipeline parameter, VkBlend pCreateInfo->pCbState->pAttachments->srcBlendAlpha, is unrecognized enumerator");
         return false;
     }
-    if(pCreateInfo->pCbState->pAttachments->destBlendAlpha < VK_BLEND_BEGIN_RANGE ||
-        pCreateInfo->pCbState->pAttachments->destBlendAlpha > VK_BLEND_END_RANGE)
+    if(pCreateInfo->pColorBlendState->pAttachments->destBlendAlpha < VK_BLEND_BEGIN_RANGE ||
+        pCreateInfo->pColorBlendState->pAttachments->destBlendAlpha > VK_BLEND_END_RANGE)
     {
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
         "vkCreateGraphicsPipeline parameter, VkBlend pCreateInfo->pCbState->pAttachments->destBlendAlpha, is unrecognized enumerator");
         return false;
     }
-    if(pCreateInfo->pCbState->pAttachments->blendOpAlpha < VK_BLEND_OP_BEGIN_RANGE ||
-        pCreateInfo->pCbState->pAttachments->blendOpAlpha > VK_BLEND_OP_END_RANGE)
+    if(pCreateInfo->pColorBlendState->pAttachments->blendOpAlpha < VK_BLEND_OP_BEGIN_RANGE ||
+        pCreateInfo->pColorBlendState->pAttachments->blendOpAlpha > VK_BLEND_OP_END_RANGE)
     {
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
         "vkCreateGraphicsPipeline parameter, VkBlendOp pCreateInfo->pCbState->pAttachments->blendOpAlpha, is unrecognized enumerator");
         return false;
     }
-    if(!ValidateEnumerator((VkChannelFlagBits)pCreateInfo->pCbState->pAttachments->channelWriteMask))
+    if(!ValidateEnumerator((VkChannelFlagBits)pCreateInfo->pColorBlendState->pAttachments->channelWriteMask))
     {
+<<<<<<< HEAD
         std::string reason = "vkCreateGraphicsPipeline parameter, VkChannelFlags pCreateInfo->pCbState->pAttachments->channelWriteMask, is " + EnumeratorString((VkChannelFlagBits)pCreateInfo->pCbState->pAttachments->channelWriteMask);
         log_msg(mdd(device), VK_DBG_REPORT_WARN_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
+=======
+        std::string reason = "vkCreateGraphicsPipeline parameter, VkChannelFlags pCreateInfo->pCbState->pAttachments->channelWriteMask, is " + EnumeratorString((VkChannelFlagBits)pCreateInfo->pColorBlendState->pAttachments->channelWriteMask);
+        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
+>>>>>>> fd61c93... Bug 14224: Remove abbreviations on some API symbols
         return false;
     }
     if(!ValidateEnumerator((VkPipelineCreateFlagBits)pCreateInfo->flags))
     {
         std::string reason = "vkCreateGraphicsPipeline parameter, VkPipelineCreateFlags pCreateInfo->flags, is " + EnumeratorString((VkPipelineCreateFlagBits)pCreateInfo->flags);
+<<<<<<< HEAD
         log_msg(mdd(device), VK_DBG_REPORT_WARN_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
         return false;
     }
     if(pCreateInfo->layout.handle == 0)
+=======
+        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
+        return false;
+    }
+
+    return true;
+}
+
+bool PostCreateGraphicsPipeline(
+    VkDevice device,
+    VkPipeline* pPipeline,
+    VkResult result)
+{
+
+    if(pPipeline == nullptr)
+    {
+        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        "vkCreateGraphicsPipeline parameter, VkPipeline* pPipeline, is null pointer");
+        return false;
+    }
+
+    if(result != VK_SUCCESS)
+    {
+        std::string reason = "vkCreateGraphicsPipeline parameter, VkResult result, is " + EnumeratorString(result);
+        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
+        return false;
+    }
+
+    return true;
+}
+
+VK_LAYER_EXPORT VkResult VKAPI vkCreateGraphicsPipeline(
+    VkDevice device,
+    const VkGraphicsPipelineCreateInfo* pCreateInfo,
+    VkPipeline* pPipeline)
+{
+    PreCreateGraphicsPipeline(device, pCreateInfo);
+
+    VkResult result = get_dispatch_table(pc_device_table_map, device)->CreateGraphicsPipeline(device, pCreateInfo, pPipeline);
+
+    PostCreateGraphicsPipeline(device, pPipeline, result);
+
+    return result;
+}
+
+bool PostDestroyPipeline(
+    VkDevice device,
+    VkPipeline pipeline,
+    VkResult result)
+{
+
+
+    if(result != VK_SUCCESS)
+    {
+        std::string reason = "vkDestroyPipeline parameter, VkResult result, is " + EnumeratorString(result);
+        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
+        return false;
+    }
+
+    return true;
+}
+
+VK_LAYER_EXPORT VkResult VKAPI vkDestroyPipeline(
+    VkDevice device,
+    VkPipeline pipeline)
+{
+    VkResult result = get_dispatch_table(pc_device_table_map, device)->DestroyPipeline(device, pipeline);
+
+    PostDestroyPipeline(device, pipeline, result);
+
+    return result;
+}
+
+bool PreCreateGraphicsPipelineDerivative(
+    VkDevice device,
+    const VkGraphicsPipelineCreateInfo* pCreateInfo)
+{
+    if(pCreateInfo == nullptr)
+    {
+        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        "vkCreateGraphicsPipelineDerivative parameter, const VkGraphicsPipelineCreateInfo* pCreateInfo, is null pointer");
+        return false;
+    }
+    if(pCreateInfo->sType < VK_STRUCTURE_TYPE_BEGIN_RANGE ||
+        pCreateInfo->sType > VK_STRUCTURE_TYPE_END_RANGE)
+    {
+        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        "vkCreateGraphicsPipelineDerivative parameter, VkStructureType pCreateInfo->sType, is unrecognized enumerator");
+        return false;
+    }
+    if(pCreateInfo->pStages == nullptr)
+    {
+        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        "vkCreateGraphicsPipelineDerivative parameter, const VkPipelineShaderStageCreateInfo* pCreateInfo->pStages, is null pointer");
+        return false;
+    }
+    if(pCreateInfo->pStages->sType < VK_STRUCTURE_TYPE_BEGIN_RANGE ||
+        pCreateInfo->pStages->sType > VK_STRUCTURE_TYPE_END_RANGE)
+    {
+        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        "vkCreateGraphicsPipelineDerivative parameter, VkStructureType pCreateInfo->pStages->sType, is unrecognized enumerator");
+        return false;
+    }
+    if(pCreateInfo->pStages->stage < VK_SHADER_STAGE_BEGIN_RANGE ||
+        pCreateInfo->pStages->stage > VK_SHADER_STAGE_END_RANGE)
+    {
+        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        "vkCreateGraphicsPipelineDerivative parameter, VkShaderStage pCreateInfo->pStages->stage, is unrecognized enumerator");
+        return false;
+    }
+    if(pCreateInfo->pStages->pSpecializationInfo == nullptr)
+    {
+        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        "vkCreateGraphicsPipelineDerivative parameter, const VkSpecializationInfo* pCreateInfo->pStages->pSpecializationInfo, is null pointer");
+        return false;
+    }
+    if(pCreateInfo->pStages->pSpecializationInfo->pMap == nullptr)
+    {
+        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        "vkCreateGraphicsPipelineDerivative parameter, const VkSpecializationMapEntry* pCreateInfo->pStages->pSpecializationInfo->pMap, is null pointer");
+        return false;
+    }
+    if(pCreateInfo->pStages->pSpecializationInfo->pData == nullptr)
+    {
+        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        "vkCreateGraphicsPipelineDerivative parameter, const void* pCreateInfo->pStages->pSpecializationInfo->pData, is null pointer");
+        return false;
+    }
+    if(pCreateInfo->pVertexInputState == nullptr)
+    {
+        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        "vkCreateGraphicsPipelineDerivative parameter, const VkPipelineVertexInputStateCreateInfo* pCreateInfo->pVertexInputState, is null pointer");
+        return false;
+    }
+    if(pCreateInfo->pVertexInputState->sType < VK_STRUCTURE_TYPE_BEGIN_RANGE ||
+        pCreateInfo->pVertexInputState->sType > VK_STRUCTURE_TYPE_END_RANGE)
+    {
+        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        "vkCreateGraphicsPipelineDerivative parameter, VkStructureType pCreateInfo->pVertexInputState->sType, is unrecognized enumerator");
+        return false;
+    }
+    if(pCreateInfo->pVertexInputState->pVertexBindingDescriptions == nullptr)
+    {
+        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        "vkCreateGraphicsPipelineDerivative parameter, const VkVertexInputBindingDescription* pCreateInfo->pVertexInputState->pVertexBindingDescriptions, is null pointer");
+        return false;
+    }
+    if(pCreateInfo->pVertexInputState->pVertexBindingDescriptions->stepRate < VK_VERTEX_INPUT_STEP_RATE_BEGIN_RANGE ||
+        pCreateInfo->pVertexInputState->pVertexBindingDescriptions->stepRate > VK_VERTEX_INPUT_STEP_RATE_END_RANGE)
+    {
+        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        "vkCreateGraphicsPipelineDerivative parameter, VkVertexInputStepRate pCreateInfo->pVertexInputState->pVertexBindingDescriptions->stepRate, is unrecognized enumerator");
+        return false;
+    }
+    if(pCreateInfo->pVertexInputState->pVertexAttributeDescriptions == nullptr)
+    {
+        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        "vkCreateGraphicsPipelineDerivative parameter, const VkVertexInputAttributeDescription* pCreateInfo->pVertexInputState->pVertexAttributeDescriptions, is null pointer");
+        return false;
+    }
+    if(pCreateInfo->pVertexInputState->pVertexAttributeDescriptions->format < VK_FORMAT_BEGIN_RANGE ||
+        pCreateInfo->pVertexInputState->pVertexAttributeDescriptions->format > VK_FORMAT_END_RANGE)
+    {
+        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        "vkCreateGraphicsPipelineDerivative parameter, VkFormat pCreateInfo->pVertexInputState->pVertexAttributeDescriptions->format, is unrecognized enumerator");
+        return false;
+    }
+    if(pCreateInfo->pInputAssemblyState == nullptr)
+    {
+        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        "vkCreateGraphicsPipelineDerivative parameter, const VkPipelineIaStateCreateInfo* pCreateInfo->pIaState, is null pointer");
+        return false;
+    }
+    if(pCreateInfo->pInputAssemblyState->sType < VK_STRUCTURE_TYPE_BEGIN_RANGE ||
+        pCreateInfo->pInputAssemblyState->sType > VK_STRUCTURE_TYPE_END_RANGE)
+    {
+        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        "vkCreateGraphicsPipelineDerivative parameter, VkStructureType pCreateInfo->pIaState->sType, is unrecognized enumerator");
+        return false;
+    }
+    if(pCreateInfo->pInputAssemblyState->topology < VK_PRIMITIVE_TOPOLOGY_BEGIN_RANGE ||
+        pCreateInfo->pInputAssemblyState->topology > VK_PRIMITIVE_TOPOLOGY_END_RANGE)
+    {
+        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        "vkCreateGraphicsPipelineDerivative parameter, VkPrimitiveTopology pCreateInfo->pIaState->topology, is unrecognized enumerator");
+        return false;
+    }
+    if(pCreateInfo->pTessellationState == nullptr)
+    {
+        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        "vkCreateGraphicsPipelineDerivative parameter, const VkPipelineTessStateCreateInfo* pCreateInfo->pTessState, is null pointer");
+        return false;
+    }
+    if(pCreateInfo->pTessellationState->sType < VK_STRUCTURE_TYPE_BEGIN_RANGE ||
+        pCreateInfo->pTessellationState->sType > VK_STRUCTURE_TYPE_END_RANGE)
+    {
+        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        "vkCreateGraphicsPipelineDerivative parameter, VkStructureType pCreateInfo->pTessState->sType, is unrecognized enumerator");
+        return false;
+    }
+    if(pCreateInfo->pViewportState == nullptr)
+    {
+        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        "vkCreateGraphicsPipelineDerivative parameter, const VkPipelineVpStateCreateInfo* pCreateInfo->pVpState, is null pointer");
+        return false;
+    }
+    if(pCreateInfo->pViewportState->sType < VK_STRUCTURE_TYPE_BEGIN_RANGE ||
+        pCreateInfo->pViewportState->sType > VK_STRUCTURE_TYPE_END_RANGE)
+    {
+        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        "vkCreateGraphicsPipelineDerivative parameter, VkStructureType pCreateInfo->pVpState->sType, is unrecognized enumerator");
+        return false;
+    }
+    if(pCreateInfo->pViewportState->clipOrigin < VK_COORDINATE_ORIGIN_BEGIN_RANGE ||
+        pCreateInfo->pViewportState->clipOrigin > VK_COORDINATE_ORIGIN_END_RANGE)
+    {
+        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        "vkCreateGraphicsPipelineDerivative parameter, VkCoordinateOrigin pCreateInfo->pVpState->clipOrigin, is unrecognized enumerator");
+        return false;
+    }
+    if(pCreateInfo->pViewportState->depthMode < VK_DEPTH_MODE_BEGIN_RANGE ||
+        pCreateInfo->pViewportState->depthMode > VK_DEPTH_MODE_END_RANGE)
+    {
+        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        "vkCreateGraphicsPipelineDerivative parameter, VkDepthMode pCreateInfo->pVpState->depthMode, is unrecognized enumerator");
+        return false;
+    }
+    if(pCreateInfo->pRasterState == nullptr)
+    {
+        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        "vkCreateGraphicsPipelineDerivative parameter, const VkPipelineRsStateCreateInfo* pCreateInfo->pRsState, is null pointer");
+        return false;
+    }
+    if(pCreateInfo->pRasterState->sType < VK_STRUCTURE_TYPE_BEGIN_RANGE ||
+        pCreateInfo->pRasterState->sType > VK_STRUCTURE_TYPE_END_RANGE)
+    {
+        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        "vkCreateGraphicsPipelineDerivative parameter, VkStructureType pCreateInfo->pRsState->sType, is unrecognized enumerator");
+        return false;
+    }
+    if(pCreateInfo->pRasterState->pointOrigin < VK_COORDINATE_ORIGIN_BEGIN_RANGE ||
+        pCreateInfo->pRasterState->pointOrigin > VK_COORDINATE_ORIGIN_END_RANGE)
+    {
+        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        "vkCreateGraphicsPipelineDerivative parameter, VkCoordinateOrigin pCreateInfo->pRsState->pointOrigin, is unrecognized enumerator");
+        return false;
+    }
+    if(pCreateInfo->pRasterState->provokingVertex < VK_PROVOKING_VERTEX_BEGIN_RANGE ||
+        pCreateInfo->pRasterState->provokingVertex > VK_PROVOKING_VERTEX_END_RANGE)
+    {
+        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        "vkCreateGraphicsPipelineDerivative parameter, VkProvokingVertex pCreateInfo->pRsState->provokingVertex, is unrecognized enumerator");
+        return false;
+    }
+    if(pCreateInfo->pRasterState->fillMode < VK_FILL_MODE_BEGIN_RANGE ||
+        pCreateInfo->pRasterState->fillMode > VK_FILL_MODE_END_RANGE)
+    {
+        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        "vkCreateGraphicsPipelineDerivative parameter, VkFillMode pCreateInfo->pRsState->fillMode, is unrecognized enumerator");
+        return false;
+    }
+    if(pCreateInfo->pRasterState->cullMode < VK_CULL_MODE_BEGIN_RANGE ||
+        pCreateInfo->pRasterState->cullMode > VK_CULL_MODE_END_RANGE)
+    {
+        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        "vkCreateGraphicsPipelineDerivative parameter, VkCullMode pCreateInfo->pRsState->cullMode, is unrecognized enumerator");
+        return false;
+    }
+    if(pCreateInfo->pRasterState->frontFace < VK_FRONT_FACE_BEGIN_RANGE ||
+        pCreateInfo->pRasterState->frontFace > VK_FRONT_FACE_END_RANGE)
+    {
+        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        "vkCreateGraphicsPipelineDerivative parameter, VkFrontFace pCreateInfo->pRsState->frontFace, is unrecognized enumerator");
+        return false;
+    }
+    if(pCreateInfo->pMultisampleState == nullptr)
+    {
+        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        "vkCreateGraphicsPipelineDerivative parameter, const VkPipelineMsStateCreateInfo* pCreateInfo->pMsState, is null pointer");
+        return false;
+    }
+    if(pCreateInfo->pMultisampleState->sType < VK_STRUCTURE_TYPE_BEGIN_RANGE ||
+        pCreateInfo->pMultisampleState->sType > VK_STRUCTURE_TYPE_END_RANGE)
+    {
+        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        "vkCreateGraphicsPipelineDerivative parameter, VkStructureType pCreateInfo->pMsState->sType, is unrecognized enumerator");
+        return false;
+    }
+    if(pCreateInfo->pDepthStencilState == nullptr)
+    {
+        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        "vkCreateGraphicsPipelineDerivative parameter, const VkPipelineDsStateCreateInfo* pCreateInfo->pDsState, is null pointer");
+        return false;
+    }
+    if(pCreateInfo->pDepthStencilState->sType < VK_STRUCTURE_TYPE_BEGIN_RANGE ||
+        pCreateInfo->pDepthStencilState->sType > VK_STRUCTURE_TYPE_END_RANGE)
+    {
+        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        "vkCreateGraphicsPipelineDerivative parameter, VkStructureType pCreateInfo->pDsState->sType, is unrecognized enumerator");
+        return false;
+    }
+    if(pCreateInfo->pDepthStencilState->format < VK_FORMAT_BEGIN_RANGE ||
+        pCreateInfo->pDepthStencilState->format > VK_FORMAT_END_RANGE)
+    {
+        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        "vkCreateGraphicsPipelineDerivative parameter, VkFormat pCreateInfo->pDsState->format, is unrecognized enumerator");
+        return false;
+    }
+    if(pCreateInfo->pDepthStencilState->depthCompareOp < VK_COMPARE_OP_BEGIN_RANGE ||
+        pCreateInfo->pDepthStencilState->depthCompareOp > VK_COMPARE_OP_END_RANGE)
+    {
+        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        "vkCreateGraphicsPipelineDerivative parameter, VkCompareOp pCreateInfo->pDsState->depthCompareOp, is unrecognized enumerator");
+        return false;
+    }
+    if(pCreateInfo->pDepthStencilState->front.stencilFailOp < VK_STENCIL_OP_BEGIN_RANGE ||
+        pCreateInfo->pDepthStencilState->front.stencilFailOp > VK_STENCIL_OP_END_RANGE)
+    {
+        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        "vkCreateGraphicsPipelineDerivative parameter, VkStencilOp pCreateInfo->pDsState->front.stencilFailOp, is unrecognized enumerator");
+        return false;
+    }
+    if(pCreateInfo->pDepthStencilState->front.stencilPassOp < VK_STENCIL_OP_BEGIN_RANGE ||
+        pCreateInfo->pDepthStencilState->front.stencilPassOp > VK_STENCIL_OP_END_RANGE)
+    {
+        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        "vkCreateGraphicsPipelineDerivative parameter, VkStencilOp pCreateInfo->pDsState->front.stencilPassOp, is unrecognized enumerator");
+        return false;
+    }
+    if(pCreateInfo->pDepthStencilState->front.stencilDepthFailOp < VK_STENCIL_OP_BEGIN_RANGE ||
+        pCreateInfo->pDepthStencilState->front.stencilDepthFailOp > VK_STENCIL_OP_END_RANGE)
+    {
+        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        "vkCreateGraphicsPipelineDerivative parameter, VkStencilOp pCreateInfo->pDsState->front.stencilDepthFailOp, is unrecognized enumerator");
+        return false;
+    }
+    if(pCreateInfo->pDepthStencilState->front.stencilCompareOp < VK_COMPARE_OP_BEGIN_RANGE ||
+        pCreateInfo->pDepthStencilState->front.stencilCompareOp > VK_COMPARE_OP_END_RANGE)
+    {
+        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        "vkCreateGraphicsPipelineDerivative parameter, VkCompareOp pCreateInfo->pDsState->front.stencilCompareOp, is unrecognized enumerator");
+        return false;
+    }
+    if(pCreateInfo->pDepthStencilState->back.stencilFailOp < VK_STENCIL_OP_BEGIN_RANGE ||
+        pCreateInfo->pDepthStencilState->back.stencilFailOp > VK_STENCIL_OP_END_RANGE)
+    {
+        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        "vkCreateGraphicsPipelineDerivative parameter, VkStencilOp pCreateInfo->pDsState->back.stencilFailOp, is unrecognized enumerator");
+        return false;
+    }
+    if(pCreateInfo->pDepthStencilState->back.stencilPassOp < VK_STENCIL_OP_BEGIN_RANGE ||
+        pCreateInfo->pDepthStencilState->back.stencilPassOp > VK_STENCIL_OP_END_RANGE)
+    {
+        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        "vkCreateGraphicsPipelineDerivative parameter, VkStencilOp pCreateInfo->pDsState->back.stencilPassOp, is unrecognized enumerator");
+        return false;
+    }
+    if(pCreateInfo->pDepthStencilState->back.stencilDepthFailOp < VK_STENCIL_OP_BEGIN_RANGE ||
+        pCreateInfo->pDepthStencilState->back.stencilDepthFailOp > VK_STENCIL_OP_END_RANGE)
+    {
+        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        "vkCreateGraphicsPipelineDerivative parameter, VkStencilOp pCreateInfo->pDsState->back.stencilDepthFailOp, is unrecognized enumerator");
+        return false;
+    }
+    if(pCreateInfo->pDepthStencilState->back.stencilCompareOp < VK_COMPARE_OP_BEGIN_RANGE ||
+        pCreateInfo->pDepthStencilState->back.stencilCompareOp > VK_COMPARE_OP_END_RANGE)
+    {
+        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        "vkCreateGraphicsPipelineDerivative parameter, VkCompareOp pCreateInfo->pDsState->back.stencilCompareOp, is unrecognized enumerator");
+        return false;
+    }
+    if(pCreateInfo->pColorBlendState == nullptr)
+    {
+        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        "vkCreateGraphicsPipelineDerivative parameter, const VkPipelineCbStateCreateInfo* pCreateInfo->pCbState, is null pointer");
+        return false;
+    }
+    if(pCreateInfo->pColorBlendState->sType < VK_STRUCTURE_TYPE_BEGIN_RANGE ||
+        pCreateInfo->pColorBlendState->sType > VK_STRUCTURE_TYPE_END_RANGE)
+    {
+        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        "vkCreateGraphicsPipelineDerivative parameter, VkStructureType pCreateInfo->pCbState->sType, is unrecognized enumerator");
+        return false;
+    }
+    if(pCreateInfo->pColorBlendState->logicOp < VK_LOGIC_OP_BEGIN_RANGE ||
+        pCreateInfo->pColorBlendState->logicOp > VK_LOGIC_OP_END_RANGE)
+    {
+        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        "vkCreateGraphicsPipelineDerivative parameter, VkLogicOp pCreateInfo->pCbState->logicOp, is unrecognized enumerator");
+        return false;
+    }
+    if(pCreateInfo->pColorBlendState->pAttachments == nullptr)
+    {
+        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        "vkCreateGraphicsPipelineDerivative parameter, const VkPipelineCbAttachmentState* pCreateInfo->pCbState->pAttachments, is null pointer");
+        return false;
+    }
+    if(pCreateInfo->pColorBlendState->pAttachments->format < VK_FORMAT_BEGIN_RANGE ||
+        pCreateInfo->pColorBlendState->pAttachments->format > VK_FORMAT_END_RANGE)
+    {
+        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        "vkCreateGraphicsPipelineDerivative parameter, VkFormat pCreateInfo->pCbState->pAttachments->format, is unrecognized enumerator");
+        return false;
+    }
+    if(pCreateInfo->pColorBlendState->pAttachments->srcBlendColor < VK_BLEND_BEGIN_RANGE ||
+        pCreateInfo->pColorBlendState->pAttachments->srcBlendColor > VK_BLEND_END_RANGE)
+    {
+        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        "vkCreateGraphicsPipelineDerivative parameter, VkBlend pCreateInfo->pCbState->pAttachments->srcBlendColor, is unrecognized enumerator");
+        return false;
+    }
+    if(pCreateInfo->pColorBlendState->pAttachments->destBlendColor < VK_BLEND_BEGIN_RANGE ||
+        pCreateInfo->pColorBlendState->pAttachments->destBlendColor > VK_BLEND_END_RANGE)
+    {
+        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        "vkCreateGraphicsPipelineDerivative parameter, VkBlend pCreateInfo->pCbState->pAttachments->destBlendColor, is unrecognized enumerator");
+        return false;
+    }
+    if(pCreateInfo->pColorBlendState->pAttachments->blendOpColor < VK_BLEND_OP_BEGIN_RANGE ||
+        pCreateInfo->pColorBlendState->pAttachments->blendOpColor > VK_BLEND_OP_END_RANGE)
+    {
+        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        "vkCreateGraphicsPipelineDerivative parameter, VkBlendOp pCreateInfo->pCbState->pAttachments->blendOpColor, is unrecognized enumerator");
+        return false;
+    }
+    if(pCreateInfo->pColorBlendState->pAttachments->srcBlendAlpha < VK_BLEND_BEGIN_RANGE ||
+        pCreateInfo->pColorBlendState->pAttachments->srcBlendAlpha > VK_BLEND_END_RANGE)
+    {
+        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        "vkCreateGraphicsPipelineDerivative parameter, VkBlend pCreateInfo->pCbState->pAttachments->srcBlendAlpha, is unrecognized enumerator");
+        return false;
+    }
+    if(pCreateInfo->pColorBlendState->pAttachments->destBlendAlpha < VK_BLEND_BEGIN_RANGE ||
+        pCreateInfo->pColorBlendState->pAttachments->destBlendAlpha > VK_BLEND_END_RANGE)
+    {
+        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        "vkCreateGraphicsPipelineDerivative parameter, VkBlend pCreateInfo->pCbState->pAttachments->destBlendAlpha, is unrecognized enumerator");
+        return false;
+    }
+    if(pCreateInfo->pColorBlendState->pAttachments->blendOpAlpha < VK_BLEND_OP_BEGIN_RANGE ||
+        pCreateInfo->pColorBlendState->pAttachments->blendOpAlpha > VK_BLEND_OP_END_RANGE)
+    {
+        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        "vkCreateGraphicsPipelineDerivative parameter, VkBlendOp pCreateInfo->pCbState->pAttachments->blendOpAlpha, is unrecognized enumerator");
+        return false;
+    }
+    if(!ValidateEnumerator((VkChannelFlagBits)pCreateInfo->pColorBlendState->pAttachments->channelWriteMask))
+    {
+        std::string reason = "vkCreateGraphicsPipelineDerivative parameter, VkChannelFlags pCreateInfo->pCbState->pAttachments->channelWriteMask, is " + EnumeratorString((VkChannelFlagBits)pCreateInfo->pColorBlendState->pAttachments->channelWriteMask);
+        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
+        return false;
+    }
+    if(!ValidateEnumerator((VkPipelineCreateFlagBits)pCreateInfo->flags))
+    {
+        std::string reason = "vkCreateGraphicsPipelineDerivative parameter, VkPipelineCreateFlags pCreateInfo->flags, is " + EnumeratorString((VkPipelineCreateFlagBits)pCreateInfo->flags);
+        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
+        return false;
+    }
+
+    return true;
+}
+
+bool PostCreateGraphicsPipelineDerivative(
+    VkDevice device,
+    VkPipeline basePipeline,
+    VkPipeline* pPipeline,
+    VkResult result)
+{
+
+
+    if(pPipeline == nullptr)
+    {
+        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        "vkCreateGraphicsPipelineDerivative parameter, VkPipeline* pPipeline, is null pointer");
+        return false;
+    }
+
+    if(result != VK_SUCCESS)
+    {
+        std::string reason = "vkCreateGraphicsPipelineDerivative parameter, VkResult result, is " + EnumeratorString(result);
+        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
+        return false;
+    }
+
+    return true;
+}
+
+VK_LAYER_EXPORT VkResult VKAPI vkCreateGraphicsPipelineDerivative(
+    VkDevice device,
+    const VkGraphicsPipelineCreateInfo* pCreateInfo,
+    VkPipeline basePipeline,
+    VkPipeline* pPipeline)
+{
+    PreCreateGraphicsPipelineDerivative(device, pCreateInfo);
+
+    VkResult result = get_dispatch_table(pc_device_table_map, device)->CreateGraphicsPipelineDerivative(device, pCreateInfo, basePipeline, pPipeline);
+
+    PostCreateGraphicsPipelineDerivative(device, basePipeline, pPipeline, result);
+
+    return result;
+}
+
+bool PreCreateComputePipeline(
+    VkDevice device,
+    const VkComputePipelineCreateInfo* pCreateInfo)
+{
+    if(pCreateInfo == nullptr)
+    {
+        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        "vkCreateComputePipeline parameter, const VkComputePipelineCreateInfo* pCreateInfo, is null pointer");
+        return false;
+    }
+    if(pCreateInfo->sType < VK_STRUCTURE_TYPE_BEGIN_RANGE ||
+        pCreateInfo->sType > VK_STRUCTURE_TYPE_END_RANGE)
+    {
+        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        "vkCreateComputePipeline parameter, VkStructureType pCreateInfo->sType, is unrecognized enumerator");
+        return false;
+    }
+    if(pCreateInfo->cs.sType < VK_STRUCTURE_TYPE_BEGIN_RANGE ||
+        pCreateInfo->cs.sType > VK_STRUCTURE_TYPE_END_RANGE)
+    {
+        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        "vkCreateComputePipeline parameter, VkStructureType pCreateInfo->cs.sType, is unrecognized enumerator");
+        return false;
+    }
+    if(pCreateInfo->cs.stage < VK_SHADER_STAGE_BEGIN_RANGE ||
+        pCreateInfo->cs.stage > VK_SHADER_STAGE_END_RANGE)
+    {
+        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        "vkCreateComputePipeline parameter, VkShaderStage pCreateInfo->cs.stage, is unrecognized enumerator");
+        return false;
+    }
+    if(pCreateInfo->cs.pSpecializationInfo == nullptr)
+    {
+        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        "vkCreateComputePipeline parameter, const VkSpecializationInfo* pCreateInfo->cs.pSpecializationInfo, is null pointer");
+        return false;
+    }
+    if(pCreateInfo->cs.pSpecializationInfo->pMap == nullptr)
+    {
+        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        "vkCreateComputePipeline parameter, const VkSpecializationMapEntry* pCreateInfo->cs.pSpecializationInfo->pMap, is null pointer");
+        return false;
+    }
+    if(pCreateInfo->cs.pSpecializationInfo->pData == nullptr)
+    {
+        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        "vkCreateComputePipeline parameter, const void* pCreateInfo->cs.pSpecializationInfo->pData, is null pointer");
+        return false;
+    }
+    if(!ValidateEnumerator((VkPipelineCreateFlagBits)pCreateInfo->flags))
+    {
+        std::string reason = "vkCreateComputePipeline parameter, VkPipelineCreateFlags pCreateInfo->flags, is " + EnumeratorString((VkPipelineCreateFlagBits)pCreateInfo->flags);
+        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
+        return false;
+    }
+
+    return true;
+}
+
+bool PostCreateComputePipeline(
+    VkDevice device,
+    VkPipeline* pPipeline,
+    VkResult result)
+{
+
+    if(pPipeline == nullptr)
+    {
+        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        "vkCreateComputePipeline parameter, VkPipeline* pPipeline, is null pointer");
+        return false;
+    }
+
+    if(result != VK_SUCCESS)
+>>>>>>> fd61c93... Bug 14224: Remove abbreviations on some API symbols
     {
         log_msg(mdd(device), VK_DBG_REPORT_WARN_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
         "vkCreateGraphicsPipeline parameter, VkPipelineLayout pCreateInfo->layout, is null pointer");

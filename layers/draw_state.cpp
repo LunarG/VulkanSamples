@@ -497,7 +497,7 @@ static PIPELINE_NODE* initPipeline(const VkGraphicsPipelineCreateInfo* pCreateIn
 
     size_t bufferSize = 0;
     const VkPipelineVertexInputStateCreateInfo* pVICI = NULL;
-    const VkPipelineCbStateCreateInfo*          pCBCI = NULL;
+    const VkPipelineColorBlendStateCreateInfo*          pCBCI = NULL;
 
     for (uint32_t i = 0; i < pCreateInfo->stageCount; i++) {
         const VkPipelineShaderStageCreateInfo *pPSSCI = &pCreateInfo->pStages[i];
@@ -551,41 +551,41 @@ static PIPELINE_NODE* initPipeline(const VkGraphicsPipelineCreateInfo* pCreateIn
         }
         pPipeline->graphicsPipelineCI.pVertexInputState = &pPipeline->vertexInputCI;
     }
-    if (pCreateInfo->pIaState != NULL) {
-        memcpy((void*)&pPipeline->iaStateCI, pCreateInfo->pIaState, sizeof(VkPipelineIaStateCreateInfo));
-        pPipeline->graphicsPipelineCI.pIaState = &pPipeline->iaStateCI;
+    if (pCreateInfo->pInputAssemblyState != NULL) {
+        memcpy((void*)&pPipeline->iaStateCI, pCreateInfo->pInputAssemblyState, sizeof(VkPipelineInputAssemblyStateCreateInfo));
+        pPipeline->graphicsPipelineCI.pInputAssemblyState = &pPipeline->iaStateCI;
     }
-    if (pCreateInfo->pTessState != NULL) {
-        memcpy((void*)&pPipeline->tessStateCI, pCreateInfo->pTessState, sizeof(VkPipelineTessStateCreateInfo));
-        pPipeline->graphicsPipelineCI.pTessState = &pPipeline->tessStateCI;
+    if (pCreateInfo->pTessellationState != NULL) {
+        memcpy((void*)&pPipeline->tessStateCI, pCreateInfo->pTessellationState, sizeof(VkPipelineTessellationStateCreateInfo));
+        pPipeline->graphicsPipelineCI.pTessellationState = &pPipeline->tessStateCI;
     }
-    if (pCreateInfo->pVpState != NULL) {
-        memcpy((void*)&pPipeline->vpStateCI, pCreateInfo->pVpState, sizeof(VkPipelineVpStateCreateInfo));
-        pPipeline->graphicsPipelineCI.pVpState = &pPipeline->vpStateCI;
+    if (pCreateInfo->pViewportState != NULL) {
+        memcpy((void*)&pPipeline->vpStateCI, pCreateInfo->pViewportState, sizeof(VkPipelineViewportStateCreateInfo));
+        pPipeline->graphicsPipelineCI.pViewportState = &pPipeline->vpStateCI;
     }
-    if (pCreateInfo->pRsState != NULL) {
-        memcpy((void*)&pPipeline->rsStateCI, pCreateInfo->pRsState, sizeof(VkPipelineRsStateCreateInfo));
-        pPipeline->graphicsPipelineCI.pRsState = &pPipeline->rsStateCI;
+    if (pCreateInfo->pRasterState != NULL) {
+        memcpy((void*)&pPipeline->rsStateCI, pCreateInfo->pRasterState, sizeof(VkPipelineRasterStateCreateInfo));
+        pPipeline->graphicsPipelineCI.pRasterState = &pPipeline->rsStateCI;
     }
-    if (pCreateInfo->pMsState != NULL) {
-        memcpy((void*)&pPipeline->msStateCI, pCreateInfo->pMsState, sizeof(VkPipelineMsStateCreateInfo));
-        pPipeline->graphicsPipelineCI.pMsState = &pPipeline->msStateCI;
+    if (pCreateInfo->pMultisampleState != NULL) {
+        memcpy((void*)&pPipeline->msStateCI, pCreateInfo->pMultisampleState, sizeof(VkPipelineMultisampleStateCreateInfo));
+        pPipeline->graphicsPipelineCI.pMultisampleState = &pPipeline->msStateCI;
     }
-    if (pCreateInfo->pCbState != NULL) {
-        memcpy((void*)&pPipeline->cbStateCI, pCreateInfo->pCbState, sizeof(VkPipelineCbStateCreateInfo));
+    if (pCreateInfo->pColorBlendState != NULL) {
+        memcpy((void*)&pPipeline->cbStateCI, pCreateInfo->pColorBlendState, sizeof(VkPipelineColorBlendStateCreateInfo));
         // Copy embedded ptrs
-        pCBCI = pCreateInfo->pCbState;
+        pCBCI = pCreateInfo->pColorBlendState;
         pPipeline->attachmentCount = pCBCI->attachmentCount;
         if (pPipeline->attachmentCount) {
-            pPipeline->pAttachments = new VkPipelineCbAttachmentState[pPipeline->attachmentCount];
-            bufferSize = pPipeline->attachmentCount * sizeof(VkPipelineCbAttachmentState);
+            pPipeline->pAttachments = new VkPipelineColorBlendAttachmentState[pPipeline->attachmentCount];
+            bufferSize = pPipeline->attachmentCount * sizeof(VkPipelineColorBlendAttachmentState);
             memcpy((void*)pPipeline->pAttachments, pCBCI->pAttachments, bufferSize);
         }
-        pPipeline->graphicsPipelineCI.pCbState = &pPipeline->cbStateCI;
+        pPipeline->graphicsPipelineCI.pColorBlendState = &pPipeline->cbStateCI;
     }
-    if (pCreateInfo->pDsState != NULL) {
-        memcpy((void*)&pPipeline->dsStateCI, pCreateInfo->pDsState, sizeof(VkPipelineDsStateCreateInfo));
-        pPipeline->graphicsPipelineCI.pDsState = &pPipeline->dsStateCI;
+    if (pCreateInfo->pDepthStencilState != NULL) {
+        memcpy((void*)&pPipeline->dsStateCI, pCreateInfo->pDepthStencilState, sizeof(VkPipelineDepthStencilStateCreateInfo));
+        pPipeline->graphicsPipelineCI.pDepthStencilState = &pPipeline->dsStateCI;
     }
 
     // Copy over GraphicsPipelineCreateInfo structure embedded pointers
@@ -624,7 +624,7 @@ static void deletePipelines()
 static uint32_t getNumSamples(const VkPipeline pipeline)
 {
     PIPELINE_NODE* pPipe = pipelineMap[pipeline.handle];
-    if (VK_STRUCTURE_TYPE_PIPELINE_MS_STATE_CREATE_INFO == pPipe->msStateCI.sType) {
+    if (VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO == pPipe->msStateCI.sType) {
         if (pPipe->msStateCI.multisampleEnable)
             return pPipe->msStateCI.rasterSamples;
     }

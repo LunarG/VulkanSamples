@@ -111,23 +111,23 @@ static int translate_stencil_op(VkStencilOp op)
 }
 
 struct intel_pipeline_create_info {
-    VkGraphicsPipelineCreateInfo         graphics;
-    VkPipelineVertexInputStateCreateInfo vi;
-    VkPipelineIaStateCreateInfo          ia;
-    VkPipelineDsStateCreateInfo          db;
-    VkPipelineCbStateCreateInfo          cb;
-    VkPipelineRsStateCreateInfo          rs;
-    VkPipelineTessStateCreateInfo        tess;
-    VkPipelineMsStateCreateInfo          ms;
-    VkPipelineVpStateCreateInfo          vp;
+    VkGraphicsPipelineCreateInfo           graphics;
+    VkPipelineVertexInputStateCreateInfo   vi;
+    VkPipelineInputAssemblyStateCreateInfo ia;
+    VkPipelineDepthStencilStateCreateInfo  db;
+    VkPipelineColorBlendStateCreateInfo    cb;
+    VkPipelineRasterStateCreateInfo        rs;
+    VkPipelineTessellationStateCreateInfo  tess;
+    VkPipelineMultisampleStateCreateInfo   ms;
+    VkPipelineViewportStateCreateInfo      vp;
 
-    VkComputePipelineCreateInfo          compute;
+    VkComputePipelineCreateInfo            compute;
 
-    VkPipelineShaderStageCreateInfo      vs;
-    VkPipelineShaderStageCreateInfo      tcs;
-    VkPipelineShaderStageCreateInfo      tes;
-    VkPipelineShaderStageCreateInfo      gs;
-    VkPipelineShaderStageCreateInfo      fs;
+    VkPipelineShaderStageCreateInfo        vs;
+    VkPipelineShaderStageCreateInfo        tcs;
+    VkPipelineShaderStageCreateInfo        tes;
+    VkPipelineShaderStageCreateInfo        gs;
+    VkPipelineShaderStageCreateInfo        fs;
 };
 
 /* in S1.3 */
@@ -361,7 +361,7 @@ static VkResult pipeline_build_ia(struct intel_pipeline *pipeline,
 static VkResult pipeline_build_rs_state(struct intel_pipeline *pipeline,
                                           const struct intel_pipeline_create_info* info)
 {
-    const VkPipelineRsStateCreateInfo *rs_state = &info->rs;
+    const VkPipelineRasterStateCreateInfo *rs_state = &info->rs;
     bool ccw;
 
     pipeline->depthClipEnable = rs_state->depthClipEnable;
@@ -1048,7 +1048,7 @@ static void pipeline_build_cb(struct intel_pipeline *pipeline,
     uint32_t *dw = pipeline->cmd_cb;
 
     for (i = 0; i < info->cb.attachmentCount; i++) {
-        const VkPipelineCbAttachmentState *att = &info->cb.pAttachments[i];
+        const VkPipelineColorBlendAttachmentState *att = &info->cb.pAttachments[i];
         uint32_t dw0, dw1;
 
 
@@ -1242,29 +1242,29 @@ static VkResult pipeline_create_info_init(struct intel_pipeline_create_info  *in
     if (vkinfo->pVertexInputState != NULL) {
         memcpy(&info->vi, vkinfo->pVertexInputState, sizeof (info->vi));
     }
-    if (vkinfo->pIaState != NULL) {
-        memcpy(&info->ia, vkinfo->pIaState, sizeof (info->ia));
+    if (vkinfo->pInputAssemblyState != NULL) {
+        memcpy(&info->ia, vkinfo->pInputAssemblyState, sizeof (info->ia));
     }
-    if (vkinfo->pDsState != NULL) {
-        memcpy(&info->db, vkinfo->pDsState, sizeof (info->db));
+    if (vkinfo->pDepthStencilState != NULL) {
+        memcpy(&info->db, vkinfo->pDepthStencilState, sizeof (info->db));
     }
-    if (vkinfo->pCbState != NULL) {
-        memcpy(&info->cb, vkinfo->pCbState, sizeof (info->cb));
+    if (vkinfo->pColorBlendState != NULL) {
+        memcpy(&info->cb, vkinfo->pColorBlendState, sizeof (info->cb));
     }
-    if (vkinfo->pRsState != NULL) {
-        memcpy(&info->rs, vkinfo->pRsState, sizeof (info->rs));
+    if (vkinfo->pRasterState != NULL) {
+        memcpy(&info->rs, vkinfo->pRasterState, sizeof (info->rs));
     }
-    if (vkinfo->pTessState != NULL) {
-        memcpy(&info->tess, vkinfo->pTessState, sizeof (info->tess));
+    if (vkinfo->pTessellationState != NULL) {
+        memcpy(&info->tess, vkinfo->pTessellationState, sizeof (info->tess));
     }
-    if (vkinfo->pMsState != NULL) {
-        memcpy(&info->ms, vkinfo->pMsState, sizeof (info->ms));
+    if (vkinfo->pMultisampleState != NULL) {
+        memcpy(&info->ms, vkinfo->pMultisampleState, sizeof (info->ms));
     }
-    if (vkinfo->pVpState != NULL) {
-        memcpy(&info->vp, vkinfo->pVpState, sizeof (info->vp));
+    if (vkinfo->pViewportState != NULL) {
+        memcpy(&info->vp, vkinfo->pViewportState, sizeof (info->vp));
     }
-    if (vkinfo->pVpState != NULL) {
-        memcpy(&info->vp, vkinfo->pVpState, sizeof (info->vp));
+    if (vkinfo->pViewportState != NULL) {
+        memcpy(&info->vp, vkinfo->pViewportState, sizeof (info->vp));
     }
 
     return VK_SUCCESS;

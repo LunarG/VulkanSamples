@@ -764,13 +764,13 @@ typedef enum VkStructureType_
     VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO       = 20,
     VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO           = 21,
     VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO = 22,
-    VK_STRUCTURE_TYPE_PIPELINE_IA_STATE_CREATE_INFO           = 23,
-    VK_STRUCTURE_TYPE_PIPELINE_TESS_STATE_CREATE_INFO         = 24,
-    VK_STRUCTURE_TYPE_PIPELINE_VP_STATE_CREATE_INFO           = 25,
-    VK_STRUCTURE_TYPE_PIPELINE_RS_STATE_CREATE_INFO           = 26,
-    VK_STRUCTURE_TYPE_PIPELINE_MS_STATE_CREATE_INFO           = 27,
-    VK_STRUCTURE_TYPE_PIPELINE_CB_STATE_CREATE_INFO           = 28,
-    VK_STRUCTURE_TYPE_PIPELINE_DS_STATE_CREATE_INFO           = 29,
+    VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO = 23,
+    VK_STRUCTURE_TYPE_PIPELINE_TESSELLATION_STATE_CREATE_INFO   = 24,
+    VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO       = 25,
+    VK_STRUCTURE_TYPE_PIPELINE_RASTER_STATE_CREATE_INFO         = 26,
+    VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO    = 27,
+    VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO    = 28,
+    VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO  = 29,
     VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO                       = 30,
     VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO                      = 31,
     VK_STRUCTURE_TYPE_BUFFER_VIEW_CREATE_INFO                 = 32,
@@ -1883,7 +1883,7 @@ typedef struct VkPipelineVertexInputStateCreateInfo_
     const VkVertexInputAttributeDescription*    pVertexAttributeDescriptions;
 } VkPipelineVertexInputStateCreateInfo;
 
-typedef struct VkPipelineIaStateCreateInfo_
+typedef struct VkPipelineInputAssemblyStateCreateInfo_
 {
     VkStructureType                             sType;      // Must be VK_STRUCTURE_TYPE_PIPELINE_IA_STATE_CREATE_INFO
     const void*                                 pNext;      // Pointer to next structure
@@ -1891,25 +1891,25 @@ typedef struct VkPipelineIaStateCreateInfo_
     VkBool32                                    disableVertexReuse;         // optional
     VkBool32                                    primitiveRestartEnable;
     uint32_t                                    primitiveRestartIndex;      // optional (GL45)
-} VkPipelineIaStateCreateInfo;
+} VkPipelineInputAssemblyStateCreateInfo;
 
-typedef struct VkPipelineTessStateCreateInfo_
+typedef struct VkPipelineTessellationStateCreateInfo_
 {
     VkStructureType                             sType;      // Must be VK_STRUCTURE_TYPE_PIPELINE_TESS_STATE_CREATE_INFO
     const void*                                 pNext;      // Pointer to next structure
     uint32_t                                    patchControlPoints;
-} VkPipelineTessStateCreateInfo;
+} VkPipelineTessellationStateCreateInfo;
 
-typedef struct VkPipelineVpStateCreateInfo_
+typedef struct VkPipelineViewportStateCreateInfo_
 {
     VkStructureType                             sType;      // Must be VK_STRUCTURE_TYPE_PIPELINE_VP_STATE_CREATE_INFO
     const void*                                 pNext;      // Pointer to next structure
     uint32_t                                    viewportCount;
     VkCoordinateOrigin                          clipOrigin;                 // optional (GL45)
     VkDepthMode                                 depthMode;                  // optional (GL45)
-} VkPipelineVpStateCreateInfo;
+} VkPipelineViewportStateCreateInfo;
 
-typedef struct VkPipelineRsStateCreateInfo_
+typedef struct VkPipelineRasterStateCreateInfo_
 {
     VkStructureType                             sType;      // Must be VK_STRUCTURE_TYPE_PIPELINE_RS_STATE_CREATE_INFO
     const void*                                 pNext;      // Pointer to next structure
@@ -1920,9 +1920,9 @@ typedef struct VkPipelineRsStateCreateInfo_
     VkFillMode                                  fillMode;                   // optional (GL45)
     VkCullMode                                  cullMode;
     VkFrontFace                                 frontFace;
-} VkPipelineRsStateCreateInfo;
+} VkPipelineRasterStateCreateInfo;
 
-typedef struct VkPipelineMsStateCreateInfo_
+typedef struct VkPipelineMultisampleStateCreateInfo_
 {
     VkStructureType                             sType;      // Must be VK_STRUCTURE_TYPE_PIPELINE_MS_STATE_CREATE_INFO
     const void*                                 pNext;      // Pointer to next structure
@@ -1931,9 +1931,9 @@ typedef struct VkPipelineMsStateCreateInfo_
     VkBool32                                    sampleShadingEnable;        // optional (GL45)
     float                                       minSampleShading;           // optional (GL45)
     VkSampleMask                                sampleMask;
-} VkPipelineMsStateCreateInfo;
+} VkPipelineMultisampleStateCreateInfo;
 
-typedef struct VkPipelineCbAttachmentState_
+typedef struct VkPipelineColorBlendAttachmentState_
 {
     VkBool32                                    blendEnable;
     VkFormat                                    format;
@@ -1944,9 +1944,9 @@ typedef struct VkPipelineCbAttachmentState_
     VkBlend                                     destBlendAlpha;
     VkBlendOp                                   blendOpAlpha;
     VkChannelFlags                              channelWriteMask;
-} VkPipelineCbAttachmentState;
+} VkPipelineColorBlendAttachmentState;
 
-typedef struct VkPipelineCbStateCreateInfo_
+typedef struct VkPipelineColorBlendStateCreateInfo_
 {
     VkStructureType                             sType;      // Must be VK_STRUCTURE_TYPE_PIPELINE_CB_STATE_CREATE_INFO
     const void*                                 pNext;      // Pointer to next structure
@@ -1954,8 +1954,8 @@ typedef struct VkPipelineCbStateCreateInfo_
     VkBool32                                    logicOpEnable;
     VkLogicOp                                   logicOp;
     uint32_t                                    attachmentCount;    // # of pAttachments
-    const VkPipelineCbAttachmentState*          pAttachments;
-} VkPipelineCbStateCreateInfo;
+    const VkPipelineColorBlendAttachmentState*          pAttachments;
+} VkPipelineColorBlendStateCreateInfo;
 
 typedef struct VkStencilOpState_
 {
@@ -1965,7 +1965,7 @@ typedef struct VkStencilOpState_
     VkCompareOp                                 stencilCompareOp;
 } VkStencilOpState;
 
-typedef struct VkPipelineDsStateCreateInfo_
+typedef struct VkPipelineDepthStencilStateCreateInfo_
 {
     VkStructureType                             sType;      // Must be VK_STRUCTURE_TYPE_PIPELINE_DS_STATE_CREATE_INFO
     const void*                                 pNext;      // Pointer to next structure
@@ -1976,7 +1976,7 @@ typedef struct VkPipelineDsStateCreateInfo_
     VkBool32                                    stencilTestEnable;
     VkStencilOpState                            front;
     VkStencilOpState                            back;
-} VkPipelineDsStateCreateInfo;
+} VkPipelineDepthStencilStateCreateInfo;
 
 typedef struct VkGraphicsPipelineCreateInfo_
 {
@@ -1985,13 +1985,13 @@ typedef struct VkGraphicsPipelineCreateInfo_
     uint32_t                                    stageCount;
     const VkPipelineShaderStageCreateInfo*      pStages;    // One entry for each active shader stage
     const VkPipelineVertexInputStateCreateInfo* pVertexInputState;
-    const VkPipelineIaStateCreateInfo*          pIaState;
-    const VkPipelineTessStateCreateInfo*        pTessState;
-    const VkPipelineVpStateCreateInfo*          pVpState;
-    const VkPipelineRsStateCreateInfo*          pRsState;
-    const VkPipelineMsStateCreateInfo*          pMsState;
-    const VkPipelineDsStateCreateInfo*          pDsState;
-    const VkPipelineCbStateCreateInfo*          pCbState;
+    const VkPipelineInputAssemblyStateCreateInfo*   pInputAssemblyState;
+    const VkPipelineTessellationStateCreateInfo*    pTessellationState;
+    const VkPipelineViewportStateCreateInfo*        pViewportState;
+    const VkPipelineRasterStateCreateInfo*          pRasterState;
+    const VkPipelineMultisampleStateCreateInfo*     pMultisampleState;
+    const VkPipelineDepthStencilStateCreateInfo*    pDepthStencilState;
+    const VkPipelineColorBlendStateCreateInfo*      pColorBlendState;
     VkPipelineCreateFlags                       flags;      // Pipeline creation flags
     VkPipelineLayout                            layout;     // Interface layout of the pipeline
     VkRenderPass                                renderPass;

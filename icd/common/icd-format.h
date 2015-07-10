@@ -67,7 +67,7 @@ static inline bool icd_blend_mode_is_dual_src(VkBlend mode)
            (mode == VK_BLEND_ONE_MINUS_SRC1_ALPHA);
 }
 
-static inline bool icd_pipeline_cb_att_needs_dual_source_blending(const VkPipelineCbAttachmentState *att)
+static inline bool icd_pipeline_cb_att_needs_dual_source_blending(const VkPipelineColorBlendAttachmentState *att)
 {
     if (icd_blend_mode_is_dual_src(att->srcBlendColor) ||
         icd_blend_mode_is_dual_src(att->srcBlendAlpha) ||

@@ -1100,14 +1100,14 @@ VkPipelineObj::VkPipelineObj(VkDeviceObj *device)
 
     m_vertexBufferCount = 0;
 
-    m_ia_state.sType = VK_STRUCTURE_TYPE_PIPELINE_IA_STATE_CREATE_INFO;
+    m_ia_state.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
     m_ia_state.pNext = VK_NULL_HANDLE;
     m_ia_state.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
     m_ia_state.disableVertexReuse = VK_FALSE;
     m_ia_state.primitiveRestartEnable = VK_FALSE;
     m_ia_state.primitiveRestartIndex = 0;
 
-    m_rs_state.sType = VK_STRUCTURE_TYPE_PIPELINE_RS_STATE_CREATE_INFO;
+    m_rs_state.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTER_STATE_CREATE_INFO;
     m_rs_state.pNext = VK_NULL_HANDLE;
     m_rs_state.depthClipEnable = VK_FALSE;
     m_rs_state.rasterizerDiscardEnable = VK_FALSE;
@@ -1118,26 +1118,26 @@ VkPipelineObj::VkPipelineObj(VkDeviceObj *device)
     m_rs_state.frontFace = VK_FRONT_FACE_CW;
 
     memset(&m_cb_state,0,sizeof(m_cb_state));
-    m_cb_state.sType = VK_STRUCTURE_TYPE_PIPELINE_CB_STATE_CREATE_INFO;
+    m_cb_state.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
     m_cb_state.pNext = VK_NULL_HANDLE;
     m_cb_state.alphaToCoverageEnable = VK_FALSE;
     m_cb_state.logicOp = VK_LOGIC_OP_COPY;
 
     m_ms_state.pNext = VK_NULL_HANDLE;
-    m_ms_state.sType = VK_STRUCTURE_TYPE_PIPELINE_MS_STATE_CREATE_INFO;
+    m_ms_state.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
     m_ms_state.multisampleEnable = VK_FALSE;
     m_ms_state.sampleMask = 1;                // Do we have to specify MSAA even just to disable it?
     m_ms_state.rasterSamples = 1;
     m_ms_state.minSampleShading = 0;
     m_ms_state.sampleShadingEnable = 0;
 
-    m_vp_state.sType = VK_STRUCTURE_TYPE_PIPELINE_VP_STATE_CREATE_INFO;
+    m_vp_state.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
     m_vp_state.pNext = VK_NULL_HANDLE;
     m_vp_state.viewportCount = 1;
     m_vp_state.depthMode = VK_DEPTH_MODE_ZERO_TO_ONE;
     m_vp_state.clipOrigin = VK_COORDINATE_ORIGIN_UPPER_LEFT;
 
-    m_ds_state.sType = VK_STRUCTURE_TYPE_PIPELINE_DS_STATE_CREATE_INFO;
+    m_ds_state.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
     m_ds_state.pNext = VK_NULL_HANDLE,
     m_ds_state.depthTestEnable      = VK_FALSE;
     m_ds_state.depthWriteEnable     = VK_FALSE;
@@ -1175,7 +1175,7 @@ void VkPipelineObj::AddVertexDataBuffer(VkConstantBufferObj* vertexDataBuffer, i
     m_vertexBufferCount++;
 }
 
-void VkPipelineObj::AddColorAttachment(uint32_t binding, const VkPipelineCbAttachmentState *att)
+void VkPipelineObj::AddColorAttachment(uint32_t binding, const VkPipelineColorBlendAttachmentState *att)
 {
     if (binding+1 > m_colorAttachments.size())
     {
@@ -1184,7 +1184,7 @@ void VkPipelineObj::AddColorAttachment(uint32_t binding, const VkPipelineCbAttac
     m_colorAttachments[binding] = *att;
 }
 
-void VkPipelineObj::SetDepthStencil(VkPipelineDsStateCreateInfo *ds_state)
+void VkPipelineObj::SetDepthStencil(VkPipelineDepthStencilStateCreateInfo *ds_state)
 {
     m_ds_state.depthTestEnable = ds_state->depthTestEnable;
     m_ds_state.depthWriteEnable = ds_state->depthWriteEnable;
@@ -1223,16 +1223,16 @@ VkResult VkPipelineObj::CreateVKPipeline(VkDescriptorSetObj &descriptorSet, VkRe
     m_cb_state.attachmentCount = m_colorAttachments.size();
     m_cb_state.pAttachments = &m_colorAttachments[0];
 
-    info.pTessState        = NULL;
-    info.pVertexInputState = &m_vi_state;
-    info.pIaState          = &m_ia_state;
-    info.pVpState          = &m_vp_state;
-    info.pRsState          = &m_rs_state;
-    info.pMsState          = &m_ms_state;
-    info.pDsState          = &m_ds_state;
-    info.pCbState          = &m_cb_state;
     info.renderPass        = render_pass;
     info.subpass           = 0;
+    info.pTessellationState   = NULL;
+    info.pVertexInputState    = &m_vi_state;
+    info.pInputAssemblyState  = &m_ia_state;
+    info.pViewportState       = &m_vp_state;
+    info.pRasterState         = &m_rs_state;
+    info.pMultisampleState    = &m_ms_state;
+    info.pDepthStencilState   = &m_ds_state;
+    info.pColorBlendState     = &m_cb_state;
 
     return init_try(*m_device, info);
 }

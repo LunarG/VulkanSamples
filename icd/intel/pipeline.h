@@ -200,13 +200,17 @@ struct intel_pipeline {
     int provoking_vertex_trifan;
     int provoking_vertex_line;
 
-    VkPipelineCbStateCreateInfo cb_state;
+    // TODO: This should probably be Intel HW state, not VK state.
+    /* Depth Buffer format */
+    VkFormat db_format;
+
+    VkPipelineColorBlendStateCreateInfo cb_state;
 
     // VkPipelineRsStateCreateInfo rs_state;
     bool depthClipEnable;
     bool rasterizerDiscardEnable;
 
-    VkPipelineTessStateCreateInfo tess_state;
+    VkPipelineTessellationStateCreateInfo tess_state;
 
     uint32_t active_shaders;
     struct intel_pipeline_shader vs;
