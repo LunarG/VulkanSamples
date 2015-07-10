@@ -45,25 +45,24 @@ int main(int argc, char **argv)
 {
 
     // initialize the VkApplicationInfo structure
-    static const VkApplicationInfo app_info = {
-        .sType = VK_STRUCTURE_TYPE_APPLICATION_INFO,
-        .pNext = NULL,
-        .pAppName = APP_SHORT_NAME,
-        .appVersion = 1,
-        .pEngineName = APP_SHORT_NAME,
-        .engineVersion = 1,
-        .apiVersion = VK_API_VERSION,
-    };
+    VkApplicationInfo app_info = {};
+    app_info.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
+    app_info.pNext = NULL;
+    app_info.pAppName = APP_SHORT_NAME;
+    app_info.appVersion = 1;
+    app_info.pEngineName = APP_SHORT_NAME;
+    app_info.engineVersion = 1;
+    app_info.apiVersion = VK_API_VERSION;
 
     // initialize the VkInstanceCreateInfo structure
-    static const VkInstanceCreateInfo inst_info = {
-        .sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
-        .pNext = NULL,
-        .pAppInfo = &app_info,
-        .pAllocCb = NULL,
-        .extensionCount = 0,
-        .ppEnabledExtensionNames = NULL,
-    };
+    VkInstanceCreateInfo inst_info = {};
+    inst_info.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
+    inst_info.pNext = NULL;
+    inst_info.pAppInfo = &app_info;
+    inst_info.pAllocCb = NULL;
+    inst_info.extensionCount = 0;
+    inst_info.ppEnabledExtensionNames = NULL;
+
     VkInstance inst;
     VkResult err;
 
