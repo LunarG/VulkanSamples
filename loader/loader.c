@@ -140,9 +140,9 @@ void loader_heap_free(
     void                       *pMem)
 {
     if (!instance && instance->alloc_callbacks.pfnFree) {
-        return instance->alloc_callbacks.pfnFree(instance->alloc_callbacks.pUserData, pMem);
+        instance->alloc_callbacks.pfnFree(instance->alloc_callbacks.pUserData, pMem);
     }
-    return free(pMem);
+    free(pMem);
 }
 
 static void loader_log(VkFlags msg_type, int32_t msg_code,
