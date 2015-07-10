@@ -2219,8 +2219,15 @@ TEST_F(VkLayerTest, VtxBufferBadIndex)
         .layout            = pipeline_layout,
     };
 
+    VkPipelineCacheCreateInfo pipelineCache;
+    VkPipelineCache pipeline_cache;
+
+    memset(&pipelineCache, 0, sizeof(pipelineCache));
+    pipelineCache.sType = VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO;
+    err = vkCreatePipelineCache(m_device->device(), &pipelineCache, &pipeline_cache);
+
     VkPipeline pipeline;
-    err = vkCreateGraphicsPipeline(m_device->device(), &gp_ci, &pipeline);
+    err = vkCreateGraphicsPipelines(m_device->device(), pipeline_cache, 1, &gp_ci, &pipeline);
     ASSERT_VK_SUCCESS(err);
 
     cmdBuffer.AddRenderTarget(m_renderTargets[0]);
