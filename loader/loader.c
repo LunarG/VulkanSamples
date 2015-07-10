@@ -1056,6 +1056,7 @@ static void loader_physical_device_extensions(
         if (strcmp(layer_name, icd->layer_properties_cache.list[i].info.layerName) == 0) {
             *count = icd->layer_properties_cache.list[i].device_extension_list.count;
             *list = &icd->layer_properties_cache.list[i].device_extension_list;
+            break;
         }
     }
 }
