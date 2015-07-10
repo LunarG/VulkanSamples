@@ -42,11 +42,6 @@ const VkExtensionProperties intel_global_exts[INTEL_GLOBAL_EXT_COUNT] = {
 };
 
 const VkExtensionProperties intel_phy_dev_gpu_exts[INTEL_PHY_DEV_EXT_COUNT] = {
-    {
-        .extName = DEBUG_MARKER_EXTENSION_NAME,
-        .version = VK_DEBUG_MARKER_EXTENSION_VERSION,
-        .specVersion = VK_API_VERSION,
-    }
 };
 
 bool compare_vk_extension_properties(

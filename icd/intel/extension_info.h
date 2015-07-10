@@ -34,7 +34,6 @@
  * No device-specific extensions at this point, so this enum is a placeholder
  */
 enum intel_phy_dev_ext_type {
-    INTEL_PHY_DEV_EXT_DEBUG_MARKER,
 
     INTEL_PHY_DEV_EXT_COUNT,
     INTEL_PHY_DEV_EXT_INVALID = INTEL_PHY_DEV_EXT_COUNT,
