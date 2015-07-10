@@ -29,6 +29,9 @@ set(LAYER_JSON_FILES
     threading
     )
 
+set(VK_LAYER_RPATH /usr/lib/x86_64-linux-gnu/vulkan/layer:/usr/lib/i386-linux-gnu/vulkan/layer)
+set(CMAKE_INSTALL_RPATH ${VK_LAYER_RPATH})
+
 if (NOT WIN32)
     # extra setup for out-of-tree builds
     if (NOT (CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_CURRENT_BINARY_DIR))
@@ -71,6 +74,7 @@ else()
         target_link_Libraries(VKLayer${target} layer_utils)
 	add_dependencies(VKLayer${target} generate_vk_layer_helpers)
 	set_target_properties(VKLayer${target} PROPERTIES LINK_FLAGS "-Wl,-Bsymbolic")
+	install(TARGETS VKLayer${target} DESTINATION ${PROJECT_BINARY_DIR}/install_staging)
     endmacro()
 endif()
 
@@ -129,6 +133,8 @@ if (WIN32)
     add_library(layer_utils_static STATIC vk_layer_config.cpp vk_layer_extension_utils.cpp)
     set_target_properties(layer_utils_static PROPERTIES OUTPUT_NAME layer_utils)
     target_link_libraries(layer_utils)
+else()
+    install(TARGETS layer_utils DESTINATION ${PROJECT_BINARY_DIR}/install_staging)
 endif()
 
 add_vk_layer(Basic basic.cpp vk_layer_table.cpp)
