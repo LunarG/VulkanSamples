@@ -46,7 +46,7 @@ else()
     set(PYTHON_CMD "py")
 endif()
 
-option(BUILD_TESTS "Build tests" OFF)
+option(BUILD_TESTS "Build tests" ON)
 
 # loader: Generic VULKAN ICD loader
 # icd: Device dependent (DD) VULKAN components

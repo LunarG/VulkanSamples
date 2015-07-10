@@ -218,7 +218,7 @@ void VkImageTest::CreateImage(uint32_t w, uint32_t h)
     mem_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO;
     mem_info.pNext = NULL;
 
-    err = vkGetObjectMemoryRequirements(device(), VK_OBJECT_TYPE_IMAGE, m_image, &mem_req);
+    err = vkGetImageMemoryRequirements(device(), m_image, &mem_req);
     ASSERT_VK_SUCCESS(err);
 
     ASSERT_NE(0, mem_req.size) << "vkGetObjectMemoryRequirements (Image): Failed - expect images to require memory";
@@ -233,7 +233,7 @@ void VkImageTest::CreateImage(uint32_t w, uint32_t h)
     ASSERT_VK_SUCCESS(err);
 
     /* bind memory */
-    err = vkBindObjectMemory(device(), VK_OBJECT_TYPE_IMAGE, m_image, m_image_mem, 0);
+    err = vkBindImageMemory(device(), m_image, m_image_mem, 0);
     ASSERT_VK_SUCCESS(err);
 }
 
@@ -244,7 +244,7 @@ void VkImageTest::DestroyImage()
     err = vkFreeMemory(device(), m_image_mem);
     ASSERT_VK_SUCCESS(err);
 
-    ASSERT_VK_SUCCESS(vkDestroyObject(device(), VK_OBJECT_TYPE_IMAGE, m_image));
+    ASSERT_VK_SUCCESS(vkDestroyImage(device(), m_image));
 }
 
 void VkImageTest::CreateImageView(VkImageViewCreateInfo *pCreateInfo,
@@ -256,7 +256,7 @@ void VkImageTest::CreateImageView(VkImageViewCreateInfo *pCreateInfo,
 
 void VkImageTest::DestroyImageView(VkImageView imageView)
 {
-    ASSERT_VK_SUCCESS(vkDestroyObject(device(), VK_OBJECT_TYPE_IMAGE_VIEW, imageView));
+    ASSERT_VK_SUCCESS(vkDestroyImageView(device(), imageView));
 }
 
 TEST_F(VkImageTest, CreateImageViewTest) {

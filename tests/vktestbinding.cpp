@@ -23,6 +23,7 @@
 #include <iostream>
 #include <string.h> // memset(), memcmp()
 #include <assert.h>
+#include <stdarg.h>
 #include "vktestbinding.h"
 
 namespace {
@@ -34,11 +35,11 @@ namespace {
             NonDispHandle::init(dev.handle(), handle);                              \
     } while (0)
 
-#define NON_DISPATCHABLE_HANDLE_DTOR(cls, destroy_func, ...)                        \
+#define NON_DISPATCHABLE_HANDLE_DTOR(cls, destroy_func)                        \
     cls::~cls()                                                                     \
     {                                                                               \
         if (initialized())                                                          \
-            EXPECT(destroy_func(device(), __VA_ARGS__, handle()) == VK_SUCCESS);    \
+            EXPECT(destroy_func(device(), handle()) == VK_SUCCESS);    \
     }
 
 #define STRINGIFY(x) #x
@@ -468,21 +469,21 @@ void DeviceMemory::unmap() const
     EXPECT(vkUnmapMemory(device(), handle()) == VK_SUCCESS);
 }
 
-NON_DISPATCHABLE_HANDLE_DTOR(Fence, vkDestroyObject, VK_OBJECT_TYPE_FENCE)
+NON_DISPATCHABLE_HANDLE_DTOR(Fence, vkDestroyFence)
 
 void Fence::init(const Device &dev, const VkFenceCreateInfo &info)
 {
     NON_DISPATCHABLE_HANDLE_INIT(vkCreateFence, dev, &info);
 }
 
-NON_DISPATCHABLE_HANDLE_DTOR(Semaphore, vkDestroyObject, VK_OBJECT_TYPE_SEMAPHORE)
+NON_DISPATCHABLE_HANDLE_DTOR(Semaphore, vkDestroySemaphore)
 
 void Semaphore::init(const Device &dev, const VkSemaphoreCreateInfo &info)
 {
     NON_DISPATCHABLE_HANDLE_INIT(vkCreateSemaphore, dev, &info);
 }
 
-NON_DISPATCHABLE_HANDLE_DTOR(Event, vkDestroyObject, VK_OBJECT_TYPE_EVENT)
+NON_DISPATCHABLE_HANDLE_DTOR(Event, vkDestroyEvent)
 
 void Event::init(const Device &dev, const VkEventCreateInfo &info)
 {
@@ -499,7 +500,7 @@ void Event::reset()
     EXPECT(vkResetEvent(device(), handle()) == VK_SUCCESS);
 }
 
-NON_DISPATCHABLE_HANDLE_DTOR(QueryPool, vkDestroyObject, VK_OBJECT_TYPE_QUERY_POOL)
+NON_DISPATCHABLE_HANDLE_DTOR(QueryPool, vkDestroyQueryPool)
 
 void QueryPool::init(const Device &dev, const VkQueryPoolCreateInfo &info)
 {
@@ -520,7 +521,7 @@ VkResult QueryPool::results(uint32_t start, uint32_t count, size_t size, void *d
     return err;
 }
 
-NON_DISPATCHABLE_HANDLE_DTOR(Buffer, vkDestroyObject, VK_OBJECT_TYPE_BUFFER)
+NON_DISPATCHABLE_HANDLE_DTOR(Buffer, vkDestroyBuffer)
 
 void Buffer::init(const Device &dev, const VkBufferCreateInfo &info, VkMemoryPropertyFlags mem_props)
 {
@@ -540,24 +541,24 @@ VkMemoryRequirements Buffer::memory_requirements() const
 {
     VkMemoryRequirements reqs;
 
-    EXPECT(vkGetObjectMemoryRequirements(device(), VK_OBJECT_TYPE_BUFFER, handle(), &reqs) == VK_SUCCESS);
+    EXPECT(vkGetBufferMemoryRequirements(device(), handle(), &reqs) == VK_SUCCESS);
 
     return reqs;
 }
 
 void Buffer::bind_memory(const DeviceMemory &mem, VkDeviceSize mem_offset)
 {
-    EXPECT(vkBindObjectMemory(device(), VK_OBJECT_TYPE_BUFFER, handle(), mem.handle(), mem_offset) == VK_SUCCESS);
+    EXPECT(vkBindBufferMemory(device(), handle(), mem.handle(), mem_offset) == VK_SUCCESS);
 }
 
-NON_DISPATCHABLE_HANDLE_DTOR(BufferView, vkDestroyObject, VK_OBJECT_TYPE_BUFFER_VIEW)
+NON_DISPATCHABLE_HANDLE_DTOR(BufferView, vkDestroyBufferView)
 
 void BufferView::init(const Device &dev, const VkBufferViewCreateInfo &info)
 {
     NON_DISPATCHABLE_HANDLE_INIT(vkCreateBufferView, dev, &info);
 }
 
-NON_DISPATCHABLE_HANDLE_DTOR(Image, vkDestroyObject, VK_OBJECT_TYPE_IMAGE)
+NON_DISPATCHABLE_HANDLE_DTOR(Image, vkDestroyImage)
 
 void Image::init(const Device &dev, const VkImageCreateInfo &info, VkMemoryPropertyFlags mem_props)
 {
@@ -589,14 +590,14 @@ VkMemoryRequirements Image::memory_requirements() const
 {
     VkMemoryRequirements reqs;
 
-    EXPECT(vkGetObjectMemoryRequirements(device(), VK_OBJECT_TYPE_IMAGE, handle(), &reqs) == VK_SUCCESS);
+    EXPECT(vkGetImageMemoryRequirements(device(), handle(), &reqs) == VK_SUCCESS);
 
     return reqs;
 }
 
 void Image::bind_memory(const DeviceMemory &mem, VkDeviceSize mem_offset)
 {
-    EXPECT(vkBindObjectMemory(device(), VK_OBJECT_TYPE_IMAGE, handle(), mem.handle(), mem_offset) == VK_SUCCESS);
+    EXPECT(vkBindImageMemory(device(), handle(), mem.handle(), mem_offset) == VK_SUCCESS);
 }
 
 VkSubresourceLayout Image::subresource_layout(const VkImageSubresource &subres) const
@@ -617,21 +618,21 @@ bool Image::transparent() const
                                     VK_IMAGE_USAGE_DEPTH_STENCIL_BIT)));
 }
 
-NON_DISPATCHABLE_HANDLE_DTOR(ImageView, vkDestroyObject, VK_OBJECT_TYPE_IMAGE_VIEW)
+NON_DISPATCHABLE_HANDLE_DTOR(ImageView, vkDestroyImageView)
 
 void ImageView::init(const Device &dev, const VkImageViewCreateInfo &info)
 {
     NON_DISPATCHABLE_HANDLE_INIT(vkCreateImageView, dev, &info);
 }
 
-NON_DISPATCHABLE_HANDLE_DTOR(AttachmentView, vkDestroyObject, VK_OBJECT_TYPE_ATTACHMENT_VIEW)
+NON_DISPATCHABLE_HANDLE_DTOR(AttachmentView, vkDestroyAttachmentView)
 
 void AttachmentView::init(const Device &dev, const VkAttachmentViewCreateInfo &info)
 {
     NON_DISPATCHABLE_HANDLE_INIT(vkCreateAttachmentView, dev, &info);
 }
 
-NON_DISPATCHABLE_HANDLE_DTOR(ShaderModule, vkDestroyObject, VK_OBJECT_TYPE_SHADER_MODULE)
+NON_DISPATCHABLE_HANDLE_DTOR(ShaderModule, vkDestroyShaderModule)
 
 void ShaderModule::init(const Device &dev, const VkShaderModuleCreateInfo &info)
 {
@@ -649,7 +650,7 @@ VkResult ShaderModule::init_try(const Device &dev, const VkShaderModuleCreateInf
     return err;
 }
 
-NON_DISPATCHABLE_HANDLE_DTOR(Shader, vkDestroyObject, VK_OBJECT_TYPE_SHADER)
+NON_DISPATCHABLE_HANDLE_DTOR(Shader, vkDestroyShader)
 
 void Shader::init(const Device &dev, const VkShaderCreateInfo &info)
 {
@@ -667,7 +668,7 @@ VkResult Shader::init_try(const Device &dev, const VkShaderCreateInfo &info)
     return err;
 }
 
-NON_DISPATCHABLE_HANDLE_DTOR(Pipeline, vkDestroyObject, VK_OBJECT_TYPE_PIPELINE)
+NON_DISPATCHABLE_HANDLE_DTOR(Pipeline, vkDestroyPipeline)
 
 void Pipeline::init(const Device &dev, const VkGraphicsPipelineCreateInfo &info)
 {
@@ -715,7 +716,7 @@ void Pipeline::init(const Device &dev, const VkComputePipelineCreateInfo &info)
     }
 }
 
-NON_DISPATCHABLE_HANDLE_DTOR(PipelineLayout, vkDestroyObject, VK_OBJECT_TYPE_PIPELINE_LAYOUT)
+NON_DISPATCHABLE_HANDLE_DTOR(PipelineLayout, vkDestroyPipelineLayout)
 
 void PipelineLayout::init(const Device &dev, VkPipelineLayoutCreateInfo &info, const std::vector<const DescriptorSetLayout *> &layouts)
 {
@@ -725,21 +726,21 @@ void PipelineLayout::init(const Device &dev, VkPipelineLayoutCreateInfo &info, c
     NON_DISPATCHABLE_HANDLE_INIT(vkCreatePipelineLayout, dev, &info);
 }
 
-NON_DISPATCHABLE_HANDLE_DTOR(Sampler, vkDestroyObject, VK_OBJECT_TYPE_SAMPLER)
+NON_DISPATCHABLE_HANDLE_DTOR(Sampler, vkDestroySampler)
 
 void Sampler::init(const Device &dev, const VkSamplerCreateInfo &info)
 {
     NON_DISPATCHABLE_HANDLE_INIT(vkCreateSampler, dev, &info);
 }
 
-NON_DISPATCHABLE_HANDLE_DTOR(DescriptorSetLayout, vkDestroyObject, VK_OBJECT_TYPE_DESCRIPTOR_SET_LAYOUT)
+NON_DISPATCHABLE_HANDLE_DTOR(DescriptorSetLayout, vkDestroyDescriptorSetLayout)
 
 void DescriptorSetLayout::init(const Device &dev, const VkDescriptorSetLayoutCreateInfo &info)
 {
     NON_DISPATCHABLE_HANDLE_INIT(vkCreateDescriptorSetLayout, dev, &info);
 }
 
-NON_DISPATCHABLE_HANDLE_DTOR(DescriptorPool, vkDestroyObject, VK_OBJECT_TYPE_DESCRIPTOR_POOL)
+NON_DISPATCHABLE_HANDLE_DTOR(DescriptorPool, vkDestroyDescriptorPool)
 
 void DescriptorPool::init(const Device &dev, VkDescriptorPoolUsage usage,
                           uint32_t max_sets, const VkDescriptorPoolCreateInfo &info)
@@ -769,7 +770,7 @@ std::vector<DescriptorSet *> DescriptorPool::alloc_sets(const Device &dev, VkDes
     sets.reserve(set_count);
     for (std::vector<VkDescriptorSet>::const_iterator it = set_handles.begin(); it != set_handles.end(); it++) {
         // do descriptor sets need memories bound?
-        DescriptorSet *descriptorSet = new DescriptorSet(dev, *it);
+        DescriptorSet *descriptorSet = new DescriptorSet(dev, handle(), *it);
         sets.push_back(descriptorSet);
     }
     return sets;
@@ -786,30 +787,36 @@ DescriptorSet *DescriptorPool::alloc_sets(const Device &dev, VkDescriptorSetUsag
     return (set.empty()) ? NULL : set[0];
 }
 
-NON_DISPATCHABLE_HANDLE_DTOR(DescriptorSet, vkDestroyObject, VK_OBJECT_TYPE_DESCRIPTOR_SET)
+DescriptorSet::~DescriptorSet()
+{
+    if (initialized()) {
+        VkDescriptorSet sets[1] = { handle() };
+        EXPECT(vkFreeDescriptorSets(device(), pool_, 1, sets) == VK_SUCCESS);
+    }
+}
 
-NON_DISPATCHABLE_HANDLE_DTOR(DynamicViewportState, vkDestroyObject, VK_OBJECT_TYPE_DYNAMIC_VP_STATE)
+NON_DISPATCHABLE_HANDLE_DTOR(DynamicViewportState, vkDestroyDynamicViewportState)
 
 void DynamicViewportState::init(const Device &dev, const VkDynamicViewportStateCreateInfo &info)
 {
     NON_DISPATCHABLE_HANDLE_INIT(vkCreateDynamicViewportState, dev, &info);
 }
 
-NON_DISPATCHABLE_HANDLE_DTOR(DynamicRasterState, vkDestroyObject, VK_OBJECT_TYPE_DYNAMIC_RS_STATE)
+NON_DISPATCHABLE_HANDLE_DTOR(DynamicRasterState, vkDestroyDynamicRasterState)
 
 void DynamicRasterState::init(const Device &dev, const VkDynamicRasterStateCreateInfo &info)
 {
     NON_DISPATCHABLE_HANDLE_INIT(vkCreateDynamicRasterState, dev, &info);
 }
 
-NON_DISPATCHABLE_HANDLE_DTOR(DynamicColorBlendState, vkDestroyObject, VK_OBJECT_TYPE_DYNAMIC_CB_STATE)
+NON_DISPATCHABLE_HANDLE_DTOR(DynamicColorBlendState, vkDestroyDynamicColorBlendState)
 
-void DynamicColorBlendState::init(const Device &dev, const VkDynamicCbStateCreateInfo &info)
+void DynamicColorBlendState::init(const Device &dev, const VkDynamicColorBlendStateCreateInfo &info)
 {
     NON_DISPATCHABLE_HANDLE_INIT(vkCreateDynamicColorBlendState, dev, &info);
 }
 
-NON_DISPATCHABLE_HANDLE_DTOR(DynamicDepthStencilState, vkDestroyObject, VK_OBJECT_TYPE_DYNAMIC_DS_STATE)
+NON_DISPATCHABLE_HANDLE_DTOR(DynamicDepthStencilState, vkDestroyDynamicDepthStencilState)
 
 void DynamicDepthStencilState::init(const Device &dev, const VkDynamicDepthStencilStateCreateInfo &info)
 {
@@ -819,7 +826,7 @@ void DynamicDepthStencilState::init(const Device &dev, const VkDynamicDepthStenc
 CmdBuffer::~CmdBuffer()
 {
     if (initialized())
-        EXPECT(vkDestroyObject(dev_handle_, VK_OBJECT_TYPE_COMMAND_BUFFER, handle()) == VK_SUCCESS);
+        EXPECT(vkDestroyCommandBuffer(dev_handle_, handle()) == VK_SUCCESS);
 }
 
 void CmdBuffer::init(const Device &dev, const VkCmdBufferCreateInfo &info)

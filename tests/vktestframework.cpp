@@ -482,7 +482,8 @@ void  TestFrameworkVkPresent::Display()
     VkCmdBuffer cmdBufs[1];
     cmdBufs[0] = m_cmdbuf.handle();
 
-    vkQueueSubmit(m_queue.handle(), 1, cmdBufs, NULL);
+    VkFence nullFence = { VK_NULL_HANDLE };
+    vkQueueSubmit(m_queue.handle(), 1, cmdBufs, nullFence);
     m_queue.wait();
 
     VkPresentInfoWSI present = {};

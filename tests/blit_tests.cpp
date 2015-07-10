@@ -748,11 +748,8 @@ TEST_F(VkCmdCopyBufferTest, RAWHazard)
     vk_testing::Buffer bufs[3];
     VkEventCreateInfo event_info;
     VkEvent event;
-    VkMemoryRequirements mem_req;
     VkResult err;
     VkMemoryPropertyFlags reqs = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
-    VkMemoryAllocInfo mem_info;
-    VkDeviceMemory event_mem;
 
     //        typedef struct VkEventCreateInfo_
     //        {
@@ -765,26 +762,6 @@ TEST_F(VkCmdCopyBufferTest, RAWHazard)
 
     err = vkCreateEvent(dev_.handle(), &event_info, &event);
     ASSERT_VK_SUCCESS(err);
-
-    err = vkGetObjectMemoryRequirements(dev_.handle(), VK_OBJECT_TYPE_EVENT, event, &mem_req);
-    ASSERT_VK_SUCCESS(err);
-
-    if (mem_req.size) {
-
-        memset(&mem_info, 0, sizeof(mem_info));
-        mem_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO;
-        mem_info.allocationSize = mem_req.size;
-        mem_info.memoryTypeIndex = 0;
-
-        err = dev_.phy().set_memory_type(mem_req.memoryTypeBits, &mem_info, 0);
-        ASSERT_VK_SUCCESS(err);
-
-        err = vkAllocMemory(dev_.handle(), &mem_info, &event_mem);
-        ASSERT_VK_SUCCESS(err);
-
-        err = vkBindObjectMemory(dev_.handle(), VK_OBJECT_TYPE_EVENT, event, event_mem, 0);
-        ASSERT_VK_SUCCESS(err);
-    }
 
     err = vkResetEvent(dev_.handle(), event);
     ASSERT_VK_SUCCESS(err);
@@ -840,14 +817,9 @@ TEST_F(VkCmdCopyBufferTest, RAWHazard)
     EXPECT_EQ(0x11111111, data[0]);
     bufs[2].memory().unmap();
 
-    err = vkDestroyObject(dev_.handle(), VK_OBJECT_TYPE_EVENT, event);
+    err = vkDestroyEvent(dev_.handle(), event);
     ASSERT_VK_SUCCESS(err);
 
-    if (mem_req.size) {
-        // All done with event memory, clean up
-        err = vkFreeMemory(dev_.handle(), event_mem);
-        ASSERT_VK_SUCCESS(err);
-    }
 }
 
 class VkCmdBlitImageTest : public VkCmdBlitTest {

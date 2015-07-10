@@ -344,10 +344,10 @@ void VkRenderTest::GenericDrawPreparation(VkCommandBufferObj *cmdBuffer, VkPipel
     }
 
     cmdBuffer->PrepareAttachments();
-    cmdBuffer->BindStateObject(VK_STATE_BIND_POINT_RASTER, m_stateRaster);
-    cmdBuffer->BindStateObject(VK_STATE_BIND_POINT_VIEWPORT, m_stateViewport);
-    cmdBuffer->BindStateObject(VK_STATE_BIND_POINT_COLOR_BLEND, m_colorBlend);
-    cmdBuffer->BindStateObject(VK_STATE_BIND_POINT_DEPTH_STENCIL, m_stateDepthStencil);
+    cmdBuffer->BindDynamicRasterState(m_stateRaster);
+    cmdBuffer->BindDynamicViewportState(m_stateViewport);
+    cmdBuffer->BindDynamicColorBlendState(m_colorBlend);
+    cmdBuffer->BindDynamicDepthStencilState(m_stateDepthStencil);
     descriptorSet.CreateVKDescriptorSet(cmdBuffer);
     pipelineobj.CreateVKPipeline(descriptorSet, renderPass());
     cmdBuffer->BindPipeline(pipelineobj);

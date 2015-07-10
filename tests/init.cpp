@@ -169,8 +169,6 @@ TEST_F(VkTest, AllocMemory) {
 TEST_F(VkTest, Event) {
     VkEventCreateInfo event_info;
     VkEvent event;
-    VkMemoryRequirements mem_req;
-    VkDeviceMemory event_mem;
     VkResult err;
 
     //        typedef struct VkEventCreateInfo_
@@ -185,31 +183,6 @@ TEST_F(VkTest, Event) {
     err = vkCreateEvent(device(), &event_info, &event);
     ASSERT_VK_SUCCESS(err);
 
-    err = vkGetObjectMemoryRequirements(device(), VK_OBJECT_TYPE_EVENT, event, &mem_req);
-    ASSERT_VK_SUCCESS(err);
-
-    if (mem_req.size) {
-
-        //        VkResult VKAPI vkAllocMemory(
-        //            VkDevice                                  device,
-        //            const VkMemoryAllocInfo*                pAllocInfo,
-        //            VkDeviceMemory*                             pMem);
-        VkMemoryAllocInfo mem_info;
-
-        memset(&mem_info, 0, sizeof(mem_info));
-        mem_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO;
-        mem_info.allocationSize = mem_req.size;
-        mem_info.memoryTypeIndex = 0;
-
-        err = m_device->phy().set_memory_type(mem_req.memoryTypeBits, &mem_info, 0);
-        ASSERT_VK_SUCCESS(err);
-
-        err = vkAllocMemory(device(), &mem_info, &event_mem);
-        ASSERT_VK_SUCCESS(err);
-
-        err = vkBindObjectMemory(device(), VK_OBJECT_TYPE_EVENT, event, event_mem, 0);
-        ASSERT_VK_SUCCESS(err);
-    }
     err = vkResetEvent(device(), event);
     ASSERT_VK_SUCCESS(err);
 
@@ -225,13 +198,8 @@ TEST_F(VkTest, Event) {
     // TODO: Test actual synchronization with command buffer event.
 
     // All done with event memory, clean up
-    err = vkDestroyObject(device(), VK_OBJECT_TYPE_EVENT, event);
+    err = vkDestroyEvent(device(), event);
     ASSERT_VK_SUCCESS(err);
-
-    if (mem_req.size) {
-        err = vkFreeMemory(device(), event_mem);
-        ASSERT_VK_SUCCESS(err);
-    }
 }
 
 #define MAX_QUERY_SLOTS 10
@@ -239,10 +207,8 @@ TEST_F(VkTest, Event) {
 TEST_F(VkTest, Query) {
     VkQueryPoolCreateInfo query_info;
     VkQueryPool query_pool;
-    VkMemoryRequirements mem_req;
     size_t query_result_size;
     uint32_t *query_result_data;
-    VkDeviceMemory query_mem;
     VkResult err;
 
     //        typedef enum VkQueryType_
@@ -277,32 +243,6 @@ TEST_F(VkTest, Query) {
     err = vkCreateQueryPool(device(), &query_info, &query_pool);
     ASSERT_VK_SUCCESS(err);
 
-    err = vkGetObjectMemoryRequirements(device(), VK_OBJECT_TYPE_QUERY_POOL, query_pool, &mem_req);
-    ASSERT_VK_SUCCESS(err);
-
-    if (mem_req.size) {
-
-        //        VkResult VKAPI vkAllocMemory(
-        //            VkDevice                                  device,
-        //            const VkMemoryAllocInfo*                pAllocInfo,
-        //            VkDeviceMemory*                             pMem);
-        VkMemoryAllocInfo mem_info;
-
-        memset(&mem_info, 0, sizeof(mem_info));
-        mem_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO;
-        // TODO: Is a simple multiple all that's needed here?
-        mem_info.allocationSize = mem_req.size * MAX_QUERY_SLOTS;
-        mem_info.memoryTypeIndex = 0;
-
-        err = m_device->phy().set_memory_type(mem_req.memoryTypeBits, &mem_info, 0);
-        ASSERT_VK_SUCCESS(err);
-
-        err = vkAllocMemory(device(), &mem_info, &query_mem);
-        ASSERT_VK_SUCCESS(err);
-
-        err = vkBindObjectMemory(device(), VK_OBJECT_TYPE_QUERY_POOL, query_pool, query_mem, 0);
-        ASSERT_VK_SUCCESS(err);
-    }
     // TODO: Test actual synchronization with command buffer event.
     // TODO: Create command buffer
     // TODO: vkCmdResetQueryPool
@@ -324,14 +264,8 @@ TEST_F(VkTest, Query) {
 
     }
 
-    err = vkDestroyObject(device(), VK_OBJECT_TYPE_QUERY_POOL, query_pool);
+    err = vkDestroyQueryPool(device(), query_pool);
     ASSERT_VK_SUCCESS(err);
-
-    if (mem_req.size) {
-        // All done with QueryPool memory, clean up
-        err = vkFreeMemory(device(), query_mem);
-        ASSERT_VK_SUCCESS(err);
-    }
 }
 
 void getQueue(vk_testing::Device *device, uint32_t queue_node_index, const char *qname)
@@ -474,7 +408,7 @@ void VkTest::CreateImageTest()
     VkMemoryRequirements mem_req;
     VkDeviceMemory image_mem;
 
-    err = vkGetObjectMemoryRequirements(device(), VK_OBJECT_TYPE_IMAGE, image, &mem_req);
+    err = vkGetImageMemoryRequirements(device(), image, &mem_req);
     ASSERT_VK_SUCCESS(err);
 
     if (mem_req.size) {
@@ -496,7 +430,7 @@ void VkTest::CreateImageTest()
         err = vkAllocMemory(device(), &mem_info, &image_mem);
         ASSERT_VK_SUCCESS(err);
 
-        err = vkBindObjectMemory(device(), VK_OBJECT_TYPE_IMAGE, image, image_mem, 0);
+        err = vkBindImageMemory(device(), image, image_mem, 0);
         ASSERT_VK_SUCCESS(err);
     }
 
@@ -540,8 +474,8 @@ void VkTest::CreateImageTest()
     // TODO: Test image memory.
 
     // All done with image memory, clean up
-    ASSERT_VK_SUCCESS(vkDestroyObject(device(), VK_OBJECT_TYPE_IMAGE_VIEW, view));
-    ASSERT_VK_SUCCESS(vkDestroyObject(device(), VK_OBJECT_TYPE_IMAGE, image));
+    ASSERT_VK_SUCCESS(vkDestroyImageView(device(), view));
+    ASSERT_VK_SUCCESS(vkDestroyImage(device(), image));
 
     if (mem_req.size) {
         ASSERT_VK_SUCCESS(vkFreeMemory(device(), image_mem));
@@ -571,7 +505,7 @@ void VkTest::CreateCommandBufferTest()
     err = vkCreateCommandBuffer(device(), &info, &cmdBuffer);
     ASSERT_VK_SUCCESS(err) << "vkCreateCommandBuffer failed";
 
-    ASSERT_VK_SUCCESS(vkDestroyObject(device(), VK_OBJECT_TYPE_COMMAND_BUFFER, cmdBuffer));
+    ASSERT_VK_SUCCESS(vkDestroyCommandBuffer(device(), cmdBuffer));
 }
 
 TEST_F(VkTest, TestCommandBuffer) {
@@ -617,7 +551,7 @@ void VkTest::CreateShader(VkShader *pshader)
     err = vkCreateShader(device(), &createInfo, &shader);
     ASSERT_VK_SUCCESS(err);
 
-    err = vkDestroyObject(device(), VK_OBJECT_TYPE_SHADER_MODULE, module);
+    err = vkDestroyShaderModule(device(), module);
     ASSERT_VK_SUCCESS(err);
 
     *pshader = shader;

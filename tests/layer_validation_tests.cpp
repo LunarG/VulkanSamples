@@ -61,9 +61,9 @@ static const char bindStateFragShaderText[] =
         "}\n";
 
 static void myDbgFunc(
-    VkFlags                    msgFlags,
-    VkObjectType                        objType,
-    VkObject                            srcObject,
+    VkFlags                             msgFlags,
+    VkDbgObjectType                     objType,
+    uint64_t                            srcObject,
     size_t                              location,
     int32_t                             msgCode,
     const char*                         pLayerPrefix,
@@ -121,8 +121,8 @@ private:
 
 static void myDbgFunc(
     VkFlags                    msgFlags,
-    VkObjectType               objType,
-    VkObject                   srcObject,
+    VkDbgObjectType            objType,
+    uint64_t                   srcObject,
     size_t                     location,
     int32_t                    msgCode,
     const char*                pLayerPrefix,
@@ -298,16 +298,16 @@ void VkLayerTest::GenericDrawPreparation(VkCommandBufferObj *cmdBuffer, VkPipeli
 
     cmdBuffer->PrepareAttachments();
     if ((failMask & BsoFailRaster) != BsoFailRaster) {
-        cmdBuffer->BindStateObject(VK_STATE_BIND_POINT_RASTER, m_stateRaster);
+        cmdBuffer->BindDynamicRasterState(m_stateRaster);
     }
     if ((failMask & BsoFailViewport) != BsoFailViewport) {
-        cmdBuffer->BindStateObject(VK_STATE_BIND_POINT_VIEWPORT, m_stateViewport);
+        cmdBuffer->BindDynamicViewportState(m_stateViewport);
     }
     if ((failMask & BsoFailColorBlend) != BsoFailColorBlend) {
-        cmdBuffer->BindStateObject(VK_STATE_BIND_POINT_COLOR_BLEND, m_colorBlend);
+        cmdBuffer->BindDynamicColorBlendState(m_colorBlend);
     }
     if ((failMask & BsoFailDepthStencil) != BsoFailDepthStencil) {
-        cmdBuffer->BindStateObject(VK_STATE_BIND_POINT_DEPTH_STENCIL, m_stateDepthStencil);
+        cmdBuffer->BindDynamicDepthStencilState(m_stateDepthStencil);
     }
     // Make sure depthWriteEnable is set so that DepthStencil fail test will work correctly
     VkStencilOpState stencil = {
@@ -461,8 +461,7 @@ TEST_F(VkLayerTest, MapMemWithoutHostVisibleBit)
     err = vkCreateImage(m_device->device(), &image_create_info, &image);
     ASSERT_VK_SUCCESS(err);
 
-    err = vkGetObjectMemoryRequirements(m_device->device(),
-                          VK_OBJECT_TYPE_IMAGE,
+    err = vkGetImageMemoryRequirements(m_device->device(),
                           image,
                           &mem_reqs);
     ASSERT_VK_SUCCESS(err);
@@ -474,7 +473,7 @@ TEST_F(VkLayerTest, MapMemWithoutHostVisibleBit)
     ASSERT_VK_SUCCESS(err);
 
     // Try to bind free memory that has been freed
-    err = vkBindObjectMemory(m_device->device(), VK_OBJECT_TYPE_IMAGE, image, mem, 0);
+    err = vkBindImageMemory(m_device->device(), image, mem, 0);
     ASSERT_VK_SUCCESS(err);
 
     // Map memory as if to initialize the image
@@ -529,8 +528,7 @@ TEST_F(VkLayerTest, BindInvalidMemory)
     err = vkCreateImage(m_device->device(), &image_create_info, &image);
     ASSERT_VK_SUCCESS(err);
 
-    err = vkGetObjectMemoryRequirements(m_device->device(),
-                          VK_OBJECT_TYPE_IMAGE,
+    err = vkGetImageMemoryRequirements(m_device->device(),
                           image,
                           &mem_reqs);
     ASSERT_VK_SUCCESS(err);
@@ -549,7 +547,7 @@ TEST_F(VkLayerTest, BindInvalidMemory)
     ASSERT_VK_SUCCESS(err);
 
     // Try to bind free memory that has been freed
-    err = vkBindObjectMemory(m_device->device(), VK_OBJECT_TYPE_IMAGE, image, mem, 0);
+    err = vkBindImageMemory(m_device->device(), image, mem, 0);
     ASSERT_VK_SUCCESS(err);
 
     msgFlags = m_errorMonitor->GetState(&msgString);
@@ -600,8 +598,7 @@ TEST_F(VkLayerTest, FreeBoundMemory)
     err = vkCreateImage(m_device->device(), &image_create_info, &image);
     ASSERT_VK_SUCCESS(err);
 
-    err = vkGetObjectMemoryRequirements(m_device->device(),
-                          VK_OBJECT_TYPE_IMAGE,
+    err = vkGetImageMemoryRequirements(m_device->device(),
                           image,
                           &mem_reqs);
     ASSERT_VK_SUCCESS(err);
@@ -616,7 +613,7 @@ TEST_F(VkLayerTest, FreeBoundMemory)
     ASSERT_VK_SUCCESS(err);
 
     // Bind memory to Image object
-    err = vkBindObjectMemory(m_device->device(), VK_OBJECT_TYPE_IMAGE, image, mem, 0);
+    err = vkBindImageMemory(m_device->device(), image, mem, 0);
     ASSERT_VK_SUCCESS(err);
 
     // Introduce validation failure, free memory while still bound to object
@@ -672,8 +669,7 @@ TEST_F(VkLayerTest, RebindMemory)
     err = vkCreateImage(m_device->device(), &image_create_info, &image);
     ASSERT_VK_SUCCESS(err);
 
-    err = vkGetObjectMemoryRequirements(m_device->device(),
-                          VK_OBJECT_TYPE_IMAGE,
+    err = vkGetImageMemoryRequirements(m_device->device(),
                           image,
                           &mem_reqs);
     ASSERT_VK_SUCCESS(err);
@@ -689,11 +685,11 @@ TEST_F(VkLayerTest, RebindMemory)
     ASSERT_VK_SUCCESS(err);
 
     // Bind first memory object to Image object
-    err = vkBindObjectMemory(m_device->device(), VK_OBJECT_TYPE_IMAGE, image, mem1, 0);
+    err = vkBindImageMemory(m_device->device(), image, mem1, 0);
     ASSERT_VK_SUCCESS(err);
 
     // Introduce validation failure, try to bind a different memory object to the same image object
-    err = vkBindObjectMemory(m_device->device(), VK_OBJECT_TYPE_IMAGE, image, mem2, 0);
+    err = vkBindImageMemory(m_device->device(), image, mem2, 0);
     ASSERT_VK_SUCCESS(err);
 
     msgFlags = m_errorMonitor->GetState(&msgString);
@@ -744,8 +740,7 @@ TEST_F(VkLayerTest, BindMemoryToDestroyedObject)
     err = vkCreateImage(m_device->device(), &image_create_info, &image);
     ASSERT_VK_SUCCESS(err);
 
-    err = vkGetObjectMemoryRequirements(m_device->device(),
-                          VK_OBJECT_TYPE_IMAGE,
+    err = vkGetImageMemoryRequirements(m_device->device(),
                           image,
                           &mem_reqs);
     ASSERT_VK_SUCCESS(err);
@@ -759,11 +754,11 @@ TEST_F(VkLayerTest, BindMemoryToDestroyedObject)
     ASSERT_VK_SUCCESS(err);
 
     // Introduce validation failure, destroy Image object before binding
-    vkDestroyObject(m_device->device(), VK_OBJECT_TYPE_IMAGE, image);
+    vkDestroyImage(m_device->device(), image);
     ASSERT_VK_SUCCESS(err);
 
     // Now Try to bind memory to this destroyted object
-    err = vkBindObjectMemory(m_device->device(), VK_OBJECT_TYPE_IMAGE, image, mem, 0);
+    err = vkBindImageMemory(m_device->device(), image, mem, 0);
     ASSERT_VK_SUCCESS(err);
 
     msgFlags = m_errorMonitor->GetState(&msgString);
@@ -2288,33 +2283,12 @@ TEST_F(VkLayerTest, ThreadCmdBufferCollision)
 
     VkEventCreateInfo event_info;
     VkEvent event;
-    VkMemoryRequirements mem_req;
     VkResult err;
 
     memset(&event_info, 0, sizeof(event_info));
     event_info.sType = VK_STRUCTURE_TYPE_EVENT_CREATE_INFO;
 
     err = vkCreateEvent(device(), &event_info, &event);
-    ASSERT_VK_SUCCESS(err);
-
-    err = vkGetObjectMemoryRequirements(device(), VK_OBJECT_TYPE_EVENT, event, &mem_req);
-    ASSERT_VK_SUCCESS(err);
-
-    VkMemoryAllocInfo mem_info;
-    VkDeviceMemory event_mem;
-
-    memset(&mem_info, 0, sizeof(mem_info));
-    mem_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO;
-    mem_info.allocationSize = mem_req.size;
-    mem_info.memoryTypeIndex = 0;
-
-    err = m_device->phy().set_memory_type(mem_req.memoryTypeBits, &mem_info, 0);
-    ASSERT_VK_SUCCESS(err);
-
-    err = vkAllocMemory(device(), &mem_info, &event_mem);
-    ASSERT_VK_SUCCESS(err);
-
-    err = vkBindObjectMemory(device(), VK_OBJECT_TYPE_EVENT, event, event_mem, 0);
     ASSERT_VK_SUCCESS(err);
 
     err = vkResetEvent(device(), event);

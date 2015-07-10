@@ -146,22 +146,22 @@ void VkRenderFramework::InitFramework(
 
 void VkRenderFramework::ShutdownFramework()
 {
-    if (m_colorBlend) vkDestroyObject(device(), VK_OBJECT_TYPE_DYNAMIC_CB_STATE, m_colorBlend);
-    if (m_stateDepthStencil) vkDestroyObject(device(), VK_OBJECT_TYPE_DYNAMIC_DS_STATE, m_stateDepthStencil);
-    if (m_stateRaster) vkDestroyObject(device(), VK_OBJECT_TYPE_DYNAMIC_RS_STATE, m_stateRaster);
-    if (m_cmdBuffer) vkDestroyObject(device(), VK_OBJECT_TYPE_COMMAND_BUFFER, m_cmdBuffer);
-    if (m_framebuffer) vkDestroyObject(device(), VK_OBJECT_TYPE_FRAMEBUFFER, m_framebuffer);
-    if (m_renderPass) vkDestroyObject(device(), VK_OBJECT_TYPE_RENDER_PASS, m_renderPass);
+    if (m_colorBlend) vkDestroyDynamicColorBlendState(device(), m_colorBlend);
+    if (m_stateDepthStencil) vkDestroyDynamicDepthStencilState(device(), m_stateDepthStencil);
+    if (m_stateRaster) vkDestroyDynamicRasterState(device(), m_stateRaster);
+    if (m_cmdBuffer) vkDestroyCommandBuffer(device(), m_cmdBuffer);
+    if (m_framebuffer) vkDestroyFramebuffer(device(), m_framebuffer);
+    if (m_renderPass) vkDestroyRenderPass(device(), m_renderPass);
 
     if (m_globalMsgCallback) m_dbgDestroyMsgCallback(this->inst, m_globalMsgCallback);
     if (m_devMsgCallback) m_dbgDestroyMsgCallback(this->inst, m_devMsgCallback);
 
     if (m_stateViewport) {
-        vkDestroyObject(device(), VK_OBJECT_TYPE_DYNAMIC_VP_STATE, m_stateViewport);
+        vkDestroyDynamicViewportState(device(), m_stateViewport);
     }
     while (!m_renderTargets.empty()) {
-        vkDestroyObject(device(), VK_OBJECT_TYPE_ATTACHMENT_VIEW, m_renderTargets.back()->targetView());
-        vkDestroyObject(device(), VK_OBJECT_TYPE_IMAGE, m_renderTargets.back()->image());
+        vkDestroyAttachmentView(device(), m_renderTargets.back()->targetView());
+        vkDestroyImage(device(), m_renderTargets.back()->image());
         vkFreeMemory(device(), m_renderTargets.back()->memory());
         m_renderTargets.pop_back();
     }
@@ -180,14 +180,14 @@ void VkRenderFramework::InitState()
     m_render_target_fmt = VK_FORMAT_B8G8R8A8_UNORM;
 
     // create a raster state (solid, back-face culling)
-    VkDynamicRsStateCreateInfo raster = {};
-    raster.sType = VK_STRUCTURE_TYPE_DYNAMIC_RS_STATE_CREATE_INFO;
+    VkDynamicRasterStateCreateInfo raster = {};
+    raster.sType = VK_STRUCTURE_TYPE_DYNAMIC_RASTER_STATE_CREATE_INFO;
 
     err = vkCreateDynamicRasterState( device(), &raster, &m_stateRaster );
     ASSERT_VK_SUCCESS(err);
 
-    VkDynamicCbStateCreateInfo blend = {};
-    blend.sType = VK_STRUCTURE_TYPE_DYNAMIC_CB_STATE_CREATE_INFO;
+    VkDynamicColorBlendStateCreateInfo blend = {};
+    blend.sType = VK_STRUCTURE_TYPE_DYNAMIC_COLOR_BLEND_STATE_CREATE_INFO;
     blend.blendConst[0] = 1.0f;
     blend.blendConst[1] = 1.0f;
     blend.blendConst[2] = 1.0f;
@@ -195,8 +195,8 @@ void VkRenderFramework::InitState()
     err = vkCreateDynamicColorBlendState(device(), &blend, &m_colorBlend);
     ASSERT_VK_SUCCESS( err );
 
-    VkDynamicDsStateCreateInfo depthStencil = {};
-    depthStencil.sType = VK_STRUCTURE_TYPE_DYNAMIC_DS_STATE_CREATE_INFO;
+    VkDynamicDepthStencilStateCreateInfo depthStencil = {};
+    depthStencil.sType = VK_STRUCTURE_TYPE_DYNAMIC_DEPTH_STENCIL_STATE_CREATE_INFO;
     depthStencil.minDepthBounds = 0.f;
     depthStencil.maxDepthBounds = 1.f;
     depthStencil.stencilFrontRef = 0;
@@ -223,8 +223,8 @@ void VkRenderFramework::InitViewport(float width, float height)
     VkViewport viewport;
     VkRect2D scissor;
 
-    VkDynamicVpStateCreateInfo viewportCreate = {};
-    viewportCreate.sType = VK_STRUCTURE_TYPE_DYNAMIC_VP_STATE_CREATE_INFO;
+    VkDynamicViewportStateCreateInfo viewportCreate = {};
+    viewportCreate.sType = VK_STRUCTURE_TYPE_DYNAMIC_VIEWPORT_STATE_CREATE_INFO;
     viewportCreate.viewportAndScissorCount         = 1;
     viewport.originX  = 0;
     viewport.originY  = 0;
@@ -1403,9 +1403,24 @@ void VkCommandBufferObj::EndRenderPass()
     vkCmdEndRenderPass(handle());
 }
 
-void VkCommandBufferObj::BindStateObject(VkStateBindPoint stateBindPoint, VkDynamicStateObject stateObject)
+void VkCommandBufferObj::BindDynamicViewportState(VkDynamicViewportState viewportState)
 {
-    vkCmdBindDynamicStateObject( handle(), stateBindPoint, stateObject);
+    vkCmdBindDynamicViewportState( handle(), viewportState);
+}
+
+void VkCommandBufferObj::BindDynamicRasterState(VkDynamicRasterState rasterState)
+{
+    vkCmdBindDynamicRasterState( handle(), rasterState);
+}
+
+void VkCommandBufferObj::BindDynamicColorBlendState(VkDynamicColorBlendState colorBlendState)
+{
+    vkCmdBindDynamicColorBlendState( handle(), colorBlendState);
+}
+
+void VkCommandBufferObj::BindDynamicDepthStencilState(VkDynamicDepthStencilState depthStencilState)
+{
+    vkCmdBindDynamicDepthStencilState( handle(), depthStencilState);
 }
 
 void VkCommandBufferObj::AddRenderTarget(VkImageObj *renderTarget)
@@ -1425,7 +1440,8 @@ void VkCommandBufferObj::Draw(uint32_t firstVertex, uint32_t vertexCount, uint32
 
 void VkCommandBufferObj::QueueCommandBuffer()
 {
-    QueueCommandBuffer(NULL);
+    VkFence nullFence = { VK_NULL_HANDLE };
+    QueueCommandBuffer(nullFence);
 }
 
 void VkCommandBufferObj::QueueCommandBuffer(VkFence fence)

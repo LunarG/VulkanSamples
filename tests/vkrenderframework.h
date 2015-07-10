@@ -106,19 +106,12 @@ protected:
     VkCmdBuffer                         m_cmdBuffer;
     VkRenderPass                        m_renderPass;
     VkFramebuffer                       m_framebuffer;
-<<<<<<< HEAD
     std::vector<VkClearValue>           m_renderPassClearValues;
     VkRenderPassBeginInfo               m_renderPassBeginInfo;
-    VkDynamicRsState                    m_stateRaster;
-    VkDynamicCbState                    m_colorBlend;
-    VkDynamicVpState                    m_stateViewport;
-    VkDynamicDsState                    m_stateDepthStencil;
-=======
     VkDynamicRasterState                m_stateRaster;
     VkDynamicColorBlendState            m_colorBlend;
     VkDynamicViewportState              m_stateViewport;
     VkDynamicDepthStencilState          m_stateDepthStencil;
->>>>>>> Bug 14084 - Improve type safety and remove polymorphism
     vector<VkImageObj*>                 m_renderTargets;
     float                               m_width, m_height;
     VkFormat                            m_render_target_fmt;
@@ -177,8 +170,11 @@ public:
     void BindDescriptorSet(VkDescriptorSetObj &descriptorSet);
     void BindVertexBuffer(VkConstantBufferObj *vertexBuffer, VkDeviceSize offset, uint32_t binding);
     void BindIndexBuffer(VkIndexBufferObj *indexBuffer, uint32_t offset);
-    void BindStateObject(VkStateBindPoint stateBindPoint, VkDynamicStateObject stateObject);
     void BeginRenderPass(const VkRenderPassBeginInfo &info);
+    void BindDynamicViewportState(VkDynamicViewportState viewportState);
+    void BindDynamicRasterState(VkDynamicRasterState rasterState);
+    void BindDynamicColorBlendState(VkDynamicColorBlendState colorBlendState);
+    void BindDynamicDepthStencilState(VkDynamicDepthStencilState depthStencilState);
     void EndRenderPass();
     void Draw(uint32_t firstVertex, uint32_t vertexCount, uint32_t firstInstance, uint32_t instanceCount);
     void DrawIndexed(uint32_t firstIndex, uint32_t indexCount, int32_t vertexOffset, uint32_t firstInstance, uint32_t instanceCount);

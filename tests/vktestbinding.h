@@ -539,7 +539,10 @@ public:
     ~DescriptorSet();
 
     explicit DescriptorSet() : NonDispHandle() {}
-    explicit DescriptorSet(const Device &dev, VkDescriptorSet set) : NonDispHandle(dev.handle(), set) {}
+    explicit DescriptorSet(const Device &dev, VkDescriptorPool pool, VkDescriptorSet set) : NonDispHandle(dev.handle(), set) { pool_ = pool;}
+
+private:
+    VkDescriptorPool pool_;
 };
 
 class DynamicViewportState : public internal::NonDispHandle<VkDynamicViewportState> {
