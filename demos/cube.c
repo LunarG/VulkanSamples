@@ -316,6 +316,7 @@ struct demo {
     PFN_vkGetSwapChainInfoWSI fpGetSwapChainInfoWSI;
     PFN_vkQueuePresentWSI fpQueuePresentWSI;
     VkSwapChainWSI swap_chain;
+    VkCmdPool cmd_pool;
     struct {
         VkImage image;
         VkDeviceMemory mem;
@@ -430,7 +431,7 @@ static void demo_set_image_layout(
         const VkCmdBufferCreateInfo cmd = {
             .sType = VK_STRUCTURE_TYPE_CMD_BUFFER_CREATE_INFO,
             .pNext = NULL,
-            .queueNodeIndex = demo->graphics_queue_node_index,
+            .cmdPool = demo->cmd_pool,
             .level = VK_CMD_BUFFER_LEVEL_PRIMARY,
             .flags = 0,
         };
@@ -1652,14 +1653,24 @@ static void demo_prepare_framebuffers(struct demo *demo)
 
 static void demo_prepare(struct demo *demo)
 {
+    VkResult U_ASSERT_ONLY err;
+
+    const VkCmdPoolCreateInfo cmd_pool_info = {
+        .sType = VK_STRUCTURE_TYPE_CMD_POOL_CREATE_INFO,
+        .pNext = NULL,
+        .queueFamilyIndex = demo->graphics_queue_node_index,
+        .flags = 0,
+    };
+    err = vkCreateCommandPool(demo->device, &cmd_pool_info, &demo->cmd_pool);
+    assert(!err);
+
     const VkCmdBufferCreateInfo cmd = {
         .sType = VK_STRUCTURE_TYPE_CMD_BUFFER_CREATE_INFO,
         .pNext = NULL,
-        .queueNodeIndex = demo->graphics_queue_node_index,
+        .cmdPool = demo->cmd_pool,
         .level = VK_CMD_BUFFER_LEVEL_PRIMARY,
         .flags = 0,
     };
-    VkResult U_ASSERT_ONLY err;
 
     demo_prepare_buffers(demo);
     demo_prepare_depth(demo);
@@ -1740,6 +1751,7 @@ static void demo_cleanup(struct demo *demo)
         vkDestroyCommandBuffer(demo->device, demo->buffers[i].cmd);
     }
 
+    vkDestroyCommandPool(demo->device, demo->cmd_pool);
     vkDestroyDevice(demo->device);
     if (demo->validate) {
         demo->dbgDestroyMsgCallback(demo->inst, demo->msg_callback);
