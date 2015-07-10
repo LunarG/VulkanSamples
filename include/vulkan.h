@@ -33,7 +33,7 @@
 #include "vk_platform.h"
 
 // Vulkan API version supported by this file
-#define VK_API_VERSION VK_MAKE_VERSION(0, 136, 0)
+#define VK_API_VERSION VK_MAKE_VERSION(0, 127, 1)
 
 #ifdef __cplusplus
 extern "C"
