@@ -127,6 +127,8 @@ class HeaderFileParser:
                         block_comment = False
                     continue
                 if '/*' in line:
+                    if '*/' in line: # single line block comment
+                        continue
                     block_comment = True
                 elif 0 == len(line.split()):
                     #print("Skipping empty line")
@@ -137,19 +139,23 @@ class HeaderFileParser:
                 elif 'typedef enum' in line:
                     (ty_txt, en_txt, base_type) = line.strip().split(None, 2)
                     #print("Found ENUM type %s" % base_type)
+                    if '{' == base_type:
+                        base_type = 'tmp_enum'
                     parse_enum = True
                     default_enum_val = 0
                     self.types_dict[base_type] = 'enum'
-                elif 'typedef struct' in line:
+                elif 'typedef struct' in line or 'typedef union' in line:
                     (ty_txt, st_txt, base_type) = line.strip().split(None, 2)
                     #print("Found STRUCT type: %s" % base_type)
+                    if '{' == base_type:
+                        base_type = 'tmp_struct'
                     parse_struct = True
                     self.types_dict[base_type] = 'struct'
-                elif 'typedef union' in line:
-                    (ty_txt, st_txt, base_type) = line.strip().split(None, 2)
-                    #print("Found UNION type: %s" % base_type)
-                    parse_struct = True
-                    self.types_dict[base_type] = 'struct'
+#                elif 'typedef union' in line:
+#                    (ty_txt, st_txt, base_type) = line.strip().split(None, 2)
+#                    print("Found UNION type: %s" % base_type)
+#                    parse_struct = True
+#                    self.types_dict[base_type] = 'struct'
                 elif '}' in line and (parse_enum or parse_struct):
                     if len(line.split()) > 1: # deals with embedded union in one struct
                         parse_enum = False
@@ -157,12 +163,31 @@ class HeaderFileParser:
                         self.last_struct_count_name = ''
                         member_num = 0
                         (cur_char, targ_type) = line.strip().split(None, 1)
+                        if 'tmp_struct' == base_type:
+                            base_type = targ_type.strip(';')
+                            #print("Found Actual Struct type %s" % base_type)
+                            self.struct_dict[base_type] = self.struct_dict['tmp_struct']
+                            self.struct_dict.pop('tmp_struct', 0)
+                            self.types_dict[base_type] = 'struct'
+                            self.types_dict.pop('tmp_struct', 0)
+                        elif 'tmp_enum' == base_type:
+                            base_type = targ_type.strip(';')
+                            #print("Found Actual ENUM type %s" % base_type)
+                            for n in self.enum_val_dict:
+                                if 'tmp_enum' == self.enum_val_dict[n]['type']:
+                                    self.enum_val_dict[n]['type'] = base_type
+#                            self.enum_val_dict[base_type] = self.enum_val_dict['tmp_enum']
+#                            self.enum_val_dict.pop('tmp_enum', 0)
+                            self.enum_type_dict[base_type] = self.enum_type_dict['tmp_enum']
+                            self.enum_type_dict.pop('tmp_enum', 0)
+                            self.types_dict[base_type] = 'enum'
+                            self.types_dict.pop('tmp_enum', 0)
                         self.typedef_fwd_dict[base_type] = targ_type.strip(';')
                         self.typedef_rev_dict[targ_type.strip(';')] = base_type
                         #print("fwd_dict: %s = %s" % (base_type, targ_type))
                 elif parse_enum:
                     #if 'VK_MAX_ENUM' not in line and '{' not in line:
-                    if True not in [ens in line for ens in ['{', 'VK_MAX_ENUM', '_RANGE']]:
+                    if True not in [ens in line for ens in ['{', '_MAX_ENUM', '_BEGIN_RANGE', '_END_RANGE', '_NUM = ', '_ENUM_RANGE']]:
                         self._add_enum(line, base_type, default_enum_val)
                         default_enum_val += 1
                 elif parse_struct:
@@ -223,6 +248,8 @@ class HeaderFileParser:
     # TODO : Handle ":" bitfield, "**" ptr->ptr and "const type*const*"
     def _add_struct(self, line_txt, struct_type, num):
         #print("Parsing struct line %s" % line_txt)
+        if '{' == struct_type:
+            print("Parsing struct '{' w/ line %s" % line_txt)
         if not struct_type in self.struct_dict:
             self.struct_dict[struct_type] = {}
         members = line_txt.strip().split(';', 1)[0] # first strip semicolon & comments
@@ -767,7 +794,9 @@ class StructWrapperGen:
             # This pre-pass flags embedded structs and pNext
             for m in sorted(self.struct_dict[s]):
                 if 'pNext' == self.struct_dict[s][m]['name'] or is_type(self.struct_dict[s][m]['type'], 'struct') or self.struct_dict[s][m]['array']:
-                    stp_list.append(self.struct_dict[s][m])
+                    # TODO: This is a tmp workaround
+                    if 'ppActiveLayerNames' not in self.struct_dict[s][m]['name']:
+                        stp_list.append(self.struct_dict[s][m])
             sh_funcs.append('%s' % lineinfo.get())
             sh_funcs.append('string %s(const %s* pStruct, const string prefix)\n{' % (self._get_sh_func_name(s), typedef_fwd_dict[s]))
             sh_funcs.append('%s' % lineinfo.get())
