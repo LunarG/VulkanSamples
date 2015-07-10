@@ -107,6 +107,7 @@ static inline void loader_init_device_dispatch_table(VkLayerDispatchTable *table
     table->DestroyDescriptorPool = (PFN_vkDestroyDescriptorPool) gpa(dev, "vkDestroyDescriptorPool");
     table->ResetDescriptorPool = (PFN_vkResetDescriptorPool) gpa(dev, "vkResetDescriptorPool");
     table->AllocDescriptorSets = (PFN_vkAllocDescriptorSets) gpa(dev, "vkAllocDescriptorSets");
+    table->FreeDescriptorSets = (PFN_vkFreeDescriptorSets) gpa(dev, "vkFreeDescriptorSets");
     table->UpdateDescriptorSets = (PFN_vkUpdateDescriptorSets) gpa(dev, "vkUpdateDescriptorSets");
     table->CreateDynamicViewportState = (PFN_vkCreateDynamicViewportState) gpa(dev, "vkCreateDynamicViewportState");
     table->DestroyDynamicViewportState = (PFN_vkDestroyDynamicViewportState) gpa(dev, "vkDestroyDynamicViewportState");
@@ -323,6 +324,8 @@ static inline void *loader_lookup_device_dispatch_table(
         return (void *) table->ResetDescriptorPool;
     if (!strcmp(name, "AllocDescriptorSets"))
         return (void *) table->AllocDescriptorSets;
+    if (!strcmp(name, "FreeDescriptorSets"))
+        return (void *) table->FreeDescriptorSets;
     if (!strcmp(name, "UpdateDescriptorSets"))
         return (void *) table->UpdateDescriptorSets;
     if (!strcmp(name, "CreateDynamicViewportState"))

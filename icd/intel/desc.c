@@ -859,6 +859,21 @@ ICD_EXPORT VkResult VKAPI vkAllocDescriptorSets(
     return ret;
 }
 
+ICD_EXPORT VkResult VKAPI vkFreeDescriptorSets(
+    VkDevice                                    device,
+    VkDescriptorPool                            descriptorPool,
+    uint32_t                                    count,
+    const VkDescriptorSet*                      pDescriptorSets)
+{
+    uint32_t i;
+
+    for (i = 0; i < count; i++) {
+        intel_desc_set_destroy(
+           *(struct intel_desc_set **) &pDescriptorSets[i]);
+    }
+    return VK_SUCCESS;
+}
+
 ICD_EXPORT VkResult VKAPI vkUpdateDescriptorSets(
     VkDevice                                    device,
     uint32_t                                    writeCount,
