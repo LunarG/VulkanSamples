@@ -346,6 +346,11 @@ core = Extension(
              Param("uint32_t", "memRangeCount"),
              Param("const VkMappedMemoryRange*", "pMemRanges")]),
 
+        Proto("VkResult", "GetDeviceMemoryCommitment",
+            [Param("VkDevice", "device"),
+             Param("VkDeviceMemory", "memory"),
+             Param("VkDeviceSize*", "pCommittedMemoryInBytes")]),
+
         Proto("VkResult", "BindBufferMemory",
             [Param("VkDevice", "device"),
              Param("VkBuffer", "buffer"),

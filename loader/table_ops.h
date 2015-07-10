@@ -49,6 +49,7 @@ static inline void loader_init_device_dispatch_table(VkLayerDispatchTable *table
     table->UnmapMemory = (PFN_vkUnmapMemory) gpa(dev, "vkUnmapMemory");
     table->FlushMappedMemoryRanges = (PFN_vkFlushMappedMemoryRanges) gpa(dev, "vkFlushMappedMemoryRanges");
     table->InvalidateMappedMemoryRanges = (PFN_vkInvalidateMappedMemoryRanges) gpa(dev, "vkInvalidateMappedMemoryRanges");
+    table->GetDeviceMemoryCommitment = (PFN_vkGetDeviceMemoryCommitment) gpa(dev, "vkGetDeviceMemoryCommitment");
     table->GetBufferMemoryRequirements = (PFN_vkGetBufferMemoryRequirements) gpa(dev, "vkGetBufferMemoryRequirements");
     table->GetImageMemoryRequirements = (PFN_vkGetImageMemoryRequirements) gpa(dev, "vkGetImageMemoryRequirements");
     table->BindBufferMemory = (PFN_vkBindBufferMemory) gpa(dev, "vkBindBufferMemory");
@@ -208,6 +209,8 @@ static inline void *loader_lookup_device_dispatch_table(
         return (void *) table->FlushMappedMemoryRanges;
     if (!strcmp(name, "InvalidateMappedMemoryRanges"))
         return (void *) table->InvalidateMappedMemoryRanges;
+    if (!strcmp(name, "GetDeviceMemoryCommitment"))
+        return (void *) table->GetDeviceMemoryCommitment;
     if (!strcmp(name, "GetBufferMemoryRequirements"))
         return (void *) table->GetBufferMemoryRequirements;
     if (!strcmp(name, "GetImageMemoryRequirements"))

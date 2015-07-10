@@ -41,6 +41,7 @@ typedef struct VkLayerDispatchTable_
     PFN_vkUnmapMemory UnmapMemory;
     PFN_vkFlushMappedMemoryRanges FlushMappedMemoryRanges;
     PFN_vkInvalidateMappedMemoryRanges InvalidateMappedMemoryRanges;
+    PFN_vkGetDeviceMemoryCommitment GetDeviceMemoryCommitment;
     PFN_vkGetImageSparseMemoryRequirements GetImageSparseMemoryRequirements;
     PFN_vkGetImageMemoryRequirements GetImageMemoryRequirements;
     PFN_vkGetBufferMemoryRequirements GetBufferMemoryRequirements;

@@ -2537,6 +2537,16 @@ VK_LAYER_EXPORT VkResult VKAPI vkInvalidateMappedMemoryRanges(
     return result;
 }
 
+VK_LAYER_EXPORT VkResult VKAPI vkGetDeviceMemoryCommitment(
+    VkDevice                                  device,
+    VkDeviceMemory                            memory,
+    VkDeviceSize*                             pCommittedMemoryInBytes)
+{
+    VkResult result = get_dispatch_table(pc_device_table_map, device)->GetDeviceMemoryCommitment(device, memory, pCommittedMemoryInBytes);
+
+    return result;
+}
+
 bool PostBindBufferMemory(
     VkDevice device,
     VkBuffer buffer,

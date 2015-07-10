@@ -876,6 +876,7 @@ typedef enum VkMemoryPropertyFlagBits_
                                                                             // vkInvalidateMappedMemoryRanges must be used flush/invalidate host cache
     VK_MEMORY_PROPERTY_HOST_UNCACHED_BIT                    = VK_BIT(2),    // Memory should not be cached by the host
     VK_MEMORY_PROPERTY_HOST_WRITE_COMBINED_BIT              = VK_BIT(3),    // Memory should support host write combining
+    VK_MEMORY_PROPERTY_LAZILY_ALLOCATED_BIT                 = 0x00000010,   // Memory may be allocated by the driver when it is required
 } VkMemoryPropertyFlagBits;
 
 // Memory output flags passed to resource transition commands
@@ -2286,6 +2287,7 @@ typedef VkResult (VKAPI *PFN_vkMapMemory)(VkDevice device, VkDeviceMemory mem, V
 typedef VkResult (VKAPI *PFN_vkUnmapMemory)(VkDevice device, VkDeviceMemory mem);
 typedef VkResult (VKAPI *PFN_vkFlushMappedMemoryRanges)(VkDevice device, uint32_t memRangeCount, const VkMappedMemoryRange* pMemRanges);
 typedef VkResult (VKAPI *PFN_vkInvalidateMappedMemoryRanges)(VkDevice device, uint32_t memRangeCount, const VkMappedMemoryRange* pMemRanges);
+typedef VkResult (VKAPI *PFN_vkGetDeviceMemoryCommitment)(VkDevice device, VkDeviceMemory memory, VkDeviceSize* pCommittedMemoryInBytes);
 typedef VkResult (VKAPI *PFN_vkBindBufferMemory)(VkDevice device, VkBuffer buffer, VkDeviceMemory mem, VkDeviceSize memOffset);
 typedef VkResult (VKAPI *PFN_vkBindImageMemory)(VkDevice device, VkImage image, VkDeviceMemory mem, VkDeviceSize memOffset);
 typedef VkResult (VKAPI *PFN_vkGetBufferMemoryRequirements)(VkDevice device, VkBuffer buffer, VkMemoryRequirements* pMemoryRequirements);
@@ -2545,6 +2547,12 @@ VkResult VKAPI vkInvalidateMappedMemoryRanges(
     VkDevice                                    device,
     uint32_t                                    memRangeCount,
     const VkMappedMemoryRange*                  pMemRanges);
+
+VkResult VKAPI vkGetDeviceMemoryCommitment(
+    VkDevice                                    device,
+    VkDeviceMemory                              memory,
+    VkDeviceSize*                               pCommittedMemoryInBytes);
+
 
 // Memory management API functions
 

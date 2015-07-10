@@ -125,3 +125,11 @@ ICD_EXPORT VkResult VKAPI vkInvalidateMappedMemoryRanges(
 {
     return VK_SUCCESS;
 }
+
+ICD_EXPORT VkResult VKAPI vkGetDeviceMemoryCommitment(
+    VkDevice                                  device,
+    VkDeviceMemory                            memory,
+    VkDeviceSize*                             pCommittedMemoryInBytes)
+{
+    return VK_SUCCESS;
+}

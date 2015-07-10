@@ -420,6 +420,15 @@ LOADER_EXPORT VkResult VKAPI vkInvalidateMappedMemoryRanges(VkDevice device, uin
     return disp->InvalidateMappedMemoryRanges(device, memRangeCount, pMemRanges);
 }
 
+LOADER_EXPORT VkResult VKAPI vkGetDeviceMemoryCommitment(VkDevice device, VkDeviceMemory memory, VkDeviceSize* pCommittedMemoryInBytes)
+{
+    const VkLayerDispatchTable *disp;
+
+    disp = loader_get_dispatch(device);
+
+    return disp->GetDeviceMemoryCommitment(device, memory, pCommittedMemoryInBytes);
+}
+
 LOADER_EXPORT VkResult VKAPI vkGetBufferMemoryRequirements(VkDevice device, VkBuffer buffer, VkMemoryRequirements* pMemoryRequirements)
 {
     const VkLayerDispatchTable *disp;
