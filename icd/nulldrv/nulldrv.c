@@ -1735,9 +1735,54 @@ ICD_EXPORT VkResult VKAPI vkQueueBindSparseImageMemory(
     NULLDRV_LOG_FUNC;
     return VK_SUCCESS;
 }
+ICD_EXPORT VkResult VKAPI vkCreatePipelineCache(
+    VkDevice                                    device,
+    const VkPipelineCacheCreateInfo*            pCreateInfo,
+    VkPipelineCache*                            pPipelineCache)
+{
 
-ICD_EXPORT VkResult VKAPI vkCreateGraphicsPipeline(
+    NULLDRV_LOG_FUNC;
+    return VK_SUCCESS;
+}
+
+VkResult VKAPI vkDestroyPipelineCache(
+    VkDevice                                    device,
+    VkPipelineCache                             pipelineCache)
+{
+    NULLDRV_LOG_FUNC;
+    return VK_SUCCESS;
+}
+
+ICD_EXPORT size_t VKAPI vkGetPipelineCacheSize(
+    VkDevice                                    device,
+    VkPipelineCache                             pipelineCache)
+{
+    NULLDRV_LOG_FUNC;
+    return VK_ERROR_UNAVAILABLE;
+}
+
+ICD_EXPORT VkResult VKAPI vkGetPipelineCacheData(
+    VkDevice                                    device,
+    VkPipelineCache                             pipelineCache,
+    void*                                       pData)
+{
+    NULLDRV_LOG_FUNC;
+    return VK_ERROR_UNAVAILABLE;
+}
+
+ICD_EXPORT VkResult VKAPI vkMergePipelineCaches(
+    VkDevice                                    device,
+    VkPipelineCache                             destCache,
+    uint32_t                                    srcCacheCount,
+    const VkPipelineCache*                      pSrcCaches)
+{
+    NULLDRV_LOG_FUNC;
+    return VK_ERROR_UNAVAILABLE;
+}
+ICD_EXPORT VkResult VKAPI vkCreateGraphicsPipelines(
     VkDevice                                  device,
+    VkPipelineCache                           pipelineCache,
+    uint32_t                                  count,
     const VkGraphicsPipelineCreateInfo*    pCreateInfo,
     VkPipeline*                               pPipeline)
 {
@@ -1748,21 +1793,12 @@ ICD_EXPORT VkResult VKAPI vkCreateGraphicsPipeline(
             (struct nulldrv_pipeline **) pPipeline);
 }
 
-ICD_EXPORT VkResult VKAPI vkCreateGraphicsPipelineDerivative(
-    VkDevice                                  device,
-    const VkGraphicsPipelineCreateInfo*    pCreateInfo,
-    VkPipeline                                basePipeline,
-    VkPipeline*                               pPipeline)
-{
-    NULLDRV_LOG_FUNC;
-    struct nulldrv_dev *dev = nulldrv_dev(device);
 
-    return graphics_pipeline_create(dev, pCreateInfo,
-            (struct nulldrv_pipeline **) pPipeline);
-}
 
-ICD_EXPORT VkResult VKAPI vkCreateComputePipeline(
+ICD_EXPORT VkResult VKAPI vkCreateComputePipelines(
     VkDevice                                  device,
+    VkPipelineCache                           pipelineCache,
+    uint32_t                                  count,
     const VkComputePipelineCreateInfo*     pCreateInfo,
     VkPipeline*                               pPipeline)
 {
@@ -1770,36 +1806,9 @@ ICD_EXPORT VkResult VKAPI vkCreateComputePipeline(
     return VK_SUCCESS;
 }
 
-ICD_EXPORT VkResult VKAPI vkStorePipeline(
-    VkDevice                                  device,
-    VkPipeline                                pipeline,
-    size_t*                                     pDataSize,
-    void*                                       pData)
-{
-    NULLDRV_LOG_FUNC;
-    return VK_SUCCESS;
-}
 
-ICD_EXPORT VkResult VKAPI vkLoadPipeline(
-    VkDevice                                  device,
-    size_t                                    	dataSize,
-    const void*                                 pData,
-    VkPipeline*                               pPipeline)
-{
-    NULLDRV_LOG_FUNC;
-    return VK_SUCCESS;
-}
 
-ICD_EXPORT VkResult VKAPI vkLoadPipelineDerivative(
-    VkDevice                                  device,
-    size_t                                    	dataSize,
-    const void*                                 pData,
-    VkPipeline				basePipeline,
-    VkPipeline*                               pPipeline)
-{
-    NULLDRV_LOG_FUNC;
-    return VK_SUCCESS;
-}
+
 
 ICD_EXPORT VkResult VKAPI vkCreateQueryPool(
     VkDevice                                  device,
