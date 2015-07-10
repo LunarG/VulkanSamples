@@ -122,8 +122,7 @@ typedef struct _SAMPLER_NODE {
 typedef struct _IMAGE_NODE {
     union {
         VkImageViewCreateInfo ivci;
-        VkAttachmentViewCreateInfo cvci;
-        VkAttachmentViewCreateInfo dsvci;
+        VkAttachmentViewCreateInfo avci;
     } createInfo;
 } IMAGE_NODE;
 

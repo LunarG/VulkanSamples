@@ -1531,26 +1531,16 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateImageView(VkDevice device, const VkImageV
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkCreateColorAttachmentView(VkDevice device, const VkColorAttachmentViewCreateInfo* pCreateInfo, VkColorAttachmentView* pView)
+VkResult VKAPI vkCreateAttachmentView(
+    VkDevice                                    device,
+    const VkAttachmentViewCreateInfo*           pCreateInfo,
+    VkAttachmentView*                           pView)
 {
-    VkResult result = get_dispatch_table(draw_state_device_table_map, device)->CreateColorAttachmentView(device, pCreateInfo, pView);
+    VkResult result = get_dispatch_table(draw_state_device_table_map, device)->CreateAttachmentView(device, pCreateInfo, pView);
     if (VK_SUCCESS == result) {
         loader_platform_thread_lock_mutex(&globalLock);
         IMAGE_NODE *pNewNode = new IMAGE_NODE;
-        pNewNode->createInfo.cvci = *pCreateInfo;
-        viewCreateInfoMap[*pView] = pNewNode;
-        loader_platform_thread_unlock_mutex(&globalLock);
-    }
-    return result;
-}
-
-VK_LAYER_EXPORT VkResult VKAPI vkCreateDepthStencilView(VkDevice device, const VkDepthStencilViewCreateInfo* pCreateInfo, VkDepthStencilView* pView)
-{
-    VkResult result = get_dispatch_table(draw_state_device_table_map, device)->CreateDepthStencilView(device, pCreateInfo, pView);
-    if (VK_SUCCESS == result) {
-        loader_platform_thread_lock_mutex(&globalLock);
-        IMAGE_NODE *pNewNode = new IMAGE_NODE;
-        pNewNode->createInfo.dsvci = *pCreateInfo;
+        pNewNode->createInfo.avci = *pCreateInfo;
         viewCreateInfoMap[*pView] = pNewNode;
         loader_platform_thread_unlock_mutex(&globalLock);
     }
@@ -2787,10 +2777,8 @@ VK_LAYER_EXPORT void* VKAPI vkGetDeviceProcAddr(VkDevice dev, const char* funcNa
         return (void*) vkCreateBufferView;
     if (!strcmp(funcName, "vkCreateImageView"))
         return (void*) vkCreateImageView;
-    if (!strcmp(funcName, "vkCreateColorAttachmentView"))
-        return (void*) vkCreateColorAttachmentView;
-    if (!strcmp(funcName, "vkCreateDepthStencilView"))
-        return (void*) vkCreateDepthStencilView;
+    if (!strcmp(funcName, "vkCreateAttachmentView"))
+        return (void*) vkCreateAttachmentView;
     if (!strcmp(funcName, "CreatePipelineCache"))
         return (void*) vkCreatePipelineCache;
     if (!strcmp(funcName, "DestroyPipelineCache"))
