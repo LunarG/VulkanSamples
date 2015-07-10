@@ -1802,11 +1802,6 @@ ICD_EXPORT VkResult VKAPI vkCreatePipelineCache(
     return VK_SUCCESS;
 }
 
-<<<<<<< HEAD
-VkResult VKAPI vkDestroyPipelineCache(
-    VkDevice                                    device,
-    VkPipelineCache                             pipelineCache)
-=======
 ICD_EXPORT VkResult VKAPI vkDestroyPipeline(
     VkDevice                                  device,
     VkPipeline                                pipeline)
@@ -1815,12 +1810,9 @@ ICD_EXPORT VkResult VKAPI vkDestroyPipeline(
     return VK_SUCCESS;
 }
 
-ICD_EXPORT VkResult VKAPI vkCreateGraphicsPipelineDerivative(
-    VkDevice                                  device,
-    const VkGraphicsPipelineCreateInfo*    pCreateInfo,
-    VkPipeline                                basePipeline,
-    VkPipeline*                               pPipeline)
->>>>>>> Bug 14084 - Improve type safety and remove polymorphism
+VkResult VKAPI vkDestroyPipelineCache(
+    VkDevice                                    device,
+    VkPipelineCache                             pipelineCache)
 {
     NULLDRV_LOG_FUNC;
     return VK_SUCCESS;
@@ -2133,9 +2125,6 @@ ICD_EXPORT VkResult VKAPI vkCreateImageView(
             (struct nulldrv_img_view **) pView);
 }
 
-<<<<<<< HEAD
-ICD_EXPORT VkResult VKAPI vkCreateAttachmentView(
-=======
 ICD_EXPORT VkResult VKAPI vkDestroyImageView(
     VkDevice                                  device,
     VkImageView                               imageView)
@@ -2144,8 +2133,7 @@ ICD_EXPORT VkResult VKAPI vkDestroyImageView(
     return VK_SUCCESS;
 }
 
-ICD_EXPORT VkResult VKAPI vkCreateColorAttachmentView(
->>>>>>> Bug 14084 - Improve type safety and remove polymorphism
+ICD_EXPORT VkResult VKAPI vkCreateAttachmentView(
     VkDevice                                  device,
     const VkAttachmentViewCreateInfo* pCreateInfo,
     VkAttachmentView*                  pView)
@@ -2157,38 +2145,14 @@ ICD_EXPORT VkResult VKAPI vkCreateColorAttachmentView(
             (struct nulldrv_rt_view **) pView);
 }
 
-<<<<<<< HEAD
-=======
-ICD_EXPORT VkResult VKAPI vkDestroyColorAttachmentView(
+ICD_EXPORT VkResult VKAPI vkDestroyAttachmentView(
     VkDevice                                  device,
-    VkColorAttachmentView                     colorAttachmentView)
+    VkAttachmentView                          attachmentView)
 {
     NULLDRV_LOG_FUNC;
     return VK_SUCCESS;
 }
 
-ICD_EXPORT VkResult VKAPI vkCreateDepthStencilView(
-    VkDevice                                  device,
-    const VkDepthStencilViewCreateInfo*   pCreateInfo,
-    VkDepthStencilView*                     pView)
-{
-    NULLDRV_LOG_FUNC;
-    struct nulldrv_dev *dev = nulldrv_dev(device);
-
-    return nulldrv_ds_view_create(dev, pCreateInfo,
-            (struct nulldrv_ds_view **) pView);
-
-}
-
-ICD_EXPORT VkResult VKAPI vkDestroyDepthStencilView(
-    VkDevice                                  device,
-    VkDepthStencilView                        depthStencilView)
-{
-    NULLDRV_LOG_FUNC;
-    return VK_SUCCESS;
-}
-
->>>>>>> Bug 14084 - Improve type safety and remove polymorphism
 ICD_EXPORT VkResult VKAPI vkCreateDescriptorSetLayout(
     VkDevice                                   device,
     const VkDescriptorSetLayoutCreateInfo* pCreateInfo,
