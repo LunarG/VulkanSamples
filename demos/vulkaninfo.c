@@ -482,9 +482,9 @@ static void app_dev_init(struct app_dev *dev, struct app_gpu *gpu)
     fflush(stdout);
 
     uint32_t enabled_extension_count = 0;
+    uint32_t known_extension_count = ARRAY_SIZE(known_extensions);
 
-#if 0 //TODO add this back in once get WSI device extension in list
-    for (uint32_t i = 0; i < ARRAY_SIZE(known_extensions); i++) {
+    for (uint32_t i = 0; i < known_extension_count; i++) {
         VkBool32 extension_found = 0;
         for (uint32_t j = 0; j < gpu->device_extension_count; j++) {
             VkExtensionProperties *ext_prop = &gpu->device_extensions[j];
@@ -499,7 +499,6 @@ static void app_dev_init(struct app_dev *dev, struct app_gpu *gpu)
             ERR_EXIT(VK_ERROR_INVALID_EXTENSION);
         }
     }
-#endif
 
     /* request all queues */
     info.queueRecordCount = gpu->queue_count;
