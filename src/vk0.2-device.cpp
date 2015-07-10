@@ -71,7 +71,7 @@ int main(int argc, char **argv)
         .pRequestedQueues = &queue_info,
         .extensionCount = 0,
         .ppEnabledExtensionNames = NULL,
-        .flags = VK_DEVICE_CREATE_VALIDATION_BIT,
+        .flags = 0,
     };
     uint32_t gpu_count;
     VkInstance inst;
