@@ -103,6 +103,7 @@ protected:
     VkPhysicalDevice                    objs[16];
     uint32_t                            gpu_count;
     VkDeviceObj                        *m_device;
+    VkCmdPool                           m_cmdPool;
     VkCmdBuffer                         m_cmdBuffer;
     VkRenderPass                        m_renderPass;
     VkFramebuffer                       m_framebuffer;

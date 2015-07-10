@@ -594,9 +594,10 @@ public:
     // vkEndCommandBuffer()
     // vkResetCommandBuffer()
     void end();
-    void reset();
+    void reset(VkCmdBufferResetFlags flags);
+    void reset() { reset(VK_CMD_BUFFER_RESET_RELEASE_RESOURCES); }
 
-    static VkCmdBufferCreateInfo create_info(uint32_t queueNodeIndex);
+    static VkCmdBufferCreateInfo create_info(VkCmdPool pool);
 
 private:
     VkDevice dev_handle_;
@@ -803,11 +804,11 @@ inline VkCopyDescriptorSet Device::copy_descriptor_set(const DescriptorSet &src_
     return copy;
 }
 
-inline VkCmdBufferCreateInfo CmdBuffer::create_info(uint32_t queueNodeIndex)
+inline VkCmdBufferCreateInfo CmdBuffer::create_info(VkCmdPool pool)
 {
     VkCmdBufferCreateInfo info = {};
     info.sType = VK_STRUCTURE_TYPE_CMD_BUFFER_CREATE_INFO;
-    info.queueNodeIndex = queueNodeIndex;
+    info.cmdPool = pool;
     return info;
 }
 

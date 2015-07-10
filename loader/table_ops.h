@@ -118,6 +118,9 @@ static inline void loader_init_device_dispatch_table(VkLayerDispatchTable *table
     table->DestroyDynamicColorBlendState = (PFN_vkDestroyDynamicColorBlendState) gpa(dev, "vkDestroyDynamicColorBlendState");
     table->CreateDynamicDepthStencilState = (PFN_vkCreateDynamicDepthStencilState) gpa(dev, "vkCreateDynamicDepthStencilState");
     table->DestroyDynamicDepthStencilState = (PFN_vkDestroyDynamicDepthStencilState) gpa(dev, "vkDestroyDynamicDepthStencilState");
+    table->CreateCommandPool = (PFN_vkCreateCommandPool) gpa(dev, "vkCreateCommandPool");
+    table->DestroyCommandPool = (PFN_vkDestroyCommandPool) gpa(dev, "vkDestroyCommandPool");
+    table->ResetCommandPool = (PFN_vkResetCommandPool) gpa(dev, "vkResetCommandPool");
     table->CreateCommandBuffer = (PFN_vkCreateCommandBuffer) gpa(dev, "vkCreateCommandBuffer");
     table->DestroyCommandBuffer = (PFN_vkDestroyCommandBuffer) gpa(dev, "vkDestroyCommandBuffer");
     table->BeginCommandBuffer = (PFN_vkBeginCommandBuffer) gpa(dev, "vkBeginCommandBuffer");
@@ -347,6 +350,12 @@ static inline void *loader_lookup_device_dispatch_table(
         return (void *) table->CreateDynamicDepthStencilState;
     if (!strcmp(name, "DestroyDynamicDepthStencilState"))
         return (void *) table->DestroyDynamicDepthStencilState;
+    if (!strcmp(name, "CreateCommandPool"))
+        return (void *) table->CreateCommandPool;
+    if (!strcmp(name, "DestroyCommandPool"))
+        return (void *) table->DestroyCommandPool;
+    if (!strcmp(name, "ResetCommandPool"))
+        return (void *) table->ResetCommandPool;
     if (!strcmp(name, "CreateCommandBuffer"))
         return (void *) table->CreateCommandBuffer;
     if (!strcmp(name, "DestroyCommandBuffer"))

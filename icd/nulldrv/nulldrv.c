@@ -711,6 +711,32 @@ ICD_EXPORT VkResult VKAPI vkDestroyBuffer(
     return VK_SUCCESS;
 }
 
+ICD_EXPORT VkResult VKAPI vkCreateCommandPool(
+    VkDevice                                    device,
+    const VkCmdPoolCreateInfo*                  pCreateInfo,
+    VkCmdPool*                                  pCmdPool)
+{
+    NULLDRV_LOG_FUNC;
+    return VK_SUCCESS;
+}
+
+ICD_EXPORT VkResult VKAPI vkDestroyCommandPool(
+    VkDevice                                    device,
+    VkCmdPool                                   cmdPool)
+{
+    NULLDRV_LOG_FUNC;
+    return VK_SUCCESS;
+}
+
+ICD_EXPORT VkResult VKAPI vkResetCommandPool(
+    VkDevice                                    device,
+    VkCmdPool                                   cmdPool,
+    VkCmdPoolResetFlags                         flags)
+{
+    NULLDRV_LOG_FUNC;
+    return VK_SUCCESS;
+}
+
 ICD_EXPORT VkResult VKAPI vkCreateCommandBuffer(
     VkDevice                                  device,
     const VkCmdBufferCreateInfo*           pCreateInfo,
@@ -747,7 +773,8 @@ ICD_EXPORT VkResult VKAPI vkEndCommandBuffer(
 }
 
 ICD_EXPORT VkResult VKAPI vkResetCommandBuffer(
-    VkCmdBuffer                              cmdBuffer)
+    VkCmdBuffer                              cmdBuffer,
+    VkCmdBufferResetFlags flags)
 {
     NULLDRV_LOG_FUNC;
     return VK_SUCCESS;

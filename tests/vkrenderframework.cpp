@@ -150,6 +150,7 @@ void VkRenderFramework::ShutdownFramework()
     if (m_stateDepthStencil) vkDestroyDynamicDepthStencilState(device(), m_stateDepthStencil);
     if (m_stateRaster) vkDestroyDynamicRasterState(device(), m_stateRaster);
     if (m_cmdBuffer) vkDestroyCommandBuffer(device(), m_cmdBuffer);
+    if (m_cmdPool) vkDestroyCommandPool(device(), m_cmdPool);
     if (m_framebuffer) vkDestroyFramebuffer(device(), m_framebuffer);
     if (m_renderPass) vkDestroyRenderPass(device(), m_renderPass);
 
@@ -207,10 +208,15 @@ void VkRenderFramework::InitState()
     err = vkCreateDynamicDepthStencilState( device(), &depthStencil, &m_stateDepthStencil );
     ASSERT_VK_SUCCESS( err );
 
-    VkCmdBufferCreateInfo cmdInfo = {};
+    VkCmdPoolCreateInfo cmd_pool_info;
+    cmd_pool_info.sType = VK_STRUCTURE_TYPE_CMD_POOL_CREATE_INFO,
+    cmd_pool_info.pNext = NULL,
+    cmd_pool_info.queueFamilyIndex = m_device->graphics_queue_node_index_;
+    cmd_pool_info.flags = 0,
+    err = vkCreateCommandPool(device(), &cmd_pool_info, &m_cmdPool);
+    assert(!err);
 
-    cmdInfo.sType = VK_STRUCTURE_TYPE_CMD_BUFFER_CREATE_INFO;
-    cmdInfo.queueNodeIndex = m_device->graphics_queue_node_index_;
+    VkCmdBufferCreateInfo cmdInfo = vk_testing::CmdBuffer::create_info(m_cmdPool);
 
     err = vkCreateCommandBuffer(device(), &cmdInfo, &m_cmdBuffer);
     ASSERT_VK_SUCCESS(err) << "vkCreateCommandBuffer failed";

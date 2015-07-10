@@ -106,6 +106,7 @@ VK_DEFINE_NONDISP_HANDLE(VkDynamicColorBlendState)
 VK_DEFINE_NONDISP_HANDLE(VkDynamicDepthStencilState)
 VK_DEFINE_NONDISP_HANDLE(VkRenderPass)
 VK_DEFINE_NONDISP_HANDLE(VkFramebuffer)
+VK_DEFINE_NONDISP_HANDLE(VkCmdPool)
 
 #define VK_MAX_PHYSICAL_DEVICE_NAME 256
 #define VK_MAX_EXTENSION_NAME       256
@@ -793,8 +794,9 @@ typedef enum VkStructureType_
     VK_STRUCTURE_TYPE_SUBPASS_DESCRIPTION                     = 48,
     VK_STRUCTURE_TYPE_SUBPASS_DEPENDENCY                      = 49,
     VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO                  = 50,
+    VK_STRUCTURE_TYPE_CMD_POOL_CREATE_INFO                    = 51,
 
-    VK_ENUM_RANGE(STRUCTURE_TYPE, APPLICATION_INFO, RENDER_PASS_BEGIN_INFO)
+    VK_ENUM_RANGE(STRUCTURE_TYPE, APPLICATION_INFO, CMD_POOL_CREATE_INFO)
 } VkStructureType;
 
 // ------------------------------------------------------------------------------------------------
@@ -905,6 +907,17 @@ typedef enum VkMemoryInputFlagBits_
     VK_MEMORY_INPUT_ATTACHMENT_BIT                          = VK_BIT(8),
     VK_MEMORY_INPUT_TRANSFER_BIT                            = VK_BIT(9),    // Controls input coherency of transfer operations
 } VkMemoryInputFlagBits;
+
+typedef enum {
+    VK_CMD_POOL_CREATE_TRANSIENT_BIT = 0x00000001,
+    VK_CMD_POOL_CREATE_RESET_COMMAND_BUFFER_BIT = 0x00000002,
+} VkCmdPoolCreateFlagBits;
+typedef VkFlags VkCmdPoolCreateFlags;
+
+typedef enum {
+    VK_CMD_POOL_RESET_RELEASE_RESOURCES = 0x00000001,
+} VkCmdPoolResetFlagBits;
+typedef VkFlags VkCmdPoolResetFlags;
 
 // Buffer usage flags
 typedef VkFlags VkBufferUsageFlags;
@@ -1119,6 +1132,11 @@ typedef enum VkCmdBufferOptimizeFlagBits_
     VK_CMD_BUFFER_OPTIMIZE_DESCRIPTOR_SET_SWITCH_BIT        = VK_BIT(3),
     VK_CMD_BUFFER_OPTIMIZE_NO_SIMULTANEOUS_USE_BIT = 0x00000010,
 } VkCmdBufferOptimizeFlagBits;
+
+typedef enum {
+    VK_CMD_BUFFER_RESET_RELEASE_RESOURCES = 0x00000001,
+} VkCmdBufferResetFlagBits;
+typedef VkFlags VkCmdBufferResetFlags;
 
 // Pipeline statistics flags
 typedef VkFlags VkQueryPipelineStatisticFlags;
@@ -2066,11 +2084,18 @@ typedef struct VkDynamicDepthStencilStateCreateInfo_
     uint32_t                                    stencilBackRef;
 } VkDynamicDepthStencilStateCreateInfo;
 
+typedef struct {
+    VkStructureType                             sType;
+    const void*                                 pNext;
+    uint32_t                                    queueFamilyIndex;
+    VkCmdPoolCreateFlags                        flags;
+} VkCmdPoolCreateInfo;
+
 typedef struct VkCmdBufferCreateInfo_
 {
     VkStructureType                             sType;      // Must be VK_STRUCTURE_TYPE_CMD_BUFFER_CREATE_INFO
     const void*                                 pNext;      // Pointer to next structure
-    uint32_t                                    queueNodeIndex;
+    VkCmdPool                                   cmdPool;
     VkCmdBufferLevel                            level;
     VkCmdBufferCreateFlags                      flags;      // Command buffer creation flags
 } VkCmdBufferCreateInfo;
@@ -2357,11 +2382,14 @@ typedef VkResult (VKAPI *PFN_vkCreateDynamicColorBlendState)(VkDevice device, co
 typedef VkResult (VKAPI *PFN_vkDestroyDynamicColorBlendState)(VkDevice device, VkDynamicColorBlendState dynamicColorBlendState);
 typedef VkResult (VKAPI *PFN_vkCreateDynamicDepthStencilState)(VkDevice device, const VkDynamicDepthStencilStateCreateInfo* pCreateInfo, VkDynamicDepthStencilState* pState);
 typedef VkResult (VKAPI *PFN_vkDestroyDynamicDepthStencilState)(VkDevice device, VkDynamicDepthStencilState dynamicDepthStencilState);
+typedef VkResult (VKAPI *PFN_vkCreateCommandPool)(VkDevice device, const VkCmdPoolCreateInfo* pCreateInfo, VkCmdPool* pCmdPool);
+typedef VkResult (VKAPI *PFN_vkDestroyCommandPool)(VkDevice device, VkCmdPool cmdPool);
+typedef VkResult (VKAPI *PFN_vkResetCommandPool)(VkDevice device, VkCmdPool cmdPool, VkCmdPoolResetFlags flags);
 typedef VkResult (VKAPI *PFN_vkCreateCommandBuffer)(VkDevice device, const VkCmdBufferCreateInfo* pCreateInfo, VkCmdBuffer* pCmdBuffer);
 typedef VkResult (VKAPI *PFN_vkDestroyCommandBuffer)(VkDevice device, VkCmdBuffer commandBuffer);
 typedef VkResult (VKAPI *PFN_vkBeginCommandBuffer)(VkCmdBuffer cmdBuffer, const VkCmdBufferBeginInfo* pBeginInfo);
 typedef VkResult (VKAPI *PFN_vkEndCommandBuffer)(VkCmdBuffer cmdBuffer);
-typedef VkResult (VKAPI *PFN_vkResetCommandBuffer)(VkCmdBuffer cmdBuffer);
+typedef VkResult (VKAPI *PFN_vkResetCommandBuffer)(VkCmdBuffer cmdBuffer, VkCmdBufferResetFlags flags);
 typedef void     (VKAPI *PFN_vkCmdBindPipeline)(VkCmdBuffer cmdBuffer, VkPipelineBindPoint pipelineBindPoint, VkPipeline pipeline);
 typedef void     (VKAPI *PFN_vkCmdBindDynamicViewportState)(VkCmdBuffer cmdBuffer, VkDynamicViewportState dynamicViewportState);
 typedef void     (VKAPI *PFN_vkCmdBindDynamicRasterState)(VkCmdBuffer cmdBuffer, VkDynamicRasterState dynamicRasterState);
@@ -2933,6 +2961,20 @@ VkResult VKAPI vkDestroyDynamicDepthStencilState(
 
 // Command buffer functions
 
+VkResult VKAPI vkCreateCommandPool(
+    VkDevice                                    device,
+    const VkCmdPoolCreateInfo*                  pCreateInfo,
+    VkCmdPool*                                  pCmdPool);
+
+VkResult VKAPI vkDestroyCommandPool(
+    VkDevice                                    device,
+    VkCmdPool                                   cmdPool);
+
+VkResult VKAPI vkResetCommandPool(
+    VkDevice                                    device,
+    VkCmdPool                                   cmdPool,
+    VkCmdPoolResetFlags                         flags);
+
 VkResult VKAPI vkCreateCommandBuffer(
     VkDevice                                    device,
     const VkCmdBufferCreateInfo*                pCreateInfo,
@@ -2950,7 +2992,8 @@ VkResult VKAPI vkEndCommandBuffer(
     VkCmdBuffer                                 cmdBuffer);
 
 VkResult VKAPI vkResetCommandBuffer(
-    VkCmdBuffer                                 cmdBuffer);
+    VkCmdBuffer                                 cmdBuffer,
+    VkCmdBufferResetFlags                       flags);
 
 // Command buffer building functions
 

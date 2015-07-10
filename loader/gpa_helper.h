@@ -227,6 +227,12 @@ static inline void* globalGetProcAddr(const char *name)
         return (void*) vkCreateDynamicDepthStencilState;
     if (!strcmp(name, "DestroyDynamicDepthStencilState"))
         return (void*) vkDestroyDynamicDepthStencilState;
+    if (!strcmp(name, "CreateCommandPool"))
+        return (void*) vkCreateCommandPool;
+    if (!strcmp(name, "DestroyCommandPool"))
+        return (void*) vkDestroyCommandPool;
+    if (!strcmp(name, "ResetCommandPool"))
+        return (void*) vkResetCommandPool;
     if (!strcmp(name, "CreateCommandBuffer"))
         return (void*) vkCreateCommandBuffer;
     if (!strcmp(name, "DestroyCommandBuffer"))

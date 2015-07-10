@@ -234,7 +234,7 @@ typedef enum _CBStatusFlagBits
 // Cmd Buffer Wrapper Struct
 typedef struct _GLOBAL_CB_NODE {
     VkCmdBuffer                  cmdBuffer;
-    uint32_t                     queueNodeIndex;
+    VkCmdPool                    pool;
     VkFlags                      flags;
     VkFence                      fence;    // fence tracking this cmd buffer
     uint64_t                     numCmds;  // number of cmds in this CB

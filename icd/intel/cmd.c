@@ -263,8 +263,9 @@ VkResult intel_cmd_create(struct intel_dev *dev,
 {
     int pipeline_select;
     struct intel_cmd *cmd;
+    struct intel_cmd_pool *pool = intel_cmd_pool(info->cmdPool);
 
-    switch (info->queueNodeIndex) {
+    switch (pool->queue_family_index) {
     case INTEL_GPU_ENGINE_3D:
         pipeline_select = GEN6_PIPELINE_SELECT_DW0_SELECT_3D;
         break;
@@ -437,10 +438,73 @@ VkResult intel_cmd_end(struct intel_cmd *cmd)
         return VK_ERROR_UNKNOWN;
 }
 
+static void pool_destroy(struct intel_obj *obj)
+{
+    struct intel_cmd_pool *cmd_pool = intel_cmd_pool_from_obj(obj);
+
+    intel_cmd_pool_destroy(cmd_pool);
+}
+
+VkResult intel_cmd_pool_create(struct intel_dev *dev,
+                            const VkCmdPoolCreateInfo *info,
+                            struct intel_cmd_pool **cmd_pool_ret)
+{
+    struct intel_cmd_pool *cmd_pool;
+
+    cmd_pool = (struct intel_cmd_pool *) intel_base_create(&dev->base.handle,
+            sizeof(*cmd_pool), dev->base.dbg, VK_OBJECT_TYPE_CMD_POOL, info, 0);
+    if (!cmd_pool)
+        return VK_ERROR_OUT_OF_HOST_MEMORY;
+
+    cmd_pool->obj.destroy = pool_destroy;
+
+    cmd_pool->dev = dev;
+    cmd_pool->queue_family_index = info->queueFamilyIndex;
+    cmd_pool->create_flags = info->flags;
+
+    *cmd_pool_ret = cmd_pool;
+
+    return VK_SUCCESS;
+}
+
+void intel_cmd_pool_destroy(struct intel_cmd_pool *cmd_pool)
+{
+    //cmd_reset(cmd);
+    //intel_free(cmd, cmd->relocs);
+    //intel_base_destroy(&cmd->obj.base);
+}
+
+ICD_EXPORT VkResult VKAPI vkCreateCommandPool(
+    VkDevice                                    device,
+    const VkCmdPoolCreateInfo*                  pCreateInfo,
+    VkCmdPool*                                  pCmdPool)
+{
+    struct intel_dev *dev = intel_dev(device);
+
+    return intel_cmd_pool_create(dev, pCreateInfo,
+            (struct intel_cmd_pool **) pCmdPool);
+}
+
+ICD_EXPORT VkResult VKAPI vkDestroyCommandPool(
+    VkDevice                                    device,
+    VkCmdPool                                   cmdPool)
+{
+    return VK_SUCCESS;
+}
+
+ICD_EXPORT VkResult VKAPI vkResetCommandPool(
+    VkDevice                                    device,
+    VkCmdPool                                   cmdPool,
+    VkCmdPoolResetFlags                         flags)
+{
+    // TODO
+    return VK_SUCCESS;
+}
+
 ICD_EXPORT VkResult VKAPI vkCreateCommandBuffer(
     VkDevice                                  device,
-    const VkCmdBufferCreateInfo*           pCreateInfo,
-    VkCmdBuffer*                             pCmdBuffer)
+    const VkCmdBufferCreateInfo*              pCreateInfo,
+    VkCmdBuffer*                              pCmdBuffer)
 {
     struct intel_dev *dev = intel_dev(device);
 
@@ -476,7 +540,8 @@ ICD_EXPORT VkResult VKAPI vkEndCommandBuffer(
 }
 
 ICD_EXPORT VkResult VKAPI vkResetCommandBuffer(
-    VkCmdBuffer                              cmdBuffer)
+    VkCmdBuffer                              cmdBuffer,
+    VkCmdBufferResetFlags                    flags)
 {
     struct intel_cmd *cmd = intel_cmd(cmdBuffer);
 

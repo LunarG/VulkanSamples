@@ -188,6 +188,7 @@ core = Extension(
         "VkDevice",
         "VkQueue",
         "VkCmdBuffer",
+        "VkCmdPool",
         "VkFence",
         "VkDeviceMemory",
         "VkBuffer",
@@ -699,6 +700,20 @@ core = Extension(
             [Param("VkDevice", "device"),
              Param("VkDynamicDepthStencilState", "dynamicDepthStencilState")]),
 
+        Proto("VkResult", "CreateCommandPool",
+            [Param("VkDevice", "device"),
+             Param("const VkCmdPoolCreateInfo*", "pCreateInfo"),
+             Param("VkCmdPool*", "pCmdPool")]),
+
+        Proto("VkResult", "DestroyCommandPool",
+            [Param("VkDevice", "device"),
+             Param("VkCmdPool", "cmdPool")]),
+
+        Proto("VkResult", "ResetCommandPool",
+            [Param("VkDevice", "device"),
+             Param("VkCmdPool", "cmdPool"),
+             Param("VkCmdPoolResetFlags", "flags")]),
+
         Proto("VkResult", "CreateCommandBuffer",
             [Param("VkDevice", "device"),
              Param("const VkCmdBufferCreateInfo*", "pCreateInfo"),
@@ -716,7 +731,8 @@ core = Extension(
             [Param("VkCmdBuffer", "cmdBuffer")]),
 
         Proto("VkResult", "ResetCommandBuffer",
-            [Param("VkCmdBuffer", "cmdBuffer")]),
+            [Param("VkCmdBuffer", "cmdBuffer"),
+             Param("VkCmdBufferResetFlags", "flags")]),
 
         Proto("void", "CmdBindPipeline",
             [Param("VkCmdBuffer", "cmdBuffer"),
@@ -1047,6 +1063,7 @@ object_dispatch_list = [
 ]
 
 object_non_dispatch_list = [
+    "VkCmdPool",
     "VkFence",
     "VkDeviceMemory",
     "VkBuffer",

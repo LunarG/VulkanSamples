@@ -211,6 +211,34 @@ struct intel_cmd_writer {
     uint32_t item_used;
 };
 
+struct intel_cmd_pool {
+    struct intel_obj obj;
+    struct intel_dev *dev;
+
+    uint32_t queue_family_index;
+    uint32_t create_flags;
+};
+
+static inline struct intel_cmd_pool *intel_cmd_pool(VkCmdPool pool)
+{
+    return *(struct intel_cmd_pool **) &pool;
+}
+
+static inline struct intel_cmd_pool *intel_cmd_pool_from_base(struct intel_base *base)
+{
+    return (struct intel_cmd_pool *) base;
+}
+
+static inline struct intel_cmd_pool *intel_cmd_pool_from_obj(struct intel_obj *obj)
+{
+    return (struct intel_cmd_pool *) &obj->base;
+}
+
+VkResult intel_cmd_pool_create(struct intel_dev *dev,
+                            const VkCmdPoolCreateInfo *info,
+                            struct intel_cmd_pool **cmd_pool_ret);
+void intel_cmd_pool_destroy(struct intel_cmd_pool *pool);
+
 struct intel_cmd {
     struct intel_obj obj;
 

@@ -1052,6 +1052,33 @@ LOADER_EXPORT VkResult VKAPI vkDestroyDynamicDepthStencilState(VkDevice device, 
     return disp->DestroyDynamicDepthStencilState(device, dynamicDepthStencilState);
 }
 
+LOADER_EXPORT VkResult VKAPI vkCreateCommandPool(VkDevice device, const VkCmdPoolCreateInfo* pCreateInfo, VkCmdPool* pCmdPool)
+{
+    const VkLayerDispatchTable *disp;
+
+    disp = loader_get_dispatch(device);
+
+    return disp->CreateCommandPool(device, pCreateInfo, pCmdPool);
+}
+
+LOADER_EXPORT VkResult VKAPI vkDestroyCommandPool(VkDevice device, VkCmdPool cmdPool)
+{
+    const VkLayerDispatchTable *disp;
+
+    disp = loader_get_dispatch(device);
+
+    return disp->DestroyCommandPool(device, cmdPool);
+}
+
+LOADER_EXPORT VkResult VKAPI vkResetCommandPool(VkDevice device, VkCmdPool cmdPool, VkCmdPoolResetFlags flags)
+{
+    const VkLayerDispatchTable *disp;
+
+    disp = loader_get_dispatch(device);
+
+    return disp->ResetCommandPool(device, cmdPool, flags);
+}
+
 LOADER_EXPORT VkResult VKAPI vkCreateCommandBuffer(VkDevice device, const VkCmdBufferCreateInfo* pCreateInfo, VkCmdBuffer* pCmdBuffer)
 {
     const VkLayerDispatchTable *disp;
@@ -1094,13 +1121,13 @@ LOADER_EXPORT VkResult VKAPI vkEndCommandBuffer(VkCmdBuffer cmdBuffer)
     return disp->EndCommandBuffer(cmdBuffer);
 }
 
-LOADER_EXPORT VkResult VKAPI vkResetCommandBuffer(VkCmdBuffer cmdBuffer)
+LOADER_EXPORT VkResult VKAPI vkResetCommandBuffer(VkCmdBuffer cmdBuffer, VkCmdBufferResetFlags flags)
 {
     const VkLayerDispatchTable *disp;
 
     disp = loader_get_dispatch(cmdBuffer);
 
-    return disp->ResetCommandBuffer(cmdBuffer);
+    return disp->ResetCommandBuffer(cmdBuffer, flags);
 }
 
 LOADER_EXPORT void VKAPI vkCmdBindPipeline(VkCmdBuffer cmdBuffer, VkPipelineBindPoint pipelineBindPoint, VkPipeline pipeline)

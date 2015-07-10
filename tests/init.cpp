@@ -490,6 +490,7 @@ void VkTest::CreateCommandBufferTest()
 {
     VkResult err;
     VkCmdBufferCreateInfo info = {};
+    VkCmdPool cmdPool;
     VkCmdBuffer cmdBuffer;
 
 //    typedef struct VkCmdBufferCreateInfo_
@@ -500,12 +501,21 @@ void VkTest::CreateCommandBufferTest()
 //        VkFlags                               flags;
 //    } VkCmdBufferCreateInfo;
 
+    VkCmdPoolCreateInfo cmd_pool_info;
+    cmd_pool_info.sType = VK_STRUCTURE_TYPE_CMD_POOL_CREATE_INFO,
+    cmd_pool_info.pNext = NULL,
+    cmd_pool_info.queueFamilyIndex = graphics_queue_node_index;
+    cmd_pool_info.flags = 0,
+    err = vkCreateCommandPool(device(), &cmd_pool_info, &cmdPool);
+    ASSERT_VK_SUCCESS(err) << "vkCreateCommandPool failed";
+
     info.sType = VK_STRUCTURE_TYPE_CMD_BUFFER_CREATE_INFO;
-    info.queueNodeIndex = graphics_queue_node_index;
+    info.cmdPool = cmdPool;
     err = vkCreateCommandBuffer(device(), &info, &cmdBuffer);
     ASSERT_VK_SUCCESS(err) << "vkCreateCommandBuffer failed";
 
     ASSERT_VK_SUCCESS(vkDestroyCommandBuffer(device(), cmdBuffer));
+    ASSERT_VK_SUCCESS(vkDestroyCommandPool(device(), cmdPool));
 }
 
 TEST_F(VkTest, TestCommandBuffer) {

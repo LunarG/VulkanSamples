@@ -2325,7 +2325,8 @@ VK_LAYER_EXPORT VkResult VKAPI vkEndCommandBuffer(
 }
 
 VK_LAYER_EXPORT VkResult VKAPI vkResetCommandBuffer(
-    VkCmdBuffer cmdBuffer)
+    VkCmdBuffer cmdBuffer,
+    VkCmdBufferResetFlags flags)
 {
     loader_platform_thread_lock_mutex(&globalLock);
     // Verify that CB is complete (not in-flight)
@@ -2338,7 +2339,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkResetCommandBuffer(
     // Clear memory references as this point.
     clear_cmd_buf_and_mem_references(cmdBuffer);
     loader_platform_thread_unlock_mutex(&globalLock);
-    VkResult result = get_dispatch_table(mem_tracker_device_table_map, cmdBuffer)->ResetCommandBuffer(cmdBuffer);
+    VkResult result = get_dispatch_table(mem_tracker_device_table_map, cmdBuffer)->ResetCommandBuffer(cmdBuffer, flags);
     return result;
 }
 // TODO : For any vkCmdBind* calls that include an object which has mem bound to it,

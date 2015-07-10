@@ -110,6 +110,9 @@ typedef struct VkLayerDispatchTable_
     PFN_vkDestroyDynamicColorBlendState DestroyDynamicColorBlendState;
     PFN_vkCreateDynamicDepthStencilState CreateDynamicDepthStencilState;
     PFN_vkDestroyDynamicDepthStencilState DestroyDynamicDepthStencilState;
+    PFN_vkCreateCommandPool CreateCommandPool;
+    PFN_vkDestroyCommandPool DestroyCommandPool;
+    PFN_vkResetCommandPool ResetCommandPool;
     PFN_vkCreateCommandBuffer CreateCommandBuffer;
     PFN_vkDestroyCommandBuffer DestroyCommandBuffer;
     PFN_vkBeginCommandBuffer BeginCommandBuffer;

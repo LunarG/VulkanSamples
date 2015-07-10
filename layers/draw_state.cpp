@@ -1116,11 +1116,11 @@ static void resetCB(const VkCmdBuffer cb)
         pCB->pCmds.clear();
         // Reset CB state
         VkFlags saveFlags = pCB->flags;
-        uint32_t saveQueueNodeIndex = pCB->queueNodeIndex;
+        VkCmdPool savedPool = pCB->pool;
         memset(pCB, 0, sizeof(GLOBAL_CB_NODE));
         pCB->cmdBuffer = cb;
         pCB->flags = saveFlags;
-        pCB->queueNodeIndex = saveQueueNodeIndex;
+        pCB->pool = savedPool;
         pCB->lastVtxBinding = MAX_BINDING;
     }
 }
@@ -1987,7 +1987,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateCommandBuffer(VkDevice device, const VkCm
         memset(pCB, 0, sizeof(GLOBAL_CB_NODE));
         pCB->cmdBuffer = *pCmdBuffer;
         pCB->flags = pCreateInfo->flags;
-        pCB->queueNodeIndex = pCreateInfo->queueNodeIndex;
+        pCB->pool = pCreateInfo->cmdPool;
         pCB->lastVtxBinding = MAX_BINDING;
         cmdBufferMap[*pCmdBuffer] = pCB;
         loader_platform_thread_unlock_mutex(&globalLock);
@@ -2036,9 +2036,9 @@ VK_LAYER_EXPORT VkResult VKAPI vkEndCommandBuffer(VkCmdBuffer cmdBuffer)
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkResetCommandBuffer(VkCmdBuffer cmdBuffer)
+VK_LAYER_EXPORT VkResult VKAPI vkResetCommandBuffer(VkCmdBuffer cmdBuffer, VkCmdBufferResetFlags flags)
 {
-    VkResult result = get_dispatch_table(draw_state_device_table_map, cmdBuffer)->ResetCommandBuffer(cmdBuffer);
+    VkResult result = get_dispatch_table(draw_state_device_table_map, cmdBuffer)->ResetCommandBuffer(cmdBuffer, flags);
     if (VK_SUCCESS == result) {
         resetCB(cmdBuffer);
         updateCBTracking(cmdBuffer);

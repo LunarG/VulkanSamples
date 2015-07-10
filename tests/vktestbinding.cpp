@@ -859,9 +859,9 @@ void CmdBuffer::end()
     EXPECT(vkEndCommandBuffer(handle()) == VK_SUCCESS);
 }
 
-void CmdBuffer::reset()
+void CmdBuffer::reset(VkCmdBufferResetFlags flags)
 {
-    EXPECT(vkResetCommandBuffer(handle()) == VK_SUCCESS);
+    EXPECT(vkResetCommandBuffer(handle(), flags) == VK_SUCCESS);
 }
 
 }; // namespace vk_testing

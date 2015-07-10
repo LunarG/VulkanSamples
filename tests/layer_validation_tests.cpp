@@ -370,7 +370,7 @@ TEST_F(VkLayerTest, CallResetCmdBufferBeforeCompletion)
 
     m_errorMonitor->ClearState();
     // Introduce failure by calling begin again before checking fence
-    vkResetCommandBuffer(cmdBuffer.handle());
+    vkResetCommandBuffer(cmdBuffer.handle(), 0);
 
     msgFlags = m_errorMonitor->GetState(&msgString);
     ASSERT_TRUE(msgFlags & VK_DBG_REPORT_ERROR_BIT) << "Did not receive an err after calling ResetCommandBuffer on an active Command Buffer";

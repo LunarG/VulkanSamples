@@ -2331,7 +2331,7 @@ VkResult loader_validate_instance_extensions(
 
 VkResult loader_validate_device_extensions(
         struct loader_icd              *icd,
-        u_int32_t                       gpu_index,
+        uint32_t                       gpu_index,
         const VkDeviceCreateInfo       *pCreateInfo)
 {
     struct loader_extension_property *extension_prop;
