@@ -52,24 +52,20 @@ if(WIN32)
 endif()
 if(NOT WIN32)
     add_custom_command(OUTPUT ${CMAKE_BINARY_DIR}/demos/tri-vert.spv
-       COMMAND ${GLSLANG_PREFIX}/build/install/bin/glslangValidator -s -V ${PROJECT_SOURCE_DIR}/demos/tri.vert
-       COMMAND mv vert.spv ${CMAKE_BINARY_DIR}/demos/tri-vert.spv
+       COMMAND ${GLSLANG_PREFIX}/build/install/bin/glslangValidator -s -V ${PROJECT_SOURCE_DIR}/demos/tri.vert && mv vert.spv ${CMAKE_BINARY_DIR}/demos/tri-vert.spv
        DEPENDS tri.vert ${GLSLANG_PREFIX}/build/install/bin/glslangValidator
        )
     add_custom_command(OUTPUT ${CMAKE_BINARY_DIR}/demos/tri-frag.spv
-       COMMAND ${GLSLANG_PREFIX}/build/install/bin/glslangValidator -s -V ${PROJECT_SOURCE_DIR}/demos/tri.frag
-       COMMAND mv frag.spv ${CMAKE_BINARY_DIR}/demos/tri-frag.spv
+       COMMAND ${GLSLANG_PREFIX}/build/install/bin/glslangValidator -s -V ${PROJECT_SOURCE_DIR}/demos/tri.frag && mv frag.spv ${CMAKE_BINARY_DIR}/demos/tri-frag.spv
        DEPENDS tri.frag ${GLSLANG_PREFIX}/build/install/bin/glslangValidator
        )
     add_custom_command(OUTPUT ${CMAKE_BINARY_DIR}/demos/cube-vert.spv
-       COMMAND ${GLSLANG_PREFIX}/build/install/bin/glslangValidator -s -V ${PROJECT_SOURCE_DIR}/demos/cube.vert
-       COMMAND mv vert.spv ${CMAKE_BINARY_DIR}/demos/cube-vert.spv
+       COMMAND ${GLSLANG_PREFIX}/build/install/bin/glslangValidator -s -V ${PROJECT_SOURCE_DIR}/demos/cube.vert && mv vert.spv ${CMAKE_BINARY_DIR}/demos/cube-vert.spv
        DEPENDS cube.vert ${GLSLANG_PREFIX}/build/install/bin/glslangValidator
        )
 
     add_custom_command(OUTPUT ${CMAKE_BINARY_DIR}/demos/cube-frag.spv
-       COMMAND ${GLSLANG_PREFIX}/build/install/bin/glslangValidator -s -V ${PROJECT_SOURCE_DIR}/demos/cube.frag
-       COMMAND mv frag.spv ${CMAKE_BINARY_DIR}/demos/cube-frag.spv
+       COMMAND ${GLSLANG_PREFIX}/build/install/bin/glslangValidator -s -V ${PROJECT_SOURCE_DIR}/demos/cube.frag && mv frag.spv ${CMAKE_BINARY_DIR}/demos/cube-frag.spv
        DEPENDS cube.frag ${GLSLANG_PREFIX}/build/install/bin/glslangValidator
        )
 endif()
