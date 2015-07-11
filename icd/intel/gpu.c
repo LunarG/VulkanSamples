@@ -390,14 +390,15 @@ enum intel_phy_dev_ext_type intel_gpu_lookup_phy_dev_extension(
         const struct intel_gpu *gpu,
         const char *ext)
 {
-    enum intel_phy_dev_ext_type type;
+    uint32_t type;
+    uint32_t array_size = ARRAY_SIZE(intel_phy_dev_gpu_exts);
 
-    for (type = 0; type < ARRAY_SIZE(intel_phy_dev_gpu_exts); type++) {
+    for (type = 0; type < array_size; type++) {
         if (compare_vk_extension_properties(&intel_phy_dev_gpu_exts[type], ext))
             break;
     }
 
-    assert(type < INTEL_PHY_DEV_EXT_COUNT || type == INTEL_PHY_DEV_EXT_INVALID);
+    assert(type < array_size || type == INTEL_PHY_DEV_EXT_INVALID);
 
     return type;
 }
@@ -535,6 +536,7 @@ ICD_EXPORT VkResult VKAPI vkGetPhysicalDeviceExtensionProperties(
         VkExtensionProperties*                      pProperties)
 {
     uint32_t copy_size;
+    uint32_t extension_count = ARRAY_SIZE(intel_phy_dev_gpu_exts);
 
     /* TODO: Do we want to check that pLayerName is null? */
 
@@ -547,10 +549,10 @@ ICD_EXPORT VkResult VKAPI vkGetPhysicalDeviceExtensionProperties(
         return VK_SUCCESS;
     }
 
-    copy_size = *pCount < INTEL_PHY_DEV_EXT_COUNT ? *pCount : INTEL_PHY_DEV_EXT_COUNT;
+    copy_size = *pCount < extension_count ? *pCount : extension_count;
     memcpy(pProperties, intel_phy_dev_gpu_exts, copy_size * sizeof(VkExtensionProperties));
     *pCount = copy_size;
-    if (copy_size < INTEL_PHY_DEV_EXT_COUNT) {
+    if (copy_size < extension_count) {
         return VK_INCOMPLETE;
     }
 
