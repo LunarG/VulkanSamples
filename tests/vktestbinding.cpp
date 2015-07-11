@@ -281,7 +281,7 @@ void Device::init(std::vector<const char *> &layers, std::vector<const char *> &
     queue_info.reserve(queue_props.size());
     for (int i = 0; i < queue_props.size(); i++) {
         VkDeviceQueueCreateInfo qi = {};
-        qi.queueNodeIndex = i;
+        qi.queueFamilyIndex = i;
         qi.queueCount = queue_props[i].queueCount;
         if (queue_props[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) {
             graphics_queue_node_index_ = i;

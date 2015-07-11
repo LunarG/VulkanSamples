@@ -33,7 +33,7 @@
 #include "vk_platform.h"
 
 // Vulkan API version supported by this file
-#define VK_API_VERSION VK_MAKE_VERSION(0, 132, 1)
+#define VK_API_VERSION VK_MAKE_VERSION(0, 138, 1)
 
 #ifdef __cplusplus
 extern "C"
@@ -127,6 +127,8 @@ VK_DEFINE_NONDISP_HANDLE(VkCmdPool)
 
 #define VK_NULL_HANDLE 0
 
+#define VK_QUEUE_FAMILY_IGNORED UINT32_MAX
+
 // This macro defines INT_MAX in enumerations to force compilers to use 32 bits
 // to represent them. This may or may not be necessary on some compilers. The
 // option to compile it out may allow compilers that warn about missing enumerants
@@ -219,6 +221,14 @@ typedef enum VkImageAspect_
 
     VK_ENUM_RANGE(IMAGE_ASPECT, COLOR, METADATA)
 } VkImageAspect;
+
+typedef enum VkSharingMode_
+{
+    VK_SHARING_MODE_EXCLUSIVE                               = 0x00000000,
+    VK_SHARING_MODE_CONCURRENT                              = 0x00000001,
+
+    VK_ENUM_RANGE(SHARING_MODE, EXCLUSIVE, CONCURRENT)
+} VkSharingMode;
 
 typedef enum VkBufferViewType_
 {
@@ -1447,7 +1457,7 @@ typedef struct VkAllocCallbacks_
 
 typedef struct VkDeviceQueueCreateInfo_
 {
-    uint32_t                                    queueNodeIndex;
+    uint32_t                                    queueFamilyIndex;
     uint32_t                                    queueCount;
 } VkDeviceQueueCreateInfo;
 
@@ -1613,6 +1623,9 @@ typedef struct VkBufferCreateInfo_
     VkDeviceSize                                size;                       // Specified in bytes
     VkBufferUsageFlags                          usage;                      // Buffer usage flags
     VkBufferCreateFlags                         flags;                      // Buffer creation flags
+    VkSharingMode                               sharingMode;
+    uint32_t                                    queueFamilyCount;
+    const uint32_t*                             pQueueFamilyIndices;
 } VkBufferCreateInfo;
 
 typedef struct VkBufferViewCreateInfo_
@@ -1652,6 +1665,9 @@ typedef struct VkBufferMemoryBarrier_
     VkMemoryOutputFlags                         outputMask;                 // Outputs the barrier should sync
     VkMemoryInputFlags                          inputMask;                  // Inputs the barrier should sync to
 
+    uint32_t                                    srcQueueFamilyIndex;
+    uint32_t                                    destQueueFamilyIndex;
+
     VkBuffer                                    buffer;                     // Buffer to sync
 
     VkDeviceSize                                offset;                     // Offset within the buffer to sync
@@ -1665,6 +1681,9 @@ typedef struct VkImageMemoryBarrier_
 
     VkMemoryOutputFlags                         outputMask;                 // Outputs the barrier should sync
     VkMemoryInputFlags                          inputMask;                  // Inputs the barrier should sync to
+
+    uint32_t                                    srcQueueFamilyIndex;
+    uint32_t                                    destQueueFamilyIndex;
 
     VkImageLayout                               oldLayout;                  // Current layout of the image
     VkImageLayout                               newLayout;                  // New layout to transition the image to
@@ -1687,6 +1706,9 @@ typedef struct VkImageCreateInfo_
     VkImageTiling                               tiling;
     VkImageUsageFlags                           usage;                      // Image usage flags
     VkImageCreateFlags                          flags;                      // Image creation flags
+    VkSharingMode                               sharingMode;
+    uint32_t                                    queueFamilyCount;
+    const uint32_t*                             pQueueFamilyIndices;
 } VkImageCreateInfo;
 
 typedef struct VkSubresourceLayout_

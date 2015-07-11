@@ -537,6 +537,7 @@ protected:
     vk_testing::CmdPool pool_;
     vk_testing::CmdBuffer cmd_;
 
+    /* TODO: We should be able to remove these now */
     std::vector<VkDeviceMemory> mem_refs_;
 };
 

@@ -78,10 +78,10 @@ static VkResult dev_create_queues(struct intel_dev *dev,
         const VkDeviceQueueCreateInfo *q = &queues[i];
         VkResult ret = VK_SUCCESS;
 
-        if (q->queueNodeIndex < INTEL_GPU_ENGINE_COUNT &&
-            q->queueCount == 1 && !dev->queues[q->queueNodeIndex]) {
-            ret = intel_queue_create(dev, q->queueNodeIndex,
-                    &dev->queues[q->queueNodeIndex]);
+        if (q->queueFamilyIndex < INTEL_GPU_ENGINE_COUNT &&
+            q->queueCount == 1 && !dev->queues[q->queueFamilyIndex]) {
+            ret = intel_queue_create(dev, q->queueFamilyIndex,
+                    &dev->queues[q->queueFamilyIndex]);
         }
         else {
             ret = VK_ERROR_INVALID_POINTER;

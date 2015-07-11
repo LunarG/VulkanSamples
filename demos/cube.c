@@ -2085,7 +2085,7 @@ static void demo_init_vk(struct demo *demo)
         .ppEnabledExtensionNames = (const char *const*) extension_names,
     };
     const VkDeviceQueueCreateInfo queue = {
-        .queueNodeIndex = 0,
+        .queueFamilyIndex = 0,
         .queueCount = 1,
     };
 
