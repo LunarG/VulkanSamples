@@ -343,7 +343,7 @@ static void validate_object(VkQueue dispatchable_object, VkBuffer object)
 {
     if (VkBufferMap.find((void*)object.handle) != VkBufferMap.end()) {
         log_msg(mdd(dispatchable_object), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, object.handle, 0, OBJTRACK_INVALID_OBJECT, "OBJTRACK",
-            "Invalid VkBuffer Object %p",reinterpret_cast<VkUintPtrLeast64>(object.handle));
+            "Invalid VkBuffer Object %p", object.handle);
     }
 }
 
@@ -357,9 +357,9 @@ static void set_status(VkQueue dispatchable_object, VkFence object, VkDbgObjectT
         }
         else {
             // If we do not find it print an error
-            log_msg(mdd(dispatchable_object), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, reinterpret_cast<VkUintPtrLeast64>(object.handle), 0, OBJTRACK_NONE, "OBJTRACK",
+            log_msg(mdd(dispatchable_object), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, object.handle, 0, OBJTRACK_NONE, "OBJTRACK",
                 "Unable to set status for non-existent object 0x%" PRIxLEAST64 " of %s type",
-                reinterpret_cast<VkUintPtrLeast64>(object.handle), string_VkDbgObjectType(objType));
+                object.handle, string_VkDbgObjectType(objType));
         }
     }
 }
@@ -368,7 +368,7 @@ static void validate_object(VkQueue dispatchable_object, VkSemaphore object)
 {
     if (VkSemaphoreMap.find((void*)object.handle) == VkSemaphoreMap.end()) {
         log_msg(mdd(dispatchable_object), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, object.handle, 0, OBJTRACK_INVALID_OBJECT, "OBJTRACK",
-            "Invalid VkSemaphore Object %p",reinterpret_cast<VkUintPtrLeast64>(object.handle));
+            "Invalid VkSemaphore Object %p", object.handle);
     }
 }
 

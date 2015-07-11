@@ -464,7 +464,7 @@ static VkResult nulldrv_pipeline_layout_create(struct nulldrv_dev *dev,
     return VK_SUCCESS;
 }
 
-static struct nulldrv_desc_layout *nulldrv_desc_layout(VkDescriptorSetLayout layout)
+static struct nulldrv_desc_layout *nulldrv_desc_layout(const VkDescriptorSetLayout layout)
 {
     return *(struct nulldrv_desc_layout **) &layout;
 }
@@ -2240,7 +2240,7 @@ ICD_EXPORT VkResult VKAPI vkAllocDescriptorSets(
 
     for (i = 0; i < count; i++) {
         const struct nulldrv_desc_layout *layout =
-            nulldrv_desc_layout((VkDescriptorSetLayout) pSetLayouts[i]);
+            nulldrv_desc_layout(pSetLayouts[i]);
 
         ret = nulldrv_desc_set_create(dev, pool, setUsage, layout,
                 (struct nulldrv_desc_set **) &pDescriptorSets[i]);

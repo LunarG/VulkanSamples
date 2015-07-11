@@ -1760,6 +1760,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkDestroyFramebuffer(VkDevice device, VkFramebuff
     }
     loader_platform_thread_unlock_mutex(&globalLock);
     VkResult result = get_dispatch_table(mem_tracker_device_table_map, device)->DestroyFramebuffer(device, framebuffer);
+    return result;
 }
 
 VK_LAYER_EXPORT VkResult VKAPI vkDestroyDynamicViewportState(VkDevice device, VkDynamicViewportState dynamicViewportState)
