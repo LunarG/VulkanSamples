@@ -343,7 +343,7 @@ static void validate_object(VkQueue dispatchable_object, VkBuffer object)
 {
     if (VkBufferMap.find((void*)object.handle) != VkBufferMap.end()) {
         log_msg(mdd(dispatchable_object), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, object.handle, 0, OBJTRACK_INVALID_OBJECT, "OBJTRACK",
-            "Invalid Object %p",reinterpret_cast<VkUintPtrLeast64>(object.handle));
+            "Invalid VkBuffer Object %p",reinterpret_cast<VkUintPtrLeast64>(object.handle));
     }
 }
 
@@ -368,15 +368,15 @@ static void validate_object(VkQueue dispatchable_object, VkSemaphore object)
 {
     if (VkSemaphoreMap.find((void*)object.handle) == VkSemaphoreMap.end()) {
         log_msg(mdd(dispatchable_object), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, object.handle, 0, OBJTRACK_INVALID_OBJECT, "OBJTRACK",
-            "Invalid Object %p",reinterpret_cast<VkUintPtrLeast64>(object.handle));
+            "Invalid VkSemaphore Object %p",reinterpret_cast<VkUintPtrLeast64>(object.handle));
     }
 }
 
 static void validate_object(VkDevice dispatchable_object, VkCmdBuffer object)
 {
-    if (VkSemaphoreMap.find(object) == VkSemaphoreMap.end()) {
+    if (VkCmdBufferMap.find(object) == VkCmdBufferMap.end()) {
         log_msg(mdd(dispatchable_object), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, reinterpret_cast<VkUintPtrLeast64>(object), 0, OBJTRACK_INVALID_OBJECT, "OBJTRACK",
-            "Invalid Object %p",reinterpret_cast<VkUintPtrLeast64>(object));
+            "Invalid VkCmdBuffer Object %p",reinterpret_cast<VkUintPtrLeast64>(object));
     }
 }
 

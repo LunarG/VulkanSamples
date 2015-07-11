@@ -921,10 +921,12 @@ static VkBool32 freeMemObjInfo(
             }
 
             // Now verify that no references to this mem obj remain
-            if (0 != pInfo->refCount) {
-                reportMemReferencesAndCleanUp(pInfo);
-                result = VK_FALSE;
-            }
+            // TODO : Is this check still valid? I don't think so
+            //   Even if not, we still need to remove binding from obj
+//            if (0 != pInfo->refCount) {
+//                reportMemReferencesAndCleanUp(pInfo);
+//                result = VK_FALSE;
+//            }
             // Delete mem obj info
             deleteMemObjInfo(object, mem.handle);
         }
@@ -1822,8 +1824,8 @@ VkResult VKAPI vkBindBufferMemory(
     VkResult result = get_dispatch_table(mem_tracker_device_table_map, device)->BindBufferMemory(device, buffer, mem, memOffset);
     loader_platform_thread_lock_mutex(&globalLock);
     // Track objects tied to memory
-    add_object_binding_info(buffer.handle, VK_OBJECT_TYPE_BUFFER, mem);
     set_mem_binding(device, mem, buffer.handle, VK_OBJECT_TYPE_BUFFER);
+    add_object_binding_info(buffer.handle, VK_OBJECT_TYPE_BUFFER, mem);
     //print_object_list(device);
     //print_mem_list(device);
     loader_platform_thread_unlock_mutex(&globalLock);
@@ -1839,8 +1841,8 @@ VkResult VKAPI vkBindImageMemory(
     VkResult result = get_dispatch_table(mem_tracker_device_table_map, device)->BindImageMemory(device, image, mem, memOffset);
     loader_platform_thread_lock_mutex(&globalLock);
     // Track objects tied to memory
-    add_object_binding_info(image.handle, VK_OBJECT_TYPE_IMAGE, mem);
     set_mem_binding(device, mem, image.handle, VK_OBJECT_TYPE_IMAGE);
+    add_object_binding_info(image.handle, VK_OBJECT_TYPE_IMAGE, mem);
     //print_object_list(device);
     //print_mem_list(device);
     loader_platform_thread_unlock_mutex(&globalLock);

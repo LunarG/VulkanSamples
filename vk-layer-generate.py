@@ -1094,11 +1094,11 @@ class ObjectTrackerSubcommand(Subcommand):
             if o in [ 'VkInstance', 'VkPhysicalDevice', 'VkDevice', 'VkQueue', 'VkCmdBuffer']:
                 procs_txt.append('    if (%sMap.find(object) == %sMap.end()) {' % (o, o))
                 procs_txt.append('        log_msg(mdd(dispatchable_object), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, reinterpret_cast<VkUintPtrLeast64>(object), 0, OBJTRACK_INVALID_OBJECT, "OBJTRACK",')
-                procs_txt.append('            "Invalid Object %p",reinterpret_cast<VkUintPtrLeast64>(object));')
+                procs_txt.append('            "Invalid %s Object %%p",reinterpret_cast<VkUintPtrLeast64>(object));' % o)
             else:
                 procs_txt.append('    if (%sMap.find((void*)object.handle) == %sMap.end()) {' % (o, o))
                 procs_txt.append('        log_msg(mdd(dispatchable_object), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, object.handle, 0, OBJTRACK_INVALID_OBJECT, "OBJTRACK",')
-                procs_txt.append('            "Invalid Object %p",reinterpret_cast<VkUintPtrLeast64>(object.handle));')
+                procs_txt.append('            "Invalid %s Object %%p",reinterpret_cast<VkUintPtrLeast64>(object.handle));' % o)
             procs_txt.append('    }')
             procs_txt.append('}')
             procs_txt.append('')
@@ -1341,7 +1341,7 @@ class ObjectTrackerSubcommand(Subcommand):
             cbv_txt.append('{')
             cbv_txt.append('    if (%sMap.find((void*)object.handle) == %sMap.end()) {' % (o, o))
             cbv_txt.append('        log_msg(mdd(dispatchable_object), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, object.handle, 0, OBJTRACK_INVALID_OBJECT, "OBJTRACK",')
-            cbv_txt.append('            "Invalid Object %p",reinterpret_cast<VkUintPtrLeast64>(object.handle));')
+            cbv_txt.append('            "Invalid %s Object %%p",reinterpret_cast<VkUintPtrLeast64>(object.handle));' % (o))
             cbv_txt.append('    }')
             cbv_txt.append('}')
             cbv_txt.append('')
@@ -1384,7 +1384,8 @@ class ObjectTrackerSubcommand(Subcommand):
         using_line = ''
         create_line = ''
         object_params = {} # dict of parameters that are VkObject types mapping to the size of array types or '0' if not array
-        valid_null_object_names = ['basePipelineHandle']
+        # TODO : For now skipping objs that can be NULL. Really should check these and have special case that allows them to be NULL
+        valid_null_object_names = ['basePipelineHandle', 'renderPass', 'framebuffer']
         # TODO : A few of the skipped types are just "hard" cases that need some more work to support
         #   Need to handle NULL fences on queue submit, binding null memory, and WSI Image objects
         for p in proto.params:
