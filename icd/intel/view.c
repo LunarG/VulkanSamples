@@ -206,6 +206,7 @@ static int img_type_to_view_type(VkImageType type, unsigned first_layer, unsigne
         switch (type) {
         case VK_IMAGE_TYPE_1D:   return VK_IMAGE_VIEW_TYPE_1D;
         case VK_IMAGE_TYPE_2D:   return VK_IMAGE_VIEW_TYPE_2D;
+        case VK_IMAGE_TYPE_3D:   return VK_IMAGE_VIEW_TYPE_3D;
         default: assert(!"unknown img type"); return VK_IMAGE_VIEW_TYPE_1D;
         }
     } else {
