@@ -100,10 +100,12 @@ struct MT_MEM_OBJ_INFO {
 // This only applies to Buffers and Images, which can have memory bound to them
 struct MT_OBJ_BINDING_INFO {
     VkDeviceMemory mem;
-    union {
+    union create_info {
         VkImageCreateInfo  image;
         VkBufferCreateInfo buffer;
         VkSwapChainCreateInfoWSI swapchain;
+
+        create_info() : image() {}
     } create_info;
 };
 
