@@ -4665,20 +4665,8 @@ bool PreCreateGraphicsPipeline(
         "vkCreateGraphicsPipeline parameter, VkStructureType pCreateInfo->pDsState->sType, is unrecognized enumerator");
         return false;
     }
-<<<<<<< HEAD
-    if(pCreateInfo->pDsState->depthCompareOp < VK_COMPARE_OP_BEGIN_RANGE ||
-        pCreateInfo->pDsState->depthCompareOp > VK_COMPARE_OP_END_RANGE)
-=======
-    if(pCreateInfo->pDepthStencilState->format < VK_FORMAT_BEGIN_RANGE ||
-        pCreateInfo->pDepthStencilState->format > VK_FORMAT_END_RANGE)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateGraphicsPipeline parameter, VkFormat pCreateInfo->pDsState->format, is unrecognized enumerator");
-        return false;
-    }
     if(pCreateInfo->pDepthStencilState->depthCompareOp < VK_COMPARE_OP_BEGIN_RANGE ||
         pCreateInfo->pDepthStencilState->depthCompareOp > VK_COMPARE_OP_END_RANGE)
->>>>>>> fd61c93... Bug 14224: Remove abbreviations on some API symbols
     {
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
         "vkCreateGraphicsPipeline parameter, VkCompareOp pCreateInfo->pDsState->depthCompareOp, is unrecognized enumerator");
@@ -4817,24 +4805,13 @@ bool PreCreateGraphicsPipeline(
     }
     if(!ValidateEnumerator((VkChannelFlagBits)pCreateInfo->pColorBlendState->pAttachments->channelWriteMask))
     {
-<<<<<<< HEAD
-        std::string reason = "vkCreateGraphicsPipeline parameter, VkChannelFlags pCreateInfo->pCbState->pAttachments->channelWriteMask, is " + EnumeratorString((VkChannelFlagBits)pCreateInfo->pCbState->pAttachments->channelWriteMask);
-        log_msg(mdd(device), VK_DBG_REPORT_WARN_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
-=======
         std::string reason = "vkCreateGraphicsPipeline parameter, VkChannelFlags pCreateInfo->pCbState->pAttachments->channelWriteMask, is " + EnumeratorString((VkChannelFlagBits)pCreateInfo->pColorBlendState->pAttachments->channelWriteMask);
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
->>>>>>> fd61c93... Bug 14224: Remove abbreviations on some API symbols
         return false;
     }
     if(!ValidateEnumerator((VkPipelineCreateFlagBits)pCreateInfo->flags))
     {
         std::string reason = "vkCreateGraphicsPipeline parameter, VkPipelineCreateFlags pCreateInfo->flags, is " + EnumeratorString((VkPipelineCreateFlagBits)pCreateInfo->flags);
-<<<<<<< HEAD
-        log_msg(mdd(device), VK_DBG_REPORT_WARN_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
-        return false;
-    }
-    if(pCreateInfo->layout.handle == 0)
-=======
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
         return false;
     }
@@ -4865,27 +4842,11 @@ bool PostCreateGraphicsPipeline(
     return true;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkCreateGraphicsPipeline(
-    VkDevice device,
-    const VkGraphicsPipelineCreateInfo* pCreateInfo,
-    VkPipeline* pPipeline)
-{
-    PreCreateGraphicsPipeline(device, pCreateInfo);
-
-    VkResult result = get_dispatch_table(pc_device_table_map, device)->CreateGraphicsPipeline(device, pCreateInfo, pPipeline);
-
-    PostCreateGraphicsPipeline(device, pPipeline, result);
-
-    return result;
-}
-
 bool PostDestroyPipeline(
     VkDevice device,
     VkPipeline pipeline,
     VkResult result)
 {
-
-
     if(result != VK_SUCCESS)
     {
         std::string reason = "vkDestroyPipeline parameter, VkResult result, is " + EnumeratorString(result);
@@ -4894,17 +4855,6 @@ bool PostDestroyPipeline(
     }
 
     return true;
-}
-
-VK_LAYER_EXPORT VkResult VKAPI vkDestroyPipeline(
-    VkDevice device,
-    VkPipeline pipeline)
-{
-    VkResult result = get_dispatch_table(pc_device_table_map, device)->DestroyPipeline(device, pipeline);
-
-    PostDestroyPipeline(device, pipeline, result);
-
-    return result;
 }
 
 bool PreCreateGraphicsPipelineDerivative(
@@ -5135,13 +5085,6 @@ bool PreCreateGraphicsPipelineDerivative(
         "vkCreateGraphicsPipelineDerivative parameter, VkStructureType pCreateInfo->pDsState->sType, is unrecognized enumerator");
         return false;
     }
-    if(pCreateInfo->pDepthStencilState->format < VK_FORMAT_BEGIN_RANGE ||
-        pCreateInfo->pDepthStencilState->format > VK_FORMAT_END_RANGE)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateGraphicsPipelineDerivative parameter, VkFormat pCreateInfo->pDsState->format, is unrecognized enumerator");
-        return false;
-    }
     if(pCreateInfo->pDepthStencilState->depthCompareOp < VK_COMPARE_OP_BEGIN_RANGE ||
         pCreateInfo->pDepthStencilState->depthCompareOp > VK_COMPARE_OP_END_RANGE)
     {
@@ -5321,21 +5264,6 @@ bool PostCreateGraphicsPipelineDerivative(
     return true;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkCreateGraphicsPipelineDerivative(
-    VkDevice device,
-    const VkGraphicsPipelineCreateInfo* pCreateInfo,
-    VkPipeline basePipeline,
-    VkPipeline* pPipeline)
-{
-    PreCreateGraphicsPipelineDerivative(device, pCreateInfo);
-
-    VkResult result = get_dispatch_table(pc_device_table_map, device)->CreateGraphicsPipelineDerivative(device, pCreateInfo, basePipeline, pPipeline);
-
-    PostCreateGraphicsPipelineDerivative(device, basePipeline, pPipeline, result);
-
-    return result;
-}
-
 bool PreCreateComputePipeline(
     VkDevice device,
     const VkComputePipelineCreateInfo* pCreateInfo)
@@ -5409,25 +5337,9 @@ bool PostCreateComputePipeline(
     }
 
     if(result != VK_SUCCESS)
->>>>>>> fd61c93... Bug 14224: Remove abbreviations on some API symbols
     {
         log_msg(mdd(device), VK_DBG_REPORT_WARN_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
         "vkCreateGraphicsPipeline parameter, VkPipelineLayout pCreateInfo->layout, is null pointer");
-        return false;
-    }
-
-    return true;
-}
-
-bool PostDestroyPipeline(
-    VkDevice device,
-    VkPipeline pipeline,
-    VkResult result)
-{
-    if(result != VK_SUCCESS)
-    {
-        std::string reason = "vkDestroyPipeline parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
         return false;
     }
 
@@ -5443,29 +5355,6 @@ VK_LAYER_EXPORT VkResult VKAPI vkDestroyPipeline(
     PostDestroyPipeline(device, pipeline, result);
 
     return result;
-}
-
-bool PostCreateGraphicsPipeline(
-    VkDevice device,
-    VkPipeline* pPipeline,
-    VkResult result)
-{
-
-    if(pPipeline == nullptr)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateGraphicsPipeline parameter, VkPipeline* pPipeline, is null pointer");
-        return false;
-    }
-
-    if(result != VK_SUCCESS)
-    {
-        std::string reason = "vkCreateGraphicsPipeline parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
-        return false;
-    }
-
-    return true;
 }
 
 //TODO handle count > 1
@@ -6854,9 +6743,10 @@ bool PostResetCommandBuffer(
 }
 
 VK_LAYER_EXPORT VkResult VKAPI vkResetCommandBuffer(
-    VkCmdBuffer cmdBuffer)
+    VkCmdBuffer cmdBuffer,
+    VkCmdBufferResetFlags flags)
 {
-    VkResult result = get_dispatch_table(pc_device_table_map, cmdBuffer)->ResetCommandBuffer(cmdBuffer);
+    VkResult result = get_dispatch_table(pc_device_table_map, cmdBuffer)->ResetCommandBuffer(cmdBuffer, flags);
 
     PostResetCommandBuffer(cmdBuffer, result);
 

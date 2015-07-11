@@ -60,6 +60,7 @@ class DynamicRasterState;
 class DynamicColorBlendState;
 class DynamicDepthStencilState;
 class CmdBuffer;
+class CmdPool;
 
 std::vector<VkLayerProperties> GetGlobalLayers();
 std::vector<VkExtensionProperties> GetGlobalExtensions();
@@ -577,6 +578,27 @@ public:
     void init(const Device &dev, const VkDynamicDepthStencilStateCreateInfo &info);
 };
 
+class CmdPool : public internal::NonDispHandle<VkCmdPool> {
+public:
+    ~CmdPool();
+
+    explicit CmdPool() : NonDispHandle() {}
+    explicit CmdPool(const Device &dev, const VkCmdPoolCreateInfo &info) { init(dev, info); }
+
+    // vkCreateDynamicDepthStencilState()
+    void init(const Device &dev, const VkCmdPoolCreateInfo &info);
+
+    static VkCmdPoolCreateInfo create_info(uint32_t queue_family_index);
+};
+
+inline VkCmdPoolCreateInfo CmdPool::create_info(uint32_t queue_family_index)
+{
+    VkCmdPoolCreateInfo info = {};
+    info.sType = VK_STRUCTURE_TYPE_CMD_BUFFER_CREATE_INFO;
+    info.queueFamilyIndex = queue_family_index;
+    return info;
+}
+
 class CmdBuffer : public internal::Handle<VkCmdBuffer> {
 public:
     ~CmdBuffer();
@@ -597,7 +619,7 @@ public:
     void reset(VkCmdBufferResetFlags flags);
     void reset() { reset(VK_CMD_BUFFER_RESET_RELEASE_RESOURCES); }
 
-    static VkCmdBufferCreateInfo create_info(VkCmdPool pool);
+    static VkCmdBufferCreateInfo create_info(VkCmdPool const &pool);
 
 private:
     VkDevice dev_handle_;
@@ -804,7 +826,7 @@ inline VkCopyDescriptorSet Device::copy_descriptor_set(const DescriptorSet &src_
     return copy;
 }
 
-inline VkCmdBufferCreateInfo CmdBuffer::create_info(VkCmdPool pool)
+inline VkCmdBufferCreateInfo CmdBuffer::create_info(VkCmdPool const &pool)
 {
     VkCmdBufferCreateInfo info = {};
     info.sType = VK_STRUCTURE_TYPE_CMD_BUFFER_CREATE_INFO;

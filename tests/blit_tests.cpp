@@ -517,7 +517,8 @@ protected:
     VkCmdBlitTest() :
         dev_(environment->default_device()),
         queue_(*dev_.graphics_queues()[0]),
-        cmd_(dev_, vk_testing::CmdBuffer::create_info(dev_.graphics_queue_node_index_))
+        pool_(dev_, vk_testing::CmdPool::create_info(dev_.graphics_queue_node_index_)),
+        cmd_(dev_, vk_testing::CmdBuffer::create_info(pool_.handle()))
     {
         // make sure every test uses a different pattern
         vk_testing::ImageChecker::hash_salt_generate();
@@ -533,6 +534,7 @@ protected:
 
     vk_testing::Device &dev_;
     vk_testing::Queue &queue_;
+    vk_testing::CmdPool pool_;
     vk_testing::CmdBuffer cmd_;
 
     std::vector<VkDeviceMemory> mem_refs_;

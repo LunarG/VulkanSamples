@@ -823,6 +823,14 @@ void DynamicDepthStencilState::init(const Device &dev, const VkDynamicDepthStenc
     NON_DISPATCHABLE_HANDLE_INIT(vkCreateDynamicDepthStencilState, dev, &info);
 }
 
+NON_DISPATCHABLE_HANDLE_DTOR(CmdPool, vkDestroyCommandPool)
+
+void CmdPool::init(const Device &dev, const VkCmdPoolCreateInfo &info)
+{
+    NON_DISPATCHABLE_HANDLE_INIT(vkCreateCommandPool, dev, &info);
+}
+
+
 CmdBuffer::~CmdBuffer()
 {
     if (initialized())
