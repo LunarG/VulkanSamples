@@ -350,7 +350,7 @@ static VkResult pipeline_build_ia(struct intel_pipeline *pipeline,
 
     if (info->ia.primitiveRestartEnable) {
         pipeline->primitive_restart = true;
-        pipeline->primitive_restart_index = info->ia.primitiveRestartIndex;
+        pipeline->primitive_restart_index = 0;
     } else {
         pipeline->primitive_restart = false;
     }
