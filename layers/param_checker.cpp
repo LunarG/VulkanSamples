@@ -5351,18 +5351,6 @@ void PreCreateComputePipeline(
         "vkCreateComputePipeline parameter, VkShader pCreateInfo->cs.shader, is null pointer");
         return;
     }
-    if(pCreateInfo->cs.pLinkConstBufferInfo == nullptr)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_WARN_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateComputePipeline parameter, const VkLinkConstBuffer* pCreateInfo->cs.pLinkConstBufferInfo, is null pointer");
-        return;
-    }
-    if(pCreateInfo->cs.pLinkConstBufferInfo->pBufferData == nullptr)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_WARN_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateComputePipeline parameter, const void* pCreateInfo->cs.pLinkConstBufferInfo->pBufferData, is null pointer");
-        return;
-    }
     if(pCreateInfo->cs.pSpecializationInfo == nullptr)
     {
         log_msg(mdd(device), VK_DBG_REPORT_WARN_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",

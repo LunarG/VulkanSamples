@@ -1084,7 +1084,6 @@ TEST_F(VkLayerTest, DescriptorSetNotUpdated)
         .pNext                = NULL,
         .stage                = VK_SHADER_STAGE_VERTEX,
         .shader               = vs.handle(),
-        .pLinkConstBufferInfo = NULL,
         .pSpecializationInfo  = NULL,
     };
     const VkGraphicsPipelineCreateInfo gp_ci = {
@@ -1369,7 +1368,6 @@ TEST_F(VkLayerTest, VtxBufferNoRenderPass)
         .pNext  = NULL,
         .stage                = VK_SHADER_STAGE_VERTEX,
         .shader               = vs.handle(),
-        .pLinkConstBufferInfo = NULL,
         .pSpecializationInfo  = NULL,
     };
     const VkGraphicsPipelineCreateInfo gp_ci = {
@@ -1846,7 +1844,6 @@ TEST_F(VkLayerTest, NumSamplesMismatch)
         .pNext                = NULL,
         .stage                = VK_SHADER_STAGE_VERTEX,
         .shader               = vs.handle(),
-        .pLinkConstBufferInfo = NULL,
         .pSpecializationInfo  = NULL,
     };
     const VkGraphicsPipelineCreateInfo gp_ci = {
@@ -2067,7 +2064,6 @@ TEST_F(VkLayerTest, ClearCmdNoDraw)
         .pNext                = NULL,
         .stage                = VK_SHADER_STAGE_VERTEX,
         .shader               = vs,
-        .pLinkConstBufferInfo = NULL,
         .pSpecializationInfo  = NULL,
     };
     const VkGraphicsPipelineCreateInfo gp_ci = {
@@ -2196,7 +2192,6 @@ TEST_F(VkLayerTest, VtxBufferBadIndex)
         .pNext                = NULL,
         .stage                = VK_SHADER_STAGE_VERTEX,
         .shader               = vs.handle(),
-        .pLinkConstBufferInfo = NULL,
         .pSpecializationInfo  = NULL,
     };
     const VkGraphicsPipelineCreateInfo gp_ci = {
