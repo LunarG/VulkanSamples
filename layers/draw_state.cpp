@@ -624,10 +624,11 @@ static void deletePipelines()
 static uint32_t getNumSamples(const VkPipeline pipeline)
 {
     PIPELINE_NODE* pPipe = pipelineMap[pipeline.handle];
-    if (VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO == pPipe->msStateCI.sType) {
-        if (pPipe->msStateCI.multisampleEnable)
-            return pPipe->msStateCI.rasterSamples;
-    }
+    // TODO: msStateCI.multisampleEnable has been removed from API, is there anything left to do here?
+//    if (VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO == pPipe->msStateCI.sType) {
+//        if (pPipe->msStateCI.multisampleEnable)
+//            return pPipe->msStateCI.rasterSamples;
+//    }
     return 1;
 }
 // Validate state related to the PSO
