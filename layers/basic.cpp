@@ -125,11 +125,11 @@ VK_LAYER_EXPORT VkResult VKAPI basic_DestroyInstance(VkInstance instance)
     return res;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI basic_GetPhysicalDeviceFormatInfo(VkPhysicalDevice gpu, VkFormat format, VkFormatProperties *pFormatInfo)
+VK_LAYER_EXPORT VkResult VKAPI basic_GetPhysicalDeviceFormatProperties(VkPhysicalDevice gpu, VkFormat format, VkFormatProperties *pFormatInfo)
 {
-    printf("At start of wrapped vkGetPhysicalDeviceFormatInfo() call w/ gpu: %p\n", (void*)gpu);
-    VkResult result = instance_dispatch_table(gpu)->GetPhysicalDeviceFormatInfo(gpu, format, pFormatInfo);
-    printf("Completed wrapped vkGetPhysicalDeviceFormatInfo() call w/ gpu: %p\n", (void*)gpu);
+    printf("At start of wrapped vkGetPhysicalDeviceFormatProperties() call w/ gpu: %p\n", (void*)gpu);
+    VkResult result = instance_dispatch_table(gpu)->GetPhysicalDeviceFormatProperties(gpu, format, pFormatInfo);
+    printf("Completed wrapped vkGetPhysicalDeviceFormatProperties() call w/ gpu: %p\n", (void*)gpu);
     return result;
 }
 
@@ -173,8 +173,8 @@ VK_LAYER_EXPORT void * VKAPI vkGetInstanceProcAddr(VkInstance instance, const ch
         return (void *) vkGetPhysicalDeviceLayerProperties;
     if (!strcmp("vkGetPhysicalDeviceExtensionProperties", pName))
         return (void *) vkGetPhysicalDeviceExtensionProperties;
-    if (!strcmp("vkGetPhysicalDeviceFormatInfo", pName))
-        return (void *) basic_GetPhysicalDeviceFormatInfo;
+    if (!strcmp("vkGetPhysicalDeviceFormatProperties", pName))
+        return (void *) basic_GetPhysicalDeviceFormatProperties;
     if (!strcmp("vkDestroyInstance", pName))
         return (void *) basic_DestroyInstance;
     if (!strcmp("vkEnumeratePhysicalDevices", pName))

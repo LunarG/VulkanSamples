@@ -252,7 +252,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateImage(VkDevice device, const VkImageCreat
     {
         layer_data *device_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
         VkFormatProperties properties;
-        VkResult result = get_dispatch_table(image_instance_table_map, device_data->physicalDevice)->GetPhysicalDeviceFormatInfo(
+        VkResult result = get_dispatch_table(image_instance_table_map, device_data->physicalDevice)->GetPhysicalDeviceFormatProperties(
                 device_data->physicalDevice, pCreateInfo->format, &properties);
         if(result != VK_SUCCESS)
         {
@@ -280,7 +280,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateRenderPass(VkDevice device, const VkRende
         {
             layer_data *device_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
             VkFormatProperties properties;
-            VkResult result = get_dispatch_table(image_instance_table_map, device_data->physicalDevice)->GetPhysicalDeviceFormatInfo(
+            VkResult result = get_dispatch_table(image_instance_table_map, device_data->physicalDevice)->GetPhysicalDeviceFormatProperties(
                     device_data->physicalDevice, pCreateInfo->pAttachments[i].format, &properties);
             if(result != VK_SUCCESS)
             {

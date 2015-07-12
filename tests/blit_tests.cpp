@@ -304,7 +304,7 @@ size_t get_format_size(VkFormat format)
         VkFormat format;
         size_t size;
         uint32_t channel_count;
-    } format_table[VK_NUM_FORMAT] = {
+    } format_table[VK_FORMAT_NUM] = {
         { VK_FORMAT_UNDEFINED,             0,  0 },
         { VK_FORMAT_R4G4_UNORM,            1,  2 },
         { VK_FORMAT_R4G4_USCALED,          1,  2 },
@@ -483,7 +483,7 @@ size_t get_format_size(VkFormat format)
     };
     if (format_table_unverified)
     {
-        for (unsigned int i = 0; i < VK_NUM_FORMAT; i++)
+        for (unsigned int i = 0; i < VK_FORMAT_NUM; i++)
         {
             assert(format_table[i].format == i);
         }

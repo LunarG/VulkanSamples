@@ -83,7 +83,7 @@ struct app_dev {
     VkDevice obj;
 
 
-    VkFormatProperties format_props[VK_NUM_FORMAT];
+    VkFormatProperties format_props[VK_FORMAT_NUM];
 };
 
 struct layer_extension_list {
@@ -363,7 +363,7 @@ static void app_dev_init_formats(struct app_dev *dev)
 {
     VkFormat f;
 
-    for (f = 0; f < VK_NUM_FORMAT; f++) {
+    for (f = 0; f < VK_FORMAT_NUM; f++) {
         const VkFormat fmt = f;
         VkResult err;
 
@@ -769,7 +769,7 @@ app_dev_dump(const struct app_dev *dev)
 {
     VkFormat fmt;
 
-    for (fmt = 0; fmt < VK_NUM_FORMAT; fmt++) {
+    for (fmt = 0; fmt < VK_FORMAT_NUM; fmt++) {
         app_dev_dump_format_props(dev, fmt);
     }
 }
