@@ -839,17 +839,8 @@ static void pipeline_build_fragment_SBE(struct intel_pipeline *pipeline,
           vue_len << GEN7_SBE_DW1_URB_READ_LEN__SHIFT |
           vue_offset << GEN7_SBE_DW1_URB_READ_OFFSET__SHIFT;
 
-    switch (info->rs.pointOrigin) {
-    case VK_COORDINATE_ORIGIN_UPPER_LEFT:
-        body[1] |= GEN7_SBE_DW1_POINT_SPRITE_TEXCOORD_UPPERLEFT;
-        break;
-    case VK_COORDINATE_ORIGIN_LOWER_LEFT:
-        body[1] |= GEN7_SBE_DW1_POINT_SPRITE_TEXCOORD_LOWERLEFT;
-        break;
-    default:
-        assert(!"unknown point origin");
-        break;
-    }
+    /* Vulkan default is point origin upper left */
+    body[1] |= GEN7_SBE_DW1_POINT_SPRITE_TEXCOORD_UPPERLEFT;
 
     uint16_t src_slot[fs->in_count];
     int32_t fs_in = 0;
