@@ -395,8 +395,6 @@ static VkResult pipeline_build_rs_state(struct intel_pipeline *pipeline,
 
     ccw = (rs_state->frontFace == VK_FRONT_FACE_CCW);
     /* flip the winding order */
-    if (info->vp.clipOrigin == VK_COORDINATE_ORIGIN_LOWER_LEFT)
-        ccw = !ccw;
 
     if (ccw) {
         pipeline->cmd_sf_fill |= GEN7_SF_DW1_FRONTWINDING_CCW;
@@ -1143,11 +1141,6 @@ static VkResult pipeline_build_all(struct intel_pipeline *pipeline,
     if (info->vi.bindingCount > ARRAY_SIZE(pipeline->vb) ||
         info->vi.attributeCount > ARRAY_SIZE(pipeline->vb))
         return VK_ERROR_BAD_PIPELINE_DATA;
-
-    if (info->vp.clipOrigin != VK_COORDINATE_ORIGIN_UPPER_LEFT) {
-        assert(!"only VK_COORDINATE_ORIGIN_UPPER_LEFT is supported");
-        return VK_ERROR_INVALID_VALUE;
-    }
 
     if (info->vp.depthMode != VK_DEPTH_MODE_ZERO_TO_ONE) {
         assert(!"only VK_DEPTH_MODE_ZERO_TO_ONE is supported");

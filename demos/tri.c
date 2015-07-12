@@ -1082,7 +1082,6 @@ static void demo_prepare_pipeline(struct demo *demo)
     memset(&vp, 0, sizeof(vp));
     vp.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
     vp.viewportCount = 1;
-    vp.clipOrigin = VK_COORDINATE_ORIGIN_UPPER_LEFT;
 
     memset(&ds, 0, sizeof(ds));
     ds.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
