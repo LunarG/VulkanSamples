@@ -1084,7 +1084,6 @@ TEST_F(VkLayerTest, DescriptorSetNotUpdated)
         .pNext                = NULL,
         .stage                = VK_SHADER_STAGE_VERTEX,
         .shader               = vs.handle(),
-        .linkConstBufferCount = 0,
         .pLinkConstBufferInfo = NULL,
         .pSpecializationInfo  = NULL,
     };
@@ -1370,7 +1369,6 @@ TEST_F(VkLayerTest, VtxBufferNoRenderPass)
         .pNext  = NULL,
         .stage                = VK_SHADER_STAGE_VERTEX,
         .shader               = vs.handle(),
-        .linkConstBufferCount = 0,
         .pLinkConstBufferInfo = NULL,
         .pSpecializationInfo  = NULL,
     };
@@ -1848,7 +1846,6 @@ TEST_F(VkLayerTest, NumSamplesMismatch)
         .pNext                = NULL,
         .stage                = VK_SHADER_STAGE_VERTEX,
         .shader               = vs.handle(),
-        .linkConstBufferCount = 0,
         .pLinkConstBufferInfo = NULL,
         .pSpecializationInfo  = NULL,
     };
@@ -2070,7 +2067,6 @@ TEST_F(VkLayerTest, ClearCmdNoDraw)
         .pNext                = NULL,
         .stage                = VK_SHADER_STAGE_VERTEX,
         .shader               = vs,
-        .linkConstBufferCount = 0,
         .pLinkConstBufferInfo = NULL,
         .pSpecializationInfo  = NULL,
     };
@@ -2200,7 +2196,6 @@ TEST_F(VkLayerTest, VtxBufferBadIndex)
         .pNext                = NULL,
         .stage                = VK_SHADER_STAGE_VERTEX,
         .shader               = vs.handle(),
-        .linkConstBufferCount = 0,
         .pLinkConstBufferInfo = NULL,
         .pSpecializationInfo  = NULL,
     };
