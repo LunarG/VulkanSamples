@@ -461,7 +461,6 @@ ICD_EXPORT VkResult VKAPI vkGetPhysicalDeviceLimits(
     memset(pLimits, 0, sizeof(*pLimits));
 
     /* no size limit, but no bounded buffer could exceed 2GB */
-    pLimits->maxInlineMemoryUpdateSize = 2u << 30;
     pLimits->maxBoundDescriptorSets = 1;
     pLimits->maxComputeWorkGroupInvocations = 512;
 

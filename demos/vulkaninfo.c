@@ -790,7 +790,6 @@ static void app_gpu_dump_limits(const struct app_gpu *gpu)
 
     printf("VkPhysicalDeviceLimits\n");
     /* TODO: add interesting limits */
-    printf("\tmaxInlineMemoryUpdateSize = " PRINTF_SIZE_T_SPECIFIER "\n",   limits->maxInlineMemoryUpdateSize);
     printf("\tmaxBoundDescriptorSets = %u\n",                               limits->maxBoundDescriptorSets);
     printf("\tmaxComputeWorkGroupInvocations = %u\n",                       limits->maxComputeWorkGroupInvocations);
     printf("\ttimestampFrequency = %lu\n",                                  limits->timestampFrequency);
