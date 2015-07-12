@@ -295,11 +295,11 @@ ICD_EXPORT void VKAPI vkCmdWaitEvents(
 
 ICD_EXPORT void VKAPI vkCmdPipelineBarrier(
         VkCmdBuffer                                 cmdBuffer,
-        VkPipelineStageFlags                        sourceStageMask,
+        VkPipelineStageFlags                        srcStageMask,
         VkPipelineStageFlags                        destStageMask,
         VkBool32                                    byRegion,
         uint32_t                                    memBarrierCount,
-        const void**                                ppMemBarriers)
+        const void* const*                          ppMemBarriers)
 {
     struct intel_cmd *cmd = intel_cmd(cmdBuffer);
     uint32_t pipe_control_flags = 0;

@@ -934,11 +934,11 @@ core = Extension(
 
         Proto("void", "CmdPipelineBarrier",
             [Param("VkCmdBuffer", "cmdBuffer"),
-             Param("VkPipelineStageFlags", "sourceStageMask"),
+             Param("VkPipelineStageFlags", "srcStageMask"),
              Param("VkPipelineStageFlags", "destStageMask"),
              Param("VkBool32", "byRegion"),
              Param("uint32_t", "memBarrierCount"),
-             Param("const void**", "ppMemBarriers")]),
+             Param("const void* const*", "ppMemBarriers")]),
 
         Proto("void", "CmdBeginQuery",
             [Param("VkCmdBuffer", "cmdBuffer"),

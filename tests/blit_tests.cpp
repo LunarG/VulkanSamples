@@ -787,7 +787,7 @@ TEST_F(VkCmdCopyBufferTest, RAWHazard)
 
     VkPipelineStageFlags src_stages = VK_PIPELINE_STAGE_TRANSFER_BIT | VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
     VkPipelineStageFlags dest_stages = VK_PIPELINE_STAGE_TRANSFER_BIT | VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
-    vkCmdPipelineBarrier(cmd_.handle(), src_stages, dest_stages, false, 1, (const void **)&pmemory_barrier);
+    vkCmdPipelineBarrier(cmd_.handle(), src_stages, dest_stages, false, 1, (const void * const*)&pmemory_barrier);
 
     VkBufferCopy region = {};
     region.copySize = 4;
@@ -796,7 +796,7 @@ TEST_F(VkCmdCopyBufferTest, RAWHazard)
     memory_barrier = bufs[1].buffer_memory_barrier(
             VK_MEMORY_OUTPUT_TRANSFER_BIT, VK_MEMORY_INPUT_TRANSFER_BIT, 0, 4);
     pmemory_barrier = &memory_barrier;
-    vkCmdPipelineBarrier(cmd_.handle(), src_stages, dest_stages, false, 1, (const void **)&pmemory_barrier);
+    vkCmdPipelineBarrier(cmd_.handle(), src_stages, dest_stages, false, 1, (const void * const*)&pmemory_barrier);
 
     vkCmdCopyBuffer(cmd_.handle(), bufs[1].handle(), bufs[2].handle(), 1, &region);
 
@@ -1231,13 +1231,13 @@ protected:
 
         VkPipelineStageFlags src_stages = VK_PIPELINE_STAGE_ALL_GPU_COMMANDS;
         VkPipelineStageFlags dest_stages = VK_PIPELINE_STAGE_ALL_GPU_COMMANDS;
-        vkCmdPipelineBarrier(cmd_.handle(), src_stages, dest_stages, false, 1, (const void **)&p_to_clear[0]);
+        vkCmdPipelineBarrier(cmd_.handle(), src_stages, dest_stages, false, 1, (const void * const*)&p_to_clear[0]);
 
         vkCmdClearColorImage(cmd_.handle(),
                               img.handle(), VK_IMAGE_LAYOUT_GENERAL,
                               &clear_color, ranges.size(), &ranges[0]);
 
-        vkCmdPipelineBarrier(cmd_.handle(), src_stages, dest_stages, false, 1, (const void **)&p_to_xfer[0]);
+        vkCmdPipelineBarrier(cmd_.handle(), src_stages, dest_stages, false, 1, (const void * const*)&p_to_xfer[0]);
 
         cmd_.end();
 
@@ -1411,14 +1411,14 @@ protected:
 
         VkPipelineStageFlags src_stages = VK_PIPELINE_STAGE_ALL_GPU_COMMANDS;
         VkPipelineStageFlags dest_stages = VK_PIPELINE_STAGE_ALL_GPU_COMMANDS;
-        vkCmdPipelineBarrier(cmd_.handle(), src_stages, dest_stages, false, to_clear.size(), (const void **)&p_to_clear[0]);
+        vkCmdPipelineBarrier(cmd_.handle(), src_stages, dest_stages, false, to_clear.size(), (const void * const*)&p_to_clear[0]);
 
         vkCmdClearDepthStencilImage(cmd_.handle(),
                                     img.handle(), VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
                                     depth, stencil,
                                     ranges.size(), &ranges[0]);
 
-        vkCmdPipelineBarrier(cmd_.handle(), src_stages, dest_stages, false, to_xfer.size(), (const void **)&p_to_xfer[0]);
+        vkCmdPipelineBarrier(cmd_.handle(), src_stages, dest_stages, false, to_xfer.size(), (const void * const*)&p_to_xfer[0]);
 
         cmd_.end();
 

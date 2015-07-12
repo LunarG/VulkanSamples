@@ -583,7 +583,7 @@ void VkImageObj::ImageMemoryBarrier(
     VkPipelineStageFlags dest_stages = VK_PIPELINE_STAGE_ALL_GPU_COMMANDS;
 
     // write barrier to the command buffer
-    vkCmdPipelineBarrier(cmd_buf->handle(), src_stages, dest_stages, false, 1, (const void **)&pmemory_barrier);
+    vkCmdPipelineBarrier(cmd_buf->handle(), src_stages, dest_stages, false, 1, (const void * const*)&pmemory_barrier);
 }
 
 void VkImageObj::SetLayout(VkCommandBufferObj *cmd_buf,
@@ -1272,7 +1272,7 @@ VkResult VkCommandBufferObj::EndCommandBuffer()
     return VK_SUCCESS;
 }
 
-void VkCommandBufferObj::PipelineBarrier(VkPipelineStageFlags src_stages,  VkPipelineStageFlags dest_stages, VkBool32 byRegion, uint32_t memBarrierCount, const void** ppMemBarriers)
+void VkCommandBufferObj::PipelineBarrier(VkPipelineStageFlags src_stages,  VkPipelineStageFlags dest_stages, VkBool32 byRegion, uint32_t memBarrierCount, const void* const* ppMemBarriers)
 {
     vkCmdPipelineBarrier(handle(), src_stages, dest_stages, byRegion, memBarrierCount, ppMemBarriers);
 }
@@ -1311,7 +1311,7 @@ void VkCommandBufferObj::ClearAllBuffers(VkClearColorValue clear_color, float de
     for (i = 0; i < m_renderTargets.size(); i++) {
         memory_barrier.image = m_renderTargets[i]->image();
         memory_barrier.oldLayout = m_renderTargets[i]->layout();
-        vkCmdPipelineBarrier( handle(), src_stages, dest_stages, false, 1, (const void **)&pmemory_barrier);
+        vkCmdPipelineBarrier( handle(), src_stages, dest_stages, false, 1, (const void * const*)&pmemory_barrier);
         m_renderTargets[i]->layout(memory_barrier.newLayout);
 
         vkCmdClearColorImage(handle(),
@@ -1336,7 +1336,7 @@ void VkCommandBufferObj::ClearAllBuffers(VkClearColorValue clear_color, float de
         memory_barrier.image = depthStencilObj->handle();
         memory_barrier.subresourceRange = dsRange;
 
-        vkCmdPipelineBarrier( handle(), src_stages, dest_stages, false, 1, (const void **)&pmemory_barrier);
+        vkCmdPipelineBarrier( handle(), src_stages, dest_stages, false, 1, (const void * const*)&pmemory_barrier);
 
         vkCmdClearDepthStencilImage(handle(),
                                     depthStencilObj->handle(), VK_IMAGE_LAYOUT_GENERAL,
@@ -1348,7 +1348,7 @@ void VkCommandBufferObj::ClearAllBuffers(VkClearColorValue clear_color, float de
         memory_barrier.oldLayout = VK_IMAGE_LAYOUT_GENERAL;
         memory_barrier.newLayout = depthStencilObj->BindInfo()->layout;
         memory_barrier.subresourceRange = dsRange;
-        vkCmdPipelineBarrier( handle(), src_stages, dest_stages, false, 1, (const void **)&pmemory_barrier);
+        vkCmdPipelineBarrier( handle(), src_stages, dest_stages, false, 1, (const void * const*)&pmemory_barrier);
     }
 }
 
@@ -1394,7 +1394,7 @@ void VkCommandBufferObj::PrepareAttachments()
     {
         memory_barrier.image = m_renderTargets[i]->image();
         memory_barrier.oldLayout = m_renderTargets[i]->layout();
-        vkCmdPipelineBarrier( handle(), src_stages, dest_stages, false, 1, (const void **)&pmemory_barrier);
+        vkCmdPipelineBarrier( handle(), src_stages, dest_stages, false, 1, (const void * const*)&pmemory_barrier);
         m_renderTargets[i]->layout(memory_barrier.newLayout);
     }
 }

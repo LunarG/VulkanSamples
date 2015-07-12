@@ -1277,11 +1277,11 @@ void VKAPI vkCmdWaitEvents(
 
 void VKAPI vkCmdPipelineBarrier(
     VkCmdBuffer                                 cmdBuffer,
-    VkPipelineStageFlags                        sourceStageMask,
+    VkPipelineStageFlags                        srcStageMask,
     VkPipelineStageFlags                        destStageMask,
     VkBool32                                    byRegion,
     uint32_t                                    memBarrierCount,
-    const void**                                ppMemBarriers)
+    const void* const*                          ppMemBarriers)
 {
     NULLDRV_LOG_FUNC;
 }
