@@ -1860,10 +1860,6 @@ static void gen6_3DSTATE_VERTEX_BUFFERS(struct intel_cmd *cmd)
             dw[0] |= GEN6_VB_DW0_ACCESS_INSTANCEDATA;
             dw[3] = 1;
             break;
-        case VK_VERTEX_INPUT_STEP_RATE_DRAW:
-            dw[0] |= GEN6_VB_DW0_ACCESS_INSTANCEDATA;
-            dw[3] = 0;
-            break;
         default:
             assert(!"unknown step rate");
             dw[0] |= GEN6_VB_DW0_ACCESS_VERTEXDATA;
