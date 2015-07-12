@@ -1074,7 +1074,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkDbgDestroyMsgCallback(
     return res;
 }
 
-VK_LAYER_EXPORT void * VKAPI vkGetDeviceProcAddr(VkDevice dev, const char* funcName)
+VK_LAYER_EXPORT PFN_vkVoidFunction VKAPI vkGetDeviceProcAddr(VkDevice dev, const char* funcName)
 {
     if (dev == NULL)
         return NULL;
@@ -1082,12 +1082,12 @@ VK_LAYER_EXPORT void * VKAPI vkGetDeviceProcAddr(VkDevice dev, const char* funcN
     /* loader uses this to force layer initialization; device object is wrapped */
     if (!strcmp("vkGetDeviceProcAddr", funcName)) {
         initDeviceTable(shader_checker_device_table_map, (const VkBaseLayerObject *) dev);
-        return (void *) vkGetDeviceProcAddr;
+        return (PFN_vkVoidFunction) vkGetDeviceProcAddr;
     }
 
 #define ADD_HOOK(fn)    \
     if (!strncmp(#fn, funcName, sizeof(#fn))) \
-        return (void *) fn
+        return (PFN_vkVoidFunction) fn
 
     ADD_HOOK(vkCreateDevice);
     ADD_HOOK(vkCreateShaderModule);
@@ -1105,20 +1105,20 @@ VK_LAYER_EXPORT void * VKAPI vkGetDeviceProcAddr(VkDevice dev, const char* funcN
     }
 }
 
-VK_LAYER_EXPORT void * VKAPI vkGetInstanceProcAddr(VkInstance instance, const char* funcName)
+VK_LAYER_EXPORT PFN_vkVoidFunction VKAPI vkGetInstanceProcAddr(VkInstance instance, const char* funcName)
 {
-    void *fptr;
+    PFN_vkVoidFunction fptr;
 
     if (instance == NULL)
         return NULL;
 
     if (!strcmp("vkGetInstanceProcAddr", funcName)) {
         initInstanceTable(shader_checker_instance_table_map, (const VkBaseLayerObject *) instance);
-        return (void *) vkGetInstanceProcAddr;
+        return (PFN_vkVoidFunction) vkGetInstanceProcAddr;
     }
 #define ADD_HOOK(fn)    \
     if (!strncmp(#fn, funcName, sizeof(#fn))) \
-        return (void *) fn
+        return (PFN_vkVoidFunction) fn
 
     ADD_HOOK(vkCreateInstance);
     ADD_HOOK(vkDestroyInstance);

@@ -198,7 +198,7 @@ static inline void layer_destroy_msg_callback(
     }
 }
 
-static inline void* debug_report_get_instance_proc_addr(
+static inline PFN_vkVoidFunction debug_report_get_instance_proc_addr(
         debug_report_data              *debug_data,
         const char                     *funcName)
 {
@@ -207,10 +207,10 @@ static inline void* debug_report_get_instance_proc_addr(
     }
 
     if (!strcmp(funcName, "vkDbgCreateMsgCallback")) {
-        return (void *) vkDbgCreateMsgCallback;
+        return (PFN_vkVoidFunction) vkDbgCreateMsgCallback;
     }
     if (!strcmp(funcName, "vkDbgDestroyMsgCallback")) {
-        return (void *) vkDbgDestroyMsgCallback;
+        return (PFN_vkVoidFunction) vkDbgDestroyMsgCallback;
     }
 
     return NULL;

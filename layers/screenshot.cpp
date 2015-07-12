@@ -520,7 +520,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkQueuePresentWSI(VkQueue queue, const VkPresentI
     return result;
 }
 
-VK_LAYER_EXPORT void* VKAPI vkGetDeviceProcAddr(
+VK_LAYER_EXPORT PFN_vkVoidFunction VKAPI vkGetDeviceProcAddr(
     VkDevice         dev,
     const char       *funcName)
 {
@@ -556,7 +556,7 @@ VK_LAYER_EXPORT void* VKAPI vkGetDeviceProcAddr(
 }
 
 
-VK_LAYER_EXPORT void* VKAPI vkGetInstanceProcAddr(VkInstance instance, const char* funcName)
+VK_LAYER_EXPORT PFN_vkVoidFunction VKAPI vkGetInstanceProcAddr(VkInstance instance, const char* funcName)
 {
     return NULL;
 #if 0

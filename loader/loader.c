@@ -64,7 +64,7 @@ static void loader_remove_layer_lib(
 
 struct loader_struct loader = {0};
 
-static void * VKAPI loader_GetInstanceProcAddr(VkInstance instance, const char * pName);
+static PFN_vkVoidFunction VKAPI loader_GetInstanceProcAddr(VkInstance instance, const char * pName);
 static bool loader_init_ext_list(struct loader_extension_list *ext_info);
 
 enum loader_debug {
@@ -1790,7 +1790,7 @@ void loader_layer_scan(void)
 
 }
 
-static void* VKAPI loader_gpa_instance_internal(VkInstance inst, const char * pName)
+static PFN_vkVoidFunction VKAPI loader_gpa_instance_internal(VkInstance inst, const char * pName)
 {
     // inst is not wrapped
     if (inst == VK_NULL_HANDLE) {
@@ -2182,12 +2182,12 @@ static VkResult scratch_vkCreateDevice(
     return VK_SUCCESS;
 }
 
-static void * VKAPI loader_GetDeviceChainProcAddr(VkDevice device, const char * name)
+static PFN_vkVoidFunction VKAPI loader_GetDeviceChainProcAddr(VkDevice device, const char * name)
 {
     if (!strcmp(name, "vkGetDeviceProcAddr"))
-        return (void *) loader_GetDeviceChainProcAddr;
+        return (PFN_vkVoidFunction) loader_GetDeviceChainProcAddr;
     if (!strcmp(name, "vkCreateDevice"))
-        return (void *) scratch_vkCreateDevice;
+        return (PFN_vkVoidFunction) scratch_vkCreateDevice;
 
     struct loader_device *found_dev;
     struct loader_icd *icd = loader_get_icd_and_device(device, &found_dev);
@@ -2824,7 +2824,7 @@ VkResult loader_CreateDevice(
     return res;
 }
 
-static void * VKAPI loader_GetInstanceProcAddr(VkInstance instance, const char * pName)
+static PFN_vkVoidFunction VKAPI loader_GetInstanceProcAddr(VkInstance instance, const char * pName)
 {
     if (instance == VK_NULL_HANDLE)
         return NULL;
@@ -2861,12 +2861,12 @@ static void * VKAPI loader_GetInstanceProcAddr(VkInstance instance, const char *
     return NULL;
 }
 
-LOADER_EXPORT void * VKAPI vkGetInstanceProcAddr(VkInstance instance, const char * pName)
+LOADER_EXPORT PFN_vkVoidFunction VKAPI vkGetInstanceProcAddr(VkInstance instance, const char * pName)
 {
     return loader_GetInstanceProcAddr(instance, pName);
 }
 
-static void * VKAPI loader_GetDeviceProcAddr(VkDevice device, const char * pName)
+static PFN_vkVoidFunction VKAPI loader_GetDeviceProcAddr(VkDevice device, const char * pName)
 {
     if (device == VK_NULL_HANDLE) {
         return NULL;
@@ -2903,7 +2903,7 @@ static void * VKAPI loader_GetDeviceProcAddr(VkDevice device, const char * pName
     }
 }
 
-LOADER_EXPORT void * VKAPI vkGetDeviceProcAddr(VkDevice device, const char * pName)
+LOADER_EXPORT PFN_vkVoidFunction VKAPI vkGetDeviceProcAddr(VkDevice device, const char * pName)
 {
     return loader_GetDeviceProcAddr(device, pName);
 }

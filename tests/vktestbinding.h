@@ -157,7 +157,7 @@ public:
     const PhysicalDevice &phy() const { return phy_; }
 
     // vkGetDeviceProcAddr()
-    void *get_proc(const char *name) const { return vkGetDeviceProcAddr(handle(), name); }
+    PFN_vkVoidFunction get_proc(const char *name) const { return vkGetDeviceProcAddr(handle(), name); }
 
     // vkGetDeviceQueue()
     const std::vector<Queue *> &graphics_queues() const { return queues_[GRAPHICS]; }

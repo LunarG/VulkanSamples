@@ -132,7 +132,7 @@ VK_LAYER_EXPORT VkResult VKAPI basic_GetPhysicalDeviceFormatProperties(VkPhysica
     return result;
 }
 
-VK_LAYER_EXPORT void * VKAPI vkGetDeviceProcAddr(VkDevice device, const char* pName)
+VK_LAYER_EXPORT PFN_vkVoidFunction VKAPI vkGetDeviceProcAddr(VkDevice device, const char* pName)
 {
     if (device == NULL)
         return NULL;
@@ -140,15 +140,15 @@ VK_LAYER_EXPORT void * VKAPI vkGetDeviceProcAddr(VkDevice device, const char* pN
     /* loader uses this to force layer initialization; device object is wrapped */
     if (!strcmp("vkGetDeviceProcAddr", pName)) {
         initDeviceTable((const VkBaseLayerObject *) device);
-        return (void *) vkGetDeviceProcAddr;
+        return (PFN_vkVoidFunction) vkGetDeviceProcAddr;
     }
 
     if (!strcmp("vkCreateDevice", pName))
-        return (void *) basic_CreateDevice;
+        return (PFN_vkVoidFunction) basic_CreateDevice;
     if (!strcmp("vkDestroyDevice", pName))
-        return (void *) basic_DestroyDevice;
+        return (PFN_vkVoidFunction) basic_DestroyDevice;
     if (!strcmp("vkLayerExtension1", pName))
-        return (void *) vkLayerExtension1;
+        return (PFN_vkVoidFunction) vkLayerExtension1;
     else
     {
         if (device_dispatch_table(device)->GetDeviceProcAddr == NULL)
@@ -157,7 +157,7 @@ VK_LAYER_EXPORT void * VKAPI vkGetDeviceProcAddr(VkDevice device, const char* pN
     }
 }
 
-VK_LAYER_EXPORT void * VKAPI vkGetInstanceProcAddr(VkInstance instance, const char* pName)
+VK_LAYER_EXPORT PFN_vkVoidFunction VKAPI vkGetInstanceProcAddr(VkInstance instance, const char* pName)
 {
     if (instance == NULL)
         return NULL;
@@ -165,19 +165,19 @@ VK_LAYER_EXPORT void * VKAPI vkGetInstanceProcAddr(VkInstance instance, const ch
     /* loader uses this to force layer initialization; instance object is wrapped */
     if (!strcmp("vkGetInstanceProcAddr", pName)) {
         initInstanceTable((const VkBaseLayerObject *) instance);
-        return (void *) vkGetInstanceProcAddr;
+        return (PFN_vkVoidFunction) vkGetInstanceProcAddr;
     }
 
     if (!strcmp("vkGetPhysicalDeviceLayerProperties", pName))
-        return (void *) vkGetPhysicalDeviceLayerProperties;
+        return (PFN_vkVoidFunction) vkGetPhysicalDeviceLayerProperties;
     if (!strcmp("vkGetPhysicalDeviceExtensionProperties", pName))
-        return (void *) vkGetPhysicalDeviceExtensionProperties;
+        return (PFN_vkVoidFunction) vkGetPhysicalDeviceExtensionProperties;
     if (!strcmp("vkGetPhysicalDeviceFormatProperties", pName))
-        return (void *) basic_GetPhysicalDeviceFormatProperties;
+        return (PFN_vkVoidFunction) basic_GetPhysicalDeviceFormatProperties;
     if (!strcmp("vkDestroyInstance", pName))
-        return (void *) basic_DestroyInstance;
+        return (PFN_vkVoidFunction) basic_DestroyInstance;
     if (!strcmp("vkEnumeratePhysicalDevices", pName))
-        return (void*) basic_EnumeratePhysicalDevices;
+        return (PFN_vkVoidFunction) basic_EnumeratePhysicalDevices;
 
     if (instance_dispatch_table(instance)->GetInstanceProcAddr == NULL)
         return NULL;

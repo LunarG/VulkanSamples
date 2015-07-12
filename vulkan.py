@@ -241,11 +241,11 @@ core = Extension(
             [Param("VkPhysicalDevice", "physicalDevice"),
              Param("VkPhysicalDeviceLimits*", "pLimits")]),
 
-        Proto("void*", "GetInstanceProcAddr",
+        Proto("PFN_vkVoidFunction", "GetInstanceProcAddr",
             [Param("VkInstance", "instance"),
              Param("const char*", "pName")]),
 
-        Proto("void*", "GetDeviceProcAddr",
+        Proto("PFN_vkVoidFunction", "GetDeviceProcAddr",
             [Param("VkDevice", "device"),
              Param("const char*", "pName")]),
 

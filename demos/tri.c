@@ -82,7 +82,7 @@
 
 #define GET_DEVICE_PROC_ADDR(dev, entrypoint)                           \
 {                                                                       \
-    demo->fp##entrypoint = vkGetDeviceProcAddr(dev, "vk"#entrypoint);   \
+    demo->fp##entrypoint = (PFN_vk##entrypoint) vkGetDeviceProcAddr(dev, "vk"#entrypoint);   \
     if (demo->fp##entrypoint == NULL) {                                 \
         ERR_EXIT("vkGetDeviceProcAddr failed to find vk"#entrypoint,    \
                  "vkGetDeviceProcAddr Failure");                        \
@@ -1646,7 +1646,7 @@ static void demo_init_vk(struct demo *demo)
     };
 
     if (demo->validate) {
-        demo->dbgCreateMsgCallback = vkGetInstanceProcAddr(demo->inst, "vkDbgCreateMsgCallback");
+        demo->dbgCreateMsgCallback = (PFN_vkDbgCreateMsgCallback) vkGetInstanceProcAddr(demo->inst, "vkDbgCreateMsgCallback");
         if (!demo->dbgCreateMsgCallback) {
             ERR_EXIT("GetProcAddr: Unable to find vkDbgCreateMsgCallback\n",
                      "vkGetProcAddr Failure");

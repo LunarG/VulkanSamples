@@ -105,7 +105,7 @@ static inline void debug_report_init_instance_extension_dispatch_table(
     table->DbgDestroyMsgCallback = (PFN_vkDbgDestroyMsgCallback) gpa(inst, "vkDbgDestroyMsgCallback");
 }
 
-static void* msg_callback_get_proc_addr(
+static PFN_vkVoidFunction msg_callback_get_proc_addr(
         const char      *funcName)
 {
     if (!g_DEBUG_REPORT) {
@@ -113,10 +113,10 @@ static void* msg_callback_get_proc_addr(
     }
 
     if (!strcmp(funcName, "vkDbgCreateMsgCallback")) {
-        return (void *) vkDbgCreateMsgCallback;
+        return (PFN_vkVoidFunction) vkDbgCreateMsgCallback;
     }
     if (!strcmp(funcName, "vkDbgDestroyMsgCallback")) {
-        return (void *) vkDbgDestroyMsgCallback;
+        return (PFN_vkVoidFunction) vkDbgDestroyMsgCallback;
     }
 
     return NULL;

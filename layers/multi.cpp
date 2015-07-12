@@ -177,7 +177,7 @@ VK_LAYER_EXPORT void * VKAPI multi1GetDeviceProcAddr(VkDevice device, const char
     }
 }
 
-VK_LAYER_EXPORT void * VKAPI multi1GetInstanceProcAddr(VkInstance inst, const char* pName)
+VK_LAYER_EXPORT PFN_vkVoidFunction VKAPI multi1GetInstanceProcAddr(VkInstance inst, const char* pName)
 {
     VkBaseLayerObject* instw = (VkBaseLayerObject *) inst;
 
@@ -331,7 +331,7 @@ VK_LAYER_EXPORT VkResult VKAPI multi2BeginCommandBuffer(VkCmdBuffer cmdBuffer, c
 
 }
 
-VK_LAYER_EXPORT void * VKAPI multi2GetDeviceProcAddr(VkDevice device, const char* pName)
+VK_LAYER_EXPORT PFN_vkVoidFunction VKAPI multi2GetDeviceProcAddr(VkDevice device, const char* pName)
 {
     VkBaseLayerObject* devw = (VkBaseLayerObject *) device;
 
@@ -359,7 +359,7 @@ VK_LAYER_EXPORT void * VKAPI multi2GetDeviceProcAddr(VkDevice device, const char
     }
 }
 
-VK_LAYER_EXPORT void * VKAPI multi2GetInstanceProcAddr(VkInstance inst, const char* pName)
+VK_LAYER_EXPORT PFN_vkVoidFunction VKAPI multi2GetInstanceProcAddr(VkInstance inst, const char* pName)
 {
     VkBaseLayerObject* instw = (VkBaseLayerObject *) inst;
 
@@ -444,7 +444,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkGetPhysicalDeviceLayerProperties(
                                    pCount, pProperties);
 }
 
-VK_LAYER_EXPORT void * VKAPI vkGetDeviceProcAddr(VkDevice device, const char* pName)
+VK_LAYER_EXPORT PFN_vkVoidFunction VKAPI vkGetDeviceProcAddr(VkDevice device, const char* pName)
 {
     // to find each layers GPA routine Loader will search via "<layerName>GetDeviceProcAddr"
     if (!strcmp("multi1GetDeviceProcAddr", pName))

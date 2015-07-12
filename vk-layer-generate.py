@@ -294,13 +294,13 @@ class Subcommand(object):
         lookups = []
         for proto in intercepted:
             lookups.append("if (!strcmp(name, \"%s\"))" % proto.name)
-            lookups.append("    return (void*) %s%s;" %
+            lookups.append("    return (PFN_vkVoidFunction) %s%s;" %
                     (prefix, proto.name))
 
         # add customized layer_intercept_proc
         body = []
         body.append('%s' % self.lineinfo.get())
-        body.append("static inline void* layer_intercept_proc(const char *name)")
+        body.append("static inline PFN_vkVoidFunction layer_intercept_proc(const char *name)")
         body.append("{")
         body.append(generate_get_proc_addr_check("name"))
         body.append("")
@@ -320,9 +320,9 @@ class Subcommand(object):
             if proto.name == "CreateDevice":
                 continue
             lookups.append("if (!strcmp(name, \"%s\"))" % proto.name)
-            lookups.append("    return (void*) %s%s;" % (prefix, proto.name))
+            lookups.append("    return (PFN_vkVoidFunction) %s%s;" % (prefix, proto.name))
 
-        body.append("static inline void* layer_intercept_instance_proc(const char *name)")
+        body.append("static inline PFN_vkVoidFunction layer_intercept_instance_proc(const char *name)")
         body.append("{")
         body.append(generate_get_proc_addr_check("name"))
         body.append("")
@@ -348,16 +348,16 @@ class Subcommand(object):
 # New style of GPA Functions for the new layer_data/layer_logging changes
 #
         if self.layer_name == 'ObjectTracker':
-            func_body.append("VK_LAYER_EXPORT void* VKAPI vkGetDeviceProcAddr(VkDevice device, const char* funcName)\n"
+            func_body.append("VK_LAYER_EXPORT PFN_vkVoidFunction VKAPI vkGetDeviceProcAddr(VkDevice device, const char* funcName)\n"
                              "{\n"
-                             "    void* addr;\n"
+                             "    PFN_vkVoidFunction addr;\n"
                              "    if (device == VK_NULL_HANDLE) {\n"
                              "        return NULL;\n"
                              "    }\n"
                              "    /* loader uses this to force layer initialization; device object is wrapped */\n"
                              "    if (!strcmp(\"vkGetDeviceProcAddr\", funcName)) {\n"
                              "        initDeviceTable(%s_device_table_map, (const VkBaseLayerObject *) device);\n"
-                             "        return (void *) vkGetDeviceProcAddr;\n"
+                             "        return (PFN_vkVoidFunction) vkGetDeviceProcAddr;\n"
                              "    }\n\n"
                              "    addr = layer_intercept_proc(funcName);\n"
                              "    if (addr)\n"
@@ -372,23 +372,23 @@ class Subcommand(object):
                         extra_space = "    "
                     for ext_name in ext_list:
                         func_body.append('    %sif (!strcmp("%s", funcName))\n'
-                                         '        %sreturn reinterpret_cast<void*>(%s);' % (extra_space, ext_name, extra_space, ext_name))
+                                         '        %sreturn reinterpret_cast<PFN_vkVoidFunction>(%s);' % (extra_space, ext_name, extra_space, ext_name))
                     if 0 != len(ext_enable):
                         func_body.append('    }\n')
             func_body.append("\n    if (get_dispatch_table(%s_device_table_map, device)->GetDeviceProcAddr == NULL)\n"
                              "        return NULL;\n"
                              "    return get_dispatch_table(%s_device_table_map, device)->GetDeviceProcAddr(device, funcName);\n"
                              "}\n" % (self.layer_name, self.layer_name))
-            func_body.append("VK_LAYER_EXPORT void* VKAPI vkGetInstanceProcAddr(VkInstance instance, const char* funcName)\n"
+            func_body.append("VK_LAYER_EXPORT PFN_vkVoidFunction VKAPI vkGetInstanceProcAddr(VkInstance instance, const char* funcName)\n"
                              "{\n"
-                             "    void* addr;\n"
+                             "    PFN_vkVoidFunction addr;\n"
                              "    if (instance == VK_NULL_HANDLE) {\n"
                              "        return NULL;\n"
                              "    }\n"
                              "    /* loader uses this to force layer initialization; instance object is wrapped */\n"
                              "    if (!strcmp(\"vkGetInstanceProcAddr\", funcName)) {\n"
                              "        initInstanceTable(%s_instance_table_map, (const VkBaseLayerObject *) instance);\n"
-                             "        return (void *) vkGetInstanceProcAddr;\n"
+                             "        return (PFN_vkVoidFunction) vkGetInstanceProcAddr;\n"
                              "    }\n\n"
                              "    addr = layer_intercept_instance_proc(funcName);\n"
                              "    if (addr) {\n"
@@ -413,9 +413,9 @@ class Subcommand(object):
 # TODO::  Old-style GPA Functions -- no local storage, no new logging mechanism.  Left for compatibility.
 #
             func_body.append('%s' % self.lineinfo.get())
-            func_body.append("VK_LAYER_EXPORT void* VKAPI vkGetDeviceProcAddr(VkDevice device, const char* funcName)\n"
+            func_body.append("VK_LAYER_EXPORT PFN_vkVoidFunction VKAPI vkGetDeviceProcAddr(VkDevice device, const char* funcName)\n"
                              "{\n"
-                             "    void* addr;\n"
+                             "    PFN_vkVoidFunction addr;\n"
                              "    if (device == VK_NULL_HANDLE) {\n"
                              "        return NULL;\n"
                              "    }\n"
@@ -423,7 +423,7 @@ class Subcommand(object):
                              "    /* loader uses this to force layer initialization; device object is wrapped */\n"
                              "    if (!strcmp(\"vkGetDeviceProcAddr\", funcName)) {\n"
                              "        initDeviceTable((const VkBaseLayerObject *) device);\n"
-                             "        return (void *) vkGetDeviceProcAddr;\n"
+                             "        return (PFN_vkVoidFunction) vkGetDeviceProcAddr;\n"
                              "    }\n\n"
                              "    addr = layer_intercept_proc(funcName);\n"
                              "    if (addr)\n"
@@ -439,7 +439,7 @@ class Subcommand(object):
                         extra_space = "    "
                     for ext_name in ext_list:
                         func_body.append('    %sif (!strcmp("%s", funcName))\n'
-                                         '            return reinterpret_cast<void*>(%s);' % (extra_space, ext_name, ext_name))
+                                         '            return reinterpret_cast<PFN_vkVoidFunction>(%s);' % (extra_space, ext_name, ext_name))
                     if 0 != len(ext_enable):
                         func_body.append('    }')
             func_body.append('%s' % self.lineinfo.get())
@@ -449,9 +449,9 @@ class Subcommand(object):
                              "        return pDisp->GetDeviceProcAddr(device, funcName);\n"
                              "    }\n"
                              "}\n")
-            func_body.append("VK_LAYER_EXPORT void* VKAPI vkGetInstanceProcAddr(VkInstance instance, const char* funcName)\n"
+            func_body.append("VK_LAYER_EXPORT PFN_vkVoidFunction VKAPI vkGetInstanceProcAddr(VkInstance instance, const char* funcName)\n"
                              "{\n"
-                             "    void* addr;\n"
+                             "    PFN_vkVoidFunction addr;\n"
                              "    if (instance == VK_NULL_HANDLE) {\n"
                              "        return NULL;\n"
                              "    }\n"
@@ -459,7 +459,7 @@ class Subcommand(object):
                              "    /* loader uses this to force layer initialization; instance object is wrapped */\n"
                              "    if (!strcmp(\"vkGetInstanceProcAddr\", funcName)) {\n"
                              "        initInstanceTable((const VkBaseLayerObject *) instance);\n"
-                             "        return (void *) vkGetInstanceProcAddr;\n"
+                             "        return (PFN_vkVoidFunction) vkGetInstanceProcAddr;\n"
                              "    }\n\n"
                              "    addr = layer_intercept_instance_proc(funcName);\n"
                              "    if (addr)\n"
@@ -467,7 +467,7 @@ class Subcommand(object):
             if 0 != len(instance_extensions):
                 for ext_name in instance_extensions:
                     func_body.append("    {\n"
-                                     "        void *fptr;\n"
+                                     "        PFN_vkVoidFunction fptr;\n"
                                      "        fptr = %s(funcName);\n"
                                      "        if (fptr) return fptr;\n"
                                      "    }\n" % ext_name)

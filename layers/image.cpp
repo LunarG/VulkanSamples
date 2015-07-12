@@ -335,7 +335,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateRenderPass(VkDevice device, const VkRende
     return result;
 }
 
-VK_LAYER_EXPORT void* VKAPI vkGetDeviceProcAddr(VkDevice device, const char* funcName)
+VK_LAYER_EXPORT PFN_vkVoidFunction VKAPI vkGetDeviceProcAddr(VkDevice device, const char* funcName)
 {
     if (device == NULL) {
         return NULL;
@@ -344,17 +344,17 @@ VK_LAYER_EXPORT void* VKAPI vkGetDeviceProcAddr(VkDevice device, const char* fun
     /* loader uses this to force layer initialization; device object is wrapped */
     if (!strcmp(funcName, "vkGetDeviceProcAddr")) {
         initDeviceTable(image_device_table_map, (const VkBaseLayerObject *) device);
-        return (void*) vkGetDeviceProcAddr;
+        return (PFN_vkVoidFunction) vkGetDeviceProcAddr;
     }
 
     if (!strcmp(funcName, "vkCreateDevice"))
-        return (void*) vkCreateDevice;
+        return (PFN_vkVoidFunction) vkCreateDevice;
     if (!strcmp(funcName, "vkDestroyDevice"))
-        return (void*) vkDestroyDevice;
+        return (PFN_vkVoidFunction) vkDestroyDevice;
     if (!strcmp(funcName, "vkCreateImage"))
-        return (void*) vkCreateImage;
+        return (PFN_vkVoidFunction) vkCreateImage;
     if (!strcmp(funcName, "vkCreateRenderPass"))
-        return (void*) vkCreateRenderPass;
+        return (PFN_vkVoidFunction) vkCreateRenderPass;
 
     {
         if (get_dispatch_table(image_device_table_map, device)->GetDeviceProcAddr == NULL)
@@ -363,7 +363,7 @@ VK_LAYER_EXPORT void* VKAPI vkGetDeviceProcAddr(VkDevice device, const char* fun
     }
 }
 
-VK_LAYER_EXPORT void* VKAPI vkGetInstanceProcAddr(VkInstance instance, const char* funcName)
+VK_LAYER_EXPORT PFN_vkVoidFunction VKAPI vkGetInstanceProcAddr(VkInstance instance, const char* funcName)
 {
     if (instance == NULL) {
         return NULL;
@@ -372,24 +372,24 @@ VK_LAYER_EXPORT void* VKAPI vkGetInstanceProcAddr(VkInstance instance, const cha
     /* loader uses this to force layer initialization; instance object is wrapped */
     if (!strcmp(funcName, "vkGetInstanceProcAddr")) {
         initInstanceTable(image_instance_table_map, (const VkBaseLayerObject *) instance);
-        return (void *) vkGetInstanceProcAddr;
+        return (PFN_vkVoidFunction) vkGetInstanceProcAddr;
     }
 
     if (!strcmp(funcName, "vkCreateInstance"))
-        return (void*) vkCreateInstance;
+        return (PFN_vkVoidFunction) vkCreateInstance;
     if (!strcmp(funcName, "vkDestroyInstance"))
-        return (void *) vkDestroyInstance;
+        return (PFN_vkVoidFunction) vkDestroyInstance;
     if (!strcmp(funcName, "vkGetGlobalLayerProperties"))
-        return (void*) vkGetGlobalLayerProperties;
+        return (PFN_vkVoidFunction) vkGetGlobalLayerProperties;
     if (!strcmp(funcName, "vkGetGlobalExtensionProperties"))
-        return (void*) vkGetGlobalExtensionProperties;
+        return (PFN_vkVoidFunction) vkGetGlobalExtensionProperties;
     if (!strcmp(funcName, "vkGetPhysicalDeviceLayerProperties"))
-        return (void*) vkGetPhysicalDeviceLayerProperties;
+        return (PFN_vkVoidFunction) vkGetPhysicalDeviceLayerProperties;
     if (!strcmp(funcName, "vkGetPhysicalDeviceExtensionProperties"))
-        return (void*) vkGetPhysicalDeviceExtensionProperties;
+        return (PFN_vkVoidFunction) vkGetPhysicalDeviceExtensionProperties;
 
     layer_data *data = get_my_data_ptr(get_dispatch_key(instance), layer_data_map);
-    void* fptr = debug_report_get_instance_proc_addr(data->report_data, funcName);
+    PFN_vkVoidFunction fptr = debug_report_get_instance_proc_addr(data->report_data, funcName);
     if(fptr)
         return fptr;
 
