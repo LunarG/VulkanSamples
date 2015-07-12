@@ -1142,11 +1142,6 @@ static VkResult pipeline_build_all(struct intel_pipeline *pipeline,
         info->vi.attributeCount > ARRAY_SIZE(pipeline->vb))
         return VK_ERROR_BAD_PIPELINE_DATA;
 
-    if (info->vp.depthMode != VK_DEPTH_MODE_ZERO_TO_ONE) {
-        assert(!"only VK_DEPTH_MODE_ZERO_TO_ONE is supported");
-        return VK_ERROR_INVALID_VALUE;
-    }
-
     pipeline->vb_count = info->vi.bindingCount;
     memcpy(pipeline->vb, info->vi.pVertexBindingDescriptions,
             sizeof(pipeline->vb[0]) * pipeline->vb_count);

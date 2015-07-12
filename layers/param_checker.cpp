@@ -4538,13 +4538,6 @@ bool PreCreateGraphicsPipeline(
         "vkCreateGraphicsPipeline parameter, VkStructureType pCreateInfo->pVpState->sType, is unrecognized enumerator");
         return false;
     }
-    if(pCreateInfo->pViewportState->depthMode < VK_DEPTH_MODE_BEGIN_RANGE ||
-        pCreateInfo->pViewportState->depthMode > VK_DEPTH_MODE_END_RANGE)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateGraphicsPipeline parameter, VkDepthMode pCreateInfo->pVpState->depthMode, is unrecognized enumerator");
-        return false;
-    }
     if(pCreateInfo->pRasterState == nullptr)
     {
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
@@ -4949,13 +4942,6 @@ bool PreCreateGraphicsPipelineDerivative(
     {
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
         "vkCreateGraphicsPipelineDerivative parameter, VkStructureType pCreateInfo->pVpState->sType, is unrecognized enumerator");
-        return false;
-    }
-    if(pCreateInfo->pViewportState->depthMode < VK_DEPTH_MODE_BEGIN_RANGE ||
-        pCreateInfo->pViewportState->depthMode > VK_DEPTH_MODE_END_RANGE)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateGraphicsPipelineDerivative parameter, VkDepthMode pCreateInfo->pVpState->depthMode, is unrecognized enumerator");
         return false;
     }
     if(pCreateInfo->pRasterState == nullptr)
