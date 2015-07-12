@@ -4687,13 +4687,6 @@ bool PreCreateGraphicsPipeline(
         "vkCreateGraphicsPipeline parameter, const VkPipelineCbAttachmentState* pCreateInfo->pCbState->pAttachments, is null pointer");
         return false;
     }
-    if(pCreateInfo->pColorBlendState->pAttachments->format < VK_FORMAT_BEGIN_RANGE ||
-        pCreateInfo->pColorBlendState->pAttachments->format > VK_FORMAT_END_RANGE)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateGraphicsPipeline parameter, VkFormat pCreateInfo->pCbState->pAttachments->format, is unrecognized enumerator");
-        return false;
-    }
     if(pCreateInfo->pColorBlendState->pAttachments->srcBlendColor < VK_BLEND_BEGIN_RANGE ||
         pCreateInfo->pColorBlendState->pAttachments->srcBlendColor > VK_BLEND_END_RANGE)
     {
@@ -5077,13 +5070,6 @@ bool PreCreateGraphicsPipelineDerivative(
     {
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
         "vkCreateGraphicsPipelineDerivative parameter, const VkPipelineCbAttachmentState* pCreateInfo->pCbState->pAttachments, is null pointer");
-        return false;
-    }
-    if(pCreateInfo->pColorBlendState->pAttachments->format < VK_FORMAT_BEGIN_RANGE ||
-        pCreateInfo->pColorBlendState->pAttachments->format > VK_FORMAT_END_RANGE)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateGraphicsPipelineDerivative parameter, VkFormat pCreateInfo->pCbState->pAttachments->format, is unrecognized enumerator");
         return false;
     }
     if(pCreateInfo->pColorBlendState->pAttachments->srcBlendColor < VK_BLEND_BEGIN_RANGE ||
