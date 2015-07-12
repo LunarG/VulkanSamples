@@ -930,7 +930,7 @@ core = Extension(
              Param("VkPipelineStageFlags", "sourceStageMask"),
              Param("VkPipelineStageFlags", "destStageMask"),
              Param("uint32_t", "memBarrierCount"),
-             Param("const void**", "ppMemBarriers")]),
+             Param("const void* const*", "ppMemBarriers")]),
 
         Proto("void", "CmdPipelineBarrier",
             [Param("VkCmdBuffer", "cmdBuffer"),

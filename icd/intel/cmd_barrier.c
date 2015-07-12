@@ -272,7 +272,7 @@ ICD_EXPORT void VKAPI vkCmdWaitEvents(
     VkPipelineStageFlags                        sourceStageMask,
     VkPipelineStageFlags                        destStageMask,
     uint32_t                                    memBarrierCount,
-    const void**                                ppMemBarriers)
+    const void* const*                          ppMemBarriers)
 {
     struct intel_cmd *cmd = intel_cmd(cmdBuffer);
 

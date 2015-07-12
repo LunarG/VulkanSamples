@@ -7857,7 +7857,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdResetEvent(
 bool PreCmdWaitEvents(
     VkCmdBuffer cmdBuffer,
     const VkEvent* pEvents,
-    const void** ppMemBarriers)
+    const void* const* ppMemBarriers)
 {
     if(pEvents == nullptr)
     {
@@ -7898,7 +7898,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdWaitEvents(
     VkPipelineStageFlags sourceStageMask,
     VkPipelineStageFlags destStageMask,
     uint32_t memBarrierCount,
-    const void** ppMemBarriers)
+    const void* const* ppMemBarriers)
 {
     PreCmdWaitEvents(cmdBuffer, pEvents, ppMemBarriers);
 
