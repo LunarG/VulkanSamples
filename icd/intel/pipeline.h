@@ -195,10 +195,6 @@ struct intel_pipeline {
     bool disable_vs_cache;
     bool primitive_restart;
     uint32_t primitive_restart_index;
-    /* Index of provoking vertex for each prim type */
-    int provoking_vertex_tri;
-    int provoking_vertex_trifan;
-    int provoking_vertex_line;
 
     // TODO: This should probably be Intel HW state, not VK state.
     /* Depth Buffer format */

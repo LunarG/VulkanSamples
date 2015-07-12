@@ -525,9 +525,9 @@ static void gen7_fill_3DSTATE_SF_body(const struct intel_cmd *cmd,
                  GEN7_SF_DW2_MSRASTMODE_OFF_PIXEL;
     }
 
-    dw3 = pipeline->provoking_vertex_tri << GEN7_SF_DW3_TRI_PROVOKE__SHIFT |
-          pipeline->provoking_vertex_line << GEN7_SF_DW3_LINE_PROVOKE__SHIFT |
-          pipeline->provoking_vertex_trifan << GEN7_SF_DW3_TRIFAN_PROVOKE__SHIFT |
+    dw3 = 2 << GEN7_SF_DW3_TRI_PROVOKE__SHIFT |
+          1 << GEN7_SF_DW3_LINE_PROVOKE__SHIFT |
+          2 << GEN7_SF_DW3_TRIFAN_PROVOKE__SHIFT |
           GEN7_SF_DW3_SUBPIXEL_8BITS;
 
     body[0] = dw1;
@@ -595,9 +595,9 @@ static void gen6_3DSTATE_CLIP(struct intel_cmd *cmd)
           GEN6_CLIP_DW2_APIMODE_D3D | /* depth range [0, 1] */
           GEN6_CLIP_DW2_XY_TEST_ENABLE |
           (vs->enable_user_clip ? 1 : 0) << GEN6_CLIP_DW2_UCP_CLIP_ENABLES__SHIFT |
-          pipeline->provoking_vertex_tri << GEN6_CLIP_DW2_TRI_PROVOKE__SHIFT |
-          pipeline->provoking_vertex_line << GEN6_CLIP_DW2_LINE_PROVOKE__SHIFT |
-          pipeline->provoking_vertex_trifan << GEN6_CLIP_DW2_TRIFAN_PROVOKE__SHIFT;
+          2 << GEN6_CLIP_DW2_TRI_PROVOKE__SHIFT |
+          1 << GEN6_CLIP_DW2_LINE_PROVOKE__SHIFT |
+          2 << GEN6_CLIP_DW2_TRIFAN_PROVOKE__SHIFT;
 
     if (pipeline->rasterizerDiscardEnable)
         dw2 |= GEN6_CLIP_DW2_CLIPMODE_REJECT_ALL;

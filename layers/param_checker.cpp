@@ -4551,13 +4551,6 @@ bool PreCreateGraphicsPipeline(
         "vkCreateGraphicsPipeline parameter, VkStructureType pCreateInfo->pRsState->sType, is unrecognized enumerator");
         return false;
     }
-    if(pCreateInfo->pRasterState->provokingVertex < VK_PROVOKING_VERTEX_BEGIN_RANGE ||
-        pCreateInfo->pRasterState->provokingVertex > VK_PROVOKING_VERTEX_END_RANGE)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateGraphicsPipeline parameter, VkProvokingVertex pCreateInfo->pRsState->provokingVertex, is unrecognized enumerator");
-        return false;
-    }
     if(pCreateInfo->pRasterState->fillMode < VK_FILL_MODE_BEGIN_RANGE ||
         pCreateInfo->pRasterState->fillMode > VK_FILL_MODE_END_RANGE)
     {
@@ -4948,13 +4941,6 @@ bool PreCreateGraphicsPipelineDerivative(
     {
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
         "vkCreateGraphicsPipelineDerivative parameter, VkStructureType pCreateInfo->pRsState->sType, is unrecognized enumerator");
-        return false;
-    }
-    if(pCreateInfo->pRasterState->provokingVertex < VK_PROVOKING_VERTEX_BEGIN_RANGE ||
-        pCreateInfo->pRasterState->provokingVertex > VK_PROVOKING_VERTEX_END_RANGE)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateGraphicsPipelineDerivative parameter, VkProvokingVertex pCreateInfo->pRsState->provokingVertex, is unrecognized enumerator");
         return false;
     }
     if(pCreateInfo->pRasterState->fillMode < VK_FILL_MODE_BEGIN_RANGE ||

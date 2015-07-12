@@ -367,16 +367,6 @@ static VkResult pipeline_build_rs_state(struct intel_pipeline *pipeline,
     pipeline->depthClipEnable = rs_state->depthClipEnable;
     pipeline->rasterizerDiscardEnable = rs_state->rasterizerDiscardEnable;
 
-    if (rs_state->provokingVertex == VK_PROVOKING_VERTEX_FIRST) {
-        pipeline->provoking_vertex_tri = 0;
-        pipeline->provoking_vertex_trifan = 1;
-        pipeline->provoking_vertex_line = 0;
-    } else {
-        pipeline->provoking_vertex_tri = 2;
-        pipeline->provoking_vertex_trifan = 2;
-        pipeline->provoking_vertex_line = 1;
-    }
-
     switch (rs_state->fillMode) {
     case VK_FILL_MODE_POINTS:
         pipeline->cmd_sf_fill |= GEN7_SF_DW1_FRONTFACE_POINT |
