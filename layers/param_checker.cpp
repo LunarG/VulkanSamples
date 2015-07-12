@@ -218,11 +218,6 @@ std::string EnumeratorString(VkResult const& enumerator)
             return "VK_ERROR_BAD_PIPELINE_DATA";
             break;
         }
-        case VK_ERROR_INVALID_OBJECT_TYPE:
-        {
-            return "VK_ERROR_INVALID_OBJECT_TYPE";
-            break;
-        }
         case VK_ERROR_INVALID_QUEUE_TYPE:
         {
             return "VK_ERROR_INVALID_QUEUE_TYPE";
