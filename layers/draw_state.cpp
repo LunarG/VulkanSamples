@@ -1431,7 +1431,6 @@ static const VkExtensionProperties ds_device_extensions[] = {
     {
         DEBUG_MARKER_EXTENSION_NAME,
         VK_MAKE_VERSION(0, 1, 0),
-        VK_API_VERSION
     }
 };
 
@@ -2701,7 +2700,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdPipelineBarrier(VkCmdBuffer cmdBuffer, VkPipelin
         if (pCB->state == CB_UPDATE_ACTIVE) {
             updateCBTracking(cmdBuffer);
             addCmd(pCB, CMD_PIPELINEBARRIER);
-            get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdPipelineBarrier(cmdBuffer, sourceStageMask, destStageMask, byRegion, memBarrierCount, ppMemBarriers);
+            get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdPipelineBarrier(cmdBuffer, srcStageMask, destStageMask, byRegion, memBarrierCount, ppMemBarriers);
         } else {
             report_error_no_cb_begin(cmdBuffer, "vkCmdPipelineBarrier()");
         }

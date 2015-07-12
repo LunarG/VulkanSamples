@@ -329,20 +329,16 @@ static void loader_add_global_extensions(
         ext_props.origin = origin;
         ext_props.lib_name = lib_name;
 
-        char spec_version[64], version[64];
+        char spec_version[64];
 
         snprintf(spec_version, sizeof(spec_version), "%d.%d.%d",
                  VK_MAJOR(ext_props.info.specVersion),
                  VK_MINOR(ext_props.info.specVersion),
                  VK_PATCH(ext_props.info.specVersion));
-        snprintf(version, sizeof(version), "%d.%d.%d",
-                 VK_MAJOR(ext_props.info.version),
-                 VK_MINOR(ext_props.info.version),
-                 VK_PATCH(ext_props.info.version));
 
         loader_log(VK_DBG_REPORT_DEBUG_BIT, 0,
-                   "Global Extension: %s (%s) version %s, Vulkan version %s",
-                   ext_props.info.extName, lib_name, version, spec_version);
+                   "Global Extension: %s (%s) version %s",
+                   ext_props.info.extName, lib_name, spec_version);
         loader_add_to_ext_list(ext_list, 1, &ext_props);
     }
 
@@ -373,7 +369,7 @@ static void loader_add_physical_device_extensions(
 
             res = get_phys_dev_ext_props(physical_device, NULL, &count, extension_properties);
             for (i = 0; i < count; i++) {
-                char spec_version[64], version[64];
+                char spec_version[64];
 
                 memcpy(&ext_props.info, &extension_properties[i], sizeof(VkExtensionProperties));
 
@@ -381,14 +377,10 @@ static void loader_add_physical_device_extensions(
                          VK_MAJOR(ext_props.info.specVersion),
                          VK_MINOR(ext_props.info.specVersion),
                          VK_PATCH(ext_props.info.specVersion));
-                snprintf(version, sizeof(version), "%d.%d.%d",
-                         VK_MAJOR(ext_props.info.version),
-                         VK_MINOR(ext_props.info.version),
-                         VK_PATCH(ext_props.info.version));
 
                 loader_log(VK_DBG_REPORT_DEBUG_BIT, 0,
-                           "PhysicalDevice Extension: %s (%s) version %s, Vulkan version %s",
-                           ext_props.info.extName, lib_name, version, spec_version);
+                           "PhysicalDevice Extension: %s (%s) version %s",
+                           ext_props.info.extName, lib_name, spec_version);
                 loader_add_to_ext_list(ext_list, 1, &ext_props);
             }
         } else {
@@ -1390,7 +1382,7 @@ static void loader_add_layer_properties(struct loader_layer_list *layer_list,
     //TODO merge the info with the versions and convert string to int
     props->abi_version = abi_versions;
     props->impl_version = implementation_version;
-    strncpy(props->info.description, description, sizeof(props->info.description));
+    strncpy((char *) props->info.description, description, sizeof(props->info.description));
     props->info.description[sizeof(props->info.description) - 1] = '\0';
     free(description);
     if (is_implicit) {

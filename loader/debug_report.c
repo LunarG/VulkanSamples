@@ -42,8 +42,7 @@ typedef void (VKAPI *PFN_stringCallback)(char *message);
 static const struct loader_extension_property debug_report_extension_info = {
     .info =  {
         .extName = DEBUG_REPORT_EXTENSION_NAME,
-        .version = VK_DEBUG_REPORT_EXTENSION_VERSION,
-        .specVersion = VK_API_VERSION,
+        .specVersion = VK_DEBUG_REPORT_EXTENSION_VERSION,
         },
     .origin = VK_EXTENSION_ORIGIN_LOADER,
 };

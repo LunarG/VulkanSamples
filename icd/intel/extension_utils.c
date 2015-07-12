@@ -31,13 +31,11 @@
 const VkExtensionProperties intel_global_exts[INTEL_GLOBAL_EXT_COUNT] = {
     {
         .extName = DEBUG_REPORT_EXTENSION_NAME,
-        .version = VK_DEBUG_REPORT_EXTENSION_VERSION,
-        .specVersion = VK_API_VERSION,
+        .specVersion = VK_DEBUG_REPORT_EXTENSION_VERSION,
     },
     {
         .extName = VK_WSI_LUNARG_EXTENSION_NAME,
-        .version = VK_WSI_LUNARG_REVISION,
-        .specVersion = VK_API_VERSION,
+        .specVersion = VK_WSI_LUNARG_REVISION,
     }
 };
 

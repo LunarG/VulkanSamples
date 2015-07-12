@@ -74,7 +74,6 @@ static const VkExtensionProperties basic_physicaldevice_extensions[] = {
     {
         "vkLayerExtension1",
         VK_MAKE_VERSION(0, 1, 0),
-        VK_API_VERSION
     }
 };
 

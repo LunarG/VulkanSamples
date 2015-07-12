@@ -182,7 +182,7 @@ static uint32_t cmd_get_flush_flags(const struct intel_cmd *cmd,
 static void cmd_memory_barriers(struct intel_cmd *cmd,
 				                uint32_t flush_flags,
                                 uint32_t memory_barrier_count,
-                                const void** memory_barriers)
+                                const void* const* memory_barriers)
 {
     uint32_t i;
     VkFlags input_mask = 0;
@@ -314,7 +314,7 @@ ICD_EXPORT void VKAPI vkCmdPipelineBarrier(
      * All other pEvents values will behave as VK_PIPE_EVENT_COMMANDS_COMPLETE.
      */
 
-    if ((sourceStageMask & VK_PIPELINE_STAGE_ALL_GRAPHICS) ||
+    if ((srcStageMask & VK_PIPELINE_STAGE_ALL_GRAPHICS) ||
             (destStageMask & VK_PIPELINE_STAGE_ALL_GRAPHICS)){
         pipe_control_flags = GEN6_PIPE_CONTROL_CS_STALL;
     }

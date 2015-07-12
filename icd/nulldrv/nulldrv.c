@@ -45,8 +45,7 @@ static const char * const nulldrv_gpu_exts[NULLDRV_EXT_COUNT] = {
 static const VkExtensionProperties intel_gpu_exts[NULLDRV_EXT_COUNT] = {
     {
         .extName = VK_WSI_LUNARG_EXTENSION_NAME,
-        .version = VK_WSI_LUNARG_REVISION,
-        .specVersion = VK_API_VERSION,
+        .specVersion = ,VK_WSI_LUNARG_REVISION,
     }
 };
 
