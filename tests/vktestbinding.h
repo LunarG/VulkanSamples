@@ -124,7 +124,6 @@ public:
     }
 
     VkPhysicalDeviceProperties properties() const;
-    VkPhysicalDevicePerformance performance() const;
     VkPhysicalDeviceMemoryProperties memory_properties() const;
     std::vector<VkPhysicalDeviceQueueProperties> queue_properties() const;
 

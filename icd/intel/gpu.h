@@ -98,8 +98,6 @@ void intel_gpu_destroy(struct intel_gpu *gpu);
 
 void intel_gpu_get_props(const struct intel_gpu *gpu,
                          VkPhysicalDeviceProperties *props);
-void intel_gpu_get_perf(const struct intel_gpu *gpu,
-                        VkPhysicalDevicePerformance *perf);
 void intel_gpu_get_queue_props(const struct intel_gpu *gpu,
                                enum intel_gpu_engine_type engine,
                                VkPhysicalDeviceQueueProperties *props);

@@ -1825,7 +1825,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkGetPhysicalDeviceFeatures(
     return result;
 }
 
-bool PostGetPhysicalDeviceFormatInfo(
+bool PostGetPhysicalDeviceFormatProperties(
     VkPhysicalDevice physicalDevice,
     VkFormat format,
     VkFormatProperties* pFormatInfo,
@@ -1836,32 +1836,32 @@ bool PostGetPhysicalDeviceFormatInfo(
         format > VK_FORMAT_END_RANGE)
     {
         log_msg(mdd(physicalDevice), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkGetPhysicalDeviceFormatInfo parameter, VkFormat format, is unrecognized enumerator");
+        "vkGetPhysicalDeviceFormatProperties parameter, VkFormat format, is unrecognized enumerator");
         return false;
     }
 
     if(pFormatInfo == nullptr)
     {
         log_msg(mdd(physicalDevice), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkGetPhysicalDeviceFormatInfo parameter, VkFormatProperties* pFormatInfo, is null pointer");
+        "vkGetPhysicalDeviceFormatProperties parameter, VkFormatProperties* pFormatInfo, is null pointer");
         return false;
     }
     if(!ValidateEnumerator((VkFormatFeatureFlagBits)pFormatInfo->linearTilingFeatures))
     {
-        std::string reason = "vkGetPhysicalDeviceFormatInfo parameter, VkFormatFeatureFlags pFormatInfo->linearTilingFeatures, is " + EnumeratorString((VkFormatFeatureFlagBits)pFormatInfo->linearTilingFeatures);
+        std::string reason = "vkGetPhysicalDeviceFormatProperties parameter, VkFormatFeatureFlags pFormatInfo->linearTilingFeatures, is " + EnumeratorString((VkFormatFeatureFlagBits)pFormatInfo->linearTilingFeatures);
         log_msg(mdd(physicalDevice), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
         return false;
     }
     if(!ValidateEnumerator((VkFormatFeatureFlagBits)pFormatInfo->optimalTilingFeatures))
     {
-        std::string reason = "vkGetPhysicalDeviceFormatInfo parameter, VkFormatFeatureFlags pFormatInfo->optimalTilingFeatures, is " + EnumeratorString((VkFormatFeatureFlagBits)pFormatInfo->optimalTilingFeatures);
+        std::string reason = "vkGetPhysicalDeviceFormatProperties parameter, VkFormatFeatureFlags pFormatInfo->optimalTilingFeatures, is " + EnumeratorString((VkFormatFeatureFlagBits)pFormatInfo->optimalTilingFeatures);
         log_msg(mdd(physicalDevice), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
         return false;
     }
 
     if(result != VK_SUCCESS)
     {
-        std::string reason = "vkGetPhysicalDeviceFormatInfo parameter, VkResult result, is " + EnumeratorString(result);
+        std::string reason = "vkGetPhysicalDeviceFormatProperties parameter, VkResult result, is " + EnumeratorString(result);
         log_msg(mdd(physicalDevice), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
         return false;
     }
@@ -1869,14 +1869,14 @@ bool PostGetPhysicalDeviceFormatInfo(
     return true;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkGetPhysicalDeviceFormatInfo(
+VK_LAYER_EXPORT VkResult VKAPI vkGetPhysicalDeviceFormatProperties(
     VkPhysicalDevice physicalDevice,
     VkFormat format,
     VkFormatProperties* pFormatInfo)
 {
-    VkResult result = get_dispatch_table(pc_instance_table_map, physicalDevice)->GetPhysicalDeviceFormatInfo(physicalDevice, format, pFormatInfo);
+    VkResult result = get_dispatch_table(pc_instance_table_map, physicalDevice)->GetPhysicalDeviceFormatProperties(physicalDevice, format, pFormatInfo);
 
-    PostGetPhysicalDeviceFormatInfo(physicalDevice, format, pFormatInfo, result);
+    PostGetPhysicalDeviceFormatProperties(physicalDevice, format, pFormatInfo, result);
 
     return result;
 }
@@ -1986,40 +1986,6 @@ VK_LAYER_EXPORT VkResult VKAPI vkGetPhysicalDeviceProperties(
     VkResult result = get_dispatch_table(pc_instance_table_map, physicalDevice)->GetPhysicalDeviceProperties(physicalDevice, pProperties);
 
     PostGetPhysicalDeviceProperties(physicalDevice, pProperties, result);
-
-    return result;
-}
-
-bool PostGetPhysicalDevicePerformance(
-    VkPhysicalDevice physicalDevice,
-    VkPhysicalDevicePerformance* pPerformance,
-    VkResult result)
-{
-
-    if(pPerformance == nullptr)
-    {
-        log_msg(mdd(physicalDevice), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkGetPhysicalDevicePerformance parameter, VkPhysicalDevicePerformance* pPerformance, is null pointer");
-        return false;
-    }
-
-    if(result != VK_SUCCESS)
-    {
-        std::string reason = "vkGetPhysicalDevicePerformance parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(physicalDevice), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
-        return false;
-    }
-
-    return true;
-}
-
-VK_LAYER_EXPORT VkResult VKAPI vkGetPhysicalDevicePerformance(
-    VkPhysicalDevice physicalDevice,
-    VkPhysicalDevicePerformance* pPerformance)
-{
-    VkResult result = get_dispatch_table(pc_instance_table_map, physicalDevice)->GetPhysicalDevicePerformance(physicalDevice, pPerformance);
-
-    PostGetPhysicalDevicePerformance(physicalDevice, pPerformance, result);
 
     return result;
 }
@@ -8695,8 +8661,8 @@ VK_LAYER_EXPORT void* VKAPI vkGetInstanceProcAddr(VkInstance instance, const cha
         return (void*) vkGetPhysicalDeviceProperties;
     if (!strcmp(funcName, "vkGetPhysicalDeviceFeatures"))
         return (void*) vkGetPhysicalDeviceFeatures;
-    if (!strcmp(funcName, "vkGetPhysicalDeviceFormatInfo"))
-        return (void*) vkGetPhysicalDeviceFormatInfo;
+    if (!strcmp(funcName, "vkGetPhysicalDeviceFormatProperties"))
+        return (void*) vkGetPhysicalDeviceFormatProperties;
     if (!strcmp(funcName, "vkGetPhysicalDeviceLimits"))
         return (void*) vkGetPhysicalDeviceLimits;
     if (!strcmp(funcName, "vkGetGlobalLayerProperties"))

@@ -467,10 +467,9 @@ static inline void loader_init_instance_core_dispatch_table(VkLayerInstanceDispa
     table->DestroyInstance = (PFN_vkDestroyInstance) gpa(inst, "vkDestroyInstance");
     table->EnumeratePhysicalDevices = (PFN_vkEnumeratePhysicalDevices) gpa(inst, "vkEnumeratePhysicalDevices");
     table->GetPhysicalDeviceFeatures = (PFN_vkGetPhysicalDeviceFeatures) gpa(inst, "vkGetPhysicalDeviceFeatures");
-    table->GetPhysicalDeviceFormatInfo = (PFN_vkGetPhysicalDeviceFormatInfo) gpa(inst, "vkGetPhysicalDeviceFormatInfo");
+    table->GetPhysicalDeviceFormatProperties = (PFN_vkGetPhysicalDeviceFormatProperties) gpa(inst, "vkGetPhysicalDeviceFormatProperties");
     table->GetPhysicalDeviceLimits = (PFN_vkGetPhysicalDeviceLimits) gpa(inst, "vkGetPhysicalDeviceLimits");
     table->GetPhysicalDeviceProperties = (PFN_vkGetPhysicalDeviceProperties) gpa(inst, "vkGetPhysicalDeviceProperties");
-    table->GetPhysicalDevicePerformance = (PFN_vkGetPhysicalDevicePerformance) gpa(inst, "vkGetPhysicalDevicePerformance");
     table->GetPhysicalDeviceQueueCount = (PFN_vkGetPhysicalDeviceQueueCount) gpa(inst, "vkGetPhysicalDeviceQueueCount");
     table->GetPhysicalDeviceQueueProperties = (PFN_vkGetPhysicalDeviceQueueProperties) gpa(inst, "vkGetPhysicalDeviceQueueProperties");
     table->GetPhysicalDeviceMemoryProperties = (PFN_vkGetPhysicalDeviceMemoryProperties) gpa(inst, "vkGetPhysicalDeviceMemoryProperties");
@@ -504,16 +503,14 @@ static inline void *loader_lookup_instance_dispatch_table(
         return (void *) table->EnumeratePhysicalDevices;
     if (!strcmp(name, "GetPhysicalDeviceFeatures"))
         return (void *) table->GetPhysicalDeviceFeatures;
-    if (!strcmp(name, "GetPhysicalDeviceFormatInfo"))
-        return (void *) table->GetPhysicalDeviceFormatInfo;
+    if (!strcmp(name, "GetPhysicalDeviceFormatProperties"))
+        return (void *) table->GetPhysicalDeviceFormatProperties;
     if (!strcmp(name, "GetPhysicalDeviceLimits"))
         return (void *) table->GetPhysicalDeviceLimits;
     if (!strcmp(name, "GetPhysicalDeviceSparseImageFormatProperties"))
         return (void *) table->GetPhysicalDeviceSparseImageFormatProperties;
     if (!strcmp(name, "GetPhysicalDeviceProperties"))
         return (void *) table->GetPhysicalDeviceProperties;
-    if (!strcmp(name, "GetPhysicalDevicePerformance"))
-        return (void *) table->GetPhysicalDevicePerformance;
     if (!strcmp(name, "GetPhysicalDeviceQueueCount"))
         return (void *) table->GetPhysicalDeviceQueueCount;
     if (!strcmp(name, "GetPhysicalDeviceQueueProperties"))

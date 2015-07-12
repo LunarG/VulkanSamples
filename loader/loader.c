@@ -89,10 +89,9 @@ const VkLayerInstanceDispatchTable instance_disp = {
     .DestroyInstance = loader_DestroyInstance,
     .EnumeratePhysicalDevices = loader_EnumeratePhysicalDevices,
     .GetPhysicalDeviceFeatures = loader_GetPhysicalDeviceFeatures,
-    .GetPhysicalDeviceFormatInfo = loader_GetPhysicalDeviceFormatInfo,
+    .GetPhysicalDeviceFormatProperties = loader_GetPhysicalDeviceFormatProperties,
     .GetPhysicalDeviceLimits = loader_GetPhysicalDeviceLimits,
     .GetPhysicalDeviceProperties = loader_GetPhysicalDeviceProperties,
-    .GetPhysicalDevicePerformance = loader_GetPhysicalDevicePerformance,
     .GetPhysicalDeviceQueueCount = loader_GetPhysicalDeviceQueueCount,
     .GetPhysicalDeviceQueueProperties = loader_GetPhysicalDeviceQueueProperties,
     .GetPhysicalDeviceMemoryProperties = loader_GetPhysicalDeviceMemoryProperties,
@@ -1079,12 +1078,11 @@ static void loader_icd_init_entrys(struct loader_icd *icd,
     LOOKUP(DestroyInstance);
     LOOKUP(EnumeratePhysicalDevices);
     LOOKUP(GetPhysicalDeviceFeatures);
-    LOOKUP(GetPhysicalDeviceFormatInfo);
+    LOOKUP(GetPhysicalDeviceFormatProperties);
     LOOKUP(GetPhysicalDeviceLimits);
     LOOKUP(CreateDevice);
     LOOKUP(GetPhysicalDeviceProperties);
     LOOKUP(GetPhysicalDeviceMemoryProperties);
-    LOOKUP(GetPhysicalDevicePerformance);
     LOOKUP(GetPhysicalDeviceQueueCount);
     LOOKUP(GetPhysicalDeviceQueueProperties);
     LOOKUP(GetPhysicalDeviceExtensionProperties);
@@ -2633,20 +2631,6 @@ VkResult loader_GetPhysicalDeviceProperties(
     return res;
 }
 
-VkResult loader_GetPhysicalDevicePerformance(
-        VkPhysicalDevice                        gpu,
-        VkPhysicalDevicePerformance*            pPerformance)
-{
-    uint32_t gpu_index;
-    struct loader_icd *icd = loader_get_icd(gpu, &gpu_index);
-    VkResult res = VK_ERROR_INITIALIZATION_FAILED;
-
-    if (icd->GetPhysicalDevicePerformance)
-        res = icd->GetPhysicalDevicePerformance(gpu, pPerformance);
-
-    return res;
-}
-
 VkResult loader_GetPhysicalDeviceQueueCount(
         VkPhysicalDevice                        gpu,
         uint32_t*                               pCount)
@@ -2704,7 +2688,7 @@ VkResult loader_GetPhysicalDeviceFeatures(
     return res;
 }
 
-VkResult loader_GetPhysicalDeviceFormatInfo(
+VkResult loader_GetPhysicalDeviceFormatProperties(
         VkPhysicalDevice                        physicalDevice,
         VkFormat                                format,
         VkFormatProperties*                     pFormatInfo)
@@ -2713,8 +2697,8 @@ VkResult loader_GetPhysicalDeviceFormatInfo(
     struct loader_icd *icd = loader_get_icd(physicalDevice, &gpu_index);
     VkResult res = VK_ERROR_INITIALIZATION_FAILED;
 
-    if (icd->GetPhysicalDeviceFormatInfo)
-        res = icd->GetPhysicalDeviceFormatInfo(physicalDevice, format, pFormatInfo);
+    if (icd->GetPhysicalDeviceFormatProperties)
+        res = icd->GetPhysicalDeviceFormatProperties(physicalDevice, format, pFormatInfo);
 
     return res;
 }

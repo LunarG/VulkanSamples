@@ -232,7 +232,7 @@ core = Extension(
             [Param("VkPhysicalDevice", "physicalDevice"),
              Param("VkPhysicalDeviceFeatures*", "pFeatures")]),
 
-        Proto("VkResult", "GetPhysicalDeviceFormatInfo",
+        Proto("VkResult", "GetPhysicalDeviceFormatProperties",
             [Param("VkPhysicalDevice", "physicalDevice"),
              Param("VkFormat", "format"),
              Param("VkFormatProperties*", "pFormatInfo")]),
@@ -260,10 +260,6 @@ core = Extension(
         Proto("VkResult", "GetPhysicalDeviceProperties",
             [Param("VkPhysicalDevice", "physicalDevice"),
              Param("VkPhysicalDeviceProperties*", "pProperties")]),
-
-        Proto("VkResult", "GetPhysicalDevicePerformance",
-            [Param("VkPhysicalDevice", "physicalDevice"),
-             Param("VkPhysicalDevicePerformance*", "pPerformance")]),
 
         Proto("VkResult", "GetPhysicalDeviceQueueCount",
             [Param("VkPhysicalDevice", "physicalDevice"),

@@ -314,7 +314,7 @@ void VkRenderFramework::InitRenderTarget(uint32_t targets, VkAttachmentBindInfo 
         VkFormatProperties props;
         VkResult err;
 
-        err = vkGetPhysicalDeviceFormatInfo(m_device->phy().handle(), m_render_target_fmt, &props);
+        err = vkGetPhysicalDeviceFormatProperties(m_device->phy().handle(), m_render_target_fmt, &props);
         ASSERT_VK_SUCCESS(err);
 
         if (props.linearTilingFeatures & VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT) {
@@ -691,7 +691,7 @@ void VkImageObj::init(uint32_t w, uint32_t h,
         mipCount++;
     }
 
-    err = vkGetPhysicalDeviceFormatInfo(m_device->phy().handle(), fmt, &image_fmt);
+    err = vkGetPhysicalDeviceFormatProperties(m_device->phy().handle(), fmt, &image_fmt);
     ASSERT_VK_SUCCESS(err);
 
     if (requested_tiling == VK_IMAGE_TILING_LINEAR) {

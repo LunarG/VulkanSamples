@@ -144,11 +144,10 @@ struct loader_icd {
     PFN_vkDestroyInstance DestroyInstance;
     PFN_vkEnumeratePhysicalDevices EnumeratePhysicalDevices;
     PFN_vkGetPhysicalDeviceFeatures GetPhysicalDeviceFeatures;
-    PFN_vkGetPhysicalDeviceFormatInfo GetPhysicalDeviceFormatInfo;
+    PFN_vkGetPhysicalDeviceFormatProperties GetPhysicalDeviceFormatProperties;
     PFN_vkGetPhysicalDeviceLimits GetPhysicalDeviceLimits;
     PFN_vkCreateDevice CreateDevice;
     PFN_vkGetPhysicalDeviceProperties GetPhysicalDeviceProperties;
-    PFN_vkGetPhysicalDevicePerformance GetPhysicalDevicePerformance;
     PFN_vkGetPhysicalDeviceQueueCount GetPhysicalDeviceQueueCount;
     PFN_vkGetPhysicalDeviceQueueProperties GetPhysicalDeviceQueueProperties;
     PFN_vkGetPhysicalDeviceMemoryProperties GetPhysicalDeviceMemoryProperties;
@@ -362,7 +361,7 @@ VkResult loader_GetPhysicalDeviceFeatures(
         VkPhysicalDevice                        physicalDevice,
         VkPhysicalDeviceFeatures*               pFeatures);
 
-VkResult loader_GetPhysicalDeviceFormatInfo(
+VkResult loader_GetPhysicalDeviceFormatProperties(
         VkPhysicalDevice                        physicalDevice,
         VkFormat                                format,
         VkFormatProperties*                     pFormatInfo);
@@ -384,10 +383,6 @@ VkResult loader_GetPhysicalDeviceSparseImageFormatProperties(
 VkResult loader_GetPhysicalDeviceProperties (
         VkPhysicalDevice physicalDevice,
         VkPhysicalDeviceProperties* pProperties);
-
-VkResult loader_GetPhysicalDevicePerformance (
-        VkPhysicalDevice physicalDevice,
-        VkPhysicalDevicePerformance* pPerformance);
 
 VkResult loader_GetPhysicalDeviceExtensionProperties (VkPhysicalDevice physicalDevice,
         const char *pLayerName, uint32_t *pCount,

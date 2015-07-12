@@ -1275,7 +1275,7 @@ TEST_F(VkCmdClearColorImageTest, Basic)
         VkFormatProperties props;
         VkResult err;
 
-        err = vkGetPhysicalDeviceFormatInfo(dev_.phy().handle(), it->format, &props);
+        err = vkGetPhysicalDeviceFormatProperties(dev_.phy().handle(), it->format, &props);
         ASSERT_EQ(err, VK_SUCCESS);
 
         if (it->tiling == VK_IMAGE_TILING_LINEAR && !(props.linearTilingFeatures & VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT))
@@ -1442,7 +1442,7 @@ TEST_F(VkCmdClearDepthStencilTest, Basic)
         VkFormatProperties props;
         VkResult err;
 
-        err = vkGetPhysicalDeviceFormatInfo(dev_.phy().handle(), it->format, &props);
+        err = vkGetPhysicalDeviceFormatProperties(dev_.phy().handle(), it->format, &props);
         ASSERT_EQ(err, VK_SUCCESS);
 
         if (it->tiling == VK_IMAGE_TILING_LINEAR && !(props.linearTilingFeatures & VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT))

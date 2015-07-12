@@ -671,7 +671,7 @@ static void intel_format_get_props(const struct intel_gpu *gpu,
     }
 }
 
-ICD_EXPORT VkResult VKAPI vkGetPhysicalDeviceFormatInfo(
+ICD_EXPORT VkResult VKAPI vkGetPhysicalDeviceFormatProperties(
     VkPhysicalDevice                          physicalDevice,
     VkFormat                                  format,
     VkFormatProperties*                       pFormatInfo)

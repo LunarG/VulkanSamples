@@ -182,18 +182,6 @@ LOADER_EXPORT VkResult VKAPI vkGetPhysicalDeviceProperties(
     return res;
 }
 
-LOADER_EXPORT VkResult VKAPI vkGetPhysicalDevicePerformance(
-                                            VkPhysicalDevice gpu,
-                                            VkPhysicalDevicePerformance* pPerformance)
-{
-    const VkLayerInstanceDispatchTable *disp;
-    VkResult res;
-
-    disp = loader_get_instance_dispatch(gpu);
-    res = disp->GetPhysicalDevicePerformance(gpu, pPerformance);
-    return res;
-}
-
 LOADER_EXPORT VkResult VKAPI vkGetPhysicalDeviceQueueCount(
                                             VkPhysicalDevice gpu,
                                             uint32_t* pCount)
@@ -243,7 +231,7 @@ LOADER_EXPORT VkResult VKAPI vkGetPhysicalDeviceFeatures(
     return res;
 }
 
-LOADER_EXPORT VkResult VKAPI vkGetPhysicalDeviceFormatInfo(
+LOADER_EXPORT VkResult VKAPI vkGetPhysicalDeviceFormatProperties(
                                             VkPhysicalDevice gpu,
                                             VkFormat format,
                                             VkFormatProperties *pFormatInfo)
@@ -252,7 +240,7 @@ LOADER_EXPORT VkResult VKAPI vkGetPhysicalDeviceFormatInfo(
     VkResult res;
 
     disp = loader_get_instance_dispatch(gpu);
-    res = disp->GetPhysicalDeviceFormatInfo(gpu, format, pFormatInfo);
+    res = disp->GetPhysicalDeviceFormatProperties(gpu, format, pFormatInfo);
     return res;
 }
 

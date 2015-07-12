@@ -179,11 +179,10 @@ typedef struct VkLayerInstanceDispatchTable_
     PFN_vkDestroyInstance DestroyInstance;
     PFN_vkEnumeratePhysicalDevices EnumeratePhysicalDevices;
     PFN_vkGetPhysicalDeviceFeatures GetPhysicalDeviceFeatures;
-    PFN_vkGetPhysicalDeviceFormatInfo GetPhysicalDeviceFormatInfo;
+    PFN_vkGetPhysicalDeviceFormatProperties GetPhysicalDeviceFormatProperties;
     PFN_vkGetPhysicalDeviceLimits GetPhysicalDeviceLimits;
     PFN_vkGetPhysicalDeviceSparseImageFormatProperties GetPhysicalDeviceSparseImageFormatProperties;
     PFN_vkGetPhysicalDeviceProperties GetPhysicalDeviceProperties;
-    PFN_vkGetPhysicalDevicePerformance GetPhysicalDevicePerformance;
     PFN_vkGetPhysicalDeviceQueueCount GetPhysicalDeviceQueueCount;
     PFN_vkGetPhysicalDeviceQueueProperties GetPhysicalDeviceQueueProperties;
     PFN_vkGetPhysicalDeviceMemoryProperties GetPhysicalDeviceMemoryProperties;

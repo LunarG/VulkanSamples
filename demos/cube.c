@@ -965,7 +965,7 @@ static void demo_prepare_textures(struct demo *demo)
     VkResult U_ASSERT_ONLY err;
     uint32_t i;
 
-    err = vkGetPhysicalDeviceFormatInfo(demo->gpu, tex_format, &props);
+    err = vkGetPhysicalDeviceFormatProperties(demo->gpu, tex_format, &props);
     assert(!err);
 
     for (i = 0; i < DEMO_TEXTURE_COUNT; i++) {

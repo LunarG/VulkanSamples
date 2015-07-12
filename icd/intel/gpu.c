@@ -238,17 +238,6 @@ void intel_gpu_get_props(const struct intel_gpu *gpu,
     props->deviceName[name_len] = '\0';
 }
 
-void intel_gpu_get_perf(const struct intel_gpu *gpu,
-                        VkPhysicalDevicePerformance *perf)
-{
-    /* TODO */
-    perf->maxDeviceClock = 1.0f;
-    perf->aluPerClock = 1.0f;
-    perf->texPerClock = 1.0f;
-    perf->primsPerClock = 1.0f;
-    perf->pixelsPerClock = 1.0f;
-}
-
 void intel_gpu_get_queue_props(const struct intel_gpu *gpu,
                                enum intel_gpu_engine_type engine,
                                VkPhysicalDeviceQueueProperties *props)
@@ -410,17 +399,6 @@ ICD_EXPORT VkResult VKAPI vkGetPhysicalDeviceProperties(
     struct intel_gpu *gpu = intel_gpu(gpu_);
 
     intel_gpu_get_props(gpu, pProperties);
-    return VK_SUCCESS;
-}
-
-ICD_EXPORT VkResult VKAPI vkGetPhysicalDevicePerformance(
-    VkPhysicalDevice gpu_,
-    VkPhysicalDevicePerformance* pPerformance)
-{
-    struct intel_gpu *gpu = intel_gpu(gpu_);
-
-    intel_gpu_get_perf(gpu, pPerformance);
-
     return VK_SUCCESS;
 }
 

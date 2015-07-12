@@ -1441,7 +1441,7 @@ ICD_EXPORT VkResult VKAPI vkGetPhysicalDeviceFeatures(
     return ret;
 }
 
-ICD_EXPORT VkResult VKAPI vkGetPhysicalDeviceFormatInfo(
+ICD_EXPORT VkResult VKAPI vkGetPhysicalDeviceFormatProperties(
     VkPhysicalDevice                          physicalDevice,
     VkFormat                                  format,
     VkFormatProperties*                       pFormatInfo)
@@ -1466,19 +1466,6 @@ ICD_EXPORT VkResult VKAPI vkGetPhysicalDeviceLimits(
     memset(pLimits, 0, sizeof(*pLimits));
 
     return ret;
-}
-
-ICD_EXPORT VkResult VKAPI vkGetPhysicalDevicePerformance(
-    VkPhysicalDevice                             gpu_,
-    VkPhysicalDevicePerformance*                  pPerformance)
-{
-    pPerformance->maxDeviceClock = 1.0f;
-    pPerformance->aluPerClock = 1.0f;
-    pPerformance->texPerClock = 1.0f;
-    pPerformance->primsPerClock = 1.0f;
-    pPerformance->pixelsPerClock = 1.0f;
-
-    return VK_SUCCESS;
 }
 
 ICD_EXPORT VkResult VKAPI vkGetPhysicalDeviceQueueCount(

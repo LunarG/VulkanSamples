@@ -96,15 +96,6 @@ VkPhysicalDeviceProperties PhysicalDevice::properties() const
     return info;
 }
 
-VkPhysicalDevicePerformance PhysicalDevice::performance() const
-{
-    VkPhysicalDevicePerformance info;
-
-    EXPECT(vkGetPhysicalDevicePerformance(handle(), &info) == VK_SUCCESS);
-
-    return info;
-}
-
 std::vector<VkPhysicalDeviceQueueProperties> PhysicalDevice::queue_properties() const
 {
     std::vector<VkPhysicalDeviceQueueProperties> info;
@@ -378,7 +369,7 @@ void Device::init_formats()
 VkFormatProperties Device::format_properties(VkFormat format)
 {
     VkFormatProperties data;
-    if (!EXPECT(vkGetPhysicalDeviceFormatInfo(phy().handle(), format, &data) == VK_SUCCESS))
+    if (!EXPECT(vkGetPhysicalDeviceFormatProperties(phy().handle(), format, &data) == VK_SUCCESS))
         memset(&data, 0, sizeof(data));
 
     return data;

@@ -314,7 +314,7 @@ void VkTest::CreateImageTest()
      * fixed structure.
      */
 
-    err = vkGetPhysicalDeviceFormatInfo(objs[m_device_id], fmt, &image_fmt);
+    err = vkGetPhysicalDeviceFormatProperties(objs[m_device_id], fmt, &image_fmt);
     ASSERT_VK_SUCCESS(err);
 
 //    typedef struct VkImageCreateInfo_

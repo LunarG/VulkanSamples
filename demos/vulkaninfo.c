@@ -105,7 +105,6 @@ struct app_gpu {
     VkPhysicalDevice obj;
 
     VkPhysicalDeviceProperties props;
-    VkPhysicalDevicePerformance perf;
 
     uint32_t queue_count;
     VkPhysicalDeviceQueueProperties *queue_props;
@@ -367,7 +366,7 @@ static void app_dev_init_formats(struct app_dev *dev)
         const VkFormat fmt = f;
         VkResult err;
 
-        err = vkGetPhysicalDeviceFormatInfo(dev->gpu->obj, fmt, &dev->format_props[f]);
+        err = vkGetPhysicalDeviceFormatProperties(dev->gpu->obj, fmt, &dev->format_props[f]);
         if (err) {
             memset(&dev->format_props[f], 0,
                    sizeof(dev->format_props[f]));
@@ -671,10 +670,6 @@ static void app_gpu_init(struct app_gpu *gpu, uint32_t id, VkPhysicalDevice obj)
     if (err)
         ERR_EXIT(err);
 
-    err = vkGetPhysicalDevicePerformance(gpu->obj, &gpu->perf);
-    if (err)
-        ERR_EXIT(err);
-
     /* get queue count */
     err = vkGetPhysicalDeviceQueueCount(gpu->obj, &gpu->queue_count);
     if (err)
@@ -815,19 +810,6 @@ static void app_gpu_dump_props(const struct app_gpu *gpu)
     fflush(stdout);
 }
 
-static void app_gpu_dump_perf(const struct app_gpu *gpu)
-{
-    const VkPhysicalDevicePerformance *perf = &gpu->perf;
-
-    printf("VkPhysicalDevicePerformance\n");
-    printf("\tmaxGpuClock = %f\n",      perf->maxDeviceClock);
-    printf("\taluPerClock = %f\n",      perf->aluPerClock);
-    printf("\ttexPerClock = %f\n",      perf->texPerClock);
-    printf("\tprimsPerClock = %f\n",    perf->primsPerClock);
-    printf("\tpixelsPerClock = %f\n",   perf->pixelsPerClock);
-    fflush(stdout);
-}
-
 static void app_dump_extensions(
         const char *indent,
         const char *layer_name,
@@ -925,8 +907,6 @@ static void app_gpu_dump(const struct app_gpu *gpu)
                             layer_info->extension_properties);
         fflush(stdout);
     }
-    printf("\n");
-    app_gpu_dump_perf(gpu);
     printf("\n");
     for (i = 0; i < gpu->queue_count; i++) {
         app_gpu_dump_queue_props(gpu, i);
