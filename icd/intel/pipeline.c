@@ -304,7 +304,7 @@ static VkResult pipeline_build_ia(struct intel_pipeline *pipeline,
                                     const struct intel_pipeline_create_info* info)
 {
     pipeline->topology = info->ia.topology;
-    pipeline->disable_vs_cache = info->ia.disableVertexReuse;
+    pipeline->disable_vs_cache = false;
 
     switch (info->ia.topology) {
     case VK_PRIMITIVE_TOPOLOGY_POINT_LIST:

@@ -1107,7 +1107,6 @@ VkPipelineObj::VkPipelineObj(VkDeviceObj *device)
     m_ia_state.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
     m_ia_state.pNext = VK_NULL_HANDLE;
     m_ia_state.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
-    m_ia_state.disableVertexReuse = VK_FALSE;
     m_ia_state.primitiveRestartEnable = VK_FALSE;
     m_ia_state.primitiveRestartIndex = 0;
 
