@@ -222,9 +222,9 @@ void VkTestFramework::InitArgs(int *argc, char *argv[])
             printf("\t--no-SPV\n"
                    "\t\tUse built-in GLSL compiler rather than SPV code path.\n");
             printf("\t--strip-SPV\n"
-                   "\t\tUse built-in GLSL compiler rather than SPV code path.\n");
+                   "\t\tStrip SPIR-V debug information (line numbers, names, etc).\n");
             printf("\t--canonicalize-SPV\n"
-                   "\t\tUse built-in GLSL compiler rather than SPV code path.\n");
+                   "\t\tRemap SPIR-V ids before submission to aid compression.\n");
             exit(0);
         } else {
             printf("\nUnrecognized option: %s\n", argv[i]);
