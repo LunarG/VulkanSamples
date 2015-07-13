@@ -58,7 +58,7 @@ int main(int argc, char **argv)
 /* VULKAN_KEY_START */
 
     VkDeviceQueueCreateInfo queue_info = {};
-    queue_info.queueNodeIndex = 0;
+    queue_info.queueFamilyIndex = 0;
     queue_info.queueCount = 1;
 
     VkDeviceCreateInfo device_info = {};
