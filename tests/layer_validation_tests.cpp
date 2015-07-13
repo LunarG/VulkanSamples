@@ -74,38 +74,36 @@ class ErrorMonitor {
 public:
     ErrorMonitor()
     {
-        pthread_mutexattr_t attr;
-        pthread_mutexattr_init(&attr);
-        pthread_mutex_init(&m_mutex, &attr);
-        pthread_mutex_lock(&m_mutex);
+        test_platform_thread_create_mutex(&m_mutex);
+        test_platform_thread_lock_mutex(&m_mutex);
         m_msgFlags = VK_DBG_REPORT_INFO_BIT;
         m_bailout = NULL;
-        pthread_mutex_unlock(&m_mutex);
+        test_platform_thread_unlock_mutex(&m_mutex);
     }
     void ClearState()
     {
-        pthread_mutex_lock(&m_mutex);
+        test_platform_thread_lock_mutex(&m_mutex);
         m_msgFlags = VK_DBG_REPORT_INFO_BIT;
         m_msgString.clear();
-        pthread_mutex_unlock(&m_mutex);
+        test_platform_thread_unlock_mutex(&m_mutex);
     }
     VkFlags GetState(std::string *msgString)
     {
-        pthread_mutex_lock(&m_mutex);
+        test_platform_thread_lock_mutex(&m_mutex);
         *msgString = m_msgString;
-        pthread_mutex_unlock(&m_mutex);
+        test_platform_thread_unlock_mutex(&m_mutex);
         return m_msgFlags;
     }
     void SetState(VkFlags msgFlags, const char *msgString)
     {
-        pthread_mutex_lock(&m_mutex);
+        test_platform_thread_lock_mutex(&m_mutex);
         if (m_bailout != NULL) {
             *m_bailout = true;
         }
         m_msgFlags = msgFlags;
         m_msgString.reserve(strlen(msgString));
         m_msgString = msgString;
-        pthread_mutex_unlock(&m_mutex);
+        test_platform_thread_unlock_mutex(&m_mutex);
     }
     void SetBailout(bool *bailout)
     {
@@ -113,10 +111,10 @@ public:
     }
 
 private:
-    VkFlags                m_msgFlags;
-    std::string            m_msgString;
-    pthread_mutex_t        m_mutex;
-    bool*                  m_bailout;
+    VkFlags                    m_msgFlags;
+    std::string                m_msgString;
+    test_platform_thread_mutex m_mutex;
+    bool*                      m_bailout;
 };
 
 static void myDbgFunc(
@@ -2261,8 +2259,7 @@ TEST_F(VkLayerTest, ThreadCmdBufferCollision)
 {
     VkFlags msgFlags;
     std::string msgString;
-    pthread_t thread;
-    pthread_attr_t thread_attr;
+    test_platform_thread thread;
 
     ASSERT_NO_FATAL_FAILURE(InitState());
     ASSERT_NO_FATAL_FAILURE(InitViewport());
@@ -2271,7 +2268,6 @@ TEST_F(VkLayerTest, ThreadCmdBufferCollision)
     VkCommandBufferObj cmdBuffer(m_device);
 
     m_errorMonitor->ClearState();
-    pthread_attr_init(&thread_attr);
     BeginCommandBuffer(cmdBuffer);
 
     VkEventCreateInfo event_info;
@@ -2293,10 +2289,10 @@ TEST_F(VkLayerTest, ThreadCmdBufferCollision)
     data.bailout = false;
     m_errorMonitor->SetBailout(&data.bailout);
     // Add many entries to command buffer from another thread.
-    pthread_create(&thread, &thread_attr, AddToCommandBuffer, (void *)&data);
+    test_platform_thread_create(&thread, AddToCommandBuffer, (void *)&data);
     // Add many entries to command buffer from this thread at the same time.
     AddToCommandBuffer(&data);
-    pthread_join(thread, NULL);
+    test_platform_thread_join(thread, NULL);
     EndCommandBuffer(cmdBuffer);
 
     msgFlags = m_errorMonitor->GetState(&msgString);
