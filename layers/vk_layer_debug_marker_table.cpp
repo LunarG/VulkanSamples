@@ -35,7 +35,6 @@ std::unordered_map<void *, VkLayerDebugMarkerDispatchTable *> tableDebugMarkerMa
  * and a new key inserted into map */
 VkLayerDebugMarkerDispatchTable * initDebugMarkerTable(VkDevice device)
 {
-    VkLayerDebugMarkerDispatchTable *pTable;
     VkLayerDebugMarkerDispatchTable *pDebugMarkerTable;
 
     assert(device);
@@ -56,5 +55,5 @@ VkLayerDebugMarkerDispatchTable * initDebugMarkerTable(VkDevice device)
     pDebugMarkerTable->DbgSetObjectTag   = (PFN_vkDbgSetObjectTag) pDisp->GetDeviceProcAddr(device, "vkDbgSetObjectTag");
     pDebugMarkerTable->DbgSetObjectName  = (PFN_vkDbgSetObjectName) pDisp->GetDeviceProcAddr(device, "vkDbgSetObjectName");
 
-    return pTable;
+    return pDebugMarkerTable;
 }

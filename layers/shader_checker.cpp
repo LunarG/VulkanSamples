@@ -571,7 +571,6 @@ validate_interface_between_stages(VkDevice dev,
     std::map<uint32_t, interface_var> builtin_outputs;
     std::map<uint32_t, interface_var> builtin_inputs;
 
-    char str[1024];
     bool pass = true;
 
     collect_interface_by_location(dev, producer, spv::StorageClassOutput, outputs, builtin_outputs);

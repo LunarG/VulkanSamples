@@ -716,7 +716,6 @@ static LAYOUT_NODE* getLayoutNode(const VkDescriptorSetLayout layout) {
 // Return 1 if update struct is of valid type, 0 otherwise
 static VkBool32 validUpdateStruct(const VkDevice device, const GENERIC_HEADER* pUpdateStruct)
 {
-    char str[1024];
     switch (pUpdateStruct->sType)
     {
         case VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET:
@@ -731,7 +730,6 @@ static VkBool32 validUpdateStruct(const VkDevice device, const GENERIC_HEADER* p
 // For given update struct, return binding
 static uint32_t getUpdateBinding(const VkDevice device, const GENERIC_HEADER* pUpdateStruct)
 {
-    char str[1024];
     switch (pUpdateStruct->sType)
     {
         case VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET:
@@ -747,7 +745,6 @@ static uint32_t getUpdateBinding(const VkDevice device, const GENERIC_HEADER* pU
 // Return count for given update struct
 static uint32_t getUpdateArrayIndex(const VkDevice device, const GENERIC_HEADER* pUpdateStruct)
 {
-    char str[1024];
     switch (pUpdateStruct->sType)
     {
         case VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET:
@@ -764,7 +761,6 @@ static uint32_t getUpdateArrayIndex(const VkDevice device, const GENERIC_HEADER*
 // Return count for given update struct
 static uint32_t getUpdateCount(const VkDevice device, const GENERIC_HEADER* pUpdateStruct)
 {
-    char str[1024];
     switch (pUpdateStruct->sType)
     {
         case VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET:

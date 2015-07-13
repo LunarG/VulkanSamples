@@ -1296,7 +1296,6 @@ VkResult VKAPI vkCreateInstance(
 
 static void createDeviceRegisterExtensions(const VkDeviceCreateInfo* pCreateInfo, VkDevice device)
 {
-    uint32_t i;
     layer_data *my_device_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     my_device_data->wsi_enabled = false;
     for (uint32_t i = 0; i < pCreateInfo->extensionCount; i++) {
