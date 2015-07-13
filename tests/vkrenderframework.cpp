@@ -1235,9 +1235,11 @@ VkResult VkPipelineObj::CreateVKPipeline(VkDescriptorSetObj &descriptorSet, VkRe
 }
 
 VkCommandBufferObj::VkCommandBufferObj(VkDeviceObj *device)
-    : vk_testing::CmdBuffer(*device, vk_testing::CmdBuffer::create_info(device->graphics_queue_node_index_))
 {
     m_device = device;
+
+    m_cmdPool.init(*device, vk_testing::CmdPool::create_info(device->graphics_queue_node_index_));
+    init(*device, vk_testing::CmdBuffer::create_info(m_cmdPool.handle()));
 }
 
 VkCmdBuffer VkCommandBufferObj::GetBufferHandle()

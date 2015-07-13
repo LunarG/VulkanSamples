@@ -184,6 +184,7 @@ public:
 
 protected:
     VkDeviceObj                        *m_device;
+    vk_testing::CmdPool                 m_cmdPool;
     vector<VkImageObj*>                 m_renderTargets;
 };
 
