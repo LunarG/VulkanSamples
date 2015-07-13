@@ -832,6 +832,9 @@ void CmdBuffer::init(const Device &dev, const VkCmdBufferCreateInfo &info)
 {
     VkCmdBuffer cmd;
 
+    // Make sure cmdPool is set
+    assert(info.cmdPool);
+
     if (EXPECT(vkCreateCommandBuffer(dev.handle(), &info, &cmd) == VK_SUCCESS)) {
         Handle::init(cmd);
         dev_handle_ = dev.handle();
