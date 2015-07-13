@@ -1373,7 +1373,7 @@ TEST_F(VkLayerTest, VtxBufferNoRenderPass)
     const VkGraphicsPipelineCreateInfo gp_ci = {
         .sType                 = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
         .pNext                 = NULL,
-        .stageCount            = 0,
+        .stageCount            = 1,
         .pStages               = &pipe_vs_ci,
         .pVertexInputState     = NULL,
         .pInputAssemblyState   = NULL,
@@ -1849,7 +1849,7 @@ TEST_F(VkLayerTest, NumSamplesMismatch)
     const VkGraphicsPipelineCreateInfo gp_ci = {
         .sType                 = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
         .pNext                 = NULL,
-        .stageCount            = 0,
+        .stageCount            = 1,
         .pStages               = &pipe_vs_ci,
         .pVertexInputState     = NULL,
         .pInputAssemblyState   = NULL,
@@ -2069,7 +2069,7 @@ TEST_F(VkLayerTest, ClearCmdNoDraw)
     const VkGraphicsPipelineCreateInfo gp_ci = {
         .sType                 = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
         .pNext                 = NULL,
-        .stageCount            = 0,
+        .stageCount            = 1,
         .pStages               = &pipe_vs_ci,
         .pVertexInputState     = NULL,
         .pInputAssemblyState   = NULL,
@@ -2197,7 +2197,7 @@ TEST_F(VkLayerTest, VtxBufferBadIndex)
     const VkGraphicsPipelineCreateInfo gp_ci = {
         .sType                 = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
         .pNext                 = NULL,
-        .stageCount            = 0,
+        .stageCount            = 1,
         .pStages               = &pipe_vs_ci,
         .pVertexInputState     = NULL,
         .pInputAssemblyState   = NULL,

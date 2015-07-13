@@ -497,7 +497,7 @@ static PIPELINE_NODE* initPipeline(const VkGraphicsPipelineCreateInfo* pCreateIn
 
     size_t bufferSize = 0;
     const VkPipelineVertexInputStateCreateInfo* pVICI = NULL;
-    const VkPipelineColorBlendStateCreateInfo*          pCBCI = NULL;
+    const VkPipelineColorBlendStateCreateInfo*  pCBCI = NULL;
 
     for (uint32_t i = 0; i < pCreateInfo->stageCount; i++) {
         const VkPipelineShaderStageCreateInfo *pPSSCI = &pCreateInfo->pStages[i];
@@ -2193,8 +2193,6 @@ VK_LAYER_EXPORT void VKAPI vkCmdBindDescriptorSets(VkCmdBuffer cmdBuffer, VkPipe
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
         if (pCB->state == CB_UPDATE_ACTIVE) {
-            updateCBTracking(cmdBuffer);
-            addCmd(pCB, CMD_BINDDESCRIPTORSETS);
             if ((VK_PIPELINE_BIND_POINT_COMPUTE == pipelineBindPoint) && (pCB->activeRenderPass)) {
                 log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, 0, 0, DRAWSTATE_INVALID_RENDERPASS_CMD, "DS",
                         "Incorrectly binding compute DescriptorSets during active RenderPass (%#" PRIxLEAST64 ")", pCB->activeRenderPass.handle);
@@ -2221,6 +2219,8 @@ VK_LAYER_EXPORT void VKAPI vkCmdBindDescriptorSets(VkCmdBuffer cmdBuffer, VkPipe
                                 "Attempt to bind DS %#" PRIxLEAST64 " that doesn't exist!", pDescriptorSets[i].handle);
                     }
                 }
+                updateCBTracking(cmdBuffer);
+                addCmd(pCB, CMD_BINDDESCRIPTORSETS);
                 get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdBindDescriptorSets(cmdBuffer, pipelineBindPoint, layout, firstSet, setCount, pDescriptorSets, dynamicOffsetCount, pDynamicOffsets);
             }
         } else {
@@ -2234,14 +2234,14 @@ VK_LAYER_EXPORT void VKAPI vkCmdBindIndexBuffer(VkCmdBuffer cmdBuffer, VkBuffer 
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
         if (pCB->state == CB_UPDATE_ACTIVE) {
-            updateCBTracking(cmdBuffer);
-            addCmd(pCB, CMD_BINDINDEXBUFFER);
             if (!pCB->activeRenderPass) {
                 log_msg(mdd(pCB->cmdBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, 0, 0, DRAWSTATE_NO_ACTIVE_RENDERPASS, "DS",
                         "Incorrect call to vkCmdBindIndexBuffer() without an active RenderPass.");
             } else {
                 // TODO : Can be more exact in tracking/validating details for Idx buffer, for now just make sure *something* was bound
                 pCB->status |= CBSTATUS_INDEX_BUFFER_BOUND;
+                updateCBTracking(cmdBuffer);
+                addCmd(pCB, CMD_BINDINDEXBUFFER);
                 get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdBindIndexBuffer(cmdBuffer, buffer, offset, indexType);
             }
         } else {
@@ -2261,14 +2261,14 @@ VK_LAYER_EXPORT void VKAPI vkCmdBindVertexBuffers(
     if (pCB) {
         if (pCB->state == CB_UPDATE_ACTIVE) {
             /* TODO: Need to track all the vertex buffers, not just last one */
-            updateCBTracking(cmdBuffer);
-            addCmd(pCB, CMD_BINDVERTEXBUFFER);
             if (!pCB->activeRenderPass) {
                 log_msg(mdd(pCB->cmdBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, 0, 0, DRAWSTATE_NO_ACTIVE_RENDERPASS, "DS",
                         "Incorrect call to vkCmdBindVertexBuffers() without an active RenderPass.");
             } else {
                 pCB->lastVtxBinding = startBinding + bindingCount -1;
                 if (validateBoundPipeline(cmdBuffer)) {
+                    updateCBTracking(cmdBuffer);
+                    addCmd(pCB, CMD_BINDVERTEXBUFFER);
                     get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdBindVertexBuffers(cmdBuffer, startBinding, bindingCount, pBuffers, pOffsets);
                 }
             }
@@ -2284,8 +2284,6 @@ VK_LAYER_EXPORT void VKAPI vkCmdDraw(VkCmdBuffer cmdBuffer, uint32_t firstVertex
     VkBool32 valid = VK_FALSE;
     if (pCB) {
         if (pCB->state == CB_UPDATE_ACTIVE) {
-            updateCBTracking(cmdBuffer);
-            addCmd(pCB, CMD_DRAW);
             pCB->drawCount[DRAW]++;
             valid = validate_draw_state(pCB, VK_FALSE);
             // TODO : Need to pass cmdBuffer as srcObj here
@@ -2293,7 +2291,9 @@ VK_LAYER_EXPORT void VKAPI vkCmdDraw(VkCmdBuffer cmdBuffer, uint32_t firstVertex
                     "vkCmdDraw() call #%lu, reporting DS state:", g_drawCount[DRAW]++);
             synchAndPrintDSConfig(cmdBuffer);
             if (valid) {
-               get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdDraw(cmdBuffer, firstVertex, vertexCount, firstInstance, instanceCount);
+                updateCBTracking(cmdBuffer);
+                addCmd(pCB, CMD_DRAW);
+                get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdDraw(cmdBuffer, firstVertex, vertexCount, firstInstance, instanceCount);
             }
         } else {
             report_error_no_cb_begin(cmdBuffer, "vkCmdBindIndexBuffer()");
@@ -2307,8 +2307,6 @@ VK_LAYER_EXPORT void VKAPI vkCmdDrawIndexed(VkCmdBuffer cmdBuffer, uint32_t firs
     VkBool32 valid = VK_FALSE;
     if (pCB) {
         if (pCB->state == CB_UPDATE_ACTIVE) {
-            updateCBTracking(cmdBuffer);
-            addCmd(pCB, CMD_DRAWINDEXED);
             pCB->drawCount[DRAW_INDEXED]++;
             valid = validate_draw_state(pCB, VK_TRUE);
             // TODO : Need to pass cmdBuffer as srcObj here
@@ -2316,6 +2314,8 @@ VK_LAYER_EXPORT void VKAPI vkCmdDrawIndexed(VkCmdBuffer cmdBuffer, uint32_t firs
                     "vkCmdDrawIndexed() call #%lu, reporting DS state:", g_drawCount[DRAW_INDEXED]++);
             synchAndPrintDSConfig(cmdBuffer);
             if (valid) {
+                updateCBTracking(cmdBuffer);
+                addCmd(pCB, CMD_DRAWINDEXED);
                 get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdDrawIndexed(cmdBuffer, firstIndex, indexCount, vertexOffset, firstInstance, instanceCount);
             }
         } else {
@@ -2330,8 +2330,6 @@ VK_LAYER_EXPORT void VKAPI vkCmdDrawIndirect(VkCmdBuffer cmdBuffer, VkBuffer buf
     VkBool32 valid = VK_FALSE;
     if (pCB) {
         if (pCB->state == CB_UPDATE_ACTIVE) {
-            updateCBTracking(cmdBuffer);
-            addCmd(pCB, CMD_DRAWINDIRECT);
             pCB->drawCount[DRAW_INDIRECT]++;
             valid = validate_draw_state(pCB, VK_FALSE);
             // TODO : Need to pass cmdBuffer as srcObj here
@@ -2339,6 +2337,8 @@ VK_LAYER_EXPORT void VKAPI vkCmdDrawIndirect(VkCmdBuffer cmdBuffer, VkBuffer buf
                     "vkCmdDrawIndirect() call #%lu, reporting DS state:", g_drawCount[DRAW_INDIRECT]++);
             synchAndPrintDSConfig(cmdBuffer);
             if (valid) {
+                updateCBTracking(cmdBuffer);
+                addCmd(pCB, CMD_DRAWINDIRECT);
                 get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdDrawIndirect(cmdBuffer, buffer, offset, count, stride);
             }
         } else {
@@ -2353,8 +2353,6 @@ VK_LAYER_EXPORT void VKAPI vkCmdDrawIndexedIndirect(VkCmdBuffer cmdBuffer, VkBuf
     VkBool32 valid = VK_FALSE;
     if (pCB) {
         if (pCB->state == CB_UPDATE_ACTIVE) {
-            updateCBTracking(cmdBuffer);
-            addCmd(pCB, CMD_DRAWINDEXEDINDIRECT);
             pCB->drawCount[DRAW_INDEXED_INDIRECT]++;
             valid = validate_draw_state(pCB, VK_TRUE);
             // TODO : Need to pass cmdBuffer as srcObj here
@@ -2362,7 +2360,9 @@ VK_LAYER_EXPORT void VKAPI vkCmdDrawIndexedIndirect(VkCmdBuffer cmdBuffer, VkBuf
                     "vkCmdDrawIndexedIndirect() call #%lu, reporting DS state:", g_drawCount[DRAW_INDEXED_INDIRECT]++);
             synchAndPrintDSConfig(cmdBuffer);
             if (valid) {
-               get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdDrawIndexedIndirect(cmdBuffer, buffer, offset, count, stride);
+                updateCBTracking(cmdBuffer);
+                addCmd(pCB, CMD_DRAWINDEXEDINDIRECT);
+                get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdDrawIndexedIndirect(cmdBuffer, buffer, offset, count, stride);
             }
         } else {
             report_error_no_cb_begin(cmdBuffer, "vkCmdBindIndexBuffer()");
@@ -2440,14 +2440,14 @@ VK_LAYER_EXPORT void VKAPI vkCmdBlitImage(VkCmdBuffer cmdBuffer,
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
         if (pCB->state == CB_UPDATE_ACTIVE) {
-            updateCBTracking(cmdBuffer);
-            addCmd(pCB, CMD_BLITIMAGE);
             if (pCB->activeRenderPass) {
                 log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, 0, 0, DRAWSTATE_INVALID_RENDERPASS_CMD, "DS",
                         "Incorrectly issuing CmdBlitImage during active RenderPass (%#" PRIxLEAST64 ")", pCB->activeRenderPass.handle);
-            }
-            else
+            } else {
+                updateCBTracking(cmdBuffer);
+                addCmd(pCB, CMD_BLITIMAGE);
                 get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdBlitImage(cmdBuffer, srcImage, srcImageLayout, destImage, destImageLayout, regionCount, pRegions, filter);
+            }
         } else {
             report_error_no_cb_begin(cmdBuffer, "vkCmdBindIndexBuffer()");
         }
