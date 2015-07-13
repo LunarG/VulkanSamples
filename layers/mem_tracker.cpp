@@ -405,7 +405,7 @@ static void add_object_create_info(const uint64_t handle, const VkDbgObjectType 
         {
             auto pCI = &imageMap[handle];
             memset(pCI, 0, sizeof(MT_OBJ_BINDING_INFO));
-            memcpy(&pCI->create_info.swapchain, pCreateInfo, sizeof(VkSwapChainCreateInfoWSI));
+            // memcpy(&pCI->create_info.swapchain, pCreateInfo, sizeof(VkSwapChainCreateInfoWSI));
             break;
         }
         // All other non-disp objects store their Create info struct as map value
@@ -2149,10 +2149,10 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateAttachmentView(
                 //  if/when we know that Image being attached to is Color or DS. Can probably do this for DS based on format
 //                validate_usage_flags(device, pInfo->create_info.image.usage, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT, true,
 //                                     pCreateInfo->image.handle, VK_OBJECT_TYPE_IMAGE, "image", "vkCreateAttachmentView()", "VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT");
-            } else if (VK_STRUCTURE_TYPE_SWAP_CHAIN_CREATE_INFO_WSI == pInfo->create_info.swapchain.sType) {
-                validate_usage_flags(device, pInfo->create_info.swapchain.imageUsageFlags, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT, true,
-                                     pCreateInfo->image.handle, VK_OBJECT_TYPE_IMAGE, "image", "vkCreateAttachmentView()", "VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT");
-            }
+            }// else if (VK_STRUCTURE_TYPE_SWAP_CHAIN_CREATE_INFO_WSI == pInfo->create_info.swapchain.sType) {
+             //   validate_usage_flags(device, pInfo->create_info.swapchain.imageUsageFlags, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT, true,
+             //                        pCreateInfo->image.handle, VK_OBJECT_TYPE_IMAGE, "image", "vkCreateAttachmentView()", "VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT");
+             //}
         }
         loader_platform_thread_unlock_mutex(&globalLock);
     }

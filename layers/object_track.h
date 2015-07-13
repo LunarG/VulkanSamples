@@ -397,14 +397,14 @@ static void create_obj(VkDevice dispatchable_object, VkCmdBuffer vkObj, VkDbgObj
 }
 static void create_obj(VkDevice dispatchable_object, VkSwapChainWSI vkObj, VkDbgObjectType objType)
 {
-    log_msg(mdd(dispatchable_object), VK_DBG_REPORT_INFO_BIT, objType, reinterpret_cast<VkUintPtrLeast64>(vkObj.handle), 0, OBJTRACK_NONE, "OBJTRACK",
+    log_msg(mdd(dispatchable_object), VK_DBG_REPORT_INFO_BIT, objType, vkObj.handle, 0, OBJTRACK_NONE, "OBJTRACK",
         "OBJ[%llu] : CREATE %s object 0x%" PRIxLEAST64 , object_track_index++, string_VkDbgObjectType(objType),
-        reinterpret_cast<VkUintPtrLeast64>(vkObj.handle));
+        vkObj.handle);
 
     OBJTRACK_NODE* pNewObjNode = new OBJTRACK_NODE;
     pNewObjNode->objType = objType;
     pNewObjNode->status  = OBJSTATUS_NONE;
-    pNewObjNode->vkObj  = reinterpret_cast<VkUintPtrLeast64>(vkObj.handle);
+    pNewObjNode->vkObj  = vkObj.handle;
     VkSwapChainWSIMap[(void*) vkObj.handle] = pNewObjNode;
     uint32_t objIndex = objTypeToIndex(objType);
     numObjs[objIndex]++;
@@ -419,16 +419,16 @@ static void destroy_obj(VkDevice dispatchable_object, VkSwapChainWSI object)
         numTotalObjs--;
         assert(numObjs[objIndex] > 0);
         numObjs[objIndex]--;
-        log_msg(mdd(dispatchable_object), VK_DBG_REPORT_INFO_BIT, pNode->objType, reinterpret_cast<VkUintPtrLeast64>(object.handle), 0, OBJTRACK_NONE, "OBJTRACK",
+        log_msg(mdd(dispatchable_object), VK_DBG_REPORT_INFO_BIT, pNode->objType, object.handle, 0, OBJTRACK_NONE, "OBJTRACK",
            "OBJ_STAT Destroy %s obj 0x%" PRIxLEAST64 " (%lu total objs remain & %lu %s objs).",
-            string_VkDbgObjectType(pNode->objType), reinterpret_cast<VkUintPtrLeast64>(object.handle), numTotalObjs, numObjs[objIndex],
+            string_VkDbgObjectType(pNode->objType), object.handle, numTotalObjs, numObjs[objIndex],
             string_VkDbgObjectType(pNode->objType));
         delete pNode;
         VkSwapChainWSIMap.erase((void*) object.handle);
     } else {
-        log_msg(mdd(dispatchable_object), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, reinterpret_cast<VkUintPtrLeast64>(object.handle), 0, OBJTRACK_NONE, "OBJTRACK",
+        log_msg(mdd(dispatchable_object), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, object.handle, 0, OBJTRACK_NONE, "OBJTRACK",
             "Unable to remove obj 0x%" PRIxLEAST64 ". Was it created? Has it already been destroyed?",
-           reinterpret_cast<VkUintPtrLeast64>(object.handle));
+           object.handle);
     }
 }
 //

@@ -842,7 +842,7 @@ ICD_EXPORT VkResult VKAPI vkCreateSwapChainWSI(
     }
     sc->dev = dev;
 
-    *pSwapChain = (VkSwapChainWSI) sc;
+    *(VkSwapChainWSI **)pSwapChain = *(VkSwapChainWSI **)&sc;
 
     return VK_SUCCESS;
 }
@@ -852,7 +852,7 @@ ICD_EXPORT VkResult VKAPI vkDestroySwapChainWSI(
     VkSwapChainWSI                          swapChain)
 {
     NULLDRV_LOG_FUNC;
-    struct nulldrv_swap_chain *sc = (struct nulldrv_swap_chain *) swapChain;
+    struct nulldrv_swap_chain *sc = *(struct nulldrv_swap_chain **) &swapChain;
 
     free(sc);
 
@@ -867,7 +867,7 @@ ICD_EXPORT VkResult VKAPI vkGetSwapChainInfoWSI(
     void*                                   pData)
 {
     NULLDRV_LOG_FUNC;
-    struct nulldrv_swap_chain *sc = (struct nulldrv_swap_chain *) swapChain;
+    struct nulldrv_swap_chain *sc = *(struct nulldrv_swap_chain **) &swapChain;
     struct nulldrv_dev *dev = sc->dev;
     VkResult ret = VK_SUCCESS;
 
@@ -890,7 +890,7 @@ ICD_EXPORT VkResult VKAPI vkGetSwapChainInfoWSI(
                         VK_OBJECT_TYPE_IMAGE);
                 if (!img)
                     return VK_ERROR_OUT_OF_HOST_MEMORY;
-                images[i].image = (VkImage) img;
+                *(VkImage **) &images[i].image = *(VkImage **) &img;
             }
         }
         break;
@@ -900,6 +900,41 @@ ICD_EXPORT VkResult VKAPI vkGetSwapChainInfoWSI(
     }
 
     return ret;
+}
+
+ICD_EXPORT VkResult VKAPI vkAcquireNextImageWSI(
+    VkDevice                                 device,
+    VkSwapChainWSI                           swapChain,
+    uint64_t                                 timeout,
+    VkSemaphore                              semaphore,
+    uint32_t*                                pImageIndex)
+{
+    NULLDRV_LOG_FUNC;
+
+    return VK_SUCCESS;
+}
+
+ICD_EXPORT VkResult VKAPI vkGetSurfaceInfoWSI(
+    VkDevice                                 device,
+    const VkSurfaceDescriptionWSI*           pSurfaceDescription,
+    VkSurfaceInfoTypeWSI                     infoType,
+    size_t*                                  pDataSize,
+    void*                                    pData)
+{
+    NULLDRV_LOG_FUNC;
+
+    return VK_SUCCESS;
+}
+
+ICD_EXPORT VkResult VKAPI vkGetPhysicalDeviceSurfaceSupportWSI(
+    VkPhysicalDevice                        physicalDevice,
+    uint32_t                                queueFamilyIndex,
+    const VkSurfaceDescriptionWSI*          pSurfaceDescription,
+    VkBool32*                               pSupported)
+{
+    NULLDRV_LOG_FUNC;
+
+    return VK_SUCCESS;
 }
 
 ICD_EXPORT VkResult VKAPI vkQueuePresentWSI(

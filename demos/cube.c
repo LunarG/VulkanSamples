@@ -309,8 +309,8 @@ struct demo {
     xcb_screen_t *screen;
     xcb_window_t window;
     xcb_intern_atom_reply_t *atom_wm_delete_window;
-#endif // _WIN32
     VkPlatformHandleXcbWSI platform_handle_xcb;
+#endif // _WIN32
     bool prepared;
     bool use_staging_buffer;
     bool use_glsl;
@@ -2429,7 +2429,7 @@ static void demo_init_vk(struct demo *demo)
     if (presentQueueNodeIndex == UINT32_MAX) {
         // If didn't find a queue that supports both graphics and present, then
         // find a separate present queue.
-        for (size_t i = 0; i < queue_count; ++i) {
+        for (uint32_t i = 0; i < queue_count; ++i) {
             if (supportsPresent[i] == VK_TRUE) {
                 presentQueueNodeIndex = i;
                 break;
