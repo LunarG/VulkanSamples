@@ -106,34 +106,40 @@ else()
     endif()
 endif()
 
+if (WIN32)
+    set (LIBVK "vulkan.${MAJOR}")
+else ()
+    set (LIBVK "vulkan")
+endif()
+
 add_executable(vkbase init.cpp ${COMMON_CPP})
 set_target_properties(vkbase
    PROPERTIES
    COMPILE_DEFINITIONS "GTEST_LINKED_AS_SHARED_LIBRARY=1")
-target_link_libraries(vkbase vulkan gtest gtest_main ${TEST_LIBRARIES})
+target_link_libraries(vkbase ${LIBVK} gtest gtest_main ${TEST_LIBRARIES})
 
 add_executable(vk_image_tests image_tests.cpp ${COMMON_CPP})
 set_target_properties(vk_image_tests
    PROPERTIES
    COMPILE_DEFINITIONS "GTEST_LINKED_AS_SHARED_LIBRARY=1")
-target_link_libraries(vk_image_tests vulkan gtest gtest_main ${TEST_LIBRARIES})
+target_link_libraries(vk_image_tests ${LIBVK} gtest gtest_main ${TEST_LIBRARIES})
 
 add_executable(vk_render_tests render_tests.cpp ${COMMON_CPP})
 set_target_properties(vk_render_tests
    PROPERTIES
    COMPILE_DEFINITIONS "GTEST_LINKED_AS_SHARED_LIBRARY=1")
-target_link_libraries(vk_render_tests vulkan gtest gtest_main ${TEST_LIBRARIES})
+target_link_libraries(vk_render_tests ${LIBVK} gtest gtest_main ${TEST_LIBRARIES})
 
 add_executable(vk_blit_tests blit_tests.cpp ${COMMON_CPP})
 set_target_properties(vk_blit_tests
    PROPERTIES
    COMPILE_DEFINITIONS "GTEST_LINKED_AS_SHARED_LIBRARY=1")
-target_link_libraries(vk_blit_tests vulkan gtest gtest_main ${TEST_LIBRARIES})
+target_link_libraries(vk_blit_tests ${LIBVK} gtest gtest_main ${TEST_LIBRARIES})
 
 add_executable(vk_layer_validation_tests layer_validation_tests.cpp ${COMMON_CPP})
 set_target_properties(vk_layer_validation_tests
    PROPERTIES
    COMPILE_DEFINITIONS "GTEST_LINKED_AS_SHARED_LIBRARY=1")
-target_link_libraries(vk_layer_validation_tests vulkan gtest gtest_main layer_utils ${TEST_LIBRARIES})
+target_link_libraries(vk_layer_validation_tests ${LIBVK} gtest gtest_main layer_utils ${TEST_LIBRARIES})
 
 add_subdirectory(gtest-1.7.0)
