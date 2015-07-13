@@ -902,7 +902,7 @@ validate_graphics_pipeline(VkDevice dev, uint32_t count, VkGraphicsPipelineCreat
 
     loader_platform_thread_lock_mutex(&globalLock);
 
-    for (auto i = 0; i < pCreateInfo->stageCount; i++) {
+    for (uint32_t i = 0; i < pCreateInfo->stageCount; i++) {
         VkPipelineShaderStageCreateInfo const *pStage = &pCreateInfo->pStages[i];
         if (pStage->sType == VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO) {
 

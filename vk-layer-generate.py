@@ -1596,11 +1596,11 @@ class ThreadingSubcommand(Subcommand):
         if proto.name in ["FlushMappedMemoryRanges","InvalidateMappedMemoryRanges"]:
             funcs.append('%s%s\n'
                      '{\n'
-                     '    for (int i=0; i<memRangeCount; i++) {\n'
+                     '    for (uint32_t i=0; i<memRangeCount; i++) {\n'
                      '        useObject(pMemRanges[i].mem, "VkDeviceMemory");\n'
                      '    }\n'
                      '    %s%s_dispatch_table(%s)->%s;\n'
-                     '    for (int i=0; i<memRangeCount; i++) {\n'
+                     '    for (uint32_t i=0; i<memRangeCount; i++) {\n'
                      '        finishUsingObject(pMemRanges[i].mem);\n'
                      '    }\n'
                      '%s'

@@ -2788,7 +2788,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateRenderPass(VkDevice device, const VkRende
             for (uint32_t i = 0; i < localRPCI->subpassCount; i++) {
                 VkSubpassDescription *subpass = (VkSubpassDescription *) &localRPCI->pSubpasses[i];
                 const uint32_t attachmentCount = subpass->inputCount +
-                    subpass->colorCount * (1 + (bool) subpass->resolveAttachments) +
+                    subpass->colorCount * (1 + (subpass->resolveAttachments?1:0)) +
                     subpass->preserveCount;
                 VkAttachmentReference *attachments = new VkAttachmentReference[attachmentCount];
 
