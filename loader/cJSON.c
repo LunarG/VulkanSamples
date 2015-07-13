@@ -135,7 +135,7 @@ static char* ensure(printbuffer *p,int needed)
 	return newbuffer+p->offset;
 }
 
-static int update(printbuffer *p)
+static size_t update(printbuffer *p)
 {
 	char *str;
 	if (!p || !p->buffer) return 0;
@@ -251,7 +251,7 @@ static const char *parse_string(cJSON *item,const char *str)
 /* Render the cstring provided to an escaped version that can be printed. */
 static char *print_string_ptr(const char *str,printbuffer *p)
 {
-	const char *ptr;char *ptr2,*out;int len=0,flag=0;unsigned char token;
+    const char *ptr;char *ptr2,*out;size_t len=0,flag=0;unsigned char token;
 	
 	for (ptr=str;*ptr;ptr++) flag|=((*ptr>0 && *ptr<32)||(*ptr=='\"')||(*ptr=='\\'))?1:0;
 	if (!flag)
@@ -434,7 +434,7 @@ static const char *parse_array(cJSON *item,const char *value)
 static char *print_array(cJSON *item,int depth,int fmt,printbuffer *p)
 {
 	char **entries;
-	char *out=0,*ptr,*ret;int len=5;
+    char *out=0,*ptr,*ret;size_t len=5;
 	cJSON *child=item->child;
 	int numentries=0,i=0,fail=0;
 	size_t tmplen=0;

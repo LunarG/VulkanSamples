@@ -812,7 +812,6 @@ static VkBool32 validateUpdateType(const VkDevice device, const LAYOUT_NODE* pLa
     // First get actual type of update
     VkDescriptorType actualType;
     uint32_t i = 0;
-    char str[1024];
     switch (pUpdateStruct->sType)
     {
         case VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET:
@@ -845,7 +844,6 @@ static GENERIC_HEADER* shadowUpdateNode(const VkDevice device, GENERIC_HEADER* p
     size_t base_array_size = 0;
     size_t total_array_size = 0;
     size_t baseBuffAddr = 0;
-    char str[1024];
     switch (pUpdate->sType)
     {
         case VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET:
@@ -906,7 +904,7 @@ static VkBool32 dsUpdate(VkDevice device, VkStructureType type, uint32_t updateC
         } else {
             // Next verify that update falls within size of given binding
             if (getBindingEndIndex(pLayout, getUpdateBinding(device, pUpdate)) < getUpdateEndIndex(device, pLayout, pUpdate)) {
-                char str[48*1024]; // TODO : Keep count of layout CI structs and size this string dynamically based on that count
+                // TODO : Keep count of layout CI structs and size this string dynamically based on that count
                 pLayoutCI = &pLayout->createInfo;
                 string DSstr = vk_print_vkdescriptorsetlayoutcreateinfo(pLayoutCI, "{DS}    ");
                 log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DESCRIPTOR_SET, ds.handle, 0, DRAWSTATE_DESCRIPTOR_UPDATE_OUT_OF_BOUNDS, "DS",
@@ -1170,7 +1168,6 @@ static bool validateBoundPipeline(const VkCmdBuffer cb)
     if (pCB && pCB->lastBoundPipeline) {
         // First verify that we have a Node for bound pipeline
         PIPELINE_NODE *pPipeTrav = getPipeline(pCB->lastBoundPipeline);
-        char str[1024];
         if (!pPipeTrav) {
             log_msg(mdd(cb), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, 0, 0, DRAWSTATE_NO_PIPELINE_BOUND, "DS",
                     "Can't find last bound Pipeline %#" PRIxLEAST64 "!", pCB->lastBoundPipeline.handle);
@@ -1203,7 +1200,6 @@ static bool validateBoundPipeline(const VkCmdBuffer cb)
 // Print details of DS config to stdout
 static void printDSConfig(const VkCmdBuffer cb)
 {
-    char tmp_str[1024];
     char ds_config_str[1024*256] = {0}; // TODO : Currently making this buffer HUGE w/o overrun protection.  Need to be smarter, start smaller, and grow as needed.
     GLOBAL_CB_NODE* pCB = getCBNode(cb);
     if (pCB && pCB->lastBoundDescriptorSet) {
@@ -1350,7 +1346,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkDestroyInstance(VkInstance instance)
 
 static void createDeviceRegisterExtensions(const VkDeviceCreateInfo* pCreateInfo, VkDevice device)
 {
-    uint32_t i, ext_idx;
+    uint32_t i;
     VkLayerDispatchTable *pDisp =  get_dispatch_table(draw_state_device_table_map, device);
     deviceExtMap[pDisp].debug_marker_enabled = false;
 
