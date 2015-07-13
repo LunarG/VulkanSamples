@@ -3141,18 +3141,18 @@ VK_LAYER_EXPORT PFN_vkVoidFunction VKAPI vkGetDeviceProcAddr(
     layer_data *my_device_data = get_my_data_ptr(get_dispatch_key(dev), layer_data_map);
     if (my_device_data->wsi_enabled)
     {
-        if (!strcmp(funcName, "vkGetSurfaceInfoWSI"))
-            return (PFN_vkVoidFunction) vkGetSurfaceInfoWSI;
+//        if (!strcmp(funcName, "vkGetSurfaceInfoWSI"))
+//            return (PFN_vkVoidFunction) vkGetSurfaceInfoWSI;
         if (!strcmp(funcName, "vkCreateSwapChainWSI"))
             return (PFN_vkVoidFunction) vkCreateSwapChainWSI;
         if (!strcmp(funcName, "vkDestroySwapChainWSI"))
             return (PFN_vkVoidFunction) vkDestroySwapChainWSI;
         if (!strcmp(funcName, "vkGetSwapChainInfoWSI"))
             return (PFN_vkVoidFunction) vkGetSwapChainInfoWSI;
-        if (!strcmp(funcName, "vkAcquireNextImageWSI"))
-            return (PFN_vkVoidFunction) vkAcquireNextImageWSI;
-        if (!strcmp(funcName, "vkQueuePresentWSI"))
-            return (PFN_vkVoidFunction) vkQueuePresentWSI;
+//        if (!strcmp(funcName, "vkAcquireNextImageWSI"))
+//            return (PFN_vkVoidFunction) vkAcquireNextImageWSI;
+//        if (!strcmp(funcName, "vkQueuePresentWSI"))
+//            return (PFN_vkVoidFunction) vkQueuePresentWSI;
     }
 
     VkLayerDispatchTable *pDisp  = get_dispatch_table(mem_tracker_device_table_map, dev);
