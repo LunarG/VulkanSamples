@@ -1355,7 +1355,7 @@ typedef struct {
     char                                        layerName[VK_MAX_EXTENSION_NAME];
     uint32_t                                    specVersion;
     uint32_t                                    implVersion;
-    const char*                                 description[VK_MAX_DESCRIPTION];
+    char                                        description[VK_MAX_DESCRIPTION];
 } VkLayerProperties;
 
 typedef struct {
