@@ -8294,25 +8294,6 @@ VK_LAYER_EXPORT void VKAPI vkCmdNextSubpass(
     PostCmdNextSubpass(cmdBuffer);
 }
 
-void PreCmdEndRenderPass(
-    VkCmdBuffer cmdBuffer)
-{
-    if(cmdBuffer == nullptr)
-    {
-        log_msg(mdd(cmdBuffer), VK_DBG_REPORT_WARN_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCmdEndRenderPass parameter, VkCmdBuffer cmdBuffer, is null pointer");
-        return;
-    }
-}
-
-void PostCmdEndRenderPass(
-    VkCmdBuffer cmdBuffer)
-{
-    get_dispatch_table(pc_device_table_map, cmdBuffer)->CmdEndRenderPass(cmdBuffer);
-
-    PostCmdEndRenderPass(cmdBuffer);
-}
-
 bool PreCmdExecuteCommands(
     VkCmdBuffer cmdBuffer,
     const VkCmdBuffer* pCmdBuffers)
@@ -8320,7 +8301,7 @@ bool PreCmdExecuteCommands(
     if(pCmdBuffers == nullptr)
     {
         log_msg(mdd(cmdBuffer), VK_DBG_REPORT_WARN_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCmdEndRenderPass parameter, VkCmdBuffer cmdBuffer, is null pointer");
+        "vkCmdExecuteCommands parameter, VkCmdBuffer cmdBuffer, is null pointer");
         return false;
     }
 
@@ -8335,7 +8316,6 @@ bool PostCmdExecuteCommands(
 
     return true;
 }
-
 void PreCmdExecuteCommands(
     VkCmdBuffer cmdBuffer)
 {
@@ -8542,8 +8522,6 @@ VK_LAYER_EXPORT PFN_vkVoidFunction VKAPI vkGetDeviceProcAddr(VkDevice device, co
         return (PFN_vkVoidFunction) vkCmdBeginRenderPass;
     if (!strcmp(funcName, "vkCmdNextSubpass"))
         return (PFN_vkVoidFunction) vkCmdNextSubpass;
-    if (!strcmp(funcName, "vkCmdEndRenderPass"))
-        return (PFN_vkVoidFunction) vkCmdEndRenderPass;
 
     {
         if (get_dispatch_table(pc_device_table_map, device)->GetDeviceProcAddr == NULL)
