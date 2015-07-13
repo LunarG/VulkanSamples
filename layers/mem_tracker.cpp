@@ -2132,7 +2132,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateImageView(
 }
 
 VK_LAYER_EXPORT VkResult VKAPI vkCreateAttachmentView(
-    VkDevice                               device,
+    VkDevice                          device,
     const VkAttachmentViewCreateInfo *pCreateInfo,
     VkAttachmentView                 *pView)
 {
@@ -2145,8 +2145,10 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateAttachmentView(
         MT_OBJ_BINDING_INFO* pInfo = get_object_binding_info(pCreateInfo->image.handle, VK_OBJECT_TYPE_IMAGE);
         if (pInfo) {
             if (VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO == pInfo->create_info.image.sType) {
-                validate_usage_flags(device, pInfo->create_info.image.usage, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT, true,
-                                     pCreateInfo->image.handle, VK_OBJECT_TYPE_IMAGE, "image", "vkCreateAttachmentView()", "VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT");
+                // TODO : Now that this is generalized for all Attachments, need to only check COLOR or DS USAGE bits
+                //  if/when we know that Image being attached to is Color or DS. Can probably do this for DS based on format
+//                validate_usage_flags(device, pInfo->create_info.image.usage, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT, true,
+//                                     pCreateInfo->image.handle, VK_OBJECT_TYPE_IMAGE, "image", "vkCreateAttachmentView()", "VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT");
             } else if (VK_STRUCTURE_TYPE_SWAP_CHAIN_CREATE_INFO_WSI == pInfo->create_info.swapchain.sType) {
                 validate_usage_flags(device, pInfo->create_info.swapchain.imageUsageFlags, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT, true,
                                      pCreateInfo->image.handle, VK_OBJECT_TYPE_IMAGE, "image", "vkCreateAttachmentView()", "VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT");
