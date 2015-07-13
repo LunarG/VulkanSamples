@@ -681,6 +681,10 @@ static void demo_prepare_buffers(struct demo *demo)
         }
     }
 
+#define WORK_AROUND_CODE
+#ifdef WORK_AROUND_CODE
+    uint32_t desiredNumberOfSwapChainImages = DEMO_BUFFER_COUNT;
+#else  // WORK_AROUND_CODE
     // Determine the number of VkImage's to use in the swap chain (we desire to
     // own only 1 image at a time, besides the images being displayed and
     // queued for display):
@@ -691,6 +695,7 @@ static void demo_prepare_buffers(struct demo *demo)
         // Application must settle for fewer images than desired:
         desiredNumberOfSwapChainImages = surfProperties->maxImageCount;
     }
+#endif // WORK_AROUND_CODE
 
     VkSurfaceTransformFlagBitsWSI preTransform;
     if (surfProperties->supportedTransforms & VK_SURFACE_TRANSFORM_NONE_BIT_WSI) {
@@ -733,8 +738,12 @@ static void demo_prepare_buffers(struct demo *demo)
                                       &swapChainImagesSize, swapChainImages);
     assert(!err);
 
+#ifdef WORK_AROUND_CODE
+    demo->swapChainImageCount = DEMO_BUFFER_COUNT;
+#else  // WORK_AROUND_CODE
     // The number of images within the swap chain is determined based on the size of the info returned
     demo->swapChainImageCount = swapChainImagesSize / sizeof(VkSwapChainImagePropertiesWSI);
+#endif // WORK_AROUND_CODE
 
     demo->buffers = (SwapChainBuffers*)malloc(sizeof(SwapChainBuffers)*demo->swapChainImageCount);
     assert(demo->buffers);
