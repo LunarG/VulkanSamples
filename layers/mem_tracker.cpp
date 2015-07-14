@@ -2923,7 +2923,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkGetSwapChainInfoWSI(
 {
     VkResult result = get_dispatch_table(mem_tracker_device_table_map, (void*) swapChain.handle)->GetSwapChainInfoWSI(device, swapChain, infoType, pDataSize, pData);
 
-    if (infoType == VK_SWAP_CHAIN_INFO_TYPE_IMAGES_WSI && result == VK_SUCCESS) {
+    if (infoType == VK_SWAP_CHAIN_INFO_TYPE_IMAGES_WSI && result == VK_SUCCESS && pData != NULL) {
         const size_t count = *pDataSize / sizeof(VkSwapChainImagePropertiesWSI);
         MT_SWAP_CHAIN_INFO *pInfo = swapChainMap[swapChain.handle];
 
