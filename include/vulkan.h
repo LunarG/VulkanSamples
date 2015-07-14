@@ -1567,7 +1567,7 @@ typedef struct {
 typedef struct {
     uint32_t                                    mapEntryCount;
     const VkSpecializationMapEntry*             pMap;
-    const size_t                                dataSize;
+    size_t                                      dataSize;
     const void*                                 pData;
 } VkSpecializationInfo;
 
