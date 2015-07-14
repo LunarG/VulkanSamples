@@ -1103,6 +1103,7 @@ char *demo_read_spv(const char *filename, size_t *psize)
 {
     long int size;
     void *shader_code;
+    size_t retVal;
 
     FILE *fp = fopen(filename, "rb");
     if (!fp) return NULL;
@@ -1113,7 +1114,8 @@ char *demo_read_spv(const char *filename, size_t *psize)
     fseek(fp, 0L, SEEK_SET);
 
     shader_code = malloc(size);
-    fread(shader_code, size, 1, fp);
+    retVal = fread(shader_code, size, 1, fp);
+    if (!retVal) return NULL;
 
     *psize = size;
 

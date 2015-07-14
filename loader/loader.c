@@ -1042,6 +1042,7 @@ static void loader_physical_device_extensions(
         uint32_t *count,
         struct loader_extension_list **list)
 {
+    *count = 0;
     if (layer_name == NULL || (strlen(layer_name) == 0)) {
         *count = icd->device_extension_cache[gpu_idx].count;
         *list = &icd->device_extension_cache[gpu_idx];
@@ -1827,6 +1828,7 @@ static PFN_vkVoidFunction VKAPI loader_gpa_instance_internal(VkInstance inst, co
 struct loader_icd * loader_get_icd(const VkPhysicalDevice gpu, uint32_t *gpu_index)
 {
 
+    *gpu_index = 0;
     for (struct loader_instance *inst = loader.instances; inst; inst = inst->next) {
         for (struct loader_icd *icd = inst->icds; icd; icd = icd->next) {
             for (uint32_t i = 0; i < icd->gpu_count; i++)
@@ -1896,7 +1898,7 @@ static void loader_remove_layer_lib(
         struct loader_layer_properties *layer_prop)
 {
     uint32_t idx;
-    struct loader_lib_info *new_layer_lib_list, *my_lib;
+    struct loader_lib_info *new_layer_lib_list, *my_lib = NULL;
 
     for (uint32_t i = 0; i < loader.loaded_layer_lib_count; i++) {
         if (strcmp(loader.loaded_layer_lib_list[i].lib_name, layer_prop->lib_info.lib_name) == 0) {
@@ -1907,13 +1909,14 @@ static void loader_remove_layer_lib(
         }
     }
 
-    my_lib->ref_count--;
-    if (my_lib->ref_count > 0) {
-        loader_log(VK_DBG_REPORT_DEBUG_BIT, 0,
-                   "Decrement reference count for layer library %s", layer_prop->lib_info.lib_name);
-        return;
+    if (my_lib) {
+        my_lib->ref_count--;
+        if (my_lib->ref_count > 0) {
+            loader_log(VK_DBG_REPORT_DEBUG_BIT, 0,
+                       "Decrement reference count for layer library %s", layer_prop->lib_info.lib_name);
+            return;
+        }
     }
-
     loader_platform_close_library(my_lib->lib_handle);
     loader_log(VK_DBG_REPORT_DEBUG_BIT, 0,
                "Unloading layer library %s", layer_prop->lib_info.lib_name);

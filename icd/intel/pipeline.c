@@ -1333,7 +1333,7 @@ ICD_EXPORT VkResult VKAPI vkCreateGraphicsPipelines(
 {
     struct intel_dev *dev = intel_dev(device);
     uint32_t i;
-    VkResult res;
+    VkResult res = VK_SUCCESS;
     bool one_succeeded = false;
 
     for (i = 0; i < count; i++) {

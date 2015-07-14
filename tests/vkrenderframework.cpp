@@ -1041,7 +1041,7 @@ VkPipelineShaderStageCreateInfo* VkShaderObj::GetStageCreateInfo()
 
 VkShaderObj::VkShaderObj(VkDeviceObj *device, const char * shader_code, VkShaderStage stage, VkRenderFramework *framework)
 {
-    VkResult err = VK_SUCCESS;
+    VkResult U_ASSERT_ONLY err = VK_SUCCESS;
     std::vector<unsigned int> spv;
     VkShaderCreateInfo createInfo;
     VkShaderModuleCreateInfo moduleCreateInfo;

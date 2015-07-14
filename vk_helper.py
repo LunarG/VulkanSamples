@@ -972,8 +972,8 @@ class StructWrapperGen:
         sh_funcs.append("    return final_str;")
         sh_funcs.append("}")
         sh_funcs.append('%s' % lineinfo.get())
-        # Add function to return a string value for input uint32_t
-        sh_funcs.append("string string_convert_helper(const uint32_t toString, const string prefix)\n{")
+        # Add function to return a string value for input uint64_t
+        sh_funcs.append("string string_convert_helper(const uint64_t toString, const string prefix)\n{")
         sh_funcs.append("    using namespace StreamControl;")
         sh_funcs.append("    stringstream ss;")
         sh_funcs.append('    ss << toString;')

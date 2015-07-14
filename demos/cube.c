@@ -1220,7 +1220,6 @@ void demo_prepare_cube_data_buffer(struct demo *demo)
         .memoryTypeIndex = 0,
     };
     VkMemoryRequirements mem_reqs;
-    size_t mem_reqs_size = sizeof(VkMemoryRequirements);
     uint8_t *pData;
     int i;
     mat4x4 MVP, VP;
