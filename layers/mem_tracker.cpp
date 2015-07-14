@@ -2884,7 +2884,9 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateSwapChainWSI(
 
     if (VK_SUCCESS == result) {
         loader_platform_thread_lock_mutex(&globalLock);
-        swapChainMap[pSwapChain->handle]->createInfo = *pCreateInfo;
+        MT_SWAP_CHAIN_INFO *new_rec = new MT_SWAP_CHAIN_INFO;
+        new_rec->createInfo = *pCreateInfo;
+        swapChainMap[pSwapChain->handle]= new_rec;
         loader_platform_thread_unlock_mutex(&globalLock);
     }
 
@@ -2901,7 +2903,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkDestroySwapChainWSI(
 
         if (pInfo->images.size() > 0) {
             for (auto it = pInfo->images.begin(); it != pInfo->images.end(); it++) {
-                clear_object_binding((void*) swapChain.handle, it->image.handle, VK_OBJECT_TYPE_SWAP_CHAIN_WSI);
+                clear_object_binding(device, it->image.handle, VK_OBJECT_TYPE_SWAP_CHAIN_WSI);
                 auto image_item = imageMap.find(it->image.handle);
                 if (image_item != imageMap.end())
                     imageMap.erase(image_item);
@@ -2911,7 +2913,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkDestroySwapChainWSI(
         swapChainMap.erase(swapChain.handle);
     }
     loader_platform_thread_unlock_mutex(&globalLock);
-    return get_dispatch_table(mem_tracker_device_table_map, (void*) swapChain.handle)->DestroySwapChainWSI(device, swapChain);
+    return get_dispatch_table(mem_tracker_device_table_map, device)->DestroySwapChainWSI(device, swapChain);
 }
 
 VK_LAYER_EXPORT VkResult VKAPI vkGetSwapChainInfoWSI(
@@ -2921,7 +2923,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkGetSwapChainInfoWSI(
     size_t                 *pDataSize,
     void                   *pData)
 {
-    VkResult result = get_dispatch_table(mem_tracker_device_table_map, (void*) swapChain.handle)->GetSwapChainInfoWSI(device, swapChain, infoType, pDataSize, pData);
+    VkResult result = get_dispatch_table(mem_tracker_device_table_map, device)->GetSwapChainInfoWSI(device, swapChain, infoType, pDataSize, pData);
 
     if (infoType == VK_SWAP_CHAIN_INFO_TYPE_IMAGES_WSI && result == VK_SUCCESS && pData != NULL) {
         const size_t count = *pDataSize / sizeof(VkSwapChainImagePropertiesWSI);
@@ -2946,7 +2948,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkGetSwapChainInfoWSI(
 
             if (mismatch) {
                 // TODO : Want swapChain to be srcObj here
-                log_msg(mdd((void*) swapChain.handle), VK_DBG_REPORT_WARN_BIT, VK_OBJECT_TYPE_SWAP_CHAIN_WSI, 0, 0, MEMTRACK_NONE, "SWAP_CHAIN",
+                log_msg(mdd(device), VK_DBG_REPORT_WARN_BIT, VK_OBJECT_TYPE_SWAP_CHAIN_WSI, 0, 0, MEMTRACK_NONE, "SWAP_CHAIN",
                         "vkGetSwapChainInfoWSI(%p, VK_SWAP_CHAIN_INFO_TYPE_PERSISTENT_IMAGES_WSI) returned mismatching data", swapChain);
             }
         }
