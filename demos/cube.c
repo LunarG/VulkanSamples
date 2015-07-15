@@ -2383,9 +2383,15 @@ static void demo_init_vk(struct demo *demo)
     assert(demo->queue_count >= 1);
 
     demo->queue_props = (VkPhysicalDeviceQueueProperties *) malloc(demo->queue_count * sizeof(VkPhysicalDeviceQueueProperties));
-    err = vkGetPhysicalDeviceQueueProperties(demo->gpu, queue_count, demo->queue_props);
+    err = vkGetPhysicalDeviceQueueProperties(demo->gpu, demo->queue_count, demo->queue_props);
     assert(!err);
-    assert(queue_count >= 1);
+    assert(demo->queue_count >= 1);
+}
+
+static void demo_init_vk_wsi(struct demo *demo)
+{
+    VkResult err;
+    uint32_t i;
 
     // Construct the WSI surface description:
     demo->surface_description.sType = VK_STRUCTURE_TYPE_SURFACE_DESCRIPTION_WINDOW_WSI;
@@ -2598,6 +2604,7 @@ int WINAPI WinMain(HINSTANCE hInstance,
     demo.connection = hInstance;
     strncpy(demo.name, "cube", APP_NAME_STR_LEN);
     demo_create_window(&demo);
+    demo_init_vk_wsi(&demo);
 
     demo_prepare(&demo);
 
@@ -2629,6 +2636,7 @@ int main(int argc, char **argv)
 
     demo_init(&demo, argc, argv);
     demo_create_window(&demo);
+    demo_init_vk_wsi(&demo);
 
     demo_prepare(&demo);
     demo_run(&demo);
