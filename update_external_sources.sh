@@ -74,7 +74,7 @@ function build_LunarGLASS () {
    make install
 }
 
-if [ ! -d "$BASEDIR/glslang" ]; then
+if [ ! -d "$BASEDIR/glslang" -o ! -d "$BASEDIR/glslang/.git" ]; then
    create_glslang
 fi
 if [ ! -d "$BASEDIR/LunarGLASS" ]; then
