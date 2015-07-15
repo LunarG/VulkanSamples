@@ -1249,7 +1249,7 @@ void demo_prepare_cube_data_buffer(struct demo *demo)
     assert(!err);
 
     err = vkGetBufferMemoryRequirements(demo->device, demo->uniform_data.buf, &mem_reqs);
-    assert(!err && mem_reqs_size == sizeof(mem_reqs));
+    assert(!err);
 
     alloc_info.allocationSize = mem_reqs.size;
     err = memory_type_from_properties(demo,
