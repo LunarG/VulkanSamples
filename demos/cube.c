@@ -800,6 +800,7 @@ static void demo_prepare_depth(struct demo *demo)
         .sType = VK_STRUCTURE_TYPE_ATTACHMENT_VIEW_CREATE_INFO,
         .pNext = NULL,
         .image.handle = VK_NULL_HANDLE,
+        .format = depth_format,
         .mipLevel = 0,
         .baseArraySlice = 0,
         .arraySize = 1,
