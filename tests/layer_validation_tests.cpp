@@ -308,23 +308,23 @@ void VkLayerTest::GenericDrawPreparation(VkCommandBufferObj *cmdBuffer, VkPipeli
         cmdBuffer->BindDynamicDepthStencilState(m_stateDepthStencil);
     }
     // Make sure depthWriteEnable is set so that DepthStencil fail test will work correctly
-    VkStencilOpState stencil = {
-        .stencilFailOp = VK_STENCIL_OP_KEEP,
-        .stencilPassOp = VK_STENCIL_OP_KEEP,
-        .stencilDepthFailOp = VK_STENCIL_OP_KEEP,
-        .stencilCompareOp = VK_COMPARE_OP_NEVER
-    };
-    VkPipelineDepthStencilStateCreateInfo ds_ci = {
-        .sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO,
-        .pNext = NULL,
-        .depthTestEnable = VK_FALSE,
-        .depthWriteEnable = VK_TRUE,
-        .depthCompareOp = VK_COMPARE_OP_NEVER,
-        .depthBoundsEnable = VK_FALSE,
-        .stencilTestEnable = VK_FALSE,
-        .front = stencil,
-        .back = stencil
-    };
+    VkStencilOpState stencil = {};
+    stencil.stencilFailOp = VK_STENCIL_OP_KEEP;
+        stencil.stencilPassOp = VK_STENCIL_OP_KEEP;
+        stencil.stencilDepthFailOp = VK_STENCIL_OP_KEEP;
+        stencil.stencilCompareOp = VK_COMPARE_OP_NEVER;
+
+    VkPipelineDepthStencilStateCreateInfo ds_ci = {};
+    ds_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
+        ds_ci.pNext = NULL;
+        ds_ci.depthTestEnable = VK_FALSE;
+        ds_ci.depthWriteEnable = VK_TRUE;
+        ds_ci.depthCompareOp = VK_COMPARE_OP_NEVER;
+        ds_ci.depthBoundsEnable = VK_FALSE;
+        ds_ci.stencilTestEnable = VK_FALSE;
+        ds_ci.front = stencil;
+        ds_ci.back = stencil;
+
     pipelineobj.SetDepthStencil(&ds_ci);
     descriptorSet.CreateVKDescriptorSet(cmdBuffer);
     pipelineobj.CreateVKPipeline(descriptorSet, renderPass());
@@ -435,26 +435,27 @@ TEST_F(VkLayerTest, MapMemWithoutHostVisibleBit)
     const int32_t  tex_width       = 32;
     const int32_t  tex_height      = 32;
 
-    const VkImageCreateInfo image_create_info = {
-        .sType          = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
-        .pNext          = NULL,
-        .imageType      = VK_IMAGE_TYPE_2D,
-        .format         = tex_format,
-        .extent         = { tex_width, tex_height, 1 },
-        .mipLevels      = 1,
-        .arraySize      = 1,
-        .samples        = 1,
-        .tiling         = VK_IMAGE_TILING_LINEAR,
-        .usage          = VK_IMAGE_USAGE_SAMPLED_BIT,
-        .flags          = 0,
-    };
-    VkMemoryAllocInfo mem_alloc = {
-        .sType          = VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO,
-        .pNext          = NULL,
-        .allocationSize = 0,
+    VkImageCreateInfo image_create_info = {};
+    image_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+        image_create_info.pNext = NULL;
+        image_create_info.imageType = VK_IMAGE_TYPE_2D;
+        image_create_info.format = tex_format;
+        image_create_info.extent.width = tex_width;
+        image_create_info.extent.height = tex_height;
+        image_create_info.extent.depth = 1;
+        image_create_info.mipLevels = 1;
+        image_create_info.arraySize = 1;
+        image_create_info.samples = 1;
+        image_create_info.tiling = VK_IMAGE_TILING_LINEAR;
+        image_create_info.usage = VK_IMAGE_USAGE_SAMPLED_BIT;
+        image_create_info.flags = 0;
+   
+    VkMemoryAllocInfo mem_alloc = {};
+    mem_alloc.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO;
+        mem_alloc.pNext = NULL;
+        mem_alloc.allocationSize = 0;
         // Introduce failure, do NOT set memProps to VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT
-        .memoryTypeIndex = 1,
-    };
+        mem_alloc.memoryTypeIndex = 1;
 
     err = vkCreateImage(m_device->device(), &image_create_info, &image);
     ASSERT_VK_SUCCESS(err);
@@ -503,25 +504,26 @@ TEST_F(VkLayerTest, BindInvalidMemory)
     const int32_t  tex_width       = 32;
     const int32_t  tex_height      = 32;
 
-    const VkImageCreateInfo image_create_info = {
-        .sType           = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
-        .pNext           = NULL,
-        .imageType       = VK_IMAGE_TYPE_2D,
-        .format          = tex_format,
-        .extent          = { tex_width, tex_height, 1 },
-        .mipLevels       = 1,
-        .arraySize       = 1,
-        .samples         = 1,
-        .tiling          = VK_IMAGE_TILING_LINEAR,
-        .usage           = VK_IMAGE_USAGE_SAMPLED_BIT,
-        .flags           = 0,
-    };
-    VkMemoryAllocInfo mem_alloc = {
-        .sType           = VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO,
-        .pNext           = NULL,
-        .allocationSize  = 0,
-        .memoryTypeIndex = 0,
-    };
+    VkImageCreateInfo image_create_info = {};
+        image_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+        image_create_info.pNext = NULL;
+        image_create_info.imageType = VK_IMAGE_TYPE_2D;
+        image_create_info.format = tex_format;
+        image_create_info.extent.width = tex_width;
+        image_create_info.extent.height = tex_height;
+        image_create_info.extent.depth = 1;
+        image_create_info.mipLevels = 1;
+        image_create_info.arraySize = 1;
+        image_create_info.samples = 1;
+        image_create_info.tiling = VK_IMAGE_TILING_LINEAR;
+        image_create_info.usage = VK_IMAGE_USAGE_SAMPLED_BIT;
+        image_create_info.flags = 0;
+
+    VkMemoryAllocInfo mem_alloc = {};
+        mem_alloc.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO;
+        mem_alloc.pNext = NULL;
+        mem_alloc.allocationSize = 0;
+        mem_alloc.memoryTypeIndex = 0;
 
     err = vkCreateImage(m_device->device(), &image_create_info, &image);
     ASSERT_VK_SUCCESS(err);
@@ -646,26 +648,29 @@ TEST_F(VkLayerTest, RebindMemory)
     const int32_t  tex_width       = 32;
     const int32_t  tex_height      = 32;
 
-    const VkImageCreateInfo image_create_info = {
-        .sType           = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
-        .pNext           = NULL,
-        .imageType       = VK_IMAGE_TYPE_2D,
-        .format          = tex_format,
-        .extent          = { tex_width, tex_height, 1 },
-        .mipLevels       = 1,
-        .arraySize       = 1,
-        .samples         = 1,
-        .tiling          = VK_IMAGE_TILING_LINEAR,
-        .usage           = VK_IMAGE_USAGE_SAMPLED_BIT,
-        .flags           = 0,
-    };
-    VkMemoryAllocInfo mem_alloc = {
-        .sType           = VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO,
-        .pNext           = NULL,
-        .allocationSize  = 0,
-        .memoryTypeIndex = 0,
-    };
+    VkImageCreateInfo image_create_info = {};
+        image_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+        image_create_info.pNext = NULL;
+        image_create_info.imageType = VK_IMAGE_TYPE_2D;
+        image_create_info.format = tex_format;
+        image_create_info.extent.width = tex_width;
+        image_create_info.extent.height = tex_height;
+        image_create_info.extent.depth = 1;
+        image_create_info.mipLevels = 1;
+        image_create_info.arraySize = 1;
+        image_create_info.samples = 1;
+        image_create_info.tiling = VK_IMAGE_TILING_LINEAR;
+        image_create_info.usage = VK_IMAGE_USAGE_SAMPLED_BIT;
+        image_create_info.flags = 0;
 
+    VkMemoryAllocInfo mem_alloc = {};
+        mem_alloc.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO;
+        mem_alloc.pNext = NULL;
+        mem_alloc.allocationSize = 0;
+        mem_alloc.memoryTypeIndex = 0;
+
+    // Introduce failure, do NOT set memProps to VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT
+    mem_alloc.memoryTypeIndex = 1;
     err = vkCreateImage(m_device->device(), &image_create_info, &image);
     ASSERT_VK_SUCCESS(err);
 
@@ -717,25 +722,26 @@ TEST_F(VkLayerTest, BindMemoryToDestroyedObject)
     const int32_t  tex_width       = 32;
     const int32_t  tex_height      = 32;
 
-    const VkImageCreateInfo image_create_info = {
-        .sType           = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
-        .pNext           = NULL,
-        .imageType       = VK_IMAGE_TYPE_2D,
-        .format          = tex_format,
-        .extent          = { tex_width, tex_height, 1 },
-        .mipLevels       = 1,
-        .arraySize       = 1,
-        .samples         = 1,
-        .tiling          = VK_IMAGE_TILING_LINEAR,
-        .usage           = VK_IMAGE_USAGE_SAMPLED_BIT,
-        .flags           = 0,
-    };
-    VkMemoryAllocInfo mem_alloc = {
-        .sType           = VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO,
-        .pNext           = NULL,
-        .allocationSize  = 0,
-        .memoryTypeIndex = 0,
-    };
+    VkImageCreateInfo image_create_info = {};
+        image_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+        image_create_info.pNext = NULL;
+        image_create_info.imageType = VK_IMAGE_TYPE_2D;
+        image_create_info.format = tex_format;
+        image_create_info.extent.width = tex_width;
+        image_create_info.extent.height = tex_height;
+        image_create_info.extent.depth = 1;
+        image_create_info.mipLevels = 1;
+        image_create_info.arraySize = 1;
+        image_create_info.samples = 1;
+        image_create_info.tiling = VK_IMAGE_TILING_LINEAR;
+        image_create_info.usage = VK_IMAGE_USAGE_SAMPLED_BIT;
+        image_create_info.flags = 0;
+
+    VkMemoryAllocInfo mem_alloc = {};
+        mem_alloc.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO;
+        mem_alloc.pNext = NULL;
+        mem_alloc.allocationSize = 0;
+        mem_alloc.memoryTypeIndex = 0;
 
     err = vkCreateImage(m_device->device(), &image_create_info, &image);
     ASSERT_VK_SUCCESS(err);
@@ -1028,33 +1034,31 @@ TEST_F(VkLayerTest, DescriptorSetNotUpdated)
     ASSERT_NO_FATAL_FAILURE(InitState());
     m_errorMonitor->ClearState();
     VkCommandBufferObj cmdBuffer(m_device);
-    const VkDescriptorTypeCount ds_type_count = {
-        .type       = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-        .count      = 1,
-    };
-    const VkDescriptorPoolCreateInfo ds_pool_ci = {
-        .sType      = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
-        .pNext      = NULL,
-        .count      = 1,
-        .pTypeCount = &ds_type_count,
-    };
+    VkDescriptorTypeCount ds_type_count = {};
+        ds_type_count.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        ds_type_count.count = 1;
+
+    VkDescriptorPoolCreateInfo ds_pool_ci = {};
+        ds_pool_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+        ds_pool_ci.pNext = NULL;
+        ds_pool_ci.count = 1;
+        ds_pool_ci.pTypeCount = &ds_type_count;
+ 
     VkDescriptorPool ds_pool;
     err = vkCreateDescriptorPool(m_device->device(), VK_DESCRIPTOR_POOL_USAGE_ONE_SHOT, 1, &ds_pool_ci, &ds_pool);
     ASSERT_VK_SUCCESS(err);
 
-    const VkDescriptorSetLayoutBinding dsl_binding = {
-        .descriptorType     = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-        .arraySize          = 1,
-        .stageFlags         = VK_SHADER_STAGE_ALL,
-        .pImmutableSamplers = NULL,
-    };
+    VkDescriptorSetLayoutBinding dsl_binding = {};
+        dsl_binding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        dsl_binding.arraySize = 1;
+        dsl_binding.stageFlags = VK_SHADER_STAGE_ALL;
+        dsl_binding.pImmutableSamplers = NULL;
 
-    const VkDescriptorSetLayoutCreateInfo ds_layout_ci = {
-        .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
-        .pNext = NULL,
-        .count = 1,
-        .pBinding = &dsl_binding,
-    };
+    VkDescriptorSetLayoutCreateInfo ds_layout_ci = {};
+        ds_layout_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+        ds_layout_ci.pNext = NULL;
+        ds_layout_ci.count = 1;
+        ds_layout_ci.pBinding = &dsl_binding;
     VkDescriptorSetLayout ds_layout;
     err = vkCreateDescriptorSetLayout(m_device->device(), &ds_layout_ci, &ds_layout);
     ASSERT_VK_SUCCESS(err);
@@ -1064,12 +1068,11 @@ TEST_F(VkLayerTest, DescriptorSetNotUpdated)
     err = vkAllocDescriptorSets(m_device->device(), ds_pool, VK_DESCRIPTOR_SET_USAGE_ONE_SHOT, 1, &ds_layout, &descriptorSet, &ds_count);
     ASSERT_VK_SUCCESS(err);
 
-    const VkPipelineLayoutCreateInfo pipeline_layout_ci = {
-        .sType              = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
-        .pNext               = NULL,
-        .descriptorSetCount = 1,
-        .pSetLayouts        = &ds_layout,
-    };
+    VkPipelineLayoutCreateInfo pipeline_layout_ci = {};
+        pipeline_layout_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+        pipeline_layout_ci.pNext = NULL;
+        pipeline_layout_ci.descriptorSetCount = 1;
+        pipeline_layout_ci.pSetLayouts = &ds_layout;
 
     VkPipelineLayout pipeline_layout;
     err = vkCreatePipelineLayout(m_device->device(), &pipeline_layout_ci, &pipeline_layout);
@@ -1077,36 +1080,35 @@ TEST_F(VkLayerTest, DescriptorSetNotUpdated)
 
     VkShaderObj vs(m_device, bindStateVertShaderText, VK_SHADER_STAGE_VERTEX, this);
 
-    const VkPipelineShaderStageCreateInfo pipe_vs_ci = {
-        .sType                = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
-        .pNext                = NULL,
-        .stage                = VK_SHADER_STAGE_VERTEX,
-        .shader               = vs.handle(),
-        .pSpecializationInfo  = NULL,
-    };
-    const VkGraphicsPipelineCreateInfo gp_ci = {
-        .sType                 = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
-        .pNext                 = NULL,
-        .stageCount            = 1,
-        .pStages               = &pipe_vs_ci,
-        .pVertexInputState     = NULL,
-        .pInputAssemblyState   = NULL,
-        .pTessellationState    = NULL,
-        .pViewportState        = NULL,
-        .pRasterState          = NULL,
-        .pMultisampleState     = NULL,
-        .pDepthStencilState    = NULL,
-        .pColorBlendState      = NULL,
-        .flags                 = VK_PIPELINE_CREATE_DISABLE_OPTIMIZATION_BIT,
-        .layout                = pipeline_layout,
-    };
-    const VkPipelineCacheCreateInfo pc_ci = {
-        .sType             = VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO,
-        .pNext             = NULL,
-        .initialSize       = 0,
-        .initialData       = 0,
-        .maxSize           = 0,
-    };
+    VkPipelineShaderStageCreateInfo pipe_vs_ci = {};
+        pipe_vs_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+        pipe_vs_ci.pNext = NULL;
+        pipe_vs_ci.stage = VK_SHADER_STAGE_VERTEX;
+        pipe_vs_ci.shader = vs.handle();
+        pipe_vs_ci.pSpecializationInfo = NULL;
+    
+    VkGraphicsPipelineCreateInfo gp_ci = {};
+        gp_ci.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
+        gp_ci.pNext = NULL;
+        gp_ci.stageCount = 1;
+        gp_ci.pStages = &pipe_vs_ci;
+        gp_ci.pVertexInputState = NULL;
+        gp_ci.pInputAssemblyState = NULL;
+        gp_ci.pTessellationState = NULL;
+        gp_ci.pViewportState = NULL;
+        gp_ci.pRasterState = NULL;
+        gp_ci.pMultisampleState = NULL;
+        gp_ci.pDepthStencilState = NULL;
+        gp_ci.pColorBlendState = NULL;
+        gp_ci.flags = VK_PIPELINE_CREATE_DISABLE_OPTIMIZATION_BIT;
+        gp_ci.layout = pipeline_layout;
+   
+    VkPipelineCacheCreateInfo pc_ci = {};
+        pc_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO;
+        pc_ci.pNext = NULL;
+        pc_ci.initialSize = 0;
+        pc_ci.initialData = 0;
+        pc_ci.maxSize = 0;
 
     VkPipeline pipeline;
     VkPipelineCache pipelineCache;
@@ -1157,33 +1159,33 @@ TEST_F(VkLayerTest, InvalidPipelineCreateState)
     ASSERT_NO_FATAL_FAILURE(InitState());
     m_errorMonitor->ClearState();
     VkCommandBufferObj cmdBuffer(m_device);
-    const VkDescriptorTypeCount ds_type_count = {
-        .type       = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-        .count      = 1,
-    };
-    const VkDescriptorPoolCreateInfo ds_pool_ci = {
-        .sType      = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
-        .pNext      = NULL,
-        .count      = 1,
-        .pTypeCount = &ds_type_count,
-    };
+    
+    VkDescriptorTypeCount ds_type_count = {};
+        ds_type_count.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        ds_type_count.count = 1;
+
+    VkDescriptorPoolCreateInfo ds_pool_ci = {};
+        ds_pool_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+        ds_pool_ci.pNext = NULL;
+        ds_pool_ci.count = 1;
+        ds_pool_ci.pTypeCount = &ds_type_count;
+ 
     VkDescriptorPool ds_pool;
     err = vkCreateDescriptorPool(m_device->device(), VK_DESCRIPTOR_POOL_USAGE_ONE_SHOT, 1, &ds_pool_ci, &ds_pool);
     ASSERT_VK_SUCCESS(err);
 
-    const VkDescriptorSetLayoutBinding dsl_binding = {
-        .descriptorType     = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-        .arraySize          = 1,
-        .stageFlags         = VK_SHADER_STAGE_ALL,
-        .pImmutableSamplers = NULL,
-    };
+    VkDescriptorSetLayoutBinding dsl_binding = {};
+        dsl_binding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        dsl_binding.arraySize = 1;
+        dsl_binding.stageFlags = VK_SHADER_STAGE_ALL;
+        dsl_binding.pImmutableSamplers = NULL;
 
-    const VkDescriptorSetLayoutCreateInfo ds_layout_ci = {
-        .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
-        .pNext = NULL,
-        .count = 1,
-        .pBinding = &dsl_binding,
-    };
+    VkDescriptorSetLayoutCreateInfo ds_layout_ci = {};
+        ds_layout_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+        ds_layout_ci.pNext = NULL;
+        ds_layout_ci.count = 1;
+        ds_layout_ci.pBinding = &dsl_binding;
+
     VkDescriptorSetLayout ds_layout;
     err = vkCreateDescriptorSetLayout(m_device->device(), &ds_layout_ci, &ds_layout);
     ASSERT_VK_SUCCESS(err);
@@ -1193,40 +1195,38 @@ TEST_F(VkLayerTest, InvalidPipelineCreateState)
     err = vkAllocDescriptorSets(m_device->device(), ds_pool, VK_DESCRIPTOR_SET_USAGE_ONE_SHOT, 1, &ds_layout, &descriptorSet, &ds_count);
     ASSERT_VK_SUCCESS(err);
 
-    const VkPipelineLayoutCreateInfo pipeline_layout_ci = {
-        .sType              = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
-        .pNext               = NULL,
-        .descriptorSetCount = 1,
-        .pSetLayouts        = &ds_layout,
-    };
+    VkPipelineLayoutCreateInfo pipeline_layout_ci = {};
+        pipeline_layout_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+        pipeline_layout_ci.pNext = NULL;
+        pipeline_layout_ci.descriptorSetCount = 1;
+        pipeline_layout_ci.pSetLayouts = &ds_layout;
 
     VkPipelineLayout pipeline_layout;
     err = vkCreatePipelineLayout(m_device->device(), &pipeline_layout_ci, &pipeline_layout);
     ASSERT_VK_SUCCESS(err);
 
-    const VkGraphicsPipelineCreateInfo gp_ci = {
-        .sType                 = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
-        .pNext                 = NULL,
-        .stageCount            = 0,
-        .pStages               = NULL, // Creating Gfx Pipeline w/o VS is a violation
-        .pVertexInputState     = NULL,
-        .pInputAssemblyState   = NULL,
-        .pTessellationState    = NULL,
-        .pViewportState        = NULL,
-        .pRasterState          = NULL,
-        .pMultisampleState     = NULL,
-        .pDepthStencilState    = NULL,
-        .pColorBlendState      = NULL,
-        .flags                 = VK_PIPELINE_CREATE_DISABLE_OPTIMIZATION_BIT,
-        .layout                = pipeline_layout,
-    };
-    const VkPipelineCacheCreateInfo pc_ci = {
-        .sType             = VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO,
-        .pNext             = NULL,
-        .initialSize       = 0,
-        .initialData       = 0,
-        .maxSize           = 0,
-    };
+    VkGraphicsPipelineCreateInfo gp_ci = {};
+        gp_ci.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
+        gp_ci.pNext = NULL;
+        gp_ci.stageCount = 0;
+        gp_ci.pStages = NULL;
+        gp_ci.pVertexInputState = NULL;
+        gp_ci.pInputAssemblyState = NULL;
+        gp_ci.pTessellationState = NULL;
+        gp_ci.pViewportState = NULL;
+        gp_ci.pRasterState = NULL;
+        gp_ci.pMultisampleState = NULL;
+        gp_ci.pDepthStencilState = NULL;
+        gp_ci.pColorBlendState = NULL;
+        gp_ci.flags = VK_PIPELINE_CREATE_DISABLE_OPTIMIZATION_BIT;
+        gp_ci.layout = pipeline_layout;
+
+    VkPipelineCacheCreateInfo pc_ci = {};
+        pc_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO;
+        pc_ci.pNext = NULL;
+        pc_ci.initialSize = 0;
+        pc_ci.initialData = 0;
+        pc_ci.maxSize = 0;
 
     VkPipeline pipeline;
     VkPipelineCache pipelineCache;
@@ -1279,12 +1279,12 @@ TEST_F(VkLayerTest, RenderPassWithinRenderPass)
     cmdBuffer.AddRenderTarget(m_renderTargets[0]);
     BeginCommandBuffer(cmdBuffer);
     // Just create a dummy Renderpass that's non-NULL so we can get to the proper error
-    const VkRenderPassBeginInfo rp_begin = {
-        .sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
-        .pNext = NULL,
-        .renderPass = (VkRenderPass) 0xc001d00d,
-        .framebuffer = 0
-    };
+    VkRenderPassBeginInfo rp_begin = {};
+        rp_begin.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+        rp_begin.pNext = NULL;
+        rp_begin.renderPass = (VkRenderPass)0xc001d00d;
+        rp_begin.framebuffer = 0;
+ 
     vkCmdBeginRenderPass(cmdBuffer.GetBufferHandle(), &rp_begin, VK_RENDER_PASS_CONTENTS_INLINE);
 
     msgFlags = m_errorMonitor->GetState(&msgString);
@@ -1312,33 +1312,33 @@ TEST_F(VkLayerTest, VtxBufferNoRenderPass)
     ASSERT_NO_FATAL_FAILURE(InitState());
     m_errorMonitor->ClearState();
     VkCommandBufferObj cmdBuffer(m_device);
-    const VkDescriptorTypeCount ds_type_count = {
-        .type       = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-        .count      = 1,
-    };
-    const VkDescriptorPoolCreateInfo ds_pool_ci = {
-        .sType      = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
-        .pNext      = NULL,
-        .count      = 1,
-        .pTypeCount = &ds_type_count,
-    };
+
+    VkDescriptorTypeCount ds_type_count = {};
+        ds_type_count.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        ds_type_count.count = 1;
+
+    VkDescriptorPoolCreateInfo ds_pool_ci = {};
+        ds_pool_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+        ds_pool_ci.pNext = NULL;
+        ds_pool_ci.count = 1;
+        ds_pool_ci.pTypeCount = &ds_type_count;
+
     VkDescriptorPool ds_pool;
     err = vkCreateDescriptorPool(m_device->device(), VK_DESCRIPTOR_POOL_USAGE_ONE_SHOT, 1, &ds_pool_ci, &ds_pool);
     ASSERT_VK_SUCCESS(err);
 
-    const VkDescriptorSetLayoutBinding dsl_binding = {
-        .descriptorType     = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-        .arraySize          = 1,
-        .stageFlags         = VK_SHADER_STAGE_ALL,
-        .pImmutableSamplers = NULL,
-    };
+    VkDescriptorSetLayoutBinding dsl_binding = {};
+        dsl_binding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        dsl_binding.arraySize = 1;
+        dsl_binding.stageFlags = VK_SHADER_STAGE_ALL;
+        dsl_binding.pImmutableSamplers = NULL;
 
-    const VkDescriptorSetLayoutCreateInfo ds_layout_ci = {
-        .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
-        .pNext = NULL,
-        .count = 1,
-        .pBinding = &dsl_binding,
-    };
+    VkDescriptorSetLayoutCreateInfo ds_layout_ci = {};
+        ds_layout_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+        ds_layout_ci.pNext = NULL;
+        ds_layout_ci.count = 1;
+        ds_layout_ci.pBinding = &dsl_binding;
+
     VkDescriptorSetLayout ds_layout;
     err = vkCreateDescriptorSetLayout(m_device->device(), &ds_layout_ci, &ds_layout);
     ASSERT_VK_SUCCESS(err);
@@ -1348,12 +1348,11 @@ TEST_F(VkLayerTest, VtxBufferNoRenderPass)
     err = vkAllocDescriptorSets(m_device->device(), ds_pool, VK_DESCRIPTOR_SET_USAGE_ONE_SHOT, 1, &ds_layout, &descriptorSet, &ds_count);
     ASSERT_VK_SUCCESS(err);
 
-    const VkPipelineLayoutCreateInfo pipeline_layout_ci = {
-        .sType              = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
-        .pNext               = NULL,
-        .descriptorSetCount = 1,
-        .pSetLayouts        = &ds_layout,
-    };
+    VkPipelineLayoutCreateInfo pipeline_layout_ci = {};
+        pipeline_layout_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+        pipeline_layout_ci.pNext = NULL;
+        pipeline_layout_ci.descriptorSetCount = 1;
+        pipeline_layout_ci.pSetLayouts = &ds_layout;
 
     VkPipelineLayout pipeline_layout;
     err = vkCreatePipelineLayout(m_device->device(), &pipeline_layout_ci, &pipeline_layout);
@@ -1361,36 +1360,35 @@ TEST_F(VkLayerTest, VtxBufferNoRenderPass)
 
     VkShaderObj vs(m_device, bindStateVertShaderText, VK_SHADER_STAGE_VERTEX, this);
 
-    const VkPipelineShaderStageCreateInfo pipe_vs_ci = {
-        .sType  = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
-        .pNext  = NULL,
-        .stage                = VK_SHADER_STAGE_VERTEX,
-        .shader               = vs.handle(),
-        .pSpecializationInfo  = NULL,
-    };
-    const VkGraphicsPipelineCreateInfo gp_ci = {
-        .sType                 = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
-        .pNext                 = NULL,
-        .stageCount            = 1,
-        .pStages               = &pipe_vs_ci,
-        .pVertexInputState     = NULL,
-        .pInputAssemblyState   = NULL,
-        .pTessellationState    = NULL,
-        .pViewportState        = NULL,
-        .pRasterState          = NULL,
-        .pMultisampleState     = NULL,
-        .pDepthStencilState    = NULL,
-        .pColorBlendState      = NULL,
-        .flags                 = VK_PIPELINE_CREATE_DISABLE_OPTIMIZATION_BIT,
-        .layout                = pipeline_layout,
-    };
-    const VkPipelineCacheCreateInfo pc_ci = {
-        .sType             = VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO,
-        .pNext             = NULL,
-        .initialSize       = 0,
-        .initialData       = 0,
-        .maxSize           = 0,
-    };
+    VkPipelineShaderStageCreateInfo pipe_vs_ci = {};
+        pipe_vs_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+        pipe_vs_ci.pNext = NULL;
+        pipe_vs_ci.stage = VK_SHADER_STAGE_VERTEX;
+        pipe_vs_ci.shader = vs.handle();
+        pipe_vs_ci.pSpecializationInfo = NULL;
+
+    VkGraphicsPipelineCreateInfo gp_ci = {};
+        gp_ci.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
+        gp_ci.pNext = NULL;
+        gp_ci.stageCount = 1;
+        gp_ci.pStages = &pipe_vs_ci;
+        gp_ci.pVertexInputState = NULL;
+        gp_ci.pInputAssemblyState = NULL;
+        gp_ci.pTessellationState = NULL;
+        gp_ci.pViewportState = NULL;
+        gp_ci.pRasterState = NULL;
+        gp_ci.pMultisampleState = NULL;
+        gp_ci.pDepthStencilState = NULL;
+        gp_ci.pColorBlendState = NULL;
+        gp_ci.flags = VK_PIPELINE_CREATE_DISABLE_OPTIMIZATION_BIT;
+        gp_ci.layout = pipeline_layout;
+
+    VkPipelineCacheCreateInfo pc_ci = {};
+        pc_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO;
+        pc_ci.pNext = NULL;
+        pc_ci.initialSize = 0;
+        pc_ci.initialData = 0;
+        pc_ci.maxSize = 0;
 
     VkPipeline pipeline;
     VkPipelineCache pipelineCache;
@@ -1423,32 +1421,31 @@ TEST_F(VkLayerTest, DSTypeMismatch)
     ASSERT_NO_FATAL_FAILURE(InitState());
     m_errorMonitor->ClearState();
     //VkDescriptorSetObj descriptorSet(m_device);
-    const VkDescriptorTypeCount ds_type_count = {
-        .type       = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-        .count      = 1,
-    };
-    const VkDescriptorPoolCreateInfo ds_pool_ci = {
-        .sType      = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
-        .pNext      = NULL,
-        .count      = 1,
-        .pTypeCount = &ds_type_count,
-    };
+    VkDescriptorTypeCount ds_type_count = {};
+        ds_type_count.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        ds_type_count.count = 1;
+
+    VkDescriptorPoolCreateInfo ds_pool_ci = {};
+        ds_pool_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+        ds_pool_ci.pNext = NULL;
+        ds_pool_ci.count = 1;
+        ds_pool_ci.pTypeCount = &ds_type_count;
+
     VkDescriptorPool ds_pool;
     err = vkCreateDescriptorPool(m_device->device(), VK_DESCRIPTOR_POOL_USAGE_ONE_SHOT, 1, &ds_pool_ci, &ds_pool);
     ASSERT_VK_SUCCESS(err);
-    const VkDescriptorSetLayoutBinding dsl_binding = {
-        .descriptorType     = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-        .arraySize          = 1,
-        .stageFlags         = VK_SHADER_STAGE_ALL,
-        .pImmutableSamplers = NULL,
-    };
+    VkDescriptorSetLayoutBinding dsl_binding = {};
+        dsl_binding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        dsl_binding.arraySize = 1;
+        dsl_binding.stageFlags = VK_SHADER_STAGE_ALL;
+        dsl_binding.pImmutableSamplers = NULL;
 
-    const VkDescriptorSetLayoutCreateInfo ds_layout_ci = {
-        .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
-        .pNext = NULL,
-        .count = 1,
-        .pBinding = &dsl_binding,
-    };
+    VkDescriptorSetLayoutCreateInfo ds_layout_ci = {};
+        ds_layout_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+        ds_layout_ci.pNext = NULL;
+        ds_layout_ci.count = 1;
+        ds_layout_ci.pBinding = &dsl_binding;
+
     VkDescriptorSetLayout ds_layout;
     err = vkCreateDescriptorSetLayout(m_device->device(), &ds_layout_ci, &ds_layout);
     ASSERT_VK_SUCCESS(err);
@@ -1458,23 +1455,23 @@ TEST_F(VkLayerTest, DSTypeMismatch)
     err = vkAllocDescriptorSets(m_device->device(), ds_pool, VK_DESCRIPTOR_SET_USAGE_ONE_SHOT, 1, &ds_layout, &descriptorSet, &ds_count);
     ASSERT_VK_SUCCESS(err);
 
-    const VkSamplerCreateInfo sampler_ci = {
-        .sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
-        .pNext = NULL,
-        .magFilter    = VK_TEX_FILTER_NEAREST,
-        .minFilter    = VK_TEX_FILTER_NEAREST,
-        .mipMode      = VK_TEX_MIPMAP_MODE_BASE,
-        .addressU     = VK_TEX_ADDRESS_CLAMP,
-        .addressV     = VK_TEX_ADDRESS_CLAMP,
-        .addressW     = VK_TEX_ADDRESS_CLAMP,
-        .mipLodBias   = 1.0,
-        .maxAnisotropy = 1,
-        .compareEnable = VK_FALSE,
-        .compareOp    = VK_COMPARE_OP_NEVER,
-        .minLod       = 1.0,
-        .maxLod       = 1.0,
-        .borderColor  = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE,
-    };
+    VkSamplerCreateInfo sampler_ci = {};
+        sampler_ci.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+        sampler_ci.pNext = NULL;
+        sampler_ci.magFilter = VK_TEX_FILTER_NEAREST;
+        sampler_ci.minFilter = VK_TEX_FILTER_NEAREST;
+        sampler_ci.mipMode = VK_TEX_MIPMAP_MODE_BASE;
+        sampler_ci.addressU = VK_TEX_ADDRESS_CLAMP;
+        sampler_ci.addressV = VK_TEX_ADDRESS_CLAMP;
+        sampler_ci.addressW = VK_TEX_ADDRESS_CLAMP;
+        sampler_ci.mipLodBias = 1.0;
+        sampler_ci.maxAnisotropy = 1;
+        sampler_ci.compareEnable = VK_FALSE;
+        sampler_ci.compareOp = VK_COMPARE_OP_NEVER;
+        sampler_ci.minLod = 1.0;
+        sampler_ci.maxLod = 1.0;
+        sampler_ci.borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE;
+   
     VkSampler sampler;
     err = vkCreateSampler(m_device->device(), &sampler_ci, &sampler);
     ASSERT_VK_SUCCESS(err);
@@ -1511,32 +1508,32 @@ TEST_F(VkLayerTest, DSUpdateOutOfBounds)
     ASSERT_NO_FATAL_FAILURE(InitState());
     m_errorMonitor->ClearState();
     //VkDescriptorSetObj descriptorSet(m_device);
-    const VkDescriptorTypeCount ds_type_count = {
-        .type       = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-        .count      = 1,
-    };
-    const VkDescriptorPoolCreateInfo ds_pool_ci = {
-        .sType      = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
-        .pNext      = NULL,
-        .count      = 1,
-        .pTypeCount = &ds_type_count,
-    };
+    VkDescriptorTypeCount ds_type_count = {};
+        ds_type_count.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        ds_type_count.count = 1;
+
+    VkDescriptorPoolCreateInfo ds_pool_ci = {};
+        ds_pool_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+        ds_pool_ci.pNext = NULL;
+        ds_pool_ci.count = 1;
+        ds_pool_ci.pTypeCount = &ds_type_count;
+
     VkDescriptorPool ds_pool;
     err = vkCreateDescriptorPool(m_device->device(), VK_DESCRIPTOR_POOL_USAGE_ONE_SHOT, 1, &ds_pool_ci, &ds_pool);
     ASSERT_VK_SUCCESS(err);
-    const VkDescriptorSetLayoutBinding dsl_binding = {
-        .descriptorType     = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-        .arraySize          = 1,
-        .stageFlags         = VK_SHADER_STAGE_ALL,
-        .pImmutableSamplers = NULL,
-    };
 
-    const VkDescriptorSetLayoutCreateInfo ds_layout_ci = {
-        .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
-        .pNext = NULL,
-        .count = 1,
-        .pBinding = &dsl_binding,
-    };
+    VkDescriptorSetLayoutBinding dsl_binding = {};
+        dsl_binding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        dsl_binding.arraySize = 1;
+        dsl_binding.stageFlags = VK_SHADER_STAGE_ALL;
+        dsl_binding.pImmutableSamplers = NULL;
+
+    VkDescriptorSetLayoutCreateInfo ds_layout_ci = {};
+        ds_layout_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+        ds_layout_ci.pNext = NULL;
+        ds_layout_ci.count = 1;
+        ds_layout_ci.pBinding = &dsl_binding;
+
     VkDescriptorSetLayout ds_layout;
     err = vkCreateDescriptorSetLayout(m_device->device(), &ds_layout_ci, &ds_layout);
     ASSERT_VK_SUCCESS(err);
@@ -1546,23 +1543,23 @@ TEST_F(VkLayerTest, DSUpdateOutOfBounds)
     err = vkAllocDescriptorSets(m_device->device(), ds_pool, VK_DESCRIPTOR_SET_USAGE_ONE_SHOT, 1, &ds_layout, &descriptorSet, &ds_count);
     ASSERT_VK_SUCCESS(err);
 
-    const VkSamplerCreateInfo sampler_ci = {
-        .sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
-        .pNext = NULL,
-        .magFilter    = VK_TEX_FILTER_NEAREST,
-        .minFilter    = VK_TEX_FILTER_NEAREST,
-        .mipMode      = VK_TEX_MIPMAP_MODE_BASE,
-        .addressU     = VK_TEX_ADDRESS_CLAMP,
-        .addressV     = VK_TEX_ADDRESS_CLAMP,
-        .addressW     = VK_TEX_ADDRESS_CLAMP,
-        .mipLodBias   = 1.0,
-        .maxAnisotropy = 1,
-        .compareEnable = VK_FALSE,
-        .compareOp    = VK_COMPARE_OP_NEVER,
-        .minLod       = 1.0,
-        .maxLod       = 1.0,
-        .borderColor  = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE,
-    };
+    VkSamplerCreateInfo sampler_ci = {};
+        sampler_ci.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+        sampler_ci.pNext = NULL;
+        sampler_ci.magFilter = VK_TEX_FILTER_NEAREST;
+        sampler_ci.minFilter = VK_TEX_FILTER_NEAREST;
+        sampler_ci.mipMode = VK_TEX_MIPMAP_MODE_BASE;
+        sampler_ci.addressU = VK_TEX_ADDRESS_CLAMP;
+        sampler_ci.addressV = VK_TEX_ADDRESS_CLAMP;
+        sampler_ci.addressW = VK_TEX_ADDRESS_CLAMP;
+        sampler_ci.mipLodBias = 1.0;
+        sampler_ci.maxAnisotropy = 1;
+        sampler_ci.compareEnable = VK_FALSE;
+        sampler_ci.compareOp = VK_COMPARE_OP_NEVER;
+        sampler_ci.minLod = 1.0;
+        sampler_ci.maxLod = 1.0;
+        sampler_ci.borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE;
+
     VkSampler sampler;
     err = vkCreateSampler(m_device->device(), &sampler_ci, &sampler);
     ASSERT_VK_SUCCESS(err);
@@ -1600,32 +1597,30 @@ TEST_F(VkLayerTest, InvalidDSUpdateIndex)
     ASSERT_NO_FATAL_FAILURE(InitState());
     m_errorMonitor->ClearState();
     //VkDescriptorSetObj descriptorSet(m_device);
-    const VkDescriptorTypeCount ds_type_count = {
-        .type       = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-        .count      = 1,
-    };
-    const VkDescriptorPoolCreateInfo ds_pool_ci = {
-        .sType      = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
-        .pNext      = NULL,
-        .count      = 1,
-        .pTypeCount = &ds_type_count,
-    };
+    VkDescriptorTypeCount ds_type_count = {};
+        ds_type_count.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        ds_type_count.count = 1;
+
+    VkDescriptorPoolCreateInfo ds_pool_ci = {};
+        ds_pool_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+        ds_pool_ci.pNext = NULL;
+        ds_pool_ci.count = 1;
+        ds_pool_ci.pTypeCount = &ds_type_count;
     VkDescriptorPool ds_pool;
     err = vkCreateDescriptorPool(m_device->device(), VK_DESCRIPTOR_POOL_USAGE_ONE_SHOT, 1, &ds_pool_ci, &ds_pool);
     ASSERT_VK_SUCCESS(err);
-    const VkDescriptorSetLayoutBinding dsl_binding = {
-        .descriptorType     = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-        .arraySize          = 1,
-        .stageFlags         = VK_SHADER_STAGE_ALL,
-        .pImmutableSamplers = NULL,
-    };
 
-    const VkDescriptorSetLayoutCreateInfo ds_layout_ci = {
-        .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
-        .pNext = NULL,
-        .count = 1,
-        .pBinding = &dsl_binding,
-    };
+    VkDescriptorSetLayoutBinding dsl_binding = {};
+        dsl_binding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        dsl_binding.arraySize = 1;
+        dsl_binding.stageFlags = VK_SHADER_STAGE_ALL;
+        dsl_binding.pImmutableSamplers = NULL;
+
+    VkDescriptorSetLayoutCreateInfo ds_layout_ci = {};
+        ds_layout_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+        ds_layout_ci.pNext = NULL;
+        ds_layout_ci.count = 1;
+        ds_layout_ci.pBinding = &dsl_binding;
     VkDescriptorSetLayout ds_layout;
     err = vkCreateDescriptorSetLayout(m_device->device(), &ds_layout_ci, &ds_layout);
     ASSERT_VK_SUCCESS(err);
@@ -1635,23 +1630,23 @@ TEST_F(VkLayerTest, InvalidDSUpdateIndex)
     err = vkAllocDescriptorSets(m_device->device(), ds_pool, VK_DESCRIPTOR_SET_USAGE_ONE_SHOT, 1, &ds_layout, &descriptorSet, &ds_count);
     ASSERT_VK_SUCCESS(err);
 
-    const VkSamplerCreateInfo sampler_ci = {
-        .sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
-        .pNext = NULL,
-        .magFilter    = VK_TEX_FILTER_NEAREST,
-        .minFilter    = VK_TEX_FILTER_NEAREST,
-        .mipMode      = VK_TEX_MIPMAP_MODE_BASE,
-        .addressU     = VK_TEX_ADDRESS_CLAMP,
-        .addressV     = VK_TEX_ADDRESS_CLAMP,
-        .addressW     = VK_TEX_ADDRESS_CLAMP,
-        .mipLodBias   = 1.0,
-        .maxAnisotropy = 1,
-        .compareEnable = VK_FALSE,
-        .compareOp    = VK_COMPARE_OP_NEVER,
-        .minLod       = 1.0,
-        .maxLod       = 1.0,
-        .borderColor  = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE,
-    };
+    VkSamplerCreateInfo sampler_ci = {};
+        sampler_ci.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+        sampler_ci.pNext = NULL;
+        sampler_ci.magFilter = VK_TEX_FILTER_NEAREST;
+        sampler_ci.minFilter = VK_TEX_FILTER_NEAREST;
+        sampler_ci.mipMode = VK_TEX_MIPMAP_MODE_BASE;
+        sampler_ci.addressU = VK_TEX_ADDRESS_CLAMP;
+        sampler_ci.addressV = VK_TEX_ADDRESS_CLAMP;
+        sampler_ci.addressW = VK_TEX_ADDRESS_CLAMP;
+        sampler_ci.mipLodBias = 1.0;
+        sampler_ci.maxAnisotropy = 1;
+        sampler_ci.compareEnable = VK_FALSE;
+        sampler_ci.compareOp = VK_COMPARE_OP_NEVER;
+        sampler_ci.minLod = 1.0;
+        sampler_ci.maxLod = 1.0;
+        sampler_ci.borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE;
+
     VkSampler sampler;
     err = vkCreateSampler(m_device->device(), &sampler_ci, &sampler);
     ASSERT_VK_SUCCESS(err);
@@ -1689,32 +1684,31 @@ TEST_F(VkLayerTest, InvalidDSUpdateStruct)
     ASSERT_NO_FATAL_FAILURE(InitState());
     m_errorMonitor->ClearState();
     //VkDescriptorSetObj descriptorSet(m_device);
-    const VkDescriptorTypeCount ds_type_count = {
-        .type       = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-        .count      = 1,
-    };
-    const VkDescriptorPoolCreateInfo ds_pool_ci = {
-        .sType      = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
-        .pNext      = NULL,
-        .count      = 1,
-        .pTypeCount = &ds_type_count,
-    };
+ 
+    VkDescriptorTypeCount ds_type_count = {};
+        ds_type_count.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        ds_type_count.count = 1;
+
+    VkDescriptorPoolCreateInfo ds_pool_ci = {};
+        ds_pool_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+        ds_pool_ci.pNext = NULL;
+        ds_pool_ci.count = 1;
+        ds_pool_ci.pTypeCount = &ds_type_count;
     VkDescriptorPool ds_pool;
     err = vkCreateDescriptorPool(m_device->device(), VK_DESCRIPTOR_POOL_USAGE_ONE_SHOT, 1, &ds_pool_ci, &ds_pool);
     ASSERT_VK_SUCCESS(err);
-    const VkDescriptorSetLayoutBinding dsl_binding = {
-        .descriptorType     = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-        .arraySize          = 1,
-        .stageFlags         = VK_SHADER_STAGE_ALL,
-        .pImmutableSamplers = NULL,
-    };
+    VkDescriptorSetLayoutBinding dsl_binding = {};
+        dsl_binding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        dsl_binding.arraySize = 1;
+        dsl_binding.stageFlags = VK_SHADER_STAGE_ALL;
+        dsl_binding.pImmutableSamplers = NULL;
 
-    const VkDescriptorSetLayoutCreateInfo ds_layout_ci = {
-        .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
-        .pNext = NULL,
-        .count = 1,
-        .pBinding = &dsl_binding,
-    };
+    VkDescriptorSetLayoutCreateInfo ds_layout_ci = {};
+        ds_layout_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+        ds_layout_ci.pNext = NULL;
+        ds_layout_ci.count = 1;
+        ds_layout_ci.pBinding = &dsl_binding;
+
     VkDescriptorSetLayout ds_layout;
     err = vkCreateDescriptorSetLayout(m_device->device(), &ds_layout_ci, &ds_layout);
     ASSERT_VK_SUCCESS(err);
@@ -1724,23 +1718,22 @@ TEST_F(VkLayerTest, InvalidDSUpdateStruct)
     err = vkAllocDescriptorSets(m_device->device(), ds_pool, VK_DESCRIPTOR_SET_USAGE_ONE_SHOT, 1, &ds_layout, &descriptorSet, &ds_count);
     ASSERT_VK_SUCCESS(err);
 
-    const VkSamplerCreateInfo sampler_ci = {
-        .sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
-        .pNext = NULL,
-        .magFilter    = VK_TEX_FILTER_NEAREST,
-        .minFilter    = VK_TEX_FILTER_NEAREST,
-        .mipMode      = VK_TEX_MIPMAP_MODE_BASE,
-        .addressU     = VK_TEX_ADDRESS_CLAMP,
-        .addressV     = VK_TEX_ADDRESS_CLAMP,
-        .addressW     = VK_TEX_ADDRESS_CLAMP,
-        .mipLodBias   = 1.0,
-        .maxAnisotropy = 1,
-        .compareEnable = VK_FALSE,
-        .compareOp    = VK_COMPARE_OP_NEVER,
-        .minLod       = 1.0,
-        .maxLod       = 1.0,
-        .borderColor  = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE,
-    };
+    VkSamplerCreateInfo sampler_ci = {};
+        sampler_ci.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+        sampler_ci.pNext = NULL;
+        sampler_ci.magFilter = VK_TEX_FILTER_NEAREST;
+        sampler_ci.minFilter = VK_TEX_FILTER_NEAREST;
+        sampler_ci.mipMode = VK_TEX_MIPMAP_MODE_BASE;
+        sampler_ci.addressU = VK_TEX_ADDRESS_CLAMP;
+        sampler_ci.addressV = VK_TEX_ADDRESS_CLAMP;
+        sampler_ci.addressW = VK_TEX_ADDRESS_CLAMP;
+        sampler_ci.mipLodBias = 1.0;
+        sampler_ci.maxAnisotropy = 1;
+        sampler_ci.compareEnable = VK_FALSE;
+        sampler_ci.compareOp = VK_COMPARE_OP_NEVER;
+        sampler_ci.minLod = 1.0;
+        sampler_ci.maxLod = 1.0;
+        sampler_ci.borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE;
     VkSampler sampler;
     err = vkCreateSampler(m_device->device(), &sampler_ci, &sampler);
     ASSERT_VK_SUCCESS(err);
@@ -1779,33 +1772,31 @@ TEST_F(VkLayerTest, NumSamplesMismatch)
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
     m_errorMonitor->ClearState();
     VkCommandBufferObj cmdBuffer(m_device);
-    const VkDescriptorTypeCount ds_type_count = {
-        .type       = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-        .count      = 1,
-    };
-    const VkDescriptorPoolCreateInfo ds_pool_ci = {
-        .sType      = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
-        .pNext      = NULL,
-        .count      = 1,
-        .pTypeCount = &ds_type_count,
-    };
+    VkDescriptorTypeCount ds_type_count = {};
+    ds_type_count.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    ds_type_count.count = 1;
+
+    VkDescriptorPoolCreateInfo ds_pool_ci = {};
+    ds_pool_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+    ds_pool_ci.pNext = NULL;
+    ds_pool_ci.count = 1;
+    ds_pool_ci.pTypeCount = &ds_type_count;
     VkDescriptorPool ds_pool;
     err = vkCreateDescriptorPool(m_device->device(), VK_DESCRIPTOR_POOL_USAGE_ONE_SHOT, 1, &ds_pool_ci, &ds_pool);
     ASSERT_VK_SUCCESS(err);
 
-    const VkDescriptorSetLayoutBinding dsl_binding = {
-        .descriptorType     = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-        .arraySize          = 1,
-        .stageFlags         = VK_SHADER_STAGE_ALL,
-        .pImmutableSamplers = NULL,
-    };
+    VkDescriptorSetLayoutBinding dsl_binding = {};
+    dsl_binding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    dsl_binding.arraySize = 1;
+    dsl_binding.stageFlags = VK_SHADER_STAGE_ALL;
+    dsl_binding.pImmutableSamplers = NULL;
 
-    const VkDescriptorSetLayoutCreateInfo ds_layout_ci = {
-        .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
-        .pNext = NULL,
-        .count = 1,
-        .pBinding = &dsl_binding,
-    };
+    VkDescriptorSetLayoutCreateInfo ds_layout_ci = {};
+    ds_layout_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+    ds_layout_ci.pNext = NULL;
+    ds_layout_ci.count = 1;
+    ds_layout_ci.pBinding = &dsl_binding;
+
     VkDescriptorSetLayout ds_layout;
     err = vkCreateDescriptorSetLayout(m_device->device(), &ds_layout_ci, &ds_layout);
     ASSERT_VK_SUCCESS(err);
@@ -1815,58 +1806,54 @@ TEST_F(VkLayerTest, NumSamplesMismatch)
     err = vkAllocDescriptorSets(m_device->device(), ds_pool, VK_DESCRIPTOR_SET_USAGE_ONE_SHOT, 1, &ds_layout, &descriptorSet, &ds_count);
     ASSERT_VK_SUCCESS(err);
 
-    const VkPipelineMultisampleStateCreateInfo pipe_ms_state_ci = {
-        .sType               = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO,
-        .pNext               = NULL,
-        .rasterSamples       = 4,
-        .sampleShadingEnable = 0,
-        .minSampleShading    = 1.0,
-        .sampleMask          = 15,
-    };
+    VkPipelineMultisampleStateCreateInfo pipe_ms_state_ci = {};
+        pipe_ms_state_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
+        pipe_ms_state_ci.pNext = NULL;
+        pipe_ms_state_ci.rasterSamples = 4;
+        pipe_ms_state_ci.sampleShadingEnable = 0;
+        pipe_ms_state_ci.minSampleShading = 1.0;
+        pipe_ms_state_ci.sampleMask = 15;
 
-    const VkPipelineLayoutCreateInfo pipeline_layout_ci = {
-        .sType              = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
-        .pNext              = NULL,
-        .descriptorSetCount = 1,
-        .pSetLayouts        = &ds_layout,
-    };
+    VkPipelineLayoutCreateInfo pipeline_layout_ci = {};
+        pipeline_layout_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+        pipeline_layout_ci.pNext = NULL;
+        pipeline_layout_ci.descriptorSetCount = 1;
+        pipeline_layout_ci.pSetLayouts = &ds_layout;
 
     VkPipelineLayout pipeline_layout;
     err = vkCreatePipelineLayout(m_device->device(), &pipeline_layout_ci, &pipeline_layout);
     ASSERT_VK_SUCCESS(err);
 
     VkShaderObj vs(m_device, bindStateVertShaderText, VK_SHADER_STAGE_VERTEX, this);
+    VkPipelineShaderStageCreateInfo pipe_vs_ci = {};
+        pipe_vs_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+        pipe_vs_ci.pNext = NULL;
+        pipe_vs_ci.stage = VK_SHADER_STAGE_VERTEX;
+        pipe_vs_ci.shader = vs.handle();
+        pipe_vs_ci.pSpecializationInfo = NULL;
 
-    const VkPipelineShaderStageCreateInfo pipe_vs_ci = {
-        .sType                = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
-        .pNext                = NULL,
-        .stage                = VK_SHADER_STAGE_VERTEX,
-        .shader               = vs.handle(),
-        .pSpecializationInfo  = NULL,
-    };
-    const VkGraphicsPipelineCreateInfo gp_ci = {
-        .sType                 = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
-        .pNext                 = NULL,
-        .stageCount            = 1,
-        .pStages               = &pipe_vs_ci,
-        .pVertexInputState     = NULL,
-        .pInputAssemblyState   = NULL,
-        .pTessellationState    = NULL,
-        .pViewportState        = NULL,
-        .pRasterState          = NULL,
-        .pMultisampleState     = &pipe_ms_state_ci,
-        .pDepthStencilState    = NULL,
-        .pColorBlendState      = NULL,
-        .flags                 = VK_PIPELINE_CREATE_DISABLE_OPTIMIZATION_BIT,
-        .layout                = pipeline_layout,
-    };
-    const VkPipelineCacheCreateInfo pc_ci = {
-        .sType             = VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO,
-        .pNext             = NULL,
-        .initialSize       = 0,
-        .initialData       = 0,
-        .maxSize           = 0,
-    };
+    VkGraphicsPipelineCreateInfo gp_ci = {};
+        gp_ci.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
+        gp_ci.pNext = NULL;
+        gp_ci.stageCount = 1;
+        gp_ci.pStages = &pipe_vs_ci;
+        gp_ci.pVertexInputState = NULL;
+        gp_ci.pInputAssemblyState = NULL;
+        gp_ci.pTessellationState = NULL;
+        gp_ci.pViewportState = NULL;
+        gp_ci.pRasterState = NULL;
+        gp_ci.pMultisampleState = &pipe_ms_state_ci;
+        gp_ci.pDepthStencilState = NULL;
+        gp_ci.pColorBlendState = NULL;
+        gp_ci.flags = VK_PIPELINE_CREATE_DISABLE_OPTIMIZATION_BIT;
+        gp_ci.layout = pipeline_layout;
+
+    VkPipelineCacheCreateInfo pc_ci = {};
+        pc_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO;
+        pc_ci.pNext = NULL;
+        pc_ci.initialSize = 0;
+        pc_ci.initialData = 0;
+        pc_ci.maxSize = 0;
 
     VkPipeline pipeline;
     VkPipelineCache pipelineCache;
@@ -1897,33 +1884,33 @@ TEST_F(VkLayerTest, PipelineNotBound)
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
     m_errorMonitor->ClearState();
     VkCommandBufferObj cmdBuffer(m_device);
-    const VkDescriptorTypeCount ds_type_count = {
-        .type       = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-        .count      = 1,
-    };
-    const VkDescriptorPoolCreateInfo ds_pool_ci = {
-        .sType      = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
-        .pNext      = NULL,
-        .count      = 1,
-        .pTypeCount = &ds_type_count,
-    };
+  
+    VkDescriptorTypeCount ds_type_count = {};
+        ds_type_count.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        ds_type_count.count = 1;
+
+    VkDescriptorPoolCreateInfo ds_pool_ci = {};
+        ds_pool_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+        ds_pool_ci.pNext = NULL;
+        ds_pool_ci.count = 1;
+        ds_pool_ci.pTypeCount = &ds_type_count;
+  
     VkDescriptorPool ds_pool;
     err = vkCreateDescriptorPool(m_device->device(), VK_DESCRIPTOR_POOL_USAGE_ONE_SHOT, 1, &ds_pool_ci, &ds_pool);
     ASSERT_VK_SUCCESS(err);
 
-    const VkDescriptorSetLayoutBinding dsl_binding = {
-        .descriptorType     = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-        .arraySize          = 1,
-        .stageFlags         = VK_SHADER_STAGE_ALL,
-        .pImmutableSamplers = NULL,
-    };
+    VkDescriptorSetLayoutBinding dsl_binding = {};
+        dsl_binding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        dsl_binding.arraySize = 1;
+        dsl_binding.stageFlags = VK_SHADER_STAGE_ALL;
+        dsl_binding.pImmutableSamplers = NULL;
 
-    const VkDescriptorSetLayoutCreateInfo ds_layout_ci = {
-        .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
-        .pNext = NULL,
-        .count = 1,
-        .pBinding = &dsl_binding,
-    };
+    VkDescriptorSetLayoutCreateInfo ds_layout_ci = {};
+        ds_layout_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+        ds_layout_ci.pNext = NULL;
+        ds_layout_ci.count = 1;
+        ds_layout_ci.pBinding = &dsl_binding;
+
     VkDescriptorSetLayout ds_layout;
     err = vkCreateDescriptorSetLayout(m_device->device(), &ds_layout_ci, &ds_layout);
     ASSERT_VK_SUCCESS(err);
@@ -1932,13 +1919,12 @@ TEST_F(VkLayerTest, PipelineNotBound)
     uint32_t ds_count = 0;
     err = vkAllocDescriptorSets(m_device->device(), ds_pool, VK_DESCRIPTOR_SET_USAGE_ONE_SHOT, 1, &ds_layout, &descriptorSet, &ds_count);
     ASSERT_VK_SUCCESS(err);
-
-    const VkPipelineLayoutCreateInfo pipeline_layout_ci = {
-        .sType              = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
-        .pNext              = NULL,
-        .descriptorSetCount = 1,
-        .pSetLayouts        = &ds_layout,
-    };
+    
+    VkPipelineLayoutCreateInfo pipeline_layout_ci = {};
+        pipeline_layout_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+        pipeline_layout_ci.pNext = NULL;
+        pipeline_layout_ci.descriptorSetCount = 1;
+        pipeline_layout_ci.pSetLayouts = &ds_layout;
 
     VkPipelineLayout pipeline_layout;
     err = vkCreatePipelineLayout(m_device->device(), &pipeline_layout_ci, &pipeline_layout);
@@ -1970,33 +1956,33 @@ TEST_F(VkLayerTest, ClearCmdNoDraw)
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
     m_errorMonitor->ClearState();
     VkCommandBufferObj cmdBuffer(m_device);
-    const VkDescriptorTypeCount ds_type_count = {
-        .type       = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-        .count      = 1,
-    };
-    const VkDescriptorPoolCreateInfo ds_pool_ci = {
-        .sType      = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
-        .pNext      = NULL,
-        .count      = 1,
-        .pTypeCount = &ds_type_count,
-    };
+
+    VkDescriptorTypeCount ds_type_count = {};
+        ds_type_count.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        ds_type_count.count = 1;
+
+    VkDescriptorPoolCreateInfo ds_pool_ci = {};
+        ds_pool_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+        ds_pool_ci.pNext = NULL;
+        ds_pool_ci.count = 1;
+        ds_pool_ci.pTypeCount = &ds_type_count;
+
     VkDescriptorPool ds_pool;
     err = vkCreateDescriptorPool(m_device->device(), VK_DESCRIPTOR_POOL_USAGE_ONE_SHOT, 1, &ds_pool_ci, &ds_pool);
     ASSERT_VK_SUCCESS(err);
 
-    const VkDescriptorSetLayoutBinding dsl_binding = {
-        .descriptorType     = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-        .arraySize          = 1,
-        .stageFlags         = VK_SHADER_STAGE_ALL,
-        .pImmutableSamplers = NULL,
-    };
+    VkDescriptorSetLayoutBinding dsl_binding = {};
+        dsl_binding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        dsl_binding.arraySize = 1;
+        dsl_binding.stageFlags = VK_SHADER_STAGE_ALL;
+        dsl_binding.pImmutableSamplers = NULL;
 
-    const VkDescriptorSetLayoutCreateInfo ds_layout_ci = {
-        .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
-        .pNext = NULL,
-        .count = 1,
-        .pBinding = &dsl_binding,
-    };
+    VkDescriptorSetLayoutCreateInfo ds_layout_ci = {};
+        ds_layout_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+        ds_layout_ci.pNext = NULL;
+        ds_layout_ci.count = 1;
+        ds_layout_ci.pBinding = &dsl_binding;
+  
     VkDescriptorSetLayout ds_layout;
     err = vkCreateDescriptorSetLayout(m_device->device(), &ds_layout_ci, &ds_layout);
     ASSERT_VK_SUCCESS(err);
@@ -2006,21 +1992,19 @@ TEST_F(VkLayerTest, ClearCmdNoDraw)
     err = vkAllocDescriptorSets(m_device->device(), ds_pool, VK_DESCRIPTOR_SET_USAGE_ONE_SHOT, 1, &ds_layout, &descriptorSet, &ds_count);
     ASSERT_VK_SUCCESS(err);
 
-    const VkPipelineMultisampleStateCreateInfo pipe_ms_state_ci = {
-        .sType               = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO,
-        .pNext               = NULL,
-        .rasterSamples       = 4,
-        .sampleShadingEnable = 0,
-        .minSampleShading    = 1.0,
-        .sampleMask          = 15,
-    };
+    VkPipelineMultisampleStateCreateInfo pipe_ms_state_ci = {};
+        pipe_ms_state_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
+        pipe_ms_state_ci.pNext = NULL;
+        pipe_ms_state_ci.rasterSamples = 4;
+        pipe_ms_state_ci.sampleShadingEnable = 0;
+        pipe_ms_state_ci.minSampleShading = 1.0;
+        pipe_ms_state_ci.sampleMask = 15;
 
-    const VkPipelineLayoutCreateInfo pipeline_layout_ci = {
-        .sType              = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
-        .pNext              = NULL,
-        .descriptorSetCount = 1,
-        .pSetLayouts        = &ds_layout,
-    };
+    VkPipelineLayoutCreateInfo pipeline_layout_ci = {};
+        pipeline_layout_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+        pipeline_layout_ci.pNext = NULL;
+        pipeline_layout_ci.descriptorSetCount = 1;
+        pipeline_layout_ci.pSetLayouts = &ds_layout;
 
     VkPipelineLayout pipeline_layout;
     err = vkCreatePipelineLayout(m_device->device(), &pipeline_layout_ci, &pipeline_layout);
@@ -2036,57 +2020,55 @@ TEST_F(VkLayerTest, ClearCmdNoDraw)
     ((uint32_t *) pCode)[2] = VK_SHADER_STAGE_VERTEX;
     memcpy(((uint32_t *) pCode + 3), bindStateVertShaderText, shader_len + 1);
 
-    const VkShaderModuleCreateInfo smci = {
-        .sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
-        .pNext = NULL,
-        .codeSize = codeSize,
-        .pCode = pCode,
-        .flags = 0,
-    };
+    VkShaderModuleCreateInfo smci = {};
+        smci.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+        smci.pNext = NULL;
+        smci.codeSize = codeSize;
+        smci.pCode = pCode;
+        smci.flags = 0;
+    
     VkShaderModule vksm;
     err = vkCreateShaderModule(m_device->device(), &smci, &vksm);
     ASSERT_VK_SUCCESS(err);
-    const VkShaderCreateInfo vs_ci = {
-        .sType = VK_STRUCTURE_TYPE_SHADER_CREATE_INFO,
-        .pNext = NULL,
-        .module = vksm,
-        .pName = "main",
-        .flags = 0,
-    };
+    VkShaderCreateInfo vs_ci = {};
+        vs_ci.sType = VK_STRUCTURE_TYPE_SHADER_CREATE_INFO;
+        vs_ci.pNext = NULL;
+        vs_ci.module = vksm;
+        vs_ci.pName = "main";
+        vs_ci.flags = 0;
+    
     VkShader vs;
     err = vkCreateShader(m_device->device(), &vs_ci, &vs);
     ASSERT_VK_SUCCESS(err);
+    VkPipelineShaderStageCreateInfo pipe_vs_ci = {};
+        pipe_vs_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+        pipe_vs_ci.pNext = NULL;
+        pipe_vs_ci.stage = VK_SHADER_STAGE_VERTEX;
+        pipe_vs_ci.shader = vs;
+        pipe_vs_ci.pSpecializationInfo = NULL;
 
-    const VkPipelineShaderStageCreateInfo pipe_vs_ci = {
-        .sType                = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
-        .pNext                = NULL,
-        .stage                = VK_SHADER_STAGE_VERTEX,
-        .shader               = vs,
-        .pSpecializationInfo  = NULL,
-    };
-    const VkGraphicsPipelineCreateInfo gp_ci = {
-        .sType                 = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
-        .pNext                 = NULL,
-        .stageCount            = 1,
-        .pStages               = &pipe_vs_ci,
-        .pVertexInputState     = NULL,
-        .pInputAssemblyState   = NULL,
-        .pTessellationState    = NULL,
-        .pViewportState        = NULL,
-        .pRasterState          = NULL,
-        .pMultisampleState     = &pipe_ms_state_ci,
-        .pDepthStencilState    = NULL,
-        .pColorBlendState      = NULL,
-        .flags                 = VK_PIPELINE_CREATE_DISABLE_OPTIMIZATION_BIT,
-        .layout                = pipeline_layout,
-    };
-    const VkPipelineCacheCreateInfo pc_ci = {
-        .sType             = VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO,
-        .pNext             = NULL,
-        .initialSize       = 0,
-        .initialData       = 0,
-        .maxSize           = 0,
-    };
+    VkGraphicsPipelineCreateInfo gp_ci = {};
+        gp_ci.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
+        gp_ci.pNext = NULL;
+        gp_ci.stageCount = 1;
+        gp_ci.pStages = &pipe_vs_ci;
+        gp_ci.pVertexInputState = NULL;
+        gp_ci.pInputAssemblyState = NULL;
+        gp_ci.pTessellationState = NULL;
+        gp_ci.pViewportState = NULL;
+        gp_ci.pRasterState = NULL;
+        gp_ci.pMultisampleState = &pipe_ms_state_ci;
+        gp_ci.pDepthStencilState = NULL;
+        gp_ci.pColorBlendState = NULL;
+        gp_ci.flags = VK_PIPELINE_CREATE_DISABLE_OPTIMIZATION_BIT;
+        gp_ci.layout = pipeline_layout;
+
+    VkPipelineCacheCreateInfo pc_ci = {};
+        pc_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO;
+        pc_ci.pNext = NULL;
+        pc_ci.initialSize = 0;
+        pc_ci.initialData = 0;
+        pc_ci.maxSize = 0;
 
     VkPipeline pipeline;
     VkPipelineCache pipelineCache;
@@ -2127,33 +2109,33 @@ TEST_F(VkLayerTest, VtxBufferBadIndex)
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
     m_errorMonitor->ClearState();
     VkCommandBufferObj cmdBuffer(m_device);
-    const VkDescriptorTypeCount ds_type_count = {
-        .type       = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-        .count      = 1,
-    };
-    const VkDescriptorPoolCreateInfo ds_pool_ci = {
-        .sType      = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
-        .pNext      = NULL,
-        .count      = 1,
-        .pTypeCount = &ds_type_count,
-    };
-    VkDescriptorPool ds_pool;
+
+    VkDescriptorTypeCount ds_type_count = {};
+        ds_type_count.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        ds_type_count.count = 1;
+
+    VkDescriptorPoolCreateInfo ds_pool_ci = {};
+        ds_pool_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+        ds_pool_ci.pNext = NULL;
+        ds_pool_ci.count = 1;
+        ds_pool_ci.pTypeCount = &ds_type_count;
+
+        VkDescriptorPool ds_pool;
     err = vkCreateDescriptorPool(m_device->device(), VK_DESCRIPTOR_POOL_USAGE_ONE_SHOT, 1, &ds_pool_ci, &ds_pool);
     ASSERT_VK_SUCCESS(err);
 
-    const VkDescriptorSetLayoutBinding dsl_binding = {
-        .descriptorType     = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-        .arraySize          = 1,
-        .stageFlags         = VK_SHADER_STAGE_ALL,
-        .pImmutableSamplers = NULL,
-    };
+    VkDescriptorSetLayoutBinding dsl_binding = {};
+        dsl_binding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        dsl_binding.arraySize = 1;
+        dsl_binding.stageFlags = VK_SHADER_STAGE_ALL;
+        dsl_binding.pImmutableSamplers = NULL;
 
-    const VkDescriptorSetLayoutCreateInfo ds_layout_ci = {
-        .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
-        .pNext = NULL,
-        .count = 1,
-        .pBinding = &dsl_binding,
-    };
+    VkDescriptorSetLayoutCreateInfo ds_layout_ci = {};
+        ds_layout_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+        ds_layout_ci.pNext = NULL;
+        ds_layout_ci.count = 1;
+        ds_layout_ci.pBinding = &dsl_binding;
+
     VkDescriptorSetLayout ds_layout;
     err = vkCreateDescriptorSetLayout(m_device->device(), &ds_layout_ci, &ds_layout);
     ASSERT_VK_SUCCESS(err);
@@ -2163,51 +2145,48 @@ TEST_F(VkLayerTest, VtxBufferBadIndex)
     err = vkAllocDescriptorSets(m_device->device(), ds_pool, VK_DESCRIPTOR_SET_USAGE_ONE_SHOT, 1, &ds_layout, &descriptorSet, &ds_count);
     ASSERT_VK_SUCCESS(err);
 
-    const VkPipelineMultisampleStateCreateInfo pipe_ms_state_ci = {
-        .sType               = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO,
-        .pNext               = NULL,
-        .rasterSamples       = 1,
-        .sampleShadingEnable = 0,
-        .minSampleShading    = 1.0,
-        .sampleMask          = 15,
-    };
+    VkPipelineMultisampleStateCreateInfo pipe_ms_state_ci = {};
+        pipe_ms_state_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
+        pipe_ms_state_ci.pNext = NULL;
+        pipe_ms_state_ci.rasterSamples = 1;
+        pipe_ms_state_ci.sampleShadingEnable = 0;
+        pipe_ms_state_ci.minSampleShading = 1.0;
+        pipe_ms_state_ci.sampleMask = 15;
 
-    const VkPipelineLayoutCreateInfo pipeline_layout_ci = {
-        .sType              = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
-        .pNext              = NULL,
-        .descriptorSetCount = 1,
-        .pSetLayouts        = &ds_layout,
-    };
+    VkPipelineLayoutCreateInfo pipeline_layout_ci = {};
+        pipeline_layout_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+        pipeline_layout_ci.pNext = NULL;
+        pipeline_layout_ci.descriptorSetCount = 1;
+        pipeline_layout_ci.pSetLayouts = &ds_layout;
+        VkPipelineLayout pipeline_layout;
 
-    VkPipelineLayout pipeline_layout;
     err = vkCreatePipelineLayout(m_device->device(), &pipeline_layout_ci, &pipeline_layout);
     ASSERT_VK_SUCCESS(err);
 
     VkShaderObj vs(m_device, bindStateVertShaderText, VK_SHADER_STAGE_VERTEX, this);
 
-    const VkPipelineShaderStageCreateInfo pipe_vs_ci = {
-        .sType                = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
-        .pNext                = NULL,
-        .stage                = VK_SHADER_STAGE_VERTEX,
-        .shader               = vs.handle(),
-        .pSpecializationInfo  = NULL,
-    };
-    const VkGraphicsPipelineCreateInfo gp_ci = {
-        .sType                 = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
-        .pNext                 = NULL,
-        .stageCount            = 1,
-        .pStages               = &pipe_vs_ci,
-        .pVertexInputState     = NULL,
-        .pInputAssemblyState   = NULL,
-        .pTessellationState    = NULL,
-        .pViewportState        = NULL,
-        .pRasterState          = NULL,
-        .pMultisampleState     = &pipe_ms_state_ci,
-        .pDepthStencilState    = NULL,
-        .pColorBlendState      = NULL,
-        .flags                 = VK_PIPELINE_CREATE_DISABLE_OPTIMIZATION_BIT,
-        .layout                = pipeline_layout,
-    };
+    VkPipelineShaderStageCreateInfo pipe_vs_ci = {};
+        pipe_vs_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+        pipe_vs_ci.pNext = NULL;
+        pipe_vs_ci.stage = VK_SHADER_STAGE_VERTEX;
+        pipe_vs_ci.shader = vs.handle();
+        pipe_vs_ci.pSpecializationInfo = NULL;
+
+    VkGraphicsPipelineCreateInfo gp_ci = {};
+        gp_ci.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
+        gp_ci.pNext = NULL;
+        gp_ci.stageCount = 1;
+        gp_ci.pStages = &pipe_vs_ci;
+        gp_ci.pVertexInputState = NULL;
+        gp_ci.pInputAssemblyState = NULL;
+        gp_ci.pTessellationState = NULL;
+        gp_ci.pViewportState = NULL;
+        gp_ci.pRasterState = NULL;
+        gp_ci.pMultisampleState = &pipe_ms_state_ci;
+        gp_ci.pDepthStencilState = NULL;
+        gp_ci.pColorBlendState = NULL;
+        gp_ci.flags = VK_PIPELINE_CREATE_DISABLE_OPTIMIZATION_BIT;
+        gp_ci.layout = pipeline_layout;
 
     VkPipelineCacheCreateInfo pipelineCache;
     VkPipelineCache pipeline_cache;
