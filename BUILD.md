@@ -76,20 +76,14 @@ cd dbuild
 make
 ```
 
-To run VK programs you must tell the icd loader where to find the libraries. Set the
-environment variable LIBVK_DRIVERS_PATH to the driver path. For example:
-```
-export LIBVK_DRIVERS_PATH=$PWD/icd/intel
-```
+To run VK programs you must tell the icd loader where to find the libraries.
+This is described in a specification in the Khronos documentation Git
+repository.  See the file:
+https://gitlab.khronos.org/vulkan/vulkan/blob/lunarg-sdk-0.2/ecosystem/LinuxICDs.txt
 
-To enable debug and validation layers with your VK programs you must tell the icd loader
-where to find the layer libraries. Set the environment variable LIBVK_LAYERS_PATH to
-the layer folder and indicate the layers you want loaded via LIBVK_LAYER_NAMES.
-For example, to enable the APIDump and DrawState layers, do:
-```
-export LIBVK_LAYERS_PATH=$PWD/layers
-export LIBVK_LAYER_NAMES=APIDump:DrawState
-```
+This specification describes both how ICDs and layers should be properly
+packaged, and how developers can point to ICDs and layers within their builds.
+
 
 ## Linux Test
 
@@ -184,40 +178,10 @@ At this point, you can use Windows Explorer to launch Visual Studio by double-cl
 
 VK programs must be able to find and use the VK.dll libary. Make sure it is either installed in the C:\Windows\System32 folder, or the PATH enviroment variable includes the folder that it is located in.
 
-To run VK programs you must have an appropriate ICD (installable client driver) that is either installed in the C:\Windows\System32 folder, or pointed to by the registry and/or an environment variable:
+To run VK programs you must tell the icd loader where to find the libraries.
+This is described in a specification in the Khronos documentation Git
+repository.  See the file:
+https://gitlab.khronos.org/vulkan/vulkan/blob/lunarg-sdk-0.2/ecosystem/WindowsICDs.txt
 
-- Registry:
-  - Root Key: HKEY_LOCAL_MACHINE
-  - Key: "SOFTWARE\Vulcan"
-  - Value: "VK_DRIVERS_PATH" (semi-colon-delimited set of folders to look for ICDs)
-- Environment Variable: "VK_DRIVERS_PATH" (semi-colon-delimited set of folders to look for ICDs)
-
-Note: If both the registry value and environment variable are used, they are concatenated into a new semi-colon-delimited list of folders.
-
-Note: Environment variables on Windows cannot be set with Cygwin, but must be set via the Windows Control Panel, and generally require a system restart in order to take effect.  Here is how to set this environment variable on a Windows 7 system:
-
-- Launch Control Panel (e.g. Start->Control Panel)
-- Within the search box, type "environment variable" and click on "Edit the system environment variables" (or navigate there via "System and Security->System->Advanced system settings").
-- This will launch a window with several tabs, one of which is "Advanced".  Click on the "Environment Variables..." button.
-- For either "User variables" or "System variables" click "New...".
-- Enter "VK_DRIVERS_PATH" as the variable name, and an appropriate Windows path to where your driver DLL is (e.g. C:\Users\username\GL-Next\_out64\icd\drivername\Debug).
-
-It is possible to specify multiple icd folders.  Simply use a semi-colon (i.e. ";") to separate folders in the environment variable.
-
-The icd loader searches in all of the folders for files that are named "VK_*.dll" (e.g. "VK_foo.dll").  It attempts to dynamically load these files, and look for appropriate functions.
-
-To enable debug and validation layers with your VK programs you must tell the icd loader
-where to find the layer libraries, and which ones you desire to use.  The default folder for layers is C:\Windows\System32. Again, this can be pointed to by the registry and/or an environment variable:
-
-- Registry:
-  - Root Key: HKEY_LOCAL_MACHINE
-  - Key: "SOFTWARE\Vulcan"
-  - Value: "VK_LAYERS_PATH" (semi-colon-delimited set of folders to look for layers)
-  - Value: "VK_LAYER_NAMES" (semi-colon-delimited list of layer names)
-- Environment Variables:
-  - "VK_LAYERS_PATH" (semi-colon-delimited set of folders to look for layers)
-  - "VK_LAYER_NAMES" (semi-colon-delimited list of layer names)
-
-Note: If both the registry value and environment variable are used, they are concatenated into a new semi-colon-delimited list.
-
-The icd loader searches in all of the folders for files that are named "VKLayer*.dll" (e.g. "VKLayerParamChecker.dll").  It attempts to dynamically load these files, and look for appropriate functions.
+This specification describes both how ICDs and layers should be properly
+packaged, and how developers can point to ICDs and layers within their builds.
