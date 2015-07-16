@@ -220,6 +220,11 @@ class IcdGetProcAddrSubcommand(IcdDummyEntrypointsSubcommand):
         body = []
         body.append("%s %s" % (self.qual, gpa_instance_decl))
         body.append("{")
+        body.append(generate_get_proc_addr_check(gpa_pname))
+        body.append("")
+        body.append("    %s += 2;" % gpa_pname)
+        body.append("    %s" % "\n    ".join(lookups))
+        body.append("")
         body.append("    return NULL;")
         body.append("}")
         body.append("")
