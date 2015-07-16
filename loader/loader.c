@@ -948,8 +948,7 @@ static void loader_scanned_icd_add(const char *filename)
     loader_platform_dl_handle handle;
     PFN_vkCreateInstance fp_create_inst;
     PFN_vkGetGlobalExtensionProperties fp_get_global_ext_props;
-    PFN_vkGetPhysicalDeviceExtensionProperties fp_get_device_ext_props;
-    PFN_vkGetDeviceProcAddr fp_get_proc_addr;
+    PFN_vkGetInstanceProcAddr fp_get_proc_addr;
     struct loader_scanned_icds *new_node;
 
     // Used to call: dlopen(filename, RTLD_LAZY);
@@ -959,7 +958,7 @@ static void loader_scanned_icd_add(const char *filename)
         return;
     }
 
-#define LOOKUP(func_ptr, func) do {                            \
+#define LOOKUP_LD(func_ptr, func) do {                            \
     func_ptr = (PFN_vk ##func) loader_platform_get_proc_address(handle, "vk" #func); \
     if (!func_ptr) {                                           \
         loader_log(VK_DBG_REPORT_WARN_BIT, 0, loader_platform_get_proc_address_error("vk" #func)); \
@@ -967,11 +966,11 @@ static void loader_scanned_icd_add(const char *filename)
     }                                                          \
 } while (0)
 
-    LOOKUP(fp_create_inst, CreateInstance);
-    LOOKUP(fp_get_global_ext_props, GetGlobalExtensionProperties);
-    LOOKUP(fp_get_device_ext_props, GetPhysicalDeviceExtensionProperties);
-    LOOKUP(fp_get_proc_addr, GetDeviceProcAddr);
-#undef LOOKUP
+    LOOKUP_LD(fp_get_proc_addr, GetInstanceProcAddr);
+    LOOKUP_LD(fp_create_inst, CreateInstance);
+    LOOKUP_LD(fp_get_global_ext_props, GetGlobalExtensionProperties);
+
+#undef LOOKUP_LD
 
     new_node = (struct loader_scanned_icds *) malloc(sizeof(struct loader_scanned_icds)
                                                      + strlen(filename) + 1);
@@ -981,6 +980,7 @@ static void loader_scanned_icd_add(const char *filename)
     }
 
     new_node->handle = handle;
+    new_node->GetInstanceProcAddr = fp_get_proc_addr;
     new_node->CreateInstance = fp_create_inst;
     new_node->GetGlobalExtensionProperties = fp_get_global_ext_props;
     loader_init_ext_list(&new_node->global_extension_list);
@@ -1057,42 +1057,41 @@ static void loader_physical_device_extensions(
     }
 }
 
-static void loader_icd_init_entrys(struct loader_icd *icd,
-                                   struct loader_scanned_icds *scanned_icds)
+static bool loader_icd_init_entrys(struct loader_icd *icd,
+                                   VkInstance inst,
+                                   const PFN_vkGetInstanceProcAddr fp_gipa)
 {
     /* initialize entrypoint function pointers */
 
-    #define LOOKUP(func) do {                                 \
-    icd->func = (PFN_vk ##func) loader_platform_get_proc_address(scanned_icds->handle, "vk" #func); \
-    if (!icd->func) {                                           \
-        loader_log(VK_DBG_REPORT_WARN_BIT, 0, loader_platform_get_proc_address_error("vk" #func)); \
-        return;                                                \
-    }                                                          \
+    #define LOOKUP_GIPA(func, required) do {                       \
+    icd->func = (PFN_vk ##func) fp_gipa(inst, "vk" #func);         \
+    if (!icd->func && required) {                                  \
+        loader_log(VK_DBG_REPORT_WARN_BIT, 0,                      \
+              loader_platform_get_proc_address_error("vk" #func)); \
+        return false;                                              \
+    }                                                              \
     } while (0)
 
-    /* could change this to use GetInstanceProcAddr in driver instead of dlsym */
-    LOOKUP(GetDeviceProcAddr);
-    LOOKUP(DestroyInstance);
-    LOOKUP(EnumeratePhysicalDevices);
-    LOOKUP(GetPhysicalDeviceFeatures);
-    LOOKUP(GetPhysicalDeviceFormatProperties);
-    LOOKUP(GetPhysicalDeviceLimits);
-    LOOKUP(CreateDevice);
-    LOOKUP(GetPhysicalDeviceProperties);
-    LOOKUP(GetPhysicalDeviceMemoryProperties);
-    LOOKUP(GetPhysicalDeviceQueueCount);
-    LOOKUP(GetPhysicalDeviceQueueProperties);
-    LOOKUP(GetPhysicalDeviceExtensionProperties);
-    LOOKUP(GetPhysicalDeviceSparseImageFormatProperties);
-    LOOKUP(DbgCreateMsgCallback);
-    LOOKUP(DbgDestroyMsgCallback);
-#undef LOOKUP
+    LOOKUP_GIPA(GetDeviceProcAddr, true);
+    LOOKUP_GIPA(DestroyInstance, true);
+    LOOKUP_GIPA(EnumeratePhysicalDevices, true);
+    LOOKUP_GIPA(GetPhysicalDeviceFeatures, true);
+    LOOKUP_GIPA(GetPhysicalDeviceFormatProperties, true);
+    LOOKUP_GIPA(GetPhysicalDeviceLimits, true);
+    LOOKUP_GIPA(CreateDevice, true);
+    LOOKUP_GIPA(GetPhysicalDeviceProperties, true);
+    LOOKUP_GIPA(GetPhysicalDeviceMemoryProperties, true);
+    LOOKUP_GIPA(GetPhysicalDeviceQueueCount, true);
+    LOOKUP_GIPA(GetPhysicalDeviceQueueProperties, true);
+    LOOKUP_GIPA(GetPhysicalDeviceExtensionProperties, true);
+    LOOKUP_GIPA(GetPhysicalDeviceSparseImageFormatProperties, true);
+    LOOKUP_GIPA(DbgCreateMsgCallback, false);
+    LOOKUP_GIPA(DbgDestroyMsgCallback, false);
+    LOOKUP_GIPA(GetPhysicalDeviceSurfaceSupportWSI, false);
 
-    icd->GetPhysicalDeviceSurfaceSupportWSI =
-        (PFN_vkGetPhysicalDeviceSurfaceSupportWSI) loader_platform_get_proc_address(scanned_icds->handle,
-                                                                                    "vkGetPhysicalDeviceSurfaceSupportWSI");
+#undef LOOKUP_GIPA
 
-    return;
+    return true;
 }
 
 static void loader_debug_init(void)
@@ -2387,6 +2386,7 @@ VkResult loader_CreateInstance(
     char **filtered_extension_names = NULL;
     VkInstanceCreateInfo icd_create_info;
     VkResult res = VK_SUCCESS;
+    bool success;
 
     icd_create_info.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
     icd_create_info.layerCount = 0;
@@ -2412,7 +2412,6 @@ VkResult loader_CreateInstance(
     while (scanned_icds) {
         icd = loader_icd_add(ptr_instance, scanned_icds);
         if (icd) {
-
             icd_create_info.extensionCount = 0;
             for (uint32_t i = 0; i < pCreateInfo->extensionCount; i++) {
                 prop = get_extension_property(pCreateInfo->ppEnabledExtensionNames[i],
@@ -2425,16 +2424,18 @@ VkResult loader_CreateInstance(
 
             res = scanned_icds->CreateInstance(&icd_create_info,
                                            &(icd->instance));
-            if (res != VK_SUCCESS)
+            success = loader_icd_init_entrys(
+                                icd,
+                                icd->instance,
+                                scanned_icds->GetInstanceProcAddr);
+
+            if (res != VK_SUCCESS || !success)
             {
                 ptr_instance->icds = ptr_instance->icds->next;
                 loader_icd_destroy(ptr_instance, icd);
                 icd->instance = VK_NULL_HANDLE;
-                loader_log(VK_DBG_REPORT_WARN_BIT, 0,
-                        "ICD ignored: failed to CreateInstance on device");
-            } else
-            {
-                loader_icd_init_entrys(icd, scanned_icds);
+                loader_log(VK_DBG_REPORT_ERROR_BIT, 0,
+                        "ICD ignored: failed to CreateInstance and find entrypoints with ICD");
             }
         }
         scanned_icds = scanned_icds->next;

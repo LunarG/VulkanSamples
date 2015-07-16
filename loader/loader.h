@@ -152,11 +152,10 @@ struct loader_icd {
     PFN_vkGetPhysicalDeviceQueueProperties GetPhysicalDeviceQueueProperties;
     PFN_vkGetPhysicalDeviceMemoryProperties GetPhysicalDeviceMemoryProperties;
     PFN_vkGetPhysicalDeviceExtensionProperties GetPhysicalDeviceExtensionProperties;
-    PFN_vkGetPhysicalDeviceLayerProperties GetPhysicalDeviceLayerProperties;
     PFN_vkGetPhysicalDeviceSparseImageFormatProperties GetPhysicalDeviceSparseImageFormatProperties;
-    PFN_vkGetPhysicalDeviceSurfaceSupportWSI GetPhysicalDeviceSurfaceSupportWSI;
     PFN_vkDbgCreateMsgCallback DbgCreateMsgCallback;
     PFN_vkDbgDestroyMsgCallback DbgDestroyMsgCallback;
+    PFN_vkGetPhysicalDeviceSurfaceSupportWSI GetPhysicalDeviceSurfaceSupportWSI;
 
     /*
      * Fill in the cache of available layers that operate
@@ -277,12 +276,9 @@ struct loader_scanned_icds {
     char *lib_name;
     loader_platform_dl_handle handle;
 
+    PFN_vkGetInstanceProcAddr GetInstanceProcAddr;
     PFN_vkCreateInstance CreateInstance;
-    PFN_vkDestroyInstance DestroyInstance;
-    PFN_vkEnumeratePhysicalDevices EnumeratePhysicalDevices;
     PFN_vkGetGlobalExtensionProperties GetGlobalExtensionProperties;
-    PFN_vkGetGlobalLayerProperties GetGlobalLayerProperties;
-    PFN_vkGetPhysicalDeviceLayerProperties GetPhysicalDeviceLayerProperties;
     VkInstance instance;
     struct loader_scanned_icds *next;
 
