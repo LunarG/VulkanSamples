@@ -237,6 +237,7 @@ struct demo {
 
     bool quit;
     uint32_t current_buffer;
+    uint32_t queue_count;
 };
 
 static VkResult memory_type_from_properties(struct demo *demo, uint32_t typeBits, VkFlags properties, uint32_t *typeIndex)
@@ -616,6 +617,7 @@ static void demo_prepare_depth(struct demo *demo)
         .sType = VK_STRUCTURE_TYPE_ATTACHMENT_VIEW_CREATE_INFO,
         .pNext = NULL,
         .image.handle = VK_NULL_HANDLE,
+        .format = depth_format,
         .mipLevel = 0,
         .baseArraySlice = 0,
         .arraySize = 1,
@@ -1073,6 +1075,7 @@ static VkShader demo_prepare_shader(struct demo *demo,
 
         shaderCreateInfo.flags = 0;
         shaderCreateInfo.module = shaderModule;
+        shaderCreateInfo.pName = "main";
         err = vkCreateShader(demo->device, &shaderCreateInfo, &shader);
     } else {
         // Create fake SPV structure to feed GLSL
@@ -1094,6 +1097,7 @@ static VkShader demo_prepare_shader(struct demo *demo,
 
         shaderCreateInfo.flags = 0;
         shaderCreateInfo.module = shaderModule;
+        shaderCreateInfo.pName = "main";
         err = vkCreateShader(demo->device, &shaderCreateInfo, &shader);
     }
     return shader;
@@ -1744,8 +1748,6 @@ static void demo_init_vk(struct demo *demo)
         .queueCount = 1,
     };
     uint32_t gpu_count;
-    uint32_t i;
-    uint32_t queue_count;
 
     err = vkCreateInstance(&inst_info, &demo->inst);
     if (err == VK_ERROR_INCOMPATIBLE_DRIVER) {
@@ -1881,17 +1883,23 @@ static void demo_init_vk(struct demo *demo)
 
     err = vkGetPhysicalDeviceProperties(demo->gpu, &demo->gpu_props);
 
-    err = vkGetPhysicalDeviceQueueCount(demo->gpu, &queue_count);
+    err = vkGetPhysicalDeviceQueueCount(demo->gpu, &demo->queue_count);
     assert(!err);
 
-    demo->queue_props = (VkPhysicalDeviceQueueProperties *) malloc(queue_count * sizeof(VkPhysicalDeviceQueueProperties));
-    err = vkGetPhysicalDeviceQueueProperties(demo->gpu, queue_count, demo->queue_props);
+    demo->queue_props = (VkPhysicalDeviceQueueProperties *) malloc(demo->queue_count * sizeof(VkPhysicalDeviceQueueProperties));
+    err = vkGetPhysicalDeviceQueueProperties(demo->gpu, demo->queue_count, demo->queue_props);
     assert(!err);
-    assert(queue_count >= 1);
+    assert(demo->queue_count >= 1);
 
     // Graphics queue and MemMgr queue can be separate.
     // TODO: Add support for separate queues, including synchronization,
     //       and appropriate tracking for QueueSubmit
+}
+
+static void demo_init_vk_wsi(struct demo *demo)
+{
+    VkResult err;
+    uint32_t i;
 
     // Construct the WSI surface description:
     demo->surface_description.sType = VK_STRUCTURE_TYPE_SURFACE_DESCRIPTION_WINDOW_WSI;
@@ -1909,8 +1917,8 @@ static void demo_init_vk(struct demo *demo)
 #endif // _WIN32
 
     // Iterate over each queue to learn whether it supports presenting to WSI:
-    VkBool32* supportsPresent = (VkBool32 *)malloc(queue_count * sizeof(VkBool32));
-    for (i = 0; i < queue_count; i++) {
+    VkBool32* supportsPresent = (VkBool32 *)malloc(demo->queue_count * sizeof(VkBool32));
+    for (i = 0; i < demo->queue_count; i++) {
         demo->fpGetPhysicalDeviceSurfaceSupportWSI(demo->gpu, i,
                                                    (VkSurfaceDescriptionWSI *) &demo->surface_description,
                                                    &supportsPresent[i]);
@@ -1920,7 +1928,7 @@ static void demo_init_vk(struct demo *demo)
     // families, try to find one that supports both
     uint32_t graphicsQueueNodeIndex = UINT32_MAX;
     uint32_t presentQueueNodeIndex  = UINT32_MAX;
-    for (i = 0; i < queue_count; i++) {
+    for (i = 0; i < demo->queue_count; i++) {
         if ((demo->queue_props[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) != 0) {
             if (graphicsQueueNodeIndex == UINT32_MAX) {
                 graphicsQueueNodeIndex = i;
@@ -1936,7 +1944,7 @@ static void demo_init_vk(struct demo *demo)
     if (presentQueueNodeIndex == UINT32_MAX) {
         // If didn't find a queue that supports both graphics and present, then
         // find a separate present queue.
-        for (size_t i = 0; i < queue_count; ++i) {
+        for (uint32_t i = 0; i < demo->queue_count; ++i) {
             if (supportsPresent[i] == VK_TRUE) {
                 presentQueueNodeIndex = i;
                 break;
@@ -2079,6 +2087,7 @@ static void demo_cleanup(struct demo *demo)
         vkDestroyCommandBuffer(demo->device, demo->setup_cmd);
     }
     vkDestroyCommandBuffer(demo->device, demo->draw_cmd);
+    vkDestroyCommandPool(demo->device, demo->cmd_pool);
 
     vkDestroyDynamicViewportState(demo->device, demo->viewport);
     vkDestroyDynamicRasterState(demo->device, demo->raster);
@@ -2131,6 +2140,7 @@ int APIENTRY WinMain(HINSTANCE hInstance,
 
     demo_init(&demo, hInstance, pCmdLine);
     demo_create_window(&demo);
+    demo_init_vk_wsi(&demo);
 
     demo_prepare(&demo);
 
@@ -2162,6 +2172,7 @@ int main(const int argc, const char *argv[])
 
     demo_init(&demo, argc, argv);
     demo_create_window(&demo);
+    demo_init_vk_wsi(&demo);
 
     demo_prepare(&demo);
     demo_run(&demo);

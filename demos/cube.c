@@ -1426,6 +1426,7 @@ static VkShader demo_prepare_shader(struct demo* demo,
 
         shaderCreateInfo.flags = 0;
         shaderCreateInfo.module = shaderModule;
+        shaderCreateInfo.pName = "main";
         err = vkCreateShader(demo->device, &shaderCreateInfo, &shader);
     } else {
         // Create fake SPV structure to feed GLSL
@@ -1447,6 +1448,7 @@ static VkShader demo_prepare_shader(struct demo* demo,
 
         shaderCreateInfo.flags = 0;
         shaderCreateInfo.module = shaderModule;
+        shaderCreateInfo.pName = "main";
         err = vkCreateShader(demo->device, &shaderCreateInfo, &shader);
     }
     return shader;
