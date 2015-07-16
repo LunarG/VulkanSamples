@@ -650,45 +650,7 @@ void loader_add_to_layer_library_list(
     }
 }
 
-#if 0
-/*
- * Add's library indicated by lib_name to list if it
- * implements vkGetGlobalLayerProperties or
- * vkGetPhysicalDeviceLayerProperties.
- */
-static void loader_add_layer_library(
-        struct loader_instance *instance,
-        const char *lib_name,
-        const loader_platform_dl_handle lib_handle,
-        struct loader_layer_library_list *list)
-{
-    struct loader_lib_info *library_info;
-    PFN_vkGetPhysicalDeviceLayerProperties fp_get_phydev_props;
-    PFN_vkGetGlobalLayerProperties fp_get_layer_props;
 
-    fp_get_layer_props = loader_platform_get_proc_address(lib_handle, "vkGetGlobalLayerProperties");
-    fp_get_phydev_props = loader_platform_get_proc_address(lib_handle, "vkGetPhysicalDeviceLayerProperties");
-
-    if (!fp_get_layer_props && !fp_get_phydev_props)
-        return;
-
-    /*
-     * Allocate enough space for the library name to
-     * immediately follow the loader_lib_info structure
-     */
-    library_info = loader_heap_alloc(instance, sizeof(struct loader_lib_info) + strlen(lib_name) + 1, VK_SYSTEM_ALLOC_TYPE_INTERNAL);
-    if (!library_info) {
-        loader_log(VK_DBG_REPORT_ERROR_BIT, 0,
-                   "Malloc for layer library list failed: %s line: %d", __FILE__, __LINE__);
-        return;
-    }
-    memset(library_info, 0, sizeof(struct loader_lib_info));
-    library_info->lib_name = (char *) &library_info[1];
-    strcpy(library_info->lib_name, lib_name);
-
-    loader_add_to_layer_library_list(list, 1, library_info);
-}
-#endif
 /*
  * Search the given layer list for a list
  * matching the given VkLayerProperties
