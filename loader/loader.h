@@ -158,13 +158,6 @@ struct loader_icd {
     PFN_vkGetPhysicalDeviceSurfaceSupportWSI GetPhysicalDeviceSurfaceSupportWSI;
 
     /*
-     * Fill in the cache of available layers that operate
-     * with this physical device. This cache will be used to satisfy
-     * calls to GetPhysicalDeviceLayerProperties
-     */
-    struct loader_layer_list layer_properties_cache;
-
-    /*
      * Fill in the cache of available global extensions that operate
      * with this physical device. This cache will be used to satisfy
      * calls to GetPhysicalDeviceExtensionProperties
@@ -266,7 +259,8 @@ struct loader_struct {
     char *layer_dirs;
 
     // TODO use this struct loader_layer_library_list scanned_layer_libraries;
-    struct loader_layer_list scanned_layers;
+    struct loader_layer_list scanned_instance_layers;
+    struct loader_layer_list scanned_device_layers;
 
     /* Keep track of all the extensions available via GetGlobalExtensionProperties */
     struct loader_extension_list global_extensions;

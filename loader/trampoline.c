@@ -56,7 +56,7 @@ LOADER_EXPORT VkResult VKAPI vkCreateInstance(
 
     res = loader_validate_layers(pCreateInfo->layerCount,
                                  pCreateInfo->ppEnabledLayerNames,
-                                 &loader.scanned_layers);
+                                 &loader.scanned_instance_layers);
     if (res != VK_SUCCESS) {
         return res;
     }
@@ -296,6 +296,7 @@ LOADER_EXPORT VkResult VKAPI vkGetPhysicalDeviceExtensionProperties(
     VkResult res;
 
     loader_platform_thread_lock_mutex(&loader_lock);
+    //TODO convert over to using instance chain dispatch
     res = loader_GetPhysicalDeviceExtensionProperties(physicalDevice, pLayerName, pCount, pProperties);
     loader_platform_thread_unlock_mutex(&loader_lock);
     return res;
@@ -309,6 +310,7 @@ LOADER_EXPORT VkResult VKAPI vkGetPhysicalDeviceLayerProperties(
     VkResult res;
 
     loader_platform_thread_lock_mutex(&loader_lock);
+    //TODO convert over to using instance chain dispatch
     res = loader_GetPhysicalDeviceLayerProperties(physicalDevice, pCount, pProperties);
     loader_platform_thread_unlock_mutex(&loader_lock);
     return res;
