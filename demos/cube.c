@@ -1245,6 +1245,7 @@ void demo_prepare_cube_data_buffer(struct demo *demo)
     memset(&buf_info, 0, sizeof(buf_info));
     buf_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
     buf_info.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
+    buf_info.size = sizeof(data);
     err = vkCreateBuffer(demo->device, &buf_info, &demo->uniform_data.buf);
     assert(!err);
 
