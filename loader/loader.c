@@ -2811,7 +2811,7 @@ VkResult loader_CreateDevice(
     }
     PFN_vkGetDeviceProcAddr get_proc_addr = icd->GetDeviceProcAddr;
     loader_init_device_dispatch_table(&dev->loader_dispatch, get_proc_addr,
-                                      (VkDevice) icd->gpus[gpu_index], (VkDevice) icd->gpus[gpu_index]);
+                                      *pDevice, *pDevice);
 
     dev->loader_dispatch.CreateDevice = scratch_vkCreateDevice;
     loader_init_dispatch(*pDevice, &dev->loader_dispatch);
