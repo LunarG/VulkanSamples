@@ -1,8 +1,8 @@
 # Loader Description 
 
 ## Overview
-The Loader implements the main VK library (e.g. "VK.dll" on Windows and
-"libVK.so" on Linux).  It handles layer management and driver management.  The
+The Loader implements the main VK library (e.g. "vulkan.dll" on Windows and
+"libvulkan.so" on Linux).  It handles layer management and driver management.  The
 loader fully supports multi-gpu operation.  As part of this, it dispatches API
 calls to the correct driver, and to the correct layers, based on the GPU object
 selected by the application.
@@ -19,23 +19,15 @@ layer can intercept a subset of the full API entrypoints.  A layer which
 doesn't intercept a given entrypoint will be skipped for that entrypoint.  The
 loader supports layers that operate on multiple GPUs.
 
-## Environment Variables
-**LIBVK\_DRIVERS\_PATH**  directory for loader to search for ICD driver libraries to open
-
-**LIBVK\_LAYERS\_PATH**   directory for loader to search for layer libraries that may get activated  and used at vkCreateDevice() time.
-
-**LIBVK\_LAYER\_NAMES**   colon-separated list of layer names to be activated (e.g., LIBVK\_LAYER\_NAMES=MemTracker:DrawState).
-
-Note: Both of the LIBVK\_*\_PATH variables may contain more than one directory.  Each directory must be separated by one of the following characters, depending on your OS:
-
-- ";" on Windows
-- ":" on Linux
+## ICD discovery
+See file LinuxICDs.txt  and WindowsICDs.txt for description of how the loader
+finds ICD driver libraries.
 
 ## Interface to driver (ICD)
-- vkEnumerateGpus exported
 - vkCreateInstance exported
-- vkDestroyInstance exported
-- vkGetProcAddr exported and returns valid function pointers for all the VK API entrypoints
+- vkGetGlobalExtensionProperties exported
+- vkGetDeviceProcAddr exported and returns valid function pointers for all the VK API entrypoints
+- vkGetInstanceProcAddr exported and returns valid function pointers for all the VK API entrypoints
 - all objects created by ICD can be cast to (VK\_LAYER\_DISPATCH\_TABLE \*\*)
  where the loader will replace the first entry with a pointer to the dispatch table which is
  owned by the loader. This implies three things for ICD drivers:
@@ -69,4 +61,11 @@ Additional Notes:
 
 - The ICD may or may not implement a dispatch table.
 - ICD entrypoints can be named anything including the offcial vk name such as vkCreateDevice().  However, beware of interposing by dynamic OS library loaders if the offical names are used.  On Linux, if offical names are used, the ICD library must be linked with -Bsymbolic.
+
+## Layer library discovery
+See file LinuxICDs.txt  and WindowsICDs.txt for description of how the loader
+finds layer libraries.
+
+## Interface to layer libraries
+TBD
 
