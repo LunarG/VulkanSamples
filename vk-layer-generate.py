@@ -1256,10 +1256,10 @@ class ObjectTrackerSubcommand(Subcommand):
             procs_txt.append('')
         return "\n".join(procs_txt)
 
-    def generate_explicit_destroy_instance(self):
+    def generate_destroy_instance(self):
         gedi_txt = []
         gedi_txt.append('%s' % self.lineinfo.get())
-        gedi_txt.append('VkResult explicit_DestroyInstance(')
+        gedi_txt.append('VkResult vkDestroyInstance(')
         gedi_txt.append('VkInstance instance)')
         gedi_txt.append('{')
         gedi_txt.append('    loader_platform_thread_lock_mutex(&objLock);')
@@ -1299,10 +1299,10 @@ class ObjectTrackerSubcommand(Subcommand):
         gedi_txt.append('')
         return "\n".join(gedi_txt)
 
-    def generate_explicit_destroy_device(self):
+    def generate_destroy_device(self):
         gedd_txt = []
         gedd_txt.append('%s' % self.lineinfo.get())
-        gedd_txt.append('VkResult explicit_DestroyDevice(')
+        gedd_txt.append('VkResult vkDestroyDevice(')
         gedd_txt.append('VkDevice device)')
         gedd_txt.append('{')
         gedd_txt.append('    loader_platform_thread_lock_mutex(&objLock);')
@@ -1311,7 +1311,7 @@ class ObjectTrackerSubcommand(Subcommand):
         gedd_txt.append('    destroy_obj(device, device);')
         gedd_txt.append('    // Report any remaining objects in LL')
         for o in vulkan.core.objects:
-            if o in ['VkPhysicalDevice', 'VkQueue']:
+            if o in ['VkInstance', 'VkPhysicalDevice', 'VkQueue']:
                 continue
             gedd_txt.append('    for (auto it = %sMap.begin(); it != %sMap.end(); ++it) {' % (o, o))
             gedd_txt.append('        OBJTRACK_NODE* pNode = it->second;')
@@ -1367,10 +1367,8 @@ class ObjectTrackerSubcommand(Subcommand):
 
         explicit_object_tracker_functions = [
             "CreateInstance",
-            "DestroyInstance",
             "GetPhysicalDeviceQueueProperties",
             "CreateDevice",
-            "DestroyDevice",
             "GetDeviceQueue",
             "QueueSubmit",
             "QueueBindSparseImageMemory",
@@ -1387,6 +1385,7 @@ class ObjectTrackerSubcommand(Subcommand):
         param0_name = proto.params[0].name
         using_line = ''
         create_line = ''
+        destroy_line = ''
         object_params = {} # dict of parameters that are VkObject types mapping to the size of array types or '0' if not array
         # TODO : For now skipping objs that can be NULL. Really should check these and have special case that allows them to be NULL
         valid_null_object_names = ['basePipelineHandle', 'renderPass', 'framebuffer']
@@ -1417,6 +1416,8 @@ class ObjectTrackerSubcommand(Subcommand):
                      '    return explicit_%s;\n'
                      '}' % (qual, decl, proto.c_call()))
             return "".join(funcs)
+        elif 'DestroyInstance' in proto.name or 'DestroyDevice' in proto.name:
+            return ""
         else:
             if 'Create' in proto.name or 'Alloc' in proto.name:
                 create_line =  '    loader_platform_thread_lock_mutex(&objLock);\n'
@@ -1424,6 +1425,15 @@ class ObjectTrackerSubcommand(Subcommand):
                 create_line += '        create_obj(%s, *%s, %s);\n' % (param0_name, proto.params[-1].name, obj_type_mapping[proto.params[-1].ty.strip('*').replace('const ', '')])
                 create_line += '    }\n'
                 create_line += '    loader_platform_thread_unlock_mutex(&objLock);\n'
+            if 'Destroy' in proto.name:
+                destroy_line =  '    loader_platform_thread_lock_mutex(&objLock);\n'
+                destroy_line += '    if (result == VK_SUCCESS) {\n'
+                if 'DestroyCommandBuffer' in proto.name:
+                    destroy_line += '        destroy_obj(%s, %s);\n' % (proto.params[-1].name, proto.params[-1].name)
+                else:
+                    destroy_line += '        destroy_obj(%s, %s);\n' % (param0_name, proto.params[-1].name)
+                destroy_line += '    }\n'
+                destroy_line += '    loader_platform_thread_unlock_mutex(&objLock);\n'
             if len(object_params) > 0:
                 if not mutex_unlock:
                     using_line += '    loader_platform_thread_lock_mutex(&objLock);\n'
@@ -1460,9 +1470,9 @@ class ObjectTrackerSubcommand(Subcommand):
                      '{\n'
                      '%s'
                      '    %sget_dispatch_table(ObjectTracker_%s_table_map, %s)->%s;\n'
+                     '%s%s'
                      '%s'
-                     '%s'
-                     '}' % (qual, decl, using_line, ret_val, table_type, dispatch_param, proto.c_call(), create_line, stmt))
+                     '}' % (qual, decl, using_line, ret_val, table_type, dispatch_param, proto.c_call(), create_line, destroy_line, stmt))
         return "\n\n".join(funcs)
 
     def generate_body(self):
@@ -1472,8 +1482,8 @@ class ObjectTrackerSubcommand(Subcommand):
                      'vkGetSwapChainInfoWSI', 'vkQueuePresentWSI'])]
         body = [self.generate_maps(),
                 self.generate_procs(),
-                self.generate_explicit_destroy_instance(),
-                self.generate_explicit_destroy_device(),
+                self.generate_destroy_instance(),
+                self.generate_destroy_device(),
                 self.generate_command_buffer_validates(),
                 self._generate_dispatch_entrypoints("VK_LAYER_EXPORT"),
                 self._generate_extensions(),
