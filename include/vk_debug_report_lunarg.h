@@ -89,6 +89,8 @@ static inline const char* string_VkDbgObjectType(VkDbgObjectType input_value)
 {
     switch ((VkDbgObjectType)input_value)
     {
+        case VK_OBJECT_TYPE_CMD_POOL:
+            return "VK_OBJECT_TYPE_CMD_POOL";
         case VK_OBJECT_TYPE_BUFFER:
             return "VK_OBJECT_TYPE_BUFFER";
         case VK_OBJECT_TYPE_BUFFER_VIEW:
@@ -133,6 +135,8 @@ static inline const char* string_VkDbgObjectType(VkDbgObjectType input_value)
             return "VK_OBJECT_TYPE_PIPELINE";
         case VK_OBJECT_TYPE_PIPELINE_LAYOUT:
             return "VK_OBJECT_TYPE_PIPELINE_LAYOUT";
+        case VK_OBJECT_TYPE_PIPELINE_CACHE:
+            return "VK_OBJECT_TYPE_PIPELINE_CACHE";
         case VK_OBJECT_TYPE_QUERY_POOL:
             return "VK_OBJECT_TYPE_QUERY_POOL";
         case VK_OBJECT_TYPE_QUEUE:
@@ -147,6 +151,8 @@ static inline const char* string_VkDbgObjectType(VkDbgObjectType input_value)
             return "VK_OBJECT_TYPE_SHADER";
         case VK_OBJECT_TYPE_SHADER_MODULE:
             return "VK_OBJECT_TYPE_SHADER_MODULE";
+        case VK_OBJECT_TYPE_SWAP_CHAIN_WSI:
+            return "VK_OBJECT_TYPE_SWAP_CHAIN_WSI";
         default:
             return "Unhandled VkObjectType";
     }
