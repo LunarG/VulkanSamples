@@ -62,7 +62,7 @@ debug_report_data *mid(VkInstance object)
 #if DISPATCH_MAP_DEBUG
     fprintf(stderr, "MID: map: %p, object: %p, key: %p, data: %p\n", &layer_data_map, object, key, data);
 #endif
-    assert(data->report_data != NULL);
+    assert(data != NULL);
 
     return data->report_data;
 }
@@ -75,7 +75,8 @@ debug_report_data *mdd(void* object)
 #if DISPATCH_MAP_DEBUG
     fprintf(stderr, "MDD: map: %p, object: %p, key: %p, data: %p\n", &layer_data_map, object, key, data);
 #endif
-    assert(data->report_data != NULL);
+    assert(data != NULL);
+
     return data->report_data;
 }
 
