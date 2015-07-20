@@ -1345,6 +1345,11 @@ void VkCommandBufferObj::ClearAllBuffers(VkClearColorValue clear_color, float de
     }
 }
 
+void VkCommandBufferObj::FillBuffer(VkBuffer buffer, VkDeviceSize offset, VkDeviceSize fill_size, uint32_t data)
+{
+    vkCmdFillBuffer( handle(), buffer, offset, fill_size, data);
+}
+
 void VkCommandBufferObj::PrepareAttachments()
 {
     uint32_t i;

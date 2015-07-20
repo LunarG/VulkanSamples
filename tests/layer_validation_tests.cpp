@@ -349,14 +349,14 @@ TEST_F(VkLayerTest, CallResetCmdBufferBeforeCompletion)
     fenceInfo.flags = 0;
 
     ASSERT_NO_FATAL_FAILURE(InitState());
-    ASSERT_NO_FATAL_FAILURE(InitViewport());
-    ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
+
+    VkMemoryPropertyFlags reqs = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
+    vk_testing::Buffer buffer;
+    buffer.init_as_dst(*m_device, (VkDeviceSize)20, reqs);
 
     VkCommandBufferObj cmdBuffer(m_device);
-    cmdBuffer.AddRenderTarget(m_renderTargets[0]);
-
     BeginCommandBuffer(cmdBuffer);
-    cmdBuffer.ClearAllBuffers(m_clear_color, m_depth_clear_color, m_stencil_clear_color, NULL);
+    cmdBuffer.FillBuffer(buffer.handle(), 0, 4, 0x11111111);
     EndCommandBuffer(cmdBuffer);
 
     testFence.init(*m_device, fenceInfo);
