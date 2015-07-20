@@ -326,6 +326,7 @@ static void validate_object(VkDevice dispatchable_object, VkDevice object);
 static void validate_object(VkDevice dispatchable_object, VkDescriptorPool object);
 static void destroy_obj(VkInstance dispatchable_object, VkInstance object);
 static void destroy_obj(VkDevice dispatchable_object, VkDeviceMemory object);
+static void destroy_obj(VkDevice dispatchable_object, VkDescriptorSet object);
 static void set_status(VkDevice dispatchable_object, VkDeviceMemory object, VkDbgObjectType objType, ObjectStatusFlags status_flag);
 static void reset_status(VkDevice dispatchable_object, VkDeviceMemory object, VkDbgObjectType objType, ObjectStatusFlags status_flag);
 #if 0
@@ -716,3 +717,20 @@ explicit_FreeMemory(
     return result;
 }
 
+VkResult
+explicit_FreeDescriptorSets(VkDevice device, VkDescriptorPool descriptorPool, uint32_t count, const VkDescriptorSet* pDescriptorSets)
+{
+    loader_platform_thread_lock_mutex(&objLock);
+    validate_object(device, descriptorPool);
+    validate_object(device, device);
+    loader_platform_thread_unlock_mutex(&objLock);
+    VkResult result = get_dispatch_table(ObjectTracker_device_table_map, device)->FreeDescriptorSets(device, descriptorPool, count, pDescriptorSets);
+
+    loader_platform_thread_lock_mutex(&objLock);
+    for (int i=0; i<count; i++)
+    {
+        destroy_obj(device, *pDescriptorSets++);
+    }
+    loader_platform_thread_unlock_mutex(&objLock);
+    return result;
+}

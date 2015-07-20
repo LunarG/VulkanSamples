@@ -1376,6 +1376,7 @@ class ObjectTrackerSubcommand(Subcommand):
             "GetFenceStatus",
             "WaitForFences",
             "AllocDescriptorSets",
+            "FreeDescriptorSets",
             "MapMemory",
             "UnmapMemory",
             "FreeMemory",
