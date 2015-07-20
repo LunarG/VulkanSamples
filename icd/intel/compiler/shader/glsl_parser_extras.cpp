@@ -54,7 +54,7 @@ extern "C" {
 #include "ir_optimization.h"
 #include "loop_analysis.h"
 #include "threadpool.h"
-#include "SPIRV/spirv.h"
+#include "SPIRV/spirv.hpp"
 
 
 /**

@@ -36,7 +36,7 @@
 #include "compiler/shader/standalone_scaffolding.h"
 #include "compiler/pipeline/brw_wm.h"
 #include "compiler/pipeline/brw_shader.h"
-#include "SPIRV/spirv.h"
+#include "SPIRV/spirv.hpp"
 
 /**
  * Init vertex/fragment/geometry program limits.
