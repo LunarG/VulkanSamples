@@ -52,9 +52,9 @@
 #define DIRECTORY_SYMBOL '/'
 
 // TODO: Need to handle different Linux distros
-#define DEFAULT_VK_DRIVERS_INFO "/usr/share/vulkan/icd.d:/etc/vulkan/icd.d"
+#define DEFAULT_VK_DRIVERS_INFO "/etc/vulkan/icd.d:/usr/share/vulkan/icd.d"
 #define DEFAULT_VK_DRIVERS_PATH "/usr/lib/i386-linux-gnu/vulkan/icd:/usr/lib/x86_64-linux-gnu/vulkan/icd"
-#define DEFAULT_VK_LAYERS_INFO "/usr/share/vulkan/explicit_layer.d:/usr/share/vulkan/implicit_layer.d:/etc/vulkan/explicit_layer.d:/etc/vulkan/implicit_layer.d"
+#define DEFAULT_VK_LAYERS_INFO "/etc/vulkan/explicit_layer.d:/etc/vulkan/implicit_layer.d:/usr/share/vulkan/explicit_layer.d:/usr/share/vulkan/implicit_layer.d"
 #define DEFAULT_VK_LAYERS_PATH "/usr/lib/i386-linux-gnu/vulkan/layer:/usr/lib/x86_64-linux-gnu/vulkan/layer"
 #define LAYERS_PATH_ENV "VK_LAYER_DIRS"
 
