@@ -41,7 +41,7 @@ VkRenderFramework::VkRenderFramework() :
     m_height( 256.0 ),                  // default window height
     m_render_target_fmt( VK_FORMAT_R8G8B8A8_UNORM ),
     m_depth_stencil_fmt( VK_FORMAT_UNDEFINED ),
-    m_clear_via_load_op( false ),
+    m_clear_via_load_op( true ),
     m_depth_clear_color( 1.0 ),
     m_stencil_clear_color( 0 ),
     m_depthStencil( NULL ),
@@ -348,7 +348,7 @@ void VkRenderFramework::InitRenderTarget(uint32_t targets, VkAttachmentBindInfo 
 
     if (dsBinding) {
         att.format = m_depth_stencil_fmt;
-        att.loadOp =  VK_ATTACHMENT_LOAD_OP_LOAD;
+        att.loadOp = (m_clear_via_load_op) ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_LOAD;;
         att.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
         att.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
         att.stencilStoreOp = VK_ATTACHMENT_STORE_OP_STORE;

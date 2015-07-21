@@ -337,10 +337,12 @@ VkResult VkRenderTest::EndCommandBuffer(VkCommandBufferObj &cmdBuffer)
 
 void VkRenderTest::GenericDrawPreparation(VkCommandBufferObj *cmdBuffer, VkPipelineObj &pipelineobj, VkDescriptorSetObj &descriptorSet)
 {
-    if (m_depthStencil->Initialized()) {
-        cmdBuffer->ClearAllBuffers(m_clear_color, m_depth_clear_color, m_stencil_clear_color, m_depthStencil);
-    } else {
-        cmdBuffer->ClearAllBuffers(m_clear_color, m_depth_clear_color, m_stencil_clear_color, NULL);
+    if (!m_clear_via_load_op) {
+        if (m_depthStencil->Initialized()) {
+            cmdBuffer->ClearAllBuffers(m_clear_color, m_depth_clear_color, m_stencil_clear_color, m_depthStencil);
+        } else {
+            cmdBuffer->ClearAllBuffers(m_clear_color, m_depth_clear_color, m_stencil_clear_color, NULL);
+        }
     }
 
     cmdBuffer->PrepareAttachments();
