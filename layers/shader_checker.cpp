@@ -43,7 +43,7 @@
 #include "vk_loader_platform.h"
 #include "vk_layer_extension_utils.h"
 
-#include "spirv/spirv.h"
+#include "spirv/spirv.hpp"
 
 
 typedef struct _layer_data {
@@ -105,8 +105,9 @@ build_type_def_index(std::vector<unsigned> const &words, std::unordered_map<unsi
         case spv::OpTypeFloat:
         case spv::OpTypeVector:
         case spv::OpTypeMatrix:
+        case spv::OpTypeImage:
         case spv::OpTypeSampler:
-        case spv::OpTypeFilter:
+        case spv::OpTypeSampledImage:
         case spv::OpTypeArray:
         case spv::OpTypeRuntimeArray:
         case spv::OpTypeStruct:
@@ -296,8 +297,8 @@ storage_class_name(unsigned sc)
     case spv::StorageClassPrivateGlobal: return "private global";
     case spv::StorageClassFunction: return "function";
     case spv::StorageClassGeneric: return "generic";
-    case spv::StorageClassPrivate: return "private";
     case spv::StorageClassAtomicCounter: return "atomic counter";
+    case spv::StorageClassImage: return "image";
     default: return "unknown";
     }
 }
