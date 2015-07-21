@@ -68,11 +68,6 @@
         MessageBox(NULL, err_msg, err_class, MB_OK);    \
         exit(1);                                        \
    } while (0)
-
-// NOTE: If the following values (copied from "loader_platform.h") change, they
-// need to change here as well:
-#define LAYER_NAMES_ENV "VK_LAYER_NAMES"
-#define LAYER_NAMES_REGISTRY_VALUE "VK_LAYER_NAMES"
 #else  // _WIN32
 
 #define ERR_EXIT(err_msg, err_class)                    \
