@@ -319,11 +319,13 @@ void VkRenderFramework::InitRenderTarget(uint32_t targets, VkAttachmentBindInfo 
 
         if (props.linearTilingFeatures & VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT) {
             img->init((uint32_t)m_width, (uint32_t)m_height, m_render_target_fmt,
-            VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT, VK_IMAGE_TILING_LINEAR);
+            VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SOURCE_BIT,
+            VK_IMAGE_TILING_LINEAR);
         }
         else if (props.optimalTilingFeatures & VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT) {
             img->init((uint32_t)m_width, (uint32_t)m_height, m_render_target_fmt,
-            VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT, VK_IMAGE_TILING_OPTIMAL);
+            VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SOURCE_BIT,
+            VK_IMAGE_TILING_OPTIMAL);
         }
         else {
             FAIL() << "Neither Linear nor Optimal allowed for render target";
@@ -789,7 +791,7 @@ VkTextureObj::VkTextureObj(VkDeviceObj *device, uint32_t *colors)
     VkImageObj stagingImage(device);
     VkMemoryPropertyFlags reqs = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
 
-    stagingImage.init(16, 16, tex_format, VK_IMAGE_USAGE_SAMPLED_BIT, VK_IMAGE_TILING_LINEAR, reqs);
+    stagingImage.init(16, 16, tex_format, VK_IMAGE_USAGE_TRANSFER_DESTINATION_BIT | VK_IMAGE_USAGE_TRANSFER_SOURCE_BIT, VK_IMAGE_TILING_LINEAR, reqs);
     VkSubresourceLayout layout = stagingImage.subresource_layout(subresource(VK_IMAGE_ASPECT_COLOR, 0, 0));
 
     if (colors == NULL)
@@ -814,7 +816,7 @@ VkTextureObj::VkTextureObj(VkDeviceObj *device, uint32_t *colors)
     view.subresourceRange.arraySize = 1;
 
     /* create image */
-    init(16, 16, tex_format, VK_IMAGE_USAGE_SAMPLED_BIT, VK_IMAGE_TILING_OPTIMAL);
+    init(16, 16, tex_format, VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DESTINATION_BIT, VK_IMAGE_TILING_OPTIMAL);
 
     /* create image view */
     view.image = handle();

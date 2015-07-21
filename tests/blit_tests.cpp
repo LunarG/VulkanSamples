@@ -972,7 +972,8 @@ TEST_F(VkCmdCopyBufferToImageTest, Basic)
         img_info.extent.width = 64;
         img_info.extent.height = 64;
         img_info.tiling = it->tiling;
-        img_info.usage = VK_IMAGE_USAGE_TRANSFER_DESTINATION_BIT;
+        img_info.usage = VK_IMAGE_USAGE_TRANSFER_DESTINATION_BIT |
+                         VK_IMAGE_USAGE_TRANSFER_SOURCE_BIT;
 
         test_copy_memory_to_image(img_info);
     }
@@ -1042,7 +1043,8 @@ TEST_F(VkCmdCopyImageToBufferTest, Basic)
         img_info.extent.width = 64;
         img_info.extent.height = 64;
         img_info.tiling = it->tiling;
-        img_info.usage = VK_IMAGE_USAGE_TRANSFER_SOURCE_BIT;
+        img_info.usage = VK_IMAGE_USAGE_TRANSFER_SOURCE_BIT |
+                         VK_IMAGE_USAGE_TRANSFER_DESTINATION_BIT; // Going to fill it before copy
 
         test_copy_image_to_memory(img_info);
     }
@@ -1290,7 +1292,8 @@ TEST_F(VkCmdClearColorImageTest, Basic)
         img_info.extent.width = 64;
         img_info.extent.height = 64;
         img_info.tiling = it->tiling;
-        img_info.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+        img_info.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT |
+                         VK_IMAGE_USAGE_TRANSFER_SOURCE_BIT; // Going to check contents
 
         const VkImageSubresourceRange range =
             vk_testing::Image::subresource_range(img_info, VK_IMAGE_ASPECT_COLOR);
