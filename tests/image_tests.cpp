@@ -117,6 +117,7 @@ protected:
     }
 
     virtual void TearDown() {
+        delete this->m_device;
         vkDestroyInstance(this->inst);
     }
 };
@@ -302,6 +303,7 @@ TEST_F(VkImageTest, CreateImageViewTest) {
     CreateImageView(&viewInfo, &imageView);
 
     DestroyImageView(imageView);
+    DestroyImage();
 }
 
 int main(int argc, char **argv) {
