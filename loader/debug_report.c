@@ -33,6 +33,8 @@
 #include <inttypes.h>
 #ifndef WIN32
 #include <alloca.h>
+#include <signal.h>
+#else
 #endif
 #include "debug_report.h"
 #include "vk_layer.h"
@@ -328,7 +330,11 @@ static void VKAPI BreakCallback(
     const char*                         pMsg,
     void*                               pUserData)
 {
-
+#ifndef WIN32
+    raise(SIGTRAP);
+#else
+    DebugBreak();
+#endif
 }
 
 void *debug_report_instance_gpa(
