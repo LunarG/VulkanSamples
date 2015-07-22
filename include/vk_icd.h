@@ -14,7 +14,7 @@
 #define ICD_LOADER_MAGIC   0x01CDC0DE
 
 typedef union _VK_LOADER_DATA {
-  uint32_t loaderMagic;
+  uintptr_t loaderMagic;
   void *loaderData;
 } VK_LOADER_DATA;
 
