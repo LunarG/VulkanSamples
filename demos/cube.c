@@ -386,8 +386,10 @@ struct demo {
     int32_t curFrame;
     int32_t frameCount;
     bool validate;
+    bool use_break;
     PFN_vkDbgCreateMsgCallback dbgCreateMsgCallback;
     PFN_vkDbgDestroyMsgCallback dbgDestroyMsgCallback;
+    PFN_vkDbgMsgCallback dbgBreakCallback;
     VkDbgMsgCallback msg_callback;
 
     uint32_t current_buffer;
@@ -2349,10 +2351,23 @@ static void demo_init_vk(struct demo *demo)
             ERR_EXIT("GetProcAddr: Unable to find vkDbgDestroyMsgCallback\n",
                      "vkGetProcAddr Failure");
         }
+        demo->dbgBreakCallback = (PFN_vkDbgMsgCallback) vkGetInstanceProcAddr(demo->inst, "vkDbgBreakCallback");
+        if (!demo->dbgBreakCallback) {
+            ERR_EXIT("GetProcAddr: Unable to find vkDbgBreakCallback\n",
+                     "vkGetProcAddr Failure");
+        }
+
+        PFN_vkDbgMsgCallback callback;
+
+        if (!demo->use_break) {
+            callback = dbgFunc;
+        } else {
+            callback = demo->dbgBreakCallback;
+        }
         err = demo->dbgCreateMsgCallback(
                   demo->inst,
                   VK_DBG_REPORT_ERROR_BIT | VK_DBG_REPORT_WARN_BIT,
-                  dbgFunc, NULL,
+                  callback, NULL,
                   &demo->msg_callback);
         switch (err) {
         case VK_SUCCESS:
@@ -2554,6 +2569,10 @@ static void demo_init(struct demo *demo, int argc, char **argv)
             demo->use_glsl = true;
             continue;
         }
+        if (strcmp(argv[i], "--break") == 0) {
+            demo->use_break = true;
+            continue;
+        }
         if (strcmp(argv[i], "--validate") == 0) {
             demo->validate = true;
             continue;
@@ -2568,7 +2587,7 @@ static void demo_init(struct demo *demo, int argc, char **argv)
             continue;
         }
 
-        fprintf(stderr, "Usage:\n  %s [--use_staging] [--validate] [--c <framecount>]\n", APP_SHORT_NAME);
+        fprintf(stderr, "Usage:\n  %s [--use_staging] [--validate] [--break] [--c <framecount>]\n", APP_SHORT_NAME);
         fflush(stderr);
         exit(1);
     }
