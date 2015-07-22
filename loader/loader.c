@@ -167,6 +167,7 @@ static void loader_log(VkFlags msg_type, int32_t msg_code,
 
 #if defined(WIN32)
     OutputDebugString(msg);
+    OutputDebugString("\n");
 #endif
     fputs(msg, stderr);
     fputc('\n', stderr);
