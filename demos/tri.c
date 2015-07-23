@@ -435,8 +435,7 @@ static void demo_draw(struct demo *demo)
     // return codes
     assert(!err);
 
-// FIXME: UNCOMMENT THE FOLLOWING LINE ONCE WE HAVE A NEW-ENOUGH "vulkan.h" HEADER:
-//    err = vkDestroySemaphore(demo->device, presentCompleteSemaphore);
+    err = vkDestroySemaphore(demo->device, presentCompleteSemaphore);
     assert(!err);
 
     err = vkQueueWaitIdle(demo->queue);
@@ -516,7 +515,7 @@ static void demo_prepare_buffers(struct demo *demo)
         desiredNumberOfSwapChainImages = surfProperties->maxImageCount;
     }
 
-    VkSurfaceTransformFlagBitsWSI preTransform;
+    VkSurfaceTransformWSI preTransform;
     if (surfProperties->supportedTransforms & VK_SURFACE_TRANSFORM_NONE_BIT_WSI) {
         preTransform = VK_SURFACE_TRANSFORM_NONE_WSI;
     } else {
