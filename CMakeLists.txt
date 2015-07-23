@@ -36,6 +36,11 @@ if(NOT EXISTS ${GLSLANG_PREFIX})
 endif()
 
 if(NOT WIN32)
+    include(GNUInstallDirs)
+    add_definitions(-DLIBDIR="${CMAKE_INSTALL_FULL_LIBDIR}")
+    add_definitions(-DSYSCONFDIR="${CMAKE_INSTALL_FULL_SYSCONFDIR}")
+    add_definitions(-DDATADIR="${CMAKE_INSTALL_FULL_DATADIR}")
+
     if(NOT EXISTS ${LUNARGLASS_PREFIX})
         message(FATAL_ERROR "Necessary LunarGLASS components do not exist: " ${LUNARGLASS_PREFIX})
     endif()

@@ -51,11 +51,18 @@
 #define PATH_SEPERATOR ':'
 #define DIRECTORY_SYMBOL '/'
 
-// TODO: Need to handle different Linux distros
-#define DEFAULT_VK_DRIVERS_INFO "/etc/vulkan/icd.d:/usr/share/vulkan/icd.d"
-#define DEFAULT_VK_DRIVERS_PATH "/usr/lib/i386-linux-gnu/vulkan/icd:/usr/lib/x86_64-linux-gnu/vulkan/icd"
-#define DEFAULT_VK_LAYERS_INFO "/etc/vulkan/explicit_layer.d:/etc/vulkan/implicit_layer.d:/usr/share/vulkan/explicit_layer.d:/usr/share/vulkan/implicit_layer.d"
-#define DEFAULT_VK_LAYERS_PATH "/usr/lib/i386-linux-gnu/vulkan/layer:/usr/lib/x86_64-linux-gnu/vulkan/layer"
+#define DEFAULT_VK_DRIVERS_INFO \
+    SYSCONFDIR "/vulkan/icd.d:" \
+    DATADIR "/vulkan/icd.d"
+#define DEFAULT_VK_DRIVERS_PATH \
+    LIBDIR "/vulkan/icd"
+#define DEFAULT_VK_LAYERS_INFO \
+    SYSCONFDIR "/vulkan/explicit_layer.d:" \
+    SYSCONFDIR "/vulkan/implicit_layer.d:" \
+    DATADIR "/vulkan/explicit_layer.d:" \
+    DATADIR "/vulkan/implicit_layer.d"
+#define DEFAULT_VK_LAYERS_PATH \
+    LIBDIR "/vulkan/layer"
 #define LAYERS_PATH_ENV "VK_LAYER_DIRS"
 
 // C99:
