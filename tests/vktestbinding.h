@@ -214,7 +214,7 @@ private:
 
 class Queue : public internal::Handle<VkQueue> {
 public:
-    explicit Queue(VkQueue queue) : Handle(queue) {}
+    explicit Queue(VkQueue queue, int index) : Handle(queue) {family_index_ = index;}
 
     // vkQueueSubmit()
     void submit(const std::vector<const CmdBuffer *> &cmds, Fence &fence);
@@ -228,6 +228,11 @@ public:
     // vkQueueWaitSemaphore()
     void signal_semaphore(Semaphore &sem);
     void wait_semaphore(Semaphore &sem);
+
+    int get_family_index() {return family_index_;}
+
+private:
+    int family_index_;
 };
 
 class DeviceMemory : public internal::NonDispHandle<VkDeviceMemory> {

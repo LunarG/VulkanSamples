@@ -330,15 +330,15 @@ void Device::init_queues()
             EXPECT(err == VK_SUCCESS);
 
             if (queue_props[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) {
-                queues_[GRAPHICS].push_back(new Queue(queue));
+                queues_[GRAPHICS].push_back(new Queue(queue, i));
             }
 
             if (queue_props[i].queueFlags & VK_QUEUE_COMPUTE_BIT) {
-                queues_[COMPUTE].push_back(new Queue(queue));
+                queues_[COMPUTE].push_back(new Queue(queue, i));
             }
 
             if (queue_props[i].queueFlags & VK_QUEUE_DMA_BIT) {
-                queues_[DMA].push_back(new Queue(queue));
+                queues_[DMA].push_back(new Queue(queue, i));
             }
         }
     }
