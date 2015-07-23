@@ -288,7 +288,7 @@ public:
         return handle();
     }
 
-    VkAttachmentView targetView()
+    VkAttachmentView targetView(VkFormat format)
     {
         if (!m_targetView.initialized())
         {
@@ -296,7 +296,7 @@ public:
                 VK_STRUCTURE_TYPE_ATTACHMENT_VIEW_CREATE_INFO,
                 VK_NULL_HANDLE,
                 handle(),
-                VK_FORMAT_B8G8R8A8_UNORM,
+                format,
                 0,
                 0,
                 1

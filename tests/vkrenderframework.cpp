@@ -26,8 +26,15 @@
  */
 
 #include "vkrenderframework.h"
+#include <vk_wsi_swapchain.h>
+#include <vk_wsi_device_swapchain.h>
 
 #define ARRAY_SIZE(a) (sizeof(a) / sizeof(a[0]))
+#define GET_DEVICE_PROC_ADDR(dev, entrypoint)                           \
+{                                                                       \
+    fp##entrypoint = (PFN_vk##entrypoint) vkGetDeviceProcAddr(dev, "vk"#entrypoint);   \
+    assert(fp##entrypoint != NULL);                                                                                        \
+}
 
 VkRenderFramework::VkRenderFramework() :
     m_cmdBuffer(),
@@ -162,7 +169,7 @@ void VkRenderFramework::ShutdownFramework()
         vkDestroyDynamicViewportState(device(), m_stateViewport);
     }
     while (!m_renderTargets.empty()) {
-        vkDestroyAttachmentView(device(), m_renderTargets.back()->targetView());
+        vkDestroyAttachmentView(device(), m_renderTargets.back()->targetView(m_render_target_fmt));
         vkDestroyImage(device(), m_renderTargets.back()->image());
         vkFreeMemory(device(), m_renderTargets.back()->memory());
         m_renderTargets.pop_back();
@@ -184,7 +191,26 @@ void VkRenderFramework::InitState()
 {
     VkResult err;
 
-    m_render_target_fmt = VK_FORMAT_B8G8R8A8_UNORM;
+    // Get the list of VkFormat's that are supported:
+    PFN_vkGetSurfaceInfoWSI fpGetSurfaceInfoWSI;
+    size_t formatsSize;
+    VkSurfaceDescriptionWSI surface_description;
+    surface_description.sType = VK_STRUCTURE_TYPE_SURFACE_DESCRIPTION_WINDOW_WSI;
+    surface_description.pNext = NULL;
+    GET_DEVICE_PROC_ADDR(device(), GetSurfaceInfoWSI);
+    err = fpGetSurfaceInfoWSI( device(),
+                                    (VkSurfaceDescriptionWSI *) &surface_description,
+                                    VK_SURFACE_INFO_TYPE_FORMATS_WSI,
+                                    &formatsSize, NULL);
+    ASSERT_VK_SUCCESS(err);
+    VkSurfaceFormatPropertiesWSI *surfFormats = (VkSurfaceFormatPropertiesWSI *)malloc(formatsSize);
+    err = fpGetSurfaceInfoWSI(device(),
+                                    (VkSurfaceDescriptionWSI *) &surface_description,
+                                    VK_SURFACE_INFO_TYPE_FORMATS_WSI,
+                                    &formatsSize, surfFormats);
+    ASSERT_VK_SUCCESS(err);
+    m_render_target_fmt = surfFormats[0].format;
+    free(surfFormats);
 
     // create a raster state (solid, back-face culling)
     VkDynamicRasterStateCreateInfo raster = {};
@@ -334,8 +360,7 @@ void VkRenderFramework::InitRenderTarget(uint32_t targets, VkAttachmentView *dsB
         }
 
         m_renderTargets.push_back(img);
-        bind = img->targetView();
-
+        bind = img->targetView(m_render_target_fmt);
         bindings.push_back(bind);
     }
 
