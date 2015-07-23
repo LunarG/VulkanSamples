@@ -169,9 +169,6 @@ typedef struct VkLayerDispatchTable_
     PFN_vkQueuePresentWSI QueuePresentWSI;
     PFN_vkDbgCreateMsgCallback DbgCreateMsgCallback;
     PFN_vkDbgDestroyMsgCallback DbgDestroyMsgCallback;
-    PFN_vkDbgStringCallback DbgStringCallback;
-    PFN_vkDbgStdioCallback DbgStdioCallback;
-    PFN_vkDbgBreakCallback DbgBreakCallback;
 } VkLayerDispatchTable;
 
 typedef struct VkLayerInstanceDispatchTable_
@@ -193,9 +190,6 @@ typedef struct VkLayerInstanceDispatchTable_
     PFN_vkGetPhysicalDeviceSurfaceSupportWSI GetPhysicalDeviceSurfaceSupportWSI;
     PFN_vkDbgCreateMsgCallback DbgCreateMsgCallback;
     PFN_vkDbgDestroyMsgCallback DbgDestroyMsgCallback;
-    PFN_vkDbgStringCallback DbgStringCallback;
-    PFN_vkDbgStdioCallback DbgStdioCallback;
-    PFN_vkDbgBreakCallback DbgBreakCallback;
 } VkLayerInstanceDispatchTable;
 
 // LL node for tree of dbg callback functions

@@ -201,9 +201,6 @@ typedef void (*PFN_vkDbgMsgCallback)(
 
 typedef VkResult (VKAPI *PFN_vkDbgCreateMsgCallback)(VkInstance instance, VkFlags msgFlags, const PFN_vkDbgMsgCallback pfnMsgCallback, const void* pUserData, VkDbgMsgCallback* pMsgCallback);
 typedef VkResult (VKAPI *PFN_vkDbgDestroyMsgCallback)(VkInstance instance, VkDbgMsgCallback msgCallback);
-typedef void (VKAPI *PFN_vkDbgStringCallback)(VkFlags msgFlags, VkDbgObjectType objType, uint64_t srcObject, size_t location, int32_t msgCode, const char* pLayerPrefix, const char* pMsg, void* pUserData);
-typedef void (VKAPI *PFN_vkDbgStdioCallback)(VkFlags msgFlags, VkDbgObjectType objType, uint64_t srcObject, size_t location, int32_t msgCode, const char* pLayerPrefix, const char* pMsg, void* pUserData);
-typedef void (VKAPI *PFN_vkDbgBreakCallback)(VkFlags msgFlags, VkDbgObjectType objType, uint64_t srcObject, size_t location, int32_t msgCode, const char* pLayerPrefix, const char* pMsg, void* pUserData);
 
 #ifdef VK_PROTOTYPES
 
