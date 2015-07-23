@@ -2,15 +2,20 @@
 
 ## Overview
 
-Layer libraries can be written to intercept or hook VK entrypoints for various
-debug and validation purposes.  One or more VK entrypoints can be defined in your Layer
+Layer libraries can be written to intercept or hook VK entry points for various
+debug and validation purposes.  One or more VK entry points can be defined in your Layer
 library.  Undefined entrypoints in the Layer library will be passed to the next Layer which
 may be the driver.  Multiple layer libraries can be chained (actually a hierarchy) together.
-vkEnumerateLayer can be called to list the available layer libraries.  vkGetProcAddr is
-used internally by the Layers and ICD Loader to initialize dispatch tables. Layers are
-activated at vkCreateDevice time. vkCreateDevice createInfo struct is extended to allow
-a list of layers to be activated.  Layer libraries can alternatively be LD\_PRELOADed depending
-upon how they are implemented.
+vkGetGlobalLayerProperties and vkGetPhysicalDeviceLayerProperties can be called to list the
+available layers and their properties. Layers can intercept Vulkan instance level entry points
+in which case they are called an Instance Layer.  Layers can intercept device entry  points
+in which case they are called a Device Layer. Instance level entry points are those with VkInstance
+or VkPhysicalDevice as first parameter.  Device level entry points are those with VkDevice, VkCmdBuffer,
+or VkQueue as the first parameter. Layers that want to intercept both instance and device
+level entrypoints are called Global Layers. vkXXXXGetProcAddr is used internally by the Layers and
+Loader to initialize dispatch tables. Device Layers are activated at vkCreateDevice time. Instance
+Layers are activated at vkCreateInstance.  Layers can also be activated via environment variables
+(VK_INSTANCE_LAYERS or VK_DEVICE_LAYERS).
 
 ##Layer library example code
 
@@ -22,24 +27,14 @@ Note that some layers are code-generated and will therefore exist in the directo
 layer/Basic.cpp (name=Basic) simple example wrapping a few entrypoints. Shows layer features:
 - Multiple dispatch tables for supporting multiple GPUs.
 - Example layer extension function shown.
-- Layer extension advertised by vkGetExtension().
-- vkEnumerateLayers() supports loader layer name queries and call interception
-- Can be LD\_PRELOADed individually
+- Layer extension advertised by vkGetXXXExtension().
 
 layer/Multi.cpp (name=multi1:multi2) simple example showing multiple layers per library
     
-(build dir)/layer/generic_layer.c (name=Generic) - auto generated example wrapping all VK entrypoints. Single global dispatch table. Can be LD\_PRELOADed.
+(build dir)/layer/generic_layer.c (name=Generic) - auto generated example wrapping all VK entrypoints.
 
 ### Print API Calls and Parameter Values
-(build dir)/layer/api_dump.c (name=APIDump) - print out API calls along with parameter values
-
-(build dir)/layer/api_dump.cpp (name=APIDumpCpp) - same as above but uses c++ strings and i/o streams
-
-(build dir)/layer/api\_dump\_file.c (name=APIDumpFile) - Write API calls along with parameter values to vk\_apidump.txt file.
-
-(build dir)/layer/api\_dump\_no\_addr.c (name=APIDumpNoAddr) - print out API calls along with parameter values but replace any variable addresses with the static string "addr".
-
-(build dir)/layer/api\_dump\_no\_addr.cpp (name=APIDumpNoAddrCpp) - same as above but uses c++ strings and i/o streams
+(build dir)/layer/api_dump.cpp (name=APIDump) - print out API calls along with parameter values
 
 ### Print Object Stats
 (build dir>/layer/object_track.c (name=ObjectTracker) - Print object CREATE/USE/DESTROY stats. Individually track objects by category. VkObjectType enum defined in vulkan.h. If a Dbg callback function is registered, this layer will use callback function(s) for reporting, otherwise uses stdout. Provides custom interface to query number about the total number of objects or of live objects of given type.  To get information on all objects, use  "VK\_UINT64 objTrackGetObjectsCount()" and the secondary call to return an array of those objects "VK\_RESULT objTrackGetObjects(VK\_UINT64 objCount, OBJTRACK\_NODE\* pObjNodeArray)". For objects of a specific type, use  "VK\_UINT64 objTrackGetObjectsOfTypeCount(VkObjectType type)" and the secondary call to return an array of those objects "VK\_RESULT objTrackGetObjectsOfType(VK\_OBJECT\_TYPE type, VK\_UINT64 objCount, OBJTRACK\_NODE\* pObjNodeArray)".
@@ -63,57 +58,39 @@ layer/mem\_tracker.c (name=MemTracker) - MemTracker functions mostly as a valida
 
     cp build/layer/libVKLayerBasic.so build/layer/libVKLayerGeneric.so build/tests
 
-    This is required for the Icd loader to be able to scan and enumerate your library. Alternatively, use the LIBVK\_LAYERS\_PATH environment variable to specify where the layer libraries reside.
+    This is required for the Loader to be able to scan and enumerate your library.
+    Alternatively, use the VK\_LAYER\_DIRS (VK\_LAYER\_FOLDERS Windows) environment variable to specify where the layer libraries reside.
 
 3. Specify which Layers to activate by using 
-vkCreateDevice VK\_LAYER\_CREATE\_INFO struct or environment variable LIBVK\_LAYER\_NAMES
+vkCreateDevice and/or vkCreateInstance or environment variables.
 
-    export LIBVK\_LAYER\_NAMES=Basic:Generic
+    export VK\_INSTANCE\_LAYERS=Basic:Generic
+    export VK\_DEVICE\_LAYERS=Basic:Generic
     cd build/tests; ./vkinfo
 
 ## Tips for writing new layers
 
-1. Must implement vkGetProcAddr() (aka GPA);
+1. Must implement vkGetInstanceProcAddr() (aka GIPA) and vkGetDeviceProcAddr() (aka GDPA);
 2. Must have a local dispatch table to call next layer (see vkLayer.h);
-3. Should implement vkEnumerateLayers() returning layer name when gpu == NULL; otherwise layer name is extracted from library filename by the Loader;
-4. gpu objects must be unwrapped (gpu->nextObject) when passed to next layer;
-5. next layers GPA can be found in the wrapped gpu object;
-6. Loader calls a layer's GPA first  so initialization should occur here;
-7. all entrypoints can be wrapped but only will be called after layer is activated
-    via the first vkCreatDevice;
-8. entrypoint names can be any name as specified by the layers vkGetProcAddr
-    implementation; exceptions are vkGetProcAddr and vkEnumerateLayers,
+3. Must have a layer manifest file for each Layer library for Loader to find layer properties (see loader/README.md)
+4. next layers GXPA can be found in the wrapped instance or device object;
+5. Loader calls a layer's GXPA first  so initialization should occur here;
+6. all entrypoints can be wrapped but only will be called after layer is activated
+    via the first vkCreatDevice or vkCreateInstance;
+7. entrypoint names can be any name as specified by the layers vkGetXXXXXProcAddr
+    implementation; exceptions are vkGetXXXXProcAddr,
     which must have the correct name since the Loader calls these entrypoints;
-9. entrypoint names must be exported to the dynamic loader with VK\_LAYER\_EXPORT;
-10. For LD\_PRELOAD support: a)entrypoint names should be offical vk names and
-    b) initialization should occur on any call with a gpu object (Loader type
-    initialization must be done if implementing vkInitAndEnumerateGpus).
-11. Implement vkGetExtension() if you want to advertise a layer extension
-    (only available after the layer is activated);
-12. Layer naming convention is camel case same name as in library: libVKLayer<name>.so
-13. For multiple layers in one library should implement a separate GetProcAddr for each
-    layer and export them to dynamic loader;  function name is <layerName>GetProcAddr().
-    Main vkGetProcAddr() should also be implemented.
+8. entrypoint names must be exported to the OSes dynamic loader with VK\_LAYER\_EXPORT;
+9. Layer naming convention is camel case same name as in library: libVKLayer<name>.so
+10. For multiple layers in one library the manifest file can specify each layer.
 
 ## Status
 
-### Current Features
-
-- scanning of available Layers during vkInitAndEnumerateGpus;
-- layer names retrieved via vkEnumerateLayers();
-- vkEnumerateLayers and vkGetProcAddr supported APIs in vulkan.h, ICD loader and i965 driver;
-- multiple layers in a hierarchy supported;
-- layer enumeration supported per GPU;
-- layers activated per gpu and per icd driver: separate  dispatch table and layer library list in loader for each gpu or icd driver;
-- activation via vkCreateDevice extension struct in CreateInfo or via env var (LIBVK\_LAYER\_NAMES);
-- layer libraries can be LD\_PRELOADed if implemented correctly;
 
 ### Current known issues
 
-- Layers with multiple threads are not well tested and some layers likely to have issues. APIDump family of layers should be thread-safe.
-- layer libraries (except Basic) don't support multiple dispatch tables for multi-gpus;
-- layer libraries not yet include loader init functionality for full LD\_PRELOAD of entire API including vkInitAndEnumerateGpus;
-- Since Layers aren't activated until vkCreateDevice, any calls to vkGetExtension() will not report layer extensions unless implemented in the layer;
-- layer extensions do NOT need to be enabled in vkCreateDevice to be available;
-- no support for apps registering layers, must be discovered via initial scan
+- Layers with multiple layers per library the manifest file parsing in Loader doesn't yet handle this;
+- multi.cpp Layer needs rewrite to allow manifest file to specify multiple layers
+- multi1  and multi2 layers from multi.cpp: only multi1 layer working
+
 
