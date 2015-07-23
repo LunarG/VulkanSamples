@@ -727,7 +727,7 @@ explicit_FreeDescriptorSets(VkDevice device, VkDescriptorPool descriptorPool, ui
     VkResult result = get_dispatch_table(ObjectTracker_device_table_map, device)->FreeDescriptorSets(device, descriptorPool, count, pDescriptorSets);
 
     loader_platform_thread_lock_mutex(&objLock);
-    for (int i=0; i<count; i++)
+    for (uint32_t i=0; i<count; i++)
     {
         destroy_obj(device, *pDescriptorSets++);
     }
