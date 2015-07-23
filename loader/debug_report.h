@@ -41,13 +41,13 @@ void *debug_report_instance_gpa(
         struct loader_instance *ptr_instance,
         const char* name);
 
-VkResult loader_DbgCreateMsgCallback(
+VkResult VKAPI loader_DbgCreateMsgCallback(
     VkInstance                          instance,
     VkFlags                             msgFlags,
     const PFN_vkDbgMsgCallback          pfnMsgCallback,
     const void*                         pUserData,
     VkDbgMsgCallback*                   pMsgCallback);
 
-VkResult loader_DbgDestroyMsgCallback(
+VkResult VKAPI loader_DbgDestroyMsgCallback(
     VkInstance                          instance,
     VkDbgMsgCallback                    msgCallback);

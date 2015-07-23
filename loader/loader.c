@@ -2127,7 +2127,7 @@ static VkResult loader_enable_device_layers(
  * we can't call CreateDevice twice we must terminate the
  * device chain with something else.
  */
-static VkResult scratch_vkCreateDevice(
+static VkResult VKAPI scratch_vkCreateDevice(
     VkPhysicalDevice          gpu,
     const VkDeviceCreateInfo *pCreateInfo,
     VkDevice                 *pDevice)
@@ -2318,7 +2318,7 @@ VkResult loader_validate_device_extensions(
     return VK_SUCCESS;
 }
 
-VkResult loader_CreateInstance(
+VkResult VKAPI loader_CreateInstance(
         const VkInstanceCreateInfo*     pCreateInfo,
         VkInstance*                     pInstance)
 {
@@ -2400,7 +2400,7 @@ VkResult loader_CreateInstance(
     return VK_SUCCESS;
 }
 
-VkResult loader_DestroyInstance(
+VkResult VKAPI loader_DestroyInstance(
         VkInstance                                instance)
 {
     struct loader_instance *ptr_instance = loader_instance(instance);
@@ -2518,7 +2518,7 @@ VkResult loader_init_physical_device_info(
     return VK_SUCCESS;
 }
 
-VkResult loader_EnumeratePhysicalDevices(
+VkResult VKAPI loader_EnumeratePhysicalDevices(
         VkInstance                              instance,
         uint32_t*                               pPhysicalDeviceCount,
         VkPhysicalDevice*                       pPhysicalDevices)
@@ -2546,7 +2546,7 @@ VkResult loader_EnumeratePhysicalDevices(
     return VK_SUCCESS;
 }
 
-VkResult loader_GetPhysicalDeviceProperties(
+VkResult VKAPI loader_GetPhysicalDeviceProperties(
         VkPhysicalDevice                        gpu,
         VkPhysicalDeviceProperties*             pProperties)
 {
@@ -2560,7 +2560,7 @@ VkResult loader_GetPhysicalDeviceProperties(
     return res;
 }
 
-VkResult loader_GetPhysicalDeviceQueueCount(
+VkResult VKAPI loader_GetPhysicalDeviceQueueCount(
         VkPhysicalDevice                        gpu,
         uint32_t*                               pCount)
 {
@@ -2574,7 +2574,7 @@ VkResult loader_GetPhysicalDeviceQueueCount(
     return res;
 }
 
-VkResult loader_GetPhysicalDeviceQueueProperties (
+VkResult VKAPI loader_GetPhysicalDeviceQueueProperties (
         VkPhysicalDevice gpu,
         uint32_t count,
         VkPhysicalDeviceQueueProperties * pProperties)
@@ -2589,7 +2589,7 @@ VkResult loader_GetPhysicalDeviceQueueProperties (
     return res;
 }
 
-VkResult loader_GetPhysicalDeviceMemoryProperties (
+VkResult VKAPI loader_GetPhysicalDeviceMemoryProperties (
         VkPhysicalDevice gpu,
         VkPhysicalDeviceMemoryProperties* pProperties)
 {
@@ -2603,7 +2603,7 @@ VkResult loader_GetPhysicalDeviceMemoryProperties (
     return res;
 }
 
-VkResult loader_GetPhysicalDeviceFeatures(
+VkResult VKAPI loader_GetPhysicalDeviceFeatures(
         VkPhysicalDevice                        physicalDevice,
         VkPhysicalDeviceFeatures*               pFeatures)
 {
@@ -2617,7 +2617,7 @@ VkResult loader_GetPhysicalDeviceFeatures(
     return res;
 }
 
-VkResult loader_GetPhysicalDeviceFormatProperties(
+VkResult VKAPI loader_GetPhysicalDeviceFormatProperties(
         VkPhysicalDevice                        physicalDevice,
         VkFormat                                format,
         VkFormatProperties*                     pFormatInfo)
@@ -2632,7 +2632,7 @@ VkResult loader_GetPhysicalDeviceFormatProperties(
     return res;
 }
 
-VkResult loader_GetPhysicalDeviceLimits(
+VkResult VKAPI loader_GetPhysicalDeviceLimits(
         VkPhysicalDevice                        physicalDevice,
         VkPhysicalDeviceLimits*                 pLimits)
 {
@@ -2646,7 +2646,7 @@ VkResult loader_GetPhysicalDeviceLimits(
     return res;
 }
 
-VkResult loader_GetPhysicalDeviceSparseImageFormatProperties(
+VkResult VKAPI loader_GetPhysicalDeviceSparseImageFormatProperties(
         VkPhysicalDevice                        physicalDevice,
         VkFormat                                format,
         VkImageType                             type,
@@ -2666,7 +2666,7 @@ VkResult loader_GetPhysicalDeviceSparseImageFormatProperties(
     return res;
 }
 
-VkResult loader_CreateDevice(
+VkResult VKAPI loader_CreateDevice(
         VkPhysicalDevice                        gpu,
         const VkDeviceCreateInfo*               pCreateInfo,
         VkDevice*                               pDevice)
@@ -2937,7 +2937,7 @@ LOADER_EXPORT VkResult VKAPI vkGetGlobalLayerProperties(
     return VK_SUCCESS;
 }
 
-VkResult loader_GetPhysicalDeviceExtensionProperties(
+VkResult VKAPI loader_GetPhysicalDeviceExtensionProperties(
         VkPhysicalDevice                        gpu,
         const char*                             pLayerName,
         uint32_t*                               pCount,
@@ -2975,7 +2975,7 @@ VkResult loader_GetPhysicalDeviceExtensionProperties(
     return VK_SUCCESS;
 }
 
-VkResult loader_GetPhysicalDeviceLayerProperties(
+VkResult VKAPI loader_GetPhysicalDeviceLayerProperties(
         VkPhysicalDevice                        gpu,
         uint32_t*                               pCount,
         VkLayerProperties*                      pProperties)

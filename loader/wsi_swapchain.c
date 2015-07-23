@@ -89,7 +89,7 @@ VkResult wsi_swapchain_GetPhysicalDeviceSurfaceSupportWSI(
  * This is the instance chain terminator function
  * for GetPhysicalDeviceSurfaceSupportWSI
  */
-VkResult loader_GetPhysicalDeviceSurfaceSupportWSI(
+VkResult VKAPI loader_GetPhysicalDeviceSurfaceSupportWSI(
         VkPhysicalDevice                        physicalDevice,
         uint32_t                                queueNodeIndex,
         const VkSurfaceDescriptionWSI*          pSurfaceDescription,

@@ -130,7 +130,7 @@ static VkResult debug_report_DbgDestroyMsgCallback(
  * for DbgCreateMsgCallback
  */
 
-VkResult loader_DbgCreateMsgCallback(
+VkResult VKAPI loader_DbgCreateMsgCallback(
         VkInstance                          instance,
         VkFlags                             msgFlags,
         const PFN_vkDbgMsgCallback          pfnMsgCallback,
@@ -202,7 +202,7 @@ VkResult loader_DbgCreateMsgCallback(
  * This is the instance chain terminator function
  * for DbgDestroyMsgCallback
  */
-VkResult loader_DbgDestroyMsgCallback(
+VkResult VKAPI loader_DbgDestroyMsgCallback(
         VkInstance instance,
         VkDbgMsgCallback msgCallback)
 {

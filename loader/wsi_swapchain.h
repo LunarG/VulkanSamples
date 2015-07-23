@@ -42,7 +42,7 @@ void *wsi_swapchain_GetInstanceProcAddr(
         struct loader_instance                  *ptr_instance,
         const char*                             pName);
 
-VkResult loader_GetPhysicalDeviceSurfaceSupportWSI(
+VkResult VKAPI loader_GetPhysicalDeviceSurfaceSupportWSI(
         VkPhysicalDevice                        physicalDevice,
         uint32_t                                queueNodeIndex,
         const VkSurfaceDescriptionWSI*          pSurfaceDescription,
