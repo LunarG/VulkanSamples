@@ -416,5 +416,7 @@ ICD_EXPORT VkResult VKAPI vkQueueWaitSemaphore(
     VkQueue                                   queue,
     VkSemaphore                               semaphore)
 {
+    vkQueueWaitIdle(queue);
+
     return VK_SUCCESS;
 }
