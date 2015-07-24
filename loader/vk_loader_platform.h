@@ -53,7 +53,7 @@
 
 #define VULKAN_ICDCONF_DIR "/" "vulkan" "/" "icd.d"
 #define VULKAN_ICD_DIR "/" "vulkan" "/" "icd"
-#define VULKAN_ELAYERCONF_DIR "/" "vulkan" "/" "implicit_layer.d"
+#define VULKAN_ELAYERCONF_DIR "/" "vulkan" "/" "explicit_layer.d"
 #define VULKAN_ILAYERCONF_DIR "/" "vulkan" "/" "implicit_layer.d"
 #define VULKAN_LAYER_DIR "/" "vulkan" "/" "layer"
 
