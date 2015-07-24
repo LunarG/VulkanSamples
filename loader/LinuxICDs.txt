@@ -1,7 +1,7 @@
-This is a proposal for how the Vulkan loader should identify Vulkan installable
-client drivers (ICDs) and layers on Linux systems.  This is designed for
-production installation of Vulkan ICDs and layers.  The design is shown first
-for ICDs, and then the variation for layers will be discussed.
+This is a specification for how the Vulkan loader should identify Vulkan
+installable client drivers (ICDs) and layers on Linux systems.  This is
+designed for production installation of Vulkan ICDs and layers.  The design is
+shown first for ICDs, and then the variation for layers will be discussed.
 
 
 1. Installable Client Drivers:
@@ -16,10 +16,10 @@ in the following Linux directories:
 /etc/vulkan/icd.d
 
 These directories will contain text information files (a.k.a. "manifest
-files"), that use a JSON format (NOTE: The JSON in this version of the proposal
-is for illustration purposes, and isn’t completely valid yet).  The Vulkan
-loader will open each info file to obtain the name or pathname of an ICD shared
-library (“.so”) file.  For example:
+files"), that use a JSON format (NOTE: The JSON in this version of the
+specification is for illustration purposes, and isn’t completely valid yet).
+The Vulkan loader will open each info file to obtain the name or pathname of an
+ICD shared library (“.so”) file.  For example:
 
 {
     "file_format_version": "1.0.0",
@@ -66,8 +66,8 @@ files, with the specified contents:
     vendorb_vk.json   { "ICD": { "library_path": "vendorb_vulkan_icd.so" }}
     vendorc_icd.json  { "ICD": { "library_path": "/usr/lib/VENDORC/icd.so" }}
 
-the loader will open the three files mentioned in the “Text File Name”
-column, and then try to load and use the three shared libraries
+then the loader will open the three files mentioned in the “Text File Contents”
+column, and then try to load and use the three shared libraries mentioned
 indicated by the ICD.library_path value.
 
 
@@ -190,8 +190,7 @@ information:
   both the "enable_environment" and "disable_environment" variables are set,
   the implicit layer is disabled.
 
-For example (NOTE: The JSON in this version of the proposal is for illustration
-purposes, and isn’t completely valid yet):
+For example:
 
 {
      “file_format_version” : “1.0.0”,

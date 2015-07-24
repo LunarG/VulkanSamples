@@ -1,7 +1,7 @@
-﻿This is a proposal for how the Vulkan loader should identify Vulkan installable
-client drivers (ICDs) on MS Windows.  This is designed for production
-installation of Vulkan ICDs and layers.  The design is shown first for ICDs,
-and then the variation for layers will be discussed.
+﻿This is a specification for how the Vulkan loader should identify Vulkan
+installable client drivers (ICDs) on MS Windows.  This is designed for
+production installation of Vulkan ICDs and layers.  The design is shown first
+for ICDs, and then the variation for layers will be discussed.
 
 
 1. Installable Client Drivers:
@@ -16,7 +16,7 @@ HKEY_LOCAL_MACHINE\SOFTWARE\Khronos\Vulkan\Drivers
 
 For each value in this key which has DWORD data set to 0, the loader opens the
 text information file (a.k.a. "manifest file"), that uses a JSON format (NOTE:
-The JSON in this version of the proposal is for illustration purposes, and
+The JSON in this version of the specification is for illustration purposes, and
 isn’t completely valid yet), specified by the name of the value.  Each name
 must be a full pathname to the text info file.  The Vulkan loader will open
 each info file to obtain the name or pathname of an ICD shared library (“.dll”)
@@ -32,10 +32,10 @@ file.  For example:
 
 The “library_path” specifies either a filename, a relative pathname, or a full
 pathname to an ICD shared library file, which the loader will attempt to load
-using LoadLibrary().  If the ICD is specified via a filename, the shared library
-lives in the system’s DLL search path (e.g. in the “C:\\Windows\\System32” folder).
-If the ICD is specified via a relative pathname, it is relative to the path
-of the info file.
+using LoadLibrary().  If the ICD is specified via a filename, the shared
+library lives in the system’s DLL search path (e.g. in the
+“C:\\Windows\\System32” folder).  If the ICD is specified via a relative
+pathname, it is relative to the path of the info file.
 
 The “file_format_version” specifies a major.minor.patch version number in case
 the format of the text information file changes in the future.  If the same ICD
@@ -180,8 +180,8 @@ information:
   both the "enable_environment" and "disable_environment" variables are set,
   the implicit layer is disabled.
 
-For example (NOTE: The JSON in this version of the proposal is for illustration
-purposes, and isn’t completely valid yet):
+For example:
+
 {
      “file_format_version” : “1.0.0”,
      “layer”: {
