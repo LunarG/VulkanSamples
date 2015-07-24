@@ -1457,6 +1457,9 @@ static void loader_get_manifest_files(const char *env_override,
         strcpy(loc, override);
     }
 
+    // Print out the paths being searched if debugging is enabled
+    loader_log(VK_DBG_REPORT_DEBUG_BIT, 0, "Searching the following paths for ICDs %s\n", loc);
+
     file = loc;
     while (*file) {
         next_file = loader_get_next_path(file);
@@ -1591,6 +1594,10 @@ void loader_icd_scan(void)
                 if (icd_filename != NULL) {
                     char def_dir[] = DEFAULT_VK_DRIVERS_PATH;
                     char *dir = def_dir;
+
+                    // Print out the paths being searched if debugging is enabled
+                    loader_log(VK_DBG_REPORT_DEBUG_BIT, 0, "Searching for ICD drivers named %s at %s\n", icd_file, dir);
+
                     // strip off extra quotes
                     if (icd_filename[strlen(icd_filename)  - 1] == '"')
                         icd_filename[strlen(icd_filename) - 1] = '\0';
