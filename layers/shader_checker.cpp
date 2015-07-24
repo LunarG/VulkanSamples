@@ -887,9 +887,8 @@ shader_stage_attribs[VK_SHADER_STAGE_FRAGMENT + 1] = {
 };
 
 
-//TODO handle count > 1
 static bool
-validate_graphics_pipeline(VkDevice dev, uint32_t count, VkGraphicsPipelineCreateInfo const *pCreateInfo)
+validate_graphics_pipeline(VkDevice dev, VkGraphicsPipelineCreateInfo const *pCreateInfo)
 {
     /* We seem to allow pipeline stages to be specified out of order, so collect and identify them
      * before trying to do anything more: */
@@ -969,7 +968,10 @@ vkCreateGraphicsPipelines(VkDevice device,
                          const VkGraphicsPipelineCreateInfo *pCreateInfos,
                          VkPipeline *pPipelines)
 {
-    bool pass = validate_graphics_pipeline(device, count, pCreateInfos);
+    bool pass = true;
+    for (uint32_t i = 0; i < count; i++) {
+        pass = validate_graphics_pipeline(device, &pCreateInfos[i]) && pass;
+    }
 
     if (pass) {
         /* The driver is allowed to crash if passed junk. Only actually create the
