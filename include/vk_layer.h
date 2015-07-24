@@ -110,6 +110,11 @@ typedef struct VkLayerDispatchTable_
     PFN_vkDestroyDynamicColorBlendState DestroyDynamicColorBlendState;
     PFN_vkCreateDynamicDepthStencilState CreateDynamicDepthStencilState;
     PFN_vkDestroyDynamicDepthStencilState DestroyDynamicDepthStencilState;
+    PFN_vkCreateFramebuffer CreateFramebuffer;
+    PFN_vkDestroyFramebuffer DestroyFramebuffer;
+    PFN_vkCreateRenderPass CreateRenderPass;
+    PFN_vkDestroyRenderPass DestroyRenderPass;
+    PFN_vkGetRenderAreaGranularity GetRenderAreaGranularity;
     PFN_vkCreateCommandPool CreateCommandPool;
     PFN_vkDestroyCommandPool DestroyCommandPool;
     PFN_vkResetCommandPool ResetCommandPool;
@@ -153,10 +158,7 @@ typedef struct VkLayerDispatchTable_
     PFN_vkCmdResetQueryPool CmdResetQueryPool;
     PFN_vkCmdWriteTimestamp CmdWriteTimestamp;
     PFN_vkCmdCopyQueryPoolResults CmdCopyQueryPoolResults;
-    PFN_vkCreateFramebuffer CreateFramebuffer;
-    PFN_vkDestroyFramebuffer DestroyFramebuffer;
-    PFN_vkCreateRenderPass CreateRenderPass;
-    PFN_vkDestroyRenderPass DestroyRenderPass;
+    PFN_vkCmdPushConstants CmdPushConstants;
     PFN_vkCmdBeginRenderPass CmdBeginRenderPass;
     PFN_vkCmdNextSubpass CmdNextSubpass;
     PFN_vkCmdEndRenderPass CmdEndRenderPass;
@@ -178,6 +180,7 @@ typedef struct VkLayerInstanceDispatchTable_
     PFN_vkDestroyInstance DestroyInstance;
     PFN_vkEnumeratePhysicalDevices EnumeratePhysicalDevices;
     PFN_vkGetPhysicalDeviceFeatures GetPhysicalDeviceFeatures;
+    PFN_vkGetPhysicalDeviceImageFormatProperties GetPhysicalDeviceImageFormatProperties;
     PFN_vkGetPhysicalDeviceFormatProperties GetPhysicalDeviceFormatProperties;
     PFN_vkGetPhysicalDeviceLimits GetPhysicalDeviceLimits;
     PFN_vkGetPhysicalDeviceSparseImageFormatProperties GetPhysicalDeviceSparseImageFormatProperties;

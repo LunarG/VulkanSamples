@@ -683,3 +683,14 @@ ICD_EXPORT VkResult VKAPI vkGetPhysicalDeviceFormatProperties(
 
     return ret;
 }
+
+ICD_EXPORT VkResult VKAPI vkGetPhysicalDeviceImageFormatProperties(
+    VkPhysicalDevice                            physicalDevice,
+    VkFormat                                    format,
+    VkImageType                                 type,
+    VkImageTiling                               tiling,
+    VkImageUsageFlags                           usage,
+    VkImageFormatProperties*                    pImageFormatProperties)
+{
+    return VK_ERROR_UNAVAILABLE;
+}

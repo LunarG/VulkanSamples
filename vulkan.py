@@ -237,6 +237,14 @@ core = Extension(
              Param("VkFormat", "format"),
              Param("VkFormatProperties*", "pFormatInfo")]),
 
+        Proto("VkResult", "GetPhysicalDeviceImageFormatProperties",
+            [Param("VkPhysicalDevice", "physicalDevice"),
+             Param("VkFormat", "format"),
+             Param("VkImageType", "type"),
+             Param("VkImageTiling", "tiling"),
+             Param("VkImageUsageFlags", "usage"),
+             Param("VkImageFormatProperties*", "pImageFormatProperties")]),
+
         Proto("VkResult", "GetPhysicalDeviceLimits",
             [Param("VkPhysicalDevice", "physicalDevice"),
              Param("VkPhysicalDeviceLimits*", "pLimits")]),
