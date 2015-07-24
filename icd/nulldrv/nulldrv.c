@@ -2402,3 +2402,14 @@ ICD_EXPORT VkResult xcbQueuePresent(void *queue, void *image, void* fence)
 {
     return VK_SUCCESS;
 }
+
+ICD_EXPORT VkResult VKAPI vkGetPhysicalDeviceImageFormatProperties(
+    VkPhysicalDevice                            physicalDevice,
+    VkFormat                                    format,
+    VkImageType                                 type,
+    VkImageTiling                               tiling,
+    VkImageUsageFlags                           usage,
+    VkImageFormatProperties*                    pImageFormatProperties)
+{
+    return VK_ERROR_UNAVAILABLE;
+}
