@@ -117,6 +117,10 @@ static bool base_dbg_copy_create_info(const struct intel_handle *handle,
         assert(info.header->struct_type == VK_STRUCTURE_TYPE_DYNAMIC_DEPTH_STENCIL_STATE_CREATE_INFO);
         shallow_copy = sizeof(VkDynamicDepthStencilStateCreateInfo);
         break;
+    case VK_OBJECT_TYPE_CMD_POOL:
+        assert(info.header->struct_type == VK_STRUCTURE_TYPE_CMD_POOL_CREATE_INFO);
+        shallow_copy = sizeof(VkCmdPoolCreateInfo);
+        break;
     case VK_OBJECT_TYPE_COMMAND_BUFFER:
         assert(info.header->struct_type == VK_STRUCTURE_TYPE_CMD_BUFFER_CREATE_INFO);
         shallow_copy = sizeof(VkCmdBufferCreateInfo);
