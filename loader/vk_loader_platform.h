@@ -51,18 +51,48 @@
 #define PATH_SEPERATOR ':'
 #define DIRECTORY_SYMBOL '/'
 
+#define VULKAN_ICDCONF_DIR "/" "vulkan" "/" "icd.d"
+#define VULKAN_ICD_DIR "/" "vulkan" "/" "icd"
+#define VULKAN_ELAYERCONF_DIR "/" "vulkan" "/" "implicit_layer.d"
+#define VULKAN_ILAYERCONF_DIR "/" "vulkan" "/" "implicit_layer.d"
+#define VULKAN_LAYER_DIR "/" "vulkan" "/" "layer"
+
+#if defined(LOCALPREFIX)
+#define LOCAL_DRIVERS_INFO \
+    LOCALPREFIX "/" SYSCONFDIR VULKAN_ICDCONF_DIR ":" \
+    LOCALPREFIX "/" DATADIR VULKAN_ICDCONF_DIR ":"
+#define LOCAL_DRIVERS_PATH \
+    LOCALPREFIX "/" LIBDIR VULKAN_ICD_DIR ":"
+#define LOCAL_LAYERS_INFO \
+    LOCALPREFIX "/" SYSCONFDIR VULKAN_ELAYERCONF_DIR ":" \
+    LOCALPREFIX "/" SYSCONFDIR VULKAN_ILAYERCONF_DIR ":" \
+    LOCALPREFIX "/" DATADIR VULKAN_ELAYERCONF_DIR ":" \
+    LOCALPREFIX "/" DATADIR VULKAN_ILAYERCONF_DIR ":"
+#define LOCAL_LAYERS_PATH \
+    LOCALPREFIX "/" LIBDIR VULKAN_LAYER_DIR ":"
+#else
+#define LOCAL_DRIVERS_INFO
+#define LOCAL_DRIVERS_PATH
+#define LOCAL_LAYERS_INFO
+#define LOCAL_LAYERS_PATH
+#endif
+
 #define DEFAULT_VK_DRIVERS_INFO \
-    SYSCONFDIR "/vulkan/icd.d:" \
-    DATADIR "/vulkan/icd.d"
+    LOCAL_DRIVERS_INFO \
+    "/usr/" SYSCONFDIR VULKAN_ICDCONF_DIR ":" \
+    "/usr/" DATADIR VULKAN_ICDCONF_DIR
 #define DEFAULT_VK_DRIVERS_PATH \
-    LIBDIR "/vulkan/icd"
+    LOCAL_DRIVERS_PATH \
+    "/usr/" LIBDIR VULKAN_ICD_DIR
 #define DEFAULT_VK_LAYERS_INFO \
-    SYSCONFDIR "/vulkan/explicit_layer.d:" \
-    SYSCONFDIR "/vulkan/implicit_layer.d:" \
-    DATADIR "/vulkan/explicit_layer.d:" \
-    DATADIR "/vulkan/implicit_layer.d"
+    LOCAL_LAYERS_INFO \
+    "/usr/" SYSCONFDIR VULKAN_ELAYERCONF_DIR ":" \
+    "/usr/" SYSCONFDIR VULKAN_ILAYERCONF_DIR ":" \
+    "/usr/" DATADIR VULKAN_ELAYERCONF_DIR ":" \
+    "/usr/" DATADIR VULKAN_ILAYERCONF_DIR
 #define DEFAULT_VK_LAYERS_PATH \
-    LIBDIR "/vulkan/layer"
+    LOCAL_LAYERS_PATH \
+    "/usr/" LIBDIR VULKAN_LAYER_DIR
 #define LAYERS_PATH_ENV "VK_LAYER_DIRS"
 
 // C99:
