@@ -190,7 +190,7 @@ using namespace std;
 #define DEFAULT_VK_DRIVERS_PATH "C:\\Windows\\System32;C:\\Windows\\SysWow64"
 #define DEFAULT_VK_LAYERS_INFO "SOFTWARE\\Khronos\\Vulkan\\ExplicitLayers;SOFTWARE\\Khronos\\Vulkan\\ImplicitLayers"
 #define DEFAULT_VK_LAYERS_PATH "C:\\Windows\\System32;C:\\Windows\\SysWow64"
-#define LAYERS_PATH_ENV "VK_LAYERS_FOLDERS"
+#define LAYERS_PATH_ENV "VK_LAYER_FOLDERS"
 
 // C99:
 // Microsoft didn't implement C99 in Visual Studio; but started adding it with
