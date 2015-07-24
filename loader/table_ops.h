@@ -50,6 +50,7 @@ static inline void loader_init_device_dispatch_table(VkLayerDispatchTable *table
     table->FlushMappedMemoryRanges = (PFN_vkFlushMappedMemoryRanges) gpa(dev, "vkFlushMappedMemoryRanges");
     table->InvalidateMappedMemoryRanges = (PFN_vkInvalidateMappedMemoryRanges) gpa(dev, "vkInvalidateMappedMemoryRanges");
     table->GetDeviceMemoryCommitment = (PFN_vkGetDeviceMemoryCommitment) gpa(dev, "vkGetDeviceMemoryCommitment");
+    table->GetImageSparseMemoryRequirements = (PFN_vkGetImageSparseMemoryRequirements) gpa(dev, "vkGetImageSparseMemoryRequirements");
     table->GetBufferMemoryRequirements = (PFN_vkGetBufferMemoryRequirements) gpa(dev, "vkGetBufferMemoryRequirements");
     table->GetImageMemoryRequirements = (PFN_vkGetImageMemoryRequirements) gpa(dev, "vkGetImageMemoryRequirements");
     table->BindBufferMemory = (PFN_vkBindBufferMemory) gpa(dev, "vkBindBufferMemory");
@@ -57,7 +58,6 @@ static inline void loader_init_device_dispatch_table(VkLayerDispatchTable *table
     table->QueueBindSparseBufferMemory = (PFN_vkQueueBindSparseBufferMemory) gpa(dev, "vkQueueBindSparseBufferMemory");
     table->QueueBindSparseImageMemory = (PFN_vkQueueBindSparseImageMemory) gpa(dev, "vkQueueBindSparseImageMemory");
     table->QueueBindSparseImageOpaqueMemory = (PFN_vkQueueBindSparseImageOpaqueMemory) gpa(dev, "vkQueueBindSparseImageOpaqueMemory");
-    table->GetImageSparseMemoryRequirements = (PFN_vkGetImageSparseMemoryRequirements) gpa(dev, "vkGetImageSparseMemoryRequirements");
     table->CreateFence = (PFN_vkCreateFence) gpa(dev, "vkCreateFence");
     table->DestroyFence = (PFN_vkDestroyFence) gpa(dev, "vkDestroyFence");
     table->ResetFences = (PFN_vkResetFences) gpa(dev, "vkResetFences");
@@ -118,6 +118,11 @@ static inline void loader_init_device_dispatch_table(VkLayerDispatchTable *table
     table->DestroyDynamicColorBlendState = (PFN_vkDestroyDynamicColorBlendState) gpa(dev, "vkDestroyDynamicColorBlendState");
     table->CreateDynamicDepthStencilState = (PFN_vkCreateDynamicDepthStencilState) gpa(dev, "vkCreateDynamicDepthStencilState");
     table->DestroyDynamicDepthStencilState = (PFN_vkDestroyDynamicDepthStencilState) gpa(dev, "vkDestroyDynamicDepthStencilState");
+    table->CreateFramebuffer = (PFN_vkCreateFramebuffer) gpa(dev, "vkCreateFramebuffer");
+    table->DestroyFramebuffer = (PFN_vkDestroyFramebuffer) gpa(dev, "vkDestroyFramebuffer");
+    table->CreateRenderPass = (PFN_vkCreateRenderPass) gpa(dev, "vkCreateRenderPass");
+    table->DestroyRenderPass = (PFN_vkDestroyRenderPass) gpa(dev, "vkDestroyRenderPass");
+    table->GetRenderAreaGranularity = (PFN_vkGetRenderAreaGranularity) gpa(dev, "vkGetRenderAreaGranularity");
     table->CreateCommandPool = (PFN_vkCreateCommandPool) gpa(dev, "vkCreateCommandPool");
     table->DestroyCommandPool = (PFN_vkDestroyCommandPool) gpa(dev, "vkDestroyCommandPool");
     table->ResetCommandPool = (PFN_vkResetCommandPool) gpa(dev, "vkResetCommandPool");
@@ -161,10 +166,7 @@ static inline void loader_init_device_dispatch_table(VkLayerDispatchTable *table
     table->CmdResetQueryPool = (PFN_vkCmdResetQueryPool) gpa(dev, "vkCmdResetQueryPool");
     table->CmdWriteTimestamp = (PFN_vkCmdWriteTimestamp) gpa(dev, "vkCmdWriteTimestamp");
     table->CmdCopyQueryPoolResults = (PFN_vkCmdCopyQueryPoolResults) gpa(dev, "vkCmdCopyQueryPoolResults");
-    table->CreateFramebuffer = (PFN_vkCreateFramebuffer) gpa(dev, "vkCreateFramebuffer");
-    table->DestroyFramebuffer = (PFN_vkDestroyFramebuffer) gpa(dev, "vkDestroyFramebuffer");
-    table->CreateRenderPass = (PFN_vkCreateRenderPass) gpa(dev, "vkCreateRenderPass");
-    table->DestroyRenderPass = (PFN_vkDestroyRenderPass) gpa(dev, "vkDestroyRenderPass");
+    table->CmdPushConstants = (PFN_vkCmdPushConstants) gpa(dev, "vkCmdPushConstants");
     table->CmdBeginRenderPass = (PFN_vkCmdBeginRenderPass) gpa(dev, "vkCmdBeginRenderPass");
     table->CmdNextSubpass = (PFN_vkCmdNextSubpass) gpa(dev, "vkCmdNextSubpass");
     table->CmdEndRenderPass = (PFN_vkCmdEndRenderPass) gpa(dev, "vkCmdEndRenderPass");
@@ -214,6 +216,8 @@ static inline void *loader_lookup_device_dispatch_table(
         return (void *) table->InvalidateMappedMemoryRanges;
     if (!strcmp(name, "GetDeviceMemoryCommitment"))
         return (void *) table->GetDeviceMemoryCommitment;
+    if (!strcmp(name, "GetImageSparseMemoryRequirements"))
+        return (void *) table->GetImageSparseMemoryRequirements;
     if (!strcmp(name, "GetBufferMemoryRequirements"))
         return (void *) table->GetBufferMemoryRequirements;
     if (!strcmp(name, "GetImageMemoryRequirements"))
@@ -228,8 +232,6 @@ static inline void *loader_lookup_device_dispatch_table(
         return (void *) table->QueueBindSparseImageMemory;
     if (!strcmp(name, "QueueBindSparseImageOpaqueMemory"))
         return (void *) table->QueueBindSparseImageOpaqueMemory;
-    if (!strcmp(name, "GetImageSparseMemoryRequirements"))
-        return (void *) table->GetImageSparseMemoryRequirements;
     if (!strcmp(name, "CreateFence"))
         return (void *) table->CreateFence;
     if (!strcmp(name, "DestroyFence"))
@@ -350,6 +352,16 @@ static inline void *loader_lookup_device_dispatch_table(
         return (void *) table->CreateDynamicDepthStencilState;
     if (!strcmp(name, "DestroyDynamicDepthStencilState"))
         return (void *) table->DestroyDynamicDepthStencilState;
+    if (!strcmp(name, "CreateFramebuffer"))
+        return (void *) table->CreateFramebuffer;
+    if (!strcmp(name, "DestroyFramebuffer"))
+        return (void *) table->DestroyFramebuffer;
+    if (!strcmp(name, "CreateRenderPass"))
+        return (void *) table->CreateRenderPass;
+    if (!strcmp(name, "DestroyRenderPass"))
+        return (void *) table->DestroyRenderPass;
+    if (!strcmp(name, "GetRenderAreaGranularity"))
+        return (void *) table->GetRenderAreaGranularity;
     if (!strcmp(name, "CreateCommandPool"))
         return (void *) table->CreateCommandPool;
     if (!strcmp(name, "DestroyCommandPool"))
@@ -436,20 +448,16 @@ static inline void *loader_lookup_device_dispatch_table(
         return (void *) table->CmdWriteTimestamp;
     if (!strcmp(name, "CmdCopyQueryPoolResults"))
         return (void *) table->CmdCopyQueryPoolResults;
-    if (!strcmp(name, "CreateFramebuffer"))
-        return (void *) table->CreateFramebuffer;
-    if (!strcmp(name, "DestroyFramebuffer"))
-        return (void *) table->DestroyFramebuffer;
-    if (!strcmp(name, "CreateRenderPass"))
-        return (void *) table->CreateRenderPass;
-    if (!strcmp(name, "DestroyRenderPass"))
-        return (void *) table->DestroyRenderPass;
+    if (!strcmp(name, "CmdPushConstants"))
+        return (void *) table->CmdPushConstants;
     if (!strcmp(name, "CmdBeginRenderPass"))
         return (void *) table->CmdBeginRenderPass;
     if (!strcmp(name, "CmdNextSubpass"))
         return (void *) table->CmdNextSubpass;
     if (!strcmp(name, "CmdEndRenderPass"))
         return (void *) table->CmdEndRenderPass;
+    if (!strcmp(name, "CmdExecuteCommands"))
+        return (void *) table->CmdExecuteCommands;
 
     return NULL;
 }
@@ -467,15 +475,16 @@ static inline void loader_init_instance_core_dispatch_table(VkLayerInstanceDispa
     table->DestroyInstance = (PFN_vkDestroyInstance) gpa(inst, "vkDestroyInstance");
     table->EnumeratePhysicalDevices = (PFN_vkEnumeratePhysicalDevices) gpa(inst, "vkEnumeratePhysicalDevices");
     table->GetPhysicalDeviceFeatures = (PFN_vkGetPhysicalDeviceFeatures) gpa(inst, "vkGetPhysicalDeviceFeatures");
+    table->GetPhysicalDeviceImageFormatProperties = (PFN_vkGetPhysicalDeviceImageFormatProperties) gpa(inst, "vkGetPhysicalDeviceImageFormatProperties");
     table->GetPhysicalDeviceFormatProperties = (PFN_vkGetPhysicalDeviceFormatProperties) gpa(inst, "vkGetPhysicalDeviceFormatProperties");
     table->GetPhysicalDeviceLimits = (PFN_vkGetPhysicalDeviceLimits) gpa(inst, "vkGetPhysicalDeviceLimits");
+    table->GetPhysicalDeviceSparseImageFormatProperties = (PFN_vkGetPhysicalDeviceSparseImageFormatProperties) gpa(inst, "vkGetPhysicalDeviceSparseImageFormatProperties");
     table->GetPhysicalDeviceProperties = (PFN_vkGetPhysicalDeviceProperties) gpa(inst, "vkGetPhysicalDeviceProperties");
     table->GetPhysicalDeviceQueueCount = (PFN_vkGetPhysicalDeviceQueueCount) gpa(inst, "vkGetPhysicalDeviceQueueCount");
     table->GetPhysicalDeviceQueueProperties = (PFN_vkGetPhysicalDeviceQueueProperties) gpa(inst, "vkGetPhysicalDeviceQueueProperties");
     table->GetPhysicalDeviceMemoryProperties = (PFN_vkGetPhysicalDeviceMemoryProperties) gpa(inst, "vkGetPhysicalDeviceMemoryProperties");
     table->GetPhysicalDeviceExtensionProperties = (PFN_vkGetPhysicalDeviceExtensionProperties) gpa(inst, "vkGetPhysicalDeviceExtensionProperties");
     table->GetPhysicalDeviceLayerProperties = (PFN_vkGetPhysicalDeviceLayerProperties) gpa(inst, "vkGetPhysicalDeviceLayerProperties");
-    table->GetPhysicalDeviceSparseImageFormatProperties = (PFN_vkGetPhysicalDeviceSparseImageFormatProperties) gpa(inst, "vkGetPhysicalDeviceSparseImageFormatProperties");
 }
 
 static inline void loader_init_instance_extension_dispatch_table(
@@ -503,6 +512,8 @@ static inline void *loader_lookup_instance_dispatch_table(
         return (void *) table->EnumeratePhysicalDevices;
     if (!strcmp(name, "GetPhysicalDeviceFeatures"))
         return (void *) table->GetPhysicalDeviceFeatures;
+    if (!strcmp(name, "GetPhysicalDeviceImageFormatProperties"))
+        return (void *) table->GetPhysicalDeviceImageFormatProperties;
     if (!strcmp(name, "GetPhysicalDeviceFormatProperties"))
         return (void *) table->GetPhysicalDeviceFormatProperties;
     if (!strcmp(name, "GetPhysicalDeviceLimits"))

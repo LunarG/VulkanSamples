@@ -172,6 +172,58 @@ LOADER_EXPORT VkResult VKAPI vkEnumeratePhysicalDevices(
     return res;
 }
 
+
+
+
+
+
+LOADER_EXPORT VkResult VKAPI vkGetPhysicalDeviceFeatures(
+                                            VkPhysicalDevice gpu,
+                                            VkPhysicalDeviceFeatures *pFeatures)
+{
+    const VkLayerInstanceDispatchTable *disp;
+    VkResult res;
+
+    disp = loader_get_instance_dispatch(gpu);
+    res = disp->GetPhysicalDeviceFeatures(gpu, pFeatures);
+    return res;
+}
+
+LOADER_EXPORT VkResult VKAPI vkGetPhysicalDeviceFormatProperties(
+                                            VkPhysicalDevice gpu,
+                                            VkFormat format,
+                                            VkFormatProperties *pFormatInfo)
+{
+    const VkLayerInstanceDispatchTable *disp;
+    VkResult res;
+
+    disp = loader_get_instance_dispatch(gpu);
+    res = disp->GetPhysicalDeviceFormatProperties(gpu, format, pFormatInfo);
+    return res;
+}
+
+LOADER_EXPORT VkResult VKAPI vkGetPhysicalDeviceImageFormatProperties(VkPhysicalDevice physicalDevice, VkFormat format, VkImageType type, VkImageTiling tiling, VkImageUsageFlags usage, VkImageFormatProperties* pImageFormatProperties)
+{
+    const VkLayerInstanceDispatchTable *disp;
+    VkResult res;
+
+    disp = loader_get_instance_dispatch(physicalDevice);
+    res = disp->GetPhysicalDeviceImageFormatProperties(physicalDevice, format, type, tiling, usage, pImageFormatProperties);
+    return res;
+}
+
+LOADER_EXPORT VkResult VKAPI vkGetPhysicalDeviceLimits(
+                                            VkPhysicalDevice gpu,
+                                            VkPhysicalDeviceLimits *pLimits)
+{
+    const VkLayerInstanceDispatchTable *disp;
+    VkResult res;
+
+    disp = loader_get_instance_dispatch(gpu);
+    res = disp->GetPhysicalDeviceLimits(gpu, pLimits);
+    return res;
+}
+
 LOADER_EXPORT VkResult VKAPI vkGetPhysicalDeviceProperties(
                                             VkPhysicalDevice gpu,
                                             VkPhysicalDeviceProperties* pProperties)
@@ -218,43 +270,6 @@ LOADER_EXPORT VkResult VKAPI vkGetPhysicalDeviceMemoryProperties(
 
     disp = loader_get_instance_dispatch(gpu);
     res = disp->GetPhysicalDeviceMemoryProperties(gpu, pMemoryProperties);
-    return res;
-}
-
-LOADER_EXPORT VkResult VKAPI vkGetPhysicalDeviceFeatures(
-                                            VkPhysicalDevice gpu,
-                                            VkPhysicalDeviceFeatures *pFeatures)
-{
-    const VkLayerInstanceDispatchTable *disp;
-    VkResult res;
-
-    disp = loader_get_instance_dispatch(gpu);
-    res = disp->GetPhysicalDeviceFeatures(gpu, pFeatures);
-    return res;
-}
-
-LOADER_EXPORT VkResult VKAPI vkGetPhysicalDeviceFormatProperties(
-                                            VkPhysicalDevice gpu,
-                                            VkFormat format,
-                                            VkFormatProperties *pFormatInfo)
-{
-    const VkLayerInstanceDispatchTable *disp;
-    VkResult res;
-
-    disp = loader_get_instance_dispatch(gpu);
-    res = disp->GetPhysicalDeviceFormatProperties(gpu, format, pFormatInfo);
-    return res;
-}
-
-LOADER_EXPORT VkResult VKAPI vkGetPhysicalDeviceLimits(
-                                            VkPhysicalDevice gpu,
-                                            VkPhysicalDeviceLimits *pLimits)
-{
-    const VkLayerInstanceDispatchTable *disp;
-    VkResult res;
-
-    disp = loader_get_instance_dispatch(gpu);
-    res = disp->GetPhysicalDeviceLimits(gpu, pLimits);
     return res;
 }
 
@@ -421,24 +436,6 @@ LOADER_EXPORT VkResult VKAPI vkGetDeviceMemoryCommitment(VkDevice device, VkDevi
     return disp->GetDeviceMemoryCommitment(device, memory, pCommittedMemoryInBytes);
 }
 
-LOADER_EXPORT VkResult VKAPI vkGetBufferMemoryRequirements(VkDevice device, VkBuffer buffer, VkMemoryRequirements* pMemoryRequirements)
-{
-    const VkLayerDispatchTable *disp;
-
-    disp = loader_get_dispatch(device);
-
-    return disp->GetBufferMemoryRequirements(device, buffer, pMemoryRequirements);
-}
-
-LOADER_EXPORT VkResult VKAPI vkGetImageMemoryRequirements(VkDevice device, VkImage image, VkMemoryRequirements* pMemoryRequirements)
-{
-    const VkLayerDispatchTable *disp;
-
-    disp = loader_get_dispatch(device);
-
-    return disp->GetImageMemoryRequirements(device, image, pMemoryRequirements);
-}
-
 LOADER_EXPORT VkResult VKAPI vkBindBufferMemory(VkDevice device, VkBuffer buffer, VkDeviceMemory mem, VkDeviceSize offset)
 {
     const VkLayerDispatchTable *disp;
@@ -455,6 +452,24 @@ LOADER_EXPORT VkResult VKAPI vkBindImageMemory(VkDevice device, VkImage image, V
     disp = loader_get_dispatch(device);
 
     return disp->BindImageMemory(device, image, mem, offset);
+}
+
+LOADER_EXPORT VkResult VKAPI vkGetBufferMemoryRequirements(VkDevice device, VkBuffer buffer, VkMemoryRequirements* pMemoryRequirements)
+{
+    const VkLayerDispatchTable *disp;
+
+    disp = loader_get_dispatch(device);
+
+    return disp->GetBufferMemoryRequirements(device, buffer, pMemoryRequirements);
+}
+
+LOADER_EXPORT VkResult VKAPI vkGetImageMemoryRequirements(VkDevice device, VkImage image, VkMemoryRequirements* pMemoryRequirements)
+{
+    const VkLayerDispatchTable *disp;
+
+    disp = loader_get_dispatch(device);
+
+    return disp->GetImageMemoryRequirements(device, image, pMemoryRequirements);
 }
 
 LOADER_EXPORT VkResult VKAPI vkGetImageSparseMemoryRequirements(VkDevice device, VkImage image, uint32_t* pNumRequirements, VkSparseImageMemoryRequirements* pSparseMemoryRequirements)
@@ -475,15 +490,6 @@ LOADER_EXPORT VkResult VKAPI vkGetPhysicalDeviceSparseImageFormatProperties(VkPh
     return disp->GetPhysicalDeviceSparseImageFormatProperties(physicalDevice, format, type, samples, usage, tiling, pNumProperties, pProperties);
 }
 
-LOADER_EXPORT VkResult VKAPI vkQueueBindSparseImageOpaqueMemory(VkQueue queue, VkImage image, uint32_t numBindings, const VkSparseMemoryBindInfo* pBindInfo)
-{
-    const VkLayerDispatchTable *disp;
-
-    disp = loader_get_dispatch(queue);
-
-    return disp->QueueBindSparseImageOpaqueMemory(queue, image, numBindings, pBindInfo);
-}
-
 LOADER_EXPORT VkResult VKAPI vkQueueBindSparseBufferMemory(VkQueue queue, VkBuffer buffer, uint32_t numBindings, const VkSparseMemoryBindInfo* pBindInfo)
 {
     const VkLayerDispatchTable *disp;
@@ -491,6 +497,15 @@ LOADER_EXPORT VkResult VKAPI vkQueueBindSparseBufferMemory(VkQueue queue, VkBuff
     disp = loader_get_dispatch(queue);
 
     return disp->QueueBindSparseBufferMemory(queue, buffer, numBindings, pBindInfo);
+}
+
+LOADER_EXPORT VkResult VKAPI vkQueueBindSparseImageOpaqueMemory(VkQueue queue, VkImage image, uint32_t numBindings, const VkSparseMemoryBindInfo* pBindInfo)
+{
+    const VkLayerDispatchTable *disp;
+
+    disp = loader_get_dispatch(queue);
+
+    return disp->QueueBindSparseImageOpaqueMemory(queue, image, numBindings, pBindInfo);
 }
 
 LOADER_EXPORT VkResult VKAPI vkQueueBindSparseImageMemory(VkQueue queue, VkImage image, uint32_t numBindings, const VkSparseImageMemoryBindInfo* pBindInfo)
@@ -1044,6 +1059,51 @@ LOADER_EXPORT VkResult VKAPI vkDestroyDynamicDepthStencilState(VkDevice device, 
     return disp->DestroyDynamicDepthStencilState(device, dynamicDepthStencilState);
 }
 
+LOADER_EXPORT VkResult VKAPI vkCreateFramebuffer(VkDevice device, const VkFramebufferCreateInfo* pCreateInfo, VkFramebuffer* pFramebuffer)
+{
+    const VkLayerDispatchTable *disp;
+
+    disp = loader_get_dispatch(device);
+
+    return disp->CreateFramebuffer(device, pCreateInfo, pFramebuffer);
+}
+
+LOADER_EXPORT VkResult VKAPI vkDestroyFramebuffer(VkDevice device, VkFramebuffer framebuffer)
+{
+    const VkLayerDispatchTable *disp;
+
+    disp = loader_get_dispatch(device);
+
+    return disp->DestroyFramebuffer(device, framebuffer);
+}
+
+LOADER_EXPORT VkResult VKAPI vkCreateRenderPass(VkDevice device, const VkRenderPassCreateInfo* pCreateInfo, VkRenderPass* pRenderPass)
+{
+    const VkLayerDispatchTable *disp;
+
+    disp = loader_get_dispatch(device);
+
+    return disp->CreateRenderPass(device, pCreateInfo, pRenderPass);
+}
+
+LOADER_EXPORT VkResult VKAPI vkDestroyRenderPass(VkDevice device, VkRenderPass renderPass)
+{
+    const VkLayerDispatchTable *disp;
+
+    disp = loader_get_dispatch(device);
+
+    return disp->DestroyRenderPass(device, renderPass);
+}
+
+LOADER_EXPORT VkResult VKAPI vkGetRenderAreaGranularity(VkDevice device, VkRenderPass renderPass, VkExtent2D* pGranularity)
+{
+    const VkLayerDispatchTable *disp;
+
+    disp = loader_get_dispatch(device);
+
+    return disp->GetRenderAreaGranularity(device, renderPass, pGranularity);
+}
+
 LOADER_EXPORT VkResult VKAPI vkCreateCommandPool(VkDevice device, const VkCmdPoolCreateInfo* pCreateInfo, VkCmdPool* pCmdPool)
 {
     const VkLayerDispatchTable *disp;
@@ -1176,15 +1236,6 @@ LOADER_EXPORT void VKAPI vkCmdBindDescriptorSets(VkCmdBuffer cmdBuffer, VkPipeli
     disp->CmdBindDescriptorSets(cmdBuffer, pipelineBindPoint, layout, firstSet, setCount, pDescriptorSets, dynamicOffsetCount, pDynamicOffsets);
 }
 
-LOADER_EXPORT void VKAPI vkCmdBindVertexBuffers(VkCmdBuffer cmdBuffer, uint32_t startBinding, uint32_t bindingCount, const VkBuffer* pBuffers, const VkDeviceSize* pOffsets)
-{
-    const VkLayerDispatchTable *disp;
-
-    disp = loader_get_dispatch(cmdBuffer);
-
-    disp->CmdBindVertexBuffers(cmdBuffer, startBinding, bindingCount, pBuffers, pOffsets);
-}
-
 LOADER_EXPORT void VKAPI vkCmdBindIndexBuffer(VkCmdBuffer cmdBuffer, VkBuffer buffer, VkDeviceSize offset, VkIndexType indexType)
 {
     const VkLayerDispatchTable *disp;
@@ -1192,6 +1243,15 @@ LOADER_EXPORT void VKAPI vkCmdBindIndexBuffer(VkCmdBuffer cmdBuffer, VkBuffer bu
     disp = loader_get_dispatch(cmdBuffer);
 
     disp->CmdBindIndexBuffer(cmdBuffer, buffer, offset, indexType);
+}
+
+LOADER_EXPORT void VKAPI vkCmdBindVertexBuffers(VkCmdBuffer cmdBuffer, uint32_t startBinding, uint32_t bindingCount, const VkBuffer* pBuffers, const VkDeviceSize* pOffsets)
+{
+    const VkLayerDispatchTable *disp;
+
+    disp = loader_get_dispatch(cmdBuffer);
+
+    disp->CmdBindVertexBuffers(cmdBuffer, startBinding, bindingCount, pBuffers, pOffsets);
 }
 
 LOADER_EXPORT void VKAPI vkCmdDraw(VkCmdBuffer cmdBuffer, uint32_t firstVertex, uint32_t vertexCount, uint32_t firstInstance, uint32_t instanceCount)
@@ -1437,40 +1497,13 @@ LOADER_EXPORT void VKAPI vkCmdCopyQueryPoolResults(VkCmdBuffer cmdBuffer, VkQuer
     disp->CmdCopyQueryPoolResults(cmdBuffer, queryPool, startQuery, queryCount, destBuffer, destOffset, destStride, flags);
 }
 
-LOADER_EXPORT VkResult VKAPI vkCreateFramebuffer(VkDevice device, const VkFramebufferCreateInfo* pCreateInfo, VkFramebuffer* pFramebuffer)
+LOADER_EXPORT void VKAPI vkCmdPushConstants(VkCmdBuffer cmdBuffer, VkPipelineLayout layout, VkShaderStageFlags stageFlags, uint32_t start, uint32_t length, const void* values)
 {
     const VkLayerDispatchTable *disp;
 
-    disp = loader_get_dispatch(device);
+    disp = loader_get_dispatch(cmdBuffer);
 
-    return disp->CreateFramebuffer(device, pCreateInfo, pFramebuffer);
-}
-
-LOADER_EXPORT VkResult VKAPI vkDestroyFramebuffer(VkDevice device, VkFramebuffer framebuffer)
-{
-    const VkLayerDispatchTable *disp;
-
-    disp = loader_get_dispatch(device);
-
-    return disp->DestroyFramebuffer(device, framebuffer);
-}
-
-LOADER_EXPORT VkResult VKAPI vkCreateRenderPass(VkDevice device, const VkRenderPassCreateInfo* pCreateInfo, VkRenderPass* pRenderPass)
-{
-    const VkLayerDispatchTable *disp;
-
-    disp = loader_get_dispatch(device);
-
-    return disp->CreateRenderPass(device, pCreateInfo, pRenderPass);
-}
-
-LOADER_EXPORT VkResult VKAPI vkDestroyRenderPass(VkDevice device, VkRenderPass renderPass)
-{
-    const VkLayerDispatchTable *disp;
-
-    disp = loader_get_dispatch(device);
-
-    return disp->DestroyRenderPass(device, renderPass);
+    return disp->CmdPushConstants(cmdBuffer, layout, stageFlags, start, length, values);
 }
 
 LOADER_EXPORT void VKAPI vkCmdBeginRenderPass(VkCmdBuffer cmdBuffer, const VkRenderPassBeginInfo* pRenderPassBegin, VkRenderPassContents contents)

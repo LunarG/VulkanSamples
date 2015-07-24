@@ -92,6 +92,7 @@ const VkLayerInstanceDispatchTable instance_disp = {
     .EnumeratePhysicalDevices = loader_EnumeratePhysicalDevices,
     .GetPhysicalDeviceFeatures = loader_GetPhysicalDeviceFeatures,
     .GetPhysicalDeviceFormatProperties = loader_GetPhysicalDeviceFormatProperties,
+    .GetPhysicalDeviceImageFormatProperties = loader_GetPhysicalDeviceImageFormatProperties,
     .GetPhysicalDeviceLimits = loader_GetPhysicalDeviceLimits,
     .GetPhysicalDeviceProperties = loader_GetPhysicalDeviceProperties,
     .GetPhysicalDeviceQueueCount = loader_GetPhysicalDeviceQueueCount,
@@ -958,6 +959,7 @@ static bool loader_icd_init_entrys(struct loader_icd *icd,
     LOOKUP_GIPA(EnumeratePhysicalDevices, true);
     LOOKUP_GIPA(GetPhysicalDeviceFeatures, true);
     LOOKUP_GIPA(GetPhysicalDeviceFormatProperties, true);
+    LOOKUP_GIPA(GetPhysicalDeviceImageFormatProperties, true);
     LOOKUP_GIPA(GetPhysicalDeviceLimits, true);
     LOOKUP_GIPA(CreateDevice, true);
     LOOKUP_GIPA(GetPhysicalDeviceProperties, true);
@@ -2628,6 +2630,25 @@ VkResult VKAPI loader_GetPhysicalDeviceFormatProperties(
 
     if (icd->GetPhysicalDeviceFormatProperties)
         res = icd->GetPhysicalDeviceFormatProperties(physicalDevice, format, pFormatInfo);
+
+    return res;
+}
+
+VkResult VKAPI loader_GetPhysicalDeviceImageFormatProperties(
+        VkPhysicalDevice                        physicalDevice,
+        VkFormat                                format,
+        VkImageType                             type,
+        VkImageTiling                           tiling,
+        VkImageUsageFlags                       usage,
+        VkImageFormatProperties*                pImageFormatProperties)
+{
+    uint32_t gpu_index;
+    struct loader_icd *icd = loader_get_icd(physicalDevice, &gpu_index);
+    VkResult res = VK_ERROR_INITIALIZATION_FAILED;
+
+    if (icd->GetPhysicalDeviceImageFormatProperties)
+        res = icd->GetPhysicalDeviceImageFormatProperties(physicalDevice, format,
+                                type, tiling, usage, pImageFormatProperties);
 
     return res;
 }

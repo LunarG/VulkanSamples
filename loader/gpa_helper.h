@@ -37,6 +37,14 @@ static inline void* globalGetProcAddr(const char *name)
         return (void*) vkDestroyInstance;
     if (!strcmp(name, "EnumeratePhysicalDevices"))
         return (void*) vkEnumeratePhysicalDevices;
+    if (!strcmp(name, "GetPhysicalDeviceFeatures"))
+        return (void*) vkGetPhysicalDeviceFeatures;
+    if (!strcmp(name, "GetPhysicalDeviceFormatProperties"))
+        return (void*) vkGetPhysicalDeviceFormatProperties;
+    if (!strcmp(name, "GetPhysicalDeviceImageFormatProperties"))
+        return (void*) vkGetPhysicalDeviceImageFormatProperties;
+    if (!strcmp(name, "GetPhysicalDeviceLimits"))
+        return (void*) vkGetPhysicalDeviceLimits;
     if (!strcmp(name, "GetPhysicalDeviceProperties"))
         return (void*) vkGetPhysicalDeviceProperties;
     if (!strcmp(name, "GetPhysicalDeviceQueueCount"))
@@ -45,12 +53,6 @@ static inline void* globalGetProcAddr(const char *name)
         return (void*) vkGetPhysicalDeviceQueueProperties;
     if (!strcmp(name, "GetPhysicalDeviceMemoryProperties"))
         return (void*) vkGetPhysicalDeviceMemoryProperties;
-    if (!strcmp(name, "GetPhysicalDeviceFeatures"))
-        return (void*) vkGetPhysicalDeviceFeatures;
-    if (!strcmp(name, "GetPhysicalDeviceFormatProperties"))
-        return (void*) vkGetPhysicalDeviceFormatProperties;
-    if (!strcmp(name, "GetPhysicalDeviceLimits"))
-        return (void*) vkGetPhysicalDeviceLimits;
     if (!strcmp(name, "GetInstanceProcAddr"))
         return (void*) vkGetInstanceProcAddr;
     if (!strcmp(name, "GetDeviceProcAddr"))
@@ -67,8 +69,6 @@ static inline void* globalGetProcAddr(const char *name)
         return (void*) vkGetGlobalLayerProperties;
     if (!strcmp(name, "GetPhysicalDeviceLayerProperties"))
         return (void*) vkGetPhysicalDeviceLayerProperties;
-    if (!strcmp(name, "GetPhysicalDeviceSparseImageFormatProperties"))
-        return (void*) vkGetPhysicalDeviceSparseImageFormatProperties;
     if (!strcmp(name, "GetDeviceQueue"))
         return (void*) vkGetDeviceQueue;
     if (!strcmp(name, "QueueSubmit"))
@@ -89,22 +89,26 @@ static inline void* globalGetProcAddr(const char *name)
         return (void*) vkFlushMappedMemoryRanges;
     if (!strcmp(name, "InvalidateMappedMemoryRanges"))
         return (void*) vkInvalidateMappedMemoryRanges;
-    if (!strcmp(name, "GetImageMemoryRequirements"))
-        return (void*) vkGetImageMemoryRequirements;
-    if (!strcmp(name, "GetBufferMemoryRequirements"))
-        return (void*) vkGetBufferMemoryRequirements;
-    if (!strcmp(name, "BindImageMemory"))
-        return (void*) vkBindImageMemory;
+    if (!strcmp(name, "GetDeviceMemoryCommitment"))
+        return (void *) vkGetDeviceMemoryCommitment;
     if (!strcmp(name, "BindBufferMemory"))
         return (void*) vkBindBufferMemory;
-    if (!strcmp(name, "QueueBindSparseBufferMemory"))
-        return (void*) vkQueueBindSparseBufferMemory;
-    if (!strcmp(name, "QueueBindSparseImageMemory"))
-        return (void*) vkQueueBindSparseImageMemory;
-    if (!strcmp(name, "QueueBindSparseImageOpaqueMemory"))
-        return (void*) vkQueueBindSparseImageOpaqueMemory;
+    if (!strcmp(name, "BindImageMemory"))
+        return (void*) vkBindImageMemory;
+    if (!strcmp(name, "GetBufferMemoryRequirements"))
+        return (void*) vkGetBufferMemoryRequirements;
+    if (!strcmp(name, "GetImageMemoryRequirements"))
+        return (void*) vkGetImageMemoryRequirements;
     if (!strcmp(name, "GetImageSparseMemoryRequirements"))
         return (void*) vkGetImageSparseMemoryRequirements;
+    if (!strcmp(name, "GetPhysicalDeviceSparseImageFormatProperties"))
+        return (void*) vkGetPhysicalDeviceSparseImageFormatProperties;
+    if (!strcmp(name, "QueueBindSparseBufferMemory"))
+        return (void*) vkQueueBindSparseBufferMemory;
+    if (!strcmp(name, "QueueBindSparseImageOpaqueMemory"))
+        return (void*) vkQueueBindSparseImageOpaqueMemory;
+    if (!strcmp(name, "QueueBindSparseImageMemory"))
+        return (void*) vkQueueBindSparseImageMemory;
     if (!strcmp(name, "CreateFence"))
         return (void*) vkCreateFence;
     if (!strcmp(name, "DestroyFence"))
@@ -225,6 +229,16 @@ static inline void* globalGetProcAddr(const char *name)
         return (void*) vkCreateDynamicDepthStencilState;
     if (!strcmp(name, "DestroyDynamicDepthStencilState"))
         return (void*) vkDestroyDynamicDepthStencilState;
+    if (!strcmp(name, "CreateFramebuffer"))
+        return (void*) vkCreateFramebuffer;
+    if (!strcmp(name, "DestroyFramebuffer"))
+        return (void*) vkDestroyFramebuffer;
+    if (!strcmp(name, "CreateRenderPass"))
+        return (void*) vkCreateRenderPass;
+    if (!strcmp(name, "DestroyRenderPass"))
+        return (void*) vkDestroyRenderPass;
+    if (!strcmp(name, "GetRenderAreaGranularity"))
+        return (void*) vkGetRenderAreaGranularity;
     if (!strcmp(name, "CreateCommandPool"))
         return (void*) vkCreateCommandPool;
     if (!strcmp(name, "DestroyCommandPool"))
@@ -253,10 +267,10 @@ static inline void* globalGetProcAddr(const char *name)
         return (void*) vkCmdBindDynamicDepthStencilState;
     if (!strcmp(name, "CmdBindDescriptorSets"))
         return (void*) vkCmdBindDescriptorSets;
-    if (!strcmp(name, "CmdBindVertexBuffers"))
-        return (void*) vkCmdBindVertexBuffers;
     if (!strcmp(name, "CmdBindIndexBuffer"))
         return (void*) vkCmdBindIndexBuffer;
+    if (!strcmp(name, "CmdBindVertexBuffers"))
+        return (void*) vkCmdBindVertexBuffers;
     if (!strcmp(name, "CmdDraw"))
         return (void*) vkCmdDraw;
     if (!strcmp(name, "CmdDrawIndexed"))
@@ -311,21 +325,16 @@ static inline void* globalGetProcAddr(const char *name)
         return (void*) vkCmdWriteTimestamp;
     if (!strcmp(name, "CmdCopyQueryPoolResults"))
         return (void*) vkCmdCopyQueryPoolResults;
-    if (!strcmp(name, "CreateFramebuffer"))
-        return (void*) vkCreateFramebuffer;
-    if (!strcmp(name, "DestroyFramebuffer"))
-        return (void*) vkDestroyFramebuffer;
-    if (!strcmp(name, "CreateRenderPass"))
-        return (void*) vkCreateRenderPass;
-    if (!strcmp(name, "DestroyRenderPass"))
-        return (void*) vkDestroyRenderPass;
+    if (!strcmp(name, "CmdPushConstants"))
+        return (void*) vkCmdPushConstants;
     if (!strcmp(name, "CmdBeginRenderPass"))
         return (void*) vkCmdBeginRenderPass;
     if (!strcmp(name, "CmdNextSubpass"))
         return (void*) vkCmdNextSubpass;
     if (!strcmp(name, "CmdEndRenderPass"))
         return (void*) vkCmdEndRenderPass;
-
+    if (!strcmp(name, "CmdExecuteCommands"))
+        return (void*) vkCmdExecuteCommands;
     return NULL;
 }
 
@@ -349,6 +358,8 @@ static inline void *loader_non_passthrough_gpa(const char *name)
         return (void*) vkGetPhysicalDeviceFeatures;
     if (!strcmp(name, "GetPhysicalDeviceFormatProperties"))
         return (void*) vkGetPhysicalDeviceFormatProperties;
+    if (!strcmp(name, "GetPhysicalDeviceImageFormatProperties"))
+        return (void*) vkGetPhysicalDeviceImageFormatProperties;
     if (!strcmp(name, "GetPhysicalDeviceLimits"))
         return (void*) vkGetPhysicalDeviceLimits;
     if (!strcmp(name, "GetPhysicalDeviceQueueCount"))
@@ -369,6 +380,8 @@ static inline void *loader_non_passthrough_gpa(const char *name)
         return (void*) vkCreateDevice;
     if (!strcmp(name, "GetPhysicalDeviceExtensionProperties"))
         return (void*) vkGetPhysicalDeviceExtensionProperties;
+    if (!strcmp(name, "GetPhysicalDeviceLayerProperties"))
+        return (void*) vkGetPhysicalDeviceLayerProperties;
     if (!strcmp(name, "GetDeviceQueue"))
         return (void*) vkGetDeviceQueue;
     if (!strcmp(name, "CreateCommandBuffer"))
