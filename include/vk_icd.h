@@ -25,7 +25,7 @@ static inline void set_loader_magic_value(void* pNewObject) {
 
 static inline bool valid_loader_magic_value(void* pNewObject) {
     const VK_LOADER_DATA *loader_info = (VK_LOADER_DATA *) pNewObject;
-    return loader_info->loaderMagic == ICD_LOADER_MAGIC;
+    return (loader_info->loaderMagic & 0xffffffff) == ICD_LOADER_MAGIC;
 }
 
 #endif // VKICD_H
