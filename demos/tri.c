@@ -489,14 +489,19 @@ static void demo_prepare_buffers(struct demo *demo)
     }
 
     // If mailbox mode is available, use it, as is the lowest-latency non-
-    // tearing mode.  If not, fall back to IMMEDIATE which should always be
-    // available.    
-    VkPresentModeWSI swapChainPresentMode = VK_PRESENT_MODE_IMMEDIATE_WSI;
+    // tearing mode.  If not, try IMMEDIATE which will usually be available,
+    // and is fastest (though it tears).  If not, fall back to FIFO which is
+    // always available.
+    VkPresentModeWSI swapChainPresentMode = VK_PRESENT_MODE_FIFO_WSI;
     size_t presentModeCount = presentModesSize / sizeof(VkSurfacePresentModePropertiesWSI);
     for (size_t i = 0; i < presentModeCount; i++) {
         if (presentModes[i].presentMode == VK_PRESENT_MODE_MAILBOX_WSI) {
             swapChainPresentMode = VK_PRESENT_MODE_MAILBOX_WSI;
             break;
+        }
+        if ((swapChainPresentMode != VK_PRESENT_MODE_MAILBOX_WSI) &&
+            (presentModes[i].presentMode == VK_PRESENT_MODE_IMMEDIATE_WSI)) {
+            swapChainPresentMode = VK_PRESENT_MODE_IMMEDIATE_WSI;
         }
     }
 
