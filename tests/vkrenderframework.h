@@ -77,6 +77,7 @@ public:
     VkPhysicalDevice gpu() {return objs[0];}
     VkRenderPass renderPass() {return m_renderPass;}
     VkFramebuffer framebuffer() {return m_framebuffer;}
+    std::vector<vk_testing::ShaderModule*> m_shader_modules;
     void InitViewport(float width, float height);
     void InitViewport();
     void InitRenderTarget();

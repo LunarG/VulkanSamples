@@ -168,6 +168,11 @@ void VkRenderFramework::ShutdownFramework()
     }
 
     delete m_depthStencil;
+    while (!m_shader_modules.empty())
+    {
+        delete m_shader_modules.back();
+        m_shader_modules.pop_back();
+    }
 
     // reset the driver
     delete m_device;
@@ -1047,7 +1052,7 @@ VkShaderObj::VkShaderObj(VkDeviceObj *device, const char * shader_code, VkShader
     std::vector<unsigned int> spv;
     VkShaderCreateInfo createInfo;
     VkShaderModuleCreateInfo moduleCreateInfo;
-    vk_testing::ShaderModule module;
+    vk_testing::ShaderModule *module = new vk_testing::ShaderModule();
     size_t shader_len;
 
     m_stage = stage;
@@ -1081,17 +1086,18 @@ VkShaderObj::VkShaderObj(VkDeviceObj *device, const char * shader_code, VkShader
         moduleCreateInfo.flags = 0;
     }
 
-    err = module.init_try(*m_device, moduleCreateInfo);
+    err = module->init_try(*m_device, moduleCreateInfo);
     assert(VK_SUCCESS == err);
 
     createInfo.sType = VK_STRUCTURE_TYPE_SHADER_CREATE_INFO;
     createInfo.pNext = NULL;
-    createInfo.module = module.handle();
+    createInfo.module = module->handle();
     createInfo.pName = "main";
     createInfo.flags = 0;
 
     err = init_try(*m_device, createInfo);
     assert(VK_SUCCESS == err);
+    framework->m_shader_modules.push_back(module);
 }
 
 VkPipelineObj::VkPipelineObj(VkDeviceObj *device)
