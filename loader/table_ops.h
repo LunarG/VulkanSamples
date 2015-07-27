@@ -174,8 +174,10 @@ static inline void loader_init_device_dispatch_table(VkLayerDispatchTable *table
 //TODO move into it's own table
 //TODO also consider dropping trampoline code for these device level extensions entirely
 // then don't need loader to know about these at all but then not queryable via GIPA
+    table->AcquireNextImageWSI = (PFN_vkAcquireNextImageWSI) gpa(dev, "vkAcquireNextImageWSI");
     table->CreateSwapChainWSI = (PFN_vkCreateSwapChainWSI) gpa(dev, "vkCreateSwapChainWSI");
     table->DestroySwapChainWSI = (PFN_vkDestroySwapChainWSI) gpa(dev, "vkDestroySwapChainWSI");
+    table->GetSurfaceInfoWSI = (PFN_vkGetSurfaceInfoWSI) gpa(dev, "vkGetSurfaceInfoWSI");
     table->GetSwapChainInfoWSI = (PFN_vkGetSwapChainInfoWSI) gpa(dev, "vkGetSwapChainInfoWSI");
     table->QueuePresentWSI = (PFN_vkQueuePresentWSI) gpa(dev, "vkQueuePresentWSI");
 }
