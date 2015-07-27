@@ -103,7 +103,7 @@ std::vector<VkPhysicalDeviceQueueProperties> PhysicalDevice::queue_properties() 
 
     if (EXPECT(vkGetPhysicalDeviceQueueCount(handle(), &count) == VK_SUCCESS)) {
         info.resize(count);
-        if (!EXPECT(vkGetPhysicalDeviceQueueProperties(handle(), count, &info[0]) == VK_SUCCESS))
+        if (!EXPECT(vkGetPhysicalDeviceQueueProperties(handle(), count, info.data()) == VK_SUCCESS))
             info.clear();
     }
 
@@ -135,7 +135,7 @@ std::vector<VkLayerProperties> GetGlobalLayers()
 
         if (err == VK_SUCCESS) {
             layers.reserve(layer_count);
-            err = vkGetGlobalLayerProperties(&layer_count, &layers[0]);
+            err = vkGetGlobalLayerProperties(&layer_count, layers.data());
         }
     } while (err == VK_INCOMPLETE);
 
@@ -168,7 +168,7 @@ std::vector<VkExtensionProperties> GetGlobalExtensions(const char *pLayerName)
 
         if (err == VK_SUCCESS) {
             exts.resize(ext_count);
-            err = vkGetGlobalExtensionProperties(pLayerName, &ext_count, &exts[0]);
+            err = vkGetGlobalExtensionProperties(pLayerName, &ext_count, exts.data());
         }
     } while (err == VK_INCOMPLETE);
 
@@ -200,7 +200,7 @@ std::vector<VkExtensionProperties> PhysicalDevice::extensions(const char *pLayer
 
         if (err == VK_SUCCESS) {
             exts.resize(extCount);
-            err = vkGetPhysicalDeviceExtensionProperties(handle(), pLayerName, &extCount, &exts[0]);
+            err = vkGetPhysicalDeviceExtensionProperties(handle(), pLayerName, &extCount, exts.data());
         }
     } while (err == VK_INCOMPLETE);
 
@@ -241,7 +241,7 @@ std::vector<VkLayerProperties> PhysicalDevice::layers() const
 
         if (err == VK_SUCCESS) {
             layer_props.reserve(layer_count);
-            err = vkGetPhysicalDeviceLayerProperties(handle(), &layer_count, &layer_props[0]);
+            err = vkGetPhysicalDeviceLayerProperties(handle(), &layer_count, layer_props.data());
         }
     } while (err == VK_INCOMPLETE);
 
@@ -284,11 +284,11 @@ void Device::init(std::vector<const char *> &layers, std::vector<const char *> &
     dev_info.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
     dev_info.pNext = NULL;
     dev_info.queueRecordCount = queue_info.size();
-    dev_info.pRequestedQueues = &queue_info[0];
+    dev_info.pRequestedQueues = queue_info.data();
     dev_info.layerCount = layers.size();
-    dev_info.ppEnabledLayerNames = &layers[0];
+    dev_info.ppEnabledLayerNames = layers.data();
     dev_info.extensionCount = extensions.size();
-    dev_info.ppEnabledExtensionNames = &extensions[0];
+    dev_info.ppEnabledExtensionNames = extensions.data();
     dev_info.flags = 0;
 
     init(dev_info);
@@ -383,7 +383,7 @@ void Device::wait()
 VkResult Device::wait(const std::vector<const Fence *> &fences, bool wait_all, uint64_t timeout)
 {
     const std::vector<VkFence> fence_handles = make_handles<VkFence>(fences);
-    VkResult err = vkWaitForFences(handle(), fence_handles.size(), &fence_handles[0], wait_all, timeout);
+    VkResult err = vkWaitForFences(handle(), fence_handles.size(), fence_handles.data(), wait_all, timeout);
     EXPECT(err == VK_SUCCESS || err == VK_TIMEOUT);
 
     return err;
@@ -391,13 +391,13 @@ VkResult Device::wait(const std::vector<const Fence *> &fences, bool wait_all, u
 
 VkResult Device::update_descriptor_sets(const std::vector<VkWriteDescriptorSet> &writes, const std::vector<VkCopyDescriptorSet> &copies)
 {
-    return vkUpdateDescriptorSets(handle(), writes.size(), &writes[0], copies.size(), &copies[0]);
+    return vkUpdateDescriptorSets(handle(), writes.size(), writes.data(), copies.size(), copies.data());
 }
 
 void Queue::submit(const std::vector<const CmdBuffer *> &cmds, Fence &fence)
 {
     const std::vector<VkCmdBuffer> cmd_handles = make_handles<VkCmdBuffer>(cmds);
-    EXPECT(vkQueueSubmit(handle(), cmd_handles.size(), &cmd_handles[0], fence.handle()) == VK_SUCCESS);
+    EXPECT(vkQueueSubmit(handle(), cmd_handles.size(), cmd_handles.data(), fence.handle()) == VK_SUCCESS);
 }
 
 void Queue::submit(const CmdBuffer &cmd, Fence &fence)
@@ -712,7 +712,7 @@ NON_DISPATCHABLE_HANDLE_DTOR(PipelineLayout, vkDestroyPipelineLayout)
 void PipelineLayout::init(const Device &dev, VkPipelineLayoutCreateInfo &info, const std::vector<const DescriptorSetLayout *> &layouts)
 {
     const std::vector<VkDescriptorSetLayout> layout_handles = make_handles<VkDescriptorSetLayout>(layouts);
-    info.pSetLayouts = &layout_handles[0];
+    info.pSetLayouts = layout_handles.data();
 
     NON_DISPATCHABLE_HANDLE_INIT(vkCreatePipelineLayout, dev, &info);
 }
@@ -752,7 +752,7 @@ std::vector<DescriptorSet *> DescriptorPool::alloc_sets(const Device &dev, VkDes
     set_handles.resize(layout_handles.size());
 
     uint32_t set_count;
-    VkResult err = vkAllocDescriptorSets(device(), handle(), usage, layout_handles.size(), &layout_handles[0], &set_handles[0], &set_count);
+    VkResult err = vkAllocDescriptorSets(device(), handle(), usage, layout_handles.size(), layout_handles.data(), set_handles.data(), &set_count);
     if (err == VK_SUCCESS)
         EXPECT(set_count == set_handles.size());
     set_handles.resize(set_count);

@@ -97,9 +97,9 @@ void VkRenderFramework::InitFramework(
     instInfo.pAppInfo = &app_info;
     instInfo.pAllocCb = NULL;
     instInfo.layerCount = instance_layer_names.size();
-    instInfo.ppEnabledLayerNames =(instance_layer_names.size()) ? &instance_layer_names[0] : NULL;
+    instInfo.ppEnabledLayerNames = instance_layer_names.data();
     instInfo.extensionCount = instance_extension_names.size();
-    instInfo.ppEnabledExtensionNames = (instance_extension_names.size()) ? &instance_extension_names[0] : NULL;
+    instInfo.ppEnabledExtensionNames = instance_extension_names.data();
     err = vkCreateInstance(&instInfo, &this->inst);
     ASSERT_VK_SUCCESS(err);
 
@@ -345,7 +345,7 @@ void VkRenderFramework::InitRenderTarget(uint32_t targets, VkAttachmentBindInfo 
     subpass.inputCount = 0;
     subpass.inputAttachments = NULL;
     subpass.colorCount = targets;
-    subpass.colorAttachments = &color_references[0];
+    subpass.colorAttachments = color_references.data();
     subpass.resolveAttachments = NULL;
 
     if (dsBinding) {
@@ -376,7 +376,7 @@ void VkRenderFramework::InitRenderTarget(uint32_t targets, VkAttachmentBindInfo 
     VkRenderPassCreateInfo rp_info = {};
     rp_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
     rp_info.attachmentCount = attachments.size();
-    rp_info.pAttachments = &attachments[0];
+    rp_info.pAttachments = attachments.data();
     rp_info.subpassCount = 1;
     rp_info.pSubpasses = &subpass;
 
@@ -388,7 +388,7 @@ void VkRenderFramework::InitRenderTarget(uint32_t targets, VkAttachmentBindInfo 
     fb_info.pNext = NULL;
     fb_info.renderPass = m_renderPass;
     fb_info.attachmentCount = bindings.size();
-    fb_info.pAttachments = &bindings[0];
+    fb_info.pAttachments = bindings.data();
     fb_info.width = (uint32_t)m_width;
     fb_info.height = (uint32_t)m_height;
     fb_info.layers = 1;
@@ -400,7 +400,7 @@ void VkRenderFramework::InitRenderTarget(uint32_t targets, VkAttachmentBindInfo 
     m_renderPassBeginInfo.renderArea.extent.width = m_width;
     m_renderPassBeginInfo.renderArea.extent.height = m_height;
     m_renderPassBeginInfo.attachmentCount = m_renderPassClearValues.size();
-    m_renderPassBeginInfo.pAttachmentClearValues = &m_renderPassClearValues[0];
+    m_renderPassBeginInfo.pAttachmentClearValues = m_renderPassClearValues.data();
 }
 
 
@@ -411,7 +411,7 @@ VkDeviceObj::VkDeviceObj(uint32_t id, VkPhysicalDevice obj) :
     init();
 
     props = phy().properties();
-    queue_props = &phy().queue_properties()[0];
+    queue_props = phy().queue_properties().data();
 }
 
 VkDeviceObj::VkDeviceObj(uint32_t id,
@@ -422,7 +422,7 @@ VkDeviceObj::VkDeviceObj(uint32_t id,
     init(layer_names, extension_names);
 
     props = phy().properties();
-    queue_props = &phy().queue_properties()[0];
+    queue_props = phy().queue_properties().data();
 }
 
 void VkDeviceObj::get_device_queue()
@@ -499,7 +499,7 @@ void VkDescriptorSetObj::CreateVKDescriptorSet(VkCommandBufferObj *cmdBuffer)
     VkDescriptorPoolCreateInfo pool = {};
     pool.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
     pool.count = m_type_counts.size();
-    pool.pTypeCount = &m_type_counts[0];
+    pool.pTypeCount = m_type_counts.data();
     init(*m_device, VK_DESCRIPTOR_POOL_USAGE_ONE_SHOT, 1, pool);
 
     // create VkDescriptorSetLayout
@@ -516,7 +516,7 @@ void VkDescriptorSetObj::CreateVKDescriptorSet(VkCommandBufferObj *cmdBuffer)
     VkDescriptorSetLayoutCreateInfo layout = {};
     layout.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
     layout.count = bindings.size();
-    layout.pBinding = &bindings[0];
+    layout.pBinding = bindings.data();
 
     m_layout.init(*m_device, layout);
     vector<const vk_testing::DescriptorSetLayout *> layouts;
@@ -1222,7 +1222,7 @@ VkResult VkPipelineObj::CreateVKPipeline(VkDescriptorSetObj &descriptorSet, VkRe
     info.layout = descriptorSet.GetPipelineLayout();
 
     m_cb_state.attachmentCount = m_colorAttachments.size();
-    m_cb_state.pAttachments = &m_colorAttachments[0];
+    m_cb_state.pAttachments = m_colorAttachments.data();
 
     info.renderPass        = render_pass;
     info.subpass           = 0;
