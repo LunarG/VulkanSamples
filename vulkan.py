@@ -999,6 +999,11 @@ core = Extension(
             [Param("VkDevice", "device"),
              Param("VkRenderPass", "renderPass")]),
 
+        Proto("VkResult", "GetRenderAreaGranularity",
+            [Param("VkDevice", "device"),
+             Param("VkRenderPass", "renderPass"),
+             Param("VkExtent2D*", "pGranularity")]),
+
         Proto("void", "CmdBeginRenderPass",
             [Param("VkCmdBuffer", "cmdBuffer"),
              Param("const VkRenderPassBeginInfo*", "pRenderPassBegin"),

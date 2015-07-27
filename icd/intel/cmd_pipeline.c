@@ -3625,6 +3625,18 @@ ICD_EXPORT void VKAPI vkCmdDispatchIndirect(
     cmd_fail(cmd, VK_ERROR_UNKNOWN);
 }
 
+
+VkResult VKAPI vkGetRenderAreaGranularity(
+    VkDevice                                    device,
+    VkRenderPass                                renderPass,
+    VkExtent2D*                                 pGranularity)
+{
+    pGranularity->height = 1;
+    pGranularity->width = 1;
+
+    return VK_SUCCESS;
+}
+
 ICD_EXPORT void VKAPI vkCmdBeginRenderPass(
     VkCmdBuffer                                 cmdBuffer,
     const VkRenderPassBeginInfo*                pRenderPassBegin,
