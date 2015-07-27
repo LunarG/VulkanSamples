@@ -1209,9 +1209,11 @@ VkResult VkPipelineObj::CreateVKPipeline(VkDescriptorSetObj &descriptorSet, VkRe
         memcpy((void*)&info.pStages[i], shaderCreateInfo, sizeof(VkPipelineShaderStageCreateInfo));
     }
 
-    if (m_vi_state.attributeCount && m_vi_state.bindingCount)
-    {
+    if (m_vi_state.attributeCount && m_vi_state.bindingCount) {
         m_vi_state.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
+        info.pVertexInputState = &m_vi_state;
+    } else {
+        info.pVertexInputState = NULL;
     }
 
     info.sType  = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
@@ -1225,7 +1227,6 @@ VkResult VkPipelineObj::CreateVKPipeline(VkDescriptorSetObj &descriptorSet, VkRe
     info.renderPass        = render_pass;
     info.subpass           = 0;
     info.pTessellationState   = NULL;
-    info.pVertexInputState    = &m_vi_state;
     info.pInputAssemblyState  = &m_ia_state;
     info.pViewportState       = &m_vp_state;
     info.pRasterState         = &m_rs_state;

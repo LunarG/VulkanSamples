@@ -593,7 +593,7 @@ public:
 inline VkCmdPoolCreateInfo CmdPool::create_info(uint32_t queue_family_index)
 {
     VkCmdPoolCreateInfo info = {};
-    info.sType = VK_STRUCTURE_TYPE_CMD_BUFFER_CREATE_INFO;
+    info.sType = VK_STRUCTURE_TYPE_CMD_POOL_CREATE_INFO;
     info.queueFamilyIndex = queue_family_index;
     return info;
 }
