@@ -1503,7 +1503,7 @@ LOADER_EXPORT void VKAPI vkCmdPushConstants(VkCmdBuffer cmdBuffer, VkPipelineLay
 
     disp = loader_get_dispatch(cmdBuffer);
 
-    return disp->CmdPushConstants(cmdBuffer, layout, stageFlags, start, length, values);
+    disp->CmdPushConstants(cmdBuffer, layout, stageFlags, start, length, values);
 }
 
 LOADER_EXPORT void VKAPI vkCmdBeginRenderPass(VkCmdBuffer cmdBuffer, const VkRenderPassBeginInfo* pRenderPassBegin, VkRenderPassContents contents)

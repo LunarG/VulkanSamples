@@ -2348,6 +2348,17 @@ ICD_EXPORT VkResult VKAPI vkDestroyRenderPass(
     return VK_SUCCESS;
 }
 
+ICD_EXPORT void VKAPI vkCmdPushConstants(
+    VkCmdBuffer                                 cmdBuffer,
+    VkPipelineLayout                            layout,
+    VkShaderStageFlags                          stageFlags,
+    uint32_t                                    start,
+    uint32_t                                    length,
+    const void*                                 values)
+{
+    /* TODO: Implement */
+}
+
 ICD_EXPORT VkResult VKAPI vkGetRenderAreaGranularity(
     VkDevice                                    device,
     VkRenderPass                                renderPass,

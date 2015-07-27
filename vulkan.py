@@ -1013,6 +1013,14 @@ core = Extension(
             [Param("VkCmdBuffer", "cmdBuffer"),
              Param("VkRenderPassContents", "contents")]),
 
+        Proto("void", "CmdPushConstants",
+            [Param("VkCmdBuffer", "cmdBuffer"),
+             Param("VkPipelineLayout", "layout"),
+             Param("VkShaderStageFlags", "stageFlags"),
+             Param("uint32_t", "start"),
+             Param("uint32_t", "length"),
+             Param("const void*", "values")]),
+
         Proto("void", "CmdEndRenderPass",
             [Param("VkCmdBuffer", "cmdBuffer")]),
 

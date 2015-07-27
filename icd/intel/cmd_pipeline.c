@@ -3625,6 +3625,16 @@ ICD_EXPORT void VKAPI vkCmdDispatchIndirect(
     cmd_fail(cmd, VK_ERROR_UNKNOWN);
 }
 
+void VKAPI vkCmdPushConstants(
+    VkCmdBuffer                                 cmdBuffer,
+    VkPipelineLayout                            layout,
+    VkShaderStageFlags                          stageFlags,
+    uint32_t                                    start,
+    uint32_t                                    length,
+    const void*                                 values)
+{
+    /* TODO: Implement */
+}
 
 VkResult VKAPI vkGetRenderAreaGranularity(
     VkDevice                                    device,
