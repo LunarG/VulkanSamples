@@ -674,13 +674,14 @@ void TestFrameworkVkPresent::CreateSwapChain()
     // FIXME: WRITE THE REAL CODE!!!
     // FIXME: WRITE THE REAL CODE!!!
     VkSurfaceDescriptionWindowWSI surface_description;
-    VkPlatformHandleXcbWSI platform_handle_xcb;
+
     surface_description.sType = VK_STRUCTURE_TYPE_SURFACE_DESCRIPTION_WINDOW_WSI;
     surface_description.pNext = NULL;
 #ifdef _WIN32
     surface_description.platform = VK_PLATFORM_WIN32_WSI;
     surface_description.pPlatformHandle = m_connection;
 #else  // _WIN32
+    VkPlatformHandleXcbWSI platform_handle_xcb;
     platform_handle_xcb.connection = m_connection;
     platform_handle_xcb.root = m_screen->root;
     surface_description.platform = VK_PLATFORM_XCB_WSI;

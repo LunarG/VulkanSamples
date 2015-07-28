@@ -888,8 +888,8 @@ VkConstantBufferObj::~VkConstantBufferObj()
 {
     // TODO: Should we call QueueRemoveMemReference for the constant buffer memory here?
     if (m_commandBuffer) {
-        delete m_cmdPool;
         delete m_commandBuffer;
+        delete m_cmdPool;
     }
 }
 
@@ -1548,6 +1548,9 @@ void VkDepthStencilObj::Init(VkDeviceObj *device, int32_t width, int32_t height,
     image_info.tiling = VK_IMAGE_TILING_OPTIMAL;
     image_info.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_BIT;
     image_info.flags = 0;
+    image_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+    image_info.queueFamilyCount = 0;
+    image_info.pQueueFamilyIndices = NULL;
     init(*m_device, image_info);
 
     view_info.sType = VK_STRUCTURE_TYPE_ATTACHMENT_VIEW_CREATE_INFO;
@@ -1557,6 +1560,7 @@ void VkDepthStencilObj::Init(VkDeviceObj *device, int32_t width, int32_t height,
     view_info.baseArraySlice = 0;
     view_info.arraySize = 1;
     view_info.flags = 0;
+    view_info.format = m_depth_stencil_fmt;
     view_info.image = handle();
     m_attachmentView.init(*m_device, view_info);
 
