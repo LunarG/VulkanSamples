@@ -119,8 +119,8 @@ static bool desc_region_init_desc_sizes(struct intel_desc_region *region,
 VkResult intel_desc_region_create(struct intel_dev *dev,
                                     struct intel_desc_region **region_ret)
 {
-    const uint32_t surface_count = 16384;
-    const uint32_t sampler_count = 16384;
+    const uint32_t surface_count = 1024*1024;
+    const uint32_t sampler_count = 1024*1024;
     struct intel_desc_region *region;
 
     region = intel_alloc(dev, sizeof(*region), 0, VK_SYSTEM_ALLOC_TYPE_INTERNAL);
