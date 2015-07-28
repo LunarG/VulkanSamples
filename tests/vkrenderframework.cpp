@@ -30,7 +30,7 @@
 #define ARRAY_SIZE(a) (sizeof(a) / sizeof(a[0]))
 
 VkRenderFramework::VkRenderFramework() :
-    m_cmdBuffer( VK_NULL_HANDLE ),
+    m_cmdBuffer(),
     m_renderPass(VK_NULL_HANDLE),
     m_framebuffer(VK_NULL_HANDLE),
     m_stateRaster( VK_NULL_HANDLE ),
@@ -149,7 +149,8 @@ void VkRenderFramework::ShutdownFramework()
     if (m_colorBlend) vkDestroyDynamicColorBlendState(device(), m_colorBlend);
     if (m_stateDepthStencil) vkDestroyDynamicDepthStencilState(device(), m_stateDepthStencil);
     if (m_stateRaster) vkDestroyDynamicRasterState(device(), m_stateRaster);
-    if (m_cmdBuffer) vkDestroyCommandBuffer(device(), m_cmdBuffer);
+    if (m_cmdBuffer)
+        delete m_cmdBuffer;
     if (m_cmdPool) vkDestroyCommandPool(device(), m_cmdPool);
     if (m_framebuffer) vkDestroyFramebuffer(device(), m_framebuffer);
     if (m_renderPass) vkDestroyRenderPass(device(), m_renderPass);
@@ -221,10 +222,7 @@ void VkRenderFramework::InitState()
     err = vkCreateCommandPool(device(), &cmd_pool_info, &m_cmdPool);
     assert(!err);
 
-    VkCmdBufferCreateInfo cmdInfo = vk_testing::CmdBuffer::create_info(m_cmdPool);
-
-    err = vkCreateCommandBuffer(device(), &cmdInfo, &m_cmdBuffer);
-    ASSERT_VK_SUCCESS(err) << "vkCreateCommandBuffer failed";
+    m_cmdBuffer = new VkCommandBufferObj(m_device, m_cmdPool);
 }
 
 void VkRenderFramework::InitViewport(float width, float height)
@@ -654,7 +652,13 @@ void VkImageObj::SetLayout(VkImageAspect aspect,
         return;
     }
 
-    VkCommandBufferObj cmd_buf(m_device);
+    VkCmdPoolCreateInfo cmd_pool_info = {};
+        cmd_pool_info.sType = VK_STRUCTURE_TYPE_CMD_POOL_CREATE_INFO;
+        cmd_pool_info.pNext = NULL;
+        cmd_pool_info.queueFamilyIndex = m_device->graphics_queue_node_index_;
+        cmd_pool_info.flags = 0;
+    vk_testing::CmdPool pool(*m_device, cmd_pool_info);
+    VkCommandBufferObj cmd_buf(m_device, pool.handle());
 
     /* Build command buffer to set image layout in the driver */
     err = cmd_buf.BeginCommandBuffer();
@@ -739,8 +743,15 @@ void VkImageObj::init(uint32_t w, uint32_t h,
 VkResult VkImageObj::CopyImage(VkImageObj &src_image)
 {
     VkResult U_ASSERT_ONLY err;
-    VkCommandBufferObj cmd_buf(m_device);
     VkImageLayout src_image_layout, dest_image_layout;
+
+    VkCmdPoolCreateInfo cmd_pool_info = {};
+        cmd_pool_info.sType = VK_STRUCTURE_TYPE_CMD_POOL_CREATE_INFO;
+        cmd_pool_info.pNext = NULL;
+        cmd_pool_info.queueFamilyIndex = m_device->graphics_queue_node_index_;
+        cmd_pool_info.flags = 0;
+    vk_testing::CmdPool pool(*m_device, cmd_pool_info);
+    VkCommandBufferObj cmd_buf(m_device, pool.handle());
 
     /* Build command buffer to copy staging texture to usable texture */
     err = cmd_buf.BeginCommandBuffer();
@@ -877,6 +888,7 @@ VkConstantBufferObj::~VkConstantBufferObj()
 {
     // TODO: Should we call QueueRemoveMemReference for the constant buffer memory here?
     if (m_commandBuffer) {
+        delete m_cmdPool;
         delete m_commandBuffer;
     }
 }
@@ -939,8 +951,13 @@ void VkConstantBufferObj::BufferMemoryBarrier(
     if (!m_commandBuffer)
     {
         m_fence.init(*m_device, vk_testing::Fence::create_info());
-
-        m_commandBuffer = new VkCommandBufferObj(m_device);
+        VkCmdPoolCreateInfo cmd_pool_info = {};
+            cmd_pool_info.sType = VK_STRUCTURE_TYPE_CMD_POOL_CREATE_INFO;
+            cmd_pool_info.pNext = NULL;
+            cmd_pool_info.queueFamilyIndex = m_device->graphics_queue_node_index_;
+            cmd_pool_info.flags = 0;
+        m_cmdPool = new vk_testing::CmdPool(*m_device, cmd_pool_info);
+        m_commandBuffer = new VkCommandBufferObj(m_device, m_cmdPool->handle());
     }
     else
     {
@@ -1243,12 +1260,11 @@ VkResult VkPipelineObj::CreateVKPipeline(VkDescriptorSetObj &descriptorSet, VkRe
     return init_try(*m_device, info);
 }
 
-VkCommandBufferObj::VkCommandBufferObj(VkDeviceObj *device)
+VkCommandBufferObj::VkCommandBufferObj(VkDeviceObj *device, VkCmdPool pool)
 {
     m_device = device;
 
-    m_cmdPool.init(*device, vk_testing::CmdPool::create_info(device->graphics_queue_node_index_));
-    init(*device, vk_testing::CmdBuffer::create_info(m_cmdPool.handle()));
+    init(*device, vk_testing::CmdBuffer::create_info(pool));
 }
 
 VkCmdBuffer VkCommandBufferObj::GetBufferHandle()

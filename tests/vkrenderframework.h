@@ -67,6 +67,8 @@ protected:
     VkAttachmentBindInfo                m_attachmentBindInfo;
 };
 
+class VkCommandBufferObj;
+
 class VkRenderFramework : public VkTestFramework
 {
 public:
@@ -105,7 +107,7 @@ protected:
     uint32_t                            gpu_count;
     VkDeviceObj                        *m_device;
     VkCmdPool                           m_cmdPool;
-    VkCmdBuffer                         m_cmdBuffer;
+    VkCommandBufferObj                 *m_cmdBuffer;
     VkRenderPass                        m_renderPass;
     VkFramebuffer                       m_framebuffer;
     std::vector<VkClearValue>           m_renderPassClearValues;
@@ -158,7 +160,7 @@ class VkDescriptorSetObj;
 class VkCommandBufferObj : public vk_testing::CmdBuffer
 {
 public:
-    VkCommandBufferObj(VkDeviceObj *device);
+    VkCommandBufferObj(VkDeviceObj *device, VkCmdPool pool);
     VkCmdBuffer GetBufferHandle();
     VkResult BeginCommandBuffer();
     VkResult BeginCommandBuffer(VkCmdBufferBeginInfo *pInfo);
@@ -186,7 +188,6 @@ public:
 
 protected:
     VkDeviceObj                        *m_device;
-    vk_testing::CmdPool                 m_cmdPool;
     vector<VkImageObj*>                 m_renderTargets;
 };
 
@@ -223,6 +224,7 @@ protected:
     vk_testing::BufferView              m_bufferView;
     int                                 m_numVertices;
     int                                 m_stride;
+    vk_testing::CmdPool                *m_cmdPool;
     VkCommandBufferObj                 *m_commandBuffer;
     vk_testing::Fence                   m_fence;
 };

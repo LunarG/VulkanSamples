@@ -268,11 +268,30 @@ public:
     void RotateTriangleVSUniform(glm::mat4 Projection, glm::mat4 View, glm::mat4 Model,
                                  VkConstantBufferObj *constantBuffer, VkCommandBufferObj *cmdBuffer);
     void GenericDrawPreparation(VkCommandBufferObj *cmdBuffer, VkPipelineObj &pipelineobj, VkDescriptorSetObj &descriptorSet);
+    void GenericDrawPreparation(VkPipelineObj &pipelineobj, VkDescriptorSetObj &descriptorSet)
+             { GenericDrawPreparation(m_cmdBuffer, pipelineobj, descriptorSet); }
     void InitDepthStencil();
     void VKTriangleTest(const char *vertShaderText, const char *fragShaderText, const bool rotate);
 
     VkResult BeginCommandBuffer(VkCommandBufferObj &cmdBuffer);
     VkResult EndCommandBuffer(VkCommandBufferObj &cmdBuffer);
+    /* Convenience functions that use built-in command buffer */
+    VkResult BeginCommandBuffer() { return BeginCommandBuffer(*m_cmdBuffer); }
+    VkResult EndCommandBuffer() { return EndCommandBuffer(*m_cmdBuffer); }
+    void Draw(uint32_t firstVertex, uint32_t vertexCount, uint32_t firstInstance, uint32_t instanceCount)
+        { m_cmdBuffer->Draw(firstVertex, vertexCount, firstInstance, instanceCount); }
+    void DrawIndexed(uint32_t firstVertex, uint32_t vertexCount, int32_t vertexOffset, uint32_t firstInstance, uint32_t instanceCount)
+        { m_cmdBuffer->DrawIndexed(firstVertex, vertexCount, vertexOffset,firstInstance, instanceCount); }
+    void QueueCommandBuffer() { m_cmdBuffer->QueueCommandBuffer(); }
+    void RotateTriangleVSUniform(glm::mat4 Projection, glm::mat4 View, glm::mat4 Model,
+                                 VkConstantBufferObj *constantBuffer)
+        {RotateTriangleVSUniform(Projection, View, Model, constantBuffer, m_cmdBuffer); }
+    void BindVertexBuffer(VkConstantBufferObj *vertexBuffer, VkDeviceSize offset, uint32_t binding)
+        { m_cmdBuffer->BindVertexBuffer(vertexBuffer, offset, binding); }
+    void BindIndexBuffer(VkIndexBufferObj *indexBuffer, VkDeviceSize offset)
+        { m_cmdBuffer->BindIndexBuffer(indexBuffer, offset); }
+
+
 
 protected:
     VkImage m_texture;
@@ -467,29 +486,26 @@ void VkRenderTest::VKTriangleTest(const char *vertShaderText, const char *fragSh
     descriptorSet.AppendBuffer(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, constantBuffer);
 
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
-    VkCommandBufferObj cmdBuffer(m_device);
-    cmdBuffer.AddRenderTarget(m_renderTargets[0]);
+    ASSERT_VK_SUCCESS(BeginCommandBuffer());
 
-    ASSERT_VK_SUCCESS(BeginCommandBuffer(cmdBuffer));
-
-    GenericDrawPreparation(&cmdBuffer, pipelineobj, descriptorSet);
+    GenericDrawPreparation(pipelineobj, descriptorSet);
 #ifdef DUMP_STATE_DOT
     DRAW_STATE_DUMP_DOT_FILE pDSDumpDot = (DRAW_STATE_DUMP_DOT_FILE)vkGetProcAddr(gpu(), (char*)"drawStateDumpDotFile");
     pDSDumpDot((char*)"triTest2.dot");
 #endif
 
     // render triangle
-    cmdBuffer.Draw(0, 3, 0, 1);
+    Draw(0, 3, 0, 1);
 
     // finalize recording of the command buffer
-    EndCommandBuffer(cmdBuffer);
+    ASSERT_VK_SUCCESS(EndCommandBuffer());
 
-    cmdBuffer.QueueCommandBuffer();
+    QueueCommandBuffer();
 
     RecordImages(m_renderTargets);
 
     if (rotate)
-        RotateTriangleVSUniform(Projection, View, Model, &constantBuffer, &cmdBuffer);
+        RotateTriangleVSUniform(Projection, View, Model, &constantBuffer);
 
 #ifdef PRINT_OBJECTS
     OBJ_TRACK_GET_OBJECTS_COUNT pObjTrackGetObjectsCount = (OBJ_TRACK_GET_OBJECTS_COUNT)vkGetProcAddr(gpu(), (char*)"objTrackGetObjectsCount");
@@ -748,22 +764,19 @@ TEST_F(VkRenderTest, QuadWithVertexFetch)
     pipelineobj.AddVertexDataBuffer(&meshBuffer, MESH_BIND_ID);
 
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
-    VkCommandBufferObj cmdBuffer(m_device);
-    cmdBuffer.AddRenderTarget(m_renderTargets[0]);
+    ASSERT_VK_SUCCESS(BeginCommandBuffer());
 
-    ASSERT_VK_SUCCESS(BeginCommandBuffer(cmdBuffer));
+    GenericDrawPreparation(pipelineobj, descriptorSet);
 
-    GenericDrawPreparation(&cmdBuffer, pipelineobj, descriptorSet);
-
-    cmdBuffer.BindVertexBuffer(&meshBuffer, 0, 0);
+    BindVertexBuffer(&meshBuffer, 0, 0);
 
     // render two triangles
-    cmdBuffer.Draw(0, 6, 0, 1);
+    Draw(0, 6, 0, 1);
 
     // finalize recording of the command buffer
-    EndCommandBuffer(cmdBuffer);
+    ASSERT_VK_SUCCESS(EndCommandBuffer());
 
-    cmdBuffer.QueueCommandBuffer();
+    QueueCommandBuffer();
 
     RecordImages(m_renderTargets);
 }
@@ -836,27 +849,22 @@ TEST_F(VkRenderTest, TriangleMRT)
     att.channelWriteMask = 0xf;
     pipelineobj.AddColorAttachment(1, &att);
 
-    VkCommandBufferObj cmdBuffer(m_device);
+    ASSERT_VK_SUCCESS(BeginCommandBuffer());
 
-    cmdBuffer.AddRenderTarget(m_renderTargets[0]);
-    cmdBuffer.AddRenderTarget(m_renderTargets[1]);
+    GenericDrawPreparation(pipelineobj, descriptorSet);
 
-    ASSERT_VK_SUCCESS(BeginCommandBuffer(cmdBuffer));
-
-    GenericDrawPreparation(&cmdBuffer, pipelineobj, descriptorSet);
-
-    cmdBuffer.BindVertexBuffer(&meshBuffer, 0, 0);
+    BindVertexBuffer(&meshBuffer, 0, 0);
 #ifdef DUMP_STATE_DOT
     DRAW_STATE_DUMP_DOT_FILE pDSDumpDot = (DRAW_STATE_DUMP_DOT_FILE)vkGetProcAddr(gpu(), (char*)"drawStateDumpDotFile");
     pDSDumpDot((char*)"triTest2.dot");
 #endif
 
     // render triangle
-    cmdBuffer.Draw(0, 3, 0, 1);
+    Draw(0, 3, 0, 1);
 
     // finalize recording of the command buffer
-    EndCommandBuffer(cmdBuffer);
-    cmdBuffer.QueueCommandBuffer();
+    ASSERT_VK_SUCCESS(EndCommandBuffer());
+    QueueCommandBuffer();
 
     RecordImages(m_renderTargets);
 }
@@ -948,26 +956,24 @@ TEST_F(VkRenderTest, QuadWithIndexedVertexFetch)
     pipelineobj.AddVertexInputBindings(&vi_binding,1);
 
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
-    VkCommandBufferObj cmdBuffer(m_device);
-    cmdBuffer.AddRenderTarget(m_renderTargets[0]);
-    ASSERT_VK_SUCCESS(BeginCommandBuffer(cmdBuffer));
+    ASSERT_VK_SUCCESS(BeginCommandBuffer());
 
-    GenericDrawPreparation(&cmdBuffer, pipelineobj, descriptorSet);
+    GenericDrawPreparation(pipelineobj, descriptorSet);
 
 #ifdef DUMP_STATE_DOT
     DRAW_STATE_DUMP_DOT_FILE pDSDumpDot = (DRAW_STATE_DUMP_DOT_FILE)vkGetProcAddr(gpu(), (char*)"drawStateDumpDotFile");
     pDSDumpDot((char*)"triTest2.dot");
 #endif
 
-    cmdBuffer.BindVertexBuffer(&meshBuffer, 0, MESH_BIND_ID);
-    cmdBuffer.BindIndexBuffer(&indexBuffer, 0);
+    BindVertexBuffer(&meshBuffer, 0, MESH_BIND_ID);
+    BindIndexBuffer(&indexBuffer, 0);
 
     // render two triangles
-    cmdBuffer.DrawIndexed(0, 6, 0, 0, 1);
+    DrawIndexed(0, 6, 0, 0, 1);
 
     // finalize recording of the command buffer
-    EndCommandBuffer(cmdBuffer);
-    cmdBuffer.QueueCommandBuffer();
+    ASSERT_VK_SUCCESS(EndCommandBuffer());
+    QueueCommandBuffer();
 
     RecordImages(m_renderTargets);
 }
@@ -1041,25 +1047,23 @@ TEST_F(VkRenderTest, GreyandRedCirclesonBlue)
     pipelineobj.AddVertexDataBuffer(&meshBuffer,MESH_BIND_ID);
 
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
-    VkCommandBufferObj cmdBuffer(m_device);
-    cmdBuffer.AddRenderTarget(m_renderTargets[0]);
 
-    ASSERT_VK_SUCCESS(BeginCommandBuffer(cmdBuffer));
+    ASSERT_VK_SUCCESS(BeginCommandBuffer());
 
-    GenericDrawPreparation(&cmdBuffer, pipelineobj, descriptorSet);
+    GenericDrawPreparation(pipelineobj, descriptorSet);
 
-    cmdBuffer.BindVertexBuffer(&meshBuffer, 0, 0);
+    BindVertexBuffer(&meshBuffer, 0, 0);
 #ifdef DUMP_STATE_DOT
     DRAW_STATE_DUMP_DOT_FILE pDSDumpDot = (DRAW_STATE_DUMP_DOT_FILE)vkGetProcAddr(gpu(), (char*)"drawStateDumpDotFile");
     pDSDumpDot((char*)"triTest2.dot");
 #endif
 
     // render triangle
-    cmdBuffer.Draw(0, 6, 0, 1);
+    Draw(0, 6, 0, 1);
 
     // finalize recording of the command buffer
-    EndCommandBuffer(cmdBuffer);
-    cmdBuffer.QueueCommandBuffer();
+    EndCommandBuffer();
+    QueueCommandBuffer();
 
     RecordImages(m_renderTargets);
 }
@@ -1133,24 +1137,21 @@ TEST_F(VkRenderTest, RedCirclesonBlue)
     pipelineobj.AddVertexDataBuffer(&meshBuffer,MESH_BIND_ID);
 
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
-    VkCommandBufferObj cmdBuffer(m_device);
-    cmdBuffer.AddRenderTarget(m_renderTargets[0]);
+    ASSERT_VK_SUCCESS(BeginCommandBuffer());
 
-    ASSERT_VK_SUCCESS(BeginCommandBuffer(cmdBuffer));
+    GenericDrawPreparation(pipelineobj, descriptorSet);
 
-    GenericDrawPreparation(&cmdBuffer, pipelineobj, descriptorSet);
-
-    cmdBuffer.BindVertexBuffer(&meshBuffer, 0, 0);
+    BindVertexBuffer(&meshBuffer, 0, 0);
 #ifdef DUMP_STATE_DOT
     DRAW_STATE_DUMP_DOT_FILE pDSDumpDot = (DRAW_STATE_DUMP_DOT_FILE)vkGetProcAddr(gpu(), (char*)"drawStateDumpDotFile");
     pDSDumpDot((char*)"triTest2.dot");
 #endif
     // render two triangles
-    cmdBuffer.Draw(0, 6, 0, 1);
+    Draw(0, 6, 0, 1);
 
     // finalize recording of the command buffer
-    EndCommandBuffer(cmdBuffer);
-    cmdBuffer.QueueCommandBuffer();
+    EndCommandBuffer();
+    QueueCommandBuffer();
 
     RecordImages(m_renderTargets);
 }
@@ -1236,25 +1237,23 @@ TEST_F(VkRenderTest, GreyCirclesonBlueFade)
     pipelineobj.AddVertexDataBuffer(&meshBuffer,MESH_BIND_ID);
 
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
-    VkCommandBufferObj cmdBuffer(m_device);
-    cmdBuffer.AddRenderTarget(m_renderTargets[0]);
 
-    ASSERT_VK_SUCCESS(BeginCommandBuffer(cmdBuffer));
+    ASSERT_VK_SUCCESS(BeginCommandBuffer());
 
-    GenericDrawPreparation(&cmdBuffer, pipelineobj, descriptorSet);
+    GenericDrawPreparation(pipelineobj, descriptorSet);
 
-    cmdBuffer.BindVertexBuffer(&meshBuffer, 0, 0);
+    BindVertexBuffer(&meshBuffer, 0, 0);
 #ifdef DUMP_STATE_DOT
     DRAW_STATE_DUMP_DOT_FILE pDSDumpDot = (DRAW_STATE_DUMP_DOT_FILE)vkGetProcAddr(gpu(), (char*)"drawStateDumpDotFile");
     pDSDumpDot((char*)"triTest2.dot");
 #endif
 
     // render two triangles
-    cmdBuffer.Draw(0, 6, 0, 1);
+    Draw(0, 6, 0, 1);
 
     // finalize recording of the command buffer
-    EndCommandBuffer(cmdBuffer);
-    cmdBuffer.QueueCommandBuffer();
+    EndCommandBuffer();
+    QueueCommandBuffer();
 
     RecordImages(m_renderTargets);
 }
@@ -1329,25 +1328,23 @@ TEST_F(VkRenderTest, GreyCirclesonBlueDiscard)
     pipelineobj.AddVertexDataBuffer(&meshBuffer,MESH_BIND_ID);
 
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
-    VkCommandBufferObj cmdBuffer(m_device);
-    cmdBuffer.AddRenderTarget(m_renderTargets[0]);
 
-    ASSERT_VK_SUCCESS(BeginCommandBuffer(cmdBuffer));
+    ASSERT_VK_SUCCESS(BeginCommandBuffer());
 
-    GenericDrawPreparation(&cmdBuffer, pipelineobj, descriptorSet);
+    GenericDrawPreparation(pipelineobj, descriptorSet);
 
-    cmdBuffer.BindVertexBuffer(&meshBuffer, 0, 0);
+    BindVertexBuffer(&meshBuffer, 0, 0);
 #ifdef DUMP_STATE_DOT
     DRAW_STATE_DUMP_DOT_FILE pDSDumpDot = (DRAW_STATE_DUMP_DOT_FILE)vkGetProcAddr(gpu(), (char*)"drawStateDumpDotFile");
     pDSDumpDot((char*)"triTest2.dot");
 #endif
 
     // render two triangles
-    cmdBuffer.Draw(0, 6, 0, 1);
+    Draw(0, 6, 0, 1);
 
     // finalize recording of the command buffer
-    EndCommandBuffer(cmdBuffer);
-    cmdBuffer.QueueCommandBuffer();
+    EndCommandBuffer();
+    QueueCommandBuffer();
 
     RecordImages(m_renderTargets);
 }
@@ -1404,29 +1401,25 @@ TEST_F(VkRenderTest, TriangleVSUniform)
     descriptorSet.AppendBuffer(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, MVPBuffer);
 
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
-    VkCommandBufferObj cmdBuffer(m_device);
-    cmdBuffer.AddRenderTarget(m_renderTargets[0]);
+    ASSERT_VK_SUCCESS(BeginCommandBuffer());
 
-    ASSERT_VK_SUCCESS(BeginCommandBuffer(cmdBuffer));
+    GenericDrawPreparation(pipelineobj, descriptorSet);
 
-    GenericDrawPreparation(&cmdBuffer, pipelineobj, descriptorSet);
-
-    // cmdBuffer.BindVertexBuffer(&meshBuffer, 0, 0);
 #ifdef DUMP_STATE_DOT
     DRAW_STATE_DUMP_DOT_FILE pDSDumpDot = (DRAW_STATE_DUMP_DOT_FILE)vkGetProcAddr(gpu(), (char*)"drawStateDumpDotFile");
     pDSDumpDot((char*)"triTest2.dot");
 #endif
 
     // render two triangles
-    cmdBuffer.Draw(0, 6, 0, 1);
+    Draw(0, 6, 0, 1);
 
     // finalize recording of the command buffer
-    EndCommandBuffer(cmdBuffer);
-    cmdBuffer.QueueCommandBuffer();
+    EndCommandBuffer();
+    QueueCommandBuffer();
 
     RecordImages(m_renderTargets);
 
-    RotateTriangleVSUniform(Projection, View, Model, &MVPBuffer, &cmdBuffer);
+    RotateTriangleVSUniform(Projection, View, Model, &MVPBuffer);
 }
 
 TEST_F(VkRenderTest, MixTriangle)
@@ -1483,12 +1476,10 @@ TEST_F(VkRenderTest, MixTriangle)
     descriptorSet.AppendDummy();
 
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
-    VkCommandBufferObj cmdBuffer(m_device);
-    cmdBuffer.AddRenderTarget(m_renderTargets[0]);
 
-    ASSERT_VK_SUCCESS(BeginCommandBuffer(cmdBuffer));
+    ASSERT_VK_SUCCESS(BeginCommandBuffer());
 
-    GenericDrawPreparation(&cmdBuffer, pipelineobj, descriptorSet);
+    GenericDrawPreparation(pipelineobj, descriptorSet);
 
 #ifdef DUMP_STATE_DOT
     DRAW_STATE_DUMP_DOT_FILE pDSDumpDot = (DRAW_STATE_DUMP_DOT_FILE)vkGetProcAddr(gpu(), (char*)"drawStateDumpDotFile");
@@ -1496,11 +1487,11 @@ TEST_F(VkRenderTest, MixTriangle)
 #endif
 
     // render triangle
-    cmdBuffer.Draw(0, 3, 0, 1);
+    Draw(0, 3, 0, 1);
 
     // finalize recording of the command buffer
-    EndCommandBuffer(cmdBuffer);
-    cmdBuffer.QueueCommandBuffer();
+    EndCommandBuffer();
+    QueueCommandBuffer();
 
     RecordImages(m_renderTargets);
 }
@@ -1575,25 +1566,23 @@ TEST_F(VkRenderTest, QuadVertFetchAndVertID)
     pipelineobj.AddVertexDataBuffer(&meshBuffer, MESH_BUF_ID);
 
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
-    VkCommandBufferObj cmdBuffer(m_device);
-    cmdBuffer.AddRenderTarget(m_renderTargets[0]);
 
-    ASSERT_VK_SUCCESS(BeginCommandBuffer(cmdBuffer));
+    ASSERT_VK_SUCCESS(BeginCommandBuffer());
 
-    GenericDrawPreparation(&cmdBuffer, pipelineobj, descriptorSet);
+    GenericDrawPreparation(pipelineobj, descriptorSet);
 
-    cmdBuffer.BindVertexBuffer(&meshBuffer, 0, 0);
+    BindVertexBuffer(&meshBuffer, 0, 0);
 #ifdef DUMP_STATE_DOT
     DRAW_STATE_DUMP_DOT_FILE pDSDumpDot = (DRAW_STATE_DUMP_DOT_FILE)vkGetProcAddr(gpu(), (char*)"drawStateDumpDotFile");
     pDSDumpDot((char*)"triTest2.dot");
 #endif
 
     // render two triangles
-    cmdBuffer.Draw(0, 6, 0, 1);
+    Draw(0, 6, 0, 1);
 
     // finalize recording of the command buffer
-    EndCommandBuffer(cmdBuffer);
-    cmdBuffer.QueueCommandBuffer();
+    EndCommandBuffer();
+    QueueCommandBuffer();
 
     RecordImages(m_renderTargets);
 }
@@ -1682,25 +1671,23 @@ TEST_F(VkRenderTest, QuadSparseVertFetch)
     pipelineobj.AddVertexDataBuffer(&meshBuffer, MESH_BUF_ID);
 
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
-    VkCommandBufferObj cmdBuffer(m_device);
-    cmdBuffer.AddRenderTarget(m_renderTargets[0]);
 
-    ASSERT_VK_SUCCESS(BeginCommandBuffer(cmdBuffer));
+    ASSERT_VK_SUCCESS(BeginCommandBuffer());
 
-    GenericDrawPreparation(&cmdBuffer, pipelineobj, descriptorSet);
+    GenericDrawPreparation(pipelineobj, descriptorSet);
 
-    cmdBuffer.BindVertexBuffer(&meshBuffer, 0, MESH_BUF_ID);
+    BindVertexBuffer(&meshBuffer, 0, MESH_BUF_ID);
 #ifdef DUMP_STATE_DOT
     DRAW_STATE_DUMP_DOT_FILE pDSDumpDot = (DRAW_STATE_DUMP_DOT_FILE)vkGetProcAddr(gpu(), (char*)"drawStateDumpDotFile");
     pDSDumpDot((char*)"triTest2.dot");
 #endif
 
     // render two triangles
-    cmdBuffer.Draw(0, 6, 0, 1);
+    Draw(0, 6, 0, 1);
 
     // finalize recording of the command buffer
-    EndCommandBuffer(cmdBuffer);
-    cmdBuffer.QueueCommandBuffer();
+    EndCommandBuffer();
+    QueueCommandBuffer();
 
     RecordImages(m_renderTargets);
 }
@@ -1779,25 +1766,23 @@ TEST_F(VkRenderTest, TriVertFetchDeadAttr)
     pipelineobj.AddVertexDataBuffer(&meshBuffer, MESH_BUF_ID);
 
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
-    VkCommandBufferObj cmdBuffer(m_device);
-    cmdBuffer.AddRenderTarget(m_renderTargets[0]);
 
-    ASSERT_VK_SUCCESS(BeginCommandBuffer(cmdBuffer));
+    ASSERT_VK_SUCCESS(BeginCommandBuffer());
 
-    GenericDrawPreparation(&cmdBuffer, pipelineobj, descriptorSet);
+    GenericDrawPreparation(pipelineobj, descriptorSet);
 
-    cmdBuffer.BindVertexBuffer(&meshBuffer, 0, 0);
+    BindVertexBuffer(&meshBuffer, 0, 0);
 #ifdef DUMP_STATE_DOT
     DRAW_STATE_DUMP_DOT_FILE pDSDumpDot = (DRAW_STATE_DUMP_DOT_FILE)vkGetProcAddr(gpu(), (char*)"drawStateDumpDotFile");
     pDSDumpDot((char*)"triTest2.dot");
 #endif
 
     // render two triangles
-    cmdBuffer.Draw(0, 6, 0, 1);
+    Draw(0, 6, 0, 1);
 
     // finalize recording of the command buffer
-    EndCommandBuffer(cmdBuffer);
-    cmdBuffer.QueueCommandBuffer();
+    EndCommandBuffer();
+    QueueCommandBuffer();
 
     RecordImages(m_renderTargets);
 }
@@ -1900,25 +1885,22 @@ TEST_F(VkRenderTest, CubeWithVertexFetchAndMVP)
 
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget(m_depthStencil->BindInfo()));
 
-    VkCommandBufferObj cmdBuffer(m_device);
-    cmdBuffer.AddRenderTarget(m_renderTargets[0]);
+    ASSERT_VK_SUCCESS(BeginCommandBuffer());
+    GenericDrawPreparation(pipelineobj, descriptorSet);
 
-    ASSERT_VK_SUCCESS(BeginCommandBuffer(cmdBuffer));
-    GenericDrawPreparation(&cmdBuffer, pipelineobj, descriptorSet);
-
-    cmdBuffer.BindVertexBuffer(&meshBuffer, 0, 0);
+    BindVertexBuffer(&meshBuffer, 0, 0);
 #ifdef DUMP_STATE_DOT
     DRAW_STATE_DUMP_DOT_FILE pDSDumpDot = (DRAW_STATE_DUMP_DOT_FILE)vkGetProcAddr(gpu(), (char*)"drawStateDumpDotFile");
     pDSDumpDot((char*)"triTest2.dot");
 #endif
 
     // render triangles
-    cmdBuffer.Draw(0, 36, 0, 1);
+    Draw(0, 36, 0, 1);
 
 
     // finalize recording of the command buffer
-    EndCommandBuffer(cmdBuffer);
-    cmdBuffer.QueueCommandBuffer();
+    EndCommandBuffer();
+    QueueCommandBuffer();
 
     RecordImages(m_renderTargets);
 }
@@ -1974,12 +1956,9 @@ TEST_F(VkRenderTest, VSTexture)
     descriptorSet.AppendSamplerTexture(&sampler, &texture);
 
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
-    VkCommandBufferObj cmdBuffer(m_device);
-    cmdBuffer.AddRenderTarget(m_renderTargets[0]);
+    ASSERT_VK_SUCCESS(BeginCommandBuffer());
 
-    ASSERT_VK_SUCCESS(BeginCommandBuffer(cmdBuffer));
-
-    GenericDrawPreparation(&cmdBuffer, pipelineobj, descriptorSet);
+    GenericDrawPreparation(pipelineobj, descriptorSet);
 
 #ifdef DUMP_STATE_DOT
     DRAW_STATE_DUMP_DOT_FILE pDSDumpDot = (DRAW_STATE_DUMP_DOT_FILE)vkGetProcAddr(gpu(), (char*)"drawStateDumpDotFile");
@@ -1987,11 +1966,11 @@ TEST_F(VkRenderTest, VSTexture)
 #endif
 
     // render triangle
-    cmdBuffer.Draw(0, 3, 0, 1);
+    Draw(0, 3, 0, 1);
 
     // finalize recording of the command buffer
-    EndCommandBuffer(cmdBuffer);
-    cmdBuffer.QueueCommandBuffer();
+    EndCommandBuffer();
+    QueueCommandBuffer();
 
     RecordImages(m_renderTargets);
 }
@@ -2048,23 +2027,20 @@ TEST_F(VkRenderTest, TexturedTriangle)
     descriptorSet.AppendSamplerTexture(&sampler, &texture);
 
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
-    VkCommandBufferObj cmdBuffer(m_device);
-    cmdBuffer.AddRenderTarget(m_renderTargets[0]);
+    ASSERT_VK_SUCCESS(BeginCommandBuffer());
 
-    ASSERT_VK_SUCCESS(BeginCommandBuffer(cmdBuffer));
-
-    GenericDrawPreparation(&cmdBuffer, pipelineobj, descriptorSet);
+    GenericDrawPreparation(pipelineobj, descriptorSet);
 
 #ifdef DUMP_STATE_DOT
     DRAW_STATE_DUMP_DOT_FILE pDSDumpDot = (DRAW_STATE_DUMP_DOT_FILE)vkGetProcAddr(gpu(), (char*)"drawStateDumpDotFile");
     pDSDumpDot((char*)"triTest2.dot");
 #endif
     // render triangle
-    cmdBuffer.Draw(0, 3, 0, 1);
+    Draw(0, 3, 0, 1);
 
     // finalize recording of the command buffer
-    EndCommandBuffer(cmdBuffer);
-    cmdBuffer.QueueCommandBuffer();
+    EndCommandBuffer();
+    QueueCommandBuffer();
 
     RecordImages(m_renderTargets);
 }
@@ -2129,23 +2105,20 @@ TEST_F(VkRenderTest, TexturedTriangleClip)
     descriptorSet.AppendSamplerTexture(&sampler, &texture);
 
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
-    VkCommandBufferObj cmdBuffer(m_device);
-    cmdBuffer.AddRenderTarget(m_renderTargets[0]);
+    ASSERT_VK_SUCCESS(BeginCommandBuffer());
 
-    ASSERT_VK_SUCCESS(BeginCommandBuffer(cmdBuffer));
-
-    GenericDrawPreparation(&cmdBuffer, pipelineobj, descriptorSet);
+    GenericDrawPreparation(pipelineobj, descriptorSet);
 
 #ifdef DUMP_STATE_DOT
     DRAW_STATE_DUMP_DOT_FILE pDSDumpDot = (DRAW_STATE_DUMP_DOT_FILE)vkGetProcAddr(gpu(), (char*)"drawStateDumpDotFile");
     pDSDumpDot((char*)"triTest2.dot");
 #endif
     // render triangle
-    cmdBuffer.Draw(0, 3, 0, 1);
+    Draw(0, 3, 0, 1);
 
     // finalize recording of the command buffer
-    EndCommandBuffer(cmdBuffer);
-    cmdBuffer.QueueCommandBuffer();
+    EndCommandBuffer();
+    QueueCommandBuffer();
 
     RecordImages(m_renderTargets);
 }
@@ -2200,23 +2173,20 @@ TEST_F(VkRenderTest, FSTriangle)
     descriptorSet.AppendSamplerTexture(&sampler, &texture);
 
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
-    VkCommandBufferObj cmdBuffer(m_device);
-    cmdBuffer.AddRenderTarget(m_renderTargets[0]);
+    ASSERT_VK_SUCCESS(BeginCommandBuffer());
 
-    ASSERT_VK_SUCCESS(BeginCommandBuffer(cmdBuffer));
-
-    GenericDrawPreparation(&cmdBuffer, pipelineobj, descriptorSet);
+    GenericDrawPreparation(pipelineobj, descriptorSet);
 
 #ifdef DUMP_STATE_DOT
     DRAW_STATE_DUMP_DOT_FILE pDSDumpDot = (DRAW_STATE_DUMP_DOT_FILE)vkGetProcAddr(gpu(), (char*)"drawStateDumpDotFile");
     pDSDumpDot((char*)"triTest2.dot");
 #endif
     // render triangle
-    cmdBuffer.Draw(0, 3, 0, 1);
+    Draw(0, 3, 0, 1);
 
     // finalize recording of the command buffer
-    EndCommandBuffer(cmdBuffer);
-    cmdBuffer.QueueCommandBuffer();
+    EndCommandBuffer();
+    QueueCommandBuffer();
 
     RecordImages(m_renderTargets);
 }
@@ -2290,23 +2260,20 @@ TEST_F(VkRenderTest, SamplerBindingsTriangle)
     descriptorSet.AppendSamplerTexture(&sampler3, &texture3);
 
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
-    VkCommandBufferObj cmdBuffer(m_device);
-    cmdBuffer.AddRenderTarget(m_renderTargets[0]);
+    ASSERT_VK_SUCCESS(BeginCommandBuffer());
 
-    ASSERT_VK_SUCCESS(BeginCommandBuffer(cmdBuffer));
-
-    GenericDrawPreparation(&cmdBuffer, pipelineobj, descriptorSet);
+    GenericDrawPreparation(pipelineobj, descriptorSet);
 
 #ifdef DUMP_STATE_DOT
     DRAW_STATE_DUMP_DOT_FILE pDSDumpDot = (DRAW_STATE_DUMP_DOT_FILE)vkGetProcAddr(gpu(), (char*)"drawStateDumpDotFile");
     pDSDumpDot((char*)"triTest2.dot");
 #endif
     // render triangle
-    cmdBuffer.Draw(0, 3, 0, 1);
+    Draw(0, 3, 0, 1);
 
     // finalize recording of the command buffer
-    EndCommandBuffer(cmdBuffer);
-    cmdBuffer.QueueCommandBuffer();
+    EndCommandBuffer();
+    QueueCommandBuffer();
 
     RecordImages(m_renderTargets);
 }
@@ -2373,23 +2340,20 @@ TEST_F(VkRenderTest, TriangleVSUniformBlock)
     descriptorSet.AppendBuffer(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, colorBuffer);
 
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
-    VkCommandBufferObj cmdBuffer(m_device);
-    cmdBuffer.AddRenderTarget(m_renderTargets[0]);
+    ASSERT_VK_SUCCESS(BeginCommandBuffer());
 
-    ASSERT_VK_SUCCESS(BeginCommandBuffer(cmdBuffer));
-
-    GenericDrawPreparation(&cmdBuffer, pipelineobj, descriptorSet);
+    GenericDrawPreparation(pipelineobj, descriptorSet);
 
 #ifdef DUMP_STATE_DOT
     DRAW_STATE_DUMP_DOT_FILE pDSDumpDot = (DRAW_STATE_DUMP_DOT_FILE)vkGetProcAddr(gpu(), (char*)"drawStateDumpDotFile");
     pDSDumpDot((char*)"triTest2.dot");
 #endif
     // render triangle
-    cmdBuffer.Draw(0, 3, 0, 1);
+    Draw(0, 3, 0, 1);
 
     // finalize recording of the command buffer
-    EndCommandBuffer(cmdBuffer);
-    cmdBuffer.QueueCommandBuffer();
+    EndCommandBuffer();
+    QueueCommandBuffer();
 
     RecordImages(m_renderTargets);
 }
@@ -2475,23 +2439,20 @@ TEST_F(VkRenderTest, TriangleFSUniformBlockBinding)
     descriptorSet.AppendBuffer(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, whiteBuffer);
 
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
-    VkCommandBufferObj cmdBuffer(m_device);
-    cmdBuffer.AddRenderTarget(m_renderTargets[0]);
+    ASSERT_VK_SUCCESS(BeginCommandBuffer());
 
-    ASSERT_VK_SUCCESS(BeginCommandBuffer(cmdBuffer));
-
-    GenericDrawPreparation(&cmdBuffer, pipelineobj, descriptorSet);
+    GenericDrawPreparation(pipelineobj, descriptorSet);
 
 #ifdef DUMP_STATE_DOT
     DRAW_STATE_DUMP_DOT_FILE pDSDumpDot = (DRAW_STATE_DUMP_DOT_FILE)vkGetProcAddr(gpu(), (char*)"drawStateDumpDotFile");
     pDSDumpDot((char*)"triTest2.dot");
 #endif
     // render triangle
-    cmdBuffer.Draw(0, 3, 0, 1);
+    Draw(0, 3, 0, 1);
 
     // finalize recording of the command buffer
-    EndCommandBuffer(cmdBuffer);
-    cmdBuffer.QueueCommandBuffer();
+    EndCommandBuffer();
+    QueueCommandBuffer();
 
     RecordImages(m_renderTargets);
 }
@@ -2572,23 +2533,20 @@ TEST_F(VkRenderTest, TriangleFSAnonymousUniformBlockBinding)
     descriptorSet.AppendBuffer(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, whiteBuffer);
 
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
-    VkCommandBufferObj cmdBuffer(m_device);
-    cmdBuffer.AddRenderTarget(m_renderTargets[0]);
+    ASSERT_VK_SUCCESS(BeginCommandBuffer());
 
-    ASSERT_VK_SUCCESS(BeginCommandBuffer(cmdBuffer));
-
-    GenericDrawPreparation(&cmdBuffer, pipelineobj, descriptorSet);
+    GenericDrawPreparation(pipelineobj, descriptorSet);
 
 #ifdef DUMP_STATE_DOT
     DRAW_STATE_DUMP_DOT_FILE pDSDumpDot = (DRAW_STATE_DUMP_DOT_FILE)vkGetProcAddr(gpu(), (char*)"drawStateDumpDotFile");
     pDSDumpDot((char*)"triTest2.dot");
 #endif
     // render triangle
-    cmdBuffer.Draw(0, 3, 0, 1);
+    Draw(0, 3, 0, 1);
 
     // finalize recording of the command buffer
-    EndCommandBuffer(cmdBuffer);
-    cmdBuffer.QueueCommandBuffer();
+    EndCommandBuffer();
+    QueueCommandBuffer();
 
     RecordImages(m_renderTargets);
 }
@@ -2693,23 +2651,20 @@ TEST_F(VkRenderTest, TriangleFSAnonymousUniformBlockBindingWithStruct)
     descriptorSet.AppendBuffer(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, whiteBuffer);
 
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
-    VkCommandBufferObj cmdBuffer(m_device);
-    cmdBuffer.AddRenderTarget(m_renderTargets[0]);
+    ASSERT_VK_SUCCESS(BeginCommandBuffer());
 
-    ASSERT_VK_SUCCESS(BeginCommandBuffer(cmdBuffer));
-
-    GenericDrawPreparation(&cmdBuffer, pipelineobj, descriptorSet);
+    GenericDrawPreparation(pipelineobj, descriptorSet);
 
 #ifdef DUMP_STATE_DOT
     DRAW_STATE_DUMP_DOT_FILE pDSDumpDot = (DRAW_STATE_DUMP_DOT_FILE)vkGetProcAddr(gpu(), (char*)"drawStateDumpDotFile");
     pDSDumpDot((char*)"triTest2.dot");
 #endif
     // render triangle
-    cmdBuffer.Draw(0, 3, 0, 1);
+    Draw(0, 3, 0, 1);
 
     // finalize recording of the command buffer
-    EndCommandBuffer(cmdBuffer);
-    cmdBuffer.QueueCommandBuffer();
+    EndCommandBuffer();
+    QueueCommandBuffer();
 
     RecordImages(m_renderTargets);
 }
@@ -2818,27 +2773,24 @@ TEST_F(VkRenderTest, CubeWithVertexFetchAndMVPAndTexture)
     pipelineobj.SetDepthStencil(&ds_state);
 
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget(m_depthStencil->BindInfo()));
-    VkCommandBufferObj cmdBuffer(m_device);
-    cmdBuffer.AddRenderTarget(m_renderTargets[0]);
+    ASSERT_VK_SUCCESS(BeginCommandBuffer());
 
-    ASSERT_VK_SUCCESS(BeginCommandBuffer(cmdBuffer));
+    GenericDrawPreparation(pipelineobj, descriptorSet);
 
-    GenericDrawPreparation(&cmdBuffer, pipelineobj, descriptorSet);
-
-    cmdBuffer.BindVertexBuffer(&meshBuffer, 0, 0);
+    BindVertexBuffer(&meshBuffer, 0, 0);
 #ifdef DUMP_STATE_DOT
     DRAW_STATE_DUMP_DOT_FILE pDSDumpDot = (DRAW_STATE_DUMP_DOT_FILE)vkGetProcAddr(gpu(), (char*)"drawStateDumpDotFile");
     pDSDumpDot((char*)"triTest2.dot");
 #endif
     // render triangle
-    cmdBuffer.Draw(0, num_verts, 0, 1);
+    Draw(0, num_verts, 0, 1);
 
     // finalize recording of the command buffer
-    EndCommandBuffer(cmdBuffer);
-    cmdBuffer.QueueCommandBuffer();
+    EndCommandBuffer();
+    QueueCommandBuffer();
 
     RecordImages(m_renderTargets);
-    RotateTriangleVSUniform(Projection, View, Model, &mvpBuffer, &cmdBuffer);
+    RotateTriangleVSUniform(Projection, View, Model, &mvpBuffer);
 }
 
 TEST_F(VkRenderTest, TriangleMixedSamplerUniformBlockBinding)
@@ -2935,23 +2887,20 @@ TEST_F(VkRenderTest, TriangleMixedSamplerUniformBlockBinding)
     descriptorSet.AppendBuffer(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, whiteBuffer);
 
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
-    VkCommandBufferObj cmdBuffer(m_device);
-    cmdBuffer.AddRenderTarget(m_renderTargets[0]);
+    ASSERT_VK_SUCCESS(BeginCommandBuffer());
 
-    ASSERT_VK_SUCCESS(BeginCommandBuffer(cmdBuffer));
-
-    GenericDrawPreparation(&cmdBuffer, pipelineobj, descriptorSet);
+    GenericDrawPreparation(pipelineobj, descriptorSet);
 
 #ifdef DUMP_STATE_DOT
     DRAW_STATE_DUMP_DOT_FILE pDSDumpDot = (DRAW_STATE_DUMP_DOT_FILE)vkGetProcAddr(gpu(), (char*)"drawStateDumpDotFile");
     pDSDumpDot((char*)"triTest2.dot");
 #endif
     // render triangle
-    cmdBuffer.Draw(0, 3, 0, 1);
+    Draw(0, 3, 0, 1);
 
     // finalize recording of the command buffer
-    EndCommandBuffer(cmdBuffer);
-    cmdBuffer.QueueCommandBuffer();
+    EndCommandBuffer();
+    QueueCommandBuffer();
 
     RecordImages(m_renderTargets);
 }
@@ -3044,23 +2993,20 @@ TEST_F(VkRenderTest, TriangleMatchingSamplerUniformBlockBinding)
     descriptorSet.AppendBuffer(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, whiteBuffer);
 
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
-    VkCommandBufferObj cmdBuffer(m_device);
-    cmdBuffer.AddRenderTarget(m_renderTargets[0]);
+    ASSERT_VK_SUCCESS(BeginCommandBuffer());
 
-    ASSERT_VK_SUCCESS(BeginCommandBuffer(cmdBuffer));
-
-    GenericDrawPreparation(&cmdBuffer, pipelineobj, descriptorSet);
+    GenericDrawPreparation(pipelineobj, descriptorSet);
 
 #ifdef DUMP_STATE_DOT
     DRAW_STATE_DUMP_DOT_FILE pDSDumpDot = (DRAW_STATE_DUMP_DOT_FILE)vkGetProcAddr(gpu(), (char*)"drawStateDumpDotFile");
     pDSDumpDot((char*)"triTest2.dot");
 #endif
     // render triangle
-    cmdBuffer.Draw(0, 3, 0, 1);
+    Draw(0, 3, 0, 1);
 
     // finalize recording of the command buffer
-    EndCommandBuffer(cmdBuffer);
-    cmdBuffer.QueueCommandBuffer();
+    EndCommandBuffer();
+    QueueCommandBuffer();
 
     RecordImages(m_renderTargets);
 }
@@ -3296,23 +3242,20 @@ TEST_F(VkRenderTest, TriangleUniformBufferLayout)
     descriptorSet.AppendBuffer(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, mixedBuffer);
 
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
-    VkCommandBufferObj cmdBuffer(m_device);
-    cmdBuffer.AddRenderTarget(m_renderTargets[0]);
+    ASSERT_VK_SUCCESS(BeginCommandBuffer());
 
-    ASSERT_VK_SUCCESS(BeginCommandBuffer(cmdBuffer));
-
-    GenericDrawPreparation(&cmdBuffer, pipelineobj, descriptorSet);
+    GenericDrawPreparation(pipelineobj, descriptorSet);
 
 #ifdef DUMP_STATE_DOT
     DRAW_STATE_DUMP_DOT_FILE pDSDumpDot = (DRAW_STATE_DUMP_DOT_FILE)vkGetProcAddr(gpu(), (char*)"drawStateDumpDotFile");
     pDSDumpDot((char*)"triTest2.dot");
 #endif
     // render triangle
-    cmdBuffer.Draw(0, 3, 0, 1);
+    Draw(0, 3, 0, 1);
 
     // finalize recording of the command buffer
-    EndCommandBuffer(cmdBuffer);
-    cmdBuffer.QueueCommandBuffer();
+    EndCommandBuffer();
+    QueueCommandBuffer();
 
     RecordImages(m_renderTargets);
 }
@@ -3407,19 +3350,16 @@ TEST_F(VkRenderTest, TextureGather)
     descriptorSet.AppendSamplerTexture(&sampler3, &texture3);
 
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
-    VkCommandBufferObj cmdBuffer(m_device);
-    cmdBuffer.AddRenderTarget(m_renderTargets[0]);
+    ASSERT_VK_SUCCESS(BeginCommandBuffer());
 
-    ASSERT_VK_SUCCESS(BeginCommandBuffer(cmdBuffer));
-
-    GenericDrawPreparation(&cmdBuffer, pipelineobj, descriptorSet);
+    GenericDrawPreparation(pipelineobj, descriptorSet);
 
     // render triangle
-    cmdBuffer.Draw(0, 3, 0, 1);
+    Draw(0, 3, 0, 1);
 
     // finalize recording of the command buffer
-    EndCommandBuffer(cmdBuffer);
-    cmdBuffer.QueueCommandBuffer();
+    EndCommandBuffer();
+    QueueCommandBuffer();
 
     RecordImages(m_renderTargets);
 }
@@ -3512,21 +3452,18 @@ TEST_F(VkRenderTest, GeometryShaderHelloWorld)
     pipelineobj.AddShader(&ps);
 
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
-    VkCommandBufferObj cmdBuffer(m_device);
-    cmdBuffer.AddRenderTarget(m_renderTargets[0]);
-
-    ASSERT_VK_SUCCESS(BeginCommandBuffer(cmdBuffer));
+    ASSERT_VK_SUCCESS(BeginCommandBuffer());
 
     VkDescriptorSetObj descriptorSet(m_device);
 
-    GenericDrawPreparation(&cmdBuffer, pipelineobj, descriptorSet);
+    GenericDrawPreparation(pipelineobj, descriptorSet);
 
     // render triangle
-    cmdBuffer.Draw(0, 3, 0, 1);
+    Draw(0, 3, 0, 1);
 
     // finalize recording of the command buffer
-    EndCommandBuffer(cmdBuffer);
-    cmdBuffer.QueueCommandBuffer();
+    EndCommandBuffer();
+    QueueCommandBuffer();
 
     RecordImages(m_renderTargets);
 }
@@ -3865,22 +3802,19 @@ TEST_F(VkRenderTest, GSUniformBufferLayout)
     pipelineobj.AddShader(&ps);
 
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
-    VkCommandBufferObj cmdBuffer(m_device);
-    cmdBuffer.AddRenderTarget(m_renderTargets[0]);
-
-    ASSERT_VK_SUCCESS(BeginCommandBuffer(cmdBuffer));
+    ASSERT_VK_SUCCESS(BeginCommandBuffer());
 
     VkDescriptorSetObj descriptorSet(m_device);
     descriptorSet.AppendBuffer(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, mixedBuffer);
 
-    GenericDrawPreparation(&cmdBuffer, pipelineobj, descriptorSet);
+    GenericDrawPreparation(pipelineobj, descriptorSet);
 
     // render triangle
-    cmdBuffer.Draw(0, 3, 0, 1);
+    Draw(0, 3, 0, 1);
 
     // finalize recording of the command buffer
-    EndCommandBuffer(cmdBuffer);
-    cmdBuffer.QueueCommandBuffer();
+    EndCommandBuffer();
+    QueueCommandBuffer();
 
     RecordImages(m_renderTargets);
 }
@@ -3994,21 +3928,18 @@ TEST_F(VkRenderTest, GSPositions)
     pipelineobj.AddShader(&ps);
 
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
-    VkCommandBufferObj cmdBuffer(m_device);
-    cmdBuffer.AddRenderTarget(m_renderTargets[0]);
-
-    ASSERT_VK_SUCCESS(BeginCommandBuffer(cmdBuffer));
+    ASSERT_VK_SUCCESS(BeginCommandBuffer());
 
     VkDescriptorSetObj descriptorSet(m_device);
 
-    GenericDrawPreparation(&cmdBuffer, pipelineobj, descriptorSet);
+    GenericDrawPreparation(pipelineobj, descriptorSet);
 
     // render triangle
-    cmdBuffer.Draw(0, 3, 0, 1);
+    Draw(0, 3, 0, 1);
 
     // finalize recording of the command buffer
-    EndCommandBuffer(cmdBuffer);
-    cmdBuffer.QueueCommandBuffer();
+    EndCommandBuffer();
+    QueueCommandBuffer();
 
     RecordImages(m_renderTargets);
 }
@@ -4131,22 +4062,19 @@ TEST_F(VkRenderTest, GSTriStrip)
     VkConstantBufferObj windowDimensions(m_device, sizeof(dimensions) / sizeof(dimensions[0]), sizeof(dimensions[0]), (const void*) dimensions);
 
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
-    VkCommandBufferObj cmdBuffer(m_device);
-    cmdBuffer.AddRenderTarget(m_renderTargets[0]);
-
-    ASSERT_VK_SUCCESS(BeginCommandBuffer(cmdBuffer));
+    ASSERT_VK_SUCCESS(BeginCommandBuffer());
 
     VkDescriptorSetObj descriptorSet(m_device);
     descriptorSet.AppendBuffer(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, windowDimensions);
 
-    GenericDrawPreparation(&cmdBuffer, pipelineobj, descriptorSet);
+    GenericDrawPreparation(pipelineobj, descriptorSet);
 
     // render triangle
-    cmdBuffer.Draw(0, 3, 0, 1);
+    Draw(0, 3, 0, 1);
 
     // finalize recording of the command buffer
-    EndCommandBuffer(cmdBuffer);
-    cmdBuffer.QueueCommandBuffer();
+    EndCommandBuffer();
+    QueueCommandBuffer();
 
     RecordImages(m_renderTargets);
 }
@@ -4163,13 +4091,10 @@ TEST_F(VkRenderTest, RenderPassLoadOpClear)
     m_clear_color.f32[2] = 0;
     m_clear_color.f32[3] = 0;
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
-
-    VkCommandBufferObj cmdBuffer(m_device);
-    cmdBuffer.AddRenderTarget(m_renderTargets[0]);
-    ASSERT_VK_SUCCESS(BeginCommandBuffer(cmdBuffer));
+    ASSERT_VK_SUCCESS(BeginCommandBuffer());
     /* This command buffer contains ONLY the load op! */
-    EndCommandBuffer(cmdBuffer);
-    cmdBuffer.QueueCommandBuffer();
+    EndCommandBuffer();
+    QueueCommandBuffer();
 
     RecordImages(m_renderTargets);
 }
@@ -4186,10 +4111,7 @@ TEST_F(VkRenderTest, RenderPassAttachmentClear)
     m_clear_color.f32[2] = 0;
     m_clear_color.f32[3] = 0;
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
-
-    VkCommandBufferObj cmdBuffer(m_device);
-    cmdBuffer.AddRenderTarget(m_renderTargets[0]);
-    ASSERT_VK_SUCCESS(BeginCommandBuffer(cmdBuffer));
+    ASSERT_VK_SUCCESS(BeginCommandBuffer());
 
     /* Load op has cleared to red */
 
@@ -4204,12 +4126,12 @@ TEST_F(VkRenderTest, RenderPassAttachmentClear)
     clear_color.f32[2] = 0;
     clear_color.f32[3] = 0;
     VkRect3D clear_rect = { { 0, 0, 0 }, { (int)m_width, (int)m_height, 1 } };
-    vkCmdClearColorAttachment(cmdBuffer.handle(), 0,
+    vkCmdClearColorAttachment(m_cmdBuffer->handle(), 0,
                               VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
                               &clear_color, 1, &clear_rect);
 
-    EndCommandBuffer(cmdBuffer);
-    cmdBuffer.QueueCommandBuffer();
+    EndCommandBuffer();
+    QueueCommandBuffer();
 
     RecordImages(m_renderTargets);
 }

@@ -140,7 +140,22 @@ public:
     VkResult EndCommandBuffer(VkCommandBufferObj &cmdBuffer);
     void VKTriangleTest(const char *vertShaderText, const char *fragShaderText, BsoFailSelect failMask);
     void GenericDrawPreparation(VkCommandBufferObj *cmdBuffer, VkPipelineObj &pipelineobj, VkDescriptorSetObj &descriptorSet, BsoFailSelect failMask);
+    void GenericDrawPreparation(VkPipelineObj &pipelineobj, VkDescriptorSetObj &descriptorSet,  BsoFailSelect failMask)
+             { GenericDrawPreparation(m_cmdBuffer, pipelineobj, descriptorSet, failMask); }
 
+    /* Convenience functions that use built-in command buffer */
+    VkResult BeginCommandBuffer() { return BeginCommandBuffer(*m_cmdBuffer); }
+    VkResult EndCommandBuffer() { return EndCommandBuffer(*m_cmdBuffer); }
+    void Draw(uint32_t firstVertex, uint32_t vertexCount, uint32_t firstInstance, uint32_t instanceCount)
+        { m_cmdBuffer->Draw(firstVertex, vertexCount, firstInstance, instanceCount); }
+    void DrawIndexed(uint32_t firstVertex, uint32_t vertexCount, int32_t vertexOffset, uint32_t firstInstance, uint32_t instanceCount)
+        { m_cmdBuffer->DrawIndexed(firstVertex, vertexCount, vertexOffset,firstInstance, instanceCount); }
+    void QueueCommandBuffer() { m_cmdBuffer->QueueCommandBuffer(); }
+    void QueueCommandBuffer(const VkFence& fence) { m_cmdBuffer->QueueCommandBuffer(fence); }
+    void BindVertexBuffer(VkConstantBufferObj *vertexBuffer, VkDeviceSize offset, uint32_t binding)
+        { m_cmdBuffer->BindVertexBuffer(vertexBuffer, offset, binding); }
+    void BindIndexBuffer(VkIndexBufferObj *indexBuffer, VkDeviceSize offset)
+        { m_cmdBuffer->BindIndexBuffer(indexBuffer, offset); }
 protected:
         ErrorMonitor               *m_errorMonitor;
 
@@ -270,20 +285,17 @@ void VkLayerTest::VKTriangleTest(const char *vertShaderText, const char *fragSha
     descriptorSet.AppendBuffer(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, constantBuffer);
 
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
-    VkCommandBufferObj cmdBuffer(m_device);
-    cmdBuffer.AddRenderTarget(m_renderTargets[0]);
+    ASSERT_VK_SUCCESS(BeginCommandBuffer());
 
-    ASSERT_VK_SUCCESS(BeginCommandBuffer(cmdBuffer));
-
-    GenericDrawPreparation(&cmdBuffer, pipelineobj, descriptorSet, failMask);
+    GenericDrawPreparation(pipelineobj, descriptorSet, failMask);
 
     // render triangle
-    cmdBuffer.Draw(0, 3, 0, 1);
+    Draw(0, 3, 0, 1);
 
     // finalize recording of the command buffer
-    EndCommandBuffer(cmdBuffer);
+    EndCommandBuffer();
 
-    cmdBuffer.QueueCommandBuffer();
+    QueueCommandBuffer();
 }
 
 void VkLayerTest::GenericDrawPreparation(VkCommandBufferObj *cmdBuffer, VkPipelineObj &pipelineobj, VkDescriptorSetObj &descriptorSet, BsoFailSelect failMask)
@@ -354,21 +366,20 @@ TEST_F(VkLayerTest, CallResetCmdBufferBeforeCompletion)
     vk_testing::Buffer buffer;
     buffer.init_as_dst(*m_device, (VkDeviceSize)20, reqs);
 
-    VkCommandBufferObj cmdBuffer(m_device);
-    BeginCommandBuffer(cmdBuffer);
-    cmdBuffer.FillBuffer(buffer.handle(), 0, 4, 0x11111111);
-    EndCommandBuffer(cmdBuffer);
+    BeginCommandBuffer();
+    m_cmdBuffer->FillBuffer(buffer.handle(), 0, 4, 0x11111111);
+    EndCommandBuffer();
 
     testFence.init(*m_device, fenceInfo);
 
     // Bypass framework since it does the waits automatically
     VkResult err = VK_SUCCESS;
-    err = vkQueueSubmit( m_device->m_queue, 1, &cmdBuffer.handle(), testFence.handle());
+    err = vkQueueSubmit( m_device->m_queue, 1, &m_cmdBuffer->handle(), testFence.handle());
     ASSERT_VK_SUCCESS( err );
 
     m_errorMonitor->ClearState();
     // Introduce failure by calling begin again before checking fence
-    vkResetCommandBuffer(cmdBuffer.handle(), 0);
+    vkResetCommandBuffer(m_cmdBuffer->handle(), 0);
 
     msgFlags = m_errorMonitor->GetState(&msgString);
     ASSERT_TRUE(msgFlags & VK_DBG_REPORT_ERROR_BIT) << "Did not receive an err after calling ResetCommandBuffer on an active Command Buffer";
@@ -392,23 +403,20 @@ TEST_F(VkLayerTest, CallBeginCmdBufferBeforeCompletion)
     ASSERT_NO_FATAL_FAILURE(InitViewport());
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
 
-    VkCommandBufferObj cmdBuffer(m_device);
-    cmdBuffer.AddRenderTarget(m_renderTargets[0]);
-
-    cmdBuffer.BeginCommandBuffer();
-    cmdBuffer.ClearAllBuffers(m_clear_color, m_depth_clear_color, m_stencil_clear_color, NULL);
-    cmdBuffer.EndCommandBuffer();
+    BeginCommandBuffer();
+    m_cmdBuffer->ClearAllBuffers(m_clear_color, m_depth_clear_color, m_stencil_clear_color, NULL);
+    EndCommandBuffer();
 
     testFence.init(*m_device, fenceInfo);
 
     // Bypass framework since it does the waits automatically
     VkResult err = VK_SUCCESS;
-    err = vkQueueSubmit( m_device->m_queue, 1, &cmdBuffer.handle(), testFence.handle());
+    err = vkQueueSubmit( m_device->m_queue, 1, &m_cmdBuffer->handle(), testFence.handle());
     ASSERT_VK_SUCCESS( err );
 
     m_errorMonitor->ClearState();
     // Introduce failure by calling begin again before checking fence
-    cmdBuffer.BeginCommandBuffer();
+    BeginCommandBuffer();
 
     msgFlags = m_errorMonitor->GetState(&msgString);
     ASSERT_TRUE(msgFlags & VK_DBG_REPORT_ERROR_BIT) << "Did not receive an err after calling BeginCommandBuffer on an active Command Buffer";
@@ -789,16 +797,13 @@ TEST_F(VkLayerTest, SubmitSignaledFence)
     ASSERT_NO_FATAL_FAILURE(InitViewport());
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
 
-    VkCommandBufferObj cmdBuffer(m_device);
-    cmdBuffer.AddRenderTarget(m_renderTargets[0]);
-
-    BeginCommandBuffer(cmdBuffer);
-    cmdBuffer.ClearAllBuffers(m_clear_color, m_depth_clear_color, m_stencil_clear_color, NULL);
-    EndCommandBuffer(cmdBuffer);
+    BeginCommandBuffer();
+    m_cmdBuffer->ClearAllBuffers(m_clear_color, m_depth_clear_color, m_stencil_clear_color, NULL);
+    EndCommandBuffer();
 
     testFence.init(*m_device, fenceInfo);
     m_errorMonitor->ClearState();
-    cmdBuffer.QueueCommandBuffer(testFence.handle());
+    QueueCommandBuffer(testFence.handle());
     msgFlags = m_errorMonitor->GetState(&msgString);
     ASSERT_TRUE(msgFlags & VK_DBG_REPORT_ERROR_BIT) << "Did not receive an err from using a fence in SIGNALED state in call to vkQueueSubmit";
     if (!strstr(msgString.c_str(),"submitted in SIGNALED state.  Fences must be reset before being submitted")) {
@@ -840,7 +845,7 @@ TEST_F(VkLayerTest, InvalidUsageBits)
     ASSERT_NO_FATAL_FAILURE(InitState());
     m_errorMonitor->ClearState();
     VkCommandBufferObj cmdBuffer(m_device);
-    BeginCommandBuffer(cmdBuffer);
+    BeginCommandBuffer();
 
     const VkExtent3D e3d = {
         .width = 128,
@@ -960,10 +965,9 @@ TEST_F(VkLayerTest, BindPipelineNoRenderPass)
 
     ASSERT_NO_FATAL_FAILURE(InitState());
     m_errorMonitor->ClearState();
-    VkCommandBufferObj cmdBuffer(m_device);
-    BeginCommandBuffer(cmdBuffer);
+    BeginCommandBuffer();
     VkPipeline badPipeline = (VkPipeline)0xbaadb1be;
-    vkCmdBindPipeline(cmdBuffer.GetBufferHandle(), VK_PIPELINE_BIND_POINT_GRAPHICS, badPipeline);
+    vkCmdBindPipeline(m_cmdBuffer->GetBufferHandle(), VK_PIPELINE_BIND_POINT_GRAPHICS, badPipeline);
     msgFlags = m_errorMonitor->GetState(&msgString);
     ASSERT_TRUE(msgFlags & VK_DBG_REPORT_ERROR_BIT) << "Did not receive error after binding pipeline to CmdBuffer w/o active RenderPass";
     if (!strstr(msgString.c_str(),"Incorrectly binding graphics pipeline ")) {
@@ -1014,7 +1018,7 @@ TEST_F(VkLayerTest, InvalidPipeline)
 //    ASSERT_NO_FATAL_FAILURE(InitState());
 //    m_errorMonitor->ClearState();
 //    VkCommandBufferObj cmdBuffer(m_device);
-//    BeginCommandBuffer(cmdBuffer);
+//    BeginCommandBuffer();
 //    VkPipeline badPipeline = (VkPipeline)0xbaadb1be;
 //    vkCmdBindPipeline(cmdBuffer.GetBufferHandle(), VK_PIPELINE_BIND_POINT_GRAPHICS, badPipeline);
 //    msgFlags = m_errorMonitor->GetState(&msgString);
@@ -1033,7 +1037,6 @@ TEST_F(VkLayerTest, DescriptorSetNotUpdated)
 
     ASSERT_NO_FATAL_FAILURE(InitState());
     m_errorMonitor->ClearState();
-    VkCommandBufferObj cmdBuffer(m_device);
     VkDescriptorTypeCount ds_type_count = {};
         ds_type_count.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
         ds_type_count.count = 1;
@@ -1120,10 +1123,10 @@ TEST_F(VkLayerTest, DescriptorSetNotUpdated)
     ASSERT_NO_FATAL_FAILURE(InitState());
     ASSERT_NO_FATAL_FAILURE(InitViewport());
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
-    cmdBuffer.AddRenderTarget(m_renderTargets[0]);
-    BeginCommandBuffer(cmdBuffer);
-    vkCmdBindPipeline(cmdBuffer.GetBufferHandle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
-    vkCmdBindDescriptorSets(cmdBuffer.GetBufferHandle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout, 0, 1, &descriptorSet, 0, NULL);
+
+    BeginCommandBuffer();
+    vkCmdBindPipeline(m_cmdBuffer->GetBufferHandle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
+    vkCmdBindDescriptorSets(m_cmdBuffer->GetBufferHandle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout, 0, 1, &descriptorSet, 0, NULL);
 
     msgFlags = m_errorMonitor->GetState(&msgString);
     ASSERT_TRUE(msgFlags & VK_DBG_REPORT_WARN_BIT) << "Did not warn after binding a DescriptorSet that was never updated.";
@@ -1139,7 +1142,7 @@ TEST_F(VkLayerTest, NoBeginCmdBuffer)
 
     ASSERT_NO_FATAL_FAILURE(InitState());
     m_errorMonitor->ClearState();
-    VkCommandBufferObj cmdBuffer(m_device);
+    VkCommandBufferObj cmdBuffer(m_device, m_cmdPool);
     // Call EndCommandBuffer() w/o calling BeginCommandBuffer()
     vkEndCommandBuffer(cmdBuffer.GetBufferHandle());
     msgFlags = m_errorMonitor->GetState(&msgString);
@@ -1158,7 +1161,6 @@ TEST_F(VkLayerTest, InvalidPipelineCreateState)
 
     ASSERT_NO_FATAL_FAILURE(InitState());
     m_errorMonitor->ClearState();
-    VkCommandBufferObj cmdBuffer(m_device);
     
     VkDescriptorTypeCount ds_type_count = {};
         ds_type_count.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
@@ -1251,12 +1253,10 @@ TEST_F(VkLayerTest, NullRenderPass)
     ASSERT_NO_FATAL_FAILURE(InitState());
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
     m_errorMonitor->ClearState();
-    VkCommandBufferObj cmdBuffer(m_device);
 
-    cmdBuffer.AddRenderTarget(m_renderTargets[0]);
-    BeginCommandBuffer(cmdBuffer);
+    BeginCommandBuffer();
     // Don't care about RenderPass handle b/c error should be flagged before that
-    vkCmdBeginRenderPass(cmdBuffer.GetBufferHandle(), NULL, VK_RENDER_PASS_CONTENTS_INLINE);
+    vkCmdBeginRenderPass(m_cmdBuffer->GetBufferHandle(), NULL, VK_RENDER_PASS_CONTENTS_INLINE);
 
     msgFlags = m_errorMonitor->GetState(&msgString);
     ASSERT_TRUE(msgFlags & VK_DBG_REPORT_ERROR_BIT) << "Did not receive error after binding NULL RenderPass.";
@@ -1274,10 +1274,8 @@ TEST_F(VkLayerTest, RenderPassWithinRenderPass)
     ASSERT_NO_FATAL_FAILURE(InitState());
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
     m_errorMonitor->ClearState();
-    VkCommandBufferObj cmdBuffer(m_device);
 
-    cmdBuffer.AddRenderTarget(m_renderTargets[0]);
-    BeginCommandBuffer(cmdBuffer);
+    BeginCommandBuffer();
     // Just create a dummy Renderpass that's non-NULL so we can get to the proper error
     VkRenderPassBeginInfo rp_begin = {};
         rp_begin.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
@@ -1285,7 +1283,7 @@ TEST_F(VkLayerTest, RenderPassWithinRenderPass)
         rp_begin.renderPass = (VkRenderPass)0xc001d00d;
         rp_begin.framebuffer = 0;
  
-    vkCmdBeginRenderPass(cmdBuffer.GetBufferHandle(), &rp_begin, VK_RENDER_PASS_CONTENTS_INLINE);
+    vkCmdBeginRenderPass(m_cmdBuffer->GetBufferHandle(), &rp_begin, VK_RENDER_PASS_CONTENTS_INLINE);
 
     msgFlags = m_errorMonitor->GetState(&msgString);
     ASSERT_TRUE(msgFlags & VK_DBG_REPORT_ERROR_BIT) << "Did not receive error after binding RenderPass w/i an active RenderPass.";
@@ -1311,7 +1309,6 @@ TEST_F(VkLayerTest, VtxBufferNoRenderPass)
 
     ASSERT_NO_FATAL_FAILURE(InitState());
     m_errorMonitor->ClearState();
-    VkCommandBufferObj cmdBuffer(m_device);
 
     VkDescriptorTypeCount ds_type_count = {};
         ds_type_count.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
@@ -1398,11 +1395,11 @@ TEST_F(VkLayerTest, VtxBufferNoRenderPass)
     err = vkCreateGraphicsPipelines(m_device->device(), pipelineCache, 1, &gp_ci, &pipeline);
     ASSERT_VK_SUCCESS(err);
 
-    err= cmdBuffer.BeginCommandBuffer();
+    BeginCommandBuffer();
     ASSERT_VK_SUCCESS(err);
-    vkCmdBindPipeline(cmdBuffer.GetBufferHandle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
+    vkCmdBindPipeline(m_cmdBuffer->GetBufferHandle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
     // Should error before calling to driver so don't care about actual data
-    vkCmdBindVertexBuffers(cmdBuffer.GetBufferHandle(), 0, 1, NULL, NULL);
+    vkCmdBindVertexBuffers(m_cmdBuffer->GetBufferHandle(), 0, 1, NULL, NULL);
 
     msgFlags = m_errorMonitor->GetState(&msgString);
     ASSERT_TRUE(msgFlags & VK_DBG_REPORT_ERROR_BIT) << "Did not receive error after vkCmdBindVertexBuffers() w/o active RenderPass.";
@@ -1771,7 +1768,6 @@ TEST_F(VkLayerTest, NumSamplesMismatch)
     ASSERT_NO_FATAL_FAILURE(InitState());
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
     m_errorMonitor->ClearState();
-    VkCommandBufferObj cmdBuffer(m_device);
     VkDescriptorTypeCount ds_type_count = {};
     ds_type_count.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
     ds_type_count.count = 1;
@@ -1863,9 +1859,8 @@ TEST_F(VkLayerTest, NumSamplesMismatch)
     err = vkCreateGraphicsPipelines(m_device->device(), pipelineCache, 1, &gp_ci, &pipeline);
     ASSERT_VK_SUCCESS(err);
 
-    cmdBuffer.AddRenderTarget(m_renderTargets[0]);
-    BeginCommandBuffer(cmdBuffer);
-    vkCmdBindPipeline(cmdBuffer.GetBufferHandle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
+    BeginCommandBuffer();
+    vkCmdBindPipeline(m_cmdBuffer->GetBufferHandle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
 
     msgFlags = m_errorMonitor->GetState(&msgString);
     ASSERT_TRUE(msgFlags & VK_DBG_REPORT_ERROR_BIT) << "Did not receive error after binding RenderPass w/ mismatched MSAA from PSO.";
@@ -1883,7 +1878,6 @@ TEST_F(VkLayerTest, PipelineNotBound)
     ASSERT_NO_FATAL_FAILURE(InitState());
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
     m_errorMonitor->ClearState();
-    VkCommandBufferObj cmdBuffer(m_device);
   
     VkDescriptorTypeCount ds_type_count = {};
         ds_type_count.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
@@ -1934,9 +1928,9 @@ TEST_F(VkLayerTest, PipelineNotBound)
     //err = vkCreateGraphicsPipeline(m_device->device(), &gp_ci, &pipeline);
     ASSERT_VK_SUCCESS(err);
 
-    cmdBuffer.AddRenderTarget(m_renderTargets[0]);
-    BeginCommandBuffer(cmdBuffer);
-    vkCmdBindPipeline(cmdBuffer.GetBufferHandle(), VK_PIPELINE_BIND_POINT_GRAPHICS, badPipeline);
+
+    BeginCommandBuffer();
+    vkCmdBindPipeline(m_cmdBuffer->GetBufferHandle(), VK_PIPELINE_BIND_POINT_GRAPHICS, badPipeline);
 
     msgFlags = m_errorMonitor->GetState(&msgString);
     ASSERT_TRUE(msgFlags & VK_DBG_REPORT_ERROR_BIT) << "Did not receive error after binding invalid pipeline to CmdBuffer";
@@ -1955,7 +1949,6 @@ TEST_F(VkLayerTest, ClearCmdNoDraw)
     ASSERT_NO_FATAL_FAILURE(InitState());
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
     m_errorMonitor->ClearState();
-    VkCommandBufferObj cmdBuffer(m_device);
 
     VkDescriptorTypeCount ds_type_count = {};
         ds_type_count.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
@@ -2078,8 +2071,8 @@ TEST_F(VkLayerTest, ClearCmdNoDraw)
     err = vkCreateGraphicsPipelines(m_device->device(), pipelineCache, 1, &gp_ci, &pipeline);
     ASSERT_VK_SUCCESS(err);
 
-    cmdBuffer.AddRenderTarget(m_renderTargets[0]);
-    BeginCommandBuffer(cmdBuffer);
+
+    BeginCommandBuffer();
 
     m_errorMonitor->ClearState();
     // Main thing we care about for this test is that the VkImage obj we're clearing matches Color Attachment of FB
@@ -2090,7 +2083,7 @@ TEST_F(VkLayerTest, ClearCmdNoDraw)
     cCV.f32[2] = 1.0;
     cCV.f32[3] = 1.0;
 
-    vkCmdClearColorAttachment(cmdBuffer.GetBufferHandle(), 0, (VkImageLayout)NULL, &cCV, 0, NULL);
+    vkCmdClearColorAttachment(m_cmdBuffer->GetBufferHandle(), 0, (VkImageLayout)NULL, &cCV, 0, NULL);
     msgFlags = m_errorMonitor->GetState(&msgString);
     ASSERT_TRUE(msgFlags & VK_DBG_REPORT_WARN_BIT) << "Did not receive error after issuing Clear Cmd on FB color attachment prior to Draw Cmd.";
     if (!strstr(msgString.c_str(),"vkCmdClearColorAttachment() issued on CB object ")) {
@@ -2108,7 +2101,6 @@ TEST_F(VkLayerTest, VtxBufferBadIndex)
     ASSERT_NO_FATAL_FAILURE(InitState());
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
     m_errorMonitor->ClearState();
-    VkCommandBufferObj cmdBuffer(m_device);
 
     VkDescriptorTypeCount ds_type_count = {};
         ds_type_count.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
@@ -2199,11 +2191,11 @@ TEST_F(VkLayerTest, VtxBufferBadIndex)
     err = vkCreateGraphicsPipelines(m_device->device(), pipeline_cache, 1, &gp_ci, &pipeline);
     ASSERT_VK_SUCCESS(err);
 
-    cmdBuffer.AddRenderTarget(m_renderTargets[0]);
-    BeginCommandBuffer(cmdBuffer);
-    vkCmdBindPipeline(cmdBuffer.GetBufferHandle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
+
+    BeginCommandBuffer();
+    vkCmdBindPipeline(m_cmdBuffer->GetBufferHandle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
     // Should error before calling to driver so don't care about actual data
-    vkCmdBindVertexBuffers(cmdBuffer.GetBufferHandle(), 0, 1, NULL, NULL);
+    vkCmdBindVertexBuffers(m_cmdBuffer->GetBufferHandle(), 0, 1, NULL, NULL);
 
     msgFlags = m_errorMonitor->GetState(&msgString);
     ASSERT_TRUE(msgFlags & VK_DBG_REPORT_ERROR_BIT) << "Did not receive error after binding Vtx Buffer w/o VBO attached to PSO.";
@@ -2244,10 +2236,8 @@ TEST_F(VkLayerTest, ThreadCmdBufferCollision)
     ASSERT_NO_FATAL_FAILURE(InitViewport());
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
 
-    VkCommandBufferObj cmdBuffer(m_device);
-
     m_errorMonitor->ClearState();
-    BeginCommandBuffer(cmdBuffer);
+    BeginCommandBuffer();
 
     VkEventCreateInfo event_info;
     VkEvent event;
@@ -2263,7 +2253,7 @@ TEST_F(VkLayerTest, ThreadCmdBufferCollision)
     ASSERT_VK_SUCCESS(err);
 
     struct thread_data_struct data;
-    data.cmdBuffer = cmdBuffer.handle();
+    data.cmdBuffer = m_cmdBuffer->handle();
     data.event = event;
     data.bailout = false;
     m_errorMonitor->SetBailout(&data.bailout);
@@ -2272,7 +2262,7 @@ TEST_F(VkLayerTest, ThreadCmdBufferCollision)
     // Add many entries to command buffer from this thread at the same time.
     AddToCommandBuffer(&data);
     test_platform_thread_join(thread, NULL);
-    EndCommandBuffer(cmdBuffer);
+    EndCommandBuffer();
 
     msgFlags = m_errorMonitor->GetState(&msgString);
     ASSERT_TRUE(msgFlags & VK_DBG_REPORT_ERROR_BIT) << "Did not receive an err from using one VkCommandBufferObj in two threads";
@@ -2319,10 +2309,9 @@ TEST_F(VkLayerTest, CreatePipelineVertexOutputNotConsumed)
     pipe.AddShader(&vs);
     pipe.AddShader(&fs);
 
-    VkCommandBufferObj dummyCmd(m_device);
     VkDescriptorSetObj descriptorSet(m_device);
     descriptorSet.AppendDummy();
-    descriptorSet.CreateVKDescriptorSet(&dummyCmd);
+    descriptorSet.CreateVKDescriptorSet(m_cmdBuffer);
 
     m_errorMonitor->ClearState();
     pipe.CreateVKPipeline(descriptorSet, renderPass());
@@ -2369,10 +2358,9 @@ TEST_F(VkLayerTest, CreatePipelineFragmentInputNotProvided)
     pipe.AddShader(&vs);
     pipe.AddShader(&fs);
 
-    VkCommandBufferObj dummyCmd(m_device);
     VkDescriptorSetObj descriptorSet(m_device);
     descriptorSet.AppendDummy();
-    descriptorSet.CreateVKDescriptorSet(&dummyCmd);
+    descriptorSet.CreateVKDescriptorSet(m_cmdBuffer);
 
     m_errorMonitor->ClearState();
     pipe.CreateVKPipeline(descriptorSet, renderPass());
@@ -2421,10 +2409,9 @@ TEST_F(VkLayerTest, CreatePipelineVsFsTypeMismatch)
     pipe.AddShader(&vs);
     pipe.AddShader(&fs);
 
-    VkCommandBufferObj dummyCmd(m_device);
     VkDescriptorSetObj descriptorSet(m_device);
     descriptorSet.AppendDummy();
-    descriptorSet.CreateVKDescriptorSet(&dummyCmd);
+    descriptorSet.CreateVKDescriptorSet(m_cmdBuffer);
 
     m_errorMonitor->ClearState();
     pipe.CreateVKPipeline(descriptorSet, renderPass());
@@ -2480,10 +2467,9 @@ TEST_F(VkLayerTest, CreatePipelineAttribNotConsumed)
     pipe.AddVertexInputBindings(&input_binding, 1);
     pipe.AddVertexInputAttribs(&input_attrib, 1);
 
-    VkCommandBufferObj dummyCmd(m_device);
     VkDescriptorSetObj descriptorSet(m_device);
     descriptorSet.AppendDummy();
-    descriptorSet.CreateVKDescriptorSet(&dummyCmd);
+    descriptorSet.CreateVKDescriptorSet(m_cmdBuffer);
 
     m_errorMonitor->ClearState();
     pipe.CreateVKPipeline(descriptorSet, renderPass());
@@ -2530,10 +2516,9 @@ TEST_F(VkLayerTest, CreatePipelineAttribNotProvided)
     pipe.AddShader(&vs);
     pipe.AddShader(&fs);
 
-    VkCommandBufferObj dummyCmd(m_device);
     VkDescriptorSetObj descriptorSet(m_device);
     descriptorSet.AppendDummy();
-    descriptorSet.CreateVKDescriptorSet(&dummyCmd);
+    descriptorSet.CreateVKDescriptorSet(m_cmdBuffer);
 
     m_errorMonitor->ClearState();
     pipe.CreateVKPipeline(descriptorSet, renderPass());
@@ -2590,10 +2575,9 @@ TEST_F(VkLayerTest, CreatePipelineAttribTypeMismatch)
     pipe.AddVertexInputBindings(&input_binding, 1);
     pipe.AddVertexInputAttribs(&input_attrib, 1);
 
-    VkCommandBufferObj dummyCmd(m_device);
     VkDescriptorSetObj descriptorSet(m_device);
     descriptorSet.AppendDummy();
-    descriptorSet.CreateVKDescriptorSet(&dummyCmd);
+    descriptorSet.CreateVKDescriptorSet(m_cmdBuffer);
 
     m_errorMonitor->ClearState();
     pipe.CreateVKPipeline(descriptorSet, renderPass());
@@ -2651,10 +2635,9 @@ TEST_F(VkLayerTest, CreatePipelineAttribBindingConflict)
     pipe.AddVertexInputBindings(input_bindings, 2);
     pipe.AddVertexInputAttribs(&input_attrib, 1);
 
-    VkCommandBufferObj dummyCmd(m_device);
     VkDescriptorSetObj descriptorSet(m_device);
     descriptorSet.AppendDummy();
-    descriptorSet.CreateVKDescriptorSet(&dummyCmd);
+    descriptorSet.CreateVKDescriptorSet(m_cmdBuffer);
 
     m_errorMonitor->ClearState();
     pipe.CreateVKPipeline(descriptorSet, renderPass());
@@ -2704,10 +2687,9 @@ TEST_F(VkLayerTest, CreatePipelineFragmentOutputNotWritten)
     pipe.AddColorAttachment();
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
 
-    VkCommandBufferObj dummyCmd(m_device);
     VkDescriptorSetObj descriptorSet(m_device);
     descriptorSet.AppendDummy();
-    descriptorSet.CreateVKDescriptorSet(&dummyCmd);
+    descriptorSet.CreateVKDescriptorSet(m_cmdBuffer);
 
     m_errorMonitor->ClearState();
     pipe.CreateVKPipeline(descriptorSet, renderPass());
@@ -2759,10 +2741,9 @@ TEST_F(VkLayerTest, CreatePipelineFragmentOutputNotConsumed)
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
     /* FS writes CB 1, but we don't configure it */
 
-    VkCommandBufferObj dummyCmd(m_device);
     VkDescriptorSetObj descriptorSet(m_device);
     descriptorSet.AppendDummy();
-    descriptorSet.CreateVKDescriptorSet(&dummyCmd);
+    descriptorSet.CreateVKDescriptorSet(m_cmdBuffer);
 
     m_errorMonitor->ClearState();
     pipe.CreateVKPipeline(descriptorSet, renderPass());
@@ -2811,10 +2792,9 @@ TEST_F(VkLayerTest, CreatePipelineFragmentOutputTypeMismatch)
     pipe.AddColorAttachment();
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
 
-    VkCommandBufferObj dummyCmd(m_device);
     VkDescriptorSetObj descriptorSet(m_device);
     descriptorSet.AppendDummy();
-    descriptorSet.CreateVKDescriptorSet(&dummyCmd);
+    descriptorSet.CreateVKDescriptorSet(m_cmdBuffer);
 
     m_errorMonitor->ClearState();
     pipe.CreateVKPipeline(descriptorSet, renderPass());
@@ -2867,10 +2847,9 @@ TEST_F(VkLayerTest, CreatePipelineNonSpirvShader)
     pipe.AddColorAttachment();
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
 
-    VkCommandBufferObj dummyCmd(m_device);
     VkDescriptorSetObj descriptorSet(m_device);
     descriptorSet.AppendDummy();
-    descriptorSet.CreateVKDescriptorSet(&dummyCmd);
+    descriptorSet.CreateVKDescriptorSet(m_cmdBuffer);
 
     VkResult res = pipe.CreateVKPipeline(descriptorSet, renderPass());
     /* pipeline creation should have succeeded */
