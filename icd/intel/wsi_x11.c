@@ -85,6 +85,7 @@ struct intel_x11_swap_chain {
     intel_x11_swap_chain_image_state *image_state;
     uint32_t *present_queue;
     uint32_t present_queue_length;
+    uint32_t present_serial;
 
     struct {
         uint32_t serial;
@@ -976,9 +977,6 @@ ICD_EXPORT VkResult VKAPI vkAcquireNextImageWSI(
     struct intel_x11_swap_chain *sc = x11_swap_chain(swapChain);
     VkResult ret = VK_SUCCESS;
 
-// TODO: IMPLEMENT SUPPORT FOR "timeout".  MEAN TIME, ASSUME WE'LL ALWAYS HAVE
-// AN IMAGE TO RETURN (OR RETURN IMAGE 0).
-
     // Find an unused image to return:
     for (int i = 0; i < sc->persistent_image_count; i++) {
         if (sc->image_state[i] == INTEL_SC_STATE_UNUSED) {
@@ -988,11 +986,23 @@ ICD_EXPORT VkResult VKAPI vkAcquireNextImageWSI(
         }
     }
 
-// NOTE: Should never get here, but in case we do, do something:
-    assert(0);
-    *pImageIndex = 0;
+    // If no image is ready, wait for a present to finish
+    ret = x11_swap_chain_wait(sc, sc->present_serial, timeout);
+    if (ret != VK_SUCCESS) {
+        return ret;
+    }
 
-    return ret;
+    // Find an unused image to return:
+    for (int i = 0; i < sc->persistent_image_count; i++) {
+        if (sc->image_state[i] == INTEL_SC_STATE_UNUSED) {
+            sc->image_state[i] = INTEL_SC_STATE_APP_OWNED;
+            *pImageIndex = i;
+            return ret;
+        }
+    }
+    // NOTE: Should never get here, but in case we do, do something:
+    assert(0);
+    return VK_ERROR_UNKNOWN;
 }
 
 
@@ -1027,6 +1037,7 @@ ICD_EXPORT VkResult VKAPI vkQueuePresentWSI(
 
         data->swap_chain = sc;
         data->serial = sc->local.serial;
+        sc->present_serial = sc->local.serial;
         intel_fence_set_seqno(queue->fence, img->obj.mem->bo);
     }
 
