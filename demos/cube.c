@@ -500,8 +500,7 @@ static void demo_draw_build_cmd(struct demo *demo, VkCmdBuffer cmd_buf)
     const VkCmdBufferBeginInfo cmd_buf_info = {
         .sType = VK_STRUCTURE_TYPE_CMD_BUFFER_BEGIN_INFO,
         .pNext = NULL,
-        .flags = VK_CMD_BUFFER_OPTIMIZE_SMALL_BATCH_BIT |
-            VK_CMD_BUFFER_OPTIMIZE_ONE_TIME_SUBMIT_BIT,
+        .flags = VK_CMD_BUFFER_OPTIMIZE_SMALL_BATCH_BIT,
     };
     const VkClearValue clear_values[2] = {
         [0] = { .color.f32 = { 0.2f, 0.2f, 0.2f, 0.2f } },
