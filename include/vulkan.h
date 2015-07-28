@@ -1400,7 +1400,8 @@ typedef struct {
 } VkSparseImageMemoryRequirements;
 
 typedef struct {
-    VkDeviceSize                                offset;
+    VkDeviceSize                                rangeOffset;
+    VkDeviceSize                                rangeSize;
     VkDeviceSize                                memOffset;
     VkDeviceMemory                              mem;
     VkSparseMemoryBindFlags                     flags;
