@@ -76,7 +76,6 @@ debug_report_data *mdd(void* object)
     fprintf(stderr, "MDD: map: %p, object: %p, key: %p, data: %p\n", &layer_data_map, object, key, data);
 #endif
     assert(data != NULL);
-
     return data->report_data;
 }
 
@@ -182,13 +181,23 @@ VK_LAYER_EXPORT VkResult VKAPI vkGetPhysicalDeviceLayerProperties(
                                    pCount, pProperties);
 }
 
-// Version: 0.136.0
+// Version: 0.138.2
 
 static
 std::string EnumeratorString(VkResult const& enumerator)
 {
     switch(enumerator)
     {
+        case VK_RESULT_MAX_ENUM:
+        {
+            return "VK_RESULT_MAX_ENUM";
+            break;
+        }
+        case VK_ERROR_INVALID_LAYER:
+        {
+            return "VK_ERROR_INVALID_LAYER";
+            break;
+        }
         case VK_ERROR_MEMORY_NOT_BOUND:
         {
             return "VK_ERROR_MEMORY_NOT_BOUND";
@@ -237,16 +246,6 @@ std::string EnumeratorString(VkResult const& enumerator)
         case VK_ERROR_INVALID_FORMAT:
         {
             return "VK_ERROR_INVALID_FORMAT";
-            break;
-        }
-        case VK_ERROR_INCOMPLETE_COMMAND_BUFFER:
-        {
-            return "VK_ERROR_INCOMPLETE_COMMAND_BUFFER";
-            break;
-        }
-        case VK_ERROR_INVALID_ALIGNMENT:
-        {
-            return "VK_ERROR_INVALID_ALIGNMENT";
             break;
         }
         case VK_ERROR_UNAVAILABLE:
@@ -379,9 +378,14 @@ std::string EnumeratorString(VkResult const& enumerator)
             return "VK_ERROR_INVALID_MEMORY_SIZE";
             break;
         }
-        case VK_ERROR_INVALID_LAYER:
+        case VK_ERROR_INCOMPLETE_COMMAND_BUFFER:
         {
-            return "VK_ERROR_INVALID_LAYER";
+            return "VK_ERROR_INCOMPLETE_COMMAND_BUFFER";
+            break;
+        }
+        case VK_ERROR_INVALID_ALIGNMENT:
+        {
+            return "VK_ERROR_INVALID_ALIGNMENT";
             break;
         }
         default:
@@ -390,6 +394,176 @@ std::string EnumeratorString(VkResult const& enumerator)
             break;
         }
     }
+}
+
+static
+bool ValidateEnumerator(VkFormatFeatureFlagBits const& enumerator)
+{
+    VkFormatFeatureFlagBits allFlags = (VkFormatFeatureFlagBits)(VK_FORMAT_FEATURE_CONVERSION_BIT |
+        VK_FORMAT_FEATURE_STORAGE_IMAGE_ATOMIC_BIT |
+        VK_FORMAT_FEATURE_STORAGE_IMAGE_BIT |
+        VK_FORMAT_FEATURE_UNIFORM_TEXEL_BUFFER_BIT |
+        VK_FORMAT_FEATURE_STORAGE_TEXEL_BUFFER_ATOMIC_BIT |
+        VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT |
+        VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BLEND_BIT |
+        VK_FORMAT_FEATURE_VERTEX_BUFFER_BIT |
+        VK_FORMAT_FEATURE_STORAGE_TEXEL_BUFFER_BIT |
+        VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT |
+        VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT);
+    if(enumerator & (~allFlags))
+    {
+        return false;
+    }
+
+    return true;
+}
+
+static
+std::string EnumeratorString(VkFormatFeatureFlagBits const& enumerator)
+{
+    if(!ValidateEnumerator(enumerator))
+    {
+        return "unrecognized enumerator";
+    }
+
+    std::vector<std::string> strings;
+    if(enumerator & VK_FORMAT_FEATURE_CONVERSION_BIT)
+    {
+        strings.push_back("VK_FORMAT_FEATURE_CONVERSION_BIT");
+    }
+    if(enumerator & VK_FORMAT_FEATURE_STORAGE_IMAGE_ATOMIC_BIT)
+    {
+        strings.push_back("VK_FORMAT_FEATURE_STORAGE_IMAGE_ATOMIC_BIT");
+    }
+    if(enumerator & VK_FORMAT_FEATURE_STORAGE_IMAGE_BIT)
+    {
+        strings.push_back("VK_FORMAT_FEATURE_STORAGE_IMAGE_BIT");
+    }
+    if(enumerator & VK_FORMAT_FEATURE_UNIFORM_TEXEL_BUFFER_BIT)
+    {
+        strings.push_back("VK_FORMAT_FEATURE_UNIFORM_TEXEL_BUFFER_BIT");
+    }
+    if(enumerator & VK_FORMAT_FEATURE_STORAGE_TEXEL_BUFFER_ATOMIC_BIT)
+    {
+        strings.push_back("VK_FORMAT_FEATURE_STORAGE_TEXEL_BUFFER_ATOMIC_BIT");
+    }
+    if(enumerator & VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT)
+    {
+        strings.push_back("VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT");
+    }
+    if(enumerator & VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BLEND_BIT)
+    {
+        strings.push_back("VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BLEND_BIT");
+    }
+    if(enumerator & VK_FORMAT_FEATURE_VERTEX_BUFFER_BIT)
+    {
+        strings.push_back("VK_FORMAT_FEATURE_VERTEX_BUFFER_BIT");
+    }
+    if(enumerator & VK_FORMAT_FEATURE_STORAGE_TEXEL_BUFFER_BIT)
+    {
+        strings.push_back("VK_FORMAT_FEATURE_STORAGE_TEXEL_BUFFER_BIT");
+    }
+    if(enumerator & VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT)
+    {
+        strings.push_back("VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT");
+    }
+    if(enumerator & VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT)
+    {
+        strings.push_back("VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT");
+    }
+
+    std::string enumeratorString;
+    for(auto const& string : strings)
+    {
+        enumeratorString += string;
+
+        if(string != strings.back())
+        {
+            enumeratorString += '|';
+        }
+    }
+
+    return enumeratorString;
+}
+
+static
+bool ValidateEnumerator(VkImageUsageFlagBits const& enumerator)
+{
+    VkImageUsageFlagBits allFlags = (VkImageUsageFlagBits)(VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT |
+        VK_IMAGE_USAGE_DEPTH_STENCIL_BIT |
+        VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT |
+        VK_IMAGE_USAGE_STORAGE_BIT |
+        VK_IMAGE_USAGE_SAMPLED_BIT |
+        VK_IMAGE_USAGE_TRANSFER_DESTINATION_BIT |
+        VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT |
+        VK_IMAGE_USAGE_TRANSFER_SOURCE_BIT |
+        VK_IMAGE_USAGE_GENERAL);
+    if(enumerator & (~allFlags))
+    {
+        return false;
+    }
+
+    return true;
+}
+
+static
+std::string EnumeratorString(VkImageUsageFlagBits const& enumerator)
+{
+    if(!ValidateEnumerator(enumerator))
+    {
+        return "unrecognized enumerator";
+    }
+
+    std::vector<std::string> strings;
+    if(enumerator & VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT)
+    {
+        strings.push_back("VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT");
+    }
+    if(enumerator & VK_IMAGE_USAGE_DEPTH_STENCIL_BIT)
+    {
+        strings.push_back("VK_IMAGE_USAGE_DEPTH_STENCIL_BIT");
+    }
+    if(enumerator & VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT)
+    {
+        strings.push_back("VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT");
+    }
+    if(enumerator & VK_IMAGE_USAGE_STORAGE_BIT)
+    {
+        strings.push_back("VK_IMAGE_USAGE_STORAGE_BIT");
+    }
+    if(enumerator & VK_IMAGE_USAGE_SAMPLED_BIT)
+    {
+        strings.push_back("VK_IMAGE_USAGE_SAMPLED_BIT");
+    }
+    if(enumerator & VK_IMAGE_USAGE_TRANSFER_DESTINATION_BIT)
+    {
+        strings.push_back("VK_IMAGE_USAGE_TRANSFER_DESTINATION_BIT");
+    }
+    if(enumerator & VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT)
+    {
+        strings.push_back("VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT");
+    }
+    if(enumerator & VK_IMAGE_USAGE_TRANSFER_SOURCE_BIT)
+    {
+        strings.push_back("VK_IMAGE_USAGE_TRANSFER_SOURCE_BIT");
+    }
+    if(enumerator & VK_IMAGE_USAGE_GENERAL)
+    {
+        strings.push_back("VK_IMAGE_USAGE_GENERAL");
+    }
+
+    std::string enumeratorString;
+    for(auto const& string : strings)
+    {
+        enumeratorString += string;
+
+        if(string != strings.back())
+        {
+            enumeratorString += '|';
+        }
+    }
+
+    return enumeratorString;
 }
 
 static
@@ -455,7 +629,8 @@ std::string EnumeratorString(VkQueueFlagBits const& enumerator)
 static
 bool ValidateEnumerator(VkMemoryPropertyFlagBits const& enumerator)
 {
-    VkMemoryPropertyFlagBits allFlags = (VkMemoryPropertyFlagBits)(VK_MEMORY_PROPERTY_HOST_WRITE_COMBINED_BIT |
+    VkMemoryPropertyFlagBits allFlags = (VkMemoryPropertyFlagBits)(VK_MEMORY_PROPERTY_LAZILY_ALLOCATED_BIT |
+        VK_MEMORY_PROPERTY_HOST_WRITE_COMBINED_BIT |
         VK_MEMORY_PROPERTY_HOST_NON_COHERENT_BIT |
         VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
         VK_MEMORY_PROPERTY_HOST_UNCACHED_BIT |
@@ -477,6 +652,10 @@ std::string EnumeratorString(VkMemoryPropertyFlagBits const& enumerator)
     }
 
     std::vector<std::string> strings;
+    if(enumerator & VK_MEMORY_PROPERTY_LAZILY_ALLOCATED_BIT)
+    {
+        strings.push_back("VK_MEMORY_PROPERTY_LAZILY_ALLOCATED_BIT");
+    }
     if(enumerator & VK_MEMORY_PROPERTY_HOST_WRITE_COMBINED_BIT)
     {
         strings.push_back("VK_MEMORY_PROPERTY_HOST_WRITE_COMBINED_BIT");
@@ -513,13 +692,9 @@ std::string EnumeratorString(VkMemoryPropertyFlagBits const& enumerator)
 }
 
 static
-bool ValidateEnumerator(VkMemoryOutputFlagBits const& enumerator)
+bool ValidateEnumerator(VkMemoryHeapFlagBits const& enumerator)
 {
-    VkMemoryOutputFlagBits allFlags = (VkMemoryOutputFlagBits)(VK_MEMORY_OUTPUT_DEPTH_STENCIL_ATTACHMENT_BIT |
-        VK_MEMORY_OUTPUT_TRANSFER_BIT |
-        VK_MEMORY_OUTPUT_COLOR_ATTACHMENT_BIT |
-        VK_MEMORY_OUTPUT_SHADER_WRITE_BIT |
-        VK_MEMORY_OUTPUT_HOST_WRITE_BIT);
+    VkMemoryHeapFlagBits allFlags = (VkMemoryHeapFlagBits)(VK_MEMORY_HEAP_HOST_LOCAL);
     if(enumerator & (~allFlags))
     {
         return false;
@@ -529,7 +704,7 @@ bool ValidateEnumerator(VkMemoryOutputFlagBits const& enumerator)
 }
 
 static
-std::string EnumeratorString(VkMemoryOutputFlagBits const& enumerator)
+std::string EnumeratorString(VkMemoryHeapFlagBits const& enumerator)
 {
     if(!ValidateEnumerator(enumerator))
     {
@@ -537,25 +712,9 @@ std::string EnumeratorString(VkMemoryOutputFlagBits const& enumerator)
     }
 
     std::vector<std::string> strings;
-    if(enumerator & VK_MEMORY_OUTPUT_DEPTH_STENCIL_ATTACHMENT_BIT)
+    if(enumerator & VK_MEMORY_HEAP_HOST_LOCAL)
     {
-        strings.push_back("VK_MEMORY_OUTPUT_DEPTH_STENCIL_ATTACHMENT_BIT");
-    }
-    if(enumerator & VK_MEMORY_OUTPUT_TRANSFER_BIT)
-    {
-        strings.push_back("VK_MEMORY_OUTPUT_TRANSFER_BIT");
-    }
-    if(enumerator & VK_MEMORY_OUTPUT_COLOR_ATTACHMENT_BIT)
-    {
-        strings.push_back("VK_MEMORY_OUTPUT_COLOR_ATTACHMENT_BIT");
-    }
-    if(enumerator & VK_MEMORY_OUTPUT_SHADER_WRITE_BIT)
-    {
-        strings.push_back("VK_MEMORY_OUTPUT_SHADER_WRITE_BIT");
-    }
-    if(enumerator & VK_MEMORY_OUTPUT_HOST_WRITE_BIT)
-    {
-        strings.push_back("VK_MEMORY_OUTPUT_HOST_WRITE_BIT");
+        strings.push_back("VK_MEMORY_HEAP_HOST_LOCAL");
     }
 
     std::string enumeratorString;
@@ -573,17 +732,9 @@ std::string EnumeratorString(VkMemoryOutputFlagBits const& enumerator)
 }
 
 static
-bool ValidateEnumerator(VkMemoryInputFlagBits const& enumerator)
+bool ValidateEnumerator(VkDeviceCreateFlagBits const& enumerator)
 {
-    VkMemoryInputFlagBits allFlags = (VkMemoryInputFlagBits)(VK_MEMORY_INPUT_TRANSFER_BIT |
-        VK_MEMORY_INPUT_DEPTH_STENCIL_ATTACHMENT_BIT |
-        VK_MEMORY_INPUT_COLOR_ATTACHMENT_BIT |
-        VK_MEMORY_INPUT_SHADER_READ_BIT |
-        VK_MEMORY_INPUT_UNIFORM_READ_BIT |
-        VK_MEMORY_INPUT_INDEX_FETCH_BIT |
-        VK_MEMORY_INPUT_INDIRECT_COMMAND_BIT |
-        VK_MEMORY_INPUT_VERTEX_ATTRIBUTE_FETCH_BIT |
-        VK_MEMORY_INPUT_HOST_READ_BIT);
+    VkDeviceCreateFlagBits allFlags = (VkDeviceCreateFlagBits)(VK_DEVICE_CREATE_VALIDATION_BIT);
     if(enumerator & (~allFlags))
     {
         return false;
@@ -593,7 +744,7 @@ bool ValidateEnumerator(VkMemoryInputFlagBits const& enumerator)
 }
 
 static
-std::string EnumeratorString(VkMemoryInputFlagBits const& enumerator)
+std::string EnumeratorString(VkDeviceCreateFlagBits const& enumerator)
 {
     if(!ValidateEnumerator(enumerator))
     {
@@ -601,41 +752,289 @@ std::string EnumeratorString(VkMemoryInputFlagBits const& enumerator)
     }
 
     std::vector<std::string> strings;
-    if(enumerator & VK_MEMORY_INPUT_TRANSFER_BIT)
+    if(enumerator & VK_DEVICE_CREATE_VALIDATION_BIT)
     {
-        strings.push_back("VK_MEMORY_INPUT_TRANSFER_BIT");
+        strings.push_back("VK_DEVICE_CREATE_VALIDATION_BIT");
     }
-    if(enumerator & VK_MEMORY_INPUT_DEPTH_STENCIL_ATTACHMENT_BIT)
+
+    std::string enumeratorString;
+    for(auto const& string : strings)
     {
-        strings.push_back("VK_MEMORY_INPUT_DEPTH_STENCIL_ATTACHMENT_BIT");
+        enumeratorString += string;
+
+        if(string != strings.back())
+        {
+            enumeratorString += '|';
+        }
     }
-    if(enumerator & VK_MEMORY_INPUT_COLOR_ATTACHMENT_BIT)
+
+    return enumeratorString;
+}
+
+static
+bool ValidateEnumerator(VkSparseImageFormatFlagBits const& enumerator)
+{
+    VkSparseImageFormatFlagBits allFlags = (VkSparseImageFormatFlagBits)(VK_SPARSE_IMAGE_FMT_NONSTD_BLOCK_SIZE_BIT |
+        VK_SPARSE_IMAGE_FMT_ALIGNED_MIP_SIZE_BIT |
+        VK_SPARSE_IMAGE_FMT_SINGLE_MIPTAIL_BIT);
+    if(enumerator & (~allFlags))
     {
-        strings.push_back("VK_MEMORY_INPUT_COLOR_ATTACHMENT_BIT");
+        return false;
     }
-    if(enumerator & VK_MEMORY_INPUT_SHADER_READ_BIT)
+
+    return true;
+}
+
+static
+std::string EnumeratorString(VkSparseImageFormatFlagBits const& enumerator)
+{
+    if(!ValidateEnumerator(enumerator))
     {
-        strings.push_back("VK_MEMORY_INPUT_SHADER_READ_BIT");
+        return "unrecognized enumerator";
     }
-    if(enumerator & VK_MEMORY_INPUT_UNIFORM_READ_BIT)
+
+    std::vector<std::string> strings;
+    if(enumerator & VK_SPARSE_IMAGE_FMT_NONSTD_BLOCK_SIZE_BIT)
     {
-        strings.push_back("VK_MEMORY_INPUT_UNIFORM_READ_BIT");
+        strings.push_back("VK_SPARSE_IMAGE_FMT_NONSTD_BLOCK_SIZE_BIT");
     }
-    if(enumerator & VK_MEMORY_INPUT_INDEX_FETCH_BIT)
+    if(enumerator & VK_SPARSE_IMAGE_FMT_ALIGNED_MIP_SIZE_BIT)
     {
-        strings.push_back("VK_MEMORY_INPUT_INDEX_FETCH_BIT");
+        strings.push_back("VK_SPARSE_IMAGE_FMT_ALIGNED_MIP_SIZE_BIT");
     }
-    if(enumerator & VK_MEMORY_INPUT_INDIRECT_COMMAND_BIT)
+    if(enumerator & VK_SPARSE_IMAGE_FMT_SINGLE_MIPTAIL_BIT)
     {
-        strings.push_back("VK_MEMORY_INPUT_INDIRECT_COMMAND_BIT");
+        strings.push_back("VK_SPARSE_IMAGE_FMT_SINGLE_MIPTAIL_BIT");
     }
-    if(enumerator & VK_MEMORY_INPUT_VERTEX_ATTRIBUTE_FETCH_BIT)
+
+    std::string enumeratorString;
+    for(auto const& string : strings)
     {
-        strings.push_back("VK_MEMORY_INPUT_VERTEX_ATTRIBUTE_FETCH_BIT");
+        enumeratorString += string;
+
+        if(string != strings.back())
+        {
+            enumeratorString += '|';
+        }
     }
-    if(enumerator & VK_MEMORY_INPUT_HOST_READ_BIT)
+
+    return enumeratorString;
+}
+
+static
+bool ValidateEnumerator(VkSparseMemoryBindFlagBits const& enumerator)
+{
+    VkSparseMemoryBindFlagBits allFlags = (VkSparseMemoryBindFlagBits)(VK_SPARSE_MEMORY_BIND_REPLICATE_64KIB_BLOCK_BIT);
+    if(enumerator & (~allFlags))
     {
-        strings.push_back("VK_MEMORY_INPUT_HOST_READ_BIT");
+        return false;
+    }
+
+    return true;
+}
+
+static
+std::string EnumeratorString(VkSparseMemoryBindFlagBits const& enumerator)
+{
+    if(!ValidateEnumerator(enumerator))
+    {
+        return "unrecognized enumerator";
+    }
+
+    std::vector<std::string> strings;
+    if(enumerator & VK_SPARSE_MEMORY_BIND_REPLICATE_64KIB_BLOCK_BIT)
+    {
+        strings.push_back("VK_SPARSE_MEMORY_BIND_REPLICATE_64KIB_BLOCK_BIT");
+    }
+
+    std::string enumeratorString;
+    for(auto const& string : strings)
+    {
+        enumeratorString += string;
+
+        if(string != strings.back())
+        {
+            enumeratorString += '|';
+        }
+    }
+
+    return enumeratorString;
+}
+
+static
+bool ValidateEnumerator(VkFenceCreateFlagBits const& enumerator)
+{
+    VkFenceCreateFlagBits allFlags = (VkFenceCreateFlagBits)(VK_FENCE_CREATE_SIGNALED_BIT);
+    if(enumerator & (~allFlags))
+    {
+        return false;
+    }
+
+    return true;
+}
+
+static
+std::string EnumeratorString(VkFenceCreateFlagBits const& enumerator)
+{
+    if(!ValidateEnumerator(enumerator))
+    {
+        return "unrecognized enumerator";
+    }
+
+    std::vector<std::string> strings;
+    if(enumerator & VK_FENCE_CREATE_SIGNALED_BIT)
+    {
+        strings.push_back("VK_FENCE_CREATE_SIGNALED_BIT");
+    }
+
+    std::string enumeratorString;
+    for(auto const& string : strings)
+    {
+        enumeratorString += string;
+
+        if(string != strings.back())
+        {
+            enumeratorString += '|';
+        }
+    }
+
+    return enumeratorString;
+}
+
+static
+bool ValidateEnumerator(VkQueryPipelineStatisticFlagBits const& enumerator)
+{
+    VkQueryPipelineStatisticFlagBits allFlags = (VkQueryPipelineStatisticFlagBits)(VK_QUERY_PIPELINE_STATISTIC_CS_INVOCATIONS_BIT |
+        VK_QUERY_PIPELINE_STATISTIC_IA_VERTICES_BIT |
+        VK_QUERY_PIPELINE_STATISTIC_IA_PRIMITIVES_BIT |
+        VK_QUERY_PIPELINE_STATISTIC_C_INVOCATIONS_BIT |
+        VK_QUERY_PIPELINE_STATISTIC_VS_INVOCATIONS_BIT |
+        VK_QUERY_PIPELINE_STATISTIC_GS_PRIMITIVES_BIT |
+        VK_QUERY_PIPELINE_STATISTIC_FS_INVOCATIONS_BIT |
+        VK_QUERY_PIPELINE_STATISTIC_C_PRIMITIVES_BIT |
+        VK_QUERY_PIPELINE_STATISTIC_TCS_PATCHES_BIT |
+        VK_QUERY_PIPELINE_STATISTIC_GS_INVOCATIONS_BIT |
+        VK_QUERY_PIPELINE_STATISTIC_TES_INVOCATIONS_BIT);
+    if(enumerator & (~allFlags))
+    {
+        return false;
+    }
+
+    return true;
+}
+
+static
+std::string EnumeratorString(VkQueryPipelineStatisticFlagBits const& enumerator)
+{
+    if(!ValidateEnumerator(enumerator))
+    {
+        return "unrecognized enumerator";
+    }
+
+    std::vector<std::string> strings;
+    if(enumerator & VK_QUERY_PIPELINE_STATISTIC_CS_INVOCATIONS_BIT)
+    {
+        strings.push_back("VK_QUERY_PIPELINE_STATISTIC_CS_INVOCATIONS_BIT");
+    }
+    if(enumerator & VK_QUERY_PIPELINE_STATISTIC_IA_VERTICES_BIT)
+    {
+        strings.push_back("VK_QUERY_PIPELINE_STATISTIC_IA_VERTICES_BIT");
+    }
+    if(enumerator & VK_QUERY_PIPELINE_STATISTIC_IA_PRIMITIVES_BIT)
+    {
+        strings.push_back("VK_QUERY_PIPELINE_STATISTIC_IA_PRIMITIVES_BIT");
+    }
+    if(enumerator & VK_QUERY_PIPELINE_STATISTIC_C_INVOCATIONS_BIT)
+    {
+        strings.push_back("VK_QUERY_PIPELINE_STATISTIC_C_INVOCATIONS_BIT");
+    }
+    if(enumerator & VK_QUERY_PIPELINE_STATISTIC_VS_INVOCATIONS_BIT)
+    {
+        strings.push_back("VK_QUERY_PIPELINE_STATISTIC_VS_INVOCATIONS_BIT");
+    }
+    if(enumerator & VK_QUERY_PIPELINE_STATISTIC_GS_PRIMITIVES_BIT)
+    {
+        strings.push_back("VK_QUERY_PIPELINE_STATISTIC_GS_PRIMITIVES_BIT");
+    }
+    if(enumerator & VK_QUERY_PIPELINE_STATISTIC_FS_INVOCATIONS_BIT)
+    {
+        strings.push_back("VK_QUERY_PIPELINE_STATISTIC_FS_INVOCATIONS_BIT");
+    }
+    if(enumerator & VK_QUERY_PIPELINE_STATISTIC_C_PRIMITIVES_BIT)
+    {
+        strings.push_back("VK_QUERY_PIPELINE_STATISTIC_C_PRIMITIVES_BIT");
+    }
+    if(enumerator & VK_QUERY_PIPELINE_STATISTIC_TCS_PATCHES_BIT)
+    {
+        strings.push_back("VK_QUERY_PIPELINE_STATISTIC_TCS_PATCHES_BIT");
+    }
+    if(enumerator & VK_QUERY_PIPELINE_STATISTIC_GS_INVOCATIONS_BIT)
+    {
+        strings.push_back("VK_QUERY_PIPELINE_STATISTIC_GS_INVOCATIONS_BIT");
+    }
+    if(enumerator & VK_QUERY_PIPELINE_STATISTIC_TES_INVOCATIONS_BIT)
+    {
+        strings.push_back("VK_QUERY_PIPELINE_STATISTIC_TES_INVOCATIONS_BIT");
+    }
+
+    std::string enumeratorString;
+    for(auto const& string : strings)
+    {
+        enumeratorString += string;
+
+        if(string != strings.back())
+        {
+            enumeratorString += '|';
+        }
+    }
+
+    return enumeratorString;
+}
+
+static
+bool ValidateEnumerator(VkQueryResultFlagBits const& enumerator)
+{
+    VkQueryResultFlagBits allFlags = (VkQueryResultFlagBits)(VK_QUERY_RESULT_PARTIAL_BIT |
+        VK_QUERY_RESULT_WITH_AVAILABILITY_BIT |
+        VK_QUERY_RESULT_WAIT_BIT |
+        VK_QUERY_RESULT_64_BIT |
+        VK_QUERY_RESULT_DEFAULT);
+    if(enumerator & (~allFlags))
+    {
+        return false;
+    }
+
+    return true;
+}
+
+static
+std::string EnumeratorString(VkQueryResultFlagBits const& enumerator)
+{
+    if(!ValidateEnumerator(enumerator))
+    {
+        return "unrecognized enumerator";
+    }
+
+    std::vector<std::string> strings;
+    if(enumerator & VK_QUERY_RESULT_PARTIAL_BIT)
+    {
+        strings.push_back("VK_QUERY_RESULT_PARTIAL_BIT");
+    }
+    if(enumerator & VK_QUERY_RESULT_WITH_AVAILABILITY_BIT)
+    {
+        strings.push_back("VK_QUERY_RESULT_WITH_AVAILABILITY_BIT");
+    }
+    if(enumerator & VK_QUERY_RESULT_WAIT_BIT)
+    {
+        strings.push_back("VK_QUERY_RESULT_WAIT_BIT");
+    }
+    if(enumerator & VK_QUERY_RESULT_64_BIT)
+    {
+        strings.push_back("VK_QUERY_RESULT_64_BIT");
+    }
+    if(enumerator & VK_QUERY_RESULT_DEFAULT)
+    {
+        strings.push_back("VK_QUERY_RESULT_DEFAULT");
     }
 
     std::string enumeratorString;
@@ -788,151 +1187,6 @@ std::string EnumeratorString(VkBufferCreateFlagBits const& enumerator)
 }
 
 static
-bool ValidateEnumerator(VkShaderStageFlagBits const& enumerator)
-{
-    VkShaderStageFlagBits allFlags = (VkShaderStageFlagBits)(VK_SHADER_STAGE_ALL |
-        VK_SHADER_STAGE_FRAGMENT_BIT |
-        VK_SHADER_STAGE_GEOMETRY_BIT |
-        VK_SHADER_STAGE_COMPUTE_BIT |
-        VK_SHADER_STAGE_TESS_EVALUATION_BIT |
-        VK_SHADER_STAGE_TESS_CONTROL_BIT |
-        VK_SHADER_STAGE_VERTEX_BIT);
-    if(enumerator & (~allFlags))
-    {
-        return false;
-    }
-
-    return true;
-}
-
-static
-std::string EnumeratorString(VkShaderStageFlagBits const& enumerator)
-{
-    if(!ValidateEnumerator(enumerator))
-    {
-        return "unrecognized enumerator";
-    }
-
-    std::vector<std::string> strings;
-    if(enumerator & VK_SHADER_STAGE_ALL)
-    {
-        strings.push_back("VK_SHADER_STAGE_ALL");
-    }
-    if(enumerator & VK_SHADER_STAGE_FRAGMENT_BIT)
-    {
-        strings.push_back("VK_SHADER_STAGE_FRAGMENT_BIT");
-    }
-    if(enumerator & VK_SHADER_STAGE_GEOMETRY_BIT)
-    {
-        strings.push_back("VK_SHADER_STAGE_GEOMETRY_BIT");
-    }
-    if(enumerator & VK_SHADER_STAGE_COMPUTE_BIT)
-    {
-        strings.push_back("VK_SHADER_STAGE_COMPUTE_BIT");
-    }
-    if(enumerator & VK_SHADER_STAGE_TESS_EVALUATION_BIT)
-    {
-        strings.push_back("VK_SHADER_STAGE_TESS_EVALUATION_BIT");
-    }
-    if(enumerator & VK_SHADER_STAGE_TESS_CONTROL_BIT)
-    {
-        strings.push_back("VK_SHADER_STAGE_TESS_CONTROL_BIT");
-    }
-    if(enumerator & VK_SHADER_STAGE_VERTEX_BIT)
-    {
-        strings.push_back("VK_SHADER_STAGE_VERTEX_BIT");
-    }
-
-    std::string enumeratorString;
-    for(auto const& string : strings)
-    {
-        enumeratorString += string;
-
-        if(string != strings.back())
-        {
-            enumeratorString += '|';
-        }
-    }
-
-    return enumeratorString;
-}
-
-static
-bool ValidateEnumerator(VkImageUsageFlagBits const& enumerator)
-{
-    VkImageUsageFlagBits allFlags = (VkImageUsageFlagBits)(VK_IMAGE_USAGE_DEPTH_STENCIL_BIT |
-        VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT |
-        VK_IMAGE_USAGE_STORAGE_BIT |
-        VK_IMAGE_USAGE_SAMPLED_BIT |
-        VK_IMAGE_USAGE_TRANSFER_DESTINATION_BIT |
-        VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT |
-        VK_IMAGE_USAGE_TRANSFER_SOURCE_BIT |
-        VK_IMAGE_USAGE_GENERAL);
-    if(enumerator & (~allFlags))
-    {
-        return false;
-    }
-
-    return true;
-}
-
-static
-std::string EnumeratorString(VkImageUsageFlagBits const& enumerator)
-{
-    if(!ValidateEnumerator(enumerator))
-    {
-        return "unrecognized enumerator";
-    }
-
-    std::vector<std::string> strings;
-    if(enumerator & VK_IMAGE_USAGE_DEPTH_STENCIL_BIT)
-    {
-        strings.push_back("VK_IMAGE_USAGE_DEPTH_STENCIL_BIT");
-    }
-    if(enumerator & VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT)
-    {
-        strings.push_back("VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT");
-    }
-    if(enumerator & VK_IMAGE_USAGE_STORAGE_BIT)
-    {
-        strings.push_back("VK_IMAGE_USAGE_STORAGE_BIT");
-    }
-    if(enumerator & VK_IMAGE_USAGE_SAMPLED_BIT)
-    {
-        strings.push_back("VK_IMAGE_USAGE_SAMPLED_BIT");
-    }
-    if(enumerator & VK_IMAGE_USAGE_TRANSFER_DESTINATION_BIT)
-    {
-        strings.push_back("VK_IMAGE_USAGE_TRANSFER_DESTINATION_BIT");
-    }
-    if(enumerator & VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT)
-    {
-        strings.push_back("VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT");
-    }
-    if(enumerator & VK_IMAGE_USAGE_TRANSFER_SOURCE_BIT)
-    {
-        strings.push_back("VK_IMAGE_USAGE_TRANSFER_SOURCE_BIT");
-    }
-    if(enumerator & VK_IMAGE_USAGE_GENERAL)
-    {
-        strings.push_back("VK_IMAGE_USAGE_GENERAL");
-    }
-
-    std::string enumeratorString;
-    for(auto const& string : strings)
-    {
-        enumeratorString += string;
-
-        if(string != strings.back())
-        {
-            enumeratorString += '|';
-        }
-    }
-
-    return enumeratorString;
-}
-
-static
 bool ValidateEnumerator(VkImageCreateFlagBits const& enumerator)
 {
     VkImageCreateFlagBits allFlags = (VkImageCreateFlagBits)(VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT |
@@ -1043,51 +1297,6 @@ std::string EnumeratorString(VkAttachmentViewCreateFlagBits const& enumerator)
 }
 
 static
-bool ValidateEnumerator(VkPipelineCreateFlagBits const& enumerator)
-{
-    VkPipelineCreateFlagBits allFlags = (VkPipelineCreateFlagBits)(VK_PIPELINE_CREATE_ALLOW_DERIVATIVES_BIT |
-        VK_PIPELINE_CREATE_DISABLE_OPTIMIZATION_BIT);
-    if(enumerator & (~allFlags))
-    {
-        return false;
-    }
-
-    return true;
-}
-
-static
-std::string EnumeratorString(VkPipelineCreateFlagBits const& enumerator)
-{
-    if(!ValidateEnumerator(enumerator))
-    {
-        return "unrecognized enumerator";
-    }
-
-    std::vector<std::string> strings;
-    if(enumerator & VK_PIPELINE_CREATE_ALLOW_DERIVATIVES_BIT)
-    {
-        strings.push_back("VK_PIPELINE_CREATE_ALLOW_DERIVATIVES_BIT");
-    }
-    if(enumerator & VK_PIPELINE_CREATE_DISABLE_OPTIMIZATION_BIT)
-    {
-        strings.push_back("VK_PIPELINE_CREATE_DISABLE_OPTIMIZATION_BIT");
-    }
-
-    std::string enumeratorString;
-    for(auto const& string : strings)
-    {
-        enumeratorString += string;
-
-        if(string != strings.back())
-        {
-            enumeratorString += '|';
-        }
-    }
-
-    return enumeratorString;
-}
-
-static
 bool ValidateEnumerator(VkChannelFlagBits const& enumerator)
 {
     VkChannelFlagBits allFlags = (VkChannelFlagBits)(VK_CHANNEL_A_BIT |
@@ -1143,9 +1352,11 @@ std::string EnumeratorString(VkChannelFlagBits const& enumerator)
 }
 
 static
-bool ValidateEnumerator(VkFenceCreateFlagBits const& enumerator)
+bool ValidateEnumerator(VkPipelineCreateFlagBits const& enumerator)
 {
-    VkFenceCreateFlagBits allFlags = (VkFenceCreateFlagBits)(VK_FENCE_CREATE_SIGNALED_BIT);
+    VkPipelineCreateFlagBits allFlags = (VkPipelineCreateFlagBits)(VK_PIPELINE_CREATE_DERIVATIVE_BIT |
+        VK_PIPELINE_CREATE_ALLOW_DERIVATIVES_BIT |
+        VK_PIPELINE_CREATE_DISABLE_OPTIMIZATION_BIT);
     if(enumerator & (~allFlags))
     {
         return false;
@@ -1155,7 +1366,7 @@ bool ValidateEnumerator(VkFenceCreateFlagBits const& enumerator)
 }
 
 static
-std::string EnumeratorString(VkFenceCreateFlagBits const& enumerator)
+std::string EnumeratorString(VkPipelineCreateFlagBits const& enumerator)
 {
     if(!ValidateEnumerator(enumerator))
     {
@@ -1163,9 +1374,17 @@ std::string EnumeratorString(VkFenceCreateFlagBits const& enumerator)
     }
 
     std::vector<std::string> strings;
-    if(enumerator & VK_FENCE_CREATE_SIGNALED_BIT)
+    if(enumerator & VK_PIPELINE_CREATE_DERIVATIVE_BIT)
     {
-        strings.push_back("VK_FENCE_CREATE_SIGNALED_BIT");
+        strings.push_back("VK_PIPELINE_CREATE_DERIVATIVE_BIT");
+    }
+    if(enumerator & VK_PIPELINE_CREATE_ALLOW_DERIVATIVES_BIT)
+    {
+        strings.push_back("VK_PIPELINE_CREATE_ALLOW_DERIVATIVES_BIT");
+    }
+    if(enumerator & VK_PIPELINE_CREATE_DISABLE_OPTIMIZATION_BIT)
+    {
+        strings.push_back("VK_PIPELINE_CREATE_DISABLE_OPTIMIZATION_BIT");
     }
 
     std::string enumeratorString;
@@ -1183,11 +1402,15 @@ std::string EnumeratorString(VkFenceCreateFlagBits const& enumerator)
 }
 
 static
-bool ValidateEnumerator(VkSparseImageFormatFlagBits const& enumerator)
+bool ValidateEnumerator(VkShaderStageFlagBits const& enumerator)
 {
-    VkSparseImageFormatFlagBits allFlags = (VkSparseImageFormatFlagBits)(VK_SPARSE_IMAGE_FMT_NONSTD_BLOCK_SIZE_BIT |
-        VK_SPARSE_IMAGE_FMT_ALIGNED_MIP_SIZE_BIT |
-        VK_SPARSE_IMAGE_FMT_SINGLE_MIPTAIL_BIT);
+    VkShaderStageFlagBits allFlags = (VkShaderStageFlagBits)(VK_SHADER_STAGE_ALL |
+        VK_SHADER_STAGE_FRAGMENT_BIT |
+        VK_SHADER_STAGE_GEOMETRY_BIT |
+        VK_SHADER_STAGE_COMPUTE_BIT |
+        VK_SHADER_STAGE_TESS_EVALUATION_BIT |
+        VK_SHADER_STAGE_TESS_CONTROL_BIT |
+        VK_SHADER_STAGE_VERTEX_BIT);
     if(enumerator & (~allFlags))
     {
         return false;
@@ -1197,7 +1420,7 @@ bool ValidateEnumerator(VkSparseImageFormatFlagBits const& enumerator)
 }
 
 static
-std::string EnumeratorString(VkSparseImageFormatFlagBits const& enumerator)
+std::string EnumeratorString(VkShaderStageFlagBits const& enumerator)
 {
     if(!ValidateEnumerator(enumerator))
     {
@@ -1205,17 +1428,33 @@ std::string EnumeratorString(VkSparseImageFormatFlagBits const& enumerator)
     }
 
     std::vector<std::string> strings;
-    if(enumerator & VK_SPARSE_IMAGE_FMT_NONSTD_BLOCK_SIZE_BIT)
+    if(enumerator & VK_SHADER_STAGE_ALL)
     {
-        strings.push_back("VK_SPARSE_IMAGE_FMT_NONSTD_BLOCK_SIZE_BIT");
+        strings.push_back("VK_SHADER_STAGE_ALL");
     }
-    if(enumerator & VK_SPARSE_IMAGE_FMT_ALIGNED_MIP_SIZE_BIT)
+    if(enumerator & VK_SHADER_STAGE_FRAGMENT_BIT)
     {
-        strings.push_back("VK_SPARSE_IMAGE_FMT_ALIGNED_MIP_SIZE_BIT");
+        strings.push_back("VK_SHADER_STAGE_FRAGMENT_BIT");
     }
-    if(enumerator & VK_SPARSE_IMAGE_FMT_SINGLE_MIPTAIL_BIT)
+    if(enumerator & VK_SHADER_STAGE_GEOMETRY_BIT)
     {
-        strings.push_back("VK_SPARSE_IMAGE_FMT_SINGLE_MIPTAIL_BIT");
+        strings.push_back("VK_SHADER_STAGE_GEOMETRY_BIT");
+    }
+    if(enumerator & VK_SHADER_STAGE_COMPUTE_BIT)
+    {
+        strings.push_back("VK_SHADER_STAGE_COMPUTE_BIT");
+    }
+    if(enumerator & VK_SHADER_STAGE_TESS_EVALUATION_BIT)
+    {
+        strings.push_back("VK_SHADER_STAGE_TESS_EVALUATION_BIT");
+    }
+    if(enumerator & VK_SHADER_STAGE_TESS_CONTROL_BIT)
+    {
+        strings.push_back("VK_SHADER_STAGE_TESS_CONTROL_BIT");
+    }
+    if(enumerator & VK_SHADER_STAGE_VERTEX_BIT)
+    {
+        strings.push_back("VK_SHADER_STAGE_VERTEX_BIT");
     }
 
     std::string enumeratorString;
@@ -1233,9 +1472,9 @@ std::string EnumeratorString(VkSparseImageFormatFlagBits const& enumerator)
 }
 
 static
-bool ValidateEnumerator(VkSparseMemoryBindFlagBits const& enumerator)
+bool ValidateEnumerator(VkSubpassDescriptionFlagBits const& enumerator)
 {
-    VkSparseMemoryBindFlagBits allFlags = (VkSparseMemoryBindFlagBits)(VK_SPARSE_MEMORY_BIND_REPLICATE_64KIB_BLOCK_BIT);
+    VkSubpassDescriptionFlagBits allFlags = (VkSubpassDescriptionFlagBits)(VK_SUBPASS_DESCRIPTION_NO_OVERDRAW_BIT);
     if(enumerator & (~allFlags))
     {
         return false;
@@ -1245,7 +1484,7 @@ bool ValidateEnumerator(VkSparseMemoryBindFlagBits const& enumerator)
 }
 
 static
-std::string EnumeratorString(VkSparseMemoryBindFlagBits const& enumerator)
+std::string EnumeratorString(VkSubpassDescriptionFlagBits const& enumerator)
 {
     if(!ValidateEnumerator(enumerator))
     {
@@ -1253,9 +1492,9 @@ std::string EnumeratorString(VkSparseMemoryBindFlagBits const& enumerator)
     }
 
     std::vector<std::string> strings;
-    if(enumerator & VK_SPARSE_MEMORY_BIND_REPLICATE_64KIB_BLOCK_BIT)
+    if(enumerator & VK_SUBPASS_DESCRIPTION_NO_OVERDRAW_BIT)
     {
-        strings.push_back("VK_SPARSE_MEMORY_BIND_REPLICATE_64KIB_BLOCK_BIT");
+        strings.push_back("VK_SUBPASS_DESCRIPTION_NO_OVERDRAW_BIT");
     }
 
     std::string enumeratorString;
@@ -1273,19 +1512,25 @@ std::string EnumeratorString(VkSparseMemoryBindFlagBits const& enumerator)
 }
 
 static
-bool ValidateEnumerator(VkFormatFeatureFlagBits const& enumerator)
+bool ValidateEnumerator(VkPipelineStageFlagBits const& enumerator)
 {
-    VkFormatFeatureFlagBits allFlags = (VkFormatFeatureFlagBits)(VK_FORMAT_FEATURE_CONVERSION_BIT |
-        VK_FORMAT_FEATURE_STORAGE_IMAGE_ATOMIC_BIT |
-        VK_FORMAT_FEATURE_STORAGE_IMAGE_BIT |
-        VK_FORMAT_FEATURE_UNIFORM_TEXEL_BUFFER_BIT |
-        VK_FORMAT_FEATURE_STORAGE_TEXEL_BUFFER_ATOMIC_BIT |
-        VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT |
-        VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BLEND_BIT |
-        VK_FORMAT_FEATURE_VERTEX_BUFFER_BIT |
-        VK_FORMAT_FEATURE_STORAGE_TEXEL_BUFFER_BIT |
-        VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT |
-        VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT);
+    VkPipelineStageFlagBits allFlags = (VkPipelineStageFlagBits)(VK_PIPELINE_STAGE_ALL_GRAPHICS |
+        VK_PIPELINE_STAGE_HOST_BIT |
+        VK_PIPELINE_STAGE_TRANSFER_BIT |
+        VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT |
+        VK_PIPELINE_STAGE_ALL_GPU_COMMANDS |
+        VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT |
+        VK_PIPELINE_STAGE_TRANSITION_BIT |
+        VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT |
+        VK_PIPELINE_STAGE_TESS_CONTROL_SHADER_BIT |
+        VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT |
+        VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT |
+        VK_PIPELINE_STAGE_VERTEX_SHADER_BIT |
+        VK_PIPELINE_STAGE_TESS_EVALUATION_SHADER_BIT |
+        VK_PIPELINE_STAGE_VERTEX_INPUT_BIT |
+        VK_PIPELINE_STAGE_GEOMETRY_SHADER_BIT |
+        VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT |
+        VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
     if(enumerator & (~allFlags))
     {
         return false;
@@ -1295,7 +1540,7 @@ bool ValidateEnumerator(VkFormatFeatureFlagBits const& enumerator)
 }
 
 static
-std::string EnumeratorString(VkFormatFeatureFlagBits const& enumerator)
+std::string EnumeratorString(VkPipelineStageFlagBits const& enumerator)
 {
     if(!ValidateEnumerator(enumerator))
     {
@@ -1303,49 +1548,73 @@ std::string EnumeratorString(VkFormatFeatureFlagBits const& enumerator)
     }
 
     std::vector<std::string> strings;
-    if(enumerator & VK_FORMAT_FEATURE_CONVERSION_BIT)
+    if(enumerator & VK_PIPELINE_STAGE_ALL_GRAPHICS)
     {
-        strings.push_back("VK_FORMAT_FEATURE_CONVERSION_BIT");
+        strings.push_back("VK_PIPELINE_STAGE_ALL_GRAPHICS");
     }
-    if(enumerator & VK_FORMAT_FEATURE_STORAGE_IMAGE_ATOMIC_BIT)
+    if(enumerator & VK_PIPELINE_STAGE_HOST_BIT)
     {
-        strings.push_back("VK_FORMAT_FEATURE_STORAGE_IMAGE_ATOMIC_BIT");
+        strings.push_back("VK_PIPELINE_STAGE_HOST_BIT");
     }
-    if(enumerator & VK_FORMAT_FEATURE_STORAGE_IMAGE_BIT)
+    if(enumerator & VK_PIPELINE_STAGE_TRANSFER_BIT)
     {
-        strings.push_back("VK_FORMAT_FEATURE_STORAGE_IMAGE_BIT");
+        strings.push_back("VK_PIPELINE_STAGE_TRANSFER_BIT");
     }
-    if(enumerator & VK_FORMAT_FEATURE_UNIFORM_TEXEL_BUFFER_BIT)
+    if(enumerator & VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT)
     {
-        strings.push_back("VK_FORMAT_FEATURE_UNIFORM_TEXEL_BUFFER_BIT");
+        strings.push_back("VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT");
     }
-    if(enumerator & VK_FORMAT_FEATURE_STORAGE_TEXEL_BUFFER_ATOMIC_BIT)
+    if(enumerator & VK_PIPELINE_STAGE_ALL_GPU_COMMANDS)
     {
-        strings.push_back("VK_FORMAT_FEATURE_STORAGE_TEXEL_BUFFER_ATOMIC_BIT");
+        strings.push_back("VK_PIPELINE_STAGE_ALL_GPU_COMMANDS");
     }
-    if(enumerator & VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT)
+    if(enumerator & VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT)
     {
-        strings.push_back("VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT");
+        strings.push_back("VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT");
     }
-    if(enumerator & VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BLEND_BIT)
+    if(enumerator & VK_PIPELINE_STAGE_TRANSITION_BIT)
     {
-        strings.push_back("VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BLEND_BIT");
+        strings.push_back("VK_PIPELINE_STAGE_TRANSITION_BIT");
     }
-    if(enumerator & VK_FORMAT_FEATURE_VERTEX_BUFFER_BIT)
+    if(enumerator & VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT)
     {
-        strings.push_back("VK_FORMAT_FEATURE_VERTEX_BUFFER_BIT");
+        strings.push_back("VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT");
     }
-    if(enumerator & VK_FORMAT_FEATURE_STORAGE_TEXEL_BUFFER_BIT)
+    if(enumerator & VK_PIPELINE_STAGE_TESS_CONTROL_SHADER_BIT)
     {
-        strings.push_back("VK_FORMAT_FEATURE_STORAGE_TEXEL_BUFFER_BIT");
+        strings.push_back("VK_PIPELINE_STAGE_TESS_CONTROL_SHADER_BIT");
     }
-    if(enumerator & VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT)
+    if(enumerator & VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT)
     {
-        strings.push_back("VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT");
+        strings.push_back("VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT");
     }
-    if(enumerator & VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT)
+    if(enumerator & VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT)
     {
-        strings.push_back("VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT");
+        strings.push_back("VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT");
+    }
+    if(enumerator & VK_PIPELINE_STAGE_VERTEX_SHADER_BIT)
+    {
+        strings.push_back("VK_PIPELINE_STAGE_VERTEX_SHADER_BIT");
+    }
+    if(enumerator & VK_PIPELINE_STAGE_TESS_EVALUATION_SHADER_BIT)
+    {
+        strings.push_back("VK_PIPELINE_STAGE_TESS_EVALUATION_SHADER_BIT");
+    }
+    if(enumerator & VK_PIPELINE_STAGE_VERTEX_INPUT_BIT)
+    {
+        strings.push_back("VK_PIPELINE_STAGE_VERTEX_INPUT_BIT");
+    }
+    if(enumerator & VK_PIPELINE_STAGE_GEOMETRY_SHADER_BIT)
+    {
+        strings.push_back("VK_PIPELINE_STAGE_GEOMETRY_SHADER_BIT");
+    }
+    if(enumerator & VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT)
+    {
+        strings.push_back("VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT");
+    }
+    if(enumerator & VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT)
+    {
+        strings.push_back("VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT");
     }
 
     std::string enumeratorString;
@@ -1363,11 +1632,13 @@ std::string EnumeratorString(VkFormatFeatureFlagBits const& enumerator)
 }
 
 static
-bool ValidateEnumerator(VkImageAspectFlagBits const& enumerator)
+bool ValidateEnumerator(VkMemoryOutputFlagBits const& enumerator)
 {
-    VkImageAspectFlagBits allFlags = (VkImageAspectFlagBits)(VK_IMAGE_ASPECT_STENCIL_BIT |
-        VK_IMAGE_ASPECT_DEPTH_BIT |
-        VK_IMAGE_ASPECT_COLOR_BIT);
+    VkMemoryOutputFlagBits allFlags = (VkMemoryOutputFlagBits)(VK_MEMORY_OUTPUT_DEPTH_STENCIL_ATTACHMENT_BIT |
+        VK_MEMORY_OUTPUT_TRANSFER_BIT |
+        VK_MEMORY_OUTPUT_COLOR_ATTACHMENT_BIT |
+        VK_MEMORY_OUTPUT_SHADER_WRITE_BIT |
+        VK_MEMORY_OUTPUT_HOST_WRITE_BIT);
     if(enumerator & (~allFlags))
     {
         return false;
@@ -1377,7 +1648,7 @@ bool ValidateEnumerator(VkImageAspectFlagBits const& enumerator)
 }
 
 static
-std::string EnumeratorString(VkImageAspectFlagBits const& enumerator)
+std::string EnumeratorString(VkMemoryOutputFlagBits const& enumerator)
 {
     if(!ValidateEnumerator(enumerator))
     {
@@ -1385,17 +1656,25 @@ std::string EnumeratorString(VkImageAspectFlagBits const& enumerator)
     }
 
     std::vector<std::string> strings;
-    if(enumerator & VK_IMAGE_ASPECT_STENCIL_BIT)
+    if(enumerator & VK_MEMORY_OUTPUT_DEPTH_STENCIL_ATTACHMENT_BIT)
     {
-        strings.push_back("VK_IMAGE_ASPECT_STENCIL_BIT");
+        strings.push_back("VK_MEMORY_OUTPUT_DEPTH_STENCIL_ATTACHMENT_BIT");
     }
-    if(enumerator & VK_IMAGE_ASPECT_DEPTH_BIT)
+    if(enumerator & VK_MEMORY_OUTPUT_TRANSFER_BIT)
     {
-        strings.push_back("VK_IMAGE_ASPECT_DEPTH_BIT");
+        strings.push_back("VK_MEMORY_OUTPUT_TRANSFER_BIT");
     }
-    if(enumerator & VK_IMAGE_ASPECT_COLOR_BIT)
+    if(enumerator & VK_MEMORY_OUTPUT_COLOR_ATTACHMENT_BIT)
     {
-        strings.push_back("VK_IMAGE_ASPECT_COLOR_BIT");
+        strings.push_back("VK_MEMORY_OUTPUT_COLOR_ATTACHMENT_BIT");
+    }
+    if(enumerator & VK_MEMORY_OUTPUT_SHADER_WRITE_BIT)
+    {
+        strings.push_back("VK_MEMORY_OUTPUT_SHADER_WRITE_BIT");
+    }
+    if(enumerator & VK_MEMORY_OUTPUT_HOST_WRITE_BIT)
+    {
+        strings.push_back("VK_MEMORY_OUTPUT_HOST_WRITE_BIT");
     }
 
     std::string enumeratorString;
@@ -1413,9 +1692,18 @@ std::string EnumeratorString(VkImageAspectFlagBits const& enumerator)
 }
 
 static
-bool ValidateEnumerator(VkQueryControlFlagBits const& enumerator)
+bool ValidateEnumerator(VkMemoryInputFlagBits const& enumerator)
 {
-    VkQueryControlFlagBits allFlags = (VkQueryControlFlagBits)(VK_QUERY_CONTROL_CONSERVATIVE_BIT);
+    VkMemoryInputFlagBits allFlags = (VkMemoryInputFlagBits)(VK_MEMORY_INPUT_TRANSFER_BIT |
+        VK_MEMORY_INPUT_DEPTH_STENCIL_ATTACHMENT_BIT |
+        VK_MEMORY_INPUT_COLOR_ATTACHMENT_BIT |
+        VK_MEMORY_INPUT_SHADER_READ_BIT |
+        VK_MEMORY_INPUT_UNIFORM_READ_BIT |
+        VK_MEMORY_INPUT_INDEX_FETCH_BIT |
+        VK_MEMORY_INPUT_INDIRECT_COMMAND_BIT |
+        VK_MEMORY_INPUT_INPUT_ATTACHMENT_BIT |
+        VK_MEMORY_INPUT_VERTEX_ATTRIBUTE_FETCH_BIT |
+        VK_MEMORY_INPUT_HOST_READ_BIT);
     if(enumerator & (~allFlags))
     {
         return false;
@@ -1425,7 +1713,7 @@ bool ValidateEnumerator(VkQueryControlFlagBits const& enumerator)
 }
 
 static
-std::string EnumeratorString(VkQueryControlFlagBits const& enumerator)
+std::string EnumeratorString(VkMemoryInputFlagBits const& enumerator)
 {
     if(!ValidateEnumerator(enumerator))
     {
@@ -1433,9 +1721,45 @@ std::string EnumeratorString(VkQueryControlFlagBits const& enumerator)
     }
 
     std::vector<std::string> strings;
-    if(enumerator & VK_QUERY_CONTROL_CONSERVATIVE_BIT)
+    if(enumerator & VK_MEMORY_INPUT_TRANSFER_BIT)
     {
-        strings.push_back("VK_QUERY_CONTROL_CONSERVATIVE_BIT");
+        strings.push_back("VK_MEMORY_INPUT_TRANSFER_BIT");
+    }
+    if(enumerator & VK_MEMORY_INPUT_DEPTH_STENCIL_ATTACHMENT_BIT)
+    {
+        strings.push_back("VK_MEMORY_INPUT_DEPTH_STENCIL_ATTACHMENT_BIT");
+    }
+    if(enumerator & VK_MEMORY_INPUT_COLOR_ATTACHMENT_BIT)
+    {
+        strings.push_back("VK_MEMORY_INPUT_COLOR_ATTACHMENT_BIT");
+    }
+    if(enumerator & VK_MEMORY_INPUT_SHADER_READ_BIT)
+    {
+        strings.push_back("VK_MEMORY_INPUT_SHADER_READ_BIT");
+    }
+    if(enumerator & VK_MEMORY_INPUT_UNIFORM_READ_BIT)
+    {
+        strings.push_back("VK_MEMORY_INPUT_UNIFORM_READ_BIT");
+    }
+    if(enumerator & VK_MEMORY_INPUT_INDEX_FETCH_BIT)
+    {
+        strings.push_back("VK_MEMORY_INPUT_INDEX_FETCH_BIT");
+    }
+    if(enumerator & VK_MEMORY_INPUT_INDIRECT_COMMAND_BIT)
+    {
+        strings.push_back("VK_MEMORY_INPUT_INDIRECT_COMMAND_BIT");
+    }
+    if(enumerator & VK_MEMORY_INPUT_INPUT_ATTACHMENT_BIT)
+    {
+        strings.push_back("VK_MEMORY_INPUT_INPUT_ATTACHMENT_BIT");
+    }
+    if(enumerator & VK_MEMORY_INPUT_VERTEX_ATTRIBUTE_FETCH_BIT)
+    {
+        strings.push_back("VK_MEMORY_INPUT_VERTEX_ATTRIBUTE_FETCH_BIT");
+    }
+    if(enumerator & VK_MEMORY_INPUT_HOST_READ_BIT)
+    {
+        strings.push_back("VK_MEMORY_INPUT_HOST_READ_BIT");
     }
 
     std::string enumeratorString;
@@ -1453,13 +1777,10 @@ std::string EnumeratorString(VkQueryControlFlagBits const& enumerator)
 }
 
 static
-bool ValidateEnumerator(VkQueryResultFlagBits const& enumerator)
+bool ValidateEnumerator(VkCmdPoolCreateFlagBits const& enumerator)
 {
-    VkQueryResultFlagBits allFlags = (VkQueryResultFlagBits)(VK_QUERY_RESULT_PARTIAL_BIT |
-        VK_QUERY_RESULT_WITH_AVAILABILITY_BIT |
-        VK_QUERY_RESULT_WAIT_BIT |
-        VK_QUERY_RESULT_64_BIT |
-        VK_QUERY_RESULT_DEFAULT);
+    VkCmdPoolCreateFlagBits allFlags = (VkCmdPoolCreateFlagBits)(VK_CMD_POOL_CREATE_RESET_COMMAND_BUFFER_BIT |
+        VK_CMD_POOL_CREATE_TRANSIENT_BIT);
     if(enumerator & (~allFlags))
     {
         return false;
@@ -1469,7 +1790,7 @@ bool ValidateEnumerator(VkQueryResultFlagBits const& enumerator)
 }
 
 static
-std::string EnumeratorString(VkQueryResultFlagBits const& enumerator)
+std::string EnumeratorString(VkCmdPoolCreateFlagBits const& enumerator)
 {
     if(!ValidateEnumerator(enumerator))
     {
@@ -1477,25 +1798,53 @@ std::string EnumeratorString(VkQueryResultFlagBits const& enumerator)
     }
 
     std::vector<std::string> strings;
-    if(enumerator & VK_QUERY_RESULT_PARTIAL_BIT)
+    if(enumerator & VK_CMD_POOL_CREATE_RESET_COMMAND_BUFFER_BIT)
     {
-        strings.push_back("VK_QUERY_RESULT_PARTIAL_BIT");
+        strings.push_back("VK_CMD_POOL_CREATE_RESET_COMMAND_BUFFER_BIT");
     }
-    if(enumerator & VK_QUERY_RESULT_WITH_AVAILABILITY_BIT)
+    if(enumerator & VK_CMD_POOL_CREATE_TRANSIENT_BIT)
     {
-        strings.push_back("VK_QUERY_RESULT_WITH_AVAILABILITY_BIT");
+        strings.push_back("VK_CMD_POOL_CREATE_TRANSIENT_BIT");
     }
-    if(enumerator & VK_QUERY_RESULT_WAIT_BIT)
+
+    std::string enumeratorString;
+    for(auto const& string : strings)
     {
-        strings.push_back("VK_QUERY_RESULT_WAIT_BIT");
+        enumeratorString += string;
+
+        if(string != strings.back())
+        {
+            enumeratorString += '|';
+        }
     }
-    if(enumerator & VK_QUERY_RESULT_64_BIT)
+
+    return enumeratorString;
+}
+
+static
+bool ValidateEnumerator(VkCmdPoolResetFlagBits const& enumerator)
+{
+    VkCmdPoolResetFlagBits allFlags = (VkCmdPoolResetFlagBits)(VK_CMD_POOL_RESET_RELEASE_RESOURCES);
+    if(enumerator & (~allFlags))
     {
-        strings.push_back("VK_QUERY_RESULT_64_BIT");
+        return false;
     }
-    if(enumerator & VK_QUERY_RESULT_DEFAULT)
+
+    return true;
+}
+
+static
+std::string EnumeratorString(VkCmdPoolResetFlagBits const& enumerator)
+{
+    if(!ValidateEnumerator(enumerator))
     {
-        strings.push_back("VK_QUERY_RESULT_DEFAULT");
+        return "unrecognized enumerator";
+    }
+
+    std::vector<std::string> strings;
+    if(enumerator & VK_CMD_POOL_RESET_RELEASE_RESOURCES)
+    {
+        strings.push_back("VK_CMD_POOL_RESET_RELEASE_RESOURCES");
     }
 
     std::string enumeratorString;
@@ -1573,19 +1922,9 @@ std::string EnumeratorString(VkCmdBufferOptimizeFlagBits const& enumerator)
 }
 
 static
-bool ValidateEnumerator(VkQueryPipelineStatisticFlagBits const& enumerator)
+bool ValidateEnumerator(VkCmdBufferResetFlagBits const& enumerator)
 {
-    VkQueryPipelineStatisticFlagBits allFlags = (VkQueryPipelineStatisticFlagBits)(VK_QUERY_PIPELINE_STATISTIC_CS_INVOCATIONS_BIT |
-        VK_QUERY_PIPELINE_STATISTIC_IA_VERTICES_BIT |
-        VK_QUERY_PIPELINE_STATISTIC_IA_PRIMITIVES_BIT |
-        VK_QUERY_PIPELINE_STATISTIC_C_INVOCATIONS_BIT |
-        VK_QUERY_PIPELINE_STATISTIC_VS_INVOCATIONS_BIT |
-        VK_QUERY_PIPELINE_STATISTIC_GS_PRIMITIVES_BIT |
-        VK_QUERY_PIPELINE_STATISTIC_FS_INVOCATIONS_BIT |
-        VK_QUERY_PIPELINE_STATISTIC_C_PRIMITIVES_BIT |
-        VK_QUERY_PIPELINE_STATISTIC_TCS_PATCHES_BIT |
-        VK_QUERY_PIPELINE_STATISTIC_GS_INVOCATIONS_BIT |
-        VK_QUERY_PIPELINE_STATISTIC_TES_INVOCATIONS_BIT);
+    VkCmdBufferResetFlagBits allFlags = (VkCmdBufferResetFlagBits)(VK_CMD_BUFFER_RESET_RELEASE_RESOURCES);
     if(enumerator & (~allFlags))
     {
         return false;
@@ -1595,7 +1934,7 @@ bool ValidateEnumerator(VkQueryPipelineStatisticFlagBits const& enumerator)
 }
 
 static
-std::string EnumeratorString(VkQueryPipelineStatisticFlagBits const& enumerator)
+std::string EnumeratorString(VkCmdBufferResetFlagBits const& enumerator)
 {
     if(!ValidateEnumerator(enumerator))
     {
@@ -1603,49 +1942,9 @@ std::string EnumeratorString(VkQueryPipelineStatisticFlagBits const& enumerator)
     }
 
     std::vector<std::string> strings;
-    if(enumerator & VK_QUERY_PIPELINE_STATISTIC_CS_INVOCATIONS_BIT)
+    if(enumerator & VK_CMD_BUFFER_RESET_RELEASE_RESOURCES)
     {
-        strings.push_back("VK_QUERY_PIPELINE_STATISTIC_CS_INVOCATIONS_BIT");
-    }
-    if(enumerator & VK_QUERY_PIPELINE_STATISTIC_IA_VERTICES_BIT)
-    {
-        strings.push_back("VK_QUERY_PIPELINE_STATISTIC_IA_VERTICES_BIT");
-    }
-    if(enumerator & VK_QUERY_PIPELINE_STATISTIC_IA_PRIMITIVES_BIT)
-    {
-        strings.push_back("VK_QUERY_PIPELINE_STATISTIC_IA_PRIMITIVES_BIT");
-    }
-    if(enumerator & VK_QUERY_PIPELINE_STATISTIC_C_INVOCATIONS_BIT)
-    {
-        strings.push_back("VK_QUERY_PIPELINE_STATISTIC_C_INVOCATIONS_BIT");
-    }
-    if(enumerator & VK_QUERY_PIPELINE_STATISTIC_VS_INVOCATIONS_BIT)
-    {
-        strings.push_back("VK_QUERY_PIPELINE_STATISTIC_VS_INVOCATIONS_BIT");
-    }
-    if(enumerator & VK_QUERY_PIPELINE_STATISTIC_GS_PRIMITIVES_BIT)
-    {
-        strings.push_back("VK_QUERY_PIPELINE_STATISTIC_GS_PRIMITIVES_BIT");
-    }
-    if(enumerator & VK_QUERY_PIPELINE_STATISTIC_FS_INVOCATIONS_BIT)
-    {
-        strings.push_back("VK_QUERY_PIPELINE_STATISTIC_FS_INVOCATIONS_BIT");
-    }
-    if(enumerator & VK_QUERY_PIPELINE_STATISTIC_C_PRIMITIVES_BIT)
-    {
-        strings.push_back("VK_QUERY_PIPELINE_STATISTIC_C_PRIMITIVES_BIT");
-    }
-    if(enumerator & VK_QUERY_PIPELINE_STATISTIC_TCS_PATCHES_BIT)
-    {
-        strings.push_back("VK_QUERY_PIPELINE_STATISTIC_TCS_PATCHES_BIT");
-    }
-    if(enumerator & VK_QUERY_PIPELINE_STATISTIC_GS_INVOCATIONS_BIT)
-    {
-        strings.push_back("VK_QUERY_PIPELINE_STATISTIC_GS_INVOCATIONS_BIT");
-    }
-    if(enumerator & VK_QUERY_PIPELINE_STATISTIC_TES_INVOCATIONS_BIT)
-    {
-        strings.push_back("VK_QUERY_PIPELINE_STATISTIC_TES_INVOCATIONS_BIT");
+        strings.push_back("VK_CMD_BUFFER_RESET_RELEASE_RESOURCES");
     }
 
     std::string enumeratorString;
@@ -1663,9 +1962,12 @@ std::string EnumeratorString(VkQueryPipelineStatisticFlagBits const& enumerator)
 }
 
 static
-bool ValidateEnumerator(VkMemoryHeapFlagBits const& enumerator)
+bool ValidateEnumerator(VkImageAspectFlagBits const& enumerator)
 {
-    VkMemoryHeapFlagBits allFlags = (VkMemoryHeapFlagBits)(VK_MEMORY_HEAP_HOST_LOCAL);
+    VkImageAspectFlagBits allFlags = (VkImageAspectFlagBits)(VK_IMAGE_ASPECT_METADATA_BIT |
+        VK_IMAGE_ASPECT_STENCIL_BIT |
+        VK_IMAGE_ASPECT_DEPTH_BIT |
+        VK_IMAGE_ASPECT_COLOR_BIT);
     if(enumerator & (~allFlags))
     {
         return false;
@@ -1675,7 +1977,7 @@ bool ValidateEnumerator(VkMemoryHeapFlagBits const& enumerator)
 }
 
 static
-std::string EnumeratorString(VkMemoryHeapFlagBits const& enumerator)
+std::string EnumeratorString(VkImageAspectFlagBits const& enumerator)
 {
     if(!ValidateEnumerator(enumerator))
     {
@@ -1683,9 +1985,61 @@ std::string EnumeratorString(VkMemoryHeapFlagBits const& enumerator)
     }
 
     std::vector<std::string> strings;
-    if(enumerator & VK_MEMORY_HEAP_HOST_LOCAL)
+    if(enumerator & VK_IMAGE_ASPECT_METADATA_BIT)
     {
-        strings.push_back("VK_MEMORY_HEAP_HOST_LOCAL");
+        strings.push_back("VK_IMAGE_ASPECT_METADATA_BIT");
+    }
+    if(enumerator & VK_IMAGE_ASPECT_STENCIL_BIT)
+    {
+        strings.push_back("VK_IMAGE_ASPECT_STENCIL_BIT");
+    }
+    if(enumerator & VK_IMAGE_ASPECT_DEPTH_BIT)
+    {
+        strings.push_back("VK_IMAGE_ASPECT_DEPTH_BIT");
+    }
+    if(enumerator & VK_IMAGE_ASPECT_COLOR_BIT)
+    {
+        strings.push_back("VK_IMAGE_ASPECT_COLOR_BIT");
+    }
+
+    std::string enumeratorString;
+    for(auto const& string : strings)
+    {
+        enumeratorString += string;
+
+        if(string != strings.back())
+        {
+            enumeratorString += '|';
+        }
+    }
+
+    return enumeratorString;
+}
+
+static
+bool ValidateEnumerator(VkQueryControlFlagBits const& enumerator)
+{
+    VkQueryControlFlagBits allFlags = (VkQueryControlFlagBits)(VK_QUERY_CONTROL_CONSERVATIVE_BIT);
+    if(enumerator & (~allFlags))
+    {
+        return false;
+    }
+
+    return true;
+}
+
+static
+std::string EnumeratorString(VkQueryControlFlagBits const& enumerator)
+{
+    if(!ValidateEnumerator(enumerator))
+    {
+        return "unrecognized enumerator";
+    }
+
+    std::vector<std::string> strings;
+    if(enumerator & VK_QUERY_CONTROL_CONSERVATIVE_BIT)
+    {
+        strings.push_back("VK_QUERY_CONTROL_CONSERVATIVE_BIT");
     }
 
     std::string enumeratorString;
@@ -1751,21 +2105,15 @@ bool PostEnumeratePhysicalDevices(
     VkResult result)
 {
 
-    if(pPhysicalDeviceCount == nullptr)
+    if(pPhysicalDeviceCount != nullptr)
     {
-        log_msg(mid(instance), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkEnumeratePhysicalDevices parameter, uint32_t* pPhysicalDeviceCount, is null pointer");
-        return false;
     }
 
-    if(pPhysicalDevices == nullptr)
+    if(pPhysicalDevices != nullptr)
     {
-        log_msg(mid(instance), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkEnumeratePhysicalDevices parameter, VkPhysicalDevice* pPhysicalDevices, is null pointer");
-        return false;
     }
 
-    if(result != VK_SUCCESS)
+    if(result < VK_SUCCESS)
     {
         std::string reason = "vkEnumeratePhysicalDevices parameter, VkResult result, is " + EnumeratorString(result);
         log_msg(mid(instance), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
@@ -1793,14 +2141,11 @@ bool PostGetPhysicalDeviceFeatures(
     VkResult result)
 {
 
-    if(pFeatures == nullptr)
+    if(pFeatures != nullptr)
     {
-        log_msg(mdd(physicalDevice), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkGetPhysicalDeviceFeatures parameter, VkPhysicalDeviceFeatures* pFeatures, is null pointer");
-        return false;
     }
 
-    if(result != VK_SUCCESS)
+    if(result < VK_SUCCESS)
     {
         std::string reason = "vkGetPhysicalDeviceFeatures parameter, VkResult result, is " + EnumeratorString(result);
         log_msg(mdd(physicalDevice), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
@@ -1824,7 +2169,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkGetPhysicalDeviceFeatures(
 bool PostGetPhysicalDeviceFormatProperties(
     VkPhysicalDevice physicalDevice,
     VkFormat format,
-    VkFormatProperties* pFormatInfo,
+    VkFormatProperties* pFormatProperties,
     VkResult result)
 {
 
@@ -1832,30 +2177,15 @@ bool PostGetPhysicalDeviceFormatProperties(
         format > VK_FORMAT_END_RANGE)
     {
         log_msg(mdd(physicalDevice), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkGetPhysicalDeviceFormatProperties parameter, VkFormat format, is unrecognized enumerator");
+        "vkGetPhysicalDeviceFormatProperties parameter, VkFormat format, is an unrecognized enumerator");
         return false;
     }
 
-    if(pFormatInfo == nullptr)
+    if(pFormatProperties != nullptr)
     {
-        log_msg(mdd(physicalDevice), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkGetPhysicalDeviceFormatProperties parameter, VkFormatProperties* pFormatInfo, is null pointer");
-        return false;
-    }
-    if(!ValidateEnumerator((VkFormatFeatureFlagBits)pFormatInfo->linearTilingFeatures))
-    {
-        std::string reason = "vkGetPhysicalDeviceFormatProperties parameter, VkFormatFeatureFlags pFormatInfo->linearTilingFeatures, is " + EnumeratorString((VkFormatFeatureFlagBits)pFormatInfo->linearTilingFeatures);
-        log_msg(mdd(physicalDevice), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
-        return false;
-    }
-    if(!ValidateEnumerator((VkFormatFeatureFlagBits)pFormatInfo->optimalTilingFeatures))
-    {
-        std::string reason = "vkGetPhysicalDeviceFormatProperties parameter, VkFormatFeatureFlags pFormatInfo->optimalTilingFeatures, is " + EnumeratorString((VkFormatFeatureFlagBits)pFormatInfo->optimalTilingFeatures);
-        log_msg(mdd(physicalDevice), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
-        return false;
     }
 
-    if(result != VK_SUCCESS)
+    if(result < VK_SUCCESS)
     {
         std::string reason = "vkGetPhysicalDeviceFormatProperties parameter, VkResult result, is " + EnumeratorString(result);
         log_msg(mdd(physicalDevice), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
@@ -1868,11 +2198,75 @@ bool PostGetPhysicalDeviceFormatProperties(
 VK_LAYER_EXPORT VkResult VKAPI vkGetPhysicalDeviceFormatProperties(
     VkPhysicalDevice physicalDevice,
     VkFormat format,
-    VkFormatProperties* pFormatInfo)
+    VkFormatProperties* pFormatProperties)
 {
-    VkResult result = get_dispatch_table(pc_instance_table_map, physicalDevice)->GetPhysicalDeviceFormatProperties(physicalDevice, format, pFormatInfo);
+    VkResult result = get_dispatch_table(pc_instance_table_map, physicalDevice)->GetPhysicalDeviceFormatProperties(physicalDevice, format, pFormatProperties);
 
-    PostGetPhysicalDeviceFormatProperties(physicalDevice, format, pFormatInfo, result);
+    PostGetPhysicalDeviceFormatProperties(physicalDevice, format, pFormatProperties, result);
+
+    return result;
+}
+
+bool PostGetPhysicalDeviceImageFormatProperties(
+    VkPhysicalDevice physicalDevice,
+    VkFormat format,
+    VkImageType type,
+    VkImageTiling tiling,
+    VkImageUsageFlags usage,
+    VkImageFormatProperties* pImageFormatProperties,
+    VkResult result)
+{
+
+    if(format < VK_FORMAT_BEGIN_RANGE ||
+        format > VK_FORMAT_END_RANGE)
+    {
+        log_msg(mdd(physicalDevice), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        "vkGetPhysicalDeviceImageFormatProperties parameter, VkFormat format, is an unrecognized enumerator");
+        return false;
+    }
+
+    if(type < VK_IMAGE_TYPE_BEGIN_RANGE ||
+        type > VK_IMAGE_TYPE_END_RANGE)
+    {
+        log_msg(mdd(physicalDevice), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        "vkGetPhysicalDeviceImageFormatProperties parameter, VkImageType type, is an unrecognized enumerator");
+        return false;
+    }
+
+    if(tiling < VK_IMAGE_TILING_BEGIN_RANGE ||
+        tiling > VK_IMAGE_TILING_END_RANGE)
+    {
+        log_msg(mdd(physicalDevice), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        "vkGetPhysicalDeviceImageFormatProperties parameter, VkImageTiling tiling, is an unrecognized enumerator");
+        return false;
+    }
+
+
+    if(pImageFormatProperties != nullptr)
+    {
+    }
+
+    if(result < VK_SUCCESS)
+    {
+        std::string reason = "vkGetPhysicalDeviceImageFormatProperties parameter, VkResult result, is " + EnumeratorString(result);
+        log_msg(mdd(physicalDevice), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
+        return false;
+    }
+
+    return true;
+}
+
+VK_LAYER_EXPORT VkResult VKAPI vkGetPhysicalDeviceImageFormatProperties(
+    VkPhysicalDevice physicalDevice,
+    VkFormat format,
+    VkImageType type,
+    VkImageTiling tiling,
+    VkImageUsageFlags usage,
+    VkImageFormatProperties* pImageFormatProperties)
+{
+    VkResult result = get_dispatch_table(pc_instance_table_map, physicalDevice)->GetPhysicalDeviceImageFormatProperties(physicalDevice, format, type, tiling, usage, pImageFormatProperties);
+
+    PostGetPhysicalDeviceImageFormatProperties(physicalDevice, format, type, tiling, usage, pImageFormatProperties, result);
 
     return result;
 }
@@ -1883,14 +2277,11 @@ bool PostGetPhysicalDeviceLimits(
     VkResult result)
 {
 
-    if(pLimits == nullptr)
+    if(pLimits != nullptr)
     {
-        log_msg(mdd(physicalDevice), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkGetPhysicalDeviceLimits parameter, VkPhysicalDeviceLimits* pLimits, is null pointer");
-        return false;
     }
 
-    if(result != VK_SUCCESS)
+    if(result < VK_SUCCESS)
     {
         std::string reason = "vkGetPhysicalDeviceLimits parameter, VkResult result, is " + EnumeratorString(result);
         log_msg(mdd(physicalDevice), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
@@ -1907,6 +2298,140 @@ VK_LAYER_EXPORT VkResult VKAPI vkGetPhysicalDeviceLimits(
     VkResult result = get_dispatch_table(pc_instance_table_map, physicalDevice)->GetPhysicalDeviceLimits(physicalDevice, pLimits);
 
     PostGetPhysicalDeviceLimits(physicalDevice, pLimits, result);
+
+    return result;
+}
+
+bool PostGetPhysicalDeviceProperties(
+    VkPhysicalDevice physicalDevice,
+    VkPhysicalDeviceProperties* pProperties,
+    VkResult result)
+{
+
+    if(pProperties != nullptr)
+    {
+    if(pProperties->deviceType < VK_PHYSICAL_DEVICE_TYPE_BEGIN_RANGE ||
+        pProperties->deviceType > VK_PHYSICAL_DEVICE_TYPE_END_RANGE)
+    {
+        log_msg(mdd(physicalDevice), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        "vkGetPhysicalDeviceProperties parameter, VkPhysicalDeviceType pProperties->deviceType, is an unrecognized enumerator");
+        return false;
+    }
+    }
+
+    if(result < VK_SUCCESS)
+    {
+        std::string reason = "vkGetPhysicalDeviceProperties parameter, VkResult result, is " + EnumeratorString(result);
+        log_msg(mdd(physicalDevice), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
+        return false;
+    }
+
+    return true;
+}
+
+VK_LAYER_EXPORT VkResult VKAPI vkGetPhysicalDeviceProperties(
+    VkPhysicalDevice physicalDevice,
+    VkPhysicalDeviceProperties* pProperties)
+{
+    VkResult result = get_dispatch_table(pc_instance_table_map, physicalDevice)->GetPhysicalDeviceProperties(physicalDevice, pProperties);
+
+    PostGetPhysicalDeviceProperties(physicalDevice, pProperties, result);
+
+    return result;
+}
+
+bool PostGetPhysicalDeviceQueueCount(
+    VkPhysicalDevice physicalDevice,
+    uint32_t* pCount,
+    VkResult result)
+{
+
+    if(pCount != nullptr)
+    {
+    }
+
+    if(result < VK_SUCCESS)
+    {
+        std::string reason = "vkGetPhysicalDeviceQueueCount parameter, VkResult result, is " + EnumeratorString(result);
+        log_msg(mdd(physicalDevice), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
+        return false;
+    }
+
+    return true;
+}
+
+VK_LAYER_EXPORT VkResult VKAPI vkGetPhysicalDeviceQueueCount(
+    VkPhysicalDevice physicalDevice,
+    uint32_t* pCount)
+{
+    VkResult result = get_dispatch_table(pc_instance_table_map, physicalDevice)->GetPhysicalDeviceQueueCount(physicalDevice, pCount);
+
+    PostGetPhysicalDeviceQueueCount(physicalDevice, pCount, result);
+
+    return result;
+}
+
+bool PostGetPhysicalDeviceQueueProperties(
+    VkPhysicalDevice physicalDevice,
+    uint32_t count,
+    VkPhysicalDeviceQueueProperties* pQueueProperties,
+    VkResult result)
+{
+
+
+    if(pQueueProperties != nullptr)
+    {
+    }
+
+    if(result < VK_SUCCESS)
+    {
+        std::string reason = "vkGetPhysicalDeviceQueueProperties parameter, VkResult result, is " + EnumeratorString(result);
+        log_msg(mdd(physicalDevice), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
+        return false;
+    }
+
+    return true;
+}
+
+VK_LAYER_EXPORT VkResult VKAPI vkGetPhysicalDeviceQueueProperties(
+    VkPhysicalDevice physicalDevice,
+    uint32_t count,
+    VkPhysicalDeviceQueueProperties* pQueueProperties)
+{
+    VkResult result = get_dispatch_table(pc_instance_table_map, physicalDevice)->GetPhysicalDeviceQueueProperties(physicalDevice, count, pQueueProperties);
+
+    PostGetPhysicalDeviceQueueProperties(physicalDevice, count, pQueueProperties, result);
+
+    return result;
+}
+
+bool PostGetPhysicalDeviceMemoryProperties(
+    VkPhysicalDevice physicalDevice,
+    VkPhysicalDeviceMemoryProperties* pMemoryProperties,
+    VkResult result)
+{
+
+    if(pMemoryProperties != nullptr)
+    {
+    }
+
+    if(result < VK_SUCCESS)
+    {
+        std::string reason = "vkGetPhysicalDeviceMemoryProperties parameter, VkResult result, is " + EnumeratorString(result);
+        log_msg(mdd(physicalDevice), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
+        return false;
+    }
+
+    return true;
+}
+
+VK_LAYER_EXPORT VkResult VKAPI vkGetPhysicalDeviceMemoryProperties(
+    VkPhysicalDevice physicalDevice,
+    VkPhysicalDeviceMemoryProperties* pMemoryProperties)
+{
+    VkResult result = get_dispatch_table(pc_instance_table_map, physicalDevice)->GetPhysicalDeviceMemoryProperties(physicalDevice, pMemoryProperties);
+
+    PostGetPhysicalDeviceMemoryProperties(physicalDevice, pMemoryProperties, result);
 
     return result;
 }
@@ -1945,161 +2470,9 @@ VK_LAYER_EXPORT VkResult VKAPI vkDestroyDevice(
     return result;
 }
 
-bool PostGetPhysicalDeviceProperties(
-    VkPhysicalDevice physicalDevice,
-    VkPhysicalDeviceProperties* pProperties,
-    VkResult result)
-{
-
-    if(pProperties == nullptr)
-    {
-        log_msg(mdd(physicalDevice), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkGetPhysicalDeviceProperties parameter, VkPhysicalDeviceProperties* pProperties, is null pointer");
-        return false;
-    }
-    if(pProperties->deviceType < VK_PHYSICAL_DEVICE_TYPE_BEGIN_RANGE ||
-        pProperties->deviceType > VK_PHYSICAL_DEVICE_TYPE_END_RANGE)
-    {
-        log_msg(mdd(physicalDevice), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkGetPhysicalDeviceProperties parameter, VkPhysicalDeviceType pProperties->deviceType, is unrecognized enumerator");
-        return false;
-    }
-
-    if(result != VK_SUCCESS)
-    {
-        std::string reason = "vkGetPhysicalDeviceProperties parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(physicalDevice), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
-        return false;
-    }
-
-    return true;
-}
-
-VK_LAYER_EXPORT VkResult VKAPI vkGetPhysicalDeviceProperties(
-    VkPhysicalDevice physicalDevice,
-    VkPhysicalDeviceProperties* pProperties)
-{
-    VkResult result = get_dispatch_table(pc_instance_table_map, physicalDevice)->GetPhysicalDeviceProperties(physicalDevice, pProperties);
-
-    PostGetPhysicalDeviceProperties(physicalDevice, pProperties, result);
-
-    return result;
-}
-
-bool PostGetPhysicalDeviceQueueCount(
-    VkPhysicalDevice physicalDevice,
-    uint32_t* pCount,
-    VkResult result)
-{
-
-    if(pCount == nullptr)
-    {
-        log_msg(mdd(physicalDevice), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkGetPhysicalDeviceQueueCount parameter, uint32_t* pCount, is null pointer");
-        return false;
-    }
-
-    if(result != VK_SUCCESS)
-    {
-        std::string reason = "vkGetPhysicalDeviceQueueCount parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(physicalDevice), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
-        return false;
-    }
-
-    return true;
-}
-
-VK_LAYER_EXPORT VkResult VKAPI vkGetPhysicalDeviceQueueCount(
-    VkPhysicalDevice physicalDevice,
-    uint32_t* pCount)
-{
-    VkResult result = get_dispatch_table(pc_instance_table_map, physicalDevice)->GetPhysicalDeviceQueueCount(physicalDevice, pCount);
-
-    PostGetPhysicalDeviceQueueCount(physicalDevice, pCount, result);
-
-    return result;
-}
-
-bool PostGetPhysicalDeviceQueueProperties(
-    VkPhysicalDevice physicalDevice,
-    uint32_t count,
-    VkPhysicalDeviceQueueProperties* pQueueProperties,
-    VkResult result)
-{
-
-
-    if(pQueueProperties == nullptr)
-    {
-        log_msg(mdd(physicalDevice), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkGetPhysicalDeviceQueueProperties parameter, VkPhysicalDeviceQueueProperties* pQueueProperties, is null pointer");
-        return false;
-    }
-    if(!ValidateEnumerator((VkQueueFlagBits)pQueueProperties->queueFlags))
-    {
-        std::string reason = "vkGetPhysicalDeviceQueueProperties parameter, VkQueueFlags pQueueProperties->queueFlags, is " + EnumeratorString((VkQueueFlagBits)pQueueProperties->queueFlags);
-        log_msg(mdd(physicalDevice), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
-        return false;
-    }
-
-    if(result != VK_SUCCESS)
-    {
-        std::string reason = "vkGetPhysicalDeviceQueueProperties parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(physicalDevice), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
-        return false;
-    }
-
-    return true;
-}
-
-VK_LAYER_EXPORT VkResult VKAPI vkGetPhysicalDeviceQueueProperties(
-    VkPhysicalDevice physicalDevice,
-    uint32_t count,
-    VkPhysicalDeviceQueueProperties* pQueueProperties)
-{
-    VkResult result = get_dispatch_table(pc_instance_table_map, physicalDevice)->GetPhysicalDeviceQueueProperties(physicalDevice, count, pQueueProperties);
-
-    PostGetPhysicalDeviceQueueProperties(physicalDevice, count, pQueueProperties, result);
-
-    return result;
-}
-
-bool PostGetPhysicalDeviceMemoryProperties(
-    VkPhysicalDevice physicalDevice,
-    VkPhysicalDeviceMemoryProperties* pMemoryProperies,
-    VkResult result)
-{
-
-    if(pMemoryProperies == nullptr)
-    {
-        log_msg(mdd(physicalDevice), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkGetPhysicalDeviceMemoryProperties parameter, VkPhysicalDeviceMemoryProperties* pMemoryProperies, is null pointer");
-        return false;
-    }
-
-    if(result != VK_SUCCESS)
-    {
-        std::string reason = "vkGetPhysicalDeviceMemoryProperties parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(physicalDevice), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
-        return false;
-    }
-
-    return true;
-}
-
-VK_LAYER_EXPORT VkResult VKAPI vkGetPhysicalDeviceMemoryProperties(
-    VkPhysicalDevice physicalDevice,
-    VkPhysicalDeviceMemoryProperties* pMemoryProperies)
-{
-    VkResult result = get_dispatch_table(pc_instance_table_map, physicalDevice)->GetPhysicalDeviceMemoryProperties(physicalDevice, pMemoryProperies);
-
-    PostGetPhysicalDeviceMemoryProperties(physicalDevice, pMemoryProperies, result);
-
-    return result;
-}
-
 bool PostGetDeviceQueue(
     VkDevice device,
-    uint32_t queueNodeIndex,
+    uint32_t queueFamilyIndex,
     uint32_t queueIndex,
     VkQueue* pQueue,
     VkResult result)
@@ -2107,14 +2480,11 @@ bool PostGetDeviceQueue(
 
 
 
-    if(pQueue == nullptr)
+    if(pQueue != nullptr)
     {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkGetDeviceQueue parameter, VkQueue* pQueue, is null pointer");
-        return false;
     }
 
-    if(result != VK_SUCCESS)
+    if(result < VK_SUCCESS)
     {
         std::string reason = "vkGetDeviceQueue parameter, VkResult result, is " + EnumeratorString(result);
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
@@ -2126,13 +2496,13 @@ bool PostGetDeviceQueue(
 
 VK_LAYER_EXPORT VkResult VKAPI vkGetDeviceQueue(
     VkDevice device,
-    uint32_t queueNodeIndex,
+    uint32_t queueFamilyIndex,
     uint32_t queueIndex,
     VkQueue* pQueue)
 {
-    VkResult result = get_dispatch_table(pc_device_table_map, device)->GetDeviceQueue(device, queueNodeIndex, queueIndex, pQueue);
+    VkResult result = get_dispatch_table(pc_device_table_map, device)->GetDeviceQueue(device, queueFamilyIndex, queueIndex, pQueue);
 
-    PostGetDeviceQueue(device, queueNodeIndex, queueIndex, pQueue, result);
+    PostGetDeviceQueue(device, queueFamilyIndex, queueIndex, pQueue, result);
 
     return result;
 }
@@ -2141,11 +2511,8 @@ bool PreQueueSubmit(
     VkQueue queue,
     const VkCmdBuffer* pCmdBuffers)
 {
-    if(pCmdBuffers == nullptr)
+    if(pCmdBuffers != nullptr)
     {
-        log_msg(mdd(queue), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkQueueSubmit parameter, const VkCmdBuffer* pCmdBuffers, is null pointer");
-        return false;
     }
 
     return true;
@@ -2160,7 +2527,7 @@ bool PostQueueSubmit(
 
 
 
-    if(result != VK_SUCCESS)
+    if(result < VK_SUCCESS)
     {
         std::string reason = "vkQueueSubmit parameter, VkResult result, is " + EnumeratorString(result);
         log_msg(mdd(queue), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
@@ -2190,7 +2557,7 @@ bool PostQueueWaitIdle(
     VkResult result)
 {
 
-    if(result != VK_SUCCESS)
+    if(result < VK_SUCCESS)
     {
         std::string reason = "vkQueueWaitIdle parameter, VkResult result, is " + EnumeratorString(result);
         log_msg(mdd(queue), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
@@ -2215,7 +2582,7 @@ bool PostDeviceWaitIdle(
     VkResult result)
 {
 
-    if(result != VK_SUCCESS)
+    if(result < VK_SUCCESS)
     {
         std::string reason = "vkDeviceWaitIdle parameter, VkResult result, is " + EnumeratorString(result);
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
@@ -2239,18 +2606,14 @@ bool PreAllocMemory(
     VkDevice device,
     const VkMemoryAllocInfo* pAllocInfo)
 {
-    if(pAllocInfo == nullptr)
+    if(pAllocInfo != nullptr)
+    {
+    if(pAllocInfo->sType != VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO)
     {
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkAllocMemory parameter, const VkMemoryAllocInfo* pAllocInfo, is null pointer");
+        "vkAllocMemory parameter, VkStructureType pAllocInfo->sType, is an invalid enumerator");
         return false;
     }
-    if(pAllocInfo->sType < VK_STRUCTURE_TYPE_BEGIN_RANGE ||
-        pAllocInfo->sType > VK_STRUCTURE_TYPE_END_RANGE)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkAllocMemory parameter, VkStructureType pAllocInfo->sType, is unrecognized enumerator");
-        return false;
     }
 
     return true;
@@ -2262,14 +2625,11 @@ bool PostAllocMemory(
     VkResult result)
 {
 
-    if(pMem == nullptr)
+    if(pMem != nullptr)
     {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkAllocMemory parameter, VkDeviceMemory* pMem, is null pointer");
-        return false;
     }
 
-    if(result != VK_SUCCESS)
+    if(result < VK_SUCCESS)
     {
         std::string reason = "vkAllocMemory parameter, VkResult result, is " + EnumeratorString(result);
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
@@ -2300,7 +2660,7 @@ bool PostFreeMemory(
 {
 
 
-    if(result != VK_SUCCESS)
+    if(result < VK_SUCCESS)
     {
         std::string reason = "vkFreeMemory parameter, VkResult result, is " + EnumeratorString(result);
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
@@ -2335,14 +2695,11 @@ bool PostMapMemory(
 
 
 
-    if(ppData == nullptr)
+    if(ppData != nullptr)
     {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkMapMemory parameter, void** ppData, is null pointer");
-        return false;
     }
 
-    if(result != VK_SUCCESS)
+    if(result < VK_SUCCESS)
     {
         std::string reason = "vkMapMemory parameter, VkResult result, is " + EnumeratorString(result);
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
@@ -2374,7 +2731,7 @@ bool PostUnmapMemory(
 {
 
 
-    if(result != VK_SUCCESS)
+    if(result < VK_SUCCESS)
     {
         std::string reason = "vkUnmapMemory parameter, VkResult result, is " + EnumeratorString(result);
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
@@ -2399,18 +2756,14 @@ bool PreFlushMappedMemoryRanges(
     VkDevice device,
     const VkMappedMemoryRange* pMemRanges)
 {
-    if(pMemRanges == nullptr)
+    if(pMemRanges != nullptr)
+    {
+    if(pMemRanges->sType != VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE)
     {
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkFlushMappedMemoryRanges parameter, const VkMappedMemoryRange* pMemRanges, is null pointer");
+        "vkFlushMappedMemoryRanges parameter, VkStructureType pMemRanges->sType, is an invalid enumerator");
         return false;
     }
-    if(pMemRanges->sType < VK_STRUCTURE_TYPE_BEGIN_RANGE ||
-        pMemRanges->sType > VK_STRUCTURE_TYPE_END_RANGE)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkFlushMappedMemoryRanges parameter, VkStructureType pMemRanges->sType, is unrecognized enumerator");
-        return false;
     }
 
     return true;
@@ -2423,7 +2776,7 @@ bool PostFlushMappedMemoryRanges(
 {
 
 
-    if(result != VK_SUCCESS)
+    if(result < VK_SUCCESS)
     {
         std::string reason = "vkFlushMappedMemoryRanges parameter, VkResult result, is " + EnumeratorString(result);
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
@@ -2451,18 +2804,14 @@ bool PreInvalidateMappedMemoryRanges(
     VkDevice device,
     const VkMappedMemoryRange* pMemRanges)
 {
-    if(pMemRanges == nullptr)
+    if(pMemRanges != nullptr)
+    {
+    if(pMemRanges->sType != VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE)
     {
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkInvalidateMappedMemoryRanges parameter, const VkMappedMemoryRange* pMemRanges, is null pointer");
+        "vkInvalidateMappedMemoryRanges parameter, VkStructureType pMemRanges->sType, is an invalid enumerator");
         return false;
     }
-    if(pMemRanges->sType < VK_STRUCTURE_TYPE_BEGIN_RANGE ||
-        pMemRanges->sType > VK_STRUCTURE_TYPE_END_RANGE)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkInvalidateMappedMemoryRanges parameter, VkStructureType pMemRanges->sType, is unrecognized enumerator");
-        return false;
     }
 
     return true;
@@ -2475,7 +2824,7 @@ bool PostInvalidateMappedMemoryRanges(
 {
 
 
-    if(result != VK_SUCCESS)
+    if(result < VK_SUCCESS)
     {
         std::string reason = "vkInvalidateMappedMemoryRanges parameter, VkResult result, is " + EnumeratorString(result);
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
@@ -2499,12 +2848,36 @@ VK_LAYER_EXPORT VkResult VKAPI vkInvalidateMappedMemoryRanges(
     return result;
 }
 
+bool PostGetDeviceMemoryCommitment(
+    VkDevice device,
+    VkDeviceMemory memory,
+    VkDeviceSize* pCommittedMemoryInBytes,
+    VkResult result)
+{
+
+
+    if(pCommittedMemoryInBytes != nullptr)
+    {
+    }
+
+    if(result < VK_SUCCESS)
+    {
+        std::string reason = "vkGetDeviceMemoryCommitment parameter, VkResult result, is " + EnumeratorString(result);
+        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
+        return false;
+    }
+
+    return true;
+}
+
 VK_LAYER_EXPORT VkResult VKAPI vkGetDeviceMemoryCommitment(
-    VkDevice                                  device,
-    VkDeviceMemory                            memory,
-    VkDeviceSize*                             pCommittedMemoryInBytes)
+    VkDevice device,
+    VkDeviceMemory memory,
+    VkDeviceSize* pCommittedMemoryInBytes)
 {
     VkResult result = get_dispatch_table(pc_device_table_map, device)->GetDeviceMemoryCommitment(device, memory, pCommittedMemoryInBytes);
+
+    PostGetDeviceMemoryCommitment(device, memory, pCommittedMemoryInBytes, result);
 
     return result;
 }
@@ -2520,7 +2893,7 @@ bool PostBindBufferMemory(
 
 
 
-    if(result != VK_SUCCESS)
+    if(result < VK_SUCCESS)
     {
         std::string reason = "vkBindBufferMemory parameter, VkResult result, is " + EnumeratorString(result);
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
@@ -2554,7 +2927,7 @@ bool PostBindImageMemory(
 
 
 
-    if(result != VK_SUCCESS)
+    if(result < VK_SUCCESS)
     {
         std::string reason = "vkBindImageMemory parameter, VkResult result, is " + EnumeratorString(result);
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
@@ -2585,14 +2958,11 @@ bool PostGetBufferMemoryRequirements(
 {
 
 
-    if(pMemoryRequirements == nullptr)
+    if(pMemoryRequirements != nullptr)
     {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkGetBufferMemoryRequirements parameter, VkMemoryRequirements* pMemoryRequirements, is null pointer");
-        return false;
     }
 
-    if(result != VK_SUCCESS)
+    if(result < VK_SUCCESS)
     {
         std::string reason = "vkGetBufferMemoryRequirements parameter, VkResult result, is " + EnumeratorString(result);
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
@@ -2622,14 +2992,11 @@ bool PostGetImageMemoryRequirements(
 {
 
 
-    if(pMemoryRequirements == nullptr)
+    if(pMemoryRequirements != nullptr)
     {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkGetImageMemoryRequirements parameter, VkMemoryRequirements* pMemoryRequirements, is null pointer");
-        return false;
     }
 
-    if(result != VK_SUCCESS)
+    if(result < VK_SUCCESS)
     {
         std::string reason = "vkGetImageMemoryRequirements parameter, VkResult result, is " + EnumeratorString(result);
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
@@ -2660,34 +3027,22 @@ bool PostGetImageSparseMemoryRequirements(
 {
 
 
-    if(pNumRequirements == nullptr)
+    if(pNumRequirements != nullptr)
     {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkGetImageSparseMemoryRequirements parameter, uint32_t* pNumRequirements, is null pointer");
-        return false;
     }
 
-    if(pSparseMemoryRequirements == nullptr)
+    if(pSparseMemoryRequirements != nullptr)
     {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkGetImageSparseMemoryRequirements parameter, VkSparseImageMemoryRequirements* pSparseMemoryRequirements, is null pointer");
-        return false;
-    }
     if(pSparseMemoryRequirements->formatProps.aspect < VK_IMAGE_ASPECT_BEGIN_RANGE ||
         pSparseMemoryRequirements->formatProps.aspect > VK_IMAGE_ASPECT_END_RANGE)
     {
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkGetImageSparseMemoryRequirements parameter, VkImageAspect pSparseMemoryRequirements->formatProps.aspect, is unrecognized enumerator");
+        "vkGetImageSparseMemoryRequirements parameter, VkImageAspect pSparseMemoryRequirements->formatProps.aspect, is an unrecognized enumerator");
         return false;
     }
-    if(!ValidateEnumerator((VkSparseImageFormatFlagBits)pSparseMemoryRequirements->formatProps.flags))
-    {
-        std::string reason = "vkGetImageSparseMemoryRequirements parameter, VkSparseImageFormatFlags pSparseMemoryRequirements->formatProps.flags, is " + EnumeratorString((VkSparseImageFormatFlagBits)pSparseMemoryRequirements->formatProps.flags);
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
-        return false;
     }
 
-    if(result != VK_SUCCESS)
+    if(result < VK_SUCCESS)
     {
         std::string reason = "vkGetImageSparseMemoryRequirements parameter, VkResult result, is " + EnumeratorString(result);
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
@@ -2726,7 +3081,7 @@ bool PostGetPhysicalDeviceSparseImageFormatProperties(
         format > VK_FORMAT_END_RANGE)
     {
         log_msg(mdd(physicalDevice), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkGetPhysicalDeviceSparseImageFormatProperties parameter, VkFormat format, is unrecognized enumerator");
+        "vkGetPhysicalDeviceSparseImageFormatProperties parameter, VkFormat format, is an unrecognized enumerator");
         return false;
     }
 
@@ -2734,54 +3089,36 @@ bool PostGetPhysicalDeviceSparseImageFormatProperties(
         type > VK_IMAGE_TYPE_END_RANGE)
     {
         log_msg(mdd(physicalDevice), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkGetPhysicalDeviceSparseImageFormatProperties parameter, VkImageType type, is unrecognized enumerator");
+        "vkGetPhysicalDeviceSparseImageFormatProperties parameter, VkImageType type, is an unrecognized enumerator");
         return false;
     }
 
 
-    if(!ValidateEnumerator((VkImageUsageFlagBits)usage))
-    {
-        std::string reason = "vkGetPhysicalDeviceSparseImageFormatProperties parameter, VkImageUsageFlags usage, is " + EnumeratorString((VkImageUsageFlagBits)usage);
-        log_msg(mdd(physicalDevice), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
-        return false;
-    }
 
     if(tiling < VK_IMAGE_TILING_BEGIN_RANGE ||
         tiling > VK_IMAGE_TILING_END_RANGE)
     {
         log_msg(mdd(physicalDevice), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkGetPhysicalDeviceSparseImageFormatProperties parameter, VkImageTiling tiling, is unrecognized enumerator");
+        "vkGetPhysicalDeviceSparseImageFormatProperties parameter, VkImageTiling tiling, is an unrecognized enumerator");
         return false;
     }
 
-    if(pNumProperties == nullptr)
+    if(pNumProperties != nullptr)
     {
-        log_msg(mdd(physicalDevice), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkGetPhysicalDeviceSparseImageFormatProperties parameter, uint32_t* pNumProperties, is null pointer");
-        return false;
     }
 
-    if(pProperties == nullptr)
+    if(pProperties != nullptr)
     {
-        log_msg(mdd(physicalDevice), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkGetPhysicalDeviceSparseImageFormatProperties parameter, VkSparseImageFormatProperties* pProperties, is null pointer");
-        return false;
-    }
     if(pProperties->aspect < VK_IMAGE_ASPECT_BEGIN_RANGE ||
         pProperties->aspect > VK_IMAGE_ASPECT_END_RANGE)
     {
         log_msg(mdd(physicalDevice), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkGetPhysicalDeviceSparseImageFormatProperties parameter, VkImageAspect pProperties->aspect, is unrecognized enumerator");
+        "vkGetPhysicalDeviceSparseImageFormatProperties parameter, VkImageAspect pProperties->aspect, is an unrecognized enumerator");
         return false;
     }
-    if(!ValidateEnumerator((VkSparseImageFormatFlagBits)pProperties->flags))
-    {
-        std::string reason = "vkGetPhysicalDeviceSparseImageFormatProperties parameter, VkSparseImageFormatFlags pProperties->flags, is " + EnumeratorString((VkSparseImageFormatFlagBits)pProperties->flags);
-        log_msg(mdd(physicalDevice), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
-        return false;
     }
 
-    if(result != VK_SUCCESS)
+    if(result < VK_SUCCESS)
     {
         std::string reason = "vkGetPhysicalDeviceSparseImageFormatProperties parameter, VkResult result, is " + EnumeratorString(result);
         log_msg(mdd(physicalDevice), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
@@ -2812,11 +3149,8 @@ bool PreQueueBindSparseBufferMemory(
     VkQueue queue,
     const VkSparseMemoryBindInfo* pBindInfo)
 {
-    if(pBindInfo == nullptr)
+    if(pBindInfo != nullptr)
     {
-        log_msg(mdd(queue), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkQueueBindSparseBufferMemory parameter, const VkSparseMemoryBindInfo* pBindInfo, is null pointer");
-        return false;
     }
 
     return true;
@@ -2831,7 +3165,7 @@ bool PostQueueBindSparseBufferMemory(
 
 
 
-    if(result != VK_SUCCESS)
+    if(result < VK_SUCCESS)
     {
         std::string reason = "vkQueueBindSparseBufferMemory parameter, VkResult result, is " + EnumeratorString(result);
         log_msg(mdd(queue), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
@@ -2860,11 +3194,8 @@ bool PreQueueBindSparseImageOpaqueMemory(
     VkQueue queue,
     const VkSparseMemoryBindInfo* pBindInfo)
 {
-    if(pBindInfo == nullptr)
+    if(pBindInfo != nullptr)
     {
-        log_msg(mdd(queue), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkQueueBindSparseImageOpaqueMemory parameter, const VkSparseMemoryBindInfo* pBindInfo, is null pointer");
-        return false;
     }
 
     return true;
@@ -2879,7 +3210,7 @@ bool PostQueueBindSparseImageOpaqueMemory(
 
 
 
-    if(result != VK_SUCCESS)
+    if(result < VK_SUCCESS)
     {
         std::string reason = "vkQueueBindSparseImageOpaqueMemory parameter, VkResult result, is " + EnumeratorString(result);
         log_msg(mdd(queue), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
@@ -2908,24 +3239,15 @@ bool PreQueueBindSparseImageMemory(
     VkQueue queue,
     const VkSparseImageMemoryBindInfo* pBindInfo)
 {
-    if(pBindInfo == nullptr)
+    if(pBindInfo != nullptr)
     {
-        log_msg(mdd(queue), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkQueueBindSparseImageMemory parameter, const VkSparseImageMemoryBindInfo* pBindInfo, is null pointer");
-        return false;
-    }
     if(pBindInfo->subresource.aspect < VK_IMAGE_ASPECT_BEGIN_RANGE ||
         pBindInfo->subresource.aspect > VK_IMAGE_ASPECT_END_RANGE)
     {
         log_msg(mdd(queue), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkQueueBindSparseImageMemory parameter, VkImageAspect pBindInfo->subresource.aspect, is unrecognized enumerator");
+        "vkQueueBindSparseImageMemory parameter, VkImageAspect pBindInfo->subresource.aspect, is an unrecognized enumerator");
         return false;
     }
-    if(!ValidateEnumerator((VkSparseMemoryBindFlagBits)pBindInfo->flags))
-    {
-        std::string reason = "vkQueueBindSparseImageMemory parameter, VkSparseMemoryBindFlags pBindInfo->flags, is " + EnumeratorString((VkSparseMemoryBindFlagBits)pBindInfo->flags);
-        log_msg(mdd(queue), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
-        return false;
     }
 
     return true;
@@ -2940,7 +3262,7 @@ bool PostQueueBindSparseImageMemory(
 
 
 
-    if(result != VK_SUCCESS)
+    if(result < VK_SUCCESS)
     {
         std::string reason = "vkQueueBindSparseImageMemory parameter, VkResult result, is " + EnumeratorString(result);
         log_msg(mdd(queue), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
@@ -2969,24 +3291,14 @@ bool PreCreateFence(
     VkDevice device,
     const VkFenceCreateInfo* pCreateInfo)
 {
-    if(pCreateInfo == nullptr)
+    if(pCreateInfo != nullptr)
+    {
+    if(pCreateInfo->sType != VK_STRUCTURE_TYPE_FENCE_CREATE_INFO)
     {
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateFence parameter, const VkFenceCreateInfo* pCreateInfo, is null pointer");
+        "vkCreateFence parameter, VkStructureType pCreateInfo->sType, is an invalid enumerator");
         return false;
     }
-    if(pCreateInfo->sType < VK_STRUCTURE_TYPE_BEGIN_RANGE ||
-        pCreateInfo->sType > VK_STRUCTURE_TYPE_END_RANGE)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateFence parameter, VkStructureType pCreateInfo->sType, is unrecognized enumerator");
-        return false;
-    }
-    if(!ValidateEnumerator((VkFenceCreateFlagBits)pCreateInfo->flags))
-    {
-        std::string reason = "vkCreateFence parameter, VkFenceCreateFlags pCreateInfo->flags, is " + EnumeratorString((VkFenceCreateFlagBits)pCreateInfo->flags);
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
-        return false;
     }
 
     return true;
@@ -2998,14 +3310,11 @@ bool PostCreateFence(
     VkResult result)
 {
 
-    if(pFence == nullptr)
+    if(pFence != nullptr)
     {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateFence parameter, VkFence* pFence, is null pointer");
-        return false;
     }
 
-    if(result != VK_SUCCESS)
+    if(result < VK_SUCCESS)
     {
         std::string reason = "vkCreateFence parameter, VkResult result, is " + EnumeratorString(result);
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
@@ -3036,7 +3345,7 @@ bool PostDestroyFence(
 {
 
 
-    if(result != VK_SUCCESS)
+    if(result < VK_SUCCESS)
     {
         std::string reason = "vkDestroyFence parameter, VkResult result, is " + EnumeratorString(result);
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
@@ -3061,11 +3370,8 @@ bool PreResetFences(
     VkDevice device,
     const VkFence* pFences)
 {
-    if(pFences == nullptr)
+    if(pFences != nullptr)
     {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkResetFences parameter, const VkFence* pFences, is null pointer");
-        return false;
     }
 
     return true;
@@ -3078,7 +3384,7 @@ bool PostResetFences(
 {
 
 
-    if(result != VK_SUCCESS)
+    if(result < VK_SUCCESS)
     {
         std::string reason = "vkResetFences parameter, VkResult result, is " + EnumeratorString(result);
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
@@ -3109,7 +3415,7 @@ bool PostGetFenceStatus(
 {
 
 
-    if(result != VK_SUCCESS)
+    if(result < VK_SUCCESS)
     {
         std::string reason = "vkGetFenceStatus parameter, VkResult result, is " + EnumeratorString(result);
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
@@ -3134,11 +3440,8 @@ bool PreWaitForFences(
     VkDevice device,
     const VkFence* pFences)
 {
-    if(pFences == nullptr)
+    if(pFences != nullptr)
     {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkWaitForFences parameter, const VkFence* pFences, is null pointer");
-        return false;
     }
 
     return true;
@@ -3155,7 +3458,7 @@ bool PostWaitForFences(
 
 
 
-    if(result != VK_SUCCESS)
+    if(result < VK_SUCCESS)
     {
         std::string reason = "vkWaitForFences parameter, VkResult result, is " + EnumeratorString(result);
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
@@ -3185,18 +3488,14 @@ bool PreCreateSemaphore(
     VkDevice device,
     const VkSemaphoreCreateInfo* pCreateInfo)
 {
-    if(pCreateInfo == nullptr)
+    if(pCreateInfo != nullptr)
+    {
+    if(pCreateInfo->sType != VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO)
     {
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateSemaphore parameter, const VkSemaphoreCreateInfo* pCreateInfo, is null pointer");
+        "vkCreateSemaphore parameter, VkStructureType pCreateInfo->sType, is an invalid enumerator");
         return false;
     }
-    if(pCreateInfo->sType < VK_STRUCTURE_TYPE_BEGIN_RANGE ||
-        pCreateInfo->sType > VK_STRUCTURE_TYPE_END_RANGE)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateSemaphore parameter, VkStructureType pCreateInfo->sType, is unrecognized enumerator");
-        return false;
     }
 
     return true;
@@ -3208,14 +3507,11 @@ bool PostCreateSemaphore(
     VkResult result)
 {
 
-    if(pSemaphore == nullptr)
+    if(pSemaphore != nullptr)
     {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateSemaphore parameter, VkSemaphore* pSemaphore, is null pointer");
-        return false;
     }
 
-    if(result != VK_SUCCESS)
+    if(result < VK_SUCCESS)
     {
         std::string reason = "vkCreateSemaphore parameter, VkResult result, is " + EnumeratorString(result);
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
@@ -3246,7 +3542,7 @@ bool PostDestroySemaphore(
 {
 
 
-    if(result != VK_SUCCESS)
+    if(result < VK_SUCCESS)
     {
         std::string reason = "vkDestroySemaphore parameter, VkResult result, is " + EnumeratorString(result);
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
@@ -3274,7 +3570,7 @@ bool PostQueueSignalSemaphore(
 {
 
 
-    if(result != VK_SUCCESS)
+    if(result < VK_SUCCESS)
     {
         std::string reason = "vkQueueSignalSemaphore parameter, VkResult result, is " + EnumeratorString(result);
         log_msg(mdd(queue), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
@@ -3302,7 +3598,7 @@ bool PostQueueWaitSemaphore(
 {
 
 
-    if(result != VK_SUCCESS)
+    if(result < VK_SUCCESS)
     {
         std::string reason = "vkQueueWaitSemaphore parameter, VkResult result, is " + EnumeratorString(result);
         log_msg(mdd(queue), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
@@ -3327,18 +3623,14 @@ bool PreCreateEvent(
     VkDevice device,
     const VkEventCreateInfo* pCreateInfo)
 {
-    if(pCreateInfo == nullptr)
+    if(pCreateInfo != nullptr)
+    {
+    if(pCreateInfo->sType != VK_STRUCTURE_TYPE_EVENT_CREATE_INFO)
     {
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateEvent parameter, const VkEventCreateInfo* pCreateInfo, is null pointer");
+        "vkCreateEvent parameter, VkStructureType pCreateInfo->sType, is an invalid enumerator");
         return false;
     }
-    if(pCreateInfo->sType < VK_STRUCTURE_TYPE_BEGIN_RANGE ||
-        pCreateInfo->sType > VK_STRUCTURE_TYPE_END_RANGE)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateEvent parameter, VkStructureType pCreateInfo->sType, is unrecognized enumerator");
-        return false;
     }
 
     return true;
@@ -3350,14 +3642,11 @@ bool PostCreateEvent(
     VkResult result)
 {
 
-    if(pEvent == nullptr)
+    if(pEvent != nullptr)
     {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateEvent parameter, VkEvent* pEvent, is null pointer");
-        return false;
     }
 
-    if(result != VK_SUCCESS)
+    if(result < VK_SUCCESS)
     {
         std::string reason = "vkCreateEvent parameter, VkResult result, is " + EnumeratorString(result);
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
@@ -3388,7 +3677,7 @@ bool PostDestroyEvent(
 {
 
 
-    if(result != VK_SUCCESS)
+    if(result < VK_SUCCESS)
     {
         std::string reason = "vkDestroyEvent parameter, VkResult result, is " + EnumeratorString(result);
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
@@ -3416,7 +3705,7 @@ bool PostGetEventStatus(
 {
 
 
-    if(result != VK_SUCCESS)
+    if(result < VK_SUCCESS)
     {
         std::string reason = "vkGetEventStatus parameter, VkResult result, is " + EnumeratorString(result);
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
@@ -3444,7 +3733,7 @@ bool PostSetEvent(
 {
 
 
-    if(result != VK_SUCCESS)
+    if(result < VK_SUCCESS)
     {
         std::string reason = "vkSetEvent parameter, VkResult result, is " + EnumeratorString(result);
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
@@ -3472,7 +3761,7 @@ bool PostResetEvent(
 {
 
 
-    if(result != VK_SUCCESS)
+    if(result < VK_SUCCESS)
     {
         std::string reason = "vkResetEvent parameter, VkResult result, is " + EnumeratorString(result);
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
@@ -3497,31 +3786,21 @@ bool PreCreateQueryPool(
     VkDevice device,
     const VkQueryPoolCreateInfo* pCreateInfo)
 {
-    if(pCreateInfo == nullptr)
+    if(pCreateInfo != nullptr)
+    {
+    if(pCreateInfo->sType != VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO)
     {
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateQueryPool parameter, const VkQueryPoolCreateInfo* pCreateInfo, is null pointer");
-        return false;
-    }
-    if(pCreateInfo->sType < VK_STRUCTURE_TYPE_BEGIN_RANGE ||
-        pCreateInfo->sType > VK_STRUCTURE_TYPE_END_RANGE)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateQueryPool parameter, VkStructureType pCreateInfo->sType, is unrecognized enumerator");
+        "vkCreateQueryPool parameter, VkStructureType pCreateInfo->sType, is an invalid enumerator");
         return false;
     }
     if(pCreateInfo->queryType < VK_QUERY_TYPE_BEGIN_RANGE ||
         pCreateInfo->queryType > VK_QUERY_TYPE_END_RANGE)
     {
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateQueryPool parameter, VkQueryType pCreateInfo->queryType, is unrecognized enumerator");
+        "vkCreateQueryPool parameter, VkQueryType pCreateInfo->queryType, is an unrecognized enumerator");
         return false;
     }
-    if(!ValidateEnumerator((VkQueryPipelineStatisticFlagBits)pCreateInfo->pipelineStatistics))
-    {
-        std::string reason = "vkCreateQueryPool parameter, VkQueryPipelineStatisticFlags pCreateInfo->pipelineStatistics, is " + EnumeratorString((VkQueryPipelineStatisticFlagBits)pCreateInfo->pipelineStatistics);
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
-        return false;
     }
 
     return true;
@@ -3533,14 +3812,11 @@ bool PostCreateQueryPool(
     VkResult result)
 {
 
-    if(pQueryPool == nullptr)
+    if(pQueryPool != nullptr)
     {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateQueryPool parameter, VkQueryPool* pQueryPool, is null pointer");
-        return false;
     }
 
-    if(result != VK_SUCCESS)
+    if(result < VK_SUCCESS)
     {
         std::string reason = "vkCreateQueryPool parameter, VkResult result, is " + EnumeratorString(result);
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
@@ -3571,7 +3847,7 @@ bool PostDestroyQueryPool(
 {
 
 
-    if(result != VK_SUCCESS)
+    if(result < VK_SUCCESS)
     {
         std::string reason = "vkDestroyQueryPool parameter, VkResult result, is " + EnumeratorString(result);
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
@@ -3606,28 +3882,16 @@ bool PostGetQueryPoolResults(
 
 
 
-    if(pDataSize == nullptr)
+    if(pDataSize != nullptr)
     {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkGetQueryPoolResults parameter, size_t* pDataSize, is null pointer");
-        return false;
     }
 
-    if(pData == nullptr)
+    if(pData != nullptr)
     {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkGetQueryPoolResults parameter, void* pData, is null pointer");
-        return false;
     }
 
-    if(!ValidateEnumerator((VkQueryResultFlagBits)flags))
-    {
-        std::string reason = "vkGetQueryPoolResults parameter, VkQueryResultFlags flags, is " + EnumeratorString((VkQueryResultFlagBits)flags);
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
-        return false;
-    }
 
-    if(result != VK_SUCCESS)
+    if(result < VK_SUCCESS)
     {
         std::string reason = "vkGetQueryPoolResults parameter, VkResult result, is " + EnumeratorString(result);
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
@@ -3657,30 +3921,24 @@ bool PreCreateBuffer(
     VkDevice device,
     const VkBufferCreateInfo* pCreateInfo)
 {
-    if(pCreateInfo == nullptr)
+    if(pCreateInfo != nullptr)
+    {
+    if(pCreateInfo->sType != VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO)
     {
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateBuffer parameter, const VkBufferCreateInfo* pCreateInfo, is null pointer");
+        "vkCreateBuffer parameter, VkStructureType pCreateInfo->sType, is an invalid enumerator");
         return false;
     }
-    if(pCreateInfo->sType < VK_STRUCTURE_TYPE_BEGIN_RANGE ||
-        pCreateInfo->sType > VK_STRUCTURE_TYPE_END_RANGE)
+    if(pCreateInfo->sharingMode < VK_SHARING_MODE_BEGIN_RANGE ||
+        pCreateInfo->sharingMode > VK_SHARING_MODE_END_RANGE)
     {
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateBuffer parameter, VkStructureType pCreateInfo->sType, is unrecognized enumerator");
+        "vkCreateBuffer parameter, VkSharingMode pCreateInfo->sharingMode, is an unrecognized enumerator");
         return false;
     }
-    if(!ValidateEnumerator((VkBufferUsageFlagBits)pCreateInfo->usage))
+    if(pCreateInfo->pQueueFamilyIndices != nullptr)
     {
-        std::string reason = "vkCreateBuffer parameter, VkBufferUsageFlags pCreateInfo->usage, is " + EnumeratorString((VkBufferUsageFlagBits)pCreateInfo->usage);
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
-        return false;
     }
-    if(!ValidateEnumerator((VkBufferCreateFlagBits)pCreateInfo->flags))
-    {
-        std::string reason = "vkCreateBuffer parameter, VkBufferCreateFlags pCreateInfo->flags, is " + EnumeratorString((VkBufferCreateFlagBits)pCreateInfo->flags);
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
-        return false;
     }
 
     return true;
@@ -3692,14 +3950,11 @@ bool PostCreateBuffer(
     VkResult result)
 {
 
-    if(pBuffer == nullptr)
+    if(pBuffer != nullptr)
     {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateBuffer parameter, VkBuffer* pBuffer, is null pointer");
-        return false;
     }
 
-    if(result != VK_SUCCESS)
+    if(result < VK_SUCCESS)
     {
         std::string reason = "vkCreateBuffer parameter, VkResult result, is " + EnumeratorString(result);
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
@@ -3730,7 +3985,7 @@ bool PostDestroyBuffer(
 {
 
 
-    if(result != VK_SUCCESS)
+    if(result < VK_SUCCESS)
     {
         std::string reason = "vkDestroyBuffer parameter, VkResult result, is " + EnumeratorString(result);
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
@@ -3755,32 +4010,28 @@ bool PreCreateBufferView(
     VkDevice device,
     const VkBufferViewCreateInfo* pCreateInfo)
 {
-    if(pCreateInfo == nullptr)
+    if(pCreateInfo != nullptr)
+    {
+    if(pCreateInfo->sType != VK_STRUCTURE_TYPE_BUFFER_VIEW_CREATE_INFO)
     {
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateBufferView parameter, const VkBufferViewCreateInfo* pCreateInfo, is null pointer");
-        return false;
-    }
-    if(pCreateInfo->sType < VK_STRUCTURE_TYPE_BEGIN_RANGE ||
-        pCreateInfo->sType > VK_STRUCTURE_TYPE_END_RANGE)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateBufferView parameter, VkStructureType pCreateInfo->sType, is unrecognized enumerator");
+        "vkCreateBufferView parameter, VkStructureType pCreateInfo->sType, is an invalid enumerator");
         return false;
     }
     if(pCreateInfo->viewType < VK_BUFFER_VIEW_TYPE_BEGIN_RANGE ||
         pCreateInfo->viewType > VK_BUFFER_VIEW_TYPE_END_RANGE)
     {
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateBufferView parameter, VkBufferViewType pCreateInfo->viewType, is unrecognized enumerator");
+        "vkCreateBufferView parameter, VkBufferViewType pCreateInfo->viewType, is an unrecognized enumerator");
         return false;
     }
     if(pCreateInfo->format < VK_FORMAT_BEGIN_RANGE ||
         pCreateInfo->format > VK_FORMAT_END_RANGE)
     {
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateBufferView parameter, VkFormat pCreateInfo->format, is unrecognized enumerator");
+        "vkCreateBufferView parameter, VkFormat pCreateInfo->format, is an unrecognized enumerator");
         return false;
+    }
     }
 
     return true;
@@ -3792,14 +4043,11 @@ bool PostCreateBufferView(
     VkResult result)
 {
 
-    if(pView == nullptr)
+    if(pView != nullptr)
     {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateBufferView parameter, VkBufferView* pView, is null pointer");
-        return false;
     }
 
-    if(result != VK_SUCCESS)
+    if(result < VK_SUCCESS)
     {
         std::string reason = "vkCreateBufferView parameter, VkResult result, is " + EnumeratorString(result);
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
@@ -3830,7 +4078,7 @@ bool PostDestroyBufferView(
 {
 
 
-    if(result != VK_SUCCESS)
+    if(result < VK_SUCCESS)
     {
         std::string reason = "vkDestroyBufferView parameter, VkResult result, is " + EnumeratorString(result);
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
@@ -3855,51 +4103,45 @@ bool PreCreateImage(
     VkDevice device,
     const VkImageCreateInfo* pCreateInfo)
 {
-    if(pCreateInfo == nullptr)
+    if(pCreateInfo != nullptr)
+    {
+    if(pCreateInfo->sType != VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO)
     {
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateImage parameter, const VkImageCreateInfo* pCreateInfo, is null pointer");
-        return false;
-    }
-    if(pCreateInfo->sType < VK_STRUCTURE_TYPE_BEGIN_RANGE ||
-        pCreateInfo->sType > VK_STRUCTURE_TYPE_END_RANGE)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateImage parameter, VkStructureType pCreateInfo->sType, is unrecognized enumerator");
+        "vkCreateImage parameter, VkStructureType pCreateInfo->sType, is an invalid enumerator");
         return false;
     }
     if(pCreateInfo->imageType < VK_IMAGE_TYPE_BEGIN_RANGE ||
         pCreateInfo->imageType > VK_IMAGE_TYPE_END_RANGE)
     {
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateImage parameter, VkImageType pCreateInfo->imageType, is unrecognized enumerator");
+        "vkCreateImage parameter, VkImageType pCreateInfo->imageType, is an unrecognized enumerator");
         return false;
     }
     if(pCreateInfo->format < VK_FORMAT_BEGIN_RANGE ||
         pCreateInfo->format > VK_FORMAT_END_RANGE)
     {
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateImage parameter, VkFormat pCreateInfo->format, is unrecognized enumerator");
+        "vkCreateImage parameter, VkFormat pCreateInfo->format, is an unrecognized enumerator");
         return false;
     }
     if(pCreateInfo->tiling < VK_IMAGE_TILING_BEGIN_RANGE ||
         pCreateInfo->tiling > VK_IMAGE_TILING_END_RANGE)
     {
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateImage parameter, VkImageTiling pCreateInfo->tiling, is unrecognized enumerator");
+        "vkCreateImage parameter, VkImageTiling pCreateInfo->tiling, is an unrecognized enumerator");
         return false;
     }
-    if(!ValidateEnumerator((VkImageUsageFlagBits)pCreateInfo->usage))
+    if(pCreateInfo->sharingMode < VK_SHARING_MODE_BEGIN_RANGE ||
+        pCreateInfo->sharingMode > VK_SHARING_MODE_END_RANGE)
     {
-        std::string reason = "vkCreateImage parameter, VkImageUsageFlags pCreateInfo->usage, is " + EnumeratorString((VkImageUsageFlagBits)pCreateInfo->usage);
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
+        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        "vkCreateImage parameter, VkSharingMode pCreateInfo->sharingMode, is an unrecognized enumerator");
         return false;
     }
-    if(!ValidateEnumerator((VkImageCreateFlagBits)pCreateInfo->flags))
+    if(pCreateInfo->pQueueFamilyIndices != nullptr)
     {
-        std::string reason = "vkCreateImage parameter, VkImageCreateFlags pCreateInfo->flags, is " + EnumeratorString((VkImageCreateFlagBits)pCreateInfo->flags);
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
-        return false;
+    }
     }
 
     return true;
@@ -3911,14 +4153,11 @@ bool PostCreateImage(
     VkResult result)
 {
 
-    if(pImage == nullptr)
+    if(pImage != nullptr)
     {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateImage parameter, VkImage* pImage, is null pointer");
-        return false;
     }
 
-    if(result != VK_SUCCESS)
+    if(result < VK_SUCCESS)
     {
         std::string reason = "vkCreateImage parameter, VkResult result, is " + EnumeratorString(result);
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
@@ -3949,7 +4188,7 @@ bool PostDestroyImage(
 {
 
 
-    if(result != VK_SUCCESS)
+    if(result < VK_SUCCESS)
     {
         std::string reason = "vkDestroyImage parameter, VkResult result, is " + EnumeratorString(result);
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
@@ -3974,18 +4213,15 @@ bool PreGetImageSubresourceLayout(
     VkDevice device,
     const VkImageSubresource* pSubresource)
 {
-    if(pSubresource == nullptr)
+    if(pSubresource != nullptr)
     {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkGetImageSubresourceLayout parameter, const VkImageSubresource* pSubresource, is null pointer");
-        return false;
-    }
     if(pSubresource->aspect < VK_IMAGE_ASPECT_BEGIN_RANGE ||
         pSubresource->aspect > VK_IMAGE_ASPECT_END_RANGE)
     {
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkGetImageSubresourceLayout parameter, VkImageAspect pSubresource->aspect, is unrecognized enumerator");
+        "vkGetImageSubresourceLayout parameter, VkImageAspect pSubresource->aspect, is an unrecognized enumerator");
         return false;
+    }
     }
 
     return true;
@@ -3999,14 +4235,11 @@ bool PostGetImageSubresourceLayout(
 {
 
 
-    if(pLayout == nullptr)
+    if(pLayout != nullptr)
     {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkGetImageSubresourceLayout parameter, VkSubresourceLayout* pLayout, is null pointer");
-        return false;
     }
 
-    if(result != VK_SUCCESS)
+    if(result < VK_SUCCESS)
     {
         std::string reason = "vkGetImageSubresourceLayout parameter, VkResult result, is " + EnumeratorString(result);
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
@@ -4035,67 +4268,63 @@ bool PreCreateImageView(
     VkDevice device,
     const VkImageViewCreateInfo* pCreateInfo)
 {
-    if(pCreateInfo == nullptr)
+    if(pCreateInfo != nullptr)
+    {
+    if(pCreateInfo->sType != VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO)
     {
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateImageView parameter, const VkImageViewCreateInfo* pCreateInfo, is null pointer");
-        return false;
-    }
-    if(pCreateInfo->sType < VK_STRUCTURE_TYPE_BEGIN_RANGE ||
-        pCreateInfo->sType > VK_STRUCTURE_TYPE_END_RANGE)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateImageView parameter, VkStructureType pCreateInfo->sType, is unrecognized enumerator");
+        "vkCreateImageView parameter, VkStructureType pCreateInfo->sType, is an invalid enumerator");
         return false;
     }
     if(pCreateInfo->viewType < VK_IMAGE_VIEW_TYPE_BEGIN_RANGE ||
         pCreateInfo->viewType > VK_IMAGE_VIEW_TYPE_END_RANGE)
     {
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateImageView parameter, VkImageViewType pCreateInfo->viewType, is unrecognized enumerator");
+        "vkCreateImageView parameter, VkImageViewType pCreateInfo->viewType, is an unrecognized enumerator");
         return false;
     }
     if(pCreateInfo->format < VK_FORMAT_BEGIN_RANGE ||
         pCreateInfo->format > VK_FORMAT_END_RANGE)
     {
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateImageView parameter, VkFormat pCreateInfo->format, is unrecognized enumerator");
+        "vkCreateImageView parameter, VkFormat pCreateInfo->format, is an unrecognized enumerator");
         return false;
     }
     if(pCreateInfo->channels.r < VK_CHANNEL_SWIZZLE_BEGIN_RANGE ||
         pCreateInfo->channels.r > VK_CHANNEL_SWIZZLE_END_RANGE)
     {
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateImageView parameter, VkChannelSwizzle pCreateInfo->channels.r, is unrecognized enumerator");
+        "vkCreateImageView parameter, VkChannelSwizzle pCreateInfo->channels.r, is an unrecognized enumerator");
         return false;
     }
     if(pCreateInfo->channels.g < VK_CHANNEL_SWIZZLE_BEGIN_RANGE ||
         pCreateInfo->channels.g > VK_CHANNEL_SWIZZLE_END_RANGE)
     {
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateImageView parameter, VkChannelSwizzle pCreateInfo->channels.g, is unrecognized enumerator");
+        "vkCreateImageView parameter, VkChannelSwizzle pCreateInfo->channels.g, is an unrecognized enumerator");
         return false;
     }
     if(pCreateInfo->channels.b < VK_CHANNEL_SWIZZLE_BEGIN_RANGE ||
         pCreateInfo->channels.b > VK_CHANNEL_SWIZZLE_END_RANGE)
     {
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateImageView parameter, VkChannelSwizzle pCreateInfo->channels.b, is unrecognized enumerator");
+        "vkCreateImageView parameter, VkChannelSwizzle pCreateInfo->channels.b, is an unrecognized enumerator");
         return false;
     }
     if(pCreateInfo->channels.a < VK_CHANNEL_SWIZZLE_BEGIN_RANGE ||
         pCreateInfo->channels.a > VK_CHANNEL_SWIZZLE_END_RANGE)
     {
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateImageView parameter, VkChannelSwizzle pCreateInfo->channels.a, is unrecognized enumerator");
+        "vkCreateImageView parameter, VkChannelSwizzle pCreateInfo->channels.a, is an unrecognized enumerator");
         return false;
     }
     if(pCreateInfo->subresourceRange.aspect < VK_IMAGE_ASPECT_BEGIN_RANGE ||
         pCreateInfo->subresourceRange.aspect > VK_IMAGE_ASPECT_END_RANGE)
     {
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateImageView parameter, VkImageAspect pCreateInfo->subresourceRange.aspect, is unrecognized enumerator");
+        "vkCreateImageView parameter, VkImageAspect pCreateInfo->subresourceRange.aspect, is an unrecognized enumerator");
         return false;
+    }
     }
 
     return true;
@@ -4107,14 +4336,11 @@ bool PostCreateImageView(
     VkResult result)
 {
 
-    if(pView == nullptr)
+    if(pView != nullptr)
     {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateImageView parameter, VkImageView* pView, is null pointer");
-        return false;
     }
 
-    if(result != VK_SUCCESS)
+    if(result < VK_SUCCESS)
     {
         std::string reason = "vkCreateImageView parameter, VkResult result, is " + EnumeratorString(result);
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
@@ -4145,7 +4371,7 @@ bool PostDestroyImageView(
 {
 
 
-    if(result != VK_SUCCESS)
+    if(result < VK_SUCCESS)
     {
         std::string reason = "vkDestroyImageView parameter, VkResult result, is " + EnumeratorString(result);
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
@@ -4166,42 +4392,62 @@ VK_LAYER_EXPORT VkResult VKAPI vkDestroyImageView(
     return result;
 }
 
-void PreCreateAttachmentView(
+bool PreCreateAttachmentView(
     VkDevice device,
     const VkAttachmentViewCreateInfo* pCreateInfo)
 {
-    if(pCreateInfo == nullptr)
+    if(pCreateInfo != nullptr)
     {
-        log_msg(mdd(device), VK_DBG_REPORT_WARN_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateAttachmentView parameter, const VkAttachmentViewCreateInfo* pCreateInfo, is null pointer");
-        return;
-    }
-    if(pCreateInfo->sType < VK_STRUCTURE_TYPE_BEGIN_RANGE ||
-        pCreateInfo->sType > VK_STRUCTURE_TYPE_END_RANGE)
+    if(pCreateInfo->sType != VK_STRUCTURE_TYPE_ATTACHMENT_VIEW_CREATE_INFO)
     {
-        log_msg(mdd(device), VK_DBG_REPORT_WARN_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateAttachmentView parameter, VkStructureType pCreateInfo->sType, is unrecognized enumerator");
-        return;
-    }
-    if(pCreateInfo->image.handle == 0)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_WARN_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateAttachmentView parameter, VkImage pCreateInfo->image, is null pointer");
-        return;
+        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        "vkCreateAttachmentView parameter, VkStructureType pCreateInfo->sType, is an invalid enumerator");
+        return false;
     }
     if(pCreateInfo->format < VK_FORMAT_BEGIN_RANGE ||
         pCreateInfo->format > VK_FORMAT_END_RANGE)
     {
-        log_msg(mdd(device), VK_DBG_REPORT_WARN_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateAttachmentView parameter, VkFormat pCreateInfo->format, is unrecognized enumerator");
-        return;
+        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        "vkCreateAttachmentView parameter, VkFormat pCreateInfo->format, is an unrecognized enumerator");
+        return false;
     }
-    if(!ValidateEnumerator((VkAttachmentViewCreateFlagBits)pCreateInfo->flags))
+    }
+
+    return true;
+}
+
+bool PostCreateAttachmentView(
+    VkDevice device,
+    VkAttachmentView* pView,
+    VkResult result)
+{
+
+    if(pView != nullptr)
     {
-        std::string reason = "vkCreateAttachmentView parameter, VkAttachmentViewCreateFlags pCreateInfo->flags, is " + EnumeratorString((VkAttachmentViewCreateFlagBits)pCreateInfo->flags);
-        log_msg(mdd(device), VK_DBG_REPORT_WARN_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
-        return;
     }
+
+    if(result < VK_SUCCESS)
+    {
+        std::string reason = "vkCreateAttachmentView parameter, VkResult result, is " + EnumeratorString(result);
+        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
+        return false;
+    }
+
+    return true;
+}
+
+VK_LAYER_EXPORT VkResult VKAPI vkCreateAttachmentView(
+    VkDevice device,
+    const VkAttachmentViewCreateInfo* pCreateInfo,
+    VkAttachmentView* pView)
+{
+    PreCreateAttachmentView(device, pCreateInfo);
+
+    VkResult result = get_dispatch_table(pc_device_table_map, device)->CreateAttachmentView(device, pCreateInfo, pView);
+
+    PostCreateAttachmentView(device, pView, result);
+
+    return result;
 }
 
 bool PostDestroyAttachmentView(
@@ -4211,7 +4457,7 @@ bool PostDestroyAttachmentView(
 {
 
 
-    if(result != VK_SUCCESS)
+    if(result < VK_SUCCESS)
     {
         std::string reason = "vkDestroyAttachmentView parameter, VkResult result, is " + EnumeratorString(result);
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
@@ -4232,53 +4478,6 @@ VK_LAYER_EXPORT VkResult VKAPI vkDestroyAttachmentView(
     return result;
 }
 
-
-void PostCreateAttachmentView(
-    VkDevice device,
-    VkAttachmentView* pView,
-    VkResult result)
-{
-    if(device == nullptr)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_WARN_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateAttachmentView parameter, VkDevice device, is null pointer");
-        return;
-    }
-
-    if(pView == nullptr)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_WARN_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateAttachmentView parameter, VkAttachmentView* pView, is null pointer");
-        return;
-    }
-    if((*pView).handle == 0)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_WARN_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateAttachmentView parameter, VkAttachmentView* pView, is null pointer");
-        return;
-    }
-
-    if(result != VK_SUCCESS)
-    {
-        std::string reason = "vkCreateAttachmentView parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(device), VK_DBG_REPORT_WARN_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
-        return;
-    }
-}
-
-VK_LAYER_EXPORT VkResult VKAPI vkCreateAttachmentView(
-    VkDevice device,
-    const VkAttachmentViewCreateInfo* pCreateInfo,
-    VkAttachmentView* pView)
-{
-    PreCreateAttachmentView(device, pCreateInfo);
-    VkResult result = get_dispatch_table(pc_device_table_map, device)->CreateAttachmentView(device, pCreateInfo, pView);
-
-    PostCreateAttachmentView(device, pView, result);
-
-    return result;
-}
-
 bool PostDestroyShaderModule(
     VkDevice device,
     VkShaderModule shaderModule,
@@ -4286,7 +4485,7 @@ bool PostDestroyShaderModule(
 {
 
 
-    if(result != VK_SUCCESS)
+    if(result < VK_SUCCESS)
     {
         std::string reason = "vkDestroyShaderModule parameter, VkResult result, is " + EnumeratorString(result);
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
@@ -4311,24 +4510,17 @@ bool PreCreateShader(
     VkDevice device,
     const VkShaderCreateInfo* pCreateInfo)
 {
-    if(pCreateInfo == nullptr)
+    if(pCreateInfo != nullptr)
+    {
+    if(pCreateInfo->sType != VK_STRUCTURE_TYPE_SHADER_CREATE_INFO)
     {
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateShader parameter, const VkShaderCreateInfo* pCreateInfo, is null pointer");
+        "vkCreateShader parameter, VkStructureType pCreateInfo->sType, is an invalid enumerator");
         return false;
     }
-    if(pCreateInfo->sType < VK_STRUCTURE_TYPE_BEGIN_RANGE ||
-        pCreateInfo->sType > VK_STRUCTURE_TYPE_END_RANGE)
+    if(pCreateInfo->pName != nullptr)
     {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateShader parameter, VkStructureType pCreateInfo->sType, is unrecognized enumerator");
-        return false;
     }
-    if(pCreateInfo->pName == nullptr)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateShader parameter, const char* pCreateInfo->pName, is null pointer");
-        return false;
     }
 
     return true;
@@ -4340,14 +4532,11 @@ bool PostCreateShader(
     VkResult result)
 {
 
-    if(pShader == nullptr)
+    if(pShader != nullptr)
     {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateShader parameter, VkShader* pShader, is null pointer");
-        return false;
     }
 
-    if(result != VK_SUCCESS)
+    if(result < VK_SUCCESS)
     {
         std::string reason = "vkCreateShader parameter, VkResult result, is " + EnumeratorString(result);
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
@@ -4376,7 +4565,9 @@ bool PostDestroyShader(
     VkShader shader,
     VkResult result)
 {
-    if(result != VK_SUCCESS)
+
+
+    if(result < VK_SUCCESS)
     {
         std::string reason = "vkDestroyShader parameter, VkResult result, is " + EnumeratorString(result);
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
@@ -4397,348 +4588,39 @@ VK_LAYER_EXPORT VkResult VKAPI vkDestroyShader(
     return result;
 }
 
-//TODO handle count > 1
-bool PreCreateGraphicsPipeline(
+bool PreCreatePipelineCache(
     VkDevice device,
-    uint32_t count,
-    const VkGraphicsPipelineCreateInfo* pCreateInfo)
+    const VkPipelineCacheCreateInfo* pCreateInfo)
 {
-    if(pCreateInfo == nullptr)
+    if(pCreateInfo != nullptr)
+    {
+    if(pCreateInfo->sType != VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO)
     {
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateGraphicsPipeline parameter, const VkGraphicsPipelineCreateInfo* pCreateInfo, is null pointer");
+        "vkCreatePipelineCache parameter, VkStructureType pCreateInfo->sType, is an invalid enumerator");
         return false;
     }
-    if(pCreateInfo->sType < VK_STRUCTURE_TYPE_BEGIN_RANGE ||
-        pCreateInfo->sType > VK_STRUCTURE_TYPE_END_RANGE)
+    if(pCreateInfo->initialData != nullptr)
     {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateGraphicsPipeline parameter, VkStructureType pCreateInfo->sType, is unrecognized enumerator");
-        return false;
     }
-    if(pCreateInfo->pStages == nullptr)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateGraphicsPipeline parameter, const VkPipelineShaderStageCreateInfo* pCreateInfo->pStages, is null pointer");
-        return false;
     }
-    if(pCreateInfo->pStages->sType < VK_STRUCTURE_TYPE_BEGIN_RANGE ||
-        pCreateInfo->pStages->sType > VK_STRUCTURE_TYPE_END_RANGE)
+
+    return true;
+}
+
+bool PostCreatePipelineCache(
+    VkDevice device,
+    VkPipelineCache* pPipelineCache,
+    VkResult result)
+{
+
+    if(pPipelineCache != nullptr)
     {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateGraphicsPipeline parameter, VkStructureType pCreateInfo->pStages->sType, is unrecognized enumerator");
-        return false;
     }
-    if(pCreateInfo->pStages->stage < VK_SHADER_STAGE_BEGIN_RANGE ||
-        pCreateInfo->pStages->stage > VK_SHADER_STAGE_END_RANGE)
+
+    if(result < VK_SUCCESS)
     {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateGraphicsPipeline parameter, VkShaderStage pCreateInfo->pStages->stage, is unrecognized enumerator");
-        return false;
-    }
-    if(pCreateInfo->pStages->pSpecializationInfo == nullptr)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateGraphicsPipeline parameter, const VkSpecializationInfo* pCreateInfo->pStages->pSpecializationInfo, is null pointer");
-        return false;
-    }
-    if(pCreateInfo->pStages->pSpecializationInfo->pMap == nullptr)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateGraphicsPipeline parameter, const VkSpecializationMapEntry* pCreateInfo->pStages->pSpecializationInfo->pMap, is null pointer");
-        return false;
-    }
-    if(pCreateInfo->pStages->pSpecializationInfo->pData == nullptr)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateGraphicsPipeline parameter, const void* pCreateInfo->pStages->pSpecializationInfo->pData, is null pointer");
-        return false;
-    }
-    if(pCreateInfo->pVertexInputState == nullptr)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateGraphicsPipeline parameter, const VkPipelineVertexInputStateCreateInfo* pCreateInfo->pVertexInputState, is null pointer");
-        return false;
-    }
-    if(pCreateInfo->pVertexInputState->sType < VK_STRUCTURE_TYPE_BEGIN_RANGE ||
-        pCreateInfo->pVertexInputState->sType > VK_STRUCTURE_TYPE_END_RANGE)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateGraphicsPipeline parameter, VkStructureType pCreateInfo->pVertexInputState->sType, is unrecognized enumerator");
-        return false;
-    }
-    if(pCreateInfo->pVertexInputState->pVertexBindingDescriptions == nullptr)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateGraphicsPipeline parameter, const VkVertexInputBindingDescription* pCreateInfo->pVertexInputState->pVertexBindingDescriptions, is null pointer");
-        return false;
-    }
-    if(pCreateInfo->pVertexInputState->pVertexBindingDescriptions->stepRate < VK_VERTEX_INPUT_STEP_RATE_BEGIN_RANGE ||
-        pCreateInfo->pVertexInputState->pVertexBindingDescriptions->stepRate > VK_VERTEX_INPUT_STEP_RATE_END_RANGE)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateGraphicsPipeline parameter, VkVertexInputStepRate pCreateInfo->pVertexInputState->pVertexBindingDescriptions->stepRate, is unrecognized enumerator");
-        return false;
-    }
-    if(pCreateInfo->pVertexInputState->pVertexAttributeDescriptions == nullptr)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateGraphicsPipeline parameter, const VkVertexInputAttributeDescription* pCreateInfo->pVertexInputState->pVertexAttributeDescriptions, is null pointer");
-        return false;
-    }
-    if(pCreateInfo->pVertexInputState->pVertexAttributeDescriptions->format < VK_FORMAT_BEGIN_RANGE ||
-        pCreateInfo->pVertexInputState->pVertexAttributeDescriptions->format > VK_FORMAT_END_RANGE)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateGraphicsPipeline parameter, VkFormat pCreateInfo->pVertexInputState->pVertexAttributeDescriptions->format, is unrecognized enumerator");
-        return false;
-    }
-    if(pCreateInfo->pInputAssemblyState == nullptr)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateGraphicsPipeline parameter, const VkPipelineIaStateCreateInfo* pCreateInfo->pIaState, is null pointer");
-        return false;
-    }
-    if(pCreateInfo->pInputAssemblyState->sType < VK_STRUCTURE_TYPE_BEGIN_RANGE ||
-        pCreateInfo->pInputAssemblyState->sType > VK_STRUCTURE_TYPE_END_RANGE)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateGraphicsPipeline parameter, VkStructureType pCreateInfo->pIaState->sType, is unrecognized enumerator");
-        return false;
-    }
-    if(pCreateInfo->pInputAssemblyState->topology < VK_PRIMITIVE_TOPOLOGY_BEGIN_RANGE ||
-        pCreateInfo->pInputAssemblyState->topology > VK_PRIMITIVE_TOPOLOGY_END_RANGE)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateGraphicsPipeline parameter, VkPrimitiveTopology pCreateInfo->pIaState->topology, is unrecognized enumerator");
-        return false;
-    }
-    if(pCreateInfo->pTessellationState == nullptr)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateGraphicsPipeline parameter, const VkPipelineTessStateCreateInfo* pCreateInfo->pTessState, is null pointer");
-        return false;
-    }
-    if(pCreateInfo->pTessellationState->sType < VK_STRUCTURE_TYPE_BEGIN_RANGE ||
-        pCreateInfo->pTessellationState->sType > VK_STRUCTURE_TYPE_END_RANGE)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateGraphicsPipeline parameter, VkStructureType pCreateInfo->pTessState->sType, is unrecognized enumerator");
-        return false;
-    }
-    if(pCreateInfo->pViewportState == nullptr)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateGraphicsPipeline parameter, const VkPipelineVpStateCreateInfo* pCreateInfo->pVpState, is null pointer");
-        return false;
-    }
-    if(pCreateInfo->pViewportState->sType < VK_STRUCTURE_TYPE_BEGIN_RANGE ||
-        pCreateInfo->pViewportState->sType > VK_STRUCTURE_TYPE_END_RANGE)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateGraphicsPipeline parameter, VkStructureType pCreateInfo->pVpState->sType, is unrecognized enumerator");
-        return false;
-    }
-    if(pCreateInfo->pRasterState == nullptr)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateGraphicsPipeline parameter, const VkPipelineRsStateCreateInfo* pCreateInfo->pRsState, is null pointer");
-        return false;
-    }
-    if(pCreateInfo->pRasterState->sType < VK_STRUCTURE_TYPE_BEGIN_RANGE ||
-        pCreateInfo->pRasterState->sType > VK_STRUCTURE_TYPE_END_RANGE)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateGraphicsPipeline parameter, VkStructureType pCreateInfo->pRsState->sType, is unrecognized enumerator");
-        return false;
-    }
-    if(pCreateInfo->pRasterState->fillMode < VK_FILL_MODE_BEGIN_RANGE ||
-        pCreateInfo->pRasterState->fillMode > VK_FILL_MODE_END_RANGE)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateGraphicsPipeline parameter, VkFillMode pCreateInfo->pRsState->fillMode, is unrecognized enumerator");
-        return false;
-    }
-    if(pCreateInfo->pRasterState->cullMode < VK_CULL_MODE_BEGIN_RANGE ||
-        pCreateInfo->pRasterState->cullMode > VK_CULL_MODE_END_RANGE)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateGraphicsPipeline parameter, VkCullMode pCreateInfo->pRsState->cullMode, is unrecognized enumerator");
-        return false;
-    }
-    if(pCreateInfo->pRasterState->frontFace < VK_FRONT_FACE_BEGIN_RANGE ||
-        pCreateInfo->pRasterState->frontFace > VK_FRONT_FACE_END_RANGE)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateGraphicsPipeline parameter, VkFrontFace pCreateInfo->pRsState->frontFace, is unrecognized enumerator");
-        return false;
-    }
-    if(pCreateInfo->pMultisampleState == nullptr)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateGraphicsPipeline parameter, const VkPipelineMsStateCreateInfo* pCreateInfo->pMsState, is null pointer");
-        return false;
-    }
-    if(pCreateInfo->pMultisampleState->sType < VK_STRUCTURE_TYPE_BEGIN_RANGE ||
-        pCreateInfo->pMultisampleState->sType > VK_STRUCTURE_TYPE_END_RANGE)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateGraphicsPipeline parameter, VkStructureType pCreateInfo->pMsState->sType, is unrecognized enumerator");
-        return false;
-    }
-    if(pCreateInfo->pDepthStencilState == nullptr)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateGraphicsPipeline parameter, const VkPipelineDsStateCreateInfo* pCreateInfo->pDsState, is null pointer");
-        return false;
-    }
-    if(pCreateInfo->pDepthStencilState->sType < VK_STRUCTURE_TYPE_BEGIN_RANGE ||
-        pCreateInfo->pDepthStencilState->sType > VK_STRUCTURE_TYPE_END_RANGE)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateGraphicsPipeline parameter, VkStructureType pCreateInfo->pDsState->sType, is unrecognized enumerator");
-        return false;
-    }
-    if(pCreateInfo->pDepthStencilState->depthCompareOp < VK_COMPARE_OP_BEGIN_RANGE ||
-        pCreateInfo->pDepthStencilState->depthCompareOp > VK_COMPARE_OP_END_RANGE)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateGraphicsPipeline parameter, VkCompareOp pCreateInfo->pDsState->depthCompareOp, is unrecognized enumerator");
-        return false;
-    }
-    if(pCreateInfo->pDepthStencilState->front.stencilFailOp < VK_STENCIL_OP_BEGIN_RANGE ||
-        pCreateInfo->pDepthStencilState->front.stencilFailOp > VK_STENCIL_OP_END_RANGE)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateGraphicsPipeline parameter, VkStencilOp pCreateInfo->pDsState->front.stencilFailOp, is unrecognized enumerator");
-        return false;
-    }
-    if(pCreateInfo->pDepthStencilState->front.stencilPassOp < VK_STENCIL_OP_BEGIN_RANGE ||
-        pCreateInfo->pDepthStencilState->front.stencilPassOp > VK_STENCIL_OP_END_RANGE)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateGraphicsPipeline parameter, VkStencilOp pCreateInfo->pDsState->front.stencilPassOp, is unrecognized enumerator");
-        return false;
-    }
-    if(pCreateInfo->pDepthStencilState->front.stencilDepthFailOp < VK_STENCIL_OP_BEGIN_RANGE ||
-        pCreateInfo->pDepthStencilState->front.stencilDepthFailOp > VK_STENCIL_OP_END_RANGE)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateGraphicsPipeline parameter, VkStencilOp pCreateInfo->pDsState->front.stencilDepthFailOp, is unrecognized enumerator");
-        return false;
-    }
-    if(pCreateInfo->pDepthStencilState->front.stencilCompareOp < VK_COMPARE_OP_BEGIN_RANGE ||
-        pCreateInfo->pDepthStencilState->front.stencilCompareOp > VK_COMPARE_OP_END_RANGE)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateGraphicsPipeline parameter, VkCompareOp pCreateInfo->pDsState->front.stencilCompareOp, is unrecognized enumerator");
-        return false;
-    }
-    if(pCreateInfo->pDepthStencilState->back.stencilFailOp < VK_STENCIL_OP_BEGIN_RANGE ||
-        pCreateInfo->pDepthStencilState->back.stencilFailOp > VK_STENCIL_OP_END_RANGE)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateGraphicsPipeline parameter, VkStencilOp pCreateInfo->pDsState->back.stencilFailOp, is unrecognized enumerator");
-        return false;
-    }
-    if(pCreateInfo->pDepthStencilState->back.stencilPassOp < VK_STENCIL_OP_BEGIN_RANGE ||
-        pCreateInfo->pDepthStencilState->back.stencilPassOp > VK_STENCIL_OP_END_RANGE)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateGraphicsPipeline parameter, VkStencilOp pCreateInfo->pDsState->back.stencilPassOp, is unrecognized enumerator");
-        return false;
-    }
-    if(pCreateInfo->pDepthStencilState->back.stencilDepthFailOp < VK_STENCIL_OP_BEGIN_RANGE ||
-        pCreateInfo->pDepthStencilState->back.stencilDepthFailOp > VK_STENCIL_OP_END_RANGE)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateGraphicsPipeline parameter, VkStencilOp pCreateInfo->pDsState->back.stencilDepthFailOp, is unrecognized enumerator");
-        return false;
-    }
-    if(pCreateInfo->pDepthStencilState->back.stencilCompareOp < VK_COMPARE_OP_BEGIN_RANGE ||
-        pCreateInfo->pDepthStencilState->back.stencilCompareOp > VK_COMPARE_OP_END_RANGE)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateGraphicsPipeline parameter, VkCompareOp pCreateInfo->pDsState->back.stencilCompareOp, is unrecognized enumerator");
-        return false;
-    }
-    if(pCreateInfo->pColorBlendState == nullptr)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateGraphicsPipeline parameter, const VkPipelineCbStateCreateInfo* pCreateInfo->pCbState, is null pointer");
-        return false;
-    }
-    if(pCreateInfo->pColorBlendState->sType < VK_STRUCTURE_TYPE_BEGIN_RANGE ||
-        pCreateInfo->pColorBlendState->sType > VK_STRUCTURE_TYPE_END_RANGE)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateGraphicsPipeline parameter, VkStructureType pCreateInfo->pCbState->sType, is unrecognized enumerator");
-        return false;
-    }
-    if(pCreateInfo->pColorBlendState->logicOp < VK_LOGIC_OP_BEGIN_RANGE ||
-        pCreateInfo->pColorBlendState->logicOp > VK_LOGIC_OP_END_RANGE)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateGraphicsPipeline parameter, VkLogicOp pCreateInfo->pCbState->logicOp, is unrecognized enumerator");
-        return false;
-    }
-    if(pCreateInfo->pColorBlendState->pAttachments == nullptr)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateGraphicsPipeline parameter, const VkPipelineCbAttachmentState* pCreateInfo->pCbState->pAttachments, is null pointer");
-        return false;
-    }
-    if(pCreateInfo->pColorBlendState->pAttachments->srcBlendColor < VK_BLEND_BEGIN_RANGE ||
-        pCreateInfo->pColorBlendState->pAttachments->srcBlendColor > VK_BLEND_END_RANGE)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateGraphicsPipeline parameter, VkBlend pCreateInfo->pCbState->pAttachments->srcBlendColor, is unrecognized enumerator");
-        return false;
-    }
-    if(pCreateInfo->pColorBlendState->pAttachments->destBlendColor < VK_BLEND_BEGIN_RANGE ||
-        pCreateInfo->pColorBlendState->pAttachments->destBlendColor > VK_BLEND_END_RANGE)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateGraphicsPipeline parameter, VkBlend pCreateInfo->pCbState->pAttachments->destBlendColor, is unrecognized enumerator");
-        return false;
-    }
-    if(pCreateInfo->pColorBlendState->pAttachments->blendOpColor < VK_BLEND_OP_BEGIN_RANGE ||
-        pCreateInfo->pColorBlendState->pAttachments->blendOpColor > VK_BLEND_OP_END_RANGE)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateGraphicsPipeline parameter, VkBlendOp pCreateInfo->pCbState->pAttachments->blendOpColor, is unrecognized enumerator");
-        return false;
-    }
-    if(pCreateInfo->pColorBlendState->pAttachments->srcBlendAlpha < VK_BLEND_BEGIN_RANGE ||
-        pCreateInfo->pColorBlendState->pAttachments->srcBlendAlpha > VK_BLEND_END_RANGE)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateGraphicsPipeline parameter, VkBlend pCreateInfo->pCbState->pAttachments->srcBlendAlpha, is unrecognized enumerator");
-        return false;
-    }
-    if(pCreateInfo->pColorBlendState->pAttachments->destBlendAlpha < VK_BLEND_BEGIN_RANGE ||
-        pCreateInfo->pColorBlendState->pAttachments->destBlendAlpha > VK_BLEND_END_RANGE)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateGraphicsPipeline parameter, VkBlend pCreateInfo->pCbState->pAttachments->destBlendAlpha, is unrecognized enumerator");
-        return false;
-    }
-    if(pCreateInfo->pColorBlendState->pAttachments->blendOpAlpha < VK_BLEND_OP_BEGIN_RANGE ||
-        pCreateInfo->pColorBlendState->pAttachments->blendOpAlpha > VK_BLEND_OP_END_RANGE)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateGraphicsPipeline parameter, VkBlendOp pCreateInfo->pCbState->pAttachments->blendOpAlpha, is unrecognized enumerator");
-        return false;
-    }
-    if(!ValidateEnumerator((VkChannelFlagBits)pCreateInfo->pColorBlendState->pAttachments->channelWriteMask))
-    {
-        std::string reason = "vkCreateGraphicsPipeline parameter, VkChannelFlags pCreateInfo->pCbState->pAttachments->channelWriteMask, is " + EnumeratorString((VkChannelFlagBits)pCreateInfo->pColorBlendState->pAttachments->channelWriteMask);
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
-        return false;
-    }
-    if(!ValidateEnumerator((VkPipelineCreateFlagBits)pCreateInfo->flags))
-    {
-        std::string reason = "vkCreateGraphicsPipeline parameter, VkPipelineCreateFlags pCreateInfo->flags, is " + EnumeratorString((VkPipelineCreateFlagBits)pCreateInfo->flags);
+        std::string reason = "vkCreatePipelineCache parameter, VkResult result, is " + EnumeratorString(result);
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
         return false;
     }
@@ -4746,27 +4628,539 @@ bool PreCreateGraphicsPipeline(
     return true;
 }
 
-bool PostCreateGraphicsPipeline(
+VK_LAYER_EXPORT VkResult VKAPI vkCreatePipelineCache(
     VkDevice device,
-    VkPipeline* pPipeline,
+    const VkPipelineCacheCreateInfo* pCreateInfo,
+    VkPipelineCache* pPipelineCache)
+{
+    PreCreatePipelineCache(device, pCreateInfo);
+
+    VkResult result = get_dispatch_table(pc_device_table_map, device)->CreatePipelineCache(device, pCreateInfo, pPipelineCache);
+
+    PostCreatePipelineCache(device, pPipelineCache, result);
+
+    return result;
+}
+
+bool PostDestroyPipelineCache(
+    VkDevice device,
+    VkPipelineCache pipelineCache,
     VkResult result)
 {
 
-    if(pPipeline == nullptr)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateGraphicsPipeline parameter, VkPipeline* pPipeline, is null pointer");
-        return false;
-    }
 
-    if(result != VK_SUCCESS)
+    if(result < VK_SUCCESS)
     {
-        std::string reason = "vkCreateGraphicsPipeline parameter, VkResult result, is " + EnumeratorString(result);
+        std::string reason = "vkDestroyPipelineCache parameter, VkResult result, is " + EnumeratorString(result);
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
         return false;
     }
 
     return true;
+}
+
+VK_LAYER_EXPORT VkResult VKAPI vkDestroyPipelineCache(
+    VkDevice device,
+    VkPipelineCache pipelineCache)
+{
+    VkResult result = get_dispatch_table(pc_device_table_map, device)->DestroyPipelineCache(device, pipelineCache);
+
+    PostDestroyPipelineCache(device, pipelineCache, result);
+
+    return result;
+}
+
+bool PostGetPipelineCacheSize(
+    VkDevice device,
+    VkPipelineCache pipelineCache)
+{
+
+
+    return true;
+}
+
+VK_LAYER_EXPORT size_t VKAPI vkGetPipelineCacheSize(
+    VkDevice device,
+    VkPipelineCache pipelineCache)
+{
+    get_dispatch_table(pc_device_table_map, device)->GetPipelineCacheSize(device, pipelineCache);
+
+    PostGetPipelineCacheSize(device, pipelineCache);
+}
+
+bool PostGetPipelineCacheData(
+    VkDevice device,
+    VkPipelineCache pipelineCache,
+    void* pData,
+    VkResult result)
+{
+
+
+    if(pData != nullptr)
+    {
+    }
+
+    if(result < VK_SUCCESS)
+    {
+        std::string reason = "vkGetPipelineCacheData parameter, VkResult result, is " + EnumeratorString(result);
+        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
+        return false;
+    }
+
+    return true;
+}
+
+VK_LAYER_EXPORT VkResult VKAPI vkGetPipelineCacheData(
+    VkDevice device,
+    VkPipelineCache pipelineCache,
+    void* pData)
+{
+    VkResult result = get_dispatch_table(pc_device_table_map, device)->GetPipelineCacheData(device, pipelineCache, pData);
+
+    PostGetPipelineCacheData(device, pipelineCache, pData, result);
+
+    return result;
+}
+
+bool PreMergePipelineCaches(
+    VkDevice device,
+    const VkPipelineCache* pSrcCaches)
+{
+    if(pSrcCaches != nullptr)
+    {
+    }
+
+    return true;
+}
+
+bool PostMergePipelineCaches(
+    VkDevice device,
+    VkPipelineCache destCache,
+    uint32_t srcCacheCount,
+    VkResult result)
+{
+
+
+
+    if(result < VK_SUCCESS)
+    {
+        std::string reason = "vkMergePipelineCaches parameter, VkResult result, is " + EnumeratorString(result);
+        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
+        return false;
+    }
+
+    return true;
+}
+
+VK_LAYER_EXPORT VkResult VKAPI vkMergePipelineCaches(
+    VkDevice device,
+    VkPipelineCache destCache,
+    uint32_t srcCacheCount,
+    const VkPipelineCache* pSrcCaches)
+{
+    PreMergePipelineCaches(device, pSrcCaches);
+
+    VkResult result = get_dispatch_table(pc_device_table_map, device)->MergePipelineCaches(device, destCache, srcCacheCount, pSrcCaches);
+
+    PostMergePipelineCaches(device, destCache, srcCacheCount, result);
+
+    return result;
+}
+
+bool PreCreateGraphicsPipelines(
+    VkDevice device,
+    const VkGraphicsPipelineCreateInfo* pCreateInfos)
+{
+    if(pCreateInfos != nullptr)
+    {
+    if(pCreateInfos->sType != VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO)
+    {
+        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        "vkCreateGraphicsPipelines parameter, VkStructureType pCreateInfos->sType, is an invalid enumerator");
+        return false;
+    }
+    if(pCreateInfos->pStages != nullptr)
+    {
+    if(pCreateInfos->pStages->sType != VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO)
+    {
+        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        "vkCreateGraphicsPipelines parameter, VkStructureType pCreateInfos->pStages->sType, is an invalid enumerator");
+        return false;
+    }
+    if(pCreateInfos->pStages->stage < VK_SHADER_STAGE_BEGIN_RANGE ||
+        pCreateInfos->pStages->stage > VK_SHADER_STAGE_END_RANGE)
+    {
+        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        "vkCreateGraphicsPipelines parameter, VkShaderStage pCreateInfos->pStages->stage, is an unrecognized enumerator");
+        return false;
+    }
+    if(pCreateInfos->pStages->pSpecializationInfo != nullptr)
+    {
+    if(pCreateInfos->pStages->pSpecializationInfo->pMap != nullptr)
+    {
+    }
+    if(pCreateInfos->pStages->pSpecializationInfo->pData != nullptr)
+    {
+    }
+    }
+    }
+    if(pCreateInfos->pVertexInputState != nullptr)
+    {
+    if(pCreateInfos->pVertexInputState->sType != VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO)
+    {
+        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        "vkCreateGraphicsPipelines parameter, VkStructureType pCreateInfos->pVertexInputState->sType, is an invalid enumerator");
+        return false;
+    }
+    if(pCreateInfos->pVertexInputState->pVertexBindingDescriptions != nullptr)
+    {
+    if(pCreateInfos->pVertexInputState->pVertexBindingDescriptions->stepRate < VK_VERTEX_INPUT_STEP_RATE_BEGIN_RANGE ||
+        pCreateInfos->pVertexInputState->pVertexBindingDescriptions->stepRate > VK_VERTEX_INPUT_STEP_RATE_END_RANGE)
+    {
+        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        "vkCreateGraphicsPipelines parameter, VkVertexInputStepRate pCreateInfos->pVertexInputState->pVertexBindingDescriptions->stepRate, is an unrecognized enumerator");
+        return false;
+    }
+    }
+    if(pCreateInfos->pVertexInputState->pVertexAttributeDescriptions != nullptr)
+    {
+    if(pCreateInfos->pVertexInputState->pVertexAttributeDescriptions->format < VK_FORMAT_BEGIN_RANGE ||
+        pCreateInfos->pVertexInputState->pVertexAttributeDescriptions->format > VK_FORMAT_END_RANGE)
+    {
+        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        "vkCreateGraphicsPipelines parameter, VkFormat pCreateInfos->pVertexInputState->pVertexAttributeDescriptions->format, is an unrecognized enumerator");
+        return false;
+    }
+    }
+    }
+    if(pCreateInfos->pInputAssemblyState != nullptr)
+    {
+    if(pCreateInfos->pInputAssemblyState->sType != VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO)
+    {
+        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        "vkCreateGraphicsPipelines parameter, VkStructureType pCreateInfos->pInputAssemblyState->sType, is an invalid enumerator");
+        return false;
+    }
+    if(pCreateInfos->pInputAssemblyState->topology < VK_PRIMITIVE_TOPOLOGY_BEGIN_RANGE ||
+        pCreateInfos->pInputAssemblyState->topology > VK_PRIMITIVE_TOPOLOGY_END_RANGE)
+    {
+        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        "vkCreateGraphicsPipelines parameter, VkPrimitiveTopology pCreateInfos->pInputAssemblyState->topology, is an unrecognized enumerator");
+        return false;
+    }
+    }
+    if(pCreateInfos->pTessellationState != nullptr)
+    {
+    if(pCreateInfos->pTessellationState->sType != VK_STRUCTURE_TYPE_PIPELINE_TESSELLATION_STATE_CREATE_INFO)
+    {
+        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        "vkCreateGraphicsPipelines parameter, VkStructureType pCreateInfos->pTessellationState->sType, is an invalid enumerator");
+        return false;
+    }
+    }
+    if(pCreateInfos->pViewportState != nullptr)
+    {
+    if(pCreateInfos->pViewportState->sType != VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO)
+    {
+        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        "vkCreateGraphicsPipelines parameter, VkStructureType pCreateInfos->pViewportState->sType, is an invalid enumerator");
+        return false;
+    }
+    }
+    if(pCreateInfos->pRasterState != nullptr)
+    {
+    if(pCreateInfos->pRasterState->sType != VK_STRUCTURE_TYPE_PIPELINE_RASTER_STATE_CREATE_INFO)
+    {
+        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        "vkCreateGraphicsPipelines parameter, VkStructureType pCreateInfos->pRasterState->sType, is an invalid enumerator");
+        return false;
+    }
+    if(pCreateInfos->pRasterState->fillMode < VK_FILL_MODE_BEGIN_RANGE ||
+        pCreateInfos->pRasterState->fillMode > VK_FILL_MODE_END_RANGE)
+    {
+        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        "vkCreateGraphicsPipelines parameter, VkFillMode pCreateInfos->pRasterState->fillMode, is an unrecognized enumerator");
+        return false;
+    }
+    if(pCreateInfos->pRasterState->cullMode < VK_CULL_MODE_BEGIN_RANGE ||
+        pCreateInfos->pRasterState->cullMode > VK_CULL_MODE_END_RANGE)
+    {
+        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        "vkCreateGraphicsPipelines parameter, VkCullMode pCreateInfos->pRasterState->cullMode, is an unrecognized enumerator");
+        return false;
+    }
+    if(pCreateInfos->pRasterState->frontFace < VK_FRONT_FACE_BEGIN_RANGE ||
+        pCreateInfos->pRasterState->frontFace > VK_FRONT_FACE_END_RANGE)
+    {
+        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        "vkCreateGraphicsPipelines parameter, VkFrontFace pCreateInfos->pRasterState->frontFace, is an unrecognized enumerator");
+        return false;
+    }
+    }
+    if(pCreateInfos->pMultisampleState != nullptr)
+    {
+    if(pCreateInfos->pMultisampleState->sType != VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO)
+    {
+        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        "vkCreateGraphicsPipelines parameter, VkStructureType pCreateInfos->pMultisampleState->sType, is an invalid enumerator");
+        return false;
+    }
+    }
+    if(pCreateInfos->pDepthStencilState != nullptr)
+    {
+    if(pCreateInfos->pDepthStencilState->sType != VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO)
+    {
+        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        "vkCreateGraphicsPipelines parameter, VkStructureType pCreateInfos->pDepthStencilState->sType, is an invalid enumerator");
+        return false;
+    }
+    if(pCreateInfos->pDepthStencilState->depthCompareOp < VK_COMPARE_OP_BEGIN_RANGE ||
+        pCreateInfos->pDepthStencilState->depthCompareOp > VK_COMPARE_OP_END_RANGE)
+    {
+        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        "vkCreateGraphicsPipelines parameter, VkCompareOp pCreateInfos->pDepthStencilState->depthCompareOp, is an unrecognized enumerator");
+        return false;
+    }
+    if(pCreateInfos->pDepthStencilState->front.stencilFailOp < VK_STENCIL_OP_BEGIN_RANGE ||
+        pCreateInfos->pDepthStencilState->front.stencilFailOp > VK_STENCIL_OP_END_RANGE)
+    {
+        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        "vkCreateGraphicsPipelines parameter, VkStencilOp pCreateInfos->pDepthStencilState->front.stencilFailOp, is an unrecognized enumerator");
+        return false;
+    }
+    if(pCreateInfos->pDepthStencilState->front.stencilPassOp < VK_STENCIL_OP_BEGIN_RANGE ||
+        pCreateInfos->pDepthStencilState->front.stencilPassOp > VK_STENCIL_OP_END_RANGE)
+    {
+        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        "vkCreateGraphicsPipelines parameter, VkStencilOp pCreateInfos->pDepthStencilState->front.stencilPassOp, is an unrecognized enumerator");
+        return false;
+    }
+    if(pCreateInfos->pDepthStencilState->front.stencilDepthFailOp < VK_STENCIL_OP_BEGIN_RANGE ||
+        pCreateInfos->pDepthStencilState->front.stencilDepthFailOp > VK_STENCIL_OP_END_RANGE)
+    {
+        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        "vkCreateGraphicsPipelines parameter, VkStencilOp pCreateInfos->pDepthStencilState->front.stencilDepthFailOp, is an unrecognized enumerator");
+        return false;
+    }
+    if(pCreateInfos->pDepthStencilState->front.stencilCompareOp < VK_COMPARE_OP_BEGIN_RANGE ||
+        pCreateInfos->pDepthStencilState->front.stencilCompareOp > VK_COMPARE_OP_END_RANGE)
+    {
+        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        "vkCreateGraphicsPipelines parameter, VkCompareOp pCreateInfos->pDepthStencilState->front.stencilCompareOp, is an unrecognized enumerator");
+        return false;
+    }
+    if(pCreateInfos->pDepthStencilState->back.stencilFailOp < VK_STENCIL_OP_BEGIN_RANGE ||
+        pCreateInfos->pDepthStencilState->back.stencilFailOp > VK_STENCIL_OP_END_RANGE)
+    {
+        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        "vkCreateGraphicsPipelines parameter, VkStencilOp pCreateInfos->pDepthStencilState->back.stencilFailOp, is an unrecognized enumerator");
+        return false;
+    }
+    if(pCreateInfos->pDepthStencilState->back.stencilPassOp < VK_STENCIL_OP_BEGIN_RANGE ||
+        pCreateInfos->pDepthStencilState->back.stencilPassOp > VK_STENCIL_OP_END_RANGE)
+    {
+        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        "vkCreateGraphicsPipelines parameter, VkStencilOp pCreateInfos->pDepthStencilState->back.stencilPassOp, is an unrecognized enumerator");
+        return false;
+    }
+    if(pCreateInfos->pDepthStencilState->back.stencilDepthFailOp < VK_STENCIL_OP_BEGIN_RANGE ||
+        pCreateInfos->pDepthStencilState->back.stencilDepthFailOp > VK_STENCIL_OP_END_RANGE)
+    {
+        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        "vkCreateGraphicsPipelines parameter, VkStencilOp pCreateInfos->pDepthStencilState->back.stencilDepthFailOp, is an unrecognized enumerator");
+        return false;
+    }
+    if(pCreateInfos->pDepthStencilState->back.stencilCompareOp < VK_COMPARE_OP_BEGIN_RANGE ||
+        pCreateInfos->pDepthStencilState->back.stencilCompareOp > VK_COMPARE_OP_END_RANGE)
+    {
+        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        "vkCreateGraphicsPipelines parameter, VkCompareOp pCreateInfos->pDepthStencilState->back.stencilCompareOp, is an unrecognized enumerator");
+        return false;
+    }
+    }
+    if(pCreateInfos->pColorBlendState != nullptr)
+    {
+    if(pCreateInfos->pColorBlendState->sType != VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO)
+    {
+        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        "vkCreateGraphicsPipelines parameter, VkStructureType pCreateInfos->pColorBlendState->sType, is an invalid enumerator");
+        return false;
+    }
+    if(pCreateInfos->pColorBlendState->logicOp < VK_LOGIC_OP_BEGIN_RANGE ||
+        pCreateInfos->pColorBlendState->logicOp > VK_LOGIC_OP_END_RANGE)
+    {
+        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        "vkCreateGraphicsPipelines parameter, VkLogicOp pCreateInfos->pColorBlendState->logicOp, is an unrecognized enumerator");
+        return false;
+    }
+    if(pCreateInfos->pColorBlendState->pAttachments != nullptr)
+    {
+    if(pCreateInfos->pColorBlendState->pAttachments->srcBlendColor < VK_BLEND_BEGIN_RANGE ||
+        pCreateInfos->pColorBlendState->pAttachments->srcBlendColor > VK_BLEND_END_RANGE)
+    {
+        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        "vkCreateGraphicsPipelines parameter, VkBlend pCreateInfos->pColorBlendState->pAttachments->srcBlendColor, is an unrecognized enumerator");
+        return false;
+    }
+    if(pCreateInfos->pColorBlendState->pAttachments->destBlendColor < VK_BLEND_BEGIN_RANGE ||
+        pCreateInfos->pColorBlendState->pAttachments->destBlendColor > VK_BLEND_END_RANGE)
+    {
+        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        "vkCreateGraphicsPipelines parameter, VkBlend pCreateInfos->pColorBlendState->pAttachments->destBlendColor, is an unrecognized enumerator");
+        return false;
+    }
+    if(pCreateInfos->pColorBlendState->pAttachments->blendOpColor < VK_BLEND_OP_BEGIN_RANGE ||
+        pCreateInfos->pColorBlendState->pAttachments->blendOpColor > VK_BLEND_OP_END_RANGE)
+    {
+        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        "vkCreateGraphicsPipelines parameter, VkBlendOp pCreateInfos->pColorBlendState->pAttachments->blendOpColor, is an unrecognized enumerator");
+        return false;
+    }
+    if(pCreateInfos->pColorBlendState->pAttachments->srcBlendAlpha < VK_BLEND_BEGIN_RANGE ||
+        pCreateInfos->pColorBlendState->pAttachments->srcBlendAlpha > VK_BLEND_END_RANGE)
+    {
+        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        "vkCreateGraphicsPipelines parameter, VkBlend pCreateInfos->pColorBlendState->pAttachments->srcBlendAlpha, is an unrecognized enumerator");
+        return false;
+    }
+    if(pCreateInfos->pColorBlendState->pAttachments->destBlendAlpha < VK_BLEND_BEGIN_RANGE ||
+        pCreateInfos->pColorBlendState->pAttachments->destBlendAlpha > VK_BLEND_END_RANGE)
+    {
+        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        "vkCreateGraphicsPipelines parameter, VkBlend pCreateInfos->pColorBlendState->pAttachments->destBlendAlpha, is an unrecognized enumerator");
+        return false;
+    }
+    if(pCreateInfos->pColorBlendState->pAttachments->blendOpAlpha < VK_BLEND_OP_BEGIN_RANGE ||
+        pCreateInfos->pColorBlendState->pAttachments->blendOpAlpha > VK_BLEND_OP_END_RANGE)
+    {
+        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        "vkCreateGraphicsPipelines parameter, VkBlendOp pCreateInfos->pColorBlendState->pAttachments->blendOpAlpha, is an unrecognized enumerator");
+        return false;
+    }
+    }
+    }
+    }
+
+    return true;
+}
+
+bool PostCreateGraphicsPipelines(
+    VkDevice device,
+    VkPipelineCache pipelineCache,
+    uint32_t count,
+    VkPipeline* pPipelines,
+    VkResult result)
+{
+
+
+
+    if(pPipelines != nullptr)
+    {
+    }
+
+    if(result < VK_SUCCESS)
+    {
+        std::string reason = "vkCreateGraphicsPipelines parameter, VkResult result, is " + EnumeratorString(result);
+        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
+        return false;
+    }
+
+    return true;
+}
+
+VK_LAYER_EXPORT VkResult VKAPI vkCreateGraphicsPipelines(
+    VkDevice device,
+    VkPipelineCache pipelineCache,
+    uint32_t count,
+    const VkGraphicsPipelineCreateInfo* pCreateInfos,
+    VkPipeline* pPipelines)
+{
+    PreCreateGraphicsPipelines(device, pCreateInfos);
+
+    VkResult result = get_dispatch_table(pc_device_table_map, device)->CreateGraphicsPipelines(device, pipelineCache, count, pCreateInfos, pPipelines);
+
+    PostCreateGraphicsPipelines(device, pipelineCache, count, pPipelines, result);
+
+    return result;
+}
+
+bool PreCreateComputePipelines(
+    VkDevice device,
+    const VkComputePipelineCreateInfo* pCreateInfos)
+{
+    if(pCreateInfos != nullptr)
+    {
+    if(pCreateInfos->sType != VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO)
+    {
+        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        "vkCreateComputePipelines parameter, VkStructureType pCreateInfos->sType, is an invalid enumerator");
+        return false;
+    }
+    if(pCreateInfos->cs.sType != VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO)
+    {
+        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        "vkCreateComputePipelines parameter, VkStructureType pCreateInfos->cs.sType, is an invalid enumerator");
+        return false;
+    }
+    if(pCreateInfos->cs.stage < VK_SHADER_STAGE_BEGIN_RANGE ||
+        pCreateInfos->cs.stage > VK_SHADER_STAGE_END_RANGE)
+    {
+        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        "vkCreateComputePipelines parameter, VkShaderStage pCreateInfos->cs.stage, is an unrecognized enumerator");
+        return false;
+    }
+    if(pCreateInfos->cs.pSpecializationInfo != nullptr)
+    {
+    if(pCreateInfos->cs.pSpecializationInfo->pMap != nullptr)
+    {
+    }
+    if(pCreateInfos->cs.pSpecializationInfo->pData != nullptr)
+    {
+    }
+    }
+    }
+
+    return true;
+}
+
+bool PostCreateComputePipelines(
+    VkDevice device,
+    VkPipelineCache pipelineCache,
+    uint32_t count,
+    VkPipeline* pPipelines,
+    VkResult result)
+{
+
+
+
+    if(pPipelines != nullptr)
+    {
+    }
+
+    if(result < VK_SUCCESS)
+    {
+        std::string reason = "vkCreateComputePipelines parameter, VkResult result, is " + EnumeratorString(result);
+        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
+        return false;
+    }
+
+    return true;
+}
+
+VK_LAYER_EXPORT VkResult VKAPI vkCreateComputePipelines(
+    VkDevice device,
+    VkPipelineCache pipelineCache,
+    uint32_t count,
+    const VkComputePipelineCreateInfo* pCreateInfos,
+    VkPipeline* pPipelines)
+{
+    PreCreateComputePipelines(device, pCreateInfos);
+
+    VkResult result = get_dispatch_table(pc_device_table_map, device)->CreateComputePipelines(device, pipelineCache, count, pCreateInfos, pPipelines);
+
+    PostCreateComputePipelines(device, pipelineCache, count, pPipelines, result);
+
+    return result;
 }
 
 bool PostDestroyPipeline(
@@ -4774,464 +5168,12 @@ bool PostDestroyPipeline(
     VkPipeline pipeline,
     VkResult result)
 {
-    if(result != VK_SUCCESS)
+
+
+    if(result < VK_SUCCESS)
     {
         std::string reason = "vkDestroyPipeline parameter, VkResult result, is " + EnumeratorString(result);
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
-        return false;
-    }
-
-    return true;
-}
-
-bool PreCreateGraphicsPipelineDerivative(
-    VkDevice device,
-    const VkGraphicsPipelineCreateInfo* pCreateInfo)
-{
-    if(pCreateInfo == nullptr)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateGraphicsPipelineDerivative parameter, const VkGraphicsPipelineCreateInfo* pCreateInfo, is null pointer");
-        return false;
-    }
-    if(pCreateInfo->sType < VK_STRUCTURE_TYPE_BEGIN_RANGE ||
-        pCreateInfo->sType > VK_STRUCTURE_TYPE_END_RANGE)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateGraphicsPipelineDerivative parameter, VkStructureType pCreateInfo->sType, is unrecognized enumerator");
-        return false;
-    }
-    if(pCreateInfo->pStages == nullptr)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateGraphicsPipelineDerivative parameter, const VkPipelineShaderStageCreateInfo* pCreateInfo->pStages, is null pointer");
-        return false;
-    }
-    if(pCreateInfo->pStages->sType < VK_STRUCTURE_TYPE_BEGIN_RANGE ||
-        pCreateInfo->pStages->sType > VK_STRUCTURE_TYPE_END_RANGE)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateGraphicsPipelineDerivative parameter, VkStructureType pCreateInfo->pStages->sType, is unrecognized enumerator");
-        return false;
-    }
-    if(pCreateInfo->pStages->stage < VK_SHADER_STAGE_BEGIN_RANGE ||
-        pCreateInfo->pStages->stage > VK_SHADER_STAGE_END_RANGE)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateGraphicsPipelineDerivative parameter, VkShaderStage pCreateInfo->pStages->stage, is unrecognized enumerator");
-        return false;
-    }
-    if(pCreateInfo->pStages->pSpecializationInfo == nullptr)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateGraphicsPipelineDerivative parameter, const VkSpecializationInfo* pCreateInfo->pStages->pSpecializationInfo, is null pointer");
-        return false;
-    }
-    if(pCreateInfo->pStages->pSpecializationInfo->pMap == nullptr)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateGraphicsPipelineDerivative parameter, const VkSpecializationMapEntry* pCreateInfo->pStages->pSpecializationInfo->pMap, is null pointer");
-        return false;
-    }
-    if(pCreateInfo->pStages->pSpecializationInfo->pData == nullptr)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateGraphicsPipelineDerivative parameter, const void* pCreateInfo->pStages->pSpecializationInfo->pData, is null pointer");
-        return false;
-    }
-    if(pCreateInfo->pVertexInputState == nullptr)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateGraphicsPipelineDerivative parameter, const VkPipelineVertexInputStateCreateInfo* pCreateInfo->pVertexInputState, is null pointer");
-        return false;
-    }
-    if(pCreateInfo->pVertexInputState->sType < VK_STRUCTURE_TYPE_BEGIN_RANGE ||
-        pCreateInfo->pVertexInputState->sType > VK_STRUCTURE_TYPE_END_RANGE)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateGraphicsPipelineDerivative parameter, VkStructureType pCreateInfo->pVertexInputState->sType, is unrecognized enumerator");
-        return false;
-    }
-    if(pCreateInfo->pVertexInputState->pVertexBindingDescriptions == nullptr)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateGraphicsPipelineDerivative parameter, const VkVertexInputBindingDescription* pCreateInfo->pVertexInputState->pVertexBindingDescriptions, is null pointer");
-        return false;
-    }
-    if(pCreateInfo->pVertexInputState->pVertexBindingDescriptions->stepRate < VK_VERTEX_INPUT_STEP_RATE_BEGIN_RANGE ||
-        pCreateInfo->pVertexInputState->pVertexBindingDescriptions->stepRate > VK_VERTEX_INPUT_STEP_RATE_END_RANGE)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateGraphicsPipelineDerivative parameter, VkVertexInputStepRate pCreateInfo->pVertexInputState->pVertexBindingDescriptions->stepRate, is unrecognized enumerator");
-        return false;
-    }
-    if(pCreateInfo->pVertexInputState->pVertexAttributeDescriptions == nullptr)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateGraphicsPipelineDerivative parameter, const VkVertexInputAttributeDescription* pCreateInfo->pVertexInputState->pVertexAttributeDescriptions, is null pointer");
-        return false;
-    }
-    if(pCreateInfo->pVertexInputState->pVertexAttributeDescriptions->format < VK_FORMAT_BEGIN_RANGE ||
-        pCreateInfo->pVertexInputState->pVertexAttributeDescriptions->format > VK_FORMAT_END_RANGE)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateGraphicsPipelineDerivative parameter, VkFormat pCreateInfo->pVertexInputState->pVertexAttributeDescriptions->format, is unrecognized enumerator");
-        return false;
-    }
-    if(pCreateInfo->pInputAssemblyState == nullptr)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateGraphicsPipelineDerivative parameter, const VkPipelineIaStateCreateInfo* pCreateInfo->pIaState, is null pointer");
-        return false;
-    }
-    if(pCreateInfo->pInputAssemblyState->sType < VK_STRUCTURE_TYPE_BEGIN_RANGE ||
-        pCreateInfo->pInputAssemblyState->sType > VK_STRUCTURE_TYPE_END_RANGE)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateGraphicsPipelineDerivative parameter, VkStructureType pCreateInfo->pIaState->sType, is unrecognized enumerator");
-        return false;
-    }
-    if(pCreateInfo->pInputAssemblyState->topology < VK_PRIMITIVE_TOPOLOGY_BEGIN_RANGE ||
-        pCreateInfo->pInputAssemblyState->topology > VK_PRIMITIVE_TOPOLOGY_END_RANGE)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateGraphicsPipelineDerivative parameter, VkPrimitiveTopology pCreateInfo->pIaState->topology, is unrecognized enumerator");
-        return false;
-    }
-    if(pCreateInfo->pTessellationState == nullptr)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateGraphicsPipelineDerivative parameter, const VkPipelineTessStateCreateInfo* pCreateInfo->pTessState, is null pointer");
-        return false;
-    }
-    if(pCreateInfo->pTessellationState->sType < VK_STRUCTURE_TYPE_BEGIN_RANGE ||
-        pCreateInfo->pTessellationState->sType > VK_STRUCTURE_TYPE_END_RANGE)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateGraphicsPipelineDerivative parameter, VkStructureType pCreateInfo->pTessState->sType, is unrecognized enumerator");
-        return false;
-    }
-    if(pCreateInfo->pViewportState == nullptr)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateGraphicsPipelineDerivative parameter, const VkPipelineVpStateCreateInfo* pCreateInfo->pVpState, is null pointer");
-        return false;
-    }
-    if(pCreateInfo->pViewportState->sType < VK_STRUCTURE_TYPE_BEGIN_RANGE ||
-        pCreateInfo->pViewportState->sType > VK_STRUCTURE_TYPE_END_RANGE)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateGraphicsPipelineDerivative parameter, VkStructureType pCreateInfo->pVpState->sType, is unrecognized enumerator");
-        return false;
-    }
-    if(pCreateInfo->pRasterState == nullptr)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateGraphicsPipelineDerivative parameter, const VkPipelineRsStateCreateInfo* pCreateInfo->pRsState, is null pointer");
-        return false;
-    }
-    if(pCreateInfo->pRasterState->sType < VK_STRUCTURE_TYPE_BEGIN_RANGE ||
-        pCreateInfo->pRasterState->sType > VK_STRUCTURE_TYPE_END_RANGE)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateGraphicsPipelineDerivative parameter, VkStructureType pCreateInfo->pRsState->sType, is unrecognized enumerator");
-        return false;
-    }
-    if(pCreateInfo->pRasterState->fillMode < VK_FILL_MODE_BEGIN_RANGE ||
-        pCreateInfo->pRasterState->fillMode > VK_FILL_MODE_END_RANGE)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateGraphicsPipelineDerivative parameter, VkFillMode pCreateInfo->pRsState->fillMode, is unrecognized enumerator");
-        return false;
-    }
-    if(pCreateInfo->pRasterState->cullMode < VK_CULL_MODE_BEGIN_RANGE ||
-        pCreateInfo->pRasterState->cullMode > VK_CULL_MODE_END_RANGE)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateGraphicsPipelineDerivative parameter, VkCullMode pCreateInfo->pRsState->cullMode, is unrecognized enumerator");
-        return false;
-    }
-    if(pCreateInfo->pRasterState->frontFace < VK_FRONT_FACE_BEGIN_RANGE ||
-        pCreateInfo->pRasterState->frontFace > VK_FRONT_FACE_END_RANGE)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateGraphicsPipelineDerivative parameter, VkFrontFace pCreateInfo->pRsState->frontFace, is unrecognized enumerator");
-        return false;
-    }
-    if(pCreateInfo->pMultisampleState == nullptr)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateGraphicsPipelineDerivative parameter, const VkPipelineMsStateCreateInfo* pCreateInfo->pMsState, is null pointer");
-        return false;
-    }
-    if(pCreateInfo->pMultisampleState->sType < VK_STRUCTURE_TYPE_BEGIN_RANGE ||
-        pCreateInfo->pMultisampleState->sType > VK_STRUCTURE_TYPE_END_RANGE)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateGraphicsPipelineDerivative parameter, VkStructureType pCreateInfo->pMsState->sType, is unrecognized enumerator");
-        return false;
-    }
-    if(pCreateInfo->pDepthStencilState == nullptr)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateGraphicsPipelineDerivative parameter, const VkPipelineDsStateCreateInfo* pCreateInfo->pDsState, is null pointer");
-        return false;
-    }
-    if(pCreateInfo->pDepthStencilState->sType < VK_STRUCTURE_TYPE_BEGIN_RANGE ||
-        pCreateInfo->pDepthStencilState->sType > VK_STRUCTURE_TYPE_END_RANGE)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateGraphicsPipelineDerivative parameter, VkStructureType pCreateInfo->pDsState->sType, is unrecognized enumerator");
-        return false;
-    }
-    if(pCreateInfo->pDepthStencilState->depthCompareOp < VK_COMPARE_OP_BEGIN_RANGE ||
-        pCreateInfo->pDepthStencilState->depthCompareOp > VK_COMPARE_OP_END_RANGE)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateGraphicsPipelineDerivative parameter, VkCompareOp pCreateInfo->pDsState->depthCompareOp, is unrecognized enumerator");
-        return false;
-    }
-    if(pCreateInfo->pDepthStencilState->front.stencilFailOp < VK_STENCIL_OP_BEGIN_RANGE ||
-        pCreateInfo->pDepthStencilState->front.stencilFailOp > VK_STENCIL_OP_END_RANGE)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateGraphicsPipelineDerivative parameter, VkStencilOp pCreateInfo->pDsState->front.stencilFailOp, is unrecognized enumerator");
-        return false;
-    }
-    if(pCreateInfo->pDepthStencilState->front.stencilPassOp < VK_STENCIL_OP_BEGIN_RANGE ||
-        pCreateInfo->pDepthStencilState->front.stencilPassOp > VK_STENCIL_OP_END_RANGE)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateGraphicsPipelineDerivative parameter, VkStencilOp pCreateInfo->pDsState->front.stencilPassOp, is unrecognized enumerator");
-        return false;
-    }
-    if(pCreateInfo->pDepthStencilState->front.stencilDepthFailOp < VK_STENCIL_OP_BEGIN_RANGE ||
-        pCreateInfo->pDepthStencilState->front.stencilDepthFailOp > VK_STENCIL_OP_END_RANGE)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateGraphicsPipelineDerivative parameter, VkStencilOp pCreateInfo->pDsState->front.stencilDepthFailOp, is unrecognized enumerator");
-        return false;
-    }
-    if(pCreateInfo->pDepthStencilState->front.stencilCompareOp < VK_COMPARE_OP_BEGIN_RANGE ||
-        pCreateInfo->pDepthStencilState->front.stencilCompareOp > VK_COMPARE_OP_END_RANGE)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateGraphicsPipelineDerivative parameter, VkCompareOp pCreateInfo->pDsState->front.stencilCompareOp, is unrecognized enumerator");
-        return false;
-    }
-    if(pCreateInfo->pDepthStencilState->back.stencilFailOp < VK_STENCIL_OP_BEGIN_RANGE ||
-        pCreateInfo->pDepthStencilState->back.stencilFailOp > VK_STENCIL_OP_END_RANGE)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateGraphicsPipelineDerivative parameter, VkStencilOp pCreateInfo->pDsState->back.stencilFailOp, is unrecognized enumerator");
-        return false;
-    }
-    if(pCreateInfo->pDepthStencilState->back.stencilPassOp < VK_STENCIL_OP_BEGIN_RANGE ||
-        pCreateInfo->pDepthStencilState->back.stencilPassOp > VK_STENCIL_OP_END_RANGE)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateGraphicsPipelineDerivative parameter, VkStencilOp pCreateInfo->pDsState->back.stencilPassOp, is unrecognized enumerator");
-        return false;
-    }
-    if(pCreateInfo->pDepthStencilState->back.stencilDepthFailOp < VK_STENCIL_OP_BEGIN_RANGE ||
-        pCreateInfo->pDepthStencilState->back.stencilDepthFailOp > VK_STENCIL_OP_END_RANGE)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateGraphicsPipelineDerivative parameter, VkStencilOp pCreateInfo->pDsState->back.stencilDepthFailOp, is unrecognized enumerator");
-        return false;
-    }
-    if(pCreateInfo->pDepthStencilState->back.stencilCompareOp < VK_COMPARE_OP_BEGIN_RANGE ||
-        pCreateInfo->pDepthStencilState->back.stencilCompareOp > VK_COMPARE_OP_END_RANGE)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateGraphicsPipelineDerivative parameter, VkCompareOp pCreateInfo->pDsState->back.stencilCompareOp, is unrecognized enumerator");
-        return false;
-    }
-    if(pCreateInfo->pColorBlendState == nullptr)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateGraphicsPipelineDerivative parameter, const VkPipelineCbStateCreateInfo* pCreateInfo->pCbState, is null pointer");
-        return false;
-    }
-    if(pCreateInfo->pColorBlendState->sType < VK_STRUCTURE_TYPE_BEGIN_RANGE ||
-        pCreateInfo->pColorBlendState->sType > VK_STRUCTURE_TYPE_END_RANGE)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateGraphicsPipelineDerivative parameter, VkStructureType pCreateInfo->pCbState->sType, is unrecognized enumerator");
-        return false;
-    }
-    if(pCreateInfo->pColorBlendState->logicOp < VK_LOGIC_OP_BEGIN_RANGE ||
-        pCreateInfo->pColorBlendState->logicOp > VK_LOGIC_OP_END_RANGE)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateGraphicsPipelineDerivative parameter, VkLogicOp pCreateInfo->pCbState->logicOp, is unrecognized enumerator");
-        return false;
-    }
-    if(pCreateInfo->pColorBlendState->pAttachments == nullptr)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateGraphicsPipelineDerivative parameter, const VkPipelineCbAttachmentState* pCreateInfo->pCbState->pAttachments, is null pointer");
-        return false;
-    }
-    if(pCreateInfo->pColorBlendState->pAttachments->srcBlendColor < VK_BLEND_BEGIN_RANGE ||
-        pCreateInfo->pColorBlendState->pAttachments->srcBlendColor > VK_BLEND_END_RANGE)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateGraphicsPipelineDerivative parameter, VkBlend pCreateInfo->pCbState->pAttachments->srcBlendColor, is unrecognized enumerator");
-        return false;
-    }
-    if(pCreateInfo->pColorBlendState->pAttachments->destBlendColor < VK_BLEND_BEGIN_RANGE ||
-        pCreateInfo->pColorBlendState->pAttachments->destBlendColor > VK_BLEND_END_RANGE)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateGraphicsPipelineDerivative parameter, VkBlend pCreateInfo->pCbState->pAttachments->destBlendColor, is unrecognized enumerator");
-        return false;
-    }
-    if(pCreateInfo->pColorBlendState->pAttachments->blendOpColor < VK_BLEND_OP_BEGIN_RANGE ||
-        pCreateInfo->pColorBlendState->pAttachments->blendOpColor > VK_BLEND_OP_END_RANGE)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateGraphicsPipelineDerivative parameter, VkBlendOp pCreateInfo->pCbState->pAttachments->blendOpColor, is unrecognized enumerator");
-        return false;
-    }
-    if(pCreateInfo->pColorBlendState->pAttachments->srcBlendAlpha < VK_BLEND_BEGIN_RANGE ||
-        pCreateInfo->pColorBlendState->pAttachments->srcBlendAlpha > VK_BLEND_END_RANGE)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateGraphicsPipelineDerivative parameter, VkBlend pCreateInfo->pCbState->pAttachments->srcBlendAlpha, is unrecognized enumerator");
-        return false;
-    }
-    if(pCreateInfo->pColorBlendState->pAttachments->destBlendAlpha < VK_BLEND_BEGIN_RANGE ||
-        pCreateInfo->pColorBlendState->pAttachments->destBlendAlpha > VK_BLEND_END_RANGE)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateGraphicsPipelineDerivative parameter, VkBlend pCreateInfo->pCbState->pAttachments->destBlendAlpha, is unrecognized enumerator");
-        return false;
-    }
-    if(pCreateInfo->pColorBlendState->pAttachments->blendOpAlpha < VK_BLEND_OP_BEGIN_RANGE ||
-        pCreateInfo->pColorBlendState->pAttachments->blendOpAlpha > VK_BLEND_OP_END_RANGE)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateGraphicsPipelineDerivative parameter, VkBlendOp pCreateInfo->pCbState->pAttachments->blendOpAlpha, is unrecognized enumerator");
-        return false;
-    }
-    if(!ValidateEnumerator((VkChannelFlagBits)pCreateInfo->pColorBlendState->pAttachments->channelWriteMask))
-    {
-        std::string reason = "vkCreateGraphicsPipelineDerivative parameter, VkChannelFlags pCreateInfo->pCbState->pAttachments->channelWriteMask, is " + EnumeratorString((VkChannelFlagBits)pCreateInfo->pColorBlendState->pAttachments->channelWriteMask);
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
-        return false;
-    }
-    if(!ValidateEnumerator((VkPipelineCreateFlagBits)pCreateInfo->flags))
-    {
-        std::string reason = "vkCreateGraphicsPipelineDerivative parameter, VkPipelineCreateFlags pCreateInfo->flags, is " + EnumeratorString((VkPipelineCreateFlagBits)pCreateInfo->flags);
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
-        return false;
-    }
-
-    return true;
-}
-
-bool PostCreateGraphicsPipelineDerivative(
-    VkDevice device,
-    VkPipeline basePipeline,
-    VkPipeline* pPipeline,
-    VkResult result)
-{
-
-
-    if(pPipeline == nullptr)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateGraphicsPipelineDerivative parameter, VkPipeline* pPipeline, is null pointer");
-        return false;
-    }
-
-    if(result != VK_SUCCESS)
-    {
-        std::string reason = "vkCreateGraphicsPipelineDerivative parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
-        return false;
-    }
-
-    return true;
-}
-
-bool PreCreateComputePipeline(
-    VkDevice device,
-    const VkComputePipelineCreateInfo* pCreateInfo)
-{
-    if(pCreateInfo == nullptr)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateComputePipeline parameter, const VkComputePipelineCreateInfo* pCreateInfo, is null pointer");
-        return false;
-    }
-    if(pCreateInfo->sType < VK_STRUCTURE_TYPE_BEGIN_RANGE ||
-        pCreateInfo->sType > VK_STRUCTURE_TYPE_END_RANGE)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateComputePipeline parameter, VkStructureType pCreateInfo->sType, is unrecognized enumerator");
-        return false;
-    }
-    if(pCreateInfo->cs.sType < VK_STRUCTURE_TYPE_BEGIN_RANGE ||
-        pCreateInfo->cs.sType > VK_STRUCTURE_TYPE_END_RANGE)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateComputePipeline parameter, VkStructureType pCreateInfo->cs.sType, is unrecognized enumerator");
-        return false;
-    }
-    if(pCreateInfo->cs.stage < VK_SHADER_STAGE_BEGIN_RANGE ||
-        pCreateInfo->cs.stage > VK_SHADER_STAGE_END_RANGE)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateComputePipeline parameter, VkShaderStage pCreateInfo->cs.stage, is unrecognized enumerator");
-        return false;
-    }
-    if(pCreateInfo->cs.pSpecializationInfo == nullptr)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateComputePipeline parameter, const VkSpecializationInfo* pCreateInfo->cs.pSpecializationInfo, is null pointer");
-        return false;
-    }
-    if(pCreateInfo->cs.pSpecializationInfo->pMap == nullptr)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateComputePipeline parameter, const VkSpecializationMapEntry* pCreateInfo->cs.pSpecializationInfo->pMap, is null pointer");
-        return false;
-    }
-    if(pCreateInfo->cs.pSpecializationInfo->pData == nullptr)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateComputePipeline parameter, const void* pCreateInfo->cs.pSpecializationInfo->pData, is null pointer");
-        return false;
-    }
-    if(!ValidateEnumerator((VkPipelineCreateFlagBits)pCreateInfo->flags))
-    {
-        std::string reason = "vkCreateComputePipeline parameter, VkPipelineCreateFlags pCreateInfo->flags, is " + EnumeratorString((VkPipelineCreateFlagBits)pCreateInfo->flags);
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
-        return false;
-    }
-
-    return true;
-}
-
-bool PostCreateComputePipeline(
-    VkDevice device,
-    VkPipeline* pPipeline,
-    VkResult result)
-{
-
-    if(pPipeline == nullptr)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateComputePipeline parameter, VkPipeline* pPipeline, is null pointer");
-        return false;
-    }
-
-    if(result != VK_SUCCESS)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_WARN_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateGraphicsPipeline parameter, VkPipelineLayout pCreateInfo->layout, is null pointer");
         return false;
     }
 
@@ -5249,214 +5191,27 @@ VK_LAYER_EXPORT VkResult VKAPI vkDestroyPipeline(
     return result;
 }
 
-//TODO handle count > 1
-void PostCreateGraphicsPipeline(
-    VkDevice device,
-    uint32_t count,
-    VkPipeline* pPipeline,
-    VkResult result)
-{
-    if(device == nullptr)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_WARN_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateGraphicsPipeline parameter, VkDevice device, is null pointer");
-        return;
-    }
-
-    if(pPipeline == nullptr)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_WARN_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateGraphicsPipeline parameter, VkPipeline* pPipeline, is null pointer");
-        return;
-    }
-    if((*pPipeline).handle == 0)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_WARN_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateGraphicsPipeline parameter, VkPipeline* pPipeline, is null pointer");
-        return;
-    }
-
-    if(result != VK_SUCCESS)
-    {
-        std::string reason = "vkCreateGraphicsPipeline parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(device), VK_DBG_REPORT_WARN_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
-        return;
-    }
-}
-
-//TODO add intercept of pipelineCache entrypoints
-VK_LAYER_EXPORT VkResult VKAPI vkCreateGraphicsPipelines(
-    VkDevice device,
-    VkPipelineCache pipelineCache,
-    uint32_t  count,
-    const VkGraphicsPipelineCreateInfo* pCreateInfos,
-    VkPipeline* pPipelines)
-{
-    PreCreateGraphicsPipeline(device, count, pCreateInfos);
-    VkResult result = get_dispatch_table(pc_device_table_map, device)->CreateGraphicsPipelines(device, pipelineCache, count, pCreateInfos, pPipelines);
-
-    PostCreateGraphicsPipeline(device, count, pPipelines, result);
-
-    return result;
-}
-
-//TODO handle count > 1
-void PreCreateComputePipeline(
-    VkDevice device,
-    uint32_t count,
-    const VkComputePipelineCreateInfo* pCreateInfo)
-{
-    if(device == nullptr)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_WARN_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateComputePipeline parameter, VkDevice device, is null pointer");
-        return;
-    }
-
-    if(pCreateInfo == nullptr)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_WARN_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateComputePipeline parameter, const VkComputePipelineCreateInfo* pCreateInfo, is null pointer");
-        return;
-    }
-    if(pCreateInfo->sType < VK_STRUCTURE_TYPE_BEGIN_RANGE ||
-        pCreateInfo->sType > VK_STRUCTURE_TYPE_END_RANGE)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_WARN_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateComputePipeline parameter, VkStructureType pCreateInfo->sType, is unrecognized enumerator");
-        return;
-    }
-    if(pCreateInfo->cs.sType < VK_STRUCTURE_TYPE_BEGIN_RANGE ||
-        pCreateInfo->cs.sType > VK_STRUCTURE_TYPE_END_RANGE)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_WARN_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateComputePipeline parameter, VkStructureType pCreateInfo->cs.sType, is unrecognized enumerator");
-        return;
-    }
-    if(pCreateInfo->cs.pNext == nullptr)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_WARN_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateComputePipeline parameter, const void* pCreateInfo->cs.pNext, is null pointer");
-        return;
-    }
-    if(pCreateInfo->cs.stage < VK_SHADER_STAGE_BEGIN_RANGE ||
-        pCreateInfo->cs.stage > VK_SHADER_STAGE_END_RANGE)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_WARN_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateComputePipeline parameter, VkShaderStage pCreateInfo->cs.stage, is unrecognized enumerator");
-        return;
-    }
-    if(pCreateInfo->cs.shader.handle == 0)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_WARN_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateComputePipeline parameter, VkShader pCreateInfo->cs.shader, is null pointer");
-        return;
-    }
-    if(pCreateInfo->cs.pSpecializationInfo == nullptr)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_WARN_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateComputePipeline parameter, const VkSpecializationInfo* pCreateInfo->cs.pSpecializationInfo, is null pointer");
-        return;
-    }
-    if(pCreateInfo->cs.pSpecializationInfo->pMap == nullptr)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_WARN_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateComputePipeline parameter, const VkSpecializationMapEntry* pCreateInfo->cs.pSpecializationInfo->pMap, is null pointer");
-        return;
-    }
-    if(pCreateInfo->cs.pSpecializationInfo->pData == nullptr)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_WARN_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateComputePipeline parameter, const void* pCreateInfo->cs.pSpecializationInfo->pData, is null pointer");
-        return;
-    }
-    if(!ValidateEnumerator((VkPipelineCreateFlagBits)pCreateInfo->flags))
-    {
-        std::string reason = "vkCreateComputePipeline parameter, VkPipelineCreateFlags pCreateInfo->flags, is " + EnumeratorString((VkPipelineCreateFlagBits)pCreateInfo->flags);
-        log_msg(mdd(device), VK_DBG_REPORT_WARN_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
-        return;
-    }
-    if(pCreateInfo->layout.handle == 0)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_WARN_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateComputePipeline parameter, VkPipelineLayout pCreateInfo->layout, is null pointer");
-        return;
-    }
-}
-
-//TODO handle count > 1
-void PostCreateComputePipeline(
-    VkDevice device,
-    uint32_t count,
-    VkPipeline* pPipeline,
-    VkResult result)
-{
-    if(device == nullptr)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_WARN_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateComputePipeline parameter, VkDevice device, is null pointer");
-        return;
-    }
-
-    if(pPipeline == nullptr)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_WARN_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateComputePipeline parameter, VkPipeline* pPipeline, is null pointer");
-        return;
-    }
-    if((*pPipeline).handle == 0)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_WARN_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateComputePipeline parameter, VkPipeline* pPipeline, is null pointer");
-        return;
-    }
-
-    if(result != VK_SUCCESS)
-    {
-        std::string reason = "vkCreateComputePipeline parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(device), VK_DBG_REPORT_WARN_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
-        return;
-    }
-}
-
-VK_LAYER_EXPORT VkResult VKAPI vkCreateComputePipelines(
-    VkDevice device,
-    VkPipelineCache pipelineCache,
-    uint32_t  count,
-    const VkComputePipelineCreateInfo* pCreateInfos,
-    VkPipeline* pPipelines)
-{
-    PreCreateComputePipeline(device, count, pCreateInfos);
-    VkResult result = get_dispatch_table(pc_device_table_map, device)->CreateComputePipelines(device, pipelineCache, count, pCreateInfos, pPipelines);
-
-    PostCreateComputePipeline(device, count, pPipelines, result);
-
-    return result;
-}
-
-void PreCreatePipelineLayout(
+bool PreCreatePipelineLayout(
     VkDevice device,
     const VkPipelineLayoutCreateInfo* pCreateInfo)
 {
-    if(pCreateInfo == nullptr)
+    if(pCreateInfo != nullptr)
+    {
+    if(pCreateInfo->sType != VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO)
     {
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreatePipelineLayout parameter, const VkPipelineLayoutCreateInfo* pCreateInfo, is null pointer");
-        return;
+        "vkCreatePipelineLayout parameter, VkStructureType pCreateInfo->sType, is an invalid enumerator");
+        return false;
     }
-    if(pCreateInfo->sType < VK_STRUCTURE_TYPE_BEGIN_RANGE ||
-        pCreateInfo->sType > VK_STRUCTURE_TYPE_END_RANGE)
+    if(pCreateInfo->pSetLayouts != nullptr)
     {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreatePipelineLayout parameter, VkStructureType pCreateInfo->sType, is unrecognized enumerator");
-        return;
     }
-    if(pCreateInfo->pSetLayouts == nullptr)
+    if(pCreateInfo->pPushConstantRanges != nullptr)
     {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreatePipelineLayout parameter, const VkDescriptorSetLayout* pCreateInfo->pSetLayouts, is null pointer");
-        return;
     }
+    }
+
+    return true;
 }
 
 bool PostCreatePipelineLayout(
@@ -5465,14 +5220,11 @@ bool PostCreatePipelineLayout(
     VkResult result)
 {
 
-    if(pPipelineLayout == nullptr)
+    if(pPipelineLayout != nullptr)
     {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreatePipelineLayout parameter, VkPipelineLayout* pPipelineLayout, is null pointer");
-        return false;
     }
 
-    if(result != VK_SUCCESS)
+    if(result < VK_SUCCESS)
     {
         std::string reason = "vkCreatePipelineLayout parameter, VkResult result, is " + EnumeratorString(result);
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
@@ -5503,7 +5255,7 @@ bool PostDestroyPipelineLayout(
 {
 
 
-    if(result != VK_SUCCESS)
+    if(result < VK_SUCCESS)
     {
         std::string reason = "vkDestroyPipelineLayout parameter, VkResult result, is " + EnumeratorString(result);
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
@@ -5528,74 +5280,70 @@ bool PreCreateSampler(
     VkDevice device,
     const VkSamplerCreateInfo* pCreateInfo)
 {
-    if(pCreateInfo == nullptr)
+    if(pCreateInfo != nullptr)
+    {
+    if(pCreateInfo->sType != VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO)
     {
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateSampler parameter, const VkSamplerCreateInfo* pCreateInfo, is null pointer");
-        return false;
-    }
-    if(pCreateInfo->sType < VK_STRUCTURE_TYPE_BEGIN_RANGE ||
-        pCreateInfo->sType > VK_STRUCTURE_TYPE_END_RANGE)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateSampler parameter, VkStructureType pCreateInfo->sType, is unrecognized enumerator");
+        "vkCreateSampler parameter, VkStructureType pCreateInfo->sType, is an invalid enumerator");
         return false;
     }
     if(pCreateInfo->magFilter < VK_TEX_FILTER_BEGIN_RANGE ||
         pCreateInfo->magFilter > VK_TEX_FILTER_END_RANGE)
     {
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateSampler parameter, VkTexFilter pCreateInfo->magFilter, is unrecognized enumerator");
+        "vkCreateSampler parameter, VkTexFilter pCreateInfo->magFilter, is an unrecognized enumerator");
         return false;
     }
     if(pCreateInfo->minFilter < VK_TEX_FILTER_BEGIN_RANGE ||
         pCreateInfo->minFilter > VK_TEX_FILTER_END_RANGE)
     {
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateSampler parameter, VkTexFilter pCreateInfo->minFilter, is unrecognized enumerator");
+        "vkCreateSampler parameter, VkTexFilter pCreateInfo->minFilter, is an unrecognized enumerator");
         return false;
     }
     if(pCreateInfo->mipMode < VK_TEX_MIPMAP_MODE_BEGIN_RANGE ||
         pCreateInfo->mipMode > VK_TEX_MIPMAP_MODE_END_RANGE)
     {
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateSampler parameter, VkTexMipmapMode pCreateInfo->mipMode, is unrecognized enumerator");
+        "vkCreateSampler parameter, VkTexMipmapMode pCreateInfo->mipMode, is an unrecognized enumerator");
         return false;
     }
     if(pCreateInfo->addressU < VK_TEX_ADDRESS_BEGIN_RANGE ||
         pCreateInfo->addressU > VK_TEX_ADDRESS_END_RANGE)
     {
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateSampler parameter, VkTexAddress pCreateInfo->addressU, is unrecognized enumerator");
+        "vkCreateSampler parameter, VkTexAddress pCreateInfo->addressU, is an unrecognized enumerator");
         return false;
     }
     if(pCreateInfo->addressV < VK_TEX_ADDRESS_BEGIN_RANGE ||
         pCreateInfo->addressV > VK_TEX_ADDRESS_END_RANGE)
     {
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateSampler parameter, VkTexAddress pCreateInfo->addressV, is unrecognized enumerator");
+        "vkCreateSampler parameter, VkTexAddress pCreateInfo->addressV, is an unrecognized enumerator");
         return false;
     }
     if(pCreateInfo->addressW < VK_TEX_ADDRESS_BEGIN_RANGE ||
         pCreateInfo->addressW > VK_TEX_ADDRESS_END_RANGE)
     {
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateSampler parameter, VkTexAddress pCreateInfo->addressW, is unrecognized enumerator");
+        "vkCreateSampler parameter, VkTexAddress pCreateInfo->addressW, is an unrecognized enumerator");
         return false;
     }
     if(pCreateInfo->compareOp < VK_COMPARE_OP_BEGIN_RANGE ||
         pCreateInfo->compareOp > VK_COMPARE_OP_END_RANGE)
     {
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateSampler parameter, VkCompareOp pCreateInfo->compareOp, is unrecognized enumerator");
+        "vkCreateSampler parameter, VkCompareOp pCreateInfo->compareOp, is an unrecognized enumerator");
         return false;
     }
     if(pCreateInfo->borderColor < VK_BORDER_COLOR_BEGIN_RANGE ||
         pCreateInfo->borderColor > VK_BORDER_COLOR_END_RANGE)
     {
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateSampler parameter, VkBorderColor pCreateInfo->borderColor, is unrecognized enumerator");
+        "vkCreateSampler parameter, VkBorderColor pCreateInfo->borderColor, is an unrecognized enumerator");
         return false;
+    }
     }
 
     return true;
@@ -5607,14 +5355,11 @@ bool PostCreateSampler(
     VkResult result)
 {
 
-    if(pSampler == nullptr)
+    if(pSampler != nullptr)
     {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateSampler parameter, VkSampler* pSampler, is null pointer");
-        return false;
     }
 
-    if(result != VK_SUCCESS)
+    if(result < VK_SUCCESS)
     {
         std::string reason = "vkCreateSampler parameter, VkResult result, is " + EnumeratorString(result);
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
@@ -5645,7 +5390,7 @@ bool PostDestroySampler(
 {
 
 
-    if(result != VK_SUCCESS)
+    if(result < VK_SUCCESS)
     {
         std::string reason = "vkDestroySampler parameter, VkResult result, is " + EnumeratorString(result);
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
@@ -5670,37 +5415,27 @@ bool PreCreateDescriptorSetLayout(
     VkDevice device,
     const VkDescriptorSetLayoutCreateInfo* pCreateInfo)
 {
-    if(pCreateInfo == nullptr)
+    if(pCreateInfo != nullptr)
+    {
+    if(pCreateInfo->sType != VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO)
     {
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateDescriptorSetLayout parameter, const VkDescriptorSetLayoutCreateInfo* pCreateInfo, is null pointer");
+        "vkCreateDescriptorSetLayout parameter, VkStructureType pCreateInfo->sType, is an invalid enumerator");
         return false;
     }
-    if(pCreateInfo->sType < VK_STRUCTURE_TYPE_BEGIN_RANGE ||
-        pCreateInfo->sType > VK_STRUCTURE_TYPE_END_RANGE)
+    if(pCreateInfo->pBinding != nullptr)
     {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateDescriptorSetLayout parameter, VkStructureType pCreateInfo->sType, is unrecognized enumerator");
-        return false;
-    }
-    if(pCreateInfo->pBinding == nullptr)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateDescriptorSetLayout parameter, const VkDescriptorSetLayoutBinding* pCreateInfo->pBinding, is null pointer");
-        return false;
-    }
     if(pCreateInfo->pBinding->descriptorType < VK_DESCRIPTOR_TYPE_BEGIN_RANGE ||
         pCreateInfo->pBinding->descriptorType > VK_DESCRIPTOR_TYPE_END_RANGE)
     {
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateDescriptorSetLayout parameter, VkDescriptorType pCreateInfo->pBinding->descriptorType, is unrecognized enumerator");
+        "vkCreateDescriptorSetLayout parameter, VkDescriptorType pCreateInfo->pBinding->descriptorType, is an unrecognized enumerator");
         return false;
     }
-    if(!ValidateEnumerator((VkShaderStageFlagBits)pCreateInfo->pBinding->stageFlags))
+    if(pCreateInfo->pBinding->pImmutableSamplers != nullptr)
     {
-        std::string reason = "vkCreateDescriptorSetLayout parameter, VkShaderStageFlags pCreateInfo->pBinding->stageFlags, is " + EnumeratorString((VkShaderStageFlagBits)pCreateInfo->pBinding->stageFlags);
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
-        return false;
+    }
+    }
     }
 
     return true;
@@ -5712,14 +5447,11 @@ bool PostCreateDescriptorSetLayout(
     VkResult result)
 {
 
-    if(pSetLayout == nullptr)
+    if(pSetLayout != nullptr)
     {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateDescriptorSetLayout parameter, VkDescriptorSetLayout* pSetLayout, is null pointer");
-        return false;
     }
 
-    if(result != VK_SUCCESS)
+    if(result < VK_SUCCESS)
     {
         std::string reason = "vkCreateDescriptorSetLayout parameter, VkResult result, is " + EnumeratorString(result);
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
@@ -5750,7 +5482,7 @@ bool PostDestroyDescriptorSetLayout(
 {
 
 
-    if(result != VK_SUCCESS)
+    if(result < VK_SUCCESS)
     {
         std::string reason = "vkDestroyDescriptorSetLayout parameter, VkResult result, is " + EnumeratorString(result);
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
@@ -5775,31 +5507,24 @@ bool PreCreateDescriptorPool(
     VkDevice device,
     const VkDescriptorPoolCreateInfo* pCreateInfo)
 {
-    if(pCreateInfo == nullptr)
+    if(pCreateInfo != nullptr)
+    {
+    if(pCreateInfo->sType != VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO)
     {
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateDescriptorPool parameter, const VkDescriptorPoolCreateInfo* pCreateInfo, is null pointer");
+        "vkCreateDescriptorPool parameter, VkStructureType pCreateInfo->sType, is an invalid enumerator");
         return false;
     }
-    if(pCreateInfo->sType < VK_STRUCTURE_TYPE_BEGIN_RANGE ||
-        pCreateInfo->sType > VK_STRUCTURE_TYPE_END_RANGE)
+    if(pCreateInfo->pTypeCount != nullptr)
     {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateDescriptorPool parameter, VkStructureType pCreateInfo->sType, is unrecognized enumerator");
-        return false;
-    }
-    if(pCreateInfo->pTypeCount == nullptr)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateDescriptorPool parameter, const VkDescriptorTypeCount* pCreateInfo->pTypeCount, is null pointer");
-        return false;
-    }
     if(pCreateInfo->pTypeCount->type < VK_DESCRIPTOR_TYPE_BEGIN_RANGE ||
         pCreateInfo->pTypeCount->type > VK_DESCRIPTOR_TYPE_END_RANGE)
     {
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateDescriptorPool parameter, VkDescriptorType pCreateInfo->pTypeCount->type, is unrecognized enumerator");
+        "vkCreateDescriptorPool parameter, VkDescriptorType pCreateInfo->pTypeCount->type, is an unrecognized enumerator");
         return false;
+    }
+    }
     }
 
     return true;
@@ -5817,19 +5542,16 @@ bool PostCreateDescriptorPool(
         poolUsage > VK_DESCRIPTOR_POOL_USAGE_END_RANGE)
     {
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateDescriptorPool parameter, VkDescriptorPoolUsage poolUsage, is unrecognized enumerator");
+        "vkCreateDescriptorPool parameter, VkDescriptorPoolUsage poolUsage, is an unrecognized enumerator");
         return false;
     }
 
 
-    if(pDescriptorPool == nullptr)
+    if(pDescriptorPool != nullptr)
     {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateDescriptorPool parameter, VkDescriptorPool* pDescriptorPool, is null pointer");
-        return false;
     }
 
-    if(result != VK_SUCCESS)
+    if(result < VK_SUCCESS)
     {
         std::string reason = "vkCreateDescriptorPool parameter, VkResult result, is " + EnumeratorString(result);
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
@@ -5862,7 +5584,7 @@ bool PostDestroyDescriptorPool(
 {
 
 
-    if(result != VK_SUCCESS)
+    if(result < VK_SUCCESS)
     {
         std::string reason = "vkDestroyDescriptorPool parameter, VkResult result, is " + EnumeratorString(result);
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
@@ -5890,7 +5612,7 @@ bool PostResetDescriptorPool(
 {
 
 
-    if(result != VK_SUCCESS)
+    if(result < VK_SUCCESS)
     {
         std::string reason = "vkResetDescriptorPool parameter, VkResult result, is " + EnumeratorString(result);
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
@@ -5915,11 +5637,8 @@ bool PreAllocDescriptorSets(
     VkDevice device,
     const VkDescriptorSetLayout* pSetLayouts)
 {
-    if(pSetLayouts == nullptr)
+    if(pSetLayouts != nullptr)
     {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkAllocDescriptorSets parameter, const VkDescriptorSetLayout* pSetLayouts, is null pointer");
-        return false;
     }
 
     return true;
@@ -5940,26 +5659,20 @@ bool PostAllocDescriptorSets(
         setUsage > VK_DESCRIPTOR_SET_USAGE_END_RANGE)
     {
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkAllocDescriptorSets parameter, VkDescriptorSetUsage setUsage, is unrecognized enumerator");
+        "vkAllocDescriptorSets parameter, VkDescriptorSetUsage setUsage, is an unrecognized enumerator");
         return false;
     }
 
 
-    if(pDescriptorSets == nullptr)
+    if(pDescriptorSets != nullptr)
     {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkAllocDescriptorSets parameter, VkDescriptorSet* pDescriptorSets, is null pointer");
-        return false;
     }
 
-    if(pCount == nullptr)
+    if(pCount != nullptr)
     {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkAllocDescriptorSets parameter, uint32_t* pCount, is null pointer");
-        return false;
     }
 
-    if(result != VK_SUCCESS)
+    if(result < VK_SUCCESS)
     {
         std::string reason = "vkAllocDescriptorSets parameter, VkResult result, is " + EnumeratorString(result);
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
@@ -5987,57 +5700,91 @@ VK_LAYER_EXPORT VkResult VKAPI vkAllocDescriptorSets(
     return result;
 }
 
+bool PreFreeDescriptorSets(
+    VkDevice device,
+    const VkDescriptorSet* pDescriptorSets)
+{
+    if(pDescriptorSets != nullptr)
+    {
+    }
+
+    return true;
+}
+
+bool PostFreeDescriptorSets(
+    VkDevice device,
+    VkDescriptorPool descriptorPool,
+    uint32_t count,
+    VkResult result)
+{
+
+
+
+    if(result < VK_SUCCESS)
+    {
+        std::string reason = "vkFreeDescriptorSets parameter, VkResult result, is " + EnumeratorString(result);
+        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
+        return false;
+    }
+
+    return true;
+}
+
+VK_LAYER_EXPORT VkResult VKAPI vkFreeDescriptorSets(
+    VkDevice device,
+    VkDescriptorPool descriptorPool,
+    uint32_t count,
+    const VkDescriptorSet* pDescriptorSets)
+{
+    PreFreeDescriptorSets(device, pDescriptorSets);
+
+    VkResult result = get_dispatch_table(pc_device_table_map, device)->FreeDescriptorSets(device, descriptorPool, count, pDescriptorSets);
+
+    PostFreeDescriptorSets(device, descriptorPool, count, result);
+
+    return result;
+}
+
 bool PreUpdateDescriptorSets(
     VkDevice device,
     const VkWriteDescriptorSet* pDescriptorWrites,
     const VkCopyDescriptorSet* pDescriptorCopies)
 {
-    if(pDescriptorWrites == nullptr)
+    if(pDescriptorWrites != nullptr)
+    {
+    if(pDescriptorWrites->sType != VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET)
     {
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkUpdateDescriptorSets parameter, const VkWriteDescriptorSet* pDescriptorWrites, is null pointer");
-        return false;
-    }
-    if(pDescriptorWrites->sType < VK_STRUCTURE_TYPE_BEGIN_RANGE ||
-        pDescriptorWrites->sType > VK_STRUCTURE_TYPE_END_RANGE)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkUpdateDescriptorSets parameter, VkStructureType pDescriptorWrites->sType, is unrecognized enumerator");
+        "vkUpdateDescriptorSets parameter, VkStructureType pDescriptorWrites->sType, is an invalid enumerator");
         return false;
     }
     if(pDescriptorWrites->descriptorType < VK_DESCRIPTOR_TYPE_BEGIN_RANGE ||
         pDescriptorWrites->descriptorType > VK_DESCRIPTOR_TYPE_END_RANGE)
     {
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkUpdateDescriptorSets parameter, VkDescriptorType pDescriptorWrites->descriptorType, is unrecognized enumerator");
+        "vkUpdateDescriptorSets parameter, VkDescriptorType pDescriptorWrites->descriptorType, is an unrecognized enumerator");
         return false;
     }
-    if(pDescriptorWrites->pDescriptors == nullptr)
+    if(pDescriptorWrites->pDescriptors != nullptr)
     {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkUpdateDescriptorSets parameter, const VkDescriptorInfo* pDescriptorWrites->pDescriptors, is null pointer");
-        return false;
-    }
     if(pDescriptorWrites->pDescriptors->imageLayout < VK_IMAGE_LAYOUT_BEGIN_RANGE ||
         pDescriptorWrites->pDescriptors->imageLayout > VK_IMAGE_LAYOUT_END_RANGE)
     {
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkUpdateDescriptorSets parameter, VkImageLayout pDescriptorWrites->pDescriptors->imageLayout, is unrecognized enumerator");
+        "vkUpdateDescriptorSets parameter, VkImageLayout pDescriptorWrites->pDescriptors->imageLayout, is an unrecognized enumerator");
         return false;
+    }
+    }
     }
 
-    if(pDescriptorCopies == nullptr)
+    if(pDescriptorCopies != nullptr)
+    {
+    if(pDescriptorCopies->sType != VK_STRUCTURE_TYPE_COPY_DESCRIPTOR_SET)
     {
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkUpdateDescriptorSets parameter, const VkCopyDescriptorSet* pDescriptorCopies, is null pointer");
+        "vkUpdateDescriptorSets parameter, VkStructureType pDescriptorCopies->sType, is an invalid enumerator");
         return false;
     }
-    if(pDescriptorCopies->sType < VK_STRUCTURE_TYPE_BEGIN_RANGE ||
-        pDescriptorCopies->sType > VK_STRUCTURE_TYPE_END_RANGE)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkUpdateDescriptorSets parameter, VkStructureType pDescriptorCopies->sType, is unrecognized enumerator");
-        return false;
     }
 
     return true;
@@ -6052,7 +5799,7 @@ bool PostUpdateDescriptorSets(
 
 
 
-    if(result != VK_SUCCESS)
+    if(result < VK_SUCCESS)
     {
         std::string reason = "vkUpdateDescriptorSets parameter, VkResult result, is " + EnumeratorString(result);
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
@@ -6082,30 +5829,20 @@ bool PreCreateDynamicViewportState(
     VkDevice device,
     const VkDynamicViewportStateCreateInfo* pCreateInfo)
 {
-    if(pCreateInfo == nullptr)
+    if(pCreateInfo != nullptr)
+    {
+    if(pCreateInfo->sType != VK_STRUCTURE_TYPE_DYNAMIC_VIEWPORT_STATE_CREATE_INFO)
     {
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateDynamicViewportState parameter, const VkDynamicViewportStateCreateInfo* pCreateInfo, is null pointer");
+        "vkCreateDynamicViewportState parameter, VkStructureType pCreateInfo->sType, is an invalid enumerator");
         return false;
     }
-    if(pCreateInfo->sType < VK_STRUCTURE_TYPE_BEGIN_RANGE ||
-        pCreateInfo->sType > VK_STRUCTURE_TYPE_END_RANGE)
+    if(pCreateInfo->pViewports != nullptr)
     {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateDynamicViewportState parameter, VkStructureType pCreateInfo->sType, is unrecognized enumerator");
-        return false;
     }
-    if(pCreateInfo->pViewports == nullptr)
+    if(pCreateInfo->pScissors != nullptr)
     {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateDynamicViewportState parameter, const VkViewport* pCreateInfo->pViewports, is null pointer");
-        return false;
     }
-    if(pCreateInfo->pScissors == nullptr)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateDynamicViewportState parameter, const VkRect2D* pCreateInfo->pScissors, is null pointer");
-        return false;
     }
 
     return true;
@@ -6117,14 +5854,11 @@ bool PostCreateDynamicViewportState(
     VkResult result)
 {
 
-    if(pState == nullptr)
+    if(pState != nullptr)
     {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateDynamicViewportState parameter, VkDynamicViewportState* pState, is null pointer");
-        return false;
     }
 
-    if(result != VK_SUCCESS)
+    if(result < VK_SUCCESS)
     {
         std::string reason = "vkCreateDynamicViewportState parameter, VkResult result, is " + EnumeratorString(result);
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
@@ -6155,7 +5889,7 @@ bool PostDestroyDynamicViewportState(
 {
 
 
-    if(result != VK_SUCCESS)
+    if(result < VK_SUCCESS)
     {
         std::string reason = "vkDestroyDynamicViewportState parameter, VkResult result, is " + EnumeratorString(result);
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
@@ -6180,18 +5914,14 @@ bool PreCreateDynamicRasterState(
     VkDevice device,
     const VkDynamicRasterStateCreateInfo* pCreateInfo)
 {
-    if(pCreateInfo == nullptr)
+    if(pCreateInfo != nullptr)
+    {
+    if(pCreateInfo->sType != VK_STRUCTURE_TYPE_DYNAMIC_RASTER_STATE_CREATE_INFO)
     {
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateDynamicRasterState parameter, const VkDynamicRasterStateCreateInfo* pCreateInfo, is null pointer");
+        "vkCreateDynamicRasterState parameter, VkStructureType pCreateInfo->sType, is an invalid enumerator");
         return false;
     }
-    if(pCreateInfo->sType < VK_STRUCTURE_TYPE_BEGIN_RANGE ||
-        pCreateInfo->sType > VK_STRUCTURE_TYPE_END_RANGE)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateDynamicRasterState parameter, VkStructureType pCreateInfo->sType, is unrecognized enumerator");
-        return false;
     }
 
     return true;
@@ -6203,14 +5933,11 @@ bool PostCreateDynamicRasterState(
     VkResult result)
 {
 
-    if(pState == nullptr)
+    if(pState != nullptr)
     {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateDynamicRasterState parameter, VkDynamicRasterState* pState, is null pointer");
-        return false;
     }
 
-    if(result != VK_SUCCESS)
+    if(result < VK_SUCCESS)
     {
         std::string reason = "vkCreateDynamicRasterState parameter, VkResult result, is " + EnumeratorString(result);
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
@@ -6241,7 +5968,7 @@ bool PostDestroyDynamicRasterState(
 {
 
 
-    if(result != VK_SUCCESS)
+    if(result < VK_SUCCESS)
     {
         std::string reason = "vkDestroyDynamicRasterState parameter, VkResult result, is " + EnumeratorString(result);
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
@@ -6266,18 +5993,14 @@ bool PreCreateDynamicColorBlendState(
     VkDevice device,
     const VkDynamicColorBlendStateCreateInfo* pCreateInfo)
 {
-    if(pCreateInfo == nullptr)
+    if(pCreateInfo != nullptr)
+    {
+    if(pCreateInfo->sType != VK_STRUCTURE_TYPE_DYNAMIC_COLOR_BLEND_STATE_CREATE_INFO)
     {
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateDynamicColorBlendState parameter, const VkDynamicColorBlendStateCreateInfo* pCreateInfo, is null pointer");
+        "vkCreateDynamicColorBlendState parameter, VkStructureType pCreateInfo->sType, is an invalid enumerator");
         return false;
     }
-    if(pCreateInfo->sType < VK_STRUCTURE_TYPE_BEGIN_RANGE ||
-        pCreateInfo->sType > VK_STRUCTURE_TYPE_END_RANGE)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateDynamicColorBlendState parameter, VkStructureType pCreateInfo->sType, is unrecognized enumerator");
-        return false;
     }
 
     return true;
@@ -6289,14 +6012,11 @@ bool PostCreateDynamicColorBlendState(
     VkResult result)
 {
 
-    if(pState == nullptr)
+    if(pState != nullptr)
     {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateDynamicColorBlendState parameter, VkDynamicColorBlendState* pState, is null pointer");
-        return false;
     }
 
-    if(result != VK_SUCCESS)
+    if(result < VK_SUCCESS)
     {
         std::string reason = "vkCreateDynamicColorBlendState parameter, VkResult result, is " + EnumeratorString(result);
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
@@ -6327,7 +6047,7 @@ bool PostDestroyDynamicColorBlendState(
 {
 
 
-    if(result != VK_SUCCESS)
+    if(result < VK_SUCCESS)
     {
         std::string reason = "vkDestroyDynamicColorBlendState parameter, VkResult result, is " + EnumeratorString(result);
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
@@ -6352,18 +6072,14 @@ bool PreCreateDynamicDepthStencilState(
     VkDevice device,
     const VkDynamicDepthStencilStateCreateInfo* pCreateInfo)
 {
-    if(pCreateInfo == nullptr)
+    if(pCreateInfo != nullptr)
+    {
+    if(pCreateInfo->sType != VK_STRUCTURE_TYPE_DYNAMIC_DEPTH_STENCIL_STATE_CREATE_INFO)
     {
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateDynamicDepthStencilState parameter, const VkDynamicDepthStencilStateCreateInfo* pCreateInfo, is null pointer");
+        "vkCreateDynamicDepthStencilState parameter, VkStructureType pCreateInfo->sType, is an invalid enumerator");
         return false;
     }
-    if(pCreateInfo->sType < VK_STRUCTURE_TYPE_BEGIN_RANGE ||
-        pCreateInfo->sType > VK_STRUCTURE_TYPE_END_RANGE)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateDynamicDepthStencilState parameter, VkStructureType pCreateInfo->sType, is unrecognized enumerator");
-        return false;
     }
 
     return true;
@@ -6375,14 +6091,11 @@ bool PostCreateDynamicDepthStencilState(
     VkResult result)
 {
 
-    if(pState == nullptr)
+    if(pState != nullptr)
     {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateDynamicDepthStencilState parameter, VkDynamicDepthStencilState* pState, is null pointer");
-        return false;
     }
 
-    if(result != VK_SUCCESS)
+    if(result < VK_SUCCESS)
     {
         std::string reason = "vkCreateDynamicDepthStencilState parameter, VkResult result, is " + EnumeratorString(result);
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
@@ -6413,7 +6126,7 @@ bool PostDestroyDynamicDepthStencilState(
 {
 
 
-    if(result != VK_SUCCESS)
+    if(result < VK_SUCCESS)
     {
         std::string reason = "vkDestroyDynamicDepthStencilState parameter, VkResult result, is " + EnumeratorString(result);
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
@@ -6434,29 +6147,467 @@ VK_LAYER_EXPORT VkResult VKAPI vkDestroyDynamicDepthStencilState(
     return result;
 }
 
+bool PreCreateFramebuffer(
+    VkDevice device,
+    const VkFramebufferCreateInfo* pCreateInfo)
+{
+    if(pCreateInfo != nullptr)
+    {
+    if(pCreateInfo->sType != VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO)
+    {
+        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        "vkCreateFramebuffer parameter, VkStructureType pCreateInfo->sType, is an invalid enumerator");
+        return false;
+    }
+    if(pCreateInfo->pAttachments != nullptr)
+    {
+    if(pCreateInfo->pAttachments->layout < VK_IMAGE_LAYOUT_BEGIN_RANGE ||
+        pCreateInfo->pAttachments->layout > VK_IMAGE_LAYOUT_END_RANGE)
+    {
+        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        "vkCreateFramebuffer parameter, VkImageLayout pCreateInfo->pAttachments->layout, is an unrecognized enumerator");
+        return false;
+    }
+    }
+    }
+
+    return true;
+}
+
+bool PostCreateFramebuffer(
+    VkDevice device,
+    VkFramebuffer* pFramebuffer,
+    VkResult result)
+{
+
+    if(pFramebuffer != nullptr)
+    {
+    }
+
+    if(result < VK_SUCCESS)
+    {
+        std::string reason = "vkCreateFramebuffer parameter, VkResult result, is " + EnumeratorString(result);
+        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
+        return false;
+    }
+
+    return true;
+}
+
+VK_LAYER_EXPORT VkResult VKAPI vkCreateFramebuffer(
+    VkDevice device,
+    const VkFramebufferCreateInfo* pCreateInfo,
+    VkFramebuffer* pFramebuffer)
+{
+    PreCreateFramebuffer(device, pCreateInfo);
+
+    VkResult result = get_dispatch_table(pc_device_table_map, device)->CreateFramebuffer(device, pCreateInfo, pFramebuffer);
+
+    PostCreateFramebuffer(device, pFramebuffer, result);
+
+    return result;
+}
+
+bool PostDestroyFramebuffer(
+    VkDevice device,
+    VkFramebuffer framebuffer,
+    VkResult result)
+{
+
+
+    if(result < VK_SUCCESS)
+    {
+        std::string reason = "vkDestroyFramebuffer parameter, VkResult result, is " + EnumeratorString(result);
+        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
+        return false;
+    }
+
+    return true;
+}
+
+VK_LAYER_EXPORT VkResult VKAPI vkDestroyFramebuffer(
+    VkDevice device,
+    VkFramebuffer framebuffer)
+{
+    VkResult result = get_dispatch_table(pc_device_table_map, device)->DestroyFramebuffer(device, framebuffer);
+
+    PostDestroyFramebuffer(device, framebuffer, result);
+
+    return result;
+}
+
+bool PreCreateRenderPass(
+    VkDevice device,
+    const VkRenderPassCreateInfo* pCreateInfo)
+{
+    if(pCreateInfo != nullptr)
+    {
+    if(pCreateInfo->sType != VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO)
+    {
+        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        "vkCreateRenderPass parameter, VkStructureType pCreateInfo->sType, is an invalid enumerator");
+        return false;
+    }
+    if(pCreateInfo->pAttachments != nullptr)
+    {
+    if(pCreateInfo->pAttachments->sType != VK_STRUCTURE_TYPE_ATTACHMENT_DESCRIPTION)
+    {
+        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        "vkCreateRenderPass parameter, VkStructureType pCreateInfo->pAttachments->sType, is an invalid enumerator");
+        return false;
+    }
+    if(pCreateInfo->pAttachments->format < VK_FORMAT_BEGIN_RANGE ||
+        pCreateInfo->pAttachments->format > VK_FORMAT_END_RANGE)
+    {
+        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        "vkCreateRenderPass parameter, VkFormat pCreateInfo->pAttachments->format, is an unrecognized enumerator");
+        return false;
+    }
+    if(pCreateInfo->pAttachments->loadOp < VK_ATTACHMENT_LOAD_OP_BEGIN_RANGE ||
+        pCreateInfo->pAttachments->loadOp > VK_ATTACHMENT_LOAD_OP_END_RANGE)
+    {
+        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        "vkCreateRenderPass parameter, VkAttachmentLoadOp pCreateInfo->pAttachments->loadOp, is an unrecognized enumerator");
+        return false;
+    }
+    if(pCreateInfo->pAttachments->storeOp < VK_ATTACHMENT_STORE_OP_BEGIN_RANGE ||
+        pCreateInfo->pAttachments->storeOp > VK_ATTACHMENT_STORE_OP_END_RANGE)
+    {
+        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        "vkCreateRenderPass parameter, VkAttachmentStoreOp pCreateInfo->pAttachments->storeOp, is an unrecognized enumerator");
+        return false;
+    }
+    if(pCreateInfo->pAttachments->stencilLoadOp < VK_ATTACHMENT_LOAD_OP_BEGIN_RANGE ||
+        pCreateInfo->pAttachments->stencilLoadOp > VK_ATTACHMENT_LOAD_OP_END_RANGE)
+    {
+        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        "vkCreateRenderPass parameter, VkAttachmentLoadOp pCreateInfo->pAttachments->stencilLoadOp, is an unrecognized enumerator");
+        return false;
+    }
+    if(pCreateInfo->pAttachments->stencilStoreOp < VK_ATTACHMENT_STORE_OP_BEGIN_RANGE ||
+        pCreateInfo->pAttachments->stencilStoreOp > VK_ATTACHMENT_STORE_OP_END_RANGE)
+    {
+        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        "vkCreateRenderPass parameter, VkAttachmentStoreOp pCreateInfo->pAttachments->stencilStoreOp, is an unrecognized enumerator");
+        return false;
+    }
+    if(pCreateInfo->pAttachments->initialLayout < VK_IMAGE_LAYOUT_BEGIN_RANGE ||
+        pCreateInfo->pAttachments->initialLayout > VK_IMAGE_LAYOUT_END_RANGE)
+    {
+        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        "vkCreateRenderPass parameter, VkImageLayout pCreateInfo->pAttachments->initialLayout, is an unrecognized enumerator");
+        return false;
+    }
+    if(pCreateInfo->pAttachments->finalLayout < VK_IMAGE_LAYOUT_BEGIN_RANGE ||
+        pCreateInfo->pAttachments->finalLayout > VK_IMAGE_LAYOUT_END_RANGE)
+    {
+        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        "vkCreateRenderPass parameter, VkImageLayout pCreateInfo->pAttachments->finalLayout, is an unrecognized enumerator");
+        return false;
+    }
+    }
+    if(pCreateInfo->pSubpasses != nullptr)
+    {
+    if(pCreateInfo->pSubpasses->sType != VK_STRUCTURE_TYPE_SUBPASS_DESCRIPTION)
+    {
+        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        "vkCreateRenderPass parameter, VkStructureType pCreateInfo->pSubpasses->sType, is an invalid enumerator");
+        return false;
+    }
+    if(pCreateInfo->pSubpasses->pipelineBindPoint < VK_PIPELINE_BIND_POINT_BEGIN_RANGE ||
+        pCreateInfo->pSubpasses->pipelineBindPoint > VK_PIPELINE_BIND_POINT_END_RANGE)
+    {
+        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        "vkCreateRenderPass parameter, VkPipelineBindPoint pCreateInfo->pSubpasses->pipelineBindPoint, is an unrecognized enumerator");
+        return false;
+    }
+    if(pCreateInfo->pSubpasses->inputAttachments != nullptr)
+    {
+    if(pCreateInfo->pSubpasses->inputAttachments->layout < VK_IMAGE_LAYOUT_BEGIN_RANGE ||
+        pCreateInfo->pSubpasses->inputAttachments->layout > VK_IMAGE_LAYOUT_END_RANGE)
+    {
+        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        "vkCreateRenderPass parameter, VkImageLayout pCreateInfo->pSubpasses->inputAttachments->layout, is an unrecognized enumerator");
+        return false;
+    }
+    }
+    if(pCreateInfo->pSubpasses->colorAttachments != nullptr)
+    {
+    if(pCreateInfo->pSubpasses->colorAttachments->layout < VK_IMAGE_LAYOUT_BEGIN_RANGE ||
+        pCreateInfo->pSubpasses->colorAttachments->layout > VK_IMAGE_LAYOUT_END_RANGE)
+    {
+        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        "vkCreateRenderPass parameter, VkImageLayout pCreateInfo->pSubpasses->colorAttachments->layout, is an unrecognized enumerator");
+        return false;
+    }
+    }
+    if(pCreateInfo->pSubpasses->resolveAttachments != nullptr)
+    {
+    if(pCreateInfo->pSubpasses->resolveAttachments->layout < VK_IMAGE_LAYOUT_BEGIN_RANGE ||
+        pCreateInfo->pSubpasses->resolveAttachments->layout > VK_IMAGE_LAYOUT_END_RANGE)
+    {
+        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        "vkCreateRenderPass parameter, VkImageLayout pCreateInfo->pSubpasses->resolveAttachments->layout, is an unrecognized enumerator");
+        return false;
+    }
+    }
+    if(pCreateInfo->pSubpasses->depthStencilAttachment.layout < VK_IMAGE_LAYOUT_BEGIN_RANGE ||
+        pCreateInfo->pSubpasses->depthStencilAttachment.layout > VK_IMAGE_LAYOUT_END_RANGE)
+    {
+        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        "vkCreateRenderPass parameter, VkImageLayout pCreateInfo->pSubpasses->depthStencilAttachment.layout, is an unrecognized enumerator");
+        return false;
+    }
+    if(pCreateInfo->pSubpasses->preserveAttachments != nullptr)
+    {
+    if(pCreateInfo->pSubpasses->preserveAttachments->layout < VK_IMAGE_LAYOUT_BEGIN_RANGE ||
+        pCreateInfo->pSubpasses->preserveAttachments->layout > VK_IMAGE_LAYOUT_END_RANGE)
+    {
+        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        "vkCreateRenderPass parameter, VkImageLayout pCreateInfo->pSubpasses->preserveAttachments->layout, is an unrecognized enumerator");
+        return false;
+    }
+    }
+    }
+    if(pCreateInfo->pDependencies != nullptr)
+    {
+    if(pCreateInfo->pDependencies->sType != VK_STRUCTURE_TYPE_SUBPASS_DEPENDENCY)
+    {
+        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        "vkCreateRenderPass parameter, VkStructureType pCreateInfo->pDependencies->sType, is an invalid enumerator");
+        return false;
+    }
+    }
+    }
+
+    return true;
+}
+
+bool PostCreateRenderPass(
+    VkDevice device,
+    VkRenderPass* pRenderPass,
+    VkResult result)
+{
+
+    if(pRenderPass != nullptr)
+    {
+    }
+
+    if(result < VK_SUCCESS)
+    {
+        std::string reason = "vkCreateRenderPass parameter, VkResult result, is " + EnumeratorString(result);
+        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
+        return false;
+    }
+
+    return true;
+}
+
+VK_LAYER_EXPORT VkResult VKAPI vkCreateRenderPass(
+    VkDevice device,
+    const VkRenderPassCreateInfo* pCreateInfo,
+    VkRenderPass* pRenderPass)
+{
+    PreCreateRenderPass(device, pCreateInfo);
+
+    VkResult result = get_dispatch_table(pc_device_table_map, device)->CreateRenderPass(device, pCreateInfo, pRenderPass);
+
+    PostCreateRenderPass(device, pRenderPass, result);
+
+    return result;
+}
+
+bool PostDestroyRenderPass(
+    VkDevice device,
+    VkRenderPass renderPass,
+    VkResult result)
+{
+
+
+    if(result < VK_SUCCESS)
+    {
+        std::string reason = "vkDestroyRenderPass parameter, VkResult result, is " + EnumeratorString(result);
+        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
+        return false;
+    }
+
+    return true;
+}
+
+VK_LAYER_EXPORT VkResult VKAPI vkDestroyRenderPass(
+    VkDevice device,
+    VkRenderPass renderPass)
+{
+    VkResult result = get_dispatch_table(pc_device_table_map, device)->DestroyRenderPass(device, renderPass);
+
+    PostDestroyRenderPass(device, renderPass, result);
+
+    return result;
+}
+
+bool PostGetRenderAreaGranularity(
+    VkDevice device,
+    VkRenderPass renderPass,
+    VkExtent2D* pGranularity,
+    VkResult result)
+{
+
+
+    if(pGranularity != nullptr)
+    {
+    }
+
+    if(result < VK_SUCCESS)
+    {
+        std::string reason = "vkGetRenderAreaGranularity parameter, VkResult result, is " + EnumeratorString(result);
+        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
+        return false;
+    }
+
+    return true;
+}
+
+VK_LAYER_EXPORT VkResult VKAPI vkGetRenderAreaGranularity(
+    VkDevice device,
+    VkRenderPass renderPass,
+    VkExtent2D* pGranularity)
+{
+    VkResult result = get_dispatch_table(pc_device_table_map, device)->GetRenderAreaGranularity(device, renderPass, pGranularity);
+
+    PostGetRenderAreaGranularity(device, renderPass, pGranularity, result);
+
+    return result;
+}
+
+bool PreCreateCommandPool(
+    VkDevice device,
+    const VkCmdPoolCreateInfo* pCreateInfo)
+{
+    if(pCreateInfo != nullptr)
+    {
+    if(pCreateInfo->sType != VK_STRUCTURE_TYPE_CMD_POOL_CREATE_INFO)
+    {
+        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        "vkCreateCommandPool parameter, VkStructureType pCreateInfo->sType, is an invalid enumerator");
+        return false;
+    }
+    }
+
+    return true;
+}
+
+bool PostCreateCommandPool(
+    VkDevice device,
+    VkCmdPool* pCmdPool,
+    VkResult result)
+{
+
+    if(pCmdPool != nullptr)
+    {
+    }
+
+    if(result < VK_SUCCESS)
+    {
+        std::string reason = "vkCreateCommandPool parameter, VkResult result, is " + EnumeratorString(result);
+        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
+        return false;
+    }
+
+    return true;
+}
+
+VK_LAYER_EXPORT VkResult VKAPI vkCreateCommandPool(
+    VkDevice device,
+    const VkCmdPoolCreateInfo* pCreateInfo,
+    VkCmdPool* pCmdPool)
+{
+    PreCreateCommandPool(device, pCreateInfo);
+
+    VkResult result = get_dispatch_table(pc_device_table_map, device)->CreateCommandPool(device, pCreateInfo, pCmdPool);
+
+    PostCreateCommandPool(device, pCmdPool, result);
+
+    return result;
+}
+
+bool PostDestroyCommandPool(
+    VkDevice device,
+    VkCmdPool cmdPool,
+    VkResult result)
+{
+
+
+    if(result < VK_SUCCESS)
+    {
+        std::string reason = "vkDestroyCommandPool parameter, VkResult result, is " + EnumeratorString(result);
+        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
+        return false;
+    }
+
+    return true;
+}
+
+VK_LAYER_EXPORT VkResult VKAPI vkDestroyCommandPool(
+    VkDevice device,
+    VkCmdPool cmdPool)
+{
+    VkResult result = get_dispatch_table(pc_device_table_map, device)->DestroyCommandPool(device, cmdPool);
+
+    PostDestroyCommandPool(device, cmdPool, result);
+
+    return result;
+}
+
+bool PostResetCommandPool(
+    VkDevice device,
+    VkCmdPool cmdPool,
+    VkCmdPoolResetFlags flags,
+    VkResult result)
+{
+
+
+
+    if(result < VK_SUCCESS)
+    {
+        std::string reason = "vkResetCommandPool parameter, VkResult result, is " + EnumeratorString(result);
+        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
+        return false;
+    }
+
+    return true;
+}
+
+VK_LAYER_EXPORT VkResult VKAPI vkResetCommandPool(
+    VkDevice device,
+    VkCmdPool cmdPool,
+    VkCmdPoolResetFlags flags)
+{
+    VkResult result = get_dispatch_table(pc_device_table_map, device)->ResetCommandPool(device, cmdPool, flags);
+
+    PostResetCommandPool(device, cmdPool, flags, result);
+
+    return result;
+}
+
 bool PreCreateCommandBuffer(
     VkDevice device,
     const VkCmdBufferCreateInfo* pCreateInfo)
 {
-    if(pCreateInfo == nullptr)
+    if(pCreateInfo != nullptr)
+    {
+    if(pCreateInfo->sType != VK_STRUCTURE_TYPE_CMD_BUFFER_CREATE_INFO)
     {
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateCommandBuffer parameter, const VkCmdBufferCreateInfo* pCreateInfo, is null pointer");
-        return false;
-    }
-    if(pCreateInfo->sType < VK_STRUCTURE_TYPE_BEGIN_RANGE ||
-        pCreateInfo->sType > VK_STRUCTURE_TYPE_END_RANGE)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateCommandBuffer parameter, VkStructureType pCreateInfo->sType, is unrecognized enumerator");
+        "vkCreateCommandBuffer parameter, VkStructureType pCreateInfo->sType, is an invalid enumerator");
         return false;
     }
     if(pCreateInfo->level < VK_CMD_BUFFER_LEVEL_BEGIN_RANGE ||
         pCreateInfo->level > VK_CMD_BUFFER_LEVEL_END_RANGE)
     {
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateCommandBuffer parameter, VkCmdBufferLevel pCreateInfo->level, is unrecognized enumerator");
+        "vkCreateCommandBuffer parameter, VkCmdBufferLevel pCreateInfo->level, is an unrecognized enumerator");
         return false;
+    }
     }
 
     return true;
@@ -6468,14 +6619,11 @@ bool PostCreateCommandBuffer(
     VkResult result)
 {
 
-    if(pCmdBuffer == nullptr)
+    if(pCmdBuffer != nullptr)
     {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateCommandBuffer parameter, VkCmdBuffer* pCmdBuffer, is null pointer");
-        return false;
     }
 
-    if(result != VK_SUCCESS)
+    if(result < VK_SUCCESS)
     {
         std::string reason = "vkCreateCommandBuffer parameter, VkResult result, is " + EnumeratorString(result);
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
@@ -6506,7 +6654,7 @@ bool PostDestroyCommandBuffer(
 {
 
 
-    if(result != VK_SUCCESS)
+    if(result < VK_SUCCESS)
     {
         std::string reason = "vkDestroyCommandBuffer parameter, VkResult result, is " + EnumeratorString(result);
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
@@ -6531,24 +6679,14 @@ bool PreBeginCommandBuffer(
     VkCmdBuffer cmdBuffer,
     const VkCmdBufferBeginInfo* pBeginInfo)
 {
-    if(pBeginInfo == nullptr)
+    if(pBeginInfo != nullptr)
+    {
+    if(pBeginInfo->sType != VK_STRUCTURE_TYPE_CMD_BUFFER_BEGIN_INFO)
     {
         log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkBeginCommandBuffer parameter, const VkCmdBufferBeginInfo* pBeginInfo, is null pointer");
+        "vkBeginCommandBuffer parameter, VkStructureType pBeginInfo->sType, is an invalid enumerator");
         return false;
     }
-    if(pBeginInfo->sType < VK_STRUCTURE_TYPE_BEGIN_RANGE ||
-        pBeginInfo->sType > VK_STRUCTURE_TYPE_END_RANGE)
-    {
-        log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkBeginCommandBuffer parameter, VkStructureType pBeginInfo->sType, is unrecognized enumerator");
-        return false;
-    }
-    if(!ValidateEnumerator((VkCmdBufferOptimizeFlagBits)pBeginInfo->flags))
-    {
-        std::string reason = "vkBeginCommandBuffer parameter, VkCmdBufferOptimizeFlags pBeginInfo->flags, is " + EnumeratorString((VkCmdBufferOptimizeFlagBits)pBeginInfo->flags);
-        log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
-        return false;
     }
 
     return true;
@@ -6559,7 +6697,7 @@ bool PostBeginCommandBuffer(
     VkResult result)
 {
 
-    if(result != VK_SUCCESS)
+    if(result < VK_SUCCESS)
     {
         std::string reason = "vkBeginCommandBuffer parameter, VkResult result, is " + EnumeratorString(result);
         log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
@@ -6587,7 +6725,7 @@ bool PostEndCommandBuffer(
     VkResult result)
 {
 
-    if(result != VK_SUCCESS)
+    if(result < VK_SUCCESS)
     {
         std::string reason = "vkEndCommandBuffer parameter, VkResult result, is " + EnumeratorString(result);
         log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
@@ -6609,10 +6747,12 @@ VK_LAYER_EXPORT VkResult VKAPI vkEndCommandBuffer(
 
 bool PostResetCommandBuffer(
     VkCmdBuffer cmdBuffer,
+    VkCmdBufferResetFlags flags,
     VkResult result)
 {
 
-    if(result != VK_SUCCESS)
+
+    if(result < VK_SUCCESS)
     {
         std::string reason = "vkResetCommandBuffer parameter, VkResult result, is " + EnumeratorString(result);
         log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
@@ -6628,7 +6768,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkResetCommandBuffer(
 {
     VkResult result = get_dispatch_table(pc_device_table_map, cmdBuffer)->ResetCommandBuffer(cmdBuffer, flags);
 
-    PostResetCommandBuffer(cmdBuffer, result);
+    PostResetCommandBuffer(cmdBuffer, flags, result);
 
     return result;
 }
@@ -6643,7 +6783,7 @@ bool PostCmdBindPipeline(
         pipelineBindPoint > VK_PIPELINE_BIND_POINT_END_RANGE)
     {
         log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCmdBindPipeline parameter, VkPipelineBindPoint pipelineBindPoint, is unrecognized enumerator");
+        "vkCmdBindPipeline parameter, VkPipelineBindPoint pipelineBindPoint, is an unrecognized enumerator");
         return false;
     }
 
@@ -6738,13 +6878,13 @@ bool PreCmdBindDescriptorSets(
     const VkDescriptorSet* pDescriptorSets,
     const uint32_t* pDynamicOffsets)
 {
-    if(pDescriptorSets == nullptr)
+    if(pDescriptorSets != nullptr)
     {
-        log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCmdBindDescriptorSets parameter, const VkDescriptorSet* pDescriptorSets, is null pointer");
-        return false;
     }
 
+    if(pDynamicOffsets != nullptr)
+    {
+    }
 
     return true;
 }
@@ -6762,7 +6902,7 @@ bool PostCmdBindDescriptorSets(
         pipelineBindPoint > VK_PIPELINE_BIND_POINT_END_RANGE)
     {
         log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCmdBindDescriptorSets parameter, VkPipelineBindPoint pipelineBindPoint, is unrecognized enumerator");
+        "vkCmdBindDescriptorSets parameter, VkPipelineBindPoint pipelineBindPoint, is an unrecognized enumerator");
         return false;
     }
 
@@ -6803,7 +6943,7 @@ bool PostCmdBindIndexBuffer(
         indexType > VK_INDEX_TYPE_END_RANGE)
     {
         log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCmdBindIndexBuffer parameter, VkIndexType indexType, is unrecognized enumerator");
+        "vkCmdBindIndexBuffer parameter, VkIndexType indexType, is an unrecognized enumerator");
         return false;
     }
 
@@ -6826,18 +6966,12 @@ bool PreCmdBindVertexBuffers(
     const VkBuffer* pBuffers,
     const VkDeviceSize* pOffsets)
 {
-    if(pBuffers == nullptr)
+    if(pBuffers != nullptr)
     {
-        log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCmdBindVertexBuffers parameter, const VkBuffer* pBuffers, is null pointer");
-        return false;
     }
 
-    if(pOffsets == nullptr)
+    if(pOffsets != nullptr)
     {
-        log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCmdBindVertexBuffers parameter, const VkDeviceSize* pOffsets, is null pointer");
-        return false;
     }
 
     return true;
@@ -7028,11 +7162,8 @@ bool PreCmdCopyBuffer(
     VkCmdBuffer cmdBuffer,
     const VkBufferCopy* pRegions)
 {
-    if(pRegions == nullptr)
+    if(pRegions != nullptr)
     {
-        log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCmdCopyBuffer parameter, const VkBufferCopy* pRegions, is null pointer");
-        return false;
     }
 
     return true;
@@ -7069,25 +7200,22 @@ bool PreCmdCopyImage(
     VkCmdBuffer cmdBuffer,
     const VkImageCopy* pRegions)
 {
-    if(pRegions == nullptr)
+    if(pRegions != nullptr)
     {
-        log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCmdCopyImage parameter, const VkImageCopy* pRegions, is null pointer");
-        return false;
-    }
     if(pRegions->srcSubresource.aspect < VK_IMAGE_ASPECT_BEGIN_RANGE ||
         pRegions->srcSubresource.aspect > VK_IMAGE_ASPECT_END_RANGE)
     {
         log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCmdCopyImage parameter, VkImageAspect pRegions->srcSubresource.aspect, is unrecognized enumerator");
+        "vkCmdCopyImage parameter, VkImageAspect pRegions->srcSubresource.aspect, is an unrecognized enumerator");
         return false;
     }
     if(pRegions->destSubresource.aspect < VK_IMAGE_ASPECT_BEGIN_RANGE ||
         pRegions->destSubresource.aspect > VK_IMAGE_ASPECT_END_RANGE)
     {
         log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCmdCopyImage parameter, VkImageAspect pRegions->destSubresource.aspect, is unrecognized enumerator");
+        "vkCmdCopyImage parameter, VkImageAspect pRegions->destSubresource.aspect, is an unrecognized enumerator");
         return false;
+    }
     }
 
     return true;
@@ -7107,7 +7235,7 @@ bool PostCmdCopyImage(
         srcImageLayout > VK_IMAGE_LAYOUT_END_RANGE)
     {
         log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCmdCopyImage parameter, VkImageLayout srcImageLayout, is unrecognized enumerator");
+        "vkCmdCopyImage parameter, VkImageLayout srcImageLayout, is an unrecognized enumerator");
         return false;
     }
 
@@ -7116,7 +7244,7 @@ bool PostCmdCopyImage(
         destImageLayout > VK_IMAGE_LAYOUT_END_RANGE)
     {
         log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCmdCopyImage parameter, VkImageLayout destImageLayout, is unrecognized enumerator");
+        "vkCmdCopyImage parameter, VkImageLayout destImageLayout, is an unrecognized enumerator");
         return false;
     }
 
@@ -7144,25 +7272,22 @@ bool PreCmdBlitImage(
     VkCmdBuffer cmdBuffer,
     const VkImageBlit* pRegions)
 {
-    if(pRegions == nullptr)
+    if(pRegions != nullptr)
     {
-        log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCmdBlitImage parameter, const VkImageBlit* pRegions, is null pointer");
-        return false;
-    }
     if(pRegions->srcSubresource.aspect < VK_IMAGE_ASPECT_BEGIN_RANGE ||
         pRegions->srcSubresource.aspect > VK_IMAGE_ASPECT_END_RANGE)
     {
         log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCmdBlitImage parameter, VkImageAspect pRegions->srcSubresource.aspect, is unrecognized enumerator");
+        "vkCmdBlitImage parameter, VkImageAspect pRegions->srcSubresource.aspect, is an unrecognized enumerator");
         return false;
     }
     if(pRegions->destSubresource.aspect < VK_IMAGE_ASPECT_BEGIN_RANGE ||
         pRegions->destSubresource.aspect > VK_IMAGE_ASPECT_END_RANGE)
     {
         log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCmdBlitImage parameter, VkImageAspect pRegions->destSubresource.aspect, is unrecognized enumerator");
+        "vkCmdBlitImage parameter, VkImageAspect pRegions->destSubresource.aspect, is an unrecognized enumerator");
         return false;
+    }
     }
 
     return true;
@@ -7183,7 +7308,7 @@ bool PostCmdBlitImage(
         srcImageLayout > VK_IMAGE_LAYOUT_END_RANGE)
     {
         log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCmdBlitImage parameter, VkImageLayout srcImageLayout, is unrecognized enumerator");
+        "vkCmdBlitImage parameter, VkImageLayout srcImageLayout, is an unrecognized enumerator");
         return false;
     }
 
@@ -7192,7 +7317,7 @@ bool PostCmdBlitImage(
         destImageLayout > VK_IMAGE_LAYOUT_END_RANGE)
     {
         log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCmdBlitImage parameter, VkImageLayout destImageLayout, is unrecognized enumerator");
+        "vkCmdBlitImage parameter, VkImageLayout destImageLayout, is an unrecognized enumerator");
         return false;
     }
 
@@ -7201,7 +7326,7 @@ bool PostCmdBlitImage(
         filter > VK_TEX_FILTER_END_RANGE)
     {
         log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCmdBlitImage parameter, VkTexFilter filter, is unrecognized enumerator");
+        "vkCmdBlitImage parameter, VkTexFilter filter, is an unrecognized enumerator");
         return false;
     }
 
@@ -7229,18 +7354,15 @@ bool PreCmdCopyBufferToImage(
     VkCmdBuffer cmdBuffer,
     const VkBufferImageCopy* pRegions)
 {
-    if(pRegions == nullptr)
+    if(pRegions != nullptr)
     {
-        log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCmdCopyBufferToImage parameter, const VkBufferImageCopy* pRegions, is null pointer");
-        return false;
-    }
     if(pRegions->imageSubresource.aspect < VK_IMAGE_ASPECT_BEGIN_RANGE ||
         pRegions->imageSubresource.aspect > VK_IMAGE_ASPECT_END_RANGE)
     {
         log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCmdCopyBufferToImage parameter, VkImageAspect pRegions->imageSubresource.aspect, is unrecognized enumerator");
+        "vkCmdCopyBufferToImage parameter, VkImageAspect pRegions->imageSubresource.aspect, is an unrecognized enumerator");
         return false;
+    }
     }
 
     return true;
@@ -7260,7 +7382,7 @@ bool PostCmdCopyBufferToImage(
         destImageLayout > VK_IMAGE_LAYOUT_END_RANGE)
     {
         log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCmdCopyBufferToImage parameter, VkImageLayout destImageLayout, is unrecognized enumerator");
+        "vkCmdCopyBufferToImage parameter, VkImageLayout destImageLayout, is an unrecognized enumerator");
         return false;
     }
 
@@ -7287,18 +7409,15 @@ bool PreCmdCopyImageToBuffer(
     VkCmdBuffer cmdBuffer,
     const VkBufferImageCopy* pRegions)
 {
-    if(pRegions == nullptr)
+    if(pRegions != nullptr)
     {
-        log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCmdCopyImageToBuffer parameter, const VkBufferImageCopy* pRegions, is null pointer");
-        return false;
-    }
     if(pRegions->imageSubresource.aspect < VK_IMAGE_ASPECT_BEGIN_RANGE ||
         pRegions->imageSubresource.aspect > VK_IMAGE_ASPECT_END_RANGE)
     {
         log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCmdCopyImageToBuffer parameter, VkImageAspect pRegions->imageSubresource.aspect, is unrecognized enumerator");
+        "vkCmdCopyImageToBuffer parameter, VkImageAspect pRegions->imageSubresource.aspect, is an unrecognized enumerator");
         return false;
+    }
     }
 
     return true;
@@ -7317,7 +7436,7 @@ bool PostCmdCopyImageToBuffer(
         srcImageLayout > VK_IMAGE_LAYOUT_END_RANGE)
     {
         log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCmdCopyImageToBuffer parameter, VkImageLayout srcImageLayout, is unrecognized enumerator");
+        "vkCmdCopyImageToBuffer parameter, VkImageLayout srcImageLayout, is an unrecognized enumerator");
         return false;
     }
 
@@ -7345,11 +7464,8 @@ bool PreCmdUpdateBuffer(
     VkCmdBuffer cmdBuffer,
     const uint32_t* pData)
 {
-    if(pData == nullptr)
+    if(pData != nullptr)
     {
-        log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCmdUpdateBuffer parameter, const uint32_t* pData, is null pointer");
-        return false;
     }
 
     return true;
@@ -7414,25 +7530,19 @@ bool PreCmdClearColorImage(
     const VkClearColorValue* pColor,
     const VkImageSubresourceRange* pRanges)
 {
-    if(pColor == nullptr)
+    if(pColor != nullptr)
     {
-        log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCmdClearColorImage parameter, const VkClearColorValue* pColor, is null pointer");
-        return false;
     }
 
-    if(pRanges == nullptr)
+    if(pRanges != nullptr)
     {
-        log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCmdClearColorImage parameter, const VkImageSubresourceRange* pRanges, is null pointer");
-        return false;
-    }
     if(pRanges->aspect < VK_IMAGE_ASPECT_BEGIN_RANGE ||
         pRanges->aspect > VK_IMAGE_ASPECT_END_RANGE)
     {
         log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCmdClearColorImage parameter, VkImageAspect pRanges->aspect, is unrecognized enumerator");
+        "vkCmdClearColorImage parameter, VkImageAspect pRanges->aspect, is an unrecognized enumerator");
         return false;
+    }
     }
 
     return true;
@@ -7450,7 +7560,7 @@ bool PostCmdClearColorImage(
         imageLayout > VK_IMAGE_LAYOUT_END_RANGE)
     {
         log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCmdClearColorImage parameter, VkImageLayout imageLayout, is unrecognized enumerator");
+        "vkCmdClearColorImage parameter, VkImageLayout imageLayout, is an unrecognized enumerator");
         return false;
     }
 
@@ -7477,18 +7587,15 @@ bool PreCmdClearDepthStencilImage(
     VkCmdBuffer cmdBuffer,
     const VkImageSubresourceRange* pRanges)
 {
-    if(pRanges == nullptr)
+    if(pRanges != nullptr)
     {
-        log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCmdClearDepthStencilImage parameter, const VkImageSubresourceRange* pRanges, is null pointer");
-        return false;
-    }
     if(pRanges->aspect < VK_IMAGE_ASPECT_BEGIN_RANGE ||
         pRanges->aspect > VK_IMAGE_ASPECT_END_RANGE)
     {
         log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCmdClearDepthStencilImage parameter, VkImageAspect pRanges->aspect, is unrecognized enumerator");
+        "vkCmdClearDepthStencilImage parameter, VkImageAspect pRanges->aspect, is an unrecognized enumerator");
         return false;
+    }
     }
 
     return true;
@@ -7508,7 +7615,7 @@ bool PostCmdClearDepthStencilImage(
         imageLayout > VK_IMAGE_LAYOUT_END_RANGE)
     {
         log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCmdClearDepthStencilImage parameter, VkImageLayout imageLayout, is unrecognized enumerator");
+        "vkCmdClearDepthStencilImage parameter, VkImageLayout imageLayout, is an unrecognized enumerator");
         return false;
     }
 
@@ -7539,18 +7646,12 @@ bool PreCmdClearColorAttachment(
     const VkClearColorValue* pColor,
     const VkRect3D* pRects)
 {
-    if(pColor == nullptr)
+    if(pColor != nullptr)
     {
-        log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCmdClearColorAttachment parameter, const VkClearColorValue* pColor, is null pointer");
-        return false;
     }
 
-    if(pRects == nullptr)
+    if(pRects != nullptr)
     {
-        log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCmdClearColorAttachment parameter, const VkRect3D* pRects, is null pointer");
-        return false;
     }
 
     return true;
@@ -7568,7 +7669,7 @@ bool PostCmdClearColorAttachment(
         imageLayout > VK_IMAGE_LAYOUT_END_RANGE)
     {
         log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCmdClearColorAttachment parameter, VkImageLayout imageLayout, is unrecognized enumerator");
+        "vkCmdClearColorAttachment parameter, VkImageLayout imageLayout, is an unrecognized enumerator");
         return false;
     }
 
@@ -7595,11 +7696,8 @@ bool PreCmdClearDepthStencilAttachment(
     VkCmdBuffer cmdBuffer,
     const VkRect3D* pRects)
 {
-    if(pRects == nullptr)
+    if(pRects != nullptr)
     {
-        log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCmdClearDepthStencilAttachment parameter, const VkRect3D* pRects, is null pointer");
-        return false;
     }
 
     return true;
@@ -7614,18 +7712,12 @@ bool PostCmdClearDepthStencilAttachment(
     uint32_t rectCount)
 {
 
-    if(!ValidateEnumerator((VkImageAspectFlagBits)imageAspectMask))
-    {
-        std::string reason = "vkCmdClearDepthStencilAttachment parameter, VkImageAspectFlags imageAspectMask, is " + EnumeratorString((VkImageAspectFlagBits)imageAspectMask);
-        log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
-        return false;
-    }
 
     if(imageLayout < VK_IMAGE_LAYOUT_BEGIN_RANGE ||
         imageLayout > VK_IMAGE_LAYOUT_END_RANGE)
     {
         log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCmdClearDepthStencilAttachment parameter, VkImageLayout imageLayout, is unrecognized enumerator");
+        "vkCmdClearDepthStencilAttachment parameter, VkImageLayout imageLayout, is an unrecognized enumerator");
         return false;
     }
 
@@ -7655,25 +7747,22 @@ bool PreCmdResolveImage(
     VkCmdBuffer cmdBuffer,
     const VkImageResolve* pRegions)
 {
-    if(pRegions == nullptr)
+    if(pRegions != nullptr)
     {
-        log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCmdResolveImage parameter, const VkImageResolve* pRegions, is null pointer");
-        return false;
-    }
     if(pRegions->srcSubresource.aspect < VK_IMAGE_ASPECT_BEGIN_RANGE ||
         pRegions->srcSubresource.aspect > VK_IMAGE_ASPECT_END_RANGE)
     {
         log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCmdResolveImage parameter, VkImageAspect pRegions->srcSubresource.aspect, is unrecognized enumerator");
+        "vkCmdResolveImage parameter, VkImageAspect pRegions->srcSubresource.aspect, is an unrecognized enumerator");
         return false;
     }
     if(pRegions->destSubresource.aspect < VK_IMAGE_ASPECT_BEGIN_RANGE ||
         pRegions->destSubresource.aspect > VK_IMAGE_ASPECT_END_RANGE)
     {
         log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCmdResolveImage parameter, VkImageAspect pRegions->destSubresource.aspect, is unrecognized enumerator");
+        "vkCmdResolveImage parameter, VkImageAspect pRegions->destSubresource.aspect, is an unrecognized enumerator");
         return false;
+    }
     }
 
     return true;
@@ -7693,7 +7782,7 @@ bool PostCmdResolveImage(
         srcImageLayout > VK_IMAGE_LAYOUT_END_RANGE)
     {
         log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCmdResolveImage parameter, VkImageLayout srcImageLayout, is unrecognized enumerator");
+        "vkCmdResolveImage parameter, VkImageLayout srcImageLayout, is an unrecognized enumerator");
         return false;
     }
 
@@ -7702,7 +7791,7 @@ bool PostCmdResolveImage(
         destImageLayout > VK_IMAGE_LAYOUT_END_RANGE)
     {
         log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCmdResolveImage parameter, VkImageLayout destImageLayout, is unrecognized enumerator");
+        "vkCmdResolveImage parameter, VkImageLayout destImageLayout, is an unrecognized enumerator");
         return false;
     }
 
@@ -7773,18 +7862,12 @@ bool PreCmdWaitEvents(
     const VkEvent* pEvents,
     const void* const* ppMemBarriers)
 {
-    if(pEvents == nullptr)
+    if(pEvents != nullptr)
     {
-        log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCmdWaitEvents parameter, const VkEvent* pEvents, is null pointer");
-        return false;
     }
 
-    if(ppMemBarriers == nullptr)
+    if(ppMemBarriers != nullptr)
     {
-        log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCmdWaitEvents parameter, const void** ppMemBarriers, is null pointer");
-        return false;
     }
 
     return true;
@@ -7793,7 +7876,7 @@ bool PreCmdWaitEvents(
 bool PostCmdWaitEvents(
     VkCmdBuffer cmdBuffer,
     uint32_t eventCount,
-    VkPipelineStageFlags sourceStageMask,
+    VkPipelineStageFlags srcStageMask,
     VkPipelineStageFlags destStageMask,
     uint32_t memBarrierCount)
 {
@@ -7809,27 +7892,24 @@ VK_LAYER_EXPORT void VKAPI vkCmdWaitEvents(
     VkCmdBuffer cmdBuffer,
     uint32_t eventCount,
     const VkEvent* pEvents,
-    VkPipelineStageFlags sourceStageMask,
+    VkPipelineStageFlags srcStageMask,
     VkPipelineStageFlags destStageMask,
     uint32_t memBarrierCount,
     const void* const* ppMemBarriers)
 {
     PreCmdWaitEvents(cmdBuffer, pEvents, ppMemBarriers);
 
-    get_dispatch_table(pc_device_table_map, cmdBuffer)->CmdWaitEvents(cmdBuffer, eventCount, pEvents, sourceStageMask, destStageMask, memBarrierCount, ppMemBarriers);
+    get_dispatch_table(pc_device_table_map, cmdBuffer)->CmdWaitEvents(cmdBuffer, eventCount, pEvents, srcStageMask, destStageMask, memBarrierCount, ppMemBarriers);
 
-    PostCmdWaitEvents(cmdBuffer, eventCount, sourceStageMask, destStageMask, memBarrierCount);
+    PostCmdWaitEvents(cmdBuffer, eventCount, srcStageMask, destStageMask, memBarrierCount);
 }
 
 bool PreCmdPipelineBarrier(
     VkCmdBuffer cmdBuffer,
     const void* const* ppMemBarriers)
 {
-    if(ppMemBarriers == nullptr)
+    if(ppMemBarriers != nullptr)
     {
-        log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCmdPipelineBarrier parameter, const void** ppMemBarriers, is null pointer");
-        return false;
     }
 
     return true;
@@ -7874,12 +7954,6 @@ bool PostCmdBeginQuery(
 
 
 
-    if(!ValidateEnumerator((VkQueryControlFlagBits)flags))
-    {
-        std::string reason = "vkCmdBeginQuery parameter, VkQueryControlFlags flags, is " + EnumeratorString((VkQueryControlFlagBits)flags);
-        log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
-        return false;
-    }
 
     return true;
 }
@@ -7951,7 +8025,7 @@ bool PostCmdWriteTimestamp(
         timestampType > VK_TIMESTAMP_TYPE_END_RANGE)
     {
         log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCmdWriteTimestamp parameter, VkTimestampType timestampType, is unrecognized enumerator");
+        "vkCmdWriteTimestamp parameter, VkTimestampType timestampType, is an unrecognized enumerator");
         return false;
     }
 
@@ -7988,12 +8062,6 @@ bool PostCmdCopyQueryPoolResults(
 
 
 
-    if(!ValidateEnumerator((VkQueryResultFlagBits)flags))
-    {
-        std::string reason = "vkCmdCopyQueryPoolResults parameter, VkQueryResultFlags flags, is " + EnumeratorString((VkQueryResultFlagBits)flags);
-        log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
-        return false;
-    }
 
     return true;
 }
@@ -8013,236 +8081,79 @@ VK_LAYER_EXPORT void VKAPI vkCmdCopyQueryPoolResults(
     PostCmdCopyQueryPoolResults(cmdBuffer, queryPool, startQuery, queryCount, destBuffer, destOffset, destStride, flags);
 }
 
-bool PreCreateFramebuffer(
-    VkDevice device,
-    const VkFramebufferCreateInfo* pCreateInfo)
+bool PreCmdPushConstants(
+    VkCmdBuffer cmdBuffer,
+    const void* values)
 {
-    if(pCreateInfo == nullptr)
+    if(values != nullptr)
     {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateFramebuffer parameter, const VkFramebufferCreateInfo* pCreateInfo, is null pointer");
-        return false;
-    }
-    if(pCreateInfo->sType < VK_STRUCTURE_TYPE_BEGIN_RANGE ||
-        pCreateInfo->sType > VK_STRUCTURE_TYPE_END_RANGE)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateFramebuffer parameter, VkStructureType pCreateInfo->sType, is unrecognized enumerator");
-        return false;
-    }
-    if(pCreateInfo->pAttachments == nullptr)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_WARN_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateFramebuffer parameter, const VkAttachmentBindInfo* pCreateInfo->pAttachments, is null pointer");
-        return false;
-    }
-    if(pCreateInfo->pAttachments->view.handle == 0)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_WARN_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateFramebuffer parameter, VkAttachmentView pCreateInfo->pAttachments->view, is null pointer");
-        return false;
-    }
-    if(pCreateInfo->pAttachments->layout < VK_IMAGE_LAYOUT_BEGIN_RANGE ||
-        pCreateInfo->pAttachments->layout > VK_IMAGE_LAYOUT_END_RANGE)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_WARN_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateFramebuffer parameter, VkImageLayout pCreateInfo->pAttachments->layout, is unrecognized enumerator");
-        return false;
     }
 
     return true;
 }
 
-bool PostCreateFramebuffer(
-    VkDevice device,
-    VkFramebuffer* pFramebuffer,
-    VkResult result)
+bool PostCmdPushConstants(
+    VkCmdBuffer cmdBuffer,
+    VkPipelineLayout layout,
+    VkShaderStageFlags stageFlags,
+    uint32_t start,
+    uint32_t length)
 {
 
-    if(pFramebuffer == nullptr)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateFramebuffer parameter, VkFramebuffer* pFramebuffer, is null pointer");
-        return false;
-    }
 
-    if(result != VK_SUCCESS)
-    {
-        std::string reason = "vkCreateFramebuffer parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
-        return false;
-    }
+
+
 
     return true;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkCreateFramebuffer(
-    VkDevice device,
-    const VkFramebufferCreateInfo* pCreateInfo,
-    VkFramebuffer* pFramebuffer)
+VK_LAYER_EXPORT void VKAPI vkCmdPushConstants(
+    VkCmdBuffer cmdBuffer,
+    VkPipelineLayout layout,
+    VkShaderStageFlags stageFlags,
+    uint32_t start,
+    uint32_t length,
+    const void* values)
 {
-    PreCreateFramebuffer(device, pCreateInfo);
+    PreCmdPushConstants(cmdBuffer, values);
 
-    VkResult result = get_dispatch_table(pc_device_table_map, device)->CreateFramebuffer(device, pCreateInfo, pFramebuffer);
+    get_dispatch_table(pc_device_table_map, cmdBuffer)->CmdPushConstants(cmdBuffer, layout, stageFlags, start, length, values);
 
-    PostCreateFramebuffer(device, pFramebuffer, result);
-
-    return result;
-}
-
-bool PostDestroyFramebuffer(
-    VkDevice device,
-    VkFramebuffer framebuffer,
-    VkResult result)
-{
-
-    if(result != VK_SUCCESS)
-    {
-        std::string reason = "vkDestroyFramebuffer parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
-        return false;
-    }
-
-    return true;
-}
-
-VK_LAYER_EXPORT VkResult VKAPI vkDestroyFramebuffer(
-    VkDevice device,
-    VkFramebuffer framebuffer)
-{
-    VkResult result = get_dispatch_table(pc_device_table_map, device)->DestroyFramebuffer(device, framebuffer);
-
-    PostDestroyFramebuffer(device, framebuffer, result);
-
-    return result;
-}
-
-bool PreCreateRenderPass(
-    VkDevice device,
-    const VkRenderPassCreateInfo* pCreateInfo)
-{
-    if(pCreateInfo == nullptr)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateRenderPass parameter, const VkRenderPassCreateInfo* pCreateInfo, is null pointer");
-        return false;
-    }
-    if(pCreateInfo->sType < VK_STRUCTURE_TYPE_BEGIN_RANGE ||
-        pCreateInfo->sType > VK_STRUCTURE_TYPE_END_RANGE)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateRenderPass parameter, VkStructureType pCreateInfo->sType, is unrecognized enumerator");
-        return false;
-    }
-
-    for (uint32_t i = 0; i < pCreateInfo->attachmentCount; i++)
-    {
-        const VkAttachmentDescription *att = &pCreateInfo->pAttachments[i];
-
-        if(att->format < VK_FORMAT_BEGIN_RANGE || att->format > VK_FORMAT_END_RANGE)
-        {
-            log_msg(mdd(device), VK_DBG_REPORT_WARN_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-            "vkCreateRenderPass parameter, VkFormat in pCreateInfo->pAttachments, is unrecognized enumerator");
-            return false;
-        }
-        if(att->initialLayout < VK_IMAGE_LAYOUT_BEGIN_RANGE || att->initialLayout > VK_IMAGE_LAYOUT_END_RANGE ||
-           att->finalLayout < VK_IMAGE_LAYOUT_BEGIN_RANGE || att->finalLayout > VK_IMAGE_LAYOUT_END_RANGE)
-        {
-            log_msg(mdd(device), VK_DBG_REPORT_WARN_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-            "vkCreateRenderPass parameter, VkImageLayout in pCreateInfo->pAttachments, is unrecognized enumerator");
-            return false;
-        }
-        if(att->loadOp < VK_ATTACHMENT_LOAD_OP_BEGIN_RANGE || att->loadOp > VK_ATTACHMENT_LOAD_OP_END_RANGE)
-        {
-            log_msg(mdd(device), VK_DBG_REPORT_WARN_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-            "vkCreateRenderPass parameter, VkAttachmentLoadOp in pCreateInfo->pAttachments, is unrecognized enumerator");
-            return false;
-        }
-        if(att->storeOp < VK_ATTACHMENT_STORE_OP_BEGIN_RANGE || att->storeOp > VK_ATTACHMENT_STORE_OP_END_RANGE)
-        {
-            log_msg(mdd(device), VK_DBG_REPORT_WARN_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-            "vkCreateRenderPass parameter, VkAttachmentStoreOp in pCreateInfo->pAttachments, is unrecognized enumerator");
-            return false;
-        }
-        if(att->stencilLoadOp < VK_ATTACHMENT_LOAD_OP_BEGIN_RANGE || att->stencilLoadOp > VK_ATTACHMENT_LOAD_OP_END_RANGE)
-        {
-            log_msg(mdd(device), VK_DBG_REPORT_WARN_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-            "vkCreateRenderPass parameter, VkAttachmentLoadOp in pCreateInfo->pAttachments, is unrecognized enumerator");
-            return false;
-        }
-        if(att->stencilStoreOp < VK_ATTACHMENT_STORE_OP_BEGIN_RANGE || att->stencilStoreOp > VK_ATTACHMENT_STORE_OP_END_RANGE)
-        {
-            log_msg(mdd(device), VK_DBG_REPORT_WARN_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-            "vkCreateRenderPass parameter, VkAttachmentStoreOp in pCreateInfo->pAttachments, is unrecognized enumerator");
-            return false;
-        }
-    }
-
-    return true;
-}
-
-bool PostCreateRenderPass(
-    VkDevice device,
-    VkRenderPass* pRenderPass,
-    VkResult result)
-{
-
-    if(pRenderPass == nullptr)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateRenderPass parameter, VkRenderPass* pRenderPass, is null pointer");
-        return false;
-    }
-
-    if(result != VK_SUCCESS)
-    {
-        std::string reason = "vkCreateRenderPass parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
-        return false;
-    }
-
-    return true;
-}
-
-VK_LAYER_EXPORT VkResult VKAPI vkCreateRenderPass(
-    VkDevice device,
-    const VkRenderPassCreateInfo* pCreateInfo,
-    VkRenderPass* pRenderPass)
-{
-    PreCreateRenderPass(device, pCreateInfo);
-
-    VkResult result = get_dispatch_table(pc_device_table_map, device)->CreateRenderPass(device, pCreateInfo, pRenderPass);
-
-    PostCreateRenderPass(device, pRenderPass, result);
-
-    return result;
+    PostCmdPushConstants(cmdBuffer, layout, stageFlags, start, length);
 }
 
 bool PreCmdBeginRenderPass(
     VkCmdBuffer cmdBuffer,
-    const VkRenderPassBeginInfo* pRenderPassBegin,
-    VkRenderPassContents contents)
+    const VkRenderPassBeginInfo* pRenderPassBegin)
 {
-    if(pRenderPassBegin == nullptr)
+    if(pRenderPassBegin != nullptr)
+    {
+    if(pRenderPassBegin->sType != VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO)
     {
         log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCmdBeginRenderPass parameter, const VkRenderPassBegin* pRenderPassBegin, is null pointer");
+        "vkCmdBeginRenderPass parameter, VkStructureType pRenderPassBegin->sType, is an invalid enumerator");
         return false;
     }
-    if(contents < VK_RENDER_PASS_CONTENTS_BEGIN_RANGE ||
-       contents > VK_RENDER_PASS_CONTENTS_END_RANGE)
+    if(pRenderPassBegin->pAttachmentClearValues != nullptr)
     {
-        log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCmdBeginRenderPass parameter, VkRenderPassContents pRenderPassBegin->contents, is unrecognized enumerator");
-        return false;
+    }
     }
 
     return true;
 }
 
 bool PostCmdBeginRenderPass(
-    VkCmdBuffer cmdBuffer)
+    VkCmdBuffer cmdBuffer,
+    VkRenderPassContents contents)
 {
+
+    if(contents < VK_RENDER_PASS_CONTENTS_BEGIN_RANGE ||
+        contents > VK_RENDER_PASS_CONTENTS_END_RANGE)
+    {
+        log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        "vkCmdBeginRenderPass parameter, VkRenderPassContents contents, is an unrecognized enumerator");
+        return false;
+    }
 
     return true;
 }
@@ -8252,58 +8163,59 @@ VK_LAYER_EXPORT void VKAPI vkCmdBeginRenderPass(
     const VkRenderPassBeginInfo* pRenderPassBegin,
     VkRenderPassContents contents)
 {
-    PreCmdBeginRenderPass(cmdBuffer, pRenderPassBegin, contents);
+    PreCmdBeginRenderPass(cmdBuffer, pRenderPassBegin);
+
     get_dispatch_table(pc_device_table_map, cmdBuffer)->CmdBeginRenderPass(cmdBuffer, pRenderPassBegin, contents);
 
-    PostCmdBeginRenderPass(cmdBuffer);
+    PostCmdBeginRenderPass(cmdBuffer, contents);
 }
 
-void PreCmdNextSubpass(
+bool PostCmdNextSubpass(
     VkCmdBuffer cmdBuffer,
     VkRenderPassContents contents)
 {
 
     if(contents < VK_RENDER_PASS_CONTENTS_BEGIN_RANGE ||
-       contents > VK_RENDER_PASS_CONTENTS_END_RANGE)
+        contents > VK_RENDER_PASS_CONTENTS_END_RANGE)
     {
         log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCmdBeginRenderPass parameter, VkRenderPassContents pRenderPassBegin->contents, is unrecognized enumerator");
-        return;
+        "vkCmdNextSubpass parameter, VkRenderPassContents contents, is an unrecognized enumerator");
+        return false;
     }
 
-    return;
-}
-
-void PostCmdNextSubpass(
-    VkCmdBuffer cmdBuffer)
-{
-    if(cmdBuffer == nullptr)
-    {
-        log_msg(mdd(cmdBuffer), VK_DBG_REPORT_WARN_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCmdNextSubpass parameter, VkCmdBuffer cmdBuffer, is null pointer");
-        return;
-    }
+    return true;
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdNextSubpass(
     VkCmdBuffer cmdBuffer,
     VkRenderPassContents contents)
 {
-    PreCmdNextSubpass(cmdBuffer, contents);
     get_dispatch_table(pc_device_table_map, cmdBuffer)->CmdNextSubpass(cmdBuffer, contents);
 
-    PostCmdNextSubpass(cmdBuffer);
+    PostCmdNextSubpass(cmdBuffer, contents);
+}
+
+bool PostCmdEndRenderPass(
+    VkCmdBuffer cmdBuffer)
+{
+
+    return true;
+}
+
+VK_LAYER_EXPORT void VKAPI vkCmdEndRenderPass(
+    VkCmdBuffer cmdBuffer)
+{
+    get_dispatch_table(pc_device_table_map, cmdBuffer)->CmdEndRenderPass(cmdBuffer);
+
+    PostCmdEndRenderPass(cmdBuffer);
 }
 
 bool PreCmdExecuteCommands(
     VkCmdBuffer cmdBuffer,
     const VkCmdBuffer* pCmdBuffers)
 {
-    if(pCmdBuffers == nullptr)
+    if(pCmdBuffers != nullptr)
     {
-        log_msg(mdd(cmdBuffer), VK_DBG_REPORT_WARN_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCmdExecuteCommands parameter, VkCmdBuffer cmdBuffer, is null pointer");
-        return false;
     }
 
     return true;
@@ -8316,27 +8228,6 @@ bool PostCmdExecuteCommands(
 
 
     return true;
-}
-void PreCmdExecuteCommands(
-    VkCmdBuffer cmdBuffer)
-{
-    if(cmdBuffer == nullptr)
-    {
-        log_msg(mdd(cmdBuffer), VK_DBG_REPORT_WARN_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCmdExecuteCommands parameter, VkCmdBuffer cmdBuffer, is null pointer");
-        return;
-    }
-}
-
-void PostCmdExecuteCommands(
-    VkCmdBuffer cmdBuffer)
-{
-    if(cmdBuffer == nullptr)
-    {
-        log_msg(mdd(cmdBuffer), VK_DBG_REPORT_WARN_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCmdExecuteCommands parameter, VkCmdBuffer cmdBuffer, is null pointer");
-        return;
-    }
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdExecuteCommands(
