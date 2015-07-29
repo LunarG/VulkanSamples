@@ -122,6 +122,8 @@ if(UNIX)
 else()
     add_executable(tri WIN32 tri.c ${CMAKE_BINARY_DIR}/demos/tri-vert.spv ${CMAKE_BINARY_DIR}/demos/tri-frag.spv)
 endif()
+add_dependencies(tri ${CMAKE_BINARY_DIR}/demos/tri-vert.spv
+                     ${CMAKE_BINARY_DIR}/demos/tri-frag.spv)
 target_link_libraries(tri ${LIBRARIES})
 
 if(NOT WIN32)
@@ -138,5 +140,7 @@ else()
     add_library(zlibd STATIC IMPORTED)
     set_target_properties(zlibd PROPERTIES IMPORTED_LOCATION ${PROJECT_SOURCE_DIR}/libs/${LIB_DIR}/zlibd.lib)
     add_executable(cube WIN32 cube.c ${CMAKE_BINARY_DIR}/demos/cube-vert.spv ${CMAKE_BINARY_DIR}/demos/cube-frag.spv)
+    add_dependencies(cube ${CMAKE_BINARY_DIR}/demos/cube-vert.spv
+                          ${CMAKE_BINARY_DIR}/demos/cube-frag.spv)
     target_link_libraries(cube ${LIBRARIES} libpngd zlibd)
 endif()
