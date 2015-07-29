@@ -474,6 +474,8 @@ TEST_F(VkLayerTest, MapMemWithoutHostVisibleBit)
     ASSERT_VK_SUCCESS(err);
 
     mem_alloc.allocationSize = mem_reqs.size;
+    err = m_device->phy().set_memory_type(mem_reqs.memoryTypeBits, &mem_alloc, 0);
+    ASSERT_VK_SUCCESS(err);
 
     // allocate memory
     err = vkAllocMemory(m_device->device(), &mem_alloc, &mem);

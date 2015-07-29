@@ -150,6 +150,12 @@ TEST_F(VkTest, AllocMemory) {
     alloc_info.allocationSize = 1024 * 1024; // 1MB
     alloc_info.memoryTypeIndex = 0;
 
+    VkPhysicalDeviceMemoryProperties mem_props;
+    vkGetPhysicalDeviceMemoryProperties(m_device->phy().handle(), &mem_props);
+
+    err = m_device->phy().set_memory_type(((1 << mem_props.memoryTypeCount) - 1), &alloc_info, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+    ASSERT_VK_SUCCESS(err);
+
     err = vkAllocMemory(device(), &alloc_info, &gpu_mem);
     ASSERT_VK_SUCCESS(err);
 
