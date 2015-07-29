@@ -246,6 +246,28 @@ VK_LAYER_EXPORT VkResult VKAPI vkGetPhysicalDeviceLayerProperties(
                                    pCount, pProperties);
 }
 
+// Start of the Image layer proper
+
+// Returns TRUE if a format is a depth-compatible format
+bool is_depth_format(VkFormat format)
+{
+    bool result = VK_FALSE;
+    switch (format) {
+        case VK_FORMAT_D16_UNORM:
+        case VK_FORMAT_D24_UNORM:
+        case VK_FORMAT_D32_SFLOAT:
+        case VK_FORMAT_S8_UINT:
+        case VK_FORMAT_D16_UNORM_S8_UINT:
+        case VK_FORMAT_D24_UNORM_S8_UINT:
+        case VK_FORMAT_D32_SFLOAT_S8_UINT:
+            result = VK_TRUE;
+            break;
+        default:
+            break;
+    }
+    return result;
+}
+
 VK_LAYER_EXPORT VkResult VKAPI vkCreateImage(VkDevice device, const VkImageCreateInfo* pCreateInfo, VkImage* pImage)
 {
     if(pCreateInfo->format != VK_FORMAT_UNDEFINED)
@@ -327,6 +349,24 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateRenderPass(VkDevice device, const VkRende
             std::stringstream ss;
             ss << "vkCreateRenderPass parameter, VkAttachmentStoreOp in pCreateInfo->pAttachments[" << i << "], is unrecognized";
             log_msg(mdd(device), VK_DBG_REPORT_WARN_BIT, (VkDbgObjectType)0, 0, 0, 1, "IMAGE", ss.str().c_str());
+        }
+    }
+
+    // Any depth buffers specified as attachments?
+    bool depthFormatPresent = VK_FALSE;
+    for (uint32_t i = 0; i < pCreateInfo->attachmentCount; ++i)
+    {
+        depthFormatPresent |= is_depth_format(pCreateInfo->pAttachments[i].format);
+    }
+
+    if (depthFormatPresent == VK_FALSE) {
+        // No depth attachment is present, validate that subpasses set depthStencilAttachment to VK_ATTACHMENT_UNUSED;
+        for (uint32_t i = 0; i < pCreateInfo->subpassCount; i++) {
+            if (pCreateInfo->pSubpasses[i].depthStencilAttachment.attachment != VK_ATTACHMENT_UNUSED) {
+                std::stringstream ss;
+                ss << "vkCreateRenderPass has no depth/stencil attachment, yet subpass[" << i << "] has VkSubpassDescription::depthStencilAttachment value that is not VK_ATTACHMENT_UNUSED";
+                log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "IMAGE", ss.str().c_str());
+            }
         }
     }
 
