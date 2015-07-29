@@ -61,8 +61,8 @@ extern "C" {
     #endif
     #define VK_DEFINE_NONDISP_HANDLE(obj) \
         struct obj { \
-            obj() { } \
-            obj(uint64_t x) { handle = x; } \
+            obj() : handle(0) { } \
+            obj(uint64_t x) : handle(x) { } \
             obj& operator =(uint64_t x) { handle = x; return *this; } \
             bool operator==(const obj& other) const { return handle == other.handle; } \
             bool operator!=(const obj& other) const { return handle != other.handle; } \
