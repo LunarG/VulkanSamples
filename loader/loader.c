@@ -175,6 +175,7 @@ static void loader_log(VkFlags msg_type, int32_t msg_code,
 }
 
 #if defined(WIN32)
+static char *loader_get_next_path(char *path);
 /**
 * Find the list of registry files (names within a key) in key "location".
 *
@@ -196,45 +197,55 @@ static char *loader_get_registry_files(char *location)
     DWORD access_flags = KEY_QUERY_VALUE;
     char name[2048];
     char *out = NULL;
-
-    hive = DEFAULT_VK_REGISTRY_HIVE;
-    rtn_value = RegOpenKeyEx(hive, location, 0, access_flags, &key);
-    if (rtn_value != ERROR_SUCCESS) {
-        // We didn't find the key.  Try the 32-bit hive (where we've seen the
-        // key end up on some people's systems):
-        access_flags |= KEY_WOW64_32KEY;
-        rtn_value = RegOpenKeyEx(hive, location, 0, access_flags, &key);
-        if (rtn_value != ERROR_SUCCESS) {
-            // We still couldn't find the key, so give up:
-            return NULL;
-        }
-    }
-
+    char *loc = location;
+    char *next;
     DWORD idx = 0;
     DWORD name_size = sizeof(name);
     DWORD value;
     DWORD total_size = 4096;
     DWORD value_size = sizeof(value);
-    while((rtn_value = RegEnumValue(key, idx++, name, &name_size, NULL, NULL, (LPBYTE) &value, &value_size)) == ERROR_SUCCESS) {
-        if (value_size == sizeof(value) && value == 0) {
-            if (out == NULL) {
-                out = malloc(total_size);
-                out[0] = '\0';
+
+    while(*loc)
+    {
+        next = loader_get_next_path(loc);
+        hive = DEFAULT_VK_REGISTRY_HIVE;
+        rtn_value = RegOpenKeyEx(hive, loc, 0, access_flags, &key);
+        if (rtn_value != ERROR_SUCCESS) {
+            // We didn't find the key.  Try the 32-bit hive (where we've seen the
+            // key end up on some people's systems):
+            access_flags |= KEY_WOW64_32KEY;
+            rtn_value = RegOpenKeyEx(hive, loc, 0, access_flags, &key);
+            if (rtn_value != ERROR_SUCCESS) {
+                // We still couldn't find the key, so give up:
+                loc = next;
+                continue;
             }
-            else if (strlen(out) + name_size + 1 > total_size) {
-                out = realloc(out, total_size * 2);
-                total_size *= 2;
-            }
-            if (out == NULL) {
-                loader_log(VK_DBG_REPORT_ERROR_BIT, 0, "Out of memory, failed loader_get_registry_files");
-                return NULL;
-            }
-            if (strlen(out) == 0)
-                snprintf(out, name_size + 1, "%s", name);
-            else
-                snprintf(out + strlen(out), name_size + 1, "%c%s", PATH_SEPERATOR, name);
         }
+
+        while((rtn_value = RegEnumValue(key, idx++, name, &name_size, NULL, NULL, (LPBYTE) &value, &value_size)) == ERROR_SUCCESS) {
+            if (value_size == sizeof(value) && value == 0) {
+                if (out == NULL) {
+                    out = malloc(total_size);
+                    out[0] = '\0';
+                }
+                else if (strlen(out) + name_size + 1 > total_size) {
+                    out = realloc(out, total_size * 2);
+                    total_size *= 2;
+                }
+                if (out == NULL) {
+                    loader_log(VK_DBG_REPORT_ERROR_BIT, 0, "Out of memory, failed loader_get_registry_files");
+                    return NULL;
+                }
+                if (strlen(out) == 0)
+                     snprintf(out, name_size + 1, "%s", name);
+                else
+                     snprintf(out + strlen(out), name_size + 2, "%c%s", PATH_SEPERATOR, name);
+            }
+            name_size = 2048;
+        }
+        loc = next;
     }
+
     return out;
 }
 
