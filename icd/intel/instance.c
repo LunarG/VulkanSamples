@@ -79,7 +79,7 @@ static void intel_debug_init(void)
     intel_debug = 0;
 
     /* parse comma-separated debug options */
-    env = getenv("INTEL_DEBUG");
+    env = getenv("VK_INTEL_DEBUG");
     while (env) {
         const char *p = strchr(env, ',');
         size_t len;
