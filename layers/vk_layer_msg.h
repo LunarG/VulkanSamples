@@ -38,7 +38,7 @@ static void enable_debug_report(
 {
     for (uint32_t i = 0; i < extension_count; i++) {
         /* TODO: Check other property fields */
-        if (strcmp(ppEnabledExtensionNames[i], DEBUG_REPORT_EXTENSION_NAME) == 0) {
+        if (strcmp(ppEnabledExtensionNames[i], VK_DEBUG_REPORT_EXTENSION_NAME) == 0) {
             g_DEBUG_REPORT = true;
         }
     }

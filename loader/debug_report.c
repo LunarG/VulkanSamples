@@ -43,7 +43,7 @@ typedef void (VKAPI *PFN_stringCallback)(char *message);
 
 static const struct loader_extension_property debug_report_extension_info = {
     .info =  {
-        .extName = DEBUG_REPORT_EXTENSION_NAME,
+        .extName = VK_DEBUG_REPORT_EXTENSION_NAME,
         .specVersion = VK_DEBUG_REPORT_EXTENSION_VERSION,
         },
     .origin = VK_EXTENSION_ORIGIN_LOADER,
@@ -62,7 +62,7 @@ void debug_report_create_instance(
     ptr_instance->debug_report_enabled = false;
 
     for (uint32_t i = 0; i < pCreateInfo->extensionCount; i++) {
-        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], DEBUG_REPORT_EXTENSION_NAME) == 0) {
+        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_DEBUG_REPORT_EXTENSION_NAME) == 0) {
             ptr_instance->debug_report_enabled = true;
             return;
         }

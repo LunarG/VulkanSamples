@@ -30,7 +30,7 @@
 
 const VkExtensionProperties intel_global_exts[INTEL_GLOBAL_EXT_COUNT] = {
     {
-        .extName = DEBUG_REPORT_EXTENSION_NAME,
+        .extName = VK_DEBUG_REPORT_EXTENSION_NAME,
         .specVersion = VK_DEBUG_REPORT_EXTENSION_VERSION,
     },
     {

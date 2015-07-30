@@ -1709,9 +1709,9 @@ static void demo_init_vk(struct demo *demo)
             WSIextFound = 1;
             extension_names[enabled_extension_count++] = "VK_WSI_swapchain";
         }
-        if (!strcmp(DEBUG_REPORT_EXTENSION_NAME, instance_extensions[i].extName)) {
+        if (!strcmp(VK_DEBUG_REPORT_EXTENSION_NAME, instance_extensions[i].extName)) {
             if (demo->validate) {
-                extension_names[enabled_extension_count++] = DEBUG_REPORT_EXTENSION_NAME;
+                extension_names[enabled_extension_count++] = VK_DEBUG_REPORT_EXTENSION_NAME;
             }
         }
         assert(enabled_extension_count < 64);

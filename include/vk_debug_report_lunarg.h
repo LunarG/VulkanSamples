@@ -157,7 +157,7 @@ static inline const char* string_VkDbgObjectType(VkDbgObjectType input_value)
             return "Unhandled VkObjectType";
     }
 }
-#define DEBUG_REPORT_EXTENSION_NAME "DEBUG_REPORT"
+#define VK_DEBUG_REPORT_EXTENSION_NAME "DEBUG_REPORT"
 
 VK_DEFINE_NONDISP_HANDLE(VkDbgMsgCallback)
 
