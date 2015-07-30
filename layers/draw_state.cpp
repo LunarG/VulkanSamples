@@ -244,7 +244,7 @@ static uint32_t        g_lastTouchedCBIndex = 0;
 static GLOBAL_CB_NODE* g_lastGlobalCB = NULL;
 static PIPELINE_NODE*  g_lastBoundPipeline = NULL;
 static uint64_t        g_lastBoundDynamicState[VK_NUM_STATE_BIND_POINT] = {0};
-static VkDescriptorSet g_lastBoundDescriptorSet = VkDescriptorSet(0);
+static VkDescriptorSet g_lastBoundDescriptorSet = VK_NULL_HANDLE;
 #define MAX_BINDING 0xFFFFFFFF // Default vtxBinding value in CB Node to identify if no vtxBinding set
 
 //static DYNAMIC_STATE_NODE* g_pDynamicStateHead[VK_NUM_STATE_BIND_POINT] = {0};
