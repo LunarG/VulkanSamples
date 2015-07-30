@@ -37,7 +37,7 @@ if (NOT WIN32)
     if (NOT (CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_CURRENT_BINARY_DIR))
         foreach (config_file ${LAYER_JSON_FILES})
             add_custom_target(${config_file}-json ALL
-                COMMAND ln -sf ${CMAKE_CURRENT_SOURCE_DIR}/${config_file}.json
+                COMMAND ln -sf ${CMAKE_CURRENT_SOURCE_DIR}/linux/${config_file}.json
                 VERBATIM
                 )
         endforeach(config_file)
@@ -45,7 +45,7 @@ if (NOT WIN32)
 else()
     if (NOT (CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_CURRENT_BINARY_DIR))
         foreach (config_file ${LAYER_JSON_FILES})
-            FILE(TO_NATIVE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/${config_file}.json src_json)
+            FILE(TO_NATIVE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/windows/${config_file}.json src_json)
             FILE(TO_NATIVE_PATH ${CMAKE_CURRENT_BINARY_DIR}/$<CONFIGURATION>/${config_file}.json dst_json)
             add_custom_target(${config_file}-json ALL
                 COMMAND copy ${src_json} ${dst_json}

@@ -1,0 +1,17 @@
+{
+    "file_format_version" : "0.9.0",
+    "layer" : {
+        "name": "DrawState",
+        "type": "GLOBAL",
+        "library_path": "./VKLayerDrawState.dll",
+        "abi_versions": "1.0.0",
+        "implementation_version": "1.0.0",
+        "description": "LunarG Validation Layer",
+        "device_extensions": [
+             {
+                 "name": "DEBUG_MARKER",
+                 "version": "1.0.0"
+             }
+         ]
+    }
+}
