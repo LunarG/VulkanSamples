@@ -71,6 +71,7 @@ public:
 protected:
     vk_testing::Device                    &m_device;
     vk_testing::Queue                     &m_queue;
+    vk_testing::CmdPool                    m_cmdpool;
     vk_testing::CmdBuffer                  m_cmdbuf;
 
 private:
@@ -443,7 +444,8 @@ void VkTestFramework::RecordImage(VkImageObj * image)
 TestFrameworkVkPresent::TestFrameworkVkPresent(vk_testing::Device &device) :
    m_device(device),
    m_queue(*m_device.graphics_queues()[0]),
-   m_cmdbuf(m_device, vk_testing::CmdBuffer::create_info(m_device.graphics_queue_node_index_))
+   m_cmdpool(m_device, vk_testing::CmdPool::create_info(m_device.graphics_queue_node_index_)),
+   m_cmdbuf(m_device, vk_testing::CmdBuffer::create_info(m_cmdpool.handle()))
 {
     m_quit = false;
     m_pause = false;
