@@ -1194,7 +1194,7 @@ class ObjectTrackerSubcommand(Subcommand):
             else:
                 procs_txt.append('static void set_status(VkDevice dispatchable_object, %s object, VkDbgObjectType objType, ObjectStatusFlags status_flag)' % (o))
                 procs_txt.append('{')
-                procs_txt.append('    if (object.handle != VK_NULL_HANDLE) {')
+                procs_txt.append('    if (object != VK_NULL_HANDLE) {')
                 procs_txt.append('        if (%sMap.find((void*)object.handle) != %sMap.end()) {' % (o, o))
                 procs_txt.append('            OBJTRACK_NODE* pNode = %sMap[(void*)object.handle];' % (o))
             procs_txt.append('           pNode->status |= status_flag;')
