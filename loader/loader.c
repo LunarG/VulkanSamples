@@ -189,7 +189,7 @@ static void loader_log(VkFlags msg_type, int32_t msg_code,
 * A string list of filenames as pointer.
 * When done using the returned string list, pointer should be freed.
 */
-static char *loader_get_registry_files(const char *location)
+static char *loader_get_registry_files(char *location)
 {
     LONG rtn_value;
     HKEY hive, key;
@@ -1433,19 +1433,18 @@ static void loader_get_manifest_files(const char *env_override,
     // Make a copy of the input we are using so it is not modified
     // Also handle getting the location(s) from registry on Windows
     if (override == NULL) {
-#if defined (_WIN32)
-        loc = loader_get_registry_files(location);
-        if (loc == NULL) {
-            loader_log(VK_DBG_REPORT_ERROR_BIT, 0, "Registry lookup failed can't get manifest files");
-            return;
-        }
-#else
         loc = alloca(strlen(location) + 1);
         if (loc == NULL) {
             loader_log(VK_DBG_REPORT_ERROR_BIT, 0, "Out of memory can't get manifest files");
             return;
         }
         strcpy(loc, location);
+#if defined (_WIN32)
+        loc = loader_get_registry_files(loc);
+        if (loc == NULL) {
+            loader_log(VK_DBG_REPORT_ERROR_BIT, 0, "Registry lookup failed can't get manifest files");
+            return;
+        }
 #endif
     }
     else {
