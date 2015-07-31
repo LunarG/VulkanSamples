@@ -1109,7 +1109,8 @@ VkResult vkReplay::manually_replay_vkCreateGraphicsPipelines(packet_vkCreateGrap
         memcpy((void*)&(pLocalCIs[i].basePipelineHandle.handle), (void*)&(tmpHandle), sizeof(uint64_t));
     }
 
-    VkPipelineCache pipelineCache = pPacket->pipelineCache;
+    VkPipelineCache pipelineCache;
+    pipelineCache.handle = m_objMapper.remap_pipelinecaches(pPacket->pipelineCache.handle);
     uint32_t count = pPacket->count;
 
     VkPipeline *local_pPipelines = GLV_NEW_ARRAY(VkPipeline, pPacket->count);
