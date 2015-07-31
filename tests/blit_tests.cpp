@@ -1396,6 +1396,7 @@ protected:
         std::vector<VkImageMemoryBarrier *> p_to_clear;
         std::vector<VkImageMemoryBarrier> to_xfer;
         std::vector<VkImageMemoryBarrier *> p_to_xfer;
+        unsigned int i = 0;
 
         for (std::vector<VkImageSubresourceRange>::const_iterator it = ranges.begin();
              it != ranges.end(); it++) {
@@ -1403,25 +1404,30 @@ protected:
                     VK_IMAGE_LAYOUT_GENERAL,
                     VK_IMAGE_LAYOUT_GENERAL,
                     *it));
-            p_to_clear.push_back(&to_clear.back());
+
             to_xfer.push_back(img.image_memory_barrier(all_cache_outputs, all_cache_inputs,
                     VK_IMAGE_LAYOUT_GENERAL,
                     VK_IMAGE_LAYOUT_TRANSFER_SOURCE_OPTIMAL, *it));
-            p_to_xfer.push_back(&to_xfer.back());
+        }
+        for (std::vector<VkImageSubresourceRange>::const_iterator it = ranges.begin();
+             it != ranges.end(); it++) {
+            p_to_clear.push_back(to_clear.data() + i);
+            p_to_xfer.push_back(to_xfer.data() + i);
+            i++;
         }
 
         cmd_.begin();
 
         VkPipelineStageFlags src_stages = VK_PIPELINE_STAGE_ALL_GPU_COMMANDS;
         VkPipelineStageFlags dest_stages = VK_PIPELINE_STAGE_ALL_GPU_COMMANDS;
-        vkCmdPipelineBarrier(cmd_.handle(), src_stages, dest_stages, false, to_clear.size(), (const void * const*)&p_to_clear[0]);
+        vkCmdPipelineBarrier(cmd_.handle(), src_stages, dest_stages, false, to_clear.size(), (const void * const*) p_to_clear.data());
 
         vkCmdClearDepthStencilImage(cmd_.handle(),
                                     img.handle(), VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
                                     depth, stencil,
                                     ranges.size(), &ranges[0]);
 
-        vkCmdPipelineBarrier(cmd_.handle(), src_stages, dest_stages, false, to_xfer.size(), (const void * const*)&p_to_xfer[0]);
+        vkCmdPipelineBarrier(cmd_.handle(), src_stages, dest_stages, false, to_xfer.size(), (const void * const*)p_to_xfer.data());
 
         cmd_.end();
 
