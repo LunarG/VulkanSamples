@@ -176,25 +176,31 @@ static inline void layer_destroy_msg_callback(
 {
     VkLayerDbgFunctionNode *pTrav = debug_data->g_pDbgFunctionHead;
     VkLayerDbgFunctionNode *pPrev = pTrav;
+    bool matched;
 
     debug_data->active_flags = 0;
     while (pTrav) {
         if (pTrav->msgCallback == msg_callback) {
+            matched = true;
             pPrev->pNext = pTrav->pNext;
             if (debug_data->g_pDbgFunctionHead == pTrav) {
                 debug_data->g_pDbgFunctionHead = pTrav->pNext;
             }
-            free(pTrav);
             debug_report_log_msg(
                         debug_data, VK_DBG_REPORT_DEBUG_BIT,
                         VK_OBJECT_TYPE_MSG_CALLBACK, pTrav->msgCallback.handle,
                         0, DEBUG_REPORT_NONE,
                         "DebugReport",
                         "Destroyed callback");
+        } else {
+            matched = false;
         }
         debug_data->active_flags |= pTrav->msgFlags;
         pPrev = pTrav;
         pTrav = pTrav->pNext;
+        if (matched) {
+            free(pPrev);
+        }
     }
 }
 
