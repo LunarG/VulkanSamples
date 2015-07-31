@@ -57,14 +57,16 @@ static device_table_map screenshot_device_table_map;
 static int globalLockInitialized = 0;
 static loader_platform_thread_mutex globalLock;
 
-// unordered map, associates a swap chain with a device, image extent, and format
+// unordered map, associates a swap chain with a device, image extent, format, and
+// list of images
 typedef struct
 {
     VkDevice device;
     VkExtent2D imageExtent;
     VkFormat format;
+    VkImage *imageList;
 } SwapchainMapStruct;
-static unordered_map<VkSwapChainWSI, SwapchainMapStruct *> swapchainMap;
+static unordered_map<uint64_t, SwapchainMapStruct *> swapchainMap;
 
 // unordered map, associates an image with a device, image extent, and format
 typedef struct
@@ -73,14 +75,13 @@ typedef struct
     VkExtent2D imageExtent;
     VkFormat format;
 } ImageMapStruct;
-static unordered_map<VkImage, ImageMapStruct *> imageMap;
+static unordered_map<uint64_t, ImageMapStruct *> imageMap;
 
-// unordered map, associates a device with a queue
+// unordered map, associates a device with a queue and a cmdPool
 typedef struct
 {
     VkQueue  queue;
-    uint32_t queueNodeIndex;
-    uint32_t queueIndex;
+    VkCmdPool cmdPool;
 } DeviceMapStruct;
 static unordered_map<VkDevice, DeviceMapStruct *> deviceMap;
 
@@ -112,11 +113,11 @@ static void writePPM( const char *filename, VkImage image1)
     const char *ptr;
     VkDeviceMemory mem2;
     VkCmdBuffer cmdBuffer;
-    VkDevice device = imageMap[image1]->device;
+    VkDevice device = imageMap[image1.handle]->device;
     VkQueue queue = deviceMap[device]->queue;
-    int width = imageMap[image1]->imageExtent.width;
-    int height = imageMap[image1]->imageExtent.height;
-    VkFormat format = imageMap[image1]->format;
+    int width = imageMap[image1.handle]->imageExtent.width;
+    int height = imageMap[image1.handle]->imageExtent.height;
+    VkFormat format = imageMap[image1.handle]->format;
     const VkImageSubresource sr = {VK_IMAGE_ASPECT_COLOR, 0, 0};
     VkSubresourceLayout sr_layout;
     const VkImageCreateInfo imgCreateInfo = {
@@ -143,7 +144,7 @@ static void writePPM( const char *filename, VkImage image1)
     const VkCmdBufferCreateInfo createCommandBufferInfo = {
         VK_STRUCTURE_TYPE_CMD_BUFFER_CREATE_INFO,
         NULL,
-        deviceMap[device]->queueNodeIndex,
+        deviceMap[device]->cmdPool,
         VK_CMD_BUFFER_LEVEL_PRIMARY,
         0
     };
@@ -167,7 +168,7 @@ static void writePPM( const char *filename, VkImage image1)
     VkLayerDispatchTable* pTableQueue = get_dispatch_table(screenshot_device_table_map, queue);
     VkLayerDispatchTable* pTableCmdBuffer;
 
-    if (imageMap.empty() || imageMap.find(image1) == imageMap.end())
+    if (imageMap.empty() || imageMap.find(image1.handle) == imageMap.end())
         return;
 
     // The VkImage image1 we are going to dump may not be mappable,
@@ -181,16 +182,14 @@ static void writePPM( const char *filename, VkImage image1)
     err = pTableDevice->CreateImage(device, &imgCreateInfo, &image2);
     assert(!err);
 
-    err = pTableDevice->GetObjectMemoryRequirements(device,
-                          VK_OBJECT_TYPE_IMAGE, image2,
-                          &memRequirements);
+    err = pTableDevice->GetImageMemoryRequirements(device, image2, &memRequirements);
     assert(!err);
 
     memAllocInfo.allocationSize = memRequirements.size;
     err = pTableDevice->AllocMemory(device, &memAllocInfo, &mem2);
     assert(!err);
 
-    err = pTableQueue->BindObjectMemory(device, VK_OBJECT_TYPE_IMAGE, image2, mem2, 0);
+    err = pTableQueue->BindImageMemory(device, image2, mem2, 0);
     assert(!err);
 
     err = pTableDevice->CreateCommandBuffer(device, &createCommandBufferInfo,  &cmdBuffer);
@@ -252,7 +251,7 @@ static void writePPM( const char *filename, VkImage image1)
         }
         else
         {
-            // TODO: add support for addition formats
+            // TODO: add support for additional formats
             printf("Unrecognized image format\n");
             break;
        }
@@ -265,7 +264,7 @@ static void writePPM( const char *filename, VkImage image1)
     assert(!err);
     err = pTableDevice->FreeMemory(device, mem2);
     assert(!err);
-    err = pTableDevice->DestroyObject(device, VK_OBJECT_TYPE_COMMAND_BUFFER, cmdBuffer);
+    err = pTableDevice->DestroyCommandBuffer(device, cmdBuffer);
     assert(!err);
 }
 
@@ -365,13 +364,32 @@ VK_LAYER_EXPORT VkResult VKAPI vkGetDeviceQueue(
     if (result == VK_SUCCESS) {
         screenshot_device_table_map.emplace(*pQueue, pTable);
 
-        // Create a mapping for the swapchain object into the dispatch table
+        // Create a device to queue mapping
         DeviceMapStruct *deviceMapElem = new DeviceMapStruct;
         deviceMapElem->queue = *pQueue;
-        deviceMapElem->queueNodeIndex = queueNodeIndex;
-        deviceMapElem->queueIndex = queueIndex;
         deviceMap.insert(make_pair(device, deviceMapElem));
     }
+    loader_platform_thread_unlock_mutex(&globalLock);
+    return result;
+}
+
+VK_LAYER_EXPORT VkResult VKAPI vkCreateCommandPool(
+    VkDevice  device,
+    const VkCmdPoolCreateInfo *pCreateInfo,
+    VkCmdPool *pCmdPool)
+{
+    VkLayerDispatchTable* pTable = screenshot_device_table_map[device];
+    VkResult result = get_dispatch_table(screenshot_device_table_map, device)->CreateCommandPool(device, pCreateInfo, pCmdPool);
+
+    loader_platform_thread_lock_mutex(&globalLock);
+    if (screenshotEnvQueried && screenshotFrames.empty()) {
+        // We are all done taking screenshots, so don't do anything else
+        loader_platform_thread_unlock_mutex(&globalLock);
+        return result;
+    }
+
+    // TODO: What if not already in deviceMap???
+    deviceMap[device]->cmdPool = *pCmdPool;
     loader_platform_thread_unlock_mutex(&globalLock);
     return result;
 }
@@ -398,10 +416,10 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateSwapChainWSI(
         swapchainMapElem->device = device;
         swapchainMapElem->imageExtent = pCreateInfo->imageExtent;
         swapchainMapElem->format = pCreateInfo->imageFormat;
-        swapchainMap.insert(make_pair(*pSwapChain, swapchainMapElem));
+        swapchainMap.insert(make_pair(pSwapChain->handle, swapchainMapElem));
 
         // Create a mapping for the swapchain object into the dispatch table
-        screenshot_device_table_map.emplace(*pSwapChain, pTable);
+        screenshot_device_table_map.emplace((void *)pSwapChain->handle, pTable);
     }
     loader_platform_thread_unlock_mutex(&globalLock);
 
@@ -415,7 +433,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkGetSwapChainInfoWSI(
     size_t                 *pDataSize,
     void                   *pData)
 {
-    VkResult result = get_dispatch_table(screenshot_device_table_map, swapChain)->GetSwapChainInfoWSI(device, swapChain, infoType, pDataSize, pData);
+    VkResult result = get_dispatch_table(screenshot_device_table_map, device)->GetSwapChainInfoWSI(device, swapChain, infoType, pDataSize, pData);
 
     loader_platform_thread_lock_mutex(&globalLock);
     if (screenshotEnvQueried && screenshotFrames.empty()) {
@@ -425,18 +443,35 @@ VK_LAYER_EXPORT VkResult VKAPI vkGetSwapChainInfoWSI(
     }
 
     if (result == VK_SUCCESS &&
-        !swapchainMap.empty() && swapchainMap.find(swapChain) != swapchainMap.end())
+        pData &&
+        !swapchainMap.empty() && swapchainMap.find(swapChain.handle) != swapchainMap.end())
     {   
         VkSwapChainImagePropertiesWSI *swapChainImageInfo = (VkSwapChainImagePropertiesWSI *)pData;
-        for (int i=0; i<*pDataSize/sizeof(VkSwapChainImagePropertiesWSI); i++,swapChainImageInfo++)
+        int i;
+
+        for (i=0; i<*pDataSize/sizeof(VkSwapChainImagePropertiesWSI); i++,swapChainImageInfo++)
         {
             // Create a mapping for an image to a device, image extent, and format
             ImageMapStruct *imageMapElem = new ImageMapStruct;
-            imageMapElem->device =  swapchainMap[swapChain]->device;
-            imageMapElem->imageExtent = swapchainMap[swapChain]->imageExtent;
-            imageMapElem->format = swapchainMap[swapChain]->format;
-            imageMap.insert(make_pair(swapChainImageInfo->image, imageMapElem));
+            imageMapElem->device =  swapchainMap[swapChain.handle]->device;
+            imageMapElem->imageExtent = swapchainMap[swapChain.handle]->imageExtent;
+            imageMapElem->format = swapchainMap[swapChain.handle]->format;
+            imageMap.insert(make_pair(swapChainImageInfo->image.handle, imageMapElem));
         }
+
+        // Add list of images to swapchain to image map
+        SwapchainMapStruct *swapchainMapElem = swapchainMap[swapChain.handle];
+        if (i >= 1 && swapchainMapElem)
+        {
+            VkImage *imageList = new VkImage[i];
+            swapchainMapElem->imageList = imageList;
+            VkSwapChainImagePropertiesWSI *swapChainImageInfo = (VkSwapChainImagePropertiesWSI *)pData;
+            for (int j=0; j<i; j++,swapChainImageInfo++)
+            {
+                swapchainMapElem->imageList[j] =  swapChainImageInfo->image.handle;
+            }
+        }
+
     }   
     loader_platform_thread_unlock_mutex(&globalLock);
     return result;
@@ -445,6 +480,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkGetSwapChainInfoWSI(
 VK_LAYER_EXPORT VkResult VKAPI vkQueuePresentWSI(VkQueue queue, VkPresentInfoWSI* pPresentInfo)
 {
     static int frameNumber = 0;
+    if (frameNumber == 10) {fflush(stdout); /* *((int*)0)=0; */ }
     VkResult result = get_dispatch_table(screenshot_device_table_map, queue)->QueuePresentWSI(queue, pPresentInfo);
 
     loader_platform_thread_lock_mutex(&globalLock);
@@ -489,17 +525,18 @@ VK_LAYER_EXPORT VkResult VKAPI vkQueuePresentWSI(VkQueue queue, VkPresentInfoWSI
         {
             string fileName;
             fileName = to_string(frameNumber) + ".ppm";
-#if 0
-            // FIXME/TBD: WRITE THE REAL CODE, GIVEN THE NEW DATA STRUCTURE
-            //  THAT ALLOWS MULTIPLE IMAGES TO BE PRESENTED DURING THE SAME
-            //  CALL (AND ARE REFERENCED BY INDEX, NOT BY HANDLE).
-            writePPM(fileName.c_str(), pPresentInfo->image);
-#endif
+
+            VkImage image;
+            uint64_t swapChain;
+            // We'll dump only one image: the first
+            swapChain = pPresentInfo->swapChains[0].handle;
+            image = swapchainMap[swapChain]->imageList[pPresentInfo->imageIndices[0]];
+            writePPM(fileName.c_str(), image);
             screenshotFrames.erase(it);
 
             if (screenshotFrames.empty())
             {
-                // Free all our maps since we are done with them.
+				// Free all our maps since we are done with them.
                 for (auto it = swapchainMap.begin(); it != swapchainMap.end(); it++)
                 {
                     SwapchainMapStruct *swapchainMapElem = it->second;
@@ -537,23 +574,26 @@ VK_LAYER_EXPORT PFN_vkVoidFunction VKAPI vkGetDeviceProcAddr(
     /* loader uses this to force layer initialization; device object is wrapped */
     if (!strcmp(funcName, "vkGetDeviceProcAddr")) {
         initDeviceTable(screenshot_device_table_map, (const VkBaseLayerObject *) dev);
-        return (void *) vkGetDeviceProcAddr;
+        return (PFN_vkVoidFunction)vkGetDeviceProcAddr;
     }
     if (!strcmp(funcName, "vkCreateDevice"))
-        return (void*) vkCreateDevice;
+        return (PFN_vkVoidFunction) vkCreateDevice;
 
     if (!strcmp(funcName, "vkGetDeviceQueue"))
-        return (void*) vkGetDeviceQueue;
+        return (PFN_vkVoidFunction) vkGetDeviceQueue;
+
+    if (!strcmp(funcName, "vkCreateCommandPool"))
+        return (PFN_vkVoidFunction) vkCreateCommandPool;
 
     VkLayerDispatchTable *pDisp =  get_dispatch_table(screenshot_device_table_map, dev);
     if (deviceExtMap.size() == 0 || deviceExtMap[pDisp].wsi_enabled)
     {
         if (!strcmp(funcName, "vkCreateSwapChainWSI"))
-            return (void*) vkCreateSwapChainWSI;
+            return (PFN_vkVoidFunction) vkCreateSwapChainWSI;
         if (!strcmp(funcName, "vkGetSwapChainInfoWSI"))
-            return (void*) vkGetSwapChainInfoWSI;
+            return (PFN_vkVoidFunction) vkGetSwapChainInfoWSI;
         if (!strcmp(funcName, "vkQueuePresentWSI"))
-            return (void*) vkQueuePresentWSI;
+            return (PFN_vkVoidFunction) vkQueuePresentWSI;
     }
 
     if (pDisp->GetDeviceProcAddr == NULL)
@@ -564,8 +604,6 @@ VK_LAYER_EXPORT PFN_vkVoidFunction VKAPI vkGetDeviceProcAddr(
 
 VK_LAYER_EXPORT PFN_vkVoidFunction VKAPI vkGetInstanceProcAddr(VkInstance instance, const char* funcName)
 {
-    return NULL;
-#if 0
     if (instance == VK_NULL_HANDLE) {
         return NULL;
     }
@@ -573,12 +611,11 @@ VK_LAYER_EXPORT PFN_vkVoidFunction VKAPI vkGetInstanceProcAddr(VkInstance instan
     /* loader uses this to force layer initialization; instance object is wrapped */
     if (!strcmp("vkGetInstanceProcAddr", funcName)) {
         initInstanceTable((const VkBaseLayerObject *) instance);
-        return (void *) vkGetInstanceProcAddr;
+        return (PFN_vkVoidFunction) vkGetInstanceProcAddr;
     }
 
     VkLayerInstanceDispatchTable* pTable = instance_dispatch_table(instance);
     if (pTable->GetInstanceProcAddr == NULL)
         return NULL;
     return pTable->GetInstanceProcAddr(instance, funcName);
-#endif
 }
