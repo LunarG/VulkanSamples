@@ -1444,7 +1444,7 @@ static void loader_get_manifest_files(const char *env_override,
     // Make a copy of the input we are using so it is not modified
     // Also handle getting the location(s) from registry on Windows
     if (override == NULL) {
-        loc = alloca(strlen(location) + 1);
+        loc = loader_stack_alloc(strlen(location) + 1);
         if (loc == NULL) {
             loader_log(VK_DBG_REPORT_ERROR_BIT, 0, "Out of memory can't get manifest files");
             return;
