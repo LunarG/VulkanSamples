@@ -151,7 +151,7 @@ void loader_heap_free(
 static void loader_log(VkFlags msg_type, int32_t msg_code,
     const char *format, ...)
 {
-    char msg[256];
+    char msg[512];
     va_list ap;
     int ret;
 
