@@ -3,7 +3,7 @@
     "layer" : {
         "name": "Basic",
         "type": "GLOBAL",
-        "library_path": "./VKLayerBasic.dll",
+        "library_path": ".\\VKLayerBasic.dll",
         "abi_versions": "1.0.0",
         "implementation_version": "1.0.0",
         "description": "LunarG Sample Layer",

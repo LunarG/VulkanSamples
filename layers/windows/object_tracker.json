@@ -3,7 +3,7 @@
     "layer" : {
         "name": "ObjectTracker",
         "type": "GLOBAL",
-        "library_path": "./VKLayerObjectTracker.dll",
+        "library_path": ".\\VKLayerObjectTracker.dll",
         "abi_versions": "1.0.0",
         "implementation_version": "1.0.0",
         "description": "LunarG Validation Layer"

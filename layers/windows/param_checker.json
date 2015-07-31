@@ -3,7 +3,7 @@
     "layer" : {
         "name": "ParamChecker",
         "type": "GLOBAL",
-        "library_path": "./VKLayerParamChecker.dll",
+        "library_path": ".\\VKLayerParamChecker.dll",
         "abi_versions": "1.0.0",
         "implementation_version": "1.0.0",
         "description": "LunarG Validation Layer"

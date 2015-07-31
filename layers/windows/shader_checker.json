@@ -3,7 +3,7 @@
     "layer" : {
         "name": "ShaderChecker",
         "type": "GLOBAL",
-        "library_path": "./VKLayerShaderChecker.dll",
+        "library_path": ".\\VKLayerShaderChecker.dll",
         "abi_versions": "1.0.0",
         "implementation_version": "1.0.0",
         "description": "LunarG Validation Layer"

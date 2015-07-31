@@ -3,7 +3,7 @@
     "layer" : {
         "name": "APIDump",
         "type": "GLOBAL",
-        "library_path": "./VKLayerAPIDump.dll",
+        "library_path": ".\\VKLayerAPIDump.dll",
         "abi_versions": "1.0.0",
         "implementation_version": "1.0.0",
         "description": "LunarG debug layer"
