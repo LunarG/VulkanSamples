@@ -4683,9 +4683,11 @@ VK_LAYER_EXPORT size_t VKAPI vkGetPipelineCacheSize(
     VkDevice device,
     VkPipelineCache pipelineCache)
 {
-    get_dispatch_table(pc_device_table_map, device)->GetPipelineCacheSize(device, pipelineCache);
+    size_t result = get_dispatch_table(pc_device_table_map, device)->GetPipelineCacheSize(device, pipelineCache);
 
     PostGetPipelineCacheSize(device, pipelineCache);
+
+    return result;
 }
 
 bool PostGetPipelineCacheData(
