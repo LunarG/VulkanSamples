@@ -440,7 +440,7 @@ explicit_CreateInstance(
     const VkInstanceCreateInfo *pCreateInfo,
     VkInstance                 * pInstance)
 {
-    loader_platform_thread_lock_mutex(&objLock);
+
     VkLayerInstanceDispatchTable *pInstanceTable = get_dispatch_table(ObjectTracker_instance_table_map, *pInstance);
     VkResult result = pInstanceTable->CreateInstance(pCreateInfo, pInstance);
 
@@ -455,7 +455,6 @@ explicit_CreateInstance(
         initObjectTracker(my_data);
         create_obj(*pInstance, *pInstance, VK_OBJECT_TYPE_INSTANCE);
     }
-    loader_platform_thread_unlock_mutex(&objLock);
     return result;
 }
 
