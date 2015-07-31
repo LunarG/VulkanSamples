@@ -5041,6 +5041,11 @@ bool PreCreateGraphicsPipelines(
     }
     }
     }
+    if(pCreateInfos->renderPass == VK_NULL_HANDLE)
+    {
+        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        "vkCreateGraphicsPipelines parameter, VkRenderPass pCreateInfos->renderPass, is null pointer");
+    }
     }
 
     return true;
