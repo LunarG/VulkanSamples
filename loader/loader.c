@@ -251,6 +251,44 @@ static char *loader_get_registry_files(char *location)
 
 #endif // WIN32
 
+/**
+ * Given string of three part form "maj.min.pat" convert to a vulkan version
+ * number.
+ */
+static uint32_t loader_make_version(const char *vers_str)
+{
+    uint32_t vers = 0, major, minor, patch;
+    char *minor_str= NULL;
+    char *patch_str = NULL;
+    char *cstr;
+    char *str;
+
+    if (!vers_str)
+        return vers;
+    cstr = loader_stack_alloc(strlen(vers_str) + 1);
+    strcpy(cstr, vers_str);
+    while ((str = strchr(cstr, '.')) != NULL) {
+        if (minor_str == NULL) {
+            minor_str = str + 1;
+            *str = '\0';
+            major = atoi(cstr);
+        }
+        else if (patch_str == NULL) {
+            patch_str = str + 1;
+            *str = '\0';
+            minor = atoi(minor_str);
+        }
+        else {
+            return vers;
+        }
+        cstr = str + 1;
+    }
+    patch = atoi(patch_str);
+
+    return VK_MAKE_VERSION(major, minor, patch);
+
+}
+
 bool compare_vk_extension_properties(const VkExtensionProperties *op1, const VkExtensionProperties *op2)
 {
     return strcmp(op1->extName, op2->extName) == 0 ? true : false;
@@ -1213,6 +1251,7 @@ static void loader_add_layer_properties(struct loader_layer_list *layer_instance
         loader_log(VK_DBG_REPORT_WARN_BIT, 0, "Unexpected manifest file version (expected 1.0.0), may cause errors");
     free(file_vers);
 
+    //TODO handle freeing the allocations: disable_env , enable_env, GIPA, GDPA, library_path
     //TODO handle multiple layer nodes in the file
     //TODO handle scanned libraries not one per layer property
     layer_node = cJSON_GetObjectItem(json, "layer");
@@ -1295,10 +1334,10 @@ static void loader_add_layer_properties(struct loader_layer_list *layer_instance
         loader_expand_path(library_path, rel_base, 2048, fullpath);
     }
     props->lib_info.lib_name = fullpath;
-    free(library_path);
-    //TODO merge the info with the versions and convert string to int
-    props->abi_version = abi_versions;
-    props->impl_version = implementation_version;
+    props->info.specVersion  = loader_make_version(abi_versions);
+    props->info.implVersion  = loader_make_version(implementation_version);
+    free(abi_versions);
+    free(implementation_version);
     strncpy((char *) props->info.description, description, sizeof(props->info.description));
     props->info.description[sizeof(props->info.description) - 1] = '\0';
     free(description);
@@ -1347,7 +1386,9 @@ static void loader_add_layer_properties(struct loader_layer_list *layer_instance
             ext_prop.origin = VK_EXTENSION_ORIGIN_LAYER;
             ext_prop.lib_name = library_path;
             strcpy(ext_prop.info.extName, name);
-            //TODO convert from string to int ext_prop.info.version = version;
+            ext_prop.info.specVersion = loader_make_version(version);
+            free(version);
+            free(name);
             loader_add_to_ext_list(&props->instance_extension_list, 1, &ext_prop);
         }
     }
@@ -1361,7 +1402,9 @@ static void loader_add_layer_properties(struct loader_layer_list *layer_instance
             ext_prop.origin = VK_EXTENSION_ORIGIN_LAYER;
             ext_prop.lib_name = library_path;
             strcpy(ext_prop.info.extName, name);
-            //TODO convert from string to int ext_prop.info.version = version;
+            ext_prop.info.specVersion = loader_make_version(version);
+            free(version);
+            free(name);
             loader_add_to_ext_list(&props->device_extension_list, 1, &ext_prop);
         }
     }
@@ -1372,7 +1415,6 @@ static void loader_add_layer_properties(struct loader_layer_list *layer_instance
     }
 #undef GET_JSON_ITEM
 #undef GET_JSON_OBJECT
-
     // for global layers need to add them to both device and instance list
     if (props->type & (VK_LAYER_TYPE_GLOBAL_IMPLICIT | VK_LAYER_TYPE_GLOBAL_EXPLICIT)) {
         //copy into device layer list

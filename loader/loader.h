@@ -97,8 +97,6 @@ struct loader_layer_functions {
 struct loader_layer_properties {
     VkLayerProperties info;
     enum layer_type type;
-    char *abi_version;
-    char *impl_version;
     struct loader_lib_info lib_info;
     struct loader_layer_functions functions;
     struct loader_extension_list instance_extension_list;
