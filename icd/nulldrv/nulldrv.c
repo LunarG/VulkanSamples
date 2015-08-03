@@ -1488,19 +1488,15 @@ ICD_EXPORT VkResult VKAPI vkGetPhysicalDeviceLimits(
     return ret;
 }
 
-ICD_EXPORT VkResult VKAPI vkGetPhysicalDeviceQueueCount(
+ICD_EXPORT VkResult VKAPI vkGetPhysicalDeviceQueueFamilyProperties(
     VkPhysicalDevice                             gpu_,
-    uint32_t*                                    pCount)
-{
-    *pCount = 1;
-    return VK_SUCCESS;
-}
-
-ICD_EXPORT VkResult VKAPI vkGetPhysicalDeviceQueueProperties(
-    VkPhysicalDevice                             gpu_,
-    uint32_t                                     count,
-    VkPhysicalDeviceQueueProperties*             pProperties)
+    uint32_t*                                    pCount,
+    VkQueueFamilyProperties*                     pProperties)
  {
+    if (pProperties == NULL) {
+        *pCount = 1;
+        return VK_SUCCESS;
+    }
     pProperties->queueFlags = VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_SPARSE_MEMMGR_BIT;
     pProperties->queueCount = 1;
     pProperties->supportsTimestamps = false;

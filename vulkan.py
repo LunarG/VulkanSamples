@@ -269,14 +269,10 @@ core = Extension(
             [Param("VkPhysicalDevice", "physicalDevice"),
              Param("VkPhysicalDeviceProperties*", "pProperties")]),
 
-        Proto("VkResult", "GetPhysicalDeviceQueueCount",
+        Proto("VkResult", "GetPhysicalDeviceQueueFamilyProperties",
             [Param("VkPhysicalDevice", "physicalDevice"),
-             Param("uint32_t*", "pCount")]),
-
-        Proto("VkResult", "GetPhysicalDeviceQueueProperties",
-            [Param("VkPhysicalDevice", "physicalDevice"),
-             Param("uint32_t", "count"),
-             Param("VkPhysicalDeviceQueueProperties*", "pQueueProperties")]),
+             Param("uint32_t*", "pCount"),
+             Param("VkQueueFamilyProperties*", "pQueueFamilyProperties")]),
 
         Proto("VkResult", "GetPhysicalDeviceMemoryProperties",
             [Param("VkPhysicalDevice", "physicalDevice"),

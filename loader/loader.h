@@ -136,8 +136,7 @@ struct loader_icd {
     PFN_vkGetPhysicalDeviceLimits GetPhysicalDeviceLimits;
     PFN_vkCreateDevice CreateDevice;
     PFN_vkGetPhysicalDeviceProperties GetPhysicalDeviceProperties;
-    PFN_vkGetPhysicalDeviceQueueCount GetPhysicalDeviceQueueCount;
-    PFN_vkGetPhysicalDeviceQueueProperties GetPhysicalDeviceQueueProperties;
+    PFN_vkGetPhysicalDeviceQueueFamilyProperties GetPhysicalDeviceQueueFamilyProperties;
     PFN_vkGetPhysicalDeviceMemoryProperties GetPhysicalDeviceMemoryProperties;
     PFN_vkGetPhysicalDeviceExtensionProperties GetPhysicalDeviceExtensionProperties;
     PFN_vkGetPhysicalDeviceSparseImageFormatProperties GetPhysicalDeviceSparseImageFormatProperties;
@@ -321,14 +320,10 @@ VkResult VKAPI loader_GetPhysicalDeviceLayerProperties (VkPhysicalDevice physica
         uint32_t *pCount,
         VkLayerProperties* pProperties);
 
-VkResult VKAPI loader_GetPhysicalDeviceQueueCount (
-        VkPhysicalDevice physicalDevice,
-        uint32_t* pCount);
-
-VkResult VKAPI loader_GetPhysicalDeviceQueueProperties (
-        VkPhysicalDevice physicalDevice,
-        uint32_t count,
-        VkPhysicalDeviceQueueProperties * pProperties);
+VkResult VKAPI loader_GetPhysicalDeviceQueueFamilyProperties (
+        VkPhysicalDevice                        physicalDevice,
+        uint32_t*                               pCount,
+        VkQueueFamilyProperties*                pProperties);
 
 VkResult VKAPI loader_GetPhysicalDeviceMemoryProperties (
         VkPhysicalDevice physicalDevice,

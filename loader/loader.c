@@ -95,8 +95,7 @@ const VkLayerInstanceDispatchTable instance_disp = {
     .GetPhysicalDeviceImageFormatProperties = loader_GetPhysicalDeviceImageFormatProperties,
     .GetPhysicalDeviceLimits = loader_GetPhysicalDeviceLimits,
     .GetPhysicalDeviceProperties = loader_GetPhysicalDeviceProperties,
-    .GetPhysicalDeviceQueueCount = loader_GetPhysicalDeviceQueueCount,
-    .GetPhysicalDeviceQueueProperties = loader_GetPhysicalDeviceQueueProperties,
+    .GetPhysicalDeviceQueueFamilyProperties = loader_GetPhysicalDeviceQueueFamilyProperties,
     .GetPhysicalDeviceMemoryProperties = loader_GetPhysicalDeviceMemoryProperties,
     .GetPhysicalDeviceExtensionProperties = loader_GetPhysicalDeviceExtensionProperties,
     .GetPhysicalDeviceLayerProperties = loader_GetPhysicalDeviceLayerProperties,
@@ -1046,8 +1045,7 @@ static bool loader_icd_init_entrys(struct loader_icd *icd,
     LOOKUP_GIPA(CreateDevice, true);
     LOOKUP_GIPA(GetPhysicalDeviceProperties, true);
     LOOKUP_GIPA(GetPhysicalDeviceMemoryProperties, true);
-    LOOKUP_GIPA(GetPhysicalDeviceQueueCount, true);
-    LOOKUP_GIPA(GetPhysicalDeviceQueueProperties, true);
+    LOOKUP_GIPA(GetPhysicalDeviceQueueFamilyProperties, true);
     LOOKUP_GIPA(GetPhysicalDeviceExtensionProperties, true);
     LOOKUP_GIPA(GetPhysicalDeviceSparseImageFormatProperties, true);
     LOOKUP_GIPA(DbgCreateMsgCallback, false);
@@ -2577,31 +2575,17 @@ VkResult VKAPI loader_GetPhysicalDeviceProperties(
     return res;
 }
 
-VkResult VKAPI loader_GetPhysicalDeviceQueueCount(
+VkResult VKAPI loader_GetPhysicalDeviceQueueFamilyProperties (
         VkPhysicalDevice                        gpu,
-        uint32_t*                               pCount)
+        uint32_t*                               pCount,
+        VkQueueFamilyProperties*                pProperties)
 {
     uint32_t gpu_index;
     struct loader_icd *icd = loader_get_icd(gpu, &gpu_index);
     VkResult res = VK_ERROR_INITIALIZATION_FAILED;
 
-    if (icd->GetPhysicalDeviceQueueCount)
-        res = icd->GetPhysicalDeviceQueueCount(gpu, pCount);
-
-    return res;
-}
-
-VkResult VKAPI loader_GetPhysicalDeviceQueueProperties (
-        VkPhysicalDevice gpu,
-        uint32_t count,
-        VkPhysicalDeviceQueueProperties * pProperties)
-{
-    uint32_t gpu_index;
-    struct loader_icd *icd = loader_get_icd(gpu, &gpu_index);
-    VkResult res = VK_ERROR_INITIALIZATION_FAILED;
-
-    if (icd->GetPhysicalDeviceQueueProperties)
-        res = icd->GetPhysicalDeviceQueueProperties(gpu, count, pProperties);
+    if (icd->GetPhysicalDeviceQueueFamilyProperties)
+        res = icd->GetPhysicalDeviceQueueFamilyProperties(gpu, pCount, pProperties);
 
     return res;
 }

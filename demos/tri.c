@@ -166,7 +166,7 @@ struct demo {
     VkDevice device;
     VkQueue queue;
     VkPhysicalDeviceProperties gpu_props;
-    VkPhysicalDeviceQueueProperties *queue_props;
+    VkQueueFamilyProperties *queue_props;
     uint32_t graphics_queue_node_index;
 
     int width, height;
@@ -1882,11 +1882,12 @@ static void demo_init_vk(struct demo *demo)
 
     err = vkGetPhysicalDeviceProperties(demo->gpu, &demo->gpu_props);
 
-    err = vkGetPhysicalDeviceQueueCount(demo->gpu, &demo->queue_count);
+    // Query with NULL data to get count
+    err = vkGetPhysicalDeviceQueueFamilyProperties(demo->gpu, &demo->queue_count, NULL);
     assert(!err);
 
-    demo->queue_props = (VkPhysicalDeviceQueueProperties *) malloc(demo->queue_count * sizeof(VkPhysicalDeviceQueueProperties));
-    err = vkGetPhysicalDeviceQueueProperties(demo->gpu, demo->queue_count, demo->queue_props);
+    demo->queue_props = (VkQueueFamilyProperties *) malloc(demo->queue_count * sizeof(VkQueueFamilyProperties));
+    err = vkGetPhysicalDeviceQueueFamilyProperties(demo->gpu, &demo->queue_count, demo->queue_props);
     assert(!err);
     assert(demo->queue_count >= 1);
 

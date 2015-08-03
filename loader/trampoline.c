@@ -236,28 +236,16 @@ LOADER_EXPORT VkResult VKAPI vkGetPhysicalDeviceProperties(
     return res;
 }
 
-LOADER_EXPORT VkResult VKAPI vkGetPhysicalDeviceQueueCount(
+LOADER_EXPORT VkResult VKAPI vkGetPhysicalDeviceQueueFamilyProperties(
                                             VkPhysicalDevice gpu,
-                                            uint32_t* pCount)
-{
-   const VkLayerInstanceDispatchTable *disp;
-   VkResult res;
-
-   disp = loader_get_instance_dispatch(gpu);
-   res = disp->GetPhysicalDeviceQueueCount(gpu, pCount);
-   return res;
-}
-
-LOADER_EXPORT VkResult VKAPI vkGetPhysicalDeviceQueueProperties(
-                                            VkPhysicalDevice gpu,
-                                            uint32_t count,
-                                            VkPhysicalDeviceQueueProperties* pQueueProperties)
+                                            uint32_t* pCount,
+                                            VkQueueFamilyProperties* pQueueProperties)
 {
     const VkLayerInstanceDispatchTable *disp;
     VkResult res;
 
     disp = loader_get_instance_dispatch(gpu);
-    res = disp->GetPhysicalDeviceQueueProperties(gpu, count, pQueueProperties);
+    res = disp->GetPhysicalDeviceQueueFamilyProperties(gpu, pCount, pQueueProperties);
     return res;
 }
 

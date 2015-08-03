@@ -1398,7 +1398,7 @@ class ObjectTrackerSubcommand(Subcommand):
 
         explicit_object_tracker_functions = [
             "CreateInstance",
-            "GetPhysicalDeviceQueueProperties",
+            "GetPhysicalDeviceQueueFamilyProperties",
             "CreateDevice",
             "GetDeviceQueue",
             "QueueSubmit",

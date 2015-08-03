@@ -100,7 +100,7 @@ void intel_gpu_get_props(const struct intel_gpu *gpu,
                          VkPhysicalDeviceProperties *props);
 void intel_gpu_get_queue_props(const struct intel_gpu *gpu,
                                enum intel_gpu_engine_type engine,
-                               VkPhysicalDeviceQueueProperties *props);
+                               VkQueueFamilyProperties *props);
 void intel_gpu_get_memory_props(const struct intel_gpu *gpu,
                                 VkPhysicalDeviceMemoryProperties *props);
 

@@ -47,10 +47,8 @@ static inline void* globalGetProcAddr(const char *name)
         return (void*) vkGetPhysicalDeviceLimits;
     if (!strcmp(name, "GetPhysicalDeviceProperties"))
         return (void*) vkGetPhysicalDeviceProperties;
-    if (!strcmp(name, "GetPhysicalDeviceQueueCount"))
-        return (void*) vkGetPhysicalDeviceQueueCount;
-    if (!strcmp(name, "GetPhysicalDeviceQueueProperties"))
-        return (void*) vkGetPhysicalDeviceQueueProperties;
+    if (!strcmp(name, "GetPhysicalDeviceQueueFamilyProperties"))
+        return (void*) vkGetPhysicalDeviceQueueFamilyProperties;
     if (!strcmp(name, "GetPhysicalDeviceMemoryProperties"))
         return (void*) vkGetPhysicalDeviceMemoryProperties;
     if (!strcmp(name, "GetInstanceProcAddr"))
@@ -362,10 +360,8 @@ static inline void *loader_non_passthrough_gpa(const char *name)
         return (void*) vkGetPhysicalDeviceImageFormatProperties;
     if (!strcmp(name, "GetPhysicalDeviceLimits"))
         return (void*) vkGetPhysicalDeviceLimits;
-    if (!strcmp(name, "GetPhysicalDeviceQueueCount"))
-        return (void*) vkGetPhysicalDeviceQueueCount;
-    if (!strcmp(name, "GetPhysicalDeviceQueueProperties"))
-        return (void*) vkGetPhysicalDeviceQueueProperties;
+    if (!strcmp(name, "GetPhysicalDeviceQueueFamilyProperties"))
+        return (void*) vkGetPhysicalDeviceQueueFamilyProperties;
     if (!strcmp(name, "GetPhysicalDeviceMemoryProperties"))
         return (void*) vkGetPhysicalDeviceMemoryProperties;
     if (!strcmp(name, "GetPhysicalDeviceProperties"))

@@ -46,7 +46,7 @@ public:
 
     uint32_t                               id;
     VkPhysicalDeviceProperties             props;
-    const VkPhysicalDeviceQueueProperties *queue_props;
+    const VkQueueFamilyProperties         *queue_props;
 
     VkQueue m_queue;
 };

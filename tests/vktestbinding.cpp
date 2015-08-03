@@ -96,14 +96,15 @@ VkPhysicalDeviceProperties PhysicalDevice::properties() const
     return info;
 }
 
-std::vector<VkPhysicalDeviceQueueProperties> PhysicalDevice::queue_properties() const
+std::vector<VkQueueFamilyProperties> PhysicalDevice::queue_properties() const
 {
-    std::vector<VkPhysicalDeviceQueueProperties> info;
+    std::vector<VkQueueFamilyProperties> info;
     uint32_t count;
 
-    if (EXPECT(vkGetPhysicalDeviceQueueCount(handle(), &count) == VK_SUCCESS)) {
+    // Call once with NULL data to receive count
+    if (EXPECT(vkGetPhysicalDeviceQueueFamilyProperties(handle(), &count, NULL) == VK_SUCCESS)) {
         info.resize(count);
-        if (!EXPECT(vkGetPhysicalDeviceQueueProperties(handle(), count, info.data()) == VK_SUCCESS))
+        if (!EXPECT(vkGetPhysicalDeviceQueueFamilyProperties(handle(), &count, info.data()) == VK_SUCCESS))
             info.clear();
     }
 
@@ -267,7 +268,7 @@ Device::~Device()
 void Device::init(std::vector<const char *> &layers, std::vector<const char *> &extensions)
 {
     // request all queues
-    const std::vector<VkPhysicalDeviceQueueProperties> queue_props = phy_.queue_properties();
+    const std::vector<VkQueueFamilyProperties> queue_props = phy_.queue_properties();
     std::vector<VkDeviceQueueCreateInfo> queue_info;
     queue_info.reserve(queue_props.size());
     for (int i = 0; i < queue_props.size(); i++) {
@@ -310,13 +311,14 @@ void Device::init_queues()
     VkResult err;
     uint32_t queue_node_count;
 
-    err = vkGetPhysicalDeviceQueueCount(phy_.handle(), &queue_node_count);
+    // Call with NULL data to get count
+    err = vkGetPhysicalDeviceQueueFamilyProperties(phy_.handle(), &queue_node_count, NULL);
     EXPECT(err == VK_SUCCESS);
     EXPECT(queue_node_count >= 1);
 
-    VkPhysicalDeviceQueueProperties* queue_props = new VkPhysicalDeviceQueueProperties[queue_node_count];
+    VkQueueFamilyProperties* queue_props = new VkQueueFamilyProperties[queue_node_count];
 
-    err = vkGetPhysicalDeviceQueueProperties(phy_.handle(), queue_node_count, queue_props);
+    err = vkGetPhysicalDeviceQueueFamilyProperties(phy_.handle(), &queue_node_count, queue_props);
     EXPECT(err == VK_SUCCESS);
 
     for (uint32_t i = 0; i < queue_node_count; i++) {

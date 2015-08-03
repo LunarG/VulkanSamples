@@ -110,7 +110,7 @@ struct app_gpu {
     VkPhysicalDeviceProperties props;
 
     uint32_t queue_count;
-    VkPhysicalDeviceQueueProperties *queue_props;
+    VkQueueFamilyProperties *queue_props;
     VkDeviceQueueCreateInfo *queue_reqs;
 
     VkPhysicalDeviceMemoryProperties memory_props;
@@ -673,7 +673,7 @@ static void app_gpu_init(struct app_gpu *gpu, uint32_t id, VkPhysicalDevice obj)
         ERR_EXIT(err);
 
     /* get queue count */
-    err = vkGetPhysicalDeviceQueueCount(gpu->obj, &gpu->queue_count);
+    err = vkGetPhysicalDeviceQueueFamilyProperties(gpu->obj, &gpu->queue_count, NULL);
     if (err)
         ERR_EXIT(err);
 
@@ -682,7 +682,7 @@ static void app_gpu_init(struct app_gpu *gpu, uint32_t id, VkPhysicalDevice obj)
 
     if (!gpu->queue_props)
         ERR_EXIT(VK_ERROR_OUT_OF_HOST_MEMORY);
-    err = vkGetPhysicalDeviceQueueProperties(gpu->obj, gpu->queue_count, gpu->queue_props);
+    err = vkGetPhysicalDeviceQueueFamilyProperties(gpu->obj, &gpu->queue_count, gpu->queue_props);
     if (err)
         ERR_EXIT(err);
 
@@ -844,9 +844,9 @@ static void app_dump_extensions(
 
 static void app_gpu_dump_queue_props(const struct app_gpu *gpu, uint32_t id)
 {
-    const VkPhysicalDeviceQueueProperties *props = &gpu->queue_props[id];
+    const VkQueueFamilyProperties *props = &gpu->queue_props[id];
 
-    printf("VkPhysicalDeviceQueueProperties[%d]\n", id);
+    printf("VkQueueFamilyProperties[%d]\n", id);
     printf("\tqueueFlags = %c%c%c%c\n",
             (props->queueFlags & VK_QUEUE_GRAPHICS_BIT) ? 'G' : '.',
             (props->queueFlags & VK_QUEUE_COMPUTE_BIT)  ? 'C' : '.',

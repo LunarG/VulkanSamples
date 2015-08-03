@@ -86,7 +86,7 @@ protected:
     uint32_t m_device_id;
     vk_testing::Device *m_device;
     VkPhysicalDeviceProperties props;
-    std::vector<VkPhysicalDeviceQueueProperties> queue_props;
+    std::vector<VkQueueFamilyProperties> queue_props;
     uint32_t graphics_queue_node_index;
 
     virtual void SetUp() {
@@ -280,7 +280,7 @@ void getQueue(vk_testing::Device *device, uint32_t queue_node_index, const char 
     VkResult err;
     VkQueue queue;
 
-    const VkPhysicalDeviceQueueProperties props = device->phy().queue_properties()[queue_node_index];
+    const VkQueueFamilyProperties props = device->phy().queue_properties()[queue_node_index];
     for (que_idx = 0; que_idx < props.queueCount; que_idx++) {
         // TODO: Need to add support for separate MEMMGR and work queues, including synchronization
         err = vkGetDeviceQueue(device->handle(), queue_node_index, que_idx, &queue);

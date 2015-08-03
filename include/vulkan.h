@@ -41,7 +41,7 @@ extern "C" {
     ((major << 22) | (minor << 12) | patch)
 
 // Vulkan API version supported by this file
-#define VK_API_VERSION VK_MAKE_VERSION(0, 139, 0)
+#define VK_API_VERSION VK_MAKE_VERSION(0, 140, 0)
 
 
 #define VK_DEFINE_HANDLE(obj) typedef struct obj##_T* obj;
@@ -1308,7 +1308,7 @@ typedef struct {
     VkQueueFlags                                queueFlags;
     uint32_t                                    queueCount;
     VkBool32                                    supportsTimestamps;
-} VkPhysicalDeviceQueueProperties;
+} VkQueueFamilyProperties;
 
 typedef struct {
     VkMemoryPropertyFlags                       propertyFlags;
@@ -2087,8 +2087,7 @@ typedef VkResult (VKAPI *PFN_vkGetPhysicalDeviceFormatProperties)(VkPhysicalDevi
 typedef VkResult (VKAPI *PFN_vkGetPhysicalDeviceImageFormatProperties)(VkPhysicalDevice physicalDevice, VkFormat format, VkImageType type, VkImageTiling tiling, VkImageUsageFlags usage, VkImageFormatProperties* pImageFormatProperties);
 typedef VkResult (VKAPI *PFN_vkGetPhysicalDeviceLimits)(VkPhysicalDevice physicalDevice, VkPhysicalDeviceLimits* pLimits);
 typedef VkResult (VKAPI *PFN_vkGetPhysicalDeviceProperties)(VkPhysicalDevice physicalDevice, VkPhysicalDeviceProperties* pProperties);
-typedef VkResult (VKAPI *PFN_vkGetPhysicalDeviceQueueCount)(VkPhysicalDevice physicalDevice, uint32_t* pCount);
-typedef VkResult (VKAPI *PFN_vkGetPhysicalDeviceQueueProperties)(VkPhysicalDevice physicalDevice, uint32_t count, VkPhysicalDeviceQueueProperties* pQueueProperties);
+typedef VkResult (VKAPI *PFN_vkGetPhysicalDeviceQueueFamilyProperties)(VkPhysicalDevice physicalDevice, uint32_t* pCount, VkQueueFamilyProperties* pQueueFamilyProperties);
 typedef VkResult (VKAPI *PFN_vkGetPhysicalDeviceMemoryProperties)(VkPhysicalDevice physicalDevice, VkPhysicalDeviceMemoryProperties* pMemoryProperties);
 typedef PFN_vkVoidFunction (VKAPI *PFN_vkGetInstanceProcAddr)(VkInstance instance, const char* pName);
 typedef PFN_vkVoidFunction (VKAPI *PFN_vkGetDeviceProcAddr)(VkDevice device, const char* pName);
@@ -2270,14 +2269,10 @@ VkResult VKAPI vkGetPhysicalDeviceProperties(
     VkPhysicalDevice                            physicalDevice,
     VkPhysicalDeviceProperties*                 pProperties);
 
-VkResult VKAPI vkGetPhysicalDeviceQueueCount(
+VkResult VKAPI vkGetPhysicalDeviceQueueFamilyProperties(
     VkPhysicalDevice                            physicalDevice,
-    uint32_t*                                   pCount);
-
-VkResult VKAPI vkGetPhysicalDeviceQueueProperties(
-    VkPhysicalDevice                            physicalDevice,
-    uint32_t                                    count,
-    VkPhysicalDeviceQueueProperties*            pQueueProperties);
+    uint32_t*                                   pCount,
+    VkQueueFamilyProperties*                    pQueueFamilyProperties);
 
 VkResult VKAPI vkGetPhysicalDeviceMemoryProperties(
     VkPhysicalDevice                            physicalDevice,

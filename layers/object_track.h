@@ -90,7 +90,7 @@ static loader_platform_thread_mutex objLock;
 
 static uint64_t                         numObjs[NUM_OBJECT_TYPES]     = {0};
 static uint64_t                         numTotalObjs                  = 0;
-static VkPhysicalDeviceQueueProperties *queueInfo                     = NULL;
+static VkQueueFamilyProperties         *queueInfo                     = NULL;
 static uint32_t                         queueCount                    = 0;
 
 template layer_data *get_my_data_ptr<layer_data>(
@@ -214,9 +214,9 @@ setGpuQueueInfoState(
     void     *pData)
 {
     queueCount = count;
-    queueInfo  = (VkPhysicalDeviceQueueProperties*)realloc((void*)queueInfo, count * sizeof(VkPhysicalDeviceQueueProperties));
+    queueInfo  = (VkQueueFamilyProperties*)realloc((void*)queueInfo, count * sizeof(VkQueueFamilyProperties));
     if (queueInfo != NULL) {
-        memcpy(queueInfo, pData, count * sizeof(VkPhysicalDeviceQueueProperties));
+        memcpy(queueInfo, pData, count * sizeof(VkQueueFamilyProperties));
     }
 }
 
@@ -459,15 +459,16 @@ explicit_CreateInstance(
 }
 
 VkResult
-explicit_GetPhysicalDeviceQueueProperties(
+explicit_GetPhysicalDeviceQueueFamilyProperties(
     VkPhysicalDevice                 gpu,
-    uint32_t                         count,
-    VkPhysicalDeviceQueueProperties* pProperties)
+    uint32_t*                        pCount,
+    VkQueueFamilyProperties*         pProperties)
 {
-    VkResult result = get_dispatch_table(ObjectTracker_instance_table_map, gpu)->GetPhysicalDeviceQueueProperties(gpu, count, pProperties);
+    VkResult result = get_dispatch_table(ObjectTracker_instance_table_map, gpu)->GetPhysicalDeviceQueueFamilyProperties(gpu, pCount, pProperties);
 
     loader_platform_thread_lock_mutex(&objLock);
-    setGpuQueueInfoState(count, pProperties);
+    if (pProperties != NULL)
+        setGpuQueueInfoState(*pCount, pProperties);
     loader_platform_thread_unlock_mutex(&objLock);
     return result;
 }

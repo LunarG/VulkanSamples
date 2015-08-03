@@ -2340,44 +2340,16 @@ VK_LAYER_EXPORT VkResult VKAPI vkGetPhysicalDeviceProperties(
     return result;
 }
 
-bool PostGetPhysicalDeviceQueueCount(
+bool PostGetPhysicalDeviceQueueFamilyProperties(
     VkPhysicalDevice physicalDevice,
     uint32_t* pCount,
+    VkQueueFamilyProperties* pQueueProperties,
     VkResult result)
 {
 
-    if(pCount != nullptr)
+    if(pQueueProperties == nullptr && pCount != nullptr)
     {
     }
-
-    if(result < VK_SUCCESS)
-    {
-        std::string reason = "vkGetPhysicalDeviceQueueCount parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(physicalDevice), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
-        return false;
-    }
-
-    return true;
-}
-
-VK_LAYER_EXPORT VkResult VKAPI vkGetPhysicalDeviceQueueCount(
-    VkPhysicalDevice physicalDevice,
-    uint32_t* pCount)
-{
-    VkResult result = get_dispatch_table(pc_instance_table_map, physicalDevice)->GetPhysicalDeviceQueueCount(physicalDevice, pCount);
-
-    PostGetPhysicalDeviceQueueCount(physicalDevice, pCount, result);
-
-    return result;
-}
-
-bool PostGetPhysicalDeviceQueueProperties(
-    VkPhysicalDevice physicalDevice,
-    uint32_t count,
-    VkPhysicalDeviceQueueProperties* pQueueProperties,
-    VkResult result)
-{
-
 
     if(pQueueProperties != nullptr)
     {
@@ -2385,7 +2357,7 @@ bool PostGetPhysicalDeviceQueueProperties(
 
     if(result < VK_SUCCESS)
     {
-        std::string reason = "vkGetPhysicalDeviceQueueProperties parameter, VkResult result, is " + EnumeratorString(result);
+        std::string reason = "vkGetPhysicalDeviceQueueFamilyProperties parameter, VkResult result, is " + EnumeratorString(result);
         log_msg(mdd(physicalDevice), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
         return false;
     }
@@ -2395,12 +2367,12 @@ bool PostGetPhysicalDeviceQueueProperties(
 
 VK_LAYER_EXPORT VkResult VKAPI vkGetPhysicalDeviceQueueProperties(
     VkPhysicalDevice physicalDevice,
-    uint32_t count,
-    VkPhysicalDeviceQueueProperties* pQueueProperties)
+    uint32_t* pCount,
+    VkQueueFamilyProperties* pQueueProperties)
 {
-    VkResult result = get_dispatch_table(pc_instance_table_map, physicalDevice)->GetPhysicalDeviceQueueProperties(physicalDevice, count, pQueueProperties);
+    VkResult result = get_dispatch_table(pc_instance_table_map, physicalDevice)->GetPhysicalDeviceQueueFamilyProperties(physicalDevice, pCount, pQueueProperties);
 
-    PostGetPhysicalDeviceQueueProperties(physicalDevice, count, pQueueProperties, result);
+    PostGetPhysicalDeviceQueueFamilyProperties(physicalDevice, pCount, pQueueProperties, result);
 
     return result;
 }

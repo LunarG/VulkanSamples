@@ -482,8 +482,7 @@ static inline void loader_init_instance_core_dispatch_table(VkLayerInstanceDispa
     table->GetPhysicalDeviceLimits = (PFN_vkGetPhysicalDeviceLimits) gpa(inst, "vkGetPhysicalDeviceLimits");
     table->GetPhysicalDeviceSparseImageFormatProperties = (PFN_vkGetPhysicalDeviceSparseImageFormatProperties) gpa(inst, "vkGetPhysicalDeviceSparseImageFormatProperties");
     table->GetPhysicalDeviceProperties = (PFN_vkGetPhysicalDeviceProperties) gpa(inst, "vkGetPhysicalDeviceProperties");
-    table->GetPhysicalDeviceQueueCount = (PFN_vkGetPhysicalDeviceQueueCount) gpa(inst, "vkGetPhysicalDeviceQueueCount");
-    table->GetPhysicalDeviceQueueProperties = (PFN_vkGetPhysicalDeviceQueueProperties) gpa(inst, "vkGetPhysicalDeviceQueueProperties");
+    table->GetPhysicalDeviceQueueFamilyProperties = (PFN_vkGetPhysicalDeviceQueueFamilyProperties) gpa(inst, "vkGetPhysicalDeviceQueueFamilyProperties");
     table->GetPhysicalDeviceMemoryProperties = (PFN_vkGetPhysicalDeviceMemoryProperties) gpa(inst, "vkGetPhysicalDeviceMemoryProperties");
     table->GetPhysicalDeviceExtensionProperties = (PFN_vkGetPhysicalDeviceExtensionProperties) gpa(inst, "vkGetPhysicalDeviceExtensionProperties");
     table->GetPhysicalDeviceLayerProperties = (PFN_vkGetPhysicalDeviceLayerProperties) gpa(inst, "vkGetPhysicalDeviceLayerProperties");
@@ -524,10 +523,8 @@ static inline void *loader_lookup_instance_dispatch_table(
         return (void *) table->GetPhysicalDeviceSparseImageFormatProperties;
     if (!strcmp(name, "GetPhysicalDeviceProperties"))
         return (void *) table->GetPhysicalDeviceProperties;
-    if (!strcmp(name, "GetPhysicalDeviceQueueCount"))
-        return (void *) table->GetPhysicalDeviceQueueCount;
-    if (!strcmp(name, "GetPhysicalDeviceQueueProperties"))
-        return (void *) table->GetPhysicalDeviceQueueProperties;
+    if (!strcmp(name, "GetPhysicalDeviceQueueFamilyProperties"))
+        return (void *) table->GetPhysicalDeviceQueueFamilyProperties;
     if (!strcmp(name, "GetPhysicalDeviceMemoryProperties"))
         return (void *) table->GetPhysicalDeviceMemoryProperties;
     if (!strcmp(name, "GetInstanceProcAddr"))

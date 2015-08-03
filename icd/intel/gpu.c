@@ -240,7 +240,7 @@ void intel_gpu_get_props(const struct intel_gpu *gpu,
 
 void intel_gpu_get_queue_props(const struct intel_gpu *gpu,
                                enum intel_gpu_engine_type engine,
-                               VkPhysicalDeviceQueueProperties *props)
+                               VkQueueFamilyProperties *props)
 {
     switch (engine) {
     case INTEL_GPU_ENGINE_3D:
@@ -402,27 +402,23 @@ ICD_EXPORT VkResult VKAPI vkGetPhysicalDeviceProperties(
     return VK_SUCCESS;
 }
 
-ICD_EXPORT VkResult VKAPI vkGetPhysicalDeviceQueueCount(
+ICD_EXPORT VkResult VKAPI vkGetPhysicalDeviceQueueFamilyProperties(
     VkPhysicalDevice gpu_,
-    uint32_t* pCount)
-{
-    *pCount = INTEL_GPU_ENGINE_COUNT;
-
-    return VK_SUCCESS;
-}
-
-ICD_EXPORT VkResult VKAPI vkGetPhysicalDeviceQueueProperties(
-    VkPhysicalDevice gpu_,
-    uint32_t count,
-    VkPhysicalDeviceQueueProperties* pProperties)
+    uint32_t* pCount,
+    VkQueueFamilyProperties* pProperties)
 {
    struct intel_gpu *gpu = intel_gpu(gpu_);
    int engine;
 
-   if (count > INTEL_GPU_ENGINE_COUNT)
+   if (pProperties == NULL) {
+       *pCount = INTEL_GPU_ENGINE_COUNT;
+       return VK_SUCCESS;
+   }
+
+   if (*pCount > INTEL_GPU_ENGINE_COUNT)
        return VK_ERROR_INVALID_VALUE;
 
-   for (engine = 0; engine < count; engine++) {
+   for (engine = 0; engine < *pCount; engine++) {
        intel_gpu_get_queue_props(gpu, engine, pProperties);
        pProperties++;
    }
