@@ -663,8 +663,7 @@ explicit_AllocDescriptorSets(
     VkDescriptorSetUsage         setUsage,
     uint32_t                     count,
     const VkDescriptorSetLayout *pSetLayouts,
-    VkDescriptorSet             *pDescriptorSets,
-    uint32_t                    *pCount)
+    VkDescriptorSet             *pDescriptorSets)
 {
     loader_platform_thread_lock_mutex(&objLock);
     validate_object(device, device);
@@ -672,10 +671,10 @@ explicit_AllocDescriptorSets(
     loader_platform_thread_unlock_mutex(&objLock);
 
     VkResult result = get_dispatch_table(ObjectTracker_device_table_map, device)->AllocDescriptorSets(
-        device, descriptorPool, setUsage, count, pSetLayouts, pDescriptorSets, pCount);
+        device, descriptorPool, setUsage, count, pSetLayouts, pDescriptorSets);
 
     loader_platform_thread_lock_mutex(&objLock);
-    for (uint32_t i = 0; i < *pCount; i++) {
+    for (uint32_t i = 0; i < count; i++) {
         create_obj(device, pDescriptorSets[i], VK_OBJECT_TYPE_DESCRIPTOR_SET);
     }
     loader_platform_thread_unlock_mutex(&objLock);

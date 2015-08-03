@@ -751,14 +751,10 @@ std::vector<DescriptorSet *> DescriptorPool::alloc_sets(const Device &dev, VkDes
     std::vector<VkDescriptorSet> set_handles;
     set_handles.resize(layout_handles.size());
 
-    uint32_t set_count;
-    VkResult err = vkAllocDescriptorSets(device(), handle(), usage, layout_handles.size(), layout_handles.data(), set_handles.data(), &set_count);
-    if (err == VK_SUCCESS)
-        EXPECT(set_count == set_handles.size());
-    set_handles.resize(set_count);
+    VkResult err = vkAllocDescriptorSets(device(), handle(), usage, layout_handles.size(), layout_handles.data(), set_handles.data());
+    EXPECT(err == VK_SUCCESS);
 
     std::vector<DescriptorSet *> sets;
-    sets.reserve(set_count);
     for (std::vector<VkDescriptorSet>::const_iterator it = set_handles.begin(); it != set_handles.end(); it++) {
         // do descriptor sets need memories bound?
         DescriptorSet *descriptorSet = new DescriptorSet(dev, handle(), *it);

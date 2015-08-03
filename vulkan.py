@@ -652,8 +652,7 @@ core = Extension(
              Param("VkDescriptorSetUsage", "setUsage"),
              Param("uint32_t", "count"),
              Param("const VkDescriptorSetLayout*", "pSetLayouts"),
-             Param("VkDescriptorSet*", "pDescriptorSets"),
-             Param("uint32_t*", "pCount")]),
+             Param("VkDescriptorSet*", "pDescriptorSets")]),
 
         Proto("VkResult", "FreeDescriptorSets",
             [Param("VkDevice", "device"),

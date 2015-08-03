@@ -1067,8 +1067,7 @@ TEST_F(VkLayerTest, DescriptorSetNotUpdated)
     ASSERT_VK_SUCCESS(err);
 
     VkDescriptorSet descriptorSet;
-    uint32_t ds_count = 0;
-    err = vkAllocDescriptorSets(m_device->device(), ds_pool, VK_DESCRIPTOR_SET_USAGE_ONE_SHOT, 1, &ds_layout, &descriptorSet, &ds_count);
+    err = vkAllocDescriptorSets(m_device->device(), ds_pool, VK_DESCRIPTOR_SET_USAGE_ONE_SHOT, 1, &ds_layout, &descriptorSet);
     ASSERT_VK_SUCCESS(err);
 
     VkPipelineLayoutCreateInfo pipeline_layout_ci = {};
@@ -1262,8 +1261,7 @@ TEST_F(VkLayerTest, InvalidPipelineCreateState)
     ASSERT_VK_SUCCESS(err);
 
     VkDescriptorSet descriptorSet;
-    uint32_t ds_count = 0;
-    err = vkAllocDescriptorSets(m_device->device(), ds_pool, VK_DESCRIPTOR_SET_USAGE_ONE_SHOT, 1, &ds_layout, &descriptorSet, &ds_count);
+    err = vkAllocDescriptorSets(m_device->device(), ds_pool, VK_DESCRIPTOR_SET_USAGE_ONE_SHOT, 1, &ds_layout, &descriptorSet);
     ASSERT_VK_SUCCESS(err);
 
     VkPipelineLayoutCreateInfo pipeline_layout_ci = {};
@@ -1410,8 +1408,7 @@ TEST_F(VkLayerTest, VtxBufferNoRenderPass)
     ASSERT_VK_SUCCESS(err);
 
     VkDescriptorSet descriptorSet;
-    uint32_t ds_count = 0;
-    err = vkAllocDescriptorSets(m_device->device(), ds_pool, VK_DESCRIPTOR_SET_USAGE_ONE_SHOT, 1, &ds_layout, &descriptorSet, &ds_count);
+    err = vkAllocDescriptorSets(m_device->device(), ds_pool, VK_DESCRIPTOR_SET_USAGE_ONE_SHOT, 1, &ds_layout, &descriptorSet);
     ASSERT_VK_SUCCESS(err);
 
     VkPipelineLayoutCreateInfo pipeline_layout_ci = {};
@@ -1517,8 +1514,7 @@ TEST_F(VkLayerTest, DSTypeMismatch)
     ASSERT_VK_SUCCESS(err);
 
     VkDescriptorSet descriptorSet;
-    uint32_t ds_count = 0;
-    err = vkAllocDescriptorSets(m_device->device(), ds_pool, VK_DESCRIPTOR_SET_USAGE_ONE_SHOT, 1, &ds_layout, &descriptorSet, &ds_count);
+    err = vkAllocDescriptorSets(m_device->device(), ds_pool, VK_DESCRIPTOR_SET_USAGE_ONE_SHOT, 1, &ds_layout, &descriptorSet);
     ASSERT_VK_SUCCESS(err);
 
     VkSamplerCreateInfo sampler_ci = {};
@@ -1605,8 +1601,7 @@ TEST_F(VkLayerTest, DSUpdateOutOfBounds)
     ASSERT_VK_SUCCESS(err);
 
     VkDescriptorSet descriptorSet;
-    uint32_t ds_count = 0;
-    err = vkAllocDescriptorSets(m_device->device(), ds_pool, VK_DESCRIPTOR_SET_USAGE_ONE_SHOT, 1, &ds_layout, &descriptorSet, &ds_count);
+    err = vkAllocDescriptorSets(m_device->device(), ds_pool, VK_DESCRIPTOR_SET_USAGE_ONE_SHOT, 1, &ds_layout, &descriptorSet);
     ASSERT_VK_SUCCESS(err);
 
     VkSamplerCreateInfo sampler_ci = {};
@@ -1692,8 +1687,7 @@ TEST_F(VkLayerTest, InvalidDSUpdateIndex)
     ASSERT_VK_SUCCESS(err);
 
     VkDescriptorSet descriptorSet;
-    uint32_t ds_count = 0;
-    err = vkAllocDescriptorSets(m_device->device(), ds_pool, VK_DESCRIPTOR_SET_USAGE_ONE_SHOT, 1, &ds_layout, &descriptorSet, &ds_count);
+    err = vkAllocDescriptorSets(m_device->device(), ds_pool, VK_DESCRIPTOR_SET_USAGE_ONE_SHOT, 1, &ds_layout, &descriptorSet);
     ASSERT_VK_SUCCESS(err);
 
     VkSamplerCreateInfo sampler_ci = {};
@@ -1780,8 +1774,7 @@ TEST_F(VkLayerTest, InvalidDSUpdateStruct)
     ASSERT_VK_SUCCESS(err);
 
     VkDescriptorSet descriptorSet;
-    uint32_t ds_count = 0;
-    err = vkAllocDescriptorSets(m_device->device(), ds_pool, VK_DESCRIPTOR_SET_USAGE_ONE_SHOT, 1, &ds_layout, &descriptorSet, &ds_count);
+    err = vkAllocDescriptorSets(m_device->device(), ds_pool, VK_DESCRIPTOR_SET_USAGE_ONE_SHOT, 1, &ds_layout, &descriptorSet);
     ASSERT_VK_SUCCESS(err);
 
     VkSamplerCreateInfo sampler_ci = {};
@@ -1867,8 +1860,7 @@ TEST_F(VkLayerTest, NumSamplesMismatch)
     ASSERT_VK_SUCCESS(err);
 
     VkDescriptorSet descriptorSet;
-    uint32_t ds_count = 0;
-    err = vkAllocDescriptorSets(m_device->device(), ds_pool, VK_DESCRIPTOR_SET_USAGE_ONE_SHOT, 1, &ds_layout, &descriptorSet, &ds_count);
+    err = vkAllocDescriptorSets(m_device->device(), ds_pool, VK_DESCRIPTOR_SET_USAGE_ONE_SHOT, 1, &ds_layout, &descriptorSet);
     ASSERT_VK_SUCCESS(err);
 
     VkPipelineMultisampleStateCreateInfo pipe_ms_state_ci = {};
@@ -1979,8 +1971,7 @@ TEST_F(VkLayerTest, PipelineNotBound)
     ASSERT_VK_SUCCESS(err);
 
     VkDescriptorSet descriptorSet;
-    uint32_t ds_count = 0;
-    err = vkAllocDescriptorSets(m_device->device(), ds_pool, VK_DESCRIPTOR_SET_USAGE_ONE_SHOT, 1, &ds_layout, &descriptorSet, &ds_count);
+    err = vkAllocDescriptorSets(m_device->device(), ds_pool, VK_DESCRIPTOR_SET_USAGE_ONE_SHOT, 1, &ds_layout, &descriptorSet);
     ASSERT_VK_SUCCESS(err);
     
     VkPipelineLayoutCreateInfo pipeline_layout_ci = {};
@@ -2050,8 +2041,7 @@ TEST_F(VkLayerTest, ClearCmdNoDraw)
     ASSERT_VK_SUCCESS(err);
 
     VkDescriptorSet descriptorSet;
-    uint32_t ds_count = 0;
-    err = vkAllocDescriptorSets(m_device->device(), ds_pool, VK_DESCRIPTOR_SET_USAGE_ONE_SHOT, 1, &ds_layout, &descriptorSet, &ds_count);
+    err = vkAllocDescriptorSets(m_device->device(), ds_pool, VK_DESCRIPTOR_SET_USAGE_ONE_SHOT, 1, &ds_layout, &descriptorSet);
     ASSERT_VK_SUCCESS(err);
 
     VkPipelineMultisampleStateCreateInfo pipe_ms_state_ci = {};
@@ -2202,8 +2192,7 @@ TEST_F(VkLayerTest, VtxBufferBadIndex)
     ASSERT_VK_SUCCESS(err);
 
     VkDescriptorSet descriptorSet;
-    uint32_t ds_count = 0;
-    err = vkAllocDescriptorSets(m_device->device(), ds_pool, VK_DESCRIPTOR_SET_USAGE_ONE_SHOT, 1, &ds_layout, &descriptorSet, &ds_count);
+    err = vkAllocDescriptorSets(m_device->device(), ds_pool, VK_DESCRIPTOR_SET_USAGE_ONE_SHOT, 1, &ds_layout, &descriptorSet);
     ASSERT_VK_SUCCESS(err);
 
     VkPipelineMultisampleStateCreateInfo pipe_ms_state_ci = {};

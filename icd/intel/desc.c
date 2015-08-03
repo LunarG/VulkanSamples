@@ -835,8 +835,7 @@ ICD_EXPORT VkResult VKAPI vkAllocDescriptorSets(
     VkDescriptorSetUsage                     setUsage,
     uint32_t                                     count,
     const VkDescriptorSetLayout*             pSetLayouts,
-    VkDescriptorSet*                          pDescriptorSets,
-    uint32_t*                                    pCount)
+    VkDescriptorSet*                          pDescriptorSets)
 {
     struct intel_desc_pool *pool = intel_desc_pool(descriptorPool);
     struct intel_dev *dev = pool->dev;
@@ -852,9 +851,6 @@ ICD_EXPORT VkResult VKAPI vkAllocDescriptorSets(
         if (ret != VK_SUCCESS)
             break;
     }
-
-    if (pCount)
-        *pCount = i;
 
     return ret;
 }

@@ -1736,14 +1736,13 @@ static void demo_prepare_descriptor_set(struct demo *demo)
     VkDescriptorInfo tex_descs[DEMO_TEXTURE_COUNT];
     VkWriteDescriptorSet writes[2];
     VkResult U_ASSERT_ONLY err;
-    uint32_t count;
     uint32_t i;
 
     err = vkAllocDescriptorSets(demo->device, demo->desc_pool,
             VK_DESCRIPTOR_SET_USAGE_STATIC,
             1, &demo->desc_layout,
-            &demo->desc_set, &count);
-    assert(!err && count == 1);
+            &demo->desc_set);
+    assert(!err);
 
     memset(&tex_descs, 0, sizeof(tex_descs));
     for (i = 0; i < DEMO_TEXTURE_COUNT; i++) {

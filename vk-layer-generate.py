@@ -867,7 +867,7 @@ class APIDumpSubcommand(Subcommand):
         sp_param_dict = {} # Store 'index' for struct param to print, or an name of binding "Count" param for array to print
         create_params = 0 # Num of params at end of function that are created and returned as output values
         if 'AllocDescriptorSets' in proto.name:
-            create_params = -2
+            create_params = -1
         elif 'Create' in proto.name or 'Alloc' in proto.name or 'MapMemory' in proto.name:
             create_params = -1
         if proto.ret != "void":
@@ -902,8 +902,6 @@ class APIDumpSubcommand(Subcommand):
             if prev_count_name != '' and (prev_count_name.replace('Count', '')[1:] in p.name):
                 sp_param_dict[pindex] = prev_count_name
                 prev_count_name = ''
-            elif 'pDescriptorSets' == p.name and proto.params[-1].name == 'pCount':
-                sp_param_dict[pindex] = '*pCount'
             elif vk_helper.is_type(p.ty.strip('*').replace('const ', ''), 'struct'):
                 sp_param_dict[pindex] = 'index'
             if p.name.endswith('Count'):

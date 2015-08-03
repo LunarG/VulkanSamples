@@ -5657,7 +5657,6 @@ bool PostAllocDescriptorSets(
     VkDescriptorSetUsage setUsage,
     uint32_t count,
     VkDescriptorSet* pDescriptorSets,
-    uint32_t* pCount,
     VkResult result)
 {
 
@@ -5672,10 +5671,6 @@ bool PostAllocDescriptorSets(
 
 
     if(pDescriptorSets != nullptr)
-    {
-    }
-
-    if(pCount != nullptr)
     {
     }
 
@@ -5695,14 +5690,13 @@ VK_LAYER_EXPORT VkResult VKAPI vkAllocDescriptorSets(
     VkDescriptorSetUsage setUsage,
     uint32_t count,
     const VkDescriptorSetLayout* pSetLayouts,
-    VkDescriptorSet* pDescriptorSets,
-    uint32_t* pCount)
+    VkDescriptorSet* pDescriptorSets)
 {
     PreAllocDescriptorSets(device, pSetLayouts);
 
-    VkResult result = get_dispatch_table(pc_device_table_map, device)->AllocDescriptorSets(device, descriptorPool, setUsage, count, pSetLayouts, pDescriptorSets, pCount);
+    VkResult result = get_dispatch_table(pc_device_table_map, device)->AllocDescriptorSets(device, descriptorPool, setUsage, count, pSetLayouts, pDescriptorSets);
 
-    PostAllocDescriptorSets(device, descriptorPool, setUsage, count, pDescriptorSets, pCount, result);
+    PostAllocDescriptorSets(device, descriptorPool, setUsage, count, pDescriptorSets, result);
 
     return result;
 }

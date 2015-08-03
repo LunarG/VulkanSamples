@@ -2264,8 +2264,7 @@ ICD_EXPORT VkResult VKAPI vkAllocDescriptorSets(
     VkDescriptorSetUsage                     setUsage,
     uint32_t                                     count,
     const VkDescriptorSetLayout*             pSetLayouts,
-    VkDescriptorSet*                          pDescriptorSets,
-    uint32_t*                                    pCount)
+    VkDescriptorSet*                          pDescriptorSets)
 {
     NULLDRV_LOG_FUNC;
     struct nulldrv_desc_pool *pool = nulldrv_desc_pool(descriptorPool);
@@ -2282,9 +2281,6 @@ ICD_EXPORT VkResult VKAPI vkAllocDescriptorSets(
         if (ret != VK_SUCCESS)
             break;
     }
-
-    if (pCount)
-        *pCount = i;
 
     return ret;
 }
