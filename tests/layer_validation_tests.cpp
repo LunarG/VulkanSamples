@@ -1089,46 +1089,12 @@ TEST_F(VkLayerTest, DescriptorSetNotUpdated)
 
     VkShaderObj vs(m_device, bindStateVertShaderText, VK_SHADER_STAGE_VERTEX, this);
 
-    VkPipelineShaderStageCreateInfo pipe_vs_ci = {};
-        pipe_vs_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-        pipe_vs_ci.pNext = NULL;
-        pipe_vs_ci.stage = VK_SHADER_STAGE_VERTEX;
-        pipe_vs_ci.shader = vs.handle();
-        pipe_vs_ci.pSpecializationInfo = NULL;
-
-    VkGraphicsPipelineCreateInfo gp_ci = {};
-        gp_ci.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
-        gp_ci.pNext = NULL;
-        gp_ci.stageCount = 1;
-        gp_ci.pStages = &pipe_vs_ci;
-        gp_ci.pVertexInputState = NULL;
-        gp_ci.pInputAssemblyState = NULL;
-        gp_ci.pTessellationState = NULL;
-        gp_ci.pViewportState = NULL;
-        gp_ci.pRasterState = NULL;
-        gp_ci.pMultisampleState = NULL;
-        gp_ci.pDepthStencilState = NULL;
-        gp_ci.pColorBlendState = NULL;
-        gp_ci.flags = VK_PIPELINE_CREATE_DISABLE_OPTIMIZATION_BIT;
-        gp_ci.layout = pipeline_layout;
-
-    VkPipelineCacheCreateInfo pc_ci = {};
-        pc_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO;
-        pc_ci.pNext = NULL;
-        pc_ci.initialSize = 0;
-        pc_ci.initialData = 0;
-        pc_ci.maxSize = 0;
-
-    VkPipeline pipeline;
-    VkPipelineCache pipelineCache;
-
-    err = vkCreatePipelineCache(m_device->device(), &pc_ci, &pipelineCache);
-    ASSERT_VK_SUCCESS(err);
-    err = vkCreateGraphicsPipelines(m_device->device(), pipelineCache, 1, &gp_ci, &pipeline);
-    ASSERT_VK_SUCCESS(err);
+    VkPipelineObj pipe(m_device);
+    pipe.AddShader(&vs);
+    pipe.CreateVKPipeline(pipeline_layout, renderPass());
 
     BeginCommandBuffer();
-    vkCmdBindPipeline(m_cmdBuffer->GetBufferHandle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
+    vkCmdBindPipeline(m_cmdBuffer->GetBufferHandle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipe.handle());
     vkCmdBindDescriptorSets(m_cmdBuffer->GetBufferHandle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout, 0, 1, &descriptorSet, 0, NULL);
 
     msgFlags = m_errorMonitor->GetState(&msgString);
@@ -1427,47 +1393,13 @@ TEST_F(VkLayerTest, VtxBufferNoRenderPass)
 
     VkShaderObj vs(m_device, bindStateVertShaderText, VK_SHADER_STAGE_VERTEX, this);
 
-    VkPipelineShaderStageCreateInfo pipe_vs_ci = {};
-        pipe_vs_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-        pipe_vs_ci.pNext = NULL;
-        pipe_vs_ci.stage = VK_SHADER_STAGE_VERTEX;
-        pipe_vs_ci.shader = vs.handle();
-        pipe_vs_ci.pSpecializationInfo = NULL;
-
-    VkGraphicsPipelineCreateInfo gp_ci = {};
-        gp_ci.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
-        gp_ci.pNext = NULL;
-        gp_ci.stageCount = 1;
-        gp_ci.pStages = &pipe_vs_ci;
-        gp_ci.pVertexInputState = NULL;
-        gp_ci.pInputAssemblyState = NULL;
-        gp_ci.pTessellationState = NULL;
-        gp_ci.pViewportState = NULL;
-        gp_ci.pRasterState = NULL;
-        gp_ci.pMultisampleState = NULL;
-        gp_ci.pDepthStencilState = NULL;
-        gp_ci.pColorBlendState = NULL;
-        gp_ci.flags = VK_PIPELINE_CREATE_DISABLE_OPTIMIZATION_BIT;
-        gp_ci.layout = pipeline_layout;
-
-    VkPipelineCacheCreateInfo pc_ci = {};
-        pc_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO;
-        pc_ci.pNext = NULL;
-        pc_ci.initialSize = 0;
-        pc_ci.initialData = 0;
-        pc_ci.maxSize = 0;
-
-    VkPipeline pipeline;
-    VkPipelineCache pipelineCache;
-
-    err = vkCreatePipelineCache(m_device->device(), &pc_ci, &pipelineCache);
-    ASSERT_VK_SUCCESS(err);
-    err = vkCreateGraphicsPipelines(m_device->device(), pipelineCache, 1, &gp_ci, &pipeline);
-    ASSERT_VK_SUCCESS(err);
+    VkPipelineObj pipe(m_device);
+    pipe.AddShader(&vs);
+    pipe.CreateVKPipeline(pipeline_layout, renderPass());
 
     BeginCommandBuffer();
     ASSERT_VK_SUCCESS(err);
-    vkCmdBindPipeline(m_cmdBuffer->GetBufferHandle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
+    vkCmdBindPipeline(m_cmdBuffer->GetBufferHandle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipe.handle());
     // Should error before calling to driver so don't care about actual data
     vkCmdBindVertexBuffers(m_cmdBuffer->GetBufferHandle(), 0, 1, NULL, NULL);
 
