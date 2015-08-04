@@ -1152,6 +1152,76 @@ TEST_F(VkLayerTest, NoBeginCmdBuffer)
     }
 }
 
+TEST_F(VkLayerTest, PrimaryCmdBufferFramebufferAndRenderpass)
+{
+    VkFlags         msgFlags;
+    std::string     msgString;
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+    m_errorMonitor->ClearState();
+
+    // Calls CreateCommandBuffer
+    VkCommandBufferObj cmdBuffer(m_device, m_cmdPool);
+
+    // Force the failure by setting the Renderpass and Framebuffer fields with (fake) data
+    const VkCmdBufferBeginInfo cmd_buf_info = {
+        .sType       = VK_STRUCTURE_TYPE_CMD_BUFFER_BEGIN_INFO,
+        .pNext       = NULL,
+        .flags       = VK_CMD_BUFFER_OPTIMIZE_SMALL_BATCH_BIT |
+                       VK_CMD_BUFFER_OPTIMIZE_ONE_TIME_SUBMIT_BIT,
+        .renderPass  = (VkRenderPass)0xcadecade,
+        .framebuffer = (VkFramebuffer)0xcadecade,
+    };
+
+    // The error should be caught by validation of the BeginCommandBuffer call
+    vkBeginCommandBuffer(cmdBuffer.GetBufferHandle(), &cmd_buf_info);
+
+    msgFlags = m_errorMonitor->GetState(&msgString);
+    ASSERT_TRUE(msgFlags & VK_DBG_REPORT_ERROR_BIT) << "Did not receive error passing a non-NULL Framebuffer and Renderpass to BeginCommandBuffer()";
+    if (!strstr(msgString.c_str(),"may not specify framebuffer or renderpass parameters")) {
+        FAIL() << "Error received was not 'vkCreateCommandBuffer():  Primary Command Buffer may not specify framebuffer or renderpass parameters'";
+    }
+}
+
+TEST_F(VkLayerTest, SecondaryCmdBufferFramebufferAndRenderpass)
+{
+    VkFlags         msgFlags;
+    std::string     msgString;
+    VkResult        err;
+    VkCmdBuffer     draw_cmd;
+    VkCmdPool       cmd_pool;
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+    m_errorMonitor->ClearState();
+
+    const VkCmdBufferCreateInfo cmd = {
+        .sType   = VK_STRUCTURE_TYPE_CMD_BUFFER_CREATE_INFO,
+        .pNext   = NULL,
+        .cmdPool = m_cmdPool,
+        .level   = VK_CMD_BUFFER_LEVEL_SECONDARY,
+        .flags   = 0,
+    };
+    err = vkCreateCommandBuffer(m_device->device(), &cmd, &draw_cmd);
+    assert(!err);
+
+    // Force the failure by not setting the Renderpass and Framebuffer fields
+    const VkCmdBufferBeginInfo cmd_buf_info = {
+        .sType = VK_STRUCTURE_TYPE_CMD_BUFFER_BEGIN_INFO,
+        .pNext = NULL,
+        .flags = VK_CMD_BUFFER_OPTIMIZE_SMALL_BATCH_BIT |
+                 VK_CMD_BUFFER_OPTIMIZE_ONE_TIME_SUBMIT_BIT,
+    };
+
+    // The error should be caught by validation of the BeginCommandBuffer call
+    vkBeginCommandBuffer(draw_cmd, &cmd_buf_info);
+
+    msgFlags = m_errorMonitor->GetState(&msgString);
+    ASSERT_TRUE(msgFlags & VK_DBG_REPORT_ERROR_BIT) << "Did not receive error passing NULL Framebuffer/Renderpass to BeginCommandBuffer()";
+    if (!strstr(msgString.c_str(),"must specify framebuffer and renderpass parameters")) {
+        FAIL() << "Error received was not 'vkCreateCommandBuffer():  Secondary Command Buffer must specify framebuffer and renderpass parameters'";
+    }
+}
+
 TEST_F(VkLayerTest, InvalidPipelineCreateState)
 {
     // Attempt to Create Gfx Pipeline w/o a VS

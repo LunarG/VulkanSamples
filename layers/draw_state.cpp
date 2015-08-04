@@ -1979,6 +1979,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateCommandBuffer(VkDevice device, const VkCm
         pCB->flags = pCreateInfo->flags;
         pCB->pool = pCreateInfo->cmdPool;
         pCB->lastVtxBinding = MAX_BINDING;
+        pCB->level = pCreateInfo->level;
         cmdBufferMap[*pCmdBuffer] = pCB;
         loader_platform_thread_unlock_mutex(&globalLock);
         updateCBTracking(*pCmdBuffer);
@@ -1988,6 +1989,23 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateCommandBuffer(VkDevice device, const VkCm
 
 VK_LAYER_EXPORT VkResult VKAPI vkBeginCommandBuffer(VkCmdBuffer cmdBuffer, const VkCmdBufferBeginInfo* pBeginInfo)
 {
+    // Validate command buffer level
+    GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
+    if (pCB) {
+        if (pCB->level == VK_CMD_BUFFER_LEVEL_PRIMARY) {
+            if (pBeginInfo->renderPass.handle || pBeginInfo->framebuffer.handle) {
+                // These should be NULL for a Primary CB
+                log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, 0, 0, DRAWSTATE_BEGIN_CB_INVALID_STATE, "DS",
+                    "vkCreateCommandBuffer():  Primary Command Buffer (%p) may not specify framebuffer or renderpass parameters", (void*)cmdBuffer);
+            }
+        } else {
+            if (!pBeginInfo->renderPass.handle || !pBeginInfo->framebuffer.handle) {
+                // These should NOT be null for an Secondary CB
+                log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, 0, 0, DRAWSTATE_BEGIN_CB_INVALID_STATE, "DS",
+                    "vkCreateCommandBuffer():  Secondary Command Buffers (%p) must specify framebuffer and renderpass parameters", (void*)cmdBuffer);
+            }
+        }
+    }
     VkResult result = get_dispatch_table(draw_state_device_table_map, cmdBuffer)->BeginCommandBuffer(cmdBuffer, pBeginInfo);
     if (VK_SUCCESS == result) {
         GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
