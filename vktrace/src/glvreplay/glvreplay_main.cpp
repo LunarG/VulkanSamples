@@ -43,7 +43,7 @@ glv_SettingInfo g_settings_info[] =
 {
     { "t", "TraceFile", GLV_SETTING_STRING, &replaySettings.pTraceFilePath, &replaySettings.pTraceFilePath, TRUE, "The trace file to replay."},
     { "l", "NumLoops", GLV_SETTING_UINT, &replaySettings.numLoops, &replaySettings.numLoops, TRUE, "The number of times to replay the trace file."},
-    { "s", "ScreenshotList", GLV_SETTING_STRING, &replaySettings.screenshotList, &replaySettings.screenshotList, TRUE, "Comma seperated list of frame numbers to take snapshots of"},
+    { "s", "Screenshot", GLV_SETTING_STRING, &replaySettings.screenshotList, &replaySettings.screenshotList, TRUE, "Comma separated list of frames to take a take snapshots of"},
 };
 
 glv_SettingGroup g_replaySettingGroup =
@@ -166,6 +166,38 @@ int main(int argc, char **argv)
 
     // merge settings so that new settings will get written into the settings file
     glv_SettingGroup_merge(&g_replaySettingGroup, &pAllSettings, &numAllSettings);
+
+    // Set up environment for screenshot
+    if (replaySettings.screenshotList != NULL)
+    {
+        if (glv_get_global_var(ENV_LAYERS_PATH) == NULL) {
+            glv_LogAlways(ENV_LAYERS_PATH "not set in environment, -s option will not work!");
+        } else {
+            char *evar;
+
+            // Set env var that communicates list to ScreenShot layer
+            glv_set_global_var("_VK_SCREENSHOT", replaySettings.screenshotList);
+
+            // Make sure ScreenShot is in layer names
+            evar = glv_get_global_var(ENV_LAYER_NAMES);
+            if (!evar) {
+                glv_set_global_var(ENV_LAYER_NAMES, "ScreenShot");
+            } else if (!strstr(evar, "ScreenShot")) {
+                // Add ScreenShot to layer names
+                char *lnString = GLV_NEW_ARRAY(char, strlen(evar)+strlen(LAYER_NAMES_SEPARATOR "ScreenShot")+1);
+                if (lnString) {
+                    strcpy(lnString, evar);
+                    strcat(lnString, LAYER_NAMES_SEPARATOR "ScreenShot");
+                    glv_set_global_var(ENV_LAYER_NAMES, lnString);
+                    GLV_DELETE(lnString);
+                }
+            }
+        }
+    }
+    else
+    {
+        glv_set_global_var("_VK_SCREENSHOT","");
+    }
 
     // open trace file and read in header
     char* pTraceFile = replaySettings.pTraceFilePath;

@@ -129,8 +129,20 @@ char *glv_get_global_var(const char *name)
 #if defined(PLATFORM_LINUX)
     return getenv(name);
 #else
-    return NULL;
-    //TODO add code for reading from Windows registry
+    // TODO: add code for reading from Windows registry
+    // For now we just return the result from getenv
+    return getenv(name);
+#endif
+}
+
+void glv_set_global_var(const char *name, const char *val)
+{
+#if defined(PLATFORM_LINUX)
+    setenv(name, val, 1);
+#else
+    // TODO add code for writing to Windows registry
+    // For now we just do _putenv_s
+    _putenv_s(name, val);
 #endif
 }
 

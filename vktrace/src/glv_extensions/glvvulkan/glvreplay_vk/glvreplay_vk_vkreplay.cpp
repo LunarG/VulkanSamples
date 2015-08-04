@@ -27,7 +27,6 @@
 #include "glvreplay_vk_vkreplay.h"
 #include "glvreplay_vk.h"
 #include "glvreplay_vk_settings.h"
-#include "glvreplay_vk_write_ppm.h"
 
 #include <algorithm>
 #include <queue>
@@ -47,9 +46,6 @@ vkReplay::vkReplay(glvreplay_settings *pReplaySettings)
     m_pCBDump = NULL;
 //    m_pGlvSnapshotPrint = NULL;
     m_objMapper.m_adjustForGPU = false;
-    if (g_pReplaySettings && g_pReplaySettings->screenshotList) {
-        process_screenshot_list(g_pReplaySettings->screenshotList);
-    }
 }
 
 vkReplay::~vkReplay()

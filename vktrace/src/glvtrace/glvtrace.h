@@ -45,6 +45,7 @@ typedef struct glvtrace_settings
     char* trace_library[16];
     BOOL print_trace_messages;
     BOOL unique_output;
+    char* screenshotList;
 } glvtrace_settings;
 
 extern glvtrace_settings g_settings;

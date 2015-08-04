@@ -90,6 +90,9 @@ glv_thread_id glv_platform_get_thread_id();
 // Get the Registry or Environment variable
 char *glv_get_global_var(const char *);
 
+// Set the Registry or Environment variable
+void glv_set_global_var(const char *, const char *);
+
 // Provides out_array_length uint32s of random data from a secure service
 size_t glv_platform_rand_s(uint32_t* out_array, size_t byteCount);
 
@@ -131,3 +134,14 @@ void glv_delete_critical_section(GLV_CRITICAL_SECTION* pCriticalSection);
 #endif
 
 BOOL glv_platform_remote_load_library(glv_process_handle pProcessHandle, const char* dllPath, glv_thread* pTracingThread, char **ldPreload);
+
+// Env vars
+#if defined(PLATFORM_LINUX)
+    #define ENV_LAYERS_PATH "VK_LAYER_DIRS"
+    #define ENV_LAYER_NAMES "VK_DEVICE_LAYERS"
+    #define LAYER_NAMES_SEPARATOR ":"
+#else
+    #define ENV_LAYERS_PATH "VK_LAYER_FOLDERS"
+    #define ENV_LAYER_NAMES "VK_DEVICE_LAYERS"
+    #define LAYER_NAMES_SEPARATOR ";"
+#endif

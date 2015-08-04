@@ -1153,6 +1153,9 @@ class StructWrapperGen:
         header.append('}\n')
         header.append('\n')
         header.append("string dynamic_display(const void* pStruct, const string prefix);\n")
+        header.append('#ifdef _WIN32')
+        header.append('#define snprintf _snprintf')
+        header.append('#endif\n')
         return "".join(header)
 
     def _generateSizeHelperFunctions(self):

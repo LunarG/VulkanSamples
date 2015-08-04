@@ -48,6 +48,7 @@ glv_SettingInfo g_settings_info[] =
     { "w", "WorkingDir", GLV_SETTING_STRING, &g_settings.working_dir, &g_default_settings.working_dir, TRUE, "The program's working directory."},
     { "o", "OutputTrace", GLV_SETTING_STRING, &g_settings.output_trace, &g_default_settings.output_trace, TRUE, "Path to the generated output trace file."},
     { "u", "UniqueOutput", GLV_SETTING_BOOL, &g_settings.unique_output, &g_default_settings.unique_output, TRUE, "Generate unique output trace filenames if the specified one already exists."},
+    { "s", "ScreenShot", GLV_SETTING_STRING, &g_settings.screenshotList, &g_default_settings.screenshotList, TRUE, "Coma separated list of frame numbers on which to take a screen snapsot."},
     { "l0", "TraceLibrary0", GLV_SETTING_STRING, &g_settings.trace_library[0], NULL, TRUE, "Path to the dynamic tracer library to be injected, may use [0-15]."},
     { "l1", "TraceLibrary1", GLV_SETTING_STRING, &g_settings.trace_library[1], NULL, FALSE, "Path to the dynamic tracer library to be injected, may use [0-15]."},
     { "l2", "TraceLibrary2", GLV_SETTING_STRING, &g_settings.trace_library[2], NULL, FALSE, "Path to the dynamic tracer library to be injected, may use [0-15]."},
@@ -66,7 +67,7 @@ glv_SettingInfo g_settings_info[] =
     { "l15", "TraceLibrary15", GLV_SETTING_STRING, &g_settings.trace_library[15], NULL, FALSE, "Path to the dynamic tracer library to be injected, may use [0-15]."},
     { "ptm", "PrintTraceMessages", GLV_SETTING_BOOL, &g_settings.print_trace_messages, &g_default_settings.print_trace_messages, TRUE, "Print trace messages to glvtrace console."},
 
-    //{ "s", "pause", GLV_SETTING_BOOL, &g_settings.pause, &g_default_settings.pause, TRUE, "Wait for a key at startup (so a debugger can be attached)" },
+    //{ "z", "pauze", GLV_SETTING_BOOL, &g_settings.pause, &g_default_settings.pause, TRUE, "Wait for a key at startup (so a debugger can be attached)" },
     //{ "q", "quiet", GLV_SETTING_BOOL, &g_settings.quiet, &g_default_settings.quiet, TRUE, "Disable warning, verbose, and debug output" },
     //{ "v", "verbose", GLV_SETTING_BOOL, &g_settings.verbose, &g_default_settings.verbose, TRUE, "Enable verbose output" },
     //{ "d", "debug", GLV_SETTING_BOOL, &g_settings.debug, &g_default_settings.debug, TRUE, "Enable verbose debug information" },
@@ -268,6 +269,7 @@ int main(int argc, char* argv[])
     g_default_settings.output_trace = glv_copy_and_append(execDir, GLV_PATH_SEPARATOR, "glvtrace_out.glv");
     g_default_settings.print_trace_messages = FALSE;
     g_default_settings.unique_output = FALSE;
+    g_default_settings.screenshotList = NULL;
 
     // free binary directory string
     glv_free(execDir);
@@ -335,6 +337,42 @@ int main(int argc, char* argv[])
         }
     }
 
+    if (g_settings.screenshotList)
+    {
+        char *evar;
+
+        evar=glv_get_global_var(ENV_LAYERS_PATH);
+        if (!evar || !*evar) {
+            // TODO: Is this an absolute restriction? Remove this check?
+            glv_LogAlways(ENV_LAYERS_PATH " not set in enviroment, -s option will not work!");
+        } else {
+            // Export list to screenshot layer
+            glv_set_global_var("_VK_SCREENSHOT", g_settings.screenshotList);
+
+            // Make sure ScreenShot is in layer names
+            evar=glv_get_global_var(ENV_LAYER_NAMES);
+            if (!evar) {
+                glv_set_global_var(ENV_LAYER_NAMES, "ScreenShot");
+            } else if (!strstr(evar, "ScreenShot"))
+            {
+                // Add ScreenShot to layer names
+                char *lnString = GLV_NEW_ARRAY(char,strlen(evar)+strlen(LAYER_NAMES_SEPARATOR "ScreenShot")+1);
+                if(lnString) {
+                    strcpy(lnString, evar);
+                    strcat(lnString, LAYER_NAMES_SEPARATOR "ScreenShot");
+                    glv_set_global_var(ENV_LAYER_NAMES, lnString);
+                    GLV_DELETE(lnString);
+                }
+            }
+        }
+    }
+    else
+    {
+        glv_set_global_var("_VK_SCREENSHOT","");
+    }
+
+
+
     do {
         // Create and start the process or run in server mode
 
@@ -345,8 +383,7 @@ int main(int argc, char* argv[])
         {
             procInfo.exeName = glv_allocate_and_copy(g_settings.program);
             procInfo.processArgs = glv_allocate_and_copy(g_settings.arguments);
-            const char pSep[1] = { ' ' };
-            procInfo.fullProcessCmdLine = glv_copy_and_append(g_settings.program, pSep, g_settings.arguments);
+            procInfo.fullProcessCmdLine = glv_copy_and_append(g_settings.program, " ", g_settings.arguments);
             procInfo.workingDirectory = glv_allocate_and_copy(g_settings.working_dir);
         }
 

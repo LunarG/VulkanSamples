@@ -66,70 +66,22 @@ BOOL glv_process_spawn(glv_process_info* pInfo)
     }
     else if (pInfo->processId == 0)
     {
-        char *envp[5];
-        envp[0] = pInfo->processLDPreload;
-        envp[4] = (char *) (NULL);
-        static char default_disp[] = "DISPLAY=:0";
-        char * libvk_drivers_path = (char *) (NULL);
-        char * env_display = (char *) NULL;
-        char * ld_library_path = (char *) NULL;
-        char * args[128];
-        const char delim[]= " \t";
+        // Inside new process
+        char *args[128];
+        const char delim[] = " \t";
         unsigned int idx;
-        // inside new process
-        // change process name so the the tracer DLLs will behave as expected when loaded.
+
+        glv_set_global_var("LD_PRELOAD", strchr(pInfo->processLDPreload, '=')+1);
+
+        // Change process name so the the tracer DLLs will behave as expected when loaded.
         // NOTE: Must be 15 characters or less.
         const char * tmpProcName = "glvChildProcess";
         prctl(PR_SET_NAME, (unsigned long)tmpProcName, 0, 0, 0);
 
-        // change working directory
+        // Change working directory
         if (chdir(pInfo->workingDirectory) == -1)
         {
             glv_LogError("Failed to set working directory.");
-        }
-
-        env_display = getenv("DISPLAY");
-        if (env_display != NULL)
-        {
-            char *disp = malloc(strlen(env_display) + strlen("DISPLAY=") + 1);
-            if (disp == NULL)
-                glv_LogError("Failed to malloc for env_display in glv_process_spawn().");
-            snprintf(disp, strlen(env_display) + strlen("DISPLAY=") + 1, "DISPLAY=%s", env_display);
-
-            envp[1] = disp;
-        } else
-        {
-            envp[1] = default_disp;
-        }
-
-        // TODO this needs to be generalized for other drivers
-        libvk_drivers_path = getenv("VK_ICD_FILENAMES");
-        if (libvk_drivers_path == NULL)
-        {
-            glv_LogWarning("VK_ICD_FILENAMES env var was not set. We recommend that you set it.");
-            envp[2] = NULL;
-        }
-        else
-        {
-            char *dPath = malloc(strlen(libvk_drivers_path) + strlen("VK_ICD_FILENAMES=") + 1);
-            if (dPath == NULL)
-                glv_LogError("Failed to malloc in glv_process_spawn().");
-            snprintf(dPath, strlen(libvk_drivers_path) + strlen("VK_ICD_FILENAMES=") + 1, "VK_ICD_FILENAMES=%s", libvk_drivers_path);
-            envp[2] = dPath;
-        }
-
-        ld_library_path = getenv("LD_LIBRARY_PATH");
-        if (ld_library_path != NULL)
-        {
-            char *ld_lib = malloc(strlen(ld_library_path) + strlen("LD_LIBRARY_PATH=") + 1);
-            if (ld_lib == NULL)
-                glv_LogError("Failed to malloc for LD_LIBRARY_PATH in glv_process_spawn().");
-            snprintf(ld_lib, strlen(ld_library_path) + strlen("LD_LIBRARY_PATH=") + 1, "LD_LIBRARY_PATH=%s", ld_library_path);
-
-            envp[3] = ld_lib;
-        } else
-        {
-            envp[3] = NULL;
         }
 
         args[0] = pInfo->exeName;
@@ -141,13 +93,7 @@ BOOL glv_process_spawn(glv_process_info* pInfo)
             idx++;
             args[idx] = strtok(NULL, delim);
         }
-        glv_LogDebug("exec process=%s argc=%u \n     env0:%s\n     env2:%s\n     env3:%s",
-                pInfo->exeName, idx, (envp[0] == NULL) ? "" : envp[0],
-                (envp[2] == NULL) ? "" : envp[2],
-                (envp[3] == NULL) ? "" : envp[3]);
-        extern char **environ;
-        environ = envp;
-
+        glv_LogDebug("exec process=%s argc=%u\n", pInfo->exeName, idx);
         if (execv(pInfo->exeName, args) < 0)
         {
             glv_LogError("Failed to spawn process.");
