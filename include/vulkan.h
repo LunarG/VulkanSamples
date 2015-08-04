@@ -41,7 +41,7 @@ extern "C" {
     ((major << 22) | (minor << 12) | patch)
 
 // Vulkan API version supported by this file
-#define VK_API_VERSION VK_MAKE_VERSION(0, 144, 0)
+#define VK_API_VERSION VK_MAKE_VERSION(0, 145, 0)
 
 
 #define VK_DEFINE_HANDLE(obj) typedef struct obj##_T* obj;
@@ -84,6 +84,7 @@ extern "C" {
 #define VK_TRUE                           1
 #define VK_FALSE                          0
 #define VK_NULL_HANDLE                    0
+#define VK_QUEUE_FAMILY_IGNORED           UINT32_MAX
 #define VK_MAX_PHYSICAL_DEVICE_NAME       256
 #define VK_UUID_LENGTH                    16
 #define VK_MAX_MEMORY_TYPES               32
@@ -889,10 +890,6 @@ typedef enum {
 } VkMemoryHeapFlagBits;
 typedef VkFlags VkMemoryHeapFlags;
 
-typedef enum {
-    VK_DEVICE_CREATE_VALIDATION_BIT = 0x00000001,
-} VkDeviceCreateFlagBits;
-typedef VkFlags VkDeviceCreateFlags;
 typedef VkFlags VkMemoryMapFlags;
 
 typedef enum {
@@ -1343,7 +1340,6 @@ typedef struct {
     uint32_t                                    extensionCount;
     const char*const*                           ppEnabledExtensionNames;
     const VkPhysicalDeviceFeatures*             pEnabledFeatures;
-    VkDeviceCreateFlags                         flags;
 } VkDeviceCreateInfo;
 
 typedef struct {

@@ -1828,7 +1828,6 @@ static void demo_init_vk(struct demo *demo)
         .ppEnabledLayerNames = (const char *const*) ((demo->validate) ? device_validation_layers : NULL),
         .extensionCount = enabled_extension_count,
         .ppEnabledExtensionNames = (const char *const*) extension_names,
-        .flags = 0,
     };
 
     if (demo->validate) {

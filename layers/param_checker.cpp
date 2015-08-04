@@ -732,46 +732,6 @@ std::string EnumeratorString(VkMemoryHeapFlagBits const& enumerator)
 }
 
 static
-bool ValidateEnumerator(VkDeviceCreateFlagBits const& enumerator)
-{
-    VkDeviceCreateFlagBits allFlags = (VkDeviceCreateFlagBits)(VK_DEVICE_CREATE_VALIDATION_BIT);
-    if(enumerator & (~allFlags))
-    {
-        return false;
-    }
-
-    return true;
-}
-
-static
-std::string EnumeratorString(VkDeviceCreateFlagBits const& enumerator)
-{
-    if(!ValidateEnumerator(enumerator))
-    {
-        return "unrecognized enumerator";
-    }
-
-    std::vector<std::string> strings;
-    if(enumerator & VK_DEVICE_CREATE_VALIDATION_BIT)
-    {
-        strings.push_back("VK_DEVICE_CREATE_VALIDATION_BIT");
-    }
-
-    std::string enumeratorString;
-    for(auto const& string : strings)
-    {
-        enumeratorString += string;
-
-        if(string != strings.back())
-        {
-            enumeratorString += '|';
-        }
-    }
-
-    return enumeratorString;
-}
-
-static
 bool ValidateEnumerator(VkSparseImageFormatFlagBits const& enumerator)
 {
     VkSparseImageFormatFlagBits allFlags = (VkSparseImageFormatFlagBits)(VK_SPARSE_IMAGE_FMT_NONSTD_BLOCK_SIZE_BIT |

@@ -290,7 +290,6 @@ void Device::init(std::vector<const char *> &layers, std::vector<const char *> &
     dev_info.ppEnabledLayerNames = layers.data();
     dev_info.extensionCount = extensions.size();
     dev_info.ppEnabledExtensionNames = extensions.data();
-    dev_info.flags = 0;
 
     init(dev_info);
 }

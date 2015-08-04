@@ -422,7 +422,6 @@ static void app_dev_init(struct app_dev *dev, struct app_gpu *gpu)
         .ppEnabledLayerNames = NULL,
         .extensionCount = 0,
         .ppEnabledExtensionNames = NULL,
-        .flags = 0,
     };
     VkResult U_ASSERT_ONLY err;
     // Extensions to enable
