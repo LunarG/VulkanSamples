@@ -1164,14 +1164,14 @@ TEST_F(VkLayerTest, PrimaryCmdBufferFramebufferAndRenderpass)
     VkCommandBufferObj cmdBuffer(m_device, m_cmdPool);
 
     // Force the failure by setting the Renderpass and Framebuffer fields with (fake) data
-    const VkCmdBufferBeginInfo cmd_buf_info = {
-        .sType       = VK_STRUCTURE_TYPE_CMD_BUFFER_BEGIN_INFO,
-        .pNext       = NULL,
-        .flags       = VK_CMD_BUFFER_OPTIMIZE_SMALL_BATCH_BIT |
-                       VK_CMD_BUFFER_OPTIMIZE_ONE_TIME_SUBMIT_BIT,
-        .renderPass  = (VkRenderPass)0xcadecade,
-        .framebuffer = (VkFramebuffer)0xcadecade,
-    };
+    VkCmdBufferBeginInfo cmd_buf_info = {};
+    cmd_buf_info.sType = VK_STRUCTURE_TYPE_CMD_BUFFER_BEGIN_INFO;
+    cmd_buf_info.pNext = NULL;
+    cmd_buf_info.flags = VK_CMD_BUFFER_OPTIMIZE_SMALL_BATCH_BIT |
+                         VK_CMD_BUFFER_OPTIMIZE_ONE_TIME_SUBMIT_BIT;
+    cmd_buf_info.renderPass = (VkRenderPass)0xcadecade;
+    cmd_buf_info.framebuffer = (VkFramebuffer)0xcadecade;
+
 
     // The error should be caught by validation of the BeginCommandBuffer call
     vkBeginCommandBuffer(cmdBuffer.GetBufferHandle(), &cmd_buf_info);
@@ -1194,23 +1194,22 @@ TEST_F(VkLayerTest, SecondaryCmdBufferFramebufferAndRenderpass)
     ASSERT_NO_FATAL_FAILURE(InitState());
     m_errorMonitor->ClearState();
 
-    const VkCmdBufferCreateInfo cmd = {
-        .sType   = VK_STRUCTURE_TYPE_CMD_BUFFER_CREATE_INFO,
-        .pNext   = NULL,
-        .cmdPool = m_cmdPool,
-        .level   = VK_CMD_BUFFER_LEVEL_SECONDARY,
-        .flags   = 0,
-    };
+    VkCmdBufferCreateInfo cmd = {};
+    cmd.sType = VK_STRUCTURE_TYPE_CMD_BUFFER_CREATE_INFO;
+    cmd.pNext = NULL;
+    cmd.cmdPool = m_cmdPool;
+    cmd.level = VK_CMD_BUFFER_LEVEL_SECONDARY;
+    cmd.flags = 0;
+
     err = vkCreateCommandBuffer(m_device->device(), &cmd, &draw_cmd);
     assert(!err);
 
     // Force the failure by not setting the Renderpass and Framebuffer fields
-    const VkCmdBufferBeginInfo cmd_buf_info = {
-        .sType = VK_STRUCTURE_TYPE_CMD_BUFFER_BEGIN_INFO,
-        .pNext = NULL,
-        .flags = VK_CMD_BUFFER_OPTIMIZE_SMALL_BATCH_BIT |
-                 VK_CMD_BUFFER_OPTIMIZE_ONE_TIME_SUBMIT_BIT,
-    };
+    VkCmdBufferBeginInfo cmd_buf_info = {};
+    cmd_buf_info.sType = VK_STRUCTURE_TYPE_CMD_BUFFER_BEGIN_INFO;
+    cmd_buf_info.pNext = NULL;
+    cmd_buf_info.flags = VK_CMD_BUFFER_OPTIMIZE_SMALL_BATCH_BIT |
+                         VK_CMD_BUFFER_OPTIMIZE_ONE_TIME_SUBMIT_BIT;
 
     // The error should be caught by validation of the BeginCommandBuffer call
     vkBeginCommandBuffer(draw_cmd, &cmd_buf_info);
