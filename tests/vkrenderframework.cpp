@@ -398,8 +398,8 @@ void VkRenderFramework::InitRenderTarget(uint32_t targets, VkAttachmentView *dsB
     m_renderPassBeginInfo.framebuffer = m_framebuffer;
     m_renderPassBeginInfo.renderArea.extent.width = m_width;
     m_renderPassBeginInfo.renderArea.extent.height = m_height;
-    m_renderPassBeginInfo.attachmentCount = m_renderPassClearValues.size();
-    m_renderPassBeginInfo.pAttachmentClearValues = m_renderPassClearValues.data();
+    m_renderPassBeginInfo.clearValueCount = m_renderPassClearValues.size();
+    m_renderPassBeginInfo.pClearValues = m_renderPassClearValues.data();
 }
 
 

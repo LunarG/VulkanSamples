@@ -355,8 +355,8 @@ static void demo_draw_build_cmd(struct demo *demo)
         .renderArea.offset.y = 0,
         .renderArea.extent.width = demo->width,
         .renderArea.extent.height = demo->height,
-        .attachmentCount = 2,
-        .pAttachmentClearValues = clear_values,
+        .clearValueCount = 2,
+        .pClearValues = clear_values,
     };
     VkResult U_ASSERT_ONLY err;
 

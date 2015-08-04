@@ -8100,7 +8100,7 @@ bool PreCmdBeginRenderPass(
         "vkCmdBeginRenderPass parameter, VkStructureType pRenderPassBegin->sType, is an invalid enumerator");
         return false;
     }
-    if(pRenderPassBegin->pAttachmentClearValues != nullptr)
+    if(pRenderPassBegin->pClearValues != nullptr)
     {
     }
     }

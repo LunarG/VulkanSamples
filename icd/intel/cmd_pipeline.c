@@ -3669,7 +3669,7 @@ ICD_EXPORT void VKAPI vkCmdBeginRenderPass(
     for (i = 0; i < rp->attachment_count; i++) {
         const struct intel_render_pass_attachment *att = &rp->attachments[i];
         const VkClearValue *clear_val =
-            &pRenderPassBegin->pAttachmentClearValues[i];
+            &pRenderPassBegin->pClearValues[i];
         VkImageSubresourceRange range;
 
         if (!att->clear_on_load)
