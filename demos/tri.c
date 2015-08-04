@@ -1394,16 +1394,9 @@ static void demo_prepare_descriptor_set(struct demo *demo)
 
 static void demo_prepare_framebuffers(struct demo *demo)
 {
-    VkAttachmentBindInfo attachments[2] = {
-        [0] = {
-            .view.handle = VK_NULL_HANDLE,
-            .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-        },
-        [1] = {
-            .view = demo->depth.view,
-            .layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
-        },
-    };
+    VkAttachmentView attachments[2];
+    attachments[1] = demo->depth.view;
+
     const VkFramebufferCreateInfo fb_info = {
          .sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
          .pNext = NULL,
@@ -1418,7 +1411,7 @@ static void demo_prepare_framebuffers(struct demo *demo)
     uint32_t i;
 
     for (i = 0; i < DEMO_BUFFER_COUNT; i++) {
-        attachments[0].view = demo->buffers[i].view;
+        attachments[0]= demo->buffers[i].view;
         err = vkCreateFramebuffer(demo->device, &fb_info, &demo->framebuffers[i]);
         assert(!err);
     }

@@ -41,14 +41,14 @@ extern "C" {
     ((major << 22) | (minor << 12) | patch)
 
 // Vulkan API version supported by this file
-#define VK_API_VERSION VK_MAKE_VERSION(0, 140, 0)
+#define VK_API_VERSION VK_MAKE_VERSION(0, 142, 0)
 
 
 #define VK_DEFINE_HANDLE(obj) typedef struct obj##_T* obj;
 
 
 #if defined(__cplusplus)
-    #if (_MSC_VER >= 1800 || __cplusplus >= 201103L)
+    #if ((defined(_MSC_VER) && _MSC_VER >= 1800) || __cplusplus >= 201103L)
         // The bool operator only works if there are no implicit conversions from an obj to
         // a bool-compatible type, which can then be used to unintentionally violate type safety.
         // C++11 and above supports the "explicit" keyword on conversion operators to stop this
@@ -1860,16 +1860,11 @@ typedef struct {
 } VkDynamicDepthStencilStateCreateInfo;
 
 typedef struct {
-    VkAttachmentView                            view;
-    VkImageLayout                               layout;
-} VkAttachmentBindInfo;
-
-typedef struct {
     VkStructureType                             sType;
     const void*                                 pNext;
     VkRenderPass                                renderPass;
     uint32_t                                    attachmentCount;
-    const VkAttachmentBindInfo*                 pAttachments;
+    const VkAttachmentView*                     pAttachments;
     uint32_t                                    width;
     uint32_t                                    height;
     uint32_t                                    layers;

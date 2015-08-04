@@ -268,16 +268,16 @@ void VkRenderFramework::InitRenderTarget(uint32_t targets)
     InitRenderTarget(targets, NULL);
 }
 
-void VkRenderFramework::InitRenderTarget(VkAttachmentBindInfo *dsBinding)
+void VkRenderFramework::InitRenderTarget(VkAttachmentView *dsBinding)
 {
     InitRenderTarget(1, dsBinding);
 }
 
-void VkRenderFramework::InitRenderTarget(uint32_t targets, VkAttachmentBindInfo *dsBinding)
+void VkRenderFramework::InitRenderTarget(uint32_t targets, VkAttachmentView *dsBinding)
 {
     std::vector<VkAttachmentDescription> attachments;
     std::vector<VkAttachmentReference> color_references;
-    std::vector<VkAttachmentBindInfo> bindings;
+    std::vector<VkAttachmentView> bindings;
     attachments.reserve(targets + (bool) dsBinding);
     color_references.reserve(targets);
     bindings.reserve(targets + (bool) dsBinding);
@@ -301,8 +301,7 @@ void VkRenderFramework::InitRenderTarget(uint32_t targets, VkAttachmentBindInfo 
     VkClearValue clear = {};
     clear.color = m_clear_color;
 
-    VkAttachmentBindInfo bind = {};
-    bind.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+    VkAttachmentView bind = {};
 
     for (uint32_t i = 0; i < targets; i++) {
         attachments.push_back(att);
@@ -335,7 +334,7 @@ void VkRenderFramework::InitRenderTarget(uint32_t targets, VkAttachmentBindInfo 
         }
 
         m_renderTargets.push_back(img);
-        bind.view  = img->targetView();
+        bind = img->targetView();
 
         bindings.push_back(bind);
     }
@@ -357,8 +356,6 @@ void VkRenderFramework::InitRenderTarget(uint32_t targets, VkAttachmentBindInfo 
         att.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
         att.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
         att.stencilStoreOp = VK_ATTACHMENT_STORE_OP_STORE;
-        att.initialLayout = dsBinding->layout;
-        att.finalLayout = dsBinding->layout;
         attachments.push_back(att);
 
         clear.ds.depth = m_depth_clear_color;
@@ -368,7 +365,6 @@ void VkRenderFramework::InitRenderTarget(uint32_t targets, VkAttachmentBindInfo 
         bindings.push_back(*dsBinding);
 
         subpass.depthStencilAttachment.attachment = targets;
-        subpass.depthStencilAttachment.layout = dsBinding->layout;
     } else {
         subpass.depthStencilAttachment.attachment = VK_ATTACHMENT_UNUSED;
     }
@@ -1349,7 +1345,7 @@ void VkCommandBufferObj::ClearAllBuffers(VkClearColorValue clear_color, float de
 
         // prepare the depth buffer for clear
 
-        memory_barrier.oldLayout = depthStencilObj->BindInfo()->layout;
+        memory_barrier.oldLayout = memory_barrier.newLayout;
         memory_barrier.newLayout = VK_IMAGE_LAYOUT_GENERAL;
         memory_barrier.image = depthStencilObj->handle();
         memory_barrier.subresourceRange = dsRange;
@@ -1363,8 +1359,8 @@ void VkCommandBufferObj::ClearAllBuffers(VkClearColorValue clear_color, float de
 
         // prepare depth buffer for rendering
         memory_barrier.image = depthStencilObj->handle();
+        memory_barrier.newLayout = memory_barrier.oldLayout;
         memory_barrier.oldLayout = VK_IMAGE_LAYOUT_GENERAL;
-        memory_barrier.newLayout = depthStencilObj->BindInfo()->layout;
         memory_barrier.subresourceRange = dsRange;
         vkCmdPipelineBarrier( handle(), src_stages, dest_stages, false, 1, (const void * const*)&pmemory_barrier);
     }
@@ -1521,7 +1517,7 @@ bool VkDepthStencilObj::Initialized()
     return m_initialized;
 }
 
-VkAttachmentBindInfo* VkDepthStencilObj::BindInfo()
+VkAttachmentView* VkDepthStencilObj::BindInfo()
 {
     return &m_attachmentBindInfo;
 }
@@ -1564,6 +1560,5 @@ void VkDepthStencilObj::Init(VkDeviceObj *device, int32_t width, int32_t height,
     view_info.image = handle();
     m_attachmentView.init(*m_device, view_info);
 
-    m_attachmentBindInfo.view = m_attachmentView.handle();
-    m_attachmentBindInfo.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+    m_attachmentBindInfo = m_attachmentView.handle();
 }

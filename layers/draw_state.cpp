@@ -2783,8 +2783,8 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateFramebuffer(VkDevice device, const VkFram
         // Shadow create info and store in map
         VkFramebufferCreateInfo* localFBCI = new VkFramebufferCreateInfo(*pCreateInfo);
         if (pCreateInfo->pAttachments) {
-            localFBCI->pAttachments = new VkAttachmentBindInfo[localFBCI->attachmentCount];
-            memcpy((void*)localFBCI->pAttachments, pCreateInfo->pAttachments, localFBCI->attachmentCount*sizeof(VkAttachmentBindInfo));
+            localFBCI->pAttachments = new VkAttachmentView[localFBCI->attachmentCount];
+            memcpy((void*)localFBCI->pAttachments, pCreateInfo->pAttachments, localFBCI->attachmentCount*sizeof(VkAttachmentView));
         }
         frameBufferMap[pFramebuffer->handle] = localFBCI;
     }

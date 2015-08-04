@@ -6134,13 +6134,6 @@ bool PreCreateFramebuffer(
     }
     if(pCreateInfo->pAttachments != nullptr)
     {
-    if(pCreateInfo->pAttachments->layout < VK_IMAGE_LAYOUT_BEGIN_RANGE ||
-        pCreateInfo->pAttachments->layout > VK_IMAGE_LAYOUT_END_RANGE)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateFramebuffer parameter, VkImageLayout pCreateInfo->pAttachments->layout, is an unrecognized enumerator");
-        return false;
-    }
     }
     }
 

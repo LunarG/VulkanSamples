@@ -57,14 +57,14 @@ public:
     VkDepthStencilObj();
     void Init(VkDeviceObj *device, int32_t width, int32_t height, VkFormat format);
     bool Initialized();
-    VkAttachmentBindInfo* BindInfo();
+    VkAttachmentView* BindInfo();
 
 protected:
     VkDeviceObj                        *m_device;
     bool                                m_initialized;
     vk_testing::AttachmentView          m_attachmentView;
     VkFormat                            m_depth_stencil_fmt;
-    VkAttachmentBindInfo                m_attachmentBindInfo;
+    VkAttachmentView                    m_attachmentBindInfo;
 };
 
 class VkCommandBufferObj;
@@ -84,8 +84,8 @@ public:
     void InitViewport();
     void InitRenderTarget();
     void InitRenderTarget(uint32_t targets);
-    void InitRenderTarget(VkAttachmentBindInfo *dsBinding);
-    void InitRenderTarget(uint32_t targets, VkAttachmentBindInfo *dsBinding);
+    void InitRenderTarget(VkAttachmentView *dsBinding);
+    void InitRenderTarget(uint32_t targets, VkAttachmentView *dsBinding);
     void InitFramework();
     void InitFramework(
             std::vector<const char *> instance_layer_names,
