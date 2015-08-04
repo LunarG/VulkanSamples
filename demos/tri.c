@@ -1019,16 +1019,16 @@ static void demo_prepare_render_pass(struct demo *demo)
         .pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS,
         .flags = 0,
         .inputCount = 0,
-        .inputAttachments = NULL,
+        .pInputAttachments = NULL,
         .colorCount = 1,
-        .colorAttachments = &color_reference,
-        .resolveAttachments = NULL,
+        .pColorAttachments = &color_reference,
+        .pResolveAttachments = NULL,
         .depthStencilAttachment = {
             .attachment = 1,
             .layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
         },
         .preserveCount = 0,
-        .preserveAttachments = NULL,
+        .pPreserveAttachments = NULL,
     };
     const VkRenderPassCreateInfo rp_info = {
         .sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO,

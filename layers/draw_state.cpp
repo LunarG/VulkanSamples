@@ -644,10 +644,10 @@ static void validatePipelineState(const GLOBAL_CB_NODE* pCB, const VkPipelineBin
             for (i = 0; i < pSD->colorCount; i++) {
                 uint32_t samples;
 
-                if (pSD->colorAttachments[i].attachment == VK_ATTACHMENT_UNUSED)
+                if (pSD->pColorAttachments[i].attachment == VK_ATTACHMENT_UNUSED)
                     continue;
 
-                samples = pRPCI->pAttachments[pSD->colorAttachments[i].attachment].samples;
+                samples = pRPCI->pAttachments[pSD->pColorAttachments[i].attachment].samples;
                 if (subpassNumSamples == 0) {
                     subpassNumSamples = samples;
                 } else if (subpassNumSamples != samples) {
@@ -2808,30 +2808,30 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateRenderPass(VkDevice device, const VkRende
             for (uint32_t i = 0; i < localRPCI->subpassCount; i++) {
                 VkSubpassDescription *subpass = (VkSubpassDescription *) &localRPCI->pSubpasses[i];
                 const uint32_t attachmentCount = subpass->inputCount +
-                    subpass->colorCount * (1 + (subpass->resolveAttachments?1:0)) +
+                    subpass->colorCount * (1 + (subpass->pResolveAttachments?1:0)) +
                     subpass->preserveCount;
                 VkAttachmentReference *attachments = new VkAttachmentReference[attachmentCount];
 
-                memcpy(attachments, subpass->inputAttachments,
+                memcpy(attachments, subpass->pInputAttachments,
                         sizeof(attachments[0]) * subpass->inputCount);
-                subpass->inputAttachments = attachments;
+                subpass->pInputAttachments = attachments;
                 attachments += subpass->inputCount;
 
-                memcpy(attachments, subpass->colorAttachments,
+                memcpy(attachments, subpass->pColorAttachments,
                         sizeof(attachments[0]) * subpass->colorCount);
-                subpass->colorAttachments = attachments;
+                subpass->pColorAttachments = attachments;
                 attachments += subpass->colorCount;
 
-                if (subpass->resolveAttachments) {
-                    memcpy(attachments, subpass->resolveAttachments,
+                if (subpass->pResolveAttachments) {
+                    memcpy(attachments, subpass->pResolveAttachments,
                             sizeof(attachments[0]) * subpass->colorCount);
-                    subpass->resolveAttachments = attachments;
+                    subpass->pResolveAttachments = attachments;
                     attachments += subpass->colorCount;
                 }
 
-                memcpy(attachments, subpass->preserveAttachments,
+                memcpy(attachments, subpass->pPreserveAttachments,
                         sizeof(attachments[0]) * subpass->preserveCount);
-                subpass->preserveAttachments = attachments;
+                subpass->pPreserveAttachments = attachments;
             }
         }
         if (pCreateInfo->pDependencies) {

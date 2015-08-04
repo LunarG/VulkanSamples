@@ -160,10 +160,10 @@ VkResult intel_render_pass_create(struct intel_dev *dev,
 
         for (j = 0; j < subpass_info->colorCount; j++) {
             const VkAttachmentReference *color_ref =
-                &subpass_info->colorAttachments[j];
+                &subpass_info->pColorAttachments[j];
             const VkAttachmentReference *resolve_ref =
-                (subpass_info->resolveAttachments) ?
-                &subpass_info->resolveAttachments[j] : NULL;
+                (subpass_info->pResolveAttachments) ?
+                &subpass_info->pResolveAttachments[j] : NULL;
 
             subpass->color_indices[j] = color_ref->attachment;
             subpass->resolve_indices[j] = (resolve_ref) ?

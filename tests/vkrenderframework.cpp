@@ -345,10 +345,10 @@ void VkRenderFramework::InitRenderTarget(uint32_t targets, VkAttachmentView *dsB
     subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
     subpass.flags = 0;
     subpass.inputCount = 0;
-    subpass.inputAttachments = NULL;
+    subpass.pInputAttachments = NULL;
     subpass.colorCount = targets;
-    subpass.colorAttachments = color_references.data();
-    subpass.resolveAttachments = NULL;
+    subpass.pColorAttachments = color_references.data();
+    subpass.pResolveAttachments = NULL;
 
     if (dsBinding) {
         att.format = m_depth_stencil_fmt;
@@ -370,7 +370,7 @@ void VkRenderFramework::InitRenderTarget(uint32_t targets, VkAttachmentView *dsB
     }
 
     subpass.preserveCount = 0;
-    subpass.preserveAttachments = NULL;
+    subpass.pPreserveAttachments = NULL;
 
     VkRenderPassCreateInfo rp_info = {};
     rp_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;

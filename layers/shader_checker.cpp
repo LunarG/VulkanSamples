@@ -186,7 +186,7 @@ struct render_pass {
 
             color_formats.reserve(subpass->colorCount);
             for (j = 0; j < subpass->colorCount; j++) {
-                const uint32_t att = subpass->colorAttachments[j].attachment;
+                const uint32_t att = subpass->pColorAttachments[j].attachment;
                 const VkFormat format = pCreateInfo->pAttachments[att].format;
 
                 color_formats.push_back(pCreateInfo->pAttachments[att].format);

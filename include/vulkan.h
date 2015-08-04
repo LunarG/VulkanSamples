@@ -41,7 +41,7 @@ extern "C" {
     ((major << 22) | (minor << 12) | patch)
 
 // Vulkan API version supported by this file
-#define VK_API_VERSION VK_MAKE_VERSION(0, 142, 0)
+#define VK_API_VERSION VK_MAKE_VERSION(0, 143, 0)
 
 
 #define VK_DEFINE_HANDLE(obj) typedef struct obj##_T* obj;
@@ -1894,13 +1894,13 @@ typedef struct {
     VkPipelineBindPoint                         pipelineBindPoint;
     VkSubpassDescriptionFlags                   flags;
     uint32_t                                    inputCount;
-    const VkAttachmentReference*                inputAttachments;
+    const VkAttachmentReference*                pInputAttachments;
     uint32_t                                    colorCount;
-    const VkAttachmentReference*                colorAttachments;
-    const VkAttachmentReference*                resolveAttachments;
+    const VkAttachmentReference*                pColorAttachments;
+    const VkAttachmentReference*                pResolveAttachments;
     VkAttachmentReference                       depthStencilAttachment;
     uint32_t                                    preserveCount;
-    const VkAttachmentReference*                preserveAttachments;
+    const VkAttachmentReference*                pPreserveAttachments;
 } VkSubpassDescription;
 
 typedef struct {

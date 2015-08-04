@@ -6287,33 +6287,33 @@ bool PreCreateRenderPass(
         "vkCreateRenderPass parameter, VkPipelineBindPoint pCreateInfo->pSubpasses->pipelineBindPoint, is an unrecognized enumerator");
         return false;
     }
-    if(pCreateInfo->pSubpasses->inputAttachments != nullptr)
+    if(pCreateInfo->pSubpasses->pInputAttachments != nullptr)
     {
-    if(pCreateInfo->pSubpasses->inputAttachments->layout < VK_IMAGE_LAYOUT_BEGIN_RANGE ||
-        pCreateInfo->pSubpasses->inputAttachments->layout > VK_IMAGE_LAYOUT_END_RANGE)
+    if(pCreateInfo->pSubpasses->pInputAttachments->layout < VK_IMAGE_LAYOUT_BEGIN_RANGE ||
+        pCreateInfo->pSubpasses->pInputAttachments->layout > VK_IMAGE_LAYOUT_END_RANGE)
     {
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateRenderPass parameter, VkImageLayout pCreateInfo->pSubpasses->inputAttachments->layout, is an unrecognized enumerator");
+        "vkCreateRenderPass parameter, VkImageLayout pCreateInfo->pSubpasses->pInputAttachments->layout, is an unrecognized enumerator");
         return false;
     }
     }
-    if(pCreateInfo->pSubpasses->colorAttachments != nullptr)
+    if(pCreateInfo->pSubpasses->pColorAttachments != nullptr)
     {
-    if(pCreateInfo->pSubpasses->colorAttachments->layout < VK_IMAGE_LAYOUT_BEGIN_RANGE ||
-        pCreateInfo->pSubpasses->colorAttachments->layout > VK_IMAGE_LAYOUT_END_RANGE)
+    if(pCreateInfo->pSubpasses->pColorAttachments->layout < VK_IMAGE_LAYOUT_BEGIN_RANGE ||
+        pCreateInfo->pSubpasses->pColorAttachments->layout > VK_IMAGE_LAYOUT_END_RANGE)
     {
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateRenderPass parameter, VkImageLayout pCreateInfo->pSubpasses->colorAttachments->layout, is an unrecognized enumerator");
+        "vkCreateRenderPass parameter, VkImageLayout pCreateInfo->pSubpasses->pColorAttachments->layout, is an unrecognized enumerator");
         return false;
     }
     }
-    if(pCreateInfo->pSubpasses->resolveAttachments != nullptr)
+    if(pCreateInfo->pSubpasses->pResolveAttachments != nullptr)
     {
-    if(pCreateInfo->pSubpasses->resolveAttachments->layout < VK_IMAGE_LAYOUT_BEGIN_RANGE ||
-        pCreateInfo->pSubpasses->resolveAttachments->layout > VK_IMAGE_LAYOUT_END_RANGE)
+    if(pCreateInfo->pSubpasses->pResolveAttachments->layout < VK_IMAGE_LAYOUT_BEGIN_RANGE ||
+        pCreateInfo->pSubpasses->pResolveAttachments->layout > VK_IMAGE_LAYOUT_END_RANGE)
     {
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateRenderPass parameter, VkImageLayout pCreateInfo->pSubpasses->resolveAttachments->layout, is an unrecognized enumerator");
+        "vkCreateRenderPass parameter, VkImageLayout pCreateInfo->pSubpasses->pResolveAttachments->layout, is an unrecognized enumerator");
         return false;
     }
     }
@@ -6324,13 +6324,13 @@ bool PreCreateRenderPass(
         "vkCreateRenderPass parameter, VkImageLayout pCreateInfo->pSubpasses->depthStencilAttachment.layout, is an unrecognized enumerator");
         return false;
     }
-    if(pCreateInfo->pSubpasses->preserveAttachments != nullptr)
+    if(pCreateInfo->pSubpasses->pPreserveAttachments != nullptr)
     {
-    if(pCreateInfo->pSubpasses->preserveAttachments->layout < VK_IMAGE_LAYOUT_BEGIN_RANGE ||
-        pCreateInfo->pSubpasses->preserveAttachments->layout > VK_IMAGE_LAYOUT_END_RANGE)
+    if(pCreateInfo->pSubpasses->pPreserveAttachments->layout < VK_IMAGE_LAYOUT_BEGIN_RANGE ||
+        pCreateInfo->pSubpasses->pPreserveAttachments->layout > VK_IMAGE_LAYOUT_END_RANGE)
     {
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateRenderPass parameter, VkImageLayout pCreateInfo->pSubpasses->preserveAttachments->layout, is an unrecognized enumerator");
+        "vkCreateRenderPass parameter, VkImageLayout pCreateInfo->pSubpasses->pPreserveAttachments->layout, is an unrecognized enumerator");
         return false;
     }
     }
