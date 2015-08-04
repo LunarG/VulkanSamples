@@ -385,7 +385,6 @@ static void loader_delete_layer_properties(struct loader_layer_list *layer_list)
 {
     uint32_t i;
 
-    //TODO make sure everything is cleaned up properly
     for (i = 0; i < layer_list->count; i++) {
         if (layer_list->list[i].lib_info.lib_name != NULL)
             free(layer_list->list[i].lib_info.lib_name);
@@ -403,7 +402,6 @@ static void loader_delete_layer_properties(struct loader_layer_list *layer_list)
 static void loader_add_global_extensions(
         const PFN_vkGetGlobalExtensionProperties fp_get_props,
         const char *lib_name,
-        const loader_platform_dl_handle lib_handle,
         const enum extension_origin origin,
         struct loader_extension_list *ext_list)
 {
@@ -441,7 +439,6 @@ static void loader_add_global_extensions(
         memcpy(&ext_props.info, &extension_properties[i], sizeof(VkExtensionProperties));
         //TODO eventually get this from the layer config file
         ext_props.origin = origin;
-        ext_props.lib_name = lib_name;
 
         char spec_version[64];
 
@@ -473,7 +470,6 @@ static void loader_add_physical_device_extensions(
 
     memset(&ext_props, 0, sizeof(ext_props));
     ext_props.origin = origin;
-    ext_props.lib_name = lib_name;
 
     if (get_phys_dev_ext_props) {
         res = get_phys_dev_ext_props(physical_device, NULL, &count, NULL);
@@ -498,7 +494,7 @@ static void loader_add_physical_device_extensions(
                 loader_add_to_ext_list(ext_list, 1, &ext_props);
             }
         } else {
-            loader_log(VK_DBG_REPORT_ERROR_BIT, 0, "Error getting physical device extension info count from Layer %s", ext_props.lib_name);
+            loader_log(VK_DBG_REPORT_ERROR_BIT, 0, "Error getting physical device extension info count from library %s", lib_name);
         }
     }
 
@@ -995,7 +991,6 @@ static void loader_scanned_icd_add(const char *filename)
     loader_add_global_extensions(
                 (PFN_vkGetGlobalExtensionProperties) fp_get_global_ext_props,
                 new_node->lib_name,
-                handle,
                 VK_EXTENSION_ORIGIN_ICD,
                 &new_node->global_extension_list);
 }
@@ -1303,7 +1298,6 @@ static void loader_add_layer_properties(struct loader_layer_list *layer_instance
         loader_log(VK_DBG_REPORT_WARN_BIT, 0, "Unexpected manifest file version (expected 0.9.0), may cause errors");
     free(file_vers);
 
-    //TODO handle freeing the allocations: disable_env , enable_env, GIPA, GDPA, library_path
     //TODO handle multiple layer nodes in the file
     //TODO handle scanned libraries not one per layer property
     layer_node = cJSON_GetObjectItem(json, "layer");
@@ -1322,7 +1316,7 @@ static void loader_add_layer_properties(struct loader_layer_list *layer_instance
             return;                                   \
         temp = cJSON_Print(item);                     \
         temp[strlen(temp) - 1] = '\0';                \
-        var = malloc(strlen(temp) + 1);               \
+        var = loader_stack_alloc(strlen(temp) + 1);   \
         strcpy(var, &temp[1]);                        \
         free(temp);                                   \
         }
@@ -1352,19 +1346,17 @@ static void loader_add_layer_properties(struct loader_layer_list *layer_instance
         props = loader_get_next_layer_property(layer_instance_list);
         props->type = (is_implicit) ? VK_LAYER_TYPE_GLOBAL_IMPLICIT : VK_LAYER_TYPE_GLOBAL_EXPLICIT;
     }
-    free(type);
 
     strncpy(props->info.layerName, name, sizeof(props->info.layerName));
     props->info.layerName[sizeof(props->info.layerName) - 1] = '\0';
-    free(name);
 
-    char *fullpath = malloc(2048);
+    char *fullpath = malloc(MAX_STRING_SIZE);
     char *rel_base;
     if (strchr(library_path, DIRECTORY_SYMBOL) == NULL) {
         // a filename which is assumed in the system directory
         char *def_path = loader_stack_alloc(strlen(DEFAULT_VK_LAYERS_PATH) + 1);
         strcpy(def_path, DEFAULT_VK_LAYERS_PATH);
-        loader_get_fullpath(library_path, def_path, 2048, fullpath);
+        loader_get_fullpath(library_path, def_path, MAX_STRING_SIZE, fullpath);
     }
     else {
         // a relative or absolute path
@@ -1375,19 +1367,18 @@ static void loader_add_layer_properties(struct loader_layer_list *layer_instance
         len = strlen(rel_base);
         rel_base[len] =  DIRECTORY_SYMBOL;
         rel_base[len + 1] = '\0';
-        loader_expand_path(library_path, rel_base, 2048, fullpath);
+        loader_expand_path(library_path, rel_base, MAX_STRING_SIZE, fullpath);
     }
     props->lib_info.lib_name = fullpath;
     props->info.specVersion  = loader_make_version(abi_versions);
     props->info.implVersion  = loader_make_version(implementation_version);
-    free(abi_versions);
-    free(implementation_version);
     strncpy((char *) props->info.description, description, sizeof(props->info.description));
     props->info.description[sizeof(props->info.description) - 1] = '\0';
-    free(description);
     if (is_implicit) {
-        props->disable_env_var.name = disable_environment->child->string;
-        props->disable_env_var.value = disable_environment->child->valuestring;
+        strncpy(props->disable_env_var.name, disable_environment->child->string, sizeof(props->disable_env_var.name));
+        props->disable_env_var.name[sizeof(props->disable_env_var.name) - 1] = '\0';
+        strncpy(props->disable_env_var.value, disable_environment->child->valuestring, sizeof(props->disable_env_var.value));
+        props->disable_env_var.value[sizeof(props->disable_env_var.value) - 1] = '\0';
     }
 
     /**
@@ -1405,7 +1396,7 @@ static void loader_add_layer_properties(struct loader_layer_list *layer_instance
         if (item != NULL)                             \
             temp = cJSON_Print(item);                 \
         temp[strlen(temp) - 1] = '\0';                \
-        var = malloc(strlen(temp) + 1);               \
+        var = loader_stack_alloc(strlen(temp) + 1);   \
         strcpy(var, &temp[1]);                        \
         free(temp);                                   \
         }
@@ -1416,8 +1407,10 @@ static void loader_add_layer_properties(struct loader_layer_list *layer_instance
     if (functions != NULL) {
         GET_JSON_ITEM(functions, vkGetInstanceProcAddr)
         GET_JSON_ITEM(functions, vkGetDeviceProcAddr)
-        props->functions.str_gipa = vkGetInstanceProcAddr;
-        props->functions.str_gdpa = vkGetDeviceProcAddr;
+        strncpy(props->functions.str_gipa, vkGetInstanceProcAddr, sizeof(props->functions.str_gipa));
+        props->functions.str_gipa[sizeof(props->functions.str_gipa) - 1] = '\0';
+        strncpy(props->functions.str_gdpa, vkGetDeviceProcAddr, sizeof(props->functions.str_gdpa));
+        props->functions.str_gdpa[sizeof(props->functions.str_gdpa) - 1] = '\0';
     }
     GET_JSON_OBJECT(layer_node, instance_extensions)
     if (instance_extensions != NULL) {
@@ -1427,11 +1420,9 @@ static void loader_add_layer_properties(struct loader_layer_list *layer_instance
             GET_JSON_ITEM(ext_item, name)
             GET_JSON_ITEM(ext_item, version)
             ext_prop.origin = VK_EXTENSION_ORIGIN_LAYER;
-            ext_prop.lib_name = library_path;
-            strcpy(ext_prop.info.extName, name);
+            strncpy(ext_prop.info.extName, name, sizeof(ext_prop.info.extName));
+            ext_prop.info.extName[sizeof(ext_prop.info.extName) -1] = '\0';
             ext_prop.info.specVersion = loader_make_version(version);
-            free(version);
-            free(name);
             loader_add_to_ext_list(&props->instance_extension_list, 1, &ext_prop);
         }
     }
@@ -1443,18 +1434,18 @@ static void loader_add_layer_properties(struct loader_layer_list *layer_instance
             GET_JSON_ITEM(ext_item, name);
             GET_JSON_ITEM(ext_item, version);
             ext_prop.origin = VK_EXTENSION_ORIGIN_LAYER;
-            ext_prop.lib_name = library_path;
-            strcpy(ext_prop.info.extName, name);
+            strncpy(ext_prop.info.extName, name, sizeof(ext_prop.info.extName));
+            ext_prop.info.extName[sizeof(ext_prop.info.extName) -1] = '\0';
             ext_prop.info.specVersion = loader_make_version(version);
-            free(version);
-            free(name);
             loader_add_to_ext_list(&props->device_extension_list, 1, &ext_prop);
         }
     }
     if (is_implicit) {
         GET_JSON_OBJECT(layer_node, enable_environment)
-        props->enable_env_var.name = enable_environment->child->string;
-        props->enable_env_var.value = enable_environment->child->valuestring;
+        strncpy(props->enable_env_var.name, enable_environment->child->string, sizeof(props->enable_env_var.name));
+        props->enable_env_var.name[sizeof(props->enable_env_var.name) - 1] = '\0';
+        strncpy(props->enable_env_var.value, enable_environment->child->valuestring, sizeof(props->enable_env_var.value));
+        props->enable_env_var.value[sizeof(props->enable_env_var.value) - 1] = '\0';
     }
 #undef GET_JSON_ITEM
 #undef GET_JSON_OBJECT

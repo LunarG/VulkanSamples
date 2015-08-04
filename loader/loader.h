@@ -45,7 +45,7 @@
 
 #define MAX_EXTENSION_NAME_SIZE (VK_MAX_EXTENSION_NAME-1)
 #define MAX_GPUS_PER_ICD 16
-
+#define MAX_STRING_SIZE 1024
 #define VK_MAJOR(version) (version >> 22)
 #define VK_MINOR(version) ((version >> 12) & 0x3ff)
 #define VK_PATCH(version) (version & 0xfff)
@@ -66,7 +66,6 @@ enum layer_type {
 
 struct loader_extension_property {
     VkExtensionProperties info;
-    const char *lib_name;
     enum extension_origin origin;
 };
 
@@ -77,8 +76,8 @@ struct loader_extension_list {
 };
 
 struct loader_name_value {
-    char *name;
-    char *value;
+    char name[MAX_STRING_SIZE];
+    char value[MAX_STRING_SIZE];
 };
 
 struct loader_lib_info {
@@ -88,8 +87,8 @@ struct loader_lib_info {
 };
 
 struct loader_layer_functions {
-    char *str_gipa;
-    char *str_gdpa;
+    char str_gipa[MAX_STRING_SIZE];
+    char str_gdpa[MAX_STRING_SIZE];
     PFN_vkGetInstanceProcAddr get_instance_proc_addr;
     PFN_vkGetDeviceProcAddr get_device_proc_addr;
 };
