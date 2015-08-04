@@ -1238,7 +1238,7 @@ void VkPipelineObj::SetDepthStencil(VkPipelineDepthStencilStateCreateInfo *ds_st
     m_ds_state.front = ds_state->front;
 }
 
-VkResult VkPipelineObj::CreateVKPipeline(VkDescriptorSetObj &descriptorSet, VkRenderPass render_pass)
+VkResult VkPipelineObj::CreateVKPipeline(VkPipelineLayout layout, VkRenderPass render_pass)
 {
     VkGraphicsPipelineCreateInfo info = {};
 
@@ -1263,7 +1263,7 @@ VkResult VkPipelineObj::CreateVKPipeline(VkDescriptorSetObj &descriptorSet, VkRe
     info.sType  = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
     info.pNext  = NULL;
     info.flags  = 0;
-    info.layout = descriptorSet.GetPipelineLayout();
+    info.layout = layout;
 
     m_cb_state.attachmentCount = m_colorAttachments.size();
     m_cb_state.pAttachments = m_colorAttachments.data();

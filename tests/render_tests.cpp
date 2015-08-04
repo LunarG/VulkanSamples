@@ -370,7 +370,7 @@ void VkRenderTest::GenericDrawPreparation(VkCommandBufferObj *cmdBuffer, VkPipel
     cmdBuffer->BindDynamicColorBlendState(m_colorBlend);
     cmdBuffer->BindDynamicDepthStencilState(m_stateDepthStencil);
     descriptorSet.CreateVKDescriptorSet(cmdBuffer);
-    pipelineobj.CreateVKPipeline(descriptorSet, renderPass());
+    pipelineobj.CreateVKPipeline(descriptorSet.GetPipelineLayout(), renderPass());
     cmdBuffer->BindPipeline(pipelineobj);
     cmdBuffer->BindDescriptorSet(descriptorSet);
 }

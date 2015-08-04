@@ -416,7 +416,7 @@ public:
     }
 
     void SetDepthStencil(VkPipelineDepthStencilStateCreateInfo *);
-    VkResult CreateVKPipeline(VkDescriptorSetObj &descriptorSet, VkRenderPass render_pass);
+    VkResult CreateVKPipeline(VkPipelineLayout layout, VkRenderPass render_pass);
 
 protected:
     VkPipelineVertexInputStateCreateInfo          m_vi_state;

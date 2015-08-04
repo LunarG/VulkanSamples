@@ -339,7 +339,7 @@ void VkLayerTest::GenericDrawPreparation(VkCommandBufferObj *cmdBuffer, VkPipeli
 
     pipelineobj.SetDepthStencil(&ds_ci);
     descriptorSet.CreateVKDescriptorSet(cmdBuffer);
-    pipelineobj.CreateVKPipeline(descriptorSet, renderPass());
+    pipelineobj.CreateVKPipeline(descriptorSet.GetPipelineLayout(), renderPass());
     cmdBuffer->BindPipeline(pipelineobj);
     cmdBuffer->BindDescriptorSet(descriptorSet);
 }
@@ -2376,7 +2376,7 @@ TEST_F(VkLayerTest, CreatePipelineVertexOutputNotConsumed)
     descriptorSet.CreateVKDescriptorSet(m_cmdBuffer);
 
     m_errorMonitor->ClearState();
-    pipe.CreateVKPipeline(descriptorSet, renderPass());
+    pipe.CreateVKPipeline(descriptorSet.GetPipelineLayout(), renderPass());
 
     msgFlags = m_errorMonitor->GetState(&msgString);
 
@@ -2425,7 +2425,7 @@ TEST_F(VkLayerTest, CreatePipelineFragmentInputNotProvided)
     descriptorSet.CreateVKDescriptorSet(m_cmdBuffer);
 
     m_errorMonitor->ClearState();
-    pipe.CreateVKPipeline(descriptorSet, renderPass());
+    pipe.CreateVKPipeline(descriptorSet.GetPipelineLayout(), renderPass());
 
     msgFlags = m_errorMonitor->GetState(&msgString);
 
@@ -2476,7 +2476,7 @@ TEST_F(VkLayerTest, CreatePipelineVsFsTypeMismatch)
     descriptorSet.CreateVKDescriptorSet(m_cmdBuffer);
 
     m_errorMonitor->ClearState();
-    pipe.CreateVKPipeline(descriptorSet, renderPass());
+    pipe.CreateVKPipeline(descriptorSet.GetPipelineLayout(), renderPass());
 
     msgFlags = m_errorMonitor->GetState(&msgString);
 
@@ -2534,7 +2534,7 @@ TEST_F(VkLayerTest, CreatePipelineAttribNotConsumed)
     descriptorSet.CreateVKDescriptorSet(m_cmdBuffer);
 
     m_errorMonitor->ClearState();
-    pipe.CreateVKPipeline(descriptorSet, renderPass());
+    pipe.CreateVKPipeline(descriptorSet.GetPipelineLayout(), renderPass());
 
     msgFlags = m_errorMonitor->GetState(&msgString);
 
@@ -2583,7 +2583,7 @@ TEST_F(VkLayerTest, CreatePipelineAttribNotProvided)
     descriptorSet.CreateVKDescriptorSet(m_cmdBuffer);
 
     m_errorMonitor->ClearState();
-    pipe.CreateVKPipeline(descriptorSet, renderPass());
+    pipe.CreateVKPipeline(descriptorSet.GetPipelineLayout(), renderPass());
 
     msgFlags = m_errorMonitor->GetState(&msgString);
 
@@ -2642,7 +2642,7 @@ TEST_F(VkLayerTest, CreatePipelineAttribTypeMismatch)
     descriptorSet.CreateVKDescriptorSet(m_cmdBuffer);
 
     m_errorMonitor->ClearState();
-    pipe.CreateVKPipeline(descriptorSet, renderPass());
+    pipe.CreateVKPipeline(descriptorSet.GetPipelineLayout(), renderPass());
 
     msgFlags = m_errorMonitor->GetState(&msgString);
 
@@ -2702,7 +2702,7 @@ TEST_F(VkLayerTest, CreatePipelineAttribBindingConflict)
     descriptorSet.CreateVKDescriptorSet(m_cmdBuffer);
 
     m_errorMonitor->ClearState();
-    pipe.CreateVKPipeline(descriptorSet, renderPass());
+    pipe.CreateVKPipeline(descriptorSet.GetPipelineLayout(), renderPass());
 
     msgFlags = m_errorMonitor->GetState(&msgString);
 
@@ -2754,7 +2754,7 @@ TEST_F(VkLayerTest, CreatePipelineFragmentOutputNotWritten)
     descriptorSet.CreateVKDescriptorSet(m_cmdBuffer);
 
     m_errorMonitor->ClearState();
-    pipe.CreateVKPipeline(descriptorSet, renderPass());
+    pipe.CreateVKPipeline(descriptorSet.GetPipelineLayout(), renderPass());
 
     msgFlags = m_errorMonitor->GetState(&msgString);
 
@@ -2808,7 +2808,7 @@ TEST_F(VkLayerTest, CreatePipelineFragmentOutputNotConsumed)
     descriptorSet.CreateVKDescriptorSet(m_cmdBuffer);
 
     m_errorMonitor->ClearState();
-    pipe.CreateVKPipeline(descriptorSet, renderPass());
+    pipe.CreateVKPipeline(descriptorSet.GetPipelineLayout(), renderPass());
 
     msgFlags = m_errorMonitor->GetState(&msgString);
 
@@ -2859,7 +2859,7 @@ TEST_F(VkLayerTest, CreatePipelineFragmentOutputTypeMismatch)
     descriptorSet.CreateVKDescriptorSet(m_cmdBuffer);
 
     m_errorMonitor->ClearState();
-    pipe.CreateVKPipeline(descriptorSet, renderPass());
+    pipe.CreateVKPipeline(descriptorSet.GetPipelineLayout(), renderPass());
 
     msgFlags = m_errorMonitor->GetState(&msgString);
 
@@ -2913,7 +2913,7 @@ TEST_F(VkLayerTest, CreatePipelineNonSpirvShader)
     descriptorSet.AppendDummy();
     descriptorSet.CreateVKDescriptorSet(m_cmdBuffer);
 
-    VkResult res = pipe.CreateVKPipeline(descriptorSet, renderPass());
+    VkResult res = pipe.CreateVKPipeline(descriptorSet.GetPipelineLayout(), renderPass());
     /* pipeline creation should have succeeded */
     ASSERT_EQ(VK_SUCCESS, res);
 
