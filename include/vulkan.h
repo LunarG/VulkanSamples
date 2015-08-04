@@ -41,7 +41,7 @@ extern "C" {
     ((major << 22) | (minor << 12) | patch)
 
 // Vulkan API version supported by this file
-#define VK_API_VERSION VK_MAKE_VERSION(0, 146, 0)
+#define VK_API_VERSION VK_MAKE_VERSION(0, 147, 0)
 
 
 #define VK_DEFINE_HANDLE(obj) typedef struct obj##_T* obj;
@@ -76,15 +76,15 @@ extern "C" {
         
 
 
-#define VK_LOD_CLAMP_NONE                 MAX_FLOAT
-#define VK_LAST_MIP_LEVEL                 UINT32_MAX
-#define VK_LAST_ARRAY_SLICE               UINT32_MAX
-#define VK_WHOLE_SIZE                     UINT64_MAX
-#define VK_ATTACHMENT_UNUSED              UINT32_MAX
+#define VK_LOD_CLAMP_NONE                 1000.0f
+#define VK_LAST_MIP_LEVEL                 (~0U)
+#define VK_LAST_ARRAY_SLICE               (~0U)
+#define VK_WHOLE_SIZE                     (~0U)
+#define VK_ATTACHMENT_UNUSED              (~0U)
 #define VK_TRUE                           1
 #define VK_FALSE                          0
 #define VK_NULL_HANDLE                    0
-#define VK_QUEUE_FAMILY_IGNORED           UINT32_MAX
+#define VK_QUEUE_FAMILY_IGNORED           (~0U)
 #define VK_MAX_PHYSICAL_DEVICE_NAME       256
 #define VK_UUID_LENGTH                    16
 #define VK_MAX_MEMORY_TYPES               32
