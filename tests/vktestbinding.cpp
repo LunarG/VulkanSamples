@@ -210,14 +210,15 @@ std::vector<VkExtensionProperties> PhysicalDevice::extensions(const char *pLayer
     return exts;
 }
 
-VkResult PhysicalDevice::set_memory_type(const uint32_t type_bits, VkMemoryAllocInfo *info, const VkFlags properties) const
+VkResult PhysicalDevice::set_memory_type(const uint32_t type_bits, VkMemoryAllocInfo *info, const VkFlags properties, const VkFlags forbid) const
 {
      uint32_t type_mask = type_bits;
      // Search memtypes to find first index with those properties
      for (uint32_t i = 0; i < 32; i++) {
          if ((type_mask & 1) == 1) {
              // Type is available, does it match user properties?
-             if ((memory_properties_.memoryTypes[i].propertyFlags & properties) == properties) {
+             if ((memory_properties_.memoryTypes[i].propertyFlags & properties) == properties &&
+                 (memory_properties_.memoryTypes[i].propertyFlags & forbid) == 0) {
                  info->memoryTypeIndex = i;
                  return VK_SUCCESS;
              }

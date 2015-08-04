@@ -475,6 +475,9 @@ TEST_F(VkLayerTest, MapMemWithoutHostVisibleBit)
 
     mem_alloc.allocationSize = mem_reqs.size;
 
+	err = m_device->phy().set_memory_type(mem_reqs.memoryTypeBits, &mem_alloc, 0, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+	ASSERT_VK_SUCCESS(err);
+
     // allocate memory
     err = vkAllocMemory(m_device->device(), &mem_alloc, &mem);
     ASSERT_VK_SUCCESS(err);
@@ -771,9 +774,10 @@ TEST_F(VkLayerTest, BindMemoryToDestroyedObject)
     vkDestroyImage(m_device->device(), image);
     ASSERT_VK_SUCCESS(err);
 
-    // Now Try to bind memory to this destroyted object
+    // Now Try to bind memory to this destroyed object
     err = vkBindImageMemory(m_device->device(), image, mem, 0);
-    ASSERT_VK_SUCCESS(err);
+    // This may very well return an error.
+    (void) err;
 
     msgFlags = m_errorMonitor->GetState(&msgString);
     ASSERT_TRUE(msgFlags & VK_DBG_REPORT_ERROR_BIT) << "Did not receive an error while binding memory to a destroyed object";
@@ -1036,6 +1040,8 @@ TEST_F(VkLayerTest, DescriptorSetNotUpdated)
     VkResult        err;
 
     ASSERT_NO_FATAL_FAILURE(InitState());
+    ASSERT_NO_FATAL_FAILURE(InitViewport());
+    ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
     m_errorMonitor->ClearState();
     VkDescriptorTypeCount ds_type_count = {};
         ds_type_count.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
@@ -1046,7 +1052,7 @@ TEST_F(VkLayerTest, DescriptorSetNotUpdated)
         ds_pool_ci.pNext = NULL;
         ds_pool_ci.count = 1;
         ds_pool_ci.pTypeCount = &ds_type_count;
- 
+
     VkDescriptorPool ds_pool;
     err = vkCreateDescriptorPool(m_device->device(), VK_DESCRIPTOR_POOL_USAGE_ONE_SHOT, 1, &ds_pool_ci, &ds_pool);
     ASSERT_VK_SUCCESS(err);
@@ -1088,7 +1094,7 @@ TEST_F(VkLayerTest, DescriptorSetNotUpdated)
         pipe_vs_ci.stage = VK_SHADER_STAGE_VERTEX;
         pipe_vs_ci.shader = vs.handle();
         pipe_vs_ci.pSpecializationInfo = NULL;
-    
+
     VkGraphicsPipelineCreateInfo gp_ci = {};
         gp_ci.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
         gp_ci.pNext = NULL;
@@ -1104,7 +1110,7 @@ TEST_F(VkLayerTest, DescriptorSetNotUpdated)
         gp_ci.pColorBlendState = NULL;
         gp_ci.flags = VK_PIPELINE_CREATE_DISABLE_OPTIMIZATION_BIT;
         gp_ci.layout = pipeline_layout;
-   
+
     VkPipelineCacheCreateInfo pc_ci = {};
         pc_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO;
         pc_ci.pNext = NULL;
@@ -1119,9 +1125,6 @@ TEST_F(VkLayerTest, DescriptorSetNotUpdated)
     ASSERT_VK_SUCCESS(err);
     err = vkCreateGraphicsPipelines(m_device->device(), pipelineCache, 1, &gp_ci, &pipeline);
     ASSERT_VK_SUCCESS(err);
-    ASSERT_NO_FATAL_FAILURE(InitState());
-    ASSERT_NO_FATAL_FAILURE(InitViewport());
-    ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
 
     BeginCommandBuffer();
     vkCmdBindPipeline(m_cmdBuffer->GetBufferHandle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
