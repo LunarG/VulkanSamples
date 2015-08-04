@@ -476,7 +476,8 @@ TEST_F(VkLayerTest, MapMemWithoutHostVisibleBit)
     mem_alloc.allocationSize = mem_reqs.size;
 
 	err = m_device->phy().set_memory_type(mem_reqs.memoryTypeBits, &mem_alloc, 0, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
-	ASSERT_VK_SUCCESS(err);
+    if(err != VK_SUCCESS) // If we can't find any unmappable memory this test doesn't make sense
+        return;
 
     // allocate memory
     err = vkAllocMemory(m_device->device(), &mem_alloc, &mem);
