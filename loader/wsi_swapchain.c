@@ -34,12 +34,9 @@
 #include "loader.h"
 #include "wsi_swapchain.h"
 
-static const struct loader_extension_property wsi_swapchain_extension_info = {
-    .info =  {
+static const VkExtensionProperties wsi_swapchain_extension_info = {
         .extName = VK_WSI_SWAPCHAIN_EXTENSION_NAME,
         .specVersion = VK_WSI_SWAPCHAIN_REVISION,
-        },
-    .origin = VK_EXTENSION_ORIGIN_LOADER,
 };
 
 void wsi_swapchain_add_instance_extensions(

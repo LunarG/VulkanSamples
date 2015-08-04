@@ -49,11 +49,6 @@
 #define VK_MAJOR(version) (version >> 22)
 #define VK_MINOR(version) ((version >> 12) & 0x3ff)
 #define VK_PATCH(version) (version & 0xfff)
-enum extension_origin {
-    VK_EXTENSION_ORIGIN_ICD,
-    VK_EXTENSION_ORIGIN_LAYER,
-    VK_EXTENSION_ORIGIN_LOADER
-};
 
 enum layer_type {
     VK_LAYER_TYPE_DEVICE_EXPLICIT = 0x1,
@@ -64,15 +59,10 @@ enum layer_type {
     VK_LAYER_TYPE_GLOBAL_IMPLICIT = 0xc,   // both instance and device layer, bitwise
 };
 
-struct loader_extension_property {
-    VkExtensionProperties info;
-    enum extension_origin origin;
-};
-
 struct loader_extension_list {
     size_t capacity;
     uint32_t count;
-    struct loader_extension_property *list;
+    VkExtensionProperties *list;
 };
 
 struct loader_name_value {
@@ -361,7 +351,7 @@ bool has_vk_extension_property(
 void loader_add_to_ext_list(
         struct loader_extension_list *ext_list,
         uint32_t prop_list_count,
-        const struct loader_extension_property *props);
+        const VkExtensionProperties *props);
 void loader_destroy_ext_list(struct loader_extension_list *ext_info);
 
 void loader_add_to_layer_list(
