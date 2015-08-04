@@ -41,7 +41,7 @@ extern "C" {
     ((major << 22) | (minor << 12) | patch)
 
 // Vulkan API version supported by this file
-#define VK_API_VERSION VK_MAKE_VERSION(0, 147, 0)
+#define VK_API_VERSION VK_MAKE_VERSION(0, 148, 0)
 
 
 #define VK_DEFINE_HANDLE(obj) typedef struct obj##_T* obj;
@@ -1136,7 +1136,7 @@ typedef struct {
     VkBool32                                    sampleRateShading;
     VkBool32                                    dualSourceBlend;
     VkBool32                                    logicOp;
-    VkBool32                                    instancedDrawIndirect;
+    VkBool32                                    multiDrawIndirect;
     VkBool32                                    depthClip;
     VkBool32                                    depthBiasClamp;
     VkBool32                                    fillModeNonSolid;
@@ -1153,11 +1153,9 @@ typedef struct {
     VkBool32                                    fragmentSideEffects;
     VkBool32                                    shaderTessellationPointSize;
     VkBool32                                    shaderGeometryPointSize;
-    VkBool32                                    shaderTextureGatherExtended;
+    VkBool32                                    shaderImageGatherExtended;
     VkBool32                                    shaderStorageImageExtendedFormats;
     VkBool32                                    shaderStorageImageMultisample;
-    VkBool32                                    shaderStorageBufferArrayConstantIndexing;
-    VkBool32                                    shaderStorageImageArrayConstantIndexing;
     VkBool32                                    shaderUniformBufferArrayDynamicIndexing;
     VkBool32                                    shaderSampledImageArrayDynamicIndexing;
     VkBool32                                    shaderStorageBufferArrayDynamicIndexing;
