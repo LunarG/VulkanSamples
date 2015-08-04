@@ -1011,7 +1011,18 @@ static void pipeline_build_msaa(struct intel_pipeline *pipeline,
 
     dw = pipeline_cmd_ptr(pipeline, cmd_len);
     dw[0] = cmd | (cmd_len - 2);
-    dw[1] = info->ms.sampleMask & ((1 << pipeline->sample_count) - 1);
+    if (info->ms.pSampleMask) {
+        /* "Bit B of mask word M corresponds to sample 32*M + B."
+         * "The array is sized to a length of ceil(rasterSamples / 32) words."
+         * "If pSampleMask is NULL, it is treated as if the mask has all bits enabled,"
+         * "i.e. no coverage is removed from primitives."
+         */
+        assert(pipeline->sample_count / 32 == 0);
+        dw[1] = *info->ms.pSampleMask & ((1 << pipeline->sample_count) - 1);
+     } else {
+        dw[1] = (1 << pipeline->sample_count) - 1;
+     }
+
     pipeline->cmd_sample_mask = dw[1];
 }
 
@@ -1175,7 +1186,7 @@ static VkResult pipeline_create_info_init(struct intel_pipeline_create_info  *in
      * the necessary create infos?
      */
     info->ms.rasterSamples    = 1;
-    info->ms.sampleMask = 1;
+    info->ms.pSampleMask = NULL;
 
     memcpy(&info->graphics, vkinfo, sizeof (info->graphics));
 

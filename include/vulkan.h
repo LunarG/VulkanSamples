@@ -41,7 +41,7 @@ extern "C" {
     ((major << 22) | (minor << 12) | patch)
 
 // Vulkan API version supported by this file
-#define VK_API_VERSION VK_MAKE_VERSION(0, 145, 0)
+#define VK_API_VERSION VK_MAKE_VERSION(0, 146, 0)
 
 
 #define VK_DEFINE_HANDLE(obj) typedef struct obj##_T* obj;
@@ -837,7 +837,7 @@ typedef enum {
     VK_RENDER_PASS_CONTENTS_MAX_ENUM = 0x7FFFFFFF
 } VkRenderPassContents;
 
-
+typedef uint32_t VkFlags;
 typedef enum {
     VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT = 0x00000001,
     VK_FORMAT_FEATURE_STORAGE_IMAGE_BIT = 0x00000002,
@@ -1125,6 +1125,7 @@ typedef struct {
     const char*const*                           ppEnabledExtensionNames;
 } VkInstanceCreateInfo;
 
+typedef uint32_t VkBool32;
 typedef struct {
     VkBool32                                    robustBufferAccess;
     VkBool32                                    fullDrawIndexUint32;
@@ -1196,6 +1197,7 @@ typedef struct {
     uint32_t                                    maxSamples;
 } VkImageFormatProperties;
 
+typedef uint64_t VkDeviceSize;
 typedef struct {
     uint32_t                                    maxImageDimension1D;
     uint32_t                                    maxImageDimension2D;
@@ -1627,13 +1629,14 @@ typedef struct {
     VkFrontFace                                 frontFace;
 } VkPipelineRasterStateCreateInfo;
 
+typedef uint32_t VkSampleMask;
 typedef struct {
     VkStructureType                             sType;
     const void*                                 pNext;
     uint32_t                                    rasterSamples;
     VkBool32                                    sampleShadingEnable;
     float                                       minSampleShading;
-    VkSampleMask                                sampleMask;
+    const VkSampleMask*                         pSampleMask;
 } VkPipelineMultisampleStateCreateInfo;
 
 typedef struct {

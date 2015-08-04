@@ -1603,7 +1603,7 @@ static void demo_prepare_pipeline(struct demo *demo)
 
     memset(&ms, 0, sizeof(ms));
     ms.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
-    ms.sampleMask = 1;
+    ms.pSampleMask = NULL;
     ms.rasterSamples = 1;
 
     // Two stages: vs and fs

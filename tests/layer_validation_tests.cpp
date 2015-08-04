@@ -1869,7 +1869,7 @@ TEST_F(VkLayerTest, NumSamplesMismatch)
         pipe_ms_state_ci.rasterSamples = 4;
         pipe_ms_state_ci.sampleShadingEnable = 0;
         pipe_ms_state_ci.minSampleShading = 1.0;
-        pipe_ms_state_ci.sampleMask = 15;
+        pipe_ms_state_ci.pSampleMask = NULL;
 
     VkPipelineLayoutCreateInfo pipeline_layout_ci = {};
         pipeline_layout_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
@@ -2050,7 +2050,7 @@ TEST_F(VkLayerTest, ClearCmdNoDraw)
         pipe_ms_state_ci.rasterSamples = 4;
         pipe_ms_state_ci.sampleShadingEnable = 0;
         pipe_ms_state_ci.minSampleShading = 1.0;
-        pipe_ms_state_ci.sampleMask = 15;
+        pipe_ms_state_ci.pSampleMask = NULL;
 
     VkPipelineLayoutCreateInfo pipeline_layout_ci = {};
         pipeline_layout_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
@@ -2201,7 +2201,7 @@ TEST_F(VkLayerTest, VtxBufferBadIndex)
         pipe_ms_state_ci.rasterSamples = 1;
         pipe_ms_state_ci.sampleShadingEnable = 0;
         pipe_ms_state_ci.minSampleShading = 1.0;
-        pipe_ms_state_ci.sampleMask = 15;
+        pipe_ms_state_ci.pSampleMask = NULL;
 
     VkPipelineLayoutCreateInfo pipeline_layout_ci = {};
         pipeline_layout_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;

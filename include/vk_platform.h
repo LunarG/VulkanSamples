@@ -76,12 +76,6 @@ extern "C"
     #endif
 #endif // !defined(VK_NO_STDINT_H)
 
-typedef uint64_t   VkDeviceSize;
-typedef uint32_t   VkBool32;
-
-typedef uint32_t   VkSampleMask;
-typedef uint32_t   VkFlags;
-
 #if (UINTPTR_MAX >= UINT64_MAX)
     #define VK_UINTPTRLEAST64_MAX UINTPTR_MAX
 
