@@ -421,7 +421,7 @@ static VkBool32 validate_draw_state(GLOBAL_CB_NODE* pCB, VkBool32 indexedDraw) {
     if (pPipe && (pCB->lastBoundPipelineLayout != pPipe->graphicsPipelineCI.layout)) {
         result = VK_FALSE;
         log_msg(mdd(pCB->cmdBuffer), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_PIPELINE_LAYOUT, pCB->lastBoundPipelineLayout.handle, 0, DRAWSTATE_PIPELINE_LAYOUT_MISMATCH, "DS",
-                "Pipeline layout from last vkCmdBindDescriptorSets() (%s) does not match PSO Pipeline layout (%s)", pCB->lastBoundPipelineLayout, pPipe->graphicsPipelineCI.layout);
+                "Pipeline layout from last vkCmdBindDescriptorSets() (%#" PRIxLEAST64 ") does not match PSO Pipeline layout (%#" PRIxLEAST64 ") ", pCB->lastBoundPipelineLayout.handle, pPipe->graphicsPipelineCI.layout.handle);
     }
     if (!pCB->activeRenderPass) {
         log_msg(mdd(pCB->cmdBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, 0, 0, DRAWSTATE_NO_ACTIVE_RENDERPASS, "DS",
