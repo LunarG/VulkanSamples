@@ -48,7 +48,7 @@ glv_SettingInfo g_settings_info[] =
     { "w", "WorkingDir", GLV_SETTING_STRING, &g_settings.working_dir, &g_default_settings.working_dir, TRUE, "The program's working directory."},
     { "o", "OutputTrace", GLV_SETTING_STRING, &g_settings.output_trace, &g_default_settings.output_trace, TRUE, "Path to the generated output trace file."},
     { "u", "UniqueOutput", GLV_SETTING_BOOL, &g_settings.unique_output, &g_default_settings.unique_output, TRUE, "Generate unique output trace filenames if the specified one already exists."},
-    { "s", "ScreenShot", GLV_SETTING_STRING, &g_settings.screenshotList, &g_default_settings.screenshotList, TRUE, "Coma separated list of frame numbers on which to take a screen snapsot."},
+    { "s", "ScreenShot", GLV_SETTING_STRING, &g_settings.screenshotList, &g_default_settings.screenshotList, TRUE, "Comma separated list of frame numbers on which to take a screen snapsot."},
     { "l0", "TraceLibrary0", GLV_SETTING_STRING, &g_settings.trace_library[0], NULL, TRUE, "Path to the dynamic tracer library to be injected, may use [0-15]."},
     { "l1", "TraceLibrary1", GLV_SETTING_STRING, &g_settings.trace_library[1], NULL, FALSE, "Path to the dynamic tracer library to be injected, may use [0-15]."},
     { "l2", "TraceLibrary2", GLV_SETTING_STRING, &g_settings.trace_library[2], NULL, FALSE, "Path to the dynamic tracer library to be injected, may use [0-15]."},
