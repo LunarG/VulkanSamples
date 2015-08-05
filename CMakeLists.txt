@@ -2,7 +2,7 @@
 # refer to the root source directory of the project as ${VULKAN_SOURCE_DIR} and
 # to the root binary directory of the project as ${VULKAN_BINARY_DIR}.
 cmake_minimum_required(VERSION 2.8.11)
-project (VULKAN)
+project (VULKAN_SAMPLES)
 # set (CMAKE_VERBOSE_MAKEFILE 1)
 
 
@@ -125,6 +125,8 @@ endif()
 
 cmake_minimum_required(VERSION 2.8 FATAL_ERROR)
 cmake_policy(VERSION 2.8)
+
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake")
 
 set (UTILS_NAME vsamputils)
 
