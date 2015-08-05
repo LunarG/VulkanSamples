@@ -983,6 +983,8 @@ void  TestFrameworkVkPresent::CreateMyWindow()
         exit(1);
     }
    // Create window with the registered class:
+    RECT wr = { 0, 0, m_width, m_height };
+    AdjustWindowRect(&wr, WS_OVERLAPPEDWINDOW, FALSE);
     m_window = CreateWindowEx(0,
                                   "Test",           // class name
                                   "Test",           // app name
@@ -990,8 +992,8 @@ void  TestFrameworkVkPresent::CreateMyWindow()
                                   WS_VISIBLE |
                                   WS_SYSMENU,
                                   100,100,              // x/y coords
-                                  m_width,          // width
-                                  m_height,         // height
+                                  wr.right - wr.left,   // width
+                                  wr.bottom - wr.top,   // height
                                   NULL,                 // handle to parent
                                   NULL,                 // handle to menu
                                   m_connection,     // hInstance
