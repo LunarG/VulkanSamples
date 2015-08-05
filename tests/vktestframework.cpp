@@ -881,7 +881,9 @@ void TestFrameworkVkPresent::CreateSwapChain()
     swap_chain.imageFormat = m_format;
     swap_chain.imageExtent.width = swapChainExtent.width;
     swap_chain.imageExtent.height = swapChainExtent.height;
-    swap_chain.imageUsageFlags = VK_IMAGE_USAGE_TRANSFER_DESTINATION_BIT;
+    // Workaround: Some implementations need color attachment for blit targets
+    swap_chain.imageUsageFlags = VK_IMAGE_USAGE_TRANSFER_DESTINATION_BIT |
+                                 VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
     swap_chain.preTransform = preTransform;
     swap_chain.imageArraySize = 1;
     swap_chain.presentMode = swapChainPresentMode;
