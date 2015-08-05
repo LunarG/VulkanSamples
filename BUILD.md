@@ -5,13 +5,9 @@ Support for Android is TBD.
 
 ## Git the Bits
 
-Make sure you have access to the Khronos Github repository. If not, send an email to
-jens@lunarg.com or courtney@lunarg.com and we can add you if you have a Khronos account.
-Also need to be sure that your Github account name is in your Khronos profile or the
-system will disable Github access. Once you have access to the Khronos Github repository,
-the preferred work flow is to fork that repo, commit work on to your fork and then issue a
-pull request to integrate that work into the Khronos repo. If that's too much, it's okay
-to clone the Khronos repository directly.
+Make sure you have access to the Khronos GitLab repository at gitlab.khronos.org.  Once you do, the
+preferred work flow is to clone the repo, create a branch, push branch to gitlab and then
+issue a merge request to integrate that work back into the repo.
 
 Note: If you are doing ICD (driver) development, please make sure to look at documentation in the [ICD Loader](loader/README.md) and the [Sample Driver](icd).
 
@@ -19,7 +15,7 @@ Note: If you are doing ICD (driver) development, please make sure to look at doc
 Ubuntu 14.10 needed for DRI 3
 
 ```
-sudo apt-get install git subversion cmake libgl1-mesa-dev freeglut3-dev libglm-dev libpng12-dev libmagickwand-dev qt5-default libpciaccess-dev libpthread-stubs0-dev
+sudo apt-get install git subversion cmake libgl1-mesa-dev freeglut3-dev libglm-dev libpng12-dev libmagickwand-dev qt5-default libpciaccess-dev libpthread-stubs0-dev libudev-dev
 sudo apt-get build-dep mesa
 ```
 Warning: Recent versions of 14.10 have **REMOVED** DRI 3.  
@@ -57,8 +53,8 @@ To create your local git repository:
 ```
 mkdir YOUR_DEV_DIRECTORY  # it's called GL-Next on Github, but the name doesn't matter
 cd YOUR_DEV_DIRECTORY
-git clone -o khronos git@github.com:KhronosGroup/GL-Next.git .
-# Or substitute the URL from your forked repo for git@github.com:KhronosGroup above.
+git clone -o khronos git@gitlab.khronos.org:vulkan/LoaderAndTools.git .
+# Or substitute the URL from your forked repo for git@gitlab.khronos.org:vulkan/LoaderAndTools.git above.
 ```
 
 ## Linux Build
@@ -89,17 +85,21 @@ packaged, and how developers can point to ICDs and layers within their builds.
 
 The test executibles can be found in the dbuild/tests directory. The tests use the Google
 gtest infrastructure. Tests available so far:
-- vkinfo: Report GPU properties
 - vkbase: Test basic entry points
 - vk_blit_tests: Test VK Blits (copy, clear, and resolve)
 - vk_image_tests: Test VK image related calls needed by render_test
 - vk_render_tests: Render a single triangle with VK. Triangle will be in a .ppm in
 the current directory at the end of the test.
+- vk_layer_validation_tests: Test Vulkan layers.
+
+There are also a few shell and Python scripts that run test collections (eg,
+`run_all_tests.sh`).
 
 ## Linux Demos
 
 The demos executables can be found in the dbuild/demos directory. The demos use DRI 3
 to render directly onto window surfaces.
+- vulkaninfo: report GPU properties
 - tri: a textured triangle
 - cube: a textured spinning cube
 
