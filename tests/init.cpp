@@ -276,7 +276,7 @@ TEST_F(VkTest, Query) {
 
 void getQueue(vk_testing::Device *device, uint32_t queue_node_index, const char *qname)
 {
-    int que_idx;
+    uint32_t que_idx;
     VkResult err;
     VkQueue queue;
 

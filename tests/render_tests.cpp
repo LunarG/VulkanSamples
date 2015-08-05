@@ -3157,70 +3157,70 @@ TEST_F(VkRenderTest, TriangleUniformBufferLayout)
             "}\n";
 
 
-    const float mixedVals[196] = {   1.0, 0.0, 0.0, 1.0,   //        vec4 fRed;            // align
-                                     0.0, 1.0, 0.0, 1.0,   //        vec4 fGreen;          // align
-                                     1.0, 0.0, 0.0, 1.0,   //        layout(row_major) mat4 worldToProj;
-                                     0.0, 1.0, 0.0, 1.0,   //        align
-                                     0.0, 0.0, 1.0, 1.0,   //        align
-                                     0.0, 0.0, 0.0, 1.0,   //        align
-                                     2.0, 0.0, 0.0, 2.0,   //        layout(row_major) mat4 projToWorld;
-                                     0.0, 2.0, 0.0, 2.0,   //        align
-                                     0.0, 0.0, 2.0, 2.0,   //        align
-                                     0.0, 0.0, 0.0, 2.0,   //        align
-                                     3.0, 0.0, 0.0, 3.0,   //        layout(row_major) mat4 worldToView;
-                                     0.0, 3.0, 0.0, 3.0,   //        align
-                                     0.0, 0.0, 3.0, 3.0,   //        align
-                                     0.0, 0.0, 0.0, 3.0,   //        align
-                                     4.0, 0.0, 0.0, 4.0,   //        layout(row_major) mat4 viewToProj;
-                                     0.0, 4.0, 0.0, 4.0,   //        align
-                                     0.0, 0.0, 4.0, 4.0,   //        align
-                                     0.0, 0.0, 0.0, 4.0,   //        align
-                                     5.0, 0.0, 0.0, 5.0,   //        layout(row_major) mat4 worldToShadow[4];
-                                     0.0, 5.0, 0.0, 5.0,   //        align
-                                     0.0, 0.0, 5.0, 5.0,   //        align
-                                     0.0, 0.0, 0.0, 5.0,   //        align
-                                     6.0, 0.0, 0.0, 6.0,   //        align
-                                     0.0, 6.0, 0.0, 6.0,   //        align
-                                     0.0, 0.0, 6.0, 6.0,   //        align
-                                     0.0, 0.0, 0.0, 6.0,   //        align
-                                     7.0, 0.0, 0.0, 7.0,   //        align
-                                     0.0, 7.0, 0.0, 7.0,   //        align
-                                     0.0, 0.0, 7.0, 7.0,   //        align
-                                     0.0, 0.0, 0.0, 7.0,   //        align
-                                     8.0, 0.0, 0.0, 8.0,   //        align
-                                     0.0, 8.0, 0.0, 8.0,   //        align
-                                     0.0, 0.0, 8.0, 8.0,   //        align
-                                     0.0, 0.0, 0.0, 8.0,   //        align
-                                     0.0,                  //        float fZero;          // align
-                                     1.0,                  //        float fOne;           // pack
-                                     2.0,                  //        float fTwo;           // pack
-                                     3.0,                  //        float fThree;         // pack
-                                     0.0, 0.0, 0.0,        //        vec3 fZeroZeroZero;   // align
-                                     4.0,                  //        float fFour;          // pack
-                                     0.0, 0.0, 1.0,        //        vec3 fZeroZeroOne;    // align
-                                     5.0,                  //        float fFive;          // pack
-                                     0.0, 1.0, 0.0,        //        vec3 fZeroOneZero;    // align
-                                     6.0,                  //        float fSix;           // pack
-                                     7.0,                  //        float fSeven;         // align
-                                     8.0,                  //        float fEight;         // pack
-                                     9.0,                  //        float fNine;          // pack
-                                     0.0,                  //        BUFFER
-                                     0.0, 0.0,             //        vec2 fZeroZero;       // align
-                                     0.0, 1.0,             //        vec2 fZeroOne;        // pack
-                                     0.0, 0.0, 1.0, 1.0,   //        vec4 fBlue;           // align
-                                     1.0, 0.0,             //        vec2 fOneZero;        // align
-                                     1.0, 1.0,             //        vec2 fOneOne;         // pack
-                                     0.0, 1.0, 1.0,        //        vec3 fZeroOneOne;     // align
-                                     10.0,                 //        float fTen;           // pack
-                                     11.0,                 //        float fEleven;        // align
-                                     12.0,                 //        float fTwelve;        // pack
-                                     0.0, 0.0,             //        BUFFER
-                                     1.0, 0.0, 0.0,        //        vec3 fOneZeroZero;    // align
-                                     0.0,                  //        BUFFER
-                                     0.1, 0.2, 0.3, 0.4,   //        vec4 uvOffsets[4];
-                                     0.5, 0.6, 0.7, 0.8,   //        align
-                                     0.9, 1.0, 1.1, 1.2,   //        align
-                                     1.3, 1.4, 1.5, 1.6,   //        align
+    const float mixedVals[196] = {   1.0f, 0.0f, 0.0f, 1.0f,   //        vec4 fRed;            // align
+                                     0.0f, 1.0f, 0.0f, 1.0f,   //        vec4 fGreen;          // align
+                                     1.0f, 0.0f, 0.0f, 1.0f,   //        layout(row_major) mat4 worldToProj;
+                                     0.0f, 1.0f, 0.0f, 1.0f,   //        align
+                                     0.0f, 0.0f, 1.0f, 1.0f,   //        align
+                                     0.0f, 0.0f, 0.0f, 1.0f,   //        align
+                                     2.0f, 0.0f, 0.0f, 2.0f,   //        layout(row_major) mat4 projToWorld;
+                                     0.0f, 2.0f, 0.0f, 2.0f,   //        align
+                                     0.0f, 0.0f, 2.0f, 2.0f,   //        align
+                                     0.0f, 0.0f, 0.0f, 2.0f,   //        align
+                                     3.0f, 0.0f, 0.0f, 3.0f,   //        layout(row_major) mat4 worldToView;
+                                     0.0f, 3.0f, 0.0f, 3.0f,   //        align
+                                     0.0f, 0.0f, 3.0f, 3.0f,   //        align
+                                     0.0f, 0.0f, 0.0f, 3.0f,   //        align
+                                     4.0f, 0.0f, 0.0f, 4.0f,   //        layout(row_major) mat4 viewToProj;
+                                     0.0f, 4.0f, 0.0f, 4.0f,   //        align
+                                     0.0f, 0.0f, 4.0f, 4.0f,   //        align
+                                     0.0f, 0.0f, 0.0f, 4.0f,   //        align
+                                     5.0f, 0.0f, 0.0f, 5.0f,   //        layout(row_major) mat4 worldToShadow[4];
+                                     0.0f, 5.0f, 0.0f, 5.0f,   //        align
+                                     0.0f, 0.0f, 5.0f, 5.0f,   //        align
+                                     0.0f, 0.0f, 0.0f, 5.0f,   //        align
+                                     6.0f, 0.0f, 0.0f, 6.0f,   //        align
+                                     0.0f, 6.0f, 0.0f, 6.0f,   //        align
+                                     0.0f, 0.0f, 6.0f, 6.0f,   //        align
+                                     0.0f, 0.0f, 0.0f, 6.0f,   //        align
+                                     7.0f, 0.0f, 0.0f, 7.0f,   //        align
+                                     0.0f, 7.0f, 0.0f, 7.0f,   //        align
+                                     0.0f, 0.0f, 7.0f, 7.0f,   //        align
+                                     0.0f, 0.0f, 0.0f, 7.0f,   //        align
+                                     8.0f, 0.0f, 0.0f, 8.0f,   //        align
+                                     0.0f, 8.0f, 0.0f, 8.0f,   //        align
+                                     0.0f, 0.0f, 8.0f, 8.0f,   //        align
+                                     0.0f, 0.0f, 0.0f, 8.0f,   //        align
+                                     0.0f,                     //        float fZero;          // align
+                                     1.0f,                     //        float fOne;           // pack
+                                     2.0f,                     //        float fTwo;           // pack
+                                     3.0f,                     //        float fThree;         // pack
+                                     0.0f, 0.0f, 0.0f,         //        vec3 fZeroZeroZero;   // align
+                                     4.0f,                     //        float fFour;          // pack
+                                     0.0f, 0.0f, 1.0f,         //        vec3 fZeroZeroOne;    // align
+                                     5.0f,                     //        float fFive;          // pack
+                                     0.0f, 1.0f, 0.0f,         //        vec3 fZeroOneZero;    // align
+                                     6.0f,                     //        float fSix;           // pack
+                                     7.0f,                     //        float fSeven;         // align
+                                     8.0f,                     //        float fEight;         // pack
+                                     9.0f,                     //        float fNine;          // pack
+                                     0.0f,                     //        BUFFER
+                                     0.0f, 0.0f,               //        vec2 fZeroZero;       // align
+                                     0.0f, 1.0f,               //        vec2 fZeroOne;        // pack
+                                     0.0f, 0.0f, 1.0f, 1.0f,   //        vec4 fBlue;           // align
+                                     1.0f, 0.0f,               //        vec2 fOneZero;        // align
+                                     1.0f, 1.0f,               //        vec2 fOneOne;         // pack
+                                     0.0f, 1.0f, 1.0f,         //        vec3 fZeroOneOne;     // align
+                                     10.0f,                    //        float fTen;           // pack
+                                     11.0f,                    //        float fEleven;        // align
+                                     12.0f,                    //        float fTwelve;        // pack
+                                     0.0f, 0.0f,               //        BUFFER
+                                     1.0f, 0.0f, 0.0f,         //        vec3 fOneZeroZero;    // align
+                                     0.0f,                     //        BUFFER
+                                     0.1f, 0.2f, 0.3f, 0.4f,   //        vec4 uvOffsets[4];
+                                     0.5f, 0.6f, 0.7f, 0.8f,   //        align
+                                     0.9f, 1.0f, 1.1f, 1.2f,   //        align
+                                     1.3f, 1.4f, 1.5f, 1.6f,   //        align
                                   };
 
     ASSERT_NO_FATAL_FAILURE(InitState());
@@ -3716,70 +3716,70 @@ TEST_F(VkRenderTest, GSUniformBufferLayout)
             "}\n";
 
 
-    const float mixedVals[196] = {   1.0, 0.0, 0.0, 1.0,   //        vec4 fRed;            // align
-                                     0.0, 1.0, 0.0, 1.0,   //        vec4 fGreen;          // align
-                                     1.0, 0.0, 0.0, 1.0,   //        layout(row_major) mat4 worldToProj;
-                                     0.0, 1.0, 0.0, 1.0,   //        align
-                                     0.0, 0.0, 1.0, 1.0,   //        align
-                                     0.0, 0.0, 0.0, 1.0,   //        align
-                                     2.0, 0.0, 0.0, 2.0,   //        layout(row_major) mat4 projToWorld;
-                                     0.0, 2.0, 0.0, 2.0,   //        align
-                                     0.0, 0.0, 2.0, 2.0,   //        align
-                                     0.0, 0.0, 0.0, 2.0,   //        align
-                                     3.0, 0.0, 0.0, 3.0,   //        layout(row_major) mat4 worldToView;
-                                     0.0, 3.0, 0.0, 3.0,   //        align
-                                     0.0, 0.0, 3.0, 3.0,   //        align
-                                     0.0, 0.0, 0.0, 3.0,   //        align
-                                     4.0, 0.0, 0.0, 4.0,   //        layout(row_major) mat4 viewToProj;
-                                     0.0, 4.0, 0.0, 4.0,   //        align
-                                     0.0, 0.0, 4.0, 4.0,   //        align
-                                     0.0, 0.0, 0.0, 4.0,   //        align
-                                     5.0, 0.0, 0.0, 5.0,   //        layout(row_major) mat4 worldToShadow[4];
-                                     0.0, 5.0, 0.0, 5.0,   //        align
-                                     0.0, 0.0, 5.0, 5.0,   //        align
-                                     0.0, 0.0, 0.0, 5.0,   //        align
-                                     6.0, 0.0, 0.0, 6.0,   //        align
-                                     0.0, 6.0, 0.0, 6.0,   //        align
-                                     0.0, 0.0, 6.0, 6.0,   //        align
-                                     0.0, 0.0, 0.0, 6.0,   //        align
-                                     7.0, 0.0, 0.0, 7.0,   //        align
-                                     0.0, 7.0, 0.0, 7.0,   //        align
-                                     0.0, 0.0, 7.0, 7.0,   //        align
-                                     0.0, 0.0, 0.0, 7.0,   //        align
-                                     8.0, 0.0, 0.0, 8.0,   //        align
-                                     0.0, 8.0, 0.0, 8.0,   //        align
-                                     0.0, 0.0, 8.0, 8.0,   //        align
-                                     0.0, 0.0, 0.0, 8.0,   //        align
-                                     0.0,                  //        float fZero;          // align
-                                     1.0,                  //        float fOne;           // pack
-                                     2.0,                  //        float fTwo;           // pack
-                                     3.0,                  //        float fThree;         // pack
-                                     0.0, 0.0, 0.0,        //        vec3 fZeroZeroZero;   // align
-                                     4.0,                  //        float fFour;          // pack
-                                     0.0, 0.0, 1.0,        //        vec3 fZeroZeroOne;    // align
-                                     5.0,                  //        float fFive;          // pack
-                                     0.0, 1.0, 0.0,        //        vec3 fZeroOneZero;    // align
-                                     6.0,                  //        float fSix;           // pack
-                                     7.0,                  //        float fSeven;         // align
-                                     8.0,                  //        float fEight;         // pack
-                                     9.0,                  //        float fNine;          // pack
-                                     0.0,                  //        BUFFER
-                                     0.0, 0.0,             //        vec2 fZeroZero;       // align
-                                     0.0, 1.0,             //        vec2 fZeroOne;        // pack
-                                     0.0, 0.0, 1.0, 1.0,   //        vec4 fBlue;           // align
-                                     1.0, 0.0,             //        vec2 fOneZero;        // align
-                                     1.0, 1.0,             //        vec2 fOneOne;         // pack
-                                     0.0, 1.0, 1.0,        //        vec3 fZeroOneOne;     // align
-                                     10.0,                 //        float fTen;           // pack
-                                     11.0,                 //        float fEleven;        // align
-                                     12.0,                 //        float fTwelve;        // pack
-                                     0.0, 0.0,             //        BUFFER
-                                     1.0, 0.0, 0.0,        //        vec3 fOneZeroZero;    // align
-                                     0.0,                  //        BUFFER
-                                     0.1, 0.2, 0.3, 0.4,   //        vec4 uvOffsets[4];
-                                     0.5, 0.6, 0.7, 0.8,   //        align
-                                     0.9, 1.0, 1.1, 1.2,   //        align
-                                     1.3, 1.4, 1.5, 1.6,   //        align
+    const float mixedVals[196] = {   1.0f, 0.0f, 0.0f, 1.0f,   //        vec4 fRed;            // align
+                                     0.0f, 1.0f, 0.0f, 1.0f,   //        vec4 fGreen;          // align
+                                     1.0f, 0.0f, 0.0f, 1.0f,   //        layout(row_major) mat4 worldToProj;
+                                     0.0f, 1.0f, 0.0f, 1.0f,   //        align
+                                     0.0f, 0.0f, 1.0f, 1.0f,   //        align
+                                     0.0f, 0.0f, 0.0f, 1.0f,   //        align
+                                     2.0f, 0.0f, 0.0f, 2.0f,   //        layout(row_major) mat4 projToWorld;
+                                     0.0f, 2.0f, 0.0f, 2.0f,   //        align
+                                     0.0f, 0.0f, 2.0f, 2.0f,   //        align
+                                     0.0f, 0.0f, 0.0f, 2.0f,   //        align
+                                     3.0f, 0.0f, 0.0f, 3.0f,   //        layout(row_major) mat4 worldToView;
+                                     0.0f, 3.0f, 0.0f, 3.0f,   //        align
+                                     0.0f, 0.0f, 3.0f, 3.0f,   //        align
+                                     0.0f, 0.0f, 0.0f, 3.0f,   //        align
+                                     4.0f, 0.0f, 0.0f, 4.0f,   //        layout(row_major) mat4 viewToProj;
+                                     0.0f, 4.0f, 0.0f, 4.0f,   //        align
+                                     0.0f, 0.0f, 4.0f, 4.0f,   //        align
+                                     0.0f, 0.0f, 0.0f, 4.0f,   //        align
+                                     5.0f, 0.0f, 0.0f, 5.0f,   //        layout(row_major) mat4 worldToShadow[4];
+                                     0.0f, 5.0f, 0.0f, 5.0f,   //        align
+                                     0.0f, 0.0f, 5.0f, 5.0f,   //        align
+                                     0.0f, 0.0f, 0.0f, 5.0f,   //        align
+                                     6.0f, 0.0f, 0.0f, 6.0f,   //        align
+                                     0.0f, 6.0f, 0.0f, 6.0f,   //        align
+                                     0.0f, 0.0f, 6.0f, 6.0f,   //        align
+                                     0.0f, 0.0f, 0.0f, 6.0f,   //        align
+                                     7.0f, 0.0f, 0.0f, 7.0f,   //        align
+                                     0.0f, 7.0f, 0.0f, 7.0f,   //        align
+                                     0.0f, 0.0f, 7.0f, 7.0f,   //        align
+                                     0.0f, 0.0f, 0.0f, 7.0f,   //        align
+                                     8.0f, 0.0f, 0.0f, 8.0f,   //        align
+                                     0.0f, 8.0f, 0.0f, 8.0f,   //        align
+                                     0.0f, 0.0f, 8.0f, 8.0f,   //        align
+                                     0.0f, 0.0f, 0.0f, 8.0f,   //        align
+                                     0.0f,                     //        float fZero;          // align
+                                     1.0f,                     //        float fOne;           // pack
+                                     2.0f,                     //        float fTwo;           // pack
+                                     3.0f,                     //        float fThree;         // pack
+                                     0.0f, 0.0f, 0.0f,         //        vec3 fZeroZeroZero;   // align
+                                     4.0f,                     //        float fFour;          // pack
+                                     0.0f, 0.0f, 1.0f,         //        vec3 fZeroZeroOne;    // align
+                                     5.0f,                     //        float fFive;          // pack
+                                     0.0f, 1.0f, 0.0f,         //        vec3 fZeroOneZero;    // align
+                                     6.0f,                     //        float fSix;           // pack
+                                     7.0f,                     //        float fSeven;         // align
+                                     8.0f,                     //        float fEight;         // pack
+                                     9.0f,                     //        float fNine;          // pack
+                                     0.0f,                     //        BUFFER
+                                     0.0f, 0.0f,               //        vec2 fZeroZero;       // align
+                                     0.0f, 1.0f,               //        vec2 fZeroOne;        // pack
+                                     0.0f, 0.0f, 1.0f, 1.0f,   //        vec4 fBlue;           // align
+                                     1.0f, 0.0f,               //        vec2 fOneZero;        // align
+                                     1.0f, 1.0f,               //        vec2 fOneOne;         // pack
+                                     0.0f, 1.0f, 1.0f,         //        vec3 fZeroOneOne;     // align
+                                     10.0f,                    //        float fTen;           // pack
+                                     11.0f,                    //        float fEleven;        // align
+                                     12.0f,                    //        float fTwelve;        // pack
+                                     0.0f, 0.0f,               //        BUFFER
+                                     1.0f, 0.0f, 0.0f,         //        vec3 fOneZeroZero;    // align
+                                     0.0f,                     //        BUFFER
+                                     0.1f, 0.2f, 0.3f, 0.4f,   //        vec4 uvOffsets[4];
+                                     0.5f, 0.6f, 0.7f, 0.8f,   //        align
+                                     0.9f, 1.0f, 1.1f, 1.2f,   //        align
+                                     1.3f, 1.4f, 1.5f, 1.6f,   //        align
                                   };
 
 

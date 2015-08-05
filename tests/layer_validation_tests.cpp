@@ -382,7 +382,7 @@ TEST_F(VkLayerTest, CallResetCmdBufferBeforeCompletion)
     vkResetCommandBuffer(m_cmdBuffer->handle(), 0);
 
     msgFlags = m_errorMonitor->GetState(&msgString);
-    ASSERT_TRUE(msgFlags & VK_DBG_REPORT_ERROR_BIT) << "Did not receive an err after calling ResetCommandBuffer on an active Command Buffer";
+    ASSERT_TRUE(0 != (msgFlags & VK_DBG_REPORT_ERROR_BIT)) << "Did not receive an err after calling ResetCommandBuffer on an active Command Buffer";
     if (!strstr(msgString.c_str(),"Resetting CB")) {
         FAIL() << "Error received was not 'Resetting CB (0xaddress) before it has completed. You must check CB flag before'";
     }
@@ -419,7 +419,7 @@ TEST_F(VkLayerTest, CallBeginCmdBufferBeforeCompletion)
     BeginCommandBuffer();
 
     msgFlags = m_errorMonitor->GetState(&msgString);
-    ASSERT_TRUE(msgFlags & VK_DBG_REPORT_ERROR_BIT) << "Did not receive an err after calling BeginCommandBuffer on an active Command Buffer";
+    ASSERT_TRUE(0 != (msgFlags & VK_DBG_REPORT_ERROR_BIT)) << "Did not receive an err after calling BeginCommandBuffer on an active Command Buffer";
     if (!strstr(msgString.c_str(),"Calling vkBeginCommandBuffer() on active CB")) {
         FAIL() << "Error received was not 'Calling vkBeginCommandBuffer() on an active CB (0xaddress) before it has completed'";
     }
@@ -492,7 +492,7 @@ TEST_F(VkLayerTest, MapMemWithoutHostVisibleBit)
     err = vkMapMemory(m_device->device(), mem, 0, 0, 0, &mappedAddress);
 
     msgFlags = m_errorMonitor->GetState(&msgString);
-    ASSERT_TRUE(msgFlags & VK_DBG_REPORT_ERROR_BIT) << "Did not receive an error while tring to map memory not visible to CPU";
+    ASSERT_TRUE(0 != (msgFlags & VK_DBG_REPORT_ERROR_BIT)) << "Did not receive an error while tring to map memory not visible to CPU";
     if (!strstr(msgString.c_str(),"Mapping Memory without VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT")) {
         FAIL() << "Error received did not match expected error message from vkMapMemory in MemTracker";
     }
@@ -563,7 +563,7 @@ TEST_F(VkLayerTest, BindInvalidMemory)
     ASSERT_VK_SUCCESS(err);
 
     msgFlags = m_errorMonitor->GetState(&msgString);
-    ASSERT_TRUE(msgFlags & VK_DBG_REPORT_ERROR_BIT) << "Did not receive an error while tring to bind a freed memory object";
+    ASSERT_TRUE(0 != (msgFlags & VK_DBG_REPORT_ERROR_BIT)) << "Did not receive an error while tring to bind a freed memory object";
     if (!strstr(msgString.c_str(),"couldn't find info for mem obj")) {
         FAIL() << "Error received did not match expected error message from BindObjectMemory in MemTracker";
     }
@@ -635,7 +635,7 @@ TEST_F(VkLayerTest, BindInvalidMemory)
 //    ASSERT_VK_SUCCESS(err);
 //
 //    msgFlags = m_errorMonitor->GetState(&msgString);
-//    ASSERT_TRUE(msgFlags & VK_DBG_REPORT_ERROR_BIT) << "Did not receive an warning while tring to free bound memory";
+//    ASSERT_TRUE(0 != (msgFlags & VK_DBG_REPORT_ERROR_BIT)) << "Did not receive an warning while tring to free bound memory";
 //    if (!strstr(msgString.c_str(),"Freeing memory object while it still has references")) {
 //        FAIL() << "Warning received did not match expected message from freeMemObjInfo  in MemTracker";
 //    }
@@ -710,7 +710,7 @@ TEST_F(VkLayerTest, RebindMemory)
     ASSERT_VK_SUCCESS(err);
 
     msgFlags = m_errorMonitor->GetState(&msgString);
-    ASSERT_TRUE(msgFlags & VK_DBG_REPORT_ERROR_BIT) << "Did not receive an error while tring to rebind an object";
+    ASSERT_TRUE(0 != (msgFlags & VK_DBG_REPORT_ERROR_BIT)) << "Did not receive an error while tring to rebind an object";
     if (!strstr(msgString.c_str(),"which has already been bound to mem object")) {
         FAIL() << "Error received did not match expected message when rebinding memory to an object";
     }
@@ -781,7 +781,7 @@ TEST_F(VkLayerTest, BindMemoryToDestroyedObject)
     (void) err;
 
     msgFlags = m_errorMonitor->GetState(&msgString);
-    ASSERT_TRUE(msgFlags & VK_DBG_REPORT_ERROR_BIT) << "Did not receive an error while binding memory to a destroyed object";
+    ASSERT_TRUE(0 != (msgFlags & VK_DBG_REPORT_ERROR_BIT)) << "Did not receive an error while binding memory to a destroyed object";
     if (!strstr(msgString.c_str(),"that's not in global list")) {
         FAIL() << "Error received did not match expected error message from updateObjectBinding in MemTracker";
     }
@@ -810,7 +810,7 @@ TEST_F(VkLayerTest, SubmitSignaledFence)
     m_errorMonitor->ClearState();
     QueueCommandBuffer(testFence.handle());
     msgFlags = m_errorMonitor->GetState(&msgString);
-    ASSERT_TRUE(msgFlags & VK_DBG_REPORT_ERROR_BIT) << "Did not receive an err from using a fence in SIGNALED state in call to vkQueueSubmit";
+    ASSERT_TRUE(0 != (msgFlags & VK_DBG_REPORT_ERROR_BIT)) << "Did not receive an err from using a fence in SIGNALED state in call to vkQueueSubmit";
     if (!strstr(msgString.c_str(),"submitted in SIGNALED state.  Fences must be reset before being submitted")) {
         FAIL() << "Error received was not 'VkQueueSubmit with fence in SIGNALED_STATE'";
     }
@@ -832,7 +832,7 @@ TEST_F(VkLayerTest, ResetUnsignaledFence)
     VkFence fences[1] = {testFence.handle()};
     vkResetFences(m_device->device(), 1, fences);
     msgFlags = m_errorMonitor->GetState(&msgString);
-    ASSERT_TRUE(msgFlags & VK_DBG_REPORT_ERROR_BIT) << "Did not receive an error from submitting fence with UNSIGNALED state to vkResetFences";
+    ASSERT_TRUE(0 != (msgFlags & VK_DBG_REPORT_ERROR_BIT)) << "Did not receive an error from submitting fence with UNSIGNALED state to vkResetFences";
     if (!strstr(msgString.c_str(),"submitted to VkResetFences in UNSIGNALED STATE")) {
         FAIL() << "Error received was not 'VkResetFences with fence in UNSIGNALED_STATE'";
     }
@@ -885,7 +885,7 @@ TEST_F(VkLayerTest, InvalidUsageBits)
     };
     vkCreateDepthStencilView(m_device->device(), &dsvci, &dsv);
     msgFlags = m_errorMonitor->GetState(&msgString);
-    ASSERT_TRUE(msgFlags & VK_DBG_REPORT_ERROR_BIT) << "Did not receive error after attempting to create DSView w/ image lacking USAGE_DS_BIT flag";
+    ASSERT_TRUE(0 != (msgFlags & VK_DBG_REPORT_ERROR_BIT)) << "Did not receive error after attempting to create DSView w/ image lacking USAGE_DS_BIT flag";
     if (!strstr(msgString.c_str(),"Invalid usage flag for image ")) {
         FAIL() << "Error received was not 'Invalid usage flag for image...'";
     }
@@ -904,7 +904,7 @@ TEST_F(VkLayerTest, RasterStateNotBound)
     VKTriangleTest(bindStateVertShaderText, bindStateFragShaderText, BsoFailRaster);
 
     msgFlags = m_errorMonitor->GetState(&msgString);
-    ASSERT_TRUE(msgFlags & VK_DBG_REPORT_ERROR_BIT) << "Did not receive an error from Not Binding a Raster State Object";
+    ASSERT_TRUE(0 != (msgFlags & VK_DBG_REPORT_ERROR_BIT)) << "Did not receive an error from Not Binding a Raster State Object";
     if (!strstr(msgString.c_str(),"Raster object not bound to this command buffer")) {
         FAIL() << "Error received was not 'Raster object not bound to this command buffer'";
     }
@@ -921,7 +921,7 @@ TEST_F(VkLayerTest, ViewportStateNotBound)
     VKTriangleTest(bindStateVertShaderText, bindStateFragShaderText, BsoFailViewport);
 
     msgFlags = m_errorMonitor->GetState(&msgString);
-    ASSERT_TRUE(msgFlags & VK_DBG_REPORT_ERROR_BIT) << "Did not receive an error from Not Binding a Viewport State Object";
+    ASSERT_TRUE(0 != (msgFlags & VK_DBG_REPORT_ERROR_BIT)) << "Did not receive an error from Not Binding a Viewport State Object";
     if (!strstr(msgString.c_str(),"Viewport object not bound to this command buffer")) {
         FAIL() << "Error received was not 'Viewport object not bound to this command buffer'";
     }
@@ -938,7 +938,7 @@ TEST_F(VkLayerTest, ColorBlendStateNotBound)
     VKTriangleTest(bindStateVertShaderText, bindStateFragShaderText, BsoFailColorBlend);
 
     msgFlags = m_errorMonitor->GetState(&msgString);
-    ASSERT_TRUE(msgFlags & VK_DBG_REPORT_ERROR_BIT) << "Did not receive an error from Not Binding a ColorBlend State Object";
+    ASSERT_TRUE(0 != (msgFlags & VK_DBG_REPORT_ERROR_BIT)) << "Did not receive an error from Not Binding a ColorBlend State Object";
     if (!strstr(msgString.c_str(),"Color-blend object not bound to this command buffer")) {
         FAIL() << "Error received was not 'Color-blend object not bound to this command buffer'";
     }
@@ -955,7 +955,7 @@ TEST_F(VkLayerTest, DepthStencilStateNotBound)
     VKTriangleTest(bindStateVertShaderText, bindStateFragShaderText, BsoFailDepthStencil);
 
     msgFlags = m_errorMonitor->GetState(&msgString);
-    ASSERT_TRUE(msgFlags & VK_DBG_REPORT_ERROR_BIT) << "Did not receive an error from Not Binding a DepthStencil State Object";
+    ASSERT_TRUE(0 != (msgFlags & VK_DBG_REPORT_ERROR_BIT)) << "Did not receive an error from Not Binding a DepthStencil State Object";
     if (!strstr(msgString.c_str(),"Depth-stencil object not bound to this command buffer")) {
         FAIL() << "Error received was not 'Depth-stencil object not bound to this command buffer'";
     }
@@ -974,7 +974,7 @@ TEST_F(VkLayerTest, BindPipelineNoRenderPass)
     VkPipeline badPipeline = (VkPipeline)0xbaadb1be;
     vkCmdBindPipeline(m_cmdBuffer->GetBufferHandle(), VK_PIPELINE_BIND_POINT_GRAPHICS, badPipeline);
     msgFlags = m_errorMonitor->GetState(&msgString);
-    ASSERT_TRUE(msgFlags & VK_DBG_REPORT_ERROR_BIT) << "Did not receive error after binding pipeline to CmdBuffer w/o active RenderPass";
+    ASSERT_TRUE(0 != (msgFlags & VK_DBG_REPORT_ERROR_BIT)) << "Did not receive error after binding pipeline to CmdBuffer w/o active RenderPass";
     if (!strstr(msgString.c_str(),"Incorrectly binding graphics pipeline ")) {
         FAIL() << "Error received was not 'Incorrectly binding graphics pipeline (0xbaadb1be) without an active RenderPass'";
     }
@@ -991,7 +991,7 @@ TEST_F(VkLayerTest, InvalidDescriptorPool)
     vkResetDescriptorPool(device(), badPool);
 
     msgFlags = m_errorMonitor->GetState(&msgString);
-    ASSERT_TRUE(msgFlags & VK_DBG_REPORT_ERROR_BIT) << "Did not receive an error from Resetting an invalid DescriptorPool Object";
+    ASSERT_TRUE(0 != (msgFlags & VK_DBG_REPORT_ERROR_BIT)) << "Did not receive an error from Resetting an invalid DescriptorPool Object";
     if (!strstr(msgString.c_str(),"Unable to find pool node for pool 0xbaad6001 specified in vkResetDescriptorPool() call")) {
         FAIL() << "Error received was note 'Unable to find pool node for pool 0xbaad6001 specified in vkResetDescriptorPool() call'";
     }*/
@@ -1027,7 +1027,7 @@ TEST_F(VkLayerTest, InvalidPipeline)
 //    VkPipeline badPipeline = (VkPipeline)0xbaadb1be;
 //    vkCmdBindPipeline(cmdBuffer.GetBufferHandle(), VK_PIPELINE_BIND_POINT_GRAPHICS, badPipeline);
 //    msgFlags = m_errorMonitor->GetState(&msgString);
-//    ASSERT_TRUE(msgFlags & VK_DBG_REPORT_ERROR_BIT) << "Did not receive error after binding invalid pipeline to CmdBuffer";
+//    ASSERT_TRUE(0 != (msgFlags & VK_DBG_REPORT_ERROR_BIT)) << "Did not receive error after binding invalid pipeline to CmdBuffer";
 //    if (!strstr(msgString.c_str(),"Attempt to bind Pipeline ")) {
 //        FAIL() << "Error received was not 'Attempt to bind Pipeline 0xbaadb1be that doesn't exist!'";
 //    }
@@ -1101,7 +1101,7 @@ TEST_F(VkLayerTest, DescriptorSetNotUpdated)
     vkCmdBindDescriptorSets(m_cmdBuffer->GetBufferHandle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout, 0, 1, &descriptorSet, 0, NULL);
 
     msgFlags = m_errorMonitor->GetState(&msgString);
-    ASSERT_TRUE(msgFlags & VK_DBG_REPORT_WARN_BIT) << "Did not warn after binding a DescriptorSet that was never updated.";
+    ASSERT_NE(0, msgFlags & VK_DBG_REPORT_WARN_BIT) << "Did not warn after binding a DescriptorSet that was never updated.";
     if (!strstr(msgString.c_str()," bound but it was never updated. ")) {
         FAIL() << "Error received was not 'DS <blah> bound but it was never updated. You may want to either update it or not bind it.'";
     }
@@ -1118,7 +1118,7 @@ TEST_F(VkLayerTest, NoBeginCmdBuffer)
     // Call EndCommandBuffer() w/o calling BeginCommandBuffer()
     vkEndCommandBuffer(cmdBuffer.GetBufferHandle());
     msgFlags = m_errorMonitor->GetState(&msgString);
-    ASSERT_TRUE(msgFlags & VK_DBG_REPORT_ERROR_BIT) << "Did not receive error after ending a CmdBuffer w/o calling BeginCommandBuffer()";
+    ASSERT_TRUE(0 != (msgFlags & VK_DBG_REPORT_ERROR_BIT)) << "Did not receive error after ending a CmdBuffer w/o calling BeginCommandBuffer()";
     if (!strstr(msgString.c_str(),"You must call vkBeginCommandBuffer() before this call to ")) {
         FAIL() << "Error received was not 'You must call vkBeginCommandBuffer() before this call to vkEndCommandBuffer()'";
     }
@@ -1149,7 +1149,7 @@ TEST_F(VkLayerTest, PrimaryCmdBufferFramebufferAndRenderpass)
     vkBeginCommandBuffer(cmdBuffer.GetBufferHandle(), &cmd_buf_info);
 
     msgFlags = m_errorMonitor->GetState(&msgString);
-    ASSERT_TRUE(msgFlags & VK_DBG_REPORT_ERROR_BIT) << "Did not receive error passing a non-NULL Framebuffer and Renderpass to BeginCommandBuffer()";
+    ASSERT_TRUE(0 != (msgFlags & VK_DBG_REPORT_ERROR_BIT)) << "Did not receive error passing a non-NULL Framebuffer and Renderpass to BeginCommandBuffer()";
     if (!strstr(msgString.c_str(),"may not specify framebuffer or renderpass parameters")) {
         FAIL() << "Error received was not 'vkCreateCommandBuffer():  Primary Command Buffer may not specify framebuffer or renderpass parameters'";
     }
@@ -1187,7 +1187,7 @@ TEST_F(VkLayerTest, SecondaryCmdBufferFramebufferAndRenderpass)
     vkBeginCommandBuffer(draw_cmd, &cmd_buf_info);
 
     msgFlags = m_errorMonitor->GetState(&msgString);
-    ASSERT_TRUE(msgFlags & VK_DBG_REPORT_ERROR_BIT) << "Did not receive error passing NULL Framebuffer/Renderpass to BeginCommandBuffer()";
+    ASSERT_TRUE(0 != (msgFlags & VK_DBG_REPORT_ERROR_BIT)) << "Did not receive error passing NULL Framebuffer/Renderpass to BeginCommandBuffer()";
     if (!strstr(msgString.c_str(),"must specify framebuffer and renderpass parameters")) {
         FAIL() << "Error received was not 'vkCreateCommandBuffer():  Secondary Command Buffer must specify framebuffer and renderpass parameters'";
     }
@@ -1278,7 +1278,7 @@ TEST_F(VkLayerTest, InvalidPipelineCreateState)
     err = vkCreateGraphicsPipelines(m_device->device(), pipelineCache, 1, &gp_ci, &pipeline);
 
     msgFlags = m_errorMonitor->GetState(&msgString);
-    ASSERT_TRUE(msgFlags & VK_DBG_REPORT_ERROR_BIT) << "Did not receive error after creating Gfx Pipeline w/o VS.";
+    ASSERT_TRUE(0 != (msgFlags & VK_DBG_REPORT_ERROR_BIT)) << "Did not receive error after creating Gfx Pipeline w/o VS.";
     if (!strstr(msgString.c_str(),"Invalid Pipeline CreateInfo State: Vtx Shader required")) {
         FAIL() << "Error received was not 'Invalid Pipeline CreateInfo State: Vtx Shader required'";
     }
@@ -1299,7 +1299,7 @@ TEST_F(VkLayerTest, NullRenderPass)
     vkCmdBeginRenderPass(m_cmdBuffer->GetBufferHandle(), NULL, VK_RENDER_PASS_CONTENTS_INLINE);
 
     msgFlags = m_errorMonitor->GetState(&msgString);
-    ASSERT_TRUE(msgFlags & VK_DBG_REPORT_ERROR_BIT) << "Did not receive error after binding NULL RenderPass.";
+    ASSERT_TRUE(0 != (msgFlags & VK_DBG_REPORT_ERROR_BIT)) << "Did not receive error after binding NULL RenderPass.";
     if (!strstr(msgString.c_str(),"You cannot use a NULL RenderPass object in vkCmdBeginRenderPass()")) {
         FAIL() << "Error received was not 'You cannot use a NULL RenderPass object in vkCmdBeginRenderPass()'";
     }
@@ -1326,7 +1326,7 @@ TEST_F(VkLayerTest, RenderPassWithinRenderPass)
     vkCmdBeginRenderPass(m_cmdBuffer->GetBufferHandle(), &rp_begin, VK_RENDER_PASS_CONTENTS_INLINE);
 
     msgFlags = m_errorMonitor->GetState(&msgString);
-    ASSERT_TRUE(msgFlags & VK_DBG_REPORT_ERROR_BIT) << "Did not receive error after binding RenderPass w/i an active RenderPass.";
+    ASSERT_TRUE(0 != (msgFlags & VK_DBG_REPORT_ERROR_BIT)) << "Did not receive error after binding RenderPass w/i an active RenderPass.";
     if (!strstr(msgString.c_str(),"Cannot call vkCmdBeginRenderPass() during an active RenderPass ")) {
         FAIL() << "Error received was not 'Cannot call vkCmdBeginRenderPass() during an active RenderPass...'";
     }
@@ -1409,7 +1409,7 @@ TEST_F(VkLayerTest, VtxBufferNoRenderPass)
     vkCmdBindVertexBuffers(m_cmdBuffer->GetBufferHandle(), 0, 1, NULL, NULL);
 
     msgFlags = m_errorMonitor->GetState(&msgString);
-    ASSERT_TRUE(msgFlags & VK_DBG_REPORT_ERROR_BIT) << "Did not receive error after vkCmdBindVertexBuffers() w/o active RenderPass.";
+    ASSERT_TRUE(0 != (msgFlags & VK_DBG_REPORT_ERROR_BIT)) << "Did not receive error after vkCmdBindVertexBuffers() w/o active RenderPass.";
     if (!strstr(msgString.c_str(),"Incorrect call to vkCmdBindVertexBuffers() without an active RenderPass.")) {
         FAIL() << "Error received was not 'Incorrect call to vkCmdBindVertexBuffers() without an active RenderPass.'";
     }
@@ -1495,7 +1495,7 @@ TEST_F(VkLayerTest, DSTypeMismatch)
     vkUpdateDescriptorSets(m_device->device(), 1, &descriptor_write, 0, NULL);
 
     msgFlags = m_errorMonitor->GetState(&msgString);
-    ASSERT_TRUE(msgFlags & VK_DBG_REPORT_ERROR_BIT) << "Did not receive error after updating BUFFER Descriptor w/ incorrect type of SAMPLER.";
+    ASSERT_TRUE(0 != (msgFlags & VK_DBG_REPORT_ERROR_BIT)) << "Did not receive error after updating BUFFER Descriptor w/ incorrect type of SAMPLER.";
     if (!strstr(msgString.c_str(),"Descriptor update type of VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET does not match ")) {
         FAIL() << "Error received was not 'Descriptor update type of VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET does not match overlapping binding type!'";
     }
@@ -1583,7 +1583,7 @@ TEST_F(VkLayerTest, DSUpdateOutOfBounds)
     vkUpdateDescriptorSets(m_device->device(), 1, &descriptor_write, 0, NULL);
 
     msgFlags = m_errorMonitor->GetState(&msgString);
-    ASSERT_TRUE(msgFlags & VK_DBG_REPORT_ERROR_BIT) << "Did not receive error after updating Descriptor w/ index out of bounds.";
+    ASSERT_TRUE(0 != (msgFlags & VK_DBG_REPORT_ERROR_BIT)) << "Did not receive error after updating Descriptor w/ index out of bounds.";
     if (!strstr(msgString.c_str(),"Descriptor update type of VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET is out of bounds for matching binding")) {
         FAIL() << "Error received was not 'Descriptor update type of VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET is out of bounds for matching binding...'";
     }
@@ -1669,7 +1669,7 @@ TEST_F(VkLayerTest, InvalidDSUpdateIndex)
     vkUpdateDescriptorSets(m_device->device(), 1, &descriptor_write, 0, NULL);
 
     msgFlags = m_errorMonitor->GetState(&msgString);
-    ASSERT_TRUE(msgFlags & VK_DBG_REPORT_ERROR_BIT) << "Did not receive error after updating Descriptor w/ count too large for layout.";
+    ASSERT_TRUE(0 != (msgFlags & VK_DBG_REPORT_ERROR_BIT)) << "Did not receive error after updating Descriptor w/ count too large for layout.";
     if (!strstr(msgString.c_str()," does not have binding to match update binding ")) {
         FAIL() << "Error received was not 'Descriptor Set <blah> does not have binding to match update binding '";
     }
@@ -1755,7 +1755,7 @@ TEST_F(VkLayerTest, InvalidDSUpdateStruct)
     vkUpdateDescriptorSets(m_device->device(), 1, &descriptor_write, 0, NULL);
 
     msgFlags = m_errorMonitor->GetState(&msgString);
-    ASSERT_TRUE(msgFlags & VK_DBG_REPORT_ERROR_BIT) << "Did not receive error after updating Descriptor w/ invalid struct type.";
+    ASSERT_TRUE(0 != (msgFlags & VK_DBG_REPORT_ERROR_BIT)) << "Did not receive error after updating Descriptor w/ invalid struct type.";
     if (!strstr(msgString.c_str(),"Unexpected UPDATE struct of type ")) {
         FAIL() << "Error received was not 'Unexpected UPDATE struct of type '";
     }
@@ -1835,7 +1835,7 @@ TEST_F(VkLayerTest, NumSamplesMismatch)
     vkCmdBindPipeline(m_cmdBuffer->GetBufferHandle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipe.handle());
 
     msgFlags = m_errorMonitor->GetState(&msgString);
-    ASSERT_TRUE(msgFlags & VK_DBG_REPORT_ERROR_BIT) << "Did not receive error after binding RenderPass w/ mismatched MSAA from PSO.";
+    ASSERT_TRUE(0 != (msgFlags & VK_DBG_REPORT_ERROR_BIT)) << "Did not receive error after binding RenderPass w/ mismatched MSAA from PSO.";
     if (!strstr(msgString.c_str(),"Num samples mismatch! ")) {
         FAIL() << "Error received was not 'Num samples mismatch!...'";
     }
@@ -1901,7 +1901,7 @@ TEST_F(VkLayerTest, PipelineNotBound)
     vkCmdBindPipeline(m_cmdBuffer->GetBufferHandle(), VK_PIPELINE_BIND_POINT_GRAPHICS, badPipeline);
 
     msgFlags = m_errorMonitor->GetState(&msgString);
-    ASSERT_TRUE(msgFlags & VK_DBG_REPORT_ERROR_BIT) << "Did not receive error after binding invalid pipeline to CmdBuffer";
+    ASSERT_TRUE(0 != (msgFlags & VK_DBG_REPORT_ERROR_BIT)) << "Did not receive error after binding invalid pipeline to CmdBuffer";
     if (!strstr(msgString.c_str(),"Attempt to bind Pipeline ")) {
         FAIL() << "Error received was not 'Attempt to bind Pipeline 0xbaadb1be that doesn't exist!'";
     }
@@ -1992,7 +1992,7 @@ TEST_F(VkLayerTest, ClearCmdNoDraw)
 
     vkCmdClearColorAttachment(m_cmdBuffer->GetBufferHandle(), 0, (VkImageLayout)NULL, &cCV, 0, NULL);
     msgFlags = m_errorMonitor->GetState(&msgString);
-    ASSERT_TRUE(msgFlags & VK_DBG_REPORT_WARN_BIT) << "Did not receive error after issuing Clear Cmd on FB color attachment prior to Draw Cmd.";
+    ASSERT_NE(0, msgFlags & VK_DBG_REPORT_WARN_BIT) << "Did not receive error after issuing Clear Cmd on FB color attachment prior to Draw Cmd.";
     if (!strstr(msgString.c_str(),"vkCmdClearColorAttachment() issued on CB object ")) {
         FAIL() << "Error received was not 'vkCmdClearColorAttachment() issued on CB object...'";
     }
@@ -2076,7 +2076,7 @@ TEST_F(VkLayerTest, VtxBufferBadIndex)
     vkCmdBindVertexBuffers(m_cmdBuffer->GetBufferHandle(), 0, 1, NULL, NULL);
 
     msgFlags = m_errorMonitor->GetState(&msgString);
-    ASSERT_TRUE(msgFlags & VK_DBG_REPORT_ERROR_BIT) << "Did not receive error after binding Vtx Buffer w/o VBO attached to PSO.";
+    ASSERT_TRUE(0 != (msgFlags & VK_DBG_REPORT_ERROR_BIT)) << "Did not receive error after binding Vtx Buffer w/o VBO attached to PSO.";
     if (!strstr(msgString.c_str(),"Vtx Buffer Index 0 was bound, but no vtx buffers are attached to PSO.")) {
         FAIL() << "Error received was not 'Vtx Buffer Index 0 was bound, but no vtx buffers are attached to PSO.'";
     }
@@ -2143,7 +2143,7 @@ TEST_F(VkLayerTest, ThreadCmdBufferCollision)
     EndCommandBuffer();
 
     msgFlags = m_errorMonitor->GetState(&msgString);
-    ASSERT_TRUE(msgFlags & VK_DBG_REPORT_ERROR_BIT) << "Did not receive an err from using one VkCommandBufferObj in two threads";
+    ASSERT_TRUE(0 != (msgFlags & VK_DBG_REPORT_ERROR_BIT)) << "Did not receive an err from using one VkCommandBufferObj in two threads";
     if (!strstr(msgString.c_str(),"THREADING ERROR")) {
         FAIL() << "Error received was not 'THREADING ERROR'";
     }
@@ -2196,7 +2196,7 @@ TEST_F(VkLayerTest, CreatePipelineVertexOutputNotConsumed)
 
     msgFlags = m_errorMonitor->GetState(&msgString);
 
-    ASSERT_TRUE(msgFlags & VK_DBG_REPORT_WARN_BIT);
+    ASSERT_NE(0, msgFlags & VK_DBG_REPORT_WARN_BIT);
     if (!strstr(msgString.c_str(),"not consumed by fragment shader")) {
         FAIL() << "Incorrect warning: " << msgString;
     }
@@ -2245,7 +2245,7 @@ TEST_F(VkLayerTest, CreatePipelineFragmentInputNotProvided)
 
     msgFlags = m_errorMonitor->GetState(&msgString);
 
-    ASSERT_TRUE(msgFlags & VK_DBG_REPORT_ERROR_BIT);
+    ASSERT_TRUE(0 != (msgFlags & VK_DBG_REPORT_ERROR_BIT));
     if (!strstr(msgString.c_str(),"not written by vertex shader")) {
         FAIL() << "Incorrect error: " << msgString;
     }
@@ -2296,7 +2296,7 @@ TEST_F(VkLayerTest, CreatePipelineVsFsTypeMismatch)
 
     msgFlags = m_errorMonitor->GetState(&msgString);
 
-    ASSERT_TRUE(msgFlags & VK_DBG_REPORT_ERROR_BIT);
+    ASSERT_TRUE(0 != (msgFlags & VK_DBG_REPORT_ERROR_BIT));
     if (!strstr(msgString.c_str(),"Type mismatch on location 0")) {
         FAIL() << "Incorrect error: " << msgString;
     }
@@ -2354,7 +2354,7 @@ TEST_F(VkLayerTest, CreatePipelineAttribNotConsumed)
 
     msgFlags = m_errorMonitor->GetState(&msgString);
 
-    ASSERT_TRUE(msgFlags & VK_DBG_REPORT_WARN_BIT);
+    ASSERT_NE(0, msgFlags & VK_DBG_REPORT_WARN_BIT);
     if (!strstr(msgString.c_str(),"location 0 not consumed by VS")) {
         FAIL() << "Incorrect warning: " << msgString;
     }
@@ -2403,7 +2403,7 @@ TEST_F(VkLayerTest, CreatePipelineAttribNotProvided)
 
     msgFlags = m_errorMonitor->GetState(&msgString);
 
-    ASSERT_TRUE(msgFlags & VK_DBG_REPORT_ERROR_BIT);
+    ASSERT_TRUE(0 != (msgFlags & VK_DBG_REPORT_ERROR_BIT));
     if (!strstr(msgString.c_str(),"VS consumes input at location 0 but not provided")) {
         FAIL() << "Incorrect warning: " << msgString;
     }
@@ -2462,7 +2462,7 @@ TEST_F(VkLayerTest, CreatePipelineAttribTypeMismatch)
 
     msgFlags = m_errorMonitor->GetState(&msgString);
 
-    ASSERT_TRUE(msgFlags & VK_DBG_REPORT_ERROR_BIT);
+    ASSERT_TRUE(0 != (msgFlags & VK_DBG_REPORT_ERROR_BIT));
     if (!strstr(msgString.c_str(),"location 0 does not match VS input type")) {
         FAIL() << "Incorrect error: " << msgString;
     }
@@ -2522,7 +2522,7 @@ TEST_F(VkLayerTest, CreatePipelineAttribBindingConflict)
 
     msgFlags = m_errorMonitor->GetState(&msgString);
 
-    ASSERT_TRUE(msgFlags & VK_DBG_REPORT_ERROR_BIT);
+    ASSERT_TRUE(0 != (msgFlags & VK_DBG_REPORT_ERROR_BIT));
     if (!strstr(msgString.c_str(),"Duplicate vertex input binding descriptions for binding 0")) {
         FAIL() << "Incorrect error: " << msgString;
     }
@@ -2574,7 +2574,7 @@ TEST_F(VkLayerTest, CreatePipelineFragmentOutputNotWritten)
 
     msgFlags = m_errorMonitor->GetState(&msgString);
 
-    ASSERT_TRUE(msgFlags & VK_DBG_REPORT_ERROR_BIT);
+    ASSERT_TRUE(0 != (msgFlags & VK_DBG_REPORT_ERROR_BIT));
     if (!strstr(msgString.c_str(),"Attachment 0 not written by FS")) {
         FAIL() << "Incorrect error: " << msgString;
     }
@@ -2628,7 +2628,7 @@ TEST_F(VkLayerTest, CreatePipelineFragmentOutputNotConsumed)
 
     msgFlags = m_errorMonitor->GetState(&msgString);
 
-    ASSERT_TRUE(msgFlags & VK_DBG_REPORT_WARN_BIT);
+    ASSERT_NE(0, msgFlags & VK_DBG_REPORT_WARN_BIT);
     if (!strstr(msgString.c_str(),"FS writes to output location 1 with no matching attachment")) {
         FAIL() << "Incorrect warning: " << msgString;
     }
@@ -2679,7 +2679,7 @@ TEST_F(VkLayerTest, CreatePipelineFragmentOutputTypeMismatch)
 
     msgFlags = m_errorMonitor->GetState(&msgString);
 
-    ASSERT_TRUE(msgFlags & VK_DBG_REPORT_ERROR_BIT);
+    ASSERT_TRUE(0 != (msgFlags & VK_DBG_REPORT_ERROR_BIT));
     if (!strstr(msgString.c_str(),"does not match FS output type")) {
         FAIL() << "Incorrect error: " << msgString;
     }
@@ -2736,7 +2736,7 @@ TEST_F(VkLayerTest, CreatePipelineNonSpirvShader)
     /* should have emitted a warning: the shader is not SPIRV, so we're
      * not going to be able to analyze it */
     msgFlags = m_errorMonitor->GetState(&msgString);
-    ASSERT_TRUE(msgFlags & VK_DBG_REPORT_WARN_BIT);
+    ASSERT_NE(0, msgFlags & VK_DBG_REPORT_WARN_BIT);
     if (!strstr(msgString.c_str(),"is not SPIR-V")) {
         FAIL() << "Incorrect warning: " << msgString;
     }

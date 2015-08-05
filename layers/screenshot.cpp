@@ -271,7 +271,7 @@ static void writePPM( const char *filename, VkImage image1)
 
 static void createDeviceRegisterExtensions(const VkDeviceCreateInfo* pCreateInfo, VkDevice device)
 {
-    uint32_t i, ext_idx;
+    uint32_t i;
     VkLayerDispatchTable *pDisp  = get_dispatch_table(screenshot_device_table_map, device);
     deviceExtMap[pDisp].wsi_enabled = false;
     for (i = 0; i < pCreateInfo->extensionCount; i++) {

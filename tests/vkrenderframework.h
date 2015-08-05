@@ -173,7 +173,7 @@ public:
     void BindPipeline(VkPipelineObj &pipeline);
     void BindDescriptorSet(VkDescriptorSetObj &descriptorSet);
     void BindVertexBuffer(VkConstantBufferObj *vertexBuffer, VkDeviceSize offset, uint32_t binding);
-    void BindIndexBuffer(VkIndexBufferObj *indexBuffer, uint32_t offset);
+    void BindIndexBuffer(VkIndexBufferObj *indexBuffer, VkDeviceSize offset);
     void BeginRenderPass(const VkRenderPassBeginInfo &info);
     void BindDynamicViewportState(VkDynamicViewportState viewportState);
     void BindDynamicRasterState(VkDynamicRasterState rasterState);

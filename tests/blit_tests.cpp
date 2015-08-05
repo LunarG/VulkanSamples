@@ -675,24 +675,24 @@ TEST_F(VkCmdCopyBufferTest, Large)
     vk_testing::Buffer src, dst;
     VkMemoryPropertyFlags reqs = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
 
-    src.init_as_src(dev_, size, reqs);
-    uint32_t *data = static_cast<uint32_t *>(src.memory().map());
+    src.init_as_src(dev_, size * sizeof(VkDeviceSize), reqs);
+    VkDeviceSize *data = static_cast<VkDeviceSize *>(src.memory().map());
     VkDeviceSize offset;
     for (offset = 0; offset < size; offset += 4)
         data[offset / 4] = offset;
     src.memory().unmap();
 
-    dst.init_as_dst(dev_, size, reqs);
+    dst.init_as_dst(dev_, size * sizeof(VkDeviceSize), reqs);
 
     cmd_.begin();
     VkBufferCopy region = {};
-    region.copySize = size;
+    region.copySize = size * sizeof(VkDeviceSize);
     vkCmdCopyBuffer(cmd_.handle(), src.handle(), dst.handle(), 1, &region);
     cmd_.end();
 
     submit_and_done();
 
-    data = static_cast<uint32_t *>(dst.memory().map());
+    data = static_cast<VkDeviceSize *>(dst.memory().map());
     for (offset = 0; offset < size; offset += 4)
         EXPECT_EQ(offset, data[offset / 4]);
     dst.memory().unmap();

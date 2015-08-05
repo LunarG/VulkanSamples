@@ -304,9 +304,9 @@ void VkRenderFramework::InitRenderTarget(uint32_t targets, VkAttachmentView *dsB
     std::vector<VkAttachmentDescription> attachments;
     std::vector<VkAttachmentReference> color_references;
     std::vector<VkAttachmentView> bindings;
-    attachments.reserve(targets + (bool) dsBinding);
+    attachments.reserve(targets + 1); // +1 for dsBinding
     color_references.reserve(targets);
-    bindings.reserve(targets + (bool) dsBinding);
+    bindings.reserve(targets + 1);     // +1 for dsBinding
 
     VkAttachmentDescription att = {};
     att.sType = VK_STRUCTURE_TYPE_ATTACHMENT_DESCRIPTION;
@@ -421,8 +421,8 @@ void VkRenderFramework::InitRenderTarget(uint32_t targets, VkAttachmentView *dsB
 
     m_renderPassBeginInfo.renderPass = m_renderPass;
     m_renderPassBeginInfo.framebuffer = m_framebuffer;
-    m_renderPassBeginInfo.renderArea.extent.width = m_width;
-    m_renderPassBeginInfo.renderArea.extent.height = m_height;
+    m_renderPassBeginInfo.renderArea.extent.width = (int32_t) m_width;
+    m_renderPassBeginInfo.renderArea.extent.height = (int32_t) m_height;
     m_renderPassBeginInfo.clearValueCount = m_renderPassClearValues.size();
     m_renderPassBeginInfo.pClearValues = m_renderPassClearValues.data();
 }
@@ -1528,7 +1528,7 @@ void VkCommandBufferObj::BindDescriptorSet(VkDescriptorSetObj &descriptorSet)
            0, 1, &set_obj, 0, NULL );
 }
 
-void VkCommandBufferObj::BindIndexBuffer(VkIndexBufferObj *indexBuffer, uint32_t offset)
+void VkCommandBufferObj::BindIndexBuffer(VkIndexBufferObj *indexBuffer, VkDeviceSize offset)
 {
     vkCmdBindIndexBuffer(handle(), indexBuffer->handle(), offset, indexBuffer->GetIndexType());
 }
