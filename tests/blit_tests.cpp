@@ -222,7 +222,8 @@ bool ImageChecker::walk_region(Action action, const VkBufferImageCopy &region,
                 } else {
                     for (size_t i = 0; i < val.size(); i++) {
                         EXPECT_EQ(val[i], dst[i]) <<
-                            "Offset is: (" << x << ", " << y << ", " << z << ")";
+                            "Offset is: (" << x << ", " << y << ", " << z << ")\n"
+                            "Format is: (" << info_.format << ")\n";
                         if (val[i] != dst[i])
                             return false;
                     }
