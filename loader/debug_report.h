@@ -105,7 +105,7 @@ VkResult VKAPI loader_DbgCreateMsgCallback(
     VkInstance                          instance,
     VkFlags                             msgFlags,
     const PFN_vkDbgMsgCallback          pfnMsgCallback,
-    const void*                         pUserData,
+    void*                               pUserData,
     VkDbgMsgCallback*                   pMsgCallback);
 
 VkResult VKAPI loader_DbgDestroyMsgCallback(

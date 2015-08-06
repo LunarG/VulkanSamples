@@ -199,7 +199,7 @@ typedef void (*PFN_vkDbgMsgCallback)(
 // ------------------------------------------------------------------------------------------------
 // API functions
 
-typedef VkResult (VKAPI *PFN_vkDbgCreateMsgCallback)(VkInstance instance, VkFlags msgFlags, const PFN_vkDbgMsgCallback pfnMsgCallback, const void* pUserData, VkDbgMsgCallback* pMsgCallback);
+typedef VkResult (VKAPI *PFN_vkDbgCreateMsgCallback)(VkInstance instance, VkFlags msgFlags, const PFN_vkDbgMsgCallback pfnMsgCallback, void* pUserData, VkDbgMsgCallback* pMsgCallback);
 typedef VkResult (VKAPI *PFN_vkDbgDestroyMsgCallback)(VkInstance instance, VkDbgMsgCallback msgCallback);
 
 #ifdef VK_PROTOTYPES
