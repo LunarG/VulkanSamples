@@ -40,6 +40,7 @@ def handle_args():
     parser.add_argument('--abs_out_dir', required=False, default=None, help='Absolute path to write output files. Will be created if needed.')
     parser.add_argument('--gen_enum_string_helper', required=False, action='store_true', default=False, help='Enable generation of helper header file to print string versions of enums.')
     parser.add_argument('--gen_struct_wrappers', required=False, action='store_true', default=False, help='Enable generation of struct wrapper classes.')
+    parser.add_argument('--gen_struct_sizes', required=False, action='store_true', default=False, help='Enable generation of struct sizes.')
     parser.add_argument('--gen_cmake', required=False, action='store_true', default=False, help='Enable generation of cmake file for generated code.')
     parser.add_argument('--gen_graphviz', required=False, action='store_true', default=False, help='Enable generation of graphviz dot file.')
     #parser.add_argument('--test', action='store_true', default=False, help='Run simple test.')
@@ -121,6 +122,7 @@ class HeaderFileParser:
         # TODO : Comment parsing is very fragile but handles 2 known files
         block_comment = False
         prev_count_name = ''
+        exclude_struct_list = ['VkPlatformHandleXcbWSI', 'VkPlatformHandleX11WSI']
         with open(self.header_file) as f:
             for line in f:
                 if block_comment:
@@ -146,6 +148,8 @@ class HeaderFileParser:
                     default_enum_val = 0
                     self.types_dict[base_type] = 'enum'
                 elif 'typedef struct' in line or 'typedef union' in line:
+                    if True in [ex_type in line for ex_type in exclude_struct_list]:
+                        continue
                     (ty_txt, st_txt, base_type) = line.strip().split(None, 2)
                     #print("Found STRUCT type: %s" % base_type)
                     if '{' == base_type:
@@ -231,7 +235,7 @@ class HeaderFileParser:
             self.enum_type_dict[enum_type] = []
         self.enum_type_dict[enum_type].append(enum_name)
 
-    # Return True of struct member is a dynamic array
+    # Return True if struct member is a dynamic array
     # RULES : This is a bit quirky based on the API
     # NOTE : Changes in API spec may cause these rules to change
     #  1. There must be a previous uint var w/ 'count' in the name in the struct
@@ -397,6 +401,7 @@ class StructWrapperGen:
     def __init__(self, in_struct_dict, prefix, out_dir):
         self.struct_dict = in_struct_dict
         self.include_headers = []
+        self.lineinfo = sourcelineinfo()
         self.api = prefix
         if prefix.lower() == "vulkan":
             self.api_prefix = "vk"
@@ -1245,43 +1250,45 @@ class StructWrapperGen:
             sh_funcs.append('%s}' % (indent))
             sh_funcs.append("%sreturn structSize;\n}" % (indent))
         # Now generate generic functions to loop over entire struct chain (or just handle single generic structs)
-        for follow_chain in [True, False]:
-            if follow_chain:
-                sh_funcs.append('size_t get_struct_chain_size(const void* pStruct)\n{')
-            else:
-                sh_funcs.append('size_t get_dynamic_struct_size(const void* pStruct)\n{')
-            indent = '    '
-            sh_funcs.append('%s// Just use VkApplicationInfo as struct until actual type is resolved' % (indent))
-            sh_funcs.append('%sVkApplicationInfo* pNext = (VkApplicationInfo*)pStruct;' % (indent))
-            sh_funcs.append('%ssize_t structSize = 0;' % (indent))
-            if follow_chain:
-                sh_funcs.append('%swhile (pNext) {' % (indent))
-                indent = '        '
-            sh_funcs.append('%sswitch (pNext->sType) {' % (indent))
-            indent += '    '
-            for e in enum_type_dict:
-                if 'StructureType' in e:
-                    for v in sorted(enum_type_dict[e]):
-                        struct_name = get_struct_name_from_struct_type(v)
-                        sh_funcs.append('%scase %s:' % (indent, v))
-                        sh_funcs.append('%s{' % (indent))
+        if 'wsi' not in self.header_filename and 'debug_report' not in self.header_filename:
+            for follow_chain in [True, False]:
+                sh_funcs.append('%s' % self.lineinfo.get())
+                if follow_chain:
+                    sh_funcs.append('size_t get_struct_chain_size(const void* pStruct)\n{')
+                else:
+                    sh_funcs.append('size_t get_dynamic_struct_size(const void* pStruct)\n{')
+                indent = '    '
+                sh_funcs.append('%s// Just use VkApplicationInfo as struct until actual type is resolved' % (indent))
+                sh_funcs.append('%sVkApplicationInfo* pNext = (VkApplicationInfo*)pStruct;' % (indent))
+                sh_funcs.append('%ssize_t structSize = 0;' % (indent))
+                if follow_chain:
+                    sh_funcs.append('%swhile (pNext) {' % (indent))
+                    indent = '        '
+                sh_funcs.append('%sswitch (pNext->sType) {' % (indent))
+                indent += '    '
+                for e in enum_type_dict:
+                    if 'StructureType' in e:
+                        for v in sorted(enum_type_dict[e]):
+                            struct_name = get_struct_name_from_struct_type(v)
+                            sh_funcs.append('%scase %s:' % (indent, v))
+                            sh_funcs.append('%s{' % (indent))
+                            indent += '    '
+                            sh_funcs.append('%sstructSize += %s((%s*)pNext);' % (indent, self._get_size_helper_func_name(struct_name), struct_name))
+                            sh_funcs.append('%sbreak;' % (indent))
+                            indent = indent[:-4]
+                            sh_funcs.append('%s}' % (indent))
+                        sh_funcs.append('%sdefault:' % (indent))
                         indent += '    '
-                        sh_funcs.append('%sstructSize += %s((%s*)pNext);' % (indent, self._get_size_helper_func_name(struct_name), struct_name))
-                        sh_funcs.append('%sbreak;' % (indent))
+                        sh_funcs.append('%sassert(0);' % (indent))
+                        sh_funcs.append('%sstructSize += 0;' % (indent))
                         indent = indent[:-4]
-                        sh_funcs.append('%s}' % (indent))
-                    sh_funcs.append('%sdefault:' % (indent))
-                    indent += '    '
-                    sh_funcs.append('%sassert(0);' % (indent))
-                    sh_funcs.append('%sstructSize += 0;' % (indent))
-                    indent = indent[:-4]
-            indent = indent[:-4]
-            sh_funcs.append('%s}' % (indent))
-            if follow_chain:
-                sh_funcs.append('%spNext = (VkApplicationInfo*)pNext->pNext;' % (indent))
                 indent = indent[:-4]
                 sh_funcs.append('%s}' % (indent))
-            sh_funcs.append('%sreturn structSize;\n}' % indent)
+                if follow_chain:
+                    sh_funcs.append('%spNext = (VkApplicationInfo*)pNext->pNext;' % (indent))
+                    indent = indent[:-4]
+                    sh_funcs.append('%s}' % (indent))
+                sh_funcs.append('%sreturn structSize;\n}' % indent)
         return "\n".join(sh_funcs)
 
     def _generateSizeHelperHeader(self):
@@ -1297,6 +1304,8 @@ class StructWrapperGen:
     def _generateSizeHelperHeaderC(self):
         header = []
         header.append('#include "vk_struct_size_helper.h"')
+        header.append('#include "vk_wsi_swapchain.h"')
+        header.append('#include "vk_wsi_device_swapchain.h"')
         header.append('#include <string.h>')
         header.append('#include <assert.h>')
         header.append('\n// Function definitions\n')
@@ -1782,6 +1791,11 @@ def main(argv=None):
         sw.set_include_headers(["stdio.h", "stdlib.h", "vulkan.h"])
         sw.generateSizeHelper()
         sw.generateSizeHelperC()
+    if opts.gen_struct_sizes:
+        st = StructWrapperGen(struct_dict, os.path.basename(opts.input_file).strip(".h"), os.path.dirname(enum_sh_filename))
+        st.set_include_headers(["stdio.h", "stdlib.h", "vulkan.h"])
+        st.generateSizeHelper()
+        st.generateSizeHelperC()
     if opts.gen_cmake:
         cmg = CMakeGen(sw, os.path.dirname(enum_sh_filename))
         cmg.generate()

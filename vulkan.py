@@ -235,7 +235,7 @@ core = Extension(
         Proto("VkResult", "GetPhysicalDeviceFormatProperties",
             [Param("VkPhysicalDevice", "physicalDevice"),
              Param("VkFormat", "format"),
-             Param("VkFormatProperties*", "pFormatInfo")]),
+             Param("VkFormatProperties*", "pFormatProperties")]),
 
         Proto("VkResult", "GetPhysicalDeviceImageFormatProperties",
             [Param("VkPhysicalDevice", "physicalDevice"),
@@ -286,7 +286,7 @@ core = Extension(
         Proto("VkResult", "GetPhysicalDeviceExtensionProperties",
             [Param("VkPhysicalDevice", "physicalDevice"),
              Param("const char*", "pLayerName"),
-             Param("uint32_t", "*pCount"),
+             Param("uint32_t*", "pCount"),
              Param("VkExtensionProperties*", "pProperties")]),
 
         Proto("VkResult", "GetGlobalLayerProperties",
@@ -295,12 +295,12 @@ core = Extension(
 
         Proto("VkResult", "GetPhysicalDeviceLayerProperties",
             [Param("VkPhysicalDevice", "physicalDevice"),
-             Param("uint32_t", "*pCount"),
+             Param("uint32_t*", "pCount"),
              Param("VkLayerProperties*", "pProperties")]),
 
         Proto("VkResult", "GetDeviceQueue",
             [Param("VkDevice", "device"),
-             Param("uint32_t", "queueNodeIndex"),
+             Param("uint32_t", "queueFamilyIndex"),
              Param("uint32_t", "queueIndex"),
              Param("VkQueue*", "pQueue")]),
 
@@ -930,7 +930,7 @@ core = Extension(
             [Param("VkCmdBuffer", "cmdBuffer"),
              Param("uint32_t", "eventCount"),
              Param("const VkEvent*", "pEvents"),
-             Param("VkPipelineStageFlags", "sourceStageMask"),
+             Param("VkPipelineStageFlags", "srcStageMask"),
              Param("VkPipelineStageFlags", "destStageMask"),
              Param("uint32_t", "memBarrierCount"),
              Param("const void* const*", "ppMemBarriers")]),
@@ -1029,14 +1029,12 @@ core = Extension(
 wsi_swapchain = Extension(
     name="VK_WSI_swapchain",
     headers=["vk_wsi_swapchain.h"],
-    objects=[
-        "VkDbgMsgCallback",
-    ],
+    objects=[],
     protos=[
         Proto("VkResult", "GetPhysicalDeviceSurfaceSupportWSI",
             [Param("VkPhysicalDevice", "physicalDevice"),
-             Param("uint32_t", "queueNodeIndex"),
-	     Param("VkSurfaceDescriptionWSI*", "pSurfaceDescription"),
+             Param("uint32_t", "queueFamilyIndex"),
+             Param("const VkSurfaceDescriptionWSI*", "pSurfaceDescription"),
              Param("VkBool32*", "pSupported")]),
     ],
 )
@@ -1044,13 +1042,11 @@ wsi_swapchain = Extension(
 wsi_device_swapchain = Extension(
     name="VK_WSI_device_swapchain",
     headers=["vk_wsi_device_swapchain.h"],
-    objects=[
-        "VkDbgMsgCallback",
-    ],
+    objects=["VkSwapChainWSI"],
     protos=[
         Proto("VkResult", "GetSurfaceInfoWSI",
             [Param("VkDevice", "device"),
-	     Param("VkSurfaceDescriptionWSI*", "pSurfaceDescription"),
+             Param("const VkSurfaceDescriptionWSI*", "pSurfaceDescription"),
              Param("VkSurfaceInfoTypeWSI", "infoType"),
              Param("size_t*", "pDataSize"),
              Param("void*", "pData")]),
@@ -1062,18 +1058,18 @@ wsi_device_swapchain = Extension(
 
         Proto("VkResult", "DestroySwapChainWSI",
             [Param("VkDevice", "device"),
-	     Param("VkSwapChainWSI", "swapChain")]),
+             Param("VkSwapChainWSI", "swapChain")]),
 
         Proto("VkResult", "GetSwapChainInfoWSI",
             [Param("VkDevice", "device"),
-	     Param("VkSwapChainWSI", "swapChain"),
+             Param("VkSwapChainWSI", "swapChain"),
              Param("VkSwapChainInfoTypeWSI", "infoType"),
              Param("size_t*", "pDataSize"),
              Param("void*", "pData")]),
 
         Proto("VkResult", "AcquireNextImageWSI",
             [Param("VkDevice", "device"),
-	     Param("VkSwapChainWSI", "swapChain"),
+             Param("VkSwapChainWSI", "swapChain"),
              Param("uint64_t", "timeout"),
              Param("VkSemaphore", "semaphore"),
              Param("uint32_t*", "pImageIndex")]),
@@ -1083,17 +1079,34 @@ wsi_device_swapchain = Extension(
              Param("VkPresentInfoWSI*", "pPresentInfo")]),
     ],
 )
+debug_report_lunarg = Extension(
+    name="VK_DEBUG_REPORT_LunarG",
+    headers=["vk_debug_report_lunarg.h"],
+    objects=[
+        "VkDbgMsgCallback",
+    ],
+    protos=[
+        Proto("VkResult", "DbgCreateMsgCallback",
+            [Param("VkInstance", "instance"),
+             Param("VkFlags", "msgFlags"),
+             Param("const PFN_vkDbgMsgCallback", "pfnMsgCallback"),
+             Param("void*", "pUserData"),
+             Param("VkDbgMsgCallback*", "pMsgCallback")]),
+
+        Proto("VkResult", "DbgDestroyMsgCallback",
+            [Param("VkInstance", "instance"),
+             Param("VkDbgMsgCallback", "msgCallback")]),
+    ],
+)
 
 extensions = [core, wsi_swapchain, wsi_device_swapchain]
-
+extensions_all = [core, wsi_swapchain, wsi_device_swapchain, debug_report_lunarg]
 object_dispatch_list = [
     "VkInstance",
     "VkPhysicalDevice",
     "VkDevice",
     "VkQueue",
     "VkCmdBuffer",
-    "VkDisplayWSI",
-    "VkSwapChainWSI",
 ]
 
 object_non_dispatch_list = [
@@ -1123,6 +1136,8 @@ object_non_dispatch_list = [
     "VkDynamicDepthStencilState",
     "VkRenderPass",
     "VkFramebuffer",
+    "VkSwapChainWSI",
+    "VkDbgMsgCallback",
 ]
 
 object_type_list = object_dispatch_list + object_non_dispatch_list
