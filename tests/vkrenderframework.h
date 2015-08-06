@@ -416,6 +416,7 @@ public:
     }
 
     void SetDepthStencil(VkPipelineDepthStencilStateCreateInfo *);
+    void SetMSAA(VkPipelineMultisampleStateCreateInfo *ms_state);
     VkResult CreateVKPipeline(VkPipelineLayout layout, VkRenderPass render_pass);
 
 protected:

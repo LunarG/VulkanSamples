@@ -1238,6 +1238,11 @@ void VkPipelineObj::SetDepthStencil(VkPipelineDepthStencilStateCreateInfo *ds_st
     m_ds_state.front = ds_state->front;
 }
 
+void VkPipelineObj::SetMSAA(VkPipelineMultisampleStateCreateInfo *ms_state)
+{
+    memcpy(&m_ms_state, ms_state, sizeof(VkPipelineMultisampleStateCreateInfo));
+}
+
 VkResult VkPipelineObj::CreateVKPipeline(VkPipelineLayout layout, VkRenderPass render_pass)
 {
     VkGraphicsPipelineCreateInfo info = {};
