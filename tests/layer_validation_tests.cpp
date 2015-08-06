@@ -1818,46 +1818,13 @@ TEST_F(VkLayerTest, NumSamplesMismatch)
     ASSERT_VK_SUCCESS(err);
 
     VkShaderObj vs(m_device, bindStateVertShaderText, VK_SHADER_STAGE_VERTEX, this);
-    VkPipelineShaderStageCreateInfo pipe_vs_ci = {};
-        pipe_vs_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-        pipe_vs_ci.pNext = NULL;
-        pipe_vs_ci.stage = VK_SHADER_STAGE_VERTEX;
-        pipe_vs_ci.shader = vs.handle();
-        pipe_vs_ci.pSpecializationInfo = NULL;
-
-    VkGraphicsPipelineCreateInfo gp_ci = {};
-        gp_ci.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
-        gp_ci.pNext = NULL;
-        gp_ci.stageCount = 1;
-        gp_ci.pStages = &pipe_vs_ci;
-        gp_ci.pVertexInputState = NULL;
-        gp_ci.pInputAssemblyState = NULL;
-        gp_ci.pTessellationState = NULL;
-        gp_ci.pViewportState = NULL;
-        gp_ci.pRasterState = NULL;
-        gp_ci.pMultisampleState = &pipe_ms_state_ci;
-        gp_ci.pDepthStencilState = NULL;
-        gp_ci.pColorBlendState = NULL;
-        gp_ci.flags = VK_PIPELINE_CREATE_DISABLE_OPTIMIZATION_BIT;
-        gp_ci.layout = pipeline_layout;
-
-    VkPipelineCacheCreateInfo pc_ci = {};
-        pc_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO;
-        pc_ci.pNext = NULL;
-        pc_ci.initialSize = 0;
-        pc_ci.initialData = 0;
-        pc_ci.maxSize = 0;
-
-    VkPipeline pipeline;
-    VkPipelineCache pipelineCache;
-
-    err = vkCreatePipelineCache(m_device->device(), &pc_ci, &pipelineCache);
-    ASSERT_VK_SUCCESS(err);
-    err = vkCreateGraphicsPipelines(m_device->device(), pipelineCache, 1, &gp_ci, &pipeline);
-    ASSERT_VK_SUCCESS(err);
+    VkPipelineObj pipe(m_device);
+    pipe.AddShader(&vs);
+    pipe.SetMSAA(&pipe_ms_state_ci);
+    pipe.CreateVKPipeline(pipeline_layout, renderPass());
 
     BeginCommandBuffer();
-    vkCmdBindPipeline(m_cmdBuffer->GetBufferHandle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
+    vkCmdBindPipeline(m_cmdBuffer->GetBufferHandle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipe.handle());
 
     msgFlags = m_errorMonitor->GetState(&msgString);
     ASSERT_TRUE(msgFlags & VK_DBG_REPORT_ERROR_BIT) << "Did not receive error after binding RenderPass w/ mismatched MSAA from PSO.";
@@ -1921,9 +1888,6 @@ TEST_F(VkLayerTest, PipelineNotBound)
     ASSERT_VK_SUCCESS(err);
 
     VkPipeline badPipeline = (VkPipeline)0xbaadb1be;
-    //err = vkCreateGraphicsPipeline(m_device->device(), &gp_ci, &pipeline);
-    ASSERT_VK_SUCCESS(err);
-
 
     BeginCommandBuffer();
     vkCmdBindPipeline(m_cmdBuffer->GetBufferHandle(), VK_PIPELINE_BIND_POINT_GRAPHICS, badPipeline);
@@ -1997,75 +1961,12 @@ TEST_F(VkLayerTest, ClearCmdNoDraw)
     VkPipelineLayout pipeline_layout;
     err = vkCreatePipelineLayout(m_device->device(), &pipeline_layout_ci, &pipeline_layout);
     ASSERT_VK_SUCCESS(err);
-
-    size_t shader_len = strlen(bindStateVertShaderText);
-    size_t codeSize = 3 * sizeof(uint32_t) + shader_len + 1;
-    void* pCode = malloc(codeSize);
-
-    /* try version 0 first: VkShaderStage followed by GLSL */
-    ((uint32_t *) pCode)[0] = ICD_SPV_MAGIC;
-    ((uint32_t *) pCode)[1] = 0;
-    ((uint32_t *) pCode)[2] = VK_SHADER_STAGE_VERTEX;
-    memcpy(((uint32_t *) pCode + 3), bindStateVertShaderText, shader_len + 1);
-
-    VkShaderModuleCreateInfo smci = {};
-        smci.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
-        smci.pNext = NULL;
-        smci.codeSize = codeSize;
-        smci.pCode = pCode;
-        smci.flags = 0;
     
-    VkShaderModule vksm;
-    err = vkCreateShaderModule(m_device->device(), &smci, &vksm);
-    ASSERT_VK_SUCCESS(err);
-    VkShaderCreateInfo vs_ci = {};
-        vs_ci.sType = VK_STRUCTURE_TYPE_SHADER_CREATE_INFO;
-        vs_ci.pNext = NULL;
-        vs_ci.module = vksm;
-        vs_ci.pName = "main";
-        vs_ci.flags = 0;
-    
-    VkShader vs;
-    err = vkCreateShader(m_device->device(), &vs_ci, &vs);
-    ASSERT_VK_SUCCESS(err);
-    VkPipelineShaderStageCreateInfo pipe_vs_ci = {};
-        pipe_vs_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-        pipe_vs_ci.pNext = NULL;
-        pipe_vs_ci.stage = VK_SHADER_STAGE_VERTEX;
-        pipe_vs_ci.shader = vs;
-        pipe_vs_ci.pSpecializationInfo = NULL;
-
-    VkGraphicsPipelineCreateInfo gp_ci = {};
-        gp_ci.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
-        gp_ci.pNext = NULL;
-        gp_ci.stageCount = 1;
-        gp_ci.pStages = &pipe_vs_ci;
-        gp_ci.pVertexInputState = NULL;
-        gp_ci.pInputAssemblyState = NULL;
-        gp_ci.pTessellationState = NULL;
-        gp_ci.pViewportState = NULL;
-        gp_ci.pRasterState = NULL;
-        gp_ci.pMultisampleState = &pipe_ms_state_ci;
-        gp_ci.pDepthStencilState = NULL;
-        gp_ci.pColorBlendState = NULL;
-        gp_ci.flags = VK_PIPELINE_CREATE_DISABLE_OPTIMIZATION_BIT;
-        gp_ci.layout = pipeline_layout;
-
-    VkPipelineCacheCreateInfo pc_ci = {};
-        pc_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO;
-        pc_ci.pNext = NULL;
-        pc_ci.initialSize = 0;
-        pc_ci.initialData = 0;
-        pc_ci.maxSize = 0;
-
-    VkPipeline pipeline;
-    VkPipelineCache pipelineCache;
-
-    err = vkCreatePipelineCache(m_device->device(), &pc_ci, &pipelineCache);
-    ASSERT_VK_SUCCESS(err);
-    err = vkCreateGraphicsPipelines(m_device->device(), pipelineCache, 1, &gp_ci, &pipeline);
-    ASSERT_VK_SUCCESS(err);
-
+    VkShaderObj vs(m_device, bindStateVertShaderText, VK_SHADER_STAGE_VERTEX, this);
+    VkPipelineObj pipe(m_device);
+    pipe.AddShader(&vs);
+    pipe.SetMSAA(&pipe_ms_state_ci);
+    pipe.CreateVKPipeline(pipeline_layout, renderPass());
 
     BeginCommandBuffer();
 
@@ -2150,44 +2051,13 @@ TEST_F(VkLayerTest, VtxBufferBadIndex)
     ASSERT_VK_SUCCESS(err);
 
     VkShaderObj vs(m_device, bindStateVertShaderText, VK_SHADER_STAGE_VERTEX, this);
-
-    VkPipelineShaderStageCreateInfo pipe_vs_ci = {};
-        pipe_vs_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-        pipe_vs_ci.pNext = NULL;
-        pipe_vs_ci.stage = VK_SHADER_STAGE_VERTEX;
-        pipe_vs_ci.shader = vs.handle();
-        pipe_vs_ci.pSpecializationInfo = NULL;
-
-    VkGraphicsPipelineCreateInfo gp_ci = {};
-        gp_ci.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
-        gp_ci.pNext = NULL;
-        gp_ci.stageCount = 1;
-        gp_ci.pStages = &pipe_vs_ci;
-        gp_ci.pVertexInputState = NULL;
-        gp_ci.pInputAssemblyState = NULL;
-        gp_ci.pTessellationState = NULL;
-        gp_ci.pViewportState = NULL;
-        gp_ci.pRasterState = NULL;
-        gp_ci.pMultisampleState = &pipe_ms_state_ci;
-        gp_ci.pDepthStencilState = NULL;
-        gp_ci.pColorBlendState = NULL;
-        gp_ci.flags = VK_PIPELINE_CREATE_DISABLE_OPTIMIZATION_BIT;
-        gp_ci.layout = pipeline_layout;
-
-    VkPipelineCacheCreateInfo pipelineCache;
-    VkPipelineCache pipeline_cache;
-
-    memset(&pipelineCache, 0, sizeof(pipelineCache));
-    pipelineCache.sType = VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO;
-    err = vkCreatePipelineCache(m_device->device(), &pipelineCache, &pipeline_cache);
-
-    VkPipeline pipeline;
-    err = vkCreateGraphicsPipelines(m_device->device(), pipeline_cache, 1, &gp_ci, &pipeline);
-    ASSERT_VK_SUCCESS(err);
-
+    VkPipelineObj pipe(m_device);
+    pipe.AddShader(&vs);
+    pipe.SetMSAA(&pipe_ms_state_ci);
+    pipe.CreateVKPipeline(pipeline_layout, renderPass());
 
     BeginCommandBuffer();
-    vkCmdBindPipeline(m_cmdBuffer->GetBufferHandle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
+    vkCmdBindPipeline(m_cmdBuffer->GetBufferHandle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipe.handle());
     // Should error before calling to driver so don't care about actual data
     vkCmdBindVertexBuffers(m_cmdBuffer->GetBufferHandle(), 0, 1, NULL, NULL);
 
