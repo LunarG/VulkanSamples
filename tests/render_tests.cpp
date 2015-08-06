@@ -3267,7 +3267,12 @@ TEST_F(VkRenderTest, TextureGather)
     // Green triangle means everything worked as expected
     // Red means something went wrong
 
-    // disable SPV until texture gather is turned on in LunarGLASS
+    // disable SPV until texture gather is turned on in glsl->SPV
+    if (!m_use_glsl) {
+        printf("Skipping test that requires GLSL path (TextureGather)\n");
+        return;
+    }
+
     ScopedUseGlsl useGlsl(true);
 
     static const char *vertShaderText =
