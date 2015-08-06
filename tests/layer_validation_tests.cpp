@@ -560,7 +560,8 @@ TEST_F(VkLayerTest, BindInvalidMemory)
 
     // Try to bind free memory that has been freed
     err = vkBindImageMemory(m_device->device(), image, mem, 0);
-    ASSERT_VK_SUCCESS(err);
+    // This may very well return an error.
+    (void)err;
 
     msgFlags = m_errorMonitor->GetState(&msgString);
     ASSERT_TRUE(0 != (msgFlags & VK_DBG_REPORT_ERROR_BIT)) << "Did not receive an error while tring to bind a freed memory object";
