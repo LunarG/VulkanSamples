@@ -177,8 +177,10 @@ static inline void loader_init_device_dispatch_table(VkLayerDispatchTable *table
     table->AcquireNextImageWSI = (PFN_vkAcquireNextImageWSI) gpa(dev, "vkAcquireNextImageWSI");
     table->CreateSwapChainWSI = (PFN_vkCreateSwapChainWSI) gpa(dev, "vkCreateSwapChainWSI");
     table->DestroySwapChainWSI = (PFN_vkDestroySwapChainWSI) gpa(dev, "vkDestroySwapChainWSI");
-    table->GetSurfaceInfoWSI = (PFN_vkGetSurfaceInfoWSI) gpa(dev, "vkGetSurfaceInfoWSI");
-    table->GetSwapChainInfoWSI = (PFN_vkGetSwapChainInfoWSI) gpa(dev, "vkGetSwapChainInfoWSI");
+    table->GetSurfacePropertiesWSI = (PFN_vkGetSurfacePropertiesWSI) gpa(dev, "vkGetSurfacePropertiesWSI");
+    table->GetSurfaceFormatsWSI = (PFN_vkGetSurfaceFormatsWSI) gpa(dev, "vkGetSurfaceFormatsWSI");
+    table->GetSurfacePresentModesWSI = (PFN_vkGetSurfacePresentModesWSI) gpa(dev, "vkGetSurfacePresentModesWSI");
+    table->GetSwapChainImagesWSI = (PFN_vkGetSwapChainImagesWSI) gpa(dev, "vkGetSwapChainImagesWSI");
     table->QueuePresentWSI = (PFN_vkQueuePresentWSI) gpa(dev, "vkQueuePresentWSI");
 }
 

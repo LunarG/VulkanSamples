@@ -163,10 +163,12 @@ typedef struct VkLayerDispatchTable_
     PFN_vkCmdNextSubpass CmdNextSubpass;
     PFN_vkCmdEndRenderPass CmdEndRenderPass;
     PFN_vkCmdExecuteCommands CmdExecuteCommands;
-    PFN_vkGetSurfaceInfoWSI GetSurfaceInfoWSI;
+    PFN_vkGetSurfacePropertiesWSI GetSurfacePropertiesWSI;
+    PFN_vkGetSurfaceFormatsWSI GetSurfaceFormatsWSI;
+    PFN_vkGetSurfacePresentModesWSI GetSurfacePresentModesWSI;
     PFN_vkCreateSwapChainWSI CreateSwapChainWSI;
     PFN_vkDestroySwapChainWSI DestroySwapChainWSI;
-    PFN_vkGetSwapChainInfoWSI GetSwapChainInfoWSI;
+    PFN_vkGetSwapChainImagesWSI GetSwapChainImagesWSI;
     PFN_vkAcquireNextImageWSI AcquireNextImageWSI;
     PFN_vkQueuePresentWSI QueuePresentWSI;
     PFN_vkDbgCreateMsgCallback DbgCreateMsgCallback;
