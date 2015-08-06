@@ -847,52 +847,63 @@ ICD_EXPORT VkResult VKAPI vkGetPhysicalDeviceSurfaceSupportWSI(
     return ret;
 }
 
-VkResult VKAPI vkGetSurfaceInfoWSI(
+VkResult VKAPI vkGetSurfacePropertiesWSI(
     VkDevice                                 device,
     const VkSurfaceDescriptionWSI*           pSurfaceDescription,
-    VkSurfaceInfoTypeWSI                     infoType,
-    size_t*                                  pDataSize,
-    void*                                    pData)
+    VkSurfacePropertiesWSI*                  pSurfaceProperties)
+{
+    // TODO: Move this check to a validation layer (i.e. the driver should
+    // assume the correct data type, and not check):
+    assert(pSurfaceProperties);
+
+    return x11_get_surface_properties(pSurfaceDescription, pSurfaceProperties);
+}
+
+VkResult VKAPI vkGetSurfaceFormatsWSI(
+    VkDevice                                 device,
+    const VkSurfaceDescriptionWSI*           pSurfaceDescription,
+    uint32_t*                                pCount,
+    VkSurfaceFormatWSI*                      pSurfaceFormats)
 {
     VkResult ret = VK_SUCCESS;
 
     // TODO: Move this check to a validation layer (i.e. the driver should
     // assume the correct data type, and not check):
-    if (!pDataSize) {
+    if (!pCount) {
         return VK_ERROR_INVALID_POINTER;
     }
 
-    switch (infoType) {
-    case VK_SURFACE_INFO_TYPE_PROPERTIES_WSI:
-        *pDataSize = sizeof(VkSurfacePropertiesWSI);
-        if (pData) {
-            ret = x11_get_surface_properties(pSurfaceDescription, pData);
+    *pCount = ARRAY_SIZE(x11_presentable_formats);
+    if (pSurfaceFormats) {
+        uint32_t i;
+        for (i = 0; i < *pCount; i++) {
+            pSurfaceFormats[i].format = x11_presentable_formats[i];
+            pSurfaceFormats[i].colorSpace = VK_COLORSPACE_SRGB_NONLINEAR_WSI;
         }
-        break;
-    case VK_SURFACE_INFO_TYPE_FORMATS_WSI:
-        *pDataSize = (sizeof(VkSurfaceFormatPropertiesWSI) *
-                      ARRAY_SIZE(x11_presentable_formats));
-        if (pData) {
-            VkSurfaceFormatPropertiesWSI *dst = pData;
-            uint32_t i;
-            uint32_t num_formats = ARRAY_SIZE(x11_presentable_formats);
-            for (i = 0; i < num_formats; i++) {
-                dst[i].format = x11_presentable_formats[i];
-            }
-        }
-        break;
-    case VK_SURFACE_INFO_TYPE_PRESENT_MODES_WSI:
-        *pDataSize = sizeof(VkSurfacePresentModePropertiesWSI) * 2;
-        if (pData) {
-            VkSurfacePresentModePropertiesWSI *dst = pData;
-            dst[0].presentMode = VK_PRESENT_MODE_IMMEDIATE_WSI;
-            dst[1].presentMode = VK_PRESENT_MODE_FIFO_WSI;
-            // TODO: Consider adding VK_PRESENT_MODE_MAILBOX_WSI sometime
-        }
-        break;
-    default:
-        ret = VK_ERROR_INVALID_VALUE;
-        break;
+    }
+
+    return ret;
+}
+
+VkResult VKAPI vkGetSurfacePresentModesWSI(
+    VkDevice                                 device,
+    const VkSurfaceDescriptionWSI*           pSurfaceDescription,
+    uint32_t*                                pCount,
+    VkPresentModeWSI*                        pPresentModes)
+{
+    VkResult ret = VK_SUCCESS;
+
+    // TODO: Move this check to a validation layer (i.e. the driver should
+    // assume the correct data type, and not check):
+    if (!pCount) {
+        return VK_ERROR_INVALID_POINTER;
+    }
+
+    *pCount = 2;
+    if (pPresentModes) {
+        pPresentModes[0] = VK_PRESENT_MODE_IMMEDIATE_WSI;
+        pPresentModes[1] = VK_PRESENT_MODE_FIFO_WSI;
+        // TODO: Consider adding VK_PRESENT_MODE_MAILBOX_WSI sometime
     }
 
     return ret;
@@ -929,39 +940,27 @@ ICD_EXPORT VkResult VKAPI vkDestroySwapChainWSI(
     return VK_SUCCESS;
 }
 
-ICD_EXPORT VkResult VKAPI vkGetSwapChainInfoWSI(
+ICD_EXPORT VkResult VKAPI vkGetSwapChainImagesWSI(
     VkDevice                                 device,
     VkSwapChainWSI                           swapChain,
-    VkSwapChainInfoTypeWSI                   infoType,
-    size_t*                                  pDataSize,
-    void*                                    pData)
+    uint32_t*                                pCount,
+    VkImage*                                 pSwapChainImages)
 {
     struct intel_x11_swap_chain *sc = x11_swap_chain(swapChain);
     VkResult ret = VK_SUCCESS;
 
     // TODO: Move this check to a validation layer (i.e. the driver should
     // assume the correct data type, and not check):
-    if (!pDataSize) {
+    if (!pCount) {
         return VK_ERROR_INVALID_POINTER;
     }
 
-    switch (infoType) {
-    case VK_SWAP_CHAIN_INFO_TYPE_IMAGES_WSI:
-        *pDataSize = (sizeof(VkSwapChainImagePropertiesWSI) *
-                      sc->persistent_image_count);
-        if (pData) {
-            VkSwapChainImagePropertiesWSI *images =
-                (VkSwapChainImagePropertiesWSI *) pData;
-            uint32_t i;
-
-            for (i = 0; i < sc->persistent_image_count; i++) {
-                images[i].image.handle = (uint64_t) sc->persistent_images[i];
-            }
+    *pCount = sc->persistent_image_count;
+    if (pSwapChainImages) {
+        uint32_t i;
+        for (i = 0; i < sc->persistent_image_count; i++) {
+            pSwapChainImages[i].handle = (uint64_t) sc->persistent_images[i];
         }
-        break;
-    default:
-        ret = VK_ERROR_INVALID_VALUE;
-        break;
     }
 
     return ret;
