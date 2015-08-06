@@ -29,7 +29,7 @@
 
 #include "vulkan.h"
 
-#define VK_WSI_DEVICE_SWAPCHAIN_REVISION            40
+#define VK_WSI_DEVICE_SWAPCHAIN_REVISION            45
 #define VK_WSI_DEVICE_SWAPCHAIN_EXTENSION_NUMBER    2
 #define VK_WSI_DEVICE_SWAPCHAIN_EXTENSION_NAME      "VK_WSI_device_swapchain"
 
@@ -51,7 +51,7 @@ VK_DEFINE_NONDISP_HANDLE(VkSwapChainWSI);
 
 // Extend VkStructureType enum with extension specific constants
 #define VK_STRUCTURE_TYPE_SWAP_CHAIN_CREATE_INFO_WSI VK_WSI_DEVICE_SWAPCHAIN_ENUM(VkStructureType, 0)
-#define VK_STRUCTURE_TYPE_QUEUE_PRESENT_INFO_WSI VK_WSI_DEVICE_SWAPCHAIN_ENUM(VkStructureType, 1)
+#define VK_STRUCTURE_TYPE_PRESENT_INFO_WSI VK_WSI_DEVICE_SWAPCHAIN_ENUM(VkStructureType, 1)
 
 // Extend VkImageLayout enum with extension specific constants
 #define VK_IMAGE_LAYOUT_PRESENT_SOURCE_WSI VK_WSI_DEVICE_SWAPCHAIN_ENUM(VkImageLayout, 2)
@@ -92,26 +92,6 @@ typedef enum VkSurfaceTransformFlagBitsWSI_
 } VkSurfaceTransformFlagBitsWSI;
 typedef VkFlags VkSurfaceTransformFlagsWSI;
 
-typedef enum VkSurfaceInfoTypeWSI_
-{
-    VK_SURFACE_INFO_TYPE_PROPERTIES_WSI = 0,
-    VK_SURFACE_INFO_TYPE_FORMATS_WSI = 1,
-    VK_SURFACE_INFO_TYPE_PRESENT_MODES_WSI = 2,
-    VK_SURFACE_INFO_TYPE_BEGIN_RANGE_WSI = VK_SURFACE_INFO_TYPE_PROPERTIES_WSI,
-    VK_SURFACE_INFO_TYPE_END_RANGE_WSI = VK_SURFACE_INFO_TYPE_PRESENT_MODES_WSI,
-    VK_SURFACE_INFO_TYPE_NUM_WSI = (VK_SURFACE_INFO_TYPE_PRESENT_MODES_WSI - VK_SURFACE_INFO_TYPE_PROPERTIES_WSI + 1),
-    VK_SURFACE_INFO_TYPE_MAX_ENUM_WSI = 0x7FFFFFFF
-} VkSurfaceInfoTypeWSI;
-
-typedef enum VkSwapChainInfoTypeWSI_
-{
-    VK_SWAP_CHAIN_INFO_TYPE_IMAGES_WSI = 0,
-    VK_SWAP_CHAIN_INFO_TYPE_BEGIN_RANGE_WSI = VK_SWAP_CHAIN_INFO_TYPE_IMAGES_WSI,
-    VK_SWAP_CHAIN_INFO_TYPE_END_RANGE_WSI = VK_SWAP_CHAIN_INFO_TYPE_IMAGES_WSI,
-    VK_SWAP_CHAIN_INFO_TYPE_NUM_WSI = (VK_SWAP_CHAIN_INFO_TYPE_IMAGES_WSI - VK_SWAP_CHAIN_INFO_TYPE_IMAGES_WSI + 1),
-    VK_SWAP_CHAIN_INFO_TYPE_MAX_ENUM_WSI = 0x7FFFFFFF
-} VkSwapChainInfoTypeWSI;
-
 typedef enum VkPresentModeWSI_
 {
     VK_PRESENT_MODE_IMMEDIATE_WSI = 0,
@@ -122,6 +102,12 @@ typedef enum VkPresentModeWSI_
     VK_PRESENT_MODE_NUM = (VK_PRESENT_MODE_FIFO_WSI - VK_PRESENT_MODE_IMMEDIATE_WSI + 1),
     VK_PRESENT_MODE_MAX_ENUM_WSI = 0x7FFFFFFF
 } VkPresentModeWSI;
+
+typedef enum VkColorSpaceWSI_
+{
+    VK_COLORSPACE_SRGB_NONLINEAR_WSI = 0x00000000,
+    VK_COLORSPACE_MAX_ENUM_WSI = 0x7FFFFFFF
+} VkColorSpaceWSI;
 
 // ------------------------------------------------------------------------------------------------
 // Flags
@@ -146,15 +132,11 @@ typedef struct VkSurfacePropertiesWSI_
     VkImageUsageFlags                       supportedUsageFlags;// Supported image usage flags for the surface
 } VkSurfacePropertiesWSI;
 
-typedef struct VkSurfaceFormatPropertiesWSI_
+typedef struct VkSurfaceFormatWSI_
 {
-    VkFormat                                format;             // Supported rendering format for the surface
-} VkSurfaceFormatPropertiesWSI;
-
-typedef struct VkSurfacePresentModePropertiesWSI_
-{
-    VkPresentModeWSI                        presentMode;        // Supported presention mode for the surface
-} VkSurfacePresentModePropertiesWSI;
+    VkFormat                                format;             // Supported pair of rendering format 
+    VkColorSpaceWSI                         colorSpace;         // and colorspace for the surface
+} VkSurfaceFormatWSI;
 
 typedef struct VkSwapChainCreateInfoWSI_
 {
@@ -165,10 +147,15 @@ typedef struct VkSwapChainCreateInfoWSI_
 
     uint32_t                                 minImageCount;     // Minimum number of presentation images the application needs
     VkFormat                                 imageFormat;       // Format of the presentation images
+    VkColorSpaceWSI                          imageColorSpace;   // Colorspace of the presentation images
     VkExtent2D                               imageExtent;       // Dimensions of the presentation images
     VkImageUsageFlags                        imageUsageFlags;   // Bits indicating how the presentation images will be used
     VkSurfaceTransformWSI                    preTransform;      // The transform, relative to the device's natural orientation, applied to the image content prior to presentation
     uint32_t                                 imageArraySize;    // Determines the number of views for multiview/stereo presentation
+
+    VkSharingMode                            sharingMode;       // Sharing mode used for the presentation images
+    uint32_t                                 queueFamilyCount;  // Number of queue families having access to the images in case of concurrent sharing mode
+    const uint32_t*                          pQueueFamilyIndices; // Array of queue family indices having access to the images in case of concurrent sharing mode
 
     VkPresentModeWSI                         presentMode;       // Which presentation mode to use for presents on this swap chain.
 
@@ -177,14 +164,9 @@ typedef struct VkSwapChainCreateInfoWSI_
     VkBool32                                 clipped;           // Specifies whether presentable images may be affected by window clip regions.
 } VkSwapChainCreateInfoWSI;
 
-typedef struct VkSwapChainImagePropertiesWSI_
-{
-    VkImage                                  image;             // Persistent swap chain image handle
-} VkSwapChainImagePropertiesWSI;
-
 typedef struct VkPresentInfoWSI_
 {
-    VkStructureType                          sType;             // Must be VK_STRUCTURE_TYPE_QUEUE_PRESENT_INFO_WSI
+    VkStructureType                          sType;             // Must be VK_STRUCTURE_TYPE_PRESENT_INFO_WSI
     const void*                              pNext;             // Pointer to next structure
     uint32_t                                 swapChainCount;    // Number of swap chains to present in this call
     const VkSwapChainWSI*                    swapChains;        // Swap chains to present an image from.
@@ -194,10 +176,12 @@ typedef struct VkPresentInfoWSI_
 // ------------------------------------------------------------------------------------------------
 // Function types
 
-typedef VkResult (VKAPI *PFN_vkGetSurfaceInfoWSI)(VkDevice device, const VkSurfaceDescriptionWSI* pSurfaceDescription, VkSurfaceInfoTypeWSI infoType, size_t* pDataSize, void* pData);
+typedef VkResult (VKAPI *PFN_vkGetSurfacePropertiesWSI)(VkDevice device, const VkSurfaceDescriptionWSI* pSurfaceDescription, VkSurfacePropertiesWSI* pSurfaceProperties);
+typedef VkResult (VKAPI *PFN_vkGetSurfaceFormatsWSI)(VkDevice device, const VkSurfaceDescriptionWSI* pSurfaceDescription, uint32_t* pCount, VkSurfaceFormatWSI* pSurfaceFormats);
+typedef VkResult (VKAPI *PFN_vkGetSurfacePresentModesWSI)(VkDevice device, const VkSurfaceDescriptionWSI* pSurfaceDescription, uint32_t* pCount, VkPresentModeWSI* pPresentModes);
 typedef VkResult (VKAPI *PFN_vkCreateSwapChainWSI)(VkDevice device, const VkSwapChainCreateInfoWSI* pCreateInfo, VkSwapChainWSI* pSwapChain);
 typedef VkResult (VKAPI *PFN_vkDestroySwapChainWSI)(VkDevice device, VkSwapChainWSI swapChain);
-typedef VkResult (VKAPI *PFN_vkGetSwapChainInfoWSI)(VkDevice device, VkSwapChainWSI swapChain, VkSwapChainInfoTypeWSI infoType, size_t* pDataSize, void* pData);
+typedef VkResult (VKAPI *PFN_vkGetSwapChainImagesWSI)(VkDevice device, VkSwapChainWSI swapChain, uint32_t* pCount, VkImage* pSwapChainImages);
 typedef VkResult (VKAPI *PFN_vkAcquireNextImageWSI)(VkDevice device, VkSwapChainWSI swapChain, uint64_t timeout, VkSemaphore semaphore, uint32_t* pImageIndex);
 typedef VkResult (VKAPI *PFN_vkQueuePresentWSI)(VkQueue queue, VkPresentInfoWSI* pPresentInfo);
 
@@ -206,12 +190,22 @@ typedef VkResult (VKAPI *PFN_vkQueuePresentWSI)(VkQueue queue, VkPresentInfoWSI*
 
 #ifdef VK_PROTOTYPES
 
-VkResult VKAPI vkGetSurfaceInfoWSI(
+VkResult VKAPI vkGetSurfacePropertiesWSI(
     VkDevice                                 device,
     const VkSurfaceDescriptionWSI*           pSurfaceDescription,
-    VkSurfaceInfoTypeWSI                     infoType,
-    size_t*                                  pDataSize,
-    void*                                    pData);
+    VkSurfacePropertiesWSI*                  pSurfaceProperties);
+
+VkResult VKAPI vkGetSurfaceFormatsWSI(
+    VkDevice                                 device,
+    const VkSurfaceDescriptionWSI*           pSurfaceDescription,
+    uint32_t*                                pCount,
+    VkSurfaceFormatWSI*                      pSurfaceFormats);
+
+VkResult VKAPI vkGetSurfacePresentModesWSI(
+    VkDevice                                 device,
+    const VkSurfaceDescriptionWSI*           pSurfaceDescription,
+    uint32_t*                                pCount,
+    VkPresentModeWSI*                        pPresentModes);
 
 VkResult VKAPI vkCreateSwapChainWSI(
     VkDevice                                 device,
@@ -222,12 +216,11 @@ VkResult VKAPI vkDestroySwapChainWSI(
     VkDevice                                 device,
     VkSwapChainWSI                           swapChain);
 
-VkResult VKAPI vkGetSwapChainInfoWSI(
+VkResult VKAPI vkGetSwapChainImagesWSI(
     VkDevice                                 device,
     VkSwapChainWSI                           swapChain,
-    VkSwapChainInfoTypeWSI                   infoType,
-    size_t*                                  pDataSize,
-    void*                                    pData);
+    uint32_t*                                pCount,
+    VkImage*                                 pSwapChainImages);
 
 VkResult VKAPI vkAcquireNextImageWSI(
     VkDevice                                 device,

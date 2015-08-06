@@ -29,7 +29,7 @@
 
 #include "vulkan.h"
 
-#define VK_WSI_SWAPCHAIN_REVISION             12
+#define VK_WSI_SWAPCHAIN_REVISION             13
 #define VK_WSI_SWAPCHAIN_EXTENSION_NUMBER     1
 #define VK_WSI_SWAPCHAIN_EXTENSION_NAME       "VK_WSI_swapchain"
 
