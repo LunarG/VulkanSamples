@@ -1265,6 +1265,7 @@ static void demo_prepare_pipeline(struct demo *demo)
     pipeline.pViewportState      = &vp;
     pipeline.pDepthStencilState  = &ds;
     pipeline.pStages             = shaderStages;
+    pipeline.renderPass          = demo->render_pass;
 
     memset(&pipelineCache, 0, sizeof(pipelineCache));
     pipelineCache.sType = VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO;
