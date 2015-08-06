@@ -24,21 +24,32 @@
 #
 
 import os, sys
-from vulkan.source_line_info import sourcelineinfo
+
 
 # add main repo directory so vulkan.py can be imported. This needs to be a complete path.
 glv_scripts_path = os.path.dirname(os.path.abspath(__file__))
-main_path = os.path.abspath(glv_scripts_path + "/vulkan/")
+main_path = os.path.abspath(glv_scripts_path + "/../")
 sys.path.append(main_path)
+from source_line_info import sourcelineinfo
 
-import vulkan.vulkan as vulkan
+import vulkan
+
+# vulkan.py doesn't include all the extensions (debug_report missing)
+headers = []
+objects = []
+protos = []
+for ext in vulkan.extensions_all:
+    headers.extend(ext.headers)
+    objects.extend(ext.objects)
+    protos.extend(ext.protos)
 
 class Subcommand(object):
     def __init__(self, argv):
         self.argv = argv
         self.extName = argv
-        self.headers = vulkan.headers
-        self.protos = vulkan.protos
+        self.headers = headers
+        self.objects = objects
+        self.protos = protos
         self.lineinfo = sourcelineinfo()
 
     def run(self):
@@ -97,165 +108,6 @@ class Subcommand(object):
     def generate_footer(self):
         pass
 
-    vkStructList = vulkan.structs
-    vkObjTypeList = [obj.type for obj in vulkan.object_type_list]
-    vkNonDispObjTypeList = [obj.type for obj in vulkan.non_disp_objects]
-
-    # Return set of printf '%' qualifier, input to that qualifier, and any dereference
-    def _get_printf_params(self, param_type, param_name, output_param):
-        deref = ""
-        isPtr = '*' in param_type
-        simple_param_type = param_type.replace("const ", "").replace("*", "")
-
-        # TODO : Need ENUM and STRUCT checks here
-#        if "VkClearColor" in param_type:
-#            return ("{%ff, %ff, %ff, %ff}", "%s->color.floatColor[0], %s->color.floatColor[1],%s->color.floatColor[2],%s->color.floatColor[3]" % (param_name, param_name, param_name, param_name), deref)
-        if "char*" == param_type:
-            return ("%s", param_name, "*")
-        if "const char*" == param_type:
-            return ("%s", param_name, "*")
-        elif simple_param_type in self.vkObjTypeList:
-            # it's a vk object
-            if isPtr:
-                if simple_param_type in self.vkNonDispObjTypeList:
-                    return ("%p {%lu}", "(void*)%s, ((%s != NULL) ? (%s)->handle : 0)" % (param_name, param_name, param_name), deref)
-                return ("%p {%p}", "(void*)%s, (void*)((%s != NULL) ? *(%s) : 0)" % (param_name, param_name, param_name), deref)
-            if simple_param_type in self.vkNonDispObjTypeList:
-                return ("%lu", "%s.handle" % (param_name), deref)
-            return ("%p", "(void*)%s" % (param_name), deref)
-        if "uint64_t" in param_type or 'VkDeviceSize' in param_type:
-            if '*' in param_type:
-                return ("%lu",  "(%s == NULL) ? 0 : *(%s)" % (param_name, param_name), "*")
-            return ("%lu", param_name, deref)
-        if "size_t" in param_type:
-            if isPtr:
-                return ("%zu", "(%s == NULL) ? 0 : *(%s)" % (param_name, param_name), "*")
-            return ("%zu", param_name, deref)
-        if "float" in param_type:
-#            if '[' in param_type: # handle array, current hard-coded to 4 (TODO: Make this dynamic)
-#                return ("[%f, %f, %f, %f]", "%s[0], %s[1], %s[2], %s[3]" % (param_name, param_name, param_name, param_name), deref)
-            return ("%f", param_name, deref)
-        if 'bool' in param_type.lower():
-            if isPtr:
-                return ("%s", '(*(%s) != 0) ? "TRUE" : "FALSE"' % (param_name), deref)
-            return ("%s", '(%s != 0) ? "TRUE" : "FALSE"' % (param_name), deref)
-        if 'xcb_randr_crtc_t' in param_type:
-            if isPtr:
-                return ("%u", param_name, "*")
-            return ("%u", param_name, deref)
-        if simple_param_type in ['VkDbgMsgCallback']:
-            if isPtr:
-                return ("%p", "(void*)(%s)" % param_name, deref)
-            return ("%lu", "%s.handle" % param_name, deref)
-        # handle ENUMs
-        if param_type[0] == 'V' and param_type[1] == 'k' and param_type not in self.vkObjTypeList and simple_param_type not in self.vkStructList:
-            if not param_type.endswith('Flags'): # There are some types or structs that are not yet supported by the string_* functions
-                return ("%s", "string_%s(%s)" % (param_type.replace('const ', '').strip('*'), param_name), deref)
-
-        if True in [t in param_type.lower() for t in ["int", "flags", "mask", "xcb_window_t"]]:
-            if '[' in param_type: # handle array, current hard-coded to 4 (TODO: Make this dynamic)
-                return ("[%i, %i, %i, %i]", "%s[0], %s[1], %s[2], %s[3]" % (param_name, param_name, param_name, param_name), deref)
-            if isPtr:
-                return ("%i", "(%s == NULL) ? 0 : *(%s)" % (param_name, param_name), "*")
-            return ("%i", param_name, deref)
-        if output_param:
-            return ("%p", "(void*)%s" % param_name, deref)
-        return ("%p", "(void*)(%s)" % param_name, deref)
-
-    # Return set of printf '%' qualifier, input to that qualifier, and any dereference
-    # The verbose version should print all structure contents
-    def _get_printf_params_verbose(self, param_type, param_name, output_param):
-        deref = ""
-        isPtr = '*' in param_type
-        simple_param_type = param_type.replace("const ", "").replace("*", "")
-        simple_param_type = simple_param_type.strip("_")
-        simple_param_name = param_name.replace("pPacket->", "")
-
-        vkExt = "vk"
-        if simple_param_type.endswith("WSI"):
-            vkExt = "vk_wsi_device_swapchain"
-            if simple_param_type in ["VkSurfaceDescriptionWSI", "VkSurfaceDescriptionWindowWSI"]:
-                vkExt = "vk_wsi_swapchain"
-
-        # It turns out that the WSI print functions (generated by vk_helper.py) don't know
-        # anything about the core Vulkan objects / structs / etc, so printing them verbosely
-        # is not going to happen right now. Temporarily abort until vk_helper is improved.
-        #if simple_param_type.endswith("WSI"):
-        #    return ("%p", "(void*)(%s)" % param_name, deref)
-        # Check bool early so VkBool doesn't get picked up in startswith("Vk") case below
-        if 'bool' in param_type.lower():
-            if isPtr:
-                return ("%s", '(*(%s) != 0) ? "TRUE" : "FALSE"' % (param_name), deref)
-            return ("%s", '(%s != 0) ? "TRUE" : "FALSE"' % (param_name), deref)
-        if 'xcb_randr_crtc_t' in param_type:
-            if isPtr:
-                return ("%u", param_name, "*")
-            return ("%u", param_name, deref)
-        if simple_param_type in ['VkDbgMsgCallback']:
-            if isPtr:
-                return ("%p", "(void*)(%s)" % param_name, deref)
-            return ("%lu", "%s.handle" % param_name, deref)
-        # handle 'Vk' special cases, objects, structs, and enums
-        if simple_param_type.startswith("Vk"):
-            if simple_param_type == 'VkDeviceSize':
-                if isPtr:
-                    return ('%lu', "(%s == NULL) ? 0 : *(%s)" % (param_name, param_name), "*")
-                else:
-                    return ('%lu', param_name, deref)
-            elif simple_param_type.endswith('Flags'):
-                return ("%u", param_name, deref)
-            elif simple_param_type.endswith('SampleMask'):
-                return ("%u", param_name, deref)
-            elif simple_param_type in self.vkObjTypeList:
-                # it's a vk object
-                if isPtr:
-                    if simple_param_type in self.vkNonDispObjTypeList:
-                        return ("%p {%lu}", "(void*)%s, ((%s != NULL) ? (%s)->handle : 0)" % (param_name, param_name, param_name), deref)
-                    return ("%p {%p}", "(void*)%s, (void*)((%s != NULL) ? *(%s) : 0)" % (param_name, param_name, param_name), deref)
-                if simple_param_type in self.vkNonDispObjTypeList:
-                    return ("%lu", "%s.handle" % (param_name), deref)
-                return ("%p", "(void*)%s" % (param_name), deref)
-            elif simple_param_type in self.vkStructList:
-                # it's a vk struct
-                if isPtr:
-                    return ("%p\\n%s", '(void*)(%s), (%s == NULL) ? "NULL" : %s_print_%s(%s, "%s->")' % (param_name, param_name, vkExt, simple_param_type.lower(), param_name, simple_param_name), "")
-                else:
-                    return ("%p\\n%s", '(void*)(&%s), %s_print_%s(&%s, "%s.")' % (param_name, vkExt, simple_param_type.lower(), param_name, simple_param_name), "")
-            else:
-                # it's a vk enum
-                if isPtr:
-                    # only true for VkCmdPipelineBarrier and the pPipeEvents array
-                    return ("%p {%s}", '(void*)%s, (%s != NULL) ? string_%s(*%s): ""' % (param_name, param_name, simple_param_type, param_name), "")
-                else:
-                    return ("%s", "string_%s(%s)" % (simple_param_type, param_name), deref)
-
-        if "uint64_t" in param_type:
-            if isPtr:
-                return ("%lu",  "(%s == NULL) ? 0 : *(%s)" % (param_name, param_name), "*")
-            return ("%lu", param_name, deref)
-        if "char*" == param_type:
-            return ("%s", param_name, "*")
-        if "const char*" == param_type:
-            return ("%s", param_name, "*")
-        if "size_t" in param_type:
-            if '*' in param_type:
-                return ("%zu", "(%s == NULL) ? 0 : *(%s)" % (param_name, param_name), "*")
-            return ("%zu", param_name, deref)
-        if "float" in param_type:
-#            if '[' in param_type: # handle array, current hard-coded to 4 (TODO: Make this dynamic)
-#                return ("[%f, %f, %f, %f]", "%s[0], %s[1], %s[2], %s[3]" % (param_name, param_name, param_name, param_name), deref)
-            return ("%f", param_name, deref)
-        if True in [t in param_type.lower() for t in ["int", "flags", "mask", "xcb_window_t"]]:
-            if '[' in param_type: # handle array, current hard-coded to 4 (TODO: Make this dynamic)
-                return ("[%i, %i, %i, %i]", "%s[0], %s[1], %s[2], %s[3]" % (param_name, param_name, param_name, param_name), deref)
-            if '*' in param_type:
-                return ("%i", "(%s == NULL) ? 0 : *(%s)" % (param_name, param_name), "*")
-            return ("%i", param_name, deref)
-        if output_param:
-            return ("%p", "(void*)%s" % param_name, deref)
-        return ("%p", "(void*)(%s)" % param_name, deref)
-
-
     def _generate_trace_func_ptrs(self):
         func_ptrs = []
         func_ptrs.append('// Pointers to real functions and declarations of hooked functions')
@@ -275,13 +127,13 @@ class Subcommand(object):
     def _generate_trace_func_ptrs_ext(self, extName):
         func_ptrs = []
         func_ptrs.append('#ifdef WIN32')
-        for ext in vulkan.extensions:
+        for ext in vulkan.extensions_all:
             if (extName.lower() == ext.name.lower()):
                 for proto in ext.protos:
                     func_ptrs.append('#define __HOOKED_vk%s hooked_vk%s' % (proto.name, proto.name))
 
         func_ptrs.append('#elif defined(__linux__)')
-        for ext in vulkan.extensions:
+        for ext in vulkan.extensions_all:
             if (extName.lower() == ext.name.lower()):
                 for proto in ext.protos:
                     func_ptrs.append('#define __HOOKED_vk%s vk%s' % (proto.name, proto.name))
@@ -301,7 +153,7 @@ class Subcommand(object):
     def _generate_trace_func_protos_ext(self, extName):
         func_protos = []
         func_protos.append('// Hooked function prototypes\n')
-        for ext in vulkan.extensions:
+        for ext in vulkan.extensions_all:
             if (extName.lower() == ext.name.lower()):
                 for proto in ext.protos:
                     func_protos.append('GLVTRACER_EXPORT %s;' % proto.c_func(prefix="__HOOKED_vk", attr="VKAPI"))
@@ -332,7 +184,7 @@ class Subcommand(object):
 
     def _generate_func_ptr_assignments_ext(self, extName):
         func_ptr_assign = []
-        for ext in vulkan.extensions:
+        for ext in vulkan.extensions_all:
             if ext.name.lower() == extName.lower():
                 for proto in ext.protos:
                     func_ptr_assign.append('%s( VKAPI * real_vk%s)(' % (proto.ret, proto.name))
@@ -640,7 +492,7 @@ class Subcommand(object):
                 sys.exit("Entry '%s' in manually_written_hooked_funcs list is not in the vulkan function prototypes" % func)
 
         # process each of the entrypoint prototypes
-        for ext in vulkan.extensions:
+        for ext in vulkan.extensions_all:
             if ext.name.lower() == extName.lower():
                 for proto in ext.protos:
                     if proto.name in manually_written_hooked_funcs:
@@ -758,78 +610,6 @@ class Subcommand(object):
             func_body.append('    {')
             func_body.append('        return "vk%s";' % proto.name)
             func_body.append('    }')
-        func_body.append('    default:')
-        func_body.append('        return NULL;')
-        func_body.append('    }')
-        func_body.append('}\n')
-        return "\n".join(func_body)
-
-    def _generate_stringify_func(self):
-        func_body = []
-        func_body.append('%s' % self.lineinfo.get())
-        func_body.append('static const char *glv_stringify_vk_packet_id(const enum GLV_TRACE_PACKET_ID_VK id, const glv_trace_packet_header* pHeader, BOOL bMultiLine)')
-        func_body.append('{')
-        func_body.append('    static char str[1024];')
-        func_body.append('    switch(id) {')
-        func_body.append('    case GLV_TPI_VK_vkApiVersion:')
-        func_body.append('    {')
-        func_body.append('        packet_vkApiVersion* pPacket = (packet_vkApiVersion*)(pHeader->pBody);')
-        func_body.append('        snprintf(str, 1024, "vkApiVersion = 0x%x (%u.%u.%u)", pPacket->version, (pPacket->version & 0xFFC00000) >> 22, (pPacket->version & 0x003FF000) >> 12, (pPacket->version & 0x00000FFF));')
-        func_body.append('        return str;')
-        func_body.append('    }')
-        func_body.append('%s' % self.lineinfo.get())
-        for proto in self.protos:
-            func_body.append('    case GLV_TPI_VK_vk%s:' % proto.name)
-            func_body.append('    {')
-            func_body.append('        packet_vk%s* pPacket = (packet_vk%s*)(pHeader->pBody);' % (proto.name, proto.name))
-            func_body.append('        if (bMultiLine == TRUE) {')
-            # formatting for multi-line
-            func_str = 'vk%s(\\n' % proto.name
-            print_vals = ''
-            create_func = False
-            if 'Create' in proto.name or 'Alloc' in proto.name or 'MapMemory' in proto.name:
-                create_func = True
-            for p in proto.params:
-                last_param = False
-                if (p.name == proto.params[-1].name):
-                    last_param = True
-                if last_param and create_func: # last param of create func
-                    (pft, pfi, ptr) = self._get_printf_params_verbose(p.ty, 'pPacket->%s' % p.name, True)
-                else:
-                    (pft, pfi, ptr) = self._get_printf_params_verbose(p.ty, 'pPacket->%s' % p.name, False)
-                if last_param == True:
-                    func_str += '%s%s = %s\\n)' % (ptr, p.name, pft)
-                    print_vals += ', %s' % (pfi)
-                else:
-                    func_str += '%s%s = %s\\n' % (ptr, p.name, pft)
-                    print_vals += ', %s' % (pfi)
-            func_body.append('            snprintf(str, 1024, "%s"%s);' % (func_str, print_vals))
-            func_body.append('        } else {')
-            # formatting for a single line
-            func_str = 'vk%s(' % proto.name
-            print_vals = ''
-            create_func = False
-            if 'Create' in proto.name or 'Alloc' in proto.name or 'MapMemory' in proto.name:
-                create_func = True
-            for p in proto.params:
-                last_param = False
-                if (p.name == proto.params[-1].name):
-                    last_param = True
-                if last_param and create_func: # last param of create func
-                    (pft, pfi, ptr) = self._get_printf_params(p.ty, 'pPacket->%s' % p.name, True)
-                else:
-                    (pft, pfi, ptr) = self._get_printf_params(p.ty, 'pPacket->%s' % p.name, False)
-                if last_param == True:
-                    func_str += '%s%s = %s)' % (ptr, p.name, pft)
-                    print_vals += ', %s' % (pfi)
-                else:
-                    func_str += '%s%s = %s, ' % (ptr, p.name, pft)
-                    print_vals += ', %s' % (pfi)
-            func_body.append('            snprintf(str, 1024, "%s"%s);' % (func_str, print_vals))
-            func_body.append('        }')
-            func_body.append('        return str;')
-            func_body.append('    }')
-        func_body.append('%s' % self.lineinfo.get())
         func_body.append('    default:')
         func_body.append('        return NULL;')
         func_body.append('    }')
@@ -1261,7 +1041,7 @@ class Subcommand(object):
         custom_case_dict = { 'QueuePresentWSI' : {'param': 'pPresentInfo', 'txt': ['pPacket->pPresentInfo->swapChains = (VkSwapChainWSI*)glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)(pPacket->pPresentInfo->swapChains));\n',
                                                                                    'pPacket->pPresentInfo->imageIndices = (uint32_t*)glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)(pPacket->pPresentInfo->imageIndices));']},
                             }
-        for ext in vulkan.extensions:
+        for ext in vulkan.extensions_all:
             if ext.name.lower() == extName.lower():
                 for proto in ext.protos:
                     if_body.append('typedef struct packet_vk%s {' % proto.name)
@@ -1413,11 +1193,11 @@ class Subcommand(object):
         # Create dict mapping member var names to VK type (i.e. 'm_imageViews' : 'VkImage_VIEW')
         obj_map_dict = {}
         for obj in vulkan.object_type_list:
-            if (obj.type.startswith('Vk')):
-                mem_var = obj.type.replace('Vk', '').lower()
+            if (obj.startswith('Vk')):
+                mem_var = obj.replace('Vk', '').lower()
             mem_var_list = mem_var.split('_')
             mem_var = 'm_%s%ss' % (mem_var_list[0], "".join([m.title() for m in mem_var_list[1:]]))
-            obj_map_dict[mem_var] = obj.type
+            obj_map_dict[mem_var] = obj
         rc_body = []
         rc_body.append('#define GLV_VK_OBJECT_TYPE_UNKNOWN (VkObjectType)-1')
         rc_body.append('')
@@ -1554,7 +1334,7 @@ class Subcommand(object):
         for var in sorted(obj_map_dict):
             rc_body.append('        %s.clear();' % var)
         rc_body.append('    }\n')
-        disp_obj_types = [obj.type for obj in vulkan.disp_objects]
+        disp_obj_types = [obj for obj in vulkan.object_dispatch_list]
         for var in sorted(obj_map_dict):
             # Disp objs are pts so the obj can be map key, for non-disp objs, use uint64_t handle as map key
             if obj_map_dict[var] in disp_obj_types:
@@ -1682,12 +1462,11 @@ class Subcommand(object):
 
     def _remap_packet_param(self, funcName, paramType, paramName):
         remap_list = vulkan.object_type_list
-        remap_list = vulkan.object_type_list
         param_exclude_list = ['pDescriptorSets', 'pFences']
         cleanParamType = paramType.strip('*').replace('const ', '')
-        VulkNonDispObjects = [o.type for o in vulkan.non_disp_objects]
+        VulkNonDispObjects = [o for o in vulkan.object_non_dispatch_list]
         for obj in remap_list:
-            if obj.type == cleanParamType and paramName not in param_exclude_list:
+            if obj == cleanParamType and paramName not in param_exclude_list:
                 objectTypeRemapParam = ''
                 if 'VkDynamicStateObject' == cleanParamType:
                     objectTypeRemapParam = ', pPacket->stateBindPoint'
@@ -1732,7 +1511,7 @@ class Subcommand(object):
         param_exclude_list = ['pDescriptorSets', 'pFences']
         cleanParamType = paramType.strip('*').replace('const ', '')
         for obj in remap_list:
-            if obj.type == cleanParamType and paramName not in param_exclude_list:
+            if obj == cleanParamType and paramName not in param_exclude_list:
                 objectTypeRemapParam = ''
                 if 'object' == paramName:
                     if 'DbgSetObjectTag' == funcName:
@@ -2020,7 +1799,7 @@ class Subcommand(object):
                     rbody.append('            if (replayResult == VK_SUCCESS)')
                     rbody.append('            {')
                     clean_type = proto.params[-1].ty.strip('*').replace('const ', '')
-                    VkNonDispObjType = [o.type for o in vulkan.non_disp_objects]
+                    VkNonDispObjType = [o for o in vulkan.object_non_dispatch_list]
                     if clean_type in VkNonDispObjType:
                         rbody.append('                m_objMapper.add_to_%ss_map(pPacket->%s->handle, local_%s.handle);' % (clean_type.lower()[2:], proto.params[-1].name, proto.params[-1].name))
                     else:
@@ -2105,18 +1884,18 @@ class GlavePacketID(Subcommand):
         #header_txt.append('#include "glv_vk_vk_wsi_lunarg_packets.h"')
         header_txt.append('#include "glv_vk_vk_wsi_swapchain_packets.h"')
         header_txt.append('#include "glv_vk_vk_wsi_device_swapchain_packets.h"')
-        header_txt.append('#include "vk_enum_string_helper.h"')
+        #header_txt.append('#include "vk_enum_string_helper.h"')
         header_txt.append('#ifndef _WIN32')
         header_txt.append(' #pragma GCC diagnostic ignored "-Wwrite-strings"')
         header_txt.append('#endif')
-        header_txt.append('#include "vk_struct_string_helper.h"')
-        header_txt.append('#include "vk_wsi_swapchain_struct_string_helper.h"')
-        header_txt.append('#include "vk_wsi_device_swapchain_struct_string_helper.h"')
+        #header_txt.append('#include "vk_struct_string_helper.h"')
+        #header_txt.append('#include "vk_wsi_swapchain_struct_string_helper.h"')
+        #header_txt.append('#include "vk_wsi_device_swapchain_struct_string_helper.h"')
         header_txt.append('#ifndef _WIN32')
         header_txt.append(' #pragma GCC diagnostic warning "-Wwrite-strings"')
         header_txt.append('#endif')
-        header_txt.append('#include "vk_wsi_swapchain_enum_string_helper.h"')
-        header_txt.append('#include "vk_wsi_device_swapchain_enum_string_helper.h"')
+        #header_txt.append('#include "vk_wsi_swapchain_enum_string_helper.h"')
+        #header_txt.append('#include "vk_wsi_device_swapchain_enum_string_helper.h"')
         header_txt.append('#if defined(WIN32)')
         header_txt.append('#define snprintf _snprintf')
         header_txt.append('#endif')
@@ -2135,7 +1914,7 @@ class GlavePacketID(Subcommand):
     def generate_body(self):
         body = [self._generate_packet_id_enum(),
                 self._generate_packet_id_name_func(),
-                self._generate_stringify_func(),
+#                self._generate_stringify_func(),
                 self._generate_interp_func()]
 
         return "\n".join(body)
@@ -2173,6 +1952,8 @@ class GlaveExtTraceC(Subcommand):
         header_txt = []
         header_txt.append('#include "glv_platform.h"')
         header_txt.append('#include "glv_common.h"')
+        if extName == "vk_wsi_device_swapchain":
+            header_txt.append('#include "vk_wsi_swapchain.h"')
         header_txt.append('#include "glvtrace_vk_%s.h"' % extName.lower())
         header_txt.append('#include "glv_vk_%s_packets.h"' % extName.lower())
         header_txt.append('#include "glv_vk_packet_id.h"')
@@ -2252,14 +2033,14 @@ class GlaveReplayC(Subcommand):
         header_txt.append('#include "glv_vk_vk_wsi_swapchain_packets.h"')
         header_txt.append('#include "glv_vk_vk_wsi_device_swapchain_packets.h"')
         header_txt.append('#include "glv_vk_packet_id.h"')
-        header_txt.append('#include "vk_enum_string_helper.h"\n}\n')
+        #header_txt.append('#include "vk_enum_string_helper.h"\n}\n')
 
         return "\n".join(header_txt)
 
     def generate_body(self):
         body = [self._generate_replay_init_funcs(),
                 self._generate_replay()]
-
+        body.append("}")
         return "\n".join(body)
 
 def main():
