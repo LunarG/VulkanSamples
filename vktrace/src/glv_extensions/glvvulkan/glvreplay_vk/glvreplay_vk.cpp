@@ -22,6 +22,7 @@
  * THE SOFTWARE.
  *
  **************************************************************************/
+#include <inttypes.h>
 #include "glvreplay_vk.h"
 #include "glvreplay_vk_vkreplay.h"
 

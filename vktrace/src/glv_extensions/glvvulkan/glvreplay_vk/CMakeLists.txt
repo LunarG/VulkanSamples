@@ -5,21 +5,18 @@ project(glvreplay_vk)
 include("${SRC_DIR}/build_options.cmake")
 
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/codegen)
-execute_process(COMMAND ${PYTHON_EXECUTABLE} ${GLV_VULKAN_DIR}/vk_generate.py glave-replay-vk-funcs     vk_core OUTPUT_FILE ${CMAKE_CURRENT_SOURCE_DIR}/codegen/glvreplay_vk_func_ptrs.h)
-execute_process(COMMAND ${PYTHON_EXECUTABLE} ${GLV_VULKAN_DIR}/vk_generate.py glave-replay-c            vk_core OUTPUT_FILE ${CMAKE_CURRENT_SOURCE_DIR}/codegen/glvreplay_vk_replay_gen.cpp)
-execute_process(COMMAND ${PYTHON_EXECUTABLE} ${GLV_VULKAN_DIR}/vk_generate.py glave-replay-obj-mapper-h vk_core OUTPUT_FILE ${CMAKE_CURRENT_SOURCE_DIR}/codegen/glvreplay_vk_objmapper.h)
+execute_process(COMMAND ${PYTHON_EXECUTABLE} ${GLV_VULKAN_DIR}/vktrace_generate.py glave-replay-vk-funcs     vk_core OUTPUT_FILE ${CMAKE_CURRENT_SOURCE_DIR}/codegen/glvreplay_vk_func_ptrs.h)
+execute_process(COMMAND ${PYTHON_EXECUTABLE} ${GLV_VULKAN_DIR}/vktrace_generate.py glave-replay-c            vk_core OUTPUT_FILE ${CMAKE_CURRENT_SOURCE_DIR}/codegen/glvreplay_vk_replay_gen.cpp)
+execute_process(COMMAND ${PYTHON_EXECUTABLE} ${GLV_VULKAN_DIR}/vktrace_generate.py glave-replay-obj-mapper-h vk_core OUTPUT_FILE ${CMAKE_CURRENT_SOURCE_DIR}/codegen/glvreplay_vk_objmapper.h)
 
 if (${CMAKE_SYSTEM_NAME} MATCHES "Linux")
 set(OS_REPLAYER_LIBS
     xcb
-    ${GLV_VULKAN_DIR}/vulkan/lib/liblayer_utils.so
 )
 endif()
 
 if (${CMAKE_SYSTEM_NAME} MATCHES "Windows")
-set(OS_REPLAYER_LIBS
-    ${GLV_VULKAN_DIR}/vulkan/lib/${CMAKE_CFG_INTDIR}/layer_utils.lib
-)
+set(OS_REPLAYER_LIBS  )
 endif()
 
 set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DVK_PROTOTYPES")
@@ -40,17 +37,12 @@ set (HDR_LIST
     glvreplay_vk_vkreplay.h
     codegen/glvreplay_vk_func_ptrs.h
     codegen/glvreplay_vk_objmapper.h
-    ${GLV_VULKAN_DIR}/${CODEGEN_GLVVK_DIR}/glv_vk_packet_id.h
-    ${GLV_VULKAN_DIR}/${CODEGEN_GLVVK_DIR}/glv_vk_vk_packets.h
-#    ${GLV_VULKAN_DIR}/${CODEGEN_GLVVK_DIR}/glv_vk_vk_wsi_lunarg_packets.h
-# TODO138 : I believe these need to be added (based on fact that above should be deleted)
-    ${GLV_VULKAN_DIR}/${CODEGEN_GLVVK_DIR}/glv_vk_vk_wsi_swapchain_packets.h
-    ${GLV_VULKAN_DIR}/${CODEGEN_GLVVK_DIR}/glv_vk_vk_wsi_device_swapchain_packets.h
-    ${GLV_VULKAN_DIR}/${CODEGEN_GLVVK_DIR}/glv_vk_vk_debug_report_lunarg_packets.h
-    ${GLV_VULKAN_DIR}/vulkan/codegen_utils/vk_enum_string_helper.h
-#    ${GLV_VULKAN_DIR}/vulkan/codegen_utils/vk_wsi_lunarg_enum_string_helper.h)
-    ${GLV_VULKAN_DIR}/vulkan/codegen_utils/vk_wsi_swapchain_enum_string_helper.h
-    ${GLV_VULKAN_DIR}/vulkan/codegen_utils/vk_wsi_device_swapchain_enum_string_helper.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/../vulkan/codegen_utils/vk_enum_string_helper.h
+    ${CODEGEN_GLVVK_DIR}/glv_vk_packet_id.h
+    ${CODEGEN_GLVVK_DIR}/glv_vk_vk_packets.h
+    ${CODEGEN_GLVVK_DIR}/glv_vk_vk_wsi_swapchain_packets.h
+    ${CODEGEN_GLVVK_DIR}/glv_vk_vk_wsi_device_swapchain_packets.h
+    ${CODEGEN_GLVVK_DIR}/glv_vk_vk_debug_report_lunarg_packets.h
 )
 
 include_directories(
@@ -58,11 +50,10 @@ include_directories(
     ${SRC_DIR}/glvreplay
     ${SRC_DIR}/glvcommon
     ${SRC_DIR}/thirdparty
-    ${GLV_VULKAN_DIR}/layers
-    ${GLV_VULKAN_DIR}/glvreplay_vk
-    ${GLV_VULKAN_DIR}/${CODEGEN_GLVVK_DIR}
+    ${CMAKE_CURRENT_SOURCE_DIR}
+    ${CODEGEN_GLVVK_DIR}
     ${GLV_VULKAN_INCLUDE_DIR}
-    ${GLV_VULKAN_DIR}/vulkan/codegen_utils
+    ${CMAKE_CURRENT_SOURCE_DIR}/../vulkan/codegen_utils
 )
 
 add_library(${PROJECT_NAME} SHARED ${SRC_LIST} ${HDR_LIST})

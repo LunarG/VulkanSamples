@@ -22,10 +22,9 @@
  * THE SOFTWARE.
  *
  **************************************************************************/
-#include <vkLayer.h>
+#include "vk_layer.h"
 
 #include "glvreplay_vk_settings.h"
-#include "layers_config.h"
 // declared as extern in header
 static glvreplay_vk_settings s_defaultVkReplaySettings = { 1, "",
                                                             STRINGIFY(VK_DBG_LAYER_LEVEL_ERROR), STRINGIFY(VK_DBG_LAYER_ACTION_CALLBACK),
@@ -52,12 +51,14 @@ glv_SettingGroup g_vkReplaySettingGroup =
 
 void apply_layerSettings_overrides()
 {
+#if 0
     setLayerOptionEnum("DrawStateReportLevel", g_vkReplaySettings.drawStateReportLevel);
     setLayerOptionEnum("DrawStateDebugAction", g_vkReplaySettings.drawStateDebugAction);
     setLayerOptionEnum("MemTrackerReportLevel", g_vkReplaySettings.memTrackerReportLevel);
     setLayerOptionEnum("MemTrackerDebugAction", g_vkReplaySettings.memTrackerDebugAction);
     setLayerOptionEnum("ObjectTrackerReportLevel", g_vkReplaySettings.objectTrackerReportLevel);
     setLayerOptionEnum("ObjectTrackerDebugAction", g_vkReplaySettings.objectTrackerDebugAction);
+#endif
 }
 
 char** get_enableLayers_list(unsigned int *pNumLayers)

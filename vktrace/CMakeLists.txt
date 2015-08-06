@@ -50,12 +50,13 @@ message("")
 #
 #  Components to build
 #
+set(GLV_VULKAN_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 
 add_subdirectory(src/thirdparty/getopt)
 add_subdirectory(src/glvcommon)
 add_subdirectory(src/glvtrace)
 add_subdirectory(src/glvreplay)
-add_subdirectory(src/glvdebug)
+#add_subdirectory(src/glvdebug)
 if (${CMAKE_SYSTEM_NAME} MATCHES "Windows")
 add_subdirectory(src/thirdparty/mhook/mhook-lib)
 add_subdirectory(src/thirdparty/mhook/disasm-lib)

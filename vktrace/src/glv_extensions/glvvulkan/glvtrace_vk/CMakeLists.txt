@@ -5,14 +5,14 @@ project(glvtrace_vk)
 include("${SRC_DIR}/build_options.cmake")
 
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/codegen)
-execute_process(COMMAND ${PYTHON_EXECUTABLE} ${GLV_VULKAN_DIR}/vk_generate.py glave-trace-h     vk_core OUTPUT_FILE ${CMAKE_CURRENT_SOURCE_DIR}/codegen/glvtrace_vk_vk.h)
-execute_process(COMMAND ${PYTHON_EXECUTABLE} ${GLV_VULKAN_DIR}/vk_generate.py glave-trace-c     vk_core OUTPUT_FILE ${CMAKE_CURRENT_SOURCE_DIR}/codegen/glvtrace_vk_vk.c)
-execute_process(COMMAND ${PYTHON_EXECUTABLE} ${GLV_VULKAN_DIR}/vk_generate.py glave-ext-trace-h vk_wsi_swapchain OUTPUT_FILE ${CMAKE_CURRENT_SOURCE_DIR}/codegen/glvtrace_vk_vk_wsi_swapchain.h)
-execute_process(COMMAND ${PYTHON_EXECUTABLE} ${GLV_VULKAN_DIR}/vk_generate.py glave-ext-trace-c vk_wsi_swapchain OUTPUT_FILE ${CMAKE_CURRENT_SOURCE_DIR}/codegen/glvtrace_vk_vk_wsi_swapchain.c)
-execute_process(COMMAND ${PYTHON_EXECUTABLE} ${GLV_VULKAN_DIR}/vk_generate.py glave-ext-trace-h vk_wsi_device_swapchain OUTPUT_FILE ${CMAKE_CURRENT_SOURCE_DIR}/codegen/glvtrace_vk_vk_wsi_device_swapchain.h)
-execute_process(COMMAND ${PYTHON_EXECUTABLE} ${GLV_VULKAN_DIR}/vk_generate.py glave-ext-trace-c vk_wsi_device_swapchain OUTPUT_FILE ${CMAKE_CURRENT_SOURCE_DIR}/codegen/glvtrace_vk_vk_wsi_device_swapchain.c)
-execute_process(COMMAND ${PYTHON_EXECUTABLE} ${GLV_VULKAN_DIR}/vk_generate.py glave-ext-trace-h vk_debug_report_lunarg OUTPUT_FILE ${CMAKE_CURRENT_SOURCE_DIR}/codegen/glvtrace_vk_vk_debug_report_lunarg.h)
-execute_process(COMMAND ${PYTHON_EXECUTABLE} ${GLV_VULKAN_DIR}/vk_generate.py glave-ext-trace-c vk_debug_report_lunarg OUTPUT_FILE ${CMAKE_CURRENT_SOURCE_DIR}/codegen/glvtrace_vk_vk_debug_report_lunarg.c)
+execute_process(COMMAND ${PYTHON_EXECUTABLE} ${GLV_VULKAN_DIR}/vktrace_generate.py glave-trace-h     vk_core OUTPUT_FILE ${CMAKE_CURRENT_SOURCE_DIR}/codegen/glvtrace_vk_vk.h)
+execute_process(COMMAND ${PYTHON_EXECUTABLE} ${GLV_VULKAN_DIR}/vktrace_generate.py glave-trace-c     vk_core OUTPUT_FILE ${CMAKE_CURRENT_SOURCE_DIR}/codegen/glvtrace_vk_vk.c)
+execute_process(COMMAND ${PYTHON_EXECUTABLE} ${GLV_VULKAN_DIR}/vktrace_generate.py glave-ext-trace-h vk_wsi_swapchain OUTPUT_FILE ${CMAKE_CURRENT_SOURCE_DIR}/codegen/glvtrace_vk_vk_wsi_swapchain.h)
+execute_process(COMMAND ${PYTHON_EXECUTABLE} ${GLV_VULKAN_DIR}/vktrace_generate.py glave-ext-trace-c vk_wsi_swapchain OUTPUT_FILE ${CMAKE_CURRENT_SOURCE_DIR}/codegen/glvtrace_vk_vk_wsi_swapchain.c)
+execute_process(COMMAND ${PYTHON_EXECUTABLE} ${GLV_VULKAN_DIR}/vktrace_generate.py glave-ext-trace-h vk_wsi_device_swapchain OUTPUT_FILE ${CMAKE_CURRENT_SOURCE_DIR}/codegen/glvtrace_vk_vk_wsi_device_swapchain.h)
+execute_process(COMMAND ${PYTHON_EXECUTABLE} ${GLV_VULKAN_DIR}/vktrace_generate.py glave-ext-trace-c vk_wsi_device_swapchain OUTPUT_FILE ${CMAKE_CURRENT_SOURCE_DIR}/codegen/glvtrace_vk_vk_wsi_device_swapchain.c)
+execute_process(COMMAND ${PYTHON_EXECUTABLE} ${GLV_VULKAN_DIR}/vktrace_generate.py glave-ext-trace-h vk_debug_report_lunarg OUTPUT_FILE ${CMAKE_CURRENT_SOURCE_DIR}/codegen/glvtrace_vk_vk_debug_report_lunarg.h)
+execute_process(COMMAND ${PYTHON_EXECUTABLE} ${GLV_VULKAN_DIR}/vktrace_generate.py glave-ext-trace-c vk_debug_report_lunarg OUTPUT_FILE ${CMAKE_CURRENT_SOURCE_DIR}/codegen/glvtrace_vk_vk_debug_report_lunarg.c)
 
 set(SRC_LIST
     ${SRC_LIST}
@@ -20,14 +20,12 @@ set(SRC_LIST
     glvtrace_vk_trace.c
     codegen/glvtrace_vk_vk.c
     codegen/glvtrace_vk_vk_debug_report_lunarg.c
-#    codegen/glvtrace_vk_vk_wsi_lunarg.c
-# TODO138 : I believe these need to be added (based on fact that above should be deleted)
     codegen/glvtrace_vk_vk_wsi_swapchain.c
     codegen/glvtrace_vk_vk_wsi_device_swapchain.c
-    ${GLV_VULKAN_DIR}/vulkan/codegen_utils/vk_struct_size_helper.c
-#    ${GLV_VULKAN_DIR}/vulkan/codegen_utils/vk_wsi_lunarg_struct_size_helper.c
-    ${GLV_VULKAN_DIR}/vulkan/codegen_utils/vk_wsi_swapchain_struct_size_helper.c
-    ${GLV_VULKAN_DIR}/vulkan/codegen_utils/vk_wsi_device_swapchain_struct_size_helper.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../vulkan/codegen_utils/vk_struct_size_helper.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../vulkan/codegen_utils/vk_wsi_swapchain_struct_size_helper.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../vulkan/codegen_utils/vk_wsi_device_swapchain_struct_size_helper.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../vulkan/codegen_utils/vk_debug_report_lunarg_struct_size_helper.c
 )
 
 set_source_files_properties( ${SRC_LIST} PROPERTIES LANGUAGE C)
@@ -36,25 +34,17 @@ set (HDR_LIST
     glvtrace_vk_helpers.h
     codegen/glvtrace_vk_vk.h
     codegen/glvtrace_vk_vk_debug_report_lunarg.h
-    #codegen/glvtrace_vk_vk_wsi_lunarg.h
-# TODO138 : I believe these need to be added (based on fact that above should be deleted)
     codegen/glvtrace_vk_vk_wsi_swapchain.h
     codegen/glvtrace_vk_vk_wsi_device_swapchain.h
-    ${GLV_VULKAN_DIR}/${CODEGEN_GLVVK_DIR}/glv_vk_packet_id.h
-    ${GLV_VULKAN_DIR}/${CODEGEN_GLVVK_DIR}/glv_vk_vk_packets.h
-    ${GLV_VULKAN_DIR}/${CODEGEN_GLVVK_DIR}/glv_vk_vk_debug_report_lunarg_packets.h
-#    ${GLV_VULKAN_DIR}/${CODEGEN_GLVVK_DIR}/glv_vk_vk_wsi_lunarg_packets.h
-# TODO138 : I believe these need to be added (based on fact that above should be deleted)
-    ${GLV_VULKAN_DIR}/${CODEGEN_GLVVK_DIR}/glv_vk_vk_wsi_swapchain_packets.h
-    ${GLV_VULKAN_DIR}/${CODEGEN_GLVVK_DIR}/glv_vk_vk_wsi_device_swapchain_packets.h
-    ${GLV_VULKAN_DIR}/vulkan/codegen_utils/vk_struct_size_helper.h
-    ${GLV_VULKAN_DIR}/vulkan/codegen_utils/vk_enum_string_helper.h
-#    ${GLV_VULKAN_DIR}/vulkan/codegen_utils/vk_wsi_lunarg_enum_string_helper.h
-#    ${GLV_VULKAN_DIR}/vulkan/codegen_utils/vk_wsi_lunarg_struct_size_helper.h
-    ${GLV_VULKAN_DIR}/vulkan/codegen_utils/vk_wsi_swapchain_enum_string_helper.h
-    ${GLV_VULKAN_DIR}/vulkan/codegen_utils/vk_wsi_swapchain_struct_size_helper.h
-    ${GLV_VULKAN_DIR}/vulkan/codegen_utils/vk_wsi_device_swapchain_enum_string_helper.h
-    ${GLV_VULKAN_DIR}/vulkan/codegen_utils/vk_wsi_device_swapchain_struct_size_helper.h
+    ${CODEGEN_GLVVK_DIR}/glv_vk_packet_id.h
+    ${CODEGEN_GLVVK_DIR}/glv_vk_vk_packets.h
+    ${CODEGEN_GLVVK_DIR}/glv_vk_vk_debug_report_lunarg_packets.h
+    ${CODEGEN_GLVVK_DIR}/glv_vk_vk_wsi_swapchain_packets.h
+    ${CODEGEN_GLVVK_DIR}/glv_vk_vk_wsi_device_swapchain_packets.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/../vulkan/codegen_utils/vk_struct_size_helper.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/../vulkan/codegen_utils/vk_wsi_swapchain_struct_size_helper.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/../vulkan/codegen_utils/vk_wsi_device_swapchain_struct_size_helper.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/../vulkan/codegen_utils/vk_debug_report_lunarg_struct_size_helper.h
 )
 
 include_directories(
@@ -63,9 +53,9 @@ include_directories(
     ${SRC_DIR}/glvtrace
     ${SRC_DIR}/thirdparty
     ${CMAKE_CURRENT_SOURCE_DIR}
-    ${GLV_VULKAN_DIR}/${CODEGEN_GLVVK_DIR}
+    ${CODEGEN_GLVVK_DIR}
     ${GLV_VULKAN_INCLUDE_DIR}
-    ${GLV_VULKAN_DIR}/vulkan/codegen_utils
+    ${CMAKE_CURRENT_SOURCE_DIR}/../vulkan/codegen_utils
 )
 
 add_library(${PROJECT_NAME} SHARED ${SRC_LIST} ${HDR_LIST})
