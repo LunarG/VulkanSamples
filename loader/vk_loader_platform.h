@@ -93,7 +93,7 @@
 #define DEFAULT_VK_LAYERS_PATH \
     LOCAL_LAYERS_PATH \
     "/usr/" LIBDIR VULKAN_LAYER_DIR
-#define LAYERS_PATH_ENV "VK_LAYER_DIRS"
+#define LAYERS_PATH_ENV "VK_LAYER_PATH"
 
 // C99:
 #define PRINTF_SIZE_T_SPECIFIER    "%zu"
@@ -227,7 +227,7 @@ using namespace std;
 #define DEFAULT_VK_DRIVERS_PATH "C:\\Windows\\System32;C:\\Windows\\SysWow64"
 #define DEFAULT_VK_LAYERS_INFO "SOFTWARE\\Khronos\\Vulkan\\ExplicitLayers;SOFTWARE\\Khronos\\Vulkan\\ImplicitLayers"
 #define DEFAULT_VK_LAYERS_PATH "C:\\Windows\\System32;C:\\Windows\\SysWow64"
-#define LAYERS_PATH_ENV "VK_LAYER_FOLDERS"
+#define LAYERS_PATH_ENV "VK_LAYER_PATH"
 
 // C99:
 // Microsoft didn't implement C99 in Visual Studio; but started adding it with
