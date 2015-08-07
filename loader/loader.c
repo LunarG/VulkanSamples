@@ -2240,6 +2240,7 @@ uint32_t loader_activate_instance_layers(struct loader_instance *inst)
     PFN_vkGetInstanceProcAddr nextGPA = loader_gpa_instance_internal;
 
     if (!inst->activated_layer_list.count) {
+        loader_init_instance_core_dispatch_table(inst->disp, nextGPA, (VkInstance) nextObj, (VkInstance) baseObj);
         return 0;
     }
 
@@ -2403,8 +2404,11 @@ static uint32_t loader_activate_device_layers(
     PFN_vkGetDeviceProcAddr nextGPA = loader_GetDeviceChainProcAddr;
     VkBaseLayerObject *wrappedGpus;
 
-    if (!dev->activated_layer_list.count)
+    if (!dev->activated_layer_list.count) {
+        loader_init_device_dispatch_table(&dev->loader_dispatch, nextGPA,
+            (VkDevice) nextObj, (VkDevice) baseObj);
         return 0;
+    }
 
     wrappedGpus = loader_heap_alloc(inst,
                     sizeof (VkBaseLayerObject) * dev->activated_layer_list.count,
