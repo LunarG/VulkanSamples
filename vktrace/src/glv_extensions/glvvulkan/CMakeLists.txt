@@ -79,7 +79,6 @@ execute_process(COMMAND ${PYTHON_EXECUTABLE} ${GLV_VULKAN_DIR}/vktrace_generate.
 execute_process(COMMAND ${PYTHON_EXECUTABLE} ${GLV_VULKAN_DIR}/vktrace_generate.py glave-ext-trace-packets vk_debug_report_lunarg OUTPUT_FILE ${CODEGEN_GLVVK_DIR}/glv_vk_vk_debug_report_lunarg_packets.h)
 
 # Directories which actually contain vulkan-specific glave plugins.
-#add_subdirectory(glvdebug_vk/)
 add_subdirectory(glvreplay_vk/)
 add_subdirectory(glvtrace_vk/)
 
