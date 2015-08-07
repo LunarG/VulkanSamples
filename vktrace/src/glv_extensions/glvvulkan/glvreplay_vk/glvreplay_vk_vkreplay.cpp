@@ -251,7 +251,7 @@ VkResult vkReplay::manually_replay_vkCreateInstance(packet_vkCreateInstance* pPa
                     }
                 }
 
-                VkInstanceCreateInfo createInfo = {};
+                VkInstanceCreateInfo createInfo;
                 createInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
                 createInfo.pNext = NULL;
                 createInfo.pAppInfo = pPacket->pCreateInfo->pAppInfo;
@@ -1732,7 +1732,7 @@ VkResult vkReplay::manually_replay_vkQueuePresentWSI(packet_vkQueuePresentWSI* p
     // TODO : Probably need some kind of remapping from image indices grabbed w/
     //   AcquireNextImageWSI call, and then the indicies that are passed in here
 
-    VkPresentInfoWSI present = {};
+    VkPresentInfoWSI present;
     present.sType = pPacket->pPresentInfo->sType;
     present.pNext = pPacket->pPresentInfo->pNext;
     present.swapChainCount = pPacket->pPresentInfo->swapChainCount;
