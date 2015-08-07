@@ -75,7 +75,7 @@ make
 To run VK programs you must tell the icd loader where to find the libraries.
 This is described in a specification in the Khronos documentation Git
 repository.  See the file:
-https://gitlab.khronos.org/vulkan/vulkan/blob/lunarg-sdk-0.2/ecosystem/LinuxICDs.txt
+https://gitlab.khronos.org/vulkan/vulkan/blob/master/ecosystem/LinuxICDs.txt
 
 This specification describes both how ICDs and layers should be properly
 packaged, and how developers can point to ICDs and layers within their builds.
@@ -181,7 +181,7 @@ VK programs must be able to find and use the VK.dll libary. Make sure it is eith
 To run VK programs you must tell the icd loader where to find the libraries.
 This is described in a specification in the Khronos documentation Git
 repository.  See the file:
-https://gitlab.khronos.org/vulkan/vulkan/blob/lunarg-sdk-0.2/ecosystem/WindowsICDs.txt
+https://gitlab.khronos.org/vulkan/vulkan/blob/master/ecosystem/WindowsICDs.txt
 
 This specification describes both how ICDs and layers should be properly
 packaged, and how developers can point to ICDs and layers within their builds.
