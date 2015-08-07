@@ -192,22 +192,21 @@ void VkRenderFramework::InitState()
     VkResult err;
 
     // Get the list of VkFormat's that are supported:
-    PFN_vkGetSurfaceInfoWSI fpGetSurfaceInfoWSI;
-    size_t formatsSize;
+    PFN_vkGetSurfaceFormatsWSI fpGetSurfaceFormatsWSI;
+    uint32_t formatCount;
     VkSurfaceDescriptionWSI surface_description;
     surface_description.sType = VK_STRUCTURE_TYPE_SURFACE_DESCRIPTION_WINDOW_WSI;
     surface_description.pNext = NULL;
-    GET_DEVICE_PROC_ADDR(device(), GetSurfaceInfoWSI);
-    err = fpGetSurfaceInfoWSI( device(),
+    GET_DEVICE_PROC_ADDR(device(), GetSurfaceFormatsWSI);
+    err = fpGetSurfaceFormatsWSI(device(),
                                     (VkSurfaceDescriptionWSI *) &surface_description,
-                                    VK_SURFACE_INFO_TYPE_FORMATS_WSI,
-                                    &formatsSize, NULL);
+                                    &formatCount, NULL);
     ASSERT_VK_SUCCESS(err);
-    VkSurfaceFormatPropertiesWSI *surfFormats = (VkSurfaceFormatPropertiesWSI *)malloc(formatsSize);
-    err = fpGetSurfaceInfoWSI(device(),
+    VkSurfaceFormatWSI *surfFormats =
+        (VkSurfaceFormatWSI *)malloc(formatCount * sizeof(VkSurfaceFormatWSI));
+    err = fpGetSurfaceFormatsWSI(device(),
                                     (VkSurfaceDescriptionWSI *) &surface_description,
-                                    VK_SURFACE_INFO_TYPE_FORMATS_WSI,
-                                    &formatsSize, surfFormats);
+                                    &formatCount, surfFormats);
     ASSERT_VK_SUCCESS(err);
     m_render_target_fmt = surfFormats[0].format;
     free(surfFormats);

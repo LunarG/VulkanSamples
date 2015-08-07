@@ -130,17 +130,20 @@ private:
     uint32_t                                m_present_queue_node_index;
 
     PFN_vkGetPhysicalDeviceSurfaceSupportWSI m_fpGetPhysicalDeviceSurfaceSupportWSI;
-    PFN_vkGetSurfaceInfoWSI                 m_fpGetSurfaceInfoWSI;
+    PFN_vkGetSurfacePropertiesWSI           m_fpGetSurfacePropertiesWSI;
+    PFN_vkGetSurfaceFormatsWSI              m_fpGetSurfaceFormatsWSI;
+    PFN_vkGetSurfacePresentModesWSI         m_fpGetSurfacePresentModesWSI;
     PFN_vkCreateSwapChainWSI                m_fpCreateSwapChainWSI;
     PFN_vkDestroySwapChainWSI               m_fpDestroySwapChainWSI;
-    PFN_vkGetSwapChainInfoWSI               m_fpGetSwapChainInfoWSI;
+    PFN_vkGetSwapChainImagesWSI             m_fpGetSwapChainImagesWSI;
     PFN_vkAcquireNextImageWSI               m_fpAcquireNextImageWSI;
     PFN_vkQueuePresentWSI                   m_fpQueuePresentWSI;
     VkSurfaceDescriptionWindowWSI           m_surface_description;
-    size_t                                  m_swapChainImageCount;
+    uint32_t                                m_swapChainImageCount;
     VkSwapChainWSI                          m_swap_chain;
     SwapChainBuffers                       *m_buffers;
     VkFormat                                m_format;
+    VkColorSpaceWSI                         m_color_space;
 
     uint32_t                                m_current_buffer;
 
@@ -561,7 +564,7 @@ void  TestFrameworkVkPresent::Display()
     m_queue.wait();
 
     VkPresentInfoWSI present = {};
-    present.sType = VK_STRUCTURE_TYPE_QUEUE_PRESENT_INFO_WSI;
+    present.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_WSI;
     present.pNext = NULL;
     present.swapChainCount = 1;
     present.swapChains = & m_swap_chain;
@@ -776,22 +779,20 @@ void TestFrameworkVkPresent::CreateSwapChain()
 
 
     // Get the list of VkFormat's that are supported:
-    size_t formatsSize;
-    err = m_fpGetSurfaceInfoWSI(m_device.handle(),
-                                    (VkSurfaceDescriptionWSI *) &m_surface_description,
-                                    VK_SURFACE_INFO_TYPE_FORMATS_WSI,
-                                    &formatsSize, NULL);
+    uint32_t formatCount;
+    err = m_fpGetSurfaceFormatsWSI(m_device.handle(),
+                                   (VkSurfaceDescriptionWSI *) &m_surface_description,
+                                   &formatCount, NULL);
     assert(!err);
-    VkSurfaceFormatPropertiesWSI *surfFormats = (VkSurfaceFormatPropertiesWSI *)malloc(formatsSize);
-    err = m_fpGetSurfaceInfoWSI(m_device.handle(),
-                                    (VkSurfaceDescriptionWSI *) &m_surface_description,
-                                    VK_SURFACE_INFO_TYPE_FORMATS_WSI,
-                                    &formatsSize, surfFormats);
+    VkSurfaceFormatWSI *surfFormats =
+        (VkSurfaceFormatWSI *)malloc(formatCount * sizeof(VkSurfaceFormatWSI));
+    err = m_fpGetSurfaceFormatsWSI(m_device.handle(),
+                                   (VkSurfaceDescriptionWSI *) &m_surface_description,
+                                   &formatCount, surfFormats);
     assert(!err);
     // If the format list includes just one entry of VK_FORMAT_UNDEFINED,
     // the surface has no preferred format.  Otherwise, at least one
     // supported format will be returned.
-    size_t formatCount = formatsSize / sizeof(VkSurfaceFormatPropertiesWSI);
     if (formatCount == 1 && surfFormats[0].format == VK_FORMAT_UNDEFINED)
     {
         m_format = VK_FORMAT_B8G8R8A8_UNORM;
@@ -801,36 +802,31 @@ void TestFrameworkVkPresent::CreateSwapChain()
         assert(formatCount >= 1);
         m_format = surfFormats[0].format;
     }
+    m_color_space = surfFormats[0].colorSpace;
 
     // Check the surface proprties and formats
-    size_t capsSize;
-    size_t presentModesSize;
-    err = m_fpGetSurfaceInfoWSI(m_device.handle(),
+    VkSurfacePropertiesWSI surfProperties;
+    err = m_fpGetSurfacePropertiesWSI(m_device.handle(),
         (const VkSurfaceDescriptionWSI *)&m_surface_description,
-        VK_SURFACE_INFO_TYPE_PROPERTIES_WSI, &capsSize, NULL);
-    assert(!err);
-    err = m_fpGetSurfaceInfoWSI(m_device.handle(),
-        (const VkSurfaceDescriptionWSI *)&m_surface_description,
-        VK_SURFACE_INFO_TYPE_PRESENT_MODES_WSI, &presentModesSize, NULL);
+        &surfProperties);
     assert(!err);
 
-    VkSurfacePropertiesWSI *surfProperties =
-        (VkSurfacePropertiesWSI *)malloc(capsSize);
-    VkSurfacePresentModePropertiesWSI *presentModes =
-        (VkSurfacePresentModePropertiesWSI *)malloc(presentModesSize);
-
-    err = m_fpGetSurfaceInfoWSI(m_device.handle(),
+    uint32_t presentModeCount;
+    err = m_fpGetSurfacePresentModesWSI(m_device.handle(),
         (const VkSurfaceDescriptionWSI *)&m_surface_description,
-        VK_SURFACE_INFO_TYPE_PROPERTIES_WSI, &capsSize, surfProperties);
+        &presentModeCount, NULL);
     assert(!err);
-    err = m_fpGetSurfaceInfoWSI(m_device.handle(),
+    VkPresentModeWSI *presentModes =
+        (VkPresentModeWSI *)malloc(presentModeCount * sizeof(VkPresentModeWSI));
+    assert(presentModes);
+    err = m_fpGetSurfacePresentModesWSI(m_device.handle(),
         (const VkSurfaceDescriptionWSI *)&m_surface_description,
-        VK_SURFACE_INFO_TYPE_PRESENT_MODES_WSI, &presentModesSize, presentModes);
+        &presentModeCount, presentModes);
     assert(!err);
 
     VkExtent2D swapChainExtent;
     // width and height are either both -1, or both not -1.
-    if (surfProperties->currentExtent.width == -1)
+    if (surfProperties.currentExtent.width == -1)
     {
         // If the surface size is undefined, the size is set to
         // the size of the images requested.
@@ -840,16 +836,19 @@ void TestFrameworkVkPresent::CreateSwapChain()
     else
     {
         // If the surface size is defined, the swap chain size must match
-        swapChainExtent = surfProperties->currentExtent;
+        swapChainExtent = surfProperties.currentExtent;
     }
 
     // If mailbox mode is available, use it, as is the lowest-latency non-
     // tearing mode.  If not, fall back to IMMEDIATE which should always be
     // available.
     VkPresentModeWSI swapChainPresentMode = VK_PRESENT_MODE_IMMEDIATE_WSI;
+#ifdef OLD_CODE
     size_t presentModeCount = presentModesSize / sizeof(VkSurfacePresentModePropertiesWSI);
+#else  // OLD_CODE
+#endif // OLD_CODE
     for (size_t i = 0; i < presentModeCount; i++) {
-        if (presentModes[i].presentMode == VK_PRESENT_MODE_MAILBOX_WSI) {
+        if (presentModes[i] == VK_PRESENT_MODE_MAILBOX_WSI) {
             swapChainPresentMode = VK_PRESENT_MODE_MAILBOX_WSI;
             break;
         }
@@ -858,19 +857,19 @@ void TestFrameworkVkPresent::CreateSwapChain()
     // Determine the number of VkImage's to use in the swap chain (we desire to
     // own only 1 image at a time, besides the images being displayed and
     // queued for display):
-    uint32_t desiredNumberOfSwapChainImages = surfProperties->minImageCount + 1;
-    if ((surfProperties->maxImageCount > 0) &&
-        (desiredNumberOfSwapChainImages > surfProperties->maxImageCount))
+    uint32_t desiredNumberOfSwapChainImages = surfProperties.minImageCount + 1;
+    if ((surfProperties.maxImageCount > 0) &&
+        (desiredNumberOfSwapChainImages > surfProperties.maxImageCount))
     {
         // Application must settle for fewer images than desired:
-        desiredNumberOfSwapChainImages = surfProperties->maxImageCount;
+        desiredNumberOfSwapChainImages = surfProperties.maxImageCount;
     }
 
     VkSurfaceTransformWSI preTransform;
-    if (surfProperties->supportedTransforms & VK_SURFACE_TRANSFORM_NONE_BIT_WSI) {
+    if (surfProperties.supportedTransforms & VK_SURFACE_TRANSFORM_NONE_BIT_WSI) {
         preTransform = VK_SURFACE_TRANSFORM_NONE_WSI;
     } else {
-        preTransform = surfProperties->currentTransform;
+        preTransform = surfProperties.currentTransform;
     }
 
     VkSwapChainCreateInfoWSI swap_chain = {};
@@ -879,6 +878,7 @@ void TestFrameworkVkPresent::CreateSwapChain()
     swap_chain.pSurfaceDescription = (const VkSurfaceDescriptionWSI *)&m_surface_description;
     swap_chain.minImageCount = desiredNumberOfSwapChainImages;
     swap_chain.imageFormat = m_format;
+    swap_chain.imageColorSpace = m_color_space;
     swap_chain.imageExtent.width = swapChainExtent.width;
     swap_chain.imageExtent.height = swapChainExtent.height;
     // Workaround: Some implementations need color attachment for blit targets
@@ -886,6 +886,9 @@ void TestFrameworkVkPresent::CreateSwapChain()
                                  VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
     swap_chain.preTransform = preTransform;
     swap_chain.imageArraySize = 1;
+    swap_chain.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+    swap_chain.queueFamilyCount = 0;
+    swap_chain.pQueueFamilyIndices = NULL;
     swap_chain.presentMode = swapChainPresentMode;
     swap_chain.oldSwapChain.handle = 0;
     swap_chain.clipped = true;
@@ -895,22 +898,15 @@ void TestFrameworkVkPresent::CreateSwapChain()
     err = m_fpCreateSwapChainWSI(m_device.handle(), &swap_chain, &m_swap_chain);
     assert(!err);
 
-    size_t swapChainImagesSize;
-    err = m_fpGetSwapChainInfoWSI(m_device.handle(), m_swap_chain,
-                                      VK_SWAP_CHAIN_INFO_TYPE_IMAGES_WSI,
-                                      &swapChainImagesSize, NULL);
+    err = m_fpGetSwapChainImagesWSI(m_device.handle(), m_swap_chain,
+                                    &m_swapChainImageCount, NULL);
     assert(!err);
 
-    VkSwapChainImagePropertiesWSI* swapChainImages = (VkSwapChainImagePropertiesWSI*)malloc(swapChainImagesSize);
+    VkImage* swapChainImages = (VkImage*)malloc(m_swapChainImageCount * sizeof(VkImage));
     assert(swapChainImages);
-    err = m_fpGetSwapChainInfoWSI(m_device.handle(), m_swap_chain,
-                                      VK_SWAP_CHAIN_INFO_TYPE_IMAGES_WSI,
-                                      &swapChainImagesSize, swapChainImages);
+    err = m_fpGetSwapChainImagesWSI(m_device.handle(), m_swap_chain,
+                                    &m_swapChainImageCount, swapChainImages);
     assert(!err);
-
-    // The number of images within the swap chain is determined based on the
-    // size of the info returned
-    m_swapChainImageCount = swapChainImagesSize / sizeof(VkSwapChainImagePropertiesWSI);
 
     m_buffers = (SwapChainBuffers*)malloc(sizeof(SwapChainBuffers)*m_swapChainImageCount);
     assert(m_buffers);
@@ -924,7 +920,7 @@ void TestFrameworkVkPresent::CreateSwapChain()
         color_attachment_view.baseArraySlice = 0;
         color_attachment_view.arraySize = 1;
 
-        m_buffers[i].image = swapChainImages[i].image;
+        m_buffers[i].image = swapChainImages[i];
 
         color_attachment_view.image = m_buffers[i].image;
         err = vkCreateAttachmentView(m_device.handle(),
@@ -936,11 +932,13 @@ void TestFrameworkVkPresent::CreateSwapChain()
 void  TestFrameworkVkPresent::InitPresentFramework(std::list<VkTestImageRecord>  &imagesIn, VkInstance inst)
 {
     GET_INSTANCE_PROC_ADDR(inst, GetPhysicalDeviceSurfaceSupportWSI);
-    GET_DEVICE_PROC_ADDR(m_device.handle(), GetSurfaceInfoWSI);
+    GET_DEVICE_PROC_ADDR(m_device.handle(), GetSurfacePropertiesWSI);
+    GET_DEVICE_PROC_ADDR(m_device.handle(), GetSurfaceFormatsWSI);
+    GET_DEVICE_PROC_ADDR(m_device.handle(), GetSurfacePresentModesWSI);
     GET_DEVICE_PROC_ADDR(m_device.handle(), CreateSwapChainWSI);
     GET_DEVICE_PROC_ADDR(m_device.handle(), CreateSwapChainWSI);
     GET_DEVICE_PROC_ADDR(m_device.handle(), DestroySwapChainWSI);
-    GET_DEVICE_PROC_ADDR(m_device.handle(), GetSwapChainInfoWSI);
+    GET_DEVICE_PROC_ADDR(m_device.handle(), GetSwapChainImagesWSI);
     GET_DEVICE_PROC_ADDR(m_device.handle(), AcquireNextImageWSI);
     GET_DEVICE_PROC_ADDR(m_device.handle(), QueuePresentWSI);
 
