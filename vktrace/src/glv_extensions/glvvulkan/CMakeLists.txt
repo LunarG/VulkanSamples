@@ -32,7 +32,7 @@ endif()
 
     if (${CMAKE_SYSTEM_NAME} MATCHES "Windows")
         set(GLV_VULKAN_LIB
-            ${CMAKE_BINARY_DIR}/vulkan.lib
+            ${CMAKE_BINARY_DIR}/loader/${CMAKE_CFG_INTDIR}/vulkan.0.lib
         )
     endif()
 
@@ -43,7 +43,7 @@ endif()
     endif()
 #endif()
 
-#message(STATUS "GLV_VULKAN_LIB = " ${GLV_VULKAN_LIB})
+message(STATUS "GLV_VULKAN_LIB = " ${GLV_VULKAN_LIB})
 #message(STATUS "GLV_VULKAN_DRIVER_DIR = " ${GLV_VULKAN_DRIVER_DIR})
 #message(STATUS "GLV_VULKAN_HEADER = " ${GLV_VULKAN_HEADER})
 #message(STATUS "GLV_VULKAN_DEBUG_REPORT_LUNARG_HEADER = " ${GLV_VULKAN_DEBUG_REPORT_LUNARG_HEADER})
