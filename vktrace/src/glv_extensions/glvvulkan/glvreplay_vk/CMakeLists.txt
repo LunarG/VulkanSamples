@@ -61,7 +61,6 @@ add_library(${PROJECT_NAME} SHARED ${SRC_LIST} ${HDR_LIST})
 target_link_libraries(${PROJECT_NAME} 
     ${OS_REPLAYER_LIBS}
     ${GLV_VULKAN_LIB}
-    getopt_bundled
     glvcommon
 )
 

@@ -35,7 +35,6 @@ extern "C" {
 #include "glvreplay_factory.h"
 #include "glvreplay_seq.h"
 #include "glvreplay_window.h"
-#include "getopt/getopt.h"
 
 glvreplay_settings replaySettings = { NULL, 1, NULL };
 

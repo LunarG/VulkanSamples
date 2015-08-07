@@ -19,7 +19,7 @@ include_directories(
     ${SRC_DIR}/thirdparty
 )
 
-set (LIBRARIES getopt_bundled glvcommon)
+set (LIBRARIES glvcommon)
 
 add_executable(${PROJECT_NAME} ${SRC_LIST})
 

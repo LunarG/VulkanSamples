@@ -52,7 +52,6 @@ message("")
 #
 set(GLV_VULKAN_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 
-add_subdirectory(src/thirdparty/getopt)
 add_subdirectory(src/glvcommon)
 add_subdirectory(src/glvtrace)
 add_subdirectory(src/glvreplay)
