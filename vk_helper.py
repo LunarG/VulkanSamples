@@ -993,6 +993,24 @@ class StructWrapperGen:
         sh_funcs.append("    return final_str;")
         sh_funcs.append("}")
         sh_funcs.append('%s' % lineinfo.get())
+        #### TODO: Get the following function moved to be in "vk_enum_string_helper.h"
+        # Add function to return a string value for input VkSurfaceFormatWSI*
+        sh_funcs.append("static inline const char* string_VkColorSpaceWSI(VkColorSpaceWSI input_value)\n{")
+        sh_funcs.append("    switch ((VkColorSpaceWSI)input_value)")
+        sh_funcs.append("    {")
+        sh_funcs.append("        case VK_COLORSPACE_SRGB_NONLINEAR_WSI:")
+        sh_funcs.append("            return \"VK_COLORSPACE_SRGB_NONLINEAR_WSI\";")
+        sh_funcs.append("        default:")
+        sh_funcs.append("            return \"Unhandled VkColorSpaceWSI\";")
+        sh_funcs.append("    }")
+        sh_funcs.append("}")
+        sh_funcs.append('%s' % lineinfo.get())
+        # Add function to return a string value for input VkSurfaceFormatWSI*
+        sh_funcs.append("string string_convert_helper(VkSurfaceFormatWSI toString, const string prefix)\n{")
+        sh_funcs.append('    string final_str = prefix + "format = " + string_VkFormat(toString.format) + "format = " + string_VkColorSpaceWSI(toString.colorSpace);')
+        sh_funcs.append("    return final_str;")
+        sh_funcs.append("}")
+        sh_funcs.append('%s' % lineinfo.get())
         # Add function to dynamically print out unknown struct
         sh_funcs.append("string dynamic_display(const void* pStruct, const string prefix)\n{")
         sh_funcs.append("    // Cast to APP_INFO ptr initially just to pull sType off struct")

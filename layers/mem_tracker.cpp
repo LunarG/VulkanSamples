@@ -2951,8 +2951,8 @@ VK_LAYER_EXPORT VkResult VKAPI vkDestroySwapChainWSI(
 
         if (pInfo->images.size() > 0) {
             for (auto it = pInfo->images.begin(); it != pInfo->images.end(); it++) {
-                clear_object_binding(device, it->image.handle, VK_OBJECT_TYPE_SWAP_CHAIN_WSI);
-                auto image_item = imageMap.find(it->image.handle);
+                clear_object_binding(device, it->handle, VK_OBJECT_TYPE_SWAP_CHAIN_WSI);
+                auto image_item = imageMap.find(it->handle);
                 if (image_item != imageMap.end())
                     imageMap.erase(image_item);
             }
@@ -2964,35 +2964,34 @@ VK_LAYER_EXPORT VkResult VKAPI vkDestroySwapChainWSI(
     return get_dispatch_table(mem_tracker_device_table_map, device)->DestroySwapChainWSI(device, swapChain);
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkGetSwapChainInfoWSI(
+VK_LAYER_EXPORT VkResult VKAPI vkGetSwapChainImagesWSI(
     VkDevice                device,
     VkSwapChainWSI          swapChain,
-    VkSwapChainInfoTypeWSI  infoType,
-    size_t                 *pDataSize,
-    void                   *pData)
+    uint32_t*               pCount,
+    VkImage*                pSwapChainImages)
 {
-    VkResult result = get_dispatch_table(mem_tracker_device_table_map, device)->GetSwapChainInfoWSI(device, swapChain, infoType, pDataSize, pData);
+    VkResult result = get_dispatch_table(mem_tracker_device_table_map, device)->GetSwapChainImagesWSI(device, swapChain, pCount, pSwapChainImages);
 
-    if (infoType == VK_SWAP_CHAIN_INFO_TYPE_IMAGES_WSI && result == VK_SUCCESS && pData != NULL) {
-        const size_t count = *pDataSize / sizeof(VkSwapChainImagePropertiesWSI);
+    if (result == VK_SUCCESS && pSwapChainImages != NULL) {
+        const size_t count = *pCount;
         MT_SWAP_CHAIN_INFO *pInfo = swapChainMap[swapChain.handle];
 
         if (pInfo->images.empty()) {
             pInfo->images.resize(count);
-            memcpy(&pInfo->images[0], pData, sizeof(pInfo->images[0]) * count);
+            memcpy(&pInfo->images[0], pSwapChainImages, sizeof(pInfo->images[0]) * count);
 
             if (pInfo->images.size() > 0) {
-                for (std::vector<VkSwapChainImagePropertiesWSI>::const_iterator it = pInfo->images.begin();
+                for (std::vector<VkImage>::const_iterator it = pInfo->images.begin();
                      it != pInfo->images.end(); it++) {
                     // Add image object binding, then insert the new Mem Object and then bind it to created image
-                    add_object_create_info(it->image.handle, VK_OBJECT_TYPE_SWAP_CHAIN_WSI, &pInfo->createInfo);
+                    add_object_create_info(it->handle, VK_OBJECT_TYPE_SWAP_CHAIN_WSI, &pInfo->createInfo);
                 }
             }
         } else {
-            const size_t count = *pDataSize / sizeof(VkSwapChainImagePropertiesWSI);
+            const size_t count = *pCount;
             MT_SWAP_CHAIN_INFO *pInfo = swapChainMap[swapChain.handle];
             const bool mismatch = (pInfo->images.size() != count ||
-                    memcmp(&pInfo->images[0], pData, sizeof(pInfo->images[0]) * count));
+                    memcmp(&pInfo->images[0], pSwapChainImages, sizeof(pInfo->images[0]) * count));
 
             if (mismatch) {
                 // TODO : Want swapChain to be srcObj here
@@ -3191,14 +3190,12 @@ VK_LAYER_EXPORT PFN_vkVoidFunction VKAPI vkGetDeviceProcAddr(
     layer_data *my_device_data = get_my_data_ptr(get_dispatch_key(dev), layer_data_map);
     if (my_device_data->wsi_enabled)
     {
-//        if (!strcmp(funcName, "vkGetSurfaceInfoWSI"))
-//            return (PFN_vkVoidFunction) vkGetSurfaceInfoWSI;
         if (!strcmp(funcName, "vkCreateSwapChainWSI"))
             return (PFN_vkVoidFunction) vkCreateSwapChainWSI;
         if (!strcmp(funcName, "vkDestroySwapChainWSI"))
             return (PFN_vkVoidFunction) vkDestroySwapChainWSI;
-        if (!strcmp(funcName, "vkGetSwapChainInfoWSI"))
-            return (PFN_vkVoidFunction) vkGetSwapChainInfoWSI;
+        if (!strcmp(funcName, "vkGetSwapChainImagesWSI"))
+            return (PFN_vkVoidFunction) vkGetSwapChainImagesWSI;
 //        if (!strcmp(funcName, "vkAcquireNextImageWSI"))
 //            return (PFN_vkVoidFunction) vkAcquireNextImageWSI;
 //        if (!strcmp(funcName, "vkQueuePresentWSI"))

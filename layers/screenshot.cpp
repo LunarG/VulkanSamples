@@ -426,14 +426,13 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateSwapChainWSI(
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkGetSwapChainInfoWSI(
+VK_LAYER_EXPORT VkResult VKAPI vkGetSwapChainImagesWSI(
     VkDevice                device,
     VkSwapChainWSI          swapChain,
-    VkSwapChainInfoTypeWSI  infoType,
-    size_t                 *pDataSize,
-    void                   *pData)
+    uint32_t*               pCount,
+    VkImage*                pSwapChainImages)
 {
-    VkResult result = get_dispatch_table(screenshot_device_table_map, device)->GetSwapChainInfoWSI(device, swapChain, infoType, pDataSize, pData);
+    VkResult result = get_dispatch_table(screenshot_device_table_map, device)->GetSwapChainImagesWSI(device, swapChain, pCount, pSwapChainImages);
 
     loader_platform_thread_lock_mutex(&globalLock);
     if (screenshotEnvQueried && screenshotFrames.empty()) {
@@ -443,20 +442,19 @@ VK_LAYER_EXPORT VkResult VKAPI vkGetSwapChainInfoWSI(
     }
 
     if (result == VK_SUCCESS &&
-        pData &&
+        pSwapChainImages &&
         !swapchainMap.empty() && swapchainMap.find(swapChain.handle) != swapchainMap.end())
-    {   
-        VkSwapChainImagePropertiesWSI *swapChainImageInfo = (VkSwapChainImagePropertiesWSI *)pData;
+    {
         int i;
 
-        for (i=0; i<*pDataSize/sizeof(VkSwapChainImagePropertiesWSI); i++,swapChainImageInfo++)
+        for (i=0; i<*pCount; i++)
         {
             // Create a mapping for an image to a device, image extent, and format
             ImageMapStruct *imageMapElem = new ImageMapStruct;
             imageMapElem->device =  swapchainMap[swapChain.handle]->device;
             imageMapElem->imageExtent = swapchainMap[swapChain.handle]->imageExtent;
             imageMapElem->format = swapchainMap[swapChain.handle]->format;
-            imageMap.insert(make_pair(swapChainImageInfo->image.handle, imageMapElem));
+            imageMap.insert(make_pair(pSwapChainImages[i].handle, imageMapElem));
         }
 
         // Add list of images to swapchain to image map
@@ -465,10 +463,9 @@ VK_LAYER_EXPORT VkResult VKAPI vkGetSwapChainInfoWSI(
         {
             VkImage *imageList = new VkImage[i];
             swapchainMapElem->imageList = imageList;
-            VkSwapChainImagePropertiesWSI *swapChainImageInfo = (VkSwapChainImagePropertiesWSI *)pData;
-            for (int j=0; j<i; j++,swapChainImageInfo++)
+            for (int j=0; j<i; j++)
             {
-                swapchainMapElem->imageList[j] =  swapChainImageInfo->image.handle;
+                swapchainMapElem->imageList[j] = pSwapChainImages[j].handle;
             }
         }
 
@@ -590,8 +587,8 @@ VK_LAYER_EXPORT PFN_vkVoidFunction VKAPI vkGetDeviceProcAddr(
     {
         if (!strcmp(funcName, "vkCreateSwapChainWSI"))
             return (PFN_vkVoidFunction) vkCreateSwapChainWSI;
-        if (!strcmp(funcName, "vkGetSwapChainInfoWSI"))
-            return (PFN_vkVoidFunction) vkGetSwapChainInfoWSI;
+        if (!strcmp(funcName, "vkGetSwapChainImagesWSI"))
+            return (PFN_vkVoidFunction) vkGetSwapChainImagesWSI;
         if (!strcmp(funcName, "vkQueuePresentWSI"))
             return (PFN_vkVoidFunction) vkQueuePresentWSI;
     }

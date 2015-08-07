@@ -648,7 +648,7 @@ class GenericLayerSubcommand(Subcommand):
         self.layer_name = "Generic"
         extensions=[('wsi_enabled', 
                      ['vkCreateSwapChainWSI', 'vkDestroySwapChainWSI',
-                      'vkGetSwapChainInfoWSI', 'vkQueuePresentWSI'])]
+                      'vkGetSwapChainImagesWSI', 'vkQueuePresentWSI'])]
         body = [self._generate_layer_initialization(True),
                 self._generate_dispatch_entrypoints("VK_LAYER_EXPORT"),
                 self._gen_create_msg_callback(),
@@ -1047,7 +1047,7 @@ class APIDumpSubcommand(Subcommand):
         self.layer_name = "APIDump"
         extensions=[('wsi_enabled',
                     ['vkCreateSwapChainWSI', 'vkDestroySwapChainWSI',
-                    'vkGetSwapChainInfoWSI', 'vkQueuePresentWSI'])]
+                    'vkGetSwapChainImagesWSI', 'vkQueuePresentWSI'])]
         body = [self.generate_init(),
                 self._generate_dispatch_entrypoints("VK_LAYER_EXPORT"),
                 self._generate_layer_gpa_function(extensions)]
@@ -1511,7 +1511,7 @@ class ObjectTrackerSubcommand(Subcommand):
         self.layer_name = "ObjectTracker"
         extensions=[('wsi_enabled',
                     ['vkCreateSwapChainWSI', 'vkDestroySwapChainWSI',
-                     'vkGetSwapChainInfoWSI', 'vkQueuePresentWSI'])]
+                     'vkGetSwapChainImagesWSI', 'vkQueuePresentWSI'])]
         body = [self.generate_maps(),
                 self.generate_procs(),
                 self.generate_destroy_instance(),

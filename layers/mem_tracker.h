@@ -140,7 +140,7 @@ struct MT_QUEUE_INFO {
 
 struct MT_SWAP_CHAIN_INFO {
     VkSwapChainCreateInfoWSI             createInfo;
-    std::vector<VkSwapChainImagePropertiesWSI> images;
+    std::vector<VkImage> images;
 };
 
 #ifdef __cplusplus
