@@ -1076,6 +1076,9 @@ static VkShader demo_prepare_shader(struct demo *demo,
         shaderCreateInfo.module = shaderModule;
         shaderCreateInfo.pName = "main";
         err = vkCreateShader(demo->device, &shaderCreateInfo, &shader);
+        assert(!err);
+        err = vkDestroyShaderModule(demo->device, shaderModule);
+        assert(!err);
     } else {
         // Create fake SPV structure to feed GLSL
         // to the driver "under the covers"
@@ -1098,6 +1101,9 @@ static VkShader demo_prepare_shader(struct demo *demo,
         shaderCreateInfo.module = shaderModule;
         shaderCreateInfo.pName = "main";
         err = vkCreateShader(demo->device, &shaderCreateInfo, &shader);
+        assert(!err);
+        err = vkDestroyShaderModule(demo->device, shaderModule);
+        assert(!err);
     }
     return shader;
 }
@@ -1273,6 +1279,9 @@ static void demo_prepare_pipeline(struct demo *demo)
     err = vkCreatePipelineCache(demo->device, &pipelineCache, &demo->pipelineCache);
     assert(!err);
     err = vkCreateGraphicsPipelines(demo->device, demo->pipelineCache, 1, &pipeline, &demo->pipeline);
+    assert(!err);
+
+    err = vkDestroyPipelineCache(demo->device, demo->pipelineCache);
     assert(!err);
 
     for (uint32_t i = 0; i < pipeline.stageCount; i++) {
@@ -2101,7 +2110,7 @@ static void demo_cleanup(struct demo *demo)
         vkDestroySampler(demo->device, demo->textures[i].sampler);
     }
 
-    for (i = 0; i < DEMO_BUFFER_COUNT; i++) {
+    for (i = 0; i < demo->swapChainImageCount; i++) {
         vkDestroyAttachmentView(demo->device, demo->buffers[i].view);
     }
 
