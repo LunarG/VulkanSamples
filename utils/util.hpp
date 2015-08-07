@@ -22,7 +22,6 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#include "vulkan/vulkan.h"
 #include <iostream>
 #include <string>
 #include <sstream>
@@ -36,6 +35,8 @@
 #include <xcb/xcb.h>
 #endif // _WIN32
 
+#define VK_PROTOTYPES 1
+#include <vulkan/vulkan.h>
 #include <vulkan/vk_wsi_swapchain.h>
 #include <vulkan/vk_wsi_device_swapchain.h>
 #include <vulkan/vk_debug_report_lunarg.h>
@@ -64,6 +65,15 @@ typedef struct _swap_chain_buffers {
 } swap_chain_buffers;
 
 /*
+ * A layer can expose extensions, keep track of those
+ * extensions here.
+ */
+typedef struct {
+    VkLayerProperties properties;
+    std::vector<VkExtensionProperties> extensions;
+} layer_properties;
+
+/*
  * Structure for tracking information used / created / modified
  * by utility functions.
  */
@@ -82,9 +92,17 @@ struct sample_info {
 #endif // _WIN32
     bool prepared;
     bool use_staging_buffer;
-    bool use_glsl;
 
+    std::vector<char *> instance_layer_names;
+    std::vector<char *> instance_extension_names;
+    std::vector<layer_properties> instance_layer_properties;
+    std::vector<VkExtensionProperties> instance_extension_properties;
     VkInstance inst;
+
+    std::vector<char *> device_layer_names;
+    std::vector<char *> device_extension_names;
+    std::vector<layer_properties> device_layer_properties;
+    std::vector<VkExtensionProperties> device_extension_properties;
     VkPhysicalDevice gpu;
     VkDevice device;
     VkQueue queue;
