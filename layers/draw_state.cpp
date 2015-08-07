@@ -1259,10 +1259,9 @@ static void printCB(const VkCmdBuffer cb)
 
 static void synchAndPrintDSConfig(const VkCmdBuffer cb)
 {
-    // TODO : Re-enable these print funcs
-//    printDSConfig(cb);
-//    printPipeline(cb);
-//    printDynamicState(cb);
+    printDSConfig(cb);
+    printPipeline(cb);
+    printDynamicState(cb);
 }
 
 static void init_draw_state(layer_data *my_data)
