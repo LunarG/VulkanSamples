@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 2.8)
 
-project(glvreplay_vk)
+project(vulkan_replay)
 
 include("${SRC_DIR}/build_options.cmake")
 

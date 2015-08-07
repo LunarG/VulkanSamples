@@ -56,7 +56,7 @@ static const GLV_TRACER_REPLAYER_INFO gs_tracerReplayerInfo[GLV_MAX_TRACER_ID_AR
     {GLV_TID_RESERVED, FALSE, "", ""},
     {GLV_TID_GL_FPS, FALSE, "", ""},
     {GLV_TID_MANTLE, TRUE, GLV_LIBRARY_NAME(glvreplay_mantle), GLV_LIBRARY_NAME(glvdebug_mantle)},
-    {GLV_TID_VULKAN, TRUE, GLV_LIBRARY_NAME(glvreplay_vk), GLV_LIBRARY_NAME(glvdebug_vk)},
+    {GLV_TID_VULKAN, TRUE, GLV_LIBRARY_NAME(vulkan_replay), GLV_LIBRARY_NAME(glvdebug_vk)},
     {GLV_TID_MANTLE_PERF, FALSE, "", ""},
     {GLV_TID_RESERVED, FALSE, "", ""}, // this can be updated as new tracers are added
     {GLV_TID_RESERVED, FALSE, "", ""}, // this can be updated as new tracers are added

@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 2.8)
 
-project(glvtrace_vk)
+project(vulkan_trace)
 
 include("${SRC_DIR}/build_options.cmake")
 
@@ -84,4 +84,4 @@ target_link_libraries(${PROJECT_NAME}
 
 build_options_finalize()
 
-set_target_properties(glvtrace_vk PROPERTIES LINKER_LANGUAGE C)
+set_target_properties(vulkan_trace PROPERTIES LINKER_LANGUAGE C)
