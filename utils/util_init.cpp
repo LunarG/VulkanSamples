@@ -40,6 +40,9 @@ samples "init" utility functions
 
 using namespace std;
 
+/*
+ * TODO: function description here
+ */
 VkResult init_global_extension_properties(
         struct sample_info &info,
         layer_properties *layer_props)
@@ -78,6 +81,9 @@ VkResult init_global_extension_properties(
     return res;
 }
 
+/*
+ * TODO: function description here
+ */
 VkResult init_global_layer_properties(struct sample_info &info)
 {
     uint32_t instance_layer_count;
