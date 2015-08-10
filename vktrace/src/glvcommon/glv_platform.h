@@ -136,12 +136,11 @@ void glv_delete_critical_section(GLV_CRITICAL_SECTION* pCriticalSection);
 BOOL glv_platform_remote_load_library(glv_process_handle pProcessHandle, const char* dllPath, glv_thread* pTracingThread, char **ldPreload);
 
 // Env vars
+#define ENV_LAYERS_PATH "VK_LAYER_PATH"
 #if defined(PLATFORM_LINUX)
-    #define ENV_LAYERS_PATH "VK_LAYER_DIRS"
     #define ENV_LAYER_NAMES "VK_DEVICE_LAYERS"
     #define LAYER_NAMES_SEPARATOR ":"
 #else
-    #define ENV_LAYERS_PATH "VK_LAYER_FOLDERS"
     #define ENV_LAYER_NAMES "VK_DEVICE_LAYERS"
     #define LAYER_NAMES_SEPARATOR ";"
 #endif

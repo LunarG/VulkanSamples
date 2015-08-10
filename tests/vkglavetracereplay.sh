@@ -12,35 +12,33 @@ fi
 
 printf "$GREEN[ RUN      ]$NC $0\n"
 
-D=`dirname \`pwd\``
-GDIR=../../../Glave/`basename $D`/
-
 # Create a temp directory to run the test in
 rm -rf vktracereplay_tmp
 mkdir vktracereplay_tmp
 cd vktracereplay_tmp
-cp ../$GDIR/glvreplay .
-cp ../$GDIR/glvtrace .
-cp ../$GDIR/libglvreplay_vk.so .
-cp ../$GDIR/libglvtrace_vk.so .
+cp ../../vktrace/vkreplay .
+cp ../../vktrace/vktrace .
+cp ../../vktrace/libvulkan_trace.so .
+#cp ../../vktrace/libvulkan_replay.so .
 cp ../../demos/cube .
 cp ../../demos/*png .
 cp ../../demos/*spv .
 export LD_LIBRARY_PATH=`pwd`:$LD_LIBRARY_PATH
+export VK_LAYER_PATH=`pwd`/../../layers
 (
-    ./glvtrace   -s 1 -p cube  -o c01.glv -l0 libglvtrace_vk.so &
+    ./vktrace -s 1 -p cube  -o c01.glv -l0 libvulkan_trace.so &
     P=$!
     sleep 3
     kill $P
 ) >/dev/null 2>&1
 mv 1.ppm 1_trace.ppm
-./glvreplay   -s 1 -t c01.glv >/dev/null 2>&1
+./vkreplay -s 1 -t c01.glv >/dev/null 2>&1
 #cp cube 1.ppm  # For testing this script -- force a failure
 #rm 1.ppm       # For testing this script -- force a failure
 cmp -s 1.ppm 1_trace.ppm
 RES=$?
 cd ..
-rm -rf vktracereplay_tmp
+#rm -rf vktracereplay_tmp
 
 if [ $RES -eq 0 ] ; then
    printf "$GREEN[  PASSED  ]$NC 1 test\n"
