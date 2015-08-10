@@ -840,17 +840,18 @@ void TestFrameworkVkPresent::CreateSwapChain()
     }
 
     // If mailbox mode is available, use it, as is the lowest-latency non-
-    // tearing mode.  If not, fall back to IMMEDIATE which should always be
-    // available.
-    VkPresentModeWSI swapChainPresentMode = VK_PRESENT_MODE_IMMEDIATE_WSI;
-#ifdef OLD_CODE
-    size_t presentModeCount = presentModesSize / sizeof(VkSurfacePresentModePropertiesWSI);
-#else  // OLD_CODE
-#endif // OLD_CODE
+    // tearing mode.  If not, try IMMEDIATE which will usually be available,
+    // and is fastest (though it tears).  If not, fall back to FIFO which is
+    // always available.
+    VkPresentModeWSI swapChainPresentMode = VK_PRESENT_MODE_FIFO_WSI;
     for (size_t i = 0; i < presentModeCount; i++) {
         if (presentModes[i] == VK_PRESENT_MODE_MAILBOX_WSI) {
             swapChainPresentMode = VK_PRESENT_MODE_MAILBOX_WSI;
             break;
+        }
+        if ((swapChainPresentMode != VK_PRESENT_MODE_MAILBOX_WSI) &&
+            (presentModes[i] == VK_PRESENT_MODE_IMMEDIATE_WSI)) {
+            swapChainPresentMode = VK_PRESENT_MODE_IMMEDIATE_WSI;
         }
     }
 
