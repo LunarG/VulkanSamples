@@ -49,7 +49,7 @@ glv_SettingInfo g_settings_info[] =
     { "o", "OutputTrace", GLV_SETTING_STRING, &g_settings.output_trace, &g_default_settings.output_trace, TRUE, "Path to the generated output trace file."},
     { "u", "UniqueOutput", GLV_SETTING_BOOL, &g_settings.unique_output, &g_default_settings.unique_output, TRUE, "Generate unique output trace filenames if the specified one already exists."},
     { "s", "ScreenShot", GLV_SETTING_STRING, &g_settings.screenshotList, &g_default_settings.screenshotList, TRUE, "Comma separated list of frame numbers on which to take a screen snapsot."},
-    { "l0", "TraceLibrary0", GLV_SETTING_STRING, &g_settings.trace_library[0], NULL, TRUE, "Path to the dynamic tracer library to be injected, may use [0-15]."},
+    { "l0", "TraceLibrary0", GLV_SETTING_STRING, &g_settings.trace_library[0], &g_default_settings.trace_library[0], TRUE, "Path to the dynamic tracer library to be injected, may use [0-15]."},
     { "l1", "TraceLibrary1", GLV_SETTING_STRING, &g_settings.trace_library[1], NULL, FALSE, "Path to the dynamic tracer library to be injected, may use [0-15]."},
     { "l2", "TraceLibrary2", GLV_SETTING_STRING, &g_settings.trace_library[2], NULL, FALSE, "Path to the dynamic tracer library to be injected, may use [0-15]."},
     { "l3", "TraceLibrary3", GLV_SETTING_STRING, &g_settings.trace_library[3], NULL, FALSE, "Path to the dynamic tracer library to be injected, may use [0-15]."},
@@ -270,6 +270,11 @@ int main(int argc, char* argv[])
     g_default_settings.print_trace_messages = FALSE;
     g_default_settings.unique_output = FALSE;
     g_default_settings.screenshotList = NULL;
+#if defined(WIN32)
+    g_default_settings.trace_library[0] = glv_copy_and_append(execDir, GLV_PATH_SEPARATOR, "vulkan_trace.dll");
+#elif defined(PLATFORM_LINUX)
+    g_default_settings.trace_library[0] = glv_copy_and_append(execDir, GLV_PATH_SEPARATOR, "libvulkan_trace.so");
+#endif
 
     // free binary directory string
     glv_free(execDir);
@@ -279,6 +284,7 @@ int main(int argc, char* argv[])
         // invalid cmd-line parameters
         glv_SettingGroup_delete(&g_settingGroup);
         glv_free(g_default_settings.output_trace);
+        glv_free(g_default_settings.trace_library[0]);
         return -1;
     }
     else
