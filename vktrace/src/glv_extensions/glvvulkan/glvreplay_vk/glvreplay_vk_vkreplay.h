@@ -132,9 +132,11 @@ private:
     VkResult manually_replay_vkFlushMappedMemoryRanges(packet_vkFlushMappedMemoryRanges* pPacket);
     // TODO138: Update these functions for new WSI
     VkResult manually_replay_vkGetPhysicalDeviceSurfaceSupportWSI(packet_vkGetPhysicalDeviceSurfaceSupportWSI* pPacket);
-    VkResult manually_replay_vkGetSurfaceInfoWSI(packet_vkGetSurfaceInfoWSI* pPacket);
+    VkResult manually_replay_vkGetSurfacePropertiesWSI(packet_vkGetSurfacePropertiesWSI* pPacket);
+    VkResult manually_replay_vkGetSurfaceFormatsWSI(packet_vkGetSurfaceFormatsWSI* pPacket);
+    VkResult manually_replay_vkGetSurfacePresentModesWSI(packet_vkGetSurfacePresentModesWSI* pPacket);
     VkResult manually_replay_vkCreateSwapChainWSI(packet_vkCreateSwapChainWSI* pPacket);
-    VkResult manually_replay_vkGetSwapChainInfoWSI(packet_vkGetSwapChainInfoWSI* pPacket);
+    VkResult manually_replay_vkGetSwapChainImagesWSI(packet_vkGetSwapChainImagesWSI* pPacket);
     VkResult manually_replay_vkQueuePresentWSI(packet_vkQueuePresentWSI* pPacket);
 
     void process_screenshot_list(const char *list)

@@ -28,6 +28,7 @@
 #include "glv_common.h"
 #include "glvtrace_vk_vk_wsi_swapchain.h"
 #include "glvtrace_vk_vk_wsi_device_swapchain.h"
+#include "vk_wsi_device_swapchain_struct_size_helper.h"
 #include "glvtrace_vk_helpers.h"
 #include "glvtrace_vk_vk.h"
 #include "glv_interconnect.h"
@@ -965,74 +966,157 @@ GLVTRACER_EXPORT VkResult VKAPI __HOOKED_vkFreeDescriptorSets(
     return result;
 }
 
-GLVTRACER_EXPORT VkResult VKAPI __HOOKED_vkGetSurfaceInfoWSI(
+GLVTRACER_EXPORT VkResult VKAPI __HOOKED_vkGetSurfacePropertiesWSI(
     VkDevice device,
     const VkSurfaceDescriptionWSI* pSurfaceDescription,
-    VkSurfaceInfoTypeWSI infoType,
-    size_t* pDataSize,
-    void* pData)
+    VkSurfacePropertiesWSI* pSurfaceProperties)
 {
     glv_trace_packet_header* pHeader;
     VkResult result;
-    size_t _dataSize;
-    packet_vkGetSurfaceInfoWSI* pPacket = NULL;
-    uint64_t startTime;
-    uint64_t endTime;
-    uint64_t glvStartTime = glv_get_time();
-    startTime = glv_get_time();
-    result = real_vkGetSurfaceInfoWSI(device, pSurfaceDescription, infoType, pDataSize, pData);
-    endTime = glv_get_time();
-    _dataSize = (pDataSize == NULL || pData == NULL) ? 0 : *pDataSize;
-    CREATE_TRACE_PACKET(vkGetSurfaceInfoWSI, sizeof(VkSurfaceDescriptionWSI) + sizeof(size_t) + _dataSize);
-    pHeader->glave_begin_time = glvStartTime;
-    pHeader->entrypoint_begin_time = startTime;
-    pHeader->entrypoint_end_time = endTime;
-    pPacket = interpret_body_as_vkGetSurfaceInfoWSI(pHeader);
+    packet_vkGetSurfacePropertiesWSI* pPacket = NULL;
+    CREATE_TRACE_PACKET(vkGetSurfacePropertiesWSI, sizeof(VkSurfaceDescriptionWSI) + sizeof(VkSurfacePropertiesWSI));
+    result = real_vkGetSurfacePropertiesWSI(device, pSurfaceDescription, pSurfaceProperties);
+    pPacket = interpret_body_as_vkGetSurfacePropertiesWSI(pHeader);
     pPacket->device = device;
-    pPacket->infoType = infoType;
     glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pSurfaceDescription), sizeof(VkSurfaceDescriptionWSI), pSurfaceDescription);
-    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pDataSize), sizeof(size_t), &_dataSize);
-    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pData), _dataSize, pData);
+    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pSurfaceProperties), sizeof(VkSurfacePropertiesWSI), pSurfaceProperties);
     pPacket->result = result;
     glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pSurfaceDescription));
-    glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pDataSize));
-    glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pData));
+    glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pSurfaceProperties));
     FINISH_TRACE_PACKET();
     return result;
 }
 
-
-GLVTRACER_EXPORT VkResult VKAPI __HOOKED_vkGetSwapChainInfoWSI(
+GLVTRACER_EXPORT VkResult VKAPI __HOOKED_vkGetSurfaceFormatsWSI(
     VkDevice device,
-    VkSwapChainWSI swapChain,
-    VkSwapChainInfoTypeWSI infoType,
-    size_t* pDataSize,
-    void* pData)
+    const VkSurfaceDescriptionWSI* pSurfaceDescription,
+    uint32_t* pCount,
+    VkSurfaceFormatWSI* pSurfaceFormats)
 {
     glv_trace_packet_header* pHeader;
     VkResult result;
     size_t _dataSize;
-    packet_vkGetSwapChainInfoWSI* pPacket = NULL;
+    packet_vkGetSurfaceFormatsWSI* pPacket = NULL;
     uint64_t startTime;
     uint64_t endTime;
     uint64_t glvStartTime = glv_get_time();
     startTime = glv_get_time();
-    result = real_vkGetSwapChainInfoWSI(device, swapChain, infoType, pDataSize, pData);
+    result = real_vkGetSurfaceFormatsWSI(device, pSurfaceDescription, pCount, pSurfaceFormats);
     endTime = glv_get_time();
-    _dataSize = (pDataSize == NULL || pData == NULL) ? 0 : *pDataSize;
-    CREATE_TRACE_PACKET(vkGetSwapChainInfoWSI, sizeof(size_t) + _dataSize);
+    _dataSize = (pCount == NULL || pSurfaceFormats == NULL) ? 0 : (*pCount *sizeof(VkSurfaceFormatWSI));
+    CREATE_TRACE_PACKET(vkGetSurfaceFormatsWSI, sizeof(VkSurfaceDescriptionWSI) + sizeof(uint32_t) + _dataSize);
     pHeader->glave_begin_time = glvStartTime;
     pHeader->entrypoint_begin_time = startTime;
     pHeader->entrypoint_end_time = endTime;
-    pPacket = interpret_body_as_vkGetSwapChainInfoWSI(pHeader);
+    pPacket = interpret_body_as_vkGetSurfaceFormatsWSI(pHeader);
+    pPacket->device = device;
+    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pSurfaceDescription), sizeof(VkSurfaceDescriptionWSI), pSurfaceDescription);
+    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCount), sizeof(uint32_t), pCount);
+    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pSurfaceFormats), _dataSize, pSurfaceFormats);
+    pPacket->result = result;
+    glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pSurfaceDescription));
+    glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pCount));
+    glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pSurfaceFormats));
+    FINISH_TRACE_PACKET();
+    return result;
+}
+
+GLVTRACER_EXPORT VkResult VKAPI __HOOKED_vkGetSurfacePresentModesWSI(
+    VkDevice device,
+    const VkSurfaceDescriptionWSI* pSurfaceDescription,
+    uint32_t* pCount,
+    VkPresentModeWSI* pPresentModes)
+{
+    glv_trace_packet_header* pHeader;
+    VkResult result;
+    size_t _dataSize;
+    packet_vkGetSurfacePresentModesWSI* pPacket = NULL;
+    uint64_t startTime;
+    uint64_t endTime;
+    uint64_t glvStartTime = glv_get_time();
+    startTime = glv_get_time();
+    result = real_vkGetSurfacePresentModesWSI(device, pSurfaceDescription, pCount, pPresentModes);
+    endTime = glv_get_time();
+    _dataSize = (pCount == NULL || pPresentModes == NULL) ? 0 : (*pCount *sizeof(VkPresentModeWSI));
+    CREATE_TRACE_PACKET(vkGetSurfaceFormatsWSI, sizeof(VkSurfaceDescriptionWSI) + sizeof(uint32_t) + _dataSize);
+    pHeader->glave_begin_time = glvStartTime;
+    pHeader->entrypoint_begin_time = startTime;
+    pHeader->entrypoint_end_time = endTime;
+    pPacket = interpret_body_as_vkGetSurfacePresentModesWSI(pHeader);
+    pPacket->device = device;
+    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pSurfaceDescription), sizeof(VkSurfaceDescriptionWSI), pSurfaceDescription);
+    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCount), sizeof(uint32_t), pCount);
+    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pPresentModes), _dataSize, pPresentModes);
+    pPacket->result = result;
+    glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pSurfaceDescription));
+    glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pCount));
+    glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pPresentModes));
+    FINISH_TRACE_PACKET();
+    return result;
+}
+
+GLVTRACER_EXPORT VkResult VKAPI __HOOKED_vkCreateSwapChainWSI(
+    VkDevice device,
+    const VkSwapChainCreateInfoWSI* pCreateInfo,
+    VkSwapChainWSI* pSwapChain)
+{
+    glv_trace_packet_header* pHeader;
+    VkResult result;
+    packet_vkCreateSwapChainWSI* pPacket = NULL;
+    uint64_t startTime;
+    uint64_t endTime;
+    uint64_t glvStartTime = glv_get_time();
+    startTime = glv_get_time();
+    result = real_vkCreateSwapChainWSI(device, pCreateInfo, pSwapChain);
+    endTime = glv_get_time();
+    CREATE_TRACE_PACKET(vkCreateSwapChainWSI, vk_wsi_device_swapchain_size_vkswapchaincreateinfowsi(pCreateInfo) + sizeof(VkSwapChainWSI));
+    pHeader->glave_begin_time = glvStartTime;
+    pHeader->entrypoint_begin_time = startTime;
+    pHeader->entrypoint_end_time = endTime;
+    pPacket = interpret_body_as_vkCreateSwapChainWSI(pHeader);
+    pPacket->device = device;
+    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo), sizeof(VkSwapChainCreateInfoWSI), pCreateInfo);
+    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo->pSurfaceDescription), sizeof(VkSurfaceDescriptionWSI), pCreateInfo->pSurfaceDescription);
+    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pSwapChain), sizeof(VkSwapChainWSI), pSwapChain);
+    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pQueueFamilyIndices), pCreateInfo->queueFamilyCount * sizeof(uint32_t), pCreateInfo->pQueueFamilyIndices);
+    pPacket->result = result;
+    glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pCreateInfo->pSurfaceDescription));
+    glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pCreateInfo));
+    glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pSwapChain));
+    glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pQueueFamilyIndices));
+    FINISH_TRACE_PACKET();
+    return result;
+}
+
+GLVTRACER_EXPORT VkResult VKAPI __HOOKED_vkGetSwapChainImagesWSI(
+    VkDevice device,
+    VkSwapChainWSI swapChain,
+    uint32_t* pCount,
+    VkImage* pSwapChainImages)
+{
+    glv_trace_packet_header* pHeader;
+    VkResult result;
+    size_t _dataSize;
+    packet_vkGetSwapChainImagesWSI* pPacket = NULL;
+    uint64_t startTime;
+    uint64_t endTime;
+    uint64_t glvStartTime = glv_get_time();
+    startTime = glv_get_time();
+    result = real_vkGetSwapChainImagesWSI(device, swapChain, pCount, pSwapChainImages);
+    endTime = glv_get_time();
+    _dataSize = (pCount == NULL || pSwapChainImages == NULL) ? 0 : (*pCount *sizeof(VkImage));
+    CREATE_TRACE_PACKET(vkGetSwapChainImagesWSI, sizeof(uint32_t) + _dataSize);
+    pHeader->glave_begin_time = glvStartTime;
+    pHeader->entrypoint_begin_time = startTime;
+    pHeader->entrypoint_end_time = endTime;
+    pPacket = interpret_body_as_vkGetSwapChainImagesWSI(pHeader);
     pPacket->device = device;
     pPacket->swapChain = swapChain;
-    pPacket->infoType = infoType;
-    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pDataSize), sizeof(size_t), &_dataSize);
-    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pData), _dataSize, pData);
+    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCount), sizeof(uint32_t), pCount);
+    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pSwapChainImages), _dataSize, pSwapChainImages);
     pPacket->result = result;
-    glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pDataSize));
-    glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pData));
+    glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pCount));
+    glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pSwapChainImages));
     FINISH_TRACE_PACKET();
     return result;
 }
