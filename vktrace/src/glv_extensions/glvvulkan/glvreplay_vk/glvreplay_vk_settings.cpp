@@ -32,7 +32,7 @@ static glvreplay_vk_settings s_defaultVkReplaySettings = { 1, "",
                                                             STRINGIFY(VK_DBG_LAYER_LEVEL_ERROR), STRINGIFY(VK_DBG_LAYER_ACTION_CALLBACK)};
 glvreplay_vk_settings g_vkReplaySettings;
 
-glv_SettingInfo g_settings_info[] =
+glv_SettingInfo g_vk_settings_info[] =
 {
     { "dl", "DebugLevel", GLV_SETTING_UINT, &g_vkReplaySettings.debugLevel, &s_defaultVkReplaySettings.debugLevel, FALSE, "Sets the Debug Level of the Vulkan validation layers."},
     { "e", "EnableLayers", GLV_SETTING_STRING, &g_vkReplaySettings.enableLayers, &s_defaultVkReplaySettings.enableLayers, TRUE, "Comma separated list of Vulkan layers to enable."},
@@ -45,8 +45,8 @@ glv_SettingInfo g_settings_info[] =
 glv_SettingGroup g_vkReplaySettingGroup =
 {
     "glvreplay_vk",
-    sizeof(g_settings_info) / sizeof(g_settings_info[0]),
-    &g_settings_info[0]
+    sizeof(g_vk_settings_info) / sizeof(g_vk_settings_info[0]),
+    &g_vk_settings_info[0]
 };
 
 void apply_layerSettings_overrides()

@@ -76,25 +76,22 @@ static void VKAPI vkErrorHandler(
     glv_leave_critical_section(&g_handlerLock);
 }
 
-extern "C"
-{
-
-GLVTRACER_EXPORT void SetLogCallback(GLV_REPORT_CALLBACK_FUNCTION pCallback)
+void VkReplaySetLogCallback(GLV_REPORT_CALLBACK_FUNCTION pCallback)
 {
     glv_LogSetCallback(pCallback);
 }
 
-GLVTRACER_EXPORT void SetLogLevel(GlvLogLevel level)
+void VkReplaySetLogLevel(GlvLogLevel level)
 {
     glv_LogSetLevel(level);
 }
 
-GLVTRACER_EXPORT void RegisterDbgMsgCallback(glv_replay::GLV_DBG_MSG_CALLBACK_FUNCTION pCallback)
+void VkReplayRegisterDbgMsgCallback(glv_replay::GLV_DBG_MSG_CALLBACK_FUNCTION pCallback)
 {
     g_fpGlvCallback = pCallback;
 }
 
-GLVTRACER_EXPORT glv_SettingGroup* GLVTRACER_CDECL GetSettings()
+glv_SettingGroup* GLVTRACER_CDECL VkReplayGetSettings()
 {
     static BOOL bFirstTime = TRUE;
     if (bFirstTime == TRUE)
@@ -106,12 +103,12 @@ GLVTRACER_EXPORT glv_SettingGroup* GLVTRACER_CDECL GetSettings()
     return &g_vkReplaySettingGroup;
 }
 
-GLVTRACER_EXPORT void GLVTRACER_CDECL UpdateFromSettings(glv_SettingGroup* pSettingGroups, unsigned int numSettingGroups)
+void GLVTRACER_CDECL VkReplayUpdateFromSettings(glv_SettingGroup* pSettingGroups, unsigned int numSettingGroups)
 {
     glv_SettingGroup_Apply_Overrides(&g_vkReplaySettingGroup, pSettingGroups, numSettingGroups);
 }
 
-GLVTRACER_EXPORT int GLVTRACER_CDECL Initialize(glv_replay::Display* pDisplay, glvreplay_settings *pReplaySettings)
+int GLVTRACER_CDECL VkReplayInitialize(glv_replay::Display* pDisplay, glvreplay_settings *pReplaySettings)
 {
     try
     {
@@ -129,7 +126,7 @@ GLVTRACER_EXPORT int GLVTRACER_CDECL Initialize(glv_replay::Display* pDisplay, g
     return result;
 }
 
-GLVTRACER_EXPORT void GLVTRACER_CDECL Deinitialize()
+void GLVTRACER_CDECL VkReplayDeinitialize()
 {
     if (g_pReplayer != NULL)
     {
@@ -139,7 +136,7 @@ GLVTRACER_EXPORT void GLVTRACER_CDECL Deinitialize()
     glv_delete_critical_section(&g_handlerLock);
 }
 
-GLVTRACER_EXPORT glv_trace_packet_header* GLVTRACER_CDECL Interpret(glv_trace_packet_header* pPacket)
+glv_trace_packet_header* GLVTRACER_CDECL VkReplayInterpret(glv_trace_packet_header* pPacket)
 {
     // Attempt to interpret the packet as a Vulkan packet
     glv_trace_packet_header* pInterpretedHeader = interpret_trace_packet_vk(pPacket);
@@ -151,7 +148,7 @@ GLVTRACER_EXPORT glv_trace_packet_header* GLVTRACER_CDECL Interpret(glv_trace_pa
     return pInterpretedHeader;
 }
 
-GLVTRACER_EXPORT glv_replay::GLV_REPLAY_RESULT GLVTRACER_CDECL Replay(glv_trace_packet_header* pPacket)
+glv_replay::GLV_REPLAY_RESULT GLVTRACER_CDECL VkReplayReplay(glv_trace_packet_header* pPacket)
 {
     glv_replay::GLV_REPLAY_RESULT result = glv_replay::GLV_REPLAY_ERROR;
     if (g_pReplayer != NULL)
@@ -164,7 +161,7 @@ GLVTRACER_EXPORT glv_replay::GLV_REPLAY_RESULT GLVTRACER_CDECL Replay(glv_trace_
     return result;
 }
 
-GLVTRACER_EXPORT int GLVTRACER_CDECL Dump()
+int GLVTRACER_CDECL VkReplayDump()
 {
     if (g_pReplayer != NULL)
     {
@@ -172,5 +169,4 @@ GLVTRACER_EXPORT int GLVTRACER_CDECL Dump()
         return 0;
     }
     return -1;
-}
 }

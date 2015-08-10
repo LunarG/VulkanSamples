@@ -56,7 +56,7 @@ include_directories(
     ${CMAKE_CURRENT_SOURCE_DIR}/../vulkan/codegen_utils
 )
 
-add_library(${PROJECT_NAME} SHARED ${SRC_LIST} ${HDR_LIST})
+add_library(${PROJECT_NAME} STATIC ${SRC_LIST} ${HDR_LIST})
 
 target_link_libraries(${PROJECT_NAME} 
     ${OS_REPLAYER_LIBS}

@@ -17,9 +17,10 @@ include_directories(
     ${SRC_DIR}/glvreplay
     ${SRC_DIR}/glvcommon
     ${SRC_DIR}/thirdparty
+    ${CMAKE_CURRENT_SOURCE_DIR}/../glv_extensions/glvvulkan/glvreplay_vk/
 )
 
-set (LIBRARIES glvcommon)
+set (LIBRARIES glvcommon vulkan_replay)
 
 add_executable(${PROJECT_NAME} ${SRC_LIST})
 

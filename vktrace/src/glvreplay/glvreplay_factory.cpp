@@ -25,6 +25,7 @@
 
 #include "glvreplay_factory.h"
 #include "glv_trace_packet_identifiers.h"
+#include "glvreplay_vk.h"
 
 namespace glv_replay {
 
@@ -35,12 +36,38 @@ glv_trace_packet_replay_library* ReplayFactory::Create(uint8_t tracerId)
 
     const GLV_TRACER_REPLAYER_INFO* pReplayerInfo = &(gs_tracerReplayerInfo[tracerId]);
 
+
     if (pReplayerInfo->tracerId != tracerId)
     {
         glv_LogError("Replayer info for TracerId (%d) failed consistency check.", tracerId);
         assert(!"TracerId in GLV_TRACER_REPLAYER_INFO does not match the requested tracerId. The array needs to be corrected.");
     }
-    else if (pReplayerInfo->needsReplayer == TRUE)
+
+    // Vulkan library is built into replayer executable
+    if (tracerId == GLV_TID_VULKAN) {
+        pReplayer = GLV_NEW(glv_trace_packet_replay_library);
+        if (pReplayer == NULL)
+        {
+            glv_LogError("Failed to allocate replayer library.");
+        }
+        else
+        {
+            pReplayer->pLibrary = NULL;
+
+            pReplayer->SetLogCallback = VkReplaySetLogCallback;
+            pReplayer->SetLogLevel = VkReplaySetLogLevel;
+
+            pReplayer->RegisterDbgMsgCallback = VkReplayRegisterDbgMsgCallback;
+            pReplayer->GetSettings = VkReplayGetSettings;
+            pReplayer->UpdateFromSettings = VkReplayUpdateFromSettings;
+            pReplayer->Initialize = VkReplayInitialize;
+            pReplayer->Deinitialize = VkReplayDeinitialize;
+            pReplayer->Interpret = VkReplayInterpret;
+            pReplayer->Replay = VkReplayReplay;
+            pReplayer->Dump = VkReplayDump;
+        }
+
+    } else if (pReplayerInfo->needsReplayer == TRUE)
     {
         pLibrary = glv_platform_open_library(pReplayerInfo->replayerLibraryName);
         if (pLibrary == NULL)
@@ -107,7 +134,8 @@ void ReplayFactory::Destroy(glv_trace_packet_replay_library** ppReplayer)
 {
     assert (ppReplayer != NULL);
     assert (*ppReplayer != NULL);
-    glv_platform_close_library((*ppReplayer)->pLibrary);
+    if ((*ppReplayer)->pLibrary)
+        glv_platform_close_library((*ppReplayer)->pLibrary);
     GLV_DELETE(*ppReplayer);
     *ppReplayer = NULL;
 }
