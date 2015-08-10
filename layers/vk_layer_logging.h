@@ -194,8 +194,8 @@ static inline void layer_destroy_msg_callback(
                         "Destroyed callback");
         } else {
             matched = false;
+            debug_data->active_flags |= pTrav->msgFlags;
         }
-        debug_data->active_flags |= pTrav->msgFlags;
         pPrev = pTrav;
         pTrav = pTrav->pNext;
         if (matched) {
