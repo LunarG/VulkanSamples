@@ -218,6 +218,9 @@ struct demo {
     VkDynamicColorBlendState color_blend;
     VkDynamicDepthStencilState depth_stencil;
 
+    VkShaderModule vert_shader_module;
+    VkShaderModule frag_shader_module;
+
     VkDescriptorPool desc_pool;
     VkDescriptorSet desc_set;
 
@@ -1047,12 +1050,12 @@ static void demo_prepare_render_pass(struct demo *demo)
 
 static VkShader demo_prepare_shader(struct demo *demo,
                                       VkShaderStage stage,
+                                      VkShaderModule* pShaderModule,
                                       const void *code,
                                       size_t size)
 {
     VkShaderModuleCreateInfo moduleCreateInfo;
     VkShaderCreateInfo shaderCreateInfo;
-    VkShaderModule shaderModule;
     VkShader shader;
     VkResult err;
 
@@ -1067,17 +1070,15 @@ static VkShader demo_prepare_shader(struct demo *demo,
         moduleCreateInfo.codeSize = size;
         moduleCreateInfo.pCode = code;
         moduleCreateInfo.flags = 0;
-        err = vkCreateShaderModule(demo->device, &moduleCreateInfo, &shaderModule);
+        err = vkCreateShaderModule(demo->device, &moduleCreateInfo, pShaderModule);
         if (err) {
             free((void *) moduleCreateInfo.pCode);
         }
 
         shaderCreateInfo.flags = 0;
-        shaderCreateInfo.module = shaderModule;
+        shaderCreateInfo.module = *pShaderModule;
         shaderCreateInfo.pName = "main";
         err = vkCreateShader(demo->device, &shaderCreateInfo, &shader);
-        assert(!err);
-        err = vkDestroyShaderModule(demo->device, shaderModule);
         assert(!err);
     } else {
         // Create fake SPV structure to feed GLSL
@@ -1092,17 +1093,15 @@ static VkShader demo_prepare_shader(struct demo *demo,
         ((uint32_t *) moduleCreateInfo.pCode)[2] = stage;
         memcpy(((uint32_t *) moduleCreateInfo.pCode + 3), code, size + 1);
 
-        err = vkCreateShaderModule(demo->device, &moduleCreateInfo, &shaderModule);
+        err = vkCreateShaderModule(demo->device, &moduleCreateInfo, pShaderModule);
         if (err) {
             free((void *) moduleCreateInfo.pCode);
         }
 
         shaderCreateInfo.flags = 0;
-        shaderCreateInfo.module = shaderModule;
+        shaderCreateInfo.module = *pShaderModule;
         shaderCreateInfo.pName = "main";
         err = vkCreateShader(demo->device, &shaderCreateInfo, &shader);
-        assert(!err);
-        err = vkDestroyShaderModule(demo->device, shaderModule);
         assert(!err);
     }
     return shader;
@@ -1140,7 +1139,8 @@ static VkShader demo_prepare_vs(struct demo *demo)
        vertShaderCode = demo_read_spv("tri-vert.spv", &size);
 
        return demo_prepare_shader(demo, VK_SHADER_STAGE_VERTEX,
-          vertShaderCode, size);
+                                  &demo->vert_shader_module,
+                                  vertShaderCode, size);
     } else {
         static const char *vertShaderText =
             "#version 140\n"
@@ -1155,6 +1155,7 @@ static VkShader demo_prepare_vs(struct demo *demo)
             "}\n";
 
         return demo_prepare_shader(demo, VK_SHADER_STAGE_VERTEX,
+                                   &demo->vert_shader_module,
                                    (const void *) vertShaderText,
                                    strlen(vertShaderText));
     }
@@ -1169,7 +1170,8 @@ static VkShader demo_prepare_fs(struct demo *demo)
        fragShaderCode = demo_read_spv("tri-frag.spv", &size);
 
        return demo_prepare_shader(demo, VK_SHADER_STAGE_FRAGMENT,
-          fragShaderCode, size);
+                                  &demo->frag_shader_module,
+                                  fragShaderCode, size);
     } else {
         static const char *fragShaderText =
                 "#version 140\n"
@@ -1183,6 +1185,7 @@ static VkShader demo_prepare_fs(struct demo *demo)
                 "}\n";
 
         return demo_prepare_shader(demo, VK_SHADER_STAGE_FRAGMENT,
+                                   &demo->frag_shader_module,
                                    (const void *) fragShaderText,
                                    strlen(fragShaderText));
     }
@@ -1287,6 +1290,8 @@ static void demo_prepare_pipeline(struct demo *demo)
     for (uint32_t i = 0; i < pipeline.stageCount; i++) {
         vkDestroyShader(demo->device, shaderStages[i].shader);
     }
+    vkDestroyShaderModule(demo->device, demo->frag_shader_module);
+    vkDestroyShaderModule(demo->device, demo->vert_shader_module);
 }
 
 static void demo_prepare_dynamic_states(struct demo *demo)
