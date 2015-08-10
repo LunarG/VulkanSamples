@@ -305,7 +305,7 @@ GLVTRACER_EXPORT VkResult VKAPI __HOOKED_vkCreateFramebuffer(
     pPacket = interpret_body_as_vkCreateFramebuffer(pHeader);
     pPacket->device = device;
     glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo), sizeof(VkFramebufferCreateInfo), pCreateInfo);
-    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo->pAttachments), attachmentCount * sizeof(VkAttachmentBindInfo), pCreateInfo->pAttachments);
+    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo->pAttachments), attachmentCount * sizeof(VkAttachmentView), pCreateInfo->pAttachments);
     glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pFramebuffer), sizeof(VkFramebuffer), pFramebuffer);
     pPacket->result = result;
     glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pCreateInfo->pAttachments));
@@ -372,15 +372,17 @@ GLVTRACER_EXPORT VkResult VKAPI __HOOKED_vkCreateRenderPass(
     glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo->pDependencies), sizeof(VkSubpassDependency), pCreateInfo->pDependencies);
     glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo->pSubpasses), sizeof(VkSubpassDescription), pCreateInfo->pSubpasses);
     uint32_t i;
-    for (i=0; i<pPacket->pCreateInfo->subpassCount; i++) {
-        glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo->pSubpasses[i].inputAttachments), sizeof(VkAttachmentReference), pCreateInfo->pSubpasses[i].inputAttachments);
-        glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pCreateInfo->pSubpasses[i].inputAttachments));
-        glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo->pSubpasses[i].colorAttachments), sizeof(VkAttachmentReference), pCreateInfo->pSubpasses[i].colorAttachments);
-        glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pCreateInfo->pSubpasses[i].colorAttachments));
-        glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo->pSubpasses[i].resolveAttachments), sizeof(VkAttachmentReference), pCreateInfo->pSubpasses[i].resolveAttachments);
-        glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pCreateInfo->pSubpasses[i].resolveAttachments));
-        glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo->pSubpasses[i].preserveAttachments), sizeof(VkAttachmentReference), pCreateInfo->pSubpasses[i].preserveAttachments);
-        glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pCreateInfo->pSubpasses[i].preserveAttachments));
+    for (i=0; i < pPacket->pCreateInfo->subpassCount; i++) {
+        VkSubpassDescription *pSubpass = (VkSubpassDescription *) &pPacket->pCreateInfo->pSubpasses[i];
+        const VkSubpassDescription *pSp = &pCreateInfo->pSubpasses[i];
+        glv_add_buffer_to_trace_packet(pHeader, (void**)&(pSubpass->pInputAttachments), pSubpass->inputCount * sizeof(VkAttachmentReference), pSp->pInputAttachments);
+        glv_finalize_buffer_address(pHeader, (void**)&(pSubpass->pInputAttachments));
+        glv_add_buffer_to_trace_packet(pHeader, (void**)&(pSubpass->pColorAttachments), pSubpass->colorCount * sizeof(VkAttachmentReference), pSp->pColorAttachments);
+        glv_finalize_buffer_address(pHeader, (void**)&(pSubpass->pColorAttachments));
+        glv_add_buffer_to_trace_packet(pHeader, (void**)&(pSubpass->pResolveAttachments), pSubpass->colorCount * sizeof(VkAttachmentReference), pSp->pResolveAttachments);
+        glv_finalize_buffer_address(pHeader, (void**)&(pSubpass->pResolveAttachments));
+        glv_add_buffer_to_trace_packet(pHeader, (void**)&(pSubpass->pPreserveAttachments), pSubpass->preserveCount * sizeof(VkAttachmentReference), pSp->pPreserveAttachments);
+        glv_finalize_buffer_address(pHeader, (void**)&(pSubpass->pPreserveAttachments));
     }
     glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pRenderPass), sizeof(VkRenderPass), pRenderPass);
     pPacket->result = result;
@@ -528,30 +530,31 @@ GLVTRACER_EXPORT VkResult VKAPI __HOOKED_vkGetPhysicalDeviceLayerProperties(
 }
 // TODO : This should be pretty easy to fit into codegen. Don't need to make the call prior to creating packet
 //  Just need to account for "count" number of queue properties
-GLVTRACER_EXPORT VkResult VKAPI __HOOKED_vkGetPhysicalDeviceQueueProperties(
+GLVTRACER_EXPORT VkResult VKAPI __HOOKED_vkGetPhysicalDeviceQueueFamilyProperties(
     VkPhysicalDevice physicalDevice,
-    uint32_t count,
-    VkPhysicalDeviceQueueProperties* pQueueProperties)
+    uint32_t* pCount,
+    VkQueueFamilyProperties* pQueueFamilyProperties)
 {
     glv_trace_packet_header* pHeader;
     VkResult result;
-    packet_vkGetPhysicalDeviceQueueProperties* pPacket = NULL;
+    packet_vkGetPhysicalDeviceQueueFamilyProperties* pPacket = NULL;
     uint64_t startTime;
     uint64_t endTime;
     uint64_t glvStartTime = glv_get_time();
     startTime = glv_get_time();
-    result = real_vkGetPhysicalDeviceQueueProperties(physicalDevice, count, pQueueProperties);
+    result = real_vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, pCount, pQueueFamilyProperties);
     endTime = glv_get_time();
-    CREATE_TRACE_PACKET(vkGetPhysicalDeviceQueueProperties, count * sizeof(VkPhysicalDeviceQueueProperties));
+    CREATE_TRACE_PACKET(vkGetPhysicalDeviceQueueFamilyProperties, sizeof(uint32_t) + *pCount * sizeof(VkQueueFamilyProperties));
     pHeader->glave_begin_time = glvStartTime;
     pHeader->entrypoint_begin_time = startTime;
     pHeader->entrypoint_end_time = endTime;
-    pPacket = interpret_body_as_vkGetPhysicalDeviceQueueProperties(pHeader);
+    pPacket = interpret_body_as_vkGetPhysicalDeviceQueueFamilyProperties(pHeader);
     pPacket->physicalDevice = physicalDevice;
-    pPacket->count = count;
-    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pQueueProperties), count * sizeof(VkPhysicalDeviceQueueProperties), pQueueProperties);
+    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCount), sizeof(uint32_t), pCount);
+    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pQueueFamilyProperties), *pCount * sizeof(VkQueueFamilyProperties), pQueueFamilyProperties);
     pPacket->result = result;
-    glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pQueueProperties));
+    glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pCount));
+    glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pQueueFamilyProperties));
     FINISH_TRACE_PACKET();
     return result;
 }
@@ -669,8 +672,7 @@ GLVTRACER_EXPORT VkResult VKAPI __HOOKED_vkAllocDescriptorSets(
     VkDescriptorSetUsage setUsage,
     uint32_t count,
     const VkDescriptorSetLayout* pSetLayouts,
-    VkDescriptorSet* pDescriptorSets,
-    uint32_t* pCount)
+    VkDescriptorSet* pDescriptorSets)
 {
     glv_trace_packet_header* pHeader;
     VkResult result;
@@ -680,10 +682,9 @@ GLVTRACER_EXPORT VkResult VKAPI __HOOKED_vkAllocDescriptorSets(
     uint64_t glvStartTime = glv_get_time();
     SEND_ENTRYPOINT_ID(vkAllocDescriptorSets);
     startTime = glv_get_time();
-    result = real_vkAllocDescriptorSets(device, descriptorPool, setUsage, count, pSetLayouts, pDescriptorSets, pCount);
+    result = real_vkAllocDescriptorSets(device, descriptorPool, setUsage, count, pSetLayouts, pDescriptorSets);
     endTime = glv_get_time();
-    size_t customSize = (*pCount <= 0) ? (sizeof(VkDescriptorSet)) : (*pCount * sizeof(VkDescriptorSet));
-    CREATE_TRACE_PACKET(vkAllocDescriptorSets, (count * sizeof(VkDescriptorSetLayout)) + customSize + sizeof(uint32_t));
+    CREATE_TRACE_PACKET(vkAllocDescriptorSets, (count * sizeof(VkDescriptorSetLayout)) + (count * sizeof(VkDescriptorSet)));
     pHeader->glave_begin_time = glvStartTime;
     pHeader->entrypoint_begin_time = startTime;
     pHeader->entrypoint_end_time = endTime;
@@ -692,13 +693,11 @@ GLVTRACER_EXPORT VkResult VKAPI __HOOKED_vkAllocDescriptorSets(
     pPacket->descriptorPool = descriptorPool;
     pPacket->setUsage = setUsage;
     pPacket->count = count;
-    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pSetLayouts), count*sizeof(VkDescriptorSetLayout), pSetLayouts);
-    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pDescriptorSets), customSize, pDescriptorSets);
-    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCount), sizeof(uint32_t), pCount);
+    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pSetLayouts), count * sizeof(VkDescriptorSetLayout), pSetLayouts);
+    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pDescriptorSets), count * sizeof(VkDescriptorSet), pDescriptorSets);
     pPacket->result = result;
     glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pSetLayouts));
     glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pDescriptorSets));
-    glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pCount));
     FINISH_TRACE_PACKET();
     return result;
 }
@@ -923,7 +922,7 @@ GLVTRACER_EXPORT void VKAPI __HOOKED_vkCmdBeginRenderPass(
 {
     glv_trace_packet_header* pHeader;
     packet_vkCmdBeginRenderPass* pPacket = NULL;
-    size_t clearValueSize = sizeof(VkClearValue) * pRenderPassBegin->attachmentCount;
+    size_t clearValueSize = sizeof(VkClearValue) * pRenderPassBegin->clearValueCount;
     CREATE_TRACE_PACKET(vkCmdBeginRenderPass, sizeof(VkRenderPassBeginInfo) + clearValueSize);
     real_vkCmdBeginRenderPass(cmdBuffer, pRenderPassBegin, contents);
     glv_set_packet_entrypoint_end_time(pHeader);
@@ -931,8 +930,8 @@ GLVTRACER_EXPORT void VKAPI __HOOKED_vkCmdBeginRenderPass(
     pPacket->cmdBuffer = cmdBuffer;
     pPacket->contents = contents;
     glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pRenderPassBegin), sizeof(VkRenderPassBeginInfo), pRenderPassBegin);
-    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pRenderPassBegin->pAttachmentClearValues), clearValueSize, pRenderPassBegin->pAttachmentClearValues);
-    glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pRenderPassBegin->pAttachmentClearValues));
+    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pRenderPassBegin->pClearValues), clearValueSize, pRenderPassBegin->pClearValues);
+    glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pRenderPassBegin->pClearValues));
     glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pRenderPassBegin));
     FINISH_TRACE_PACKET();
 }

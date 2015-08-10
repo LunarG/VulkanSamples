@@ -912,7 +912,7 @@ VkResult vkReplay::manually_replay_vkAllocDescriptorSets(packet_vkAllocDescripto
 
     VkDescriptorSet* pDescriptorSets = NULL;
     replayResult = m_vkFuncs.real_vkAllocDescriptorSets(remappedDevice, descriptorPool, pPacket->setUsage, pPacket->count,
-        pPacket->pSetLayouts, pDescriptorSets, pPacket->pCount);
+        pPacket->pSetLayouts, pDescriptorSets);
     if(replayResult == VK_SUCCESS)
     {
         for(uint32_t i = 0; i < pPacket->count; ++i)
@@ -1272,16 +1272,16 @@ VkResult vkReplay::manually_replay_vkCreateFramebuffer(packet_vkCreateFramebuffe
         return VK_ERROR_UNKNOWN;
 
     VkFramebufferCreateInfo *pInfo = (VkFramebufferCreateInfo *) pPacket->pCreateInfo;
-    VkAttachmentBindInfo *pAttachments, *pSavedAttachments = (VkAttachmentBindInfo*)pInfo->pAttachments;
+    VkAttachmentView *pAttachments, *pSavedAttachments = (VkAttachmentView*)pInfo->pAttachments;
     bool allocatedAttachments = false;
     if (pSavedAttachments != NULL)
     {
         allocatedAttachments = true;
-        pAttachments = GLV_NEW_ARRAY(VkAttachmentBindInfo, pInfo->attachmentCount);
-        memcpy(pAttachments, pSavedAttachments, sizeof(VkAttachmentBindInfo) * pInfo->attachmentCount);
+        pAttachments = GLV_NEW_ARRAY(VkAttachmentView, pInfo->attachmentCount);
+        memcpy(pAttachments, pSavedAttachments, sizeof(VkAttachmentView) * pInfo->attachmentCount);
         for (uint32_t i = 0; i < pInfo->attachmentCount; i++)
         {
-            pAttachments[i].view.handle = m_objMapper.remap_attachmentviews(pInfo->pAttachments[i].view.handle);
+            pAttachments[i].handle = m_objMapper.remap_attachmentviews(pInfo->pAttachments[i].handle);
         }
         pInfo->pAttachments = pAttachments;
     }
@@ -1330,7 +1330,7 @@ void vkReplay::manually_replay_vkCmdBeginRenderPass(packet_vkCmdBeginRenderPass*
     }
     VkRenderPassBeginInfo local_renderPassBeginInfo;
     memcpy((void*)&local_renderPassBeginInfo, (void*)pPacket->pRenderPassBegin, sizeof(VkRenderPassBeginInfo));
-    local_renderPassBeginInfo.pAttachmentClearValues = (const VkClearValue*)pPacket->pRenderPassBegin->pAttachmentClearValues;
+    local_renderPassBeginInfo.pClearValues = (const VkClearValue*)pPacket->pRenderPassBegin->pClearValues;
     local_renderPassBeginInfo.framebuffer.handle = m_objMapper.remap_framebuffers(pPacket->pRenderPassBegin->framebuffer.handle);
     local_renderPassBeginInfo.renderPass.handle = m_objMapper.remap_renderpasss(pPacket->pRenderPassBegin->renderPass.handle);
     m_vkFuncs.real_vkCmdBeginRenderPass(remappedCmdBuffer, &local_renderPassBeginInfo, pPacket->contents);

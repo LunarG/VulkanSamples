@@ -475,7 +475,7 @@ class Subcommand(object):
                                          'GetPhysicalDeviceExtensionProperties',
                                          'GetGlobalLayerProperties',
                                          'GetPhysicalDeviceLayerProperties',
-                                         'GetPhysicalDeviceQueueProperties',
+                                         'GetPhysicalDeviceQueueFamilyProperties',
                                          'GetQueryPoolResults',
                                          'MapMemory',
                                          'UnmapMemory',
@@ -818,14 +818,14 @@ class Subcommand(object):
                             'VkSubpassDescription** ppSP = (VkSubpassDescription**)&(pInfo->pSubpasses);\n',
                             '*ppSP = (VkSubpassDescription*) glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pInfo->pSubpasses);\n',
                             'for (i=0; i<pInfo->subpassCount; i++) {\n',
-                            '    VkAttachmentReference** pAR = (VkAttachmentReference**)&(pInfo->pSubpasses[i].inputAttachments);\n',
-                            '    *pAR = (VkAttachmentReference*)glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pInfo->pSubpasses[i].inputAttachments);\n',
-                            '    pAR = (VkAttachmentReference**)&(pInfo->pSubpasses[i].colorAttachments);\n',
-                            '    *pAR = (VkAttachmentReference*)glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pInfo->pSubpasses[i].colorAttachments);\n',
-                            '    pAR = (VkAttachmentReference**)&(pInfo->pSubpasses[i].resolveAttachments);\n',
-                            '    *pAR = (VkAttachmentReference*)glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pInfo->pSubpasses[i].resolveAttachments);\n',
-                            '    pAR = (VkAttachmentReference**)&(pInfo->pSubpasses[i].preserveAttachments);\n',
-                            '    *pAR = (VkAttachmentReference*)glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pInfo->pSubpasses[i].preserveAttachments);\n',
+                            '    VkAttachmentReference** pAR = (VkAttachmentReference**)&(pInfo->pSubpasses[i].pInputAttachments);\n',
+                            '    *pAR = (VkAttachmentReference*)glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pInfo->pSubpasses[i].pInputAttachments);\n',
+                            '    pAR = (VkAttachmentReference**)&(pInfo->pSubpasses[i].pColorAttachments);\n',
+                            '    *pAR = (VkAttachmentReference*)glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pInfo->pSubpasses[i].pColorAttachments);\n',
+                            '    pAR = (VkAttachmentReference**)&(pInfo->pSubpasses[i].pResolveAttachments);\n',
+                            '    *pAR = (VkAttachmentReference*)glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pInfo->pSubpasses[i].pResolveAttachments);\n',
+                            '    pAR = (VkAttachmentReference**)&(pInfo->pSubpasses[i].pPreserveAttachments);\n',
+                            '    *pAR = (VkAttachmentReference*)glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pInfo->pSubpasses[i].pPreserveAttachments);\n',
                             '}\n',
                             'VkSubpassDependency** ppSD = (VkSubpassDependency**)&(pInfo->pDependencies);\n',
                             '*ppSD = (VkSubpassDependency*) glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pInfo->pDependencies);\n']
@@ -975,10 +975,10 @@ class Subcommand(object):
                                                                                ]},
                              'CreateGraphicsPipelines' : {'param': 'pCreateInfos', 'txt': create_gfx_pipe},
                              'CreateComputePipeline' : {'param': 'pCreateInfo', 'txt': ['interpret_VkPipelineShaderStageCreateInfo(pHeader, (VkPipelineShaderStageCreateInfo*)(&pPacket->pCreateInfo->cs));']},
-                             'CreateFramebuffer' : {'param': 'pCreateInfo', 'txt': ['VkAttachmentBindInfo** ppABI = (VkAttachmentBindInfo**)&(pPacket->pCreateInfo->pAttachments);\n',
-                                                                                    '*ppABI = (VkAttachmentBindInfo*)glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)(pPacket->pCreateInfo->pAttachments));']},
-                             'CmdBeginRenderPass' : {'param': 'pRenderPassBegin', 'txt': ['VkClearValue** ppCV = (VkClearValue**)&(pPacket->pRenderPassBegin->pAttachmentClearValues);\n',
-                                                                                          '*ppCV = (VkClearValue*)glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)(pPacket->pRenderPassBegin->pAttachmentClearValues));']},
+                             'CreateFramebuffer' : {'param': 'pCreateInfo', 'txt': ['VkAttachmentView** ppAV = (VkAttachmentView**)&(pPacket->pCreateInfo->pAttachments);\n',
+                                                                                    '*ppAV = (VkAttachmentView*)glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)(pPacket->pCreateInfo->pAttachments));']},
+                             'CmdBeginRenderPass' : {'param': 'pRenderPassBegin', 'txt': ['VkClearValue** ppCV = (VkClearValue**)&(pPacket->pRenderPassBegin->pClearValues);\n',
+                                                                                          '*ppCV = (VkClearValue*)glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)(pPacket->pRenderPassBegin->pClearValues));']},
                              'CreateShaderModule' : {'param': 'pCreateInfo', 'txt': ['void** ppCode = (void**)&(pPacket->pCreateInfo->pCode);\n',
                                                                                      '*ppCode = (void*)glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->pCreateInfo->pCode);']},
                              'CreateShader' : {'param': 'pCreateInfo', 'txt': ['void** ppName = (void**)&(pPacket->pCreateInfo->pName);\n',
@@ -1679,15 +1679,16 @@ class Subcommand(object):
                         rbody.append('            createInfo.image.handle = m_objMapper.remap_images(pPacket->pCreateInfo->image.handle);')
                     rbody.append('            %s local_%s;' % (proto.params[-1].ty.strip('*').replace('const ', ''), proto.params[-1].name))
                 elif create_func: # Declare local var to store created handle into
-                    rbody.append('            %s local_%s;' % (proto.params[-1].ty.strip('*').replace('const ', ''), proto.params[-1].name))
                     if 'AllocDescriptorSets' == proto.name:
-                        p_ty = proto.params[-2].ty.strip('*').replace('const ', '')
-                        rbody.append('            %s* local_%s = (%s*)malloc(pPacket->count * sizeof(%s));' % (p_ty, proto.params[-2].name, p_ty, p_ty))
-                        rbody.append('            VkDescriptorSetLayout* pLocalDescSetLayouts = (VkDescriptorSetLayout*)malloc(pPacket->count * sizeof(VkDescriptorSetLayout));')
+                        p_ty = proto.params[-1].ty.strip('*').replace('const ', '')
+                        rbody.append('            %s* local_%s = (%s*)malloc(pPacket->count * sizeof(%s));' % (p_ty, proto.params[-1].name, p_ty, p_ty))
+                        rbody.append('            VkDescriptorSetLayout* local_pSetLayouts = (VkDescriptorSetLayout*)malloc(pPacket->count * sizeof(VkDescriptorSetLayout));')
                         rbody.append('            for (uint32_t i = 0; i < pPacket->count; i++)')
                         rbody.append('            {')
-                        rbody.append('                pLocalDescSetLayouts[i].handle = m_objMapper.remap_descriptorsetlayouts(pPacket->%s[i].handle);' % (proto.params[-3].name))
+                        rbody.append('                local_pSetLayouts[i].handle = m_objMapper.remap_descriptorsetlayouts(pPacket->%s[i].handle);' % (proto.params[-2].name))
                         rbody.append('            }')
+                    else:
+                        rbody.append('            %s local_%s;' % (proto.params[-1].ty.strip('*').replace('const ', ''), proto.params[-1].name))
                 elif proto.name == 'ResetFences':
                     rbody.append('            VkFence* fences = GLV_NEW_ARRAY(VkFence, pPacket->fenceCount);')
                     rbody.append('            for (uint32_t i = 0; i < pPacket->fenceCount; i++)')
@@ -1731,10 +1732,10 @@ class Subcommand(object):
                 for p in proto.params:
                     # For last param of Create funcs, pass address of param
                     if create_func:
-                        if p.name == proto.params[-1].name:
-                            rr_string += '&local_%s, ' % p.name
-                        elif proto.name == 'AllocDescriptorSets' and p.name == proto.params[-2].name:
+                        if proto.name == 'AllocDescriptorSets' and ((p.name == proto.params[-2].name) or (p.name == proto.params[-1].name)):
                             rr_string += 'local_%s, ' % p.name
+                        elif p.name == proto.params[-1].name:
+                            rr_string += '&local_%s, ' % p.name
                         else:
                             rr_string += '%s, ' % self._get_packet_param(proto.name, p.ty, p.name)
                     else:
@@ -1787,11 +1788,11 @@ class Subcommand(object):
                 elif 'AllocDescriptorSets' in proto.name:
                     rbody.append('            if (replayResult == VK_SUCCESS)')
                     rbody.append('            {')
-                    rbody.append('                for (uint32_t i = 0; i < local_pCount; i++) {')
-                    rbody.append('                    m_objMapper.add_to_descriptorsets_map(pPacket->%s[i].handle, local_%s[i].handle);' % (proto.params[-2].name, proto.params[-2].name))
+                    rbody.append('                for (uint32_t i = 0; i < pPacket->count; i++) {')
+                    rbody.append('                    m_objMapper.add_to_descriptorsets_map(pPacket->%s[i].handle, local_%s[i].handle);' % (proto.params[-1].name, proto.params[-1].name))
                     rbody.append('                }')
                     rbody.append('            }')
-                    rbody.append('            free(pLocalDescSetLayouts);')
+                    rbody.append('            free(local_pSetLayouts);')
                     rbody.append('            free(local_pDescriptorSets);')
                 elif proto.name == 'ResetFences':
                     rbody.append('            GLV_DELETE(fences);')
