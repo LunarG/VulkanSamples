@@ -37,6 +37,15 @@ int main(int argc, char **argv)
     struct sample_info info = {};
     char test_title[] = "Depth Buffer Test";
 
+    /*
+     * Make a depth buffer:
+     * - Create an Image to be the depth buffer
+     * - Find memory requirements
+     * - Allocate and bind memory
+     * - Set the image layout
+     * - Create an attachment view
+     * /
+
     init_instance_and_device(info, test_title);
     info.memory_properties.reserve(1);
     err = vkGetPhysicalDeviceMemoryProperties(info.gpu, info.memory_properties.data());
@@ -97,7 +106,7 @@ int main(int argc, char **argv)
 
     info.depth.format = depth_format;
 
-    /* create image */
+    /* Create image */
     err = vkCreateImage(info.device, &image_info,
                         &info.depth.image);
     assert(!err);
@@ -106,21 +115,23 @@ int main(int argc, char **argv)
                                        info.depth.image, &mem_reqs);
 
     mem_alloc.allocationSize = mem_reqs.size;
+    /* Use the memory properties to determine the type of memory required */
     err = memory_type_from_properties(info,
                                       mem_reqs.memoryTypeBits,
                                       VK_MEMORY_PROPERTY_DEVICE_ONLY,
                                       &mem_alloc.memoryTypeIndex);
     assert(!err);
 
-    /* allocate memory */
+    /* Allocate memory */
     err = vkAllocMemory(info.device, &mem_alloc, &info.depth.mem);
     assert(!err);
 
-    /* bind memory */
+    /* Bind memory */
     err = vkBindImageMemory(info.device, info.depth.image,
                             info.depth.mem, 0);
     assert(!err);
 
+    /* Set the image layout to depth stencil optimal */
     set_image_layout(info, info.depth.image,
                           VK_IMAGE_ASPECT_DEPTH,
                           VK_IMAGE_LAYOUT_UNDEFINED,
@@ -133,6 +144,7 @@ int main(int argc, char **argv)
 
     /* VULKAN_KEY_END */
 
+    /* Clean Up*/
     vkDestroyCommandBuffer(info.device, info.cmd);
     vkDestroyCommandPool(info.device, info.cmd_pool);
     vkFreeMemory(info.device, info.depth.mem);
