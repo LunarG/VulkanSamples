@@ -32,6 +32,8 @@ VkResult init_global_extension_properties(
         layer_properties *layer_props = NULL);
 
 VkResult init_global_layer_properties(sample_info &info);
+VkResult init_instance_and_device(struct sample_info &info, char *app_short_name);
+
 
 #endif // UTIL_INIT
 
