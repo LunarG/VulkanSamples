@@ -38,7 +38,7 @@ mv 1.ppm 1_trace.ppm
 cmp -s 1.ppm 1_trace.ppm
 RES=$?
 cd ..
-#rm -rf vktracereplay_tmp
+rm -rf vktracereplay_tmp
 
 if [ $RES -eq 0 ] ; then
    printf "$GREEN[  PASSED  ]$NC 1 test\n"

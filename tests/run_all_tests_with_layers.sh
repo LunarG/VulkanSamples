@@ -34,13 +34,7 @@ fi
 ./vk_render_tests --compare-images 
 
 # vkglavetracereplay.sh tests glave trace and replay
-D=`dirname \`pwd\``
-GDIR=../../../Glave/`basename $D`/
-if [ ! -d "$GDIR" ]; then
-   printf "Glave unavailable, skipping vkglavetracereplay.sh\n"
-else
-   ./vkglavetracereplay.sh
-fi
+./vkglavetracereplay.sh
 
 if [ -f ./vk_layer_settings.txt ];
 then
