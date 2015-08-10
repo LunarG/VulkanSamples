@@ -89,7 +89,7 @@ struct MT_OBJ_HANDLE_TYPE {
 
 // Data struct for tracking memory object
 struct MT_MEM_OBJ_INFO {
-    void*                       object;       // Dispatchable object used to create this memory (device of swapchain)
+    void*                       object;             // Dispatchable object used to create this memory (device of swapchain)
     uint32_t                    refCount;           // Count of references (obj bindings or CB use)
     VkDeviceMemory              mem;
     VkMemoryAllocInfo           allocInfo;

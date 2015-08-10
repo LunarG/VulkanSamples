@@ -669,7 +669,7 @@ static MT_MEM_OBJ_INFO* get_mem_obj_info(
 }
 
 static void add_mem_obj_info(
-    void*              object,
+    void*                    object,
     const VkDeviceMemory     mem,
     const VkMemoryAllocInfo* pAllocInfo)
 {
@@ -1096,21 +1096,51 @@ static VkBool32 set_sparse_mem_binding(
     return VK_TRUE;
 }
 
+template <typename T>
+void print_object_map_members(
+    void*            dispObj,
+    T const&         objectName,
+    VkDbgObjectType  objectType,
+    const char      *objectStr)
+{
+    for (auto const& element : objectName) {
+        log_msg(mdd(dispObj), VK_DBG_REPORT_INFO_BIT, objectType, 0, 0, MEMTRACK_NONE, "MEM",
+            "    %s Object list contains %s Object %#" PRIxLEAST64 " ", objectStr, objectStr, element.first);
+    }
+}
+
 // Print details of global Obj tracking list
-//static void print_object_list(
-//    VkObject object)
-//{
-//    MT_OBJ_INFO* pInfo = NULL;
-//    log_msg(mdd(object), VK_DBG_REPORT_INFO_BIT, (VkObjectType) 0, NULL, 0, MEMTRACK_NONE, "MEM",
-//            "Details of Object list of size %lu elements", objectMap.size());
-//    if (objectMap.size() <= 0)
-//        return;
-//    for (unordered_map<VkObject, MT_OBJ_INFO>::iterator ii=objectMap.begin(); ii!=objectMap.end(); ++ii) {
-//        pInfo = &(*ii).second;
-//        log_msg(mdd(object), VK_DBG_REPORT_INFO_BIT, (VkObjectType) 0, pInfo->object, 0, MEMTRACK_NONE, "MEM",
-//                "    ObjInfo %p has object %p, pMemObjInfo %p", pInfo, pInfo->object, pInfo->pMemObjInfo);
-//    }
-//}
+static void print_object_list(
+    void* dispObj)
+{
+    // Early out if info is not requested
+    if (!(mdd(dispObj)->active_flags & VK_DBG_REPORT_INFO_BIT)) {
+        return;
+    }
+
+    log_msg(mdd(dispObj), VK_DBG_REPORT_INFO_BIT, VK_OBJECT_TYPE_DEVICE, 0, 0, MEMTRACK_NONE, "MEM", "Details of Object lists:");
+    log_msg(mdd(dispObj), VK_DBG_REPORT_INFO_BIT, VK_OBJECT_TYPE_DEVICE, 0, 0, MEMTRACK_NONE, "MEM", "========================");
+
+    print_object_map_members(dispObj, attachmentViewMap,           VK_OBJECT_TYPE_ATTACHMENT_VIEW,             "AttachmentView");
+    print_object_map_members(dispObj, imageViewMap,                VK_OBJECT_TYPE_IMAGE_VIEW,                  "ImageView");
+    print_object_map_members(dispObj, samplerMap,                  VK_OBJECT_TYPE_SAMPLER,                     "Sampler");
+    print_object_map_members(dispObj, semaphoreMap,                VK_OBJECT_TYPE_SEMAPHORE,                   "Semaphore");
+    print_object_map_members(dispObj, eventMap,                    VK_OBJECT_TYPE_EVENT,                       "Event");
+    print_object_map_members(dispObj, queryPoolMap,                VK_OBJECT_TYPE_QUERY_POOL,                  "QueryPool");
+    print_object_map_members(dispObj, bufferViewMap,               VK_OBJECT_TYPE_BUFFER_VIEW,                 "BufferView");
+    print_object_map_members(dispObj, shaderModuleMap,             VK_OBJECT_TYPE_SHADER_MODULE,               "ShaderModule");
+    print_object_map_members(dispObj, shaderMap,                   VK_OBJECT_TYPE_SHADER,                      "Shader");
+    print_object_map_members(dispObj, pipelineLayoutMap,           VK_OBJECT_TYPE_PIPELINE_LAYOUT,             "PipelineLayout");
+    print_object_map_members(dispObj, descriptorSetLayoutMap,      VK_OBJECT_TYPE_DESCRIPTOR_SET_LAYOUT,       "DescriptorSetLayout");
+    print_object_map_members(dispObj, descriptorPoolMap,           VK_OBJECT_TYPE_DESCRIPTOR_POOL,             "DescriptorPool");
+    print_object_map_members(dispObj, renderPassMap,               VK_OBJECT_TYPE_RENDER_PASS,                 "RenderPass");
+    print_object_map_members(dispObj, framebufferMap,              VK_OBJECT_TYPE_FRAMEBUFFER,                 "Framebuffer");
+    print_object_map_members(dispObj, dynamicViewportStateMap,     VK_OBJECT_TYPE_DYNAMIC_VIEWPORT_STATE,      "DynamicViewportState");
+    print_object_map_members(dispObj, dynamicRasterStateMap,       VK_OBJECT_TYPE_DYNAMIC_RASTER_STATE,        "DynamicRasterState");
+    print_object_map_members(dispObj, dynamicColorBlendStateMap,   VK_OBJECT_TYPE_DYNAMIC_COLOR_BLEND_STATE,   "DynamicColorBlendState");
+    print_object_map_members(dispObj, dynamicDepthStencilStateMap, VK_OBJECT_TYPE_DYNAMIC_DEPTH_STENCIL_STATE, "DynamicDepthStencilState");
+    log_msg(mdd(dispObj), VK_DBG_REPORT_INFO_BIT, VK_OBJECT_TYPE_DEVICE, 0, 0, MEMTRACK_NONE, "MEM", "*** End of Object lists ***");
+}
 
 // For given Object, get 'mem' obj that it's bound to or NULL if no binding
 static VkDeviceMemory get_mem_binding_from_object(
@@ -1125,93 +1155,109 @@ static VkDeviceMemory get_mem_binding_from_object(
         } else {
             log_msg(mdd(dispObj), VK_DBG_REPORT_ERROR_BIT, type, handle, 0, MEMTRACK_MISSING_MEM_BINDINGS, "MEM",
                     "Trying to get mem binding for object %#" PRIxLEAST64 " but object has no mem binding", handle);
-            //print_object_list(object);
+            print_object_list(dispObj);
         }
     } else {
         log_msg(mdd(dispObj), VK_DBG_REPORT_ERROR_BIT, type, handle, 0, MEMTRACK_INVALID_OBJECT, "MEM",
                 "Trying to get mem binding for object %#" PRIxLEAST64 " but no such object in %s list", handle, (VK_OBJECT_TYPE_IMAGE == type) ? "image" : "buffer");
-        //print_object_list(object);
+        print_object_list(dispObj);
     }
     return mem;
 }
 
 // Print details of MemObjInfo list
-//static void print_mem_list(
-//    VkObject object)
-//{
-//    MT_MEM_OBJ_INFO* pInfo = NULL;
-//    // Just printing each msg individually for now, may want to package these into single large print
-//    log_msg(mdd(object), VK_DBG_REPORT_INFO_BIT, (VkObjectType) 0, NULL, 0, MEMTRACK_NONE, "MEM",
-//            "MEM INFO : Details of Memory Object list of size %lu elements", memObjMap.size());
-//
-//    if (memObjMap.size() <= 0)
-//        return;
-//
-//    for (auto ii=memObjMap.begin(); ii!=memObjMap.end(); ++ii) {
-//        pInfo = &(*ii).second;
-//
-//        log_msg(mdd(object), VK_DBG_REPORT_INFO_BIT, (VkObjectType) 0, NULL, 0, MEMTRACK_NONE, "MEM",
-//                "    ===MemObjInfo at %p===", (void*)pInfo);
-//        log_msg(mdd(object), VK_DBG_REPORT_INFO_BIT, (VkObjectType) 0, NULL, 0, MEMTRACK_NONE, "MEM",
-//                "    Mem object: %#" PRIxLEAST64, (void*)pInfo->mem.handle);
-//        log_msg(mdd(object), VK_DBG_REPORT_INFO_BIT, (VkObjectType) 0, NULL, 0, MEMTRACK_NONE, "MEM",
-//                "    Ref Count: %u", pInfo->refCount);
-//        if (0 != pInfo->allocInfo.allocationSize) {
-//            string pAllocInfoMsg = vk_print_vkmemoryallocinfo(&pInfo->allocInfo, "{MEM}INFO :       ");
-//            log_msg(mdd(object), VK_DBG_REPORT_INFO_BIT, (VkObjectType) 0, NULL, 0, MEMTRACK_NONE, "MEM",
-//                    "    Mem Alloc info:\n%s", pAllocInfoMsg.c_str());
-//        } else {
-//            log_msg(mdd(object), VK_DBG_REPORT_INFO_BIT, (VkObjectType) 0, NULL, 0, MEMTRACK_NONE, "MEM",
-//                    "    Mem Alloc info is NULL (alloc done by vkCreateSwapChainWSI())");
-//        }
-//
-//        log_msg(mdd(object), VK_DBG_REPORT_INFO_BIT, (VkObjectType) 0, NULL, 0, MEMTRACK_NONE, "MEM",
-//                "    VK OBJECT Binding list of size %lu elements:", pInfo->pObjBindings.size());
-//        if (pInfo->pObjBindings.size() > 0) {
-//            for (list<VkObject>::iterator it = pInfo->pObjBindings.begin(); it != pInfo->pObjBindings.end(); ++it) {
-//                log_msg(mdd(object), VK_DBG_REPORT_INFO_BIT, (VkObjectType) 0, NULL, 0, MEMTRACK_NONE, "MEM",
-//                        "       VK OBJECT %p", (*it));
-//            }
-//        }
-//
-//        log_msg(mdd(object), VK_DBG_REPORT_INFO_BIT, (VkObjectType) 0, NULL, 0, MEMTRACK_NONE, "MEM",
-//                "    VK Command Buffer (CB) binding list of size %lu elements", pInfo->pCmdBufferBindings.size());
-//        if (pInfo->pCmdBufferBindings.size() > 0)
-//        {
-//            for (list<VkCmdBuffer>::iterator it = pInfo->pCmdBufferBindings.begin(); it != pInfo->pCmdBufferBindings.end(); ++it) {
-//                log_msg(mdd(object), VK_DBG_REPORT_INFO_BIT, (VkObjectType) 0, NULL, 0, MEMTRACK_NONE, "MEM",
-//                        "      VK CB %p", (*it));
-//            }
-//        }
-//    }
-//}
+static void print_mem_list(
+    void* dispObj)
+{
+    MT_MEM_OBJ_INFO* pInfo = NULL;
 
-//static void printCBList(
-//    VkObject object)
-//{
-//    MT_CB_INFO* pCBInfo = NULL;
-//    log_msg(mdd(object), VK_DBG_REPORT_INFO_BIT, (VkObjectType) 0, NULL, 0, MEMTRACK_NONE, "MEM",
-//            "Details of CB list of size %lu elements", cbMap.size());
-//
-//    if (cbMap.size() <= 0)
-//        return;
-//
-//    for (auto ii=cbMap.begin(); ii!=cbMap.end(); ++ii) {
-//        pCBInfo = &(*ii).second;
-//
-//        log_msg(mdd(object), VK_DBG_REPORT_INFO_BIT, (VkObjectType) 0, NULL, 0, MEMTRACK_NONE, "MEM",
-//                "    CB Info (%p) has CB %p, fenceId %" PRIx64", and fence %#" PRIxLEAST64,
-//                (void*)pCBInfo, (void*)pCBInfo->cmdBuffer, pCBInfo->fenceId,
-//                pCBInfo->lastSubmittedFence.handle);
-//
-//        if (pCBInfo->pMemObjList.size() <= 0)
-//            continue;
-//        for (list<VkDeviceMemory>::iterator it = pCBInfo->pMemObjList.begin(); it != pCBInfo->pMemObjList.end(); ++it) {
-//            log_msg(mdd(object), VK_DBG_REPORT_INFO_BIT, (VkObjectType) 0, NULL, 0, MEMTRACK_NONE, "MEM",
-//                    "      Mem obj %p", (*it));
-//        }
-//    }
-//}
+    // Early out if info is not requested
+    if (!(mdd(dispObj)->active_flags & VK_DBG_REPORT_INFO_BIT)) {
+        return;
+    }
+
+    // Just printing each msg individually for now, may want to package these into single large print
+    log_msg(mdd(dispObj), VK_DBG_REPORT_INFO_BIT, VK_OBJECT_TYPE_DEVICE_MEMORY, 0, 0, MEMTRACK_NONE, "MEM",
+            "Details of Memory Object list (of size %lu elements)", memObjMap.size());
+    log_msg(mdd(dispObj), VK_DBG_REPORT_INFO_BIT, VK_OBJECT_TYPE_DEVICE_MEMORY, 0, 0, MEMTRACK_NONE, "MEM",
+            "=============================");
+
+    if (memObjMap.size() <= 0)
+        return;
+
+    for (auto ii=memObjMap.begin(); ii!=memObjMap.end(); ++ii) {
+        pInfo = &(*ii).second;
+
+        log_msg(mdd(dispObj), VK_DBG_REPORT_INFO_BIT, VK_OBJECT_TYPE_DEVICE_MEMORY, 0, 0, MEMTRACK_NONE, "MEM",
+            "    ===MemObjInfo at %p===", (void*)pInfo);
+        log_msg(mdd(dispObj), VK_DBG_REPORT_INFO_BIT, VK_OBJECT_TYPE_DEVICE_MEMORY, 0, 0, MEMTRACK_NONE, "MEM",
+                "    Mem object: %#" PRIxLEAST64, (void*)pInfo->mem.handle);
+        log_msg(mdd(dispObj), VK_DBG_REPORT_INFO_BIT, VK_OBJECT_TYPE_DEVICE_MEMORY, 0, 0, MEMTRACK_NONE, "MEM",
+                "    Ref Count: %u", pInfo->refCount);
+        if (0 != pInfo->allocInfo.allocationSize) {
+            string pAllocInfoMsg = vk_print_vkmemoryallocinfo(&pInfo->allocInfo, "MEM(INFO):         ");
+            log_msg(mdd(dispObj), VK_DBG_REPORT_INFO_BIT, VK_OBJECT_TYPE_DEVICE_MEMORY, 0, 0, MEMTRACK_NONE, "MEM",
+                    "    Mem Alloc info:\n%s", pAllocInfoMsg.c_str());
+        } else {
+            log_msg(mdd(dispObj), VK_DBG_REPORT_INFO_BIT, VK_OBJECT_TYPE_DEVICE_MEMORY, 0, 0, MEMTRACK_NONE, "MEM",
+                    "    Mem Alloc info is NULL (alloc done by vkCreateSwapChainWSI())");
+        }
+
+        log_msg(mdd(dispObj), VK_DBG_REPORT_INFO_BIT, VK_OBJECT_TYPE_DEVICE_MEMORY, 0, 0, MEMTRACK_NONE, "MEM",
+                "    VK OBJECT Binding list of size %lu elements:", pInfo->pObjBindings.size());
+        if (pInfo->pObjBindings.size() > 0) {
+            for (list<MT_OBJ_HANDLE_TYPE>::iterator it = pInfo->pObjBindings.begin(); it != pInfo->pObjBindings.end(); ++it) {
+                log_msg(mdd(dispObj), VK_DBG_REPORT_INFO_BIT, VK_OBJECT_TYPE_DEVICE_MEMORY, 0, 0, MEMTRACK_NONE, "MEM",
+                        "       VK OBJECT %p", (*it));
+            }
+        }
+
+        log_msg(mdd(dispObj), VK_DBG_REPORT_INFO_BIT, VK_OBJECT_TYPE_DEVICE_MEMORY, 0, 0, MEMTRACK_NONE, "MEM",
+                "    VK Command Buffer (CB) binding list of size %lu elements", pInfo->pCmdBufferBindings.size());
+        if (pInfo->pCmdBufferBindings.size() > 0)
+        {
+            for (list<VkCmdBuffer>::iterator it = pInfo->pCmdBufferBindings.begin(); it != pInfo->pCmdBufferBindings.end(); ++it) {
+                log_msg(mdd(dispObj), VK_DBG_REPORT_INFO_BIT, VK_OBJECT_TYPE_DEVICE_MEMORY, 0, 0, MEMTRACK_NONE, "MEM",
+                        "      VK CB %p", (*it));
+            }
+        }
+    }
+}
+
+static void printCBList(
+    void* dispObj)
+{
+    MT_CB_INFO* pCBInfo = NULL;
+
+    // Early out if info is not requested
+    if (!(mdd(dispObj)->active_flags & VK_DBG_REPORT_INFO_BIT)) {
+        return;
+    }
+
+    log_msg(mdd(dispObj), VK_DBG_REPORT_INFO_BIT, VK_OBJECT_TYPE_DEVICE_MEMORY, 0, 0, MEMTRACK_NONE, "MEM",
+        "Details of CB list (of size %lu elements)", cbMap.size());
+    log_msg(mdd(dispObj), VK_DBG_REPORT_INFO_BIT, VK_OBJECT_TYPE_DEVICE_MEMORY, 0, 0, MEMTRACK_NONE, "MEM",
+        "==================");
+
+    if (cbMap.size() <= 0)
+        return;
+
+    for (auto ii=cbMap.begin(); ii!=cbMap.end(); ++ii) {
+        pCBInfo = &(*ii).second;
+
+        log_msg(mdd(dispObj), VK_DBG_REPORT_INFO_BIT, VK_OBJECT_TYPE_DEVICE_MEMORY, 0, 0, MEMTRACK_NONE, "MEM",
+                "    CB Info (%p) has CB %p, fenceId %" PRIx64", and fence %#" PRIxLEAST64,
+                (void*)pCBInfo, (void*)pCBInfo->cmdBuffer, pCBInfo->fenceId,
+                pCBInfo->lastSubmittedFence.handle);
+
+        if (pCBInfo->pMemObjList.size() <= 0)
+            continue;
+        for (list<VkDeviceMemory>::iterator it = pCBInfo->pMemObjList.begin(); it != pCBInfo->pMemObjList.end(); ++it) {
+            log_msg(mdd(dispObj), VK_DBG_REPORT_INFO_BIT, VK_OBJECT_TYPE_DEVICE_MEMORY, 0, 0, MEMTRACK_NONE, "MEM",
+                    "      Mem obj %p", (*it));
+        }
+    }
+}
 
 static void init_mem_tracker(
     layer_data *my_data)
@@ -1325,11 +1371,13 @@ VK_LAYER_EXPORT VkResult VKAPI vkDestroyDevice(
 {
     loader_platform_thread_lock_mutex(&globalLock);
     // TODO : Need to set device as srcObj
-//    log_msg(mdd(device), VK_DBG_REPORT_INFO_BIT, VK_OBJECT_TYPE_DEVICE, 0, 0, MEMTRACK_NONE, "MEM",
-//            "Printing List details prior to vkDestroyDevice()");
-//    print_mem_list(device);
-//    printCBList(device);
-//    print_object_list(device);
+    log_msg(mdd(device), VK_DBG_REPORT_INFO_BIT, VK_OBJECT_TYPE_DEVICE, 0, 0, MEMTRACK_NONE, "MEM",
+        "Printing List details prior to vkDestroyDevice()");
+    log_msg(mdd(device), VK_DBG_REPORT_INFO_BIT, VK_OBJECT_TYPE_DEVICE, 0, 0, MEMTRACK_NONE, "MEM",
+        "================================================");
+    print_mem_list(device);
+    printCBList(device);
+    print_object_list(device);
     if (VK_FALSE == delete_cmd_buf_info_list()) {
         // TODO : Need to set device as srcObj
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DEVICE, 0, 0, MEMTRACK_INTERNAL_ERROR, "MEM",
@@ -1450,8 +1498,8 @@ VK_LAYER_EXPORT VkResult VKAPI vkQueueSubmit(
     MT_CB_INFO* pCBInfo = NULL;
     uint64_t    fenceId = add_fence_info(fence, queue);
 
-    //print_mem_list(queue);
-    //printCBList(queue);
+    print_mem_list(queue);
+    printCBList(queue);
     for (uint32_t i = 0; i < cmdBufferCount; i++) {
         pCBInfo = get_cmd_buf_info(pCmdBuffers[i]);
         pCBInfo->fenceId = fenceId;
@@ -1474,7 +1522,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkAllocMemory(
     // TODO : Track allocations and overall size here
     loader_platform_thread_lock_mutex(&globalLock);
     add_mem_obj_info(device, *pMem, pAllocInfo);
-    //print_mem_list(device);
+    print_mem_list(device);
     loader_platform_thread_unlock_mutex(&globalLock);
     return result;
 }
@@ -1489,9 +1537,9 @@ VK_LAYER_EXPORT VkResult VKAPI vkFreeMemory(
      */
     loader_platform_thread_lock_mutex(&globalLock);
     VkBool32 noerror = freeMemObjInfo(device, mem, false);
-    //print_mem_list(device);
-    //print_object_list(device);
-    //printCBList(device);
+    print_mem_list(device);
+    print_object_list(device);
+    printCBList(device);
     // Output an warning message for proper error/warning handling
     if (noerror == VK_FALSE) {
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DEVICE_MEMORY, mem.handle, 0, MEMTRACK_FREED_MEM_REF, "MEM",
@@ -1821,8 +1869,8 @@ VkResult VKAPI vkBindBufferMemory(
     // Track objects tied to memory
     set_mem_binding(device, mem, buffer.handle, VK_OBJECT_TYPE_BUFFER);
     add_object_binding_info(buffer.handle, VK_OBJECT_TYPE_BUFFER, mem);
-    //print_object_list(device);
-    //print_mem_list(device);
+    print_object_list(device);
+    print_mem_list(device);
     loader_platform_thread_unlock_mutex(&globalLock);
     return result;
 }
@@ -1838,8 +1886,8 @@ VkResult VKAPI vkBindImageMemory(
     // Track objects tied to memory
     set_mem_binding(device, mem, image.handle, VK_OBJECT_TYPE_IMAGE);
     add_object_binding_info(image.handle, VK_OBJECT_TYPE_IMAGE, mem);
-    //print_object_list(device);
-    //print_mem_list(device);
+    print_object_list(device);
+    print_mem_list(device);
     loader_platform_thread_unlock_mutex(&globalLock);
     return result;
 }
@@ -1880,8 +1928,8 @@ VK_LAYER_EXPORT VkResult VKAPI vkQueueBindSparseImageOpaqueMemory(
         log_msg(mdd(queue), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_IMAGE, image.handle, 0, MEMTRACK_MEMORY_BINDING_ERROR, "MEM",
                 "In vkQueueBindSparseImageOpaqueMemory(), unable to set image %#" PRIxLEAST64 " binding to mem obj %#" PRIxLEAST64, image.handle, pBindInfo->mem.handle);
     }
-    //print_object_list(queue);
-    //print_mem_list(queue);
+    print_object_list(queue);
+    print_mem_list(queue);
     loader_platform_thread_unlock_mutex(&globalLock);
     return result;
 }
@@ -1900,8 +1948,8 @@ VK_LAYER_EXPORT VkResult VKAPI vkQueueBindSparseImageMemory(
         log_msg(mdd(queue), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_IMAGE, image.handle, 0, MEMTRACK_MEMORY_BINDING_ERROR, "MEM",
                 "In vkQueueBindSparseImageMemory(), unable to set image %#" PRIxLEAST64 " binding to mem obj %#" PRIxLEAST64, image.handle, pBindInfo->mem.handle);
     }
-    //print_object_list(queue);
-    //print_mem_list(queue);
+    print_object_list(queue);
+    print_mem_list(queue);
     loader_platform_thread_unlock_mutex(&globalLock);
     return result;
 }
@@ -1920,8 +1968,8 @@ VK_LAYER_EXPORT VkResult VKAPI vkQueueBindSparseBufferMemory(
         log_msg(mdd(queue), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_BUFFER, buffer.handle, 0, MEMTRACK_MEMORY_BINDING_ERROR, "MEM",
                 "Unable to set object %#" PRIxLEAST64 " binding to mem obj %#" PRIxLEAST64, buffer.handle, pBindInfo->mem.handle);
     }
-    //print_object_list(queue);
-    //print_mem_list(queue);
+    print_object_list(queue);
+    print_mem_list(queue);
     loader_platform_thread_unlock_mutex(&globalLock);
     return result;
 }
@@ -2288,7 +2336,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateCommandBuffer(
     loader_platform_thread_lock_mutex(&globalLock);
     if (*pCmdBuffer)
         add_cmd_buf_info(*pCmdBuffer);
-    //printCBList(device);
+    printCBList(device);
     loader_platform_thread_unlock_mutex(&globalLock);
     return result;
 }
