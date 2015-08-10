@@ -523,13 +523,6 @@ class LayerFuncsSubcommand(Subcommand):
     def generate_body(self):
         return self._generate_dispatch_entrypoints("static")
 
-class LayerDispatchSubcommand(Subcommand):
-    def generate_header(self):
-        return '#include "layer_wrappers.h"'
-
-    def generate_body(self):
-        return self._generate_layer_initialization()
-
 class GenericLayerSubcommand(Subcommand):
     def generate_header(self):
         gen_header = []
@@ -1754,7 +1747,6 @@ class ThreadingSubcommand(Subcommand):
 def main():
     subcommands = {
             "layer-funcs" : LayerFuncsSubcommand,
-            "layer-dispatch" : LayerDispatchSubcommand,
             "Generic" : GenericLayerSubcommand,
             "APIDump" : APIDumpSubcommand,
             "ObjectTracker" : ObjectTrackerSubcommand,
