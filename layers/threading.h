@@ -21,6 +21,10 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
+#ifndef THREADING_H
+#define THREADING_H
+#include "vk_layer_config.h"
+#include "vk_layer_logging.h"
 
 // Draw State ERROR codes
 typedef enum _THREADING_CHECKER_ERROR
@@ -30,3 +34,19 @@ typedef enum _THREADING_CHECKER_ERROR
     THREADING_CHECKER_SINGLE_THREAD_REUSE,              // Object used simultaneously by recursion in single thread
 } THREADING_CHECKER_ERROR;
 
+typedef struct _layer_data {
+    debug_report_data *report_data;
+    VkDbgMsgCallback   logging_callback;
+} layer_data;
+
+static std::unordered_map<void*, layer_data *> layer_data_map;
+static device_table_map                        Threading_device_table_map;
+static instance_table_map                      Threading_instance_table_map;
+
+static inline debug_report_data *mdd(const void* object)
+{
+    dispatch_key key = get_dispatch_key(object);
+    layer_data *my_data = get_my_data_ptr(key, layer_data_map);
+    return my_data->report_data;
+}
+#endif // THREADING_H
