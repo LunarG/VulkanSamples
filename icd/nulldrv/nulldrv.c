@@ -859,30 +859,21 @@ ICD_EXPORT VkResult VKAPI vkDestroySwapChainWSI(
     return VK_SUCCESS;
 }
 
-ICD_EXPORT VkResult VKAPI vkGetSwapChainInfoWSI(
-    VkDevice                                device,
-    VkSwapChainWSI                          swapChain,
-    VkSwapChainInfoTypeWSI                  infoType,
-    size_t*                                 pDataSize,
-    void*                                   pData)
+ICD_EXPORT VkResult VKAPI vkGetSwapChainImagesWSI(
+    VkDevice                                 device,
+    VkSwapChainWSI                           swapChain,
+    uint32_t*                                pCount,
+    VkImage*                                 pSwapChainImages)
 {
     NULLDRV_LOG_FUNC;
     struct nulldrv_swap_chain *sc = *(struct nulldrv_swap_chain **) &swapChain;
     struct nulldrv_dev *dev = sc->dev;
     VkResult ret = VK_SUCCESS;
 
-    if (!pDataSize)
-        return VK_ERROR_INVALID_POINTER;
-
-    switch (infoType) {
-    case VK_SWAP_CHAIN_INFO_TYPE_IMAGES_WSI:
-        *pDataSize = (sizeof(VkSwapChainImagePropertiesWSI) * 2);
-        if (pData) {
-            VkSwapChainImagePropertiesWSI *images =
-                (VkSwapChainImagePropertiesWSI *) pData;
-            uint32_t i;
-
-            for (i = 0; i < 2; i++) {
+    *pCount = 2;
+    if (pSwapChainImages) {
+        uint32_t i;
+        for (i = 0; i < 2; i++) {
                 struct nulldrv_img *img;
 
                 img = (struct nulldrv_img *) nulldrv_base_create(dev,
@@ -890,13 +881,8 @@ ICD_EXPORT VkResult VKAPI vkGetSwapChainInfoWSI(
                         VK_OBJECT_TYPE_IMAGE);
                 if (!img)
                     return VK_ERROR_OUT_OF_HOST_MEMORY;
-                *(VkImage **) &images[i].image = *(VkImage **) &img;
-            }
+            pSwapChainImages[i].handle = (uint64_t) &img;
         }
-        break;
-    default:
-        ret = VK_ERROR_INVALID_VALUE;
-        break;
     }
 
     return ret;
@@ -914,12 +900,32 @@ ICD_EXPORT VkResult VKAPI vkAcquireNextImageWSI(
     return VK_SUCCESS;
 }
 
-ICD_EXPORT VkResult VKAPI vkGetSurfaceInfoWSI(
+VkResult VKAPI vkGetSurfacePropertiesWSI(
     VkDevice                                 device,
     const VkSurfaceDescriptionWSI*           pSurfaceDescription,
-    VkSurfaceInfoTypeWSI                     infoType,
-    size_t*                                  pDataSize,
-    void*                                    pData)
+    VkSurfacePropertiesWSI*                  pSurfaceProperties)
+{
+    NULLDRV_LOG_FUNC;
+
+    return VK_SUCCESS;
+}
+
+VkResult VKAPI vkGetSurfaceFormatsWSI(
+    VkDevice                                 device,
+    const VkSurfaceDescriptionWSI*           pSurfaceDescription,
+    uint32_t*                                pCount,
+    VkSurfaceFormatWSI*                      pSurfaceFormats)
+{
+    NULLDRV_LOG_FUNC;
+
+    return VK_SUCCESS;
+}
+
+VkResult VKAPI vkGetSurfacePresentModesWSI(
+    VkDevice                                 device,
+    const VkSurfaceDescriptionWSI*           pSurfaceDescription,
+    uint32_t*                                pCount,
+    VkPresentModeWSI*                        pPresentModes)
 {
     NULLDRV_LOG_FUNC;
 
