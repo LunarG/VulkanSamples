@@ -5,32 +5,19 @@
 # enable layers
 export VK_INSTANCE_LAYERS=Threading:MemTracker:ObjectTracker:DrawState:ParamChecker:ShaderChecker
 export VK_DEVICE_LAYERS=Threading:MemTracker:ObjectTracker:DrawState:ParamChecker:ShaderChecker
-# Save any existing settings file
-RESTORE_SETTINGS="false"
-SETTINGS_NAME="vk_layer_settings.txt"
-TMP_SETTINGS_NAME="xls.txt"
-OUTPUT_FLAGS="error"
-OUTPUT_ACTION="VK_DBG_LAYER_ACTION_LOG_MSG"
-if [ -f $SETTINGS_NAME ]; then
-    echo Saving $SETTINGS_NAME to $TMP_SETTINGS_NAME
-    RESTORE_SETTINGS="true"
-    mv $SETTINGS_NAME $TMP_SETTINGS_NAME
-else
-    echo not copying layer settings
+
+set -e
+
+if [ -f ../../tests/vk_layer_settings.txt ];
+then
+    cp ../../tests/vk_layer_settings.txt .
+fi 
+
+if [ ! -f ./vk_layer_settings.txt ];
+then
+    printf "ERROR:  No vk_layer_settings.txt file found\n"
+    exit 1;
 fi
-# Write out settings file to run tests with
-echo "MemTrackerReportFlags = $OUTPUT_FLAGS" > $SETTINGS_NAME
-echo "MemTrackerDebugAction = $OUTPUT_ACTION" >> $SETTINGS_NAME
-echo "DrawStateReportFlags = $OUTPUT_FLAGS" >> $SETTINGS_NAME
-echo "DrawStateDebugAction = $OUTPUT_ACTION" >> $SETTINGS_NAME
-echo "ObjectTrackerReportFlags = $OUTPUT_FLAGS" >> $SETTINGS_NAME
-echo "ObjectTrackerDebugAction = $OUTPUT_ACTION" >> $SETTINGS_NAME
-echo "ParamCheckerReportFlags = $OUTPUT_FLAGS" >> $SETTINGS_NAME
-echo "ParamCheckerDebugAction = $OUTPUT_ACTION" >> $SETTINGS_NAME
-echo "ThreadingReportFlags = $OUTPUT_FLAGS" >> $SETTINGS_NAME
-echo "ThreadingDebugAction = $OUTPUT_ACTION" >> $SETTINGS_NAME
-echo "ShaderCheckerReportFlags = $OUTPUT_FLAGS" >> $SETTINGS_NAME
-echo "ShaderCheckerDebugAction = $OUTPUT_ACTION" >> $SETTINGS_NAME
 
 # vkbase tests that basic VK calls are working (don't return an error).
 ./vkbase
@@ -55,8 +42,7 @@ else
    ./vkglavetracereplay.sh
 fi
 
-if [ "$RESTORE_SETTINGS" = "true" ]; then
-    echo Restore $SETTINGS_NAME from $TMP_SETTINGS_NAME
-    mv $TMP_SETTINGS_NAME $SETTINGS_NAME
+if [ -f ./vk_layer_settings.txt ];
+then
+    rm ./vk_layer_settings.txt
 fi
-

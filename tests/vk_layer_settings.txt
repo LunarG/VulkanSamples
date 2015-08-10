@@ -1,0 +1,12 @@
+MemTrackerReportFlags = error
+MemTrackerDebugAction = VK_DBG_LAYER_ACTION_LOG_MSG
+DrawStateReportFlags = error
+DrawStateDebugAction = VK_DBG_LAYER_ACTION_LOG_MSG
+ObjectTrackerReportFlags = error
+ObjectTrackerDebugAction = VK_DBG_LAYER_ACTION_LOG_MSG
+ParamCheckerReportFlags = error
+ParamCheckerDebugAction = VK_DBG_LAYER_ACTION_LOG_MSG
+ThreadingReportFlags = error
+ThreadingDebugAction = VK_DBG_LAYER_ACTION_LOG_MSG
+ShaderCheckerReportFlags = error
+ShaderCheckerDebugAction = VK_DBG_LAYER_ACTION_LOG_MSG
