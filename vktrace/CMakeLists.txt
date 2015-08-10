@@ -18,6 +18,7 @@ if (WIN32)
     set(WIN32_PTHREADS_INCLUDE_PATH "${WIN32_PTHREADS_PATH}/include")
 endif()
 
+set(PYTHON_EXECUTABLE ${PYTHON_CMD})
 find_package(PythonInterp)
 
 if (NOT PYTHONINTERP_FOUND)
