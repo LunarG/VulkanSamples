@@ -633,7 +633,6 @@ GLVTRACER_EXPORT VkResult VKAPI __HOOKED_vkEnumeratePhysicalDevices(
     return result;
 }
 
-// TODO138 : Update this
 GLVTRACER_EXPORT VkResult VKAPI __HOOKED_vkGetQueryPoolResults(
     VkDevice device,
     VkQueryPool queryPool,
@@ -647,10 +646,17 @@ GLVTRACER_EXPORT VkResult VKAPI __HOOKED_vkGetQueryPoolResults(
     VkResult result;
     size_t _dataSize;
     packet_vkGetQueryPoolResults* pPacket = NULL;
-    CREATE_TRACE_PACKET(vkGetQueryPoolResults, ((pDataSize != NULL) ? sizeof(size_t) : 0) + sizeof(void*));
+    uint64_t startTime;
+    uint64_t endTime;
+    uint64_t glvStartTime = glv_get_time();
+    startTime = glv_get_time();
     result = real_vkGetQueryPoolResults(device, queryPool, startQuery, queryCount, pDataSize, pData, flags);
-    glv_set_packet_entrypoint_end_time(pHeader);
+    endTime = glv_get_time();
     _dataSize = (pDataSize == NULL || pData == NULL) ? 0 : *pDataSize;
+    CREATE_TRACE_PACKET(vkGetQueryPoolResults, ((pDataSize != NULL) ? sizeof(size_t) : 0) + _dataSize);
+    pHeader->glave_begin_time = glvStartTime;
+    pHeader->entrypoint_begin_time = startTime;
+    pHeader->entrypoint_end_time = endTime;
     pPacket = interpret_body_as_vkGetQueryPoolResults(pHeader);
     pPacket->device = device;
     pPacket->queryPool = queryPool;
@@ -658,7 +664,7 @@ GLVTRACER_EXPORT VkResult VKAPI __HOOKED_vkGetQueryPoolResults(
     pPacket->queryCount = queryCount;
     pPacket->flags = flags;
     glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pDataSize), sizeof(size_t), &_dataSize);
-    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pData), sizeof(void), pData);
+    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pData), _dataSize, pData);
     pPacket->result = result;
     glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pDataSize));
     glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pData));
