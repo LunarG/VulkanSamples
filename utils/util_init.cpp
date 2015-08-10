@@ -27,6 +27,8 @@ VULKAN_SAMPLE_DESCRIPTION
 samples "init" utility functions
 */
 
+#include <cstdlib>
+#include <assert.h>
 #include "util_init.hpp"
 
 using namespace std;
@@ -115,4 +117,60 @@ VkResult init_global_layer_properties(struct sample_info &info)
     }
 
     return err;
+}
+
+VkResult init_instance_and_device(struct sample_info &info, char *app_short_name)
+{
+    init_global_layer_properties(info);
+
+    // initialize the VkApplicationInfo structure
+    VkApplicationInfo app_info = {};
+    app_info.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
+    app_info.pNext = NULL;
+    app_info.pAppName = app_short_name;
+    app_info.appVersion = 1;
+    app_info.pEngineName = app_short_name;
+    app_info.engineVersion = 1;
+    app_info.apiVersion = VK_API_VERSION;
+
+    // initialize the VkInstanceCreateInfo structure
+    VkInstanceCreateInfo inst_info = {};
+    inst_info.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
+    inst_info.pNext = NULL;
+    inst_info.pAppInfo = &app_info;
+    inst_info.pAllocCb = NULL;
+    inst_info.extensionCount = 0;
+    inst_info.ppEnabledExtensionNames = NULL;
+
+    VkDeviceQueueCreateInfo queue_info = {};
+    queue_info.queueFamilyIndex = 0;
+    queue_info.queueCount = 1;
+
+    VkDeviceCreateInfo device_info = {};
+    device_info.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
+    device_info.pNext = NULL;
+    device_info.queueRecordCount = 1;
+    device_info.pRequestedQueues = &queue_info;
+    device_info.extensionCount = 0;
+    device_info.ppEnabledExtensionNames = NULL;
+    device_info.flags = 0;
+
+    uint32_t gpu_count;
+    VkResult err;
+
+    err = vkCreateInstance(&inst_info, &info.inst);
+    if (err == VK_ERROR_INCOMPATIBLE_DRIVER) {
+        std::cout << "Cannot find a compatible Vulkan ICD.\n";
+        exit(-1);
+    } else if (err) {
+        std::cout << "unknown error\n";
+        exit(-1);
+    }
+
+    gpu_count = 1;
+    err = vkEnumeratePhysicalDevices(info.inst, &gpu_count, &info.gpu);
+    assert(!err && gpu_count == 1);
+
+    err = vkCreateDevice(info.gpu, &device_info, &info.device);
+    assert(!err);
 }

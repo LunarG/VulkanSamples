@@ -170,3 +170,12 @@ struct sample_info {
     PFN_vkDbgMsgCallback dbgBreakCallback;
     std::vector<VkDbgMsgCallback> msg_callbacks;
 };
+
+VkResult memory_type_from_properties(struct sample_info &info, uint32_t typeBits, VkFlags properties, uint32_t *typeIndex);
+
+void set_image_layout(
+        struct sample_info &demo,
+        VkImage image,
+        VkImageAspect aspect,
+        VkImageLayout old_image_layout,
+        VkImageLayout new_image_layout);
