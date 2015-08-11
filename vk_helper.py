@@ -835,6 +835,9 @@ class StructWrapperGen:
                         if not idx_ss_decl:
                             sh_funcs.append('%sstringstream index_ss;' % (indent))
                             idx_ss_decl = True
+                        if (stp_list[index]['name'] == 'pQueueFamilyIndices'):
+                            sh_funcs.append('%sif (pStruct->sharingMode == VK_SHARING_MODE_CONCURRENT) {' % (indent))
+                            indent += '    '
                         sh_funcs.append('%sif (pStruct->%s) {' % (indent, stp_list[index]['name']))
                         indent += '    '
                         sh_funcs.append('%sfor (uint32_t i = 0; i < %s; i++) {' % (indent, array_count))
@@ -872,6 +875,10 @@ class StructWrapperGen:
                         sh_funcs.append('%s}' % (indent))
                         indent = indent[4:]
                         sh_funcs.append('%s}' % (indent))
+                        #endif
+                        if (stp_list[index]['name'] == 'pQueueFamilyIndices'):
+                            indent = indent[4:]
+                            sh_funcs.append('%s}' % (indent))
                     elif (stp_list[index]['ptr']):
                         sh_funcs.append('%s' % lineinfo.get())
                         sh_funcs.append('%sif (pStruct->%s) {' % (indent, stp_list[index]['name']))
