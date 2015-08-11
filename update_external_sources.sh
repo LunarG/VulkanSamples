@@ -42,7 +42,11 @@ function create_LunarGLASS () {
 function update_LunarGLASS () {
    echo "Updating $BASEDIR/LunarGLASS"
    cd $BASEDIR/LunarGLASS
-   svn update -r "$LUNARGLASS_REVISION"
+   svn update -r "$LUNARGLASS_REVISION" |& tee svnout
+   if grep --quiet LLVM svnout ; then
+      rm -rf $BASEDIR/LunarGLASS/Core/LLVM/llvm-3.4/build
+   fi
+   rm -rf svnout
 }
 
 function build_glslang () {
