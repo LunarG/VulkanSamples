@@ -1475,6 +1475,7 @@ TEST_F(VkLayerTest, DSTypeMismatch)
         sampler_ci.minLod = 1.0;
         sampler_ci.maxLod = 1.0;
         sampler_ci.borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE;
+        sampler_ci.texelCoords = VK_FALSE;
    
     VkSampler sampler;
     err = vkCreateSampler(m_device->device(), &sampler_ci, &sampler);
@@ -1562,6 +1563,7 @@ TEST_F(VkLayerTest, DSUpdateOutOfBounds)
         sampler_ci.minLod = 1.0;
         sampler_ci.maxLod = 1.0;
         sampler_ci.borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE;
+        sampler_ci.texelCoords = VK_FALSE;
 
     VkSampler sampler;
     err = vkCreateSampler(m_device->device(), &sampler_ci, &sampler);
@@ -1648,6 +1650,7 @@ TEST_F(VkLayerTest, InvalidDSUpdateIndex)
         sampler_ci.minLod = 1.0;
         sampler_ci.maxLod = 1.0;
         sampler_ci.borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE;
+        sampler_ci.texelCoords = VK_FALSE;
 
     VkSampler sampler;
     err = vkCreateSampler(m_device->device(), &sampler_ci, &sampler);
@@ -1735,6 +1738,7 @@ TEST_F(VkLayerTest, InvalidDSUpdateStruct)
         sampler_ci.minLod = 1.0;
         sampler_ci.maxLod = 1.0;
         sampler_ci.borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE;
+        sampler_ci.texelCoords = VK_FALSE;
     VkSampler sampler;
     err = vkCreateSampler(m_device->device(), &sampler_ci, &sampler);
     ASSERT_VK_SUCCESS(err);

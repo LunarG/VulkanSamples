@@ -889,6 +889,7 @@ VkSamplerObj::VkSamplerObj(VkDeviceObj *device)
     samplerCreateInfo.minLod = 0.0;
     samplerCreateInfo.maxLod = 0.0;
     samplerCreateInfo.borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE;
+    samplerCreateInfo.texelCoords = VK_FALSE;
 
     init(*m_device, samplerCreateInfo);
 }

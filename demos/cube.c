@@ -1197,6 +1197,7 @@ static void demo_prepare_textures(struct demo *demo)
             .minLod = 0.0f,
             .maxLod = 0.0f,
             .borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE,
+            .texelCoords = VK_FALSE,
         };
 
         VkImageViewCreateInfo view = {

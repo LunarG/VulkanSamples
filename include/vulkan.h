@@ -1753,6 +1753,7 @@ typedef struct {
     float                                       minLod;
     float                                       maxLod;
     VkBorderColor                               borderColor;
+    VkBool32                                    texelCoords;
 } VkSamplerCreateInfo;
 
 typedef struct {

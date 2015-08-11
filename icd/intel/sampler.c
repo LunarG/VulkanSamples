@@ -305,6 +305,9 @@ sampler_init(struct intel_sampler *sampler,
              wrap_t << 3 |
              wrap_r;
 
+      if (info->texelCoords)
+          dw3 |= GEN7_SAMPLER_DW3_NON_NORMALIZED_COORD;
+
       sampler->cmd[0] = dw0;
       sampler->cmd[1] = dw1;
       sampler->cmd[2] = dw3;
@@ -348,6 +351,9 @@ sampler_init(struct intel_sampler *sampler,
                  GEN6_SAMPLER_DW3_V_MAG_ROUND |
                  GEN6_SAMPLER_DW3_R_MAG_ROUND);
       }
+
+      if (info->texelCoords)
+          dw3 |= GEN6_SAMPLER_DW3_NON_NORMALIZED_COORD;
 
       sampler->cmd[0] = dw0;
       sampler->cmd[1] = dw1;
