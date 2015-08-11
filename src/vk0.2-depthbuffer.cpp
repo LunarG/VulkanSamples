@@ -46,7 +46,10 @@ int main(int argc, char **argv)
      * - Create an attachment view
      */
 
-    init_instance_and_device(info, test_title);
+    init_global_layer_properties(info);
+    init_instance(info, test_title);
+    init_enumerate_device(info);
+    init_device(info);
     info.memory_properties.reserve(1);
     err = vkGetPhysicalDeviceMemoryProperties(info.gpu, info.memory_properties.data());
     assert(!err);
