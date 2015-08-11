@@ -14,11 +14,6 @@
   - Windows dependencies include:
     - cmake ??
 
-  - The VulkanSamplesKit repository makes use of the build framework and some
-    3rd party components of the Khronos gitlab LoaderAndTools repository.  The
-    LoaderAndTools and VulkanSamplesKit repos should be cloned in the same
-    base directory.
-
 ## Kit Structure
   - The Vulkan Samples Kit is a set of source and data files in a specific
     directory hierarchy:
