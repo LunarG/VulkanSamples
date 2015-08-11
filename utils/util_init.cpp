@@ -31,6 +31,13 @@ samples "init" utility functions
 #include <assert.h>
 #include "util_init.hpp"
 
+#ifdef _WIN32
+#include <windows.h>
+#define APP_NAME_STR_LEN 80
+#else  // _WIN32
+#include <xcb/xcb.h>
+#endif // _WIN32
+
 using namespace std;
 
 VkResult init_global_extension_properties(
@@ -172,3 +179,157 @@ VkResult init_enumerate_device(struct sample_info &info, uint32_t gpu_count)
 
     return res;
 }
+
+void init_connection(struct sample_info &info)
+{
+#ifndef _WIN32
+    const xcb_setup_t *setup;
+    xcb_screen_iterator_t iter;
+    int scr;
+
+    info.connection = xcb_connect(NULL, &scr);
+    if (info.connection == NULL) {
+        std::cout << "Cannot find a compatible Vulkan ICD.\n";
+        exit(-1);
+    }
+
+    setup = xcb_get_setup(info.connection);
+    iter = xcb_setup_roots_iterator(setup);
+    while (scr-- > 0)
+        xcb_screen_next(&iter);
+
+    info.screen = iter.data;
+#endif // _WIN32
+}
+#ifdef _WIN32
+static void demo_run(struct sample_info &info)
+{
+    if (!info.prepared)
+        return;
+    // Wait for work to finish before updating MVP.
+    vkDeviceWaitIdle(info.device);
+    demo_update_data_buffer(demo);
+
+    demo_draw(demo);
+
+    // Wait for work to finish before updating MVP.
+    vkDeviceWaitIdle(info.device);
+
+    info.curFrame++;
+
+    if (info.frameCount != INT_MAX && info.curFrame == info.frameCount)
+    {
+        info.quit=true;
+        demo_cleanup(demo);
+        ExitProcess(0);
+    }
+
+}
+// MS-Windows event handling function:
+LRESULT CALLBACK WndProc(HWND hWnd,
+                         UINT uMsg,
+                         WPARAM wParam,
+                         LPARAM lParam)
+{
+    switch(uMsg)
+    {
+    case WM_CLOSE:
+        PostQuitMessage(0);
+        break;
+    case WM_PAINT:
+        demo_run(&demo);
+        return 0;
+    default:
+        break;
+    }
+    return (DefWindowProc(hWnd, uMsg, wParam, lParam));
+}
+
+static void init_window(struct sample_info &info)
+{
+    WNDCLASSEX  win_class;
+
+    // Initialize the window class structure:
+    win_class.cbSize = sizeof(WNDCLASSEX);
+    win_class.style = CS_HREDRAW | CS_VREDRAW;
+    win_class.lpfnWndProc = WndProc;
+    win_class.cbClsExtra = 0;
+    win_class.cbWndExtra = 0;
+    win_class.hInstance = info.connection; // hInstance
+    win_class.hIcon = LoadIcon(NULL, IDI_APPLICATION);
+    win_class.hCursor = LoadCursor(NULL, IDC_ARROW);
+    win_class.hbrBackground = (HBRUSH)GetStockObject(WHITE_BRUSH);
+    win_class.lpszMenuName = NULL;
+    win_class.lpszClassName = info.name;
+    win_class.hIconSm = LoadIcon(NULL, IDI_WINLOGO);
+    // Register window class:
+    if (!RegisterClassEx(&win_class)) {
+        // It didn't work, so try to give a useful error:
+        printf("Unexpected error trying to start the application!\n");
+        fflush(stdout);
+        exit(1);
+    }
+    // Create window with the registered class:
+    RECT wr = { 0, 0, info.width, info.height };
+    AdjustWindowRect(&wr, WS_OVERLAPPEDWINDOW, FALSE);
+    info.window = CreateWindowEx(0,
+                                  info.name,           // class name
+                                  info.name,           // app name
+                                  WS_OVERLAPPEDWINDOW | // window style
+                                  WS_VISIBLE |
+                                  WS_SYSMENU,
+                                  100,100,              // x/y coords
+                                  wr.right-wr.left,     // width
+                                  wr.bottom-wr.top,     // height
+                                  NULL,                 // handle to parent
+                                  NULL,                 // handle to menu
+                                  info.connection,     // hInstance
+                                  NULL);                // no extra parameters
+    if (!info.window) {
+        // It didn't work, so try to give a useful error:
+        printf("Cannot create a window in which to draw!\n");
+        fflush(stdout);
+        exit(1);
+    }
+}
+#else
+void init_window(struct sample_info &info)
+{
+    uint32_t value_mask, value_list[32];
+
+    info.window = xcb_generate_id(info.connection);
+
+    value_mask = XCB_CW_BACK_PIXEL | XCB_CW_EVENT_MASK;
+    value_list[0] = info.screen->black_pixel;
+    value_list[1] = XCB_EVENT_MASK_KEY_RELEASE |
+                    XCB_EVENT_MASK_EXPOSURE;
+
+    xcb_create_window(info.connection,
+            XCB_COPY_FROM_PARENT,
+            info.window, info.screen->root,
+            0, 0, info.width, info.height, 0,
+            XCB_WINDOW_CLASS_INPUT_OUTPUT,
+            info.screen->root_visual,
+            value_mask, value_list);
+
+    /* Magic code that will send notification when window is destroyed */
+    xcb_intern_atom_cookie_t cookie = xcb_intern_atom(info.connection, 1, 12,
+                                                      "WM_PROTOCOLS");
+    xcb_intern_atom_reply_t* reply = xcb_intern_atom_reply(info.connection, cookie, 0);
+
+    xcb_intern_atom_cookie_t cookie2 = xcb_intern_atom(info.connection, 0, 16, "WM_DELETE_WINDOW");
+    info.atom_wm_delete_window = xcb_intern_atom_reply(info.connection, cookie2, 0);
+
+    xcb_change_property(info.connection, XCB_PROP_MODE_REPLACE,
+                        info.window, (*reply).atom, 4, 32, 1,
+                        &(*info.atom_wm_delete_window).atom);
+    free(reply);
+
+    xcb_map_window(info.connection, info.window);
+
+    // Force the x/y coordinates to 100,100 results are identical in consecutive runs
+    const uint32_t coords[] = {100,  100};
+    xcb_configure_window(info.connection, info.window,
+                         XCB_CONFIG_WINDOW_X | XCB_CONFIG_WINDOW_Y, coords);
+}
+#endif // _WIN32

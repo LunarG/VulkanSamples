@@ -52,7 +52,7 @@ function(sampleWithSingleFile)
         set(SAMPLE_NAME ${VULKAN_VERSION}-${TARG})
         if(UNIX)
             add_executable(${SAMPLE_NAME} ${SAMPLE_NAME}.cpp)
-            target_link_libraries(${SAMPLE_NAME} ${UTILS_NAME} ${VULKAN_LOADER})
+            target_link_libraries(${SAMPLE_NAME} ${UTILS_NAME} ${XCB_LIBRARIES} ${VULKAN_LOADER})
         else()
             add_executable(${SAMPLE_NAME} WIN32 ${SAMPLE_NAME}.cpp)
             target_link_libraries(${SAMPLE_NAME} ${UTILS_NAME} ${VULKAN_LOADER} ${WINLIBS})
@@ -109,7 +109,7 @@ set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DVK_PROTOTYPES")
 set(VULKAN_VERSION vk0.2)
 
 # simple one file sample targets, no additional files
-set (S_TARGETS instance device depthbuffer)
+set (S_TARGETS instance device depthbuffer initwsi)
 sampleWithSingleFile()
 
 # targets that use spv shaders
