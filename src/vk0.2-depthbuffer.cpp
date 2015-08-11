@@ -33,7 +33,7 @@ create Vulkan depth buffer
 
 int main(int argc, char **argv)
 {
-    VkResult err;
+    VkResult res;
     struct sample_info info = {};
     char test_title[] = "Depth Buffer Test";
 
@@ -51,8 +51,8 @@ int main(int argc, char **argv)
     init_enumerate_device(info);
     init_device(info);
     info.memory_properties.reserve(1);
-    err = vkGetPhysicalDeviceMemoryProperties(info.gpu, info.memory_properties.data());
-    assert(!err);
+    res = vkGetPhysicalDeviceMemoryProperties(info.gpu, info.memory_properties.data());
+    assert(!res);
 
     /* HACK - Do this the right way once we have WSI code to call */
     info.graphics_queue_family_index = 0;
@@ -63,11 +63,11 @@ int main(int argc, char **argv)
     cmd_pool_info.queueFamilyIndex = info.graphics_queue_family_index;
     cmd_pool_info.flags = 0;
 
-    err = vkCreateCommandPool(info.device, &cmd_pool_info, &info.cmd_pool);
-    assert(!err);
-    err = vkGetDeviceQueue(info.device, info.graphics_queue_family_index,
+    res = vkCreateCommandPool(info.device, &cmd_pool_info, &info.cmd_pool);
+    assert(!res);
+    res = vkGetDeviceQueue(info.device, info.graphics_queue_family_index,
             0, &info.queue);
-    assert(!err);
+    assert(!res);
 
     info.width = info.height = 50;
 
@@ -76,8 +76,8 @@ int main(int argc, char **argv)
     VkImageCreateInfo image_info = {};
     const VkFormat depth_format = VK_FORMAT_D16_UNORM;
     VkFormatProperties props;
-    err = vkGetPhysicalDeviceFormatProperties(info.gpu, depth_format, &props);
-    assert(!err);
+    res = vkGetPhysicalDeviceFormatProperties(info.gpu, depth_format, &props);
+    assert(!res);
     if (props.linearTilingFeatures & VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT) {
         image_info.tiling = VK_IMAGE_TILING_LINEAR;
     } else if (props.optimalTilingFeatures & VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT) {
@@ -122,29 +122,29 @@ int main(int argc, char **argv)
     info.depth.format = depth_format;
 
     /* Create image */
-    err = vkCreateImage(info.device, &image_info,
+    res = vkCreateImage(info.device, &image_info,
                         &info.depth.image);
-    assert(!err);
+    assert(!res);
 
-    err = vkGetImageMemoryRequirements(info.device,
+    res = vkGetImageMemoryRequirements(info.device,
                                        info.depth.image, &mem_reqs);
 
     mem_alloc.allocationSize = mem_reqs.size;
     /* Use the memory properties to determine the type of memory required */
-    err = memory_type_from_properties(info,
+    res = memory_type_from_properties(info,
                                       mem_reqs.memoryTypeBits,
                                       VK_MEMORY_PROPERTY_DEVICE_ONLY,
                                       &mem_alloc.memoryTypeIndex);
-    assert(!err);
+    assert(!res);
 
     /* Allocate memory */
-    err = vkAllocMemory(info.device, &mem_alloc, &info.depth.mem);
-    assert(!err);
+    res = vkAllocMemory(info.device, &mem_alloc, &info.depth.mem);
+    assert(!res);
 
     /* Bind memory */
-    err = vkBindImageMemory(info.device, info.depth.image,
+    res = vkBindImageMemory(info.device, info.depth.image,
                             info.depth.mem, 0);
-    assert(!err);
+    assert(!res);
 
     /* Set the image layout to depth stencil optimal */
     set_image_layout(info, info.depth.image,
@@ -154,8 +154,8 @@ int main(int argc, char **argv)
 
     /* Create image view */
     view_info.image = info.depth.image;
-    err = vkCreateAttachmentView(info.device, &view_info, &info.depth.view);
-    assert(!err);
+    res = vkCreateAttachmentView(info.device, &view_info, &info.depth.view);
+    assert(!res);
 
     /* VULKAN_KEY_END */
 

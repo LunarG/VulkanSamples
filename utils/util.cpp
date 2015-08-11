@@ -94,7 +94,7 @@ void set_image_layout(
         VkImageLayout old_image_layout,
         VkImageLayout new_image_layout)
 {
-    VkResult err;
+    VkResult res;
 
     if (info.cmd == VK_NULL_HANDLE) {
         const VkCmdBufferCreateInfo cmd = {
@@ -105,8 +105,8 @@ void set_image_layout(
             .flags = 0,
         };
 
-        err = vkCreateCommandBuffer(info.device, &cmd, &info.cmd);
-        assert(!err);
+        res = vkCreateCommandBuffer(info.device, &cmd, &info.cmd);
+        assert(!res);
     }
 
     VkCmdBufferBeginInfo cmd_buf_info = {
@@ -115,8 +115,8 @@ void set_image_layout(
         .flags = VK_CMD_BUFFER_OPTIMIZE_SMALL_BATCH_BIT |
             VK_CMD_BUFFER_OPTIMIZE_ONE_TIME_SUBMIT_BIT,
     };
-    err = vkBeginCommandBuffer(info.cmd, &cmd_buf_info);
-    assert(!err);
+    res = vkBeginCommandBuffer(info.cmd, &cmd_buf_info);
+    assert(!res);
 
     VkImageMemoryBarrier image_memory_barrier = {};
     image_memory_barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
@@ -148,15 +148,15 @@ void set_image_layout(
     VkPipelineStageFlags dest_stages = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
 
     vkCmdPipelineBarrier(info.cmd, src_stages, dest_stages, false, 1, (const void * const*)&pmemory_barrier);
-    err = vkEndCommandBuffer(info.cmd);
-    assert(!err);
+    res = vkEndCommandBuffer(info.cmd);
+    assert(!res);
     const VkCmdBuffer cmd_bufs[] = { info.cmd };
     VkFence nullFence;
     nullFence.handle = VK_NULL_HANDLE;
 
-    err = vkQueueSubmit(info.queue, 1, cmd_bufs, nullFence);
-    assert(!err);
+    res = vkQueueSubmit(info.queue, 1, cmd_bufs, nullFence);
+    assert(!res);
 
-    err = vkQueueWaitIdle(info.queue);
-    assert(!err);
+    res = vkQueueWaitIdle(info.queue);
+    assert(!res);
 }

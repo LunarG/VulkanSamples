@@ -74,14 +74,14 @@ int main(int argc, char **argv)
     VkInstance inst;
     VkPhysicalDevice gpu;
     VkDevice device;
-    VkResult err;
+    VkResult res;
 /* VULKAN_KEY_END */
 
-    err = vkCreateInstance(&inst_info, &inst);
-    if (err == VK_ERROR_INCOMPATIBLE_DRIVER) {
+    res = vkCreateInstance(&inst_info, &inst);
+    if (res == VK_ERROR_INCOMPATIBLE_DRIVER) {
         std::cout << "Cannot find a compatible Vulkan ICD.\n";
         exit(-1);
-    } else if (err) {
+    } else if (res) {
         std::cout << "unknown error\n";
         exit(-1);
     }
@@ -89,12 +89,12 @@ int main(int argc, char **argv)
 /* VULKAN_KEY_START */
     gpu_count = 1;
     std::cout << "calling vkEnumeratePhysicalDevices\n";
-    err = vkEnumeratePhysicalDevices(inst, &gpu_count, &gpu);
-    assert(!err && gpu_count == 1);
+    res = vkEnumeratePhysicalDevices(inst, &gpu_count, &gpu);
+    assert(!res && gpu_count == 1);
 
     std::cout << "calling vkCreateDevice\n";
-    err = vkCreateDevice(gpu, &device_info, &device);
-    assert(!err);
+    res = vkCreateDevice(gpu, &device_info, &device);
+    assert(!res);
 
     std::cout << "calling vkDestroyDevice\n";
     vkDestroyDevice(device);
