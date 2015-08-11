@@ -41,7 +41,14 @@ extern "C" {
     ((major << 22) | (minor << 12) | patch)
 
 // Vulkan API version supported by this file
-#define VK_API_VERSION VK_MAKE_VERSION(0, 150, 0)
+#define VK_API_VERSION VK_MAKE_VERSION(0, 151, 0)
+
+
+#if defined(__cplusplus) && (_MSC_VER >= 1800 || __cplusplus >= 201103L)
+    #define VK_NULL_HANDLE nullptr
+#else
+    #define VK_NULL_HANDLE 0
+#endif
 
 
 #define VK_DEFINE_HANDLE(obj) typedef struct obj##_T* obj;
@@ -56,13 +63,18 @@ extern "C" {
         // the object handle as a bool in expressions like:
         //     if (obj) vkDestroy(obj);
         #define VK_NONDISP_HANDLE_OPERATOR_BOOL() explicit operator bool() const { return handle != 0; }
+        #define VK_NONDISP_HANDLE_CONSTRUCTOR_FROM_UINT64(obj) \
+            explicit obj(uint64_t x) : handle(x) { } \
+            obj(decltype(nullptr)) : handle(0) { }
     #else
         #define VK_NONDISP_HANDLE_OPERATOR_BOOL()
+        #define VK_NONDISP_HANDLE_CONSTRUCTOR_FROM_UINT64(obj) \
+            obj(uint64_t x) : handle(x) { }
     #endif
     #define VK_DEFINE_NONDISP_HANDLE(obj) \
         struct obj { \
             obj() : handle(0) { } \
-            obj(uint64_t x) : handle(x) { } \
+            VK_NONDISP_HANDLE_CONSTRUCTOR_FROM_UINT64(obj) \
             obj& operator =(uint64_t x) { handle = x; return *this; } \
             bool operator==(const obj& other) const { return handle == other.handle; } \
             bool operator!=(const obj& other) const { return handle != other.handle; } \
@@ -120,7 +132,6 @@ VK_DEFINE_NONDISP_HANDLE(VkCmdPool)
 #define VK_ATTACHMENT_UNUSED              (~0U)
 #define VK_TRUE                           1
 #define VK_FALSE                          0
-#define VK_NULL_HANDLE                    0
 #define VK_QUEUE_FAMILY_IGNORED           (~0U)
 #define VK_MAX_PHYSICAL_DEVICE_NAME       256
 #define VK_UUID_LENGTH                    16
