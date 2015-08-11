@@ -43,7 +43,22 @@ int main(int argc, char **argv)
     for (std::vector<layer_properties>::iterator it = info.instance_layer_properties.begin();
          it != info.instance_layer_properties.end();
          it++) {
-        std::cout << (*it).properties.layerName << " ";
+        layer_properties *props = &(*it);
+        std::cout << props->properties.layerName << std::endl;
+        if (props->extensions.size() > 0) {
+            for (uint32_t j = 0; j < props->extensions.size(); j++) {
+                if (j > 0) {
+                    std::cout << ", ";
+                }
+                uint32_t major, minor, patch;
+                extract_version(props->extensions[j].specVersion, major, minor, patch);
+
+                std::cout << props->extensions[j].extName << "(" << major << "." << minor << "." << patch << ")";
+            }
+        } else {
+            std::cout << "Layer Extensions: None";
+        }
+        std::cout << std::endl << std::endl;
     }
 
     std::cout << std::endl;
