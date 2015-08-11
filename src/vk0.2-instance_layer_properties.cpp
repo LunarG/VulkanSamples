@@ -32,12 +32,12 @@ create and destroy Vulkan instance
 
 int main(int argc, char **argv)
 {
-    VkResult err;
+    VkResult res;
     struct sample_info info;
 
 /* VULKAN_KEY_START */
 
-    err = init_global_layer_properties(info);
+    res = init_global_layer_properties(info);
 
     std::cout << "Instance Layers:" << std::endl;
     for (std::vector<layer_properties>::iterator it = info.instance_layer_properties.begin();

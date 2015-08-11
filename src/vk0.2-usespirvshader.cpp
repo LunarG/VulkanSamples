@@ -57,13 +57,13 @@ int main(int argc, char **argv)
     inst_info.ppEnabledExtensionNames = NULL;
 
     VkInstance inst;
-    VkResult err;
+    VkResult res;
 
-    err = vkCreateInstance(&inst_info, &inst);
-    if (err == VK_ERROR_INCOMPATIBLE_DRIVER) {
+    res = vkCreateInstance(&inst_info, &inst);
+    if (res == VK_ERROR_INCOMPATIBLE_DRIVER) {
         std::cout << "cannot find a compatible Vulkan ICD\n";
         exit(-1);
-    } else if (err) {
+    } else if (res) {
         std::cout << "unknown error\n";
         exit(-1);
     }

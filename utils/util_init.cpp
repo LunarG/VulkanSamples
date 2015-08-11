@@ -39,7 +39,7 @@ VkResult init_global_extension_properties(
 {
     VkExtensionProperties *instance_extensions;
     uint32_t instance_extension_count;
-    VkResult err;
+    VkResult res;
     char *layer_name = NULL;
 
     if (layer_props) {
@@ -47,9 +47,9 @@ VkResult init_global_extension_properties(
     }
 
     do {
-        err = vkGetGlobalExtensionProperties(layer_name, &instance_extension_count, NULL);
-        if (err)
-            return err;
+        res = vkGetGlobalExtensionProperties(layer_name, &instance_extension_count, NULL);
+        if (res)
+            return res;
 
         if (instance_extension_count == 0) {
             return VK_SUCCESS;
@@ -62,20 +62,20 @@ VkResult init_global_extension_properties(
             info.instance_extension_properties.reserve(instance_extension_count);
             instance_extensions = info.instance_extension_properties.data();
         }
-        err = vkGetGlobalExtensionProperties(
+        res = vkGetGlobalExtensionProperties(
                   layer_name,
                   &instance_extension_count,
                   instance_extensions);
-    } while (err == VK_INCOMPLETE);
+    } while (res == VK_INCOMPLETE);
 
-    return err;
+    return res;
 }
 
 VkResult init_global_layer_properties(struct sample_info &info)
 {
     uint32_t instance_layer_count;
     std::vector<VkLayerProperties> vk_props;
-    VkResult err;
+    VkResult res;
 
     /*
      * It's possible, though very rare, that the number of
@@ -90,9 +90,9 @@ VkResult init_global_layer_properties(struct sample_info &info)
      * of layers went down or is smaller than the size given.
      */
     do {
-        err = vkGetGlobalLayerProperties(&instance_layer_count, NULL);
-        if (err)
-            return err;
+        res = vkGetGlobalLayerProperties(&instance_layer_count, NULL);
+        if (res)
+            return res;
 
         if (instance_layer_count == 0) {
             return VK_SUCCESS;
@@ -100,8 +100,8 @@ VkResult init_global_layer_properties(struct sample_info &info)
 
         vk_props.reserve(instance_layer_count);
 
-        err = vkGetGlobalLayerProperties(&instance_layer_count, vk_props.data());
-    } while (err == VK_INCOMPLETE);
+        res = vkGetGlobalLayerProperties(&instance_layer_count, vk_props.data());
+    } while (res == VK_INCOMPLETE);
 
     /*
      * Now gather the extension list for each instance layer.
@@ -109,14 +109,14 @@ VkResult init_global_layer_properties(struct sample_info &info)
     for (uint32_t i = 0; i < instance_layer_count; i++) {
         layer_properties layer_props;
         layer_props.properties = vk_props[i];
-        err = init_global_extension_properties(
+        res = init_global_extension_properties(
                   info, &layer_props);
-        if (err)
-            return err;
+        if (res)
+            return res;
         info.instance_layer_properties.push_back(layer_props);
     }
 
-    return err;
+    return res;
 }
 
 VkResult init_instance(struct sample_info &info, char *app_short_name)
@@ -138,10 +138,10 @@ VkResult init_instance(struct sample_info &info, char *app_short_name)
     inst_info.extensionCount = 0;
     inst_info.ppEnabledExtensionNames = NULL;
 
-    VkResult err = vkCreateInstance(&inst_info, &info.inst);
-    assert(!err);
+    VkResult res = vkCreateInstance(&inst_info, &info.inst);
+    assert(!res);
 
-    return err;
+    return res;
 }
 
 VkResult init_device(struct sample_info &info)
@@ -159,16 +159,16 @@ VkResult init_device(struct sample_info &info)
     device_info.ppEnabledExtensionNames = NULL;
     device_info.flags = 0;
 
-    VkResult err = vkCreateDevice(info.gpu, &device_info, &info.device);
-    assert(!err);
+    VkResult res = vkCreateDevice(info.gpu, &device_info, &info.device);
+    assert(!res);
 
-    return err;
+    return res;
 }
 
 VkResult init_enumerate_device(struct sample_info &info, uint32_t gpu_count)
 {
-    VkResult err = vkEnumeratePhysicalDevices(info.inst, &gpu_count, &info.gpu);
-    assert(!err && gpu_count == 1);
+    VkResult res = vkEnumeratePhysicalDevices(info.inst, &gpu_count, &info.gpu);
+    assert(!res && gpu_count == 1);
 
-    return err;
+    return res;
 }
