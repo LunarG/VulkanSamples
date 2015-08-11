@@ -14,6 +14,13 @@ execute_process(COMMAND ${PYTHON_EXECUTABLE} ${GLV_VULKAN_DIR}/vktrace_generate.
 execute_process(COMMAND ${PYTHON_EXECUTABLE} ${GLV_VULKAN_DIR}/vktrace_generate.py glave-ext-trace-h vk_debug_report_lunarg OUTPUT_FILE ${CMAKE_CURRENT_SOURCE_DIR}/codegen/glvtrace_vk_vk_debug_report_lunarg.h)
 execute_process(COMMAND ${PYTHON_EXECUTABLE} ${GLV_VULKAN_DIR}/vktrace_generate.py glave-ext-trace-c vk_debug_report_lunarg OUTPUT_FILE ${CMAKE_CURRENT_SOURCE_DIR}/codegen/glvtrace_vk_vk_debug_report_lunarg.c)
 
+if (WIN32)
+    # Put vulkan_trace.dll in the same directory as vktrace.exe
+    # so that vktrace.exe can find vulkan_trace.dll.
+    set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR}/../../../..)
+endif()
+
+
 set(SRC_LIST
     ${SRC_LIST}
     glvtrace_vk.c
