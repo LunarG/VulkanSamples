@@ -41,7 +41,7 @@ extern "C" {
     ((major << 22) | (minor << 12) | patch)
 
 // Vulkan API version supported by this file
-#define VK_API_VERSION VK_MAKE_VERSION(0, 149, 0)
+#define VK_API_VERSION VK_MAKE_VERSION(0, 150, 0)
 
 
 #define VK_DEFINE_HANDLE(obj) typedef struct obj##_T* obj;
@@ -1945,6 +1945,7 @@ typedef struct {
     const void*                                 pNext;
     VkCmdBufferOptimizeFlags                    flags;
     VkRenderPass                                renderPass;
+    uint32_t                                    subpass;
     VkFramebuffer                               framebuffer;
 } VkCmdBufferBeginInfo;
 

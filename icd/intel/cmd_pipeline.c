@@ -3664,7 +3664,7 @@ ICD_EXPORT void VKAPI vkCmdBeginRenderPass(
         return;
     }
 
-    cmd_begin_render_pass(cmd, rp, fb, contents);
+    cmd_begin_render_pass(cmd, rp, fb, 0, contents);
 
     for (i = 0; i < rp->attachment_count; i++) {
         const struct intel_render_pass_attachment *att = &rp->attachments[i];

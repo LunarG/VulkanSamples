@@ -307,6 +307,9 @@ static void demo_set_image_layout(
             .pNext = NULL,
             .flags = VK_CMD_BUFFER_OPTIMIZE_SMALL_BATCH_BIT |
                 VK_CMD_BUFFER_OPTIMIZE_ONE_TIME_SUBMIT_BIT,
+            .renderPass = VK_NULL_HANDLE,
+            .subpass = 0,
+            .framebuffer = VK_NULL_HANDLE,
         };
         err = vkBeginCommandBuffer(demo->setup_cmd, &cmd_buf_info);
     }
@@ -347,6 +350,9 @@ static void demo_draw_build_cmd(struct demo *demo)
         .pNext = NULL,
         .flags = VK_CMD_BUFFER_OPTIMIZE_SMALL_BATCH_BIT |
             VK_CMD_BUFFER_OPTIMIZE_ONE_TIME_SUBMIT_BIT,
+        .renderPass = VK_NULL_HANDLE,
+        .subpass = 0,
+        .framebuffer = VK_NULL_HANDLE,
     };
     const VkClearValue clear_values[2] = {
         [0] = { .color.f32 = { 0.2f, 0.2f, 0.2f, 0.2f } },

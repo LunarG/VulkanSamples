@@ -329,6 +329,7 @@ VkResult intel_cmd_begin(struct intel_cmd *cmd, const VkCmdBufferBeginInfo *info
         cmd_begin_render_pass(cmd,
                 intel_render_pass(info->renderPass),
                 intel_fb(info->framebuffer),
+                info->subpass,
                 VK_RENDER_PASS_CONTENTS_INLINE);
     }
 

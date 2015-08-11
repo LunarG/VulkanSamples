@@ -488,11 +488,14 @@ static inline void cmd_batch_end(struct intel_cmd *cmd)
 static inline void cmd_begin_render_pass(struct intel_cmd *cmd,
                                          const struct intel_render_pass *rp,
                                          const struct intel_fb *fb,
+                                         const uint32_t sp,
                                          VkRenderPassContents contents)
 {
+    assert(sp < rp->subpass_count);
+
     cmd->bind.render_pass_changed = true;
     cmd->bind.render_pass = rp;
-    cmd->bind.render_pass_subpass = &rp->subpasses[0];
+    cmd->bind.render_pass_subpass = &rp->subpasses[sp];
     cmd->bind.fb = fb;
     cmd->bind.render_pass_contents = contents;
 }
