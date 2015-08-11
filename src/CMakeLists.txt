@@ -1,5 +1,4 @@
 cmake_minimum_required(VERSION 2.8.11)
-set (CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${PROJECT_SOURCE_DIR}/../LoaderAndTools/cmake")
 set(SAMPLES_DATA_DIR ${SAMPLES_DATA_DIR} "${PROJECT_SOURCE_DIR}/data")
 set(SHADER_FILES ${SHADER_FILES} "")
 
