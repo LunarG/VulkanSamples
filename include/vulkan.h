@@ -1184,6 +1184,7 @@ typedef struct {
     VkBool32                                    shaderInt16;
     VkBool32                                    shaderResourceResidency;
     VkBool32                                    shaderResourceMinLOD;
+    VkBool32                                    alphaToOne;
     VkBool32                                    sparse;
     VkBool32                                    sparseResidencyBuffer;
     VkBool32                                    sparseResidencyImage2D;
