@@ -1043,6 +1043,10 @@ class Subcommand(object):
         if_body = []
         custom_case_dict = { 'QueuePresentWSI' : {'param': 'pPresentInfo', 'txt': ['pPacket->pPresentInfo->swapChains = (VkSwapChainWSI*)glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)(pPacket->pPresentInfo->swapChains));\n',
                                                                                    'pPacket->pPresentInfo->imageIndices = (uint32_t*)glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)(pPacket->pPresentInfo->imageIndices));']},
+                             'CreateSwapChainWSI' : {'param': 'pCreateInfo', 'txt': ['VkSurfaceDescriptionWSI **ppSurfDescp = (VkSurfaceDescriptionWSI**)&pPacket->pCreateInfo->pSurfaceDescription;\n',
+                                                     'uint32_t **ppQFI = (uint32_t**)&pPacket->pCreateInfo->pQueueFamilyIndices;\n',
+                                                     '(*ppSurfDescp) = (VkSurfaceDescriptionWSI*)glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)(pPacket->pCreateInfo->pSurfaceDescription));\n',
+                                                     '(*ppQFI) = (uint32_t*)glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)(pPacket->pCreateInfo->pQueueFamilyIndices));']},
                             }
         for ext in vulkan.extensions_all:
             if ext.name.lower() == extName.lower():
@@ -1053,8 +1057,6 @@ class Subcommand(object):
                         if_body.append('    %s %s;' % (p.ty, p.name))
                     if 'void' != proto.ret:
                         if_body.append('    %s result;' % proto.ret)
-                    if 'CreateSwapChainWSI' == proto.name:
-                        if_body.append('    uint32_t* pQueueFamilyIndices;')
                     if_body.append('} packet_vk%s;\n' % proto.name)
                     if_body.append('static packet_vk%s* interpret_body_as_vk%s(glv_trace_packet_header* pHeader)' % (proto.name, proto.name))
                     if_body.append('{')
@@ -1070,8 +1072,6 @@ class Subcommand(object):
                                 if_body.append('    {')
                                 if_body.append('        %s' % "        ".join(custom_case_dict[proto.name]['txt']))
                                 if_body.append('    }')
-                    if 'CreateSwapChainWSI' == proto.name:
-                        if_body.append('    pPacket->pQueueFamilyIndices = (uint32_t*) glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->pCreateInfo->pQueueFamilyIndices);')
                     if_body.append('    return pPacket;')
                     if_body.append('}\n')
         return "\n".join(if_body)
