@@ -1664,12 +1664,16 @@ VkResult vkReplay::manually_replay_vkCreateSwapChainWSI(packet_vkCreateSwapChain
 {
     VkResult replayResult = VK_ERROR_UNKNOWN;
     VkSwapChainWSI local_pSwapChain;
+    VkSwapChainWSI save_oldSwapChain, *pSC;
+    pSC = (VkSwapChainWSI *) &pPacket->pCreateInfo->oldSwapChain;
     VkDevice remappeddevice = m_objMapper.remap_devices(pPacket->device);
 
 //    if (pPacket->device != VK_NULL_HANDLE && remappeddevice == VK_NULL_HANDLE)
 //    {
 //        return glv_replay::GLV_REPLAY_ERROR;
 //    }
+    save_oldSwapChain = pPacket->pCreateInfo->oldSwapChain;
+    (*pSC) = m_objMapper.remap_swapchainwsis(save_oldSwapChain.handle);
     VkSurfaceDescriptionWSI** ppSD = (VkSurfaceDescriptionWSI**)&(pPacket->pCreateInfo->pSurfaceDescription);
     *ppSD = (VkSurfaceDescriptionWSI*) m_display->get_surface_description();
 
@@ -1679,6 +1683,8 @@ VkResult vkReplay::manually_replay_vkCreateSwapChainWSI(packet_vkCreateSwapChain
     {
         m_objMapper.add_to_swapchainwsis_map(pPacket->pSwapChain->handle, local_pSwapChain.handle);
     }
+
+    (*pSC) = save_oldSwapChain;
     return replayResult;
 }
 
