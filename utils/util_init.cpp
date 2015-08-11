@@ -169,4 +169,6 @@ VkResult init_enumerate_device(struct sample_info &info, uint32_t gpu_count)
 {
     VkResult err = vkEnumeratePhysicalDevices(info.inst, &gpu_count, &info.gpu);
     assert(!err && gpu_count == 1);
+
+    return err;
 }
