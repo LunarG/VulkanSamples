@@ -159,7 +159,7 @@ int main(int argc, char **argv)
 
     /* VULKAN_KEY_END */
 
-    /* Clean Up*/
+    /* Clean Up */
     vkDestroyCommandBuffer(info.device, info.cmd);
     vkDestroyCommandPool(info.device, info.cmd_pool);
     vkFreeMemory(info.device, info.depth.mem);

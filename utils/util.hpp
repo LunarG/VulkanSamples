@@ -41,6 +41,25 @@
 #include <vulkan/vk_wsi_device_swapchain.h>
 #include <vulkan/vk_debug_report_lunarg.h>
 
+#define GET_INSTANCE_PROC_ADDR(inst, entrypoint)                         \
+{                                                                        \
+    info.fp##entrypoint = (PFN_vk##entrypoint) vkGetInstanceProcAddr(inst, "vk"#entrypoint); \
+    if (info.fp##entrypoint == NULL) {                                   \
+        std::cout << "vkGetDeviceProcAddr failed to find vk"#entrypoint; \
+        exit(-1);                                                        \
+    }                                                                    \
+}
+
+#define GET_DEVICE_PROC_ADDR(dev, entrypoint)                           \
+{                                                                       \
+    info.fp##entrypoint = (PFN_vk##entrypoint) vkGetDeviceProcAddr(dev, "vk"#entrypoint);   \
+    if (info.fp##entrypoint == NULL) {                                   \
+        std::cout << "vkGetDeviceProcAddr failed to find vk"#entrypoint; \
+        exit(-1);                                                        \
+    }                                                                    \
+}
+
+
 std::string get_base_data_dir();
 std::string get_data_dir( std::string filename );
 
@@ -72,6 +91,15 @@ typedef struct {
     VkLayerProperties properties;
     std::vector<VkExtensionProperties> extensions;
 } layer_properties;
+
+/*
+ * Keep each of our swap chain buffers' image, command buffer and view in one spot
+ */
+typedef struct _SwapChainBuffers {
+    VkImage image;
+    VkCmdBuffer cmd;
+    VkAttachmentView view;
+} SwapChainBuffers;
 
 /*
  * Structure for tracking information used / created / modified
@@ -123,6 +151,7 @@ struct sample_info {
     PFN_vkAcquireNextImageWSI fpAcquireNextImageWSI;
     PFN_vkQueuePresentWSI fpQueuePresentWSI;
     VkSurfaceDescriptionWindowWSI surface_description;
+    size_t swapChainImageCount;
     VkSwapChainWSI swap_chain;
     std::vector<swap_chain_buffers> buffers;
 
@@ -169,6 +198,9 @@ struct sample_info {
     PFN_vkDbgDestroyMsgCallback dbgDestroyMsgCallback;
     PFN_vkDbgMsgCallback dbgBreakCallback;
     std::vector<VkDbgMsgCallback> msg_callbacks;
+
+    uint32_t current_buffer;
+    uint32_t queue_count;
 };
 
 VkResult memory_type_from_properties(struct sample_info &info, uint32_t typeBits, VkFlags properties, uint32_t *typeIndex);
