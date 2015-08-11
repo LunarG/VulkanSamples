@@ -34,6 +34,13 @@ samples utility functions
 
 using namespace std;
 
+void extract_version(uint32_t version, uint32_t &major, uint32_t &minor, uint32_t &patch)
+{
+    major = version >> 22;
+    minor = (version >> 12) & 0x3ff;
+    patch = version & 0xfff;
+}
+
 string get_file_name(const string& s) {
 
     char sep = '/';
