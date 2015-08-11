@@ -375,13 +375,17 @@ static void printDynamicState(const VkCmdBuffer cb)
     if (pCB) {
         loader_platform_thread_lock_mutex(&globalLock);
         for (uint32_t i = 0; i < VK_NUM_STATE_BIND_POINT; i++) {
-            void* pDynStateCI = getDynamicStateCreateInfo(pCB->lastBoundDynamicState[i], (DYNAMIC_STATE_BIND_POINT)i);
-            if (pDynStateCI) {
-                log_msg(mdd(cb), VK_DBG_REPORT_INFO_BIT, dynamicStateBindPointToObjType((DYNAMIC_STATE_BIND_POINT)i), pCB->lastBoundDynamicState[i], 0, DRAWSTATE_NONE, "DS",
-                        "Reporting CreateInfo for currently bound %s object %#" PRIxLEAST64, string_DYNAMIC_STATE_BIND_POINT((DYNAMIC_STATE_BIND_POINT)i).c_str(), pCB->lastBoundDynamicState[i]);
-                log_msg(mdd(cb), VK_DBG_REPORT_INFO_BIT, dynamicStateBindPointToObjType((DYNAMIC_STATE_BIND_POINT)i), pCB->lastBoundDynamicState[i], 0, DRAWSTATE_NONE, "DS",
-                        dynamic_display(pDynStateCI, "  ").c_str());
-                break;
+            if (pCB->lastBoundDynamicState[i]) {
+                void* pDynStateCI = getDynamicStateCreateInfo(pCB->lastBoundDynamicState[i], (DYNAMIC_STATE_BIND_POINT)i);
+                if (pDynStateCI) {
+                    log_msg(mdd(cb), VK_DBG_REPORT_INFO_BIT, dynamicStateBindPointToObjType((DYNAMIC_STATE_BIND_POINT)i), pCB->lastBoundDynamicState[i], 0, DRAWSTATE_NONE, "DS",
+                            "Reporting CreateInfo for currently bound %s object %#" PRIxLEAST64, string_DYNAMIC_STATE_BIND_POINT((DYNAMIC_STATE_BIND_POINT)i).c_str(), pCB->lastBoundDynamicState[i]);
+                    log_msg(mdd(cb), VK_DBG_REPORT_INFO_BIT, dynamicStateBindPointToObjType((DYNAMIC_STATE_BIND_POINT)i), pCB->lastBoundDynamicState[i], 0, DRAWSTATE_NONE, "DS",
+                            dynamic_display(pDynStateCI, "  ").c_str());
+                } else {
+                    log_msg(mdd(cb), VK_DBG_REPORT_INFO_BIT, (VkDbgObjectType) 0, 0, 0, DRAWSTATE_NONE, "DS",
+                            "No dynamic state of type %s bound", string_DYNAMIC_STATE_BIND_POINT((DYNAMIC_STATE_BIND_POINT)i).c_str());
+                }
             } else {
                 log_msg(mdd(cb), VK_DBG_REPORT_INFO_BIT, (VkDbgObjectType) 0, 0, 0, DRAWSTATE_NONE, "DS",
                         "No dynamic state of type %s bound", string_DYNAMIC_STATE_BIND_POINT((DYNAMIC_STATE_BIND_POINT)i).c_str());
