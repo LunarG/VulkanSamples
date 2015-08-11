@@ -44,14 +44,14 @@ int main(int argc, char **argv)
      * - Allocate and bind memory
      * - Set the image layout
      * - Create an attachment view
-     * /
+     */
 
     init_instance_and_device(info, test_title);
     info.memory_properties.reserve(1);
     err = vkGetPhysicalDeviceMemoryProperties(info.gpu, info.memory_properties.data());
     assert(!err);
 
-    /* HACK */
+    /* HACK - Do this the right way once we have WSI code to call */
     info.graphics_queue_family_index = 0;
 
     VkCmdPoolCreateInfo cmd_pool_info = {};
@@ -70,8 +70,21 @@ int main(int argc, char **argv)
 
 
     /* VULKAN_KEY_START */
-    const VkFormat depth_format = VK_FORMAT_D16_UNORM;
     VkImageCreateInfo image_info = {};
+    const VkFormat depth_format = VK_FORMAT_D16_UNORM;
+    VkFormatProperties props;
+    err = vkGetPhysicalDeviceFormatProperties(info.gpu, depth_format, &props);
+    assert(!err);
+    if (props.linearTilingFeatures & VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT) {
+        image_info.tiling = VK_IMAGE_TILING_LINEAR;
+    } else if (props.optimalTilingFeatures & VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT) {
+        image_info.tiling = VK_IMAGE_TILING_OPTIMAL;
+    } else {
+        /* Try other depth formats? */
+        std::cout << "VK_FORMAT_D16_UNORM Unsupported.\n";
+        exit(-1);
+    }
+
     image_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
     image_info.pNext = NULL;
     image_info.imageType = VK_IMAGE_TYPE_2D;
@@ -82,7 +95,6 @@ int main(int argc, char **argv)
     image_info.mipLevels = 1;
     image_info.arraySize = 1;
     image_info.samples = 1;
-    image_info.tiling = VK_IMAGE_TILING_OPTIMAL;
     image_info.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_BIT;
     image_info.flags = 0;
 
@@ -137,7 +149,7 @@ int main(int argc, char **argv)
                           VK_IMAGE_LAYOUT_UNDEFINED,
                           VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
 
-    /* create image view */
+    /* Create image view */
     view_info.image = info.depth.image;
     err = vkCreateAttachmentView(info.device, &view_info, &info.depth.view);
     assert(!err);
