@@ -41,7 +41,7 @@ extern "C" {
     ((major << 22) | (minor << 12) | patch)
 
 // Vulkan API version supported by this file
-#define VK_API_VERSION VK_MAKE_VERSION(0, 148, 0)
+#define VK_API_VERSION VK_MAKE_VERSION(0, 149, 0)
 
 
 #define VK_DEFINE_HANDLE(obj) typedef struct obj##_T* obj;
@@ -76,21 +76,10 @@ extern "C" {
         
 
 
-#define VK_LOD_CLAMP_NONE                 1000.0f
-#define VK_LAST_MIP_LEVEL                 (~0U)
-#define VK_LAST_ARRAY_SLICE               (~0U)
-#define VK_WHOLE_SIZE                     (~0U)
-#define VK_ATTACHMENT_UNUSED              (~0U)
-#define VK_TRUE                           1
-#define VK_FALSE                          0
-#define VK_NULL_HANDLE                    0
-#define VK_QUEUE_FAMILY_IGNORED           (~0U)
-#define VK_MAX_PHYSICAL_DEVICE_NAME       256
-#define VK_UUID_LENGTH                    16
-#define VK_MAX_MEMORY_TYPES               32
-#define VK_MAX_MEMORY_HEAPS               16
-#define VK_MAX_EXTENSION_NAME             256
-#define VK_MAX_DESCRIPTION                256
+typedef uint32_t VkBool32;
+typedef uint32_t VkFlags;
+typedef uint64_t VkDeviceSize;
+typedef uint32_t VkSampleMask;
 
 VK_DEFINE_HANDLE(VkInstance)
 VK_DEFINE_HANDLE(VkPhysicalDevice)
@@ -123,6 +112,22 @@ VK_DEFINE_NONDISP_HANDLE(VkDynamicColorBlendState)
 VK_DEFINE_NONDISP_HANDLE(VkDynamicDepthStencilState)
 VK_DEFINE_NONDISP_HANDLE(VkFramebuffer)
 VK_DEFINE_NONDISP_HANDLE(VkCmdPool)
+
+#define VK_LOD_CLAMP_NONE                 1000.0f
+#define VK_LAST_MIP_LEVEL                 (~0U)
+#define VK_LAST_ARRAY_SLICE               (~0U)
+#define VK_WHOLE_SIZE                     (~0ULL)
+#define VK_ATTACHMENT_UNUSED              (~0U)
+#define VK_TRUE                           1
+#define VK_FALSE                          0
+#define VK_NULL_HANDLE                    0
+#define VK_QUEUE_FAMILY_IGNORED           (~0U)
+#define VK_MAX_PHYSICAL_DEVICE_NAME       256
+#define VK_UUID_LENGTH                    16
+#define VK_MAX_MEMORY_TYPES               32
+#define VK_MAX_MEMORY_HEAPS               16
+#define VK_MAX_EXTENSION_NAME             256
+#define VK_MAX_DESCRIPTION                256
 
 
 typedef enum {
@@ -837,7 +842,7 @@ typedef enum {
     VK_RENDER_PASS_CONTENTS_MAX_ENUM = 0x7FFFFFFF
 } VkRenderPassContents;
 
-typedef uint32_t VkFlags;
+
 typedef enum {
     VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT = 0x00000001,
     VK_FORMAT_FEATURE_STORAGE_IMAGE_BIT = 0x00000002,
@@ -889,7 +894,6 @@ typedef enum {
     VK_MEMORY_HEAP_HOST_LOCAL = 0x00000001,
 } VkMemoryHeapFlagBits;
 typedef VkFlags VkMemoryHeapFlags;
-
 typedef VkFlags VkMemoryMapFlags;
 
 typedef enum {
@@ -1088,16 +1092,6 @@ typedef enum {
 } VkQueryControlFlagBits;
 typedef VkFlags VkQueryControlFlags;
 
-typedef struct {
-    VkStructureType                             sType;
-    const void*                                 pNext;
-    const char*                                 pAppName;
-    uint32_t                                    appVersion;
-    const char*                                 pEngineName;
-    uint32_t                                    engineVersion;
-    uint32_t                                    apiVersion;
-} VkApplicationInfo;
-
 typedef void* (VKAPI *PFN_vkAllocFunction)(
     void*                           pUserData,
     size_t                          size,
@@ -1107,6 +1101,18 @@ typedef void* (VKAPI *PFN_vkAllocFunction)(
 typedef void (VKAPI *PFN_vkFreeFunction)(
     void*                           pUserData,
     void*                           pMem);
+
+typedef void (VKAPI *PFN_vkVoidFunction)(void);
+
+typedef struct {
+    VkStructureType                             sType;
+    const void*                                 pNext;
+    const char*                                 pAppName;
+    uint32_t                                    appVersion;
+    const char*                                 pEngineName;
+    uint32_t                                    engineVersion;
+    uint32_t                                    apiVersion;
+} VkApplicationInfo;
 
 typedef struct {
     void*                                       pUserData;
@@ -1125,7 +1131,6 @@ typedef struct {
     const char*const*                           ppEnabledExtensionNames;
 } VkInstanceCreateInfo;
 
-typedef uint32_t VkBool32;
 typedef struct {
     VkBool32                                    robustBufferAccess;
     VkBool32                                    fullDrawIndexUint32;
@@ -1195,7 +1200,6 @@ typedef struct {
     uint32_t                                    maxSamples;
 } VkImageFormatProperties;
 
-typedef uint64_t VkDeviceSize;
 typedef struct {
     uint32_t                                    maxImageDimension1D;
     uint32_t                                    maxImageDimension2D;
@@ -1324,7 +1328,6 @@ typedef struct {
     VkMemoryHeap                                memoryHeaps[VK_MAX_MEMORY_HEAPS];
 } VkPhysicalDeviceMemoryProperties;
 
-typedef void (VKAPI *PFN_vkVoidFunction)(void);
 typedef struct {
     uint32_t                                    queueFamilyIndex;
     uint32_t                                    queueCount;
@@ -1627,7 +1630,6 @@ typedef struct {
     VkFrontFace                                 frontFace;
 } VkPipelineRasterStateCreateInfo;
 
-typedef uint32_t VkSampleMask;
 typedef struct {
     VkStructureType                             sType;
     const void*                                 pNext;

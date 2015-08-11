@@ -152,10 +152,12 @@ class HeaderFileParser:
                         continue
                     (ty_txt, st_txt, base_type) = line.strip().split(None, 2)
                     #print("Found STRUCT type: %s" % base_type)
-                    if '{' == base_type:
+                    # Note:  This really needs to be updated to handle one line struct definition, like
+                    #        typedef struct obj##_T { uint64_t handle; } obj;
+                    if ('{' == base_type or not (' ' in base_type)):
                         base_type = 'tmp_struct'
-                    parse_struct = True
-                    self.types_dict[base_type] = 'struct'
+                        parse_struct = True
+                        self.types_dict[base_type] = 'struct'
 #                elif 'typedef union' in line:
 #                    (ty_txt, st_txt, base_type) = line.strip().split(None, 2)
 #                    print("Found UNION type: %s" % base_type)
