@@ -186,8 +186,6 @@ struct loader_struct {
     char *layer_dirs;
 
     // TODO use this struct loader_layer_library_list scanned_layer_libraries;
-    struct loader_layer_list scanned_instance_layers;
-    struct loader_layer_list scanned_device_layers;
 
     /* Keep track of all the extensions available via GetGlobalExtensionProperties */
     struct loader_extension_list global_extensions;
@@ -245,7 +243,6 @@ static inline void loader_init_dispatch(void* obj, const void *data)
 /* global variables used across files */
 extern struct loader_struct loader;
 extern LOADER_PLATFORM_THREAD_ONCE_DEFINITION(once_icd);
-extern LOADER_PLATFORM_THREAD_ONCE_DEFINITION(once_layer);
 extern LOADER_PLATFORM_THREAD_ONCE_DEFINITION(once_exts);
 extern loader_platform_thread_mutex loader_lock;
 extern const VkLayerInstanceDispatchTable instance_disp;
@@ -262,6 +259,7 @@ bool compare_vk_extension_properties(
 VkResult loader_validate_layers(const uint32_t layer_count, const char * const *ppEnabledLayerNames, struct loader_layer_list *list);
 
 VkResult loader_validate_instance_extensions(
+        const struct loader_layer_list *instance_layer,
         const VkInstanceCreateInfo*             pCreateInfo);
 
 /* instance layer chain termination entrypoint definitions */
@@ -354,29 +352,35 @@ void loader_add_to_layer_list(
         uint32_t prop_list_count,
         const struct loader_layer_properties *props);
 void loader_icd_scan(void);
-void loader_layer_scan(void);
+void loader_layer_scan(
+        struct loader_layer_list *instance_layers,
+        struct loader_layer_list *device_layers);
 void loader_coalesce_extensions(void);
 
-struct loader_icd * loader_get_icd(const VkPhysicalDevice gpu,
-                                   uint32_t *gpu_index);
+struct loader_icd * loader_get_icd(
+        const VkPhysicalDevice gpu,
+        uint32_t *gpu_index);
 void loader_remove_logical_device(VkDevice device);
-VkResult loader_enable_instance_layers(struct loader_instance *inst, const VkInstanceCreateInfo *pCreateInfo);
+VkResult loader_enable_instance_layers(
+        struct loader_instance *inst,
+        const VkInstanceCreateInfo *pCreateInfo,
+        const struct loader_layer_list *instance_layers);
 void loader_deactivate_instance_layers(struct loader_instance *instance);
 uint32_t loader_activate_instance_layers(struct loader_instance *inst);
 void loader_activate_instance_layer_extensions(struct loader_instance *inst);
 
 void* loader_heap_alloc(
-    struct loader_instance      *instance,
-    size_t                       size,
-    VkSystemAllocType            allocType);
+        struct loader_instance      *instance,
+        size_t                       size,
+        VkSystemAllocType            allocType);
 
 void* loader_aligned_heap_alloc(
-    struct loader_instance      *instance,
-    size_t                       size,
-    size_t                       alignment,
-    VkSystemAllocType            allocType);
+        struct loader_instance      *instance,
+        size_t                       size,
+        size_t                       alignment,
+        VkSystemAllocType            allocType);
 
 void loader_heap_free(
-    struct loader_instance      *instance,
-    void                        *pMem);
+        struct loader_instance      *instance,
+        void                        *pMem);
 #endif /* LOADER_H */

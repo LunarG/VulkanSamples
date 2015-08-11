@@ -44,24 +44,31 @@ LOADER_EXPORT VkResult VKAPI vkCreateInstance(
     struct loader_instance *ptr_instance = NULL;
 
     VkResult res = VK_ERROR_INITIALIZATION_FAILED;
+    struct loader_layer_list instance_layer_list;
 
     /* Scan/discover all ICD libraries in a single-threaded manner */
     loader_platform_thread_once(&once_icd, loader_icd_scan);
 
-    /* get layer libraries in a single-threaded manner */
-    loader_platform_thread_once(&once_layer, loader_layer_scan);
-
     /* merge any duplicate extensions */
     loader_platform_thread_once(&once_exts, loader_coalesce_extensions);
 
-    res = loader_validate_layers(pCreateInfo->layerCount,
-                                 pCreateInfo->ppEnabledLayerNames,
-                                 &loader.scanned_instance_layers);
-    if (res != VK_SUCCESS) {
-        return res;
+    /* Due to implicit layers might still need to get layer list even if
+     * layerCount == 0 and VK_INSTANCE_LAYERS is unset. For now always
+     * get layer list via loader_layer_scan(). */
+    memset(&instance_layer_list, 0, sizeof(instance_layer_list));
+    loader_layer_scan(&instance_layer_list, NULL);
+
+    /* validate the app requested layers to be enabled */
+    if (pCreateInfo->layerCount > 0) {
+        res = loader_validate_layers(pCreateInfo->layerCount,
+                                     pCreateInfo->ppEnabledLayerNames,
+                                     &instance_layer_list);
+        if (res != VK_SUCCESS) {
+            return res;
+        }
     }
 
-    res = loader_validate_instance_extensions(pCreateInfo);
+    res = loader_validate_instance_extensions(&instance_layer_list, pCreateInfo);
     if (res != VK_SUCCESS) {
         return res;
     }
@@ -81,9 +88,8 @@ LOADER_EXPORT VkResult VKAPI vkCreateInstance(
         return VK_ERROR_OUT_OF_HOST_MEMORY;
     }
 
-    memset(ptr_instance, 0, sizeof(struct loader_instance));
-
     loader_platform_thread_lock_mutex(&loader_lock);
+    memset(ptr_instance, 0, sizeof(struct loader_instance));
 
     if (pCreateInfo->pAllocCb
             && pCreateInfo->pAllocCb->pfnAlloc
@@ -105,18 +111,19 @@ LOADER_EXPORT VkResult VKAPI vkCreateInstance(
     ptr_instance->next = loader.instances;
     loader.instances = ptr_instance;
 
-    res = loader_enable_instance_layers(ptr_instance, pCreateInfo);
+    /* activate any layers on instance chain */
+    res = loader_enable_instance_layers(ptr_instance, pCreateInfo, &instance_layer_list);
     if (res != VK_SUCCESS) {
         loader_heap_free(ptr_instance, ptr_instance->disp);
         loader_heap_free(ptr_instance, ptr_instance);
+        loader_platform_thread_unlock_mutex(&loader_lock);
         return res;
     }
+    loader_activate_instance_layers(ptr_instance);
 
     wsi_swapchain_create_instance(ptr_instance, pCreateInfo);
     debug_report_create_instance(ptr_instance, pCreateInfo);
 
-    /* enable any layers on instance chain */
-    loader_activate_instance_layers(ptr_instance);
 
     *pInstance = (VkInstance) ptr_instance;
 
@@ -131,7 +138,6 @@ LOADER_EXPORT VkResult VKAPI vkCreateInstance(
     loader_activate_instance_layer_extensions(ptr_instance);
 
     loader_platform_thread_unlock_mutex(&loader_lock);
-
     return res;
 }
 
