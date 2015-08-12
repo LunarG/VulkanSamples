@@ -1038,7 +1038,7 @@ GLVTRACER_EXPORT VkResult VKAPI __HOOKED_vkGetSurfacePresentModesWSI(
     result = real_vkGetSurfacePresentModesWSI(device, pSurfaceDescription, pCount, pPresentModes);
     endTime = glv_get_time();
     _dataSize = (pCount == NULL || pPresentModes == NULL) ? 0 : (*pCount *sizeof(VkPresentModeWSI));
-    CREATE_TRACE_PACKET(vkGetSurfaceFormatsWSI, sizeof(VkSurfaceDescriptionWSI) + sizeof(uint32_t) + _dataSize);
+    CREATE_TRACE_PACKET(vkGetSurfacePresentModesWSI, sizeof(VkSurfaceDescriptionWSI) + sizeof(uint32_t) + _dataSize);
     pHeader->glave_begin_time = glvStartTime;
     pHeader->entrypoint_begin_time = startTime;
     pHeader->entrypoint_end_time = endTime;
