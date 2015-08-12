@@ -174,8 +174,9 @@ VkResult init_device(struct sample_info &info)
 
 VkResult init_enumerate_device(struct sample_info &info, uint32_t gpu_count)
 {
+    uint32_t const req_count = gpu_count;
     VkResult res = vkEnumeratePhysicalDevices(info.inst, &gpu_count, &info.gpu);
-    assert(!res && gpu_count == 1);
+    assert(!res && gpu_count >= req_count);
 
     return res;
 }
