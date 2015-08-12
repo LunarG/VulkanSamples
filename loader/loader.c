@@ -1244,105 +1244,115 @@ static void loader_add_layer_properties(struct loader_layer_list *layer_instance
         loader_log(VK_DBG_REPORT_WARN_BIT, 0, "Unexpected manifest file version (expected 0.9.0), may cause errors");
     free(file_vers);
 
-    //TODO handle multiple layer nodes in the file
-    //TODO handle scanned libraries not one per layer property
     layer_node = cJSON_GetObjectItem(json, "layer");
     if (layer_node == NULL) {
         loader_log(VK_DBG_REPORT_WARN_BIT, 0, "Can't find \"layer\" object in manifest JSON file, skipping");
         return;
     }
+
+    // loop through all "layer" objects in the file
+    do {
 #define GET_JSON_OBJECT(node, var) {                  \
         var = cJSON_GetObjectItem(node, #var);        \
-        if (var == NULL)                              \
-            return;                                   \
+        if (var == NULL) {                            \
+            layer_node = layer_node->next;            \
+            continue;                                 \
+        }                                             \
         }
 #define GET_JSON_ITEM(node, var) {                    \
         item = cJSON_GetObjectItem(node, #var);       \
-        if (item == NULL)                             \
-            return;                                   \
+        if (item == NULL) {                           \
+            layer_node = layer_node->next;            \
+            continue;                                 \
+        }                                             \
         temp = cJSON_Print(item);                     \
         temp[strlen(temp) - 1] = '\0';                \
         var = loader_stack_alloc(strlen(temp) + 1);   \
         strcpy(var, &temp[1]);                        \
         free(temp);                                   \
         }
-    GET_JSON_ITEM(layer_node, name)
-    GET_JSON_ITEM(layer_node, type)
-    GET_JSON_ITEM(layer_node, library_path)
-    GET_JSON_ITEM(layer_node, abi_versions)
-    GET_JSON_ITEM(layer_node, implementation_version)
-    GET_JSON_ITEM(layer_node, description)
-    if (is_implicit) {
-        GET_JSON_OBJECT(layer_node, disable_environment)
-    }
+        GET_JSON_ITEM(layer_node, name)
+        GET_JSON_ITEM(layer_node, type)
+        GET_JSON_ITEM(layer_node, library_path)
+        GET_JSON_ITEM(layer_node, abi_versions)
+        GET_JSON_ITEM(layer_node, implementation_version)
+        GET_JSON_ITEM(layer_node, description)
+        if (is_implicit) {
+            GET_JSON_OBJECT(layer_node, disable_environment)
+        }
 #undef GET_JSON_ITEM
 #undef GET_JSON_OBJECT
 
-   // add list entry
-    struct loader_layer_properties *props;
-    if (!strcmp(type, "DEVICE")) {
-        if (layer_device_list == NULL)
-            return;
-        props = loader_get_next_layer_property(layer_device_list);
-        props->type = (is_implicit) ? VK_LAYER_TYPE_DEVICE_IMPLICIT : VK_LAYER_TYPE_DEVICE_EXPLICIT;
-    }
-    if (!strcmp(type, "INSTANCE")) {
-        if (layer_instance_list == NULL)
-            return;
-        props = loader_get_next_layer_property(layer_instance_list);
-        props->type = (is_implicit) ? VK_LAYER_TYPE_INSTANCE_IMPLICIT : VK_LAYER_TYPE_INSTANCE_EXPLICIT;
-    }
-    if (!strcmp(type, "GLOBAL")) {
-        if (layer_instance_list != NULL)
-            props = loader_get_next_layer_property(layer_instance_list);
-        else if (layer_device_list != NULL)
+        // add list entry
+        struct loader_layer_properties *props;
+        if (!strcmp(type, "DEVICE")) {
+            if (layer_device_list == NULL) {
+                layer_node = layer_node->next;
+                continue;
+            }
             props = loader_get_next_layer_property(layer_device_list);
-        else
-            return;
-        props->type = (is_implicit) ? VK_LAYER_TYPE_GLOBAL_IMPLICIT : VK_LAYER_TYPE_GLOBAL_EXPLICIT;
-    }
+            props->type = (is_implicit) ? VK_LAYER_TYPE_DEVICE_IMPLICIT : VK_LAYER_TYPE_DEVICE_EXPLICIT;
+        }
+        if (!strcmp(type, "INSTANCE")) {
+            if (layer_instance_list == NULL) {
+                layer_node = layer_node->next;
+                continue;
+            }
+            props = loader_get_next_layer_property(layer_instance_list);
+            props->type = (is_implicit) ? VK_LAYER_TYPE_INSTANCE_IMPLICIT : VK_LAYER_TYPE_INSTANCE_EXPLICIT;
+        }
+        if (!strcmp(type, "GLOBAL")) {
+            if (layer_instance_list != NULL)
+                props = loader_get_next_layer_property(layer_instance_list);
+            else if (layer_device_list != NULL)
+                props = loader_get_next_layer_property(layer_device_list);
+            else {
+                layer_node = layer_node->next;
+                continue;
+            }
+            props->type = (is_implicit) ? VK_LAYER_TYPE_GLOBAL_IMPLICIT : VK_LAYER_TYPE_GLOBAL_EXPLICIT;
+        }
 
-    strncpy(props->info.layerName, name, sizeof(props->info.layerName));
-    props->info.layerName[sizeof(props->info.layerName) - 1] = '\0';
+        strncpy(props->info.layerName, name, sizeof (props->info.layerName));
+        props->info.layerName[sizeof (props->info.layerName) - 1] = '\0';
 
-    char *fullpath = malloc(MAX_STRING_SIZE);
-    char *rel_base;
-    if (strchr(library_path, DIRECTORY_SYMBOL) == NULL) {
-        // a filename which is assumed in the system directory
-        char *def_path = loader_stack_alloc(strlen(DEFAULT_VK_LAYERS_PATH) + 1);
-        strcpy(def_path, DEFAULT_VK_LAYERS_PATH);
-        loader_get_fullpath(library_path, def_path, MAX_STRING_SIZE, fullpath);
-    }
-    else {
-        // a relative or absolute path
-        char *name_copy = loader_stack_alloc(strlen(filename) + 2);
-        size_t len;
-        strcpy(name_copy, filename);
-        rel_base = loader_platform_dirname(name_copy);
-        len = strlen(rel_base);
-        rel_base[len] =  DIRECTORY_SYMBOL;
-        rel_base[len + 1] = '\0';
-        loader_expand_path(library_path, rel_base, MAX_STRING_SIZE, fullpath);
-    }
-    props->lib_info.lib_name = fullpath;
-    props->info.specVersion  = loader_make_version(abi_versions);
-    props->info.implVersion  = loader_make_version(implementation_version);
-    strncpy((char *) props->info.description, description, sizeof(props->info.description));
-    props->info.description[sizeof(props->info.description) - 1] = '\0';
-    if (is_implicit) {
-        strncpy(props->disable_env_var.name, disable_environment->child->string, sizeof(props->disable_env_var.name));
-        props->disable_env_var.name[sizeof(props->disable_env_var.name) - 1] = '\0';
-        strncpy(props->disable_env_var.value, disable_environment->child->valuestring, sizeof(props->disable_env_var.value));
-        props->disable_env_var.value[sizeof(props->disable_env_var.value) - 1] = '\0';
-    }
+        char *fullpath = malloc(MAX_STRING_SIZE);
+        char *rel_base;
+        if (strchr(library_path, DIRECTORY_SYMBOL) == NULL) {
+            // a filename which is assumed in the system directory
+            char *def_path = loader_stack_alloc(strlen(DEFAULT_VK_LAYERS_PATH) + 1);
+            strcpy(def_path, DEFAULT_VK_LAYERS_PATH);
+            loader_get_fullpath(library_path, def_path, MAX_STRING_SIZE, fullpath);
+        } else {
+            // a relative or absolute path
+            char *name_copy = loader_stack_alloc(strlen(filename) + 2);
+            size_t len;
+            strcpy(name_copy, filename);
+            rel_base = loader_platform_dirname(name_copy);
+            len = strlen(rel_base);
+            rel_base[len] = DIRECTORY_SYMBOL;
+            rel_base[len + 1] = '\0';
+            loader_expand_path(library_path, rel_base, MAX_STRING_SIZE, fullpath);
+        }
+        props->lib_info.lib_name = fullpath;
+        props->info.specVersion = loader_make_version(abi_versions);
+        props->info.implVersion = loader_make_version(implementation_version);
+        strncpy((char *) props->info.description, description, sizeof (props->info.description));
+        props->info.description[sizeof (props->info.description) - 1] = '\0';
+        if (is_implicit) {
+            strncpy(props->disable_env_var.name, disable_environment->child->string, sizeof (props->disable_env_var.name));
+            props->disable_env_var.name[sizeof (props->disable_env_var.name) - 1] = '\0';
+            strncpy(props->disable_env_var.value, disable_environment->child->valuestring, sizeof (props->disable_env_var.value));
+            props->disable_env_var.value[sizeof (props->disable_env_var.value) - 1] = '\0';
+        }
 
-    /**
-     * Now get all optional items and objects and put in list:
-     * functions
-     * instance_extensions
-     * device_extensions
-     * enable_environment (implicit layers only)
-     */
+        /**
+         * Now get all optional items and objects and put in list:
+         * functions
+         * instance_extensions
+         * device_extensions
+         * enable_environment (implicit layers only)
+         */
 #define GET_JSON_OBJECT(node, var) {                  \
         var = cJSON_GetObjectItem(node, #var);        \
         }
@@ -1356,62 +1366,66 @@ static void loader_add_layer_properties(struct loader_layer_list *layer_instance
         free(temp);                                   \
         }
 
-    cJSON *instance_extensions, *device_extensions, *functions, *enable_environment;
-    char *vkGetInstanceProcAddr, *vkGetDeviceProcAddr, *version;
-    GET_JSON_OBJECT(layer_node, functions)
-    if (functions != NULL) {
-        GET_JSON_ITEM(functions, vkGetInstanceProcAddr)
-        GET_JSON_ITEM(functions, vkGetDeviceProcAddr)
-        strncpy(props->functions.str_gipa, vkGetInstanceProcAddr, sizeof(props->functions.str_gipa));
-        props->functions.str_gipa[sizeof(props->functions.str_gipa) - 1] = '\0';
-        strncpy(props->functions.str_gdpa, vkGetDeviceProcAddr, sizeof(props->functions.str_gdpa));
-        props->functions.str_gdpa[sizeof(props->functions.str_gdpa) - 1] = '\0';
-    }
-    GET_JSON_OBJECT(layer_node, instance_extensions)
-    if (instance_extensions != NULL) {
-        int count = cJSON_GetArraySize(instance_extensions);
-        for (i = 0; i < count; i++) {
-            ext_item = cJSON_GetArrayItem(instance_extensions, i);
-            GET_JSON_ITEM(ext_item, name)
-            GET_JSON_ITEM(ext_item, version)
-            strncpy(ext_prop.extName, name, sizeof(ext_prop.extName));
-            ext_prop.extName[sizeof(ext_prop.extName) -1] = '\0';
-            ext_prop.specVersion = loader_make_version(version);
-            loader_add_to_ext_list(&props->instance_extension_list, 1, &ext_prop);
+        cJSON *instance_extensions, *device_extensions, *functions, *enable_environment;
+        char *vkGetInstanceProcAddr, *vkGetDeviceProcAddr, *version;
+        GET_JSON_OBJECT(layer_node, functions)
+        if (functions != NULL) {
+            GET_JSON_ITEM(functions, vkGetInstanceProcAddr)
+            GET_JSON_ITEM(functions, vkGetDeviceProcAddr)
+            strncpy(props->functions.str_gipa, vkGetInstanceProcAddr, sizeof (props->functions.str_gipa));
+            props->functions.str_gipa[sizeof (props->functions.str_gipa) - 1] = '\0';
+            strncpy(props->functions.str_gdpa, vkGetDeviceProcAddr, sizeof (props->functions.str_gdpa));
+            props->functions.str_gdpa[sizeof (props->functions.str_gdpa) - 1] = '\0';
         }
-    }
-    GET_JSON_OBJECT(layer_node, device_extensions)
-    if (device_extensions != NULL) {
-        int count = cJSON_GetArraySize(device_extensions);
-        for (i = 0; i < count; i++) {
-            ext_item = cJSON_GetArrayItem(device_extensions, i);
-            GET_JSON_ITEM(ext_item, name);
-            GET_JSON_ITEM(ext_item, version);
-            strncpy(ext_prop.extName, name, sizeof(ext_prop.extName));
-            ext_prop.extName[sizeof(ext_prop.extName) -1] = '\0';
-            ext_prop.specVersion = loader_make_version(version);
-            loader_add_to_ext_list(&props->device_extension_list, 1, &ext_prop);
+        GET_JSON_OBJECT(layer_node, instance_extensions)
+        if (instance_extensions != NULL) {
+            int count = cJSON_GetArraySize(instance_extensions);
+            for (i = 0; i < count; i++) {
+                ext_item = cJSON_GetArrayItem(instance_extensions, i);
+                GET_JSON_ITEM(ext_item, name)
+                GET_JSON_ITEM(ext_item, version)
+                strncpy(ext_prop.extName, name, sizeof (ext_prop.extName));
+                ext_prop.extName[sizeof (ext_prop.extName) - 1] = '\0';
+                ext_prop.specVersion = loader_make_version(version);
+                loader_add_to_ext_list(&props->instance_extension_list, 1, &ext_prop);
+            }
         }
-    }
-    if (is_implicit) {
-        GET_JSON_OBJECT(layer_node, enable_environment)
-        strncpy(props->enable_env_var.name, enable_environment->child->string, sizeof(props->enable_env_var.name));
-        props->enable_env_var.name[sizeof(props->enable_env_var.name) - 1] = '\0';
-        strncpy(props->enable_env_var.value, enable_environment->child->valuestring, sizeof(props->enable_env_var.value));
-        props->enable_env_var.value[sizeof(props->enable_env_var.value) - 1] = '\0';
-    }
+        GET_JSON_OBJECT(layer_node, device_extensions)
+        if (device_extensions != NULL) {
+            int count = cJSON_GetArraySize(device_extensions);
+            for (i = 0; i < count; i++) {
+                ext_item = cJSON_GetArrayItem(device_extensions, i);
+                GET_JSON_ITEM(ext_item, name);
+                GET_JSON_ITEM(ext_item, version);
+                strncpy(ext_prop.extName, name, sizeof (ext_prop.extName));
+                ext_prop.extName[sizeof (ext_prop.extName) - 1] = '\0';
+                ext_prop.specVersion = loader_make_version(version);
+                loader_add_to_ext_list(&props->device_extension_list, 1, &ext_prop);
+            }
+        }
+        if (is_implicit) {
+            GET_JSON_OBJECT(layer_node, enable_environment)
+            strncpy(props->enable_env_var.name, enable_environment->child->string, sizeof (props->enable_env_var.name));
+            props->enable_env_var.name[sizeof (props->enable_env_var.name) - 1] = '\0';
+            strncpy(props->enable_env_var.value, enable_environment->child->valuestring, sizeof (props->enable_env_var.value));
+            props->enable_env_var.value[sizeof (props->enable_env_var.value) - 1] = '\0';
+        }
 #undef GET_JSON_ITEM
 #undef GET_JSON_OBJECT
-    // for global layers need to add them to both device and instance list
-    if (props->type & (VK_LAYER_TYPE_GLOBAL_IMPLICIT | VK_LAYER_TYPE_GLOBAL_EXPLICIT)) {
-        struct loader_layer_properties *dev_props;
-        if (layer_instance_list == NULL || layer_device_list == NULL)
-            return;
-        dev_props = loader_get_next_layer_property(layer_device_list);
-        //copy into device layer list
-        memcpy(dev_props, props, sizeof(*props));
-    }
-
+        // for global layers need to add them to both device and instance list
+        if (!strcmp(type, "GLOBAL")) {
+            struct loader_layer_properties *dev_props;
+            if (layer_instance_list == NULL || layer_device_list == NULL) {
+                layer_node = layer_node->next;
+                continue;
+            }
+            dev_props = loader_get_next_layer_property(layer_device_list);
+            //copy into device layer list
+            memcpy(dev_props, props, sizeof (*props));
+        }
+        layer_node = layer_node->next;
+    } while (layer_node != NULL);
+    return;
 }
 
 /**
@@ -2044,7 +2058,7 @@ uint32_t loader_activate_instance_layers(struct loader_instance *inst)
         if (!nextGPA) {
             loader_log(VK_DBG_REPORT_ERROR_BIT, 0, "Failed to find vkGetInstanceProcAddr in layer %s", layer_prop->lib_info.lib_name);
 
-            /* TODO: Should we return nextObj, nextGPA to previous? */
+            /* TODO: Should we return nextObj, nextGPA to previous? or decrement layer_list count*/
             continue;
         }
 
