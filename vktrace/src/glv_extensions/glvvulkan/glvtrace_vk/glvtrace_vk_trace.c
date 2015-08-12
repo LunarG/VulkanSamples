@@ -1073,9 +1073,9 @@ GLVTRACER_EXPORT VkResult VKAPI __HOOKED_vkCreateSwapChainWSI(
     glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo->pQueueFamilyIndices), pCreateInfo->queueFamilyCount * sizeof(uint32_t), pCreateInfo->pQueueFamilyIndices);
     pPacket->result = result;
     glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pCreateInfo->pSurfaceDescription));
+    glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pCreateInfo->pQueueFamilyIndices));
     glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pCreateInfo));
     glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pSwapChain));
-    glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pCreateInfo->pQueueFamilyIndices));
     FINISH_TRACE_PACKET();
     return result;
 }
