@@ -81,7 +81,7 @@ VkResult init_global_extension_properties(
 VkResult init_global_layer_properties(struct sample_info &info)
 {
     uint32_t instance_layer_count;
-    std::vector<VkLayerProperties> vk_props;
+    VkLayerProperties *vk_props = NULL;
     VkResult res;
 
     /*
@@ -105,9 +105,9 @@ VkResult init_global_layer_properties(struct sample_info &info)
             return VK_SUCCESS;
         }
 
-        vk_props.reserve(instance_layer_count);
+        vk_props = (VkLayerProperties *) realloc(vk_props, instance_layer_count * sizeof(VkLayerProperties));
 
-        res = vkGetGlobalLayerProperties(&instance_layer_count, vk_props.data());
+        res = vkGetGlobalLayerProperties(&instance_layer_count, vk_props);
     } while (res == VK_INCOMPLETE);
 
     /*
@@ -122,6 +122,7 @@ VkResult init_global_layer_properties(struct sample_info &info)
             return res;
         info.instance_layer_properties.push_back(layer_props);
     }
+    free(vk_props);
 
     return res;
 }
@@ -203,42 +204,26 @@ void init_connection(struct sample_info &info)
 #endif // _WIN32
 }
 #ifdef _WIN32
-static void demo_run(struct sample_info &info)
+static void run(struct sample_info *info)
 {
-    if (!info.prepared)
-        return;
-    // Wait for work to finish before updating MVP.
-    vkDeviceWaitIdle(info.device);
-    demo_update_data_buffer(demo);
-
-    demo_draw(demo);
-
-    // Wait for work to finish before updating MVP.
-    vkDeviceWaitIdle(info.device);
-
-    info.curFrame++;
-
-    if (info.frameCount != INT_MAX && info.curFrame == info.frameCount)
-    {
-        info.quit=true;
-        demo_cleanup(demo);
-        ExitProcess(0);
-    }
-
+ /* Placeholder for samples that want to show dynamic content */
 }
+
 // MS-Windows event handling function:
 LRESULT CALLBACK WndProc(HWND hWnd,
                          UINT uMsg,
                          WPARAM wParam,
                          LPARAM lParam)
 {
+    struct sample_info *info = reinterpret_cast<struct sample_info*>(GetWindowLongPtr(hWnd, GWLP_USERDATA));
+
     switch(uMsg)
     {
     case WM_CLOSE:
         PostQuitMessage(0);
         break;
     case WM_PAINT:
-        demo_run(&demo);
+        run(info);
         return 0;
     default:
         break;
@@ -246,9 +231,11 @@ LRESULT CALLBACK WndProc(HWND hWnd,
     return (DefWindowProc(hWnd, uMsg, wParam, lParam));
 }
 
-static void init_window(struct sample_info &info)
+void init_window(struct sample_info &info)
 {
     WNDCLASSEX  win_class;
+
+    info.connection = GetModuleHandle(NULL);
 
     // Initialize the window class structure:
     win_class.cbSize = sizeof(WNDCLASSEX);
@@ -292,6 +279,7 @@ static void init_window(struct sample_info &info)
         fflush(stdout);
         exit(1);
     }
+    SetWindowLongPtr(info.window, GWLP_USERDATA, (LONG_PTR) &info);
 }
 #else
 void init_window(struct sample_info &info)

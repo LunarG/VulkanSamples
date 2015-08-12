@@ -12,17 +12,17 @@ function(sampleWithGLSLShaders SNAME)
     set(SHADER_DIR ${SAMPLES_DATA_DIR}/${VULKAN_VERSION})
     foreach(SFILE ${SAMPLE_GLSL_VERT_SHADERS})
         add_custom_command(OUTPUT ${SHADER_DIR}/${SFILE}-vert.spv
-            COMMAND /usr/bin/glslangValidator -s -V ${SHADER_DIR}/${SFILE}.vert
-            COMMAND mv vert.spv ${SHADER_DIR}/${SFILE}-vert.spv
-            DEPENDS ${SHADER_DIR}/${SFILE}.vert /usr/bin/glslangValidator
+            COMMAND ${GLSLANG_VALIDATOR} -s -V ${SHADER_DIR}/${SFILE}.vert
+            COMMAND ${MOVE_CMD} vert.spv ${SHADER_DIR}/${SFILE}-vert.spv
+            DEPENDS ${SHADER_DIR}/${SFILE}.vert ${GLSLANG_VALIDATOR}
         )
         set(SHADER_FILES ${SHADER_FILES} ${SHADER_DIR}/${SFILE}-vert.spv)
     endforeach(SFILE)
     foreach(SFILE ${SAMPLE_GLSL_FRAG_SHADERS})
         add_custom_command(OUTPUT ${SHADER_DIR}/${SFILE}-frag.spv
-            COMMAND /usr/bin/glslangValidator -s -V ${SHADER_DIR}/${SFILE}.frag
-            COMMAND mv frag.spv ${SHADER_DIR}/${SFILE}-frag.spv
-            DEPENDS ${SHADER_DIR}/${SFILE}.frag /usr/bin/glslangValidator
+            COMMAND ${GLSLANG_VALIDATOR} -s -V ${SHADER_DIR}/${SFILE}.frag
+            COMMAND ${MOVE_CMD} frag.spv ${SHADER_DIR}/${SFILE}-frag.spv
+            DEPENDS ${SHADER_DIR}/${SFILE}.frag ${GLSLANG_VALIDATOR}
         )
         set(SHADER_FILES ${SHADER_FILES} ${SHADER_DIR}/${SFILE}-frag.spv)
     endforeach(SFILE)
@@ -74,13 +74,24 @@ if(NOT WIN32)
 endif()
 
 if(WIN32)
+    set (VULKAN_LOADER
+        "C:\\VulkanSDK\\0.0.2.3\\Bin\\vulkan.0.lib"
+        )
+    set (GLSLANG_VALIDATOR
+        "C:\\VulkanSDK\\0.0.2.3\\Bin\\glslangValidator.exe"
+        )
+    set (MOVE_CMD "move")
+else()
+    set (VULKAN_LOADER
+        "vulkan"
+        )
+    set (GLSLANG_VALIDATOR
+        "/usr/bin/glslangValidator"
+        )
+    set (MOVE_CMD "mv")
 endif()
 
 set (LIBGLM_INCLUDE_DIR ${PROJECT_SOURCE_DIR}/libs)
-
-set (VULKAN_LOADER
-    "vulkan"
-    )
 
 if(NOT WIN32)
     include_directories(
@@ -93,13 +104,12 @@ if(WIN32)
        "${PROJECT_SOURCE_DIR}/libs/libpng"
        "${PROJECT_SOURCE_DIR}/libs/zlib"
        )
+    set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DVK_PROTOTYPES -D_CRT_SECURE_NO_WARNINGS -D_USE_MATH_DEFINES /wd4267")
     set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DVK_PROTOTYPES -D_CRT_SECURE_NO_WARNINGS -D_USE_MATH_DEFINES /wd4267")
+else()
+    set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DVK_PROTOTYPES")
     set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DVK_PROTOTYPES -Wno-sign-compare")
 endif()
-
-set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DVK_PROTOTYPES")
-set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DVK_PROTOTYPES")
-
 
 #
 # START BUILDING SAMPLES HERE
