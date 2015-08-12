@@ -88,6 +88,54 @@ static int globalLockInitialized = 0;
 static loader_platform_thread_mutex globalLock;
 
 
+std::unordered_map<uint32_t, std::vector<VkDescriptorSetLayoutBinding>*> descriptor_set_layout_map;
+
+VK_LAYER_EXPORT VkResult VKAPI vkCreateDescriptorSetLayout(
+    VkDevice device,
+    const VkDescriptorSetLayoutCreateInfo* pCreateInfo,
+    VkDescriptorSetLayout* pSetLayout)
+{
+    /* stash a copy of the layout bindings */
+    VkLayerDispatchTable *pDeviceTable = get_dispatch_table(shader_checker_device_table_map, device);
+    VkResult result = pDeviceTable->CreateDescriptorSetLayout(device, pCreateInfo, pSetLayout);
+
+    if (VK_SUCCESS == result) {
+        loader_platform_thread_lock_mutex(&globalLock);
+        auto& bindings = descriptor_set_layout_map[pSetLayout->handle];
+        bindings = new std::vector<VkDescriptorSetLayoutBinding>(
+                pCreateInfo->pBinding, pCreateInfo->pBinding + pCreateInfo->count);
+        loader_platform_thread_unlock_mutex(&globalLock);
+    }
+
+    return result;
+}
+
+
+std::unordered_map<uint32_t, std::vector<std::vector<VkDescriptorSetLayoutBinding>*>*> pipeline_layout_map;
+
+VK_LAYER_EXPORT VkResult VKAPI vkCreatePipelineLayout(
+    VkDevice                                    device,
+    const VkPipelineLayoutCreateInfo*           pCreateInfo,
+    VkPipelineLayout*                           pPipelineLayout)
+{
+    VkLayerDispatchTable *pDeviceTable = get_dispatch_table(shader_checker_device_table_map, device);
+    VkResult result = pDeviceTable->CreatePipelineLayout(device, pCreateInfo, pPipelineLayout);
+
+    if (VK_SUCCESS == result) {
+        loader_platform_thread_lock_mutex(&globalLock);
+        auto& layouts = pipeline_layout_map[pPipelineLayout->handle];
+        layouts = new std::vector<std::vector<VkDescriptorSetLayoutBinding>*>();
+        layouts->reserve(pCreateInfo->descriptorSetCount);
+        for (unsigned i = 0; i < pCreateInfo->descriptorSetCount; i++) {
+            layouts->push_back(descriptor_set_layout_map[pCreateInfo->pSetLayouts[i].handle]);
+        }
+        loader_platform_thread_unlock_mutex(&globalLock);
+    }
+
+    return result;
+}
+
+
 static void
 build_type_def_index(std::vector<unsigned> const &words, std::unordered_map<unsigned, unsigned> &type_def_index)
 {
@@ -1092,6 +1140,8 @@ VK_LAYER_EXPORT PFN_vkVoidFunction VKAPI vkGetDeviceProcAddr(VkDevice dev, const
     ADD_HOOK(vkCreateRenderPass);
     ADD_HOOK(vkDestroyDevice);
     ADD_HOOK(vkCreateGraphicsPipelines);
+    ADD_HOOK(vkCreateDescriptorSetLayout);
+    ADD_HOOK(vkCreatePipelineLayout);
 #undef ADD_HOOK
 
     VkLayerDispatchTable* pTable = get_dispatch_table(shader_checker_device_table_map, dev);
