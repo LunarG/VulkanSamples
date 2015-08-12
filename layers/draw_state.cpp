@@ -1263,6 +1263,9 @@ static void printCB(const VkCmdBuffer cb)
 
 static void synchAndPrintDSConfig(const VkCmdBuffer cb)
 {
+    if (!(mdd(cb)->active_flags & VK_DBG_REPORT_INFO_BIT)) {
+        return;
+    }
     printDSConfig(cb);
     printPipeline(cb);
     printDynamicState(cb);
