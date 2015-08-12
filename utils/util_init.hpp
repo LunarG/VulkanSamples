@@ -32,7 +32,7 @@ VkResult init_global_extension_properties(
         layer_properties *layer_props = NULL);
 
 VkResult init_global_layer_properties(sample_info &info);
-VkResult init_instance(struct sample_info &info, char *app_short_name);
+VkResult init_instance(struct sample_info &info, char const*const app_short_name);
 VkResult init_device(struct sample_info &info);
 VkResult init_enumerate_device(struct sample_info &info, uint32_t gpu_count = 1);
 void init_connection(struct sample_info &info);

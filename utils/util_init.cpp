@@ -126,7 +126,7 @@ VkResult init_global_layer_properties(struct sample_info &info)
     return res;
 }
 
-VkResult init_instance(struct sample_info &info, char *app_short_name)
+VkResult init_instance(struct sample_info &info, char const*const app_short_name)
 {
     VkApplicationInfo app_info = {};
     app_info.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
