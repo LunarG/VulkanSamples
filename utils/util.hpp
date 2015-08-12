@@ -28,18 +28,20 @@
 #include <vector>
 
 #ifdef _WIN32
-#pragma comment(linker, "/subsystem:windows")
+#pragma comment(linker, "/subsystem:console")
 #include <windows.h>
+#include <vulkan.h>
+#include <vk_wsi_swapchain.h>
+#include <vk_wsi_device_swapchain.h>
+#include <vk_debug_report_lunarg.h>
 #define APP_NAME_STR_LEN 80
 #else  // _WIN32
 #include <xcb/xcb.h>
-#endif // _WIN32
-
-#define VK_PROTOTYPES 1
 #include <vulkan/vulkan.h>
 #include <vulkan/vk_wsi_swapchain.h>
 #include <vulkan/vk_wsi_device_swapchain.h>
 #include <vulkan/vk_debug_report_lunarg.h>
+#endif // _WIN32
 
 #define GET_INSTANCE_PROC_ADDR(inst, entrypoint)                         \
 {                                                                        \
@@ -137,7 +139,7 @@ struct sample_info {
     uint32_t graphics_queue_family_index;
     VkPhysicalDeviceProperties gpu_props;
     std::vector<VkPhysicalDeviceQueueProperties> queue_props;
-    std::vector<VkPhysicalDeviceMemoryProperties> memory_properties;
+    VkPhysicalDeviceMemoryProperties memory_properties;
 
     VkFramebuffer framebuffer;
     int width, height;

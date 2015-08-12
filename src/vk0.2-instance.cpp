@@ -29,7 +29,7 @@ create and destroy Vulkan instance
 
 #include <iostream>
 #include <cstdlib>
-#include <vulkan/vulkan.h>
+#include "util.hpp"
 
 #define APP_SHORT_NAME "vulkansamples_instance"
 

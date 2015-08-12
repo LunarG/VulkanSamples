@@ -103,7 +103,7 @@ int main(int argc, char **argv)
 
     // Iterate over each queue to learn whether it supports presenting to WSI:
     VkBool32* supportsPresent = (VkBool32 *)malloc(info.queue_count * sizeof(VkBool32));
-    for (int i = 0; i < info.queue_count; i++) {
+    for (uint32_t i = 0; i < info.queue_count; i++) {
         info.fpGetPhysicalDeviceSurfaceSupportWSI(info.gpu, i,
                                                    (VkSurfaceDescriptionWSI *) &info.surface_description,
                                                    &supportsPresent[i]);
@@ -113,7 +113,7 @@ int main(int argc, char **argv)
     // families, try to find one that supports both
     uint32_t graphicsQueueNodeIndex = UINT32_MAX;
     uint32_t presentQueueNodeIndex  = UINT32_MAX;
-    for (int i = 0; i < info.queue_count; i++) {
+    for (uint32_t i = 0; i < info.queue_count; i++) {
         if ((info.queue_props[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) != 0) {
             if (graphicsQueueNodeIndex == UINT32_MAX) {
                 graphicsQueueNodeIndex = i;

@@ -10,6 +10,10 @@ set (UTILS_NAME vsamputils)
 add_definitions(-DVULKAN_SAMPLES_BASE_DIR="${CMAKE_CURRENT_SOURCE_DIR}")
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/utils)
+if(WIN32)
+    include_directories(C:\\VulkanSDK\\0.0.2.3\\Include)
+endif()
+
 add_subdirectory(utils)
 
 add_subdirectory(src)
