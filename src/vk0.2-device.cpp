@@ -37,10 +37,10 @@ int main(int argc, char **argv)
     struct sample_info info = {};
     init_instance(info, "vulkansamples_device");
 
-/* VULKAN_KEY_START */
-
     std::cout << "calling vkEnumeratePhysicalDevices\n";
     init_enumerate_device(info);
+
+/* VULKAN_KEY_START */
 
     VkDeviceQueueCreateInfo queue_info = {};
     queue_info.queueFamilyIndex = 0;
