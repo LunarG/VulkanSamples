@@ -30,32 +30,20 @@ create and destroy a Vulkan physical device
 #include <iostream>
 #include <cassert>
 #include <cstdlib>
-#include <vulkan/vulkan.h>
-
-#define APP_SHORT_NAME "vulkansamples_device"
+#include <util_init.hpp>
 
 int main(int argc, char **argv)
 {
-    // initialize the VkApplicationInfo structure
-    VkApplicationInfo app_info = {};
-    app_info.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
-    app_info.pNext = NULL;
-    app_info.pAppName = APP_SHORT_NAME;
-    app_info.appVersion = 1;
-    app_info.pEngineName = APP_SHORT_NAME;
-    app_info.engineVersion = 1;
-    app_info.apiVersion = VK_API_VERSION;
-
-    // initialize the VkInstanceCreateInfo structure
-    VkInstanceCreateInfo inst_info = {};
-    inst_info.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
-    inst_info.pNext = NULL;
-    inst_info.pAppInfo = &app_info;
-    inst_info.pAllocCb = NULL;
-    inst_info.extensionCount = 0;
-    inst_info.ppEnabledExtensionNames = NULL;
+    struct sample_info info = {};
+    VkResult res = init_instance(info, "vulkansamples_device");
+    assert(!res);
 
 /* VULKAN_KEY_START */
+
+    std::cout << "calling vkEnumeratePhysicalDevices\n";
+    uint32_t gpu_count;
+    res = vkEnumeratePhysicalDevices(info.inst, &gpu_count, &info.gpu);
+    assert(!res && gpu_count == 1);
 
     VkDeviceQueueCreateInfo queue_info = {};
     queue_info.queueFamilyIndex = 0;
@@ -70,30 +58,9 @@ int main(int argc, char **argv)
     device_info.ppEnabledExtensionNames = NULL;
     device_info.flags = 0;
 
-    uint32_t gpu_count;
-    VkInstance inst;
-    VkPhysicalDevice gpu;
     VkDevice device;
-    VkResult res;
-/* VULKAN_KEY_END */
-
-    res = vkCreateInstance(&inst_info, &inst);
-    if (res == VK_ERROR_INCOMPATIBLE_DRIVER) {
-        std::cout << "Cannot find a compatible Vulkan ICD.\n";
-        exit(-1);
-    } else if (res) {
-        std::cout << "unknown error\n";
-        exit(-1);
-    }
-
-/* VULKAN_KEY_START */
-    gpu_count = 1;
-    std::cout << "calling vkEnumeratePhysicalDevices\n";
-    res = vkEnumeratePhysicalDevices(inst, &gpu_count, &gpu);
-    assert(!res && gpu_count == 1);
-
     std::cout << "calling vkCreateDevice\n";
-    res = vkCreateDevice(gpu, &device_info, &device);
+    res = vkCreateDevice(info.gpu, &device_info, &device);
     assert(!res);
 
     std::cout << "calling vkDestroyDevice\n";
@@ -101,7 +68,7 @@ int main(int argc, char **argv)
 
 /* VULKAN_KEY_END */
 
-    vkDestroyInstance(inst);
+    vkDestroyInstance(info.inst);
 
     return 0;
 }
