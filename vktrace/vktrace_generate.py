@@ -1110,7 +1110,7 @@ class Subcommand(object):
         txt = '    %s remap_%s(const %s& value)\n    {\n' % (ty, name[2:], ty)
         txt += '        if (value == 0) { return 0; }\n'
         txt += '        std::map<%s, %s>::const_iterator q = %s.find(value);\n' % (ty, ty, name)
-        txt += '        if (q == %s.end()) { glv_LogError("Failed to remap %s."); return VK_NULL_HANDLE; }\n' % (name, ty)
+        txt += '        if (q == %s.end()) { glv_LogError("Failed to remap %s."); return value; }\n' % (name, ty)
         txt += '        return q->second;\n    }\n'
         return txt
 
@@ -1358,7 +1358,7 @@ class Subcommand(object):
                 rc_body.append('        if (value == 0) { return 0; }')
                 rc_body.append('')
                 rc_body.append('        std::map<uint64_t, imageObj>::const_iterator q = m_images.find(value);')
-                rc_body.append('        if (q == m_images.end()) { glv_LogError("Failed to remap VkImage."); return VK_NULL_HANDLE; }\n')
+                rc_body.append('        if (q == m_images.end()) { glv_LogError("Failed to remap VkImage."); return value; }\n')
                 rc_body.append('        return q->second.replayImage.handle;')
                 rc_body.append('    }\n')
             elif obj_map_dict[var] == 'VkBuffer':
@@ -1370,7 +1370,7 @@ class Subcommand(object):
                 rc_body.append('        if (value == 0) { return 0; }')
                 rc_body.append('')
                 rc_body.append('        std::map<uint64_t, bufferObj>::const_iterator q = m_buffers.find(value);')
-                rc_body.append('        if (q == m_buffers.end()) { glv_LogError("Failed to remap VkBuffer."); return VK_NULL_HANDLE; }\n')
+                rc_body.append('        if (q == m_buffers.end()) { glv_LogError("Failed to remap VkBuffer."); return value; }\n')
                 rc_body.append('        return q->second.replayBuffer.handle;')
                 rc_body.append('    }\n')
             elif obj_map_dict[var] == 'VkDeviceMemory':
@@ -1382,7 +1382,7 @@ class Subcommand(object):
                 rc_body.append('        if (value == 0) { return 0; }')
                 rc_body.append('')
                 rc_body.append('        std::map<uint64_t, gpuMemObj>::const_iterator q = m_devicememorys.find(value);')
-                rc_body.append('        if (q == m_devicememorys.end()) { glv_LogError("Failed to remap VkDeviceMemory."); return VK_NULL_HANDLE; }')
+                rc_body.append('        if (q == m_devicememorys.end()) { glv_LogError("Failed to remap VkDeviceMemory."); return value; }')
                 rc_body.append('        return q->second.replayGpuMem.handle;')
                 rc_body.append('    }\n')
             else:
