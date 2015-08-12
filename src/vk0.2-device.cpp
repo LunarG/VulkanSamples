@@ -35,15 +35,12 @@ create and destroy a Vulkan physical device
 int main(int argc, char **argv)
 {
     struct sample_info info = {};
-    VkResult res = init_instance(info, "vulkansamples_device");
-    assert(!res);
+    init_instance(info, "vulkansamples_device");
 
 /* VULKAN_KEY_START */
 
     std::cout << "calling vkEnumeratePhysicalDevices\n";
-    uint32_t gpu_count;
-    res = vkEnumeratePhysicalDevices(info.inst, &gpu_count, &info.gpu);
-    assert(!res && gpu_count == 1);
+    init_enumerate_device(info);
 
     VkDeviceQueueCreateInfo queue_info = {};
     queue_info.queueFamilyIndex = 0;
@@ -60,7 +57,7 @@ int main(int argc, char **argv)
 
     VkDevice device;
     std::cout << "calling vkCreateDevice\n";
-    res = vkCreateDevice(info.gpu, &device_info, &device);
+    VkResult res = vkCreateDevice(info.gpu, &device_info, &device);
     assert(!res);
 
     std::cout << "calling vkDestroyDevice\n";
