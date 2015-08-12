@@ -50,8 +50,7 @@ int main(int argc, char **argv)
     init_instance(info, test_title);
     init_enumerate_device(info);
     init_device(info);
-    info.memory_properties.reserve(1);
-    res = vkGetPhysicalDeviceMemoryProperties(info.gpu, info.memory_properties.data());
+    res = vkGetPhysicalDeviceMemoryProperties(info.gpu, &info.memory_properties);
     assert(!res);
 
     /* HACK - Do this the right way once we have WSI code to call */

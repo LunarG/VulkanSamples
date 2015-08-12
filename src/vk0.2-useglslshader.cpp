@@ -36,7 +36,6 @@ VULKAN_SAMPLE_DESCRIPTION_END
 
 #include <iostream>
 #include <cstdlib>
-#include <vulkan/vulkan.h>
 #include "util.hpp"
 
 #define APP_SHORT_NAME "vulkansamples_glslshader"

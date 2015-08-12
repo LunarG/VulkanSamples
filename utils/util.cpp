@@ -76,7 +76,7 @@ VkResult memory_type_from_properties(struct sample_info &info, uint32_t typeBits
      for (uint32_t i = 0; i < 32; i++) {
          if ((typeBits & 1) == 1) {
              // Type is available, does it match user properties?
-             if ((info.memory_properties[0].memoryTypes[i].propertyFlags & properties) == properties) {
+             if ((info.memory_properties.memoryTypes[i].propertyFlags & properties) == properties) {
                  *typeIndex = i;
                  return VK_SUCCESS;
              }
@@ -97,24 +97,23 @@ void set_image_layout(
     VkResult res;
 
     if (info.cmd == VK_NULL_HANDLE) {
-        const VkCmdBufferCreateInfo cmd = {
-            .sType = VK_STRUCTURE_TYPE_CMD_BUFFER_CREATE_INFO,
-            .pNext = NULL,
-            .cmdPool = info.cmd_pool,
-            .level = VK_CMD_BUFFER_LEVEL_PRIMARY,
-            .flags = 0,
-        };
+        VkCmdBufferCreateInfo cmd = {};
+        cmd.sType = VK_STRUCTURE_TYPE_CMD_BUFFER_CREATE_INFO;
+        cmd.pNext = NULL;
+        cmd.cmdPool = info.cmd_pool;
+        cmd.level = VK_CMD_BUFFER_LEVEL_PRIMARY;
+        cmd.flags = 0;
 
         res = vkCreateCommandBuffer(info.device, &cmd, &info.cmd);
         assert(!res);
     }
 
-    VkCmdBufferBeginInfo cmd_buf_info = {
-        .sType = VK_STRUCTURE_TYPE_CMD_BUFFER_BEGIN_INFO,
-        .pNext = NULL,
-        .flags = VK_CMD_BUFFER_OPTIMIZE_SMALL_BATCH_BIT |
-            VK_CMD_BUFFER_OPTIMIZE_ONE_TIME_SUBMIT_BIT,
-    };
+    VkCmdBufferBeginInfo cmd_buf_info = {};
+    cmd_buf_info.sType = VK_STRUCTURE_TYPE_CMD_BUFFER_BEGIN_INFO;
+    cmd_buf_info.pNext = NULL;
+    cmd_buf_info.flags = VK_CMD_BUFFER_OPTIMIZE_SMALL_BATCH_BIT |
+                         VK_CMD_BUFFER_OPTIMIZE_ONE_TIME_SUBMIT_BIT;
+
     res = vkBeginCommandBuffer(info.cmd, &cmd_buf_info);
     assert(!res);
 
