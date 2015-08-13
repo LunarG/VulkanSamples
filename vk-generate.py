@@ -246,19 +246,22 @@ class WinDefFileSubcommand(Subcommand):
         library_exports = {
                 "all": [],
                 "icd": [
-                    "EnumeratePhysicalDevices",
-                    "CreateInstance",
-                    "DestroyInstance",
-                    "GetDeviceProcAddr",
-                    "GetInstanceProcAddr",
+                    "vkEnumeratePhysicalDevices",
+                    "vkCreateInstance",
+                    "vkDestroyInstance",
+                    "vkGetDeviceProcAddr",
+                    "vkGetInstanceProcAddr",
                 ],
                 "layer": [
-                    "GetInstanceProcAddr",
-                    "GetDeviceProcAddr",
-                    "EnumerateLayers",
-                    "GetGlobalLayerProperties",
-                    "GetGlobalExtensionProperties"
+                    "vkGetInstanceProcAddr",
+                    "vkGetDeviceProcAddr",
+                    "vkGetGlobalLayerProperties",
+                    "vkGetGlobalExtensionProperties"
                 ],
+                "layerMulti": [
+                    "multi2GetInstanceProcAddr",
+                    "multi1GetDeviceProcAddr"
+                ]
         }
 
         if len(self.argv) != 2 or self.argv[1] not in library_exports:
@@ -267,7 +270,10 @@ class WinDefFileSubcommand(Subcommand):
             return
 
         self.library = self.argv[0]
-        self.exports = library_exports[self.argv[1]]
+        if self.library == "VKLayerMulti":
+            self.exports = library_exports["layerMulti"]
+        else:
+            self.exports = library_exports[self.argv[1]]
 
         super().run()
 
@@ -307,10 +313,8 @@ class WinDefFileSubcommand(Subcommand):
         body.append("LIBRARY " + self.library)
         body.append("EXPORTS")
 
-        for proto in self.protos:
-            if self.exports and proto.name not in self.exports:
-                continue
-            body.append("   vk" + proto.name)
+        for proto in self.exports:
+            body.append( proto)
 
         return "\n".join(body)
 
