@@ -1647,6 +1647,8 @@ static void demo_prepare_pipeline(struct demo *demo)
     pipeline.pStages             = shaderStages;
     pipeline.renderPass          = demo->render_pass;
 
+    pipeline.renderPass = demo->render_pass;
+
     err = vkCreateGraphicsPipelines(demo->device, demo->pipelineCache, 1, &pipeline, &demo->pipeline);
     assert(!err);
 
