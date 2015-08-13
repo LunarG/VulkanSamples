@@ -110,7 +110,7 @@ set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DVK_PROTOTYPES")
 set(VULKAN_VERSION vk0.2)
 
 # simple one file sample targets, no additional files
-set (S_TARGETS instance device depthbuffer initwsi)
+set (S_TARGETS instance device enumerate depthbuffer initwsi)
 sampleWithSingleFile()
 
 # targets that use spv shaders
