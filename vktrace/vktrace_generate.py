@@ -1604,13 +1604,10 @@ class Subcommand(object):
                                  'UnmapMemory',
                                  'UpdateDescriptorSets',
                                  'WaitForFences',
-                                 #'DbgCreateMsgCallback',
-                                 #'DbgDestroyMsgCallback',
+                                 'DbgCreateMsgCallback',
+                                 'DbgDestroyMsgCallback',
                                  'CreateCommandBuffer',
                                  ]
-        skip_funcs = ['DbgCreateMsgCallback',
-                      'DbgDestroyMsgCallback',
-                      ]
 
         # validate the manually_replay_funcs list
         protoFuncs = [proto.name for proto in self.protos]
@@ -1651,8 +1648,6 @@ class Subcommand(object):
         rbody.append('            break;')
         rbody.append('        }')
         for proto in self.protos:
-            if proto.name in skip_funcs:
-                continue
             ret_value = False
             create_view = False
             create_func = False

@@ -152,28 +152,20 @@ VkResult vkReplay::manually_replay_vkCreateInstance(packet_vkCreateInstance* pPa
         VkInstance inst;
         if (g_vkReplaySettings.debugLevel > 0)
         {
-            // the list of layers that glvreplay needs to enable
-            // TODO : Fix this. Should be enabling what the trace tells us. Just hard-coding for now.
-            uint32_t requiredLayerCount = 2;
-            const char * requiredLayerNames[] =
-            {
-                "DEBUG_REPORT",
-                "VK_WSI_swapchain",
-            };
 
             // get the list of layers that the user wants to enable
             uint32_t userLayerCount  = 0;
             char ** userLayerNames = get_enableLayers_list(&userLayerCount);
 
             apply_layerSettings_overrides();
-            if (userLayerCount > 0 || requiredLayerCount > 0)
+            if (userLayerCount > 0)
             {
                 // enumerate layers
 //                VkResult err;
                 VkExtensionProperties *instance_extensions;
                 uint32_t instance_extension_count = 0;
 //                size_t extSize = sizeof(uint32_t);
-                uint32_t total_extension_count = 2;
+                uint32_t total_extension_count = 1;
 
                 // TODO : Need to update this for new extension interface
 //                err = vkGetGlobalExtensionInfo(VK_EXTENSION_INFO_TYPE_COUNT, 0, &extSize, &total_extension_count);
@@ -189,17 +181,18 @@ VkResult vkReplay::manually_replay_vkCreateInstance(packet_vkCreateInstance* pPa
                 instance_extensions = (VkExtensionProperties*)malloc(sizeof(VkExtensionProperties) * total_extension_count);
                 //extProp.extName[0] = requiredLayerNames;
                 // TODO : Bug here only copying into one extProp and re-checking that in loop below. Do we need any of this anymore?
-                memcpy(extProp.extName, requiredLayerNames[0], strlen(requiredLayerNames[0])*sizeof(char));
+ //               memcpy(extProp.extName, requiredLayerNames[0], strlen(requiredLayerNames[0])*sizeof(char));
                 extProp.specVersion = 0;
                 for (uint32_t i = 0; i < total_extension_count; i++)
                 {
 //                    err = vkGetGlobalExtensionInfo(VK_EXTENSION_INFO_TYPE_PROPERTIES, i, &extSize, &extProp);
 //                    glv_LogDebug("Ext %u: '%s' v%u from '%s'.", i, extProp.name, extProp.version, extProp.description);
 //
-                    bool bCheckIfNeeded = true;
+//                    bool bCheckIfNeeded = true;
                     bool bFound = false;
 //
                     // First, check extensions required by glvreplay
+#if 0
                     if (bCheckIfNeeded)
                     {
                         for (uint32_t j = 0; j < requiredLayerCount; j++)
@@ -213,6 +206,7 @@ VkResult vkReplay::manually_replay_vkCreateInstance(packet_vkCreateInstance* pPa
                             }
                         }
                     }
+#endif
 //
 //                    // Second, check extensions requested by user
 //                    if (bCheckIfNeeded)
@@ -259,7 +253,7 @@ VkResult vkReplay::manually_replay_vkCreateInstance(packet_vkCreateInstance* pPa
                 createInfo.layerCount = 0;
                 createInfo.ppEnabledLayerNames = NULL;
                 createInfo.extensionCount = instance_extension_count;
-                createInfo.ppEnabledExtensionNames = requiredLayerNames;
+//                createInfo.ppEnabledExtensionNames = requiredLayerNames;
 
                 // make the call
                 replayResult = m_vkFuncs.real_vkCreateInstance(&createInfo, &inst);
@@ -1752,6 +1746,45 @@ VkResult vkReplay::manually_replay_vkQueuePresentWSI(packet_vkQueuePresentWSI* p
     return replayResult;
 }
 
+
+VkResult  vkReplay::manually_replay_vkDbgCreateMsgCallback(packet_vkDbgCreateMsgCallback* pPacket)
+{
+    VkResult replayResult = VK_ERROR_UNKNOWN;
+    VkDbgMsgCallback local_msgCallback;
+    VkInstance remappedInstance = m_objMapper.remap_instances(pPacket->instance);
+
+    if (remappedInstance == NULL)
+        return replayResult;
+
+    if (!g_fpDbgMsgCallback) {
+        // just eat this call as we don't have local call back function defined
+        return VK_SUCCESS;
+    } else
+    {
+        replayResult = m_vkFuncs.real_vkDbgCreateMsgCallback(remappedInstance, pPacket->msgFlags, g_fpDbgMsgCallback, NULL, &local_msgCallback);
+        if (replayResult == VK_SUCCESS)
+        {
+                m_objMapper.add_to_dbgmsgcallbacks_map(pPacket->pMsgCallback->handle, local_msgCallback.handle);
+        }
+    }
+    return replayResult;
+}
+
+VkResult vkReplay::manually_replay_vkDbgDestroyMsgCallback(packet_vkDbgDestroyMsgCallback* pPacket)
+{
+    VkResult replayResult = VK_SUCCESS;
+    VkInstance remappedInstance = m_objMapper.remap_instances(pPacket->instance);
+    VkDbgMsgCallback remappedMsgCallback = m_objMapper.remap_dbgmsgcallbacks(pPacket->msgCallback.handle);
+    if (!g_fpDbgMsgCallback) {
+        // just eat this call as we don't have local call back function defined
+        return VK_SUCCESS;
+    } else
+    {
+        replayResult = m_vkFuncs.real_vkDbgDestroyMsgCallback(remappedInstance, remappedMsgCallback);
+    }
+
+    return replayResult;
+}
 
 VkResult vkReplay::manually_replay_vkCreateCommandBuffer(packet_vkCreateCommandBuffer* pPacket)
 {

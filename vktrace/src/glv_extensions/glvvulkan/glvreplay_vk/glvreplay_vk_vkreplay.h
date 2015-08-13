@@ -40,6 +40,7 @@ extern "C" {
 #include "glv_vk_vk_packets.h"
 #include "glv_vk_vk_wsi_swapchain_packets.h"
 #include "glv_vk_vk_wsi_device_swapchain_packets.h"
+#include "glv_vk_vk_debug_report_lunarg_packets.h"
 // TODO138 : Need to add packets files for new wsi headers
 }
 
@@ -122,8 +123,6 @@ private:
     void manually_replay_vkCmdBeginRenderPass(packet_vkCmdBeginRenderPass* pPacket);
     VkResult manually_replay_vkBeginCommandBuffer(packet_vkBeginCommandBuffer* pPacket);
     VkResult manually_replay_vkCreateCommandBuffer(packet_vkCreateCommandBuffer* pPacket);
-    //VkResult manually_replay_vkStorePipeline(packet_vkStorePipeline* pPacket);
-    //VkResult manually_replay_vkDestroyObject(packet_vkDestroyObject* pPacket);
     VkResult manually_replay_vkWaitForFences(packet_vkWaitForFences* pPacket);
     VkResult manually_replay_vkAllocMemory(packet_vkAllocMemory* pPacket);
     VkResult manually_replay_vkFreeMemory(packet_vkFreeMemory* pPacket);
@@ -138,6 +137,8 @@ private:
     VkResult manually_replay_vkCreateSwapChainWSI(packet_vkCreateSwapChainWSI* pPacket);
     VkResult manually_replay_vkGetSwapChainImagesWSI(packet_vkGetSwapChainImagesWSI* pPacket);
     VkResult manually_replay_vkQueuePresentWSI(packet_vkQueuePresentWSI* pPacket);
+    VkResult manually_replay_vkDbgCreateMsgCallback(packet_vkDbgCreateMsgCallback* pPacket);
+    VkResult manually_replay_vkDbgDestroyMsgCallback(packet_vkDbgDestroyMsgCallback* pPacket);
 
     void process_screenshot_list(const char *list)
     {
