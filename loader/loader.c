@@ -142,6 +142,7 @@ void loader_heap_free(
 {
     if (!instance && instance->alloc_callbacks.pfnFree) {
         instance->alloc_callbacks.pfnFree(instance->alloc_callbacks.pUserData, pMem);
+        return;
     }
     free(pMem);
 }
