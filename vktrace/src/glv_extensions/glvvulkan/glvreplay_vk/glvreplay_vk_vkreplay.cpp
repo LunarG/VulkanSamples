@@ -1774,7 +1774,8 @@ VkResult vkReplay::manually_replay_vkDbgDestroyMsgCallback(packet_vkDbgDestroyMs
 {
     VkResult replayResult = VK_SUCCESS;
     VkInstance remappedInstance = m_objMapper.remap_instances(pPacket->instance);
-    VkDbgMsgCallback remappedMsgCallback = m_objMapper.remap_dbgmsgcallbacks(pPacket->msgCallback.handle);
+    VkDbgMsgCallback remappedMsgCallback;
+    remappedMsgCallback.handle = m_objMapper.remap_dbgmsgcallbacks(pPacket->msgCallback.handle);
     if (!g_fpDbgMsgCallback) {
         // just eat this call as we don't have local call back function defined
         return VK_SUCCESS;
