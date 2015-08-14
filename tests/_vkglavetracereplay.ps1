@@ -33,7 +33,7 @@ cp ..\..\layers\$dPath\VKLayerScreenShot.dll .
 # Change PATH to the temp directory
 $oldpath = $Env:PATH
 $Env:PATH = $pwd
-$Env:VK_LAYERS_PATH = $pwd
+$Env:VK_LAYER_PATH = $pwd
 
 # Do a trace and replay
 & glvtrace -o c01.glv -s 1 -p cube -a "--c 10" -l0 glvtrace_vk.dll > trace.sout 2> trace.serr
