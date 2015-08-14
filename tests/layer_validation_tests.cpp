@@ -3055,6 +3055,62 @@ TEST_F(VkLayerTest, CreatePipelineNonSpirvShader)
         FAIL() << "Incorrect warning: " << msgString;
     }
 }
+
+TEST_F(VkLayerTest, CreatePipelineUniformBlockNotProvided)
+{
+    VkFlags msgFlags;
+    std::string msgString;
+    ASSERT_NO_FATAL_FAILURE(InitState());
+    ScopedUseGlsl useGlsl(false);
+
+    char const *vsSource =
+        "#version 140\n"
+        "#extension GL_ARB_separate_shader_objects: require\n"
+        "#extension GL_ARB_shading_language_420pack: require\n"
+        "\n"
+        "void main(){\n"
+        "   gl_Position = vec4(1);\n"
+        "}\n";
+    char const *fsSource =
+        "#version 140\n"
+        "#extension GL_ARB_separate_shader_objects: require\n"
+        "#extension GL_ARB_shading_language_420pack: require\n"
+        "\n"
+        "layout(location=0) out vec4 x;\n"
+        "layout(set=0) layout(binding=0) uniform foo { int x; int y; } bar;\n"
+        "void main(){\n"
+        "   x = vec4(bar.y);\n"
+        "}\n";
+
+    m_errorMonitor->ClearState();
+
+    VkShaderObj vs(m_device, vsSource, VK_SHADER_STAGE_VERTEX, this);
+    VkShaderObj fs(m_device, fsSource, VK_SHADER_STAGE_FRAGMENT, this);
+
+
+    VkPipelineObj pipe(m_device);
+    pipe.AddShader(&vs);
+    pipe.AddShader(&fs);
+
+    /* set up CB 0; type is UNORM by default */
+    pipe.AddColorAttachment();
+    ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
+
+    VkDescriptorSetObj descriptorSet(m_device);
+    descriptorSet.CreateVKDescriptorSet(m_cmdBuffer);
+
+    pipe.CreateVKPipeline(descriptorSet.GetPipelineLayout(), renderPass());
+
+    /* should have generated an error -- pipeline layout does not
+     * provide a uniform buffer in 0.0
+     */
+    msgFlags = m_errorMonitor->GetState(&msgString);
+    ASSERT_TRUE(msgFlags & VK_DBG_REPORT_ERROR_BIT);
+    if (!strstr(msgString.c_str(),"not declared in pipeline layout")) {
+        FAIL() << "Incorrect error: " << msgString;
+    }
+}
+
 #endif // SHADER_CHECKER_TESTS
 
 #if DEVICE_LIMITS_TESTS

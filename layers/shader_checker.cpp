@@ -991,6 +991,25 @@ shader_stage_attribs[VK_SHADER_STAGE_FRAGMENT + 1] = {
 };
 
 
+static VkDescriptorSetLayoutBinding *
+find_descriptor_binding(std::vector<std::vector<VkDescriptorSetLayoutBinding>*>* layout,
+                        std::pair<unsigned, unsigned> slot)
+{
+    if (!layout)
+        return nullptr;
+
+    if (slot.first >= layout->size())
+        return nullptr;
+
+    auto set = (*layout)[slot.first];
+
+    if (slot.second >= set->size())
+        return nullptr;
+
+    return &(*set)[slot.second];
+}
+
+
 static bool
 validate_graphics_pipeline(VkDevice dev, VkGraphicsPipelineCreateInfo const *pCreateInfo)
 {
@@ -1016,6 +1035,33 @@ validate_graphics_pipeline(VkDevice dev, VkGraphicsPipelineCreateInfo const *pCr
             else {
                 struct shader_object *shader = shader_object_map[pStage->shader.handle];
                 shaders[pStage->stage] = shader->module;
+
+                /* validate descriptor set layout against what the spirv module actually uses */
+                if (shader->module->is_spirv) {
+                    std::map<std::pair<unsigned, unsigned>, interface_var> descriptor_uses;
+                    collect_interface_by_descriptor_slot(dev, shader->module, spv::StorageClassUniform,
+                            descriptor_uses);
+
+                    auto layout = pCreateInfo->layout.handle ?
+                        pipeline_layout_map[pCreateInfo->layout.handle] : nullptr;
+
+                    for (auto it = descriptor_uses.begin(); it != descriptor_uses.end(); it++) {
+
+                        /* find the matching binding */
+                        auto binding = find_descriptor_binding(layout, it->first);
+
+                        if (binding == nullptr) {
+                            char type_name[1024];
+                            describe_type(type_name, shader->module, it->second.type_id);
+                            log_msg(mdd(dev), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DEVICE, /*dev*/0, 0,
+                                    SHADER_CHECKER_MISSING_DESCRIPTOR, "SC",
+                                    "Shader uses descriptor slot %u.%u (used as type `%s`) but not declared in pipeline layout",
+                                    it->first.first, it->first.second, type_name);
+                            pass = false;
+                        }
+
+                    }
+                }
             }
         }
     }
