@@ -161,7 +161,7 @@ struct loader_instance {
     uint32_t total_icd_count;
     struct loader_icd *icds;
     struct loader_instance *next;
-
+    struct loader_extension_list ext_list;
     /* TODO: Should keep track of application provided allocation functions */
 
     struct loader_msg_callback_map_entry *icd_msg_callback_map;

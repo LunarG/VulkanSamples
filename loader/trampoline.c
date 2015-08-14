@@ -42,7 +42,6 @@ LOADER_EXPORT VkResult VKAPI vkCreateInstance(
         VkInstance* pInstance)
 {
     struct loader_instance *ptr_instance = NULL;
-    struct loader_extension_list icd_extensions;
 
     VkResult res = VK_ERROR_INITIALIZATION_FAILED;
     struct loader_layer_list instance_layer_list;
@@ -64,14 +63,6 @@ LOADER_EXPORT VkResult VKAPI vkCreateInstance(
         if (res != VK_SUCCESS) {
             return res;
         }
-    }
-
-    /* get extensions from all ICD's, merge so no duplicates, then validate */
-    memset(&icd_extensions, 0, sizeof(icd_extensions));
-    loader_get_icd_loader_instance_extensions(&icd_extensions);
-    res = loader_validate_instance_extensions(&icd_extensions, &instance_layer_list, pCreateInfo);
-    if (res != VK_SUCCESS) {
-        return res;
     }
 
     if (pCreateInfo->pAllocCb
@@ -100,12 +91,24 @@ LOADER_EXPORT VkResult VKAPI vkCreateInstance(
         ptr_instance->alloc_callbacks.pfnFree = pCreateInfo->pAllocCb->pfnFree;
     }
 
+    /* get extensions from all ICD's, merge so no duplicates, then validate */
+    loader_get_icd_loader_instance_extensions(&ptr_instance->ext_list);
+    res = loader_validate_instance_extensions(&ptr_instance->ext_list, &instance_layer_list, pCreateInfo);
+    if (res != VK_SUCCESS) {
+        loader_destroy_ext_list(&ptr_instance->ext_list);
+        loader_platform_thread_unlock_mutex(&loader_lock);
+        loader_heap_free(ptr_instance, ptr_instance);
+        return res;
+    }
+
     ptr_instance->disp = loader_heap_alloc(
                              ptr_instance,
                              sizeof(VkLayerInstanceDispatchTable),
                              VK_SYSTEM_ALLOC_TYPE_INTERNAL);
     if (ptr_instance->disp == NULL) {
+        loader_destroy_ext_list(&ptr_instance->ext_list);
         loader_platform_thread_unlock_mutex(&loader_lock);
+        loader_heap_free(ptr_instance, ptr_instance);
         return VK_ERROR_OUT_OF_HOST_MEMORY;
     }
     memcpy(ptr_instance->disp, &instance_disp, sizeof(instance_disp));
@@ -115,9 +118,11 @@ LOADER_EXPORT VkResult VKAPI vkCreateInstance(
     /* activate any layers on instance chain */
     res = loader_enable_instance_layers(ptr_instance, pCreateInfo, &instance_layer_list);
     if (res != VK_SUCCESS) {
+        loader_destroy_ext_list(&ptr_instance->ext_list);
+        loader.instances = ptr_instance->next;
+        loader_platform_thread_unlock_mutex(&loader_lock);
         loader_heap_free(ptr_instance, ptr_instance->disp);
         loader_heap_free(ptr_instance, ptr_instance);
-        loader_platform_thread_unlock_mutex(&loader_lock);
         return res;
     }
     loader_activate_instance_layers(ptr_instance);
@@ -155,8 +160,8 @@ LOADER_EXPORT VkResult VKAPI vkDestroyInstance(
 
     struct loader_instance *ptr_instance = loader_instance(instance);
     loader_deactivate_instance_layers(ptr_instance);
-
-    free(ptr_instance);
+    loader_heap_free(ptr_instance, ptr_instance->disp);
+    loader_heap_free(ptr_instance, ptr_instance);
 
     loader_platform_thread_unlock_mutex(&loader_lock);
 

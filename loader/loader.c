@@ -125,7 +125,7 @@ void* loader_aligned_heap_alloc(
     size_t                      alignment,
     VkSystemAllocType           alloc_type)
 {
-    if (!instance && instance->alloc_callbacks.pfnAlloc) {
+    if (instance && instance->alloc_callbacks.pfnAlloc) {
         return instance->alloc_callbacks.pfnAlloc(instance->alloc_callbacks.pUserData, size, alignment, alloc_type);
     }
 #if defined(_WIN32)
@@ -139,7 +139,7 @@ void loader_heap_free(
     struct loader_instance     *instance,
     void                       *pMem)
 {
-    if (!instance && instance->alloc_callbacks.pfnFree) {
+    if (instance && instance->alloc_callbacks.pfnFree) {
         instance->alloc_callbacks.pfnFree(instance->alloc_callbacks.pUserData, pMem);
         return;
     }
@@ -2450,6 +2450,7 @@ VkResult VKAPI loader_DestroyInstance(
     }
 
 
+    loader_destroy_ext_list(&ptr_instance->ext_list);
     return VK_SUCCESS;
 }
 
