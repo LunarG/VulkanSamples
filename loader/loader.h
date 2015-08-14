@@ -161,7 +161,7 @@ struct loader_instance {
     uint32_t total_icd_count;
     struct loader_icd *icds;
     struct loader_instance *next;
-    struct loader_extension_list ext_list;
+    struct loader_extension_list ext_list;   // icds and loaders extensions
     /* TODO: Should keep track of application provided allocation functions */
 
     struct loader_msg_callback_map_entry *icd_msg_callback_map;
@@ -195,11 +195,7 @@ struct loader_scanned_icds {
     PFN_vkGetInstanceProcAddr GetInstanceProcAddr;
     PFN_vkCreateInstance CreateInstance;
     PFN_vkGetGlobalExtensionProperties GetGlobalExtensionProperties;
-    VkInstance instance;
     struct loader_scanned_icds *next;
-
-    /* cache of global extensions for specific ICD */
-    struct loader_extension_list global_extension_list;
 
     /*
      * cache of device extensions for specific ICD,

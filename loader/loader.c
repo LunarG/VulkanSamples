@@ -797,13 +797,18 @@ static VkExtensionProperties *get_extension_property(
 void loader_get_icd_loader_instance_extensions(struct loader_extension_list *inst_exts)
 {
     struct loader_scanned_icds *icd_list = loader.scanned_icd_list;
-
+    struct loader_extension_list icd_exts;
     loader_log(VK_DBG_REPORT_DEBUG_BIT, 0, "Build ICD instance extension list");
     // traverse scanned icd list adding non-duplicate extensions to the list
     while (icd_list != NULL) {
+        loader_init_ext_list(&icd_exts);
+        loader_add_global_extensions(icd_list->GetGlobalExtensionProperties,
+                                     icd_list->lib_name,
+                                     &icd_exts);
         loader_add_to_ext_list(inst_exts,
-                               icd_list->global_extension_list.count,
-                               icd_list->global_extension_list.list);
+                               icd_exts.count,
+                               icd_exts.list);
+        loader_destroy_ext_list(&icd_exts);
         icd_list = icd_list->next;
     };
 
@@ -966,7 +971,6 @@ static void loader_scanned_icd_add(const char *filename)
     new_node->GetInstanceProcAddr = fp_get_proc_addr;
     new_node->CreateInstance = fp_create_inst;
     new_node->GetGlobalExtensionProperties = fp_get_global_ext_props;
-    loader_init_ext_list(&new_node->global_extension_list);
     loader_init_ext_list(&new_node->device_extension_list);
     new_node->next = loader.scanned_icd_list;
 
@@ -979,10 +983,6 @@ static void loader_scanned_icd_add(const char *filename)
 
     loader.scanned_icd_list = new_node;
 
-    loader_add_global_extensions(
-                (PFN_vkGetGlobalExtensionProperties) fp_get_global_ext_props,
-                new_node->lib_name,
-                &new_node->global_extension_list);
 }
 
 static bool loader_icd_init_entrys(struct loader_icd *icd,
@@ -2365,7 +2365,7 @@ VkResult VKAPI loader_CreateInstance(
             icd_create_info.extensionCount = 0;
             for (uint32_t i = 0; i < pCreateInfo->extensionCount; i++) {
                 prop = get_extension_property(pCreateInfo->ppEnabledExtensionNames[i],
-                                              &scanned_icds->global_extension_list);
+                                              &ptr_instance->ext_list);
                 if (prop) {
                     filtered_extension_names[icd_create_info.extensionCount] = (char *) pCreateInfo->ppEnabledExtensionNames[i];
                     icd_create_info.extensionCount++;
