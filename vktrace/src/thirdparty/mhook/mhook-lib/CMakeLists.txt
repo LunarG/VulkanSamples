@@ -6,7 +6,7 @@ include("${SRC_DIR}/build_options.cmake")
 include_directories(
     ${SRC_DIR}/thirdparty/mhook/mhook-lib
     ${SRC_DIR}/thirdparty/mhook/disasm-lib
-    ${SRC_DIR}/glvcommon
+    ${SRC_DIR}/vktrace_common
 )
 
 set(SRC_LIST
@@ -22,7 +22,7 @@ endif()
 
 
 add_library(${PROJECT_NAME} STATIC ${SRC_LIST})
-target_link_libraries(${PROJECT_NAME} 
+target_link_libraries(${PROJECT_NAME}
     disasm
 )
 

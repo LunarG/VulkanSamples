@@ -25,7 +25,7 @@ The following components are available:
     
 - [*GLAVE Debugger*](tools/glave)
 
-    ![ScreenShot](docs/images/Glave-Small.png)
+    ![ScreenShot](docs/images/Vktrace-Small.png)
 
 - Core [*Validation Layers*](layers/)
 

@@ -25,5 +25,5 @@ set -e
 # that are wrong
 ./vk_layer_validation_tests
 
-# vkglavetracereplay.sh tests glave trace and replay
-./vkglavetracereplay.sh
+# vktracereplay.sh tests vktrace trace and replay
+./vktracereplay.sh

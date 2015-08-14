@@ -33,8 +33,8 @@ fi
 # a saved "golden" image and will report an error if there is any difference
 ./vk_render_tests --compare-images 
 
-# vkglavetracereplay.sh tests glave trace and replay
-./vkglavetracereplay.sh
+# vktracereplay.sh tests vktrace trace and replay
+./vktracereplay.sh
 
 if [ -f ./vk_layer_settings.txt ];
 then

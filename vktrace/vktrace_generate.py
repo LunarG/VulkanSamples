@@ -195,7 +195,7 @@ class Subcommand(object):
 
     def _generate_attach_hooks(self):
         hooks_txt = []
-        hooks_txt.append('// declared as extern in glvtrace_vk_helpers.h')
+        hooks_txt.append('// declared as extern in vktrace_lib_helpers.h')
         hooks_txt.append('BOOL isHooked = FALSE;\n')
         hooks_txt.append('void AttachHooks()\n{\n   BOOL hookSuccess = TRUE;\n#if defined(WIN32)')
         hooks_txt.append('    Mhook_BeginMultiOperation(FALSE);')
@@ -501,7 +501,7 @@ class Subcommand(object):
             if ext.name.lower() == extName.lower():
                 for proto in ext.protos:
                     if proto.name in manually_written_hooked_funcs:
-                        func_body.append( '// __HOOKED_vk%s is manually written. Look in glvtrace_vk_trace.c\n' % proto.name)
+                        func_body.append( '// __HOOKED_vk%s is manually written. Look in vktrace_vk_trace.c\n' % proto.name)
                     else:
                         raw_packet_update_list = [] # non-ptr elements placed directly into packet
                         ptr_packet_update_list = [] # ptr elements to be updated into packet
@@ -805,7 +805,7 @@ class Subcommand(object):
         return "\n".join(pid_enum)
 
     # Interpret functions used on replay to read in packets and interpret their contents
-    #  This code gets generated into glv_vk_vk_packets.h file
+    #  This code gets generated into vktrace_vk_vk_packets.h file
     def _generate_interp_funcs(self):
         # Custom txt for given function and parameter.  First check if param is NULL, then insert txt if not
         # First some common code used by both CmdWaitEvents & CmdPipelineBarrier
@@ -1834,8 +1834,8 @@ class Subcommand(object):
 class GlaveTraceHeader(Subcommand):
     def generate_header(self, extName):
         header_txt = []
-        header_txt.append('#include "glv_vk_vk_packets.h"')
-        header_txt.append('#include "glv_vk_packet_id.h"\n')
+        header_txt.append('#include "vktrace_vk_vk_packets.h"')
+        header_txt.append('#include "vktrace_vk_packet_id.h"\n')
         header_txt.append('void AttachHooks();')
         header_txt.append('void DetachHooks();')
         header_txt.append('void InitTracer(void);\n')
@@ -1851,22 +1851,22 @@ class GlaveTraceHeader(Subcommand):
 class GlaveTraceC(Subcommand):
     def generate_header(self, extName):
         header_txt = []
-        header_txt.append('#include "glv_platform.h"')
-        header_txt.append('#include "glv_common.h"')
-        header_txt.append('#include "glvtrace_vk_helpers.h"')
-        header_txt.append('#include "glvtrace_vk_vk.h"')
-        header_txt.append('#include "glvtrace_vk_vk_debug_report_lunarg.h"')
-        header_txt.append('#include "glvtrace_vk_vk_wsi_swapchain.h"')
-        header_txt.append('#include "glvtrace_vk_vk_wsi_device_swapchain.h"')
-        header_txt.append('#include "glv_interconnect.h"')
-        header_txt.append('#include "glv_filelike.h"')
+        header_txt.append('#include "vktrace_platform.h"')
+        header_txt.append('#include "vktrace_common.h"')
+        header_txt.append('#include "vktrace_lib_helpers.h"')
+        header_txt.append('#include "vktrace_vk_vk.h"')
+        header_txt.append('#include "vktrace_vk_vk_debug_report_lunarg.h"')
+        header_txt.append('#include "vktrace_vk_vk_wsi_swapchain.h"')
+        header_txt.append('#include "vktrace_vk_vk_wsi_device_swapchain.h"')
+        header_txt.append('#include "vktrace_interconnect.h"')
+        header_txt.append('#include "vktrace_filelike.h"')
         header_txt.append('#include "vk_struct_size_helper.h"')
         header_txt.append('#ifdef WIN32')
         header_txt.append('#include "mhook/mhook-lib/mhook.h"')
         header_txt.append('#else')
         header_txt.append('#include <pthread.h>\n')
         header_txt.append('#endif')
-        header_txt.append('#include "glv_trace_packet_utils.h"')
+        header_txt.append('#include "vktrace_trace_packet_utils.h"')
         header_txt.append('#include <stdio.h>')
         return "\n".join(header_txt)
 
@@ -1883,14 +1883,14 @@ class GlavePacketID(Subcommand):
     def generate_header(self, extName):
         header_txt = []
         header_txt.append('#pragma once\n')
-        header_txt.append('#include "glv_trace_packet_utils.h"')
-        header_txt.append('#include "glv_trace_packet_identifiers.h"')
-        header_txt.append('#include "glv_interconnect.h"')
-        header_txt.append('#include "glv_vk_vk_packets.h"')
-        header_txt.append('#include "glv_vk_vk_debug_report_lunarg_packets.h"')
-        #header_txt.append('#include "glv_vk_vk_wsi_lunarg_packets.h"')
-        header_txt.append('#include "glv_vk_vk_wsi_swapchain_packets.h"')
-        header_txt.append('#include "glv_vk_vk_wsi_device_swapchain_packets.h"')
+        header_txt.append('#include "vktrace_trace_packet_utils.h"')
+        header_txt.append('#include "vktrace_trace_packet_identifiers.h"')
+        header_txt.append('#include "vktrace_interconnect.h"')
+        header_txt.append('#include "vktrace_vk_vk_packets.h"')
+        header_txt.append('#include "vktrace_vk_vk_debug_report_lunarg_packets.h"')
+        #header_txt.append('#include "vktrace_vk_vk_wsi_lunarg_packets.h"')
+        header_txt.append('#include "vktrace_vk_vk_wsi_swapchain_packets.h"')
+        header_txt.append('#include "vktrace_vk_vk_wsi_device_swapchain_packets.h"')
         #header_txt.append('#include "vk_enum_string_helper.h"')
         header_txt.append('#ifndef _WIN32')
         header_txt.append(' #pragma GCC diagnostic ignored "-Wwrite-strings"')
@@ -1931,7 +1931,7 @@ class GlaveCoreTracePackets(Subcommand):
         header_txt = []
         header_txt.append('#pragma once\n')
         header_txt.append('#include "vulkan.h"')
-        header_txt.append('#include "glv_trace_packet_utils.h"\n')
+        header_txt.append('#include "vktrace_trace_packet_utils.h"\n')
         return "\n".join(header_txt)
 
     def generate_body(self):
@@ -1957,13 +1957,13 @@ class GlaveExtTraceHeader(Subcommand):
 class GlaveExtTraceC(Subcommand):
     def generate_header(self, extName):
         header_txt = []
-        header_txt.append('#include "glv_platform.h"')
-        header_txt.append('#include "glv_common.h"')
+        header_txt.append('#include "vktrace_platform.h"')
+        header_txt.append('#include "vktrace_common.h"')
         if extName == "vk_wsi_device_swapchain":
             header_txt.append('#include "vk_wsi_swapchain.h"')
-        header_txt.append('#include "glvtrace_vk_%s.h"' % extName.lower())
-        header_txt.append('#include "glv_vk_%s_packets.h"' % extName.lower())
-        header_txt.append('#include "glv_vk_packet_id.h"')
+        header_txt.append('#include "vktrace_vk_%s.h"' % extName.lower())
+        header_txt.append('#include "vktrace_vk_%s_packets.h"' % extName.lower())
+        header_txt.append('#include "vktrace_vk_packet_id.h"')
         header_txt.append('#include "vk_struct_size_helper.h"')
         header_txt.append('#include "%s_struct_size_helper.h"' % extName.lower())
         header_txt.append('#ifdef WIN32')
@@ -1982,7 +1982,7 @@ class GlaveExtTracePackets(Subcommand):
         header_txt = []
         header_txt.append('#pragma once\n')
         header_txt.append('#include "%s.h"' % extName.lower())
-        header_txt.append('#include "glv_trace_packet_utils.h"\n')
+        header_txt.append('#include "vktrace_trace_packet_utils.h"\n')
         return "\n".join(header_txt)
 
     def generate_body(self):
@@ -2027,19 +2027,19 @@ class GlaveReplayObjMapperHeader(Subcommand):
 class GlaveReplayC(Subcommand):
     def generate_header(self, extName):
         header_txt = []
-        header_txt.append('#include "glvreplay_vk_vkreplay.h"\n')
-        header_txt.append('#include "glvreplay_vk.h"\n')
-        header_txt.append('#include "glvreplay_main.h"\n')
+        header_txt.append('#include "vkreplay_vkreplay.h"\n')
+        header_txt.append('#include "vkreplay.h"\n')
+        header_txt.append('#include "vkreplay_main.h"\n')
         header_txt.append('#include <algorithm>')
         header_txt.append('#include <queue>')
         header_txt.append('\n')
         header_txt.append('extern "C" {')
-        header_txt.append('#include "glv_vk_vk_packets.h"')
-        header_txt.append('#include "glv_vk_vk_debug_report_lunarg_packets.h"')
-        #header_txt.append('#include "glv_vk_vk_wsi_lunarg_packets.h"')
-        header_txt.append('#include "glv_vk_vk_wsi_swapchain_packets.h"')
-        header_txt.append('#include "glv_vk_vk_wsi_device_swapchain_packets.h"')
-        header_txt.append('#include "glv_vk_packet_id.h"')
+        header_txt.append('#include "vktrace_vk_vk_packets.h"')
+        header_txt.append('#include "vktrace_vk_vk_debug_report_lunarg_packets.h"')
+        #header_txt.append('#include "vktrace_vk_vk_wsi_lunarg_packets.h"')
+        header_txt.append('#include "vktrace_vk_vk_wsi_swapchain_packets.h"')
+        header_txt.append('#include "vktrace_vk_vk_wsi_device_swapchain_packets.h"')
+        header_txt.append('#include "vktrace_vk_packet_id.h"')
         #header_txt.append('#include "vk_enum_string_helper.h"\n}\n')
 
         return "\n".join(header_txt)

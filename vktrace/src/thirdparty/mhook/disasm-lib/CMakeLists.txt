@@ -5,7 +5,7 @@ include("${SRC_DIR}/build_options.cmake")
 
 include_directories(
     ${SRC_DIR}/thirdparty/mhook/disasm-lib
-    ${SRC_DIR}/glvcommon
+    ${SRC_DIR}/vktrace_common
 )
 
 set(SRC_LIST

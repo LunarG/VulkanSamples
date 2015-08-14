@@ -1,4 +1,4 @@
-PROJECT(glave)
+PROJECT(vktrace_project)
 if (WIN32)
     # For Windows, we need CMake version 3.0+ in order to "find_package(Qt5)":
     cmake_minimum_required(VERSION 3.0)
@@ -26,7 +26,7 @@ if (NOT PYTHONINTERP_FOUND)
 endif()
 
 
-#set(CODE_GEN_DIR "glv_extensions/glave_vk_gen")
+#set(CODE_GEN_DIR "vktrace_extensions/glave_vk_gen")
 
 #execute_process(COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/../../vk-helper.py --abs_out_dir ${CMAKE_CURRENT_SOURCE_DIR}/src/${CODE_GEN_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/../../include/vulkan.h)
 
@@ -43,9 +43,9 @@ message("")
 #
 set(GLV_VULKAN_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 
-add_subdirectory(src/glvcommon)
-add_subdirectory(src/glvtrace)
-add_subdirectory(src/glvreplay)
+add_subdirectory(src/vktrace_common)
+add_subdirectory(src/vktrace_trace)
+add_subdirectory(src/vktrace_replay)
 if (${CMAKE_SYSTEM_NAME} MATCHES "Windows")
 add_subdirectory(src/thirdparty/mhook/mhook-lib)
 add_subdirectory(src/thirdparty/mhook/disasm-lib)
@@ -65,10 +65,10 @@ MACRO(SUBDIRLIST result curdir)
 ENDMACRO()
 
 # now generate the list and add each of the subdirectories
-SUBDIRLIST(SUBDIRS ${SRC_DIR}/glv_extensions)
+SUBDIRLIST(SUBDIRS ${SRC_DIR}/vktrace_extensions)
 message("Adding extensions: '${SUBDIRS}'")
 FOREACH(subdir ${SUBDIRS})
-    add_subdirectory(${SRC_DIR}/glv_extensions/${subdir})
+    add_subdirectory(${SRC_DIR}/vktrace_extensions/${subdir})
 ENDFOREACH()
 
 
