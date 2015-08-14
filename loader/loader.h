@@ -197,11 +197,6 @@ struct loader_scanned_icds {
     PFN_vkGetGlobalExtensionProperties GetGlobalExtensionProperties;
     struct loader_scanned_icds *next;
 
-    /*
-     * cache of device extensions for specific ICD,
-     * filled in at CreateInstance time
-     */
-    struct loader_extension_list device_extension_list;
 };
 
 static inline struct loader_instance *loader_instance(VkInstance instance) {

@@ -971,7 +971,6 @@ static void loader_scanned_icd_add(const char *filename)
     new_node->GetInstanceProcAddr = fp_get_proc_addr;
     new_node->CreateInstance = fp_create_inst;
     new_node->GetGlobalExtensionProperties = fp_get_global_ext_props;
-    loader_init_ext_list(&new_node->device_extension_list);
     new_node->next = loader.scanned_icd_list;
 
     new_node->lib_name = (char *) (new_node + 1);
