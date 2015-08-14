@@ -388,6 +388,8 @@ describe_type(char *dst, shader_module const *src, unsigned type)
                 }
                 return dst;
             }
+        case spv::OpTypeSampler:
+            return dst + sprintf(dst, "sampler");
         default:
             return dst + sprintf(dst, "oddtype");
     }
@@ -557,6 +559,62 @@ collect_interface_by_location(VkDevice dev,
                 v.type_id = code[word+1];
                 builtins_out[builtin] = v;
             }
+        }
+
+        word += oplen;
+    }
+}
+
+
+static void
+collect_interface_by_descriptor_slot(VkDevice dev,
+                              shader_module const *src, spv::StorageClass sinterface,
+                              std::map<std::pair<unsigned, unsigned>, interface_var> &out)
+{
+    unsigned int const *code = (unsigned int const *)&src->words[0];
+    size_t size = src->words.size();
+
+    std::unordered_map<unsigned, unsigned> var_sets;
+    std::unordered_map<unsigned, unsigned> var_bindings;
+
+    unsigned word = 5;
+    while (word < size) {
+
+        unsigned opcode = code[word] & 0x0ffffu;
+        unsigned oplen = (code[word] & 0xffff0000u) >> 16;
+
+        /* We consider two interface models: SSO rendezvous-by-location, and
+         * builtins. Complain about anything that fits neither model.
+         */
+        if (opcode == spv::OpDecorate) {
+            if (code[word+2] == spv::DecorationDescriptorSet) {
+                var_sets[code[word+1]] = code[word+3];
+            }
+
+            if (code[word+2] == spv::DecorationBinding) {
+                var_bindings[code[word+1]] = code[word+3];
+            }
+        }
+
+        if (opcode == spv::OpVariable && (code[word+3] == spv::StorageClassUniform ||
+                                          code[word+3] == spv::StorageClassUniformConstant)) {
+            unsigned set = value_or_default(var_sets, code[word+2], 0);
+            unsigned binding = value_or_default(var_bindings, code[word+2], 0);
+
+            auto existing_it = out.find(std::make_pair(set, binding));
+            if (existing_it != out.end()) {
+                /* conflict within spv image */
+                log_msg(mdd(dev), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DEVICE, /*dev*/0, 0,
+                        SHADER_CHECKER_INCONSISTENT_SPIRV, "SC",
+                        "var %d (type %d) in %s interface in descriptor slot (%u,%u) conflicts with existing definition",
+                        code[word+2], code[word+1], storage_class_name(sinterface),
+                        existing_it->first.first, existing_it->first.second);
+            }
+
+            interface_var v;
+            v.id = code[word+2];
+            v.type_id = code[word+1];
+            out[std::make_pair(set, binding)] = v;
         }
 
         word += oplen;
