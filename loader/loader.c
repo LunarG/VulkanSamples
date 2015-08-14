@@ -106,7 +106,6 @@ const VkLayerInstanceDispatchTable instance_disp = {
 };
 
 LOADER_PLATFORM_THREAD_ONCE_DECLARATION(once_icd);
-LOADER_PLATFORM_THREAD_ONCE_DECLARATION(once_exts);
 
 void* loader_heap_alloc(
     struct loader_instance     *instance,
@@ -794,21 +793,23 @@ static VkExtensionProperties *get_extension_property(
  * The extension itself should be in a separate file that will be
  * linked directly with the loader.
  */
-void loader_coalesce_extensions(void)
+
+void loader_get_icd_loader_instance_extensions(struct loader_extension_list *inst_exts)
 {
     struct loader_scanned_icds *icd_list = loader.scanned_icd_list;
 
+    loader_log(VK_DBG_REPORT_DEBUG_BIT, 0, "Build ICD instance extension list");
     // traverse scanned icd list adding non-duplicate extensions to the list
     while (icd_list != NULL) {
-        loader_add_to_ext_list(&loader.global_extensions,
+        loader_add_to_ext_list(inst_exts,
                                icd_list->global_extension_list.count,
                                icd_list->global_extension_list.list);
         icd_list = icd_list->next;
     };
 
     // Traverse loader's extensions, adding non-duplicate extensions to the list
-    wsi_swapchain_add_instance_extensions(&loader.global_extensions);
-    debug_report_add_instance_extensions(&loader.global_extensions);
+    wsi_swapchain_add_instance_extensions(inst_exts);
+    debug_report_add_instance_extensions(inst_exts);
 }
 
 static struct loader_icd *loader_get_icd_and_device(const VkDevice device,
@@ -2129,7 +2130,7 @@ static VkResult loader_enable_device_layers(
 }
 
 /*
- * This function terminates the device chain fro CreateDevice.
+ * This function terminates the device chain for CreateDevice.
  * CreateDevice is a special case and so the loader call's
  * the ICD's CreateDevice before creating the chain. Since
  * we can't call CreateDevice twice we must terminate the
@@ -2156,13 +2157,9 @@ static PFN_vkVoidFunction VKAPI loader_GetDeviceChainProcAddr(VkDevice device, c
 }
 
 static uint32_t loader_activate_device_layers(
-        struct loader_icd *icd,
         struct loader_device *dev,
         VkDevice device)
 {
-    if (!icd)
-        return 0;
-
     if (!dev) {
         return 0;
     }
@@ -2237,6 +2234,7 @@ VkResult loader_validate_layers(
 }
 
 VkResult loader_validate_instance_extensions(
+                        const struct loader_extension_list *icd_exts,
                         const struct loader_layer_list *instance_layer,
                         const VkInstanceCreateInfo     *pCreateInfo)
 {
@@ -2245,7 +2243,7 @@ VkResult loader_validate_instance_extensions(
 
     for (uint32_t i = 0; i < pCreateInfo->extensionCount; i++) {
         extension_prop = get_extension_property(pCreateInfo->ppEnabledExtensionNames[i],
-                                                &loader.global_extensions);
+                                                icd_exts);
 
         if (extension_prop) {
             continue;
@@ -2771,7 +2769,7 @@ VkResult VKAPI loader_CreateDevice(
         loader_destroy_logical_device(dev);
         return res;
     }
-    loader_activate_device_layers(icd, dev, *pDevice);
+    loader_activate_device_layers(dev, *pDevice);
 
     res = dev->loader_dispatch.CreateDevice(gpu, pCreateInfo, pDevice);
 
@@ -2863,18 +2861,16 @@ LOADER_EXPORT VkResult VKAPI vkGetGlobalExtensionProperties(
 {
     struct loader_extension_list *global_ext_list;
     struct loader_layer_list instance_layers;
-
-    /* Scan/discover all ICD libraries in a single-threaded manner */
-    loader_platform_thread_once(&once_icd, loader_icd_scan);
-
-    /* merge any duplicate extensions */
-    loader_platform_thread_once(&once_exts, loader_coalesce_extensions);
-
+    struct loader_extension_list icd_extensions;
     uint32_t copy_size;
 
     if (pCount == NULL) {
         return VK_ERROR_INVALID_POINTER;
     }
+
+    memset(&icd_extensions, 0, sizeof(icd_extensions));
+    /* Scan/discover all ICD libraries in a single-threaded manner */
+    loader_platform_thread_once(&once_icd, loader_icd_scan);
 
     //TODO do we still need to lock? for loader.global_extensions
     loader_platform_thread_lock_mutex(&loader_lock);
@@ -2890,7 +2886,9 @@ LOADER_EXPORT VkResult VKAPI vkGetGlobalExtensionProperties(
         }
     }
     else {
-        global_ext_list = &loader.global_extensions;
+        /* get extensions from all ICD's, merge so no duplicates */
+        loader_get_icd_loader_instance_extensions(&icd_extensions);
+        global_ext_list = &icd_extensions;
     }
 
     if (global_ext_list == NULL) {
@@ -2900,6 +2898,7 @@ LOADER_EXPORT VkResult VKAPI vkGetGlobalExtensionProperties(
 
     if (pProperties == NULL) {
         *pCount = global_ext_list->count;
+        loader_destroy_ext_list(&icd_extensions);
         loader_platform_thread_unlock_mutex(&loader_lock);
         return VK_SUCCESS;
     }
@@ -2911,7 +2910,7 @@ LOADER_EXPORT VkResult VKAPI vkGetGlobalExtensionProperties(
                sizeof(VkExtensionProperties));
     }
     *pCount = copy_size;
-
+    loader_destroy_ext_list(&icd_extensions);
     loader_platform_thread_unlock_mutex(&loader_lock);
 
     if (copy_size < global_ext_list->count) {
@@ -2930,9 +2929,6 @@ LOADER_EXPORT VkResult VKAPI vkGetGlobalLayerProperties(
 
     /* Scan/discover all ICD libraries in a single-threaded manner */
     loader_platform_thread_once(&once_icd, loader_icd_scan);
-
-    /* merge any duplicate extensions */
-    loader_platform_thread_once(&once_exts, loader_coalesce_extensions);
 
     uint32_t copy_size;
 

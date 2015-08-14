@@ -42,15 +42,13 @@ LOADER_EXPORT VkResult VKAPI vkCreateInstance(
         VkInstance* pInstance)
 {
     struct loader_instance *ptr_instance = NULL;
+    struct loader_extension_list icd_extensions;
 
     VkResult res = VK_ERROR_INITIALIZATION_FAILED;
     struct loader_layer_list instance_layer_list;
 
     /* Scan/discover all ICD libraries in a single-threaded manner */
     loader_platform_thread_once(&once_icd, loader_icd_scan);
-
-    /* merge any duplicate extensions */
-    loader_platform_thread_once(&once_exts, loader_coalesce_extensions);
 
     /* Due to implicit layers might still need to get layer list even if
      * layerCount == 0 and VK_INSTANCE_LAYERS is unset. For now always
@@ -68,7 +66,10 @@ LOADER_EXPORT VkResult VKAPI vkCreateInstance(
         }
     }
 
-    res = loader_validate_instance_extensions(&instance_layer_list, pCreateInfo);
+    /* get extensions from all ICD's, merge so no duplicates, then validate */
+    memset(&icd_extensions, 0, sizeof(icd_extensions));
+    loader_get_icd_loader_instance_extensions(&icd_extensions);
+    res = loader_validate_instance_extensions(&icd_extensions, &instance_layer_list, pCreateInfo);
     if (res != VK_SUCCESS) {
         return res;
     }

@@ -186,9 +186,6 @@ struct loader_struct {
     char *layer_dirs;
 
     // TODO use this struct loader_layer_library_list scanned_layer_libraries;
-
-    /* Keep track of all the extensions available via GetGlobalExtensionProperties */
-    struct loader_extension_list global_extensions;
 };
 
 struct loader_scanned_icds {
@@ -259,6 +256,7 @@ bool compare_vk_extension_properties(
 VkResult loader_validate_layers(const uint32_t layer_count, const char * const *ppEnabledLayerNames, struct loader_layer_list *list);
 
 VkResult loader_validate_instance_extensions(
+        const struct loader_extension_list *icd_exts,
         const struct loader_layer_list *instance_layer,
         const VkInstanceCreateInfo*             pCreateInfo);
 
@@ -355,7 +353,7 @@ void loader_icd_scan(void);
 void loader_layer_scan(
         struct loader_layer_list *instance_layers,
         struct loader_layer_list *device_layers);
-void loader_coalesce_extensions(void);
+void loader_get_icd_loader_instance_extensions(struct loader_extension_list *inst_exts);
 
 struct loader_icd * loader_get_icd(
         const VkPhysicalDevice gpu,
