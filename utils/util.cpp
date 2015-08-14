@@ -27,7 +27,9 @@ VULKAN_SAMPLE_DESCRIPTION
 samples utility functions
 */
 
+#include <stdio.h>
 #include <assert.h>
+#include <cstdlib>
 #include "util.hpp"
 
 using namespace std;
@@ -158,4 +160,39 @@ void set_image_layout(
 
     res = vkQueueWaitIdle(info.queue);
     assert(!res);
+}
+
+bool read_ppm(char const*const filename, int *width, int *height, int rowPitch, char *dataPtr)
+{
+    /* TODO: make this more flexible in handling comments and whitespace in ppm file */
+
+    FILE *fPtr = fopen(filename,"r");
+    char header[16];
+
+    if (!fPtr)
+        return false;
+
+    fgets(header, 16, fPtr); // P6
+    fgets(header, 16, fPtr); // Width
+    *width = atoi(header);
+    fgets(header, 16, fPtr); // Height
+    *height = atoi(header);
+    if (dataPtr == NULL)
+        return true;
+
+    fgets(header, 16, fPtr); // Format
+
+    for(int y = 0; y < *height; y++)
+    {
+        char *rowPtr = dataPtr;
+        for(int x = 0; x < *width; x++)
+        {
+            fgets(rowPtr, 3, fPtr);
+            rowPtr[3] = 0;
+            rowPtr += 4;
+        }
+        dataPtr += rowPitch;
+    }
+    fclose(fPtr);
+    return true;
 }

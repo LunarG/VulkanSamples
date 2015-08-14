@@ -119,7 +119,7 @@ endif()
 set(VULKAN_VERSION vk0.2)
 
 # simple one file sample targets, no additional files
-set (S_TARGETS instance device enumerate depthbuffer initwsi)
+set (S_TARGETS instance device enumerate depthbuffer initwsi initTexture)
 sampleWithSingleFile()
 
 # targets that use spv shaders
