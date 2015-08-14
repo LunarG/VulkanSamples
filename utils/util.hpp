@@ -213,3 +213,5 @@ void set_image_layout(
         VkImageAspect aspect,
         VkImageLayout old_image_layout,
         VkImageLayout new_image_layout);
+
+bool read_ppm(char const*const filename, int *width, int *height, int rowPitch, char *dataPtr);
