@@ -226,9 +226,10 @@ void intel_desc_region_destroy(struct intel_dev *dev,
                                struct intel_desc_region *region);
 
 VkResult intel_desc_region_alloc(struct intel_desc_region *region,
-                                   const VkDescriptorPoolCreateInfo *info,
-                                   struct intel_desc_offset *begin,
-                                   struct intel_desc_offset *end);
+                                 uint32_t max_sets,
+                                 const VkDescriptorPoolCreateInfo *info,
+                                 struct intel_desc_offset *begin,
+                                 struct intel_desc_offset *end);
 void intel_desc_region_free(struct intel_desc_region *region,
                             const struct intel_desc_offset *begin,
                             const struct intel_desc_offset *end);

@@ -205,9 +205,10 @@ static VkResult desc_region_get_desc_size(const struct intel_desc_region *region
 }
 
 VkResult intel_desc_region_alloc(struct intel_desc_region *region,
-                                   const VkDescriptorPoolCreateInfo *info,
-                                   struct intel_desc_offset *begin,
-                                   struct intel_desc_offset *end)
+                                 uint32_t max_sets,
+                                 const VkDescriptorPoolCreateInfo *info,
+                                 struct intel_desc_offset *begin,
+                                 struct intel_desc_offset *end)
 {
     uint32_t surface_size = 0, sampler_size = 0;
     struct intel_desc_offset alloc;
@@ -226,6 +227,9 @@ VkResult intel_desc_region_alloc(struct intel_desc_region *region,
         surface_size += size.surface * tc->count;
         sampler_size += size.sampler * tc->count;
     }
+
+    surface_size *= max_sets;
+    sampler_size *= max_sets;
 
     intel_desc_offset_set(&alloc, surface_size, sampler_size);
 
@@ -385,7 +389,7 @@ VkResult intel_desc_pool_create(struct intel_dev *dev,
 
     pool->dev = dev;
 
-    ret = intel_desc_region_alloc(dev->desc_region, info,
+    ret = intel_desc_region_alloc(dev->desc_region, max_sets, info,
             &pool->region_begin, &pool->region_end);
     if (ret != VK_SUCCESS) {
         intel_base_destroy(&pool->obj.base);
