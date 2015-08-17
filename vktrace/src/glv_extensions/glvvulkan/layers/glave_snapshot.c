@@ -1239,16 +1239,32 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateDynamicViewportState(VkDevice device, con
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkCreateDynamicRasterState(VkDevice device, const VkDynamicRasterStateCreateInfo* pCreateInfo, VkDynamicRasterState* pState)
+VK_LAYER_EXPORT VkResult VKAPI vkCreateDynamicRasterLineState(VkDevice device, const VkDynamicRasterLineStateCreateInfo* pCreateInfo, VkDynamicRasterLineState* pState)
 {
     loader_platform_thread_lock_mutex(&objLock);
     ll_increment_use_count(device, VK_OBJECT_TYPE_DEVICE);
     loader_platform_thread_unlock_mutex(&objLock);
-    VkResult result = nextTable.CreateDynamicRasterState(device, pCreateInfo, pState);
+    VkResult result = nextTable.CreateDynamicRasterLineState(device, pCreateInfo, pState);
     if (result == VK_SUCCESS)
     {
         loader_platform_thread_lock_mutex(&objLock);
-        GLV_VK_SNAPSHOT_LL_NODE* pNode = snapshot_insert_object(&s_delta, *pState, VK_OBJECT_TYPE_DYNAMIC_RS_STATE);
+        GLV_VK_SNAPSHOT_LL_NODE* pNode = snapshot_insert_object(&s_delta, *pState, VK_OBJECT_TYPE_DYNAMIC_RASTER_LINE_STATE);
+        pNode->obj.pStruct = NULL;
+        loader_platform_thread_unlock_mutex(&objLock);
+    }
+    return result;
+}
+
+VK_LAYER_EXPORT VkResult VKAPI vkCreateDynamicRasterDepthBiasState(VkDevice device, const VkDynamicRasterDepthBiasStateCreateInfo* pCreateInfo, VkDynamicRasterDepthBiasState* pState)
+{
+    loader_platform_thread_lock_mutex(&objLock);
+    ll_increment_use_count(device, VK_OBJECT_TYPE_DEVICE);
+    loader_platform_thread_unlock_mutex(&objLock);
+    VkResult result = nextTable.CreateDynamicRasterDepthBiasState(device, pCreateInfo, pState);
+    if (result == VK_SUCCESS)
+    {
+        loader_platform_thread_lock_mutex(&objLock);
+        GLV_VK_SNAPSHOT_LL_NODE* pNode = snapshot_insert_object(&s_delta, *pState, VK_OBJECT_TYPE_DYNAMIC_RASTER_DEPTH_BIAS_STATE);
         pNode->obj.pStruct = NULL;
         loader_platform_thread_unlock_mutex(&objLock);
     }

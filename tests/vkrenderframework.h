@@ -112,7 +112,8 @@ protected:
     VkFramebuffer                       m_framebuffer;
     std::vector<VkClearValue>           m_renderPassClearValues;
     VkRenderPassBeginInfo               m_renderPassBeginInfo;
-    VkDynamicRasterState                m_stateRaster;
+    VkDynamicRasterLineState            m_stateRasterLine;
+    VkDynamicRasterDepthBiasState       m_stateRasterDepthBias;
     VkDynamicColorBlendState            m_colorBlend;
     VkDynamicViewportState              m_stateViewport;
     VkDynamicDepthStencilState          m_stateDepthStencil;
@@ -176,7 +177,8 @@ public:
     void BindIndexBuffer(VkIndexBufferObj *indexBuffer, VkDeviceSize offset);
     void BeginRenderPass(const VkRenderPassBeginInfo &info);
     void BindDynamicViewportState(VkDynamicViewportState viewportState);
-    void BindDynamicRasterState(VkDynamicRasterState rasterState);
+    void BindDynamicRasterLineState(VkDynamicRasterLineState rasterLineState);
+    void BindDynamicRasterDepthBiasState(VkDynamicRasterDepthBiasState rasterStateDepthBias);
     void BindDynamicColorBlendState(VkDynamicColorBlendState colorBlendState);
     void BindDynamicDepthStencilState(VkDynamicDepthStencilState depthStencilState);
     void EndRenderPass();

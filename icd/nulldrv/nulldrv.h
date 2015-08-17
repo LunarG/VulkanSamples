@@ -148,7 +148,11 @@ struct nulldrv_dynamic_vp {
     struct nulldrv_obj obj;
 };
 
-struct nulldrv_dynamic_rs {
+struct nulldrv_dynamic_rs_line {
+    struct nulldrv_obj obj;
+};
+
+struct nulldrv_dynamic_rs_depth_bias {
     struct nulldrv_obj obj;
 };
 

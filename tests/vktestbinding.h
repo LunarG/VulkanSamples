@@ -56,7 +56,8 @@ class PipelineLayout;
 class DescriptorSetPool;
 class DescriptorSet;
 class DynamicViewportState;
-class DynamicRasterState;
+class DynamicRasterLineState;
+class DynamicRasterDepthBiasState;
 class DynamicColorBlendState;
 class DynamicDepthStencilState;
 class CmdBuffer;
@@ -559,12 +560,20 @@ public:
     void init(const Device &dev, const VkDynamicViewportStateCreateInfo &info);
 };
 
-class DynamicRasterState : public internal::NonDispHandle<VkDynamicRasterState> {
+class DynamicRasterLineState : public internal::NonDispHandle<VkDynamicRasterLineState> {
 public:
-    ~DynamicRasterState();
+    ~DynamicRasterLineState();
 
-    // vkCreateDynamicRasterState()
-    void init(const Device &dev, const VkDynamicRasterStateCreateInfo &info);
+    // vkCreateDynamicRasterLineState()
+    void init(const Device &dev, const VkDynamicRasterLineStateCreateInfo &info);
+};
+
+class DynamicRasterDepthBiasState : public internal::NonDispHandle<VkDynamicRasterDepthBiasState> {
+public:
+    ~DynamicRasterDepthBiasState();
+
+    // vkCreateDynamicRasterDepthBiasState()
+    void init(const Device &dev, const VkDynamicRasterDepthBiasStateCreateInfo &info);
 };
 
 class DynamicColorBlendState : public internal::NonDispHandle<VkDynamicColorBlendState> {

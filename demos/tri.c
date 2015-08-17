@@ -217,7 +217,8 @@ struct demo {
     VkPipeline pipeline;
 
     VkDynamicViewportState viewport;
-    VkDynamicRasterState raster;
+    VkDynamicRasterLineState raster_line;
+    VkDynamicRasterDepthBiasState raster_depth_bias;
     VkDynamicColorBlendState color_blend;
     VkDynamicDepthStencilState depth_stencil;
 
@@ -382,7 +383,8 @@ static void demo_draw_build_cmd(struct demo *demo)
             0, 1, & demo->desc_set, 0, NULL);
 
     vkCmdBindDynamicViewportState(demo->draw_cmd, demo->viewport);
-    vkCmdBindDynamicRasterState(demo->draw_cmd, demo->raster);
+    vkCmdBindDynamicRasterLineState(demo->draw_cmd, demo->raster_line);
+    vkCmdBindDynamicRasterDepthBiasState(demo->draw_cmd, demo->raster_depth_bias);
     vkCmdBindDynamicColorBlendState(demo->draw_cmd, demo->color_blend);
     vkCmdBindDynamicDepthStencilState(demo->draw_cmd, demo->depth_stencil);
 
@@ -1224,6 +1226,8 @@ static void demo_prepare_pipeline(struct demo *demo)
     rs.cullMode = VK_CULL_MODE_BACK;
     rs.frontFace = VK_FRONT_FACE_CW;
     rs.depthClipEnable = VK_TRUE;
+    rs.rasterizerDiscardEnable = VK_FALSE;
+    rs.depthBiasEnable = VK_FALSE;
 
     memset(&cb, 0, sizeof(cb));
     cb.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
@@ -1299,7 +1303,8 @@ static void demo_prepare_pipeline(struct demo *demo)
 static void demo_prepare_dynamic_states(struct demo *demo)
 {
     VkDynamicViewportStateCreateInfo viewport_create;
-    VkDynamicRasterStateCreateInfo raster;
+    VkDynamicRasterLineStateCreateInfo raster_line;
+    VkDynamicRasterDepthBiasStateCreateInfo raster_depth_bias;
     VkDynamicColorBlendStateCreateInfo color_blend;
     VkDynamicDepthStencilStateCreateInfo depth_stencil;
     VkResult U_ASSERT_ONLY err;
@@ -1322,9 +1327,15 @@ static void demo_prepare_dynamic_states(struct demo *demo)
     scissor.offset.y = 0;
     viewport_create.pScissors = &scissor;
 
-    memset(&raster, 0, sizeof(raster));
-    raster.sType = VK_STRUCTURE_TYPE_DYNAMIC_RASTER_STATE_CREATE_INFO;
-    raster.lineWidth = 1.0;
+    memset(&raster_line, 0, sizeof(raster_line));
+    raster_line.sType = VK_STRUCTURE_TYPE_DYNAMIC_RASTER_LINE_STATE_CREATE_INFO;
+    raster_line.lineWidth = 1.0;
+
+    memset(&raster_depth_bias, 0, sizeof(raster_depth_bias));
+    raster_depth_bias.sType = VK_STRUCTURE_TYPE_DYNAMIC_RASTER_DEPTH_BIAS_STATE_CREATE_INFO;
+    raster_depth_bias.depthBias = 0.0f;
+    raster_depth_bias.depthBiasClamp = 0.0f;
+    raster_depth_bias.slopeScaledDepthBias = 0.0f;
 
     memset(&color_blend, 0, sizeof(color_blend));
     color_blend.sType = VK_STRUCTURE_TYPE_DYNAMIC_COLOR_BLEND_STATE_CREATE_INFO;
@@ -1345,7 +1356,10 @@ static void demo_prepare_dynamic_states(struct demo *demo)
     err = vkCreateDynamicViewportState(demo->device, &viewport_create, &demo->viewport);
     assert(!err);
 
-    err = vkCreateDynamicRasterState(demo->device, &raster, &demo->raster);
+    err = vkCreateDynamicRasterLineState(demo->device, &raster_line, &demo->raster_line);
+    assert(!err);
+
+    err = vkCreateDynamicRasterDepthBiasState(demo->device, &raster_depth_bias, &demo->raster_depth_bias);
     assert(!err);
 
     err = vkCreateDynamicColorBlendState(demo->device,
@@ -2099,7 +2113,8 @@ static void demo_cleanup(struct demo *demo)
     vkDestroyCommandPool(demo->device, demo->cmd_pool);
 
     vkDestroyDynamicViewportState(demo->device, demo->viewport);
-    vkDestroyDynamicRasterState(demo->device, demo->raster);
+    vkDestroyDynamicRasterLineState(demo->device, demo->raster_line);
+    vkDestroyDynamicRasterDepthBiasState(demo->device, demo->raster_depth_bias);
     vkDestroyDynamicColorBlendState(demo->device, demo->color_blend);
     vkDestroyDynamicDepthStencilState(demo->device, demo->depth_stencil);
 

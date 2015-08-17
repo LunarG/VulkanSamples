@@ -27,10 +27,11 @@ struct Vertex
 
 typedef enum _BsoFailSelect {
     BsoFailNone                     = 0x00000000,
-    BsoFailRaster                   = 0x00000001,
-    BsoFailViewport                 = 0x00000002,
-    BsoFailColorBlend               = 0x00000004,
-    BsoFailDepthStencil             = 0x00000008,
+    BsoFailRasterLine               = 0x00000001,
+    BsoFailRasterDepthBias          = 0x00000002,
+    BsoFailViewport                 = 0x00000004,
+    BsoFailColorBlend               = 0x00000008,
+    BsoFailDepthStencil             = 0x00000010,
 } BsoFailSelect;
 
 struct vktriangle_vs_uniform {
@@ -307,8 +308,11 @@ void VkLayerTest::GenericDrawPreparation(VkCommandBufferObj *cmdBuffer, VkPipeli
     }
 
     cmdBuffer->PrepareAttachments();
-    if ((failMask & BsoFailRaster) != BsoFailRaster) {
-        cmdBuffer->BindDynamicRasterState(m_stateRaster);
+    if ((failMask & BsoFailRasterLine) != BsoFailRasterLine) {
+        cmdBuffer->BindDynamicRasterLineState(m_stateRasterLine);
+    }
+    if ((failMask & BsoFailRasterDepthBias) != BsoFailRasterDepthBias) {
+        cmdBuffer->BindDynamicRasterDepthBiasState(m_stateRasterDepthBias);
     }
     if ((failMask & BsoFailViewport) != BsoFailViewport) {
         cmdBuffer->BindDynamicViewportState(m_stateViewport);
@@ -894,20 +898,37 @@ TEST_F(VkLayerTest, InvalidUsageBits)
 #endif
 #endif
 #if OBJ_TRACKER_TESTS
-TEST_F(VkLayerTest, RasterStateNotBound)
+TEST_F(VkLayerTest, RasterLineStateNotBound)
 {
     VkFlags msgFlags;
     std::string msgString;
     ASSERT_NO_FATAL_FAILURE(InitState());
     m_errorMonitor->ClearState();
-    TEST_DESCRIPTION("Simple Draw Call that validates failure when a raster state object is not bound beforehand");
+    TEST_DESCRIPTION("Simple Draw Call that validates failure when a raster line state object is not bound beforehand");
 
-    VKTriangleTest(bindStateVertShaderText, bindStateFragShaderText, BsoFailRaster);
+    VKTriangleTest(bindStateVertShaderText, bindStateFragShaderText, BsoFailRasterLine);
 
     msgFlags = m_errorMonitor->GetState(&msgString);
-    ASSERT_TRUE(0 != (msgFlags & VK_DBG_REPORT_ERROR_BIT)) << "Did not receive an error from Not Binding a Raster State Object";
-    if (!strstr(msgString.c_str(),"Raster object not bound to this command buffer")) {
-        FAIL() << "Error received was not 'Raster object not bound to this command buffer'";
+    ASSERT_TRUE(0 != (msgFlags & VK_DBG_REPORT_ERROR_BIT)) << "Did not receive an error from Not Binding a Raster Line State Object";
+    if (!strstr(msgString.c_str(),"Raster line object not bound to this command buffer")) {
+        FAIL() << "Error received was not 'Raster line object not bound to this command buffer'";
+    }
+}
+
+TEST_F(VkLayerTest, RasterDepthBiasStateNotBound)
+{
+    VkFlags msgFlags;
+    std::string msgString;
+    ASSERT_NO_FATAL_FAILURE(InitState());
+    m_errorMonitor->ClearState();
+    TEST_DESCRIPTION("Simple Draw Call that validates failure when a raster depth bias state object is not bound beforehand");
+
+    VKTriangleTest(bindStateVertShaderText, bindStateFragShaderText, BsoFailRasterDepthBias);
+
+    msgFlags = m_errorMonitor->GetState(&msgString);
+    ASSERT_TRUE(0 != (msgFlags & VK_DBG_REPORT_ERROR_BIT)) << "Did not receive an error from Not Binding a Raster Depth Bias State Object";
+    if (!strstr(msgString.c_str(),"Raster depth bias object not bound to this command buffer")) {
+        FAIL() << "Error received was not 'Raster depth bias object not bound to this command buffer'";
     }
 }
 

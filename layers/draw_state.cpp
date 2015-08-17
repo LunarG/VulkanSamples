@@ -65,7 +65,8 @@ unordered_map<uint64_t, VkImageViewCreateInfo> imageMap;
 unordered_map<uint64_t, VkAttachmentViewCreateInfo> viewMap;
 unordered_map<uint64_t, BUFFER_NODE*> bufferMap;
 unordered_map<uint64_t, VkDynamicViewportStateCreateInfo> dynamicVpStateMap;
-unordered_map<uint64_t, VkDynamicRasterStateCreateInfo> dynamicRsStateMap;
+unordered_map<uint64_t, VkDynamicRasterLineStateCreateInfo> dynamicRasterLineStateMap;
+unordered_map<uint64_t, VkDynamicRasterDepthBiasStateCreateInfo> dynamicRasterDepthBiasStateMap;
 unordered_map<uint64_t, VkDynamicColorBlendStateCreateInfo> dynamicCbStateMap;
 unordered_map<uint64_t, VkDynamicDepthStencilStateCreateInfo> dynamicDsStateMap;
 unordered_map<uint64_t, PIPELINE_NODE*> pipelineMap;
@@ -140,8 +141,10 @@ static string cmdTypeToString(CMD_TYPE cmd)
             return "CMD_BINDPIPELINEDELTA";
         case CMD_BINDDYNAMICVIEWPORTSTATE:
             return "CMD_BINDDYNAMICVIEWPORTSTATE";
-        case CMD_BINDDYNAMICRASTERSTATE:
-            return "CMD_BINDDYNAMICRASTERSTATE";
+        case CMD_BINDDYNAMICRASTERLINESTATE:
+            return "CMD_BINDDYNAMICRASTERLINESTATE";
+        case CMD_BINDDYNAMICRASTERDEPTHBIASSTATE:
+            return "CMD_BINDDYNAMICRASTERDEPTHBIASSTATE";
         case CMD_BINDDYNAMICCOLORBLENDSTATE:
             return "CMD_BINDDYNAMICCOLORBLENDSTATE";
         case CMD_BINDDYNAMICDEPTHSTENCILSTATE:
@@ -257,7 +260,8 @@ static void deleteDynamicState()
         delete[] (*ii).second.pViewports;
     }
     dynamicVpStateMap.clear();
-    dynamicRsStateMap.clear();
+    dynamicRasterLineStateMap.clear();
+    dynamicRasterDepthBiasStateMap.clear();
     dynamicCbStateMap.clear();
     dynamicDsStateMap.clear();
 }
@@ -358,8 +362,10 @@ static void* getDynamicStateCreateInfo(const uint64_t handle, const DYNAMIC_STAT
     switch (type) {
         case VK_STATE_BIND_POINT_VIEWPORT:
             return (void*)&dynamicVpStateMap[handle];
-        case VK_STATE_BIND_POINT_RASTER:
-            return (void*)&dynamicRsStateMap[handle];
+        case VK_STATE_BIND_POINT_RASTER_LINE:
+            return (void*)&dynamicRasterLineStateMap[handle];
+        case VK_STATE_BIND_POINT_RASTER_DEPTH_BIAS:
+            return (void*)&dynamicRasterDepthBiasStateMap[handle];
         case VK_STATE_BIND_POINT_COLOR_BLEND:
             return (void*)&dynamicCbStateMap[handle];
         case VK_STATE_BIND_POINT_DEPTH_STENCIL:
@@ -409,7 +415,8 @@ static PIPELINE_NODE* getPipeline(VkPipeline pipeline)
 static VkBool32 validate_draw_state_flags(GLOBAL_CB_NODE* pCB, VkBool32 indexedDraw) {
     VkBool32 result;
     result = validate_status(pCB, CBSTATUS_NONE, CBSTATUS_VIEWPORT_BOUND, CBSTATUS_VIEWPORT_BOUND, VK_DBG_REPORT_ERROR_BIT, DRAWSTATE_VIEWPORT_NOT_BOUND, "Viewport object not bound to this command buffer");
-    result &= validate_status(pCB, CBSTATUS_NONE, CBSTATUS_RASTER_BOUND,   CBSTATUS_RASTER_BOUND,   VK_DBG_REPORT_ERROR_BIT, DRAWSTATE_RASTER_NOT_BOUND,   "Raster object not bound to this command buffer");
+    result &= validate_status(pCB, CBSTATUS_NONE, CBSTATUS_RASTER_LINE_BOUND,   CBSTATUS_RASTER_LINE_BOUND,   VK_DBG_REPORT_ERROR_BIT, DRAWSTATE_RASTER_LINE_NOT_BOUND,   "Raster line object not bound to this command buffer");
+    result &= validate_status(pCB, CBSTATUS_NONE, CBSTATUS_RASTER_DEPTH_BIAS_BOUND,   CBSTATUS_RASTER_DEPTH_BIAS_BOUND,   VK_DBG_REPORT_ERROR_BIT, DRAWSTATE_RASTER_DEPTH_BIAS_NOT_BOUND,   "Raster depth bias object not bound to this command buffer");
     result &= validate_status(pCB, CBSTATUS_COLOR_BLEND_WRITE_ENABLE, CBSTATUS_COLOR_BLEND_BOUND,   CBSTATUS_COLOR_BLEND_BOUND,   VK_DBG_REPORT_ERROR_BIT,  DRAWSTATE_COLOR_BLEND_NOT_BOUND,   "Color-blend object not bound to this command buffer");
     result &= validate_status(pCB, CBSTATUS_DEPTH_STENCIL_WRITE_ENABLE, CBSTATUS_DEPTH_STENCIL_BOUND, CBSTATUS_DEPTH_STENCIL_BOUND, VK_DBG_REPORT_ERROR_BIT,  DRAWSTATE_DEPTH_STENCIL_NOT_BOUND, "Depth-stencil object not bound to this command buffer");
     if (indexedDraw)
@@ -1135,8 +1142,10 @@ static void set_cb_pso_status(GLOBAL_CB_NODE* pCB, const PIPELINE_NODE* pPipe)
 static void set_cb_dyn_status(GLOBAL_CB_NODE* pNode, DYNAMIC_STATE_BIND_POINT stateBindPoint) {
     if (stateBindPoint == VK_STATE_BIND_POINT_VIEWPORT) {
         pNode->status |= CBSTATUS_VIEWPORT_BOUND;
-    } else if (stateBindPoint == VK_STATE_BIND_POINT_RASTER) {
-        pNode->status |= CBSTATUS_RASTER_BOUND;
+    } else if (stateBindPoint == VK_STATE_BIND_POINT_RASTER_LINE) {
+        pNode->status |= CBSTATUS_RASTER_LINE_BOUND;
+    } else if (stateBindPoint == VK_STATE_BIND_POINT_RASTER_DEPTH_BIAS) {
+        pNode->status |= CBSTATUS_RASTER_DEPTH_BIAS_BOUND;
     } else if (stateBindPoint == VK_STATE_BIND_POINT_COLOR_BLEND) {
         pNode->status |= CBSTATUS_COLOR_BLEND_BOUND;
     } else if (stateBindPoint == VK_STATE_BIND_POINT_DEPTH_STENCIL) {
@@ -1605,9 +1614,16 @@ VK_LAYER_EXPORT VkResult VKAPI vkDestroyDynamicViewportState(VkDevice device, Vk
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkDestroyDynamicRasterState(VkDevice device, VkDynamicRasterState dynamicRasterState)
+VK_LAYER_EXPORT VkResult VKAPI vkDestroyDynamicRasterLineState(VkDevice device, VkDynamicRasterLineState dynamicRasterLineState)
 {
-    VkResult result = get_dispatch_table(draw_state_device_table_map, device)->DestroyDynamicRasterState(device, dynamicRasterState);
+    VkResult result = get_dispatch_table(draw_state_device_table_map, device)->DestroyDynamicRasterLineState(device, dynamicRasterLineState);
+    // TODO : Clean up any internal data structures using this obj.
+    return result;
+}
+
+VK_LAYER_EXPORT VkResult VKAPI vkDestroyDynamicRasterDepthBiasState(VkDevice device, VkDynamicRasterDepthBiasState dynamicRasterDepthBiasState)
+{
+    VkResult result = get_dispatch_table(draw_state_device_table_map, device)->DestroyDynamicRasterDepthBiasState(device, dynamicRasterDepthBiasState);
     // TODO : Clean up any internal data structures using this obj.
     return result;
 }
@@ -1951,12 +1967,22 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateDynamicViewportState(VkDevice device, con
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkCreateDynamicRasterState(VkDevice device, const VkDynamicRasterStateCreateInfo* pCreateInfo, VkDynamicRasterState* pState)
+VK_LAYER_EXPORT VkResult VKAPI vkCreateDynamicRasterLineState(VkDevice device, const VkDynamicRasterLineStateCreateInfo* pCreateInfo, VkDynamicRasterLineState* pState)
 {
-    VkResult result = get_dispatch_table(draw_state_device_table_map, device)->CreateDynamicRasterState(device, pCreateInfo, pState);
-    //insertDynamicState(*pState, (GENERIC_HEADER*)pCreateInfo, VK_STATE_BIND_POINT_RASTER);
+    VkResult result = get_dispatch_table(draw_state_device_table_map, device)->CreateDynamicRasterLineState(device, pCreateInfo, pState);
+    //insertDynamicState(*pState, (GENERIC_HEADER*)pCreateInfo, VK_STATE_BIND_POINT_RASTER_LINE);
     loader_platform_thread_lock_mutex(&globalLock);
-    dynamicRsStateMap[pState->handle] = *pCreateInfo;
+    dynamicRasterLineStateMap[pState->handle] = *pCreateInfo;
+    loader_platform_thread_unlock_mutex(&globalLock);
+    return result;
+}
+
+VK_LAYER_EXPORT VkResult VKAPI vkCreateDynamicRasterDepthBiasState(VkDevice device, const VkDynamicRasterDepthBiasStateCreateInfo* pCreateInfo, VkDynamicRasterDepthBiasState* pState)
+{
+    VkResult result = get_dispatch_table(draw_state_device_table_map, device)->CreateDynamicRasterDepthBiasState(device, pCreateInfo, pState);
+    //insertDynamicState(*pState, (GENERIC_HEADER*)pCreateInfo, VK_STATE_BIND_POINT_RASTER_DEPTH_BIAS);
+    loader_platform_thread_lock_mutex(&globalLock);
+    dynamicRasterDepthBiasStateMap[pState->handle] = *pCreateInfo;
     loader_platform_thread_unlock_mutex(&globalLock);
     return result;
 }
@@ -2125,30 +2151,57 @@ VK_LAYER_EXPORT void VKAPI vkCmdBindDynamicViewportState(VkCmdBuffer cmdBuffer, 
         }
     }
 }
-VK_LAYER_EXPORT void VKAPI vkCmdBindDynamicRasterState(VkCmdBuffer cmdBuffer, VkDynamicRasterState dynamicRasterState)
+VK_LAYER_EXPORT void VKAPI vkCmdBindDynamicRasterLineState(VkCmdBuffer cmdBuffer, VkDynamicRasterLineState dynamicRasterLineState)
 {
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
         if (pCB->state == CB_UPDATE_ACTIVE) {
             updateCBTracking(cmdBuffer);
-            addCmd(pCB, CMD_BINDDYNAMICRASTERSTATE);
+            addCmd(pCB, CMD_BINDDYNAMICRASTERLINESTATE);
             if (!pCB->activeRenderPass) {
                 log_msg(mdd(pCB->cmdBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, 0, 0, DRAWSTATE_NO_ACTIVE_RENDERPASS, "DS",
-                        "Incorrect call to vkCmdBindDynamicRasterState() without an active RenderPass.");
+                        "Incorrect call to vkCmdBindDynamicRasterLineState() without an active RenderPass.");
             }
             loader_platform_thread_lock_mutex(&globalLock);
-            pCB->status |= CBSTATUS_RASTER_BOUND;
-            if (dynamicRsStateMap.find(dynamicRasterState.handle) == dynamicRsStateMap.end()) {
-                log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DYNAMIC_RASTER_STATE, dynamicRasterState.handle, 0, DRAWSTATE_INVALID_DYNAMIC_STATE_OBJECT, "DS",
-                        "Unable to find VkDynamicRasterState object %#" PRIxLEAST64 ", was it ever created?", dynamicRasterState.handle);
+            pCB->status |= CBSTATUS_RASTER_LINE_BOUND;
+            if (dynamicRasterLineStateMap.find(dynamicRasterLineState.handle) == dynamicRasterLineStateMap.end()) {
+                log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DYNAMIC_RASTER_LINE_STATE, dynamicRasterLineState.handle, 0, DRAWSTATE_INVALID_DYNAMIC_STATE_OBJECT, "DS",
+                        "Unable to find VkDynamicRasterLineState object %#" PRIxLEAST64 ", was it ever created?", dynamicRasterLineState.handle);
             } else {
-                pCB->lastBoundDynamicState[VK_STATE_BIND_POINT_RASTER] = dynamicRasterState.handle;
-                g_lastBoundDynamicState[VK_STATE_BIND_POINT_RASTER] = dynamicRasterState.handle;
+                pCB->lastBoundDynamicState[VK_STATE_BIND_POINT_RASTER_LINE] = dynamicRasterLineState.handle;
+                g_lastBoundDynamicState[VK_STATE_BIND_POINT_RASTER_LINE] = dynamicRasterLineState.handle;
             }
             loader_platform_thread_unlock_mutex(&globalLock);
-            get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdBindDynamicRasterState(cmdBuffer, dynamicRasterState);
+            get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdBindDynamicRasterLineState(cmdBuffer, dynamicRasterLineState);
         } else {
-            report_error_no_cb_begin(cmdBuffer, "vkCmdBindDynamicRasterState()");
+            report_error_no_cb_begin(cmdBuffer, "vkCmdBindDynamicRasterLineState()");
+        }
+    }
+}
+VK_LAYER_EXPORT void VKAPI vkCmdBindDynamicRasterDepthBiasState(VkCmdBuffer cmdBuffer, VkDynamicRasterDepthBiasState dynamicRasterDepthBiasState)
+{
+    GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
+    if (pCB) {
+        if (pCB->state == CB_UPDATE_ACTIVE) {
+            updateCBTracking(cmdBuffer);
+            addCmd(pCB, CMD_BINDDYNAMICRASTERDEPTHBIASSTATE);
+            if (!pCB->activeRenderPass) {
+                log_msg(mdd(pCB->cmdBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, 0, 0, DRAWSTATE_NO_ACTIVE_RENDERPASS, "DS",
+                        "Incorrect call to vkCmdBindDynamicRasterDepthBiasState() without an active RenderPass.");
+            }
+            loader_platform_thread_lock_mutex(&globalLock);
+            pCB->status |= CBSTATUS_RASTER_DEPTH_BIAS_BOUND;
+            if (dynamicRasterDepthBiasStateMap.find(dynamicRasterDepthBiasState.handle) == dynamicRasterDepthBiasStateMap.end()) {
+                log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DYNAMIC_RASTER_DEPTH_BIAS_STATE, dynamicRasterDepthBiasState.handle, 0, DRAWSTATE_INVALID_DYNAMIC_STATE_OBJECT, "DS",
+                        "Unable to find VkDynamicRasterDepthBiasState object %#" PRIxLEAST64 ", was it ever created?", dynamicRasterDepthBiasState.handle);
+            } else {
+                pCB->lastBoundDynamicState[VK_STATE_BIND_POINT_RASTER_DEPTH_BIAS] = dynamicRasterDepthBiasState.handle;
+                g_lastBoundDynamicState[VK_STATE_BIND_POINT_RASTER_DEPTH_BIAS] = dynamicRasterDepthBiasState.handle;
+            }
+            loader_platform_thread_unlock_mutex(&globalLock);
+            get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdBindDynamicRasterDepthBiasState(cmdBuffer, dynamicRasterDepthBiasState);
+        } else {
+            report_error_no_cb_begin(cmdBuffer, "vkCmdBindDynamicRasterDepthBiasState()");
         }
     }
 }
@@ -3061,8 +3114,10 @@ VK_LAYER_EXPORT PFN_vkVoidFunction VKAPI vkGetDeviceProcAddr(VkDevice dev, const
         return (PFN_vkVoidFunction) vkDestroyDescriptorPool;
     if (!strcmp(funcName, "vkDestroyDynamicViewportState"))
         return (PFN_vkVoidFunction) vkDestroyDynamicViewportState;
-    if (!strcmp(funcName, "vkDestroyDynamicRasterState"))
-        return (PFN_vkVoidFunction) vkDestroyDynamicRasterState;
+    if (!strcmp(funcName, "vkDestroyDynamicRasterLineState"))
+        return (PFN_vkVoidFunction) vkDestroyDynamicRasterLineState;
+    if (!strcmp(funcName, "vkDestroyDynamicRasterDepthBiasState"))
+        return (PFN_vkVoidFunction) vkDestroyDynamicRasterDepthBiasState;
     if (!strcmp(funcName, "vkDestroyDynamicColorBlendState"))
         return (PFN_vkVoidFunction) vkDestroyDynamicColorBlendState;
     if (!strcmp(funcName, "vkDestroyDynamicDepthStencilState"))
@@ -3107,8 +3162,10 @@ VK_LAYER_EXPORT PFN_vkVoidFunction VKAPI vkGetDeviceProcAddr(VkDevice dev, const
         return (PFN_vkVoidFunction) vkUpdateDescriptorSets;
     if (!strcmp(funcName, "vkCreateDynamicViewportState"))
         return (PFN_vkVoidFunction) vkCreateDynamicViewportState;
-    if (!strcmp(funcName, "vkCreateDynamicRasterState"))
-        return (PFN_vkVoidFunction) vkCreateDynamicRasterState;
+    if (!strcmp(funcName, "vkCreateDynamicRasterLineState"))
+        return (PFN_vkVoidFunction) vkCreateDynamicRasterLineState;
+    if (!strcmp(funcName, "vkCreateDynamicRasterDepthBiasState"))
+        return (PFN_vkVoidFunction) vkCreateDynamicRasterDepthBiasState;
     if (!strcmp(funcName, "vkCreateDynamicColorBlendState"))
         return (PFN_vkVoidFunction) vkCreateDynamicColorBlendState;
     if (!strcmp(funcName, "vkCreateDynamicDepthStencilState"))
@@ -3125,8 +3182,10 @@ VK_LAYER_EXPORT PFN_vkVoidFunction VKAPI vkGetDeviceProcAddr(VkDevice dev, const
         return (PFN_vkVoidFunction) vkCmdBindPipeline;
     if (!strcmp(funcName, "vkCmdBindDynamicViewportState"))
         return (PFN_vkVoidFunction) vkCmdBindDynamicViewportState;
-    if (!strcmp(funcName, "vkCmdBindDynamicRasterState"))
-        return (PFN_vkVoidFunction) vkCmdBindDynamicRasterState;
+    if (!strcmp(funcName, "vkCmdBindDynamicRasterLineState"))
+        return (PFN_vkVoidFunction) vkCmdBindDynamicRasterLineState;
+    if (!strcmp(funcName, "vkCmdBindDynamicRasterDepthBiasState"))
+        return (PFN_vkVoidFunction) vkCmdBindDynamicRasterDepthBiasState;
     if (!strcmp(funcName, "vkCmdBindDynamicColorBlendState"))
         return (PFN_vkVoidFunction) vkCmdBindDynamicColorBlendState;
     if (!strcmp(funcName, "vkCmdBindDynamicDepthStencilState"))

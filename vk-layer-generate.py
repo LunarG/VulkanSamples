@@ -1404,7 +1404,7 @@ class ObjectTrackerSubcommand(Subcommand):
     def generate_command_buffer_validates(self):
         cbv_txt = []
         cbv_txt.append('%s' % self.lineinfo.get())
-        for o in ['VkPipeline', 'VkDynamicViewportState', 'VkDynamicRasterState', 'VkDynamicColorBlendState', 'VkDynamicDepthStencilState',
+        for o in ['VkPipeline', 'VkDynamicViewportState', 'VkDynamicRasterLineState', 'VkDynamicRasterDepthBiasState', 'VkDynamicColorBlendState', 'VkDynamicDepthStencilState',
                   'VkPipelineLayout', 'VkBuffer', 'VkEvent', 'VkQueryPool', 'VkRenderPass', 'VkFramebuffer']:
             cbv_txt.append('static void validate_object(VkCmdBuffer dispatchable_object, %s object)' % (o))
             cbv_txt.append('{')
@@ -1597,7 +1597,8 @@ class ThreadingSubcommand(Subcommand):
         'VkDescriptorPool' : 'VK_OBJECT_TYPE_DESCRIPTOR_POOL',
         'VkDescriptorSet' : 'VK_OBJECT_TYPE_DESCRIPTOR_SET',
         'VkDynamicViewportState' : 'VK_OBJECT_TYPE_DYNAMIC_VIEWPORT_STATE',
-        'VkDynamicRasterState' : 'VK_OBJECT_TYPE_DYNAMIC_RASTER_STATE',
+        'VkDynamicRasterLineState' : 'VK_OBJECT_TYPE_DYNAMIC_RASTER_LINE_STATE',
+        'VkDynamicRasterDepthBiasState' : 'VK_OBJECT_TYPE_DYNAMIC_RASTER_DEPTH_BIAS_STATE',
         'VkDynamicColorBlendState' : 'VK_OBJECT_TYPE_DYNAMIC_COLOR_BLEND_STATE',
         'VkDynamicDepthStencilState' : 'VK_OBJECT_TYPE_DYNAMIC_DEPTH_STENCIL_STATE',
         'VkFramebuffer' : 'VK_OBJECT_TYPE_FRAMEBUFFER',

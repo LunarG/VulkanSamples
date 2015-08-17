@@ -791,11 +791,18 @@ void DynamicViewportState::init(const Device &dev, const VkDynamicViewportStateC
     NON_DISPATCHABLE_HANDLE_INIT(vkCreateDynamicViewportState, dev, &info);
 }
 
-NON_DISPATCHABLE_HANDLE_DTOR(DynamicRasterState, vkDestroyDynamicRasterState)
+NON_DISPATCHABLE_HANDLE_DTOR(DynamicRasterLineState, vkDestroyDynamicRasterLineState)
 
-void DynamicRasterState::init(const Device &dev, const VkDynamicRasterStateCreateInfo &info)
+void DynamicRasterLineState::init(const Device &dev, const VkDynamicRasterLineStateCreateInfo &info)
 {
-    NON_DISPATCHABLE_HANDLE_INIT(vkCreateDynamicRasterState, dev, &info);
+    NON_DISPATCHABLE_HANDLE_INIT(vkCreateDynamicRasterLineState, dev, &info);
+}
+
+NON_DISPATCHABLE_HANDLE_DTOR(DynamicRasterDepthBiasState, vkDestroyDynamicRasterDepthBiasState)
+
+void DynamicRasterDepthBiasState::init(const Device &dev, const VkDynamicRasterDepthBiasStateCreateInfo &info)
+{
+    NON_DISPATCHABLE_HANDLE_INIT(vkCreateDynamicRasterDepthBiasState, dev, &info);
 }
 
 NON_DISPATCHABLE_HANDLE_DTOR(DynamicColorBlendState, vkDestroyDynamicColorBlendState)

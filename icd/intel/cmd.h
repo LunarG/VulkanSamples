@@ -164,7 +164,8 @@ struct intel_cmd_bind {
 
     struct {
         const struct intel_dynamic_viewport *viewport;
-        const struct intel_dynamic_raster *raster;
+        const struct intel_dynamic_raster_line *raster_line;
+        const struct intel_dynamic_raster_depth_bias *raster_depth_bias;
         const struct intel_dynamic_color_blend *blend;
         const struct intel_dynamic_depth_stencil *depth;
     } state;

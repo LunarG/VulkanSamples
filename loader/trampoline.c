@@ -1016,22 +1016,40 @@ LOADER_EXPORT VkResult VKAPI vkDestroyDynamicViewportState(VkDevice device, VkDy
     return disp->DestroyDynamicViewportState(device, dynamicViewportState);
 }
 
-LOADER_EXPORT VkResult VKAPI vkCreateDynamicRasterState(VkDevice device, const VkDynamicRasterStateCreateInfo* pCreateInfo, VkDynamicRasterState* pState)
+LOADER_EXPORT VkResult VKAPI vkCreateDynamicRasterLineState(VkDevice device, const VkDynamicRasterLineStateCreateInfo* pCreateInfo, VkDynamicRasterLineState* pState)
 {
     const VkLayerDispatchTable *disp;
 
     disp = loader_get_dispatch(device);
 
-    return disp->CreateDynamicRasterState(device, pCreateInfo, pState);
+    return disp->CreateDynamicRasterLineState(device, pCreateInfo, pState);
 }
 
-LOADER_EXPORT VkResult VKAPI vkDestroyDynamicRasterState(VkDevice device, VkDynamicRasterState dynamicRasterState)
+LOADER_EXPORT VkResult VKAPI vkDestroyDynamicRasterLineState(VkDevice device, VkDynamicRasterLineState dynamicRasterLineState)
 {
     const VkLayerDispatchTable *disp;
 
     disp = loader_get_dispatch(device);
 
-    return disp->DestroyDynamicRasterState(device, dynamicRasterState);
+    return disp->DestroyDynamicRasterLineState(device, dynamicRasterLineState);
+}
+
+LOADER_EXPORT VkResult VKAPI vkCreateDynamicRasterDepthBiasState(VkDevice device, const VkDynamicRasterDepthBiasStateCreateInfo* pCreateInfo, VkDynamicRasterDepthBiasState* pState)
+{
+    const VkLayerDispatchTable *disp;
+
+    disp = loader_get_dispatch(device);
+
+    return disp->CreateDynamicRasterDepthBiasState(device, pCreateInfo, pState);
+}
+
+LOADER_EXPORT VkResult VKAPI vkDestroyDynamicRasterDepthBiasState(VkDevice device, VkDynamicRasterDepthBiasState dynamicRasterDepthBiasState)
+{
+    const VkLayerDispatchTable *disp;
+
+    disp = loader_get_dispatch(device);
+
+    return disp->DestroyDynamicRasterDepthBiasState(device, dynamicRasterDepthBiasState);
 }
 
 LOADER_EXPORT VkResult VKAPI vkCreateDynamicColorBlendState(VkDevice device, const VkDynamicColorBlendStateCreateInfo* pCreateInfo, VkDynamicColorBlendState* pState)
@@ -1211,13 +1229,22 @@ LOADER_EXPORT void VKAPI vkCmdBindDynamicViewportState(VkCmdBuffer cmdBuffer, Vk
     disp->CmdBindDynamicViewportState(cmdBuffer, state);
 }
 
-LOADER_EXPORT void VKAPI vkCmdBindDynamicRasterState(VkCmdBuffer cmdBuffer, VkDynamicRasterState state)
+LOADER_EXPORT void VKAPI vkCmdBindDynamicRasterLineState(VkCmdBuffer cmdBuffer, VkDynamicRasterLineState state)
 {
     const VkLayerDispatchTable *disp;
 
     disp = loader_get_dispatch(cmdBuffer);
 
-    disp->CmdBindDynamicRasterState(cmdBuffer, state);
+    disp->CmdBindDynamicRasterLineState(cmdBuffer, state);
+}
+
+LOADER_EXPORT void VKAPI vkCmdBindDynamicRasterDepthBiasState(VkCmdBuffer cmdBuffer, VkDynamicRasterDepthBiasState state)
+{
+    const VkLayerDispatchTable *disp;
+
+    disp = loader_get_dispatch(cmdBuffer);
+
+    disp->CmdBindDynamicRasterDepthBiasState(cmdBuffer, state);
 }
 
 LOADER_EXPORT void VKAPI vkCmdBindDynamicColorBlendState(VkCmdBuffer cmdBuffer, VkDynamicColorBlendState state)

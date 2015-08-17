@@ -366,6 +366,7 @@ static VkResult pipeline_build_rs_state(struct intel_pipeline *pipeline,
 
     pipeline->depthClipEnable = rs_state->depthClipEnable;
     pipeline->rasterizerDiscardEnable = rs_state->rasterizerDiscardEnable;
+    pipeline->depthBiasEnable = rs_state->depthBiasEnable;
 
     switch (rs_state->fillMode) {
     case VK_FILL_MODE_POINTS:

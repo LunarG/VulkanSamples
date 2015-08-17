@@ -479,8 +479,9 @@ static void gen7_fill_3DSTATE_SF_body(const struct intel_cmd *cmd,
     const struct intel_render_pass *rp = cmd->bind.render_pass;
     const struct intel_render_pass_subpass *subpass =
         cmd->bind.render_pass_subpass;
-    const struct intel_dynamic_raster *raster = cmd->bind.state.raster;
-    uint32_t dw1, dw2, dw3;
+    const struct intel_dynamic_raster_line *raster_line = cmd->bind.state.raster_line;
+    const struct intel_dynamic_raster_depth_bias *raster_depth_bias = cmd->bind.state.raster_depth_bias;
+    uint32_t dw1, dw2, dw3, dw4, dw5, dw6;
 
     CMD_ASSERT(cmd, 6, 7.5);
 
@@ -517,6 +518,9 @@ static void gen7_fill_3DSTATE_SF_body(const struct intel_cmd *cmd,
     /* Scissor is always enabled */
     dw2 |= GEN7_SF_DW2_SCISSOR_ENABLE;
 
+    // TODO: line width support
+    (void) raster_line;
+
     if (pipeline->sample_count > 1) {
           dw2 |= 128 << GEN7_SF_DW2_LINE_WIDTH__SHIFT |
                  GEN7_SF_DW2_MSRASTMODE_ON_PATTERN;
@@ -530,12 +534,22 @@ static void gen7_fill_3DSTATE_SF_body(const struct intel_cmd *cmd,
           2 << GEN7_SF_DW3_TRIFAN_PROVOKE__SHIFT |
           GEN7_SF_DW3_SUBPIXEL_8BITS;
 
+    if (pipeline->depthBiasEnable) {
+        dw4 = u_fui((float) raster_depth_bias->raster_depth_bias_info.depthBias * 2.0f);
+        dw5 = u_fui(raster_depth_bias->raster_depth_bias_info.slopeScaledDepthBias);
+        dw6 = u_fui(raster_depth_bias->raster_depth_bias_info.depthBiasClamp);
+    } else {
+        dw4 = 0;
+        dw5 = 0;
+        dw6 = 0;
+    }
+
     body[0] = dw1;
     body[1] = dw2;
     body[2] = dw3;
-    body[3] = u_fui((float) raster->raster_info.depthBias * 2.0f);
-    body[4] = u_fui(raster->raster_info.slopeScaledDepthBias);
-    body[5] = u_fui(raster->raster_info.depthBiasClamp);
+    body[3] = dw4;
+    body[4] = dw5;
+    body[5] = dw6;
 }
 
 static void gen6_3DSTATE_SF(struct intel_cmd *cmd)
@@ -3204,10 +3218,16 @@ static void cmd_bind_viewport_state(struct intel_cmd *cmd,
     cmd->bind.state.viewport = state;
 }
 
-static void cmd_bind_raster_state(struct intel_cmd *cmd,
-                                  const struct intel_dynamic_raster *state)
+static void cmd_bind_raster_line_state(struct intel_cmd *cmd,
+                                       const struct intel_dynamic_raster_line *state)
 {
-    cmd->bind.state.raster = state;
+    cmd->bind.state.raster_line = state;
+}
+
+static void cmd_bind_raster_depth_bias_state(struct intel_cmd *cmd,
+                                             const struct intel_dynamic_raster_depth_bias *state)
+{
+    cmd->bind.state.raster_depth_bias = state;
 }
 
 static void cmd_bind_depth_stencil_state(struct intel_cmd *cmd,
@@ -3452,14 +3472,24 @@ ICD_EXPORT void VKAPI vkCmdBindDynamicViewportState(
             intel_dynamic_viewport(state));
 }
 
-ICD_EXPORT void VKAPI vkCmdBindDynamicRasterState(
+ICD_EXPORT void VKAPI vkCmdBindDynamicRasterLineState(
     VkCmdBuffer                              cmdBuffer,
-    VkDynamicRasterState                    state)
+    VkDynamicRasterLineState                 state)
 {
     struct intel_cmd *cmd = intel_cmd(cmdBuffer);
 
-    cmd_bind_raster_state(cmd,
-            intel_dynamic_raster(state));
+    cmd_bind_raster_line_state(cmd,
+            intel_dynamic_raster_line(state));
+}
+
+ICD_EXPORT void VKAPI vkCmdBindDynamicRasterDepthBiasState(
+    VkCmdBuffer                              cmdBuffer,
+    VkDynamicRasterDepthBiasState            state)
+{
+    struct intel_cmd *cmd = intel_cmd(cmdBuffer);
+
+    cmd_bind_raster_depth_bias_state(cmd,
+            intel_dynamic_raster_depth_bias(state));
 }
 
 ICD_EXPORT void VKAPI vkCmdBindDynamicColorBlendState(

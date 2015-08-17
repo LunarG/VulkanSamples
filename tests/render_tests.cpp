@@ -384,7 +384,8 @@ void VkRenderTest::GenericDrawPreparation(VkCommandBufferObj *cmdBuffer, VkPipel
     }
 
     cmdBuffer->PrepareAttachments();
-    cmdBuffer->BindDynamicRasterState(m_stateRaster);
+    cmdBuffer->BindDynamicRasterLineState(m_stateRasterLine);
+    cmdBuffer->BindDynamicRasterDepthBiasState(m_stateRasterDepthBias);
     cmdBuffer->BindDynamicViewportState(m_stateViewport);
     cmdBuffer->BindDynamicColorBlendState(m_colorBlend);
     cmdBuffer->BindDynamicDepthStencilState(m_stateDepthStencil);

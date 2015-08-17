@@ -215,10 +215,14 @@ static inline void* globalGetProcAddr(const char *name)
         return (void*) vkCreateDynamicViewportState;
     if (!strcmp(name, "DestroyDynamicViewportState"))
         return (void*) vkDestroyDynamicViewportState;
-    if (!strcmp(name, "CreateDynamicRasterState"))
-        return (void*) vkCreateDynamicRasterState;
-    if (!strcmp(name, "DestroyDynamicRasterState"))
-        return (void*) vkDestroyDynamicRasterState;
+    if (!strcmp(name, "CreateDynamicRasterLineState"))
+        return (void*) vkCreateDynamicRasterLineState;
+    if (!strcmp(name, "DestroyDynamicRasterLineState"))
+        return (void*) vkDestroyDynamicRasterLineState;
+    if (!strcmp(name, "CreateDynamicRasterDepthBiasState"))
+        return (void*) vkCreateDynamicRasterDepthBiasState;
+    if (!strcmp(name, "DestroyDynamicRasterDepthBiasState"))
+        return (void*) vkDestroyDynamicRasterDepthBiasState;
     if (!strcmp(name, "CreateDynamicColorBlendState"))
         return (void*) vkCreateDynamicColorBlendState;
     if (!strcmp(name, "DestroyDynamicColorBlendState"))
@@ -257,8 +261,10 @@ static inline void* globalGetProcAddr(const char *name)
         return (void*) vkCmdBindPipeline;
     if (!strcmp(name, "CmdBindDynamicViewportState"))
         return (void*) vkCmdBindDynamicViewportState;
-    if (!strcmp(name, "CmdBindDynamicRasterState"))
-        return (void*) vkCmdBindDynamicRasterState;
+    if (!strcmp(name, "CmdBindDynamicRasterLineState"))
+        return (void*) vkCmdBindDynamicRasterLineState;
+    if (!strcmp(name, "CmdBindDynamicRasterDepthBiasState"))
+        return (void*) vkCmdBindDynamicRasterDepthBiasState;
     if (!strcmp(name, "CmdBindDynamicColorBlendState"))
         return (void*) vkCmdBindDynamicColorBlendState;
     if (!strcmp(name, "CmdBindDynamicDepthStencilState"))

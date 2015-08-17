@@ -205,6 +205,7 @@ struct intel_pipeline {
     // VkPipelineRsStateCreateInfo rs_state;
     bool depthClipEnable;
     bool rasterizerDiscardEnable;
+    bool depthBiasEnable;
 
     VkPipelineTessellationStateCreateInfo tess_state;
 

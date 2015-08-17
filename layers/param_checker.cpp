@@ -5843,16 +5843,16 @@ VK_LAYER_EXPORT VkResult VKAPI vkDestroyDynamicViewportState(
     return result;
 }
 
-bool PreCreateDynamicRasterState(
+bool PreCreateDynamicRasterLineState(
     VkDevice device,
-    const VkDynamicRasterStateCreateInfo* pCreateInfo)
+    const VkDynamicRasterLineStateCreateInfo* pCreateInfo)
 {
     if(pCreateInfo != nullptr)
     {
-    if(pCreateInfo->sType != VK_STRUCTURE_TYPE_DYNAMIC_RASTER_STATE_CREATE_INFO)
+    if(pCreateInfo->sType != VK_STRUCTURE_TYPE_DYNAMIC_RASTER_LINE_STATE_CREATE_INFO)
     {
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateDynamicRasterState parameter, VkStructureType pCreateInfo->sType, is an invalid enumerator");
+        "vkCreateDynamicRasterLineState parameter, VkStructureType pCreateInfo->sType, is an invalid enumerator");
         return false;
     }
     }
@@ -5860,9 +5860,9 @@ bool PreCreateDynamicRasterState(
     return true;
 }
 
-bool PostCreateDynamicRasterState(
+bool PostCreateDynamicRasterLineState(
     VkDevice device,
-    VkDynamicRasterState* pState,
+    VkDynamicRasterLineState* pState,
     VkResult result)
 {
 
@@ -5872,7 +5872,7 @@ bool PostCreateDynamicRasterState(
 
     if(result < VK_SUCCESS)
     {
-        std::string reason = "vkCreateDynamicRasterState parameter, VkResult result, is " + EnumeratorString(result);
+        std::string reason = "vkCreateDynamicRasterLineState parameter, VkResult result, is " + EnumeratorString(result);
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
         return false;
     }
@@ -5880,30 +5880,30 @@ bool PostCreateDynamicRasterState(
     return true;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkCreateDynamicRasterState(
+VK_LAYER_EXPORT VkResult VKAPI vkCreateDynamicRasterLineState(
     VkDevice device,
-    const VkDynamicRasterStateCreateInfo* pCreateInfo,
-    VkDynamicRasterState* pState)
+    const VkDynamicRasterLineStateCreateInfo* pCreateInfo,
+    VkDynamicRasterLineState* pState)
 {
-    PreCreateDynamicRasterState(device, pCreateInfo);
+    PreCreateDynamicRasterLineState(device, pCreateInfo);
 
-    VkResult result = get_dispatch_table(pc_device_table_map, device)->CreateDynamicRasterState(device, pCreateInfo, pState);
+    VkResult result = get_dispatch_table(pc_device_table_map, device)->CreateDynamicRasterLineState(device, pCreateInfo, pState);
 
-    PostCreateDynamicRasterState(device, pState, result);
+    PostCreateDynamicRasterLineState(device, pState, result);
 
     return result;
 }
 
-bool PostDestroyDynamicRasterState(
+bool PostDestroyDynamicRasterLineState(
     VkDevice device,
-    VkDynamicRasterState dynamicRasterState,
+    VkDynamicRasterLineState dynamicRasterLineState,
     VkResult result)
 {
 
 
     if(result < VK_SUCCESS)
     {
-        std::string reason = "vkDestroyDynamicRasterState parameter, VkResult result, is " + EnumeratorString(result);
+        std::string reason = "vkDestroyDynamicRasterLineState parameter, VkResult result, is " + EnumeratorString(result);
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
         return false;
     }
@@ -5911,13 +5911,92 @@ bool PostDestroyDynamicRasterState(
     return true;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkDestroyDynamicRasterState(
+VK_LAYER_EXPORT VkResult VKAPI vkDestroyDynamicRasterLineState(
     VkDevice device,
-    VkDynamicRasterState dynamicRasterState)
+    VkDynamicRasterLineState dynamicRasterLineState)
 {
-    VkResult result = get_dispatch_table(pc_device_table_map, device)->DestroyDynamicRasterState(device, dynamicRasterState);
+    VkResult result = get_dispatch_table(pc_device_table_map, device)->DestroyDynamicRasterLineState(device, dynamicRasterLineState);
 
-    PostDestroyDynamicRasterState(device, dynamicRasterState, result);
+    PostDestroyDynamicRasterLineState(device, dynamicRasterLineState, result);
+
+    return result;
+}
+
+bool PreCreateDynamicRasterDepthBiasState(
+    VkDevice device,
+    const VkDynamicRasterDepthBiasStateCreateInfo* pCreateInfo)
+{
+    if(pCreateInfo != nullptr)
+    {
+    if(pCreateInfo->sType != VK_STRUCTURE_TYPE_DYNAMIC_RASTER_DEPTH_BIAS_STATE_CREATE_INFO)
+    {
+        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        "vkCreateDynamicRasterDepthBiasState parameter, VkStructureType pCreateInfo->sType, is an invalid enumerator");
+        return false;
+    }
+    }
+
+    return true;
+}
+
+bool PostCreateDynamicRasterDepthBiasState(
+    VkDevice device,
+    VkDynamicRasterDepthBiasState* pState,
+    VkResult result)
+{
+
+    if(pState != nullptr)
+    {
+    }
+
+    if(result < VK_SUCCESS)
+    {
+        std::string reason = "vkCreateDynamicRasterDepthBiasState parameter, VkResult result, is " + EnumeratorString(result);
+        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
+        return false;
+    }
+
+    return true;
+}
+
+VK_LAYER_EXPORT VkResult VKAPI vkCreateDynamicRasterDepthBiasState(
+    VkDevice device,
+    const VkDynamicRasterDepthBiasStateCreateInfo* pCreateInfo,
+    VkDynamicRasterDepthBiasState* pState)
+{
+    PreCreateDynamicRasterDepthBiasState(device, pCreateInfo);
+
+    VkResult result = get_dispatch_table(pc_device_table_map, device)->CreateDynamicRasterDepthBiasState(device, pCreateInfo, pState);
+
+    PostCreateDynamicRasterDepthBiasState(device, pState, result);
+
+    return result;
+}
+
+bool PostDestroyDynamicRasterDepthBiasState(
+    VkDevice device,
+    VkDynamicRasterDepthBiasState dynamicRasterDepthBiasState,
+    VkResult result)
+{
+
+
+    if(result < VK_SUCCESS)
+    {
+        std::string reason = "vkDestroyDynamicRasterDepthBiasState parameter, VkResult result, is " + EnumeratorString(result);
+        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
+        return false;
+    }
+
+    return true;
+}
+
+VK_LAYER_EXPORT VkResult VKAPI vkDestroyDynamicRasterDepthBiasState(
+    VkDevice device,
+    VkDynamicRasterDepthBiasState dynamicRasterDepthBiasState)
+{
+    VkResult result = get_dispatch_table(pc_device_table_map, device)->DestroyDynamicRasterDepthBiasState(device, dynamicRasterDepthBiasState);
+
+    PostDestroyDynamicRasterDepthBiasState(device, dynamicRasterDepthBiasState, result);
 
     return result;
 }
@@ -6745,22 +6824,40 @@ VK_LAYER_EXPORT void VKAPI vkCmdBindDynamicViewportState(
     PostCmdBindDynamicViewportState(cmdBuffer, dynamicViewportState);
 }
 
-bool PostCmdBindDynamicRasterState(
+bool PostCmdBindDynamicRasterLineState(
     VkCmdBuffer cmdBuffer,
-    VkDynamicRasterState dynamicRasterState)
+    VkDynamicRasterLineState dynamicRasterLineState)
 {
 
 
     return true;
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdBindDynamicRasterState(
+VK_LAYER_EXPORT void VKAPI vkCmdBindDynamicRasterLineState(
     VkCmdBuffer cmdBuffer,
-    VkDynamicRasterState dynamicRasterState)
+    VkDynamicRasterLineState dynamicRasterLineState)
 {
-    get_dispatch_table(pc_device_table_map, cmdBuffer)->CmdBindDynamicRasterState(cmdBuffer, dynamicRasterState);
+    get_dispatch_table(pc_device_table_map, cmdBuffer)->CmdBindDynamicRasterLineState(cmdBuffer, dynamicRasterLineState);
 
-    PostCmdBindDynamicRasterState(cmdBuffer, dynamicRasterState);
+    PostCmdBindDynamicRasterLineState(cmdBuffer, dynamicRasterLineState);
+}
+
+bool PostCmdBindDynamicRasterDepthBiasState(
+    VkCmdBuffer cmdBuffer,
+    VkDynamicRasterDepthBiasState dynamicRasterDepthBiasState)
+{
+
+
+    return true;
+}
+
+VK_LAYER_EXPORT void VKAPI vkCmdBindDynamicRasterDepthBiasState(
+    VkCmdBuffer cmdBuffer,
+    VkDynamicRasterDepthBiasState dynamicRasterDepthBiasState)
+{
+    get_dispatch_table(pc_device_table_map, cmdBuffer)->CmdBindDynamicRasterDepthBiasState(cmdBuffer, dynamicRasterDepthBiasState);
+
+    PostCmdBindDynamicRasterDepthBiasState(cmdBuffer, dynamicRasterDepthBiasState);
 }
 
 bool PostCmdBindDynamicColorBlendState(
@@ -8262,8 +8359,10 @@ VK_LAYER_EXPORT PFN_vkVoidFunction VKAPI vkGetDeviceProcAddr(VkDevice device, co
         return (PFN_vkVoidFunction) vkAllocDescriptorSets;
     if (!strcmp(funcName, "vkCreateDynamicViewportState"))
         return (PFN_vkVoidFunction) vkCreateDynamicViewportState;
-    if (!strcmp(funcName, "vkCreateDynamicRasterState"))
-        return (PFN_vkVoidFunction) vkCreateDynamicRasterState;
+    if (!strcmp(funcName, "vkCreateDynamicRasterLineState"))
+        return (PFN_vkVoidFunction) vkCreateDynamicRasterLineState;
+    if (!strcmp(funcName, "vkCreateDynamicRasterDepthBiasState"))
+        return (PFN_vkVoidFunction) vkCreateDynamicRasterDepthBiasState;
     if (!strcmp(funcName, "vkCreateDynamicColorBlendState"))
         return (PFN_vkVoidFunction) vkCreateDynamicColorBlendState;
     if (!strcmp(funcName, "vkCreateDynamicDepthStencilState"))

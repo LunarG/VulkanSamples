@@ -45,9 +45,14 @@ struct intel_dynamic_viewport {
     uint32_t cmd_scissor_rect_pos;
 };
 
-struct intel_dynamic_raster {
+struct intel_dynamic_raster_line {
     struct intel_obj obj;
-    VkDynamicRasterStateCreateInfo raster_info;
+    VkDynamicRasterLineStateCreateInfo raster_line_info;
+};
+
+struct intel_dynamic_raster_depth_bias {
+    struct intel_obj obj;
+    VkDynamicRasterDepthBiasStateCreateInfo raster_depth_bias_info;
 };
 
 struct intel_dynamic_color_blend {
@@ -70,14 +75,24 @@ static inline struct intel_dynamic_viewport *intel_viewport_state_from_obj(struc
     return (struct intel_dynamic_viewport *) obj;
 }
 
-static inline struct intel_dynamic_raster *intel_dynamic_raster(VkDynamicRasterState state)
+static inline struct intel_dynamic_raster_line *intel_dynamic_raster_line(VkDynamicRasterLineState state)
 {
-    return *(struct intel_dynamic_raster **) &state;
+    return *(struct intel_dynamic_raster_line **) &state;
 }
 
-static inline struct intel_dynamic_raster *intel_raster_state_from_obj(struct intel_obj *obj)
+static inline struct intel_dynamic_raster_line *intel_raster_line_state_from_obj(struct intel_obj *obj)
 {
-    return (struct intel_dynamic_raster *) obj;
+    return (struct intel_dynamic_raster_line *) obj;
+}
+
+static inline struct intel_dynamic_raster_depth_bias *intel_dynamic_raster_depth_bias(VkDynamicRasterDepthBiasState state)
+{
+    return *(struct intel_dynamic_raster_depth_bias **) &state;
+}
+
+static inline struct intel_dynamic_raster_depth_bias *intel_raster_depth_bias_state_from_obj(struct intel_obj *obj)
+{
+    return (struct intel_dynamic_raster_depth_bias *) obj;
 }
 
 static inline struct intel_dynamic_color_blend *intel_dynamic_color_blend(VkDynamicColorBlendState state)
@@ -105,11 +120,14 @@ VkResult intel_viewport_state_create(struct intel_dev *dev,
                                        struct intel_dynamic_viewport **state_ret);
 void intel_viewport_state_destroy(struct intel_dynamic_viewport *state);
 
-VkResult intel_raster_state_create(struct intel_dev *dev,
-                                     const VkDynamicRasterStateCreateInfo *info,
-                                     struct intel_dynamic_raster **state_ret);
-void intel_raster_state_destroy(struct intel_dynamic_raster *state);
-
+VkResult intel_raster_line_state_create(struct intel_dev *dev,
+                                        const VkDynamicRasterLineStateCreateInfo *info,
+                                        struct intel_dynamic_raster_line **state_ret);
+void intel_raster_line_state_destroy(struct intel_dynamic_raster_line *state);
+VkResult intel_raster_depth_bias_state_create(struct intel_dev *dev,
+                                              const VkDynamicRasterDepthBiasStateCreateInfo *info,
+                                              struct intel_dynamic_raster_depth_bias **state_ret);
+void intel_raster_depth_bias_state_destroy(struct intel_dynamic_raster_depth_bias *state);
 VkResult intel_blend_state_create(struct intel_dev *dev,
                                     const VkDynamicColorBlendStateCreateInfo *info,
                                     struct intel_dynamic_color_blend **state_ret);

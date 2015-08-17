@@ -105,9 +105,13 @@ static bool base_dbg_copy_create_info(const struct intel_handle *handle,
         assert(info.header->struct_type == VK_STRUCTURE_TYPE_DYNAMIC_VIEWPORT_STATE_CREATE_INFO);
         shallow_copy = sizeof(VkDynamicViewportStateCreateInfo);
         break;
-    case VK_OBJECT_TYPE_DYNAMIC_RASTER_STATE:
-        assert(info.header->struct_type == VK_STRUCTURE_TYPE_DYNAMIC_RASTER_STATE_CREATE_INFO);
-        shallow_copy = sizeof(VkDynamicRasterStateCreateInfo);
+    case VK_OBJECT_TYPE_DYNAMIC_RASTER_LINE_STATE:
+        assert(info.header->struct_type == VK_STRUCTURE_TYPE_DYNAMIC_RASTER_LINE_STATE_CREATE_INFO);
+        shallow_copy = sizeof(VkDynamicRasterLineStateCreateInfo);
+        break;
+    case VK_OBJECT_TYPE_DYNAMIC_RASTER_DEPTH_BIAS_STATE:
+        assert(info.header->struct_type == VK_STRUCTURE_TYPE_DYNAMIC_RASTER_DEPTH_BIAS_STATE_CREATE_INFO);
+        shallow_copy = sizeof(VkDynamicRasterDepthBiasStateCreateInfo);
         break;
     case VK_OBJECT_TYPE_DYNAMIC_COLOR_BLEND_STATE:
         assert(info.header->struct_type == VK_STRUCTURE_TYPE_DYNAMIC_COLOR_BLEND_STATE_CREATE_INFO);

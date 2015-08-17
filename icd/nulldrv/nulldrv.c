@@ -518,14 +518,30 @@ static VkResult nulldrv_viewport_state_create(struct nulldrv_dev *dev,
     return VK_SUCCESS;
 }
 
-static VkResult nulldrv_raster_state_create(struct nulldrv_dev *dev,
-                                     const VkDynamicRasterStateCreateInfo *info,
-                                     struct nulldrv_dynamic_rs **state_ret)
+static VkResult nulldrv_raster_line_state_create(struct nulldrv_dev *dev,
+                                     const VkDynamicRasterLineStateCreateInfo *info,
+                                     struct nulldrv_dynamic_rs_line **state_ret)
 {
-    struct nulldrv_dynamic_rs *state;
+    struct nulldrv_dynamic_rs_line *state;
 
-    state = (struct nulldrv_dynamic_rs *) nulldrv_base_create(dev,
-            sizeof(*state), VK_OBJECT_TYPE_DYNAMIC_RASTER_STATE);
+    state = (struct nulldrv_dynamic_rs_line *) nulldrv_base_create(dev,
+            sizeof(*state), VK_OBJECT_TYPE_DYNAMIC_RASTER_LINE_STATE);
+    if (!state)
+        return VK_ERROR_OUT_OF_HOST_MEMORY;
+
+    *state_ret = state;
+
+    return VK_SUCCESS;
+}
+
+static VkResult nulldrv_raster_depth_bias_state_create(struct nulldrv_dev *dev,
+                                     const VkDynamicRasterDepthBiasStateCreateInfo *info,
+                                     struct nulldrv_dynamic_rs_depth_bias **state_ret)
+{
+    struct nulldrv_dynamic_rs_depth_bias *state;
+
+    state = (struct nulldrv_dynamic_rs_depth_bias *) nulldrv_base_create(dev,
+            sizeof(*state), VK_OBJECT_TYPE_DYNAMIC_RASTER_DEPTH_BIAS_STATE);
     if (!state)
         return VK_ERROR_OUT_OF_HOST_MEMORY;
 
@@ -1178,9 +1194,16 @@ ICD_EXPORT void VKAPI vkCmdBindDynamicViewportState(
     NULLDRV_LOG_FUNC;
 }
 
-ICD_EXPORT void VKAPI vkCmdBindDynamicRasterState(
+ICD_EXPORT void VKAPI vkCmdBindDynamicRasterLineState(
     VkCmdBuffer                               cmdBuffer,
-    VkDynamicRasterState                    state)
+    VkDynamicRasterLineState                  state)
+{
+    NULLDRV_LOG_FUNC;
+}
+
+ICD_EXPORT void VKAPI vkCmdBindDynamicRasterDepthBiasState(
+    VkCmdBuffer                               cmdBuffer,
+    VkDynamicRasterDepthBiasState             state)
 {
     NULLDRV_LOG_FUNC;
 }
@@ -2069,21 +2092,41 @@ ICD_EXPORT VkResult VKAPI vkDestroyDynamicViewportState(
     return VK_SUCCESS;
 }
 
-ICD_EXPORT VkResult VKAPI vkCreateDynamicRasterState(
+ICD_EXPORT VkResult VKAPI vkCreateDynamicRasterLineState(
     VkDevice                                  device,
-    const VkDynamicRasterStateCreateInfo*     pCreateInfo,
-    VkDynamicRasterState*                     pState)
+    const VkDynamicRasterLineStateCreateInfo* pCreateInfo,
+    VkDynamicRasterLineState*                 pState)
 {
     NULLDRV_LOG_FUNC;
     struct nulldrv_dev *dev = nulldrv_dev(device);
 
-    return nulldrv_raster_state_create(dev, pCreateInfo,
-            (struct nulldrv_dynamic_rs **) pState);
+    return nulldrv_raster_line_state_create(dev, pCreateInfo,
+            (struct nulldrv_dynamic_rs_line **) pState);
 }
 
-ICD_EXPORT VkResult VKAPI vkDestroyDynamicRasterState(
+ICD_EXPORT VkResult VKAPI vkCreateDynamicRasterDepthBiasState(
+    VkDevice                                       device,
+    const VkDynamicRasterDepthBiasStateCreateInfo* pCreateInfo,
+    VkDynamicRasterDepthBiasState*                 pState)
+{
+    NULLDRV_LOG_FUNC;
+    struct nulldrv_dev *dev = nulldrv_dev(device);
+
+    return nulldrv_raster_depth_bias_state_create(dev, pCreateInfo,
+            (struct nulldrv_dynamic_rs_depth_bias **) pState);
+}
+
+ICD_EXPORT VkResult VKAPI vkDestroyDynamicRasterLinesState(
     VkDevice                                  device,
-    VkDynamicRasterState                    dynamicRasterState)
+    VkDynamicRasterLineState                  dynamicRasterLineState)
+{
+    NULLDRV_LOG_FUNC;
+    return VK_SUCCESS;
+}
+
+ICD_EXPORT VkResult VKAPI vkDestroyDynamicRasterDepthBiasState(
+    VkDevice                                  device,
+    VkDynamicRasterDepthBiasState             dynamicRasterDepthBiasState)
 {
     NULLDRV_LOG_FUNC;
     return VK_SUCCESS;

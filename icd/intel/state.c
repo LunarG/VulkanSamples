@@ -253,34 +253,66 @@ void intel_viewport_state_destroy(struct intel_dynamic_viewport *state)
     intel_base_destroy(&state->obj.base);
 }
 
-static void raster_state_destroy(struct intel_obj *obj)
+static void raster_line_state_destroy(struct intel_obj *obj)
 {
-    struct intel_dynamic_raster *state = intel_raster_state_from_obj(obj);
+    struct intel_dynamic_raster_line *state = intel_raster_line_state_from_obj(obj);
 
-    intel_raster_state_destroy(state);
+    intel_raster_line_state_destroy(state);
 }
 
-VkResult intel_raster_state_create(struct intel_dev *dev,
-                                     const VkDynamicRasterStateCreateInfo *info,
-                                     struct intel_dynamic_raster **state_ret)
+VkResult intel_raster_line_state_create(struct intel_dev *dev,
+                                        const VkDynamicRasterLineStateCreateInfo *info,
+                                        struct intel_dynamic_raster_line **state_ret)
 {
-    struct intel_dynamic_raster *state;
+    struct intel_dynamic_raster_line *state;
 
-    state = (struct intel_dynamic_raster *) intel_base_create(&dev->base.handle,
-            sizeof(*state), dev->base.dbg, VK_OBJECT_TYPE_DYNAMIC_RASTER_STATE,
+    state = (struct intel_dynamic_raster_line *) intel_base_create(&dev->base.handle,
+            sizeof(*state), dev->base.dbg, VK_OBJECT_TYPE_DYNAMIC_RASTER_LINE_STATE,
             info, 0);
     if (!state)
         return VK_ERROR_OUT_OF_HOST_MEMORY;
 
-    state->obj.destroy = raster_state_destroy;
-    state->raster_info = *info;
+    state->obj.destroy = raster_line_state_destroy;
+    state->raster_line_info = *info;
 
     *state_ret = state;
 
     return VK_SUCCESS;
 }
 
-void intel_raster_state_destroy(struct intel_dynamic_raster *state)
+void intel_raster_line_state_destroy(struct intel_dynamic_raster_line *state)
+{
+    intel_base_destroy(&state->obj.base);
+}
+
+static void raster_depth_bias_state_destroy(struct intel_obj *obj)
+{
+    struct intel_dynamic_raster_depth_bias *state = intel_raster_depth_bias_state_from_obj(obj);
+
+    intel_raster_depth_bias_state_destroy(state);
+}
+
+VkResult intel_raster_depth_bias_state_create(struct intel_dev *dev,
+                                              const VkDynamicRasterDepthBiasStateCreateInfo *info,
+                                              struct intel_dynamic_raster_depth_bias **state_ret)
+{
+    struct intel_dynamic_raster_depth_bias *state;
+
+    state = (struct intel_dynamic_raster_depth_bias *) intel_base_create(&dev->base.handle,
+            sizeof(*state), dev->base.dbg, VK_OBJECT_TYPE_DYNAMIC_RASTER_DEPTH_BIAS_STATE,
+            info, 0);
+    if (!state)
+        return VK_ERROR_OUT_OF_HOST_MEMORY;
+
+    state->obj.destroy = raster_depth_bias_state_destroy;
+    state->raster_depth_bias_info = *info;
+
+    *state_ret = state;
+
+    return VK_SUCCESS;
+}
+
+void intel_raster_depth_bias_state_destroy(struct intel_dynamic_raster_depth_bias *state)
 {
     intel_base_destroy(&state->obj.base);
 }
@@ -387,23 +419,45 @@ ICD_EXPORT VkResult VKAPI vkDestroyDynamicViewportState(
     return VK_SUCCESS;
 }
 
-ICD_EXPORT VkResult VKAPI vkCreateDynamicRasterState(
+ICD_EXPORT VkResult VKAPI vkCreateDynamicRasterLineState(
     VkDevice                                  device,
-    const VkDynamicRasterStateCreateInfo*     pCreateInfo,
-    VkDynamicRasterState*                     pState)
+    const VkDynamicRasterLineStateCreateInfo* pCreateInfo,
+    VkDynamicRasterLineState*                 pState)
 {
     struct intel_dev *dev = intel_dev(device);
 
-    return intel_raster_state_create(dev, pCreateInfo,
-            (struct intel_dynamic_raster **) pState);
+    return intel_raster_line_state_create(dev, pCreateInfo,
+            (struct intel_dynamic_raster_line **) pState);
 }
 
-ICD_EXPORT VkResult VKAPI vkDestroyDynamicRasterState(
+ICD_EXPORT VkResult VKAPI vkDestroyDynamicRasterLineState(
     VkDevice                                device,
-    VkDynamicRasterState                    dynamicRasterState)
+    VkDynamicRasterLineState                dynamicRasterLineState)
 
 {
-    struct intel_obj *obj = intel_obj(dynamicRasterState.handle);
+    struct intel_obj *obj = intel_obj(dynamicRasterLineState.handle);
+
+    obj->destroy(obj);
+    return VK_SUCCESS;
+}
+
+ICD_EXPORT VkResult VKAPI vkCreateDynamicRasterDepthBiasState(
+    VkDevice                                        device,
+    const VkDynamicRasterDepthBiasStateCreateInfo*  pCreateInfo,
+    VkDynamicRasterDepthBiasState*                  pState)
+{
+    struct intel_dev *dev = intel_dev(device);
+
+    return intel_raster_depth_bias_state_create(dev, pCreateInfo,
+            (struct intel_dynamic_raster_depth_bias **) pState);
+}
+
+ICD_EXPORT VkResult VKAPI vkDestroyDynamicRasterDepthBiasState(
+    VkDevice                                device,
+    VkDynamicRasterDepthBiasState           dynamicRasterDepthBiasState)
+
+{
+    struct intel_obj *obj = intel_obj(dynamicRasterDepthBiasState.handle);
 
     obj->destroy(obj);
     return VK_SUCCESS;
