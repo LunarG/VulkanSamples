@@ -217,5 +217,5 @@ void set_image_layout(
         VkImageLayout old_image_layout,
         VkImageLayout new_image_layout);
 
-bool read_ppm(char const*const filename, int *width, int *height, int rowPitch, char *dataPtr);
+bool read_ppm(char const*const filename, int *width, int *height, uint64_t rowPitch, char *dataPtr);
 void extract_version(uint32_t version, uint32_t &major, uint32_t &minor, uint32_t &patch);
