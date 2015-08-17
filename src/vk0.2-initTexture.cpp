@@ -71,7 +71,9 @@ int main(int argc, char **argv)
      */
 
     struct texture_object texObj;
-    if (!read_ppm("lunarg.ppm", &texObj.tex_width, &texObj.tex_height, 0, NULL))
+    std::string filename = get_base_data_dir();
+    filename.append("lunarg.ppm");
+    if (!read_ppm(filename.c_str(), &texObj.tex_width, &texObj.tex_height, 0, NULL))
     {
         std::cout << "Could not read texture file lunarg.ppm\n";
         exit(-1);
@@ -153,7 +155,7 @@ int main(int argc, char **argv)
     assert(!err);
 
     /* Read the ppm file into the mappable image's memory */
-    if (!read_ppm("lunarg.ppm", &texObj.tex_width, &texObj.tex_height, layout.rowPitch, (char *)data)) {
+    if (!read_ppm(filename.c_str(), &texObj.tex_width, &texObj.tex_height, layout.rowPitch, (char *)data)) {
         std::cout << "Could not load texture file lunarg.ppm\n";
         exit(-1);
     }
