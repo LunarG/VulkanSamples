@@ -79,6 +79,9 @@ struct texture_object {
     int32_t tex_width, tex_height;
 };
 
+/*
+ * Keep each of our swap chain buffers' image, command buffer and view in one spot
+ */
 typedef struct _swap_chain_buffers {
     VkImage image;
     VkCmdBuffer cmd;
@@ -93,15 +96,6 @@ typedef struct {
     VkLayerProperties properties;
     std::vector<VkExtensionProperties> extensions;
 } layer_properties;
-
-/*
- * Keep each of our swap chain buffers' image, command buffer and view in one spot
- */
-typedef struct _SwapChainBuffers {
-    VkImage image;
-    VkCmdBuffer cmd;
-    VkAttachmentView view;
-} SwapChainBuffers;
 
 /*
  * Structure for tracking information used / created / modified
