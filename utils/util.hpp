@@ -27,6 +27,10 @@
 #include <sstream>
 #include <vector>
 
+#define GLM_FORCE_RADIANS
+#include "glm/glm.hpp"
+#include <glm/gtc/matrix_transform.hpp>
+
 #ifdef _WIN32
 #pragma comment(linker, "/subsystem:console")
 #include <windows.h>
@@ -169,6 +173,11 @@ struct sample_info {
         VkBufferView view;
         VkDescriptorInfo desc;
     } uniform_data;
+
+    glm::mat4 Projection;
+    glm::mat4 View;
+    glm::mat4 Model;
+    glm::mat4 MVP;
 
     VkCmdBuffer cmd;  // Buffer for initialization commands
     VkPipelineLayout pipeline_layout;

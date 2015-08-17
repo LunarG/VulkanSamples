@@ -22,6 +22,8 @@ echo "Instance"
 & $dPath\vk0.2-instance
 echo "Instance Layer Properties"
 & $dPath\vk0.2-instance_layer_properties
+echo "Uniform Buffer"
+& $dPath\vk0.2-uniformbuffer
 echo "Use GLSL Shader"
 & $dPath\vk0.2-useglslshader
 echo "Use SPIR-V Shader"
