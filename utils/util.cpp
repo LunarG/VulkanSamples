@@ -169,7 +169,7 @@ void set_image_layout(
     assert(!res);
 }
 
-bool read_ppm(char const*const filename, int *width, int *height, int rowPitch, char *dataPtr)
+bool read_ppm(char const*const filename, int *width, int *height, uint64_t rowPitch, char *dataPtr)
 {
     /* TODO: make this more flexible in handling comments and whitespace in ppm file */
 
