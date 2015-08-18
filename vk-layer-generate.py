@@ -1373,7 +1373,7 @@ class ObjectTrackerSubcommand(Subcommand):
         gedi_txt.append('    destroy_obj(instance, instance);')
         gedi_txt.append('    // Report any remaining objects in LL')
         for o in vulkan.core.objects:
-            if o in ['VkPhysicalDevice', 'VkQueue']:
+            if o in ['VkInstance', 'VkPhysicalDevice', 'VkQueue']:
                 continue
             gedi_txt.append('    for (auto it = %sMap.begin(); it != %sMap.end(); ++it) {' % (o, o))
             gedi_txt.append('        OBJTRACK_NODE* pNode = it->second;')
@@ -1381,6 +1381,7 @@ class ObjectTrackerSubcommand(Subcommand):
             gedi_txt.append('                "OBJ ERROR : %s object 0x%" PRIxLEAST64 " has not been destroyed.", string_VkDbgObjectType(pNode->objType),')
             gedi_txt.append('                pNode->vkObj);')
             gedi_txt.append('    }')
+            gedi_txt.append('    %sMap.clear();' % (o))
             gedi_txt.append('')
         gedi_txt.append('    dispatch_key key = get_dispatch_key(instance);')
         gedi_txt.append('    VkLayerInstanceDispatchTable *pInstanceTable = get_dispatch_table(ObjectTracker_instance_table_map, instance);')
@@ -1395,11 +1396,15 @@ class ObjectTrackerSubcommand(Subcommand):
         gedi_txt.append('    layer_debug_report_destroy_instance(mid(instance));')
         gedi_txt.append('    layer_data_map.erase(pInstanceTable);')
         gedi_txt.append('')
-        gedi_txt.append('    ObjectTracker_instance_table_map.erase(key);')
         gedi_txt.append('    instanceExtMap.erase(pInstanceTable);')
-        gedi_txt.append('    assert(ObjectTracker_instance_table_map.size() == 0 && "Should not have any instance mappings hanging around");')
-        gedi_txt.append('')
         gedi_txt.append('    loader_platform_thread_unlock_mutex(&objLock);')
+        # The loader holds a mutex that protects this from other threads
+        gedi_txt.append('    ObjectTracker_instance_table_map.erase(key);')
+        gedi_txt.append('    if (ObjectTracker_instance_table_map.empty()) {')
+        gedi_txt.append('        // Release mutex when destroying last instance.')
+        gedi_txt.append('        loader_platform_thread_delete_mutex(&objLock);')
+        gedi_txt.append('        objLockInitialized = 0;')
+        gedi_txt.append('    }')
         gedi_txt.append('}')
         gedi_txt.append('')
         return "\n".join(gedi_txt)
@@ -1416,7 +1421,7 @@ class ObjectTrackerSubcommand(Subcommand):
         gedd_txt.append('    destroy_obj(device, device);')
         gedd_txt.append('    // Report any remaining objects in LL')
         for o in vulkan.core.objects:
-            if o in ['VkInstance', 'VkPhysicalDevice', 'VkQueue']:
+            if o in ['VkInstance', 'VkPhysicalDevice', 'VkQueue', 'VkDevice']:
                 continue
             gedd_txt.append('    for (auto it = %sMap.begin(); it != %sMap.end(); ++it) {' % (o, o))
             gedd_txt.append('        OBJTRACK_NODE* pNode = it->second;')
@@ -1424,6 +1429,7 @@ class ObjectTrackerSubcommand(Subcommand):
             gedd_txt.append('                "OBJ ERROR : %s object 0x%" PRIxLEAST64 " has not been destroyed.", string_VkDbgObjectType(pNode->objType),')
             gedd_txt.append('                pNode->vkObj);')
             gedd_txt.append('    }')
+            gedd_txt.append('    %sMap.clear();' % (o))
             gedd_txt.append('')
         gedd_txt.append("    // Clean up Queue's MemRef Linked Lists")
         gedd_txt.append('    destroyQueueMemRefLists();')
