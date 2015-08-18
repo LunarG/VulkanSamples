@@ -409,7 +409,9 @@ bool ValidateEnumerator(VkFormatFeatureFlagBits const& enumerator)
         VK_FORMAT_FEATURE_VERTEX_BUFFER_BIT |
         VK_FORMAT_FEATURE_STORAGE_TEXEL_BUFFER_BIT |
         VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT |
-        VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT);
+        VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT |
+        VK_FORMAT_FEATURE_BLIT_SOURCE_BIT |
+        VK_FORMAT_FEATURE_BLIT_DESTINATION_BIT);
     if(enumerator & (~allFlags))
     {
         return false;
@@ -470,6 +472,14 @@ std::string EnumeratorString(VkFormatFeatureFlagBits const& enumerator)
     if(enumerator & VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT)
     {
         strings.push_back("VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT");
+    }
+    if(enumerator & VK_FORMAT_FEATURE_BLIT_SOURCE_BIT)
+    {
+        strings.push_back("VK_FORMAT_FEATURE_BLIT_SOURCE_BIT");
+    }
+    if(enumerator & VK_FORMAT_FEATURE_BLIT_DESTINATION_BIT)
+    {
+        strings.push_back("VK_FORMAT_FEATURE_BLIT_DESTINATION_BIT");
     }
 
     std::string enumeratorString;
