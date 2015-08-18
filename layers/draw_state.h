@@ -50,6 +50,7 @@ typedef enum _DRAW_STATE_ERROR
     DRAWSTATE_NUM_SAMPLES_MISMATCH,             // Number of samples in bound PSO does not match number in FB of current RenderPass
     DRAWSTATE_NO_END_CMD_BUFFER,                // Must call vkEndCommandBuffer() before QueueSubmit on that cmdBuffer
     DRAWSTATE_NO_BEGIN_CMD_BUFFER,              // Binding cmds or calling End on CB that never had vkBeginCommandBuffer() called on it
+    DRAWSTATE_CMD_BUFFER_SINGLE_SUBMIT_VIOLATION, // Cmd Buffer created with VK_CMD_BUFFER_OPTIMIZE_ONE_TIME_SUBMIT_BIT flag is submitted multiple times
     DRAWSTATE_VIEWPORT_NOT_BOUND,               // Draw submitted with no viewport state object bound
     DRAWSTATE_RASTER_NOT_BOUND,                 // Draw submitted with no raster state object bound
     DRAWSTATE_COLOR_BLEND_NOT_BOUND,            // Draw submitted with no color blend state object bound when color write enabled
@@ -235,12 +236,13 @@ typedef enum _CBStatusFlagBits
 // Cmd Buffer Wrapper Struct
 typedef struct _GLOBAL_CB_NODE {
     VkCmdBuffer                  cmdBuffer;
-    VkCmdPool                    pool;
-    VkFlags                      flags;
+    VkCmdBufferCreateInfo        createInfo;
+    VkCmdBufferBeginInfo         beginInfo;
     VkFence                      fence;    // fence tracking this cmd buffer
     uint64_t                     numCmds;  // number of cmds in this CB
     uint64_t                     drawCount[NUM_DRAW_TYPES]; // Count of each type of draw in this CB
     CB_STATE                     state;  // Track cmd buffer update state
+    uint64_t                     submitCount; // Number of times CB has been submitted
     CBStatusFlags                status; // Track status of various bindings on cmd buffer
     vector<CMD_NODE*>            pCmds;
     // Currently storing "lastBound" objects on per-CB basis

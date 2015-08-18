@@ -963,6 +963,46 @@ TEST_F(VkLayerTest, DepthStencilStateNotBound)
 }
 #endif
 #if DRAW_STATE_TESTS
+TEST_F(VkLayerTest, CmdBufferTwoSubmits)
+{
+    vk_testing::Fence testFence;
+    VkFlags msgFlags;
+    std::string msgString;
+
+    VkFenceCreateInfo fenceInfo = {};
+    fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+    fenceInfo.pNext = NULL;
+    fenceInfo.flags = 0;
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+    ASSERT_NO_FATAL_FAILURE(InitViewport());
+    ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
+
+    // We luck out b/c by default the framework creates CB w/ the VK_CMD_BUFFER_OPTIMIZE_ONE_TIME_SUBMIT_BIT set
+    BeginCommandBuffer();
+    m_cmdBuffer->ClearAllBuffers(m_clear_color, m_depth_clear_color, m_stencil_clear_color, NULL);
+    EndCommandBuffer();
+
+    testFence.init(*m_device, fenceInfo);
+
+    // Bypass framework since it does the waits automatically
+    VkResult err = VK_SUCCESS;
+    err = vkQueueSubmit( m_device->m_queue, 1, &m_cmdBuffer->handle(), testFence.handle());
+    ASSERT_VK_SUCCESS( err );
+
+    m_errorMonitor->ClearState();
+    // Cause validation error by re-submitting cmd buffer that should only be submitted once
+    err = vkQueueSubmit( m_device->m_queue, 1, &m_cmdBuffer->handle(), testFence.handle());
+    ASSERT_VK_SUCCESS( err );
+
+    msgFlags = m_errorMonitor->GetState(&msgString);
+    ASSERT_TRUE(0 != (msgFlags & VK_DBG_REPORT_ERROR_BIT)) << "Did not receive an err after re-submitting Command Buffer that was created with one-time submit flag";
+    if (!strstr(msgString.c_str(),"was created w/ VK_CMD_BUFFER_OPTIMIZE_ONE_TIME_SUBMIT_BIT set, but has been submitted")) {
+        FAIL() << "Error received was not 'CB (0xaddress) was created w/ VK_CMD_BUFFER_OPTIMIZE_ONE_TIME_SUBMIT_BIT set...'";
+    }
+}
+
+
 TEST_F(VkLayerTest, BindPipelineNoRenderPass)
 {
     // Initiate Draw w/o a PSO bound
