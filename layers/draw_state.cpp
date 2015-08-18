@@ -1251,11 +1251,7 @@ static void init_draw_state(layer_data *my_data)
 
     if (!globalLockInitialized)
     {
-        // TODO/TBD: Need to delete this mutex sometime.  How???  One
-        // suggestion is to call this during vkCreateInstance(), and then we
-        // can clean it up during vkDestroyInstance().  However, that requires
-        // that the layer have per-instance locks.  We need to come back and
-        // address this soon.
+        // This mutex may be deleted by vkDestroyInstance of last instance.
         loader_platform_thread_create_mutex(&globalLock);
         globalLockInitialized = 1;
     }
@@ -1296,6 +1292,11 @@ VK_LAYER_EXPORT void VKAPI vkDestroyInstance(VkInstance instance)
     layer_data_map.erase(pTable);
 
     draw_state_instance_table_map.erase(key);
+    if (draw_state_instance_table_map.empty()) {
+        // Release mutex when destroying last instance.
+        loader_platform_thread_delete_mutex(&globalLock);
+        globalLockInitialized = 0;
+    }
 }
 
 static void createDeviceRegisterExtensions(const VkDeviceCreateInfo* pCreateInfo, VkDevice device)
