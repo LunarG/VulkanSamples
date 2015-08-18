@@ -1690,6 +1690,7 @@ typedef struct {
     VkStructureType                             sType;
     const void*                                 pNext;
     VkBool32                                    alphaToCoverageEnable;
+    VkBool32                                    alphaToOneEnable;
     VkBool32                                    logicOpEnable;
     VkLogicOp                                   logicOp;
     uint32_t                                    attachmentCount;
