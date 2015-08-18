@@ -27,7 +27,6 @@ VULKAN_SAMPLE_SHORT_DESCRIPTION
 enumerate physical devices
 */
 
-#include <iostream>
 #include <cassert>
 #include <cstdlib>
 #include <util_init.hpp>
@@ -41,7 +40,7 @@ int main(int argc, char **argv)
 
     uint32_t gpu_count = 1;
     VkResult res = vkEnumeratePhysicalDevices(info.inst, &gpu_count, &info.gpu);
-    assert(!res && gpu_count >= 1);
+    assert(!res && gpu_count == 1);
 
 /* VULKAN_KEY_END */
 
