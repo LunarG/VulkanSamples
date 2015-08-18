@@ -695,8 +695,8 @@ VkResult Pipeline::init_try(const Device &dev, const VkGraphicsPipelineCreateInf
         err = vkCreateGraphicsPipelines(dev.handle(), cache, 1, &info, &pipe);
         if (err == VK_SUCCESS) {
             NonDispHandle::init(dev.handle(), pipe);
-            vkDestroyPipelineCache(dev.handle(), cache);
         }
+        vkDestroyPipelineCache(dev.handle(), cache);
     }
 
     return err;

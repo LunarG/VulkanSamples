@@ -180,7 +180,7 @@ protected:
          * any extension / layer that utilizes that feature also needs
          * to be enabled at create instance time.
          */
-	// Use Threading layer first to protect others from ThreadCmdBufferCollision test
+        // Use Threading layer first to protect others from ThreadCmdBufferCollision test
         instance_layer_names.push_back("Threading");
         instance_layer_names.push_back("ObjectTracker");
         instance_layer_names.push_back("MemTracker");
@@ -511,9 +511,11 @@ TEST_F(VkLayerTest, MapMemWithoutHostVisibleBit)
 
     mem_alloc.allocationSize = mem_reqs.size;
 
-	err = m_device->phy().set_memory_type(mem_reqs.memoryTypeBits, &mem_alloc, 0, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
-    if(err != VK_SUCCESS) // If we can't find any unmappable memory this test doesn't make sense
+    err = m_device->phy().set_memory_type(mem_reqs.memoryTypeBits, &mem_alloc, 0, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+    if(err != VK_SUCCESS) { // If we can't find any unmappable memory this test doesn't make sense
+        vkDestroyImage(m_device->device(), image);
         return;
+    }
 
     // allocate memory
     err = vkAllocMemory(m_device->device(), &mem_alloc, &mem);
@@ -532,6 +534,8 @@ TEST_F(VkLayerTest, MapMemWithoutHostVisibleBit)
     if (!strstr(msgString.c_str(),"Mapping Memory without VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT")) {
         FAIL() << "Error received did not match expected error message from vkMapMemory in MemTracker";
     }
+
+    vkDestroyImage(m_device->device(), image);
 }
 
 // TODO : Is this test still valid. Not sure it is with updates to memory binding model
@@ -677,6 +681,10 @@ TEST_F(VkLayerTest, RebindMemory)
     if (!strstr(msgString.c_str(),"which has already been bound to mem object")) {
         FAIL() << "Error received did not match expected message when rebinding memory to an object";
     }
+
+    vkDestroyImage(m_device->device(), image);
+    vkFreeMemory(m_device->device(), mem1);
+    vkFreeMemory(m_device->device(), mem2);
 }
 
 TEST_F(VkLayerTest, SubmitSignaledFence)
@@ -991,6 +999,12 @@ TEST_F(VkLayerTest, PipelineNotBound)
     if (!strstr(msgString.c_str(),"Invalid VkPipeline Object ")) {
         FAIL() << "Error received was not 'Invalid VkPipeline Object 0xbaadb1be' but instead it was '" << msgString.c_str() << "'";
     }
+
+    vkDestroyPipelineLayout(m_device->device(), pipeline_layout);
+    err = vkFreeDescriptorSets(m_device->device(), ds_pool, 1, &descriptorSet);
+    ASSERT_VK_SUCCESS(err);
+    vkDestroyDescriptorSetLayout(m_device->device(), ds_layout);
+    vkDestroyDescriptorPool(m_device->device(), ds_pool);
 }
 
 TEST_F(VkLayerTest, BindInvalidMemory)
@@ -1051,7 +1065,6 @@ TEST_F(VkLayerTest, BindInvalidMemory)
 
     // Introduce validation failure, free memory before binding
     vkFreeMemory(m_device->device(), mem);
-    ASSERT_VK_SUCCESS(err);
 
     // Try to bind free memory that has been freed
     err = vkBindImageMemory(m_device->device(), image, mem, 0);
@@ -1063,6 +1076,8 @@ TEST_F(VkLayerTest, BindInvalidMemory)
     if (!strstr(msgString.c_str(),"Invalid VkDeviceMemory Object ")) {
         FAIL() << "Error received from BindInvalidMemory was not 'Invalid VkDeviceMemory Object 0x<handle>' but instead '" << msgString.c_str() << "'";
     }
+
+    vkDestroyImage(m_device->device(), image);
 }
 
 TEST_F(VkLayerTest, BindMemoryToDestroyedObject)
@@ -1134,6 +1149,8 @@ TEST_F(VkLayerTest, BindMemoryToDestroyedObject)
     if (!strstr(msgString.c_str(),"Invalid VkImage Object ")) {
         FAIL() << "Error received from BindMemoryToDestroyedObject was not 'Invalid VkImage Object 0x<handle>' but rather '" << msgString.c_str() << "'";
     }
+
+    vkFreeMemory(m_device->device(), mem);
 }
 #endif // OBJ_TRACKER_TESTS
 
@@ -1265,6 +1282,12 @@ TEST_F(VkLayerTest, BindPipelineNoRenderPass)
     if (!strstr(msgString.c_str(),"Incorrectly binding graphics pipeline ")) {
         FAIL() << "Error received was not 'Incorrectly binding graphics pipeline (0x<handle>) without an active RenderPass'";
     }
+
+    vkDestroyPipelineLayout(m_device->device(), pipeline_layout);
+    err = vkFreeDescriptorSets(m_device->device(), ds_pool, 1, &descriptorSet);
+    ASSERT_VK_SUCCESS(err);
+    vkDestroyDescriptorSetLayout(m_device->device(), ds_layout);
+    vkDestroyDescriptorPool(m_device->device(), ds_pool);
 }
 
 TEST_F(VkLayerTest, InvalidDescriptorPool)
@@ -1394,6 +1417,12 @@ TEST_F(VkLayerTest, DescriptorSetNotUpdated)
     if (!strstr(msgString.c_str()," bound but it was never updated. ")) {
         FAIL() << "Error received was not 'DS <blah> bound but it was never updated. You may want to either update it or not bind it.'";
     }
+
+    vkDestroyPipelineLayout(m_device->device(), pipeline_layout);
+    err = vkFreeDescriptorSets(m_device->device(), ds_pool, 1, &descriptorSet);
+    ASSERT_VK_SUCCESS(err);
+    vkDestroyDescriptorSetLayout(m_device->device(), ds_layout);
+    vkDestroyDescriptorPool(m_device->device(), ds_pool);
 }
 
 TEST_F(VkLayerTest, NoBeginCmdBuffer)
@@ -1463,7 +1492,7 @@ TEST_F(VkLayerTest, SecondaryCmdBufferFramebufferAndRenderpass)
     cmd.flags = 0;
 
     err = vkCreateCommandBuffer(m_device->device(), &cmd, &draw_cmd);
-    assert(!err);
+    ASSERT_VK_SUCCESS(err);
 
     // Force the failure by not setting the Renderpass and Framebuffer fields
     VkCmdBufferBeginInfo cmd_buf_info = {};
@@ -1480,6 +1509,7 @@ TEST_F(VkLayerTest, SecondaryCmdBufferFramebufferAndRenderpass)
     if (!strstr(msgString.c_str(),"must specify framebuffer and renderpass parameters")) {
         FAIL() << "Error received was not 'vkCreateCommandBuffer():  Secondary Command Buffer must specify framebuffer and renderpass parameters'";
     }
+    vkDestroyCommandBuffer(m_device->device(), draw_cmd);
 }
 
 TEST_F(VkLayerTest, InvalidPipelineCreateState)
@@ -1575,6 +1605,13 @@ TEST_F(VkLayerTest, InvalidPipelineCreateState)
     if (!strstr(msgString.c_str(),"Invalid Pipeline CreateInfo State: Vtx Shader required")) {
         FAIL() << "Error received was not 'Invalid Pipeline CreateInfo State: Vtx Shader required'";
     }
+
+    vkDestroyPipelineCache(m_device->device(), pipelineCache);
+    vkDestroyPipelineLayout(m_device->device(), pipeline_layout);
+    err = vkFreeDescriptorSets(m_device->device(), ds_pool, 1, &descriptorSet);
+    ASSERT_VK_SUCCESS(err);
+    vkDestroyDescriptorSetLayout(m_device->device(), ds_layout);
+    vkDestroyDescriptorPool(m_device->device(), ds_pool);
 }
 /*// TODO : This test should be good, but needs Tess support in compiler to run
 TEST_F(VkLayerTest, InvalidPatchControlPoints)
@@ -1694,6 +1731,13 @@ TEST_F(VkLayerTest, InvalidPatchControlPoints)
     if (!strstr(msgString.c_str(),"Invalid Pipeline CreateInfo State: VK_PRIMITIVE_TOPOLOGY_PATCH primitive ")) {
         FAIL() << "Error received was not 'Invalid Pipeline CreateInfo State: VK_PRIMITIVE_TOPOLOGY_PATCH primitive...' but instead '" << msgString.c_str() << "'";
     }
+
+    vkDestroyPipelineCache(m_device->device(), pipelineCache);
+    vkDestroyPipelineLayout(m_device->device(), pipeline_layout);
+    err = vkFreeDescriptorSets(m_device->device(), ds_pool, 1, &descriptorSet);
+    ASSERT_VK_SUCCESS(err);
+    vkDestroyDescriptorSetLayout(m_device->device(), ds_layout);
+    vkDestroyDescriptorPool(m_device->device(), ds_pool);
 }
 */
 TEST_F(VkLayerTest, NullRenderPass)
@@ -1827,6 +1871,12 @@ TEST_F(VkLayerTest, VtxBufferNoRenderPass)
     if (!strstr(msgString.c_str(),"Incorrect call to vkCmdBindVertexBuffers() without an active RenderPass.")) {
         FAIL() << "Error received was not 'Incorrect call to vkCmdBindVertexBuffers() without an active RenderPass.'";
     }
+
+    vkDestroyPipelineLayout(m_device->device(), pipeline_layout);
+    err = vkFreeDescriptorSets(m_device->device(), ds_pool, 1, &descriptorSet);
+    ASSERT_VK_SUCCESS(err);
+    vkDestroyDescriptorSetLayout(m_device->device(), ds_layout);
+    vkDestroyDescriptorPool(m_device->device(), ds_pool);
 }
 
 TEST_F(VkLayerTest, IdxBufferAlignmentError)
@@ -1862,6 +1912,8 @@ TEST_F(VkLayerTest, IdxBufferAlignmentError)
     if (!strstr(msgString.c_str(),"vkCmdBindIndexBuffer() offset (0x7) does not fall on ")) {
         FAIL() << "Error received was not 'vkCmdBindIndexBuffer() offset (0x7) does not fall on ...' but instead '" << msgString.c_str() << "'";
     }
+
+    vkDestroyBuffer(m_device->device(), ib);
 }
 
 TEST_F(VkLayerTest, ExecuteCommandsPrimaryCB)
@@ -1973,6 +2025,12 @@ TEST_F(VkLayerTest, DSTypeMismatch)
     if (!strstr(msgString.c_str(),"Descriptor update type of VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET does not match ")) {
         FAIL() << "Error received was not 'Descriptor update type of VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET does not match overlapping binding type!'";
     }
+
+    vkDestroySampler(m_device->device(), sampler);
+    err = vkFreeDescriptorSets(m_device->device(), ds_pool, 1, &descriptorSet);
+    ASSERT_VK_SUCCESS(err);
+    vkDestroyDescriptorSetLayout(m_device->device(), ds_layout);
+    vkDestroyDescriptorPool(m_device->device(), ds_pool);
 }
 
 TEST_F(VkLayerTest, DSUpdateOutOfBounds)
@@ -2064,6 +2122,12 @@ TEST_F(VkLayerTest, DSUpdateOutOfBounds)
     if (!strstr(msgString.c_str(),"Descriptor update type of VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET is out of bounds for matching binding")) {
         FAIL() << "Error received was not 'Descriptor update type of VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET is out of bounds for matching binding...'";
     }
+
+    vkDestroySampler(m_device->device(), sampler);
+    err = vkFreeDescriptorSets(m_device->device(), ds_pool, 1, &descriptorSet);
+    ASSERT_VK_SUCCESS(err);
+    vkDestroyDescriptorSetLayout(m_device->device(), ds_layout);
+    vkDestroyDescriptorPool(m_device->device(), ds_pool);
 }
 
 TEST_F(VkLayerTest, InvalidDSUpdateIndex)
@@ -2154,6 +2218,12 @@ TEST_F(VkLayerTest, InvalidDSUpdateIndex)
     if (!strstr(msgString.c_str()," does not have binding to match update binding ")) {
         FAIL() << "Error received was not 'Descriptor Set <blah> does not have binding to match update binding '";
     }
+
+    vkDestroySampler(m_device->device(), sampler);
+    err = vkFreeDescriptorSets(m_device->device(), ds_pool, 1, &descriptorSet);
+    ASSERT_VK_SUCCESS(err);
+    vkDestroyDescriptorSetLayout(m_device->device(), ds_layout);
+    vkDestroyDescriptorPool(m_device->device(), ds_pool);
 }
 
 TEST_F(VkLayerTest, InvalidDSUpdateStruct)
@@ -2244,6 +2314,12 @@ TEST_F(VkLayerTest, InvalidDSUpdateStruct)
     if (!strstr(msgString.c_str(),"Unexpected UPDATE struct of type ")) {
         FAIL() << "Error received was not 'Unexpected UPDATE struct of type '";
     }
+
+    vkDestroySampler(m_device->device(), sampler);
+    err = vkFreeDescriptorSets(m_device->device(), ds_pool, 1, &descriptorSet);
+    ASSERT_VK_SUCCESS(err);
+    vkDestroyDescriptorSetLayout(m_device->device(), ds_layout);
+    vkDestroyDescriptorPool(m_device->device(), ds_pool);
 }
 
 TEST_F(VkLayerTest, NumSamplesMismatch)
@@ -2327,6 +2403,12 @@ TEST_F(VkLayerTest, NumSamplesMismatch)
     if (!strstr(msgString.c_str(),"Num samples mismatch! ")) {
         FAIL() << "Error received was not 'Num samples mismatch!...'";
     }
+
+    vkDestroyPipelineLayout(m_device->device(), pipeline_layout);
+    err = vkFreeDescriptorSets(m_device->device(), ds_pool, 1, &descriptorSet);
+    ASSERT_VK_SUCCESS(err);
+    vkDestroyDescriptorSetLayout(m_device->device(), ds_layout);
+    vkDestroyDescriptorPool(m_device->device(), ds_pool);
 }
 
 TEST_F(VkLayerTest, ClearCmdNoDraw)
@@ -2420,6 +2502,12 @@ TEST_F(VkLayerTest, ClearCmdNoDraw)
     if (!strstr(msgString.c_str(),"vkCmdClearColorAttachment() issued on CB object ")) {
         FAIL() << "Error received was not 'vkCmdClearColorAttachment() issued on CB object...'";
     }
+
+    vkDestroyPipelineLayout(m_device->device(), pipeline_layout);
+    err = vkFreeDescriptorSets(m_device->device(), ds_pool, 1, &descriptorSet);
+    ASSERT_VK_SUCCESS(err);
+    vkDestroyDescriptorSetLayout(m_device->device(), ds_layout);
+    vkDestroyDescriptorPool(m_device->device(), ds_pool);
 }
 
 TEST_F(VkLayerTest, VtxBufferBadIndex)
@@ -2509,6 +2597,12 @@ TEST_F(VkLayerTest, VtxBufferBadIndex)
     if (!strstr(msgString.c_str(),"Vtx Buffer Index 1 was bound, but no vtx buffers are attached to PSO.")) {
         FAIL() << "Error received was not 'Vtx Buffer Index 0 was bound, but no vtx buffers are attached to PSO.'";
     }
+
+    vkDestroyPipelineLayout(m_device->device(), pipeline_layout);
+    err = vkFreeDescriptorSets(m_device->device(), ds_pool, 1, &descriptorSet);
+    ASSERT_VK_SUCCESS(err);
+    vkDestroyDescriptorSetLayout(m_device->device(), ds_layout);
+    vkDestroyDescriptorPool(m_device->device(), ds_pool);
 }
 #endif // DRAW_STATE_TESTS
 
@@ -2578,6 +2672,7 @@ TEST_F(VkLayerTest, ThreadCmdBufferCollision)
         FAIL() << "Error received was not 'THREADING ERROR'";
     }
 
+    vkDestroyEvent(device(), event);
 }
 #endif // GTEST_IS_THREADSAFE
 #endif // THREADING_TESTS
